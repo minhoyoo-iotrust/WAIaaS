@@ -1,454 +1,702 @@
-# AI Agent Wallet-as-a-Service 도메인 함정 분석
+# Self-Hosted Agent Wallet Daemon: Domain Pitfalls
 
-**프로젝트:** WAIaaS (AI Agent Wallet-as-a-Service)
-**연구 일자:** 2026-02-04
-**신뢰도:** MEDIUM (WebSearch 및 공식 문서 교차 검증)
-
----
-
-## 개요
-
-이 문서는 AI 에이전트 지갑 서비스 개발 시 흔히 범하는 실수와 치명적인 함정을 분석합니다. 각 함정에 대해 경고 신호, 예방 전략, 관련 개발 단계를 명시합니다.
+**Project:** WAIaaS v0.2 - Self-Hosted Secure Wallet for AI Agents
+**Domain:** Self-hosted wallet daemon with local key management and session-based auth
+**Researched:** 2026-02-05
+**Overall Confidence:** MEDIUM-HIGH (multiple authoritative sources cross-referenced)
 
 ---
 
-## 치명적 함정 (Critical Pitfalls)
+## Overview
 
-재작성이나 심각한 보안 사고를 유발하는 실수들입니다.
+This document catalogs pitfalls specific to building a self-hosted wallet daemon that stores private keys locally, uses session-based authentication, implements time-lock transactions, and communicates with browser wallet extensions. The v0.1 PITFALLS.md covered cloud-centric WaaS concerns (AWS KMS, Nitro Enclaves, Squads Protocol). This document replaces it with pitfalls for the v0.2 self-hosted local daemon architecture.
 
-### 함정 1: 프롬프트 인젝션을 통한 비인가 트랜잭션
-
-**문제 설명:**
-AI 에이전트는 프롬프트 인젝션 공격에 취약합니다. 공격자가 악의적인 프롬프트를 통해 에이전트의 로직과 명령을 변경하여 비인가 거래를 실행할 수 있습니다. 2025-2026년 기준, "salami slicing" 공격처럼 단계적으로 에이전트의 제약 모델을 왜곡시키는 정교한 다단계 공격이 등장했습니다.
-
-**왜 발생하는가:**
-- LLM의 본질적 특성: 수신된 모든 콘텐츠가 모델에 의해 명령으로 해석될 수 있음
-- "치명적 삼중주(Lethal Trifecta)": 개인 데이터 접근 + 신뢰할 수 없는 토큰 노출 + 유출 벡터의 조합
-- 에이전트 프레임워크의 취약점 (예: LangChain CVE-2025-68664 "LangGrinch")
-
-**결과:**
-- 에이전트가 사용자 동의 없이 자금 전송
-- 환경 변수 및 API 키 탈취
-- 전체 지갑 잔고 손실
-
-**경고 신호:**
-- 에이전트가 예상치 못한 트랜잭션을 생성
-- 로그에서 비정상적인 외부 데이터 소스 접근 패턴
-- 에이전트 응답에서 정책 우회 시도 흔적
-
-**예방 전략:**
-1. LLM 출력을 절대 신뢰하지 않음 - 모든 트랜잭션 요청에 대해 독립적 검증
-2. 트랜잭션 서명 전 화이트리스트 기반 명령어 필터링
-3. 중요 작업에 대한 Human-in-the-loop 필수화
-4. AI 방화벽 및 런타임 보안 도구 도입
-
-**관련 단계:** Phase 1 (핵심 아키텍처), Phase 2 (에이전트 인증)
+Each pitfall includes: severity rating, what goes wrong, why it happens, warning signs, a concrete prevention strategy, and which v0.2 phase should address it.
 
 ---
 
-### 함정 2: 개인 키 노출 및 중앙화된 키 저장
+## Critical Pitfalls
 
-**문제 설명:**
-2025년 1분기 손실의 88%가 개인 키 침해로 인한 것이었습니다. DEXX 사건에서는 중앙화된 키 관리와 부적절한 키 관리로 인해 $3천만 이상이 탈취되었고, 8,620개 이상의 Solana 지갑이 영향을 받았습니다.
-
-**왜 발생하는가:**
-- 온라인 지갑의 개인 키가 제공자 서버에 저장
-- 클라우드 스토리지에 개인 키 업로드
-- Trust Wallet 사건처럼 내부 코드 변조를 통한 백도어 삽입
-- 평문으로 개인 키 표시/전송
-
-**결과:**
-- 전체 자산 손실
-- 복구 불가능한 피해
-- 신뢰 붕괴
-
-**경고 신호:**
-- 키가 암호화되지 않은 상태로 저장/전송되는 코드
-- 단일 서버/서비스에 키 집중
-- 키 로테이션 메커니즘 부재
-
-**예방 전략:**
-1. MPC(다자간 계산) 또는 TEE(신뢰 실행 환경) 기반 키 관리 도입
-2. 키 샤드 자동 갱신(Key Refresh) 구현 - 수 분 간격
-3. HSM(하드웨어 보안 모듈) 연동
-4. 절대로 평문 키 저장/전송 금지
-5. 다중 서명(Multi-sig) 구현
-
-**관련 단계:** Phase 1 (키 관리 아키텍처)
+Mistakes that cause key compromise, fund loss, or require full rewrites.
 
 ---
 
-### 함정 3: API 키 및 자격 증명 탈취
+### C-01: AES-256-GCM Nonce Reuse Destroys Both Confidentiality and Authentication
 
-**문제 설명:**
-Trust Wallet 크롬 익스텐션 침해 사건에서 유출된 Chrome Web Store API 키를 통해 악성 익스텐션이 배포되었습니다. LangChain "LangGrinch" 취약점은 환경 변수 전체 탈취, 클라우드 자격 증명, 데이터베이스 연결 문자열, LLM API 키 등을 유출시킬 수 있습니다.
+**Severity:** CRITICAL
+**Confidence:** HIGH (RFC 5116, NIST research, cryptographic proofs)
 
-**왜 발생하는가:**
-- 정적 자격 증명 사용
-- API 키의 불충분한 스코핑
-- 공급망 침해를 통한 악성 코드 주입
-- 의존성 라이브러리의 보안 취약점
+**What goes wrong:**
+The daemon encrypts the agent private key with AES-256-GCM using a reused or predictable nonce (IV). An attacker who obtains two ciphertexts encrypted under the same key and nonce can XOR them to recover plaintext differences, and more critically, can recover the GHASH authentication key. With the authentication key, the attacker can forge valid ciphertexts and recover the private key.
 
-**결과:**
-- 무제한 API 남용
-- 재정적 손실
-- 데이터 유출
+**Why it happens:**
+- Developer uses a static IV stored alongside the encrypted file (common in Android KeyStore implementations)
+- Counter-based nonce wraps around after 2^32 encryptions without key rotation
+- Random 96-bit nonce collides due to birthday bound (~2^48 encryptions under same key)
+- Re-encryption of the same key file after settings change reuses the previous nonce
 
-**경고 신호:**
-- 장기간 변경되지 않는 API 키
-- 광범위한 권한을 가진 단일 API 키
-- 비정상적인 API 호출 패턴
+**Warning signs:**
+- IV/nonce stored as a constant in code or config
+- No nonce generation on each encryption call
+- No key rotation mechanism after N encryptions
+- Encrypted key file never changes size despite re-encryption
 
-**예방 전략:**
-1. OAuth 2.1 + PKCE 채택 (MCP 표준)
-2. 단기 수명 액세스 토큰 사용
-3. JIT(Just-In-Time) 자격 증명 발급
-4. HashiCorp Vault 등 동적 시크릿 관리 도입
-5. 에이전트별 고유 자격 증명 할당
-6. 자동 키 로테이션 구현
+**Prevention:**
+1. Generate a fresh 96-bit random nonce for EVERY encryption operation using `crypto.randomBytes(12)`
+2. Prepend the nonce to the ciphertext file: `[12-byte nonce][ciphertext][16-byte auth tag]`
+3. Implement key rotation: re-derive the encryption key (from master password via Argon2id with new salt) after every N re-encryptions or on every password change
+4. Consider AES-256-GCM-SIV (RFC 8452) for nonce misuse resistance as a defense-in-depth measure
+5. Use libsodium's `crypto_aead_xchacha20poly1305_ietf` which uses a 192-bit nonce (birthday bound at ~2^96), dramatically reducing collision risk
 
-**관련 단계:** Phase 1 (인프라), Phase 2 (인증 시스템)
+**Phase:** Core key management (Phase 1 - encrypted keystore implementation)
 
 ---
 
-### 함정 4: 과도하게 광범위한 권한 부여
+### C-02: Argon2id Parameter Misconfiguration Weakens Key Derivation
 
-**문제 설명:**
-대부분의 현재 구현에서 OAuth 토큰에 `gmail.readonly`나 `gmail.compose` 같은 광범위한 스코프가 부여됩니다. 에이전트가 "지난 주 이메일 요약"을 요청받아도 기술적으로 3년 전 기밀 HR 폴더의 이메일까지 읽을 수 있습니다.
+**Severity:** CRITICAL
+**Confidence:** HIGH (OWASP Password Storage Cheat Sheet, RFC 9106, 2025 arXiv study)
 
-**왜 발생하는가:**
-- 편의성을 위한 광범위한 권한 부여
-- 세분화된 권한 모델 설계의 복잡성
-- 최소 권한 원칙 미적용
+**What goes wrong:**
+The master password that protects the encrypted private key file is derived using Argon2id with weak parameters, making brute-force attacks feasible. An attacker who steals the encrypted key file can crack the password offline.
 
-**결과:**
-- 에이전트의 의도치 않은 자산 접근
-- 데이터 유출
-- 규정 위반
+**Why it happens:**
+- Using default parameters from example code (e.g., `m=4096, t=1, p=1` -- only 4 MiB memory)
+- Copying parameters from password hashing guides, which target server environments with many concurrent users (low memory per hash), not a single-user desktop daemon
+- Not benchmarking on target hardware -- parameters that take 100ms on a dev machine may take 10ms on an attacker's GPU cluster
+- Storing only the raw derived key, losing salt and parameters needed for re-derivation
 
-**경고 신호:**
-- 단일 권한으로 모든 작업 수행 가능
-- 권한 요청 시 구체적 범위 미지정
-- 작업별 권한 분리 없음
+**Warning signs:**
+- Key derivation completes in under 500ms on target hardware
+- Memory parameter below 46 MiB (OWASP minimum for general use)
+- Salt is hardcoded or derived from username instead of being cryptographically random
+- Parameters are not stored alongside the encrypted file
 
-**예방 전략:**
-1. 최소 권한 원칙 엄격 적용
-2. 작업별 세분화된 권한 스코프 정의
-3. 트랜잭션 금액/수신자/시간 제한 설정
-4. RAR(Rich Authorization Requests) 활용
-5. 정책 기반 권한 시스템 구현
-6. 즉각적인 권한 해제 메커니즘
+**Prevention:**
+1. For a single-user local daemon, target **1-3 seconds** derivation time (much higher than server defaults)
+2. Recommended minimum: `m=256 MiB, t=3, p=4` -- benchmark on target hardware and adjust upward
+3. Generate a 16-byte cryptographically random salt per derivation: `crypto.randomBytes(16)`
+4. Store the complete PHC-encoded string: `$argon2id$v=19$m=262144,t=3,p=4$[salt]$[hash]`
+5. On every password change, re-derive with fresh salt and optionally increased parameters
+6. Use constant-time comparison (`crypto.timingSafeEqual`) when verifying derived keys
 
-**관련 단계:** Phase 2 (권한 모델), Phase 3 (정책 엔진)
-
----
-
-### 함정 5: 트랜잭션 제어 부재
-
-**문제 설명:**
-AI 에이전트의 작은 오정렬이 수천 번의 반복적인 API 호출, 업데이트, 이메일, 데이터 쓰기로 확대될 수 있습니다. 명확한 제한 없이 자율 루프가 파괴적으로 변할 수 있습니다.
-
-**왜 발생하는가:**
-- 속도 제한(Rate Limiting) 미구현
-- 지출 한도 미설정
-- 트랜잭션 검증 단계 생략
-
-**결과:**
-- 의도치 않은 대량 자금 이동
-- 리소스 고갈
-- 서비스 중단
-
-**경고 신호:**
-- 단시간 내 비정상적으로 많은 트랜잭션
-- 점진적으로 증가하는 트랜잭션 금액
-- 검증 없는 자동 승인 로직
-
-**예방 전략:**
-1. 지출 한도 구현 (일일/주간/월간)
-2. 트랜잭션별 금액 제한
-3. 토큰 버킷 알고리즘 기반 속도 제한
-4. 중간 규모 트랜잭션에 대한 확인 요구
-5. 되돌릴 수 없는 작업에 Human-in-the-loop 필수
-6. 비용 기반 추적으로 리소스 고갈 방지
-7. Google AP2 프로토콜 같은 "Mandate" 기반 승인 체계 검토
-
-**관련 단계:** Phase 2 (트랜잭션 정책), Phase 3 (제어 시스템)
+**Phase:** Core key management (Phase 1 - encrypted keystore implementation)
 
 ---
 
-### 함정 6: 주인(Owner) 자금 회수 메커니즘 부재
+### C-03: Private Key Lingers in Node.js Process Memory, Exposed via Swap and Core Dumps
 
-**문제 설명:**
-AI 에이전트가 자율적으로 지갑을 소유할 때, 주인(사람)이 언제든지 자금을 안전하게 회수할 수 있는 메커니즘이 없으면 자금이 영구적으로 잠길 수 있습니다.
+**Severity:** CRITICAL
+**Confidence:** HIGH (Node.js Issue #18896, #30956, libsodium documentation)
 
-**왜 발생하는가:**
-- 에이전트 자율성에만 집중하고 소유자 권한 설계 누락
-- 비상 복구 시나리오 미고려
-- 에이전트 오작동/중단 시나리오 미대비
+**What goes wrong:**
+After decrypting the private key for signing, the key remains in Node.js heap memory as a standard `Buffer`. This memory can be:
+- Paged to disk swap file (recoverable after process exit)
+- Included in core dumps (if the process crashes)
+- Copied during garbage collection (old location not zeroed)
+- Visible via `/proc/[pid]/mem` to processes with same UID on Linux
 
-**결과:**
-- 에이전트 장애 시 자금 영구 손실
-- 법적 분쟁
-- 사용자 신뢰 상실
+**Why it happens:**
+- Node.js does not implement secure memory (`mlock`, `MADV_DONTDUMP`). Issue #30956 remains open with no resolution
+- JavaScript's garbage collector moves objects in memory, leaving copies at old addresses
+- `Buffer.fill(0)` zeros the current location but cannot track copies the GC already made
+- Developers assume "process memory is safe" without considering the OS virtual memory system
 
-**경고 신호:**
-- 소유자 전용 회수 함수 부재
-- 비상 탈출 메커니즘 미설계
-- 에이전트 키만으로 모든 작업 가능
+**Warning signs:**
+- Private key stored in a regular `Buffer` or JavaScript variable
+- No explicit zeroing after use
+- Process uses standard `node` binary without memory protections
+- Swap is enabled on the host machine
+- Application does not catch crashes to prevent core dump
 
-**예방 전략:**
-1. 소유자 전용 회수(withdraw) 함수 구현
-2. 타임락(Timelock) 기반 비상 회수 메커니즘
-3. 다중 서명 기반 회수 경로
-4. 에이전트 키와 별개의 소유자 키 체계
-5. 스마트 컨트랙트에 "pause" 및 "emergency withdraw" 기능 내장
+**Prevention:**
+1. Use `sodium-native` package for secure memory allocation:
+   ```
+   const secureBuffer = sodium.sodium_malloc(32)
+   // ... use for signing ...
+   sodium.sodium_memzero(secureBuffer) // guaranteed zero
+   ```
+   `sodium_malloc` calls `mlock()` (prevents swap), `madvise(MADV_DONTDUMP)` (prevents core dump), and places guard pages around the allocation
+2. Minimize key residence time: decrypt -> sign -> zero, all in the same synchronous call path
+3. Disable swap on daemon host machines (document in setup guide): `swapoff -a`
+4. Set `ulimit -c 0` to prevent core dumps, or configure the daemon to set `prctl(PR_SET_DUMPABLE, 0)` via native addon
+5. Never store the raw private key in a JavaScript variable; always keep it in the `sodium_malloc` buffer
+6. Document that `sodium-native` is a hard dependency for security, not a convenience choice
 
-**관련 단계:** Phase 1 (핵심 컨트랙트), Phase 2 (소유자 권한)
-
----
-
-## 중대한 함정 (Moderate Pitfalls)
-
-지연이나 기술 부채를 유발하는 실수들입니다.
-
-### 함정 7: Solana 계정 검증 실패
-
-**문제 설명:**
-Solana의 163개 보안 감사 분석 결과, 심각한 이슈의 85.5%가 비즈니스 로직, 권한, 검증 오류에서 발생했습니다. Solana에서는 어떤 계정이든 프로그램 함수에 전달될 수 있어, 엄격한 검증 없이는 악의적 입력에 취약합니다.
-
-**왜 발생하는가:**
-- EVM 개발자가 Solana 특성 미숙지
-- 계정 소유권 검증 누락
-- PDA(Program Derived Address) 오용
-
-**결과:**
-- 비인가 계정 접근
-- 프로토콜 조작
-- 자금 탈취
-
-**예방 전략:**
-1. 모든 계정에 대해 소유권, 타입, 주소, 관계 검증
-2. 서명자 검사 필수
-3. `get_associated_token_address`로 ATA 검증
-4. Anchor 프레임워크의 제약 시스템 활용
-5. Soteria 같은 보안 분석 도구 사용
-
-**관련 단계:** Phase 1 (Solana 프로그램 개발)
+**Phase:** Core key management (Phase 1 - signing service implementation)
 
 ---
 
-### 함정 8: SPL 토큰 및 ATA 처리 오류
+### C-04: Localhost Daemon Exploitable via 0.0.0.0 Day and DNS Rebinding Attacks
 
-**문제 설명:**
-Solana의 Associated Token Account(ATA) 시스템은 EVM과 완전히 다릅니다. ATA를 토큰 계정의 소유자로 설정하면 토큰을 영구 손실할 수 있으며, 중첩 ATA 문제로 자금이 잠길 수 있습니다.
+**Severity:** CRITICAL
+**Confidence:** HIGH (Oligo Security research, GitHub Security blog, CVE-2025-8036)
 
-**왜 발생하는가:**
-- "사용자당 민트당 하나의 계정" 모델 미이해
-- ATA가 PDA라서 개인 키가 없다는 점 간과
-- 닫힌 ATA로 토큰 전송
+**What goes wrong:**
+The daemon listens on `localhost:3000` and assumes it is only reachable by local processes. A malicious webpage visited in the user's browser exploits the "0.0.0.0 Day" vulnerability or DNS rebinding to send HTTP requests to the daemon, bypassing browser same-origin policy. The attacker can invoke daemon APIs (list transactions, send funds) if no authentication is required for local access.
 
-**결과:**
-- 토큰 영구 손실
-- 복구 불가능한 자금
-- 사용자 불만
+**How 0.0.0.0 Day works:**
+- Browser PNA (Private Network Access) blocks requests to `127.0.0.1` from public websites
+- But `0.0.0.0` was NOT on the restricted list (patched in Chrome 128-133, Safari 18, Firefox still unpatched)
+- With `mode: "no-cors"`, a public website can POST to `http://0.0.0.0:3000/v1/transactions/send`
+- The daemon processes it as a legitimate localhost request
 
-**예방 전략:**
-1. ATA를 절대 토큰 계정의 소유자로 설정 금지
-2. 토큰 전송 시 동일 민트 주소 확인
-3. ATA 존재 여부 확인 후 생성
-4. 시스템 프로그램 주소만 지갑 주소로 수용
-5. RecoverNested 명령어 이해 및 활용
+**How DNS rebinding works:**
+- Attacker controls `evil.com` which initially resolves to their server
+- After the page loads, DNS is re-resolved to `127.0.0.1`
+- Browser now considers `evil.com` as same-origin with the local daemon
+- Full CORS access to daemon APIs
 
-**관련 단계:** Phase 1 (토큰 처리 로직)
+**Warning signs:**
+- Daemon accepts requests without session token validation on any endpoint
+- No `Host` header validation
+- CORS configured with `Access-Control-Allow-Origin: *`
+- Daemon binds to `0.0.0.0` instead of `127.0.0.1`
 
----
+**Prevention:**
+1. **Bind exclusively to 127.0.0.1**, never `0.0.0.0`:
+   ```typescript
+   server.listen({ port: 3000, host: '127.0.0.1' })
+   ```
+2. **Require session token on ALL endpoints** including balance queries -- no unauthenticated endpoints
+3. **Validate Host header** on every request: reject if not `localhost` or `127.0.0.1`
+4. **Validate Origin header** if present: reject unknown origins
+5. **CORS policy**: do not set `Access-Control-Allow-Origin: *`. Only allow specific known origins (e.g., the Tauri app's custom scheme or `null` for local file origins)
+6. **Implement CSRF tokens** for any state-changing operations accessed from a browser context
+7. **Add PNA headers** to preflight responses for defense against future browser implementations:
+   ```
+   Access-Control-Allow-Private-Network: true
+   ```
 
-### 함정 9: MPC 구현 실수
+**Known affected services:** Ray AI clusters (ShadowRay campaign), Selenium Grid, PyTorch TorchServe, and any unauthenticated localhost service.
 
-**문제 설명:**
-MPC 프로토콜은 복잡하며, 구현, 오케스트레이션, 무작위성의 엔지니어링 실수가 보안을 훼손할 수 있습니다. 복구 복잡성, 지연 시간, 벤더 종속 문제도 존재합니다.
-
-**왜 발생하는가:**
-- MPC가 단일 시드 구문과 달리 다자간 조정 필요
-- 고지연/불안정 네트워크에서 다중 라운드 프로토콜 문제
-- 벤더 간 상호 운용성 부재
-
-**결과:**
-- 보안 약화
-- 운영 지연 (트랜잭션당 100-500ms 추가)
-- 벤더 변경 시 재키잉 필요
-
-**예방 전략:**
-1. 프로덕션 시스템 철저한 감사
-2. 첫날부터 다중 복구 경로 구축
-3. 지역별 서명자 배치로 지연 최소화
-4. 보안 임계값과 운영 연속성 균형
-5. 키 갱신(Key Refresh) 메커니즘 구현
-
-**관련 단계:** Phase 1 (키 관리), Phase 2 (복구 시스템)
+**Phase:** API server setup (Phase 1 - HTTP server configuration). This MUST be implemented from day one, not added later.
 
 ---
 
-### 함정 10: 에이전트 프레임워크 공급망 공격
+### C-05: Session Token with Insufficient Entropy Enables Prediction Attacks
 
-**문제 설명:**
-Barracuda Security 보고서(2025년 11월)에서 공급망 침해로 취약점이 내장된 43개의 에이전트 프레임워크 컴포넌트가 확인되었습니다. 악의적 기여자가 인기 있는 MCP 서버 라이브러리에 백도어를 삽입하면, 해당 라이브러리를 사용하는 모든 에이전트가 은밀한 데이터 유출 채널을 갖게 됩니다.
+**Severity:** CRITICAL
+**Confidence:** HIGH (OWASP Session Management Cheat Sheet, CWE-331, Rapid7 severity upgrade to Critical in 2025)
 
-**왜 발생하는가:**
-- 오픈소스 의존성의 광범위한 사용
-- 의존성 버전 고정 미실시
-- 제3자 라이브러리 보안 검토 부재
+**What goes wrong:**
+Session tokens are generated with insufficient entropy (e.g., timestamp-based, sequential, or using `Math.random()`), allowing attackers to predict valid tokens. Since session tokens in WAIaaS grant transaction signing authority, a predicted token means unauthorized fund transfers.
 
-**결과:**
-- 시크릿 유출
-- 명령어 주입
-- 원격 코드 실행
+**Why it happens:**
+- Using non-cryptographic RNG (`Math.random()`, `Date.now()`)
+- MD5/SHA hashing of predictable inputs (timestamp, incrementing counter) -- the hash output is 128/256 bits but entropy is as low as the input
+- Session ID generated from user-visible data (agent name, IP address)
+- Copying example code from non-security-focused tutorials
 
-**예방 전략:**
-1. 의존성 버전 고정 및 정기 감사
-2. langchain-core 즉시 업그레이드 (1.2.5 또는 0.3.81)
-3. 스트리밍/로그의 역직렬화 감사
-4. 입력 검증 없이 시크릿 해결 비활성화
-5. SBOM(소프트웨어 자재 명세서) 관리
+**Warning signs:**
+- Token generation does not call `crypto.randomBytes()` or equivalent CSPRNG
+- Token format contains recognizable patterns (timestamps, sequential numbers)
+- Tokens shorter than 32 bytes (256 bits)
+- Token generation is deterministic given known inputs
 
-**관련 단계:** Phase 1 (의존성 관리), 전 단계 (지속적 모니터링)
+**Prevention:**
+1. Generate session tokens with minimum 256 bits of cryptographic randomness:
+   ```typescript
+   import { randomBytes } from 'crypto'
+   const sessionToken = `wai_sess_${randomBytes(32).toString('base64url')}`
+   ```
+2. Store server-side as SHA-256 hash (same pattern as API keys in the v0.1 auth model)
+3. Include token metadata (expiry, limits) in server-side storage, not encoded in the token itself (avoid JWT for session tokens -- they cannot be revoked without a blocklist)
+4. Implement token binding: associate token with creating wallet signature, IP range, or TLS channel
+5. Rate-limit authentication attempts: max 5 failed attempts per minute per source
 
----
-
-### 함정 11: 감사 추적 부재
-
-**문제 설명:**
-에이전트 행동이 일반 시스템 활동과 섞이면, 문제 조사가 추측에 의존하게 됩니다. 각 행동을 올바른 사람이나 에이전트에 명확하게 귀속시키는 로그가 필요합니다.
-
-**왜 발생하는가:**
-- 로깅 시스템 설계 시 에이전트 행위자 미고려
-- 사용자와 에이전트 행동 미구분
-- 불충분한 메타데이터 기록
-
-**결과:**
-- 사고 조사 불가
-- 규정 준수 실패
-- 책임 소재 불명확
-
-**예방 전략:**
-1. 전용 에이전트 ID 및 감사 로그 구현
-2. 모든 트랜잭션에 행위자 귀속 메타데이터 포함
-3. 불변 로그 저장소 사용
-4. 실시간 모니터링 대시보드 구축
-
-**관련 단계:** Phase 2 (로깅 시스템), Phase 3 (규정 준수)
+**Phase:** Session auth system (Phase 1 - session token design)
 
 ---
 
-## 경미한 함정 (Minor Pitfalls)
+## High Pitfalls
 
-불편을 유발하지만 수정 가능한 실수들입니다.
-
-### 함정 12: 규정 준수 지연
-
-**문제 설명:**
-2026년까지 EU MiCA가 활성 시행되며, 디지털 자산 서비스 제공자는 전통 은행과 동일한 AML/KYC 표준을 충족해야 합니다. 규정 위반 시 평균 380만 달러의 벌금이 부과됩니다.
-
-**왜 발생하는가:**
-- "나중에 하자" 태도
-- 규제 환경의 빠른 변화 미추적
-- 지갑 제공자의 자금 세탁 방지 의무 인식 부족
-
-**예방 전략:**
-1. 초기 단계부터 KYC/AML 통합 계획
-2. Chainalysis, TRM Labs 등 블록체인 분석 플랫폼 연동
-3. Travel Rule 준수 체계 구축
-4. 법률 자문 조기 확보
-
-**관련 단계:** Phase 3 (규정 준수), Phase 1 (아키텍처 계획)
+Mistakes that cause security degradation, data loss, or significant rework.
 
 ---
 
-### 함정 13: 사용자 복구 경험 복잡성
+### H-01: Time-Lock Bypass via TOCTOU Race Condition in Pending Queue
 
-**문제 설명:**
-사용자는 기기를 잃어버리고 자격 증명을 잊어버립니다. MPC의 경우 키 샤드 복구가 여러 당사자 또는 복구 서비스 조정을 필요로 합니다.
+**Severity:** HIGH
+**Confidence:** MEDIUM (Bitcoin Core race conditions, Compound Timelock patterns, general TOCTOU literature)
 
-**왜 발생하는가:**
-- 복구 시나리오 사용자 테스트 부족
-- 단일 복구 경로만 제공
-- 복구 과정의 UX 미고려
+**What goes wrong:**
+The time-lock mechanism checks transaction amount -> determines delay tier -> places in pending queue. Between the check and the actual blockchain submission, conditions change. Specific attacks:
 
-**예방 전략:**
-1. 다중 복구 경로 제공 (소셜 복구, 백업 키 등)
-2. 복구 과정 단계별 안내 UX
-3. TEE 기반 정교한 복구 흐름 검토
-4. 정기적인 복구 테스트 권장
+1. **Rapid-fire small transactions**: Agent submits 100 transactions of 0.09 SOL each (below the "instant" threshold of 0.1 SOL), draining 9 SOL without triggering any delay
+2. **Session limit exhaustion during pending**: Transaction A (4 SOL) enters 10-min pending queue, leaving 6 SOL session budget. Agent immediately submits Transaction B (6 SOL). When A completes, session budget should have been 2 SOL but both executed
+3. **Cancel-and-resubmit**: Transaction enters pending queue, owner is notified, owner doesn't respond, transaction auto-cancels, agent immediately resubmits -- creating notification fatigue
 
-**관련 단계:** Phase 2 (복구 시스템), Phase 3 (UX 개선)
+**Why it happens:**
+- Balance/limit checks happen at submission time, not at execution time
+- Pending queue doesn't lock the funds being spent (no "reservation" of session budget)
+- No aggregate rate limiting across the instant-execution tier
+- No deduplication or cooldown after auto-cancel
 
----
+**Warning signs:**
+- Session budget is checked only at transaction creation, not at signing time
+- No "reserved" or "locked" amount tracking for pending transactions
+- Instant-tier transactions have no aggregate limit
+- No per-minute or per-hour rate limit for instant transactions
 
-### 함정 14: 멀티 에이전트 신뢰 악용
+**Prevention:**
+1. **Reserve session budget at submission time**: When a transaction enters the pending queue, deduct its amount from the available session budget immediately. If the transaction is canceled, refund the reservation
+2. **Re-validate at execution time**: When a pending transaction's delay expires, re-check ALL constraints (balance, session limit, per-tx limit) before signing
+3. **Aggregate rate limit on instant tier**: Max 5 instant transactions per 10-minute window, and max 0.5 SOL aggregate per 10-minute window for instant tier
+4. **Cooldown after cancel**: 5-minute cooldown before re-submitting a transaction that was canceled (by owner or timeout)
+5. **Atomic check-and-execute**: Use database transactions with serializable isolation to make limit checks and budget deductions atomic:
+   ```sql
+   BEGIN;
+   SELECT remaining_budget FROM sessions WHERE id = ? FOR UPDATE;
+   -- check if sufficient
+   UPDATE sessions SET remaining_budget = remaining_budget - ? WHERE id = ?;
+   INSERT INTO pending_transactions ...;
+   COMMIT;
+   ```
 
-**문제 설명:**
-에이전트 간 신뢰를 악용하여 공격자가 AI 피드백 루프를 생성할 수 있습니다. Agent A가 Agent B에게 더 많은 권한을 부여하고, 그 반대도 마찬가지로 발생하여 둘 다 안전 제약에서 벗어날 수 있습니다.
-
-**왜 발생하는가:**
-- 에이전트 간 통신의 암묵적 신뢰
-- 권한 상승 검증 부재
-- 피드백 루프 감지 메커니즘 없음
-
-**예방 전략:**
-1. 에이전트 간 제로 트러스트 원칙 적용
-2. 권한 상승 요청 독립 검증
-3. 순환 참조 및 피드백 루프 감지 로직
-4. 에이전트별 격리된 권한 경계
-
-**관련 단계:** Phase 3 (멀티 에이전트 시나리오)
-
----
-
-## 단계별 함정 경고
-
-| 개발 단계 | 주요 함정 | 완화 전략 |
-|-----------|-----------|-----------|
-| Phase 1: 핵심 인프라 | 키 노출, Solana 계정 검증, ATA 오류 | MPC/TEE 키 관리, 철저한 계정 검증, ATA 처리 규칙 준수 |
-| Phase 2: 에이전트 인증 | 프롬프트 인젝션, 과도한 권한, API 키 탈취 | OAuth 2.1, 세분화된 권한, 동적 시크릿 관리 |
-| Phase 3: 트랜잭션 제어 | 제어 부재, 감사 추적 부재, 자율 루프 | 지출 한도, 속도 제한, 포괄적 로깅 |
-| Phase 4: 소유자 기능 | 자금 회수 불가, 복구 복잡성 | 비상 회수 메커니즘, 다중 복구 경로 |
-| Phase 5: 규정 준수 | KYC/AML 미준수, Travel Rule 위반 | 조기 규정 준수 계획, 블록체인 분석 도구 연동 |
-| 전 단계 | 공급망 공격, 프레임워크 취약점 | 의존성 감사, 버전 고정, 보안 패치 즉시 적용 |
+**Phase:** Time-lock system (Phase 2 - pending transaction queue)
 
 ---
 
-## 핵심 교훈 요약
+### H-02: SQLite Corruption Under Concurrent Daemon Operations
 
-1. **아무것도 신뢰하지 마라**: LLM 출력, 전달된 계정, 서명자, 데이터 모두 명시적으로 검증
-2. **최소 권한 원칙**: 에이전트에게 필요한 최소한의 권한만 부여
-3. **다층 방어**: 단일 보안 계층에 의존하지 말고 여러 계층의 보호 구현
-4. **소유자 우선**: 에이전트 자율성보다 소유자의 자금 통제권 우선
-5. **조기 규정 준수**: 규정 준수를 나중으로 미루지 말고 초기부터 계획
-6. **지속적 감시**: 에이전트 행동에 대한 실시간 모니터링 및 이상 탐지
-7. **복구 우선 설계**: 장애 시나리오를 먼저 고려하고 복구 메커니즘 설계
+**Severity:** HIGH
+**Confidence:** HIGH (SQLite official docs, better-sqlite3 documentation)
+
+**What goes wrong:**
+The daemon uses SQLite for transaction history, session state, and policy configuration. Multiple concurrent operations (agent API calls, pending transaction processing, notification delivery, owner approvals) write to the database simultaneously, causing `SQLITE_BUSY` errors, data loss, or database corruption.
+
+**Why it happens:**
+- SQLite in default journal mode allows only one writer at a time; readers block during writes
+- WAL mode helps but still limits to a single writer -- concurrent write attempts get `SQLITE_BUSY`
+- `better-sqlite3` is synchronous; long-running queries block the entire Node.js event loop
+- Database file on network filesystem (NFS, SMB) breaks POSIX file locking, causing silent corruption
+- Separating WAL file from database file (e.g., during backup) loses committed transactions
+
+**Warning signs:**
+- `SQLITE_BUSY` errors in logs
+- `database is locked` error messages
+- WAL file growing unboundedly (checkpoint starvation)
+- Database file on a Docker volume backed by NFS
+- Backup scripts that copy only the `.db` file without `.db-wal` and `.db-shm`
+
+**Prevention:**
+1. **Enable WAL mode immediately on database open**:
+   ```typescript
+   db.pragma('journal_mode = WAL')
+   db.pragma('busy_timeout = 5000')  // 5s wait on lock contention
+   db.pragma('synchronous = NORMAL') // safe with WAL, much faster
+   ```
+2. **Single database connection per process**: Use one `better-sqlite3` instance shared across the daemon. It is synchronous and thread-safe within a single Node.js process
+3. **Wrap related writes in transactions**: All budget-check-and-deduct operations must be in a single transaction
+4. **Periodic WAL checkpoints**: Run `db.pragma('wal_checkpoint(TRUNCATE)')` periodically (every 5 minutes or every 1000 writes) to prevent WAL file growth
+5. **Never run on network filesystems**: Document that `~/.waiaas/data/` MUST be on a local filesystem
+6. **Atomic backup**: Use SQLite's `.backup()` API or `VACUUM INTO` to create consistent backups, never copy files directly:
+   ```typescript
+   db.backup(`${backupDir}/waiaas-${Date.now()}.db`)
+   ```
+7. **If multi-process is needed later** (e.g., separate notification worker), use a single process as database gatekeeper or switch to PostgreSQL
+
+**Phase:** Database setup (Phase 1 - storage layer initialization)
 
 ---
 
-## 출처
+### H-03: Owner Wallet Signature Replay Allows Unauthorized Session Creation
 
-### 고신뢰도 (HIGH Confidence)
-- [Solana Security Ecosystem Review 2025](https://solanasec25.sec3.dev/)
-- [Helius - Hitchhiker's Guide to Solana Program Security](https://www.helius.dev/blog/a-hitchhikers-guide-to-solana-program-security)
-- [Sec3 - Two Caveats of SPL Associated Token Account](https://www.sec3.dev/blog/two-caveats-spl)
-- [Cantina - Securing Solana Developer Guide](https://cantina.xyz/blog/securing-solana-a-developers-guide)
+**Severity:** HIGH
+**Confidence:** MEDIUM (general signature replay patterns, wallet adapter security model)
 
-### 중신뢰도 (MEDIUM Confidence)
-- [Cointelegraph - AI agents crypto vulnerability](https://cointelegraph.com/news/ai-agents-poised-crypto-major-vulnerability)
-- [Airia - AI Security 2026 Prompt Injection](https://airia.com/ai-security-in-2026-prompt-injection-the-lethal-trifecta-and-how-to-defend/)
-- [OWASP AI Agent Security Top 10 2026](https://medium.com/@oracle_43885/owasps-ai-agent-security-top-10-agent-security-risks-2026-fc5c435e86eb)
-- [Stytch - Agent-to-agent OAuth Guide](https://stytch.com/blog/agent-to-agent-oauth-guide/)
-- [WorkOS - OAuth for AI Agents 2025](https://workos.com/blog/best-oauth-oidc-providers-for-authenticating-ai-agents-2025)
-- [Alchemy - MPC Wallets Guide 2025](https://www.alchemy.com/overviews/what-is-a-multi-party-computation-mpc-wallet)
-- [Google Cloud - Agent Payments Protocol AP2](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol)
-- [LangChain LangGrinch CVE-2025-68664](https://cyata.ai/blog/langgrinch-langchain-core-cve-2025-68664/)
-- [TRM Labs - Crypto AML Compliance 2026](https://www.trmlabs.com/resources/blog/what-is-the-best-crypto-aml-and-compliance-solution-in-2026)
-- [KYC Chain - 2026 Compliance Trends](https://kyc-chain.com/kyc-aml-trends-2026/)
+**What goes wrong:**
+The owner signs a message to approve a session. This signed message is replayed by an attacker (or a compromised agent) to create additional unauthorized sessions. The daemon accepts the replay because it only verifies the signature is valid, not that it is fresh.
 
-### 저신뢰도 (LOW Confidence - 추가 검증 필요)
-- [Medium - AI Agents Want Your Crypto Wallet](https://medium.com/@casi.borg/ai-agents-want-your-crypto-wallet-but-can-you-trust-them-46cdef42134a)
-- [AInvest - Crypto 2025 Security Collapse](https://www.ainvest.com/news/crypto-2025-security-collapse-lessons-opportunities-2026-2512/)
+**Why it happens:**
+- Sign message contains no nonce or timestamp: `"Approve session for agent-1"`
+- Daemon does not track which signed messages have already been used
+- No expiration on the signed approval message itself
+- Message format doesn't bind to a specific session creation request
+
+**Warning signs:**
+- Same signed message can be submitted to `/v1/sessions` multiple times, each creating a new session
+- Signed message payload does not include timestamp, nonce, or request ID
+- No used-nonce storage or deduplication
+- Session creation logs show multiple sessions with identical signatures
+
+**Prevention:**
+1. **Include a nonce in every sign request**: Generate a random nonce server-side, include it in the message the owner signs:
+   ```
+   WAIaaS Session Approval
+   Agent: agent-xyz
+   Nonce: a1b2c3d4e5f6
+   Timestamp: 2026-02-05T12:00:00Z
+   Limits: 10 SOL / 24hr
+   ```
+2. **Store used nonces**: Track consumed nonces in the database. Reject any signature with a previously-seen nonce
+3. **Expiration on the approval itself**: The nonce-bearing message is valid for only 5 minutes. After that, the owner must sign a new message
+4. **Bind to session parameters**: The signed message must include the exact session constraints (expiry, limits, allowed operations). Changing any parameter requires a new signature
+
+**Phase:** Session auth system (Phase 2 - owner approval flow)
+
+---
+
+### H-04: Clipboard Hijacking and Address Substitution During Wallet Operations
+
+**Severity:** HIGH
+**Confidence:** HIGH (Trust Wallet advisory, Halborn research, multiple real-world incidents)
+
+**What goes wrong:**
+When the owner copies a recipient address to paste into the daemon UI (desktop app or CLI), clipboard hijacking malware (clipper malware) replaces the address with an attacker-controlled address. Funds are sent to the wrong destination. Solana addresses are Base58 strings that are difficult for humans to fully verify visually.
+
+**Known malware families:** CryptoShuffler, Laplas Clipper (supports Solana, Ethereum, Bitcoin + 15 other chains), Android/Clipper.C (was in Google Play Store impersonating MetaMask).
+
+**Why it happens:**
+- Any application on the system can read and write the clipboard (OS design, not a bug)
+- Users copy-paste wallet addresses because they are too long to type
+- Laplas generates lookalike addresses (matching first/last characters) making visual comparison unreliable
+- Desktop app (Electron/Tauri) does not validate or warn about address changes
+
+**Warning signs:**
+- User reports that the pasted address differs from what they copied
+- Transaction sent to an address not in the user's address book
+- Antivirus detects clipboard monitoring process
+
+**Prevention:**
+1. **Address book with verification**: Require all recipient addresses to be pre-registered in an address book. Flag any address not in the address book with a prominent warning
+2. **Address confirmation UI**: Show the full address character-by-character in a monospace font with visual grouping (4-char blocks). Highlight characters that differ from the last-used address for this recipient
+3. **Clipboard clearing**: After pasting an address, immediately clear the clipboard:
+   ```typescript
+   navigator.clipboard.writeText('')
+   ```
+4. **Direct QR/WalletConnect input**: Prefer QR code scanning or WalletConnect deep links over clipboard-based address input
+5. **Whitelist enforcement**: In policy engine, restrict transactions to pre-approved addresses only. Any address outside the whitelist requires owner approval (time-lock tier)
+
+**Phase:** Desktop app and owner interface (Phase 3 - transaction UX)
+
+---
+
+### H-05: Encrypted Key File Metadata Leaks Information
+
+**Severity:** HIGH
+**Confidence:** MEDIUM (oByte wallet cleartext key in logs, general encrypted storage patterns)
+
+**What goes wrong:**
+While the private key itself is encrypted, surrounding metadata leaks sensitive information:
+- The encrypted key filename reveals it contains a private key (`~/.waiaas/data/agent-key.enc`)
+- File timestamps reveal when the daemon last started (decryption time = file access time)
+- SQLite database stores wallet addresses in plaintext, correlating the daemon to specific on-chain wallets
+- Log files contain partial key material, derivation parameters, or debug output from signing operations
+- Environment variables contain session tokens in shell history
+
+**Why it happens:**
+- Focus on encrypting the key itself while ignoring everything around it
+- Debug logging enabled in production that logs function arguments
+- File naming conventions that make sensitive files obvious targets
+- Not considering that `~/.waiaas/` directory listing reveals system architecture
+
+**Warning signs:**
+- `ls ~/.waiaas/` reveals files named `private-key.*`, `seed.*`, or `keystore.*`
+- Log files contain hexadecimal strings that look like keys or tokens
+- `env` or `printenv` shows session tokens
+- SQLite database is readable with any SQLite browser, revealing all wallet addresses and transaction history
+
+**Prevention:**
+1. **Opaque filenames**: Name encrypted files generically: `store.dat`, not `private-key.enc`
+2. **No key material in logs**: Set log level to `warn` in production. Implement a log sanitizer that redacts any string matching key/token patterns. Never log function arguments for crypto operations
+3. **Encrypt the entire data directory**: Consider encrypting the SQLite database file itself (via SQLCipher or application-level encryption for sensitive columns)
+4. **Secure log storage**: Rotate logs, set restrictive permissions (`0600`), and exclude from backup tools that sync to cloud
+5. **Environment variable hygiene**: Never pass session tokens via environment variables in shell. Use a file-based token store with `0600` permissions
+
+**Phase:** Key management and storage (Phase 1 - file layout design)
+
+---
+
+## Moderate Pitfalls
+
+Mistakes that cause delays, degraded UX, or technical debt.
+
+---
+
+### M-01: Notification System Silent Failures Create False Sense of Security
+
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (Discord/Telegram API documentation, webhook reliability data)
+
+**What goes wrong:**
+The kill switch depends on the owner receiving timely notifications. Notifications fail silently due to rate limiting (Discord: 30 req/min, Telegram: 30 msg/sec), expired webhooks, network issues, or message size limits. The owner believes they will be alerted but receives nothing during a critical event.
+
+**Specific failure modes:**
+- Discord webhook returns 429 (rate limited) during burst of suspicious transactions -- alerts are dropped
+- Telegram bot silently stops receiving webhook callbacks (reported late 2025, no error surfaced)
+- Push notification service (ntfy.sh) is down -- no fallback
+- Message body too long for Telegram (4096 char limit) -- HTTP 400, notification lost
+
+**Warning signs:**
+- No health checks on notification channels
+- No delivery confirmation tracking
+- Only one notification channel configured
+- No retry logic for failed deliveries
+- Rate limit headers from Discord/Telegram not checked
+
+**Prevention:**
+1. **Require minimum 2 notification channels**: Daemon refuses to start in production with fewer than 2 configured channels
+2. **Delivery confirmation tracking**: Log every notification attempt with success/failure status. Alert the owner (via a different channel) if a channel has failed 3 times consecutively
+3. **Exponential backoff with retry**: Respect `Retry-After` headers. Queue failed notifications for retry (up to 3 attempts with backoff)
+4. **Message batching**: Aggregate rapid-fire alerts into a single notification per 30-second window to avoid rate limits
+5. **Health checks**: Ping each notification channel on daemon startup and every 30 minutes. Surface channel health in daemon status/dashboard
+6. **Fallback escalation**: If primary channel fails, immediately attempt all secondary channels. If ALL channels fail, the daemon should enter a defensive mode (reduce session limits by 50%, require explicit owner presence for any transaction)
+
+**Phase:** Notification system (Phase 2 - multi-channel alerts)
+
+---
+
+### M-02: Chain-Agnostic Abstraction Leaks Chain-Specific Semantics
+
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (multi-chain development patterns, chain abstraction literature)
+
+**What goes wrong:**
+The `ChainAdapter` interface (`createWallet`, `getBalance`, `signTransaction`, `broadcastTransaction`) hides critical chain-specific differences that affect security and correctness:
+
+- **Finality**: Solana "confirmed" (2-3 seconds) vs Ethereum "finalized" (12+ minutes). Checking balance after Solana "confirmed" may show funds that later roll back
+- **Fee model**: Solana compute units vs EVM gas. Estimation is fundamentally different. Under-estimating causes tx failure; over-estimating wastes funds
+- **Address format**: Solana Base58 (32 bytes) vs Ethereum hex (20 bytes). Address validation logic is chain-specific
+- **Token model**: Solana SPL token accounts (separate per mint) vs ERC-20 (single contract). "Get balance" means different API calls
+- **Nonce handling**: EVM requires sequential nonces for transaction ordering. Solana uses recent blockhash (no nonce). This affects retry and cancellation logic
+- **Transaction simulation**: Both chains support simulation but with different APIs and failure modes
+
+**Warning signs:**
+- `ChainAdapter` interface has no method for checking finality
+- Balance check does not specify confirmation level
+- Error handling is generic (`TransactionFailed`) without chain-specific error codes
+- No way to cancel or speed up a pending transaction (EVM-specific)
+- Token transfers use the same code path for native tokens and SPL/ERC-20
+
+**Prevention:**
+1. **Finality-aware interface**: Add confirmation level to all reads:
+   ```typescript
+   interface ChainAdapter {
+     getBalance(address: string, confirmationLevel: 'pending' | 'confirmed' | 'finalized'): Promise<Balance>
+   }
+   ```
+2. **Chain-specific error types**: Map chain errors to domain errors that preserve the original:
+   ```typescript
+   class InsufficientFeeError extends TransactionError {
+     constructor(public chain: string, public requiredFee: bigint, public nativeError: unknown) {}
+   }
+   ```
+3. **Separate token adapter**: Do not force native transfers and token transfers into the same method. SPL token transfers require ATA (Associated Token Account) creation, which has no EVM equivalent
+4. **Simulation before signing**: Make transaction simulation a required step in the adapter, not optional
+5. **Start with Solana only**: Implement the Solana adapter completely, including edge cases. Only then design the abstract interface by extracting commonalities. Do NOT design the interface first and force both chains to fit
+
+**Phase:** Chain adapter (Phase 2 - Solana adapter implementation, before EVM adapter)
+
+---
+
+### M-03: Browser-to-Daemon Communication Lacks Mutual Authentication
+
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (wallet adapter patterns, localhost security research)
+
+**What goes wrong:**
+The owner connects their browser wallet (Phantom, MetaMask) to the local daemon for session approval and transaction signing. This communication path has several weaknesses:
+
+1. **No HTTPS on localhost**: Browser sends wallet signatures over unencrypted HTTP. While localhost traffic doesn't traverse the network, other local processes can sniff it via loopback interface capture
+2. **Extension impersonation**: A malicious browser extension can intercept wallet adapter calls, modify the message before signing, or capture the signed result
+3. **Origin confusion**: The daemon's local web UI runs on `http://localhost:3000`. Another local app or malicious page could also open `localhost:3000` and interact with the UI if session cookies are used
+
+**Warning signs:**
+- Daemon accepts wallet connection requests without verifying the connecting UI is the legitimate Tauri app
+- No request signing or HMAC between browser UI and daemon API
+- Session cookies used for owner authentication on localhost (vulnerable to CSRF from other local pages)
+- Wallet adapter messages do not include the daemon's identity or session ID
+
+**Prevention:**
+1. **Tauri IPC instead of HTTP for desktop app**: Use Tauri's native `invoke` commands (Rust backend) instead of HTTP. This eliminates the entire browser-to-localhost attack surface for the desktop app path
+2. **For the browser path**: Generate a per-session CSRF token on daemon startup. Include it in all browser-to-daemon requests
+3. **Message binding**: Include the daemon's instance ID and request nonce in the message the owner signs:
+   ```
+   WAIaaS Approval
+   Daemon: d-1a2b3c (instance ID displayed in tray icon)
+   Action: Approve transaction 0.5 SOL to [address]
+   Nonce: [server-generated]
+   ```
+4. **Consider mTLS for advanced setup**: For Docker/server deployments where the owner connects remotely, use mutual TLS with client certificates
+
+**Phase:** Owner wallet connection (Phase 2 - wallet adapter integration)
+
+---
+
+### M-04: Kill Switch Fails When Daemon Process Is Compromised
+
+**Severity:** MEDIUM
+**Confidence:** LOW-MEDIUM (architectural reasoning, no specific incident found for local daemons)
+
+**What goes wrong:**
+The kill switch is implemented as a daemon API endpoint (`POST /v1/owner/kill-switch`). If the daemon process is compromised (code injection, dependency supply chain attack), the attacker can:
+1. Disable the kill switch handler
+2. Continue processing transactions while reporting "frozen" status
+3. Suppress notification delivery
+4. Modify policy checks to approve all transactions
+
+The owner believes the system is frozen, but the attacker is actively draining funds.
+
+**Why it happens:**
+- Kill switch, policy engine, signing service, and notification system all run in the same process
+- No out-of-band verification that the daemon is actually in a frozen state
+- No hardware-backed integrity check on daemon state
+
+**Warning signs:**
+- All security layers run in a single Node.js process
+- No external health monitor that can verify daemon state
+- No way for the owner to verify the daemon's claimed state matches reality
+- No blockchain-level spending controls (unlike v0.1's Squads on-chain limits)
+
+**Prevention:**
+1. **On-chain verification of pending transactions**: After the kill switch is activated, the owner should verify on-chain that no new transactions are being submitted from the agent wallet address. The daemon's dashboard should show live blockchain state, not just internal state
+2. **External watchdog process**: Run a separate lightweight process that monitors the agent wallet address on-chain. If transactions appear after kill switch activation, this watchdog sends alerts via its own (separate) notification channels
+3. **Key deletion as ultimate kill**: The kill switch should have a "nuclear" option that deletes the decrypted key from memory AND overwrites the encrypted key file. This makes recovery harder but guarantees the daemon cannot sign more transactions
+4. **Document the trust boundary**: Clearly document that the kill switch protects against agent misbehavior, NOT daemon process compromise. For process compromise, the defense is: shutdown the daemon, revoke session tokens, move funds using the owner wallet directly
+
+**Phase:** Kill switch and monitoring (Phase 3 - defense-in-depth measures)
+
+---
+
+### M-05: Daemon Auto-Start and Persistence Create Unmonitored Execution Windows
+
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (desktop daemon patterns, operational security)
+
+**What goes wrong:**
+The daemon is configured to auto-start on boot (systemd service, launchd plist, Windows startup). It begins processing agent requests immediately, before the owner has verified system integrity or checked for security updates. During this unmonitored window:
+- Stale session tokens may still be valid
+- Pending transactions from before shutdown may auto-execute
+- A compromised daemon (from prior attack) restarts with the same compromised code
+
+**Warning signs:**
+- Daemon starts silently without owner presence confirmation
+- Sessions survive daemon restart
+- Pending transactions resume without re-approval
+- No startup integrity check
+
+**Prevention:**
+1. **Require owner presence on first start**: After boot, daemon enters "locked" mode. Owner must actively unlock (e.g., enter password or connect wallet) before any transactions are processed. Balance queries can remain available
+2. **Session invalidation on restart**: All active sessions are invalidated when the daemon restarts. Agents must request new sessions
+3. **Pending transaction purge**: All pending (unexecuted) transactions are canceled on daemon restart. They can be resubmitted by the agent after session re-creation
+4. **Startup integrity check**: On start, verify checksums of daemon binary and configuration files. Alert if they differ from expected values
+
+**Phase:** Daemon lifecycle (Phase 1 - startup and shutdown procedures)
+
+---
+
+## Minor Pitfalls
+
+Annoyances and edge cases that are fixable but should be known.
+
+---
+
+### L-01: SQLite Busy Timeout Too Low Causes Spurious Transaction Failures
+
+**Severity:** LOW
+**Confidence:** HIGH (SQLite documentation, better-sqlite3 docs)
+
+**What goes wrong:**
+Default SQLite busy timeout is 0ms (immediate failure). When two operations contend for the write lock (e.g., agent transaction + owner approval happening simultaneously), one gets `SQLITE_BUSY` and the transaction fails. The agent sees an error and retries, creating unnecessary noise and potential rate limit triggers.
+
+**Prevention:**
+Set `busy_timeout` to at least 5000ms. Wrap retryable database operations in application-level retry with exponential backoff. This is a one-line fix but easy to forget.
+
+**Phase:** Database setup (Phase 1)
+
+---
+
+### L-02: Tauri App Cannot Access Hardware Wallets via WebUSB
+
+**Severity:** LOW
+**Confidence:** MEDIUM (Tauri/WebView limitations, Ledger SDK docs)
+
+**What goes wrong:**
+Tauri uses the system WebView (not Chromium) which may lack WebUSB/WebHID support needed for direct Ledger/Trezor hardware wallet communication. The owner cannot use their hardware wallet for session approvals.
+
+**Prevention:**
+Use Tauri's Rust backend to communicate with hardware wallets via native USB libraries (e.g., `hidapi` crate) instead of WebUSB. Alternatively, use WalletConnect as the bridge between hardware wallets and the daemon. Document supported connection methods clearly.
+
+**Phase:** Desktop app and hardware wallet support (Phase 3)
+
+---
+
+### L-03: Agent SDK Exposes Session Token in Process Environment
+
+**Severity:** LOW
+**Confidence:** MEDIUM (standard practice observation)
+
+**What goes wrong:**
+The TypeScript/Python SDK documentation shows `process.env.WAIAAS_SESSION` as the recommended way to pass session tokens. Environment variables are:
+- Visible in `/proc/[pid]/environ` on Linux
+- Logged by some deployment tools
+- Inherited by child processes
+- Visible in crash reports
+
+**Prevention:**
+Recommend file-based token storage (`~/.waiaas/session-token` with `0600` permissions) as the primary method. Support environment variables as a convenience option but document the security tradeoff. The MCP server integration should read from the file by default.
+
+**Phase:** SDK and MCP integration (Phase 3)
+
+---
+
+## Phase-Specific Warning Summary
+
+| Phase | Critical Pitfalls | High Pitfalls | Key Focus Area |
+|-------|------------------|---------------|----------------|
+| **Phase 1: Core Infrastructure** | C-01, C-02, C-03, C-04, C-05 | H-02, H-05 | Get encryption, key storage, localhost security, and session tokens RIGHT from day one. These cannot be safely retrofitted |
+| **Phase 2: Security Layers** | - | H-01, H-03, M-01, M-02 | Time-lock race conditions, owner approval replay, notification reliability |
+| **Phase 3: Owner Experience** | - | H-04, M-03, M-04 | Clipboard attacks, browser-daemon auth, kill switch integrity |
+| **All Phases** | - | - | Supply chain attacks on dependencies (npm audit, lockfile, SBOM) |
+
+---
+
+## Known Incidents Reference
+
+| Incident | Relevance | Lesson |
+|----------|-----------|--------|
+| **0.0.0.0 Day** (Oligo Security, 2024) | Direct -- localhost daemon exploitable via browser | Always authenticate localhost endpoints, validate Host headers |
+| **oByte Wallet** (Blaze InfoSec) | Direct -- private key in cleartext logs | Never log crypto material, sanitize all log output |
+| **LastPass Breach** ($438M+ losses) | Analogous -- encrypted vault stolen, cracked offline | Argon2id parameters must resist offline brute force for years |
+| **DEXX Incident** ($30M+, 8620 Solana wallets) | Analogous -- centralized key management failure | Even self-hosted, key management is the #1 attack surface |
+| **Frame.sh Audit** (Cure53/Doyensec) | Positive example -- only 2 Low vulns found | Desktop wallet daemon CAN be secure with proper engineering |
+| **ShadowRay Campaign** | Direct -- AI services on localhost exploited | Daemon + AI agent combo is a known target pattern |
+| **CVE-2025-59956** (Coder AgentAPI) | Direct -- DNS rebinding on localhost agent API | Validate Host/Origin headers on all local HTTP servers |
+| **Laplas Clipper** (2023-present) | Direct -- clipboard hijacking with lookalike Solana addresses | Address whitelisting and verification UI are essential |
+
+---
+
+## Sources
+
+### HIGH Confidence
+- [SQLite WAL Documentation](https://sqlite.org/wal.html)
+- [SQLite File Locking](https://sqlite.org/lockingv3.html)
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+- [RFC 9106 - Argon2](https://www.rfc-editor.org/rfc/rfc9106.html)
+- [RFC 8452 - AES-GCM-SIV](https://www.rfc-editor.org/rfc/rfc8452.html)
+- [Libsodium Secure Memory](https://libsodium.gitbook.io/doc/memory_management)
+- [Node.js Issue #18896 - crypto.alloc()](https://github.com/nodejs/node/issues/18896)
+- [Node.js Issue #30956 - Secure Memory](https://github.com/nodejs/node/issues/30956)
+- [better-sqlite3 Performance](https://wchargin.com/better-sqlite3/performance.html)
+- [Frame Security Audit FRM-01](https://medium.com/@framehq/frame-security-audit-frm-01-7a90975992af)
+
+### MEDIUM Confidence
+- [Oligo Security - 0.0.0.0 Day](https://www.oligo.security/blog/0-0-0-0-day-exploiting-localhost-apis-from-the-browser)
+- [GitHub Blog - Localhost CORS and DNS Rebinding](https://github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/)
+- [GitHub Blog - DNS Rebinding Attacks Explained](https://github.blog/security/application-security/dns-rebinding-attacks-explained-the-lookup-is-coming-from-inside-the-house/)
+- [elttam - Key Recovery Attacks on GCM](https://www.elttam.com/blog/key-recovery-attacks-on-gcm/)
+- [Halborn - Clipper Malware](https://www.halborn.com/blog/post/clipper-malware-how-hackers-steal-crypto-with-clipboard-hijacking)
+- [Trust Wallet - Clipboard Hijacking](https://trustwallet.com/blog/security/clipboard-hijacking-attacks-how-to-prevent-them)
+- [arXiv - Evaluating Argon2 Adoption (2025)](https://arxiv.org/html/2504.17121v1)
+- [CVE-2025-59956 - Coder AgentAPI DNS Rebinding](https://www.miggo.io/vulnerability-database/cve/CVE-2025-59956)
+- [Blaze InfoSec - Crypto Wallet Vulnerabilities](https://www.blazeinfosec.com/post/vulnerabilities-crypto-wallets/)
+- [CWE-331 - Insufficient Entropy](https://cwe.mitre.org/data/definitions/331.html)
+- [Discord Webhook Rate Limits](https://birdie0.github.io/discord-webhooks-guide/other/rate_limits.html)
+
+### LOW Confidence (needs further validation)
+- Telegram webhook silent failure reports (community forums, late 2025)
+- Specific swap file key extraction techniques (theoretical, no Node.js-specific PoC found)
+- Kill switch bypass via daemon process compromise (architectural reasoning, no known incident)
