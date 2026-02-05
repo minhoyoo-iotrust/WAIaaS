@@ -125,40 +125,40 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KEYS-01 | Phase 6: Core Daemon | Pending |
-| KEYS-02 | Phase 6: Core Daemon | Pending |
-| KEYS-03 | Phase 6: Core Daemon | Pending |
-| KEYS-04 | Phase 6: Core Daemon | Pending |
-| SESS-01 | Phase 7: Session & Transaction | Pending |
-| SESS-02 | Phase 7: Session & Transaction | Pending |
-| SESS-03 | Phase 7: Session & Transaction | Pending |
-| SESS-04 | Phase 7: Session & Transaction | Pending |
-| SESS-05 | Phase 7: Session & Transaction | Pending |
-| LOCK-01 | Phase 8: Security Layers | Pending |
-| LOCK-02 | Phase 8: Security Layers | Pending |
-| LOCK-03 | Phase 8: Security Layers | Pending |
-| LOCK-04 | Phase 8: Security Layers | Pending |
-| NOTI-01 | Phase 8: Security Layers | Pending |
-| NOTI-02 | Phase 8: Security Layers | Pending |
-| NOTI-03 | Phase 8: Security Layers | Pending |
-| NOTI-04 | Phase 8: Security Layers | Pending |
-| NOTI-05 | Phase 8: Security Layers | Pending |
-| OWNR-01 | Phase 8: Security Layers | Pending |
-| OWNR-02 | Phase 8: Security Layers | Pending |
-| OWNR-03 | Phase 8: Security Layers | Pending |
-| CHAIN-01 | Phase 6: Core Daemon | Pending |
-| CHAIN-02 | Phase 7: Session & Transaction | Pending |
-| CHAIN-03 | Phase 8: Security Layers | Pending |
-| API-01 | Phase 6: Core Daemon | Pending |
-| API-02 | Phase 7: Session & Transaction | Pending |
-| API-03 | Phase 7: Session & Transaction | Pending |
-| API-04 | Phase 7: Session & Transaction | Pending |
-| API-05 | Phase 8: Security Layers | Pending |
-| API-06 | Phase 6: Core Daemon | Pending |
-| CLI-01 | Phase 6: Core Daemon | Pending |
-| CLI-02 | Phase 6: Core Daemon | Pending |
-| CLI-03 | Phase 6: Core Daemon | Pending |
-| CLI-04 | Phase 6: Core Daemon | Pending |
+| KEYS-01 | Phase 6: Core Daemon | Complete |
+| KEYS-02 | Phase 6: Core Daemon | Complete |
+| KEYS-03 | Phase 6: Core Daemon | Complete |
+| KEYS-04 | Phase 6: Core Daemon | Complete |
+| SESS-01 | Phase 7: Session & Transaction | Complete |
+| SESS-02 | Phase 7: Session & Transaction | Complete |
+| SESS-03 | Phase 7: Session & Transaction | Complete |
+| SESS-04 | Phase 7: Session & Transaction | Complete |
+| SESS-05 | Phase 7: Session & Transaction | Complete |
+| LOCK-01 | Phase 8: Security Layers | Complete |
+| LOCK-02 | Phase 8: Security Layers | Complete |
+| LOCK-03 | Phase 8: Security Layers | Complete |
+| LOCK-04 | Phase 8: Security Layers | Complete |
+| NOTI-01 | Phase 8: Security Layers | Complete |
+| NOTI-02 | Phase 8: Security Layers | Complete |
+| NOTI-03 | Phase 8: Security Layers | Complete |
+| NOTI-04 | Phase 8: Security Layers | Complete |
+| NOTI-05 | Phase 8: Security Layers | Complete |
+| OWNR-01 | Phase 8: Security Layers | Complete |
+| OWNR-02 | Phase 8: Security Layers | Complete |
+| OWNR-03 | Phase 8: Security Layers | Complete |
+| CHAIN-01 | Phase 6: Core Daemon | Complete |
+| CHAIN-02 | Phase 7: Session & Transaction | Complete |
+| CHAIN-03 | Phase 8: Security Layers | Complete |
+| API-01 | Phase 6: Core Daemon | Complete |
+| API-02 | Phase 7: Session & Transaction | Complete |
+| API-03 | Phase 7: Session & Transaction | Complete |
+| API-04 | Phase 7: Session & Transaction | Complete |
+| API-05 | Phase 8: Security Layers | Complete |
+| API-06 | Phase 6: Core Daemon | Complete |
+| CLI-01 | Phase 6: Core Daemon | Complete |
+| CLI-02 | Phase 6: Core Daemon | Complete |
+| CLI-03 | Phase 6: Core Daemon | Complete |
+| CLI-04 | Phase 6: Core Daemon | Complete |
 | SDK-01 | Phase 9: Integration & Polish | Pending |
 | SDK-02 | Phase 9: Integration & Polish | Pending |
 | MCP-01 | Phase 9: Integration & Polish | Pending |
@@ -178,4 +178,4 @@
 
 ---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after roadmap creation*
+*Last updated: 2026-02-05 (Phase 8 complete — 34/45 requirements done)*
