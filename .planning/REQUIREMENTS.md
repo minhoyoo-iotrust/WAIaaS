@@ -1,7 +1,7 @@
 # Requirements: WAIaaS v0.2 Self-Hosted Secure Wallet
 
 **Defined:** 2026-02-05
-**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
 
 ## v0.2 Requirements
 
@@ -14,7 +14,7 @@
 - [ ] **KEYS-03**: 지갑 잔액 및 주소 조회 가능
 - [ ] **KEYS-04**: 암호화된 키스토어 백업 및 복원 기능
 
-### Session Auth (세션 기반 인증 — Layer 1)
+### Session Auth (세션 기반 인증 -- Layer 1)
 
 - [ ] **SESS-01**: Owner가 개인 지갑 서명(SIWS/SIWE)으로 세션 생성 승인
 - [ ] **SESS-02**: 세션 토큰에 만료 시간, 누적 지출 한도, 단건 한도, 허용 작업 목록 내장
@@ -22,14 +22,14 @@
 - [ ] **SESS-04**: Owner가 활성 세션을 즉시 폐기 가능
 - [ ] **SESS-05**: 활성 세션 목록 조회 가능
 
-### Time-Lock + Approval (시간 지연 + 승인 — Layer 2)
+### Time-Lock + Approval (시간 지연 + 승인 -- Layer 2)
 
 - [ ] **LOCK-01**: 거래를 금액 기준 4단계로 분류 (즉시/알림/대기/승인), 기준 금액 설정 가능
-- [ ] **LOCK-02**: 대기(Delay) 등급: 거래 큐잉 → 쿨다운 대기 → 미취소 시 자동 실행, Owner 취소 가능
+- [ ] **LOCK-02**: 대기(Delay) 등급: 거래 큐잉 -> 쿨다운 대기 -> 미취소 시 자동 실행, Owner 취소 가능
 - [ ] **LOCK-03**: 승인(Approval) 등급: Owner 지갑 서명으로 명시적 승인 필요
 - [ ] **LOCK-04**: 미승인 거래는 타임아웃 후 자동 만료/취소
 
-### Monitoring + Kill Switch (모니터링 + 긴급 정지 — Layer 3)
+### Monitoring + Kill Switch (모니터링 + 긴급 정지 -- Layer 3)
 
 - [ ] **NOTI-01**: 멀티 채널 알림 발송 (Telegram Bot, Discord Webhook, ntfy.sh Push)
 - [ ] **NOTI-02**: 알림 채널 최소 2개 설정 필수, 전달 실패 시 폴백 채널로 재시도
@@ -39,7 +39,7 @@
 
 ### Owner Wallet Connection (소유자 지갑 연결)
 
-- [ ] **OWNR-01**: 브라우저 익스텐션 지갑 연결 (Solana Wallet Adapter — Phantom, Backpack 등)
+- [ ] **OWNR-01**: 브라우저 익스텐션 지갑 연결 (Solana Wallet Adapter -- Phantom, Backpack 등)
 - [ ] **OWNR-02**: WalletConnect v2로 모바일 지갑 QR 연결
 - [ ] **OWNR-03**: Owner 지갑 서명으로 세션 승인, 거래 승인, 설정 변경 인증
 
@@ -67,12 +67,12 @@
 
 ### SDK (개발자 SDK)
 
-- [ ] **SDK-01**: TypeScript SDK (@waiaas/sdk) — 완전한 타입 정의, 세션 토큰 관리, 자동 재시도
-- [ ] **SDK-02**: Python SDK (waiaas) — async/await 지원, 동일 기능
+- [ ] **SDK-01**: TypeScript SDK (@waiaas/sdk) -- 완전한 타입 정의, 세션 토큰 관리, 자동 재시도
+- [ ] **SDK-02**: Python SDK (waiaas) -- async/await 지원, 동일 기능
 
 ### MCP Server (LLM 에이전트 통합)
 
-- [ ] **MCP-01**: MCP Server 패키지 (@waiaas/mcp) — get_balance, send_token, get_address, list_transactions 도구
+- [ ] **MCP-01**: MCP Server 패키지 (@waiaas/mcp) -- get_balance, send_token, get_address, list_transactions 도구
 - [ ] **MCP-02**: Claude Desktop에서 MCP 연동 후 자연어 거래 가능
 
 ### Desktop App (데스크톱 애플리케이션)
@@ -123,61 +123,59 @@
 
 ## Traceability
 
-로드맵 생성 시 채워짐.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KEYS-01 | — | Pending |
-| KEYS-02 | — | Pending |
-| KEYS-03 | — | Pending |
-| KEYS-04 | — | Pending |
-| SESS-01 | — | Pending |
-| SESS-02 | — | Pending |
-| SESS-03 | — | Pending |
-| SESS-04 | — | Pending |
-| SESS-05 | — | Pending |
-| LOCK-01 | — | Pending |
-| LOCK-02 | — | Pending |
-| LOCK-03 | — | Pending |
-| LOCK-04 | — | Pending |
-| NOTI-01 | — | Pending |
-| NOTI-02 | — | Pending |
-| NOTI-03 | — | Pending |
-| NOTI-04 | — | Pending |
-| NOTI-05 | — | Pending |
-| OWNR-01 | — | Pending |
-| OWNR-02 | — | Pending |
-| OWNR-03 | — | Pending |
-| CHAIN-01 | — | Pending |
-| CHAIN-02 | — | Pending |
-| CHAIN-03 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| SDK-01 | — | Pending |
-| SDK-02 | — | Pending |
-| MCP-01 | — | Pending |
-| MCP-02 | — | Pending |
-| DESK-01 | — | Pending |
-| DESK-02 | — | Pending |
-| DESK-03 | — | Pending |
-| DESK-04 | — | Pending |
-| DOCK-01 | — | Pending |
-| TGBOT-01 | — | Pending |
-| TGBOT-02 | — | Pending |
+| KEYS-01 | Phase 6: Core Daemon | Pending |
+| KEYS-02 | Phase 6: Core Daemon | Pending |
+| KEYS-03 | Phase 6: Core Daemon | Pending |
+| KEYS-04 | Phase 6: Core Daemon | Pending |
+| SESS-01 | Phase 7: Session & Transaction | Pending |
+| SESS-02 | Phase 7: Session & Transaction | Pending |
+| SESS-03 | Phase 7: Session & Transaction | Pending |
+| SESS-04 | Phase 7: Session & Transaction | Pending |
+| SESS-05 | Phase 7: Session & Transaction | Pending |
+| LOCK-01 | Phase 8: Security Layers | Pending |
+| LOCK-02 | Phase 8: Security Layers | Pending |
+| LOCK-03 | Phase 8: Security Layers | Pending |
+| LOCK-04 | Phase 8: Security Layers | Pending |
+| NOTI-01 | Phase 8: Security Layers | Pending |
+| NOTI-02 | Phase 8: Security Layers | Pending |
+| NOTI-03 | Phase 8: Security Layers | Pending |
+| NOTI-04 | Phase 8: Security Layers | Pending |
+| NOTI-05 | Phase 8: Security Layers | Pending |
+| OWNR-01 | Phase 8: Security Layers | Pending |
+| OWNR-02 | Phase 8: Security Layers | Pending |
+| OWNR-03 | Phase 8: Security Layers | Pending |
+| CHAIN-01 | Phase 6: Core Daemon | Pending |
+| CHAIN-02 | Phase 7: Session & Transaction | Pending |
+| CHAIN-03 | Phase 8: Security Layers | Pending |
+| API-01 | Phase 6: Core Daemon | Pending |
+| API-02 | Phase 7: Session & Transaction | Pending |
+| API-03 | Phase 7: Session & Transaction | Pending |
+| API-04 | Phase 7: Session & Transaction | Pending |
+| API-05 | Phase 8: Security Layers | Pending |
+| API-06 | Phase 6: Core Daemon | Pending |
+| CLI-01 | Phase 6: Core Daemon | Pending |
+| CLI-02 | Phase 6: Core Daemon | Pending |
+| CLI-03 | Phase 6: Core Daemon | Pending |
+| CLI-04 | Phase 6: Core Daemon | Pending |
+| SDK-01 | Phase 9: Integration & Polish | Pending |
+| SDK-02 | Phase 9: Integration & Polish | Pending |
+| MCP-01 | Phase 9: Integration & Polish | Pending |
+| MCP-02 | Phase 9: Integration & Polish | Pending |
+| DESK-01 | Phase 9: Integration & Polish | Pending |
+| DESK-02 | Phase 9: Integration & Polish | Pending |
+| DESK-03 | Phase 9: Integration & Polish | Pending |
+| DESK-04 | Phase 9: Integration & Polish | Pending |
+| DOCK-01 | Phase 9: Integration & Polish | Pending |
+| TGBOT-01 | Phase 9: Integration & Polish | Pending |
+| TGBOT-02 | Phase 9: Integration & Polish | Pending |
 
 **Coverage:**
 - v0.2 requirements: 45 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 45
+- Mapped to phases: 45
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after initial definition*
+*Last updated: 2026-02-05 after roadmap creation*

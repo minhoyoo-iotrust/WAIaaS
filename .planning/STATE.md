@@ -4,17 +4,17 @@
 
 참고: .planning/PROJECT.md (업데이트: 2026-02-05)
 
-**핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유.
-**현재 초점:** v0.2 Self-Hosted 보안 지갑 설계 및 구현
+**핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
+**현재 초점:** Phase 6 - Core Architecture Design (데몬 아키텍처, 키스토어 스펙, 스토리지 스키마 설계)
 
 ## 현재 위치
 
-페이즈: 요구사항 정의 중
-플랜: —
-상태: Defining requirements
-마지막 활동: 2026-02-05 — Milestone v0.2 started
+페이즈: 6 of 9 (Core Architecture Design)
+플랜: 0 of 5 in current phase
+상태: Ready to plan
+마지막 활동: 2026-02-05 -- v0.2 로드맵 생성 완료 (4 phases, 16 plans, 45 requirements)
 
-진행률: v0.2 [░░░░░░░░░░░░░░░] 0%
+진행률: v0.2 [░░░░░░░░░░░░░░░░] 0/16 plans (0%)
 
 ## 성과 지표
 
@@ -24,57 +24,38 @@
 - 총 실행 시간: 82분
 - 요구사항: 23/23 완료
 
+**v0.2 페이즈 구성:**
+
+| 페이즈 | 플랜 | 요구사항 | 상태 |
+|--------|------|----------|------|
+| 6. Core Daemon | 0/5 | 11 reqs | Not started |
+| 7. Session & Transaction | 0/3 | 9 reqs | Not started |
+| 8. Security Layers | 0/4 | 14 reqs | Not started |
+| 9. Integration & Polish | 0/4 | 11 reqs | Not started |
+
 ## 누적 컨텍스트
 
 ### 결정 사항
 
-결정 사항은 PROJECT.md의 주요 결정 테이블에 기록됩니다.
-
-### v0.1 → v0.2 전환 사항
-
-- Cloud-First → Self-Hosted-First 아키텍처 전환
-- AWS KMS/Nitro Enclaves → 로컬 암호화 키스토어
-- Squads 온체인 정책 → 로컬 정책 엔진 (체인 무관)
-- PostgreSQL/Redis → SQLite + In-memory LRU
-- API Key 인증 → 세션 토큰 기반 인증
+- [v0.2]: Cloud -> Self-Hosted 전환 (AWS KMS/PostgreSQL/Redis 제거, 로컬 SQLite/파일 기반)
+- [v0.2]: 세션 토큰 기반 인증 (영구 API Key 대신 단기 JWT, SIWS/SIWE 서명 승인)
+- [v0.2]: 체인 무관 로컬 정책 엔진 (Squads 온체인 의존 제거)
+- [v0.2]: Tauri + Hono + Drizzle + better-sqlite3 기술 스택 확정
 
 ### v0.1에서 활용 가능한 설계
 
 - IBlockchainAdapter 체인 추상화 인터페이스
-- 에이전트 생명주기 5단계 모델
-- 4단계 에스컬레이션 프레임워크
-- 비상 정지 트리거 패턴 4종
-- 규칙 기반 이상 탐지 (ML 제외)
-- 모노레포 패키지 구조 (core/selfhost/api)
+- 에이전트 생명주기 5단계 모델 / 4단계 에스컬레이션 / 비상 정지 트리거
+- 모노레포 패키지 구조 (core/daemon/adapters/cli/sdk/mcp)
 
 ### 차단 요소/우려 사항
 
-- 세션 토큰 시스템 신규 설계 필요
-- 로컬 키 저장 보안 (AES-256-GCM + Argon2id) 검증 필요
-- Owner 지갑 연결 (Wallet Adapter, WalletConnect) 통합 검증 필요
+- WalletConnect v2 -> Reown 리브랜딩 불확실성 (Phase 8 시작 전 확인 필요)
+- Tauri WebView WebHID 호환성 (Phase 9 Desktop 앱 개발 시 테스트)
+- MCP 도구 인증 모델 (Phase 9 MCP 설계 시 결정)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-05
-중단 지점: v0.2 마일스톤 시작, 요구사항 정의 진행 중
-재개 파일: objectives/02-self-hosted-secure-wallet.md
-
-## 완료된 플랜
-
-| 플랜 | 이름 | 커밋 | 소요 시간 |
-|------|------|------|-----------|
-| 01-01 | 기술 스택 및 Solana 환경 (TECH-01, TECH-02) | c6c850e | 5분 |
-| 01-02 | 데이터베이스 및 캐싱 전략 (TECH-03) | 00f58e2 | 2.5분 |
-| 02-01 | 커스터디 모델 비교 분석 (CUST-01, CUST-03) | 116c5e2 | 5분 |
-| 02-02 | AI 에이전트 특화 커스터디 고려사항 (CUST-02) | 45e6887 | 5.5분 |
-| 02-03 | 권장 커스터디 모델 제안, Turnkey 철회 (CUST-04) | 811e186 | 7분 |
-| 03-01 | Dual Key 아키텍처, 시스템 컴포넌트 (ARCH-01, ARCH-02) | 67e60c6 | 8.4분 |
-| 03-02 | 트랜잭션 데이터 흐름 다이어그램 (ARCH-03) | c079682 | 5분 |
-| 03-03 | 보안 위협 모델링, 멀티체인 확장성 (ARCH-04, ARCH-05) | 32368f0 | 6분 |
-| 04-01 | 자금 충전/회수 프로세스 설계 (REL-01, REL-02) | b4e8e12 | 7분 |
-| 04-02 | 에이전트 생명주기 및 키 관리 설계 (REL-03) | 85a9d24 | 5분 |
-| 04-03 | 비상 회수 및 멀티 에이전트 관리 설계 (REL-04, REL-05) | 18b10a1 | 8분 |
-| 05-01 | 에이전트 인증 및 권한 모델 설계 (API-02, API-03) | ca9cfb2 | 6분 |
-| 05-02 | 에러 코드 및 처리 규격 설계 (API-04) | d54a928 | 4.3분 |
-| 05-03 | OpenAPI 3.0 REST API 스펙 설계 (API-01) | cb8cb02 | 6.3분 |
-| 05-04 | SDK 인터페이스 및 MCP 통합 스펙 설계 (API-05, API-06) | 623a5de | 7분 |
+중단 지점: v0.2 로드맵 생성 완료, Phase 6 계획 준비 상태
+재개 파일: None -- 다음 단계: `/gsd:plan-phase 6`
