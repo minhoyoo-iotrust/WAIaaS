@@ -23,7 +23,7 @@ Git range: first commit -> `fbceed0`
 
 **산출물:** 상세 설계 문서 (v0.1과 동일 형식의 Markdown 설계 문서)
 
-- [ ] **Phase 6: Core Architecture Design** - 데몬 아키텍처, 암호화 키스토어 스펙, 스토리지 스키마, 기본 API 프레임워크 설계
+- [x] **Phase 6: Core Architecture Design** - 데몬 아키텍처, 암호화 키스토어 스펙, 스토리지 스키마, 기본 API 프레임워크 설계
 - [ ] **Phase 7: Session & Transaction Protocol Design** - 세션 토큰 프로토콜, 거래 처리 파이프라인, Solana 어댑터 설계
 - [ ] **Phase 8: Security Layers Design** - 시간 지연/승인 메커니즘, 알림 아키텍처, Owner 지갑 연결 플로우, Kill Switch 프로토콜 설계
 - [ ] **Phase 9: Integration & Client Interface Design** - REST API 스펙, SDK 인터페이스, MCP 서버 스펙, Desktop 앱 아키텍처, 배포 스펙 설계
@@ -48,11 +48,11 @@ Git range: first commit -> `fbceed0`
   5. 모노레포 패키지 구조와 `~/.waiaas/` 데이터 디렉토리 레이아웃이 확정됨
 
 Plans:
-- [ ] 06-01-PLAN.md — 모노레포 구조 + 데이터 디렉토리 + SQLite 스키마 설계
-- [ ] 06-02-PLAN.md — 암호화 키스토어 스펙 설계 (파일 포맷, 키 파생, 메모리 안전성 프로토콜)
-- [ ] 06-03-PLAN.md — ChainAdapter 인터페이스 설계 + Solana/EVM 어댑터 명세
-- [ ] 06-04-PLAN.md — 데몬 라이프사이클 + CLI 커맨드 설계 (init/start/stop/status)
-- [ ] 06-05-PLAN.md — Hono API 프레임워크 설계 + localhost 보안 + Zod/OpenAPI 통합 설계
+- [x] 06-01-PLAN.md — 모노레포 구조 + 데이터 디렉토리 + SQLite 스키마 설계
+- [x] 06-02-PLAN.md — 암호화 키스토어 스펙 설계 (파일 포맷, 키 파생, 메모리 안전성 프로토콜)
+- [x] 06-03-PLAN.md — ChainAdapter 인터페이스 설계 + Solana/EVM 어댑터 명세
+- [x] 06-04-PLAN.md — 데몬 라이프사이클 + CLI 커맨드 설계 (init/start/stop/status)
+- [x] 06-05-PLAN.md — Hono API 프레임워크 설계 + localhost 보안 + Zod/OpenAPI 통합 설계
 
 ---
 
@@ -71,10 +71,12 @@ Plans:
   4. Solana Adapter가 @solana/kit 3.x 기반으로 상세 설계됨 (트랜잭션 빌드, 시뮬레이션, 제출, 확정성 처리)
   5. 세션/거래 API 엔드포인트가 요청/응답 스키마 수준으로 설계됨
 
+**Plans:** 3 plans
+
 Plans:
-- [ ] 07-01: 세션 토큰 프로토콜 설계 (JWT 구조, SIWS/SIWE 플로우, 제약 모델, 폐기 메커니즘)
-- [ ] 07-02: Solana Adapter 상세 설계 (@solana/kit 3.x 통합, 트랜잭션 빌드/시뮬/제출)
-- [ ] 07-03: 거래 처리 파이프라인 설계 + 세션/거래 API 엔드포인트 스펙
+- [ ] 07-01-PLAN.md — 세션 토큰 프로토콜 설계 (JWT 구조, SIWS/SIWE 플로우, 제약 모델, 수명주기, sessionAuth 미들웨어)
+- [ ] 07-02-PLAN.md — Solana Adapter 상세 설계 (@solana/kit pipe API, 13개 메서드 구현, 에러 매핑)
+- [ ] 07-03-PLAN.md — 거래 처리 파이프라인 6단계 설계 + 세션/거래/지갑 API 엔드포인트 Zod 스펙
 
 ---
 
@@ -129,11 +131,11 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-5 | v0.1 | 15/15 | Complete | 2026-02-05 |
-| 6. Core Architecture Design | v0.2 | 0/5 | Planned | - |
-| 7. Session & Transaction Protocol | v0.2 | 0/3 | Not started | - |
+| 6. Core Architecture Design | v0.2 | 5/5 | Complete | 2026-02-05 |
+| 7. Session & Transaction Protocol | v0.2 | 0/3 | Planned | - |
 | 8. Security Layers Design | v0.2 | 0/4 | Not started | - |
 | 9. Integration & Client Interface | v0.2 | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-05*
+*Last updated: 2026-02-05 (Phase 7 planned)*

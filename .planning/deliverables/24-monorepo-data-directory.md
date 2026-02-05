@@ -1,0 +1,963 @@
+# 모노레포 패키지 구조 + 데이터 디렉토리 + TOML 설정 스펙 (CORE-01)
+
+**문서 ID:** CORE-01
+**작성일:** 2026-02-05
+**상태:** 완료
+**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md
+
+---
+
+## 1. 모노레포 패키지 구조
+
+### 1.1 전체 디렉토리 트리
+
+```
+waiaas/
+├── packages/
+│   ├── core/                          # 도메인 모델, 인터페이스, Zod 스키마
+│   │   ├── src/
+│   │   │   ├── domain/                # 도메인 엔티티
+│   │   │   │   ├── agent.ts           # Agent 엔티티 + 타입
+│   │   │   │   ├── session.ts         # Session 엔티티 + 타입
+│   │   │   │   ├── transaction.ts     # Transaction 엔티티 + 타입
+│   │   │   │   └── policy.ts          # Policy 엔티티 + 타입
+│   │   │   ├── interfaces/            # 추상화 인터페이스
+│   │   │   │   ├── ILocalKeyStore.ts  # 키스토어 인터페이스
+│   │   │   │   ├── IBlockchainAdapter.ts  # 체인 추상화
+│   │   │   │   ├── IPolicyEngine.ts   # 정책 엔진 인터페이스
+│   │   │   │   └── INotificationChannel.ts  # 알림 채널 인터페이스
+│   │   │   ├── schemas/               # Zod SSoT 스키마
+│   │   │   │   ├── agent.schema.ts    # Agent 요청/응답 스키마
+│   │   │   │   ├── session.schema.ts  # Session 스키마
+│   │   │   │   ├── transaction.schema.ts  # Transaction 스키마
+│   │   │   │   ├── policy.schema.ts   # Policy 스키마
+│   │   │   │   └── config.schema.ts   # Config 검증 스키마
+│   │   │   ├── errors/                # 도메인 에러 코드
+│   │   │   │   ├── error-codes.ts     # v0.1 46개 재사용 + 확장
+│   │   │   │   └── base-error.ts      # WAIaaSError 베이스 클래스
+│   │   │   └── index.ts               # 패키지 진입점
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   ├── daemon/                        # Self-hosted 데몬 (Primary deliverable)
+│   │   ├── src/
+│   │   │   ├── infrastructure/        # 인프라 계층
+│   │   │   │   ├── database/          # Drizzle ORM + SQLite
+│   │   │   │   │   ├── schema.ts      # 전체 테이블 정의
+│   │   │   │   │   ├── connection.ts  # DB 연결 + PRAGMA 설정
+│   │   │   │   │   └── migrate.ts     # 자동 마이그레이션
+│   │   │   │   ├── keystore/          # 암호화 키스토어
+│   │   │   │   │   ├── keystore.ts    # KeyStore 클래스
+│   │   │   │   │   ├── crypto.ts      # AES-256-GCM + Argon2id
+│   │   │   │   │   └── memory.ts      # sodium-native 메모리 관리
+│   │   │   │   ├── cache/             # LRU 캐시
+│   │   │   │   │   └── session-cache.ts
+│   │   │   │   ├── notifications/     # 알림 발송
+│   │   │   │   │   ├── telegram.ts
+│   │   │   │   │   ├── discord.ts
+│   │   │   │   │   └── ntfy.ts
+│   │   │   │   └── config/            # TOML 설정 로더
+│   │   │   │       └── loader.ts      # 설정 로드 + 환경변수 오버라이드
+│   │   │   ├── server/                # Hono HTTP 서버
+│   │   │   │   ├── app.ts             # OpenAPIHono 인스턴스
+│   │   │   │   ├── middleware/        # 미들웨어
+│   │   │   │   │   ├── auth.ts        # 세션 토큰 검증
+│   │   │   │   │   ├── host-guard.ts  # Host 헤더 검증
+│   │   │   │   │   └── rate-limit.ts  # 속도 제한
+│   │   │   │   └── routes/            # API 라우트
+│   │   │   │       ├── agents.ts      # /v1/agents
+│   │   │   │       ├── sessions.ts    # /v1/sessions
+│   │   │   │       ├── transactions.ts # /v1/transactions
+│   │   │   │       └── health.ts      # /health
+│   │   │   ├── services/              # 비즈니스 로직
+│   │   │   │   ├── agent-service.ts
+│   │   │   │   ├── session-service.ts
+│   │   │   │   ├── transaction-service.ts
+│   │   │   │   └── policy-engine.ts
+│   │   │   ├── lifecycle/             # 데몬 라이프사이클
+│   │   │   │   ├── daemon.ts          # DaemonLifecycle 클래스
+│   │   │   │   ├── signal-handler.ts  # SIGINT/SIGTERM 처리
+│   │   │   │   └── workers.ts         # 백그라운드 워커 (WAL checkpoint 등)
+│   │   │   └── index.ts               # 데몬 진입점
+│   │   ├── drizzle/                   # 마이그레이션 파일 (drizzle-kit generate 산출물)
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── drizzle.config.ts          # drizzle-kit 설정
+│   │
+│   ├── adapters/
+│   │   ├── solana/                    # SolanaAdapter (@solana/kit 3.x)
+│   │   │   ├── src/
+│   │   │   │   ├── adapter.ts         # SolanaAdapter 구현
+│   │   │   │   ├── transaction-builder.ts  # pipe 기반 트랜잭션 빌드
+│   │   │   │   ├── rpc.ts             # RPC 클라이언트 설정
+│   │   │   │   └── index.ts
+│   │   │   ├── package.json
+│   │   │   └── tsconfig.json
+│   │   │
+│   │   └── evm/                       # EVMAdapter (viem)
+│   │       ├── src/
+│   │       │   ├── adapter.ts         # EVMAdapter 구현
+│   │       │   ├── client.ts          # viem 클라이언트 설정
+│   │       │   └── index.ts
+│   │       ├── package.json
+│   │       └── tsconfig.json
+│   │
+│   ├── cli/                           # waiaas CLI (npm 글로벌 설치)
+│   │   ├── src/
+│   │   │   ├── commands/              # CLI 커맨드
+│   │   │   │   ├── init.ts            # waiaas init
+│   │   │   │   ├── start.ts           # waiaas start [--daemon]
+│   │   │   │   ├── stop.ts            # waiaas stop
+│   │   │   │   └── status.ts          # waiaas status
+│   │   │   ├── utils/                 # CLI 유틸리티
+│   │   │   │   ├── data-dir.ts        # 데이터 디렉토리 해석
+│   │   │   │   └── password-prompt.ts # 마스터 패스워드 입력
+│   │   │   └── index.ts               # CLI 진입점
+│   │   ├── bin/
+│   │   │   └── waiaas                 # npm global entry point (#!/usr/bin/env node)
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   ├── sdk/                           # @waiaas/sdk (Phase 9에서 설계)
+│   │   ├── src/
+│   │   │   └── index.ts               # placeholder
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   └── mcp/                           # @waiaas/mcp (Phase 9에서 설계)
+│       ├── src/
+│       │   └── index.ts               # placeholder
+│       ├── package.json
+│       └── tsconfig.json
+│
+├── turbo.json                         # Turborepo 빌드 설정
+├── pnpm-workspace.yaml                # pnpm 워크스페이스
+├── package.json                       # 루트 패키지
+├── tsconfig.base.json                 # 공유 TypeScript 설정
+└── .nvmrc                             # Node.js 22 LTS
+```
+
+### 1.2 패키지별 역할 정의
+
+| 패키지 | npm name | 역할 | 주요 exports |
+|--------|----------|------|-------------|
+| `packages/core` | `@waiaas/core` | 도메인 모델, 인터페이스, Zod 스키마, 에러 코드. 모든 패키지가 의존하는 공유 계층 | 타입, 인터페이스, Zod 스키마, 에러 클래스 |
+| `packages/daemon` | `@waiaas/daemon` | Self-hosted 데몬. Hono HTTP 서버, SQLite, 키스토어, 라이프사이클 관리 | `startDaemon()`, `DaemonLifecycle` |
+| `packages/adapters/solana` | `@waiaas/adapter-solana` | Solana 블록체인 어댑터. @solana/kit 3.x 기반 | `SolanaAdapter` (implements `IBlockchainAdapter`) |
+| `packages/adapters/evm` | `@waiaas/adapter-evm` | EVM 블록체인 어댑터. viem 기반 | `EVMAdapter` (implements `IBlockchainAdapter`) |
+| `packages/cli` | `@waiaas/cli` (bin: `waiaas`) | CLI 도구. init/start/stop/status 커맨드 | binary entry point |
+| `packages/sdk` | `@waiaas/sdk` | 외부 개발자용 SDK (Phase 9) | `WAIaaSClient` |
+| `packages/mcp` | `@waiaas/mcp` | MCP 서버 (Phase 9) | `MCPServer` |
+
+### 1.3 패키지 의존 관계
+
+```mermaid
+graph TB
+    subgraph "packages/"
+        Core["@waiaas/core<br/>도메인, 인터페이스, 스키마"]
+        Daemon["@waiaas/daemon<br/>HTTP 서버, DB, 키스토어"]
+        Solana["@waiaas/adapter-solana<br/>@solana/kit 3.x"]
+        EVM["@waiaas/adapter-evm<br/>viem"]
+        CLI["@waiaas/cli<br/>init/start/stop/status"]
+        SDK["@waiaas/sdk<br/>(Phase 9)"]
+        MCP["@waiaas/mcp<br/>(Phase 9)"]
+    end
+
+    subgraph "외부 의존성"
+        Hono["hono + @hono/node-server"]
+        Drizzle["drizzle-orm + better-sqlite3"]
+        Sodium["sodium-native"]
+        SolanaKit["@solana/kit 3.x"]
+        Viem["viem"]
+        Jose["jose"]
+        SmolToml["smol-toml"]
+    end
+
+    Daemon -->|depends| Core
+    Solana -->|depends| Core
+    EVM -->|depends| Core
+    CLI -->|depends| Daemon
+    SDK -->|depends| Core
+    MCP -->|depends| SDK
+
+    Daemon --> Hono
+    Daemon --> Drizzle
+    Daemon --> Sodium
+    Daemon --> Jose
+    Daemon --> SmolToml
+    Daemon -.->|runtime plugin| Solana
+    Daemon -.->|runtime plugin| EVM
+    Solana --> SolanaKit
+    EVM --> Viem
+```
+
+**빌드 순서 (의존성 그래프에 의해 결정):**
+
+```
+Step 1: @waiaas/core              (의존성 없음)
+Step 2: @waiaas/adapter-solana    (core에 의존)
+         @waiaas/adapter-evm      (core에 의존)  -- 병렬 빌드
+Step 3: @waiaas/daemon            (core + adapters에 의존)
+Step 4: @waiaas/cli               (daemon에 의존)
+         @waiaas/sdk              (core에 의존)   -- 병렬 빌드
+Step 5: @waiaas/mcp               (sdk에 의존)
+```
+
+### 1.4 Workspace 설정
+
+#### pnpm-workspace.yaml
+
+```yaml
+packages:
+  - 'packages/*'
+  - 'packages/adapters/*'
+```
+
+#### turbo.json
+
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "inputs": ["src/**", "tsconfig.json", "package.json"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": [],
+      "inputs": ["src/**", "test/**", "*.test.ts"]
+    },
+    "test:unit": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test:integration": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": [],
+      "inputs": ["src/**", ".eslintrc.*"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}
+```
+
+#### 루트 package.json
+
+```json
+{
+  "name": "waiaas",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev --filter=@waiaas/daemon",
+    "format": "prettier --write \"packages/*/src/**/*.ts\"",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0",
+    "prettier": "^3.4.0",
+    "husky": "^9.1.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
+```
+
+#### tsconfig.base.json (루트)
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  }
+}
+```
+
+### 1.5 패키지별 package.json
+
+#### @waiaas/core
+
+```json
+{
+  "name": "@waiaas/core",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./domain": {
+      "types": "./dist/domain/index.d.ts",
+      "default": "./dist/domain/index.js"
+    },
+    "./interfaces": {
+      "types": "./dist/interfaces/index.d.ts",
+      "default": "./dist/interfaces/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "default": "./dist/schemas/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "default": "./dist/errors/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
+```
+
+#### @waiaas/daemon
+
+```json
+{
+  "name": "@waiaas/daemon",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run --dir test/unit",
+    "test:integration": "vitest run --dir test/integration",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/infrastructure/database/migrate.ts"
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "hono": "^4.11.0",
+    "@hono/node-server": "^1.14.0",
+    "@hono/zod-openapi": "^0.18.0",
+    "drizzle-orm": "^0.45.0",
+    "better-sqlite3": "^12.6.0",
+    "sodium-native": "^5.0.10",
+    "argon2": "^0.44.0",
+    "jose": "^6.0.0",
+    "lru-cache": "^11.0.0",
+    "smol-toml": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
+```
+
+#### @waiaas/adapter-solana
+
+```json
+{
+  "name": "@waiaas/adapter-solana",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "@solana/kit": "^3.0.0",
+    "@solana-program/system": "^0.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
+```
+
+#### @waiaas/adapter-evm
+
+```json
+{
+  "name": "@waiaas/adapter-evm",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "viem": "^2.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
+```
+
+#### @waiaas/cli
+
+```json
+{
+  "name": "@waiaas/cli",
+  "version": "0.2.0",
+  "type": "module",
+  "bin": {
+    "waiaas": "bin/waiaas"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@waiaas/daemon": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
+```
+
+**Note:** `packages/sdk`와 `packages/mcp`의 package.json은 Phase 9에서 상세 정의. 현재는 placeholder로 name과 version만 설정.
+
+---
+
+## 2. 데이터 디렉토리 레이아웃 (~/.waiaas/)
+
+### 2.1 경로 해석 로직
+
+데이터 디렉토리는 다음 우선순위로 결정된다:
+
+```typescript
+function resolveDataDir(): string {
+  // 1. 환경변수 최우선
+  if (process.env.WAIAAS_DATA_DIR) {
+    return process.env.WAIAAS_DATA_DIR;
+  }
+
+  // 2. XDG Base Directory 스펙 준수
+  if (process.env.XDG_DATA_HOME) {
+    return path.join(process.env.XDG_DATA_HOME, 'waiaas');
+  }
+
+  // 3. 기본 경로
+  return path.join(os.homedir(), '.waiaas');
+}
+```
+
+**환경변수를 사용한 멀티 프로필 운용:**
+
+```bash
+# devnet 전용 데몬
+WAIAAS_DATA_DIR=~/.waiaas-devnet waiaas start
+
+# mainnet 전용 데몬
+WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
+```
+
+### 2.2 전체 디렉토리 트리
+
+```
+~/.waiaas/                             # 데이터 루트 (700)
+├── config.toml                        # 데몬 설정 파일 (600)
+├── daemon.pid                         # PID 파일 - background 모드 시 (644)
+├── data/                              # 데이터 파일 (700)
+│   ├── waiaas.db                      # SQLite 메인 데이터베이스 (600)
+│   ├── waiaas.db-wal                  # WAL 저널 (자동 생성) (600)
+│   └── waiaas.db-shm                  # 공유 메모리 (자동 생성) (600)
+├── keystore/                          # 암호화된 키 파일 (700)
+│   └── <agent-id>.json                # 에이전트별 키스토어 파일 (600)
+├── logs/                              # 로그 디렉토리 (700)
+│   └── daemon.log                     # 데몬 로그 (644)
+├── backups/                           # 백업 디렉토리 (700)
+│   └── waiaas-<timestamp>.db          # DB 백업 파일 (600)
+└── drizzle/                           # 마이그레이션 메타데이터 (700)
+    └── meta/                          # drizzle-kit 메타 (700)
+```
+
+### 2.3 파일/디렉토리 상세 정의
+
+| 경로 | 용도 | 생성 시점 | 권한 | 소유자 |
+|------|------|----------|------|--------|
+| `~/.waiaas/` | 데이터 루트 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
+| `config.toml` | 데몬 설정 (TOML 포맷) | `waiaas init` (기본값 생성) | `600` (rw-------) | 실행 사용자 |
+| `daemon.pid` | 데몬 PID (background 모드) | `waiaas start --daemon` | `644` (rw-r--r--) | 실행 사용자 |
+| `data/` | SQLite 데이터베이스 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
+| `data/waiaas.db` | SQLite 메인 DB (WAL 모드) | 데몬 첫 시작 시 마이그레이션으로 생성 | `600` (rw-------) | 실행 사용자 |
+| `data/waiaas.db-wal` | WAL 저널 파일 | SQLite가 WAL 모드 진입 시 자동 생성 | `600` (rw-------) | 실행 사용자 |
+| `data/waiaas.db-shm` | 공유 메모리 파일 | SQLite가 WAL 모드 진입 시 자동 생성 | `600` (rw-------) | 실행 사용자 |
+| `keystore/` | 암호화된 에이전트 키 파일 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
+| `keystore/<agent-id>.json` | 개별 에이전트 키스토어 (AES-256-GCM + Argon2id 암호화) | 에이전트 생성 시 (`POST /v1/agents`) | `600` (rw-------) | 실행 사용자 |
+| `logs/` | 데몬 운영 로그 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
+| `logs/daemon.log` | 데몬 stdout/stderr 로그 (로테이션 대상) | 데몬 시작 시 | `644` (rw-r--r--) | 실행 사용자 |
+| `backups/` | DB 및 키스토어 백업 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
+| `backups/waiaas-<ts>.db` | SQLite 백업 (VACUUM INTO) | 수동 또는 스케줄 백업 시 | `600` (rw-------) | 실행 사용자 |
+| `drizzle/` | 마이그레이션 메타데이터 | 데몬 첫 시작 시 | `700` (rwx------) | 실행 사용자 |
+
+### 2.4 디렉토리 초기화 (`waiaas init`)
+
+`waiaas init` 커맨드가 수행하는 작업:
+
+```typescript
+async function initDataDir(dataDir: string): Promise<void> {
+  // 1. 루트 디렉토리 생성
+  await fs.mkdir(dataDir, { recursive: true, mode: 0o700 });
+
+  // 2. 하위 디렉토리 생성
+  const dirs = ['data', 'keystore', 'logs', 'backups', 'drizzle'];
+  for (const dir of dirs) {
+    await fs.mkdir(path.join(dataDir, dir), { recursive: true, mode: 0o700 });
+  }
+
+  // 3. 기본 config.toml 생성 (존재하지 않을 때만)
+  const configPath = path.join(dataDir, 'config.toml');
+  if (!await fileExists(configPath)) {
+    await fs.writeFile(configPath, DEFAULT_CONFIG_TOML, { mode: 0o600 });
+  }
+
+  // 4. 권한 검증
+  await verifyPermissions(dataDir);
+}
+```
+
+### 2.5 보안 고려사항
+
+- **파일 권한:** 모든 민감 파일(DB, 키스토어, config)은 `600` (소유자만 읽기/쓰기)
+- **디렉토리 권한:** 모든 디렉토리는 `700` (소유자만 접근)
+- **umask 검증:** `waiaas init` 시 현재 umask가 `0077` 이상인지 경고
+- **심볼릭 링크 방지:** 데이터 디렉토리 내 심볼릭 링크 존재 시 거부
+- **네트워크 FS 방지:** SQLite는 로컬 파일시스템에서만 안전하게 동작. NFS/SMB 감지 시 경고
+- **daemon.pid 경합:** PID 파일 존재 시 해당 프로세스가 실제 실행 중인지 확인 후 시작
+
+---
+
+## 3. TOML 설정 파일 스펙 (config.toml)
+
+### 3.1 설정 로드 순서
+
+설정은 다음 순서로 적용되며, 후순위가 이전을 오버라이드한다:
+
+```
+1. 하드코딩 기본값 (코드 내 DEFAULT_CONFIG)
+    ↓ 오버라이드
+2. config.toml 파일 (smol-toml로 파싱)
+    ↓ 오버라이드
+3. 환경변수 (WAIAAS_ 접두어)
+```
+
+### 3.2 환경변수 매핑 규칙
+
+TOML 섹션과 키는 다음 규칙으로 환경변수에 매핑된다:
+
+```
+WAIAAS_{SECTION}_{KEY} -> [section].key
+```
+
+| 환경변수 | TOML 키 | 예시 |
+|---------|---------|------|
+| `WAIAAS_DAEMON_PORT` | `[daemon].port` | `3001` |
+| `WAIAAS_DAEMON_LOG_LEVEL` | `[daemon].log_level` | `debug` |
+| `WAIAAS_KEYSTORE_ARGON2_MEMORY` | `[keystore].argon2_memory` | `65536` |
+| `WAIAAS_RPC_SOLANA_MAINNET` | `[rpc.solana].mainnet` | `https://custom.rpc.com` |
+| `WAIAAS_SECURITY_SESSION_TTL` | `[security].session_ttl` | `3600` |
+
+**특수 환경변수 (TOML에 없는 항목):**
+
+| 환경변수 | 용도 | 예시 |
+|---------|------|------|
+| `WAIAAS_DATA_DIR` | 데이터 디렉토리 경로 오버라이드 | `~/.waiaas-devnet` |
+| `WAIAAS_MASTER_PASSWORD` | 마스터 패스워드 (비대화형 모드) | `my-secure-password` |
+| `WAIAAS_MASTER_PASSWORD_FILE` | 마스터 패스워드 파일 경로 | `/run/secrets/master_pw` |
+
+### 3.3 전체 키-값 구조
+
+#### [daemon] 섹션 -- 데몬 서버 설정
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `port` | integer | `3000` | 1024-65535 | HTTP 서버 포트 |
+| `hostname` | string | `"127.0.0.1"` | `"127.0.0.1"` 고정 | 바인딩 주소. 보안상 localhost 강제 |
+| `log_level` | string | `"info"` | `"trace"`, `"debug"`, `"info"`, `"warn"`, `"error"` | 로그 레벨 |
+| `log_file` | string | `"logs/daemon.log"` | 상대 경로 (DATA_DIR 기준) 또는 절대 경로 | 로그 파일 경로 |
+| `log_max_size` | string | `"50MB"` | `"1MB"` ~ `"1GB"` | 로그 파일 최대 크기 (로테이션 트리거) |
+| `log_max_files` | integer | `5` | 1-100 | 보관할 로그 파일 수 |
+| `pid_file` | string | `"daemon.pid"` | 상대 경로 (DATA_DIR 기준) 또는 절대 경로 | PID 파일 경로 |
+| `shutdown_timeout` | integer | `30` | 5-300 (초) | Graceful shutdown 타임아웃 |
+
+#### [keystore] 섹션 -- 키스토어 암호화 설정
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `argon2_memory` | integer | `65536` | 32768-1048576 (KiB) | Argon2id 메모리 비용 (기본: 64 MiB) |
+| `argon2_time` | integer | `3` | 1-20 | Argon2id 반복 횟수 |
+| `argon2_parallelism` | integer | `4` | 1-16 | Argon2id 병렬 스레드 수 |
+| `backup_on_rotate` | boolean | `true` | true/false | 키 로테이션 시 이전 키 백업 여부 |
+
+**Note:** Argon2id 기본 파라미터(m=64MiB, t=3, p=4)는 06-CONTEXT.md에서 확정된 값이다. config.toml로 조정 가능하지만, 기본값 미만으로 설정 시 경고를 출력한다.
+
+#### [rpc] 섹션 -- 체인별 RPC 엔드포인트
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `[rpc.solana]` | | | | Solana RPC 설정 |
+| `.mainnet` | string | `"https://api.mainnet-beta.solana.com"` | URL | Mainnet Beta RPC |
+| `.devnet` | string | `"https://api.devnet.solana.com"` | URL | Devnet RPC |
+| `.testnet` | string | `"https://api.testnet.solana.com"` | URL | Testnet RPC |
+| `[rpc.solana.ws]` | | | | Solana WebSocket 설정 |
+| `.mainnet` | string | `"wss://api.mainnet-beta.solana.com"` | URL | Mainnet WebSocket |
+| `.devnet` | string | `"wss://api.devnet.solana.com"` | URL | Devnet WebSocket |
+| `[rpc.ethereum]` | | | | Ethereum RPC 설정 |
+| `.mainnet` | string | `""` | URL | Mainnet RPC (사용자 설정 필수) |
+| `.sepolia` | string | `""` | URL | Sepolia Testnet RPC |
+
+#### [database] 섹션 -- SQLite 설정
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `path` | string | `"data/waiaas.db"` | 상대 경로 (DATA_DIR 기준) 또는 절대 경로 | DB 파일 경로 |
+| `wal_checkpoint_interval` | integer | `300` | 60-3600 (초) | WAL 체크포인트 주기 |
+| `busy_timeout` | integer | `5000` | 1000-30000 (ms) | SQLite busy timeout |
+| `cache_size` | integer | `64000` | 2000-512000 (KiB, 음수로 전달) | SQLite 페이지 캐시 크기 |
+| `mmap_size` | integer | `268435456` | 0-1073741824 (bytes) | 메모리 매핑 크기 (기본: 256 MiB) |
+
+#### [notifications] 섹션 -- 알림 채널 설정 (Phase 8에서 상세화)
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `enabled` | boolean | `false` | true/false | 알림 시스템 활성화 여부 |
+| `[notifications.telegram]` | | | | Telegram 알림 |
+| `.bot_token` | string | `""` | 문자열 | Bot API 토큰 |
+| `.chat_id` | string | `""` | 문자열 | 대상 채팅 ID |
+| `[notifications.discord]` | | | | Discord 알림 |
+| `.webhook_url` | string | `""` | URL | Webhook URL |
+| `[notifications.ntfy]` | | | | ntfy.sh 알림 |
+| `.server` | string | `"https://ntfy.sh"` | URL | ntfy 서버 URL |
+| `.topic` | string | `""` | 문자열 | 구독 토픽 |
+
+#### [security] 섹션 -- 보안 설정 (Phase 7-8에서 상세화)
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `session_ttl` | integer | `3600` | 300-86400 (초) | 세션 토큰 유효 기간 (기본: 1시간) |
+| `max_sessions_per_agent` | integer | `5` | 1-50 | 에이전트당 최대 동시 세션 수 |
+| `max_pending_tx` | integer | `10` | 1-100 | 최대 대기 트랜잭션 수 |
+| `rate_limit_rpm` | integer | `60` | 10-1000 | 분당 최대 요청 수 |
+| `cors_origins` | array of string | `["http://localhost:3000", "http://127.0.0.1:3000"]` | URL 배열 | 허용 CORS origin |
+
+### 3.4 전체 기본 config.toml 예시
+
+```toml
+# WAIaaS 데몬 설정 파일
+# 경로: ~/.waiaas/config.toml
+# 문서: https://github.com/waiaas/waiaas/docs/config.md
+
+# ─────────────────────────────────────────
+# 데몬 서버 설정
+# ─────────────────────────────────────────
+[daemon]
+port = 3000                        # HTTP 서버 포트 (1024-65535)
+hostname = "127.0.0.1"             # 바인딩 주소 (보안상 변경 불가)
+log_level = "info"                 # trace, debug, info, warn, error
+log_file = "logs/daemon.log"       # 로그 파일 (DATA_DIR 상대 경로)
+log_max_size = "50MB"              # 로그 로테이션 크기
+log_max_files = 5                  # 보관할 로그 파일 수
+pid_file = "daemon.pid"            # PID 파일 (DATA_DIR 상대 경로)
+shutdown_timeout = 30              # Graceful shutdown 타임아웃 (초)
+
+# ─────────────────────────────────────────
+# 키스토어 암호화 설정
+# Argon2id 파라미터 -- 기본값은 1Password급 보안 수준
+# 기본값 미만으로 낮추면 경고가 출력됩니다
+# ─────────────────────────────────────────
+[keystore]
+argon2_memory = 65536              # 메모리 비용 (KiB) -- 64 MiB
+argon2_time = 3                    # 반복 횟수
+argon2_parallelism = 4             # 병렬 스레드 수
+backup_on_rotate = true            # 키 로테이션 시 이전 키 백업
+
+# ─────────────────────────────────────────
+# 데이터베이스 설정
+# ─────────────────────────────────────────
+[database]
+path = "data/waiaas.db"            # SQLite 파일 경로 (DATA_DIR 상대 경로)
+wal_checkpoint_interval = 300      # WAL 체크포인트 주기 (초) -- 5분
+busy_timeout = 5000                # SQLite busy timeout (ms)
+cache_size = 64000                 # 페이지 캐시 (KiB) -- 64 MiB
+mmap_size = 268435456              # 메모리 매핑 (bytes) -- 256 MiB
+
+# ─────────────────────────────────────────
+# RPC 엔드포인트
+# 체인별 공용 RPC 기본값 제공. 프로덕션에서는 전용 RPC 사용 권장
+# ─────────────────────────────────────────
+[rpc.solana]
+mainnet = "https://api.mainnet-beta.solana.com"
+devnet = "https://api.devnet.solana.com"
+testnet = "https://api.testnet.solana.com"
+
+[rpc.solana.ws]
+mainnet = "wss://api.mainnet-beta.solana.com"
+devnet = "wss://api.devnet.solana.com"
+
+[rpc.ethereum]
+mainnet = ""                       # 사용 시 설정 필수 (Alchemy, Infura 등)
+sepolia = ""                       # 테스트넷
+
+# ─────────────────────────────────────────
+# 알림 설정 (Phase 8에서 상세 설계)
+# ─────────────────────────────────────────
+[notifications]
+enabled = false                    # 알림 시스템 활성화 여부
+
+[notifications.telegram]
+bot_token = ""                     # Telegram Bot API 토큰
+chat_id = ""                       # 대상 채팅 ID
+
+[notifications.discord]
+webhook_url = ""                   # Discord Webhook URL
+
+[notifications.ntfy]
+server = "https://ntfy.sh"        # ntfy 서버 URL
+topic = ""                         # 구독 토픽
+
+# ─────────────────────────────────────────
+# 보안 설정 (Phase 7-8에서 상세 설계)
+# ─────────────────────────────────────────
+[security]
+session_ttl = 3600                 # 세션 유효 기간 (초) -- 1시간
+max_sessions_per_agent = 5         # 에이전트당 최대 동시 세션
+max_pending_tx = 10                # 최대 대기 트랜잭션 수
+rate_limit_rpm = 60                # 분당 최대 요청 수
+cors_origins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+]
+```
+
+### 3.5 설정 로드 구현 패턴
+
+```typescript
+import { parse } from 'smol-toml';
+import { z } from 'zod';
+import { readFile } from 'node:fs/promises';
+
+// Zod 스키마로 설정 검증
+const ConfigSchema = z.object({
+  daemon: z.object({
+    port: z.number().int().min(1024).max(65535).default(3000),
+    hostname: z.literal('127.0.0.1').default('127.0.0.1'),
+    log_level: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
+    log_file: z.string().default('logs/daemon.log'),
+    log_max_size: z.string().default('50MB'),
+    log_max_files: z.number().int().min(1).max(100).default(5),
+    pid_file: z.string().default('daemon.pid'),
+    shutdown_timeout: z.number().int().min(5).max(300).default(30),
+  }).default({}),
+  keystore: z.object({
+    argon2_memory: z.number().int().min(32768).max(1048576).default(65536),
+    argon2_time: z.number().int().min(1).max(20).default(3),
+    argon2_parallelism: z.number().int().min(1).max(16).default(4),
+    backup_on_rotate: z.boolean().default(true),
+  }).default({}),
+  // ... 나머지 섹션
+});
+
+type Config = z.infer<typeof ConfigSchema>;
+
+async function loadConfig(dataDir: string): Promise<Config> {
+  // 1. 하드코딩 기본값
+  let config: Record<string, unknown> = {};
+
+  // 2. config.toml 파일 로드
+  const configPath = path.join(dataDir, 'config.toml');
+  try {
+    const tomlContent = await readFile(configPath, 'utf-8');
+    config = parse(tomlContent);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    // config.toml 없으면 기본값 사용
+  }
+
+  // 3. 환경변수 오버라이드
+  config = applyEnvOverrides(config);
+
+  // 4. Zod 검증 + 기본값 적용
+  return ConfigSchema.parse(config);
+}
+
+function applyEnvOverrides(config: Record<string, unknown>): Record<string, unknown> {
+  const PREFIX = 'WAIAAS_';
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!key.startsWith(PREFIX) || key === 'WAIAAS_DATA_DIR'
+        || key === 'WAIAAS_MASTER_PASSWORD' || key === 'WAIAAS_MASTER_PASSWORD_FILE') {
+      continue;  // 특수 환경변수는 config에 반영하지 않음
+    }
+
+    // WAIAAS_DAEMON_PORT -> ['daemon', 'port']
+    const parts = key.slice(PREFIX.length).toLowerCase().split('_');
+    if (parts.length < 2) continue;
+
+    const section = parts[0];
+    const field = parts.slice(1).join('_');
+
+    if (!config[section]) config[section] = {};
+    (config[section] as Record<string, unknown>)[field] = parseEnvValue(value!);
+  }
+  return config;
+}
+
+function parseEnvValue(value: string): unknown {
+  // boolean
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  // number
+  const num = Number(value);
+  if (!isNaN(num) && value.trim() !== '') return num;
+
+  // JSON array (CORS origins 등)
+  if (value.startsWith('[')) {
+    try { return JSON.parse(value); } catch { /* fall through */ }
+  }
+
+  // string
+  return value;
+}
+```
+
+### 3.6 hostname 보안 강제
+
+`[daemon].hostname`은 `"127.0.0.1"` 고정이며 config.toml이나 환경변수로 변경할 수 없다. 이는 C-04 (Localhost 0.0.0.0 Day) 피트폴 방지를 위한 의도적 설계이다.
+
+```typescript
+// hostname은 Zod 스키마에서 z.literal('127.0.0.1')로 강제
+// 다른 값 설정 시 Zod 검증 실패
+```
+
+외부 네트워크에서 접근이 필요한 경우 리버스 프록시(nginx, Caddy)를 사용해야 한다.
+
+---
+
+## 4. v0.1 대비 변경 사항
+
+| 항목 | v0.1 (ARCH-02) | v0.2 (CORE-01) |
+|------|---------------|----------------|
+| 패키지 구조 | core, cloud, selfhost, api | core, daemon, adapters/solana, adapters/evm, cli, sdk, mcp |
+| 키 관리 | AWS KMS + Nitro Enclave | 로컬 키스토어 (sodium-native + Argon2id) |
+| 데이터베이스 | PostgreSQL (RDS/Local) | SQLite (better-sqlite3, WAL 모드) |
+| 캐시 | Redis (ElastiCache) | lru-cache (in-memory) |
+| HTTP 프레임워크 | Fastify | Hono + @hono/node-server |
+| ORM | Prisma | Drizzle ORM |
+| 설정 관리 | 환경변수 (.env) | TOML + 환경변수 오버라이드 |
+| 배포 | Docker Compose + AWS EC2 | 로컬 데몬 + Tauri 사이드카 |
+| 멀티시그 | Squads Protocol | 제거 (로컬 정책 엔진) |
+| CLI | 없음 | waiaas init/start/stop/status |
+
+---
+
+## 5. 요구사항 매핑
+
+| 요구사항 | 커버리지 |
+|---------|---------|
+| CLI-01 (waiaas init) | 섹션 2.4 -- 데이터 디렉토리 초기화 절차 |
+| CLI-04 (npm 글로벌 설치) | 섹션 1.5 -- @waiaas/cli의 bin 엔트리 |
+| KEYS-01 (키스토어 경로) | 섹션 2.2 -- `keystore/<agent-id>.json` |
+| API-01 (localhost 전용) | 섹션 3.6 -- hostname 보안 강제 |
+| API-06 (OpenAPI 자동 생성) | 섹션 1.5 -- daemon의 @hono/zod-openapi 의존성 |
+
+---
+
+*문서 ID: CORE-01*
+*작성일: 2026-02-05*
+*Phase: 06-core-architecture-design*
+*상태: 완료*
