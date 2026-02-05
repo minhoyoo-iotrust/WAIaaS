@@ -1,5 +1,32 @@
 # Project Milestones: WAIaaS
 
+## v0.2 Self-Hosted Secure Wallet Design (Shipped: 2026-02-05)
+
+**Delivered:** Self-Hosted AI 에이전트 지갑의 상세 설계를 완성 -- 3계층 보안 모델, 17개 설계 문서, 45개 요구사항을 구현 가능한 수준으로 정의
+
+**Phases completed:** 6-9 (16 plans total)
+
+**Key accomplishments:**
+
+- 암호화 키스토어 바이트 수준 스펙 (AES-256-GCM + Argon2id + sodium guarded memory) + SQLite 7-table 스키마 + 데몬 라이프사이클 설계
+- JWT 세션 프로토콜 (SIWS/SIWE 서명), 6단계 거래 파이프라인, SolanaAdapter 13 메서드 상세 설계
+- 3계층 보안: 4-tier 정책 엔진 + WalletConnect v2 Owner 인증 + 멀티 채널 알림 + Kill Switch 캐스케이드
+- REST API 31 엔드포인트 + TypeScript/Python SDK + MCP 6 도구 + Tauri Desktop 8화면 + Telegram Bot + Docker 배포 스펙
+- 45개 요구사항 전체 충족, 교차 페이즈 통합 43건 검증, E2E 6개 핵심 플로우 완전
+
+**Stats:**
+
+- 74 files created/modified
+- 32,158 lines of design docs (Markdown deliverables)
+- 4 phases, 16 plans, 17 deliverables
+- 1 day (same-day completion, 2026-02-05)
+
+**Git range:** `5be4181` (Phase 6 start) → `fec9f88` (audit complete)
+
+**What's next:** v0.3 Implementation -- 설계 문서를 기반으로 실제 코드 구현 시작
+
+---
+
 ## v0.1 Research & Design (Shipped: 2026-02-05)
 
 **Delivered:** AI 에이전트용 Wallet-as-a-Service의 전체 설계 문서 완성 — 기술 스택부터 API 스펙까지.
