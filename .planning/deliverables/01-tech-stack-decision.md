@@ -1,8 +1,17 @@
 # 권장 기술 스택 최종 확정 문서 (TECH-01)
 
 **작성일:** 2026-02-04
-**버전:** 1.0
-**상태:** 확정
+**버전:** 1.1
+**상태:** 확정 (일부 수정)
+
+---
+
+## 수정 이력
+
+| 날짜 | 버전 | 변경 내용 | 근거 |
+|------|------|----------|------|
+| 2026-02-04 | 1.0 | 최초 작성 | Phase 1 기술 스택 결정 |
+| 2026-02-04 | 1.1 | **[철회] Turnkey 프로바이더 선택 -> 직접 구축으로 변경** | Phase 2 커스터디 모델 분석 결과, 외부 프로바이더 의존 배제 결정 (CUST-04 참조) |
 
 ---
 
@@ -93,20 +102,34 @@
 
 ### 2.5 키 관리
 
-| 구분 | 선택 기술 | 버전 |
-|------|----------|------|
-| 키 관리 프로바이더 | Turnkey | SDK latest |
-| 서버 SDK | @turnkey/sdk-server | latest |
-| Solana 통합 | @turnkey/solana | latest |
+> **[철회됨] 기존 결정:** Turnkey 프로바이더 사용
+>
+> **Phase 2 커스터디 모델 분석 결과, 외부 프로바이더 의존 없이 직접 구축하는 방향으로 변경되었습니다.**
+> 상세 내용은 [07-recommended-custody-model.md](./07-recommended-custody-model.md) (CUST-04)를 참조하세요.
+
+| 구분 | 선택 기술 | 버전 | 비고 |
+|------|----------|------|------|
+| **Owner Key 관리** | AWS KMS (ED25519) | latest | FIPS 140-2 Level 3, Solana 직접 서명 |
+| **Agent Key 런타임** | AWS Nitro Enclaves | - | TEE 기반 키 격리, Attestation 검증 |
+| **온체인 권한 제어** | Squads Protocol v4 | latest | 멀티시그, 온체인 정책 강제 |
+| **KMS 서명 SDK** | solana-kms-signer | latest | KMS ED25519 -> Solana 트랜잭션 서명 |
+
+**직접 구축 선택 이유:**
+1. **벤더 락인 방지:** 외부 프로바이더 서비스 중단/가격 인상 리스크 제거
+2. **데이터 주권:** 키 관리 데이터가 자사 AWS 계정에만 존재
+3. **장기 비용 효율:** 5년 기준 약 36% 비용 절감 (직접 구축 ~$57,600 vs 프로바이더 ~$90,000)
+4. **커스터마이징:** AI 에이전트 특화 정책 엔진 자유 구현 가능
 
 ### 2.6 클라우드 인프라
 
 | 구분 | 선택 기술 | 비고 |
 |------|----------|------|
-| 클라우드 프로바이더 | AWS | Turnkey 동일 인프라 |
+| 클라우드 프로바이더 | AWS | **KMS ED25519 지원, Nitro Enclaves 제공** |
 | 컨테이너 오케스트레이션 | ECS Fargate 또는 EKS | 서버리스 우선 |
 | 데이터베이스 호스팅 | Amazon RDS (PostgreSQL) | Multi-AZ 권장 |
 | 캐시 호스팅 | Amazon ElastiCache (Redis) | 클러스터 모드 |
+| **키 관리 서비스** | AWS KMS | ED25519 지원 (2025-11), FIPS 140-2 Level 3 |
+| **TEE 환경** | AWS Nitro Enclaves | Agent Key 격리, Attestation 검증 |
 
 ### 2.7 테스트 프레임워크
 
@@ -193,29 +216,41 @@
 - Nx 대비 고급 기능(영향 분석, 분산 캐싱) 부족 (단, 현재 규모에 불필요)
 - pnpm 엄격한 의존성 관리로 일부 패키지 호환성 이슈 가능
 
-### 3.5 Turnkey (키 관리)
+### 3.5 키 관리: 직접 구축 (AWS KMS + Nitro Enclaves + Squads)
 
-**비교 대상:** Crossmint Agent Wallets, Privy, Magic, 자체 HSM
+> **[철회됨] 기존 결정:** Turnkey 프로바이더
+>
+> Phase 2 커스터디 모델 분석(CUST-01 ~ CUST-04) 결과, 외부 프로바이더 대신 직접 구축하는 방향으로 변경되었습니다.
 
-**선택 이유:**
-1. **TEE 기반 보안**: AWS Nitro Enclaves에서 프라이빗 키 격리
-2. **Solana Policy Engine**: 거래 정책을 Turnkey 레벨에서 강제 가능
-3. **50-100ms 서명 지연**: 실시간 거래에 적합한 성능
-4. **성숙한 문서/예제**: Solana 통합 가이드, SDK 예제 풍부
+**비교 대상:** Turnkey, Crossmint, Dfns, Privy, 자체 MPC 구현
+
+**직접 구축 선택 이유:**
+1. **벤더 락인 방지:** 프로바이더 서비스 중단, 가격 인상, 기능 제한 시 대응 어려움 방지
+2. **데이터 주권:** 키가 자사 AWS 계정(KMS, Nitro)에만 존재, 제3자 접근 차단
+3. **장기 비용 효율:** 5년 기준 약 36% 비용 절감 (월 $400 vs 프로바이더 월 $600-1,500)
+4. **커스터마이징:** AI 에이전트 특화 정책 엔진 자유 구현, 온체인 정책 강제
+
+**구성 요소:**
+| 구성 요소 | 기술 | 역할 |
+|----------|------|------|
+| Owner Key | AWS KMS (ED25519) | 소유자 마스터 키, 에이전트 관리, 긴급 대응 |
+| Agent Key | AWS Nitro Enclaves | 자율 운영, 정책 범위 내 서명, TEE 격리 |
+| Smart Wallet | Squads Protocol v4 | 온체인 멀티시그, 정책 강제, 동적 threshold |
 
 **트레이드오프 인정:**
-- Crossmint 대비 완전 비수탁(Dual-Key Smart Wallet)은 아님
-- 단, Turnkey도 사용자가 복구 키 보관 가능 (반수탁 모델)
-- Phase 2에서 두 프로바이더 PoC 비교 후 필요시 재평가
+- 초기 개발 비용 발생 (약 3개월 개발 인력)
+- Nitro Enclave 운영 복잡도 (이미지 관리, attestation 설정)
+- 단, 장기적으로 비용 효율적이고 기술 차별화 가능
 
 ### 3.6 AWS (클라우드 인프라)
 
 **비교 대상:** GCP, Azure, Cloudflare
 
 **선택 이유:**
-1. **Turnkey 동일 인프라**: Turnkey가 AWS Nitro Enclaves 사용, 지연시간 최소화
-2. **서비스 완성도**: RDS, ElastiCache, ECS/EKS 모두 프로덕션 검증됨
-3. **한국 리전**: ap-northeast-2 (서울) 리전 가용
+1. **KMS ED25519 지원:** 2025년 11월 발표, Solana 트랜잭션 직접 서명 가능
+2. **Nitro Enclaves:** 하드웨어 수준 TEE, Coinbase/Fireblocks 검증된 키 관리 인프라
+3. **서비스 완성도**: RDS, ElastiCache, ECS/EKS 모두 프로덕션 검증됨
+4. **한국 리전**: ap-northeast-2 (서울) 리전 가용
 
 **트레이드오프 인정:**
 - GCP 대비 Kubernetes(EKS) 관리 복잡 (하지만 ECS Fargate로 시작하면 무관)
@@ -249,7 +284,9 @@ WAIaaS/
 │   │   ├── rpc/                # RPC 클라이언트 래퍼
 │   │   ├── transaction/        # TX 구성, 시뮬레이션
 │   │   └── token/              # SPL 토큰 유틸리티
-│   ├── key-management/         # Turnkey 통합
+│   ├── key-management/         # 키 관리 (직접 구축)
+│   │   ├── kms/                # AWS KMS 통합 (Owner Key)
+│   │   ├── enclave/            # Nitro Enclave 통합 (Agent Key)
 │   │   ├── signer/             # 서명 로직
 │   │   └── policy/             # 서명 정책
 │   ├── database/               # Prisma 스키마 및 클라이언트
@@ -369,10 +406,10 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/waiaas?schema=public
 # Redis
 REDIS_URL="redis://localhost:6379"
 
-# Turnkey (Phase 2에서 발급)
-TURNKEY_API_PUBLIC_KEY=""
-TURNKEY_API_PRIVATE_KEY=""
-TURNKEY_ORG_ID=""
+# AWS KMS (키 관리 - 직접 구축)
+AWS_REGION="ap-northeast-2"
+AWS_KMS_OWNER_KEY_ID=""       # Owner Key ID
+AWS_ENCLAVE_IMAGE_URI=""       # Nitro Enclave 이미지 URI
 
 # Solana RPC (Phase 2에서 설정)
 HELIUS_API_KEY=""
@@ -426,7 +463,8 @@ volumes:
 # 런타임 필수
 pnpm add fastify @fastify/cors @fastify/rate-limit @fastify/helmet
 pnpm add @solana/kit @solana/web3.js
-pnpm add @turnkey/sdk-server @turnkey/solana
+pnpm add @aws-sdk/client-kms solana-kms-signer  # 키 관리 (직접 구축)
+pnpm add @sqds/sdk                               # Squads 멀티시그
 pnpm add @prisma/client ioredis zod jose
 
 # AI 에이전트 통합
@@ -456,8 +494,8 @@ pnpm add -D husky lint-staged
 본 문서의 기술 스택을 기반으로:
 
 1. **Phase 1 완료**: Solana 개발 환경 문서(TECH-02) 작성
-2. **Phase 2 시작**: 모노레포 초기화, Prisma 스키마 설계, Turnkey 계정 설정
-3. **Phase 3**: 지갑 생성 API, 거래 처리 로직 구현
+2. **Phase 2 완료**: 커스터디 모델 분석, 직접 구축 방향 결정 (CUST-04)
+3. **Phase 3 시작**: AWS KMS/Nitro Enclave 설정, Squads 통합, 지갑 생성 API 구현
 4. **Phase 4**: 정책 엔진, human-in-the-loop 구현
 5. **Phase 5**: MCP 서버 통합
 
@@ -471,8 +509,11 @@ pnpm add -D husky lint-staged
 | Fastify | 5.x | 2026-02-04 | 2026-06-04 |
 | Prisma | 6.x | 2026-02-04 | 2026-06-04 |
 | Turborepo | 2.x | 2026-02-04 | 2026-06-04 |
-| Turnkey SDK | latest | 2026-02-04 | 2026-03-04 |
+| ~~Turnkey SDK~~ | ~~latest~~ | ~~2026-02-04~~ | **[철회됨]** |
+| AWS SDK (KMS) | latest | 2026-02-04 | 2026-06-04 |
+| solana-kms-signer | latest | 2026-02-04 | 2026-03-04 |
+| @sqds/sdk | latest | 2026-02-04 | 2026-03-04 |
 | Node.js | 22 LTS | 2026-02-04 | 2027-04-01 |
 | TypeScript | 5.x | 2026-02-04 | 2026-12-04 |
 
-*Solana 생태계(@solana/kit, Turnkey)는 빠른 변화로 30일마다 검토 권장*
+*Solana 생태계(@solana/kit, @sqds/sdk)는 빠른 변화로 30일마다 검토 권장*
