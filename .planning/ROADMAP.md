@@ -38,6 +38,8 @@ Git range: first commit -> `fbceed0`
 
 **Requirements**: KEYS-01, KEYS-02, KEYS-03, KEYS-04, CHAIN-01, CLI-01, CLI-02, CLI-03, CLI-04, API-01, API-06
 
+**Plans:** 5 plans
+
 **Success Criteria** (what must be TRUE):
   1. 암호화 키스토어 파일 포맷이 바이트 수준으로 정의됨 (Ethereum Keystore V3 확장, AES-256-GCM nonce 관리, Argon2id 파라미터, sodium-native guarded memory 사용 프로토콜)
   2. SQLite 스키마가 테이블/인덱스/마이그레이션 수준으로 정의됨 (세션, 거래, 정책, 감사 로그)
@@ -46,11 +48,11 @@ Git range: first commit -> `fbceed0`
   5. 모노레포 패키지 구조와 `~/.waiaas/` 데이터 디렉토리 레이아웃이 확정됨
 
 Plans:
-- [ ] 06-01: 모노레포 구조 + 데이터 디렉토리 + SQLite 스키마 설계
-- [ ] 06-02: 암호화 키스토어 스펙 설계 (파일 포맷, 키 파생, 메모리 안전성 프로토콜)
-- [ ] 06-03: ChainAdapter 인터페이스 설계 + Solana/EVM 어댑터 명세
-- [ ] 06-04: 데몬 라이프사이클 + CLI 커맨드 설계 (init/start/stop/status)
-- [ ] 06-05: Hono API 프레임워크 설계 + localhost 보안 + Zod/OpenAPI 통합 설계
+- [ ] 06-01-PLAN.md — 모노레포 구조 + 데이터 디렉토리 + SQLite 스키마 설계
+- [ ] 06-02-PLAN.md — 암호화 키스토어 스펙 설계 (파일 포맷, 키 파생, 메모리 안전성 프로토콜)
+- [ ] 06-03-PLAN.md — ChainAdapter 인터페이스 설계 + Solana/EVM 어댑터 명세
+- [ ] 06-04-PLAN.md — 데몬 라이프사이클 + CLI 커맨드 설계 (init/start/stop/status)
+- [ ] 06-05-PLAN.md — Hono API 프레임워크 설계 + localhost 보안 + Zod/OpenAPI 통합 설계
 
 ---
 
@@ -127,7 +129,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-5 | v0.1 | 15/15 | Complete | 2026-02-05 |
-| 6. Core Architecture Design | v0.2 | 0/5 | Not started | - |
+| 6. Core Architecture Design | v0.2 | 0/5 | Planned | - |
 | 7. Session & Transaction Protocol | v0.2 | 0/3 | Not started | - |
 | 8. Security Layers Design | v0.2 | 0/4 | Not started | - |
 | 9. Integration & Client Interface | v0.2 | 0/4 | Not started | - |
