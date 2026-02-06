@@ -137,3 +137,229 @@ CLI 바이너리 실행, Docker 컨테이너 빌드/실행, Tauri 데스크톱 �
 | CI 게이트 | 초기 soft gate (경고만) -> 안정화 후 hard gate (PR 차단) |
 | 모노레포 실행 | 루트 Jest projects 설정 + 패키지별 jest.config.ts |
 | 빌드 캐시 | Turborepo `test` 태스크 (cache: false, 항상 실행) |
+
+---
+
+## 2. 모듈별 테스트 레벨 매트릭스
+
+9개 모듈(7 모노레포 패키지 + Python SDK + Desktop App)에 대해 6개 테스트 레벨의 적용 여부를 정의한다. O는 적용, -는 해당없음을 의미한다.
+
+### 2.1 매트릭스 요약
+
+| Module | Unit | Integration | E2E | Chain Integration | Security | Platform |
+|--------|------|-------------|-----|-------------------|----------|----------|
+| @waiaas/core | O | O | - | - | O | - |
+| @waiaas/daemon | O | O | O | - | O | - |
+| @waiaas/adapter-solana | O | O | - | O | - | - |
+| @waiaas/adapter-evm | O | - | - | - | - | - |
+| @waiaas/cli | - | O | - | - | - | O |
+| @waiaas/sdk | O | O | - | - | - | - |
+| @waiaas/mcp | O | O | - | - | - | - |
+| Python SDK | O | O | - | - | - | - |
+| Desktop App (Tauri) | - | - | - | - | - | O |
+
+### 2.2 매트릭스 셀별 검증 대상
+
+#### @waiaas/core
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | Zod 스키마 검증 (입력 유효성/거부), Enum 일관성 (45-enum-unified-mapping 준수), 순수 유틸리티 함수, 타입 가드 |
+| Integration | 테스트 유틸리티(FakeClock, FakeOwnerSigner, MockChainAdapter 등)가 Contract Test 스위트를 통과하는지 검증 |
+| Security | Zod 스키마 우회 시도 (악의적 입력, 프로토타입 오염, JSON 인젝션), Enum 범위 밖 값 처리 |
+
+#### @waiaas/daemon
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | 서비스 로직(SessionService, PolicyEngine, TransactionService), 미들웨어 개별 동작(sessionAuth, ownerAuth, hostGuard, rateLimit), 키스토어 암호화/복호화 로직 |
+| Integration | 서비스 + SQLite DB 연동(세션 CRUD, 정책 평가 + DB 조회, 트랜잭션 파이프라인 + 상태 전이), 키스토어 + 실제 파일시스템 |
+| E2E | 31개 API 엔드포인트 전체 흐름: 세션 생성->트랜잭션 요청->정책 평가->응답, 미들웨어 체인 통합(9단계), 에러 응답 형식 검증 |
+| Security | 인증 토큰 위변조, 세션 하이재킹, 정책 우회(TOCTOU 공격), Rate limit 우회, Host header 변조, Replay 공격 방어 |
+
+#### @waiaas/adapter-solana
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | 주소 검증 로직, 트랜잭션 빌드/직렬화, 수수료 추정 계산, 에러 코드 매핑(RPC 에러 -> WAIaaS 에러) |
+| Integration | Mock RPC 서버와의 연동 흐름 (connect -> getBalance -> buildTransaction -> simulate), Contract Test 스위트 실행 |
+| Chain Integration | Solana Devnet 실제 연결, SOL 전송 전체 흐름(빌드->시뮬레이션->서명->제출->확인), 네트워크 에러 복구 |
+
+#### @waiaas/adapter-evm
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | 13개 메소드 전체가 CHAIN_NOT_SUPPORTED 에러를 throw하는지 확인, Stub 인터페이스 준수 |
+
+#### @waiaas/cli
+
+| Level | 검증 대상 |
+|-------|----------|
+| Integration | CLI 명령 실행(init, start, stop, status) + 데몬 프로세스 상호작용, config.toml 생성/읽기, exit code 검증 |
+| Platform | 실제 바이너리로 패키징 후 init->start->status->stop 전체 흐름, Node.js SEA 패키징 동작 확인 |
+
+#### @waiaas/sdk
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | SDK 클라이언트 메소드 시그니처, 요청 빌드 로직, 응답 파싱/타입 변환, 에러 래핑 |
+| Integration | Mock HTTP 서버(MSW 또는 Hono test client)와의 연동, 세션 토큰 관리 흐름, 재시도 로직 |
+
+#### @waiaas/mcp
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | 6개 MCP 도구 정의(스키마, 파라미터 검증), 3개 리소스 정의, SDK 메소드 호출 위임 로직 |
+| Integration | SDK를 통한 daemon 연동 흐름, stdio 전송 프로토콜 입출력, WAIAAS_SESSION_TOKEN 환경변수 처리 |
+
+#### Python SDK
+
+| Level | 검증 대상 |
+|-------|----------|
+| Unit | Pydantic v2 모델 직렬화/역직렬화, 클라이언트 메소드 시그니처, snake_case 변환, 에러 타입 |
+| Integration | httpx AsyncClient + Mock 서버 연동, 세션 토큰 관리, 비동기 요청/응답 흐름 |
+
+#### Desktop App (Tauri)
+
+| Level | 검증 대상 |
+|-------|----------|
+| Platform | Tauri 앱 빌드/패키징, Sidecar(Node.js SEA) 실행, IPC 통신(daemon lifecycle), 트레이 아이콘 3-color 상태 전환 |
+
+---
+
+## 3. 패키지별 커버리지 목표
+
+보안 위험도 기반 차등 커버리지를 적용한다. 커버리지는 Unit + Integration 테스트로 측정하며, E2E는 별도 관리한다.
+
+### 3.1 커버리지 Tier 정의
+
+| Tier | 커버리지 범위 | 적용 기준 |
+|------|-------------|----------|
+| Critical | 90%+ | 자금 보호, 인증/인가, 정책 평가 등 보안 핵심 모듈. 실패 시 자금 손실 또는 무단 접근 가능 |
+| High | 80%+ | 공개 인터페이스, 외부 연동 어댑터. 실패 시 서비스 중단 또는 데이터 불일치 가능 |
+| Normal | 70%+ | 유틸리티, CLI, 얇은 위임 레이어. 실패 시 사용성 저하이나 보안 영향 없음 |
+| Low | 50%+ | Stub/미구현 모듈. 인터페이스 준수 확인만 필요 |
+
+### 3.2 패키지 수준 커버리지 목표
+
+| Package | Target | Tier | Rationale |
+|---------|--------|------|-----------|
+| @waiaas/core | 90%+ | Critical | SSoT Enum 9종, Zod 스키마, 인터페이스 정의를 포함하며 모든 패키지의 기반이 된다. 여기서의 타입 오류는 전체 시스템으로 전파된다 |
+| @waiaas/daemon | 하위 모듈별 차등 | Critical~Normal | 키스토어(보안 최상위)부터 라이프사이클(프로세스 관리)까지 보안 위험도가 혼재한다. 패키지 전체 단일 수치로는 보안 보장이 불충분하므로 모듈별 세분화 적용 |
+| @waiaas/adapter-solana | 80%+ | High | RPC 의존도가 높아 Mock 한계가 존재하나, 주소 검증/트랜잭션 빌드/에러 매핑 등 핵심 로직은 순수 함수로 검증 가능하다 |
+| @waiaas/adapter-evm | 50%+ | Low | v0.4에서는 Stub만 존재한다. 13개 메소드가 CHAIN_NOT_SUPPORTED를 throw하는지만 확인하면 충분하다 |
+| @waiaas/cli | 70%+ | Normal | parseArgs 기반 명령 파싱과 프로세스 spawn/시그널 전달이 주요 로직이다. 프로세스 간 통신 특성상 Unit보다 Integration 위주로 검증한다 |
+| @waiaas/sdk | 80%+ | High | AI 에이전트와 외부 클라이언트가 직접 사용하는 공개 인터페이스이다. 타입 안정성과 에러 처리의 정확성이 사용자 경험에 직결된다 |
+| @waiaas/mcp | 70%+ | Normal | SDK 위의 얇은 위임 레이어로, 6개 MCP 도구와 3개 리소스의 스키마 정의/위임 로직만 포함한다. 핵심 로직은 SDK에서 검증된다 |
+| Python SDK | 80%+ | High | httpx + Pydantic v2 기반 별도 레포이다. pytest + httpx.AsyncClient mock으로 TS SDK와 동일 수준의 인터페이스 안정성을 보장한다 |
+| Desktop App (Tauri) | 제외 | - | UI 컴포넌트는 수동 QA 중심이며, 자동화 커버리지 측정 대상에서 제외한다. Platform 테스트로 빌드/패키징/IPC만 검증한다 |
+
+### 3.3 @waiaas/daemon 모듈별 세분화 커버리지
+
+@waiaas/daemon은 보안 위험도가 모듈마다 크게 다르므로, 디렉토리 단위로 커버리지 목표를 세분화한다.
+
+| daemon Sub-Module | Target | Tier | Rationale |
+|-------------------|--------|------|-----------|
+| infrastructure/keystore/ | 95%+ | Critical | AES-256-GCM 암호화, Argon2id 키 파생, sodium guarded memory 관리를 담당한다. 자금 보호의 최전선이며, 암호화 로직의 어떤 경로도 미검증 상태로 남아서는 안 된다 |
+| services/session-service | 90%+ | Critical | JWT HS256 토큰 발급/검증, 세션 만료/무효화, nonce LRU 캐시를 관리한다. 인증 우회 시 전체 시스템 접근 권한이 탈취된다 |
+| services/policy-engine | 90%+ | Critical | DatabasePolicyEngine의 4-tier 정책 평가(INSTANT/NOTIFY/DELAY/APPROVAL), TOCTOU 방지를 위한 BEGIN IMMEDIATE + reserved_amount 로직을 포함한다. 정책 평가 오류는 자금 무단 이동으로 이어진다 |
+| services/transaction-service | 90%+ | Critical | 6단계 트랜잭션 파이프라인(validate->policy->build->simulate->sign->submit)과 8-state 상태 머신을 관리한다. 파이프라인의 단일 단계 오류가 자금 손실로 이어질 수 있다 |
+| server/middleware/ | 85%+ | High | sessionAuth 2단계 검증, ownerAuth 8단계 검증, hostGuard(127.0.0.1 강제), rateLimit 3레벨(global/session/tx)을 포함한다. 미들웨어 우회는 보안 계층 전체를 무력화한다 |
+| server/routes/ | 80%+ | High | 31개 API 엔드포인트의 요청 파싱(Zod), 서비스 위임, 응답 직렬화를 담당한다. 라우트 핸들러는 서비스 로직을 위임하므로 직접 보안 로직은 적으나, 입력 검증 누락이 보안 취약점이 된다 |
+| infrastructure/database/ | 80%+ | High | Drizzle ORM 스키마 정의, 마이그레이션, 쿼리 빌더를 포함한다. 쿼리 오류는 데이터 불일치와 상태 손상으로 이어지며, 트랜잭션 격리 실패는 TOCTOU 취약점을 유발한다 |
+| infrastructure/notifications/ | 80%+ | High | Telegram/Discord/ntfy.sh 채널의 INotificationChannel 구현체와 TokenBucketRateLimiter를 포함한다. 모든 레벨에서 완전 Mock이므로 HTTP 호출 로직 자체의 정확성을 검증한다 |
+| lifecycle/ | 75%+ | Normal | 7단계 startup, 10단계 graceful shutdown, 시그널 핸들링(SIGTERM/SIGINT), 프로세스 관리를 담당한다. 실패 시 서비스 중단이나 리소스 누수가 발생하나, 자금 손실 위험은 제한적이다 |
+
+### 3.4 커버리지 측정 방법
+
+**커버리지 엔진:** Jest 30의 v8 coverage provider (기본 제공)
+
+**임계값 설정:** 루트 `jest.config.ts`에서 `coverageThreshold`를 glob 패턴으로 지정한다. Jest projects에서 per-project `coverageThreshold`는 지원이 제한적이므로(Pitfall #2), 반드시 루트에서 관리한다.
+
+```typescript
+// jest.config.ts (루트) -- 커버리지 임계값 설정 예시
+coverageThreshold: {
+  // 글로벌 기본값
+  global: {
+    branches: 70,
+    functions: 70,
+    lines: 70,
+    statements: 70,
+  },
+  // @waiaas/core (Critical)
+  './packages/core/src/': {
+    branches: 85, functions: 90, lines: 90, statements: 90,
+  },
+  // @waiaas/daemon - keystore (Critical, 최상위)
+  './packages/daemon/src/infrastructure/keystore/': {
+    branches: 90, functions: 95, lines: 95, statements: 95,
+  },
+  // @waiaas/daemon - 핵심 서비스 (Critical)
+  './packages/daemon/src/services/': {
+    branches: 85, functions: 90, lines: 90, statements: 90,
+  },
+  // @waiaas/daemon - 미들웨어 (High)
+  './packages/daemon/src/server/middleware/': {
+    branches: 80, functions: 85, lines: 85, statements: 85,
+  },
+  // @waiaas/daemon - 라우트 (High)
+  './packages/daemon/src/server/routes/': {
+    branches: 75, functions: 80, lines: 80, statements: 80,
+  },
+  // @waiaas/daemon - DB/알림 인프라 (High)
+  './packages/daemon/src/infrastructure/database/': {
+    branches: 75, functions: 80, lines: 80, statements: 80,
+  },
+  './packages/daemon/src/infrastructure/notifications/': {
+    branches: 75, functions: 80, lines: 80, statements: 80,
+  },
+  // @waiaas/daemon - 라이프사이클 (Normal)
+  './packages/daemon/src/lifecycle/': {
+    branches: 70, functions: 75, lines: 75, statements: 75,
+  },
+  // @waiaas/adapter-solana (High)
+  './packages/adapters/solana/src/': {
+    branches: 75, functions: 80, lines: 80, statements: 80,
+  },
+  // @waiaas/adapter-evm (Low)
+  './packages/adapters/evm/src/': {
+    branches: 45, functions: 50, lines: 50, statements: 50,
+  },
+  // @waiaas/sdk (High)
+  './packages/sdk/src/': {
+    branches: 75, functions: 80, lines: 80, statements: 80,
+  },
+  // @waiaas/cli (Normal)
+  './packages/cli/src/': {
+    branches: 65, functions: 70, lines: 70, statements: 70,
+  },
+  // @waiaas/mcp (Normal)
+  './packages/mcp/src/': {
+    branches: 65, functions: 70, lines: 70, statements: 70,
+  },
+}
+```
+
+**측정 제외 대상:**
+- `**/*.d.ts` -- 타입 선언 파일
+- `**/index.ts` -- barrel export 파일
+- `**/testing/**` -- 테스트 유틸리티 (FakeClock, MockChainAdapter 등)
+- `**/__tests__/**` -- 테스트 코드 자체
+
+### 3.5 CI 게이트 전략
+
+커버리지 게이트는 프로젝트 성숙도에 따라 2단계로 적용한다.
+
+| Phase | 게이트 유형 | 동작 | 전환 조건 |
+|-------|-----------|------|----------|
+| Phase 1 (초기) | Soft Gate | 커버리지 미달 시 CI 경고 출력, PR은 통과 허용 | 프로젝트 시작부터 적용 |
+| Phase 2 (안정화 후) | Hard Gate | 커버리지 미달 시 CI 실패, PR 차단 | 각 패키지의 커버리지가 목표의 80% 이상에 안정적으로 도달한 후 |
+
+**Soft Gate 구현 방식:**
+- Jest `coverageThreshold` 설정은 유지하되, CI 스크립트에서 `jest --coverage` 실패 시 exit code를 무시하고 경고만 출력
+- 커버리지 리포트는 PR 코멘트에 첨부하여 가시성 확보
+
+**Hard Gate 전환 판단 기준:**
+- 최근 10회 PR에서 해당 패키지의 커버리지가 목표 수치의 80% 이상 유지
+- 예: @waiaas/core 목표 90%이면, 72% 이상이 10회 연속 유지 시 hard gate 전환
+- 전환은 패키지별로 독립 적용 (전체 일괄 전환 아님)
