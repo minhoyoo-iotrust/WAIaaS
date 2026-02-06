@@ -31,12 +31,12 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
   3. agents 테이블 스키마에 owner_address 컬럼이 추가되고, config.toml [owner] 섹션 제거 및 owner_wallets -> wallet_connections 전환이 명세되어 있다
   4. WalletConnect 미연결 상태에서도 CLI 수동 서명으로 모든 ownerAuth 기능이 동작하는 플로우가 정의되어 있다
   5. 보안 비다운그레이드 검증 -- APPROVAL 티어 거래와 KS 복구에서 ownerAuth가 유지됨이 v0.2 대비 매핑표로 확인 가능하다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 19-01: TBD
-- [ ] 19-02: TBD
-- [ ] 19-03: TBD
+- [ ] 19-01-PLAN.md -- 3-tier 인증 모델 정의 + 31 엔드포인트 인증 맵 + 보안 비다운그레이드 검증
+- [ ] 19-02-PLAN.md -- Owner 주소 에이전트 귀속 (agents.owner_address NOT NULL) + wallet_connections + config.toml
+- [ ] 19-03-PLAN.md -- 기존 설계 문서 반영 (34-owner-wallet-connection.md + 37-rest-api-complete-spec.md)
 
 **Key Deliverables:**
 - 신규: 인증 모델 재설계 문서 (masterAuth/ownerAuth/sessionAuth 3-tier 정의)
@@ -94,7 +94,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 0/TBD | Not started | - |
+| 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 0/3 | Planning complete | - |
 | 20. 세션 갱신 프로토콜 | v0.5 | 0/TBD | Not started | - |
 | 21. DX 개선 + 설계 문서 통합 | v0.5 | 0/TBD | Not started | - |
 
@@ -112,4 +112,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-07 (Phase 19 planning complete)*
