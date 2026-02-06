@@ -1846,7 +1846,81 @@ async function killSwitch(password: string, reason: string): Promise<void> {
 
 ---
 
-## 13. 요구사항 충족 매트릭스
+## 13. 구현 노트
+
+> Phase 13 (v0.3 MEDIUM 구현 노트)에서 추가. 기존 설계를 변경하지 않으며, 구현 시 참고할 주의사항을 정리한다.
+
+### 13.1 IPC + HTTP 이중 채널 에러 처리 전략
+
+**배경:** Tauri Desktop 앱은 데몬 프로세스 관리(IPC)와 API 호출(HTTP) 두 가지 통신 경로를 사용한다(섹션 3 참조). 두 채널의 에러 유형이 다르므로, 구현 시 통합 에러 처리 전략이 필요하다.
+
+**에러 분류표:**
+
+| 에러 유형 | 원천 | 에러 클래스 | 사용자 표시 |
+|----------|------|-----------|-----------|
+| 데몬 프로세스 관리 실패 | Tauri IPC (`invoke`) | Rust `tauri::Error` -> JS catch | "데몬 시작/중지 실패" |
+| API 호출 실패 | HTTP fetch (`@waiaas/sdk`) | `WAIaaSError` | SDK 에러 코드별 메시지 |
+| 데몬 미실행 | HTTP fetch | `ECONNREFUSED` | "데몬이 실행 중이 아닙니다" -> 자동 시작 시도 |
+| IPC 성공 + HTTP 실패 | 혼합 시퀀스 | 복합 | 상태 동기화 후 재시도 안내 |
+
+**ECONNREFUSED 처리 전략:**
+
+```
+HTTP 요청 시 ECONNREFUSED 감지
+  -> invoke('get_daemon_status') (IPC) 호출
+  -> 미실행이면 invoke('start_daemon') (IPC) 시도
+  -> 시작 성공 후 HTTP 재시도 (최대 1회)
+  -> 재시도 실패 시 "데몬 시작에 실패했습니다" 에러 표시
+```
+
+**상태 동기화 패턴:**
+
+IPC `DaemonStatus`와 HTTP `GET /health` 응답을 조합하여 최종 상태를 결정한다.
+
+| IPC DaemonStatus | HTTP /health | 최종 상태 | 사용자 표시 |
+|------------------|-------------|----------|-----------|
+| running | healthy | **정상** | 녹색 아이콘 |
+| running | degraded | **경고** | 노란색 아이콘 |
+| running | 실패 (ECONNREFUSED) | **시작 중** | "데몬이 시작 중입니다..." |
+| stopped | N/A (호출 불가) | **중지됨** | 회색 아이콘 |
+| error | N/A | **오류** | 빨간색 아이콘 + 에러 메시지 |
+
+**React 에러 통합 패턴:**
+
+`useDaemonHealth()` hook에서 IPC 상태와 HTTP `/health`를 폴링하여 통합 상태를 제공한다. 에러 발생 시 Toast(일시적 에러) 또는 Banner(지속적 에러)로 통합 표시한다.
+
+- IPC 에러 -> Banner ("데몬 프로세스 관리 실패")
+- HTTP 4xx -> Toast (SDK 에러 코드별 메시지, 사용자 동작 오류)
+- HTTP 5xx -> Banner ("서버 내부 오류")
+- ECONNREFUSED -> 자동 복구 시도 후 실패 시 Banner
+
+**참조:** 섹션 3.1~3.3 (통신 아키텍처), SDK-MCP (38-sdk-mcp-interface.md) WAIaaSError 정의
+
+### 13.2 Setup Wizard와 CLI init 초기화 순서 관계
+
+**배경:** Setup Wizard(섹션 7.8)는 5단계, CLI init(CORE-05, 28-daemon-lifecycle-cli.md 섹션 6.1)은 4단계로 초기화 범위와 순서에 차이가 있다. 구현 시 양쪽의 역할 분담과 차이를 이해해야 한다.
+
+**차이점 비교표:**
+
+| 항목 | CLI init (4단계) | Setup Wizard (5단계) | 설계 근거 |
+|------|-----------------|---------------------|----------|
+| 패스워드 최소 길이 | 12자 | 8자 (구현 시 12자로 통일 권장) | 보안 우선. 12자 통일 권장 |
+| 에이전트 생성 | 선택적 | 필수 (Step 2) | Wizard는 즉시 사용 가능 상태 목표 |
+| Owner 지갑 연결 | 선택적 | 필수 (Step 3, WalletConnect) | Wizard는 보안 완전 설정 목표 |
+| 알림 채널 | 선택적 | 필수 (Step 4, 최소 2개) | Wizard는 4-tier 정책 즉시 활성화 |
+| Owner/알림 순서 | 알림 -> Owner | Owner -> 알림 | Wizard: Owner QR 후 알림 설정이 자연스러운 흐름 |
+
+**통합 근거:**
+
+- **CLI = 최소 초기화:** 데몬 실행 가능한 최소 상태(패스워드 + 데이터 디렉토리 + DB + 키스토어 초기화)만 설정. 나머지는 데몬 시작 후 API로 설정 가능.
+- **Wizard = CLI init + 데몬 시작 + API 호출의 조합:** Step 1-2는 내부적으로 `waiaas init` 호출, Step 3-4는 데몬 시작 후 REST API 호출(`POST /v1/owner/connect`, `PUT /v1/owner/settings`).
+- **패스워드 최소 길이:** 설계 문서상 CLI 12자 / Wizard 8자이나, 구현 시 양쪽 모두 12자로 통일 권장 (보안 우선). Wizard 설계 변경은 v0.4에서 반영.
+
+**참조:** CORE-05 (28-daemon-lifecycle-cli.md) 구현 노트 "CLI init과 Setup Wizard의 역할 분담"
+
+---
+
+## 14. 요구사항 충족 매트릭스
 
 | 요구사항 | 상태 | 충족 섹션 | 핵심 설계 |
 |---------|------|-----------|-----------|

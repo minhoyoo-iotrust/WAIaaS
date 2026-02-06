@@ -2127,7 +2127,47 @@ dedup_ttl = 300                    # 중복 방지 TTL (초) -- 5분
 
 ---
 
-## 13. 요구사항 매핑 총괄
+## 13. 구현 노트
+
+### 13.1 알림 채널과 정책 엔진 연동 규칙 (NOTE-02)
+
+알림 채널의 활성 상태에 따라 정책 엔진의 동작 범위가 제한된다. 이 규칙은 DatabasePolicyEngine의 `evaluate()` 메서드에서 반드시 검증해야 한다.
+
+**핵심 규칙:**
+- `notifications.enabled = true` 이고 활성 채널 >= 2일 때: 전체 4-tier(INSTANT/NOTIFY/DELAY/APPROVAL) 정책이 동작
+- `notifications.enabled = true` 이고 활성 채널 < 2일 때: INSTANT 티어만 허용. NOTIFY/DELAY/APPROVAL 티어 정책을 적용하려 하면 PolicyEngine이 거부해야 함
+- `notifications.enabled = false` (기본값)일 때: 알림 시스템 자체 비활성. 채널 설정과 무관하게 INSTANT 티어만 허용
+
+**초기화 시나리오별 동작:**
+
+| 시나리오 | notifications.enabled | 활성 채널 수 | 허용 티어 |
+|---------|----------------------|------------|----------|
+| `waiaas init` 직후 | false (기본값) | 0 | INSTANT만 |
+| 알림 활성화, 채널 미설정 | true | 0 | INSTANT만 |
+| 채널 1개 설정 | true | 1 | INSTANT만 (min_channels 미달) |
+| 채널 2개 이상 설정 | true | >= 2 | INSTANT/NOTIFY/DELAY/APPROVAL 전체 |
+| Setup Wizard 완료 후 | true | >= 2 (Wizard Step 4 필수) | 전체 4-tier |
+
+**config.toml과의 관계:**
+- `[notifications].enabled`: 알림 시스템 마스터 스위치. `false`이면 채널 설정 자체가 무의미
+- `[notifications].min_channels`: 최소 활성 채널 수 (기본 2). 35-notification-architecture.md 섹션 12.4 참조
+- 채널 삭제/비활성화 시 `activeCount < min_channels` 검증으로 차단 (섹션 9.3)
+- 참조: config.toml `[notifications]` 섹션은 24-monorepo-data-directory.md 참조
+
+**PolicyEngine 구현 의사 코드:**
+
+```
+function evaluate(request):
+  tier = determineTier(request.amount)
+  if tier != INSTANT:
+    if !config.notifications.enabled OR activeChannelCount < config.notifications.min_channels:
+      return DENY(reason: "알림 채널 부족으로 NOTIFY/DELAY/APPROVAL 정책 사용 불가")
+  // ... 기존 정책 평가 로직
+```
+
+---
+
+## 14. 요구사항 매핑 총괄
 
 | 요구사항 | 충족 여부 | 충족 근거 |
 |---------|----------|----------|

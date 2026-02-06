@@ -2604,6 +2604,215 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 
 ---
 
+## 11. 구현 노트
+
+### 11.1 MCP <-> REST API 기능 패리티 매트릭스 (NOTE-03)
+
+31개 REST 엔드포인트 전체에 대한 MCP Tool/Resource 매핑 현황이다. MCP는 AI 에이전트 권한 범위(세션 Bearer)만 노출하며, Owner/Admin API는 보안상 의도적으로 제외한다.
+
+**Public API (3개)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 1 | GET /health | 리소스: `waiaas://system/status` | 커버됨 | 시스템 상태 확인 |
+| 2 | GET /doc | - | 의도적 미커버 | Swagger UI는 브라우저 전용 |
+| 3 | GET /v1/nonce | 도구: `get_nonce` | 커버됨 | 세션 생성 전 nonce 조회 |
+
+**Session API -- Agent 인증 (5개)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 4 | GET /v1/wallet/balance | 도구: `get_balance` + 리소스: `waiaas://wallet/balance` | 커버됨 | 잔액 조회 |
+| 5 | GET /v1/wallet/address | 도구: `get_address` + 리소스: `waiaas://wallet/address` | 커버됨 | 주소 조회 |
+| 6 | POST /v1/transactions/send | 도구: `send_token` | 커버됨 | 토큰 전송 |
+| 7 | GET /v1/transactions | 도구: `list_transactions` | 커버됨 | 거래 이력 |
+| 8 | GET /v1/transactions/:id | 도구: `get_transaction` | 커버됨 | 거래 상세 |
+
+**Session API -- 추가 (1개, 부분 커버)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 9 | GET /v1/transactions/pending | - | 의도적 미커버 | 대기 거래는 Agent가 조회할 필요 적음. list_transactions로 대체 가능 |
+
+**Session Management API -- Owner 인증 (3개)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 10 | POST /v1/sessions | - | 의도적 미커버 | 세션 생성은 Owner 권한 |
+| 11 | GET /v1/sessions | - | 의도적 미커버 | 세션 관리는 Owner 권한 |
+| 12 | DELETE /v1/sessions/:id | - | 의도적 미커버 | 세션 폐기는 Owner 권한 |
+
+**Owner API (17개)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 13-28 | /v1/owner/* (16개) | - | 의도적 미커버 | Owner API 전체는 보안상 MCP 미노출 |
+| 29 | GET /v1/owner/dashboard | - | 의도적 미커버 | 대시보드는 Desktop/CLI 전용 |
+
+**Admin API (3개)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 30 | POST /v1/admin/kill-switch | - | 의도적 미커버 | Kill Switch는 Master 권한 |
+| 31 | POST /v1/admin/shutdown | - | 의도적 미커버 | 시스템 종료는 Master 권한 |
+| 32 | GET /v1/admin/status | - | 의도적 미커버 | Admin 상태는 Master 권한 |
+
+**요약:**
+- 커버됨: 7개 (도구 6 + 리소스 3, 일부 중복)
+- 의도적 미커버: 24개 (Owner 17 + Admin 3 + Session Mgmt 3 + doc 1)
+- "MCP Pitfall 2: Tool 과다 등록 방지" 결정 참조
+- v0.3+ 확장 후보: Streamable HTTP transport 도입 시 MCP 도구 확장 검토
+
+### 11.2 SDK 에러 코드 타입 매핑 전략 (NOTE-04)
+
+현재 SDK의 `WAIaaSError.code`는 `string` 타입이다. 구현 시 36개 에러 코드를 타입 수준에서 매핑하여 자동완성과 타입 체크를 활성화해야 한다.
+
+**TS SDK 타입 매핑:**
+
+```typescript
+// @waiaas/sdk에서 정의
+type WAIaaSErrorCode =
+  // AUTH (8)
+  | 'INVALID_TOKEN' | 'TOKEN_EXPIRED' | 'SESSION_REVOKED'
+  | 'INVALID_SIGNATURE' | 'INVALID_NONCE' | 'INVALID_MASTER_PASSWORD'
+  | 'MASTER_PASSWORD_LOCKED' | 'SYSTEM_LOCKED'
+  // SESSION (4)
+  | 'SESSION_NOT_FOUND' | 'SESSION_EXPIRED'
+  | 'SESSION_LIMIT_EXCEEDED' | 'CONSTRAINT_VIOLATED'
+  // TX (7)
+  | 'INSUFFICIENT_BALANCE' | 'INVALID_ADDRESS' | 'TX_NOT_FOUND'
+  | 'TX_EXPIRED' | 'TX_ALREADY_PROCESSED' | 'CHAIN_ERROR' | 'SIMULATION_FAILED'
+  // POLICY (4)
+  | 'POLICY_DENIED' | 'SPENDING_LIMIT_EXCEEDED'
+  | 'RATE_LIMIT_EXCEEDED' | 'WHITELIST_DENIED'
+  // OWNER (4)
+  | 'OWNER_ALREADY_CONNECTED' | 'OWNER_NOT_CONNECTED'
+  | 'APPROVAL_TIMEOUT' | 'APPROVAL_NOT_FOUND'
+  // SYSTEM (6)
+  | 'KILL_SWITCH_ACTIVE' | 'KILL_SWITCH_NOT_ACTIVE'
+  | 'KEYSTORE_LOCKED' | 'CHAIN_NOT_SUPPORTED'
+  | 'SHUTTING_DOWN' | 'ADAPTER_NOT_AVAILABLE'
+  // AGENT (3)
+  | 'AGENT_NOT_FOUND' | 'AGENT_SUSPENDED' | 'AGENT_TERMINATED'
+
+// WAIaaSError.code 필드 타입 변경
+class WAIaaSError extends Error {
+  readonly code: WAIaaSErrorCode  // string -> WAIaaSErrorCode
+  // ... 나머지 동일
+}
+```
+
+**Python SDK 타입 매핑:**
+
+```python
+from enum import Enum
+
+class ErrorCode(str, Enum):
+    # AUTH (8)
+    INVALID_TOKEN = "INVALID_TOKEN"
+    TOKEN_EXPIRED = "TOKEN_EXPIRED"
+    SESSION_REVOKED = "SESSION_REVOKED"
+    INVALID_SIGNATURE = "INVALID_SIGNATURE"
+    INVALID_NONCE = "INVALID_NONCE"
+    INVALID_MASTER_PASSWORD = "INVALID_MASTER_PASSWORD"
+    MASTER_PASSWORD_LOCKED = "MASTER_PASSWORD_LOCKED"
+    SYSTEM_LOCKED = "SYSTEM_LOCKED"
+    # SESSION (4)
+    SESSION_NOT_FOUND = "SESSION_NOT_FOUND"
+    SESSION_EXPIRED = "SESSION_EXPIRED"
+    SESSION_LIMIT_EXCEEDED = "SESSION_LIMIT_EXCEEDED"
+    CONSTRAINT_VIOLATED = "CONSTRAINT_VIOLATED"
+    # TX (7)
+    INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE"
+    INVALID_ADDRESS = "INVALID_ADDRESS"
+    TX_NOT_FOUND = "TX_NOT_FOUND"
+    TX_EXPIRED = "TX_EXPIRED"
+    TX_ALREADY_PROCESSED = "TX_ALREADY_PROCESSED"
+    CHAIN_ERROR = "CHAIN_ERROR"
+    SIMULATION_FAILED = "SIMULATION_FAILED"
+    # POLICY (4)
+    POLICY_DENIED = "POLICY_DENIED"
+    SPENDING_LIMIT_EXCEEDED = "SPENDING_LIMIT_EXCEEDED"
+    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
+    WHITELIST_DENIED = "WHITELIST_DENIED"
+    # OWNER (4)
+    OWNER_ALREADY_CONNECTED = "OWNER_ALREADY_CONNECTED"
+    OWNER_NOT_CONNECTED = "OWNER_NOT_CONNECTED"
+    APPROVAL_TIMEOUT = "APPROVAL_TIMEOUT"
+    APPROVAL_NOT_FOUND = "APPROVAL_NOT_FOUND"
+    # SYSTEM (6)
+    KILL_SWITCH_ACTIVE = "KILL_SWITCH_ACTIVE"
+    KILL_SWITCH_NOT_ACTIVE = "KILL_SWITCH_NOT_ACTIVE"
+    KEYSTORE_LOCKED = "KEYSTORE_LOCKED"
+    CHAIN_NOT_SUPPORTED = "CHAIN_NOT_SUPPORTED"
+    SHUTTING_DOWN = "SHUTTING_DOWN"
+    ADAPTER_NOT_AVAILABLE = "ADAPTER_NOT_AVAILABLE"
+    # AGENT (3)
+    AGENT_NOT_FOUND = "AGENT_NOT_FOUND"
+    AGENT_SUSPENDED = "AGENT_SUSPENDED"
+    AGENT_TERMINATED = "AGENT_TERMINATED"
+
+# WAIaaSError.code 필드 타입 변경
+class WAIaaSError(Exception):
+    code: ErrorCode  # str -> ErrorCode
+```
+
+**7개 도메인별 에러 코드 전체 목록:**
+
+| 도메인 | 코드 수 | 에러 코드 |
+|--------|--------|----------|
+| AUTH | 8 | INVALID_TOKEN, TOKEN_EXPIRED, SESSION_REVOKED, INVALID_SIGNATURE, INVALID_NONCE, INVALID_MASTER_PASSWORD, MASTER_PASSWORD_LOCKED, SYSTEM_LOCKED |
+| SESSION | 4 | SESSION_NOT_FOUND, SESSION_EXPIRED, SESSION_LIMIT_EXCEEDED, CONSTRAINT_VIOLATED |
+| TX | 7 | INSUFFICIENT_BALANCE, INVALID_ADDRESS, TX_NOT_FOUND, TX_EXPIRED, TX_ALREADY_PROCESSED, CHAIN_ERROR, SIMULATION_FAILED |
+| POLICY | 4 | POLICY_DENIED, SPENDING_LIMIT_EXCEEDED, RATE_LIMIT_EXCEEDED, WHITELIST_DENIED |
+| OWNER | 4 | OWNER_ALREADY_CONNECTED, OWNER_NOT_CONNECTED, APPROVAL_TIMEOUT, APPROVAL_NOT_FOUND |
+| SYSTEM | 6 | KILL_SWITCH_ACTIVE, KILL_SWITCH_NOT_ACTIVE, KEYSTORE_LOCKED, CHAIN_NOT_SUPPORTED, SHUTTING_DOWN, ADAPTER_NOT_AVAILABLE |
+| AGENT | 3 | AGENT_NOT_FOUND, AGENT_SUSPENDED, AGENT_TERMINATED |
+
+**추가 결정 사항:**
+- 도메인별 에러 서브클래스 불필요: 단일 `WAIaaSError` + `code` 필드로 구분 (현행 유지)
+- retryable 판정: HTTP 429, 502, 503, 504 -> `retryable=true`, 나머지 `false` (현행 유지)
+- MCP 에러: `isError: true` + JSON text `{code, message}` 반환 (현행 유지)
+
+### 11.3 Python SDK snake_case 변환 검증 (NOTE-10)
+
+REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을 검증한 결과이다. 17개 주요 필드 전부 일관성 OK.
+
+**검증 결과:**
+
+| # | REST API (camelCase) | Python SDK (snake_case) | alias 설정 | 일관성 |
+|---|---------------------|------------------------|-----------|--------|
+| 1 | `transactionId` | `transaction_id` | `alias="transactionId"` | OK |
+| 2 | `txHash` | `tx_hash` | `alias="txHash"` | OK |
+| 3 | `estimatedFee` | `estimated_fee` | `alias="estimatedFee"` | OK |
+| 4 | `createdAt` | `created_at` | `alias="createdAt"` | OK |
+| 5 | `executedAt` | `executed_at` | `alias="executedAt"` | OK |
+| 6 | `toAddress` | `to_address` | `alias="toAddress"` | OK |
+| 7 | `nextCursor` | `next_cursor` | `alias="nextCursor"` | OK |
+| 8 | `queuedAt` | `queued_at` | `alias="queuedAt"` | OK |
+| 9 | `expiresAt` | `expires_at` | `alias="expiresAt"` | OK |
+| 10 | `sessionId` | `session_id` | `alias="sessionId"` | OK |
+| 11 | `maxAmountPerTx` | `max_amount_per_tx` | `alias="maxAmountPerTx"` | OK |
+| 12 | `maxTotalAmount` | `max_total_amount` | `alias="maxTotalAmount"` | OK |
+| 13 | `maxTransactions` | `max_transactions` | `alias="maxTransactions"` | OK |
+| 14 | `allowedOperations` | `allowed_operations` | `alias="allowedOperations"` | OK |
+| 15 | `allowedDestinations` | `allowed_destinations` | `alias="allowedDestinations"` | OK |
+| 16 | `expiresIn` | `expires_in` | `alias="expiresIn"` | OK |
+| 17 | `tokenMint` | `token_mint` | `alias="tokenMint"` | OK |
+
+**Pydantic 규칙:**
+- 모든 alias 모델에 `model_config = {"populate_by_name": True}` 필수 설정
+- 이 설정이 없으면 Python 코드에서 snake_case 필드명으로 인스턴스 생성이 불가
+
+**에러 코드 무변환 원칙:**
+- UPPER_SNAKE_CASE 에러 코드(INVALID_TOKEN, INSUFFICIENT_BALANCE 등)는 Python에서도 그대로 사용
+- 이미 Python 관례(상수 = UPPER_SNAKE_CASE)와 일치하므로 변환 불필요
+
+**Owner API Python SDK:**
+- v0.2에서는 TS Owner SDK만 설계됨. Python Owner SDK는 v0.3+ 확장 시 동일 snake_case 규칙 적용
+
+---
+
 *문서 ID: SDK-MCP*
 *작성일: 2026-02-05*
 *Phase: 09-integration-client-interface-design*

@@ -429,6 +429,8 @@ const BalanceResponseSchema = z.object({
 }).openapi('BalanceResponse')
 ```
 
+> **금액 변환 규칙:** `formatted` 필드의 bigint -> 표시 문자열 변환 공식은 27-chain-adapter-interface.md 구현 노트 참조.
+
 **응답 예시 (200 OK):**
 ```json
 {
@@ -2471,7 +2473,52 @@ app.use('/v1/deprecated-endpoint', async (c, next) => {
 
 ---
 
-## 14. 전체 엔드포인트 맵 (Quick Reference)
+## 14. 구현 노트
+
+### 14.1 커서 페이지네이션 표준 (NOTE-11)
+
+모든 리스트 엔드포인트에서 일관된 커서 페이지네이션 파라미터를 사용한다.
+
+**표준 파라미터 4개:**
+
+| 파라미터 | 위치 | 타입 | 필수 | 기본값 | 설명 |
+|---------|------|------|------|--------|------|
+| `cursor` | 요청 query | string (UUID v7) | 선택 | - | 이전 응답의 `nextCursor` 값. 첫 요청 시 생략 |
+| `limit` | 요청 query | number | 선택 | 20 | 페이지 크기 (1~100) |
+| `order` | 요청 query | `asc` \| `desc` | 선택 | `desc` | 정렬 방향 (UUID v7 시간순) |
+| `nextCursor` | 응답 body | string \| null | 항상 | - | 다음 페이지 커서. `null`이면 마지막 페이지 |
+
+**UUID v7 커서 구현 규칙:**
+
+```sql
+-- DESC (최신순, 기본)
+WHERE id < :cursor ORDER BY id DESC LIMIT :limit + 1
+
+-- ASC (오래된 순)
+WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
+```
+
+오버페치 방식: `LIMIT n+1`로 조회 후 n+1번째 행이 존재하면 `nextCursor = rows[n-1].id`, 없으면 `nextCursor = null`.
+
+**페이지네이션 적용/미적용 엔드포인트:**
+
+| 엔드포인트 | 페이지네이션 | 근거 |
+|-----------|------------|------|
+| GET /v1/transactions | 적용 | 거래 이력은 무한 증가 |
+| GET /v1/sessions (Session Mgmt) | 적용 | 에이전트당 세션 누적 |
+| GET /v1/owner/sessions | 적용 | Owner 세션 전체 조회 |
+| GET /v1/owner/pending-approvals | 적용 (선택) | 대기 승인은 소규모이나 일관성을 위해 지원 |
+| GET /v1/owner/agents | 미적용 | 에이전트 수는 소규모 (전체 반환) |
+
+**클라이언트 구현 가이드:**
+1. 첫 요청: `cursor` 파라미터 생략
+2. 다음 페이지: 응답의 `nextCursor` 값을 다음 요청의 `cursor`에 전달
+3. 마지막 페이지: `nextCursor`가 `null`이면 더 이상 데이터 없음
+4. 이 파라미터명(`cursor`/`nextCursor`/`limit`/`order`)은 현재 모든 리스트 엔드포인트에서 일관됨을 확인함
+
+---
+
+## 15. 전체 엔드포인트 맵 (Quick Reference)
 
 | # | Method | Path | Auth | Tags | operationId | 정의 원본 |
 |---|--------|------|------|------|-------------|----------|

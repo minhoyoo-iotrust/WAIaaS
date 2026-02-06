@@ -1968,7 +1968,61 @@ export async function runAgent(args: string[]): Promise<void> {
 
 ---
 
-## 9. 요구사항 매핑
+## 9. 구현 노트
+
+### 9.1 Graceful Shutdown 타임라인 검증 (NOTE-08)
+
+10단계 Graceful Shutdown(섹션 3)의 합산 시간이 Docker `stop_grace_period: 35s` 내에 수렴하는지 검증한다.
+
+**30초 강제 타이머:** Step 1에서 `setTimeout(() => process.exit(1), 30_000)` 설정. 이 타이머는 모든 후속 Step에 대한 절대적인 상한선이다.
+
+**Step 4-5 병렬성:** In-flight HTTP 요청에 서명 작업이 포함된 경우, Step 4(In-flight 완료 대기)에서 이미 서명 완료까지 대기하므로 Step 5(진행 중 서명 작업 완료)는 추가 대기가 불필요하다. 즉, Step 4와 Step 5는 순차가 아닌 포함 관계이다.
+
+**타임라인 검증표:**
+
+| 시나리오 | Step 1-3 | Step 4 | Step 5 | Step 6-10 | 합계 | 35s 내? |
+|---------|----------|--------|--------|-----------|------|---------|
+| 정상 종료 (요청 없음) | ~0ms | 0s | 0s | ~1.2s | ~1.2s | OK |
+| In-flight 요청 있음 | ~0ms | 최대 30s | 포함됨 | ~1.5s | ~31.5s | OK (마진 3.5s) |
+| 서명 진행 중 | ~0ms | 최대 30s | 포함됨 | ~1.5s | ~31.5s | OK |
+| 최악 케이스 | ~0ms | 30s (타이머) | - | - | 30s | 강제 exit(1) |
+
+**최악 케이스 흐름:**
+1. Step 1: SIGTERM 수신 -> 30초 강제 타이머 시작
+2. Step 4: In-flight 요청이 30초 가까이 소요
+3. 30초 강제 타이머 발동 -> `process.exit(1)`
+4. Docker는 추가 5초 마진 내에서 SIGKILL 전송 (실제로는 이미 종료됨)
+
+**Docker stop_grace_period: 35s = 30s(daemon 강제 타이머) + 5s(margin)**
+
+참조: Docker 설정은 40-telegram-bot-docker.md 참조.
+
+### 9.2 CLI init과 Setup Wizard의 역할 분담 (NOTE-06)
+
+**배경:** CLI `waiaas init`(섹션 6.1)은 4단계, Tauri Setup Wizard(TAURI-DESK, 39-tauri-desktop-architecture.md 섹션 7.8)는 5단계로 초기화를 수행한다. 양쪽의 역할이 다르므로, 구현 시 범위를 명확히 이해해야 한다.
+
+**CLI init 범위 (데몬 미실행 상태에서 수행):**
+
+1. 데이터 디렉토리 생성 (`~/.waiaas/`)
+2. `config.toml` 기본 설정 파일 생성
+3. SQLite 초기화 (마이그레이션 포함)
+4. 키스토어 초기화 (마스터 패스워드 설정, Argon2id 키 파생)
+5. (선택적) 첫 에이전트 생성
+
+**데몬 실행 후 API로 수행하는 항목 (CLI init 범위 밖):**
+
+- Owner 지갑 연결: `POST /v1/owner/connect`
+- 알림 채널 설정: `PUT /v1/owner/settings`
+- 추가 에이전트 생성: `POST /v1/owner/agents`
+- 정책 설정: Owner API 엔드포인트
+
+**패스워드 최소 길이:** CLI init에서 12자 기준을 유지한다. Setup Wizard 측 8자는 구현 시 12자로 통일 권장 (보안 우선).
+
+**참조:** Setup Wizard 상세는 39-tauri-desktop-architecture.md 구현 노트 "Setup Wizard와 CLI init 초기화 순서 관계" 참조.
+
+---
+
+## 10. 요구사항 매핑
 
 | 요구사항 ID | 요구사항 | 커버 섹션 |
 |------------|---------|----------|

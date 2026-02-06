@@ -2592,6 +2592,51 @@ private notConnectedError(): ChainError {
 
 ---
 
+## 9. 구현 노트
+
+### 9.1 금액 단위 변환 규칙 (NOTE-01)
+
+WAIaaS에서 금액은 레이어별로 다른 표현을 사용한다. 구현 시 레이어 간 변환 규칙을 반드시 준수해야 한다.
+
+**저장/전송 레이어 (ChainAdapter, DB, Pipeline):**
+모든 금액은 최소 단위(lamports/wei) bigint로 처리한다. DB `transactions.amount`는 TEXT 타입으로 bigint 직렬화 값을 저장한다. `TransferRequest.amount`, `TokenAmount.raw`, `UnsignedTransaction.estimatedFee` 모두 bigint이다.
+
+**API 레이어 변환 공식:**
+REST API `BalanceResponse.formatted` 필드는 다음 공식으로 생성한다:
+
+```
+formatted = Number(balance) / (10 ** decimals)  -- 숫자 변환
+         -> .toFixed(decimals)                  -- 전체 소수점 표현
+         -> .replace(/\.?0+$/, '')              -- trailing zeros 제거
+         + ' ' + symbol                         -- 심볼 붙이기
+```
+
+예시: `1500000000n` (SOL, decimals=9) -> `"1.5 SOL"`
+
+**체인별 변환표:**
+
+| 체인 | 최소 단위 | decimals | 1 토큰 = 최소 단위 | 예시 |
+|------|----------|----------|-------------------|------|
+| Solana (SOL) | lamports | 9 | 1 SOL = 10^9 lamports | 1.5 SOL = `1_500_000_000n` |
+| Ethereum (ETH) | wei | 18 | 1 ETH = 10^18 wei | 0.1 ETH = `100_000_000_000_000_000n` |
+| Polygon (MATIC) | wei | 18 | 1 MATIC = 10^18 wei | 동일 EVM 규칙 |
+| Arbitrum (ETH) | wei | 18 | 1 ETH = 10^18 wei | 동일 EVM 규칙 |
+
+**SDK 레이어 변환 헬퍼 (구현 시 참고):**
+
+```typescript
+// @waiaas/sdk 또는 @waiaas/core에 포함
+function formatAmount(balance: bigint, decimals: number, symbol: string): string
+// 예: formatAmount(1_500_000_000n, 9, 'SOL') -> "1.5 SOL"
+
+function parseAmount(amount: string, decimals: number): bigint
+// 예: parseAmount("1.5", 9) -> 1_500_000_000n
+```
+
+**참조:** REST API `BalanceResponse`의 `formatted` 필드 변환 규칙은 37-rest-api-complete-spec.md 섹션 6.3 참조.
+
+---
+
 *문서 ID: CORE-04*
 *작성일: 2026-02-05*
 *Phase: 06-core-architecture-design*

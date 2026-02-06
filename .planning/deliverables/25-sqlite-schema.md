@@ -1263,7 +1263,40 @@ export const notificationChannels = sqliteTable('notification_channels', {
 
 ---
 
-## 7. 요구사항 매핑 총괄
+## 7. 구현 노트
+
+### 7.1 에이전트 상태 v0.1 -> v0.2 매핑 (NOTE-09)
+
+v0.1(15-agent-lifecycle-management.md, SUPERSEDED)과 v0.2(이 문서)의 에이전트 상태 5단계 매핑이다. 값 이름은 동일하지만 대소문자와 의미가 변경되었다.
+
+**상태 매핑표:**
+
+| v0.1 값 (lowercase) | v0.2 값 (UPPERCASE) | 의미 변경 요약 |
+|---------------------|---------------------|--------------|
+| `creating` | `CREATING` | v0.1: Squads 멤버 등록 포함 -> v0.2: 키 생성 + 지갑 주소 생성만 |
+| `active` | `ACTIVE` | v0.1: SpendingLimit 온체인 활성 -> v0.2: DatabasePolicyEngine 로컬 정책 활성 |
+| `suspended` | `SUSPENDED` | v0.1: SpendingLimit 비활성화(온체인) -> v0.2: 로컬 정책 차단 + `suspension_reason` 세분화 |
+| `terminating` | `TERMINATING` | v0.1: Squads 멤버 제거 + 자금 회수 -> v0.2: 키스토어 키 제거 + 잔액 반환 안내 |
+| `terminated` | `TERMINATED` | 양쪽 모두 불가역 최종 상태. 변경 없음 |
+
+**v0.2에서 추가된 SUSPENDED 세분화:**
+
+v0.2에서는 `suspension_reason` 컬럼으로 정지 사유를 구분한다:
+
+| suspension_reason | 트리거 | 복구 방법 |
+|-------------------|--------|----------|
+| `kill_switch` | Kill Switch 발동 (전체 에이전트 정지) | Owner 복구 (SIWS + 마스터 패스워드) |
+| `policy_violation` | 정책 엔진 위반 감지 | Owner 수동 resume |
+| `manual` | Owner 직접 정지 | Owner 수동 resume |
+| `auto_stop` | AutoStopEngine 규칙 트리거 | Owner 확인 후 resume |
+
+**SUPERSEDED 참조:** v0.1 15-agent-lifecycle-management.md는 Phase 10에서 SUPERSEDED 표기됨. v0.2 설계가 SSoT이다.
+
+**통합 대응표 참조:** 45-enum-unified-mapping.md에서 AgentStatus 5개 값의 SSoT를 확인할 수 있다.
+
+---
+
+## 8. 요구사항 매핑 총괄
 
 | 요구사항 | 테이블 | 커버리지 |
 |---------|--------|---------|

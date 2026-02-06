@@ -725,6 +725,8 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 
 #### [notifications] 섹션 -- 알림 채널 설정 (Phase 8에서 상세화)
 
+> **채널 최소 요구 규칙:** 활성 채널 수와 정책 엔진 4-tier 동작의 관계는 35-notification-architecture.md 구현 노트 참조.
+
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
 | `enabled` | boolean | `false` | true/false | 알림 시스템 활성화 여부 |
