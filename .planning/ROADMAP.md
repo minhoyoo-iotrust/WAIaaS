@@ -40,7 +40,7 @@ Git range: `5be4181` → `fec9f88`
 
 - [x] **Phase 10: v0.1 잔재 정리** — SUPERSEDED 표기, 변경 매핑 문서 작성 ✓
 - [x] **Phase 11: CRITICAL 의사결정 확정** — 포트, Enum, Docker 바인딩, 자금 충전 모델 ✓
-- [ ] **Phase 12: HIGH 스키마/수치 통일** — Enum 통일, config.toml 보완, API 스펙 통일
+- [x] **Phase 12: HIGH 스키마/수치 통일** — Enum 통일, config.toml 보완, API 스펙 통일 ✓
 - [ ] **Phase 13: MEDIUM 구현 노트** — 11개 구현 시 주의사항 문서화
 
 ## Phase Details
@@ -108,9 +108,9 @@ Plans:
   6. ownerAuth 미들웨어 상세가 REST API 스펙에 정의됨
 
 Plans:
-- [ ] 12-01-PLAN.md — Enum/상태값 통합 대응표 작성 + SQLite CHECK 일치 검증
-- [ ] 12-02-PLAN.md — config.toml 누락 설정 추가 (jwt_secret, 임계값, 쿨다운 등)
-- [ ] 12-03-PLAN.md — REST API ↔ API Framework 스펙 통일 (CORS, Health, Rate Limiter, ownerAuth)
+- [x] 12-01-PLAN.md — Enum/상태값 통합 대응표 작성 + SQLite CHECK 일치 검증
+- [x] 12-02-PLAN.md — config.toml 누락 설정 추가 (jwt_secret, 임계값, 쿨다운 등)
+- [x] 12-03-PLAN.md — REST API ↔ API Framework 스펙 통일 (CORS, Health, Rate Limiter, ownerAuth)
 
 ---
 
@@ -151,9 +151,9 @@ Plans:
 | 6-9 | v0.2 | 16/16 | Complete | 2026-02-05 |
 | 10. v0.1 잔재 정리 | v0.3 | 2/2 | Complete | 2026-02-06 |
 | 11. CRITICAL 의사결정 | v0.3 | 1/1 | Complete | 2026-02-06 |
-| 12. HIGH 스키마/수치 통일 | v0.3 | 0/3 | Not started | - |
+| 12. HIGH 스키마/수치 통일 | v0.3 | 3/3 | Complete | 2026-02-06 |
 | 13. MEDIUM 구현 노트 | v0.3 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-06 (Phase 11 complete)*
+*Last updated: 2026-02-06 (Phase 12 complete)*
