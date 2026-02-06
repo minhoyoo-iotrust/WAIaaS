@@ -666,7 +666,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
-| `port` | integer | `3000` | 1024-65535 | HTTP 서버 포트 |
+| `port` | integer | `3100` | 1024-65535 | HTTP 서버 포트 |
 | `hostname` | string | `"127.0.0.1"` | `"127.0.0.1"` 고정 | 바인딩 주소. 보안상 localhost 강제 |
 | `log_level` | string | `"info"` | `"trace"`, `"debug"`, `"info"`, `"warn"`, `"error"` | 로그 레벨 |
 | `log_file` | string | `"logs/daemon.log"` | 상대 경로 (DATA_DIR 기준) 또는 절대 경로 | 로그 파일 경로 |
@@ -733,7 +733,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `max_sessions_per_agent` | integer | `5` | 1-50 | 에이전트당 최대 동시 세션 수 |
 | `max_pending_tx` | integer | `10` | 1-100 | 최대 대기 트랜잭션 수 |
 | `rate_limit_rpm` | integer | `60` | 10-1000 | 분당 최대 요청 수 |
-| `cors_origins` | array of string | `["http://localhost:3000", "http://127.0.0.1:3000"]` | URL 배열 | 허용 CORS origin |
+| `cors_origins` | array of string | `["http://localhost:3100", "http://127.0.0.1:3100"]` | URL 배열 | 허용 CORS origin |
 
 ### 3.4 전체 기본 config.toml 예시
 
@@ -746,7 +746,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 # 데몬 서버 설정
 # ─────────────────────────────────────────
 [daemon]
-port = 3000                        # HTTP 서버 포트 (1024-65535)
+port = 3100                        # HTTP 서버 포트 (1024-65535)
 hostname = "127.0.0.1"             # 바인딩 주소 (보안상 변경 불가)
 log_level = "info"                 # trace, debug, info, warn, error
 log_file = "logs/daemon.log"       # 로그 파일 (DATA_DIR 상대 경로)
@@ -819,8 +819,8 @@ max_sessions_per_agent = 5         # 에이전트당 최대 동시 세션
 max_pending_tx = 10                # 최대 대기 트랜잭션 수
 rate_limit_rpm = 60                # 분당 최대 요청 수
 cors_origins = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000"
+  "http://localhost:3100",
+  "http://127.0.0.1:3100"
 ]
 ```
 
@@ -834,7 +834,7 @@ import { readFile } from 'node:fs/promises';
 // Zod 스키마로 설정 검증
 const ConfigSchema = z.object({
   daemon: z.object({
-    port: z.number().int().min(1024).max(65535).default(3000),
+    port: z.number().int().min(1024).max(65535).default(3100),
     hostname: z.literal('127.0.0.1').default('127.0.0.1'),
     log_level: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
     log_file: z.string().default('logs/daemon.log'),
