@@ -290,9 +290,9 @@ ACTIVATED 또는 RECOVERING 상태에서 **허용 엔드포인트 목록만 통�
 
 ```typescript
 const HealthResponseSchema = z.object({
-  status: z.enum(['ok', 'degraded', 'error']).openapi({
+  status: z.enum(['healthy', 'degraded', 'unhealthy']).openapi({
     description: '서버 상태',
-    example: 'ok',
+    example: 'healthy',
   }),
   version: z.string().openapi({
     description: 'WAIaaS 버전',
@@ -312,7 +312,7 @@ const HealthResponseSchema = z.object({
 **응답 예시 (200 OK):**
 ```json
 {
-  "status": "ok",
+  "status": "healthy",
   "version": "0.2.0",
   "uptime": 3600,
   "timestamp": "2026-02-05T10:31:25.000Z"
@@ -561,7 +561,7 @@ const TransferRequestSchema = z.object({
     description: 'SPL/ERC20 토큰 주소 (type=TOKEN_TRANSFER 시 필수)',
   }),
   memo: z.string().max(200).optional().openapi({
-    description: '메모 (최대 200자)',
+    description: '최대 200자. Solana Memo Program 256 bytes 이내를 보장한다. UTF-8 멀티바이트 문자 사용 시에도 200자 제한으로 256 bytes를 초과하지 않는다. 체인 어댑터에서 바이트 길이 이중 검증 수행.',
     example: 'Payment for services',
   }),
   priority: z.enum(['low', 'medium', 'high']).optional().default('medium').openapi({
@@ -600,6 +600,24 @@ TransactionStatusEnum의 8개 상태는 DB의 SSoT(Single Source of Truth)이다
 
 > **참고**: DB 상태 8개가 SSoT이며, 표시 텍스트는 클라이언트 구현 재량.
 > Telegram Bot, Tauri Desktop 모두 이 매핑을 따른다.
+
+#### 클라이언트 에이전트 상태 표시 가이드
+
+AgentStatus의 5개 상태는 DB의 SSoT이다. `KILL_SWITCH`는 DB 상태가 아니며, 클라이언트에서 `status`와 `suspensionReason`을 조합하여 표시한다.
+
+| DB status | suspension_reason | 클라이언트 표시 |
+|-----------|-------------------|----------------|
+| `CREATING` | - | "생성 중" |
+| `ACTIVE` | - | "활성" |
+| `SUSPENDED` | `kill_switch` | "킬 스위치 발동" |
+| `SUSPENDED` | `policy_violation` | "정책 위반으로 정지" |
+| `SUSPENDED` | `manual` | "수동 정지" |
+| `SUSPENDED` | `auto_stop` | "자동 정지" |
+| `SUSPENDED` | (기타) | "정지됨" |
+| `TERMINATING` | - | "종료 중" |
+| `TERMINATED` | - | "종료됨" |
+
+> **참고**: Enum 통합 대응표(45-enum-unified-mapping.md)가 모든 Enum의 SSoT이다.
 
 ```typescript
 const TransactionResponseSchema = z.object({
@@ -1362,7 +1380,7 @@ const RecoverResponseSchema = z.object({
   recovered: z.literal(true),
   timestamp: z.string().datetime(),
   agentsReactivated: z.number().int().nonnegative().openapi({
-    description: 'ACTIVE로 복원된 에이전트 수 (KILL_SWITCH 정지된 것만)',
+    description: 'ACTIVE로 복원된 에이전트 수 (Kill Switch로 SUSPENDED된 것만, suspension_reason=kill_switch)',
   }),
 }).openapi('RecoverResponse')
 ```
@@ -1727,10 +1745,15 @@ const OwnerSessionRevokeResponseSchema = z.object({
 const AgentSummarySchema = z.object({
   id: z.string().uuid().openapi({ description: '에이전트 ID (UUID v7)' }),
   name: z.string().openapi({ description: '에이전트 이름' }),
-  status: z.enum(['ACTIVE', 'SUSPENDED', 'TERMINATED', 'KILL_SWITCH']).openapi({ description: '상태' }),
+  status: z.enum(['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']).openapi({
+    description: '에이전트 상태 (DB CHECK 5개 값). KILL_SWITCH는 DB 상태가 아닌 클라이언트 표시 상태 (status=SUSPENDED + suspension_reason=kill_switch)',
+  }),
   chain: z.string().openapi({ description: '체인' }),
   network: z.string().openapi({ description: '네트워크' }),
   publicKey: z.string().openapi({ description: '지갑 공개키' }),
+  suspensionReason: z.string().nullable().optional().openapi({
+    description: '정지 사유 (SUSPENDED 상태일 때만). kill_switch, policy_violation, manual, auto_stop 등',
+  }),
   createdAt: z.string().datetime(),
   sessionCount: z.number().int().openapi({ description: '활성 세션 수' }),
   totalTxCount: z.number().int().openapi({ description: '총 거래 수' }),
@@ -1982,9 +2005,10 @@ const DashboardResponseSchema = z.object({
   agentStatuses: z.array(z.object({
     id: z.string().uuid(),
     name: z.string(),
-    status: z.enum(['ACTIVE', 'SUSPENDED', 'TERMINATED', 'KILL_SWITCH']),
+    status: z.enum(['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']),
+    suspensionReason: z.string().nullable().optional(),
     chain: z.string(),
-  })).openapi({ description: '에이전트 상태 요약' }),
+  })).openapi({ description: '에이전트 상태 요약. KILL_SWITCH는 status=SUSPENDED + suspensionReason=kill_switch로 표현' }),
 }).openapi('DashboardResponse')
 ```
 

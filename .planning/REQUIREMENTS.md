@@ -34,31 +34,31 @@ v0.2에서 대체된 v0.1 설계에 명시적 표기를 추가하여 잘못된 �
 
 문서 간 충돌하는 Enum 값을 SQLite CHECK 제약과 1:1로 대응시킨다.
 
-- [ ] **ENUM-01**: 에이전트 상태 Enum 통일 (H6) — REST API와 SQLite CHECK 일치
-- [ ] **ENUM-02**: 정책 상태 Enum 통일 (H7) — REST API와 SQLite CHECK 일치
-- [ ] **ENUM-03**: 트랜잭션 상태 머신 통일 (M1) — QUEUED vs PENDING_QUEUE 등 정리
-- [ ] **ENUM-04**: Enum/상태값 통합 대응표 작성 — 모든 Enum의 단일 진실 소스
+- [x] **ENUM-01**: 에이전트 상태 Enum 통일 (H6) — REST API와 SQLite CHECK 일치
+- [x] **ENUM-02**: 정책 상태 Enum 통일 (H7) — REST API와 SQLite CHECK 일치
+- [x] **ENUM-03**: 트랜잭션 상태 머신 통일 (M1) — QUEUED vs PENDING_QUEUE 등 정리
+- [x] **ENUM-04**: Enum/상태값 통합 대응표 작성 — 모든 Enum의 단일 진실 소스
 
 ### 설정 스펙 통일
 
 config.toml에 누락된 설정을 추가하고 기본값을 통일한다.
 
-- [ ] **CONF-01**: 세션 TTL 기본값 통일 (H2) — 24h로 확정, config.toml 반영
-- [ ] **CONF-02**: jwt_secret 설정 추가 (H3) — config.toml [auth] 섹션에 필드 추가
-- [ ] **CONF-03**: 연속 실패 임계값 통일 (H5) — 단일 값으로 확정
-- [ ] **CONF-04**: Nonce 캐시 크기 설정화 (M3) — config.toml에 조절 옵션 추가
-- [ ] **CONF-05**: Kill Switch 복구 쿨다운 설정화 (M5) — config.toml에 옵션 추가
+- [x] **CONF-01**: 세션 TTL 기본값 통일 (H2) — 24h로 확정, config.toml 반영
+- [x] **CONF-02**: jwt_secret 설정 추가 (H3) — config.toml [security] 섹션에 필드 추가
+- [x] **CONF-03**: 연속 실패 임계값 통일 (H5) — 단일 값으로 확정
+- [x] **CONF-04**: Nonce 캐시 크기 설정화 (M3) — config.toml에 조절 옵션 추가
+- [x] **CONF-05**: Kill Switch 복구 쿨다운 설정화 (M5) — config.toml에 옵션 추가
 
 ### API 스펙 통일
 
 REST API 스펙과 API 프레임워크 설계 간 불일치를 해소한다.
 
-- [ ] **API-01**: 메모 길이 제한 통일 (H4) — Solana 256 bytes vs API 200 chars 해결
-- [ ] **API-02**: CORS 헤더 통일 (H8) — REST API 추가 헤더를 미들웨어 설계에 반영
-- [ ] **API-03**: Health 응답 스키마 통일 (H9) — 단일 스키마로 확정
-- [ ] **API-04**: Rate Limiter 단위 통일 (H12) — req/min으로 통일
-- [ ] **API-05**: SuccessResponse 래퍼 정리 (H14) — 미사용 확정, 잔존 예시 제거
-- [ ] **API-06**: ownerAuth 미들웨어 상세 정의 (H15) — REST API 스펙에 반영
+- [x] **API-01**: 메모 길이 제한 통일 (H4) — Solana 256 bytes vs API 200 chars 해결
+- [x] **API-02**: CORS 헤더 통일 (H8) — REST API 추가 헤더를 미들웨어 설계에 반영
+- [x] **API-03**: Health 응답 스키마 통일 (H9) — 단일 스키마로 확정
+- [x] **API-04**: Rate Limiter 단위 통일 (H12) — req/min으로 통일
+- [x] **API-05**: SuccessResponse 래퍼 정리 (H14) — 미사용 확정, 잔존 예시 제거
+- [x] **API-06**: ownerAuth 미들웨어 상세 정의 (H15) — REST API 스펙에 반영
 
 ### MEDIUM 구현 노트
 
@@ -110,21 +110,21 @@ v0.4 Implementation 마일스톤에서 다룰 예정:
 | CRIT-02 | Phase 11 | Complete |
 | CRIT-03 | Phase 11 | Complete |
 | CRIT-04 | Phase 11 | Complete |
-| ENUM-01 | Phase 12 | Pending |
-| ENUM-02 | Phase 12 | Pending |
-| ENUM-03 | Phase 12 | Pending |
-| ENUM-04 | Phase 12 | Pending |
-| CONF-01 | Phase 12 | Pending |
-| CONF-02 | Phase 12 | Pending |
-| CONF-03 | Phase 12 | Pending |
-| CONF-04 | Phase 12 | Pending |
-| CONF-05 | Phase 12 | Pending |
-| API-01 | Phase 12 | Pending |
-| API-02 | Phase 12 | Pending |
-| API-03 | Phase 12 | Pending |
-| API-04 | Phase 12 | Pending |
-| API-05 | Phase 12 | Pending |
-| API-06 | Phase 12 | Pending |
+| ENUM-01 | Phase 12 | Complete |
+| ENUM-02 | Phase 12 | Complete |
+| ENUM-03 | Phase 12 | Complete |
+| ENUM-04 | Phase 12 | Complete |
+| CONF-01 | Phase 12 | Complete |
+| CONF-02 | Phase 12 | Complete |
+| CONF-03 | Phase 12 | Complete |
+| CONF-04 | Phase 12 | Complete |
+| CONF-05 | Phase 12 | Complete |
+| API-01 | Phase 12 | Complete |
+| API-02 | Phase 12 | Complete |
+| API-03 | Phase 12 | Complete |
+| API-04 | Phase 12 | Complete |
+| API-05 | Phase 12 | Complete |
+| API-06 | Phase 12 | Complete |
 | NOTE-01 | Phase 13 | Pending |
 | NOTE-02 | Phase 13 | Pending |
 | NOTE-03 | Phase 13 | Pending |
@@ -144,4 +144,4 @@ v0.4 Implementation 마일스톤에서 다룰 예정:
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 (Phase 11 CRIT-01~04 complete)*
+*Last updated: 2026-02-06 (Phase 12 ENUM/CONF/API complete)*

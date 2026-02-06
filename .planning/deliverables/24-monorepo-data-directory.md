@@ -650,7 +650,18 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `WAIAAS_DAEMON_LOG_LEVEL` | `[daemon].log_level` | `debug` |
 | `WAIAAS_KEYSTORE_ARGON2_MEMORY` | `[keystore].argon2_memory` | `65536` |
 | `WAIAAS_RPC_SOLANA_MAINNET` | `[rpc.solana].mainnet` | `https://custom.rpc.com` |
-| `WAIAAS_SECURITY_SESSION_TTL` | `[security].session_ttl` | `3600` |
+| `WAIAAS_SECURITY_SESSION_TTL` | `[security].session_ttl` | `86400` |
+| `WAIAAS_SECURITY_JWT_SECRET` | `[security].jwt_secret` | `a1b2c3...` (64자 hex) |
+| `WAIAAS_SECURITY_NONCE_CACHE_MAX` | `[security].nonce_cache_max` | `1000` |
+| `WAIAAS_SECURITY_NONCE_CACHE_TTL` | `[security].nonce_cache_ttl` | `300` |
+| `WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_RPM` | `[security].rate_limit_global_rpm` | `100` |
+| `WAIAAS_SECURITY_RATE_LIMIT_SESSION_RPM` | `[security].rate_limit_session_rpm` | `300` |
+| `WAIAAS_SECURITY_RATE_LIMIT_TX_RPM` | `[security].rate_limit_tx_rpm` | `10` |
+| `WAIAAS_SECURITY_AUTO_STOP_CONSECUTIVE_FAILURES_THRESHOLD` | `[security.auto_stop].consecutive_failures_threshold` | `3` |
+| `WAIAAS_SECURITY_POLICY_DEFAULTS_DELAY_SECONDS` | `[security.policy_defaults].delay_seconds` | `300` |
+| `WAIAAS_SECURITY_POLICY_DEFAULTS_APPROVAL_TIMEOUT` | `[security.policy_defaults].approval_timeout` | `3600` |
+| `WAIAAS_SECURITY_KILL_SWITCH_RECOVERY_COOLDOWN` | `[security.kill_switch].recovery_cooldown` | `1800` |
+| `WAIAAS_SECURITY_KILL_SWITCH_MAX_RECOVERY_ATTEMPTS` | `[security.kill_switch].max_recovery_attempts` | `3` |
 
 **특수 환경변수 (TOML에 없는 항목):**
 
@@ -726,15 +737,40 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `.server` | string | `"https://ntfy.sh"` | URL | ntfy 서버 URL |
 | `.topic` | string | `""` | 문자열 | 구독 토픽 |
 
-#### [security] 섹션 -- 보안 설정 (Phase 7-8에서 상세화)
+#### [security] 섹션 -- 보안 설정
 
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
-| `session_ttl` | integer | `3600` | 300-86400 (초) | 세션 토큰 유효 기간 (기본: 1시간) |
+| `session_ttl` | integer | `86400` | 300-604800 (초) | 세션 토큰 유효 기간 — 24시간. Phase 7 SESS-PROTO에서 24시간 기본으로 확정 |
+| `jwt_secret` | string | `""` | 64자 hex (256비트) | JWT HS256 서명 Secret. `waiaas init` 시 `crypto.randomBytes(32).toString('hex')` 자동 생성 |
 | `max_sessions_per_agent` | integer | `5` | 1-50 | 에이전트당 최대 동시 세션 수 |
 | `max_pending_tx` | integer | `10` | 1-100 | 최대 대기 트랜잭션 수 |
-| `rate_limit_rpm` | integer | `60` | 10-1000 | 분당 최대 요청 수 |
+| `nonce_cache_max` | integer | `1000` | 100-10000 | Nonce LRU 캐시 최대 항목 수 (SESS-PROTO 참조) |
+| `nonce_cache_ttl` | integer | `300` | 60-600 (초) | Nonce TTL — 5분 |
+| `rate_limit_global_rpm` | integer | `100` | 10-1000 | 전역 RPM (인증 전, IP 기준). CORE-06에서 확정 |
+| `rate_limit_session_rpm` | integer | `300` | 10-5000 | 세션당 RPM (인증 후) |
+| `rate_limit_tx_rpm` | integer | `10` | 1-100 | 거래 전송 RPM |
 | `cors_origins` | array of string | `["http://localhost:3100", "http://127.0.0.1:3100"]` | URL 배열 | 허용 CORS origin |
+
+#### [security.auto_stop] 섹션 -- 자동 정지 규칙 설정
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `consecutive_failures_threshold` | integer | `3` | 1-20 | 연속 트랜잭션 실패 시 자동 정지 임계값 (AutoStopEngine CONSECUTIVE_FAILURES 규칙, KILL-AUTO-EVM 참조) |
+
+#### [security.policy_defaults] 섹션 -- 정책 기본값
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `delay_seconds` | integer | `300` | 60-3600 (초) | DELAY 티어 기본 쿨다운 — 5분. LOCK-MECH에서 확정 |
+| `approval_timeout` | integer | `3600` | 300-86400 (초) | APPROVAL 티어 기본 승인 대기 — 1시간. LOCK-MECH에서 확정 |
+
+#### [security.kill_switch] 섹션 -- Kill Switch 설정
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `recovery_cooldown` | integer | `1800` | 600-86400 (초) | 복구 최소 쿨다운 — 30분. KILL-AUTO-EVM에서 확정 |
+| `max_recovery_attempts` | integer | `3` | 1-10 | 복구 실패 시 최대 재시도 횟수 |
 
 ### 3.4 전체 기본 config.toml 예시
 
@@ -812,17 +848,34 @@ server = "https://ntfy.sh"        # ntfy 서버 URL
 topic = ""                         # 구독 토픽
 
 # ─────────────────────────────────────────
-# 보안 설정 (Phase 7-8에서 상세 설계)
+# 보안 설정
+# Phase 7 SESS-PROTO, Phase 8 LOCK-MECH/KILL-AUTO-EVM에서 확정된 값
 # ─────────────────────────────────────────
 [security]
-session_ttl = 3600                 # 세션 유효 기간 (초) -- 1시간
+session_ttl = 86400                # 세션 유효 기간 (초) -- 24시간 (최소 300, 최대 604800)
+jwt_secret = ""                    # waiaas init 시 crypto.randomBytes(32).toString('hex') 자동 생성
 max_sessions_per_agent = 5         # 에이전트당 최대 동시 세션
 max_pending_tx = 10                # 최대 대기 트랜잭션 수
-rate_limit_rpm = 60                # 분당 최대 요청 수
+nonce_cache_max = 1000             # Nonce LRU 캐시 최대 항목 수
+nonce_cache_ttl = 300              # Nonce TTL (초) -- 5분
+rate_limit_global_rpm = 100        # 전역 RPM (인증 전, IP 기준)
+rate_limit_session_rpm = 300       # 세션당 RPM (인증 후)
+rate_limit_tx_rpm = 10             # 거래 전송 RPM
 cors_origins = [
   "http://localhost:3100",
   "http://127.0.0.1:3100"
 ]
+
+[security.auto_stop]
+consecutive_failures_threshold = 3 # 연속 실패 임계값 (AutoStopEngine CONSECUTIVE_FAILURES 규칙)
+
+[security.policy_defaults]
+delay_seconds = 300                # DELAY 티어 기본 쿨다운 (초) -- 5분. 최소 60
+approval_timeout = 3600            # APPROVAL 티어 기본 승인 대기 (초) -- 1시간
+
+[security.kill_switch]
+recovery_cooldown = 1800           # 복구 최소 쿨다운 (초) -- 30분
+max_recovery_attempts = 3          # 복구 실패 시 최대 재시도 횟수
 ```
 
 ### 3.5 설정 로드 구현 패턴
@@ -850,7 +903,65 @@ const ConfigSchema = z.object({
     argon2_parallelism: z.number().int().min(1).max(16).default(4),
     backup_on_rotate: z.boolean().default(true),
   }).default({}),
-  // ... 나머지 섹션
+  database: z.object({
+    path: z.string().default('data/waiaas.db'),
+    wal_checkpoint_interval: z.number().int().min(60).max(3600).default(300),
+    busy_timeout: z.number().int().min(1000).max(30000).default(5000),
+    cache_size: z.number().int().min(2000).max(512000).default(64000),
+    mmap_size: z.number().int().min(0).max(1073741824).default(268435456),
+  }).default({}),
+  rpc: z.object({
+    solana: z.object({
+      mainnet: z.string().url().default('https://api.mainnet-beta.solana.com'),
+      devnet: z.string().url().default('https://api.devnet.solana.com'),
+      testnet: z.string().url().default('https://api.testnet.solana.com'),
+      ws: z.object({
+        mainnet: z.string().url().default('wss://api.mainnet-beta.solana.com'),
+        devnet: z.string().url().default('wss://api.devnet.solana.com'),
+      }).default({}),
+    }).default({}),
+    ethereum: z.object({
+      mainnet: z.string().default(''),
+      sepolia: z.string().default(''),
+    }).default({}),
+  }).default({}),
+  notifications: z.object({
+    enabled: z.boolean().default(false),
+    telegram: z.object({
+      bot_token: z.string().default(''),
+      chat_id: z.string().default(''),
+    }).default({}),
+    discord: z.object({
+      webhook_url: z.string().default(''),
+    }).default({}),
+    ntfy: z.object({
+      server: z.string().url().default('https://ntfy.sh'),
+      topic: z.string().default(''),
+    }).default({}),
+  }).default({}),
+  security: z.object({
+    session_ttl: z.number().int().min(300).max(604800).default(86400),
+    jwt_secret: z.string().min(32, 'JWT secret은 최소 32자 이상').default(''),
+    max_sessions_per_agent: z.number().int().min(1).max(50).default(5),
+    max_pending_tx: z.number().int().min(1).max(100).default(10),
+    nonce_cache_max: z.number().int().min(100).max(10000).default(1000),
+    nonce_cache_ttl: z.number().int().min(60).max(600).default(300),
+    rate_limit_global_rpm: z.number().int().min(10).max(1000).default(100),
+    rate_limit_session_rpm: z.number().int().min(10).max(5000).default(300),
+    rate_limit_tx_rpm: z.number().int().min(1).max(100).default(10),
+    cors_origins: z.array(z.string()).default(['http://localhost:3100', 'http://127.0.0.1:3100']),
+    auto_stop: z.object({
+      consecutive_failures_threshold: z.number().int().min(1).max(20).default(3),
+    }).default({}),
+    policy_defaults: z.object({
+      delay_seconds: z.number().int().min(60).max(3600).default(300),
+      approval_timeout: z.number().int().min(300).max(86400).default(3600),
+    }).default({}),
+    kill_switch: z.object({
+      recovery_cooldown: z.number().int().min(600).max(86400).default(1800),
+      max_recovery_attempts: z.number().int().min(1).max(10).default(3),
+    }).default({}),
+  }).default({}),
 });
 
 type Config = z.infer<typeof ConfigSchema>;
