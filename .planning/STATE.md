@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 14 테스트 기반 정의
+**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 15 보안 테스트 시나리오
 
 ## 현재 위치
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 14 of 18 (테스트 기반 정의)
-플랜: 2 of 2 in Phase 14
-상태: Phase 14 complete
-마지막 활동: 2026-02-06 -- Completed 14-02-PLAN.md (Mock 경계, 인터페이스 스펙, Contract Test)
+페이즈: 15 of 18 (보안 테스트 시나리오)
+플랜: 1 of 3 in Phase 15
+상태: In progress
+마지막 활동: 2026-02-06 -- Completed 15-01-PLAN.md (Layer 1 세션 인증 공격 시나리오)
 
-Progress: [██░░░░░░░░] 29% (2/7 plans across 5 phases)
+Progress: [███░░░░░░░] 43% (3/7 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,8 +35,8 @@ Progress: [██░░░░░░░░] 29% (2/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 2/7
-- 요구사항: 7/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04)
+- 완료된 플랜: 3/7
+- 요구사항: 8/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01)
 
 ## 누적 컨텍스트
 
@@ -56,6 +56,8 @@ v0.4 결정:
 - MOCK-ALL-LEVELS-NOTIFICATION: 알림 채널은 모든 테스트 레벨에서 Mock
 - MOCK-KEYSTORE-MEDIUM: ILocalKeyStore Mock 가능성 MEDIUM (sodium-native C++ 바인딩, Unit은 tweetnacl)
 - CONTRACT-TEST-FACTORY-PATTERN: 5개 인터페이스 전체에 팩토리 함수 기반 Contract Test 적용
+- SEC-01-ERROR-DUAL-REFERENCE: 에러 코드를 REST API SSoT + 내부 코드 양측 병기하여 구현 시 매핑 혼동 방지
+- SEC-01-NONCE-PATH-SSOT: nonce 엔드포인트 /v1/nonce (API SSoT) 채택, /v1/auth/nonce (원본)과의 관계 명시
 
 ### 차단 요소/우려 사항
 
@@ -64,5 +66,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 14-02-PLAN.md, Phase 14 complete
+중단 지점: Completed 15-01-PLAN.md (Layer 1 세션 인증 공격 시나리오)
 재개 파일: None
