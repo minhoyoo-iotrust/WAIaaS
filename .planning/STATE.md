@@ -10,12 +10,12 @@
 ## 현재 위치
 
 마일스톤: v0.3 설계 논리 일관성 확보
-페이즈: 12 of 13 (HIGH 스키마/수치 통일)
-플랜: 3 of 3 in Phase 12
-상태: Phase 12 완료 — VERIFIED ✓
-마지막 활동: 2026-02-06 — Phase 12 검증 완료 (6/6 must-haves, 15/15 requirements)
+페이즈: 13 of 13 (MEDIUM 구현 노트)
+플랜: 2 of 2 in Phase 13 (13-02 완료, 13-01 병렬 실행 중)
+상태: In progress — 13-02 완료
+마지막 활동: 2026-02-06 — Completed 13-02-PLAN.md (통합/인증/배포 구현 노트)
 
-Progress: [███████░░░] 6/8 plans (75%)
+Progress: [████████░░] 7/8 plans (87.5%)
 
 ## 성과 지표
 
@@ -29,20 +29,22 @@ Progress: [███████░░░] 6/8 plans (75%)
 - 설계 문서: 17개
 
 **v0.3 진행:**
-- 완료된 플랜: 6/8 (75%)
+- 완료된 플랜: 7/8 (87.5%) — 13-01 병렬 실행 중
 - Phase 10 완료: 10-01, 10-02
 - Phase 11 완료: 11-01 (CRITICAL 4건)
 - Phase 12 완료: 12-01, 12-02, 12-03
+- Phase 13 진행: 13-02 완료 (NOTE-05, NOTE-06, NOTE-07), 13-01 병렬 실행 중
 - SUPERSEDED 표기 완료: 6개 문서
 - 대응표 문서: 5개 (41~45)
 - CRITICAL 해결: 8건 전부 — Phase 10, 11에서 완료
 - HIGH 해결: 15건 전부 — Phase 10, 12에서 완료
+- MEDIUM 구현 노트: 3/11건 완료 (NOTE-05, NOTE-06, NOTE-07) — 13-01에서 8/11건 진행 중
 
 **v0.3 비일관성 분석:**
 - CRITICAL: 8건 중 8건 해결 (C1-C3,C8: Phase 11, C4-C7: Phase 10)
 - HIGH: 15건 중 15건 해결 (H1,H10-H11,H13: Phase 10, H2-H3,H5,H12: Phase 12-02, H6-H7: Phase 12-01, H4,H8-H9,H14-H15: Phase 12-03)
-- MEDIUM: 14건 (구현 시 주의 필요) — Phase 13 대상
-- 총 37건 중 23건 해결, 14건 남음
+- MEDIUM: 14건 중 3건 구현 노트 추가 (M8, M9, M10) — Phase 13-02
+- 총 37건 중 23건 해결 + 3건 구현 노트 추가, 11건 진행 중 (13-01)
 
 ## 누적 컨텍스트
 
@@ -96,6 +98,9 @@ Progress: [███████░░░] 6/8 plans (75%)
 | 12-03 | Health: healthy/degraded/unhealthy 양쪽 통일 (API-03) | 2026-02-06 |
 | 12-03 | 미들웨어 9단계 순서, ownerAuth 라우트 레벨 (API-06) | 2026-02-06 |
 | 12-03 | memo 200자 + Solana 256 bytes 이중 검증 (API-01) | 2026-02-06 |
+| 13-02 | Tauri IPC+HTTP 에러 4유형 분류, ECONNREFUSED 자동 복구 (NOTE-05) | 2026-02-06 |
+| 13-02 | 패스워드 12자 통일 권장, CLI=최소 초기화/Wizard=완전 초기화 (NOTE-06) | 2026-02-06 |
+| 13-02 | Telegram Tier 2는 TELEGRAM_PRE_APPROVED 패턴, SIWS는 Desktop/CLI 필수 (NOTE-07) | 2026-02-06 |
 
 ### 차단 요소/우려 사항
 
@@ -162,8 +167,18 @@ Progress: [███████░░░] 6/8 plans (75%)
 | API-05 | SuccessResponse 래퍼 잔존 없음 확인 | 37-rest-api |
 | API-06 | ownerAuth 미들웨어 9단계 반영 | 29-api-framework |
 
+## Phase 13 산출물
+
+### 13-02 (통합/인증/배포 구현 노트)
+
+| NOTE | 내용 | 수정 문서 |
+|------|------|-----------|
+| NOTE-05 | IPC+HTTP 이중 채널 에러 분류표 + ECONNREFUSED 처리 | 39-tauri-desktop-architecture |
+| NOTE-06 | Setup Wizard vs CLI init 역할 분담 + 패스워드 12자 권장 | 39-tauri-desktop-architecture, 28-daemon-lifecycle-cli |
+| NOTE-07 | Telegram SIWS 대체 TELEGRAM_PRE_APPROVED 패턴 | 40-telegram-bot-docker |
+
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 12-03-PLAN.md (REST API <-> API Framework 스펙 통일)
-재개 파일: None — 다음 단계: Phase 13 (MEDIUM 구현 노트)
+중단 지점: Completed 13-02-PLAN.md (통합/인증/배포 구현 노트)
+재개 파일: None — 13-01 병렬 실행 완료 대기
