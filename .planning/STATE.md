@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-07)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** 다음 마일스톤 계획 중
+**현재 초점:** v0.5 인증 모델 재설계 + 개발자 경험 개선
 
 ## 현재 위치
 
-마일스톤: v0.4 완료, 다음 마일스톤 미정
-페이즈: Not started
+마일스톤: v0.5 인증 모델 재설계 + DX 개선
+페이즈: Not started (요구사항 정의 중)
 플랜: Not started
-상태: Ready to plan next milestone
-마지막 활동: 2026-02-07 -- v0.4 마일스톤 완료 및 아카이브
+상태: Defining requirements
+마지막 활동: 2026-02-07 -- v0.5 마일스톤 시작
 
-Progress: Planning next milestone
+Progress: Defining requirements
 
 ## 성과 지표
 
@@ -46,6 +46,13 @@ Progress: Planning next milestone
 
 v0.1~v0.4 전체 결정 사항은 PROJECT.md 참조.
 
+v0.5 핵심 결정:
+- masterAuth/ownerAuth/sessionAuth 3-tier 인증 분리
+- Owner 주소를 에이전트별 속성으로 이동 (agents.owner_address)
+- WalletConnect를 선택적 편의 기능으로 전환
+- 세션 낙관적 갱신 패턴 (maxRenewals 30, 총 수명 30일, 50% 갱신 시점)
+- ownerAuth 필수 엔드포인트: 거래 승인 + Kill Switch 복구 (2곳만)
+
 ### 차단 요소/우려 사항
 
 - 없음
@@ -53,5 +60,5 @@ v0.1~v0.4 전체 결정 사항은 PROJECT.md 참조.
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: v0.4 마일스톤 완료 및 아카이브 -- 다음 마일스톤 시작 대기
+중단 지점: v0.5 마일스톤 시작 -- 요구사항 정의 진행 중
 재개 파일: None
