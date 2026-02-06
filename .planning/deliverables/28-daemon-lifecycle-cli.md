@@ -1997,6 +1997,29 @@ export async function runAgent(args: string[]): Promise<void> {
 
 참조: Docker 설정은 40-telegram-bot-docker.md 참조.
 
+### 9.2 CLI init과 Setup Wizard의 역할 분담 (NOTE-06)
+
+**배경:** CLI `waiaas init`(섹션 6.1)은 4단계, Tauri Setup Wizard(TAURI-DESK, 39-tauri-desktop-architecture.md 섹션 7.8)는 5단계로 초기화를 수행한다. 양쪽의 역할이 다르므로, 구현 시 범위를 명확히 이해해야 한다.
+
+**CLI init 범위 (데몬 미실행 상태에서 수행):**
+
+1. 데이터 디렉토리 생성 (`~/.waiaas/`)
+2. `config.toml` 기본 설정 파일 생성
+3. SQLite 초기화 (마이그레이션 포함)
+4. 키스토어 초기화 (마스터 패스워드 설정, Argon2id 키 파생)
+5. (선택적) 첫 에이전트 생성
+
+**데몬 실행 후 API로 수행하는 항목 (CLI init 범위 밖):**
+
+- Owner 지갑 연결: `POST /v1/owner/connect`
+- 알림 채널 설정: `PUT /v1/owner/settings`
+- 추가 에이전트 생성: `POST /v1/owner/agents`
+- 정책 설정: Owner API 엔드포인트
+
+**패스워드 최소 길이:** CLI init에서 12자 기준을 유지한다. Setup Wizard 측 8자는 구현 시 12자로 통일 권장 (보안 우선).
+
+**참조:** Setup Wizard 상세는 39-tauri-desktop-architecture.md 구현 노트 "Setup Wizard와 CLI init 초기화 순서 관계" 참조.
+
 ---
 
 ## 10. 요구사항 매핑

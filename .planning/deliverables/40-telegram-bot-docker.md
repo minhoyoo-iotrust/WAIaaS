@@ -2117,6 +2117,46 @@ Docker named volume 자체는 암호화 기능을 제공하지 않는다. 데이
 
 ---
 
+## 16. 구현 노트
+
+> Phase 13 (v0.3 MEDIUM 구현 노트)에서 추가. 기존 설계를 변경하지 않으며, 구현 시 참고할 주의사항을 정리한다.
+
+### 16.1 Telegram Tier 2 인증과 SIWS 서명 대체 방안 (NOTE-07)
+
+**배경:** 섹션 6에서 정의한 2-Tier 인증 모델에서, Tier 2(ownerAuth: SIWS/SIWE per-request 서명)는 Telegram 환경에서 직접 수행이 불가능하다. 구현 시 이 제약과 대체 패턴을 명확히 이해해야 한다.
+
+**v0.2 결정:** Telegram에서 Tier 2(SIWS/SIWE) 서명을 미지원한다. UX 복잡도(Telegram Mini App + WalletConnect QR + 외부 지갑 서명 -> Bot 전달)가 높아 실용성이 부족하다.
+
+**대체 패턴 (TELEGRAM_PRE_APPROVED):**
+
+```
+1. Telegram에서 [Pre-Approve] 버튼 클릭 (Tier 1 chatId 인증)
+2. 트랜잭션 상태: QUEUED -> PENDING_APPROVAL -> TELEGRAM_PRE_APPROVED (중간 상태)
+3. Desktop/CLI 알림: "Telegram에서 사전 승인된 거래가 있습니다"
+4. Desktop/CLI에서 ownerAuth(SIWS/SIWE 서명) 수행 -> APPROVED -> EXECUTING
+```
+
+**Tier별 동작 분류:**
+
+| 동작 | 필요 인증 | Telegram 수행 | Desktop/CLI 필수 |
+|------|----------|-------------|-----------------|
+| reject (거부) | Tier 1 (chatId) | 가능 | - |
+| revoke (세션 취소) | Tier 1 (chatId) | 가능 | - |
+| kill switch activate (긴급 중지) | Tier 1 (chatId) | 가능 | - |
+| 읽기 전용 조회 | Tier 1 (chatId) | 가능 | - |
+| approve (승인) | Tier 2 (ownerAuth) | 불가 -> Pre-Approve만 | Desktop/CLI에서 최종 승인 |
+| recover (Kill Switch 복구) | Tier 2 (ownerAuth) | 불가 | Desktop/CLI 필수 |
+| create (에이전트/세션 생성) | Tier 2 (ownerAuth) | 불가 | Desktop/CLI 필수 |
+| settings (설정 변경) | Tier 2 (ownerAuth) | 불가 | Desktop/CLI 필수 |
+
+**보안 근거:** 자금 이동(approve)과 시스템 복구(recover)는 지갑 서명 필수 원칙을 유지한다. Telegram은 "알림 + 방어적 동작" 채널로 위치한다. 방어적 동작(reject, revoke, kill switch)은 자금 유출 방지에 해당하므로 Tier 1으로 충분하다.
+
+**v0.3+ 확장 후보:** Telegram Mini App + WalletConnect DeepLink 연동으로 Tier 2 직접 수행 검토. Mini App에서 WalletConnect QR을 표시하고, Phantom/MetaMask로 서명 후 결과를 Bot에 전달하는 흐름이 가능하나 추가 개발 범위가 크다.
+
+**참조:** 섹션 6 (2-Tier 인증 모델), 부록 B (트랜잭션 상태 흐름), TAURI-DESK (39-tauri-desktop-architecture.md) 구현 노트에서 Desktop 측 최종 승인 흐름 참조.
+
+---
+
 ## 부록 A: Telegram Bot API 참조
 
 | API 메서드 | 용도 | 섹션 |
