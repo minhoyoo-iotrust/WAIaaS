@@ -66,36 +66,36 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| AUTH-05 | TBD | Pending |
-| OWNR-01 | TBD | Pending |
-| OWNR-02 | TBD | Pending |
-| OWNR-03 | TBD | Pending |
-| OWNR-04 | TBD | Pending |
-| OWNR-05 | TBD | Pending |
-| OWNR-06 | TBD | Pending |
-| SESS-01 | TBD | Pending |
-| SESS-02 | TBD | Pending |
-| SESS-03 | TBD | Pending |
-| SESS-04 | TBD | Pending |
-| SESS-05 | TBD | Pending |
-| DX-01 | TBD | Pending |
-| DX-02 | TBD | Pending |
-| DX-03 | TBD | Pending |
-| DX-04 | TBD | Pending |
-| DX-05 | TBD | Pending |
-| DX-06 | TBD | Pending |
-| DX-07 | TBD | Pending |
-| DX-08 | TBD | Pending |
+| AUTH-01 | Phase 19 | Pending |
+| AUTH-02 | Phase 19 | Pending |
+| AUTH-03 | Phase 19 | Pending |
+| AUTH-04 | Phase 19 | Pending |
+| AUTH-05 | Phase 19 | Pending |
+| OWNR-01 | Phase 19 | Pending |
+| OWNR-02 | Phase 19 | Pending |
+| OWNR-03 | Phase 19 | Pending |
+| OWNR-04 | Phase 19 | Pending |
+| OWNR-05 | Phase 19 | Pending |
+| OWNR-06 | Phase 19 | Pending |
+| SESS-01 | Phase 20 | Pending |
+| SESS-02 | Phase 20 | Pending |
+| SESS-03 | Phase 20 | Pending |
+| SESS-04 | Phase 20 | Pending |
+| SESS-05 | Phase 20 | Pending |
+| DX-01 | Phase 21 | Pending |
+| DX-02 | Phase 21 | Pending |
+| DX-03 | Phase 21 | Pending |
+| DX-04 | Phase 21 | Pending |
+| DX-05 | Phase 21 | Pending |
+| DX-06 | Phase 21 | Pending |
+| DX-07 | Phase 21 | Pending |
+| DX-08 | Phase 21 | Pending |
 
 **Coverage:**
-- v0.5 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- v0.5 requirements: 24 total (AUTH 5 + OWNR 6 + SESS 5 + DX 8)
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after initial definition*
+*Last updated: 2026-02-07 after roadmap creation*
