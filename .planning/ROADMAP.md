@@ -41,7 +41,7 @@ Git range: `5be4181` → `fec9f88`
 - [x] **Phase 10: v0.1 잔재 정리** — SUPERSEDED 표기, 변경 매핑 문서 작성 ✓
 - [x] **Phase 11: CRITICAL 의사결정 확정** — 포트, Enum, Docker 바인딩, 자금 충전 모델 ✓
 - [x] **Phase 12: HIGH 스키마/수치 통일** — Enum 통일, config.toml 보완, API 스펙 통일 ✓
-- [ ] **Phase 13: MEDIUM 구현 노트** — 11개 구현 시 주의사항 문서화
+- [x] **Phase 13: MEDIUM 구현 노트** — 11개 구현 시 주의사항 문서화 ✓
 
 ## Phase Details
 
@@ -152,8 +152,8 @@ Plans:
 | 10. v0.1 잔재 정리 | v0.3 | 2/2 | Complete | 2026-02-06 |
 | 11. CRITICAL 의사결정 | v0.3 | 1/1 | Complete | 2026-02-06 |
 | 12. HIGH 스키마/수치 통일 | v0.3 | 3/3 | Complete | 2026-02-06 |
-| 13. MEDIUM 구현 노트 | v0.3 | 0/2 | Not started | - |
+| 13. MEDIUM 구현 노트 | v0.3 | 2/2 | Complete | 2026-02-06 |
 
 ---
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-06 (Phase 12 complete)*
+*Last updated: 2026-02-06 (Phase 13 complete — v0.3 milestone complete)*
