@@ -51,10 +51,12 @@ Plans:
   3. Layer 3 Kill Switch/AutoStop 시나리오 6개 이상이 정의되어 있고, 복구 흐름까지 포함한다
   4. 키스토어 보안 시나리오 4개 이상(파일 변조, 틀린 패스워드, 권한, 메모리 잔존)이 정의되어 있다
   5. 4-tier 경계값(0.1/1/10 SOL), 한도 +/-1, 만료 직전/직후 등 경계값 테스트 케이스가 표로 정리되어 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 15-01: 3계층 보안 공격 시나리오 및 경계값 테스트
+- [ ] 15-01-PLAN.md -- Layer 1 세션 인증 공격 시나리오 12건 + ownerAuth 8건 (SEC-01)
+- [ ] 15-02-PLAN.md -- Layer 2 정책 우회 9건 + Layer 3 Kill Switch/AutoStop 8건 (SEC-02, SEC-03)
+- [ ] 15-03-PLAN.md -- 키스토어 보안 + 외부 위협 + 경계값 테스트 + E2E 연쇄 체인 (SEC-04, SEC-05)
 
 ### Phase 16: 블록체인 & 일관성 검증 전략
 **Goal**: 블록체인 의존성을 3단계로 격리하는 테스트 환경 전략과, v0.3에서 확보한 Enum/설정 SSoT의 자동 검증 방법이 확정되어 있다
@@ -107,7 +109,7 @@ Phases execute in numeric order: 14 -> 15 -> 16 -> 17 -> 18
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 14. 테스트 기반 정의 | 2/2 | ✓ Complete | 2026-02-06 |
-| 15. 보안 테스트 시나리오 | 0/1 | Not started | - |
+| 15. 보안 테스트 시나리오 | 0/3 | Planning complete | - |
 | 16. 블록체인 & 일관성 검증 전략 | 0/2 | Not started | - |
 | 17. CI/CD 파이프라인 설계 | 0/1 | Not started | - |
 | 18. 배포 타겟별 테스트 | 0/1 | Not started | - |
