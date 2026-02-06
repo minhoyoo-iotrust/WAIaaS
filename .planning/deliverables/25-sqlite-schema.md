@@ -350,7 +350,7 @@ export const policies = sqliteTable('policies', {
 
   // ── 정책 정의 ──
   type: text('type', {
-    enum: ['SPENDING_LIMIT', 'ALLOWED_ADDRESSES', 'TIME_RESTRICTION', 'AUTO_STOP']
+    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']
   }).notNull(),
   rules: text('rules').notNull(),                       // JSON: 정책별 규칙 구조
 
@@ -362,9 +362,8 @@ export const policies = sqliteTable('policies', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
-  index('idx_policies_agent_id').on(table.agentId),
+  index('idx_policies_agent_enabled').on(table.agentId, table.enabled),
   index('idx_policies_type').on(table.type),
-  index('idx_policies_enabled').on(table.enabled),
 ]);
 ```
 
@@ -375,7 +374,7 @@ CREATE TABLE policies (
   id TEXT PRIMARY KEY,
   agent_id TEXT REFERENCES agents(id) ON DELETE CASCADE,
   type TEXT NOT NULL
-    CHECK (type IN ('SPENDING_LIMIT', 'ALLOWED_ADDRESSES', 'TIME_RESTRICTION', 'AUTO_STOP')),
+    CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT')),
   rules TEXT NOT NULL,             -- JSON
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,   -- boolean (0/1)
@@ -383,9 +382,8 @@ CREATE TABLE policies (
   updated_at INTEGER NOT NULL
 );
 
-CREATE INDEX idx_policies_agent_id ON policies(agent_id);
+CREATE INDEX idx_policies_agent_enabled ON policies(agent_id, enabled);
 CREATE INDEX idx_policies_type ON policies(type);
-CREATE INDEX idx_policies_enabled ON policies(enabled);
 ```
 
 #### 컬럼 설명
@@ -394,14 +392,14 @@ CREATE INDEX idx_policies_enabled ON policies(enabled);
 |------|------|----------|--------|------|
 | `id` | TEXT (PK) | NOT NULL | - | 정책 UUID v7 |
 | `agent_id` | TEXT (FK) | NULL | - | 대상 에이전트. NULL이면 모든 에이전트에 적용되는 글로벌 정책 |
-| `type` | TEXT (ENUM) | NOT NULL | - | 정책 유형 |
-| `rules` | TEXT (JSON) | NOT NULL | - | 정책별 규칙 JSON. Phase 8에서 각 type별 JSON 구조 확정 |
+| `type` | TEXT (ENUM) | NOT NULL | - | 정책 유형. 4개: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT |
+| `rules` | TEXT (JSON) | NOT NULL | - | 정책별 규칙 JSON. LOCK-MECH (Phase 8)에서 각 type별 JSON 구조 확정 |
 | `priority` | INTEGER | NOT NULL | `0` | 평가 우선순위. 동일 type 내에서 높은 priority 먼저 적용 |
 | `enabled` | INTEGER (BOOL) | NOT NULL | `1` (true) | 활성화 여부. 비활성 정책은 평가에서 제외 |
 | `created_at` | INTEGER | NOT NULL | - | 정책 생성 시각 |
 | `updated_at` | INTEGER | NOT NULL | - | 정책 최종 수정 시각 |
 
-**rules JSON 구조 예시 (Phase 8에서 확정):**
+**rules JSON 구조 예시 (Phase 8 LOCK-MECH에서 확정):**
 
 ```json
 // SPENDING_LIMIT
@@ -411,7 +409,7 @@ CREATE INDEX idx_policies_enabled ON policies(enabled);
   "weekly_total": "20000000000"
 }
 
-// ALLOWED_ADDRESSES
+// WHITELIST
 {
   "addresses": ["So1ana...", "Eth0x..."],
   "mode": "whitelist"
@@ -424,13 +422,15 @@ CREATE INDEX idx_policies_enabled ON policies(enabled);
   "timezone": "UTC"
 }
 
-// AUTO_STOP
+// RATE_LIMIT
 {
-  "trigger": "consecutive_failures",
-  "threshold": 3,
-  "action": "suspend"
+  "max_tx_per_hour": 50,
+  "max_tx_per_day": 200
 }
 ```
+
+> **NOTE:** AutoStop 규칙은 PolicyType이 아닌 별도 시스템 (auto_stop_rules 테이블)에서 관리한다.
+> KILL-AUTO-EVM (36-killswitch-autostop-evm.md) 섹션 8 참조.
 
 ---
 
@@ -1180,14 +1180,14 @@ export const transactions = sqliteTable('transactions', {
 ]);
 
 // ══════════════════════════════════════════
-// policies (Phase 8에서 상세화)
+// policies (Phase 8 LOCK-MECH에서 상세화)
 // ══════════════════════════════════════════
 export const policies = sqliteTable('policies', {
   id: text('id').primaryKey(),
   agentId: text('agent_id')
     .references(() => agents.id, { onDelete: 'cascade' }),
   type: text('type', {
-    enum: ['SPENDING_LIMIT', 'ALLOWED_ADDRESSES', 'TIME_RESTRICTION', 'AUTO_STOP']
+    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']
   }).notNull(),
   rules: text('rules').notNull(),
   priority: integer('priority').notNull().default(0),
@@ -1195,9 +1195,8 @@ export const policies = sqliteTable('policies', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
-  index('idx_policies_agent_id').on(table.agentId),
+  index('idx_policies_agent_enabled').on(table.agentId, table.enabled),
   index('idx_policies_type').on(table.type),
-  index('idx_policies_enabled').on(table.enabled),
 ]);
 
 // ══════════════════════════════════════════
@@ -1276,9 +1275,9 @@ export const notificationChannels = sqliteTable('notification_channels', {
 | API-03 (거래 상태 조회) | transactions | status, txHash 인덱스 |
 | API-05 (감사 로그) | audit_log | append-only, 이벤트 타입 목록 |
 | CHAIN-02 (트랜잭션 실행) | transactions | chain, txHash, status 파이프라인 |
-| LOCK-01 (거래 제한) | policies | SPENDING_LIMIT type |
+| LOCK-01 (거래 제한) | policies | SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT types |
 | LOCK-02 (승인 메커니즘) | pending_approvals | Owner 서명 승인 |
-| LOCK-03 (자동 정지 규칙) | policies | AUTO_STOP type |
+| LOCK-03 (자동 정지 규칙) | auto_stop_rules (KILL-AUTO-EVM) | 별도 테이블에서 관리 |
 | NOTI-01 (알림 채널 관리) | notification_channels | type, config, enabled |
 | NOTI-02 (알림 전달) | notification_channels | priority, lastSuccessAt/lastFailureAt |
 | NOTI-05 (보안 이벤트 기록) | audit_log | severity=critical 이벤트 |
