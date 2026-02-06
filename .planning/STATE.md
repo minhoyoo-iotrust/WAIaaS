@@ -150,5 +150,5 @@ Progress: [██████░░░░] 5/8 plans (62.5%)
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 12-02-PLAN.md
+중단 지점: Completed 12-01-PLAN.md (Enum 통합 대응표 커밋 341371e)
 재개 파일: None — 다음 단계: 12-03 (REST API <-> API Framework 스펙 통일)
