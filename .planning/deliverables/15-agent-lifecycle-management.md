@@ -2,8 +2,23 @@
 
 **문서 ID:** REL-03
 **작성일:** 2026-02-05
-**상태:** 완료
+**상태:** SUPERSEDED by [26-keystore-spec.md](./26-keystore-spec.md)
 **참조:** ARCH-01 (Dual Key 아키텍처), ARCH-02 (시스템 컴포넌트), ARCH-04 (보안 위협 모델)
+
+---
+
+> **SUPERSEDED**
+>
+> 이 문서의 키 관리 설계(AWS KMS + Nitro Enclave + Squads 멀티시그)는 v0.2에서 **로컬 Keystore + sodium-native**로 대체되었습니다.
+>
+> **구현 시 참조:** [26-keystore-spec.md](./26-keystore-spec.md) (CORE-03)
+>
+> **변경 사항:**
+> - Owner Key (AWS KMS ED25519) -> Owner Wallet 연결 (WalletConnect v2)
+> - Agent Key (Nitro Enclave) -> 로컬 Keystore (AES-256-GCM + Argon2id)
+> - Squads 2-of-2 멀티시그 -> 로컬 정책 엔진 (DatabasePolicyEngine)
+> - 8단계 에이전트 생성 -> 간소화된 에이전트 생성
+> - Drain-then-Rotate 10단계 -> 단순화된 키 로테이션 (v0.3 계획)
 
 ---
 
