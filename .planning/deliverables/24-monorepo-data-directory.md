@@ -2,8 +2,9 @@
 
 **문서 ID:** CORE-01
 **작성일:** 2026-02-05
+**v0.5 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md
+**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5)
 
 ---
 
@@ -662,6 +663,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `WAIAAS_SECURITY_POLICY_DEFAULTS_APPROVAL_TIMEOUT` | `[security.policy_defaults].approval_timeout` | `3600` |
 | `WAIAAS_SECURITY_KILL_SWITCH_RECOVERY_COOLDOWN` | `[security.kill_switch].recovery_cooldown` | `1800` |
 | `WAIAAS_SECURITY_KILL_SWITCH_MAX_RECOVERY_ATTEMPTS` | `[security.kill_switch].max_recovery_attempts` | `3` |
+| `WAIAAS_WALLETCONNECT_PROJECT_ID` | `[walletconnect].project_id` | `""` |
 
 **특수 환경변수 (TOML에 없는 항목):**
 
@@ -774,6 +776,22 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `recovery_cooldown` | integer | `1800` | 600-86400 (초) | 복구 최소 쿨다운 — 30분. KILL-AUTO-EVM에서 확정 |
 | `max_recovery_attempts` | integer | `3` | 1-10 | 복구 실패 시 최대 재시도 횟수 |
 
+#### [walletconnect] 섹션 -- WalletConnect v2 설정 (v0.5: 선택적 편의 기능)
+
+> **v0.5 변경:** WalletConnect는 "Owner 지갑 연결의 유일한 경로"에서 "모바일 지갑 push 서명의 편의 기능"으로 역할 변경. 미설정 시에도 CLI 수동 서명으로 ownerAuth가 가능하다.
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `project_id` | string | `""` | 문자열 | Reown Cloud에서 발급한 WalletConnect projectId. 선택 사항. 미설정 시 WC 기능 비활성 (CLI 수동 서명은 항상 가능) |
+
+**`waiaas init` 안내 메시지 (v0.5 변경):**
+
+```
+WalletConnect projectId가 미설정입니다. 모바일 지갑 push 서명을 사용하려면
+https://cloud.reown.com 에서 발급하세요.
+CLI 수동 서명은 projectId 없이도 사용 가능합니다.
+```
+
 ### 3.4 전체 기본 config.toml 예시
 
 ```toml
@@ -878,6 +896,14 @@ approval_timeout = 3600            # APPROVAL 티어 기본 승인 대기 (초) 
 [security.kill_switch]
 recovery_cooldown = 1800           # 복구 최소 쿨다운 (초) -- 30분
 max_recovery_attempts = 3          # 복구 실패 시 최대 재시도 횟수
+
+# ─────────────────────────────────────────
+# WalletConnect v2 설정 (선택적 편의 기능)
+# 미설정 시에도 CLI 수동 서명으로 ownerAuth 가능
+# Reown Cloud에서 무료 projectId 발급: https://cloud.reown.com
+# ─────────────────────────────────────────
+[walletconnect]
+project_id = ""                    # 선택. 미설정 시 WC 기능 비활성 (CLI 수동 서명은 항상 가능)
 ```
 
 ### 3.5 설정 로드 구현 패턴
@@ -963,6 +989,11 @@ const ConfigSchema = z.object({
       recovery_cooldown: z.number().int().min(600).max(86400).default(1800),
       max_recovery_attempts: z.number().int().min(1).max(10).default(3),
     }).default({}),
+  }).default({}),
+  // WalletConnect v2 -- 선택적 편의 기능
+  // project_id 미설정 시 WC push 서명 비활성. CLI 수동 서명은 항상 가능.
+  walletconnect: z.object({
+    project_id: z.string().default(''),
   }).default({}),
 });
 
@@ -1068,6 +1099,39 @@ hostname: z.union([
 
 ---
 
+## 4b. v0.5 Owner 모델 변경 노트
+
+> **v0.5 업데이트 (2026-02-07):** 인증 모델 재설계에 따른 config.toml 변경사항.
+
+### Owner 개념의 이동
+
+v0.5에서 Owner 개념이 **config.toml(데몬 전역)**에서 **agents 테이블(에이전트별)**로 이동했다:
+
+| 항목 | v0.2 | v0.5 |
+|------|------|------|
+| Owner 주소 저장 | `owner_wallets` 테이블 (전역 단일 Owner) | `agents.owner_address` 컬럼 (에이전트별) |
+| config.toml [owner] 섹션 | 향후 추가 예정이었으나 미구현 | 명시적으로 제거 (불필요) |
+| WalletConnect 역할 | Owner 지갑 연결의 유일한 경로 | 모바일 지갑 push 서명의 편의 기능 |
+| WC 미설정 시 | Owner 연결 불가 (ownerAuth 차단) | CLI 수동 서명으로 ownerAuth 가능 |
+
+### config.toml 변경 요약
+
+1. **[owner] 섹션 제거:** config.toml에는 `[owner]` 섹션이 원래 존재하지 않았으나, v0.2 설계에서 향후 추가가 검토되었다. v0.5에서 Owner가 에이전트별 속성이 되면서 데몬 전역 설정에 Owner 관련 항목이 불필요해졌다.
+
+2. **[walletconnect] 섹션 선택적 전환:** `project_id`가 "필수"에서 "선택"으로 변경. 미설정 시에도 CLI 수동 서명으로 ownerAuth가 가능하다.
+
+3. **waiaas init 안내 메시지 변경:**
+   - v0.2: `"WalletConnect projectId가 설정되지 않았습니다. Owner 지갑 연결을 위해 https://cloud.reown.com 에서 발급하세요."`
+   - v0.5: `"WalletConnect projectId가 미설정입니다. 모바일 지갑 push 서명을 사용하려면 https://cloud.reown.com 에서 발급하세요. CLI 수동 서명은 projectId 없이도 사용 가능합니다."`
+
+### 참조 문서
+
+- 52-auth-model-redesign.md -- masterAuth/ownerAuth/sessionAuth 3-tier 인증 아키텍처
+- 25-sqlite-schema.md (v0.5 업데이트) -- agents.owner_address NOT NULL, wallet_connections 테이블
+- 34-owner-wallet-connection.md -- WalletConnect v2 프로토콜 (세션 관리는 유지, 인증 역할만 제거)
+
+---
+
 ## 5. 요구사항 매핑
 
 | 요구사항 | 커버리지 |
@@ -1077,10 +1141,12 @@ hostname: z.union([
 | KEYS-01 (키스토어 경로) | 섹션 2.2 -- `keystore/<agent-id>.json` |
 | API-01 (localhost 전용) | 섹션 3.6 -- hostname 보안 강제 |
 | API-06 (OpenAPI 자동 생성) | 섹션 1.5 -- daemon의 @hono/zod-openapi 의존성 |
+| OWNR-02 (config.toml Owner 개념 제거) | 섹션 3.3 [walletconnect] 선택적 전환 + 섹션 4b Owner 모델 변경 노트 |
 
 ---
 
 *문서 ID: CORE-01*
 *작성일: 2026-02-05*
+*v0.5 업데이트: 2026-02-07*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
