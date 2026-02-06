@@ -2,20 +2,20 @@
 
 ## 프로젝트 참조
 
-참고: .planning/PROJECT.md (업데이트: 2026-02-06)
+참고: .planning/PROJECT.md (업데이트: 2026-02-07)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- v0.4 완료
+**현재 초점:** 다음 마일스톤 계획 중
 
 ## 현재 위치
 
-마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 18 of 18 (배포 타겟별 테스트) -- Phase 18 완료
-플랜: 1 of 1 in Phase 18 (완료)
-상태: Milestone complete
-마지막 활동: 2026-02-06 -- Completed 18-01-PLAN.md (배포 타겟별 테스트 범위 설계)
+마일스톤: v0.4 완료, 다음 마일스톤 미정
+페이즈: Not started
+플랜: Not started
+상태: Ready to plan next milestone
+마지막 활동: 2026-02-07 -- v0.4 마일스톤 완료 및 아카이브
 
-Progress: [██████████] 100% (9/9 plans across 5 phases)
+Progress: Planning next milestone
 
 ## 성과 지표
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100% (9/9 plans across 5 phases)
 
 **v0.4 최종 통계:**
 - 완료된 플랜: 9/9 (100%)
-- 요구사항: 26/26 (TLVL-01~03, MOCK-01~04, SEC-01~05, CHAIN-01~04, ENUM-01~03, CICD-01~03, PLAT-01~04)
+- 요구사항: 26/26 완료
 - 설계 문서: 11개 (41~51번)
 - 총 테스트 시나리오: ~300건 이상 (보안 71 + 블록체인 21 + 플랫폼 118 + 기타)
 
@@ -44,45 +44,7 @@ Progress: [██████████] 100% (9/9 plans across 5 phases)
 
 ### 결정 사항
 
-v0.1~v0.3 전체 결정 사항은 PROJECT.md 참조.
-
-v0.4 결정:
-- 테스트 전략 선행 수립 (구현 전 "무엇을 테스트할지" 확정)
-- IClock/ISigner 인터페이스 추가 필요 식별
-- TLVL-01: 6개 테스트 레벨 실행 빈도 피라미드 확정 (Unit 매커밋, Integration/E2E/Security 매PR, Chain Integration/Platform nightly/릴리스)
-- TLVL-02: 9개 모듈 x 6개 레벨 O/X 매트릭스 확정
-- TLVL-03: 보안 위험도 기반 4-tier 커버리지 (Critical 90%+, High 80%+, Normal 70%+, Low 50%+), daemon 9개 서브모듈 세분화
-- CI-GATE: Soft gate(초기) -> Hard gate(안정화후), 패키지별 독립 전환
-- MOCK-OWNER-ONLY: IOwnerSigner는 Owner 서명만 추상화 (Agent 서명은 ILocalKeyStore.sign()으로 충족)
-- MOCK-ICLOCK-MINIMAL: IClock은 now(): Date만 제공 (setTimeout/setInterval은 Jest useFakeTimers)
-- MOCK-ALL-LEVELS-NOTIFICATION: 알림 채널은 모든 테스트 레벨에서 Mock
-- MOCK-KEYSTORE-MEDIUM: ILocalKeyStore Mock 가능성 MEDIUM (sodium-native C++ 바인딩, Unit은 tweetnacl)
-- CONTRACT-TEST-FACTORY-PATTERN: 5개 인터페이스 전체에 팩토리 함수 기반 Contract Test 적용
-- SEC-01-ERROR-DUAL-REFERENCE: 에러 코드를 REST API SSoT + 내부 코드 양측 병기하여 구현 시 매핑 혼동 방지
-- SEC-01-NONCE-PATH-SSOT: nonce 엔드포인트 /v1/nonce (API SSoT) 채택, /v1/auth/nonce (원본)과의 관계 명시
-- SEC02-TOCTOU-INTEGRATION: TOCTOU 테스트는 Integration 레벨에서 실제 SQLite + BEGIN IMMEDIATE로 검증 (Unit 불가)
-- SEC03-CASCADE-SPLIT: Kill Switch 캐스케이드 테스트를 Step 1-3 원자적 + Step 4-6 best-effort로 분리
-- SEC03-AUTOSTOP-COVERAGE: AutoStop 5규칙 중 CONSECUTIVE_FAILURES만 상세 시나리오, 나머지 4규칙은 SEC-05 경계값 문서로 이연
-- SEC04-INTEGRATION-LEVEL: authTag 변조/마스터 패스워드 시나리오는 Integration 필수 (sodium-native/argon2 바인딩)
-- SEC05-DUAL-THRESHOLD: 금액 경계를 기본(1/10/50 SOL) + 커스텀(0.1/1/10 SOL) 양쪽 검증, SSoT 명시
-- SEC05-CHAIN-SELECTION: 5개 E2E 체인 선택 기준 = 현실적 공격 시나리오 (한도 소진/TOCTOU/3계층 관통/탈취+복구/시간 기반)
-- CHAIN-MOCK-13-SCENARIOS: Mock RPC 13개 시나리오 확정 (성공 3 + 실패 7 + 지연 2 + 중복 1)
-- CHAIN-E2E-5-FLOWS: Local Validator E2E 5개 흐름 (SOL전송/잔액+수수료/주소검증/연결관리/에러복구), 합계 ~21초
-- CHAIN-EVM-STUB-5-ITEMS: EvmAdapterStub 테스트 5항목 (타입준수/isConnected/getHealth/11메서드throw/Registry)
-- CHAIN-DEVNET-LIMIT-3: Devnet 테스트 최대 3건 제한 (SOL 전송 + 잔액 + 헬스)
-- ENUM-SSOT-DERIVE-CHAIN: as const 배열 -> TypeScript 타입 -> Zod enum -> Drizzle text enum -> DB CHECK SQL 단방향 파생
-- AUDIT-EVENT-OPEN-TYPE: AuditLogEventType은 CHECK 미적용, as const 객체로 관리 (확장 가능성 보존)
-- KILL-SWITCH-ZOD-RUNTIME: KillSwitchStatus는 system_state key-value 저장이므로 DB CHECK 대신 Zod 런타임 검증
-- CONFIG-UNIT-TEST: config.toml 로딩은 Unit 테스트로 충분 (memfs/mock + process.env)
-- NOTE-4-OF-11: NOTE-01/02/08/11만 전용 테스트 필요, 나머지 7건은 문서/타입/범위밖
-- CICD-4STAGE: 4단계 파이프라인 (Stage 1 매커밋 ~2min, Stage 2 매PR ~5min, Stage 3 nightly ~10min, Stage 4 릴리스 ~15min)
-- CICD-COVERAGE-REPORT-SPLIT: coverage-report.yml 분리 (fork PR 보안, GITHUB_TOKEN 쓰기 권한 격리)
-- CICD-ARTIOMTR-4PKG: ArtiomTr action 핵심 4패키지(core/daemon/adapter-solana/sdk)만 PR 코멘트, 나머지 콘솔
-- CICD-SOFT-HARD-PRIORITY: Soft->Hard 전환 우선순위 6단계 (core -> keystore/services -> solana/sdk -> middleware 등 -> cli/mcp -> evm)
-- CICD-TEST-NO-CACHE: turbo.json 모든 test:* 태스크 cache: false (테스트 결과 캐싱 위험 방지)
-- PLAT-TGBOT-SPLIT: Telegram Bot 명령어/콜백은 Integration(매PR), Long Polling 루프만 Platform(릴리스)으로 분리
-- PLAT-TAURI-OPTIONAL: Tauri CI 빌드는 선택적 Stage 4 job (빌드 시간 ~30min/platform 제약)
-- PLAT-118-SCENARIOS: 4타겟 총 118건 시나리오 확정 (CLI 32 + Docker 18 + Tauri 34 + Telegram 34)
+v0.1~v0.4 전체 결정 사항은 PROJECT.md 참조.
 
 ### 차단 요소/우려 사항
 
@@ -90,6 +52,6 @@ v0.4 결정:
 
 ## 세션 연속성
 
-마지막 세션: 2026-02-06
-중단 지점: Completed 18-01-PLAN.md (배포 타겟별 테스트 범위 설계) -- v0.4 마일스톤 완료
+마지막 세션: 2026-02-07
+중단 지점: v0.4 마일스톤 완료 및 아카이브 -- 다음 마일스톤 시작 대기
 재개 파일: None
