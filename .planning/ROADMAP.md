@@ -20,7 +20,7 @@ v0.2에서 완성한 17개 설계 문서와 v0.3에서 확보한 일관성 대�
 - [x] **Phase 14: 테스트 기반 정의** - 테스트 레벨, 모듈 매트릭스, Mock 경계, 테스트 인터페이스 확정
 - [x] **Phase 15: 보안 테스트 시나리오** - 3계층 보안 공격 시나리오 25건 이상 + 키스토어 + 경계값
 - [x] **Phase 16: 블록체인 & 일관성 검증 전략** - 블록체인 3단계 테스트 환경 + Enum/설정 검증 방법
-- [ ] **Phase 17: CI/CD 파이프라인 설계** - 4단계 파이프라인, GitHub Actions, 커버리지 게이트
+- [x] **Phase 17: CI/CD 파이프라인 설계** - 4단계 파이프라인, GitHub Actions, 커버리지 게이트
 - [ ] **Phase 18: 배포 타겟별 테스트** - CLI/Docker/Desktop/Telegram 각 플랫폼 테스트 범위
 
 ## Phase Details
@@ -85,7 +85,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 17-01-PLAN.md -- CI/CD 파이프라인 4단계 구조 + GitHub Actions 워크플로우 + 커버리지 게이트 설계 (CICD-01, CICD-02, CICD-03)
+- [x] 17-01-PLAN.md -- CI/CD 파이프라인 4단계 구조 + GitHub Actions 워크플로우 + 커버리지 게이트 설계 (CICD-01, CICD-02, CICD-03)
 
 ### Phase 18: 배포 타겟별 테스트
 **Goal**: 4개 배포 타겟(CLI Daemon/Docker/Desktop/Telegram Bot) 각각의 테스트 범위와 검증 방법이 확정되어, 플랫폼별 품질 기준이 명확하다
@@ -111,5 +111,5 @@ Phases execute in numeric order: 14 -> 15 -> 16 -> 17 -> 18
 | 14. 테스트 기반 정의 | 2/2 | ✓ Complete | 2026-02-06 |
 | 15. 보안 테스트 시나리오 | 3/3 | ✓ Complete | 2026-02-06 |
 | 16. 블록체인 & 일관성 검증 전략 | 2/2 | ✓ Complete | 2026-02-06 |
-| 17. CI/CD 파이프라인 설계 | 0/1 | Not started | - |
+| 17. CI/CD 파이프라인 설계 | 1/1 | ✓ Complete | 2026-02-06 |
 | 18. 배포 타겟별 테스트 | 0/1 | Not started | - |

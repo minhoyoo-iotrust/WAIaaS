@@ -41,9 +41,9 @@
 
 ### CI/CD 파이프라인
 
-- [ ] **CICD-01**: 4단계 파이프라인 구조가 정의됨 (매 커밋: lint→type-check→unit→coverage / 매 PR: +integration+e2e+security+enum / nightly: devnet / 릴리스: full suite)
-- [ ] **CICD-02**: GitHub Actions 워크플로우 구조가 설계됨 (push/PR/schedule/release 트리거별)
-- [ ] **CICD-03**: 커버리지 게이트(기준 미달 시 CI 실패) 및 리포트 자동 생성 방식이 정의됨
+- [x] **CICD-01**: 4단계 파이프라인 구조가 정의됨 (매 커밋: lint→type-check→unit→coverage / 매 PR: +integration+e2e+security+enum / nightly: devnet / 릴리스: full suite)
+- [x] **CICD-02**: GitHub Actions 워크플로우 구조가 설계됨 (push/PR/schedule/release 트리거별)
+- [x] **CICD-03**: 커버리지 게이트(기준 미달 시 CI 실패) 및 리포트 자동 생성 방식이 정의됨
 
 ### 배포 타겟별 테스트
 
@@ -95,9 +95,9 @@
 | ENUM-01 | Phase 16 | Complete |
 | ENUM-02 | Phase 16 | Complete |
 | ENUM-03 | Phase 16 | Complete |
-| CICD-01 | Phase 17 | Pending |
-| CICD-02 | Phase 17 | Pending |
-| CICD-03 | Phase 17 | Pending |
+| CICD-01 | Phase 17 | Complete |
+| CICD-02 | Phase 17 | Complete |
+| CICD-03 | Phase 17 | Complete |
 | PLAT-01 | Phase 18 | Pending |
 | PLAT-02 | Phase 18 | Pending |
 | PLAT-03 | Phase 18 | Pending |
