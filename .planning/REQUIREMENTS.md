@@ -66,48 +66,48 @@
 
 | Feature | Reason |
 |---------|--------|
-| 테스트 코드 구현 | v0.4는 전략/계획만 — 실제 테스트 코드는 구현 마일스톤에서 |
+| 테스트 코드 구현 | v0.4는 전략/계획만 -- 실제 테스트 코드는 구현 마일스톤에서 |
 | 성능/부하 테스트 계획 | 기능 구현 완료 후 별도 마일스톤으로 분리 |
 | Formal verification | 수학적 증명은 현 단계에서 과도 |
 | 외부 보안 감사 계획 | 구현 완료 후 외부 업체 선정 |
-| Mainnet 테스트 | Devnet까지만 — Mainnet은 프로덕션 릴리스 시점 |
+| Mainnet 테스트 | Devnet까지만 -- Mainnet은 프로덕션 릴리스 시점 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TLVL-01 | Pending | Pending |
-| TLVL-02 | Pending | Pending |
-| TLVL-03 | Pending | Pending |
-| MOCK-01 | Pending | Pending |
-| MOCK-02 | Pending | Pending |
-| MOCK-03 | Pending | Pending |
-| MOCK-04 | Pending | Pending |
-| SEC-01 | Pending | Pending |
-| SEC-02 | Pending | Pending |
-| SEC-03 | Pending | Pending |
-| SEC-04 | Pending | Pending |
-| SEC-05 | Pending | Pending |
-| CHAIN-01 | Pending | Pending |
-| CHAIN-02 | Pending | Pending |
-| CHAIN-03 | Pending | Pending |
-| CHAIN-04 | Pending | Pending |
-| ENUM-01 | Pending | Pending |
-| ENUM-02 | Pending | Pending |
-| ENUM-03 | Pending | Pending |
-| CICD-01 | Pending | Pending |
-| CICD-02 | Pending | Pending |
-| CICD-03 | Pending | Pending |
-| PLAT-01 | Pending | Pending |
-| PLAT-02 | Pending | Pending |
-| PLAT-03 | Pending | Pending |
-| PLAT-04 | Pending | Pending |
+| TLVL-01 | Phase 14 | Pending |
+| TLVL-02 | Phase 14 | Pending |
+| TLVL-03 | Phase 14 | Pending |
+| MOCK-01 | Phase 14 | Pending |
+| MOCK-02 | Phase 14 | Pending |
+| MOCK-03 | Phase 14 | Pending |
+| MOCK-04 | Phase 14 | Pending |
+| SEC-01 | Phase 15 | Pending |
+| SEC-02 | Phase 15 | Pending |
+| SEC-03 | Phase 15 | Pending |
+| SEC-04 | Phase 15 | Pending |
+| SEC-05 | Phase 15 | Pending |
+| CHAIN-01 | Phase 16 | Pending |
+| CHAIN-02 | Phase 16 | Pending |
+| CHAIN-03 | Phase 16 | Pending |
+| CHAIN-04 | Phase 16 | Pending |
+| ENUM-01 | Phase 16 | Pending |
+| ENUM-02 | Phase 16 | Pending |
+| ENUM-03 | Phase 16 | Pending |
+| CICD-01 | Phase 17 | Pending |
+| CICD-02 | Phase 17 | Pending |
+| CICD-03 | Phase 17 | Pending |
+| PLAT-01 | Phase 18 | Pending |
+| PLAT-02 | Phase 18 | Pending |
+| PLAT-03 | Phase 18 | Pending |
+| PLAT-04 | Phase 18 | Pending |
 
 **Coverage:**
 - v0.4 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- Mapped to phases: 26
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after initial definition*
+*Last updated: 2026-02-06 after roadmap creation*
