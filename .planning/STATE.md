@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 15 완료, Phase 16 대기
+**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 16 실행 중
 
 ## 현재 위치
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 15 of 18 (보안 테스트 시나리오) -- Phase 15 완료
-플랜: 3 of 3 in Phase 15 (완료)
-상태: Phase complete
-마지막 활동: 2026-02-06 -- Completed 15-03-PLAN.md (키스토어 보안, 경계값, E2E 연쇄 공격 체인)
+페이즈: 16 of 18 (블록체인 & 일관성 검증 전략) -- 실행 중
+플랜: 1 of 2 in Phase 16 (완료)
+상태: In progress
+마지막 활동: 2026-02-06 -- Completed 16-01-PLAN.md (블록체인 3단계 테스트 환경 + Mock RPC + E2E + EVM Stub)
 
-Progress: [██████░░░░] 71% (5/7 plans across 5 phases)
+Progress: [███████░░░] 86% (6/7 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,8 +35,8 @@ Progress: [██████░░░░] 71% (5/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 5/7
-- 요구사항: 12/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05)
+- 완료된 플랜: 6/7
+- 요구사항: 16/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04)
 
 ## 누적 컨텍스트
 
@@ -64,6 +64,10 @@ v0.4 결정:
 - SEC04-INTEGRATION-LEVEL: authTag 변조/마스터 패스워드 시나리오는 Integration 필수 (sodium-native/argon2 바인딩)
 - SEC05-DUAL-THRESHOLD: 금액 경계를 기본(1/10/50 SOL) + 커스텀(0.1/1/10 SOL) 양쪽 검증, SSoT 명시
 - SEC05-CHAIN-SELECTION: 5개 E2E 체인 선택 기준 = 현실적 공격 시나리오 (한도 소진/TOCTOU/3계층 관통/탈취+복구/시간 기반)
+- CHAIN-MOCK-13-SCENARIOS: Mock RPC 13개 시나리오 확정 (성공 3 + 실패 7 + 지연 2 + 중복 1)
+- CHAIN-E2E-5-FLOWS: Local Validator E2E 5개 흐름 (SOL전송/잔액+수수료/주소검증/연결관리/에러복구), 합계 ~21초
+- CHAIN-EVM-STUB-5-ITEMS: EvmAdapterStub 테스트 5항목 (타입준수/isConnected/getHealth/11메서드throw/Registry)
+- CHAIN-DEVNET-LIMIT-3: Devnet 테스트 최대 3건 제한 (SOL 전송 + 잔액 + 헬스)
 
 ### 차단 요소/우려 사항
 
@@ -72,5 +76,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 15-03-PLAN.md (키스토어 보안, 경계값, E2E 연쇄 공격 체인) -- Phase 15 완료
+중단 지점: Completed 16-01-PLAN.md (블록체인 3단계 테스트 환경 + Mock RPC 13개 시나리오 + Local Validator E2E 5개 흐름 + EVM Stub 5항목)
 재개 파일: None
