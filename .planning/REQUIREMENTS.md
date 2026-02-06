@@ -7,16 +7,16 @@
 
 ### 테스트 레벨 & 모듈 매트릭스
 
-- [ ] **TLVL-01**: 6개 테스트 레벨(Unit/Integration/E2E/Chain Integration/Security/Platform)의 범위, 실행 환경, 실행 빈도가 정의됨
-- [ ] **TLVL-02**: 7개 모노레포 패키지 + Python SDK + Desktop App에 대해 어떤 테스트 레벨을 적용할지 매트릭스로 정의됨
-- [ ] **TLVL-03**: 패키지별 커버리지 목표가 정의됨 (core/daemon 90%+, adapter-solana 80%+, cli 70%+ 등)
+- [x] **TLVL-01**: 6개 테스트 레벨(Unit/Integration/E2E/Chain Integration/Security/Platform)의 범위, 실행 환경, 실행 빈도가 정의됨
+- [x] **TLVL-02**: 7개 모노레포 패키지 + Python SDK + Desktop App에 대해 어떤 테스트 레벨을 적용할지 매트릭스로 정의됨
+- [x] **TLVL-03**: 패키지별 커버리지 목표가 정의됨 (core/daemon 90%+, adapter-solana 80%+, cli 70%+ 등)
 
 ### Mock 경계 & 테스트 인터페이스
 
-- [ ] **MOCK-01**: 5개 외부 의존성(블록체인 RPC, 알림 채널, 파일시스템, 시간, Owner 서명)에 대한 Mock 방식이 Unit/Integration/E2E 레벨별로 정의됨
-- [ ] **MOCK-02**: 기존 v0.2 인터페이스 4개(IChainAdapter, INotificationChannel, ILocalKeyStore, IPolicyEngine)의 Mock 가능성이 검증됨
-- [ ] **MOCK-03**: 신규 테스트 인터페이스 IClock(시간 추상화)과 ISigner(서명 추상화)의 인터페이스 스펙이 정의됨
-- [ ] **MOCK-04**: Mock과 실제 구현의 동작 일치를 보장하는 Contract Test 전략이 정의됨
+- [x] **MOCK-01**: 5개 외부 의존성(블록체인 RPC, 알림 채널, 파일시스템, 시간, Owner 서명)에 대한 Mock 방식이 Unit/Integration/E2E 레벨별로 정의됨
+- [x] **MOCK-02**: 기존 v0.2 인터페이스 4개(IChainAdapter, INotificationChannel, ILocalKeyStore, IPolicyEngine)의 Mock 가능성이 검증됨
+- [x] **MOCK-03**: 신규 테스트 인터페이스 IClock(시간 추상화)과 ISigner(서명 추상화)의 인터페이스 스펙이 정의됨
+- [x] **MOCK-04**: Mock과 실제 구현의 동작 일치를 보장하는 Contract Test 전략이 정의됨
 
 ### 보안 테스트 시나리오
 
@@ -76,13 +76,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TLVL-01 | Phase 14 | Pending |
-| TLVL-02 | Phase 14 | Pending |
-| TLVL-03 | Phase 14 | Pending |
-| MOCK-01 | Phase 14 | Pending |
-| MOCK-02 | Phase 14 | Pending |
-| MOCK-03 | Phase 14 | Pending |
-| MOCK-04 | Phase 14 | Pending |
+| TLVL-01 | Phase 14 | Complete |
+| TLVL-02 | Phase 14 | Complete |
+| TLVL-03 | Phase 14 | Complete |
+| MOCK-01 | Phase 14 | Complete |
+| MOCK-02 | Phase 14 | Complete |
+| MOCK-03 | Phase 14 | Complete |
+| MOCK-04 | Phase 14 | Complete |
 | SEC-01 | Phase 15 | Pending |
 | SEC-02 | Phase 15 | Pending |
 | SEC-03 | Phase 15 | Pending |
