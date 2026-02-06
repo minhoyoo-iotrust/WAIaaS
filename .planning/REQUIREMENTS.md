@@ -25,10 +25,10 @@ v0.2에서 대체된 v0.1 설계에 명시적 표기를 추가하여 잘못된 �
 
 시스템의 기본 동작에 영향을 미치는 모순을 단일 값으로 확정한다.
 
-- [ ] **CRIT-01**: 기본 포트 통일 (C1) — 3100으로 확정, config.toml 및 모든 문서 반영
-- [ ] **CRIT-02**: 트랜잭션 상태 Enum 통일 (C2) — DB 8개 상태 + 클라이언트 표시 상태 분리 방안 확정
-- [ ] **CRIT-03**: Docker 바인딩 전략 확정 (C3) — WAIAAS_HOST 환경변수 오버라이드 허용 설계
-- [ ] **CRIT-04**: 자금 충전 모델 문서화 (C8) — Owner → Agent 직접 SOL 전송 방식 명시
+- [x] **CRIT-01**: 기본 포트 통일 (C1) — 3100으로 확정, config.toml 및 모든 문서 반영
+- [x] **CRIT-02**: 트랜잭션 상태 Enum 통일 (C2) — DB 8개 상태 + 클라이언트 표시 상태 분리 방안 확정
+- [x] **CRIT-03**: Docker 바인딩 전략 확정 (C3) — WAIAAS_DAEMON_HOSTNAME 환경변수 오버라이드 허용 설계
+- [x] **CRIT-04**: 자금 충전 모델 문서화 (C8) — Owner → Agent 직접 SOL 전송 방식 명시
 
 ### Enum/상태값 통일
 
@@ -106,10 +106,10 @@ v0.4 Implementation 마일스톤에서 다룰 예정:
 | LEGACY-07 | Phase 10 | Complete |
 | LEGACY-08 | Phase 10 | Complete |
 | LEGACY-09 | Phase 10 | Complete |
-| CRIT-01 | Phase 11 | Pending |
-| CRIT-02 | Phase 11 | Pending |
-| CRIT-03 | Phase 11 | Pending |
-| CRIT-04 | Phase 11 | Pending |
+| CRIT-01 | Phase 11 | Complete |
+| CRIT-02 | Phase 11 | Complete |
+| CRIT-03 | Phase 11 | Complete |
+| CRIT-04 | Phase 11 | Complete |
 | ENUM-01 | Phase 12 | Pending |
 | ENUM-02 | Phase 12 | Pending |
 | ENUM-03 | Phase 12 | Pending |
@@ -144,4 +144,4 @@ v0.4 Implementation 마일스톤에서 다룰 예정:
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after initial definition*
+*Last updated: 2026-02-06 (Phase 11 CRIT-01~04 complete)*

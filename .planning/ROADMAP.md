@@ -39,7 +39,7 @@ Git range: `5be4181` → `fec9f88`
 **산출물:** 수정된 설계 문서, v0.1→v0.2 변경 매핑 문서, Enum/상태값 통합 대응표, 구현 노트
 
 - [x] **Phase 10: v0.1 잔재 정리** — SUPERSEDED 표기, 변경 매핑 문서 작성 ✓
-- [ ] **Phase 11: CRITICAL 의사결정 확정** — 포트, Enum, Docker 바인딩, 자금 충전 모델
+- [x] **Phase 11: CRITICAL 의사결정 확정** — 포트, Enum, Docker 바인딩, 자금 충전 모델 ✓
 - [ ] **Phase 12: HIGH 스키마/수치 통일** — Enum 통일, config.toml 보완, API 스펙 통일
 - [ ] **Phase 13: MEDIUM 구현 노트** — 11개 구현 시 주의사항 문서화
 
@@ -85,7 +85,7 @@ Plans:
   4. 자금 충전 모델이 문서화됨 — Owner → Agent 직접 SOL 전송 방식 명시
 
 Plans:
-- [ ] 11-01-PLAN.md — CRITICAL 4건 의사결정 확정 및 문서 반영 (C1, C2, C3, C8)
+- [x] 11-01-PLAN.md — CRITICAL 4건 의사결정 확정 및 문서 반영 (C1, C2, C3, C8)
 
 ---
 
@@ -150,10 +150,10 @@ Plans:
 | 1-5 | v0.1 | 15/15 | Complete | 2026-02-05 |
 | 6-9 | v0.2 | 16/16 | Complete | 2026-02-05 |
 | 10. v0.1 잔재 정리 | v0.3 | 2/2 | Complete | 2026-02-06 |
-| 11. CRITICAL 의사결정 | v0.3 | 0/1 | Not started | - |
+| 11. CRITICAL 의사결정 | v0.3 | 1/1 | Complete | 2026-02-06 |
 | 12. HIGH 스키마/수치 통일 | v0.3 | 0/3 | Not started | - |
 | 13. MEDIUM 구현 노트 | v0.3 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-06 (v0.3 phases added)*
+*Last updated: 2026-02-06 (Phase 11 complete)*

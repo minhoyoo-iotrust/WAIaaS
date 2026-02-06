@@ -170,7 +170,7 @@ sequenceDiagram
     Note over PID: Step 7: PID 파일 + Ready
     PID->>PID: ~/.waiaas/daemon.pid에 PID 기록
     PID->>PID: Ready 로그 출력
-    PID-->>CLI: "WAIaaS daemon v0.2.0 ready on 127.0.0.1:3000 (PID: 12345)"
+    PID-->>CLI: "WAIaaS daemon v0.2.0 ready on 127.0.0.1:3100 (PID: 12345)"
 ```
 
 ### 2.2 단계별 상세
@@ -1353,7 +1353,7 @@ waiaas start [options]
 
 Options:
   --daemon, -d             백그라운드 모드로 실행
-  --port <number>          포트 오버라이드 (기본: 3000)
+  --port <number>          포트 오버라이드 (기본: 3100)
   --data-dir <path>        데이터 디렉토리 오버라이드
   --log-level <level>      로그 레벨 (debug/info/warn/error)
   --password-env <var>     패스워드 환경변수 이름
@@ -1366,7 +1366,7 @@ Options:
 | 옵션 | Short | 타입 | 필수 | 기본값 | 설명 |
 |------|-------|------|------|--------|------|
 | `--daemon` | `-d` | boolean | X | `false` | 백그라운드 모드 실행 (fork + detach) |
-| `--port` | - | number | X | config.toml 값 또는 `3000` | HTTP 서버 포트 |
+| `--port` | - | number | X | config.toml 값 또는 `3100` | HTTP 서버 포트 |
 | `--data-dir` | - | string | X | `~/.waiaas` | 데이터 디렉토리 |
 | `--log-level` | - | string | X | config.toml 값 또는 `info` | `debug` / `info` / `warn` / `error` |
 | `--password-env` | - | string | X | `WAIAAS_MASTER_PASSWORD` | 패스워드 환경변수 이름 |
@@ -1404,9 +1404,9 @@ Unlocking keystore... (Argon2id, ~2s)
 KeyStore unlocked (3 keys loaded)
 solana/devnet adapter ready (latency: 45ms)
 ethereum/sepolia adapter ready (latency: 120ms)
-HTTP server listening on 127.0.0.1:3000
+HTTP server listening on 127.0.0.1:3100
 Background workers started (wal-checkpoint, session-cleanup)
-WAIaaS daemon v0.2.0 ready on 127.0.0.1:3000 (PID: 12345)
+WAIaaS daemon v0.2.0 ready on 127.0.0.1:3100 (PID: 12345)
 ```
 
 **Background 모드:**
@@ -1432,8 +1432,8 @@ $ waiaas start
 Error: Daemon already running (PID: 12345). Use 'waiaas stop' first.
 (exit code: 2)
 
-$ waiaas start --port 3000
-Error: Port 3000 already in use (EADDRINUSE)
+$ waiaas start --port 3100
+Error: Port 3100 already in use (EADDRINUSE)
 (exit code: 1)
 
 $ waiaas start
@@ -1703,7 +1703,7 @@ $ waiaas status
   ─────────────────────
   Status:     Running (PID: 12345)
   Uptime:     2h 34m
-  Address:    127.0.0.1:3000
+  Address:    127.0.0.1:3100
 
   Agents:     3 active, 1 suspended
   Sessions:   2 active
@@ -1729,7 +1729,7 @@ $ waiaas status --json
   "pid": 12345,
   "version": "0.2.0",
   "uptime": 9240,
-  "address": "127.0.0.1:3000",
+  "address": "127.0.0.1:3100",
   "agents": { "active": 3, "suspended": 1, "total": 4 },
   "sessions": { "active": 2 },
   "lastTransaction": "2026-02-05T11:02:00Z",

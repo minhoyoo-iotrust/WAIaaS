@@ -102,7 +102,7 @@ export function startServer(
   const server = serve({
     fetch: app.fetch,
     port: config.daemon.port,
-    hostname: '127.0.0.1',  // 필수: localhost만 바인딩 (C-04 방지)
+    hostname: config.daemon.hostname,  // 기본 '127.0.0.1', Docker 환경 '0.0.0.0' (WAIAAS_DAEMON_HOSTNAME)
   })
 
   // 소켓 추적 (Graceful Shutdown용 -- CORE-05 Pitfall 6 대응)
@@ -163,7 +163,7 @@ log_level = "info"             # 로그 레벨 (debug, info, warn, error)
 **포트 결정:**
 - 기본 포트 `3100`: 3000/3001/8080 등 흔히 사용되는 포트와 충돌 방지
 - 환경변수 `WAIAAS_DAEMON_PORT`로 오버라이드 가능
-- `hostname`은 `z.literal('127.0.0.1')`로 Zod 스키마에서 강제 (CORE-01 결정사항)
+- `hostname`은 `z.union([z.literal('127.0.0.1'), z.literal('0.0.0.0')])`로 Zod 스키마에서 제한 (CORE-01 결정사항). 기본값 `127.0.0.1`, Docker 컨테이너 환경에서만 `0.0.0.0` 허용
 
 ---
 
@@ -599,13 +599,20 @@ WAIaaS 데몬은 localhost에서만 실행되지만, 다음 공격 벡터가 존
 | **한계** | 동일 머신의 프로세스는 접근 가능 |
 
 ```typescript
-// 코드에서 강제 -- 설정 파일로 변경 불가
+// Zod 스키마에서 허용 값 제한 -- 기본값 127.0.0.1, Docker 환경 0.0.0.0 허용
 serve({
   fetch: app.fetch,
   port: config.daemon.port,
-  hostname: '127.0.0.1',  // z.literal('127.0.0.1') -- CORE-01 결정
+  hostname: config.daemon.hostname,  // z.union([z.literal('127.0.0.1'), z.literal('0.0.0.0')]).default('127.0.0.1')
 })
 ```
+
+> **Docker 전용 경고**: `0.0.0.0` 바인딩은 Docker 컨테이너 환경에서만 사용해야 한다.
+> 컨테이너 내부에서 `0.0.0.0` 바인딩은 컨테이너의 모든 네트워크 인터페이스에서 접근 허용을 의미한다.
+> 반드시 Docker 포트 매핑에서 `127.0.0.1:3100:3100` 형식을 사용하여 호스트 측 노출을 localhost로 제한해야 한다.
+> `0.0.0.0:3100:3100` (전체 노출) 또는 `3100:3100` (기본 0.0.0.0)은 보안 위험.
+>
+> **환경변수 오버라이드:** `WAIAAS_DAEMON_HOSTNAME=0.0.0.0`으로 설정. 비-Docker 환경에서 이 값을 사용하면 외부 네트워크에 API가 노출된다.
 
 > **IPv6 미지원 결정:** `::1` (IPv6 loopback)은 의도적으로 제외한다. IPv4/IPv6 듀얼 스택은 공격 표면을 넓히고, localhost 전용 서비스에서 IPv6의 실질적 이점이 없다.
 

@@ -504,6 +504,27 @@ const AddressResponseSchema = z.object({
 |------|------|-----------|------|
 | `INVALID_TOKEN` | 401 | false | 세션 토큰 검증 실패 |
 
+#### 사용 사례: Agent 지갑에 자금 충전
+
+WAIaaS는 Owner의 Private Key에 접근하지 않으므로,
+Agent 지갑으로의 자금 전송은 Owner가 외부 지갑에서 직접 수행한다.
+
+**절차:**
+1. Agent 지갑 주소 조회: `GET /v1/wallet/address`
+2. Owner 지갑(Phantom, Ledger 등)에서 해당 주소로 SOL/ETH 전송
+3. 잔액 확인: `GET /v1/wallet/balance`
+
+**v0.1 대비 변경:**
+
+| v0.1 (Squads Vault) | v0.2 (Self-Hosted) |
+|---------------------|-------------------|
+| Owner -> Vault PDA -> Agent | Owner -> Agent 직접 전송 |
+| 다층 예산 관리 | 정책 엔진(`policies` 테이블)으로 대체 |
+
+> **참고**: WAIaaS API에는 "자금 입금" 전용 엔드포인트가 없다.
+> Owner가 외부 지갑에서 Agent 주소로 직접 전송하는 것이 유일한 충전 경로이다.
+> Agent 지갑은 수신만 허용하며, 발신은 정책 엔진의 승인을 거쳐야 한다.
+
 ---
 
 ### 6.3 POST /v1/transactions/send
@@ -557,7 +578,30 @@ const TransactionStatusEnum = z.enum([
   'PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED',
 ])
 const TierEnum = z.enum(['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'])
+```
 
+#### 클라이언트 상태 표시 가이드
+
+TransactionStatusEnum의 8개 상태는 DB의 SSoT(Single Source of Truth)이다.
+클라이언트 UI에서는 상태와 tier를 조합하여 사용자 친화적 메시지로 표시한다.
+
+| DB 상태 | Tier | 표시 텍스트 (예시) |
+|---------|------|-------------------|
+| `PENDING` | - | "승인 대기 중" |
+| `QUEUED` | `INSTANT` | "실행 준비됨" |
+| `QUEUED` | `DELAY` | "대기 중 (15분 후 실행)" |
+| `QUEUED` | `APPROVAL` | "Owner 승인 대기 중" |
+| `EXECUTING` | - | "실행 중" |
+| `SUBMITTED` | - | "블록체인 전송됨" |
+| `CONFIRMED` | - | "완료" |
+| `FAILED` | - | "실패" |
+| `CANCELLED` | - | "취소됨" |
+| `EXPIRED` | - | "시간 초과" |
+
+> **참고**: DB 상태 8개가 SSoT이며, 표시 텍스트는 클라이언트 구현 재량.
+> Telegram Bot, Tauri Desktop 모두 이 매핑을 따른다.
+
+```typescript
 const TransactionResponseSchema = z.object({
   transactionId: z.string().uuid().openapi({
     description: '내부 트랜잭션 ID (UUID v7)',
