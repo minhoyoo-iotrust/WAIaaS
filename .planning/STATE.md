@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 16 완료
+**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 17 완료 (v0.4 마일스톤 완료)
 
 ## 현재 위치
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 16 of 18 (블록체인 & 일관성 검증 전략) -- Phase 16 완료
-플랜: 2 of 2 in Phase 16 (완료)
-상태: Phase complete
-마지막 활동: 2026-02-06 -- Completed 16-02-PLAN.md (Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE 매핑)
+페이즈: 17 of 17 (CI/CD 파이프라인 설계) -- Phase 17 완료
+플랜: 1 of 1 in Phase 17 (완료)
+상태: Milestone complete
+마지막 활동: 2026-02-06 -- Completed 17-01-PLAN.md (CI/CD 파이프라인 설계 + 커버리지 게이트 전략)
 
-Progress: [████████░░] 78% (7/9 plans across 5 phases)
+Progress: [██████████] 100% (8/8 plans across 4 phases)
 
 ## 성과 지표
 
@@ -34,9 +34,10 @@ Progress: [████████░░] 78% (7/9 plans across 5 phases)
 - 비일관성 해소: 37건 전부
 - 산출물: 5개 대응표/매핑 문서
 
-**v0.4 현재:**
-- 완료된 플랜: 7/9
-- 요구사항: 19/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04, ENUM-01, ENUM-02, ENUM-03)
+**v0.4 최종 통계:**
+- 완료된 플랜: 8/8 (100%)
+- 요구사항: 22/22 완료 (TLVL-01~03, MOCK-01~04, SEC-01~05, CHAIN-01~04, ENUM-01~03, CICD-01~03)
+- 설계 문서: 10개 (41~50번)
 
 ## 누적 컨텍스트
 
@@ -73,6 +74,11 @@ v0.4 결정:
 - KILL-SWITCH-ZOD-RUNTIME: KillSwitchStatus는 system_state key-value 저장이므로 DB CHECK 대신 Zod 런타임 검증
 - CONFIG-UNIT-TEST: config.toml 로딩은 Unit 테스트로 충분 (memfs/mock + process.env)
 - NOTE-4-OF-11: NOTE-01/02/08/11만 전용 테스트 필요, 나머지 7건은 문서/타입/범위밖
+- CICD-4STAGE: 4단계 파이프라인 (Stage 1 매커밋 ~2min, Stage 2 매PR ~5min, Stage 3 nightly ~10min, Stage 4 릴리스 ~15min)
+- CICD-COVERAGE-REPORT-SPLIT: coverage-report.yml 분리 (fork PR 보안, GITHUB_TOKEN 쓰기 권한 격리)
+- CICD-ARTIOMTR-4PKG: ArtiomTr action 핵심 4패키지(core/daemon/adapter-solana/sdk)만 PR 코멘트, 나머지 콘솔
+- CICD-SOFT-HARD-PRIORITY: Soft->Hard 전환 우선순위 6단계 (core -> keystore/services -> solana/sdk -> middleware 등 -> cli/mcp -> evm)
+- CICD-TEST-NO-CACHE: turbo.json 모든 test:* 태스크 cache: false (테스트 결과 캐싱 위험 방지)
 
 ### 차단 요소/우려 사항
 
@@ -81,5 +87,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 16-02-PLAN.md (Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE 매핑) -- Phase 16 완료
+중단 지점: Completed 17-01-PLAN.md (CI/CD 파이프라인 설계 + 커버리지 게이트 전략) -- Phase 17 완료, v0.4 마일스톤 완료
 재개 파일: None
