@@ -2,8 +2,22 @@
 
 **문서 ID:** ARCH-03
 **작성일:** 2026-02-04
-**상태:** 완료
+**상태:** SUPERSEDED by [32-transaction-pipeline-api.md](./32-transaction-pipeline-api.md)
 **참조:** ARCH-01, ARCH-02, 03-CONTEXT.md, 03-RESEARCH.md
+
+---
+
+> **SUPERSEDED**
+>
+> 이 문서의 트랜잭션 흐름(8단계, Enclave + Squads 기반)은 v0.2에서 **6단계 파이프라인**으로 대체되었습니다.
+>
+> **구현 시 참조:** [32-transaction-pipeline-api.md](./32-transaction-pipeline-api.md) (TX-PIPE)
+>
+> **변경 사항:**
+> - 8단계 -> 6단계 (BUILD, SIMULATE, SIGN, SUBMIT, CONFIRM, COMPLETE)
+> - Nitro Enclave 정책 검증 제거 -> DatabasePolicyEngine으로 대체
+> - Squads 온체인 정책 제거 -> 로컬 4-tier 정책 (INSTANT/NOTIFY/DELAY/APPROVAL)
+> - 3중 정책 검증 -> 서버 단일 정책 검증
 
 ---
 

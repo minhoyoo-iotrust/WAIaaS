@@ -2,7 +2,17 @@
 
 **작성일:** 2026-02-04
 **버전:** 1.0
-**상태:** 승인됨
+**상태:** SUPERSEDED by [25-sqlite-schema.md](./25-sqlite-schema.md)
+
+---
+
+> **SUPERSEDED**
+>
+> 이 문서의 데이터베이스 설계(PostgreSQL + Redis)는 v0.2에서 **SQLite + LRU 캐시**로 대체되었습니다.
+>
+> **구현 시 참조:** [25-sqlite-schema.md](./25-sqlite-schema.md) (CORE-02)
+>
+> **변경 이유:** Self-Hosted 단일 프로세스 환경에서 외부 DB 의존성 제거
 
 ---
 

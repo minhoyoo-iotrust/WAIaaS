@@ -2,8 +2,23 @@
 
 **문서 ID:** API-03
 **작성일:** 2026-02-05
-**상태:** 완료
+**상태:** SUPERSEDED by [33-time-lock-approval-mechanism.md](./33-time-lock-approval-mechanism.md)
 **참조:** API-02 (인증 모델), ARCH-01 (Dual Key 아키텍처), ARCH-03 (트랜잭션 플로우), REL-01 (자금 충전), REL-03 (에이전트 생명주기), REL-04 (비상 회수), REL-05 (멀티 에이전트)
+
+---
+
+> **SUPERSEDED**
+>
+> 이 문서의 권한/정책 모델(RBAC + ABAC + 4단계 에스컬레이션)은 v0.2에서 **DatabasePolicyEngine + 4-tier 정책**으로 대체되었습니다.
+>
+> **구현 시 참조:** [33-time-lock-approval-mechanism.md](./33-time-lock-approval-mechanism.md) (LOCK-MECH)
+>
+> **변경 사항:**
+> - RBAC + ABAC 하이브리드 -> 세션 기반 제약 (SessionConstraints)
+> - 4단계 에스컬레이션 (경고/제한/승인/동결) -> 4-tier 정책 (INSTANT/NOTIFY/DELAY/APPROVAL)
+> - 금액/화이트리스트/시간/에스컬레이션 별도 -> 통합 정책 테이블 (policies)
+> - Rate Limiting 3-Layer -> Rate Limiter 3-level (global 100/session 300/tx 10 req/min)
+> - 온체인-오프체인 동기화 -> 오프체인 전용 정책
 
 ---
 

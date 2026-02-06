@@ -2,8 +2,22 @@
 
 **문서 ID:** ARCH-02
 **작성일:** 2026-02-04
-**상태:** 완료
+**상태:** SUPERSEDED by [29-api-framework-design.md](./29-api-framework-design.md)
 **참조:** ARCH-01, CUST-04, 03-CONTEXT.md, 03-RESEARCH.md
+
+---
+
+> **SUPERSEDED**
+>
+> 이 문서의 시스템 아키텍처(Fastify + AWS 클라우드 컴포넌트)는 v0.2에서 **Hono + Self-Hosted 단일 프로세스**로 대체되었습니다.
+>
+> **구현 시 참조:** [29-api-framework-design.md](./29-api-framework-design.md) (CORE-06)
+>
+> **변경 사항:**
+> - Fastify -> Hono 4.x
+> - PostgreSQL/Redis -> SQLite/LRU
+> - AWS KMS + Nitro Enclave -> 로컬 Keystore + sodium-native
+> - Squads Protocol -> 로컬 정책 엔진
 
 ---
 

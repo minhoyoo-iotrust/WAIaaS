@@ -2,8 +2,23 @@
 
 **문서 ID:** API-02
 **작성일:** 2026-02-05
-**상태:** 완료
+**상태:** SUPERSEDED by [30-session-token-protocol.md](./30-session-token-protocol.md)
 **참조:** ARCH-01 (Dual Key 아키텍처), ARCH-03 (트랜잭션 플로우), 05-RESEARCH.md Pattern 2, REL-03 (에이전트 생명주기)
+
+---
+
+> **SUPERSEDED**
+>
+> 이 문서의 인증 모델(영구 API Key + OAuth 2.1 + MCP Authorization)은 v0.2에서 **JWT 세션 토큰 기반 인증**으로 대체되었습니다.
+>
+> **구현 시 참조:** [30-session-token-protocol.md](./30-session-token-protocol.md) (SESS-PROTO)
+>
+> **변경 사항:**
+> - 영구 API Key -> 단기 JWT 세션 토큰 (min 5분, max 7일, default 24h)
+> - SHA-256 해시 저장 -> JWT HS256 서명 (jose v6)
+> - 3-Layer 인증 -> 2-stage sessionAuth (JWT verify -> DB lookup)
+> - RBAC/ABAC -> SessionConstraints 6 필드 (amount, destinations, etc.)
+> - OAuth 2.1 Client Credentials -> SIWS/SIWE Owner 인증
 
 ---
 
