@@ -68,11 +68,11 @@ Plans:
   3. Local Validator 기반 E2E 흐름(세션 생성 -> 정책 평가 -> 서명 -> 전송 -> 확인)이 단계별로 정의되어 있다
   4. 9개 Enum SSoT 동기화 검증 방법(DB CHECK = Drizzle = Zod = TypeScript)이 자동화 가능한 수준으로 정의되어 있다
   5. config.toml 검증(기본값/부분 오버라이드/Docker 환경변수 우선순위)과 NOTE-01~11의 테스트 케이스 매핑이 완료되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 16-01: 블록체인 테스트 환경 전략
-- [ ] 16-02: Enum/설정 일관성 검증 전략
+- [ ] 16-01-PLAN.md -- 블록체인 3단계 테스트 환경 + Mock RPC 시나리오 + Local Validator E2E + EVM Stub (CHAIN-01~04)
+- [ ] 16-02-PLAN.md -- Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE-01~11 매핑 (ENUM-01~03)
 
 ### Phase 17: CI/CD 파이프라인 설계
 **Goal**: 테스트 자동화 파이프라인 구조가 확정되어, 구현 단계에서 워크플로우 YAML을 바로 작성할 수 있다
