@@ -1524,7 +1524,9 @@ services:
     container_name: waiaas-daemon
     restart: unless-stopped
 
-    # ── 포트: localhost만 바인딩 (0.0.0.0 절대 금지) ──
+    # ── 포트: 호스트 측 localhost만 바인딩 (호스트 포트 매핑에서 0.0.0.0 금지) ──
+    # 컨테이너 내부는 WAIAAS_DAEMON_HOSTNAME=0.0.0.0으로 모든 인터페이스에서 수신하지만,
+    # 호스트 측은 127.0.0.1로 제한하여 외부 접근을 차단한다.
     ports:
       - "127.0.0.1:3100:3100"
 
@@ -1536,6 +1538,7 @@ services:
     environment:
       - NODE_ENV=production
       - WAIAAS_DAEMON_PORT=3100
+      - WAIAAS_DAEMON_HOSTNAME=0.0.0.0  # 컨테이너 내부 모든 인터페이스에서 수신. 호스트 측은 ports에서 127.0.0.1로 제한
       - WAIAAS_MASTER_PASSWORD_FILE=/run/secrets/master_password
       - WAIAAS_LOG_LEVEL=${WAIAAS_LOG_LEVEL:-info}
       - WAIAAS_WALLETCONNECT_PROJECT_ID=${WALLETCONNECT_PROJECT_ID:-}
@@ -1743,6 +1746,7 @@ const telegramToken = loadSecret('WAIAAS_TELEGRAM_BOT_TOKEN', 'WAIAAS_TELEGRAM_B
 |------|------|--------|------|
 | `NODE_ENV` | No | `production` | Node.js 환경 |
 | `WAIAAS_DAEMON_PORT` | No | `3100` | 데몬 포트 |
+| `WAIAAS_DAEMON_HOSTNAME` | No | `127.0.0.1` | 바인딩 주소 (Docker: `0.0.0.0` 필수, 호스트 포트 매핑에서 127.0.0.1 제한) |
 | `WAIAAS_MASTER_PASSWORD_FILE` | **Yes** | - | 마스터 패스워드 파일 경로 |
 | `WAIAAS_MASTER_PASSWORD` | No | - | 마스터 패스워드 직접 (비추천) |
 | `WAIAAS_WALLETCONNECT_PROJECT_ID` | No | `""` | WalletConnect 프로젝트 ID |
@@ -1775,18 +1779,22 @@ ports:
   - "127.0.0.1:3100:3100"   # localhost만 바인딩
 ```
 
-**절대 금지:**
+**호스트 포트 매핑에서 0.0.0.0 금지:**
 
 ```yaml
-# 이것은 WAIaaS 보안 모델을 파괴한다
+# 이것은 WAIaaS 보안 모델을 파괴한다 (호스트 측에서 외부 네트워크에 노출)
 ports:
-  - "0.0.0.0:3100:3100"   # 모든 인터페이스에 노출 -- 금지
+  - "0.0.0.0:3100:3100"   # 호스트의 모든 인터페이스에 노출 -- 금지
   - "3100:3100"            # 기본 0.0.0.0 -- 금지
 ```
 
-**컨테이너 내부에서도 127.0.0.1 바인딩:**
+**컨테이너 내부 바인딩과 호스트 포트 매핑의 관계:**
 
-Hono 서버의 `hostname: '127.0.0.1'` 설정은 Docker 내부에서도 동일하게 적용된다. Docker의 포트 매핑(`-p`)이 컨테이너 내부 127.0.0.1:3100을 호스트 127.0.0.1:3100으로 연결한다.
+컨테이너 내부에서 `WAIAAS_DAEMON_HOSTNAME=0.0.0.0`으로 설정하면 컨테이너 내 모든 네트워크 인터페이스에서 요청을 수신한다. 이는 Docker 포트 매핑이 동작하기 위해 필요하다 (컨테이너 내부 127.0.0.1 바인딩은 Docker bridge 네트워크를 통한 포트 매핑이 불가). 호스트 측에서는 `ports: "127.0.0.1:3100:3100"` 설정으로 localhost만 접근 가능하도록 제한한다.
+
+```
+[호스트] 127.0.0.1:3100 <-- Docker port mapping --> [컨테이너] 0.0.0.0:3100 (Hono 서버)
+```
 
 ### 12.2 외부 접근 시나리오
 
@@ -1997,6 +2005,7 @@ services:
     environment:
       - NODE_ENV=production
       - WAIAAS_DAEMON_PORT=3100
+      - WAIAAS_DAEMON_HOSTNAME=0.0.0.0
       - WAIAAS_MASTER_PASSWORD_FILE=/run/secrets/master_password
       - WAIAAS_TELEGRAM_BOT_TOKEN_FILE=/run/secrets/telegram_bot_token
       - WAIAAS_TELEGRAM_BOT_ENABLED=true
@@ -2097,7 +2106,7 @@ Docker named volume 자체는 암호화 기능을 제공하지 않는다. 데이
 
 ### 15.5 네트워크 보안 체크리스트
 
-- [ ] `ports: "127.0.0.1:3100:3100"` 확인 (0.0.0.0 아닌지)
+- [ ] `ports: "127.0.0.1:3100:3100"` 확인 (호스트 포트 매핑에서 0.0.0.0 아닌지)
 - [ ] 방화벽에서 3100 포트 외부 접근 차단
 - [ ] SSH 터널 사용 시 SSH 키 기반 인증
 - [ ] Reverse Proxy 사용 시 TLS + mTLS 설정

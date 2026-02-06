@@ -657,6 +657,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | 환경변수 | 용도 | 예시 |
 |---------|------|------|
 | `WAIAAS_DATA_DIR` | 데이터 디렉토리 경로 오버라이드 | `~/.waiaas-devnet` |
+| `WAIAAS_DAEMON_HOSTNAME` | 바인딩 주소 오버라이드 (Docker 전용: `0.0.0.0`) | `0.0.0.0` |
 | `WAIAAS_MASTER_PASSWORD` | 마스터 패스워드 (비대화형 모드) | `my-secure-password` |
 | `WAIAAS_MASTER_PASSWORD_FILE` | 마스터 패스워드 파일 경로 | `/run/secrets/master_pw` |
 
@@ -667,7 +668,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
 | `port` | integer | `3100` | 1024-65535 | HTTP 서버 포트 |
-| `hostname` | string | `"127.0.0.1"` | `"127.0.0.1"` 고정 | 바인딩 주소. 보안상 localhost 강제 |
+| `hostname` | string | `"127.0.0.1"` | `"127.0.0.1"`, `"0.0.0.0"` (Docker 전용) | 바인딩 주소. 기본 localhost. Docker 컨테이너 환경에서 `0.0.0.0` 허용 (환경변수 `WAIAAS_DAEMON_HOSTNAME` 오버라이드) |
 | `log_level` | string | `"info"` | `"trace"`, `"debug"`, `"info"`, `"warn"`, `"error"` | 로그 레벨 |
 | `log_file` | string | `"logs/daemon.log"` | 상대 경로 (DATA_DIR 기준) 또는 절대 경로 | 로그 파일 경로 |
 | `log_max_size` | string | `"50MB"` | `"1MB"` ~ `"1GB"` | 로그 파일 최대 크기 (로테이션 트리거) |
@@ -747,7 +748,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 # ─────────────────────────────────────────
 [daemon]
 port = 3100                        # HTTP 서버 포트 (1024-65535)
-hostname = "127.0.0.1"             # 바인딩 주소 (보안상 변경 불가)
+hostname = "127.0.0.1"             # 바인딩 주소 (기본: localhost. Docker 환경: WAIAAS_DAEMON_HOSTNAME=0.0.0.0)
 log_level = "info"                 # trace, debug, info, warn, error
 log_file = "logs/daemon.log"       # 로그 파일 (DATA_DIR 상대 경로)
 log_max_size = "50MB"              # 로그 로테이션 크기
@@ -835,7 +836,7 @@ import { readFile } from 'node:fs/promises';
 const ConfigSchema = z.object({
   daemon: z.object({
     port: z.number().int().min(1024).max(65535).default(3100),
-    hostname: z.literal('127.0.0.1').default('127.0.0.1'),
+    hostname: z.union([z.literal('127.0.0.1'), z.literal('0.0.0.0')]).default('127.0.0.1'),
     log_level: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
     log_file: z.string().default('logs/daemon.log'),
     log_max_size: z.string().default('50MB'),
@@ -915,14 +916,23 @@ function parseEnvValue(value: string): unknown {
 }
 ```
 
-### 3.6 hostname 보안 강제
+### 3.6 hostname 보안 정책
 
-`[daemon].hostname`은 `"127.0.0.1"` 고정이며 config.toml이나 환경변수로 변경할 수 없다. 이는 C-04 (Localhost 0.0.0.0 Day) 피트폴 방지를 위한 의도적 설계이다.
+`[daemon].hostname`의 기본값은 `"127.0.0.1"`이며, Docker 컨테이너 환경에서만 `"0.0.0.0"` 바인딩을 허용한다. 이는 C-04 (Localhost 0.0.0.0 Day) 피트폴 방지를 위한 설계이다.
 
 ```typescript
-// hostname은 Zod 스키마에서 z.literal('127.0.0.1')로 강제
-// 다른 값 설정 시 Zod 검증 실패
+// hostname은 Zod 스키마에서 z.union으로 제한
+hostname: z.union([
+  z.literal('127.0.0.1'),
+  z.literal('0.0.0.0'),
+]).default('127.0.0.1'),
+// 환경변수 오버라이드: WAIAAS_DAEMON_HOSTNAME
 ```
+
+> **Docker 전용 경고**: `0.0.0.0` 바인딩은 Docker 컨테이너 환경에서만 사용해야 한다.
+> 컨테이너 내부에서 `0.0.0.0` 바인딩은 컨테이너의 모든 네트워크 인터페이스에서 접근 허용을 의미한다.
+> 반드시 Docker 포트 매핑에서 `127.0.0.1:3100:3100` 형식을 사용하여 호스트 측 노출을 localhost로 제한해야 한다.
+> `0.0.0.0:3100:3100` (전체 노출) 또는 `3100:3100` (기본 0.0.0.0)은 보안 위험.
 
 외부 네트워크에서 접근이 필요한 경우 리버스 프록시(nginx, Caddy)를 사용해야 한다.
 
