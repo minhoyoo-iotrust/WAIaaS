@@ -1,5 +1,32 @@
 # Project Milestones: WAIaaS
 
+## v0.4 테스트 전략 및 계획 수립 (Shipped: 2026-02-07)
+
+**Delivered:** v0.2 설계 문서(17개) + v0.3 일관성 대응표(5개)를 역방향 검증하는 테스트 전략을 수립하여, 구현 단계에서 "무엇을 어떻게 테스트할 것인가"가 명확한 상태를 확립
+
+**Phases completed:** 14-18 (9 plans total)
+
+**Key accomplishments:**
+
+- 테스트 기반 확립 — 6개 테스트 레벨, 9x6 모듈 매트릭스, 4-tier 커버리지 목표, IClock/IOwnerSigner 인터페이스 + 5개 Contract Test 전략
+- 보안 시나리오 71건 — 3계층 공격 47건 + 경계값 19건 + E2E 연쇄 체인 5건, Given-When-Then 테스트 케이스 수준
+- 블록체인 테스트 격리 — Solana 3단계(Mock RPC 13건 / Local Validator 5흐름 / Devnet 3건), Enum SSoT 빌드타임 파생 체인
+- CI/CD 파이프라인 설계 — 4단계(push/PR/nightly/release), GitHub Actions 4 YAML + 1 composite action, Soft/Hard 커버리지 게이트
+- 배포 타겟별 테스트 118건 — CLI 32 + Docker 18 + Tauri 34(자동 6+수동 28) + Telegram 34 시나리오
+
+**Stats:**
+
+- 44 files created/modified
+- 9,432 lines of test strategy docs (Markdown)
+- 5 phases, 9 plans, 26 requirements, 11 deliverables (docs 41-51)
+- 2 days (2026-02-06 → 2026-02-07)
+
+**Git range:** `a0214e1` (Phase 14 start) → `725f083` (Phase 18 complete)
+
+**What's next:** v0.5 구현 — 테스트 전략 문서를 참조하여 테스트 코드, Mock 구현, CI 워크플로우 작성 시작
+
+---
+
 ## v0.3 설계 논리 일관성 확보 (Shipped: 2026-02-06)
 
 **Delivered:** v0.1(23개) + v0.2(17개) = 40개 설계 문서를 크로스체크하여 37개 비일관성(8 CRITICAL + 15 HIGH + 14 MEDIUM)을 모두 해소, 구현 단계 진입을 위한 Single Source of Truth 확립
