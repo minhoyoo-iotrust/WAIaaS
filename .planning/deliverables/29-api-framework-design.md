@@ -183,8 +183,13 @@ log_level = "info"             # 로그 레벨 (debug, info, warn, error)
 | 6 | `cors` | CORS 설정 | 전체 (`*`) | 403 |
 | 7 | `rateLimiter` | 요청 속도 제한 | 전체 (`*`) | 429 |
 | 8 | `sessionAuth` | 세션 토큰 검증 | `/v1/*` (인증 필요) | 401 |
+| 9 | `ownerAuth` | Owner 서명 검증 | 라우트 레벨 (`/v1/owner/*`, `POST /v1/sessions`) | 401/403 |
 
-> **참고:** `ownerAuth` (Owner 서명 검증)는 라우트 레벨 미들웨어로 `/v1/owner/*` 엔드포인트에만 적용된다. Phase 8에서 상세 설계한다.
+> **참고:** 순서 1-7은 글로벌 미들웨어(`app.use('*')`)로 모든 요청에 적용된다. 순서 8 `sessionAuth`는 `/v1/*` 경로에만 적용되며, 순서 9 `ownerAuth`는 라우트 레벨에서 개별 엔드포인트에 적용된다. 두 인증 미들웨어는 상호 배타적으로, 하나의 엔드포인트에 둘 다 적용되지 않는다.
+>
+> **ownerAuth 상세:** per-request SIWS/SIWE 서명 기반 인증. `Authorization: Bearer <base64url JSON>` 형식으로 전달되며, 8단계 검증 체인을 거친다 (헤더 파싱 -> timestamp 5분 -> nonce 일회성 -> 서명 검증 -> owner 일치 -> action 일치 -> 컨텍스트 설정 -> next). 상세는 34-owner-wallet-connection.md 섹션 5, API-SPEC(37-rest-api-complete-spec.md) 섹션 3.2 참조.
+>
+> **ownerAuth 적용 대상:** Owner 전용 API (approve/reject, kill-switch, sessions 관리, 설정 변경, 대시보드 조회)
 
 ### 2.2 미들웨어 등록 코드 패턴
 
@@ -223,10 +228,10 @@ export function registerMiddleware(
 
   // 6. CORS
   app.use('*', cors({
-    origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`],
+    origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`, 'tauri://localhost'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowHeaders: ['Authorization', 'Content-Type', 'X-Request-ID'],
-    exposeHeaders: ['X-Request-ID', 'Retry-After'],
+    allowHeaders: ['Authorization', 'Content-Type', 'X-Request-ID', 'X-Master-Password'],
+    exposeHeaders: ['X-Request-ID', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
     maxAge: 600,
   }))
 
@@ -397,15 +402,15 @@ Hono 내장 CORS 미들웨어로 Cross-Origin 요청을 제한한다.
 |------|-----|
 | **입력** | `Origin` 요청 헤더 |
 | **출력** | CORS 응답 헤더 (`Access-Control-Allow-*`) |
-| **허용 Origin** | `http://localhost:{port}`, `http://127.0.0.1:{port}` |
+| **허용 Origin** | `http://localhost:{port}`, `http://127.0.0.1:{port}`, `tauri://localhost` |
 | **에러** | Origin 불일치 시 CORS 헤더 미포함 (브라우저가 차단) |
 
 ```typescript
 cors({
-  origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`],
+  origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`, 'tauri://localhost'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowHeaders: ['Authorization', 'Content-Type', 'X-Request-ID'],
-  exposeHeaders: ['X-Request-ID', 'Retry-After'],
+  allowHeaders: ['Authorization', 'Content-Type', 'X-Request-ID', 'X-Master-Password'],
+  exposeHeaders: ['X-Request-ID', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   maxAge: 600,  // preflight 캐시 10분
 })
 ```
@@ -414,13 +419,11 @@ cors({
 
 | 옵션 | 값 | 근거 |
 |------|-----|------|
-| `origin` | localhost + 127.0.0.1 (포트 포함) | 동일 머신의 Tauri WebView/브라우저만 허용 |
+| `origin` | localhost + 127.0.0.1 (포트 포함) + `tauri://localhost` | 동일 머신의 Tauri WebView/브라우저만 허용. Tauri 2.x WebView Origin 대응 (Phase 9 TAURI-DESK) |
 | `allowMethods` | GET, POST, PUT, DELETE | REST API에 필요한 메서드만 |
-| `allowHeaders` | Authorization, Content-Type, X-Request-ID | 세션 토큰 + JSON + 요청 추적 |
-| `exposeHeaders` | X-Request-ID, Retry-After | 클라이언트가 읽어야 하는 커스텀 헤더 |
+| `allowHeaders` | Authorization, Content-Type, X-Request-ID, X-Master-Password | 세션 토큰 + JSON + 요청 추적 + Admin API 마스터 패스워드 (Phase 8) |
+| `exposeHeaders` | X-Request-ID, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset | 클라이언트가 읽어야 하는 커스텀 헤더 (요청 추적 + 재시도 + Rate Limit 정보) |
 | `maxAge` | 600 (10분) | preflight 요청 빈도 감소 |
-
-> **Tauri WebView Origin:** Tauri 2.x의 WebView는 `tauri://localhost` Origin을 사용한다. Phase 9 Desktop 앱 설계 시 이 Origin을 CORS 허용 목록에 추가한다. Phase 6에서는 localhost HTTP만 정의.
 
 #### 미들웨어 7: rateLimiter
 
@@ -669,13 +672,13 @@ serve({
 
 ### 3.4 Tauri WebView 추가 방어 (Phase 9 연계)
 
-Phase 9에서 Tauri Desktop 앱을 설계할 때, 다음 추가 방어를 적용한다:
+Phase 9 Tauri Desktop 앱 설계에서 정의된 추가 방어:
 
-1. **Origin 검증:** Tauri WebView의 `tauri://localhost` Origin을 CORS 허용 목록에 추가
+1. **Origin 검증:** Tauri WebView의 `tauri://localhost` Origin이 CORS 허용 목록에 포함됨 (섹션 2.3 cors 미들웨어 참조)
 2. **IPC 기반 통신:** Tauri의 내장 IPC를 사용하면 HTTP를 우회하여 더 안전한 통신 가능
 3. **CSP 설정:** Tauri WebView에 Content-Security-Policy를 설정하여 외부 스크립트 로딩 차단
 
-이 추가 방어는 Phase 9 Desktop 앱 설계 문서에서 상세화한다.
+상세는 Phase 9 Desktop 앱 설계 문서(39-tauri-desktop-architecture.md) 참조.
 
 ---
 
@@ -1426,6 +1429,10 @@ export const HealthResponseSchema = z.object({
     description: '데몬 가동 시간 (초)',
     example: 9234,
   }),
+  timestamp: z.string().datetime().openapi({
+    description: '응답 시각 (ISO 8601)',
+    example: '2026-02-05T10:31:25.000Z',
+  }),
   services: z.object({
     database: z.object({
       status: ServiceStatusSchema,
@@ -1502,6 +1509,7 @@ export function registerHealthRoutes(app: OpenAPIHono<AppBindings>, deps: AppCon
       status: overallStatus,
       version: deps.version,
       uptime,
+      timestamp: new Date().toISOString(),
       services: {
         database: {
           status: dbHealthy ? 'healthy' : 'unhealthy',
@@ -1525,6 +1533,7 @@ export function registerHealthRoutes(app: OpenAPIHono<AppBindings>, deps: AppCon
   "status": "healthy",
   "version": "0.2.0",
   "uptime": 9234,
+  "timestamp": "2026-02-05T10:31:25.000Z",
   "services": {
     "database": {
       "status": "healthy",
@@ -1556,6 +1565,15 @@ export function registerHealthRoutes(app: OpenAPIHono<AppBindings>, deps: AppCon
 | healthy | unlocked | 일부 disconnected | `degraded` |
 | unhealthy | * | * | `unhealthy` |
 | * | locked/error | * | `unhealthy` |
+
+#### `/health` vs `/v1/admin/status` 역할 분리
+
+| 엔드포인트 | 인증 | 스키마 | 용도 |
+|-----------|------|--------|------|
+| `GET /health` | None (공개) | 간단 스키마 (status, version, uptime, timestamp + services/adapters) | `waiaas status` CLI, 외부 모니터링, 로드밸런서 헬스체크 |
+| `GET /v1/admin/status` | masterAuth (마스터 패스워드) | 상세 스키마 (대시보드 전체 정보: 에이전트 상태 집계, 최근 거래, 시스템 상태) | Tauri 대시보드, 관리자 상세 모니터링 |
+
+`/health`는 서비스 가용성 판단용 경량 엔드포인트이고, `/v1/admin/status`는 관리 대시보드용 상세 정보 엔드포인트이다. 두 엔드포인트의 status 값은 동일한 `healthy/degraded/unhealthy` enum을 사용한다.
 
 ### 6.4 Phase 6 상세 설계: `GET /doc`
 
@@ -1748,13 +1766,13 @@ export function rateLimiterMiddleware(config: RateLimitConfig) {
 
 ### 7.4 config.toml 설정
 
-CORE-01에서 정의한 `[security]` 섹션에 rate limiter 설정을 포함한다.
+CORE-01(24-monorepo-data-directory.md)에서 정의한 `config.toml [security]` 섹션에 rate limiter 설정을 포함한다. 이 값들은 `config.toml [security]` 섹션의 `rate_limit_global_rpm`, `rate_limit_session_rpm`, `rate_limit_tx_rpm`으로 조절 가능하며, 환경변수(`WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_RPM` 등)로 오버라이드할 수 있다.
 
 ```toml
 [security]
-rate_limit_rpm = 100           # 전역 RPM (인증 전)
-rate_limit_session_rpm = 300   # 세션당 RPM (인증 후)
-rate_limit_tx_rpm = 10         # 거래 전송 RPM
+rate_limit_global_rpm = 100       # 전역 RPM (인증 전)
+rate_limit_session_rpm = 300      # 세션당 RPM (인증 후)
+rate_limit_tx_rpm = 10            # 거래 전송 RPM
 ```
 
 ### 7.5 429 응답 헤더
@@ -1867,5 +1885,5 @@ Content negotiation은 사용하지 않는다. 모든 요청/응답은 `applicat
 | Phase | 연결 지점 |
 |-------|----------|
 | Phase 7 | 세션 인증 JWT 검증 로직 (`sessionAuth`), 거래 파이프라인 라우트 핸들러, Zod 스키마 상세화 |
-| Phase 8 | `ownerAuth` 라우트 레벨 미들웨어, 시간 지연/승인 에러 코드, Kill Switch 연동 |
+| Phase 8 | `ownerAuth` 라우트 레벨 미들웨어 (34-owner-wallet-connection.md에서 상세 설계 완료), 시간 지연/승인 에러 코드, Kill Switch 연동 |
 | Phase 9 | REST API 전체 스펙 완성, SDK 인터페이스 (Zod 타입 기반), MCP 도구 스키마 (/doc 참조), Tauri CORS 추가 |
