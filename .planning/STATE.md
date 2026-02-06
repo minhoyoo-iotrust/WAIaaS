@@ -11,11 +11,11 @@
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
 페이즈: 14 of 18 (테스트 기반 정의)
-플랜: 1 of 2 in Phase 14
-상태: In progress
-마지막 활동: 2026-02-06 -- Completed 14-01-PLAN.md (테스트 레벨, 매트릭스, 커버리지)
+플랜: 2 of 2 in Phase 14
+상태: Phase 14 complete
+마지막 활동: 2026-02-06 -- Completed 14-02-PLAN.md (Mock 경계, 인터페이스 스펙, Contract Test)
 
-Progress: [█░░░░░░░░░] 14% (1/7 plans across 5 phases)
+Progress: [██░░░░░░░░] 29% (2/7 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,8 +35,8 @@ Progress: [█░░░░░░░░░] 14% (1/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 1/7
-- 요구사항: 3/26 (TLVL-01, TLVL-02, TLVL-03)
+- 완료된 플랜: 2/7
+- 요구사항: 7/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04)
 
 ## 누적 컨텍스트
 
@@ -51,6 +51,11 @@ v0.4 결정:
 - TLVL-02: 9개 모듈 x 6개 레벨 O/X 매트릭스 확정
 - TLVL-03: 보안 위험도 기반 4-tier 커버리지 (Critical 90%+, High 80%+, Normal 70%+, Low 50%+), daemon 9개 서브모듈 세분화
 - CI-GATE: Soft gate(초기) -> Hard gate(안정화후), 패키지별 독립 전환
+- MOCK-OWNER-ONLY: IOwnerSigner는 Owner 서명만 추상화 (Agent 서명은 ILocalKeyStore.sign()으로 충족)
+- MOCK-ICLOCK-MINIMAL: IClock은 now(): Date만 제공 (setTimeout/setInterval은 Jest useFakeTimers)
+- MOCK-ALL-LEVELS-NOTIFICATION: 알림 채널은 모든 테스트 레벨에서 Mock
+- MOCK-KEYSTORE-MEDIUM: ILocalKeyStore Mock 가능성 MEDIUM (sodium-native C++ 바인딩, Unit은 tweetnacl)
+- CONTRACT-TEST-FACTORY-PATTERN: 5개 인터페이스 전체에 팩토리 함수 기반 Contract Test 적용
 
 ### 차단 요소/우려 사항
 
@@ -59,5 +64,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 14-01-PLAN.md
-재개 파일: .planning/phases/14-test-foundation/14-02-PLAN.md
+중단 지점: Completed 14-02-PLAN.md, Phase 14 complete
+재개 파일: None
