@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 17 완료
+**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- v0.4 완료
 
 ## 현재 위치
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 17 of 18 (CI/CD 파이프라인 설계) -- Phase 17 완료
-플랜: 1 of 1 in Phase 17 (완료)
-상태: Phase complete
-마지막 활동: 2026-02-06 -- Completed 17-01-PLAN.md (CI/CD 파이프라인 설계 + 커버리지 게이트 전략)
+페이즈: 18 of 18 (배포 타겟별 테스트) -- Phase 18 완료
+플랜: 1 of 1 in Phase 18 (완료)
+상태: Milestone complete
+마지막 활동: 2026-02-06 -- Completed 18-01-PLAN.md (배포 타겟별 테스트 범위 설계)
 
-Progress: [█████████░] 89% (8/9 plans across 5 phases)
+Progress: [██████████] 100% (9/9 plans across 5 phases)
 
 ## 성과 지표
 
@@ -34,10 +34,11 @@ Progress: [█████████░] 89% (8/9 plans across 5 phases)
 - 비일관성 해소: 37건 전부
 - 산출물: 5개 대응표/매핑 문서
 
-**v0.4 현재:**
-- 완료된 플랜: 8/9
-- 요구사항: 22/26 (TLVL-01~03, MOCK-01~04, SEC-01~05, CHAIN-01~04, ENUM-01~03, CICD-01~03)
-- 설계 문서: 10개 (41~50번)
+**v0.4 최종 통계:**
+- 완료된 플랜: 9/9 (100%)
+- 요구사항: 26/26 (TLVL-01~03, MOCK-01~04, SEC-01~05, CHAIN-01~04, ENUM-01~03, CICD-01~03, PLAT-01~04)
+- 설계 문서: 11개 (41~51번)
+- 총 테스트 시나리오: ~300건 이상 (보안 71 + 블록체인 21 + 플랫폼 118 + 기타)
 
 ## 누적 컨텍스트
 
@@ -79,6 +80,9 @@ v0.4 결정:
 - CICD-ARTIOMTR-4PKG: ArtiomTr action 핵심 4패키지(core/daemon/adapter-solana/sdk)만 PR 코멘트, 나머지 콘솔
 - CICD-SOFT-HARD-PRIORITY: Soft->Hard 전환 우선순위 6단계 (core -> keystore/services -> solana/sdk -> middleware 등 -> cli/mcp -> evm)
 - CICD-TEST-NO-CACHE: turbo.json 모든 test:* 태스크 cache: false (테스트 결과 캐싱 위험 방지)
+- PLAT-TGBOT-SPLIT: Telegram Bot 명령어/콜백은 Integration(매PR), Long Polling 루프만 Platform(릴리스)으로 분리
+- PLAT-TAURI-OPTIONAL: Tauri CI 빌드는 선택적 Stage 4 job (빌드 시간 ~30min/platform 제약)
+- PLAT-118-SCENARIOS: 4타겟 총 118건 시나리오 확정 (CLI 32 + Docker 18 + Tauri 34 + Telegram 34)
 
 ### 차단 요소/우려 사항
 
@@ -87,5 +91,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 17-01-PLAN.md (CI/CD 파이프라인 설계 + 커버리지 게이트 전략) -- Phase 17 완료
+중단 지점: Completed 18-01-PLAN.md (배포 타겟별 테스트 범위 설계) -- v0.4 마일스톤 완료
 재개 파일: None
