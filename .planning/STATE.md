@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 15 보안 테스트 시나리오
+**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 15 완료, Phase 16 대기
 
 ## 현재 위치
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 15 of 18 (보안 테스트 시나리오)
-플랜: 2 of 3 in Phase 15
-상태: In progress
-마지막 활동: 2026-02-06 -- Completed 15-02-PLAN.md (Layer 2/3 공격 시나리오)
+페이즈: 15 of 18 (보안 테스트 시나리오) -- Phase 15 완료
+플랜: 3 of 3 in Phase 15 (완료)
+상태: Phase complete
+마지막 활동: 2026-02-06 -- Completed 15-03-PLAN.md (키스토어 보안, 경계값, E2E 연쇄 공격 체인)
 
-Progress: [████░░░░░░] 57% (4/7 plans across 5 phases)
+Progress: [██████░░░░] 71% (5/7 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,8 +35,8 @@ Progress: [████░░░░░░] 57% (4/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 4/7
-- 요구사항: 10/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03)
+- 완료된 플랜: 5/7
+- 요구사항: 12/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05)
 
 ## 누적 컨텍스트
 
@@ -61,6 +61,9 @@ v0.4 결정:
 - SEC02-TOCTOU-INTEGRATION: TOCTOU 테스트는 Integration 레벨에서 실제 SQLite + BEGIN IMMEDIATE로 검증 (Unit 불가)
 - SEC03-CASCADE-SPLIT: Kill Switch 캐스케이드 테스트를 Step 1-3 원자적 + Step 4-6 best-effort로 분리
 - SEC03-AUTOSTOP-COVERAGE: AutoStop 5규칙 중 CONSECUTIVE_FAILURES만 상세 시나리오, 나머지 4규칙은 SEC-05 경계값 문서로 이연
+- SEC04-INTEGRATION-LEVEL: authTag 변조/마스터 패스워드 시나리오는 Integration 필수 (sodium-native/argon2 바인딩)
+- SEC05-DUAL-THRESHOLD: 금액 경계를 기본(1/10/50 SOL) + 커스텀(0.1/1/10 SOL) 양쪽 검증, SSoT 명시
+- SEC05-CHAIN-SELECTION: 5개 E2E 체인 선택 기준 = 현실적 공격 시나리오 (한도 소진/TOCTOU/3계층 관통/탈취+복구/시간 기반)
 
 ### 차단 요소/우려 사항
 
@@ -69,5 +72,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 15-02-PLAN.md (Layer 2/3 공격 시나리오)
+중단 지점: Completed 15-03-PLAN.md (키스토어 보안, 경계값, E2E 연쇄 공격 체인) -- Phase 15 완료
 재개 파일: None
