@@ -1968,7 +1968,38 @@ export async function runAgent(args: string[]): Promise<void> {
 
 ---
 
-## 9. 요구사항 매핑
+## 9. 구현 노트
+
+### 9.1 Graceful Shutdown 타임라인 검증 (NOTE-08)
+
+10단계 Graceful Shutdown(섹션 3)의 합산 시간이 Docker `stop_grace_period: 35s` 내에 수렴하는지 검증한다.
+
+**30초 강제 타이머:** Step 1에서 `setTimeout(() => process.exit(1), 30_000)` 설정. 이 타이머는 모든 후속 Step에 대한 절대적인 상한선이다.
+
+**Step 4-5 병렬성:** In-flight HTTP 요청에 서명 작업이 포함된 경우, Step 4(In-flight 완료 대기)에서 이미 서명 완료까지 대기하므로 Step 5(진행 중 서명 작업 완료)는 추가 대기가 불필요하다. 즉, Step 4와 Step 5는 순차가 아닌 포함 관계이다.
+
+**타임라인 검증표:**
+
+| 시나리오 | Step 1-3 | Step 4 | Step 5 | Step 6-10 | 합계 | 35s 내? |
+|---------|----------|--------|--------|-----------|------|---------|
+| 정상 종료 (요청 없음) | ~0ms | 0s | 0s | ~1.2s | ~1.2s | OK |
+| In-flight 요청 있음 | ~0ms | 최대 30s | 포함됨 | ~1.5s | ~31.5s | OK (마진 3.5s) |
+| 서명 진행 중 | ~0ms | 최대 30s | 포함됨 | ~1.5s | ~31.5s | OK |
+| 최악 케이스 | ~0ms | 30s (타이머) | - | - | 30s | 강제 exit(1) |
+
+**최악 케이스 흐름:**
+1. Step 1: SIGTERM 수신 -> 30초 강제 타이머 시작
+2. Step 4: In-flight 요청이 30초 가까이 소요
+3. 30초 강제 타이머 발동 -> `process.exit(1)`
+4. Docker는 추가 5초 마진 내에서 SIGKILL 전송 (실제로는 이미 종료됨)
+
+**Docker stop_grace_period: 35s = 30s(daemon 강제 타이머) + 5s(margin)**
+
+참조: Docker 설정은 40-telegram-bot-docker.md 참조.
+
+---
+
+## 10. 요구사항 매핑
 
 | 요구사항 ID | 요구사항 | 커버 섹션 |
 |------------|---------|----------|

@@ -1898,6 +1898,8 @@ services:
     stop_grace_period: 35s  # 30초 shutdown + 5초 마진
 ```
 
+> **Shutdown 타임라인 검증:** 30초 강제 타이머 + 10단계 합산 시간의 관계 검증은 28-daemon-lifecycle-cli.md 구현 노트 참조.
+
 ### 13.3 자동 재시작
 
 ```yaml
