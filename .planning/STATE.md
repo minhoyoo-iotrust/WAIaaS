@@ -10,10 +10,12 @@
 ## 현재 위치
 
 마일스톤: v0.3 설계 논리 일관성 확보
-페이즈: 10 of 13 (v0.1 잔재 정리) — Not started
-플랜: 0 of 2 in Phase 10
-상태: 로드맵 생성 완료, 실행 대기
-마지막 활동: 2026-02-06 — 로드맵 생성 완료 (4 phases, 8 plans)
+페이즈: 10 of 13 (v0.1 잔재 정리) — In progress
+플랜: 1 of 2 in Phase 10
+상태: 10-01 완료
+마지막 활동: 2026-02-06 — 10-01-PLAN.md 완료 (매핑 문서 + SUPERSEDED 표기)
+
+Progress: [██░░░░░░░░] 1/8 plans (12.5%)
 
 ## 성과 지표
 
@@ -25,6 +27,11 @@
 - 완료된 플랜 총계: 16
 - 요구사항: 45/45 완료
 - 설계 문서: 17개
+
+**v0.3 진행:**
+- 완료된 플랜: 1/8 (12.5%)
+- SUPERSEDED 표기 완료: 6개 문서
+- 매핑 문서: 41-v01-v02-mapping.md
 
 **v0.3 비일관성 분석:**
 - CRITICAL: 8건 (즉시 결정 필요)
@@ -40,29 +47,33 @@
 - C1: 기본 포트 충돌 (3000 vs 3100)
 - C2: 트랜잭션 상태 Enum 불일치 (14개 vs 8개)
 - C3: Docker 127.0.0.1 바인딩 문제
-- C4-C7: v0.1 잔재 (PostgreSQL, Fastify, API Key, AWS KMS)
+- C4-C7: v0.1 잔재 (PostgreSQL, Fastify, API Key, AWS KMS) — **10-01에서 SUPERSEDED 표기 완료**
 - C8: 자금 충전 모델 누락
 
 **HIGH (15건):**
-- H1: 인터페이스명 (IBlockchainAdapter vs IChainAdapter)
+- H1: 인터페이스명 (IBlockchainAdapter vs IChainAdapter) — **10-01 매핑 문서에 대응표 포함**
 - H2: 세션 TTL (1h vs 24h)
 - H3: jwt_secret 설정 누락
 - H4: 메모 길이 (256 bytes vs 200 chars)
 - H5: 연속 실패 임계값 (3/5/3)
 - H6-H7: 에이전트/정책 상태 Enum
 - H8-H9: CORS/Health 스키마 불일치
-- H10-H11: v0.1 어댑터/에러코드 잔재
+- H10-H11: v0.1 어댑터/에러코드 잔재 — **10-01 매핑 문서에 대응표 포함**
 - H12: Rate Limiter 단위 (req/min vs req/sec)
-- H13: 에스컬레이션 모델 혼동
+- H13: 에스컬레이션 모델 혼동 — **10-01 매핑 문서에 대응표 포함**
 - H14: SuccessResponse 래퍼 잔존
 - H15: ownerAuth 미들웨어 상세 미정의
 
-### 결정 사항 (v0.2에서 유지)
+### 결정 사항
 
-- [v0.2]: Cloud -> Self-Hosted 전환
-- [v0.2]: 세션 토큰 기반 인증
-- [v0.2]: 체인 무관 로컬 정책 엔진
-- [v0.2]: Tauri + Hono + Drizzle + better-sqlite3 기술 스택
+| 단계 | 결정 | 날짜 |
+|------|------|------|
+| v0.2 | Cloud -> Self-Hosted 전환 | 2026-02-05 |
+| v0.2 | 세션 토큰 기반 인증 | 2026-02-05 |
+| v0.2 | 체인 무관 로컬 정책 엔진 | 2026-02-05 |
+| v0.2 | Tauri + Hono + Drizzle + better-sqlite3 | 2026-02-05 |
+| 10-01 | ADR 표준 SUPERSEDED 포맷 사용 | 2026-02-06 |
+| 10-01 | SUPERSEDED 문서 삭제 대신 아카이브 유지 | 2026-02-06 |
 
 ### 차단 요소/우려 사항
 
@@ -70,6 +81,6 @@
 
 ## 세션 연속성
 
-마지막 세션: 2026-02-06
-중단 지점: 마일스톤 v0.3 시작
-재개 파일: None — 다음 단계: 요구사항 정의 및 로드맵 생성
+마지막 세션: 2026-02-06T01:36:39Z
+중단 지점: 10-01-PLAN.md 완료
+재개 파일: None — 다음 단계: 10-02-PLAN.md 실행
