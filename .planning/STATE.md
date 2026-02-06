@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 16 실행 중
+**현재 초점:** v0.4 테스트 전략 및 계획 수립 -- Phase 16 완료
 
 ## 현재 위치
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
-페이즈: 16 of 18 (블록체인 & 일관성 검증 전략) -- 실행 중
-플랜: 1 of 2 in Phase 16 (완료)
-상태: In progress
-마지막 활동: 2026-02-06 -- Completed 16-01-PLAN.md (블록체인 3단계 테스트 환경 + Mock RPC + E2E + EVM Stub)
+페이즈: 16 of 18 (블록체인 & 일관성 검증 전략) -- Phase 16 완료
+플랜: 2 of 2 in Phase 16 (완료)
+상태: Phase complete
+마지막 활동: 2026-02-06 -- Completed 16-02-PLAN.md (Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE 매핑)
 
-Progress: [███████░░░] 86% (6/7 plans across 5 phases)
+Progress: [██████████] 100% (7/7 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,8 +35,8 @@ Progress: [███████░░░] 86% (6/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 6/7
-- 요구사항: 16/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04)
+- 완료된 플랜: 7/7
+- 요구사항: 19/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04, ENUM-01, ENUM-02, ENUM-03)
 
 ## 누적 컨텍스트
 
@@ -68,6 +68,11 @@ v0.4 결정:
 - CHAIN-E2E-5-FLOWS: Local Validator E2E 5개 흐름 (SOL전송/잔액+수수료/주소검증/연결관리/에러복구), 합계 ~21초
 - CHAIN-EVM-STUB-5-ITEMS: EvmAdapterStub 테스트 5항목 (타입준수/isConnected/getHealth/11메서드throw/Registry)
 - CHAIN-DEVNET-LIMIT-3: Devnet 테스트 최대 3건 제한 (SOL 전송 + 잔액 + 헬스)
+- ENUM-SSOT-DERIVE-CHAIN: as const 배열 -> TypeScript 타입 -> Zod enum -> Drizzle text enum -> DB CHECK SQL 단방향 파생
+- AUDIT-EVENT-OPEN-TYPE: AuditLogEventType은 CHECK 미적용, as const 객체로 관리 (확장 가능성 보존)
+- KILL-SWITCH-ZOD-RUNTIME: KillSwitchStatus는 system_state key-value 저장이므로 DB CHECK 대신 Zod 런타임 검증
+- CONFIG-UNIT-TEST: config.toml 로딩은 Unit 테스트로 충분 (memfs/mock + process.env)
+- NOTE-4-OF-11: NOTE-01/02/08/11만 전용 테스트 필요, 나머지 7건은 문서/타입/범위밖
 
 ### 차단 요소/우려 사항
 
@@ -76,5 +81,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 16-01-PLAN.md (블록체인 3단계 테스트 환경 + Mock RPC 13개 시나리오 + Local Validator E2E 5개 흐름 + EVM Stub 5항목)
+중단 지점: Completed 16-02-PLAN.md (Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE 매핑) -- Phase 16 완료
 재개 파일: None

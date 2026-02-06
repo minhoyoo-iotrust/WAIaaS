@@ -19,7 +19,7 @@ v0.2에서 완성한 17개 설계 문서와 v0.3에서 확보한 일관성 대�
 
 - [x] **Phase 14: 테스트 기반 정의** - 테스트 레벨, 모듈 매트릭스, Mock 경계, 테스트 인터페이스 확정
 - [x] **Phase 15: 보안 테스트 시나리오** - 3계층 보안 공격 시나리오 25건 이상 + 키스토어 + 경계값
-- [ ] **Phase 16: 블록체인 & 일관성 검증 전략** - 블록체인 3단계 테스트 환경 + Enum/설정 검증 방법
+- [x] **Phase 16: 블록체인 & 일관성 검증 전략** - 블록체인 3단계 테스트 환경 + Enum/설정 검증 방법
 - [ ] **Phase 17: CI/CD 파이프라인 설계** - 4단계 파이프라인, GitHub Actions, 커버리지 게이트
 - [ ] **Phase 18: 배포 타겟별 테스트** - CLI/Docker/Desktop/Telegram 각 플랫폼 테스트 범위
 
@@ -71,8 +71,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md -- 블록체인 3단계 테스트 환경 + Mock RPC 시나리오 + Local Validator E2E + EVM Stub (CHAIN-01~04)
-- [ ] 16-02-PLAN.md -- Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE-01~11 매핑 (ENUM-01~03)
+- [x] 16-01-PLAN.md -- 블록체인 3단계 테스트 환경 + Mock RPC 시나리오 + Local Validator E2E + EVM Stub (CHAIN-01~04)
+- [x] 16-02-PLAN.md -- Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE-01~11 매핑 (ENUM-01~03)
 
 ### Phase 17: CI/CD 파이프라인 설계
 **Goal**: 테스트 자동화 파이프라인 구조가 확정되어, 구현 단계에서 워크플로우 YAML을 바로 작성할 수 있다
@@ -110,6 +110,6 @@ Phases execute in numeric order: 14 -> 15 -> 16 -> 17 -> 18
 |-------|---------------|--------|-----------|
 | 14. 테스트 기반 정의 | 2/2 | ✓ Complete | 2026-02-06 |
 | 15. 보안 테스트 시나리오 | 3/3 | ✓ Complete | 2026-02-06 |
-| 16. 블록체인 & 일관성 검증 전략 | 0/2 | Not started | - |
+| 16. 블록체인 & 일관성 검증 전략 | 2/2 | Complete | 2026-02-06 |
 | 17. CI/CD 파이프라인 설계 | 0/1 | Not started | - |
 | 18. 배포 타겟별 테스트 | 0/1 | Not started | - |
