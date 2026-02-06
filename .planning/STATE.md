@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.3 설계 논리 일관성 확보 — 40개 설계 문서 크로스체크, 37개 비일관성 해소
+**현재 초점:** v0.3 설계 논리 일관성 확보 -- 완료
 
 ## 현재 위치
 
 마일스톤: v0.3 설계 논리 일관성 확보
 페이즈: 13 of 13 (MEDIUM 구현 노트)
-플랜: 2 of 2 in Phase 13 (13-02 완료, 13-01 병렬 실행 중)
-상태: In progress — 13-02 완료
-마지막 활동: 2026-02-06 — Completed 13-02-PLAN.md (통합/인증/배포 구현 노트)
+플랜: 2 of 2 in Phase 13
+상태: Phase 13 완료 -- v0.3 마일스톤 완료
+마지막 활동: 2026-02-06 — Completed 13-01-PLAN.md (단위 변환/매핑/패리티 구현 노트)
 
-Progress: [████████░░] 7/8 plans (87.5%)
+Progress: [██████████] 8/8 plans (100%)
 
 ## 성과 지표
 
@@ -28,23 +28,24 @@ Progress: [████████░░] 7/8 plans (87.5%)
 - 요구사항: 45/45 완료
 - 설계 문서: 17개
 
-**v0.3 진행:**
-- 완료된 플랜: 7/8 (87.5%) — 13-01 병렬 실행 중
+**v0.3 최종 통계:**
+- 완료된 플랜: 8/8 (100%)
 - Phase 10 완료: 10-01, 10-02
 - Phase 11 완료: 11-01 (CRITICAL 4건)
 - Phase 12 완료: 12-01, 12-02, 12-03
-- Phase 13 진행: 13-02 완료 (NOTE-05, NOTE-06, NOTE-07), 13-01 병렬 실행 중
+- Phase 13 완료: 13-01, 13-02
 - SUPERSEDED 표기 완료: 6개 문서
 - 대응표 문서: 5개 (41~45)
-- CRITICAL 해결: 8건 전부 — Phase 10, 11에서 완료
-- HIGH 해결: 15건 전부 — Phase 10, 12에서 완료
-- MEDIUM 구현 노트: 3/11건 완료 (NOTE-05, NOTE-06, NOTE-07) — 13-01에서 8/11건 진행 중
+- CRITICAL 해결: 8건 전부 -- Phase 10, 11에서 완료
+- HIGH 해결: 15건 전부 -- Phase 10, 12에서 완료
+- MEDIUM 구현 노트: 11/11건 완료 (NOTE-01~NOTE-11) -- Phase 13에서 완료
+  - M1, M3, M5는 Phase 12에서 이미 해결 (14건 중 3건 제외)
 
 **v0.3 비일관성 분석:**
 - CRITICAL: 8건 중 8건 해결 (C1-C3,C8: Phase 11, C4-C7: Phase 10)
 - HIGH: 15건 중 15건 해결 (H1,H10-H11,H13: Phase 10, H2-H3,H5,H12: Phase 12-02, H6-H7: Phase 12-01, H4,H8-H9,H14-H15: Phase 12-03)
-- MEDIUM: 14건 중 3건 구현 노트 추가 (M8, M9, M10) — Phase 13-02
-- 총 37건 중 23건 해결 + 3건 구현 노트 추가, 11건 진행 중 (13-01)
+- MEDIUM: 14건 중 14건 해결 (M1,M3,M5: Phase 12, 나머지 11건: Phase 13)
+- 총 37건 전부 해결
 
 ## 누적 컨텍스트
 
@@ -70,6 +71,22 @@ Progress: [████████░░] 7/8 plans (87.5%)
 - H13: 에스컬레이션 모델 혼동 — **44-escalation-mapping.md로 해결**
 - H14: SuccessResponse 래퍼 잔존 — **12-03에서 잔존 없음 확인**
 - H15: ownerAuth 미들웨어 상세 미정의 — **12-03에서 CORE-06에 9단계 반영**
+
+**MEDIUM (14건) — 전부 해결:**
+- M1: Phase 12에서 해결 (config.toml 설정화)
+- M2: NOTE-01 -- BalanceInfo 단위 변환 규칙 (CORE-04) — **13-01**
+- M3: Phase 12에서 해결 (Enum 통일)
+- M4: NOTE-02 -- 알림 채널 최소 요구 명확화 (NOTI-ARCH) — **13-01**
+- M5: Phase 12에서 해결 (Rate Limiter 구조)
+- M6: NOTE-03 -- MCP 기능 패리티 매트릭스 (SDK-MCP) — **13-01**
+- M7: NOTE-04 -- SDK 에러 타입 매핑 전략 (SDK-MCP) — **13-01**
+- M8: NOTE-05 -- Tauri IPC+HTTP 이중 채널 (TAURI-DESK) — **13-02**
+- M9: NOTE-06 -- Setup Wizard vs CLI init 순서 (CORE-05, TAURI-DESK) — **13-02**
+- M10: NOTE-07 -- Telegram SIWS 서명 방안 (TGBOT) — **13-02**
+- M11: NOTE-08 -- Docker graceful shutdown 검증 (CORE-05) — **13-01**
+- M12: NOTE-09 -- 에이전트 생명주기 매핑 (CORE-02) — **13-01**
+- M13: NOTE-10 -- Python SDK 네이밍 검증 (SDK-MCP) — **13-01**
+- M14: NOTE-11 -- 커서 페이지네이션 통일 (API-SPEC) — **13-01**
 
 ### 결정 사항
 
@@ -98,13 +115,16 @@ Progress: [████████░░] 7/8 plans (87.5%)
 | 12-03 | Health: healthy/degraded/unhealthy 양쪽 통일 (API-03) | 2026-02-06 |
 | 12-03 | 미들웨어 9단계 순서, ownerAuth 라우트 레벨 (API-06) | 2026-02-06 |
 | 12-03 | memo 200자 + Solana 256 bytes 이중 검증 (API-01) | 2026-02-06 |
+| 13-01 | 구현 노트는 설계 변경 없이 "구현 시 참고" 수준으로 제한 | 2026-02-06 |
+| 13-01 | MCP 미커버 24개는 "의도적" 미커버 (보안 원칙) | 2026-02-06 |
+| 13-01 | SDK 에러 서브클래스 불필요, 단일 WAIaaSError + code 필드 유지 | 2026-02-06 |
 | 13-02 | Tauri IPC+HTTP 에러 4유형 분류, ECONNREFUSED 자동 복구 (NOTE-05) | 2026-02-06 |
 | 13-02 | 패스워드 12자 통일 권장, CLI=최소 초기화/Wizard=완전 초기화 (NOTE-06) | 2026-02-06 |
 | 13-02 | Telegram Tier 2는 TELEGRAM_PRE_APPROVED 패턴, SIWS는 Desktop/CLI 필수 (NOTE-07) | 2026-02-06 |
 
 ### 차단 요소/우려 사항
 
-- 없음 — v0.3은 문서 정리 작업으로 외부 의존성 없음
+- 없음 -- v0.3 마일스톤 완료
 
 ## Phase 10 산출물
 
@@ -169,6 +189,19 @@ Progress: [████████░░] 7/8 plans (87.5%)
 
 ## Phase 13 산출물
 
+### 13-01 (단위 변환/매핑/패리티 구현 노트)
+
+| NOTE | 내용 | 수정 문서 |
+|------|------|-----------|
+| NOTE-01 | BalanceInfo 단위 변환 규칙 (체인별 decimals, formatted 공식) | 27-chain-adapter, 37-rest-api |
+| NOTE-02 | 알림 채널 최소 요구 + 정책 엔진 연동 규칙 | 35-notification, 24-monorepo |
+| NOTE-03 | MCP 31개 REST 엔드포인트 패리티 매트릭스 | 38-sdk-mcp |
+| NOTE-04 | SDK 36개 에러 코드 타입 매핑 (WAIaaSErrorCode/ErrorCode) | 38-sdk-mcp |
+| NOTE-08 | Docker graceful shutdown 30초+5초 타임라인 검증 | 28-daemon-lifecycle, 40-telegram |
+| NOTE-09 | 에이전트 상태 5단계 v0.1-v0.2 매핑표 | 25-sqlite-schema |
+| NOTE-10 | Python SDK 17개 필드 snake_case 변환 검증 | 38-sdk-mcp |
+| NOTE-11 | 커서 페이지네이션 표준 파라미터 4개 통일 | 37-rest-api |
+
 ### 13-02 (통합/인증/배포 구현 노트)
 
 | NOTE | 내용 | 수정 문서 |
@@ -180,5 +213,5 @@ Progress: [████████░░] 7/8 plans (87.5%)
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 13-02-PLAN.md (통합/인증/배포 구현 노트)
-재개 파일: None — 13-01 병렬 실행 완료 대기
+중단 지점: Completed 13-01-PLAN.md (단위 변환/매핑/패리티 구현 노트) -- v0.3 마일스톤 완료
+재개 파일: None -- v0.3 완료, 다음 마일스톤은 v0.4 (구현)
