@@ -20,11 +20,11 @@
 
 ### 보안 테스트 시나리오
 
-- [ ] **SEC-01**: Layer 1 세션 인증 공격 시나리오 9개 이상이 정의됨 (만료 토큰, 위조 JWT, 한도 초과, 폐기 재사용, Nonce 재사용 등)
-- [ ] **SEC-02**: Layer 2 정책 우회 공격 시나리오 6개 이상이 정의됨 (금액 분할, 시간 조작, TOCTOU, 대기 중 변조, 타임아웃, Owner 취소)
-- [ ] **SEC-03**: Layer 3 Kill Switch 및 복구 시나리오 6개 이상이 정의됨 (동시 거래, AutoStop 트리거 3종, Agent 복구 시도, Owner 복구)
-- [ ] **SEC-04**: 키스토어 보안 시나리오 4개 이상이 정의됨 (파일 변조, 틀린 패스워드, 파일 권한, 메모리 잔존)
-- [ ] **SEC-05**: 경계값 테스트 케이스가 정의됨 (4-tier 경계: 0.1/1/10 SOL, 한도 ±1, 만료 직전/직후)
+- [x] **SEC-01**: Layer 1 세션 인증 공격 시나리오 9개 이상이 정의됨 (만료 토큰, 위조 JWT, 한도 초과, 폐기 재사용, Nonce 재사용 등)
+- [x] **SEC-02**: Layer 2 정책 우회 공격 시나리오 6개 이상이 정의됨 (금액 분할, 시간 조작, TOCTOU, 대기 중 변조, 타임아웃, Owner 취소)
+- [x] **SEC-03**: Layer 3 Kill Switch 및 복구 시나리오 6개 이상이 정의됨 (동시 거래, AutoStop 트리거 3종, Agent 복구 시도, Owner 복구)
+- [x] **SEC-04**: 키스토어 보안 시나리오 4개 이상이 정의됨 (파일 변조, 틀린 패스워드, 파일 권한, 메모리 잔존)
+- [x] **SEC-05**: 경계값 테스트 케이스가 정의됨 (4-tier 경계: 0.1/1/10 SOL, 한도 ±1, 만료 직전/직후)
 
 ### 블록체인 테스트 전략
 
@@ -83,11 +83,11 @@
 | MOCK-02 | Phase 14 | Complete |
 | MOCK-03 | Phase 14 | Complete |
 | MOCK-04 | Phase 14 | Complete |
-| SEC-01 | Phase 15 | Pending |
-| SEC-02 | Phase 15 | Pending |
-| SEC-03 | Phase 15 | Pending |
-| SEC-04 | Phase 15 | Pending |
-| SEC-05 | Phase 15 | Pending |
+| SEC-01 | Phase 15 | Complete |
+| SEC-02 | Phase 15 | Complete |
+| SEC-03 | Phase 15 | Complete |
+| SEC-04 | Phase 15 | Complete |
+| SEC-05 | Phase 15 | Complete |
 | CHAIN-01 | Phase 16 | Pending |
 | CHAIN-02 | Phase 16 | Pending |
 | CHAIN-03 | Phase 16 | Pending |
