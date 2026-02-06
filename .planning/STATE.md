@@ -10,12 +10,12 @@
 ## 현재 위치
 
 마일스톤: v0.3 설계 논리 일관성 확보
-페이즈: 11 of 13 (CRITICAL 의사결정) — VERIFIED ✓
-플랜: 1 of 1 in Phase 11
-상태: Phase 11 검증 완료, Phase 12 진행 준비
-마지막 활동: 2026-02-06 — Phase 11 검증 완료 (4/4 must-haves verified)
+페이즈: 12 of 13 (HIGH 스키마/수치 통일)
+플랜: 2 of 3 in Phase 12
+상태: Phase 12 진행 중 (12-02 완료)
+마지막 활동: 2026-02-06 — Completed 12-02-PLAN.md (config.toml 누락 설정 추가)
 
-Progress: [████░░░░░░] 3/8 plans (37.5%) — Phase 11 verified
+Progress: [██████░░░░] 5/8 plans (62.5%)
 
 ## 성과 지표
 
@@ -29,12 +29,14 @@ Progress: [████░░░░░░] 3/8 plans (37.5%) — Phase 11 verifi
 - 설계 문서: 17개
 
 **v0.3 진행:**
-- 완료된 플랜: 3/8 (37.5%)
+- 완료된 플랜: 5/8 (62.5%)
 - Phase 10 완료: 10-01, 10-02
 - Phase 11 완료: 11-01 (CRITICAL 4건)
+- Phase 12 진행: 12-01, 12-02 완료, 12-03 남음
 - SUPERSEDED 표기 완료: 6개 문서
-- 대응표 문서: 4개 (41~44)
-- CRITICAL 해결: 4건 (C1, C2, C3, C8) — **11-01에서 완료**
+- 대응표 문서: 5개 (41~45)
+- CRITICAL 해결: 8건 전부 — Phase 10, 11에서 완료
+- HIGH 해결 진행: CONF-01~05 (12-02), ENUM-01~04 (12-01)
 
 **v0.3 비일관성 분석:**
 - CRITICAL: 8건 중 8건 해결 (C1-C3,C8: Phase 11, C4-C7: Phase 10)
@@ -55,14 +57,14 @@ Progress: [████░░░░░░] 3/8 plans (37.5%) — Phase 11 verifi
 
 **HIGH (15건):**
 - H1: 인터페이스명 (IBlockchainAdapter vs IChainAdapter) — **42-interface-mapping.md로 해결**
-- H2: 세션 TTL (1h vs 24h)
-- H3: jwt_secret 설정 누락
+- H2: 세션 TTL (1h vs 24h) — **12-02에서 86400 통일**
+- H3: jwt_secret 설정 누락 — **12-02에서 config.toml 추가**
 - H4: 메모 길이 (256 bytes vs 200 chars)
-- H5: 연속 실패 임계값 (3/5/3)
-- H6-H7: 에이전트/정책 상태 Enum
+- H5: 연속 실패 임계값 (3/5/3) — **12-02에서 config.toml 설정화**
+- H6-H7: 에이전트/정책 상태 Enum — **12-01에서 해결**
 - H8-H9: CORS/Health 스키마 불일치
 - H10-H11: v0.1 어댑터/에러코드 잔재 — **42, 43-mapping.md로 해결**
-- H12: Rate Limiter 단위 (req/min vs req/sec)
+- H12: Rate Limiter 단위 (req/min vs req/sec) — **12-02에서 3-level 구조 확립**
 - H13: 에스컬레이션 모델 혼동 — **44-escalation-mapping.md로 해결**
 - H14: SuccessResponse 래퍼 잔존
 - H15: ownerAuth 미들웨어 상세 미정의
@@ -85,6 +87,11 @@ Progress: [████░░░░░░] 3/8 plans (37.5%) — Phase 11 verifi
 | 11-01 | DB 8개 상태 SSoT + 클라이언트 표시 가이드 (CRIT-02) | 2026-02-06 |
 | 11-01 | hostname z.union 허용: 기본 127.0.0.1, Docker 0.0.0.0 (CRIT-03) | 2026-02-06 |
 | 11-01 | 자금 충전: Owner 외부 지갑 -> Agent 직접 전송 (CRIT-04) | 2026-02-06 |
+| 12-02 | session_ttl 86400 통일 (CONF-01) | 2026-02-06 |
+| 12-02 | jwt_secret 필드 추가, Zod min(32) (CONF-02) | 2026-02-06 |
+| 12-02 | rate_limit 3-level 구조 (global 100, session 300, tx 10) | 2026-02-06 |
+| 12-02 | config.toml 중첩 섹션: auto_stop, policy_defaults, kill_switch | 2026-02-06 |
+| 12-02 | Zod 스키마 전체 섹션 명시 (partial 제거) | 2026-02-06 |
 
 ### 차단 요소/우려 사항
 
@@ -118,8 +125,30 @@ Progress: [████░░░░░░] 3/8 plans (37.5%) — Phase 11 verifi
 | CRIT-03 | WAIAAS_DAEMON_HOSTNAME 오버라이드 | 29-api, 24-monorepo, 40-telegram |
 | CRIT-04 | 자금 충전 사용 사례 | 37-rest-api |
 
+## Phase 12 산출물
+
+### 12-01 (Enum/상태값 통합 대응표)
+
+| 항목 | 내용 | 수정 문서 |
+|------|------|-----------|
+| ENUM-01 | AgentStatus 5개 값 통일 + KILL_SWITCH 표시 로직 | 37-rest-api |
+| ENUM-02 | PolicyType 4개 값 통일 (WHITELIST, RATE_LIMIT) | 25-sqlite |
+| ENUM-03 | TransactionStatus 8개 확인 (이미 통일) | - |
+| ENUM-04 | 통합 대응표 산출물 | 45-enum-unified-mapping.md |
+
+### 12-02 (config.toml 누락 설정 추가)
+
+| CONF | 내용 | 수정 문서 |
+|------|------|-----------|
+| CONF-01 | session_ttl 3600 -> 86400 | 24-monorepo |
+| CONF-02 | jwt_secret 필드 추가 | 24-monorepo |
+| CONF-03 | [security.auto_stop] consecutive_failures_threshold = 3 | 24-monorepo |
+| CONF-04 | nonce_cache_max/ttl 추가 | 24-monorepo |
+| CONF-05 | [security.kill_switch] recovery_cooldown = 1800 | 24-monorepo |
+| 추가 | rate_limit 3-level, policy_defaults | 24-monorepo |
+
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Phase 11 검증 완료
-재개 파일: None — 다음 단계: Phase 12 (HIGH 스키마/수치 통일) 계획 및 실행
+중단 지점: Completed 12-02-PLAN.md
+재개 파일: None — 다음 단계: 12-03 (REST API <-> API Framework 스펙 통일)
