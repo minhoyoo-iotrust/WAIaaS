@@ -138,8 +138,8 @@ Plans:
   11. 커서 페이지네이션 파라미터명이 통일됨
 
 Plans:
-- [ ] 13-01-PLAN.md — 단위 변환/매핑/패리티 구현 노트 (M2, M3, M6, M7, M9, M12, M13, M14)
-- [ ] 13-02-PLAN.md — 통합/인증/배포 구현 노트 (M4, M5, M8, M10, M11)
+- [ ] 13-01-PLAN.md — 단위 변환/매핑/패리티 구현 노트 (NOTE-01, NOTE-02, NOTE-03, NOTE-04, NOTE-08, NOTE-09, NOTE-10, NOTE-11)
+- [ ] 13-02-PLAN.md — 통합/인증/배포 구현 노트 (NOTE-05, NOTE-06, NOTE-07)
 
 ## Progress
 
