@@ -47,10 +47,10 @@
 
 ### 배포 타겟별 테스트
 
-- [ ] **PLAT-01**: CLI Daemon 테스트 범위가 정의됨 (init/start/stop/status, 시그널 처리, Windows fallback)
-- [ ] **PLAT-02**: Docker 테스트 범위가 정의됨 (빌드, compose, named volume, 환경변수, hostname 오버라이드, grace period)
-- [ ] **PLAT-03**: Desktop App(Tauri) 테스트 범위가 정의됨 (빌드, Sidecar SEA, 수동 QA 체크리스트)
-- [ ] **PLAT-04**: Telegram Bot 테스트 범위가 정의됨 (Long Polling, 2-Tier 인증, 인라인 키보드)
+- [x] **PLAT-01**: CLI Daemon 테스트 범위가 정의됨 (init/start/stop/status, 시그널 처리, Windows fallback)
+- [x] **PLAT-02**: Docker 테스트 범위가 정의됨 (빌드, compose, named volume, 환경변수, hostname 오버라이드, grace period)
+- [x] **PLAT-03**: Desktop App(Tauri) 테스트 범위가 정의됨 (빌드, Sidecar SEA, 수동 QA 체크리스트)
+- [x] **PLAT-04**: Telegram Bot 테스트 범위가 정의됨 (Long Polling, 2-Tier 인증, 인라인 키보드)
 
 ## Future Requirements
 
@@ -98,10 +98,10 @@
 | CICD-01 | Phase 17 | Complete |
 | CICD-02 | Phase 17 | Complete |
 | CICD-03 | Phase 17 | Complete |
-| PLAT-01 | Phase 18 | Pending |
-| PLAT-02 | Phase 18 | Pending |
-| PLAT-03 | Phase 18 | Pending |
-| PLAT-04 | Phase 18 | Pending |
+| PLAT-01 | Phase 18 | Complete |
+| PLAT-02 | Phase 18 | Complete |
+| PLAT-03 | Phase 18 | Complete |
+| PLAT-04 | Phase 18 | Complete |
 
 **Coverage:**
 - v0.4 requirements: 26 total
@@ -110,4 +110,4 @@
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after roadmap creation*
+*Last updated: 2026-02-07 after Phase 18 completion*

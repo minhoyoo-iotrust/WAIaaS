@@ -5,7 +5,7 @@
 - v0.1 Research & Design (Phases 1-5) -- shipped 2026-02-05
 - v0.2 Self-Hosted Secure Wallet Design (Phases 6-9) -- shipped 2026-02-05
 - v0.3 설계 논리 일관성 확보 (Phases 10-13) -- shipped 2026-02-06
-- **v0.4 테스트 전략 및 계획 수립 (Phases 14-18)** -- in progress
+- **v0.4 테스트 전략 및 계획 수립 (Phases 14-18)** -- shipped 2026-02-07
 
 ## Overview
 
@@ -21,7 +21,7 @@ v0.2에서 완성한 17개 설계 문서와 v0.3에서 확보한 일관성 대�
 - [x] **Phase 15: 보안 테스트 시나리오** - 3계층 보안 공격 시나리오 25건 이상 + 키스토어 + 경계값
 - [x] **Phase 16: 블록체인 & 일관성 검증 전략** - 블록체인 3단계 테스트 환경 + Enum/설정 검증 방법
 - [x] **Phase 17: CI/CD 파이프라인 설계** - 4단계 파이프라인, GitHub Actions, 커버리지 게이트
-- [ ] **Phase 18: 배포 타겟별 테스트** - CLI/Docker/Desktop/Telegram 각 플랫폼 테스트 범위
+- [x] **Phase 18: 배포 타겟별 테스트** - CLI/Docker/Desktop/Telegram 각 플랫폼 테스트 범위
 
 ## Phase Details
 
@@ -99,7 +99,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 18-01-PLAN.md -- 4개 배포 타겟별 테스트 범위, 시나리오, 검증 방법, CI/CD 통합 매핑 (PLAT-01, PLAT-02, PLAT-03, PLAT-04)
+- [x] 18-01-PLAN.md -- 4개 배포 타겟별 테스트 범위, 시나리오, 검증 방법, CI/CD 통합 매핑 (PLAT-01, PLAT-02, PLAT-03, PLAT-04)
 
 ## Progress
 
@@ -112,4 +112,4 @@ Phases execute in numeric order: 14 -> 15 -> 16 -> 17 -> 18
 | 15. 보안 테스트 시나리오 | 3/3 | ✓ Complete | 2026-02-06 |
 | 16. 블록체인 & 일관성 검증 전략 | 2/2 | ✓ Complete | 2026-02-06 |
 | 17. CI/CD 파이프라인 설계 | 1/1 | ✓ Complete | 2026-02-06 |
-| 18. 배포 타겟별 테스트 | 0/1 | Not started | - |
+| 18. 배포 타겟별 테스트 | 1/1 | ✓ Complete | 2026-02-07 |
