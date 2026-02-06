@@ -12,7 +12,21 @@
 
 v0.1 Research & Design + v0.2 Self-Hosted Secure Wallet Design 완료 (2026-02-05).
 31개 플랜, 68개 요구사항, 17개 설계 문서를 통해 전체 시스템 아키텍처와 상세 설계가 완성됨.
-다음 단계: v0.3 Implementation — 설계 문서를 기반으로 실제 코드 구현.
+
+## 현재 마일스톤: v0.3 설계 논리 일관성 확보
+
+**목표:** v0.1(리서치 & 기획)과 v0.2(Self-Hosted 설계) 전체 산출물 40건을 크로스체크하여, 구현 단계 진입 전에 설계 문서 간 논리적 모순을 해소한다.
+
+**타겟 기능:**
+- v0.1 잔재 정리 (SUPERSEDED 표기, 변경 매핑 문서)
+- CRITICAL 8건 의사결정 확정 (포트, Enum, Docker 바인딩, 자금 충전)
+- HIGH 15건 스키마/수치 통일 (TTL, jwt_secret, CORS, Rate Limiter)
+- MEDIUM 14건 구현 노트 추가
+
+**핵심 원칙:**
+1. 구현 가능한 설계만 남긴다 — 동일 개념에 단일 값
+2. v0.1 문서의 역할을 명확히 한다 — 대체된 항목 명시적 표기
+3. 결정은 한 곳에 기록한다 — 해당 도메인의 v0.2 문서에 반영
 
 ## 요구사항
 
@@ -42,7 +56,13 @@ v0.1 Research & Design + v0.2 Self-Hosted Secure Wallet Design 완료 (2026-02-0
 
 ### 활성
 
-(v0.3에서 정의 예정 — 설계 문서 기반 구현)
+- [ ] v0.1 → v0.2 변경 매핑 문서 작성 — v0.3 (CONS-01)
+- [ ] v0.1 SUPERSEDED 표기 — v0.3 (CONS-02~09)
+- [ ] CRITICAL 의사결정 확정 (포트, Enum, Docker, 자금충전) — v0.3 (CONS-10~13)
+- [ ] Enum/상태값 통합 대응표 작성 — v0.3 (CONS-14)
+- [ ] config.toml 누락 설정 추가 — v0.3 (CONS-15)
+- [ ] REST API ↔ API Framework 스펙 통일 — v0.3 (CONS-16)
+- [ ] MEDIUM 14건 구현 노트 추가 — v0.3 (CONS-17)
 
 ### 범위 외
 
@@ -103,4 +123,4 @@ v0.2 Self-Hosted Secure Wallet Design 완료 (2026-02-05). 4개 페이즈, 16개
 | Budget Pool + Hub-and-Spoke | 다수 에이전트 효율적 관리, 예산 격리 | ✓ Good |
 
 ---
-*최종 업데이트: 2026-02-05 after v0.2 milestone*
+*최종 업데이트: 2026-02-06 after v0.3 milestone started*
