@@ -11,15 +11,15 @@ v0.1(23개) + v0.2(17개) = 40개 설계 문서의 논리 일관성 확보.
 
 v0.2에서 대체된 v0.1 설계에 명시적 표기를 추가하여 잘못된 참조를 방지한다.
 
-- [ ] **LEGACY-01**: v0.1 → v0.2 변경 매핑 문서 작성 — 40개 문서 간 대체/계승 관계 정리
-- [ ] **LEGACY-02**: v0.1 데이터베이스 스택 SUPERSEDED 표기 (C4) — PostgreSQL + Redis → SQLite + LRU
-- [ ] **LEGACY-03**: v0.1 API 프레임워크 SUPERSEDED 표기 (C5) — Fastify + JWT Bearer → Hono + Session Token
-- [ ] **LEGACY-04**: v0.1 인증 모델 SUPERSEDED 표기 (C6) — 영구 API Key + RBAC → 단기 JWT + SIWS/SIWE
-- [ ] **LEGACY-05**: v0.1 키 관리 SUPERSEDED 표기 (C7) — AWS KMS + Nitro → 로컬 Keystore + sodium
-- [ ] **LEGACY-06**: v0.1 인터페이스명 업데이트 (H1) — IBlockchainAdapter → IChainAdapter 참조 수정
-- [ ] **LEGACY-07**: v0.1 어댑터 Squads 메서드 정리 (H10) — createMultisig() 등 v0.2 미사용 메서드 표기
-- [ ] **LEGACY-08**: v0.1 에러 코드 체계 정리 (H11) — RFC 9457 46개 코드 → v0.2 36개 코드 매핑
-- [ ] **LEGACY-09**: v0.1 에스컬레이션 모델 정리 (H13) — 4단계 → 4-tier 대응표
+- [x] **LEGACY-01**: v0.1 → v0.2 변경 매핑 문서 작성 — 40개 문서 간 대체/계승 관계 정리
+- [x] **LEGACY-02**: v0.1 데이터베이스 스택 SUPERSEDED 표기 (C4) — PostgreSQL + Redis → SQLite + LRU
+- [x] **LEGACY-03**: v0.1 API 프레임워크 SUPERSEDED 표기 (C5) — Fastify + JWT Bearer → Hono + Session Token
+- [x] **LEGACY-04**: v0.1 인증 모델 SUPERSEDED 표기 (C6) — 영구 API Key + RBAC → 단기 JWT + SIWS/SIWE
+- [x] **LEGACY-05**: v0.1 키 관리 SUPERSEDED 표기 (C7) — AWS KMS + Nitro → 로컬 Keystore + sodium
+- [x] **LEGACY-06**: v0.1 인터페이스명 업데이트 (H1) — IBlockchainAdapter → IChainAdapter 참조 수정
+- [x] **LEGACY-07**: v0.1 어댑터 Squads 메서드 정리 (H10) — createMultisig() 등 v0.2 미사용 메서드 표기
+- [x] **LEGACY-08**: v0.1 에러 코드 체계 정리 (H11) — RFC 9457 46개 코드 → v0.2 36개 코드 매핑
+- [x] **LEGACY-09**: v0.1 에스컬레이션 모델 정리 (H13) — 4단계 → 4-tier 대응표
 
 ### CRITICAL 의사결정
 
@@ -97,15 +97,15 @@ v0.4 Implementation 마일스톤에서 다룰 예정:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LEGACY-01 | Phase 10 | Pending |
-| LEGACY-02 | Phase 10 | Pending |
-| LEGACY-03 | Phase 10 | Pending |
-| LEGACY-04 | Phase 10 | Pending |
-| LEGACY-05 | Phase 10 | Pending |
-| LEGACY-06 | Phase 10 | Pending |
-| LEGACY-07 | Phase 10 | Pending |
-| LEGACY-08 | Phase 10 | Pending |
-| LEGACY-09 | Phase 10 | Pending |
+| LEGACY-01 | Phase 10 | Complete |
+| LEGACY-02 | Phase 10 | Complete |
+| LEGACY-03 | Phase 10 | Complete |
+| LEGACY-04 | Phase 10 | Complete |
+| LEGACY-05 | Phase 10 | Complete |
+| LEGACY-06 | Phase 10 | Complete |
+| LEGACY-07 | Phase 10 | Complete |
+| LEGACY-08 | Phase 10 | Complete |
+| LEGACY-09 | Phase 10 | Complete |
 | CRIT-01 | Phase 11 | Pending |
 | CRIT-02 | Phase 11 | Pending |
 | CRIT-03 | Phase 11 | Pending |
