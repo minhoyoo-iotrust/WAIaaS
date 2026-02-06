@@ -82,10 +82,10 @@ Plans:
   1. 4단계 파이프라인(매 커밋 / 매 PR / nightly / 릴리스)의 실행 범위와 각 단계에 포함되는 테스트 유형이 명확히 구분되어 있다
   2. GitHub Actions 워크플로우 구조가 트리거(push/PR/schedule/release)별로 설계되어 있고, job 의존 관계가 시각화되어 있다
   3. 패키지별 커버리지 게이트 기준과 CI 실패 조건이 정의되어 있고, 리포트 자동 생성 방식이 명시되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 17-01: CI/CD 파이프라인 및 커버리지 게이트 설계
+- [ ] 17-01-PLAN.md -- CI/CD 파이프라인 4단계 구조 + GitHub Actions 워크플로우 + 커버리지 게이트 설계 (CICD-01, CICD-02, CICD-03)
 
 ### Phase 18: 배포 타겟별 테스트
 **Goal**: 4개 배포 타겟(CLI Daemon/Docker/Desktop/Telegram Bot) 각각의 테스트 범위와 검증 방법이 확정되어, 플랫폼별 품질 기준이 명확하다
