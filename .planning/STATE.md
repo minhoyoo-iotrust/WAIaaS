@@ -11,11 +11,11 @@
 
 마일스톤: v0.4 테스트 전략 및 계획 수립
 페이즈: 15 of 18 (보안 테스트 시나리오)
-플랜: 1 of 3 in Phase 15
+플랜: 2 of 3 in Phase 15
 상태: In progress
-마지막 활동: 2026-02-06 -- Completed 15-01-PLAN.md (Layer 1 세션 인증 공격 시나리오)
+마지막 활동: 2026-02-06 -- Completed 15-02-PLAN.md (Layer 2/3 공격 시나리오)
 
-Progress: [███░░░░░░░] 43% (3/7 plans across 5 phases)
+Progress: [████░░░░░░] 57% (4/7 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,8 +35,8 @@ Progress: [███░░░░░░░] 43% (3/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 3/7
-- 요구사항: 8/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01)
+- 완료된 플랜: 4/7
+- 요구사항: 10/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03)
 
 ## 누적 컨텍스트
 
@@ -58,6 +58,9 @@ v0.4 결정:
 - CONTRACT-TEST-FACTORY-PATTERN: 5개 인터페이스 전체에 팩토리 함수 기반 Contract Test 적용
 - SEC-01-ERROR-DUAL-REFERENCE: 에러 코드를 REST API SSoT + 내부 코드 양측 병기하여 구현 시 매핑 혼동 방지
 - SEC-01-NONCE-PATH-SSOT: nonce 엔드포인트 /v1/nonce (API SSoT) 채택, /v1/auth/nonce (원본)과의 관계 명시
+- SEC02-TOCTOU-INTEGRATION: TOCTOU 테스트는 Integration 레벨에서 실제 SQLite + BEGIN IMMEDIATE로 검증 (Unit 불가)
+- SEC03-CASCADE-SPLIT: Kill Switch 캐스케이드 테스트를 Step 1-3 원자적 + Step 4-6 best-effort로 분리
+- SEC03-AUTOSTOP-COVERAGE: AutoStop 5규칙 중 CONSECUTIVE_FAILURES만 상세 시나리오, 나머지 4규칙은 SEC-05 경계값 문서로 이연
 
 ### 차단 요소/우려 사항
 
@@ -66,5 +69,5 @@ v0.4 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 15-01-PLAN.md (Layer 1 세션 인증 공격 시나리오)
+중단 지점: Completed 15-02-PLAN.md (Layer 2/3 공격 시나리오)
 재개 파일: None
