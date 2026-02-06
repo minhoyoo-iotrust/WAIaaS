@@ -15,7 +15,7 @@
 상태: Phase complete
 마지막 활동: 2026-02-06 -- Completed 16-02-PLAN.md (Enum SSoT 빌드타임 검증 + config.toml 테스트 + NOTE 매핑)
 
-Progress: [██████████] 100% (7/7 plans across 5 phases)
+Progress: [████████░░] 78% (7/9 plans across 5 phases)
 
 ## 성과 지표
 
@@ -35,7 +35,7 @@ Progress: [██████████] 100% (7/7 plans across 5 phases)
 - 산출물: 5개 대응표/매핑 문서
 
 **v0.4 현재:**
-- 완료된 플랜: 7/7
+- 완료된 플랜: 7/9
 - 요구사항: 19/26 (TLVL-01, TLVL-02, TLVL-03, MOCK-01, MOCK-02, MOCK-03, MOCK-04, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04, ENUM-01, ENUM-02, ENUM-03)
 
 ## 누적 컨텍스트

@@ -28,16 +28,16 @@
 
 ### 블록체인 테스트 전략
 
-- [ ] **CHAIN-01**: Solana 테스트 3단계 환경(Mock RPC / Local Validator / Devnet)별 실행 범위와 시나리오가 정의됨
-- [ ] **CHAIN-02**: Mock RPC 클라이언트의 시나리오(성공/실패/지연/Blockhash 만료)가 명세됨
-- [ ] **CHAIN-03**: Local Validator(solana-test-validator) 기반 E2E 테스트 흐름이 정의됨 (세션→정책→서명→전송→확인)
-- [ ] **CHAIN-04**: EVM 테스트 범위가 정의됨 (EvmAdapterStub IChainAdapter 타입 준수 + CHAIN_NOT_SUPPORTED throw 확인)
+- [x] **CHAIN-01**: Solana 테스트 3단계 환경(Mock RPC / Local Validator / Devnet)별 실행 범위와 시나리오가 정의됨
+- [x] **CHAIN-02**: Mock RPC 클라이언트의 시나리오(성공/실패/지연/Blockhash 만료)가 명세됨
+- [x] **CHAIN-03**: Local Validator(solana-test-validator) 기반 E2E 테스트 흐름이 정의됨 (세션→정책→서명→전송→확인)
+- [x] **CHAIN-04**: EVM 테스트 범위가 정의됨 (EvmAdapterStub IChainAdapter 타입 준수 + CHAIN_NOT_SUPPORTED throw 확인)
 
 ### Enum & 설정 일관성 검증
 
-- [ ] **ENUM-01**: 9개 Enum(TransactionStatus/Tier/AgentStatus/PolicyType/NotificationChannelType/AuditLogSeverity/EventType/KillSwitchStatus/AutoStopRuleType)의 DB CHECK = Drizzle = Zod = TypeScript 동기화 검증 방법이 정의됨
-- [ ] **ENUM-02**: config.toml 검증 전략이 정의됨 (기본값, 부분 오버라이드, Zod 검증, Docker 환경변수 우선순위, 중첩 섹션)
-- [ ] **ENUM-03**: v0.3 구현 노트(NOTE-01~11)의 제약/경고가 테스트 케이스로 변환 가능한 형태로 매핑됨
+- [x] **ENUM-01**: 9개 Enum(TransactionStatus/Tier/AgentStatus/PolicyType/NotificationChannelType/AuditLogSeverity/EventType/KillSwitchStatus/AutoStopRuleType)의 DB CHECK = Drizzle = Zod = TypeScript 동기화 검증 방법이 정의됨
+- [x] **ENUM-02**: config.toml 검증 전략이 정의됨 (기본값, 부분 오버라이드, Zod 검증, Docker 환경변수 우선순위, 중첩 섹션)
+- [x] **ENUM-03**: v0.3 구현 노트(NOTE-01~11)의 제약/경고가 테스트 케이스로 변환 가능한 형태로 매핑됨
 
 ### CI/CD 파이프라인
 
@@ -88,13 +88,13 @@
 | SEC-03 | Phase 15 | Complete |
 | SEC-04 | Phase 15 | Complete |
 | SEC-05 | Phase 15 | Complete |
-| CHAIN-01 | Phase 16 | Pending |
-| CHAIN-02 | Phase 16 | Pending |
-| CHAIN-03 | Phase 16 | Pending |
-| CHAIN-04 | Phase 16 | Pending |
-| ENUM-01 | Phase 16 | Pending |
-| ENUM-02 | Phase 16 | Pending |
-| ENUM-03 | Phase 16 | Pending |
+| CHAIN-01 | Phase 16 | Complete |
+| CHAIN-02 | Phase 16 | Complete |
+| CHAIN-03 | Phase 16 | Complete |
+| CHAIN-04 | Phase 16 | Complete |
+| ENUM-01 | Phase 16 | Complete |
+| ENUM-02 | Phase 16 | Complete |
+| ENUM-03 | Phase 16 | Complete |
 | CICD-01 | Phase 17 | Pending |
 | CICD-02 | Phase 17 | Pending |
 | CICD-03 | Phase 17 | Pending |
