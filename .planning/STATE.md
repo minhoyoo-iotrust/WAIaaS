@@ -10,12 +10,12 @@
 ## 현재 위치
 
 마일스톤: v0.3 설계 논리 일관성 확보
-페이즈: 10 of 13 (v0.1 잔재 정리) — VERIFIED ✓
-플랜: 2 of 2 in Phase 10
-상태: Phase 10 검증 완료, Phase 11 진행 준비
-마지막 활동: 2026-02-06 — Phase 10 검증 완료 (7/7 truths verified)
+페이즈: 11 of 13 (CRITICAL 의사결정)
+플랜: 1 of 2 in Phase 11
+상태: In progress — 11-01 완료, 11-02 대기
+마지막 활동: 2026-02-06 — Completed 11-01-PLAN.md (CRITICAL 4건 의사결정)
 
-Progress: [███░░░░░░░] 2/8 plans (25%) — Phase 10 verified
+Progress: [████░░░░░░] 3/8 plans (37.5%)
 
 ## 성과 지표
 
@@ -29,27 +29,29 @@ Progress: [███░░░░░░░] 2/8 plans (25%) — Phase 10 verified
 - 설계 문서: 17개
 
 **v0.3 진행:**
-- 완료된 플랜: 2/8 (25%)
+- 완료된 플랜: 3/8 (37.5%)
 - Phase 10 완료: 10-01, 10-02
+- Phase 11 진행: 11-01 완료
 - SUPERSEDED 표기 완료: 6개 문서
 - 대응표 문서: 4개 (41~44)
+- CRITICAL 해결: 4건 (C1, C2, C3, C8) — **11-01에서 완료**
 
 **v0.3 비일관성 분석:**
-- CRITICAL: 8건 (즉시 결정 필요)
-- HIGH: 15건 (구현 전 해결 필요)
-- MEDIUM: 14건 (구현 시 주의 필요)
+- CRITICAL: 8건 중 8건 해결 (C1-C3,C8: Phase 11, C4-C7: Phase 10)
+- HIGH: 15건 (구현 전 해결 필요) — Phase 12 대상
+- MEDIUM: 14건 (구현 시 주의 필요) — Phase 13 대상
 - 총 37건
 
 ## 누적 컨텍스트
 
 ### v0.3 식별된 비일관성
 
-**CRITICAL (8건):**
-- C1: 기본 포트 충돌 (3000 vs 3100)
-- C2: 트랜잭션 상태 Enum 불일치 (14개 vs 8개)
-- C3: Docker 127.0.0.1 바인딩 문제
+**CRITICAL (8건) — 전부 해결:**
+- C1: 기본 포트 충돌 (3000 vs 3100) — **11-01에서 3100 통일**
+- C2: 트랜잭션 상태 Enum 불일치 (14개 vs 8개) — **11-01에서 8개 SSoT + 표시 가이드**
+- C3: Docker 127.0.0.1 바인딩 문제 — **11-01에서 WAIAAS_DAEMON_HOSTNAME 오버라이드**
 - C4-C7: v0.1 잔재 (PostgreSQL, Fastify, API Key, AWS KMS) — **Phase 10에서 해결 완료**
-- C8: 자금 충전 모델 누락
+- C8: 자금 충전 모델 누락 — **11-01에서 GET /v1/wallet/address 사용 사례 추가**
 
 **HIGH (15건):**
 - H1: 인터페이스명 (IBlockchainAdapter vs IChainAdapter) — **42-interface-mapping.md로 해결**
@@ -79,6 +81,10 @@ Progress: [███░░░░░░░] 2/8 plans (25%) — Phase 10 verified
 | 10-02 | Level 2 Throttle -> SessionConstraints 대체 | 2026-02-06 |
 | 10-02 | INSTANT 티어 신규 도입 (알림 없음) | 2026-02-06 |
 | 10-02 | DELAY 티어 신규 도입 (15분 쿨다운) | 2026-02-06 |
+| 11-01 | 기본 포트 3100 확정 (CRIT-01) | 2026-02-06 |
+| 11-01 | DB 8개 상태 SSoT + 클라이언트 표시 가이드 (CRIT-02) | 2026-02-06 |
+| 11-01 | hostname z.union 허용: 기본 127.0.0.1, Docker 0.0.0.0 (CRIT-03) | 2026-02-06 |
+| 11-01 | 자금 충전: Owner 외부 지갑 -> Agent 직접 전송 (CRIT-04) | 2026-02-06 |
 
 ### 차단 요소/우려 사항
 
@@ -101,8 +107,19 @@ Progress: [███░░░░░░░] 2/8 plans (25%) — Phase 10 verified
 | 43-error-code-mapping.md | RFC 9457 46개 -> v0.2 36개 에러코드 |
 | 44-escalation-mapping.md | 4단계 에스컬레이션 -> 4-tier 정책 |
 
+## Phase 11 산출물
+
+### 11-01 (CRITICAL 의사결정)
+
+| CRIT | 내용 | 수정 문서 |
+|------|------|-----------|
+| CRIT-01 | 기본 포트 3100 통일 | 24-monorepo, 28-daemon |
+| CRIT-02 | TransactionStatus 8개 SSoT + 표시 가이드 | 37-rest-api |
+| CRIT-03 | WAIAAS_DAEMON_HOSTNAME 오버라이드 | 29-api, 24-monorepo, 40-telegram |
+| CRIT-04 | 자금 충전 사용 사례 | 37-rest-api |
+
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Phase 10 검증 완료
-재개 파일: None — 다음 단계: Phase 11 (CRITICAL 의사결정) 계획 및 실행
+중단 지점: Completed 11-01-PLAN.md
+재개 파일: None — 다음 단계: Phase 11-02 또는 Phase 12
