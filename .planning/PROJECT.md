@@ -10,8 +10,25 @@
 
 ## 현재 상태
 
-v0.1 Research & Design + v0.2 Self-Hosted Secure Wallet Design + v0.3 설계 논리 일관성 확보 완료 (2026-02-06).
-39개 플랜, 105개 요구사항, 17개 설계 문서 + 5개 대응표/매핑 문서를 통해 전체 시스템 아키텍처, 상세 설계, 그리고 설계 문서 간 논리 일관성이 확보됨. 구현 준비 완료.
+v0.1~v0.3 완료 (2026-02-06). 39개 플랜, 105개 요구사항, 17개 설계 문서 + 5개 대응표. 구현 준비 완료.
+
+## 현재 마일스톤: v0.4 테스트 전략 및 계획 수립
+
+**목표:** v0.2 설계(17개 문서) + v0.3 일관성 확보(5개 대응표)를 역방향 검증하는 테스트 전략을 수립하여, 구현 단계에서 "무엇을 어떻게 테스트할 것인가"가 명확한 상태를 만든다.
+
+**핵심 원칙:**
+- 테스트가 설계를 검증한다 (테스트할 수 없는 설계는 수정 대상)
+- 보안 테스트가 기능 테스트보다 우선한다 (지갑 = 자금 손실 리스크)
+- 블록체인 의존성을 격리한다 (Mock RPC / Local Validator / Devnet 3단계)
+
+**대상 기능:**
+- 모듈별 테스트 레벨 정의 (Unit/Integration/E2E/Security/Platform)
+- Mock 경계 정의 및 신규 인터페이스 식별 (IClock, ISigner)
+- 보안 시나리오 25+ (3계층 공격 시나리오)
+- 블록체인 테스트 환경 3단계 (Mock RPC → Local Validator → Devnet)
+- Enum SSoT + config.toml 일관성 자동 검증
+- CI/CD 파이프라인 구조 확정
+- 배포 타겟별 테스트 범위 (CLI/Docker/Desktop/Telegram)
 
 ## 요구사항
 
@@ -46,7 +63,7 @@ v0.1 Research & Design + v0.2 Self-Hosted Secure Wallet Design + v0.3 설계 논
 
 ### 활성
 
-(v0.4 마일스톤에서 정의 예정)
+(v0.4 REQUIREMENTS.md에서 상세 정의)
 
 ### 범위 외
 
@@ -113,5 +130,8 @@ v0.3 설계 논리 일관성 확보 완료 (2026-02-06). 4개 페이즈, 8개 �
 | MCP 의도적 미커버 24개 | 보안 원칙: AI 에이전트에 Owner/Admin 권한 미노출 | ✓ Good — v0.3 확정 |
 | Telegram Tier 2 TELEGRAM_PRE_APPROVED | SIWS는 Desktop/CLI 필수, Telegram은 알림+방어 채널 | ✓ Good — v0.3 확정 |
 
+| 테스트 전략 선행 수립 | 구현 전 "무엇을 테스트할지" 확정 → 테스트 불가 설계 사전 발견 | — Pending |
+| IClock/ISigner 인터페이스 추가 | 테스트 격리를 위한 시간/서명 추상화 필요 | — Pending |
+
 ---
-*최종 업데이트: 2026-02-06 after v0.3 milestone*
+*최종 업데이트: 2026-02-06 after v0.4 milestone start*

@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-06)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** 다음 마일스톤 계획 중
+**현재 초점:** v0.4 테스트 전략 및 계획 수립
 
 ## 현재 위치
 
-마일스톤: v0.3 설계 논리 일관성 확보 — 완료
-페이즈: Planning next milestone
-플랜: Not started
-상태: Ready to plan
-마지막 활동: 2026-02-06 — v0.3 milestone complete
+마일스톤: v0.4 테스트 전략 및 계획 수립
+페이즈: Not started (defining requirements)
+플랜: —
+상태: Defining requirements
+마지막 활동: 2026-02-06 — Milestone v0.4 started
 
-Progress: [██████████] v0.1 + v0.2 + v0.3 complete (13/13 phases)
+Progress: [░░░░░░░░░░] v0.4 started (0/? phases)
 
 ## 성과 지표
 
@@ -47,5 +47,5 @@ v0.1~v0.3 전체 결정 사항은 PROJECT.md 참조.
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: v0.3 마일스톤 완료, 다음 단계 `/gsd:new-milestone`
+중단 지점: v0.4 마일스톤 시작, 요구사항 정의 중
 재개 파일: None
