@@ -290,9 +290,9 @@ ACTIVATED 또는 RECOVERING 상태에서 **허용 엔드포인트 목록만 통�
 
 ```typescript
 const HealthResponseSchema = z.object({
-  status: z.enum(['ok', 'degraded', 'error']).openapi({
+  status: z.enum(['healthy', 'degraded', 'unhealthy']).openapi({
     description: '서버 상태',
-    example: 'ok',
+    example: 'healthy',
   }),
   version: z.string().openapi({
     description: 'WAIaaS 버전',
@@ -312,7 +312,7 @@ const HealthResponseSchema = z.object({
 **응답 예시 (200 OK):**
 ```json
 {
-  "status": "ok",
+  "status": "healthy",
   "version": "0.2.0",
   "uptime": 3600,
   "timestamp": "2026-02-05T10:31:25.000Z"
@@ -561,7 +561,7 @@ const TransferRequestSchema = z.object({
     description: 'SPL/ERC20 토큰 주소 (type=TOKEN_TRANSFER 시 필수)',
   }),
   memo: z.string().max(200).optional().openapi({
-    description: '메모 (최대 200자)',
+    description: '최대 200자. Solana Memo Program 256 bytes 이내를 보장한다. UTF-8 멀티바이트 문자 사용 시에도 200자 제한으로 256 bytes를 초과하지 않는다. 체인 어댑터에서 바이트 길이 이중 검증 수행.',
     example: 'Payment for services',
   }),
   priority: z.enum(['low', 'medium', 'high']).optional().default('medium').openapi({
