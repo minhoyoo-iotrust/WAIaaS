@@ -96,10 +96,10 @@ Plans:
   2. Docker 테스트(빌드/compose/named volume/환경변수/hostname 오버라이드/grace period)의 시나리오와 자동화 가능 여부가 정의되어 있다
   3. Desktop App(Tauri) 테스트(빌드/Sidecar SEA/수동 QA 체크리스트)가 정의되어 있고, 자동화 한계가 명시되어 있다
   4. Telegram Bot 테스트(Long Polling/2-Tier 인증/인라인 키보드)의 시나리오와 Mock 전략이 정의되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 18-01: 배포 타겟별 테스트 범위 정의
+- [ ] 18-01-PLAN.md -- 4개 배포 타겟별 테스트 범위, 시나리오, 검증 방법, CI/CD 통합 매핑 (PLAT-01, PLAT-02, PLAT-03, PLAT-04)
 
 ## Progress
 
