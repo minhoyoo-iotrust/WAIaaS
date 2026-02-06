@@ -2,8 +2,9 @@
 
 **문서 ID:** CORE-02
 **작성일:** 2026-02-05
+**v0.5 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md
+**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5)
 
 ---
 
@@ -91,8 +92,8 @@ export const agents = sqliteTable('agents', {
     enum: ['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']
   }).notNull().default('CREATING'),
 
-  // ── Owner 정보 ──
-  ownerAddress: text('owner_address'),                  // Owner 지갑 주소 (Phase 8에서 연결)
+  // ── Owner 정보 (v0.5 변경: NOT NULL -- 에이전트 생성 시 필수) ──
+  ownerAddress: text('owner_address').notNull(),        // Owner 지갑 주소 (에이전트 생성 시 필수 지정)
 
   // ── 타임스탬프 ──
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -103,6 +104,7 @@ export const agents = sqliteTable('agents', {
   uniqueIndex('idx_agents_public_key').on(table.publicKey),
   index('idx_agents_status').on(table.status),
   index('idx_agents_chain_network').on(table.chain, table.network),
+  index('idx_agents_owner_address').on(table.ownerAddress),  // v0.5: 1:N 조회, ownerAuth 검증, Owner 주소 일괄 변경
 ]);
 ```
 
@@ -117,7 +119,7 @@ CREATE TABLE agents (
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING'
     CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
-  owner_address TEXT,
+  owner_address TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   suspended_at INTEGER,
@@ -127,6 +129,7 @@ CREATE TABLE agents (
 CREATE UNIQUE INDEX idx_agents_public_key ON agents(public_key);
 CREATE INDEX idx_agents_status ON agents(status);
 CREATE INDEX idx_agents_chain_network ON agents(chain, network);
+CREATE INDEX idx_agents_owner_address ON agents(owner_address);
 ```
 
 #### 컬럼 설명
@@ -139,7 +142,7 @@ CREATE INDEX idx_agents_chain_network ON agents(chain, network);
 | `network` | TEXT | NOT NULL | - | 네트워크 식별자. `mainnet-beta`, `devnet`, `mainnet`, `sepolia` |
 | `public_key` | TEXT (UNIQUE) | NOT NULL | - | 에이전트 지갑 공개키. 체인별 인코딩 (Solana=base58, EVM=hex) |
 | `status` | TEXT (ENUM) | NOT NULL | `'CREATING'` | 에이전트 생명주기 상태. CHECK 제약으로 유효 값 강제 |
-| `owner_address` | TEXT | NULL | - | Owner 지갑 주소. Phase 8에서 연결 프로세스 정의 |
+| `owner_address` | TEXT | NOT NULL | - | 에이전트 소유자 지갑 주소. 에이전트 생성 시 필수(NOT NULL). 1:1 바인딩(에이전트당 단일 Owner). 동일 주소가 여러 에이전트를 소유 가능(1:N). 체인별 형식: Solana=base58(32-44자), EVM=0x 접두사 hex(42자) |
 | `created_at` | INTEGER | NOT NULL | - | 생성 시각 (Unix epoch, 초) |
 | `updated_at` | INTEGER | NOT NULL | - | 최종 수정 시각 (Unix epoch, 초) |
 | `suspended_at` | INTEGER | NULL | - | 정지 시각. status가 SUSPENDED일 때만 값 존재 |
@@ -685,6 +688,74 @@ CREATE INDEX idx_notification_channels_enabled ON notification_channels(enabled)
 
 ---
 
+### 2.8 wallet_connections 테이블 -- WalletConnect 세션 캐시 (v0.5)
+
+> **v0.5에서 owner_wallets를 대체한다.** 인증 역할이 제거되고 WalletConnect 푸시 서명 편의 기능 전용.
+
+WalletConnect v2 세션 정보를 캐시한다. 이 테이블은 **인증 소스가 아니다**. ownerAuth는 `agents.owner_address`로 검증하며, 이 테이블의 부재가 ownerAuth를 차단하지 않는다. CLI 수동 서명은 WalletConnect 연결 여부와 무관하게 항상 사용 가능하다.
+
+**요구사항 매핑:** OWNR-03 (wallet_connections 테이블), OWNR-02 (config.toml walletconnect 선택적 전환)
+
+#### Drizzle ORM 정의
+
+```typescript
+export const walletConnections = sqliteTable('wallet_connections', {
+  id: text('id').primaryKey(),                          // UUID v7
+  ownerAddress: text('owner_address').notNull(),        // agents.owner_address와 일치
+  chain: text('chain', {
+    enum: ['solana', 'ethereum'],
+  }).notNull(),
+  wcSessionTopic: text('wc_session_topic'),             // WalletConnect 세션 토픽
+  wcPairingTopic: text('wc_pairing_topic'),             // WalletConnect 페어링 토픽
+  connectedAt: integer('connected_at', { mode: 'timestamp' }).notNull(),
+  lastActiveAt: integer('last_active_at', { mode: 'timestamp' }),
+  metadata: text('metadata'),                           // JSON: 지갑 이름, 아이콘 등
+}, (table) => [
+  index('idx_wallet_connections_owner_address').on(table.ownerAddress),
+]);
+```
+
+#### CREATE TABLE SQL DDL
+
+```sql
+CREATE TABLE wallet_connections (
+  id TEXT PRIMARY KEY,
+  owner_address TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK (chain IN ('solana', 'ethereum')),
+  wc_session_topic TEXT,
+  wc_pairing_topic TEXT,
+  connected_at INTEGER NOT NULL,
+  last_active_at INTEGER,
+  metadata TEXT
+);
+CREATE INDEX idx_wallet_connections_owner_address ON wallet_connections(owner_address);
+```
+
+#### 컬럼 설명
+
+| 컬럼 | 타입 | Nullable | 기본값 | 용도 |
+|------|------|----------|--------|------|
+| `id` | TEXT (PK) | NOT NULL | - | UUID v7 |
+| `owner_address` | TEXT | NOT NULL | - | Owner 지갑 주소. agents.owner_address와 일치. FK 없음 (애플리케이션 레벨 관리) |
+| `chain` | TEXT (ENUM) | NOT NULL | - | 체인 식별자: `'solana'` 또는 `'ethereum'` |
+| `wc_session_topic` | TEXT | NULL | - | WalletConnect 활성 세션 토픽 |
+| `wc_pairing_topic` | TEXT | NULL | - | WalletConnect 페어링 토픽 |
+| `connected_at` | INTEGER | NOT NULL | - | 연결 시각 (Unix epoch, 초) |
+| `last_active_at` | INTEGER | NULL | - | 마지막 활동 시각 |
+| `metadata` | TEXT (JSON) | NULL | - | 모바일 지갑 메타데이터 (이름, 아이콘 URL 등) |
+
+**owner_wallets와의 핵심 차이:**
+
+| 항목 | v0.2 owner_wallets | v0.5 wallet_connections |
+|------|-------------------|----------------------|
+| 역할 | 인증 소스 (ownerAuth Step 5에서 주소 대조) | WC 세션 캐시 전용 (편의 기능) |
+| address UNIQUE | O (단일 Owner 강제) | X (여러 에이전트의 동일 Owner가 동일 WC 세션 사용 가능) |
+| FK 관계 | 없음 | 없음 (애플리케이션 레벨 관리) |
+| 부재 시 영향 | ownerAuth 불가 | ownerAuth에 영향 없음 (CLI 수동 서명 항상 가능) |
+| 타임스탬프 형식 | TEXT (ISO 8601) | INTEGER (Unix epoch, 초) -- CORE-02 표준 준수 |
+
+---
+
 ## 3. 관계 다이어그램 (ERD)
 
 ```mermaid
@@ -696,7 +767,7 @@ erDiagram
         text network
         text public_key UK
         text status
-        text owner_address
+        text owner_address "NOT NULL (v0.5)"
         integer created_at
         integer updated_at
         integer suspended_at
@@ -778,6 +849,17 @@ erDiagram
         integer created_at
     }
 
+    wallet_connections {
+        text id PK
+        text owner_address "NOT NULL"
+        text chain
+        text wc_session_topic
+        text wc_pairing_topic
+        integer connected_at
+        integer last_active_at
+        text metadata
+    }
+
     agents ||--o{ sessions : "has"
     agents ||--o{ transactions : "executes"
     agents ||--o{ policies : "governed by"
@@ -796,6 +878,7 @@ erDiagram
 | transactions -> pending_approvals | 1:0..1 | ON DELETE CASCADE |
 | audit_log | 독립 | FK 없음 (데이터 보존) |
 | notification_channels | 독립 | FK 없음 (글로벌 설정) |
+| wallet_connections | 독립 | FK 없음 (v0.5 WC 편의 기능, agents.owner_address와 애플리케이션 레벨 관계) |
 
 **FK 삭제 정책 설계 근거:**
 
@@ -855,6 +938,7 @@ export { policies } from './tables/policies';
 export { auditLog } from './tables/audit-log';
 export { pendingApprovals } from './tables/pending-approvals';
 export { notificationChannels } from './tables/notification-channels';
+export { walletConnections } from './tables/wallet-connections';  // v0.5: WC 세션 캐시
 ```
 
 ### 4.4 데몬 시작 시 자동 마이그레이션
@@ -957,6 +1041,57 @@ ALTER TABLE agents_new RENAME TO agents;
 -- 5. 인덱스 재생성
 CREATE INDEX ...;
 ```
+
+### 4.7 v0.5 스키마 마이그레이션 (owner_wallets -> wallet_connections)
+
+v0.5에서 Owner 주소가 시스템 전역(`owner_wallets` 테이블)에서 에이전트별 속성(`agents.owner_address NOT NULL`)으로 이동한다. 기존 데이터를 보존하면서 스키마를 전환하는 6단계 마이그레이션 전략이다.
+
+**전제 조건:**
+- SQLite 3.25.0+ (ALTER TABLE RENAME TO 지원)
+- 마이그레이션 실행 전 DB 백업 필수 (`VACUUM INTO`)
+
+**마이그레이션 SQL:**
+
+```sql
+-- ═══ Step 1: agents 테이블에 owner_address 컬럼 추가 ═══
+-- NOT NULL + DEFAULT '' 조합으로 기존 행 보존
+-- 신규 에이전트는 애플리케이션 레벨에서 유효한 주소 강제
+ALTER TABLE agents ADD COLUMN owner_address TEXT DEFAULT '' NOT NULL;
+
+-- ═══ Step 2: 기존 단일 Owner 주소를 모든 에이전트에 복사 ═══
+-- v0.2는 단일 Owner 모델이므로 owner_wallets에서 첫 번째 주소를 가져옴
+UPDATE agents SET owner_address = (
+  SELECT address FROM owner_wallets LIMIT 1
+) WHERE owner_address = '';
+
+-- ═══ Step 3: agents.owner_address 인덱스 생성 ═══
+CREATE INDEX idx_agents_owner_address ON agents(owner_address);
+
+-- ═══ Step 4: owner_wallets -> wallet_connections 이름 변경 ═══
+ALTER TABLE owner_wallets RENAME TO wallet_connections;
+
+-- ═══ Step 5: 기존 UNIQUE 인덱스 제거 ═══
+-- v0.5에서는 동일 Owner 주소로 여러 WC 세션 가능
+DROP INDEX idx_owner_wallets_address;
+
+-- ═══ Step 6: wallet_connections 인덱스 재생성 ═══
+CREATE INDEX idx_wallet_connections_owner_address ON wallet_connections(owner_address);
+```
+
+**주의사항:**
+
+| 단계 | 설명 | 실패 시 대응 |
+|------|------|------------|
+| Step 1 | `DEFAULT ''`는 마이그레이션 전용. 빈 문자열은 유효한 주소가 아님 | 롤백 불필요 (컬럼 추가는 안전) |
+| Step 2 | `owner_wallets`에 레코드가 없으면 UPDATE가 0건 -- 에이전트의 `owner_address`가 빈 문자열로 남음 | 사용자에게 수동 설정 안내 |
+| Step 3 | 인덱스 생성은 멱등적이지 않음 | `CREATE INDEX IF NOT EXISTS` 사용 권장 |
+| Step 4 | SQLite 3.25.0 미만에서는 RENAME TO 불가 | 테이블 재생성 패턴(섹션 4.6) 사용 |
+| Step 5 | 인덱스가 존재하지 않으면 에러 | `DROP INDEX IF EXISTS` 사용 권장 |
+| Step 6 | wallet_connections의 address 컬럼이 owner_address로 변경되어야 할 수 있음 | RENAME COLUMN 사용 (SQLite 3.25.0+) |
+
+**Drizzle-kit 자동 마이그레이션과의 관계:**
+
+이 마이그레이션은 drizzle-kit의 `ALTER TABLE ADD COLUMN`이 자동 지원하는 범위(Step 1, 3)와 수동 SQL이 필요한 범위(Step 2, 4, 5, 6)가 혼재한다. 수동 마이그레이션 파일로 작성하여 `drizzle/` 폴더에 포함시킨다.
 
 ---
 
@@ -1105,7 +1240,7 @@ ORDER BY priority DESC;
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ══════════════════════════════════════════
-// agents
+// agents (v0.5: owner_address NOT NULL, idx_agents_owner_address 추가)
 // ══════════════════════════════════════════
 export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
@@ -1116,7 +1251,7 @@ export const agents = sqliteTable('agents', {
   status: text('status', {
     enum: ['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']
   }).notNull().default('CREATING'),
-  ownerAddress: text('owner_address'),
+  ownerAddress: text('owner_address').notNull(),         // v0.5: NOT NULL, 에이전트 생성 시 필수
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
@@ -1125,6 +1260,7 @@ export const agents = sqliteTable('agents', {
   uniqueIndex('idx_agents_public_key').on(table.publicKey),
   index('idx_agents_status').on(table.status),
   index('idx_agents_chain_network').on(table.chain, table.network),
+  index('idx_agents_owner_address').on(table.ownerAddress),  // v0.5: Owner 주소 조회/변경
 ]);
 
 // ══════════════════════════════════════════
@@ -1259,6 +1395,24 @@ export const notificationChannels = sqliteTable('notification_channels', {
   index('idx_notification_channels_type').on(table.type),
   index('idx_notification_channels_enabled').on(table.enabled),
 ]);
+
+// ══════════════════════════════════════════
+// wallet_connections (v0.5: owner_wallets 대체, WC 세션 캐시 전용)
+// ══════════════════════════════════════════
+export const walletConnections = sqliteTable('wallet_connections', {
+  id: text('id').primaryKey(),
+  ownerAddress: text('owner_address').notNull(),
+  chain: text('chain', {
+    enum: ['solana', 'ethereum'],
+  }).notNull(),
+  wcSessionTopic: text('wc_session_topic'),
+  wcPairingTopic: text('wc_pairing_topic'),
+  connectedAt: integer('connected_at', { mode: 'timestamp' }).notNull(),
+  lastActiveAt: integer('last_active_at', { mode: 'timestamp' }),
+  metadata: text('metadata'),
+}, (table) => [
+  index('idx_wallet_connections_owner_address').on(table.ownerAddress),
+]);
 ```
 
 ---
@@ -1294,6 +1448,72 @@ v0.2에서는 `suspension_reason` 컬럼으로 정지 사유를 구분한다:
 
 **통합 대응표 참조:** 45-enum-unified-mapping.md에서 AgentStatus 5개 값의 SSoT를 확인할 수 있다.
 
+### 7.2 Owner 주소 변경 정책 (v0.5)
+
+v0.5에서 Owner 주소는 에이전트별 속성(`agents.owner_address`)이며, 변경은 **masterAuth(implicit) 단일 트랙**으로 처리한다. 서명 이력 유무와 무관하게 masterAuth만으로 변경 가능하다.
+
+**변경 API:**
+
+```
+PUT /v1/agents/:id { ownerAddress: "<new_address>" }
+```
+
+인증: masterAuth(implicit) -- 데몬이 실행 중이면 인증된 상태.
+
+**변경 시 동작 (4단계):**
+
+1. **agents.owner_address 업데이트**
+   ```sql
+   UPDATE agents SET owner_address = :newAddress, updated_at = :now WHERE id = :agentId;
+   ```
+
+2. **APPROVAL 대기 거래 일괄 취소**
+   해당 에이전트의 `status='QUEUED'` 거래를 모두 `CANCELLED` 처리한다. 기존 Owner의 서명으로는 새 Owner가 승인할 수 없기 때문이다.
+   ```sql
+   UPDATE transactions
+   SET status = 'CANCELLED', error = 'OWNER_ADDRESS_CHANGED'
+   WHERE agent_id = :agentId AND status = 'QUEUED';
+   ```
+
+3. **audit_log 기록**
+   ```json
+   {
+     "eventType": "OWNER_ADDRESS_CHANGED",
+     "actor": "master",
+     "agentId": "<agentId>",
+     "severity": "warning",
+     "details": {
+       "previousAddress": "<old_address>",
+       "newAddress": "<new_address>"
+     }
+   }
+   ```
+
+4. **활성 세션 유지**
+   Owner 변경이 세션을 무효화하지 않는다. 세션은 에이전트 인증(sessionAuth)이지 Owner 인증이 아니다. 세션의 constraints는 변경 없이 유지된다.
+
+**주소 형식 검증:**
+
+| 체인 | 검증 규칙 | 예시 |
+|------|----------|------|
+| Solana | base58 디코드 성공 + 32바이트 | `7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU` |
+| EVM | `0x` 접두사 + 40자 hex + EIP-55 체크섬 | `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045` |
+
+검증은 애플리케이션 레벨(`@waiaas/core`의 Zod 스키마)에서 수행한다. DB에는 CHECK 제약을 추가하지 않는다 (체인별 형식이 다르므로 SQL CHECK로 표현하기 복잡).
+
+**멀티 에이전트 시나리오:**
+
+동일 Owner 주소가 여러 에이전트를 소유할 수 있다 (1:N 관계). Owner 주소 변경은 에이전트 단위이므로, 동일 Owner의 다른 에이전트에는 영향이 없다.
+
+```
+Agent A (owner: 7xKX...) -- APPROVAL 거래 2건 대기 중
+Agent B (owner: 7xKX...) -- 활성 중
+
+PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
+→ Agent A의 APPROVAL 거래 2건 CANCELLED
+→ Agent B는 영향 없음 (여전히 7xKX... 소유)
+```
+
 ---
 
 ## 8. 요구사항 매핑 총괄
@@ -1316,9 +1536,20 @@ v0.2에서는 `suspension_reason` 컬럼으로 정지 사유를 구분한다:
 | NOTI-05 (보안 이벤트 기록) | audit_log | severity=critical 이벤트 |
 | OWNR-01 (Owner 서명 승인) | pending_approvals | ownerSignature |
 
+### v0.5 요구사항 매핑 추가
+
+| 요구사항 | 테이블/섹션 | 커버리지 |
+|---------|-----------|---------|
+| OWNR-01 (에이전트별 Owner 주소) | agents | `owner_address NOT NULL` + `idx_agents_owner_address` 인덱스. 에이전트 생성 시 필수. 1:1 바인딩 |
+| OWNR-02 (config.toml Owner 개념 제거) | - | 24-monorepo-data-directory.md 참조. walletconnect 섹션 선택적 전환 |
+| OWNR-03 (wallet_connections 테이블) | wallet_connections (섹션 2.8) | owner_wallets 대체. 인증 역할 제거. WC 세션 캐시 전용 |
+| OWNR-04 (멀티 에이전트 Owner 격리) | agents + wallet_connections | `agents.owner_address` + `idx_agents_owner_address`로 에이전트별 Owner 격리. 동일 주소 1:N 소유 지원 |
+| AUTH-04 (Owner 주소 변경 정책) | 섹션 7.2 | masterAuth 단일 트랙. APPROVAL 대기 거래 자동 취소. audit_log OWNER_ADDRESS_CHANGED 이벤트 |
+
 ---
 
 *문서 ID: CORE-02*
 *작성일: 2026-02-05*
+*v0.5 업데이트: 2026-02-07*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
