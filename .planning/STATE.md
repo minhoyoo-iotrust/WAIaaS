@@ -11,11 +11,11 @@
 
 마일스톤: v0.3 설계 논리 일관성 확보
 페이즈: 12 of 13 (HIGH 스키마/수치 통일)
-플랜: 2 of 3 in Phase 12
-상태: Phase 12 진행 중 (12-02 완료)
-마지막 활동: 2026-02-06 — Completed 12-02-PLAN.md (config.toml 누락 설정 추가)
+플랜: 3 of 3 in Phase 12
+상태: Phase 12 완료
+마지막 활동: 2026-02-06 — Completed 12-03-PLAN.md (REST API <-> API Framework 스펙 통일)
 
-Progress: [██████░░░░] 5/8 plans (62.5%)
+Progress: [███████░░░] 6/8 plans (75%)
 
 ## 성과 지표
 
@@ -29,20 +29,20 @@ Progress: [██████░░░░] 5/8 plans (62.5%)
 - 설계 문서: 17개
 
 **v0.3 진행:**
-- 완료된 플랜: 5/8 (62.5%)
+- 완료된 플랜: 6/8 (75%)
 - Phase 10 완료: 10-01, 10-02
 - Phase 11 완료: 11-01 (CRITICAL 4건)
-- Phase 12 진행: 12-01, 12-02 완료, 12-03 남음
+- Phase 12 완료: 12-01, 12-02, 12-03
 - SUPERSEDED 표기 완료: 6개 문서
 - 대응표 문서: 5개 (41~45)
 - CRITICAL 해결: 8건 전부 — Phase 10, 11에서 완료
-- HIGH 해결 진행: CONF-01~05 (12-02), ENUM-01~04 (12-01)
+- HIGH 해결: 15건 전부 — Phase 10, 12에서 완료
 
 **v0.3 비일관성 분석:**
 - CRITICAL: 8건 중 8건 해결 (C1-C3,C8: Phase 11, C4-C7: Phase 10)
-- HIGH: 15건 (구현 전 해결 필요) — Phase 12 대상
+- HIGH: 15건 중 15건 해결 (H1,H10-H11,H13: Phase 10, H2-H3,H5,H12: Phase 12-02, H6-H7: Phase 12-01, H4,H8-H9,H14-H15: Phase 12-03)
 - MEDIUM: 14건 (구현 시 주의 필요) — Phase 13 대상
-- 총 37건
+- 총 37건 중 23건 해결, 14건 남음
 
 ## 누적 컨텍스트
 
@@ -55,19 +55,19 @@ Progress: [██████░░░░] 5/8 plans (62.5%)
 - C4-C7: v0.1 잔재 (PostgreSQL, Fastify, API Key, AWS KMS) — **Phase 10에서 해결 완료**
 - C8: 자금 충전 모델 누락 — **11-01에서 GET /v1/wallet/address 사용 사례 추가**
 
-**HIGH (15건):**
+**HIGH (15건) — 전부 해결:**
 - H1: 인터페이스명 (IBlockchainAdapter vs IChainAdapter) — **42-interface-mapping.md로 해결**
 - H2: 세션 TTL (1h vs 24h) — **12-02에서 86400 통일**
 - H3: jwt_secret 설정 누락 — **12-02에서 config.toml 추가**
-- H4: 메모 길이 (256 bytes vs 200 chars)
+- H4: 메모 길이 (256 bytes vs 200 chars) — **12-03에서 200자 + 256 bytes 이중 검증 명시**
 - H5: 연속 실패 임계값 (3/5/3) — **12-02에서 config.toml 설정화**
 - H6-H7: 에이전트/정책 상태 Enum — **12-01에서 해결**
-- H8-H9: CORS/Health 스키마 불일치
+- H8-H9: CORS/Health 스키마 불일치 — **12-03에서 CORS 통일, Health healthy/unhealthy 통일**
 - H10-H11: v0.1 어댑터/에러코드 잔재 — **42, 43-mapping.md로 해결**
 - H12: Rate Limiter 단위 (req/min vs req/sec) — **12-02에서 3-level 구조 확립**
 - H13: 에스컬레이션 모델 혼동 — **44-escalation-mapping.md로 해결**
-- H14: SuccessResponse 래퍼 잔존
-- H15: ownerAuth 미들웨어 상세 미정의
+- H14: SuccessResponse 래퍼 잔존 — **12-03에서 잔존 없음 확인**
+- H15: ownerAuth 미들웨어 상세 미정의 — **12-03에서 CORE-06에 9단계 반영**
 
 ### 결정 사항
 
@@ -92,6 +92,10 @@ Progress: [██████░░░░] 5/8 plans (62.5%)
 | 12-02 | rate_limit 3-level 구조 (global 100, session 300, tx 10) | 2026-02-06 |
 | 12-02 | config.toml 중첩 섹션: auto_stop, policy_defaults, kill_switch | 2026-02-06 |
 | 12-02 | Zod 스키마 전체 섹션 명시 (partial 제거) | 2026-02-06 |
+| 12-03 | CORS: tauri://localhost + X-Master-Password + RateLimit expose (API-02) | 2026-02-06 |
+| 12-03 | Health: healthy/degraded/unhealthy 양쪽 통일 (API-03) | 2026-02-06 |
+| 12-03 | 미들웨어 9단계 순서, ownerAuth 라우트 레벨 (API-06) | 2026-02-06 |
+| 12-03 | memo 200자 + Solana 256 bytes 이중 검증 (API-01) | 2026-02-06 |
 
 ### 차단 요소/우려 사항
 
@@ -147,8 +151,19 @@ Progress: [██████░░░░] 5/8 plans (62.5%)
 | CONF-05 | [security.kill_switch] recovery_cooldown = 1800 | 24-monorepo |
 | 추가 | rate_limit 3-level, policy_defaults | 24-monorepo |
 
+### 12-03 (REST API <-> API Framework 스펙 통일)
+
+| API | 내용 | 수정 문서 |
+|-----|------|-----------|
+| API-01 | memo 200자 + Solana 256 bytes 이중 검증 명시 | 37-rest-api |
+| API-02 | CORS tauri://localhost, X-Master-Password, RateLimit expose | 29-api-framework |
+| API-03 | Health healthy/degraded/unhealthy 양쪽 통일 | 29-api-framework, 37-rest-api |
+| API-04 | Rate Limiter config.toml 참조 추가 | 29-api-framework |
+| API-05 | SuccessResponse 래퍼 잔존 없음 확인 | 37-rest-api |
+| API-06 | ownerAuth 미들웨어 9단계 반영 | 29-api-framework |
+
 ## 세션 연속성
 
 마지막 세션: 2026-02-06
-중단 지점: Completed 12-01-PLAN.md (Enum 통합 대응표 커밋 341371e)
-재개 파일: None — 다음 단계: 12-03 (REST API <-> API Framework 스펙 통일)
+중단 지점: Completed 12-03-PLAN.md (REST API <-> API Framework 스펙 통일)
+재개 파일: None — 다음 단계: Phase 13 (MEDIUM 구현 노트)
