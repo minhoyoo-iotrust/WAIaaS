@@ -2,8 +2,9 @@
 
 **문서 ID:** API-SPEC
 **작성일:** 2026-02-05
+**v0.5 인증 모델 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md)
+**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md)
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
 
 ---
@@ -23,10 +24,11 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 | CORE-06 | 29-api-framework-design.md | Hono OpenAPIHono, 8 미들웨어, localhost 보안, Zod/OpenAPI |
 | SESS-PROTO | 30-session-token-protocol.md | JWT HS256 jose, sessionAuth 2-stage, POST /v1/sessions |
 | TX-PIPE | 32-transaction-pipeline-api.md | 6-stage pipeline, 9 API endpoints Zod specs |
-| OWNR-CONN | 34-owner-wallet-connection.md | WalletConnect v2, ownerAuth 8-step, Owner API 8 endpoints |
+| OWNR-CONN | 34-owner-wallet-connection.md | WalletConnect v2, ownerAuth 8-step, Owner API 엔드포인트 |
 | KILL-AUTO-EVM | 36-killswitch-autostop-evm.md | Kill Switch API, /v1/admin/kill-switch |
-| CORE-02 | 25-sqlite-schema.md | 7 tables, Drizzle ORM, 스키마 참조 |
+| CORE-02 | 25-sqlite-schema.md | 8 tables, Drizzle ORM, 스키마 참조 (v0.5 agents.owner_address 추가) |
 | CORE-05 | 28-daemon-lifecycle-cli.md | /v1/admin/shutdown, Graceful Shutdown |
+| AUTH-REDESIGN | 52-auth-model-redesign.md | v0.5 3-tier 인증 모델, 31 엔드포인트 인증 맵 재배치 |
 
 ### 1.3 v0.1 -> v0.2 핵심 차이
 
@@ -38,16 +40,19 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 | 거래 파이프라인 | 8단계 (Enclave + Squads) | 6단계 (로컬 키스토어 + 정책 엔진) |
 | 에러 포맷 | RFC 9457 + 46개 코드 | 간소화 JSON + 도메인별 에러 코드 |
 
-### 1.4 전체 엔드포인트 요약
+### 1.4 전체 엔드포인트 요약 (v0.5 변경)
 
 | 카테고리 | 수 | 인증 | 범위 |
 |----------|---|------|------|
 | Public API | 3 | None | 헬스체크, 문서, nonce |
-| Session API (Agent) | 5 | Session Bearer | 지갑, 거래 |
-| Session Management API | 3 | Owner Signature | 세션 CRUD |
-| Owner API | 17 | Owner Signature | 승인, 정책, 관리, 대시보드 |
-| Admin API | 3 | Master Password | Kill Switch, Shutdown, Status |
-| **합계** | **31** | | `/doc` 포함 시 31, 제외 시 30 |
+| Session API (Agent) | 6 | Session Bearer | 지갑, 거래, 세션 조회 |
+| System Management API | 16 | masterAuth (implicit) | 세션 CRUD, 에이전트 CRUD, 정책, 설정, 대시보드 |
+| Owner Auth API | 1 | Owner Signature | 거래 승인 (APPROVAL 티어) |
+| Dual Auth API | 1 | Owner Signature + Master Password | Kill Switch 복구 |
+| Admin API | 3 | Master Password (explicit) | Kill Switch, Shutdown, Status |
+| **합계** | **30** | | `/doc` 포함 시 31 |
+
+> **v0.5 변경:** v0.2의 "Session Management API 3 (ownerAuth)" + "Owner API 17 (ownerAuth)"가 3-tier 재분류로 통합 재편성되었다. ownerAuth 적용은 2곳(거래 승인, KS 복구)으로 축소. 나머지 시스템 관리 엔드포인트는 masterAuth(implicit)로 이동. 52-auth-model-redesign.md 섹션 4 참조.
 
 ---
 
@@ -75,7 +80,7 @@ http://127.0.0.1:{port}
 |------|------|------|------|
 | `Content-Type` | Request | POST/PUT 시 | `application/json` |
 | `Authorization` | Request | 인증 필요 엔드포인트 | `Bearer wai_sess_...` 또는 `Bearer <ownerSignaturePayload>` |
-| `X-Master-Password` | Request | Admin API | 마스터 패스워드 평문 |
+| `X-Master-Password` | Request | Admin API + KS 복구 | 마스터 패스워드 평문. Admin API (explicit masterAuth) 및 Kill Switch 복구 (dual-auth). 대부분의 masterAuth 엔드포인트는 implicit (헤더 불필요). (v0.5 변경) |
 | `X-Request-ID` | 양방향 | 선택 | 클라이언트 제공 시 재사용, 없으면 서버 생성 (`req_` + 22자) |
 
 ### 2.4 공통 응답 헤더
@@ -136,16 +141,16 @@ bearerAuth:
 | JWT Claims | `iss`, `exp`, `iat`, `jti`, `sid`, `aid` |
 | 만료 범위 | 최소 5분 ~ 최대 7일, 기본 24시간 |
 | 검증 | 2-stage: Stage 1 JWT verify (no DB) -> Stage 2 DB lookup (폐기/제약) |
-| 적용 | `/v1/wallet/*`, `/v1/transactions/*` |
+| 적용 | `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions` (v0.5: 에이전트 자기 세션 조회 추가) |
 
 **헤더 예시:**
 ```
 Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ3YWlhYXMiLCJpYXQiOjE3NzAyODcxODUsImV4cCI6MTc3MDM3MzU4NSwianRpIjoiMDE5NTAyYTgtN2IzYy03ZDRlLThmNWEtMTIzNDU2Nzg5MGFiIiwic2lkIjoiMDE5NTAyYTgtN2IzYy03ZDRlLThmNWEtMTIzNDU2Nzg5MGFiIiwiYWlkIjoiMDE5NTAyODgtMWEyYi0zYzRkLTVlNmYtYWJjZGVmMDEyMzQ1In0.xxxxx
 ```
 
-### 3.2 Owner Signature (`ownerAuth`)
+### 3.2 Owner Signature (`ownerAuth`) (v0.5 변경)
 
-Owner 전용 API에 적용되는 요청별 SIWS/SIWE 서명 인증.
+자금 이동 승인 및 Kill Switch 복구에만 적용되는 요청별 SIWS/SIWE 서명 인증. (v0.5 변경: 적용 범위 2곳으로 축소)
 
 ```yaml
 ownerAuth:
@@ -155,8 +160,9 @@ ownerAuth:
   description: |
     Owner 지갑 서명 페이로드. 형식: Bearer <base64url JSON>
     페이로드: { chain, address, action, nonce, timestamp, message, signature }
-    검증: 8-step verify chain (OWNR-CONN 참조)
+    검증: 8-step verify chain (OWNR-CONN v0.5 참조)
     유효기간: 5분 (timestamp + nonce + action binding)
+    v0.5: 적용 범위 2곳 한정 (approve_tx, recover)
 ```
 
 | 항목 | 값 |
@@ -166,16 +172,16 @@ ownerAuth:
 | 서명 알고리즘 | Solana: Ed25519 (tweetnacl), EVM: EIP-191 (siwe + ethers) |
 | 유효기간 | 5분 (timestamp 기준) |
 | nonce | 일회성 (LRU 캐시, max 1000, TTL 5분) |
-| 적용 | `/v1/owner/*` (connect 제외), `POST /v1/sessions` |
+| 적용 | `POST /v1/owner/approve/:txId`, `POST /v1/owner/recover` (v0.5 변경: 2곳만) |
 
-**ownerSignaturePayload Zod 스키마:**
+**ownerSignaturePayload Zod 스키마 (v0.5 변경: action 7개에서 2개로 축소):**
 ```typescript
 const OwnerSignaturePayloadSchema = z.object({
   chain: z.enum(['solana', 'ethereum']),
   address: z.string(),
   action: z.enum([
-    'approve_tx', 'reject_tx', 'kill_switch', 'recover',
-    'manage_sessions', 'update_settings', 'view_dashboard',
+    'approve_tx',  // POST /v1/owner/approve/:txId
+    'recover',     // POST /v1/owner/recover
   ]),
   nonce: z.string(),
   timestamp: z.string().datetime(),
@@ -184,7 +190,7 @@ const OwnerSignaturePayloadSchema = z.object({
 })
 ```
 
-**ownerAuth 8단계 검증 (OWNR-CONN 참조):**
+**ownerAuth 8단계 검증 (OWNR-CONN v0.5 참조):**
 
 | 단계 | 검증 항목 | 실패 시 |
 |------|----------|---------|
@@ -192,14 +198,16 @@ const OwnerSignaturePayloadSchema = z.object({
 | 2 | timestamp 유효성 (5분 이내) | 401 INVALID_SIGNATURE |
 | 3 | nonce 일회성 (LRU 캐시 확인 + 삭제) | 401 INVALID_NONCE |
 | 4 | SIWS/SIWE 서명 암호학적 검증 | 401 INVALID_SIGNATURE |
-| 5 | 서명자 == owner_wallets.address | 403 OWNER_MISMATCH |
+| 5 | 서명자 == agents.owner_address (v0.5 변경: 에이전트별 검증) | 403 OWNER_MISMATCH |
 | 6 | action == 라우트 기대 action | 403 INVALID_SIGNATURE |
 | 7 | 컨텍스트 설정 (ownerAddress, ownerChain) | - |
 | 8 | next() | - |
 
-### 3.3 Master Password (`masterAuth`)
+> **v0.5 Step 5 변경:** 서명자 주소 검증 대상이 `owner_wallets.address`(전역 단일 Owner)에서 `agents.owner_address`(에이전트별 Owner)로 변경. 52-auth-model-redesign.md 섹션 3.2 참조.
 
-Admin API에 적용되는 마스터 패스워드 인증.
+### 3.3 Master Password (`masterAuth`) (v0.5 변경)
+
+시스템 관리 전반에 적용되는 마스터 패스워드 기반 인증. v0.5에서 **2가지 모드**로 확장. (v0.5 변경)
 
 ```yaml
 masterAuth:
@@ -207,42 +215,64 @@ masterAuth:
   in: header
   name: X-Master-Password
   description: |
-    키스토어 마스터 패스워드. Argon2id로 검증 후 키스토어 잠금 해제.
-    brute-force 방지: 5회 실패 -> 30분 lockout
+    v0.5 2가지 모드:
+    - implicit: 데몬 실행 = 인증 상태. 헤더 불필요. 시스템 관리 전반.
+    - explicit: X-Master-Password 헤더 필수. Admin API + KS 복구 dual-auth.
+    brute-force 방지 (explicit만): 5회 실패 -> 30분 lockout
 ```
+
+**암묵적 masterAuth (implicit)** (v0.5 신규)
+
+- **전제 조건**: 데몬 구동 중 = 마스터 패스워드 인증 완료 상태
+- **추가 헤더**: 불필요. HTTP 요청에 인증 관련 헤더를 포함하지 않아도 된다.
+- **적용 범위**: 세션 CRUD, 에이전트 CRUD, 정책 CRUD, 설정 변경, 조회 등 시스템 관리 전반 (16개 엔드포인트)
+- **보안 근거**: localhost 바인딩(`127.0.0.1` Zod literal)에 의존. 로컬 네트워크 외부에서 접근 불가.
+- **미들웨어 동작**: `authType='master'` 설정 후 `next()` 호출. 사실상 no-op guard. 52-auth-model-redesign.md 섹션 3.1 참조.
+
+**명시적 masterAuth (explicit)**
+
+- **전제 조건**: `X-Master-Password` 헤더 필수
+- **적용 범위**: Admin API (`/v1/admin/*`) + Kill Switch 복구 (dual-auth 구성 요소)
+- **보안 근거**: 파괴적/비가역적 작업에 대한 defense-in-depth. localhost 바인딩만으로는 부족한 고위험 작업.
 
 | 항목 | 값 |
 |------|-----|
-| 전달 방식 | `X-Master-Password` 헤더 |
-| 검증 | Argon2id (argon2 npm, 비동기) |
-| brute-force 방지 | 5회 연속 실패 -> 30분 lockout |
-| 적용 | `/v1/admin/*` |
+| 전달 방식 (implicit) | 헤더 불필요 (데몬 실행 = 인증) |
+| 전달 방식 (explicit) | `X-Master-Password` 헤더 |
+| 검증 (implicit) | 없음 (no-op guard) |
+| 검증 (explicit) | Argon2id (argon2 npm, 비동기) |
+| brute-force 방지 (explicit) | 5회 연속 실패 -> 30분 lockout |
+| 적용 (implicit) | 시스템 관리 전반 (16개 엔드포인트) |
+| 적용 (explicit) | `/v1/admin/*` (3개) + KS 복구 dual-auth |
 
-**헤더 예시:**
+**헤더 예시 (explicit만 해당):**
 ```
 X-Master-Password: my-secure-master-password-2026
 ```
 
-### 3.4 인증 체계 적용 맵
+### 3.4 인증 체계 적용 맵 (v0.5 변경)
+
+> **v0.5 전면 교체:** 52-auth-model-redesign.md 섹션 4의 31 엔드포인트 인증 맵을 반영.
 
 | 엔드포인트 패턴 | 인증 | 미들웨어 |
 |---------------|------|----------|
 | `GET /health`, `GET /doc`, `GET /v1/nonce` | None | - |
 | `POST /v1/owner/connect` | None (localhost 보안) | hostValidation |
-| `POST /v1/sessions` | Owner Signature (body 내 서명) | 커스텀 검증 |
-| `GET /v1/sessions`, `DELETE /v1/sessions/:id` | Owner Signature | ownerAuth |
-| `/v1/wallet/*`, `/v1/transactions/*` | Session Bearer | sessionAuth |
-| `/v1/owner/*` (connect 제외) | Owner Signature | ownerAuth |
-| `POST /v1/owner/recover` | Owner Signature + Master Password | ownerAuth + masterAuth |
-| `/v1/admin/*` | Master Password | masterAuth |
+| `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions` | Session Bearer | sessionAuth |
+| `POST /v1/sessions`, `DELETE /v1/sessions/:id`, 에이전트 CRUD, 정책 CRUD, 설정, 조회 등 | masterAuth (implicit) | masterAuth(implicit) |
+| `POST /v1/owner/approve/:txId` | Owner Signature | ownerAuth |
+| `POST /v1/owner/recover` | Owner Signature + Master Password (dual-auth) | ownerAuth + masterAuth(explicit) |
+| `/v1/admin/*` | Master Password (explicit) | masterAuth(explicit) |
+
+> **v0.5 주요 변경 요약:** (1) `POST /v1/sessions`가 ownerAuth에서 masterAuth(implicit)로 전환. (2) `GET /v1/sessions`가 ownerAuth에서 sessionAuth로 전환 (에이전트 자기 세션 조회). (3) `/v1/owner/*` 대부분이 ownerAuth에서 masterAuth(implicit)로 전환. ownerAuth가 유지되는 것은 approve/:txId 1곳 + recover 1곳(dual-auth) = 2곳뿐.
 
 ---
 
 ## 4. 미들웨어 체인 (Phase 8 확장 반영)
 
-### 4.1 9단계 미들웨어 순서
+### 4.1 9단계 미들웨어 순서 (v0.5 변경)
 
-Phase 8에서 killSwitchGuard가 추가되어 8단계에서 **9단계**로 확장되었다.
+Phase 8에서 killSwitchGuard가 추가되어 8단계에서 **9단계**로 확장되었다. v0.5에서 순서 9가 `authRouter` 단일 디스패처로 통합. (v0.5 변경)
 
 | 순서 | 미들웨어 | 역할 | 적용 범위 | 실패 시 |
 |------|----------|------|-----------|---------|
@@ -254,7 +284,9 @@ Phase 8에서 killSwitchGuard가 추가되어 8단계에서 **9단계**로 확�
 | 6 | `cors` | CORS 설정 | 전체 (`*`) | 403 |
 | 7 | `rateLimiter` | 요청 속도 제한 | 전체 (`*`) | 429 |
 | 8 | `killSwitchGuard` | Kill Switch 상태 검사 | 전체 (`*`) | 401 |
-| 9 | `sessionAuth` / `ownerAuth` / `masterAuth` | 인증 (라우트별) | 라우트 | 401/403 |
+| 9 | `authRouter` (v0.5 변경) | 라우트별 인증 디스패치 | 전체 (`*`) | 401/403 |
+
+> **v0.5 순서 9 변경:** v0.2의 `sessionAuth / ownerAuth / masterAuth` 개별 라우트 적용이 `authRouter` 단일 디스패처로 통합되었다. authRouter는 요청 경로(path)와 HTTP 메서드(method)를 기반으로 적절한 인증 미들웨어를 디스패치한다: publicAuth (None) / sessionAuth / masterAuth(implicit) / masterAuth(explicit) / ownerAuth / dualAuth (ownerAuth + masterAuth explicit). 52-auth-model-redesign.md 섹션 7.2 참조.
 
 ### 4.2 killSwitchGuard 동작
 

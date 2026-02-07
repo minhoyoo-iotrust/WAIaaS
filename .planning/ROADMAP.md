@@ -14,7 +14,7 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
 
 ## Phases
 
-- [ ] **Phase 19: 인증 모델 + Owner 주소 재설계** -- 3-tier 인증 책임 분리와 Owner 주소 에이전트 귀속
+- [x] **Phase 19: 인증 모델 + Owner 주소 재설계** -- 3-tier 인증 책임 분리와 Owner 주소 에이전트 귀속 ✓ 2026-02-07
 - [ ] **Phase 20: 세션 갱신 프로토콜** -- 에이전트 자체 갱신 + Owner 사후 거부 패턴
 - [ ] **Phase 21: DX 개선 + 설계 문서 통합** -- CLI 간소화, 개발 모드, actionable 에러, 통합 반영
 
@@ -34,9 +34,9 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
 **Plans**: 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md -- 3-tier 인증 모델 정의 + 31 엔드포인트 인증 맵 + 보안 비다운그레이드 검증
-- [ ] 19-02-PLAN.md -- Owner 주소 에이전트 귀속 (agents.owner_address NOT NULL) + wallet_connections + config.toml
-- [ ] 19-03-PLAN.md -- 기존 설계 문서 반영 (34-owner-wallet-connection.md + 37-rest-api-complete-spec.md)
+- [x] 19-01-PLAN.md -- 3-tier 인증 모델 정의 + 31 엔드포인트 인증 맵 + 보안 비다운그레이드 검증
+- [x] 19-02-PLAN.md -- Owner 주소 에이전트 귀속 (agents.owner_address NOT NULL) + wallet_connections + config.toml
+- [x] 19-03-PLAN.md -- 기존 설계 문서 반영 (34-owner-wallet-connection.md + 37-rest-api-complete-spec.md)
 
 **Key Deliverables:**
 - 신규: 인증 모델 재설계 문서 (masterAuth/ownerAuth/sessionAuth 3-tier 정의)
@@ -54,10 +54,11 @@ Plans:
   2. 세션 갱신 안전 장치 5종(maxRenewals 30, 총 수명 30일, 50% 시점 갱신, 거부 윈도우, 갱신 단위 고정)이 명세되고, 각 장치의 위반 시 동작이 정의되어 있다
   3. sessions 테이블 스키마 변경(renewal_count, max_renewals, last_renewed_at)과 SessionConstraints 확장(maxRenewals, renewalRejectWindow)이 명세되어 있다
   4. Owner 거부 플로우와 SESSION_RENEWED/SESSION_RENEWAL_REJECTED 알림 이벤트 2종이 알림 아키텍처에 추가되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 20-01: TBD
+- [ ] 20-01-PLAN.md -- 핵심 프로토콜 정의 (53-session-renewal-protocol.md 신규) + 30-session-token-protocol.md 수명주기 확장
+- [ ] 20-02-PLAN.md -- 기존 설계 문서 반영 (25-sqlite-schema.md + 37-rest-api-complete-spec.md + 35-notification-architecture.md)
 
 **Key Deliverables:**
 - 신규: 세션 갱신 프로토콜 문서
@@ -94,8 +95,8 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 0/3 | Planning complete | - |
-| 20. 세션 갱신 프로토콜 | v0.5 | 0/TBD | Not started | - |
+| 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 3/3 | Complete | 2026-02-07 |
+| 20. 세션 갱신 프로토콜 | v0.5 | 0/2 | Planned | - |
 | 21. DX 개선 + 설계 문서 통합 | v0.5 | 0/TBD | Not started | - |
 
 ## Coverage
@@ -112,4 +113,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-07 (Phase 19 planning complete)*
+*Last updated: 2026-02-07 (Phase 20 planned)*

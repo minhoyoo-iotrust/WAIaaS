@@ -1,10 +1,11 @@
-# Owner 지갑 연결 프로토콜 설계 (OWNR-CONN)
+# Owner 지갑 연결 + 인증 프로토콜 설계 (OWNR-CONN v0.5)
 
 **문서 ID:** OWNR-CONN
 **작성일:** 2026-02-05
-**상태:** 완료
-**참조:** SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), LOCK-MECH (33-time-lock-approval-mechanism.md)
-**요구사항:** OWNR-01 (브라우저 지갑), OWNR-02 (WalletConnect QR), OWNR-03 (서명 승인), API-05 (Owner 엔드포인트)
+**v0.5 업데이트:** 2026-02-07
+**상태:** v0.5 업데이트
+**참조:** SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), LOCK-MECH (33-time-lock-approval-mechanism.md), AUTH-REDESIGN (52-auth-model-redesign.md)
+**요구사항:** OWNR-01 (브라우저 지갑), OWNR-02 (WalletConnect QR), OWNR-03 (서명 승인), API-05 (Owner 엔드포인트), OWNR-05 (CLI 수동 서명), OWNR-06 (APPROVAL 타임아웃 설정)
 
 ---
 
@@ -12,7 +13,7 @@
 
 ### 1.1 목적
 
-Owner는 WAIaaS에서 **유일한 인가 주체**이다. 세션 발급, 거래 승인, Kill Switch 발동, 정책 변경 등 모든 관리 작업은 Owner의 지갑 서명으로 인가된다. 이 문서는 Owner 지갑이 WAIaaS 데몬에 연결되는 전체 프로토콜, 연결 후 사용되는 ownerAuth 미들웨어, 그리고 Owner 전용 API 엔드포인트를 구현 가능한 수준으로 설계한다.
+Owner는 WAIaaS에서 **자금 관련 인가 주체**이다. 시스템 관리는 masterAuth, 에이전트 API는 sessionAuth가 담당한다. ownerAuth는 **자금 이동 승인(APPROVAL 거래)**과 **Kill Switch 복구(동결 해제)** 2곳에만 적용된다. (v0.5 변경) 이 문서는 Owner 지갑이 WAIaaS 데몬에 연결되는 전체 프로토콜, 연결 후 사용되는 ownerAuth 미들웨어, 그리고 Owner 관련 API 엔드포인트를 구현 가능한 수준으로 설계한다.
 
 ### 1.2 요구사항 매핑
 
@@ -20,8 +21,10 @@ Owner는 WAIaaS에서 **유일한 인가 주체**이다. 세션 발급, 거래 �
 |---------|------|-----------|
 | OWNR-01 | 브라우저 기반 지갑 연결 (Tauri WebView) | 섹션 3 (Tauri Desktop 연결 플로우) |
 | OWNR-02 | WalletConnect v2 QR 코드 기반 연결 | 섹션 2 (WalletConnect v2 아키텍처) + 섹션 3 (시퀀스 다이어그램) |
-| OWNR-03 | Owner 서명 기반 거래 승인 | 섹션 5 (ownerAuth 미들웨어) + 섹션 6 (approve/reject API) |
-| API-05 | Owner 전용 API 엔드포인트 | 섹션 6 (Owner API 6개 엔드포인트) |
+| OWNR-03 | Owner 서명 기반 거래 승인 | 섹션 5 (ownerAuth 미들웨어) + 섹션 6 (approve API) |
+| API-05 | Owner 관련 API 엔드포인트 | 섹션 6 (Owner API 엔드포인트) |
+| OWNR-05 | CLI 수동 서명 플로우 (v0.5) | 섹션 8.2 (CLI 직접 서명), 52-auth-model-redesign.md 섹션 5 |
+| OWNR-06 | APPROVAL 타임아웃 설정 가능 (v0.5) | 52-auth-model-redesign.md 섹션 3.2 |
 
 ### 1.3 v0.1 -> v0.2 변경 요약
 
@@ -32,13 +35,22 @@ Owner는 WAIaaS에서 **유일한 인가 주체**이다. 세션 발급, 거래 �
 | 지갑 연결 | MetaMask 브라우저 익스텐션 직접 연결 | WalletConnect v2 QR 코드 (모바일 지갑) | Tauri WebView는 브라우저 익스텐션 미지원 |
 | Owner API 인증 | Bearer API Key | Bearer ownerSignaturePayload (SIWS/SIWE) | 단기 서명 기반 인가. 영구 키 탈취 위험 제거 |
 
-### 1.4 Tauri WebView 제약사항
+### 1.4 v0.2 -> v0.5 변경 요약 (v0.5 변경)
+
+| 항목 | v0.2 | v0.5 | 근거 |
+|------|------|------|------|
+| Owner 인증 범위 | 17+ 엔드포인트 전체 관리 | 2곳(거래 승인+KS 복구)으로 한정 | 자금 영향 기준 분리 |
+| Owner 주소 저장 | owner_wallets 테이블 (시스템 전역) | agents.owner_address (에이전트별) | 멀티 에이전트 격리 |
+| WalletConnect 역할 | 유일한 Owner 연결 경로 | 선택적 편의 기능 (CLI 대안 존재) | WC 외부 의존성 최소화 |
+| Owner API 인증 | ownerAuth 8개 엔드포인트 | ownerAuth 2개 + masterAuth 나머지 | 3-tier 분리 |
+
+### 1.5 Tauri WebView 제약사항
 
 Tauri 2는 시스템 네이티브 WebView(WKWebView/WebView2/WebKitGTK)를 사용하며, **Chrome Extension API를 지원하지 않는다**. 따라서:
 
 - `window.solana` (Phantom 브라우저 익스텐션) 사용 불가
 - `window.ethereum` (MetaMask 브라우저 익스텐션) 사용 불가
-- **WalletConnect v2 QR 코드 방식이 유일하게 실용적인 Owner 지갑 연결 경로**
+- **WalletConnect v2 QR 코드 방식이 Tauri Desktop에서 실용적인 Owner 지갑 연결 경로** (CLI 수동 서명이 항상 대안으로 존재) (v0.5 변경)
 
 향후 Phantom Embedded SDK (`@phantom/browser-sdk`)를 대안으로 검토 가능하나, 현재 **체인 무관 설계 원칙**에 따라 Reown AppKit (Solana + EVM 모두 지원) 우선.
 
@@ -49,6 +61,8 @@ Tauri 2는 시스템 네이티브 WebView(WKWebView/WebView2/WebKitGTK)를 사�
 ### 2.1 역할 분배
 
 WAIaaS는 WalletConnect v2 프로토콜에서 **dApp(요청자)** 역할을 수행한다. Owner의 모바일 지갑이 Wallet(서명자) 역할이다.
+
+> **v0.5 변경:** WalletConnect는 Owner 지갑 연결의 "유일한 경로"가 아니다. WC는 모바일 지갑 push 서명의 **선택적 편의 기능**이며, CLI 수동 서명이 항상 대안으로 존재한다 (52-auth-model-redesign.md 섹션 5 참조).
 
 ```
 ┌─────────────────────┐         ┌──────────────────────┐         ┌──────────────────────┐
@@ -67,30 +81,34 @@ WAIaaS는 WalletConnect v2 프로토콜에서 **dApp(요청자)** 역할을 수�
 
 ### 2.2 projectId 관리
 
+> **v0.5 변경:** WalletConnect projectId 설정은 **선택적**이다. 미설정 시 WC 편의 기능만 비활성되며, ownerAuth 자체는 CLI 수동 서명으로 동작 가능하다 (24-monorepo-data-directory.md Task 2와 일관).
+
 ```toml
 # ~/.waiaas/config.toml
 
 # ─────────────────────────────────────────
-# WalletConnect v2 설정
+# WalletConnect v2 설정 (선택적 -- 미설정 시 WC push 서명 비활성)
 # Reown Cloud에서 무료 projectId 발급: https://cloud.reown.com
 # ─────────────────────────────────────────
 [walletconnect]
-project_id = ""   # 필수. 사용자 직접 발급. 기본값 없음.
+enabled = false   # (v0.5) 선택적 기능. true로 변경 시 project_id 필수.
+project_id = ""   # Reown Cloud에서 발급. 기본값 없음.
 ```
 
 | 항목 | 값 |
 |------|-----|
 | 설정 위치 | `config.toml [walletconnect].project_id` |
 | 환경변수 | `WAIAAS_WALLETCONNECT_PROJECT_ID` |
-| 기본값 | `""` (빈 문자열 -- 미설정 시 Owner 연결 기능 비활성) |
+| 기본값 | `""` (빈 문자열 -- 미설정 시 WC push 서명 기능 비활성) |
 | 발급 방법 | [Reown Cloud](https://cloud.reown.com) 무료 회원가입 후 프로젝트 생성 |
-| `waiaas init` 안내 | `"WalletConnect projectId가 설정되지 않았습니다. Owner 지갑 연결을 위해 https://cloud.reown.com 에서 발급하세요."` |
+| `waiaas init` 안내 | `"WalletConnect projectId가 설정되지 않았습니다 (선택적). 모바일 지갑 push 서명을 사용하려면 https://cloud.reown.com 에서 발급하세요."` (v0.5 변경) |
 
 **Zod 스키마 (ConfigSchema 확장):**
 
 ```typescript
 // packages/core/src/schemas/config.schema.ts (CORE-01 확장)
 walletconnect: z.object({
+  enabled: z.boolean().default(false),  // (v0.5) 선택적 기능
   project_id: z.string().default(''),
 }).default({}),
 ```
@@ -149,15 +167,15 @@ sequenceDiagram
     OwnerWallet->>Relay: 세션 수락 (공개키 + 승인된 체인/메서드)
     Relay->>AppKit: 세션 수립 완료
 
-    Note over OwnerUI,Daemon: ═══ Phase C: Owner 정보 등록 ═══
+    Note over OwnerUI,Daemon: ═══ Phase C: WC 연결 정보 등록 ═══
 
     AppKit->>AppKit: session 이벤트 -> Owner 공개키 추출
     AppKit->>OwnerUI: 연결 성공 콜백 (address, chain, sessionTopic)
     OwnerUI->>Daemon: POST /v1/owner/connect { address, chain, wcSessionTopic }
-    Daemon->>Daemon: owner_wallets 테이블 INSERT (또는 기존 레코드 교체)
-    Daemon-->>OwnerUI: 201 { ownerId, address, chain, connectedAt }
+    Daemon->>Daemon: wallet_connections 테이블 INSERT (또는 기존 레코드 교체) (v0.5 변경)
+    Daemon-->>OwnerUI: 201 { connectionId, address, chain, connectedAt }
 
-    Note over OwnerUI,Daemon: ═══ 연결 완료 -- 이후 서명 요청 가능 ═══
+    Note over OwnerUI,Daemon: ═══ 연결 완료 -- 이후 WC push 서명 요청 가능 ═══
 ```
 
 ### 3.2 Reown AppKit 초기화 코드 패턴
@@ -189,18 +207,18 @@ appKit.subscribeEvents((event) => {
   switch (event.data.event) {
     case 'CONNECT_SUCCESS': {
       const { address, chainId } = event.data.properties
-      // Daemon에 Owner 정보 등록
-      registerOwner(address, chainId, appKit.getWalletConnectSession()?.topic)
+      // Daemon에 WC 연결 정보 등록
+      registerWcConnection(address, chainId, appKit.getWalletConnectSession()?.topic)
       break
     }
     case 'DISCONNECT_SUCCESS': {
-      // Daemon에서 Owner 연결 해제
-      disconnectOwner()
+      // Daemon에서 WC 연결 해제
+      disconnectWcConnection()
       break
     }
     case 'SESSION_UPDATE': {
       // 세션 갱신 시 lastActiveAt 업데이트
-      updateOwnerActivity()
+      updateWcActivity()
       break
     }
   }
@@ -212,11 +230,11 @@ function openConnectModal(): void {
 }
 ```
 
-### 3.3 Daemon에 Owner 등록 API
+### 3.3 Daemon에 WC 연결 등록 API
 
 ```typescript
 // POST /v1/owner/connect 호출 (Tauri WebView -> Daemon)
-async function registerOwner(
+async function registerWcConnection(
   address: string,
   chain: string,
   wcSessionTopic?: string,
@@ -227,17 +245,17 @@ async function registerOwner(
     body: JSON.stringify({ address, chain, wcSessionTopic }),
   })
   if (!response.ok) {
-    throw new Error(`Owner 등록 실패: ${response.status}`)
+    throw new Error(`WC 연결 등록 실패: ${response.status}`)
   }
 }
 ```
 
 **POST /v1/owner/connect:**
 - **인증:** 없음 (초기 연결이므로 아직 Owner 서명 불가). 단, `hostValidation` 미들웨어로 localhost만 허용
-- **보안:** localhost 전용이므로 외부 접근 불가. 최초 1회만 허용 (이미 Owner가 등록된 경우 409)
+- **보안:** localhost 전용이므로 외부 접근 불가
 - **요청:** `{ address: string, chain: 'solana' | 'ethereum', wcSessionTopic?: string }`
-- **응답:** `201 { ownerId, address, chain, connectedAt }`
-- **에러:** `OWNER_ALREADY_CONNECTED (409)` -- 기존 Owner 해제 후 재연결 필요
+- **응답:** `201 { connectionId, address, chain, connectedAt }`
+- **용도 (v0.5 변경):** WalletConnect push 서명 캐시 등록. agents.owner_address와는 별개. WC 연결 없이도 ownerAuth는 CLI 수동 서명으로 사용 가능.
 
 ---
 
@@ -245,13 +263,15 @@ async function registerOwner(
 
 ### 4.1 CLI `waiaas owner connect` 커맨드
 
-Tauri Desktop 없이 터미널에서 직접 Owner 지갑을 연결하는 대안 경로. CLI에서는 `@reown/appkit` 불필요하며, `@walletconnect/sign-client`를 직접 사용한다.
+Tauri Desktop 없이 터미널에서 직접 WalletConnect를 통해 Owner 지갑을 연결하는 선택적 편의 경로. CLI에서는 `@reown/appkit` 불필요하며, `@walletconnect/sign-client`를 직접 사용한다.
+
+> **v0.5 변경:** 이 WC 연결이 없어도 ownerAuth는 CLI 수동 서명으로 사용 가능하다 (52-auth-model-redesign.md 섹션 5 참조). WC 연결은 모바일 push 서명 자동화를 위한 선택적 편의 기능이다.
 
 ```
 $ waiaas owner connect --chain solana
 
-WAIaaS Owner Wallet Connection
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAIaaS Owner Wallet Connection (선택적 -- WC push 서명 활성화)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. 아래 QR 코드를 모바일 지갑 (Phantom/MetaMask)으로 스캔하세요:
 
@@ -265,7 +285,7 @@ WAIaaS Owner Wallet Connection
 2. 지갑에서 연결 요청을 승인하세요.
 3. 대기 중... (120초 타임아웃)
 
-✓ Owner 지갑 연결 완료
+✓ WC 연결 완료 (모바일 push 서명 활성화)
   주소: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
   체인: solana
   연결 시각: 2026-02-05T10:30:00.000Z
@@ -332,10 +352,10 @@ async function ownerConnect(chain: 'solana' | 'ethereum'): Promise<void> {
   // CAIP-10 형식: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:7xKXtg..."
   const [namespace, chainId, address] = accounts[0].split(':')
 
-  // 6. Daemon에 Owner 등록
-  await registerOwner(address, chain, session.topic)
+  // 6. Daemon에 WC 연결 정보 등록
+  await registerWcConnection(address, chain, session.topic)
 
-  console.log(`\n✓ Owner 지갑 연결 완료`)
+  console.log(`\n✓ WC 연결 완료 (모바일 push 서명 활성화)`)
   console.log(`  주소: ${address}`)
   console.log(`  체인: ${chain}`)
   console.log(`  연결 시각: ${new Date().toISOString()}`)
@@ -352,6 +372,7 @@ async function ownerConnect(chain: 'solana' | 'ethereum'): Promise<void> {
 | 세션 유지 | AppKit localStorage 캐시 | 파일 기반 세션 캐시 (~/.waiaas/wc-session.json) |
 | 자동 재연결 | AppKit 내장 | CLI 시작 시 수동 재연결 시도 |
 | 사용 편의성 | 높음 (GUI) | 중간 (터미널) |
+| ownerAuth 대안 (v0.5) | CLI 수동 서명 (WC 미연결 시 자동 폴백) | CLI 수동 서명 (항상 가능) |
 
 ---
 
@@ -359,11 +380,13 @@ async function ownerConnect(chain: 'solana' | 'ethereum'): Promise<void> {
 
 ### 5.1 CORE-06 ownerAuth stub 완성
 
-CORE-06에서 `ownerAuth`는 `/v1/owner/*` 라우트에만 적용되는 **라우트 레벨 미들웨어**로 정의되었다. Phase 7의 `owner-verifier` 유틸리티(`verifySIWS`, `verifySIWE`)를 재사용하여 완성한다.
+CORE-06에서 `ownerAuth`는 인증 미들웨어 중 하나로 정의되었다. Phase 7의 `owner-verifier` 유틸리티(`verifySIWS`, `verifySIWE`)를 재사용하여 완성한다.
+
+> **v0.5 변경:** ownerAuth의 적용 범위가 변경되었다. v0.2에서 `/v1/owner/*` 라우트 전체에 적용되던 것이 v0.5에서는 **정확히 2개 라우트(approve/:txId, recover)에만** 적용된다. 나머지 Owner 관련 엔드포인트는 masterAuth(implicit)로 전환되었다 (52-auth-model-redesign.md 참조).
 
 ### 5.2 인증 방식
 
-Owner 전용 API는 매 요청마다 **SIWS/SIWE 서명**을 포함한다. 세션 기반 인증(JWT)이 아닌 **요청별 서명(per-request signature)** 방식이다.
+ownerAuth가 적용되는 2개 엔드포인트는 매 요청마다 **SIWS/SIWE 서명**을 포함한다. 세션 기반 인증(JWT)이 아닌 **요청별 서명(per-request signature)** 방식이다. (v0.5 변경: 적용 범위 2곳 한정)
 
 ```
 Authorization: Bearer <ownerSignaturePayload>
@@ -384,13 +407,10 @@ export const OwnerSignaturePayloadSchema = z.object({
   /** Owner 지갑 공개키/주소 */
   address: z.string(),
 
-  /** 수행하려는 작업 */
+  /** 수행하려는 작업 (v0.5 변경: 7개에서 2개로 축소) */
   action: z.enum([
     'approve_tx',
-    'reject_tx',
-    'kill_switch',
-    'manage_sessions',
-    'update_settings',
+    'recover',
   ]),
 
   /** 일회성 nonce (LRU 캐시 기반, SESS-PROTO와 동일) */
@@ -461,14 +481,10 @@ import { verifyAndConsumeNonce } from '../../infrastructure/cache/nonce-cache.js
 import { OwnerSignaturePayloadSchema } from '@waiaas/core/schemas'
 import type { AppBindings } from '../types.js'
 
-/** ownerAuth 미들웨어가 기대하는 action 매핑 */
+/** ownerAuth 미들웨어가 기대하는 action 매핑 (v0.5 변경: 6개에서 2개로 축소) */
 const ROUTE_ACTION_MAP: Record<string, string> = {
   'POST /v1/owner/approve': 'approve_tx',
-  'POST /v1/owner/reject': 'reject_tx',
-  'POST /v1/owner/kill-switch': 'kill_switch',
-  'GET /v1/owner/pending-approvals': 'manage_sessions',
-  'PUT /v1/owner/policies': 'update_settings',
-  'POST /v1/owner/policies': 'update_settings',
+  'POST /v1/owner/recover': 'recover',
 }
 
 export function ownerAuthMiddleware(db: DrizzleInstance) {
@@ -541,16 +557,19 @@ export function ownerAuthMiddleware(db: DrizzleInstance) {
       )
     }
 
-    // ═══ Step 5: 서명자 주소 == 등록된 Owner 주소 확인 ═══
-    const ownerWallet = await db.select()
-      .from(ownerWallets)
-      .where(eq(ownerWallets.address, payload.address))
+    // ═══ Step 5: 서명자 주소 == 에이전트의 owner_address 확인 (v0.5 변경) ═══
+    // v0.2: owner_wallets.address 테이블에서 조회
+    // v0.5: agents.owner_address 컬럼에서 조회 (에이전트별 Owner)
+    const agentId = resolveAgentIdFromContext(c) // txId -> transactions.agent_id
+    const agent = await db.select()
+      .from(agents)
+      .where(eq(agents.id, agentId))
       .get()
 
-    if (!ownerWallet) {
+    if (!agent || agent.ownerAddress !== payload.address) {
       throw new WaiaasError(
         'OWNER_MISMATCH',
-        '등록된 Owner 지갑 주소와 서명자 주소가 일치하지 않습니다.',
+        '에이전트의 등록된 Owner 주소와 서명자 주소가 일치하지 않습니다.',
         403,
       )
     }
@@ -573,14 +592,43 @@ export function ownerAuthMiddleware(db: DrizzleInstance) {
     c.set('ownerAddress', payload.address)
     c.set('ownerChain', payload.chain)
 
-    // lastActiveAt 갱신
-    await db.update(ownerWallets)
-      .set({ lastActiveAt: new Date().toISOString() })
-      .where(eq(ownerWallets.id, ownerWallet.id))
-
     // ═══ Step 8: next() ═══
     await next()
   })
+}
+
+/**
+ * agentId 해석 체인 (v0.5 신규)
+ * - 거래 승인: txId -> transactions.agent_id -> agents.owner_address 대조
+ * - KS 복구: 서명자 주소로 에이전트 존재 여부 확인
+ */
+function resolveAgentIdFromContext(c: Context): string {
+  const path = c.req.path
+
+  // 거래 승인: txId -> agentId
+  if (path.startsWith('/v1/owner/approve/')) {
+    const txId = c.req.param('txId')
+    const tx = db.select()
+      .from(transactions)
+      .where(eq(transactions.id, txId))
+      .get()
+    if (!tx) throw new WaiaasError('TRANSACTION_NOT_FOUND', '거래를 찾을 수 없습니다.', 404)
+    return tx.agentId
+  }
+
+  // KS 복구: 서명자 주소로 에이전트 존재 여부 확인
+  if (path === '/v1/owner/recover') {
+    const ownerAgents = db.select()
+      .from(agents)
+      .where(eq(agents.ownerAddress, c.get('ownerAddress')))
+      .all()
+    if (ownerAgents.length === 0) {
+      throw new WaiaasError('OWNER_MISMATCH', '해당 주소를 Owner로 가진 에이전트가 없습니다.', 403)
+    }
+    return ownerAgents[0].id // 대표 에이전트 (복구는 시스템 전체)
+  }
+
+  throw new WaiaasError('UNAUTHORIZED', '지원되지 않는 ownerAuth 경로입니다.', 401)
 }
 ```
 
@@ -592,7 +640,7 @@ export function ownerAuthMiddleware(db: DrizzleInstance) {
 | 2 | timestamp 유효성 (5분 이내) | `INVALID_SIGNATURE` | 401 |
 | 3 | nonce 일회성 (LRU 캐시 확인 + 삭제) | `INVALID_NONCE` | 401 |
 | 4 | SIWS/SIWE 서명 암호학적 검증 | `INVALID_SIGNATURE` | 401 |
-| 5 | 서명자 == owner_wallets.address | `OWNER_MISMATCH` | 403 |
+| 5 | 서명자 == agents.owner_address (v0.5 변경) | `OWNER_MISMATCH` | 403 |
 | 6 | action == 라우트 기대 action | `INVALID_SIGNATURE` | 403 |
 | 7 | 컨텍스트 설정 (ownerAddress, ownerChain) | - | - |
 | 8 | next() 호출 | - | - |
@@ -623,16 +671,16 @@ type AppBindings = {
 
 | 항목 | sessionAuth | ownerAuth |
 |------|------------|-----------|
-| 적용 범위 | 전역 미들웨어 (`/v1/*`) | 라우트 레벨 (`/v1/owner/*`) |
+| 적용 범위 | 에이전트 API (`/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions`) | 2개 라우트 (POST /v1/owner/approve/:txId, POST /v1/owner/recover) (v0.5 변경) |
 | 인증 방식 | JWT 토큰 (상태 기반) | 요청별 SIWS/SIWE 서명 (무상태) |
 | 토큰 수명 | 최대 7일 | 요청 시점 5분 이내 서명 |
 | nonce | 세션 생성 시 1회 사용 | 매 요청마다 새 nonce |
 | 재생 방지 | JWT jti + DB 폐기 확인 | nonce 일회성 + timestamp 5분 제한 |
 | 사용자 | AI 에이전트 | Owner (인간) |
-| DB 의존성 | Stage 2에서 sessions 조회 | Step 5에서 owner_wallets 조회 |
+| DB 의존성 | Stage 2에서 sessions 조회 | Step 5에서 agents.owner_address 조회 (v0.5 변경) |
 | Phase 7 재사용 | owner-verifier (세션 생성 시) | owner-verifier (매 요청 시) |
 
-### 5.9 ownerAuth 라우트 등록 패턴
+### 5.9 ownerAuth 라우트 등록 패턴 (v0.5 변경)
 
 ```typescript
 // packages/daemon/src/server/routes/owner.ts
@@ -644,40 +692,46 @@ export function registerOwnerRoutes(
   app: OpenAPIHono<AppBindings>,
   deps: AppContext,
 ): void {
-  // ownerAuth를 라우트 그룹에 적용
-  app.use('/*', ownerAuthMiddleware(deps.db))
+  // (v0.5 변경) ownerAuth를 /v1/owner/* 전체가 아닌 특정 2개 라우트에만 적용
+  // 나머지 /v1/owner/* 라우트는 authRouter에서 masterAuth(implicit)로 디스패치
 
-  // POST /v1/owner/approve/:txId -- 섹션 6에서 상세
-  // POST /v1/owner/reject/:txId -- 섹션 6에서 상세
-  // POST /v1/owner/kill-switch -- 섹션 6에서 상세
-  // GET /v1/owner/pending-approvals -- 섹션 6에서 상세
-  // PUT /v1/owner/policies/:policyId -- 섹션 6에서 상세
-  // POST /v1/owner/policies -- 섹션 6에서 상세
+  // POST /v1/owner/approve/:txId -- ownerAuth 적용 (자금 이동 승인)
+  app.post('/approve/:txId', ownerAuthMiddleware(deps.db), handleApprove)
+
+  // POST /v1/owner/recover -- dualAuth 적용 (ownerAuth + masterAuth explicit)
+  // (dualAuth 미들웨어는 authRouter에서 처리)
+
+  // 나머지 엔드포인트는 masterAuth(implicit) -- authRouter에서 자동 디스패치
+  // POST /v1/owner/connect -- None (localhost)
+  // DELETE /v1/owner/disconnect -- masterAuth(implicit)
+  // POST /v1/owner/reject/:txId -- masterAuth(implicit)
+  // POST /v1/owner/kill-switch -- masterAuth(implicit)
+  // GET /v1/owner/pending-approvals -- masterAuth(implicit)
+  // PUT /v1/owner/policies/:policyId -- masterAuth(implicit)
+  // POST /v1/owner/policies -- masterAuth(implicit)
 }
 ```
 
-**참고:** `/v1/owner/connect`와 `/v1/owner/disconnect`는 ownerAuth 적용 대상이 아니다:
-- `/v1/owner/connect`: 최초 연결이므로 아직 Owner 서명 불가 (localhost 보안으로 보호)
-- `/v1/owner/disconnect`: ownerAuth 적용 (연결 해제는 Owner만 가능)
-
 ---
 
-## 6. Owner 전용 API 엔드포인트 (API-05)
+## 6. Owner 관련 API 엔드포인트 (API-05) (v0.5 변경)
 
-모든 Owner 엔드포인트는 `ownerAuth` 미들웨어 적용 (SIWS/SIWE 서명 필수). 예외: `/v1/owner/connect` (초기 연결).
+> **v0.5 변경:** 기존 8개 엔드포인트 중 ownerAuth가 유지되는 것은 2개(approve, recover)뿐이다. 나머지 6개는 masterAuth(implicit)로 전환되었다. 52-auth-model-redesign.md 섹션 4 참조.
 
-### 6.1 엔드포인트 전체 목록
+### 6.1 엔드포인트 전체 목록 (v0.5 변경)
 
-| # | Method | Path | 인증 | action | 설명 |
-|---|--------|------|------|--------|------|
-| 1 | POST | `/v1/owner/connect` | None (localhost) | - | Owner 지갑 초기 등록 |
-| 2 | DELETE | `/v1/owner/disconnect` | ownerAuth | - | Owner 지갑 연결 해제 |
-| 3 | POST | `/v1/owner/approve/:txId` | ownerAuth | `approve_tx` | 거래 승인 (APPROVAL 티어) |
-| 4 | POST | `/v1/owner/reject/:txId` | ownerAuth | `reject_tx` | 거래 거절 |
-| 5 | POST | `/v1/owner/kill-switch` | ownerAuth | `kill_switch` | Kill Switch 발동 |
-| 6 | GET | `/v1/owner/pending-approvals` | ownerAuth | `manage_sessions` | 승인 대기 거래 목록 |
-| 7 | PUT | `/v1/owner/policies/:policyId` | ownerAuth | `update_settings` | 정책 수정 |
-| 8 | POST | `/v1/owner/policies` | ownerAuth | `update_settings` | 정책 생성 |
+| # | Method | Path | v0.5 인증 | action | 설명 |
+|---|--------|------|-----------|--------|------|
+| 1 | POST | `/v1/owner/connect` | None (localhost) | - | WC 연결 정보 등록 (선택적 편의 기능) |
+| 2 | DELETE | `/v1/owner/disconnect` | masterAuth (implicit) (v0.5 변경) | - | WC 연결 해제 |
+| 3 | POST | `/v1/owner/approve/:txId` | **ownerAuth** | `approve_tx` | 거래 승인 (APPROVAL 티어) |
+| 4 | POST | `/v1/owner/reject/:txId` | masterAuth (implicit) (v0.5 변경) | - | 거래 거절 |
+| 5 | POST | `/v1/owner/kill-switch` | masterAuth (implicit) (v0.5 변경) | - | Kill Switch 발동 |
+| 6 | GET | `/v1/owner/pending-approvals` | masterAuth (implicit) (v0.5 변경) | - | 승인 대기 거래 목록 |
+| 7 | PUT | `/v1/owner/policies/:policyId` | masterAuth (implicit) (v0.5 변경) | - | 정책 수정 |
+| 8 | POST | `/v1/owner/policies` | masterAuth (implicit) (v0.5 변경) | - | 정책 생성 |
+
+> **ownerAuth 유지 기준 (자금 영향 기준):** 자금 이동/동결 해제에 직접 영향 = ownerAuth. 보호적 행위/조회/관리 = masterAuth(implicit). 52-auth-model-redesign.md 섹션 4 참조.
 
 ### 6.2 POST /v1/owner/approve/:txId (거래 승인)
 
@@ -747,7 +801,7 @@ async function handleApprove(c: Context): Promise<Response> {
   // 4. audit_log 기록
   await insertAuditLog(db, {
     eventType: 'TX_APPROVED',
-    actor: ownerAddress,
+    actor: `owner:${ownerAddress}`,
     transactionId: txId,
     severity: 'info',
     details: { approvedBy: ownerAddress },
@@ -771,11 +825,11 @@ async function handleApprove(c: Context): Promise<Response> {
 | `TX_EXPIRED` | 410 | 승인 대기 시간 만료 |
 | `OWNER_MISMATCH` | 403 | ownerAuth Step 5 실패 |
 
-### 6.3 POST /v1/owner/reject/:txId (거래 거절)
+### 6.3 POST /v1/owner/reject/:txId (거래 거절) (v0.5 변경)
 
-DELAY 또는 APPROVAL 티어의 대기 중인 거래를 Owner가 거절한다.
+DELAY 또는 APPROVAL 티어의 대기 중인 거래를 거절한다.
 
-**인증:** ownerAuth (action=`reject_tx`)
+**인증:** masterAuth (implicit) (v0.5 변경: ownerAuth에서 masterAuth로 전환. 거절은 자금 보존 = 보호적 행위.)
 
 **경로 파라미터:**
 
@@ -800,7 +854,7 @@ const RejectResponseSchema = z.object({
   transactionId: z.string().uuid(),
   status: z.literal('CANCELLED'),
   rejectedAt: z.string().datetime(),
-  rejectedBy: z.string(),
+  rejectedBy: z.literal('master').openapi({ description: 'masterAuth actor' }),
   reason: z.string().optional(),
 }).openapi('RejectResponse')
 ```
@@ -810,7 +864,6 @@ const RejectResponseSchema = z.object({
 ```typescript
 async function handleReject(c: Context): Promise<Response> {
   const { txId } = c.req.param()
-  const ownerAddress = c.get('ownerAddress')
   const body = await c.req.json().catch(() => ({}))
   const reason = body?.reason ?? 'OWNER_REJECTED'
 
@@ -827,7 +880,7 @@ async function handleReject(c: Context): Promise<Response> {
     // QUEUED/PENDING -> CANCELLED
     sqlite.prepare(
       "UPDATE transactions SET status = 'CANCELLED', error = ? WHERE id = ?"
-    ).run(`OWNER_REJECTED: ${reason}`, txId)
+    ).run(`REJECTED: ${reason}`, txId)
 
     // reserved_amount 롤백 (TOCTOU 방지 -- LOCK-MECH 참조)
     // reserved_amount가 있으면 해제
@@ -835,17 +888,17 @@ async function handleReject(c: Context): Promise<Response> {
 
   await insertAuditLog(db, {
     eventType: 'TX_CANCELLED',
-    actor: ownerAddress,
+    actor: 'master',
     transactionId: txId,
     severity: 'info',
-    details: { rejectedBy: ownerAddress, reason },
+    details: { reason },
   })
 
   return c.json({
     transactionId: txId,
     status: 'CANCELLED',
     rejectedAt: new Date().toISOString(),
-    rejectedBy: ownerAddress,
+    rejectedBy: 'master',
     reason,
   }, 200)
 }
@@ -858,11 +911,13 @@ async function handleReject(c: Context): Promise<Response> {
 | `TX_NOT_FOUND` | 404 | txId에 해당하는 거래 없음 |
 | `TX_NOT_PENDING` | 409 | 거래 상태가 QUEUED/PENDING이 아님 |
 
-### 6.4 POST /v1/owner/kill-switch (Kill Switch 발동)
+### 6.4 POST /v1/owner/kill-switch (Kill Switch 발동) (v0.5 변경)
 
 모든 세션 폐기, 대기 거래 취소, 에이전트 정지를 일괄 수행한다. 08-04에서 상세 캐스케이드 설계.
 
-**인증:** ownerAuth (action=`kill_switch`)
+**인증:** masterAuth (implicit) (v0.5 변경: ownerAuth에서 masterAuth로 전환. Kill Switch 발동 = 보호적 행위(자금 동결). CLI에서 별도 인증 없이 호출 가능 -- 데몬 실행 = 인증 상태.)
+
+> **v0.5 참고:** `/v1/owner/kill-switch`와 `/v1/admin/kill-switch`는 동일한 캐스케이드 로직을 실행한다. 인증 수준은 모두 masterAuth이지만, admin 경로는 explicit(X-Master-Password), owner 경로는 implicit(헤더 불필요). Phase 21에서 경로 통합 여부를 검토한다.
 
 **요청 스키마:**
 
@@ -891,7 +946,6 @@ const KillSwitchResponseSchema = z.object({
 
 ```typescript
 async function handleKillSwitch(c: Context): Promise<Response> {
-  const ownerAddress = c.get('ownerAddress')
   const { reason } = await c.req.json()
 
   // Kill Switch 중복 발동 방지
@@ -905,7 +959,7 @@ async function handleKillSwitch(c: Context): Promise<Response> {
 
   await insertAuditLog(db, {
     eventType: 'KILL_SWITCH_ACTIVATED',
-    actor: ownerAddress,
+    actor: 'master',
     severity: 'critical',
     details: { reason, ...result },
   })
@@ -926,11 +980,11 @@ async function handleKillSwitch(c: Context): Promise<Response> {
 |----------|------|------|
 | `KILL_SWITCH_ALREADY_ACTIVE` | 409 | Kill Switch 이미 활성 상태 |
 
-### 6.5 GET /v1/owner/pending-approvals (승인 대기 거래 목록)
+### 6.5 GET /v1/owner/pending-approvals (승인 대기 거래 목록) (v0.5 변경)
 
 APPROVAL 또는 DELAY 티어에서 QUEUED 상태인 거래 목록을 조회한다.
 
-**인증:** ownerAuth (action=`manage_sessions`)
+**인증:** masterAuth (implicit) (v0.5 변경: ownerAuth에서 masterAuth로 전환. 조회 = 시스템 관리.)
 
 **쿼리 파라미터:**
 
@@ -1003,11 +1057,11 @@ async function handlePendingApprovals(c: Context): Promise<Response> {
 }
 ```
 
-### 6.6 PUT /v1/owner/policies/:policyId (정책 수정)
+### 6.6 PUT /v1/owner/policies/:policyId (정책 수정) (v0.5 변경)
 
 LOCK-MECH에서 정의한 policies 테이블의 기존 정책을 수정한다.
 
-**인증:** ownerAuth (action=`update_settings`)
+**인증:** masterAuth (implicit) (v0.5 변경: ownerAuth에서 masterAuth로 전환. 정책 관리 = 시스템 관리.)
 
 **경로 파라미터:**
 
@@ -1059,11 +1113,11 @@ const UpdatePolicyResponseSchema = z.object({
 | `POLICY_NOT_FOUND` | 404 | policyId에 해당하는 정책 없음 |
 | `INVALID_RULES` | 400 | rules JSON이 해당 type의 Zod 스키마 검증 실패 |
 
-### 6.7 POST /v1/owner/policies (정책 생성)
+### 6.7 POST /v1/owner/policies (정책 생성) (v0.5 변경)
 
 새 정책을 생성한다.
 
-**인증:** ownerAuth (action=`update_settings`)
+**인증:** masterAuth (implicit) (v0.5 변경: ownerAuth에서 masterAuth로 전환. 정책 관리 = 시스템 관리.)
 
 **요청 스키마:**
 
@@ -1097,7 +1151,6 @@ const CreatePolicyResponseSchema = z.object({
 
 ```typescript
 async function handleCreatePolicy(c: Context): Promise<Response> {
-  const ownerAddress = c.get('ownerAddress')
   const body = CreatePolicyRequestSchema.parse(await c.req.json())
 
   // rules를 type에 맞는 Zod 스키마로 검증
@@ -1119,7 +1172,7 @@ async function handleCreatePolicy(c: Context): Promise<Response> {
 
   await insertAuditLog(db, {
     eventType: 'POLICY_CREATED',
-    actor: ownerAddress,
+    actor: 'master',
     severity: 'info',
     details: { policyId, type: body.type, agentId: body.agentId },
   })
@@ -1133,7 +1186,7 @@ async function handleCreatePolicy(c: Context): Promise<Response> {
 
 ---
 
-## 7. Owner 지갑 세션 관리
+## 7. WC 세션 관리 (v0.5 변경)
 
 ### 7.1 WalletConnect 세션 수명주기
 
@@ -1143,7 +1196,7 @@ stateDiagram-v2
     Disconnected --> Pairing : QR 스캔 (페어링)
     Pairing --> Connected : 세션 제안 수락
     Connected --> Connected : 세션 ping (30분 주기)
-    Connected --> Connected : Owner 서명 요청/응답
+    Connected --> Connected : Owner push 서명 요청/응답
     Connected --> Reconnecting : 네트워크 단절
     Reconnecting --> Connected : 자동 재연결 성공
     Reconnecting --> Disconnected : 재연결 실패 (타임아웃)
@@ -1153,16 +1206,18 @@ stateDiagram-v2
 
 | 수명주기 단계 | API/이벤트 | 처리 |
 |--------------|-----------|------|
-| **연결** | `POST /v1/owner/connect` | owner_wallets INSERT |
+| **연결** | `POST /v1/owner/connect` | wallet_connections INSERT (v0.5 변경) |
 | **유지** | WalletConnect SDK 내장 세션 ping (30분 주기) | 자동 (SDK 관리) |
 | **재연결** | AppKit 자동 재연결 (localStorage 세션 캐시) | Tauri WebView 재시작 시 자동 복원 |
-| **해제** | `DELETE /v1/owner/disconnect` | owner_wallets DELETE + WC 세션 종료 |
+| **해제** | `DELETE /v1/owner/disconnect` | wallet_connections DELETE + WC 세션 종료 (v0.5 변경) |
 
-### 7.2 owner_wallets 테이블 스키마
+### 7.2 wallet_connections 테이블 스키마 (v0.5 변경)
+
+> **v0.5 변경:** v0.2의 `owner_wallets` 테이블이 `wallet_connections`로 변경되었다. 이 테이블은 WalletConnect push 서명 캐시 역할만 수행한다. Owner 주소의 SSoT는 `agents.owner_address`이다 (25-sqlite-schema.md 참조).
 
 ```typescript
 // packages/daemon/src/infrastructure/database/schema.ts (CORE-02 확장)
-export const ownerWallets = sqliteTable('owner_wallets', {
+export const walletConnections = sqliteTable('wallet_connections', {
   // -- 식별자 --
   id: text('id').primaryKey(),                    // UUID v7
 
@@ -1188,7 +1243,7 @@ export const ownerWallets = sqliteTable('owner_wallets', {
 **CREATE TABLE SQL DDL:**
 
 ```sql
-CREATE TABLE owner_wallets (
+CREATE TABLE wallet_connections (
   id TEXT PRIMARY KEY,
   address TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN ('solana', 'ethereum')),
@@ -1199,198 +1254,105 @@ CREATE TABLE owner_wallets (
   metadata TEXT       -- JSON: { walletName, walletIcon }
 );
 
-CREATE UNIQUE INDEX idx_owner_wallets_address ON owner_wallets(address);
+CREATE UNIQUE INDEX idx_wallet_connections_address ON wallet_connections(address);
 ```
 
 | 컬럼 | 타입 | Nullable | 용도 |
 |------|------|----------|------|
-| `id` | TEXT (PK) | NOT NULL | Owner 지갑 UUID v7 |
+| `id` | TEXT (PK) | NOT NULL | WC 연결 UUID v7 |
 | `address` | TEXT (UNIQUE) | NOT NULL | Owner 지갑 공개키 (Solana base58 / Ethereum 0x...) |
 | `chain` | TEXT (ENUM) | NOT NULL | 체인 식별자: `'solana'` 또는 `'ethereum'` |
 | `wc_session_topic` | TEXT | NULL | WalletConnect 활성 세션 토픽 (재연결에 사용) |
 | `wc_pairing_topic` | TEXT | NULL | WalletConnect 페어링 토픽 |
 | `connected_at` | TEXT | NOT NULL | 연결 시각 (ISO 8601) |
-| `last_active_at` | TEXT | NULL | 마지막 서명 활동 시각 (ownerAuth Step 7에서 갱신) |
+| `last_active_at` | TEXT | NULL | 마지막 서명 활동 시각 |
 | `metadata` | TEXT | NULL | JSON: 모바일 지갑 메타데이터 (이름, 아이콘 URL 등) |
 
-### 7.3 다중 Owner 미지원 (v0.2)
+### 7.3 에이전트별 Owner 관리 (v0.5 변경)
 
-v0.2에서 owner_wallets 테이블에는 **최대 1개의 활성 레코드**만 존재한다. Self-Hosted 데몬은 단일 Owner가 운영하는 개인 인프라이며, 다중 Owner(멀티시그)는 v0.3 이후 검토한다.
+> **v0.5 변경:** v0.2에서 "다중 Owner 미지원 (단일 Owner 강제)"였던 정책이 v0.5에서는 "에이전트별 Owner"로 전환되었다. 에이전트별 `owner_address`로 Owner가 관리되므로, `wallet_connections`는 **WC push 서명 캐시 역할만** 수행한다.
 
-**단일 Owner 강제 로직:**
+- **Owner 주소 SSoT**: `agents.owner_address` 컬럼 (25-sqlite-schema.md)
+- **wallet_connections 역할**: WalletConnect push 서명 자동화 캐시. WC 미연결 시에도 ownerAuth는 CLI 수동 서명으로 정상 동작.
+- **다중 Owner 가능**: 에이전트별로 다른 Owner 주소를 지정 가능. (단, wallet_connections의 WC 세션은 1개만 유지)
 
-```typescript
-// POST /v1/owner/connect 핸들러
-async function handleOwnerConnect(c: Context): Promise<Response> {
-  const { address, chain, wcSessionTopic } = await c.req.json()
+### 7.4 Owner 주소 변경 절차 (v0.5 변경)
 
-  // 이미 Owner가 등록된 경우 거부
-  const existing = await db.select().from(ownerWallets).get()
-  if (existing) {
-    throw new WaiaasError(
-      'OWNER_ALREADY_CONNECTED',
-      `이미 Owner 지갑(${existing.address})이 연결되어 있습니다. 먼저 연결을 해제하세요.`,
-      409,
-    )
-  }
+> **v0.5 변경:** masterAuth 단일 트랙으로 변경. 기존의 disconnect -> reconnect 절차 불필요 (52-auth-model-redesign.md 참조).
 
-  const ownerId = generateUUIDv7()
-  await db.insert(ownerWallets).values({
-    id: ownerId,
-    address,
-    chain,
-    wcSessionTopic: wcSessionTopic ?? null,
-    connectedAt: new Date().toISOString(),
-  })
+에이전트의 Owner 주소를 변경하려면:
 
-  return c.json({ ownerId, address, chain, connectedAt: new Date().toISOString() }, 201)
-}
+```
+PUT /v1/agents/:id { ownerAddress: "<new_address>" }
 ```
 
-### 7.4 Owner 주소 변경 절차
-
-Owner 지갑 주소를 변경하려면 기존 연결 해제 후 새 연결을 수립해야 한다:
-
-1. `DELETE /v1/owner/disconnect` (기존 Owner 서명 필요)
-2. owner_wallets 레코드 삭제 + WalletConnect 세션 종료
-3. 모든 에이전트의 `ownerAddress` 참조 갱신 (agents 테이블)
-4. `POST /v1/owner/connect` (새 지갑으로 QR 스캔)
-5. 새 Owner 주소로 에이전트 재등록 안내
-
-**주의:** Owner 변경 시 기존 세션은 모두 유효하지만, 새 거래의 APPROVAL은 새 Owner만 가능하다.
+- **인증**: masterAuth (implicit) -- 데몬 실행 = 인증 상태
+- **별도 disconnect + reconnect 절차 불필요**: agents.owner_address 직접 수정
+- **APPROVAL 대기 거래 자동 취소**: Owner 주소 변경 시 해당 에이전트의 QUEUED 상태 거래를 자동 CANCELLED 처리 (구 Owner의 서명이 더 이상 유효하지 않으므로)
+- **WC 연결은 독립적**: wallet_connections 테이블의 WC 세션과 agents.owner_address는 별개. WC 재연결 없이도 새 Owner가 CLI 수동 서명으로 ownerAuth 사용 가능.
 
 ---
 
 ## 8. WalletConnect Relay 장애 대응
 
-### 8.1 장애 시 영향 분석
+### 8.1 장애 시 영향 분석 (v0.5 변경)
 
-WalletConnect Relay (`wss://relay.walletconnect.com`)는 WAIaaS의 **유일한 외부 의존성**이다. 장애 시 다음 기능이 영향받는다:
+WalletConnect Relay (`wss://relay.walletconnect.com`)는 WAIaaS의 **선택적 외부 의존성**이다 (v0.5 변경: "유일한 외부 의존성"에서 "선택적 외부 의존성"으로). 장애 시 다음 기능이 영향받는다:
 
 | 기능 | Relay 필요 여부 | 장애 시 영향 |
 |------|---------------|------------|
-| Owner 지갑 초기 연결 | 필요 | QR 스캔 불가 -> 연결 불가 |
-| APPROVAL 거래 승인 | 필요 (모바일 서명) | 서명 요청 전달 불가 -> 타임아웃 -> EXPIRED |
-| DELAY 거래 취소 | 필요 (모바일 서명) | 취소 불가 -> 쿨다운 만료 시 자동 실행 |
-| Kill Switch | **불필요** (로컬 CLI) | 영향 없음 |
+| Owner 지갑 WC 연결 | 필요 | QR 스캔 불가 -> WC 연결 불가 |
+| APPROVAL 거래 승인 | **불필요** (v0.5 변경) | WC 미연결 시 CLI 수동 서명으로 대체 가능 |
+| DELAY 거래 취소 | **불필요** (v0.5 변경) | masterAuth(implicit)로 변경. WC 불필요. |
+| Kill Switch 발동 | **불필요** (로컬) | 영향 없음 |
+| Kill Switch 복구 | **불필요** (v0.5 변경) | CLI 수동 서명으로 대체 가능 |
 | 세션 발급 | **불필요** (HTTP POST) | 영향 없음 |
 | 일반 거래 (INSTANT) | **불필요** | 영향 없음 |
 
+> **v0.5 핵심 변경:** WC 장애 시에도 ownerAuth 자체는 동작한다 (CLI 수동 서명). WC는 UX 편의(모바일 push 서명)일 뿐, ownerAuth의 필수 의존성이 아니다.
+
 **핵심 원칙:** Relay 장애 시 시스템은 **안전 방향(fail-safe)**으로 동작한다:
-- APPROVAL 거래는 타임아웃 만료 -> `EXPIRED` (실행되지 않음)
-- DELAY 거래는 Owner가 취소하지 못하면 자동 실행 (이미 정책 엔진이 허가한 거래)
+- APPROVAL 거래는 CLI 수동 서명으로 승인 가능. 타임아웃 만료 시 `EXPIRED` (실행되지 않음)
+- DELAY 거래는 masterAuth(implicit)로 거절 가능
 
-### 8.2 CLI 직접 서명 대안
+### 8.2 CLI 직접 서명 대안 (v0.5 변경)
 
-Relay 장애 시에도 Owner가 거래를 승인/거절할 수 있는 CLI 대안 경로:
+> **v0.5 변경:** CLI 수동 서명 플로우의 상세는 52-auth-model-redesign.md 섹션 5에서 정의한다. 여기서는 개요만 제공한다 (중복 방지).
+
+CLI 수동 서명 4단계 플로우 (52-auth-model-redesign.md 섹션 5.2 참조):
+
+1. **nonce 발급**: `GET /v1/nonce`
+2. **SIWS/SIWE 메시지 구성 + 출력**: CLI가 메시지 생성, 터미널 출력 + 임시 파일 저장
+3. **오프라인 서명**: Owner가 Solana CLI, Ledger CLI, 또는 키페어 파일로 서명
+4. **서명 수신 + API 호출**: CLI가 ownerAuth 페이로드 구성 후 API 호출
+
+**대화형/비대화형 모드 모두 지원:**
 
 ```bash
-# APPROVAL 거래 직접 승인 (WalletConnect 불필요)
-waiaas owner approve <txId> \
-  --signature <base58_sig> \
-  --message <siws_message_file>
+# 대화형 모드 (기본)
+$ waiaas owner approve <txId>
 
-# APPROVAL 거래 직접 거절
-waiaas owner reject <txId> \
-  --signature <base58_sig> \
-  --message <siws_message_file>
+# 비대화형 모드 (스크립트/CI)
+$ waiaas owner approve <txId> \
+    --signature "3Kp8V2...base58...signature" \
+    --message-file /tmp/waiaas-sign-msg.txt
 ```
 
-**플로우:**
+### 8.3 Kill Switch 로컬 발동 (v0.5 변경)
 
-1. CLI가 데몬에서 nonce를 발급받는다 (`GET /v1/auth/nonce`)
-2. SIWS/SIWE 메시지를 생성하여 파일로 저장
-3. Owner가 **키페어 파일** 또는 **오프라인 서명 도구**로 메시지에 서명
-4. 서명 결과를 CLI에 전달
-5. CLI가 ownerSignaturePayload를 구성하여 API 호출
+Kill Switch는 **최고 비상 상황**에서 사용되므로, WalletConnect Relay에 의존해서는 안 된다.
 
-```typescript
-// packages/cli/src/commands/owner-approve.ts
-async function ownerApprove(
-  txId: string,
-  signatureBase58: string,
-  messageFile: string,
-): Promise<void> {
-  const message = await readFile(messageFile, 'utf-8')
-  const nonce = extractNonceFromMessage(message)
-  const address = extractAddressFromMessage(message)
-
-  // ownerSignaturePayload 구성
-  const payload = {
-    chain: 'solana',
-    address,
-    action: 'approve_tx',
-    nonce,
-    timestamp: new Date().toISOString(),
-    message,
-    signature: signatureBase58,
-  }
-
-  const token = Buffer.from(JSON.stringify(payload)).toString('base64url')
-
-  const response = await fetch(`http://127.0.0.1:3100/v1/owner/approve/${txId}`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-  })
-
-  if (response.ok) {
-    console.log(`✓ 거래 ${txId} 승인 완료`)
-  } else {
-    const error = await response.json()
-    console.error(`✗ 승인 실패: ${error.error.message}`)
-  }
-}
-```
-
-### 8.3 Kill Switch 로컬 발동 (WalletConnect 불필요)
-
-Kill Switch는 **최고 비상 상황**에서 사용되므로, WalletConnect Relay에 의존해서는 안 된다. CLI에서 **마스터 패스워드 인증**으로 직접 발동할 수 있다:
+**v0.5 변경:** masterAuth(implicit)로 변경. 데몬 실행 = 인증 상태이므로, CLI에서 **별도 패스워드 입력 없이** 직접 발동 가능:
 
 ```bash
 waiaas kill-switch --reason "emergency: suspicious activity detected"
-# 마스터 패스워드 입력 요청:
-# Enter master password: ********
 # ✓ Kill Switch 발동 완료
 #   세션 폐기: 3
 #   거래 취소: 1
 #   에이전트 정지: 2
 ```
 
-**CLI Kill Switch 인증 방식:**
-- WalletConnect/SIWS 서명 **불필요**
-- **마스터 패스워드** 인증 (키스토어 잠금 해제 수준의 인증)
-- localhost에서만 실행 가능 (CLI -> 데몬 HTTP API)
-
-```typescript
-// packages/cli/src/commands/kill-switch.ts
-async function killSwitch(reason: string): Promise<void> {
-  // 1. 마스터 패스워드 입력
-  const password = await promptPassword('Enter master password: ')
-
-  // 2. 마스터 패스워드 해시를 Authorization 헤더로 전달
-  // Kill Switch 전용 인증: 마스터 패스워드 SHA-256 해시
-  const passwordHash = createHash('sha256').update(password).digest('hex')
-
-  const response = await fetch('http://127.0.0.1:3100/v1/admin/kill-switch', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Password-Hash': passwordHash,
-    },
-    body: JSON.stringify({ reason }),
-  })
-
-  const result = await response.json()
-  if (response.ok) {
-    console.log(`\n✓ Kill Switch 발동 완료`)
-    console.log(`  세션 폐기: ${result.sessionsRevoked}`)
-    console.log(`  거래 취소: ${result.txCancelled}`)
-    console.log(`  에이전트 정지: ${result.agentsSuspended}`)
-  }
-}
-```
-
-**참고:** `/v1/admin/kill-switch` (마스터 패스워드 인증)과 `/v1/owner/kill-switch` (Owner 서명 인증)은 **동일한 캐스케이드 로직**을 실행하지만 인증 방식이 다르다. 08-04에서 두 경로의 통합 설계를 상세화한다.
+> **참고:** Kill Switch 발동은 masterAuth(implicit)으로 쉽게 가능하지만, **복구(recover)에는 ownerAuth + masterAuth(explicit) dual-auth가 필수**이다. 이 비대칭은 의도적인 설계로, "정지는 쉽게, 복원은 엄격하게" 원칙을 따른다.
 
 ---
 
@@ -1418,36 +1380,36 @@ projectId는 **읽기 전용 식별자**로, Relay 서버 접근을 허용하는
 **공격 시나리오와 방어:**
 
 ```
-공격자가 approve_tx 서명을 캡처 -> reject_tx API에 재사용 시도
+공격자가 approve_tx 서명을 캡처 -> recover API에 재사용 시도
 -> Step 6에서 action 불일치로 거부
 -> 같은 approve_tx API에 재사용 시도
 -> Step 3에서 nonce 이미 소비되어 거부
 ```
 
-### 9.3 Owner 사칭 방지
+### 9.3 Owner 사칭 방지 (v0.5 변경)
 
-서명자 주소와 owner_wallets.address의 일치 확인은 **ownerAuth Step 5**에서 수행된다:
+서명자 주소와 agents.owner_address의 일치 확인은 **ownerAuth Step 5**에서 수행된다 (v0.5 변경: owner_wallets.address에서 agents.owner_address로):
 
 ```
 1. 공격자가 자신의 지갑으로 SIWS 메시지 서명
 2. ownerAuth Step 4: 서명 자체는 유효 (공격자 지갑으로 검증)
-3. ownerAuth Step 5: 서명자 주소 != owner_wallets.address -> OWNER_MISMATCH (403)
+3. ownerAuth Step 5: 서명자 주소 != agents.owner_address -> OWNER_MISMATCH (403)
 ```
 
-owner_wallets에 등록된 주소만 Owner로 인정된다. 등록은 localhost에서만 가능(`POST /v1/owner/connect`).
+agents.owner_address에 등록된 주소만 해당 에이전트의 Owner로 인정된다. 주소 변경은 masterAuth(implicit)로 `PUT /v1/agents/:id`를 통해서만 가능.
 
-### 9.4 다중 디바이스 정책
+### 9.4 다중 디바이스 정책 (v0.5 변경)
 
-WalletConnect 세션은 **1개만 유지**한다. 새 디바이스에서 연결하면 기존 연결이 해제된다:
+WalletConnect 세션은 wallet_connections 테이블에서 **1개만 유지**한다 (v0.5 변경: wallet_connections 반영). 새 디바이스에서 연결하면 기존 WC 연결이 해제된다:
 
 ```typescript
-// 새 연결 시 기존 세션 종료 로직
-async function replaceOwnerConnection(
+// 새 WC 연결 시 기존 세션 종료 로직
+async function replaceWcConnection(
   newAddress: string,
   newChain: string,
   newSessionTopic: string,
 ): Promise<void> {
-  const existing = await db.select().from(ownerWallets).get()
+  const existing = await db.select().from(walletConnections).get()
   if (existing) {
     // 기존 WalletConnect 세션 종료
     if (existing.wcSessionTopic) {
@@ -1457,14 +1419,14 @@ async function replaceOwnerConnection(
       })
     }
     // 기존 레코드 삭제
-    await db.delete(ownerWallets).where(eq(ownerWallets.id, existing.id))
+    await db.delete(walletConnections).where(eq(walletConnections.id, existing.id))
   }
   // 새 레코드 생성
   // ...
 }
 ```
 
-**참고:** v0.2에서는 `POST /v1/owner/connect`가 기존 Owner 존재 시 409를 반환한다. 교체를 원하면 먼저 `DELETE /v1/owner/disconnect` 호출 필요. 이 보수적 정책은 실수로 Owner가 교체되는 것을 방지한다.
+**참고:** v0.2에서는 `POST /v1/owner/connect`가 기존 Owner 존재 시 409를 반환한다. 교체를 원하면 먼저 `DELETE /v1/owner/disconnect` 호출 필요. 이 보수적 정책은 실수로 WC 연결이 교체되는 것을 방지한다.
 
 ### 9.5 Phase 9 Tauri 통합 시 CSP 설정
 
@@ -1495,7 +1457,7 @@ Tauri WebView의 Content Security Policy에 WalletConnect Relay 도메인을 허
 
 ---
 
-*문서 ID: OWNR-CONN*
-*작성일: 2026-02-05*
-*Phase: 08-security-layers-design*
-*상태: 완료*
+*문서 ID: OWNR-CONN v0.5*
+*작성일: 2026-02-05, v0.5 업데이트: 2026-02-07*
+*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign*
+*상태: v0.5 업데이트*
