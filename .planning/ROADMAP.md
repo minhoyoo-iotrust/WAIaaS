@@ -22,7 +22,7 @@
 소수 페이즈는 해당 정수 사이에서 번호 순서대로 실행된다.
 
 - [x] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책 (2026-02-07)
-- [ ] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션
+- [x] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션 (2026-02-08)
 - [ ] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action
 - [ ] **Phase 25: 테스트 전략 통합 + 기존 문서 반영** - 확장 기능 테스트 전략, 기존 문서 8개 v0.6 통합
 
@@ -68,9 +68,9 @@ Plans:
 **플랜**: 3 plans in 2 waves (1 sequential + 2 parallel)
 
 Plans:
-- [ ] 23-01-PLAN.md — ContractCallRequest 인터페이스, CONTRACT_WHITELIST/METHOD_WHITELIST 정책, 파이프라인/DB/REST 크로스커팅 확장 (CHAIN-EXT-03)
-- [ ] 23-02-PLAN.md — ApproveRequest 독립 타입, APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE 정책, EVM race condition 자동 처리 (CHAIN-EXT-04)
-- [ ] 23-03-PLAN.md — BatchRequest/InstructionRequest, Solana 원자적 배치, 배치 정책 합산 평가, EVM 미지원 분기 (CHAIN-EXT-05)
+- [x] 23-01-PLAN.md — ContractCallRequest 인터페이스, CONTRACT_WHITELIST/METHOD_WHITELIST 정책, 파이프라인/DB/REST 크로스커팅 확장 (CHAIN-EXT-03)
+- [x] 23-02-PLAN.md — ApproveRequest 독립 타입, APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE 정책, EVM race condition 자동 처리 (CHAIN-EXT-04)
+- [x] 23-03-PLAN.md — BatchRequest/InstructionRequest, Solana 원자적 배치, 배치 정책 합산 평가, EVM 미지원 분기 (CHAIN-EXT-05)
 
 ### Phase 24: 상위 추상화 레이어 설계
 
@@ -159,6 +159,6 @@ Plans:
 | 페이즈 | 플랜 완료 | 상태 | 완료일 |
 |--------|-----------|------|--------|
 | 22. 토큰 확장 설계 | 2/2 | ✓ Complete | 2026-02-07 |
-| 23. 트랜잭션 타입 확장 설계 | 0/3 | Not started | - |
+| 23. 트랜잭션 타입 확장 설계 | 3/3 | ✓ Complete | 2026-02-08 |
 | 24. 상위 추상화 레이어 설계 | 0/2 | Not started | - |
 | 25. 테스트 전략 통합 + 문서 반영 | 0/2 | Not started | - |

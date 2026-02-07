@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-07)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.6 블록체인 기능 확장 설계 -- Phase 23 완료, Phase 24 대기
+**현재 초점:** v0.6 블록체인 기능 확장 설계 -- Phase 24 상위 추상화 레이어 설계
 
 ## 현재 위치
 
 마일스톤: v0.6 블록체인 기능 확장 설계
-페이즈: 23 of 25 (트랜잭션 타입 확장 설계)
-플랜: 3 of 3 in current phase (Phase 23 complete)
-상태: Phase complete
-마지막 활동: 2026-02-08 -- Completed 23-03-PLAN.md (CHAIN-EXT-05 배치 트랜잭션 스펙)
+페이즈: 24 of 25 (상위 추상화 레이어 설계)
+플랜: 0 of 2 in current phase
+상태: Ready to plan
+마지막 활동: 2026-02-08 -- Phase 23 완료 (3/3 plans, 21/21 verified), Phase 24 대기
 
-Progress: ███████████░░░░░░░░░░ 55%
+Progress: ██████████░░░░░░░░░░░ 50%
 
 ## 성과 지표
 
@@ -92,5 +92,5 @@ Phase 23-03 결정 (CHAIN-EXT-05):
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Completed 23-03-PLAN.md. Phase 23 complete (3/3). Phase 24 대기.
+중단 지점: Phase 23 완료 (3/3 plans, 21/21 verified). Phase 24 플래닝 대기.
 재개 파일: None
