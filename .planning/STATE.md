@@ -11,11 +11,11 @@
 
 마일스톤: v0.5 인증 모델 재설계 + DX 개선
 페이즈: Phase 19 of 21 (인증 모델 + Owner 주소 재설계)
-플랜: 2 of 3
-상태: In progress
-마지막 활동: 2026-02-07 -- Completed 19-02-PLAN.md (recovered SUMMARY)
+플랜: 3 of 3
+상태: Phase complete
+마지막 활동: 2026-02-07 -- Completed 19-03-PLAN.md
 
-Progress: [██████░░░░] 2/3 (Phase 19), 2/TBD (v0.5 전체)
+Progress: [██████████] 3/3 (Phase 19), 3/TBD (v0.5 전체)
 
 ## 성과 지표
 
@@ -23,7 +23,7 @@ Progress: [██████░░░░] 2/3 (Phase 19), 2/TBD (v0.5 전체)
 **v0.2 최종 통계:** 16 plans, 45/45 reqs, 17 docs
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
-**v0.5 현재:** 2/TBD plans, 12/24 reqs (AUTH-01~05, OWNR-01~06)
+**v0.5 현재:** 3/TBD plans, 12/24 reqs (AUTH-01~05, OWNR-01~06)
 
 ## 누적 컨텍스트
 
@@ -48,6 +48,11 @@ v0.5 Plan 19-01 결정:
 - 16개 다운그레이드 엔드포인트 모두 보상 통제 존재 확인
 - 감사 추적 트레이드오프: masterAuth = actor='master' (개인 식별 불가, Self-Hosted 단일 운영자 수용)
 
+v0.5 Plan 19-03 결정:
+- 34-owner-wallet-connection.md 기존 구조 유지 + v0.5 인라인 변경 (변경 추적 용이)
+- 37-rest-api-complete-spec.md 섹션 1-4만 수정, 5-9는 Phase 21 위임
+- audit_log actor 값 ownerAuth->masterAuth 전환 반영 (actor='master')
+
 ### 차단 요소/우려 사항
 
 없음
@@ -55,5 +60,5 @@ v0.5 Plan 19-01 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: Completed 19-02 (recovered), ready for 19-03
+중단 지점: Completed 19-03 (Phase 19 complete), ready for Phase 20
 재개 파일: None
