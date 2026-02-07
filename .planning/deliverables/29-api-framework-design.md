@@ -2,8 +2,9 @@
 
 **문서 ID:** CORE-06
 **작성일:** 2026-02-05
+**v0.5 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), CORE-03 (26-keystore-spec.md), CORE-04 (27-chain-adapter-interface.md), CORE-05 (28-daemon-lifecycle-cli.md), 06-RESEARCH.md, 06-CONTEXT.md
+**참조:** CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), CORE-03 (26-keystore-spec.md), CORE-04 (27-chain-adapter-interface.md), CORE-05 (28-daemon-lifecycle-cli.md), 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 55-dx-improvement-spec.md (v0.5)
 **요구사항:** API-01 (REST API 서버), API-06 (MCP 서버 연동 기반)
 
 ---
@@ -186,6 +187,8 @@ log_level = "info"             # 로그 레벨 (debug, info, warn, error)
 | 9 | `ownerAuth` | Owner 서명 검증 | 라우트 레벨 (`/v1/owner/*`, `POST /v1/sessions`) | 401/403 |
 
 > **참고:** 순서 1-7은 글로벌 미들웨어(`app.use('*')`)로 모든 요청에 적용된다. 순서 8 `sessionAuth`는 `/v1/*` 경로에만 적용되며, 순서 9 `ownerAuth`는 라우트 레벨에서 개별 엔드포인트에 적용된다. 두 인증 미들웨어는 상호 배타적으로, 하나의 엔드포인트에 둘 다 적용되지 않는다.
+>
+> **(v0.5 변경) Auth 단계 통합:** 순서 8-9의 sessionAuth/ownerAuth가 `authRouter` 통합 디스패처로 변경됨. authRouter는 경로 패턴에 따라 masterAuth(implicit/explicit), ownerAuth, sessionAuth를 자동 분기한다. masterAuth(implicit)는 localhost 접속 자체로 인증 완료되며, masterAuth(explicit)는 X-Master-Password 헤더를 검증한다. 상세: 52-auth-model-redesign.md 섹션 5 참조.
 >
 > **ownerAuth 상세:** per-request SIWS/SIWE 서명 기반 인증. `Authorization: Bearer <base64url JSON>` 형식으로 전달되며, 8단계 검증 체인을 거친다 (헤더 파싱 -> timestamp 5분 -> nonce 일회성 -> 서명 검증 -> owner 일치 -> action 일치 -> 컨텍스트 설정 -> next). 상세는 34-owner-wallet-connection.md 섹션 5, API-SPEC(37-rest-api-complete-spec.md) 섹션 3.2 참조.
 >
@@ -728,6 +731,10 @@ export const ErrorResponseSchema = z.object({
     retryable: z.boolean().optional().openapi({
       description: '재시도 가능 여부 (true이면 동일 요청 재시도 가능)',
       example: false,
+    }),
+    hint: z.string().optional().openapi({
+      description: '(v0.5 추가) 다음 행동을 안내하는 선택적 문자열. AI 에이전트가 에러 복구 판단에 활용. 상세: 55-dx-improvement-spec.md 섹션 2 참조',
+      example: 'Run `waiaas session create` to get a new token',
     }),
   }),
 }).openapi('ErrorResponse')
@@ -1887,3 +1894,10 @@ Content negotiation은 사용하지 않는다. 모든 요청/응답은 `applicat
 | Phase 7 | 세션 인증 JWT 검증 로직 (`sessionAuth`), 거래 파이프라인 라우트 핸들러, Zod 스키마 상세화 |
 | Phase 8 | `ownerAuth` 라우트 레벨 미들웨어 (34-owner-wallet-connection.md에서 상세 설계 완료), 시간 지연/승인 에러 코드, Kill Switch 연동 |
 | Phase 9 | REST API 전체 스펙 완성, SDK 인터페이스 (Zod 타입 기반), MCP 도구 스키마 (/doc 참조), Tauri CORS 추가 |
+
+### 10.3 v0.5 참조 문서
+
+| 문서 | 참조 내용 |
+|------|----------|
+| 52-auth-model-redesign.md (v0.5) | authRouter 통합 디스패처, masterAuth/ownerAuth/sessionAuth 3-tier 인증 아키텍처 |
+| 55-dx-improvement-spec.md (v0.5) | ErrorResponseSchema hint 필드 상세 정의, 40개 에러 코드별 hint 매핑 |

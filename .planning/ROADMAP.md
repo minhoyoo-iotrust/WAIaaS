@@ -6,7 +6,7 @@
 - v0.2 Self-Hosted Secure Wallet Design (Phases 6-9) -- shipped 2026-02-05
 - v0.3 설계 논리 일관성 확보 (Phases 10-13) -- shipped 2026-02-06
 - v0.4 테스트 전략 및 계획 수립 (Phases 14-18) -- shipped 2026-02-07
-- **v0.5 인증 모델 재설계 + DX 개선 (Phases 19-21) -- in progress**
+- **v0.5 인증 모델 재설계 + DX 개선 (Phases 19-21) -- shipped 2026-02-07**
 
 ## Overview
 
@@ -16,7 +16,7 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
 
 - [x] **Phase 19: 인증 모델 + Owner 주소 재설계** -- 3-tier 인증 책임 분리와 Owner 주소 에이전트 귀속 ✓ 2026-02-07
 - [x] **Phase 20: 세션 갱신 프로토콜** -- 에이전트 자체 갱신 + Owner 사후 거부 패턴 ✓ 2026-02-07
-- [ ] **Phase 21: DX 개선 + 설계 문서 통합** -- CLI 간소화, 개발 모드, actionable 에러, 통합 반영
+- [x] **Phase 21: DX 개선 + 설계 문서 통합** -- CLI 간소화, 개발 모드, actionable 에러, 통합 반영 ✓ 2026-02-07
 
 ## Phase Details
 
@@ -76,12 +76,13 @@ Plans:
   3. --dev 모드(패스워드 프롬프트 없이 데몬 시작)와 actionable 에러 응답(hint 필드)의 스펙이 정의되어 있다
   4. MCP 데몬 내장 옵션의 검토 결과(채택/기각 + 근거)와 원격 에이전트 접근 가이드(SSH 터널, VPN, --expose)가 작성되어 있다
   5. v0.5에서 변경된 인증 모델, Owner 주소 모델, 세션 갱신이 기존 설계 문서 11개에 일관되게 반영되어 있다
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 21-01: TBD
-- [ ] 21-02: TBD
-- [ ] 21-03: TBD
+- [x] 21-01-PLAN.md -- CLI 플로우 재설계 문서 신규 작성 (54-cli-flow-redesign.md: DX-01~05)
+- [x] 21-02-PLAN.md -- DX 개선 스펙 문서 신규 작성 (55-dx-improvement-spec.md: DX-06~08)
+- [x] 21-03-PLAN.md -- 중규모 기존 문서 수정 (28, 37, 40: v0.5 CLI/인증/hint 반영)
+- [x] 21-04-PLAN.md -- 소규모 기존 문서 수정 + 참조 노트 + 통합 일관성 검증 (24, 29, 38, 39, 33, 36)
 
 **Key Deliverables:**
 - 신규: CLI 플로우 재설계 문서, DX 개선 스펙 문서
@@ -97,7 +98,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 3/3 | Complete | 2026-02-07 |
 | 20. 세션 갱신 프로토콜 | v0.5 | 2/2 | Complete | 2026-02-07 |
-| 21. DX 개선 + 설계 문서 통합 | v0.5 | 0/TBD | Not started | - |
+| 21. DX 개선 + 설계 문서 통합 | v0.5 | 4/4 | Complete | 2026-02-07 |
 
 ## Coverage
 
@@ -113,4 +114,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-07 (Phase 20 complete)*
+*Last updated: 2026-02-07 (v0.5 complete)*

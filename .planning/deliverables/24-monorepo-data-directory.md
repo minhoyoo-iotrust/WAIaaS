@@ -552,6 +552,7 @@ WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
 ```
 ~/.waiaas/                             # 데이터 루트 (700)
 ├── config.toml                        # 데몬 설정 파일 (600)
+├── .master-password                   # (v0.5 추가) 마스터 패스워드 파일. --quickstart 시 자동 생성 (600)
 ├── daemon.pid                         # PID 파일 - background 모드 시 (644)
 ├── data/                              # 데이터 파일 (700)
 │   ├── waiaas.db                      # SQLite 메인 데이터베이스 (600)
@@ -573,6 +574,7 @@ WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
 |------|------|----------|------|--------|
 | `~/.waiaas/` | 데이터 루트 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
 | `config.toml` | 데몬 설정 (TOML 포맷) | `waiaas init` (기본값 생성) | `600` (rw-------) | 실행 사용자 |
+| `.master-password` | (v0.5 추가) 마스터 패스워드 파일. `--quickstart`로 자동 생성되거나 `--password-file`로 참조됨 | `waiaas init --quickstart` | `600` (rw-------) | 실행 사용자 |
 | `daemon.pid` | 데몬 PID (background 모드) | `waiaas start --daemon` | `644` (rw-r--r--) | 실행 사용자 |
 | `data/` | SQLite 데이터베이스 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
 | `data/waiaas.db` | SQLite 메인 DB (WAL 모드) | 데몬 첫 시작 시 마이그레이션으로 생성 | `600` (rw-------) | 실행 사용자 |
@@ -688,6 +690,7 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `log_max_files` | integer | `5` | 1-100 | 보관할 로그 파일 수 |
 | `pid_file` | string | `"daemon.pid"` | 상대 경로 (DATA_DIR 기준) 또는 절대 경로 | PID 파일 경로 |
 | `shutdown_timeout` | integer | `30` | 5-300 (초) | Graceful shutdown 타임아웃 |
+| `dev_mode` | boolean | `false` | true/false | (v0.5 추가) --dev 모드 영구 설정. true 시 고정 패스워드 'waiaas-dev' 사용. 프로덕션 사용 금지. 54-cli-flow-redesign.md 섹션 7 참조 |
 
 #### [keystore] 섹션 -- 키스토어 암호화 설정
 
@@ -811,6 +814,7 @@ log_max_size = "50MB"              # 로그 로테이션 크기
 log_max_files = 5                  # 보관할 로그 파일 수
 pid_file = "daemon.pid"            # PID 파일 (DATA_DIR 상대 경로)
 shutdown_timeout = 30              # Graceful shutdown 타임아웃 (초)
+dev_mode = false                   # (v0.5 추가) --dev 모드 영구 설정. true 시 고정 패스워드 'waiaas-dev' 사용
 
 # ─────────────────────────────────────────
 # 키스토어 암호화 설정
@@ -924,6 +928,7 @@ const ConfigSchema = z.object({
     log_max_files: z.number().int().min(1).max(100).default(5),
     pid_file: z.string().default('daemon.pid'),
     shutdown_timeout: z.number().int().min(5).max(300).default(30),
+    dev_mode: z.boolean().default(false),  // (v0.5 추가) --dev 모드 영구 설정
   }).default({}),
   keystore: z.object({
     argon2_memory: z.number().int().min(32768).max(1048576).default(65536),
@@ -1129,6 +1134,7 @@ v0.5에서 Owner 개념이 **config.toml(데몬 전역)**에서 **agents 테이�
 - 52-auth-model-redesign.md -- masterAuth/ownerAuth/sessionAuth 3-tier 인증 아키텍처
 - 25-sqlite-schema.md (v0.5 업데이트) -- agents.owner_address NOT NULL, wallet_connections 테이블
 - 34-owner-wallet-connection.md -- WalletConnect v2 프로토콜 (세션 관리는 유지, 인증 역할만 제거)
+- 54-cli-flow-redesign.md (v0.5) -- CLI 커맨드 재설계 (init/agent create/session create/--quickstart/--dev)
 
 ---
 

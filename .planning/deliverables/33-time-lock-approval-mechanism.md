@@ -1062,6 +1062,8 @@ function cleanupZombieReservations(sqlite: Database): number {
 
 ## 6. DELAY 티어 -- 쿨다운 큐잉 플로우
 
+> **v0.5 인증 모델 변경:** DELAY 티어 거래의 Owner 취소(cancel)가 masterAuth(implicit)로 변경되었습니다. 취소 역시 자금 이동을 동반하지 않는 작업이므로 localhost 인증으로 충분합니다. 상세: 52-auth-model-redesign.md 참조.
+
 ### 6.1 DELAY 플로우 시퀀스 다이어그램
 
 ```mermaid
@@ -1342,6 +1344,8 @@ class DelayQueueWorker {
 ---
 
 ## 7. APPROVAL 티어 -- Owner 승인 대기 플로우
+
+> **v0.5 인증 모델 변경:** APPROVAL 티어 거래 승인의 인증이 v0.5에서 재정의되었습니다. ownerAuth는 거래 승인(approve)에 유지되며, 거래 거부(reject)는 masterAuth(implicit)로 변경되었습니다. 이는 거부가 자금 이동을 동반하지 않으므로 간소화된 인증으로 충분하다는 판단에 기반합니다. 상세: 52-auth-model-redesign.md 참조.
 
 ### 7.1 APPROVAL 플로우 시퀀스 다이어그램
 

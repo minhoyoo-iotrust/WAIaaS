@@ -78,6 +78,8 @@ const AdminKillSwitchRequest = z.object({
 
 ## 2. Kill Switch 상태 머신
 
+> **v0.5 인증 모델 변경:** Kill Switch 발동(activate)의 인증이 masterAuth(implicit)로 변경되었으며, 복구(recover)만 ownerAuth를 유지합니다. 이는 발동은 긴급 상황에서 빠른 대응이 필요하나(localhost 접속만으로 발동 가능), 복구는 정상 운영 재개에 해당하므로 Owner 서명으로 이중 확인하는 설계입니다. AutoStopEngine은 이벤트 기반 내부 호출이므로 인증 변경 없음. 상세: 52-auth-model-redesign.md 참조.
+
 ### 2.1 상태 다이어그램
 
 ```mermaid

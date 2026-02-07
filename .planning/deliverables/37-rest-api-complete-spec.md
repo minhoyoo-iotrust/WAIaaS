@@ -4,7 +4,7 @@
 **작성일:** 2026-02-05
 **v0.5 인증 모델 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md)
+**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md)
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
 
 ---
@@ -903,19 +903,23 @@ const PendingTransactionListResponseSchema = z.object({
 
 ---
 
-## 7. Session Management API (Owner 인증 -- ownerAuth)
+## 7. Session Management API (v0.5 변경: masterAuth(implicit))
 
-세션의 생성, 조회, 폐기를 Owner가 관리하는 엔드포인트.
+> **(v0.5 변경)** 세션 관리가 ownerAuth에서 masterAuth(implicit)으로 변경되었다. 데몬 구동 시 마스터 패스워드 인증이 완료되므로 localhost API 호출에 추가 인증이 불필요하다. CLI `waiaas session create/list` 커맨드로 직접 관리 가능. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
+
+세션의 생성, 조회, 폐기를 관리하는 엔드포인트.
 
 ### 7.1 POST /v1/sessions
 
-Owner가 SIWS/SIWE 서명으로 에이전트 세션을 생성한다. 세션 토큰은 이 응답에서만 반환.
+> **(v0.5 변경)** ownerAuth(SIWS/SIWE 서명) -> masterAuth(implicit). 데몬 구동 = 인증 완료. CLI `waiaas session create --agent <name>`으로 세션 토큰 발급. 요청 바디의 signature/message/ownerAddress 필드는 v0.5에서 불필요 (하위 호환을 위해 스키마 유지, 서버가 무시).
+
+에이전트 세션을 생성한다. 세션 토큰은 이 응답에서만 반환.
 
 | 항목 | 값 |
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/sessions` |
-| **Auth** | Owner 서명 (요청 본문 내 signature 검증) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Session` |
 | **operationId** | `createSession` |
 | **Rate Limit** | 전역 100 req/min |
@@ -1034,7 +1038,7 @@ const SessionCreateResponseSchema = z.object({
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/sessions` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Session` |
 | **operationId** | `listSessions` |
 | **Rate Limit** | 전역 100 req/min |
@@ -1115,13 +1119,13 @@ const SessionListResponseSchema = z.object({
 
 ### 7.3 DELETE /v1/sessions/:id
 
-세션을 즉시 무효화(폐기)한다.
+세션을 즉시 무효화(폐기)한다. **(v0.5 추가)** 세션 갱신 거부 용도로도 재활용 (별도 엔드포인트 불필요, 53-session-renewal-protocol.md 참조).
 
 | 항목 | 값 |
 |------|-----|
 | **Method** | `DELETE` |
 | **Path** | `/v1/sessions/:id` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Session` |
 | **operationId** | `revokeSession` |
 | **Rate Limit** | 전역 100 req/min |
@@ -1169,7 +1173,9 @@ const SessionRevokeResponseSchema = z.object({
 
 ---
 
-## 8. Owner API (Owner 인증 -- ownerAuth)
+## 8. Owner API (v0.5 변경: 대부분 masterAuth(implicit), ownerAuth 2곳만 유지)
+
+> **(v0.5 변경)** Owner API의 대부분이 ownerAuth에서 masterAuth(implicit)으로 변경되었다. ownerAuth(SIWS/SIWE 서명)는 보안상 반드시 Owner 본인 확인이 필요한 **2곳에만 한정**: `POST /v1/owner/approve/:txId` (거래 승인), `POST /v1/owner/recover` (Kill Switch 복구). 나머지는 데몬 구동 시 마스터 패스워드 인증으로 충분. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
 
 Owner가 에이전트, 거래, 정책, 시스템을 관리하는 엔드포인트. Phase 8에서 정의된 기존 10개 + Phase 9에서 추가하는 7개 = 총 **17개** 엔드포인트.
 
@@ -1241,7 +1247,7 @@ Owner 지갑 연결을 해제한다.
 |------|-----|
 | **Method** | `DELETE` |
 | **Path** | `/v1/owner/disconnect` |
-| **Auth** | ownerAuth |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `disconnectOwner` |
 | **정의 원본** | OWNR-CONN (섹션 6) |
@@ -1279,7 +1285,7 @@ APPROVAL 티어의 대기 중인 거래를 Owner가 승인한다.
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/owner/approve/:txId` |
-| **Auth** | ownerAuth (action=`approve_tx`) |
+| **Auth** | ownerAuth (action=`approve_tx`) **(v0.5 유지: 거래 승인은 반드시 ownerAuth)** |
 | **Tags** | `Owner` |
 | **operationId** | `approveTransaction` |
 | **정의 원본** | OWNR-CONN (섹션 6.2) |
@@ -1331,7 +1337,7 @@ DELAY 또는 APPROVAL 티어의 대기 중인 거래를 Owner가 거절한다.
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/owner/reject/:txId` |
-| **Auth** | ownerAuth (action=`reject_tx`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `rejectTransaction` |
 | **정의 원본** | OWNR-CONN (섹션 6.3) |
@@ -1384,7 +1390,7 @@ const RejectResponseSchema = z.object({
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/owner/kill-switch` |
-| **Auth** | ownerAuth (action=`kill_switch`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit). 발동은 masterAuth)** |
 | **Tags** | `Owner` |
 | **operationId** | `activateKillSwitch` |
 | **정의 원본** | KILL-AUTO-EVM (섹션 1.2) |
@@ -1439,7 +1445,7 @@ Kill Switch를 해제하고 시스템을 정상 상태로 복구한다. **이중
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/owner/recover` |
-| **Auth** | ownerAuth (action=`recover`) + masterAuth |
+| **Auth** | ownerAuth (action=`recover`) + masterAuth(explicit) **(v0.5 유지: 복구는 이중 인증 필수)** |
 | **Tags** | `Owner` |
 | **operationId** | `recoverFromKillSwitch` |
 | **정의 원본** | KILL-AUTO-EVM (섹션 4) |
@@ -1493,7 +1499,7 @@ APPROVAL 또는 DELAY 티어에서 QUEUED 상태인 거래 목록을 조회한�
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/pending-approvals` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `listPendingApprovals` |
 | **정의 원본** | OWNR-CONN (섹션 6.5) |
@@ -1561,7 +1567,7 @@ Owner 지갑 연결 상태 및 시스템 요약을 조회한다.
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/status` |
-| **Auth** | ownerAuth (action=`view_dashboard`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `getOwnerStatus` |
 | **정의 원본** | OWNR-CONN (섹션 6) |
@@ -1607,7 +1613,7 @@ const OwnerStatusResponseSchema = z.object({
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/owner/policies` |
-| **Auth** | ownerAuth (action=`update_settings`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `createPolicy` |
 | **정의 원본** | OWNR-CONN (섹션 6.7) |
@@ -1684,7 +1690,7 @@ const CreatePolicyResponseSchema = z.object({
 |------|-----|
 | **Method** | `PUT` |
 | **Path** | `/v1/owner/policies/:policyId` |
-| **Auth** | ownerAuth (action=`update_settings`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `updatePolicy` |
 | **정의 원본** | OWNR-CONN (섹션 6.6) |
@@ -1723,7 +1729,7 @@ Owner 관점에서 모든 에이전트 세션을 조회한다. 섹션 7.2의 `GE
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/sessions` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `listOwnerSessions` |
 | **Phase 9 신규** | |
@@ -1776,7 +1782,7 @@ Owner가 특정 세션을 즉시 폐기한다.
 |------|-----|
 | **Method** | `DELETE` |
 | **Path** | `/v1/owner/sessions/:id` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `revokeOwnerSession` |
 | **Phase 9 신규** | |
@@ -1815,7 +1821,7 @@ const OwnerSessionRevokeResponseSchema = z.object({
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/agents` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `listAgents` |
 | **Phase 9 신규** | |
@@ -1874,7 +1880,7 @@ const AgentListResponseSchema = z.object({
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/agents/:id` |
-| **Auth** | ownerAuth (action=`manage_sessions`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `getAgentDetail` |
 | **Phase 9 신규** | |
@@ -1935,7 +1941,7 @@ const AgentDetailResponseSchema = z.object({
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/settings` |
-| **Auth** | ownerAuth (action=`view_dashboard`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `getSettings` |
 | **Phase 9 신규** | |
@@ -2008,7 +2014,7 @@ const SettingsResponseSchema = z.object({
 |------|-----|
 | **Method** | `PUT` |
 | **Path** | `/v1/owner/settings` |
-| **Auth** | ownerAuth (action=`update_settings`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `updateSettings` |
 | **Phase 9 신규** | |
@@ -2062,7 +2068,7 @@ Owner 대시보드에 표시할 핵심 지표를 한 번에 조회한다.
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/owner/dashboard` |
-| **Auth** | ownerAuth (action=`view_dashboard`) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `getDashboard` |
 | **Phase 9 신규** | |
@@ -2114,9 +2120,11 @@ const DashboardResponseSchema = z.object({
 
 ---
 
-## 9. Admin API (Master Password 인증 -- masterAuth)
+## 9. Admin API (masterAuth -- explicit/implicit)
 
-CLI 또는 시스템 관리용 엔드포인트. 마스터 패스워드로 인증한다.
+> **(v0.5 변경)** Admin API는 masterAuth 이중 모드를 사용한다. **masterAuth(explicit)**: `X-Master-Password` 헤더 필수 (shutdown, kill-switch, 설정 변경 등 위험 작업). **masterAuth(implicit)**: 데몬 구동 = 인증 완료 (상태 조회 등 안전한 작업). 상세: **52-auth-model-redesign.md 섹션 2.1** 참조.
+
+CLI 또는 시스템 관리용 엔드포인트.
 
 ### 9.1 POST /v1/admin/kill-switch (CLI Kill Switch)
 
@@ -2126,7 +2134,7 @@ CLI에서 마스터 패스워드로 Kill Switch를 발동한다. WalletConnect �
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/admin/kill-switch` |
-| **Auth** | masterAuth (X-Master-Password 헤더) |
+| **Auth** | masterAuth(explicit) -- X-Master-Password 헤더 필수 |
 | **Tags** | `Admin` |
 | **operationId** | `adminKillSwitch` |
 | **정의 원본** | KILL-AUTO-EVM (섹션 1.2) |
@@ -2162,7 +2170,7 @@ const AdminKillSwitchRequestSchema = z.object({
 |------|-----|
 | **Method** | `POST` |
 | **Path** | `/v1/admin/shutdown` |
-| **Auth** | masterAuth (X-Master-Password 헤더) |
+| **Auth** | masterAuth(explicit) -- X-Master-Password 헤더 필수 |
 | **Tags** | `Admin` |
 | **operationId** | `adminShutdown` |
 | **정의 원본** | CORE-05 |
@@ -2206,7 +2214,7 @@ const ShutdownResponseSchema = z.object({
 |------|-----|
 | **Method** | `GET` |
 | **Path** | `/v1/admin/status` |
-| **Auth** | masterAuth (X-Master-Password 헤더) |
+| **Auth** | masterAuth(implicit) **(v0.5 변경: 상태 조회는 implicit 허용)** |
 | **Tags** | `Admin` |
 | **operationId** | `getAdminStatus` |
 
@@ -2290,17 +2298,21 @@ const AdminStatusResponseSchema = z.object({
 const ErrorResponseSchema = z.object({
   code: z.string().openapi({ description: '에러 코드 (대문자 스네이크)' }),
   message: z.string().openapi({ description: '사람이 읽을 수 있는 에러 메시지' }),
+  hint: z.string().optional().openapi({ description: '(v0.5 추가) 다음 행동을 안내하는 actionable 메시지. 40개 에러 중 31개에 매핑 (78%). 상세: 55-dx-improvement-spec.md 섹션 2 참조' }),
   details: z.unknown().optional().openapi({ description: '추가 상세 정보 (디버깅용)' }),
   requestId: z.string().openapi({ description: '요청 추적 ID' }),
   retryable: z.boolean().openapi({ description: '재시도 가능 여부' }),
 }).openapi('ErrorResponse')
 ```
 
+> **(v0.5 추가)** `hint` 필드는 backward-compatible 확장이다 (`z.string().optional()`). 기존 클라이언트는 이 필드를 무시하고, v0.5+ 클라이언트는 hint를 사용자에게 표시하여 에러 해결을 안내한다. hint 전체 매핑(errorHintMap)은 **55-dx-improvement-spec.md 섹션 2.2** 참조.
+
 **에러 응답 예시:**
 ```json
 {
   "code": "INSUFFICIENT_BALANCE",
   "message": "잔액이 부족합니다. 현재 잔액: 500000000 lamports, 요청 금액: 1000000000 lamports",
+  "hint": "에이전트 지갑에 충분한 잔액을 입금하세요. 주소: waiaas status로 확인",
   "details": { "currentBalance": "500000000", "requestedAmount": "1000000000" },
   "requestId": "req_a1b2c3d4e5f678901234",
   "retryable": false
@@ -2394,6 +2406,8 @@ const ErrorResponseSchema = z.object({
 | SYSTEM | 6 | 400, 409, 503 |
 | AGENT | 3 | 404, 409, 410 |
 | **합계** | **40** | |
+
+> **(v0.5 추가) hint 매핑:** 40개 에러 코드 중 31개(78%)에 hint가 매핑되어 있다. 9개 미매핑(보안/복구불가 사유: `INVALID_TOKEN`, `TOKEN_EXPIRED`, `SESSION_REVOKED`, `INVALID_SIGNATURE`, `INVALID_NONCE`, `MASTER_PASSWORD_LOCKED`, `SYSTEM_LOCKED`, `SHUTTING_DOWN`, `KEYSTORE_LOCKED`). 전체 hint 맵은 **55-dx-improvement-spec.md 섹션 2.2 errorHintMap** 참조.
 
 ---
 
@@ -2603,37 +2617,39 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 
 ## 15. 전체 엔드포인트 맵 (Quick Reference)
 
-| # | Method | Path | Auth | Tags | operationId | 정의 원본 |
-|---|--------|------|------|------|-------------|----------|
+> **(v0.5 변경)** Auth 열이 v0.5 인증 모델을 반영하여 업데이트되었다. ownerAuth는 #15(approve)과 #18(recover) 2곳에만 유지. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
+
+| # | Method | Path | Auth (v0.5) | Tags | operationId | 정의 원본 |
+|---|--------|------|-------------|------|-------------|----------|
 | 1 | GET | `/health` | None | Public | healthCheck | CORE-06 |
 | 2 | GET | `/doc` | None | Public | getOpenApiSpec | CORE-06 |
 | 3 | GET | `/v1/nonce` | None | Public | getNonce | SESS-PROTO |
-| 4 | GET | `/v1/wallet/balance` | Session | Wallet | getBalance | TX-PIPE |
-| 5 | GET | `/v1/wallet/address` | Session | Wallet | getAddress | TX-PIPE |
-| 6 | POST | `/v1/transactions/send` | Session | Transaction | sendTransaction | TX-PIPE |
-| 7 | GET | `/v1/transactions` | Session | Transaction | listTransactions | TX-PIPE |
-| 8 | GET | `/v1/transactions/pending` | Session | Transaction | listPendingTransactions | TX-PIPE |
-| 9 | PUT | `/v1/sessions/:id/renew` | Session | Session | renewSession | **Phase 20** |
-| 10 | POST | `/v1/sessions` | Owner (body) | Session | createSession | SESS-PROTO |
-| 11 | GET | `/v1/sessions` | Owner | Session | listSessions | TX-PIPE |
-| 12 | DELETE | `/v1/sessions/:id` | Owner | Session | revokeSession | TX-PIPE |
+| 4 | GET | `/v1/wallet/balance` | sessionAuth | Wallet | getBalance | TX-PIPE |
+| 5 | GET | `/v1/wallet/address` | sessionAuth | Wallet | getAddress | TX-PIPE |
+| 6 | POST | `/v1/transactions/send` | sessionAuth | Transaction | sendTransaction | TX-PIPE |
+| 7 | GET | `/v1/transactions` | sessionAuth | Transaction | listTransactions | TX-PIPE |
+| 8 | GET | `/v1/transactions/pending` | sessionAuth | Transaction | listPendingTransactions | TX-PIPE |
+| 9 | PUT | `/v1/sessions/:id/renew` | sessionAuth | Session | renewSession | **Phase 20** |
+| 10 | POST | `/v1/sessions` | masterAuth(implicit) | Session | createSession | SESS-PROTO |
+| 11 | GET | `/v1/sessions` | masterAuth(implicit) | Session | listSessions | TX-PIPE |
+| 12 | DELETE | `/v1/sessions/:id` | masterAuth(implicit) | Session | revokeSession | TX-PIPE |
 | 13 | POST | `/v1/owner/connect` | None | Owner | connectOwner | OWNR-CONN |
-| 14 | DELETE | `/v1/owner/disconnect` | Owner | Owner | disconnectOwner | OWNR-CONN |
-| 15 | POST | `/v1/owner/approve/:txId` | Owner | Owner | approveTransaction | OWNR-CONN |
-| 16 | POST | `/v1/owner/reject/:txId` | Owner | Owner | rejectTransaction | OWNR-CONN |
-| 17 | POST | `/v1/owner/kill-switch` | Owner | Owner | activateKillSwitch | KILL-AUTO-EVM |
-| 18 | POST | `/v1/owner/recover` | Owner+Master | Owner | recoverFromKillSwitch | KILL-AUTO-EVM |
-| 19 | GET | `/v1/owner/pending-approvals` | Owner | Owner | listPendingApprovals | OWNR-CONN |
-| 20 | GET | `/v1/owner/status` | Owner | Owner | getOwnerStatus | OWNR-CONN |
-| 21 | POST | `/v1/owner/policies` | Owner | Owner | createPolicy | OWNR-CONN |
-| 22 | PUT | `/v1/owner/policies/:policyId` | Owner | Owner | updatePolicy | OWNR-CONN |
-| 23 | GET | `/v1/owner/sessions` | Owner | Owner | listOwnerSessions | **Phase 9** |
-| 24 | DELETE | `/v1/owner/sessions/:id` | Owner | Owner | revokeOwnerSession | **Phase 9** |
-| 25 | GET | `/v1/owner/agents` | Owner | Owner | listAgents | **Phase 9** |
-| 26 | GET | `/v1/owner/agents/:id` | Owner | Owner | getAgentDetail | **Phase 9** |
-| 27 | GET | `/v1/owner/settings` | Owner | Owner | getSettings | **Phase 9** |
-| 28 | PUT | `/v1/owner/settings` | Owner | Owner | updateSettings | **Phase 9** |
-| 29 | GET | `/v1/owner/dashboard` | Owner | Owner | getDashboard | **Phase 9** |
-| 30 | POST | `/v1/admin/kill-switch` | Master | Admin | adminKillSwitch | KILL-AUTO-EVM |
-| 31 | POST | `/v1/admin/shutdown` | Master | Admin | adminShutdown | CORE-05 |
-| 32 | GET | `/v1/admin/status` | Master | Admin | getAdminStatus | Phase 9 |
+| 14 | DELETE | `/v1/owner/disconnect` | masterAuth(implicit) | Owner | disconnectOwner | OWNR-CONN |
+| 15 | POST | `/v1/owner/approve/:txId` | **ownerAuth** | Owner | approveTransaction | OWNR-CONN |
+| 16 | POST | `/v1/owner/reject/:txId` | masterAuth(implicit) | Owner | rejectTransaction | OWNR-CONN |
+| 17 | POST | `/v1/owner/kill-switch` | masterAuth(implicit) | Owner | activateKillSwitch | KILL-AUTO-EVM |
+| 18 | POST | `/v1/owner/recover` | **ownerAuth**+masterAuth(explicit) | Owner | recoverFromKillSwitch | KILL-AUTO-EVM |
+| 19 | GET | `/v1/owner/pending-approvals` | masterAuth(implicit) | Owner | listPendingApprovals | OWNR-CONN |
+| 20 | GET | `/v1/owner/status` | masterAuth(implicit) | Owner | getOwnerStatus | OWNR-CONN |
+| 21 | POST | `/v1/owner/policies` | masterAuth(implicit) | Owner | createPolicy | OWNR-CONN |
+| 22 | PUT | `/v1/owner/policies/:policyId` | masterAuth(implicit) | Owner | updatePolicy | OWNR-CONN |
+| 23 | GET | `/v1/owner/sessions` | masterAuth(implicit) | Owner | listOwnerSessions | **Phase 9** |
+| 24 | DELETE | `/v1/owner/sessions/:id` | masterAuth(implicit) | Owner | revokeOwnerSession | **Phase 9** |
+| 25 | GET | `/v1/owner/agents` | masterAuth(implicit) | Owner | listAgents | **Phase 9** |
+| 26 | GET | `/v1/owner/agents/:id` | masterAuth(implicit) | Owner | getAgentDetail | **Phase 9** |
+| 27 | GET | `/v1/owner/settings` | masterAuth(implicit) | Owner | getSettings | **Phase 9** |
+| 28 | PUT | `/v1/owner/settings` | masterAuth(implicit) | Owner | updateSettings | **Phase 9** |
+| 29 | GET | `/v1/owner/dashboard` | masterAuth(implicit) | Owner | getDashboard | **Phase 9** |
+| 30 | POST | `/v1/admin/kill-switch` | masterAuth(explicit) | Admin | adminKillSwitch | KILL-AUTO-EVM |
+| 31 | POST | `/v1/admin/shutdown` | masterAuth(explicit) | Admin | adminShutdown | CORE-05 |
+| 32 | GET | `/v1/admin/status` | masterAuth(implicit) | Admin | getAdminStatus | Phase 9 |

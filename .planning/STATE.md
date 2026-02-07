@@ -10,12 +10,12 @@
 ## 현재 위치
 
 마일스톤: v0.5 인증 모델 재설계 + DX 개선
-페이즈: Phase 20 of 21 (세션 갱신 프로토콜)
-플랜: 2 of 2
-상태: Phase complete
-마지막 활동: 2026-02-07 -- Completed 20-02-PLAN.md
+페이즈: Phase 21 of 21 (DX 개선 + 설계 문서 통합)
+플랜: 4 of 4
+상태: Phase complete (v0.5 마일스톤 완료)
+마지막 활동: 2026-02-07 -- Completed 21-03-PLAN.md (21-03 검증 완료, Phase 21 전체 완료)
 
-Progress: [█████████░] 5/TBD (v0.5 전체), 2/2 (Phase 20)
+Progress: [█████████████] 9/9 (v0.5 전체), 4/4 (Phase 21)
 
 ## 성과 지표
 
@@ -23,7 +23,7 @@ Progress: [█████████░] 5/TBD (v0.5 전체), 2/2 (Phase 20)
 **v0.2 최종 통계:** 16 plans, 45/45 reqs, 17 docs
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
-**v0.5 현재:** 5/TBD plans, 19/24 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, SESS-03)
+**v0.5 최종 통계:** 9/9 plans, 27/27 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~08, SESS-03), 15 docs (52-55 신규 + 11개 기존 문서 수정)
 
 ## 누적 컨텍스트
 
@@ -66,6 +66,32 @@ v0.5 Plan 20-02 결정:
 - 갱신 엔드포인트를 Section 6 Session API (Agent 인증)에 6.6으로 배치 (sessionAuth)
 - 섹션 5-9 엔드포인트 상세는 Phase 21 위임 유지 (19-03 결정 D2)
 
+v0.5 Plan 21-01 결정:
+- init에서 에이전트 생성/알림 설정/Owner 등록 제거, 순수 인프라 초기화(2단계)로 한정
+- agent create --owner 필수 (agents.owner_address NOT NULL 반영, SIWS/SIWE 서명 불필요)
+- session create는 masterAuth(implicit) 전용, 3가지 출력 포맷 (token/json/env)
+- --quickstart 패스워드 자동 생성: randomBytes(24) base64url, ~/.waiaas/.master-password mode 0o600
+- --dev 고정 패스워드 "waiaas-dev", 3종 보안 경고 (배너/헤더/감사로그), --expose 조합 금지
+- config.toml [daemon].dev_mode 영구 설정 (boolean, 기본 false)
+- 54-cli-flow-redesign.md가 28-daemon-lifecycle-cli.md 섹션 6(CLI 커맨드) 대체
+
+v0.5 Plan 21-02 결정:
+- hint 필드는 z.string().optional()로 ErrorResponseSchema backward-compatible 확장
+- 40개 에러 중 31개에 hint 매핑 (78%), 9개 미매핑 (보안/복구불가 사유)
+- MCP 옵션 B(별도 stdio) 채택: MCP Host 표준 + sessionAuth 보장 + 관심사 분리
+- MCP 옵션 A(Streamable HTTP) 기각: Host 호환성 부족 + 인증 모델 충돌
+- MCP 마이그레이션 경로: B -> B+자동화 -> C(--mcp-stdio) -> A 재검토
+- 세션 토큰 불편함 완화 3방안: mcp setup 커맨드, 세션 자동 갱신, env 파일
+- 원격 접근 SSH 터널 추천, --expose는 mTLS+IP화이트리스트 구현 후에만 안전
+
+v0.5 Plan 21-03 결정:
+- 37-rest-api 에러 코드 테이블에 hint 열 추가 대신 위임 링크 채택 (55-dx-improvement-spec.md가 hint SSoT)
+- 40-telegram-bot 2-Tier 모델은 v0.5 3-tier와 양립 (Tier 1 = masterAuth implicit, Tier 2 = ownerAuth approve/recover)
+- Docker --dev 모드 별도 섹션 9.2로 독립 (프로덕션 금지 + 테스트 YAML 예시)
+
+v0.5 Plan 21-04 결정:
+- 33/36 참조 노트는 인라인 코드 수정 없이 blockquote 노트만 추가 (원본 설계 무결성 유지)
+
 ### 차단 요소/우려 사항
 
 없음
@@ -73,5 +99,5 @@ v0.5 Plan 20-02 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: Completed 20-02-PLAN.md, Phase 20 complete. Ready for Phase 21.
+중단 지점: Completed 21-03-PLAN.md. Phase 21 4/4 plans complete. v0.5 마일스톤 완료.
 재개 파일: None
