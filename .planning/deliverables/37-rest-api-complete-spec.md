@@ -4,7 +4,7 @@
 **작성일:** 2026-02-05
 **v0.5 인증 모델 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md)
+**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md)
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
 
 ---
@@ -13,7 +13,7 @@
 
 ### 1.1 목적
 
-WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트를 합쳐 총 **30개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
+WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트를 합쳐 총 **31개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
 
 SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참조하는 **API 단일 소스(Single Source of Truth)** 역할을 한다.
 
@@ -45,12 +45,12 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 | 카테고리 | 수 | 인증 | 범위 |
 |----------|---|------|------|
 | Public API | 3 | None | 헬스체크, 문서, nonce |
-| Session API (Agent) | 6 | Session Bearer | 지갑, 거래, 세션 조회 |
+| Session API (Agent) | 7 | Session Bearer | 지갑, 거래, 세션 조회, 세션 갱신 (Phase 20 추가: +1) |
 | System Management API | 16 | masterAuth (implicit) | 세션 CRUD, 에이전트 CRUD, 정책, 설정, 대시보드 |
 | Owner Auth API | 1 | Owner Signature | 거래 승인 (APPROVAL 티어) |
 | Dual Auth API | 1 | Owner Signature + Master Password | Kill Switch 복구 |
 | Admin API | 3 | Master Password (explicit) | Kill Switch, Shutdown, Status |
-| **합계** | **30** | | `/doc` 포함 시 31 |
+| **합계** | **31** | | `/doc` 포함 시 32 |
 
 > **v0.5 변경:** v0.2의 "Session Management API 3 (ownerAuth)" + "Owner API 17 (ownerAuth)"가 3-tier 재분류로 통합 재편성되었다. ownerAuth 적용은 2곳(거래 승인, KS 복구)으로 축소. 나머지 시스템 관리 엔드포인트는 masterAuth(implicit)로 이동. 52-auth-model-redesign.md 섹션 4 참조.
 
@@ -258,7 +258,7 @@ X-Master-Password: my-secure-master-password-2026
 |---------------|------|----------|
 | `GET /health`, `GET /doc`, `GET /v1/nonce` | None | - |
 | `POST /v1/owner/connect` | None (localhost 보안) | hostValidation |
-| `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions` | Session Bearer | sessionAuth |
+| `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions`, `PUT /v1/sessions/:id/renew` | Session Bearer | sessionAuth |
 | `POST /v1/sessions`, `DELETE /v1/sessions/:id`, 에이전트 CRUD, 정책 CRUD, 설정, 조회 등 | masterAuth (implicit) | masterAuth(implicit) |
 | `POST /v1/owner/approve/:txId` | Owner Signature | ownerAuth |
 | `POST /v1/owner/recover` | Owner Signature + Master Password (dual-auth) | ownerAuth + masterAuth(explicit) |
@@ -853,6 +853,53 @@ const PendingTransactionListResponseSchema = z.object({
   ]
 }
 ```
+
+---
+
+### 6.6 PUT /v1/sessions/:id/renew (세션 갱신) [Phase 20 추가]
+
+에이전트가 자신의 세션을 갱신(토큰 회전)한다. 낙관적 갱신 패턴: 에이전트가 sessionAuth만으로 갱신하고, Owner가 사후에 거부할 수 있다.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `PUT` |
+| **Path** | `/v1/sessions/:id/renew` |
+| **Auth** | bearerAuth (Session) -- JWT의 sid == :id 일치 필수 |
+| **Tags** | `Session` |
+| **operationId** | `renewSession` |
+| **Rate Limit** | 세션 300 req/min |
+| **정의 원본** | SESS-RENEW (53-session-renewal-protocol.md 섹션 3) |
+
+**Path Parameters:**
+
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| `id` | UUID v7 | 갱신할 세션 ID (JWT의 sid claim과 일치해야 함) |
+
+**요청 바디:** 없음 (갱신 단위 고정, Guard 5)
+
+**응답 (200 OK):**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `sessionId` | string (UUID v7) | 세션 ID (변경 없음) |
+| `token` | string | 새 세션 토큰 (`wai_sess_` + 새 JWT) |
+| `expiresAt` | string (ISO 8601) | 새 만료 시각 = now + expiresIn |
+| `renewalCount` | number | 누적 갱신 횟수 (갱신 후 값) |
+| `maxRenewals` | number | 최대 갱신 횟수 |
+| `absoluteExpiresAt` | string (ISO 8601) | 절대 만료 시각 (세션 총 수명 상한) |
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `RENEWAL_LIMIT_REACHED` | 403 | false | 최대 갱신 횟수 초과 |
+| `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` | 403 | false | 절대 수명 초과 |
+| `RENEWAL_TOO_EARLY` | 403 | true | 50% 미경과 |
+| `SESSION_RENEWAL_MISMATCH` | 403 | false | JWT sid != :id |
+| `SESSION_NOT_FOUND` | 404 | false | 세션 없음 |
+
+> **상세 스펙:** 5종 안전 장치, 토큰 회전 메커니즘, Owner 사후 거부 플로우 등 전체 프로토콜은 53-session-renewal-protocol.md 참조.
 
 ---
 
@@ -2281,6 +2328,10 @@ const ErrorResponseSchema = z.object({
 | `SESSION_EXPIRED` | 401 | false | 세션 만료 (exp claim 초과) |
 | `SESSION_LIMIT_EXCEEDED` | 403 | false | 세션 제약 조건 초과 (한도/횟수/주소) |
 | `CONSTRAINT_VIOLATED` | 403 | false | 허용 작업/주소 제약 위반 |
+| `RENEWAL_LIMIT_REACHED` | 403 | false | 최대 갱신 횟수(maxRenewals) 초과 (Phase 20 추가) |
+| `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` | 403 | false | 갱신 후 세션 총 수명이 절대 수명 초과 (Phase 20 추가) |
+| `RENEWAL_TOO_EARLY` | 403 | true | 현재 세션 기간의 50% 미경과 (시간 경과 후 재시도) (Phase 20 추가) |
+| `SESSION_RENEWAL_MISMATCH` | 403 | false | JWT의 sid와 요청의 :id 불일치 (타인의 세션 갱신 시도) (Phase 20 추가) |
 
 ### 10.4 TX 도메인 에러
 
@@ -2336,13 +2387,13 @@ const ErrorResponseSchema = z.object({
 | 도메인 | 코드 수 | 주요 HTTP |
 |--------|--------|-----------|
 | AUTH | 8 | 401, 429 |
-| SESSION | 4 | 401, 403, 404 |
+| SESSION | 8 | 401, 403, 404 (Phase 20: +4 갱신 에러) |
 | TX | 7 | 400, 404, 409, 410, 422, 502 |
 | POLICY | 4 | 403, 429 |
 | OWNER | 4 | 404, 409, 410 |
 | SYSTEM | 6 | 400, 409, 503 |
 | AGENT | 3 | 404, 409, 410 |
-| **합계** | **36** | |
+| **합계** | **40** | |
 
 ---
 
@@ -2562,26 +2613,27 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 6 | POST | `/v1/transactions/send` | Session | Transaction | sendTransaction | TX-PIPE |
 | 7 | GET | `/v1/transactions` | Session | Transaction | listTransactions | TX-PIPE |
 | 8 | GET | `/v1/transactions/pending` | Session | Transaction | listPendingTransactions | TX-PIPE |
-| 9 | POST | `/v1/sessions` | Owner (body) | Session | createSession | SESS-PROTO |
-| 10 | GET | `/v1/sessions` | Owner | Session | listSessions | TX-PIPE |
-| 11 | DELETE | `/v1/sessions/:id` | Owner | Session | revokeSession | TX-PIPE |
-| 12 | POST | `/v1/owner/connect` | None | Owner | connectOwner | OWNR-CONN |
-| 13 | DELETE | `/v1/owner/disconnect` | Owner | Owner | disconnectOwner | OWNR-CONN |
-| 14 | POST | `/v1/owner/approve/:txId` | Owner | Owner | approveTransaction | OWNR-CONN |
-| 15 | POST | `/v1/owner/reject/:txId` | Owner | Owner | rejectTransaction | OWNR-CONN |
-| 16 | POST | `/v1/owner/kill-switch` | Owner | Owner | activateKillSwitch | KILL-AUTO-EVM |
-| 17 | POST | `/v1/owner/recover` | Owner+Master | Owner | recoverFromKillSwitch | KILL-AUTO-EVM |
-| 18 | GET | `/v1/owner/pending-approvals` | Owner | Owner | listPendingApprovals | OWNR-CONN |
-| 19 | GET | `/v1/owner/status` | Owner | Owner | getOwnerStatus | OWNR-CONN |
-| 20 | POST | `/v1/owner/policies` | Owner | Owner | createPolicy | OWNR-CONN |
-| 21 | PUT | `/v1/owner/policies/:policyId` | Owner | Owner | updatePolicy | OWNR-CONN |
-| 22 | GET | `/v1/owner/sessions` | Owner | Owner | listOwnerSessions | **Phase 9** |
-| 23 | DELETE | `/v1/owner/sessions/:id` | Owner | Owner | revokeOwnerSession | **Phase 9** |
-| 24 | GET | `/v1/owner/agents` | Owner | Owner | listAgents | **Phase 9** |
-| 25 | GET | `/v1/owner/agents/:id` | Owner | Owner | getAgentDetail | **Phase 9** |
-| 26 | GET | `/v1/owner/settings` | Owner | Owner | getSettings | **Phase 9** |
-| 27 | PUT | `/v1/owner/settings` | Owner | Owner | updateSettings | **Phase 9** |
-| 28 | GET | `/v1/owner/dashboard` | Owner | Owner | getDashboard | **Phase 9** |
-| 29 | POST | `/v1/admin/kill-switch` | Master | Admin | adminKillSwitch | KILL-AUTO-EVM |
-| 30 | POST | `/v1/admin/shutdown` | Master | Admin | adminShutdown | CORE-05 |
-| 31 | GET | `/v1/admin/status` | Master | Admin | getAdminStatus | Phase 9 |
+| 9 | PUT | `/v1/sessions/:id/renew` | Session | Session | renewSession | **Phase 20** |
+| 10 | POST | `/v1/sessions` | Owner (body) | Session | createSession | SESS-PROTO |
+| 11 | GET | `/v1/sessions` | Owner | Session | listSessions | TX-PIPE |
+| 12 | DELETE | `/v1/sessions/:id` | Owner | Session | revokeSession | TX-PIPE |
+| 13 | POST | `/v1/owner/connect` | None | Owner | connectOwner | OWNR-CONN |
+| 14 | DELETE | `/v1/owner/disconnect` | Owner | Owner | disconnectOwner | OWNR-CONN |
+| 15 | POST | `/v1/owner/approve/:txId` | Owner | Owner | approveTransaction | OWNR-CONN |
+| 16 | POST | `/v1/owner/reject/:txId` | Owner | Owner | rejectTransaction | OWNR-CONN |
+| 17 | POST | `/v1/owner/kill-switch` | Owner | Owner | activateKillSwitch | KILL-AUTO-EVM |
+| 18 | POST | `/v1/owner/recover` | Owner+Master | Owner | recoverFromKillSwitch | KILL-AUTO-EVM |
+| 19 | GET | `/v1/owner/pending-approvals` | Owner | Owner | listPendingApprovals | OWNR-CONN |
+| 20 | GET | `/v1/owner/status` | Owner | Owner | getOwnerStatus | OWNR-CONN |
+| 21 | POST | `/v1/owner/policies` | Owner | Owner | createPolicy | OWNR-CONN |
+| 22 | PUT | `/v1/owner/policies/:policyId` | Owner | Owner | updatePolicy | OWNR-CONN |
+| 23 | GET | `/v1/owner/sessions` | Owner | Owner | listOwnerSessions | **Phase 9** |
+| 24 | DELETE | `/v1/owner/sessions/:id` | Owner | Owner | revokeOwnerSession | **Phase 9** |
+| 25 | GET | `/v1/owner/agents` | Owner | Owner | listAgents | **Phase 9** |
+| 26 | GET | `/v1/owner/agents/:id` | Owner | Owner | getAgentDetail | **Phase 9** |
+| 27 | GET | `/v1/owner/settings` | Owner | Owner | getSettings | **Phase 9** |
+| 28 | PUT | `/v1/owner/settings` | Owner | Owner | updateSettings | **Phase 9** |
+| 29 | GET | `/v1/owner/dashboard` | Owner | Owner | getDashboard | **Phase 9** |
+| 30 | POST | `/v1/admin/kill-switch` | Master | Admin | adminKillSwitch | KILL-AUTO-EVM |
+| 31 | POST | `/v1/admin/shutdown` | Master | Admin | adminShutdown | CORE-05 |
+| 32 | GET | `/v1/admin/status` | Master | Admin | getAdminStatus | Phase 9 |

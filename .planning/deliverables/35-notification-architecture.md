@@ -3,7 +3,7 @@
 **문서 ID:** NOTI-ARCH
 **작성일:** 2026-02-05
 **상태:** 완료
-**참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), TX-PIPE (32-transaction-pipeline-api.md)
+**참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), TX-PIPE (32-transaction-pipeline-api.md), SESS-RENEW (53-session-renewal-protocol.md)
 **요구사항:** NOTI-01 (멀티 채널 알림), NOTI-02 (최소 2채널 + 폴백)
 
 ---
@@ -80,6 +80,8 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 | 자동 정지 발동 | AUTO_STOP_TRIGGERED | broadcast() (전체) | AutoStopRuleEngine |
 | 세션 생성 | SESSION_CREATED | notify() (표준) | POST /v1/sessions 완료 |
 | 세션 폐기 | SESSION_REVOKED | notify() (표준) | DELETE /v1/sessions/:id |
+| 세션 갱신 성공 | SESSION_RENEWED | notify() (표준) | session-renewal-service (PUT /v1/sessions/:id/renew 200 응답 후) (Phase 20 추가) |
+| 세션 갱신 거부 | SESSION_RENEWAL_REJECTED | notify() (표준) | session-service (DELETE /v1/sessions/:id, details.trigger='renewal_rejected') (Phase 20 추가) |
 | 일일 요약 | DAILY_SUMMARY | notify() (표준) | 일일 스케줄러 (선택) |
 
 ---
@@ -217,6 +219,10 @@ export const NotificationEventType = {
   SESSION_CREATED: 'SESSION_CREATED',
   /** 세션 폐기 알림 */
   SESSION_REVOKED: 'SESSION_REVOKED',
+  /** 세션 갱신 완료 알림 (Phase 20 추가) */
+  SESSION_RENEWED: 'SESSION_RENEWED',
+  /** 세션 갱신 거부(폐기) 알림 (Phase 20 추가) */
+  SESSION_RENEWAL_REJECTED: 'SESSION_RENEWAL_REJECTED',
 
   // ── 운영 ──
   /** 일일 요약 (선택적 활성화) */
@@ -242,6 +248,8 @@ export type NotificationEventType = typeof NotificationEventType[keyof typeof No
 | AUTO_STOP_TRIGGERED | CRITICAL | 자동 정지 발동 (모든 채널 broadcast) |
 | SESSION_CREATED | INFO | 새 세션 생성 |
 | SESSION_REVOKED | INFO | 세션 폐기 |
+| SESSION_RENEWED | INFO | 세션 갱신 완료 (Phase 20 추가) |
+| SESSION_RENEWAL_REJECTED | WARNING | 세션 갱신 거부 -- Owner가 세션을 폐기함 (Phase 20 추가) |
 | DAILY_SUMMARY | INFO | 일일 운영 요약 |
 
 ---
@@ -2019,6 +2027,117 @@ Tags: rotating_light,skull,octagonal_sign
 에이전트 전원 정지.
 복구하려면 Owner 인증이 필요합니다.
 ```
+
+#### SESSION_RENEWED (세션 갱신 완료) [Phase 20 추가]
+
+**Telegram (MarkdownV2):**
+```
+*세션 갱신 알림* \(INFO\)
+
+세션 `{sessionId}` \(에이전트: {agentName}\)이 갱신되었습니다\.
+
+갱신 횟수: {renewalCount}/{maxRenewals}
+남은 총 수명: {remainingAbsoluteLife}
+확인 기한: {rejectWindowExpiry}
+
+세션을 폐기하면 갱신이 취소됩니다\.
+```
+
+**Discord (Embed):**
+```json
+{
+  "embeds": [{
+    "title": "세션 갱신 알림",
+    "color": 3447003,
+    "fields": [
+      { "name": "세션 ID", "value": "{sessionId}", "inline": true },
+      { "name": "에이전트", "value": "{agentName}", "inline": true },
+      { "name": "갱신 횟수", "value": "{renewalCount}/{maxRenewals}", "inline": true },
+      { "name": "남은 총 수명", "value": "{remainingAbsoluteLife}", "inline": true },
+      { "name": "확인 기한", "value": "{rejectWindowExpiry}", "inline": false }
+    ],
+    "footer": { "text": "세션을 폐기하면 갱신이 취소됩니다." },
+    "timestamp": "{createdAt}"
+  }]
+}
+```
+
+**ntfy.sh:**
+```
+Title: 세션 갱신 알림
+Priority: 3 (default)
+Tags: session,renewal
+Body:
+세션 {sessionId} (에이전트: {agentName})이 갱신되었습니다.
+갱신 횟수: {renewalCount}/{maxRenewals}
+남은 총 수명: {remainingAbsoluteLife}
+확인 기한: {rejectWindowExpiry}
+```
+
+**context 필드:**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `sessionId` | string | 갱신된 세션 ID |
+| `agentName` | string | 에이전트 이름 (agents.name) |
+| `renewalCount` | number | 누적 갱신 횟수 (갱신 후) |
+| `maxRenewals` | number | 최대 갱신 횟수 |
+| `remainingAbsoluteLife` | string | 남은 절대 수명 (예: "27d 12h") |
+| `rejectWindowExpiry` | string (ISO 8601) | 거부 윈도우 만료 시각 |
+
+#### SESSION_RENEWAL_REJECTED (세션 갱신 거부) [Phase 20 추가]
+
+**Telegram (MarkdownV2):**
+```
+*세션 갱신 거부 알림* \(WARNING\)
+
+세션 `{sessionId}` \(에이전트: {agentName}\)의 갱신이 거부\(폐기\)되었습니다\.
+
+거부 시점의 갱신 횟수: {renewalCount}
+폐기 시각: {rejectedAt}
+
+에이전트는 더 이상 이 세션으로 API에 접근할 수 없습니다\.
+```
+
+**Discord (Embed):**
+```json
+{
+  "embeds": [{
+    "title": "세션 갱신 거부 알림",
+    "color": 15105570,
+    "fields": [
+      { "name": "세션 ID", "value": "{sessionId}", "inline": true },
+      { "name": "에이전트", "value": "{agentName}", "inline": true },
+      { "name": "갱신 횟수", "value": "{renewalCount}", "inline": true },
+      { "name": "폐기 시각", "value": "{rejectedAt}", "inline": false }
+    ],
+    "footer": { "text": "에이전트는 더 이상 이 세션으로 API에 접근할 수 없습니다." },
+    "timestamp": "{createdAt}"
+  }]
+}
+```
+
+**ntfy.sh:**
+```
+Title: 세션 갱신 거부 알림
+Priority: 4 (high)
+Tags: warning,session,rejection
+Body:
+세션 {sessionId} (에이전트: {agentName})의 갱신이 거부(폐기)되었습니다.
+거부 시점의 갱신 횟수: {renewalCount}
+폐기 시각: {rejectedAt}
+```
+
+**context 필드:**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `sessionId` | string | 폐기된 세션 ID |
+| `agentName` | string | 에이전트 이름 (agents.name) |
+| `renewalCount` | number | 폐기 시점의 갱신 횟수 |
+| `rejectedAt` | string (ISO 8601) | 폐기 시각 |
+
+> **참고:** SESSION_RENEWAL_REJECTED 알림은 Owner가 갱신 후 세션을 폐기한 경우에만 전송된다. 기존 DELETE /v1/sessions/:id의 감사 로그 `details.trigger`가 `renewal_rejected`인 경우에 해당한다.
 
 ### 11.4 주소 축약 표시 규칙
 
