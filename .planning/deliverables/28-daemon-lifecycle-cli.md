@@ -3,7 +3,7 @@
 **문서 ID:** CORE-05
 **작성일:** 2026-02-05
 **상태:** 완료
-**참조:** CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), CORE-03 (26-keystore-spec.md), CORE-04 (27-chain-adapter-interface.md), 06-RESEARCH.md, 06-CONTEXT.md
+**참조:** CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), CORE-03 (26-keystore-spec.md), CORE-04 (27-chain-adapter-interface.md), 06-RESEARCH.md, 06-CONTEXT.md, AUTH-REDESIGN (52-auth-model-redesign.md), CLI-REDESIGN (54-cli-flow-redesign.md)
 
 ---
 
@@ -909,6 +909,7 @@ SIGHUP으로 런타임 중 재로드 가능한 설정과 불가능한 설정을 
 | `log_level` | O | 로거 레벨만 변경 |
 | `log_max_size`, `log_max_files` | O | 로그 로테이션 설정 |
 | `shutdown_timeout` | O | 다음 종료 시 적용 |
+| `dev_mode` | **X** | **(v0.5 추가)** 시작 시점에만 적용. 런타임 변경 불가 (패스워드 재파생 필요). 54-cli-flow-redesign.md 섹션 7 참조 |
 | `port` | **X** | 서버 재시작 필요. 데몬 재시작으로 해결 |
 | `hostname` | **X** | `127.0.0.1` 고정. 변경 자체가 불가 |
 | `[keystore]` | **X** | 이미 파생된 키에는 영향 없음 |
@@ -1110,6 +1111,7 @@ switch (subcommand) {
   case 'stop':    return runStop(process.argv.slice(3))
   case 'status':  return runStatus(process.argv.slice(3))
   case 'agent':   return runAgent(process.argv.slice(3))
+  case 'session': return runSession(process.argv.slice(3))  // (v0.5 추가)
   case 'backup':  return runBackup(process.argv.slice(3))
   default:
     if (values.version) return printVersion()
@@ -1153,6 +1155,10 @@ Options:
 
 #### 대화형 초기 설정 플로우 (Interactive Mode)
 
+> **(v0.5 변경)** v0.5에서 init은 순수 인프라 초기화(2단계)로 간소화되었다. 에이전트 생성, 알림 설정, Owner 등록은 별도 커맨드(`waiaas agent create`, API)로 분리. 상세: **54-cli-flow-redesign.md 섹션 2** 참조.
+>
+> v0.5 추가 옵션: `--quickstart` (패스워드 자동 생성 + 즉시 시작), `--force` (재초기화). 상세: **54-cli-flow-redesign.md 섹션 6** 참조.
+
 ```mermaid
 flowchart TD
     Start([waiaas init]) --> CheckExist{~/.waiaas/<br/>존재?}
@@ -1167,7 +1173,7 @@ flowchart TD
     PWMatch -->|No| PW1
     PWMatch -->|Yes| Step2
 
-    Step2[Step 2: 첫 번째 에이전트 생성?]
+    Step2["Step 2: 첫 번째 에이전트 생성? (v0.5 제거)"]
     Step2 --> AgentQ{에이전트<br/>생성? y/n}
     AgentQ -->|Yes| AgentName[에이전트 이름 입력]
     AgentName --> AgentChain[체인 선택: solana / ethereum]
@@ -1175,13 +1181,13 @@ flowchart TD
     AgentNet --> Step3
     AgentQ -->|No| Step3
 
-    Step3[Step 3: 알림 채널 설정?]
+    Step3["Step 3: 알림 채널 설정? (v0.5 제거)"]
     Step3 --> NotiQ{설정? y/n<br/>Phase 8 상세}
     NotiQ -->|Yes| NotiSkip[Skip -- Phase 8에서 상세]
     NotiQ -->|No| Step4
     NotiSkip --> Step4
 
-    Step4[Step 4: Owner 지갑 주소 등록?]
+    Step4["Step 4: Owner 지갑 주소 등록? (v0.5 제거)"]
     Step4 --> OwnerQ{등록? y/n<br/>Phase 8 상세}
     OwnerQ -->|Yes| OwnerSkip[Skip -- Phase 8에서 상세]
     OwnerQ -->|No| Execute
@@ -1200,6 +1206,8 @@ flowchart TD
 
 #### 대화형 모드 출력 예시
 
+> **(v0.5 변경)** 아래는 v0.2 기준 4단계 출력 예시이다. v0.5에서는 Step 1/2(PW 설정 + 인프라 초기화)만 수행하고 Step 2-4는 제거되었다. v0.5 출력 예시는 **54-cli-flow-redesign.md 섹션 2.4** 참조.
+
 ```
 $ waiaas init
 
@@ -1214,7 +1222,7 @@ $ waiaas init
   Confirm password: ••••••••••••••••
   ✓ Master password set
 
-  Step 2/4: Create First Agent
+  Step 2/4: Create First Agent (v0.5 제거 -- waiaas agent create로 분리)
   Would you like to create your first agent? (y/N): y
   Agent name: trading-bot-01
   Chain (solana/ethereum): solana
@@ -1222,11 +1230,11 @@ $ waiaas init
   ✓ Agent 'trading-bot-01' created
     Address: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
 
-  Step 3/4: Notification Channel (optional)
+  Step 3/4: Notification Channel (optional) (v0.5 제거 -- API로 분리)
   Configure notification channel? (y/N): n
   → Skipped (configure later via API or config.toml)
 
-  Step 4/4: Owner Wallet (optional)
+  Step 4/4: Owner Wallet (optional) (v0.5 제거 -- waiaas agent create --owner로 통합)
   Register owner wallet address? (y/N): n
   → Skipped (configure later for time-lock approvals)
 
@@ -1339,6 +1347,7 @@ async function runInit(args: string[]): Promise<void> {
 | `--non-interactive` | boolean | X | `false` | 비대화형 모드 |
 | `--password-env <var>` | string | X | `WAIAAS_MASTER_PASSWORD` | 패스워드 환경변수 이름 |
 | `--force` | boolean | X | `false` | 기존 초기화 덮어쓰기 |
+| `--quickstart` | boolean | X | `false` | **(v0.5 추가)** 패스워드 자동 생성 + 즉시 시작. 54-cli-flow-redesign.md 섹션 6 참조 |
 
 ---
 
@@ -1358,6 +1367,7 @@ Options:
   --log-level <level>      로그 레벨 (debug/info/warn/error)
   --password-env <var>     패스워드 환경변수 이름
   --password-file <path>   패스워드 파일 경로
+  --dev                    (v0.5 추가) 개발 모드 -- 고정 패스워드로 프롬프트 없이 시작
   -h, --help               도움말
 ```
 
@@ -1371,6 +1381,7 @@ Options:
 | `--log-level` | - | string | X | config.toml 값 또는 `info` | `debug` / `info` / `warn` / `error` |
 | `--password-env` | - | string | X | `WAIAAS_MASTER_PASSWORD` | 패스워드 환경변수 이름 |
 | `--password-file` | - | string | X | - | 패스워드 파일 경로 (파일 첫 줄) |
+| `--dev` | - | boolean | X | `false` | **(v0.5 추가)** 고정 패스워드('waiaas-dev')로 프롬프트 없이 시작. config.toml `[daemon].dev_mode = true`와 동등. **개발 환경 전용.** `--expose`와 조합 금지. 54-cli-flow-redesign.md 섹션 7 참조 |
 
 #### 실행 흐름
 
@@ -1417,9 +1428,28 @@ Logs: ~/.waiaas/logs/daemon.log
 
 $ waiaas start --daemon --port 3001
 WAIaaS daemon started in background (PID: 12346)
-Listening on 127.0.0.1:3001
+Listening on 127.0.0.0:3001
 Logs: ~/.waiaas/logs/daemon.log
 ```
+
+**(v0.5 추가) --dev 모드:**
+```
+$ waiaas start --dev
+  ┌─────────────────────────────────────────────┐
+  │  WARNING: DEV MODE ACTIVE                   │
+  │  Using fixed password 'waiaas-dev'          │
+  │  DO NOT use in production                   │
+  └─────────────────────────────────────────────┘
+WAIaaS daemon v0.5.0 [DEV MODE]
+Validating environment... OK
+Database ready (7 tables, migration v5)
+Unlocking keystore... (Argon2id, ~2s)
+KeyStore unlocked (1 key loaded)
+HTTP server listening on 127.0.0.1:3100
+WAIaaS daemon v0.5.0 ready on 127.0.0.1:3100 (PID: 12345) [DEV MODE]
+```
+
+> **--dev 보안 경고:** `--dev`는 개발/테스트 환경 전용이다. 고정 패스워드 'waiaas-dev'를 사용하므로 프로덕션에서 절대 사용 금지. `--expose`와 조합 시 에러로 거부. 3종 보안 경고: 시작 배너, 모든 API 응답 `X-Dev-Mode: true` 헤더, 감사 로그 `actor='dev-mode'`. 상세: **54-cli-flow-redesign.md 섹션 7** 참조.
 
 #### 에러 출력 예시
 
@@ -1894,15 +1924,25 @@ Phase 6에서는 CLI 구조만 정의한다. 상세 옵션과 구현은 Phase 7-
 
 | 커맨드 | 설명 | 상세 설계 시점 |
 |--------|------|-------------|
-| `waiaas agent create <name> --chain <chain> [--network <net>]` | 에이전트 키 생성 + 암호화 저장 + DB 등록 | Phase 7 |
-| `waiaas agent list` | 에이전트 목록 (이름, 체인, 상태, 주소) | Phase 7 |
+| `waiaas agent create <name> --chain <chain> --owner <address> [--network <net>]` | **(v0.5 변경)** 에이전트 키 생성 + Owner 주소 등록 (필수). 54-cli-flow-redesign.md 섹션 3 참조 | Phase 7 |
+| `waiaas agent list` | 에이전트 목록 (이름, 체인, 상태, 주소, Owner) | Phase 7 |
 | `waiaas agent info <id\|name>` | 에이전트 상세 (잔액, 세션, 거래 내역) | Phase 7 |
 | `waiaas agent suspend <id\|name>` | 에이전트 일시 정지 | Phase 8 |
 | `waiaas agent resume <id\|name>` | 에이전트 재개 | Phase 8 |
 | `waiaas agent export <id\|name> --output <path>` | 키파일 내보내기 (CORE-03 포맷) | Phase 7 |
 | `waiaas agent import <path>` | 키파일 가져오기 + 재암호화 | Phase 7 |
 
-### 8.2 백업/복원 커맨드
+### 8.2 세션 관리 커맨드 (v0.5 추가)
+
+> **(v0.5 추가)** 세션 토큰 발급/조회 커맨드. masterAuth(implicit) 기반 -- 데몬 실행 중 CLI에서 직접 세션을 관리한다. 상세: **54-cli-flow-redesign.md 섹션 4** 참조.
+
+| 커맨드 | 설명 | 상세 설계 시점 |
+|--------|------|-------------|
+| `waiaas session create --agent <name> [--format token\|json\|env]` | 세션 토큰 발급 (masterAuth implicit). 3가지 출력 포맷 지원 | 54-cli-flow-redesign.md |
+| `waiaas session list` | 활성 세션 목록 조회 | 54-cli-flow-redesign.md |
+| `waiaas session revoke <id>` | 세션 토큰 폐기 | 54-cli-flow-redesign.md |
+
+### 8.3 백업/복원 커맨드
 
 | 커맨드 | 설명 | 상세 설계 시점 |
 |--------|------|-------------|
@@ -1910,29 +1950,33 @@ Phase 6에서는 CLI 구조만 정의한다. 상세 옵션과 구현은 Phase 7-
 | `waiaas backup restore <path>` | 백업에서 복원 (데몬 정지 필요) | Phase 7 |
 | `waiaas backup list` | 백업 목록 (자동 백업 포함) | Phase 7 |
 
-### 8.3 보안 커맨드
+### 8.4 보안 커맨드
 
 | 커맨드 | 설명 | 상세 설계 시점 |
 |--------|------|-------------|
 | `waiaas password change` | 마스터 패스워드 변경 (모든 키 재암호화) | Phase 8 |
 | `waiaas kill-switch` | 긴급 정지 (모든 세션 취소 + 에이전트 정지) | Phase 8 |
 
-### 8.4 커맨드 구조 트리
+### 8.5 커맨드 구조 트리
 
 ```
 waiaas
-├── init                    # CORE-05: 초기 설정 (이 문서)
-├── start                   # CORE-05: 데몬 시작 (이 문서)
+├── init                    # CORE-05: 초기 설정 (이 문서). v0.5: 2단계 간소화 (54 참조)
+├── start                   # CORE-05: 데몬 시작 (이 문서). v0.5: --dev 추가
 ├── stop                    # CORE-05: 데몬 정지 (이 문서)
 ├── status                  # CORE-05: 데몬 상태 (이 문서)
-├── agent                   # Phase 7-8
-│   ├── create
+├── agent                   # Phase 7-8. v0.5: create --owner 필수
+│   ├── create              # (v0.5 변경) --owner <address> 필수. 54-cli-flow-redesign.md 섹션 3
 │   ├── list
 │   ├── info
 │   ├── suspend
 │   ├── resume
 │   ├── export
 │   └── import
+├── session                 # (v0.5 추가) 세션 토큰 관리. 54-cli-flow-redesign.md 섹션 4
+│   ├── create              # --agent <name> --format token|json|env
+│   ├── list
+│   └── revoke
 ├── backup                  # Phase 7
 │   ├── create
 │   ├── restore
@@ -1942,7 +1986,7 @@ waiaas
 └── kill-switch             # Phase 8
 ```
 
-### 8.5 서브커맨드 라우팅 패턴
+### 8.6 서브커맨드 라우팅 패턴
 
 ```typescript
 // packages/cli/src/commands/agent.ts
@@ -2001,20 +2045,23 @@ export async function runAgent(args: string[]): Promise<void> {
 
 **배경:** CLI `waiaas init`(섹션 6.1)은 4단계, Tauri Setup Wizard(TAURI-DESK, 39-tauri-desktop-architecture.md 섹션 7.8)는 5단계로 초기화를 수행한다. 양쪽의 역할이 다르므로, 구현 시 범위를 명확히 이해해야 한다.
 
+> **(v0.5 변경)** CLI init은 v0.5에서 2단계로 간소화 (Step 1 PW + Step 2 인프라). 에이전트 생성/Owner 등록은 `waiaas agent create --owner`로 분리. 세션 발급은 `waiaas session create`로 분리. 상세: **54-cli-flow-redesign.md** 참조.
+
 **CLI init 범위 (데몬 미실행 상태에서 수행):**
 
 1. 데이터 디렉토리 생성 (`~/.waiaas/`)
 2. `config.toml` 기본 설정 파일 생성
 3. SQLite 초기화 (마이그레이션 포함)
 4. 키스토어 초기화 (마스터 패스워드 설정, Argon2id 키 파생)
-5. (선택적) 첫 에이전트 생성
+5. (선택적) 첫 에이전트 생성 **(v0.5 제거 -- `waiaas agent create`로 분리)**
 
-**데몬 실행 후 API로 수행하는 항목 (CLI init 범위 밖):**
+**데몬 실행 후 CLI/API로 수행하는 항목 (CLI init 범위 밖):**
 
-- Owner 지갑 연결: `POST /v1/owner/connect`
-- 알림 채널 설정: `PUT /v1/owner/settings`
-- 추가 에이전트 생성: `POST /v1/owner/agents`
-- 정책 설정: Owner API 엔드포인트
+- 에이전트 생성: `waiaas agent create --owner <address>` **(v0.5 변경: CLI 커맨드로 직접 수행)**
+- 세션 토큰 발급: `waiaas session create --agent <name>` **(v0.5 추가)**
+- Owner 지갑 연결: WalletConnect 선택적 편의 기능 (52-auth-model-redesign.md 참조)
+- 알림 채널 설정: `PUT /v1/admin/config` (API)
+- 정책 설정: Admin API 엔드포인트
 
 **패스워드 최소 길이:** CLI init에서 12자 기준을 유지한다. Setup Wizard 측 8자는 구현 시 12자로 통일 권장 (보안 우선).
 
@@ -2026,7 +2073,7 @@ export async function runAgent(args: string[]): Promise<void> {
 
 | 요구사항 ID | 요구사항 | 커버 섹션 |
 |------------|---------|----------|
-| **CLI-01** | `waiaas init` 대화형 초기 설정 | 섹션 6.1: init 커맨드 상세, 대화형 4단계 플로우, 비대화형 모드 |
-| **CLI-02** | `waiaas start` + `waiaas stop` 데몬 실행/종료 | 섹션 2 (시작 7단계), 섹션 3 (종료 10단계), 섹션 6.2-6.3 (start/stop CLI) |
+| **CLI-01** | `waiaas init` 대화형 초기 설정 | 섹션 6.1: init 커맨드 상세, 대화형 4단계 플로우 (v0.5: 2단계 간소화), 비대화형 모드. v0.5 상세: 54-cli-flow-redesign.md |
+| **CLI-02** | `waiaas start` + `waiaas stop` 데몬 실행/종료 | 섹션 2 (시작 7단계), 섹션 3 (종료 10단계), 섹션 6.2-6.3 (start/stop CLI). v0.5: --dev 모드 추가 |
 | **CLI-03** | `waiaas status` 데몬 상태 조회 | 섹션 6.4: status 커맨드, Health API 호출, JSON/Human 출력 |
 | **CLI-04** | npm 글로벌 패키지 설치 | 섹션 7: package.json bin 필드, shebang, 설치 방법, 의존성 체인 |
