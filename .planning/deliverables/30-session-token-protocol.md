@@ -3,7 +3,7 @@
 **문서 ID:** SESS-PROTO
 **작성일:** 2026-02-05
 **상태:** 완료
-**참조:** CORE-02 (25-sqlite-schema.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md)
+**참조:** CORE-02 (25-sqlite-schema.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), SESS-RENEW (53-session-renewal-protocol.md, Phase 20 추가)
 **요구사항:** SESS-01 (세션 토큰 발급), SESS-02 (세션 제약), SESS-03 (사용량 추적), SESS-04 (즉시 폐기), SESS-05 (활성 세션 목록)
 
 ---
@@ -680,6 +680,32 @@ export const SessionConstraintsSchema = z.object({
       description: '세션 만료 시간 (초, 최대 7일)',
       example: 86400,
     }),
+
+  // ── Phase 20 추가: 세션 갱신 프로토콜 필드 ──
+
+  /** (v0.5 변경) 최대 갱신 횟수. 0이면 갱신 불가. 기본 30. */
+  maxRenewals: z.number()
+    .int()
+    .min(0, '0이면 갱신 불가')
+    .max(100, '최대 100회를 초과할 수 없습니다')
+    .optional()
+    .default(30)
+    .openapi({
+      description: '최대 갱신 횟수. 0이면 갱신 불가.',
+      example: 30,
+    }),
+
+  /** (v0.5 변경) 갱신 거부 윈도우 (초). 알림에 포함되는 안내 기간. 기본 1시간. */
+  renewalRejectWindow: z.number()
+    .int()
+    .min(300, '최소 5분 이상이어야 합니다')
+    .max(86400, '최대 24시간을 초과할 수 없습니다')
+    .optional()
+    .default(3600)
+    .openapi({
+      description: '갱신 후 Owner가 확인할 수 있는 권장 시간 윈도우 (초)',
+      example: 3600,
+    }),
 }).openapi('SessionConstraints')
 
 export type SessionConstraints = z.infer<typeof SessionConstraintsSchema>
@@ -695,6 +721,8 @@ export type SessionConstraints = z.infer<typeof SessionConstraintsSchema>
 | `allowedOperations` | `string[]?` | 모두 허용 | 허용된 작업 유형 목록 |
 | `allowedDestinations` | `string[]?` | 모두 허용 | 전송 허용 주소 화이트리스트 |
 | `expiresIn` | `number` | 86400 (24h) | 세션 만료 시간 (초) |
+| `maxRenewals` | `number?` | 30 | (v0.5 변경) 최대 갱신 횟수. 0이면 갱신 불가. 상세: 53-session-renewal-protocol.md |
+| `renewalRejectWindow` | `number?` | 3600 (1h) | (v0.5 변경) 갱신 거부 윈도우 (초). 알림 안내용. 상세: 53-session-renewal-protocol.md |
 
 **금액 필드가 `string`인 이유:**
 - Solana: lamports (u64, 최대 ~18.4 x 10^18) -- JavaScript `Number.MAX_SAFE_INTEGER` (9 x 10^15) 초과 가능
@@ -986,14 +1014,15 @@ CORE-02에서 정의한 `sessions.usage_stats TEXT` 컬럼에 `SessionUsageStats
 
 ---
 
-## 7. 세션 수명주기 (발급 -> 검증 -> 폐기 -> 만료)
+## 7. 세션 수명주기 (발급 -> 검증 -> 갱신 -> 폐기 -> 만료)
 
-### 7.1 4단계 수명주기 개요
+### 7.1 5단계 수명주기 개요 (v0.5 변경: 4단계 -> 5단계, 갱신 추가)
 
 | 단계 | 트리거 | 주체 | 결과 |
 |------|--------|------|------|
 | 발급 (Issue) | `POST /v1/sessions` | Owner (SIWS/SIWE 서명) | 세션 생성 + JWT 발급 |
 | 검증 (Validate) | 매 API 요청 | `sessionAuth` 미들웨어 | JWT 서명 + DB lookup |
+| 갱신 (Renew) | `PUT /v1/sessions/:id/renew` | 에이전트 (sessionAuth) | 새 JWT 발급 + token_hash 교체 (v0.5 Phase 20 추가) |
 | 폐기 (Revoke) | `DELETE /v1/sessions/:id` | Owner 또는 시스템 | `revokedAt` 설정 |
 | 만료 (Expire) | BackgroundWorker 1분 주기 | 시스템 자동 | 만료/폐기 세션 DELETE |
 
@@ -1032,16 +1061,31 @@ sequenceDiagram
     Server->>Server: c.set('sessionId', 'agentId', 'constraints', 'usageStats')
     Server-->>Agent: 200 { balance: ... }
 
-    Note over Owner,Worker: ═══ 3단계: 폐기 (Revoke) ═══
+    Note over Owner,Worker: ═══ 3단계: 갱신 (Renew) ═══ (v0.5 Phase 20 추가)
 
-    Owner->>Server: DELETE /v1/sessions/:id (Owner 인증)
+    Agent->>Server: PUT /v1/sessions/:id/renew (Bearer wai_sess_...)
+    Server->>Server: sessionAuth 검증 (기존 토큰)
+    Server->>Server: 5종 안전 장치 검증 (maxRenewals, 절대 수명, 50% 시점)
+    alt 안전 장치 위반
+        Server-->>Agent: 403 RENEWAL_LIMIT_REACHED / RENEWAL_TOO_EARLY / ...
+    end
+    Server->>Server: 새 JWT 발급 (SignJWT + HS256) + 새 token_hash 계산
+    Server->>DB: BEGIN IMMEDIATE: token_hash 교체, expires_at 갱신, renewal_count++
+    Server->>DB: INSERT INTO audit_log (SESSION_RENEWED)
+    Server-->>Agent: 200 { token: "wai_sess_...(새 토큰)", expiresAt, renewalCount }
+    Note over Agent: 구 토큰 자동 무효화 (token_hash 교체)
+    Note over Agent: 갱신 상세: 53-session-renewal-protocol.md 참조
+
+    Note over Owner,Worker: ═══ 4단계: 폐기 (Revoke) ═══
+
+    Owner->>Server: DELETE /v1/sessions/:id (masterAuth implicit)
     Server->>DB: UPDATE sessions SET revoked_at = now() WHERE id = :id
     Server->>DB: INSERT INTO audit_log (SESSION_REVOKED)
     Server-->>Owner: 200 { message: "세션이 폐기되었습니다" }
 
     Note over Agent: 다음 요청 시 401 SESSION_REVOKED
 
-    Note over Owner,Worker: ═══ 4단계: 만료 정리 (Expire) ═══
+    Note over Owner,Worker: ═══ 5단계: 만료 정리 (Expire) ═══
 
     loop 매 1분
         Worker->>DB: SELECT id FROM sessions WHERE expires_at < now()
@@ -1161,6 +1205,7 @@ function startSessionCleanupWorker(
 | `POST` | `/v1/sessions` | Owner 서명 (본문) | 세션 생성 | SESS-01 |
 | `GET` | `/v1/sessions` | 세션 토큰 | 활성 세션 목록 | SESS-05 |
 | `GET` | `/v1/sessions/:id` | 세션 토큰 | 세션 상세 조회 | SESS-05 |
+| `PUT` | `/v1/sessions/:id/renew` | sessionAuth | 세션 갱신 (낙관적 갱신, v0.5 Phase 20 추가) | SESS-01 |
 | `DELETE` | `/v1/sessions/:id` | 세션 토큰 | 세션 폐기 | SESS-04 |
 
 #### POST /v1/sessions 요청/응답
