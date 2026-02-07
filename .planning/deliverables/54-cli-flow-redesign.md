@@ -1316,6 +1316,79 @@ v0.5 데몬 시작 시 Drizzle ORM의 자동 마이그레이션이 실행된다.
 
 ---
 
+---
+
+## 부록 A: v0.5 설계 문서 통합 검증 체크리스트
+
+Phase 21 완료 후 전체 설계 문서의 v0.5 용어 일관성을 검증하기 위한 체크리스트이다. 6개 핵심 용어별로 관련 문서와 확인 항목을 정리한다.
+
+### A.1 masterAuth (implicit/explicit)
+
+| 상태 | 문서 | 확인 항목 |
+|------|------|----------|
+| [ ] | 52-auth-model-redesign.md | 정의 SSoT (섹션 3.1): implicit=데몬 구동, explicit=X-Master-Password |
+| [ ] | 37-rest-api-complete-spec.md | 31+1 엔드포인트 인증 맵에서 masterAuth 대상 일치 |
+| [ ] | 28-daemon-lifecycle-cli.md | CLI 커맨드 인증 수준이 masterAuth(implicit)와 일치 |
+| [ ] | 29-api-framework-design.md | authRouter 통합 디스패처 참조 존재 |
+| [ ] | 40-telegram-bot-docker.md | Tier 2 인증이 v0.5 모델과 일치 |
+| [ ] | 54-cli-flow-redesign.md | session create가 masterAuth(implicit) 전용 |
+
+### A.2 ownerAuth (2곳 한정)
+
+| 상태 | 문서 | 확인 항목 |
+|------|------|----------|
+| [ ] | 52-auth-model-redesign.md | approve_tx + recover만 ownerAuth 필요 (섹션 4.2) |
+| [ ] | 37-rest-api-complete-spec.md | ownerAuth가 정확히 2개 엔드포인트에만 적용 |
+| [ ] | 34-owner-wallet-connection.md | WalletConnect가 선택적 편의 기능으로 기술 |
+| [ ] | 33-time-lock-approval-mechanism.md | approve는 ownerAuth 유지, reject는 masterAuth 변경 참조 노트 |
+| [ ] | 36-killswitch-autostop-evm.md | recover는 ownerAuth 유지, activate는 masterAuth 변경 참조 노트 |
+
+### A.3 agents.owner_address NOT NULL
+
+| 상태 | 문서 | 확인 항목 |
+|------|------|----------|
+| [ ] | 52-auth-model-redesign.md | agents 테이블 owner_address 컬럼 변경 정의 |
+| [ ] | 25-sqlite-schema.md | owner_address NOT NULL 컬럼 추가 (Phase 19 완료) |
+| [ ] | 54-cli-flow-redesign.md | agent create --owner 필수 옵션으로 기술 |
+| [ ] | 37-rest-api-complete-spec.md | POST /v1/agents에 ownerAddress 필수 필드 |
+
+### A.4 세션 갱신 프로토콜
+
+| 상태 | 문서 | 확인 항목 |
+|------|------|----------|
+| [ ] | 53-session-renewal-protocol.md | SSoT (8개 섹션): 갱신 플로우, 안전 장치, API 스펙 |
+| [ ] | 30-session-token-protocol.md | SessionConstraints 8필드 확장 (Phase 20 완료) |
+| [ ] | 25-sqlite-schema.md | sessions 테이블 갱신 컬럼 +4 (Phase 20 완료) |
+| [ ] | 37-rest-api-complete-spec.md | PUT /v1/sessions/:id/renew 엔드포인트 (Phase 20 완료) |
+| [ ] | 35-notification-architecture.md | SESSION_RENEWED/SESSION_RENEWAL_REJECTED 이벤트 (Phase 20 완료) |
+| [ ] | 38-sdk-mcp-interface.md | sessions.renew() (renewSession) 메서드 추가 |
+
+### A.5 hint 필드
+
+| 상태 | 문서 | 확인 항목 |
+|------|------|----------|
+| [ ] | 55-dx-improvement-spec.md | 정의 SSoT (섹션 2): 40개 에러 중 31개 hint 매핑 |
+| [ ] | 29-api-framework-design.md | ErrorResponseSchema에 hint: z.string().optional() 추가 |
+| [ ] | 37-rest-api-complete-spec.md | 에러 응답 포맷에 hint 필드 존재 |
+
+### A.6 CLI 플로우 (init / agent create / session create / --quickstart / --dev)
+
+| 상태 | 문서 | 확인 항목 |
+|------|------|----------|
+| [ ] | 54-cli-flow-redesign.md | SSoT (9개 섹션): init 2단계, agent create, session create, --quickstart, --dev |
+| [ ] | 28-daemon-lifecycle-cli.md | v0.5 변경 반영 (섹션 6 CLI 커맨드를 54로 대체) |
+| [ ] | 24-monorepo-data-directory.md | dev_mode config + .master-password 파일 설명 |
+| [ ] | 39-tauri-desktop-architecture.md | Setup Wizard v0.5 재구성 반영 |
+
+---
+
+**총 검증 대상:** 6개 핵심 용어, 17개 문서 참조 (일부 문서 중복 카운트), 29개 확인 항목.
+
+Phase 21 Plan 03 (21-03) 검증 단계에서 이 체크리스트를 사용하여 문서 간 일관성을 최종 확인한다.
+
+---
+
 *문서 작성: 2026-02-07*
 *Phase: 21-dx-improvement, Plan: 01*
 *CLI-REDESIGN v1.0*
+*부록 A 추가: 2026-02-07 (Plan: 04)*
