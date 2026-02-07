@@ -2,8 +2,9 @@
 
 **문서 ID:** TAURI-DESK
 **작성일:** 2026-02-05
+**v0.5 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-05 (28-daemon-lifecycle-cli.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-01 (24-monorepo-data-directory.md), 09-RESEARCH.md Pattern 3
+**참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-05 (28-daemon-lifecycle-cli.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-01 (24-monorepo-data-directory.md), 09-RESEARCH.md Pattern 3, 52-auth-model-redesign.md (v0.5), 54-cli-flow-redesign.md (v0.5)
 
 ---
 
@@ -154,6 +155,8 @@ API 호출은 WebView에서 **HTTP localhost:3100**을 직접 호출한다.
 | `/v1/admin/*` | masterAuth | Kill Switch, Shutdown | fetch 직접 호출 |
 | `/health` | None | 데몬 건강 상태 | Rust Sidecar Manager에서 호출 |
 | `/v1/nonce` | None | 서명용 nonce 발급 | `@waiaas/sdk` |
+
+> **(v0.5 변경) 데스크톱 앱 인증 모델 변경:** 데스크톱 앱에서 데몬 API 호출 시 masterAuth(implicit) 사용 (localhost 접속 = 인증 완료). Owner 관련 기능 중 거래 승인(approve_tx)과 Kill Switch 복구(recover)만 ownerAuth(WalletConnect QR 서명 또는 수동 서명)가 필요하다. 나머지 Owner 관리 기능(세션 목록, 에이전트 조회, 설정 변경 등)은 masterAuth(implicit)로 충분하다. 상세: 52-auth-model-redesign.md 참조.
 
 **HTTP 사용 이유:**
 - `@waiaas/sdk`를 WebView에서 그대로 재사용 (SDK의 WAIaaSOwnerClient 인스턴스)
@@ -1013,6 +1016,19 @@ graph LR
 | 3 | Owner 지갑 연결 | WalletConnect QR 표시 | 연결 성공 확인 (address 표시) |
 | 4 | 알림 채널 | Telegram bot token, Discord webhook URL 등 | 최소 2개 채널 구성 + 테스트 전송 성공 |
 | 5 | 완료 확인 | 설정 요약 표시 | [Start WAIaaS] 버튼 |
+
+> **(v0.5 변경) Setup Wizard init 플로우 재구성:** `waiaas init`이 순수 인프라 초기화(마스터 패스워드 설정 + 디렉토리/config/DB/JWT 생성)로 간소화되었다. 에이전트 생성과 Owner 주소 등록은 별도 단계(`agent create --owner`)로 분리. Setup Wizard 5-step도 이에 맞게 재구성된다:
+>
+> | Step | v0.2 | v0.5 |
+> |------|------|------|
+> | 1 | 마스터 패스워드 설정 | 마스터 패스워드 설정 |
+> | 2 | 체인 선택 + 에이전트 생성 | 인프라 초기화 (자동: waiaas init 실행) |
+> | 3 | Owner 지갑 연결 (QR) | 에이전트 생성 + Owner 주소 입력 (agent create --owner) |
+> | 4 | 알림 채널 설정 | 세션 토큰 발급 (session create) |
+> | 5 | 완료 확인 | 완료 (대시보드로 이동) |
+>
+> 알림 채널 설정은 대시보드의 Settings 화면으로 이동하여 별도 수행 가능.
+> 상세: 54-cli-flow-redesign.md 참조.
 
 **백엔드 연동:**
 - Step 1-2: `waiaas init` CLI 커맨드를 Sidecar Manager가 실행 (또는 동등 API)
@@ -1928,3 +1944,10 @@ IPC `DaemonStatus`와 HTTP `GET /health` 응답을 조합하여 최종 상태를
 | **DESK-02** | DONE | 7 | 8개 화면 (Dashboard, Approvals, Sessions, Agents, Settings, Setup, OwnerConnect, KillSwitch) |
 | **DESK-03** | DONE | 11 | macOS (arm64/x64) + Windows (x64) + Linux (x64), GitHub Actions 매트릭스 CI/CD |
 | **DESK-04** | DONE | 9, 10 | @tauri-apps/plugin-notification (6 트리거) + @tauri-apps/plugin-updater (GitHub Releases) |
+
+---
+
+### v0.5 참조 문서
+
+- 52-auth-model-redesign.md (v0.5) -- masterAuth(implicit) 인증으로 Owner 관리 API 간소화, ownerAuth는 approve_tx + recover만
+- 54-cli-flow-redesign.md (v0.5) -- Setup Wizard init 플로우 재구성 (순수 인프라 초기화 + 별도 agent create)

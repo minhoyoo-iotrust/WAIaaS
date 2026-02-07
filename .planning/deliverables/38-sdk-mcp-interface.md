@@ -2,8 +2,9 @@
 
 **문서 ID:** SDK-MCP
 **작성일:** 2026-02-05
+**v0.5 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md)
+**참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
 
 ---
@@ -299,6 +300,20 @@ export class WAIaaSClient {
 
   // ── Public API ──
 
+  // ── Session API ── (v0.5 추가)
+
+  /**
+   * (v0.5 추가) 세션 갱신. 현재 세션 토큰으로 인증하여 새 토큰을 발급받는다.
+   * 갱신 시점: 만료까지 남은 시간이 50% 이하일 때 권장.
+   * 상세: 53-session-renewal-protocol.md 참조.
+   */
+  async renewSession(
+    sessionId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ token: string; expiresAt: string; renewalCount: number }> {
+    return this.put(`/v1/sessions/${sessionId}/renew`, undefined, options)
+  }
+
   /** SIWS/SIWE 서명용 nonce 조회 (인증 불필요) */
   async getNonce(options?: { signal?: AbortSignal }): Promise<NonceResponse> {
     return this.get<NonceResponse>('/v1/nonce', options, false)
@@ -436,6 +451,8 @@ export class WAIaaSClient {
 ```
 
 ### 3.4 WAIaaSOwnerClient (Owner API)
+
+> **(v0.5 변경) Owner 메서드 인증 변경:** 대부분의 Owner 메서드 인증이 ownerAuth에서 masterAuth(implicit)로 변경됨. signMessage 콜백은 approve_tx(거래 승인)와 recover(Kill Switch 복구) 2가지 액션에만 필요. 나머지 Owner 관리 API(세션 목록, 에이전트 조회, 설정 변경 등)는 localhost 접속만으로 인증 완료(masterAuth implicit). 상세: 52-auth-model-redesign.md 참조.
 
 ```typescript
 // packages/sdk/src/owner-client.ts
@@ -1744,6 +1761,8 @@ asyncio.run(main())
 
 ## 5. MCP Server (`@waiaas/mcp`) -- MCP-01
 
+> **(v0.5 검토) MCP 데몬 내장 옵션 검토 결과:** MCP 데몬 내장 옵션(Streamable HTTP 옵션 A, 하이브리드 stdio 옵션 C)을 검토하였으나, 현행 별도 stdio 프로세스(옵션 B)를 유지하기로 결정. 근거: MCP 호스트 생태계가 stdio 기반이며, sessionAuth 보장 + 관심사 분리가 유리. 마이그레이션 경로: B -> B+자동화 -> C(--mcp-stdio) -> A 재검토. 상세: 55-dx-improvement-spec.md 섹션 3 참조.
+
 ### 5.1 패키지 구조
 
 ```
@@ -1842,6 +1861,10 @@ AI 에이전트가 직접 호출하는 **행동(Action)** 도구. Agent API(Sess
 - Agent API 엔드포인트만 Tool로 노출 (Owner API, Admin API 미노출)
 - 6개로 제한 (MCP Pitfall 2: Tool 과다 등록 방지, LLM 컨텍스트 절약)
 - 관리 작업(세션/정책/킬스위치)은 Tauri Desktop 또는 REST API 직접 호출
+
+> **(v0.5 변경) MCP tool 호출 인증:** MCP tool은 WAIAAS_SESSION_TOKEN(sessionAuth)으로 인증. 세션 생성은 masterAuth(implicit)이므로 MCP 프로세스 외부에서 수행. 세션 토큰 불편함 완화 방안으로 `mcp setup` 커맨드, 세션 자동 갱신, env 파일 생성을 검토 중.
+>
+> **(v0.5 참고) 세션 갱신:** 에이전트가 세션 갱신을 자율적으로 수행 가능. MCP tool에 `renew_session` 추가 검토 가능 (미래 확장).
 
 #### 5.3.2 send_token
 
@@ -2815,5 +2838,12 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 
 *문서 ID: SDK-MCP*
 *작성일: 2026-02-05*
+*v0.5 업데이트: 2026-02-07*
 *Phase: 09-integration-client-interface-design*
 *상태: 완료*
+
+### v0.5 참조 문서
+
+- 52-auth-model-redesign.md -- masterAuth/ownerAuth/sessionAuth 3-tier 인증 (Owner 메서드 인증 변경)
+- 53-session-renewal-protocol.md -- 세션 낙관적 갱신 프로토콜 (sessions.renew() 메서드)
+- 55-dx-improvement-spec.md -- MCP 내장 옵션 검토 결과, hint 필드
