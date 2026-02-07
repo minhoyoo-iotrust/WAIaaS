@@ -893,4 +893,584 @@ app.openapi(assetsRoute, async (c) => {
 
 ---
 
-> **섹션 7-9** (수수료 추정 확장, 테스트 시나리오, 기존 문서 변경 요약)은 Task 2에서 추가된다.
+## 7. 토큰 전송 수수료 추정 확장
+
+### 7.1 기존 estimateFee() 인터페이스
+
+현재(v0.2) estimateFee()는 네이티브 토큰 전송만 고려하여 `bigint`를 반환한다.
+
+```typescript
+// v0.2 현재 (27-chain-adapter-interface.md)
+estimateFee(request: TransferRequest): Promise<bigint>
+```
+
+### 7.2 FeeEstimate 확장 타입
+
+토큰 전송 수수료의 세부 항목을 표현하기 위해 반환 타입을 `FeeEstimate` 구조체로 확장한다.
+
+```typescript
+/**
+ * 수수료 추정 결과.
+ * estimateFee()의 반환 타입.
+ *
+ * v0.2에서는 bigint(= total)만 반환했으나,
+ * v0.6에서 토큰 전송의 ATA 생성 비용, ERC-20 가스 등
+ * 세부 항목을 구분하기 위해 구조체로 확장한다.
+ *
+ * 하위 호환: total 필드가 기존 bigint 반환값에 대응한다.
+ */
+interface FeeEstimate {
+  /**
+   * 기본 수수료 (lamports/wei).
+   * - Solana: 서명당 5,000 lamports (단일 서명 = 5,000)
+   * - EVM: gasLimit * baseFeePerGas (EIP-1559)
+   */
+  baseFee: bigint
+
+  /**
+   * 우선순위 수수료.
+   * - Solana: getRecentPrioritizationFees 중앙값 기반
+   * - EVM: maxPriorityFeePerGas * gasLimit
+   */
+  priorityFee: bigint
+
+  /**
+   * 총 수수료.
+   * baseFee + priorityFee + (ataCreationCost ?? 0n)
+   */
+  total: bigint
+
+  /**
+   * Solana ATA 생성 비용 (토큰 전송 시에만 존재).
+   * 수신자의 Associated Token Account가 미존재할 때 발생하는 rent-exempt 비용.
+   * getMinimumBalanceForRentExemption(165) RPC로 동적 조회한다.
+   * 현재 ~2,039,280 lamports (~0.00204 SOL).
+   *
+   * EVM 전송 시 undefined (ATA 개념 없음).
+   * 네이티브 전송 시 undefined.
+   */
+  ataCreationCost?: bigint
+
+  /**
+   * 수수료 지불 통화.
+   * 토큰 전송이라도 수수료는 항상 네이티브 토큰으로 지불된다.
+   * - Solana: 'SOL'
+   * - EVM: 'ETH' (Polygon일 때는 'MATIC' 등 체인별 네이티브)
+   */
+  feeCurrency: string
+}
+```
+
+### 7.3 estimateFee() 시그니처 변경
+
+```typescript
+// v0.6 확장 (하위 호환 유지)
+// TransferRequest에 token 필드가 포함될 수 있다 (CHAIN-EXT-01 참조)
+estimateFee(request: TransferRequest): Promise<FeeEstimate>
+```
+
+> **하위 호환:** 기존 호출자가 `const fee = await adapter.estimateFee(req)` 후 `fee`를 bigint로 사용하던 코드는 `fee.total`로 변경해야 한다. 이 변경은 Phase 25에서 기존 문서 반영 시 일괄 처리한다.
+
+### 7.4 Solana SPL 수수료 추정 상세
+
+```typescript
+/**
+ * SolanaAdapter.estimateFee() -- SPL 토큰 전송 확장.
+ */
+async estimateFee(request: TransferRequest): Promise<FeeEstimate> {
+  this.ensureConnected()
+
+  // ── 1. Base Fee ──
+  // Solana base fee: 서명 1개당 5,000 lamports (고정)
+  const baseFee = 5_000n
+
+  // ── 2. Priority Fee ──
+  // getRecentPrioritizationFees 중앙값 기반
+  const priorityFee = await this.getMedianPriorityFee()
+
+  // ── 3. ATA 생성 비용 (토큰 전송 시에만) ──
+  let ataCreationCost: bigint | undefined
+
+  if (request.token) {
+    // 수신자 ATA 존재 여부 확인
+    const [destinationAta] = await findAssociatedTokenPda({
+      owner: request.to as Address,
+      mint: request.token.address as Address,
+      tokenProgram: await this.resolveTokenProgram(request.token.address),
+    })
+
+    const accountInfo = await this.rpc!.getAccountInfo(destinationAta).send()
+    const needCreateAta = !accountInfo.value
+
+    if (needCreateAta) {
+      // 동적 조회: getMinimumBalanceForRentExemption(165)
+      // 165 = Token Account 데이터 크기 (bytes)
+      const rentExempt = await this.rpc!
+        .getMinimumBalanceForRentExemption(165n)
+        .send()
+      ataCreationCost = rentExempt
+    }
+    // 발신자 ATA는 이미 존재한다고 가정 (토큰 보유 중이므로)
+  }
+
+  // ── 4. Compute Unit ──
+  // SPL 전송: ~450 CU (기본 200K limit 내, 추가 비용 없음)
+  // CU 가격은 priorityFee에 이미 반영됨
+
+  // ── 5. 총 수수료 ──
+  const total = baseFee + priorityFee + (ataCreationCost ?? 0n)
+
+  // ── 6. SOL 잔액 부족 검증 ──
+  const solBalance = await this.getBalance(request.from)
+  if (request.token) {
+    // 토큰 전송: SOL 잔액이 수수료를 커버하는지 확인
+    if (solBalance.balance < total) {
+      throw new ChainError(
+        `Insufficient SOL for token transfer fee. ` +
+        `Required: ${total} lamports, Available: ${solBalance.balance} lamports. ` +
+        `SOL is needed for transaction fee${ataCreationCost ? ' and ATA creation' : ''}.`,
+        'INSUFFICIENT_BALANCE',
+      )
+    }
+  }
+
+  return {
+    baseFee,
+    priorityFee,
+    total,
+    ataCreationCost,
+    feeCurrency: 'SOL',
+  }
+}
+```
+
+**Solana SPL 수수료 구성 요소:**
+
+| 항목 | 값 | 조건 | 비고 |
+|------|-----|------|------|
+| Base Fee | 5,000 lamports | 항상 | 서명 1개 기준 |
+| Priority Fee | 가변 | 항상 | `getRecentPrioritizationFees` 중앙값 |
+| ATA 생성 비용 | ~2,039,280 lamports | 수신자 ATA 미존재 시 | `getMinimumBalanceForRentExemption(165)` 동적 조회 |
+| Compute Unit | ~450 CU | SPL 전송 | 기본 200K limit 내, 추가 비용 없음 |
+| **총 수수료** | baseFee + priorityFee + ataCreationCost | | SOL로 지불 |
+
+### 7.5 EVM ERC-20 수수료 추정 상세
+
+```typescript
+/**
+ * EvmAdapter.estimateFee() -- ERC-20 토큰 전송 확장.
+ */
+async estimateFee(request: TransferRequest): Promise<FeeEstimate> {
+  this.ensureConnected()
+
+  let gasLimit: bigint
+  let maxFeePerGas: bigint
+  let maxPriorityFeePerGas: bigint
+
+  if (request.token) {
+    // ── ERC-20 전송 수수료 추정 ──
+
+    // 1. transfer calldata 인코딩
+    const data = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: 'transfer',
+      args: [request.to as `0x${string}`, request.amount],
+    })
+
+    // 2. Gas 추정 (estimateGas)
+    gasLimit = await this.publicClient!.estimateGas({
+      to: request.token.address as `0x${string}`, // 컨트랙트 주소
+      data,
+      account: request.from as `0x${string}`,
+      value: 0n, // ETH 전송 없음
+    })
+
+    // 3. EIP-1559 수수료 조회
+    const fees = await this.publicClient!.estimateFeesPerGas()
+    maxFeePerGas = fees.maxFeePerGas!
+    maxPriorityFeePerGas = fees.maxPriorityFeePerGas!
+  } else {
+    // ── 네이티브 ETH 전송 수수료 추정 ──
+    gasLimit = 21_000n // 기본 전송 gas
+
+    const fees = await this.publicClient!.estimateFeesPerGas()
+    maxFeePerGas = fees.maxFeePerGas!
+    maxPriorityFeePerGas = fees.maxPriorityFeePerGas!
+  }
+
+  // ── 수수료 계산 (EIP-1559) ──
+  const baseFee = gasLimit * (maxFeePerGas - maxPriorityFeePerGas)
+  const priorityFee = gasLimit * maxPriorityFeePerGas
+  const total = gasLimit * maxFeePerGas // baseFee + priorityFee
+
+  return {
+    baseFee,
+    priorityFee,
+    total,
+    // EVM에는 ATA 개념이 없으므로 ataCreationCost는 undefined
+    feeCurrency: this.getNativeSymbol(), // 'ETH', 'MATIC' 등
+  }
+}
+```
+
+**EVM ERC-20 수수료 구성 요소:**
+
+| 항목 | 값 | 조건 | 비고 |
+|------|-----|------|------|
+| Gas Limit | ~65,000 gas | ERC-20 transfer | `estimateGas()`로 동적 추정 |
+| Gas Limit (비표준) | ~100,000 gas | USDT 등 비표준 ERC-20 | `estimateGas()`가 정확히 반영 |
+| maxFeePerGas | 가변 (EIP-1559) | 항상 | `estimateFeesPerGas()` |
+| maxPriorityFeePerGas | 가변 | 항상 | `estimateFeesPerGas()` |
+| **총 수수료** | gasLimit * maxFeePerGas (wei) | | ETH로 지불 |
+
+### 7.6 수수료 비교 테이블 (네이티브 vs 토큰)
+
+| | Solana 네이티브 | Solana SPL | EVM 네이티브 | EVM ERC-20 |
+|---|---|---|---|---|
+| 기본 수수료 | 5,000 lamports | 5,000 lamports | ~21,000 gas | ~65,000 gas |
+| 우선순위 수수료 | 가변 | 가변 | 가변 | 가변 |
+| ATA 생성 비용 | N/A | 0 또는 ~2,039,280 lamports | N/A | N/A |
+| Compute Unit | ~200 CU | ~450 CU | N/A | N/A |
+| 수수료 통화 | SOL | SOL | ETH | ETH |
+| 추정 방식 | 고정 + RPC | 고정 + RPC + ATA 확인 | estimateGas + estimateFeesPerGas | estimateGas + estimateFeesPerGas |
+| 일반 수수료 범위 | ~0.000005 SOL | ~0.000005-0.002 SOL | ~0.0003-0.003 ETH | ~0.001-0.01 ETH |
+
+---
+
+## 8. 토큰 전송 테스트 시나리오 (TOKEN-05)
+
+v0.4 테스트 프레임워크(41-test-architecture-coverage-spec.md) 기반으로 토큰 전송 관련 테스트 시나리오를 정의한다.
+
+### 8.1 Level 1: Unit Tests (Mock 의존성)
+
+Mock된 의존성으로 개별 함수/모듈의 로직을 검증한다.
+
+| ID | 시나리오 | 입력 | 기대 결과 | Mock 대상 |
+|----|---------|------|----------|----------|
+| UT-TOKEN-01 | TransferRequest.token 파싱: 유효한 토큰 필드 | `{ from, to, amount, token: { address, decimals: 6, symbol: 'USDC' } }` | 파싱 성공, 토큰 전송으로 분기 | 없음 (순수 타입 검증) |
+| UT-TOKEN-02 | TransferRequest.token 하위 호환 | `{ from, to, amount }` (token 미제공) | 네이티브 전송으로 분기 | 없음 |
+| UT-TOKEN-03 | TransferRequest.token 잘못된 주소 형식 | `{ token: { address: 'invalid', decimals: 6, symbol: 'X' } }` | 검증 실패, INVALID_ADDRESS | 없음 |
+| UT-TOKEN-04 | ALLOWED_TOKENS 정책 검증: 허용 토큰 | USDC 전송, ALLOWED_TOKENS에 USDC 포함 | 정책 통과 | MockPolicyEngine |
+| UT-TOKEN-05 | ALLOWED_TOKENS 정책 검증: 미등록 토큰 거부 | 미등록 토큰 전송 시도 | TOKEN_NOT_ALLOWED 에러 | MockPolicyEngine |
+| UT-TOKEN-06 | ALLOWED_TOKENS 정책 미설정 시 기본 동작 | 토큰 전송, ALLOWED_TOKENS 정책 없음 | unknown_token_action 기본값(DENY) 적용 | MockPolicyEngine |
+| UT-TOKEN-07 | AllowedTokensRuleSchema Zod 검증: 유효 | 올바른 rules JSON | 파싱 성공 | 없음 |
+| UT-TOKEN-08 | AllowedTokensRuleSchema Zod 검증: 무효 | 누락된 필드 rules JSON | Zod 에러 | 없음 |
+| UT-TOKEN-09 | FeeEstimate 계산: ATA 미존재 | SPL 전송 + ATA 생성 필요 | total = baseFee + priorityFee + ataCreationCost | MockRpc |
+| UT-TOKEN-10 | FeeEstimate 계산: ATA 존재 | SPL 전송 + ATA 이미 존재 | total = baseFee + priorityFee, ataCreationCost = undefined | MockRpc |
+| UT-TOKEN-11 | FeeEstimate 계산: ERC-20 gas 추정 | ERC-20 transfer | total = gasLimit * maxFeePerGas | MockEvmClient |
+| UT-TOKEN-12 | AssetInfo 직렬화: bigint -> string | balance: 1500000000n | balance: '1500000000' | 없음 |
+| UT-TOKEN-13 | AssetInfo type enum 검증 | type: 'spl' | Zod 검증 통과 | 없음 |
+| UT-TOKEN-14 | AssetInfo type enum 무효값 | type: 'invalid' | Zod 에러 | 없음 |
+
+### 8.2 Level 2: Integration Tests (Local DB + Mock RPC)
+
+로컬 SQLite + Mock RPC 클라이언트로 모듈 간 연동을 검증한다.
+
+| ID | 시나리오 | 구성 | 기대 결과 |
+|----|---------|------|----------|
+| IT-TOKEN-01 | SPL 토큰 전송 파이프라인 | MockSolanaRpc -> SolanaAdapter.buildTransaction(token req) | buildSplTokenTransfer 호출, UnsignedTransaction 반환 |
+| IT-TOKEN-02 | SPL 전송 실패: 잔액 부족 | MockSolanaRpc (잔액 0) -> buildTransaction | INSUFFICIENT_BALANCE 에러 |
+| IT-TOKEN-03 | ERC-20 토큰 전송 파이프라인 | MockEvmClient -> EvmAdapter.buildTransaction(token req) | ERC-20 transfer calldata 생성 |
+| IT-TOKEN-04 | ERC-20 전송 실패: 시뮬레이션 실패 | MockEvmClient (simulateContract revert) | SIMULATION_FAILED 에러 |
+| IT-TOKEN-05 | ALLOWED_TOKENS 정책 DB 라운드트립 | 정책 생성 -> DB 저장 -> 조회 -> 검증 | 정책 규칙 일관성 유지 |
+| IT-TOKEN-06 | ALLOWED_TOKENS 정책 변경 후 재검증 | 정책 수정 -> 이전에 허용된 토큰 거부 | 변경된 정책 즉시 반영 |
+| IT-TOKEN-07 | getAssets() Solana 통합 | MockSolanaRpc (SOL + 2 SPL) -> getAssets() | AssetInfo[] 3개 (native 첫 번째) |
+| IT-TOKEN-08 | getAssets() EVM 통합 | MockEvmClient (ETH + 1 ERC-20) -> getAssets() | AssetInfo[] 2개 |
+| IT-TOKEN-09 | getAssets() -> REST API 응답 변환 | getAssets() 결과 -> AssetsResponseSchema | bigint -> string 변환, Zod 검증 통과 |
+| IT-TOKEN-10 | estimateFee() -> ATA 비용 포함 응답 | MockSolanaRpc (ATA 미존재) -> estimateFee(token req) | FeeEstimate.ataCreationCost > 0 |
+
+### 8.3 Level 3: Solana Validator Tests (solana-test-validator)
+
+로컬 Solana validator에서 실제 SPL 토큰 전송을 검증한다.
+
+| ID | 시나리오 | 사전 조건 | 기대 결과 |
+|----|---------|----------|----------|
+| VT-TOKEN-01 | SPL 토큰 민팅 + ATA 생성 + 전송 | 로컬 validator, 테스트 토큰 민트 | 발신자 잔액 감소, 수신자 잔액 증가 |
+| VT-TOKEN-02 | Token-2022 토큰 기본 전송 | Token-2022 프로그램으로 민트된 토큰 | transferChecked 성공 |
+| VT-TOKEN-03 | ATA 미존재 수신자로 전송 | 수신자 ATA 미생성 상태 | ATA 자동 생성 + 토큰 전송 성공 |
+| VT-TOKEN-04 | 잔액 부족 전송 시도 | 발신자 토큰 잔액 < 전송량 | 트랜잭션 실패, 에러 코드 확인 |
+| VT-TOKEN-05 | SOL 잔액 부족으로 토큰 전송 실패 | 토큰 잔액 충분, SOL 잔액 0 | INSUFFICIENT_BALANCE (수수료 부족) |
+| VT-TOKEN-06 | getAssets() 실제 조회 | 에이전트가 SOL + 2개 SPL 보유 | AssetInfo[] 3개 반환, 잔액 정확 |
+| VT-TOKEN-07 | transferChecked decimals 검증 | decimals 불일치 전달 | 프로그램 에러 (TokenInvalidAccountError) |
+| VT-TOKEN-08 | estimateFee() ATA 비용 정확도 | 수신자 ATA 미존재 | ataCreationCost = 실제 rent-exempt 금액 |
+
+### 8.4 Level 4: EVM Local Tests (Hardhat/Anvil)
+
+로컬 EVM 노드에서 실제 ERC-20 전송을 검증한다.
+
+| ID | 시나리오 | 사전 조건 | 기대 결과 |
+|----|---------|----------|----------|
+| ET-TOKEN-01 | ERC-20 배포 + transfer + balanceOf | Anvil 로컬 노드, 테스트 ERC-20 배포 | transfer 성공, balanceOf 확인 |
+| ET-TOKEN-02 | USDT-like 비표준 ERC-20 transfer | bool 미반환 ERC-20 배포 | 시뮬레이션 성공, 전송 성공 |
+| ET-TOKEN-03 | gas 추정 정확도 | ERC-20 transfer estimateGas | 추정 gas >= 실제 gas used |
+| ET-TOKEN-04 | 잔액 부족 시뮬레이션 | 발신자 토큰 잔액 < 전송량 | simulateContract revert |
+| ET-TOKEN-05 | ETH 잔액 부족으로 ERC-20 전송 실패 | 토큰 잔액 충분, ETH 잔액 0 | 가스 부족 에러 |
+| ET-TOKEN-06 | getAssets() multicall 조회 | 에이전트가 ETH + 3개 ERC-20 보유 | AssetInfo[] 4개 반환 |
+| ET-TOKEN-07 | getAssets() 일부 토큰 조회 실패 | 1개 컨트랙트 주소 무효 | 유효한 토큰만 반환, 경고 로그 |
+| ET-TOKEN-08 | estimateFee() ERC-20 gas 정확도 | ERC-20 transfer | total >= 실제 수수료 |
+
+### 8.5 보안 시나리오
+
+42-security-scenario-test-spec.md 확장. 토큰 전송 관련 공격 벡터를 검증한다.
+
+| ID | 시나리오 | 공격 벡터 | 기대 방어 | 검증 방법 |
+|----|---------|----------|----------|----------|
+| SEC-TOKEN-01 | 미등록 토큰 전송 시도 | ALLOWED_TOKENS에 없는 토큰 전송 요청 | ALLOWED_TOKENS 정책 거부 | Unit + Integration |
+| SEC-TOKEN-02 | 악성 토큰 민트/컨트랙트 주소 | 존재하지 않거나 악성 컨트랙트 주소 제공 | 주소 검증 실패 또는 시뮬레이션 실패 | Unit + Integration |
+| SEC-TOKEN-03 | Token-2022 TransferFee 확장 토큰 | TransferFee 확장이 활성화된 토큰 전송 | 감지 후 거부 (v0.6 범위 외 확장) | Validator Test |
+| SEC-TOKEN-04 | ERC-20 approve 위장 (transfer 시그니처 조작) | transfer() 호출인 척하지만 다른 함수 호출 | 시뮬레이션에서 예상 외 동작 감지 | Integration + Anvil |
+| SEC-TOKEN-05 | SOL/ETH 잔액 0에서 토큰 전송 시도 | 네이티브 잔액 0으로 수수료 지불 불가 | 수수료 부족 사전 차단 (estimateFee 단계) | Unit + Validator/Anvil |
+| SEC-TOKEN-06 | decimals 불일치 공격 | 잘못된 decimals 값으로 전송 시도 | transferChecked에서 거부 (Solana), on-chain decimals 검증 (EVM) | Validator + Anvil |
+| SEC-TOKEN-07 | 매우 큰 토큰 금액 전송 (uint256 max) | amount = 2^256 - 1 | overflow 방지: bigint 범위 검증, 잔액 초과 체크 | Unit |
+| SEC-TOKEN-08 | 동일 주소로 자기 전송 | from === to 주소 | 정책 또는 어댑터에서 감지, 경고/거부 | Unit + Integration |
+
+### 8.6 Mock 경계 정의
+
+테스트에서 사용할 Mock 객체의 인터페이스와 범위를 정의한다.
+
+#### MockSolanaRpc
+
+```typescript
+/**
+ * Solana RPC Mock.
+ * SPL/Token-2022 토큰 관련 RPC 메서드를 Mock한다.
+ */
+interface MockSolanaRpc {
+  // 기존 (v0.2에서 정의)
+  getBalance(address: Address): Promise<{ value: bigint }>
+  getHealth(): Promise<'ok'>
+  getRecentPrioritizationFees(): Promise<PrioritizationFeeEntry[]>
+
+  // v0.6 추가: SPL 토큰 조회
+  getTokenAccountsByOwner(
+    address: Address,
+    filter: { programId: Address },
+    config: { encoding: 'jsonParsed' },
+  ): Promise<{ value: TokenAccountInfo[] }>
+
+  // v0.6 추가: ATA 존재 확인 + rent-exempt 비용
+  getAccountInfo(address: Address): Promise<{ value: AccountInfo | null }>
+  getMinimumBalanceForRentExemption(size: bigint): Promise<bigint>
+}
+
+/**
+ * Mock용 토큰 계정 정보.
+ * getTokenAccountsByOwner의 jsonParsed 응답 형태.
+ */
+interface TokenAccountInfo {
+  pubkey: Address
+  account: {
+    data: {
+      parsed: {
+        info: {
+          mint: string
+          tokenAmount: {
+            amount: string  // '50000000'
+            decimals: number // 6
+            uiAmount: number // 50.0
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### MockEvmClient
+
+```typescript
+/**
+ * EVM Client Mock.
+ * ERC-20 토큰 관련 viem 메서드를 Mock한다.
+ */
+interface MockEvmClient {
+  // 기존 (v0.2에서 정의)
+  getBalance(params: { address: `0x${string}` }): Promise<bigint>
+  estimateGas(params: EstimateGasParams): Promise<bigint>
+  estimateFeesPerGas(): Promise<FeeValues>
+
+  // v0.6 추가: ERC-20 읽기/시뮬레이션
+  readContract(params: ReadContractParams): Promise<unknown>
+  // 지원 functionName: 'balanceOf', 'decimals', 'symbol', 'name'
+
+  simulateContract(params: SimulateContractParams): Promise<{ result: unknown }>
+  // 지원 functionName: 'transfer'
+
+  // v0.6 추가: multicall
+  multicall(params: { contracts: ContractCall[] }): Promise<MulticallResult[]>
+}
+```
+
+#### MockPolicyEngine
+
+```typescript
+/**
+ * PolicyEngine Mock.
+ * ALLOWED_TOKENS 정책 반환을 Mock한다.
+ */
+interface MockPolicyEngine {
+  /**
+   * 에이전트의 정책 목록 반환.
+   * - 허용 토큰 설정 시: ALLOWED_TOKENS 정책 포함
+   * - 미설정 시: 빈 배열
+   * - 거부 설정 시: unknown_token_action = 'DENY'
+   */
+  getPolicies(
+    agentId: string,
+    policyType?: string,
+  ): Promise<PolicyEntry[]>
+
+  /**
+   * 단일 정책 평가 결과 반환.
+   */
+  evaluate(
+    agentId: string,
+    request: TransferRequest,
+  ): Promise<PolicyEvaluationResult>
+}
+```
+
+---
+
+## 9. 기존 문서 변경 요약
+
+이 문서(CHAIN-EXT-02)로 인해 Phase 25에서 반영할 기존 문서 변경 목록이다.
+
+### 9.1 수정 대상
+
+| 문서 | 섹션 | 변경 내용 | 변경 유형 |
+|------|------|----------|----------|
+| 27-chain-adapter-interface.md | 3. IChainAdapter | getAssets() 14번째 메서드 추가 | 인터페이스 확장 |
+| 27-chain-adapter-interface.md | 2. 공통 타입 | AssetInfo 타입 추가, FeeEstimate 타입 추가 | 타입 추가 |
+| 27-chain-adapter-interface.md | 2.3 TransferRequest | (CHAIN-EXT-01과 공동) token? 필드 참조 | 타입 확장 |
+| 27-chain-adapter-interface.md | 13. estimateFee | 반환 타입 bigint -> FeeEstimate 변경 | 시그니처 변경 |
+| 31-solana-adapter-detail.md | 1.3 메서드 매핑 | 14번째 메서드(getAssets) 행 추가 | 테이블 확장 |
+| 31-solana-adapter-detail.md | 신규 섹션 | getAssets() Solana 구현 설계 (이 문서 섹션 4) | 섹션 추가 |
+| 31-solana-adapter-detail.md | 4.4 estimateFee | ATA 생성 비용 포함 확장 (이 문서 섹션 7.4) | 로직 확장 |
+| 36-killswitch-autostop-evm.md | 10. EvmAdapterStub | getAssets() stub 추가 | 메서드 추가 |
+| 36-killswitch-autostop-evm.md | 10. EvmAdapterStub | estimateFee() 반환 타입 FeeEstimate 변경 노트 | 노트 추가 |
+| 37-rest-api-complete-spec.md | 1.4 전체 엔드포인트 요약 | Session API 7 -> 8, 전체 31 -> 32 | 수치 변경 |
+| 37-rest-api-complete-spec.md | 12.5 v0.3 확장 | GET /v1/wallet/tokens -> GET /v1/wallet/assets 확정 | 엔드포인트 확정 |
+| 37-rest-api-complete-spec.md | 신규 | GET /v1/wallet/assets 엔드포인트 스펙 추가 | 엔드포인트 추가 |
+
+### 9.2 테스트 문서 확장
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 41-test-architecture-coverage-spec.md (docs/v0.4/) | Mock 경계 추가: MockSolanaRpc (SPL 토큰 메서드), MockEvmClient (ERC-20 메서드) |
+| 42-mock-boundaries-interfaces-contracts.md (docs/v0.4/) | SEC-TOKEN-01~08 보안 시나리오 추가 |
+| 48-blockchain-test-environment-strategy.md (docs/v0.4/) | SPL 토큰 테스트 시나리오 (validator): VT-TOKEN-01~08 |
+
+### 9.3 참조만 (수정 없음)
+
+| 문서 | 참조 이유 |
+|------|----------|
+| 32-transaction-pipeline-api.md | 파이프라인 6단계 구조 변경 없음. Stage 1 type 분기 확인 |
+| 25-sqlite-schema.md | transactions.type 'TOKEN_TRANSFER' 사용 확인 |
+| 52-auth-model-redesign.md | 인증 체계 변경 없음. sessionAuth가 자산 조회에도 동일 적용 |
+| 56-token-transfer-extension-spec.md | ALLOWED_TOKENS 정책 참조, TransferRequest.token 참조 |
+
+---
+
+## 부록 A: AssetInfo 직렬화 규칙
+
+### A.1 bigint -> string 변환
+
+JSON은 bigint를 지원하지 않으므로, REST API 응답에서 balance 필드를 string으로 직렬화한다.
+
+```typescript
+// 내부 타입 (TypeScript)
+const asset: AssetInfo = {
+  tokenAddress: 'native',
+  symbol: 'SOL',
+  name: 'Solana',
+  decimals: 9,
+  balance: 1_500_000_000n, // bigint
+  type: 'native',
+}
+
+// REST API 응답 (JSON)
+{
+  "tokenAddress": "native",
+  "symbol": "SOL",
+  "name": "Solana",
+  "decimals": 9,
+  "balance": "1500000000", // string
+  "type": "native"
+}
+```
+
+### A.2 UI 표시 변환 (클라이언트 책임)
+
+```typescript
+// 클라이언트에서 balance 표시 변환
+const displayBalance = Number(BigInt(asset.balance)) / Math.pow(10, asset.decimals)
+// 1500000000 / 10^9 = 1.5 SOL
+```
+
+---
+
+## 부록 B: config.toml [tokens] 전체 구조
+
+```toml
+# ─── 토큰 레지스트리 ───
+# getAssets() 메타데이터 조회의 1순위 소스.
+# 여기에 등록된 토큰은 RPC 메타데이터 조회 없이 즉시 메타정보를 제공한다.
+# 사용자가 필요에 따라 토큰을 추가할 수 있다.
+
+[tokens]
+
+# Solana 토큰 레지스트리
+[[tokens.solana.known]]
+address = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+symbol = "USDC"
+name = "USD Coin"
+decimals = 6
+
+[[tokens.solana.known]]
+address = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+symbol = "USDT"
+name = "Tether USD"
+decimals = 6
+
+[[tokens.solana.known]]
+address = "So11111111111111111111111111111111111111112"
+symbol = "wSOL"
+name = "Wrapped SOL"
+decimals = 9
+
+[[tokens.solana.known]]
+address = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"
+symbol = "JUP"
+name = "Jupiter"
+decimals = 6
+
+# Ethereum 토큰 레지스트리
+[[tokens.ethereum.known]]
+address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+symbol = "USDC"
+name = "USD Coin"
+decimals = 6
+
+[[tokens.ethereum.known]]
+address = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+symbol = "USDT"
+name = "Tether USD"
+decimals = 6
+
+[[tokens.ethereum.known]]
+address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+symbol = "WETH"
+name = "Wrapped Ether"
+decimals = 18
+
+[[tokens.ethereum.known]]
+address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+symbol = "DAI"
+name = "Dai Stablecoin"
+decimals = 18
+
+# Polygon 토큰 레지스트리 (필요 시 추가)
+# [[tokens.polygon.known]]
+# address = "0x..."
+```
