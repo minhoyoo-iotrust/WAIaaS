@@ -3,8 +3,9 @@
 **문서 ID:** CORE-02
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
+**Phase 20 업데이트:** 2026-02-07
 **상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5)
+**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20)
 
 ---
 
@@ -182,6 +183,12 @@ export const sessions = sqliteTable('sessions', {
   // ── 상태 ──
   revokedAt: integer('revoked_at', { mode: 'timestamp' }),
 
+  // ── Phase 20 추가: 세션 갱신 추적 ──
+  renewalCount: integer('renewal_count').notNull().default(0),           // 누적 갱신 횟수
+  maxRenewals: integer('max_renewals').notNull().default(30),            // 최대 갱신 횟수 (SessionConstraints에서 복사)
+  lastRenewedAt: integer('last_renewed_at', { mode: 'timestamp' }),     // 마지막 갱신 시각
+  absoluteExpiresAt: integer('absolute_expires_at', { mode: 'timestamp' }).notNull(),  // 절대 만료 시각
+
   // ── 타임스탬프 ──
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
@@ -202,6 +209,10 @@ CREATE TABLE sessions (
   constraints TEXT,                -- JSON
   usage_stats TEXT,                -- JSON
   revoked_at INTEGER,
+  renewal_count INTEGER NOT NULL DEFAULT 0,         -- Phase 20 추가
+  max_renewals INTEGER NOT NULL DEFAULT 30,         -- Phase 20 추가
+  last_renewed_at INTEGER,                          -- Phase 20 추가
+  absolute_expires_at INTEGER NOT NULL,             -- Phase 20 추가
   created_at INTEGER NOT NULL
 );
 
@@ -221,6 +232,10 @@ CREATE INDEX idx_sessions_token_hash ON sessions(token_hash);
 | `constraints` | TEXT (JSON) | NULL | - | 세션 제약 조건. Phase 7에서 구조 확정 |
 | `usage_stats` | TEXT (JSON) | NULL | - | 누적 사용 통계. Phase 7에서 구조 확정 |
 | `revoked_at` | INTEGER | NULL | - | 수동 폐기 시각. NULL이면 유효 |
+| `renewal_count` | INTEGER | NOT NULL | `0` | 누적 갱신 횟수 (Phase 20 추가) |
+| `max_renewals` | INTEGER | NOT NULL | `30` | 최대 갱신 횟수. SessionConstraints에서 복사 (Phase 20 추가) |
+| `last_renewed_at` | INTEGER | NULL | - | 마지막 갱신 시각 (Unix epoch, 초). 미갱신 시 NULL (Phase 20 추가) |
+| `absolute_expires_at` | INTEGER | NOT NULL | - | 절대 만료 시각 (created_at + session_absolute_lifetime). config 변경이 기존 세션에 소급 적용되지 않도록 세션 생성 시 계산하여 저장 (Phase 20 추가) |
 | `created_at` | INTEGER | NOT NULL | - | 세션 생성 시각 |
 
 ---
@@ -782,6 +797,10 @@ erDiagram
         text constraints
         text usage_stats
         integer revoked_at
+        integer renewal_count "NOT NULL DEFAULT 0 (Phase 20)"
+        integer max_renewals "NOT NULL DEFAULT 30 (Phase 20)"
+        integer last_renewed_at "NULL (Phase 20)"
+        integer absolute_expires_at "NOT NULL (Phase 20)"
         integer created_at
     }
 
@@ -1093,6 +1112,47 @@ CREATE INDEX idx_wallet_connections_owner_address ON wallet_connections(owner_ad
 
 이 마이그레이션은 drizzle-kit의 `ALTER TABLE ADD COLUMN`이 자동 지원하는 범위(Step 1, 3)와 수동 SQL이 필요한 범위(Step 2, 4, 5, 6)가 혼재한다. 수동 마이그레이션 파일로 작성하여 `drizzle/` 폴더에 포함시킨다.
 
+### 4.8 Phase 20 스키마 마이그레이션 (세션 갱신 추적 컬럼 추가)
+
+Phase 20에서 세션 갱신 프로토콜을 지원하기 위해 `sessions` 테이블에 4개 컬럼을 추가한다. 모든 컬럼은 `ALTER TABLE ADD COLUMN`으로 추가 가능하며 drizzle-kit 자동 마이그레이션 범위 내이다.
+
+**전제 조건:**
+- v0.5 마이그레이션(섹션 4.7) 완료 상태
+- 기존 sessions 행에 대한 기본값 보정 필요 (absolute_expires_at)
+
+**마이그레이션 SQL:**
+
+```sql
+-- ═══ Phase 20: 세션 갱신 추적 컬럼 추가 ═══
+
+-- Step 1: renewal_count -- 누적 갱신 횟수
+ALTER TABLE sessions ADD COLUMN renewal_count INTEGER NOT NULL DEFAULT 0;
+
+-- Step 2: max_renewals -- 최대 갱신 횟수 (SessionConstraints에서 복사)
+ALTER TABLE sessions ADD COLUMN max_renewals INTEGER NOT NULL DEFAULT 30;
+
+-- Step 3: last_renewed_at -- 마지막 갱신 시각 (NULL = 미갱신)
+ALTER TABLE sessions ADD COLUMN last_renewed_at INTEGER;
+
+-- Step 4: absolute_expires_at -- 절대 만료 시각
+-- DEFAULT 0은 마이그레이션 전용. 기존 행에 대해 Step 5에서 보정.
+ALTER TABLE sessions ADD COLUMN absolute_expires_at INTEGER NOT NULL DEFAULT 0;
+
+-- Step 5: 기존 세션의 absolute_expires_at 보정
+-- created_at + 30일(2,592,000초)로 채움
+UPDATE sessions SET absolute_expires_at = created_at + 2592000 WHERE absolute_expires_at = 0;
+```
+
+**주의사항:**
+
+| 단계 | 설명 | 실패 시 대응 |
+|------|------|------------|
+| Step 1-3 | NOT NULL DEFAULT 또는 NULL 컬럼 추가. SQLite ALTER TABLE ADD COLUMN 안전 범위. | 롤백 불필요 (컬럼 추가는 안전) |
+| Step 4 | `DEFAULT 0`은 마이그레이션 전용. 유효한 absolute_expires_at은 0이 아님. | Step 5에서 반드시 보정 |
+| Step 5 | 기존 세션에 30일 절대 수명 소급 적용. config.toml의 `session_absolute_lifetime` 기본값(2,592,000초)과 동일. | 에이전트가 없으면 UPDATE 0건 (무해) |
+
+**53-session-renewal-protocol.md 참조:** 갱신 컬럼의 전체 동작 스펙은 53-session-renewal-protocol.md 섹션 3-5에서 정의한다.
+
 ---
 
 ## 5. SQLite 운영 가이드
@@ -1264,7 +1324,7 @@ export const agents = sqliteTable('agents', {
 ]);
 
 // ══════════════════════════════════════════
-// sessions (Phase 7에서 상세화)
+// sessions (Phase 7에서 상세화, Phase 20 갱신 추적 컬럼 추가)
 // ══════════════════════════════════════════
 export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey(),
@@ -1275,6 +1335,11 @@ export const sessions = sqliteTable('sessions', {
   constraints: text('constraints'),
   usageStats: text('usage_stats'),
   revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+  // ── Phase 20 추가: 세션 갱신 추적 ──
+  renewalCount: integer('renewal_count').notNull().default(0),
+  maxRenewals: integer('max_renewals').notNull().default(30),
+  lastRenewedAt: integer('last_renewed_at', { mode: 'timestamp' }),
+  absoluteExpiresAt: integer('absolute_expires_at', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
   index('idx_sessions_agent_id').on(table.agentId),
@@ -1524,6 +1589,7 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 | KEYS-03 (에이전트 상태 관리) | agents | status enum, suspendedAt, suspensionReason |
 | SESS-01 (세션 토큰 발급) | sessions | tokenHash, expiresAt, constraints |
 | SESS-02 (세션 제약) | sessions | constraints JSON, usageStats JSON |
+| SESS-03 (세션 갱신 스키마) | sessions | renewalCount, maxRenewals, lastRenewedAt, absoluteExpiresAt (Phase 20) |
 | API-02 (거래 요청) | transactions | 전체 컬럼 |
 | API-03 (거래 상태 조회) | transactions | status, txHash 인덱스 |
 | API-05 (감사 로그) | audit_log | append-only, 이벤트 타입 목록 |
@@ -1551,5 +1617,6 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 *문서 ID: CORE-02*
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
+*Phase 20 업데이트: 2026-02-07*
 *Phase: 06-core-architecture-design*
 *상태: 완료*

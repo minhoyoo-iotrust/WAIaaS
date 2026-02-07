@@ -15,7 +15,7 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
 ## Phases
 
 - [x] **Phase 19: 인증 모델 + Owner 주소 재설계** -- 3-tier 인증 책임 분리와 Owner 주소 에이전트 귀속 ✓ 2026-02-07
-- [ ] **Phase 20: 세션 갱신 프로토콜** -- 에이전트 자체 갱신 + Owner 사후 거부 패턴
+- [x] **Phase 20: 세션 갱신 프로토콜** -- 에이전트 자체 갱신 + Owner 사후 거부 패턴 ✓ 2026-02-07
 - [ ] **Phase 21: DX 개선 + 설계 문서 통합** -- CLI 간소화, 개발 모드, actionable 에러, 통합 반영
 
 ## Phase Details
@@ -57,8 +57,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md -- 핵심 프로토콜 정의 (53-session-renewal-protocol.md 신규) + 30-session-token-protocol.md 수명주기 확장
-- [ ] 20-02-PLAN.md -- 기존 설계 문서 반영 (25-sqlite-schema.md + 37-rest-api-complete-spec.md + 35-notification-architecture.md)
+- [x] 20-01-PLAN.md -- 핵심 프로토콜 정의 (53-session-renewal-protocol.md 신규) + 30-session-token-protocol.md 수명주기 확장
+- [x] 20-02-PLAN.md -- 기존 설계 문서 반영 (25-sqlite-schema.md + 37-rest-api-complete-spec.md + 35-notification-architecture.md)
 
 **Key Deliverables:**
 - 신규: 세션 갱신 프로토콜 문서
@@ -96,7 +96,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 3/3 | Complete | 2026-02-07 |
-| 20. 세션 갱신 프로토콜 | v0.5 | 0/2 | Planned | - |
+| 20. 세션 갱신 프로토콜 | v0.5 | 2/2 | Complete | 2026-02-07 |
 | 21. DX 개선 + 설계 문서 통합 | v0.5 | 0/TBD | Not started | - |
 
 ## Coverage
@@ -113,4 +113,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-07 (Phase 20 planned)*
+*Last updated: 2026-02-07 (Phase 20 complete)*

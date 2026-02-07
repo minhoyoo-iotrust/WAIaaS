@@ -26,11 +26,11 @@
 
 ### 세션 갱신 (SESS)
 
-- [ ] **SESS-01**: PUT /v1/sessions/:id/renew 엔드포인트가 sessionAuth로 동작함
-- [ ] **SESS-02**: 세션 갱신 안전 장치 5종이 정의됨 (maxRenewals 30, 총 수명 30일, 50% 시점, 거부 윈도우, 갱신 단위 고정)
-- [ ] **SESS-03**: sessions 테이블에 renewal_count, max_renewals, last_renewed_at 컬럼이 추가됨
-- [ ] **SESS-04**: SessionConstraints에 maxRenewals, renewalRejectWindow 필드가 확장됨
-- [ ] **SESS-05**: Owner 거부 플로우와 SESSION_RENEWED / SESSION_RENEWAL_REJECTED 알림 이벤트 2종이 추가됨
+- [x] **SESS-01**: PUT /v1/sessions/:id/renew 엔드포인트가 sessionAuth로 동작함
+- [x] **SESS-02**: 세션 갱신 안전 장치 5종이 정의됨 (maxRenewals 30, 총 수명 30일, 50% 시점, 거부 윈도우, 갱신 단위 고정)
+- [x] **SESS-03**: sessions 테이블에 renewal_count, max_renewals, last_renewed_at 컬럼이 추가됨
+- [x] **SESS-04**: SessionConstraints에 maxRenewals, renewalRejectWindow 필드가 확장됨
+- [x] **SESS-05**: Owner 거부 플로우와 SESSION_RENEWED / SESSION_RENEWAL_REJECTED 알림 이벤트 2종이 추가됨
 
 ### 개발자 경험 (DX)
 
