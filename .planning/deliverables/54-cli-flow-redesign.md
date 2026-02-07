@@ -699,3 +699,623 @@ switch (subcommand) {
 - `session` 서브커맨드 그룹 신규 추가 (`session create`, `session list`, `session revoke`)
 - `owner` 서브커맨드 그룹 신규 추가 (`owner approve`, `owner reject`, `owner recover`)
 - `agent` 서브커맨드에 `create` 액션 추가 (기존 `list`, `info`에 더하여)
+
+---
+
+## 6. waiaas init --quickstart (DX-04)
+
+### 6.1 설계 원칙
+
+`--quickstart` 플래그는 `init`부터 세션 토큰 발급까지 **4단계를 단일 커맨드로 오케스트레이션**한다. 개발자가 처음 WAIaaS를 시작할 때 최소 명령어로 동작하는 환경을 얻을 수 있도록 한다.
+
+**4단계 오케스트레이션:**
+
+```
+[1/4] init       -- 인프라 초기화 (디렉토리 + DB + 키스토어)
+[2/4] start      -- 데몬 시작 (foreground)
+[3/4] agent      -- 에이전트 생성 + Owner 등록
+[4/4] session    -- 세션 토큰 발급
+```
+
+### 6.2 커맨드 인터페이스
+
+```
+waiaas init --quickstart [options]
+
+Required (quickstart 모드):
+  --owner <address>        Owner 지갑 주소
+
+Options:
+  --agent-name <string>    에이전트 이름 (기본: "agent-01")
+  --chain <string>         블록체인 (기본: solana)
+  --network <string>       네트워크 (기본: devnet)
+  --expires-in <seconds>   세션 만료 시간 (기본: 86400)
+  --data-dir <path>        데이터 디렉토리
+  --password <string>      마스터 패스워드 (미지정 시 자동 생성)
+  --password-file <path>   패스워드 파일 경로
+  -h, --help               도움말
+```
+
+### 6.3 --quickstart 필수 옵션
+
+| 옵션 | 필수 | 기본값 | 설명 |
+|------|------|--------|------|
+| `--owner <address>` | **필수** | - | Owner 지갑 주소. agents.owner_address NOT NULL이므로 반드시 필요. |
+| `--agent-name <string>` | 선택 | `agent-01` | 에이전트 이름 |
+| `--chain <string>` | 선택 | `solana` | 블록체인 |
+| `--network <string>` | 선택 | `devnet` | 네트워크 |
+| `--expires-in <seconds>` | 선택 | `86400` | 세션 만료 시간 (24시간) |
+
+### 6.4 마스터 패스워드 자동 생성
+
+`--quickstart`에서 패스워드를 명시적으로 지정하지 않으면 자동 생성한다.
+
+```typescript
+import { randomBytes } from 'node:crypto'
+
+function generateMasterPassword(): string {
+  // 24바이트 = 192비트 엔트로피 -> base64url 32자
+  return randomBytes(24).toString('base64url')
+  // 예: "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1x"
+}
+```
+
+**패스워드 저장:**
+
+자동 생성된 패스워드는 `~/.waiaas/.master-password` 파일에 저장한다.
+
+```typescript
+const passwordPath = join(dataDir, '.master-password')
+writeFileSync(passwordPath, password, { mode: 0o600 })
+// 파일 권한: 소유자만 읽기/쓰기 (rw-------)
+```
+
+| 항목 | 값 |
+|------|-----|
+| 파일 경로 | `~/.waiaas/.master-password` |
+| 파일 권한 | `0o600` (rw-------) |
+| 내용 | 패스워드 평문 (1줄) |
+| 생성 시점 | `--quickstart` 자동 생성 시에만 |
+| 이후 사용 | `waiaas start`에서 `--password-file ~/.waiaas/.master-password`로 참조 |
+
+**보안 고려사항:**
+- `.master-password` 파일은 `~/.waiaas/` 디렉토리(mode 0o700) 내에 위치하여 소유자만 접근 가능
+- 터미널 히스토리에 패스워드가 남지 않음 (파일 기반)
+- 프로덕션에서는 `--quickstart`를 사용하지 않고 대화형 init + 수동 패스워드 설정을 권장
+
+### 6.5 출력 예시
+
+```
+$ waiaas init --quickstart \
+    --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
+    --agent-name my-bot \
+    --chain solana \
+    --network devnet
+
+  WAIaaS Quickstart
+  -----------------
+
+  [1/4] Initializing...
+        Data directory: ~/.waiaas/
+        Master password: auto-generated
+        Saved to: ~/.waiaas/.master-password (chmod 600)
+        Database: 7 tables, migration v5
+        Keystore: initialized
+
+  [2/4] Starting daemon...
+        WAIaaS daemon v0.5.0 ready on 127.0.0.1:3100 (PID: 12345)
+
+  [3/4] Creating agent...
+        Name:    my-bot
+        Chain:   solana (devnet)
+        Address: 9wB3Lz8n...AgentPublicKey...
+        Owner:   7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+  [4/4] Creating session...
+        Expires: 2026-02-08T10:30:00.000Z (24h)
+
+  -----------------
+  Quickstart complete!
+
+  Session token:
+  wai_sess_eyJhbGciOiJIUzI1NiIs...
+
+  Quick copy:
+    export WAIAAS_SESSION_TOKEN="wai_sess_eyJhbGciOiJIUzI1NiIs..."
+
+  Master password saved to:
+    ~/.waiaas/.master-password
+
+  Next time, start the daemon with:
+    waiaas start --password-file ~/.waiaas/.master-password
+```
+
+### 6.6 에러 롤백
+
+각 Stage에서 실패 시 이전 Stage에서 생성한 리소스를 정리한다.
+
+```
+Stage 1 (init) 실패:
+  -> 생성된 디렉토리 삭제 (rmSync recursive)
+  -> Exit 1
+
+Stage 2 (start) 실패:
+  -> 데몬 프로세스 정리 (이미 종료됨)
+  -> 데이터 디렉토리는 유지 (init 성공이므로)
+  -> "init succeeded, but daemon failed to start. Run 'waiaas start' manually."
+  -> Exit 1
+
+Stage 3 (agent create) 실패:
+  -> 데몬 정지 (SIGTERM 전송)
+  -> 데이터 디렉토리 유지
+  -> "init + start succeeded, but agent creation failed: {error}"
+  -> Exit 1
+
+Stage 4 (session create) 실패:
+  -> 데몬 정지 (SIGTERM 전송)
+  -> 에이전트는 유지 (이미 생성됨)
+  -> "Agent created, but session creation failed: {error}"
+  -> Exit 1
+```
+
+**롤백 원칙:**
+- init 실패: 전부 삭제 (아무것도 남기지 않음)
+- init 이후 실패: 데이터 디렉토리는 유지 (init은 성공했으므로 수동으로 재시도 가능)
+- 부분 성공 상태를 명확히 안내하여 사용자가 수동 복구 가능
+
+### 6.7 비대화형 통합 예시
+
+```bash
+# CI/CD에서 완전 비대화형 quickstart
+export WAIAAS_MASTER_PASSWORD="test-password-12345"
+waiaas init --quickstart \
+  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
+  --agent-name ci-bot \
+  --chain solana \
+  --network devnet
+
+# Docker 환경에서
+docker run -d waiaas:latest init --quickstart \
+  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
+  --non-interactive
+```
+
+### 6.8 구현 수도코드
+
+```typescript
+async function runQuickstart(options: InitOptions): Promise<void> {
+  const dataDir = resolveDataDir(options.dataDir)
+
+  // === Stage 1: init ===
+  console.log('  [1/4] Initializing...')
+  try {
+    // 패스워드 해석: 명시적 > 환경변수 > 자동 생성
+    let password: string
+    let passwordAutoGenerated = false
+    if (options.password) {
+      password = options.password
+    } else if (process.env.WAIAAS_MASTER_PASSWORD) {
+      password = process.env.WAIAAS_MASTER_PASSWORD
+    } else {
+      password = generateMasterPassword()
+      passwordAutoGenerated = true
+    }
+
+    validatePasswordStrength(password)
+
+    // 인프라 초기화
+    await initializeInfrastructure(dataDir, password)
+
+    // 자동 생성된 패스워드 저장
+    if (passwordAutoGenerated) {
+      const passwordPath = join(dataDir, '.master-password')
+      writeFileSync(passwordPath, password, { mode: 0o600 })
+      console.log(`        Master password: auto-generated`)
+      console.log(`        Saved to: ${passwordPath} (chmod 600)`)
+    }
+  } catch (err) {
+    // Stage 1 실패: 전체 롤백
+    if (existsSync(dataDir)) rmSync(dataDir, { recursive: true })
+    console.error(`  [1/4] Failed: ${err.message}`)
+    process.exit(1)
+  }
+
+  // === Stage 2: start ===
+  console.log('  [2/4] Starting daemon...')
+  let daemonProcess: ChildProcess
+  try {
+    daemonProcess = await startDaemonForQuickstart(dataDir, password)
+    await waitForDaemonReady(daemonProcess, 15_000) // Argon2id 포함 15초 대기
+    console.log(`        WAIaaS daemon ready on 127.0.0.1:${config.port}`)
+  } catch (err) {
+    console.error(`  [2/4] Failed: ${err.message}`)
+    console.error("  Init succeeded. Run 'waiaas start' manually.")
+    process.exit(1)
+  }
+
+  // === Stage 3: agent create ===
+  console.log('  [3/4] Creating agent...')
+  let agent: AgentResponse
+  try {
+    agent = await createAgentViaApi({
+      name: options.agentName ?? 'agent-01',
+      chain: options.chain ?? 'solana',
+      network: options.network ?? 'devnet',
+      ownerAddress: options.owner,
+    })
+    console.log(`        Name:    ${agent.name}`)
+    console.log(`        Address: ${agent.address}`)
+    console.log(`        Owner:   ${agent.ownerAddress}`)
+  } catch (err) {
+    await stopDaemonProcess(daemonProcess)
+    console.error(`  [3/4] Failed: ${err.message}`)
+    process.exit(1)
+  }
+
+  // === Stage 4: session create ===
+  console.log('  [4/4] Creating session...')
+  try {
+    const session = await createSessionViaApi({
+      agentId: agent.id,
+      expiresIn: options.expiresIn ?? 86400,
+    })
+    console.log(`        Expires: ${session.expiresAt}`)
+    console.log('')
+    console.log('  Quickstart complete!')
+    console.log('')
+    console.log('  Session token:')
+    console.log(`  ${session.token}`)
+    console.log('')
+    console.log('  Quick copy:')
+    console.log(`    export WAIAAS_SESSION_TOKEN="${session.token}"`)
+  } catch (err) {
+    await stopDaemonProcess(daemonProcess)
+    console.error(`  [4/4] Failed: ${err.message}`)
+    console.error('  Agent created. Create session manually after starting daemon.')
+    process.exit(1)
+  }
+
+  // 데몬은 foreground로 계속 실행됨
+}
+```
+
+---
+
+## 7. waiaas start --dev (DX-05)
+
+### 7.1 설계 원칙
+
+`--dev` 모드는 **개발/테스트 환경에서 프롬프트 없이 즉시 데몬을 시작**할 수 있도록 한다. 고정 마스터 패스워드를 사용하여 대화형 입력을 제거하고, debug 로그를 자동 활성화한다.
+
+### 7.2 동작 정의
+
+| 항목 | 값 |
+|------|-----|
+| 고정 패스워드 | `waiaas-dev` (하드코딩) |
+| 로그 레벨 | `debug` (자동) |
+| 프롬프트 | 없음 (패스워드 입력 건너뜀) |
+| 보안 경고 | 3가지 메커니즘 활성화 |
+
+```bash
+# 기본 사용
+waiaas start --dev
+
+# 커스텀 포트와 함께
+waiaas start --dev --port 3200
+
+# 백그라운드 모드와 함께
+waiaas start --dev --daemon
+```
+
+**내부 동작:** `--dev` 플래그는 다음과 동등하다:
+
+```bash
+WAIAAS_MASTER_PASSWORD=waiaas-dev waiaas start --log-level debug
+```
+
+단, `--dev`는 추가로 보안 경고 메커니즘 3가지를 활성화한다.
+
+### 7.3 보안 경고 메커니즘 (3가지)
+
+#### 메커니즘 1: 시작 배너
+
+```
+$ waiaas start --dev
+
+  ╔══════════════════════════════════════════════════════════╗
+  ║  WARNING: DEV MODE - NOT FOR PRODUCTION                 ║
+  ║  Master password: "waiaas-dev" (fixed, publicly known)  ║
+  ║  All keys are protected with a weak password.           ║
+  ╚══════════════════════════════════════════════════════════╝
+
+  WAIaaS daemon v0.5.0 (DEV MODE)
+  Validating environment... OK
+  Database ready (7 tables, migration v5)
+  Unlocking keystore... (Argon2id, ~2s)
+  KeyStore unlocked (2 keys loaded)
+  solana/devnet adapter ready (latency: 45ms)
+  HTTP server listening on 127.0.0.1:3100
+  WAIaaS daemon v0.5.0 ready on 127.0.0.1:3100 (PID: 12345) [DEV MODE]
+```
+
+Ready 메시지에도 `[DEV MODE]` 접미사를 추가하여 로그 파일에서도 식별 가능하게 한다.
+
+#### 메커니즘 2: X-WAIaaS-Dev-Mode 응답 헤더
+
+`--dev` 모드에서 모든 HTTP 응답에 다음 헤더를 추가한다:
+
+```
+X-WAIaaS-Dev-Mode: true
+```
+
+```typescript
+// dev 모드 미들웨어
+if (config.devMode) {
+  app.use('*', async (c, next) => {
+    await next()
+    c.header('X-WAIaaS-Dev-Mode', 'true')
+  })
+}
+```
+
+**용도:**
+- SDK/클라이언트가 dev 모드를 감지하여 경고 표시 가능
+- 프록시/모니터링 도구에서 dev 모드 트래픽 식별
+
+#### 메커니즘 3: 감사 로그 dev_mode 필드
+
+`--dev` 모드에서 모든 감사 로그 레코드에 `dev_mode: true` 필드를 추가한다.
+
+```typescript
+auditLog({
+  eventType: 'daemon.started',
+  actor: 'system',
+  details: {
+    version,
+    port: config.daemon.port,
+    pid: process.pid,
+    dev_mode: true,  // --dev 모드 표시
+  },
+  severity: 'info',
+})
+```
+
+**용도:**
+- 감사 로그 분석 시 dev 모드에서 발생한 이벤트를 필터링
+- 프로덕션 로그에 `dev_mode: true`가 발견되면 즉시 경고
+
+### 7.4 config.toml 영구 설정
+
+`--dev` 플래그 외에 config.toml에서도 dev 모드를 영구 설정할 수 있다.
+
+```toml
+# config.toml
+[daemon]
+port = 3100
+hostname = "127.0.0.1"
+log_level = "info"          # --dev 시 자동으로 "debug" 오버라이드
+dev_mode = false             # true로 설정 시 --dev와 동일 효과
+```
+
+**우선순위:**
+
+```
+--dev 플래그 (최우선) > config.toml [daemon].dev_mode > 기본값 (false)
+```
+
+**Zod 스키마:**
+
+```typescript
+// packages/core/src/schemas/config.schema.ts (v0.5 추가)
+const DaemonConfigSchema = z.object({
+  port: z.number().int().min(1024).max(65535).default(3100),
+  hostname: z.literal('127.0.0.1'),
+  log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  dev_mode: z.boolean().default(false),  // v0.5 추가
+  shutdown_timeout: z.number().int().min(5).max(300).default(30),
+})
+```
+
+### 7.5 --dev와 --quickstart 조합
+
+`--dev`와 `--quickstart`를 함께 사용하면 가장 빠른 개발 환경 구축이 가능하다:
+
+```bash
+waiaas init --quickstart --dev \
+  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+```
+
+동작:
+1. init: 고정 패스워드 `waiaas-dev`로 인프라 초기화 (자동 생성 대신 고정값)
+2. start: `--dev` 모드로 데몬 시작 (보안 경고 3종 활성화)
+3. agent create: 에이전트 생성
+4. session create: 세션 토큰 발급
+
+`--dev`와 `--quickstart` 조합 시 마스터 패스워드는 항상 `waiaas-dev`이며, `.master-password` 파일은 생성하지 않는다 (고정값이므로 파일 저장 불필요).
+
+### 7.6 --dev 모드 제약
+
+#### --expose와 조합 금지
+
+`--dev`와 `--expose`(향후 구현, 원격 접근 플래그)는 함께 사용할 수 없다:
+
+```
+$ waiaas start --dev --expose 0.0.0.0
+Error: --dev and --expose cannot be used together.
+Dev mode uses a fixed, publicly known password. Exposing the daemon
+to non-localhost interfaces would be a critical security vulnerability.
+
+Remove --dev for production/remote use, or remove --expose for local development.
+```
+
+**근거:** `--dev`는 공개적으로 알려진 고정 패스워드(`waiaas-dev`)를 사용하므로, 외부 네트워크에 노출하면 누구나 키스토어를 해제할 수 있다.
+
+#### init --force와의 관계
+
+`--dev` 모드에서 init --force를 실행하면 기존 dev 환경을 재초기화한다:
+
+```bash
+waiaas init --quickstart --dev --force \
+  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+```
+
+### 7.7 구현 수도코드
+
+```typescript
+// packages/cli/src/commands/start.ts (v0.5 --dev 추가)
+function parseStartOptions(args: string[]): StartOptions {
+  const { values } = parseArgs({
+    args,
+    options: {
+      daemon: { type: 'boolean', short: 'd', default: false },
+      dev: { type: 'boolean', default: false },  // v0.5 추가
+      port: { type: 'string' },
+      'data-dir': { type: 'string' },
+      'log-level': { type: 'string' },
+      'password-env': { type: 'string' },
+      'password-file': { type: 'string' },
+      expose: { type: 'string' },  // 향후 구현
+      help: { type: 'boolean', short: 'h' },
+    },
+    strict: true,
+  })
+
+  // --dev + --expose 조합 금지
+  if (values.dev && values.expose) {
+    console.error('Error: --dev and --expose cannot be used together.')
+    console.error('Dev mode uses a fixed, publicly known password.')
+    console.error('Exposing the daemon would be a critical security vulnerability.')
+    process.exit(1)
+  }
+
+  return {
+    daemon: values.daemon ?? false,
+    dev: values.dev ?? false,
+    port: values.port ? parseInt(values.port, 10) : undefined,
+    dataDir: values['data-dir'],
+    logLevel: values.dev ? 'debug' : values['log-level'] as LogLevel | undefined,
+    passwordEnv: values['password-env'],
+    passwordFile: values['password-file'],
+  }
+}
+
+async function runStart(args: string[]): Promise<void> {
+  const options = parseStartOptions(args)
+
+  // --dev 모드: 고정 패스워드 주입
+  if (options.dev) {
+    process.env.WAIAAS_MASTER_PASSWORD = 'waiaas-dev'
+
+    // 보안 경고 배너
+    console.log('')
+    console.log('  +------------------------------------------------------+')
+    console.log('  |  WARNING: DEV MODE - NOT FOR PRODUCTION              |')
+    console.log('  |  Master password: "waiaas-dev" (fixed, public)       |')
+    console.log('  |  All keys are protected with a weak password.        |')
+    console.log('  +------------------------------------------------------+')
+    console.log('')
+  }
+
+  // 기존 start 로직 실행
+  await startDaemon({
+    ...options,
+    devMode: options.dev,
+  })
+}
+```
+
+---
+
+## 8. v0.2 -> v0.5 마이그레이션 가이드
+
+### 8.1 변경 영향
+
+| 영역 | 변경 사항 | 영향도 | 조치 필요 |
+|------|----------|--------|----------|
+| `waiaas init` | 4단계 -> 2단계 | **HIGH** | 기존 init 스크립트 업데이트 |
+| 에이전트 생성 | init 내 -> `agent create --owner` | **HIGH** | 에이전트 생성 워크플로우 변경 |
+| 세션 생성 | ownerAuth -> masterAuth | **MEDIUM** | CLI에서 서명 프로세스 제거 |
+| CLI 커맨드 | 4개 신규, 2개 변경 | **MEDIUM** | 스크립트/자동화 업데이트 |
+| config.toml | `dev_mode` 추가 | **LOW** | 기존 설정 파일 호환 (기본값 false) |
+
+### 8.2 마이그레이션 절차
+
+기존 v0.2 환경에서 v0.5로 전환하는 절차를 안내한다.
+
+#### 기존 v0.2 사용자
+
+```bash
+# v0.2에서 이미 init + agent 생성이 완료된 경우:
+
+# 1. 데몬 정지
+waiaas stop
+
+# 2. v0.5 바이너리로 업데이트
+npm install -g @waiaas/cli@0.5.0
+
+# 3. 데몬 재시작 (v0.5)
+waiaas start
+
+# 4. 기존 에이전트에 Owner 주소 설정 (v0.5 필수)
+#    v0.2에서 Owner 미등록 에이전트가 있으면 v0.5 시작 시 경고
+#    PUT /v1/agents/:id API로 ownerAddress 설정
+curl -X PUT http://127.0.0.1:3100/v1/agents/<agent-id> \
+  -H "Content-Type: application/json" \
+  -d '{"ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"}'
+
+# 5. 새 세션 생성 (v0.5 방식 -- masterAuth implicit)
+export WAIAAS_SESSION_TOKEN=$(waiaas session create --agent my-bot)
+```
+
+#### 신규 v0.5 사용자
+
+```bash
+# 가장 빠른 시작 (개발용)
+waiaas init --quickstart --dev \
+  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+# 프로덕션용
+waiaas init
+waiaas start
+waiaas agent create --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+export WAIAAS_SESSION_TOKEN=$(waiaas session create --agent agent-01)
+```
+
+### 8.3 DB 마이그레이션
+
+v0.5 데몬 시작 시 Drizzle ORM의 자동 마이그레이션이 실행된다. 52-auth-model-redesign.md에서 정의된 스키마 변경(agents.owner_address NOT NULL, wallet_connections 테이블 등)이 자동으로 적용된다. 수동 DB 조작은 불필요하다.
+
+**주의사항:**
+- v0.2에서 owner_address가 NULL인 에이전트가 있으면 마이그레이션 시 경고 (NOT NULL 제약 위반)
+- 마이그레이션 전 `waiaas backup create`로 백업 권장
+- 마이그레이션은 역방향(v0.5 -> v0.2) 불가. 백업 필수.
+
+### 8.4 주요 삭제 항목
+
+| 삭제된 기능 | v0.5 대안 | 비고 |
+|-----------|----------|------|
+| `init` Step 2 (에이전트 생성) | `waiaas agent create --owner` | 별도 커맨드로 분리 |
+| `init` Step 3 (알림 설정) | API/config.toml | 데몬 시작 후 설정 |
+| `init` Step 4 (Owner 등록) | `--owner` 옵션 | 에이전트별 속성으로 변경 |
+| 세션 생성 시 ownerAuth | masterAuth (implicit) | 서명 불필요 |
+| ownerAuth 적용 대상 15개 엔드포인트 | masterAuth (implicit) | 2곳만 ownerAuth 유지 |
+
+---
+
+## 9. 요구사항 매핑 총괄
+
+| 요구사항 | 설명 | 충족 섹션 | 충족 상태 |
+|---------|------|-----------|----------|
+| DX-01 | `waiaas init` 순수 인프라 초기화 (에이전트/Owner 제거) | 섹션 2 (2단계 플로우, 제거된 단계 명시, 구현 수도코드) | 완료 |
+| DX-02 | `waiaas agent create --owner <addr>` (Owner 필수, 서명 불필요) | 섹션 3 (커맨드 인터페이스, 동작 설명, API 호출 구현) | 완료 |
+| DX-03 | `waiaas session create` masterAuth(implicit) 기반 | 섹션 4 (3가지 출력 포맷, 사용 패턴, parseArgs 구현) | 완료 |
+| DX-04 | `--quickstart` 4단계 오케스트레이션 | 섹션 6 (init->start->agent->session, 에러 롤백, 패스워드 자동 생성) | 완료 |
+| DX-05 | `--dev` 모드 (고정 패스워드 + 보안 경고) | 섹션 7 (3가지 경고 메커니즘, config.toml, --expose 금지) | 완료 |
+
+**5/5 요구사항 완료.**
+
+---
+
+*문서 작성: 2026-02-07*
+*Phase: 21-dx-improvement, Plan: 01*
+*CLI-REDESIGN v1.0*
