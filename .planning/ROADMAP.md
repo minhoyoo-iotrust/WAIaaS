@@ -96,7 +96,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 3/3 | Complete | 2026-02-07 |
-| 20. 세션 갱신 프로토콜 | v0.5 | 0/2 | Not started | - |
+| 20. 세션 갱신 프로토콜 | v0.5 | 0/2 | Planned | - |
 | 21. DX 개선 + 설계 문서 통합 | v0.5 | 0/TBD | Not started | - |
 
 ## Coverage
