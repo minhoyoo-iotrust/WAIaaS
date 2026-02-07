@@ -12,10 +12,10 @@
 마일스톤: v0.5 인증 모델 재설계 + DX 개선
 페이즈: Phase 21 of 21 (DX 개선 + 설계 문서 통합)
 플랜: 4 of 4
-상태: In progress
-마지막 활동: 2026-02-07 -- Completed 21-04-PLAN.md
+상태: Phase complete (v0.5 마일스톤 완료)
+마지막 활동: 2026-02-07 -- Completed 21-03-PLAN.md (21-03 검증 완료, Phase 21 전체 완료)
 
-Progress: [████████████░] 9/9 (v0.5 전체), 4/4 (Phase 21) -- 21-03 검증 미완
+Progress: [█████████████] 9/9 (v0.5 전체), 4/4 (Phase 21)
 
 ## 성과 지표
 
@@ -23,7 +23,7 @@ Progress: [████████████░] 9/9 (v0.5 전체), 4/4 (Phas
 **v0.2 최종 통계:** 16 plans, 45/45 reqs, 17 docs
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
-**v0.5 현재:** 9/9 plans, 27/27 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~08, SESS-03) -- 21-03 검증 미완
+**v0.5 최종 통계:** 9/9 plans, 27/27 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~08, SESS-03), 15 docs (52-55 신규 + 11개 기존 문서 수정)
 
 ## 누적 컨텍스트
 
@@ -84,6 +84,11 @@ v0.5 Plan 21-02 결정:
 - 세션 토큰 불편함 완화 3방안: mcp setup 커맨드, 세션 자동 갱신, env 파일
 - 원격 접근 SSH 터널 추천, --expose는 mTLS+IP화이트리스트 구현 후에만 안전
 
+v0.5 Plan 21-03 결정:
+- 37-rest-api 에러 코드 테이블에 hint 열 추가 대신 위임 링크 채택 (55-dx-improvement-spec.md가 hint SSoT)
+- 40-telegram-bot 2-Tier 모델은 v0.5 3-tier와 양립 (Tier 1 = masterAuth implicit, Tier 2 = ownerAuth approve/recover)
+- Docker --dev 모드 별도 섹션 9.2로 독립 (프로덕션 금지 + 테스트 YAML 예시)
+
 v0.5 Plan 21-04 결정:
 - 33/36 참조 노트는 인라인 코드 수정 없이 blockquote 노트만 추가 (원본 설계 무결성 유지)
 
@@ -94,5 +99,5 @@ v0.5 Plan 21-04 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: Completed 21-04-PLAN.md. Phase 21 plan 4 of 4 complete. 21-03 검증 대기.
+중단 지점: Completed 21-03-PLAN.md. Phase 21 4/4 plans complete. v0.5 마일스톤 완료.
 재개 파일: None
