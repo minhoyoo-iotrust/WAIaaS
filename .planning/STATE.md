@@ -11,11 +11,11 @@
 
 마일스톤: v0.5 인증 모델 재설계 + DX 개선
 페이즈: Phase 21 of 21 (DX 개선 + 설계 문서 통합)
-플랜: 1 of 4
+플랜: 2 of 4
 상태: In progress
-마지막 활동: 2026-02-07 -- Completed 21-01-PLAN.md
+마지막 활동: 2026-02-07 -- Completed 21-02-PLAN.md
 
-Progress: [██████████░░] 6/9 (v0.5 전체), 1/4 (Phase 21)
+Progress: [███████████░] 7/9 (v0.5 전체), 2/4 (Phase 21)
 
 ## 성과 지표
 
@@ -23,7 +23,7 @@ Progress: [██████████░░] 6/9 (v0.5 전체), 1/4 (Phase 2
 **v0.2 최종 통계:** 16 plans, 45/45 reqs, 17 docs
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
-**v0.5 현재:** 6/9 plans, 24/24 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~05, SESS-03)
+**v0.5 현재:** 7/9 plans, 27/27 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~08, SESS-03)
 
 ## 누적 컨텍스트
 
@@ -75,6 +75,15 @@ v0.5 Plan 21-01 결정:
 - config.toml [daemon].dev_mode 영구 설정 (boolean, 기본 false)
 - 54-cli-flow-redesign.md가 28-daemon-lifecycle-cli.md 섹션 6(CLI 커맨드) 대체
 
+v0.5 Plan 21-02 결정:
+- hint 필드는 z.string().optional()로 ErrorResponseSchema backward-compatible 확장
+- 40개 에러 중 31개에 hint 매핑 (78%), 9개 미매핑 (보안/복구불가 사유)
+- MCP 옵션 B(별도 stdio) 채택: MCP Host 표준 + sessionAuth 보장 + 관심사 분리
+- MCP 옵션 A(Streamable HTTP) 기각: Host 호환성 부족 + 인증 모델 충돌
+- MCP 마이그레이션 경로: B -> B+자동화 -> C(--mcp-stdio) -> A 재검토
+- 세션 토큰 불편함 완화 3방안: mcp setup 커맨드, 세션 자동 갱신, env 파일
+- 원격 접근 SSH 터널 추천, --expose는 mTLS+IP화이트리스트 구현 후에만 안전
+
 ### 차단 요소/우려 사항
 
 없음
@@ -82,5 +91,5 @@ v0.5 Plan 21-01 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: Completed 21-01-PLAN.md. Phase 21 plan 1 of 4 complete. Ready for 21-02.
+중단 지점: Completed 21-02-PLAN.md. Phase 21 plan 2 of 4 complete. Ready for 21-03.
 재개 파일: None
