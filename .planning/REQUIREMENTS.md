@@ -9,11 +9,11 @@
 
 ### 토큰 확장 (TOKEN)
 
-- [ ] **TOKEN-01**: TransferRequest에 token 필드를 추가하여 SPL/ERC-20 토큰 전송을 설계한다 (하위 호환: undefined = 네이티브)
-- [ ] **TOKEN-02**: ALLOWED_TOKENS 정책 규칙을 설계한다 (에이전트별 토큰 민트/컨트랙트 화이트리스트, 미등록 토큰 거부)
-- [ ] **TOKEN-03**: getAssets() 인터페이스를 복원하고 AssetInfo 스키마를 확정한다 (Solana getTokenAccountsByOwner, EVM 프로바이더별 방식)
-- [ ] **TOKEN-04**: 토큰 전송 수수료 추정을 확장 설계한다 (Solana ATA 생성 비용, EVM ERC-20 gas 추정)
-- [ ] **TOKEN-05**: SPL/ERC-20 토큰 전송의 테스트 레벨/Mock/보안 시나리오를 정의한다
+- [x] **TOKEN-01**: TransferRequest에 token 필드를 추가하여 SPL/ERC-20 토큰 전송을 설계한다 (하위 호환: undefined = 네이티브)
+- [x] **TOKEN-02**: ALLOWED_TOKENS 정책 규칙을 설계한다 (에이전트별 토큰 민트/컨트랙트 화이트리스트, 미등록 토큰 거부)
+- [x] **TOKEN-03**: getAssets() 인터페이스를 복원하고 AssetInfo 스키마를 확정한다 (Solana getTokenAccountsByOwner, EVM 프로바이더별 방식)
+- [x] **TOKEN-04**: 토큰 전송 수수료 추정을 확장 설계한다 (Solana ATA 생성 비용, EVM ERC-20 gas 추정)
+- [x] **TOKEN-05**: SPL/ERC-20 토큰 전송의 테스트 레벨/Mock/보안 시나리오를 정의한다
 
 ### 컨트랙트 호출 (CONTRACT)
 
@@ -92,11 +92,11 @@ v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TOKEN-01 | Phase 22 | Pending |
-| TOKEN-02 | Phase 22 | Pending |
-| TOKEN-03 | Phase 22 | Pending |
-| TOKEN-04 | Phase 22 | Pending |
-| TOKEN-05 | Phase 22 | Pending |
+| TOKEN-01 | Phase 22 | Complete |
+| TOKEN-02 | Phase 22 | Complete |
+| TOKEN-03 | Phase 22 | Complete |
+| TOKEN-04 | Phase 22 | Complete |
+| TOKEN-05 | Phase 22 | Complete |
 | CONTRACT-01 | Phase 23 | Pending |
 | CONTRACT-02 | Phase 23 | Pending |
 | CONTRACT-03 | Phase 23 | Pending |

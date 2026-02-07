@@ -21,7 +21,7 @@
 
 소수 페이즈는 해당 정수 사이에서 번호 순서대로 실행된다.
 
-- [ ] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책
+- [x] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책 (2026-02-07)
 - [ ] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션
 - [ ] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action
 - [ ] **Phase 25: 테스트 전략 통합 + 기존 문서 반영** - 확장 기능 테스트 전략, 기존 문서 8개 v0.6 통합
@@ -46,8 +46,8 @@
 **플랜**: 2 plans in 1 wave (parallel)
 
 Plans:
-- [ ] 22-01-PLAN.md — TransferRequest.token 확장, SPL/ERC-20 빌드 로직, ALLOWED_TOKENS 정책, 파이프라인 통합 (CHAIN-EXT-01)
-- [ ] 22-02-PLAN.md — getAssets() 인터페이스, 수수료 추정 확장, 테스트 시나리오 (CHAIN-EXT-02)
+- [x] 22-01-PLAN.md — TransferRequest.token 확장, SPL/ERC-20 빌드 로직, ALLOWED_TOKENS 정책, 파이프라인 통합 (CHAIN-EXT-01)
+- [x] 22-02-PLAN.md — getAssets() 인터페이스, 수수료 추정 확장, 테스트 시나리오 (CHAIN-EXT-02)
 
 ### Phase 23: 트랜잭션 타입 확장 설계
 
@@ -158,7 +158,7 @@ Plans:
 
 | 페이즈 | 플랜 완료 | 상태 | 완료일 |
 |--------|-----------|------|--------|
-| 22. 토큰 확장 설계 | 0/2 | Not started | - |
+| 22. 토큰 확장 설계 | 2/2 | ✓ Complete | 2026-02-07 |
 | 23. 트랜잭션 타입 확장 설계 | 0/3 | Not started | - |
 | 24. 상위 추상화 레이어 설계 | 0/2 | Not started | - |
 | 25. 테스트 전략 통합 + 문서 반영 | 0/2 | Not started | - |
