@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-07)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.6 블록체인 기능 확장 설계 -- Phase 23 트랜잭션 타입 확장 설계
+**현재 초점:** v0.6 블록체인 기능 확장 설계 -- Phase 23 완료, Phase 24 대기
 
 ## 현재 위치
 
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 23 of 25 (트랜잭션 타입 확장 설계)
-플랜: 2 of 3 in current phase (23-01, 23-02 complete)
-상태: In progress
-마지막 활동: 2026-02-08 -- Completed 23-02-PLAN.md (CHAIN-EXT-04 Approve 관리 스펙)
+플랜: 3 of 3 in current phase (Phase 23 complete)
+상태: Phase complete
+마지막 활동: 2026-02-08 -- Completed 23-03-PLAN.md (CHAIN-EXT-05 배치 트랜잭션 스펙)
 
-Progress: ████████░░░░░░░░░░░░░ 44%
+Progress: ███████████░░░░░░░░░░ 55%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: ████████░░░░░░░░░░░░░ 44%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 4/9 plans
+**v0.6 진행:** 5/9 plans
 
 ## 누적 컨텍스트
 
@@ -75,6 +75,16 @@ Phase 23-02 결정 (CHAIN-EXT-04):
 - 무제한 임계값 = 체인별 MAX / 2 (EVM: 2^256/2, Solana: 2^64/2)
 - Solana 단일 delegate 경고: 자동 차단하지 않고 previousDelegate 정보 + 감사 로그 기록
 
+Phase 23-03 결정 (CHAIN-EXT-05):
+- InstructionRequest를 discriminated union으로 설계 (4 types: TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE)
+- BatchRequest의 chain은 'solana' only (EVM BATCH_NOT_SUPPORTED 400)
+- 2단계 정책 평가: Phase A 개별 instruction + Phase B 합산 금액 티어
+- TOKEN_TRANSFER/APPROVE 합산 금액 = 0n (Phase 24 USD 통합 전)
+- APPROVE 포함 배치: maxTier(합산 금액 티어, APPROVE override 티어)
+- 감사 컬럼 대표값 + metadata JSON 전체 기록 패턴
+- 배치 내 중복 instruction 미감지 (감사 로그 사후 추적)
+- ATA 자동 생성은 instruction 수(20개 한도)에 포함
+
 ### 차단 요소/우려 사항
 
 없음
@@ -82,5 +92,5 @@ Phase 23-02 결정 (CHAIN-EXT-04):
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Completed 23-02-PLAN.md. Phase 23 1/3 plans 대기 (23-03 Batch).
+중단 지점: Completed 23-03-PLAN.md. Phase 23 complete (3/3). Phase 24 대기.
 재개 파일: None
