@@ -43,11 +43,11 @@
   3. getAssets()가 에이전트 보유 토큰 목록(민트/잔액/소수점)을 반환하는 인터페이스와 RPC 구현이 설계되어 있다
   4. ALLOWED_TOKENS 정책 규칙이 에이전트별 토큰 화이트리스트를 검증하고, 미등록 토큰 전송을 거부하는 로직이 명세되어 있다
   5. SPL ATA 생성 비용과 ERC-20 gas 추정을 포함한 토큰 전송 수수료 추정 로직이 설계되어 있다
-**플랜**: TBD
+**플랜**: 2 plans in 1 wave (parallel)
 
 Plans:
-- [ ] 22-01: 토큰 전송 확장 + 정책 스펙 (CHAIN-EXT-01)
-- [ ] 22-02: 자산 조회 + 수수료 추정 + 테스트 시나리오 스펙 (CHAIN-EXT-02)
+- [ ] 22-01-PLAN.md — TransferRequest.token 확장, SPL/ERC-20 빌드 로직, ALLOWED_TOKENS 정책, 파이프라인 통합 (CHAIN-EXT-01)
+- [ ] 22-02-PLAN.md — getAssets() 인터페이스, 수수료 추정 확장, 테스트 시나리오 (CHAIN-EXT-02)
 
 ### Phase 23: 트랜잭션 타입 확장 설계
 
