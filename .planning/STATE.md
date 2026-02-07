@@ -11,11 +11,11 @@
 
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 23 of 25 (트랜잭션 타입 확장 설계)
-플랜: 0 of 3 in current phase
-상태: Ready to plan
-마지막 활동: 2026-02-07 -- Phase 22 완료 (2/2 plans, 5/5 verified), Phase 23 대기
+플랜: 1 of 3 in current phase
+상태: In progress
+마지막 활동: 2026-02-08 -- Completed 23-01-PLAN.md (CHAIN-EXT-03 컨트랙트 호출 스펙)
 
-Progress: █████░░░░░░░░░░░░░░░░ 25%
+Progress: ██████░░░░░░░░░░░░░░░ 33%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: █████░░░░░░░░░░░░░░░░ 25%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 2/9 plans
+**v0.6 진행:** 3/9 plans
 
 ## 누적 컨텍스트
 
@@ -58,12 +58,22 @@ Phase 22-02 결정 (CHAIN-EXT-02):
 - REST API 명칭: GET /v1/wallet/tokens -> GET /v1/wallet/assets 확정
 - ITokenDiscovery 확장 포인트: 향후 AlchemyDiscovery, MoralisDiscovery 플러그인 가능
 
+Phase 23-01 결정 (CHAIN-EXT-03):
+- IChainAdapter에 buildContractCall() 독립 메서드 추가 (유니온 확장 대신)
+- CONTRACT_CALL 기본 티어 = APPROVAL (보수적, Owner 승인 필수)
+- METHOD_WHITELIST는 EVM 전용 (Solana 표준 selector 규약 없음)
+- 감사 컬럼 4개 직접 추가 (metadata JSON 대신 독립 컬럼, 인덱싱 효율)
+- 주소 비교 시 lowercase 정규화 (EVM checksum 주소 호환)
+- TransactionType 5개 정식화 (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH)
+- PolicyType 10개로 확장 (+CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE)
+- DatabasePolicyEngine.evaluate() 11단계 알고리즘 (DENY 우선 원칙)
+
 ### 차단 요소/우려 사항
 
 없음
 
 ## 세션 연속성
 
-마지막 세션: 2026-02-07
-중단 지점: Phase 22 완료 (2/2 plans, 5/5 verified). Phase 23 플래닝 대기.
+마지막 세션: 2026-02-08
+중단 지점: Completed 23-01-PLAN.md. Phase 23 2/3 plans 대기 (23-02 Approve, 23-03 Batch).
 재개 파일: None
