@@ -34,14 +34,14 @@
 
 ### 개발자 경험 (DX)
 
-- [ ] **DX-01**: waiaas init이 순수 인프라 초기화만 수행함 — Owner 관련 단계 제거
-- [ ] **DX-02**: waiaas agent create --owner \<address\>로 에이전트 생성 시 Owner 주소가 등록됨 (서명 불필요)
-- [ ] **DX-03**: waiaas session create가 masterAuth(마스터 패스워드)만으로 동작함
-- [ ] **DX-04**: --quickstart 플래그로 init부터 세션 토큰 발급까지 단일 커맨드로 완료됨
-- [ ] **DX-05**: --dev 모드에서 마스터 패스워드 프롬프트 없이 데몬이 시작됨
-- [ ] **DX-06**: 에러 응답에 hint 필드가 포함되어 다음 행동을 안내함
-- [ ] **DX-07**: MCP 데몬 내장 옵션이 검토되고 스펙이 정의됨
-- [ ] **DX-08**: 원격 에이전트 접근 가이드가 작성됨 (SSH 터널, VPN, --expose)
+- [x] **DX-01**: waiaas init이 순수 인프라 초기화만 수행함 — Owner 관련 단계 제거
+- [x] **DX-02**: waiaas agent create --owner \<address\>로 에이전트 생성 시 Owner 주소가 등록됨 (서명 불필요)
+- [x] **DX-03**: waiaas session create가 masterAuth(마스터 패스워드)만으로 동작함
+- [x] **DX-04**: --quickstart 플래그로 init부터 세션 토큰 발급까지 단일 커맨드로 완료됨
+- [x] **DX-05**: --dev 모드에서 마스터 패스워드 프롬프트 없이 데몬이 시작됨
+- [x] **DX-06**: 에러 응답에 hint 필드가 포함되어 다음 행동을 안내함
+- [x] **DX-07**: MCP 데몬 내장 옵션이 검토되고 스펙이 정의됨
+- [x] **DX-08**: 원격 에이전트 접근 가이드가 작성됨 (SSH 터널, VPN, --expose)
 
 ## Future Requirements
 
@@ -77,19 +77,19 @@
 | OWNR-04 | Phase 19 | Complete |
 | OWNR-05 | Phase 19 | Complete |
 | OWNR-06 | Phase 19 | Complete |
-| SESS-01 | Phase 20 | Pending |
-| SESS-02 | Phase 20 | Pending |
-| SESS-03 | Phase 20 | Pending |
-| SESS-04 | Phase 20 | Pending |
-| SESS-05 | Phase 20 | Pending |
-| DX-01 | Phase 21 | Pending |
-| DX-02 | Phase 21 | Pending |
-| DX-03 | Phase 21 | Pending |
-| DX-04 | Phase 21 | Pending |
-| DX-05 | Phase 21 | Pending |
-| DX-06 | Phase 21 | Pending |
-| DX-07 | Phase 21 | Pending |
-| DX-08 | Phase 21 | Pending |
+| SESS-01 | Phase 20 | Complete |
+| SESS-02 | Phase 20 | Complete |
+| SESS-03 | Phase 20 | Complete |
+| SESS-04 | Phase 20 | Complete |
+| SESS-05 | Phase 20 | Complete |
+| DX-01 | Phase 21 | Complete |
+| DX-02 | Phase 21 | Complete |
+| DX-03 | Phase 21 | Complete |
+| DX-04 | Phase 21 | Complete |
+| DX-05 | Phase 21 | Complete |
+| DX-06 | Phase 21 | Complete |
+| DX-07 | Phase 21 | Complete |
+| DX-08 | Phase 21 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 24 total (AUTH 5 + OWNR 6 + SESS 5 + DX 8)
