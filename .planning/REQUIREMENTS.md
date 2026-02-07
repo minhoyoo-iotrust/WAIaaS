@@ -9,20 +9,20 @@
 
 ### 인증 모델 (AUTH)
 
-- [ ] **AUTH-01**: masterAuth/ownerAuth/sessionAuth 3-tier 인증 수단이 정의되고 책임이 분리됨
-- [ ] **AUTH-02**: 12개 엔드포인트의 인증 맵이 재배치됨 — ownerAuth는 거래 승인 + Kill Switch 복구 2곳으로 한정
-- [ ] **AUTH-03**: ownerAuth 미들웨어가 agents.owner_address와 대조하여 에이전트별 Owner를 검증함
-- [ ] **AUTH-04**: Owner 주소 변경 정책이 서명 이력 유무에 따라 2-track으로 정의됨
-- [ ] **AUTH-05**: 인증 모델 변경이 보안 수준을 다운그레이드하지 않음 — APPROVAL 티어 + KS 복구의 ownerAuth 유지
+- [x] **AUTH-01**: masterAuth/ownerAuth/sessionAuth 3-tier 인증 수단이 정의되고 책임이 분리됨
+- [x] **AUTH-02**: 12개 엔드포인트의 인증 맵이 재배치됨 — ownerAuth는 거래 승인 + Kill Switch 복구 2곳으로 한정
+- [x] **AUTH-03**: ownerAuth 미들웨어가 agents.owner_address와 대조하여 에이전트별 Owner를 검증함
+- [x] **AUTH-04**: Owner 주소 변경 정책이 서명 이력 유무에 따라 2-track으로 정의됨
+- [x] **AUTH-05**: 인증 모델 변경이 보안 수준을 다운그레이드하지 않음 — APPROVAL 티어 + KS 복구의 ownerAuth 유지
 
 ### Owner 주소 모델 (OWNR)
 
-- [ ] **OWNR-01**: agents 테이블에 owner_address 컬럼이 추가되고 체인별 주소 형식이 검증됨
-- [ ] **OWNR-02**: config.toml [owner] 섹션이 제거되고 Owner 개념이 에이전트별 DB로 이동함
-- [ ] **OWNR-03**: owner_wallets 테이블이 wallet_connections (WC push 서명 전용)으로 전환됨
-- [ ] **OWNR-04**: 멀티 에이전트 시나리오에서 에이전트별 owner_address로 Owner가 격리됨
-- [ ] **OWNR-05**: WalletConnect가 선택적 편의 기능으로 전환됨 — 미연결에서도 CLI 승인 가능
-- [ ] **OWNR-06**: Kill Switch 복구 시 등록 Owner 중 1명 서명 + masterAuth로 검증됨
+- [x] **OWNR-01**: agents 테이블에 owner_address 컬럼이 추가되고 체인별 주소 형식이 검증됨
+- [x] **OWNR-02**: config.toml [owner] 섹션이 제거되고 Owner 개념이 에이전트별 DB로 이동함
+- [x] **OWNR-03**: owner_wallets 테이블이 wallet_connections (WC push 서명 전용)으로 전환됨
+- [x] **OWNR-04**: 멀티 에이전트 시나리오에서 에이전트별 owner_address로 Owner가 격리됨
+- [x] **OWNR-05**: WalletConnect가 선택적 편의 기능으로 전환됨 — 미연결에서도 CLI 승인 가능
+- [x] **OWNR-06**: Kill Switch 복구 시 등록 Owner 중 1명 서명 + masterAuth로 검증됨
 
 ### 세션 갱신 (SESS)
 
@@ -66,17 +66,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 19 | Pending |
-| AUTH-02 | Phase 19 | Pending |
-| AUTH-03 | Phase 19 | Pending |
-| AUTH-04 | Phase 19 | Pending |
-| AUTH-05 | Phase 19 | Pending |
-| OWNR-01 | Phase 19 | Pending |
-| OWNR-02 | Phase 19 | Pending |
-| OWNR-03 | Phase 19 | Pending |
-| OWNR-04 | Phase 19 | Pending |
-| OWNR-05 | Phase 19 | Pending |
-| OWNR-06 | Phase 19 | Pending |
+| AUTH-01 | Phase 19 | Complete |
+| AUTH-02 | Phase 19 | Complete |
+| AUTH-03 | Phase 19 | Complete |
+| AUTH-04 | Phase 19 | Complete |
+| AUTH-05 | Phase 19 | Complete |
+| OWNR-01 | Phase 19 | Complete |
+| OWNR-02 | Phase 19 | Complete |
+| OWNR-03 | Phase 19 | Complete |
+| OWNR-04 | Phase 19 | Complete |
+| OWNR-05 | Phase 19 | Complete |
+| OWNR-06 | Phase 19 | Complete |
 | SESS-01 | Phase 20 | Pending |
 | SESS-02 | Phase 20 | Pending |
 | SESS-03 | Phase 20 | Pending |
@@ -98,4 +98,4 @@
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after roadmap creation*
+*Last updated: 2026-02-07 (Phase 19 complete — AUTH-01~05, OWNR-01~06)*

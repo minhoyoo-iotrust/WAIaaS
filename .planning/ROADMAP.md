@@ -14,7 +14,7 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
 
 ## Phases
 
-- [ ] **Phase 19: 인증 모델 + Owner 주소 재설계** -- 3-tier 인증 책임 분리와 Owner 주소 에이전트 귀속
+- [x] **Phase 19: 인증 모델 + Owner 주소 재설계** -- 3-tier 인증 책임 분리와 Owner 주소 에이전트 귀속 ✓ 2026-02-07
 - [ ] **Phase 20: 세션 갱신 프로토콜** -- 에이전트 자체 갱신 + Owner 사후 거부 패턴
 - [ ] **Phase 21: DX 개선 + 설계 문서 통합** -- CLI 간소화, 개발 모드, actionable 에러, 통합 반영
 
@@ -34,9 +34,9 @@ v0.2에서 설계한 인증 모델을 masterAuth/ownerAuth/sessionAuth 3-tier로
 **Plans**: 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md -- 3-tier 인증 모델 정의 + 31 엔드포인트 인증 맵 + 보안 비다운그레이드 검증
-- [ ] 19-02-PLAN.md -- Owner 주소 에이전트 귀속 (agents.owner_address NOT NULL) + wallet_connections + config.toml
-- [ ] 19-03-PLAN.md -- 기존 설계 문서 반영 (34-owner-wallet-connection.md + 37-rest-api-complete-spec.md)
+- [x] 19-01-PLAN.md -- 3-tier 인증 모델 정의 + 31 엔드포인트 인증 맵 + 보안 비다운그레이드 검증
+- [x] 19-02-PLAN.md -- Owner 주소 에이전트 귀속 (agents.owner_address NOT NULL) + wallet_connections + config.toml
+- [x] 19-03-PLAN.md -- 기존 설계 문서 반영 (34-owner-wallet-connection.md + 37-rest-api-complete-spec.md)
 
 **Key Deliverables:**
 - 신규: 인증 모델 재설계 문서 (masterAuth/ownerAuth/sessionAuth 3-tier 정의)
@@ -94,7 +94,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 0/3 | Planning complete | - |
+| 19. 인증 모델 + Owner 주소 재설계 | v0.5 | 3/3 | Complete | 2026-02-07 |
 | 20. 세션 갱신 프로토콜 | v0.5 | 0/TBD | Not started | - |
 | 21. DX 개선 + 설계 문서 통합 | v0.5 | 0/TBD | Not started | - |
 
@@ -112,4 +112,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-07 (Phase 19 planning complete)*
+*Last updated: 2026-02-07 (Phase 19 complete)*
