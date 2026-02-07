@@ -3,7 +3,7 @@
 **문서 ID:** TGBOT-DOCK
 **작성일:** 2026-02-05
 **상태:** 완료
-**참조:** API-SPEC (37-rest-api-complete-spec.md), NOTI-ARCH (35-notification-architecture.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-01 (24-monorepo-data-directory.md)
+**참조:** API-SPEC (37-rest-api-complete-spec.md), NOTI-ARCH (35-notification-architecture.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-01 (24-monorepo-data-directory.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CLI-REDESIGN (54-cli-flow-redesign.md)
 **요구사항:** TGBOT-01 (인라인 키보드 거래 승인/거부), TGBOT-02 (봇 명령어), DOCK-01 (Docker 이미지 + docker-compose)
 
 ---
@@ -99,6 +99,9 @@ export class TelegramBotService {
   private offset = 0
 
   // 서비스 의존성 (DI)
+  // (v0.5 변경) 봇의 세션/거래 API 호출은 masterAuth(implicit) 기반.
+  // 봇이 localhost에서 데몬 API를 호출하므로 서명 불필요.
+  // 세션 갱신: 봇이 PUT /v1/sessions/:id/renew 호출 가능 (53-session-renewal-protocol.md 참조)
   private readonly sessionService: SessionService
   private readonly transactionService: TransactionService
   private readonly killSwitchService: KillSwitchService
@@ -601,6 +604,8 @@ _Last updated: 2026-02-05T13:00:00Z_
 ```
 
 ### 4.5 명령어 4: /sessions
+
+> **(v0.5 변경)** 세션 관리 API가 ownerAuth에서 masterAuth(implicit)으로 전환됨. 봇이 localhost에서 데몬 API를 호출하므로 서명 불필요. 세션 생성도 masterAuth(implicit) -- CLI `waiaas session create`로 수행. 세션 갱신: 봇이 `PUT /v1/sessions/:id/renew`를 호출하여 자동 갱신 가능 (**53-session-renewal-protocol.md** 참조).
 
 ```typescript
 async handleSessions(message: TelegramMessage): Promise<void> {
@@ -1114,9 +1119,13 @@ private async sendUnauthorized(chatId: number | string): Promise<void> {
 
 ## 6. Telegram 거래 승인 인증 갭 해결 -- 2-Tier 모델
 
+> **(v0.5 변경)** v0.5에서 3-tier 인증 모델(masterAuth/ownerAuth/sessionAuth)로 재설계되었다. ownerAuth는 거래 승인(approve)과 Kill Switch 복구(recover) 2곳에만 한정. 나머지 API는 masterAuth(implicit)로 변경되어 봇이 localhost에서 데몬 API를 호출할 때 추가 인증이 불필요하다. 상세: **52-auth-model-redesign.md** 참조.
+>
+> 아래 2-Tier 모델은 v0.5 인증 모델과 양립한다: Tier 1(chatId) 동작은 masterAuth(implicit) API를 호출하고, Tier 2 동작은 ownerAuth가 필요한 approve/:txId와 recover를 호출한다.
+
 ### 6.1 인증 갭 분석
 
-OWNR-CONN에서 정의한 `ownerAuth`는 **per-request SIWS/SIWE 서명**을 요구한다. 모든 Owner API 호출에는 지갑 서명이 필요하다.
+OWNR-CONN에서 정의한 `ownerAuth`는 **per-request SIWS/SIWE 서명**을 요구한다. **(v0.5 변경)** v0.5에서 ownerAuth 적용 범위가 거래 승인과 Kill Switch 복구 2곳으로 축소되었다. 나머지 API는 masterAuth(implicit)으로 전환되어 서명 없이 호출 가능.
 
 그러나 Telegram 앱 환경에서는:
 - Phantom/MetaMask 지갑 앱을 직접 호출할 수 없음
@@ -1146,28 +1155,30 @@ OWNR-CONN에서 정의한 `ownerAuth`는 **per-request SIWS/SIWE 서명**을 요
 │                                                              │
 │  🔒 APPROVAL 티어 거래 approve (자금 이동 최종 승인)          │
 │  🔒 Kill Switch recover (시스템 복구 -- 이중 인증 필수)       │
-│  🔒 세션 생성 (새 에이전트 권한 부여)                         │
-│  🔒 설정 변경 (보안 설정 수정)                                │
-│  🔒 정책 변경 (임계값, 규칙 수정)                             │
 │                                                              │
-│  인증: ownerAuth 미들웨어 (SIWS/SIWE per-request 서명)       │
-│  원칙: "자금 이동/시스템 복구/권한 부여는 지갑 서명 필수"      │
+│  (v0.5 변경) 아래 항목은 masterAuth(implicit)으로 전환됨:     │
+│  ✅ 세션 생성 -> masterAuth(implicit), CLI waiaas session    │
+│  ✅ 설정 변경 -> masterAuth(implicit), Admin API             │
+│  ✅ 정책 변경 -> masterAuth(implicit), Owner API             │
+│                                                              │
+│  인증: ownerAuth = approve + recover 2곳만 (v0.5)           │
+│  원칙: "자금 이동/시스템 복구는 지갑 서명 필수"               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 6.3 Tier 판별 기준
 
-| 동작 | 위험도 | 근거 | Tier |
-|------|--------|------|------|
-| DELAY reject | 낮음 | 정책 엔진이 이미 허가한 거래의 취소. Owner가 "실행하지 마라"고 하는 것 | Tier 1 |
-| APPROVAL reject | 낮음 | 승인 대기 거래의 거부. 자금 이동 차단 | Tier 1 |
-| Session revoke | 낮음 | 기존 세션 폐기. 에이전트 접근 차단 (방어적) | Tier 1 |
-| Kill Switch activate | 낮음 | 시스템 긴급 정지. 모든 활동 중단 (방어적) | Tier 1 |
-| 읽기 전용 조회 | 없음 | 정보 노출만 (localhost 범위 내) | Tier 1 |
-| APPROVAL approve | **높음** | 자금 이동 최종 승인. Telegram chatId만으로 불충분 | **Tier 2** |
-| Kill Switch recover | **높음** | 잠긴 시스템 복구. 이중 인증 (서명 + 마스터 패스워드) | **Tier 2** |
-| Session create | **중간** | 새 에이전트에 지갑 접근 권한 부여 | **Tier 2** |
-| Settings change | **중간** | 보안 임계값/정책 변경 | **Tier 2** |
+| 동작 | 위험도 | 근거 | Tier | v0.5 API 인증 |
+|------|--------|------|------|--------------|
+| DELAY reject | 낮음 | 정책 엔진이 이미 허가한 거래의 취소. Owner가 "실행하지 마라"고 하는 것 | Tier 1 | masterAuth(implicit) |
+| APPROVAL reject | 낮음 | 승인 대기 거래의 거부. 자금 이동 차단 | Tier 1 | masterAuth(implicit) |
+| Session revoke | 낮음 | 기존 세션 폐기. 에이전트 접근 차단 (방어적) | Tier 1 | masterAuth(implicit) |
+| Kill Switch activate | 낮음 | 시스템 긴급 정지. 모든 활동 중단 (방어적) | Tier 1 | masterAuth(implicit) |
+| 읽기 전용 조회 | 없음 | 정보 노출만 (localhost 범위 내) | Tier 1 | masterAuth(implicit) |
+| APPROVAL approve | **높음** | 자금 이동 최종 승인. Telegram chatId만으로 불충분 | **Tier 2** | **ownerAuth (유지)** |
+| Kill Switch recover | **높음** | 잠긴 시스템 복구. 이중 인증 (서명 + 마스터 패스워드) | **Tier 2** | **ownerAuth + masterAuth(explicit) (유지)** |
+| Session create | ~~중간~~ | ~~새 에이전트에 지갑 접근 권한 부여~~ | ~~Tier 2~~ | **(v0.5 변경) masterAuth(implicit). CLI `waiaas session create`** |
+| Settings change | ~~중간~~ | ~~보안 임계값/정책 변경~~ | ~~Tier 2~~ | **(v0.5 변경) masterAuth(implicit). Admin API** |
 
 ### 6.4 TELEGRAM_PRE_APPROVED 상태
 
@@ -1578,7 +1589,42 @@ secrets:
     file: ./secrets/master_password.txt
 ```
 
-### 9.2 Telegram Bot 포함 구성
+### 9.2 Docker --dev 모드 주의사항 (v0.5 추가)
+
+> **(v0.5 추가)** `--dev` 모드는 고정 패스워드('waiaas-dev')를 사용하므로 Docker 프로덕션 배포에서 절대 사용 금지. 고정 패스워드가 이미지에 포함되면 보안이 무력화된다. 상세: **54-cli-flow-redesign.md 섹션 7** 참조.
+
+```yaml
+# 프로덕션 Docker Compose -- --dev 사용 금지
+services:
+  waiaas:
+    command: ["waiaas", "start"]  # --dev 옵션 없이 시작
+    environment:
+      - WAIAAS_MASTER_PASSWORD_FILE=/run/secrets/master_password  # Secrets로 패스워드 관리
+    secrets:
+      - master_password
+```
+
+```yaml
+# 테스트/개발용 Docker Compose -- --dev 허용
+# WARNING: 개발/테스트 환경에서만 사용. 프로덕션 금지.
+services:
+  waiaas-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["waiaas", "start", "--dev"]
+    ports:
+      - "127.0.0.1:3100:3100"
+    # --dev 모드에서는 WAIAAS_MASTER_PASSWORD_FILE 불필요
+    # 고정 패스워드 'waiaas-dev' 자동 사용
+```
+
+**`dev_mode=true`가 Docker 환경에서 위험한 이유:**
+- 고정 패스워드가 컨테이너 실행 명령에 포함됨 (`docker inspect`로 노출)
+- Docker Hub에 push된 이미지에 dev_mode 설정이 번들되면 누구나 접근 가능
+- `--expose`와 `--dev` 조합 시 에러로 거부됨 (54-cli-flow-redesign.md 결정)
+
+### 9.3 Telegram Bot 포함 구성
 
 ```yaml
 # docker-compose.telegram.yml (override)
@@ -1597,7 +1643,7 @@ secrets:
     file: ./secrets/telegram_bot_token.txt
 ```
 
-### 9.3 프리빌트 이미지 사용
+### 9.4 프리빌트 이미지 사용
 
 ```yaml
 # docker-compose.prebuilt.yml (Docker Hub / GHCR 이미지 사용 시)
