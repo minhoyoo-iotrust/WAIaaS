@@ -11,11 +11,11 @@
 
 마일스톤: v0.5 인증 모델 재설계 + DX 개선
 페이즈: Phase 21 of 21 (DX 개선 + 설계 문서 통합)
-플랜: 2 of 4
+플랜: 4 of 4
 상태: In progress
-마지막 활동: 2026-02-07 -- Completed 21-02-PLAN.md
+마지막 활동: 2026-02-07 -- Completed 21-04-PLAN.md
 
-Progress: [███████████░] 7/9 (v0.5 전체), 2/4 (Phase 21)
+Progress: [████████████░] 9/9 (v0.5 전체), 4/4 (Phase 21) -- 21-03 검증 미완
 
 ## 성과 지표
 
@@ -23,7 +23,7 @@ Progress: [███████████░] 7/9 (v0.5 전체), 2/4 (Phase 2
 **v0.2 최종 통계:** 16 plans, 45/45 reqs, 17 docs
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
-**v0.5 현재:** 7/9 plans, 27/27 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~08, SESS-03)
+**v0.5 현재:** 9/9 plans, 27/27 reqs (AUTH-01~05, OWNR-01~06, SESS-01~05, DX-01~08, SESS-03) -- 21-03 검증 미완
 
 ## 누적 컨텍스트
 
@@ -84,6 +84,9 @@ v0.5 Plan 21-02 결정:
 - 세션 토큰 불편함 완화 3방안: mcp setup 커맨드, 세션 자동 갱신, env 파일
 - 원격 접근 SSH 터널 추천, --expose는 mTLS+IP화이트리스트 구현 후에만 안전
 
+v0.5 Plan 21-04 결정:
+- 33/36 참조 노트는 인라인 코드 수정 없이 blockquote 노트만 추가 (원본 설계 무결성 유지)
+
 ### 차단 요소/우려 사항
 
 없음
@@ -91,5 +94,5 @@ v0.5 Plan 21-02 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: Completed 21-02-PLAN.md. Phase 21 plan 2 of 4 complete. Ready for 21-03.
+중단 지점: Completed 21-04-PLAN.md. Phase 21 plan 4 of 4 complete. 21-03 검증 대기.
 재개 파일: None
