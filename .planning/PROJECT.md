@@ -12,18 +12,23 @@
 
 v0.1~v0.5 완료 (2026-02-07). 57개 플랜, 155개 요구사항, 21개 설계 문서 + 5개 대응표 + 11개 테스트 전략 문서.
 
-## 최근 완료 마일스톤: v0.5 인증 모델 재설계 + 개발자 경험 개선
+## 현재 마일스톤: v0.6 블록체인 기능 확장 설계
 
-**목표:** Owner 지갑 주소 등록과 서명 검증을 분리하여 인증 모델을 재설계하고, 에이전트 개발자가 지갑 서명 없이 첫 거래까지 3분 내에 도달할 수 있는 개발자 경험을 설계한다.
+**목표:** 네이티브 토큰(SOL/ETH) 전송에 한정된 IChainAdapter와 트랜잭션 파이프라인을 확장하여, SPL/ERC-20 토큰 전송, 자산 조회, 임의 컨트랙트 호출, DeFi 액션 추상화까지 설계 수준에서 정의한다. 각 확장 기능의 테스트 전략을 함께 수립한다.
 
 **핵심 변경:**
-- masterAuth(로컬 관리) / ownerAuth(자금 인가) / sessionAuth(에이전트 API) 3-tier 책임 분리
-- Owner 주소를 시스템 전역에서 에이전트별 속성(agents.owner_address)으로 이동
-- WalletConnect를 필수 의존에서 선택적 편의 기능으로 전환
-- 세션 낙관적 갱신 패턴 (에이전트 자체 갱신 + Owner 사후 거부)
-- CLI DX 개선: --quickstart, --dev 모드, actionable 에러
+- TransferRequest.token 확장으로 SPL/ERC-20 토큰 전송 지원
+- getAssets() 복원 + AssetInfo 스키마 확정
+- ContractCallRequest, ApproveRequest, BatchRequest 신규 타입
+- IPriceOracle 인터페이스 + USD 기준 정책 평가
+- IActionProvider 레이어 (resolve-then-execute 패턴, MCP 도구 자동 노출)
+- 6+ 정책 규칙 추가 (ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS 등)
+- 보안 시나리오 12건 추가 (S-26~S-37)
 
-**산출물:** 인증 모델 재설계 문서(52), 세션 갱신 프로토콜(53), CLI 플로우 재설계(54), DX 개선 스펙(55) + 기존 설계 문서 11개 수정
+**대상 기능:**
+- Phase A: 토큰 확장 (SPL/ERC-20 전송, 자산 조회, 수수료 추정)
+- Phase B: 트랜잭션 타입 확장 (컨트랙트 호출, Approve 관리, 배치)
+- Phase C: 상위 추상화 (가격 오라클, Action Provider, Swap Action)
 
 ## 요구사항
 
@@ -68,7 +73,7 @@ v0.1~v0.5 완료 (2026-02-07). 57개 플랜, 155개 요구사항, 21개 설계 �
 
 ### 활성
 
-없음 — 다음 마일스톤 정의 필요
+v0.6 블록체인 기능 확장 설계 — 요구사항 정의 중
 
 ### 범위 외
 
@@ -78,6 +83,10 @@ v0.1~v0.5 완료 (2026-02-07). 57개 플랜, 155개 요구사항, 21개 설계 �
 - ML 기반 이상 탐지 — 규칙 기반으로 시작
 - 가격/비즈니스 모델 — 기술 구현 완료 후 별도 검토
 - 하드웨어 지갑 직접 연결 (Ledger/D'CENT) — WalletConnect 간접 연결
+- 크로스체인 브릿지 — 별도 마일스톤으로 분리
+- NFT 민팅/마켓플레이스 통합 — Action Provider로 향후 추가 가능
+- Account Abstraction / Smart Wallet — EVM 배치 문제 해결, 별도 마일스톤
+- 실제 코드 구현 — v0.6은 설계 마일스톤
 
 ## 컨텍스트
 
@@ -86,8 +95,9 @@ v0.2 Self-Hosted Secure Wallet Design 완료 (2026-02-05). 4개 페이즈, 16개
 v0.3 설계 논리 일관성 확보 완료 (2026-02-06). 4개 페이즈, 8개 플랜, 37개 요구사항, 5개 대응표/매핑 문서.
 v0.4 테스트 전략 및 계획 수립 완료 (2026-02-07). 5개 페이즈, 9개 플랜, 26개 요구사항, 11개 테스트 전략 문서 (docs 41-51).
 v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9개 플랜, 24개 요구사항, 4개 신규 문서(52-55) + 11개 기존 문서 수정.
+v0.6 블록체인 기능 확장 설계 시작 (2026-02-07). 토큰/컨트랙트/DeFi 확장 + 테스트 전략.
 
-**기술 스택 (v0.2 확정):**
+**기술 스택 (v0.2 확정, v0.6 확장 예정):**
 - Runtime: Node.js 22 LTS
 - Server: Hono 4.x (OpenAPIHono)
 - DB: SQLite (better-sqlite3) + Drizzle ORM
@@ -98,10 +108,16 @@ v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9�
 
 **설계 문서:** 21개 (deliverables 24-55.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md)
 
+**v0.6 추가 의존성 (설계 대상):**
+- Chain: @solana-program/token (SPL), Jupiter Aggregator API, 0x Swap API
+- Oracle: CoinGecko API, Pyth Network, Chainlink
+- Test: Hardhat/Anvil (EVM 로컬 노드)
+
 ### 알려진 이슈
 
 - Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.4 스파이크)
 - CORE-02 스키마에 Phase 8 확장 (reserved_amount, system_state 등) 미반영 (구현 시 마이그레이션)
+- IChainAdapter가 네이티브 토큰 전송만 지원 — v0.6에서 확장 설계
 
 ## 제약사항
 
@@ -147,5 +163,11 @@ v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9�
 | 세션 낙관적 갱신 | 에이전트 자율성 보장 + Owner 사후 거부권 | ✓ Good — v0.5 설계 완성 |
 | WalletConnect 선택적 전환 | 초기 설정 마찰 제거, CLI 수동 서명으로 모든 기능 동작 | ✓ Good — v0.5 설계 완성 |
 
+| IChainAdapter 저수준 유지 | 어댑터는 실행 엔진, DeFi 지식은 Action Provider에 분리 | — Pending — v0.6 설계 |
+| resolve-then-execute 패턴 | Action Provider가 요청 생성 → 파이프라인이 정책 평가 후 실행 | — Pending — v0.6 설계 |
+| 임의 컨트랙트 기본 거부 | CONTRACT_WHITELIST 비어있으면 모든 호출 거부 (opt-in) | — Pending — v0.6 설계 |
+| approve 독립 정책 카테고리 | 권한 위임은 전송보다 위험, 별도 정책 규칙 필요 | — Pending — v0.6 설계 |
+| USD 기준 정책 평가 | 토큰 종류 무관하게 달러 금액으로 티어 분류 | — Pending — v0.6 설계 |
+
 ---
-*최종 업데이트: 2026-02-07 after v0.5 milestone complete*
+*최종 업데이트: 2026-02-07 after v0.6 milestone started*
