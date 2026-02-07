@@ -11,11 +11,11 @@
 
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 23 of 25 (트랜잭션 타입 확장 설계)
-플랜: 1 of 3 in current phase
+플랜: 2 of 3 in current phase (23-01, 23-02 complete)
 상태: In progress
-마지막 활동: 2026-02-08 -- Completed 23-01-PLAN.md (CHAIN-EXT-03 컨트랙트 호출 스펙)
+마지막 활동: 2026-02-08 -- Completed 23-02-PLAN.md (CHAIN-EXT-04 Approve 관리 스펙)
 
-Progress: ██████░░░░░░░░░░░░░░░ 33%
+Progress: ████████░░░░░░░░░░░░░ 44%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: ██████░░░░░░░░░░░░░░░ 33%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 3/9 plans
+**v0.6 진행:** 4/9 plans
 
 ## 누적 컨텍스트
 
@@ -68,6 +68,13 @@ Phase 23-01 결정 (CHAIN-EXT-03):
 - PolicyType 10개로 확장 (+CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE)
 - DatabasePolicyEngine.evaluate() 11단계 알고리즘 (DENY 우선 원칙)
 
+Phase 23-02 결정 (CHAIN-EXT-04):
+- ApproveRequest를 ContractCallRequest와 독립 타입으로 설계 (권한 위임 vs 실행)
+- EVM race condition 방지: 어댑터에서 approve(0)->approve(new) 자동 처리 (에이전트 보안 지식 불요)
+- APPROVE_TIER_OVERRIDE가 SPENDING_LIMIT과 독립 (approve는 자금 소모가 아닌 권한 위임)
+- 무제한 임계값 = 체인별 MAX / 2 (EVM: 2^256/2, Solana: 2^64/2)
+- Solana 단일 delegate 경고: 자동 차단하지 않고 previousDelegate 정보 + 감사 로그 기록
+
 ### 차단 요소/우려 사항
 
 없음
@@ -75,5 +82,5 @@ Phase 23-01 결정 (CHAIN-EXT-03):
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Completed 23-01-PLAN.md. Phase 23 2/3 plans 대기 (23-02 Approve, 23-03 Batch).
+중단 지점: Completed 23-02-PLAN.md. Phase 23 1/3 plans 대기 (23-03 Batch).
 재개 파일: None
