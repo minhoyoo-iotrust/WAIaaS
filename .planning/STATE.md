@@ -11,11 +11,11 @@
 
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 22 of 25 (토큰 확장 설계)
-플랜: 1 of 2 in current phase
-상태: In progress
-마지막 활동: 2026-02-07 -- 22-01-PLAN.md 완료 (CHAIN-EXT-01 토큰 전송 확장 스펙)
+플랜: 2 of 2 in current phase
+상태: Phase complete
+마지막 활동: 2026-02-07 -- 22-02-PLAN.md 완료 (CHAIN-EXT-02 자산 조회 + 수수료 추정 스펙)
 
-Progress: █░░░░░░░░░░░░░░░░░░░░ 11%
+Progress: ██░░░░░░░░░░░░░░░░░░░ 22%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: █░░░░░░░░░░░░░░░░░░░░ 11%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 1/9 plans
+**v0.6 진행:** 2/9 plans
 
 ## 누적 컨텍스트
 
@@ -49,6 +49,15 @@ Phase 22-01 결정 (CHAIN-EXT-01):
 - SPENDING_LIMIT은 토큰 전송에 미적용 (금액 단위 비교 불가)
 - PolicyType 5개로 확장 (ALLOWED_TOKENS 추가)
 
+Phase 22-02 결정 (CHAIN-EXT-02):
+- getAssets() 반환 순서: 네이티브 토큰 첫 번째, 이후 잔액 내림차순
+- EVM 토큰 조회: ALLOWED_TOKENS 기반 보수적 조회 (외부 인덱서 의존 없음)
+- Token-2022 토큰도 type='spl'로 통합 (프로그램 구분은 어댑터 내부)
+- ATA 생성 비용: getMinimumBalanceForRentExemption(165) 동적 조회 (하드코딩 금지)
+- estimateFee() 반환 타입: bigint -> FeeEstimate 구조체 (하위 호환 필요)
+- REST API 명칭: GET /v1/wallet/tokens -> GET /v1/wallet/assets 확정
+- ITokenDiscovery 확장 포인트: 향후 AlchemyDiscovery, MoralisDiscovery 플러그인 가능
+
 ### 차단 요소/우려 사항
 
 없음
@@ -56,5 +65,5 @@ Phase 22-01 결정 (CHAIN-EXT-01):
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: 22-01-PLAN.md 완료. 22-02-PLAN.md (getAssets, estimateFee, 테스트) 대기.
-재개 파일: .planning/phases/22-token-extension/22-02-PLAN.md
+중단 지점: Phase 22 완료 (2/2 plans). Phase 23 대기.
+재개 파일: None
