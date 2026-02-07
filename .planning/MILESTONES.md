@@ -1,5 +1,32 @@
 # Project Milestones: WAIaaS
 
+## v0.5 인증 모델 재설계 + DX 개선 (Shipped: 2026-02-07)
+
+**Delivered:** masterAuth/ownerAuth/sessionAuth 3-tier 인증 모델을 재설계하고, Owner 주소를 에이전트별 속성으로 이동하며, 세션 낙관적 갱신 프로토콜과 CLI DX 개선을 설계하여, 기존 설계 문서 11개에 v0.5 변경을 통합
+
+**Phases completed:** 19-21 (9 plans total)
+
+**Key accomplishments:**
+
+- 3-Tier 인증 모델 재설계 — masterAuth(로컬 관리) / ownerAuth(자금 인가, 2곳 한정) / sessionAuth(에이전트 API) 책임 분리, authRouter 통합 디스패처
+- Owner 주소 에이전트별 귀속 — agents.owner_address NOT NULL, config.toml [owner] 제거, owner_wallets → wallet_connections 전환, WalletConnect 선택적
+- 세션 낙관적 갱신 프로토콜 — PUT /renew sessionAuth, 5종 안전 장치(maxRenewals 30, 총 수명 30일, 50% 시점), 토큰 로테이션 + Owner 사후 거부
+- CLI DX 개선 — init 2단계 간소화, --quickstart 단일 커맨드, --dev 모드, actionable 에러 hint 31/40 매핑, MCP 옵션 B 채택
+- 설계 문서 11개 v0.5 통합 — 신규 4문서(52-55) + 기존 11개 수정, 통합 검증 25/25 PASSED
+
+**Stats:**
+
+- 54 files created/modified
+- +14,928 / -696 lines (Markdown design docs)
+- 3 phases, 9 plans, 24 requirements, 15 deliverables (docs 52-55 신규 + 11개 수정)
+- 1 day (2026-02-07)
+
+**Git range:** `683aace` (Phase 19 start) → `84dfef3` (audit complete)
+
+**What's next:** 구현 마일스톤 — 설계 문서(24-55)를 기반으로 실제 코드 구현 시작
+
+---
+
 ## v0.4 테스트 전략 및 계획 수립 (Shipped: 2026-02-07)
 
 **Delivered:** v0.2 설계 문서(17개) + v0.3 일관성 대응표(5개)를 역방향 검증하는 테스트 전략을 수립하여, 구현 단계에서 "무엇을 어떻게 테스트할 것인가"가 명확한 상태를 확립
