@@ -10,12 +10,12 @@
 ## 현재 위치
 
 마일스톤: v0.5 인증 모델 재설계 + DX 개선
-페이즈: Phase 19 of 21 (인증 모델 + Owner 주소 재설계)
-플랜: 3 of 3
-상태: Phase complete
-마지막 활동: 2026-02-07 -- Completed 19-03-PLAN.md
+페이즈: Phase 20 of 21 (세션 갱신 프로토콜)
+플랜: 1 of 2
+상태: In progress
+마지막 활동: 2026-02-07 -- Completed 20-01-PLAN.md
 
-Progress: [██████████] 3/3 (Phase 19), 3/TBD (v0.5 전체)
+Progress: [████████░░] 4/TBD (v0.5 전체), 1/2 (Phase 20)
 
 ## 성과 지표
 
@@ -23,7 +23,7 @@ Progress: [██████████] 3/3 (Phase 19), 3/TBD (v0.5 전체)
 **v0.2 최종 통계:** 16 plans, 45/45 reqs, 17 docs
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
-**v0.5 현재:** 3/TBD plans, 12/24 reqs (AUTH-01~05, OWNR-01~06)
+**v0.5 현재:** 4/TBD plans, 16/24 reqs (AUTH-01~05, OWNR-01~06, SESS-01, SESS-02, SESS-04, SESS-05)
 
 ## 누적 컨텍스트
 
@@ -53,6 +53,13 @@ v0.5 Plan 19-03 결정:
 - 37-rest-api-complete-spec.md 섹션 1-4만 수정, 5-9는 Phase 21 위임
 - audit_log actor 값 ownerAuth->masterAuth 전환 반영 (actor='master')
 
+v0.5 Plan 20-01 결정:
+- 기존 DELETE /v1/sessions/:id 재활용 for 갱신 거부 (별도 엔드포인트 불필요)
+- 거부 윈도우는 검증이 아닌 알림 안내 문구 (Owner는 언제든 폐기 가능)
+- usageStats 갱신 시 유지 (리셋하지 않음)
+- 절대 수명(session_absolute_lifetime)은 config.toml 전역만 존재, 세션별 재정의 불가
+- 50% 시점 갱신 비율은 시스템 고정 (설정 불가)
+
 ### 차단 요소/우려 사항
 
 없음
@@ -60,5 +67,5 @@ v0.5 Plan 19-03 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-07
-중단 지점: Completed 19-03 (Phase 19 complete), ready for Phase 20
+중단 지점: Completed 20-01-PLAN.md, ready for 20-02
 재개 파일: None
