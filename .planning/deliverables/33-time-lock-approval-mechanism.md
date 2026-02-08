@@ -2332,11 +2332,16 @@ BATCH 타입의 정책 평가는 2단계로 수행된다:
 
 ```typescript
 // 배치 정책 평가 pseudo-code
+// [v0.8] agentOwnerInfo optional 파라미터 추가 (evaluate()와 동일 패턴)
 async function evaluateBatch(
   agentId: string,
   batch: TxRequest,  // type === 'BATCH'
+  agentOwnerInfo?: AgentOwnerInfo,  // [v0.8] Owner 상태 파악용
 ): Promise<PolicyDecision> {
   // Phase A: 개별 instruction 검사
+  // 주의: 개별 instruction 평가에서는 다운그레이드를 적용하지 않는다.
+  //       개별 evaluate()는 각 instruction의 tier만 결정한다.
+  //       다운그레이드는 합산 tierDecision에만 1회 적용한다.
   for (const instruction of batch.instructions!) {
     const decision = await this.evaluate(agentId, instruction)
     if (!decision.allowed) {
@@ -2357,12 +2362,60 @@ async function evaluateBatch(
   const hasApprove = batch.instructions!.some(i => i.type === 'APPROVE')
   if (hasApprove) {
     const approveOverride = this.evaluateApproveTierOverride(effectiveRules, sumTierDecision)
-    return maxTierDecision(sumTierDecision, approveOverride)
+    const maxDecision = maxTierDecision(sumTierDecision, approveOverride)
+
+    // [v0.8] maxTier 결과에도 Step 9.5 다운그레이드 적용
+    if (maxDecision.allowed && maxDecision.tier === 'APPROVAL') {
+      const ownerInfo = agentOwnerInfo ?? await this.loadAgentOwnerInfo(agentId)
+      const ownerState = resolveOwnerState(ownerInfo)
+      if (ownerState !== 'LOCKED') {
+        const spendingRule = effectiveRules.find(r => r.type === 'SPENDING_LIMIT')
+        const config = spendingRule ? JSON.parse(spendingRule.rules) : {}
+        const rawDelay = config.delay_seconds ?? 300
+        return {
+          allowed: true,
+          tier: 'DELAY',
+          delaySeconds: Math.max(rawDelay, 60),
+          downgraded: true,
+          originalTier: 'APPROVAL',
+        }
+      }
+    }
+
+    return maxDecision
+  }
+
+  // [v0.8] 합산 결과에도 Step 9.5 다운그레이드 적용
+  if (sumTierDecision.allowed && sumTierDecision.tier === 'APPROVAL') {
+    const ownerInfo = agentOwnerInfo ?? await this.loadAgentOwnerInfo(agentId)
+    const ownerState = resolveOwnerState(ownerInfo)
+    if (ownerState !== 'LOCKED') {
+      const spendingRule = effectiveRules.find(r => r.type === 'SPENDING_LIMIT')
+      const config = spendingRule ? JSON.parse(spendingRule.rules) : {}
+      const rawDelay = config.delay_seconds ?? 300
+      return {
+        allowed: true,
+        tier: 'DELAY',
+        delaySeconds: Math.max(rawDelay, 60),
+        downgraded: true,
+        originalTier: 'APPROVAL',
+      }
+    }
   }
 
   return sumTierDecision
 }
 ```
+
+**evaluateBatch() 다운그레이드 핵심 사항:**
+
+| 항목 | 설명 |
+|------|------|
+| agentOwnerInfo 전달 | evaluateBatch()에도 optional 파라미터로 동일하게 추가 |
+| 개별 instruction 다운그레이드 | 적용하지 않는다 -- 개별 tier는 DENY 판정용이지 최종 실행 tier가 아님 |
+| 합산 tierDecision 다운그레이드 | 1회만 적용 -- 이중 다운그레이드 방지 |
+| APPROVE 포함 시 | maxTier 결과가 APPROVAL이면 다운그레이드 적용 |
+| APPROVE 미포함 시 | sumTierDecision이 APPROVAL이면 다운그레이드 적용 |
 
 ### 11.6 [v0.8] Step 9.5: OwnerState 기반 APPROVAL -> DELAY 다운그레이드 상세
 
@@ -2460,6 +2513,216 @@ if (decision.downgraded) {
 ```
 
 > **별도 이벤트 타입 사용 근거:** `TX_DOWNGRADED`를 독립 이벤트로 추가하면, audit_log 쿼리에서 `WHERE event_type = 'TX_DOWNGRADED'`로 다운그레이드 빈도를 직접 집계할 수 있다. 기존 TX_QUEUED 이벤트의 details에 포함하면 JSON 파싱이 필요하여 쿼리 성능과 가독성이 저하된다.
+
+### 11.7 [v0.8] Owner LOCKED 후 정상 APPROVAL 복원 흐름
+
+> **[v0.8 추가]** Owner가 등록되고 LOCKED 상태가 된 이후, 동일 금액 거래가 정상 APPROVAL 티어로 처리되는 전체 흐름을 명세한다. POLICY-03 요구사항을 충족한다.
+
+#### Owner LOCKED 후 정상 APPROVAL 흐름
+
+```
+[Owner LOCKED 후 정상 APPROVAL 흐름]
+
+1. 에이전트 A에 Owner 등록:
+   waiaas agent set-owner agent-a So1ana...
+   → OwnerState: NONE → GRACE (owner_address 설정, owner_verified=0)
+
+2. ownerAuth 최초 사용 (예: 다른 APPROVAL 거래 승인, set-owner 변경 등):
+   → ownerAuth 미들웨어에서 SIWS/SIWE 서명 검증 성공
+   → Step 8.5에서 markOwnerVerified() 호출 (섹션 13)
+   → OwnerState: GRACE → LOCKED (owner_verified: 0 → 1)
+
+3. 대액 거래 요청 (예: 15 SOL 전송):
+   POST /v1/transactions/send { amount: "15000000000", to: "9bKr...TDxz" }
+   → evaluate() Step 9: SPENDING_LIMIT에서 APPROVAL 결정 (15 SOL > delay_max 10 SOL)
+   → evaluate() Step 9.5: ownerState === LOCKED → 다운그레이드 스킵
+   → evaluate() Step 10: (TRANSFER이므로 APPROVE_TIER_OVERRIDE 해당 없음) → 스킵
+   → evaluate() Step 11: PolicyDecision { allowed: true, tier: 'APPROVAL', downgraded: undefined }
+
+4. Stage 4: APPROVAL 큐잉:
+   → transactions UPDATE: status='QUEUED', tier='APPROVAL'
+   → TX_APPROVAL_REQUEST 알림 전송 (승인/거부 URL 포함)
+
+5. Owner가 ownerAuth로 승인:
+   POST /v1/owner/approve/{txId} (SIWS/SIWE 서명)
+   → Stage 5a부터 재실행 → 온체인 확정 → CONFIRMED
+```
+
+#### GRACE 상태에서 다운그레이드 흐름 (비교)
+
+```
+[GRACE 상태에서 다운그레이드 흐름]
+
+1. 에이전트 A에 Owner 등록:
+   waiaas agent set-owner agent-a So1ana...
+   → OwnerState: NONE → GRACE
+
+2. 대액 거래 요청 (15 SOL):
+   POST /v1/transactions/send { amount: "15000000000", to: "9bKr...TDxz" }
+   → evaluate() Step 9: SPENDING_LIMIT에서 APPROVAL 결정
+   → evaluate() Step 9.5: ownerState === GRACE → 다운그레이드 적용
+   → PolicyDecision { allowed: true, tier: 'DELAY', delaySeconds: 300, downgraded: true, originalTier: 'APPROVAL' }
+
+3. Stage 4: DELAY 큐잉:
+   → transactions UPDATE: status='QUEUED', tier='DELAY'
+   → metadata: { expiresAt: ..., delaySeconds: 300, downgraded: true, originalTier: 'APPROVAL' }
+   → TX_DOWNGRADED_DELAY 알림 (Owner 등록/검증 안내 포함)
+
+4. delaySeconds(300초) 후 자동 실행:
+   → DelayQueueWorker가 Stage 5a부터 재실행 → 온체인 확정 → CONFIRMED
+```
+
+#### NONE 상태에서 다운그레이드 흐름 (비교)
+
+```
+[NONE 상태에서 다운그레이드 흐름]
+
+1. 에이전트 B에 Owner 미등록:
+   waiaas agent create trading-bot (--owner 없음)
+   → OwnerState: NONE (owner_address=null, owner_verified=0)
+
+2. 대액 거래 요청 (15 SOL):
+   POST /v1/transactions/send { amount: "15000000000", to: "9bKr...TDxz" }
+   → evaluate() Step 9: SPENDING_LIMIT에서 APPROVAL 결정
+   → evaluate() Step 9.5: ownerState === NONE → 다운그레이드 적용
+   → PolicyDecision { allowed: true, tier: 'DELAY', delaySeconds: 300, downgraded: true, originalTier: 'APPROVAL' }
+
+3. Stage 4: DELAY 큐잉 (GRACE와 동일 경로):
+   → TX_DOWNGRADED_DELAY 알림 (Owner 등록 CLI 안내 포함)
+
+4. delaySeconds 후 자동 실행
+```
+
+#### 상태별 동일 금액(15 SOL) 거래 처리 비교
+
+| OwnerState | Step 9 결과 | Step 9.5 | 최종 tier | 실행 방식 | 알림 |
+|------------|-----------|----------|----------|----------|------|
+| NONE | APPROVAL | 다운그레이드 | DELAY (downgraded) | 300초 후 자동 실행 | TX_DOWNGRADED_DELAY + Owner 등록 안내 |
+| GRACE | APPROVAL | 다운그레이드 | DELAY (downgraded) | 300초 후 자동 실행 | TX_DOWNGRADED_DELAY + Owner 검증 안내 |
+| LOCKED | APPROVAL | 스킵 | APPROVAL | Owner 승인 대기 | TX_APPROVAL_REQUEST + [승인]/[거부] |
+
+### 11.8 [v0.8] Stage 4 다운그레이드 분기 상세화
+
+> **[v0.8 추가]** 기존 Stage 4 DELAY 큐잉 로직(섹션 4.3)에 다운그레이드된 PolicyDecision 처리 분기를 추가한다.
+
+```typescript
+// Stage 4 확장 -- [v0.8] 다운그레이드 분기
+async function stageTierClassifyPhase8(
+  txId: string,
+  decision: PolicyDecision,
+  db: DrizzleInstance,
+  agentId: string,
+  request: TxRequest,
+): Promise<{ tier: string; immediate: boolean }> {
+  const tier = decision.tier
+  const now = new Date()
+
+  switch (tier) {
+    case 'INSTANT':
+    case 'NOTIFY':
+      // 즉시 실행 -- 기존과 동일
+      await db.update(transactions)
+        .set({ tier })
+        .where(eq(transactions.id, txId))
+      return { tier, immediate: true }
+
+    case 'DELAY':
+      // 쿨다운 대기 큐잉
+      validateTransition('PENDING', 'QUEUED')
+      await db.update(transactions).set({
+        tier,
+        status: 'QUEUED',
+        queuedAt: now,
+        metadata: JSON.stringify({
+          expiresAt: Math.floor(now.getTime() / 1000) + (decision.delaySeconds ?? 300),
+          delaySeconds: decision.delaySeconds ?? 300,
+          // [v0.8] 다운그레이드 정보 저장
+          downgraded: decision.downgraded ?? false,
+          originalTier: decision.originalTier,
+        }),
+      }).where(eq(transactions.id, txId))
+
+      // [v0.8] 다운그레이드 감사 로그
+      if (decision.downgraded) {
+        const ownerInfo = await db.select({
+          ownerAddress: agents.ownerAddress,
+          ownerVerified: agents.ownerVerified,
+        }).from(agents).where(eq(agents.id, agentId)).get()
+        const ownerState = resolveOwnerState(ownerInfo ?? { ownerAddress: null, ownerVerified: false })
+
+        await insertAuditLog(db, {
+          eventType: 'TX_DOWNGRADED',
+          actor: 'system',
+          agentId,
+          details: {
+            txId,
+            originalTier: 'APPROVAL',
+            downgradedTier: 'DELAY',
+            ownerState,
+            reason: 'OWNER_NOT_LOCKED',
+            amount: request.amount,
+          },
+          severity: 'info',
+        })
+      }
+
+      // [v0.8] 알림 분기: downgraded이면 TX_DOWNGRADED_DELAY, 아니면 TX_DELAY_QUEUED
+      const notifEvent = decision.downgraded
+        ? 'TX_DOWNGRADED_DELAY'
+        : 'TX_DELAY_QUEUED'
+      await notificationService.notify({
+        event: notifEvent,
+        level: decision.downgraded ? 'INFO' : 'INFO',
+        agentId,
+        metadata: {
+          txId,
+          amount: request.amount,
+          to: request.to,
+          delaySeconds: decision.delaySeconds,
+          downgraded: decision.downgraded ?? false,
+          originalTier: decision.originalTier,
+        },
+      })
+
+      return { tier, immediate: false }
+
+    case 'APPROVAL':
+      // Owner 승인 대기 큐잉 -- 기존과 동일
+      validateTransition('PENDING', 'QUEUED')
+      await db.update(transactions).set({
+        tier,
+        status: 'QUEUED',
+        queuedAt: now,
+        metadata: JSON.stringify({
+          expiresAt: Math.floor(now.getTime() / 1000) + (decision.approvalTimeoutSeconds ?? 3600),
+          approvalTimeoutSeconds: decision.approvalTimeoutSeconds ?? 3600,
+        }),
+      }).where(eq(transactions.id, txId))
+
+      // APPROVAL 알림 (Owner LOCKED 상태에서만 도달 -- Step 9.5 통과 의미)
+      await notificationService.notify({
+        event: 'TX_APPROVAL_REQUEST',
+        level: 'CRITICAL',
+        agentId,
+        metadata: { txId, amount: request.amount, to: request.to },
+      })
+
+      return { tier, immediate: false }
+
+    default:
+      throw new WaiaasError('INVALID_TIER', `알 수 없는 보안 티어: ${tier}`, 500)
+  }
+}
+```
+
+**Stage 4 다운그레이드 분기 핵심:**
+
+| 항목 | 설명 |
+|------|------|
+| metadata.downgraded | DELAY 큐잉 시 downgraded/originalTier를 metadata JSON에 저장. DelayQueueWorker 실행 시 참조 가능 |
+| TX_DOWNGRADED 감사 로그 | downgraded === true일 때만 기록. ownerState를 details에 포함하여 NONE/GRACE 구분 |
+| TX_DOWNGRADED_DELAY 알림 | decision.downgraded 분기로 알림 이벤트 타입 결정. 채널별 템플릿은 35-notification-architecture.md(Plan 33-02)에서 정의 |
+| TX_APPROVAL_REQUEST 알림 | APPROVAL 케이스는 Step 9.5를 통과한(LOCKED 상태) 거래만 도달. 정상 APPROVAL 알림 전송 |
 
 ---
 
