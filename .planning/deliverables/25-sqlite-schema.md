@@ -4,8 +4,9 @@
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
 **Phase 20 업데이트:** 2026-02-07
+**v0.6 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20)
+**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md)
 
 ---
 
@@ -262,9 +263,20 @@ export const transactions = sqliteTable('transactions', {
   txHash: text('tx_hash'),                              // 온체인 트랜잭션 해시 (제출 후 기록)
 
   // ── 거래 내용 ──
-  type: text('type').notNull(),                         // 'TRANSFER' | 'TOKEN_TRANSFER' | 'PROGRAM_CALL' 등
+  type: text('type', {                                  // (v0.6 변경) CHECK 제약 추가
+    enum: ['TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH']
+  }).notNull(),
   amount: text('amount'),                               // 금액 (문자열: bigint 안전). lamports/wei 단위
   toAddress: text('to_address'),                        // 수신자 주소
+
+  // ── 토큰 정보 (v0.6 추가) ──
+  tokenMint: text('token_mint'),                        // (v0.6 추가) 토큰 민트/컨트랙트 주소 (TOKEN_TRANSFER)
+
+  // ── 감사 컬럼 (v0.6 추가) ──
+  contractAddress: text('contract_address'),             // (v0.6 추가) 컨트랙트 주소 (CONTRACT_CALL, APPROVE)
+  methodSignature: text('method_signature'),             // (v0.6 추가) 메서드 시그니처 (CONTRACT_CALL, EVM 전용)
+  spenderAddress: text('spender_address'),               // (v0.6 추가) 승인 대상 (APPROVE)
+  approvedAmount: text('approved_amount'),               // (v0.6 추가) 승인 금액 (APPROVE, TEXT=bigint 안전)
 
   // ── 파이프라인 상태 ──
   status: text('status', {
@@ -283,13 +295,15 @@ export const transactions = sqliteTable('transactions', {
 
   // ── 에러/메타데이터 ──
   error: text('error'),                                 // 실패 시 에러 메시지
-  metadata: text('metadata'),                           // JSON: 추가 정보 (gas, fee, simulation 결과 등)
+  metadata: text('metadata'),                           // JSON: 추가 정보 (gas, fee, simulation 결과, actionSource 등)
 }, (table) => [
   index('idx_transactions_agent_status').on(table.agentId, table.status),
   index('idx_transactions_session_id').on(table.sessionId),
   uniqueIndex('idx_transactions_tx_hash').on(table.txHash),
   index('idx_transactions_queued_at').on(table.queuedAt),
   index('idx_transactions_created_at').on(table.createdAt),
+  index('idx_transactions_type').on(table.type),                                    // (v0.6 추가) type별 조회 최적화
+  index('idx_transactions_contract_address').on(table.contractAddress),              // (v0.6 추가) 컨트랙트 주소 조회
 ]);
 ```
 
@@ -302,9 +316,15 @@ CREATE TABLE transactions (
   session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
   chain TEXT NOT NULL,
   tx_hash TEXT,
-  type TEXT NOT NULL,
+  type TEXT NOT NULL
+    CHECK (type IN ('TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH')),  -- (v0.6 추가) 5개 TransactionType CHECK
   amount TEXT,
   to_address TEXT,
+  token_mint TEXT,                                       -- (v0.6 추가) 토큰 민트/컨트랙트 주소
+  contract_address TEXT,                                 -- (v0.6 추가) 감사 컬럼: 컨트랙트 주소
+  method_signature TEXT,                                 -- (v0.6 추가) 감사 컬럼: 메서드 시그니처 (EVM)
+  spender_address TEXT,                                  -- (v0.6 추가) 감사 컬럼: 승인 대상
+  approved_amount TEXT,                                  -- (v0.6 추가) 감사 컬럼: 승인 금액
   status TEXT NOT NULL DEFAULT 'PENDING'
     CHECK (status IN ('PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED')),
   tier TEXT
@@ -313,7 +333,7 @@ CREATE TABLE transactions (
   executed_at INTEGER,
   created_at INTEGER NOT NULL,
   error TEXT,
-  metadata TEXT              -- JSON
+  metadata TEXT              -- JSON (v0.6: actionSource, batchInstructions 등 확장)
 );
 
 CREATE INDEX idx_transactions_agent_status ON transactions(agent_id, status);
@@ -321,6 +341,9 @@ CREATE INDEX idx_transactions_session_id ON transactions(session_id);
 CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash);
 CREATE INDEX idx_transactions_queued_at ON transactions(queued_at);
 CREATE INDEX idx_transactions_created_at ON transactions(created_at);
+CREATE INDEX idx_transactions_type ON transactions(type);                            -- (v0.6 추가)
+CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)
+  WHERE contract_address IS NOT NULL;                                                -- (v0.6 추가) partial index
 ```
 
 #### 컬럼 설명
@@ -332,16 +355,21 @@ CREATE INDEX idx_transactions_created_at ON transactions(created_at);
 | `session_id` | TEXT (FK) | NULL | - | 요청한 세션. SET NULL (세션 삭제 후에도 거래 기록 유지) |
 | `chain` | TEXT | NOT NULL | - | 대상 체인 식별자 |
 | `tx_hash` | TEXT (UNIQUE) | NULL | - | 온체인 트랜잭션 해시. 제출 전에는 NULL |
-| `type` | TEXT | NOT NULL | - | 거래 유형 (TRANSFER, TOKEN_TRANSFER, PROGRAM_CALL 등) |
+| `type` | TEXT (ENUM) | NOT NULL | - | (v0.6 변경) 거래 유형. CHECK 제약 5개: TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH |
 | `amount` | TEXT | NULL | - | 거래 금액. TEXT 타입 = bigint 안전 저장 (lamports/wei) |
 | `to_address` | TEXT | NULL | - | 수신자 주소. 복합 트랜잭션은 NULL 가능 |
+| `token_mint` | TEXT | NULL | - | (v0.6 추가) 토큰 민트/컨트랙트 주소. TOKEN_TRANSFER 시 해당 토큰 식별 |
+| `contract_address` | TEXT | NULL | - | (v0.6 추가) 호출 컨트랙트 주소 (CONTRACT_CALL, APPROVE). 감사 컬럼 |
+| `method_signature` | TEXT | NULL | - | (v0.6 추가) 함수 selector + 이름 (CONTRACT_CALL, EVM 전용). 예: '0x70a08231 (balanceOf)'. 감사 컬럼 |
+| `spender_address` | TEXT | NULL | - | (v0.6 추가) 토큰 승인 대상 주소 (APPROVE). 감사 컬럼 |
+| `approved_amount` | TEXT | NULL | - | (v0.6 추가) 토큰 승인 금액 (APPROVE, TEXT=bigint 안전). 감사 컬럼 |
 | `status` | TEXT (ENUM) | NOT NULL | `'PENDING'` | 파이프라인 상태. CHECK 제약 |
 | `tier` | TEXT (ENUM) | NULL | - | 보안 티어. 정책 평가 후 결정 |
 | `queued_at` | INTEGER | NULL | - | 큐 진입 시각 (DELAY/APPROVAL 티어) |
 | `executed_at` | INTEGER | NULL | - | 실행 완료(온체인 확정) 시각 |
 | `created_at` | INTEGER | NOT NULL | - | 요청 접수 시각 |
 | `error` | TEXT | NULL | - | 실패 시 에러 메시지/코드 |
-| `metadata` | TEXT (JSON) | NULL | - | 추가 정보: gas fee, 시뮬레이션 결과, blockhash 등 |
+| `metadata` | TEXT (JSON) | NULL | - | 추가 정보: gas fee, 시뮬레이션 결과, blockhash 등. (v0.6 확장: actionSource, batchInstructions, usdAmount) |
 
 **amount를 TEXT로 저장하는 이유:**
 - SQLite INTEGER는 최대 64비트 (9.2 x 10^18). lamports는 u64 범위 내이지만, wei는 uint256으로 64비트 초과 가능
@@ -368,7 +396,9 @@ export const policies = sqliteTable('policies', {
 
   // ── 정책 정의 ──
   type: text('type', {
-    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']
+    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+      'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST',            // (v0.6 추가)
+      'APPROVED_SPENDERS', 'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE'] // (v0.6 추가)
   }).notNull(),
   rules: text('rules').notNull(),                       // JSON: 정책별 규칙 구조
 
@@ -392,7 +422,9 @@ CREATE TABLE policies (
   id TEXT PRIMARY KEY,
   agent_id TEXT REFERENCES agents(id) ON DELETE CASCADE,
   type TEXT NOT NULL
-    CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT')),
+    CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+      'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST',
+      'APPROVED_SPENDERS', 'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE')),  -- (v0.6 변경) 10개 PolicyType
   rules TEXT NOT NULL,             -- JSON
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,   -- boolean (0/1)
@@ -410,21 +442,24 @@ CREATE INDEX idx_policies_type ON policies(type);
 |------|------|----------|--------|------|
 | `id` | TEXT (PK) | NOT NULL | - | 정책 UUID v7 |
 | `agent_id` | TEXT (FK) | NULL | - | 대상 에이전트. NULL이면 모든 에이전트에 적용되는 글로벌 정책 |
-| `type` | TEXT (ENUM) | NOT NULL | - | 정책 유형. 4개: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT |
+| `type` | TEXT (ENUM) | NOT NULL | - | (v0.6 변경) 정책 유형. 10개: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT, ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE |
 | `rules` | TEXT (JSON) | NOT NULL | - | 정책별 규칙 JSON. LOCK-MECH (Phase 8)에서 각 type별 JSON 구조 확정 |
 | `priority` | INTEGER | NOT NULL | `0` | 평가 우선순위. 동일 type 내에서 높은 priority 먼저 적용 |
 | `enabled` | INTEGER (BOOL) | NOT NULL | `1` (true) | 활성화 여부. 비활성 정책은 평가에서 제외 |
 | `created_at` | INTEGER | NOT NULL | - | 정책 생성 시각 |
 | `updated_at` | INTEGER | NOT NULL | - | 정책 최종 수정 시각 |
 
-**rules JSON 구조 예시 (Phase 8 LOCK-MECH에서 확정):**
+**rules JSON 구조 예시 (Phase 8 LOCK-MECH에서 확정, v0.6 확장):**
 
 ```json
-// SPENDING_LIMIT
+// SPENDING_LIMIT (Phase 8 기존 + v0.6 USD 확장)
 {
   "per_transaction": "1000000000",
   "daily_total": "5000000000",
-  "weekly_total": "20000000000"
+  "weekly_total": "20000000000",
+  "instant_max_usd": 10,
+  "notify_max_usd": 100,
+  "delay_max_usd": 1000
 }
 
 // WHITELIST
@@ -445,10 +480,69 @@ CREATE INDEX idx_policies_type ON policies(type);
   "max_tx_per_hour": 50,
   "max_tx_per_day": 200
 }
+
+// ALLOWED_TOKENS (v0.6 추가 -- CHAIN-EXT-01)
+{
+  "tokens": [
+    { "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "symbol": "USDC", "chain": "solana" },
+    { "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "symbol": "USDT", "chain": "solana" }
+  ],
+  "unknown_token_action": "DENY"
+}
+
+// CONTRACT_WHITELIST (v0.6 추가 -- CHAIN-EXT-03)
+{
+  "contracts": [
+    { "address": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", "chain": "ethereum", "label": "Uniswap V3 Router" },
+    { "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", "chain": "solana", "label": "Jupiter Aggregator" }
+  ]
+}
+
+// METHOD_WHITELIST (v0.6 추가 -- CHAIN-EXT-03, EVM 전용)
+{
+  "methods": [
+    { "address": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", "selector": "0x414bf389", "name": "exactInputSingle" },
+    { "address": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", "selector": "0xc04b8d59", "name": "exactInput" }
+  ]
+}
+
+// APPROVED_SPENDERS (v0.6 추가 -- CHAIN-EXT-04)
+{
+  "spenders": [
+    { "address": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", "chain": "ethereum", "label": "Uniswap V3 Router" }
+  ]
+}
+
+// APPROVE_AMOUNT_LIMIT (v0.6 추가 -- CHAIN-EXT-04)
+{
+  "max_amount": "1000000000000",
+  "unlimited_blocked": true,
+  "unlimited_threshold": "57896044618658097711785492504343953926634992332820282019728792003956564819968"
+}
+
+// APPROVE_TIER_OVERRIDE (v0.6 추가 -- CHAIN-EXT-04)
+{
+  "default_tier": "APPROVAL"
+}
 ```
 
 > **NOTE:** AutoStop 규칙은 PolicyType이 아닌 별도 시스템 (auto_stop_rules 테이블)에서 관리한다.
 > KILL-AUTO-EVM (36-killswitch-autostop-evm.md) 섹션 8 참조.
+
+**SpendingLimit USD 확장 (v0.6 -- CHAIN-EXT-06):**
+
+SPENDING_LIMIT의 rules JSON에 USD 기준 optional 필드가 추가된다. 기존 네이티브 토큰 기준 필드와 하위 호환.
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `per_transaction` | TEXT(bigint) | O | 건당 최대 금액 (네이티브 토큰 단위) |
+| `daily_total` | TEXT(bigint) | O | 일일 총 한도 (네이티브 토큰 단위) |
+| `weekly_total` | TEXT(bigint) | O | 주간 총 한도 (네이티브 토큰 단위) |
+| `instant_max_usd` | number | X | (v0.6 추가) INSTANT 티어 USD 상한 |
+| `notify_max_usd` | number | X | (v0.6 추가) NOTIFY 티어 USD 상한 |
+| `delay_max_usd` | number | X | (v0.6 추가) DELAY 티어 USD 상한 (초과 시 APPROVAL) |
+
+> USD 필드가 설정되면 maxTier(nativeTier, usdTier) 보수적 채택. 가격 조회 완전 장애 시 Phase 22-23 과도기 전략 fallback.
 
 ---
 
@@ -810,9 +904,14 @@ erDiagram
         text session_id FK
         text chain
         text tx_hash UK
-        text type
+        text type "CHECK 5 types (v0.6)"
         text amount
         text to_address
+        text token_mint "v0.6"
+        text contract_address "v0.6 감사"
+        text method_signature "v0.6 감사"
+        text spender_address "v0.6 감사"
+        text approved_amount "v0.6 감사"
         text status
         text tier
         integer queued_at
@@ -825,7 +924,7 @@ erDiagram
     policies {
         text id PK
         text agent_id FK
-        text type
+        text type "CHECK 10 types (v0.6)"
         text rules
         integer priority
         integer enabled
@@ -1153,6 +1252,48 @@ UPDATE sessions SET absolute_expires_at = created_at + 2592000 WHERE absolute_ex
 
 **53-session-renewal-protocol.md 참조:** 갱신 컬럼의 전체 동작 스펙은 53-session-renewal-protocol.md 섹션 3-5에서 정의한다.
 
+### 4.9 v0.6 스키마 마이그레이션 (TransactionType CHECK + 감사 컬럼 + PolicyType 확장)
+
+v0.6에서 transactions 테이블에 감사 컬럼 4개, token_mint, 인덱스 2개를 추가하고, type/PolicyType에 CHECK 제약을 추가한다.
+
+**전제 조건:**
+- Phase 20 마이그레이션(섹션 4.8) 완료 상태
+- Drizzle Kit push 또는 수동 마이그레이션 중 선택
+
+**마이그레이션 SQL:**
+
+```sql
+-- ═══ v0.6 Step 1: transactions 감사 컬럼 5개 추가 ═══
+ALTER TABLE transactions ADD COLUMN token_mint TEXT;
+ALTER TABLE transactions ADD COLUMN contract_address TEXT;
+ALTER TABLE transactions ADD COLUMN method_signature TEXT;
+ALTER TABLE transactions ADD COLUMN spender_address TEXT;
+ALTER TABLE transactions ADD COLUMN approved_amount TEXT;
+
+-- ═══ v0.6 Step 2: 인덱스 2개 추가 ═══
+CREATE INDEX idx_transactions_type ON transactions(type);
+CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)
+  WHERE contract_address IS NOT NULL;
+
+-- ═══ v0.6 Step 3: type CHECK 제약 추가 (테이블 재생성 필요) ═══
+-- Drizzle Kit push:sqlite가 자동 처리하거나 수동 재생성:
+-- transactions 테이블: type CHECK ('TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH')
+-- policies 테이블: type CHECK (10개 PolicyType)
+-- 수동 재생성 패턴은 섹션 4.6 참조
+```
+
+**주의사항:**
+
+| 단계 | 설명 | 실패 시 대응 |
+|------|------|------------|
+| Step 1 | NULL 컬럼 추가. SQLite ALTER TABLE ADD COLUMN 안전 범위 | 롤백 불필요 |
+| Step 2 | 인덱스 생성. partial index 포함 | `CREATE INDEX IF NOT EXISTS` 사용 |
+| Step 3 | CHECK 제약 추가는 테이블 재생성 필요 | Drizzle Kit push 사용 권장 |
+
+**기존 데이터 보정:**
+- 기존 transactions.type이 'TRANSFER'만 존재하면 CHECK 추가 시 충돌 없음
+- 기존 policies.type이 4개 값만 존재하면 10개 CHECK 추가 시 충돌 없음
+
 ---
 
 ## 5. SQLite 운영 가이드
@@ -1348,7 +1489,7 @@ export const sessions = sqliteTable('sessions', {
 ]);
 
 // ══════════════════════════════════════════
-// transactions
+// transactions (v0.6: TransactionType CHECK, 감사 컬럼 4개, 인덱스 2개 추가)
 // ══════════════════════════════════════════
 export const transactions = sqliteTable('transactions', {
   id: text('id').primaryKey(),
@@ -1358,9 +1499,16 @@ export const transactions = sqliteTable('transactions', {
     .references(() => sessions.id, { onDelete: 'set null' }),
   chain: text('chain').notNull(),
   txHash: text('tx_hash'),
-  type: text('type').notNull(),
+  type: text('type', {                                                      // (v0.6 변경) CHECK 제약 추가
+    enum: ['TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH']
+  }).notNull(),
   amount: text('amount'),
   toAddress: text('to_address'),
+  tokenMint: text('token_mint'),                                            // (v0.6 추가) 토큰 민트/컨트랙트 주소
+  contractAddress: text('contract_address'),                                // (v0.6 추가) 감사 컬럼
+  methodSignature: text('method_signature'),                                // (v0.6 추가) 감사 컬럼
+  spenderAddress: text('spender_address'),                                  // (v0.6 추가) 감사 컬럼
+  approvedAmount: text('approved_amount'),                                  // (v0.6 추가) 감사 컬럼
   status: text('status', {
     enum: ['PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED']
   }).notNull().default('PENDING'),
@@ -1378,17 +1526,21 @@ export const transactions = sqliteTable('transactions', {
   uniqueIndex('idx_transactions_tx_hash').on(table.txHash),
   index('idx_transactions_queued_at').on(table.queuedAt),
   index('idx_transactions_created_at').on(table.createdAt),
+  index('idx_transactions_type').on(table.type),                            // (v0.6 추가)
+  index('idx_transactions_contract_address').on(table.contractAddress),      // (v0.6 추가)
 ]);
 
 // ══════════════════════════════════════════
-// policies (Phase 8 LOCK-MECH에서 상세화)
+// policies (Phase 8 LOCK-MECH에서 상세화, v0.6: PolicyType 10개로 확장)
 // ══════════════════════════════════════════
 export const policies = sqliteTable('policies', {
   id: text('id').primaryKey(),
   agentId: text('agent_id')
     .references(() => agents.id, { onDelete: 'cascade' }),
   type: text('type', {
-    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']
+    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+      'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST',            // (v0.6 추가)
+      'APPROVED_SPENDERS', 'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE'] // (v0.6 추가)
   }).notNull(),
   rules: text('rules').notNull(),
   priority: integer('priority').notNull().default(0),
@@ -1602,6 +1754,17 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 | NOTI-05 (보안 이벤트 기록) | audit_log | severity=critical 이벤트 |
 | OWNR-01 (Owner 서명 승인) | pending_approvals | ownerSignature |
 
+### v0.6 요구사항 매핑 추가
+
+| 요구사항 | 테이블/섹션 | 커버리지 |
+|---------|-----------|---------|
+| TOKEN-01 (토큰 전송) | transactions | token_mint 컬럼, type='TOKEN_TRANSFER' |
+| CONTRACT-04 (TransactionType + 감사) | transactions | type CHECK 5개, 감사 컬럼 4개, 인덱스 2개 |
+| APPROVE-01 (approve 정책) | policies | APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE |
+| BATCH-01 (배치 거래) | transactions | type='BATCH', metadata JSON에 batchInstructions |
+| ORACLE-03 (USD 정책) | policies | SPENDING_LIMIT rules에 instant_max_usd/notify_max_usd/delay_max_usd |
+| ACTION-01 (Action Provider) | transactions | metadata JSON에 actionSource 필드 |
+
 ### v0.5 요구사항 매핑 추가
 
 | 요구사항 | 테이블/섹션 | 커버리지 |
@@ -1618,5 +1781,6 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
 *Phase 20 업데이트: 2026-02-07*
+*v0.6 업데이트: 2026-02-08*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
