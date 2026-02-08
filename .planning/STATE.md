@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 31 of 35 (데이터 모델 + 타입 기반 설계)
-플랜: 0 of 2 in current phase
-상태: Ready to plan
-마지막 활동: 2026-02-08 -- 로드맵 생성 완료, Phase 31 계획 대기 중
+플랜: 1 of 2 in current phase
+상태: In progress
+마지막 활동: 2026-02-08 -- Completed 31-01-PLAN.md
 
-Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/11 plans)
+Progress: █░░░░░░░░░░░░░░░░░░░ 9% (1/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 0 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 1 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -31,6 +31,10 @@ v0.8 관련:
 - Owner 선택적 등록 (필수 -> 선택): 자율 에이전트 시나리오 지원 + 온보딩 마찰 제거
 - 점진적 보안 해금 (Base/Enhanced): DELAY 다운그레이드로 차단 없이 보안 유도
 - sweepAll masterAuth만: 수신 주소 owner_address 고정이므로 공격자 이득 없음
+- [31-01] OwnerState는 DB 컬럼이 아닌 런타임 파생 상태 (동기화 오류 방지)
+- [31-01] SweepResult.tokensRecovered는 v0.6 AssetInfo 직접 재사용 (중복 정의 금지)
+- [31-01] PolicyDecision 확장은 optional 필드로 하위 호환성 유지
+- [31-01] v0.8 마이그레이션에서 PRAGMA foreign_keys OFF/ON 패턴 적용
 
 ### 차단 요소/우려 사항
 
@@ -41,5 +45,5 @@ v0.8 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: v0.8 로드맵 생성 완료. Phase 31 계획 시작 대기.
-재개 파일: .planning/ROADMAP.md
+중단 지점: Completed 31-01-PLAN.md
+재개 파일: .planning/phases/31-데이터-모델-타입-기반-설계/31-02-PLAN.md
