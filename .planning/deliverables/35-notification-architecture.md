@@ -18,7 +18,7 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 - **INotificationChannel 인터페이스**: 채널 추상화 계약 (type/name/send/healthCheck)
 - **3개 채널 어댑터**: Telegram Bot API, Discord Webhook, ntfy.sh Push
 - **NotificationService 오케스트레이터**: 우선순위 기반 전송 + 폴백 체인 + broadcast
-- **알림 이벤트 타입 체계**: 13개 NotificationEventType 열거형
+- **알림 이벤트 타입 체계**: 16개 NotificationEventType 열거형
 - **DB 스키마**: notification_channels + notification_log 테이블
 - **채널별 Rate Limit 준수**: 토큰 버킷 기반 내장 rate limiter
 - **전달 추적**: 성공/실패/폴백 기록 + 30일 보존 정책
@@ -69,7 +69,8 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 | 호출 포인트 | 이벤트 | 전송 방식 | 트리거 위치 |
 |------------|--------|----------|------------|
 | NOTIFY 티어 거래 실행 후 | TX_NOTIFY | notify() (표준) | Stage 5 완료 후 비동기 |
-| DELAY 큐잉 시 | TX_DELAY_QUEUED | notify() (표준) | Stage 4 QUEUED 전이 후 |
+| DELAY 큐잉 시 | TX_DELAY_QUEUED | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.tier === 'DELAY' && !decision.downgraded) |
+| [v0.8] DELAY 다운그레이드 시 | TX_DOWNGRADED_DELAY | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.downgraded === true) |
 | DELAY 자동 실행 시 | TX_DELAY_EXECUTED | notify() (표준) | DelayQueueWorker 실행 후 |
 | APPROVAL 승인 요청 시 | TX_APPROVAL_REQUEST | notify() (표준) | Stage 4 QUEUED 전이 후 |
 | APPROVAL 만료 시 | TX_APPROVAL_EXPIRED | notify() (표준) | ApprovalTimeoutWorker |
@@ -205,6 +206,8 @@ export const NotificationEventType = {
   TX_CONFIRMED: 'TX_CONFIRMED',
   /** 거래 실패 알림 */
   TX_FAILED: 'TX_FAILED',
+  /** [v0.8] APPROVAL -> DELAY 다운그레이드 알림 (Owner 미등록/미검증) */
+  TX_DOWNGRADED_DELAY: 'TX_DOWNGRADED_DELAY',
 
   // ── Kill Switch / 자동 정지 ──
   /** Kill Switch 발동 (모든 채널 동시 전송) */
@@ -243,6 +246,7 @@ export type NotificationEventType = typeof NotificationEventType[keyof typeof No
 | TX_APPROVAL_EXPIRED | WARNING | 타임아웃으로 거래 만료 |
 | TX_CONFIRMED | INFO | 온체인 확정 |
 | TX_FAILED | WARNING | 거래 실패 (조사 필요) |
+| TX_DOWNGRADED_DELAY | INFO | [v0.8] APPROVAL -> DELAY 다운그레이드됨 (Owner 미등록/미검증) |
 | KILL_SWITCH_ACTIVATED | CRITICAL | 비상 정지 (모든 채널 broadcast) |
 | KILL_SWITCH_RECOVERED | WARNING | 복구 완료 (주의 환기) |
 | AUTO_STOP_TRIGGERED | CRITICAL | 자동 정지 발동 (모든 채널 broadcast) |
@@ -435,6 +439,87 @@ TX: 019\.\.\. \| Agent: 019\.\.\.
 
 _2026\-02\-05T12:00:00Z_
 ```
+
+#### TX_DOWNGRADED_DELAY (APPROVAL -> DELAY 다운그레이드) [v0.8 추가]
+
+> **TX_DELAY_QUEUED vs TX_DOWNGRADED_DELAY 차이점:**
+>
+> | 항목 | TX_DELAY_QUEUED | TX_DOWNGRADED_DELAY |
+> |------|-----------------|---------------------|
+> | 발생 조건 | 정상 DELAY 티어 평가 | APPROVAL -> DELAY 다운그레이드 |
+> | 메시지 톤 | 정보 제공 (대기 중) | 안내 + 행동 유도 (Owner 등록) |
+> | Owner 등록 안내 | 미포함 | 포함 (`waiaas agent set-owner` 명령어) |
+> | 원래 티어 표시 | 미포함 | 포함 (APPROVAL -> DELAY 전환 사유) |
+
+**Telegram (MarkdownV2):**
+```
+ℹ️ *대액 거래 대기 중 \(다운그레이드\)*
+
+Agent "{agentName}"의 {amount} {symbol} \(≈ ${usdAmount}\) 전송이
+DELAY 큐에 대기합니다\.
+수신: {shortenedAddress}
+실행 예정: {delayMinutes}분 후
+
+원래 티어: APPROVAL → DELAY로 자동 전환
+\(Owner 미등록 에이전트\)
+
+💡 *Owner 지갑을 등록하면 대액 거래에*
+   *승인 정책을 적용할 수 있습니다\.*
+   `waiaas agent set\-owner {agentName} <address>`
+
+TX: {shortTxId} \| Agent: {shortAgentId}
+
+_{timestamp}_
+```
+
+**Discord (Embed):**
+```json
+{
+  "embeds": [{
+    "title": "ℹ️ 대액 거래 대기 중 (다운그레이드)",
+    "color": 3447003,
+    "description": "Agent \"{agentName}\"의 {amount} {symbol} (≈ ${usdAmount}) 전송이\nDELAY 큐에 대기합니다.",
+    "fields": [
+      { "name": "수신", "value": "{shortenedAddress}", "inline": true },
+      { "name": "실행 예정", "value": "{delayMinutes}분 후", "inline": true },
+      { "name": "다운그레이드", "value": "APPROVAL → DELAY (Owner 미등록)", "inline": false },
+      { "name": "💡 Owner 등록 안내", "value": "`waiaas agent set-owner {agentName} <address>`\nOwner 지갑을 등록하면 대액 거래에 승인 정책을 적용할 수 있습니다.", "inline": false }
+    ],
+    "footer": { "text": "TX: {shortTxId} | Agent: {shortAgentId}" },
+    "timestamp": "{iso8601}"
+  }]
+}
+```
+
+**ntfy.sh:**
+```
+Title: 대액 거래 대기 중 (APPROVAL → DELAY 다운그레이드)
+Priority: default (3)
+Tags: information_source, arrow_down
+Actions: view, 대시보드, http://127.0.0.1:3100/dashboard
+Body:
+Agent "{agentName}" {amount} {symbol} (≈ ${usdAmount})
+수신: {shortenedAddress}
+실행: {delayMinutes}분 후
+원래 티어: APPROVAL → DELAY (Owner 미등록)
+
+Owner 등록: waiaas agent set-owner {agentName} <address>
+TX: {shortTxId} | Agent: {shortAgentId}
+```
+
+**context 필드:**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `agentName` | string | 에이전트 이름 (agents.name) |
+| `amount` | string | 전송 금액 (사람이 읽을 수 있는 단위) |
+| `symbol` | string | 토큰 심볼 (SOL, ETH 등) |
+| `usdAmount` | string | USD 환산 금액 |
+| `shortenedAddress` | string | 수신 주소 축약 (앞 4 + ... + 뒤 4) |
+| `delayMinutes` | number | DELAY 실행 예정 시간 (분) |
+| `shortTxId` | string | 거래 ID 축약 |
+| `shortAgentId` | string | 에이전트 ID 축약 |
+| `timestamp` | string (ISO 8601) | 알림 생성 시각 |
 
 #### KILL_SWITCH_ACTIVATED (비상 정지)
 
