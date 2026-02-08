@@ -11,11 +11,11 @@
 
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 25 of 25 (테스트 전략 + 문서 통합)
-플랜: 1 of 4 in current phase
+플랜: 2 of 4 in current phase
 상태: In progress
-마지막 활동: 2026-02-08 -- Completed 25-01-PLAN.md (CHAIN-EXT-09 테스트 전략 통합)
+마지막 활동: 2026-02-08 -- Completed 25-02-PLAN.md (SSoT 기반 문서 3개 v0.6 통합)
 
-Progress: █████████████████░░░ 83%
+Progress: █████████████████████████████████████████████████████████████████░░ 97%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: █████████████████░░░ 83%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 8/9 plans (Phase 25 plan 1/4 complete)
+**v0.6 진행:** 9/11 plans (Phase 25 plan 2/4 complete)
 
 ## 누적 컨텍스트
 
@@ -103,6 +103,11 @@ Phase 24-02 결정 (CHAIN-EXT-07, CHAIN-EXT-08):
 - priceImpactPct 1% 상한 (유동성 부족/MEV 공격 사전 차단, config.toml 조정 가능)
 - Jito MEV 보호 기본 활성화 (1000 lamports 팁, 100000 상한)
 
+Phase 25-02 결정 (SSoT 문서 통합):
+- 45-enum 섹션 번호 재번호 (2.3~2.12, TransactionType 신규 삽입으로 기존 섹션 이동)
+- ActionErrorCode는 소스 문서(62) 실제 정의 반영 (계획의 ACTION_PROVIDER_* 대신 ACTION_* 사용)
+- 27-chain-adapter에 Action Provider 협력 패턴 섹션 추가 (resolve-then-execute 상호 참조)
+
 ### 차단 요소/우려 사항
 
 없음
@@ -110,5 +115,5 @@ Phase 24-02 결정 (CHAIN-EXT-07, CHAIN-EXT-08):
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Phase 25 plan 01 완료 (CHAIN-EXT-09). Plan 02-04 대기.
+중단 지점: Phase 25 plan 02 완료 (SSoT 문서 3개 v0.6 통합). Plan 03-04 대기.
 재개 파일: None
