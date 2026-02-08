@@ -3,6 +3,7 @@
 **문서 ID:** CORE-04
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
+**v0.7 업데이트:** 2026-02-08
 **상태:** 완료
 **참조:** ARCH-05 (12-multichain-extension.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), 06-CONTEXT.md, 06-RESEARCH.md, CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md)
 
@@ -30,6 +31,7 @@ v0.1의 `IBlockchainAdapter`(ARCH-05)는 Cloud-First + Squads Protocol 의존 �
 | 자산 조회 | `getBalance()`, `getAssets()` | `getBalance()` + `getAssets()` (v0.6 복원) |
 | 헬스 체크 | `healthCheck(): boolean` | `getHealth(): { healthy, latency }` (레이턴시 포함) |
 | 컨트랙트 호출 | 없음 | `buildContractCall()`, `buildApprove()`, `buildBatch()` (v0.6 추가) |
+| **Nonce 관리** | 없음 | **[v0.7 추가]** `getCurrentNonce()`, `resetNonceTracker()` -- EVM nonce 타입 안전 관리 |
 
 ### 1.2 설계 원칙
 
@@ -202,14 +204,35 @@ interface UnsignedTransaction {
    *
    * EVM 예시:
    * {
-   *   nonce: number,
    *   chainId: number,
    *   maxFeePerGas: bigint,
    *   maxPriorityFeePerGas: bigint,
    *   gasLimit: bigint
    * }
+   *
+   * [v0.7 보완] nonce는 v0.7부터 명시적 필드(tx.nonce)로 승격.
+   * metadata.nonce 대신 tx.nonce를 사용할 것.
+   * 기존 호환: metadata.nonce를 읽는 코드는 tx.nonce로 마이그레이션 필요.
    */
   metadata: Record<string, unknown>
+
+  /**
+   * [v0.7 보완] EVM 트랜잭션 nonce.
+   * EVM 체인에서만 사용. Solana는 undefined (blockhash 기반).
+   *
+   * 기존 metadata.nonce에서 승격된 명시적 optional 필드.
+   * buildTransaction()이 자동 설정하며, 외부에서 override 가능.
+   *
+   * 파이프라인에서 nonce 접근 시 반드시 tx.nonce !== undefined 가드 사용.
+   * Solana 어댑터에서는 항상 undefined이므로, 체인 무관 코드에서
+   * nonce 존재 여부를 확인 후 사용해야 한다.
+   *
+   * @example
+   * if (tx.nonce !== undefined) {
+   *   // EVM nonce 관련 로직
+   * }
+   */
+  nonce?: number
 }
 ```
 
@@ -501,7 +524,7 @@ interface BatchRequest {
 | `NetworkType` | 네트워크 식별 | 리터럴 유니온 | 체인별 네트워크 이름 |
 | `TokenAmount` | 금액 표현 | `raw`, `decimals`, `symbol` | UI 표시 + 내부 계산 |
 | `TransferRequest` | 전송 요청 | `from`, `to`, `amount`, `memo?` | 체인 무관 공통 포맷 |
-| `UnsignedTransaction` | 미서명 트랜잭션 | `serialized`, `estimatedFee`, `metadata` | 체인별 직렬화 |
+| `UnsignedTransaction` | 미서명 트랜잭션 | `serialized`, `estimatedFee`, `metadata`, `nonce?` **(v0.7)** | 체인별 직렬화, nonce는 EVM 전용 |
 | `SimulationResult` | 시뮬레이션 결과 | `success`, `logs`, `unitsConsumed` | 정책 엔진 입력 |
 | `SubmitResult` | 제출 결과 | `txHash`, `status`, `fee` | 상태 추적 |
 | `BalanceInfo` | 잔액 정보 | `balance`, `decimals`, `symbol` | 네이티브 토큰 전용 |
@@ -858,6 +881,54 @@ interface IChainAdapter {
    * @see CHAIN-EXT-05 (60-batch-transaction-spec.md) 섹션 3
    */
   buildBatch(request: BatchRequest): Promise<UnsignedTransaction>
+
+  // ═══════════════════════════════════════════════════════════
+  // Nonce 관리 (v0.7 추가)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * [18] [v0.7 보완] 주소의 현재 유효 nonce를 반환한다.
+   *
+   * EVM: max(onchainPendingNonce, localTrackerNonce)를 반환한다.
+   *   - onchainPendingNonce: getTransactionCount(address, 'pending')
+   *   - localTrackerNonce: 내부 nonceTracker에서 관리하는 값
+   *   - 둘 중 높은 값을 반환하여 nonce gap과 충돌을 모두 방지
+   *
+   * Solana: 0을 반환한다 (Solana는 nonce 기반이 아님, blockhash 기반).
+   *   - Solana에서 이 메서드를 호출하는 것은 의미 없으나, 인터페이스 일관성을 위해 0 반환.
+   *
+   * 사용 시나리오:
+   * - 파이프라인에서 현재 nonce 상태 확인
+   * - 에러 복구 시 nonce 상태 조회
+   * - 감사 로그에 nonce 기록
+   *
+   * @param address - 조회 대상 주소 (체인별 포맷)
+   * @returns 현재 유효 nonce (EVM), 0 (Solana)
+   *
+   * @throws {ChainError} code=RPC_ERROR -- 온체인 nonce 조회 실패
+   */
+  getCurrentNonce(address: string): Promise<number>
+
+  /**
+   * [19] [v0.7 보완] nonce 트래커를 리셋한다.
+   *
+   * 제출 실패/stuck 트랜잭션 복구 시 사용한다.
+   * 리셋 후 다음 buildTransaction()에서 온체인 nonce를 새로 조회한다.
+   *
+   * EVM: nonceTracker Map에서 해당 주소 항목을 삭제한다.
+   *   - address 지정 시: 해당 주소만 삭제
+   *   - address 미지정 시: 전체 nonceTracker 클리어
+   *
+   * Solana: no-op (Solana는 nonce 트래커가 없음).
+   *
+   * 사용 시나리오:
+   * - NONCE_TOO_LOW 에러 후 복구
+   * - stuck 트랜잭션 감지 후 nonce 재동기화
+   * - 관리자 수동 리셋
+   *
+   * @param address - 리셋 대상 주소 (생략 시 전체 리셋)
+   */
+  resetNonceTracker(address?: string): void
 }
 ```
 
@@ -882,8 +953,12 @@ interface IChainAdapter {
 | 15 | `buildContractCall` | 파이프라인 | `ContractCallRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
 | 16 | `buildApprove` | 파이프라인 | `ApproveRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
 | 17 | `buildBatch` | 파이프라인 | `BatchRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
+| 18 | `getCurrentNonce` | **Nonce 관리 (v0.7 추가)** | `address: string` | `number` | O | **(v0.7 추가)** EVM: max(onchain, local), Solana: 0 |
+| 19 | `resetNonceTracker` | **Nonce 관리 (v0.7 추가)** | `address?: string` | `void` | X | **(v0.7 추가)** EVM: Map 삭제, Solana: no-op |
 
-**Note:** v0.2 대비 v0.6 변경 사항: `getAssets` 복원(14번째), `buildContractCall`(15번째), `buildApprove`(16번째), `buildBatch`(17번째) 추가. `estimateFee` 반환 타입 bigint -> FeeEstimate 변경.
+**Note:** v0.2 대비 변경 이력:
+- **v0.6:** `getAssets` 복원(14번째), `buildContractCall`(15번째), `buildApprove`(16번째), `buildBatch`(17번째) 추가. `estimateFee` 반환 타입 bigint -> FeeEstimate 변경.
+- **[v0.7 보완]:** `getCurrentNonce`(18번째), `resetNonceTracker`(19번째) 추가. `UnsignedTransaction.nonce` 명시적 optional 필드 승격. **총 19개 메서드.**
 
 > **DeFi 메서드 미추가 원칙 (v0.6 핵심 결정):** IChainAdapter는 저수준 실행 엔진으로 유지한다. swap(), stake(), lend() 같은 DeFi 프로토콜 지식은 IChainAdapter에 추가하지 않으며, IActionProvider 계층에 위임한다. Action Provider의 resolve()는 ContractCallRequest를 반환하고, 이를 IChainAdapter.buildContractCall()이 실행한다. 이 패턴(resolve-then-execute)은 모든 DeFi 작업이 기존 6단계 파이프라인의 정책 평가를 거치도록 보장한다. (CHAIN-EXT-07 참조)
 
@@ -990,6 +1065,19 @@ enum SolanaErrorCode {
    * 예: InstructionError, ProgramError
    */
   PROGRAM_ERROR = 'SOLANA_PROGRAM_ERROR',
+
+  /**
+   * [v0.7 보완] Blockhash 잔여 수명 부족.
+   * signTransaction() 직전 checkBlockhashFreshness() 검증에서 발생.
+   * blockhash가 아직 유효하지만, 서명 + 제출 + 확인에 충분한 시간이 남지 않은 상태.
+   *
+   * BLOCKHASH_EXPIRED와의 차이:
+   * - EXPIRED: 이미 만료됨 → buildTransaction() 완전 재실행 필요
+   * - STALE: 잔여 수명 부족 → refreshBlockhash() 호출로 빠른 복구 가능
+   *
+   * 복구: refreshBlockhash(tx) -> signTransaction(refreshedTx) -> submitTransaction()
+   */
+  BLOCKHASH_STALE = 'SOLANA_BLOCKHASH_STALE',
 }
 ```
 
@@ -1134,6 +1222,7 @@ class ChainError extends Error {
 | `BATCH_SIZE_EXCEEDED` | Solana | 400 | X | instruction 수 줄이기 | (v0.6 추가) |
 | `BATCH_INSTRUCTION_INVALID` | Solana | 400 | X | instruction 데이터 확인 | (v0.6 추가) |
 | `SOLANA_BLOCKHASH_EXPIRED` | Solana | 408 | O | buildTransaction() 재실행 |
+| `SOLANA_BLOCKHASH_STALE` | Solana | 408 | O | **[v0.7 추가]** refreshBlockhash() 호출 후 re-sign. EXPIRED보다 복구 비용 낮음 |
 | `SOLANA_PROGRAM_ERROR` | Solana | 400 | X | 프로그램 에러 분석 |
 | `EVM_NONCE_TOO_LOW` | EVM | 409 | O | nonce 재조회 후 재빌드 |
 | `EVM_GAS_TOO_LOW` | EVM | 400 | O | gas limit 상향 후 재빌드 |
@@ -2108,6 +2197,33 @@ private notConnectedError(): ChainError {
 static readonly LAMPORTS_PER_SOL = 1_000_000_000n
 ```
 
+### 6.10 [v0.7 보완] Nonce 관리 (Solana: no-op)
+
+> **[v0.7 보완]** IChainAdapter가 19개 메서드로 확장되면서 추가된 getCurrentNonce, resetNonceTracker의 Solana 구현. Solana는 blockhash 기반이므로 nonce 개념이 없다. 인터페이스 일관성을 위해 no-op으로 구현한다.
+
+```typescript
+/**
+ * [v0.7 보완] Solana는 nonce 기반이 아니므로 항상 0을 반환한다.
+ * Solana 트랜잭션은 blockhash로 수명을 관리하며, 순차적 nonce 개념이 없다.
+ *
+ * @param _address - 미사용 (인터페이스 호환용)
+ * @returns 항상 0
+ */
+async getCurrentNonce(_address: string): Promise<number> {
+  return 0
+}
+
+/**
+ * [v0.7 보완] Solana는 nonce 트래커가 없으므로 no-op이다.
+ * 호출해도 아무 동작을 하지 않는다.
+ *
+ * @param _address - 미사용 (인터페이스 호환용)
+ */
+resetNonceTracker(_address?: string): void {
+  // no-op: Solana는 blockhash 기반, nonce 트래커 없음
+}
+```
+
 ---
 
 ## 7. EVM Adapter 상세 명세
@@ -2391,7 +2507,9 @@ async buildTransaction(request: TransferRequest): Promise<UnsignedTransaction> {
     serialized: hexToBytes(serialized),
     estimatedFee,
     expiresAt: undefined,  // EVM은 nonce 기반, 유효 기한 없음
+    nonce,  // [v0.7 보완] 명시적 optional 필드로 승격 (기존 metadata.nonce 대체)
     metadata: {
+      // [v0.7 보완] nonce는 tx.nonce로 승격. metadata에도 호환성을 위해 유지하되, tx.nonce가 SSoT
       nonce,
       chainId: this.viemChain.id,
       maxFeePerGas,
@@ -2802,6 +2920,77 @@ nonceTracker.set(address, nonce + 1)
 
 **핵심 원칙:** 서명된 트랜잭션은 반드시 제출을 시도한다. 서명만 하고 미제출하면 nonce가 소비되지 않으므로 큰 문제는 없지만, 사용자가 의도한 트랜잭션이 실행되지 않는 것이 문제이다. Phase 7 트랜잭션 파이프라인에서 이 시나리오를 상세 설계한다.
 
+#### [v0.7 보완] getCurrentNonce / resetNonceTracker 구현
+
+> **[v0.7 보완]** IChainAdapter 인터페이스에 추가된 18번, 19번 메서드의 EVM 구현. 파이프라인 및 에러 복구 로직에서 nonce 상태를 타입 안전하게 조회/리셋할 수 있다.
+
+```typescript
+/**
+ * [v0.7 보완] 주소의 현재 유효 nonce를 반환한다.
+ *
+ * 조회 전략: max(onchainPendingNonce, localTrackerNonce)
+ * - getTransactionCount(address, 'pending'): 온체인 pending 포함 nonce
+ * - nonceTracker.get(address): 로컬에서 추적 중인 다음 nonce
+ * - 둘 중 높은 값 반환 (nonce gap 방지 + 충돌 방지)
+ *
+ * 참고: viem의 createNonceManager 패턴과 유사한 로직이나,
+ * WAIaaS는 직접 구현하여 nonceTracker Map으로 관리한다.
+ * (viem nonceManager는 내부 상태 접근이 제한적이므로 직접 관리가 유리)
+ *
+ * @param address - 조회 대상 주소 (0x hex 포맷)
+ * @returns 현재 유효 nonce
+ * @throws {ChainError} code=RPC_ERROR -- getTransactionCount 호출 실패
+ */
+async getCurrentNonce(address: string): Promise<number> {
+  if (!this.client) throw this.notConnectedError()
+
+  const onchainNonce = await this.client.getTransactionCount({
+    address: address as `0x${string}`,
+    blockTag: 'pending',
+  })
+  const localNonce = this.nonceTracker.get(address) ?? 0
+
+  return Math.max(onchainNonce, localNonce)
+}
+
+/**
+ * [v0.7 보완] nonce 트래커를 리셋한다.
+ *
+ * 리셋 후 다음 buildTransaction()에서 온체인 nonce를 새로 조회한다.
+ * NONCE_TOO_LOW 에러 복구, stuck 트랜잭션 감지 후 재동기화에 사용.
+ *
+ * @param address - 리셋 대상 주소. 생략 시 전체 nonceTracker 클리어.
+ */
+resetNonceTracker(address?: string): void {
+  if (address) {
+    this.nonceTracker.delete(address)
+  } else {
+    this.nonceTracker.clear()
+  }
+}
+```
+
+**nonce 접근 패턴 마이그레이션 (v0.7):**
+
+| 기존 (v0.6) | v0.7 | 비고 |
+|------------|------|------|
+| `tx.metadata.nonce as number` | `tx.nonce` | 명시적 optional 필드로 승격 |
+| `this.nonceTracker.clear()` (private) | `adapter.resetNonceTracker()` | public 인터페이스로 노출 |
+| `this.nonceTracker.get(addr)` (private) | `adapter.getCurrentNonce(addr)` | 온체인 + 로컬 max 비교 포함 |
+
+**파이프라인 nonce 접근 시 가드 패턴:**
+
+```typescript
+// 체인 무관 코드에서 nonce 접근 시 반드시 가드 사용
+if (tx.nonce !== undefined) {
+  // EVM 전용 nonce 로직
+  auditLog.nonce = tx.nonce
+} else {
+  // Solana (blockhash 기반) -- nonce 없음
+  auditLog.blockhash = tx.metadata.blockhash
+}
+```
+
 ### 7.9 지원 체인 + RPC 기본값 테이블
 
 | Chain | ChainType | Chain ID | 네이티브 토큰 | RPC 기본값 | 비고 |
@@ -2891,7 +3080,8 @@ private notConnectedError(): ChainError {
 | 인터페이스 요소 | 설계 결정 | 근거 |
 |---------------|----------|------|
 | `UnsignedTransaction.expiresAt` | `Date \| undefined` (optional) | Solana는 blockhash 만료가 있고, EVM은 없음 |
-| `UnsignedTransaction.metadata` | `Record<string, unknown>` (유연한 타입) | Solana: blockhash/version, EVM: nonce/chainId/gas -- 체인마다 다른 메타데이터 |
+| `UnsignedTransaction.nonce` | `number \| undefined` (optional) **(v0.7)** | EVM 전용. 명시적 필드로 승격하여 타입 안전성 확보. Solana: undefined |
+| `UnsignedTransaction.metadata` | `Record<string, unknown>` (유연한 타입) | Solana: blockhash/version, EVM: chainId/gas -- 체인마다 다른 메타데이터. nonce는 v0.7부터 tx.nonce로 승격 |
 | `SubmitResult.confirmations` | `number \| undefined` (optional) | Solana는 confirmed/finalized 이진 상태, EVM은 블록 수 |
 | `signTransaction` 키 크기 | `Uint8Array` (체인별 크기 다름) | Solana 64바이트, EVM 32바이트 -- 호출자(키스토어)가 올바른 크기 전달 책임 |
 | `isValidAddress` 반환 | `boolean` (동기) | 두 체인 모두 로컬에서 검증 가능 (RPC 불필요) |
@@ -2948,5 +3138,6 @@ function parseAmount(amount: string, decimals: number): bigint
 *문서 ID: CORE-04*
 *작성일: 2026-02-05*
 *v0.6 업데이트: 2026-02-08*
+*v0.7 업데이트: 2026-02-08*
 *Phase: 06-core-architecture-design*
 *상태: 완료*

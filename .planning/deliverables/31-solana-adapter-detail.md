@@ -3,6 +3,7 @@
 **문서 ID:** CHAIN-SOL
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
+**v0.7 업데이트:** 2026-02-08
 **상태:** 완료
 **참조:** CORE-04 (27-chain-adapter-interface.md), CORE-03 (26-keystore-spec.md), CORE-01 (24-monorepo-data-directory.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63)
 **요구사항:** CHAIN-02 (Solana Adapter 완전 구현)
@@ -28,7 +29,9 @@ SolanaAdapter는 IChainAdapter 인터페이스(CORE-04)의 Solana 구현체이�
 
 **WAIaaS 방침:** `@solana/kit` latest를 사용한다. 문서에서는 `@solana/kit (구 @solana/web3.js 2.x)`로 표기하되, 버전 번호보다 기능(pipe API, createSolanaRpc 등)에 초점을 둔다.
 
-### 1.3 IChainAdapter 17개 메서드 -- SolanaAdapter 매핑 (v0.6 변경: 13 -> 17)
+### 1.3 IChainAdapter 메서드 -- SolanaAdapter 매핑 (v0.6 변경: 13 -> 17, v0.7: IChainAdapter 19개로 확장)
+
+> **[v0.7 보완]** IChainAdapter는 v0.7에서 19개 메서드로 확장되었다 (getCurrentNonce, resetNonceTracker 추가). 추가된 2개는 EVM nonce 관리 전용이며, SolanaAdapter에서는 no-op으로 구현한다 (Solana는 blockhash 기반, nonce 개념 없음). 아래 테이블은 SolanaAdapter가 실질적으로 구현하는 17개 메서드를 나열한다.
 
 | # | IChainAdapter 메서드 | 카테고리 | SolanaAdapter 구현 | @solana/kit API | 비동기 |
 |---|---------------------|---------|-------------------|----------------|--------|
@@ -155,6 +158,24 @@ class SolanaAdapter implements IChainAdapter {
     medianFee: bigint
     cachedAt: number
   } | null = null
+
+  // ═══════════════════════════════════════════════════════════
+  // [v0.7 보완] Blockhash Freshness Guard 상수
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * [v0.7 보완] Blockhash freshness 임계값 (초).
+   * signTransaction() 직전에 잔여 수명이 이 값 미만이면 BLOCKHASH_STALE을 발생시킨다.
+   *
+   * 근거:
+   * - Solana blockhash 수명: 150 슬롯 x 400ms = ~60초
+   * - sign 소요: ~1초
+   * - submit 소요: ~2초
+   * - confirmation 대기: ~2초
+   * - 안전 마진: ~15초 (네트워크 지연, RPC 레이턴시, 변동)
+   * - 20초 = sign(1초) + submit(2초) + 대기(2초) + 안전마진(15초)
+   */
+  private readonly FRESHNESS_THRESHOLD_SECONDS = 20
 
   // ═══════════════════════════════════════════════════════════
   // 생성자
@@ -1408,6 +1429,226 @@ async signTransaction(
 | 만료된 blockhash | 빌드 후 ~60초 초과 | `TRANSACTION_EXPIRED` | `buildTransaction` 재실행 |
 | 잘못된 키 포맷 | Ed25519가 아닌 키 전달 | `TRANSACTION_FAILED` | 키스토어 무결성 확인 |
 | Web Crypto 미지원 | 비표준 런타임 환경 | `TRANSACTION_FAILED` | Node.js 22+ 확인 |
+| **[v0.7] Blockhash stale** | 잔여 수명 < 20초 | `SOLANA_BLOCKHASH_STALE` | `refreshBlockhash()` 호출 후 재서명 |
+
+### 7.3 [v0.7 보완] Blockhash Freshness Guard -- checkBlockhashFreshness
+
+> **[v0.7 보완]** signTransaction() 직전에 blockhash 잔여 수명을 `getBlockHeight()` 기반으로 정밀 검증한다. 기존 `expiresAt` Date 비교(1차 검증)는 wall-clock 기반이라 슬롯 속도 변동(400~600ms)에 취약하다. 2차 검증으로 실제 block height를 조회하여 정밀한 잔여 수명을 계산한다.
+
+```typescript
+/**
+ * [v0.7 보완] Blockhash 잔여 수명을 block height 기반으로 검증한다.
+ *
+ * signTransaction() 내부에서 1차 expiresAt 검증 통과 후 호출된다.
+ * getBlockHeight()로 현재 블록 높이를 조회하고, lastValidBlockHeight와 비교하여
+ * 잔여 수명이 FRESHNESS_THRESHOLD_SECONDS 미만이면 BLOCKHASH_STALE 에러를 던진다.
+ *
+ * 주의: getSlot()이 아닌 getBlockHeight()를 사용한다.
+ * slot과 block height는 다르며, skipped 슬롯이 있으면 slot > blockHeight이 된다.
+ * lastValidBlockHeight는 block height 기준이므로 반드시 getBlockHeight()로 비교해야 한다.
+ *
+ * @param lastValidBlockHeight - buildTransaction()에서 저장한 blockhash 유효 블록 높이
+ * @param thresholdSeconds - 잔여 수명 임계값 (기본: FRESHNESS_THRESHOLD_SECONDS = 20초)
+ * @throws ChainError code=SOLANA_BLOCKHASH_STALE -- 잔여 수명 부족 (refreshBlockhash 호출 권장)
+ * @throws ChainError code=SOLANA_BLOCKHASH_EXPIRED -- 이미 만료 (buildTransaction 재실행 필요)
+ */
+private async checkBlockhashFreshness(
+  lastValidBlockHeight: bigint,
+  thresholdSeconds: number = this.FRESHNESS_THRESHOLD_SECONDS,
+): Promise<void> {
+  this.ensureConnected()
+
+  // 1. 현재 블록 높이 조회
+  // 주의: getBlockHeight()를 사용해야 한다 (getSlot() 아님)
+  // skipped 슬롯이 있으면 slot > blockHeight이므로 잘못된 비교가 됨
+  const currentBlockHeight = await this.rpc!.getBlockHeight({
+    commitment: this.commitment,
+  }).send()
+
+  // 2. 잔여 블록 수 계산
+  const remainingBlocks = lastValidBlockHeight - currentBlockHeight
+
+  // 3. 이미 만료된 경우
+  if (remainingBlocks <= 0n) {
+    throw new ChainError({
+      code: SolanaErrorCode.BLOCKHASH_EXPIRED,
+      chain: 'solana',
+      message: `Blockhash가 이미 만료되었습니다. currentBlockHeight(${currentBlockHeight}) >= lastValidBlockHeight(${lastValidBlockHeight}). buildTransaction()부터 재실행하세요.`,
+      details: {
+        currentBlockHeight: currentBlockHeight.toString(),
+        lastValidBlockHeight: lastValidBlockHeight.toString(),
+        remainingBlocks: '0',
+      },
+      retryable: true,
+    })
+  }
+
+  // 4. 잔여 수명 계산 (슬롯당 ~400ms = 0.4초)
+  const remainingSeconds = Number(remainingBlocks) * 0.4
+
+  // 5. 임계값 미달 시 STALE 에러
+  if (remainingSeconds < thresholdSeconds) {
+    throw new ChainError({
+      code: SolanaErrorCode.BLOCKHASH_STALE,
+      chain: 'solana',
+      message: `Blockhash 잔여 수명 부족: ${remainingSeconds.toFixed(1)}초 (임계값: ${thresholdSeconds}초). refreshBlockhash()를 호출하여 blockhash를 갱신하세요.`,
+      details: {
+        currentBlockHeight: currentBlockHeight.toString(),
+        lastValidBlockHeight: lastValidBlockHeight.toString(),
+        remainingBlocks: remainingBlocks.toString(),
+        remainingSeconds: remainingSeconds.toFixed(1),
+        thresholdSeconds,
+      },
+      retryable: true,
+    })
+  }
+
+  // 6. 잔여 수명 충분 -- 서명 진행 가능
+}
+```
+
+**signTransaction() 내 호출 위치:**
+
+```typescript
+// signTransaction() 내부 (v0.7 보완)
+async signTransaction(tx: UnsignedTransaction, privateKey: Uint8Array): Promise<Uint8Array> {
+  // 1차 검증: wall-clock 기반 (기존 유지 -- 빠른 실패)
+  if (tx.expiresAt && tx.expiresAt < new Date()) {
+    throw new ChainError({
+      code: ChainErrorCode.TRANSACTION_EXPIRED,
+      chain: 'solana',
+      message: '서명 시점에 트랜잭션이 이미 만료되었습니다.',
+      retryable: true,
+    })
+  }
+
+  // [v0.7 보완] 2차 검증: getBlockHeight() 기반 정밀 검증
+  const lastValidBlockHeight = tx.metadata?.lastValidBlockHeight as bigint | undefined
+  if (lastValidBlockHeight !== undefined) {
+    await this.checkBlockhashFreshness(lastValidBlockHeight)
+  }
+
+  // ... 이하 기존 서명 로직 동일 ...
+}
+```
+
+**BLOCKHASH_STALE vs BLOCKHASH_EXPIRED 복구 전략 차이:**
+
+| 에러 코드 | 의미 | 복구 방법 | 비용 |
+|-----------|------|----------|------|
+| `SOLANA_BLOCKHASH_STALE` | 잔여 수명 부족, 아직 유효 | `refreshBlockhash()` -> re-sign -> submit | 낮음 (RPC 1회 + 재컴파일) |
+| `SOLANA_BLOCKHASH_EXPIRED` | 이미 만료 | `buildTransaction()` 완전 재실행 | 높음 (수수료 재추정 포함) |
+
+### 7.4 [v0.7 보완] refreshBlockhash -- Blockhash 갱신 유틸리티
+
+> **[v0.7 보완]** BLOCKHASH_STALE 에러 발생 시 호출하는 유틸리티 메서드. 기존 트랜잭션의 instruction을 유지하면서 blockhash만 갱신한다. **Option A(메시지 객체 캐싱) 방식을 채택**하여, buildTransaction()에서 컴파일 전의 transactionMessage 객체를 `metadata._compiledMessage`에 보관하고 이를 재사용한다.
+
+```typescript
+/**
+ * [v0.7 보완] UnsignedTransaction의 blockhash를 갱신한다.
+ *
+ * 기존 instruction은 변경하지 않고 blockhash만 교체하여 재컴파일한다.
+ * Option A 채택: buildTransaction()에서 metadata._compiledMessage에 보관한
+ * transactionMessage 객체를 재사용하여 새 blockhash를 적용한다.
+ *
+ * 사용 시나리오:
+ * 1. signTransaction()에서 BLOCKHASH_STALE 에러 발생
+ * 2. 호출자가 refreshBlockhash(tx)로 blockhash 갱신
+ * 3. 갱신된 tx로 signTransaction() 재시도
+ *
+ * 주의사항:
+ * - instruction은 변경하지 않음 (동일 전송/호출 유지)
+ * - fee 변동이 큰 경우 buildTransaction() 완전 재실행 권장
+ *   (priority fee가 30초 이상 지났으면 캐시가 만료되어 달라질 수 있음)
+ * - metadata._compiledMessage가 없으면 에러 (buildTransaction() 미지원 버전)
+ *
+ * @param tx - blockhash를 갱신할 미서명 트랜잭션
+ * @returns 새 blockhash가 적용된 미서명 트랜잭션 (새 객체)
+ */
+async refreshBlockhash(tx: UnsignedTransaction): Promise<UnsignedTransaction> {
+  this.ensureConnected()
+
+  // 1. metadata에서 캐싱된 transactionMessage 객체 조회
+  const cachedMessage = tx.metadata?._compiledMessage
+  if (!cachedMessage) {
+    throw new ChainError({
+      code: ChainErrorCode.TRANSACTION_FAILED,
+      chain: 'solana',
+      message: 'refreshBlockhash 실패: metadata._compiledMessage가 없습니다. buildTransaction()을 재실행하세요.',
+      retryable: true,
+    })
+  }
+
+  // 2. blockhash 캐시 무효화 후 새 blockhash 조회
+  this.blockhashCache = null  // 강제 무효화
+  const { blockhash, lastValidBlockHeight } = await this.getRecentBlockhash()
+
+  // 3. transactionMessage에 새 blockhash 적용
+  const refreshedMessage = setTransactionMessageLifetimeUsingBlockhash(
+    { blockhash, lastValidBlockHeight },
+    cachedMessage,  // 기존 instruction이 보존된 메시지 객체
+  )
+
+  // 4. 재컴파일 + 직렬화
+  const compiledMessage = compileTransactionMessage(refreshedMessage)
+  const encoder = getCompiledTransactionMessageEncoder()
+  const serialized = encoder.encode(compiledMessage)
+
+  // 5. 새 expiresAt 계산
+  const expiresAt = new Date(Date.now() + 50_000)  // 50초 (기존과 동일 안전 마진)
+
+  // 6. 새 UnsignedTransaction 반환 (불변 -- 기존 tx를 수정하지 않음)
+  return {
+    ...tx,
+    serialized,
+    expiresAt,
+    metadata: {
+      ...tx.metadata,
+      blockhash,
+      lastValidBlockHeight,
+      _compiledMessage: refreshedMessage,  // 갱신된 메시지 객체도 보관
+    },
+  }
+}
+```
+
+**buildTransaction()에서 _compiledMessage 보관 (v0.7 보완):**
+
+> buildTransaction() 섹션 5.1의 `return` 직전에 transactionMessage 객체를 metadata에 보관하도록 설계를 추가한다. 이는 refreshBlockhash()가 instruction을 재구성하지 않고 blockhash만 교체할 수 있게 하는 핵심이다.
+
+```typescript
+// buildTransaction() 내부 (v0.7 보완 추가 부분)
+// 기존 코드: const transactionMessage = pipe(...)
+
+// [v0.7 보완] transactionMessage 객체를 metadata에 캐싱
+// refreshBlockhash()에서 instruction을 유지하면서 blockhash만 교체할 때 사용
+return {
+  chain: 'solana',
+  serialized,
+  estimatedFee,
+  expiresAt,
+  metadata: {
+    blockhash,
+    lastValidBlockHeight,
+    version: 0,
+    from: request.from,
+    to: request.to,
+    amount: request.amount.toString(),
+    type: 'SOL_TRANSFER',
+    _compiledMessage: transactionMessage,  // [v0.7 보완] refreshBlockhash()용 메시지 캐싱
+  },
+}
+```
+
+**refreshBlockhash vs buildTransaction 재실행 선택 기준:**
+
+| 상황 | 권장 방법 | 근거 |
+|------|----------|------|
+| STALE (잔여 20초 미만) | `refreshBlockhash()` | 빠름, instruction 유지, RPC 1회 |
+| EXPIRED (이미 만료) | `buildTransaction()` 재실행 | 새 수수료 추정 필요 |
+| fee 변동 감지 (30초+ 경과) | `buildTransaction()` 재실행 | priority fee 캐시 만료, 수수료 재추정 필요 |
+| 동일 티어 재시도 (INSTANT) | `refreshBlockhash()` | 속도 우선 |
+| DELAY/APPROVAL 승인 후 | `buildTransaction()` 재실행 | 오래 대기하여 상태 변경 가능 |
 
 ---
 
@@ -1508,6 +1749,89 @@ async submitTransaction(signedTx: Uint8Array): Promise<SubmitResult> {
 | 디버그/개발 환경 | `false` | 항상 이중 검증 |
 
 **v0.2 기본값:** `skipPreflight: false` (안전 우선). 향후 config.toml `[adapters.solana]` 섹션에서 설정 가능하도록 확장 예정.
+
+### 8.2 [v0.7 보완] 제출 실패 시 1.5배 Fee Bump 1회 재시도 전략
+
+```
+submitTransaction() 실패
+    |
+    v
+[실패 원인 분류]
+    |
+    +-- BlockhashNotFound -> blockhash 만료 -> buildTransaction() 재실행 (기존 전략)
+    |
+    +-- InsufficientFeeForTransaction / 우선순위 부족 ->
+    |       |
+    |       v
+    |   [Fee Bump 재시도 (v0.7 추가)]
+    |   1. 현재 priority fee * 1.5 (50% 인상)
+    |   2. 새 buildTransaction() (새 blockhash + bumped fee)
+    |   3. simulateTransaction() -> signTransaction() -> submitTransaction()
+    |   4. 재시도 횟수: 최대 1회 (무한 재시도 방지)
+    |   5. bump 후에도 실패 시 -> TRANSACTION_FAILED 반환
+    |
+    +-- 기타 에러 -> 기존 에러 처리 유지
+```
+
+**설계 제약:**
+
+| 제약 | 값 | 근거 |
+|------|-----|------|
+| 최대 재시도 횟수 | 1회 | fee escalation 무한 루프 방지 |
+| bump 계수 | 1.5배 고정 | 업계 관행 (50~100% 인상이 일반적), 설정 가능하게 하지 않음 -- 단순성 우선 |
+| 새 blockhash 필수 | yes | 기존 blockhash 만료 위험 방지 |
+| 감사 기록 | audit_log에 기록 | fee_bump_attempted, original_fee, bumped_fee 필드 |
+
+**fee bump 실패 감지 조건에 대한 현실적 주의사항:**
+- Solana RPC는 "priority fee 부족"을 명시적 에러로 반환하지 않는 경우가 있음
+- waitForConfirmation 타임아웃 + 네트워크 혼잡 감지(최근 fee 중간값 급등) 시에도 fee bump 적용 가능
+- 구현 시 구체적인 감지 조건은 RPC 에러 코드 매핑에서 확정 (섹션 10.1 SOLANA_INSUFFICIENT_FEE 참조)
+
+```typescript
+/**
+ * [v0.7 보완] Fee bump 재시도를 수행한다.
+ * submitTransaction() 실패 시 priority fee를 1.5배 인상하여 1회 재시도.
+ *
+ * @param originalRequest - 원래 트랜잭션 빌드 요청
+ * @param originalFee - 원래 priority fee (microLamports)
+ * @param privateKey - 서명에 사용할 개인키
+ * @returns SubmitResult (재시도 성공 시) 또는 ChainError (재시도 실패 시)
+ */
+private async retryWithFeeBump(
+  originalRequest: TransferRequest,
+  originalFee: bigint,
+  privateKey: Uint8Array,
+): Promise<SubmitResult> {
+  const bumpedFee = BigInt(Math.ceil(Number(originalFee) * 1.5))
+
+  // audit log 기록
+  this.auditLog({
+    event: 'fee_bump_attempted',
+    original_fee: originalFee.toString(),
+    bumped_fee: bumpedFee.toString(),
+  })
+
+  // 새 blockhash + bumped fee로 트랜잭션 재빌드
+  const newTx = await this.buildTransaction({
+    ...originalRequest,
+    priorityFee: bumpedFee,
+  })
+
+  // simulate -> sign -> submit
+  const simResult = await this.simulateTransaction(newTx)
+  if (!simResult.success) {
+    throw new ChainError({
+      code: ChainErrorCode.TRANSACTION_FAILED,
+      chain: 'solana',
+      message: `Fee bump 후 시뮬레이션 실패: ${simResult.error}`,
+      retryable: false,
+    })
+  }
+
+  const signedTx = await this.signTransaction(newTx, privateKey)
+  return this.submitTransaction(signedTx)
+}
+```
 
 ---
 
@@ -1671,7 +1995,9 @@ private async getTransactionFee(txHash: string): Promise<bigint | undefined> {
 | `InsufficientFunds` | `INSUFFICIENT_BALANCE` | 400 | 조건부 | 전송 금액 잔액 부족 |
 | `AccountNotFound` | `INVALID_ADDRESS` | 404 | X | 계정 미존재 (온체인) |
 | `InvalidAccountForFee` | `TRANSACTION_FAILED` | 400 | X | 수수료 계정 유효하지 않음 |
-| `BlockhashNotFound` | `SOLANA_BLOCKHASH_EXPIRED` | 408 | O | blockhash 만료 (~60초 초과) |
+| `BlockhashNotFound` | `SOLANA_BLOCKHASH_EXPIRED` | 408 | O | blockhash 만료 (~60초 초과). 복구: buildTransaction() 재실행 |
+| **[v0.7] Freshness guard** | `SOLANA_BLOCKHASH_STALE` | 408 | O | **[v0.7 보완]** blockhash 잔여 수명 부족 (< 20초). 복구: refreshBlockhash() 호출 |
+| **[v0.7] Fee 부족** | `SOLANA_INSUFFICIENT_FEE` | 400 | O | **[v0.7 보완]** Priority fee 부족으로 제출 실패. fee bump 재시도 대상 (섹션 8.2). 복구: retryWithFeeBump() 호출 |
 | `TransactionError` | `TRANSACTION_FAILED` | 500 | X | 온체인 실행 실패 |
 | `AccountInUse` | `TRANSACTION_FAILED` | 409 | O | 계정 잠금 (동시 트랜잭션) |
 | RPC timeout | `RPC_ERROR` | 503 | O | RPC 응답 없음 (네트워크 또는 rate limit) |
@@ -1729,6 +2055,19 @@ private mapRpcError(err: unknown, context: string): ChainError {
     })
   }
 
+  // [v0.7 보완] Priority fee 부족 (fee bump 재시도 대상)
+  if (message.includes('InsufficientFeeForTransaction') ||
+      message.includes('insufficient priority fee') ||
+      message.includes('fee too low')) {
+    return new ChainError({
+      code: SolanaErrorCode.INSUFFICIENT_FEE,
+      chain: 'solana',
+      message: `Priority fee 부족: ${message}`,
+      details: { context, originalError: message },
+      retryable: true,  // fee bump 재시도 가능 (섹션 8.2)
+    })
+  }
+
   // 프로그램 에러
   if (message.includes('Program failed') ||
       message.includes('InstructionError') ||
@@ -1758,7 +2097,7 @@ private mapRpcError(err: unknown, context: string): ChainError {
 
 | 분류 | 에러 코드 | 동작 |
 |------|----------|------|
-| **재시도 가능 (retryable: true)** | `RPC_ERROR`, `NETWORK_ERROR`, `SOLANA_BLOCKHASH_EXPIRED`, `SIMULATION_FAILED` | transaction-service가 자동 재시도 또는 재빌드 |
+| **재시도 가능 (retryable: true)** | `RPC_ERROR`, `NETWORK_ERROR`, `SOLANA_BLOCKHASH_EXPIRED`, `SOLANA_BLOCKHASH_STALE` **(v0.7 추가)**, `SOLANA_INSUFFICIENT_FEE` **(v0.7 추가)**, `SIMULATION_FAILED` | transaction-service가 자동 재시도 또는 재빌드. STALE: refreshBlockhash() -> re-sign, EXPIRED: buildTransaction() 재실행, INSUFFICIENT_FEE: retryWithFeeBump() (섹션 8.2) |
 | **재시도 불가 (retryable: false)** | `INSUFFICIENT_BALANCE`, `INVALID_ADDRESS`, `SOLANA_PROGRAM_ERROR`, `TRANSACTION_FAILED` | 사용자에게 에러 반환. 입력 수정 필요 |
 | **조건부 재시도** | `INSUFFICIENT_BALANCE` (잔액 충전 후), `TRANSACTION_FAILED` (원인에 따라) | 상황에 따라 판단 |
 
@@ -1805,9 +2144,27 @@ ChainError {                    catch (err) {
 | 캐시 대상 | TTL | 근거 | 무효화 조건 |
 |----------|-----|------|------------|
 | **blockhash** | 5초 | 동일 슬롯 내 여러 트랜잭션이 같은 blockhash를 사용 가능. 슬롯 시간 ~400ms이므로 5초 캐시는 ~12 슬롯을 커버 | TTL 만료 시 자동 무효화 |
-| **priority fee** | 30초 | getRecentPrioritizationFees는 150 슬롯(~60초) 통계를 반환. 30초 캐시는 네트워크 혼잡도 변화에 적절히 반응 | TTL 만료 시 자동 무효화 |
+| **priority fee** | 30초 | **(v0.7 보완)** Nyquist 기준. 아래 상세 참조 | TTL 만료 시 자동 무효화 |
 | **잔액** | 캐시 없음 | 잔액은 매 요청마다 실시간 조회. 캐시 시 잔액 부족 감지 실패 위험 | - |
 | **ATA 존재 여부** | 캐시 없음 | ATA 생성/삭제 빈도가 낮지만, 캐시 시 불필요한 ATA 생성 instruction 추가 위험 | - |
+
+#### [v0.7 보완] Priority Fee TTL 30초의 Nyquist 기준 근거
+
+Nyquist-Shannon 샘플링 정리: 대역 제한 신호를 왜곡 없이 복원하려면 최소 신호 주파수의 2배로 샘플링해야 한다 (f_s >= 2 * f_max).
+
+**적용:**
+- `getRecentPrioritizationFees`는 최근 150 슬롯(~ 60초)의 통계를 반환
+- 이 60초 윈도우가 fee 변화의 "주기"에 해당
+- Nyquist 최소 샘플링 주기 = 60초 / 2 = 30초
+- TTL 30초 = Nyquist 최소 샘플링 주기
+
+**비교 테이블:**
+
+| TTL | Nyquist 판정 | 트레이드오프 |
+|-----|-------------|------------|
+| 15초 | 오버샘플링 (4x) | 불필요한 RPC 호출 증가 |
+| **30초** | **적정 (2x, Nyquist 최소)** | **fee 변화 추적 + RPC 부담 균형** |
+| 60초 | 언더샘플링 (1x) | fee 변화 절반 놓침 (앨리어싱) |
 
 ### 11.3 Blockhash 만료 대응 전략
 
@@ -1820,6 +2177,7 @@ ChainError {                    catch (err) {
 │  t=0s   buildTransaction()                                       │
 │         └─ getLatestBlockhash → blockhash (수명 ~60초)            │
 │         └─ expiresAt = now + 50초 (안전 마진 10초)                │
+│         └─ [v0.7] metadata._compiledMessage에 메시지 객체 캐싱     │
 │                                                                  │
 │  t=1s   simulateTransaction()                                    │
 │         └─ replaceRecentBlockhash: true (만료 무관)               │
@@ -1833,7 +2191,16 @@ ChainError {                    catch (err) {
 │           승인 후 buildTransaction() 재실행 (새 blockhash)         │
 │                                                                  │
 │  t=4s   signTransaction()                                        │
-│         └─ expiresAt 확인 → 만료 시 TRANSACTION_EXPIRED 반환      │
+│         └─ 1차: expiresAt 확인 → 만료 시 TRANSACTION_EXPIRED 반환 │
+│         └─ [v0.7] 2차: checkBlockhashFreshness() 호출            │
+│             └─ getBlockHeight() 기반 잔여 수명 정밀 검증           │
+│             └─ < 20초 → BLOCKHASH_STALE (refreshBlockhash 유도)  │
+│             └─ <= 0 → BLOCKHASH_EXPIRED (buildTransaction 재실행) │
+│                                                                  │
+│  t=4.1s [v0.7] STALE 시 복구 플로우:                              │
+│         └─ refreshBlockhash(tx) → 새 blockhash 적용              │
+│         └─ signTransaction(refreshedTx, privateKey) → 재서명     │
+│         └─ submitTransaction(signedTx) → 제출                    │
 │                                                                  │
 │  t=5s   submitTransaction()                                      │
 │         └─ BlockhashNotFound → SOLANA_BLOCKHASH_EXPIRED 반환      │
@@ -1844,12 +2211,34 @@ ChainError {                    catch (err) {
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+**[v0.7 보완] STALE 시 복구 플로우 상세:**
+
+```
+signTransaction()
+    |
+    +-- 1차: expiresAt < now? → EXPIRED
+    |
+    +-- [v0.7] 2차: checkBlockhashFreshness(lastValidBlockHeight)
+            |
+            +-- remainingBlocks <= 0 → BLOCKHASH_EXPIRED
+            |   └── buildTransaction() 완전 재실행
+            |
+            +-- remainingSeconds < 20 → BLOCKHASH_STALE
+            |   └── refreshBlockhash(tx) → 새 UnsignedTransaction
+            |   └── signTransaction(refreshedTx, key) → 재서명
+            |   └── submitTransaction(signedTx) → 제출
+            |
+            +-- remainingSeconds >= 20 → 서명 진행
+```
+
 **핵심 원칙:**
 1. `buildTransaction()`에서 `expiresAt = now + 50초` (10초 안전 마진)
 2. `simulateTransaction()`은 `replaceRecentBlockhash: true`로 blockhash 만료 무시
 3. `signTransaction()`과 `submitTransaction()`에서 만료 확인
-4. DELAY/APPROVAL 티어에서는 승인 후 반드시 `buildTransaction()` 재실행
-5. `waitForConfirmation()`의 기본 타임아웃 = 60초 (blockhash 수명)
+4. **[v0.7 보완]** `signTransaction()` 직전 `getBlockHeight()` 기반 freshness guard 적용
+5. **[v0.7 보완]** STALE 시 `refreshBlockhash()` -> re-sign -> submit으로 빠른 복구
+6. DELAY/APPROVAL 티어에서는 승인 후 반드시 `buildTransaction()` 재실행
+7. `waitForConfirmation()`의 기본 타임아웃 = 60초 (blockhash 수명)
 
 ### 11.4 Compute Unit 최적화
 

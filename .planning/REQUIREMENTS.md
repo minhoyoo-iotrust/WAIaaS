@@ -9,10 +9,10 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ### 체인 어댑터 & 트랜잭션 안정성
 
-- [ ] **CHAIN-01**: Solana blockhash freshness guard — signTransaction() 직전 잔여 수명 < 20초이면 blockhash 갱신, UnsignedTransaction에 refreshBlockhash() 추가 [CRITICAL]
-- [ ] **CHAIN-02**: IChainAdapter에 getCurrentNonce/resetNonceTracker 2개 메서드 추가 (17→19개), UnsignedTransaction.nonce 명시적 optional 필드 승격 [CRITICAL]
-- [ ] **CHAIN-03**: Keystore AES-256-GCM nonce 충돌 확률 Birthday Problem 계산을 정확한 수학적 근거로 정정 [CRITICAL]
-- [ ] **CHAIN-04**: Priority fee 캐시 TTL 30초 근거 명시 (Nyquist 기준) + 제출 실패 시 1.5배 fee bump 1회 재시도 전략 추가 [MEDIUM]
+- [x] **CHAIN-01**: Solana blockhash freshness guard — signTransaction() 직전 잔여 수명 < 20초이면 blockhash 갱신, UnsignedTransaction에 refreshBlockhash() 추가 [CRITICAL]
+- [x] **CHAIN-02**: IChainAdapter에 getCurrentNonce/resetNonceTracker 2개 메서드 추가 (17→19개), UnsignedTransaction.nonce 명시적 optional 필드 승격 [CRITICAL]
+- [x] **CHAIN-03**: Keystore AES-256-GCM nonce 충돌 확률 Birthday Problem 계산을 정확한 수학적 근거로 정정 [CRITICAL]
+- [x] **CHAIN-04**: Priority fee 캐시 TTL 30초 근거 명시 (Nyquist 기준) + 제출 실패 시 1.5배 fee bump 1회 재시도 전략 추가 [MEDIUM]
 
 ### 데몬 프로세스 & 보안 기반
 
@@ -62,10 +62,10 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHAIN-01 | Phase 26 | Pending |
-| CHAIN-02 | Phase 26 | Pending |
-| CHAIN-03 | Phase 26 | Pending |
-| CHAIN-04 | Phase 26 | Pending |
+| CHAIN-01 | Phase 26 | Complete |
+| CHAIN-02 | Phase 26 | Complete |
+| CHAIN-03 | Phase 26 | Complete |
+| CHAIN-04 | Phase 26 | Complete |
 | DAEMON-01 | Phase 27 | Pending |
 | DAEMON-02 | Phase 27 | Pending |
 | DAEMON-03 | Phase 27 | Pending |
@@ -95,4 +95,4 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after initial definition*
+*Last updated: 2026-02-08 after Phase 26 completion*

@@ -42,7 +42,7 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요
 
 ## Phases
 
-- [ ] **Phase 26: 체인 어댑터 안정화** - blockhash 경쟁 조건, EVM nonce, keystore 수학, fee 전략 해소
+- [x] **Phase 26: 체인 어댑터 안정화** - blockhash 경쟁 조건, EVM nonce, keystore 수학, fee 전략 해소
 - [ ] **Phase 27: 데몬 보안 기반 확립** - JWT rotation, flock 잠금, Rate Limiter 분리, killSwitch 확정, 패스워드 통일
 - [ ] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
 - [ ] **Phase 29: API 통합 프로토콜 완성** - Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서, SDK 보완
@@ -62,8 +62,8 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요
 **Plans**: 2 plans
 
 Plans:
-- [ ] 26-01-PLAN.md -- Solana blockhash freshness guard + EVM nonce 인터페이스 확장 (CHAIN-01, CHAIN-02)
-- [ ] 26-02-PLAN.md -- Keystore nonce 수학 정정 + Priority fee TTL 근거/bump 전략 (CHAIN-03, CHAIN-04)
+- [x] 26-01-PLAN.md -- Solana blockhash freshness guard + EVM nonce 인터페이스 확장 (CHAIN-01, CHAIN-02)
+- [x] 26-02-PLAN.md -- Keystore nonce 수학 정정 + Priority fee TTL 근거/bump 전략 (CHAIN-03, CHAIN-04)
 
 ### Phase 27: 데몬 보안 기반 확립
 **Goal**: 데몬 프로세스의 보안 메커니즘이 구현 시 경쟁 조건이나 보안 수준 불일치 없이 동작하는 상태를 만든다
@@ -74,12 +74,12 @@ Plans:
   2. 데몬 인스턴스 잠금이 flock 기반(Windows Named Mutex fallback)으로 전환되어, PID 파일 경쟁 조건이 제거되고, DAEMON-06의 nonce replay 방지를 위한 SQLite nonce 저장 옵션이 추가되었다
   3. Rate Limiter가 globalRateLimit(#3.5, IP 1000/min)과 sessionRateLimit(#9, authRouter 후)로 2단계 분리되어, 미인증 공격자가 인증 사용자의 rate limit을 소진할 수 없다
   4. killSwitchGuard 허용 엔드포인트 4개(health/status/recover/kill-switch)가 확정되고 503 SYSTEM_LOCKED 응답이 정의되었으며, Master Password 인증이 전체 Argon2id로 통일되었다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 27-01: JWT Secret dual-key rotation + flock 기반 인스턴스 잠금
-- [ ] 27-02: Rate Limiter 2단계 분리 + killSwitchGuard 허용 목록 확정
-- [ ] 27-03: Master Password Argon2id 통일 + 단일 인스턴스 SQLite nonce 옵션
+- [ ] 27-01-PLAN.md -- JWT Secret dual-key rotation + flock 기반 인스턴스 잠금 (DAEMON-01, DAEMON-02)
+- [ ] 27-02-PLAN.md -- Rate Limiter 2단계 분리 + killSwitchGuard 허용 목록 확정 (DAEMON-03, DAEMON-04)
+- [ ] 27-03-PLAN.md -- Master Password Argon2id 통일 + 단일 인스턴스 SQLite nonce 옵션 (DAEMON-05, DAEMON-06)
 
 ### Phase 28: 의존성 빌드 환경 해소
 **Goal**: 모노레포 첫 빌드부터 의존성 충돌이나 네이티브 바이너리 문제 없이 빌드가 성공하는 상태를 만든다
@@ -131,7 +131,7 @@ Phase 26 -> 27 -> 28 -> 29 -> 30
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 26. 체인 어댑터 안정화 | 0/2 | Planning complete | - |
+| 26. 체인 어댑터 안정화 | 2/2 | ✓ Complete | 2026-02-08 |
 | 27. 데몬 보안 기반 확립 | 0/3 | Not started | - |
 | 28. 의존성 빌드 환경 해소 | 0/1 | Not started | - |
 | 29. API 통합 프로토콜 완성 | 0/3 | Not started | - |
@@ -139,4 +139,4 @@ Phase 26 -> 27 -> 28 -> 29 -> 30
 
 ---
 *Roadmap created: 2026-02-08*
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-08 after Phase 27 planning*
