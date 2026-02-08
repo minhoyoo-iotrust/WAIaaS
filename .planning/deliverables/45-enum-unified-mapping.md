@@ -2,10 +2,12 @@
 
 **문서 ID:** ENUM-MAP
 **작성일:** 2026-02-06
+**v0.6 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** CORE-02 (25-sqlite-schema.md), LOCK-MECH (33-time-lock-approval-mechanism.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), NOTI-ARCH (35-notification-architecture.md), API-SPEC (37-rest-api-complete-spec.md)
+**참조:** CORE-02 (25-sqlite-schema.md), LOCK-MECH (33-time-lock-approval-mechanism.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), NOTI-ARCH (35-notification-architecture.md), API-SPEC (37-rest-api-complete-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), CHAIN-EXT-06 (61-price-oracle-spec.md)
 **Phase:** 12-high-schema-unification (Plan 12-01)
 **해결 항목:** ENUM-01, ENUM-02, ENUM-03, ENUM-04
+**v0.6 통합:** INTEG-02 (TransactionType 5개, PolicyType 10개, ActionErrorCode 7개, PriceSource 5개)
 
 ---
 
@@ -21,13 +23,16 @@
 |---|--------|-----------|---------|----------|------|
 | 1 | Transaction | TransactionStatus | 8 | CORE-02 + TX-PIPE | Phase 11 SSoT 확정 |
 | 2 | Transaction | TransactionTier | 4 | CORE-02 | Phase 8에서 4-tier 확정 |
-| 3 | Agent | AgentStatus | 5 | CORE-02 | DB CHECK가 SSoT |
-| 4 | Policy | PolicyType | 4 | LOCK-MECH | Phase 8이 SSoT, CORE-02 수정 완료 |
-| 5 | Notification | NotificationChannelType | 3 | CORE-02 | 3개 채널 고정 |
-| 6 | Audit | AuditLogSeverity | 3 | CORE-02 | lowercase (info, warning, critical) |
-| 7 | Audit | AuditLogEventType | 23+ | CORE-02 | 이벤트 타입 목록 |
-| 8 | System | KillSwitchStatus | 3 | KILL-AUTO-EVM | system_state 테이블 |
-| 9 | AutoStop | AutoStopRuleType | 5 | KILL-AUTO-EVM | auto_stop_rules 테이블 |
+| 3 | Transaction | TransactionType | 5 | CHAIN-EXT-03 + CORE-02 | (v0.6 추가) Phase 23 정식화 |
+| 4 | Agent | AgentStatus | 5 | CORE-02 | DB CHECK가 SSoT |
+| 5 | Policy | PolicyType | 10 | LOCK-MECH + CHAIN-EXT-03 | (v0.6 변경) Phase 8 기존 4개 + Phase 22-23 신규 6개 |
+| 6 | Notification | NotificationChannelType | 3 | CORE-02 | 3개 채널 고정 |
+| 7 | Audit | AuditLogSeverity | 3 | CORE-02 | lowercase (info, warning, critical) |
+| 8 | Audit | AuditLogEventType | 23+ | CORE-02 | 이벤트 타입 목록 |
+| 9 | System | KillSwitchStatus | 3 | KILL-AUTO-EVM | system_state 테이블 |
+| 10 | AutoStop | AutoStopRuleType | 5 | KILL-AUTO-EVM | auto_stop_rules 테이블 |
+| 11 | Action | ActionErrorCode | 7 | CHAIN-EXT-07 | (v0.6 추가) Action Provider 에러 코드 |
+| 12 | Price | PriceSource | 5 | CHAIN-EXT-06 | (v0.6 추가) 가격 오라클 소스 식별자 |
 
 ---
 
@@ -117,7 +122,59 @@ type TransactionTier = z.infer<typeof TierEnum>
 
 ---
 
-### 2.3 AgentStatus
+### 2.3 TransactionType (v0.6 추가)
+
+**SSoT:** CHAIN-EXT-03 (58-contract-call-spec.md) + CORE-02 (25-sqlite-schema.md) DB CHECK 제약
+**Phase 23 정식화:** Phase 23에서 5개 값의 공식 Enum으로 등록. 기존 transactions.type은 CHECK 제약 없는 TEXT 컬럼이었으나, Phase 23에서 CHECK 제약 추가.
+
+| 값 | DB CHECK | Drizzle ORM | Zod Schema | 설명 | 도입 Phase |
+|----|----------|-------------|------------|------|-----------|
+| `TRANSFER` | O | O | O | 네이티브 토큰 전송 (SOL, ETH) | Phase 7 (기존) |
+| `TOKEN_TRANSFER` | O | O | O | SPL/ERC-20 토큰 전송 | Phase 22 |
+| `CONTRACT_CALL` | O | O | O | 임의 컨트랙트/프로그램 호출 | Phase 23 |
+| `APPROVE` | O | O | O | 토큰 approve/delegate 권한 위임 | Phase 23 |
+| `BATCH` | O | O | O | 다중 instruction 배치 (Solana 전용) | Phase 23 |
+
+**DB CHECK:**
+```sql
+CHECK (type IN ('TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH'))
+```
+
+**Drizzle ORM:**
+```typescript
+type: text('type', {
+  enum: ['TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH']
+}).notNull()
+```
+
+**Zod Schema:**
+```typescript
+const TransactionTypeEnum = z.enum([
+  'TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH'
+])
+```
+
+**TypeScript Type:**
+```typescript
+type TransactionType = z.infer<typeof TransactionTypeEnum>
+// = 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH'
+```
+
+**파이프라인 Stage 1 연관:** 32-transaction-pipeline-api.md의 Stage 1에서 discriminatedUnion의 type 필드로 사용된다.
+
+**type별 정책 적용 범위:**
+
+| TransactionType | 적용 PolicyType | 기본 티어 |
+|-----------------|----------------|----------|
+| `TRANSFER` | SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT | 금액 기반 4-tier |
+| `TOKEN_TRANSFER` | SPENDING_LIMIT(USD), ALLOWED_TOKENS, WHITELIST, TIME_RESTRICTION, RATE_LIMIT | USD 기반 4-tier |
+| `CONTRACT_CALL` | CONTRACT_WHITELIST, METHOD_WHITELIST, SPENDING_LIMIT | APPROVAL (기본) |
+| `APPROVE` | APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE | APPROVE_TIER_OVERRIDE |
+| `BATCH` | 개별 instruction별 + 합산 금액 | maxTier(개별, 합산) |
+
+---
+
+### 2.4 AgentStatus
 
 **SSoT:** CORE-02 (25-sqlite-schema.md) DB CHECK 제약
 **Phase 12 수정:** ENUM-01 해결 -- REST API Zod를 DB CHECK 5개 값으로 통일
@@ -157,49 +214,87 @@ type AgentStatus = z.infer<typeof AgentStatusEnum>
 
 ---
 
-### 2.4 PolicyType
+### 2.5 PolicyType (v0.6 변경: 4개 -> 10개)
 
-**SSoT:** LOCK-MECH (33-time-lock-approval-mechanism.md)
+**SSoT:** LOCK-MECH (33-time-lock-approval-mechanism.md) + CHAIN-EXT-03 (58-contract-call-spec.md)
 **Phase 12 수정:** ENUM-02 해결 -- CORE-02의 CHECK를 Phase 8 기준으로 수정
+**Phase 22-23 확장:** ALLOWED_TOKENS(Phase 22) + CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE(Phase 23) 추가
 
-| 값 | DB CHECK | Drizzle ORM | Zod Schema | 설명 |
-|----|----------|-------------|------------|------|
-| `SPENDING_LIMIT` | O | O | O | 거래 금액 제한 (건당/일간/주간) |
-| `WHITELIST` | O | O | O | 허용 주소 목록 |
-| `TIME_RESTRICTION` | O | O | O | 시간대 제한 |
-| `RATE_LIMIT` | O | O | O | 거래 빈도 제한 |
+| 값 | DB CHECK | Drizzle ORM | Zod Schema | 설명 | 도입 Phase |
+|----|----------|-------------|------------|------|-----------|
+| `SPENDING_LIMIT` | O | O | O | 거래 금액 제한 (건당/일간/주간, v0.6 USD 확장) | Phase 8 |
+| `WHITELIST` | O | O | O | 허용 주소 목록 | Phase 8 |
+| `TIME_RESTRICTION` | O | O | O | 시간대 제한 | Phase 8 |
+| `RATE_LIMIT` | O | O | O | 거래 빈도 제한 | Phase 8 |
+| `ALLOWED_TOKENS` | O | O | O | 허용 토큰 목록 (미설정 시 토큰 전송 기본 거부) | (v0.6 추가) Phase 22 |
+| `CONTRACT_WHITELIST` | O | O | O | 허용 컨트랙트 주소 (미설정 시 CONTRACT_CALL 거부) | (v0.6 추가) Phase 23 |
+| `METHOD_WHITELIST` | O | O | O | 허용 함수 selector (EVM 전용) | (v0.6 추가) Phase 23 |
+| `APPROVED_SPENDERS` | O | O | O | 허용 spender 주소 (미설정 시 APPROVE 거부) | (v0.6 추가) Phase 23 |
+| `APPROVE_AMOUNT_LIMIT` | O | O | O | approve 최대 금액 + 무제한 차단 | (v0.6 추가) Phase 23 |
+| `APPROVE_TIER_OVERRIDE` | O | O | O | approve 독립 보안 티어 (SPENDING_LIMIT과 독립) | (v0.6 추가) Phase 23 |
 
 **DB CHECK:**
 ```sql
-CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT'))
+CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+  'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+  'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE'))
 ```
 
 **Drizzle ORM:**
 ```typescript
 type: text('type', {
-  enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']
+  enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+    'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+    'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE']
 }).notNull()
 ```
 
 **Zod Schema:**
 ```typescript
-const PolicyTypeEnum = z.enum(['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT'])
+const PolicyTypeEnum = z.enum([
+  // Phase 8 기존 (4개)
+  'SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+  // Phase 22 추가 (1개)
+  'ALLOWED_TOKENS',
+  // Phase 23 추가 (5개)
+  'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+  'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE',
+])
 ```
 
 **TypeScript Type:**
 ```typescript
 type PolicyType = z.infer<typeof PolicyTypeEnum>
 // = 'SPENDING_LIMIT' | 'WHITELIST' | 'TIME_RESTRICTION' | 'RATE_LIMIT'
+// | 'ALLOWED_TOKENS' | 'CONTRACT_WHITELIST' | 'METHOD_WHITELIST'
+// | 'APPROVED_SPENDERS' | 'APPROVE_AMOUNT_LIMIT' | 'APPROVE_TIER_OVERRIDE'
 ```
+
+**PolicyType별 적용 TransactionType:**
+
+| PolicyType | 적용 TransactionType | rule_config 스키마 |
+|------------|---------------------|-------------------|
+| `SPENDING_LIMIT` | TRANSFER, TOKEN_TRANSFER(USD), CONTRACT_CALL(value) | per_transaction, daily_total, weekly_total, instant_max_usd?, notify_max_usd?, delay_max_usd? |
+| `WHITELIST` | TRANSFER, TOKEN_TRANSFER | addresses[], mode |
+| `TIME_RESTRICTION` | ALL | allowed_hours, allowed_days, timezone |
+| `RATE_LIMIT` | ALL | max_tx_per_hour, max_tx_per_day |
+| `ALLOWED_TOKENS` | TOKEN_TRANSFER | tokens[{mint, symbol, chain}], unknown_token_action |
+| `CONTRACT_WHITELIST` | CONTRACT_CALL | contracts[{address, chain, label}] |
+| `METHOD_WHITELIST` | CONTRACT_CALL (EVM) | methods[{address, selector, name}] |
+| `APPROVED_SPENDERS` | APPROVE | spenders[{address, chain, label}] |
+| `APPROVE_AMOUNT_LIMIT` | APPROVE | max_amount, unlimited_blocked, unlimited_threshold? |
+| `APPROVE_TIER_OVERRIDE` | APPROVE | default_tier |
 
 **변경 이력:**
 - Phase 6 (CORE-02 원본): `ALLOWED_ADDRESSES` -> Phase 8에서 `WHITELIST`로 변경
 - Phase 6 (CORE-02 원본): `AUTO_STOP` -> Phase 8에서 제거 (AutoStopEngine은 별도 시스템, auto_stop_rules 테이블에서 관리)
 - Phase 8 (LOCK-MECH): `RATE_LIMIT` 추가
+- (v0.6) Phase 22: `ALLOWED_TOKENS` 추가 (토큰 전송 허용 목록)
+- (v0.6) Phase 23: 5개 추가 (컨트랙트/approve 정책)
 
 ---
 
-### 2.5 NotificationChannelType
+### 2.6 NotificationChannelType
 
 **SSoT:** CORE-02 (25-sqlite-schema.md)
 
@@ -234,7 +329,7 @@ type NotificationChannelType = z.infer<typeof NotificationChannelTypeEnum>
 
 ---
 
-### 2.6 AuditLogSeverity
+### 2.7 AuditLogSeverity
 
 **SSoT:** CORE-02 (25-sqlite-schema.md)
 
@@ -273,7 +368,7 @@ type AuditLogSeverity = z.infer<typeof AuditLogSeverityEnum>
 
 ---
 
-### 2.7 AuditLogEventType
+### 2.8 AuditLogEventType
 
 **SSoT:** CORE-02 (25-sqlite-schema.md) 이벤트 타입 목록
 
@@ -339,7 +434,7 @@ type AuditLogEventType = typeof AuditLogEventType[keyof typeof AuditLogEventType
 
 ---
 
-### 2.8 KillSwitchStatus
+### 2.9 KillSwitchStatus
 
 **SSoT:** KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
 
@@ -373,7 +468,7 @@ type KillSwitchStatus = z.infer<typeof KillSwitchStatusEnum>
 
 ---
 
-### 2.9 AutoStopRuleType
+### 2.10 AutoStopRuleType
 
 **SSoT:** KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
 
@@ -409,6 +504,75 @@ type AutoStopRuleType =
   | 'HOURLY_RATE'
   | 'ANOMALY_PATTERN'
 ```
+
+---
+
+### 2.11 ActionErrorCode (v0.6 추가)
+
+**SSoT:** CHAIN-EXT-07 (62-action-provider-architecture.md)
+**Phase 24 추가:** Action Provider 에러 코드 7개. 기존 에러 코드 체계(CHAIN-EXT-03 섹션 8)와 일관된 형식.
+
+> Action Provider 에러는 파이프라인 진입 전에 발생한다. resolve() 성공 후에는 기존 파이프라인 에러 체계가 적용된다.
+
+| 에러 코드 | HTTP 상태 | 설명 | 재시도 |
+|----------|----------|------|--------|
+| `ACTION_NOT_FOUND` | 404 | 존재하지 않는 액션 이름 | X |
+| `ACTION_VALIDATION_FAILED` | 400 | 입력 파라미터 Zod 검증 실패 | X |
+| `ACTION_RESOLVE_FAILED` | 502 | 외부 API 호출 실패 (Quote API 등) | O |
+| `ACTION_RETURN_INVALID` | 500 | resolve() 반환값 스키마 검증 실패 | X |
+| `ACTION_PLUGIN_LOAD_FAILED` | 500 | 플러그인 로드 실패 (startup 시) | X |
+| `ACTION_NAME_CONFLICT` | 409 | 동일 액션 이름 중복 등록 시도 | X |
+| `ACTION_CHAIN_MISMATCH` | 400 | 요청 체인과 프로바이더 지원 체인 불일치 | X |
+
+**TypeScript Type:**
+```typescript
+export type ActionErrorCode =
+  | 'ACTION_NOT_FOUND'
+  | 'ACTION_VALIDATION_FAILED'
+  | 'ACTION_RESOLVE_FAILED'
+  | 'ACTION_RETURN_INVALID'
+  | 'ACTION_PLUGIN_LOAD_FAILED'
+  | 'ACTION_NAME_CONFLICT'
+  | 'ACTION_CHAIN_MISMATCH'
+```
+
+**에러 흐름:**
+```
+[Action Provider 에러] -> (파이프라인 미진입)
+ACTION_NOT_FOUND -------> 404 응답
+ACTION_RESOLVE_FAILED --> 502 응답 (재시도 가능)
+(resolve 성공) ---------> Stage 1: 기존 파이프라인 에러 체계
+```
+
+---
+
+### 2.12 PriceSource (v0.6 추가)
+
+**SSoT:** CHAIN-EXT-06 (61-price-oracle-spec.md)
+**Phase 24 추가:** 가격 오라클 소스 식별자. IPriceOracle의 PriceInfo.source 필드에 사용.
+
+> PriceSource는 DB CHECK 제약 없이 TypeScript Enum으로만 관리한다. 구현 시 확정.
+
+| 값 | 설명 | 조회 방식 |
+|----|------|----------|
+| `coingecko` | CoinGecko API (Primary) | HTTP REST |
+| `pyth` | Pyth Network (Solana Secondary) | HTTP REST |
+| `chainlink` | Chainlink (EVM Secondary) | HTTP REST |
+| `jupiter` | Jupiter Price API (Solana 토큰) | HTTP REST |
+| `cache` | 캐시된 가격 (stale 포함) | 로컬 LRU |
+
+**Zod Schema:**
+```typescript
+const PriceSourceEnum = z.enum(['coingecko', 'pyth', 'chainlink', 'jupiter', 'cache'])
+```
+
+**TypeScript Type:**
+```typescript
+type PriceSource = z.infer<typeof PriceSourceEnum>
+// = 'coingecko' | 'pyth' | 'chainlink' | 'jupiter' | 'cache'
+```
+
+**OracleChain fallback 순서:** CoinGecko(Primary) -> Pyth/Chainlink(Chain-specific Secondary) -> stale cache
 
 ---
 
@@ -478,17 +642,20 @@ Enum과 함께 혼동 가능한 API 경로도 기록한다.
 
 각 Enum이 사용되는 문서와 레이어를 정리한다.
 
-| Enum | DB (CORE-02) | Pipeline (TX-PIPE) | Policy (LOCK-MECH) | Kill Switch (KILL-AUTO-EVM) | Notification (NOTI-ARCH) | REST API (API-SPEC) | SDK (SDK-MCP) |
-|------|-------------|-------------------|--------------------|-----------------------------|--------------------------|---------------------|---------------|
-| TransactionStatus | O | O | - | - | - | O | O |
-| TransactionTier | O | O | O | - | O | O | O |
-| AgentStatus | O | - | - | O (SUSPENDED 전이) | - | O | O |
-| PolicyType | O | - | O (SSoT) | - | - | O | O |
-| NotificationChannelType | O | - | - | - | O (SSoT) | - | - |
-| AuditLogSeverity | O | - | - | - | - | - | - |
-| AuditLogEventType | O | - | - | O (감사 기록) | O (이벤트 참조) | - | - |
-| KillSwitchStatus | - | - | - | O (SSoT) | - | O | - |
-| AutoStopRuleType | - | - | - | O (SSoT) | - | - | - |
+| Enum | DB (CORE-02) | Pipeline (TX-PIPE) | Policy (LOCK-MECH) | Kill Switch (KILL-AUTO-EVM) | Notification (NOTI-ARCH) | REST API (API-SPEC) | SDK (SDK-MCP) | Chain Adapter (CORE-04) | Action Provider (CHAIN-EXT-07) | Price Oracle (CHAIN-EXT-06) |
+|------|-------------|-------------------|--------------------|-----------------------------|--------------------------|---------------------|---------------|------------------------|-----------------------------|--------------------------|
+| TransactionStatus | O | O | - | - | - | O | O | - | - | - |
+| TransactionTier | O | O | O | - | O | O | O | - | - | - |
+| TransactionType | O | O | O | - | - | O | O | - | O (resolve 반환) | - |
+| AgentStatus | O | - | - | O (SUSPENDED 전이) | - | O | O | - | - | - |
+| PolicyType | O | - | O (SSoT) | - | - | O | O | - | - | O (USD 확장) |
+| NotificationChannelType | O | - | - | - | O (SSoT) | - | - | - | - | - |
+| AuditLogSeverity | O | - | - | - | - | - | - | - | - | - |
+| AuditLogEventType | O | - | - | O (감사 기록) | O (이벤트 참조) | - | - | - | - | - |
+| KillSwitchStatus | - | - | - | O (SSoT) | - | O | - | - | - | - |
+| AutoStopRuleType | - | - | - | O (SSoT) | - | - | - | - | - | - |
+| ActionErrorCode | - | - | - | - | - | O | O | - | O (SSoT) | - |
+| PriceSource | - | - | - | - | - | - | - | - | - | O (SSoT) |
 
 ---
 
@@ -517,7 +684,46 @@ Enum과 함께 혼동 가능한 API 경로도 기록한다.
 
 ---
 
+### v0.6 에러 코드 교차 참조 (CHAIN-EXT-03~08)
+
+Phase 22-24에서 정의된 도메인별 에러 코드 전체 목록이다. 37-rest-api-complete-spec.md에 등록되어야 한다.
+
+| # | 에러 코드 | HTTP | 도메인 | 소스 문서 | 설명 |
+|---|----------|------|--------|----------|------|
+| 1 | `TOKEN_NOT_FOUND` | 404 | tx | CHAIN-EXT-01 | 토큰 민트/컨트랙트 주소 불일치 |
+| 2 | `TOKEN_NOT_ALLOWED` | 403 | tx | CHAIN-EXT-01 | ALLOWED_TOKENS에 미등록 |
+| 3 | `INSUFFICIENT_TOKEN_BALANCE` | 400 | tx | CHAIN-EXT-01 | 토큰 잔액 부족 |
+| 4 | `CONTRACT_CALL_DISABLED` | 403 | tx | CHAIN-EXT-03 | CONTRACT_WHITELIST 미설정 |
+| 5 | `CONTRACT_NOT_WHITELISTED` | 403 | tx | CHAIN-EXT-03 | 컨트랙트가 화이트리스트에 없음 |
+| 6 | `METHOD_NOT_WHITELISTED` | 403 | tx | CHAIN-EXT-03 | 함수 selector가 메서드 화이트리스트에 없음 (EVM) |
+| 7 | `APPROVE_DISABLED` | 403 | tx | CHAIN-EXT-04 | APPROVED_SPENDERS 미설정 |
+| 8 | `SPENDER_NOT_APPROVED` | 403 | tx | CHAIN-EXT-04 | spender가 승인 목록에 없음 |
+| 9 | `APPROVE_AMOUNT_EXCEEDED` | 403 | tx | CHAIN-EXT-04 | approve 금액 초과 |
+| 10 | `UNLIMITED_APPROVE_BLOCKED` | 403 | tx | CHAIN-EXT-04 | 무제한 approve 차단 |
+| 11 | `BATCH_NOT_SUPPORTED` | 400 | tx | CHAIN-EXT-05 | 체인이 배치 미지원 (EVM) |
+| 12 | `BATCH_SIZE_EXCEEDED` | 400 | tx | CHAIN-EXT-05 | instruction 수 > 20 |
+| 13 | `BATCH_POLICY_VIOLATION` | 403 | tx | CHAIN-EXT-05 | 배치 내 정책 위반 |
+| 14 | `ACTION_NOT_FOUND` | 404 | action | CHAIN-EXT-07 | 존재하지 않는 액션 |
+| 15 | `ACTION_VALIDATION_FAILED` | 400 | action | CHAIN-EXT-07 | 입력 파라미터 검증 실패 |
+| 16 | `ACTION_RESOLVE_FAILED` | 502 | action | CHAIN-EXT-07 | 외부 API 호출 실패 |
+| 17 | `ACTION_RETURN_INVALID` | 500 | action | CHAIN-EXT-07 | resolve() 반환값 스키마 검증 실패 |
+| 18 | `ACTION_PLUGIN_LOAD_FAILED` | 500 | action | CHAIN-EXT-07 | 플러그인 로드 실패 |
+| 19 | `ACTION_NAME_CONFLICT` | 409 | action | CHAIN-EXT-07 | 동일 액션 이름 중복 |
+| 20 | `ACTION_CHAIN_MISMATCH` | 400 | action | CHAIN-EXT-07 | 체인 불일치 |
+
+### ENUM-05 해결: v0.6 통합 (INTEG-02)
+
+- **추가:** TransactionType 5개 (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH)
+- **확장:** PolicyType 4개 -> 10개 (+ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE)
+- **추가:** ActionErrorCode 7개 (ACTION_NOT_FOUND 외 6개)
+- **추가:** PriceSource 5개 (coingecko, pyth, chainlink, jupiter, cache)
+- **추가:** v0.6 에러 코드 교차 참조 20개
+- **수정 문서:** 25-sqlite-schema.md (TransactionType CHECK, PolicyType CHECK), 27-chain-adapter-interface.md (메서드 4개 추가)
+
+---
+
 *문서 ID: ENUM-MAP*
 *작성일: 2026-02-06*
+*v0.6 업데이트: 2026-02-08*
 *Phase: 12-high-schema-unification*
 *상태: 완료*

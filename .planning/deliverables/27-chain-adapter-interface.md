@@ -2,8 +2,9 @@
 
 **문서 ID:** CORE-04
 **작성일:** 2026-02-05
+**v0.6 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** ARCH-05 (12-multichain-extension.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), 06-CONTEXT.md, 06-RESEARCH.md
+**참조:** ARCH-05 (12-multichain-extension.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), 06-CONTEXT.md, 06-RESEARCH.md, CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md)
 
 ---
 
@@ -26,8 +27,9 @@ v0.1의 `IBlockchainAdapter`(ARCH-05)는 Cloud-First + Squads Protocol 의존 �
 | 확인 대기 | 없음 | `waitForConfirmation()` -- 능동 확인 대기 |
 | 수수료 추정 | 없음 | `estimateFee()` -- 독립 수수료 추정 |
 | 에러 체계 | 없음 (문자열 에러) | `ChainError` 클래스 + 계층적 에러 코드 |
-| 자산 조회 | `getBalance()`, `getAssets()` | `getBalance()` (자산 목록은 v0.3로 이연) |
+| 자산 조회 | `getBalance()`, `getAssets()` | `getBalance()` + `getAssets()` (v0.6 복원) |
 | 헬스 체크 | `healthCheck(): boolean` | `getHealth(): { healthy, latency }` (레이턴시 포함) |
+| 컨트랙트 호출 | 없음 | `buildContractCall()`, `buildApprove()`, `buildBatch()` (v0.6 추가) |
 
 ### 1.2 설계 원칙
 
@@ -326,7 +328,172 @@ interface BalanceInfo {
 }
 ```
 
-### 2.8 타입 요약
+### 2.8 AssetInfo 타입 (v0.6 추가)
+
+```typescript
+/**
+ * 에이전트가 보유한 개별 자산 정보.
+ * getAssets()의 반환값 배열 요소이다.
+ * 네이티브 토큰과 프로그램/컨트랙트 토큰을 하나의 타입으로 표현한다.
+ *
+ * @see CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md) 섹션 2
+ */
+interface AssetInfo {
+  /** 토큰 민트/컨트랙트 주소. 네이티브 토큰이면 'native' */
+  tokenAddress: string
+
+  /** 토큰 심볼. 'SOL', 'USDC', 'ETH' 등 */
+  symbol: string
+
+  /** 토큰 이름. 'Solana', 'USD Coin' 등 */
+  name: string
+
+  /** 소수점 자릿수. SOL=9, USDC=6, ETH=18 */
+  decimals: number
+
+  /** 잔액 (최소 단위, bigint) */
+  balance: bigint
+
+  /** 토큰 타입. 'native' | 'spl' | 'erc20' */
+  type: 'native' | 'spl' | 'erc20'
+
+  /** 토큰 로고 URI (선택적) */
+  logoUri?: string
+}
+```
+
+### 2.9 FeeEstimate 타입 (v0.6 추가)
+
+```typescript
+/**
+ * 수수료 추정 결과.
+ * estimateFee()의 반환 타입.
+ *
+ * v0.2에서는 bigint(= total)만 반환했으나, v0.6에서 토큰 전송의
+ * ATA 생성 비용, ERC-20 가스 등 세부 항목을 표현하기 위해 확장.
+ *
+ * 하위 호환: total 필드가 기존 bigint 반환값에 대응한다.
+ *
+ * @see CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md) 섹션 7
+ */
+interface FeeEstimate {
+  /** 기본 수수료 (lamports/wei). Solana: 5000 lamports/sig, EVM: baseFee */
+  networkFee: bigint
+
+  /** 우선순위 수수료 (선택적). Solana: priority fee, EVM: maxPriorityFeePerGas * gas */
+  priorityFee?: bigint
+
+  /** 계정 생성 비용 (선택적). Solana: ATA rent-exempt 비용 */
+  accountCreationFee?: bigint
+
+  /** 총 수수료. networkFee + (priorityFee ?? 0n) + (accountCreationFee ?? 0n) */
+  totalFee: bigint
+}
+```
+
+### 2.10 ContractCallRequest 타입 (v0.6 추가)
+
+```typescript
+/**
+ * 컨트랙트/프로그램 호출 요청.
+ * buildContractCall()의 입력 타입이다.
+ *
+ * EVM: calldata + value 기반 호출
+ * Solana: programId + instructionData + accounts 기반 호출
+ *
+ * @see CHAIN-EXT-03 (58-contract-call-spec.md) 섹션 2
+ */
+interface ContractCallRequest {
+  /** 발신 주소 */
+  from: string
+
+  /** 컨트랙트/프로그램 주소 */
+  to: string
+
+  /** 호출 시 전송할 네이티브 토큰 금액 (0이면 view call) */
+  value: bigint
+
+  // ── EVM 전용 ──
+  /** ABI 인코딩된 호출 데이터 (EVM). 예: '0x70a08231...' */
+  calldata?: string
+
+  // ── Solana 전용 ──
+  /** Solana 프로그램 ID */
+  programId?: string
+
+  /** Solana instruction data (직렬화된 바이트) */
+  instructionData?: Uint8Array
+
+  /** Solana instruction accounts */
+  accounts?: Array<{
+    pubkey: string
+    isSigner: boolean
+    isWritable: boolean
+  }>
+}
+```
+
+### 2.11 ApproveRequest 타입 (v0.6 추가)
+
+```typescript
+/**
+ * 토큰 approve/delegate 요청.
+ * buildApprove()의 입력 타입이다.
+ *
+ * APPROVE는 ContractCallRequest와 독립 타입이다 (권한 위임 vs 실행).
+ * EVM: race condition 방지를 위해 approve(0)->approve(new) 자동 처리.
+ * Solana: delegateChecked instruction, 단일 delegate 경고.
+ *
+ * @see CHAIN-EXT-04 (59-approve-management-spec.md) 섹션 2
+ */
+interface ApproveRequest {
+  /** 토큰 소유자 주소 (발신자) */
+  from: string
+
+  /** 토큰 민트/컨트랙트 주소 */
+  token: string
+
+  /** 승인 대상 주소 (spender/delegate) */
+  spender: string
+
+  /** 승인 금액 (최소 단위, bigint). 0이면 revoke */
+  amount: bigint
+
+  /** 토큰 소수점 자릿수 (Solana delegateChecked에 필요) */
+  decimals: number
+}
+```
+
+### 2.12 BatchRequest 타입 (v0.6 추가)
+
+```typescript
+/**
+ * 다중 instruction 배치 요청.
+ * buildBatch()의 입력 타입이다.
+ * Solana 전용. EVM에서는 BATCH_NOT_SUPPORTED 에러.
+ *
+ * @see CHAIN-EXT-05 (60-batch-transaction-spec.md) 섹션 2
+ */
+interface BatchRequest {
+  /** 대상 체인 (현재 'solana'만 지원) */
+  chain: 'solana'
+
+  /** 발신 주소 (모든 instruction의 fee payer) */
+  from: string
+
+  /** instruction 목록 (최소 2, 최대 20) */
+  instructions: Array<{
+    type: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE'
+    // type별 필드는 해당 Request 타입과 동일
+    to: string
+    amount?: bigint
+    token?: string
+    // ... type별 추가 필드
+  }>
+}
+```
+
+### 2.13 타입 요약
 
 | 타입 | 용도 | 핵심 필드 | 비고 |
 |------|------|----------|------|
@@ -338,6 +505,11 @@ interface BalanceInfo {
 | `SimulationResult` | 시뮬레이션 결과 | `success`, `logs`, `unitsConsumed` | 정책 엔진 입력 |
 | `SubmitResult` | 제출 결과 | `txHash`, `status`, `fee` | 상태 추적 |
 | `BalanceInfo` | 잔액 정보 | `balance`, `decimals`, `symbol` | 네이티브 토큰 전용 |
+| `AssetInfo` | 자산 정보 | `tokenAddress`, `balance`, `type` | (v0.6 추가) 토큰 포함 |
+| `FeeEstimate` | 수수료 상세 | `networkFee`, `totalFee` | (v0.6 추가) bigint 대체 |
+| `ContractCallRequest` | 컨트랙트 호출 | `to`, `calldata`/`programId` | (v0.6 추가) |
+| `ApproveRequest` | 토큰 승인 | `token`, `spender`, `amount` | (v0.6 추가) |
+| `BatchRequest` | 배치 요청 | `instructions[]`, `chain: 'solana'` | (v0.6 추가) |
 
 ---
 
@@ -586,16 +758,106 @@ interface IChainAdapter {
    * 전송 요청의 예상 수수료를 추정한다.
    * buildTransaction() 없이 수수료만 미리 확인할 때 사용한다.
    *
-   * Solana: base fee(5000 lamports) + priority fee 조회
+   * Solana: base fee(5000 lamports) + priority fee 조회 + ATA 생성 비용 (토큰 전송 시)
    * EVM: estimateGas() * maxFeePerGas (EIP-1559)
    *
+   * (v0.6 변경) 반환 타입: bigint -> FeeEstimate.
+   * 하위 호환: 기존 호출자는 .totalFee으로 마이그레이션 필요.
+   *
    * @param request - 수수료를 추정할 전송 요청
-   * @returns 예상 수수료 (최소 단위, bigint)
+   * @returns 수수료 상세 (FeeEstimate)
    *
    * @throws {ChainError} code=INVALID_ADDRESS -- 주소 오류
    * @throws {ChainError} code=RPC_ERROR -- 수수료 조회 실패
+   *
+   * @see CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md) 섹션 7
    */
-  estimateFee(request: TransferRequest): Promise<bigint>
+  estimateFee(request: TransferRequest): Promise<FeeEstimate>
+
+  // ═══════════════════════════════════════════════════════════
+  // 자산 조회 (v0.6 추가)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * [14] 주소가 보유한 모든 자산(네이티브 + 토큰)을 조회한다. (v0.6 추가)
+   *
+   * v0.1에서 제거되었던 getAssets()를 v0.6에서 복원.
+   * 네이티브 토큰을 첫 번째 항목으로, 이후 잔액 내림차순으로 정렬하여 반환.
+   *
+   * Solana: getBalance() + getTokenAccountsByOwner() + Token-2022 포함
+   * EVM: getBalance() + ALLOWED_TOKENS 기반 multicall 보수적 조회
+   *
+   * 파싱 실패한 토큰 계정은 건너뛰고, 성공한 항목만 반환.
+   *
+   * @param address - 조회 대상 주소 (체인별 포맷)
+   * @returns 보유 자산 목록 (AssetInfo[])
+   *
+   * @throws {ChainError} code=INVALID_ADDRESS -- 주소 형식 오류
+   * @throws {ChainError} code=RPC_ERROR -- RPC 호출 실패
+   *
+   * @see CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md) 섹션 3
+   */
+  getAssets(address: string): Promise<AssetInfo[]>
+
+  // ═══════════════════════════════════════════════════════════
+  // 확장 빌드 메서드 (v0.6 추가)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * [15] 컨트랙트/프로그램 호출 트랜잭션을 빌드한다. (v0.6 추가)
+   *
+   * EVM: calldata 기반 컨트랙트 호출 트랜잭션 구성
+   * Solana: programId + instructionData + accounts 기반 instruction 구성
+   *
+   * CONTRACT_WHITELIST 정책은 이 메서드 호출 전에 파이프라인 Stage 3에서 검증된다.
+   *
+   * @param request - 컨트랙트 호출 요청 (ContractCallRequest)
+   * @returns 미서명 트랜잭션 (UnsignedTransaction)
+   *
+   * @throws {ChainError} code=INVALID_ADDRESS -- 주소 오류
+   * @throws {ChainError} code=RPC_ERROR -- RPC 호출 실패
+   * @throws {ChainError} code=TRANSACTION_FAILED -- 트랜잭션 구성 실패
+   *
+   * @see CHAIN-EXT-03 (58-contract-call-spec.md) 섹션 3
+   */
+  buildContractCall(request: ContractCallRequest): Promise<UnsignedTransaction>
+
+  /**
+   * [16] 토큰 approve/delegate 트랜잭션을 빌드한다. (v0.6 추가)
+   *
+   * EVM: approve(spender, amount) + race condition 방지 (approve(0)->approve(new))
+   * Solana: delegateChecked instruction (단일 delegate 경고)
+   *
+   * APPROVED_SPENDERS 정책은 이 메서드 호출 전에 파이프라인 Stage 3에서 검증된다.
+   *
+   * @param request - 토큰 승인 요청 (ApproveRequest)
+   * @returns 미서명 트랜잭션 (UnsignedTransaction)
+   *
+   * @throws {ChainError} code=INVALID_ADDRESS -- 주소 오류
+   * @throws {ChainError} code=RPC_ERROR -- RPC 호출 실패
+   *
+   * @see CHAIN-EXT-04 (59-approve-management-spec.md) 섹션 3
+   */
+  buildApprove(request: ApproveRequest): Promise<UnsignedTransaction>
+
+  /**
+   * [17] 다중 instruction 배치 트랜잭션을 빌드한다. (v0.6 추가)
+   *
+   * Solana 전용. 2~20개 instruction을 단일 트랜잭션으로 원자적 실행.
+   * EVM에서 호출 시 BATCH_NOT_SUPPORTED 에러.
+   *
+   * 배치 정책은 2단계: Phase A (개별 instruction) + Phase B (합산 금액 티어).
+   *
+   * @param request - 배치 요청 (BatchRequest)
+   * @returns 미서명 트랜잭션 (UnsignedTransaction)
+   *
+   * @throws {ChainError} code=BATCH_NOT_SUPPORTED -- EVM 체인에서 호출
+   * @throws {ChainError} code=BATCH_SIZE_EXCEEDED -- instruction 수 초과 (> 20)
+   * @throws {ChainError} code=INVALID_ADDRESS -- 주소 오류
+   *
+   * @see CHAIN-EXT-05 (60-batch-transaction-spec.md) 섹션 3
+   */
+  buildBatch(request: BatchRequest): Promise<UnsignedTransaction>
 }
 ```
 
@@ -615,9 +877,15 @@ interface IChainAdapter {
 | 10 | `submitTransaction` | 파이프라인 | `Uint8Array` | `SubmitResult` | O |
 | 11 | `getTransactionStatus` | 조회 | `txHash: string` | `SubmitResult` | O |
 | 12 | `waitForConfirmation` | 조회 | `txHash, timeout?` | `SubmitResult` | O |
-| 13 | `estimateFee` | 추정 | `TransferRequest` | `bigint` | O |
+| 13 | `estimateFee` | 추정 | `TransferRequest` | `FeeEstimate` | O | (v0.6 변경: bigint -> FeeEstimate) |
+| 14 | `getAssets` | 조회 | `address: string` | `AssetInfo[]` | O | (v0.6 추가) |
+| 15 | `buildContractCall` | 파이프라인 | `ContractCallRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
+| 16 | `buildApprove` | 파이프라인 | `ApproveRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
+| 17 | `buildBatch` | 파이프라인 | `BatchRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
 
-**Note:** v0.1 대비 추가된 메서드: `connect`, `disconnect`, `isConnected`, `getHealth`, `isValidAddress`, `signTransaction`, `waitForConfirmation`, `estimateFee` (8개). 제거된 메서드: `createSmartWallet`, `addMember`, `removeMember`, `updateWalletConfig`, `getAssets`, `getBlockHeight` (6개).
+**Note:** v0.2 대비 v0.6 변경 사항: `getAssets` 복원(14번째), `buildContractCall`(15번째), `buildApprove`(16번째), `buildBatch`(17번째) 추가. `estimateFee` 반환 타입 bigint -> FeeEstimate 변경.
+
+> **DeFi 메서드 미추가 원칙 (v0.6 핵심 결정):** IChainAdapter는 저수준 실행 엔진으로 유지한다. swap(), stake(), lend() 같은 DeFi 프로토콜 지식은 IChainAdapter에 추가하지 않으며, IActionProvider 계층에 위임한다. Action Provider의 resolve()는 ContractCallRequest를 반환하고, 이를 IChainAdapter.buildContractCall()이 실행한다. 이 패턴(resolve-then-execute)은 모든 DeFi 작업이 기존 6단계 파이프라인의 정책 평가를 거치도록 보장한다. (CHAIN-EXT-07 참조)
 
 ---
 
@@ -853,6 +1121,18 @@ class ChainError extends Error {
 | `RPC_ERROR` | 공통 | 502 | O | 재시도 (exponential backoff) |
 | `NETWORK_ERROR` | 공통 | 503 | O | 네트워크 복구 대기 |
 | `SIMULATION_FAILED` | 공통 | 502 | O | 재시도 |
+| `TOKEN_NOT_FOUND` | 공통 | 404 | X | 토큰 주소 확인 | (v0.6 추가) |
+| `TOKEN_NOT_ALLOWED` | 공통 | 403 | X | ALLOWED_TOKENS 정책 추가 | (v0.6 추가) |
+| `INSUFFICIENT_TOKEN_BALANCE` | 공통 | 400 | 조건부 | 토큰 잔액 충전 | (v0.6 추가) |
+| `CONTRACT_NOT_WHITELISTED` | 공통 | 403 | X | CONTRACT_WHITELIST에 주소 추가 | (v0.6 추가) |
+| `METHOD_NOT_WHITELISTED` | EVM | 403 | X | METHOD_WHITELIST에 selector 추가 | (v0.6 추가) |
+| `CONTRACT_CALL_FAILED` | 공통 | 500 | 조건부 | 호출 파라미터 확인 | (v0.6 추가) |
+| `APPROVE_LIMIT_EXCEEDED` | 공통 | 403 | X | APPROVE_AMOUNT_LIMIT 설정 확인 | (v0.6 추가) |
+| `SPENDER_NOT_APPROVED` | 공통 | 403 | X | APPROVED_SPENDERS에 주소 추가 | (v0.6 추가) |
+| `UNLIMITED_APPROVE_BLOCKED` | 공통 | 403 | X | 금액 제한 후 재시도 | (v0.6 추가) |
+| `BATCH_NOT_SUPPORTED` | EVM | 400 | X | Solana에서만 사용 | (v0.6 추가) |
+| `BATCH_SIZE_EXCEEDED` | Solana | 400 | X | instruction 수 줄이기 | (v0.6 추가) |
+| `BATCH_INSTRUCTION_INVALID` | Solana | 400 | X | instruction 데이터 확인 | (v0.6 추가) |
 | `SOLANA_BLOCKHASH_EXPIRED` | Solana | 408 | O | buildTransaction() 재실행 |
 | `SOLANA_PROGRAM_ERROR` | Solana | 400 | X | 프로그램 에러 분석 |
 | `EVM_NONCE_TOO_LOW` | EVM | 409 | O | nonce 재조회 후 재빌드 |
@@ -1099,7 +1379,35 @@ mainnet = "https://arb1.arbitrum.io/rpc"
 - EVM 체인의 기본값이 `""` (빈 문자열)이면 에이전트 생성 시 에러:
   "RPC URL이 설정되지 않았습니다. config.toml [rpc.ethereum].mainnet을 설정하세요."
 
-### 5.7 향후 플러그인 어댑터 인터페이스
+### 5.7 Action Provider와 어댑터 협력 패턴 (v0.6 추가)
+
+Action Provider(IActionProvider)는 DeFi 프로토콜 지식을 캡슐화하고, AdapterRegistry를 통해 IChainAdapter에 접근한다. resolve-then-execute 패턴에서 어댑터는 실행만 담당한다.
+
+```typescript
+/**
+ * Action Provider가 어댑터를 사용하는 패턴.
+ * resolve()는 ContractCallRequest만 반환하고, 실행은 파이프라인이 담당.
+ *
+ * @see CHAIN-EXT-07 (62-action-provider-architecture.md) 섹션 3
+ */
+// 1. Action Provider의 resolve() -- 어댑터 직접 사용 안 함
+const contractCall = await provider.resolve(actionParams)
+// contractCall: ContractCallRequest (정책 평가 전)
+
+// 2. 파이프라인 Stage 3: 정책 평가
+const policyResult = await policyEngine.evaluate(contractCall)
+
+// 3. 파이프라인 Stage 5: 어댑터로 빌드/실행
+const adapter = registry.get(agent.chain, agent.network)
+const unsignedTx = await adapter.buildContractCall(contractCall)
+const simulation = await adapter.simulateTransaction(unsignedTx)
+const signedTx = await adapter.signTransaction(unsignedTx, privateKey)
+const result = await adapter.submitTransaction(signedTx)
+```
+
+> **핵심:** Action Provider는 어댑터에 직접 접근하지 않는다. resolve() -> 파이프라인 -> 어댑터 경로만 허용된다.
+
+### 5.8 향후 플러그인 어댑터 인터페이스
 
 v0.2에서는 구현하지 않되, 인터페이스만 정의하여 향후 확장 경로를 확보한다:
 
@@ -2639,5 +2947,6 @@ function parseAmount(amount: string, decimals: number): bigint
 
 *문서 ID: CORE-04*
 *작성일: 2026-02-05*
+*v0.6 업데이트: 2026-02-08*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
