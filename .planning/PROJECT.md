@@ -8,9 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## 현재 마일스톤: v0.7 구현 장애 요소 해소
+
+**목표:** v0.1~v0.6 설계 문서에서 도출된 25건(CRITICAL 7 + HIGH 10 + MEDIUM 8)의 구현 장애 요소를 해소하여, 코드 작성 전에 "설계대로 구현하면 동작하지 않는 부분"을 제거한다.
+
+**대상 기능:**
+- 체인 어댑터 & 트랜잭션 안정성 (blockhash 경쟁 조건, EVM nonce, keystore 수학, fee TTL)
+- 데몬 프로세스 & 보안 기반 (JWT rotation, flock 잠금, 2단계 Rate Limiter, killSwitch, 패스워드 통일)
+- 의존성 & 빌드 환경 (SIWE viem 전환, sidecar 크로스 컴파일)
+- API & 통합 프로토콜 완성 (Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서)
+- 스키마 & 설정 확정 (환경변수 매핑, timestamp 정밀도, CHECK 제약, Docker UID)
+
 ## 현재 상태
 
-v0.1~v0.6 완료 (2026-02-08). 68개 플랜, 185개 요구사항, 30개 설계 문서(24-64) + 5개 대응표 + 11개 테스트 전략 문서. 전체 설계 단계 완료 — 구현 마일스톤 준비 완료.
+v0.1~v0.6 완료 (2026-02-08). 68개 플랜, 185개 요구사항, 30개 설계 문서(24-64) + 5개 대응표 + 11개 테스트 전략 문서. 전체 설계 단계 완료 — v0.7 구현 장애 요소 해소 진행 중.
 
 ## 요구사항
 
@@ -62,7 +73,10 @@ v0.1~v0.6 완료 (2026-02-08). 68개 플랜, 185개 요구사항, 30개 설계 �
 
 ### 활성
 
-다음 마일스톤 요구사항 정의 대기
+v0.7 구현 장애 요소 해소 (25건):
+- CRITICAL 7건: blockhash 경쟁 조건, EVM nonce 인터페이스, SIWE 의존성, JWT rotation, flock 잠금, Tauri 종료 타임아웃, keystore nonce 수학
+- HIGH 10건: Rate Limiter 2단계, killSwitchGuard 허용 목록, Tauri CORS, Owner disconnect cascade, 패스워드 통일, status 응답값, Setup Wizard 순서, 환경변수 매핑, timestamp 정밀도, 단일 인스턴스
+- MEDIUM 8건: Python snake_case, Docker UID, amount TEXT 근거, fee TTL, 채널 삭제, 크로스 컴파일, Zod export, CHECK 제약조건
 
 ### 범위 외
 
@@ -156,4 +170,4 @@ v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11�
 | USD 기준 정책 평가 | 토큰 종류 무관하게 달러 금액으로 티어 분류 | ✓ Good — v0.6 설계 완성 |
 
 ---
-*최종 업데이트: 2026-02-08 after v0.6 milestone complete*
+*최종 업데이트: 2026-02-08 after v0.7 milestone start*
