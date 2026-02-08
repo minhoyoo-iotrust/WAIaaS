@@ -1643,15 +1643,5 @@ Tauri WebView의 Content Security Policy에 WalletConnect Relay 도메인을 허
 
 *문서 ID: OWNR-CONN v0.7*
 *작성일: 2026-02-05, v0.5 업데이트: 2026-02-07, v0.7 보완: 2026-02-08*
-<<<<<<< HEAD
-<<<<<<< HEAD
-*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation*
-*상태: v0.7 보완*
-=======
 *Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation + 29-api-integration-protocol*
 *상태: v0.7 보완 (API-03 cascade 추가)*
->>>>>>> gsd/phase-29-api-integration-protocol
-=======
-*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation + 29-api-integration-protocol*
-*상태: v0.7 보완 (API-03 cascade 추가)*
->>>>>>> gsd/phase-30-schema-config-finalization

@@ -6,15 +6,10 @@
 **Phase 20 업데이트:** 2026-02-07
 **v0.6 업데이트:** 2026-02-08
 **v0.7 업데이트:** 2026-02-08
-<<<<<<< HEAD
-**상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소)
-=======
 **v0.7 스키마 설정 확정:** 2026-02-08
 **v0.7 스키마 CHECK/amount 보강:** 2026-02-08
 **상태:** 완료
 **참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT)
->>>>>>> gsd/phase-30-schema-config-finalization
 
 ---
 
