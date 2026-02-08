@@ -2082,6 +2082,101 @@ $ waiaas agent remove-owner 01945a2e
 #   -> 종료
 ```
 
+### 10.8 Owner 주소 형식 검증 [v0.8]
+
+Owner 주소 등록/변경 시 체인별 주소 형식 검증을 수행한다. 에이전트의 `chain` 필드에 따라 분기한다. Zod SSoT 원칙에 따라 런타임 검증과 타입 추론을 동시에 제공한다.
+
+```typescript
+// packages/core/src/schemas/owner.schema.ts (설계 스펙)
+import { z } from 'zod'
+
+/**
+ * Solana 주소: Base58 인코딩 32바이트
+ * - 보통 32-44자
+ * - 0, O, I, l 문자 제외 (Base58 특성)
+ */
+const solanaAddressSchema = z.string()
+  .min(32).max(44)
+  .regex(/^[1-9A-HJ-NP-Za-km-z]+$/, 'Invalid Solana address (Base58)')
+
+/**
+ * EVM 주소: 0x + 40 hex 문자
+ * - EIP-55 체크섬은 viem의 getAddress()로 별도 정규화/검증
+ */
+const evmAddressSchema = z.string()
+  .regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid EVM address')
+
+/**
+ * OwnerLifecycleService.setOwner() 내부에서 호출
+ * 에이전트의 chain에 맞는 주소 형식인지 검증
+ *
+ * @throws ZodError - 주소 형식이 유효하지 않을 때
+ */
+export function validateOwnerAddress(chain: 'solana' | 'ethereum', address: string): void {
+  if (chain === 'solana') {
+    solanaAddressSchema.parse(address)
+  } else {
+    evmAddressSchema.parse(address)
+  }
+}
+
+// 타입 추론용 export
+export type SolanaAddress = z.infer<typeof solanaAddressSchema>
+export type EvmAddress = z.infer<typeof evmAddressSchema>
+```
+
+**체인별 검증 규칙:**
+
+| 체인 | 형식 | 길이 | 인코딩 | 추가 검증 |
+|------|------|:----:|--------|----------|
+| Solana | Base58 | 32-44자 | `[1-9A-HJ-NP-Za-km-z]+` | - |
+| EVM | `0x` + 40 hex | 42자 | `0x[0-9a-fA-F]{40}` | EIP-55 체크섬 (viem `getAddress()`) |
+
+> **참고:** EVM 주소의 EIP-55 체크섬 검증은 Zod 스키마 단계에서는 수행하지 않는다. 이는 `viem`의 `getAddress()` 함수를 통해 주소를 정규화할 때 자동으로 처리된다. Zod 스키마는 형식 레벨 검증만 담당한다.
+
+### 10.9 Anti-Patterns 및 설계 결정 근거 [v0.8]
+
+구현 시 반드시 회피해야 하는 안티 패턴을 정리한다. 각 패턴에 대해 "왜 위험한지"와 "올바른 접근"을 명시한다.
+
+| # | Anti-Pattern | 위험 | 올바른 접근 |
+|---|-------------|------|-----------|
+| 1 | LOCKED 주소 변경 시 `owner_verified` 리셋 | 새 Owner가 GRACE 상태로 전환 -> masterAuth만으로 재변경 가능 (보안 허점) | `owner_verified = 1` 유지. 기존 Owner 서명 승인 = 새 주소 신뢰 |
+| 2 | `OwnerState` DB 컬럼 저장 | `owner_address`/`owner_verified`와의 동기화 오류 발생 가능 | `resolveOwnerState()` 순수 함수로 런타임 산출 (Phase 31 결정) |
+| 3 | 미들웨어에서 인증 분기 | PATCH 요청 바디를 미들웨어에서 파싱해야 함 -- 미들웨어 책임 위반 | `OwnerLifecycleService` 비즈니스 로직에서 상태 기반 검증 |
+| 4 | Kill Switch ACTIVATED에서 Owner 변경 | 복구 요건이 동적으로 변경되는 보안 위험 (H-03) | `killSwitchGuard`가 허용 경로 4개만 통과 -> `set-owner`/`remove-owner` 자동 차단 |
+| 5 | ownerAuth 검증 후 비동기 `markOwnerVerified()` | 검증과 전이 사이 레이스 윈도우 발생 (C-01) | 동일 요청 처리 내 동기적 전이 (Step 8.5, BEGIN IMMEDIATE) |
+
+**Anti-Pattern #1 상세: LOCKED 주소 변경 시 owner_verified 리셋**
+
+```
+시나리오: LOCKED 상태, owner_address = Alice
+1. Alice가 ownerAuth + masterAuth로 set-owner Bob 요청
+2. [위험] owner_verified = 0으로 리셋 -> OwnerState = GRACE
+3. 공격자가 masterAuth만으로 set-owner Mallory 요청 (GRACE이므로 masterAuth만 필요)
+4. Mallory가 ownerAuth 수행 -> LOCKED
+5. Alice와 Bob 모두 제어권 상실
+
+올바른 접근: owner_verified = 1 유지 -> OwnerState = LOCKED 유지
+-> Mallory가 set-owner하려면 Bob의 ownerAuth + masterAuth 필요
+```
+
+**Anti-Pattern #4 상세: Kill Switch와 Owner 생명주기 연동**
+
+Kill Switch ACTIVATED 상태에서 Owner 변경/제거를 허용하면:
+- Owner를 변경하면 복구(recover)에 필요한 ownerAuth 주소가 변경됨
+- Owner를 제거하면 복구 자체가 불가능해짐 (ownerAuth 필수인 recover가 실행 불가)
+- `killSwitchGuard` 미들웨어가 허용하는 4개 경로 외의 모든 요청은 503 `SERVICE_UNAVAILABLE`로 차단되므로, `set-owner`/`remove-owner`는 자동으로 차단된다. 별도 로직 불필요.
+
+```
+killSwitchGuard 허용 경로 (4개):
+1. POST /v1/owner/recover (ownerAuth + masterAuth explicit)
+2. GET  /v1/status (health check)
+3. GET  /v1/agents/:id (상태 조회)
+4. GET  /v1/owner/pending-approvals (대기 거래 조회)
+
+-> PATCH /v1/agents/:id (owner 변경) = 503 차단
+```
+
 ---
 
 *문서 ID: OWNR-CONN v0.8*
