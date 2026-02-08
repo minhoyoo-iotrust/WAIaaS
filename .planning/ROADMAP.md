@@ -115,11 +115,11 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-08 |
-| 32. Owner 생명주기 설계 | v0.8 | 2/2 | Complete | 2026-02-09 |
+| 32. Owner 생명주기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 0/2 | Not started | - |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
 | 35. DX + 설계 문서 통합 | v0.8 | 0/3 | Not started | - |
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-09 after 32-02 execution complete*
+*Last updated: 2026-02-09 after Phase 32 execution complete*
