@@ -1,5 +1,33 @@
 # Project Milestones: WAIaaS
 
+## v0.6 블록체인 기능 확장 설계 (Shipped: 2026-02-08)
+
+**Delivered:** IChainAdapter와 트랜잭션 파이프라인을 확장하여 SPL/ERC-20 토큰 전송, 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션, 가격 오라클, Action Provider 아키텍처를 설계하고, 기존 설계 문서 8개에 v0.6 변경을 통합
+
+**Phases completed:** 22-25 (11 plans total)
+
+**Key accomplishments:**
+
+- 토큰 확장 설계 — TransferRequest.token 확장(SPL/ERC-20), getAssets() 복원, ALLOWED_TOKENS 정책, ATA/gas 수수료 추정
+- 트랜잭션 타입 확장 — ContractCallRequest(기본 거부 opt-in), ApproveRequest(독립 정책 카테고리, 무제한 차단), BatchRequest(Solana 원자적, 2단계 합산 정책)
+- 상위 추상화 레이어 — IPriceOracle(CoinGecko/Pyth/Chainlink, 5분TTL, OracleChain fallback), USD 기준 정책 평가 전환
+- Action Provider 아키텍처 — IActionProvider resolve-then-execute 패턴, MCP Tool 자동 변환(16개 상한), Jupiter Swap 상세 설계
+- 테스트 전략 통합 — Mock 경계 5→10개, Contract Test 5→7개, Hardhat EVM 환경, 166개 시나리오(124기능+42보안)
+- 기존 문서 8개 v0.6 통합 — Enum 9→12, IChainAdapter 13→17 메서드, REST API 31→36 엔드포인트, 에러코드 40→60
+
+**Stats:**
+
+- 58 files created/modified
+- +26,976 / -247 lines (Markdown design docs)
+- 4 phases, 11 plans, 30 requirements, 17 deliverables (docs 56-64 신규 + 기존 8개 수정)
+- 2 days (2026-02-07 → 2026-02-08)
+
+**Git range:** `2571e9c` (Phase 22 start) → `54cb3d3` (Phase 25 complete)
+
+**What's next:** 구현 마일스톤 — 설계 문서(24-64)를 기반으로 실제 코드 구현 시작
+
+---
+
 ## v0.5 인증 모델 재설계 + DX 개선 (Shipped: 2026-02-07)
 
 **Delivered:** masterAuth/ownerAuth/sessionAuth 3-tier 인증 모델을 재설계하고, Owner 주소를 에이전트별 속성으로 이동하며, 세션 낙관적 갱신 프로토콜과 CLI DX 개선을 설계하여, 기존 설계 문서 11개에 v0.5 변경을 통합

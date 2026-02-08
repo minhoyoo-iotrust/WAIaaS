@@ -3,8 +3,9 @@
 **문서 ID:** SDK-MCP
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
+**v0.6 블록체인 기능 확장:** 2026-02-08
 **상태:** 완료
-**참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5)
+**참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
 
 ---
@@ -201,6 +202,15 @@ import type {
   NonceResponse,
   TransferRequest,
   TransactionListQuery,
+  // v0.6 추가 타입
+  AssetsResponse,
+  TokenTransferRequest,
+  ContractCallRequest,
+  ApproveRequest,
+  BatchRequest,
+  ActionListResponse,
+  ActionDetailResponse,
+  ActionResolveResponse,
 } from '@waiaas/core'
 import type { WAIaaSClientOptions, RetryPolicy } from './types.js'
 import { WAIaaSError } from './error.js'
@@ -296,6 +306,124 @@ export class WAIaaSClient {
     options?: { signal?: AbortSignal },
   ): Promise<PendingTransactionListResponse> {
     return this.get<PendingTransactionListResponse>('/v1/transactions/pending', options)
+  }
+
+  // ── Wallet API (v0.6 추가) ──
+
+  /**
+   * (v0.6 추가) 에이전트 보유 자산 목록 조회.
+   * 네이티브 토큰 + SPL/ERC-20 전체 목록.
+   * 정렬: 네이티브 토큰 첫 번째, 잔액 내림차순.
+   */
+  async getAssets(options?: { signal?: AbortSignal }): Promise<AssetsResponse> {
+    return this.get<AssetsResponse>('/v1/wallet/assets', options)
+  }
+
+  // ── Transaction API (v0.6 확장: 타입별 단축 메서드) ──
+
+  /**
+   * (v0.6 추가) SPL/ERC-20 토큰 전송 단축 메서드.
+   * type=TOKEN_TRANSFER로 POST /v1/transactions/send 호출.
+   */
+  async sendToken(
+    request: TokenTransferRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<TransactionResponse> {
+    return this.post<TransactionResponse>('/v1/transactions/send', {
+      ...request,
+      type: 'TOKEN_TRANSFER',
+    }, options)
+  }
+
+  /**
+   * (v0.6 추가) 컨트랙트 호출 단축 메서드.
+   * type=CONTRACT_CALL로 POST /v1/transactions/send 호출.
+   * CONTRACT_WHITELIST + METHOD_WHITELIST 기본 거부 정책 적용.
+   */
+  async contractCall(
+    request: ContractCallRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<TransactionResponse> {
+    return this.post<TransactionResponse>('/v1/transactions/send', {
+      ...request,
+      type: 'CONTRACT_CALL',
+    }, options)
+  }
+
+  /**
+   * (v0.6 추가) 토큰 승인 단축 메서드.
+   * type=APPROVE로 POST /v1/transactions/send 호출.
+   * APPROVED_SPENDERS 기본 거부 정책 적용.
+   */
+  async approve(
+    request: ApproveRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<TransactionResponse> {
+    return this.post<TransactionResponse>('/v1/transactions/send', {
+      ...request,
+      type: 'APPROVE',
+    }, options)
+  }
+
+  /**
+   * (v0.6 추가) Solana 배치 트랜잭션 단축 메서드.
+   * type=BATCH로 POST /v1/transactions/send 호출.
+   * Solana only (EVM BATCH_NOT_SUPPORTED). min 2 / max 20 instructions.
+   */
+  async batch(
+    request: BatchRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<TransactionResponse> {
+    return this.post<TransactionResponse>('/v1/transactions/send', {
+      ...request,
+      type: 'BATCH',
+    }, options)
+  }
+
+  // ── Action API (v0.6 추가) ──
+
+  /** (v0.6 추가) Action Provider 및 Action 목록 조회 */
+  async listActions(options?: { signal?: AbortSignal }): Promise<ActionListResponse> {
+    return this.get<ActionListResponse>('/v1/actions', options)
+  }
+
+  /** (v0.6 추가) 특정 Action 상세 조회 (inputSchema 포함) */
+  async getAction(
+    providerName: string,
+    actionName: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<ActionDetailResponse> {
+    return this.get<ActionDetailResponse>(
+      `/v1/actions/${providerName}/${actionName}`, options
+    )
+  }
+
+  /** (v0.6 추가) Action resolve만 실행 (ContractCallRequest 반환, 파이프라인 미실행) */
+  async resolveAction(
+    providerName: string,
+    actionName: string,
+    params: Record<string, unknown>,
+    options?: { signal?: AbortSignal },
+  ): Promise<ActionResolveResponse> {
+    return this.post<ActionResolveResponse>(
+      `/v1/actions/${providerName}/${actionName}/resolve`,
+      { params },
+      options,
+    )
+  }
+
+  /** (v0.6 추가) Action resolve + 파이프라인 실행 (TransactionResponse 반환) */
+  async executeAction(
+    providerName: string,
+    actionName: string,
+    params: Record<string, unknown>,
+    options?: { signal?: AbortSignal },
+  ): Promise<TransactionResponse> {
+    return this.post<TransactionResponse>(
+      `/v1/actions/${providerName}/${actionName}/execute`,
+      { params },
+      options,
+    )
   }
 
   // ── Public API ──
@@ -1337,6 +1465,81 @@ class WAIaaSClient:
         data = await self._get("/v1/transactions/pending")
         return PendingTransactionListResponse.model_validate(data)
 
+    # ── Wallet API (v0.6 추가) ──
+
+    async def get_assets(self) -> dict[str, Any]:
+        """(v0.6) 보유 자산 목록 (네이티브 + SPL/ERC-20)"""
+        return await self._get("/v1/wallet/assets")
+
+    # ── Transaction API (v0.6 확장: 타입별 단축 메서드) ──
+
+    async def send_token_transfer(
+        self, *, to: str, amount: str, token_mint: str, decimals: Optional[int] = None,
+        memo: Optional[str] = None, priority: str = "medium",
+    ) -> TransactionResponse:
+        """(v0.6) SPL/ERC-20 토큰 전송 단축 메서드"""
+        body: dict[str, Any] = {
+            "type": "TOKEN_TRANSFER", "to": to, "amount": amount,
+            "token": {"mint": token_mint},
+            "priority": priority,
+        }
+        if decimals is not None:
+            body["token"]["decimals"] = decimals
+        if memo:
+            body["memo"] = memo
+        data = await self._post("/v1/transactions/send", json=body)
+        return TransactionResponse.model_validate(data)
+
+    async def contract_call(
+        self, *, contract_address: str, **kwargs: Any,
+    ) -> TransactionResponse:
+        """(v0.6) 컨트랙트 호출 단축 메서드"""
+        body: dict[str, Any] = {"type": "CONTRACT_CALL", "contractAddress": contract_address, **kwargs}
+        data = await self._post("/v1/transactions/send", json=body)
+        return TransactionResponse.model_validate(data)
+
+    async def approve_token(
+        self, *, token_mint: str, spender: str, amount: str, **kwargs: Any,
+    ) -> TransactionResponse:
+        """(v0.6) 토큰 승인 단축 메서드"""
+        body: dict[str, Any] = {
+            "type": "APPROVE", "token": {"mint": token_mint},
+            "spender": spender, "amount": amount, **kwargs,
+        }
+        data = await self._post("/v1/transactions/send", json=body)
+        return TransactionResponse.model_validate(data)
+
+    async def batch_transaction(
+        self, *, instructions: list[dict[str, Any]], **kwargs: Any,
+    ) -> TransactionResponse:
+        """(v0.6) Solana 배치 트랜잭션 단축 메서드"""
+        body: dict[str, Any] = {"type": "BATCH", "instructions": instructions, **kwargs}
+        data = await self._post("/v1/transactions/send", json=body)
+        return TransactionResponse.model_validate(data)
+
+    # ── Action API (v0.6 추가) ──
+
+    async def list_actions(self) -> dict[str, Any]:
+        """(v0.6) Action Provider 및 Action 목록"""
+        return await self._get("/v1/actions")
+
+    async def get_action(self, provider: str, action: str) -> dict[str, Any]:
+        """(v0.6) Action 상세 (inputSchema 포함)"""
+        return await self._get(f"/v1/actions/{provider}/{action}")
+
+    async def resolve_action(
+        self, provider: str, action: str, params: dict[str, Any],
+    ) -> dict[str, Any]:
+        """(v0.6) Action resolve만 실행"""
+        return await self._post(f"/v1/actions/{provider}/{action}/resolve", json={"params": params})
+
+    async def execute_action(
+        self, provider: str, action: str, params: dict[str, Any],
+    ) -> TransactionResponse:
+        """(v0.6) Action resolve + 파이프라인 실행"""
+        data = await self._post(f"/v1/actions/{provider}/{action}/execute", json={"params": params})
+        return TransactionResponse.model_validate(data)
+
     # ── Public API ──
 
     async def get_nonce(self) -> NonceResponse:
@@ -2103,6 +2306,118 @@ export function registerGetNonce(server: McpServer): void {
 }
 ```
 
+### 5.3.8 Action Provider -> MCP Tool 자동 변환 (v0.6 추가)
+
+> **(v0.6 추가)** Action Provider가 등록한 ActionDefinition을 MCP Tool로 자동 변환하는 메커니즘. 62-action-provider-architecture.md 섹션 7.3 참조.
+
+**변환 규칙:**
+
+| ActionDefinition 필드 | MCP Tool 필드 | 변환 방식 |
+|---------------------|--------------|----------|
+| `name` | `tool.name` | `{providerName}_{actionName}` 접두어 결합 |
+| `description` | `tool.description` | 그대로 전달 |
+| `inputSchema` (Zod) | `tool.inputSchema` (JSON Schema) | `zodToJsonSchema()` 자동 변환 |
+| `mcpExpose` | (등록 여부) | `mcpExpose: true`인 Action만 MCP Tool로 등록 |
+
+**MCP_TOOL_MAX = 16 상한:**
+
+```typescript
+/**
+ * MCP Tool 최대 등록 수.
+ * - 기존 6개 MCP Tool (send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce)
+ * - + Action에서 변환된 Tool 최대 10개
+ * - = 총 16개 상한
+ *
+ * 근거: LLM 컨텍스트 오버플로 방지 (62-action-provider-architecture.md 섹션 7.3 결정)
+ * 16개 초과 시 mcpExpose=true인 Action 중 우선순위 순 선택, 나머지 경고 로그.
+ */
+const MCP_TOOL_MAX = 16
+const BUILT_IN_TOOL_COUNT = 6
+const MAX_ACTION_TOOLS = MCP_TOOL_MAX - BUILT_IN_TOOL_COUNT  // = 10
+```
+
+**변환 프로세스:**
+
+```typescript
+// packages/mcp/src/server.ts (v0.6 확장)
+async function registerActionTools(server: McpServer, apiBaseUrl: string): Promise<void> {
+  // 1. Action Provider 목록 조회
+  const res = await fetch(`${apiBaseUrl}/v1/actions`, {
+    headers: { 'Authorization': `Bearer ${SESSION_TOKEN}` },
+  })
+  const { providers } = await res.json()
+
+  // 2. mcpExpose=true인 Action 수집
+  const exposedActions: Array<{ provider: string; action: ActionSummary }> = []
+  for (const provider of providers) {
+    for (const action of provider.actions) {
+      if (action.mcpExpose) {
+        exposedActions.push({ provider: provider.name, action })
+      }
+    }
+  }
+
+  // 3. MCP_TOOL_MAX 검사 (기존 6개 + Action Tool)
+  if (exposedActions.length > MAX_ACTION_TOOLS) {
+    console.warn(
+      `[waiaas-mcp] ${exposedActions.length} action tools exceed limit ${MAX_ACTION_TOOLS}. ` +
+      `Only first ${MAX_ACTION_TOOLS} will be registered.`
+    )
+  }
+  const toRegister = exposedActions.slice(0, MAX_ACTION_TOOLS)
+
+  // 4. 각 Action을 MCP Tool로 등록
+  for (const { provider, action } of toRegister) {
+    const toolName = `${provider}_${action.name}`  // 예: jupiter-swap_swap
+    const detailRes = await fetch(
+      `${apiBaseUrl}/v1/actions/${provider}/${action.name}`,
+      { headers: { 'Authorization': `Bearer ${SESSION_TOKEN}` } },
+    )
+    const detail = await detailRes.json()
+
+    server.tool(
+      toolName,
+      action.description,
+      detail.inputSchema,  // JSON Schema (Zod -> JSON Schema 변환 결과)
+      async (params) => {
+        // execute 엔드포인트 호출 (resolve + 파이프라인)
+        const execRes = await fetch(
+          `${apiBaseUrl}/v1/actions/${provider}/${action.name}/execute`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SESSION_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ params }),
+          },
+        )
+        const data = await execRes.json()
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(data) }],
+          isError: !execRes.ok,
+        }
+      },
+    )
+  }
+}
+```
+
+**MCP Tool 등록 순서:**
+1. 기존 6개 내장 Tool 등록 (send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce)
+2. Action Provider API 조회 -> mcpExpose=true인 Action Tool 등록 (최대 10개)
+3. 총 Tool 수가 MCP_TOOL_MAX(16)을 초과하면 경고 로그 + 초과분 미등록
+
+**MCP Tool 총 현황 (v0.6):**
+
+| 구분 | 수 | 예시 |
+|------|---|------|
+| 기존 내장 Tool | 6 | send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce |
+| Action 변환 Tool | 0~10 | jupiter-swap_swap (등록된 Action Provider에 따라 동적) |
+| **최대** | **16** | MCP_TOOL_MAX 상한 |
+
+---
+
 ### 5.4 MCP Resources (3개)
 
 AI 에이전트가 참조하는 **데이터(Context)** 리소스. LLM이 컨텍스트에 로드하여 참조.
@@ -2523,11 +2838,20 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 |------|--------|-----------|----------|----------|
 | 잔액 조회 | `getBalance()` | `get_balance()` | `get_balance` | GET /v1/wallet/balance |
 | 주소 조회 | `getAddress()` | `get_address()` | `get_address` | GET /v1/wallet/address |
-| 토큰 전송 | `sendToken()` | `send_token()` | `send_token` | POST /v1/transactions/send |
+| 자산 목록 (v0.6) | `getAssets()` | `get_assets()` | -- | GET /v1/wallet/assets |
+| 네이티브 전송 | `sendToken()` | `send_token()` | `send_token` | POST /v1/transactions/send |
+| 토큰 전송 (v0.6) | `sendToken()` | `send_token_transfer()` | `send_token` (type 지정) | POST /v1/transactions/send (TOKEN_TRANSFER) |
+| 컨트랙트 호출 (v0.6) | `contractCall()` | `contract_call()` | -- | POST /v1/transactions/send (CONTRACT_CALL) |
+| 토큰 승인 (v0.6) | `approve()` | `approve_token()` | -- | POST /v1/transactions/send (APPROVE) |
+| 배치 (v0.6) | `batch()` | `batch_transaction()` | -- | POST /v1/transactions/send (BATCH) |
 | 거래 목록 | `listTransactions()` | `list_transactions()` | `list_transactions` | GET /v1/transactions |
 | 거래 조회 | `getTransaction()` | `get_transaction()` | `get_transaction` | GET /v1/transactions/:id |
 | 대기 거래 | `listPendingTransactions()` | `list_pending_transactions()` | -- | GET /v1/transactions/pending |
 | nonce 조회 | `getNonce()` | `get_nonce()` | `get_nonce` | GET /v1/nonce |
+| Action 목록 (v0.6) | `listActions()` | `list_actions()` | -- (동적 Tool로 노출) | GET /v1/actions |
+| Action 상세 (v0.6) | `getAction()` | `get_action()` | -- | GET /v1/actions/:p/:a |
+| Action resolve (v0.6) | `resolveAction()` | `resolve_action()` | -- | POST /v1/actions/:p/:a/resolve |
+| Action 실행 (v0.6) | `executeAction()` | `execute_action()` | `{provider}_{action}` (자동 변환) | POST /v1/actions/:p/:a/execute |
 
 ### 9.2 Owner 기능 비교
 
@@ -2629,9 +2953,9 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 
 ## 11. 구현 노트
 
-### 11.1 MCP <-> REST API 기능 패리티 매트릭스 (NOTE-03)
+### 11.1 MCP <-> REST API 기능 패리티 매트릭스 (NOTE-03) (v0.6 변경)
 
-31개 REST 엔드포인트 전체에 대한 MCP Tool/Resource 매핑 현황이다. MCP는 AI 에이전트 권한 범위(세션 Bearer)만 노출하며, Owner/Admin API는 보안상 의도적으로 제외한다.
+36개 REST 엔드포인트 전체에 대한 MCP Tool/Resource 매핑 현황이다. MCP는 AI 에이전트 권한 범위(세션 Bearer)만 노출하며, Owner/Admin API는 보안상 의도적으로 제외한다.
 
 **Public API (3개)**
 
@@ -2680,15 +3004,25 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 | 31 | POST /v1/admin/shutdown | - | 의도적 미커버 | 시스템 종료는 Master 권한 |
 | 32 | GET /v1/admin/status | - | 의도적 미커버 | Admin 상태는 Master 권한 |
 
+**v0.6 추가 엔드포인트 (5개)**
+
+| # | REST 엔드포인트 | MCP 매핑 | 커버 상태 | 근거 |
+|---|----------------|---------|----------|------|
+| 33 | GET /v1/wallet/assets | - | 의도적 미커버 | get_balance로 핵심 정보 커버. 전체 자산 목록은 SDK 사용 권장 |
+| 34 | GET /v1/actions | - | 간접 커버 | Action Tool 자동 등록으로 간접 노출 (5.3.8 참조) |
+| 35 | GET /v1/actions/:p/:a | - | 간접 커버 | MCP Tool description에 Action 정보 포함 |
+| 36 | POST /v1/actions/:p/:a/resolve | - | 의도적 미커버 | resolve만 사용하는 시나리오는 Agent 고급 사용, SDK 권장 |
+| 37 | POST /v1/actions/:p/:a/execute | 동적 도구: `{provider}_{action}` | 커버됨 | Action -> MCP Tool 자동 변환 (mcpExpose=true, MCP_TOOL_MAX=16) |
+
 **요약:**
-- 커버됨: 7개 (도구 6 + 리소스 3, 일부 중복)
-- 의도적 미커버: 24개 (Owner 17 + Admin 3 + Session Mgmt 3 + doc 1)
-- "MCP Pitfall 2: Tool 과다 등록 방지" 결정 참조
+- 커버됨: 7개 내장 + 동적 Action Tool (도구 6 + 리소스 3, 일부 중복 + Action Tool 최대 10개)
+- 의도적 미커버: 27개 (Owner 17 + Admin 3 + Session Mgmt 3 + doc 1 + assets 1 + resolve 1 + actions list 1)
+- MCP_TOOL_MAX = 16 (내장 6 + Action 최대 10) -- 62-action-provider-architecture.md 결정
 - v0.3+ 확장 후보: Streamable HTTP transport 도입 시 MCP 도구 확장 검토
 
-### 11.2 SDK 에러 코드 타입 매핑 전략 (NOTE-04)
+### 11.2 SDK 에러 코드 타입 매핑 전략 (NOTE-04) (v0.6 변경)
 
-현재 SDK의 `WAIaaSError.code`는 `string` 타입이다. 구현 시 36개 에러 코드를 타입 수준에서 매핑하여 자동완성과 타입 체크를 활성화해야 한다.
+현재 SDK의 `WAIaaSError.code`는 `string` 타입이다. 구현 시 60개 에러 코드(v0.6: +20개)를 타입 수준에서 매핑하여 자동완성과 타입 체크를 활성화해야 한다.
 
 **TS SDK 타입 매핑:**
 
@@ -2717,6 +3051,14 @@ type WAIaaSErrorCode =
   | 'SHUTTING_DOWN' | 'ADAPTER_NOT_AVAILABLE'
   // AGENT (3)
   | 'AGENT_NOT_FOUND' | 'AGENT_SUSPENDED' | 'AGENT_TERMINATED'
+  // v0.6 TX 확장 (13)
+  | 'TOKEN_NOT_FOUND' | 'TOKEN_NOT_ALLOWED' | 'INSUFFICIENT_TOKEN_BALANCE'
+  | 'CONTRACT_CALL_DISABLED' | 'CONTRACT_NOT_WHITELISTED' | 'METHOD_NOT_WHITELISTED'
+  | 'APPROVE_DISABLED' | 'SPENDER_NOT_APPROVED' | 'APPROVE_AMOUNT_EXCEEDED' | 'UNLIMITED_APPROVE_BLOCKED'
+  | 'BATCH_NOT_SUPPORTED' | 'BATCH_SIZE_EXCEEDED' | 'BATCH_POLICY_VIOLATION'
+  // v0.6 ACTION (7)
+  | 'ACTION_NOT_FOUND' | 'ACTION_VALIDATION_FAILED' | 'ACTION_RESOLVE_FAILED'
+  | 'ACTION_RETURN_INVALID' | 'ACTION_PLUGIN_LOAD_FAILED' | 'ACTION_NAME_CONFLICT' | 'ACTION_CHAIN_MISMATCH'
 
 // WAIaaSError.code 필드 타입 변경
 class WAIaaSError extends Error {
@@ -2745,7 +3087,7 @@ class ErrorCode(str, Enum):
     SESSION_EXPIRED = "SESSION_EXPIRED"
     SESSION_LIMIT_EXCEEDED = "SESSION_LIMIT_EXCEEDED"
     CONSTRAINT_VIOLATED = "CONSTRAINT_VIOLATED"
-    # TX (7)
+    # TX (7 + v0.6 13 = 20)
     INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE"
     INVALID_ADDRESS = "INVALID_ADDRESS"
     TX_NOT_FOUND = "TX_NOT_FOUND"
@@ -2753,6 +3095,20 @@ class ErrorCode(str, Enum):
     TX_ALREADY_PROCESSED = "TX_ALREADY_PROCESSED"
     CHAIN_ERROR = "CHAIN_ERROR"
     SIMULATION_FAILED = "SIMULATION_FAILED"
+    # v0.6 TX 확장 (13)
+    TOKEN_NOT_FOUND = "TOKEN_NOT_FOUND"
+    TOKEN_NOT_ALLOWED = "TOKEN_NOT_ALLOWED"
+    INSUFFICIENT_TOKEN_BALANCE = "INSUFFICIENT_TOKEN_BALANCE"
+    CONTRACT_CALL_DISABLED = "CONTRACT_CALL_DISABLED"
+    CONTRACT_NOT_WHITELISTED = "CONTRACT_NOT_WHITELISTED"
+    METHOD_NOT_WHITELISTED = "METHOD_NOT_WHITELISTED"
+    APPROVE_DISABLED = "APPROVE_DISABLED"
+    SPENDER_NOT_APPROVED = "SPENDER_NOT_APPROVED"
+    APPROVE_AMOUNT_EXCEEDED = "APPROVE_AMOUNT_EXCEEDED"
+    UNLIMITED_APPROVE_BLOCKED = "UNLIMITED_APPROVE_BLOCKED"
+    BATCH_NOT_SUPPORTED = "BATCH_NOT_SUPPORTED"
+    BATCH_SIZE_EXCEEDED = "BATCH_SIZE_EXCEEDED"
+    BATCH_POLICY_VIOLATION = "BATCH_POLICY_VIOLATION"
     # POLICY (4)
     POLICY_DENIED = "POLICY_DENIED"
     SPENDING_LIMIT_EXCEEDED = "SPENDING_LIMIT_EXCEEDED"
@@ -2774,23 +3130,33 @@ class ErrorCode(str, Enum):
     AGENT_NOT_FOUND = "AGENT_NOT_FOUND"
     AGENT_SUSPENDED = "AGENT_SUSPENDED"
     AGENT_TERMINATED = "AGENT_TERMINATED"
+    # v0.6 ACTION (7)
+    ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
+    ACTION_VALIDATION_FAILED = "ACTION_VALIDATION_FAILED"
+    ACTION_RESOLVE_FAILED = "ACTION_RESOLVE_FAILED"
+    ACTION_RETURN_INVALID = "ACTION_RETURN_INVALID"
+    ACTION_PLUGIN_LOAD_FAILED = "ACTION_PLUGIN_LOAD_FAILED"
+    ACTION_NAME_CONFLICT = "ACTION_NAME_CONFLICT"
+    ACTION_CHAIN_MISMATCH = "ACTION_CHAIN_MISMATCH"
 
 # WAIaaSError.code 필드 타입 변경
 class WAIaaSError(Exception):
     code: ErrorCode  # str -> ErrorCode
 ```
 
-**7개 도메인별 에러 코드 전체 목록:**
+**9개 도메인별 에러 코드 전체 목록 (v0.6 변경: 7 -> 9 도메인, 36 -> 60 코드):**
 
 | 도메인 | 코드 수 | 에러 코드 |
 |--------|--------|----------|
 | AUTH | 8 | INVALID_TOKEN, TOKEN_EXPIRED, SESSION_REVOKED, INVALID_SIGNATURE, INVALID_NONCE, INVALID_MASTER_PASSWORD, MASTER_PASSWORD_LOCKED, SYSTEM_LOCKED |
 | SESSION | 4 | SESSION_NOT_FOUND, SESSION_EXPIRED, SESSION_LIMIT_EXCEEDED, CONSTRAINT_VIOLATED |
-| TX | 7 | INSUFFICIENT_BALANCE, INVALID_ADDRESS, TX_NOT_FOUND, TX_EXPIRED, TX_ALREADY_PROCESSED, CHAIN_ERROR, SIMULATION_FAILED |
+| TX | 20 | INSUFFICIENT_BALANCE, INVALID_ADDRESS, TX_NOT_FOUND, TX_EXPIRED, TX_ALREADY_PROCESSED, CHAIN_ERROR, SIMULATION_FAILED + (v0.6) TOKEN_NOT_FOUND, TOKEN_NOT_ALLOWED, INSUFFICIENT_TOKEN_BALANCE, CONTRACT_CALL_DISABLED, CONTRACT_NOT_WHITELISTED, METHOD_NOT_WHITELISTED, APPROVE_DISABLED, SPENDER_NOT_APPROVED, APPROVE_AMOUNT_EXCEEDED, UNLIMITED_APPROVE_BLOCKED, BATCH_NOT_SUPPORTED, BATCH_SIZE_EXCEEDED, BATCH_POLICY_VIOLATION |
 | POLICY | 4 | POLICY_DENIED, SPENDING_LIMIT_EXCEEDED, RATE_LIMIT_EXCEEDED, WHITELIST_DENIED |
 | OWNER | 4 | OWNER_ALREADY_CONNECTED, OWNER_NOT_CONNECTED, APPROVAL_TIMEOUT, APPROVAL_NOT_FOUND |
 | SYSTEM | 6 | KILL_SWITCH_ACTIVE, KILL_SWITCH_NOT_ACTIVE, KEYSTORE_LOCKED, CHAIN_NOT_SUPPORTED, SHUTTING_DOWN, ADAPTER_NOT_AVAILABLE |
 | AGENT | 3 | AGENT_NOT_FOUND, AGENT_SUSPENDED, AGENT_TERMINATED |
+| ACTION | 7 | (v0.6) ACTION_NOT_FOUND, ACTION_VALIDATION_FAILED, ACTION_RESOLVE_FAILED, ACTION_RETURN_INVALID, ACTION_PLUGIN_LOAD_FAILED, ACTION_NAME_CONFLICT, ACTION_CHAIN_MISMATCH |
+| SESSION (Phase 20) | 4 | RENEWAL_LIMIT_REACHED, SESSION_ABSOLUTE_LIFETIME_EXCEEDED, RENEWAL_TOO_EARLY, SESSION_RENEWAL_MISMATCH |
 
 **추가 결정 사항:**
 - 도메인별 에러 서브클래스 불필요: 단일 `WAIaaSError` + `code` 필드로 구분 (현행 유지)

@@ -2,9 +2,11 @@
 
 **문서 ID:** LOCK-MECH
 **작성일:** 2026-02-05
+**v0.6 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** TX-PIPE (32-transaction-pipeline-api.md), SESS-PROTO (30-session-token-protocol.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md)
+**참조:** TX-PIPE (32-transaction-pipeline-api.md), SESS-PROTO (30-session-token-protocol.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md)
 **요구사항:** LOCK-01 (4단계 분류), LOCK-02 (Delay 큐잉), LOCK-03 (Approval 승인), LOCK-04 (미승인 만료)
+**v0.6 통합:** INTEG-01 (PolicyType 10개, evaluate() 11단계, USD 정책, 배치/컨트랙트/approve 정책)
 
 ---
 
@@ -108,8 +110,12 @@ export const policies = sqliteTable('policies', {
     .references(() => agents.id, { onDelete: 'cascade' }),  // NULL = 글로벌 정책
 
   // -- 정책 정의 --
+  // (v0.6 변경) Phase 22-23에서 6개 추가: 4개 -> 10개 PolicyType
+  // SSoT: 45-enum-unified-mapping.md 섹션 2.5
   type: text('type', {
-    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']
+    enum: ['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+      'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+      'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE']
   }).notNull(),
   rules: text('rules').notNull(),                       // JSON: 정책별 규칙 구조
 
@@ -133,7 +139,9 @@ CREATE TABLE policies (
   id TEXT PRIMARY KEY,
   agent_id TEXT REFERENCES agents(id) ON DELETE CASCADE,
   type TEXT NOT NULL
-    CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT')),
+    CHECK (type IN ('SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+      'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+      'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE')),
   rules TEXT NOT NULL,             -- JSON
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,   -- boolean (0/1)
@@ -151,7 +159,7 @@ CREATE INDEX idx_policies_type ON policies(type);
 |------|------|----------|--------|------|
 | `id` | TEXT (PK) | NOT NULL | - | 정책 UUID v7 |
 | `agent_id` | TEXT (FK) | NULL | - | 대상 에이전트. NULL이면 모든 에이전트에 적용되는 글로벌 정책 |
-| `type` | TEXT (ENUM) | NOT NULL | - | 정책 유형. 4개: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT |
+| `type` | TEXT (ENUM) | NOT NULL | - | 정책 유형. (v0.6 변경) 10개: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT, ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE. SSoT: 45-enum 섹션 2.5 |
 | `rules` | TEXT (JSON) | NOT NULL | - | 정책별 규칙 JSON. 아래 Zod 스키마 참조 |
 | `priority` | INTEGER | NOT NULL | `0` | 평가 우선순위. 높을수록 먼저 평가. 에이전트별 > 글로벌 |
 | `enabled` | INTEGER | NOT NULL | `1` | 활성화 여부. 0=비활성, 1=활성 |
@@ -192,6 +200,18 @@ export const SpendingLimitRuleSchema = z.object({
 
   /** APPROVAL 티어 승인 대기 시간 (초). 최소 300, 최대 86400, 기본 3600 */
   approval_timeout: z.number().int().min(300).max(86400).default(3600),
+
+  // (v0.6 추가) USD 기준 티어 임계값 -- IPriceOracle 연동 (CHAIN-EXT-06)
+  // optional 필드: 미설정 시 네이티브 금액만으로 티어 결정 (하위 호환)
+
+  /** INSTANT 티어 최대 USD 금액 (이하 즉시 실행) */
+  instant_max_usd: z.number().positive().optional(),
+
+  /** NOTIFY 티어 최대 USD 금액 (이하 즉시 실행 + 알림) */
+  notify_max_usd: z.number().positive().optional(),
+
+  /** DELAY 티어 최대 USD 금액 (이하 시간 지연 후 실행) */
+  delay_max_usd: z.number().positive().optional(),
 })
 
 /**
@@ -237,14 +257,119 @@ export const RateLimitRuleSchema = z.object({
   max_tx_per_day: z.number().int().min(0).default(0),
 })
 
+// ══════════════════════════════════════════════════════════════════
+// (v0.6 추가) Phase 22-23 신규 정책 스키마 6개
+// SSoT: 45-enum-unified-mapping.md 섹션 2.5
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * (v0.6 추가) ALLOWED_TOKENS: 에이전트별 허용 토큰 화이트리스트 (CHAIN-EXT-01)
+ *
+ * TOKEN_TRANSFER 타입에만 적용된다.
+ * 미설정 시 토큰 전송은 기본 거부 (보수적 정책).
+ */
+export const AllowedTokensRuleSchema = z.object({
+  /** 허용 토큰 목록 */
+  tokens: z.array(z.object({
+    mint: z.string(),    // 토큰 민트/컨트랙트 주소
+    symbol: z.string(),  // 사람이 읽을 수 있는 심볼 (예: 'USDC')
+    chain: z.enum(['solana', 'ethereum']),
+  })),
+  /** 미등록 토큰 처리: deny(기본) | notify */
+  unknown_token_action: z.enum(['deny', 'notify']).default('deny'),
+})
+
+/**
+ * (v0.6 추가) CONTRACT_WHITELIST: 허용 컨트랙트 주소 목록 (CHAIN-EXT-03)
+ *
+ * CONTRACT_CALL 타입에만 적용된다.
+ * 미설정 시 모든 컨트랙트 호출은 거부 (기본 전면 거부 원칙).
+ */
+export const ContractWhitelistRuleSchema = z.object({
+  /** 허용 컨트랙트 목록 */
+  contracts: z.array(z.object({
+    address: z.string(),  // 컨트랙트 주소 (lowercase 정규화)
+    chain: z.enum(['solana', 'ethereum']),
+    label: z.string().optional(),  // 사람이 읽을 수 있는 라벨 (예: 'Jupiter V6')
+  })),
+})
+
+/**
+ * (v0.6 추가) METHOD_WHITELIST: EVM 전용 함수 selector 화이트리스트 (CHAIN-EXT-03)
+ *
+ * CONTRACT_CALL + EVM 체인에만 적용된다.
+ * Solana는 표준 selector 규약이 없으므로 미적용.
+ */
+export const MethodWhitelistRuleSchema = z.object({
+  /** 허용 메서드 목록 */
+  methods: z.array(z.object({
+    address: z.string(),    // 대상 컨트랙트 주소
+    selector: z.string(),   // 4바이트 함수 selector (0x 접두사)
+    name: z.string().optional(),  // 함수 이름 (예: 'swap')
+  })),
+})
+
+/**
+ * (v0.6 추가) APPROVED_SPENDERS: 승인 허용 대상 목록 (CHAIN-EXT-04)
+ *
+ * APPROVE 타입에만 적용된다.
+ * 미설정 시 모든 approve 요청은 거부 (보수적 정책).
+ */
+export const ApprovedSpendersRuleSchema = z.object({
+  /** 허용 spender 주소 목록 */
+  spenders: z.array(z.object({
+    address: z.string(),  // spender 주소 (lowercase 정규화)
+    chain: z.enum(['solana', 'ethereum']),
+    label: z.string().optional(),  // 사람이 읽을 수 있는 라벨 (예: 'Jupiter V6 Router')
+  })),
+})
+
+/**
+ * (v0.6 추가) APPROVE_AMOUNT_LIMIT: 단일 approve 최대 금액 (CHAIN-EXT-04)
+ *
+ * APPROVE 타입에만 적용된다.
+ * unlimited_blocked: true이면 무제한 approve 요청을 차단한다.
+ * 무제한 임계값: EVM 2^256/2, Solana 2^64/2
+ */
+export const ApproveAmountLimitRuleSchema = z.object({
+  /** 단일 approve 최대 금액 (최소 단위, 문자열) */
+  max_amount: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+  /** 무제한 approve 차단 여부 (기본: true) */
+  unlimited_blocked: z.boolean().default(true),
+  /** 무제한 판정 임계값 (미설정 시 체인별 MAX/2 기본값) */
+  unlimited_threshold: z.string().regex(/^\d+$/).optional(),
+})
+
+/**
+ * (v0.6 추가) APPROVE_TIER_OVERRIDE: approve 독립 보안 티어 (CHAIN-EXT-04)
+ *
+ * APPROVE 타입에만 적용된다.
+ * SPENDING_LIMIT과 독립적으로 동작한다 (approve는 자금 소모가 아닌 권한 위임).
+ * 기본 티어: APPROVAL (Owner 승인 필수, 보수적).
+ */
+export const ApproveTierOverrideRuleSchema = z.object({
+  /** approve 기본 보안 티어 */
+  default_tier: z.enum(['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL']).default('APPROVAL'),
+})
+
 /**
  * PolicyRule 유니온 스키마: type 필드에 따라 rules 구조가 결정된다.
+ * (v0.6 변경) 4개 -> 10개 PolicyType 지원
  */
 export const PolicyRuleSchema = z.discriminatedUnion('type', [
+  // Phase 8 기존 (4개)
   z.object({ type: z.literal('SPENDING_LIMIT'), rules: SpendingLimitRuleSchema }),
   z.object({ type: z.literal('WHITELIST'), rules: WhitelistRuleSchema }),
   z.object({ type: z.literal('TIME_RESTRICTION'), rules: TimeRestrictionRuleSchema }),
   z.object({ type: z.literal('RATE_LIMIT'), rules: RateLimitRuleSchema }),
+  // (v0.6 추가) Phase 22 추가 (1개)
+  z.object({ type: z.literal('ALLOWED_TOKENS'), rules: AllowedTokensRuleSchema }),
+  // (v0.6 추가) Phase 23 추가 (5개)
+  z.object({ type: z.literal('CONTRACT_WHITELIST'), rules: ContractWhitelistRuleSchema }),
+  z.object({ type: z.literal('METHOD_WHITELIST'), rules: MethodWhitelistRuleSchema }),
+  z.object({ type: z.literal('APPROVED_SPENDERS'), rules: ApprovedSpendersRuleSchema }),
+  z.object({ type: z.literal('APPROVE_AMOUNT_LIMIT'), rules: ApproveAmountLimitRuleSchema }),
+  z.object({ type: z.literal('APPROVE_TIER_OVERRIDE'), rules: ApproveTierOverrideRuleSchema }),
 ])
 
 /** PolicyRule 타입 추출 */
@@ -253,6 +378,13 @@ export type SpendingLimitRule = z.infer<typeof SpendingLimitRuleSchema>
 export type WhitelistRule = z.infer<typeof WhitelistRuleSchema>
 export type TimeRestrictionRule = z.infer<typeof TimeRestrictionRuleSchema>
 export type RateLimitRule = z.infer<typeof RateLimitRuleSchema>
+// (v0.6 추가) 신규 6개 정책 타입
+export type AllowedTokensRule = z.infer<typeof AllowedTokensRuleSchema>
+export type ContractWhitelistRule = z.infer<typeof ContractWhitelistRuleSchema>
+export type MethodWhitelistRule = z.infer<typeof MethodWhitelistRuleSchema>
+export type ApprovedSpendersRule = z.infer<typeof ApprovedSpendersRuleSchema>
+export type ApproveAmountLimitRule = z.infer<typeof ApproveAmountLimitRuleSchema>
+export type ApproveTierOverrideRule = z.infer<typeof ApproveTierOverrideRuleSchema>
 ```
 
 ### 2.3 기본 정책 세트
@@ -358,22 +490,33 @@ import { policies } from '@waiaas/core/schema'
 import type { IPolicyEngine, PolicyDecision } from '@waiaas/core/interfaces'
 import type { SpendingLimitRule, WhitelistRule, TimeRestrictionRule, RateLimitRule } from '@waiaas/core/schema/policy-rules.js'
 
-/** policies 테이블 행 타입 */
+/** policies 테이블 행 타입 (v0.6 변경: 10개 PolicyType) */
 interface PolicyRow {
   id: string
   agentId: string | null
   type: 'SPENDING_LIMIT' | 'WHITELIST' | 'TIME_RESTRICTION' | 'RATE_LIMIT'
+    | 'ALLOWED_TOKENS' | 'CONTRACT_WHITELIST' | 'METHOD_WHITELIST'
+    | 'APPROVED_SPENDERS' | 'APPROVE_AMOUNT_LIMIT' | 'APPROVE_TIER_OVERRIDE'
   rules: string  // JSON
   priority: number
   enabled: boolean
 }
 
-/** 거래 요청 타입 (IPolicyEngine.evaluate 입력) */
+/** 거래 요청 타입 (IPolicyEngine.evaluate 입력)
+ *  (v0.6 확장) 5개 TransactionType 필드 추가
+ */
 interface TxRequest {
-  type: string
+  type: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH'
   amount: string
   to: string
   chain: string
+  // (v0.6 추가) TransactionType별 추가 필드
+  token?: string           // TOKEN_TRANSFER: 토큰 민트/컨트랙트 주소
+  contractAddress?: string // CONTRACT_CALL: 대상 컨트랙트 주소
+  methodSelector?: string  // CONTRACT_CALL (EVM): 4바이트 함수 selector
+  spender?: string         // APPROVE: approve 대상 spender 주소
+  approveAmount?: string   // APPROVE: approve 금액
+  instructions?: TxRequest[] // BATCH: 개별 instruction 배열
 }
 
 /**
@@ -392,13 +535,21 @@ class DatabasePolicyEngine implements IPolicyEngine {
   /**
    * 거래 요청을 평가한다.
    *
-   * 알고리즘 6단계:
+   * (v0.6 변경) 알고리즘 11단계 (Phase 8 기존 6단계에서 확장):
    * 1. 에이전트별 + 글로벌 활성 정책 로드
-   * 2. WHITELIST 평가 (DENY 우선)
-   * 3. TIME_RESTRICTION 평가 (DENY 우선)
-   * 4. RATE_LIMIT 평가 (DENY 우선)
-   * 5. SPENDING_LIMIT 평가 -> 4-티어 분류
-   * 6. 최종 결정 반환
+   * 2. TransactionType 결정
+   * 3. ALLOWED_TOKENS 검사 (TOKEN_TRANSFER) -- (v0.6 추가)
+   * 4. CONTRACT_WHITELIST 검사 (CONTRACT_CALL) -- (v0.6 추가)
+   * 5. METHOD_WHITELIST 검사 (CONTRACT_CALL, EVM only) -- (v0.6 추가)
+   * 6. APPROVED_SPENDERS 검사 (APPROVE) -- (v0.6 추가)
+   * 7. APPROVE_AMOUNT_LIMIT 검사 (APPROVE) -- (v0.6 추가)
+   * 8. WHITELIST + TIME_RESTRICTION + RATE_LIMIT 평가 (기존 Step 2-4)
+   * 9. 금액 기반 티어 결정 (SPENDING_LIMIT + resolveEffectiveAmountUsd) -- (v0.6 USD 확장)
+   * 10. APPROVE_TIER_OVERRIDE 적용 (APPROVE) -- (v0.6 추가)
+   * 11. DAILY_LIMIT + RATE_LIMIT + 최종 PolicyDecision 반환
+   *
+   * DENY 우선 원칙: Step 3-7 중 하나라도 DENY면 즉시 반환.
+   * SSoT: 58-contract-call-spec.md 섹션 5, 45-enum 섹션 2.5
    */
   async evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision> {
     // Step 1: 에이전트별 + 글로벌(agentId=NULL) 활성 정책 로드 (priority DESC)
@@ -418,20 +569,62 @@ class DatabasePolicyEngine implements IPolicyEngine {
     // 에이전트별 정책과 글로벌 정책 분리 (같은 type이면 에이전트별이 override)
     const effectiveRules = this.resolveOverrides(rules, agentId)
 
-    // Step 2: WHITELIST 평가
+    // Step 2: TransactionType 결정 (v0.6 추가)
+    const txType = request.type // TRANSFER | TOKEN_TRANSFER | CONTRACT_CALL | APPROVE | BATCH
+
+    // Step 3: ALLOWED_TOKENS 검사 -- TOKEN_TRANSFER만 (v0.6 추가)
+    if (txType === 'TOKEN_TRANSFER') {
+      const tokenResult = this.evaluateAllowedTokens(effectiveRules, request)
+      if (!tokenResult.allowed) return tokenResult
+    }
+
+    // Step 4: CONTRACT_WHITELIST 검사 -- CONTRACT_CALL만 (v0.6 추가)
+    if (txType === 'CONTRACT_CALL') {
+      const contractResult = this.evaluateContractWhitelist(effectiveRules, request)
+      if (!contractResult.allowed) return contractResult
+    }
+
+    // Step 5: METHOD_WHITELIST 검사 -- CONTRACT_CALL + EVM only (v0.6 추가)
+    if (txType === 'CONTRACT_CALL' && request.chain === 'ethereum') {
+      const methodResult = this.evaluateMethodWhitelist(effectiveRules, request)
+      if (!methodResult.allowed) return methodResult
+    }
+
+    // Step 6: APPROVED_SPENDERS 검사 -- APPROVE만 (v0.6 추가)
+    if (txType === 'APPROVE') {
+      const spenderResult = this.evaluateApprovedSpenders(effectiveRules, request)
+      if (!spenderResult.allowed) return spenderResult
+    }
+
+    // Step 7: APPROVE_AMOUNT_LIMIT 검사 -- APPROVE만 (v0.6 추가)
+    if (txType === 'APPROVE') {
+      const amountLimitResult = this.evaluateApproveAmountLimit(effectiveRules, request)
+      if (!amountLimitResult.allowed) return amountLimitResult
+    }
+
+    // Step 8: 기존 WHITELIST + TIME_RESTRICTION + RATE_LIMIT (Phase 8 Step 2-4)
     const whitelistResult = this.evaluateWhitelist(effectiveRules, request)
     if (!whitelistResult.allowed) return whitelistResult
 
-    // Step 3: TIME_RESTRICTION 평가
     const timeResult = this.evaluateTimeRestriction(effectiveRules)
     if (!timeResult.allowed) return timeResult
 
-    // Step 4: RATE_LIMIT 평가
     const rateResult = await this.evaluateRateLimit(effectiveRules, agentId)
     if (!rateResult.allowed) return rateResult
 
-    // Step 5: SPENDING_LIMIT 평가 -> 4-티어 분류
+    // Step 9: 금액 기반 티어 결정 (v0.6 USD 확장)
+    // resolveEffectiveAmountUsd()로 USD 환산 후 maxTier(nativeTier, usdTier) 보수적 채택
+    // IPriceOracle 주입 필요 (CHAIN-EXT-06)
     const tierResult = this.evaluateSpendingLimit(effectiveRules, request)
+
+    // Step 10: APPROVE_TIER_OVERRIDE 적용 -- APPROVE만 (v0.6 추가)
+    // SPENDING_LIMIT과 독립적으로 동작 (approve는 자금 소모가 아닌 권한 위임)
+    if (txType === 'APPROVE' && tierResult.allowed) {
+      const overrideResult = this.evaluateApproveTierOverride(effectiveRules, tierResult)
+      return overrideResult
+    }
+
+    // Step 11: 최종 PolicyDecision 반환
     return tierResult
   }
 
@@ -648,47 +841,63 @@ class DatabasePolicyEngine implements IPolicyEngine {
 }
 ```
 
-### 3.3 evaluate() 알고리즘 플로우차트
+### 3.3 evaluate() 알고리즘 플로우차트 (v0.6 변경: 11단계)
 
 ```mermaid
 flowchart TD
     A[evaluate 호출] --> B[Step 1: 에이전트별 + 글로벌 활성 정책 로드<br/>priority DESC 정렬]
     B --> C{정책 존재?}
     C -->|No| D[return ALLOW + INSTANT<br/>Phase 7 호환]
-    C -->|Yes| E[resolveOverrides:<br/>에이전트별 정책이 같은 type의 글로벌 정책 override]
+    C -->|Yes| E[resolveOverrides + Step 2: TransactionType 결정]
 
-    E --> F[Step 2: WHITELIST 평가]
-    F --> G{수신 주소가<br/>화이트리스트에 있는가?}
-    G -->|No| H[return DENY<br/>reason: 화이트리스트 미포함]
-    G -->|Yes 또는 미설정| I[Step 3: TIME_RESTRICTION 평가]
+    E --> F2{txType?}
 
-    I --> J{현재 시각이<br/>허용 시간대인가?}
-    J -->|No| K[return DENY<br/>reason: 시간대 제한]
-    J -->|Yes 또는 미설정| L[Step 4: RATE_LIMIT 평가]
+    F2 -->|TOKEN_TRANSFER| G2[Step 3: ALLOWED_TOKENS 검사]
+    G2 --> G2D{토큰 허용?}
+    G2D -->|No| G2N[return DENY<br/>TOKEN_NOT_ALLOWED]
+    G2D -->|Yes| H2[Step 8: 기존 정책 평가]
 
-    L --> M{시간당/일일<br/>한도 초과?}
-    M -->|Yes| N[return DENY<br/>reason: 횟수 제한 초과]
-    M -->|No 또는 미설정| O[Step 5: SPENDING_LIMIT 평가]
+    F2 -->|CONTRACT_CALL| G3[Step 4: CONTRACT_WHITELIST 검사]
+    G3 --> G3D{컨트랙트 허용?}
+    G3D -->|No| G3N[return DENY<br/>CONTRACT_NOT_WHITELISTED]
+    G3D -->|Yes| G4{EVM?}
+    G4 -->|Yes| G5[Step 5: METHOD_WHITELIST 검사]
+    G5 --> G5D{메서드 허용?}
+    G5D -->|No| G5N[return DENY<br/>METHOD_NOT_WHITELISTED]
+    G5D -->|Yes| H2
+    G4 -->|No/Solana| H2
 
-    O --> P{SPENDING_LIMIT<br/>규칙 존재?}
-    P -->|No| Q[return ALLOW + INSTANT]
-    P -->|Yes| R{amount <=<br/>instant_max?}
-    R -->|Yes| S[return ALLOW + INSTANT]
-    R -->|No| T{amount <=<br/>notify_max?}
-    T -->|Yes| U[return ALLOW + NOTIFY]
-    T -->|No| V{amount <=<br/>delay_max?}
-    V -->|Yes| W[return ALLOW + DELAY<br/>delaySeconds 포함]
-    V -->|No| X[return ALLOW + APPROVAL<br/>approvalTimeoutSeconds 포함]
+    F2 -->|APPROVE| G6[Step 6: APPROVED_SPENDERS 검사]
+    G6 --> G6D{spender 허용?}
+    G6D -->|No| G6N[return DENY<br/>SPENDER_NOT_APPROVED]
+    G6D -->|Yes| G7[Step 7: APPROVE_AMOUNT_LIMIT 검사]
+    G7 --> G7D{금액 허용?}
+    G7D -->|No| G7N[return DENY<br/>APPROVE_AMOUNT_EXCEEDED]
+    G7D -->|Yes| H2
+
+    F2 -->|TRANSFER/BATCH| H2
+
+    H2[Step 8: WHITELIST + TIME + RATE] --> H2D{기존 정책<br/>통과?}
+    H2D -->|No| H2N[return DENY]
+    H2D -->|Yes| I2[Step 9: SPENDING_LIMIT<br/>+ resolveEffectiveAmountUsd]
+
+    I2 --> J2{txType == APPROVE?}
+    J2 -->|Yes| K2[Step 10: APPROVE_TIER_OVERRIDE 적용]
+    K2 --> L2[Step 11: return PolicyDecision]
+    J2 -->|No| L2
 ```
 
-### 3.4 정책 평가 우선순위 규칙
+### 3.4 정책 평가 우선순위 규칙 (v0.6 확장)
 
 | 규칙 | 설명 |
 |------|------|
-| DENY 우선 | WHITELIST/TIME_RESTRICTION/RATE_LIMIT에서 DENY가 발생하면 SPENDING_LIMIT까지 가지 않고 즉시 반환 |
+| DENY 우선 | (v0.6 확장) Step 3-7의 타입별 화이트리스트에서 DENY가 발생하면 즉시 반환. 이후 Step 8의 기존 정책, Step 9의 SPENDING_LIMIT까지 도달하지 않음 |
 | 에이전트별 > 글로벌 | 같은 type의 정책이 에이전트별과 글로벌 모두 존재하면, 에이전트별 정책만 적용 |
 | priority DESC | 같은 스코프 내에서 priority가 높은 정책이 먼저 평가됨 |
 | 캐시 없음 | 정책은 매 요청마다 DB에서 직접 조회. 정책 변경 즉시 적용 보장 |
+| (v0.6 추가) TransactionType 분기 | Step 3-7은 request.type에 따라 조건부 실행. 해당하지 않는 type의 정책은 건너뜀 |
+| (v0.6 추가) APPROVE 독립 티어 | APPROVE_TIER_OVERRIDE는 SPENDING_LIMIT의 티어 결과를 재정의. approve는 자금 소모가 아닌 권한 위임이므로 독립 평가 |
+| (v0.6 추가) USD 보수적 채택 | USD + 네이티브 병행 평가: maxTier(nativeTier, usdTier). stale 가격 시 INSTANT->NOTIFY 상향, +-50% 급변동 시 한 단계 상향 |
 
 ---
 
@@ -1938,3 +2147,144 @@ DatabasePolicyEngine 우회를 방지하는 설계적 장치:
 | `POST /v1/owner/reject/:txId` | ownerAuth (Owner) | 거절 대상 거래 ID만 |
 
 에이전트는 자신의 거래 상태를 폴링할 수 있지만, 다른 에이전트의 거래는 조회할 수 없다 (sessionAuth의 agentId 바인딩).
+
+---
+
+## 11. v0.6 정책 엔진 확장 -- TransactionType별 정책 적용 (Phase 22-24)
+
+> 이 섹션은 v0.6 블록체인 기능 확장 설계(Phase 22-24)에서 도입된 정책 엔진 확장을 문서화한다.
+> 기존 섹션 2-10의 구조는 Phase 8 기본 설계를 유지하며, 이 섹션에서 확장 사항을 집중 기술한다.
+
+### 11.1 PolicyType 확장 요약 (4개 -> 10개)
+
+| # | PolicyType | 도입 Phase | 적용 TransactionType | 기본 동작 |
+|---|-----------|-----------|---------------------|----------|
+| 1 | `SPENDING_LIMIT` | Phase 8 | TRANSFER, TOKEN_TRANSFER(USD), CONTRACT_CALL(value) | 금액 기반 4-tier |
+| 2 | `WHITELIST` | Phase 8 | TRANSFER, TOKEN_TRANSFER | 주소 화이트리스트 |
+| 3 | `TIME_RESTRICTION` | Phase 8 | ALL | 시간대 제한 |
+| 4 | `RATE_LIMIT` | Phase 8 | ALL | 거래 횟수 제한 |
+| 5 | `ALLOWED_TOKENS` | (v0.6) Phase 22 | TOKEN_TRANSFER | 미설정 시 토큰 전송 거부 |
+| 6 | `CONTRACT_WHITELIST` | (v0.6) Phase 23 | CONTRACT_CALL | 미설정 시 컨트랙트 호출 거부 |
+| 7 | `METHOD_WHITELIST` | (v0.6) Phase 23 | CONTRACT_CALL (EVM) | 함수 selector 화이트리스트 |
+| 8 | `APPROVED_SPENDERS` | (v0.6) Phase 23 | APPROVE | 미설정 시 approve 거부 |
+| 9 | `APPROVE_AMOUNT_LIMIT` | (v0.6) Phase 23 | APPROVE | 최대 금액 + 무제한 차단 |
+| 10 | `APPROVE_TIER_OVERRIDE` | (v0.6) Phase 23 | APPROVE | approve 독립 보안 티어 |
+
+SSoT: 45-enum-unified-mapping.md 섹션 2.5
+
+### 11.2 evaluate() 11단계 알고리즘 상세
+
+기존 6단계 알고리즘(섹션 3.2)을 11단계로 확장한다. 핵심 변경:
+
+1. **Step 2 신설:** TransactionType에 따른 조건부 분기 (request.type 필드)
+2. **Step 3-7 신설:** TransactionType별 화이트리스트/제한 검사 (DENY 우선)
+3. **Step 9 확장:** resolveEffectiveAmountUsd()를 통한 USD 기준 티어 결정
+4. **Step 10 신설:** APPROVE 전용 APPROVE_TIER_OVERRIDE 적용
+
+**DENY 우선 원칙:** Step 3-7의 타입별 검사에서 DENY가 발생하면 이후 단계(Step 8-11)까지 도달하지 않고 즉시 반환한다. 이는 기존 Phase 8의 DENY 우선 원칙을 확장한 것이다.
+
+### 11.3 USD 기준 정책 평가 (CHAIN-EXT-06 연동)
+
+Step 9에서 SPENDING_LIMIT 평가 시 IPriceOracle(CHAIN-EXT-06)을 통해 USD 환산 금액을 함께 평가한다.
+
+**resolveEffectiveAmountUsd() 동작:**
+
+```typescript
+// IPriceOracle 주입 (DI 패턴)
+// evaluateSpendingLimit 내부에서 호출
+async function resolveEffectiveAmountUsd(
+  priceOracle: IPriceOracle,
+  chain: string,
+  token: string | undefined,
+  amount: string,
+): Promise<{ amountUsd: number; priceInfo: PriceInfo } | null> {
+  const tokenId = token ?? (chain === 'solana' ? 'SOL' : 'ETH')
+  const priceInfo = await priceOracle.getPrice(tokenId)
+  if (!priceInfo) return null  // 가격 조회 실패 -> 네이티브만 평가
+
+  const amountUsd = Number(BigInt(amount)) / (10 ** priceInfo.decimals) * priceInfo.price
+  return { amountUsd, priceInfo }
+}
+```
+
+**USD + 네이티브 병행 평가:**
+
+```
+nativeTier = evaluateByNativeAmount(amount, spendingLimit)
+usdTier    = evaluateByUsdAmount(amountUsd, spendingLimit)
+finalTier  = maxTier(nativeTier, usdTier)  // 보수적 채택 (더 높은 티어)
+```
+
+**가격 이상 상황 대응:**
+
+| 상황 | 동작 | 근거 |
+|------|------|------|
+| stale 가격 (TTL 초과, staleMaxAge 이내) | INSTANT -> NOTIFY 상향 | 부정확한 가격으로 보수적 대응 |
+| +-50% 급변동 (이전 가격 대비) | 한 단계 상향 | MEV/시세 조작 가능성 대응 |
+| 완전 장애 (IPriceOracle 불가) | 네이티브 금액만 평가 + Phase 22-23 과도기 전략 fallback | TOKEN_TRANSFER=NOTIFY 기본 |
+
+### 11.4 CONTRACT_CALL 기본 APPROVAL 티어 (CHAIN-EXT-03)
+
+화이트리스트에 등록된 컨트랙트만 호출 가능하며, 화이트리스트 통과 시에도 기본 APPROVAL 티어를 적용한다 (보수적).
+
+```
+CONTRACT_CALL 정책 평가 플로우:
+  Step 4: CONTRACT_WHITELIST 미설정 → DENY (CONTRACT_CALL_DISABLED)
+  Step 4: 컨트랙트 미등록 → DENY (CONTRACT_NOT_WHITELISTED)
+  Step 5: (EVM) selector 미등록 → DENY (METHOD_NOT_WHITELISTED)
+  Step 9: SPENDING_LIMIT → 기본 APPROVAL 티어 (contract_call_default_tier)
+```
+
+### 11.5 배치 정책 합산 (CHAIN-EXT-05)
+
+BATCH 타입의 정책 평가는 2단계로 수행된다:
+
+**Phase A: 개별 instruction 정책 검사**
+- 배치 내 각 instruction을 독립적으로 evaluate() 수행
+- 하나라도 DENY 발생 시 전체 배치 DENY (All-or-Nothing)
+
+**Phase B: 합산 금액 티어 결정**
+- 개별 instruction의 금액을 합산하여 SPENDING_LIMIT 평가
+- APPROVE 포함 시: maxTier(합산 금액 티어, APPROVE_TIER_OVERRIDE 티어)
+
+```typescript
+// 배치 정책 평가 pseudo-code
+async function evaluateBatch(
+  agentId: string,
+  batch: TxRequest,  // type === 'BATCH'
+): Promise<PolicyDecision> {
+  // Phase A: 개별 instruction 검사
+  for (const instruction of batch.instructions!) {
+    const decision = await this.evaluate(agentId, instruction)
+    if (!decision.allowed) {
+      return { ...decision, reason: `BATCH_POLICY_VIOLATION: ${decision.reason}` }
+    }
+  }
+
+  // Phase B: 합산 금액 티어 결정
+  const totalAmount = batch.instructions!
+    .filter(i => i.type === 'TRANSFER' || i.type === 'TOKEN_TRANSFER')
+    .reduce((sum, i) => sum + BigInt(i.amount), 0n)
+
+  const sumTierDecision = this.evaluateSpendingLimit(effectiveRules, {
+    ...batch, amount: totalAmount.toString(),
+  })
+
+  // APPROVE 포함 시 maxTier 적용
+  const hasApprove = batch.instructions!.some(i => i.type === 'APPROVE')
+  if (hasApprove) {
+    const approveOverride = this.evaluateApproveTierOverride(effectiveRules, sumTierDecision)
+    return maxTierDecision(sumTierDecision, approveOverride)
+  }
+
+  return sumTierDecision
+}
+```
+
+---
+
+*문서 ID: LOCK-MECH*
+*작성일: 2026-02-05*
+*v0.6 업데이트: 2026-02-08*
+*Phase: 08-security-layers-design*
+*상태: 완료*

@@ -3,8 +3,9 @@
 **문서 ID:** API-SPEC
 **작성일:** 2026-02-05
 **v0.5 인증 모델 업데이트:** 2026-02-07
+**v0.6 블록체인 기능 확장:** 2026-02-08
 **상태:** 완료
-**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md)
+**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md)
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
 
 ---
@@ -13,7 +14,7 @@
 
 ### 1.1 목적
 
-WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트를 합쳐 총 **31개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
+WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트, Phase 22-24(v0.6)에서 추가하는 5개 엔드포인트를 합쳐 총 **36개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
 
 SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참조하는 **API 단일 소스(Single Source of Truth)** 역할을 한다.
 
@@ -40,19 +41,21 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 | 거래 파이프라인 | 8단계 (Enclave + Squads) | 6단계 (로컬 키스토어 + 정책 엔진) |
 | 에러 포맷 | RFC 9457 + 46개 코드 | 간소화 JSON + 도메인별 에러 코드 |
 
-### 1.4 전체 엔드포인트 요약 (v0.5 변경)
+### 1.4 전체 엔드포인트 요약 (v0.6 변경)
 
 | 카테고리 | 수 | 인증 | 범위 |
 |----------|---|------|------|
 | Public API | 3 | None | 헬스체크, 문서, nonce |
-| Session API (Agent) | 7 | Session Bearer | 지갑, 거래, 세션 조회, 세션 갱신 (Phase 20 추가: +1) |
+| Session API (Agent) | 12 | Session Bearer | 지갑, 거래, 세션 조회, 세션 갱신, 자산 조회, Action API (v0.6 추가: +5) |
 | System Management API | 16 | masterAuth (implicit) | 세션 CRUD, 에이전트 CRUD, 정책, 설정, 대시보드 |
 | Owner Auth API | 1 | Owner Signature | 거래 승인 (APPROVAL 티어) |
 | Dual Auth API | 1 | Owner Signature + Master Password | Kill Switch 복구 |
 | Admin API | 3 | Master Password (explicit) | Kill Switch, Shutdown, Status |
-| **합계** | **31** | | `/doc` 포함 시 32 |
+| **합계** | **36** | | `/doc` 포함 시 37 |
 
 > **v0.5 변경:** v0.2의 "Session Management API 3 (ownerAuth)" + "Owner API 17 (ownerAuth)"가 3-tier 재분류로 통합 재편성되었다. ownerAuth 적용은 2곳(거래 승인, KS 복구)으로 축소. 나머지 시스템 관리 엔드포인트는 masterAuth(implicit)로 이동. 52-auth-model-redesign.md 섹션 4 참조.
+>
+> **v0.6 변경:** 5개 엔드포인트 추가: GET /v1/wallet/assets (자산 조회), GET /v1/actions (Action Provider 목록), GET /v1/actions/:provider/:action (Action 상세), POST /v1/actions/:provider/:action/resolve (Action resolve), POST /v1/actions/:provider/:action/execute (Action 실행). POST /v1/transactions/send 요청 바디가 discriminatedUnion 5-type으로 확장. 에러 코드 20개 추가 (40개 -> 60개). 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
 
 ---
 
@@ -258,7 +261,7 @@ X-Master-Password: my-secure-master-password-2026
 |---------------|------|----------|
 | `GET /health`, `GET /doc`, `GET /v1/nonce` | None | - |
 | `POST /v1/owner/connect` | None (localhost 보안) | hostValidation |
-| `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions`, `PUT /v1/sessions/:id/renew` | Session Bearer | sessionAuth |
+| `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions`, `PUT /v1/sessions/:id/renew`, `/v1/actions/*` (v0.6 추가) | Session Bearer | sessionAuth |
 | `POST /v1/sessions`, `DELETE /v1/sessions/:id`, 에이전트 CRUD, 정책 CRUD, 설정, 조회 등 | masterAuth (implicit) | masterAuth(implicit) |
 | `POST /v1/owner/approve/:txId` | Owner Signature | ownerAuth |
 | `POST /v1/owner/recover` | Owner Signature + Master Password (dual-auth) | ownerAuth + masterAuth(explicit) |
@@ -575,10 +578,28 @@ Agent 지갑으로의 자금 전송은 Owner가 외부 지갑에서 직접 수�
 | **Rate Limit** | 거래 10 req/min |
 | **정의 원본** | TX-PIPE (섹션 7.1) |
 
-**Request Zod 스키마:**
+**Request Zod 스키마 (v0.6 변경: discriminatedUnion 5-type):**
+
+> **(v0.6 변경)** 요청 바디가 `type` 필드 기반 discriminatedUnion으로 확장되었다. 기존 TRANSFER/TOKEN_TRANSFER에 CONTRACT_CALL, APPROVE, BATCH가 추가되어 총 5개 TransactionType을 지원한다. `type` 미지정 시 기본값 `TRANSFER` (하위 호환). 45-enum-unified-mapping.md TransactionType 참조.
 
 ```typescript
+// --- 공통 필드 ---
+const BaseTransactionFields = {
+  memo: z.string().max(200).optional().openapi({
+    description: '최대 200자. Solana Memo Program 256 bytes 이내를 보장한다.',
+    example: 'Payment for services',
+  }),
+  priority: z.enum(['low', 'medium', 'high']).optional().default('medium').openapi({
+    description: '우선순위 (수수료 조정: low=최소, medium=중간, high=최대)',
+    example: 'medium',
+  }),
+}
+
+// --- Type 1: TRANSFER (네이티브 토큰 전송) ---
 const TransferRequestSchema = z.object({
+  type: z.literal('TRANSFER').default('TRANSFER').openapi({
+    description: '네이티브 토큰 전송 (SOL/ETH)',
+  }),
   to: z.string().min(1).openapi({
     description: '수신자 주소 (Solana: base58, EVM: 0x hex)',
     example: 'So11111111111111111111111111111112',
@@ -587,23 +608,111 @@ const TransferRequestSchema = z.object({
     description: '전송 금액 (최소 단위: lamports/wei, 문자열)',
     example: '1000000000',
   }),
-  type: z.enum(['TRANSFER', 'TOKEN_TRANSFER']).optional().default('TRANSFER').openapi({
-    description: '거래 유형 (TRANSFER: 네이티브 토큰, TOKEN_TRANSFER: SPL/ERC20)',
-    example: 'TRANSFER',
-  }),
-  tokenMint: z.string().optional().openapi({
-    description: 'SPL/ERC20 토큰 주소 (type=TOKEN_TRANSFER 시 필수)',
-  }),
-  memo: z.string().max(200).optional().openapi({
-    description: '최대 200자. Solana Memo Program 256 bytes 이내를 보장한다. UTF-8 멀티바이트 문자 사용 시에도 200자 제한으로 256 bytes를 초과하지 않는다. 체인 어댑터에서 바이트 길이 이중 검증 수행.',
-    example: 'Payment for services',
-  }),
-  priority: z.enum(['low', 'medium', 'high']).optional().default('medium').openapi({
-    description: '우선순위 (수수료 조정: low=최소, medium=중간, high=최대)',
-    example: 'medium',
-  }),
+  ...BaseTransactionFields,
 }).openapi('TransferRequest')
+
+// --- Type 2: TOKEN_TRANSFER (SPL/ERC-20 토큰 전송) (v0.6 추가) ---
+const TokenTransferRequestSchema = z.object({
+  type: z.literal('TOKEN_TRANSFER').openapi({
+    description: 'SPL/ERC-20 토큰 전송',
+  }),
+  to: z.string().min(1).openapi({
+    description: '수신자 주소',
+  }),
+  amount: z.string().min(1).openapi({
+    description: '전송 금액 (토큰 최소 단위)',
+    example: '1000000',
+  }),
+  token: z.object({
+    mint: z.string().min(1).openapi({
+      description: '토큰 민트/컨트랙트 주소',
+      example: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    }),
+    decimals: z.number().int().optional().openapi({
+      description: '소수점 자릿수 (미지정 시 온체인 조회)',
+    }),
+  }).openapi({ description: '토큰 정보 (56-token-transfer-extension-spec.md 참조)' }),
+  ...BaseTransactionFields,
+}).openapi('TokenTransferRequest')
+
+// --- Type 3: CONTRACT_CALL (컨트랙트 호출) (v0.6 추가) ---
+const ContractCallRequestSchema = z.object({
+  type: z.literal('CONTRACT_CALL').openapi({
+    description: '스마트 컨트랙트 호출. CONTRACT_WHITELIST + METHOD_WHITELIST 기본 거부 정책.',
+  }),
+  contractAddress: z.string().min(1).openapi({
+    description: '컨트랙트 주소 (EVM: 0x hex, Solana: base58 programId)',
+  }),
+  // EVM 전용
+  calldata: z.string().optional().openapi({
+    description: '(EVM) ABI-encoded calldata (0x hex)',
+  }),
+  value: z.string().optional().openapi({
+    description: '(EVM) msg.value (wei)',
+  }),
+  // Solana 전용
+  programId: z.string().optional().openapi({
+    description: '(Solana) 프로그램 ID (base58)',
+  }),
+  instructionData: z.string().optional().openapi({
+    description: '(Solana) instruction data (base64)',
+  }),
+  accounts: z.array(z.object({
+    pubkey: z.string(),
+    isSigner: z.boolean(),
+    isWritable: z.boolean(),
+  })).optional().openapi({
+    description: '(Solana) AccountMeta 배열',
+  }),
+  ...BaseTransactionFields,
+}).openapi('ContractCallRequest')
+
+// --- Type 4: APPROVE (토큰 승인) (v0.6 추가) ---
+const ApproveRequestSchema = z.object({
+  type: z.literal('APPROVE').openapi({
+    description: '토큰 승인 (권한 위임). APPROVED_SPENDERS 기본 거부 정책.',
+  }),
+  token: z.object({
+    mint: z.string().min(1).openapi({
+      description: '토큰 민트/컨트랙트 주소',
+    }),
+  }),
+  spender: z.string().min(1).openapi({
+    description: '승인 대상 주소 (DEX 라우터 등)',
+  }),
+  amount: z.string().min(1).openapi({
+    description: '승인 금액 (토큰 최소 단위). 무제한 시 체인별 MAX/2 (59-approve-management-spec.md 참조)',
+  }),
+  ...BaseTransactionFields,
+}).openapi('ApproveRequest')
+
+// --- Type 5: BATCH (배치 트랜잭션) (v0.6 추가) ---
+const BatchRequestSchema = z.object({
+  type: z.literal('BATCH').openapi({
+    description: 'Solana 원자적 배치 트랜잭션. EVM 미지원 (BATCH_NOT_SUPPORTED). min 2 / max 20 instructions.',
+  }),
+  instructions: z.array(z.discriminatedUnion('type', [
+    z.object({ type: z.literal('TRANSFER'), to: z.string(), amount: z.string() }),
+    z.object({ type: z.literal('TOKEN_TRANSFER'), to: z.string(), amount: z.string(), token: z.object({ mint: z.string() }) }),
+    z.object({ type: z.literal('CONTRACT_CALL'), contractAddress: z.string(), programId: z.string().optional(), instructionData: z.string().optional(), accounts: z.array(z.object({ pubkey: z.string(), isSigner: z.boolean(), isWritable: z.boolean() })).optional() }),
+    z.object({ type: z.literal('APPROVE'), token: z.object({ mint: z.string() }), spender: z.string(), amount: z.string() }),
+  ])).min(2).max(20).openapi({
+    description: '배치 내 instruction 목록 (2~20개, 60-batch-transaction-spec.md 참조)',
+  }),
+  ...BaseTransactionFields,
+}).openapi('BatchRequest')
+
+// --- discriminatedUnion (5-type) ---
+const TransactionRequestSchema = z.discriminatedUnion('type', [
+  TransferRequestSchema,
+  TokenTransferRequestSchema,
+  ContractCallRequestSchema,
+  ApproveRequestSchema,
+  BatchRequestSchema,
+]).openapi('TransactionRequest')
 ```
+
+> **하위 호환:** `type` 필드 미지정 시 `TRANSFER`로 기본값 적용. 기존 클라이언트는 변경 없이 동작한다.
 
 **Response Zod 스키마:**
 
@@ -659,6 +768,10 @@ const TransactionResponseSchema = z.object({
     description: '내부 트랜잭션 ID (UUID v7)',
     example: '019502c0-1a2b-3c4d-5e6f-abcdef012345',
   }),
+  type: z.enum(['TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH']).openapi({
+    description: '(v0.6 추가) 거래 유형',
+    example: 'TRANSFER',
+  }),
   status: TransactionStatusEnum.openapi({
     description: '트랜잭션 상태',
     example: 'CONFIRMED',
@@ -674,6 +787,19 @@ const TransactionResponseSchema = z.object({
   estimatedFee: z.string().optional().openapi({
     description: '추정 수수료 (최소 단위)',
     example: '5000',
+  }),
+  // v0.6 감사 필드 (CONTRACT_CALL, APPROVE 타입에서 사용)
+  contractAddress: z.string().optional().openapi({
+    description: '(v0.6 추가) 컨트랙트 주소 (CONTRACT_CALL, APPROVE 시)',
+  }),
+  methodSignature: z.string().optional().openapi({
+    description: '(v0.6 추가) EVM 함수 selector (CONTRACT_CALL 시, 4바이트 hex)',
+  }),
+  spenderAddress: z.string().optional().openapi({
+    description: '(v0.6 추가) 승인 대상 주소 (APPROVE 시)',
+  }),
+  approvedAmount: z.string().optional().openapi({
+    description: '(v0.6 추가) 승인 금액 (APPROVE 시, 토큰 최소 단위)',
   }),
   createdAt: z.string().datetime().openapi({
     description: '요청 시각 (ISO 8601)',
@@ -719,6 +845,19 @@ const TransactionResponseSchema = z.object({
 | `SIMULATION_FAILED` | 422 | false | 온체인 시뮬레이션 실패 |
 | `ADAPTER_NOT_AVAILABLE` | 503 | true | 체인 어댑터 미초기화 |
 | `KEYSTORE_LOCKED` | 503 | true | 키스토어 잠김 |
+| `TOKEN_NOT_FOUND` | 404 | false | (v0.6) 토큰 민트/컨트랙트 주소 불일치 |
+| `TOKEN_NOT_ALLOWED` | 403 | false | (v0.6) ALLOWED_TOKENS에 미등록 |
+| `INSUFFICIENT_TOKEN_BALANCE` | 400 | false | (v0.6) 토큰 잔액 부족 |
+| `CONTRACT_CALL_DISABLED` | 403 | false | (v0.6) CONTRACT_WHITELIST 미설정 |
+| `CONTRACT_NOT_WHITELISTED` | 403 | false | (v0.6) 컨트랙트가 화이트리스트에 없음 |
+| `METHOD_NOT_WHITELISTED` | 403 | false | (v0.6) 함수 selector가 메서드 화이트리스트에 없음 (EVM) |
+| `APPROVE_DISABLED` | 403 | false | (v0.6) APPROVED_SPENDERS 미설정 |
+| `SPENDER_NOT_APPROVED` | 403 | false | (v0.6) spender가 승인 목록에 없음 |
+| `APPROVE_AMOUNT_EXCEEDED` | 403 | false | (v0.6) approve 금액 초과 |
+| `UNLIMITED_APPROVE_BLOCKED` | 403 | false | (v0.6) 무제한 approve 차단 |
+| `BATCH_NOT_SUPPORTED` | 400 | false | (v0.6) 체인이 배치 미지원 (EVM) |
+| `BATCH_SIZE_EXCEEDED` | 400 | false | (v0.6) instruction 수 > 20 |
+| `BATCH_POLICY_VIOLATION` | 403 | false | (v0.6) 배치 내 정책 위반 |
 
 ---
 
@@ -900,6 +1039,285 @@ const PendingTransactionListResponseSchema = z.object({
 | `SESSION_NOT_FOUND` | 404 | false | 세션 없음 |
 
 > **상세 스펙:** 5종 안전 장치, 토큰 회전 메커니즘, Owner 사후 거부 플로우 등 전체 프로토콜은 53-session-renewal-protocol.md 참조.
+
+---
+
+### 6.7 GET /v1/wallet/assets (에이전트 보유 자산 목록) [v0.6 추가]
+
+> **(v0.6 추가)** 에이전트 지갑이 보유한 전체 자산(네이티브 토큰 + SPL/ERC-20)을 조회한다. 57-asset-query-fee-estimation-spec.md 섹션 7 참조.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `GET` |
+| **Path** | `/v1/wallet/assets` |
+| **Auth** | bearerAuth (Session) |
+| **Tags** | `Wallet` |
+| **operationId** | `getAssets` |
+| **Rate Limit** | 세션 300 req/min |
+| **정의 원본** | ASSET-FEE (57-asset-query-fee-estimation-spec.md 섹션 7) |
+
+**Response Zod 스키마:**
+
+```typescript
+const AssetInfoSchema = z.object({
+  type: z.enum(['native', 'spl', 'erc20']).openapi({
+    description: '자산 유형 (native: SOL/ETH, spl: Solana 토큰, erc20: EVM 토큰)',
+  }),
+  mint: z.string().optional().openapi({
+    description: '토큰 주소 (native이면 null)',
+  }),
+  symbol: z.string().openapi({
+    description: '토큰 심볼',
+    example: 'SOL',
+  }),
+  name: z.string().optional().openapi({
+    description: '토큰 이름',
+  }),
+  balance: z.string().openapi({
+    description: '잔액 (최소 단위)',
+    example: '1500000000',
+  }),
+  decimals: z.number().int().openapi({
+    description: '소수점 자릿수',
+    example: 9,
+  }),
+  usdValue: z.string().optional().openapi({
+    description: 'USD 환산 가격 (오라클 가용 시)',
+  }),
+}).openapi('AssetInfo')
+
+const AssetsResponseSchema = z.object({
+  assets: z.array(AssetInfoSchema).openapi({
+    description: '보유 자산 목록 (네이티브 토큰 첫 번째, 잔액 내림차순)',
+  }),
+  totalUsdValue: z.string().optional().openapi({
+    description: '총 USD 환산 가치 (오라클 가용 시)',
+  }),
+  chain: z.string().openapi({ description: '체인' }),
+  network: z.string().openapi({ description: '네트워크' }),
+}).openapi('AssetsResponse')
+```
+
+> **정렬 규칙:** 네이티브 토큰(SOL/ETH) 항상 첫 번째, 이후 잔액 내림차순. 57-asset-query-fee-estimation-spec.md 결정 참조.
+
+**응답 예시 (200 OK):**
+```json
+{
+  "assets": [
+    {
+      "type": "native",
+      "symbol": "SOL",
+      "name": "Solana",
+      "balance": "1500000000",
+      "decimals": 9,
+      "usdValue": "225.00"
+    },
+    {
+      "type": "spl",
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "balance": "50000000",
+      "decimals": 6,
+      "usdValue": "50.00"
+    }
+  ],
+  "totalUsdValue": "275.00",
+  "chain": "solana",
+  "network": "mainnet-beta"
+}
+```
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `INVALID_TOKEN` | 401 | false | 세션 토큰 검증 실패 |
+| `ADAPTER_NOT_AVAILABLE` | 503 | true | 체인 어댑터 미초기화 |
+| `CHAIN_ERROR` | 502 | true | RPC 노드 연결/응답 오류 |
+
+---
+
+### 6.8 GET /v1/actions (Action Provider 목록) [v0.6 추가]
+
+> **(v0.6 추가)** 등록된 Action Provider 목록과 각 Provider가 제공하는 Action 목록을 조회한다. 62-action-provider-architecture.md 섹션 7 참조.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `GET` |
+| **Path** | `/v1/actions` |
+| **Auth** | bearerAuth (Session) |
+| **Tags** | `Action` |
+| **operationId** | `listActions` |
+| **Rate Limit** | 세션 300 req/min |
+| **정의 원본** | ACTION (62-action-provider-architecture.md 섹션 7) |
+
+**Response Zod 스키마:**
+
+```typescript
+const ActionSummarySchema = z.object({
+  name: z.string().openapi({ description: '액션 이름' }),
+  description: z.string().openapi({ description: '액션 설명' }),
+  mcpExpose: z.boolean().openapi({ description: 'MCP Tool로 노출 여부' }),
+})
+
+const ActionProviderSummarySchema = z.object({
+  name: z.string().openapi({ description: 'Provider 이름', example: 'jupiter-swap' }),
+  description: z.string().openapi({ description: 'Provider 설명' }),
+  supportedChains: z.array(z.string()).openapi({ description: '지원 체인 목록', example: ['solana'] }),
+  actions: z.array(ActionSummarySchema).openapi({ description: '제공 액션 목록' }),
+})
+
+const ActionListResponseSchema = z.object({
+  providers: z.array(ActionProviderSummarySchema),
+}).openapi('ActionListResponse')
+```
+
+**응답 예시 (200 OK):**
+```json
+{
+  "providers": [
+    {
+      "name": "jupiter-swap",
+      "description": "Jupiter DEX aggregator swap provider",
+      "supportedChains": ["solana"],
+      "actions": [
+        {
+          "name": "swap",
+          "description": "Swap tokens via Jupiter aggregator",
+          "mcpExpose": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 6.9 GET /v1/actions/:providerName/:actionName (Action 상세) [v0.6 추가]
+
+> **(v0.6 추가)** 특정 Action의 상세 정보(입력 스키마, 설명, 지원 체인)를 조회한다.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `GET` |
+| **Path** | `/v1/actions/:providerName/:actionName` |
+| **Auth** | bearerAuth (Session) |
+| **Tags** | `Action` |
+| **operationId** | `getAction` |
+| **Rate Limit** | 세션 300 req/min |
+| **정의 원본** | ACTION (62-action-provider-architecture.md 섹션 7) |
+
+**Path Parameters:**
+
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| `providerName` | string | Action Provider 이름 (예: `jupiter-swap`) |
+| `actionName` | string | Action 이름 (예: `swap`) |
+
+**Response Zod 스키마:**
+
+```typescript
+const ActionDetailResponseSchema = z.object({
+  providerName: z.string(),
+  actionName: z.string(),
+  description: z.string(),
+  supportedChains: z.array(z.string()),
+  inputSchema: z.unknown().openapi({
+    description: 'JSON Schema (Zod -> JSON Schema 변환). 클라이언트가 입력 폼 생성에 활용.',
+  }),
+  mcpExpose: z.boolean(),
+}).openapi('ActionDetailResponse')
+```
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `ACTION_NOT_FOUND` | 404 | false | (v0.6) 존재하지 않는 Provider 또는 Action |
+
+---
+
+### 6.10 POST /v1/actions/:providerName/:actionName/resolve (Action Resolve) [v0.6 추가]
+
+> **(v0.6 추가)** Action의 resolve 단계만 실행한다. resolve()는 외부 API 호출(예: Jupiter Quote) 후 ContractCallRequest를 반환한다. 파이프라인 실행 없이 결과만 조회. 62-action-provider-architecture.md 섹션 7 resolve-then-execute 패턴 참조.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `POST` |
+| **Path** | `/v1/actions/:providerName/:actionName/resolve` |
+| **Auth** | bearerAuth (Session) |
+| **Tags** | `Action` |
+| **operationId** | `resolveAction` |
+| **Rate Limit** | 거래 10 req/min |
+| **정의 원본** | ACTION (62-action-provider-architecture.md 섹션 7) |
+
+**Request Zod 스키마:**
+
+```typescript
+const ActionResolveRequestSchema = z.object({
+  params: z.record(z.unknown()).openapi({
+    description: 'Action별 입력 파라미터 (inputSchema에 맞는 키-값 쌍)',
+  }),
+}).openapi('ActionResolveRequest')
+```
+
+**Response Zod 스키마:**
+
+```typescript
+const ActionResolveResponseSchema = z.object({
+  resolved: z.literal(true),
+  contractCallRequest: z.object({
+    type: z.literal('CONTRACT_CALL'),
+    contractAddress: z.string(),
+    calldata: z.string().optional(),
+    programId: z.string().optional(),
+    instructionData: z.string().optional(),
+    accounts: z.array(z.object({ pubkey: z.string(), isSigner: z.boolean(), isWritable: z.boolean() })).optional(),
+    value: z.string().optional(),
+  }).openapi({ description: 'resolve()가 생성한 ContractCallRequest (정책 엔진에 제출 가능)' }),
+  metadata: z.record(z.unknown()).optional().openapi({
+    description: 'Action별 추가 메타데이터 (예: priceImpactPct, routePlan)',
+  }),
+}).openapi('ActionResolveResponse')
+```
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `ACTION_NOT_FOUND` | 404 | false | (v0.6) 존재하지 않는 Action |
+| `ACTION_VALIDATION_FAILED` | 400 | false | (v0.6) 입력 파라미터 Zod 검증 실패 |
+| `ACTION_RESOLVE_FAILED` | 502 | true | (v0.6) 외부 API 호출 실패 (Quote API 등) |
+| `ACTION_RETURN_INVALID` | 500 | false | (v0.6) resolve() 반환값 스키마 검증 실패 |
+| `ACTION_CHAIN_MISMATCH` | 400 | false | (v0.6) 요청 체인과 Provider 지원 체인 불일치 |
+
+---
+
+### 6.11 POST /v1/actions/:providerName/:actionName/execute (Action Execute) [v0.6 추가]
+
+> **(v0.6 추가)** Action의 resolve + 트랜잭션 파이프라인을 한 번에 실행한다. resolve()로 ContractCallRequest를 생성하고, 정책 엔진 평가 -> 서명 -> 제출까지 전체 파이프라인을 수행. INSTANT 티어는 CONFIRMED까지 동기 대기, DELAY/APPROVAL 티어는 QUEUED 즉시 반환.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `POST` |
+| **Path** | `/v1/actions/:providerName/:actionName/execute` |
+| **Auth** | bearerAuth (Session) |
+| **Tags** | `Action` |
+| **operationId** | `executeAction` |
+| **Rate Limit** | 거래 10 req/min |
+| **정의 원본** | ACTION (62-action-provider-architecture.md 섹션 7) |
+
+**Request Zod 스키마:** `ActionResolveRequestSchema`와 동일
+
+**Response Zod 스키마:** `TransactionResponseSchema`와 동일 (섹션 6.3 참조)
+
+**응답 분기:**
+- **200 OK** (INSTANT 티어): `status: 'CONFIRMED'`, `txHash` 포함
+- **202 Accepted** (DELAY/APPROVAL 티어): `status: 'QUEUED'`, `txHash` 없음
+
+**에러:** ActionResolveRequest의 에러 + TransactionSend의 에러 전체 (resolve 실패 또는 파이프라인 실패)
 
 ---
 
@@ -2356,6 +2774,19 @@ const ErrorResponseSchema = z.object({
 | `TX_ALREADY_PROCESSED` | 409 | false | 이미 처리 완료된 거래 |
 | `CHAIN_ERROR` | 502 | true | 온체인 제출/확인 중 RPC 오류 |
 | `SIMULATION_FAILED` | 422 | false | 온체인 시뮬레이션 실패 |
+| `TOKEN_NOT_FOUND` | 404 | false | (v0.6 추가) 토큰 민트/컨트랙트 주소 불일치 |
+| `TOKEN_NOT_ALLOWED` | 403 | false | (v0.6 추가) ALLOWED_TOKENS에 미등록 토큰 |
+| `INSUFFICIENT_TOKEN_BALANCE` | 400 | false | (v0.6 추가) SPL/ERC-20 토큰 잔액 부족 |
+| `CONTRACT_CALL_DISABLED` | 403 | false | (v0.6 추가) CONTRACT_WHITELIST 미설정 (컨트랙트 호출 비활성) |
+| `CONTRACT_NOT_WHITELISTED` | 403 | false | (v0.6 추가) 컨트랙트가 화이트리스트에 없음 |
+| `METHOD_NOT_WHITELISTED` | 403 | false | (v0.6 추가) EVM 함수 selector가 메서드 화이트리스트에 없음 |
+| `APPROVE_DISABLED` | 403 | false | (v0.6 추가) APPROVED_SPENDERS 미설정 (approve 비활성) |
+| `SPENDER_NOT_APPROVED` | 403 | false | (v0.6 추가) spender가 승인 목록에 없음 |
+| `APPROVE_AMOUNT_EXCEEDED` | 403 | false | (v0.6 추가) approve 금액 초과 |
+| `UNLIMITED_APPROVE_BLOCKED` | 403 | false | (v0.6 추가) 무제한 approve 차단 |
+| `BATCH_NOT_SUPPORTED` | 400 | false | (v0.6 추가) 체인이 배치 미지원 (EVM) |
+| `BATCH_SIZE_EXCEEDED` | 400 | false | (v0.6 추가) instruction 수 > 20 |
+| `BATCH_POLICY_VIOLATION` | 403 | false | (v0.6 추가) 배치 내 정책 위반 |
 
 ### 10.5 POLICY 도메인 에러
 
@@ -2394,20 +2825,37 @@ const ErrorResponseSchema = z.object({
 | `AGENT_SUSPENDED` | 409 | false | 에이전트 정지 상태 |
 | `AGENT_TERMINATED` | 410 | false | 에이전트 종료됨 |
 
-### 10.9 에러 코드 요약 통계
+### 10.9 ACTION 도메인 에러 (v0.6 추가)
+
+> **(v0.6 추가)** Action Provider 관련 에러. 45-enum-unified-mapping.md ActionErrorCode 7개 참조.
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `ACTION_NOT_FOUND` | 404 | false | 존재하지 않는 Action Provider 또는 Action 이름 |
+| `ACTION_VALIDATION_FAILED` | 400 | false | 입력 파라미터 Zod 검증 실패 |
+| `ACTION_RESOLVE_FAILED` | 502 | true | 외부 API 호출 실패 (예: Jupiter Quote API) |
+| `ACTION_RETURN_INVALID` | 500 | false | resolve() 반환값 스키마 검증 실패 |
+| `ACTION_PLUGIN_LOAD_FAILED` | 500 | false | 플러그인 로드 실패 (startup 시) |
+| `ACTION_NAME_CONFLICT` | 409 | false | 동일 액션 이름 중복 등록 시도 |
+| `ACTION_CHAIN_MISMATCH` | 400 | false | 요청 체인과 Provider 지원 체인 불일치 |
+
+### 10.10 에러 코드 요약 통계 (v0.6 변경)
 
 | 도메인 | 코드 수 | 주요 HTTP |
 |--------|--------|-----------|
 | AUTH | 8 | 401, 429 |
 | SESSION | 8 | 401, 403, 404 (Phase 20: +4 갱신 에러) |
-| TX | 7 | 400, 404, 409, 410, 422, 502 |
+| TX | 20 | 400, 403, 404, 409, 410, 422, 502 (v0.6: +13 토큰/컨트랙트/approve/배치 에러) |
 | POLICY | 4 | 403, 429 |
 | OWNER | 4 | 404, 409, 410 |
 | SYSTEM | 6 | 400, 409, 503 |
 | AGENT | 3 | 404, 409, 410 |
-| **합계** | **40** | |
+| ACTION | 7 | 400, 404, 409, 500, 502 (v0.6 추가) |
+| **합계** | **60** | |
 
-> **(v0.5 추가) hint 매핑:** 40개 에러 코드 중 31개(78%)에 hint가 매핑되어 있다. 9개 미매핑(보안/복구불가 사유: `INVALID_TOKEN`, `TOKEN_EXPIRED`, `SESSION_REVOKED`, `INVALID_SIGNATURE`, `INVALID_NONCE`, `MASTER_PASSWORD_LOCKED`, `SYSTEM_LOCKED`, `SHUTTING_DOWN`, `KEYSTORE_LOCKED`). 전체 hint 맵은 **55-dx-improvement-spec.md 섹션 2.2 errorHintMap** 참조.
+> **(v0.5 추가) hint 매핑:** v0.5 기준 40개 에러 코드 중 31개(78%)에 hint가 매핑되어 있다. v0.6 추가 20개 에러 코드의 hint 매핑은 구현 시 확장 예정. 전체 hint 맵은 **55-dx-improvement-spec.md 섹션 2.2 errorHintMap** 참조.
+>
+> **(v0.6 추가) 에러 코드 교차 참조:** v0.6 에러 코드 20개(TX 도메인 13개 + ACTION 도메인 7개)의 전체 목록과 소스 문서 매핑은 **45-enum-unified-mapping.md v0.6 에러 코드 교차 참조** 섹션 참조.
 
 ---
 
@@ -2473,9 +2921,10 @@ Zod Schema (packages/core/src/schemas/)
 | 태그 | 설명 | 엔드포인트 수 |
 |------|------|-------------|
 | `Public` | 인증 불필요 | 3 |
-| `Wallet` | 지갑 조회 | 2 |
+| `Wallet` | 지갑 조회 | 3 (v0.6: +1 assets) |
 | `Transaction` | 거래 송금/조회 | 3 |
 | `Session` | 세션 관리 | 3 |
+| `Action` | Action Provider (v0.6 추가) | 4 |
 | `Owner` | Owner 전용 관리 | 17 |
 | `Admin` | 시스템 관리 | 3 |
 
@@ -2526,14 +2975,19 @@ if (config.daemon.log_level === 'debug') {
 }
 ```
 
-### 12.5 v0.3 확장 포인트
+### 12.5 확장 포인트
 
-| 영역 | 확장 내용 |
-|------|----------|
-| SPL 토큰 | `GET /v1/wallet/tokens`, `POST /v1/transactions/send` (type=TOKEN_TRANSFER 구현) |
-| EVM 체인 | `EvmAdapter` 구현, `eip155` 네임스페이스 활성화 |
-| 멀티 에이전트 | `POST /v1/agents`, `DELETE /v1/agents/:id` 관리 API |
-| Remote MCP | Streamable HTTP transport, OAuth 2.1 인증 |
+> **(v0.6 변경)** v0.3에서 예고된 SPL 토큰, 컨트랙트 호출, Action Provider 확장이 v0.6에서 설계 완료. 구현 단계에서 아래 항목 참조.
+
+| 영역 | 상태 | 확장 내용 |
+|------|------|----------|
+| SPL/ERC-20 토큰 | v0.6 설계 완료 | `GET /v1/wallet/assets`, `POST /v1/transactions/send` (type=TOKEN_TRANSFER) |
+| 컨트랙트 호출 | v0.6 설계 완료 | `POST /v1/transactions/send` (type=CONTRACT_CALL, APPROVE, BATCH) |
+| Action Provider | v0.6 설계 완료 | `GET/POST /v1/actions/*` (resolve-then-execute 패턴) |
+| 가격 오라클 | v0.6 설계 완료 | IPriceOracle (USD 기준 정책 평가), 내부 서비스 (REST API 미노출) |
+| EVM 체인 | 구현 대기 | `EvmAdapter` 구현, `eip155` 네임스페이스 활성화 |
+| 멀티 에이전트 | 미래 확장 | `POST /v1/agents`, `DELETE /v1/agents/:id` 관리 API |
+| Remote MCP | 미래 확장 | Streamable HTTP transport, OAuth 2.1 인증 |
 
 ---
 
@@ -2618,6 +3072,8 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 ## 15. 전체 엔드포인트 맵 (Quick Reference)
 
 > **(v0.5 변경)** Auth 열이 v0.5 인증 모델을 반영하여 업데이트되었다. ownerAuth는 #15(approve)과 #18(recover) 2곳에만 유지. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
+>
+> **(v0.6 변경)** 5개 엔드포인트 추가: #33 GET /v1/wallet/assets, #34~37 /v1/actions/* (Action Provider API). 총 36개 엔드포인트. 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
 
 | # | Method | Path | Auth (v0.5) | Tags | operationId | 정의 원본 |
 |---|--------|------|-------------|------|-------------|----------|
@@ -2653,3 +3109,8 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 30 | POST | `/v1/admin/kill-switch` | masterAuth(explicit) | Admin | adminKillSwitch | KILL-AUTO-EVM |
 | 31 | POST | `/v1/admin/shutdown` | masterAuth(explicit) | Admin | adminShutdown | CORE-05 |
 | 32 | GET | `/v1/admin/status` | masterAuth(implicit) | Admin | getAdminStatus | Phase 9 |
+| 33 | GET | `/v1/wallet/assets` | sessionAuth | Wallet | getAssets | **v0.6** ASSET-FEE |
+| 34 | GET | `/v1/actions` | sessionAuth | Action | listActions | **v0.6** ACTION |
+| 35 | GET | `/v1/actions/:provider/:action` | sessionAuth | Action | getAction | **v0.6** ACTION |
+| 36 | POST | `/v1/actions/:provider/:action/resolve` | sessionAuth | Action | resolveAction | **v0.6** ACTION |
+| 37 | POST | `/v1/actions/:provider/:action/execute` | sessionAuth | Action | executeAction | **v0.6** ACTION |

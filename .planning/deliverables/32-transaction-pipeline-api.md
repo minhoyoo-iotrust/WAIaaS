@@ -2,9 +2,11 @@
 
 **문서 ID:** TX-PIPE
 **작성일:** 2026-02-05
+**v0.6 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** SESS-PROTO (30-session-token-protocol.md), CHAIN-SOL (31-solana-adapter-detail.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), CORE-06 (29-api-framework-design.md)
+**참조:** SESS-PROTO (30-session-token-protocol.md), CHAIN-SOL (31-solana-adapter-detail.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), CORE-06 (29-api-framework-design.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63)
 **요구사항:** API-02 (지갑 엔드포인트), API-03 (세션 엔드포인트), API-04 (거래 엔드포인트)
+**v0.6 통합:** INTEG-01 (5-type 분기, IPriceOracle 주입, actionSource 메타, type별 빌드)
 
 ---
 
@@ -194,10 +196,12 @@ function validateTransition(currentStatus: string, nextStatus: string): boolean 
 
 **역할:** POST /v1/transactions/send 요청을 수신하고, Zod 스키마로 검증한 뒤 transactions 테이블에 INSERT한다.
 
+> **(v0.6 확장)** Stage 1에서 discriminatedUnion 5-type 분기를 수행한다. `type` 필드에 따라 TransferRequestSchema, TokenTransferRequestSchema, ContractCallRequestSchema, ApproveRequestSchema, BatchRequestSchema 중 하나로 파싱된다. SSoT: 45-enum-unified-mapping.md 섹션 2.3
+
 | 항목 | 값 |
 |------|-----|
-| **입력** | HTTP POST body (TransferRequestSchema) |
-| **처리** | Zod 파싱 -> UUID v7 생성 -> transactions INSERT |
+| **입력** | HTTP POST body -- (v0.6 변경) discriminatedUnion 5-type 중 하나 |
+| **처리** | Zod 파싱 (type 기반 분기) -> UUID v7 생성 -> transactions INSERT |
 | **출력** | transactionId (UUID v7) |
 | **DB 변경** | `INSERT INTO transactions (id, agent_id, session_id, chain, type, amount, to_address, status='PENDING', created_at)` |
 | **에러** | `VALIDATION_ERROR` (400) -- Zod 검증 실패 |
@@ -205,24 +209,45 @@ function validateTransition(currentStatus: string, nextStatus: string): boolean 
 
 ```typescript
 // Stage 1 pseudo-code
+// (v0.6 변경) discriminatedUnion 5-type 분기
 async function stageReceive(
-  request: TransferRequest,
+  request: TransactionRequest,  // (v0.6) 5-type 유니온
   sessionContext: { sessionId: string; agentId: string; chain: string },
   db: DrizzleInstance,
 ): Promise<string> {
   const txId = generateUUIDv7()
 
+  // (v0.6 추가) type 필드 기반 discriminatedUnion 파싱
+  // Zod 스키마: z.discriminatedUnion('type', [
+  //   TransferRequestSchema,        // type: 'TRANSFER'
+  //   TokenTransferRequestSchema,    // type: 'TOKEN_TRANSFER'
+  //   ContractCallRequestSchema,     // type: 'CONTRACT_CALL'
+  //   ApproveRequestSchema,          // type: 'APPROVE'
+  //   BatchRequestSchema,            // type: 'BATCH'
+  // ])
+  // SSoT: 45-enum-unified-mapping.md 섹션 2.3 TransactionType
+
   // 1. transactions INSERT (status=PENDING)
+  // (v0.6 변경) type별 추가 컬럼 기록
   await db.insert(transactions).values({
     id: txId,
     agentId: sessionContext.agentId,
     sessionId: sessionContext.sessionId,
     chain: sessionContext.chain,
-    type: request.type ?? 'TRANSFER',
-    amount: request.amount,
+    type: request.type,       // (v0.6) 5개 TransactionType 중 하나
+    amount: request.amount ?? '0',
     toAddress: request.to,
     status: 'PENDING',
     createdAt: new Date(),
+    // (v0.6 추가) 감사 컬럼 -- 25-sqlite-schema.md 참조
+    tokenMint: 'token' in request ? request.token : null,
+    contractAddress: 'contractAddress' in request ? request.contractAddress : null,
+    methodSelector: 'methodSelector' in request ? request.methodSelector : null,
+    spenderAddress: 'spender' in request ? request.spender : null,
+    // (v0.6 추가) Action Provider 메타데이터
+    metadata: 'actionSource' in request
+      ? JSON.stringify({ actionSource: request.actionSource })
+      : null,
   })
 
   // 2. audit_log INSERT
@@ -246,6 +271,8 @@ async function stageReceive(
 
 **역할:** 07-01 SESS-PROTO에서 정의한 `validateSessionConstraints()`를 호출하여 세션 제약 조건을 확인한다.
 
+> **(v0.6 확장)** TransactionType 5개에 대응하는 세션 제약이 추가되었다. allowedContracts (CONTRACT_CALL 대상 제한), allowedSpenders (APPROVE 대상 제한), allowedTokens (TOKEN_TRANSFER 토큰 제한)가 세션 생성 시 설정 가능하다. 소스: 56 섹션 9.6, 58 섹션 7, 59 섹션 10
+
 | 항목 | 값 |
 |------|-----|
 | **입력** | transactionId + 세션 제약 (`c.get('constraints')`) + 사용 통계 (`c.get('usageStats')`) |
@@ -263,16 +290,49 @@ async function stageReceive(
 4. **허용 작업 (allowedOperations)** -- `request.type`이 목록에 없으면 거부
 5. **허용 주소 (allowedDestinations)** -- `request.to`가 목록에 없으면 거부
 
+**(v0.6 추가) 검증 항목 3가지 추가** (CHAIN-EXT-01~04):
+
+6. **허용 토큰 (allowedTokens)** -- TOKEN_TRANSFER 시 `request.token`이 목록에 없으면 거부 (56 섹션 9.6)
+7. **허용 컨트랙트 (allowedContracts)** -- CONTRACT_CALL 시 `request.contractAddress`가 목록에 없으면 거부 (58 섹션 7)
+8. **허용 Spender (allowedSpenders)** -- APPROVE 시 `request.spender`가 목록에 없으면 거부 (59 섹션 10)
+
 ```typescript
 // Stage 2 pseudo-code
+// (v0.6 변경) request 타입을 TransactionRequest 유니온으로 확장
 async function stageSessionValidate(
   txId: string,
-  request: TransferRequest,
+  request: TransactionRequest,  // (v0.6) 5-type 유니온
   constraints: SessionConstraints,
   usageStats: SessionUsageStats,
   db: DrizzleInstance,
 ): Promise<void> {
   const result = validateSessionConstraints(request, constraints, usageStats)
+
+  // (v0.6 추가) type별 세션 제약 검증
+  // TOKEN_TRANSFER: allowedTokens 검사
+  if (result.allowed && request.type === 'TOKEN_TRANSFER' && constraints.allowedTokens?.length) {
+    if (!constraints.allowedTokens.includes(request.token)) {
+      result.allowed = false
+      result.code = 'SESSION_TOKEN_NOT_ALLOWED'
+      result.reason = `토큰 ${request.token}은 세션에서 허용되지 않습니다.`
+    }
+  }
+  // CONTRACT_CALL: allowedContracts 검사
+  if (result.allowed && request.type === 'CONTRACT_CALL' && constraints.allowedContracts?.length) {
+    if (!constraints.allowedContracts.includes(request.contractAddress)) {
+      result.allowed = false
+      result.code = 'SESSION_CONTRACT_NOT_ALLOWED'
+      result.reason = `컨트랙트 ${request.contractAddress}는 세션에서 허용되지 않습니다.`
+    }
+  }
+  // APPROVE: allowedSpenders 검사
+  if (result.allowed && request.type === 'APPROVE' && constraints.allowedSpenders?.length) {
+    if (!constraints.allowedSpenders.includes(request.spender)) {
+      result.allowed = false
+      result.code = 'SESSION_SPENDER_NOT_ALLOWED'
+      result.reason = `Spender ${request.spender}는 세션에서 허용되지 않습니다.`
+    }
+  }
 
   // audit_log INSERT (성공/실패 모두)
   await insertAuditLog(db, {
@@ -305,12 +365,14 @@ async function stageSessionValidate(
 
 > **Phase 8에서 상세화.** Phase 7에서는 인터페이스만 정의하고, 기본 동작은 passthrough (ALLOW + INSTANT).
 
+> **(v0.6 확장)** DatabasePolicyEngine.evaluate()가 11단계 알고리즘으로 확장되었다. IPriceOracle을 주입받아 resolveEffectiveAmountUsd()로 USD 기준 티어를 결정한다. DENY 우선 원칙: Step 1~6에서 DENY 발생 시 즉시 반환. 배치 요청은 Phase A (개별 instruction) + Phase B (합산 금액) 2단계 평가를 수행한다. 상세: 33-time-lock-approval-mechanism.md 섹션 3, 61-price-oracle-spec.md 섹션 6
+
 **역할:** 에이전트별/글로벌 정책 규칙을 평가하여 거래를 허용/거부하고 보안 티어를 결정한다.
 
 | 항목 | 값 |
 |------|-----|
-| **입력** | transactionId + agentId + 거래 내용 (amount, to, type) |
-| **처리** | `PolicyEngine.evaluate(request)` -> `PolicyDecision` |
+| **입력** | transactionId + agentId + 거래 내용 (amount, to, type) + **(v0.6) IPriceOracle** |
+| **처리** | `PolicyEngine.evaluate(request)` -> `PolicyDecision` -- **(v0.6) 11단계 알고리즘** |
 | **Phase 7 기본 동작** | 정책 미설정 시 `ALLOW` + `INSTANT` 티어 (passthrough) |
 | **실패** | `status=CANCELLED`, `error='POLICY_VIOLATION'` |
 | **DB 변경** | 실패 시 `UPDATE transactions SET status='CANCELLED', error=? WHERE id=?` |
@@ -349,16 +411,29 @@ interface IPolicyEngine {
    *
    * Phase 7 기본 구현: 항상 { allowed: true, tier: 'INSTANT' } 반환
    * Phase 8 구현: policies 테이블에서 규칙 로드 -> 순차 평가
+   * (v0.6 변경) DatabasePolicyEngine: 11단계 알고리즘, IPriceOracle 주입
+   *   - Step 1~6: DENY 우선 검사 (ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT)
+   *   - Step 7: 금액 기반 티어 결정 (resolveEffectiveAmountUsd -> maxTier(nativeTier, usdTier))
+   *   - Step 8: APPROVE_TIER_OVERRIDE 적용
+   *   - Step 9~10: DAILY_LIMIT, RATE_LIMIT
+   *   - Step 11: 최종 PolicyDecision 반환
+   *   상세: 33-time-lock-approval-mechanism.md 섹션 3
    *
    * @param agentId 에이전트 ID
-   * @param request 거래 요청 정보
+   * @param request 거래 요청 정보 (v0.6: 5-type 유니온)
    * @returns 정책 결정 (ALLOW/DENY + 티어)
    */
   evaluate(agentId: string, request: {
-    type: string
+    type: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH'  // (v0.6 변경) 5-type
     amount: string
     to: string
     chain: string
+    // (v0.6 추가) type별 추가 필드
+    token?: string              // TOKEN_TRANSFER: 토큰 주소
+    contractAddress?: string    // CONTRACT_CALL: 컨트랙트 주소
+    methodSelector?: string     // CONTRACT_CALL: EVM 메서드 selector (4 bytes hex)
+    spender?: string            // APPROVE: spender 주소
+    instructions?: unknown[]    // BATCH: 개별 instruction 배열
   }): Promise<PolicyDecision>
 }
 ```
@@ -377,6 +452,22 @@ class DefaultPolicyEngine implements IPolicyEngine {
     }
   }
 }
+
+// (v0.6) Phase 8 이후: DatabasePolicyEngine으로 대체
+// 33-time-lock-approval-mechanism.md 참조
+// class DatabasePolicyEngine implements IPolicyEngine {
+//   constructor(
+//     private db: DrizzleInstance,
+//     private priceOracle: IPriceOracle,  // (v0.6 추가) 61-price-oracle-spec.md
+//   ) {}
+//   async evaluate(agentId, request): Promise<PolicyDecision> {
+//     // 11단계 알고리즘 -- 33-time-lock 섹션 3 참조
+//     // Step 7: resolveEffectiveAmountUsd(request, this.priceOracle)
+//     //   -> maxTier(nativeTier, usdTier) 보수적 채택
+//     //   -> stale 가격 시 INSTANT->NOTIFY 상향
+//     //   -> +-50% 급변동 시 한 단계 상향
+//   }
+// }
 ```
 
 ---
@@ -384,6 +475,8 @@ class DefaultPolicyEngine implements IPolicyEngine {
 ### Stage 4 -- TIER CLASSIFY (보안 티어 분류)
 
 > **Phase 8에서 상세화.** Phase 7에서는 4개 티어의 분기 로직만 정의하고, 기본 동작은 모든 거래를 INSTANT으로 분류한다.
+
+> **(v0.6 확장)** CONTRACT_CALL은 기본 APPROVAL 티어 (화이트리스트 통과 시도 보수적). APPROVE는 APPROVE_TIER_OVERRIDE에 의해 티어가 독립 결정된다. BATCH는 개별 instruction 중 최고 티어가 배치 전체의 티어가 되며, All-or-Nothing: 하나라도 DENY면 전체 배치 DENY. 소스: 58 섹션 4, 59 섹션 10, 60 섹션 5
 
 **역할:** Stage 3의 정책 결정(PolicyDecision)에 따라 거래를 4개 보안 티어로 분류하고, 각 티어별 실행 경로를 결정한다.
 
@@ -462,10 +555,12 @@ async function stageTierClassify(
 
 **역할:** CORE-04 IChainAdapter의 4단계 트랜잭션 메서드를 순차 호출하여 온체인 트랜잭션을 실행한다. CHAIN-SOL의 SolanaAdapter가 Solana 체인의 구체적 구현이다.
 
+> **(v0.6 확장)** Stage 5a의 빌드 메서드가 TransactionType에 따라 분기된다. TRANSFER/TOKEN_TRANSFER -> `adapter.buildTransfer(request)`, CONTRACT_CALL -> `adapter.buildContractCall(request)`, APPROVE -> `adapter.buildApprove(request)`, BATCH -> `adapter.buildBatch(request)`. 27-chain-adapter-interface.md 섹션 4~7 참조
+
 | 항목 | 값 |
 |------|-----|
-| **입력** | transactionId + TransferRequest + IChainAdapter + ILocalKeyStore |
-| **처리** | build -> simulate -> sign -> submit (4단계) |
+| **입력** | transactionId + **(v0.6 변경) TransactionRequest 5-type 유니온** + IChainAdapter + ILocalKeyStore |
+| **처리** | **(v0.6 변경) type별 build** -> simulate -> sign -> submit (4단계) |
 | **타임아웃** | Stage 5 전체 30초 (INSTANT 티어). blockhash ~60초 수명의 절반 |
 | **DB 변경** | 단계별 갱신 (아래 상세) |
 | **audit_log** | `TX_SUBMITTED` (info, 5d 성공 시) |
@@ -474,12 +569,62 @@ async function stageTierClassify(
 
 ```typescript
 // 5a. 트랜잭션 빌드
-const unsignedTx = await adapter.buildTransaction({
-  from: agent.publicKey,
-  to: request.to,
-  amount: BigInt(request.amount),
-  memo: request.memo,
-})
+// (v0.6 변경) type별 빌드 메서드 분기
+// 27-chain-adapter-interface.md 섹션 4~7 참조
+let unsignedTx: UnsignedTransaction
+
+switch (request.type) {
+  case 'TRANSFER':
+  case 'TOKEN_TRANSFER':
+    // buildTransfer()는 token 필드 존재 시 SPL/ERC-20 전송 분기
+    // CHAIN-SOL: token 없으면 SOL SystemProgram.transfer
+    //            token 있으면 getTransferCheckedInstruction (decimals 온체인 검증)
+    unsignedTx = await adapter.buildTransfer({
+      from: agent.publicKey,
+      to: request.to,
+      amount: BigInt(request.amount),
+      token: 'token' in request ? request.token : undefined,
+      memo: request.memo,
+    })
+    break
+
+  case 'CONTRACT_CALL':
+    // buildContractCall(): EVM calldata / Solana programId+data 기반 임의 컨트랙트 호출
+    // 27-chain-adapter-interface.md 섹션 5
+    unsignedTx = await adapter.buildContractCall({
+      from: agent.publicKey,
+      contractAddress: request.contractAddress,
+      methodSelector: request.methodSelector,  // EVM: 4 bytes hex
+      calldata: request.calldata,              // EVM: ABI-encoded
+      value: request.value ? BigInt(request.value) : 0n,
+      // Solana: programId + accounts + data
+      programId: request.programId,
+      accounts: request.accounts,
+      data: request.data,
+    })
+    break
+
+  case 'APPROVE':
+    // buildApprove(): ERC-20 approve / SPL createApproveCheckedInstruction
+    // 27-chain-adapter-interface.md 섹션 6
+    unsignedTx = await adapter.buildApprove({
+      from: agent.publicKey,
+      token: request.token,
+      spender: request.spender,
+      amount: BigInt(request.amount),
+    })
+    break
+
+  case 'BATCH':
+    // buildBatch(): Solana 전용 다중 instruction VersionedTransaction
+    // 27-chain-adapter-interface.md 섹션 7
+    // EVM: BATCH_NOT_SUPPORTED (400) 반환
+    unsignedTx = await adapter.buildBatch({
+      from: agent.publicKey,
+      instructions: request.instructions,  // InstructionRequest[]
+    })
+    break
+}
 // CHAIN-SOL: pipe(createTransactionMessage, setFeePayer, setLifetime, appendInstruction)
 
 // INSTANT 티어: PENDING -> QUEUED (내부 전이)
@@ -806,18 +951,22 @@ class TransactionService {
     private keyStore: ILocalKeyStore,
     private adapters: AdapterRegistry,
     private policyEngine: IPolicyEngine,
+    private priceOracle?: IPriceOracle,  // (v0.6 추가) 61-price-oracle-spec.md
   ) {}
 
   /**
    * 거래 전송을 실행한다.
    * 파이프라인 6단계를 순차 실행하며, 각 단계의 에러를 적절히 처리한다.
    *
-   * @param request 전송 요청 (Zod 검증 완료)
+   * (v0.6 변경) request 타입이 TransactionRequest 5-type 유니온으로 확장.
+   * type에 따라 Stage 2 세션 제약, Stage 3 정책 평가, Stage 5 빌드가 분기된다.
+   *
+   * @param request 전송 요청 (Zod 검증 완료) -- (v0.6) 5-type 유니온
    * @param session 세션 컨텍스트 (sessionAuth 미들웨어에서 주입)
    * @returns TransactionResult (INSTANT: CONFIRMED까지, DELAY/APPROVAL: QUEUED 즉시)
    */
-  async executeTransfer(
-    request: TransferRequest,
+  async executeTransaction(
+    request: TransactionRequest,  // (v0.6 변경) TransferRequest -> TransactionRequest 유니온
     session: {
       sessionId: string
       agentId: string
@@ -839,12 +988,19 @@ class TransactionService {
       this.logTiming('Stage 2 (SESSION_VALIDATE)', stage2Start)
 
       // Stage 3: POLICY CHECK
+      // (v0.6 변경) 11단계 알고리즘, IPriceOracle 주입, 5-type 전달
       const stage3Start = Date.now()
       const decision = await this.policyEngine.evaluate(session.agentId, {
-        type: request.type ?? 'TRANSFER',
+        type: request.type ?? 'TRANSFER',  // (v0.6) 5-type
         amount: request.amount,
         to: request.to,
         chain: session.agent.chain,
+        // (v0.6 추가) type별 추가 필드
+        ...('token' in request && { token: request.token }),
+        ...('contractAddress' in request && { contractAddress: request.contractAddress }),
+        ...('methodSelector' in request && { methodSelector: request.methodSelector }),
+        ...('spender' in request && { spender: request.spender }),
+        ...('instructions' in request && { instructions: request.instructions }),
       })
       this.logTiming('Stage 3 (POLICY_CHECK)', stage3Start)
 
@@ -2157,7 +2313,122 @@ return c.json(createErrorResponse(
 
 ---
 
+## 10. v0.6 파이프라인 확장 요약 (v0.6 추가)
+
+v0.6 블록체인 기능 확장에 의해 파이프라인 6단계의 각 Stage에 다음 변경이 적용되었다. 기존 6단계 구조는 유지되며, 새 기능은 기존 위에 적층된다.
+
+### 10.1 Stage별 v0.6 변경 요약
+
+| Stage | v0.2 (기존) | v0.6 (확장) | 소스 |
+|-------|-------------|-------------|------|
+| Stage 1 (RECEIVE) | TransferRequest 단일 Zod | discriminatedUnion 5-type 파싱 (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH). 감사 컬럼 4개 + actionSource 메타 기록 | 45-enum 2.3 |
+| Stage 2 (SESSION) | 5가지 제약 검증 | +3가지: allowedTokens, allowedContracts, allowedSpenders | 56, 58, 59 |
+| Stage 3 (POLICY) | DefaultPolicyEngine (passthrough) | DatabasePolicyEngine 11단계 + IPriceOracle 주입 (resolveEffectiveAmountUsd) | 33-time-lock, 61 |
+| Stage 4 (TIER) | 4-tier 분기 | CONTRACT_CALL 기본 APPROVAL, APPROVE 독립 TIER_OVERRIDE, BATCH All-or-Nothing | 58, 59, 60 |
+| Stage 5 (EXECUTE) | buildTransaction 단일 | type별 분기: buildTransfer / buildContractCall / buildApprove / buildBatch | 27-chain-adapter |
+| Stage 6 (CONFIRM) | 변경 없음 | 변경 없음 (type 무관 온체인 확정 대기) | - |
+
+### 10.2 actionSource 메타데이터 (v0.6 추가)
+
+Action Provider(62-action-provider-architecture.md)에서 `resolve()`한 요청에는 `actionSource` 필드가 추가된다. 이 필드는 어떤 Action Provider가 어떤 액션으로 이 거래를 생성했는지 추적한다.
+
+```typescript
+// Action Provider resolve() 결과에 포함되는 메타데이터
+interface ActionSourceMetadata {
+  /** Action Provider 식별자 (e.g., 'jupiter-swap', 'orca-swap') */
+  provider: string
+  /** 액션 이름 (e.g., 'swap', 'addLiquidity') */
+  action: string
+  /** 원본 파라미터 요약 (감사 로그용) */
+  params: Record<string, unknown>
+  /** resolve 시각 */
+  resolvedAt: string  // ISO 8601
+}
+```
+
+**파이프라인 통합:**
+- **Stage 1 (RECEIVE):** `request.actionSource` 존재 시 `transactions.metadata` JSON에 기록
+- **Stage 3 (POLICY):** actionSource에 의해 정책이 달라지지 않음 (투명 통과). 정책은 결과 ContractCallRequest 기준으로 평가
+- **감사 추적:** `audit_log.details`에 actionSource 포함, 사후 분석 시 "이 거래는 Jupiter swap에서 생성됨" 확인 가능
+
+```typescript
+// Stage 1에서 actionSource 기록 예시
+metadata: request.actionSource
+  ? JSON.stringify({
+      actionSource: {
+        provider: request.actionSource.provider,  // 'jupiter-swap'
+        action: request.actionSource.action,      // 'swap'
+        params: request.actionSource.params,       // { inputMint, outputMint, amount }
+        resolvedAt: request.actionSource.resolvedAt,
+      },
+    })
+  : null,
+```
+
+### 10.3 IPriceOracle 파이프라인 주입 (v0.6 추가)
+
+Stage 3 정책 평가에서 USD 기준 티어를 결정하기 위해 IPriceOracle이 주입된다.
+
+```
+TransactionService
+  |
+  +-- policyEngine: DatabasePolicyEngine
+  |       |
+  |       +-- priceOracle: IPriceOracle  <-- (v0.6 추가)
+  |                |
+  |                +-- getPrice(tokenId, chain): PriceResult
+  |                +-- getPrices(tokenIds[], chain): Map<string, PriceResult>
+  |                +-- resolveEffectiveAmountUsd(request): AmountUsd | null
+  |                +-- isStale(tokenId, chain): boolean
+  |
+  +-- adapters: AdapterRegistry
+  +-- keyStore: ILocalKeyStore
+```
+
+**resolveEffectiveAmountUsd 호출 흐름** (61-price-oracle-spec.md 섹션 6):
+1. TransactionType에 따라 가격 조회 대상 결정:
+   - TRANSFER: 네이티브 토큰 (SOL/ETH) 가격
+   - TOKEN_TRANSFER: 토큰 가격 (token 주소 기준)
+   - CONTRACT_CALL: value 필드의 네이티브 토큰 가격
+   - APPROVE: 참고값만 기록 (티어는 APPROVE_TIER_OVERRIDE 독립)
+   - BATCH: 개별 instruction 금액 합산 후 가격 조회
+2. 가격 조회: OracleChain fallback (CoinGecko -> Pyth/Chainlink -> stale cache)
+3. USD 금액 계산: `amount * price`
+4. maxTier(nativeTier, usdTier) 보수적 채택
+
+### 10.4 5-type 유니온 Zod 스키마 참조 (v0.6 추가)
+
+Stage 1에서 사용하는 5-type discriminatedUnion의 각 스키마는 소스 문서에서 정의된다:
+
+| TransactionType | Zod 스키마 | 소스 문서 | 필수 필드 |
+|-----------------|-----------|-----------|-----------|
+| `TRANSFER` | TransferRequestSchema | 기존 (이 문서 섹션 7.1) | to, amount |
+| `TOKEN_TRANSFER` | TokenTransferRequestSchema | 56-token-transfer-extension-spec.md | to, amount, token |
+| `CONTRACT_CALL` | ContractCallRequestSchema | 58-contract-call-spec.md | contractAddress, (EVM: methodSelector+calldata / Solana: programId+data) |
+| `APPROVE` | ApproveRequestSchema | 59-approve-management-spec.md | token, spender, amount |
+| `BATCH` | BatchRequestSchema | 60-batch-transaction-spec.md | instructions[] (Solana only, min 2 / max 20) |
+
+파이프라인 진입점의 통합 스키마:
+
+```typescript
+// (v0.6 추가) packages/core/src/schemas/transaction.ts
+import { z } from '@hono/zod-openapi'
+
+export const TransactionRequestSchema = z.discriminatedUnion('type', [
+  TransferRequestSchema,
+  TokenTransferRequestSchema,
+  ContractCallRequestSchema,
+  ApproveRequestSchema,
+  BatchRequestSchema,
+]).openapi('TransactionRequest')
+
+export type TransactionRequest = z.infer<typeof TransactionRequestSchema>
+```
+
+---
+
 *문서 ID: TX-PIPE*
 *작성일: 2026-02-05*
+*v0.6 업데이트: 2026-02-08*
 *Phase: 07-session-transaction-protocol-design*
 *상태: 완료*
