@@ -65,7 +65,7 @@ Phase 11은 v0.3 설계 논리 일관성 확보의 핵심 단계로, 시스템�
 ### CRIT-02: 트랜잭션 상태 Enum 통일 (C2)
 
 **문제 정의:**
-40-telegram-bot-docker.md에서 14개 상태값을 참조한다는 objectives/03-design-consistency.md의 지적이 있으나, 실제 분석 결과는 다름.
+40-telegram-bot-docker.md에서 14개 상태값을 참조한다는 objectives/v0.3-design-consistency.md의 지적이 있으나, 실제 분석 결과는 다름.
 
 **현황 분석 (직접 검증):**
 
@@ -76,7 +76,7 @@ Phase 11은 v0.3 설계 논리 일관성 확보의 핵심 단계로, 시스템�
 | 37-rest-api-complete-spec.md | `TransactionStatusEnum = z.enum([...])` 8개 | 8 |
 
 **14개 상태 주장의 근거:**
-objectives/03-design-consistency.md에서 "Bot이 14개 상태값 참조"라고 했으나, 40-telegram-bot-docker.md를 직접 검색한 결과:
+objectives/v0.3-design-consistency.md에서 "Bot이 14개 상태값 참조"라고 했으나, 40-telegram-bot-docker.md를 직접 검색한 결과:
 - 해당 문서에서 트랜잭션 상태 14개를 정의하는 곳이 발견되지 않음
 - 가능성: v0.1 문서(10-transaction-flow.md)의 8단계 + v0.2 8상태를 혼동했을 수 있음
 
@@ -419,7 +419,7 @@ WAIaaS는 Owner의 Private Key에 접근하지 않으므로, 전송은 Owner의 
 
 1. **C2 14개 상태 출처**
    - What we know: 실제 DB 스키마와 API 스펙 모두 8개 상태
-   - What's unclear: objectives/03-design-consistency.md의 "14개 상태" 주장 근거
+   - What's unclear: objectives/v0.3-design-consistency.md의 "14개 상태" 주장 근거
    - Recommendation: 40-telegram-bot-docker.md 전체 검색으로 14개 주장 검증 후, 해당 없으면 C2를 "이미 해결됨"으로 처리
 
 2. **C8 문서 위치**
@@ -444,7 +444,7 @@ WAIaaS는 Owner의 Private Key에 접근하지 않으므로, 전송은 Owner의 
 - **32-transaction-pipeline-api.md** - 8-state machine 정의
 - **37-rest-api-complete-spec.md** - TransactionStatusEnum 8개, REST API 스펙
 - **40-telegram-bot-docker.md** - Docker 포트 매핑, docker-compose 설계
-- **objectives/03-design-consistency.md** - CRITICAL 이슈 목록 (C1, C2, C3, C8)
+- **objectives/v0.3-design-consistency.md** - CRITICAL 이슈 목록 (C1, C2, C3, C8)
 
 ### Secondary (MEDIUM confidence)
 
@@ -454,7 +454,7 @@ WAIaaS는 Owner의 Private Key에 접근하지 않으므로, 전송은 Owner의 
 
 ### Tertiary (LOW confidence)
 
-- objectives/03-design-consistency.md의 C2 "14개 상태" 주장 - 직접 검증 결과 확인되지 않음
+- objectives/v0.3-design-consistency.md의 C2 "14개 상태" 주장 - 직접 검증 결과 확인되지 않음
 
 ---
 

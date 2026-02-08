@@ -75,7 +75,7 @@ Phase 12는 v0.3 설계 논리 일관성 확보의 두 번째 핵심 단계로, 
 
 **현황:**
 - Phase 11 CRIT-02에서 DB 8개 상태가 SSoT로 확정됨: `PENDING, QUEUED, EXECUTING, SUBMITTED, CONFIRMED, FAILED, CANCELLED, EXPIRED`
-- objectives/03-design-consistency.md에서 언급된 "QUEUED vs PENDING_QUEUE" 불일치는 Phase 11 조사에서 실제 존재하지 않음 확인
+- objectives/v0.3-design-consistency.md에서 언급된 "QUEUED vs PENDING_QUEUE" 불일치는 Phase 11 조사에서 실제 존재하지 않음 확인
 - 25-sqlite, 32-transaction-pipeline, 37-rest-api 모두 동일 8개 상태 사용
 
 **통일 방향:**
@@ -171,7 +171,7 @@ Phase 12는 v0.3 설계 논리 일관성 확보의 두 번째 핵심 단계로, 
 | 40-telegram-bot-docker.md Long Polling 재시도 | `consecutiveErrors >= 3` → 30초 대기 (다른 맥락) |
 
 **분석:**
-- objectives/03-design-consistency.md에서 "3, 5, 3으로 세 군데 다르게 표기" 지적
+- objectives/v0.3-design-consistency.md에서 "3, 5, 3으로 세 군데 다르게 표기" 지적
 - 36-killswitch 직접 검색 결과: threshold 값 5를 사용하는 곳이 발견되지 않음
 - velocity 규칙의 threshold는 50 tx/hour (다른 규칙 타입)
 - 08-dual-key는 v0.1 SUPERSEDED 문서로 무시
@@ -355,7 +355,7 @@ HealthResponseSchema = z.object({
 | 24-monorepo (CORE-01) config.toml | "rate_limit_rpm" | 60 |
 
 **분석:**
-- objectives/03에서 "req/min vs req/sec 혼재" 지적이 있으나, 실제 문서 검색 결과 모든 곳에서 req/min 사용
+- objectives/v0.3에서 "req/min vs req/sec 혼재" 지적이 있으나, 실제 문서 검색 결과 모든 곳에서 req/min 사용
 - req/sec 표기는 발견되지 않음 -- objectives의 지적이 오류일 가능성
 - 단, CORE-01의 `rate_limit_rpm = 60`은 CORE-06의 전역 100 req/min과 불일치
 - CORE-01 config.toml에는 `rate_limit_session_rpm`, `rate_limit_tx_rpm` 필드가 없음 (CORE-06에서 정의)
@@ -403,7 +403,7 @@ HealthResponseSchema = z.object({
 - 37-rest-api(API-SPEC) 섹션 3.2: ownerAuth 스키마 정의 + 8단계 검증 테이블 포함
 
 **분석:**
-- objectives/03에서 "per-request SIWS 서명 설계와 ownerAuth 미들웨어 상세 미정의" 지적
+- objectives/v0.3에서 "per-request SIWS 서명 설계와 ownerAuth 미들웨어 상세 미정의" 지적
 - 실제로는 34-owner-wallet에서 상세 설계가 완료되었고, 37-rest-api에도 반영됨
 - 단, 29-api-framework(CORE-06) 섹션 2.1에서 ownerAuth가 "라우트 레벨 미들웨어 (Phase 8에서 상세 설계)" 주석으로만 존재
 - CORE-06에 ownerAuth 미들웨어 상세를 반영하는 작업이 필요
@@ -627,7 +627,7 @@ grep -n "SPENDING_LIMIT\|ALLOWED_ADDRESSES\|WHITELIST\|TIME_RESTRICTION\|AUTO_ST
 - 36-killswitch-autostop-evm.md (KILL-AUTO-EVM) -- kill switch states, cooldown
 - 34-owner-wallet-connection.md (OWNR-CONN) -- ownerAuth 미들웨어 8단계
 - 31-solana-adapter-detail.md (CHAIN-SOL) -- memo 256 bytes 제한
-- objectives/03-design-consistency.md -- 비일관성 목록 원본
+- objectives/v0.3-design-consistency.md -- 비일관성 목록 원본
 
 ### Secondary (MEDIUM confidence)
 - Phase 11 research + summary -- CRIT-01~04 해결 결과 참조

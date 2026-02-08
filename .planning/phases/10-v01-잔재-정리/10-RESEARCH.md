@@ -315,7 +315,7 @@ v0.1 문서 상단(프론트매터 바로 아래)에 추가:
 - [AWS ADR Process](https://docs.aws.amazon.com/prescriptive-guidance/latest/architectural-decision-records/adr-process.html) - Superseded state handling
 - WAIaaS v0.1 deliverables (01-23) - 문서 내용 직접 분석
 - WAIaaS v0.2 deliverables (24-40) - 문서 내용 직접 분석
-- objectives/03-design-consistency.md - CRITICAL/HIGH 이슈 목록
+- objectives/v0.3-design-consistency.md - CRITICAL/HIGH 이슈 목록
 
 ### Secondary (MEDIUM confidence)
 
