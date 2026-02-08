@@ -1,702 +1,558 @@
-# Self-Hosted Agent Wallet Daemon: Domain Pitfalls
+# Domain Pitfalls: Owner 선택적 등록 + 점진적 보안 모델
 
-**Project:** WAIaaS v0.2 - Self-Hosted Secure Wallet for AI Agents
-**Domain:** Self-hosted wallet daemon with local key management and session-based auth
-**Researched:** 2026-02-05
-**Overall Confidence:** MEDIUM-HIGH (multiple authoritative sources cross-referenced)
+**Domain:** Self-hosted AI agent wallet daemon -- optional owner/guardian registration and progressive security unlock
+**Project:** WAIaaS v0.8
+**Researched:** 2026-02-08
+**Overall Confidence:** MEDIUM-HIGH (cross-referenced with v0.5-v0.7 design documents, Argent guardian model, Solana token program, PortSwigger state machine research, SQLite migration patterns)
 
 ---
 
 ## Overview
 
-This document catalogs pitfalls specific to building a self-hosted wallet daemon that stores private keys locally, uses session-based authentication, implements time-lock transactions, and communicates with browser wallet extensions. The v0.1 PITFALLS.md covered cloud-centric WaaS concerns (AWS KMS, Nitro Enclaves, Squads Protocol). This document replaces it with pitfalls for the v0.2 self-hosted local daemon architecture.
+이 문서는 **기존에 Owner 필수(NOT NULL)로 설계된 시스템에 Owner 선택적 등록(nullable)과 점진적 보안 해금 모델을 추가할 때** 발생하는 함정을 다룬다. 기존 v0.2 PITFALLS.md의 일반적 보안 함정(AES-GCM nonce 재사용, Argon2id 파라미터, 메모리 안전 등)과는 달리, v0.8 특유의 상태 전이, 정책 다운그레이드, 자금 회수, 스키마 마이그레이션 위험에 집중한다.
 
-Each pitfall includes: severity rating, what goes wrong, why it happens, warning signs, a concrete prevention strategy, and which v0.2 phase should address it.
+각 함정은 **Critical(재작성 수준)**, **High(보안 열화 또는 자금 위험)**, **Moderate(기술 부채 또는 UX 혼란)** 3단계로 분류한다.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause key compromise, fund loss, or require full rewrites.
+재작성 수준의 보안 결함 또는 자금 손실을 야기하는 실수.
 
 ---
 
-### C-01: AES-256-GCM Nonce Reuse Destroys Both Confidentiality and Authentication
+### C-01: Grace-to-Locked 전이 레이스 컨디션 -- Owner 주소 탈취 윈도우
 
 **Severity:** CRITICAL
-**Confidence:** HIGH (RFC 5116, NIST research, cryptographic proofs)
+**Confidence:** HIGH (PortSwigger state machine research, Argent 36h guardian delay 패턴, WAIaaS v0.8 objective 분석)
 
 **What goes wrong:**
-The daemon encrypts the agent private key with AES-256-GCM using a reused or predictable nonce (IV). An attacker who obtains two ciphertexts encrypted under the same key and nonce can XOR them to recover plaintext differences, and more critically, can recover the GHASH authentication key. With the authentication key, the attacker can forge valid ciphertexts and recover the private key.
+유예 구간(owner_verified = 0)에서 잠금 구간(owner_verified = 1)으로 전이하는 순간에 레이스 컨디션이 존재한다. 공격 시나리오:
+
+1. 공격자가 masterAuth를 탈취한다
+2. 공격자가 `agent set-owner`로 자신의 주소를 등록한다 (유예 구간이므로 masterAuth만 필요)
+3. 공격자가 자신의 주소로 ownerAuth를 수행한다 (owner_verified = 1로 전이)
+4. 이제 잠금 구간이므로 원래 사용자는 ownerAuth(공격자 주소) + masterAuth 없이 변경 불가
+5. 공격자가 `withdraw` API로 전 자산을 자신의 owner_address로 회수
+
+핵심 문제: **ownerAuth 최초 사용(owner_verified 0->1 전이)과 masterAuth 주소 변경 사이에 원자성이 보장되지 않으면, 두 연산이 동시 실행될 수 있다.** 예를 들어:
+- Thread A: ownerAuth 검증 중 (아직 owner_verified 갱신 전)
+- Thread B: masterAuth로 주소 변경 요청 처리 중 (아직 유예 구간으로 판단)
 
 **Why it happens:**
-- Developer uses a static IV stored alongside the encrypted file (common in Android KeyStore implementations)
-- Counter-based nonce wraps around after 2^32 encryptions without key rotation
-- Random 96-bit nonce collides due to birthday bound (~2^48 encryptions under same key)
-- Re-encryption of the same key file after settings change reuses the previous nonce
+- owner_verified 플래그 갱신과 ownerAuth 검증이 단일 트랜잭션 안에 있지 않음
+- Node.js 이벤트 루프에서 동시에 두 HTTP 요청이 처리될 때, SQLite 읽기 시점과 쓰기 시점 사이에 갭 존재
+- 유예→잠금 전이가 명시적 상태 머신이 아닌 단순 플래그 토글로 구현됨
 
 **Warning signs:**
-- IV/nonce stored as a constant in code or config
-- No nonce generation on each encryption call
-- No key rotation mechanism after N encryptions
-- Encrypted key file never changes size despite re-encryption
+- owner_verified 갱신이 ownerAuth 미들웨어에서 "사후" 처리됨 (검증 성공 후 별도 UPDATE)
+- 주소 변경 API에서 owner_verified를 SELECT한 뒤 별도 트랜잭션으로 판단
+- 두 엔드포인트(ownerAuth 사용 / 주소 변경)가 같은 DB 행을 동시에 읽고 쓸 수 있는 구조
 
 **Prevention:**
-1. Generate a fresh 96-bit random nonce for EVERY encryption operation using `crypto.randomBytes(12)`
-2. Prepend the nonce to the ciphertext file: `[12-byte nonce][ciphertext][16-byte auth tag]`
-3. Implement key rotation: re-derive the encryption key (from master password via Argon2id with new salt) after every N re-encryptions or on every password change
-4. Consider AES-256-GCM-SIV (RFC 8452) for nonce misuse resistance as a defense-in-depth measure
-5. Use libsodium's `crypto_aead_xchacha20poly1305_ietf` which uses a 192-bit nonce (birthday bound at ~2^96), dramatically reducing collision risk
+1. **BEGIN IMMEDIATE 트랜잭션으로 owner_verified 전이를 원자화:** ownerAuth가 최초 사용되는 순간, 같은 DB 트랜잭션 안에서 owner_verified = 1을 SET하고 응답을 반환한다. 별도 비동기 갱신 금지.
+2. **주소 변경 API에서 owner_verified를 트랜잭션 내 재확인:** `SELECT owner_verified FROM agents WHERE id = ? FOR UPDATE` 패턴으로 읽기 시점의 상태를 잠근다. SQLite에서는 `BEGIN IMMEDIATE` + `SELECT ... WHERE owner_verified = 0`으로 경합 방지.
+3. **상태 전이 이벤트 로깅:** owner_verified 0->1 전이 시 audit_log에 즉시 기록. 이후 24시간 내 주소 변경 시도가 있으면 추가 알림.
+4. **owner_verified 전이 후 쿨다운:** 전이 후 최소 5분간 주소 변경 불가 (Argent의 36h 대기 패턴의 최소 적용).
 
-**Phase:** Core key management (Phase 1 - encrypted keystore implementation)
+**Phase:** Owner 등록/변경 API 구현 시 (v1.2 인증+정책 단계)
 
 ---
 
-### C-02: Argon2id Parameter Misconfiguration Weakens Key Derivation
+### C-02: Security Downgrade Attack -- masterAuth로 Owner 제거 후 APPROVAL 우회
 
 **Severity:** CRITICAL
-**Confidence:** HIGH (OWASP Password Storage Cheat Sheet, RFC 9106, 2025 arXiv study)
+**Confidence:** HIGH (v0.8 objective 분석, Argent guardian removal 36h delay 패턴 참조)
 
 **What goes wrong:**
-The master password that protects the encrypted private key file is derived using Argon2id with weak parameters, making brute-force attacks feasible. An attacker who steals the encrypted key file can crack the password offline.
+유예 구간(owner_verified = 0)에서 masterAuth만으로 Owner를 제거(`remove-owner`)할 수 있다. 공격 시나리오:
+
+1. 운영자가 에이전트 생성 시 Owner를 등록한다 (`--owner 7xKXtg...`)
+2. 아직 ownerAuth를 사용하지 않았으므로 유예 구간
+3. masterAuth가 유출된다 (에이전트 코드, 환경 변수, 설정 파일 등)
+4. 공격자가 `remove-owner`로 Owner를 제거한다
+5. APPROVAL 티어가 DELAY로 다운그레이드된다
+6. 이전에 APPROVAL로 차단되던 고액 거래가 이제 DELAY(15분 대기)만으로 실행된다
+7. Kill Switch 복구도 24시간 대기(Owner 없음)로 변경되어 오히려 악용 가능
+
+**핵심 위험:** Owner 등록 직후~ownerAuth 최초 사용 사이의 유예 구간이 길수록, masterAuth 유출 시 보안 다운그레이드 윈도우가 넓어진다. 사용자는 "Owner를 등록했으니 안전하다"고 믿지만, 실제로는 ownerAuth를 한 번도 사용하지 않으면 보호 효과가 없다.
 
 **Why it happens:**
-- Using default parameters from example code (e.g., `m=4096, t=1, p=1` -- only 4 MiB memory)
-- Copying parameters from password hashing guides, which target server environments with many concurrent users (low memory per hash), not a single-user desktop daemon
-- Not benchmarking on target hardware -- parameters that take 100ms on a dev machine may take 10ms on an attacker's GPU cluster
-- Storing only the raw derived key, losing salt and parameters needed for re-derivation
+- 유예 구간의 존재 의의("오타 교정")와 보안 보장 사이의 근본적 긴장
+- 사용자가 Owner 등록 후 ownerAuth를 즉시 사용하지 않을 합리적 기대
+- Owner 등록 시 서명 검증을 하지 않는 설계 결정(주소는 공개 정보)
 
 **Warning signs:**
-- Key derivation completes in under 500ms on target hardware
-- Memory parameter below 46 MiB (OWASP minimum for general use)
-- Salt is hardcoded or derived from username instead of being cryptographically random
-- Parameters are not stored alongside the encrypted file
+- Owner 등록 후 ownerAuth 사용까지의 평균 시간이 24시간 이상
+- `remove-owner` 명령에 추가 확인 메커니즘이 없음
+- Owner 등록/제거 이벤트 알림이 없거나 선택적
 
 **Prevention:**
-1. For a single-user local daemon, target **1-3 seconds** derivation time (much higher than server defaults)
-2. Recommended minimum: `m=256 MiB, t=3, p=4` -- benchmark on target hardware and adjust upward
-3. Generate a 16-byte cryptographically random salt per derivation: `crypto.randomBytes(16)`
-4. Store the complete PHC-encoded string: `$argon2id$v=19$m=262144,t=3,p=4$[salt]$[hash]`
-5. On every password change, re-derive with fresh salt and optionally increased parameters
-6. Use constant-time comparison (`crypto.timingSafeEqual`) when verifying derived keys
+1. **유예 구간 시간 제한:** Owner 등록 후 최대 1시간까지만 유예 구간 유지. 이후 자동으로 유예 구간이 만료되어 변경 시 ownerAuth 필요. (owner_verified는 여전히 0이지만, 유예 기간 경과 후에는 ownerAuth가 필요한 "준잠금" 상태로 전환)
+2. **Owner 등록/제거 시 전 채널 알림:** Owner 등록, 변경, 제거 시 즉시 모든 알림 채널로 통보. 특히 제거 시 "보안 수준이 저하됩니다" 경고 포함.
+3. **remove-owner에 확인 지연:** 유예 구간에서도 제거 요청 후 5분 쿨다운. 이 시간 동안 알림 수신 후 취소 가능.
+4. **CLI 경고 메시지:** `remove-owner` 실행 시 "APPROVAL 티어가 비활성화됩니다. 계속하시겠습니까?" 명시적 확인.
+5. **audit_log에 보안 수준 변경 기록:** `SECURITY_LEVEL_DOWNGRADE` 이벤트 타입으로 Owner 제거를 기록.
 
-**Phase:** Core key management (Phase 1 - encrypted keystore implementation)
+**Phase:** Owner 등록/변경/해제 API 및 CLI 구현 시 (v1.2 인증+정책)
 
 ---
 
-### C-03: Private Key Lingers in Node.js Process Memory, Exposed via Swap and Core Dumps
+### C-03: sweepAll 부분 실패 시 잔여 자산 고립 (Partial Sweep Orphan)
 
 **Severity:** CRITICAL
-**Confidence:** HIGH (Node.js Issue #18896, #30956, libsodium documentation)
+**Confidence:** HIGH (Solana CloseAccount 문서, 토큰 계정 rent recovery 메커니즘 검증)
 
 **What goes wrong:**
-After decrypting the private key for signing, the key remains in Node.js heap memory as a standard `Buffer`. This memory can be:
-- Paged to disk swap file (recoverable after process exit)
-- Included in core dumps (if the process crashes)
-- Copied during garbage collection (old location not zeroed)
-- Visible via `/proc/[pid]/mem` to processes with same UID on Linux
+sweepAll의 207(부분 성공) 응답 시, 이후 상태가 불일치한다. 구체적 시나리오:
+
+1. 에이전트가 SOL + USDC + BONK + 3개 소액 토큰을 보유
+2. Owner가 `withdraw(scope: all)` 호출
+3. SOL 전송 성공, USDC 전송 성공
+4. BONK 전송 실패 (네트워크 일시 장애)
+5. 소액 토큰 3개의 closeAccount 실패 (BONK 토큰 계정에 잔액 남아 close 불가)
+6. 응답: 207 + `failed: [{ mint: "DezXA...", error: "transfer failed" }]`
+
+**이후 문제:**
+- SOL이 이미 전송되었으므로 남은 토큰의 재시도에 필요한 tx fee가 없을 수 있음
+- 네이티브 SOL 전량 전송을 마지막에 실행하면, 중간 토큰 실패 시 SOL은 아직 남아 있지만 재시도 로직이 없으면 수동 개입 필요
+- 부분 성공 상태에서 에이전트가 남은 토큰으로 거래를 계속 시도할 수 있음
+- Kill Switch 상태에서의 sweepAll 부분 실패 시, 재시도 경로가 killSwitchGuard에 의해 차단될 수 있음
+
+**Solana 특유의 edge case:**
+- 토큰 계정 잔액이 0이 아니면 `CloseAccount` instruction 실패 -- transfer + closeAccount를 같은 배치에 넣어야 원자적
+- 토큰 계정이 ATA(Associated Token Account)가 아닌 보조 계정일 수 있음 -- `getTokenAccountsByOwner`로 전수 조사 필요
+- Solana 단일 트랜잭션에 최대 ~24개 계정 참조 가능 -- 토큰 종류가 많으면 여러 트랜잭션 필요
+- 각 트랜잭션의 blockhash가 만료되면 재시도 시 새 blockhash 필요
 
 **Why it happens:**
-- Node.js does not implement secure memory (`mlock`, `MADV_DONTDUMP`). Issue #30956 remains open with no resolution
-- JavaScript's garbage collector moves objects in memory, leaving copies at old addresses
-- `Buffer.fill(0)` zeros the current location but cannot track copies the GC already made
-- Developers assume "process memory is safe" without considering the OS virtual memory system
-
-**Warning signs:**
-- Private key stored in a regular `Buffer` or JavaScript variable
-- No explicit zeroing after use
-- Process uses standard `node` binary without memory protections
-- Swap is enabled on the host machine
-- Application does not catch crashes to prevent core dump
+- sweepAll을 단일 원자적 연산으로 설계하기 불가능 (토큰 수에 따라 여러 tx 필요)
+- 실패 시 재시도 로직이 없거나 불완전
+- SOL 전송 순서가 잘못됨 (SOL을 먼저 보내면 토큰 tx fee 부족)
 
 **Prevention:**
-1. Use `sodium-native` package for secure memory allocation:
-   ```
-   const secureBuffer = sodium.sodium_malloc(32)
-   // ... use for signing ...
-   sodium.sodium_memzero(secureBuffer) // guaranteed zero
-   ```
-   `sodium_malloc` calls `mlock()` (prevents swap), `madvise(MADV_DONTDUMP)` (prevents core dump), and places guard pages around the allocation
-2. Minimize key residence time: decrypt -> sign -> zero, all in the same synchronous call path
-3. Disable swap on daemon host machines (document in setup guide): `swapoff -a`
-4. Set `ulimit -c 0` to prevent core dumps, or configure the daemon to set `prctl(PR_SET_DUMPABLE, 0)` via native addon
-5. Never store the raw private key in a JavaScript variable; always keep it in the `sodium_malloc` buffer
-6. Document that `sodium-native` is a hard dependency for security, not a convenience choice
+1. **SOL 전송을 반드시 마지막에 실행:** v0.8 objective의 5.4절 순서를 엄격 준수. 토큰 전부 처리 후 `잔액 - estimated_fee`만큼 SOL 전송.
+2. **토큰별 transfer + closeAccount를 같은 Solana 트랜잭션에 원자적으로 묶기:** `buildBatch()`로 `transferChecked + closeAccount`를 하나의 배치 instruction으로.
+3. **부분 실패 시 자동 재시도 (최대 3회):** 실패한 토큰만 별도 트랜잭션으로 재시도. 재시도 사이에 2초 간격.
+4. **sweepAll 전용 SOL 예약:** 토큰 sweep 전에 예상 tx fee(토큰 수 x 5000 lamports + 여유분)를 계산하고, 이 금액은 SOL sweep에서 제외하여 재시도에 사용.
+5. **207 응답 시 잔여 자산 목록 반환 + 재시도 가이드:** `failed` 배열에 mint 주소, 잔액, 실패 원인을 상세히 포함. CLI에서 `waiaas agent sweep-retry <agentId>` 명령 제공.
+6. **Kill Switch 상태에서의 sweepAll 경로 확보:** killSwitchGuard 허용 목록에 withdraw 엔드포인트를 추가하거나, 복구 프로세스 내에서 sweepAll을 호출하는 방식으로 경로 보장.
 
-**Phase:** Core key management (Phase 1 - signing service implementation)
-
----
-
-### C-04: Localhost Daemon Exploitable via 0.0.0.0 Day and DNS Rebinding Attacks
-
-**Severity:** CRITICAL
-**Confidence:** HIGH (Oligo Security research, GitHub Security blog, CVE-2025-8036)
-
-**What goes wrong:**
-The daemon listens on `localhost:3000` and assumes it is only reachable by local processes. A malicious webpage visited in the user's browser exploits the "0.0.0.0 Day" vulnerability or DNS rebinding to send HTTP requests to the daemon, bypassing browser same-origin policy. The attacker can invoke daemon APIs (list transactions, send funds) if no authentication is required for local access.
-
-**How 0.0.0.0 Day works:**
-- Browser PNA (Private Network Access) blocks requests to `127.0.0.1` from public websites
-- But `0.0.0.0` was NOT on the restricted list (patched in Chrome 128-133, Safari 18, Firefox still unpatched)
-- With `mode: "no-cors"`, a public website can POST to `http://0.0.0.0:3000/v1/transactions/send`
-- The daemon processes it as a legitimate localhost request
-
-**How DNS rebinding works:**
-- Attacker controls `evil.com` which initially resolves to their server
-- After the page loads, DNS is re-resolved to `127.0.0.1`
-- Browser now considers `evil.com` as same-origin with the local daemon
-- Full CORS access to daemon APIs
-
-**Warning signs:**
-- Daemon accepts requests without session token validation on any endpoint
-- No `Host` header validation
-- CORS configured with `Access-Control-Allow-Origin: *`
-- Daemon binds to `0.0.0.0` instead of `127.0.0.1`
-
-**Prevention:**
-1. **Bind exclusively to 127.0.0.1**, never `0.0.0.0`:
-   ```typescript
-   server.listen({ port: 3000, host: '127.0.0.1' })
-   ```
-2. **Require session token on ALL endpoints** including balance queries -- no unauthenticated endpoints
-3. **Validate Host header** on every request: reject if not `localhost` or `127.0.0.1`
-4. **Validate Origin header** if present: reject unknown origins
-5. **CORS policy**: do not set `Access-Control-Allow-Origin: *`. Only allow specific known origins (e.g., the Tauri app's custom scheme or `null` for local file origins)
-6. **Implement CSRF tokens** for any state-changing operations accessed from a browser context
-7. **Add PNA headers** to preflight responses for defense against future browser implementations:
-   ```
-   Access-Control-Allow-Private-Network: true
-   ```
-
-**Known affected services:** Ray AI clusters (ShadowRay campaign), Selenium Grid, PyTorch TorchServe, and any unauthenticated localhost service.
-
-**Phase:** API server setup (Phase 1 - HTTP server configuration). This MUST be implemented from day one, not added later.
-
----
-
-### C-05: Session Token with Insufficient Entropy Enables Prediction Attacks
-
-**Severity:** CRITICAL
-**Confidence:** HIGH (OWASP Session Management Cheat Sheet, CWE-331, Rapid7 severity upgrade to Critical in 2025)
-
-**What goes wrong:**
-Session tokens are generated with insufficient entropy (e.g., timestamp-based, sequential, or using `Math.random()`), allowing attackers to predict valid tokens. Since session tokens in WAIaaS grant transaction signing authority, a predicted token means unauthorized fund transfers.
-
-**Why it happens:**
-- Using non-cryptographic RNG (`Math.random()`, `Date.now()`)
-- MD5/SHA hashing of predictable inputs (timestamp, incrementing counter) -- the hash output is 128/256 bits but entropy is as low as the input
-- Session ID generated from user-visible data (agent name, IP address)
-- Copying example code from non-security-focused tutorials
-
-**Warning signs:**
-- Token generation does not call `crypto.randomBytes()` or equivalent CSPRNG
-- Token format contains recognizable patterns (timestamps, sequential numbers)
-- Tokens shorter than 32 bytes (256 bits)
-- Token generation is deterministic given known inputs
-
-**Prevention:**
-1. Generate session tokens with minimum 256 bits of cryptographic randomness:
-   ```typescript
-   import { randomBytes } from 'crypto'
-   const sessionToken = `wai_sess_${randomBytes(32).toString('base64url')}`
-   ```
-2. Store server-side as SHA-256 hash (same pattern as API keys in the v0.1 auth model)
-3. Include token metadata (expiry, limits) in server-side storage, not encoded in the token itself (avoid JWT for session tokens -- they cannot be revoked without a blocklist)
-4. Implement token binding: associate token with creating wallet signature, IP range, or TLS channel
-5. Rate-limit authentication attempts: max 5 failed attempts per minute per source
-
-**Phase:** Session auth system (Phase 1 - session token design)
+**Phase:** sweepAll 구현 시 (v1.4 토큰+컨트랙트 확장 -- IChainAdapter.sweepAll)
 
 ---
 
 ## High Pitfalls
 
-Mistakes that cause security degradation, data loss, or significant rework.
+보안 열화, 자금 위험, 또는 주요 재작업을 야기하는 실수.
 
 ---
 
-### H-01: Time-Lock Bypass via TOCTOU Race Condition in Pending Queue
+### H-01: APPROVAL->DELAY 다운그레이드 레이스 컨디션 -- Owner 등록 직후의 정책 갭
 
 **Severity:** HIGH
-**Confidence:** MEDIUM (Bitcoin Core race conditions, Compound Timelock patterns, general TOCTOU literature)
+**Confidence:** HIGH (v0.8 objective 3절 다운그레이드 삽입 지점 분석)
 
 **What goes wrong:**
-The time-lock mechanism checks transaction amount -> determines delay tier -> places in pending queue. Between the check and the actual blockchain submission, conditions change. Specific attacks:
+Owner가 등록되는 순간과 정책 엔진이 이를 반영하는 순간 사이에 갭이 존재한다:
 
-1. **Rapid-fire small transactions**: Agent submits 100 transactions of 0.09 SOL each (below the "instant" threshold of 0.1 SOL), draining 9 SOL without triggering any delay
-2. **Session limit exhaustion during pending**: Transaction A (4 SOL) enters 10-min pending queue, leaving 6 SOL session budget. Agent immediately submits Transaction B (6 SOL). When A completes, session budget should have been 2 SOL but both executed
-3. **Cancel-and-resubmit**: Transaction enters pending queue, owner is notified, owner doesn't respond, transaction auto-cancels, agent immediately resubmits -- creating notification fatigue
+1. 에이전트에 Owner가 없음 (APPROVAL -> DELAY 다운그레이드 활성)
+2. 15 SOL 거래 요청 → evaluate() → APPROVAL → **DELAY로 다운그레이드** → 15분 대기 시작
+3. 대기 중(DELAY 쿨다운 진행 중) 운영자가 `set-owner`로 Owner 등록
+4. 15분 경과 → DELAY 큐 처리기가 거래를 자동 실행
+5. **문제:** Owner 등록 후에는 이 거래가 APPROVAL 티어여야 했음 -- Owner의 서명 없이 실행됨
+
+반대 방향도 위험:
+1. 에이전트에 Owner 있음 → 15 SOL 거래 → APPROVAL → Owner 서명 대기
+2. 유예 구간에서 `remove-owner` 실행
+3. APPROVAL 대기 중이던 거래의 처리 방식이 불분명 (계속 대기? 자동 실행? 취소?)
 
 **Why it happens:**
-- Balance/limit checks happen at submission time, not at execution time
-- Pending queue doesn't lock the funds being spent (no "reservation" of session budget)
-- No aggregate rate limiting across the instant-execution tier
-- No deduplication or cooldown after auto-cancel
+- 정책 평가(evaluate)가 요청 시점에 1회만 실행되고, 실행 시점에 재평가하지 않음
+- Owner 등록/제거가 기존 대기 중 거래에 영향을 주는지 명시적 정의 없음
+- DELAY/APPROVAL 대기 큐에 "평가 시점의 Owner 상태"가 기록되지 않음
 
 **Warning signs:**
-- Session budget is checked only at transaction creation, not at signing time
-- No "reserved" or "locked" amount tracking for pending transactions
-- Instant-tier transactions have no aggregate limit
-- No per-minute or per-hour rate limit for instant transactions
+- pending_transactions 테이블에 평가 시점의 owner_address 스냅샷이 없음
+- Owner 변경 시 pending queue를 재검토하는 로직이 없음
+- 큐 처리기에서 실행 전 re-evaluate를 하지 않음
 
 **Prevention:**
-1. **Reserve session budget at submission time**: When a transaction enters the pending queue, deduct its amount from the available session budget immediately. If the transaction is canceled, refund the reservation
-2. **Re-validate at execution time**: When a pending transaction's delay expires, re-check ALL constraints (balance, session limit, per-tx limit) before signing
-3. **Aggregate rate limit on instant tier**: Max 5 instant transactions per 10-minute window, and max 0.5 SOL aggregate per 10-minute window for instant tier
-4. **Cooldown after cancel**: 5-minute cooldown before re-submitting a transaction that was canceled (by owner or timeout)
-5. **Atomic check-and-execute**: Use database transactions with serializable isolation to make limit checks and budget deductions atomic:
-   ```sql
-   BEGIN;
-   SELECT remaining_budget FROM sessions WHERE id = ? FOR UPDATE;
-   -- check if sufficient
-   UPDATE sessions SET remaining_budget = remaining_budget - ? WHERE id = ?;
-   INSERT INTO pending_transactions ...;
-   COMMIT;
-   ```
+1. **실행 시점 재평가(re-validate):** 이미 v0.2 PITFALLS H-01에서 제시한 "실행 시점 재검증" 원칙을 Owner 상태에도 확장. DELAY 만료 시 `agent.owner_address`를 재확인하고, Owner가 추가되었으면 APPROVAL로 재분류.
+2. **Owner 변경 시 pending queue 재분류:** `set-owner` 또는 `remove-owner` 실행 시 해당 에이전트의 모든 PENDING 거래를 재평가. Owner 추가 시: DELAY(다운그레이드된 것) -> APPROVAL로 승격, Owner 제거 시: APPROVAL 대기 -> 취소(Owner 서명을 받을 수 없으므로).
+3. **pending_transactions에 evaluated_with_owner 플래그 저장:** 평가 시 Owner 존재 여부를 기록하여 상태 변경 감지에 활용.
 
-**Phase:** Time-lock system (Phase 2 - pending transaction queue)
+**Phase:** 정책 엔진 다운그레이드 로직 구현 시 (v1.2)
 
 ---
 
-### H-02: SQLite Corruption Under Concurrent Daemon Operations
+### H-02: withdraw 엔드포인트의 Owner 미검증 상태 악용 -- 유예 구간 자금 탈취 경로
 
 **Severity:** HIGH
-**Confidence:** HIGH (SQLite official docs, better-sqlite3 documentation)
+**Confidence:** HIGH (v0.8 objective 5.2절 보안 분석 직접 파생)
 
 **What goes wrong:**
-The daemon uses SQLite for transaction history, session state, and policy configuration. Multiple concurrent operations (agent API calls, pending transaction processing, notification delivery, owner approvals) write to the database simultaneously, causing `SQLITE_BUSY` errors, data loss, or database corruption.
+v0.8 objective 5.2절에서 `withdraw`가 masterAuth만으로 동작하는 이유를 "자금이 항상 owner_address로만 이동하므로 안전"이라고 설명한다. 그러나 유예 구간에서는:
+
+1. 공격자가 masterAuth 탈취
+2. `set-owner <공격자 주소>` 실행 (유예 구간이므로 masterAuth만 필요)
+3. 즉시 `withdraw(scope: all)` 호출 -- 자금이 공격자의 owner_address로 이동
+4. 공격 완료 -- ownerAuth 불필요, 서명 검증 한 번도 없이 전 자산 탈취
+
+v0.8 objective 5.2절의 표에서도 이 시나리오를 인식하고 있으나 "ownerAuth 미사용 = 아직 Owner 검증 전 (등록 직후)"로 경시한다. 문제는 이것이 **의도적 운영 패턴**(Owner 등록 후 ownerAuth를 바로 사용하지 않는 경우)과 겹친다는 것이다.
 
 **Why it happens:**
-- SQLite in default journal mode allows only one writer at a time; readers block during writes
-- WAL mode helps but still limits to a single writer -- concurrent write attempts get `SQLITE_BUSY`
-- `better-sqlite3` is synchronous; long-running queries block the entire Node.js event loop
-- Database file on network filesystem (NFS, SMB) breaks POSIX file locking, causing silent corruption
-- Separating WAL file from database file (e.g., during backup) loses committed transactions
+- withdraw가 recipient를 owner_address로 고정하는 것은 잠금 구간에서만 안전
+- 유예 구간에서는 owner_address 자체가 masterAuth만으로 변경 가능
+- "주소 등록" -> "주소 변경" -> "회수"가 모두 masterAuth 하나로 가능한 체인
 
 **Warning signs:**
-- `SQLITE_BUSY` errors in logs
-- `database is locked` error messages
-- WAL file growing unboundedly (checkpoint starvation)
-- Database file on a Docker volume backed by NFS
-- Backup scripts that copy only the `.db` file without `.db-wal` and `.db-shm`
+- owner_verified = 0인 상태에서 withdraw 호출이 성공하는 테스트 케이스
+- 유예 구간 withdraw에 추가 보호 장치(지연, 알림)가 없음
 
 **Prevention:**
-1. **Enable WAL mode immediately on database open**:
-   ```typescript
-   db.pragma('journal_mode = WAL')
-   db.pragma('busy_timeout = 5000')  // 5s wait on lock contention
-   db.pragma('synchronous = NORMAL') // safe with WAL, much faster
-   ```
-2. **Single database connection per process**: Use one `better-sqlite3` instance shared across the daemon. It is synchronous and thread-safe within a single Node.js process
-3. **Wrap related writes in transactions**: All budget-check-and-deduct operations must be in a single transaction
-4. **Periodic WAL checkpoints**: Run `db.pragma('wal_checkpoint(TRUNCATE)')` periodically (every 5 minutes or every 1000 writes) to prevent WAL file growth
-5. **Never run on network filesystems**: Document that `~/.waiaas/data/` MUST be on a local filesystem
-6. **Atomic backup**: Use SQLite's `.backup()` API or `VACUUM INTO` to create consistent backups, never copy files directly:
-   ```typescript
-   db.backup(`${backupDir}/waiaas-${Date.now()}.db`)
-   ```
-7. **If multi-process is needed later** (e.g., separate notification worker), use a single process as database gatekeeper or switch to PostgreSQL
+1. **유예 구간에서 withdraw 시 강제 대기:** owner_verified = 0이면 withdraw 요청 후 최소 1시간 대기. 이 시간 동안 전 채널 알림.
+2. **주소 변경 후 즉시 withdraw 차단:** owner_address 변경 후 최소 24시간 동안 withdraw 불가. "주소 변경 → 즉시 회수" 공격 체인 차단.
+3. **유예 구간 withdraw 시 ownerAuth 요구 검토:** 유예 구간이라도 자금 이동에는 서명 검증을 요구하는 옵션. 이 경우 Owner가 아직 서명하지 않았으면 withdraw 자체가 불가능 (기능적으로는 자연스러움 -- Owner 검증 전에는 회수 불가).
+4. **가장 간단한 해법: 유예 구간에서 withdraw 비활성화.** owner_verified = 1(잠금 구간)에서만 withdraw 활성화. Owner가 실제 서명으로 검증된 후에만 자금 회수 허용.
 
-**Phase:** Database setup (Phase 1 - storage layer initialization)
+**Phase:** withdraw API 구현 시 (v1.2 또는 v1.4)
 
 ---
 
-### H-03: Owner Wallet Signature Replay Allows Unauthorized Session Creation
+### H-03: Kill Switch 복구 시간 역전 -- Owner 제거로 복구 지연 증가 악용
 
 **Severity:** HIGH
-**Confidence:** MEDIUM (general signature replay patterns, wallet adapter security model)
+**Confidence:** MEDIUM (v0.8 objective 6절 분석, 아키텍처적 추론)
 
 **What goes wrong:**
-The owner signs a message to approve a session. This signed message is replayed by an attacker (or a compromised agent) to create additional unauthorized sessions. The daemon accepts the replay because it only verifies the signature is valid, not that it is fresh.
+v0.8에서 Kill Switch 복구 시간이 Owner 유무에 따라 분기된다:
+- Owner 있음: ownerAuth + masterAuth + 30분
+- Owner 없음: masterAuth + 24시간
+
+공격 시나리오 (DoS 공격):
+1. 공격자가 masterAuth 탈취
+2. Kill Switch 발동 (정상 -- 시스템 보호)
+3. 유예 구간이면: `remove-owner` 실행 -> 복구 시간이 30분 -> 24시간으로 증가
+4. 시스템이 24시간 동안 사용 불가 (피해 확대)
+
+반대 방향 (보안 우회):
+1. 공격자가 masterAuth 탈취
+2. Owner 미등록 상태에서 Kill Switch 발동
+3. masterAuth만으로 24시간 후 복구 가능 -- 이 24시간 동안 공격자는 다른 준비 가능
+4. 복구 후 즉시 자금 탈취 시도
 
 **Why it happens:**
-- Sign message contains no nonce or timestamp: `"Approve session for agent-1"`
-- Daemon does not track which signed messages have already been used
-- No expiration on the signed approval message itself
-- Message format doesn't bind to a specific session creation request
+- Kill Switch 복구 요건이 현재 Owner 상태를 기준으로 동적 판단
+- Kill Switch 발동 시점의 보안 상태가 스냅샷으로 기록되지 않음
+- Owner 제거와 Kill Switch 상태가 독립적으로 변경 가능
 
 **Warning signs:**
-- Same signed message can be submitted to `/v1/sessions` multiple times, each creating a new session
-- Signed message payload does not include timestamp, nonce, or request ID
-- No used-nonce storage or deduplication
-- Session creation logs show multiple sessions with identical signatures
+- Kill Switch ACTIVATED 상태에서 Owner 변경/제거 API가 동작함
+- recover 엔드포인트에서 현재 owner_address만 확인하고 발동 시점 상태를 무시
 
 **Prevention:**
-1. **Include a nonce in every sign request**: Generate a random nonce server-side, include it in the message the owner signs:
-   ```
-   WAIaaS Session Approval
-   Agent: agent-xyz
-   Nonce: a1b2c3d4e5f6
-   Timestamp: 2026-02-05T12:00:00Z
-   Limits: 10 SOL / 24hr
-   ```
-2. **Store used nonces**: Track consumed nonces in the database. Reject any signature with a previously-seen nonce
-3. **Expiration on the approval itself**: The nonce-bearing message is valid for only 5 minutes. After that, the owner must sign a new message
-4. **Bind to session parameters**: The signed message must include the exact session constraints (expiry, limits, allowed operations). Changing any parameter requires a new signature
+1. **Kill Switch ACTIVATED 상태에서 Owner 변경/제거 금지:** Kill Switch 상태에서는 모든 구성 변경을 차단 (이미 killSwitchGuard에서 제한된 4개 경로만 허용하는 구조와 일관).
+2. **Kill Switch 발동 시 보안 상태 스냅샷:** 발동 시점의 owner_address, owner_verified를 kill_switch 레코드에 기록. 복구 시 발동 시점 기준으로 인증 요건 결정.
+3. **복구 인증 요건 결정 시 "더 엄격한 쪽" 적용:** 발동 시점과 현재 시점의 인증 요건 중 더 엄격한 쪽을 적용 (보수적 접근).
 
-**Phase:** Session auth system (Phase 2 - owner approval flow)
+**Phase:** Kill Switch 복구 분기 구현 시 (v1.6 Kill Switch + AutoStop)
 
 ---
 
-### H-04: Clipboard Hijacking and Address Substitution During Wallet Operations
+### H-04: 14개 설계 문서 동시 수정의 일관성 붕괴 -- Cross-Reference Drift
 
 **Severity:** HIGH
-**Confidence:** HIGH (Trust Wallet advisory, Halborn research, multiple real-world incidents)
+**Confidence:** HIGH (v0.3 마일스톤에서 설계 논리 일관성 확보에 전체 마일스톤을 소요한 전례)
 
 **What goes wrong:**
-When the owner copies a recipient address to paste into the daemon UI (desktop app or CLI), clipboard hijacking malware (clipper malware) replaces the address with an attacker-controlled address. Funds are sent to the wrong destination. Solana addresses are Base58 strings that are difficult for humans to fully verify visually.
+v0.8은 14개 기존 설계 문서를 수정한다. Owner nullable 변경이 각 문서에 미치는 영향은 서로 연쇄적이다:
 
-**Known malware families:** CryptoShuffler, Laplas Clipper (supports Solana, Ethereum, Bitcoin + 15 other chains), Android/Clipper.C (was in Google Play Store impersonating MetaMask).
+- 25-sqlite-schema: `owner_address TEXT` (nullable) + `owner_verified INTEGER`
+- 33-time-lock: evaluate()에 다운그레이드 삽입
+- 34-owner-wallet: 등록/변경/해제 생명주기 전면 재설계
+- 37-rest-api: withdraw 엔드포인트 추가, 인증 맵 분기
+- 52-auth-model: Owner 선택적 모델 반영
 
-**Why it happens:**
-- Any application on the system can read and write the clipboard (OS design, not a bug)
-- Users copy-paste wallet addresses because they are too long to type
-- Laplas generates lookalike addresses (matching first/last characters) making visual comparison unreliable
-- Desktop app (Electron/Tauri) does not validate or warn about address changes
+**구체적 drift 시나리오:**
+1. 25-sqlite-schema에서 owner_address를 nullable로 변경
+2. 52-auth-model에서 ownerAuth 미들웨어를 Owner 없는 경우 스킵하도록 수정
+3. 하지만 37-rest-api의 인증 맵에서 특정 엔드포인트가 여전히 ownerAuth를 필수로 명시
+4. 결과: 구현 시 API 스펙과 인증 미들웨어가 충돌
 
-**Warning signs:**
-- User reports that the pasted address differs from what they copied
-- Transaction sent to an address not in the user's address book
-- Antivirus detects clipboard monitoring process
-
-**Prevention:**
-1. **Address book with verification**: Require all recipient addresses to be pre-registered in an address book. Flag any address not in the address book with a prominent warning
-2. **Address confirmation UI**: Show the full address character-by-character in a monospace font with visual grouping (4-char blocks). Highlight characters that differ from the last-used address for this recipient
-3. **Clipboard clearing**: After pasting an address, immediately clear the clipboard:
-   ```typescript
-   navigator.clipboard.writeText('')
-   ```
-4. **Direct QR/WalletConnect input**: Prefer QR code scanning or WalletConnect deep links over clipboard-based address input
-5. **Whitelist enforcement**: In policy engine, restrict transactions to pre-approved addresses only. Any address outside the whitelist requires owner approval (time-lock tier)
-
-**Phase:** Desktop app and owner interface (Phase 3 - transaction UX)
-
----
-
-### H-05: Encrypted Key File Metadata Leaks Information
-
-**Severity:** HIGH
-**Confidence:** MEDIUM (oByte wallet cleartext key in logs, general encrypted storage patterns)
-
-**What goes wrong:**
-While the private key itself is encrypted, surrounding metadata leaks sensitive information:
-- The encrypted key filename reveals it contains a private key (`~/.waiaas/data/agent-key.enc`)
-- File timestamps reveal when the daemon last started (decryption time = file access time)
-- SQLite database stores wallet addresses in plaintext, correlating the daemon to specific on-chain wallets
-- Log files contain partial key material, derivation parameters, or debug output from signing operations
-- Environment variables contain session tokens in shell history
-
-**Why it happens:**
-- Focus on encrypting the key itself while ignoring everything around it
-- Debug logging enabled in production that logs function arguments
-- File naming conventions that make sensitive files obvious targets
-- Not considering that `~/.waiaas/` directory listing reveals system architecture
-
-**Warning signs:**
-- `ls ~/.waiaas/` reveals files named `private-key.*`, `seed.*`, or `keystore.*`
-- Log files contain hexadecimal strings that look like keys or tokens
-- `env` or `printenv` shows session tokens
-- SQLite database is readable with any SQLite browser, revealing all wallet addresses and transaction history
+**v0.3 교훈:** v0.3 마일스톤(설계 논리 일관성 확보)에서 5개 대응표(41-45)를 만들어 해결하는 데 전체 마일스톤(8 plans, 37 reqs)을 소요했다. v0.8은 더 많은 문서(14개)를 수정하면서 비슷한 일관성 문제가 반복될 수 있다.
 
 **Prevention:**
-1. **Opaque filenames**: Name encrypted files generically: `store.dat`, not `private-key.enc`
-2. **No key material in logs**: Set log level to `warn` in production. Implement a log sanitizer that redacts any string matching key/token patterns. Never log function arguments for crypto operations
-3. **Encrypt the entire data directory**: Consider encrypting the SQLite database file itself (via SQLCipher or application-level encryption for sensitive columns)
-4. **Secure log storage**: Rotate logs, set restrictive permissions (`0600`), and exclude from backup tools that sync to cloud
-5. **Environment variable hygiene**: Never pass session tokens via environment variables in shell. Use a file-based token store with `0600` permissions
+1. **Owner 상태 분기표(decision matrix) 먼저 작성:** 각 API 엔드포인트 x Owner 유무 x 유예/잠금 구간 조합의 동작을 하나의 매트릭스로 정의. 모든 문서 수정은 이 매트릭스를 SSoT로 참조.
+2. **문서 수정 순서 고정:** 25(스키마) -> 52(인증) -> 33(정책) -> 34(Owner) -> 37(API) -> 나머지. 상위 문서의 결정이 하위 문서에 전파되는 순서로.
+3. **Cross-reference 체크리스트:** 각 문서 수정 시 영향받는 다른 문서를 명시적으로 나열하고, 수정 완료 후 체크.
+4. **v0.3 패턴 재사용:** Owner 상태 관련 enum/타입 통합 대응표를 작성하여 구현 시 SSoT로 활용.
 
-**Phase:** Key management and storage (Phase 1 - file layout design)
+**Phase:** v0.8 설계 문서 수정 단계 (구현 전, 로드맵 첫 phase)
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause delays, degraded UX, or technical debt.
+기술 부채, UX 혼란, 또는 지연을 야기하는 실수.
 
 ---
 
-### M-01: Notification System Silent Failures Create False Sense of Security
+### M-01: SQLite NOT NULL -> nullable 마이그레이션의 테이블 재생성 필요
 
 **Severity:** MEDIUM
-**Confidence:** MEDIUM (Discord/Telegram API documentation, webhook reliability data)
+**Confidence:** HIGH (SQLite ALTER TABLE 제한, Drizzle ORM 이슈 #1313, #2795)
 
 **What goes wrong:**
-The kill switch depends on the owner receiving timely notifications. Notifications fail silently due to rate limiting (Discord: 30 req/min, Telegram: 30 msg/sec), expired webhooks, network issues, or message size limits. The owner believes they will be alerted but receives nothing during a critical event.
+SQLite의 `ALTER TABLE`은 기존 컬럼의 NOT NULL 제약을 제거하는 것을 지원하지 않는다. `owner_address TEXT NOT NULL`을 `owner_address TEXT`로 변경하려면 **테이블 재생성(create-copy-rename)** 패턴이 필요하다:
 
-**Specific failure modes:**
-- Discord webhook returns 429 (rate limited) during burst of suspicious transactions -- alerts are dropped
-- Telegram bot silently stops receiving webhook callbacks (reported late 2025, no error surfaced)
-- Push notification service (ntfy.sh) is down -- no fallback
-- Message body too long for Telegram (4096 char limit) -- HTTP 400, notification lost
+```sql
+-- 1. 임시 테이블 생성 (새 스키마)
+CREATE TABLE agents_new (..., owner_address TEXT, owner_verified INTEGER NOT NULL DEFAULT 0, ...);
+-- 2. 데이터 복사
+INSERT INTO agents_new SELECT ..., owner_address, 0, ... FROM agents;
+-- 3. 원본 삭제
+DROP TABLE agents;
+-- 4. 이름 변경
+ALTER TABLE agents_new RENAME TO agents;
+-- 5. 인덱스 재생성
+CREATE UNIQUE INDEX ...;
+```
 
-**Warning signs:**
-- No health checks on notification channels
-- No delivery confirmation tracking
-- Only one notification channel configured
-- No retry logic for failed deliveries
-- Rate limit headers from Discord/Telegram not checked
-
-**Prevention:**
-1. **Require minimum 2 notification channels**: Daemon refuses to start in production with fewer than 2 configured channels
-2. **Delivery confirmation tracking**: Log every notification attempt with success/failure status. Alert the owner (via a different channel) if a channel has failed 3 times consecutively
-3. **Exponential backoff with retry**: Respect `Retry-After` headers. Queue failed notifications for retry (up to 3 attempts with backoff)
-4. **Message batching**: Aggregate rapid-fire alerts into a single notification per 30-second window to avoid rate limits
-5. **Health checks**: Ping each notification channel on daemon startup and every 30 minutes. Surface channel health in daemon status/dashboard
-6. **Fallback escalation**: If primary channel fails, immediately attempt all secondary channels. If ALL channels fail, the daemon should enter a defensive mode (reduce session limits by 50%, require explicit owner presence for any transaction)
-
-**Phase:** Notification system (Phase 2 - multi-channel alerts)
-
----
-
-### M-02: Chain-Agnostic Abstraction Leaks Chain-Specific Semantics
-
-**Severity:** MEDIUM
-**Confidence:** MEDIUM (multi-chain development patterns, chain abstraction literature)
-
-**What goes wrong:**
-The `ChainAdapter` interface (`createWallet`, `getBalance`, `signTransaction`, `broadcastTransaction`) hides critical chain-specific differences that affect security and correctness:
-
-- **Finality**: Solana "confirmed" (2-3 seconds) vs Ethereum "finalized" (12+ minutes). Checking balance after Solana "confirmed" may show funds that later roll back
-- **Fee model**: Solana compute units vs EVM gas. Estimation is fundamentally different. Under-estimating causes tx failure; over-estimating wastes funds
-- **Address format**: Solana Base58 (32 bytes) vs Ethereum hex (20 bytes). Address validation logic is chain-specific
-- **Token model**: Solana SPL token accounts (separate per mint) vs ERC-20 (single contract). "Get balance" means different API calls
-- **Nonce handling**: EVM requires sequential nonces for transaction ordering. Solana uses recent blockhash (no nonce). This affects retry and cancellation logic
-- **Transaction simulation**: Both chains support simulation but with different APIs and failure modes
-
-**Warning signs:**
-- `ChainAdapter` interface has no method for checking finality
-- Balance check does not specify confirmation level
-- Error handling is generic (`TransactionFailed`) without chain-specific error codes
-- No way to cancel or speed up a pending transaction (EVM-specific)
-- Token transfers use the same code path for native tokens and SPL/ERC-20
-
-**Prevention:**
-1. **Finality-aware interface**: Add confirmation level to all reads:
-   ```typescript
-   interface ChainAdapter {
-     getBalance(address: string, confirmationLevel: 'pending' | 'confirmed' | 'finalized'): Promise<Balance>
-   }
-   ```
-2. **Chain-specific error types**: Map chain errors to domain errors that preserve the original:
-   ```typescript
-   class InsufficientFeeError extends TransactionError {
-     constructor(public chain: string, public requiredFee: bigint, public nativeError: unknown) {}
-   }
-   ```
-3. **Separate token adapter**: Do not force native transfers and token transfers into the same method. SPL token transfers require ATA (Associated Token Account) creation, which has no EVM equivalent
-4. **Simulation before signing**: Make transaction simulation a required step in the adapter, not optional
-5. **Start with Solana only**: Implement the Solana adapter completely, including edge cases. Only then design the abstract interface by extracting commonalities. Do NOT design the interface first and force both chains to fit
-
-**Phase:** Chain adapter (Phase 2 - Solana adapter implementation, before EVM adapter)
-
----
-
-### M-03: Browser-to-Daemon Communication Lacks Mutual Authentication
-
-**Severity:** MEDIUM
-**Confidence:** MEDIUM (wallet adapter patterns, localhost security research)
-
-**What goes wrong:**
-The owner connects their browser wallet (Phantom, MetaMask) to the local daemon for session approval and transaction signing. This communication path has several weaknesses:
-
-1. **No HTTPS on localhost**: Browser sends wallet signatures over unencrypted HTTP. While localhost traffic doesn't traverse the network, other local processes can sniff it via loopback interface capture
-2. **Extension impersonation**: A malicious browser extension can intercept wallet adapter calls, modify the message before signing, or capture the signed result
-3. **Origin confusion**: The daemon's local web UI runs on `http://localhost:3000`. Another local app or malicious page could also open `localhost:3000` and interact with the UI if session cookies are used
-
-**Warning signs:**
-- Daemon accepts wallet connection requests without verifying the connecting UI is the legitimate Tauri app
-- No request signing or HMAC between browser UI and daemon API
-- Session cookies used for owner authentication on localhost (vulnerable to CSRF from other local pages)
-- Wallet adapter messages do not include the daemon's identity or session ID
-
-**Prevention:**
-1. **Tauri IPC instead of HTTP for desktop app**: Use Tauri's native `invoke` commands (Rust backend) instead of HTTP. This eliminates the entire browser-to-localhost attack surface for the desktop app path
-2. **For the browser path**: Generate a per-session CSRF token on daemon startup. Include it in all browser-to-daemon requests
-3. **Message binding**: Include the daemon's instance ID and request nonce in the message the owner signs:
-   ```
-   WAIaaS Approval
-   Daemon: d-1a2b3c (instance ID displayed in tray icon)
-   Action: Approve transaction 0.5 SOL to [address]
-   Nonce: [server-generated]
-   ```
-4. **Consider mTLS for advanced setup**: For Docker/server deployments where the owner connects remotely, use mutual TLS with client certificates
-
-**Phase:** Owner wallet connection (Phase 2 - wallet adapter integration)
-
----
-
-### M-04: Kill Switch Fails When Daemon Process Is Compromised
-
-**Severity:** MEDIUM
-**Confidence:** LOW-MEDIUM (architectural reasoning, no specific incident found for local daemons)
-
-**What goes wrong:**
-The kill switch is implemented as a daemon API endpoint (`POST /v1/owner/kill-switch`). If the daemon process is compromised (code injection, dependency supply chain attack), the attacker can:
-1. Disable the kill switch handler
-2. Continue processing transactions while reporting "frozen" status
-3. Suppress notification delivery
-4. Modify policy checks to approve all transactions
-
-The owner believes the system is frozen, but the attacker is actively draining funds.
+**Drizzle ORM 특유의 문제:**
+- `drizzle-kit push:sqlite`가 테이블 재생성 시 데이터를 올바르게 복사하지 못하는 버그 보고 (Issue #1313)
+- ALTER TABLE 마이그레이션에서 기본값이 보존되지 않는 버그 (Issue #2795)
+- 자동 생성 마이그레이션이 아닌 수동 마이그레이션 SQL 작성 필요
 
 **Why it happens:**
-- Kill switch, policy engine, signing service, and notification system all run in the same process
-- No out-of-band verification that the daemon is actually in a frozen state
-- No hardware-backed integrity check on daemon state
+- SQLite의 ALTER TABLE 제한은 설계 결함이 아닌 의도적 단순성
+- Drizzle의 SQLite 마이그레이션 지원이 PostgreSQL 대비 제한적
+- NOT NULL -> nullable은 "추가"가 아닌 "제약 변경"이라 복잡
 
 **Warning signs:**
-- All security layers run in a single Node.js process
-- No external health monitor that can verify daemon state
-- No way for the owner to verify the daemon's claimed state matches reality
-- No blockchain-level spending controls (unlike v0.1's Squads on-chain limits)
+- `drizzle-kit generate` 출력에 `ALTER TABLE ... ALTER COLUMN` 시도가 보임
+- 마이그레이션 후 agents 테이블의 인덱스가 사라짐
+- 마이그레이션 후 FOREIGN KEY 제약이 깨짐 (sessions.agent_id 등)
 
 **Prevention:**
-1. **On-chain verification of pending transactions**: After the kill switch is activated, the owner should verify on-chain that no new transactions are being submitted from the agent wallet address. The daemon's dashboard should show live blockchain state, not just internal state
-2. **External watchdog process**: Run a separate lightweight process that monitors the agent wallet address on-chain. If transactions appear after kill switch activation, this watchdog sends alerts via its own (separate) notification channels
-3. **Key deletion as ultimate kill**: The kill switch should have a "nuclear" option that deletes the decrypted key from memory AND overwrites the encrypted key file. This makes recovery harder but guarantees the daemon cannot sign more transactions
-4. **Document the trust boundary**: Clearly document that the kill switch protects against agent misbehavior, NOT daemon process compromise. For process compromise, the defense is: shutdown the daemon, revoke session tokens, move funds using the owner wallet directly
+1. **수동 마이그레이션 SQL 작성:** Drizzle의 자동 생성에 의존하지 않고, 위 create-copy-rename 패턴의 마이그레이션을 직접 작성.
+2. **마이그레이션 전 백업 필수:** `db.backup()` API로 마이그레이션 직전 스냅샷.
+3. **PRAGMA foreign_keys=OFF 후 작업, 완료 후 ON + integrity_check:**
+```sql
+PRAGMA foreign_keys=OFF;
+BEGIN;
+-- create-copy-rename
+PRAGMA foreign_key_check;
+COMMIT;
+PRAGMA foreign_keys=ON;
+```
+4. **마이그레이션 후 검증 쿼리:** 모든 인덱스 존재 확인, FOREIGN KEY 무결성, 데이터 행 수 일치.
+5. **Drizzle 스키마에서 NOT NULL -> optional 변경 시 `.notNull()` 제거 + 기존 데이터 DEFAULT 처리 확인.**
+6. **첫 구현 시 고려:** v0.8은 아직 설계 단계이고 v1.1에서 최초 DB 생성이므로, 마이그레이션 문제는 v1.1에서 처음부터 nullable로 시작하면 회피 가능. 그러나 v1.1 후 스키마 변경이 필요한 경우를 대비하여 마이그레이션 패턴을 확립해야 함.
 
-**Phase:** Kill switch and monitoring (Phase 3 - defense-in-depth measures)
+**Phase:** DB 스키마 구현 시 (v1.1 코어 인프라) -- 처음부터 v0.8 스키마 반영
 
 ---
 
-### M-05: Daemon Auto-Start and Persistence Create Unmonitored Execution Windows
+### M-02: 점진적 보안 해금의 UX 혼란 -- 사용자가 현재 보안 수준을 이해하지 못함
 
 **Severity:** MEDIUM
-**Confidence:** MEDIUM (desktop daemon patterns, operational security)
+**Confidence:** MEDIUM (UX 패턴 분석, 점진적 기능 해금 제품 사례)
 
 **What goes wrong:**
-The daemon is configured to auto-start on boot (systemd service, launchd plist, Windows startup). It begins processing agent requests immediately, before the owner has verified system integrity or checked for security updates. During this unmonitored window:
-- Stale session tokens may still be valid
-- Pending transactions from before shutdown may auto-execute
-- A compromised daemon (from prior attack) restarts with the same compromised code
+점진적 보안 모델에서 사용자가 현재 에이전트의 보안 수준을 정확히 파악하지 못한다:
 
-**Warning signs:**
-- Daemon starts silently without owner presence confirmation
-- Sessions survive daemon restart
-- Pending transactions resume without re-approval
-- No startup integrity check
+1. **"Owner 등록 = 안전" 오해:** Owner를 등록했지만 ownerAuth를 사용하지 않아 유예 구간인 상태에서, 사용자는 이미 3계층 보안이 적용되었다고 믿음
+2. **"DELAY = APPROVAL" 혼동:** Owner 없는 에이전트에서 고액 거래 시 DELAY로 다운그레이드되지만, 사용자는 이것이 APPROVAL과 같은 수준이라고 오해
+3. **Kill Switch 복구 시간 혼란:** Owner 유무에 따라 복구 시간이 24시간 vs 30분으로 극적으로 다른데, 사용자가 이를 인지하지 못함
+4. **세션 갱신 거부 윈도우 미인지:** Owner 있음/없음에 따라 세션 갱신 시 거부 가능 여부가 달라지는데, 이 차이를 사용자가 모름
+
+**UX 혼란 사례:**
+```
+$ waiaas agent info trading-bot
+Agent "trading-bot"
+  Status: ACTIVE
+  Owner:  7xKXtg... (등록됨)    <-- "등록됨"만 보이면 안전하다고 착각
+  보안 수준: ???                  <-- 이 정보가 표시되지 않으면 혼란
+```
 
 **Prevention:**
-1. **Require owner presence on first start**: After boot, daemon enters "locked" mode. Owner must actively unlock (e.g., enter password or connect wallet) before any transactions are processed. Balance queries can remain available
-2. **Session invalidation on restart**: All active sessions are invalidated when the daemon restarts. Agents must request new sessions
-3. **Pending transaction purge**: All pending (unexecuted) transactions are canceled on daemon restart. They can be resubmitted by the agent after session re-creation
-4. **Startup integrity check**: On start, verify checksums of daemon binary and configuration files. Alert if they differ from expected values
+1. **agent info에 보안 수준 명시 표시:**
+```
+$ waiaas agent info trading-bot
+Agent "trading-bot"
+  Status: ACTIVE
+  Owner:  7xKXtg... (등록됨, 유예 구간 - ownerAuth 미사용)
+  보안 수준: BASE + OWNER_REGISTERED
+    - INSTANT/NOTIFY/DELAY: 활성
+    - APPROVAL: 활성 (Owner 등록)
+    - 자금 회수: 활성 (Owner 등록)
+    - 세션 거부: 활성 (Owner 등록)
+    - Kill Switch 복구: 30분 (Owner 서명)
+    ⚠ Owner 검증 미완료 - ownerAuth를 1회 사용하면 잠금 구간으로 전환됩니다
+```
+2. **보안 수준 API 엔드포인트:** `GET /v1/agents/:id/security-level` -- Base/Enhanced 수준 + 각 기능 활성화 상태 반환.
+3. **다운그레이드 알림에 보안 수준 차이 명시:** "이 거래는 APPROVAL 티어이지만, Owner가 없어 DELAY(15분)로 처리됩니다. Owner를 등록하면 서명 승인으로 전환됩니다."
+4. **유예 구간 경고 알림:** Owner 등록 후 1시간 이내에 ownerAuth를 사용하지 않으면 알림: "Owner 주소가 아직 검증되지 않았습니다. ownerAuth를 사용하여 보안을 완성하세요."
 
-**Phase:** Daemon lifecycle (Phase 1 - startup and shutdown procedures)
+**Phase:** CLI + API + 알림 구현 시 (v1.2-v1.3)
 
 ---
 
-## Minor Pitfalls
+### M-03: owner_verified 플래그의 단일 비트 의존 -- 복잡한 상태를 boolean으로 축소
 
-Annoyances and edge cases that are fixable but should be known.
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (상태 머신 설계 패턴 분석)
+
+**What goes wrong:**
+`owner_verified INTEGER NOT NULL DEFAULT 0`은 0/1 boolean이지만, 실제 Owner 상태는 더 복잡하다:
+
+| 상태 | owner_address | owner_verified | 설명 |
+|------|:------------:|:--------------:|------|
+| 미등록 | NULL | 0 | Owner 없음 |
+| 유예 | NOT NULL | 0 | 등록됨, ownerAuth 미사용 |
+| 잠금 | NOT NULL | 1 | ownerAuth 사용 완료 |
+| 유예 만료? | NOT NULL | 0 | 등록 후 시간 경과 (C-02 Prevention 적용 시) |
+| 변경 중? | NOT NULL | 1 | Owner 변경 요청 대기 중 |
+
+C-02에서 제시한 "유예 구간 시간 제한"을 도입하면, owner_verified = 0이면서 유예 기간 경과 후의 상태가 필요하다. 이때 boolean 하나로는 표현 불가.
+
+**Why it happens:**
+- 초기 설계에서 "유예/잠금" 2상태만 고려
+- 방어적 기능(유예 기간 만료, 변경 대기 등)을 추가하면 상태 공간 확장
+- boolean 플래그 하나에 여러 의미를 부여하면 코드 전반에 `if (owner_verified === 0 && owner_registered_at + GRACE_PERIOD > now)` 같은 분산된 판단 로직 발생
+
+**Prevention:**
+1. **owner_verified를 enum 컬럼으로 확장 검토:**
+```sql
+owner_status TEXT NOT NULL DEFAULT 'NONE'
+  CHECK (owner_status IN ('NONE', 'GRACE', 'LOCKED'))
+```
+- NONE: Owner 미등록
+- GRACE: Owner 등록, ownerAuth 미사용 (유예)
+- LOCKED: ownerAuth 사용 완료 (잠금)
+
+이렇게 하면 `owner_address IS NOT NULL AND owner_status = 'GRACE'` 형태의 명시적 쿼리가 가능.
+
+2. **대안: owner_verified 유지 + owner_registered_at 추가:**
+```sql
+owner_verified  INTEGER NOT NULL DEFAULT 0,
+owner_registered_at  INTEGER,  -- Owner 주소 등록 시각 (유예 기간 계산용)
+```
+유예 기간 판단: `owner_verified = 0 AND owner_registered_at IS NOT NULL AND (now - owner_registered_at) < GRACE_PERIOD`
+
+3. **어느 쪽이든 Zod 스키마에서 상태를 discriminated union으로 표현:**
+```typescript
+const OwnerState = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('none') }),
+  z.object({ status: z.literal('grace'), address: z.string(), registeredAt: z.number() }),
+  z.object({ status: z.literal('locked'), address: z.string(), verifiedAt: z.number() }),
+])
+```
+
+**Phase:** 스키마 설계 확정 단계 (v0.8 설계 문서 수정 시 결정)
 
 ---
 
-### L-01: SQLite Busy Timeout Too Low Causes Spurious Transaction Failures
+### M-04: 기존 테스트/보안 시나리오 무효화 -- v0.4 테스트 전략 46-51 갱신 누락
 
-**Severity:** LOW
-**Confidence:** HIGH (SQLite documentation, better-sqlite3 docs)
+**Severity:** MEDIUM
+**Confidence:** HIGH (v0.4 문서에 Owner 필수 전제한 테스트 케이스 다수 존재)
 
 **What goes wrong:**
-Default SQLite busy timeout is 0ms (immediate failure). When two operations contend for the write lock (e.g., agent transaction + owner approval happening simultaneously), one gets `SQLITE_BUSY` and the transaction fails. The agent sees an error and retries, creating unnecessary noise and potential rate limit triggers.
+v0.4에서 수립한 테스트 전략(46-51)과 보안 시나리오(237건)가 Owner 필수를 전제로 작성되었다. v0.8에서 Owner를 선택적으로 변경하면:
+
+1. **43-layer1-session-auth-attacks:** ownerAuth 관련 테스트가 "Owner 없는 경우" 분기 미포함
+2. **44-layer2-policy-bypass-attacks:** APPROVAL 우회 시나리오가 "Owner 없는 경우 DELAY 다운그레이드" 경로 미포함
+3. **45-layer3-killswitch-recovery-attacks:** Kill Switch 복구 시나리오가 24시간 vs 30분 분기 미포함
+4. **46-keystore-external-security-scenarios:** withdraw/sweepAll 시나리오 미포함
+5. **51-platform-test-scope:** CLI `set-owner`, `remove-owner` 테스트 미포함
+
+**Why it happens:**
+- 테스트 문서가 설계 문서와 별도 마일스톤(v0.4)에서 작성되어, 이후 설계 변경이 자동 반영되지 않음
+- "기존 기능은 그대로 유지" 원칙이 테스트 커버리지 갱신 누락을 유발
 
 **Prevention:**
-Set `busy_timeout` to at least 5000ms. Wrap retryable database operations in application-level retry with exponential backoff. This is a one-line fix but easy to forget.
+1. **v0.8 설계 문서 수정 시 영향받는 테스트 문서도 동시 갱신:** 14개 설계 문서 수정 목록에 테스트 문서 3-4개 추가.
+2. **Owner 상태 분기 테스트 매트릭스 별도 작성:** 각 보안 시나리오를 `Owner 없음 / 유예 / 잠금` 3가지 상태로 확장.
+3. **v1.2 구현 시 새 테스트 시나리오 추가:** APPROVAL 다운그레이드, 유예→잠금 전이, withdraw 보안 등 v0.8 특유 시나리오.
 
-**Phase:** Database setup (Phase 1)
+**Phase:** v0.8 설계 문서 수정 시 + v1.7 품질 강화 시
 
 ---
 
-### L-02: Tauri App Cannot Access Hardware Wallets via WebUSB
+### M-05: Notification 채널의 Owner 등록 안내 피로감 -- 반복 알림에 의한 무시 패턴
 
-**Severity:** LOW
-**Confidence:** MEDIUM (Tauri/WebView limitations, Ledger SDK docs)
-
-**What goes wrong:**
-Tauri uses the system WebView (not Chromium) which may lack WebUSB/WebHID support needed for direct Ledger/Trezor hardware wallet communication. The owner cannot use their hardware wallet for session approvals.
-
-**Prevention:**
-Use Tauri's Rust backend to communicate with hardware wallets via native USB libraries (e.g., `hidapi` crate) instead of WebUSB. Alternatively, use WalletConnect as the bridge between hardware wallets and the daemon. Document supported connection methods clearly.
-
-**Phase:** Desktop app and hardware wallet support (Phase 3)
-
----
-
-### L-03: Agent SDK Exposes Session Token in Process Environment
-
-**Severity:** LOW
-**Confidence:** MEDIUM (standard practice observation)
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (알림 피로 UX 패턴 연구)
 
 **What goes wrong:**
-The TypeScript/Python SDK documentation shows `process.env.WAIAAS_SESSION` as the recommended way to pass session tokens. Environment variables are:
-- Visible in `/proc/[pid]/environ` on Linux
-- Logged by some deployment tools
-- Inherited by child processes
-- Visible in crash reports
+Owner 없는 에이전트에서 APPROVAL -> DELAY 다운그레이드가 발생할 때마다 알림에 Owner 등록 안내가 포함된다:
+
+```
+⏳ 대액 거래 대기 중 (APPROVAL -> DELAY 다운그레이드)
+에이전트: trading-bot
+금액: 15 SOL ($2,250) -> 9bKrTD...
+실행 예정: 15분 후
+
+💡 Owner 지갑을 등록하면 대액 거래에
+   승인 정책을 적용할 수 있습니다.
+   waiaas agent set-owner trading-bot <address>
+```
+
+고빈도 트레이딩 봇에서 하루 50-100건의 다운그레이드가 발생하면:
+1. Owner 등록 안내가 50-100번 반복 → 알림 자체를 무시하는 패턴 형성
+2. 실제 중요한 알림(비정상 거래, Kill Switch)도 함께 무시
+3. 알림 채널의 메시지 크기 증가 (Telegram 4096자 제한에 근접)
 
 **Prevention:**
-Recommend file-based token storage (`~/.waiaas/session-token` with `0600` permissions) as the primary method. Support environment variables as a convenience option but document the security tradeoff. The MCP server integration should read from the file by default.
+1. **Owner 등록 안내는 최초 5회만 포함:** 이후에는 다운그레이드 사실만 알리고, 안내 생략. 매일 1회 일일 요약에서만 안내 재표시.
+2. **일일 요약 알림:** "오늘 23건의 거래가 DELAY로 다운그레이드되었습니다. Owner를 등록하면 승인 정책을 적용할 수 있습니다."
+3. **알림 템플릿 분리:** 다운그레이드 알림과 등록 안내를 별도 메시지로 전송하여, 사용자가 중요 알림을 놓치지 않도록.
 
-**Phase:** SDK and MCP integration (Phase 3)
+**Phase:** 알림 시스템 구현 시 (v1.3)
 
 ---
 
 ## Phase-Specific Warning Summary
 
-| Phase | Critical Pitfalls | High Pitfalls | Key Focus Area |
-|-------|------------------|---------------|----------------|
-| **Phase 1: Core Infrastructure** | C-01, C-02, C-03, C-04, C-05 | H-02, H-05 | Get encryption, key storage, localhost security, and session tokens RIGHT from day one. These cannot be safely retrofitted |
-| **Phase 2: Security Layers** | - | H-01, H-03, M-01, M-02 | Time-lock race conditions, owner approval replay, notification reliability |
-| **Phase 3: Owner Experience** | - | H-04, M-03, M-04 | Clipboard attacks, browser-daemon auth, kill switch integrity |
-| **All Phases** | - | - | Supply chain attacks on dependencies (npm audit, lockfile, SBOM) |
-
----
-
-## Known Incidents Reference
-
-| Incident | Relevance | Lesson |
-|----------|-----------|--------|
-| **0.0.0.0 Day** (Oligo Security, 2024) | Direct -- localhost daemon exploitable via browser | Always authenticate localhost endpoints, validate Host headers |
-| **oByte Wallet** (Blaze InfoSec) | Direct -- private key in cleartext logs | Never log crypto material, sanitize all log output |
-| **LastPass Breach** ($438M+ losses) | Analogous -- encrypted vault stolen, cracked offline | Argon2id parameters must resist offline brute force for years |
-| **DEXX Incident** ($30M+, 8620 Solana wallets) | Analogous -- centralized key management failure | Even self-hosted, key management is the #1 attack surface |
-| **Frame.sh Audit** (Cure53/Doyensec) | Positive example -- only 2 Low vulns found | Desktop wallet daemon CAN be secure with proper engineering |
-| **ShadowRay Campaign** | Direct -- AI services on localhost exploited | Daemon + AI agent combo is a known target pattern |
-| **CVE-2025-59956** (Coder AgentAPI) | Direct -- DNS rebinding on localhost agent API | Validate Host/Origin headers on all local HTTP servers |
-| **Laplas Clipper** (2023-present) | Direct -- clipboard hijacking with lookalike Solana addresses | Address whitelisting and verification UI are essential |
+| Phase Topic | Likely Pitfall | Severity | Mitigation Key |
+|-------------|---------------|----------|---------------|
+| **설계 문서 수정 (v0.8)** | H-04: 14개 문서 cross-reference drift | HIGH | Owner 상태 분기 매트릭스 SSoT |
+| **설계 문서 수정 (v0.8)** | M-03: owner_verified boolean 부족 | MEDIUM | enum 또는 timestamp 추가 검토 |
+| **스키마/DB (v1.1)** | M-01: SQLite NOT NULL -> nullable 재생성 | MEDIUM | 수동 마이그레이션 + 검증 쿼리 |
+| **인증+정책 (v1.2)** | C-01: Grace-to-Locked 레이스 컨디션 | CRITICAL | BEGIN IMMEDIATE 원자화 |
+| **인증+정책 (v1.2)** | C-02: Owner 제거 → APPROVAL 우회 | CRITICAL | 유예 구간 시간 제한 + 알림 |
+| **인증+정책 (v1.2)** | H-01: APPROVAL->DELAY 다운그레이드 레이스 | HIGH | 실행 시점 재평가 |
+| **인증+정책 (v1.2)** | H-02: 유예 구간 withdraw 자금 탈취 | HIGH | 유예 구간 withdraw 비활성화 |
+| **알림 (v1.3)** | M-05: 등록 안내 알림 피로 | MEDIUM | 최초 5회 제한 + 일일 요약 |
+| **CLI+UX (v1.2-v1.3)** | M-02: 보안 수준 UX 혼란 | MEDIUM | 명시적 보안 수준 표시 |
+| **토큰 확장 (v1.4)** | C-03: sweepAll 부분 실패 자산 고립 | CRITICAL | SOL 마지막, 자동 재시도, fee 예약 |
+| **Kill Switch (v1.6)** | H-03: Kill Switch 복구 시간 역전 | HIGH | ACTIVATED 상태에서 Owner 변경 금지 |
+| **테스트 (v1.7)** | M-04: 기존 테스트 시나리오 무효화 | MEDIUM | Owner 상태 3분기 확장 매트릭스 |
 
 ---
 
 ## Sources
 
 ### HIGH Confidence
-- [SQLite WAL Documentation](https://sqlite.org/wal.html)
-- [SQLite File Locking](https://sqlite.org/lockingv3.html)
-- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
-- [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
-- [RFC 9106 - Argon2](https://www.rfc-editor.org/rfc/rfc9106.html)
-- [RFC 8452 - AES-GCM-SIV](https://www.rfc-editor.org/rfc/rfc8452.html)
-- [Libsodium Secure Memory](https://libsodium.gitbook.io/doc/memory_management)
-- [Node.js Issue #18896 - crypto.alloc()](https://github.com/nodejs/node/issues/18896)
-- [Node.js Issue #30956 - Secure Memory](https://github.com/nodejs/node/issues/30956)
-- [better-sqlite3 Performance](https://wchargin.com/better-sqlite3/performance.html)
-- [Frame Security Audit FRM-01](https://medium.com/@framehq/frame-security-audit-frm-01-7a90975992af)
+- [Solana CloseAccount Documentation](https://solana.com/docs/tokens/basics/close-account) -- 토큰 계정 폐쇄 요건, 잔액 0 필수
+- [Solana Closing Accounts and Revival Attacks](https://solana.com/developers/courses/program-security/closing-accounts) -- 계정 폐쇄 보안 에지 케이스
+- [Drizzle ORM Issue #1313](https://github.com/drizzle-team/drizzle-orm/issues/1313) -- SQLite push 시 테이블 재생성 데이터 손실 버그
+- [Drizzle ORM Issue #2795](https://github.com/drizzle-team/drizzle-orm/issues/2795) -- ALTER TABLE 마이그레이션 기본값 미보존
+- [SQLite ALTER TABLE Limitations](https://www.sqlite.org/lang_altertable.html) -- NOT NULL 제약 변경 불가
+- WAIaaS v0.8 objective (objectives/v0.8-optional-owner-progressive-security.md) -- 설계 변경 명세 전문
+- WAIaaS v0.2 PITFALLS.md (.planning/research/PITFALLS.md) -- 기존 함정 목록 (H-01 TOCTOU 재참조)
+- WAIaaS v1.0 implementation planning (objectives/v1.0-implementation-planning.md) -- 구현 마일스톤 매핑
 
 ### MEDIUM Confidence
-- [Oligo Security - 0.0.0.0 Day](https://www.oligo.security/blog/0-0-0-0-day-exploiting-localhost-apis-from-the-browser)
-- [GitHub Blog - Localhost CORS and DNS Rebinding](https://github.blog/security/application-security/localhost-dangers-cors-and-dns-rebinding/)
-- [GitHub Blog - DNS Rebinding Attacks Explained](https://github.blog/security/application-security/dns-rebinding-attacks-explained-the-lookup-is-coming-from-inside-the-house/)
-- [elttam - Key Recovery Attacks on GCM](https://www.elttam.com/blog/key-recovery-attacks-on-gcm/)
-- [Halborn - Clipper Malware](https://www.halborn.com/blog/post/clipper-malware-how-hackers-steal-crypto-with-clipboard-hijacking)
-- [Trust Wallet - Clipboard Hijacking](https://trustwallet.com/blog/security/clipboard-hijacking-attacks-how-to-prevent-them)
-- [arXiv - Evaluating Argon2 Adoption (2025)](https://arxiv.org/html/2504.17121v1)
-- [CVE-2025-59956 - Coder AgentAPI DNS Rebinding](https://www.miggo.io/vulnerability-database/cve/CVE-2025-59956)
-- [Blaze InfoSec - Crypto Wallet Vulnerabilities](https://www.blazeinfosec.com/post/vulnerabilities-crypto-wallets/)
-- [CWE-331 - Insufficient Entropy](https://cwe.mitre.org/data/definitions/331.html)
-- [Discord Webhook Rate Limits](https://birdie0.github.io/discord-webhooks-guide/other/rate_limits.html)
+- [PortSwigger - Smashing the State Machine](https://portswigger.net/research/smashing-the-state-machine) -- HTTP 요청 간 sub-state 레이스 컨디션
+- [Argent Guardian Removal Security](https://support.argent.xyz/hc/en-us/articles/360022520932) -- 36h 대기 기간, 지갑 잠금 방어
+- [Argent Guardian Recovery Guide](https://support.argent.xyz/hc/en-us/articles/360007338877) -- 48h 복구, 시간 기반 보안
+- [Safe{Wallet} Bybit Incident](https://thehackernews.com/2025/03/safewallet-confirms-north-korean.html) -- 지갑 인프라 침해 사례
+- [Coinbase CDP Wallet Policies](https://www.coinbase.com/developer-platform/discover/launches/policy-engine) -- 정책 엔진 설계 참고
+- [Safeheron Policy Engine](https://safeheron.com/blog/policy-engine/) -- 트랜잭션 승인 프로세스 최적화
 
-### LOW Confidence (needs further validation)
-- Telegram webhook silent failure reports (community forums, late 2025)
-- Specific swap file key extraction techniques (theoretical, no Node.js-specific PoC found)
-- Kill switch bypass via daemon process compromise (architectural reasoning, no known incident)
+### LOW Confidence (아키텍처적 추론 기반)
+- Kill Switch 복구 시간 역전 공격 -- 특정 사례 미발견, 논리적 추론
+- 알림 피로 패턴 -- 일반 UX 원칙 적용, 크립토 지갑 특화 연구 미발견
