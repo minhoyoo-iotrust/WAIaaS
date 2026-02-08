@@ -24,7 +24,7 @@
 - [x] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책 (2026-02-07)
 - [x] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션 (2026-02-08)
 - [x] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action (2026-02-08)
-- [ ] **Phase 25: 테스트 전략 통합 + 기존 문서 반영** - 확장 기능 테스트 전략, 기존 문서 8개 v0.6 통합
+- [x] **Phase 25: 테스트 전략 통합 + 기존 문서 반영** - 확장 기능 테스트 전략, 기존 문서 8개 v0.6 통합 (2026-02-08)
 
 ## 페이즈 상세
 
@@ -112,10 +112,10 @@ Plans:
 **플랜**: 4 plans in 2 waves (2 parallel + 2 parallel)
 
 Plans:
-- [ ] 25-01-PLAN.md — CHAIN-EXT-09 확장 기능 테스트 전략: Mock 경계 5개, EVM Hardhat 환경, 커버리지 재설정, 148개 테스트 시나리오 통합 (TEST-01, TEST-02, TEST-03)
-- [ ] 25-02-PLAN.md — SSoT 문서 v0.6 통합: 45-enum (TransactionType 5개, PolicyType 10개), 27-chain-adapter (메서드 4개 추가), 25-sqlite (감사 컬럼, 정책 확장) (INTEG-02 + INTEG-01 일부)
-- [ ] 25-03-PLAN.md — 기능 계층 문서 v0.6 통합: 33-time-lock (PolicyType 10개, evaluate 11단계), 32-pipeline (5-type 분기, IPriceOracle), 31-solana (SPL 정식화, Token-2022) (INTEG-01 일부)
-- [ ] 25-04-PLAN.md — 인터페이스 계층 문서 v0.6 통합: 37-rest-api (discriminatedUnion, /v1/actions), 38-sdk-mcp (MCP Tool Action 변환, MCP_TOOL_MAX=16) (INTEG-01 일부)
+- [x] 25-01-PLAN.md — CHAIN-EXT-09 확장 기능 테스트 전략: Mock 경계 5개, EVM Hardhat 환경, 커버리지 재설정, 148개 테스트 시나리오 통합 (TEST-01, TEST-02, TEST-03)
+- [x] 25-02-PLAN.md — SSoT 문서 v0.6 통합: 45-enum (TransactionType 5개, PolicyType 10개), 27-chain-adapter (메서드 4개 추가), 25-sqlite (감사 컬럼, 정책 확장) (INTEG-02 + INTEG-01 일부)
+- [x] 25-03-PLAN.md — 기능 계층 문서 v0.6 통합: 33-time-lock (PolicyType 10개, evaluate 11단계), 32-pipeline (5-type 분기, IPriceOracle), 31-solana (SPL 정식화, Token-2022) (INTEG-01 일부)
+- [x] 25-04-PLAN.md — 인터페이스 계층 문서 v0.6 통합: 37-rest-api (discriminatedUnion, /v1/actions), 38-sdk-mcp (MCP Tool Action 변환, MCP_TOOL_MAX=16) (INTEG-01 일부)
 
 ## 요구사항 커버리지
 
@@ -163,4 +163,4 @@ Plans:
 | 22. 토큰 확장 설계 | 2/2 | ✓ Complete | 2026-02-07 |
 | 23. 트랜잭션 타입 확장 설계 | 3/3 | ✓ Complete | 2026-02-08 |
 | 24. 상위 추상화 레이어 설계 | 2/2 | ✓ Complete | 2026-02-08 |
-| 25. 테스트 전략 통합 + 문서 반영 | 0/4 | Not started | - |
+| 25. 테스트 전략 통합 + 문서 반영 | 4/4 | ✓ Complete | 2026-02-08 |

@@ -52,20 +52,20 @@
 
 ### 테스트 전략 통합 (TEST)
 
-- [ ] **TEST-01**: v0.4 테스트 프레임워크에 새 Mock 경계 5개를 추가 설계한다 (Aggregator, 가격 API, 온체인 오라클, IPriceOracle, IActionProvider)
-- [ ] **TEST-02**: EVM 로컬 테스트 환경(Hardhat/Anvil)을 설계에 포함한다 (ERC-20 배포, Uniswap fork)
-- [ ] **TEST-03**: 확장 패키지(@waiaas/actions 등)를 포함하여 커버리지 기준을 재설정한다
+- [x] **TEST-01**: v0.4 테스트 프레임워크에 새 Mock 경계 5개를 추가 설계한다 (Aggregator, 가격 API, 온체인 오라클, IPriceOracle, IActionProvider)
+- [x] **TEST-02**: EVM 로컬 테스트 환경(Hardhat/Anvil)을 설계에 포함한다 (ERC-20 배포, Uniswap fork)
+- [x] **TEST-03**: 확장 패키지(@waiaas/actions 등)를 포함하여 커버리지 기준을 재설정한다
 
 ### 기존 문서 통합 (INTEG)
 
-- [ ] **INTEG-01**: 기존 설계 문서 8개에 v0.6 확장을 반영한다 (27, 25, 31, 33, 32, 37, 38, 45)
-- [ ] **INTEG-02**: TransactionType, PolicyType 등 Enum 확장을 v0.3 SSoT 체계(45-enum)에 통합한다
+- [x] **INTEG-01**: 기존 설계 문서 8개에 v0.6 확장을 반영한다 (27, 25, 31, 33, 32, 37, 38, 45)
+- [x] **INTEG-02**: TransactionType, PolicyType 등 Enum 확장을 v0.3 SSoT 체계(45-enum)에 통합한다
 
 ## Future Requirements
 
 v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 
-### 자금 회수 (objectives/08 연관)
+### 자금 회수 (objectives/v0.8 연관)
 - **SWEEP-01**: getTokenBalances, sweepAll 메서드로 에이전트 자금 전량 회수
 - **SWEEP-02**: Owner 선택적 등록 + 점진적 보안 해금 모델
 
@@ -86,7 +86,7 @@ v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 | NFT 민팅/마켓플레이스 | Action Provider 패턴 확립 후 |
 | Liquid Staking 상세 설계 | Swap Action 패턴 검증 후 |
 | Account Abstraction / Smart Wallet | EVM 배치 문제 해결, 별도 마일스톤 |
-| Owner 선택적 등록 (objectives/08) | 별도 마일스톤으로 분리 |
+| Owner 선택적 등록 (objectives/v0.8) | 별도 마일스톤으로 분리 |
 
 ## Traceability
 
@@ -117,11 +117,11 @@ v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 | ACTION-03 | Phase 24 | Complete |
 | ACTION-04 | Phase 24 | Complete |
 | ACTION-05 | Phase 24 | Complete |
-| TEST-01 | Phase 25 | Pending |
-| TEST-02 | Phase 25 | Pending |
-| TEST-03 | Phase 25 | Pending |
-| INTEG-01 | Phase 25 | Pending |
-| INTEG-02 | Phase 25 | Pending |
+| TEST-01 | Phase 25 | Complete |
+| TEST-02 | Phase 25 | Complete |
+| TEST-03 | Phase 25 | Complete |
+| INTEG-01 | Phase 25 | Complete |
+| INTEG-02 | Phase 25 | Complete |
 
 **Coverage:**
 - v0.6 requirements: 30 total
@@ -130,4 +130,4 @@ v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after initial definition*
+*Last updated: 2026-02-08 after Phase 25 completion (30/30 Complete)*
