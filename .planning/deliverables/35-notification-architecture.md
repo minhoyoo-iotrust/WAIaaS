@@ -72,7 +72,7 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 | DELAY 큐잉 시 | TX_DELAY_QUEUED | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.tier === 'DELAY' && !decision.downgraded) |
 | [v0.8] DELAY 다운그레이드 시 | TX_DOWNGRADED_DELAY | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.downgraded === true) |
 | DELAY 자동 실행 시 | TX_DELAY_EXECUTED | notify() (표준) | DelayQueueWorker 실행 후 |
-| APPROVAL 승인 요청 시 | TX_APPROVAL_REQUEST | notify() (표준) | Stage 4 QUEUED 전이 후 |
+| APPROVAL 승인 요청 시 | TX_APPROVAL_REQUEST | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.tier === 'APPROVAL' && !decision.downgraded, OwnerState LOCKED만) |
 | APPROVAL 만료 시 | TX_APPROVAL_EXPIRED | notify() (표준) | ApprovalTimeoutWorker |
 | 거래 확정 시 | TX_CONFIRMED | notify() (표준) | Stage 6 CONFIRMED 전이 |
 | 거래 실패 시 | TX_FAILED | notify() (표준) | Stage 5/6 FAILED 전이 |
@@ -2033,6 +2033,107 @@ Agent "{agentName}"이 {amount} SOL 전송을 요청했습니다.
 TX: {txId_short} | Agent: {agentId_short}
 ```
 
+##### [v0.8] TX_APPROVAL_REQUEST 승인/거부 버튼 확장
+
+> **전제 조건:** TX_APPROVAL_REQUEST는 OwnerState === LOCKED인 에이전트에서만 발생한다. NONE/GRACE 에이전트의 APPROVAL은 Step 9.5에서 DELAY로 다운그레이드되어 TX_DOWNGRADED_DELAY 이벤트가 발생한다.
+
+**승인/거부 URL 패턴:**
+```
+승인: http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/approve?nonce={nonce}
+거부: http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/reject?nonce={nonce}
+```
+
+> **주의:** 이 URL은 승인 대시보드 페이지(Tauri/브라우저)로 이동하는 링크이다. 버튼 클릭만으로 승인이 완료되지 않는다 -- ownerAuth(SIWS/SIWE 서명)가 필요하므로 별도 인증 과정이 필수이다.
+
+**Telegram (MarkdownV2 + InlineKeyboardMarkup):**
+
+```
+⚠️ *거래 승인 요청*
+
+Agent "{agentName}"이 {amount} {symbol} \(≈ ${usdAmount}\) 전송을 요청했습니다\.
+수신: {shortenedAddress}
+타임아웃: {approvalTimeoutMinutes}분
+
+TX: {shortTxId} \| Agent: {shortAgentId}
+
+_{timestamp}_
+```
+
+InlineKeyboardMarkup (url 기반 -- callback 아님):
+```json
+{
+  "reply_markup": {
+    "inline_keyboard": [[
+      { "text": "✅ 승인", "url": "http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/approve?nonce={nonce}" },
+      { "text": "❌ 거부", "url": "http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/reject?nonce={nonce}" }
+    ]]
+  }
+}
+```
+
+설계 결정:
+- `url` 기반 버튼 사용 (callback_data 아님): 승인 시 ownerAuth(SIWS/SIWE 서명)가 필요하므로 Telegram callback만으로는 승인 불가. 브라우저/Tauri 승인 대시보드로 이동
+- 버튼 클릭 -> 승인 대시보드 열림 -> Owner가 SIWS/SIWE 서명으로 인증 -> 승인 완료
+
+**Discord (Embed + Markdown 링크):**
+
+> **Discord Webhook은 Interactive Components(Button)를 지원하지 않는다.** Discord Bot Token이 있어야 버튼을 사용할 수 있다. 현재 설계는 Webhook 전용이므로 Embed 내 markdown 링크로 승인/거부 URL을 안내한다.
+
+```json
+{
+  "embeds": [{
+    "title": "⚠️ 거래 승인 요청",
+    "color": 16776960,
+    "description": "Agent \"{agentName}\"이 {amount} {symbol} (≈ ${usdAmount}) 전송을 요청했습니다.",
+    "fields": [
+      { "name": "수신", "value": "{shortenedAddress}", "inline": true },
+      { "name": "타임아웃", "value": "{approvalTimeoutMinutes}분", "inline": true },
+      { "name": "📋 승인/거부", "value": "[✅ 승인]({approveUrl}) | [❌ 거부]({rejectUrl})\n⚠️ 링크 클릭 후 Owner 서명이 필요합니다.", "inline": false }
+    ],
+    "footer": { "text": "TX: {shortTxId} | Agent: {shortAgentId}" },
+    "timestamp": "{iso8601}"
+  }]
+}
+```
+
+설계 결정:
+- Embed description의 markdown 링크로 승인/거부 URL 안내
+- footer에 "링크 클릭 후 Owner 서명 필요" 주의사항 표기
+- Discord Bot 전환 시 Button Component로 업그레이드 가능 (향후 확장)
+
+**ntfy.sh (Actions 헤더):**
+
+```
+Title: 거래 승인 요청 - {amount} {symbol}
+Priority: high (4)
+Tags: warning, money_with_wings
+Actions: view, ✅ 승인 대시보드, {approveUrl}; view, ❌ 거부, {rejectUrl}
+Body:
+Agent "{agentName}" {amount} {symbol} (≈ ${usdAmount})
+수신: {shortenedAddress}
+타임아웃: {approvalTimeoutMinutes}분
+⚠️ 승인/거부 버튼 클릭 후 Owner 서명이 필요합니다.
+TX: {shortTxId} | Agent: {shortAgentId}
+```
+
+설계 결정:
+- ntfy.sh Actions는 `view` 타입으로 브라우저에서 URL을 열도록 설정
+- `http` 타입(직접 API 호출)은 사용하지 않음: ownerAuth 서명 없이 HTTP 호출만으로 승인 불가
+- Priority: high (4)로 설정하여 즉각 주의 환기
+
+**v0.8 TX_APPROVAL_REQUEST context 필드 (확장):**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `approvalId` | string | pending_approvals.id (승인 요청 ID) |
+| `nonce` | string | 1회용 토큰 (URL 재사용 방지) |
+| `approveUrl` | string | 승인 대시보드 URL (nonce 포함) |
+| `rejectUrl` | string | 거부 대시보드 URL (nonce 포함) |
+| `approvalTimeoutMinutes` | number | 승인 타임아웃 (분) |
+| `usdAmount` | string | USD 환산 금액 |
+| `symbol` | string | 토큰 심볼 (SOL, ETH 등) |
+| `shortenedAddress` | string | 수신 주소 축약 (앞 4 + ... + 뒤 4) |
+
 #### TX_DELAY_QUEUED (지연 큐잉)
 
 **Telegram (MarkdownV2):**
@@ -2286,11 +2387,23 @@ APPROVAL_REQUEST 알림에 승인 직접 링크(approvalUrl)를 포함할 경우
 
 ```
 승인 URL 형식:
-http://127.0.0.1:3100/v1/owner/approvals/{approvalId}?nonce={nonce}
+http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/approve?nonce={nonce}
+http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/reject?nonce={nonce}
 
 이 URL은 승인 대시보드 페이지로 연결되며,
 실제 승인은 Owner 서명 검증 후 수행.
 ```
+
+#### [v0.8] 채널별 승인/거부 버튼 보안 고려사항
+
+| 항목 | 설명 |
+|------|------|
+| **nonce 1회용** | nonce는 1회용 토큰으로 URL 재사용 방지 (기존 설계 유지) |
+| **localhost 한정** | URL은 localhost(127.0.0.1:3100)로 외부 네트워크 노출 없음 |
+| **ownerAuth 서명 필수** | 승인 대시보드 접근 시 ownerAuth(SIWS/SIWE) 서명 필수 -- 버튼 클릭만으로 승인 불가 |
+| **Telegram url 버튼** | Telegram url 기반 InlineKeyboard는 callback_data와 달리 서버 사이드 검증이 불가하므로, 대시보드에서 ownerAuth로 인증 |
+| **Discord Webhook Button 미지원** | Discord Webhook은 Interactive Components(Button)를 지원하지 않으므로 Embed markdown 링크로 대체. Bot Token 전환 시 Button Component 업그레이드 가능 |
+| **ntfy.sh view 타입** | ntfy.sh Actions는 `view` 타입만 사용. `http` 타입(직접 API 호출)은 ownerAuth 서명 없이 호출 불가하므로 사용하지 않음 |
 
 ### 12.4 config.toml [notifications] 섹션 확정
 
