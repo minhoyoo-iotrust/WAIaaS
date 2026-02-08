@@ -37,18 +37,18 @@
 
 ### 가격 오라클 (ORACLE)
 
-- [ ] **ORACLE-01**: IPriceOracle 인터페이스를 설계한다 (CoinGecko/Pyth/Chainlink 구현 옵션, PriceInfo 스키마)
-- [ ] **ORACLE-02**: 오라클 캐싱 전략(5분 TTL)과 fallback 동작(stale 허용 vs 거부)을 설계한다
-- [ ] **ORACLE-03**: USD 기준 정책 평가 확장을 설계한다 (기존 네이티브 금액 기준 → USD 금액 기준 티어 분류)
-- [ ] **ORACLE-04**: 가격 오라클의 테스트 레벨/Mock/보안 시나리오를 정의한다 (가격 조작, 오라클 장애 등)
+- [x] **ORACLE-01**: IPriceOracle 인터페이스를 설계한다 (CoinGecko/Pyth/Chainlink 구현 옵션, PriceInfo 스키마)
+- [x] **ORACLE-02**: 오라클 캐싱 전략(5분 TTL)과 fallback 동작(stale 허용 vs 거부)을 설계한다
+- [x] **ORACLE-03**: USD 기준 정책 평가 확장을 설계한다 (기존 네이티브 금액 기준 → USD 금액 기준 티어 분류)
+- [x] **ORACLE-04**: 가격 오라클의 테스트 레벨/Mock/보안 시나리오를 정의한다 (가격 조작, 오라클 장애 등)
 
 ### Action Provider (ACTION)
 
-- [ ] **ACTION-01**: IActionProvider 인터페이스를 설계한다 (resolve-then-execute 패턴, ActionDefinition Zod 스키마)
-- [ ] **ACTION-02**: ActionDefinition → MCP Tool 자동 변환 메커니즘을 설계한다 (name/description/inputSchema 매핑)
-- [ ] **ACTION-03**: Action Provider 플러그인 로드 메커니즘을 설계한다 (~/.waiaas/actions/ 디렉토리, 보안 경계)
-- [ ] **ACTION-04**: Jupiter Swap Action Provider를 상세 설계한다 (quote API → ContractCallRequest 변환, 슬리피지, MEV 보호)
-- [ ] **ACTION-05**: Action Provider의 테스트 레벨/Mock/보안 시나리오를 정의한다 (악성 플러그인, 슬리피지 조작 등)
+- [x] **ACTION-01**: IActionProvider 인터페이스를 설계한다 (resolve-then-execute 패턴, ActionDefinition Zod 스키마)
+- [x] **ACTION-02**: ActionDefinition → MCP Tool 자동 변환 메커니즘을 설계한다 (name/description/inputSchema 매핑)
+- [x] **ACTION-03**: Action Provider 플러그인 로드 메커니즘을 설계한다 (~/.waiaas/actions/ 디렉토리, 보안 경계)
+- [x] **ACTION-04**: Jupiter Swap Action Provider를 상세 설계한다 (quote API → ContractCallRequest 변환, 슬리피지, MEV 보호)
+- [x] **ACTION-05**: Action Provider의 테스트 레벨/Mock/보안 시나리오를 정의한다 (악성 플러그인, 슬리피지 조작 등)
 
 ### 테스트 전략 통합 (TEST)
 
@@ -108,15 +108,15 @@ v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 | BATCH-01 | Phase 23 | Complete |
 | BATCH-02 | Phase 23 | Complete |
 | BATCH-03 | Phase 23 | Complete |
-| ORACLE-01 | Phase 24 | Pending |
-| ORACLE-02 | Phase 24 | Pending |
-| ORACLE-03 | Phase 24 | Pending |
-| ORACLE-04 | Phase 24 | Pending |
-| ACTION-01 | Phase 24 | Pending |
-| ACTION-02 | Phase 24 | Pending |
-| ACTION-03 | Phase 24 | Pending |
-| ACTION-04 | Phase 24 | Pending |
-| ACTION-05 | Phase 24 | Pending |
+| ORACLE-01 | Phase 24 | Complete |
+| ORACLE-02 | Phase 24 | Complete |
+| ORACLE-03 | Phase 24 | Complete |
+| ORACLE-04 | Phase 24 | Complete |
+| ACTION-01 | Phase 24 | Complete |
+| ACTION-02 | Phase 24 | Complete |
+| ACTION-03 | Phase 24 | Complete |
+| ACTION-04 | Phase 24 | Complete |
+| ACTION-05 | Phase 24 | Complete |
 | TEST-01 | Phase 25 | Pending |
 | TEST-02 | Phase 25 | Pending |
 | TEST-03 | Phase 25 | Pending |

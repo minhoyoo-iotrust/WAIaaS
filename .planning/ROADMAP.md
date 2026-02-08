@@ -23,7 +23,7 @@
 
 - [x] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책 (2026-02-07)
 - [x] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션 (2026-02-08)
-- [ ] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action
+- [x] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action (2026-02-08)
 - [ ] **Phase 25: 테스트 전략 통합 + 기존 문서 반영** - 확장 기능 테스트 전략, 기존 문서 8개 v0.6 통합
 
 ## 페이즈 상세
@@ -91,8 +91,8 @@ Plans:
 **플랜**: 2 plans in 1 wave (parallel)
 
 Plans:
-- [ ] 24-01-PLAN.md — 가격 오라클 스펙: IPriceOracle 인터페이스, CoinGecko/Pyth/Chainlink 구현체, 캐싱/fallback, USD 기준 정책 평가 확장 (CHAIN-EXT-06)
-- [ ] 24-02-PLAN.md — Action Provider 아키텍처 + Swap Action: IActionProvider, MCP 변환, 플러그인 로드, Jupiter Swap 상세 설계 (CHAIN-EXT-07, CHAIN-EXT-08)
+- [x] 24-01-PLAN.md — 가격 오라클 스펙: IPriceOracle 인터페이스, CoinGecko/Pyth/Chainlink 구현체, 캐싱/fallback, USD 기준 정책 평가 확장 (CHAIN-EXT-06)
+- [x] 24-02-PLAN.md — Action Provider 아키텍처 + Swap Action: IActionProvider, MCP 변환, 플러그인 로드, Jupiter Swap 상세 설계 (CHAIN-EXT-07, CHAIN-EXT-08)
 
 ### Phase 25: 테스트 전략 통합 + 기존 문서 반영
 
@@ -160,5 +160,5 @@ Plans:
 |--------|-----------|------|--------|
 | 22. 토큰 확장 설계 | 2/2 | ✓ Complete | 2026-02-07 |
 | 23. 트랜잭션 타입 확장 설계 | 3/3 | ✓ Complete | 2026-02-08 |
-| 24. 상위 추상화 레이어 설계 | 0/2 | Not started | - |
+| 24. 상위 추상화 레이어 설계 | 2/2 | ✓ Complete | 2026-02-08 |
 | 25. 테스트 전략 통합 + 문서 반영 | 0/2 | Not started | - |
