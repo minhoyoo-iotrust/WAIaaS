@@ -9,46 +9,46 @@
 
 ### 토큰 확장 (TOKEN)
 
-- [ ] **TOKEN-01**: TransferRequest에 token 필드를 추가하여 SPL/ERC-20 토큰 전송을 설계한다 (하위 호환: undefined = 네이티브)
-- [ ] **TOKEN-02**: ALLOWED_TOKENS 정책 규칙을 설계한다 (에이전트별 토큰 민트/컨트랙트 화이트리스트, 미등록 토큰 거부)
-- [ ] **TOKEN-03**: getAssets() 인터페이스를 복원하고 AssetInfo 스키마를 확정한다 (Solana getTokenAccountsByOwner, EVM 프로바이더별 방식)
-- [ ] **TOKEN-04**: 토큰 전송 수수료 추정을 확장 설계한다 (Solana ATA 생성 비용, EVM ERC-20 gas 추정)
-- [ ] **TOKEN-05**: SPL/ERC-20 토큰 전송의 테스트 레벨/Mock/보안 시나리오를 정의한다
+- [x] **TOKEN-01**: TransferRequest에 token 필드를 추가하여 SPL/ERC-20 토큰 전송을 설계한다 (하위 호환: undefined = 네이티브)
+- [x] **TOKEN-02**: ALLOWED_TOKENS 정책 규칙을 설계한다 (에이전트별 토큰 민트/컨트랙트 화이트리스트, 미등록 토큰 거부)
+- [x] **TOKEN-03**: getAssets() 인터페이스를 복원하고 AssetInfo 스키마를 확정한다 (Solana getTokenAccountsByOwner, EVM 프로바이더별 방식)
+- [x] **TOKEN-04**: 토큰 전송 수수료 추정을 확장 설계한다 (Solana ATA 생성 비용, EVM ERC-20 gas 추정)
+- [x] **TOKEN-05**: SPL/ERC-20 토큰 전송의 테스트 레벨/Mock/보안 시나리오를 정의한다
 
 ### 컨트랙트 호출 (CONTRACT)
 
-- [ ] **CONTRACT-01**: ContractCallRequest 인터페이스를 설계한다 (EVM calldata, Solana programId+instructionData+accounts)
-- [ ] **CONTRACT-02**: CONTRACT_WHITELIST, METHOD_WHITELIST 정책 규칙을 설계한다 (기본 전면 거부, opt-in 화이트리스트)
-- [ ] **CONTRACT-03**: 파이프라인 Stage 1 type 분기(TRANSFER/CONTRACT_CALL)와 Stage 2 세션 제약(allowedContracts) 확장을 설계한다
-- [ ] **CONTRACT-04**: transactions 테이블 type Enum 확장(CONTRACT_CALL, APPROVE, BATCH)과 감사 컬럼(contract_address, method_signature)을 설계한다
-- [ ] **CONTRACT-05**: 임의 컨트랙트 호출의 테스트 레벨/Mock/보안 시나리오를 정의한다 (악성 calldata, 미허용 method signature 등)
+- [x] **CONTRACT-01**: ContractCallRequest 인터페이스를 설계한다 (EVM calldata, Solana programId+instructionData+accounts)
+- [x] **CONTRACT-02**: CONTRACT_WHITELIST, METHOD_WHITELIST 정책 규칙을 설계한다 (기본 전면 거부, opt-in 화이트리스트)
+- [x] **CONTRACT-03**: 파이프라인 Stage 1 type 분기(TRANSFER/CONTRACT_CALL)와 Stage 2 세션 제약(allowedContracts) 확장을 설계한다
+- [x] **CONTRACT-04**: transactions 테이블 type Enum 확장(CONTRACT_CALL, APPROVE, BATCH)과 감사 컬럼(contract_address, method_signature)을 설계한다
+- [x] **CONTRACT-05**: 임의 컨트랙트 호출의 테스트 레벨/Mock/보안 시나리오를 정의한다 (악성 calldata, 미허용 method signature 등)
 
 ### 토큰 승인 (APPROVE)
 
-- [ ] **APPROVE-01**: ApproveRequest를 독립 타입으로 설계한다 (ContractCall과 분리 — 권한 위임은 별도 정책 카테고리)
-- [ ] **APPROVE-02**: APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE 정책 규칙을 설계한다 (무제한 approve 차단)
-- [ ] **APPROVE-03**: 토큰 Approve의 테스트 레벨/Mock/보안 시나리오를 정의한다 (무제한 approve, 미허용 spender 등)
+- [x] **APPROVE-01**: ApproveRequest를 독립 타입으로 설계한다 (ContractCall과 분리 — 권한 위임은 별도 정책 카테고리)
+- [x] **APPROVE-02**: APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE 정책 규칙을 설계한다 (무제한 approve 차단)
+- [x] **APPROVE-03**: 토큰 Approve의 테스트 레벨/Mock/보안 시나리오를 정의한다 (무제한 approve, 미허용 spender 등)
 
 ### 배치 트랜잭션 (BATCH)
 
-- [ ] **BATCH-01**: BatchRequest 및 InstructionRequest 인터페이스를 설계한다 (Solana 원자적 배치, EVM 미지원 분기)
-- [ ] **BATCH-02**: 배치 정책 평가 규칙을 설계한다 (금액 합산 티어 결정, All-or-Nothing 정책 위반 처리)
-- [ ] **BATCH-03**: 멀티 instruction 배치의 테스트 레벨/Mock/보안 시나리오를 정의한다 (배치 크기 제한, 부분 위반 등)
+- [x] **BATCH-01**: BatchRequest 및 InstructionRequest 인터페이스를 설계한다 (Solana 원자적 배치, EVM 미지원 분기)
+- [x] **BATCH-02**: 배치 정책 평가 규칙을 설계한다 (금액 합산 티어 결정, All-or-Nothing 정책 위반 처리)
+- [x] **BATCH-03**: 멀티 instruction 배치의 테스트 레벨/Mock/보안 시나리오를 정의한다 (배치 크기 제한, 부분 위반 등)
 
 ### 가격 오라클 (ORACLE)
 
-- [ ] **ORACLE-01**: IPriceOracle 인터페이스를 설계한다 (CoinGecko/Pyth/Chainlink 구현 옵션, PriceInfo 스키마)
-- [ ] **ORACLE-02**: 오라클 캐싱 전략(5분 TTL)과 fallback 동작(stale 허용 vs 거부)을 설계한다
-- [ ] **ORACLE-03**: USD 기준 정책 평가 확장을 설계한다 (기존 네이티브 금액 기준 → USD 금액 기준 티어 분류)
-- [ ] **ORACLE-04**: 가격 오라클의 테스트 레벨/Mock/보안 시나리오를 정의한다 (가격 조작, 오라클 장애 등)
+- [x] **ORACLE-01**: IPriceOracle 인터페이스를 설계한다 (CoinGecko/Pyth/Chainlink 구현 옵션, PriceInfo 스키마)
+- [x] **ORACLE-02**: 오라클 캐싱 전략(5분 TTL)과 fallback 동작(stale 허용 vs 거부)을 설계한다
+- [x] **ORACLE-03**: USD 기준 정책 평가 확장을 설계한다 (기존 네이티브 금액 기준 → USD 금액 기준 티어 분류)
+- [x] **ORACLE-04**: 가격 오라클의 테스트 레벨/Mock/보안 시나리오를 정의한다 (가격 조작, 오라클 장애 등)
 
 ### Action Provider (ACTION)
 
-- [ ] **ACTION-01**: IActionProvider 인터페이스를 설계한다 (resolve-then-execute 패턴, ActionDefinition Zod 스키마)
-- [ ] **ACTION-02**: ActionDefinition → MCP Tool 자동 변환 메커니즘을 설계한다 (name/description/inputSchema 매핑)
-- [ ] **ACTION-03**: Action Provider 플러그인 로드 메커니즘을 설계한다 (~/.waiaas/actions/ 디렉토리, 보안 경계)
-- [ ] **ACTION-04**: Jupiter Swap Action Provider를 상세 설계한다 (quote API → ContractCallRequest 변환, 슬리피지, MEV 보호)
-- [ ] **ACTION-05**: Action Provider의 테스트 레벨/Mock/보안 시나리오를 정의한다 (악성 플러그인, 슬리피지 조작 등)
+- [x] **ACTION-01**: IActionProvider 인터페이스를 설계한다 (resolve-then-execute 패턴, ActionDefinition Zod 스키마)
+- [x] **ACTION-02**: ActionDefinition → MCP Tool 자동 변환 메커니즘을 설계한다 (name/description/inputSchema 매핑)
+- [x] **ACTION-03**: Action Provider 플러그인 로드 메커니즘을 설계한다 (~/.waiaas/actions/ 디렉토리, 보안 경계)
+- [x] **ACTION-04**: Jupiter Swap Action Provider를 상세 설계한다 (quote API → ContractCallRequest 변환, 슬리피지, MEV 보호)
+- [x] **ACTION-05**: Action Provider의 테스트 레벨/Mock/보안 시나리오를 정의한다 (악성 플러그인, 슬리피지 조작 등)
 
 ### 테스트 전략 통합 (TEST)
 
@@ -92,31 +92,31 @@ v0.6 이후로 이연. 추적하되 현재 로드맵에는 미포함.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TOKEN-01 | Phase 22 | Pending |
-| TOKEN-02 | Phase 22 | Pending |
-| TOKEN-03 | Phase 22 | Pending |
-| TOKEN-04 | Phase 22 | Pending |
-| TOKEN-05 | Phase 22 | Pending |
-| CONTRACT-01 | Phase 23 | Pending |
-| CONTRACT-02 | Phase 23 | Pending |
-| CONTRACT-03 | Phase 23 | Pending |
-| CONTRACT-04 | Phase 23 | Pending |
-| CONTRACT-05 | Phase 23 | Pending |
-| APPROVE-01 | Phase 23 | Pending |
-| APPROVE-02 | Phase 23 | Pending |
-| APPROVE-03 | Phase 23 | Pending |
-| BATCH-01 | Phase 23 | Pending |
-| BATCH-02 | Phase 23 | Pending |
-| BATCH-03 | Phase 23 | Pending |
-| ORACLE-01 | Phase 24 | Pending |
-| ORACLE-02 | Phase 24 | Pending |
-| ORACLE-03 | Phase 24 | Pending |
-| ORACLE-04 | Phase 24 | Pending |
-| ACTION-01 | Phase 24 | Pending |
-| ACTION-02 | Phase 24 | Pending |
-| ACTION-03 | Phase 24 | Pending |
-| ACTION-04 | Phase 24 | Pending |
-| ACTION-05 | Phase 24 | Pending |
+| TOKEN-01 | Phase 22 | Complete |
+| TOKEN-02 | Phase 22 | Complete |
+| TOKEN-03 | Phase 22 | Complete |
+| TOKEN-04 | Phase 22 | Complete |
+| TOKEN-05 | Phase 22 | Complete |
+| CONTRACT-01 | Phase 23 | Complete |
+| CONTRACT-02 | Phase 23 | Complete |
+| CONTRACT-03 | Phase 23 | Complete |
+| CONTRACT-04 | Phase 23 | Complete |
+| CONTRACT-05 | Phase 23 | Complete |
+| APPROVE-01 | Phase 23 | Complete |
+| APPROVE-02 | Phase 23 | Complete |
+| APPROVE-03 | Phase 23 | Complete |
+| BATCH-01 | Phase 23 | Complete |
+| BATCH-02 | Phase 23 | Complete |
+| BATCH-03 | Phase 23 | Complete |
+| ORACLE-01 | Phase 24 | Complete |
+| ORACLE-02 | Phase 24 | Complete |
+| ORACLE-03 | Phase 24 | Complete |
+| ORACLE-04 | Phase 24 | Complete |
+| ACTION-01 | Phase 24 | Complete |
+| ACTION-02 | Phase 24 | Complete |
+| ACTION-03 | Phase 24 | Complete |
+| ACTION-04 | Phase 24 | Complete |
+| ACTION-05 | Phase 24 | Complete |
 | TEST-01 | Phase 25 | Pending |
 | TEST-02 | Phase 25 | Pending |
 | TEST-03 | Phase 25 | Pending |

@@ -21,9 +21,9 @@
 
 소수 페이즈는 해당 정수 사이에서 번호 순서대로 실행된다.
 
-- [ ] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책
-- [ ] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션
-- [ ] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action
+- [x] **Phase 22: 토큰 확장 설계** - SPL/ERC-20 토큰 전송, 자산 조회, 수수료 추정, 토큰 정책 (2026-02-07)
+- [x] **Phase 23: 트랜잭션 타입 확장 설계** - 임의 컨트랙트 호출, Approve 관리, 배치 트랜잭션 (2026-02-08)
+- [x] **Phase 24: 상위 추상화 레이어 설계** - 가격 오라클, Action Provider 아키텍처, Swap Action (2026-02-08)
 - [ ] **Phase 25: 테스트 전략 통합 + 기존 문서 반영** - 확장 기능 테스트 전략, 기존 문서 8개 v0.6 통합
 
 ## 페이즈 상세
@@ -46,8 +46,8 @@
 **플랜**: 2 plans in 1 wave (parallel)
 
 Plans:
-- [ ] 22-01-PLAN.md — TransferRequest.token 확장, SPL/ERC-20 빌드 로직, ALLOWED_TOKENS 정책, 파이프라인 통합 (CHAIN-EXT-01)
-- [ ] 22-02-PLAN.md — getAssets() 인터페이스, 수수료 추정 확장, 테스트 시나리오 (CHAIN-EXT-02)
+- [x] 22-01-PLAN.md — TransferRequest.token 확장, SPL/ERC-20 빌드 로직, ALLOWED_TOKENS 정책, 파이프라인 통합 (CHAIN-EXT-01)
+- [x] 22-02-PLAN.md — getAssets() 인터페이스, 수수료 추정 확장, 테스트 시나리오 (CHAIN-EXT-02)
 
 ### Phase 23: 트랜잭션 타입 확장 설계
 
@@ -65,12 +65,12 @@ Plans:
   3. BatchRequest로 Solana 원자적 배치를 표현할 수 있고, EVM 미지원 시 명확한 에러를 반환하며, 정책 평가에서 금액 합산과 All-or-Nothing 위반 처리가 명세되어 있다
   4. 파이프라인 Stage 1의 type 분기(TRANSFER/CONTRACT_CALL/APPROVE/BATCH)와 Stage 2의 세션 제약(allowedContracts) 확장이 설계되어 있다
   5. transactions 테이블의 TransactionType Enum 확장(CONTRACT_CALL, APPROVE, BATCH)과 감사 컬럼(contract_address, method_signature)이 명세되어 있다
-**플랜**: TBD
+**플랜**: 3 plans in 2 waves (1 sequential + 2 parallel)
 
 Plans:
-- [ ] 23-01: 컨트랙트 호출 스펙 (CHAIN-EXT-03)
-- [ ] 23-02: Approve 관리 스펙 (CHAIN-EXT-04)
-- [ ] 23-03: 배치 트랜잭션 스펙 (CHAIN-EXT-05)
+- [x] 23-01-PLAN.md — ContractCallRequest 인터페이스, CONTRACT_WHITELIST/METHOD_WHITELIST 정책, 파이프라인/DB/REST 크로스커팅 확장 (CHAIN-EXT-03)
+- [x] 23-02-PLAN.md — ApproveRequest 독립 타입, APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE 정책, EVM race condition 자동 처리 (CHAIN-EXT-04)
+- [x] 23-03-PLAN.md — BatchRequest/InstructionRequest, Solana 원자적 배치, 배치 정책 합산 평가, EVM 미지원 분기 (CHAIN-EXT-05)
 
 ### Phase 24: 상위 추상화 레이어 설계
 
@@ -88,11 +88,11 @@ Plans:
   3. IActionProvider 인터페이스와 ActionDefinition Zod 스키마가 정의되어 있고, resolve()가 ContractCallRequest를 반환하여 기존 파이프라인 정책 평가를 거치는 패턴이 명세되어 있다
   4. ActionDefinition에서 MCP Tool로의 자동 변환(name/description/inputSchema 매핑)과 ~/.waiaas/actions/ 디렉토리 기반 플러그인 로드 메커니즘이 설계되어 있다
   5. Jupiter Swap Action Provider가 quote API 호출부터 ContractCallRequest 변환, 슬리피지 보호, MEV 보호까지 상세 설계되어 있다
-**플랜**: TBD
+**플랜**: 2 plans in 1 wave (parallel)
 
 Plans:
-- [ ] 24-01: 가격 오라클 스펙 (CHAIN-EXT-06)
-- [ ] 24-02: Action Provider 아키텍처 + Swap Action 설계 (CHAIN-EXT-07, CHAIN-EXT-08)
+- [x] 24-01-PLAN.md — 가격 오라클 스펙: IPriceOracle 인터페이스, CoinGecko/Pyth/Chainlink 구현체, 캐싱/fallback, USD 기준 정책 평가 확장 (CHAIN-EXT-06)
+- [x] 24-02-PLAN.md — Action Provider 아키텍처 + Swap Action: IActionProvider, MCP 변환, 플러그인 로드, Jupiter Swap 상세 설계 (CHAIN-EXT-07, CHAIN-EXT-08)
 
 ### Phase 25: 테스트 전략 통합 + 기존 문서 반영
 
@@ -109,11 +109,13 @@ Plans:
   3. @waiaas/actions 등 확장 패키지를 포함한 커버리지 기준이 재설정되어 있다
   4. 기존 설계 문서 8개(27-chain-adapter, 25-sqlite-schema, 31-solana-adapter, 33-time-lock, 32-transaction-pipeline, 37-rest-api, 38-sdk-mcp, 45-enum)에 v0.6 확장이 반영되어 있다
   5. TransactionType, PolicyType 등 Enum 확장이 v0.3 SSoT 체계(45-enum-unified-mapping)에 통합되어 있다
-**플랜**: TBD
+**플랜**: 4 plans in 2 waves (2 parallel + 2 parallel)
 
 Plans:
-- [ ] 25-01: 확장 기능 테스트 전략 (CHAIN-EXT-09)
-- [ ] 25-02: 기존 설계 문서 8개 v0.6 통합
+- [ ] 25-01-PLAN.md — CHAIN-EXT-09 확장 기능 테스트 전략: Mock 경계 5개, EVM Hardhat 환경, 커버리지 재설정, 148개 테스트 시나리오 통합 (TEST-01, TEST-02, TEST-03)
+- [ ] 25-02-PLAN.md — SSoT 문서 v0.6 통합: 45-enum (TransactionType 5개, PolicyType 10개), 27-chain-adapter (메서드 4개 추가), 25-sqlite (감사 컬럼, 정책 확장) (INTEG-02 + INTEG-01 일부)
+- [ ] 25-03-PLAN.md — 기능 계층 문서 v0.6 통합: 33-time-lock (PolicyType 10개, evaluate 11단계), 32-pipeline (5-type 분기, IPriceOracle), 31-solana (SPL 정식화, Token-2022) (INTEG-01 일부)
+- [ ] 25-04-PLAN.md — 인터페이스 계층 문서 v0.6 통합: 37-rest-api (discriminatedUnion, /v1/actions), 38-sdk-mcp (MCP Tool Action 변환, MCP_TOOL_MAX=16) (INTEG-01 일부)
 
 ## 요구사항 커버리지
 
@@ -158,7 +160,7 @@ Plans:
 
 | 페이즈 | 플랜 완료 | 상태 | 완료일 |
 |--------|-----------|------|--------|
-| 22. 토큰 확장 설계 | 0/2 | Not started | - |
-| 23. 트랜잭션 타입 확장 설계 | 0/3 | Not started | - |
-| 24. 상위 추상화 레이어 설계 | 0/2 | Not started | - |
-| 25. 테스트 전략 통합 + 문서 반영 | 0/2 | Not started | - |
+| 22. 토큰 확장 설계 | 2/2 | ✓ Complete | 2026-02-07 |
+| 23. 트랜잭션 타입 확장 설계 | 3/3 | ✓ Complete | 2026-02-08 |
+| 24. 상위 추상화 레이어 설계 | 2/2 | ✓ Complete | 2026-02-08 |
+| 25. 테스트 전략 통합 + 문서 반영 | 0/4 | Not started | - |
