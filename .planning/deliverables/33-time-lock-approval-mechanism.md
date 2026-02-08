@@ -482,6 +482,31 @@ interface IPolicyEngine {
 
 ### 3.2 DatabasePolicyEngine 클래스 설계
 
+#### [v0.8] evaluate() 시그니처 확장
+
+v0.8 Owner 선택적 등록 모델 도입에 따라, DatabasePolicyEngine.evaluate()에 optional 파라미터 `agentOwnerInfo`를 추가한다.
+
+```typescript
+// IPolicyEngine 인터페이스는 변경하지 않는다 (하위 호환성 유지)
+interface IPolicyEngine {
+  evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision>
+}
+
+// DatabasePolicyEngine 구현체에서 확장된 시그니처를 제공한다
+// 현재 (v0.7): evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision>
+// v0.8:       evaluate(agentId: string, request: TxRequest, agentOwnerInfo?: AgentOwnerInfo): Promise<PolicyDecision>
+```
+
+| 항목 | 설명 |
+|------|------|
+| 인터페이스 변경 | IPolicyEngine 인터페이스 자체는 변경하지 않는다 |
+| 구현체 확장 | DatabasePolicyEngine.evaluate()의 3번째 파라미터로 optional AgentOwnerInfo 추가 |
+| 호출부 전달 | Stage 3(Policy Evaluate)에서 agent를 이미 DB에서 로드하므로 `{ ownerAddress, ownerVerified }` 전달이 자연스러움 |
+| 미전달 시 | agentOwnerInfo가 undefined이면 DatabasePolicyEngine 내부에서 DB 조회로 대체 |
+| 하위 호환성 | optional 파라미터이므로 기존 호출 코드 변경 없이 동작 |
+
+> **근거:** IPolicyEngine을 변경하면 DefaultPolicyEngine 등 다른 구현체도 영향받는다. DatabasePolicyEngine의 evaluate() 오버라이드에서만 처리하여 Phase 7 호환성을 유지한다.
+
 ```typescript
 // packages/daemon/src/domain/policy-engine.ts
 
@@ -536,7 +561,7 @@ class DatabasePolicyEngine implements IPolicyEngine {
   /**
    * 거래 요청을 평가한다.
    *
-   * (v0.6 변경) 알고리즘 11단계 (Phase 8 기존 6단계에서 확장):
+   * (v0.6 변경, v0.8 확장) 알고리즘 11+1단계 (Phase 8 기존 6단계에서 확장):
    * 1. 에이전트별 + 글로벌 활성 정책 로드
    * 2. TransactionType 결정
    * 3. ALLOWED_TOKENS 검사 (TOKEN_TRANSFER) -- (v0.6 추가)
@@ -546,13 +571,19 @@ class DatabasePolicyEngine implements IPolicyEngine {
    * 7. APPROVE_AMOUNT_LIMIT 검사 (APPROVE) -- (v0.6 추가)
    * 8. WHITELIST + TIME_RESTRICTION + RATE_LIMIT 평가 (기존 Step 2-4)
    * 9. 금액 기반 티어 결정 (SPENDING_LIMIT + resolveEffectiveAmountUsd) -- (v0.6 USD 확장)
+   * 9.5. [v0.8] OwnerState 기반 APPROVAL -> DELAY 다운그레이드 -- (v0.8 추가)
    * 10. APPROVE_TIER_OVERRIDE 적용 (APPROVE) -- (v0.6 추가)
    * 11. DAILY_LIMIT + RATE_LIMIT + 최종 PolicyDecision 반환
    *
    * DENY 우선 원칙: Step 3-7 중 하나라도 DENY면 즉시 반환.
    * SSoT: 58-contract-call-spec.md 섹션 5, 45-enum 섹션 2.5
    */
-  async evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision> {
+  // [v0.8] agentOwnerInfo optional 파라미터 추가 (IPolicyEngine 인터페이스 미변경)
+  async evaluate(
+    agentId: string,
+    request: TxRequest,
+    agentOwnerInfo?: AgentOwnerInfo,  // [v0.8] Owner 상태 파악용
+  ): Promise<PolicyDecision> {
     // Step 1: 에이전트별 + 글로벌(agentId=NULL) 활성 정책 로드 (priority DESC)
     const rules = await this.db.select()
       .from(policies)
@@ -618,6 +649,35 @@ class DatabasePolicyEngine implements IPolicyEngine {
     // IPriceOracle 주입 필요 (CHAIN-EXT-06)
     const tierResult = this.evaluateSpendingLimit(effectiveRules, request)
 
+    // ══════════════════════════════════════════════════════════════
+    // [v0.8] Step 9.5: OwnerState 기반 APPROVAL -> DELAY 다운그레이드
+    // 삽입 지점: Step 9 이후, Step 10 전
+    // 조건: APPROVAL 티어 + OwnerState가 NONE 또는 GRACE
+    // 동작: APPROVAL -> DELAY 다운그레이드 후 즉시 return (Step 10 스킵)
+    // 참조: resolveOwnerState() (섹션 12), PolicyDecision.downgraded (32-transaction-pipeline §3.1)
+    // ══════════════════════════════════════════════════════════════
+    if (tierResult.allowed && tierResult.tier === 'APPROVAL') {
+      const ownerInfo = agentOwnerInfo ?? await this.loadAgentOwnerInfo(agentId)
+      const ownerState = resolveOwnerState(ownerInfo)
+      if (ownerState !== 'LOCKED') {
+        // NONE 또는 GRACE: Owner 승인 불가 -> DELAY로 다운그레이드
+        const spendingRule = effectiveRules.find(r => r.type === 'SPENDING_LIMIT')
+        const config = spendingRule ? JSON.parse(spendingRule.rules) : {}
+        const rawDelay = config.delay_seconds ?? 300  // SPENDING_LIMIT의 delay_seconds 우선, fallback 300초(5분)
+        const delaySeconds = Math.max(rawDelay, 60)   // 최소 60초 보장 (0초면 INSTANT과 동일하여 보안 의미 없음)
+        return {
+          allowed: true,
+          tier: 'DELAY',
+          delaySeconds,
+          downgraded: true,
+          originalTier: 'APPROVAL',
+        }
+        // 즉시 return하여 Step 10을 건너뛴다.
+        // 이유: Step 10(APPROVE_TIER_OVERRIDE)이 다운그레이드된 DELAY를 다시 APPROVAL로 복원하는 것을 방지
+      }
+      // ownerState === 'LOCKED': 다운그레이드 안 함 -> 정상 APPROVAL 흐름으로 Step 10 진행
+    }
+
     // Step 10: APPROVE_TIER_OVERRIDE 적용 -- APPROVE만 (v0.6 추가)
     // SPENDING_LIMIT과 독립적으로 동작 (approve는 자금 소모가 아닌 권한 위임)
     if (txType === 'APPROVE' && tierResult.allowed) {
@@ -647,6 +707,20 @@ class DatabasePolicyEngine implements IPolicyEngine {
       if (r.agentId === null && !agentRuleTypes.has(r.type)) return true
       return false
     })
+  }
+
+  /**
+   * [v0.8] 에이전트의 Owner 정보를 DB에서 로드한다.
+   * agentOwnerInfo가 evaluate()에 전달되지 않았을 때의 fallback.
+   */
+  private async loadAgentOwnerInfo(agentId: string): Promise<AgentOwnerInfo> {
+    const agent = this.sqlite.prepare(
+      `SELECT owner_address, owner_verified FROM agents WHERE id = ?`
+    ).get(agentId) as { owner_address: string | null; owner_verified: number } | undefined
+    return {
+      ownerAddress: agent?.owner_address ?? null,
+      ownerVerified: agent?.owner_verified === 1,
+    }
   }
 
   /**
@@ -842,7 +916,7 @@ class DatabasePolicyEngine implements IPolicyEngine {
 }
 ```
 
-### 3.3 evaluate() 알고리즘 플로우차트 (v0.6 변경: 11단계)
+### 3.3 evaluate() 알고리즘 플로우차트 (v0.6 변경, v0.8 확장: 11+1단계)
 
 ```mermaid
 flowchart TD
@@ -882,7 +956,13 @@ flowchart TD
     H2D -->|No| H2N[return DENY]
     H2D -->|Yes| I2[Step 9: SPENDING_LIMIT<br/>+ resolveEffectiveAmountUsd]
 
-    I2 --> J2{txType == APPROVE?}
+    I2 --> I2B{tier == APPROVAL?}
+    I2B -->|Yes| I2C["[v0.8] Step 9.5: resolveOwnerState()"]
+    I2C --> I2D{ownerState?}
+    I2D -->|NONE/GRACE| I2E["return DELAY<br/>(downgraded: true)"]
+    I2D -->|LOCKED| J2{txType == APPROVE?}
+    I2B -->|No| J2
+
     J2 -->|Yes| K2[Step 10: APPROVE_TIER_OVERRIDE 적용]
     K2 --> L2[Step 11: return PolicyDecision]
     J2 -->|No| L2
@@ -1983,6 +2063,7 @@ const agentPolicy = {
 | `POLICY_UPDATED` | Owner가 기존 정책 수정 | info | `{ policyId, type, changes: { before, after } }` |
 | `POLICY_DELETED` | Owner가 정책 삭제 | warning | `{ policyId, type, agentId }` |
 | `POLICY_DISABLED` | Owner가 정책 비활성화 | info | `{ policyId, type }` |
+| `TX_DOWNGRADED` | [v0.8] APPROVAL -> DELAY 다운그레이드 발생 | info | `{ txId, originalTier: 'APPROVAL', downgradedTier: 'DELAY', ownerState: 'NONE'\|'GRACE', reason: 'OWNER_NOT_LOCKED', agentId, amount }` |
 
 ```typescript
 // 정책 변경 감사 로그 예시
@@ -2282,6 +2363,103 @@ async function evaluateBatch(
   return sumTierDecision
 }
 ```
+
+### 11.6 [v0.8] Step 9.5: OwnerState 기반 APPROVAL -> DELAY 다운그레이드 상세
+
+> **[v0.8 추가]** evaluate() 11단계 알고리즘에 Step 9.5를 삽입하여, OwnerState가 NONE 또는 GRACE인 에이전트의 APPROVAL 거래를 DELAY로 다운그레이드한다. POLICY-01, POLICY-02, POLICY-03 요구사항을 충족한다.
+
+#### 삽입 지점
+
+```
+Step 9:   SPENDING_LIMIT (금액 기반 티어 결정, USD dual 평가)
+          ↓
+--- [v0.8] Step 9.5: APPROVAL -> DELAY 다운그레이드 ---
+          ↓
+Step 10:  APPROVE_TIER_OVERRIDE (APPROVE 전용)
+```
+
+#### Step 9.5 의사코드 (섹션 3.2의 코드와 동일 -- 집중 해설용)
+
+```typescript
+// [v0.8] Step 9.5: OwnerState 기반 APPROVAL -> DELAY 다운그레이드
+if (tierResult.allowed && tierResult.tier === 'APPROVAL') {
+  const ownerInfo = agentOwnerInfo ?? await this.loadAgentOwnerInfo(agentId)
+  const ownerState = resolveOwnerState(ownerInfo)   // 섹션 12 참조
+  if (ownerState !== 'LOCKED') {
+    // NONE 또는 GRACE: Owner 승인 불가 -> DELAY로 다운그레이드
+    const spendingRule = effectiveRules.find(r => r.type === 'SPENDING_LIMIT')
+    const config = spendingRule ? JSON.parse(spendingRule.rules) : {}
+    const rawDelay = config.delay_seconds ?? 300  // 규칙의 delay_seconds 우선, fallback 300초(5분)
+    const delaySeconds = Math.max(rawDelay, 60)   // 최소 60초 보장
+    return {
+      allowed: true,
+      tier: 'DELAY',
+      delaySeconds,
+      downgraded: true,
+      originalTier: 'APPROVAL',
+    }
+  }
+  // ownerState === 'LOCKED': 다운그레이드 안 함 -> Step 10으로 계속
+}
+```
+
+#### 핵심 설계 사항
+
+| 항목 | 값 | 근거 |
+|------|-----|------|
+| 삽입 지점 | Step 9 이후, Step 10 전 | Step 9가 금액 기반 최종 tier를 결정하는 시점. Step 10 전에 수행해야 APPROVE 트랜잭션도 커버 |
+| 다운그레이드 대상 OwnerState | NONE, GRACE | NONE=Owner 미등록(승인 불가), GRACE=ownerAuth 미사용(승인 프로세스 미검증) |
+| 다운그레이드 비대상 | LOCKED | Owner 등록 + ownerAuth 검증 완료 -> 정상 APPROVAL 처리 |
+| delaySeconds 결정 | SPENDING_LIMIT 규칙의 delay_seconds 우선 | APPROVAL 규칙에는 approval_timeout만 있고 delay_seconds가 없을 수 있으므로 SPENDING_LIMIT의 값을 사용 |
+| delaySeconds fallback | 300초 (5분) | SPENDING_LIMIT 규칙이 없거나 delay_seconds가 미설정인 경우 |
+| delaySeconds 최소값 | 60초 | 0초면 INSTANT과 동일하여 보안 의미 없음. 최소 60초 보장 (섹션 10.1과 일치) |
+| APPROVE 트랜잭션 처리 | 동일하게 다운그레이드 | APPROVE도 Owner 서명이 필요한 APPROVAL 티어면 다운그레이드. token approve 권한 위임도 보안 관련 |
+| Step 10 스킵 메커니즘 | return으로 즉시 반환 | 다운그레이드 후 APPROVE_TIER_OVERRIDE가 DELAY를 APPROVAL로 복원하는 것 방지 |
+| PolicyDecision 확장 필드 | downgraded: true, originalTier: 'APPROVAL' | 32-transaction-pipeline §3.1에서 정의된 optional 필드. 알림 분기 조건(POLICY-02) |
+
+#### 안티패턴 주의사항
+
+| 안티패턴 | 왜 문제인가 | 올바른 접근 |
+|----------|------------|------------|
+| evaluate() 외부(Stage 4 등)에서 다운그레이드 | PolicyDecision의 SSoT가 깨진다. Stage 4가 정책 결정을 변경하면 감사 로그/테스트가 불일치 | evaluate() 내부 Step 9.5에서 다운그레이드 후 PolicyDecision으로 반환 |
+| GRACE 상태에서 APPROVAL 허용 | ownerAuth 미사용 상태에서 Owner 서명을 받을 수 없다. 승인 대기만 하고 영원히 만료됨 | GRACE에서도 DELAY로 다운그레이드하여 시간 지연 후 자동 실행 |
+| delaySeconds를 0으로 설정 | DELAY 티어인데 즉시 실행되어 INSTANT과 동일. 보안 메커니즘이 무효화됨 | Math.max(rawDelay, 60)으로 최소 60초 보장 |
+| Step 10 이후에 다운그레이드 삽입 | APPROVE 트랜잭션의 TIER_OVERRIDE 결과와 충돌. 다운그레이드 -> OVERRIDE 복원 -> 원래대로 | Step 9.5에서 return으로 Step 10을 건너뛴다 |
+| 개별 instruction에 다운그레이드 적용 | evaluateBatch()에서 개별 evaluate() 호출 시 다운그레이드하면 합산 tiering과 이중 다운그레이드 | 합산 tierDecision에만 1회 적용 (섹션 11.7 참조) |
+
+#### TX_DOWNGRADED 감사 로그 이벤트
+
+다운그레이드가 발생하면 Stage 4에서 QUEUED 전이 직후 audit_log에 기록한다.
+
+| 필드 | 값 | 설명 |
+|------|-----|------|
+| event_type | `TX_DOWNGRADED` | 다운그레이드 전용 이벤트 (기존 TX_QUEUED와 별도) |
+| severity | `info` | 정상 동작이므로 info. 보안 이슈가 아닌 정책 적용 결과 |
+| actor | `system` | 정책 엔진 자동 결정 |
+| agent_id | agentId | 다운그레이드 대상 에이전트 |
+| details | `{ txId, originalTier: 'APPROVAL', downgradedTier: 'DELAY', ownerState: 'NONE'\|'GRACE', reason: 'OWNER_NOT_LOCKED', amount }` | 다운그레이드 상세 정보 |
+
+```typescript
+// Stage 4에서 다운그레이드된 PolicyDecision 처리 시
+if (decision.downgraded) {
+  await insertAuditLog(db, {
+    eventType: 'TX_DOWNGRADED',
+    actor: 'system',
+    agentId,
+    details: {
+      txId,
+      originalTier: decision.originalTier,    // 'APPROVAL'
+      downgradedTier: decision.tier,          // 'DELAY'
+      ownerState,                              // 'NONE' | 'GRACE'
+      reason: 'OWNER_NOT_LOCKED',
+      amount: request.amount,
+    },
+    severity: 'info',
+  })
+}
+```
+
+> **별도 이벤트 타입 사용 근거:** `TX_DOWNGRADED`를 독립 이벤트로 추가하면, audit_log 쿼리에서 `WHERE event_type = 'TX_DOWNGRADED'`로 다운그레이드 빈도를 직접 집계할 수 있다. 기존 TX_QUEUED 이벤트의 details에 포함하면 JSON 파싱이 필요하여 쿼리 성능과 가독성이 저하된다.
 
 ---
 
