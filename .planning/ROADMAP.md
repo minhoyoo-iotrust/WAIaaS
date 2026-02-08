@@ -35,11 +35,11 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
   2. OwnerState 타입(NONE/GRACE/LOCKED)이 정의되어 resolveOwnerState() 유틸리티의 입출력이 명세되어 있다
   3. SweepResult 타입과 IChainAdapter.sweepAll 시그니처가 정의되어 있다 (19->20 메서드)
   4. Grace->Locked 전이의 BEGIN IMMEDIATE 트랜잭션 원자화 설계가 명세되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 31-01: agents 스키마 변경 + 마이그레이션 SQL + 핵심 타입 정의 (OwnerState, SweepResult, PolicyDecision.downgraded)
-- [ ] 31-02: IChainAdapter.sweepAll 시그니처 + resolveOwnerState() 유틸리티 설계
+- [ ] 31-01-PLAN.md -- agents 스키마 v0.8 변경(nullable owner_address, owner_verified) + 마이그레이션 SQL + OwnerState/SweepResult 타입 + PolicyDecision 확장
+- [ ] 31-02-PLAN.md -- IChainAdapter.sweepAll 시그니처(20번째 메서드) + resolveOwnerState() 유틸리티 + Grace->Locked BEGIN IMMEDIATE 원자화
 
 ### Phase 32: Owner 생명주기 설계
 **Goal**: Owner 주소의 등록/변경/해제 전체 생명주기가 설계되어, 유예/잠금 2단계에 따른 인증 요건과 제약이 명확하다
@@ -114,7 +114,7 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 0/2 | Not started | - |
+| 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 0/2 | Planned | - |
 | 32. Owner 생명주기 설계 | v0.8 | 0/2 | Not started | - |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 0/2 | Not started | - |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
@@ -122,4 +122,4 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-08 after Phase 31 planning*
