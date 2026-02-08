@@ -383,6 +383,8 @@ async function ownerConnect(chain: 'solana' | 'ethereum'): Promise<void> {
 
 CORE-06에서 `ownerAuth`는 인증 미들웨어 중 하나로 정의되었다. Phase 7의 `owner-verifier` 유틸리티(`verifySIWS`, `verifySIWE`)를 재사용하여 완성한다.
 
+> **[v0.7 보완]** `verifySIWE`는 viem/siwe 기반으로 전환됨 (30-session-token-protocol.md 섹션 3.3.3 참조). `siwe`/`ethers` 의존성 없이 `parseSiweMessage` + `validateSiweMessage` + `verifyMessage` (viem v2.x 내장)로 검증. 함수 시그니처(`SIWEVerifyInput -> { valid, address?, nonce? }`)는 동일.
+
 > **v0.5 변경:** ownerAuth의 적용 범위가 변경되었다. v0.2에서 `/v1/owner/*` 라우트 전체에 적용되던 것이 v0.5에서는 **정확히 2개 라우트(approve/:txId, recover)에만** 적용된다. 나머지 Owner 관련 엔드포인트는 masterAuth(implicit)로 전환되었다 (52-auth-model-redesign.md 참조).
 
 ### 5.2 인증 방식
@@ -538,6 +540,7 @@ export function ownerAuthMiddleware(db: DrizzleInstance) {
 
     // ═══ Step 4: chain 분기 -> SIWS/SIWE 서명 검증 ═══
     // Phase 7 owner-verifier 유틸리티 재사용
+    // [v0.7 보완] verifySIWE 내부 구현이 viem/siwe 기반으로 전환됨
     const verifyResult = payload.chain === 'solana'
       ? await verifySIWS({
           message: payload.message,

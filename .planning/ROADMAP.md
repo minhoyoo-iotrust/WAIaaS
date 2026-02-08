@@ -44,7 +44,11 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요
 
 - [x] **Phase 26: 체인 어댑터 안정화** - blockhash 경쟁 조건, EVM nonce, keystore 수학, fee 전략 해소
 - [x] **Phase 27: 데몬 보안 기반 확립** - JWT rotation, flock 잠금, Rate Limiter 분리, killSwitch 확정, 패스워드 통일
+<<<<<<< HEAD
 - [ ] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
+=======
+- [x] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
+>>>>>>> gsd/phase-28-dependency-build-resolution
 - [ ] **Phase 29: API 통합 프로토콜 완성** - Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서, SDK 보완
 - [ ] **Phase 30: 스키마 설정 확정** - 환경변수 매핑, timestamp 정밀도, CHECK 제약, Docker UID, amount 근거, 채널 삭제
 
@@ -91,7 +95,11 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
+<<<<<<< HEAD
 - [ ] 28-01-PLAN.md -- SIWE viem 전환 + Sidecar 크로스 컴파일 전략 (DEPS-01, DEPS-02)
+=======
+- [x] 28-01-PLAN.md -- SIWE viem 전환 + Sidecar 크로스 컴파일 전략 (DEPS-01, DEPS-02)
+>>>>>>> gsd/phase-28-dependency-build-resolution
 
 ### Phase 29: API 통합 프로토콜 완성
 **Goal**: REST API, SDK, 플랫폼 통합의 모호한 스펙이 확정되어, 클라이언트 구현자가 추가 질문 없이 코딩할 수 있는 상태를 만든다
@@ -102,12 +110,12 @@ Plans:
   2. DELETE /v1/owner/disconnect의 cascade 동작이 에이전트별 owner_address 기준 5단계(APPROVAL->EXPIRED, DELAY유지, WC정리, 주소유지, 감사)로 확정되었다
   3. 5개 TransactionType 전체에 대해 티어별 HTTP 응답 status 값(INSTANT->200 CONFIRMED/SUBMITTED, DELAY/APPROVAL->202 QUEUED)이 확정되었다
   4. Tauri Setup Wizard가 CLI를 통해서만 초기화하는 구조이고 waiaas init이 idempotent하며, Python SDK snake_case 변환 규칙과 Zod 스키마 @waiaas/core export 패턴이 SSoT로 정의되었다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 29-01: Tauri 종료 타임아웃 + CORS Origin + Setup Wizard CLI 위임
-- [ ] 29-02: Owner disconnect cascade + TransactionType status 응답값 확정
-- [ ] 29-03: Python SDK snake_case SSoT + Zod 스키마 export 패턴
+- [ ] 29-01-PLAN.md -- Tauri 종료 타임아웃 35초 + CORS 3종 Origin + Setup Wizard CLI 위임 (API-01, API-02, API-05)
+- [ ] 29-02-PLAN.md -- Owner disconnect cascade 5단계 + TransactionType x Tier HTTP 응답 매트릭스 (API-03, API-04)
+- [ ] 29-03-PLAN.md -- Python SDK snake_case SSoT + Zod 스키마 @waiaas/core export 패턴 (API-06, API-07)
 
 ### Phase 30: 스키마 설정 확정
 **Goal**: 데이터베이스 스키마와 설정 파일의 미결정 사항이 모두 확정되어, 모든 변경의 데이터 모델이 완전한 상태를 만든다
@@ -133,10 +141,19 @@ Phase 26 -> 27 -> 28 -> 29 -> 30
 |-------|----------------|--------|-----------|
 | 26. 체인 어댑터 안정화 | 2/2 | ✓ Complete | 2026-02-08 |
 | 27. 데몬 보안 기반 확립 | 3/3 | ✓ Complete | 2026-02-08 |
+<<<<<<< HEAD
 | 28. 의존성 빌드 환경 해소 | 0/1 | Planning complete | - |
 | 29. API 통합 프로토콜 완성 | 0/3 | Not started | - |
+=======
+| 28. 의존성 빌드 환경 해소 | 1/1 | ✓ Complete | 2026-02-08 |
+| 29. API 통합 프로토콜 완성 | 0/3 | In progress | - |
+>>>>>>> gsd/phase-28-dependency-build-resolution
 | 30. 스키마 설정 확정 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-08*
+<<<<<<< HEAD
 *Last updated: 2026-02-08 after Phase 28 planning*
+=======
+*Last updated: 2026-02-08 after Phase 29 planning*
+>>>>>>> gsd/phase-28-dependency-build-resolution

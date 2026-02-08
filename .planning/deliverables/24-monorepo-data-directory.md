@@ -399,7 +399,8 @@ packages:
     "argon2": "^0.44.0",
     "jose": "^6.0.0",
     "lru-cache": "^11.0.0",
-    "smol-toml": "^1.3.0"
+    "smol-toml": "^1.3.0",
+    "viem": "^2.23.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
@@ -410,6 +411,8 @@ packages:
   }
 }
 ```
+
+> **[v0.7 보완]** SIWE 검증이 viem/siwe로 전환되어 daemon에 `viem` 직접 의존. `siwe`/`ethers` 패키지 불필요. Native addon prebuild 전략: `sodium-native`(prebuildify), `better-sqlite3`(prebuild-install), `argon2`(node-pre-gyp).
 
 #### @waiaas/adapter-solana
 

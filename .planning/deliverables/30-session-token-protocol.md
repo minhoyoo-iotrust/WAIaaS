@@ -568,7 +568,7 @@ sequenceDiagram
 3. 클라이언트가 SIWE 메시지 구성 (EIP-4361 포맷)
 4. Owner가 MetaMask 등으로 `personal_sign` (EIP-191)
 5. 클라이언트가 `POST /v1/sessions`에 message + signature + ownerAddress 전달
-6. 서버가 nonce 검증 + 삭제, `siwe` SiweMessage.verify({ signature }) 실행
+6. 서버가 nonce 검증 + 삭제, viem/siwe 기반 3단계 검증: parseSiweMessage(파싱) -> validateSiweMessage(필드검증) -> verifyMessage(서명검증) [v0.7 보완]
 7. recovered address == 요청의 ownerAddress 확인
 8. 에이전트 소유권 확인 + 세션 생성
 
@@ -588,11 +588,13 @@ Issued At: 2026-02-05T10:26:25.000Z
 Expiration Time: 2026-02-05T10:31:25.000Z
 ```
 
-#### 3.3.3 SIWE 서버 사이드 검증 코드 패턴
+#### 3.3.3 SIWE 서버 사이드 검증 코드 패턴 [v0.7 보완: viem/siwe 전환]
 
 ```typescript
-// packages/daemon/src/services/owner-verifier.ts
-import { SiweMessage } from 'siwe'
+// packages/daemon/src/services/owner-verifier.ts [v0.7 보완]
+// Source: viem v2.x 공식 소스 코드 (github.com/wevm/viem)
+import { verifyMessage, type Hex } from 'viem'
+import { parseSiweMessage, validateSiweMessage } from 'viem/siwe'
 
 interface SIWEVerifyInput {
   message: string       // SIWE 포맷 메시지 원문
@@ -600,34 +602,46 @@ interface SIWEVerifyInput {
   ownerAddress: string  // Ethereum 주소 (0x...)
 }
 
+/**
+ * SIWE 서명 검증 [v0.7 보완: siwe+ethers -> viem/siwe 전환]
+ *
+ * 기존: import { SiweMessage } from 'siwe' (ethers v6 peer dep 필수)
+ * 전환: viem/siwe 내장 함수 사용 (ethers 의존성 완전 제거)
+ */
 async function verifySIWE(input: SIWEVerifyInput): Promise<{
   valid: boolean
   address?: string
   nonce?: string
 }> {
   try {
-    const siweMessage = new SiweMessage(input.message)
+    // 1. SIWE 메시지 파싱 (viem/siwe -- 순수 함수, 외부 의존성 없음)
+    const parsed = parseSiweMessage(input.message)
+    if (!parsed.address) return { valid: false }
 
-    // 1. 서명 검증 + 메시지 필드 검증 (도메인, 만료 등)
-    const { data: fields } = await siweMessage.verify({
-      signature: input.signature,
-      // domain, nonce 검증은 siwe 라이브러리가 자동 수행
+    // 2. 메시지 필드 검증 (domain 바인딩, 만료 시간 등)
+    const isValid = validateSiweMessage({
+      message: parsed,
+      domain: 'localhost:3100',
     })
+    if (!isValid) return { valid: false }
 
-    // 2. recovered address와 요청의 ownerAddress 일치 확인
-    if (fields.address.toLowerCase() !== input.ownerAddress.toLowerCase()) {
-      return { valid: false }
-    }
+    // 3. EIP-191 서명 검증 (viem verifyMessage -- ecRecover, RPC 불필요)
+    const verified = await verifyMessage({
+      address: parsed.address,
+      message: input.message,
+      signature: input.signature as Hex,
+    })
+    if (!verified) return { valid: false }
 
-    // 3. 도메인 바인딩 검증
-    if (fields.domain !== 'localhost:3100') {
+    // 4. recovered address == ownerAddress 확인
+    if (parsed.address.toLowerCase() !== input.ownerAddress.toLowerCase()) {
       return { valid: false }
     }
 
     return {
       valid: true,
-      address: fields.address,
-      nonce: fields.nonce,
+      address: parsed.address,
+      nonce: parsed.nonce,
     }
   } catch {
     return { valid: false }
@@ -635,11 +649,12 @@ async function verifySIWE(input: SIWEVerifyInput): Promise<{
 }
 ```
 
-**siwe v3.x + ethers v6 의존성:**
-- `siwe` v3.x는 `ethers` v6을 peer dependency로 요구
-- `siwe`가 내부적으로 `ethers.verifyMessage()`와 `ethers.getAddress()`를 사용
-- pnpm workspace에서 `ethers` v6을 명시적으로 설치해야 함
-- EVM 어댑터(viem)와 SIWE 검증(ethers)은 독립적으로 공존 가능
+**[v0.7 보완] viem/siwe 의존성:**
+- viem v2.x에 내장된 `viem/siwe` 모듈 사용. 별도 `siwe`/`ethers` 패키지 불필요.
+- `parseSiweMessage`: 순수 regex 파싱 (EIP-4361), RPC 불필요
+- `validateSiweMessage`: domain, nonce, expiration 등 필드 유효성 검사
+- `verifyMessage`: ecRecover 기반 EIP-191 서명 검증, RPC 불필요 (EOA 전용)
+- 스마트 계정(EIP-1271) 지원이 필요하면 `verifySiweMessage`(PublicClient 필요)로 전환
 
 #### 3.3.4 SIWE 시퀀스 다이어그램
 
@@ -669,8 +684,8 @@ sequenceDiagram
         Server-->>Client: 401 { code: "INVALID_NONCE" }
     end
 
-    Note over Server: 2. SIWE 서명 검증
-    Server->>Server: SiweMessage.verify({ signature })
+    Note over Server: 2. SIWE 서명 검증 [v0.7 보완: viem/siwe 전환]
+    Server->>Server: parseSiweMessage + validateSiweMessage + verifyMessage (viem/siwe)
     Server->>Server: recovered address == ownerAddress 확인
 
     alt 서명 무효 또는 주소 불일치

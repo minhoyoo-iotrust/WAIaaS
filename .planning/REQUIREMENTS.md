@@ -25,8 +25,8 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ### 의존성 & 빌드 환경
 
-- [ ] **DEPS-01**: SIWE 검증을 viem v2.x 내장 `viem/siwe` parseSiweMessage + verifyMessage로 전환, ethers/siwe npm 패키지 의존성 제거 [CRITICAL]
-- [ ] **DEPS-02**: Sidecar 크로스 컴파일 전략 — prebuildify 기반 네이티브 바이너리 번들, 6개 타겟 플랫폼 확정 (ARM64 Windows 제외) [MEDIUM]
+- [x] **DEPS-01**: SIWE 검증을 viem v2.x 내장 `viem/siwe` parseSiweMessage + verifyMessage로 전환, ethers/siwe npm 패키지 의존성 제거 [CRITICAL]
+- [x] **DEPS-02**: Sidecar 크로스 컴파일 전략 — prebuildify 기반 네이티브 바이너리 번들, 6개 타겟 플랫폼 확정 (ARM64 Windows 제외) [MEDIUM]
 
 ### API & 통합 프로토콜
 
@@ -72,8 +72,13 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 | DAEMON-04 | Phase 27 | Complete |
 | DAEMON-05 | Phase 27 | Complete |
 | DAEMON-06 | Phase 27 | Complete |
+<<<<<<< HEAD
 | DEPS-01 | Phase 28 | Pending |
 | DEPS-02 | Phase 28 | Pending |
+=======
+| DEPS-01 | Phase 28 | Complete |
+| DEPS-02 | Phase 28 | Complete |
+>>>>>>> gsd/phase-28-dependency-build-resolution
 | API-01 | Phase 29 | Pending |
 | API-02 | Phase 29 | Pending |
 | API-03 | Phase 29 | Pending |
@@ -95,4 +100,8 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ---
 *Requirements defined: 2026-02-08*
+<<<<<<< HEAD
 *Last updated: 2026-02-08 after Phase 27 completion*
+=======
+*Last updated: 2026-02-08 after Phase 28 completion*
+>>>>>>> gsd/phase-28-dependency-build-resolution

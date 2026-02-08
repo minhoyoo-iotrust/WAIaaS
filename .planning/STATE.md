@@ -5,17 +5,30 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-08)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
+<<<<<<< HEAD
 **현재 초점:** v0.7 Phase 27 완료 (verified ✓) -> Phase 28 의존성 빌드 환경 해소
+=======
+**현재 초점:** v0.7 Phase 28 완료 (verified ✓) -> Phase 29 API 통합 프로토콜 완성
+>>>>>>> gsd/phase-28-dependency-build-resolution
 
 ## 현재 위치
 
 마일스톤: v0.7 구현 장애 요소 해소
+<<<<<<< HEAD
 페이즈: 27 of 30 (데몬 보안 기반) -- COMPLETE
 플랜: 3 of 3 in current phase -- COMPLETE
 상태: Phase complete (verified ✓, 4/4 must-haves)
 마지막 활동: 2026-02-08 -- Phase 27 verified, DAEMON-01~06 complete
 
 Progress: █████████░░░░░░░░░░░ 45% (5/11)
+=======
+페이즈: 28 of 30 (의존성 빌드 환경 해소) -- COMPLETE
+플랜: 1 of 1 in current phase -- COMPLETE
+상태: Phase complete (verified ✓, 3/3 must-haves)
+마지막 활동: 2026-02-08 -- Phase 28 verified, DEPS-01~02 complete
+
+Progress: ██████████░░░░░░░░░░ 55% (6/11)
+>>>>>>> gsd/phase-28-dependency-build-resolution
 
 ## 성과 지표
 
@@ -31,7 +44,11 @@ Progress: █████████░░░░░░░░░░░ 45% (5/11
 **v0.7:**
 - Total plans: 11 (2+3+1+3+2)
 - Requirements: 25
+<<<<<<< HEAD
 - Completed: 5/11 plans (26-01, 26-02, 27-01, 27-02, 27-03)
+=======
+- Completed: 6/11 plans (26-01, 26-02, 27-01, 27-02, 27-03, 28-01)
+>>>>>>> gsd/phase-28-dependency-build-resolution
 
 ## 누적 컨텍스트
 
@@ -70,6 +87,14 @@ v0.7 핵심: 설계 문서 직접 수정 + [v0.7 보완] 태그 추적
 | INSERT OR IGNORE + changes > 0 원자적 소비 | SQLite 원자적 중복 검사, 별도 SELECT 불필요, TOCTOU 없음 | 27-03 |
 | nonce_storage 기본값 "memory" | flock 단일 인스턴스 보장, sqlite는 2차 방어, INSERT ~100-500us 오버헤드 | 27-03 |
 | nonces 테이블 CREATE TABLE IF NOT EXISTS | 선택적 테이블, nonce_storage=sqlite 시에만 런타임 생성 | 27-03 |
+<<<<<<< HEAD
+=======
+| viem/siwe 3단계 검증 (parse -> validate -> verifyMessage) | EOA 전용, RPC 불필요, ethers 130KB+ 의존성 완전 제거 | 28-01 |
+| verifySIWE 함수 시그니처 유지, 내부 구현만 교체 | 호출부 변경 최소화, SIWEVerifyInput -> { valid, address?, nonce? } 유지 | 28-01 |
+| ARM64 Windows 제외 (5개 타겟 플랫폼) | sodium-native/argon2 prebuild 미제공, Tauri 실험적, 시장 미미 | 28-01 |
+| SEA assets primary + 동반 파일 fallback | SEA 내장 메커니즘 우선, native addon 호환성 문제 시 안전망 | 28-01 |
+| argon2 경로 차이: lib/binding/ (node-pre-gyp) | prebuildify의 prebuilds/와 다름, SEA config에서 정확한 경로 지정 필수 | 28-01 |
+>>>>>>> gsd/phase-28-dependency-build-resolution
 
 ### 차단 요소/우려 사항
 
@@ -78,5 +103,10 @@ v0.7 핵심: 설계 문서 직접 수정 + [v0.7 보완] 태그 추적
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
+<<<<<<< HEAD
 중단 지점: Phase 27 verified ✓. Phase 28 계획 수립 필요.
 재개 파일: .planning/ROADMAP.md (Phase 28 참조)
+=======
+중단 지점: Phase 28 verified ✓. Phase 29 계획 수립 필요.
+재개 파일: .planning/ROADMAP.md (Phase 29 참조)
+>>>>>>> gsd/phase-28-dependency-build-resolution

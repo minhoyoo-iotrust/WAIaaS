@@ -192,7 +192,7 @@ WAIaaS 데몬을 **단일 실행 바이너리**로 변환하여 Tauri에 번들�
 | 바이너리 이름 | `waiaas-daemon-{target_triple}` | `waiaas-daemon-aarch64-apple-darwin` 등 |
 | 바이너리 위치 | Tauri `externalBin` 설정 | `src-tauri/binaries/` |
 | 포함 패키지 | `@waiaas/daemon` + `@waiaas/core` + adapters | Turborepo 빌드 후 SEA 변환 |
-| native addon | `sodium-native`, `better-sqlite3` | v0.3 구현 시 크로스 컴파일 검증 필요 |
+| native addon | `sodium-native`, `better-sqlite3`, `argon2` | [v0.7 보완] prebuildify 기반 번들 전략 정의 (섹션 4.1.1 및 11.6 참조) |
 
 **tauri.conf.json 설정:**
 
@@ -212,9 +212,94 @@ Tauri는 빌드 시 `{externalBin}-{target_triple}` 패턴으로 바이너리를
 src-tauri/binaries/
   waiaas-daemon-aarch64-apple-darwin       (macOS Apple Silicon)
   waiaas-daemon-x86_64-apple-darwin        (macOS Intel)
-  waiaas-daemon-x86_64-pc-windows-msvc.exe (Windows)
-  waiaas-daemon-x86_64-unknown-linux-gnu   (Linux)
+  waiaas-daemon-x86_64-pc-windows-msvc.exe (Windows x64)
+  waiaas-daemon-x86_64-unknown-linux-gnu   (Linux x64)
+  waiaas-daemon-aarch64-unknown-linux-gnu   (Linux ARM64) [v0.7 보완]
 ```
+
+> **[v0.7 보완]** ARM64 Windows(`aarch64-pc-windows-msvc`)는 **제외**. 근거: sodium-native/argon2 ARM64 Windows prebuild 미제공, Tauri ARM64 Windows 실험적 지원, 시장 점유율 미미.
+
+#### 4.1.1 Native Addon 번들 전략 [v0.7 보완]
+
+SEA(Single Executable Application)에서 native addon(`.node` 파일)을 번들하기 위한 전략을 정의한다.
+
+**Primary 전략: SEA assets 메커니즘 (Node.js 22+)**
+
+SEA config의 `assets` 필드로 `.node` 파일을 바이너리에 내장하고, 런타임에 임시 파일로 추출하여 `process.dlopen()`으로 로딩한다.
+
+```json
+// sea-config.json [v0.7 보완]
+{
+  "main": "dist/daemon-bundle.js",
+  "output": "dist/waiaas-daemon",
+  "assets": {
+    "sodium-native.node": "node_modules/sodium-native/prebuilds/{platform}-{arch}/sodium-native.node",
+    "better_sqlite3.node": "node_modules/better-sqlite3/prebuilds/{platform}-{arch}/better_sqlite3.node",
+    "argon2.node": "node_modules/argon2/lib/binding/napi-v3-{platform}-{arch}/argon2.node"
+  }
+}
+```
+
+**native-loader.ts 패턴:**
+
+```typescript
+// packages/daemon/src/infrastructure/native-loader.ts [v0.7 보완]
+import sea from 'node:sea'
+import { writeFileSync, rmSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+
+/**
+ * SEA 환경에서 native addon을 로딩한다.
+ * 비-SEA 환경에서는 일반 require()로 폴백한다.
+ */
+function loadNativeAddon(assetName: string, fallbackRequire: () => any): any {
+  if (!sea.isSea()) {
+    return fallbackRequire()
+  }
+
+  const addonPath = join(tmpdir(), `waiaas-${assetName}`)
+  try {
+    writeFileSync(addonPath, new Uint8Array(sea.getRawAsset(assetName)))
+    const mod = { exports: {} as any }
+    process.dlopen(mod, addonPath)
+    return mod.exports
+  } finally {
+    if (existsSync(addonPath)) {
+      try { rmSync(addonPath) } catch { /* ignore cleanup errors */ }
+    }
+  }
+}
+
+const sodiumNative = loadNativeAddon('sodium-native.node', () => require('sodium-native'))
+const betterSqlite3 = loadNativeAddon('better_sqlite3.node', () => require('better-sqlite3'))
+const argon2Native = loadNativeAddon('argon2.node', () => require('argon2'))
+```
+
+**각 native addon별 빌드 도구 차이:**
+
+| Package | Build Tool | 런타임 로더 | Prebuild 경로 |
+|---------|------------|------------|--------------|
+| `sodium-native` v5.x | prebuildify | node-gyp-build | `prebuilds/{platform}-{arch}/` |
+| `better-sqlite3` v12.x | prebuild-install | node-gyp-build | `prebuilds/{platform}-{arch}/` |
+| `argon2` v0.43+ | @mapbox/node-pre-gyp | @mapbox/node-pre-gyp | `lib/binding/napi-v3-{platform}-{arch}/` |
+
+> argon2의 prebuild 경로가 `prebuilds/`가 아닌 `lib/binding/`인 점에 주의. SEA config에서 assets 경로를 정확히 지정해야 한다.
+
+**Fallback 전략: 동반 .node 파일 디렉토리 (.d/)**
+
+SEA assets 번들링이 native addon과 호환성 문제를 보일 경우(특히 sodium-native의 libsodium 동적 링크 의존성), 아래와 같이 동반 파일 전략으로 전환한다:
+
+```
+src-tauri/binaries/
+  waiaas-daemon-aarch64-apple-darwin       # SEA 바이너리 (JS only)
+  waiaas-daemon-aarch64-apple-darwin.d/    # 동반 native addon 디렉토리
+    sodium-native.node
+    better_sqlite3.node
+    argon2.node
+```
+
+> **[v0.7 보완]** sodium-native SEA 호환성은 구현 시 검증 필요. `process.dlopen()` 시 libsodium 동적 링크 의존성이 문제될 수 있음. 실패 시 동반 파일 전략으로 전환.
 
 ### 4.2 Sidecar 라이프사이클
 
@@ -1722,21 +1807,56 @@ jobs:
 | **Linux AppImage** | `.AppImage` | 다운로드 -> chmod +x -> 실행 |
 | **Linux .deb** | `.deb` 패키지 | apt install 호환 (Debian/Ubuntu) |
 
-### 11.6 Sidecar 크로스 컴파일
+### 11.6 Sidecar 크로스 컴파일 [v0.7 보완: 전면 보강]
 
-Node.js SEA 바이너리는 각 타겟 플랫폼에서 빌드해야 한다 (크로스 컴파일 제한):
+Node.js SEA 바이너리는 각 타겟 플랫폼에서 빌드해야 한다 (크로스 컴파일 제한).
 
-| 과제 | 설명 | 해결 |
-|------|------|------|
-| Node.js SEA 크로스 빌드 | SEA는 호스트 OS에서만 빌드 가능 | CI 매트릭스에서 각 OS별 빌드 |
-| native addon (sodium-native) | C 소스 빌드 필요, OS/arch 의존 | 각 OS runner에서 npm rebuild |
-| native addon (better-sqlite3) | prebuilt binary 또는 소스 빌드 | prebuild-install 사용 |
-| Apple Silicon SEA | Node.js 22 SEA는 arm64 네이티브 지원 | macOS-latest runner (arm64) |
+#### [v0.7 보완] 타겟 플랫폼 매트릭스 (5+1)
 
-**v0.3 구현 시 검증 필요 항목:**
-- sodium-native의 Node.js SEA 호환성 (정적 링킹 가능 여부)
-- better-sqlite3의 SEA 번들링 (napi 바인딩 포함)
-- SEA 바이너리 크기 최적화 (현재 예상: 80-120MB per platform)
+| # | Target Triple | OS | Arch | CI Runner | 우선순위 |
+|---|--------------|-----|------|-----------|:--------:|
+| 1 | aarch64-apple-darwin | macOS | ARM64 | macos-14 (M1) | P0 |
+| 2 | x86_64-apple-darwin | macOS | x64 | macos-13 | P0 |
+| 3 | x86_64-pc-windows-msvc | Windows | x64 | windows-2022 | P1 |
+| 4 | x86_64-unknown-linux-gnu | Linux | x64 | ubuntu-22.04 | P1 |
+| 5 | aarch64-unknown-linux-gnu | Linux | ARM64 | ubuntu-22.04 ARM64 | P2 |
+| - | aarch64-pc-windows-msvc | Windows | ARM64 | - | **제외** |
+
+**제외 근거 (ARM64 Windows):**
+- sodium-native/argon2: ARM64 Windows prebuild 미제공
+- Tauri: ARM64 Windows 빌드 지원은 실험적
+- 시장 점유율: 2026년 기준 미미
+
+#### Native Addon별 Prebuild 현황
+
+| Package | Build Tool | 런타임 로더 | Prebuild 경로 |
+|---------|------------|------------|--------------|
+| `sodium-native` v5.x | prebuildify | node-gyp-build | `prebuilds/{platform}-{arch}/` |
+| `better-sqlite3` v12.x | prebuild-install | node-gyp-build | `prebuilds/{platform}-{arch}/` |
+| `argon2` v0.43+ | @mapbox/node-pre-gyp | @mapbox/node-pre-gyp | `lib/binding/napi-v3-{platform}-{arch}/` |
+
+> argon2는 prebuildify가 아닌 `@mapbox/node-pre-gyp`를 사용하며, prebuild 경로가 `lib/binding/`으로 다른 점에 주의.
+
+#### SEA 빌드 파이프라인 (CI 매트릭스)
+
+```
+1. pnpm install + turborepo build (@waiaas/daemon 번들)
+2. 플랫폼별 prebuilt .node 파일 수집
+3. sea-config.json에 assets로 .node 파일 포함
+4. node --experimental-sea-config sea-config.json (Node.js 22)
+5. postject로 SEA 바이너리 생성
+6. 코드사인 (macOS: codesign, Windows: signtool)
+```
+
+> **참고:** Node.js 25.5+에서는 `node --build-sea` 단일 명령으로 steps 4-5가 통합된다. 설계 문서는 Node.js 22 LTS 기준으로 작성.
+
+#### 구현 시 검증 필요 항목
+
+- sodium-native의 SEA assets 호환성 (process.dlopen 시 libsodium 동적 링크 의존성)
+- better-sqlite3의 SEA 번들링 (napi 바인딩 + SQLite 정적 링크)
+- argon2의 `lib/binding/` 경로 차이 (prebuildify가 아닌 node-pre-gyp 사용)
+- Linux ARM64 Docker postject ELF hash table 이슈 (postject#105) -- P2 우선순위이므로 non-container 빌드 기본
+- SEA 바이너리 크기 최적화 (예상: 80-120MB per platform)
 
 ---
 

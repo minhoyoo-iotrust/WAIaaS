@@ -173,7 +173,7 @@ ownerAuth:
 |------|-----|
 | 전달 방식 | `Authorization: Bearer <base64url encoded JSON>` |
 | 페이로드 필드 | chain, address, action, nonce, timestamp, message, signature |
-| 서명 알고리즘 | Solana: Ed25519 (tweetnacl), EVM: EIP-191 (siwe + ethers) |
+| 서명 알고리즘 | Solana: Ed25519 (tweetnacl), EVM: EIP-191 (viem/siwe + verifyMessage) | [v0.7 보완]
 | 유효기간 | 5분 (timestamp 기준) |
 | nonce | 일회성 (LRU 캐시, max 1000, TTL 5분) |
 | 적용 | `POST /v1/owner/approve/:txId`, `POST /v1/admin/recover` (v0.5 변경: 2곳만) [v0.7 보완: recover 경로 변경] |
