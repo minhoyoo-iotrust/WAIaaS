@@ -76,7 +76,13 @@ WAIaaS v0.5 CLI 플로우 재설계를 정의한다. v0.2의 `waiaas init` 4단�
 
 ```mermaid
 flowchart TD
-    Start([waiaas init]) --> CheckExist{~/.waiaas/<br/>존재?}
+    Start([waiaas init]) --> CheckJson{--json<br/>모드?}
+
+    CheckJson -->|Yes| CheckExistJson{~/.waiaas/<br/>존재?}
+    CheckJson -->|No| CheckExist{~/.waiaas/<br/>존재?}
+
+    CheckExistJson -->|Yes| IdempotentReturn["JSON: { success: true,<br/>alreadyInitialized: true }"]
+    CheckExistJson -->|No| Step1
 
     CheckExist -->|Yes, --force 없음| AlreadyInit["Error: Already initialized.<br/>Use --force to reinitialize"]
     CheckExist -->|Yes, --force 있음| ForceClean["기존 데이터 삭제"]
@@ -157,7 +163,9 @@ waiaas init --non-interactive --data-dir /opt/waiaas/data
 | `--non-interactive` | - | boolean | X | `false` | 비대화형 모드 (CI/자동화) |
 | `--password-env <var>` | - | string | X | `WAIAAS_MASTER_PASSWORD` | 패스워드 환경변수 이름 |
 | `--password-file <path>` | - | string | X | - | 패스워드 파일 경로 (파일 첫 줄, mode 0o600 권장) |
-| `--force` | - | boolean | X | `false` | 기존 초기화 덮어쓰기 (데이터 삭제!) |
+| `--master-password <pw>` | - | string | X | - | **(v0.7 추가)** 마스터 패스워드 직접 전달 (Tauri sidecar 호출용). localhost 전용 |
+| `--json` | - | boolean | X | `false` | **(v0.7 추가)** JSON 출력 + idempotent 동작: 이미 초기화된 경우 에러 없이 `{ success: true, alreadyInitialized: true }` 반환. Tauri Setup Wizard에서 sidecar로 호출 시 사용 |
+| `--force` | - | boolean | X | `false` | 기존 초기화 덮어쓰기 (데이터 삭제!). idempotent 동작과 상호 배타적 |
 | `--quickstart` | - | boolean | X | `false` | 4단계 통합 플로우 (섹션 6 참조) |
 | `-h, --help` | `-h` | boolean | X | - | 도움말 |
 
@@ -181,7 +189,8 @@ waiaas init --non-interactive --data-dir /opt/waiaas/data
 
 | 상황 | 에러 메시지 | Exit Code |
 |------|-----------|-----------|
-| 이미 초기화됨 | `Error: Already initialized at ~/.waiaas/. Use --force to reinitialize.` | 1 |
+| 이미 초기화됨 (비-JSON) | `Error: Already initialized at ~/.waiaas/. Use --force to reinitialize.` | 1 |
+| 이미 초기화됨 (--json) | `{ "success": true, "alreadyInitialized": true, ... }` [v0.7 보완: idempotent] | 0 |
 | 비대화형 + 패스워드 미제공 | `Error: Master password not provided. Set WAIAAS_MASTER_PASSWORD or use --password-file.` | 1 |
 | 패스워드 12자 미만 | `Error: Master password too short (minimum 12 characters, got N).` | 1 |
 | 패스워드 불일치 (대화형) | `Error: Passwords do not match.` | 1 |
@@ -201,7 +210,7 @@ waiaas init --non-interactive --data-dir /opt/waiaas/data
 ### 2.9 구현 수도코드
 
 ```typescript
-// packages/cli/src/commands/init.ts (v0.5)
+// packages/cli/src/commands/init.ts (v0.5 + v0.7 보완)
 async function runInit(args: string[]): Promise<void> {
   const options = parseInitOptions(args)
 
@@ -212,7 +221,21 @@ async function runInit(args: string[]): Promise<void> {
 
   const dataDir = resolveDataDir(options.dataDir)
 
-  // 기존 초기화 확인
+  // [v0.7 보완] --json 모드: idempotent 동작 (이미 초기화된 경우 에러 없이 성공 반환)
+  if (options.json && existsSync(dataDir) && !options.force) {
+    const steps = detectExistingSteps(dataDir)
+    const allExist = Object.values(steps).every(s => s === 'exists')
+    console.log(JSON.stringify({
+      success: true,
+      alreadyInitialized: allExist,
+      dataDir,
+      version: VERSION,
+      steps,
+    }))
+    return  // exit 0 (에러 아님)
+  }
+
+  // 기존 초기화 확인 (비-JSON 모드: 기존 동작 유지)
   if (existsSync(dataDir) && !options.force) {
     console.error(`Error: Already initialized at ${dataDir}`)
     console.error("Use 'waiaas init --force' to reinitialize (WARNING: all data will be deleted)")
@@ -222,38 +245,68 @@ async function runInit(args: string[]): Promise<void> {
   // --force 시 기존 데이터 삭제
   if (options.force && existsSync(dataDir)) {
     rmSync(dataDir, { recursive: true })
-    console.log(`Removed existing data directory: ${dataDir}`)
+    if (!options.json) console.log(`Removed existing data directory: ${dataDir}`)
   }
 
   // === Step 1: 마스터 패스워드 설정 ===
   const password = await resolveInitPassword(options)
   validatePasswordStrength(password) // 최소 12자
 
-  // === Step 2: 인프라 초기화 ===
-  // 2-1. 디렉토리 생성
+  // === Step 2: 인프라 초기화 (각 단계 개별 idempotent) [v0.7 보완] ===
+  const steps: Record<string, string> = {}
+
+  // 2-1. 디렉토리 생성 (idempotent: recursive)
   mkdirSync(dataDir, { mode: 0o700, recursive: true })
-  mkdirSync(join(dataDir, 'data'), { mode: 0o700 })
-  mkdirSync(join(dataDir, 'keystore'), { mode: 0o700 })
-  mkdirSync(join(dataDir, 'logs'), { mode: 0o700 })
-  mkdirSync(join(dataDir, 'backups'), { mode: 0o700 })
+  mkdirSync(join(dataDir, 'data'), { mode: 0o700, recursive: true })
+  mkdirSync(join(dataDir, 'keystore'), { mode: 0o700, recursive: true })
+  mkdirSync(join(dataDir, 'logs'), { mode: 0o700, recursive: true })
+  mkdirSync(join(dataDir, 'backups'), { mode: 0o700, recursive: true })
+  steps.directory = 'created'
 
-  // 2-2. config.toml 기본 파일 생성
-  writeFileSync(join(dataDir, 'config.toml'), DEFAULT_CONFIG_TOML, { mode: 0o600 })
+  // 2-2. config.toml 기본 파일 생성 (idempotent: 존재하면 skip)
+  const configPath = join(dataDir, 'config.toml')
+  if (!existsSync(configPath)) {
+    writeFileSync(configPath, DEFAULT_CONFIG_TOML, { mode: 0o600 })
+    steps.config = 'created'
+  } else {
+    steps.config = 'exists'
+  }
 
-  // 2-3. SQLite DB 초기화 + 마이그레이션
-  const sqlite = new Database(join(dataDir, 'data', 'waiaas.db'))
+  // 2-3. SQLite DB 초기화 + 마이그레이션 (idempotent: migration은 이미 적용된 것을 skip)
+  const dbPath = join(dataDir, 'data', 'waiaas.db')
+  const dbExisted = existsSync(dbPath)
+  const sqlite = new Database(dbPath)
   applyPragmas(sqlite)
   const db = drizzle({ client: sqlite })
   await migrate(db, { migrationsFolder: getMigrationsPath() })
+  steps.database = dbExisted ? 'migrated' : 'created'
 
-  // 2-4. 키스토어 초기화 (마스터 패스워드 해시 저장)
+  // 2-4. 키스토어 초기화 (idempotent: 이미 존재하면 skip)
   const keyStore = new LocalKeyStore(dataDir, db)
-  await keyStore.initialize(password)
+  if (!keyStore.isInitialized()) {
+    await keyStore.initialize(password)
+    steps.keystore = 'created'
+  } else {
+    steps.keystore = 'exists'
+  }
 
   // 에이전트 생성 없음 -- DX-01: init은 순수 인프라만
   sqlite.close()
 
-  // 안내 메시지
+  // [v0.7 보완] --json 모드 출력
+  if (options.json) {
+    const alreadyInitialized = Object.values(steps).every(s => s === 'exists')
+    console.log(JSON.stringify({
+      success: true,
+      alreadyInitialized,
+      dataDir,
+      version: VERSION,
+      steps,
+    }))
+    return
+  }
+
+  // 안내 메시지 (비-JSON 모드)
   console.log('WAIaaS initialized successfully!')
   console.log('')
   console.log('Next steps:')

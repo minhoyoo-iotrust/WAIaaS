@@ -832,7 +832,25 @@ const TransactionResponseSchema = z.object({
 - **200 OK** (INSTANT 티어): `status: 'CONFIRMED'`, `txHash` 포함
 - **202 Accepted** (DELAY/APPROVAL 티어): `status: 'QUEUED'`, `txHash` 없음
 
-**응답 예시 (200 OK -- INSTANT):**
+#### HTTP 응답 Status 매트릭스 [v0.7 보완]
+
+모든 TransactionType(TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH)에 동일한 규칙이 적용된다. 티어별 차이만 존재하며, 타입별 차이는 응답의 `type` 필드로 구분.
+
+| 티어 | HTTP Status | 응답 body의 status | 설명 |
+|------|------------|-------------------|------|
+| INSTANT (성공) | 200 OK | CONFIRMED | 동기 완료. txHash 포함. |
+| INSTANT (타임아웃) | 200 OK | SUBMITTED | 30초 내 미확정. txHash 포함. 클라이언트 폴링 필요. |
+| NOTIFY | 200 OK | CONFIRMED / SUBMITTED | INSTANT과 동일 동작 + Owner 알림 전송. |
+| DELAY | 202 Accepted | QUEUED | 대기열 진입. 쿨다운 후 자동 실행. txHash 없음. |
+| APPROVAL | 202 Accepted | QUEUED | 대기열 진입. Owner 승인 대기. txHash 없음. |
+
+**핵심 원칙:**
+- 200 = 동기 처리 완료 (CONFIRMED 또는 SUBMITTED)
+- 202 = 비동기 대기열 진입 (QUEUED)
+- 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)은 HTTP status에 영향 없음 -- TransactionType 무관 원칙
+- INSTANT 타임아웃(30초 내 미확정)은 200 SUBMITTED으로 반환하여 클라이언트가 GET /v1/transactions/:id로 폴링
+
+**응답 예시 (200 OK -- INSTANT 성공):**
 ```json
 {
   "transactionId": "019502c0-1a2b-3c4d-5e6f-abcdef012345",
@@ -843,6 +861,21 @@ const TransactionResponseSchema = z.object({
   "createdAt": "2026-02-05T10:31:25.000Z"
 }
 ```
+
+**응답 예시 (200 OK -- INSTANT 타임아웃, SUBMITTED, 폴링 필요):** [v0.7 보완]
+```json
+{
+  "transactionId": "019502c0-1a2b-3c4d-5e6f-abcdef012345",
+  "type": "TRANSFER",
+  "status": "SUBMITTED",
+  "tier": "INSTANT",
+  "txHash": "4vJ9JU1bJJE96FW...",
+  "estimatedFee": "5000",
+  "createdAt": "2026-02-05T10:31:25.000Z"
+}
+```
+
+> **[v0.7 보완] SUBMITTED 폴링:** INSTANT 타임아웃 시 200 SUBMITTED 반환. 클라이언트는 `GET /v1/transactions/:id`로 폴링하여 최종 CONFIRMED 상태 확인. 폴링 권장 간격: 2초.
 
 **응답 예시 (202 Accepted -- DELAY/APPROVAL):**
 ```json
@@ -1677,9 +1710,9 @@ const OwnerConnectResponseSchema = z.object({
 
 ---
 
-### 8.2 DELETE /v1/owner/disconnect (Owner 지갑 해제)
+### 8.2 DELETE /v1/owner/disconnect (Owner 지갑 해제 + Cascade) [v0.7 보완]
 
-Owner 지갑 연결을 해제한다.
+Owner 지갑 연결을 해제하고, 해당 address/chain에 매칭되는 에이전트들에 대해 5단계 cascade를 수행한다.
 
 | 항목 | 값 |
 |------|-----|
@@ -1688,14 +1721,37 @@ Owner 지갑 연결을 해제한다.
 | **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Owner` |
 | **operationId** | `disconnectOwner` |
-| **정의 원본** | OWNR-CONN (섹션 6) |
+| **정의 원본** | OWNR-CONN (섹션 6.8) |
 
-**Response Zod 스키마:**
+**Request Body Zod 스키마:** [v0.7 보완]
 
 ```typescript
+// [v0.7 보완] disconnect 요청에 대상 address/chain 지정
+const OwnerDisconnectRequestSchema = z.object({
+  address: z.string().min(1).openapi({
+    description: 'Owner 지갑 주소',
+    example: 'EcxjN4mea6Ah9WSqZhLtSJJCZcxY73Vaz6UVHFZZ5Ttz',
+  }),
+  chain: z.enum(['solana', 'ethereum']).openapi({
+    description: '체인 식별자',
+    example: 'solana',
+  }),
+}).openapi('OwnerDisconnectRequest')
+```
+
+**Response Zod 스키마:** [v0.7 보완]
+
+```typescript
+// [v0.7 보완] cascade 결과 포함 응답으로 확장
 const OwnerDisconnectResponseSchema = z.object({
   disconnected: z.literal(true),
   disconnectedAt: z.string().datetime(),
+  affectedAgents: z.number().int().min(0).openapi({
+    description: '영향받은 에이전트 수',
+  }),
+  expiredTransactions: z.number().int().min(0).openapi({
+    description: 'EXPIRED로 전환된 APPROVAL 대기 트랜잭션 수',
+  }),
 }).openapi('OwnerDisconnectResponse')
 ```
 
@@ -1703,15 +1759,19 @@ const OwnerDisconnectResponseSchema = z.object({
 ```json
 {
   "disconnected": true,
-  "disconnectedAt": "2026-02-05T10:30:00.000Z"
+  "disconnectedAt": "2026-02-05T10:30:00.000Z",
+  "affectedAgents": 2,
+  "expiredTransactions": 1
 }
 ```
+
+> **[v0.7 보완] cascade 5단계 동작:** APPROVAL 대기 -> EXPIRED, DELAY 유지(no-op), WC 세션 정리, owner_address 유지(no-op), audit_log 기록. 상세는 34-owner-wallet-connection.md 섹션 6.8 참조.
 
 **에러:**
 
 | 코드 | HTTP | retryable | 설명 |
 |------|------|-----------|------|
-| `OWNER_NOT_CONNECTED` | 404 | false | Owner가 등록되지 않음 |
+| `OWNER_NOT_FOUND` | 404 | false | [v0.7 보완] 해당 address/chain 조합의 에이전트가 없음 |
 
 ---
 
@@ -2871,6 +2931,7 @@ const ErrorResponseSchema = z.object({
 |------|------|-----------|------|
 | `OWNER_ALREADY_CONNECTED` | 409 | false | Owner 이미 등록됨 |
 | `OWNER_NOT_CONNECTED` | 404 | false | Owner 미등록 |
+| `OWNER_NOT_FOUND` | 404 | false | [v0.7 보완] 해당 address/chain 조합의 에이전트가 없음 (disconnect 시) |
 | `APPROVAL_TIMEOUT` | 410 | false | 승인 기한 만료 (APPROVAL 티어) |
 | `APPROVAL_NOT_FOUND` | 404 | false | 승인 대기 거래 없음 |
 

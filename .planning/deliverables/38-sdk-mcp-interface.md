@@ -4,6 +4,7 @@
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
 **v0.6 블록체인 기능 확장:** 2026-02-08
+**v0.7 API 통합 프로토콜:** 2026-02-08
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -89,6 +90,54 @@ npx openapi-typescript http://127.0.0.1:3100/doc -o packages/sdk/src/generated/a
 ```
 
 **이 경로는 보조적**이다. Primary 타입 소스는 `@waiaas/core` 직접 import이며, `openapi-typescript` 생성 타입은 외부 배포 시 `@waiaas/core`에 의존하지 않는 독립 타입으로 활용한다.
+
+#### 2.4 SDK 클라이언트 사전 검증 패턴 [v0.7 보완]
+
+`@waiaas/sdk`는 `@waiaas/core`에서 Zod 스키마를 import하여, 서버 전송 전 클라이언트에서 요청을 사전 검증한다. 이로써 서버 왕복 없이 즉시 유효성 에러를 반환할 수 있다.
+
+```typescript
+// packages/sdk/src/client.ts
+import {
+  TransferRequestSchema,
+  TokenTransferRequestSchema,
+  ContractCallRequestSchema,
+  ApproveRequestSchema,
+  TransactionRequestSchema,
+  type TransferRequest,
+  type TransactionResponse,
+} from '@waiaas/core'
+
+class WAIaaSClient {
+  async sendNativeToken(request: TransferRequest): Promise<TransactionResponse> {
+    // 서버 전송 전 클라이언트 사전 검증
+    TransferRequestSchema.parse(request)  // 실패 시 ZodError throw
+    return this.post('/v1/transactions/send', { ...request, type: 'TRANSFER' })
+  }
+
+  async sendTransaction(request: TransactionRequest): Promise<TransactionResponse> {
+    // discriminatedUnion 검증 (type 필드 기반 자동 스키마 선택)
+    TransactionRequestSchema.parse(request)
+    return this.post('/v1/transactions/send', request)
+  }
+}
+```
+
+**검증 실패 시 동작:**
+- `ZodError` throw (SDK에서 `WAIaaSError`로 래핑)
+- 에러 메시지에 어떤 필드가 잘못되었는지 포함 (`issue.path`, `issue.message`)
+- 서버에 요청이 전송되지 않음 (네트워크 비용 절약)
+
+**검증 대상 스키마 목록 (24-monorepo-data-directory.md @waiaas/core export 참조):**
+
+| SDK 메서드 | 사전 검증 스키마 | 설명 |
+|-----------|----------------|------|
+| `sendNativeToken()` | `TransferRequestSchema` | SOL/ETH 네이티브 전송 |
+| `sendTokenTransfer()` | `TokenTransferRequestSchema` | SPL/ERC-20 토큰 전송 |
+| `contractCall()` | `ContractCallRequestSchema` | 컨트랙트 호출 |
+| `approveToken()` | `ApproveRequestSchema` | 토큰 승인 |
+| `batchTransaction()` | `BatchRequestSchema` | 배치 트랜잭션 |
+| `sendTransaction()` | `TransactionRequestSchema` | discriminatedUnion 5-type |
+| `createSession()` | `SessionCreateRequestSchema` | 세션 생성 |
 
 ---
 
@@ -1220,8 +1269,25 @@ dev = [
 from __future__ import annotations
 from datetime import datetime
 from enum import Enum
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
+
+
+# [v0.7 보완] 공통 베이스 모델 (snake_case SSoT)
+class WAIaaSBaseModel(BaseModel):
+    """WAIaaS Python SDK 공통 베이스 모델.
+
+    모든 모델은 이 클래스를 상속하여 일관된 snake_case <-> camelCase 변환을 보장한다.
+    - alias_generator=to_camel: snake_case 필드명 -> camelCase alias 자동 생성
+    - populate_by_name=True: snake_case와 camelCase 양방향 입력 허용
+    - 직렬화: model_dump(by_alias=True)로 camelCase JSON 출력
+    - 기존 Field(alias=) 수동 방식을 완전 대체 (v0.7 전환)
+    """
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
 
 class TransactionStatus(str, Enum):
@@ -1242,12 +1308,24 @@ class Tier(str, Enum):
     APPROVAL = "APPROVAL"
 
 
+# [v0.7 보완] v0.6 확장: TransactionType enum
+class TransactionType(str, Enum):
+    TRANSFER = "TRANSFER"
+    TOKEN_TRANSFER = "TOKEN_TRANSFER"
+    CONTRACT_CALL = "CONTRACT_CALL"
+    APPROVE = "APPROVE"
+    BATCH = "BATCH"
+
+
 class Chain(str, Enum):
     SOLANA = "solana"
     ETHEREUM = "ethereum"
 
 
-class BalanceResponse(BaseModel):
+# [v0.7 보완] BaseModel -> WAIaaSBaseModel 전환 (alias_generator=to_camel 자동 적용)
+# 기존 Field(alias="camelCase") 수동 지정이 제거됨. 모든 alias는 to_camel에서 자동 생성.
+
+class BalanceResponse(WAIaaSBaseModel):
     balance: str = Field(description="잔액 (최소 단위: lamports/wei)")
     decimals: int = Field(description="소수점 자릿수")
     symbol: str = Field(description="토큰 심볼")
@@ -1256,98 +1334,240 @@ class BalanceResponse(BaseModel):
     network: str
 
 
-class AddressResponse(BaseModel):
+class AddressResponse(WAIaaSBaseModel):
     address: str = Field(description="지갑 공개키")
     chain: str
     network: str
     encoding: str = Field(description="base58 | hex")
 
 
-class TransferRequest(BaseModel):
+class TransferRequest(WAIaaSBaseModel):
     to: str = Field(min_length=1, description="수신자 주소")
     amount: str = Field(min_length=1, description="전송 금액 (최소 단위)")
     type: str = Field(default="TRANSFER")
-    token_mint: Optional[str] = Field(default=None, alias="tokenMint")
+    token_mint: Optional[str] = Field(default=None)  # alias: "tokenMint" (자동)
     memo: Optional[str] = Field(default=None, max_length=200)
     priority: str = Field(default="medium")
 
 
-class TransactionResponse(BaseModel):
-    transaction_id: str = Field(alias="transactionId")
+class TransactionResponse(WAIaaSBaseModel):
+    transaction_id: str        # alias: "transactionId" (자동)
     status: TransactionStatus
     tier: Optional[Tier] = None
-    tx_hash: Optional[str] = Field(default=None, alias="txHash")
-    estimated_fee: Optional[str] = Field(default=None, alias="estimatedFee")
-    created_at: datetime = Field(alias="createdAt")
-
-    model_config = {"populate_by_name": True}
+    tx_hash: Optional[str] = None  # alias: "txHash" (자동)
+    estimated_fee: Optional[str] = None  # alias: "estimatedFee" (자동)
+    created_at: datetime       # alias: "createdAt" (자동)
 
 
-class TransactionSummary(BaseModel):
+class TransactionSummary(WAIaaSBaseModel):
     id: str
     type: str
     status: TransactionStatus
     tier: Optional[Tier] = None
     amount: Optional[str] = None
-    to_address: Optional[str] = Field(default=None, alias="toAddress")
-    tx_hash: Optional[str] = Field(default=None, alias="txHash")
-    created_at: datetime = Field(alias="createdAt")
-    executed_at: Optional[datetime] = Field(default=None, alias="executedAt")
+    to_address: Optional[str] = None  # alias: "toAddress" (자동)
+    tx_hash: Optional[str] = None  # alias: "txHash" (자동)
+    created_at: datetime       # alias: "createdAt" (자동)
+    executed_at: Optional[datetime] = None  # alias: "executedAt" (자동)
     error: Optional[str] = None
 
-    model_config = {"populate_by_name": True}
 
-
-class TransactionListResponse(BaseModel):
+class TransactionListResponse(WAIaaSBaseModel):
     transactions: list[TransactionSummary]
-    next_cursor: Optional[str] = Field(default=None, alias="nextCursor")
-
-    model_config = {"populate_by_name": True}
+    next_cursor: Optional[str] = None  # alias: "nextCursor" (자동)
 
 
-class PendingTransactionSummary(BaseModel):
+class PendingTransactionSummary(WAIaaSBaseModel):
     id: str
     type: str
     amount: Optional[str] = None
-    to_address: Optional[str] = Field(default=None, alias="toAddress")
+    to_address: Optional[str] = None  # alias: "toAddress" (자동)
     tier: Tier
-    queued_at: datetime = Field(alias="queuedAt")
-    expires_at: Optional[datetime] = Field(default=None, alias="expiresAt")
+    queued_at: datetime        # alias: "queuedAt" (자동)
+    expires_at: Optional[datetime] = None  # alias: "expiresAt" (자동)
     status: str = "QUEUED"
 
-    model_config = {"populate_by_name": True}
 
-
-class PendingTransactionListResponse(BaseModel):
+class PendingTransactionListResponse(WAIaaSBaseModel):
     transactions: list[PendingTransactionSummary]
 
 
-class NonceResponse(BaseModel):
+class NonceResponse(WAIaaSBaseModel):
     nonce: str
-    expires_at: datetime = Field(alias="expiresAt")
-
-    model_config = {"populate_by_name": True}
+    expires_at: datetime       # alias: "expiresAt" (자동)
 
 
-class SessionCreateResponse(BaseModel):
-    session_id: str = Field(alias="sessionId")
+class SessionCreateResponse(WAIaaSBaseModel):
+    session_id: str            # alias: "sessionId" (자동)
     token: str
-    expires_at: datetime = Field(alias="expiresAt")
+    expires_at: datetime       # alias: "expiresAt" (자동)
     constraints: dict
 
-    model_config = {"populate_by_name": True}
+
+class SessionConstraints(WAIaaSBaseModel):
+    max_amount_per_tx: Optional[str] = None      # alias: "maxAmountPerTx" (자동)
+    max_total_amount: Optional[str] = None        # alias: "maxTotalAmount" (자동)
+    max_transactions: Optional[int] = None        # alias: "maxTransactions" (자동)
+    allowed_operations: Optional[list[str]] = None  # alias: "allowedOperations" (자동)
+    allowed_destinations: Optional[list[str]] = None  # alias: "allowedDestinations" (자동)
+    expires_in: Optional[int] = None              # alias: "expiresIn" (자동)
 
 
-class SessionConstraints(BaseModel):
-    max_amount_per_tx: Optional[str] = Field(default=None, alias="maxAmountPerTx")
-    max_total_amount: Optional[str] = Field(default=None, alias="maxTotalAmount")
-    max_transactions: Optional[int] = Field(default=None, alias="maxTransactions")
-    allowed_operations: Optional[list[str]] = Field(default=None, alias="allowedOperations")
-    allowed_destinations: Optional[list[str]] = Field(default=None, alias="allowedDestinations")
-    expires_in: Optional[int] = Field(default=None, alias="expiresIn")
+# [v0.7 보완] v0.6 확장 타입: 토큰 관련 보조 모델
+class TokenIdentifier(WAIaaSBaseModel):
+    """SPL/ERC-20 토큰 식별자"""
+    mint: str                  # SPL mint address 또는 ERC-20 contract address
+    decimals: Optional[int] = None
 
-    model_config = {"populate_by_name": True}
+
+class AccountMeta(WAIaaSBaseModel):
+    """Solana 계정 메타 (CONTRACT_CALL 트랜잭션용)"""
+    pubkey: str
+    is_signer: bool = False    # alias: "isSigner" (자동)
+    is_writable: bool = False  # alias: "isWritable" (자동)
+
+
+# [v0.7 보완] v0.6 확장: TOKEN_TRANSFER 요청
+class TokenTransferRequest(WAIaaSBaseModel):
+    type: Literal['TOKEN_TRANSFER'] = 'TOKEN_TRANSFER'
+    to: str = Field(min_length=1, description="수신자 주소")
+    amount: str = Field(min_length=1, description="전송 금액 (최소 단위)")
+    token: TokenIdentifier
+    memo: Optional[str] = Field(default=None, max_length=200)
+    priority: str = Field(default="medium")
+
+
+# [v0.7 보완] v0.6 확장: CONTRACT_CALL 요청
+class ContractCallRequest(WAIaaSBaseModel):
+    type: Literal['CONTRACT_CALL'] = 'CONTRACT_CALL'
+    contract_address: str      # alias: "contractAddress" (자동)
+    # EVM 전용
+    calldata: Optional[str] = None
+    value: Optional[str] = None
+    method_signature: Optional[str] = None  # alias: "methodSignature" (자동)
+    # Solana 전용
+    program_id: Optional[str] = None  # alias: "programId" (자동)
+    instruction_data: Optional[str] = None  # alias: "instructionData" (자동)
+    accounts: Optional[list[AccountMeta]] = None
+
+
+# [v0.7 보완] v0.6 확장: APPROVE 요청
+class ApproveRequest(WAIaaSBaseModel):
+    type: Literal['APPROVE'] = 'APPROVE'
+    token: TokenIdentifier
+    spender_address: str       # alias: "spenderAddress" (자동)
+    approved_amount: str       # alias: "approvedAmount" (자동)
+
+
+# [v0.7 보완] v0.6 확장: BATCH 요청 (Solana 전용)
+class BatchRequest(WAIaaSBaseModel):
+    type: Literal['BATCH'] = 'BATCH'
+    instructions: list[TransferRequest | TokenTransferRequest | ContractCallRequest | ApproveRequest]
+
+
+# 직렬화 예시:
+# response.model_dump(by_alias=True) -> {"transactionId": "...", "txHash": "...", ...}
+# TransactionResponse(transaction_id="abc", status="CONFIRMED") -> OK (populate_by_name)
+# TransactionResponse(**{"transactionId": "abc", "status": "CONFIRMED"}) -> OK (alias)
 ```
+
+#### 4.2.1 snake_case -> camelCase 변환 대조표 [v0.7 보완]
+
+`to_camel` 함수(pydantic.alias_generators)의 변환 결과와 REST API의 실제 camelCase 필드명을 대조한다. 불일치 시 해당 필드만 `Field(alias="...")` 수동 지정이 필요하나, 현재 모든 필드가 일치한다.
+
+| # | Python 필드 (snake_case) | to_camel 결과 | API 필드 (camelCase) | 일치 |
+|---|-------------------------|--------------|---------------------|------|
+| 1 | `transaction_id` | `transactionId` | `transactionId` | O |
+| 2 | `tx_hash` | `txHash` | `txHash` | O |
+| 3 | `estimated_fee` | `estimatedFee` | `estimatedFee` | O |
+| 4 | `created_at` | `createdAt` | `createdAt` | O |
+| 5 | `executed_at` | `executedAt` | `executedAt` | O |
+| 6 | `to_address` | `toAddress` | `toAddress` | O |
+| 7 | `next_cursor` | `nextCursor` | `nextCursor` | O |
+| 8 | `queued_at` | `queuedAt` | `queuedAt` | O |
+| 9 | `expires_at` | `expiresAt` | `expiresAt` | O |
+| 10 | `session_id` | `sessionId` | `sessionId` | O |
+| 11 | `max_amount_per_tx` | `maxAmountPerTx` | `maxAmountPerTx` | O |
+| 12 | `max_total_amount` | `maxTotalAmount` | `maxTotalAmount` | O |
+| 13 | `max_transactions` | `maxTransactions` | `maxTransactions` | O |
+| 14 | `allowed_operations` | `allowedOperations` | `allowedOperations` | O |
+| 15 | `allowed_destinations` | `allowedDestinations` | `allowedDestinations` | O |
+| 16 | `expires_in` | `expiresIn` | `expiresIn` | O |
+| 17 | `token_mint` | `tokenMint` | `tokenMint` | O |
+| 18 | `usd_value` | `usdValue` | `usdValue` | O |
+| 19 | `contract_address` | `contractAddress` | `contractAddress` | O |
+| 20 | `method_signature` | `methodSignature` | `methodSignature` | O |
+| 21 | `spender_address` | `spenderAddress` | `spenderAddress` | O |
+| 22 | `approved_amount` | `approvedAmount` | `approvedAmount` | O |
+| 23 | `instruction_data` | `instructionData` | `instructionData` | O |
+| 24 | `is_signer` | `isSigner` | `isSigner` | O |
+| 25 | `is_writable` | `isWritable` | `isWritable` | O |
+| 26 | `program_id` | `programId` | `programId` | O |
+| 27 | `max_daily_amount` | `maxDailyAmount` | `maxDailyAmount` | O |
+| 28 | `allowed_addresses` | `allowedAddresses` | `allowedAddresses` | O |
+| 29 | `session_token` | `sessionToken` | `sessionToken` | O |
+
+**결론:** v0.2 기존 17개 필드 + v0.6 확장 12개 필드, 총 29개 필드 전부 `to_camel` 변환 결과와 API 필드명이 일치한다. `Field(alias="...")` 수동 지정이 필요한 필드는 없다.
+
+#### 4.2.2 Python SDK 검증: Pydantic field_validator 수동 매핑 [v0.7 보완]
+
+Python SDK는 Zod 스키마를 자동 변환하지 않는다. OpenAPI 스키마의 `format`/`pattern` 제약조건을 참조하여 Pydantic `field_validator`로 수동 매핑한다. 이는 Zod -> Pydantic 자동 생성 도구를 사용하지 않는 설계 결정이다.
+
+```python
+from pydantic import field_validator
+
+class TransferRequest(WAIaaSBaseModel):
+    type: Literal['TRANSFER'] = 'TRANSFER'
+    to: str
+    amount: str
+    memo: str | None = None
+    priority: Literal['low', 'medium', 'high'] = 'medium'
+
+    @field_validator('to')
+    @classmethod
+    def validate_to(cls, v: str) -> str:
+        if not v:
+            raise ValueError('to address must not be empty')
+        return v
+
+    @field_validator('amount')
+    @classmethod
+    def validate_amount(cls, v: str) -> str:
+        if not v:
+            raise ValueError('amount must not be empty')
+        # 양수 검증 (lamports/wei 문자열)
+        try:
+            if int(v) <= 0:
+                raise ValueError('amount must be positive')
+        except (ValueError, TypeError):
+            raise ValueError('amount must be a numeric string')
+        return v
+
+    @field_validator('memo')
+    @classmethod
+    def validate_memo(cls, v: str | None) -> str | None:
+        if v is not None and len(v) > 200:
+            raise ValueError('memo must be 200 characters or less')
+        return v
+```
+
+**원칙:**
+- Zod 스키마의 `.min()`, `.max()`, `.regex()` 등을 `field_validator`로 대응
+- OpenAPI 3.0 spec의 `format`/`pattern` 참조 (37-rest-api-complete-spec.md)
+- **자동 생성이 아닌 수동 매핑** (Zod -> Pydantic 자동 변환 도구 미사용)
+- 변환 정확성은 테스트(51-platform-test-scenarios.md)에서 검증
+- 필드명 변환(snake_case <-> camelCase)은 `WAIaaSBaseModel`의 `alias_generator=to_camel`이 담당하고, 값 검증은 `field_validator`가 담당하는 관심사 분리
+
+**Zod -> Pydantic 매핑 규칙:**
+
+| Zod 검증 | Pydantic 대응 | 예시 |
+|---------|-------------|------|
+| `z.string().min(1)` | `field_validator` + `if not v` | 필수 문자열 필드 |
+| `z.string().max(200)` | `field_validator` + `len(v) > 200` | memo 길이 제한 |
+| `z.string().regex(...)` | `field_validator` + `re.match(...)` | 주소 형식 검증 |
+| `z.number().positive()` | `field_validator` + `int(v) > 0` | 금액 양수 검증 |
+| `z.enum([...])` | `Literal['a', 'b', 'c']` | priority, type |
+| `z.union([...])` | `Union[A, B, C]` | 복합 타입 |
 
 ### 4.3 WAIaaSClient (Python)
 
@@ -3165,40 +3385,22 @@ class WAIaaSError(Exception):
 
 ### 11.3 Python SDK snake_case 변환 검증 (NOTE-10)
 
-REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을 검증한 결과이다. 17개 주요 필드 전부 일관성 OK.
+> **[v0.7 보완]** `alias_generator=to_camel` 전환으로 인해 `Field(alias=)` 수동 지정이 제거됨. 전수 검증 결과는 섹션 4.2.1 대조표 참조. 아래는 요약.
 
-**검증 결과:**
+REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을 검증한 결과이다. v0.2 기존 17개 + v0.6 확장 12개, **총 29개 필드** 전부 `to_camel` 자동 변환과 일치 확인 OK.
 
-| # | REST API (camelCase) | Python SDK (snake_case) | alias 설정 | 일관성 |
-|---|---------------------|------------------------|-----------|--------|
-| 1 | `transactionId` | `transaction_id` | `alias="transactionId"` | OK |
-| 2 | `txHash` | `tx_hash` | `alias="txHash"` | OK |
-| 3 | `estimatedFee` | `estimated_fee` | `alias="estimatedFee"` | OK |
-| 4 | `createdAt` | `created_at` | `alias="createdAt"` | OK |
-| 5 | `executedAt` | `executed_at` | `alias="executedAt"` | OK |
-| 6 | `toAddress` | `to_address` | `alias="toAddress"` | OK |
-| 7 | `nextCursor` | `next_cursor` | `alias="nextCursor"` | OK |
-| 8 | `queuedAt` | `queued_at` | `alias="queuedAt"` | OK |
-| 9 | `expiresAt` | `expires_at` | `alias="expiresAt"` | OK |
-| 10 | `sessionId` | `session_id` | `alias="sessionId"` | OK |
-| 11 | `maxAmountPerTx` | `max_amount_per_tx` | `alias="maxAmountPerTx"` | OK |
-| 12 | `maxTotalAmount` | `max_total_amount` | `alias="maxTotalAmount"` | OK |
-| 13 | `maxTransactions` | `max_transactions` | `alias="maxTransactions"` | OK |
-| 14 | `allowedOperations` | `allowed_operations` | `alias="allowedOperations"` | OK |
-| 15 | `allowedDestinations` | `allowed_destinations` | `alias="allowedDestinations"` | OK |
-| 16 | `expiresIn` | `expires_in` | `alias="expiresIn"` | OK |
-| 17 | `tokenMint` | `token_mint` | `alias="tokenMint"` | OK |
-
-**Pydantic 규칙:**
-- 모든 alias 모델에 `model_config = {"populate_by_name": True}` 필수 설정
-- 이 설정이 없으면 Python 코드에서 snake_case 필드명으로 인스턴스 생성이 불가
+**v0.7 전환 요약:**
+- **이전:** 각 모델에 `Field(alias="camelCase")` 수동 지정 + 모델별 `model_config = {"populate_by_name": True}`
+- **이후:** `WAIaaSBaseModel` 상속으로 `ConfigDict(alias_generator=to_camel, populate_by_name=True)` 자동 적용. 수동 alias 불필요.
+- **전수 검증:** 섹션 4.2.1 대조표에서 29개 필드 모두 `to_camel` 결과 = API 필드명 일치 확인
 
 **에러 코드 무변환 원칙:**
 - UPPER_SNAKE_CASE 에러 코드(INVALID_TOKEN, INSUFFICIENT_BALANCE 등)는 Python에서도 그대로 사용
 - 이미 Python 관례(상수 = UPPER_SNAKE_CASE)와 일치하므로 변환 불필요
+- Enum 값(PENDING, CONFIRMED, TRANSFER, TOKEN_TRANSFER 등)은 alias_generator 대상이 아님
 
 **Owner API Python SDK:**
-- v0.2에서는 TS Owner SDK만 설계됨. Python Owner SDK는 v0.3+ 확장 시 동일 snake_case 규칙 적용
+- v0.2에서는 TS Owner SDK만 설계됨. Python Owner SDK는 v0.3+ 확장 시 동일 WAIaaSBaseModel 상속 규칙 적용
 
 ---
 

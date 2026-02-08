@@ -30,13 +30,13 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ### API & 통합 프로토콜
 
-- [ ] **API-01**: Tauri sidecar 종료 타임아웃을 5초→35초로 변경 (데몬 30초+5초 마진), 비정상 종료 시 다음 시작에서 SQLite integrity_check [CRITICAL]
-- [ ] **API-02**: Tauri CORS Origin에 Windows용 `https://tauri.localhost` 추가, 개발 모드 Origin 로깅 [HIGH]
-- [ ] **API-03**: Owner disconnect cascade — DELETE /v1/owner/disconnect 스펙 확정, 에이전트별 owner_address 기준 5단계 (APPROVAL→EXPIRED, DELAY유지, WC정리, 주소유지, 감사) [HIGH]
-- [ ] **API-04**: 5개 TransactionType × 4 티어의 HTTP 응답 status 값 확정 (INSTANT→200 CONFIRMED/SUBMITTED, DELAY/APPROVAL→202 QUEUED) [HIGH]
-- [ ] **API-05**: Tauri Setup Wizard가 CLI를 통해 초기화하는 구조 확정, `waiaas init` idempotent 보장 [HIGH]
-- [ ] **API-06**: Python SDK snake_case 변환 규칙 SSoT + Pydantic v2 ConfigDict alias_generator 패턴 확정 [MEDIUM]
-- [ ] **API-07**: @waiaas/core에서 Zod 스키마 export → @waiaas/sdk에서 사전 검증, Python SDK는 Pydantic field_validator 수동 매핑 [MEDIUM]
+- [x] **API-01**: Tauri sidecar 종료 타임아웃을 5초→35초로 변경 (데몬 30초+5초 마진), 비정상 종료 시 다음 시작에서 SQLite integrity_check [CRITICAL]
+- [x] **API-02**: Tauri CORS Origin에 Windows용 `https://tauri.localhost` 추가, 개발 모드 Origin 로깅 [HIGH]
+- [x] **API-03**: Owner disconnect cascade — DELETE /v1/owner/disconnect 스펙 확정, 에이전트별 owner_address 기준 5단계 (APPROVAL→EXPIRED, DELAY유지, WC정리, 주소유지, 감사) [HIGH]
+- [x] **API-04**: 5개 TransactionType × 4 티어의 HTTP 응답 status 값 확정 (INSTANT→200 CONFIRMED/SUBMITTED, DELAY/APPROVAL→202 QUEUED) [HIGH]
+- [x] **API-05**: Tauri Setup Wizard가 CLI를 통해 초기화하는 구조 확정, `waiaas init` idempotent 보장 [HIGH]
+- [x] **API-06**: Python SDK snake_case 변환 규칙 SSoT + Pydantic v2 ConfigDict alias_generator 패턴 확정 [MEDIUM]
+- [x] **API-07**: @waiaas/core에서 Zod 스키마 export → @waiaas/sdk에서 사전 검증, Python SDK는 Pydantic field_validator 수동 매핑 [MEDIUM]
 
 ### 스키마 & 설정
 
@@ -73,6 +73,7 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 | DAEMON-05 | Phase 27 | Complete |
 | DAEMON-06 | Phase 27 | Complete |
 <<<<<<< HEAD
+<<<<<<< HEAD
 | DEPS-01 | Phase 28 | Pending |
 | DEPS-02 | Phase 28 | Pending |
 =======
@@ -86,6 +87,17 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 | API-05 | Phase 29 | Pending |
 | API-06 | Phase 29 | Pending |
 | API-07 | Phase 29 | Pending |
+=======
+| DEPS-01 | Phase 28 | Complete |
+| DEPS-02 | Phase 28 | Complete |
+| API-01 | Phase 29 | Complete |
+| API-02 | Phase 29 | Complete |
+| API-03 | Phase 29 | Complete |
+| API-04 | Phase 29 | Complete |
+| API-05 | Phase 29 | Complete |
+| API-06 | Phase 29 | Complete |
+| API-07 | Phase 29 | Complete |
+>>>>>>> gsd/phase-29-api-integration-protocol
 | SCHEMA-01 | Phase 30 | Pending |
 | SCHEMA-02 | Phase 30 | Pending |
 | SCHEMA-03 | Phase 30 | Pending |
@@ -101,7 +113,11 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 ---
 *Requirements defined: 2026-02-08*
 <<<<<<< HEAD
+<<<<<<< HEAD
 *Last updated: 2026-02-08 after Phase 27 completion*
 =======
 *Last updated: 2026-02-08 after Phase 28 completion*
 >>>>>>> gsd/phase-28-dependency-build-resolution
+=======
+*Last updated: 2026-02-08 after Phase 29 completion*
+>>>>>>> gsd/phase-29-api-integration-protocol

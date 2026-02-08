@@ -244,9 +244,15 @@ export function registerMiddleware(
   // 5. Host Validation
   app.use('*', hostValidationMiddleware(port))
 
-  // 6. CORS
+  // 6. CORS [v0.7 보완: Windows Tauri Origin 2종 추가]
   app.use('*', cors({
-    origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`, 'tauri://localhost'],
+    origin: [
+      `http://localhost:${port}`,
+      `http://127.0.0.1:${port}`,
+      'tauri://localhost',            // macOS, Linux (WKWebView, WebKitGTK)
+      'http://tauri.localhost',       // Windows (WebView2, Tauri 2.x 기본) [v0.7 보완]
+      'https://tauri.localhost',      // Windows (WebView2, useHttpsScheme: true) [v0.7 보완]
+    ],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowHeaders: ['Authorization', 'Content-Type', 'X-Request-ID', 'X-Master-Password'],
     exposeHeaders: ['X-Request-ID', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
@@ -418,7 +424,7 @@ export function hostValidationMiddleware(port: number) {
 - 와일드카드(`*`)나 정규식 대신 정확한 문자열 매칭으로 우회 방지
 - 포트를 포함/미포함 모두 허용 (브라우저에 따라 Host 헤더 형식이 다를 수 있음)
 
-#### 미들웨어 6: cors
+#### 미들웨어 6: cors [v0.7 보완: Windows Tauri Origin 추가]
 
 Hono 내장 CORS 미들웨어로 Cross-Origin 요청을 제한한다.
 
@@ -426,12 +432,19 @@ Hono 내장 CORS 미들웨어로 Cross-Origin 요청을 제한한다.
 |------|-----|
 | **입력** | `Origin` 요청 헤더 |
 | **출력** | CORS 응답 헤더 (`Access-Control-Allow-*`) |
-| **허용 Origin** | `http://localhost:{port}`, `http://127.0.0.1:{port}`, `tauri://localhost` |
+| **허용 Origin** | `http://localhost:{port}`, `http://127.0.0.1:{port}`, `tauri://localhost`, `http://tauri.localhost` [v0.7], `https://tauri.localhost` [v0.7] |
 | **에러** | Origin 불일치 시 CORS 헤더 미포함 (브라우저가 차단) |
 
 ```typescript
+// [v0.7 보완] 플랫폼별 CORS Origin 5종
 cors({
-  origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`, 'tauri://localhost'],
+  origin: [
+    `http://localhost:${port}`,
+    `http://127.0.0.1:${port}`,
+    'tauri://localhost',            // macOS, Linux (WKWebView, WebKitGTK)
+    'http://tauri.localhost',       // Windows (WebView2, Tauri 2.x 기본) [v0.7 보완]
+    'https://tauri.localhost',      // Windows (WebView2, useHttpsScheme: true) [v0.7 보완]
+  ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowHeaders: ['Authorization', 'Content-Type', 'X-Request-ID', 'X-Master-Password'],
   exposeHeaders: ['X-Request-ID', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
@@ -439,11 +452,82 @@ cors({
 })
 ```
 
+**[v0.7 보완] 개발 모드 Origin 로깅:**
+
+<<<<<<< HEAD
+| 옵션 | 값 | 근거 |
+|------|-----|------|
+| `origin` | localhost + 127.0.0.1 (포트 포함) + `tauri://localhost` | 동일 머신의 Tauri WebView/브라우저만 허용. Tauri 2.x WebView Origin 대응 (Phase 9 TAURI-DESK) |
+| `allowMethods` | GET, POST, PUT, DELETE | REST API에 필요한 메서드만 |
+| `allowHeaders` | Authorization, Content-Type, X-Request-ID, X-Master-Password | 세션 토큰 + JSON + 요청 추적 + Admin API 마스터 패스워드 (Phase 8) |
+| `exposeHeaders` | X-Request-ID, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset | 클라이언트가 읽어야 하는 커스텀 헤더 (요청 추적 + 재시도 + Rate Limit 정보) |
+| `maxAge` | 600 (10분) | preflight 요청 빈도 감소 |
+
+#### 미들웨어 3.5: globalRateLimit [v0.7 보완]
+
+IP 기반 전역 요청 속도 상한. 인증 전에 실행되어 미인증/인증 무관하게 모든 요청을 제한한다. 섹션 7에서 상세 설계.
+
+| 항목 | 값 |
+|------|-----|
+| **입력** | 클라이언트 IP (`x-forwarded-for` 또는 `socket.remoteAddress` 또는 `'127.0.0.1'`) |
+| **출력** | 정상: pass-through + 헤더 / 초과: 429 응답 |
+| **한도** | `rate_limit_global_ip_rpm` (기본 1000 req/min) |
+| **저장소** | `lru-cache` (in-memory, IP별 timestamp 배열) |
+| **에러 코드** | `RATE_LIMIT_EXCEEDED` (429) |
+| **목적** | 절대 상한(absolute ceiling). localhost에서는 IP='127.0.0.1' 고정이므로 사실상 전체 요청 속도 상한 |
+
+```typescript
+export function globalRateLimitMiddleware(config: { maxRpm: number; windowMs: number }) {
+  const cache = new LRUCache<string, { timestamps: number[] }>({ max: 1_000, ttl: config.windowMs })
+
+  return createMiddleware(async (c, next) => {
+    const ip = c.req.header('x-forwarded-for') || c.env?.incoming?.socket?.remoteAddress || '127.0.0.1'
+    const now = Date.now()
+    const entry = cache.get(ip) || { timestamps: [] }
+    entry.timestamps = entry.timestamps.filter(t => t > now - config.windowMs)
+
+    c.header('X-RateLimit-Limit', String(config.maxRpm))
+    c.header('X-RateLimit-Remaining', String(Math.max(0, config.maxRpm - entry.timestamps.length)))
+
+    if (entry.timestamps.length >= config.maxRpm) {
+      const retryAfter = Math.ceil((entry.timestamps[0]! + config.windowMs - now) / 1000)
+      c.header('Retry-After', String(retryAfter))
+      return c.json({
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: '전역 요청 속도 제한을 초과했습니다.',
+          details: { limit: config.maxRpm, window: '1m', retryAfter, stage: 'global' },
+          requestId: c.get('requestId'),
+          retryable: true,
+        },
+      }, 429)
+=======
+CORS Origin 불일치 디버깅을 위해, `log_level: 'debug'`에서 수신된 Origin 헤더를 로깅한다. CORS 미들웨어 직전에 배치한다:
+
+```typescript
+// [v0.7 보완] CORS 디버깅용 Origin 로깅 (개발 모드 전용)
+if (config.daemon.log_level === 'debug') {
+  app.use('*', async (c, next) => {
+    const origin = c.req.header('Origin')
+    if (origin) {
+      logger.debug(`[CORS] Request Origin: ${origin}`)
+>>>>>>> gsd/phase-29-api-integration-protocol
+    }
+
+    entry.timestamps.push(now)
+    cache.set(ip, entry)
+    await next()
+  })
+}
+```
+
+<<<<<<< HEAD
+=======
 **CORS 설정 상세:**
 
 | 옵션 | 값 | 근거 |
 |------|-----|------|
-| `origin` | localhost + 127.0.0.1 (포트 포함) + `tauri://localhost` | 동일 머신의 Tauri WebView/브라우저만 허용. Tauri 2.x WebView Origin 대응 (Phase 9 TAURI-DESK) |
+| `origin` | localhost + 127.0.0.1 (포트 포함) + `tauri://localhost` + `http://tauri.localhost` + `https://tauri.localhost` [v0.7] | 동일 머신의 Tauri WebView/브라우저만 허용. Tauri 2.x WebView는 플랫폼별로 서로 다른 Origin 사용 (39-tauri-desktop-architecture.md 섹션 3.4 참조) |
 | `allowMethods` | GET, POST, PUT, DELETE | REST API에 필요한 메서드만 |
 | `allowHeaders` | Authorization, Content-Type, X-Request-ID, X-Master-Password | 세션 토큰 + JSON + 요청 추적 + Admin API 마스터 패스워드 (Phase 8) |
 | `exposeHeaders` | X-Request-ID, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset | 클라이언트가 읽어야 하는 커스텀 헤더 (요청 추적 + 재시도 + Rate Limit 정보) |
@@ -496,6 +580,7 @@ export function globalRateLimitMiddleware(config: { maxRpm: number; windowMs: nu
 }
 ```
 
+>>>>>>> gsd/phase-29-api-integration-protocol
 #### 미들웨어 7: killSwitchGuard [v0.7 보완: #8->#7]
 
 Kill Switch 상태를 확인하여 ACTIVATED/RECOVERING 상태에서는 허용 목록 외 모든 요청을 거부한다. 상세는 36-killswitch-autostop-evm.md 섹션 2.4 참조.
@@ -796,7 +881,7 @@ serve({
 
 Phase 9 Tauri Desktop 앱 설계에서 정의된 추가 방어:
 
-1. **Origin 검증:** Tauri WebView의 `tauri://localhost` Origin이 CORS 허용 목록에 포함됨 (섹션 2.3 cors 미들웨어 참조)
+1. **Origin 검증:** Tauri WebView의 플랫폼별 Origin(`tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost`)이 CORS 허용 목록에 포함됨 (섹션 2.3 cors 미들웨어 참조) [v0.7 보완]
 2. **IPC 기반 통신:** Tauri의 내장 IPC를 사용하면 HTTP를 우회하여 더 안전한 통신 가능
 3. **CSP 설정:** Tauri WebView에 Content-Security-Policy를 설정하여 외부 스크립트 로딩 차단
 

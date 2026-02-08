@@ -878,6 +878,8 @@ sequenceDiagram
     API-->>C: 200 { transactionId, status: 'CONFIRMED', txHash }
 ```
 
+> **Note:** [v0.7 보완] INSTANT 플로우에서 Stage 6 CONFIRM이 30초 타임아웃이면 200 SUBMITTED 반환. 클라이언트는 GET /v1/transactions/:id로 폴링하여 최종 CONFIRMED 확인. 37-rest-api-complete-spec.md 섹션 6.3 HTTP 응답 Status 매트릭스 참조.
+
 #### 실패 플로우 -- 세션 제약 위반
 
 ```mermaid
@@ -1156,13 +1158,30 @@ const result = await Promise.race([
   transactionService.executeTransfer(request, session),
   sleep(INSTANT_TIMEOUT_MS).then(() => ({
     transactionId: txId,
-    status: 'SUBMITTED',  // 타임아웃 시 현재 상태 반환
+    status: 'SUBMITTED',  // 타임아웃 시 현재 상태 반환 [v0.7 보완: 200 SUBMITTED 반환, 클라이언트 폴링 필요]
     tier: 'INSTANT',
     txHash,
     createdAt: new Date().toISOString(),
   })),
 ])
 ```
+
+#### 4.3.1 파이프라인 결과 -> HTTP 응답 매핑 [v0.7 보완]
+
+파이프라인 Stage 4 (Tier Classify)의 결과와 Stage 5-6 (Execute-Confirm)의 결과가 HTTP 응답으로 매핑되는 규칙:
+
+| 파이프라인 결과 | HTTP Status | 응답 status | 조건 |
+|--------------|------------|------------|------|
+| Stage 4: tier=INSTANT/NOTIFY + Stage 6: CONFIRMED | 200 | CONFIRMED | 30초 내 온체인 확정 |
+| Stage 4: tier=INSTANT/NOTIFY + Stage 5d: SUBMITTED (timeout) | 200 | SUBMITTED | 30초 내 미확정, 클라이언트 폴링 필요 |
+| Stage 4: tier=DELAY | 202 | QUEUED | 즉시 반환, 쿨다운 대기 |
+| Stage 4: tier=APPROVAL | 202 | QUEUED | 즉시 반환, Owner 승인 대기 |
+| Stage 1-3: 실패 | 4xx | (에러) | 검증/정책 실패 |
+| Stage 5: 실패 | 4xx/5xx | (에러) | 빌드/서명/제출 실패 |
+
+이 매핑은 TransactionType에 무관하게 적용된다. 5개 TransactionType (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) 모두 동일 규칙.
+
+> **핵심:** 200은 동기 완료(CONFIRMED 또는 SUBMITTED), 202는 비동기 대기열 진입(QUEUED). 타입별 차이는 응답의 `type` 필드로 구분하며 HTTP status에 영향 없음. 전체 HTTP 응답 Status 매트릭스는 37-rest-api-complete-spec.md 섹션 6.3 참조.
 
 ---
 

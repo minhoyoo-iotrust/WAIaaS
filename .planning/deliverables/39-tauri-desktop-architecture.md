@@ -165,18 +165,51 @@ API 호출은 WebView에서 **HTTP localhost:3100**을 직접 호출한다.
 
 ### 3.4 CORS 설정
 
-Tauri 2.x WebView는 `tauri://localhost` Origin을 사용한다. API-SPEC (37번 문서)에서 이미 CORS 허용 목록에 추가됨:
+**[v0.7 보완]** Tauri 2.x WebView는 플랫폼별로 서로 다른 Origin을 사용한다. macOS(WKWebView)와 Linux(WebKitGTK)는 커스텀 프로토콜 `tauri://localhost`를 사용하고, Windows(WebView2)는 `http://tauri.localhost` 또는 `https://tauri.localhost`를 사용한다.
+
+**플랫폼별 Origin 표:**
+
+| 플랫폼 | WebView 엔진 | Origin | 비고 |
+|--------|-------------|--------|------|
+| macOS | WKWebView | `tauri://localhost` | 커스텀 프로토콜 |
+| Linux | WebKitGTK | `tauri://localhost` | macOS와 동일 |
+| Windows | WebView2 | `http://tauri.localhost` | Tauri 2.x 기본값 (2.1.0+) |
+| Windows (HTTPS) | WebView2 | `https://tauri.localhost` | `useHttpsScheme: true` 설정 시 |
+
+CORS 허용 목록에 5개 Origin을 포함하여 모든 플랫폼에서 API 호출이 가능하도록 한다:
 
 ```typescript
+// [v0.7 보완] 플랫폼별 CORS Origin 5종
 cors({
   origin: [
     `http://localhost:${port}`,
     `http://127.0.0.1:${port}`,
-    'tauri://localhost',  // Tauri 2.x WebView
+    'tauri://localhost',            // macOS, Linux (WKWebView, WebKitGTK)
+    'http://tauri.localhost',       // Windows (WebView2, Tauri 2.x 기본) [v0.7 보완]
+    'https://tauri.localhost',      // Windows (WebView2, useHttpsScheme: true) [v0.7 보완]
   ],
   // ...
 })
 ```
+
+**[v0.7 보완] 개발 모드 Origin 로깅:**
+
+플랫폼별 실제 Origin 값을 확인하기 위해, 개발 모드(`log_level: 'debug'`)에서 수신된 Origin 헤더를 로깅한다:
+
+```typescript
+// [v0.7 보완] 개발 모드에서 수신된 Origin 헤더 로깅 (디버그용)
+if (config.daemon.log_level === 'debug') {
+  app.use('*', async (c, next) => {
+    const origin = c.req.header('Origin')
+    if (origin) {
+      logger.debug(`[CORS] Request Origin: ${origin}`)
+    }
+    await next()
+  })
+}
+```
+
+> **주의:** CORS 허용 목록은 29-api-framework-design.md의 미들웨어 6(cors)과 동일한 5개 Origin을 유지해야 한다.
 
 ---
 
@@ -341,7 +374,7 @@ stateDiagram-v2
 | 이벤트 | 동작 | 비고 |
 |--------|------|------|
 | 앱 시작 | 자동으로 sidecar 시작 (config `auto_start` 옵션) | 기본값: true |
-| 앱 종료 | sidecar graceful shutdown | POST /v1/admin/shutdown -> 5초 대기 -> SIGTERM |
+| 앱 종료 | sidecar graceful shutdown | [v0.7 보완] POST /v1/admin/shutdown -> 35초 대기 -> SIGTERM -> 5초 대기 -> SIGKILL |
 | sidecar 크래시 | 자동 재시작 (최대 3회, 간격 5초) | 3회 초과 시 Error 상태 + OS 알림 |
 | 첫 실행 | `~/.waiaas/` 디렉토리 없으면 Setup Wizard 화면 이동 | waiaas init 미완료 감지 |
 | health check | 5초 주기 GET /health | 2회 연속 실패 시 Crashed 판정 |
@@ -407,14 +440,48 @@ impl SidecarManager {
         todo!()
     }
 
-    /// Sidecar 프로세스 중지 (graceful)
+    // [v0.7 보완] 5초 -> 35초로 변경 (데몬 graceful shutdown 30초 + 5초 마진)
+    const SHUTDOWN_TIMEOUT_SECS: u64 = 35;
+    const SIGTERM_GRACE_SECS: u64 = 5;
+
+    /// Sidecar 프로세스 중지 (graceful) [v0.7 보완: 4단계 종료 플로우]
+    ///
+    /// 종료 시퀀스:
+    ///   1. POST /v1/admin/shutdown -> 데몬 graceful shutdown 요청
+    ///   2. SHUTDOWN_TIMEOUT_SECS(35초) 대기 -> 데몬이 자체 종료할 시간 확보
+    ///   3. 프로세스 여전히 살아있으면 SIGTERM -> OS 수준 종료 요청
+    ///   4. SIGTERM_GRACE_SECS(5초) 추가 대기 후 SIGKILL -> 강제 종료
+    ///
+    /// 타임아웃 근거: 28-daemon-lifecycle-cli.md의 shutdown_timeout=30초 + 5초 마진
     pub async fn stop(&self) -> Result<(), String> {
         // 1. POST /v1/admin/shutdown 전송 (마스터 패스워드)
-        // 2. 5초 대기
+        let _ = reqwest::Client::new()
+            .post(format!("http://127.0.0.1:{}/v1/admin/shutdown", self.port()))
+            .header("X-Master-Password", &self.master_password())
+            .send()
+            .await;
+
+        // 2. 35초 대기 (데몬 graceful shutdown: 최대 30초 + 5초 마진)
+        tokio::time::sleep(Duration::from_secs(Self::SHUTDOWN_TIMEOUT_SECS)).await;
+
         // 3. 프로세스 여전히 살아있으면 SIGTERM
-        // 4. 2초 추가 대기 후 SIGKILL
-        // 5. 상태 업데이트: Stopped
-        todo!()
+        if self.is_alive() {
+            self.send_signal(Signal::SIGTERM);
+            tokio::time::sleep(Duration::from_secs(Self::SIGTERM_GRACE_SECS)).await;
+        }
+
+        // 4. 그래도 살아있으면 SIGKILL (강제 종료)
+        if self.is_alive() {
+            self.send_signal(Signal::SIGKILL);
+        }
+
+        // 5. 상태 업데이트
+        *self.status.lock().unwrap() = DaemonStatus {
+            running: false,
+            state: DaemonState::Stopped,
+            ..Default::default()
+        };
+        Ok(())
     }
 
     /// Health check (5초 주기 호출)
@@ -427,6 +494,62 @@ impl SidecarManager {
     }
 }
 ```
+
+### 4.3.1 SQLite Integrity Check 복구 [v0.7 보완]
+
+비정상 종료(SIGKILL, 프로세스 크래시, OS 강제 종료) 후 다음 데몬 시작 시 SQLite 데이터베이스의 무결성을 검증하고, 문제 발견 시 복구를 시도한다.
+
+**비정상 종료 감지:**
+
+데몬 시작 시 daemon.lock 파일의 상태로 비정상 종료 여부를 감지한다:
+- 정상 종료: daemon.lock 파일이 없거나 PID가 존재하지 않음
+- 비정상 종료: daemon.lock 파일에 PID가 남아있으나 해당 프로세스가 없음
+
+**복구 로직:**
+
+```typescript
+// packages/daemon/src/infrastructure/database/connection.ts [v0.7 보완]
+
+/**
+ * [v0.7 보완] 비정상 종료 후 SQLite 무결성 검증 및 복구.
+ *
+ * - PRAGMA integrity_check: 전체 테이블 + 인덱스 무결성 검증 (O(NlogN))
+ * - WAIaaS DB는 로컬 에이전트용 소규모 DB이므로 성능 영향 미미
+ * - PRAGMA quick_check는 인덱스 검증이 없으므로 비정상 종료 후에는 integrity_check 사용
+ */
+function checkDatabaseIntegrity(db: Database): void {
+  const result = db.pragma('integrity_check') as Array<{ integrity_check: string }>
+
+  if (result[0]?.integrity_check !== 'ok') {
+    logger.warn('[v0.7] Database integrity check failed, attempting recovery...')
+    logger.warn(`[v0.7] Issues found: ${JSON.stringify(result)}`)
+
+    // WAL 체크포인트 강제 실행으로 복구 시도
+    db.pragma('wal_checkpoint(TRUNCATE)')
+
+    // 재검증
+    const recheck = db.pragma('integrity_check') as Array<{ integrity_check: string }>
+    if (recheck[0]?.integrity_check !== 'ok') {
+      logger.error('[v0.7] Database recovery failed. Manual intervention required.')
+      throw new Error('DATABASE_CORRUPT: integrity_check failed after recovery attempt')
+    }
+
+    logger.info('[v0.7] Database recovery successful after WAL checkpoint')
+  } else {
+    logger.debug('[v0.7] Database integrity check passed')
+  }
+}
+```
+
+**호출 시점:**
+
+| 시점 | 조건 | 동작 |
+|------|------|------|
+| 데몬 시작 (정상) | 이전 정상 종료 | integrity_check 생략 (불필요) |
+| 데몬 시작 (비정상 종료 후) | daemon.lock에 잔존 PID 감지 | integrity_check 실행 -> 실패 시 WAL checkpoint -> 재검증 |
+| 데몬 시작 (Tauri SIGKILL 후) | Sidecar Manager가 SIGKILL 전송한 경우 | integrity_check 실행 |
+
+**실패 시 동작:** `DATABASE_CORRUPT` 에러를 throw하면 데몬 시작이 중단되고, 사용자에게 "데이터베이스 손상 감지. 수동 복구 필요" 메시지를 표시한다. 백업(`~/.waiaas/backups/`)에서 복원을 안내한다.
 
 ### 4.4 Rust IPC 커맨드 정의
 
@@ -1115,11 +1238,43 @@ graph LR
 > 알림 채널 설정은 대시보드의 Settings 화면으로 이동하여 별도 수행 가능.
 > 상세: 54-cli-flow-redesign.md 참조.
 
-**백엔드 연동:**
-- Step 1-2: `waiaas init` CLI 커맨드를 Sidecar Manager가 실행 (또는 동등 API)
-- Step 3: Sidecar 시작 후 POST /v1/owner/connect
-- Step 4: PUT /v1/owner/settings (알림 채널 설정)
+**백엔드 연동 [v0.7 보완: CLI 위임 + idempotent 확정]:**
+
+Setup Wizard는 직접 초기화 로직을 구현하지 않고, CLI 커맨드(`waiaas init --json --master-password`)를 Sidecar Manager가 sidecar 바이너리로 실행하여 초기화를 위임한다.
+
+- Step 1: UI에서 마스터 패스워드 입력
+- Step 2: `waiaas init --json --non-interactive --master-password <pw>` sidecar 실행 (idempotent: 이미 초기화된 경우에도 에러 없이 성공 반환)
+- Step 3: `waiaas start` sidecar 실행 -> POST /v1/agents (에이전트 생성, Owner 주소 포함)
+- Step 4: `waiaas session create --agent <name> --json` sidecar 실행 -> 세션 토큰 발급
 - Step 5: 대시보드로 react-router navigate
+
+**[v0.7 보완] `waiaas init --json` 응답 스키마:**
+
+```typescript
+// waiaas init --json 출력 (stdout)
+// idempotent: 이미 초기화된 경우에도 success: true 반환
+interface InitJsonResponse {
+  success: true
+  alreadyInitialized: boolean  // true: 이미 존재하여 skip, false: 신규 초기화
+  dataDir: string              // "~/.waiaas/"
+  version: string              // "0.2.0"
+  steps: {
+    directory: 'created' | 'exists'   // 디렉토리 상태
+    config: 'created' | 'exists'      // config.toml 상태
+    database: 'created' | 'migrated' | 'exists'  // DB 상태
+    keystore: 'created' | 'exists'    // 키스토어 상태
+  }
+}
+```
+
+**idempotent 동작:** `waiaas init --json`은 각 단계를 개별적으로 idempotent하게 수행한다:
+- 디렉토리 존재 -> skip (`exists`)
+- config.toml 존재 -> skip (`exists`)
+- DB 존재 -> migration만 실행 (`migrated`), 이미 최신이면 skip (`exists`)
+- 키스토어 존재 -> skip (`exists`)
+- 모든 단계가 skip되면 `alreadyInitialized: true`
+
+**`--force`와의 차이:** `--force`는 기존 데이터를 삭제하고 처음부터 재초기화한다. idempotent 동작과 `--force`는 상호 배타적이다. 28-daemon-lifecycle-cli.md 및 54-cli-flow-redesign.md 참조.
 
 ### 7.8 화면 7 -- Owner Connect
 
@@ -2052,7 +2207,43 @@ IPC `DaemonStatus`와 HTTP `GET /health` 응답을 조합하여 최종 상태를
 - **Wizard = CLI init + 데몬 시작 + API 호출의 조합:** Step 1-2는 내부적으로 `waiaas init` 호출, Step 3-4는 데몬 시작 후 REST API 호출(`POST /v1/owner/connect`, `PUT /v1/owner/settings`).
 - **패스워드 최소 길이:** 설계 문서상 CLI 12자 / Wizard 8자이나, 구현 시 양쪽 모두 12자로 통일 권장 (보안 우선). Wizard 설계 변경은 v0.4에서 반영.
 
-**참조:** CORE-05 (28-daemon-lifecycle-cli.md) 구현 노트 "CLI init과 Setup Wizard의 역할 분담"
+**[v0.7 보완] Setup Wizard 내부 호출 시퀀스 (5단계):**
+
+Wizard는 Sidecar Manager를 통해 CLI 커맨드를 sidecar 바이너리로 실행한다. 모든 호출은 `--json` 모드를 사용하여 UI에서 JSON 응답을 파싱한다.
+
+```mermaid
+sequenceDiagram
+    participant UI as Setup Wizard (React)
+    participant SM as Sidecar Manager (Rust)
+    participant CLI as waiaas CLI (Sidecar)
+    participant API as Daemon API
+
+    Note over UI: Step 1: 마스터 패스워드 입력 (UI)
+
+    UI->>SM: invoke('run_sidecar_command', {args: ['init', '--json', '--non-interactive', '--master-password', pw]})
+    SM->>CLI: waiaas init --json --non-interactive --master-password <pw>
+    CLI-->>SM: { success: true, alreadyInitialized: false, ... }
+    SM-->>UI: InitJsonResponse
+    Note over UI: Step 2: 인프라 초기화 완료 (idempotent)
+
+    UI->>SM: invoke('start_daemon')
+    SM->>CLI: waiaas start --daemon --json
+    CLI-->>SM: { status: 'running', port: 3100 }
+    SM-->>UI: DaemonStatus
+    Note over UI: Step 3: 데몬 시작
+
+    UI->>API: POST /v1/agents { name, chain, network, ownerAddress }
+    API-->>UI: 201 { agentId, name, address }
+    Note over UI: Step 4: 에이전트 생성
+
+    UI->>API: POST /v1/sessions { agentId, expiresIn }
+    API-->>UI: 201 { sessionToken, expiresAt }
+    Note over UI: Step 5: 세션 발급 -> Dashboard 이동
+```
+
+**idempotent 보장:** Step 2에서 `waiaas init --json`은 이미 초기화된 경우에도 에러 없이 `{ success: true, alreadyInitialized: true }` 를 반환한다. 이를 통해 Wizard 재시도, 앱 재시작, 부분 완료 후 재진입이 안전하다.
+
+**참조:** CORE-05 (28-daemon-lifecycle-cli.md) 구현 노트 "CLI init과 Setup Wizard의 역할 분담", 54-cli-flow-redesign.md 섹션 2 (waiaas init 재설계)
 
 ---
 

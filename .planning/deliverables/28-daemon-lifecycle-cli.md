@@ -1256,6 +1256,8 @@ Options:
   --data-dir <path>        데이터 디렉토리 경로 (기본: ~/.waiaas)
   --non-interactive        비대화형 모드 (CI/자동화 환경)
   --password-env <var>     마스터 패스워드 환경변수 이름 (기본: WAIAAS_MASTER_PASSWORD)
+  --master-password <pw>   마스터 패스워드 직접 전달 (Tauri sidecar 전용) [v0.7 보완]
+  --json                   JSON 출력 + idempotent 동작 (Tauri sidecar 전용) [v0.7 보완]
   --force                  기존 초기화 덮어쓰기 (데이터 삭제 주의!)
   -h, --help               도움말
 ```
@@ -1268,9 +1270,16 @@ Options:
 
 ```mermaid
 flowchart TD
-    Start([waiaas init]) --> CheckExist{~/.waiaas/<br/>존재?}
+    Start([waiaas init]) --> CheckJson{--json<br/>모드?}
 
-    CheckExist -->|Yes| AlreadyInit["Error: Already initialized.<br/>Use --force to reinitialize"]
+    CheckJson -->|Yes| CheckExistJson{~/.waiaas/<br/>존재?}
+    CheckJson -->|No| CheckExist{~/.waiaas/<br/>존재?}
+
+    CheckExistJson -->|Yes| IdempotentReturn["JSON: { success: true,<br/>alreadyInitialized: true }"]
+    CheckExistJson -->|No| Step1
+
+    CheckExist -->|Yes, --force 없음| AlreadyInit["Error: Already initialized.<br/>Use --force to reinitialize"]
+    CheckExist -->|Yes, --force 있음| ForceClean["기존 데이터 삭제"] --> Step1
     CheckExist -->|No| Step1
 
     Step1[Step 1: 마스터 비밀번호 설정]
@@ -1398,7 +1407,21 @@ async function runInit(args: string[]): Promise<void> {
   const options = parseInitOptions(args)
   const dataDir = resolveDataDir(options.dataDir)
 
-  // 이미 초기화 확인
+  // [v0.7 보완] --json 모드: idempotent 동작 (이미 초기화된 경우 에러 없이 성공 반환)
+  if (options.json && existsSync(dataDir) && !options.force) {
+    const steps = detectExistingSteps(dataDir)
+    const allExist = Object.values(steps).every(s => s === 'exists')
+    console.log(JSON.stringify({
+      success: true,
+      alreadyInitialized: allExist,
+      dataDir,
+      version: VERSION,
+      steps,
+    }))
+    return  // exit 0 (에러 아님)
+  }
+
+  // 이미 초기화 확인 (비-JSON 모드: 기존 동작 유지)
   if (existsSync(dataDir) && !options.force) {
     console.error(`Error: Already initialized at ${dataDir}`)
     console.error("Use 'waiaas init --force' to reinitialize (WARNING: all data will be deleted)")
@@ -1408,41 +1431,75 @@ async function runInit(args: string[]): Promise<void> {
   // --force 시 기존 데이터 삭제
   if (options.force && existsSync(dataDir)) {
     rmSync(dataDir, { recursive: true })
-    console.log(`Removed existing data directory: ${dataDir}`)
+    if (!options.json) console.log(`Removed existing data directory: ${dataDir}`)
   }
 
-  // 1. 디렉토리 생성
+  // [v0.7 보완] 각 단계를 개별 idempotent하게 수행
+  const steps: Record<string, string> = {}
+
+  // 1. 디렉토리 생성 (idempotent: mkdirSync recursive)
   mkdirSync(dataDir, { mode: 0o700, recursive: true })
-  mkdirSync(join(dataDir, 'data'), { mode: 0o700 })
-  mkdirSync(join(dataDir, 'keystore'), { mode: 0o700 })
-  mkdirSync(join(dataDir, 'logs'), { mode: 0o700 })
-  mkdirSync(join(dataDir, 'backups'), { mode: 0o700 })
+  mkdirSync(join(dataDir, 'data'), { mode: 0o700, recursive: true })
+  mkdirSync(join(dataDir, 'keystore'), { mode: 0o700, recursive: true })
+  mkdirSync(join(dataDir, 'logs'), { mode: 0o700, recursive: true })
+  mkdirSync(join(dataDir, 'backups'), { mode: 0o700, recursive: true })
+  steps.directory = 'created'
 
-  // 2. config.toml 기본 파일 생성
-  writeFileSync(join(dataDir, 'config.toml'), DEFAULT_CONFIG_TOML, { mode: 0o600 })
+  // 2. config.toml 기본 파일 생성 (idempotent: 존재하면 skip)
+  const configPath = join(dataDir, 'config.toml')
+  if (!existsSync(configPath)) {
+    writeFileSync(configPath, DEFAULT_CONFIG_TOML, { mode: 0o600 })
+    steps.config = 'created'
+  } else {
+    steps.config = 'exists'
+  }
 
-  // 3. SQLite DB 초기화 + 마이그레이션
-  const sqlite = new Database(join(dataDir, 'data', 'waiaas.db'))
+  // 3. SQLite DB 초기화 + 마이그레이션 (idempotent: migration은 이미 적용된 것을 skip)
+  const dbPath = join(dataDir, 'data', 'waiaas.db')
+  const dbExisted = existsSync(dbPath)
+  const sqlite = new Database(dbPath)
   applyPragmas(sqlite)
   const db = drizzle({ client: sqlite })
   await migrate(db, { migrationsFolder: getMigrationsPath() })
+  steps.database = dbExisted ? 'migrated' : 'created'
 
-  // 4. 키스토어 초기화 (마스터 패스워드 설정)
+  // 4. 키스토어 초기화 (idempotent: 이미 존재하면 skip)
   const password = await resolveInitPassword(options)
   validatePasswordStrength(password)  // 최소 12자 확인
   const keyStore = new LocalKeyStore(dataDir, db)
-  await keyStore.initialize(password)
-
-  // 5. (선택) 첫 번째 에이전트 생성
-  if (options.createAgent) {
-    await keyStore.createKey({
-      name: options.agentName,
-      chain: options.agentChain,
-      network: options.agentNetwork,
-    })
+  if (!keyStore.isInitialized()) {
+    await keyStore.initialize(password)
+    steps.keystore = 'created'
+  } else {
+    steps.keystore = 'exists'
   }
 
+  // 5. (선택) 첫 번째 에이전트 생성 (v0.5 제거 -- waiaas agent create로 분리)
+  // if (options.createAgent) { ... }
+
   sqlite.close()
+
+  // [v0.7 보완] --json 모드 출력
+  if (options.json) {
+    const alreadyInitialized = Object.values(steps).every(s => s === 'exists')
+    console.log(JSON.stringify({
+      success: true,
+      alreadyInitialized,
+      dataDir,
+      version: VERSION,
+      steps,
+    }))
+  }
+}
+
+// [v0.7 보완] 기존 초기화 상태 감지 (idempotent 판정용)
+function detectExistingSteps(dataDir: string): Record<string, string> {
+  return {
+    directory: existsSync(dataDir) ? 'exists' : 'missing',
+    config: existsSync(join(dataDir, 'config.toml')) ? 'exists' : 'missing',
+    database: existsSync(join(dataDir, 'data', 'waiaas.db')) ? 'exists' : 'missing',
+    keystore: existsSync(join(dataDir, 'keystore')) ? 'exists' : 'missing',
+  }
 }
 ```
 
@@ -1453,7 +1510,9 @@ async function runInit(args: string[]): Promise<void> {
 | `--data-dir <path>` | string | X | `~/.waiaas` | 데이터 디렉토리 경로 |
 | `--non-interactive` | boolean | X | `false` | 비대화형 모드 |
 | `--password-env <var>` | string | X | `WAIAAS_MASTER_PASSWORD` | 패스워드 환경변수 이름 |
-| `--force` | boolean | X | `false` | 기존 초기화 덮어쓰기 |
+| `--master-password <pw>` | string | X | - | **(v0.7 추가)** 마스터 패스워드 직접 전달 (Tauri sidecar 호출용). 보안 주의: 프로세스 인자로 노출됨, localhost 환경 전용 |
+| `--force` | boolean | X | `false` | 기존 초기화 덮어쓰기 (데이터 삭제!). idempotent 동작과 상호 배타적 |
+| `--json` | boolean | X | `false` | **(v0.7 추가)** JSON 출력 모드. idempotent 동작: 이미 초기화된 경우 에러 없이 `{ success: true, alreadyInitialized: true }` 반환 |
 | `--quickstart` | boolean | X | `false` | **(v0.5 추가)** 패스워드 자동 생성 + 즉시 시작. 54-cli-flow-redesign.md 섹션 6 참조 |
 
 ---

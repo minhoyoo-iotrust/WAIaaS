@@ -45,11 +45,16 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요
 - [x] **Phase 26: 체인 어댑터 안정화** - blockhash 경쟁 조건, EVM nonce, keystore 수학, fee 전략 해소
 - [x] **Phase 27: 데몬 보안 기반 확립** - JWT rotation, flock 잠금, Rate Limiter 분리, killSwitch 확정, 패스워드 통일
 <<<<<<< HEAD
+<<<<<<< HEAD
 - [ ] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
 =======
 - [x] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
 >>>>>>> gsd/phase-28-dependency-build-resolution
 - [ ] **Phase 29: API 통합 프로토콜 완성** - Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서, SDK 보완
+=======
+- [x] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
+- [x] **Phase 29: API 통합 프로토콜 완성** - Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서, SDK 보완
+>>>>>>> gsd/phase-29-api-integration-protocol
 - [ ] **Phase 30: 스키마 설정 확정** - 환경변수 매핑, timestamp 정밀도, CHECK 제약, Docker UID, amount 근거, 채널 삭제
 
 ## Phase Details
@@ -96,10 +101,14 @@ Plans:
 
 Plans:
 <<<<<<< HEAD
+<<<<<<< HEAD
 - [ ] 28-01-PLAN.md -- SIWE viem 전환 + Sidecar 크로스 컴파일 전략 (DEPS-01, DEPS-02)
 =======
 - [x] 28-01-PLAN.md -- SIWE viem 전환 + Sidecar 크로스 컴파일 전략 (DEPS-01, DEPS-02)
 >>>>>>> gsd/phase-28-dependency-build-resolution
+=======
+- [x] 28-01-PLAN.md -- SIWE viem 전환 + Sidecar 크로스 컴파일 전략 (DEPS-01, DEPS-02)
+>>>>>>> gsd/phase-29-api-integration-protocol
 
 ### Phase 29: API 통합 프로토콜 완성
 **Goal**: REST API, SDK, 플랫폼 통합의 모호한 스펙이 확정되어, 클라이언트 구현자가 추가 질문 없이 코딩할 수 있는 상태를 만든다
@@ -113,9 +122,15 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+<<<<<<< HEAD
 - [ ] 29-01-PLAN.md -- Tauri 종료 타임아웃 35초 + CORS 3종 Origin + Setup Wizard CLI 위임 (API-01, API-02, API-05)
 - [ ] 29-02-PLAN.md -- Owner disconnect cascade 5단계 + TransactionType x Tier HTTP 응답 매트릭스 (API-03, API-04)
 - [ ] 29-03-PLAN.md -- Python SDK snake_case SSoT + Zod 스키마 @waiaas/core export 패턴 (API-06, API-07)
+=======
+- [x] 29-01-PLAN.md -- Tauri 종료 타임아웃 35초 + CORS 3종 Origin + Setup Wizard CLI 위임 (API-01, API-02, API-05)
+- [x] 29-02-PLAN.md -- Owner disconnect cascade 5단계 + TransactionType x Tier HTTP 응답 매트릭스 (API-03, API-04)
+- [x] 29-03-PLAN.md -- Python SDK snake_case SSoT + Zod 스키마 @waiaas/core export 패턴 (API-06, API-07)
+>>>>>>> gsd/phase-29-api-integration-protocol
 
 ### Phase 30: 스키마 설정 확정
 **Goal**: 데이터베이스 스키마와 설정 파일의 미결정 사항이 모두 확정되어, 모든 변경의 데이터 모델이 완전한 상태를 만든다
@@ -126,11 +141,11 @@ Plans:
   2. SQLite 타임스탬프가 전체 초 단위(Unix epoch INTEGER)로 통일 확정되고, audit_log 밀리초 고려 주석이 삭제되어 UUID v7 시간 정밀도 활용으로 대체되었다
   3. agents 테이블에 chain/network CHECK 제약조건이 추가되고, Docker 볼륨 UID 1001이 Dockerfile에 명시되어 데이터 디렉토리 소유권 확인 로직이 정의되었다
   4. amount TEXT 유지 근거(JS number 정밀도 한계)가 문서화되고 amount_lamports 보조 컬럼 옵션이 유보되었으며, 알림 채널 삭제가 BEGIN IMMEDIATE 트랜잭션으로 동시성 보호되었다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 30-01: 환경변수 매핑 규칙 + SQLite timestamp 통일
-- [ ] 30-02: agents CHECK 제약 + Docker UID + amount TEXT 근거 + 채널 삭제 트랜잭션
+- [ ] 30-01-PLAN.md -- 환경변수 매핑 규칙 평탄화 + SQLite timestamp 초 단위 통일 (SCHEMA-01, SCHEMA-02)
+- [ ] 30-02-PLAN.md -- agents CHECK 제약 + network 값 통일 + Docker UID 1001 + amount TEXT 근거 + 채널 삭제 BEGIN IMMEDIATE (SCHEMA-03, SCHEMA-04, SCHEMA-05, SCHEMA-06)
 
 ## Progress
 
@@ -142,18 +157,27 @@ Phase 26 -> 27 -> 28 -> 29 -> 30
 | 26. 체인 어댑터 안정화 | 2/2 | ✓ Complete | 2026-02-08 |
 | 27. 데몬 보안 기반 확립 | 3/3 | ✓ Complete | 2026-02-08 |
 <<<<<<< HEAD
+<<<<<<< HEAD
 | 28. 의존성 빌드 환경 해소 | 0/1 | Planning complete | - |
 | 29. API 통합 프로토콜 완성 | 0/3 | Not started | - |
 =======
 | 28. 의존성 빌드 환경 해소 | 1/1 | ✓ Complete | 2026-02-08 |
 | 29. API 통합 프로토콜 완성 | 0/3 | In progress | - |
 >>>>>>> gsd/phase-28-dependency-build-resolution
+=======
+| 28. 의존성 빌드 환경 해소 | 1/1 | ✓ Complete | 2026-02-08 |
+| 29. API 통합 프로토콜 완성 | 3/3 | ✓ Complete | 2026-02-08 |
+>>>>>>> gsd/phase-29-api-integration-protocol
 | 30. 스키마 설정 확정 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-08*
 <<<<<<< HEAD
+<<<<<<< HEAD
 *Last updated: 2026-02-08 after Phase 28 planning*
 =======
 *Last updated: 2026-02-08 after Phase 29 planning*
 >>>>>>> gsd/phase-28-dependency-build-resolution
+=======
+*Last updated: 2026-02-08 after Phase 30 planning*
+>>>>>>> gsd/phase-29-api-integration-protocol

@@ -727,7 +727,7 @@ export function registerOwnerRoutes(
 | # | Method | Path | v0.5 인증 | action | 설명 |
 |---|--------|------|-----------|--------|------|
 | 1 | POST | `/v1/owner/connect` | None (localhost) | - | WC 연결 정보 등록 (선택적 편의 기능) |
-| 2 | DELETE | `/v1/owner/disconnect` | masterAuth (implicit) (v0.5 변경) | - | WC 연결 해제 |
+| 2 | DELETE | `/v1/owner/disconnect` | masterAuth (implicit) (v0.5 변경) | - | WC 연결 해제 + cascade 5단계 [v0.7 보완: 섹션 6.8 참조] |
 | 3 | POST | `/v1/owner/approve/:txId` | **ownerAuth** | `approve_tx` | 거래 승인 (APPROVAL 티어) |
 | 4 | POST | `/v1/owner/reject/:txId` | masterAuth (implicit) (v0.5 변경) | - | 거래 거절 |
 | 5 | POST | `/v1/owner/kill-switch` | masterAuth (implicit) (v0.5 변경) | - | Kill Switch 발동 |
@@ -1188,6 +1188,132 @@ async function handleCreatePolicy(c: Context): Promise<Response> {
 }
 ```
 
+### 6.8 DELETE /v1/owner/disconnect Cascade 동작 [v0.7 보완]
+
+v0.5에서 owner_address가 agents 테이블의 에이전트별 컬럼으로 변경되었으므로, disconnect는 요청된 address/chain에 매칭되는 에이전트들에 대해 5단계 cascade를 수행한다.
+
+**인증:** masterAuth (implicit) -- v0.5 변경에 의해 시스템 관리 작업으로 분류
+
+**요청:**
+
+```
+DELETE /v1/owner/disconnect
+Content-Type: application/json
+Body: { address: string, chain: 'solana' | 'ethereum' }
+```
+
+**5단계 Cascade:**
+
+| 순서 | 동작 | 대상 | 근거 |
+|------|------|------|------|
+| 1 | APPROVAL 대기 트랜잭션 -> EXPIRED | transactions WHERE status='QUEUED' AND tier='APPROVAL' AND agentId IN (해당 에이전트들) | 승인자 부재로 영구 대기 방지 |
+| 2 | DELAY 대기 트랜잭션 -> 유지 (no-op) | transactions WHERE tier='DELAY' | DELAY는 Owner 개입 불필요, 타이머 계속 진행 |
+| 3 | WalletConnect 세션 정리 | wallet_connections WHERE address=req.address AND chain=req.chain | push 서명 비활성화 |
+| 4 | agents.owner_address 유지 (no-op) | agents | 주소는 에이전트 속성, 변경은 PUT /v1/agents/:id/owner |
+| 5 | audit_log 기록 | audit_log INSERT | OWNER_DISCONNECTED 이벤트, severity: info |
+
+> **Pitfall 방지:** DELAY 트랜잭션은 Owner 개입 불필요한 자동 실행 티어이므로 disconnect 시 EXPIRED 처리하지 않는다 (Pitfall 3 참조). DELAY 유지(no-op)는 의도적 설계이다.
+
+**응답 (200 OK):**
+
+```typescript
+// [v0.7 보완] cascade 결과 포함 응답
+const OwnerDisconnectResponseSchema = z.object({
+  disconnected: z.literal(true),
+  disconnectedAt: z.string().datetime(),
+  affectedAgents: z.number().int().min(0).openapi({
+    description: '영향받은 에이전트 수 (해당 address/chain을 owner_address로 가진 에이전트)',
+  }),
+  expiredTransactions: z.number().int().min(0).openapi({
+    description: 'EXPIRED로 전환된 APPROVAL 대기 트랜잭션 수',
+  }),
+}).openapi('OwnerDisconnectResponse')
+```
+
+**응답 예시:**
+
+```json
+{
+  "disconnected": true,
+  "disconnectedAt": "2026-02-05T10:30:00.000Z",
+  "affectedAgents": 2,
+  "expiredTransactions": 1
+}
+```
+
+**코드 패턴 (구현 참조):**
+
+```typescript
+// packages/daemon/src/services/owner-service.ts [v0.7 보완]
+async function disconnectOwner(
+  db: DrizzleInstance,
+  address: string,
+  chain: string,
+): Promise<DisconnectResult> {
+  return db.transaction(() => {
+    // Step 1: APPROVAL 대기 트랜잭션 -> EXPIRED
+    const affectedAgentIds = db.select({ id: agents.id })
+      .from(agents)
+      .where(and(
+        eq(agents.ownerAddress, address),
+        eq(agents.chain, chain),
+      ))
+      .all()
+      .map(a => a.id)
+
+    let expiredCount = 0
+    if (affectedAgentIds.length > 0) {
+      const result = db.update(transactions)
+        .set({ status: 'EXPIRED', error: 'OWNER_DISCONNECTED' })
+        .where(and(
+          inArray(transactions.agentId, affectedAgentIds),
+          eq(transactions.status, 'QUEUED'),
+          eq(transactions.tier, 'APPROVAL'),
+        ))
+        .run()
+      expiredCount = result.changes
+    }
+
+    // Step 2: DELAY 대기 트랜잭션 -> 유지 (no-op)
+    // DELAY는 Owner 개입 불필요, 타이머 계속 진행
+
+    // Step 3: wallet_connections에서 WC 세션 정리
+    db.delete(walletConnections)
+      .where(and(
+        eq(walletConnections.address, address),
+        eq(walletConnections.chain, chain),
+      ))
+      .run()
+
+    // Step 4: agents.owner_address는 유지 (no-op)
+    // 주소는 에이전트 속성, 변경은 PUT /v1/agents/:id/owner
+
+    // Step 5: audit_log 기록
+    insertAuditLog(db, {
+      eventType: 'OWNER_DISCONNECTED',
+      actor: 'system',
+      details: {
+        address,
+        chain,
+        affectedAgents: affectedAgentIds.length,
+        expiredTransactions: expiredCount,
+      },
+      severity: 'info',
+    })
+
+    return {
+      disconnectedAt: new Date().toISOString(),
+      affectedAgents: affectedAgentIds.length,
+      expiredTransactions: expiredCount,
+    }
+  })()
+}
+```
+
+> **주의:** 전체 동작은 단일 SQLite 트랜잭션(`db.transaction()`)으로 원자적 실행한다. APPROVAL -> EXPIRED 전이와 WC 세션 정리가 부분 실패하면 rollback된다.
+
+> **OWNER_DISCONNECTED 감사 이벤트:** 45-enum-unified-mapping.md의 AuditEventType enum에 `OWNER_DISCONNECTED` 추가 필요 (구현 시 반영).
+
 ---
 
 ## 7. WC 세션 관리 (v0.5 변경)
@@ -1517,5 +1643,10 @@ Tauri WebView의 Content Security Policy에 WalletConnect Relay 도메인을 허
 
 *문서 ID: OWNR-CONN v0.7*
 *작성일: 2026-02-05, v0.5 업데이트: 2026-02-07, v0.7 보완: 2026-02-08*
+<<<<<<< HEAD
 *Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation*
 *상태: v0.7 보완*
+=======
+*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation + 29-api-integration-protocol*
+*상태: v0.7 보완 (API-03 cascade 추가)*
+>>>>>>> gsd/phase-29-api-integration-protocol

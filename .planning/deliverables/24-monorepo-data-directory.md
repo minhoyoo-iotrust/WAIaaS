@@ -3,8 +3,9 @@
 **문서 ID:** CORE-01
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
+**v0.7 API 통합 프로토콜:** 2026-02-08
 **상태:** 완료
-**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5)
+**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 38-sdk-mcp-interface.md (v0.7)
 
 ---
 
@@ -360,6 +361,51 @@ packages:
   }
 }
 ```
+
+#### @waiaas/core Zod 스키마 Export 패턴 [v0.7 보완]
+
+`@waiaas/core`의 `index.ts`에서 타입(`z.infer`)과 Zod 스키마를 named export한다. `@waiaas/sdk`는 workspace 참조로 이 스키마를 import하여 클라이언트 사전 검증에 사용한다.
+
+```typescript
+// packages/core/src/index.ts
+
+// === 타입 (z.infer) -- tree-shaking, 런타임 0 바이트 ===
+export type { TransferRequest } from './schemas/transaction.schema.js'
+export type { TokenTransferRequest } from './schemas/transaction.schema.js'
+export type { ContractCallRequest } from './schemas/transaction.schema.js'
+export type { ApproveRequest } from './schemas/transaction.schema.js'
+export type { BatchRequest } from './schemas/transaction.schema.js'
+export type { TransactionResponse } from './schemas/transaction.schema.js'
+export type { SessionConstraints, SessionCreateRequest, SessionCreateResponse } from './schemas/session.schema.js'
+export type { AgentCreateRequest, AgentSummary } from './schemas/agent.schema.js'
+
+// === Zod 스키마 (런타임 검증용) ===
+export {
+  TransferRequestSchema,
+  TokenTransferRequestSchema,
+  ContractCallRequestSchema,
+  ApproveRequestSchema,
+  BatchRequestSchema,
+  TransactionRequestSchema,  // discriminatedUnion 5-type
+} from './schemas/transaction.schema.js'
+
+export {
+  SessionConstraintsSchema,
+  SessionCreateRequestSchema,
+} from './schemas/session.schema.js'
+
+export {
+  AgentCreateRequestSchema,
+} from './schemas/agent.schema.js'
+```
+
+**원칙:**
+- 타입은 `export type` (tree-shaking, 런타임 0 바이트)
+- 스키마는 `export` (런타임 검증에 사용, Zod 코드 포함)
+- 스키마 이름 규칙: `{PascalCaseName}Schema` (예: `TransferRequestSchema`)
+- 파일 위치 규칙: `packages/core/src/schemas/{domain}.schema.ts`
+- `TransactionRequestSchema`는 `z.discriminatedUnion('type', [...])` 5-type으로 정의 (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH)
+- v0.6 확장 타입(ContractCallRequest, ApproveRequest, BatchRequest) 포함 완료
 
 #### @waiaas/daemon
 
