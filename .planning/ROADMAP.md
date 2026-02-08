@@ -59,11 +59,11 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요
   2. IChainAdapter가 getCurrentNonce/resetNonceTracker 포함 19개 메서드로 확장되고, UnsignedTransaction.nonce가 명시적 optional 필드로 승격되어, EVM nonce 관리가 타입 안전하게 설계되었다
   3. 26-keystore-spec의 AES-256-GCM nonce 충돌 확률이 정확한 Birthday Problem 수식(P ~ 1-e^(-n^2/2N), N=2^96)으로 정정되고 실제 사용 패턴 분석이 추가되었다
   4. Priority fee 캐시 TTL 30초의 Nyquist 기준 근거가 명시되고, 제출 실패 시 1.5배 fee bump 1회 재시도 전략이 추가되었다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 26-01: Solana blockhash freshness guard + EVM nonce 인터페이스 확장
-- [ ] 26-02: Keystore nonce 수학 정정 + Priority fee TTL 근거/bump 전략
+- [ ] 26-01-PLAN.md -- Solana blockhash freshness guard + EVM nonce 인터페이스 확장 (CHAIN-01, CHAIN-02)
+- [ ] 26-02-PLAN.md -- Keystore nonce 수학 정정 + Priority fee TTL 근거/bump 전략 (CHAIN-03, CHAIN-04)
 
 ### Phase 27: 데몬 보안 기반 확립
 **Goal**: 데몬 프로세스의 보안 메커니즘이 구현 시 경쟁 조건이나 보안 수준 불일치 없이 동작하는 상태를 만든다
@@ -131,7 +131,7 @@ Phase 26 -> 27 -> 28 -> 29 -> 30
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 26. 체인 어댑터 안정화 | 0/2 | Not started | - |
+| 26. 체인 어댑터 안정화 | 0/2 | Planning complete | - |
 | 27. 데몬 보안 기반 확립 | 0/3 | Not started | - |
 | 28. 의존성 빌드 환경 해소 | 0/1 | Not started | - |
 | 29. API 통합 프로토콜 완성 | 0/3 | Not started | - |
