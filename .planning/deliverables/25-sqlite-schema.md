@@ -8,8 +8,9 @@
 **v0.7 업데이트:** 2026-02-08
 **v0.7 스키마 설정 확정:** 2026-02-08
 **v0.7 스키마 CHECK/amount 보강:** 2026-02-08
+**v0.8 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT)
+**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT), objectives/v0.8-optional-owner-progressive-security.md
 
 ---
 
@@ -99,8 +100,11 @@ export const agents = sqliteTable('agents', {
     enum: ['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']
   }).notNull().default('CREATING'),
 
-  // ── Owner 정보 (v0.5 변경: NOT NULL -- 에이전트 생성 시 필수) ──
-  ownerAddress: text('owner_address').notNull(),        // Owner 지갑 주소 (에이전트 생성 시 필수 지정)
+  // ── Owner 정보 ──
+  ownerAddress: text('owner_address'),                  // [v0.8] NOT NULL 제거 -> nullable (OWNER-01)
+  ownerVerified: integer('owner_verified', { mode: 'boolean' })
+    .notNull()
+    .default(false),                                    // [v0.8] 신규: ownerAuth 사용 이력 (OWNER-07)
 
   // ── 타임스탬프 ──
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -115,6 +119,7 @@ export const agents = sqliteTable('agents', {
   // [v0.7 보완] 테이블 레벨 CHECK 제약 -- ChainType/NetworkType SSoT (45-enum)
   check('check_chain', sql`chain IN ('solana', 'ethereum')`),
   check('check_network', sql`network IN ('mainnet', 'devnet', 'testnet')`),
+  check('check_owner_verified', sql`owner_verified IN (0, 1)`),  // [v0.8] boolean CHECK 제약
 ]);
 ```
 
@@ -131,7 +136,9 @@ CREATE TABLE agents (
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING'
     CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
-  owner_address TEXT NOT NULL,
+  owner_address TEXT,                                              -- [v0.8] NOT NULL 제거 -> nullable (OWNER-01)
+  owner_verified INTEGER NOT NULL DEFAULT 0                        -- [v0.8] 신규: ownerAuth 사용 이력 (0/1, OWNER-07)
+    CHECK (owner_verified IN (0, 1)),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   suspended_at INTEGER,
@@ -154,7 +161,8 @@ CREATE INDEX idx_agents_owner_address ON agents(owner_address);
 | `network` | TEXT | NOT NULL | - | [v0.7 보완] 네트워크 식별자. CHECK 제약: `'mainnet'` \| `'devnet'` \| `'testnet'`. NetworkType SSoT (45-enum). 앱 레벨 network 값은 체인 무관 추상화. Solana의 'mainnet-beta'는 AdapterRegistry에서 RPC URL 매핑 시 변환 |
 | `public_key` | TEXT (UNIQUE) | NOT NULL | - | 에이전트 지갑 공개키. 체인별 인코딩 (Solana=base58, EVM=hex) |
 | `status` | TEXT (ENUM) | NOT NULL | `'CREATING'` | 에이전트 생명주기 상태. CHECK 제약으로 유효 값 강제 |
-| `owner_address` | TEXT | NOT NULL | - | 에이전트 소유자 지갑 주소. 에이전트 생성 시 필수(NOT NULL). 1:1 바인딩(에이전트당 단일 Owner). 동일 주소가 여러 에이전트를 소유 가능(1:N). 체인별 형식: Solana=base58(32-44자), EVM=0x 접두사 hex(42자) |
+| `owner_address` | TEXT | NULL | - | [v0.8] 에이전트 소유자 지갑 주소. nullable로 변경(OWNER-01). NULL이면 Owner 미등록(OwnerState=NONE). 1:1 바인딩(에이전트당 단일 Owner). 동일 주소가 여러 에이전트를 소유 가능(1:N). 체인별 형식: Solana=base58(32-44자), EVM=0x 접두사 hex(42자) |
+| `owner_verified` | INTEGER | NOT NULL | `0` | [v0.8] ownerAuth 사용 이력(OWNER-07). 0=미검증(GRACE), 1=검증됨(LOCKED). Drizzle에서 `{ mode: 'boolean' }`으로 true/false 접근. CHECK 제약: `owner_verified IN (0, 1)` |
 | `created_at` | INTEGER | NOT NULL | - | 생성 시각 (Unix epoch, 초) |
 | `updated_at` | INTEGER | NOT NULL | - | 최종 수정 시각 (Unix epoch, 초) |
 | `suspended_at` | INTEGER | NULL | - | 정지 시각. status가 SUSPENDED일 때만 값 존재 |
@@ -973,7 +981,8 @@ erDiagram
         text network
         text public_key UK
         text status
-        text owner_address "NOT NULL (v0.5)"
+        text owner_address "NULL (v0.8)"
+        integer owner_verified "NOT NULL DEFAULT 0 (v0.8)"
         integer created_at
         integer updated_at
         integer suspended_at
@@ -1431,7 +1440,9 @@ CREATE TABLE agents_new (
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING'
     CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
-  owner_address TEXT NOT NULL,
+  owner_address TEXT,                                              -- [v0.8] nullable
+  owner_verified INTEGER NOT NULL DEFAULT 0                        -- [v0.8] 신규
+    CHECK (owner_verified IN (0, 1)),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   suspended_at INTEGER,
@@ -1441,6 +1452,7 @@ CREATE TABLE agents_new (
 -- Step 3: 데이터 복사
 INSERT INTO agents_new
   SELECT id, name, chain, network, public_key, status, owner_address,
+         0,  -- owner_verified: 기존 에이전트는 모두 미검증 상태
          created_at, updated_at, suspended_at, suspension_reason
   FROM agents;
 
@@ -1471,6 +1483,165 @@ COMMIT;
 **Drizzle Kit 자동 처리:**
 - Drizzle Kit `push:sqlite`는 CHECK 변경 시 자동으로 테이블 재생성을 수행한다
 - 수동 마이그레이션이 필요한 경우 위 SQL을 `drizzle/` 폴더에 포함
+
+### 4.11 [v0.8] 마이그레이션: owner_address nullable + owner_verified 추가
+
+v0.8에서 agents 테이블의 `owner_address`를 nullable로 전환하고 `owner_verified` 컬럼을 추가한다. SQLite는 ALTER TABLE로 NOT NULL 제거가 불가하므로 **테이블 재생성이 필요**하다 (섹션 4.6 참조).
+
+**전제 조건:**
+- v0.7 마이그레이션(섹션 4.10) 완료 상태
+- DB 백업 필수 (`VACUUM INTO`)
+
+**마이그레이션 SQL:**
+
+```sql
+-- ═══ v0.8 agents 변경: owner_address nullable + owner_verified 추가 ═══
+
+-- Step 0: FK 제약 비활성화 (테이블 DROP/RENAME 중 FK 참조 무결성 보호)
+PRAGMA foreign_keys = OFF;
+
+BEGIN;
+
+-- Step 1: 새 테이블 생성 (v0.8 변경 반영)
+CREATE TABLE agents_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  chain TEXT NOT NULL
+    CHECK (chain IN ('solana', 'ethereum')),
+  network TEXT NOT NULL
+    CHECK (network IN ('mainnet', 'devnet', 'testnet')),
+  public_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CREATING'
+    CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
+  owner_address TEXT,                                              -- [v0.8] nullable
+  owner_verified INTEGER NOT NULL DEFAULT 0                        -- [v0.8] 신규
+    CHECK (owner_verified IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  suspended_at INTEGER,
+  suspension_reason TEXT
+);
+
+-- Step 2: 데이터 복사 (기존 에이전트는 모두 owner_verified = 0)
+INSERT INTO agents_new
+  SELECT id, name, chain, network, public_key, status, owner_address,
+         0,  -- owner_verified: 기존 에이전트는 모두 미검증 (안전한 기본값)
+         created_at, updated_at, suspended_at, suspension_reason
+  FROM agents;
+
+-- Step 3: 이전 테이블 삭제
+DROP TABLE agents;
+
+-- Step 4: 이름 변경
+ALTER TABLE agents_new RENAME TO agents;
+
+-- Step 5: 인덱스 재생성 (5개)
+CREATE UNIQUE INDEX idx_agents_public_key ON agents(public_key);
+CREATE INDEX idx_agents_status ON agents(status);
+CREATE INDEX idx_agents_chain_network ON agents(chain, network);
+CREATE INDEX idx_agents_owner_address ON agents(owner_address);
+
+COMMIT;
+
+-- Step 6: FK 제약 재활성화 + 무결성 검증
+PRAGMA foreign_keys = ON;
+PRAGMA foreign_key_check;
+```
+
+**핵심 주의사항:**
+
+| 항목 | 설명 |
+|------|------|
+| PRAGMA foreign_keys OFF/ON | 테이블 DROP/RENAME 중 FK 참조가 깨지지 않도록 반드시 비활성화. COMMIT 후 재활성화 |
+| owner_verified = 0 기본값 | 기존 에이전트는 모두 미검증 상태로 시작한다. Owner 주소가 있더라도 ownerAuth를 사용한 이력이 없으므로 GRACE 상태 |
+| foreign_key_check | PRAGMA foreign_keys = ON 후 무결성 검증. sessions, transactions 등의 FK 참조가 정상인지 확인 |
+
+**v1.1 첫 구현 참고:** v1.1 첫 구현에서는 초기 스키마에 이미 v0.8 변경이 포함되므로, 이 마이그레이션은 기존 v0.7 DB 업그레이드 시에만 필요하다. Drizzle-kit 자동 생성 시에도 수동 검증 필수.
+
+---
+
+### 4.12 [v0.8] 핵심 타입 정의 (OwnerState, SweepResult)
+
+v0.8에서 신규 도입되는 핵심 타입 2개를 정의한다. 이 타입들은 DB 스키마가 아니라 런타임 타입이지만, 데이터 모델과 밀접하게 연관되므로 이 문서에서 정의한다.
+
+#### 4.12.1 OwnerState 타입 (Zod SSoT)
+
+```typescript
+// packages/core/src/types/owner.ts
+import { z } from 'zod'
+
+/**
+ * Owner 상태.
+ * owner_address + owner_verified 컬럼 조합에서 런타임에 파생된다.
+ * DB에 저장하지 않는다 (파생 상태).
+ */
+export const OwnerStateSchema = z.enum(['NONE', 'GRACE', 'LOCKED'])
+export type OwnerState = z.infer<typeof OwnerStateSchema>
+```
+
+**상태 매핑:**
+
+| OwnerState | owner_address | owner_verified | 의미 |
+|------------|---------------|----------------|------|
+| `NONE` | NULL | 0 | Owner 미등록. Base 보안만 적용 |
+| `GRACE` | NOT NULL | 0 | Owner 등록됨, 유예 구간. ownerAuth 미사용 이력 |
+| `LOCKED` | NOT NULL | 1 | Owner 검증 완료. Enhanced 보안 해금 |
+
+**안티패턴 경고:** OwnerState를 DB 컬럼으로 저장하면 `owner_address`/`owner_verified` 변경 시 동기화 오류가 발생한다. 반드시 `resolveOwnerState()` 유틸리티로 런타임에 산출해야 한다. 이 유틸리티의 상세 설계는 Plan 31-02에서 다룬다.
+
+**불가능 조합:** `owner_address = NULL, owner_verified = 1`은 논리적으로 불가능하다. 이 조합은 애플리케이션 레벨에서 방지한다 (owner_verified는 ownerAuth 성공 시에만 1로 전환되며, ownerAuth는 owner_address가 있어야 가능).
+
+#### 4.12.2 SweepResult 타입
+
+```typescript
+// packages/core/src/interfaces/chain-adapter.types.ts
+import type { AssetInfo } from './chain-adapter.types'
+
+/**
+ * 전량 회수(sweepAll) 결과.
+ *
+ * 토큰 배치 전송 + 네이티브 전송 결과를 집계한다.
+ * 부분 실패 허용: failed 배열이 비어있지 않으면 HTTP 207 응답으로 매핑된다.
+ */
+interface SweepResult {
+  /** 실행된 트랜잭션 목록 */
+  transactions: Array<{
+    txHash: string
+    assets: Array<{ mint: string; amount: string }>
+  }>
+
+  /** 회수된 네이티브 자산 금액 (최소 단위 문자열) */
+  nativeRecovered: string
+
+  /** 회수된 토큰 목록 (v0.6 AssetInfo 재사용) */
+  tokensRecovered: AssetInfo[]
+
+  /** Solana 토큰 계정 rent 회수분 (최소 단위 문자열, Solana 전용) */
+  rentRecovered?: string
+
+  /** 실패한 토큰 목록 */
+  failed: Array<{ mint: string; error: string }>
+}
+```
+
+**설계 결정:**
+- `SweepResult.tokensRecovered`는 v0.6 `AssetInfo` 타입을 직접 재사용한다 (중복 정의 금지)
+- 부분 실패 시 `failed` 배열이 비어있지 않으며, HTTP 207(Multi-Status) 응답으로 매핑된다 (Phase 34에서 상세)
+- 파일 위치: `packages/core/src/interfaces/chain-adapter.types.ts` (기존 `AssetInfo`와 같은 파일)
+- `SweepResult`를 Drizzle 스키마에 정의하지 않는다 (체인 어댑터 반환 타입이지 DB 저장 타입이 아님)
+
+---
+
+### 4.13 [v0.8] 안티패턴 주의사항
+
+v0.8 변경에 따라 추가되는 안티패턴 경고:
+
+| 안티패턴 | 설명 | 올바른 접근 |
+|---------|------|-----------|
+| `owner_verified`에 타임스탬프 저장 | boolean 0/1이지 타임스탬프가 아니다. "언제 verified되었는가"는 별도로 추적 | `audit_log`에 `OWNER_VERIFIED` 이벤트로 기록. owner_verified는 0 또는 1만 허용 |
+| OwnerState를 DB 컬럼으로 저장 | 파생 상태를 DB에 저장하면 동기화 오류 발생 | `resolveOwnerState()` 유틸리티로 런타임 산출 |
+| SweepResult를 Drizzle 스키마에 정의 | 체인 어댑터 반환 타입이지 DB 저장 타입이 아님 | `chain-adapter.types.ts`에 인터페이스로 정의 |
+| Drizzle `{ mode: 'boolean' }` 혼용 | ORM에서는 true/false, raw SQL에서는 0/1 사용. 혼용 시 비교 오류 | raw SQL: `owner_verified = 0`, Drizzle ORM: `agent.ownerVerified` (boolean) |
 
 ---
 
@@ -1619,7 +1790,7 @@ ORDER BY priority DESC;
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ══════════════════════════════════════════
-// agents (v0.5: owner_address NOT NULL, idx_agents_owner_address 추가)
+// agents (v0.8: owner_address nullable, owner_verified 추가)
 // ══════════════════════════════════════════
 export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
@@ -1630,7 +1801,10 @@ export const agents = sqliteTable('agents', {
   status: text('status', {
     enum: ['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']
   }).notNull().default('CREATING'),
-  ownerAddress: text('owner_address').notNull(),         // v0.5: NOT NULL, 에이전트 생성 시 필수
+  ownerAddress: text('owner_address'),                   // [v0.8] nullable (OWNER-01)
+  ownerVerified: integer('owner_verified', { mode: 'boolean' })
+    .notNull()
+    .default(false),                                     // [v0.8] ownerAuth 사용 이력 (OWNER-07)
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
@@ -1639,7 +1813,10 @@ export const agents = sqliteTable('agents', {
   uniqueIndex('idx_agents_public_key').on(table.publicKey),
   index('idx_agents_status').on(table.status),
   index('idx_agents_chain_network').on(table.chain, table.network),
-  index('idx_agents_owner_address').on(table.ownerAddress),  // v0.5: Owner 주소 조회/변경
+  index('idx_agents_owner_address').on(table.ownerAddress),
+  check('check_chain', sql`chain IN ('solana', 'ethereum')`),
+  check('check_network', sql`network IN ('mainnet', 'devnet', 'testnet')`),
+  check('check_owner_verified', sql`owner_verified IN (0, 1)`),  // [v0.8]
 ]);
 
 // ══════════════════════════════════════════
@@ -1947,11 +2124,19 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 
 | 요구사항 | 테이블/섹션 | 커버리지 |
 |---------|-----------|---------|
-| OWNR-01 (에이전트별 Owner 주소) | agents | `owner_address NOT NULL` + `idx_agents_owner_address` 인덱스. 에이전트 생성 시 필수. 1:1 바인딩 |
+| OWNR-01 (에이전트별 Owner 주소) | agents | [v0.8] `owner_address` nullable + `idx_agents_owner_address` 인덱스. Owner 미등록 시 NULL. 1:1 바인딩 |
 | OWNR-02 (config.toml Owner 개념 제거) | - | 24-monorepo-data-directory.md 참조. walletconnect 섹션 선택적 전환 |
 | OWNR-03 (wallet_connections 테이블) | wallet_connections (섹션 2.8) | owner_wallets 대체. 인증 역할 제거. WC 세션 캐시 전용 |
 | OWNR-04 (멀티 에이전트 Owner 격리) | agents + wallet_connections | `agents.owner_address` + `idx_agents_owner_address`로 에이전트별 Owner 격리. 동일 주소 1:N 소유 지원 |
 | AUTH-04 (Owner 주소 변경 정책) | 섹션 7.2 | masterAuth 단일 트랙. APPROVAL 대기 거래 자동 취소. audit_log OWNER_ADDRESS_CHANGED 이벤트 |
+
+### v0.8 요구사항 매핑 추가
+
+| 요구사항 | 테이블/섹션 | 커버리지 |
+|---------|-----------|---------|
+| OWNER-01 (Owner 선택적 등록) | agents | `owner_address` nullable 전환. NULL이면 Owner 미등록(OwnerState=NONE) |
+| OWNER-07 (유예->잠금 전이) | agents | `owner_verified` 컬럼. 0=GRACE, 1=LOCKED. CHECK 제약 `IN (0, 1)` |
+| WITHDRAW-06 (전량 회수) | 섹션 4.12.2 | `SweepResult` 타입 정의. `AssetInfo[]` 재사용 |
 
 ---
 
@@ -1961,5 +2146,6 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 *Phase 20 업데이트: 2026-02-07*
 *v0.6 업데이트: 2026-02-08*
 *v0.7 업데이트: 2026-02-08*
+*v0.8 업데이트: 2026-02-08*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
