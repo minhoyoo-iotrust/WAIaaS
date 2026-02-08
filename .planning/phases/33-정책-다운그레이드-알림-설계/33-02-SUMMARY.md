@@ -73,7 +73,7 @@ Each task was committed atomically:
 1. **Task 1: TX_DOWNGRADED_DELAY 이벤트 추가 + 채널별 다운그레이드 알림 템플릿 설계** - `61c065b` (feat)
 2. **Task 2: APPROVAL 대기 알림 [승인]/[거부] 버튼 채널별 명세** - `208259a` (feat)
 
-**Plan metadata:** TBD (docs: complete plan)
+**Plan metadata:** `d5b2ad1` (docs: complete plan)
 
 ## Files Created/Modified
 - `.planning/deliverables/35-notification-architecture.md` - TX_DOWNGRADED_DELAY 이벤트 + 다운그레이드 템플릿 3채널 + APPROVAL 승인/거부 버튼 3채널 + 보안 고려사항
