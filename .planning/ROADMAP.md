@@ -67,11 +67,11 @@ Plans:
   3. Owner 등록 후 동일 금액 거래가 정상 APPROVAL로 처리되는 흐름이 명세되어 있다
   4. 다운그레이드 알림 템플릿에 Owner 등록 CLI 안내 메시지가 포함되어 있다
   5. Owner 있는 에이전트의 APPROVAL 대기 알림에 [승인]/[거부] 버튼이 명세되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 33-01: DatabasePolicyEngine 다운그레이드 로직 + PolicyDecision 확장 설계
-- [ ] 33-02: 다운그레이드/APPROVAL 알림 템플릿 + Owner 등록 안내 설계
+- [ ] 33-01-PLAN.md -- evaluate() Step 9.5 다운그레이드 로직 + evaluateBatch 다운그레이드 + evaluate 시그니처 확장 + TX_DOWNGRADED 감사 로그 + Owner LOCKED 후 정상 APPROVAL 복원 흐름 (33-time-lock-approval-mechanism.md)
+- [ ] 33-02-PLAN.md -- TX_DOWNGRADED_DELAY 이벤트 추가 + 채널별(Telegram/Discord/ntfy.sh) 다운그레이드 알림 템플릿 + APPROVAL 대기 [승인]/[거부] 버튼 명세 (35-notification-architecture.md)
 
 ### Phase 34: 자금 회수 + 보안 분기 설계
 **Goal**: Owner 등록된 에이전트의 자금 전량 회수 프로토콜과, Owner 유무별 Kill Switch 복구/세션 갱신 분기가 설계된다
