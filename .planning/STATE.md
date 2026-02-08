@@ -12,8 +12,8 @@
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 25 of 25 (테스트 전략 + 문서 통합)
 플랜: 4 of 4 in current phase
-상태: In progress (plan 03 pending confirmation)
-마지막 활동: 2026-02-08 -- Completed 25-04-PLAN.md (인터페이스 계층 문서 2개 v0.6 통합)
+상태: In progress (plan 01 pending)
+마지막 활동: 2026-02-08 -- Completed 25-03-PLAN.md + 25-04-PLAN.md (기능계층 3 + 인터페이스 2 문서 통합)
 
 Progress: ██████████████████████████████████████████████████████████████████░ 99%
 
@@ -107,6 +107,12 @@ Phase 25-02 결정 (SSoT 문서 통합):
 - 45-enum 섹션 번호 재번호 (2.3~2.12, TransactionType 신규 삽입으로 기존 섹션 이동)
 - ActionErrorCode는 소스 문서(62) 실제 정의 반영 (계획의 ACTION_PROVIDER_* 대신 ACTION_* 사용)
 - 27-chain-adapter에 Action Provider 협력 패턴 섹션 추가 (resolve-then-execute 상호 참조)
+
+Phase 25-03 결정 (기능 계층 문서 통합):
+- Token-2022 위험 확장은 detectDangerousExtensions() 메서드로 사전 감지 (TransferFee, ConfidentialTransfer, TransferHook, PermanentDelegate)
+- getAssets()에서 Token-2022도 type='spl' 통합 반환 (programId 필드로 구분)
+- ATA 생성 비용 getMinimumBalanceForRentExemption(165) 동적 조회 (하드코딩 금지)
+- 32-pipeline v0.6 확장을 섹션 10으로 추가 (기존 섹션 1-9 구조 유지)
 
 Phase 25-04 결정 (인터페이스 계층 문서 통합):
 - 37-rest-api 에러 코드는 45-enum SSoT 실제 코드명 사용 (ACTION_NOT_FOUND 등)
