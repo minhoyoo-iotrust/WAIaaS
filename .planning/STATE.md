@@ -11,11 +11,11 @@
 
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 24 of 25 (상위 추상화 레이어 설계)
-플랜: 0 of 2 in current phase
-상태: Ready to plan
-마지막 활동: 2026-02-08 -- Phase 23 완료 (3/3 plans, 21/21 verified), Phase 24 대기
+플랜: 2 of 2 in current phase
+상태: In progress
+마지막 활동: 2026-02-08 -- Phase 24 Plan 02 완료 (Action Provider + Swap Action 설계)
 
-Progress: ██████████░░░░░░░░░░░ 50%
+Progress: ███████████████░░░░░ 78%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: ██████████░░░░░░░░░░░ 50%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 5/9 plans
+**v0.6 진행:** 7/9 plans
 
 ## 누적 컨텍스트
 
@@ -85,6 +85,14 @@ Phase 23-03 결정 (CHAIN-EXT-05):
 - 배치 내 중복 instruction 미감지 (감사 로그 사후 추적)
 - ATA 자동 생성은 instruction 수(20개 한도)에 포함
 
+Phase 24-02 결정 (CHAIN-EXT-07, CHAIN-EXT-08):
+- resolve()는 ContractCallRequest만 반환 (UnsignedTransaction/TransactionRequest 대안 미채택, 정책 우회 차단)
+- validate-then-trust 보안 경계 (vm.Module 샌드박스 미채택, 실험적 API 불안정)
+- MCP Tool 16개 상한 (기존 6 + Action 최대 10, mcpExpose 플래그 제어)
+- Jupiter /swap-instructions 사용 (/swap은 직렬화 전체 트랜잭션 반환하므로 부적합)
+- priceImpactPct 1% 상한 (유동성 부족/MEV 공격 사전 차단, config.toml 조정 가능)
+- Jito MEV 보호 기본 활성화 (1000 lamports 팁, 100000 상한)
+
 ### 차단 요소/우려 사항
 
 없음
@@ -92,5 +100,5 @@ Phase 23-03 결정 (CHAIN-EXT-05):
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Phase 23 완료 (3/3 plans, 21/21 verified). Phase 24 플래닝 대기.
+중단 지점: Phase 24 Plan 02 완료 (Action Provider + Swap Action 설계). Plan 01 (가격 오라클) 대기.
 재개 파일: None
