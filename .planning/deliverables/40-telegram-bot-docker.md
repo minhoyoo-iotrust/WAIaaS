@@ -1411,9 +1411,12 @@ FROM node:22-alpine AS production
 # 최소 런타임 의존성 (sodium-native가 libstdc++ 필요)
 RUN apk add --no-cache libstdc++
 
-# Non-root 사용자 생성
+# [v0.7 보완: SCHEMA-04] Non-root 사용자 생성 (UID 1001, 홈 디렉토리 명시)
 RUN addgroup -g 1001 -S waiaas && \
-    adduser -S waiaas -u 1001 -G waiaas
+    adduser -S waiaas -u 1001 -G waiaas -h /home/waiaas
+
+# [v0.7 보완] WAIAAS_DATA_DIR 환경변수 명시 -- 데이터 디렉토리 표준 경로
+ENV WAIAAS_DATA_DIR=/home/waiaas/.waiaas
 
 # 앱 디렉토리
 WORKDIR /app
@@ -1431,11 +1434,15 @@ COPY --from=builder --chown=waiaas:waiaas /app/package.json ./
 COPY --chown=waiaas:waiaas docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
+# [v0.7 보완: SCHEMA-04] 데이터 디렉토리 명시적 생성 + 소유권 설정
+RUN mkdir -p ${WAIAAS_DATA_DIR} && \
+    chown -R waiaas:waiaas /home/waiaas
+
+# [v0.7 보완] VOLUME 선언 -- named volume 마운트 포인트
+VOLUME ${WAIAAS_DATA_DIR}
+
 # Non-root로 전환
 USER waiaas
-
-# 데이터 디렉토리 (named volume 마운트 포인트)
-RUN mkdir -p /home/waiaas/.waiaas
 
 # 포트 선언 (실제 바인딩은 docker-compose에서)
 EXPOSE 3100
@@ -1457,7 +1464,7 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 
 set -e
 
-DATA_DIR="/home/waiaas/.waiaas"
+DATA_DIR="${WAIAAS_DATA_DIR:-/home/waiaas/.waiaas}"
 
 # ── 마스터 패스워드 로드 ──
 if [ -n "$WAIAAS_MASTER_PASSWORD_FILE" ] && [ -f "$WAIAAS_MASTER_PASSWORD_FILE" ]; then
@@ -1494,7 +1501,51 @@ exec node packages/daemon/dist/index.js \
 
 **런타임 의존성:** `libstdc++` (Alpine에서 sodium-native 실행에 필요)
 
-### 8.5 .dockerignore
+### 8.5 데몬 시작 시 데이터 디렉토리 소유권 확인 [v0.7 보완: SCHEMA-04]
+
+데몬 시작 시 데이터 디렉토리의 소유권이 현재 프로세스 사용자와 일치하는지 확인한다. Docker 환경에서 named volume이 root 소유로 생성되면 UID 1001 사용자가 쓰기 권한이 없어 런타임 에러가 발생할 수 있다.
+
+```typescript
+// packages/daemon/src/lifecycle/startup-checks.ts
+
+import { stat } from 'node:fs/promises'
+
+/**
+ * 데이터 디렉토리 소유권 확인.
+ * stat(dataDir).uid !== process.getuid() 시 경고 로그를 출력한다.
+ * 에러가 아닌 경고로 처리하는 이유: bind mount 등 일부 환경에서는 UID 불일치가 정상일 수 있음.
+ */
+async function checkDataDirOwnership(dataDir: string): Promise<void> {
+  try {
+    const stats = await stat(dataDir)
+    const currentUid = process.getuid?.()
+
+    if (currentUid !== undefined && stats.uid !== currentUid) {
+      logger.warn(
+        `데이터 디렉토리 소유자 불일치: ${dataDir} (UID ${stats.uid}) vs 현재 프로세스 (UID ${currentUid}). ` +
+        '쓰기 권한 문제가 발생할 수 있습니다. ' +
+        'Docker 환경에서는 `user: "1001:1001"` 설정을 확인하세요.'
+      )
+    }
+  } catch (error) {
+    // stat 실패 = 디렉토리 미존재. init에서 생성됨.
+    logger.debug(`데이터 디렉토리 stat 실패: ${dataDir}`)
+  }
+}
+```
+
+**호출 시점:** 데몬 시작 시퀀스 1단계 (ConfigLoader) 직전. CORE-05 (28-daemon-lifecycle-cli.md) 참조.
+
+**Docker 환경별 대응:**
+
+| 시나리오 | UID 일치 | 대응 |
+|---------|---------|------|
+| Dockerfile USER waiaas (1001) + named volume | O (최초 생성 시 1001 소유) | 정상 |
+| docker-compose `user: "1001:1001"` | O | 정상 |
+| bind mount + root 소유 호스트 디렉토리 | X (root vs 1001) | 경고 로그 |
+| Linux 호스트에서 직접 실행 | 사용자 종속 | 경고 또는 정상 |
+
+### 8.6 .dockerignore
 
 ```
 node_modules
@@ -1535,6 +1586,9 @@ services:
     container_name: waiaas-daemon
     restart: unless-stopped
 
+    # [v0.7 보완: SCHEMA-04] 명시적 UID:GID 지정 -- Dockerfile USER와 일치
+    user: "1001:1001"
+
     # ── 포트: 호스트 측 localhost만 바인딩 (호스트 포트 매핑에서 0.0.0.0 금지) ──
     # 컨테이너 내부는 WAIAAS_DAEMON_HOSTNAME=0.0.0.0으로 모든 인터페이스에서 수신하지만,
     # 호스트 측은 127.0.0.1로 제한하여 외부 접근을 차단한다.
@@ -1573,6 +1627,9 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+
+    # ── Graceful Shutdown ── [v0.7 보완: 29-01에서 35초 확정]
+    stop_grace_period: 35s  # 데몬 shutdown_timeout=30초 + 5초 마진
 
     # ── 보안 옵션 (선택) ──
     security_opt:

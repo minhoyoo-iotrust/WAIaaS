@@ -121,7 +121,7 @@ class SolanaAdapter implements IChainAdapter {
   /** Solana 체인 식별자 */
   readonly chain: ChainType = 'solana'
 
-  /** Solana 네트워크 (mainnet-beta | devnet | testnet) */
+  /** Solana 네트워크. [v0.7 보완] 앱 레벨 NetworkType: 'mainnet' | 'devnet' | 'testnet' */
   readonly network: NetworkType
 
   // ═══════════════════════════════════════════════════════════
@@ -198,8 +198,8 @@ class SolanaAdapter implements IChainAdapter {
  * config.toml [rpc.solana] 섹션에서 로드된 값을 주입받는다.
  */
 interface SolanaAdapterConfig {
-  /** Solana 네트워크 */
-  network: 'mainnet-beta' | 'devnet' | 'testnet'
+  /** Solana 네트워크. [v0.7 보완] 앱 레벨 NetworkType 사용 (체인 무관 추상화) */
+  network: 'mainnet' | 'devnet' | 'testnet'
 
   /** RPC HTTP 엔드포인트 URL */
   rpcUrl: string
@@ -224,13 +224,15 @@ interface SolanaAdapterConfig {
 ```toml
 # CORE-01 config.toml에서 로드되는 Solana 관련 설정
 
+# [v0.7 보완] config 키는 앱 레벨 NetworkType ('mainnet') 사용.
+# RPC URL의 'mainnet-beta'는 Solana 공식 도메인명이므로 그대로 유지.
 [rpc.solana]
-mainnet = "https://api.mainnet-beta.solana.com"
+mainnet = "https://api.mainnet-beta.solana.com"    # mainnet -> mainnet-beta RPC URL 매핑
 devnet = "https://api.devnet.solana.com"
 testnet = "https://api.testnet.solana.com"
 
 [rpc.solana.ws]
-mainnet = "wss://api.mainnet-beta.solana.com"
+mainnet = "wss://api.mainnet-beta.solana.com"      # mainnet -> mainnet-beta WebSocket 매핑
 devnet = "wss://api.devnet.solana.com"
 ```
 
@@ -241,14 +243,16 @@ devnet = "wss://api.devnet.solana.com"
 
 function createSolanaFactory(config: AppConfig): AdapterFactory {
   return (network: NetworkType, _rpcUrl: string): IChainAdapter => {
-    // network에 따라 적절한 RPC URL 선택
-    const networkKey = network === 'mainnet-beta' ? 'mainnet' : network
-    const rpcUrl = config.rpc.solana[networkKey]
-    const wsUrl = config.rpc.solana.ws?.[networkKey]
+    // [v0.7 보완] network는 앱 레벨 NetworkType ('mainnet' | 'devnet' | 'testnet')
+    // config.toml의 키와 직접 대응하므로 별도 변환 불필요
+    // 참고: Solana의 실제 RPC URL은 'api.mainnet-beta.solana.com'이지만
+    //       앱 레벨에서는 'mainnet'으로 추상화. RPC URL 매핑은 config.toml이 담당.
+    const rpcUrl = config.rpc.solana[network]
+    const wsUrl = config.rpc.solana.ws?.[network]
       ?? rpcUrl.replace('https://', 'wss://').replace('http://', 'ws://')
 
     return new SolanaAdapter({
-      network: network as 'mainnet-beta' | 'devnet' | 'testnet',
+      network,
       rpcUrl,
       wsUrl,
       commitment: 'confirmed',

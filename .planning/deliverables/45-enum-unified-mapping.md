@@ -3,11 +3,13 @@
 **문서 ID:** ENUM-MAP
 **작성일:** 2026-02-06
 **v0.6 업데이트:** 2026-02-08
+**v0.7 보완:** 2026-02-08
 **상태:** 완료
 **참조:** CORE-02 (25-sqlite-schema.md), LOCK-MECH (33-time-lock-approval-mechanism.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), NOTI-ARCH (35-notification-architecture.md), API-SPEC (37-rest-api-complete-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), CHAIN-EXT-06 (61-price-oracle-spec.md)
 **Phase:** 12-high-schema-unification (Plan 12-01)
 **해결 항목:** ENUM-01, ENUM-02, ENUM-03, ENUM-04
 **v0.6 통합:** INTEG-02 (TransactionType 5개, PolicyType 10개, ActionErrorCode 7개, PriceSource 5개)
+**v0.7 보완:** SCHEMA-03 (ChainType 2개, NetworkType 3개 추가 -- agents CHECK 제약 SSoT)
 
 ---
 
@@ -33,6 +35,8 @@
 | 10 | AutoStop | AutoStopRuleType | 5 | KILL-AUTO-EVM | auto_stop_rules 테이블 |
 | 11 | Action | ActionErrorCode | 7 | CHAIN-EXT-07 | (v0.6 추가) Action Provider 에러 코드 |
 | 12 | Price | PriceSource | 5 | CHAIN-EXT-06 | (v0.6 추가) 가격 오라클 소스 식별자 |
+| 13 | Agent | ChainType | 2 | CORE-02 | (v0.7 추가) agents.chain CHECK SSoT |
+| 14 | Agent | NetworkType | 3 | CORE-02 | (v0.7 추가) agents.network CHECK SSoT |
 
 ---
 
@@ -576,6 +580,93 @@ type PriceSource = z.infer<typeof PriceSourceEnum>
 
 ---
 
+### 2.13 ChainType (v0.7 추가)
+
+**SSoT:** CORE-02 (25-sqlite-schema.md) agents 테이블 chain CHECK 제약
+**Phase 30 추가:** SCHEMA-03 -- agents 테이블 chain 컬럼의 데이터 무결성 확보
+
+| 값 | DB CHECK | Drizzle ORM | Zod Schema | 설명 |
+|----|----------|-------------|------------|------|
+| `solana` | O | O | O | Solana 블록체인 |
+| `ethereum` | O | O | O | Ethereum 블록체인 (EVM) |
+
+**DB CHECK:**
+```sql
+CHECK (chain IN ('solana', 'ethereum'))
+```
+
+**Drizzle ORM:**
+```typescript
+chain: text('chain').$type<'solana' | 'ethereum'>().notNull()
+```
+
+**Zod Schema:**
+```typescript
+const ChainTypeEnum = z.enum(['solana', 'ethereum'])
+```
+
+**TypeScript Type (`as const` SSoT 파생):**
+```typescript
+// SSoT: as const -> TS type -> Zod enum -> Drizzle $type -> DB CHECK
+export const CHAIN_TYPES = ['solana', 'ethereum'] as const
+export type ChainType = typeof CHAIN_TYPES[number]
+// = 'solana' | 'ethereum'
+
+export const ChainTypeEnum = z.enum(CHAIN_TYPES)
+```
+
+**agents 테이블 chain CHECK와 1:1 대응:** `CHAIN_TYPES` 배열의 값이 agents.chain CHECK 제약과 정확히 일치해야 한다. 새 체인 추가 시 이 배열, Zod enum, Drizzle $type, DB CHECK를 모두 갱신한다.
+
+---
+
+### 2.14 NetworkType (v0.7 추가)
+
+**SSoT:** CORE-02 (25-sqlite-schema.md) agents 테이블 network CHECK 제약
+**Phase 30 추가:** SCHEMA-03 -- agents 테이블 network 컬럼의 데이터 무결성 확보 + network 값 'mainnet' 통일
+
+| 값 | DB CHECK | Drizzle ORM | Zod Schema | 설명 |
+|----|----------|-------------|------------|------|
+| `mainnet` | O | O | O | 메인넷 (Solana: mainnet-beta 매핑, EVM: mainnet) |
+| `devnet` | O | O | O | 개발넷 |
+| `testnet` | O | O | O | 테스트넷 (EVM: sepolia/goerli 등 매핑) |
+
+**DB CHECK:**
+```sql
+CHECK (network IN ('mainnet', 'devnet', 'testnet'))
+```
+
+**Drizzle ORM:**
+```typescript
+network: text('network').$type<'mainnet' | 'devnet' | 'testnet'>().notNull()
+```
+
+**Zod Schema:**
+```typescript
+const NetworkTypeEnum = z.enum(['mainnet', 'devnet', 'testnet'])
+```
+
+**TypeScript Type (`as const` SSoT 파생):**
+```typescript
+// SSoT: as const -> TS type -> Zod enum -> Drizzle $type -> DB CHECK
+export const NETWORK_TYPES = ['mainnet', 'devnet', 'testnet'] as const
+export type NetworkType = typeof NETWORK_TYPES[number]
+// = 'mainnet' | 'devnet' | 'testnet'
+
+export const NetworkTypeEnum = z.enum(NETWORK_TYPES)
+```
+
+**체인별 RPC URL 매핑 (AdapterRegistry 책임):**
+
+| NetworkType (앱 레벨) | Solana RPC URL | EVM (참고) |
+|----------------------|---------------|------------|
+| `mainnet` | `https://api.mainnet-beta.solana.com` | Ethereum mainnet |
+| `devnet` | `https://api.devnet.solana.com` | Goerli/Sepolia |
+| `testnet` | `https://api.testnet.solana.com` | Holesky 등 |
+
+> **핵심 설계 결정:** 앱 레벨 network 값은 체인 무관 추상화이다. Solana의 실제 네트워크명 'mainnet-beta'는 AdapterRegistry에서 RPC URL 매핑 시에만 사용하며, DB/API/SDK에서는 `'mainnet'`으로 통일한다. 이로써 클라이언트가 체인별 네트워크 명명 규칙을 알 필요가 없다.
+
+---
+
 ## 3. 클라이언트 표시 상태
 
 ### 3.1 KILL_SWITCH는 DB 상태가 아닌 클라이언트 표시 상태
@@ -656,6 +747,8 @@ Enum과 함께 혼동 가능한 API 경로도 기록한다.
 | AutoStopRuleType | - | - | - | O (SSoT) | - | - | - | - | - | - |
 | ActionErrorCode | - | - | - | - | - | O | O | - | O (SSoT) | - |
 | PriceSource | - | - | - | - | - | - | - | - | - | O (SSoT) |
+| ChainType | O (CHECK) | - | - | - | - | O | O | O (chain) | - | - |
+| NetworkType | O (CHECK) | - | - | - | - | O | O | O (network) | - | - |
 
 ---
 
@@ -720,10 +813,19 @@ Phase 22-24에서 정의된 도메인별 에러 코드 전체 목록이다. 37-r
 - **추가:** v0.6 에러 코드 교차 참조 20개
 - **수정 문서:** 25-sqlite-schema.md (TransactionType CHECK, PolicyType CHECK), 27-chain-adapter-interface.md (메서드 4개 추가)
 
+### ENUM-06 해결: v0.7 ChainType/NetworkType 추가 (SCHEMA-03)
+
+- **추가:** ChainType 2개 (solana, ethereum) -- agents.chain CHECK SSoT
+- **추가:** NetworkType 3개 (mainnet, devnet, testnet) -- agents.network CHECK SSoT
+- **network 통일:** 'mainnet-beta' -> 'mainnet', 'sepolia' -> 'testnet' (체인 무관 추상화)
+- **파생 체인:** `as const -> TS type -> Zod enum -> Drizzle $type -> DB CHECK`
+- **수정 문서:** 25-sqlite-schema.md (agents CHECK), 37-rest-api, 26-keystore, 31-solana, 29-api (network 통일)
+
 ---
 
 *문서 ID: ENUM-MAP*
 *작성일: 2026-02-06*
 *v0.6 업데이트: 2026-02-08*
+*v0.7 보완: 2026-02-08*
 *Phase: 12-high-schema-unification*
 *상태: 완료*

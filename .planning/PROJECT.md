@@ -8,20 +8,11 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## 현재 마일스톤: v0.7 구현 장애 요소 해소
-
-**목표:** v0.1~v0.6 설계 문서에서 도출된 25건(CRITICAL 7 + HIGH 10 + MEDIUM 8)의 구현 장애 요소를 해소하여, 코드 작성 전에 "설계대로 구현하면 동작하지 않는 부분"을 제거한다.
-
-**대상 기능:**
-- 체인 어댑터 & 트랜잭션 안정성 (blockhash 경쟁 조건, EVM nonce, keystore 수학, fee TTL)
-- 데몬 프로세스 & 보안 기반 (JWT rotation, flock 잠금, 2단계 Rate Limiter, killSwitch, 패스워드 통일)
-- 의존성 & 빌드 환경 (SIWE viem 전환, sidecar 크로스 컴파일)
-- API & 통합 프로토콜 완성 (Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서)
-- 스키마 & 설정 확정 (환경변수 매핑, timestamp 정밀도, CHECK 제약, Docker UID)
-
 ## 현재 상태
 
-v0.1~v0.6 완료 (2026-02-08). 68개 플랜, 185개 요구사항, 30개 설계 문서(24-64) + 5개 대응표 + 11개 테스트 전략 문서. 전체 설계 단계 완료 — v0.7 구현 장애 요소 해소 진행 중.
+v0.1~v0.7 완료 (2026-02-08). 79개 플랜, 210개 요구사항, 30개 설계 문서(24-64) + 5개 대응표 + 11개 테스트 전략 문서. 전체 설계 단계 완료 + 구현 장애 요소 25건 해소. 코드 구현 준비 완료.
+
+**v0.7 최종 결과:** 25건 구현 장애 요소(CRITICAL 7 + HIGH 10 + MEDIUM 8) 기존 설계 문서 9개 직접 수정으로 해소. 150+ [v0.7 보완] 태그. Audit PASSED (25/25 reqs, 5/5 phases, 7/7 integrations, 5/5 E2E flows).
 
 ## 요구사항
 
@@ -70,13 +61,11 @@ v0.1~v0.6 완료 (2026-02-08). 68개 플랜, 185개 요구사항, 30개 설계 �
 - ✓ IPriceOracle + USD 기준 정책 평가 전환 — v0.6 (ORACLE-01~04)
 - ✓ IActionProvider resolve-then-execute + MCP 자동 변환 + Jupiter Swap — v0.6 (ACTION-01~05)
 - ✓ 확장 기능 테스트 전략 166건 + 기존 문서 8개 v0.6 통합 — v0.6 (TEST-01~03, INTEG-01~02)
+- ✓ 구현 장애 요소 25건 해소 (CRITICAL 7 + HIGH 10 + MEDIUM 8) — v0.7 (CHAIN-01~04, DAEMON-01~06, DEPS-01~02, API-01~07, SCHEMA-01~06)
 
 ### 활성
 
-v0.7 구현 장애 요소 해소 (25건):
-- CRITICAL 7건: blockhash 경쟁 조건, EVM nonce 인터페이스, SIWE 의존성, JWT rotation, flock 잠금, Tauri 종료 타임아웃, keystore nonce 수학
-- HIGH 10건: Rate Limiter 2단계, killSwitchGuard 허용 목록, Tauri CORS, Owner disconnect cascade, 패스워드 통일, status 응답값, Setup Wizard 순서, 환경변수 매핑, timestamp 정밀도, 단일 인스턴스
-- MEDIUM 8건: Python snake_case, Docker UID, amount TEXT 근거, fee TTL, 채널 삭제, 크로스 컴파일, Zod export, CHECK 제약조건
+(v0.7 완료 — 다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -99,8 +88,11 @@ v0.3 설계 논리 일관성 확보 완료 (2026-02-06). 4개 페이즈, 8개 �
 v0.4 테스트 전략 및 계획 수립 완료 (2026-02-07). 5개 페이즈, 9개 플랜, 26개 요구사항, 11개 테스트 전략 문서 (docs 41-51).
 v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9개 플랜, 24개 요구사항, 4개 신규 문서(52-55) + 11개 기존 문서 수정.
 v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11개 플랜, 30개 요구사항, 9개 신규 문서(56-64) + 기존 8개 문서 v0.6 통합.
+v0.7 구현 장애 요소 해소 완료 (2026-02-08). 5개 페이즈, 11개 플랜, 25개 요구사항, 기존 9개 설계 문서 직접 수정.
 
-**기술 스택 (v0.2 확정, v0.6 확장 설계 완료):**
+**누적:** 7 milestones (v0.1-v0.7), 30 phases, 79 plans, 210 requirements, 30 설계 문서 (24-64)
+
+**기술 스택 (v0.2 확정, v0.6 확장 설계 완료, v0.7 의존성 정리):**
 - Runtime: Node.js 22 LTS
 - Server: Hono 4.x (OpenAPIHono)
 - DB: SQLite (better-sqlite3) + Drizzle ORM
@@ -113,11 +105,11 @@ v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11�
 - Schema: Zod SSoT → TypeScript → OpenAPI 3.0
 
 **설계 문서:** 30개 (deliverables 24-64.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md) + 1개 확장 테스트 전략 (64.md)
+- v0.7 보완: ethers/siwe → viem/siwe 전환, 5개 타겟 플랫폼 확정, prebuildify 네이티브 번들 전략
 
 ### 알려진 이슈
 
-- Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.4 스파이크)
-- CORE-02 스키마에 Phase 8 확장 (reserved_amount, system_state 등) 미반영 (구현 시 마이그레이션)
+- Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.4 스파이크, v0.7 prebuildify 전략 설계 완료)
 
 ## 제약사항
 
@@ -169,5 +161,16 @@ v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11�
 | approve 독립 정책 카테고리 | 권한 위임은 전송보다 위험, 별도 정책 규칙 필요 | ✓ Good — v0.6 설계 완성 |
 | USD 기준 정책 평가 | 토큰 종류 무관하게 달러 금액으로 티어 분류 | ✓ Good — v0.6 설계 완성 |
 
+| Solana blockhash freshness guard | sign 직전 잔여 수명 < 20초이면 갱신, 경쟁 조건 제거 | ✓ Good — v0.7 해소 |
+| AES-GCM nonce 충돌 구조적 불가능 | 매번 새 salt→새 AES 키→n=1, Birthday Problem 전제 미충족 | ✓ Good — v0.7 정정 |
+| JWT Secret dual-key 5분 윈도우 | 로테이션 시 기존 세션 즉시 무효화 방지, 운영 단순성 | ✓ Good — v0.7 해소 |
+| flock 기반 인스턴스 잠금 | OS 커널 원자적 잠금, PID TOCTOU 제거, Windows 포트 바인딩 fallback | ✓ Good — v0.7 해소 |
+| Rate Limiter 2단계 분리 | 미인증 공격자가 인증 사용자 rate limit 소진 불가 | ✓ Good — v0.7 해소 |
+| Master Password Argon2id 통일 | SHA-256 폐기, X-Master-Password 평문 (localhost only) | ✓ Good — v0.7 해소 |
+| SIWE viem/siwe 전환 | ethers 130KB+ 제거, 3단계 검증 (parse→validate→verify) | ✓ Good — v0.7 해소 |
+| Tauri sidecar 종료 35초 | 데몬 30초 + 5초 마진, SQLite WAL 손상 방지 | ✓ Good — v0.7 해소 |
+| config.toml 중첩 섹션 금지 | WAIAAS_{SECTION}_{KEY} 1:1 매핑 단순성 | ✓ Good — v0.7 해소 |
+| SQLite 타임스탬프 초 단위 통일 | UUID v7 ms 정밀도가 동일 초 내 순서 보장 | ✓ Good — v0.7 해소 |
+
 ---
-*최종 업데이트: 2026-02-08 after v0.7 milestone start*
+*최종 업데이트: 2026-02-08 after v0.7 milestone complete*

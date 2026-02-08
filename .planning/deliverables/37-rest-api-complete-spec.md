@@ -479,7 +479,7 @@ const BalanceResponseSchema = z.object({
   }),
   network: z.string().openapi({
     description: '네트워크 식별자',
-    example: 'mainnet-beta',
+    example: 'mainnet',  // [v0.7 보완] NetworkType 통일: mainnet-beta -> mainnet
   }),
 }).openapi('BalanceResponse')
 ```
@@ -494,7 +494,7 @@ const BalanceResponseSchema = z.object({
   "symbol": "SOL",
   "formatted": "1.5 SOL",
   "chain": "solana",
-  "network": "mainnet-beta"
+  "network": "mainnet"
 }
 ```
 
@@ -536,7 +536,7 @@ const AddressResponseSchema = z.object({
   }),
   network: z.string().openapi({
     description: '네트워크 식별자',
-    example: 'mainnet-beta',
+    example: 'mainnet',  // [v0.7 보완] NetworkType 통일: mainnet-beta -> mainnet
   }),
   encoding: z.enum(['base58', 'hex']).openapi({
     description: '주소 인코딩 방식 (Solana: base58, EVM: hex)',
@@ -550,7 +550,7 @@ const AddressResponseSchema = z.object({
 {
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "chain": "solana",
-  "network": "mainnet-beta",
+  "network": "mainnet",
   "encoding": "base58"
 }
 ```
@@ -1177,7 +1177,7 @@ const AssetsResponseSchema = z.object({
   ],
   "totalUsdValue": "275.00",
   "chain": "solana",
-  "network": "mainnet-beta"
+  "network": "mainnet"
 }
 ```
 
@@ -2358,7 +2358,7 @@ const AgentListResponseSchema = z.object({
       "name": "trading-agent-01",
       "status": "ACTIVE",
       "chain": "solana",
-      "network": "mainnet-beta",
+      "network": "mainnet",
       "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
       "createdAt": "2026-02-01T00:00:00.000Z",
       "sessionCount": 2,
@@ -2410,7 +2410,7 @@ const AgentDetailResponseSchema = z.object({
     "name": "trading-agent-01",
     "status": "ACTIVE",
     "chain": "solana",
-    "network": "mainnet-beta",
+    "network": "mainnet",
     "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
     "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
     "createdAt": "2026-02-01T00:00:00.000Z",
@@ -2816,7 +2816,7 @@ const AdminStatusResponseSchema = z.object({
     "actor": null
   },
   "adapters": [
-    { "chain": "solana", "network": "mainnet-beta", "healthy": true, "lastCheck": "2026-02-05T10:30:00.000Z" }
+    { "chain": "solana", "network": "mainnet", "healthy": true, "lastCheck": "2026-02-05T10:30:00.000Z" }
   ],
   "workers": {
     "delayQueue": { "running": true, "lastRun": "2026-02-05T10:30:10.000Z" },

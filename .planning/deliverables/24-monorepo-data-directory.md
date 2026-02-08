@@ -4,8 +4,9 @@
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
 **v0.7 API 통합 프로토콜:** 2026-02-08
+**v0.7 스키마 설정 확정:** 2026-02-08
 **상태:** 완료
-**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 38-sdk-mcp-interface.md (v0.7)
+**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 38-sdk-mcp-interface.md (v0.7), 35-notification-architecture.md (v0.7 notifications 확장 키)
 
 ---
 
@@ -690,20 +691,51 @@ async function initDataDir(dataDir: string): Promise<void> {
 3. 환경변수 (WAIAAS_ 접두어)
 ```
 
-### 3.2 환경변수 매핑 규칙
+### 3.2 환경변수 매핑 규칙 [v0.7 보완]
+
+> **[v0.7 보완] 중첩 섹션 금지 규칙:** config.toml에서 `[rpc.solana]`, `[notifications.telegram]`, `[security.auto_stop]` 같은 중첩 섹션(dotted section)을 **사용하지 않는다**. 모든 키는 `[section]` 내 평탄화된 snake_case 키로 정의한다. 이는 환경변수 매핑의 1:1 단순성을 보장하기 위함이다.
 
 TOML 섹션과 키는 다음 규칙으로 환경변수에 매핑된다:
 
 ```
-WAIAAS_{SECTION}_{KEY} -> [section].key
+규칙: WAIAAS_{SECTION}_{KEY} -> [section].key
+     (SECTION = 대문자, KEY = 대문자, 언더스코어 구분)
+
+예시: WAIAAS_RPC_SOLANA_MAINNET -> [rpc].solana_mainnet
 ```
+
+**평탄화 매핑 -- 기존 중첩 -> 평탄화 대조표:**
+
+| 기존 중첩 구조 | 평탄화 후 | 환경변수 |
+|--------------|----------|---------|
+| `[rpc.solana].mainnet` | `[rpc].solana_mainnet` | `WAIAAS_RPC_SOLANA_MAINNET` |
+| `[rpc.solana].devnet` | `[rpc].solana_devnet` | `WAIAAS_RPC_SOLANA_DEVNET` |
+| `[rpc.solana].testnet` | `[rpc].solana_testnet` | `WAIAAS_RPC_SOLANA_TESTNET` |
+| `[rpc.solana.ws].mainnet` | `[rpc].solana_ws_mainnet` | `WAIAAS_RPC_SOLANA_WS_MAINNET` |
+| `[rpc.solana.ws].devnet` | `[rpc].solana_ws_devnet` | `WAIAAS_RPC_SOLANA_WS_DEVNET` |
+| `[rpc.ethereum].mainnet` | `[rpc].ethereum_mainnet` | `WAIAAS_RPC_ETHEREUM_MAINNET` |
+| `[rpc.ethereum].sepolia` | `[rpc].ethereum_sepolia` | `WAIAAS_RPC_ETHEREUM_SEPOLIA` |
+| `[notifications.telegram].bot_token` | `[notifications].telegram_bot_token` | `WAIAAS_NOTIFICATIONS_TELEGRAM_BOT_TOKEN` |
+| `[notifications.telegram].chat_id` | `[notifications].telegram_chat_id` | `WAIAAS_NOTIFICATIONS_TELEGRAM_CHAT_ID` |
+| `[notifications.discord].webhook_url` | `[notifications].discord_webhook_url` | `WAIAAS_NOTIFICATIONS_DISCORD_WEBHOOK_URL` |
+| `[notifications.ntfy].server` | `[notifications].ntfy_server` | `WAIAAS_NOTIFICATIONS_NTFY_SERVER` |
+| `[notifications.ntfy].topic` | `[notifications].ntfy_topic` | `WAIAAS_NOTIFICATIONS_NTFY_TOPIC` |
+| `[security.auto_stop].consecutive_failures_threshold` | `[security].auto_stop_consecutive_failures_threshold` | `WAIAAS_SECURITY_AUTO_STOP_CONSECUTIVE_FAILURES_THRESHOLD` |
+| `[security.policy_defaults].delay_seconds` | `[security].policy_defaults_delay_seconds` | `WAIAAS_SECURITY_POLICY_DEFAULTS_DELAY_SECONDS` |
+| `[security.policy_defaults].approval_timeout` | `[security].policy_defaults_approval_timeout` | `WAIAAS_SECURITY_POLICY_DEFAULTS_APPROVAL_TIMEOUT` |
+| `[security.kill_switch].recovery_cooldown` | `[security].kill_switch_recovery_cooldown` | `WAIAAS_SECURITY_KILL_SWITCH_RECOVERY_COOLDOWN` |
+| `[security.kill_switch].max_recovery_attempts` | `[security].kill_switch_max_recovery_attempts` | `WAIAAS_SECURITY_KILL_SWITCH_MAX_RECOVERY_ATTEMPTS` |
+
+**전체 환경변수 매핑 테이블:**
 
 | 환경변수 | TOML 키 | 예시 |
 |---------|---------|------|
 | `WAIAAS_DAEMON_PORT` | `[daemon].port` | `3001` |
 | `WAIAAS_DAEMON_LOG_LEVEL` | `[daemon].log_level` | `debug` |
 | `WAIAAS_KEYSTORE_ARGON2_MEMORY` | `[keystore].argon2_memory` | `65536` |
-| `WAIAAS_RPC_SOLANA_MAINNET` | `[rpc.solana].mainnet` | `https://custom.rpc.com` |
+| `WAIAAS_RPC_SOLANA_MAINNET` | `[rpc].solana_mainnet` | `https://custom.rpc.com` |
+| `WAIAAS_RPC_SOLANA_WS_MAINNET` | `[rpc].solana_ws_mainnet` | `wss://custom.rpc.com` |
+| `WAIAAS_RPC_ETHEREUM_MAINNET` | `[rpc].ethereum_mainnet` | `https://eth-mainnet.alchemyapi.io/v2/...` |
 | `WAIAAS_SECURITY_SESSION_TTL` | `[security].session_ttl` | `86400` |
 | `WAIAAS_SECURITY_JWT_SECRET` | `[security].jwt_secret` | `a1b2c3...` (64자 hex) |
 | `WAIAAS_SECURITY_NONCE_STORAGE` | `[security].nonce_storage` | `"memory"` |
@@ -712,11 +744,15 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_IP_RPM` | `[security].rate_limit_global_ip_rpm` | `1000` |
 | `WAIAAS_SECURITY_RATE_LIMIT_SESSION_RPM` | `[security].rate_limit_session_rpm` | `300` |
 | `WAIAAS_SECURITY_RATE_LIMIT_TX_RPM` | `[security].rate_limit_tx_rpm` | `10` |
-| `WAIAAS_SECURITY_AUTO_STOP_CONSECUTIVE_FAILURES_THRESHOLD` | `[security.auto_stop].consecutive_failures_threshold` | `3` |
-| `WAIAAS_SECURITY_POLICY_DEFAULTS_DELAY_SECONDS` | `[security.policy_defaults].delay_seconds` | `300` |
-| `WAIAAS_SECURITY_POLICY_DEFAULTS_APPROVAL_TIMEOUT` | `[security.policy_defaults].approval_timeout` | `3600` |
-| `WAIAAS_SECURITY_KILL_SWITCH_RECOVERY_COOLDOWN` | `[security.kill_switch].recovery_cooldown` | `1800` |
-| `WAIAAS_SECURITY_KILL_SWITCH_MAX_RECOVERY_ATTEMPTS` | `[security.kill_switch].max_recovery_attempts` | `3` |
+| `WAIAAS_SECURITY_AUTO_STOP_CONSECUTIVE_FAILURES_THRESHOLD` | `[security].auto_stop_consecutive_failures_threshold` | `3` |
+| `WAIAAS_SECURITY_POLICY_DEFAULTS_DELAY_SECONDS` | `[security].policy_defaults_delay_seconds` | `300` |
+| `WAIAAS_SECURITY_POLICY_DEFAULTS_APPROVAL_TIMEOUT` | `[security].policy_defaults_approval_timeout` | `3600` |
+| `WAIAAS_SECURITY_KILL_SWITCH_RECOVERY_COOLDOWN` | `[security].kill_switch_recovery_cooldown` | `1800` |
+| `WAIAAS_SECURITY_KILL_SWITCH_MAX_RECOVERY_ATTEMPTS` | `[security].kill_switch_max_recovery_attempts` | `3` |
+| `WAIAAS_NOTIFICATIONS_TELEGRAM_BOT_TOKEN` | `[notifications].telegram_bot_token` | `123456:ABC-DEF...` |
+| `WAIAAS_NOTIFICATIONS_DISCORD_WEBHOOK_URL` | `[notifications].discord_webhook_url` | `https://discord.com/api/webhooks/...` |
+| `WAIAAS_NOTIFICATIONS_NTFY_SERVER` | `[notifications].ntfy_server` | `https://ntfy.sh` |
+| `WAIAAS_NOTIFICATIONS_MIN_CHANNELS` | `[notifications].min_channels` | `2` |
 | `WAIAAS_WALLETCONNECT_PROJECT_ID` | `[walletconnect].project_id` | `""` |
 
 **특수 환경변수 (TOML에 없는 항목):**
@@ -728,7 +764,9 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `WAIAAS_MASTER_PASSWORD` | 마스터 패스워드 (비대화형 모드) | `my-secure-password` |
 | `WAIAAS_MASTER_PASSWORD_FILE` | 마스터 패스워드 파일 경로 | `/run/secrets/master_pw` |
 
-### 3.3 전체 키-값 구조
+### 3.3 전체 키-값 구조 [v0.7 보완]
+
+> **[v0.7 보완]** 모든 섹션이 평탄화된 snake_case 키만 사용한다. 중첩 섹션(`[section.subsection]`)은 허용하지 않는다.
 
 #### [daemon] 섹션 -- 데몬 서버 설정
 
@@ -755,20 +793,19 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 
 **Note:** Argon2id 기본 파라미터(m=64MiB, t=3, p=4)는 06-CONTEXT.md에서 확정된 값이다. config.toml로 조정 가능하지만, 기본값 미만으로 설정 시 경고를 출력한다.
 
-#### [rpc] 섹션 -- 체인별 RPC 엔드포인트
+#### [rpc] 섹션 -- 체인별 RPC 엔드포인트 [v0.7 보완: 평탄화]
+
+> **[v0.7 보완]** 기존 `[rpc.solana]`, `[rpc.solana.ws]`, `[rpc.ethereum]` 중첩 섹션이 `[rpc]` 단일 섹션으로 평탄화되었다.
 
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
-| `[rpc.solana]` | | | | Solana RPC 설정 |
-| `.mainnet` | string | `"https://api.mainnet-beta.solana.com"` | URL | Mainnet Beta RPC |
-| `.devnet` | string | `"https://api.devnet.solana.com"` | URL | Devnet RPC |
-| `.testnet` | string | `"https://api.testnet.solana.com"` | URL | Testnet RPC |
-| `[rpc.solana.ws]` | | | | Solana WebSocket 설정 |
-| `.mainnet` | string | `"wss://api.mainnet-beta.solana.com"` | URL | Mainnet WebSocket |
-| `.devnet` | string | `"wss://api.devnet.solana.com"` | URL | Devnet WebSocket |
-| `[rpc.ethereum]` | | | | Ethereum RPC 설정 |
-| `.mainnet` | string | `""` | URL | Mainnet RPC (사용자 설정 필수) |
-| `.sepolia` | string | `""` | URL | Sepolia Testnet RPC |
+| `solana_mainnet` | string | `"https://api.mainnet-beta.solana.com"` | URL | Solana Mainnet Beta RPC |
+| `solana_devnet` | string | `"https://api.devnet.solana.com"` | URL | Solana Devnet RPC |
+| `solana_testnet` | string | `"https://api.testnet.solana.com"` | URL | Solana Testnet RPC |
+| `solana_ws_mainnet` | string | `"wss://api.mainnet-beta.solana.com"` | URL | Solana Mainnet WebSocket |
+| `solana_ws_devnet` | string | `"wss://api.devnet.solana.com"` | URL | Solana Devnet WebSocket |
+| `ethereum_mainnet` | string | `""` | URL | Ethereum Mainnet RPC (사용자 설정 필수) |
+| `ethereum_sepolia` | string | `""` | URL | Ethereum Sepolia Testnet RPC |
 
 #### [database] 섹션 -- SQLite 설정
 
@@ -780,57 +817,47 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `cache_size` | integer | `64000` | 2000-512000 (KiB, 음수로 전달) | SQLite 페이지 캐시 크기 |
 | `mmap_size` | integer | `268435456` | 0-1073741824 (bytes) | 메모리 매핑 크기 (기본: 256 MiB) |
 
-#### [notifications] 섹션 -- 알림 채널 설정 (Phase 8에서 상세화)
+#### [notifications] 섹션 -- 알림 채널 설정 [v0.7 보완: 평탄화 + 확장 키]
 
+> **[v0.7 보완]** 기존 `[notifications.telegram]`, `[notifications.discord]`, `[notifications.ntfy]` 중첩 섹션이 `[notifications]` 단일 섹션으로 평탄화되었다. 35-notification-architecture.md 섹션 12.4의 확장 키(min_channels, health_check_interval 등)도 통합하였다.
+>
 > **채널 최소 요구 규칙:** 활성 채널 수와 정책 엔진 4-tier 동작의 관계는 35-notification-architecture.md 구현 노트 참조.
 
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
 | `enabled` | boolean | `false` | true/false | 알림 시스템 활성화 여부 |
-| `[notifications.telegram]` | | | | Telegram 알림 |
-| `.bot_token` | string | `""` | 문자열 | Bot API 토큰 |
-| `.chat_id` | string | `""` | 문자열 | 대상 채팅 ID |
-| `[notifications.discord]` | | | | Discord 알림 |
-| `.webhook_url` | string | `""` | URL | Webhook URL |
-| `[notifications.ntfy]` | | | | ntfy.sh 알림 |
-| `.server` | string | `"https://ntfy.sh"` | URL | ntfy 서버 URL |
-| `.topic` | string | `""` | 문자열 | 구독 토픽 |
+| `min_channels` | integer | `2` | 1-10 | 최소 활성 채널 수. 미만 시 NOTIFY/DELAY/APPROVAL 정책 사용 불가 (35-notification-architecture.md 섹션 12.4) |
+| `health_check_interval` | integer | `300` | 60-3600 (초) | healthCheck 주기 -- 5분 |
+| `log_retention_days` | integer | `30` | 7-365 (일) | notification_log 보존 기간 |
+| `dedup_ttl` | integer | `300` | 60-3600 (초) | 중복 방지 TTL -- 5분 |
+| `telegram_bot_token` | string | `""` | 문자열 | Telegram Bot API 토큰 |
+| `telegram_chat_id` | string | `""` | 문자열 | Telegram 대상 채팅 ID |
+| `discord_webhook_url` | string | `""` | URL | Discord Webhook URL |
+| `ntfy_server` | string | `"https://ntfy.sh"` | URL | ntfy 서버 URL |
+| `ntfy_topic` | string | `""` | 문자열 | ntfy 구독 토픽 |
 
-#### [security] 섹션 -- 보안 설정
+#### [security] 섹션 -- 보안 설정 [v0.7 보완: 평탄화]
+
+> **[v0.7 보완]** 기존 `[security.auto_stop]`, `[security.policy_defaults]`, `[security.kill_switch]` 중첩 섹션이 `[security]` 단일 섹션으로 평탄화되었다. 키 이름에 접두어를 추가하여 의미를 유지한다.
 
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
-| `session_ttl` | integer | `86400` | 300-604800 (초) | 세션 토큰 유효 기간 — 24시간. Phase 7 SESS-PROTO에서 24시간 기본으로 확정 |
+| `session_ttl` | integer | `86400` | 300-604800 (초) | 세션 토큰 유효 기간 -- 24시간. Phase 7 SESS-PROTO에서 24시간 기본으로 확정 |
 | `jwt_secret` | string | `""` | 64자 hex (256비트) | [v0.7 보완] **초기값 전용.** `waiaas init` 시 `crypto.randomBytes(32).toString('hex')` 자동 생성하여 config에 기록. 이후 DB system_state에서 관리. `waiaas secret rotate` 시 config.toml은 갱신하지 않음. 30-session-token-protocol.md 섹션 2.7.5 참조 |
 | `max_sessions_per_agent` | integer | `5` | 1-50 | 에이전트당 최대 동시 세션 수 |
 | `max_pending_tx` | integer | `10` | 1-100 | 최대 대기 트랜잭션 수 |
 | `nonce_storage` | string | `"memory"` | `"memory"`, `"sqlite"` | [v0.7 보완] Nonce 저장소 타입. `memory`: 인메모리 LRU (기본, 빠름), `sqlite`: SQLite nonces 테이블 (데몬 재시작 후 nonce 유지). SESS-PROTO 섹션 4.2 INonceStore 참조 |
 | `nonce_cache_max` | integer | `1000` | 100-10000 | Nonce LRU 캐시 최대 항목 수 (memory 모드에서만 유효. SESS-PROTO 참조) |
-| `nonce_cache_ttl` | integer | `300` | 60-600 (초) | Nonce TTL — 5분 |
+| `nonce_cache_ttl` | integer | `300` | 60-600 (초) | Nonce TTL -- 5분 |
 | `rate_limit_global_ip_rpm` | integer | `1000` | 100-10000 | [v0.7 보완] IP 기반 전역 RPM (Stage 1 globalRateLimit). localhost에서는 전체 요청 상한. 기존 `rate_limit_global_rpm`(100)에서 이름/값 변경. CORE-06 섹션 7 참조 |
 | `rate_limit_session_rpm` | integer | `300` | 10-5000 | 세션당 RPM (인증 후) |
 | `rate_limit_tx_rpm` | integer | `10` | 1-100 | 거래 전송 RPM |
 | `cors_origins` | array of string | `["http://localhost:3100", "http://127.0.0.1:3100"]` | URL 배열 | 허용 CORS origin |
-
-#### [security.auto_stop] 섹션 -- 자동 정지 규칙 설정
-
-| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
-|----|------|--------|----------|------|
-| `consecutive_failures_threshold` | integer | `3` | 1-20 | 연속 트랜잭션 실패 시 자동 정지 임계값 (AutoStopEngine CONSECUTIVE_FAILURES 규칙, KILL-AUTO-EVM 참조) |
-
-#### [security.policy_defaults] 섹션 -- 정책 기본값
-
-| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
-|----|------|--------|----------|------|
-| `delay_seconds` | integer | `300` | 60-3600 (초) | DELAY 티어 기본 쿨다운 — 5분. LOCK-MECH에서 확정 |
-| `approval_timeout` | integer | `3600` | 300-86400 (초) | APPROVAL 티어 기본 승인 대기 — 1시간. LOCK-MECH에서 확정 |
-
-#### [security.kill_switch] 섹션 -- Kill Switch 설정
-
-| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
-|----|------|--------|----------|------|
-| `recovery_cooldown` | integer | `1800` | 600-86400 (초) | 복구 최소 쿨다운 — 30분. KILL-AUTO-EVM에서 확정 |
-| `max_recovery_attempts` | integer | `3` | 1-10 | 복구 실패 시 최대 재시도 횟수 |
+| `auto_stop_consecutive_failures_threshold` | integer | `3` | 1-20 | 연속 트랜잭션 실패 시 자동 정지 임계값 (AutoStopEngine CONSECUTIVE_FAILURES 규칙, KILL-AUTO-EVM 참조) |
+| `policy_defaults_delay_seconds` | integer | `300` | 60-3600 (초) | DELAY 티어 기본 쿨다운 -- 5분. LOCK-MECH에서 확정 |
+| `policy_defaults_approval_timeout` | integer | `3600` | 300-86400 (초) | APPROVAL 티어 기본 승인 대기 -- 1시간. LOCK-MECH에서 확정 |
+| `kill_switch_recovery_cooldown` | integer | `1800` | 600-86400 (초) | 복구 최소 쿨다운 -- 30분. KILL-AUTO-EVM에서 확정 |
+| `kill_switch_max_recovery_attempts` | integer | `3` | 1-10 | 복구 실패 시 최대 재시도 횟수 |
 
 #### [walletconnect] 섹션 -- WalletConnect v2 설정 (v0.5: 선택적 편의 기능)
 
@@ -848,12 +875,18 @@ https://cloud.reown.com 에서 발급하세요.
 CLI 수동 서명은 projectId 없이도 사용 가능합니다.
 ```
 
-### 3.4 전체 기본 config.toml 예시
+### 3.4 전체 기본 config.toml 예시 [v0.7 보완: 평탄화]
+
+> **[v0.7 보완]** 모든 중첩 섹션이 제거되고 평탄화된 키만 사용한다. 환경변수 `WAIAAS_{SECTION}_{KEY}` 1:1 대응이 보장된다.
 
 ```toml
 # WAIaaS 데몬 설정 파일
 # 경로: ~/.waiaas/config.toml
 # 문서: https://github.com/waiaas/waiaas/docs/config.md
+#
+# [v0.7 보완] 중첩 섹션 금지: [rpc.solana] 같은 dotted section을 사용하지 않습니다.
+# 모든 키는 [section] 내 평탄화된 snake_case로 정의합니다.
+# 환경변수 매핑: WAIAAS_{SECTION}_{KEY} (1:1 대응)
 
 # ─────────────────────────────────────────
 # 데몬 서버 설정
@@ -891,69 +924,63 @@ cache_size = 64000                 # 페이지 캐시 (KiB) -- 64 MiB
 mmap_size = 268435456              # 메모리 매핑 (bytes) -- 256 MiB
 
 # ─────────────────────────────────────────
-# RPC 엔드포인트
+# RPC 엔드포인트 [v0.7 보완: 평탄화]
 # 체인별 공용 RPC 기본값 제공. 프로덕션에서는 전용 RPC 사용 권장
+# 기존 [rpc.solana], [rpc.solana.ws], [rpc.ethereum] 중첩 섹션 제거
 # ─────────────────────────────────────────
-[rpc.solana]
-mainnet = "https://api.mainnet-beta.solana.com"
-devnet = "https://api.devnet.solana.com"
-testnet = "https://api.testnet.solana.com"
-
-[rpc.solana.ws]
-mainnet = "wss://api.mainnet-beta.solana.com"
-devnet = "wss://api.devnet.solana.com"
-
-[rpc.ethereum]
-mainnet = ""                       # 사용 시 설정 필수 (Alchemy, Infura 등)
-sepolia = ""                       # 테스트넷
+[rpc]
+solana_mainnet = "https://api.mainnet-beta.solana.com"
+solana_devnet = "https://api.devnet.solana.com"
+solana_testnet = "https://api.testnet.solana.com"
+solana_ws_mainnet = "wss://api.mainnet-beta.solana.com"
+solana_ws_devnet = "wss://api.devnet.solana.com"
+ethereum_mainnet = ""              # 사용 시 설정 필수 (Alchemy, Infura 등)
+ethereum_sepolia = ""              # 테스트넷
 
 # ─────────────────────────────────────────
-# 알림 설정 (Phase 8에서 상세 설계)
+# 알림 설정 [v0.7 보완: 평탄화 + 확장 키]
+# 기존 [notifications.telegram], [notifications.discord], [notifications.ntfy] 제거
+# 35-notification-architecture.md 섹션 12.4 확장 키 통합
+# 채널별 상세 설정은 DB (notification_channels 테이블)에 저장
+# config.toml은 시스템 레벨 설정만 담음
 # ─────────────────────────────────────────
 [notifications]
 enabled = false                    # 알림 시스템 활성화 여부
-
-[notifications.telegram]
-bot_token = ""                     # Telegram Bot API 토큰
-chat_id = ""                       # 대상 채팅 ID
-
-[notifications.discord]
-webhook_url = ""                   # Discord Webhook URL
-
-[notifications.ntfy]
-server = "https://ntfy.sh"        # ntfy 서버 URL
-topic = ""                         # 구독 토픽
+min_channels = 2                   # 최소 활성 채널 수 (미만 시 NOTIFY/DELAY/APPROVAL 정책 사용 불가)
+health_check_interval = 300        # healthCheck 주기 (초) -- 5분
+log_retention_days = 30            # notification_log 보존 기간 (일)
+dedup_ttl = 300                    # 중복 방지 TTL (초) -- 5분
+telegram_bot_token = ""            # Telegram Bot API 토큰
+telegram_chat_id = ""              # Telegram 대상 채팅 ID
+discord_webhook_url = ""           # Discord Webhook URL
+ntfy_server = "https://ntfy.sh"   # ntfy 서버 URL
+ntfy_topic = ""                    # ntfy 구독 토픽
 
 # ─────────────────────────────────────────
-# 보안 설정
+# 보안 설정 [v0.7 보완: 평탄화]
+# 기존 [security.auto_stop], [security.policy_defaults], [security.kill_switch] 제거
 # Phase 7 SESS-PROTO, Phase 8 LOCK-MECH/KILL-AUTO-EVM에서 확정된 값
 # ─────────────────────────────────────────
 [security]
 session_ttl = 86400                # 세션 유효 기간 (초) -- 24시간 (최소 300, 최대 604800)
-jwt_secret = ""                    # [v0.7 보완] 초기값 전용. waiaas init 시 32바이트 랜덤 생성하여 config에 기록. 이후 DB system_state에서 관리. waiaas secret rotate 시 config.toml은 갱신하지 않음
+jwt_secret = ""                    # [v0.7 보완] 초기값 전용. waiaas init 시 32바이트 랜덤 생성하여 config에 기록. 이후 DB system_state에서 관리
 max_sessions_per_agent = 5         # 에이전트당 최대 동시 세션
 max_pending_tx = 10                # 최대 대기 트랜잭션 수
 nonce_storage = "memory"           # [v0.7 보완] Nonce 저장소: "memory" (기본, LRU) 또는 "sqlite" (재시작 후 유지)
 nonce_cache_max = 1000             # Nonce LRU 캐시 최대 항목 수 (memory 모드)
 nonce_cache_ttl = 300              # Nonce TTL (초) -- 5분
-rate_limit_global_ip_rpm = 1000    # [v0.7 보완] IP 기반 전역 RPM (Stage 1 globalRateLimit). 기존 rate_limit_global_rpm=100에서 이름/값 변경
+rate_limit_global_ip_rpm = 1000    # [v0.7 보완] IP 기반 전역 RPM (Stage 1 globalRateLimit)
 rate_limit_session_rpm = 300       # 세션당 RPM (인증 후)
 rate_limit_tx_rpm = 10             # 거래 전송 RPM
 cors_origins = [
   "http://localhost:3100",
   "http://127.0.0.1:3100"
 ]
-
-[security.auto_stop]
-consecutive_failures_threshold = 3 # 연속 실패 임계값 (AutoStopEngine CONSECUTIVE_FAILURES 규칙)
-
-[security.policy_defaults]
-delay_seconds = 300                # DELAY 티어 기본 쿨다운 (초) -- 5분. 최소 60
-approval_timeout = 3600            # APPROVAL 티어 기본 승인 대기 (초) -- 1시간
-
-[security.kill_switch]
-recovery_cooldown = 1800           # 복구 최소 쿨다운 (초) -- 30분
-max_recovery_attempts = 3          # 복구 실패 시 최대 재시도 횟수
+auto_stop_consecutive_failures_threshold = 3   # 연속 실패 임계값 (AutoStopEngine)
+policy_defaults_delay_seconds = 300            # DELAY 티어 기본 쿨다운 (초) -- 5분
+policy_defaults_approval_timeout = 3600        # APPROVAL 티어 기본 승인 대기 (초) -- 1시간
+kill_switch_recovery_cooldown = 1800           # 복구 최소 쿨다운 (초) -- 30분
+kill_switch_max_recovery_attempts = 3          # 복구 실패 시 최대 재시도 횟수
 
 # ─────────────────────────────────────────
 # WalletConnect v2 설정 (선택적 편의 기능)
@@ -964,14 +991,44 @@ max_recovery_attempts = 3          # 복구 실패 시 최대 재시도 횟수
 project_id = ""                    # 선택. 미설정 시 WC 기능 비활성 (CLI 수동 서명은 항상 가능)
 ```
 
-### 3.5 설정 로드 구현 패턴
+### 3.5 설정 로드 구현 패턴 [v0.7 보완: 평탄화 반영]
+
+> **[v0.7 보완]** ConfigSchema가 평탄화된 구조를 반영한다. 중첩 Zod 객체가 제거되고, `[section]` 내 평탄 키만 정의한다. `detectNestedSections()` 유틸리티가 추가되어 중첩 섹션 사용 시 명시적 에러를 반환한다. `applyEnvOverrides()`가 단순화되었다.
 
 ```typescript
 import { parse } from 'smol-toml';
 import { z } from 'zod';
 import { readFile } from 'node:fs/promises';
 
-// Zod 스키마로 설정 검증
+// ── [v0.7 보완] 중첩 섹션 감지 유틸리티 ──
+// config.toml 파싱 후 중첩 객체가 발견되면 명시적 에러를 반환한다.
+// smol-toml은 [rpc.solana] 같은 dotted section을 { rpc: { solana: { ... } } }로 파싱한다.
+function detectNestedSections(config: Record<string, unknown>): void {
+  const KNOWN_SECTIONS = ['daemon', 'keystore', 'database', 'rpc', 'notifications', 'security', 'walletconnect'];
+
+  for (const [section, value] of Object.entries(config)) {
+    if (!KNOWN_SECTIONS.includes(section)) {
+      throw new Error(
+        `Unknown config section: [${section}]. ` +
+        `Allowed sections: ${KNOWN_SECTIONS.join(', ')}`
+      );
+    }
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      for (const [key, subValue] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof subValue === 'object' && subValue !== null && !Array.isArray(subValue)) {
+          throw new Error(
+            `Nested section detected: [${section}.${key}] is not allowed. ` +
+            `Use flattened keys instead. Example: [${section}].${key}_<subkey> = value. ` +
+            `See WAIAAS config.toml spec for the flattened key format.`
+          );
+        }
+      }
+    }
+  }
+}
+
+// ── [v0.7 보완] 평탄화된 Zod ConfigSchema ──
+// 중첩 z.object()가 제거되고 [section] 내 평탄 키만 정의한다.
 const ConfigSchema = z.object({
   daemon: z.object({
     port: z.number().int().min(1024).max(65535).default(3100),
@@ -982,7 +1039,7 @@ const ConfigSchema = z.object({
     log_max_files: z.number().int().min(1).max(100).default(5),
     pid_file: z.string().default('daemon.pid'),
     shutdown_timeout: z.number().int().min(5).max(300).default(30),
-    dev_mode: z.boolean().default(false),  // (v0.5 추가) --dev 모드 영구 설정
+    dev_mode: z.boolean().default(false),
   }).default({}),
   keystore: z.object({
     argon2_memory: z.number().int().min(32768).max(1048576).default(65536),
@@ -997,61 +1054,52 @@ const ConfigSchema = z.object({
     cache_size: z.number().int().min(2000).max(512000).default(64000),
     mmap_size: z.number().int().min(0).max(1073741824).default(268435456),
   }).default({}),
+  // [v0.7 보완] 평탄화: 기존 rpc.solana, rpc.solana.ws, rpc.ethereum 중첩 제거
   rpc: z.object({
-    solana: z.object({
-      mainnet: z.string().url().default('https://api.mainnet-beta.solana.com'),
-      devnet: z.string().url().default('https://api.devnet.solana.com'),
-      testnet: z.string().url().default('https://api.testnet.solana.com'),
-      ws: z.object({
-        mainnet: z.string().url().default('wss://api.mainnet-beta.solana.com'),
-        devnet: z.string().url().default('wss://api.devnet.solana.com'),
-      }).default({}),
-    }).default({}),
-    ethereum: z.object({
-      mainnet: z.string().default(''),
-      sepolia: z.string().default(''),
-    }).default({}),
+    solana_mainnet: z.string().url().default('https://api.mainnet-beta.solana.com'),
+    solana_devnet: z.string().url().default('https://api.devnet.solana.com'),
+    solana_testnet: z.string().url().default('https://api.testnet.solana.com'),
+    solana_ws_mainnet: z.string().url().default('wss://api.mainnet-beta.solana.com'),
+    solana_ws_devnet: z.string().url().default('wss://api.devnet.solana.com'),
+    ethereum_mainnet: z.string().default(''),
+    ethereum_sepolia: z.string().default(''),
   }).default({}),
+  // [v0.7 보완] 평탄화: 기존 notifications.telegram, discord, ntfy 중첩 제거
+  // 35-notification-architecture.md 섹션 12.4 확장 키 통합
   notifications: z.object({
     enabled: z.boolean().default(false),
-    telegram: z.object({
-      bot_token: z.string().default(''),
-      chat_id: z.string().default(''),
-    }).default({}),
-    discord: z.object({
-      webhook_url: z.string().default(''),
-    }).default({}),
-    ntfy: z.object({
-      server: z.string().url().default('https://ntfy.sh'),
-      topic: z.string().default(''),
-    }).default({}),
+    min_channels: z.number().int().min(1).max(10).default(2),
+    health_check_interval: z.number().int().min(60).max(3600).default(300),
+    log_retention_days: z.number().int().min(7).max(365).default(30),
+    dedup_ttl: z.number().int().min(60).max(3600).default(300),
+    telegram_bot_token: z.string().default(''),
+    telegram_chat_id: z.string().default(''),
+    discord_webhook_url: z.string().default(''),
+    ntfy_server: z.string().url().default('https://ntfy.sh'),
+    ntfy_topic: z.string().default(''),
   }).default({}),
+  // [v0.7 보완] 평탄화: 기존 security.auto_stop, policy_defaults, kill_switch 중첩 제거
   security: z.object({
     session_ttl: z.number().int().min(300).max(604800).default(86400),
     jwt_secret: z.string().min(32, 'JWT secret은 최소 32자 이상').default(''),
     max_sessions_per_agent: z.number().int().min(1).max(50).default(5),
     max_pending_tx: z.number().int().min(1).max(100).default(10),
-    nonce_storage: z.enum(['memory', 'sqlite']).default('memory'),  // [v0.7 보완] nonce 저장소 타입
+    nonce_storage: z.enum(['memory', 'sqlite']).default('memory'),
     nonce_cache_max: z.number().int().min(100).max(10000).default(1000),
     nonce_cache_ttl: z.number().int().min(60).max(600).default(300),
-    rate_limit_global_ip_rpm: z.number().int().min(100).max(10000).default(1000),  // [v0.7 보완] 이름/값 변경
+    rate_limit_global_ip_rpm: z.number().int().min(100).max(10000).default(1000),
     rate_limit_session_rpm: z.number().int().min(10).max(5000).default(300),
     rate_limit_tx_rpm: z.number().int().min(1).max(100).default(10),
     cors_origins: z.array(z.string()).default(['http://localhost:3100', 'http://127.0.0.1:3100']),
-    auto_stop: z.object({
-      consecutive_failures_threshold: z.number().int().min(1).max(20).default(3),
-    }).default({}),
-    policy_defaults: z.object({
-      delay_seconds: z.number().int().min(60).max(3600).default(300),
-      approval_timeout: z.number().int().min(300).max(86400).default(3600),
-    }).default({}),
-    kill_switch: z.object({
-      recovery_cooldown: z.number().int().min(600).max(86400).default(1800),
-      max_recovery_attempts: z.number().int().min(1).max(10).default(3),
-    }).default({}),
+    // 기존 [security.auto_stop] -> 평탄화
+    auto_stop_consecutive_failures_threshold: z.number().int().min(1).max(20).default(3),
+    // 기존 [security.policy_defaults] -> 평탄화
+    policy_defaults_delay_seconds: z.number().int().min(60).max(3600).default(300),
+    policy_defaults_approval_timeout: z.number().int().min(300).max(86400).default(3600),
+    // 기존 [security.kill_switch] -> 평탄화
+    kill_switch_recovery_cooldown: z.number().int().min(600).max(86400).default(1800),
+    kill_switch_max_recovery_attempts: z.number().int().min(1).max(10).default(3),
   }).default({}),
-  // WalletConnect v2 -- 선택적 편의 기능
-  // project_id 미설정 시 WC push 서명 비활성. CLI 수동 서명은 항상 가능.
   walletconnect: z.object({
     project_id: z.string().default(''),
   }).default({}),
@@ -1073,22 +1121,36 @@ async function loadConfig(dataDir: string): Promise<Config> {
     // config.toml 없으면 기본값 사용
   }
 
-  // 3. 환경변수 오버라이드
+  // 3. [v0.7 보완] 중첩 섹션 감지 -- 사용자에게 명시적 에러 반환
+  detectNestedSections(config);
+
+  // 4. 환경변수 오버라이드
   config = applyEnvOverrides(config);
 
-  // 4. Zod 검증 + 기본값 적용
+  // 5. Zod 검증 + 기본값 적용
   return ConfigSchema.parse(config);
 }
 
+// [v0.7 보완] 평탄화된 구조 전용 -- 1단계 섹션 + 평탄 키만 처리
+// 중첩 구조가 없으므로 section/field 분리가 단순하다:
+//   WAIAAS_DAEMON_PORT      -> section='daemon',  field='port'
+//   WAIAAS_RPC_SOLANA_MAINNET -> section='rpc', field='solana_mainnet'
+//   WAIAAS_SECURITY_KILL_SWITCH_RECOVERY_COOLDOWN -> section='security', field='kill_switch_recovery_cooldown'
 function applyEnvOverrides(config: Record<string, unknown>): Record<string, unknown> {
   const PREFIX = 'WAIAAS_';
+  const SPECIAL_KEYS = new Set([
+    'WAIAAS_DATA_DIR',
+    'WAIAAS_MASTER_PASSWORD',
+    'WAIAAS_MASTER_PASSWORD_FILE',
+  ]);
+
   for (const [key, value] of Object.entries(process.env)) {
-    if (!key.startsWith(PREFIX) || key === 'WAIAAS_DATA_DIR'
-        || key === 'WAIAAS_MASTER_PASSWORD' || key === 'WAIAAS_MASTER_PASSWORD_FILE') {
+    if (!key.startsWith(PREFIX) || SPECIAL_KEYS.has(key)) {
       continue;  // 특수 환경변수는 config에 반영하지 않음
     }
 
     // WAIAAS_DAEMON_PORT -> ['daemon', 'port']
+    // WAIAAS_RPC_SOLANA_MAINNET -> ['rpc', 'solana_mainnet']
     const parts = key.slice(PREFIX.length).toLowerCase().split('_');
     if (parts.length < 2) continue;
 

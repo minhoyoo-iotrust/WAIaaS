@@ -454,54 +454,6 @@ cors({
 
 **[v0.7 보완] 개발 모드 Origin 로깅:**
 
-<<<<<<< HEAD
-| 옵션 | 값 | 근거 |
-|------|-----|------|
-| `origin` | localhost + 127.0.0.1 (포트 포함) + `tauri://localhost` | 동일 머신의 Tauri WebView/브라우저만 허용. Tauri 2.x WebView Origin 대응 (Phase 9 TAURI-DESK) |
-| `allowMethods` | GET, POST, PUT, DELETE | REST API에 필요한 메서드만 |
-| `allowHeaders` | Authorization, Content-Type, X-Request-ID, X-Master-Password | 세션 토큰 + JSON + 요청 추적 + Admin API 마스터 패스워드 (Phase 8) |
-| `exposeHeaders` | X-Request-ID, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset | 클라이언트가 읽어야 하는 커스텀 헤더 (요청 추적 + 재시도 + Rate Limit 정보) |
-| `maxAge` | 600 (10분) | preflight 요청 빈도 감소 |
-
-#### 미들웨어 3.5: globalRateLimit [v0.7 보완]
-
-IP 기반 전역 요청 속도 상한. 인증 전에 실행되어 미인증/인증 무관하게 모든 요청을 제한한다. 섹션 7에서 상세 설계.
-
-| 항목 | 값 |
-|------|-----|
-| **입력** | 클라이언트 IP (`x-forwarded-for` 또는 `socket.remoteAddress` 또는 `'127.0.0.1'`) |
-| **출력** | 정상: pass-through + 헤더 / 초과: 429 응답 |
-| **한도** | `rate_limit_global_ip_rpm` (기본 1000 req/min) |
-| **저장소** | `lru-cache` (in-memory, IP별 timestamp 배열) |
-| **에러 코드** | `RATE_LIMIT_EXCEEDED` (429) |
-| **목적** | 절대 상한(absolute ceiling). localhost에서는 IP='127.0.0.1' 고정이므로 사실상 전체 요청 속도 상한 |
-
-```typescript
-export function globalRateLimitMiddleware(config: { maxRpm: number; windowMs: number }) {
-  const cache = new LRUCache<string, { timestamps: number[] }>({ max: 1_000, ttl: config.windowMs })
-
-  return createMiddleware(async (c, next) => {
-    const ip = c.req.header('x-forwarded-for') || c.env?.incoming?.socket?.remoteAddress || '127.0.0.1'
-    const now = Date.now()
-    const entry = cache.get(ip) || { timestamps: [] }
-    entry.timestamps = entry.timestamps.filter(t => t > now - config.windowMs)
-
-    c.header('X-RateLimit-Limit', String(config.maxRpm))
-    c.header('X-RateLimit-Remaining', String(Math.max(0, config.maxRpm - entry.timestamps.length)))
-
-    if (entry.timestamps.length >= config.maxRpm) {
-      const retryAfter = Math.ceil((entry.timestamps[0]! + config.windowMs - now) / 1000)
-      c.header('Retry-After', String(retryAfter))
-      return c.json({
-        error: {
-          code: 'RATE_LIMIT_EXCEEDED',
-          message: '전역 요청 속도 제한을 초과했습니다.',
-          details: { limit: config.maxRpm, window: '1m', retryAfter, stage: 'global' },
-          requestId: c.get('requestId'),
-          retryable: true,
-        },
-      }, 429)
-=======
 CORS Origin 불일치 디버깅을 위해, `log_level: 'debug'`에서 수신된 Origin 헤더를 로깅한다. CORS 미들웨어 직전에 배치한다:
 
 ```typescript
@@ -511,18 +463,12 @@ if (config.daemon.log_level === 'debug') {
     const origin = c.req.header('Origin')
     if (origin) {
       logger.debug(`[CORS] Request Origin: ${origin}`)
->>>>>>> gsd/phase-29-api-integration-protocol
     }
-
-    entry.timestamps.push(now)
-    cache.set(ip, entry)
     await next()
   })
 }
 ```
 
-<<<<<<< HEAD
-=======
 **CORS 설정 상세:**
 
 | 옵션 | 값 | 근거 |
@@ -580,7 +526,6 @@ export function globalRateLimitMiddleware(config: { maxRpm: number; windowMs: nu
 }
 ```
 
->>>>>>> gsd/phase-29-api-integration-protocol
 #### 미들웨어 7: killSwitchGuard [v0.7 보완: #8->#7]
 
 Kill Switch 상태를 확인하여 ACTIVATED/RECOVERING 상태에서는 허용 목록 외 모든 요청을 거부한다. 상세는 36-killswitch-autostop-evm.md 섹션 2.4 참조.
@@ -1315,7 +1260,7 @@ export const BalanceResponseSchema = z.object({
   }),
   network: z.string().openapi({
     description: '네트워크 이름',
-    example: 'mainnet-beta',
+    example: 'mainnet',  // [v0.7 보완] NetworkType 통일: mainnet-beta -> mainnet
   }),
   decimals: z.number().int().openapi({
     description: '소수점 자릿수',

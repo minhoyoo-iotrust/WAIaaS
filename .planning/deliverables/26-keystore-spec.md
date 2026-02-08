@@ -31,7 +31,7 @@ WAIaaS Keystore v1은 Ethereum Keystore V3 포맷을 기반으로 다음을 확�
   "version": 1,
   "id": "01936f4c-8c3a-7000-8000-000000000001",
   "chain": "solana",
-  "network": "mainnet-beta",
+  "network": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "crypto": {
     "cipher": "aes-256-gcm",
@@ -66,7 +66,7 @@ WAIaaS Keystore v1은 Ethereum Keystore V3 포맷을 기반으로 다음을 확�
 | `version` | integer | - | JSON number | 상수 `1` | 키스토어 포맷 버전. 향후 호환성 판단에 사용 |
 | `id` | string | 16B (UUID) | UUID v4 문자열 | `crypto.randomUUID()` | 키스토어 파일 고유 식별자. agent-id와 별개 |
 | `chain` | string | - | UTF-8 | 에이전트 생성 시 지정 | 블록체인 식별자: `"solana"` 또는 `"ethereum"` |
-| `network` | string | - | UTF-8 | 에이전트 생성 시 지정 | 네트워크: `"mainnet-beta"`, `"devnet"`, `"mainnet"`, `"sepolia"` |
+| `network` | string | - | UTF-8 | 에이전트 생성 시 지정 | [v0.7 보완] 네트워크: `"mainnet"`, `"devnet"`, `"testnet"`. NetworkType SSoT (45-enum). 체인 무관 추상화 |
 | `publicKey` | string | 32B (Ed25519) / 20B (EVM) | Base58 (Solana) / 0x hex (EVM) | 키쌍 생성 시 추출 | 에이전트 공개키/주소. agents 테이블 `public_key` 컬럼과 동일 |
 
 #### crypto 객체
@@ -423,7 +423,7 @@ async function encryptAndSaveKeystore(
   password: string,             // 마스터 패스워드
   agentId: string,              // 에이전트 UUID v7
   chain: string,                // 'solana' | 'ethereum'
-  network: string,              // 'mainnet-beta' | 'devnet' 등
+  network: string,              // 'mainnet' | 'devnet' | 'testnet' (NetworkType SSoT)
   agentName: string,            // 에이전트 이름
   keystoreDir: string           // ~/.waiaas/keystore/
 ): Promise<KeystoreFile> {
@@ -793,7 +793,7 @@ function storeEVMKeySecurely(privateKeyHex: string): Buffer {
 │                                                                      │
 │  API 요청                                                            │
 │  POST /v1/agents                                                     │
-│  { "name": "bot-01", "chain": "solana", "network": "mainnet-beta" } │
+│  { "name": "bot-01", "chain": "solana", "network": "mainnet" }      │
 │       │                                                              │
 │       ▼                                                              │
 │  ┌─────────────────────────────────────────────────┐                 │
@@ -1085,7 +1085,7 @@ Ed25519 서명(`crypto_sign_detached`)은 비밀키를 **읽기만** 한다. 비
 type ChainType = 'solana' | 'ethereum';
 
 /** 네트워크 식별자 */
-type NetworkType = 'mainnet-beta' | 'devnet' | 'testnet' | 'mainnet' | 'sepolia';
+type NetworkType = 'mainnet' | 'devnet' | 'testnet';  // [v0.7 보완] 체인 무관 추상화. 45-enum SSoT
 
 /** 에이전트 키 정보 (공개 정보만 포함) */
 interface AgentKeyInfo {

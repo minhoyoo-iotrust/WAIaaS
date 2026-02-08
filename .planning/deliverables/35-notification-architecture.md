@@ -1569,57 +1569,54 @@ sequenceDiagram
 
 ### 9.3 최소 2채널 검증
 
-**채널 삭제 시 검증:**
+**[v0.7 보완: SCHEMA-06] 물리 삭제(DELETE) 금지 결정:**
+
+알림 채널은 **물리 삭제(DELETE)를 금지**하고 비활성화(soft-delete, `enabled=false`)만 허용한다. 물리 삭제 시 notification_log의 channel_id FK가 고아가 되어 전달 이력 추적이 불가능해지기 때문이다. 이 결정은 33-time-lock-approval-mechanism.md의 TOCTOU 방지 패턴과 동일한 원칙을 따른다.
+
+> **DELETE API 엔드포인트:** `DELETE /v1/owner/notification-channels/:id`는 실제로 `enabled=false`로 soft-delete를 수행한다. API 이름은 DELETE이지만 내부 구현은 UPDATE이다.
+
+**채널 비활성화(soft-delete) 시 검증 [v0.7 보완: BEGIN IMMEDIATE 보호]:**
 
 ```typescript
-// 채널 삭제 전 활성 채널 수 확인
-async function deleteChannel(channelId: string): Promise<void> {
-  const activeCount = await db.select({ count: count() })
-    .from(notificationChannels)
-    .where(and(
-      eq(notificationChannels.enabled, true),
-      ne(notificationChannels.id, channelId),
-    ))
+// [v0.7 보완] 채널 비활성화 시 BEGIN IMMEDIATE 트랜잭션으로 동시성 보호
+// 33-time-lock-approval-mechanism.md TOCTOU 방지 패턴과 동일 원칙
+async function disableChannel(channelId: string): Promise<void> {
+  // BEGIN IMMEDIATE: 트랜잭션 시작 시점에 쓰기 잠금 획득
+  // 동시에 2개 채널을 비활성화하여 최소 2채널 정책을 우회하는 TOCTOU 방지
+  await db.transaction(async (tx) => {
+    const activeCount = await tx.select({ count: count() })
+      .from(notificationChannels)
+      .where(and(
+        eq(notificationChannels.enabled, true),
+        ne(notificationChannels.id, channelId),
+      ))
 
-  if (activeCount[0].count < 2) {
-    throw new WaiaasError(
-      'MIN_CHANNELS_REQUIRED',
-      '최소 2개의 활성 알림 채널이 필요합니다. 삭제할 수 없습니다.',
-      400,
-    )
-  }
+    if (activeCount[0].count < 2) {
+      throw new WaiaasError(
+        'MIN_CHANNELS_REQUIRED',
+        '최소 2개의 활성 알림 채널이 필요합니다. 비활성화할 수 없습니다.',
+        400,
+      )
+    }
 
-  // 삭제 진행
-  await db.delete(notificationChannels)
-    .where(eq(notificationChannels.id, channelId))
+    // soft-delete: enabled=false (물리 삭제 금지)
+    await tx.update(notificationChannels)
+      .set({ enabled: false, updatedAt: new Date() })
+      .where(eq(notificationChannels.id, channelId))
+  }, { behavior: 'immediate' })
+  // Drizzle ORM: { behavior: 'immediate' } -> BEGIN IMMEDIATE TRANSACTION
+  // SQLite: 트랜잭션 시작 시 쓰기 잠금 획득, 다른 쓰기 트랜잭션 대기
 }
 ```
 
-**채널 비활성화 시 동일 검증:**
+**BEGIN IMMEDIATE 트랜잭션이 필요한 이유:**
 
-```typescript
-// 채널 비활성화(enabled=false) 전에도 동일 검증
-async function disableChannel(channelId: string): Promise<void> {
-  const activeCount = await db.select({ count: count() })
-    .from(notificationChannels)
-    .where(and(
-      eq(notificationChannels.enabled, true),
-      ne(notificationChannels.id, channelId),
-    ))
+| 시나리오 | BEGIN DEFERRED (기본) | BEGIN IMMEDIATE |
+|---------|----------------------|-----------------|
+| 동시 비활성화 요청 2건 | 두 요청 모두 SELECT 시점에 3개 활성 채널 확인 -> 둘 다 통과 -> 최종 1개 | 첫 번째 요청이 쓰기 잠금 획득 -> 두 번째 요청 대기 -> 순차 처리로 정확한 카운트 보장 |
+| TOCTOU 방지 | X (읽기-쓰기 간 갭) | O (읽기 시점에 이미 잠금 보유) |
 
-  if (activeCount[0].count < 2) {
-    throw new WaiaasError(
-      'MIN_CHANNELS_REQUIRED',
-      '최소 2개의 활성 알림 채널이 필요합니다. 비활성화할 수 없습니다.',
-      400,
-    )
-  }
-
-  // 비활성화 진행
-  await db.update(notificationChannels)
-    .set({ enabled: false, updatedAt: new Date() })
-    .where(eq(notificationChannels.id, channelId))
-}
+> **33-time-lock-approval-mechanism.md 교차 참조:** DatabasePolicyEngine의 `BEGIN IMMEDIATE + reserved_amount` 패턴과 동일한 TOCTOU 방지 전략이다. SQLite 단일 프로세스 데몬에서는 BEGIN IMMEDIATE가 가장 간결한 동시성 보호 수단이다.
 ```
 
 **데몬 시작 시 활성 채널 수 확인:**

@@ -6,8 +6,15 @@
 **Phase 20 업데이트:** 2026-02-07
 **v0.6 업데이트:** 2026-02-08
 **v0.7 업데이트:** 2026-02-08
+<<<<<<< HEAD
 **상태:** 완료
 **참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소)
+=======
+**v0.7 스키마 설정 확정:** 2026-02-08
+**v0.7 스키마 CHECK/amount 보강:** 2026-02-08
+**상태:** 완료
+**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT)
+>>>>>>> gsd/phase-30-schema-config-finalization
 
 ---
 
@@ -51,9 +58,9 @@ sqlite.pragma('temp_store = MEMORY');      // 7. 임시 테이블 메모리 저�
 | `mmap_size` | `268435456` | 256MB 메모리 매핑. 읽기 성능 향상. DB 크기가 이보다 작으면 전체 DB 매핑 |
 | `temp_store` | `MEMORY` | 임시 테이블/인덱스를 메모리에 저장. ORDER BY, GROUP BY 성능 향상 |
 
-### 1.3 타임스탬프 저장 전략
+### 1.3 타임스탬프 저장 전략 [v0.7 보완: 초 단위 확정]
 
-모든 타임스탬프는 **Unix epoch (초 단위)** 정수로 저장한다:
+모든 타임스탬프는 **Unix epoch (초 단위)** 정수로 저장한다. **예외 없이 전체 테이블에 동일하게 적용한다.**
 
 ```typescript
 // Drizzle ORM에서 { mode: 'timestamp' } 사용
@@ -63,7 +70,8 @@ createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 
 - **근거:** SQLite에는 네이티브 DATE/TIMESTAMP 타입이 없음. 정수가 정렬, 비교, 인덱싱에 가장 효율적
 - **시간대:** 모든 타임스탬프는 UTC 기준
-- **밀리초 필요 시:** audit_log의 timestamp만 밀리초 정밀도 필요하면 `{ mode: 'timestamp_ms' }` 사용 고려 (현재는 초 단위로 충분)
+- **[v0.7 보완] 초 단위 통일 확정:** audit_log를 포함한 **모든 테이블의 타임스탬프가 초 단위(INTEGER)**로 확정되었다. `{ mode: 'timestamp_ms' }` 는 사용하지 않는다
+- **동일 초 내 순서 보장:** audit_log에서 동일 초에 발생한 이벤트의 순서는 `id` (UUID v7) 정렬로 보장한다. UUID v7은 밀리초 정밀도의 시간 정보를 내장하므로, 별도의 밀리초 타임스탬프 컬럼 없이도 ms 수준의 시간 정렬이 가능하다
 
 ---
 
@@ -78,16 +86,17 @@ createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 #### Drizzle ORM 정의
 
 ```typescript
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
 export const agents = sqliteTable('agents', {
   // ── 식별자 ──
   id: text('id').primaryKey(),                          // UUID v7 (시간 정렬 가능)
   name: text('name').notNull(),                         // 사람이 읽을 수 있는 에이전트 이름
 
-  // ── 체인 정보 ──
-  chain: text('chain').notNull(),                       // 'solana' | 'ethereum' (체인 식별자)
-  network: text('network').notNull(),                   // 'mainnet-beta' | 'devnet' | 'mainnet' | 'sepolia'
+  // ── 체인 정보 [v0.7 보완: CHECK 제약 추가] ──
+  chain: text('chain').$type<'solana' | 'ethereum'>().notNull(),    // ChainType SSoT (45-enum)
+  network: text('network').$type<'mainnet' | 'devnet' | 'testnet'>().notNull(),  // NetworkType SSoT (45-enum)
   publicKey: text('public_key').notNull(),              // 에이전트 지갑 공개키 (base58/hex)
 
   // ── 상태 ──
@@ -108,6 +117,9 @@ export const agents = sqliteTable('agents', {
   index('idx_agents_status').on(table.status),
   index('idx_agents_chain_network').on(table.chain, table.network),
   index('idx_agents_owner_address').on(table.ownerAddress),  // v0.5: 1:N 조회, ownerAuth 검증, Owner 주소 일괄 변경
+  // [v0.7 보완] 테이블 레벨 CHECK 제약 -- ChainType/NetworkType SSoT (45-enum)
+  check('check_chain', sql`chain IN ('solana', 'ethereum')`),
+  check('check_network', sql`network IN ('mainnet', 'devnet', 'testnet')`),
 ]);
 ```
 
@@ -117,8 +129,10 @@ export const agents = sqliteTable('agents', {
 CREATE TABLE agents (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  chain TEXT NOT NULL,
-  network TEXT NOT NULL,
+  chain TEXT NOT NULL
+    CHECK (chain IN ('solana', 'ethereum')),                -- [v0.7 보완] ChainType SSoT (45-enum)
+  network TEXT NOT NULL
+    CHECK (network IN ('mainnet', 'devnet', 'testnet')),    -- [v0.7 보완] NetworkType SSoT (45-enum)
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING'
     CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
@@ -141,8 +155,8 @@ CREATE INDEX idx_agents_owner_address ON agents(owner_address);
 |------|------|----------|--------|------|
 | `id` | TEXT (PK) | NOT NULL | - | UUID v7. 생성 시간 순 정렬 가능 |
 | `name` | TEXT | NOT NULL | - | 사용자가 지정한 에이전트 이름 (예: "DeFi Trading Bot") |
-| `chain` | TEXT | NOT NULL | - | 블록체인 식별자. `solana`, `ethereum` 등 |
-| `network` | TEXT | NOT NULL | - | 네트워크 식별자. `mainnet-beta`, `devnet`, `mainnet`, `sepolia` |
+| `chain` | TEXT | NOT NULL | - | [v0.7 보완] 블록체인 식별자. CHECK 제약: `'solana'` \| `'ethereum'`. ChainType SSoT (45-enum) |
+| `network` | TEXT | NOT NULL | - | [v0.7 보완] 네트워크 식별자. CHECK 제약: `'mainnet'` \| `'devnet'` \| `'testnet'`. NetworkType SSoT (45-enum). 앱 레벨 network 값은 체인 무관 추상화. Solana의 'mainnet-beta'는 AdapterRegistry에서 RPC URL 매핑 시 변환 |
 | `public_key` | TEXT (UNIQUE) | NOT NULL | - | 에이전트 지갑 공개키. 체인별 인코딩 (Solana=base58, EVM=hex) |
 | `status` | TEXT (ENUM) | NOT NULL | `'CREATING'` | 에이전트 생명주기 상태. CHECK 제약으로 유효 값 강제 |
 | `owner_address` | TEXT | NOT NULL | - | 에이전트 소유자 지갑 주소. 에이전트 생성 시 필수(NOT NULL). 1:1 바인딩(에이전트당 단일 Owner). 동일 주소가 여러 에이전트를 소유 가능(1:N). 체인별 형식: Solana=base58(32-44자), EVM=0x 접두사 hex(42자) |
@@ -372,9 +386,19 @@ CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)
 | `error` | TEXT | NULL | - | 실패 시 에러 메시지/코드 |
 | `metadata` | TEXT (JSON) | NULL | - | 추가 정보: gas fee, 시뮬레이션 결과, blockhash 등. (v0.6 확장: actionSource, batchInstructions, usdAmount) |
 
-**amount를 TEXT로 저장하는 이유:**
-- SQLite INTEGER는 최대 64비트 (9.2 x 10^18). lamports는 u64 범위 내이지만, wei는 uint256으로 64비트 초과 가능
-- TEXT로 저장하면 체인 무관하게 안전. 쿼리 시 CAST 필요하나, 금액 범위 검색은 드물고 대부분 상태/시간 기반 검색
+**amount를 TEXT로 저장하는 이유 [v0.7 보완: 근거 보강]:**
+
+| 기준 | JS `Number` | SQLite `INTEGER` | `TEXT` (현행) |
+|------|------------|-----------------|-------------|
+| 최대 안전값 | `2^53-1` (9.0 x 10^15) | `2^63-1` (9.2 x 10^18) | 무제한 |
+| Solana lamports (u64) | **초과 가능** (u64 max = 1.8 x 10^19) | 안전 (동일 64-bit) | 안전 |
+| EVM wei (uint256) | **초과** | **초과** (256-bit 필요) | 안전 |
+| 정밀도 문제 | 15자리 초과 시 부동소수점 오차 | 없음 | 없음 |
+
+- **JS `Number.MAX_SAFE_INTEGER` = 9,007,199,254,740,991 (약 9 x 10^15):** Solana의 u64 max인 18,446,744,073,709,551,615 (약 1.8 x 10^19)를 초과. JSON.parse 시 정밀도 손실 발생
+- **EVM uint256:** 2^256 - 1 = 약 1.16 x 10^77. SQLite INTEGER 64비트로는 저장 불가
+- **TEXT 선택 근거:** 체인 무관하게 안전한 유일한 타입. JavaScript 런타임에서 BigInt 또는 문자열로 처리. 쿼리 시 CAST 필요하나, 금액 범위 검색은 드물고 대부분 상태/시간 기반 검색
+- **amount_lamports 보조 컬럼 유보:** Solana 전용 최적화로 `amount_lamports INTEGER` 보조 컬럼 추가를 고려할 수 있으나, 현재 단일 `amount TEXT`로 충분하며 v1.0 이후 성능 프로파일링에 따라 결정. 유보 상태로 문서화
 
 ---
 
@@ -616,7 +640,7 @@ CREATE INDEX idx_audit_log_agent_timestamp ON audit_log(agent_id, timestamp);
 | 컬럼 | 타입 | Nullable | 기본값 | 용도 |
 |------|------|----------|--------|------|
 | `id` | INTEGER (PK, AI) | NOT NULL | AUTOINCREMENT | 단조 증가 ID. 로그 순서 보장 |
-| `timestamp` | INTEGER | NOT NULL | - | 이벤트 발생 시각 (Unix epoch, 초) |
+| `timestamp` | INTEGER | NOT NULL | - | [v0.7 보완] 이벤트 발생 시각 (Unix epoch, 초 단위 확정). 동일 초 내 순서는 id (UUID v7) 정렬로 보장 |
 | `event_type` | TEXT | NOT NULL | - | 이벤트 유형 식별자 (아래 목록 참조) |
 | `actor` | TEXT | NOT NULL | - | 이벤트 주체. `agent:<id>`, `owner`, `system`, `cli` |
 | `agent_id` | TEXT | NULL | - | 관련 에이전트 ID (FK 없음 -- 삭제 후에도 보존) |
@@ -1378,6 +1402,80 @@ CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)
 **기존 데이터 보정:**
 - 기존 transactions.type이 'TRANSFER'만 존재하면 CHECK 추가 시 충돌 없음
 - 기존 policies.type이 4개 값만 존재하면 10개 CHECK 추가 시 충돌 없음
+
+### 4.10 v0.7 agents 테이블 CHECK 제약 추가 마이그레이션 (chain/network) [v0.7 보완]
+
+v0.7에서 agents 테이블의 chain/network 컬럼에 CHECK 제약을 추가한다. SQLite에서 기존 컬럼에 CHECK 제약을 추가하려면 **테이블 재생성이 필요**하다 (섹션 4.6 참조).
+
+**전제 조건:**
+- v0.6 마이그레이션(섹션 4.9) 완료 상태
+- 기존 agents.network 값이 'mainnet-beta'인 행이 있으면 Step 2에서 'mainnet'으로 변환
+- DB 백업 필수 (`VACUUM INTO`)
+
+**마이그레이션 SQL:**
+
+```sql
+-- ═══ v0.7 agents CHECK 추가: 테이블 재생성 패턴 ═══
+
+-- Step 0: 트랜잭션 시작 (원자적 보장)
+BEGIN IMMEDIATE;
+
+-- Step 1: 기존 network 값 정규화
+-- 'mainnet-beta' -> 'mainnet', 'sepolia' -> 'testnet' (체인 무관 추상화)
+UPDATE agents SET network = 'mainnet' WHERE network = 'mainnet-beta';
+UPDATE agents SET network = 'testnet' WHERE network = 'sepolia';
+
+-- Step 2: 새 테이블 생성 (CHECK 제약 포함)
+CREATE TABLE agents_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  chain TEXT NOT NULL
+    CHECK (chain IN ('solana', 'ethereum')),
+  network TEXT NOT NULL
+    CHECK (network IN ('mainnet', 'devnet', 'testnet')),
+  public_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CREATING'
+    CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
+  owner_address TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  suspended_at INTEGER,
+  suspension_reason TEXT
+);
+
+-- Step 3: 데이터 복사
+INSERT INTO agents_new
+  SELECT id, name, chain, network, public_key, status, owner_address,
+         created_at, updated_at, suspended_at, suspension_reason
+  FROM agents;
+
+-- Step 4: 이전 테이블 삭제
+DROP TABLE agents;
+
+-- Step 5: 이름 변경
+ALTER TABLE agents_new RENAME TO agents;
+
+-- Step 6: 인덱스 재생성
+CREATE UNIQUE INDEX idx_agents_public_key ON agents(public_key);
+CREATE INDEX idx_agents_status ON agents(status);
+CREATE INDEX idx_agents_chain_network ON agents(chain, network);
+CREATE INDEX idx_agents_owner_address ON agents(owner_address);
+
+COMMIT;
+```
+
+**주의사항:**
+
+| 단계 | 설명 | 실패 시 대응 |
+|------|------|------------|
+| Step 1 | network 값 정규화. 'mainnet-beta'/'sepolia' 직접 참조가 DB에 존재할 수 있음 | ROLLBACK 가능 (BEGIN IMMEDIATE 내부) |
+| Step 2 | 새 테이블에 CHECK 제약 포함 | 동일 |
+| Step 3 | 정규화된 데이터만 복사되므로 CHECK 위반 없음 | Step 1 정규화 누락 시 INSERT 실패 -> ROLLBACK |
+| Step 4-5 | FK가 agents를 참조하는 테이블(sessions, transactions 등)은 DROP/RENAME 중에도 영향 없음 (SQLite는 FK 이름이 아닌 테이블 이름으로 참조) | foreign_keys=OFF 불필요 (RENAME이 참조 갱신) |
+
+**Drizzle Kit 자동 처리:**
+- Drizzle Kit `push:sqlite`는 CHECK 변경 시 자동으로 테이블 재생성을 수행한다
+- 수동 마이그레이션이 필요한 경우 위 SQL을 `drizzle/` 폴더에 포함
 
 ---
 
