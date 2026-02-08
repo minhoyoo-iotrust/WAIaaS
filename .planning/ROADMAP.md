@@ -109,11 +109,13 @@ Plans:
   3. @waiaas/actions 등 확장 패키지를 포함한 커버리지 기준이 재설정되어 있다
   4. 기존 설계 문서 8개(27-chain-adapter, 25-sqlite-schema, 31-solana-adapter, 33-time-lock, 32-transaction-pipeline, 37-rest-api, 38-sdk-mcp, 45-enum)에 v0.6 확장이 반영되어 있다
   5. TransactionType, PolicyType 등 Enum 확장이 v0.3 SSoT 체계(45-enum-unified-mapping)에 통합되어 있다
-**플랜**: TBD
+**플랜**: 4 plans in 2 waves (2 parallel + 2 parallel)
 
 Plans:
-- [ ] 25-01: 확장 기능 테스트 전략 (CHAIN-EXT-09)
-- [ ] 25-02: 기존 설계 문서 8개 v0.6 통합
+- [ ] 25-01-PLAN.md — CHAIN-EXT-09 확장 기능 테스트 전략: Mock 경계 5개, EVM Hardhat 환경, 커버리지 재설정, 148개 테스트 시나리오 통합 (TEST-01, TEST-02, TEST-03)
+- [ ] 25-02-PLAN.md — SSoT 문서 v0.6 통합: 45-enum (TransactionType 5개, PolicyType 10개), 27-chain-adapter (메서드 4개 추가), 25-sqlite (감사 컬럼, 정책 확장) (INTEG-02 + INTEG-01 일부)
+- [ ] 25-03-PLAN.md — 기능 계층 문서 v0.6 통합: 33-time-lock (PolicyType 10개, evaluate 11단계), 32-pipeline (5-type 분기, IPriceOracle), 31-solana (SPL 정식화, Token-2022) (INTEG-01 일부)
+- [ ] 25-04-PLAN.md — 인터페이스 계층 문서 v0.6 통합: 37-rest-api (discriminatedUnion, /v1/actions), 38-sdk-mcp (MCP Tool Action 변환, MCP_TOOL_MAX=16) (INTEG-01 일부)
 
 ## 요구사항 커버리지
 
@@ -161,4 +163,4 @@ Plans:
 | 22. 토큰 확장 설계 | 2/2 | ✓ Complete | 2026-02-07 |
 | 23. 트랜잭션 타입 확장 설계 | 3/3 | ✓ Complete | 2026-02-08 |
 | 24. 상위 추상화 레이어 설계 | 2/2 | ✓ Complete | 2026-02-08 |
-| 25. 테스트 전략 통합 + 문서 반영 | 0/2 | Not started | - |
+| 25. 테스트 전략 통합 + 문서 반영 | 0/4 | Not started | - |
