@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-08)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- Owner 등록 없이도 기본 보안을 제공하고, Owner 등록 시 강화된 보안이 점진적으로 해금된다.
-**현재 초점:** Phase 33 -- 정책 다운그레이드 + 알림 설계
+**현재 초점:** Phase 34 -- 자금 회수 + 보안 분기 설계
 
 ## 현재 위치
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
-페이즈: 33 of 35 (정책 다운그레이드 + 알림 설계)
-플랜: 2 of 2 in current phase
-상태: Phase 33 complete
-마지막 활동: 2026-02-09 -- Completed 33-02-PLAN.md
+페이즈: 34 of 35 (자금 회수 + 보안 분기 설계)
+플랜: 0 of 2 in current phase
+상태: Phase 33 complete, Phase 34 ready to plan
+마지막 활동: 2026-02-09 -- Phase 33 실행 완료 (2/2 plans, verified)
 
-Progress: ██████████░░░░░░░░░░ 54% (6/11 plans)
+Progress: ██████░░░░░░░░░░░░░░ 55% (6/11 plans)
 
 ## 성과 지표
 
@@ -68,5 +68,5 @@ v0.8 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 33 실행 완료 (2/2 plans). Phase 34 계획 시작 대기.
+중단 지점: Phase 33 실행 및 검증 완료. Phase 34 계획 시작 대기.
 재개 파일: .planning/ROADMAP.md

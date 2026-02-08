@@ -20,7 +20,7 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 
 - [x] **Phase 31: 데이터 모델 + 타입 기반 설계** - agents 스키마 nullable 전환 + 핵심 타입 정의
 - [x] **Phase 32: Owner 생명주기 설계** - 등록/변경/해제 + 유예/잠금 2단계 상태 머신
-- [ ] **Phase 33: 정책 다운그레이드 + 알림 설계** - APPROVAL->DELAY 다운그레이드 + 알림 템플릿
+- [x] **Phase 33: 정책 다운그레이드 + 알림 설계** - APPROVAL->DELAY 다운그레이드 + 알림 템플릿
 - [ ] **Phase 34: 자금 회수 + 보안 분기 설계** - sweepAll 프로토콜 + Kill Switch/세션 Owner 분기
 - [ ] **Phase 35: DX + 설계 문서 통합** - CLI 변경 + 14개 설계 문서 v0.8 반영
 
@@ -70,8 +70,8 @@ Plans:
 **Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 33-01-PLAN.md -- evaluate() Step 9.5 다운그레이드 로직 + evaluateBatch 다운그레이드 + evaluate 시그니처 확장 + TX_DOWNGRADED 감사 로그 + Owner LOCKED 후 정상 APPROVAL 복원 흐름 (33-time-lock-approval-mechanism.md)
-- [ ] 33-02-PLAN.md -- TX_DOWNGRADED_DELAY 이벤트 추가 + 채널별(Telegram/Discord/ntfy.sh) 다운그레이드 알림 템플릿 + APPROVAL 대기 [승인]/[거부] 버튼 명세 (35-notification-architecture.md)
+- [x] 33-01-PLAN.md -- evaluate() Step 9.5 다운그레이드 로직 + evaluateBatch 다운그레이드 + evaluate 시그니처 확장 + TX_DOWNGRADED 감사 로그 + Owner LOCKED 후 정상 APPROVAL 복원 흐름 (33-time-lock-approval-mechanism.md)
+- [x] 33-02-PLAN.md -- TX_DOWNGRADED_DELAY 이벤트 추가 + 채널별(Telegram/Discord/ntfy.sh) 다운그레이드 알림 템플릿 + APPROVAL 대기 [승인]/[거부] 버튼 명세 (35-notification-architecture.md)
 
 ### Phase 34: 자금 회수 + 보안 분기 설계
 **Goal**: Owner 등록된 에이전트의 자금 전량 회수 프로토콜과, Owner 유무별 Kill Switch 복구/세션 갱신 분기가 설계된다
@@ -116,10 +116,10 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 |-------|-----------|----------------|--------|-----------|
 | 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-08 |
 | 32. Owner 생명주기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
-| 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 0/2 | Not started | - |
+| 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
 | 35. DX + 설계 문서 통합 | v0.8 | 0/3 | Not started | - |
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-09 after Phase 32 execution complete*
+*Last updated: 2026-02-09 after Phase 33 execution complete*
