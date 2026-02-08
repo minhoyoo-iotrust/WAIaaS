@@ -3,6 +3,7 @@
 **문서 ID:** CORE-06
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
+**v0.7 보완:** 2026-02-08
 **상태:** 완료
 **참조:** CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), CORE-03 (26-keystore-spec.md), CORE-04 (27-chain-adapter-interface.md), CORE-05 (28-daemon-lifecycle-cli.md), 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 55-dx-improvement-spec.md (v0.5)
 **요구사항:** API-01 (REST API 서버), API-06 (MCP 서버 연동 기반)
@@ -172,23 +173,31 @@ log_level = "info"             # 로그 레벨 (debug, info, warn, error)
 
 ### 2.1 미들웨어 실행 순서
 
-미들웨어 실행 순서는 보안에 직접 영향을 미치므로, 정확한 순서를 코드 수준으로 정의한다. 요청은 순서 1 -> 8로 통과하며, 응답은 역순으로 반환된다.
+미들웨어 실행 순서는 보안에 직접 영향을 미치므로, 정확한 순서를 코드 수준으로 정의한다. 요청은 순서 1 -> 10으로 통과하며, 응답은 역순으로 반환된다. [v0.7 보완: 9단계 -> 10단계. #3.5 globalRateLimit + #9 sessionRateLimit 2단계 분리. 기존 #7 rateLimiter 삭제, killSwitchGuard #8->#7, authRouter #9->#8로 이동]
 
-| 순서 | 미들웨어 | 역할 | 적용 범위 | 실패 시 |
-|------|----------|------|-----------|---------|
-| 1 | `requestId` | 요청 ID 부여 (X-Request-ID) | 전체 (`*`) | - |
-| 2 | `requestLogger` | 요청/응답 로깅 | 전체 (`*`) | - |
-| 3 | `shutdownGuard` | 종료 중 요청 거부 | 전체 (`*`) | 503 |
-| 4 | `secureHeaders` | 보안 헤더 설정 | 전체 (`*`) | - |
-| 5 | `hostValidation` | Host 헤더 검증 | 전체 (`*`) | 403 |
-| 6 | `cors` | CORS 설정 | 전체 (`*`) | 403 |
-| 7 | `rateLimiter` | 요청 속도 제한 | 전체 (`*`) | 429 |
-| 8 | `sessionAuth` | 세션 토큰 검증 | `/v1/*` (인증 필요) | 401 |
-| 9 | `ownerAuth` | Owner 서명 검증 | 라우트 레벨 (`/v1/owner/*`, `POST /v1/sessions`) | 401/403 |
+| 순서 | 미들웨어 | 역할 | 키 방식 | 적용 범위 | 실패 시 |
+|------|----------|------|---------|-----------|---------|
+| 1 | `requestId` | 요청 ID 부여 (X-Request-ID) | - | 전체 (`*`) | - |
+| 2 | `requestLogger` | 요청/응답 로깅 | - | 전체 (`*`) | - |
+| 3 | `shutdownGuard` | 종료 중 요청 거부 | - | 전체 (`*`) | 503 |
+| 3.5 | `globalRateLimit` | IP 기반 전역 속도 제한 (절대 상한) | IP 주소 | 전체 (`*`) | 429 |
+| 4 | `secureHeaders` | 보안 헤더 설정 | - | 전체 (`*`) | - |
+| 5 | `hostValidation` | Host 헤더 검증 | - | 전체 (`*`) | 403 |
+| 6 | `cors` | CORS 설정 | - | 전체 (`*`) | 403 |
+| 7 | `killSwitchGuard` | Kill Switch 상태 검사 | - | 전체 (`*`) | 503 |
+| 8 | `authRouter` | 라우트별 인증 디스패치 (v0.5 통합) | - | 전체 (`*`) | 401/403 |
+| 9 | `sessionRateLimit` | 세션 기반 세분화 속도 제한 | sessionId | 인증 완료 후 | 429 |
 
-> **참고:** 순서 1-7은 글로벌 미들웨어(`app.use('*')`)로 모든 요청에 적용된다. 순서 8 `sessionAuth`는 `/v1/*` 경로에만 적용되며, 순서 9 `ownerAuth`는 라우트 레벨에서 개별 엔드포인트에 적용된다. 두 인증 미들웨어는 상호 배타적으로, 하나의 엔드포인트에 둘 다 적용되지 않는다.
+> **[v0.7 보완] Rate Limiter 2단계 분리 근거 (DAEMON-03 해소):**
+> 기존 설계에서는 단일 `rateLimiter`(#7)가 인증 전에 실행되면서 IP 기반 + 세션 기반 제한을 동시에 처리했다. 이는 미인증 공격자가 대량 요청을 보내 IP 기반 전역 한도를 소진하면, 동일 IP(localhost `127.0.0.1`)를 공유하는 인증된 사용자의 세션별 rate limit까지 간접적으로 영향받는 문제가 있었다.
 >
-> **(v0.5 변경) Auth 단계 통합:** 순서 8-9의 sessionAuth/ownerAuth가 `authRouter` 통합 디스패처로 변경됨. authRouter는 경로 패턴에 따라 masterAuth(implicit/explicit), ownerAuth, sessionAuth를 자동 분기한다. masterAuth(implicit)는 localhost 접속 자체로 인증 완료되며, masterAuth(explicit)는 X-Master-Password 헤더를 검증한다. 상세: 52-auth-model-redesign.md 섹션 5 참조.
+> 2단계 분리로 이 문제를 해소한다:
+> - **Stage 1 globalRateLimit (#3.5):** 인증 전, IP 기반 절대 상한. 미인증/인증 무관하게 전체 요청 속도를 제한.
+> - **Stage 2 sessionRateLimit (#9):** 인증 후, sessionId 기반 세분화 제한. 미인증 요청은 이 단계에 도달하지 않으므로 인증 사용자의 세션별 한도에 영향을 줄 수 없음.
+>
+> **참고:** 순서 1-3.5은 글로벌 미들웨어(`app.use('*')`)로 모든 요청에 적용된다. 순서 4-8도 글로벌이다. 순서 9 `sessionRateLimit`은 인증 완료 후에만 적용되며, 미인증 요청(공개 엔드포인트)은 Stage 1만 적용된다.
+>
+> **(v0.5 변경) Auth 단계 통합:** authRouter는 경로 패턴에 따라 masterAuth(implicit/explicit), ownerAuth, sessionAuth를 자동 분기한다. masterAuth(implicit)는 localhost 접속 자체로 인증 완료되며, masterAuth(explicit)는 X-Master-Password 헤더를 검증한다. 상세: 52-auth-model-redesign.md 섹션 5 참조.
 >
 > **ownerAuth 상세:** per-request SIWS/SIWE 서명 기반 인증. `Authorization: Bearer <base64url JSON>` 형식으로 전달되며, 8단계 검증 체인을 거친다 (헤더 파싱 -> timestamp 5분 -> nonce 일회성 -> 서명 검증 -> owner 일치 -> action 일치 -> 컨텍스트 설정 -> next). 상세는 34-owner-wallet-connection.md 섹션 5, API-SPEC(37-rest-api-complete-spec.md) 섹션 3.2 참조.
 >
@@ -197,7 +206,7 @@ log_level = "info"             # 로그 레벨 (debug, info, warn, error)
 ### 2.2 미들웨어 등록 코드 패턴
 
 ```typescript
-// packages/daemon/src/server/middleware/index.ts
+// packages/daemon/src/server/middleware/index.ts [v0.7 보완: 10단계]
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { secureHeaders } from 'hono/secure-headers'
 import { cors } from 'hono/cors'
@@ -217,6 +226,12 @@ export function registerMiddleware(
 
   // 3. Shutdown Guard
   app.use('*', shutdownGuardMiddleware(deps.lifecycle))
+
+  // 3.5. Global Rate Limit (IP 기반 절대 상한) [v0.7 보완]
+  app.use('*', globalRateLimitMiddleware({
+    maxRpm: deps.config.security.rate_limit_global_ip_rpm,  // 기본 1000
+    windowMs: 60_000,
+  }))
 
   // 4. Secure Headers
   app.use('*', secureHeaders({
@@ -238,11 +253,17 @@ export function registerMiddleware(
     maxAge: 600,
   }))
 
-  // 7. Rate Limiter
-  app.use('*', rateLimiterMiddleware(deps.config.security))
+  // 7. Kill Switch Guard [v0.7 보완: #8->#7]
+  app.use('*', killSwitchGuardMiddleware(deps.db))
 
-  // 8. Session Auth (인증 필요 엔드포인트만)
-  app.use('/v1/*', sessionAuthMiddleware(deps.db))
+  // 8. Auth Router (v0.5 통합 디스패처) [v0.7 보완: #9->#8]
+  app.use('*', authRouter(deps))
+
+  // 9. Session Rate Limit (세션 기반 세분화 제한) [v0.7 보완]
+  app.use('*', sessionRateLimitMiddleware({
+    sessionRpm: deps.config.security.rate_limit_session_rpm,  // 기본 300
+    txRpm: deps.config.security.rate_limit_tx_rpm,            // 기본 10
+  }))
 }
 ```
 
@@ -428,45 +449,129 @@ cors({
 | `exposeHeaders` | X-Request-ID, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset | 클라이언트가 읽어야 하는 커스텀 헤더 (요청 추적 + 재시도 + Rate Limit 정보) |
 | `maxAge` | 600 (10분) | preflight 요청 빈도 감소 |
 
-#### 미들웨어 7: rateLimiter
+#### 미들웨어 3.5: globalRateLimit [v0.7 보완]
 
-요청 속도를 제한하여 무차별 대입 공격과 리소스 고갈을 방지한다. 섹션 7에서 상세 설계.
+IP 기반 전역 요청 속도 상한. 인증 전에 실행되어 미인증/인증 무관하게 모든 요청을 제한한다. 섹션 7에서 상세 설계.
 
 | 항목 | 값 |
 |------|-----|
-| **입력** | 클라이언트 IP (기본: 127.0.0.1) + 세션 ID (인증 후) |
+| **입력** | 클라이언트 IP (`x-forwarded-for` 또는 `socket.remoteAddress` 또는 `'127.0.0.1'`) |
 | **출력** | 정상: pass-through + 헤더 / 초과: 429 응답 |
-| **저장소** | `lru-cache` (in-memory) |
+| **한도** | `rate_limit_global_ip_rpm` (기본 1000 req/min) |
+| **저장소** | `lru-cache` (in-memory, IP별 timestamp 배열) |
 | **에러 코드** | `RATE_LIMIT_EXCEEDED` (429) |
+| **목적** | 절대 상한(absolute ceiling). localhost에서는 IP='127.0.0.1' 고정이므로 사실상 전체 요청 속도 상한 |
 
 ```typescript
-// 기본 구조 (섹션 7에서 상세 설계)
-export function rateLimiterMiddleware(config: SecurityConfig) {
+export function globalRateLimitMiddleware(config: { maxRpm: number; windowMs: number }) {
+  const cache = new LRUCache<string, { timestamps: number[] }>({ max: 1_000, ttl: config.windowMs })
+
   return createMiddleware(async (c, next) => {
-    const key = c.get('sessionId') || c.req.header('x-forwarded-for') || '127.0.0.1'
-    const result = checkRateLimit(key, config)
+    const ip = c.req.header('x-forwarded-for') || c.env?.incoming?.socket?.remoteAddress || '127.0.0.1'
+    const now = Date.now()
+    const entry = cache.get(ip) || { timestamps: [] }
+    entry.timestamps = entry.timestamps.filter(t => t > now - config.windowMs)
 
-    c.header('X-RateLimit-Limit', String(result.limit))
-    c.header('X-RateLimit-Remaining', String(result.remaining))
-    c.header('X-RateLimit-Reset', String(result.resetAt))
+    c.header('X-RateLimit-Limit', String(config.maxRpm))
+    c.header('X-RateLimit-Remaining', String(Math.max(0, config.maxRpm - entry.timestamps.length)))
 
-    if (!result.allowed) {
-      c.header('Retry-After', String(result.retryAfter))
+    if (entry.timestamps.length >= config.maxRpm) {
+      const retryAfter = Math.ceil((entry.timestamps[0]! + config.windowMs - now) / 1000)
+      c.header('Retry-After', String(retryAfter))
       return c.json({
         error: {
           code: 'RATE_LIMIT_EXCEEDED',
-          message: '요청 속도 제한을 초과했습니다.',
-          details: { retryAfter: result.retryAfter },
+          message: '전역 요청 속도 제한을 초과했습니다.',
+          details: { limit: config.maxRpm, window: '1m', retryAfter, stage: 'global' },
           requestId: c.get('requestId'),
+          retryable: true,
         },
       }, 429)
     }
+
+    entry.timestamps.push(now)
+    cache.set(ip, entry)
     await next()
   })
 }
 ```
 
-#### 미들웨어 8: sessionAuth
+#### 미들웨어 7: killSwitchGuard [v0.7 보완: #8->#7]
+
+Kill Switch 상태를 확인하여 ACTIVATED/RECOVERING 상태에서는 허용 목록 외 모든 요청을 거부한다. 상세는 36-killswitch-autostop-evm.md 섹션 2.4 참조.
+
+| 항목 | 값 |
+|------|-----|
+| **입력** | system_state 테이블의 `kill_switch_status` |
+| **출력** | NORMAL: pass-through / ACTIVATED or RECOVERING: 허용 목록 외 503 |
+| **허용 목록** | `GET /v1/health`, `GET /v1/admin/status`, `POST /v1/admin/recover`, `GET /v1/admin/kill-switch` |
+| **에러 코드** | `SYSTEM_LOCKED` (503) |
+
+#### 미들웨어 8: authRouter (v0.5 통합) [v0.7 보완: #9->#8]
+
+라우트별 인증 디스패치. 상세는 52-auth-model-redesign.md 섹션 7.2 참조.
+
+#### 미들웨어 9: sessionRateLimit [v0.7 보완]
+
+인증된 사용자별 세분화 속도 제한. 인증 완료 후에만 실행되어 미인증 요청은 이 단계에 도달하지 않는다. 섹션 7에서 상세 설계.
+
+| 항목 | 값 |
+|------|-----|
+| **입력** | sessionId (`c.get('session').id`) 또는 authType=master인 경우 `'master'` |
+| **출력** | 정상: pass-through + 헤더 / 초과: 429 응답 |
+| **한도** | 세션 300 req/min, tx 엔드포인트 10 req/min |
+| **저장소** | `lru-cache` (in-memory, sessionId별 timestamp 배열) |
+| **에러 코드** | `RATE_LIMIT_EXCEEDED` (429) |
+| **목적** | 인증된 사용자별 세분화 제한. 미인증 요청은 Stage 1(globalRateLimit)에서만 제한됨 |
+
+```typescript
+export function sessionRateLimitMiddleware(config: { sessionRpm: number; txRpm: number }) {
+  const cache = new LRUCache<string, { timestamps: number[] }>({ max: 10_000, ttl: 60_000 })
+
+  return createMiddleware(async (c, next) => {
+    const sessionId = c.get('sessionId') || (c.get('authType') === 'master' ? 'master' : null)
+    if (!sessionId) return next()  // 공개 엔드포인트는 Stage 1만 적용
+
+    const now = Date.now()
+    const routeKey = `${c.req.method} ${c.req.routePath}`
+    const isTxEndpoint = routeKey === 'POST /v1/transactions/send'
+    const limit = isTxEndpoint ? config.txRpm : config.sessionRpm
+    const key = isTxEndpoint ? `${sessionId}:tx` : sessionId
+
+    const entry = cache.get(key) || { timestamps: [] }
+    entry.timestamps = entry.timestamps.filter(t => t > now - 60_000)
+
+    c.header('X-RateLimit-Limit', String(limit))
+    c.header('X-RateLimit-Remaining', String(Math.max(0, limit - entry.timestamps.length)))
+
+    if (entry.timestamps.length >= limit) {
+      const retryAfter = Math.ceil((entry.timestamps[0]! + 60_000 - now) / 1000)
+      c.header('Retry-After', String(retryAfter))
+      return c.json({
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: '세션 요청 속도 제한을 초과했습니다.',
+          details: { limit, window: '1m', retryAfter, stage: 'session' },
+          requestId: c.get('requestId'),
+          retryable: true,
+        },
+      }, 429)
+    }
+
+    entry.timestamps.push(now)
+    cache.set(key, entry)
+    await next()
+  })
+}
+```
+
+#### 미들웨어 (구): sessionAuth -- [v0.7 보완: authRouter(#8)에 통합됨]
+
+세션 토큰(`Bearer wai_sess_...`)을 검증하고 세션/에이전트 컨텍스트를 설정한다. Phase 7에서 JWT 구조와 검증 로직을 상세 설계한다.
+
+> **참고:** v0.5에서 `authRouter`(#8)에 통합되어 독립 미들웨어 슬롯을 차지하지 않음. 아래는 sessionAuth 내부 로직 참조용.
+
+#### 미들웨어 (구 #8): sessionAuth (authRouter 내부)
 
 세션 토큰(`Bearer wai_sess_...`)을 검증하고 세션/에이전트 컨텍스트를 설정한다. Phase 7에서 JWT 구조와 검증 로직을 상세 설계한다.
 
@@ -518,7 +623,7 @@ export function sessionAuthMiddleware(db: DrizzleInstance) {
 }
 ```
 
-### 2.4 미들웨어 실행 흐름 다이어그램
+### 2.4 미들웨어 실행 흐름 다이어그램 [v0.7 보완: 10단계]
 
 ```mermaid
 sequenceDiagram
@@ -526,11 +631,13 @@ sequenceDiagram
     participant M1 as 1. requestId
     participant M2 as 2. requestLogger
     participant M3 as 3. shutdownGuard
+    participant M35 as 3.5 globalRateLimit
     participant M4 as 4. secureHeaders
     participant M5 as 5. hostValidation
     participant M6 as 6. cors
-    participant M7 as 7. rateLimiter
-    participant M8 as 8. sessionAuth
+    participant M7 as 7. killSwitchGuard
+    participant M8 as 8. authRouter
+    participant M9 as 9. sessionRateLimit
     participant H as Handler
 
     Client->>M1: Request
@@ -541,7 +648,13 @@ sequenceDiagram
         M3-->>Client: 503 SERVICE_SHUTTING_DOWN
     end
 
-    M3->>M4: pass
+    M3->>M35: pass
+
+    alt IP 전역 속도 초과
+        M35-->>Client: 429 RATE_LIMIT_EXCEEDED (stage: global)
+    end
+
+    M35->>M4: pass
     M4->>M5: + Security Headers
 
     alt Host 불일치
@@ -556,17 +669,23 @@ sequenceDiagram
 
     M6->>M7: pass
 
-    alt 속도 제한 초과
-        M7-->>Client: 429 RATE_LIMIT_EXCEEDED
+    alt Kill Switch ACTIVATED
+        M7-->>Client: 503 SYSTEM_LOCKED
     end
 
     M7->>M8: pass
 
-    alt 인증 실패 (/v1/* 경로만)
-        M8-->>Client: 401 AUTH_TOKEN_*
+    alt 인증 실패
+        M8-->>Client: 401 AUTH_TOKEN_* / 403
     end
 
-    M8->>H: + sessionId, agentId
+    M8->>M9: + sessionId, agentId, authType
+
+    alt 세션 속도 초과
+        M9-->>Client: 429 RATE_LIMIT_EXCEEDED (stage: session)
+    end
+
+    M9->>H: pass
     H-->>Client: Response + 보안 헤더
 ```
 
@@ -650,13 +769,13 @@ serve({
 2. 세션 토큰: CORS를 우회하더라도(비브라우저 클라이언트) 유효한 토큰 필수
 3. 두 방어가 독립적 -- CORS는 브라우저 공격, 세션은 모든 클라이언트 공격을 차단
 
-#### Layer 4: Rate Limiter
+#### Layer 4: Rate Limiter [v0.7 보완: 2단계 분리]
 
 | 항목 | 값 |
 |------|-----|
 | **방어 대상** | 공격 벡터 #6 (무차별 대입) |
-| **구현** | 미들웨어 7 (`rateLimiter`) |
-| **강도** | 시간 기반 차단 -- 과도한 요청 속도를 제한 |
+| **구현** | 미들웨어 3.5 (`globalRateLimit`) + 미들웨어 9 (`sessionRateLimit`) |
+| **강도** | 시간 기반 차단 -- 2단계로 미인증/인증 공격 벡터를 분리하여 제한 |
 | **한계** | 분산 공격에는 제한적 (localhost이므로 단일 소스) |
 
 ### 3.3 보안 수준 매트릭스
@@ -1661,7 +1780,7 @@ const shutdownRoute = createRoute({
 
 ---
 
-## 7. Rate Limiter 설계
+## 7. Rate Limiter 설계 [v0.7 보완: 2-Stage 구조로 전면 재구성]
 
 ### 7.1 설계 원칙
 
@@ -1671,78 +1790,68 @@ Rate limiter는 `lru-cache` 기반 슬라이딩 윈도우로 구현한다. local
 |------|-----|
 | **알고리즘** | 슬라이딩 윈도우 (요청 타임스탬프 배열) |
 | **저장소** | `lru-cache` (in-memory, 데몬 재시작 시 초기화) |
-| **키** | IP + 세션 ID (인증 후) |
+| **구조** | 2-Stage (globalRateLimit + sessionRateLimit) [v0.7 보완] |
 | **윈도우** | 1분 (60,000ms) |
-| **최대 항목** | 10,000 (동시 세션/IP) |
 
-### 7.2 3-레벨 속도 제한
+> **[v0.7 보완] 기존 3-level 구조에서 2-stage 구조로 변경한 이유 (DAEMON-03 해소):**
+> 기존 단일 `rateLimiter` 미들웨어는 인증 전(#7)에 위치하면서 IP 기반 전역 제한과 세션 기반 제한을 동시에 처리했다. 이때 `c.get('sessionId')`가 아직 설정되지 않은 상태이므로, 미인증 요청도 IP 키로 동일한 슬라이딩 윈도우에 카운트되었다. localhost 환경에서 모든 요청의 IP가 `127.0.0.1`로 고정되므로, 미인증 공격자의 대량 요청이 인증 사용자의 전역 한도를 소진하는 문제가 있었다.
+>
+> 2-Stage 분리로 이 문제를 구조적으로 해소한다:
+> - Stage 1 (globalRateLimit #3.5): 인증 전, IP 기반 절대 상한 → 미인증 공격 차단
+> - Stage 2 (sessionRateLimit #9): 인증 후, sessionId 기반 세분화 제한 → 인증 사용자별 공정한 할당
 
-| 레벨 | 대상 | 한도 | 근거 |
-|------|------|------|------|
-| **전역** | IP당 | 100 req/min | 인증 전 무차별 대입 방지 |
-| **인증된 세션** | 세션당 | 300 req/min | 정상 에이전트 활동 허용 |
-| **엔드포인트별** | 특정 경로 | 개별 설정 | 고비용 작업 보호 |
+### 7.2 2-Stage 속도 제한
 
-**엔드포인트별 오버라이드:**
+| Stage | 미들웨어 | 위치 | 키 | 한도 | 저장소 | 목적 |
+|-------|----------|------|-----|------|--------|------|
+| **1** | `globalRateLimit` | #3.5 (shutdownGuard 직후, 인증 전) | IP 주소 (`x-forwarded-for` \|\| `socket.remoteAddress` \|\| `'127.0.0.1'`) | `rate_limit_global_ip_rpm` (기본 1000) | `lru-cache` (IP별, max 1,000) | 절대 상한(absolute ceiling). localhost에서는 IP='127.0.0.1' 고정이므로 사실상 전체 요청 속도 상한. |
+| **2** | `sessionRateLimit` | #9 (authRouter 직후, 인증 완료 후) | sessionId (`c.get('session').id`) 또는 authType=master인 경우 `'master'` | session 300 req/min, tx 엔드포인트 10 req/min | `lru-cache` (sessionId별, max 10,000) | 인증된 사용자별 세분화 제한. 미인증 요청은 Stage 1에서만 제한됨. |
+
+**Stage 2 엔드포인트별 오버라이드:**
 
 | 엔드포인트 | 한도 | 근거 |
 |-----------|------|------|
-| `POST /v1/transactions/send` | 10 req/min | 서명/제출 비용이 높음 |
-| `POST /v1/sessions` | 5 req/min | 세션 생성은 Owner 서명 필요 |
-| `POST /v1/owner/kill-switch` | 3 req/min | 비상 정지 남용 방지 |
-| `GET /health` | 600 req/min | 모니터링 도구 빈번 폴링 허용 |
+| `POST /v1/transactions/send` | 10 req/min | 서명/제출 비용이 높음 (tx 전용 제한) |
+
+> **참고:** 기존 `POST /v1/sessions` 5 req/min, `POST /v1/owner/kill-switch` 3 req/min 등의 엔드포인트별 오버라이드는 Stage 2에서 sessionId 기반으로 자연스럽게 제한된다. 별도 오버라이드 없이도 session 300 req/min 안에서 충분히 관리 가능.
 
 ### 7.3 구현 코드 패턴
 
+**Stage 1: globalRateLimitMiddleware (섹션 2.3 미들웨어 3.5 참조)**
+
 ```typescript
-// packages/daemon/src/server/middleware/rate-limiter.ts
+// packages/daemon/src/server/middleware/global-rate-limit.ts
 import { LRUCache } from 'lru-cache'
 import { createMiddleware } from 'hono/factory'
 
-interface RateLimitEntry {
-  timestamps: number[]
+interface GlobalRateLimitConfig {
+  maxRpm: number        // 기본: 1000 (rate_limit_global_ip_rpm)
+  windowMs: number      // 기본: 60_000 (1분)
 }
 
-interface RateLimitConfig {
-  globalLimit: number        // 기본: 100
-  sessionLimit: number       // 기본: 300
-  windowMs: number           // 기본: 60_000 (1분)
-  endpointOverrides: Map<string, number>
-}
-
-export function rateLimiterMiddleware(config: RateLimitConfig) {
-  const cache = new LRUCache<string, RateLimitEntry>({
-    max: 10_000,             // 최대 10,000 키 추적
-    ttl: config.windowMs,    // 윈도우 만료 시 자동 삭제
+export function globalRateLimitMiddleware(config: GlobalRateLimitConfig) {
+  const cache = new LRUCache<string, { timestamps: number[] }>({
+    max: 1_000,              // 최대 1,000 IP 추적 (localhost에서는 1개)
+    ttl: config.windowMs,
   })
 
   return createMiddleware(async (c, next) => {
     const now = Date.now()
-    const sessionId = c.get('sessionId')
-    const key = sessionId || '127.0.0.1'  // localhost 단일 IP
+    const ip = c.req.header('x-forwarded-for')
+      || c.env?.incoming?.socket?.remoteAddress
+      || '127.0.0.1'
 
-    // 엔드포인트별 오버라이드 확인
-    const routeKey = `${c.req.method} ${c.req.routePath}`
-    const endpointLimit = config.endpointOverrides.get(routeKey)
+    let entry = cache.get(ip) || { timestamps: [] }
+    entry.timestamps = entry.timestamps.filter(t => t > now - config.windowMs)
 
-    // 적용할 한도 결정 (우선순위: 엔드포인트 > 세션 > 전역)
-    const limit = endpointLimit
-      ?? (sessionId ? config.sessionLimit : config.globalLimit)
+    const remaining = Math.max(0, config.maxRpm - entry.timestamps.length)
+    const resetAt = Math.ceil((now + config.windowMs) / 1000)
 
-    // 슬라이딩 윈도우: 윈도우 내 요청 수 계산
-    let entry = cache.get(key) || { timestamps: [] }
-    const windowStart = now - config.windowMs
-    entry.timestamps = entry.timestamps.filter(t => t > windowStart)
-
-    // Rate limit 헤더 설정
-    const remaining = Math.max(0, limit - entry.timestamps.length)
-    const resetAt = Math.ceil((windowStart + config.windowMs) / 1000)
-
-    c.header('X-RateLimit-Limit', String(limit))
+    c.header('X-RateLimit-Limit', String(config.maxRpm))
     c.header('X-RateLimit-Remaining', String(remaining))
     c.header('X-RateLimit-Reset', String(resetAt))
 
-    if (entry.timestamps.length >= limit) {
+    if (entry.timestamps.length >= config.maxRpm) {
       const retryAfter = Math.ceil(
         (entry.timestamps[0]! + config.windowMs - now) / 1000
       )
@@ -1750,11 +1859,12 @@ export function rateLimiterMiddleware(config: RateLimitConfig) {
       return c.json({
         error: {
           code: 'RATE_LIMIT_EXCEEDED',
-          message: '요청 속도 제한을 초과했습니다.',
+          message: '전역 요청 속도 제한을 초과했습니다.',
           details: {
-            limit,
+            limit: config.maxRpm,
             window: '1m',
             retryAfter,
+            stage: 'global',
           },
           requestId: c.get('requestId'),
           retryable: true,
@@ -1762,10 +1872,80 @@ export function rateLimiterMiddleware(config: RateLimitConfig) {
       }, 429)
     }
 
-    // 현재 요청 기록
+    entry.timestamps.push(now)
+    cache.set(ip, entry)
+    await next()
+  })
+}
+```
+
+**Stage 2: sessionRateLimitMiddleware (섹션 2.3 미들웨어 9 참조)**
+
+```typescript
+// packages/daemon/src/server/middleware/session-rate-limit.ts
+import { LRUCache } from 'lru-cache'
+import { createMiddleware } from 'hono/factory'
+
+interface SessionRateLimitConfig {
+  sessionRpm: number     // 기본: 300 (rate_limit_session_rpm)
+  txRpm: number          // 기본: 10 (rate_limit_tx_rpm)
+}
+
+export function sessionRateLimitMiddleware(config: SessionRateLimitConfig) {
+  const cache = new LRUCache<string, { timestamps: number[] }>({
+    max: 10_000,             // 최대 10,000 세션 추적
+    ttl: 60_000,
+  })
+
+  return createMiddleware(async (c, next) => {
+    const sessionId = c.get('sessionId')
+      || (c.get('authType') === 'master' ? 'master' : null)
+
+    // 공개 엔드포인트 (authType='none')는 Stage 1(globalRateLimit)만 적용
+    if (!sessionId) return next()
+
+    const now = Date.now()
+    const routeKey = `${c.req.method} ${c.req.routePath}`
+
+    // tx 엔드포인트 전용 제한
+    const isTxEndpoint = routeKey === 'POST /v1/transactions/send'
+    const limit = isTxEndpoint ? config.txRpm : config.sessionRpm
+    const key = isTxEndpoint ? `${sessionId}:tx` : sessionId
+
+    let entry = cache.get(key) || { timestamps: [] }
+    entry.timestamps = entry.timestamps.filter(t => t > now - 60_000)
+
+    const remaining = Math.max(0, limit - entry.timestamps.length)
+    const resetAt = Math.ceil((now + 60_000) / 1000)
+
+    // Stage 2 헤더는 Stage 1 헤더를 덮어씀 (더 세분화된 정보 제공)
+    c.header('X-RateLimit-Limit', String(limit))
+    c.header('X-RateLimit-Remaining', String(remaining))
+    c.header('X-RateLimit-Reset', String(resetAt))
+
+    if (entry.timestamps.length >= limit) {
+      const retryAfter = Math.ceil(
+        (entry.timestamps[0]! + 60_000 - now) / 1000
+      )
+      c.header('Retry-After', String(retryAfter))
+      return c.json({
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: '세션 요청 속도 제한을 초과했습니다.',
+          details: {
+            limit,
+            window: '1m',
+            retryAfter,
+            stage: 'session',
+          },
+          requestId: c.get('requestId'),
+          retryable: true,
+        },
+      }, 429)
+    }
+
     entry.timestamps.push(now)
     cache.set(key, entry)
-
     await next()
   })
 }
@@ -1773,25 +1953,29 @@ export function rateLimiterMiddleware(config: RateLimitConfig) {
 
 ### 7.4 config.toml 설정
 
-CORE-01(24-monorepo-data-directory.md)에서 정의한 `config.toml [security]` 섹션에 rate limiter 설정을 포함한다. 이 값들은 `config.toml [security]` 섹션의 `rate_limit_global_rpm`, `rate_limit_session_rpm`, `rate_limit_tx_rpm`으로 조절 가능하며, 환경변수(`WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_RPM` 등)로 오버라이드할 수 있다.
+CORE-01(24-monorepo-data-directory.md)에서 정의한 `config.toml [security]` 섹션에 rate limiter 설정을 포함한다. [v0.7 보완: `rate_limit_global_rpm` -> `rate_limit_global_ip_rpm` (이름 변경 + 값 1000)]
 
 ```toml
 [security]
-rate_limit_global_rpm = 100       # 전역 RPM (인증 전)
-rate_limit_session_rpm = 300      # 세션당 RPM (인증 후)
-rate_limit_tx_rpm = 10            # 거래 전송 RPM
+rate_limit_global_ip_rpm = 1000   # [v0.7 보완] IP 기반 전역 RPM (Stage 1 globalRateLimit). localhost에서는 전체 요청 상한
+rate_limit_session_rpm = 300      # 세션당 RPM (Stage 2 sessionRateLimit, 인증 후)
+rate_limit_tx_rpm = 10            # 거래 전송 RPM (Stage 2 tx 엔드포인트 오버라이드)
 ```
+
+환경변수 오버라이드: `WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_IP_RPM`, `WAIAAS_SECURITY_RATE_LIMIT_SESSION_RPM`, `WAIAAS_SECURITY_RATE_LIMIT_TX_RPM`
 
 ### 7.5 429 응답 헤더
 
-Rate limit 관련 응답 헤더는 모든 요청에 포함한다 (429뿐 아니라 정상 응답에도).
+Rate limit 관련 응답 헤더는 모든 요청에 포함한다 (429뿐 아니라 정상 응답에도). [v0.7 보완: stage 필드 추가]
 
 | 헤더 | 타입 | 설명 |
 |------|------|------|
-| `X-RateLimit-Limit` | number | 적용된 요청 한도 |
+| `X-RateLimit-Limit` | number | 적용된 요청 한도 (Stage 2가 있으면 Stage 2 값으로 덮어씀) |
 | `X-RateLimit-Remaining` | number | 남은 요청 수 |
 | `X-RateLimit-Reset` | number | 윈도우 리셋 시각 (Unix epoch 초) |
 | `Retry-After` | number | 재시도까지 대기 시간 (초) -- 429 응답에만 |
+
+429 응답의 `details.stage` 필드로 어느 단계에서 제한되었는지 식별 가능: `"global"` (Stage 1) 또는 `"session"` (Stage 2).
 
 ---
 
@@ -1870,7 +2054,7 @@ Content negotiation은 사용하지 않는다. 모든 요청/응답은 `applicat
 
 | 요구사항 | 커버 내용 | 섹션 |
 |----------|----------|------|
-| **API-01** (REST API 서버) | Hono 서버 아키텍처, 미들웨어 스택, 에러 처리, 라우트 구조, Rate Limiter | 1-8 |
+| **API-01** (REST API 서버) | Hono 서버 아키텍처, 미들웨어 스택 (10단계), 에러 처리, 라우트 구조, Rate Limiter (2-Stage) | 1-8 |
 | **API-06** (MCP 서버 연동 기반) | OpenAPI 3.0 자동 생성 (`/doc`), Zod SSoT 파이프라인 -- MCP 도구 스키마가 OpenAPI 스펙을 참조 | 5, 6 |
 
 ---

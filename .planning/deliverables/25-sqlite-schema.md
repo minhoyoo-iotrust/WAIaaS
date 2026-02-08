@@ -5,8 +5,9 @@
 **v0.5 업데이트:** 2026-02-07
 **Phase 20 업데이트:** 2026-02-07
 **v0.6 업데이트:** 2026-02-08
+**v0.7 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md)
+**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소)
 
 ---
 
@@ -863,6 +864,83 @@ CREATE INDEX idx_wallet_connections_owner_address ON wallet_connections(owner_ad
 | 부재 시 영향 | ownerAuth 불가 | ownerAuth에 영향 없음 (CLI 수동 서명 항상 가능) |
 | 타임스탬프 형식 | TEXT (ISO 8601) | INTEGER (Unix epoch, 초) -- CORE-02 표준 준수 |
 
+### 2.9 nonces 테이블 -- Nonce 저장소 (v0.7, 선택적) [v0.7 보완]
+
+> **선택적 테이블.** `config.toml`의 `[security] nonce_storage = "sqlite"` 설정 시에만 생성된다. 기본값 `"memory"`는 기존 LRU 캐시를 사용하며 이 테이블을 생성하지 않는다.
+
+세션 인증의 nonce 재사용 방지를 위한 영구 저장소. 메모리 LRU 캐시 대비 데몬 재시작 시에도 nonce가 보존되어 replay attack 윈도우를 제거한다.
+
+**요구사항 매핑:** DAEMON-06 (SQLite nonce 저장 옵션), SESS-PROTO 4.2 (nonce 저장소 추상화)
+
+#### Drizzle ORM 정의
+
+```typescript
+export const nonces = sqliteTable('nonces', {
+  // ── 식별자 (nonce 문자열 자체가 PK) ──
+  nonce: text('nonce').primaryKey(),                       // UUID v7 nonce 값
+
+  // ── 타임스탬프 ──
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
+// 만료 nonce 정리용 인덱스
+export const noncesIndexes = [
+  index('idx_nonces_expires_at').on(nonces.expiresAt),
+];
+```
+
+#### CREATE TABLE SQL DDL
+
+```sql
+CREATE TABLE IF NOT EXISTS nonces (
+  nonce TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX idx_nonces_expires_at ON nonces(expires_at);
+```
+
+> **`IF NOT EXISTS` 사용 근거:** 이 테이블은 `nonce_storage = "sqlite"` 설정 시에만 생성되므로, 마이그레이션이 아닌 런타임 초기화 시 조건부 생성한다.
+
+#### 컬럼 설명
+
+| 컬럼 | 타입 | Nullable | 기본값 | 용도 |
+|------|------|----------|--------|------|
+| `nonce` | TEXT (PK) | NOT NULL | - | 세션 인증 nonce (UUID v7). 소비 즉시 INSERT하여 재사용 방지 |
+| `created_at` | INTEGER | NOT NULL | - | nonce 소비(INSERT) 시각 (Unix epoch, 초) |
+| `expires_at` | INTEGER | NOT NULL | - | nonce 만료 시각. 이 시각 이후 DELETE 대상 |
+
+#### 운영 패턴
+
+**nonce 소비 (원자적):**
+
+```typescript
+// SqliteNonceStore.consume() 구현
+// INSERT OR IGNORE: PK 중복 시 삽입 실패 (0 rows) → 이미 사용된 nonce
+const result = db.prepare(
+  'INSERT OR IGNORE INTO nonces (nonce, created_at, expires_at) VALUES (?, ?, ?)'
+).run(nonce, now, expiresAt);
+return result.changes > 0; // true = 최초 사용, false = 재사용 시도
+```
+
+**만료 nonce 정리:**
+
+```typescript
+// SqliteNonceStore.cleanup() -- 주기적 호출 (예: 5분마다)
+db.prepare('DELETE FROM nonces WHERE expires_at <= ?').run(now);
+```
+
+**메모리 vs SQLite 비교:**
+
+| 항목 | MemoryNonceStore (기본) | SqliteNonceStore |
+|------|----------------------|-----------------|
+| 재시작 내성 | X (휘발) | O (영구) |
+| 성능 | O(1) LRU | O(log N) B-tree |
+| 메모리 사용 | max 1000 LRU | 디스크 기반 |
+| Replay 윈도우 | 재시작 직후 TTL 잔여분 | 0 (완전 제거) |
+| 권장 환경 | 개발/테스트 | 프로덕션 |
+
 ---
 
 ## 3. 관계 다이어그램 (ERD)
@@ -978,6 +1056,12 @@ erDiagram
         text metadata
     }
 
+    nonces {
+        text nonce PK
+        integer created_at
+        integer expires_at
+    }
+
     agents ||--o{ sessions : "has"
     agents ||--o{ transactions : "executes"
     agents ||--o{ policies : "governed by"
@@ -997,6 +1081,7 @@ erDiagram
 | audit_log | 독립 | FK 없음 (데이터 보존) |
 | notification_channels | 독립 | FK 없음 (글로벌 설정) |
 | wallet_connections | 독립 | FK 없음 (v0.5 WC 편의 기능, agents.owner_address와 애플리케이션 레벨 관계) |
+| nonces | 독립 | FK 없음 (v0.7 선택적 nonce 영구 저장소, `nonce_storage = "sqlite"` 시에만 생성) |
 
 **FK 삭제 정책 설계 근거:**
 
@@ -1782,5 +1867,6 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 *v0.5 업데이트: 2026-02-07*
 *Phase 20 업데이트: 2026-02-07*
 *v0.6 업데이트: 2026-02-08*
+*v0.7 업데이트: 2026-02-08*
 *Phase: 06-core-architecture-design*
 *상태: 완료*

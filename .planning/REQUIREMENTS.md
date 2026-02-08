@@ -16,12 +16,12 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ### 데몬 프로세스 & 보안 기반
 
-- [ ] **DAEMON-01**: JWT Secret dual-key rotation 메커니즘 — current/previous 5분 전환 윈도우, `waiaas secret rotate` CLI + `POST /v1/admin/rotate-secret` API [CRITICAL]
-- [ ] **DAEMON-02**: 데몬 인스턴스 잠금을 PID 파일에서 flock 기반으로 전환, Windows Named Mutex fallback [CRITICAL]
-- [ ] **DAEMON-03**: Rate Limiter 2단계 분리 — #3.5 globalRateLimit(IP, 1000/min DoS방어) + #9 sessionRateLimit(세션기반, authRouter 후) [HIGH]
-- [ ] **DAEMON-04**: killSwitchGuard 허용 엔드포인트 4개 확정 (health/status/recover/kill-switch), 503 SYSTEM_LOCKED 응답 + hint [HIGH]
-- [ ] **DAEMON-05**: Master Password 인증을 Argon2id로 통일 — SHA-256 해시 전송 폐기, X-Master-Password 헤더 평문(localhost only) [HIGH]
-- [ ] **DAEMON-06**: 단일 데몬 인스턴스 강제 — flock(1차) + 선택적 SQLite nonce 저장(2차), config.toml nonce_storage 옵션 [HIGH]
+- [x] **DAEMON-01**: JWT Secret dual-key rotation 메커니즘 — current/previous 5분 전환 윈도우, `waiaas secret rotate` CLI + `POST /v1/admin/rotate-secret` API [CRITICAL]
+- [x] **DAEMON-02**: 데몬 인스턴스 잠금을 PID 파일에서 flock 기반으로 전환, Windows Named Mutex fallback [CRITICAL]
+- [x] **DAEMON-03**: Rate Limiter 2단계 분리 — #3.5 globalRateLimit(IP, 1000/min DoS방어) + #9 sessionRateLimit(세션기반, authRouter 후) [HIGH]
+- [x] **DAEMON-04**: killSwitchGuard 허용 엔드포인트 4개 확정 (health/status/recover/kill-switch), 503 SYSTEM_LOCKED 응답 + hint [HIGH]
+- [x] **DAEMON-05**: Master Password 인증을 Argon2id로 통일 — SHA-256 해시 전송 폐기, X-Master-Password 헤더 평문(localhost only) [HIGH]
+- [x] **DAEMON-06**: 단일 데몬 인스턴스 강제 — flock(1차) + 선택적 SQLite nonce 저장(2차), config.toml nonce_storage 옵션 [HIGH]
 
 ### 의존성 & 빌드 환경
 
@@ -66,12 +66,12 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 | CHAIN-02 | Phase 26 | Complete |
 | CHAIN-03 | Phase 26 | Complete |
 | CHAIN-04 | Phase 26 | Complete |
-| DAEMON-01 | Phase 27 | Pending |
-| DAEMON-02 | Phase 27 | Pending |
-| DAEMON-03 | Phase 27 | Pending |
-| DAEMON-04 | Phase 27 | Pending |
-| DAEMON-05 | Phase 27 | Pending |
-| DAEMON-06 | Phase 27 | Pending |
+| DAEMON-01 | Phase 27 | Complete |
+| DAEMON-02 | Phase 27 | Complete |
+| DAEMON-03 | Phase 27 | Complete |
+| DAEMON-04 | Phase 27 | Complete |
+| DAEMON-05 | Phase 27 | Complete |
+| DAEMON-06 | Phase 27 | Complete |
 | DEPS-01 | Phase 28 | Pending |
 | DEPS-02 | Phase 28 | Pending |
 | API-01 | Phase 29 | Pending |
@@ -95,4 +95,4 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 구현 장애 요소 25건
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after Phase 26 completion*
+*Last updated: 2026-02-08 after Phase 27 completion*

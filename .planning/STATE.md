@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-08)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 중앙 서버 없이 사용자가 완전한 통제권을 보유하면서.
-**현재 초점:** v0.7 Phase 26 완료 (verified ✓) -> Phase 27 데몬 보안 기반 확립
+**현재 초점:** v0.7 Phase 27 완료 (verified ✓) -> Phase 28 의존성 빌드 환경 해소
 
 ## 현재 위치
 
 마일스톤: v0.7 구현 장애 요소 해소
-페이즈: 26 of 30 (체인 어댑터 안정화)
-플랜: 2 of 2 in current phase
-상태: Phase complete (verified ✓, 10/10 must-haves)
-마지막 활동: 2026-02-08 -- Phase 26 verified, CHAIN-01~04 complete
+페이즈: 27 of 30 (데몬 보안 기반) -- COMPLETE
+플랜: 3 of 3 in current phase -- COMPLETE
+상태: Phase complete (verified ✓, 4/4 must-haves)
+마지막 활동: 2026-02-08 -- Phase 27 verified, DAEMON-01~06 complete
 
-Progress: ██░░░░░░░░░░░░░░░░░░ 18% (2/11)
+Progress: █████████░░░░░░░░░░░ 45% (5/11)
 
 ## 성과 지표
 
@@ -31,7 +31,7 @@ Progress: ██░░░░░░░░░░░░░░░░░░ 18% (2/11
 **v0.7:**
 - Total plans: 11 (2+3+1+3+2)
 - Requirements: 25
-- Completed: 2/11 plans (26-01, 26-02)
+- Completed: 5/11 plans (26-01, 26-02, 27-01, 27-02, 27-03)
 
 ## 누적 컨텍스트
 
@@ -53,6 +53,23 @@ v0.7 핵심: 설계 문서 직접 수정 + [v0.7 보완] 태그 추적
 | Priority fee TTL 30초 = Nyquist 최소 | 60초 윈도우 / 2 = 30초 (Nyquist-Shannon) | 26-02 |
 | Fee bump 1.5배 고정, 최대 1회 | 업계 관행 하한, 무한 escalation 방지, 단순성 우선 | 26-02 |
 | SOLANA_INSUFFICIENT_FEE 에러 코드 | retryable:true, fee bump 재시도 전용 | 26-02 |
+| JWT Secret dual-key 5분 전환 윈도우 (고정값) | 24h 만료 대비 짧아 보안 영향 최소, 운영 복잡성 방지 | 27-01 |
+| system_state 테이블에 JWT Secret 저장 | config.toml은 파일 잠금 없이 수정 위험, DB 트랜잭션 원자성 보장 | 27-01 |
+| config.toml jwt_secret 초기값 전용 | init 시 생성, 이후 system_state에서 관리, rotate 시 config 미갱신 | 27-01 |
+| flock exclusive non-blocking 인스턴스 잠금 | OS 커널 원자적 잠금, 비정상 종료 시 자동 해제, PID TOCTOU 제거 | 27-01 |
+| Windows flock 미사용, 포트 바인딩 fallback | flock Windows 미지원, EADDRINUSE가 자연스러운 중복 감지 | 27-01 |
+| PID 파일 보조 정보 격하 | flock이 주 잠금, PID는 표시 목적만 | 27-01 |
+| 연속 로테이션 5분 이내 429 거부 | previous-이전 키 토큰 즉시 무효화 방지 | 27-01 |
+| Rate Limiter 2단계: globalRateLimit(IP 1000/min) + sessionRateLimit(세션 300/min) | 미인증 공격자의 인증 사용자 rate limit 소진 방지 | 27-02 |
+| killSwitchGuard 허용 4개 (health, status, recover, kill-switch) | 모니터링+복구+상태 최소 필요 | 27-02 |
+| HTTP 503 SYSTEM_LOCKED (기존 401) | Kill Switch는 인증 실패가 아닌 시스템 가용성 문제 | 27-02 |
+| recover 경로 /v1/admin/recover (기존 /v1/owner/recover) | 시스템 관리 작업, /v1/admin/ 네임스페이스 적절 | 27-02 |
+| Argon2id 해시 메모리 캐시 (~50ms verify) | 매 요청 argon2.hash (~1-3s) 대비 수십 배 빠른 검증 | 27-03 |
+| X-Master-Password 평문 헤더 (SHA-256 클라이언트 해싱 불필요) | localhost only 통신, 해시가 사실상 비밀번호 역할 | 27-03 |
+| INonceStore 최소 인터페이스 (consume + cleanup) | 전략 패턴으로 Memory/SQLite 교체 가능, DI 주입 | 27-03 |
+| INSERT OR IGNORE + changes > 0 원자적 소비 | SQLite 원자적 중복 검사, 별도 SELECT 불필요, TOCTOU 없음 | 27-03 |
+| nonce_storage 기본값 "memory" | flock 단일 인스턴스 보장, sqlite는 2차 방어, INSERT ~100-500us 오버헤드 | 27-03 |
+| nonces 테이블 CREATE TABLE IF NOT EXISTS | 선택적 테이블, nonce_storage=sqlite 시에만 런타임 생성 | 27-03 |
 
 ### 차단 요소/우려 사항
 
@@ -61,5 +78,5 @@ v0.7 핵심: 설계 문서 직접 수정 + [v0.7 보완] 태그 추적
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Phase 26 verified ✓. Phase 27 계획 수립 필요.
-재개 파일: .planning/ROADMAP.md (Phase 27 참조)
+중단 지점: Phase 27 verified ✓. Phase 28 계획 수립 필요.
+재개 파일: .planning/ROADMAP.md (Phase 28 참조)

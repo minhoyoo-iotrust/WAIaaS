@@ -1,9 +1,10 @@
-# Owner 지갑 연결 + 인증 프로토콜 설계 (OWNR-CONN v0.5)
+# Owner 지갑 연결 + 인증 프로토콜 설계 (OWNR-CONN v0.7)
 
 **문서 ID:** OWNR-CONN
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
-**상태:** v0.5 업데이트
+**v0.7 보완:** 2026-02-08
+**상태:** v0.7 보완
 **참조:** SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), LOCK-MECH (33-time-lock-approval-mechanism.md), AUTH-REDESIGN (52-auth-model-redesign.md)
 **요구사항:** OWNR-01 (브라우저 지갑), OWNR-02 (WalletConnect QR), OWNR-03 (서명 승인), API-05 (Owner 엔드포인트), OWNR-05 (CLI 수동 서명), OWNR-06 (APPROVAL 타임아웃 설정)
 
@@ -1354,6 +1355,60 @@ waiaas kill-switch --reason "emergency: suspicious activity detected"
 
 > **참고:** Kill Switch 발동은 masterAuth(implicit)으로 쉽게 가능하지만, **복구(recover)에는 ownerAuth + masterAuth(explicit) dual-auth가 필수**이다. 이 비대칭은 의도적인 설계로, "정지는 쉽게, 복원은 엄격하게" 원칙을 따른다.
 
+### 8.4 masterAuth(explicit) Argon2id 통일 [v0.7 보완]
+
+Kill Switch 복구를 포함한 모든 masterAuth(explicit) 엔드포인트는 `X-Master-Password` 헤더로 **마스터 패스워드 평문**을 전송하며, 서버에서 **Argon2id 검증**을 수행한다.
+
+**인증 흐름:**
+
+```
+CLI -> X-Master-Password: <평문 패스워드> -> 데몬 서버
+                                              │
+                                              ▼
+                                   argon2.verify(cachedHash, password)
+                                              │
+                                    ┌─────────┴─────────┐
+                                    │ true               │ false
+                                    ▼                    ▼
+                                  next()           401 INVALID_MASTER_PASSWORD
+```
+
+**보안 근거:**
+- localhost only 통신이므로 네트워크 스니핑 위험 없음
+- 클라이언트 측 해싱(SHA-256 등)은 보안 이점이 없음 (해시가 사실상 비밀번호 역할)
+- Argon2id 서버 검증으로 통일하여 보안 수준 일관성 확보
+
+**Argon2id 해시 메모리 캐시:**
+- 데몬 시작 시 키스토어 잠금 해제에 성공한 마스터 패스워드로 `argon2.hash()` 실행
+- 생성된 해시를 메모리에 캐시하여 API 요청 시 `argon2.verify(cachedHash, inputPassword)` 실행
+- 매 요청마다 Argon2id 해시를 새로 생성하지 않으므로 응답 지연 최소화 (~수 ms)
+
+```typescript
+// packages/daemon/src/services/master-auth-manager.ts [v0.7 보완]
+import argon2 from 'argon2'
+
+class MasterAuthManager {
+  private cachedHash: string  // Argon2id 해시 (메모리 캐시)
+
+  /** 데몬 시작 시 키스토어 해제 성공 후 호출 */
+  async initialize(masterPassword: string): Promise<void> {
+    this.cachedHash = await argon2.hash(masterPassword, {
+      type: argon2.argon2id,
+      memoryCost: config.keystore.argon2_memory,
+      timeCost: config.keystore.argon2_time,
+      parallelism: config.keystore.argon2_parallelism,
+    })
+  }
+
+  /** masterAuth(explicit) 미들웨어에서 호출 */
+  async verify(inputPassword: string): Promise<boolean> {
+    return argon2.verify(this.cachedHash, inputPassword)
+  }
+}
+```
+
+> **52-auth-model-redesign.md 섹션 3.1 참조:** `explicitMasterAuthMiddleware`의 `verifyPassword` 콜백이 `MasterAuthManager.verify()`를 사용한다.
+
 ---
 
 ## 9. 보안 고려사항
@@ -1457,7 +1512,7 @@ Tauri WebView의 Content Security Policy에 WalletConnect Relay 도메인을 허
 
 ---
 
-*문서 ID: OWNR-CONN v0.5*
-*작성일: 2026-02-05, v0.5 업데이트: 2026-02-07*
-*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign*
-*상태: v0.5 업데이트*
+*문서 ID: OWNR-CONN v0.7*
+*작성일: 2026-02-05, v0.5 업데이트: 2026-02-07, v0.7 보완: 2026-02-08*
+*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation*
+*상태: v0.7 보완*

@@ -4,6 +4,7 @@
 **작성일:** 2026-02-05
 **v0.5 인증 모델 업데이트:** 2026-02-07
 **v0.6 블록체인 기능 확장:** 2026-02-08
+**v0.7 보완:** 2026-02-08
 **상태:** 완료
 **참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md)
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
@@ -14,7 +15,7 @@
 
 ### 1.1 목적
 
-WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트, Phase 22-24(v0.6)에서 추가하는 5개 엔드포인트를 합쳐 총 **36개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
+WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트, Phase 22-24(v0.6)에서 추가하는 5개 엔드포인트, Phase 27(v0.7)에서 추가하는 1개 엔드포인트를 합쳐 총 **37개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
 
 SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참조하는 **API 단일 소스(Single Source of Truth)** 역할을 한다.
 
@@ -22,7 +23,7 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 
 | 문서 ID | 파일 | 핵심 내용 |
 |---------|------|-----------|
-| CORE-06 | 29-api-framework-design.md | Hono OpenAPIHono, 8 미들웨어, localhost 보안, Zod/OpenAPI |
+| CORE-06 | 29-api-framework-design.md | Hono OpenAPIHono, 10 미들웨어 [v0.7 보완: 8->10], localhost 보안, Zod/OpenAPI |
 | SESS-PROTO | 30-session-token-protocol.md | JWT HS256 jose, sessionAuth 2-stage, POST /v1/sessions |
 | TX-PIPE | 32-transaction-pipeline-api.md | 6-stage pipeline, 9 API endpoints Zod specs |
 | OWNR-CONN | 34-owner-wallet-connection.md | WalletConnect v2, ownerAuth 8-step, Owner API 엔드포인트 |
@@ -50,8 +51,8 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 | System Management API | 16 | masterAuth (implicit) | 세션 CRUD, 에이전트 CRUD, 정책, 설정, 대시보드 |
 | Owner Auth API | 1 | Owner Signature | 거래 승인 (APPROVAL 티어) |
 | Dual Auth API | 1 | Owner Signature + Master Password | Kill Switch 복구 |
-| Admin API | 3 | Master Password (explicit) | Kill Switch, Shutdown, Status |
-| **합계** | **36** | | `/doc` 포함 시 37 |
+| Admin API | 4 | Master Password (explicit) | Kill Switch, Shutdown, Secret Rotation, Status [v0.7 보완: +1] |
+| **합계** | **37** | | `/doc` 포함 시 38 |
 
 > **v0.5 변경:** v0.2의 "Session Management API 3 (ownerAuth)" + "Owner API 17 (ownerAuth)"가 3-tier 재분류로 통합 재편성되었다. ownerAuth 적용은 2곳(거래 승인, KS 복구)으로 축소. 나머지 시스템 관리 엔드포인트는 masterAuth(implicit)로 이동. 52-auth-model-redesign.md 섹션 4 참조.
 >
@@ -175,7 +176,7 @@ ownerAuth:
 | 서명 알고리즘 | Solana: Ed25519 (tweetnacl), EVM: EIP-191 (siwe + ethers) |
 | 유효기간 | 5분 (timestamp 기준) |
 | nonce | 일회성 (LRU 캐시, max 1000, TTL 5분) |
-| 적용 | `POST /v1/owner/approve/:txId`, `POST /v1/owner/recover` (v0.5 변경: 2곳만) |
+| 적용 | `POST /v1/owner/approve/:txId`, `POST /v1/admin/recover` (v0.5 변경: 2곳만) [v0.7 보완: recover 경로 변경] |
 
 **ownerSignaturePayload Zod 스키마 (v0.5 변경: action 7개에서 2개로 축소):**
 ```typescript
@@ -184,7 +185,7 @@ const OwnerSignaturePayloadSchema = z.object({
   address: z.string(),
   action: z.enum([
     'approve_tx',  // POST /v1/owner/approve/:txId
-    'recover',     // POST /v1/owner/recover
+    'recover',     // POST /v1/admin/recover [v0.7 보완: 경로 변경]
   ]),
   nonce: z.string(),
   timestamp: z.string().datetime(),
@@ -241,12 +242,14 @@ masterAuth:
 | 항목 | 값 |
 |------|-----|
 | 전달 방식 (implicit) | 헤더 불필요 (데몬 실행 = 인증) |
-| 전달 방식 (explicit) | `X-Master-Password` 헤더 |
+| 전달 방식 (explicit) | `X-Master-Password` 헤더 (평문. localhost only 통신) |
 | 검증 (implicit) | 없음 (no-op guard) |
-| 검증 (explicit) | Argon2id (argon2 npm, 비동기) |
+| 검증 (explicit) | Argon2id (`argon2.verify(cachedHash, inputPassword)`) [v0.7 보완: 메모리 캐시 명시] |
 | brute-force 방지 (explicit) | 5회 연속 실패 -> 30분 lockout |
 | 적용 (implicit) | 시스템 관리 전반 (16개 엔드포인트) |
-| 적용 (explicit) | `/v1/admin/*` (3개) + KS 복구 dual-auth |
+| 적용 (explicit) | `/v1/admin/*` (4개) + KS 복구 dual-auth [v0.7 보완: rotate-secret 추가로 3->4개] |
+
+> **[v0.7 보완] Argon2id 해시 메모리 캐시:** 데몬 시작 시 키스토어 잠금 해제에 성공한 마스터 패스워드로 `argon2.hash()` 실행하여 해시를 메모리에 캐시한다. 이후 `X-Master-Password` 헤더가 포함된 요청 시 `argon2.verify(cachedHash, inputPassword)`로 검증한다. 매 요청마다 Argon2id 해시를 새로 생성하지 않으므로 응답 지연 최소화 (~수 ms). 보안 근거: localhost only 통신이므로 평문 전송에 따른 네트워크 스니핑 위험 없음. 클라이언트 측 해싱(SHA-256 등)은 해시가 사실상 비밀번호 역할을 하므로 보안 이점 없음.
 
 **헤더 예시 (explicit만 해당):**
 ```
@@ -264,7 +267,7 @@ X-Master-Password: my-secure-master-password-2026
 | `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions`, `PUT /v1/sessions/:id/renew`, `/v1/actions/*` (v0.6 추가) | Session Bearer | sessionAuth |
 | `POST /v1/sessions`, `DELETE /v1/sessions/:id`, 에이전트 CRUD, 정책 CRUD, 설정, 조회 등 | masterAuth (implicit) | masterAuth(implicit) |
 | `POST /v1/owner/approve/:txId` | Owner Signature | ownerAuth |
-| `POST /v1/owner/recover` | Owner Signature + Master Password (dual-auth) | ownerAuth + masterAuth(explicit) |
+| `POST /v1/admin/recover` | Owner Signature + Master Password (dual-auth) | ownerAuth + masterAuth(explicit) | [v0.7 보완: 경로 변경]
 | `/v1/admin/*` | Master Password (explicit) | masterAuth(explicit) |
 
 > **v0.5 주요 변경 요약:** (1) `POST /v1/sessions`가 ownerAuth에서 masterAuth(implicit)로 전환. (2) `GET /v1/sessions`가 ownerAuth에서 sessionAuth로 전환 (에이전트 자기 세션 조회). (3) `/v1/owner/*` 대부분이 ownerAuth에서 masterAuth(implicit)로 전환. ownerAuth가 유지되는 것은 approve/:txId 1곳 + recover 1곳(dual-auth) = 2곳뿐.
@@ -273,35 +276,52 @@ X-Master-Password: my-secure-master-password-2026
 
 ## 4. 미들웨어 체인 (Phase 8 확장 반영)
 
-### 4.1 9단계 미들웨어 순서 (v0.5 변경)
+### 4.1 10단계 미들웨어 순서 [v0.7 보완: 9단계 -> 10단계, Rate Limiter 2단계 분리]
 
-Phase 8에서 killSwitchGuard가 추가되어 8단계에서 **9단계**로 확장되었다. v0.5에서 순서 9가 `authRouter` 단일 디스패처로 통합. (v0.5 변경)
+Phase 8에서 killSwitchGuard가 추가되어 9단계로 확장된 후, v0.7에서 Rate Limiter를 2단계(globalRateLimit + sessionRateLimit)로 분리하여 **10단계**로 확장. (v0.7 보완)
 
 | 순서 | 미들웨어 | 역할 | 적용 범위 | 실패 시 |
 |------|----------|------|-----------|---------|
 | 1 | `requestId` | 요청 ID 부여 (X-Request-ID) | 전체 (`*`) | - |
 | 2 | `requestLogger` | 요청/응답 로깅 | 전체 (`*`) | - |
 | 3 | `shutdownGuard` | 종료 중 요청 거부 | 전체 (`*`) | 503 |
+| 3.5 | `globalRateLimit` | IP 기반 전역 속도 제한 (절대 상한, 1000/min) [v0.7 보완] | 전체 (`*`) | 429 |
 | 4 | `secureHeaders` | 보안 헤더 설정 | 전체 (`*`) | - |
 | 5 | `hostValidation` | Host 헤더 검증 | 전체 (`*`) | 403 |
 | 6 | `cors` | CORS 설정 | 전체 (`*`) | 403 |
-| 7 | `rateLimiter` | 요청 속도 제한 | 전체 (`*`) | 429 |
-| 8 | `killSwitchGuard` | Kill Switch 상태 검사 | 전체 (`*`) | 401 |
-| 9 | `authRouter` (v0.5 변경) | 라우트별 인증 디스패치 | 전체 (`*`) | 401/403 |
+| 7 | `killSwitchGuard` | Kill Switch 상태 검사 [v0.7 보완: #8->#7, 503 SYSTEM_LOCKED] | 전체 (`*`) | 503 |
+| 8 | `authRouter` (v0.5 변경) [v0.7 보완: #9->#8] | 라우트별 인증 디스패치 | 전체 (`*`) | 401/403 |
+| 9 | `sessionRateLimit` | 세션 기반 세분화 속도 제한 (세션 300/min, tx 10/min) [v0.7 보완] | 인증 완료 후 | 429 |
 
-> **v0.5 순서 9 변경:** v0.2의 `sessionAuth / ownerAuth / masterAuth` 개별 라우트 적용이 `authRouter` 단일 디스패처로 통합되었다. authRouter는 요청 경로(path)와 HTTP 메서드(method)를 기반으로 적절한 인증 미들웨어를 디스패치한다: publicAuth (None) / sessionAuth / masterAuth(implicit) / masterAuth(explicit) / ownerAuth / dualAuth (ownerAuth + masterAuth explicit). 52-auth-model-redesign.md 섹션 7.2 참조.
+> **[v0.7 보완] Rate Limiter 2단계 분리:** 기존 단일 `rateLimiter`(#7)가 `globalRateLimit`(#3.5, IP 기반, 인증 전)과 `sessionRateLimit`(#9, sessionId 기반, 인증 후)로 분리되었다. 이로써 미인증 공격자가 대량 요청으로 인증 사용자의 세션별 rate limit을 소진할 수 없게 되었다 (DAEMON-03 해소). 상세: CORE-06 (29-api-framework-design.md) 섹션 7 참조.
+>
+> **v0.5 순서 변경:** v0.2의 `sessionAuth / ownerAuth / masterAuth` 개별 라우트 적용이 `authRouter` 단일 디스패처로 통합되었다. authRouter는 요청 경로(path)와 HTTP 메서드(method)를 기반으로 적절한 인증 미들웨어를 디스패치한다: publicAuth (None) / sessionAuth / masterAuth(implicit) / masterAuth(explicit) / ownerAuth / dualAuth (ownerAuth + masterAuth explicit). 52-auth-model-redesign.md 섹션 7.2 참조.
 
-### 4.2 killSwitchGuard 동작
+### 4.2 killSwitchGuard 동작 [v0.7 보완: 허용 목록 4개 확정, 503 SYSTEM_LOCKED]
 
-ACTIVATED 또는 RECOVERING 상태에서 **허용 엔드포인트 목록만 통과**:
+ACTIVATED 또는 RECOVERING 상태에서 **허용 엔드포인트 목록만 통과** (DAEMON-04 해소):
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/health` | 헬스체크 (모니터링) |
-| POST | `/v1/owner/recover` | Kill Switch 복구 |
+| GET | `/v1/health` | 헬스체크 (모니터링) |
 | GET | `/v1/admin/status` | 데몬 상태 조회 |
+| POST | `/v1/admin/recover` | Kill Switch 복구 (dual-auth) [v0.7 보완: 경로 변경] |
+| GET | `/v1/admin/kill-switch` | Kill Switch 상태 조회 [v0.7 보완: 추가] |
 
-그 외 모든 요청은 `401 SYSTEM_LOCKED` 에러로 거부된다.
+그 외 모든 요청은 `503 SYSTEM_LOCKED` 에러로 거부된다. [v0.7 보완: 401->503 변경]
+
+```json
+{
+  "code": "SYSTEM_LOCKED",
+  "message": "System is in kill switch mode.",
+  "details": {
+    "activatedAt": "2026-02-08T08:00:00.000Z",
+    "reason": "Auto-stop: consecutive_failures threshold exceeded"
+  },
+  "requestId": "req_a1b2c3d4e5f678901234",
+  "retryable": false
+}
+```
 
 ---
 
@@ -318,7 +338,7 @@ ACTIVATED 또는 RECOVERING 상태에서 **허용 엔드포인트 목록만 통�
 | **Auth** | None |
 | **Tags** | `Public` |
 | **operationId** | `healthCheck` |
-| **Rate Limit** | 전역 100 req/min |
+| **Rate Limit** | globalRateLimit 1000 req/min (Stage 1) [v0.7 보완] |
 | **정의 원본** | CORE-06 |
 
 **Response Zod 스키마:**
@@ -385,7 +405,7 @@ SIWS/SIWE 메시지 서명에 사용할 일회성 nonce를 생성한다.
 | **Auth** | None |
 | **Tags** | `Public` |
 | **operationId** | `getNonce` |
-| **Rate Limit** | 전역 100 req/min |
+| **Rate Limit** | globalRateLimit 1000 req/min (Stage 1) [v0.7 보완] |
 | **정의 원본** | SESS-PROTO (섹션 4), TX-PIPE (섹션 5) |
 
 > **참고:** SESS-PROTO/TX-PIPE에서는 `/v1/auth/nonce`로 정의되었으나, 본 통합 스펙에서 `/v1/nonce`로 경로를 단순화한다. 인증이 불필요한 공개 엔드포인트이므로 `/v1/auth/` 접두사가 불필요.
@@ -1340,7 +1360,7 @@ const ActionResolveResponseSchema = z.object({
 | **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Session` |
 | **operationId** | `createSession` |
-| **Rate Limit** | 전역 100 req/min |
+| **Rate Limit** | globalRateLimit 1000 req/min (Stage 1) [v0.7 보완] |
 | **참고** | sessionAuth 미들웨어 **제외** (SESS-PROTO 결정) |
 | **정의 원본** | SESS-PROTO (섹션 3), TX-PIPE (섹션 6.1) |
 
@@ -1459,7 +1479,7 @@ const SessionCreateResponseSchema = z.object({
 | **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Session` |
 | **operationId** | `listSessions` |
-| **Rate Limit** | 전역 100 req/min |
+| **Rate Limit** | globalRateLimit 1000 req/min (Stage 1) [v0.7 보완] |
 | **정의 원본** | TX-PIPE (섹션 6.2) |
 
 **Query Parameters Zod 스키마:**
@@ -1546,7 +1566,7 @@ const SessionListResponseSchema = z.object({
 | **Auth** | masterAuth(implicit) **(v0.5 변경: ownerAuth -> masterAuth(implicit))** |
 | **Tags** | `Session` |
 | **operationId** | `revokeSession` |
-| **Rate Limit** | 전역 100 req/min |
+| **Rate Limit** | globalRateLimit 1000 req/min (Stage 1) [v0.7 보완] |
 | **정의 원본** | TX-PIPE (섹션 6.3) |
 
 **Path Parameters:**
@@ -1593,7 +1613,7 @@ const SessionRevokeResponseSchema = z.object({
 
 ## 8. Owner API (v0.5 변경: 대부분 masterAuth(implicit), ownerAuth 2곳만 유지)
 
-> **(v0.5 변경)** Owner API의 대부분이 ownerAuth에서 masterAuth(implicit)으로 변경되었다. ownerAuth(SIWS/SIWE 서명)는 보안상 반드시 Owner 본인 확인이 필요한 **2곳에만 한정**: `POST /v1/owner/approve/:txId` (거래 승인), `POST /v1/owner/recover` (Kill Switch 복구). 나머지는 데몬 구동 시 마스터 패스워드 인증으로 충분. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
+> **(v0.5 변경)** Owner API의 대부분이 ownerAuth에서 masterAuth(implicit)으로 변경되었다. ownerAuth(SIWS/SIWE 서명)는 보안상 반드시 Owner 본인 확인이 필요한 **2곳에만 한정**: `POST /v1/owner/approve/:txId` (거래 승인), `POST /v1/admin/recover` (Kill Switch 복구) [v0.7 보완: recover 경로 변경]. 나머지는 데몬 구동 시 마스터 패스워드 인증으로 충분. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
 
 Owner가 에이전트, 거래, 정책, 시스템을 관리하는 엔드포인트. Phase 8에서 정의된 기존 10개 + Phase 9에서 추가하는 7개 = 총 **17개** 엔드포인트.
 
@@ -1855,16 +1875,16 @@ const KillSwitchResponseSchema = z.object({
 
 ---
 
-### 8.6 POST /v1/owner/recover (Kill Switch 복구)
+### 8.6 POST /v1/admin/recover (Kill Switch 복구) [v0.7 보완: 경로 변경 /v1/owner/recover -> /v1/admin/recover]
 
 Kill Switch를 해제하고 시스템을 정상 상태로 복구한다. **이중 인증** 필요 (Owner 서명 + 마스터 패스워드).
 
 | 항목 | 값 |
 |------|-----|
 | **Method** | `POST` |
-| **Path** | `/v1/owner/recover` |
+| **Path** | `/v1/admin/recover` [v0.7 보완: 경로 변경] |
 | **Auth** | ownerAuth (action=`recover`) + masterAuth(explicit) **(v0.5 유지: 복구는 이중 인증 필수)** |
-| **Tags** | `Owner` |
+| **Tags** | `Admin` [v0.7 보완: Owner -> Admin] |
 | **operationId** | `recoverFromKillSwitch` |
 | **정의 원본** | KILL-AUTO-EVM (섹션 4) |
 
@@ -2624,7 +2644,55 @@ const ShutdownResponseSchema = z.object({
 
 ---
 
-### 9.3 GET /v1/admin/status (데몬 상태 조회)
+### 9.3 POST /v1/admin/rotate-secret (JWT Secret 로테이션) [v0.7 보완]
+
+JWT Secret을 로테이션한다. 기존 세션은 5분간 유효하다. DAEMON-01(JWT Secret 변경 시 모든 세션 즉시 무효화) 해소를 위해 도입.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `POST` |
+| **Path** | `/v1/admin/rotate-secret` |
+| **Auth** | masterAuth(explicit) -- X-Master-Password 헤더 필수 |
+| **Tags** | `Admin` |
+| **operationId** | `rotateJwtSecret` |
+| **정의 원본** | SESS-PROTO (섹션 2.7.5, v0.7 보완) |
+
+**Request:** 본문 없음 (Empty body)
+
+**Response Zod 스키마:**
+
+```typescript
+const RotateSecretResponseSchema = z.object({
+  previousExpiry: z.string().datetime().openapi({
+    description: '이전 Secret 만료 시각 (ISO 8601). 이 시각까지 기존 토큰이 유효',
+    example: '2026-02-08T10:36:25.000Z',
+  }),
+  message: z.string().openapi({
+    description: '로테이션 결과 메시지',
+    example: 'JWT Secret rotated. Previous secret expires at 2026-02-08T10:36:25.000Z',
+  }),
+}).openapi('RotateSecretResponse')
+```
+
+**응답 예시 (200 OK):**
+```json
+{
+  "previousExpiry": "2026-02-08T10:36:25.000Z",
+  "message": "JWT Secret rotated. Previous secret expires at 2026-02-08T10:36:25.000Z"
+}
+```
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `INVALID_MASTER_PASSWORD` | 401 | false | 패스워드 불일치 |
+| `MASTER_PASSWORD_LOCKED` | 429 | false | 5회 실패 lockout |
+| `ROTATION_TOO_RECENT` | 429 | false | 이전 로테이션 후 5분 미경과 (전환 윈도우 내 연속 로테이션 방지) |
+
+---
+
+### 9.4 GET /v1/admin/status (데몬 상태 조회)
 
 데몬의 상세 상태를 조회한다.
 
@@ -2748,7 +2816,7 @@ const ErrorResponseSchema = z.object({
 | `INVALID_NONCE` | 401 | false | nonce 무효, 만료, 또는 이미 사용됨 |
 | `INVALID_MASTER_PASSWORD` | 401 | false | 마스터 패스워드 불일치 |
 | `MASTER_PASSWORD_LOCKED` | 429 | false | 5회 실패로 30분 lockout |
-| `SYSTEM_LOCKED` | 401 | false | Kill Switch ACTIVATED 상태에서 요청 거부 |
+| `SYSTEM_LOCKED` | 503 | false | Kill Switch ACTIVATED 상태에서 요청 거부 [v0.7 보완: 401->503] |
 
 ### 10.3 SESSION 도메인 에러
 
@@ -3094,7 +3162,7 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 15 | POST | `/v1/owner/approve/:txId` | **ownerAuth** | Owner | approveTransaction | OWNR-CONN |
 | 16 | POST | `/v1/owner/reject/:txId` | masterAuth(implicit) | Owner | rejectTransaction | OWNR-CONN |
 | 17 | POST | `/v1/owner/kill-switch` | masterAuth(implicit) | Owner | activateKillSwitch | KILL-AUTO-EVM |
-| 18 | POST | `/v1/owner/recover` | **ownerAuth**+masterAuth(explicit) | Owner | recoverFromKillSwitch | KILL-AUTO-EVM |
+| 18 | POST | `/v1/admin/recover` | **ownerAuth**+masterAuth(explicit) | Admin | recoverFromKillSwitch | KILL-AUTO-EVM [v0.7 보완: 경로 변경] |
 | 19 | GET | `/v1/owner/pending-approvals` | masterAuth(implicit) | Owner | listPendingApprovals | OWNR-CONN |
 | 20 | GET | `/v1/owner/status` | masterAuth(implicit) | Owner | getOwnerStatus | OWNR-CONN |
 | 21 | POST | `/v1/owner/policies` | masterAuth(implicit) | Owner | createPolicy | OWNR-CONN |
@@ -3108,9 +3176,10 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 29 | GET | `/v1/owner/dashboard` | masterAuth(implicit) | Owner | getDashboard | **Phase 9** |
 | 30 | POST | `/v1/admin/kill-switch` | masterAuth(explicit) | Admin | adminKillSwitch | KILL-AUTO-EVM |
 | 31 | POST | `/v1/admin/shutdown` | masterAuth(explicit) | Admin | adminShutdown | CORE-05 |
-| 32 | GET | `/v1/admin/status` | masterAuth(implicit) | Admin | getAdminStatus | Phase 9 |
-| 33 | GET | `/v1/wallet/assets` | sessionAuth | Wallet | getAssets | **v0.6** ASSET-FEE |
-| 34 | GET | `/v1/actions` | sessionAuth | Action | listActions | **v0.6** ACTION |
-| 35 | GET | `/v1/actions/:provider/:action` | sessionAuth | Action | getAction | **v0.6** ACTION |
-| 36 | POST | `/v1/actions/:provider/:action/resolve` | sessionAuth | Action | resolveAction | **v0.6** ACTION |
-| 37 | POST | `/v1/actions/:provider/:action/execute` | sessionAuth | Action | executeAction | **v0.6** ACTION |
+| 32 | POST | `/v1/admin/rotate-secret` | masterAuth(explicit) | Admin | rotateJwtSecret | **v0.7** SESS-PROTO |
+| 33 | GET | `/v1/admin/status` | masterAuth(implicit) | Admin | getAdminStatus | Phase 9 |
+| 34 | GET | `/v1/wallet/assets` | sessionAuth | Wallet | getAssets | **v0.6** ASSET-FEE |
+| 35 | GET | `/v1/actions` | sessionAuth | Action | listActions | **v0.6** ACTION |
+| 36 | GET | `/v1/actions/:provider/:action` | sessionAuth | Action | getAction | **v0.6** ACTION |
+| 37 | POST | `/v1/actions/:provider/:action/resolve` | sessionAuth | Action | resolveAction | **v0.6** ACTION |
+| 38 | POST | `/v1/actions/:provider/:action/execute` | sessionAuth | Action | executeAction | **v0.6** ACTION |

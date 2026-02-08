@@ -43,7 +43,7 @@ v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요
 ## Phases
 
 - [x] **Phase 26: 체인 어댑터 안정화** - blockhash 경쟁 조건, EVM nonce, keystore 수학, fee 전략 해소
-- [ ] **Phase 27: 데몬 보안 기반 확립** - JWT rotation, flock 잠금, Rate Limiter 분리, killSwitch 확정, 패스워드 통일
+- [x] **Phase 27: 데몬 보안 기반 확립** - JWT rotation, flock 잠금, Rate Limiter 분리, killSwitch 확정, 패스워드 통일
 - [ ] **Phase 28: 의존성 빌드 환경 해소** - SIWE viem 전환, sidecar 크로스 컴파일 전략 확정
 - [ ] **Phase 29: API 통합 프로토콜 완성** - Tauri 타임아웃/CORS, disconnect cascade, status 응답, init 순서, SDK 보완
 - [ ] **Phase 30: 스키마 설정 확정** - 환경변수 매핑, timestamp 정밀도, CHECK 제약, Docker UID, amount 근거, 채널 삭제
@@ -77,9 +77,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 27-01-PLAN.md -- JWT Secret dual-key rotation + flock 기반 인스턴스 잠금 (DAEMON-01, DAEMON-02)
-- [ ] 27-02-PLAN.md -- Rate Limiter 2단계 분리 + killSwitchGuard 허용 목록 확정 (DAEMON-03, DAEMON-04)
-- [ ] 27-03-PLAN.md -- Master Password Argon2id 통일 + 단일 인스턴스 SQLite nonce 옵션 (DAEMON-05, DAEMON-06)
+- [x] 27-01-PLAN.md -- JWT Secret dual-key rotation + flock 기반 인스턴스 잠금 (DAEMON-01, DAEMON-02)
+- [x] 27-02-PLAN.md -- Rate Limiter 2단계 분리 + killSwitchGuard 허용 목록 확정 (DAEMON-03, DAEMON-04)
+- [x] 27-03-PLAN.md -- Master Password Argon2id 통일 + 단일 인스턴스 SQLite nonce 옵션 (DAEMON-05, DAEMON-06)
 
 ### Phase 28: 의존성 빌드 환경 해소
 **Goal**: 모노레포 첫 빌드부터 의존성 충돌이나 네이티브 바이너리 문제 없이 빌드가 성공하는 상태를 만든다
@@ -87,11 +87,11 @@ Plans:
 **Requirements**: DEPS-01, DEPS-02
 **Success Criteria** (what must be TRUE):
   1. SIWE 검증이 viem v2.x 내장 parseSiweMessage + verifyMessage로 전환되어, ethers와 siwe npm 패키지 의존성이 모노레포에서 완전히 제거된 설계이다
-  2. Sidecar 크로스 컴파일 대상 6개 플랫폼(ARM64 Windows 제외)이 확정되고, prebuildify 기반 네이티브 바이너리 번들 전략이 정의되었다
-**Plans**: TBD
+  2. Sidecar 크로스 컴파일 대상 5개 플랫폼(ARM64 Windows 제외)이 확정되고, prebuildify 기반 네이티브 바이너리 번들 전략이 정의되었다
+**Plans**: 1 plan
 
 Plans:
-- [ ] 28-01: SIWE viem 전환 + Sidecar 크로스 컴파일 전략
+- [ ] 28-01-PLAN.md -- SIWE viem 전환 + Sidecar 크로스 컴파일 전략 (DEPS-01, DEPS-02)
 
 ### Phase 29: API 통합 프로토콜 완성
 **Goal**: REST API, SDK, 플랫폼 통합의 모호한 스펙이 확정되어, 클라이언트 구현자가 추가 질문 없이 코딩할 수 있는 상태를 만든다
@@ -132,11 +132,11 @@ Phase 26 -> 27 -> 28 -> 29 -> 30
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 26. 체인 어댑터 안정화 | 2/2 | ✓ Complete | 2026-02-08 |
-| 27. 데몬 보안 기반 확립 | 0/3 | Not started | - |
-| 28. 의존성 빌드 환경 해소 | 0/1 | Not started | - |
+| 27. 데몬 보안 기반 확립 | 3/3 | ✓ Complete | 2026-02-08 |
+| 28. 의존성 빌드 환경 해소 | 0/1 | Planning complete | - |
 | 29. API 통합 프로토콜 완성 | 0/3 | Not started | - |
 | 30. 스키마 설정 확정 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-08*
-*Last updated: 2026-02-08 after Phase 27 planning*
+*Last updated: 2026-02-08 after Phase 28 planning*

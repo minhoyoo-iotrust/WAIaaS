@@ -205,24 +205,95 @@ async function validateEnvironment(options: StartOptions): Promise<ValidatedConf
   if (options.port) config.daemon.port = options.port
   if (options.logLevel) config.daemon.log_level = options.logLevel
 
-  // 1-5. PID 파일로 기존 데몬 감지
+  // 1-5. [v0.7 보완] flock 기반 데몬 인스턴스 잠금 (DAEMON-02 해소)
+  //   PID 파일의 check-then-act 경쟁 조건을 제거하기 위해 flock exclusive lock 사용.
+  //   lockFd는 데몬 수명 동안 유지되며, 프로세스 종료 시 OS가 자동 해제.
   const pidPath = resolvePidPath(dataDir, config.daemon.pid_file)
+  const lockFd = acquireDaemonLock(dataDir)
+
+  // PID 파일은 보조 정보로만 사용 (status 명령의 PID 표시용)
   if (existsSync(pidPath)) {
     const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10)
-    if (isProcessRunning(pid)) {
-      throw new DaemonError('ALREADY_RUNNING',
-        `Daemon already running (PID: ${pid}). Use 'waiaas stop' first.`)
+    if (!isProcessRunning(pid)) {
+      unlinkSync(pidPath)
+      logger.warn(`Removed stale PID file (PID: ${pid} not running)`)
     }
-    // Stale PID 파일 삭제
-    unlinkSync(pidPath)
-    logger.warn(`Removed stale PID file (PID: ${pid} not running)`)
   }
 
-  return { dataDir, config, pidPath }
+  return { dataDir, config, pidPath, lockFd }
 }
 ```
 
-**실패 시 동작:** Error 메시지 출력 + `process.exit(1)`. 이 단계에서는 리소스가 아직 할당되지 않았으므로 정리 불필요.
+**실패 시 동작:** Error 메시지 출력 + `process.exit(1)`. 이 단계에서는 리소스가 아직 할당되지 않았으므로 정리 불필요(lockFd는 프로세스 종료 시 OS가 자동 해제).
+
+##### acquireDaemonLock() [v0.7 보완]
+
+```typescript
+// packages/daemon/src/lifecycle/daemon.ts
+import { openSync, writeSync, closeSync } from 'node:fs'
+
+/**
+ * flock 기반 데몬 인스턴스 잠금을 획득한다. [v0.7 보완]
+ *
+ * PID 파일의 check-then-act 경쟁 조건(DAEMON-02)을 제거하기 위해
+ * flock exclusive non-blocking 잠금을 사용한다.
+ *
+ * 동작 원리:
+ * - 성공: fd를 반환. 데몬 수명 동안 fd를 유지하여 잠금 보유.
+ * - 실패: 다른 프로세스가 이미 잠금 보유 -> ALREADY_RUNNING 에러.
+ * - 비정상 종료: OS가 프로세스 종료 시 fd를 자동 닫아 잠금 해제.
+ *   -> 다음 시작 시 잠금 획득 성공 (stale PID 문제 원천 제거).
+ *
+ * @param dataDir 데이터 디렉토리 경로
+ * @returns lockFd - 잠금 파일 디스크립터 (데몬 종료까지 유지)
+ */
+function acquireDaemonLock(dataDir: string): number {
+  const lockPath = path.join(dataDir, 'daemon.lock')
+
+  // O_WRONLY | O_CREAT | O_TRUNC
+  const fd = openSync(lockPath, 'w')
+
+  try {
+    // flock exclusive non-blocking
+    // fs-ext: flockSync(fd, 'exnb')
+    // 또는 Node.js 네이티브 대안 사용
+    flockSync(fd, 'exnb')
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException).code
+    if (code === 'EWOULDBLOCK' || code === 'EAGAIN') {
+      closeSync(fd)
+      // lock 파일 내용(PID)을 읽어 사용자에게 안내
+      let existingPid = 'unknown'
+      try {
+        const content = readFileSync(lockPath, 'utf-8').trim()
+        if (content) existingPid = content
+      } catch { /* ignore */ }
+      throw new DaemonError('ALREADY_RUNNING',
+        `Daemon already running (PID: ${existingPid}). Use 'waiaas stop' first.`)
+    }
+    closeSync(fd)
+    throw err
+  }
+
+  // 잠금 성공: lock 파일에 PID 기록 (보조 정보)
+  writeSync(fd, String(process.pid))
+
+  return fd
+}
+```
+
+**Windows fallback [v0.7 보완]:** Windows에서는 flock이 지원되지 않는다. HTTP 포트 바인딩 자체가 단일 인스턴스를 보장한다 (`127.0.0.1:3100` bind 실패 = EADDRINUSE = 이미 실행 중). Windows에서는 `acquireDaemonLock()`이 flock 대신 no-op으로 동작하고, Step 5(HTTP 서버 시작)에서 포트 바인딩 실패로 중복 실행을 감지한다.
+
+```typescript
+function acquireDaemonLock(dataDir: string): number {
+  if (process.platform === 'win32') {
+    // Windows: 포트 바인딩으로 단일 인스턴스 보장. flock 미사용.
+    return -1  // sentinel: lockFd 미사용
+  }
+  // Unix: flock 기반 잠금 (위 구현)
+  // ...
+}
+```
 
 #### Step 2: 데이터베이스 초기화
 
@@ -751,8 +822,11 @@ async function cleanupResources(
     severity: 'info',
   })
 
-  // Step 10: 최종 정리
+  // Step 10: 최종 정리 [v0.7 보완: lockFd 해제 추가]
   db.close()               // sqlite.close()
+  // closeSync(lockFd)는 명시적 정리. OS가 프로세스 종료 시 자동 해제하므로
+  // 비정상 종료에도 안전. 명시적 호출은 코드 의도 명확화 목적.
+  if (lockFd >= 0) closeSync(lockFd)  // daemon.lock fd 해제 (Windows: -1이면 skip)
   unlinkSync(pidPath)      // PID 파일 삭제
   clearTimeout(forceTimeout) // 강제 종료 타이머 취소
 
@@ -936,9 +1010,41 @@ async function shutdown(signal: string): Promise<void> {
 
 ---
 
-## 5. 프로세스 관리 (PID 파일)
+## 5. 프로세스 관리 (daemon.lock + PID 파일)
 
-### 5.1 PID 파일 스펙
+> **[v0.7 보완]** v0.7에서 데몬 인스턴스 잠금의 주 메커니즘이 PID 파일에서 flock/fd 기반 `daemon.lock`으로 전환되었다 (DAEMON-02 해소). PID 파일은 **보조 정보**로 격하되어 status 명령의 PID 표시 등에만 사용된다.
+
+### 5.0 daemon.lock 파일 스펙 [v0.7 보완]
+
+| 항목 | 값 |
+|------|-----|
+| **경로** | `~/.waiaas/daemon.lock` |
+| **잠금 방식** | flock exclusive (fd 유지 기반). 프로세스가 fd를 보유하는 한 잠금 유지 |
+| **내용물** | 프로세스 ID 숫자 (보조 정보, 잠금의 핵심은 fd) |
+| **생성 시점** | Step 1: 환경 검증 시 `acquireDaemonLock()` |
+| **해제 시점** | Step 10: `closeSync(lockFd)` 또는 프로세스 종료 시 OS 자동 해제 |
+| **비정상 종료 시** | OS가 프로세스 종료 시 fd를 자동 닫아 flock 해제. 다음 시작 시 즉시 잠금 획득 가능 (stale lock 문제 없음) |
+| **Windows** | 미사용 (HTTP 포트 바인딩으로 단일 인스턴스 보장) |
+
+**flock vs PID 파일 비교:**
+
+| 특성 | PID 파일 (기존) | daemon.lock (v0.7) |
+|------|----------------|-------------------|
+| 경쟁 조건 | check-then-act TOCTOU 취약 | 원자적 flock (OS 커널 보장) |
+| 비정상 종료 | stale PID 잔존 -> 수동 감지 필요 | OS 자동 해제 -> 즉시 재시작 가능 |
+| PID 재사용 | OS가 같은 PID를 다른 프로세스에 할당 시 오판 가능 | fd 기반이므로 PID 무관 |
+| Windows | process.kill(pid, 0) 동작 | 미지원 -> 포트 바인딩 fallback |
+
+**status 명령의 프로세스 확인 순서 [v0.7 보완]:**
+1. `daemon.lock` fd 잠금 시도 (flock exclusive non-blocking)
+2. 실패 시(EWOULDBLOCK): lock 파일 내 PID 읽기 -> `GET http://127.0.0.1:{port}/health` 호출
+3. health 응답 성공: running (건강)
+4. health 응답 실패: running but unhealthy (데몬 응답 불가)
+5. 잠금 성공: not running (즉시 잠금 해제 후 반환)
+
+### 5.1 PID 파일 스펙 (보조 정보) [v0.7 보완]
+
+> **역할 변경:** PID 파일은 더 이상 인스턴스 잠금의 주 메커니즘이 아니다. status 명령에서 PID를 표시하거나, 외부 모니터링 도구가 프로세스를 식별하는 **보조 정보**로만 사용된다.
 
 | 항목 | 값 |
 |------|-----|
@@ -946,7 +1052,7 @@ async function shutdown(signal: string): Promise<void> {
 | **내용** | 프로세스 ID 숫자 (개행 없음). 예: `12345` |
 | **권한** | `0o644` (rw-r--r--) |
 | **기록 시점** | Step 7: 서버 리스닝 시작 후 (모든 서비스 준비 완료 후) |
-| **삭제 시점** | Step 10: Graceful Shutdown 마지막 단계 |
+| **삭제 시점** | Step 10: Graceful Shutdown 마지막 단계 (closeSync(lockFd) 이후) |
 | **인코딩** | UTF-8 |
 
 ### 5.2 PID 파일 생성 (경쟁 조건 방지)
@@ -1112,6 +1218,7 @@ switch (subcommand) {
   case 'status':  return runStatus(process.argv.slice(3))
   case 'agent':   return runAgent(process.argv.slice(3))
   case 'session': return runSession(process.argv.slice(3))  // (v0.5 추가)
+  case 'secret':  return runSecret(process.argv.slice(3))   // (v0.7 추가)
   case 'backup':  return runBackup(process.argv.slice(3))
   default:
     if (values.version) return printVersion()
@@ -1956,6 +2063,45 @@ Phase 6에서는 CLI 구조만 정의한다. 상세 옵션과 구현은 Phase 7-
 |--------|------|-------------|
 | `waiaas password change` | 마스터 패스워드 변경 (모든 키 재암호화) | Phase 8 |
 | `waiaas kill-switch` | 긴급 정지 (모든 세션 취소 + 에이전트 정지) | Phase 8 |
+| `waiaas secret rotate` | [v0.7 보완] JWT Secret 로테이션. 기존 세션은 5분간 유효. SESS-PROTO 섹션 2.7.5 참조 | Phase 27 |
+
+#### `waiaas secret rotate` 상세 [v0.7 보완]
+
+**Usage:**
+```
+waiaas secret rotate [options]
+
+Options:
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**설명:** JWT Secret을 로테이션합니다. 기존 세션은 5분간 유효합니다.
+
+**동작:**
+1. config.toml에서 데몬 포트 읽기
+2. `POST http://127.0.0.1:{port}/v1/admin/rotate-secret` 호출 (masterAuth explicit: X-Master-Password 헤더 필수)
+3. 마스터 패스워드가 환경변수(`WAIAAS_MASTER_PASSWORD`)에 없으면 대화형 프롬프트로 입력
+4. 응답의 `previousExpiry`를 사용자에게 표시
+
+**출력 예시:**
+```
+$ waiaas secret rotate
+Master password: ••••••••••••••••
+Secret rotated. Previous secret expires at: 2026-02-08T10:36:25.000Z
+Existing sessions will remain valid for 5 minutes.
+
+$ waiaas secret rotate
+Error: Previous rotation still in transition window. Wait 3 minutes 12 seconds.
+(exit code: 1)
+```
+
+**에러:**
+| 상황 | 메시지 | Exit Code |
+|------|--------|-----------|
+| 데몬 미실행 | `Error: Daemon is not running` | 3 |
+| 패스워드 불일치 | `Error: Invalid master password` | 4 |
+| 연속 로테이션 | `Error: Previous rotation still in transition window` | 1 |
 
 ### 8.5 커맨드 구조 트리
 
@@ -1965,6 +2111,8 @@ waiaas
 ├── start                   # CORE-05: 데몬 시작 (이 문서). v0.5: --dev 추가
 ├── stop                    # CORE-05: 데몬 정지 (이 문서)
 ├── status                  # CORE-05: 데몬 상태 (이 문서)
+├── secret                  # v0.7: JWT Secret 관리
+│   └── rotate              # JWT Secret 로테이션 (5분 전환 윈도우)
 ├── agent                   # Phase 7-8. v0.5: create --owner 필수
 │   ├── create              # (v0.5 변경) --owner <address> 필수. 54-cli-flow-redesign.md 섹션 3
 │   ├── list

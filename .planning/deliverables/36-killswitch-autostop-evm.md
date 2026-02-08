@@ -2,6 +2,7 @@
 
 **문서 ID:** KILL-AUTO-EVM
 **작성일:** 2026-02-05
+**v0.7 보완:** 2026-02-08
 **상태:** 완료
 **참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), OWNR-CONN (34-owner-wallet-connection.md), NOTI-ARCH (35-notification-architecture.md), CORE-04 (27-chain-adapter-interface.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-03 (26-keystore-spec.md)
 
@@ -87,7 +88,7 @@ stateDiagram-v2
     [*] --> NORMAL : 데몬 시작 (system_state 확인)
 
     NORMAL --> ACTIVATED : Owner 수동 발동\nAutoStopEngine 트리거\nCLI kill-switch\n키스토어 무결성 실패
-    ACTIVATED --> RECOVERING : POST /v1/owner/recover\n(Owner 서명 + 마스터 패스워드)
+    ACTIVATED --> RECOVERING : POST /v1/admin/recover [v0.7 보완]\n(Owner 서명 + 마스터 패스워드)
     RECOVERING --> NORMAL : 복구 완료\n(키스토어 해제 + 에이전트 재활성화)
     RECOVERING --> ACTIVATED : 복구 실패\n(인증 오류 / 타임아웃)
 
@@ -155,10 +156,11 @@ INSERT INTO system_state (key, value, updated_at)
 VALUES ('kill_switch_status', '"NORMAL"', unixepoch());
 ```
 
-### 2.4 ACTIVATED 상태에서의 API 동작
+### 2.4 ACTIVATED 상태에서의 API 동작 [v0.7 보완: 허용 목록 4개 확정, 503 응답, recover 경로 변경]
 
 ```typescript
-// killSwitchGuard 미들웨어 -- 미들웨어 체인에서 sessionAuth 이전에 실행
+// killSwitchGuard 미들웨어 -- 미들웨어 체인 #7 (authRouter 이전에 실행)
+// [v0.7 보완] 허용 목록 4개로 확장, HTTP 503 응답, recover 경로 /v1/admin/recover로 통일
 async function killSwitchGuard(c: Context, next: Next): Promise<void> {
   const status = getSystemState(c.get('db'), 'kill_switch_status')
 
@@ -170,14 +172,15 @@ async function killSwitchGuard(c: Context, next: Next): Promise<void> {
   const path = c.req.path
   const method = c.req.method
 
-  // 허용 목록: 복구 관련 엔드포인트 + 헬스 체크
-  const allowedPaths = [
-    { method: 'POST', path: '/v1/owner/recover' },
+  // [v0.7 보완] 허용 목록 4개 확정 (DAEMON-04 해소)
+  const KILL_SWITCH_ALLOWED_PATHS = [
     { method: 'GET',  path: '/v1/health' },
     { method: 'GET',  path: '/v1/admin/status' },
+    { method: 'POST', path: '/v1/admin/recover' },
+    { method: 'GET',  path: '/v1/admin/kill-switch' },
   ]
 
-  const isAllowed = allowedPaths.some(
+  const isAllowed = KILL_SWITCH_ALLOWED_PATHS.some(
     p => p.method === method && path === p.path
   )
 
@@ -185,26 +188,35 @@ async function killSwitchGuard(c: Context, next: Next): Promise<void> {
     return next()
   }
 
-  // 모든 다른 요청 거부
-  throw new WaiaasError(
-    'SYSTEM_LOCKED',
-    'Kill Switch is activated. System is locked.',
-    401,
-    {
-      activatedAt: getSystemState(c.get('db'), 'kill_switch_activated_at'),
-      reason: getSystemState(c.get('db'), 'kill_switch_reason'),
-    }
-  )
+  // [v0.7 보완] 모든 다른 요청 거부 -- HTTP 503 Service Unavailable (기존 401에서 변경)
+  // 401은 "인증 실패"를 의미하나, Kill Switch는 인증 문제가 아니라 시스템 상태 문제이므로 503이 적절
+  return c.json({
+    error: {
+      code: 'SYSTEM_LOCKED',
+      message: 'System is in kill switch mode.',
+      details: {
+        activatedAt: getSystemState(c.get('db'), 'kill_switch_activated_at'),
+        reason: getSystemState(c.get('db'), 'kill_switch_reason'),
+      },
+      requestId: c.get('requestId'),
+      retryable: false,
+    },
+  }, 503)
 }
 ```
 
-**미들웨어 순서 업데이트:**
+**미들웨어 순서 업데이트:** [v0.7 보완: 10단계]
 
 ```
-ID -> 로깅 -> 종료검사 -> 보안헤더 -> Host -> CORS -> Rate -> KillSwitchGuard -> 인증
+ID -> 로깅 -> 종료검사 -> globalRateLimit -> 보안헤더 -> Host -> CORS -> KillSwitchGuard -> Auth -> sessionRateLimit
 ```
 
-killSwitchGuard는 Rate Limiter 이후, 인증(sessionAuth/ownerAuth) 이전에 위치한다. ACTIVATED 상태에서는 인증 로직까지 도달하지 않으므로 불필요한 DB 조회를 방지한다.
+killSwitchGuard(#7)는 CORS 이후, 인증(authRouter) 이전에 위치한다. ACTIVATED 상태에서는 인증 로직까지 도달하지 않으므로 불필요한 DB 조회를 방지한다.
+
+> **[v0.7 보완] 변경 사항:**
+> 1. **허용 목록 3개 -> 4개:** `GET /v1/admin/kill-switch` (Kill Switch 상태 조회) 추가. 외부 모니터링 도구가 Kill Switch 상태를 확인할 수 있어야 함.
+> 2. **recover 경로 변경:** `/v1/owner/recover` -> `/v1/admin/recover`. Kill Switch 복구는 시스템 관리 작업이므로 `/v1/admin/` 네임스페이스가 적절.
+> 3. **HTTP 상태 코드 변경:** 401 -> 503 Service Unavailable. Kill Switch는 인증 실패(401)가 아니라 시스템 가용성 문제(503)에 해당.
 
 **`/v1/health` 엔드포인트 확장:**
 
@@ -489,7 +501,7 @@ Kill Switch 복구는 **두 가지 인증을 동시에 요구**한다:
 ```mermaid
 sequenceDiagram
     participant Owner as Owner 지갑
-    participant API as POST /v1/owner/recover
+    participant API as POST /v1/admin/recover
     participant Auth as ownerAuth 미들웨어
     participant KS as KillSwitchService
     participant Key as KeyStore
@@ -563,11 +575,11 @@ sequenceDiagram
 | **system_state** | NORMAL | kill_switch 관련 값 초기화 |
 | **백그라운드 워커** | 재시작 | DELAY/APPROVAL 워커 재활성화 |
 
-### 4.4 POST /v1/owner/recover 엔드포인트 스펙
+### 4.4 POST /v1/admin/recover 엔드포인트 스펙 [v0.7 보완: 경로 변경 /v1/owner/recover -> /v1/admin/recover]
 
 ```typescript
 // 인증: ownerAuth (action='recover')
-// POST /v1/owner/recover
+// POST /v1/admin/recover  [v0.7 보완: 경로 변경]
 
 const RecoverRequest = z.object({
   masterPassword: z.string().min(8),
@@ -602,7 +614,7 @@ WAIAAS_MASTER_PASSWORD=<password> waiaas recover \
 
 - **Owner 서명 획득 방법:** 다른 기기에서 SIWS/SIWE 메시지를 서명하고, base64url 인코딩된 ownerSignaturePayload를 CLI 인자로 전달
 - **WalletConnect 불필요:** CLI 복구는 서명을 직접 인자로 받으므로 Relay 의존 없음
-- **내부 동작:** `/v1/owner/recover` 엔드포인트를 HTTP 호출
+- **내부 동작:** `/v1/admin/recover` 엔드포인트를 HTTP 호출 [v0.7 보완: 경로 변경]
 
 ### 4.6 복구 brute-force 방지
 
@@ -1695,7 +1707,7 @@ async function checkKillSwitchState(db: Database): Promise<void> {
     logger.warn(
       `Daemon starting in restricted mode: Kill Switch is ${status}. ` +
       `Only recovery endpoints are available. ` +
-      `Use POST /v1/owner/recover or waiaas recover to restore.`
+      `Use POST /v1/admin/recover or waiaas recover to restore.`  // [v0.7 보완: 경로 변경]
     )
 
     // 제한 모드로 시작:
@@ -1727,20 +1739,21 @@ Kill Switch 상태(ACTIVATED/RECOVERING)는 system_state 테이블에 유지됨.
 다음 데몬 시작 시 checkKillSwitchState()에서 복구 필요 상태 감지.
 ```
 
-### 11.4 미들웨어 체인 최종 순서
+### 11.4 미들웨어 체인 최종 순서 [v0.7 보완: 10단계]
 
-Phase 8 완료 후 미들웨어 체인 (CORE-06 대비 추가):
+Phase 8 완료 후 미들웨어 체인 (CORE-06 대비 추가). v0.7에서 Rate Limiter 2단계 분리 및 순서 재정의:
 
 ```
-1. RequestID          -- 요청 고유 ID 생성
-2. Logger             -- 요청/응답 로깅
-3. ShutdownGuard      -- 종료 진행 중이면 503
-4. SecureHeaders      -- 보안 헤더 설정
-5. HostGuard          -- 127.0.0.1 강제
-6. CORS               -- CORS 헤더
-7. RateLimiter        -- 3-레벨 속도 제한
-8. KillSwitchGuard    -- Kill Switch 상태 확인 (NEW)
-9. Auth               -- sessionAuth 또는 ownerAuth (라우트별)
+1.   RequestID          -- 요청 고유 ID 생성
+2.   Logger             -- 요청/응답 로깅
+3.   ShutdownGuard      -- 종료 진행 중이면 503
+3.5  GlobalRateLimit    -- IP 기반 전역 속도 제한 (1000/min) [v0.7 보완]
+4.   SecureHeaders      -- 보안 헤더 설정
+5.   HostGuard          -- 127.0.0.1 강제
+6.   CORS               -- CORS 헤더
+7.   KillSwitchGuard    -- Kill Switch 상태 확인, 503 SYSTEM_LOCKED [v0.7 보완: #8->#7]
+8.   AuthRouter         -- authRouter 통합 디스패처 [v0.7 보완: #9->#8]
+9.   SessionRateLimit   -- 세션 기반 속도 제한 (300/min, tx 10/min) [v0.7 보완]
 ```
 
 ---

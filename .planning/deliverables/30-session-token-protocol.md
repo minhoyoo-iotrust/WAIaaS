@@ -2,7 +2,8 @@
 
 **문서 ID:** SESS-PROTO
 **작성일:** 2026-02-05
-**상태:** 완료
+**v0.7 보완:** 2026-02-08
+**상태:** v0.7 보완
 **참조:** CORE-02 (25-sqlite-schema.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), SESS-RENEW (53-session-renewal-protocol.md, Phase 20 추가)
 **요구사항:** SESS-01 (세션 토큰 발급), SESS-02 (세션 제약), SESS-03 (사용량 추적), SESS-04 (즉시 폐기), SESS-05 (활성 세션 목록)
 
@@ -152,19 +153,208 @@ WAIAAS_SECURITY_JWT_SECRET=your_custom_secret_here
 
 **분리가 중요한 이유:** 데몬이 시작되면 HTTP 서버가 즉시 요청을 받을 수 있어야 한다. 키스토어 잠금 해제는 마스터 패스워드 입력이 필요한 대화형 프로세스인데, 이것이 완료되기 전에도 세션 토큰 검증(API 요청 인증)은 가능해야 한다. 따라서 JWT Secret은 config.toml에서 자동 로드하고, 키스토어 잠금 해제는 별도 단계로 진행한다.
 
-#### 2.7.5 Secret 변경의 영향
+#### 2.7.5 JWT Secret Dual-Key Rotation [v0.7 보완]
 
-JWT Secret이 변경되면 기존의 모든 세션 토큰이 자동으로 무효화된다. 이는 의도된 동작이다:
+> **v0.7 변경:** JWT Secret 변경 시 "모든 세션 즉시 무효화" 문제(DAEMON-01)를 해소하기 위해 dual-key 전환 윈도우를 도입한다. 기존의 단일 키 즉시 교체 방식에서, current/previous 이중 키 구조로 전환하여 기존 세션이 5분간 유효하게 유지된다.
 
-1. `jwtVerify`가 새 Secret으로 기존 토큰의 서명을 검증하면 실패
-2. `sessionAuth` 미들웨어가 Stage 1(JWT 서명 검증)에서 즉시 거부
-3. DB의 sessions 레코드는 그대로 유지되나, 토큰 자체가 무효이므로 접근 불가
-4. 만료 정리 워커가 이후 정리
+##### JwtSecretManager 인터페이스
+
+```typescript
+// packages/daemon/src/services/jwt-secret-manager.ts
+
+/** JWT Secret dual-key 관리자 [v0.7 보완] */
+interface JwtSecretState {
+  /** 현재 활성 JWT Secret (서명 + 검증에 사용) */
+  current: Uint8Array
+  /** 이전 JWT Secret (검증에만 사용, 전환 윈도우 내) */
+  previous?: Uint8Array
+  /** 로테이션 시각 (epoch ms). previous가 존재할 때만 유효 */
+  rotatedAt?: number
+}
+
+/** 전환 윈도우: 5분 (고정값, config 불가) */
+const TRANSITION_WINDOW_MS = 5 * 60 * 1000  // 300,000ms
+
+class JwtSecretManager {
+  private state: JwtSecretState
+
+  constructor(db: DatabaseManager) {
+    // system_state 테이블에서 로드
+    this.state = this.loadFromSystemState(db)
+  }
+
+  /** 서명용: 항상 current 사용 */
+  getSigningKey(): Uint8Array {
+    return this.state.current
+  }
+
+  /** 검증용: current 우선, 실패 시 previous 시도 */
+  async verifyToken(jwt: string): Promise<JWTPayload> {
+    // 1차: current key로 검증
+    try {
+      const result = await jwtVerify(jwt, this.state.current, {
+        issuer: 'waiaas',
+        algorithms: ['HS256'],
+      })
+      return result.payload
+    } catch (currentError) {
+      // 2차: previous key가 존재하고 전환 윈도우 내인 경우
+      if (this.state.previous && this.state.rotatedAt) {
+        const elapsed = Date.now() - this.state.rotatedAt
+        if (elapsed <= TRANSITION_WINDOW_MS) {
+          try {
+            const result = await jwtVerify(jwt, this.state.previous, {
+              issuer: 'waiaas',
+              algorithms: ['HS256'],
+            })
+            return result.payload
+          } catch {
+            // previous로도 실패 -- 원래 에러 전파
+          }
+        }
+      }
+      throw currentError
+    }
+  }
+}
+```
+
+##### system_state 테이블 키-값 저장
+
+JWT Secret은 더 이상 config.toml에서만 관리되지 않는다. 런타임에는 `system_state` 테이블(키-값 저장소)에서 관리한다:
+
+| system_state 키 | 타입 | 설명 |
+|----------------|------|------|
+| `jwt_secret_current` | `string` (hex) | 현재 활성 JWT Secret. 64자 hex (32바이트) |
+| `jwt_secret_previous` | `string\|null` (hex) | 이전 JWT Secret. 로테이션 후 5분간 유효. null이면 단일 키 모드 |
+| `jwt_secret_rotated_at` | `string\|null` (epoch ms) | 마지막 로테이션 시각. previous가 null이면 null |
+
+> **config.toml과의 관계:** config.toml의 `[security].jwt_secret`은 `waiaas init` 시 초기값으로만 사용된다. init 시 랜덤 생성하여 config.toml에 기록하고, 동시에 system_state `jwt_secret_current`에 저장한다. 이후 `waiaas secret rotate` 실행 시 config.toml은 갱신하지 않으며, system_state만 갱신된다.
+
+##### rotateJwtSecret() 함수 스펙
+
+```typescript
+// packages/daemon/src/services/jwt-secret-manager.ts
+
+/**
+ * JWT Secret 로테이션을 수행한다. [v0.7 보완]
+ *
+ * BEGIN IMMEDIATE 트랜잭션으로 원자적 실행:
+ * 1. 현재 current -> previous로 이동
+ * 2. 새 32바이트 랜덤 Secret 생성 -> current에 저장
+ * 3. rotatedAt에 현재 시각 기록
+ * 4. audit_log에 SECRET_ROTATED 이벤트 기록
+ *
+ * @returns previousExpiry - previous key 만료 시각 (ISO 8601)
+ * @throws 이전 로테이션 후 5분 미경과 시 거부 (연속 로테이션 방지)
+ */
+async function rotateJwtSecret(
+  db: DatabaseManager,
+  secretManager: JwtSecretManager,
+): Promise<{ previousExpiry: string }> {
+  const now = Date.now()
+
+  // 연속 로테이션 방지: 이전 로테이션 후 5분 미경과 시 거부
+  const lastRotatedAt = db.getSystemState('jwt_secret_rotated_at')
+  if (lastRotatedAt && (now - Number(lastRotatedAt)) < TRANSITION_WINDOW_MS) {
+    throw new DaemonError('ROTATION_TOO_RECENT',
+      'Previous rotation still in transition window. Wait until previous secret expires.')
+  }
+
+  const newSecret = randomBytes(32)
+  const newSecretHex = newSecret.toString('hex')
+  const previousExpiry = new Date(now + TRANSITION_WINDOW_MS).toISOString()
+
+  // BEGIN IMMEDIATE 트랜잭션으로 원자적 실행
+  const rotateTx = db.raw.transaction(() => {
+    const currentHex = db.getSystemState('jwt_secret_current')
+
+    // current -> previous
+    db.setSystemState('jwt_secret_previous', currentHex)
+    // 새 secret -> current
+    db.setSystemState('jwt_secret_current', newSecretHex)
+    // 로테이션 시각 기록
+    db.setSystemState('jwt_secret_rotated_at', String(now))
+
+    // audit_log
+    db.insertAuditLog({
+      eventType: 'SECRET_ROTATED',
+      actor: 'system',
+      severity: 'warning',
+      details: {
+        previousExpiry,
+        note: 'JWT Secret rotated. Previous secret valid for 5 minutes.',
+      },
+    })
+  })
+
+  rotateTx.immediate()
+
+  // 인메모리 상태 갱신
+  secretManager.reload(db)
+
+  return { previousExpiry }
+}
+```
+
+##### 데몬 시작 초기화 로직
+
+데몬 시작 시(`waiaas start`) system_state를 확인하여 만료된 previous를 정리한다:
+
+```typescript
+// packages/daemon/src/lifecycle/daemon.ts -- startDaemon() 내부
+
+/** 데몬 시작 시 JWT Secret 초기화 [v0.7 보완] */
+function initializeJwtSecret(db: DatabaseManager): JwtSecretManager {
+  const rotatedAt = db.getSystemState('jwt_secret_rotated_at')
+
+  if (rotatedAt) {
+    const elapsed = Date.now() - Number(rotatedAt)
+    if (elapsed > TRANSITION_WINDOW_MS) {
+      // 전환 윈도우 경과: previous 즉시 삭제
+      const clearTx = db.raw.transaction(() => {
+        db.setSystemState('jwt_secret_previous', null)
+        db.setSystemState('jwt_secret_rotated_at', null)
+        db.insertAuditLog({
+          eventType: 'PREVIOUS_SECRET_EXPIRED',
+          actor: 'system',
+          severity: 'info',
+          details: { rotatedAt, expiredAfterMs: elapsed },
+        })
+      })
+      clearTx.immediate()
+    }
+  }
+
+  // system_state에 jwt_secret_current가 없으면 config.toml에서 마이그레이션
+  if (!db.getSystemState('jwt_secret_current')) {
+    const configSecret = config.security.jwt_secret
+    if (!configSecret) {
+      throw new DaemonError('JWT_SECRET_MISSING',
+        "JWT secret not found. Run 'waiaas init' first.")
+    }
+    db.setSystemState('jwt_secret_current', configSecret)
+  }
+
+  return new JwtSecretManager(db)
+}
+```
+
+##### 5분 전환 윈도우 설계 근거
+
+| 항목 | 값 | 근거 |
+|------|-----|------|
+| 전환 윈도우 | 5분 (고정값) | JWT 기본 만료(24h) 대비 충분히 짧아 보안 영향 최소. 에이전트가 갱신(renew)하기에 충분한 시간 |
+| config 가능 여부 | 불가 (하드코딩) | 운영 복잡성 방지. 5분은 어떤 시나리오에서든 합리적인 균형점 |
+| 자동 로테이션 | 미지원 | 운영자가 명시적으로 실행만 가능 (`waiaas secret rotate` 또는 `POST /v1/admin/rotate-secret`). 자동 로테이션은 예기치 않은 세션 중단 위험 |
+| 연속 로테이션 | 5분 이내 거부 | 이전 previous가 아직 유효한 상태에서 새 로테이션을 하면 이전-이전 키로 서명된 토큰이 즉시 무효화됨. 이를 방지 |
 
 **Secret 변경이 필요한 경우:**
 - Secret이 유출되었거나 유출이 의심될 때
-- 보안 사고 대응으로 모든 세션을 일괄 무효화할 때
+- 보안 사고 대응으로 모든 세션을 일괄 무효화할 때 (이 경우에도 5분 전환 윈도우 적용)
 - 정기적인 키 로테이션 정책 적용 시
+
+> **즉시 무효화가 필요한 경우:** Kill Switch를 사용한다. Kill Switch 6단계 캐스케이드(36-killswitch-autostop-evm.md)가 모든 세션의 revokedAt을 일괄 설정하므로, JWT Secret 유효 여부와 관계없이 Stage 2(DB lookup)에서 즉시 거부된다.
 
 ### 2.8 토큰 만료 범위
 
@@ -538,54 +728,175 @@ function generateNonce(): string {
 
 ### 4.2 nonce 저장소
 
-**추천: 인메모리 LRU 캐시 (`lru-cache`)**
+**기본: 인메모리 LRU 캐시 (`lru-cache`), 선택적 SQLite 저장 [v0.7 보완]**
 
 | 저장소 옵션 | 장점 | 단점 | 채택 |
 |------------|------|------|------|
-| SQLite `nonces` 테이블 | 데몬 재시작 후 nonce 유지 | DB 부하 (매 nonce I/O), 테이블 관리 | X |
-| 인메모리 LRU 캐시 | 빠른 접근 (< 0.1ms), DB 부하 없음 | 데몬 재시작 시 소멸 | O |
+| 인메모리 LRU 캐시 | 빠른 접근 (< 0.1ms), DB 부하 없음 | 데몬 재시작 시 소멸 | O (기본값) |
+| SQLite `nonces` 테이블 | 데몬 재시작 후 nonce 유지. 단일 인스턴스 보강 | DB 부하 (매 nonce I/O), 테이블 관리 | O (선택적) [v0.7 보완] |
 | Redis / 외부 캐시 | 분산 환경 지원 | Self-Hosted에 과도한 의존성 | X |
 
-**인메모리 LRU 선택 근거:**
-- nonce는 **단기 일회성 데이터** (TTL 5분, 사용 후 즉시 삭제)
-- 데몬 재시작 시 진행 중이던 인증 플로우만 중단됨 -- 클라이언트가 새 nonce 재요청하면 해결
-- Self-Hosted 단일 프로세스 환경에서 분산 캐시 불필요
-- `lru-cache` max 1000 entries로 메모리 사용량 제한 (~50KB)
+> **[v0.7 보완] DAEMON-06 해소:** 인메모리 nonce 캐시는 단일 인스턴스에서는 안전하지만, 데몬 재시작 시 진행 중이던 nonce가 소멸되어 인증 플로우가 중단될 수 있다. SQLite 옵션을 추가하여 운영자가 선택할 수 있게 한다. 기본값은 인메모리(memory)로 유지한다.
+
+#### INonceStore 인터페이스 [v0.7 보완]
+
+```typescript
+// packages/core/src/interfaces/INonceStore.ts [v0.7 보완]
+
+/** nonce 저장소 추상화 인터페이스 */
+interface INonceStore {
+  /**
+   * nonce를 소비한다 (일회성).
+   * 존재하고 만료되지 않았으면 true를 반환하고 즉시 삭제(또는 마킹).
+   * 미존재/만료/이미 사용된 경우 false 반환.
+   */
+  consume(nonce: string, expiresAt: number): boolean
+
+  /** 만료된 nonce를 정리한다 */
+  cleanup(): void
+}
+```
+
+#### MemoryNonceStore (기본값) [v0.7 보완]
+
+인메모리 LRU 캐시 기반 구현. 기존 v0.2 설계를 INonceStore 인터페이스로 래핑.
+
+```typescript
+// packages/daemon/src/infrastructure/cache/memory-nonce-store.ts [v0.7 보완]
+import { LRUCache } from 'lru-cache'
+
+class MemoryNonceStore implements INonceStore {
+  private cache: LRUCache<string, number>  // nonce -> expiresAt
+
+  constructor(max: number = 1000, ttlMs: number = 5 * 60 * 1000) {
+    this.cache = new LRUCache<string, number>({
+      max,
+      ttl: ttlMs,
+    })
+  }
+
+  /** nonce 등록 */
+  register(nonce: string, expiresAt: number): void {
+    this.cache.set(nonce, expiresAt)
+  }
+
+  /** nonce 소비 (일회성) */
+  consume(nonce: string, expiresAt: number): boolean {
+    const entry = this.cache.get(nonce)
+    if (entry === undefined) return false
+    this.cache.delete(nonce)
+    return true
+  }
+
+  /** 만료 정리 (LRU TTL이 자동 처리하므로 no-op) */
+  cleanup(): void {
+    this.cache.purgeStale()
+  }
+}
+```
+
+#### SqliteNonceStore (선택적) [v0.7 보완]
+
+SQLite `nonces` 테이블 기반 구현. `INSERT OR IGNORE` + `rowsAffected` 패턴으로 원자적 일회성 소비를 보장한다.
+
+```typescript
+// packages/daemon/src/infrastructure/cache/sqlite-nonce-store.ts [v0.7 보완]
+import Database from 'better-sqlite3'
+
+class SqliteNonceStore implements INonceStore {
+  private insertStmt: Database.Statement
+  private consumeStmt: Database.Statement
+  private cleanupStmt: Database.Statement
+
+  constructor(private sqlite: Database.Database) {
+    this.insertStmt = sqlite.prepare(
+      'INSERT OR IGNORE INTO nonces (nonce, created_at, expires_at) VALUES (?, ?, ?)'
+    )
+    this.consumeStmt = sqlite.prepare(
+      'DELETE FROM nonces WHERE nonce = ? AND expires_at > ?'
+    )
+    this.cleanupStmt = sqlite.prepare(
+      'DELETE FROM nonces WHERE expires_at <= ?'
+    )
+  }
+
+  /** nonce 등록 */
+  register(nonce: string, expiresAt: number): void {
+    const now = Math.floor(Date.now() / 1000)
+    this.insertStmt.run(nonce, now, expiresAt)
+  }
+
+  /**
+   * nonce 소비 (일회성).
+   * DELETE WHERE nonce = ? AND expires_at > now()
+   * rowsAffected > 0 이면 유효한 nonce가 존재했고 삭제됨 = 소비 성공.
+   * rowsAffected = 0 이면 미존재/만료/이미 사용 = 소비 실패.
+   */
+  consume(nonce: string, expiresAt: number): boolean {
+    const now = Math.floor(Date.now() / 1000)
+    const result = this.consumeStmt.run(nonce, now)
+    return result.changes > 0
+  }
+
+  /** 만료된 nonce 정리 (BackgroundWorker에서 주기적 호출) */
+  cleanup(): void {
+    const now = Math.floor(Date.now() / 1000)
+    this.cleanupStmt.run(now)
+  }
+}
+```
+
+**SqliteNonceStore INSERT OR IGNORE 패턴 설명:**
+- `INSERT OR IGNORE`: nonce PK 충돌 시 에러 없이 무시. nonce 중복 등록 방지.
+- `DELETE WHERE nonce = ? AND expires_at > ?`: 존재하고 만료되지 않은 nonce를 삭제. `changes > 0`이면 소비 성공.
+- 이 패턴은 별도의 SELECT + DELETE 없이 **단일 쿼리로 원자적 일회성 소비**를 구현한다.
+
+#### createNonceStore 팩토리 [v0.7 보완]
+
+```typescript
+// packages/daemon/src/infrastructure/cache/nonce-store-factory.ts [v0.7 보완]
+
+function createNonceStore(
+  config: { nonce_storage: 'memory' | 'sqlite' },
+  sqlite?: Database.Database,
+): INonceStore {
+  if (config.nonce_storage === 'sqlite') {
+    if (!sqlite) throw new DaemonError('SQLITE_REQUIRED', 'SQLite nonce storage requires DB connection')
+    return new SqliteNonceStore(sqlite)
+  }
+  return new MemoryNonceStore(
+    config.nonce_cache_max ?? 1000,
+    (config.nonce_cache_ttl ?? 300) * 1000,
+  )
+}
+```
+
+**기존 코드와의 호환:**
+
+기존 `createNonce()` 및 `verifyAndConsumeNonce()` 함수는 INonceStore를 사용하도록 리팩터링된다:
 
 ```typescript
 // packages/daemon/src/infrastructure/cache/nonce-cache.ts
-import { LRUCache } from 'lru-cache'
+// [v0.7 보완] INonceStore 기반으로 리팩터링
 
-interface NonceEntry {
-  nonce: string
-  createdAt: number  // Unix epoch (ms)
-}
-
-const nonceCache = new LRUCache<string, NonceEntry>({
-  max: 1000,         // 최대 1000개 nonce 동시 관리
-  ttl: 5 * 60 * 1000,  // 5분 TTL (밀리초)
-})
+let nonceStore: INonceStore  // DI로 주입
 
 /** nonce 생성 + 저장 */
 function createNonce(): { nonce: string; expiresAt: string } {
   const nonce = generateNonce()
   const createdAt = Date.now()
-  const expiresAt = new Date(createdAt + 5 * 60 * 1000).toISOString()
+  const expiresAtMs = createdAt + 5 * 60 * 1000
+  const expiresAtSec = Math.floor(expiresAtMs / 1000)
 
-  nonceCache.set(nonce, { nonce, createdAt })
+  nonceStore.register(nonce, expiresAtSec)
 
-  return { nonce, expiresAt }
+  return { nonce, expiresAt: new Date(expiresAtMs).toISOString() }
 }
 
 /** nonce 검증 + 삭제 (일회성) */
 function verifyAndConsumeNonce(nonce: string): boolean {
-  const entry = nonceCache.get(nonce)
-  if (!entry) {
-    return false  // 미존재 또는 만료
-  }
-  // 사용 후 즉시 삭제 (replay attack 방지)
-  nonceCache.delete(nonce)
-  return true
+  const now = Math.floor(Date.now() / 1000)
+  return nonceStore.consume(nonce, now)
 }
 ```
 
@@ -1494,15 +1805,15 @@ type AppBindings = {
 
 ## 9. 보안 고려사항
 
-### 9.1 JWT Secret 수명주기 관리
+### 9.1 JWT Secret 수명주기 관리 [v0.7 보완]
 
 | 단계 | 시점 | 동작 |
 |------|------|------|
-| 생성 | `waiaas init` | `crypto.randomBytes(32).toString('hex')` -> config.toml 저장 |
-| 로드 | `waiaas start` | config.toml에서 읽기 (환경변수 오버라이드 확인) |
-| 사용 | 매 요청 | `jwtVerify(jwt, secret)` 서명 검증 |
-| 변경 | 수동/사고 대응 | config.toml 수정 + 데몬 재시작 -> 모든 세션 자동 무효화 |
-| 보호 | 항상 | config.toml 파일 권한 600, 환경변수 프로세스 스코프 |
+| 생성 | `waiaas init` | `crypto.randomBytes(32).toString('hex')` -> config.toml + system_state 저장 |
+| 로드 | `waiaas start` | system_state에서 읽기 (초회 시 config.toml에서 마이그레이션). JwtSecretManager 초기화 |
+| 사용 | 매 요청 | `JwtSecretManager.verifyToken(jwt)` dual-key 검증 (current 우선, 전환 윈도우 내 previous 시도) |
+| 변경 | `waiaas secret rotate` / `POST /v1/admin/rotate-secret` | rotateJwtSecret(): current->previous 이동 + 새 secret 생성. 5분 전환 윈도우 |
+| 보호 | 항상 | config.toml 파일 권한 600, system_state DB 파일 권한 600, 환경변수 프로세스 스코프 |
 
 ### 9.2 토큰 탈취 대응 (Defense in Depth)
 
@@ -1541,6 +1852,6 @@ jose 내부: crypto.timingSafeEqual(computed_signature, received_signature)
 ---
 
 *문서 ID: SESS-PROTO*
-*작성일: 2026-02-05*
-*Phase: 07-session-transaction-protocol-design*
-*상태: 완료*
+*작성일: 2026-02-05, v0.7 보완: 2026-02-08*
+*Phase: 07-session-transaction-protocol-design, v0.7 보완: 27-daemon-security-foundation*
+*상태: v0.7 보완*

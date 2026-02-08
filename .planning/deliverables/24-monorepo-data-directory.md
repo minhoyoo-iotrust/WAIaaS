@@ -553,7 +553,8 @@ WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
 ~/.waiaas/                             # 데이터 루트 (700)
 ├── config.toml                        # 데몬 설정 파일 (600)
 ├── .master-password                   # (v0.5 추가) 마스터 패스워드 파일. --quickstart 시 자동 생성 (600)
-├── daemon.pid                         # PID 파일 - background 모드 시 (644)
+├── daemon.lock                        # [v0.7 보완] flock 기반 인스턴스 잠금 파일. fd 유지 기반 (644)
+├── daemon.pid                         # PID 파일 - 보조 정보 [v0.7: 보조로 격하] (644)
 ├── data/                              # 데이터 파일 (700)
 │   ├── waiaas.db                      # SQLite 메인 데이터베이스 (600)
 │   ├── waiaas.db-wal                  # WAL 저널 (자동 생성) (600)
@@ -575,7 +576,8 @@ WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
 | `~/.waiaas/` | 데이터 루트 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
 | `config.toml` | 데몬 설정 (TOML 포맷) | `waiaas init` (기본값 생성) | `600` (rw-------) | 실행 사용자 |
 | `.master-password` | (v0.5 추가) 마스터 패스워드 파일. `--quickstart`로 자동 생성되거나 `--password-file`로 참조됨 | `waiaas init --quickstart` | `600` (rw-------) | 실행 사용자 |
-| `daemon.pid` | 데몬 PID (background 모드) | `waiaas start --daemon` | `644` (rw-r--r--) | 실행 사용자 |
+| `daemon.lock` | [v0.7 보완] flock 기반 인스턴스 잠금 파일. fd 유지 기반 잠금. 내용물은 PID (보조 정보) | `waiaas start` (Step 1) | `644` (rw-r--r--) | 실행 사용자 |
+| `daemon.pid` | 데몬 PID (보조 정보, [v0.7 보완] status 명령 표시용으로 격하) | `waiaas start --daemon` | `644` (rw-r--r--) | 실행 사용자 |
 | `data/` | SQLite 데이터베이스 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
 | `data/waiaas.db` | SQLite 메인 DB (WAL 모드) | 데몬 첫 시작 시 마이그레이션으로 생성 | `600` (rw-------) | 실행 사용자 |
 | `data/waiaas.db-wal` | WAL 저널 파일 | SQLite가 WAL 모드 진입 시 자동 생성 | `600` (rw-------) | 실행 사용자 |
@@ -655,9 +657,10 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | `WAIAAS_RPC_SOLANA_MAINNET` | `[rpc.solana].mainnet` | `https://custom.rpc.com` |
 | `WAIAAS_SECURITY_SESSION_TTL` | `[security].session_ttl` | `86400` |
 | `WAIAAS_SECURITY_JWT_SECRET` | `[security].jwt_secret` | `a1b2c3...` (64자 hex) |
+| `WAIAAS_SECURITY_NONCE_STORAGE` | `[security].nonce_storage` | `"memory"` |
 | `WAIAAS_SECURITY_NONCE_CACHE_MAX` | `[security].nonce_cache_max` | `1000` |
 | `WAIAAS_SECURITY_NONCE_CACHE_TTL` | `[security].nonce_cache_ttl` | `300` |
-| `WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_RPM` | `[security].rate_limit_global_rpm` | `100` |
+| `WAIAAS_SECURITY_RATE_LIMIT_GLOBAL_IP_RPM` | `[security].rate_limit_global_ip_rpm` | `1000` |
 | `WAIAAS_SECURITY_RATE_LIMIT_SESSION_RPM` | `[security].rate_limit_session_rpm` | `300` |
 | `WAIAAS_SECURITY_RATE_LIMIT_TX_RPM` | `[security].rate_limit_tx_rpm` | `10` |
 | `WAIAAS_SECURITY_AUTO_STOP_CONSECUTIVE_FAILURES_THRESHOLD` | `[security.auto_stop].consecutive_failures_threshold` | `3` |
@@ -749,12 +752,13 @@ WAIAAS_{SECTION}_{KEY} -> [section].key
 | 키 | 타입 | 기본값 | 유효 범위 | 설명 |
 |----|------|--------|----------|------|
 | `session_ttl` | integer | `86400` | 300-604800 (초) | 세션 토큰 유효 기간 — 24시간. Phase 7 SESS-PROTO에서 24시간 기본으로 확정 |
-| `jwt_secret` | string | `""` | 64자 hex (256비트) | JWT HS256 서명 Secret. `waiaas init` 시 `crypto.randomBytes(32).toString('hex')` 자동 생성 |
+| `jwt_secret` | string | `""` | 64자 hex (256비트) | [v0.7 보완] **초기값 전용.** `waiaas init` 시 `crypto.randomBytes(32).toString('hex')` 자동 생성하여 config에 기록. 이후 DB system_state에서 관리. `waiaas secret rotate` 시 config.toml은 갱신하지 않음. 30-session-token-protocol.md 섹션 2.7.5 참조 |
 | `max_sessions_per_agent` | integer | `5` | 1-50 | 에이전트당 최대 동시 세션 수 |
 | `max_pending_tx` | integer | `10` | 1-100 | 최대 대기 트랜잭션 수 |
-| `nonce_cache_max` | integer | `1000` | 100-10000 | Nonce LRU 캐시 최대 항목 수 (SESS-PROTO 참조) |
+| `nonce_storage` | string | `"memory"` | `"memory"`, `"sqlite"` | [v0.7 보완] Nonce 저장소 타입. `memory`: 인메모리 LRU (기본, 빠름), `sqlite`: SQLite nonces 테이블 (데몬 재시작 후 nonce 유지). SESS-PROTO 섹션 4.2 INonceStore 참조 |
+| `nonce_cache_max` | integer | `1000` | 100-10000 | Nonce LRU 캐시 최대 항목 수 (memory 모드에서만 유효. SESS-PROTO 참조) |
 | `nonce_cache_ttl` | integer | `300` | 60-600 (초) | Nonce TTL — 5분 |
-| `rate_limit_global_rpm` | integer | `100` | 10-1000 | 전역 RPM (인증 전, IP 기준). CORE-06에서 확정 |
+| `rate_limit_global_ip_rpm` | integer | `1000` | 100-10000 | [v0.7 보완] IP 기반 전역 RPM (Stage 1 globalRateLimit). localhost에서는 전체 요청 상한. 기존 `rate_limit_global_rpm`(100)에서 이름/값 변경. CORE-06 섹션 7 참조 |
 | `rate_limit_session_rpm` | integer | `300` | 10-5000 | 세션당 RPM (인증 후) |
 | `rate_limit_tx_rpm` | integer | `10` | 1-100 | 거래 전송 RPM |
 | `cors_origins` | array of string | `["http://localhost:3100", "http://127.0.0.1:3100"]` | URL 배열 | 허용 CORS origin |
@@ -877,12 +881,13 @@ topic = ""                         # 구독 토픽
 # ─────────────────────────────────────────
 [security]
 session_ttl = 86400                # 세션 유효 기간 (초) -- 24시간 (최소 300, 최대 604800)
-jwt_secret = ""                    # waiaas init 시 crypto.randomBytes(32).toString('hex') 자동 생성
+jwt_secret = ""                    # [v0.7 보완] 초기값 전용. waiaas init 시 32바이트 랜덤 생성하여 config에 기록. 이후 DB system_state에서 관리. waiaas secret rotate 시 config.toml은 갱신하지 않음
 max_sessions_per_agent = 5         # 에이전트당 최대 동시 세션
 max_pending_tx = 10                # 최대 대기 트랜잭션 수
-nonce_cache_max = 1000             # Nonce LRU 캐시 최대 항목 수
+nonce_storage = "memory"           # [v0.7 보완] Nonce 저장소: "memory" (기본, LRU) 또는 "sqlite" (재시작 후 유지)
+nonce_cache_max = 1000             # Nonce LRU 캐시 최대 항목 수 (memory 모드)
 nonce_cache_ttl = 300              # Nonce TTL (초) -- 5분
-rate_limit_global_rpm = 100        # 전역 RPM (인증 전, IP 기준)
+rate_limit_global_ip_rpm = 1000    # [v0.7 보완] IP 기반 전역 RPM (Stage 1 globalRateLimit). 기존 rate_limit_global_rpm=100에서 이름/값 변경
 rate_limit_session_rpm = 300       # 세션당 RPM (인증 후)
 rate_limit_tx_rpm = 10             # 거래 전송 RPM
 cors_origins = [
@@ -977,9 +982,10 @@ const ConfigSchema = z.object({
     jwt_secret: z.string().min(32, 'JWT secret은 최소 32자 이상').default(''),
     max_sessions_per_agent: z.number().int().min(1).max(50).default(5),
     max_pending_tx: z.number().int().min(1).max(100).default(10),
+    nonce_storage: z.enum(['memory', 'sqlite']).default('memory'),  // [v0.7 보완] nonce 저장소 타입
     nonce_cache_max: z.number().int().min(100).max(10000).default(1000),
     nonce_cache_ttl: z.number().int().min(60).max(600).default(300),
-    rate_limit_global_rpm: z.number().int().min(10).max(1000).default(100),
+    rate_limit_global_ip_rpm: z.number().int().min(100).max(10000).default(1000),  // [v0.7 보완] 이름/값 변경
     rate_limit_session_rpm: z.number().int().min(10).max(5000).default(300),
     rate_limit_tx_rpm: z.number().int().min(1).max(100).default(10),
     cors_origins: z.array(z.string()).default(['http://localhost:3100', 'http://127.0.0.1:3100']),

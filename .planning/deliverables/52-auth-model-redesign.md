@@ -2,6 +2,7 @@
 
 **문서 ID:** AUTH-REDESIGN
 **작성일:** 2026-02-07
+**v0.7 보완:** 2026-02-08
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), OWNR-CONN (34-owner-wallet-connection.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
 **요구사항:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, OWNR-05, OWNR-06
@@ -105,6 +106,10 @@ export function implicitMasterAuthMiddleware() {
 ```typescript
 // masterAuth 명시적 모드 미들웨어
 // 파괴적 작업(Kill Switch, Shutdown)에만 적용
+// [v0.7 보완] verifyPassword 콜백은 MasterAuthManager.verify()를 사용.
+// MasterAuthManager는 데몬 시작 시 키스토어 해제에 성공한 마스터 패스워드로
+// argon2.hash()를 실행하여 Argon2id 해시를 메모리에 캐시하고,
+// 이후 요청 시 argon2.verify(cachedHash, inputPassword)로 검증한다.
 export function explicitMasterAuthMiddleware(
   verifyPassword: (password: string) => Promise<boolean>,
   lockoutTracker: BruteForceLockout,
@@ -128,7 +133,8 @@ export function explicitMasterAuthMiddleware(
       )
     }
 
-    // Argon2id 검증
+    // [v0.7 보완] Argon2id 검증: argon2.verify(cachedHash, password)
+    // cachedHash는 데몬 시작 시 메모리에 캐시된 Argon2id 해시
     const valid = await verifyPassword(password)
     if (!valid) {
       lockoutTracker.recordFailure()
@@ -155,6 +161,42 @@ export function explicitMasterAuthMiddleware(
 | lockout 기간 | 30분 (1800초) | 공격 비용 증가 + 정당 사용자 복구 가능 |
 | 카운터 저장 | 메모리 (데몬 재시작 시 리셋) | SQLite 불필요. 재시작으로 해제 가능. |
 
+#### Argon2id 해시 메모리 캐시 메커니즘 [v0.7 보완]
+
+데몬 시작 시 키스토어 잠금 해제에 성공한 마스터 패스워드로 `argon2.hash()` 실행하여 Argon2id 해시를 메모리에 캐시한다. 이후 `X-Master-Password` 헤더가 포함된 API 요청 시 `argon2.verify(cachedHash, inputPassword)`로 검증한다.
+
+```typescript
+// MasterAuthManager [v0.7 보완]
+import argon2 from 'argon2'
+
+class MasterAuthManager {
+  private cachedHash: string  // Argon2id 해시 (메모리 캐시)
+
+  /** 데몬 시작 시 키스토어 해제 성공 후 호출 */
+  async initialize(masterPassword: string): Promise<void> {
+    this.cachedHash = await argon2.hash(masterPassword, {
+      type: argon2.argon2id,
+      memoryCost: config.keystore.argon2_memory,  // 65536 KiB (64 MiB)
+      timeCost: config.keystore.argon2_time,       // 3
+      parallelism: config.keystore.argon2_parallelism,  // 4
+    })
+    // masterPassword 원본은 이후 sodium_memzero로 소거
+  }
+
+  /** explicitMasterAuthMiddleware의 verifyPassword 콜백 */
+  async verify(inputPassword: string): Promise<boolean> {
+    return argon2.verify(this.cachedHash, inputPassword)
+  }
+}
+```
+
+| 항목 | 값 | 근거 |
+|------|-----|------|
+| 해시 생성 시점 | 데몬 시작 시 (키스토어 해제 직후) | 1회 생성, 이후 캐시 재사용 |
+| 검증 비용 | ~수 ms (`argon2.verify`) | 매 요청 `argon2.hash` 대비 수십 배 빠름 |
+| 보안 근거 | localhost only 통신 | 평문 전송에 따른 네트워크 스니핑 위험 없음 |
+| SHA-256 불사용 | 의도적 폐기 | 클라이언트 해싱은 해시가 비밀번호 역할 → 보안 이점 없음 |
+
 #### 감사 추적
 
 | 모드 | actor 값 | 개인 식별 | 비고 |
@@ -179,7 +221,7 @@ export function explicitMasterAuthMiddleware(
 | # | 엔드포인트 | 용도 | 인증 조합 |
 |---|----------|------|-----------|
 | 1 | `POST /v1/owner/approve/:txId` | APPROVAL 티어 거래 승인 | ownerAuth 단독 |
-| 2 | `POST /v1/owner/recover` | Kill Switch 복구 (dual-auth) | ownerAuth + masterAuth(explicit) |
+| 2 | `POST /v1/admin/recover` | Kill Switch 복구 (dual-auth) [v0.7 보완: 경로 변경] | ownerAuth + masterAuth(explicit) |
 
 **적용 원칙**: "자금 이동/동결 해제에 직접 영향을 미치는 경우에만 ownerAuth 요구"
 
@@ -219,7 +261,7 @@ function resolveAgentIdFromContext(c: Context): string {
   }
 
   // KS 복구: 서명자 주소로 에이전트 존재 여부 확인
-  if (path === '/v1/owner/recover') {
+  if (path === '/v1/admin/recover') {  // [v0.7 보완: 경로 변경]
     // 해당 주소를 owner로 가진 에이전트가 1개 이상 존재하면 통과
     const ownerAgents = db.select()
       .from(agents)
@@ -247,7 +289,7 @@ action: z.enum([
 // v0.5: 2개 action (ownerAuth 적용 엔드포인트와 1:1 대응)
 action: z.enum([
   'approve_tx',  // POST /v1/owner/approve/:txId
-  'recover',     // POST /v1/owner/recover
+  'recover',     // POST /v1/admin/recover [v0.7 보완: 경로 변경]
 ])
 ```
 
@@ -301,7 +343,7 @@ const ROUTE_ACTION_MAP: Record<string, string> = {
 // v0.5 ROUTE_ACTION_MAP: 2개 매핑
 const ROUTE_ACTION_MAP: Record<string, string> = {
   'POST /v1/owner/approve': 'approve_tx',
-  'POST /v1/owner/recover': 'recover',
+  'POST /v1/admin/recover': 'recover',  // [v0.7 보완: 경로 변경]
 }
 ```
 
@@ -414,7 +456,7 @@ JWT HS256 Bearer 토큰 기반 인증. SESS-PROTO(30-session-token-protocol.md)�
 | 14 | POST | /v1/owner/approve/:txId | ownerAuth | **ownerAuth** | **Same** | 자금 이동 승인. ownerAuth 유지 필수. |
 | 15 | POST | /v1/owner/reject/:txId | ownerAuth | masterAuth (implicit) | **Downgrade** | 거절 = 자금 보존. 보호적 행위. |
 | 16 | POST | /v1/owner/kill-switch | ownerAuth | masterAuth (implicit) | **Downgrade** | 비상 정지 = 보호적 행위. 자금 동결. |
-| 17 | POST | /v1/owner/recover | ownerAuth + masterAuth | **ownerAuth + masterAuth (explicit)** | **Same** | dual-auth 유지. 동결 해제 = 자금 접근 복원. |
+| 17 | POST | /v1/admin/recover [v0.7 보완] | ownerAuth + masterAuth | **ownerAuth + masterAuth (explicit)** | **Same** | dual-auth 유지. 동결 해제 = 자금 접근 복원. |
 | 18 | GET | /v1/owner/pending-approvals | ownerAuth | masterAuth (implicit) | **Downgrade** | 대기 목록 조회 = 시스템 관리 |
 | 19 | POST | /v1/owner/policies | ownerAuth | masterAuth (implicit) | **Downgrade** | 정책 생성 = 시스템 관리 |
 | 20 | PUT | /v1/owner/policies/:policyId | ownerAuth | masterAuth (implicit) | **Downgrade** | 정책 수정 = 시스템 관리 |
@@ -439,7 +481,7 @@ JWT HS256 Bearer 토큰 기반 인증. SESS-PROTO(30-session-token-protocol.md)�
 | masterAuth (implicit) | 16 | POST /v1/sessions, DELETE /v1/sessions/:id, POST /v1/owner/connect, DELETE /v1/owner/disconnect, POST /v1/owner/reject/:txId, POST /v1/owner/kill-switch, GET /v1/owner/pending-approvals, POST /v1/owner/policies, PUT /v1/owner/policies/:policyId, GET /v1/owner/sessions, DELETE /v1/owner/sessions/:id, GET /v1/owner/agents, GET /v1/owner/agents/:id, GET /v1/owner/settings, PUT /v1/owner/settings, GET /v1/owner/dashboard |
 | masterAuth (explicit) | 3 | POST /v1/admin/kill-switch, POST /v1/admin/shutdown, GET /v1/admin/status |
 | ownerAuth | 1 | POST /v1/owner/approve/:txId |
-| dualAuth (ownerAuth + masterAuth explicit) | 1 | POST /v1/owner/recover |
+| dualAuth (ownerAuth + masterAuth explicit) | 1 | POST /v1/admin/recover [v0.7 보완: 경로 변경] |
 | **합계** | **30** | GET /v1/owner/status는 masterAuth(implicit) 16개에 포함하여 총 30 |
 
 > **참고**: #12 POST /v1/owner/connect는 None(localhost)이지만 hostValidation 미들웨어로 localhost만 허용. 공개 3개 + sessionAuth 6개 + masterAuth(implicit) 16개 + masterAuth(explicit) 3개 + ownerAuth 1개 + dualAuth 1개 = 30개. GET /doc 포함 시 31개.
@@ -692,7 +734,7 @@ async function performOwnerAuth(action: string, txId?: string): Promise<string> 
 | 14 | POST /v1/owner/approve/:txId | ownerAuth | ownerAuth | Same | **직접 (자금 이동)** | SAFE |
 | 15 | POST /v1/owner/reject/:txId | ownerAuth | masterAuth(implicit) | **Downgrade** | 없음 (자금 보존) | **JUSTIFIED** |
 | 16 | POST /v1/owner/kill-switch | ownerAuth | masterAuth(implicit) | **Downgrade** | 없음 (자금 동결 = 보호) | **JUSTIFIED** |
-| 17 | POST /v1/owner/recover | ownerAuth+masterAuth | ownerAuth+masterAuth(explicit) | Same | **직접 (동결 해제)** | SAFE |
+| 17 | POST /v1/admin/recover [v0.7 보완] | ownerAuth+masterAuth | ownerAuth+masterAuth(explicit) | Same | **직접 (동결 해제)** | SAFE |
 | 18 | GET /v1/owner/pending-approvals | ownerAuth | masterAuth(implicit) | **Downgrade** | 없음 (조회) | **JUSTIFIED** |
 | 19 | POST /v1/owner/policies | ownerAuth | masterAuth(implicit) | **Downgrade** | 간접 (정책 변경) | **JUSTIFIED** |
 | 20 | PUT /v1/owner/policies/:policyId | ownerAuth | masterAuth(implicit) | **Downgrade** | 간접 (정책 변경) | **JUSTIFIED** |
@@ -815,19 +857,19 @@ async function performOwnerAuth(action: string, txId?: string): Promise<string> 
 | Downgrade + JUSTIFIED | 16 | 모든 항목에 보상 통제 존재. 실질적 보안 수준 유지. |
 | Downgrade + UNJUSTIFIED | 0 | 없음 |
 
-**핵심 검증 결과**: ownerAuth가 유지되는 2곳(POST /v1/owner/approve/:txId, POST /v1/owner/recover)은 자금 이동/동결 해제에 직접 영향을 미치는 유일한 엔드포인트이다. v0.2와 동일한 보안 수준이 유지된다. 다운그레이드된 16개 엔드포인트는 모두 보상 통제가 존재하며, 실질적 보안 수준 저하가 없다.
+**핵심 검증 결과**: ownerAuth가 유지되는 2곳(POST /v1/owner/approve/:txId, POST /v1/admin/recover [v0.7 보완: 경로 변경])은 자금 이동/동결 해제에 직접 영향을 미치는 유일한 엔드포인트이다. v0.2와 동일한 보안 수준이 유지된다. 다운그레이드된 16개 엔드포인트는 모두 보상 통제가 존재하며, 실질적 보안 수준 저하가 없다.
 
 ---
 
 ## 7. 미들웨어 아키텍처 업데이트
 
-### 7.1 v0.5 미들웨어 체인
+### 7.1 v0.5 미들웨어 체인 [v0.7 보완: 10단계]
 
 ```
-requestId -> logger -> shutdownGuard -> secureHeaders -> hostValidation -> cors -> rateLimiter -> killSwitchGuard -> authRouter
+requestId -> logger -> shutdownGuard -> globalRateLimit -> secureHeaders -> hostValidation -> cors -> killSwitchGuard -> authRouter -> sessionRateLimit
 ```
 
-v0.2 대비 변경: 순서 9의 `sessionAuth / ownerAuth / masterAuth` 개별 적용이 `authRouter` 단일 디스패처로 통합.
+v0.2 대비 변경: 순서 9의 `sessionAuth / ownerAuth / masterAuth` 개별 적용이 `authRouter` 단일 디스패처로 통합. [v0.7 보완] rateLimiter를 globalRateLimit(#3.5) + sessionRateLimit(#9)로 2단계 분리. killSwitchGuard #8->#7, authRouter #9->#8로 이동.
 
 ### 7.2 authRouter 디스패치 로직
 
@@ -869,7 +911,7 @@ const OWNER_AUTH_PATHS = new Set([
 
 // dualAuth 경로 (ownerAuth + masterAuth explicit)
 const DUAL_AUTH_PATHS = new Set([
-  'POST /v1/owner/recover',
+  'POST /v1/admin/recover',  // [v0.7 보완: /v1/owner/recover -> /v1/admin/recover]
 ])
 
 export function authRouter(deps: AuthDeps) {
@@ -936,33 +978,38 @@ export function dualAuthMiddleware(deps: DualAuthDeps) {
 }
 ```
 
-### 7.4 killSwitchGuard 허용 목록 (v0.2 동일)
+### 7.4 killSwitchGuard 허용 목록 [v0.7 보완: 4개로 확장, recover 경로 변경, 503 응답]
 
-ACTIVATED 또는 RECOVERING 상태에서 통과가 허용되는 엔드포인트:
+ACTIVATED 또는 RECOVERING 상태에서 통과가 허용되는 엔드포인트 (DAEMON-04 해소):
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | /health | 헬스체크 (모니터링) |
-| POST | /v1/owner/recover | Kill Switch 복구 (dual-auth) |
+| GET | /v1/health | 헬스체크 (모니터링) |
 | GET | /v1/admin/status | 데몬 상태 조회 |
+| POST | /v1/admin/recover | Kill Switch 복구 (dual-auth) [v0.7 보완: /v1/owner/recover에서 경로 변경] |
+| GET | /v1/admin/kill-switch | Kill Switch 상태 조회 [v0.7 보완: 추가] |
 
-v0.2와 동일. 변경 없음.
+> **[v0.7 보완] 변경 사항:**
+> 1. **허용 목록 3개 -> 4개:** `GET /v1/admin/kill-switch` 추가. 외부 모니터링 도구가 Kill Switch 상태를 확인할 수 있어야 함.
+> 2. **recover 경로 변경:** `/v1/owner/recover` -> `/v1/admin/recover`. Kill Switch 복구는 시스템 관리 작업이므로 `/v1/admin/` 네임스페이스가 적절. 인증은 기존 동일 (ownerAuth + masterAuth explicit, dual-auth).
+> 3. **HTTP 상태 코드 변경:** 401 -> 503 Service Unavailable. Kill Switch는 인증 실패가 아니라 시스템 가용성 문제에 해당. 에러 코드: `SYSTEM_LOCKED`.
 
-### 7.5 미들웨어 순서 변경 요약
+### 7.5 미들웨어 순서 변경 요약 [v0.7 보완: 10단계]
 
-| 순서 | v0.2 | v0.5 | 변경 |
-|------|------|------|------|
-| 1 | requestId | requestId | 동일 |
-| 2 | requestLogger | requestLogger | 동일 |
-| 3 | shutdownGuard | shutdownGuard | 동일 |
-| 4 | secureHeaders | secureHeaders | 동일 |
-| 5 | hostValidation | hostValidation | 동일 |
-| 6 | cors | cors | 동일 |
-| 7 | rateLimiter | rateLimiter | 동일 |
-| 8 | killSwitchGuard | killSwitchGuard | 동일 |
-| 9 | sessionAuth / ownerAuth / masterAuth (라우트별) | **authRouter** (통합 디스패처) | **변경** |
+| 순서 | v0.2 | v0.5 | v0.7 | 변경 |
+|------|------|------|------|------|
+| 1 | requestId | requestId | requestId | 동일 |
+| 2 | requestLogger | requestLogger | requestLogger | 동일 |
+| 3 | shutdownGuard | shutdownGuard | shutdownGuard | 동일 |
+| 3.5 | - | - | **globalRateLimit** | **[v0.7 추가]** |
+| 4 | secureHeaders | secureHeaders | secureHeaders | 동일 |
+| 5 | hostValidation | hostValidation | hostValidation | 동일 |
+| 6 | cors | cors | cors | 동일 |
+| 7 | rateLimiter | rateLimiter | **killSwitchGuard** | **[v0.7 변경: #8->#7]** |
+| 8 | killSwitchGuard | killSwitchGuard | **authRouter** | **[v0.7 변경: #9->#8]** |
+| 9 | sessionAuth / ownerAuth / masterAuth | **authRouter** | **sessionRateLimit** | **[v0.7 추가]** |
 
-순서 9만 변경. authRouter가 기존 3개의 인증 미들웨어를 경로 기반으로 디스패치하는 단일 진입점 역할.
+[v0.7 보완] Rate Limiter를 globalRateLimit(#3.5, IP 기반, 인증 전) + sessionRateLimit(#9, sessionId 기반, 인증 후)로 2단계 분리. 기존 rateLimiter(#7) 삭제.
 
 ---
 
