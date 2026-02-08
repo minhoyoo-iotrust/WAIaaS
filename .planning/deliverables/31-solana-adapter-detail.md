@@ -2,9 +2,11 @@
 
 **문서 ID:** CHAIN-SOL
 **작성일:** 2026-02-05
+**v0.6 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** CORE-04 (27-chain-adapter-interface.md), CORE-03 (26-keystore-spec.md), CORE-01 (24-monorepo-data-directory.md)
+**참조:** CORE-04 (27-chain-adapter-interface.md), CORE-03 (26-keystore-spec.md), CORE-01 (24-monorepo-data-directory.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63)
 **요구사항:** CHAIN-02 (Solana Adapter 완전 구현)
+**v0.6 통합:** INTEG-01 (SPL 정식화, Token-2022, getAssets, approve/batch, Jupiter 참조)
 
 ---
 
@@ -26,7 +28,7 @@ SolanaAdapter는 IChainAdapter 인터페이스(CORE-04)의 Solana 구현체이�
 
 **WAIaaS 방침:** `@solana/kit` latest를 사용한다. 문서에서는 `@solana/kit (구 @solana/web3.js 2.x)`로 표기하되, 버전 번호보다 기능(pipe API, createSolanaRpc 등)에 초점을 둔다.
 
-### 1.3 IChainAdapter 13개 메서드 -- SolanaAdapter 매핑
+### 1.3 IChainAdapter 17개 메서드 -- SolanaAdapter 매핑 (v0.6 변경: 13 -> 17)
 
 | # | IChainAdapter 메서드 | 카테고리 | SolanaAdapter 구현 | @solana/kit API | 비동기 |
 |---|---------------------|---------|-------------------|----------------|--------|
@@ -42,7 +44,11 @@ SolanaAdapter는 IChainAdapter 인터페이스(CORE-04)의 Solana 구현체이�
 | 10 | `submitTransaction(signed)` | 파이프라인 | `rpc.sendTransaction(signedTx).send()` | `sendTransaction` RPC 메서드 | O |
 | 11 | `getTransactionStatus(hash)` | 조회 | `rpc.getSignatureStatuses([sig]).send()` | `getSignatureStatuses` RPC 메서드 | O |
 | 12 | `waitForConfirmation(hash, timeout)` | 조회 | 폴링 기반 (`getSignatureStatuses` 반복) + 타임아웃 | `getSignatureStatuses` 폴링 | O |
-| 13 | `estimateFee(req)` | 추정 | base fee(5000 lamports) + `getRecentPrioritizationFees` | `getRecentPrioritizationFees` RPC 메서드 | O |
+| 13 | `estimateFee(req)` | 추정 | **(v0.6 변경)** FeeEstimate 구조체 반환. base fee + priority + ATA 생성 비용 | `getRecentPrioritizationFees` RPC 메서드 | O |
+| 14 | `getAssets(addr)` **(v0.6 추가)** | 조회 | `rpc.getTokenAccountsByOwner()` + 네이티브 SOL 통합 | `getTokenAccountsByOwner` RPC 메서드 | O |
+| 15 | `buildContractCall(req)` **(v0.6 추가)** | 파이프라인 | Solana: programId + accounts + data 기반 instruction 빌드 | `pipe` + instruction 직접 구성 | O |
+| 16 | `buildApprove(req)` **(v0.6 추가)** | 파이프라인 | `createApproveCheckedInstruction` -- SPL delegate 설정 | `@solana-program/token` approve | O |
+| 17 | `buildBatch(req)` **(v0.6 추가)** | 파이프라인 | 다중 instruction VersionedTransaction 구성 (min 2 / max 20) | `pipe` + 다중 `appendTransactionMessageInstruction` | O |
 
 ### 1.4 참조 문서 관계
 
@@ -57,7 +63,7 @@ SolanaAdapter는 IChainAdapter 인터페이스(CORE-04)의 Solana 구현체이�
                          ▼
 ┌──────────────────────────────────────────────────────────┐
 │  CHAIN-SOL (31-solana-adapter-detail.md) ◀── 이 문서     │
-│  SolanaAdapter 상세 구현 설계                             │
+│  SolanaAdapter 상세 구현 설계 (v0.6: 17 메서드)           │
 │  @solana/kit pipe API + Solana RPC 호출 패턴             │
 └──────────┬──────────────────────────────┬────────────────┘
            │ signTransaction              │ config
@@ -93,7 +99,7 @@ import type { Rpc, SolanaRpcApi, RpcSubscriptions, SolanaRpcSubscriptionsApi } f
 
 /**
  * Solana 체인 어댑터.
- * IChainAdapter 13개 메서드를 @solana/kit pipe 기반 API로 구현한다.
+ * IChainAdapter 17개 메서드를 @solana/kit pipe 기반 API로 구현한다. (v0.6: 13 -> 17)
  *
  * 사용 흐름:
  * 1. const adapter = new SolanaAdapter(config)
@@ -428,7 +434,7 @@ async getBalance(address: string): Promise<BalanceInfo> {
 }
 ```
 
-**참고:** SPL 토큰 잔액 조회는 v0.3으로 이연한다. 현재는 네이티브 SOL 잔액만 지원한다. SPL 토큰 잔액 조회 시에는 `rpc.getTokenAccountsByOwner()` 또는 `@solana-program/token`의 유틸리티를 사용할 예정이다.
+**참고:** ~~SPL 토큰 잔액 조회는 v0.3으로 이연한다.~~ **(v0.6 정식 설계)** SPL/Token-2022 토큰 잔액 조회는 `getAssets()` 메서드(섹션 4.6)로 통합 지원된다. `getBalance()`는 네이티브 SOL 잔액만 반환하며, 토큰 포함 전체 자산은 `getAssets()`를 사용한다.
 
 ### 4.3 getTransactionStatus(txHash: string): Promise\<SubmitResult\>
 
@@ -504,16 +510,27 @@ async getTransactionStatus(txHash: string): Promise<SubmitResult> {
 }
 ```
 
-### 4.4 estimateFee(request: TransferRequest): Promise\<bigint\>
+### 4.4 estimateFee(request: TransferRequest): Promise\<FeeEstimate\> (v0.6 변경)
+
+> **(v0.6 변경)** 반환 타입이 `bigint` -> `FeeEstimate` 구조체로 변경되었다. ATA 생성 비용을 `accountCreationFee`로 분리하여 토큰 전송 시 정확한 수수료 추정을 제공한다. 소스: 57-asset-query-fee-estimation-spec.md 섹션 6
 
 ```typescript
-async estimateFee(request: TransferRequest): Promise<bigint> {
+/** (v0.6 변경) 수수료 추정 결과 -- 27-chain-adapter-interface.md 참조 */
+interface FeeEstimate {
+  baseFee: bigint          // 서명당 고정 수수료 (5000 lamports)
+  priorityFee: bigint      // 네트워크 혼잡도 기반 추가 수수료
+  accountCreationFee: bigint  // (v0.6 추가) ATA 생성 시 rent-exempt 비용
+  totalFee: bigint         // baseFee + priorityFee + accountCreationFee
+  computeUnits?: number    // (v0.6 추가) 예상 compute units
+}
+
+async estimateFee(request: TransferRequest): Promise<FeeEstimate> {
   this.ensureConnected()
 
   // === 1. Base Fee ===
   // Solana의 base fee는 서명당 5000 lamports로 고정이다.
   // 단일 서명 트랜잭션(WAIaaS 기본)의 base fee = 5000 lamports
-  const BASE_FEE = BigInt(5000)
+  const baseFee = BigInt(5000)
 
   // === 2. Priority Fee (선택적) ===
   // getRecentPrioritizationFees를 호출하여 네트워크 혼잡도에 따른 추가 수수료를 추정한다.
@@ -527,9 +544,37 @@ async estimateFee(request: TransferRequest): Promise<bigint> {
     // 네트워크 혼잡 시 트랜잭션 지연될 수 있지만 실패하지는 않음
   }
 
-  // === 3. 수수료 합산 ===
-  // estimatedFee = baseFee + priorityFee
-  return BASE_FEE + priorityFee
+  // === 3. (v0.6 추가) ATA 생성 비용 ===
+  // 토큰 전송 시 수신자 ATA가 없으면 rent-exempt 비용이 추가된다
+  // getMinimumBalanceForRentExemption(165) 동적 조회 (하드코딩 금지)
+  let accountCreationFee = BigInt(0)
+  if (request.token) {
+    const destinationAta = await this.checkAtaExists(
+      request.to as Address,
+      request.token as Address,
+    )
+    if (!destinationAta) {
+      accountCreationFee = await this.rpc!.getMinimumBalanceForRentExemption(
+        BigInt(165),
+        { commitment: this.commitment },
+      ).send()
+    }
+  }
+
+  // === 4. (v0.6 추가) Compute Units 추정 ===
+  // SOL 전송: ~200 CU, SPL 전송: ~3000 CU, SPL+ATA 생성: ~6000 CU
+  const computeUnits = request.token
+    ? (accountCreationFee > 0n ? 6000 : 3000)
+    : 200
+
+  // === 5. 수수료 합산 ===
+  return {
+    baseFee,
+    priorityFee,
+    accountCreationFee,
+    totalFee: baseFee + priorityFee + accountCreationFee,
+    computeUnits,
+  }
 }
 
 /**
@@ -571,14 +616,15 @@ private async getMedianPriorityFee(): Promise<bigint> {
 }
 ```
 
-**수수료 구조 요약:**
+**수수료 구조 요약 (v0.6 변경):**
 
 | 항목 | 값 | 단위 | 설명 |
 |------|-----|------|------|
 | Base Fee | 5000 | lamports | 서명당 고정 수수료 |
 | Priority Fee | 가변 | lamports | 네트워크 혼잡도 기반 추가 수수료 |
+| **(v0.6) Account Creation Fee** | 가변 (~2,039,280) | lamports | ATA 생성 시 rent-exempt 비용. `getMinimumBalanceForRentExemption(165)` 동적 조회 |
 | Compute Unit Price | `getRecentPrioritizationFees` 중간값 | micro-lamports/CU | Compute Budget instruction으로 설정 |
-| 총 예상 수수료 | baseFee + priorityFee | lamports | `estimateFee()` 반환값 |
+| 총 예상 수수료 | baseFee + priorityFee + accountCreationFee | lamports | `estimateFee()` 반환값 (v0.6: FeeEstimate 구조체) |
 
 ### 4.5 공통 유틸리티
 
@@ -634,6 +680,100 @@ private async getRecentBlockhash(): Promise<{
   }
 }
 ```
+
+### 4.6 getAssets(address: string): Promise\<AssetInfo[]\> (v0.6 추가)
+
+> **(v0.6 추가)** 27-chain-adapter-interface.md에서 추가된 `getAssets()` 메서드. 네이티브 SOL + SPL/Token-2022 토큰의 통합 자산 목록을 반환한다. 소스: 57-asset-query-fee-estimation-spec.md 섹션 5
+
+```typescript
+import type { Address } from '@solana/kit'
+
+/** (v0.6 추가) 자산 정보 구조체 -- 27-chain-adapter-interface.md 참조 */
+interface AssetInfo {
+  type: 'native' | 'spl'   // Token-2022도 'spl'로 통합 (프로그램 구분은 내부)
+  symbol?: string           // SOL, USDC 등 (알려진 토큰만)
+  name?: string             // 토큰 이름 (알려진 토큰만)
+  mint?: string             // 토큰 민트 주소 (native는 undefined)
+  balance: string           // 잔액 (최소 단위 문자열)
+  decimals: number          // 소수점 자릿수
+  programId?: string        // (v0.6) TOKEN_PROGRAM_ID 또는 TOKEN_2022_PROGRAM_ID
+}
+
+async getAssets(address: string): Promise<AssetInfo[]> {
+  this.ensureConnected()
+
+  if (!this.isValidAddress(address)) {
+    throw new ChainError({
+      code: ChainErrorCode.INVALID_ADDRESS,
+      chain: 'solana',
+      message: `유효하지 않은 Solana 주소: ${address}`,
+      retryable: false,
+    })
+  }
+
+  const assets: AssetInfo[] = []
+  const addr = address as Address
+
+  // 1. 네이티브 SOL 잔액 (항상 첫 번째)
+  const solBalance = await this.rpc!.getBalance(addr, {
+    commitment: this.commitment,
+  }).send()
+
+  assets.push({
+    type: 'native',
+    symbol: 'SOL',
+    name: 'Solana',
+    balance: solBalance.value.toString(),
+    decimals: 9,
+  })
+
+  // 2. SPL 토큰 조회 (Token Program)
+  const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address
+  const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address
+
+  for (const programId of [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID]) {
+    try {
+      const tokenAccounts = await this.rpc!.getTokenAccountsByOwner(
+        addr,
+        { programId },
+        { encoding: 'jsonParsed', commitment: this.commitment },
+      ).send()
+
+      for (const account of tokenAccounts.value) {
+        const parsed = account.account.data.parsed?.info
+        if (!parsed || parsed.tokenAmount.uiAmount === 0) continue  // 잔액 0 제외
+
+        assets.push({
+          type: 'spl',  // Token-2022도 'spl'로 통합
+          mint: parsed.mint,
+          balance: parsed.tokenAmount.amount,
+          decimals: parsed.tokenAmount.decimals,
+          programId: programId as string,
+        })
+      }
+    } catch {
+      // 토큰 조회 실패 시 무시 (네이티브 SOL은 이미 추가됨)
+    }
+  }
+
+  // 3. 잔액 내림차순 정렬 (네이티브 SOL 첫 번째 유지, 이후 토큰은 잔액 내림차순)
+  // 결정: 57-asset-query-fee-estimation-spec.md -- 네이티브 토큰 첫 번째, 이후 잔액 내림차순
+  const nativeAssets = assets.filter(a => a.type === 'native')
+  const tokenAssets = assets.filter(a => a.type === 'spl')
+    .sort((a, b) => {
+      const balA = BigInt(a.balance)
+      const balB = BigInt(b.balance)
+      return balB > balA ? 1 : balB < balA ? -1 : 0
+    })
+
+  return [...nativeAssets, ...tokenAssets]
+}
+```
+
+**Token-2022 처리 (v0.6):**
+- Token-2022 토큰도 `type='spl'`로 통합 반환한다 (프로그램 구분은 `programId` 필드로)
+- Token-2022의 위험 확장(TransferFee, ConfidentialTransfer 등)은 `getAssets()` 단계에서는 검사하지 않는다
+- 위험 확장 감지/거부는 `buildTransfer()` 또는 `buildApprove()` 단계에서 수행 (섹션 5.2)
 
 ---
 
@@ -787,10 +927,14 @@ async buildTransaction(request: TransferRequest): Promise<UnsignedTransaction> {
 }
 ```
 
-### 5.2 SPL 토큰 전송
+### 5.2 SPL 토큰 전송 (v0.6 정식 설계)
+
+> **(v0.6 정식 설계)** ~~v0.2에서는 네이티브 SOL 전송만 공식 지원.~~ SPL 토큰 전송이 v0.6에서 정식 설계되었다. `getTransferCheckedInstruction` 사용으로 decimals 온체인 검증이 보장된다. Token-2022 기본 transfer 지원, 위험 확장 감지 시 거부. 소스: 56-token-transfer-extension-spec.md 섹션 5
 
 ```typescript
-import { getTransferInstruction } from '@solana-program/token'
+// (v0.6 변경) getTransferInstruction -> getTransferCheckedInstruction
+// decimals 온체인 검증을 보장하여 소수점 오류로 인한 자산 손실 방지
+import { getTransferCheckedInstruction } from '@solana-program/token'
 import {
   getCreateAssociatedTokenAccountInstruction,
   findAssociatedTokenPda,
@@ -798,15 +942,16 @@ import {
 
 /**
  * SPL 토큰 전송 트랜잭션을 빌드한다.
- * buildTransaction()에서 request.type이 'TOKEN_TRANSFER'일 때 내부적으로 호출된다.
+ * buildTransaction()에서 request.token 필드 존재 시 내부적으로 호출된다.
  *
- * SPL 토큰 전송 시 추가 고려사항:
- * 1. Associated Token Account (ATA) 존재 확인
- * 2. ATA가 없으면 생성 instruction 선행 추가
- * 3. 토큰 전송 instruction 추가
+ * (v0.6 정식 설계) SPL 토큰 전송 절차:
+ * 1. 토큰 프로그램 감지 (Token Program vs Token-2022)
+ * 2. Token-2022 위험 확장 검사 (TransferFee, ConfidentialTransfer 등 -> 거부)
+ * 3. Associated Token Account (ATA) 존재 확인
+ * 4. ATA가 없으면 생성 instruction 선행 추가 (생성 비용 동적 조회)
+ * 5. getTransferCheckedInstruction으로 토큰 전송 (decimals 온체인 검증)
  *
- * 참고: v0.2에서는 네이티브 SOL 전송만 공식 지원한다.
- * SPL 토큰 전송은 설계만 포함하고, 구현은 v0.3에서 수행한다.
+ * 소스: 56-token-transfer-extension-spec.md 섹션 5
  */
 private async buildSplTokenTransfer(
   from: Address,
@@ -817,17 +962,47 @@ private async buildSplTokenTransfer(
   lastValidBlockHeight: bigint,
 ): Promise<UnsignedTransaction> {
 
+  // (v0.6 추가) 0. 토큰 프로그램 감지 + Token-2022 위험 확장 검사
+  const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address
+  const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address
+
+  // 민트 계정의 owner 프로그램으로 Token/Token-2022 구분
+  const mintAccountInfo = await this.rpc!.getAccountInfo(mintAddress, {
+    encoding: 'base64',
+  }).send()
+
+  const tokenProgramId = mintAccountInfo.value?.owner === TOKEN_2022_PROGRAM_ID
+    ? TOKEN_2022_PROGRAM_ID
+    : TOKEN_PROGRAM_ID
+
+  // (v0.6) Token-2022 위험 확장 감지 시 거부
+  // TransferFee, ConfidentialTransfer, TransferHook 등은 예측 불가능한 동작 유발
+  // 소스: 56-token-transfer-extension-spec.md 섹션 5.3
+  if (tokenProgramId === TOKEN_2022_PROGRAM_ID) {
+    const dangerousExtensions = await this.detectDangerousExtensions(mintAddress)
+    if (dangerousExtensions.length > 0) {
+      throw new ChainError({
+        code: ChainErrorCode.TRANSACTION_FAILED,
+        chain: 'solana',
+        message: `Token-2022 위험 확장이 감지되어 전송이 거부되었습니다: ${dangerousExtensions.join(', ')}`,
+        details: { mint: mintAddress, extensions: dangerousExtensions },
+        retryable: false,
+      })
+    }
+  }
+
   // 1. 발신자/수신자의 ATA(Associated Token Account) PDA 계산
+  // (v0.6 변경) tokenProgram에 감지된 프로그램 ID 사용
   const [sourceAta] = await findAssociatedTokenPda({
     owner: from,
     mint: mintAddress,
-    tokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address,
+    tokenProgram: tokenProgramId,
   })
 
   const [destinationAta] = await findAssociatedTokenPda({
     owner: to,
     mint: mintAddress,
-    tokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address,
+    tokenProgram: tokenProgramId,
   })
 
   // 2. 수신자 ATA 존재 확인
@@ -866,12 +1041,24 @@ private async buildSplTokenTransfer(
   }
 
   // 3b. SPL 토큰 전송 instruction
+  // (v0.6 변경) getTransferCheckedInstruction 사용
+  // decimals를 온체인에서 검증하여 소수점 오류로 인한 자산 손실 방지
+  // 소스: 56-token-transfer-extension-spec.md 결정 "getTransferCheckedInstruction 사용"
+  const mintInfo = await this.rpc!.getAccountInfo(mintAddress, {
+    encoding: 'jsonParsed',
+  }).send()
+  const tokenDecimals = mintInfo.value?.data?.parsed?.info?.decimals ?? 0
+
   transactionMessage = appendTransactionMessageInstruction(
-    getTransferInstruction({
+    getTransferCheckedInstruction({
       source: sourceAta,
+      mint: mintAddress,
       destination: destinationAta,
       authority: from,  // owner = 발신자
       amount,           // 토큰 최소 단위 (decimals 적용 전 원시값)
+      decimals: tokenDecimals,  // (v0.6) 온체인 검증용 decimals
+      // (v0.6) Token-2022인 경우 해당 프로그램 ID 사용
+      tokenProgram: tokenProgramId,
     }),
     transactionMessage,
   )
@@ -884,12 +1071,21 @@ private async buildSplTokenTransfer(
   const baseFee = BigInt(5000)
   const expiresAt = new Date(Date.now() + 50_000)
 
+  // (v0.6 변경) ATA 생성 비용 동적 조회 (하드코딩 금지)
+  // 소스: 57-asset-query-fee-estimation-spec.md 결정
+  // getMinimumBalanceForRentExemption(165) -- ATA 데이터 크기 = 165 bytes
+  let accountCreationFee = BigInt(0)
+  if (needCreateAta) {
+    accountCreationFee = await this.rpc!.getMinimumBalanceForRentExemption(
+      BigInt(165),  // SPL Token Account 데이터 크기
+      { commitment: this.commitment },
+    ).send()
+  }
+
   return {
     chain: 'solana',
     serialized,
-    estimatedFee: needCreateAta
-      ? baseFee + BigInt(2_039_280)  // ATA 생성 시 rent-exempt 최소 잔액 추가
-      : baseFee,
+    estimatedFee: baseFee + accountCreationFee,  // (v0.6 변경) 동적 rent-exempt 비용
     expiresAt,
     metadata: {
       blockhash,
@@ -900,29 +1096,35 @@ private async buildSplTokenTransfer(
       amount: amount.toString(),
       mintAddress: mintAddress as string,
       needCreateAta,
+      accountCreationFee: accountCreationFee.toString(),  // (v0.6) 감사 로그용
       type: 'SPL_TOKEN_TRANSFER',
+      tokenProgram: tokenProgramId as string,  // (v0.6) Token/Token-2022 구분
     },
   }
 }
 ```
 
-### 5.3 buildTransaction 내부 분기 로직
+### 5.3 buildTransaction 내부 분기 로직 (v0.6 정식화)
+
+> **(v0.6 변경)** buildTransaction은 `request.token` 필드 존재 여부로 SOL/SPL 전송을 분기한다. 기존 주석 처리를 정식 코드로 전환. 소스: 56-token-transfer-extension-spec.md 결정 "TransferRequest에 token? 필드로 분기"
 
 ```typescript
-// buildTransaction() 내부에서 전송 유형에 따라 분기
-// v0.2에서는 SOL 전송만 공식 지원하며, SPL은 설계만 포함
+// (v0.6 정식화) buildTransaction() 내부 분기
+// request.token 필드 존재 시 SPL 토큰 전송, 없으면 네이티브 SOL 전송
+// 27-chain-adapter-interface.md의 buildTransfer() 메서드에 해당
 
-// 향후 확장 시:
-// if (request.type === 'TOKEN_TRANSFER' && request.tokenMint) {
-//   return this.buildSplTokenTransfer(
-//     request.from as Address,
-//     request.to as Address,
-//     request.amount,
-//     request.tokenMint as Address,
-//     blockhash,
-//     lastValidBlockHeight,
-//   )
-// }
+if (request.token) {
+  // SPL/Token-2022 토큰 전송
+  return this.buildSplTokenTransfer(
+    request.from as Address,
+    request.to as Address,
+    request.amount,
+    request.token as Address,  // (v0.6) tokenMint -> token
+    blockhash,
+    lastValidBlockHeight,
+  )
+}
+// else: 네이티브 SOL 전송 (섹션 5.1)
 ```
 
 ---
@@ -1674,15 +1876,16 @@ ChainError {                    catch (err) {
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 11.5 제약사항 요약
+### 11.5 제약사항 요약 (v0.6 변경)
 
 | 항목 | 제약 | 영향 | 해소 계획 |
 |------|------|------|----------|
-| **네이티브 SOL만 지원** | SPL 토큰은 v0.3 | 토큰 전송 불가 | SPL 전송 설계는 포함됨 (섹션 5.2) |
-| **단일 서명만 지원** | 멀티시그 미지원 | 복수 서명자 트랜잭션 불가 | v0.3+ 검토 |
-| **폴링 기반 확인** | WebSocket 미사용 | 확인 지연 (~2초 간격) | v0.3에서 WebSocket 구독 검토 |
-| **자동 재연결 미지원** | 수동 재연결 필요 | RPC 장애 시 운영자 개입 | v0.3에서 자동 재연결 + 폴백 RPC |
-| **Address Lookup Table 미지원** | ALT 없이 트랜잭션 구성 | 복잡한 트랜잭션에서 크기 제한 | v0.3+ 검토 |
+| ~~**네이티브 SOL만 지원**~~ | **(v0.6 해소)** SPL/Token-2022 정식 설계 | ~~토큰 전송 불가~~ 토큰 전송 가능 | 섹션 5.2 (v0.6 정식 설계) |
+| **(v0.6) Token-2022 위험 확장 제한** | TransferFee, ConfidentialTransfer 등 거부 | 일부 Token-2022 토큰 전송 불가 | 추후 확장별 핸들러 구현 시 해소 |
+| **단일 서명만 지원** | 멀티시그 미지원 | 복수 서명자 트랜잭션 불가 | 향후 검토 |
+| **폴링 기반 확인** | WebSocket 미사용 | 확인 지연 (~2초 간격) | 향후 WebSocket 구독 검토 |
+| **자동 재연결 미지원** | 수동 재연결 필요 | RPC 장애 시 운영자 개입 | 향후 자동 재연결 + 폴백 RPC |
+| **Address Lookup Table 미지원** | ALT 없이 트랜잭션 구성 | 복잡한 트랜잭션에서 크기 제한 | 향후 검토 |
 | **Versioned Transaction v0만** | Legacy 트랜잭션 미지원 | Legacy 프로그램 호환성 제한 | 대부분의 현대 프로그램은 v0 지원 |
 
 ### 11.6 @solana/kit 주요 import 경로
@@ -1695,6 +1898,275 @@ ChainError {                    catch (err) {
 | 서명 | `@solana/kit` | `createKeyPairFromBytes`, `createSignerFromKeyPair`, `signTransactionMessageWithSigners` |
 | 주소 검증 | `@solana/addresses` | `isAddress` |
 | SOL 전송 | `@solana-program/system` | `getTransferSolInstruction` |
-| SPL 토큰 전송 | `@solana-program/token` | `getTransferInstruction` |
+| SPL 토큰 전송 | `@solana-program/token` | `getTransferCheckedInstruction` **(v0.6 변경)**, `createApproveCheckedInstruction` **(v0.6 추가)** |
 | ATA 관리 | `@solana-program/associated-token-account` | `getCreateAssociatedTokenAccountInstruction`, `findAssociatedTokenPda` |
 | Compute Budget | `@solana-program/compute-budget` | `getSetComputeUnitLimitInstruction`, `getSetComputeUnitPriceInstruction` |
+
+---
+
+## 12. v0.6 확장: buildApprove, buildBatch, Jupiter 참조 (v0.6 추가)
+
+### 12.1 buildApprove() -- SPL delegate 설정 (v0.6 추가)
+
+> **(v0.6 추가)** IChainAdapter.buildApprove()의 Solana 구현. `createApproveCheckedInstruction`으로 SPL 토큰 delegate를 설정한다. 소스: 59-approve-management-spec.md 섹션 6
+
+```typescript
+import { createApproveCheckedInstruction } from '@solana-program/token'
+
+/**
+ * SPL 토큰 approve 트랜잭션을 빌드한다.
+ * 지정된 spender에게 amount만큼 위임(delegate)을 설정한다.
+ *
+ * Solana 특이사항:
+ * - Solana SPL Token은 단일 delegate만 허용 (기존 delegate 자동 덮어쓰기)
+ * - previousDelegate 정보를 감사 로그에 기록 (경고, 차단 아님)
+ * - createApproveCheckedInstruction 사용 (decimals 온체인 검증)
+ *
+ * 소스: 59-approve-management-spec.md 섹션 6
+ */
+async buildApprove(request: {
+  from: string
+  token: string
+  spender: string
+  amount: bigint
+}): Promise<UnsignedTransaction> {
+  this.ensureConnected()
+
+  const owner = request.from as Address
+  const mint = request.token as Address
+  const spender = request.spender as Address
+
+  // 1. 발신자 ATA 조회 (approve 대상)
+  const [sourceAta] = await findAssociatedTokenPda({
+    owner,
+    mint,
+    tokenProgram: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address,
+  })
+
+  // 2. (v0.6) 기존 delegate 확인 -> 감사 로그용 previousDelegate 기록
+  // Solana 단일 delegate 경고: 자동 차단하지 않고 previousDelegate 정보 기록
+  const accountInfo = await this.rpc!.getAccountInfo(sourceAta, {
+    encoding: 'jsonParsed',
+  }).send()
+  const previousDelegate = accountInfo.value?.data?.parsed?.info?.delegate ?? null
+
+  // 3. 토큰 decimals 조회
+  const mintInfo = await this.rpc!.getAccountInfo(mint, {
+    encoding: 'jsonParsed',
+  }).send()
+  const decimals = mintInfo.value?.data?.parsed?.info?.decimals ?? 0
+
+  // 4. blockhash + 트랜잭션 빌드
+  const { blockhash, lastValidBlockHeight } = await this.getRecentBlockhash()
+
+  const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    tx => setTransactionMessageFeePayer(owner, tx),
+    tx => setTransactionMessageLifetimeUsingBlockhash(
+      { blockhash, lastValidBlockHeight }, tx,
+    ),
+    tx => appendTransactionMessageInstruction(
+      createApproveCheckedInstruction({
+        account: sourceAta,
+        mint,
+        delegate: spender,
+        owner,
+        amount: request.amount,
+        decimals,
+      }),
+      tx,
+    ),
+  )
+
+  const compiledMessage = compileTransactionMessage(transactionMessage)
+  const encoder = getCompiledTransactionMessageEncoder()
+
+  return {
+    chain: 'solana',
+    serialized: encoder.encode(compiledMessage),
+    estimatedFee: BigInt(5000),
+    expiresAt: new Date(Date.now() + 50_000),
+    metadata: {
+      blockhash,
+      lastValidBlockHeight,
+      version: 0,
+      type: 'APPROVE',
+      from: request.from,
+      spender: request.spender,
+      token: request.token,
+      amount: request.amount.toString(),
+      previousDelegate,  // (v0.6) 감사 로그용
+    },
+  }
+}
+```
+
+### 12.2 buildBatch() -- 다중 instruction VersionedTransaction (v0.6 추가)
+
+> **(v0.6 추가)** IChainAdapter.buildBatch()의 Solana 구현. 다중 instruction을 하나의 VersionedTransaction으로 묶는다. Solana 전용 (EVM은 BATCH_NOT_SUPPORTED 400). 소스: 60-batch-transaction-spec.md 섹션 4
+
+```typescript
+/**
+ * 배치 트랜잭션을 빌드한다. Solana 전용.
+ *
+ * 제약사항:
+ * - min 2 / max 20 instructions (ATA 생성도 카운트 포함)
+ * - All-or-Nothing: 하나의 instruction이라도 실패하면 전체 롤백
+ * - BatchRequest.chain === 'solana' 검증 (EVM: BATCH_NOT_SUPPORTED)
+ *
+ * 소스: 60-batch-transaction-spec.md 섹션 4
+ */
+async buildBatch(request: {
+  from: string
+  instructions: Array<{
+    type: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE'
+    // type별 필드 (InstructionRequest discriminatedUnion)
+    [key: string]: unknown
+  }>
+}): Promise<UnsignedTransaction> {
+  this.ensureConnected()
+
+  // 1. instruction 수 검증
+  if (request.instructions.length < 2) {
+    throw new ChainError({
+      code: ChainErrorCode.TRANSACTION_FAILED,
+      chain: 'solana',
+      message: '배치에는 최소 2개의 instruction이 필요합니다.',
+      retryable: false,
+    })
+  }
+  if (request.instructions.length > 20) {
+    throw new ChainError({
+      code: ChainErrorCode.TRANSACTION_FAILED,
+      chain: 'solana',
+      message: '배치 instruction은 최대 20개까지 허용됩니다 (ATA 생성 포함).',
+      retryable: false,
+    })
+  }
+
+  // 2. blockhash + 기본 트랜잭션 메시지 구성
+  const { blockhash, lastValidBlockHeight } = await this.getRecentBlockhash()
+  const from = request.from as Address
+
+  let transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    tx => setTransactionMessageFeePayer(from, tx),
+    tx => setTransactionMessageLifetimeUsingBlockhash(
+      { blockhash, lastValidBlockHeight }, tx,
+    ),
+  )
+
+  // 3. 각 instruction을 type별로 빌드하여 append
+  // 개별 instruction의 빌드는 해당 메서드(buildTransfer, buildApprove 등) 내부 로직 재사용
+  // 여기서는 instruction-level 빌드를 수행하고 메시지에 추가
+  for (const instr of request.instructions) {
+    const solanaInstruction = await this.resolveInstruction(from, instr)
+    transactionMessage = appendTransactionMessageInstruction(
+      solanaInstruction,
+      transactionMessage,
+    )
+  }
+
+  // 4. 컴파일 + 직렬화
+  const compiledMessage = compileTransactionMessage(transactionMessage)
+  const encoder = getCompiledTransactionMessageEncoder()
+
+  return {
+    chain: 'solana',
+    serialized: encoder.encode(compiledMessage),
+    estimatedFee: BigInt(5000),  // 배치도 서명 1개 = base fee 5000
+    expiresAt: new Date(Date.now() + 50_000),
+    metadata: {
+      blockhash,
+      lastValidBlockHeight,
+      version: 0,
+      type: 'BATCH',
+      from: request.from,
+      instructionCount: request.instructions.length,
+      instructionTypes: request.instructions.map(i => i.type),
+    },
+  }
+}
+```
+
+### 12.3 Token-2022 위험 확장 감지 (v0.6 추가)
+
+> **(v0.6 추가)** Token-2022 토큰의 위험 확장을 감지하여 예측 불가능한 동작을 사전 차단. 소스: 56-token-transfer-extension-spec.md 섹션 5.3
+
+```typescript
+/**
+ * Token-2022 민트의 위험 확장을 감지한다.
+ * 위험 확장이 포함된 토큰은 전송/approve가 거부된다.
+ *
+ * 위험 확장 목록:
+ * - TransferFee: 전송 시 수수료 자동 차감 (금액 예측 불가)
+ * - ConfidentialTransfer: 영지식 전송 (검증 불가)
+ * - TransferHook: 커스텀 프로그램 호출 (부작용 예측 불가)
+ * - PermanentDelegate: 영구 delegate (자산 통제 위험)
+ */
+private async detectDangerousExtensions(mintAddress: Address): Promise<string[]> {
+  const dangerous: string[] = []
+
+  try {
+    const mintInfo = await this.rpc!.getAccountInfo(mintAddress, {
+      encoding: 'jsonParsed',
+    }).send()
+
+    const extensions = mintInfo.value?.data?.parsed?.info?.extensions ?? []
+
+    const DANGEROUS_EXTENSIONS = [
+      'transferFeeConfig',
+      'confidentialTransferMint',
+      'transferHook',
+      'permanentDelegate',
+    ]
+
+    for (const ext of extensions) {
+      if (DANGEROUS_EXTENSIONS.includes(ext.extension)) {
+        dangerous.push(ext.extension)
+      }
+    }
+  } catch {
+    // 조회 실패 시 안전하게 위험으로 판단
+    dangerous.push('UNKNOWN_EXTENSION_CHECK_FAILED')
+  }
+
+  return dangerous
+}
+```
+
+### 12.4 Jupiter swap instruction 빌드 참조 (v0.6 추가)
+
+> **(v0.6 추가)** Action Provider(62-action-provider-architecture.md)의 JupiterSwapActionProvider가 `/swap-instructions` API를 호출하여 받은 instruction을 SolanaAdapter에서 빌드한다. 소스: 63-jupiter-swap-action-provider.md 섹션 10
+
+**Jupiter 연동 흐름:**
+
+```
+JupiterSwapActionProvider.resolve(params)
+  |
+  +-- 1. GET /quote (견적 조회, slippageBps, priceImpactPct 1% 상한)
+  |
+  +-- 2. POST /swap-instructions (instruction 분해)
+  |       |
+  |       +-- computeBudgetInstructions[]
+  |       +-- setupInstructions[]
+  |       +-- swapInstruction
+  |       +-- cleanupInstruction? (optional)
+  |
+  +-- 3. ContractCallRequest 반환
+  |       programId: Jupiter Aggregator v6
+  |       data: swapInstruction.data
+  |       accounts: swapInstruction.accounts
+  |
+  +-- 4. (Jito MEV 보호)
+          tipInstruction: SystemProgram.transfer -> Jito tip account
+          amount: 1000 lamports (기본), max 100000 lamports
+```
+
+**SolanaAdapter 관점:**
+- JupiterSwapActionProvider는 `resolve()`에서 `ContractCallRequest`를 반환
+- `buildContractCall()`이 이 요청을 처리 (programId + accounts + data)
+- Jito MEV 보호 instruction은 배치의 마지막에 추가
+- `/swap` 대신 `/swap-instructions` 사용: 직렬화 전체 트랜잭션이 아닌 instruction 분해를 받아 정책 엔진 개입 보장
+
+**참조:** 63-jupiter-swap-action-provider.md 전체, 62-action-provider-architecture.md 섹션 5
