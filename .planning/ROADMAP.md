@@ -54,7 +54,7 @@ Plans:
 **Plans**: 2 plans (Wave 1 -> Wave 2 sequential)
 
 Plans:
-- [ ] 32-01-PLAN.md -- Owner 생명주기 상태 머신(3-State, 6전이) + OwnerLifecycleService + REST API/CLI 스펙 + 감사 이벤트/에러 코드 (34-owner-wallet-connection.md)
+- [x] 32-01-PLAN.md -- Owner 생명주기 상태 머신(3-State, 6전이) + OwnerLifecycleService + REST API/CLI 스펙 + 감사 이벤트/에러 코드 (34-owner-wallet-connection.md)
 - [ ] 32-02-PLAN.md -- ownerAuth Step 8.5 + change_owner action + 인증 맵 갱신 (52-auth-model-redesign.md) + 보안 공격 방어 C-01/C-02/H-02/H-03 (34-owner-wallet-connection.md)
 
 ### Phase 33: 정책 다운그레이드 + 알림 설계
@@ -115,11 +115,11 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-08 |
-| 32. Owner 생명주기 설계 | v0.8 | 0/2 | Not started | - |
+| 32. Owner 생명주기 설계 | v0.8 | 1/2 | In progress | - |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 0/2 | Not started | - |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
 | 35. DX + 설계 문서 통합 | v0.8 | 0/3 | Not started | - |
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-08 after Phase 31 execution complete*
+*Last updated: 2026-02-09 after 32-01 execution complete*
