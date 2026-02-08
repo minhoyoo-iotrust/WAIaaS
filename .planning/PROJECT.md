@@ -10,25 +10,7 @@
 
 ## 현재 상태
 
-v0.1~v0.5 완료 (2026-02-07). 57개 플랜, 155개 요구사항, 21개 설계 문서 + 5개 대응표 + 11개 테스트 전략 문서.
-
-## 현재 마일스톤: v0.6 블록체인 기능 확장 설계
-
-**목표:** 네이티브 토큰(SOL/ETH) 전송에 한정된 IChainAdapter와 트랜잭션 파이프라인을 확장하여, SPL/ERC-20 토큰 전송, 자산 조회, 임의 컨트랙트 호출, DeFi 액션 추상화까지 설계 수준에서 정의한다. 각 확장 기능의 테스트 전략을 함께 수립한다.
-
-**핵심 변경:**
-- TransferRequest.token 확장으로 SPL/ERC-20 토큰 전송 지원
-- getAssets() 복원 + AssetInfo 스키마 확정
-- ContractCallRequest, ApproveRequest, BatchRequest 신규 타입
-- IPriceOracle 인터페이스 + USD 기준 정책 평가
-- IActionProvider 레이어 (resolve-then-execute 패턴, MCP 도구 자동 노출)
-- 6+ 정책 규칙 추가 (ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS 등)
-- 보안 시나리오 12건 추가 (S-26~S-37)
-
-**대상 기능:**
-- Phase A: 토큰 확장 (SPL/ERC-20 전송, 자산 조회, 수수료 추정)
-- Phase B: 트랜잭션 타입 확장 (컨트랙트 호출, Approve 관리, 배치)
-- Phase C: 상위 추상화 (가격 오라클, Action Provider, Swap Action)
+v0.1~v0.6 완료 (2026-02-08). 68개 플랜, 185개 요구사항, 30개 설계 문서(24-64) + 5개 대응표 + 11개 테스트 전략 문서. 전체 설계 단계 완료 — 구현 마일스톤 준비 완료.
 
 ## 요구사항
 
@@ -70,10 +52,17 @@ v0.1~v0.5 완료 (2026-02-07). 57개 플랜, 155개 요구사항, 21개 설계 �
 - ✓ 세션 낙관적 갱신 프로토콜 (PUT /renew, 5종 안전 장치) — v0.5 (SESS-01~05)
 - ✓ CLI DX 개선 (init 간소화, --quickstart, --dev, hint, MCP 검토, 원격 접근) — v0.5 (DX-01~08)
 - ✓ 기존 설계 문서 11개 v0.5 통합 반영 — v0.5 (Phase 21)
+- ✓ SPL/ERC-20 토큰 전송 확장 + ALLOWED_TOKENS 정책 + getAssets() 복원 — v0.6 (TOKEN-01~05)
+- ✓ ContractCallRequest + CONTRACT_WHITELIST 기본 거부 정책 — v0.6 (CONTRACT-01~05)
+- ✓ ApproveRequest 독립 정책 카테고리 + 무제한 approve 차단 — v0.6 (APPROVE-01~03)
+- ✓ BatchRequest Solana 원자적 배치 + 2단계 합산 정책 — v0.6 (BATCH-01~03)
+- ✓ IPriceOracle + USD 기준 정책 평가 전환 — v0.6 (ORACLE-01~04)
+- ✓ IActionProvider resolve-then-execute + MCP 자동 변환 + Jupiter Swap — v0.6 (ACTION-01~05)
+- ✓ 확장 기능 테스트 전략 166건 + 기존 문서 8개 v0.6 통합 — v0.6 (TEST-01~03, INTEG-01~02)
 
 ### 활성
 
-v0.6 블록체인 기능 확장 설계 — 요구사항 정의 중
+다음 마일스톤 요구사항 정의 대기
 
 ### 범위 외
 
@@ -86,7 +75,7 @@ v0.6 블록체인 기능 확장 설계 — 요구사항 정의 중
 - 크로스체인 브릿지 — 별도 마일스톤으로 분리
 - NFT 민팅/마켓플레이스 통합 — Action Provider로 향후 추가 가능
 - Account Abstraction / Smart Wallet — EVM 배치 문제 해결, 별도 마일스톤
-- 실제 코드 구현 — v0.6은 설계 마일스톤
+- Liquid Staking 상세 설계 — Swap Action 패턴 검증 후
 
 ## 컨텍스트
 
@@ -95,29 +84,26 @@ v0.2 Self-Hosted Secure Wallet Design 완료 (2026-02-05). 4개 페이즈, 16개
 v0.3 설계 논리 일관성 확보 완료 (2026-02-06). 4개 페이즈, 8개 플랜, 37개 요구사항, 5개 대응표/매핑 문서.
 v0.4 테스트 전략 및 계획 수립 완료 (2026-02-07). 5개 페이즈, 9개 플랜, 26개 요구사항, 11개 테스트 전략 문서 (docs 41-51).
 v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9개 플랜, 24개 요구사항, 4개 신규 문서(52-55) + 11개 기존 문서 수정.
-v0.6 블록체인 기능 확장 설계 시작 (2026-02-07). 토큰/컨트랙트/DeFi 확장 + 테스트 전략.
+v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11개 플랜, 30개 요구사항, 9개 신규 문서(56-64) + 기존 8개 문서 v0.6 통합.
 
-**기술 스택 (v0.2 확정, v0.6 확장 예정):**
+**기술 스택 (v0.2 확정, v0.6 확장 설계 완료):**
 - Runtime: Node.js 22 LTS
 - Server: Hono 4.x (OpenAPIHono)
 - DB: SQLite (better-sqlite3) + Drizzle ORM
 - Crypto: sodium-native (guarded memory), argon2 (KDF), jose (JWT)
 - Chain: @solana/kit 3.x (Solana), viem 2.x (EVM stub)
+- Chain 확장: @solana-program/token (SPL), Jupiter Aggregator API
+- Oracle: CoinGecko API, Pyth Network, Chainlink (v0.6 설계)
+- Test: Hardhat/Anvil (EVM 로컬 노드, v0.6 설계)
 - Desktop: Tauri 2.x + React 18 + TailwindCSS 4
 - Schema: Zod SSoT → TypeScript → OpenAPI 3.0
 
-**설계 문서:** 21개 (deliverables 24-55.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md)
-
-**v0.6 추가 의존성 (설계 대상):**
-- Chain: @solana-program/token (SPL), Jupiter Aggregator API, 0x Swap API
-- Oracle: CoinGecko API, Pyth Network, Chainlink
-- Test: Hardhat/Anvil (EVM 로컬 노드)
+**설계 문서:** 30개 (deliverables 24-64.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md) + 1개 확장 테스트 전략 (64.md)
 
 ### 알려진 이슈
 
 - Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.4 스파이크)
 - CORE-02 스키마에 Phase 8 확장 (reserved_amount, system_state 등) 미반영 (구현 시 마이그레이션)
-- IChainAdapter가 네이티브 토큰 전송만 지원 — v0.6에서 확장 설계
 
 ## 제약사항
 
@@ -163,11 +149,11 @@ v0.6 블록체인 기능 확장 설계 시작 (2026-02-07). 토큰/컨트랙트/
 | 세션 낙관적 갱신 | 에이전트 자율성 보장 + Owner 사후 거부권 | ✓ Good — v0.5 설계 완성 |
 | WalletConnect 선택적 전환 | 초기 설정 마찰 제거, CLI 수동 서명으로 모든 기능 동작 | ✓ Good — v0.5 설계 완성 |
 
-| IChainAdapter 저수준 유지 | 어댑터는 실행 엔진, DeFi 지식은 Action Provider에 분리 | — Pending — v0.6 설계 |
-| resolve-then-execute 패턴 | Action Provider가 요청 생성 → 파이프라인이 정책 평가 후 실행 | — Pending — v0.6 설계 |
-| 임의 컨트랙트 기본 거부 | CONTRACT_WHITELIST 비어있으면 모든 호출 거부 (opt-in) | — Pending — v0.6 설계 |
-| approve 독립 정책 카테고리 | 권한 위임은 전송보다 위험, 별도 정책 규칙 필요 | — Pending — v0.6 설계 |
-| USD 기준 정책 평가 | 토큰 종류 무관하게 달러 금액으로 티어 분류 | — Pending — v0.6 설계 |
+| IChainAdapter 저수준 유지 | 어댑터는 실행 엔진, DeFi 지식은 Action Provider에 분리 | ✓ Good — v0.6 설계 완성 |
+| resolve-then-execute 패턴 | Action Provider가 요청 생성 → 파이프라인이 정책 평가 후 실행 | ✓ Good — v0.6 설계 완성 |
+| 임의 컨트랙트 기본 거부 | CONTRACT_WHITELIST 비어있으면 모든 호출 거부 (opt-in) | ✓ Good — v0.6 설계 완성 |
+| approve 독립 정책 카테고리 | 권한 위임은 전송보다 위험, 별도 정책 규칙 필요 | ✓ Good — v0.6 설계 완성 |
+| USD 기준 정책 평가 | 토큰 종류 무관하게 달러 금액으로 티어 분류 | ✓ Good — v0.6 설계 완성 |
 
 ---
-*최종 업데이트: 2026-02-07 after v0.6 milestone started*
+*최종 업데이트: 2026-02-08 after v0.6 milestone complete*
