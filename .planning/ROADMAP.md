@@ -88,11 +88,11 @@ Plans:
   3. IActionProvider 인터페이스와 ActionDefinition Zod 스키마가 정의되어 있고, resolve()가 ContractCallRequest를 반환하여 기존 파이프라인 정책 평가를 거치는 패턴이 명세되어 있다
   4. ActionDefinition에서 MCP Tool로의 자동 변환(name/description/inputSchema 매핑)과 ~/.waiaas/actions/ 디렉토리 기반 플러그인 로드 메커니즘이 설계되어 있다
   5. Jupiter Swap Action Provider가 quote API 호출부터 ContractCallRequest 변환, 슬리피지 보호, MEV 보호까지 상세 설계되어 있다
-**플랜**: TBD
+**플랜**: 2 plans in 1 wave (parallel)
 
 Plans:
-- [ ] 24-01: 가격 오라클 스펙 (CHAIN-EXT-06)
-- [ ] 24-02: Action Provider 아키텍처 + Swap Action 설계 (CHAIN-EXT-07, CHAIN-EXT-08)
+- [ ] 24-01-PLAN.md — 가격 오라클 스펙: IPriceOracle 인터페이스, CoinGecko/Pyth/Chainlink 구현체, 캐싱/fallback, USD 기준 정책 평가 확장 (CHAIN-EXT-06)
+- [ ] 24-02-PLAN.md — Action Provider 아키텍처 + Swap Action: IActionProvider, MCP 변환, 플러그인 로드, Jupiter Swap 상세 설계 (CHAIN-EXT-07, CHAIN-EXT-08)
 
 ### Phase 25: 테스트 전략 통합 + 기존 문서 반영
 
