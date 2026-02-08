@@ -3,8 +3,9 @@
 **문서 ID:** AUTH-REDESIGN
 **작성일:** 2026-02-07
 **v0.7 보완:** 2026-02-08
-**상태:** 완료
-**참조:** API-SPEC (37-rest-api-complete-spec.md), OWNR-CONN (34-owner-wallet-connection.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
+**v0.8 업데이트:** 2026-02-09
+**상태:** v0.8 보완
+**참조:** API-SPEC (37-rest-api-complete-spec.md), OWNR-CONN (34-owner-wallet-connection.md, Owner 생명주기 섹션 10 참조), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
 **요구사항:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, OWNR-05, OWNR-06
 
 ---
@@ -291,22 +292,84 @@ action: z.enum([
   'approve_tx',  // POST /v1/owner/approve/:txId
   'recover',     // POST /v1/admin/recover [v0.7 보완: 경로 변경]
 ])
+
+// [v0.8] 3개 action (change_owner 추가)
+action: z.enum([
+  'approve_tx',    // POST /v1/owner/approve/:txId
+  'recover',       // POST /v1/admin/recover [v0.7 보완: 경로 변경]
+  'change_owner',  // PATCH /v1/agents/:id (LOCKED 상태 Owner 변경 시)
+])
 ```
+
+**[v0.8] `change_owner` action 추가 근거:**
+
+LOCKED 상태에서 Owner 주소를 변경하려면 기존 Owner의 서명이 필요하다 (34-owner-wallet-connection.md 섹션 10.2, 전이 #5). CLI/API가 ownerAuth 헤더를 포함하여 PATCH /v1/agents/:id를 호출하며, ownerAuth 미들웨어 Step 6에서 `action === 'change_owner'`를 검증한다. 이후 `OwnerLifecycleService.setOwner()` 내부에서 `auth.ownerVerified` 플래그를 확인하여 LOCKED 상태 변경 권한을 부여한다.
+
+**[v0.8] ROUTE_ACTION_MAP 갱신:**
+
+| 라우트 | 기대 action | 비고 |
+|--------|-----------|------|
+| POST /v1/owner/approve/:txId | approve_tx | v0.5 유지 |
+| POST /v1/admin/recover | recover | v0.7 경로 변경 |
+| PATCH /v1/agents/:id (LOCKED 상태 Owner 변경) | change_owner | **[v0.8 추가]** |
+
+> **참고:** PATCH /v1/agents/:id는 LOCKED 상태 Owner 변경 시에만 ownerAuth가 요구된다. NONE/GRACE 상태에서는 기존 masterAuth(implicit)로 동작하므로, ownerAuth 미들웨어가 아닌 `OwnerLifecycleService` 비즈니스 로직 내부에서 인증 분기를 처리한다. authRouter의 OWNER_AUTH_PATHS에 PATCH /v1/agents/:id를 추가하지 않는다 -- 핸들러 레벨에서 ownerAuth 헤더 존재 시 검증을 수행하는 패턴이다.
 
 #### ownerAuth 미들웨어 8단계 업데이트
 
 v0.2의 8단계 검증 체인을 유지하되, Step 5만 변경한다.
 
-| 단계 | v0.2 | v0.5 | 변경 여부 |
-|------|------|------|----------|
-| 1 | Authorization 헤더 파싱 + payload 디코딩 | 동일 | 변경 없음 |
-| 2 | timestamp 유효성 (5분 이내) | 동일 | 변경 없음 |
-| 3 | nonce 일회성 (LRU 캐시 확인 + 삭제) | 동일 | 변경 없음 |
-| 4 | SIWS/SIWE 서명 암호학적 검증 | 동일 | 변경 없음 |
-| 5 | 서명자 == `owner_wallets.address` | **서명자 == `agents.owner_address`** | **변경** |
-| 6 | action == 라우트 기대 action | 동일 | 변경 없음 |
-| 7 | 컨텍스트 설정 (ownerAddress, ownerChain) | 동일 | 변경 없음 |
-| 8 | next() 호출 | 동일 | 변경 없음 |
+| 단계 | v0.2 | v0.5 | v0.8 | 변경 여부 |
+|------|------|------|------|----------|
+| 1 | Authorization 헤더 파싱 + payload 디코딩 | 동일 | 동일 | 변경 없음 |
+| 2 | timestamp 유효성 (5분 이내) | 동일 | 동일 | 변경 없음 |
+| 3 | nonce 일회성 (LRU 캐시 확인 + 삭제) | 동일 | 동일 | 변경 없음 |
+| 4 | SIWS/SIWE 서명 암호학적 검증 | 동일 | 동일 | 변경 없음 |
+| 5 | 서명자 == `owner_wallets.address` | **서명자 == `agents.owner_address`** | 동일 | **v0.5 변경** |
+| 6 | action == 라우트 기대 action | 동일 | 동일 | 변경 없음 |
+| 7 | 컨텍스트 설정 (ownerAddress, ownerChain) | 동일 | 동일 | 변경 없음 |
+| **8.5** | - | - | **markOwnerVerified() 자동 호출** | **[v0.8 추가]** |
+| 8 | next() 호출 | 동일 | 동일 | 변경 없음 |
+
+#### [v0.8] Step 8.5: markOwnerVerified() 자동 호출 (GRACE -> LOCKED 전이)
+
+ownerAuth 검증이 완료된 후(Step 1-7), `next()` 호출 전에 GRACE 상태 에이전트를 자동으로 LOCKED 상태로 전환한다. "핸들러 실행 전 LOCKED 전환이 일관성 보장" -- 보수적 접근으로 핸들러가 실행되는 시점에는 항상 LOCKED 상태가 보장된다.
+
+```
+Step 8.5 [v0.8]: markOwnerVerified() 자동 호출
+  - 조건: agent.ownerVerified === false (GRACE 상태)
+  - 동작: ownerLifecycleService.markOwnerVerified(agent.id) 호출
+  - 타이밍: Step 8(next() 호출) 전에 실행 -- 핸들러 실행 전 LOCKED 상태 보장
+  - 직렬화: BEGIN IMMEDIATE + WHERE owner_verified = 0 (Phase 31 설계)
+  - Idempotency: changes === 0이면 이미 LOCKED (중복 호출 안전)
+```
+
+Step 순서: 1-7(검증) -> **8.5(자동 잠금 전이)** -> 8(next() 호출)
+
+```typescript
+// ownerAuth 미들웨어 Step 8.5 의사코드 [v0.8]
+async function ownerAuth(c: Context, next: Next): Promise<void> {
+  // ... Step 1-7 기존 검증 (v0.5 동일) ...
+
+  // [v0.8] Step 8.5: ownerAuth 첫 사용 시 자동 잠금 전환
+  // 보수적 접근: 핸들러 실행 전 LOCKED 전환이 일관성 보장
+  const agent = c.get('agent')  // Step 5에서 조회한 에이전트
+  if (agent && !agent.ownerVerified) {
+    ownerLifecycleService.markOwnerVerified(agent.id)
+    // markOwnerVerified 내부에서:
+    //   BEGIN IMMEDIATE + WHERE owner_verified = 0 원자화
+    //   감사 로그 OWNER_VERIFIED 이벤트 기록 (같은 트랜잭션)
+    //   changes === 0이면 이미 LOCKED (Idempotent)
+  }
+
+  // 컨텍스트에 ownerVerified 플래그 설정 (핸들러에서 참조)
+  c.set('ownerVerified', true)
+
+  await next()  // Step 8
+}
+```
+
+> **교차 참조:** markOwnerVerified()의 상세 구현은 34-owner-wallet-connection.md 섹션 10.3(OwnerLifecycleService.markOwnerVerified) 참조. BEGIN IMMEDIATE 원자화 패턴은 33-time-lock-approval-mechanism.md의 BEGIN IMMEDIATE 일관성 테이블 참조.
 
 **Step 5 상세 (v0.5):**
 
@@ -344,6 +407,13 @@ const ROUTE_ACTION_MAP: Record<string, string> = {
 const ROUTE_ACTION_MAP: Record<string, string> = {
   'POST /v1/owner/approve': 'approve_tx',
   'POST /v1/admin/recover': 'recover',  // [v0.7 보완: 경로 변경]
+}
+
+// [v0.8] ROUTE_ACTION_MAP: 3개 매핑 (change_owner 추가)
+const ROUTE_ACTION_MAP: Record<string, string> = {
+  'POST /v1/owner/approve': 'approve_tx',
+  'POST /v1/admin/recover': 'recover',       // [v0.7 보완: 경로 변경]
+  'PATCH /v1/agents': 'change_owner',         // [v0.8] LOCKED 상태 Owner 변경
 }
 ```
 
@@ -471,6 +541,15 @@ JWT HS256 Bearer 토큰 기반 인증. SESS-PROTO(30-session-token-protocol.md)�
 | 29 | POST | /v1/admin/kill-switch | masterAuth (explicit) | masterAuth (explicit) | Same | CLI 비상 정지 (v0.2 동일) |
 | 30 | POST | /v1/admin/shutdown | masterAuth (explicit) | masterAuth (explicit) | Same | 데몬 종료 (v0.2 동일) |
 | 31 | GET | /v1/admin/status | masterAuth (explicit) | masterAuth (explicit) | Same | 데몬 상태 조회 (v0.2 동일) |
+
+> **[v0.8] PATCH /v1/agents/:id Owner 변경 인증 분기:**
+> PATCH /v1/agents/:id는 masterAuth(implicit) 그룹(#24 GET /v1/owner/agents/:id와 동일 기본 인증)에 속하지만, **LOCKED 상태에서 Owner 주소를 변경하는 경우에 한해** ownerAuth 헤더가 추가로 필요하다. 이 인증 분기는 미들웨어 레벨이 아닌 `OwnerLifecycleService` 비즈니스 로직 내부에서 처리한다 (미들웨어 레벨 분기 금지 -- 34-owner-wallet-connection.md 섹션 10.9 Anti-Pattern #3 참조).
+>
+> | Owner 상태 | 인증 요건 | ownerAuth 헤더 |
+> |-----------|----------|---------------|
+> | NONE -> GRACE (등록) | masterAuth(implicit) | 불필요 |
+> | GRACE -> GRACE (주소변경) | masterAuth(implicit) | 불필요 |
+> | LOCKED -> LOCKED (주소변경) | masterAuth(implicit) + ownerAuth(기존 주소) | **필요** (action: `change_owner`) |
 
 ### 4.3 v0.5 인증별 엔드포인트 그룹
 
@@ -1031,4 +1110,6 @@ ACTIVATED 또는 RECOVERING 상태에서 통과가 허용되는 엔드포인트 
 
 *문서 작성: 2026-02-07*
 *Phase: 19-auth-owner-redesign, Plan: 01*
-*AUTH-REDESIGN v1.0*
+*v0.7 보완: 27-daemon-security-foundation*
+*v0.8 업데이트: 32-owner-생명주기-설계, Plan: 02 (ownerAuth Step 8.5 + change_owner action + 인증 맵 갱신)*
+*AUTH-REDESIGN v1.1*
