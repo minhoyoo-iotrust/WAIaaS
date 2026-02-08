@@ -3,8 +3,9 @@
 **문서 ID:** TX-PIPE
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
+**v0.8 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** SESS-PROTO (30-session-token-protocol.md), CHAIN-SOL (31-solana-adapter-detail.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), CORE-06 (29-api-framework-design.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63)
+**참조:** SESS-PROTO (30-session-token-protocol.md), CHAIN-SOL (31-solana-adapter-detail.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), CORE-06 (29-api-framework-design.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63), objectives/v0.8-optional-owner-progressive-security.md
 **요구사항:** API-02 (지갑 엔드포인트), API-03 (세션 엔드포인트), API-04 (거래 엔드포인트)
 **v0.6 통합:** INTEG-01 (5-type 분기, IPriceOracle 주입, actionSource 메타, type별 빌드)
 
@@ -367,6 +368,8 @@ async function stageSessionValidate(
 
 > **(v0.6 확장)** DatabasePolicyEngine.evaluate()가 11단계 알고리즘으로 확장되었다. IPriceOracle을 주입받아 resolveEffectiveAmountUsd()로 USD 기준 티어를 결정한다. DENY 우선 원칙: Step 1~6에서 DENY 발생 시 즉시 반환. 배치 요청은 Phase A (개별 instruction) + Phase B (합산 금액) 2단계 평가를 수행한다. 상세: 33-time-lock-approval-mechanism.md 섹션 3, 61-price-oracle-spec.md 섹션 6
 
+> **[v0.8] Stage 3 정책 평가 후 OwnerState에 따라 APPROVAL -> DELAY 다운그레이드가 삽입될 수 있다.** OwnerState가 NONE 또는 GRACE일 때 APPROVAL 티어가 결정되면, Owner가 승인할 수 없으므로 DELAY로 다운그레이드한다. 이때 `PolicyDecision.downgraded = true`, `PolicyDecision.originalTier = 'APPROVAL'`이 설정된다. 상세 다운그레이드 로직은 Phase 33에서 설계한다.
+
 **역할:** 에이전트별/글로벌 정책 규칙을 평가하여 거래를 허용/거부하고 보안 티어를 결정한다.
 
 | 항목 | 값 |
@@ -402,8 +405,30 @@ interface PolicyDecision {
 
   /** APPROVAL 티어의 승인 기한 (초) */
   approvalTimeoutSeconds?: number
-}
 
+  // ── [v0.8 추가] OwnerState 기반 다운그레이드 ──
+
+  /** APPROVAL -> DELAY 다운그레이드 여부. true이면 알림에 Owner 등록 안내 포함. */
+  downgraded?: boolean
+
+  /** 다운그레이드 전 원래 티어. 감사 로그용. 현재는 APPROVAL만 다운그레이드 가능. */
+  originalTier?: 'APPROVAL'
+}
+```
+
+**[v0.8] PolicyDecision.downgraded 소비자 목록:**
+
+| 소비자 | 역할 | 상세 |
+|--------|------|------|
+| **NotificationService** | `downgraded === true`이면 Owner 등록 안내 메시지를 알림에 포함 | Phase 33에서 상세 설계 |
+| **감사 로그** | `originalTier` 기록으로 다운그레이드 추적 (`DOWNGRADED` 이벤트 타입) | audit_log.details에 기록 |
+| **CLI/API 응답** | 다운그레이드 여부를 클라이언트에 표시 | 거래 상태 조회 시 반환 |
+| **Phase 33 의존** | 실제 다운그레이드 분기 로직(evaluate() Step 11 이후) | Phase 33에서 설계 |
+
+- `downgraded`와 `originalTier`는 모두 optional이므로 기존 코드에 영향 없음 (하위 호환성 유지)
+- 기존 6개 필드(allowed, tier, reason, policyId, delaySeconds, approvalTimeoutSeconds)는 변경 없음
+
+```typescript
 /** 정책 엔진 인터페이스 */
 interface IPolicyEngine {
   /**
@@ -2342,7 +2367,7 @@ v0.6 블록체인 기능 확장에 의해 파이프라인 6단계의 각 Stage�
 |-------|-------------|-------------|------|
 | Stage 1 (RECEIVE) | TransferRequest 단일 Zod | discriminatedUnion 5-type 파싱 (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH). 감사 컬럼 4개 + actionSource 메타 기록 | 45-enum 2.3 |
 | Stage 2 (SESSION) | 5가지 제약 검증 | +3가지: allowedTokens, allowedContracts, allowedSpenders | 56, 58, 59 |
-| Stage 3 (POLICY) | DefaultPolicyEngine (passthrough) | DatabasePolicyEngine 11단계 + IPriceOracle 주입 (resolveEffectiveAmountUsd) | 33-time-lock, 61 |
+| Stage 3 (POLICY) | DefaultPolicyEngine (passthrough) | DatabasePolicyEngine 11단계 + IPriceOracle 주입 (resolveEffectiveAmountUsd). [v0.8] OwnerState 기반 APPROVAL->DELAY 다운그레이드 | 33-time-lock, 61 |
 | Stage 4 (TIER) | 4-tier 분기 | CONTRACT_CALL 기본 APPROVAL, APPROVE 독립 TIER_OVERRIDE, BATCH All-or-Nothing | 58, 59, 60 |
 | Stage 5 (EXECUTE) | buildTransaction 단일 | type별 분기: buildTransfer / buildContractCall / buildApprove / buildBatch | 27-chain-adapter |
 | Stage 6 (CONFIRM) | 변경 없음 | 변경 없음 (type 무관 온체인 확정 대기) | - |
@@ -2449,5 +2474,6 @@ export type TransactionRequest = z.infer<typeof TransactionRequestSchema>
 *문서 ID: TX-PIPE*
 *작성일: 2026-02-05*
 *v0.6 업데이트: 2026-02-08*
+*v0.8 업데이트: 2026-02-08*
 *Phase: 07-session-transaction-protocol-design*
 *상태: 완료*
