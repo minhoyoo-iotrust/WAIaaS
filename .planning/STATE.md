@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 33 of 35 (정책 다운그레이드 + 알림 설계)
-플랜: 1 of 2 in current phase
-상태: In progress (33-01 complete, 33-02 pending)
-마지막 활동: 2026-02-09 -- Completed 33-01-PLAN.md
+플랜: 2 of 2 in current phase
+상태: Phase 33 complete
+마지막 활동: 2026-02-09 -- Completed 33-02-PLAN.md
 
-Progress: █████░░░░░░░░░░░░░░░ 45% (5/11 plans)
+Progress: ██████████░░░░░░░░░░ 54% (6/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 5 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 6 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -52,6 +52,10 @@ v0.8 관련:
 - [33-01] delaySeconds: SPENDING_LIMIT delay_seconds 우선, fallback 300초, 최소 60초
 - [33-01] TX_DOWNGRADED 독립 감사 이벤트 -- audit_log 쿼리 직접 집계 지원
 - [33-01] evaluateBatch() 개별 instruction 다운그레이드 불적용 -- 합산 1회만 (이중 방지)
+- [33-02] TX_DOWNGRADED_DELAY를 별도 이벤트로 분리 -- TX_DELAY_QUEUED + metadata 방식 대신 (하위 호환)
+- [33-02] Telegram 승인/거부 버튼은 url 기반 -- ownerAuth 서명이 필요하므로 callback_data 불가
+- [33-02] Discord Webhook은 Button 미지원 -- Embed markdown 링크로 대체
+- [33-02] ntfy.sh Actions는 view 타입만 -- http 타입은 ownerAuth 서명 불가
 
 ### 차단 요소/우려 사항
 
@@ -64,5 +68,5 @@ v0.8 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Completed 33-01-PLAN.md. Phase 33 Plan 02 (알림 템플릿) 실행 대기.
-재개 파일: .planning/phases/33-정책-다운그레이드-알림-설계/33-02-PLAN.md
+중단 지점: Phase 33 실행 완료 (2/2 plans). Phase 34 계획 시작 대기.
+재개 파일: .planning/ROADMAP.md
