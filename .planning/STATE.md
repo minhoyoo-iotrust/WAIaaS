@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 31 of 35 (데이터 모델 + 타입 기반 설계)
-플랜: 1 of 2 in current phase
-상태: In progress
-마지막 활동: 2026-02-08 -- Completed 31-01-PLAN.md
+플랜: 2 of 2 in current phase
+상태: Phase complete
+마지막 활동: 2026-02-08 -- Completed 31-02-PLAN.md
 
-Progress: █░░░░░░░░░░░░░░░░░░░ 9% (1/11 plans)
+Progress: ██░░░░░░░░░░░░░░░░░░ 18% (2/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 1 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 2 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -35,15 +35,19 @@ v0.8 관련:
 - [31-01] SweepResult.tokensRecovered는 v0.6 AssetInfo 직접 재사용 (중복 정의 금지)
 - [31-01] PolicyDecision 확장은 optional 필드로 하위 호환성 유지
 - [31-01] v0.8 마이그레이션에서 PRAGMA foreign_keys OFF/ON 패턴 적용
+- [31-02] sweepAll 정책 엔진 우회: 수신 주소 owner_address 고정이므로 공격자 이득 없음
+- [31-02] OwnerState DB 비저장: 순수 함수로 런타임 산출하여 SSoT 유지
+- [31-02] owner_verified 타임스탬프는 audit_log OWNER_VERIFIED 이벤트로 추적
+- [31-02] Grace->Locked 전이: BEGIN IMMEDIATE + WHERE owner_verified = 0 직렬화
 
 ### 차단 요소/우려 사항
 
-- Grace->Locked 레이스 컨디션 (C-01): BEGIN IMMEDIATE 트랜잭션으로 원자화 필요
+- Grace->Locked 레이스 컨디션 (C-01): BEGIN IMMEDIATE 트랜잭션으로 원자화 **설계 완료** (31-02)
 - 유예 구간 withdraw 공격 (H-02): owner_verified=1에서만 withdraw 활성화로 방어
-- sweepAll 부분 실패 (C-03): SOL 마지막 전송 + HTTP 207 부분 성공 처리
+- sweepAll 부분 실패 (C-03): SOL 마지막 전송 + HTTP 207 부분 성공 처리 **설계 완료** (31-02)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Completed 31-01-PLAN.md
-재개 파일: .planning/phases/31-데이터-모델-타입-기반-설계/31-02-PLAN.md
+중단 지점: Completed 31-02-PLAN.md. Phase 31 완료.
+재개 파일: None (Phase 32 계획 시작 대기)
