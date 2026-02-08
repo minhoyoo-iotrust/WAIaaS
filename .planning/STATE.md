@@ -12,10 +12,10 @@
 마일스톤: v0.6 블록체인 기능 확장 설계
 페이즈: 24 of 25 (상위 추상화 레이어 설계)
 플랜: 2 of 2 in current phase
-상태: In progress
-마지막 활동: 2026-02-08 -- Phase 24 Plan 02 완료 (Action Provider + Swap Action 설계)
+상태: Phase complete
+마지막 활동: 2026-02-08 -- Phase 24 완료 (2/2 plans, ORACLE-01~04 + ACTION-01~05)
 
-Progress: ███████████████░░░░░ 78%
+Progress: ████████████████░░░░ 78%
 
 ## 성과 지표
 
@@ -24,7 +24,7 @@ Progress: ███████████████░░░░░ 78%
 **v0.3 최종 통계:** 8 plans, 37/37 reqs, 5 mapping docs
 **v0.4 최종 통계:** 9 plans, 26/26 reqs, 11 docs (41-51)
 **v0.5 최종 통계:** 9 plans, 24/24 reqs, 15 docs (52-55 신규 + 11개 기존 문서 수정)
-**v0.6 진행:** 7/9 plans
+**v0.6 진행:** 7/9 plans (Phase 24 complete)
 
 ## 누적 컨텍스트
 
@@ -85,6 +85,16 @@ Phase 23-03 결정 (CHAIN-EXT-05):
 - 배치 내 중복 instruction 미감지 (감사 로그 사후 추적)
 - ATA 자동 생성은 instruction 수(20개 한도)에 포함
 
+Phase 24-01 결정 (CHAIN-EXT-06):
+- IPriceOracle 4개 메서드, 서비스 레이어 위치 (IChainAdapter 독립)
+- OracleChain 패턴: CoinGecko(Primary) -> Pyth(Solana)/Chainlink(EVM) -> stale cache
+- 5분 TTL + 30분 staleMaxAge, LRU 1000 항목
+- SpendingLimitRuleSchema에 instant_max_usd/notify_max_usd/delay_max_usd optional 추가 (하위 호환)
+- USD + 네이티브 병행 평가: maxTier(nativeTier, usdTier) 보수적 채택
+- stale 가격 INSTANT->NOTIFY 상향, +-50% 급변동 시 한 단계 상향
+- 완전 장애 시 Phase 22-23 과도기 전략 fallback (TOKEN_TRANSFER=NOTIFY)
+- APPROVE USD는 참고값 (TIER_OVERRIDE 독립, 감사 로그 기록용)
+
 Phase 24-02 결정 (CHAIN-EXT-07, CHAIN-EXT-08):
 - resolve()는 ContractCallRequest만 반환 (UnsignedTransaction/TransactionRequest 대안 미채택, 정책 우회 차단)
 - validate-then-trust 보안 경계 (vm.Module 샌드박스 미채택, 실험적 API 불안정)
@@ -100,5 +110,5 @@ Phase 24-02 결정 (CHAIN-EXT-07, CHAIN-EXT-08):
 ## 세션 연속성
 
 마지막 세션: 2026-02-08
-중단 지점: Phase 24 Plan 02 완료 (Action Provider + Swap Action 설계). Plan 01 (가격 오라클) 대기.
+중단 지점: Phase 24 완료 (2/2 plans). Phase 25 대기.
 재개 파일: None
