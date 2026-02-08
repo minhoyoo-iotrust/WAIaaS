@@ -51,11 +51,11 @@ Plans:
   3. 유예 구간(owner_verified=0)에서 masterAuth만으로 변경/해제가 가능한 정책이 명세되어 있다
   4. 잠금 구간(owner_verified=1)에서 ownerAuth+masterAuth로만 변경이 가능하고, 해제가 불가능한 정책이 명세되어 있다
   5. OwnerLifecycleService의 상태 전이 다이어그램과 보안 다운그레이드 방지 메커니즘이 명세되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 -> Wave 2 sequential)
 
 Plans:
-- [ ] 32-01: Owner 등록/변경/해제 정책 + 유예/잠금 2단계 상태 머신 설계
-- [ ] 32-02: OwnerLifecycleService + ownerAuth 미들웨어 통합 + 보안 공격 방어 설계
+- [ ] 32-01-PLAN.md -- Owner 생명주기 상태 머신(3-State, 6전이) + OwnerLifecycleService + REST API/CLI 스펙 + 감사 이벤트/에러 코드 (34-owner-wallet-connection.md)
+- [ ] 32-02-PLAN.md -- ownerAuth Step 8.5 + change_owner action + 인증 맵 갱신 (52-auth-model-redesign.md) + 보안 공격 방어 C-01/C-02/H-02/H-03 (34-owner-wallet-connection.md)
 
 ### Phase 33: 정책 다운그레이드 + 알림 설계
 **Goal**: Owner 없는 에이전트의 APPROVAL 거래가 차단 없이 DELAY로 다운그레이드되어 실행되고, 알림에 Owner 등록 안내가 포함되는 설계가 완성된다
