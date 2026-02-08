@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 33 of 35 (정책 다운그레이드 + 알림 설계)
-플랜: 0 of 2 in current phase
-상태: Phase 32 complete, Phase 33 ready to plan
-마지막 활동: 2026-02-09 -- Phase 32 실행 완료 (2/2 plans, verified)
+플랜: 1 of 2 in current phase
+상태: In progress (33-01 complete, 33-02 pending)
+마지막 활동: 2026-02-09 -- Completed 33-01-PLAN.md
 
-Progress: ████░░░░░░░░░░░░░░░░ 36% (4/11 plans)
+Progress: █████░░░░░░░░░░░░░░░ 45% (5/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 4 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 5 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -47,6 +47,11 @@ v0.8 관련:
 - [32-02] change_owner action: authRouter 미등록, 핸들러 레벨 ownerAuth 검증
 - [32-02] setOwner BEGIN IMMEDIATE 트랜잭션 -- resolveOwnerState 재확인 + 주소변경 + 감사로그 일체화
 - [32-02] 보안 공격 방어 4건 확정: C-01(레이스 3중), C-02(다운그레이드 3중), H-02(withdraw LOCKED만), H-03(killSwitchGuard)
+- [33-01] evaluate() 시그니처에 optional agentOwnerInfo 추가 -- IPolicyEngine 인터페이스 미변경 (하위 호환)
+- [33-01] Step 9.5에서 return으로 Step 10 스킵 -- APPROVE_TIER_OVERRIDE 다운그레이드 복원 방지
+- [33-01] delaySeconds: SPENDING_LIMIT delay_seconds 우선, fallback 300초, 최소 60초
+- [33-01] TX_DOWNGRADED 독립 감사 이벤트 -- audit_log 쿼리 직접 집계 지원
+- [33-01] evaluateBatch() 개별 instruction 다운그레이드 불적용 -- 합산 1회만 (이중 방지)
 
 ### 차단 요소/우려 사항
 
@@ -59,5 +64,5 @@ v0.8 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 32 실행 및 검증 완료. Phase 33 계획 시작 대기.
-재개 파일: .planning/ROADMAP.md
+중단 지점: Completed 33-01-PLAN.md. Phase 33 Plan 02 (알림 템플릿) 실행 대기.
+재개 파일: .planning/phases/33-정책-다운그레이드-알림-설계/33-02-PLAN.md
