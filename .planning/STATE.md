@@ -56,6 +56,11 @@ v0.8 관련:
 - [33-02] Telegram 승인/거부 버튼은 url 기반 -- ownerAuth 서명이 필요하므로 callback_data 불가
 - [33-02] Discord Webhook은 Button 미지원 -- Embed markdown 링크로 대체
 - [33-02] ntfy.sh Actions는 view 타입만 -- http 타입은 ownerAuth 서명 불가
+- [34-01] withdraw API masterAuth(implicit)만 -- 수신 주소 owner_address 고정으로 ownerAuth 불필요 (v0.8 §5.2)
+- [34-01] scope 분기 WithdrawService 수준 -- IChainAdapter.sweepAll에 scope 파라미터 없음 (31-02 결정)
+- [34-01] WITHDRAW 에러 코드 4개 신설 + AGENT 도메인 2개 재사용 (중복 정의 금지)
+- [34-01] Kill Switch withdraw Open Question -- 방안 A(허용 목록 추가) vs 방안 B(CLI 직접) 구현 시 결정
+- [34-01] 감사 로그 3종: FUND_WITHDRAWN/FUND_PARTIALLY_WITHDRAWN/FUND_WITHDRAWAL_FAILED
 - [34-02] Kill Switch 복구는 시스템별 분기 -- agents.owner_address IS NOT NULL 존재 여부로 판단
 - [34-02] config.toml로 복구 대기 시간 재정의 가능 (kill_switch_recovery_wait_owner/no_owner)
 - [34-02] Step 2에서 masterAuth만 재검증 -- ownerAuth는 Step 1에서 완료
@@ -65,10 +70,11 @@ v0.8 관련:
 ### 차단 요소/우려 사항
 
 - Grace->Locked 레이스 컨디션 (C-01): 3중 보호 **설계 완료** (31-02, 32-02)
-- 유예 구간 withdraw 공격 (H-02): owner_verified=1에서만 withdraw 활성화 **설계 완료** (32-02)
+- 유예 구간 withdraw 공격 (H-02): owner_verified=1에서만 withdraw 활성화 **설계 완료** (32-02, 34-01 API 스펙 확정)
 - 보안 다운그레이드 공격 (C-02): LOCKED 해제 금지 + 알림 + killSwitchGuard **설계 완료** (32-02)
-- sweepAll 부분 실패 (C-03): SOL 마지막 전송 + HTTP 207 부분 성공 처리 **설계 완료** (31-02)
+- sweepAll 부분 실패 (C-03): SOL 마지막 전송 + HTTP 207 부분 성공 처리 **설계 완료** (31-02, 34-01 상세 확정)
 - Kill Switch Owner 변경 (H-03): killSwitchGuard 4개 허용 경로 외 503 차단 **설계 완료** (32-02)
+- Kill Switch withdraw (Open Question): 방안 A/B 문서화, Phase 35 CLI 설계 시 결정 (34-01)
 
 ## 세션 연속성
 
