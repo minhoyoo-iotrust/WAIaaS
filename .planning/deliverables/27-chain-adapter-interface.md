@@ -2295,86 +2295,270 @@ resetNonceTracker(_address?: string): void {
 
 > **[v0.8 추가]** IChainAdapter가 20개 메서드로 확장되면서 추가된 sweepAll의 SolanaAdapter 구현 지침. WithdrawService에서 직접 호출하며 정책 엔진을 우회한다. (WITHDRAW-06, WITHDRAW-07)
 
-**SolanaAdapter.sweepAll 구현 전략:**
+#### 6.11.1 sweepAll Solana 실행 순서 상세
 
-1. `getAssets(from)` 호출로 SPL 토큰 목록 전수 조사
-2. 각 SPL 토큰에 대해 transfer + closeAccount 일괄 수행 (buildBatch 활용 가능)
-   - transfer: 토큰 잔액 전량을 `to`의 ATA(Associated Token Account)로 전송
-   - closeAccount: 빈 토큰 계정을 닫아 rent 회수 (lamports -> from 주소)
-3. SOL 전량 전송은 **반드시 마지막** -- 잔액에서 tx fee를 차감하고 전송
-   - 토큰 계정 closeAccount로 회수된 rent lamports를 포함한 최종 잔액 기준
-   - SOL이 먼저 전송되면 이후 토큰 전송의 tx fee를 지불할 수 없음 (WITHDRAW-07)
-4. 부분 실패 허용: 특정 토큰 전송 실패 시 `failed` 배열에 기록하고 나머지 계속 처리
+> **[v0.8 Phase 34 보완]** 31-02에서 확정된 실행 순서(getAssets -> 토큰 배치 -> SOL 마지막)를 4단계로 구체화한다.
+
+**실행 순서 4단계:**
+
+```
+실행 순서:
+1. getAssets(address) -> AssetInfo[] 조회 (v0.6 57-asset-query)
+2. SPL 토큰 필터링: type === 'spl' && balance > 0n
+3. 토큰별 transfer + closeAccount 배치:
+   - buildBatch() (v0.6 60-batch-transaction) 활용
+   - Solana: min 2 / max 20 instructions per tx (1232 byte 제한)
+   - 배치 실패 시 개별 토큰 fallback (partial sweep 허용)
+   - closeAccount로 rent 회수 (SweepResult.rentRecovered에 합산)
+4. 잔여 SOL 전량 전송:
+   - getBalance(address) -> 현재 SOL 잔액
+   - estimateFee(transferTx) -> 예상 fee
+   - amount = balance - estimatedFee
+   - sendTransaction(signedTx) -> SOL 전송
+   - 마지막 tx이므로 fee 정확 계산 가능
+```
+
+**단계별 상세:**
+
+| 단계 | 동작 | IChainAdapter 메서드 | 비고 |
+|------|------|---------------------|------|
+| 1 | 보유 자산 전수 조사 | `getAssets(from)` | v0.6 57-asset-query. AssetInfo[] 반환 |
+| 2 | SPL 토큰 필터링 | (로컬 필터) | `type === 'spl' && balance > 0n` |
+| 3a | 토큰 transfer + closeAccount 배치 | `buildBatch()` | 2 instructions/token. 배치 크기 = max 10 토큰/tx |
+| 3b | 배치 실패 -> 개별 fallback | `buildTransaction()` | 개별 transfer+closeAccount per token |
+| 4 | SOL 전량 전송 | `getBalance()` + `estimateFee()` + `signTransaction()` + `submitTransaction()` | balance - fee = 전송 금액 |
+
+#### 6.11.2 SOL 마지막 전송 근거 (WITHDRAW-07)
+
+> **[v0.8 Phase 34 보완]** SOL을 반드시 마지막에 전송해야 하는 이유를 명시한다.
+
+1. **토큰 전송 + closeAccount에 SOL tx fee가 필요하다.** 각 배치 트랜잭션에 ~5000 lamports base fee + priority fee가 소비된다.
+2. **SOL을 먼저 전송하면 이후 토큰 전송 fee 부족으로 실패한다.** 에이전트 지갑의 SOL이 0이 되면 토큰 전송 tx를 제출할 수 없다.
+3. **모든 토큰 처리 완료 후 잔여 SOL에서 마지막 tx fee만 차감하여 최대 회수한다.** closeAccount로 반환된 rent lamports가 최종 SOL 잔액에 합산되므로, SOL 전송을 마지막에 수행하면 rent 회수분까지 포함한 최대 금액을 Owner에게 전송할 수 있다.
+
+```
+시간순:
+  토큰A transfer+closeAccount -> SOL -= fee, SOL += rent_A
+  토큰B transfer+closeAccount -> SOL -= fee, SOL += rent_B
+  ...
+  SOL 전량 전송: amount = SOL_balance - last_tx_fee
+```
+
+#### 6.11.3 부분 실패 처리 상세
+
+> **[v0.8 Phase 34 보완]** sweepAll에서 발생할 수 있는 부분 실패 시나리오와 처리 전략을 명세한다.
+
+**부분 실패 계층:**
+
+| 실패 수준 | 동작 | SweepResult 영향 |
+|-----------|------|-----------------|
+| 배치 내 특정 instruction 실패 | 해당 토큰만 `failed` 배열에 추가 | `failed += { mint, error }` |
+| 배치 전체 실패 | 개별 토큰 전송으로 재시도 (fallback) | 개별 시도 결과에 따라 succeeded/failed 분배 |
+| 개별 전송도 실패 | `failed` 배열에 `{ mint, error }` 추가 | `failed += { mint, error }` |
+| SOL 전송 실패 | `failed` 배열에 SOL 실패 기록 | `nativeRecovered = '0'` |
+| 모든 전송 실패 | `transactions.length === 0` | WithdrawService에서 500 SWEEP_TOTAL_FAILURE throw |
+
+**fallback 흐름:**
+
+```typescript
+// 1차: 배치 시도 (최대 10 토큰/tx)
+try {
+  const batchResult = await this.executeBatch(tokenGroup, from, to)
+  // 배치 성공 -> succeeded에 추가
+} catch (batchError) {
+  // 2차: 배치 실패 -> 개별 토큰 fallback
+  for (const token of tokenGroup) {
+    try {
+      const result = await this.transferAndClose(from, to, token)
+      succeeded.push(result)
+    } catch (individualError) {
+      // 3차: 개별도 실패 -> failed에 기록
+      failed.push({ mint: token.tokenAddress, error: individualError.message })
+    }
+  }
+}
+```
+
+**핵심 규칙:** 모든 토큰이 실패해도 SOL 전송은 반드시 시도한다. SOL만이라도 회수되면 부분 성공(HTTP 207)으로 처리한다.
+
+#### 6.11.4 SolanaAdapter.sweepAll 구현 코드
 
 ```typescript
 /**
  * [v0.8 추가] 에이전트 지갑의 전체 자산을 Owner 주소로 회수한다.
  *
+ * 실행 순서: getAssets -> SPL 배치 전송+closeAccount -> SOL 마지막 전송
+ * 부분 실패 허용: 개별 토큰 실패 시 failed 배열에 기록하고 나머지 계속 처리
+ * 정책 엔진 우회: 수신 주소 owner_address 고정 (31-02 확정)
+ *
  * @param from - 에이전트 지갑 주소 (Base58)
  * @param to - Owner 지갑 주소 (Base58, agents.owner_address)
- * @returns SweepResult -- succeeded/failed 분리, rentRecovered 기록
+ * @returns SweepResult -- transactions/nativeRecovered/tokensRecovered/rentRecovered/failed
+ * @see 25-sqlite-schema.md §4.12.2 SweepResult 타입 정의
  */
 async sweepAll(from: string, to: string): Promise<SweepResult> {
   if (!this.rpc) throw this.notConnectedError()
 
-  // 1. 보유 자산 전수 조사
-  const assets = await this.getAssets(from)
-  const splTokens = assets.filter(a => !a.isNative)
-
-  const succeeded: SweepTransfer[] = []
-  const failed: SweepTransferError[] = []
+  const transactions: SweepResult['transactions'] = []
+  const tokensRecovered: AssetInfo[] = []
+  const failed: SweepResult['failed'] = []
   let rentRecovered = 0n
 
-  // 2. SPL 토큰별 transfer + closeAccount (배치 처리)
-  for (const token of splTokens) {
+  // 1. 보유 자산 전수 조사 (v0.6 getAssets)
+  const assets = await this.getAssets(from)
+  const splTokens = assets.filter(a => a.type === 'spl' && a.balance > 0n)
+
+  // 2. SPL 토큰 배치 전송 + closeAccount
+  //    - buildBatch() 활용: 2 instructions/token (transfer + closeAccount)
+  //    - Solana tx 크기 제한 (1232 bytes): max ~10 토큰/배치
+  const TOKEN_BATCH_SIZE = 10
+  for (let i = 0; i < splTokens.length; i += TOKEN_BATCH_SIZE) {
+    const batch = splTokens.slice(i, i + TOKEN_BATCH_SIZE)
     try {
-      // transfer 전량 + closeAccount -> rent 회수
-      // buildBatch 활용 가능 (2 instructions per token)
-      const result = await this.transferAndClose(from, to, token)
-      succeeded.push(result.transfer)
-      rentRecovered += result.rentLamports
-    } catch (error) {
-      failed.push({
-        mint: token.mint!,
-        symbol: token.symbol,
-        amount: token.balance.raw.toString(),
-        error: error instanceof Error ? error.message : String(error),
+      // 배치 시도: transfer + closeAccount per token
+      const batchResult = await this.executeSweepBatch(from, to, batch)
+      transactions.push({
+        txHash: batchResult.txHash,
+        assets: batch.map(t => ({ mint: t.tokenAddress, amount: t.balance.toString() })),
       })
+      tokensRecovered.push(...batch)
+      rentRecovered += batchResult.rentLamports
+    } catch (batchError) {
+      // 배치 실패 -> 개별 토큰 fallback
+      for (const token of batch) {
+        try {
+          const result = await this.transferAndClose(from, to, token)
+          transactions.push({
+            txHash: result.txHash,
+            assets: [{ mint: token.tokenAddress, amount: token.balance.toString() }],
+          })
+          tokensRecovered.push(token)
+          rentRecovered += result.rentLamports
+        } catch (error) {
+          failed.push({
+            mint: token.tokenAddress,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
     }
   }
 
   // 3. SOL 전량 전송 (마지막 -- WITHDRAW-07)
+  //    closeAccount rent 회수분이 잔액에 포함된 상태
+  let nativeRecovered = '0'
   try {
     const balance = await this.getBalance(from)
-    const fee = await this.estimateNativeTransferFee()
-    const transferAmount = balance.balance.raw - fee.totalFee
+    const fee = await this.estimateFee({
+      type: 'transfer',
+      to,
+      amount: balance.balance.toString(),
+    })
+    const transferAmount = balance.balance - fee.total
     if (transferAmount > 0n) {
-      // SOL 전송 (잔액 - fee)
-      succeeded.push({
-        type: 'native',
-        symbol: 'SOL',
-        amount: transferAmount.toString(),
-        txHash: '...', // 실제 구현에서 채워짐
+      const tx = await this.buildTransaction({ from, to, amount: transferAmount })
+      const signed = await this.signTransaction(tx, /* privateKey from keystore */)
+      const result = await this.submitTransaction(signed)
+      transactions.push({
+        txHash: result.txHash,
+        assets: [{ mint: 'native', amount: transferAmount.toString() }],
       })
+      nativeRecovered = transferAmount.toString()
     }
   } catch (error) {
     failed.push({
-      mint: null,
-      symbol: 'SOL',
-      amount: '0',
+      mint: 'native',
       error: error instanceof Error ? error.message : String(error),
     })
   }
 
-  return { succeeded, failed, rentRecovered: rentRecovered.toString() }
+  return {
+    transactions,
+    nativeRecovered,
+    tokensRecovered,
+    rentRecovered: rentRecovered.toString(),
+    failed,
+  }
 }
 ```
 
+#### 6.11.5 [v0.8 Phase 34 보완] scope "native" WithdrawService 로직
+
+> **scope 분기는 WithdrawService 수준에서 처리한다.** IChainAdapter.sweepAll()에 scope 파라미터를 추가하지 않는다 (31-02 결정: IChainAdapter는 저수준 인터페이스).
+
+scope `"native"`는 `sweepAll()`을 호출하지 않고, 기존 IChainAdapter 메서드 조합으로 처리한다. **새로운 IChainAdapter 메서드 추가 없음.**
+
+```typescript
+// WithdrawService.sweepNative() -- packages/daemon/src/services/withdraw-service.ts
+// IChainAdapter 기존 메서드 3개 조합: getBalance + estimateFee + sendNative
+
+async sweepNative(agent: Agent): Promise<WithdrawResult> {
+  // 1. 현재 네이티브 잔액 조회
+  const balance = await this.chainAdapter.getBalance(agent.publicKey)
+  if (balance.balance === 0n) {
+    return {
+      totalTransactions: 0,
+      nativeRecovered: '0',
+      tokensRecovered: [],
+      failed: [],
+    }
+  }
+
+  // 2. tx fee 추정
+  const fee = await this.chainAdapter.estimateFee({
+    type: 'transfer',
+    to: agent.ownerAddress!,
+    amount: balance.balance.toString(),
+  })
+
+  // 3. 전송 금액 = 잔액 - estimatedFee
+  const amount = balance.balance - fee.total
+  if (amount <= 0n) {
+    throw new InternalError('INSUFFICIENT_FOR_FEE')
+  }
+
+  // 4. 네이티브 전송 (기존 sendNative 파이프라인 활용)
+  //    build -> simulate -> sign -> submit 4단계
+  const tx = await this.chainAdapter.buildTransaction({
+    from: agent.publicKey,
+    to: agent.ownerAddress!,
+    amount,
+  })
+  const signed = await this.chainAdapter.signTransaction(tx, /* privateKey */)
+  const result = await this.chainAdapter.submitTransaction(signed)
+
+  return {
+    totalTransactions: 1,
+    nativeRecovered: amount.toString(),
+    tokensRecovered: [],
+    failed: [],
+  }
+}
+```
+
+**scope 분기 요약:**
+
+| scope | WithdrawService 메서드 | IChainAdapter 호출 | 토큰 처리 | rent 회수 |
+|-------|----------------------|-------------------|----------|----------|
+| `"all"` | `sweepAll(agent)` | `sweepAll(from, to)` | 전량 전송+closeAccount | 포함 |
+| `"native"` | `sweepNative(agent)` | `getBalance()` + `estimateFee()` + `buildTransaction()` + `signTransaction()` + `submitTransaction()` | 미처리 | 미처리 |
+
 **Solana 토큰 계정 rent 회수:**
-- SPL 토큰 계정은 생성 시 rent-exempt 최소 금액(약 0.00203928 SOL)을 예치한다
+- SPL 토큰 계정은 생성 시 rent-exempt 최소 금액(약 0.00203928 SOL = 2,039,280 lamports)을 예치한다
 - closeAccount로 토큰 계정을 닫으면 이 rent가 from 주소로 반환된다
 - 반환된 rent는 `rentRecovered` 필드에 누적 기록한다
 - 최종 SOL 전송 시 이 rent 회수분이 잔액에 포함된다
+
+#### 6.11.6 [v0.8 Phase 34 보완] EVM sweepAll 참고 (EvmStub)
+
+> v0.8에서는 Solana만 구현한다. EVM은 EvmStub에서 `NOT_IMPLEMENTED`를 유지한다 (§7.11 참조).
+
+**EVM sweepAll 구현 시 고려사항 (미래 참고):**
+- ERC-20 토큰 목록 조회: Alchemy/Infura `alchemy_getTokenBalances` API 또는 Moralis 등 서드파티 필요 (온체인 전수 조사 불가)
+- ERC-20 transfer: `IERC20.transfer(to, amount)` 개별 tx (Solana처럼 배치 불가, 별도 multicall 컨트랙트 필요)
+- ETH 전량 전송: `balance - gasLimit * maxFeePerGas` (EIP-1559 fee 추정이 Solana보다 복잡)
+- nonce 순차 관리: 각 tx가 nonce 순서대로 제출/확인되어야 함 (v0.7 nonce tracker 활용)
+- 토큰 계정 close 개념 없음: EVM에는 rent 회수가 없으므로 `rentRecovered` 항상 undefined
 
 ---
 
