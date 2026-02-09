@@ -86,11 +86,11 @@ Plans:
   2. `waiaas mcp refresh-token` 커맨드의 동작(기존 세션 폐기 + 새 세션 생성 + constraints 계승 + 토큰 파일 교체)이 정의되어 있다
   3. Telegram `/newsession` 명령어의 chatId Tier 1 인증, 에이전트 목록 인라인 키보드, 세션 생성 + 토큰 파일 저장 + 완료 메시지 플로우가 정의되어 있다
   4. 기본 constraints 결정 규칙(agents.default_constraints > config.toml > 하드코딩 기본값) 3-level 우선순위가 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 39-01: CLI mcp setup + mcp refresh-token 커맨드 설계
-- [ ] 39-02: Telegram /newsession 플로우 + 기본 constraints 규칙 설계
+- [ ] 39-01-PLAN.md -- CLI mcp 서브커맨드 그룹 설계: mcp setup (7단계 플로우, Claude Desktop config 안내) + mcp refresh-token (8단계 플로우, constraints 계승) (CLIP-01, CLIP-02)
+- [ ] 39-02-PLAN.md -- Telegram /newsession 명령어 플로우 (인라인 키보드 에이전트 선택) + 기본 constraints 결정 규칙 (2-level + EXT-03 확장 예약) (TGSN-01, TGSN-02)
 
 ### Phase 40: 테스트 설계 + 설계 문서 통합
 **Goal**: 18개 테스트 시나리오(14 핵심 + 4 보안)가 설계 문서에 명시되고, 7개 기존 설계 문서에 v0.9 변경이 일관되게 통합된다
