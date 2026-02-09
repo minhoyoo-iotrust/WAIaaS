@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 38 완료 + Phase 39 완료 -- Phase 40 (테스트 설계 + 문서 통합)만 남음
+**현재 초점:** v0.9 Phase 40 진행 중 -- Plan 40-01 완료, Plan 40-02 대기
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 38 of 40 (SessionManager MCP 통합 설계) -- Phase 38 Complete
-플랜: 38-02 완료 (Phase 38 2/2)
-상태: Phase 38 complete + verified (4/4 must-haves, SMGI-D01~D04 설계 결정 4건). Phase 36, 37, 38, 39 모두 완료. Phase 40 대기
-마지막 활동: 2026-02-09 — Phase 38 완료 + 검증 PASSED (4/4 must-haves)
+페이즈: 40 of 40 (테스트 설계 + 문서 통합) -- Phase 40 In Progress
+플랜: 40-01 완료 (Phase 40 1/2)
+상태: Phase 36, 37, 38, 39 완료. Phase 40 Plan 01 완료 (테스트 시나리오 18개 설계 문서 명시). Plan 02 대기
+마지막 활동: 2026-02-09 — 40-01-PLAN.md 완료 (TEST-01, TEST-02 설계 완료)
 
-Progress: ████████████████░░░░ 80%
+Progress: ██████████████████░░ 90%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 8/10 plans complete, 4/5 phases complete (Phase 36, 37, 38, 39)
+**v0.9 진행:** 9/10 plans complete, 4/5 phases complete (Phase 36, 37, 38, 39 완료, Phase 40 진행중 1/2)
 
 ## 누적 컨텍스트
 
@@ -98,5 +98,5 @@ Phase 39-02 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 38 실행+검증 완료. 다음: `/gsd:plan-phase 40` (테스트 설계 + 문서 통합) — Phase 36/37/38/39 모두 완료, Phase 40이 마지막
-재개 파일: None
+중단 지점: 40-01-PLAN.md 완료. 다음: 40-02-PLAN.md 실행 (설계 문서 v0.9 통합 + pitfall 반영)
+재개 파일: .planning/phases/40-test-design-doc-integration/40-02-PLAN.md
