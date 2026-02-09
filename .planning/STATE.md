@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.0 구현 계획 수립 — Phase 46 완료, Phase 47 대기
+**현재 초점:** v1.0 구현 계획 수립 완료 — Phase 47 완료, v1.1 구현 착수 준비
 
 ## 현재 위치
 
 마일스톤: v1.0 -- 구현 계획 수립
-페이즈: 46 of 47 (확장+릴리스 objective 문서 생성)
-플랜: 2 of 2 in current phase (완료)
-상태: Phase 46 완료
-마지막 활동: 2026-02-09 -- 46-02-PLAN.md 완료 (v1.7/v2.0 objective 문서 생성)
+페이즈: 47 of 47 (설계 부채 추적 + 매핑 검증)
+플랜: 1 of 1 in current phase (완료)
+상태: v1.0 마일스톤 완료
+마지막 활동: 2026-02-09 -- 47-01-PLAN.md 완료 (설계 부채 추적 초기화 + 37개 문서 전수 매핑 검증)
 
-진행: [████████░░] 80% (v1.0 기준 4/5 plans)
+진행: [██████████] 100% (v1.0 기준 5/5 plans)
 
 ## 성과 지표
 
 **v0.1-v0.10 누적:** 110 plans, 276 reqs, 44 phases, 10 milestones, 30 설계 문서 (24-64)
 
-**v1.0 현재:** 3 phases, 5 plans (예정), 10 requirements, 4 plans 완료
+**v1.0 완료:** 3 phases, 5 plans, 10 requirements, 5 plans 완료
 
 ## 누적 컨텍스트
 
@@ -56,6 +56,8 @@
 - v1.0-46-02: v2.0 [HUMAN] 3건 — README 영문, CHANGELOG, 설계 부채 이연
 - v1.0-46-02: v2.0 npm 전체 7패키지 공개, MIT 라이선스, release-please 자동화
 - v1.0-46-02: v2.0 Docker 태깅 latest+semver+SHA, pre-release(rc) 3일 관찰 후 정식 발행
+- v1.0-47-01: design-debt.md가 운영 SSoT, v1.0-implementation-planning.md 섹션 4의 규칙 기반
+- v1.0-47-01: 37개 문서 번호 전수 매핑 확인 — "30개 설계 문서" 프로젝트 용어와 "37개 문서 번호" 실제 카운트 관계 명시
 
 ### 차단 요소/우려 사항
 
@@ -64,6 +66,6 @@
 
 ## 세션 연속성
 
-마지막 세션: 2026-02-09 14:05 UTC
-중단 지점: Phase 46 완료 (plan 01 + plan 02). v1.1~v2.0 objective 8개 생성 완료. Phase 47 대기.
-재개 파일: .planning/phases/46-ext-release-objectives/46-02-SUMMARY.md
+마지막 세션: 2026-02-09 14:31 UTC
+중단 지점: Phase 47 완료 (plan 01). v1.0 마일스톤 완료. v1.1 구현 착수 준비 완료.
+재개 파일: .planning/phases/47-design-debt-verification/47-01-SUMMARY.md
