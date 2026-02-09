@@ -25,8 +25,8 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 
 - [x] **Phase 36: 토큰 파일 인프라 + 알림 이벤트** - 공유 파일 유틸리티와 SESSION_EXPIRING_SOON 이벤트 설계
 - [x] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
-- [ ] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
-- [ ] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
+- [x] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
+- [x] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
 - [ ] **Phase 40: 테스트 설계 + 설계 문서 통합** - 18개 테스트 시나리오 명시 + 7개 기존 문서 v0.9 통합
 
 ## Phase Details
@@ -56,7 +56,7 @@ Plans:
   3. 자동 갱신 스케줄(60% TTL 경과, safeSetTimeout 래퍼, 서버 응답 기반 드리프트 보정)이 정의되어 있다
   4. 5종 갱신 실패 에러 각각의 대응 전략(재시도 횟수, 알림 트리거, 에러 상태 전이)이 정의되어 있다
   5. Lazy 401 reload(파일 재로드, 토큰 비교, API 재시도) 메커니즘이 정의되어 있다
-**Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
+**Plans**: 2 plans (Wave 1 -> Wave 2: 순차 실행)
 
 Plans:
 - [x] 37-01-PLAN.md -- SessionManager 인터페이스 + 토큰 로드 전략 설계 (SMGR-01, SMGR-03)
@@ -71,11 +71,11 @@ Plans:
   2. 갱신 중 tool 호출 시 동시성 처리(현재 토큰 사용, 갱신 완료 후 전환, in-flight 충돌 방지)가 정의되어 있다
   3. Claude Desktop 재시작 시 파일 복원, 갱신 도중 프로세스 kill 시 파일-우선 쓰기 순서가 정의되어 있다
   4. 세션 만료 시 tool 응답 형식(isError 대신 안내 메시지)과 반복 에러 시 연결 해제 방지 전략이 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 -> Wave 2: 순차 실행)
 
 Plans:
-- [ ] 38-01: MCP tool handler 통합 + ApiClient 리팩토링 설계
-- [ ] 38-02: 동시성 + 프로세스 생명주기 + Claude Desktop 에러 처리 설계
+- [x] 38-01-PLAN.md -- ApiClient 래퍼 클래스 + tool/resource handler 통합 패턴 설계 (SMGI-01)
+- [x] 38-02-PLAN.md -- 토큰 로테이션 동시성 + 프로세스 생명주기 + Claude Desktop 에러 처리 설계 (SMGI-02, SMGI-03, SMGI-04)
 
 ### Phase 39: CLI + Telegram 연동 설계
 **Goal**: CLI mcp setup/refresh-token 커맨드와 Telegram /newsession 플로우가 인터페이스, 동작, 출력 수준으로 정의된다
@@ -86,11 +86,11 @@ Plans:
   2. `waiaas mcp refresh-token` 커맨드의 동작(기존 세션 폐기 + 새 세션 생성 + constraints 계승 + 토큰 파일 교체)이 정의되어 있다
   3. Telegram `/newsession` 명령어의 chatId Tier 1 인증, 에이전트 목록 인라인 키보드, 세션 생성 + 토큰 파일 저장 + 완료 메시지 플로우가 정의되어 있다
   4. 기본 constraints 결정 규칙(agents.default_constraints > config.toml > 하드코딩 기본값) 3-level 우선순위가 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 39-01: CLI mcp setup + mcp refresh-token 커맨드 설계
-- [ ] 39-02: Telegram /newsession 플로우 + 기본 constraints 규칙 설계
+- [x] 39-01-PLAN.md -- CLI mcp 서브커맨드 그룹 설계: mcp setup (7단계 플로우, Claude Desktop config 안내) + mcp refresh-token (8단계 플로우, constraints 계승) (CLIP-01, CLIP-02)
+- [x] 39-02-PLAN.md -- Telegram /newsession 명령어 플로우 (인라인 키보드 에이전트 선택) + 기본 constraints 결정 규칙 (2-level + EXT-03 확장 예약) (TGSN-01, TGSN-02)
 
 ### Phase 40: 테스트 설계 + 설계 문서 통합
 **Goal**: 18개 테스트 시나리오(14 핵심 + 4 보안)가 설계 문서에 명시되고, 7개 기존 설계 문서에 v0.9 변경이 일관되게 통합된다
@@ -101,30 +101,30 @@ Plans:
   2. S-01~S-04 보안 시나리오(파일 권한/악성 내용/미인증/심볼릭 링크)의 검증 방법이 정의되어 있다
   3. 7개 기존 설계 문서(38, 35, 40, 54, 53, 24, 25)에 v0.9 변경이 [v0.9] 태그로 통합되어 있다
   4. 리서치 pitfall 5건(safeSetTimeout C-01, 원자적 쓰기 C-02, JWT 미검증 디코딩 C-03, Claude Desktop 에러 처리 H-04, 토큰 로테이션 충돌 H-05)의 대응이 설계 문서에 반영되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 40-01: 18개 테스트 시나리오 설계 문서 명시
-- [ ] 40-02: 7개 기존 설계 문서 v0.9 통합 + pitfall 반영
+- [ ] 40-01-PLAN.md -- 18개 테스트 시나리오(T-01~T-14, S-01~S-04) 설계 문서 명시: 검증 방법 + 테스트 레벨 + 관련 설계 결정 ID (TEST-01, TEST-02)
+- [ ] 40-02-PLAN.md -- 7개 기존 설계 문서 v0.9 통합 검증 + 25-sqlite EXT-03 이연 태그 + pitfall 교차 참조 매트릭스 + REQUIREMENTS.md 갱신 (INTEG-01, INTEG-02)
 
 ## Progress
 
 **Execution Order:**
-Phase 36 → Phase 37 → Phase 38 (Phase 39는 Phase 36 이후 병렬 가능) → Phase 40
+Phase 36 -> Phase 37 -> Phase 38 (Phase 39는 Phase 36 이후 병렬 가능) -> Phase 40
 
 **Dependencies:**
 ```
-Phase 36 ─┬─→ Phase 37 ──→ Phase 38 ──┐
-           └─→ Phase 39 ───────────────┤
-                                        └──→ Phase 40
+Phase 36 -+---> Phase 37 ---> Phase 38 --+
+           +---> Phase 39 ---------------+
+                                          +---> Phase 40
 ```
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 36. 토큰 파일 인프라 + 알림 이벤트 | 2/2 | Complete | 2026-02-09 |
 | 37. SessionManager 핵심 설계 | 2/2 | Complete | 2026-02-09 |
-| 38. SessionManager MCP 통합 설계 | 0/2 | Not started | - |
-| 39. CLI + Telegram 연동 설계 | 0/2 | Not started | - |
+| 38. SessionManager MCP 통합 설계 | 2/2 | Complete | 2026-02-09 |
+| 39. CLI + Telegram 연동 설계 | 2/2 | Complete | 2026-02-09 |
 | 40. 테스트 설계 + 설계 문서 통합 | 0/2 | Not started | - |
 
 ---

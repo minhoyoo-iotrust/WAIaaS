@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 37 완료 + 검증 PASSED — 다음: Phase 38 또는 39 (병렬 가능)
+**현재 초점:** v0.9 Phase 38 완료 + Phase 39 완료 -- Phase 40 (테스트 설계 + 문서 통합)만 남음
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 37 of 40 (SessionManager 핵심 설계) -- Complete + Verified
-플랜: 2 of 2 in current phase (완료)
-상태: Phase complete + verified (5/5 must-haves)
-마지막 활동: 2026-02-09 — Phase 37 완료 + 검증 PASSED (5/5 must-haves)
+페이즈: 38 of 40 (SessionManager MCP 통합 설계) -- Phase 38 Complete
+플랜: 38-02 완료 (Phase 38 2/2)
+상태: Phase 38 complete + verified (4/4 must-haves, SMGI-D01~D04 설계 결정 4건). Phase 36, 37, 38, 39 모두 완료. Phase 40 대기
+마지막 활동: 2026-02-09 — Phase 38 완료 + 검증 PASSED (4/4 must-haves)
 
-Progress: ████████░░░░░░░░░░░░ 40%
+Progress: ████████████████░░░░ 80%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 4/10 plans complete, 2/5 phases complete (Phase 36, 37)
+**v0.9 진행:** 8/10 plans complete, 4/5 phases complete (Phase 36, 37, 38, 39)
 
 ## 누적 컨텍스트
 
@@ -67,6 +67,30 @@ Phase 37-02 설계 결정:
 - SM-13: MCP SessionManager는 알림 직접 발송하지 않음 (데몬 자동, NOTI-01)
 - SM-14: 갱신 중 getToken()은 구 토큰 반환 (동시성 안전)
 
+Phase 38-01 설계 결정:
+- SMGI-D01: getState()를 4번째 public 메서드로 추가 (3-public -> 4-public: getToken/getState/start/dispose)
+
+Phase 38-02 설계 결정:
+- SMGI-D02: Mutex/Lock 미사용, 50ms 대기 + 401 재시도 (Node.js 단일 스레드, 차단 지연 방지)
+- SMGI-D03: 에러 복구 루프 SessionManager 소속, 60초 polling (fs.watch 대신 안정적 polling, SM-12 일관)
+- SMGI-D04: console.log 금지, console.error 통일 (stdio stdout 오염 → JSON-RPC 파싱 실패 방지)
+
+Phase 39-01 설계 결정:
+- CLI-01: mcp 서브커맨드 그룹 (setup + refresh-token) 진입점 패턴
+- CLI-02: mcp setup 7단계 동작 플로우 (데몬확인 -> 에이전트결정 -> constraints -> 세션생성 -> 파일저장 -> 출력 -> config안내)
+- CLI-03: mcp refresh-token 8단계 동작 플로우 (생성 -> 파일 -> 폐기 순서, Pitfall 5 대응)
+- CLI-04: 에이전트 자동 선택 (1개면 자동, 0개 에러, 2개+ 필수)
+- CLI-05: Claude Desktop config.json 플랫폼별 경로 안내 (macOS/Windows/Linux)
+- CLI-06: constraints 계승 규칙 (기존 세션 constraints 그대로 전달, renewalCount 리셋)
+
+Phase 39-02 설계 결정:
+- TG-01: /newsession 9번째 명령어 등록 (Tier 1 chatId 인증)
+- TG-02: 에이전트 인라인 키보드 (1개 자동, 2개+ 선택, callback_data 47바이트)
+- TG-03: createNewSession private 메서드 (세션 생성 + writeMcpToken + 완료 메시지)
+- TG-04: 기본 constraints 2-level (config.toml > 하드코딩), EXT-03 3-level 확장 예약
+- TG-05: resolveDefaultConstraints 공용 함수 (CLI + Telegram 공유)
+- TG-06: 최소 보안 보장 (expiresIn/maxRenewals 항상 값 존재, Pitfall 4 대응)
+
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
@@ -74,5 +98,5 @@ Phase 37-02 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 37 실행+검증 완료. 다음: `/gsd:plan-phase 38` (MCP 통합) 또는 `/gsd:plan-phase 39` (CLI+Telegram, Phase 36 이후 독립)
+중단 지점: Phase 38 실행+검증 완료. 다음: `/gsd:plan-phase 40` (테스트 설계 + 문서 통합) — Phase 36/37/38/39 모두 완료, Phase 40이 마지막
 재개 파일: None

@@ -3,9 +3,10 @@
 **문서 ID:** CLI-REDESIGN
 **작성일:** 2026-02-07
 **v0.8 업데이트:** 2026-02-09
-**상태:** v0.8 갱신
-**참조:** CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CORE-01 (24-monorepo-data-directory.md), API-SPEC (37-rest-api-complete-spec.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
-**요구사항:** DX-01, DX-02, DX-03, DX-04, DX-05
+**v0.9 CLI MCP 서브커맨드:** 2026-02-09
+**상태:** v0.9 갱신
+**참조:** CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CORE-01 (24-monorepo-data-directory.md), API-SPEC (37-rest-api-complete-spec.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), SDK-MCP (38-sdk-mcp-interface.md)
+**요구사항:** DX-01, DX-02, DX-03, DX-04, DX-05, CLIP-01, CLIP-02
 
 ---
 
@@ -24,6 +25,8 @@ WAIaaS CLI 플로우 재설계를 정의한다. v0.2의 `waiaas init` 4단계를
 | DX-03 | `waiaas session create` masterAuth(implicit) 기반 | 섹션 4 |
 | DX-04 | `--quickstart` 4단계 오케스트레이션 | 섹션 6 |
 | DX-05 | `--dev` 모드 고정 패스워드 + 보안 경고; [v0.8] Owner 미등록 시 agent info 안내 메시지 | 섹션 5, 7 |
+| CLIP-01 | [v0.9] `waiaas mcp setup` MCP 환경 초기 설정 (세션 생성 + 토큰 파일 저장 + Claude Desktop 안내) | 섹션 10 |
+| CLIP-02 | [v0.9] `waiaas mcp refresh-token` 수동 토큰 교체 (기존 세션 constraints 계승, 생성->파일->폐기 순서) | 섹션 10 |
 
 ### 1.3 참조 문서
 
@@ -797,6 +800,8 @@ function parseSessionCreateOptions(args: string[]): SessionCreateOptions {
 | `waiaas owner reject <txId>` | masterAuth (implicit) | O | 유지 (v0.5 변경) | 거래 거절 |
 | `waiaas owner withdraw --agent <name\|id>` | masterAuth (implicit) | O | [v0.8] **신규** | 에이전트 자금 회수 (LOCKED에서만 동작) |
 | `waiaas owner recover` | dualAuth (owner + master) | O | 유지 | Kill Switch 복구 |
+| `waiaas mcp setup` | masterAuth (implicit) | O | [v0.9] **신규** | MCP 환경 초기 설정 (세션 생성 + 토큰 파일 + Claude Desktop 안내) |
+| `waiaas mcp refresh-token` | masterAuth (implicit) | O | [v0.9] **신규** | MCP 토큰 교체 (기존 constraints 계승, 생성->파일->폐기) |
 | `waiaas backup create` | 없음 (파일 시스템) | X | 유지 | 데이터 백업 생성 |
 | `waiaas backup restore <path>` | 없음 (파일 시스템) | X | 유지 | 백업 복원 |
 
@@ -848,6 +853,7 @@ switch (subcommand) {
   case 'agent':   return runAgent(subAction, process.argv.slice(4))
   case 'session': return runSession(subAction, process.argv.slice(4))
   case 'owner':   return runOwner(subAction, process.argv.slice(4))
+  case 'mcp':     return runMcp(subAction, process.argv.slice(4))  // [v0.9] MCP 서브커맨드 그룹
   case 'backup':  return runBackup(subAction, process.argv.slice(4))
   default:
     if (values.version) return printVersion()
@@ -862,6 +868,7 @@ switch (subcommand) {
 - `owner` 서브커맨드 그룹 신규 추가 (`owner approve`, `owner reject`, `owner recover`, [v0.8] `owner withdraw`)
 - `agent` 서브커맨드에 `create` 액션 추가 (기존 `list`, `info`에 더하여)
 - [v0.8] `agent` 서브커맨드에 `set-owner`, `remove-owner` 액션 추가
+- [v0.9] `mcp` 서브커맨드 그룹 신규 추가 (`mcp setup`, `mcp refresh-token`)
 
 ### 5.5 agent info 출력 확장 [v0.8] (DX-05)
 
@@ -1891,8 +1898,599 @@ v0.8 데몬 시작 시 Drizzle ORM의 자동 마이그레이션이 실행된다.
 | DX-03 | `waiaas session create` masterAuth(implicit) 기반 | 섹션 4 (3가지 출력 포맷, 사용 패턴, parseArgs 구현) | 완료 |
 | DX-04 | [v0.8] `--quickstart` 4단계 오케스트레이션 (`--chain`만 필수, `--owner` 선택) | 섹션 6 (init->start->agent->session, 에러 롤백, 패스워드 자동 생성) | 완료 |
 | DX-05 | `--dev` 모드 (고정 패스워드 + 보안 경고); [v0.8] Owner 미등록 시 agent info 안내 메시지 | 섹션 5.5 (agent info 출력 확장), 섹션 7 (3가지 경고 메커니즘) | 완료 |
+| CLIP-01 | [v0.9] `waiaas mcp setup` MCP 환경 초기 설정 (세션 생성 + 토큰 파일 저장 + Claude Desktop 안내) | 섹션 10.2 (7단계 플로우, parseArgs 옵션, 에러 처리) | 완료 |
+| CLIP-02 | [v0.9] `waiaas mcp refresh-token` 수동 토큰 교체 (기존 constraints 계승, 생성->파일->폐기) | 섹션 10.3 (8단계 플로우, constraints 계승, 에러 처리) | 완료 |
 
-**5/5 요구사항 완료.**
+**7/7 요구사항 완료.**
+
+---
+
+## 10. [v0.9] MCP 서브커맨드 그룹 (CLIP-01, CLIP-02)
+
+### 10.1 설계 원칙
+
+MCP 환경에서 세션 토큰의 초기 설정과 수동 교체를 CLI에서 수행하는 커맨드 그룹이다. `waiaas mcp setup`은 세션 생성 + 토큰 파일 저장 + Claude Desktop config.json 안내까지 한 번에 수행하며, `waiaas mcp refresh-token`은 절대 수명 만료 후 새 세션을 발급하고 기존 constraints를 계승한다.
+
+**Phase 36 유틸리티 의존:**
+- `getMcpTokenPath(dataDir?)`: 토큰 파일 경로 결정 (`~/.waiaas/mcp-token`)
+- `writeMcpToken(path, token)`: 원자적 쓰기 (write-then-rename, TF-02)
+- `readMcpToken(path)`: 동기 읽기 (readFileSync, TF-03)
+
+**Phase 37 참조:**
+- `jose.decodeJwt(token)`: JWT payload에서 `sid` 추출 (SM-05 패턴)
+
+**인증:** 두 커맨드 모두 masterAuth(implicit). 데몬 실행 중 = 인증 완료.
+
+### 10.2 `waiaas mcp setup` (CLIP-01)
+
+세션 발급 + 토큰 파일 생성 + Claude Desktop config.json 안내를 한 번에 수행한다.
+
+#### 10.2.1 커맨드 인터페이스
+
+```
+waiaas mcp setup [options]
+
+Options:
+  --agent <name|id>        에이전트 (선택: 1개면 자동 선택, 0개 에러, 2개+ 필수)
+  --expires-in <seconds>   세션 만료 시간 (선택. 기본: 604800 = 7일)
+  --max-amount <amount>    최대 거래 금액 (선택. maxAmountPerTx)
+  --allowed-ops <ops>      허용 작업 (선택. 쉼표 구분 allowedOperations)
+  --data-dir <path>        데이터 디렉토리 (선택. WAIAAS_DATA_DIR 오버라이드)
+  --output <text|json>     출력 형식 (선택. 기본: text)
+  -h, --help               도움말
+```
+
+#### 10.2.2 parseArgs 구현
+
+```typescript
+// packages/cli/src/commands/mcp.ts
+function parseMcpSetupOptions(args: string[]): McpSetupOptions {
+  const { values } = parseArgs({
+    args,
+    options: {
+      agent: { type: 'string' },
+      'expires-in': { type: 'string' },
+      'max-amount': { type: 'string' },
+      'allowed-ops': { type: 'string' },
+      'data-dir': { type: 'string' },
+      output: { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
+    },
+    strict: true,
+  })
+
+  return {
+    agent: values.agent,                    // string | undefined
+    expiresIn: values['expires-in']
+      ? parseInt(values['expires-in'], 10)
+      : undefined,
+    maxAmount: values['max-amount'],         // string | undefined
+    allowedOps: values['allowed-ops']
+      ?.split(',').map(s => s.trim()),       // string[] | undefined
+    dataDir: values['data-dir'],
+    output: (values.output ?? 'text') as 'text' | 'json',
+  }
+}
+```
+
+#### 10.2.3 동작 플로우 (7단계)
+
+```
+waiaas mcp setup [--agent <name>]
+  │
+  ├─ Step 1: 데몬 실행 확인
+  │   GET /health → 실패 시 에러 + exit(1)
+  │
+  ├─ Step 2: 에이전트 결정
+  │   resolveAgentId(baseUrl, options.agent)
+  │   ├─ GET /v1/agents → 에이전트 목록 조회
+  │   ├─ 0개 → 에러 "No agents found"
+  │   ├─ 1개 → 자동 선택 (--agent 미지정 허용)
+  │   └─ 2개+ → --agent 미지정 시 에러 "Multiple agents found. Use --agent"
+  │
+  ├─ Step 3: 기본 constraints 결정
+  │   resolveDefaultConstraints(config, options)
+  │   ├─ CLI 옵션 (--expires-in, --max-amount, --allowed-ops)
+  │   ├─ > config.toml [session].default_constraints
+  │   └─ > 하드코딩 기본값 (expiresIn=604800, maxRenewals=30)
+  │
+  ├─ Step 4: 세션 생성
+  │   POST /v1/sessions (masterAuth implicit)
+  │   Body: {
+  │     agentId,
+  │     expiresIn,
+  │     maxAmountPerTx?,
+  │     allowedOperations?,
+  │     maxRenewals
+  │   }
+  │
+  ├─ Step 5: 토큰 파일 저장
+  │   writeMcpToken(getMcpTokenPath(options.dataDir), session.token)
+  │   (Phase 36 유틸리티: write-then-rename 원자적 쓰기, mode 0o600)
+  │
+  ├─ Step 6: 텍스트 출력
+  │   세션 정보: Agent, Expires, Token path
+  │
+  └─ Step 7: Claude Desktop config.json 안내
+      플랫폼별 경로 + JSON 스니펫 출력
+```
+
+#### 10.2.4 구현 수도코드
+
+```typescript
+// packages/cli/src/commands/mcp.ts
+
+import { getMcpTokenPath, writeMcpToken } from '@waiaas/core/utils/token-file'
+
+/**
+ * mcp 서브커맨드 그룹 진입점
+ */
+function runMcp(action: string | undefined, args: string[]): void {
+  switch (action) {
+    case 'setup':         return runMcpSetup(args)
+    case 'refresh-token': return runMcpRefreshToken(args)
+    default:
+      console.error('Usage: waiaas mcp <setup|refresh-token>')
+      console.error('')
+      console.error('Commands:')
+      console.error('  setup          Create MCP session and save token file')
+      console.error('  refresh-token  Replace expired token with new session')
+      process.exit(1)
+  }
+}
+
+async function runMcpSetup(args: string[]): Promise<void> {
+  const options = parseMcpSetupOptions(args)
+  if (options.help) return printMcpSetupHelp()
+
+  const config = loadCliConfig(options.dataDir)
+  const baseUrl = `http://127.0.0.1:${config.port}`
+
+  // Step 1: 데몬 실행 확인
+  try {
+    await fetch(`${baseUrl}/health`)
+  } catch {
+    console.error('Error: Cannot connect to WAIaaS daemon.')
+    console.error("Daemon is not running. Start: waiaas start")
+    process.exit(1)
+  }
+
+  // Step 2: 에이전트 결정
+  const agentId = await resolveAgentId(baseUrl, options.agent)
+
+  // Step 3: 기본 constraints 결정
+  const constraints = resolveDefaultConstraints(config, options)
+
+  // Step 4: 세션 생성
+  const body: Record<string, unknown> = {
+    agentId,
+    expiresIn: constraints.expiresIn,
+    maxRenewals: constraints.maxRenewals,
+  }
+  if (constraints.maxAmountPerTx) body.maxAmountPerTx = constraints.maxAmountPerTx
+  if (constraints.allowedOperations) body.allowedOperations = constraints.allowedOperations
+
+  const response = await fetch(`${baseUrl}/v1/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    console.error(`Error: Session creation failed. ${error.error?.message ?? 'Unknown error'}`)
+    process.exit(1)
+  }
+
+  const session = await response.json()
+
+  // Step 5: 토큰 파일 저장
+  const tokenPath = getMcpTokenPath(options.dataDir)
+  writeMcpToken(tokenPath, session.token)
+
+  // Step 6 & 7: 출력
+  if (options.output === 'json') {
+    console.log(JSON.stringify({
+      agentId: session.agentId,
+      agentName: session.agentName,
+      sessionId: session.sessionId,
+      expiresAt: session.expiresAt,
+      tokenPath,
+      configPath: getClaudeDesktopConfigPath(),
+    }, null, 2))
+  } else {
+    printMcpSetupResult(session, tokenPath, baseUrl)
+  }
+}
+
+/**
+ * 에이전트 자동 선택 로직 (CLI-04)
+ */
+async function resolveAgentId(baseUrl: string, agentOption?: string): Promise<string> {
+  const res = await fetch(`${baseUrl}/v1/agents`)
+  const agents = await res.json()
+
+  if (agents.length === 0) {
+    console.error('Error: No agents found. Create one first: waiaas agent create')
+    process.exit(1)
+  }
+
+  if (agentOption) {
+    // 이름 또는 ID로 매칭
+    const match = agents.find(
+      (a: any) => a.id === agentOption || a.name === agentOption
+    )
+    if (!match) {
+      console.error(`Error: Agent '${agentOption}' not found.`)
+      console.error('Available agents:')
+      agents.forEach((a: any) => console.error(`  - ${a.name} (${a.id})`))
+      process.exit(1)
+    }
+    return match.id
+  }
+
+  // --agent 미지정
+  if (agents.length === 1) {
+    return agents[0].id  // 자동 선택
+  }
+
+  // 2개 이상 + --agent 미지정
+  console.error('Error: Multiple agents found. Use --agent <name|id> to specify.')
+  console.error('Available agents:')
+  agents.forEach((a: any) => console.error(`  - ${a.name} (${a.id})`))
+  process.exit(1)
+}
+
+/**
+ * 기본 constraints 결정 (CLI 옵션 > config.toml > 하드코딩)
+ */
+function resolveDefaultConstraints(
+  config: CliConfig,
+  options: McpSetupOptions
+): SessionConstraints {
+  return {
+    expiresIn: options.expiresIn
+      ?? config.session?.default_expires_in
+      ?? 604800,  // 7일
+    maxRenewals: config.session?.default_max_renewals ?? 30,
+    maxAmountPerTx: options.maxAmount ?? undefined,
+    allowedOperations: options.allowedOps ?? undefined,
+  }
+}
+```
+
+#### 10.2.5 텍스트 출력 예시
+
+```
+$ waiaas mcp setup
+
+  MCP session created for agent "trading-bot"
+
+  Agent:    trading-bot
+  Session:  019502c0-7b3c-7d4e-8f5a-1234567890ab
+  Expires:  2026-02-16T08:18:20.000Z (7 days)
+  Token:    ~/.waiaas/mcp-token (saved)
+
+  Claude Desktop 설정 (최초 1회):
+  ────────────────────────────────
+  Config 파일 위치:
+    macOS:   ~/Library/Application Support/Claude/claude_desktop_config.json
+    Windows: %APPDATA%\Claude\claude_desktop_config.json
+    Linux:   ~/.config/Claude/claude_desktop_config.json
+
+  아래 내용을 config.json의 "mcpServers"에 추가하세요:
+
+  {
+    "mcpServers": {
+      "waiaas-wallet": {
+        "command": "npx",
+        "args": ["@waiaas/mcp"],
+        "env": {
+          "WAIAAS_SESSION_TOKEN": "wai_sess_eyJ...",
+          "WAIAAS_BASE_URL": "http://127.0.0.1:3100"
+        }
+      }
+    }
+  }
+
+  NOTE: 토큰 파일 기반이므로 이후 갱신은 SessionManager가 자동 처리합니다.
+  config.json 재수정은 불필요합니다.
+```
+
+#### 10.2.6 JSON 출력 포맷 (`--output json`)
+
+```json
+{
+  "agentId": "019502a8-0000-7d4e-8f5a-1234567890ab",
+  "agentName": "trading-bot",
+  "sessionId": "019502c0-7b3c-7d4e-8f5a-1234567890ab",
+  "expiresAt": "2026-02-16T08:18:20.000Z",
+  "tokenPath": "/Users/owner/.waiaas/mcp-token",
+  "configPath": "/Users/owner/Library/Application Support/Claude/claude_desktop_config.json"
+}
+```
+
+#### 10.2.7 Claude Desktop config.json 플랫폼별 경로 (CLI-05)
+
+```typescript
+/**
+ * Claude Desktop config.json 경로 (플랫폼별)
+ */
+function getClaudeDesktopConfigPath(): string {
+  switch (process.platform) {
+    case 'darwin':
+      return join(homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
+    case 'win32':
+      return join(process.env.APPDATA ?? '', 'Claude', 'claude_desktop_config.json')
+    case 'linux':
+      return join(homedir(), '.config', 'Claude', 'claude_desktop_config.json')
+    default:
+      return '~/.config/Claude/claude_desktop_config.json'  // fallback
+  }
+}
+```
+
+| 플랫폼 | 경로 |
+|--------|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Linux | `~/.config/Claude/claude_desktop_config.json` |
+
+#### 10.2.8 에러 케이스 테이블
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| 데몬 미실행 | `Error: Cannot connect to WAIaaS daemon. Daemon is not running. Start: waiaas start` | 1 |
+| 에이전트 0개 | `Error: No agents found. Create one first: waiaas agent create` | 1 |
+| 에이전트 2개+ & --agent 미지정 | `Error: Multiple agents found. Use --agent <name\|id> to specify.` | 1 |
+| --agent로 지정한 에이전트 미발견 | `Error: Agent '<name>' not found.` | 1 |
+| 세션 생성 실패 | `Error: Session creation failed. <server error message>` | 1 |
+
+---
+
+### 10.3 `waiaas mcp refresh-token` (CLIP-02)
+
+절대 수명 만료 후(또는 수동 교체 필요 시) 새 세션을 발급하고 토큰 파일을 교체한다. 기존 세션의 constraints를 계승하여 동일한 권한 수준을 유지한다.
+
+**동작 순서 (Pitfall 5 대응):** 새 세션 생성 -> 토큰 파일 교체 -> 구 세션 폐기. 이 순서는 파일 쓰기 실패 시 구 세션이 살아있어 서비스 연속성을 보장한다.
+
+#### 10.3.1 커맨드 인터페이스
+
+```
+waiaas mcp refresh-token [options]
+
+Options:
+  --data-dir <path>        데이터 디렉토리 (선택)
+  --output <text|json>     출력 형식 (선택. 기본: text)
+  -h, --help               도움말
+```
+
+#### 10.3.2 parseArgs 구현
+
+```typescript
+function parseMcpRefreshTokenOptions(args: string[]): McpRefreshTokenOptions {
+  const { values } = parseArgs({
+    args,
+    options: {
+      'data-dir': { type: 'string' },
+      output: { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
+    },
+    strict: true,
+  })
+
+  return {
+    dataDir: values['data-dir'],
+    output: (values.output ?? 'text') as 'text' | 'json',
+  }
+}
+```
+
+#### 10.3.3 동작 플로우 (8단계)
+
+```
+waiaas mcp refresh-token
+  │
+  ├─ Step 1: 데몬 실행 확인
+  │   GET /health → 실패 시 에러 + exit(1)
+  │
+  ├─ Step 2: 기존 토큰 로드
+  │   readMcpToken(getMcpTokenPath(options.dataDir))
+  │   └─ 파일 없음 → 에러 "No token file. Run: waiaas mcp setup"
+  │
+  ├─ Step 3: sessionId 추출
+  │   jose.decodeJwt(token) → payload.sid
+  │   └─ 디코딩 실패 → 에러 "Invalid token format"
+  │
+  ├─ Step 4: 기존 세션 조회
+  │   GET /v1/sessions/:sessionId (masterAuth implicit)
+  │   ├─ constraints + agentId 획득
+  │   └─ 세션 미발견 → 에러 "Session not found. Run: waiaas mcp setup"
+  │
+  ├─ Step 5: 새 세션 생성
+  │   POST /v1/sessions (masterAuth implicit)
+  │   Body: {
+  │     agentId: 기존 세션의 agentId,
+  │     expiresIn: 기존 세션의 원래 TTL (original_expires_in 또는 604800),
+  │     maxAmountPerTx: 기존 constraints 계승,
+  │     allowedOperations: 기존 constraints 계승,
+  │     maxRenewals: 기존 constraints 계승
+  │   }
+  │   └─ renewalCount는 0으로 리셋 (새 세션이므로 서버 자동 처리)
+  │
+  ├─ Step 6: 토큰 파일 교체
+  │   writeMcpToken(getMcpTokenPath(), newSession.token)
+  │   (원자적 쓰기: write-then-rename)
+  │
+  ├─ Step 7: 구 세션 폐기
+  │   DELETE /v1/sessions/:oldSessionId
+  │   └─ 실패해도 경고만 출력 (새 세션은 이미 활성)
+  │
+  └─ Step 8: 완료 출력
+      갱신 정보: Old session → New session, Agent, Expires
+```
+
+#### 10.3.4 구현 수도코드
+
+```typescript
+import { decodeJwt } from 'jose'
+import { getMcpTokenPath, readMcpToken, writeMcpToken } from '@waiaas/core/utils/token-file'
+
+async function runMcpRefreshToken(args: string[]): Promise<void> {
+  const options = parseMcpRefreshTokenOptions(args)
+  if (options.help) return printMcpRefreshTokenHelp()
+
+  const config = loadCliConfig(options.dataDir)
+  const baseUrl = `http://127.0.0.1:${config.port}`
+
+  // Step 1: 데몬 실행 확인
+  try {
+    await fetch(`${baseUrl}/health`)
+  } catch {
+    console.error('Error: Cannot connect to WAIaaS daemon.')
+    console.error("Daemon is not running. Start: waiaas start")
+    process.exit(1)
+  }
+
+  // Step 2: 기존 토큰 로드
+  const tokenPath = getMcpTokenPath(options.dataDir)
+  let oldToken: string
+  try {
+    oldToken = readMcpToken(tokenPath)
+  } catch {
+    console.error('Error: No token file found.')
+    console.error('Run: waiaas mcp setup')
+    process.exit(1)
+  }
+
+  // Step 3: sessionId 추출 (SM-05 패턴: jose decodeJwt 무검증 디코딩)
+  let oldSessionId: string
+  try {
+    const payload = decodeJwt(oldToken)
+    oldSessionId = payload.sid as string
+    if (!oldSessionId) throw new Error('Missing sid')
+  } catch {
+    console.error('Error: Invalid token format. Cannot extract session ID.')
+    console.error('Run: waiaas mcp setup')
+    process.exit(1)
+  }
+
+  // Step 4: 기존 세션 조회
+  const sessionRes = await fetch(`${baseUrl}/v1/sessions/${oldSessionId}`)
+  if (!sessionRes.ok) {
+    console.error(`Error: Session '${oldSessionId}' not found.`)
+    console.error('The session may have been revoked or expired.')
+    console.error('Run: waiaas mcp setup')
+    process.exit(1)
+  }
+  const oldSession = await sessionRes.json()
+
+  // Step 5: 새 세션 생성 (constraints 계승, CLI-06)
+  const newSessionBody: Record<string, unknown> = {
+    agentId: oldSession.agentId,
+    expiresIn: oldSession.originalExpiresIn ?? oldSession.constraints?.expiresIn ?? 604800,
+    maxRenewals: oldSession.constraints?.maxRenewals ?? 30,
+  }
+  // constraints 계승 (존재하는 필드만 전달)
+  if (oldSession.constraints?.maxAmountPerTx) {
+    newSessionBody.maxAmountPerTx = oldSession.constraints.maxAmountPerTx
+  }
+  if (oldSession.constraints?.allowedOperations) {
+    newSessionBody.allowedOperations = oldSession.constraints.allowedOperations
+  }
+
+  const createRes = await fetch(`${baseUrl}/v1/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newSessionBody),
+  })
+
+  if (!createRes.ok) {
+    const error = await createRes.json()
+    console.error(`Error: New session creation failed. ${error.error?.message ?? 'Unknown error'}`)
+    process.exit(1)
+  }
+
+  const newSession = await createRes.json()
+
+  // Step 6: 토큰 파일 교체 (원자적 쓰기)
+  writeMcpToken(tokenPath, newSession.token)
+
+  // Step 7: 구 세션 폐기 (실패해도 경고만)
+  try {
+    const deleteRes = await fetch(`${baseUrl}/v1/sessions/${oldSessionId}`, {
+      method: 'DELETE',
+    })
+    if (!deleteRes.ok) {
+      console.warn(`Warning: Failed to revoke old session '${oldSessionId}'. It may expire naturally.`)
+    }
+  } catch {
+    console.warn(`Warning: Could not reach daemon to revoke old session. It may expire naturally.`)
+  }
+
+  // Step 8: 완료 출력
+  if (options.output === 'json') {
+    console.log(JSON.stringify({
+      oldSessionId,
+      newSessionId: newSession.sessionId,
+      agentId: newSession.agentId,
+      agentName: newSession.agentName,
+      expiresAt: newSession.expiresAt,
+      tokenPath,
+      oldSessionRevoked: true,
+    }, null, 2))
+  } else {
+    console.log('')
+    console.log('  MCP token refreshed successfully!')
+    console.log('')
+    console.log(`  Old session: ${oldSessionId} (revoked)`)
+    console.log(`  New session: ${newSession.sessionId}`)
+    console.log(`  Agent:       ${newSession.agentName}`)
+    console.log(`  Expires:     ${newSession.expiresAt}`)
+    console.log(`  Token:       ${tokenPath} (updated)`)
+    console.log('')
+    console.log('  No config.json change needed -- SessionManager loads from file.')
+  }
+}
+```
+
+#### 10.3.5 constraints 계승 규칙 (CLI-06)
+
+| 항목 | 계승 방법 | 비고 |
+|------|----------|------|
+| `agentId` | 기존 세션에서 복사 | 동일 에이전트 |
+| `expiresIn` | 기존 세션의 원래 TTL (`originalExpiresIn` 또는 `constraints.expiresIn`) | 기본값 604800 |
+| `maxAmountPerTx` | 기존 `constraints.maxAmountPerTx` 그대로 | null이면 미전달 |
+| `allowedOperations` | 기존 `constraints.allowedOperations` 그대로 | null이면 미전달 |
+| `maxRenewals` | 기존 `constraints.maxRenewals` 값 계승 | 기본값 30 |
+| `renewalCount` | 0으로 리셋 | 새 세션이므로 서버가 자동 처리 |
+
+#### 10.3.6 텍스트 출력 예시
+
+```
+$ waiaas mcp refresh-token
+
+  MCP token refreshed successfully!
+
+  Old session: 019502c0-aaaa-7d4e-8f5a-1234567890ab (revoked)
+  New session: 019502c0-bbbb-7d4e-8f5a-1234567890ab
+  Agent:       trading-bot
+  Expires:     2026-02-16T08:18:20.000Z
+  Token:       ~/.waiaas/mcp-token (updated)
+
+  No config.json change needed -- SessionManager loads from file.
+```
+
+#### 10.3.7 에러 케이스 테이블
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| 데몬 미실행 | `Error: Cannot connect to WAIaaS daemon. Daemon is not running. Start: waiaas start` | 1 |
+| 토큰 파일 없음 | `Error: No token file found. Run: waiaas mcp setup` | 1 |
+| JWT 디코딩 실패 | `Error: Invalid token format. Cannot extract session ID. Run: waiaas mcp setup` | 1 |
+| 세션 미발견 | `Error: Session '<id>' not found. The session may have been revoked or expired. Run: waiaas mcp setup` | 1 |
+| 새 세션 생성 실패 | `Error: New session creation failed. <server error message>` | 1 |
+| 구 세션 폐기 실패 | `Warning: Failed to revoke old session '<id>'. It may expire naturally.` | 0 (경고) |
 
 ---
 
@@ -2032,3 +2630,4 @@ Phase 35 Plan 03 (35-03) 검증 단계에서 이 체크리스트를 사용하여
 *CLI-REDESIGN v1.0*
 *부록 A 추가: 2026-02-07 (Plan: 04)*
 *v0.8 전면 갱신: 2026-02-09 (Phase 35-01) -- --owner 선택, set-owner/remove-owner/withdraw 신규, agent info 안내, --quickstart 간소화, Kill Switch withdraw 방안 A 채택*
+*v0.9 MCP 서브커맨드 추가: 2026-02-09 (Phase 39-01) -- mcp setup(7단계 플로우) + mcp refresh-token(8단계 플로우, 생성->파일->폐기 순서), CLIP-01/CLIP-02, CLI-01~CLI-06 설계 결정*

@@ -6,6 +6,7 @@
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 API 통합 프로토콜:** 2026-02-08
 **v0.9 SessionManager 핵심 설계:** 2026-02-09 (Phase 37-01: 인터페이스 + 토큰 로드, Phase 37-02: 갱신 + 실패 + reload)
+**v0.9 SessionManager MCP 통합 설계:** 2026-02-09 (Phase 38-01: ApiClient + tool/resource handler 통합, Phase 38-02: 동시성 + 생명주기 + 에러 처리)
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -3765,6 +3766,1277 @@ async handleUnauthorized(): Promise<boolean> {
 
 > **Phase 36-02 연결:** SESSION_EXPIRING_SOON 알림은 데몬이 갱신 API 처리 시 자동 발송한다 (NOTI-01). MCP SessionManager가 RENEWAL_LIMIT_REACHED/LIFETIME_EXCEEDED를 수신해도 별도 알림 호출 없이 로그만 출력한다.
 
+### 6.5 [v0.9] SessionManager MCP 통합 설계 (Phase 38)
+
+Phase 37에서 확정된 SessionManager(getToken/start/dispose, 9개 내부 상태, 5개 내부 메서드)를 MCP tool/resource handler와 실제로 통합하기 위한 설계이다. MCP SDK v1.x에 미들웨어/hook 시스템이 없으므로, 모든 데몬 API 호출을 캡슐화하는 **ApiClient 래퍼 클래스**를 도입하여 인증 헤더 관리, 401 자동 재시도, 세션 만료 graceful 응답을 한 곳에 집중시킨다.
+
+**Phase 38 목표:**
+1. **ApiClient 래퍼 클래스** -- 9개 handler(6 tool + 3 resource)의 인증/재시도/에러 처리를 단일 클래스에 캡슐화 (SMGI-01)
+2. **Tool handler 통합** -- 기존 환경변수+직접 fetch 패턴을 apiClient.get()/post() + toToolResult() 공통 변환으로 리팩토링
+3. **Resource handler 통합** -- 동일 ApiClient + toResourceResult() 패턴으로 리소스 핸들러도 통합
+
+#### 6.5.1 [v0.9] SessionManager.getState() 추가 (Phase 38 확장)
+
+Phase 37에서 `state` 필드가 private으로 정의되었으나(SM-03), ApiClient가 API 호출 전 세션 상태를 사전 확인하려면 public 접근이 필요하다.
+
+**getState() public 메서드:**
+
+| 항목 | 내용 |
+|------|------|
+| 시그니처 | `getState(): SessionState` |
+| 반환 타입 | `'active' \| 'expired' \| 'error'` |
+| 동작 | 현재 내부 `state` 필드를 그대로 반환 (순수 getter, 부수효과 없음) |
+| 호출자 | `ApiClient.request()` -- API 호출 전 세션 상태 확인용 |
+
+```typescript
+// SessionManager에 추가되는 4번째 public 메서드
+getState(): SessionState {
+  return this.state
+}
+```
+
+> **설계 결정 SMGI-D01:** `getState()`를 4번째 public 메서드로 추가. Phase 37의 3-public(getToken/start/dispose)에서 4-public(getToken/getState/start/dispose)으로 확장. Research Open Question 1 해결.
+
+> **섹션 6.4.1 업데이트 노트:** Phase 38에서 getState() public 메서드가 추가되어 Public 메서드 테이블이 3개에서 4개로 확장된다. 전체 Public 메서드는 getToken, getState, start, dispose이다.
+
+**Public 메서드 4개 (Phase 38 확장 후):**
+
+| 메서드 | 시그니처 | 설명 |
+|--------|---------|------|
+| `getToken()` | `getToken(): string` | 현재 유효 토큰 반환. 갱신 중에도 구 토큰 반환 (SM-14) |
+| `getState()` | `getState(): SessionState` | 현재 세션 상태 반환 (`'active' \| 'expired' \| 'error'`). Phase 38 추가 (SMGI-D01) |
+| `start()` | `async start(): Promise<void>` | loadToken() + scheduleRenewal(). 프로세스 시작 시 1회 호출 |
+| `dispose()` | `dispose(): void` | clearTimeout(timer) + 정리. SIGTERM 시 호출 |
+
+#### 6.5.2 [v0.9] ApiClient 래퍼 클래스 설계 (SMGI-01)
+
+**파일 위치:** `packages/mcp/src/internal/api-client.ts`
+
+모든 MCP tool/resource handler가 데몬 REST API를 호출할 때 사용하는 공통 래퍼 클래스이다. 개별 handler는 인증 헤더, 401 재시도, 세션 만료 처리를 직접 다루지 않고 ApiClient에 위임한다.
+
+##### 6.5.2.1 ApiResult<T> Discriminated Union 타입
+
+```typescript
+/**
+ * [v0.9] ApiClient 응답 타입 -- 4종 분기 discriminated union
+ * 모든 ApiClient 메서드의 반환 타입
+ */
+type ApiResult<T = unknown> =
+  | { ok: true; data: T; status: number }                                    // 성공 (2xx)
+  | { ok: false; error: { code: string; message: string }; status: number }  // API 에러 (4xx/5xx)
+  | { ok: false; expired: true }                                             // 세션 만료/에러 상태
+  | { ok: false; networkError: true }                                        // 네트워크 에러 (ECONNREFUSED 등)
+```
+
+**4종 분기 설명:**
+
+| 분기 | 조건 | 설명 | 후속 처리 |
+|------|------|------|-----------|
+| 성공 | `ok: true` | 데몬 API가 2xx를 반환 | `data`를 JSON.stringify하여 tool result로 반환 |
+| API 에러 | `ok: false, error` | 데몬 API가 4xx/5xx를 반환 (400 Bad Request, 403 Forbidden 등) | `isError: true`로 tool result 반환 |
+| 세션 만료 | `ok: false, expired: true` | SessionManager가 expired/error 상태이거나, 401 복구 실패 | `isError` 미설정으로 안내 메시지 반환 (H-04) |
+| 네트워크 에러 | `ok: false, networkError: true` | fetch 자체가 throw (ECONNREFUSED, DNS 실패 등) | `isError` 미설정으로 안내 메시지 반환 |
+
+##### 6.5.2.2 ApiClient 클래스 인터페이스
+
+```typescript
+class ApiClient {
+  constructor(sessionManager: SessionManager, baseUrl: string)
+
+  // ── Public 메서드 (3개) ──
+  async get<T>(path: string): Promise<ApiResult<T>>              // GET 요청
+  async post<T>(path: string, body?: unknown): Promise<ApiResult<T>>  // POST 요청
+  async put<T>(path: string, body?: unknown): Promise<ApiResult<T>>   // PUT 요청
+
+  // ── Private 메서드 (4개) ──
+  private async request<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>>
+  private async handle401<T>(method: string, path: string, originalToken: string, body?: unknown): Promise<ApiResult<T>>
+  private async doFetch(method: string, path: string, token: string, body?: unknown): Promise<Response>
+  private parseResponse<T>(res: Response): Promise<ApiResult<T>>
+}
+```
+
+**메서드 요약:**
+
+| # | 메서드 | 가시성 | 역할 |
+|---|--------|--------|------|
+| 1 | `get<T>(path)` | public | GET 요청. `request('GET', path)` 위임 |
+| 2 | `post<T>(path, body?)` | public | POST 요청. `request('POST', path, body)` 위임 |
+| 3 | `put<T>(path, body?)` | public | PUT 요청. `request('PUT', path, body)` 위임 |
+| 4 | `request<T>(method, path, body?)` | private | 공통 요청 처리. 7-step 절차 |
+| 5 | `handle401<T>(method, path, originalToken, body?)` | private | 401 재시도. 3-step 절차 |
+| 6 | `doFetch(method, path, token, body?)` | private | 실제 fetch 호출 |
+| 7 | `parseResponse<T>(res)` | private | Response -> ApiResult 변환 |
+
+##### 6.5.2.3 request() 메서드 7-Step 절차
+
+| Step | 동작 | 실패 시 | 참조 |
+|------|------|---------|------|
+| 1 | `getState()` 확인 | `expired` 또는 `error`이면 즉시 `{ ok: false, expired: true }` 반환 | SMGI-D01 |
+| 2 | `getToken()`으로 현재 토큰 획득 | - | SM-02 |
+| 3 | `doFetch(method, path, token, body)`로 API 호출 | fetch throw 시 Step 6으로 | - |
+| 4 | 401 응답이면 `handle401(method, path, token, body)` 호출 | handle401 결과 반환 | H-05 |
+| 5 | 기타 응답이면 `parseResponse(res)` 호출 | 파싱 결과 반환 | - |
+| 6 | fetch 실패(ECONNREFUSED 등)이면 `{ ok: false, networkError: true }` 반환 | - | Pitfall 3 |
+| 7 | 결과 반환 | - | - |
+
+##### 6.5.2.4 handle401() 메서드 3-Step 재시도 절차
+
+| Step | 동작 | 설명 | 참조 |
+|------|------|------|------|
+| 1 | 50ms 대기 | 갱신 중일 수 있음. SM-14에서 갱신 중 getToken()은 구 토큰을 반환하므로 갱신 완료를 대기 | SM-14 |
+| 2 | `getToken()` 재호출 + `originalToken`과 비교 | **다르면:** 갱신 완료. 새 토큰으로 `doFetch()` 1회 재시도 후 `parseResponse()` 반환. **같으면:** Step 3으로 | H-05 |
+| 3 | `sessionManager.handleUnauthorized()` 호출 | **recovered=true:** 새 토큰으로 `doFetch()` 1회 재시도 후 반환. **recovered=false:** `{ ok: false, expired: true }` 반환 | SM-12 |
+
+**handle401 플로우:**
+
+```
+401 수신
+  |
+  v
+  Step 1: await 50ms (갱신 완료 대기)
+  |
+  v
+  Step 2: getToken() 재호출
+  |
+  +-- token !== originalToken ──> 새 토큰으로 doFetch() 재시도 ──> parseResponse()
+  |
+  +-- token === originalToken ──> Step 3
+       |
+       v
+       Step 3: handleUnauthorized() (파일 재로드)
+       |
+       +-- recovered: true ──> getToken() → doFetch() 재시도 → parseResponse()
+       |
+       +-- recovered: false ──> { ok: false, expired: true }
+```
+
+##### 6.5.2.5 parseResponse() 동작
+
+| 응답 | 처리 | 반환 |
+|------|------|------|
+| 2xx | JSON 파싱 성공 | `{ ok: true, data: parsed, status: res.status }` |
+| 4xx/5xx | JSON 파싱 성공 | `{ ok: false, error: { code: parsed.error?.code ?? 'UNKNOWN', message: parsed.error?.message ?? 'Unknown error' }, status: res.status }` |
+| JSON 파싱 실패 | catch | `{ ok: false, error: { code: 'PARSE_ERROR', message: 'Failed to parse response' }, status: res.status }` |
+
+##### 6.5.2.6 doFetch() 동작
+
+```typescript
+private async doFetch(
+  method: string,
+  path: string,
+  token: string,
+  body?: unknown,
+): Promise<Response> {
+  return fetch(`${this.baseUrl}${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+```
+
+fetch 자체가 throw(ECONNREFUSED, DNS 실패, 타임아웃 등)하면 상위 `request()`의 try-catch에서 `{ ok: false, networkError: true }`로 변환한다.
+
+##### 6.5.2.7 TypeScript 의사 코드 (전체)
+
+```typescript
+// packages/mcp/src/internal/api-client.ts
+// [v0.9] Phase 38 -- MCP tool/resource handler 통합용 API 클라이언트
+// 참조: 38-RESEARCH.md Example 1, SM-12, SM-14, H-04, H-05
+
+import type { SessionManager } from '../session-manager.js'
+
+// ── ApiResult discriminated union ──
+
+type ApiResult<T = unknown> =
+  | { ok: true; data: T; status: number }
+  | { ok: false; error: { code: string; message: string }; status: number }
+  | { ok: false; expired: true }
+  | { ok: false; networkError: true }
+
+// ── ApiClient 클래스 ──
+
+class ApiClient {
+  constructor(
+    private readonly sessionManager: SessionManager,
+    private readonly baseUrl: string,
+  ) {}
+
+  // ── Public 메서드 ──
+
+  async get<T>(path: string): Promise<ApiResult<T>> {
+    return this.request<T>('GET', path)
+  }
+
+  async post<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+    return this.request<T>('POST', path, body)
+  }
+
+  async put<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+    return this.request<T>('PUT', path, body)
+  }
+
+  // ── Private: 공통 요청 처리 (7-Step) ──
+
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<ApiResult<T>> {
+    // Step 1: 세션 상태 사전 확인 (SMGI-D01)
+    const state = this.sessionManager.getState()
+    if (state === 'expired' || state === 'error') {
+      return { ok: false, expired: true }
+    }
+
+    try {
+      // Step 2: 현재 토큰 획득
+      const token = this.sessionManager.getToken()
+
+      // Step 3: API 호출
+      const res = await this.doFetch(method, path, token, body)
+
+      // Step 4: 401 처리
+      if (res.status === 401) {
+        return await this.handle401<T>(method, path, token, body)
+      }
+
+      // Step 5: 응답 파싱
+      return await this.parseResponse<T>(res)
+    } catch (err) {
+      // Step 6: 네트워크 에러
+      console.error(
+        `[waiaas-mcp:api-client] Network error: ${method} ${path}`,
+        err,
+      )
+      return { ok: false, networkError: true }
+    }
+    // Step 7: 결과는 각 Step에서 직접 반환
+  }
+
+  // ── Private: 401 재시도 (3-Step) ──
+
+  private async handle401<T>(
+    method: string,
+    path: string,
+    originalToken: string,
+    body?: unknown,
+  ): Promise<ApiResult<T>> {
+    console.error(
+      `[waiaas-mcp:api-client] 401 received for ${method} ${path}. ` +
+      'Starting retry sequence.',
+    )
+
+    // Step 1: 50ms 대기 (갱신 중일 수 있음, SM-14)
+    await new Promise(r => setTimeout(r, 50))
+
+    // Step 2: 토큰 변경 확인
+    const freshToken = this.sessionManager.getToken()
+    if (freshToken !== originalToken) {
+      // 갱신 완료됨 -- 새 토큰으로 1회 재시도
+      console.error(
+        '[waiaas-mcp:api-client] Token changed during wait. ' +
+        'Retrying with fresh token.',
+      )
+      try {
+        const retryRes = await this.doFetch(method, path, freshToken, body)
+        return await this.parseResponse<T>(retryRes)
+      } catch {
+        return { ok: false, networkError: true }
+      }
+    }
+
+    // Step 3: handleUnauthorized (파일 재로드, SM-12)
+    console.error(
+      '[waiaas-mcp:api-client] Token unchanged. ' +
+      'Calling handleUnauthorized for file reload.',
+    )
+    const recovered = await this.sessionManager.handleUnauthorized()
+    if (recovered) {
+      const newToken = this.sessionManager.getToken()
+      console.error(
+        '[waiaas-mcp:api-client] Recovered via file reload. ' +
+        'Retrying with new token.',
+      )
+      try {
+        const retryRes = await this.doFetch(method, path, newToken, body)
+        return await this.parseResponse<T>(retryRes)
+      } catch {
+        return { ok: false, networkError: true }
+      }
+    }
+
+    // 복구 실패
+    console.error(
+      '[waiaas-mcp:api-client] Recovery failed. Session expired.',
+    )
+    return { ok: false, expired: true }
+  }
+
+  // ── Private: 실제 fetch 호출 ──
+
+  private async doFetch(
+    method: string,
+    path: string,
+    token: string,
+    body?: unknown,
+  ): Promise<Response> {
+    return fetch(`${this.baseUrl}${path}`, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  }
+
+  // ── Private: 응답 파싱 ──
+
+  private async parseResponse<T>(res: Response): Promise<ApiResult<T>> {
+    try {
+      const data = await res.json()
+
+      if (res.ok) {
+        return { ok: true, data: data as T, status: res.status }
+      }
+
+      // API 에러 (4xx/5xx)
+      const error = data.error ?? data
+      return {
+        ok: false,
+        error: {
+          code: error.code ?? 'UNKNOWN',
+          message: error.message ?? 'Unknown error',
+        },
+        status: res.status,
+      }
+    } catch {
+      // JSON 파싱 실패
+      return {
+        ok: false,
+        error: {
+          code: 'PARSE_ERROR',
+          message: 'Failed to parse response body as JSON',
+        },
+        status: res.status,
+      }
+    }
+  }
+}
+
+export { ApiClient, type ApiResult }
+```
+
+##### 6.5.2.8 console.error 통일 규칙
+
+| 규칙 | 내용 |
+|------|------|
+| 출력 대상 | `console.error` 전용 (stdout 오염 방지, Pitfall 4) |
+| 로그 접두사 | `[waiaas-mcp:api-client]` |
+| 사용 금지 | `console.log`, `console.info`, `console.warn` |
+| 근거 | MCP stdio transport에서 JSON-RPC 메시지만 stdout으로 전달되어야 함. 로그가 stdout에 출력되면 Claude Desktop의 JSON 파서가 깨짐 |
+
+**로그 메시지 목록:**
+
+| 상황 | 메시지 |
+|------|--------|
+| 네트워크 에러 | `[waiaas-mcp:api-client] Network error: {method} {path}` |
+| 401 수신 | `[waiaas-mcp:api-client] 401 received for {method} {path}. Starting retry sequence.` |
+| 토큰 변경 감지 | `[waiaas-mcp:api-client] Token changed during wait. Retrying with fresh token.` |
+| 토큰 미변경 | `[waiaas-mcp:api-client] Token unchanged. Calling handleUnauthorized for file reload.` |
+| 파일 재로드 복구 | `[waiaas-mcp:api-client] Recovered via file reload. Retrying with new token.` |
+| 복구 실패 | `[waiaas-mcp:api-client] Recovery failed. Session expired.` |
+
+> **참조:** 38-RESEARCH.md Pattern 1 (ApiClient 래퍼 패턴), Pattern 2 (Tool Handler에서 ApiClient 사용). SM-12 (handleUnauthorized 4-step), SM-14 (갱신 중 구 토큰 반환). v0.9-PITFALLS.md H-04 (isError 회피), H-05 (401 자동 재시도), Pitfall 4 (stdout 오염).
+
+#### 6.5.3 [v0.9] Tool Handler 통합 패턴 (SMGI-01)
+
+기존 tool handler(섹션 5.3.2~5.3.7)는 환경변수 `SESSION_TOKEN`을 직접 참조하고 `fetch`를 인라인 호출하는 구조이다. Phase 38에서 이를 `ApiClient.get()/post()` + `toToolResult()` 공통 변환 패턴으로 리팩토링한다.
+
+##### 6.5.3.1 toToolResult() 공통 변환 함수
+
+`ApiResult<T>`를 MCP SDK의 `CallToolResult` 타입으로 변환하는 함수이다. 4가지 분기를 처리한다.
+
+| # | 분기 | isError | 응답 내용 | 근거 |
+|---|------|---------|-----------|------|
+| (a) | `expired: true` | **미설정** | `{ status: 'session_expired', message: '...', retryable: true }` | H-04: Claude Desktop 연결 해제 방지 |
+| (b) | `networkError: true` | **미설정** | `{ status: 'daemon_unavailable', message: '...', retryable: true }` | 일시적 에러, 연결 유지 |
+| (c) | `ok: false` (API 에러) | `true` | `{ error: true, code, message }` | 클라이언트/서버 에러는 isError 적합 |
+| (d) | `ok: true` (성공) | 미설정 | `JSON.stringify(data)` | 정상 응답 |
+
+**핵심 설계: (a), (b)에서 `isError`를 설정하지 않는다.** Claude Desktop은 반복적인 `isError: true` 응답을 감지하면 MCP 서버 연결을 해제할 수 있다 (H-04). 세션 만료와 네트워크 에러는 MCP 서버 자체의 오류가 아니므로 정상 응답으로 안내 메시지를 반환하여 LLM이 사용자에게 상황을 설명하도록 한다.
+
+```typescript
+// packages/mcp/src/internal/tool-result.ts
+// [v0.9] Phase 38 -- H-04 대응: ApiResult -> CallToolResult 변환
+
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { ApiResult } from './api-client.js'
+
+function toToolResult<T>(result: ApiResult<T>): CallToolResult {
+  // (a) 세션 만료/에러 -- isError 미설정
+  if ('expired' in result && result.expired) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: 'session_expired',
+          message: 'Session has expired. The owner has been notified. '
+            + 'Please try again in a few minutes after a new session is created.',
+          retryable: true,
+        }),
+      }],
+      // isError를 설정하지 않음! Claude Desktop 연결 해제 방지 (H-04)
+    }
+  }
+
+  // (b) 네트워크 에러 -- isError 미설정 (일시적)
+  if ('networkError' in result && result.networkError) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: 'daemon_unavailable',
+          message: 'WAIaaS daemon is not responding. '
+            + 'Please check if the daemon is running.',
+          retryable: true,
+        }),
+      }],
+    }
+  }
+
+  // (c) API 에러 (400, 403 등) -- isError 설정
+  if (!result.ok) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          error: true,
+          code: result.error.code,
+          message: result.error.message,
+        }),
+      }],
+      isError: true,
+    }
+  }
+
+  // (d) 성공
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify(result.data),
+    }],
+  }
+}
+
+export { toToolResult }
+```
+
+##### 6.5.3.2 Tool Handler Factory 패턴
+
+각 tool을 `registerXxx(server: McpServer, apiClient: ApiClient): void` 형태의 독립 함수로 모듈화한다. 기존 패턴에서 `apiClient` 파라미터가 추가되고, 내부 구현이 ApiClient + toToolResult로 단순화된다.
+
+**6개 Tool Handler 리팩토링 전후 비교:**
+
+| # | Tool | Before (v0.2: 환경변수 + 직접 fetch) | After (v0.9: ApiClient + toToolResult) |
+|---|------|---------------------------------------|----------------------------------------|
+| 1 | `send_token` | `process.env.WAIAAS_SESSION_TOKEN` + `fetch(POST)` + 인라인 에러 분기 | `apiClient.post('/v1/transactions/send', body)` + `toToolResult(result)` |
+| 2 | `get_balance` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `apiClient.get('/v1/wallet/balance')` + `toToolResult(result)` |
+| 3 | `get_address` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `apiClient.get('/v1/wallet/address')` + `toToolResult(result)` |
+| 4 | `list_transactions` | `SESSION_TOKEN` + `fetch(GET)` + 쿼리 파라미터 조립 + 인라인 에러 | `apiClient.get('/v1/transactions?...')` + `toToolResult(result)` |
+| 5 | `get_transaction` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `` apiClient.get(`/v1/transactions/${id}`) `` + `toToolResult(result)` |
+| 6 | `get_nonce` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `apiClient.get('/v1/nonce')` + `toToolResult(result)` |
+
+**코드 변화 요약:**
+- 각 handler에서 `Authorization` 헤더 설정, `res.ok` 분기, `isError` 판단 로직 제거
+- 인증/재시도/만료 처리가 ApiClient에 위임되어 handler 코드 ~50% 감소
+- **기존 도구 이름, 파라미터, 설명은 변경 없음** (MCP 호환성 유지)
+
+**send_token 리팩토링 예시 (가장 복잡한 케이스):**
+
+```typescript
+// packages/mcp/src/tools/send-token.ts
+// [v0.9] Phase 38 리팩토링 -- ApiClient 사용
+
+import { z } from 'zod'
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from '../internal/api-client.js'
+import { toToolResult } from '../internal/tool-result.js'
+
+export function registerSendToken(
+  server: McpServer,
+  apiClient: ApiClient,
+): void {
+  server.tool(
+    'send_token',
+    'Send SOL or tokens from the agent wallet to a destination address. ' +
+    'Amount is in the smallest unit (lamports for SOL: 1 SOL = 1_000_000_000 lamports). ' +
+    'Returns transaction ID and status. INSTANT tier returns CONFIRMED with txHash, ' +
+    'DELAY/APPROVAL tier returns QUEUED for owner action.',
+    {
+      to: z.string().describe('Destination wallet address (Solana: base58, EVM: 0x hex)'),
+      amount: z.string().describe('Amount in smallest unit (lamports/wei as string)'),
+      memo: z.string().optional().describe('Optional transaction memo (max 200 chars)'),
+      priority: z.enum(['low', 'medium', 'high']).optional()
+        .describe('Fee priority: low=minimum, medium=average, high=maximum. Default: medium'),
+    },
+    async ({ to, amount, memo, priority }) => {
+      const body: Record<string, unknown> = { to, amount }
+      if (memo) body.memo = memo
+      if (priority) body.priority = priority
+
+      const result = await apiClient.post('/v1/transactions/send', body)
+      return toToolResult(result)
+    },
+  )
+}
+```
+
+**get_balance 리팩토링 예시 (단순 GET):**
+
+```typescript
+// packages/mcp/src/tools/get-balance.ts
+// [v0.9] Phase 38 리팩토링
+
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from '../internal/api-client.js'
+import { toToolResult } from '../internal/tool-result.js'
+
+export function registerGetBalance(
+  server: McpServer,
+  apiClient: ApiClient,
+): void {
+  server.tool(
+    'get_balance',
+    'Get the current balance of the agent wallet. ' +
+    'Returns balance in smallest unit (lamports/wei), decimals, symbol, and formatted string.',
+    {},
+    async () => {
+      const result = await apiClient.get('/v1/wallet/balance')
+      return toToolResult(result)
+    },
+  )
+}
+```
+
+##### 6.5.3.3 createMcpServer() 함수 설계
+
+MCP Server 생성과 tool/resource 등록을 캡슐화하는 팩토리 함수이다. ApiClient를 DI 패턴으로 전달받아 6개 tool + 3개 resource를 등록한다.
+
+```typescript
+// packages/mcp/src/server.ts
+// [v0.9] Phase 38 -- MCP Server 팩토리 + DI
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from './internal/api-client.js'
+
+// Tool handlers
+import { registerSendToken } from './tools/send-token.js'
+import { registerGetBalance } from './tools/get-balance.js'
+import { registerGetAddress } from './tools/get-address.js'
+import { registerListTransactions } from './tools/list-transactions.js'
+import { registerGetTransaction } from './tools/get-transaction.js'
+import { registerGetNonce } from './tools/get-nonce.js'
+
+// Resource handlers (Phase 38에서 동일 패턴 적용)
+import { registerWalletBalance } from './resources/wallet-balance.js'
+import { registerWalletAddress } from './resources/wallet-address.js'
+import { registerSystemStatus } from './resources/system-status.js'
+
+export function createMcpServer(apiClient: ApiClient): McpServer {
+  const server = new McpServer({
+    name: 'waiaas-mcp',
+    version: '0.2.0',
+  })
+
+  // 6개 Tool 등록
+  registerSendToken(server, apiClient)
+  registerGetBalance(server, apiClient)
+  registerGetAddress(server, apiClient)
+  registerListTransactions(server, apiClient)
+  registerGetTransaction(server, apiClient)
+  registerGetNonce(server, apiClient)
+
+  // 3개 Resource 등록
+  registerWalletBalance(server, apiClient)
+  registerWalletAddress(server, apiClient)
+  registerSystemStatus(server, apiClient)
+
+  return server
+}
+```
+
+**DI 패턴의 이점:**
+- 테스트 시 mock ApiClient 주입 가능
+- ApiClient 생성 책임이 index.ts(엔트리포인트)에 집중
+- tool/resource handler가 SessionManager에 직접 의존하지 않음
+
+##### 6.5.3.4 기존 섹션 5.3 코드와의 관계
+
+| 항목 | 설명 |
+|------|------|
+| 기존 5.3.2~5.3.7 | v0.2 원본 설계. 환경변수 + 직접 fetch 패턴 |
+| v0.9 리팩토링 | ApiClient 기반으로 전환. 코드 라인 수 ~50% 감소 |
+| 호환성 | **기존 도구 이름, 파라미터, 설명 등은 변경 없음**. MCP 프로토콜 수준의 호환성 완전 유지 |
+| 동작 차이 | 401 자동 재시도, 세션 만료 시 isError 회피 (v0.2에서는 isError: true) |
+| 기존 코드 유지 | v0.2 구현 코드는 참조용으로 유지. v0.9 리팩토링 코드가 실제 구현 기준 |
+
+#### 6.5.4 [v0.9] Resource Handler 통합 패턴 (SMGI-01)
+
+MCP Resource(섹션 5.4.1~5.4.3)도 동일한 ApiClient 패턴을 적용한다. Resource는 tool과 달리 `isError` 개념이 없고 `contents` 배열로 반환하므로, 별도의 `toResourceResult()` 변환 함수를 사용한다.
+
+##### 6.5.4.1 toResourceResult() 공통 변환 함수
+
+`ApiResult<T>`를 MCP SDK의 `ReadResourceResult` 타입으로 변환한다.
+
+| # | 분기 | 응답 내용 | 설명 |
+|---|------|-----------|------|
+| (a) | `expired: true` | 안내 텍스트: "Session expired. Please create a new session..." | 만료 안내가 resource 내용 자체가 됨 |
+| (b) | `networkError: true` | 안내 텍스트: "WAIaaS daemon is not responding..." | 데몬 미응답 안내 |
+| (c) | `ok: true` | `JSON.stringify(data)` | 정상 데이터 |
+| (d) | `ok: false` (API 에러) | `JSON.stringify({ error: true, code, message })` | 에러 JSON 텍스트 |
+
+**Resource는 `isError` 개념이 없다.** MCP Resource의 `ReadResourceResult`는 `contents` 배열을 반환하며, 에러 플래그가 존재하지 않는다. 따라서 만료/에러 시에도 안내 텍스트가 resource 내용으로 직접 반환된다. LLM이 이 텍스트를 컨텍스트로 읽고 상황을 파악한다.
+
+```typescript
+// packages/mcp/src/internal/resource-result.ts
+// [v0.9] Phase 38 -- ApiResult -> ReadResourceResult 변환
+
+import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
+import type { ApiResult } from './api-client.js'
+
+function toResourceResult<T>(
+  result: ApiResult<T>,
+  uri: string,
+): ReadResourceResult {
+  // (a) 세션 만료/에러
+  if ('expired' in result && result.expired) {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          status: 'session_expired',
+          message: 'Session expired. Please create a new session '
+            + 'via CLI (waiaas mcp setup) or Telegram (/newsession).',
+        }),
+      }],
+    }
+  }
+
+  // (b) 네트워크 에러
+  if ('networkError' in result && result.networkError) {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          status: 'daemon_unavailable',
+          message: 'WAIaaS daemon is not responding. '
+            + 'Please check if the daemon is running.',
+        }),
+      }],
+    }
+  }
+
+  // (c) 성공
+  if (result.ok) {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify(result.data),
+      }],
+    }
+  }
+
+  // (d) API 에러
+  return {
+    contents: [{
+      uri,
+      mimeType: 'application/json',
+      text: JSON.stringify({
+        error: true,
+        code: result.error.code,
+        message: result.error.message,
+      }),
+    }],
+  }
+}
+
+export { toResourceResult }
+```
+
+##### 6.5.4.2 3개 Resource Handler 리팩토링
+
+| # | Resource | API 경로 | 변환 |
+|---|----------|----------|------|
+| 1 | `wallet-balance` | `apiClient.get('/v1/wallet/balance')` | `toResourceResult(result, uri.href)` |
+| 2 | `wallet-address` | `apiClient.get('/v1/wallet/address')` | `toResourceResult(result, uri.href)` |
+| 3 | `system-status` | `apiClient.get('/v1/system/status')` | `toResourceResult(result, uri.href)` |
+
+**대표 예시: wallet-balance 리팩토링:**
+
+```typescript
+// packages/mcp/src/resources/wallet-balance.ts
+// [v0.9] Phase 38 리팩토링 -- ApiClient 사용
+
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from '../internal/api-client.js'
+import { toResourceResult } from '../internal/resource-result.js'
+
+export function registerWalletBalance(
+  server: McpServer,
+  apiClient: ApiClient,
+): void {
+  server.resource(
+    'wallet-balance',
+    'waiaas://wallet/balance',
+    {
+      description: 'Current balance of the agent wallet. Returns balance in lamports/wei, ' +
+        'human-readable format, chain, and network.',
+      mimeType: 'application/json',
+    },
+    async (uri) => {
+      const result = await apiClient.get('/v1/wallet/balance')
+      return toResourceResult(result, uri.href)
+    },
+  )
+}
+```
+
+**기존 5.4.1 코드와의 비교:** 기존 코드에서 `fetch` + `SESSION_TOKEN` + `res.ok` 분기 + 인라인 에러 처리가 모두 제거되고, `apiClient.get()` + `toResourceResult()` 2줄로 대체된다.
+
+##### 6.5.4.3 Open Question 해결 기록
+
+Phase 38 설계 과정에서 38-RESEARCH.md의 Open Question들을 다음과 같이 해결하였다:
+
+| # | Open Question | 해결 방법 | 결정 ID |
+|---|---------------|-----------|---------|
+| 1 | SessionManager.getState() public 메서드 추가 여부 | `getState(): SessionState` 4번째 public 메서드로 추가 | SMGI-D01 (섹션 6.5.1) |
+| 3 | Resource handler의 세션 만료 처리 | 동일 ApiClient + toResourceResult() 패턴. 만료 시 안내 텍스트를 resource 내용으로 반환 | 섹션 6.5.4.1 |
+| 4 | previous_token_hash 유예 기간 (H-05 데몬 측 대응) | v0.9에서는 MCP 측 401 재시도로 대응 (ApiClient handle401). 데몬 측 유예 기간은 EXT-04로 이연 확정 | 섹션 6.5.2.4 |
+
+> **Open Question 2 (에러 복구 루프):** SessionManager에 `startRecoveryLoop()` 추가 -- **[해결: Phase 38-02, 섹션 6.5.6 참조]**
+
+#### 6.5.5 [v0.9] 토큰 로테이션 동시성 처리 (SMGI-02)
+
+토큰 갱신 중 tool 호출이 발생하는 동시성 시나리오를 정의한다. Node.js 단일 스레드 특성을 활용하여 Mutex/Lock 없이 안전한 동시성을 보장한다.
+
+##### 6.5.5.1 갱신 중 tool 호출 시나리오 시퀀스 다이어그램
+
+**정상 케이스 (갱신 완료 전 데몬이 구 토큰 수용):**
+
+```
+시간 →
+T0: renew() 시작 (isRenewing=true)
+T1: tool handler 호출 → apiClient.request()
+     → getState()='active' → getToken()=구 토큰
+     → doFetch(구 토큰) → 성공 (데몬이 아직 구 토큰 수용)
+T2: renew() API 응답 수신 → 데몬 DB에서 token_hash 교체
+T3: renew() writeMcpToken(새 토큰) → this.token = 새 토큰 (isRenewing=false)
+T4: tool handler 호출 → getToken()=새 토큰 → doFetch(새 토큰) → 성공
+```
+
+**핵심:** T1~T2 사이에서 tool handler는 구 토큰으로 API를 호출한다. 데몬이 아직 token_hash를 교체하지 않았으므로 구 토큰이 유효하다. SM-14(갱신 중 getToken() 구 토큰 반환) 설계와 일치한다.
+
+##### 6.5.5.2 T1~T2 사이 경쟁 시나리오 (401 발생 케이스)
+
+```
+시간 →
+T0: renew() 시작
+T1: tool handler 호출 → getToken()=구 토큰
+T2: renew() 데몬 응답 수신 → DB에서 token_hash 교체됨
+T3: tool handler의 doFetch(구 토큰) 도착 → 401 (DB에는 새 hash)
+T4: handle401() → 50ms 대기
+T5: renew() writeMcpToken → this.token = 새 토큰
+T6: handle401() getToken()=새 토큰 (≠ 구 토큰) → doFetch(새 토큰) → 성공
+```
+
+**핵심:** T2~T3 사이의 좁은 창에서 tool handler의 fetch가 도착하면 401이 발생한다. handle401()의 50ms 대기가 renew()의 메모리 교체(T5)를 대기하는 역할을 한다.
+
+##### 6.5.5.3 50ms 대기 근거
+
+| 항목 | 값 | 근거 |
+|------|-----|------|
+| Node.js 이벤트 루프 지연 | 1-5ms | 일반적 microtask 처리 시간 |
+| renew() 응답 처리 (JSON 파싱 + JWT 디코딩) | 1-3ms | jose decodeJwt + 범위 검증 |
+| writeMcpToken 파일 I/O | 1-10ms | write-then-rename, SSD 기준 |
+| 메모리 교체 (this.token = 새 토큰) | <1ms | 동기 할당 |
+| **합계** | **5-19ms** | |
+| **안전 마진 포함** | **50ms** | 2.5~10배 여유 |
+
+- 50ms 이내에 갱신이 완료되면 `getToken()` 재호출에서 새 토큰 획득 → 재시도 성공
+- 50ms 이후에도 동일 토큰이면 갱신이 아닌 다른 원인 → `handleUnauthorized()` 진행 (파일 재로드 시도)
+- 50ms는 사용자 체감 지연에 영향 없음 (tool 호출 전체 RTT가 수백ms 이상)
+
+##### 6.5.5.4 동시성 보장 테이블
+
+| 시나리오 | getToken() 반환 | 401 발생? | 복구 방법 |
+|---------|----------------|----------|----------|
+| 갱신 미진행 | 현재 토큰 | No | - |
+| 갱신 중 (데몬 미교체) | 구 토큰 | No | - (데몬이 구 토큰 수용) |
+| 갱신 중 (데몬 교체됨, MCP 미교체) | 구 토큰 | Yes | handle401: 50ms 대기 → getToken() 재호출 → 새 토큰으로 재시도 |
+| 갱신 완료 | 새 토큰 | No | - |
+| 외부 갱신 (CLI/Telegram) | 구 토큰 | Yes | handleUnauthorized: 파일 재로드 → 토큰 비교 → 교체 (SM-12) |
+
+##### 6.5.5.5 설계 결정 SMGI-D02
+
+> **SMGI-D02: Mutex/Lock 미사용. Node.js 단일 스레드에서 getToken()의 동기 반환 + 401 재시도가 충분하다. 갱신 중 tool 호출을 차단하면 사용자 체감 지연 발생.**
+
+근거:
+- Node.js는 단일 스레드이므로 `getToken()`의 메모리 읽기와 `renew()`의 메모리 쓰기가 동시 실행되지 않음
+- `getToken()`은 동기 함수 → 호출 시점의 `this.token` 스냅샷을 즉시 반환
+- 경쟁 조건은 DB 교체(서버 측)와 메모리 교체(클라이언트 측) 사이의 시간차에서만 발생
+- handle401()의 50ms 대기 + getToken() 재호출이 이 시간차를 안전하게 처리
+
+참조: Research Anti-Patterns "갱신 중 Mutex로 tool 호출 차단"
+
+#### 6.5.6 [v0.9] MCP 프로세스 생명주기 (SMGI-03)
+
+MCP Server 프로세스의 시작부터 종료까지 5단계 생명주기와, 실패 상태에서의 에러 복구 루프를 정의한다.
+
+##### 6.5.6.1 index.ts 엔트리포인트 생명주기 5단계
+
+| 단계 | 동작 | 실패 시 |
+|------|------|---------|
+| 1. SessionManager 생성 | `new SessionManager(options)` | 예외 없음 (생성자는 상태 초기화만) |
+| 2. SessionManager 시작 | `await sessionManager.start()` | catch → console.error, degraded mode 진입 |
+| 3. ApiClient 생성 | `new ApiClient(sessionManager, baseUrl)` | 예외 없음 |
+| 4. MCP Server 생성 + 연결 | `createMcpServer(apiClient)` + `server.connect(transport)` | throw → process.exit(1) |
+| 5. SIGTERM/SIGINT 핸들링 | `sessionManager.dispose()` → `process.exit(0)` | dispose는 안전 (timer 정리, 예외 무시) |
+
+**단계별 실패 격리:**
+- 단계 1~3 실패: MCP Server 미시작 (process.exit(1) 또는 degraded mode)
+- 단계 4 실패: MCP Server 자체 시작 불가 (transport 연결 실패) → process.exit(1) (불가피)
+- 단계 5: dispose()는 모든 예외를 무시하므로 실패하지 않음
+
+##### 6.5.6.2 Degraded Mode 정의
+
+**진입 조건:** `SessionManager.start()` 실패 (토큰 없음, 만료된 토큰, 파일 읽기 에러 등)
+
+**상태:**
+- `SessionManager.state` = `'expired'` 또는 `'error'`
+- MCP Server는 정상 기동 (Claude Desktop과 stdio 연결 유지)
+- 모든 tool/resource 호출 시 `ApiClient.request()`가 `getState()` 확인 → expired/error 반환
+- `toToolResult()`/`toResourceResult()`가 안내 메시지 반환 (isError 미설정, H-04 대응)
+- **에러 복구 루프** 자동 활성화
+
+**Degraded mode의 핵심 목적:**
+
+| 목적 | 방법 |
+|------|------|
+| Claude Desktop 연결 유지 | MCP Server를 정상 기동하여 stdio 연결 유지. 프로세스 종료 방지 |
+| 사용자에게 상황 안내 | tool 호출 시 session_expired 안내 메시지 반환 |
+| 자동 복구 시도 | 에러 복구 루프로 외부 토큰 감지 시 active 전환 |
+| 재시작 없는 서비스 복원 | 외부에서 토큰 파일 갱신 시 자동 감지 → Claude Desktop 재시작 불필요 |
+
+##### 6.5.6.3 에러 복구 루프 설계 (SMGI-D03)
+
+**소속:** SessionManager 내부 메서드 `startRecoveryLoop()` / `stopRecoveryLoop()`
+
+**트리거:** state가 `'expired'` 또는 `'error'`로 전환될 때 자동 시작
+
+**중단:** state가 `'active'`로 전환될 때 자동 중단
+
+**동작:**
+
+```
+60초 간격으로 readMcpToken() 호출
+  ↓
+  1. 파일에서 토큰 읽기 시도
+     ├─ 파일 없음/읽기 실패 → 무시, 다음 루프 대기
+     └─ 토큰 읽음 → 계속
+  ↓
+  2. jose decodeJwt()로 디코딩 + 방어적 범위 검증 (SM-05)
+     ├─ 디코딩 실패 → 무시, 다음 루프 대기
+     └─ 디코딩 성공 → 계속
+  ↓
+  3. exp > now 확인
+     ├─ exp <= now (만료) → 무시, 다음 루프 대기
+     └─ exp > now (유효) → 토큰 교체 + state='active' + scheduleRenewal()
+  ↓
+  4. stopRecoveryLoop() (active 전환으로 자동 중단)
+```
+
+**타이머:** `safeSetTimeout(recoveryCheck, 60_000)` 체이닝 (setInterval 미사용, C-01 safeSetTimeout 패턴 일관성)
+
+**60초 간격 근거:**
+- 너무 짧으면 (1-5초): 불필요한 파일 I/O, CPU 낭비
+- 너무 길면 (5-10분): 외부 토큰 저장 후 사용자 대기 시간 길어짐
+- 60초: 파일 I/O 비용 무시 가능 (~500byte readFileSync), 사용자 체감 대기 합리적
+
+**로그:**
+```
+[waiaas-mcp:session] Recovery: checking token file...
+[waiaas-mcp:session] Recovery: found fresh token, resuming active mode
+[waiaas-mcp:session] Recovery: token file not found or still expired, retrying in 60s
+```
+
+**TypeScript 의사 코드:**
+
+```typescript
+// SessionManager 내부 메서드
+
+private recoveryTimer: ReturnType<typeof setTimeout> | null = null
+
+private startRecoveryLoop(): void {
+  if (this.recoveryTimer !== null) return  // 이미 실행 중
+  console.error('[waiaas-mcp:session] Starting recovery loop (60s interval)')
+  this.scheduleRecoveryCheck()
+}
+
+private stopRecoveryLoop(): void {
+  if (this.recoveryTimer !== null) {
+    clearTimeout(this.recoveryTimer)
+    this.recoveryTimer = null
+    console.error('[waiaas-mcp:session] Recovery loop stopped')
+  }
+}
+
+private scheduleRecoveryCheck(): void {
+  this.recoveryTimer = safeSetTimeout(() => {
+    this.recoveryCheck()
+  }, 60_000)
+}
+
+private recoveryCheck(): void {
+  console.error('[waiaas-mcp:session] Recovery: checking token file...')
+  try {
+    const fileToken = readMcpToken()
+    if (fileToken === null || fileToken === this.token) {
+      console.error('[waiaas-mcp:session] Recovery: token file not found or still expired, retrying in 60s')
+      this.scheduleRecoveryCheck()
+      return
+    }
+
+    // 새 토큰 발견 -- 디코딩 + 검증
+    const payload = decodeJwt(fileToken)
+    const exp = (payload.exp ?? 0) * 1000  // sec → ms
+    if (exp <= Date.now()) {
+      console.error('[waiaas-mcp:session] Recovery: token file contains expired token, retrying in 60s')
+      this.scheduleRecoveryCheck()
+      return
+    }
+
+    // 유효한 새 토큰 -- active 전환
+    this.token = fileToken
+    this.sessionId = payload.sub ?? ''
+    this.expiresAt = exp
+    this.expiresIn = (exp - (payload.iat ?? 0) * 1000)
+    this.state = 'active'
+    this.recoveryTimer = null  // stopRecoveryLoop 대신 직접 정리
+    console.error('[waiaas-mcp:session] Recovery: found fresh token, resuming active mode')
+    this.scheduleRenewal()
+  } catch {
+    console.error('[waiaas-mcp:session] Recovery: error reading/decoding token, retrying in 60s')
+    this.scheduleRecoveryCheck()
+  }
+}
+```
+
+**내부 상태 확장:**
+
+| 필드 | 타입 | 초기값 | 용도 |
+|------|------|--------|------|
+| `recoveryTimer` | `ReturnType<typeof setTimeout> \| null` | `null` | 에러 복구 루프 타이머 |
+
+기존 9개 내부 상태(SM-03) + recoveryTimer = **10개 내부 상태**로 확장.
+
+**설계 결정 SMGI-D03:**
+
+> **SMGI-D03: 에러 복구 루프는 SessionManager 소속. ApiClient가 아닌 SessionManager가 세션 상태 관리 책임을 가지며, 토큰 파일 감시 역할을 한다. fs.watch 대신 주기적 polling으로 플랫폼 안정성 확보 (SM-12 일관).**
+
+근거:
+- SessionManager가 state 전이 책임을 가짐 (SM-01 단일 클래스)
+- ApiClient는 HTTP 요청/응답에만 집중 (관심사 분리)
+- fs.watch는 macOS FSEvents race condition, Linux inotify limit 등 플랫폼 불안정성 (SM-12 lazy reload와 동일 근거)
+- 60초 polling은 readMcpToken()의 동기 ~500byte 파일 I/O로 성능 영향 무시 가능
+
+참조: Research Open Question 2 (에러 복구 루프 범위), SM-12 (fs.watch 미사용), C-01 (safeSetTimeout).
+
+##### 6.5.6.4 Claude Desktop 재시작 시나리오
+
+```
+Claude Desktop 재시작
+  → MCP Server 프로세스 종료 (SIGTERM → dispose())
+  → Claude Desktop이 새 MCP Server 프로세스 시작
+  → 새 프로세스의 SessionManager.start():
+     (1) readMcpToken()으로 파일에서 토큰 로드 (SM-04)
+     (2) 이전 갱신에서 writeMcpToken으로 저장된 최신 토큰 존재 → 정상 시작
+     (3) 파일 없으면 → env var fallback → 만료 가능성 → degraded mode + recovery loop
+```
+
+**핵심:** 이전 프로세스의 갱신 결과가 파일에 영속화되어 있으므로 (SM-10 파일-우선 쓰기), 재시작 시 최신 토큰 복원 가능. Claude Desktop config.json의 `WAIAAS_SESSION_TOKEN` 환경변수가 오래된 값이라도 파일이 우선하므로 문제 없음.
+
+| 시나리오 | 파일 상태 | env var 상태 | 결과 |
+|---------|----------|-------------|------|
+| 정상 재시작 | 최신 토큰 | 구 토큰 | 파일에서 최신 토큰 로드 → active |
+| 파일 삭제됨 | 없음 | 구 토큰 | env var fallback → 만료 가능성 → degraded → recovery loop |
+| 파일 + env var 모두 만료 | 만료 토큰 | 만료 토큰 | degraded mode → recovery loop (외부 갱신 대기) |
+
+##### 6.5.6.5 갱신 도중 프로세스 kill 시나리오
+
+renew() 7-step(섹션 6.4.5) 중 프로세스가 kill되는 경우의 토큰 상태를 분석한다.
+
+| kill 시점 | 파일 상태 | 메모리 상태 | 재시작 시 |
+|----------|----------|-----------|----------|
+| Step 1~4 (API 호출 전/중) | 구 토큰 | 구 토큰 (소멸) | 파일에서 구 토큰 로드 → 유효하면 active |
+| Step 5 (writeMcpToken 완료) 직후 | 새 토큰 | 구 토큰 (소멸) | 파일에서 새 토큰 로드 → active |
+| Step 6 (메모리 교체) 직후 | 새 토큰 | 새 토큰 (소멸) | 파일에서 새 토큰 로드 → active |
+| Step 7 (scheduleRenewal) 직후 | 새 토큰 | 새 토큰 (소멸) | 파일에서 새 토큰 로드 → active |
+
+**보장:** SM-10(파일-우선 쓰기) 덕분에 파일은 항상 "적어도 마지막 성공 갱신" 상태를 유지한다.
+
+- Step 5 전 kill: 파일에 구 토큰. 구 토큰이 아직 유효하면(데몬 DB도 구 hash 유지 -- API 미완료) active로 시작
+- Step 5 후 kill: 파일에 새 토큰. 데몬 DB에는 새 hash(renew API 성공). 새 토큰으로 active 시작
+- **최악의 경우:** Step 5 직전(writeMcpToken 실패)에 kill + 데몬 DB는 이미 새 hash 교체 → 파일에 구 토큰, DB에 새 hash → 401 → handleUnauthorized → 파일 재로드(동일 구 토큰) → 복구 실패 → expired → recovery loop → 외부 갱신 대기
+
+**SIGTERM 수신 시 동작:**
+
+```typescript
+const shutdown = () => {
+  sessionManager.dispose()  // timer 정리, renew() inflight 확인하지 않음
+  process.exit(0)
+}
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)
+```
+
+- `dispose()`에서 `isRenewing`이 true여도 timer만 정리하고 exit
+- 갱신 API 응답이 도착하지 않으면 파일에 구 토큰 유지 (안전)
+- 갱신 API 응답이 이미 도착하여 writeMcpToken 완료 후라면 파일에 새 토큰 유지 (안전)
+- 어느 경우든 파일의 토큰은 일관된 상태
+
+##### 6.5.6.6 TypeScript 의사 코드 -- index.ts main() 함수
+
+```typescript
+// packages/mcp/src/index.ts
+// [v0.9] Phase 38-02 -- MCP 프로세스 생명주기 설계
+
+import { SessionManager } from './session-manager.js'
+import { ApiClient } from './internal/api-client.js'
+import { createMcpServer } from './server.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+
+const BASE_URL = process.env.WAIAAS_BASE_URL ?? 'http://127.0.0.1:3100'
+
+async function main(): Promise<void> {
+  // 단계 1: SessionManager 생성
+  const sessionManager = new SessionManager({
+    baseUrl: BASE_URL,
+    dataDir: process.env.WAIAAS_DATA_DIR,
+    envToken: process.env.WAIAAS_SESSION_TOKEN,
+  })
+
+  // 단계 2: SessionManager 시작 (실패해도 MCP Server는 기동)
+  try {
+    await sessionManager.start()
+    console.error('[waiaas-mcp] SessionManager started successfully')
+  } catch (err) {
+    console.error(`[waiaas-mcp] SessionManager start failed: ${err}`)
+    console.error('[waiaas-mcp] MCP Server will start in degraded mode')
+    // degraded mode: state='expired'/'error', recovery loop 자동 시작
+  }
+
+  // 단계 3: ApiClient 생성
+  const apiClient = new ApiClient(sessionManager, BASE_URL)
+
+  // 단계 4: MCP Server 생성 + stdio transport 연결
+  const server = createMcpServer(apiClient)
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+
+  console.error('[waiaas-mcp] MCP Server connected via stdio transport')
+
+  // 단계 5: graceful shutdown
+  const shutdown = () => {
+    console.error('[waiaas-mcp] Shutting down...')
+    sessionManager.dispose()
+    process.exit(0)
+  }
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
+}
+
+main().catch((err) => {
+  console.error(`[waiaas-mcp] Fatal: ${err}`)
+  process.exit(1)
+})
+```
+
+**참조:** Research Pattern 3 (프로세스 생명주기), Pitfall 3 (만료 환경변수), Pitfall 5 (start 실패). SM-04, SM-10, SM-12.
+
+#### 6.5.7 [v0.9] Claude Desktop 에러 처리 전략 (SMGI-04)
+
+세션 만료, 네트워크 에러, Kill Switch 등 다양한 에러 상황에서 Claude Desktop과의 연결을 유지하면서 사용자에게 적절한 안내를 제공하는 전략을 정의한다.
+
+##### 6.5.7.1 isError 사용 원칙 테이블
+
+| 상황 | isError 설정 | 근거 |
+|------|------------|------|
+| API 에러 (400 Bad Request, 403 Forbidden 등) | `true` | 도구 실행 에러 (MCP 스펙 정상 사용) |
+| 세션 만료 (expired) | 미설정 | H-04: Claude Desktop 반복 에러 연결 해제 방지 |
+| 네트워크 에러 (daemon unavailable) | 미설정 | 일시적 문제, 연결 해제 방지 |
+| 정책 거부 (DELAY tier pending) | `true` | 정상적 도구 실행 에러 (사용자 행동 필요) |
+| Kill Switch 활성 (503) | 미설정 | 일시적 상태, 연결 해제 방지 |
+
+**원칙 요약:**
+- `isError: true` = tool 실행 자체의 에러 (잘못된 입력, 권한 부족, 정책 거부)
+- `isError` 미설정 = 일시적/외부 요인 에러 (만료, 네트워크, Kill Switch)
+- 반복 발생 가능한 에러에 isError를 설정하면 Claude Desktop이 연결을 해제할 위험
+
+##### 6.5.7.2 세션 만료 안내 메시지 형식
+
+```json
+{
+  "status": "session_expired",
+  "message": "Session has expired. The owner has been notified. Please try again in a few minutes after a new session is created.",
+  "hint": "Run 'waiaas mcp refresh-token' or use Telegram /newsession to create a new session.",
+  "retryable": true
+}
+```
+
+| 필드 | 용도 |
+|------|------|
+| `status` | 기계적 상태 식별 (LLM이 파싱 가능) |
+| `message` | 사용자 대면 메시지 (LLM이 사용자에게 전달) |
+| `hint` | 복구 방법 안내 (CLI 또는 Telegram) |
+| `retryable` | LLM이 나중에 재시도 가능함을 암시 |
+
+##### 6.5.7.3 데몬 미가동 안내 메시지 형식
+
+```json
+{
+  "status": "daemon_unavailable",
+  "message": "WAIaaS daemon is not responding. Please check if the daemon is running with 'waiaas status'.",
+  "retryable": true
+}
+```
+
+- 네트워크 에러(fetch 실패, ECONNREFUSED 등)를 ApiClient.request()의 catch 블록에서 감지
+- isError 미설정으로 Claude Desktop 연결 유지
+- 데몬이 재시작되면 다음 tool 호출에서 자동 복구
+
+##### 6.5.7.4 Kill Switch 활성 안내 메시지 형식
+
+```json
+{
+  "status": "kill_switch_active",
+  "message": "Emergency kill switch is active. All transaction operations are suspended.",
+  "retryable": true
+}
+```
+
+- 503 응답을 `ApiClient.parseResponse()`에서 감지하여 특별 처리
+- isError 미설정 (Kill Switch는 Owner가 해제할 때까지 지속, 반복 에러 방지)
+- 조회 API(get_balance, list_transactions)는 Kill Switch 영향 없이 동작 (데몬 측에서 조회는 허용)
+
+**parseResponse() Kill Switch 분기 추가:**
+
+```typescript
+// ApiClient.parseResponse() 내부 -- 섹션 6.5.2.5 확장
+private async parseResponse<T>(res: Response): Promise<ApiResult<T>> {
+  if (res.status === 503) {
+    return { ok: false, killSwitch: true }
+  }
+  // ... 기존 분기 (200, 4xx, 5xx)
+}
+```
+
+**ApiResult<T> 타입 확장:**
+
+```typescript
+type ApiResult<T = unknown> =
+  | { ok: true; data: T; status: number }
+  | { ok: false; error: { code: string; message: string }; status: number }
+  | { ok: false; expired: true }
+  | { ok: false; networkError: true }
+  | { ok: false; killSwitch: true }   // [Phase 38-02 추가]
+```
+
+**toToolResult() Kill Switch 분기 추가:**
+
+```typescript
+function toToolResult(result: ApiResult): CallToolResult {
+  // Kill Switch -- isError 미설정
+  if ('killSwitch' in result && result.killSwitch) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: 'kill_switch_active',
+          message: 'Emergency kill switch is active. All transaction operations are suspended.',
+          retryable: true,
+        }),
+      }],
+    }
+  }
+  // ... 기존 분기 (expired, networkError, error, ok)
+}
+```
+
+##### 6.5.7.5 반복 에러 연결 해제 방지 종합 전략
+
+| 전략 | 방법 | 대응 에러 |
+|------|------|----------|
+| (a) isError 회피 | 일시적/복구 가능 에러에 isError 미설정 | expired, networkError, killSwitch |
+| (b) retryable 안내 | 안내 메시지에 `retryable: true` 포함 | 모든 비-isError 에러 |
+| (c) 에러 복구 루프 | 60초 파일 확인으로 외부 토큰 감지 (섹션 6.5.6) | expired, error |
+| (d) stdout 오염 방지 | SessionManager/ApiClient 모든 로그 console.error 통일 | JSON-RPC 파싱 실패 |
+
+**전략 간 상호작용:**
+- (a) + (b): Claude Desktop이 연결을 유지하면서 LLM이 사용자에게 상황 설명
+- (c): 사용자가 외부에서 토큰을 갱신하면 자동으로 active 복귀, 다음 tool 호출 성공
+- (d): 모든 전략의 기반 -- stdout이 오염되면 JSON-RPC 자체가 깨져 연결 해제
+
+##### 6.5.7.6 stdout 오염 방지 규칙
+
+**MCP stdio transport 제약:**
+- stdout = JSON-RPC 메시지만 (MCP SDK가 관리)
+- stderr = 로그, 디버그 출력
+
+**규칙:**
+
+| 허용 | 금지 |
+|------|------|
+| `console.error(msg)` | `console.log(msg)` |
+| `process.stderr.write(msg)` | `process.stdout.write(msg)` (로그 용도) |
+
+**로그 접두사 규약:**
+
+| 모듈 | 접두사 | 예시 |
+|------|--------|------|
+| SessionManager | `[waiaas-mcp:session]` | `[waiaas-mcp:session] Renewal scheduled in 362880s` |
+| ApiClient | `[waiaas-mcp:api-client]` | `[waiaas-mcp:api-client] 401 received, retrying with fresh token` |
+| index.ts | `[waiaas-mcp]` | `[waiaas-mcp] MCP Server connected via stdio transport` |
+
+**설계 결정 SMGI-D04:**
+
+> **SMGI-D04: console.log 사용 금지. 모든 내부 로그를 console.error로 통일. stdio transport에서 stdout 오염은 JSON-RPC 파싱 실패 → 즉시 연결 해제를 유발한다.**
+
+근거:
+- MCP SDK의 StdioServerTransport는 stdout을 JSON-RPC 전용으로 사용
+- `console.log`는 Node.js에서 `process.stdout.write`로 출력됨
+- 로그 문자열이 stdout에 섞이면 Claude Desktop의 JSON 파서가 예외 발생 → 연결 해제
+- `console.error`는 stderr로 출력되어 JSON-RPC에 영향 없음
+
+참조: Research Pitfall 4 (stdout 오염으로 MCP 연결 끊김), MCP Protocol stdio 사양.
+
+##### 6.5.7.7 Phase 38 설계 결정 요약 테이블
+
+| ID | 결정 | 근거 | 섹션 |
+|----|------|------|------|
+| SMGI-D01 | getState() 4번째 public 메서드 추가 | ApiClient의 세션 상태 사전 확인 필요 | 6.5.1 |
+| SMGI-D02 | Mutex/Lock 미사용, 50ms 대기 + 401 재시도 | Node.js 단일 스레드, 차단 지연 방지 | 6.5.5 |
+| SMGI-D03 | 에러 복구 루프 SessionManager 소속, 60초 polling | fs.watch 대신 안정적 polling, SM-12 일관 | 6.5.6 |
+| SMGI-D04 | console.log 금지, console.error 통일 | stdio stdout 오염 → JSON-RPC 파싱 실패 방지 | 6.5.7 |
+
 ---
 
 ## 7. MCP Transport 설계
@@ -4315,7 +5587,7 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 *문서 ID: SDK-MCP*
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
-*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01 (인터페이스 + 토큰 로드), Phase 37-02 (갱신 + 실패 + reload)*
+*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01 (인터페이스 + 토큰 로드), Phase 37-02 (갱신 + 실패 + reload), Phase 38-02 (동시성 + 생명주기 + 에러 처리)*
 *Phase: 09-integration-client-interface-design*
 *상태: 완료*
 
@@ -4332,3 +5604,6 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 - 53-session-renewal-protocol.md 섹션 3.7 -- 5종 갱신 에러 코드 및 HTTP 상태 (Phase 37-02 연동)
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 알림 이벤트 (Phase 36-02 확정, NOTI-01)
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 이벤트 (Phase 36-02 확정)
+- 38-RESEARCH.md -- Phase 38 ApiClient 래퍼 패턴, tool/resource handler 통합 패턴, 프로세스 생명주기 리서치 (Phase 38-01 참조)
+- v0.9-PITFALLS.md -- H-04 (반복 에러 연결 해제), H-05 (401 자동 재시도), M-03 (만료 환경변수) (Phase 38-02 참조)
+- MCP Protocol stdio 사양 -- stdout JSON-RPC 전용, stderr 로그 (Phase 38-02 SMGI-D04 근거)
