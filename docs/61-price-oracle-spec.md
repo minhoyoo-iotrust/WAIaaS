@@ -1295,6 +1295,8 @@ function adjustTierForPriceSpike(
 
 ## 6. USD 기준 정책 평가 확장 (ORACLE-03)
 
+> **[v0.8] 정책 다운그레이드 교차 참조:** v0.8의 APPROVAL -> DELAY 다운그레이드 결정(33-time-lock-approval-mechanism.md §11.6 Step 9.5)에서 거래 금액 USD 평가에 `resolveEffectiveAmountUsd()`를 통한 IPriceOracle을 활용한다. `maxTier(nativeTier, usdTier)` 산출 후 APPROVAL이면 OwnerState에 따라 다운그레이드 여부를 결정한다. USD 변환 실패 시 네이티브 기준 fallback이 적용되므로, IPriceOracle 미주입 환경에서도 다운그레이드 로직은 정상 동작한다.
+
 ### 6.1 PolicyEvaluationInput 확장
 
 CHAIN-EXT-03에서 정의한 PolicyEvaluationInput에 USD 관련 필드를 추가한다:

@@ -1661,6 +1661,8 @@ Tauri WebView의 Content Security Policy에 WalletConnect Relay 도메인을 허
 ## 10. Owner 생명주기 상태 머신 [v0.8]
 
 > **v0.8 신규 섹션.** Phase 32(Owner 생명주기 설계)의 산출물로, Owner 등록/변경/해제의 전체 생명주기를 3-State 상태 머신으로 정의한다. Phase 31에서 확정된 데이터 모델(agents.owner_address nullable, owner_verified, OwnerState 타입, resolveOwnerState(), markOwnerVerified())을 기반으로 한다.
+>
+> **[v0.8] 매트릭스 SSoT 참조:** Owner 상태별 전체 동작 분기(18행 x 3열)는 `objectives/v0.8-optional-owner-progressive-security.md` 부록 "Owner 상태 분기 매트릭스 (SSoT)"에 정의되어 있다. 본 섹션의 상태 전이와 인증 맵은 해당 매트릭스와 일관되어야 한다.
 
 ### 10.1 3-State 상태 머신 (NONE / GRACE / LOCKED)
 
