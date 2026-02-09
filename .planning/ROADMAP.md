@@ -83,11 +83,11 @@ Plans:
   3. scope "all"(네이티브+SPL+rent)과 "native" 분기가 명세되어 있다
   4. 유예 구간(owner_verified=0)에서 withdraw가 비활성화되는 보안 정책이 명세되어 있다
   5. Kill Switch 복구 대기 시간(Owner 없음: 24h / Owner 있음: 30min)과 세션 갱신 거부 윈도우 분기가 명세되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 34-01: withdraw API + WithdrawService + sweepAll Solana 구현 설계
-- [ ] 34-02: Kill Switch Owner 분기 + 세션 갱신 분기 + 세션 알림 거부 버튼 설계
+- [ ] 34-01-PLAN.md -- withdraw API 엔드포인트 + WithdrawService 도메인 서비스 + sweepAll Solana 실행 순서 + scope 분기 + HTTP 207 부분 실패 (37-rest-api + 27-chain-adapter)
+- [ ] 34-02-PLAN.md -- Kill Switch 복구 Owner 유무 분기(24h vs 30min) + 2단계 복구 패턴 + 세션 갱신 Owner 분기 + [거부하기] 버튼 3채널 명세 (36-killswitch + 53-session + 35-notification)
 
 ### Phase 35: DX + 설계 문서 통합
 **Goal**: CLI 명령어 변경이 설계되고, 14개 기존 설계 문서에 v0.8 Owner 선택적 모델이 일관되게 반영된다
