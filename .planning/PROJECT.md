@@ -8,11 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## 현재 마일스톤: v0.10 구현 전 설계 완결성 확보
+
+**목표:** v0.2~v0.9에서 작성한 30개 설계 문서의 BLOCKING 4건 + HIGH 8건 = 12건의 구현 착수 차단 미비점을 모두 해소하여, v1.0(구현 계획) 수립 시 설계 문서만으로 코드를 작성할 수 있는 상태를 만든다.
+
+**대상 기능:**
+- 정책 엔진 완결 (PolicyRuleSchema 교차 참조, Owner 상태 전이, APPROVAL 타임아웃)
+- 에러 처리 체계 완결 (에러 코드 통합 매트릭스, 어댑터 에러 복구, PolicyType 동기화)
+- 동시성 + 실행 로직 완결 (Stage 5 의사코드, 세션 갱신 동시성, Kill Switch ACID)
+- 운영 로직 완결 (데몬 타임아웃, Batch DB 전략, Oracle 충돌 해결)
+
 ## 현재 상태
 
-v0.1~v0.9 완료 (2026-02-09). 100개 플랜, 264개 요구사항, 40개 페이즈, 9개 마일스톤, 30개 설계 문서(24-64). 전체 설계 단계 완료.
-
-**v0.9 최종 결과:** MCP 세션 관리 자동화 설계 완료. SessionManager 핵심 로직(4 public 메서드, 9 내부 상태, 5종 에러 분기), MCP tool handler 통합(ApiClient 래퍼, 동시성, 생명주기), CLI/Telegram 연동(mcp setup/refresh-token, /newsession), 18개 테스트 시나리오, 7개 설계 문서 v0.9 통합(85 [v0.9] 태그), 34 설계 결정. Audit PASSED (21/21 reqs, 5/5 phases, 34/34 integrations, 7/7 E2E flows).
+v0.1~v0.9 완료 (2026-02-09). 100개 플랜, 264개 요구사항, 40개 페이즈, 9개 마일스톤, 30개 설계 문서(24-64). 전체 설계 단계 완료. v0.10 설계 완결성 확보 진행 중.
 
 ## 요구사항
 
@@ -76,7 +84,18 @@ v0.1~v0.9 완료 (2026-02-09). 100개 플랜, 264개 요구사항, 40개 페이�
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+- [ ] **COMPL-01**: PolicyRuleSchema ↔ 25-sqlite 교차 참조 정리 + 이연 표기 제거
+- [ ] **COMPL-02**: Owner GRACE→LOCKED 상태 전이 타이밍 + 다운그레이드 우선순위 확정
+- [ ] **COMPL-03**: APPROVAL 타임아웃 우선순위 체계 (정책별 > 글로벌 > 하드코딩)
+- [ ] **COMPL-04**: 에러 코드 → HTTP 상태 코드 통합 매트릭스 (64코드 전수)
+- [ ] **COMPL-05**: IChainAdapter 에러 복구 전략 매트릭스 (3-카테고리)
+- [ ] **COMPL-06**: REST API PolicyType enum v0.6 동기화 (4→10개)
+- [ ] **COMPL-07**: 트랜잭션 파이프라인 Stage 5 완전 의사코드
+- [ ] **COMPL-08**: 세션 갱신 동시성 제어 (낙관적 잠금)
+- [ ] **COMPL-09**: Kill Switch 상태 전이 ACID 보장
+- [ ] **COMPL-10**: 데몬 시작 단계별 타임아웃 (6단계)
+- [ ] **COMPL-11**: Batch 트랜잭션 DB 저장 전략 (부모-자식 2계층)
+- [ ] **COMPL-12**: Price Oracle 다중 소스 충돌 해결 + stale 가격 정책
 
 ### 범위 외
 
@@ -202,4 +221,4 @@ v0.9 MCP 세션 관리 자동화 설계 완료 (2026-02-09). 5개 페이즈, 10�
 | resolveDefaultConstraints 공용 함수 | CLI + Telegram constraints 결정 규칙 SSoT | ✓ Good — v0.9 설계 완성 |
 
 ---
-*최종 업데이트: 2026-02-09 after v0.9 milestone completed*
+*최종 업데이트: 2026-02-09 after v0.10 milestone started*
