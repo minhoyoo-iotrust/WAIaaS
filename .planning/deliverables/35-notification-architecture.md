@@ -18,7 +18,7 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 - **INotificationChannel 인터페이스**: 채널 추상화 계약 (type/name/send/healthCheck)
 - **3개 채널 어댑터**: Telegram Bot API, Discord Webhook, ntfy.sh Push
 - **NotificationService 오케스트레이터**: 우선순위 기반 전송 + 폴백 체인 + broadcast
-- **알림 이벤트 타입 체계**: 13개 NotificationEventType 열거형
+- **알림 이벤트 타입 체계**: 16개 NotificationEventType 열거형
 - **DB 스키마**: notification_channels + notification_log 테이블
 - **채널별 Rate Limit 준수**: 토큰 버킷 기반 내장 rate limiter
 - **전달 추적**: 성공/실패/폴백 기록 + 30일 보존 정책
@@ -69,9 +69,10 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 | 호출 포인트 | 이벤트 | 전송 방식 | 트리거 위치 |
 |------------|--------|----------|------------|
 | NOTIFY 티어 거래 실행 후 | TX_NOTIFY | notify() (표준) | Stage 5 완료 후 비동기 |
-| DELAY 큐잉 시 | TX_DELAY_QUEUED | notify() (표준) | Stage 4 QUEUED 전이 후 |
+| DELAY 큐잉 시 | TX_DELAY_QUEUED | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.tier === 'DELAY' && !decision.downgraded) |
+| [v0.8] DELAY 다운그레이드 시 | TX_DOWNGRADED_DELAY | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.downgraded === true) |
 | DELAY 자동 실행 시 | TX_DELAY_EXECUTED | notify() (표준) | DelayQueueWorker 실행 후 |
-| APPROVAL 승인 요청 시 | TX_APPROVAL_REQUEST | notify() (표준) | Stage 4 QUEUED 전이 후 |
+| APPROVAL 승인 요청 시 | TX_APPROVAL_REQUEST | notify() (표준) | Stage 4 QUEUED 전이 후 (decision.tier === 'APPROVAL' && !decision.downgraded, OwnerState LOCKED만) |
 | APPROVAL 만료 시 | TX_APPROVAL_EXPIRED | notify() (표준) | ApprovalTimeoutWorker |
 | 거래 확정 시 | TX_CONFIRMED | notify() (표준) | Stage 6 CONFIRMED 전이 |
 | 거래 실패 시 | TX_FAILED | notify() (표준) | Stage 5/6 FAILED 전이 |
@@ -205,6 +206,8 @@ export const NotificationEventType = {
   TX_CONFIRMED: 'TX_CONFIRMED',
   /** 거래 실패 알림 */
   TX_FAILED: 'TX_FAILED',
+  /** [v0.8] APPROVAL -> DELAY 다운그레이드 알림 (Owner 미등록/미검증) */
+  TX_DOWNGRADED_DELAY: 'TX_DOWNGRADED_DELAY',
 
   // ── Kill Switch / 자동 정지 ──
   /** Kill Switch 발동 (모든 채널 동시 전송) */
@@ -243,6 +246,7 @@ export type NotificationEventType = typeof NotificationEventType[keyof typeof No
 | TX_APPROVAL_EXPIRED | WARNING | 타임아웃으로 거래 만료 |
 | TX_CONFIRMED | INFO | 온체인 확정 |
 | TX_FAILED | WARNING | 거래 실패 (조사 필요) |
+| TX_DOWNGRADED_DELAY | INFO | [v0.8] APPROVAL -> DELAY 다운그레이드됨 (Owner 미등록/미검증) |
 | KILL_SWITCH_ACTIVATED | CRITICAL | 비상 정지 (모든 채널 broadcast) |
 | KILL_SWITCH_RECOVERED | WARNING | 복구 완료 (주의 환기) |
 | AUTO_STOP_TRIGGERED | CRITICAL | 자동 정지 발동 (모든 채널 broadcast) |
@@ -435,6 +439,87 @@ TX: 019\.\.\. \| Agent: 019\.\.\.
 
 _2026\-02\-05T12:00:00Z_
 ```
+
+#### TX_DOWNGRADED_DELAY (APPROVAL -> DELAY 다운그레이드) [v0.8 추가]
+
+> **TX_DELAY_QUEUED vs TX_DOWNGRADED_DELAY 차이점:**
+>
+> | 항목 | TX_DELAY_QUEUED | TX_DOWNGRADED_DELAY |
+> |------|-----------------|---------------------|
+> | 발생 조건 | 정상 DELAY 티어 평가 | APPROVAL -> DELAY 다운그레이드 |
+> | 메시지 톤 | 정보 제공 (대기 중) | 안내 + 행동 유도 (Owner 등록) |
+> | Owner 등록 안내 | 미포함 | 포함 (`waiaas agent set-owner` 명령어) |
+> | 원래 티어 표시 | 미포함 | 포함 (APPROVAL -> DELAY 전환 사유) |
+
+**Telegram (MarkdownV2):**
+```
+ℹ️ *대액 거래 대기 중 \(다운그레이드\)*
+
+Agent "{agentName}"의 {amount} {symbol} \(≈ ${usdAmount}\) 전송이
+DELAY 큐에 대기합니다\.
+수신: {shortenedAddress}
+실행 예정: {delayMinutes}분 후
+
+원래 티어: APPROVAL → DELAY로 자동 전환
+\(Owner 미등록 에이전트\)
+
+💡 *Owner 지갑을 등록하면 대액 거래에*
+   *승인 정책을 적용할 수 있습니다\.*
+   `waiaas agent set\-owner {agentName} <address>`
+
+TX: {shortTxId} \| Agent: {shortAgentId}
+
+_{timestamp}_
+```
+
+**Discord (Embed):**
+```json
+{
+  "embeds": [{
+    "title": "ℹ️ 대액 거래 대기 중 (다운그레이드)",
+    "color": 3447003,
+    "description": "Agent \"{agentName}\"의 {amount} {symbol} (≈ ${usdAmount}) 전송이\nDELAY 큐에 대기합니다.",
+    "fields": [
+      { "name": "수신", "value": "{shortenedAddress}", "inline": true },
+      { "name": "실행 예정", "value": "{delayMinutes}분 후", "inline": true },
+      { "name": "다운그레이드", "value": "APPROVAL → DELAY (Owner 미등록)", "inline": false },
+      { "name": "💡 Owner 등록 안내", "value": "`waiaas agent set-owner {agentName} <address>`\nOwner 지갑을 등록하면 대액 거래에 승인 정책을 적용할 수 있습니다.", "inline": false }
+    ],
+    "footer": { "text": "TX: {shortTxId} | Agent: {shortAgentId}" },
+    "timestamp": "{iso8601}"
+  }]
+}
+```
+
+**ntfy.sh:**
+```
+Title: 대액 거래 대기 중 (APPROVAL → DELAY 다운그레이드)
+Priority: default (3)
+Tags: information_source, arrow_down
+Actions: view, 대시보드, http://127.0.0.1:3100/dashboard
+Body:
+Agent "{agentName}" {amount} {symbol} (≈ ${usdAmount})
+수신: {shortenedAddress}
+실행: {delayMinutes}분 후
+원래 티어: APPROVAL → DELAY (Owner 미등록)
+
+Owner 등록: waiaas agent set-owner {agentName} <address>
+TX: {shortTxId} | Agent: {shortAgentId}
+```
+
+**context 필드:**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `agentName` | string | 에이전트 이름 (agents.name) |
+| `amount` | string | 전송 금액 (사람이 읽을 수 있는 단위) |
+| `symbol` | string | 토큰 심볼 (SOL, ETH 등) |
+| `usdAmount` | string | USD 환산 금액 |
+| `shortenedAddress` | string | 수신 주소 축약 (앞 4 + ... + 뒤 4) |
+| `delayMinutes` | number | DELAY 실행 예정 시간 (분) |
+| `shortTxId` | string | 거래 ID 축약 |
+| `shortAgentId` | string | 에이전트 ID 축약 |
+| `timestamp` | string (ISO 8601) | 알림 생성 시각 |
 
 #### KILL_SWITCH_ACTIVATED (비상 정지)
 
@@ -1948,6 +2033,107 @@ Agent "{agentName}"이 {amount} SOL 전송을 요청했습니다.
 TX: {txId_short} | Agent: {agentId_short}
 ```
 
+##### [v0.8] TX_APPROVAL_REQUEST 승인/거부 버튼 확장
+
+> **전제 조건:** TX_APPROVAL_REQUEST는 OwnerState === LOCKED인 에이전트에서만 발생한다. NONE/GRACE 에이전트의 APPROVAL은 Step 9.5에서 DELAY로 다운그레이드되어 TX_DOWNGRADED_DELAY 이벤트가 발생한다.
+
+**승인/거부 URL 패턴:**
+```
+승인: http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/approve?nonce={nonce}
+거부: http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/reject?nonce={nonce}
+```
+
+> **주의:** 이 URL은 승인 대시보드 페이지(Tauri/브라우저)로 이동하는 링크이다. 버튼 클릭만으로 승인이 완료되지 않는다 -- ownerAuth(SIWS/SIWE 서명)가 필요하므로 별도 인증 과정이 필수이다.
+
+**Telegram (MarkdownV2 + InlineKeyboardMarkup):**
+
+```
+⚠️ *거래 승인 요청*
+
+Agent "{agentName}"이 {amount} {symbol} \(≈ ${usdAmount}\) 전송을 요청했습니다\.
+수신: {shortenedAddress}
+타임아웃: {approvalTimeoutMinutes}분
+
+TX: {shortTxId} \| Agent: {shortAgentId}
+
+_{timestamp}_
+```
+
+InlineKeyboardMarkup (url 기반 -- callback 아님):
+```json
+{
+  "reply_markup": {
+    "inline_keyboard": [[
+      { "text": "✅ 승인", "url": "http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/approve?nonce={nonce}" },
+      { "text": "❌ 거부", "url": "http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/reject?nonce={nonce}" }
+    ]]
+  }
+}
+```
+
+설계 결정:
+- `url` 기반 버튼 사용 (callback_data 아님): 승인 시 ownerAuth(SIWS/SIWE 서명)가 필요하므로 Telegram callback만으로는 승인 불가. 브라우저/Tauri 승인 대시보드로 이동
+- 버튼 클릭 -> 승인 대시보드 열림 -> Owner가 SIWS/SIWE 서명으로 인증 -> 승인 완료
+
+**Discord (Embed + Markdown 링크):**
+
+> **Discord Webhook은 Interactive Components(Button)를 지원하지 않는다.** Discord Bot Token이 있어야 버튼을 사용할 수 있다. 현재 설계는 Webhook 전용이므로 Embed 내 markdown 링크로 승인/거부 URL을 안내한다.
+
+```json
+{
+  "embeds": [{
+    "title": "⚠️ 거래 승인 요청",
+    "color": 16776960,
+    "description": "Agent \"{agentName}\"이 {amount} {symbol} (≈ ${usdAmount}) 전송을 요청했습니다.",
+    "fields": [
+      { "name": "수신", "value": "{shortenedAddress}", "inline": true },
+      { "name": "타임아웃", "value": "{approvalTimeoutMinutes}분", "inline": true },
+      { "name": "📋 승인/거부", "value": "[✅ 승인]({approveUrl}) | [❌ 거부]({rejectUrl})\n⚠️ 링크 클릭 후 Owner 서명이 필요합니다.", "inline": false }
+    ],
+    "footer": { "text": "TX: {shortTxId} | Agent: {shortAgentId}" },
+    "timestamp": "{iso8601}"
+  }]
+}
+```
+
+설계 결정:
+- Embed description의 markdown 링크로 승인/거부 URL 안내
+- footer에 "링크 클릭 후 Owner 서명 필요" 주의사항 표기
+- Discord Bot 전환 시 Button Component로 업그레이드 가능 (향후 확장)
+
+**ntfy.sh (Actions 헤더):**
+
+```
+Title: 거래 승인 요청 - {amount} {symbol}
+Priority: high (4)
+Tags: warning, money_with_wings
+Actions: view, ✅ 승인 대시보드, {approveUrl}; view, ❌ 거부, {rejectUrl}
+Body:
+Agent "{agentName}" {amount} {symbol} (≈ ${usdAmount})
+수신: {shortenedAddress}
+타임아웃: {approvalTimeoutMinutes}분
+⚠️ 승인/거부 버튼 클릭 후 Owner 서명이 필요합니다.
+TX: {shortTxId} | Agent: {shortAgentId}
+```
+
+설계 결정:
+- ntfy.sh Actions는 `view` 타입으로 브라우저에서 URL을 열도록 설정
+- `http` 타입(직접 API 호출)은 사용하지 않음: ownerAuth 서명 없이 HTTP 호출만으로 승인 불가
+- Priority: high (4)로 설정하여 즉각 주의 환기
+
+**v0.8 TX_APPROVAL_REQUEST context 필드 (확장):**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `approvalId` | string | pending_approvals.id (승인 요청 ID) |
+| `nonce` | string | 1회용 토큰 (URL 재사용 방지) |
+| `approveUrl` | string | 승인 대시보드 URL (nonce 포함) |
+| `rejectUrl` | string | 거부 대시보드 URL (nonce 포함) |
+| `approvalTimeoutMinutes` | number | 승인 타임아웃 (분) |
+| `usdAmount` | string | USD 환산 금액 |
+| `symbol` | string | 토큰 심볼 (SOL, ETH 등) |
+| `shortenedAddress` | string | 수신 주소 축약 (앞 4 + ... + 뒤 4) |
+
 #### TX_DELAY_QUEUED (지연 큐잉)
 
 **Telegram (MarkdownV2):**
@@ -2201,11 +2387,23 @@ APPROVAL_REQUEST 알림에 승인 직접 링크(approvalUrl)를 포함할 경우
 
 ```
 승인 URL 형식:
-http://127.0.0.1:3100/v1/owner/approvals/{approvalId}?nonce={nonce}
+http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/approve?nonce={nonce}
+http://127.0.0.1:3100/v1/owner/approvals/{approvalId}/reject?nonce={nonce}
 
 이 URL은 승인 대시보드 페이지로 연결되며,
 실제 승인은 Owner 서명 검증 후 수행.
 ```
+
+#### [v0.8] 채널별 승인/거부 버튼 보안 고려사항
+
+| 항목 | 설명 |
+|------|------|
+| **nonce 1회용** | nonce는 1회용 토큰으로 URL 재사용 방지 (기존 설계 유지) |
+| **localhost 한정** | URL은 localhost(127.0.0.1:3100)로 외부 네트워크 노출 없음 |
+| **ownerAuth 서명 필수** | 승인 대시보드 접근 시 ownerAuth(SIWS/SIWE) 서명 필수 -- 버튼 클릭만으로 승인 불가 |
+| **Telegram url 버튼** | Telegram url 기반 InlineKeyboard는 callback_data와 달리 서버 사이드 검증이 불가하므로, 대시보드에서 ownerAuth로 인증 |
+| **Discord Webhook Button 미지원** | Discord Webhook은 Interactive Components(Button)를 지원하지 않으므로 Embed markdown 링크로 대체. Bot Token 전환 시 Button Component 업그레이드 가능 |
+| **ntfy.sh view 타입** | ntfy.sh Actions는 `view` 타입만 사용. `http` 타입(직접 API 호출)은 ownerAuth 서명 없이 호출 불가하므로 사용하지 않음 |
 
 ### 12.4 config.toml [notifications] 섹션 확정
 
