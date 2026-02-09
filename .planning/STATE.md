@@ -5,15 +5,15 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 37 — MCP SessionManager 설계
+**현재 초점:** v0.9 Phase 37 — SessionManager 핵심 설계
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 36 of 40 (토큰 파일 인프라 + 알림 이벤트) -- Phase complete
-플랜: 2 of 2 in current phase (complete)
-상태: Phase complete
-마지막 활동: 2026-02-09 — Completed 36-02-PLAN.md (SESSION_EXPIRING_SOON 알림 이벤트 설계)
+페이즈: 37 of 40 (SessionManager 핵심 설계) -- Ready to plan
+플랜: 0 of 2 in current phase
+상태: Ready to plan
+마지막 활동: 2026-02-09 — Phase 36 완료 + 검증 PASSED (4/4 must-haves)
 
 Progress: ████░░░░░░░░░░░░░░░░ 20%
 
@@ -22,7 +22,7 @@ Progress: ████░░░░░░░░░░░░░░░░ 20%
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 2/10 plans complete
+**v0.9 진행:** 2/10 plans complete, 1/5 phases complete
 
 ## 누적 컨텍스트
 
@@ -56,5 +56,5 @@ Phase 36-02 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 36 완료 (2/2 plans). 다음: Phase 37 플래닝 (MCP SessionManager 설계)
+중단 지점: Phase 36 실행+검증 완료. 다음: Phase 37 플래닝 (`/gsd:plan-phase 37`)
 재개 파일: None
