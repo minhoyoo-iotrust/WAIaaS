@@ -3,9 +3,10 @@
 **문서 ID:** TGBOT-DOCK
 **작성일:** 2026-02-05
 **v0.8 보완:** 2026-02-09
-**상태:** v0.8 보완
+**v0.9 /newsession + 기본 Constraints:** 2026-02-09
+**상태:** v0.9 보완
 **참조:** API-SPEC (37-rest-api-complete-spec.md), NOTI-ARCH (35-notification-architecture.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-01 (24-monorepo-data-directory.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CLI-REDESIGN (54-cli-flow-redesign.md)
-**요구사항:** TGBOT-01 (인라인 키보드 거래 승인/거부), TGBOT-02 (봇 명령어), DOCK-01 (Docker 이미지 + docker-compose)
+**요구사항:** TGBOT-01 (인라인 키보드 거래 승인/거부), TGBOT-02 (봇 명령어), DOCK-01 (Docker 이미지 + docker-compose), TGSN-01 (/newsession 명령어 + 인라인 키보드), TGSN-02 (기본 constraints 결정 규칙)
 
 ---
 
@@ -17,7 +18,7 @@ WAIaaS의 Telegram 인터랙티브 봇과 Docker 배포 스펙을 구현 가능�
 
 이 문서는 두 가지 독립적이지만 밀접한 주제를 다룬다:
 
-1. **Telegram 인터랙티브 봇** (섹션 2-7): Long Polling 아키텍처, 8개 명령어, 인라인 키보드 거래 승인/거부, 2-Tier 인증 모델
+1. **Telegram 인터랙티브 봇** (섹션 2-7): Long Polling 아키텍처, 9개 명령어, 인라인 키보드 거래 승인/거부, 2-Tier 인증 모델
 2. **Docker 배포 스펙** (섹션 8-15): Multi-stage Dockerfile, docker-compose, named volume, Docker Secrets, 보안 고려사항
 
 ### 1.2 요구사항 매핑
@@ -25,7 +26,9 @@ WAIaaS의 Telegram 인터랙티브 봇과 Docker 배포 스펙을 구현 가능�
 | 요구사항 | 설명 | 충족 섹션 |
 |---------|------|-----------|
 | TGBOT-01 | 인라인 키보드 거래 승인/거부 | 섹션 5 (인라인 키보드) + 섹션 6 (2-Tier 인증) |
-| TGBOT-02 | 봇 명령어 체계 (관리 + 조회) | 섹션 4 (8개 명령어) |
+| TGBOT-02 | 봇 명령어 체계 (관리 + 조회) | 섹션 4 (9개 명령어) |
+| TGSN-01 | /newsession 명령어 + 인라인 키보드 에이전트 선택 | 섹션 4.12 (/newsession 명령어) |
+| TGSN-02 | 기본 constraints 결정 규칙 (CLI + Telegram 공용) | 섹션 4.13 (기본 Constraints 결정 규칙) |
 | DOCK-01 | Docker 이미지 + docker-compose | 섹션 8-9 (Dockerfile + docker-compose) |
 
 ### 1.3 v0.1 -> v0.2 핵심 변경
@@ -158,13 +161,15 @@ TelegramBotService
 │   ├── /revoke -> 세션 폐기
 │   ├── /killswitch -> Kill Switch 발동
 │   ├── /pending -> 대기 거래 목록
+│   ├── /newsession -> MCP 세션 재생성 [v0.9]
 │   └── /help   -> 명령어 안내
 ├── Callback Query Handler
 │   ├── approve:{txId} -> 거래 사전 승인 (Tier 1)
 │   ├── reject:{txId}  -> 거래 거부
 │   ├── revoke:{sessionId} -> 세션 폐기
 │   ├── killswitch_confirm -> Kill Switch 확인
-│   └── killswitch_cancel  -> Kill Switch 취소
+│   ├── killswitch_cancel  -> Kill Switch 취소
+│   └── newsession:{agentId} -> 에이전트 선택 후 세션 생성 [v0.9]
 ├── Message Formatter (MarkdownV2)
 │   └── TelegramChannel.formatMessage() 재사용
 └── TelegramNotificationChannel (NOTI-ARCH 구현)
@@ -431,6 +436,7 @@ interface InlineKeyboardButton {
 | 6 | `/killswitch` | Kill Switch 발동 | chatId + 확인 | Tier 1 |
 | 7 | `/pending` | 대기 거래 목록 + 인라인 키보드 | chatId | Tier 1 |
 | 8 | `/help` | 명령어 목록 안내 | 없음 | - |
+| 9 | `/newsession` | MCP 세션 재생성 (에이전트 선택 -> 세션 생성 -> 토큰 파일 갱신) | chatId | Tier 1 |
 
 ### 4.2 명령어 1: /start
 
@@ -782,6 +788,7 @@ async handleHelp(message: TelegramMessage): Promise<void> {
     '/revoke \\[id\\] \\- Revoke a session',
     '/killswitch \\- Emergency Kill Switch',
     '/pending \\- Pending transactions with approve/reject',
+    '/newsession \\- Create new MCP session',
     '/help \\- This message',
     '',
     '_Tier 1 actions \\(Telegram\\): reject, revoke, kill switch, read\\-only_',
@@ -808,6 +815,7 @@ private registerCommands(): Map<string, CommandHandler> {
   handlers.set('/killswitch', this.handleKillSwitch.bind(this))
   handlers.set('/pending',    this.handlePending.bind(this))
   handlers.set('/help',       this.handleHelp.bind(this))
+  handlers.set('/newsession', this.handleNewSession.bind(this))  // [v0.9]
 
   return handlers
 }
@@ -840,8 +848,346 @@ sessions - List active sessions
 revoke - Revoke a session
 killswitch - Emergency Kill Switch
 pending - Pending transactions
+newsession - Create new MCP session
 help - Available commands
 ```
+
+### 4.12 [v0.9] 명령어 9: /newsession (TGSN-01)
+
+> **[v0.9 추가]** MCP 세션 재생성 명령어. 절대 수명 만료 후 또는 세션 갱신 한도 도달 시, Owner가 Telegram에서 원클릭으로 새 세션을 생성하고 토큰 파일을 갱신한다.
+
+**Tier 분류 근거:** 세션 생성은 masterAuth(implicit) 기반이며, 봇은 데몬 내부에서 sessionService를 직접 호출한다. 세션 생성 자체는 자금 이동이 아니며, 세션의 constraints가 자금 이동 범위를 제한한다. 따라서 chatId 인증(Tier 1)으로 충분하다.
+
+#### handleNewSession(message) 핸들러
+
+**동작 플로우 (5단계):**
+
+```
+Owner: /newsession
+  |
+  1. Tier 1 인증: isAuthorizedOwner(message.from.id) 검증
+     ├── 실패: "Unauthorized" 응답 -> 종료
+     └── 성공: 계속
+  |
+  2. 에이전트 목록 조회: agentService.listActive()
+  |
+  3. 에이전트 수 분기:
+     ├── 0개: "No active agents" 메시지 -> 종료
+     ├── 1개: 키보드 생략, 직접 createNewSession() 호출
+     └── 2개+: 인라인 키보드로 에이전트 선택 UI 제공
+  |
+  4. 인라인 키보드 구성 (2개+ 에이전트):
+     - 각 에이전트별 버튼 1행
+     - callback_data: "newsession:{agentId}" (47바이트 < 64바이트 제한)
+     - 메시지: "*Select an agent for the new session:*"
+  |
+  5. 인라인 키보드 타임아웃: 없음
+     (Telegram이 관리, 사용자가 키보드를 직접 닫음)
+```
+
+```typescript
+// [v0.9] packages/daemon/src/infrastructure/telegram/telegram-bot-service.ts
+
+async handleNewSession(message: TelegramMessage): Promise<void> {
+  // 1. Tier 1 인증
+  if (!this.isAuthorizedOwner(message.from.id)) {
+    await this.sendUnauthorized(message.chat.id)
+    return
+  }
+
+  // 2. 에이전트 목록 조회
+  const agents = await this.agentService.listActive()
+
+  // 3. 에이전트 수 분기
+  if (agents.length === 0) {
+    await this.sendMessage(message.chat.id,
+      'No active agents\\. Create an agent first with `waiaas agent create`\\.')
+    return
+  }
+
+  if (agents.length === 1) {
+    // 에이전트 1개: 키보드 생략, 직접 세션 생성
+    await this.createNewSession(message.chat.id, agents[0].id, agents[0].name)
+    return
+  }
+
+  // 4. 에이전트 2개 이상: 인라인 키보드
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: agents.map(agent => [{
+      text: agent.name ?? agent.id.slice(0, 8),
+      callback_data: `newsession:${agent.id}`,
+      // callback_data 크기: "newsession:" (11) + UUID v7 (36) = 47바이트 < 64바이트 제한
+    }]),
+  }
+
+  await this.sendMessageWithKeyboard(
+    message.chat.id,
+    '*Select an agent for the new session:*',
+    keyboard,
+  )
+}
+```
+
+#### handleNewSessionCallback(callbackQuery) 콜백 핸들러
+
+기존 callbackQuery 처리 패턴(`/approve`, `/reject` 콜백 참조)을 따른다.
+
+**동작 플로우 (4단계):**
+
+```
+callbackQuery.data = "newsession:{agentId}"
+  |
+  1. callback_data 파싱: "newsession:{agentId}" -> agentId 추출
+  |
+  2. Tier 1 재인증: isAuthorizedOwner(callbackQuery.from.id)
+     (콜백도 인증 필수)
+  |
+  3. answerCallbackQuery(callbackQuery.id)
+     -- Telegram 로딩 해제
+  |
+  4. createNewSession(chatId, agentId, agentName) 호출
+```
+
+```typescript
+// [v0.9] handleCallbackQuery switch 'newsession' 케이스에서 호출
+
+private async handleNewSessionCallback(
+  query: TelegramCallbackQuery,
+  agentId: string,
+): Promise<void> {
+  // 1. Tier 1 재인증 (callbackQuery에서도 인증 필수)
+  if (!this.isAuthorizedOwner(query.from.id)) {
+    await this.answerCallbackQuery(query.id, 'Unauthorized.')
+    return
+  }
+
+  // 2. Telegram 로딩 해제
+  await this.answerCallbackQuery(query.id)
+
+  // 3. 에이전트 이름 조회 (표시용)
+  const agent = await this.agentService.findById(agentId)
+  const agentName = agent?.name ?? agentId.slice(0, 8)
+
+  // 4. 세션 생성
+  await this.createNewSession(
+    query.message?.chat.id ?? Number(this.ownerChatId),
+    agentId,
+    agentName,
+  )
+}
+```
+
+#### createNewSession(chatId, agentId, agentName) private 메서드
+
+**동작 (4단계):**
+
+```
+1. 기본 constraints 결정: resolveDefaultConstraints(config) (섹션 4.13 규칙 적용)
+   |
+2. 세션 생성: sessionService.create({ agentId, ...constraints })
+   -- masterAuth implicit (데몬 내부)
+   |
+3. 토큰 파일 저장: writeMcpToken(getMcpTokenPath(), session.token)
+   -- Phase 36 유틸리티 (24-monorepo-data-directory.md 섹션 4)
+   |
+4. 완료 메시지 전송 (MarkdownV2)
+```
+
+```typescript
+// [v0.9] packages/daemon/src/infrastructure/telegram/telegram-bot-service.ts
+
+import { writeMcpToken, getMcpTokenPath } from '@waiaas/core/utils/token-file'
+import { resolveDefaultConstraints } from '@waiaas/core/utils/constraints'
+
+private async createNewSession(
+  chatId: number | string,
+  agentId: string,
+  agentName: string,
+): Promise<void> {
+  try {
+    // 1. 기본 constraints 결정 (섹션 4.13 규칙 적용)
+    const constraints = resolveDefaultConstraints(this.config)
+
+    // 2. 세션 생성 (masterAuth implicit -- 데몬 내부)
+    const session = await this.sessionService.create({
+      agentId,
+      expiresIn: constraints.expiresIn,
+      maxRenewals: constraints.maxRenewals,
+      renewalRejectWindow: constraints.renewalRejectWindow,
+      maxAmountPerTx: constraints.maxAmountPerTx,
+      allowedOperations: constraints.allowedOperations,
+    })
+
+    // 3. 토큰 파일 저장 (Phase 36 유틸리티)
+    try {
+      await writeMcpToken(getMcpTokenPath(), session.token)
+    } catch (fileError) {
+      // 세션은 생성됨, 파일 쓰기만 실패
+      const errMsg = fileError instanceof Error ? fileError.message : 'unknown'
+      await this.sendMessage(chatId, [
+        '*Session Created \\(Token File Warning\\)*',
+        '',
+        `Agent: \`${this.escapeMarkdownV2(agentName)}\``,
+        `Session created but token file write failed: \`${this.escapeMarkdownV2(errMsg)}\``,
+        '',
+        '_Use CLI to manually update the token file\\._',
+      ].join('\n'))
+      return
+    }
+
+    // 4. 완료 메시지 (MarkdownV2)
+    const expiresAtStr = new Date(session.expiresAt * 1000).toISOString()
+    await this.sendMessage(chatId, [
+      '*New Session Created*',
+      '',
+      `Agent: \`${this.escapeMarkdownV2(agentName)}\``,
+      `Expires: \`${this.escapeMarkdownV2(expiresAtStr)}\``,
+      `Token file updated: \`~/.waiaas/mcp\\-token\``,
+      '',
+      '_MCP Server will automatically load the new token\\._',
+    ].join('\n'))
+
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'unknown error'
+    await this.sendMessage(chatId,
+      `Failed to create session: \`${this.escapeMarkdownV2(errorMsg)}\``)
+  }
+}
+```
+
+**에러 처리 분기:**
+
+| 에러 상황 | 메시지 | 세션 상태 |
+|----------|--------|----------|
+| 세션 생성 실패 | "Failed to create session: {error}" | 미생성 |
+| 토큰 파일 쓰기 실패 | "Session created but token file write failed: {error}" | 생성됨 (DB에 존재) |
+| 성공 | "New Session Created" + 상세 정보 | 생성 + 파일 저장 완료 |
+
+### 4.13 [v0.9] 기본 Constraints 결정 규칙 (TGSN-02)
+
+> **[v0.9 추가]** CLI `waiaas mcp setup` / `waiaas mcp refresh-token` 및 Telegram `/newsession`에서 세션 생성 시 적용하는 기본 constraints 우선순위 체계.
+
+#### 현재 v0.9: 2-level 우선순위
+
+| 우선순위 | Level | 소스 | 설명 |
+|---------|-------|------|------|
+| 최우선 | 1 | config.toml `[security]` 섹션 기본값 | Owner가 명시적으로 설정한 시스템 전역 기본값 |
+| 기본 | 2 | 코드 내 하드코딩 상수 | config.toml에 값이 없을 때의 안전 기본값 |
+
+**Level 1: config.toml `[security]` 섹션 기본값**
+
+| 키 | 타입 | 기본값 | 설명 |
+|----|------|--------|------|
+| `default_max_renewals` | number | 30 | 세션 최대 갱신 횟수 |
+| `default_renewal_reject_window` | number | 3600 (1시간) | 갱신 거부 윈도우 (초) |
+| `session_absolute_lifetime` | number | 7776000 (90일) | 절대 수명 (초) |
+
+**Level 2: 코드 내 하드코딩 상수**
+
+```typescript
+// @waiaas/core 또는 공통 모듈
+
+/** MCP 전용 기본 만료 시간 (7일) */
+const DEFAULT_EXPIRES_IN = 604800
+
+/** 기본 최대 갱신 횟수 */
+const DEFAULT_MAX_RENEWALS = 30
+
+/** 기본 갱신 거부 윈도우 (1시간) */
+const DEFAULT_RENEWAL_REJECT_WINDOW = 3600
+
+/** 기본 허용 오퍼레이션 (제한 없음) */
+const DEFAULT_ALLOWED_OPERATIONS = undefined
+
+/** 기본 트랜잭션당 최대 금액 (제한 없음) */
+const DEFAULT_MAX_AMOUNT_PER_TX = undefined
+```
+
+#### 향후 v1.x: 3-level 확장 예약 (EXT-03)
+
+| 우선순위 | Level | 소스 | 설명 | 상태 |
+|---------|-------|------|------|------|
+| 최우선 | 0 | `agents.default_constraints` DB 컬럼 | 에이전트별 사전 설정 | EXT-03 이연 |
+| 중간 | 1 | config.toml `[security]` | 시스템 전역 기본값 | v0.9 구현 |
+| 기본 | 2 | 하드코딩 상수 | 안전 기본값 | v0.9 구현 |
+
+> **EXT-03:** `agents` 테이블에 `default_constraints` JSON 컬럼을 추가하여 에이전트별 기본 constraints를 지원하는 기능. v1.x에서 구현 예정. 현재는 모든 에이전트에 동일한 시스템 전역 기본값이 적용된다.
+
+#### resolveDefaultConstraints 유틸리티 함수
+
+```typescript
+// @waiaas/core 또는 CLI/daemon 공통 모듈
+// 위치: packages/core/src/utils/constraints.ts
+
+interface DefaultConstraints {
+  expiresIn: number           // 초. 항상 값 존재 (undefined 불가)
+  maxRenewals: number         // 항상 값 존재 (undefined 불가)
+  renewalRejectWindow: number // 초
+  maxAmountPerTx?: string     // 선택. undefined = 제한 없음
+  allowedOperations?: string[] // 선택. undefined = 제한 없음
+}
+
+interface ResolveConstraintsOptions {
+  /** CLI 명시 옵션 (최우선, CLI 전용) */
+  cliOverrides?: Partial<DefaultConstraints>
+}
+
+/**
+ * 기본 constraints를 결정하는 공용 함수.
+ * CLI waiaas mcp setup / refresh-token, Telegram /newsession에서 공유.
+ *
+ * 우선순위: CLI 명시 옵션 > config.toml [security] > 하드코딩 기본값
+ * CLI 명시 옵션은 CLI 전용 (--expires-in 등). Telegram에서는 항상 undefined.
+ *
+ * 최소 보안 보장: expiresIn과 maxRenewals는 항상 값이 존재한다 (undefined 불가).
+ * Pitfall 4 대응: constraints가 빈 객체가 되지 않도록 하드코딩 기본값이 반드시 적용.
+ */
+function resolveDefaultConstraints(
+  config: AppConfig,
+  options?: ResolveConstraintsOptions,
+): DefaultConstraints {
+  const cli = options?.cliOverrides ?? {}
+  const sec = config.security ?? {}
+
+  return {
+    expiresIn:
+      cli.expiresIn
+      ?? DEFAULT_EXPIRES_IN,  // MCP 전용 7일 (config.toml에 expiresIn 키 없음)
+
+    maxRenewals:
+      cli.maxRenewals
+      ?? sec.default_max_renewals
+      ?? DEFAULT_MAX_RENEWALS,
+
+    renewalRejectWindow:
+      cli.renewalRejectWindow
+      ?? sec.default_renewal_reject_window
+      ?? DEFAULT_RENEWAL_REJECT_WINDOW,
+
+    maxAmountPerTx:
+      cli.maxAmountPerTx
+      ?? DEFAULT_MAX_AMOUNT_PER_TX,
+
+    allowedOperations:
+      cli.allowedOperations
+      ?? DEFAULT_ALLOWED_OPERATIONS,
+  }
+}
+```
+
+**CLI와 Telegram의 차이:**
+
+| 항목 | CLI | Telegram |
+|------|-----|----------|
+| `--expires-in` 명시 옵션 | 지원 (최우선) | 미지원 (항상 기본값) |
+| `--max-renewals` 명시 옵션 | 지원 (최우선) | 미지원 (항상 기본값) |
+| resolveDefaultConstraints 호출 | `options.cliOverrides` 전달 | `options` 생략 (undefined) |
+
+**최소 보안 보장:**
+
+- `expiresIn`과 `maxRenewals`는 **항상 값이 존재**한다 (undefined 불가)
+- Pitfall 4 대응: constraints가 빈 객체(`{}`)가 되어 무제한 세션이 생성되는 것을 방지
+- 하드코딩 기본값(`DEFAULT_EXPIRES_IN = 604800`, `DEFAULT_MAX_RENEWALS = 30`)이 최후 안전망
 
 ---
 
@@ -895,6 +1241,7 @@ async sendApprovalRequest(tx: PendingTransaction): Promise<void> {
 | 세션 폐기 | `revoke:{sessionId}` | `revoke:` (7) + UUID v7 (36) = 43 | < 64바이트 |
 | Kill Switch 확인 | `killswitch_confirm` | 19 | < 64바이트 |
 | Kill Switch 취소 | `killswitch_cancel` | 18 | < 64바이트 |
+| 세션 생성 (에이전트 선택) | `newsession:{agentId}` | `newsession:` (11) + UUID v7 (36) = 47 | < 64바이트 |
 
 **주의:** callback_data 최대 64바이트. UUID v7은 36자 (하이픈 포함), 접두사와 합쳐도 안전하게 64바이트 이내.
 
@@ -934,6 +1281,9 @@ private async handleCallbackQuery(query: TelegramCallbackQuery): Promise<void> {
         break
       case 'killswitch_cancel':
         await this.handleKillSwitchCancelCallback(query)
+        break
+      case 'newsession':  // [v0.9]
+        await this.handleNewSessionCallback(query, targetId)
         break
       default:
         logger.warn(`TelegramBotService: unknown callback action: ${action}`)
@@ -2356,6 +2706,12 @@ QUEUED
 | 10 | wget healthcheck (curl 아님) | Alpine 기본 포함 (추가 설치 불필요) |
 | 11 | stop_grace_period: 35s | 데몬 30초 graceful shutdown + 5초 마진 |
 | 12 | direct_approve 기본 비활성 | 보안 최우선, 편의 기능은 명시적 활성화 |
+| 13 | /newsession Tier 1 (chatId) 인증 | 세션 생성은 자금 이동 아님, constraints가 범위 제한. masterAuth implicit |
+| 14 | 에이전트 인라인 키보드 (1개 자동, 2개+ 선택) | UX 최적화: 에이전트 1개면 불필요한 선택 과정 제거 |
+| 15 | callback_data `newsession:{agentId}` (47바이트) | UUID v7 (36) + prefix (11) = 47 < 64바이트 Telegram 제한 |
+| 16 | 기본 constraints 2-level (config > 하드코딩) | 최소 보안 보장 + 설정 유연성. EXT-03으로 3-level 확장 예약 |
+| 17 | resolveDefaultConstraints 공용 함수 | CLI + Telegram 동일 규칙 적용, 중복 제거 |
+| 18 | expiresIn/maxRenewals 항상 값 존재 | Pitfall 4 대응: 빈 constraints로 무제한 세션 생성 방지 |
 
 ---
 
@@ -2367,3 +2723,14 @@ QUEUED
 | [v0.8] APPROVAL url 기반 InlineKeyboard 버튼 | ownerAuth 서명 필요 → callback_data 불가 (33-02 결정) | §5.6 |
 | [v0.8] SESSION_RENEWED [거부하기] 버튼 | LOCKED 에이전트 세션 갱신 시 거부 윈도우 활성 (34-02 설계) | §5.6 |
 | [v0.8] Owner 미등록 에이전트 안내 메시지 | TX_DOWNGRADED_DELAY 알림에 set-owner CLI 안내 포함 | §5.6 |
+
+### v0.9 /newsession + 기본 Constraints (2026-02-09)
+
+| 변경 | 근거 | 영향 섹션 |
+|------|------|----------|
+| [v0.9] /newsession 명령어 추가 (9번째) | MCP 절대 수명 만료 시 원클릭 세션 재생성 (TGSN-01) | §4.12 |
+| [v0.9] 에이전트 인라인 키보드 선택 | 2개+ 에이전트 시 인라인 키보드, 1개 자동 (TGSN-01) | §4.12 |
+| [v0.9] handleNewSessionCallback 콜백 핸들러 | newsession:{agentId} callback_data 처리 (TGSN-01) | §4.12, §5.3 |
+| [v0.9] createNewSession private 메서드 | 세션 생성 + writeMcpToken + 완료 메시지 (TGSN-01) | §4.12 |
+| [v0.9] 기본 Constraints 결정 규칙 | 2-level (config.toml > 하드코딩), EXT-03 3-level 확장 예약 (TGSN-02) | §4.13 |
+| [v0.9] resolveDefaultConstraints 공용 함수 | CLI + Telegram 공유, 최소 보안 보장 (TGSN-02) | §4.13 |
