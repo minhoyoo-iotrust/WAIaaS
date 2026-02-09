@@ -3,6 +3,7 @@
 **문서 ID:** KILL-AUTO-EVM
 **작성일:** 2026-02-05
 **v0.7 보완:** 2026-02-08
+**v0.8 보완:** 2026-02-09
 **상태:** 완료
 **참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), OWNR-CONN (34-owner-wallet-connection.md), NOTI-ARCH (35-notification-architecture.md), CORE-04 (27-chain-adapter-interface.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-03 (26-keystore-spec.md)
 
@@ -88,9 +89,9 @@ stateDiagram-v2
     [*] --> NORMAL : 데몬 시작 (system_state 확인)
 
     NORMAL --> ACTIVATED : Owner 수동 발동\nAutoStopEngine 트리거\nCLI kill-switch\n키스토어 무결성 실패
-    ACTIVATED --> RECOVERING : POST /v1/admin/recover [v0.7 보완]\n(Owner 서명 + 마스터 패스워드)
-    RECOVERING --> NORMAL : 복구 완료\n(키스토어 해제 + 에이전트 재활성화)
-    RECOVERING --> ACTIVATED : 복구 실패\n(인증 오류 / 타임아웃)
+    ACTIVATED --> RECOVERING : POST /v1/admin/recover Step 1 [v0.8 보완]\n(masterAuth + ownerAuth(선택적) + 대기시간 기록)
+    RECOVERING --> NORMAL : POST /v1/admin/recover Step 2\n(대기 완료 + masterAuth 재검증\n+ 키스토어 해제 + 에이전트 재활성화)
+    RECOVERING --> ACTIVATED : 복구 실패\n(인증 오류 / lockout)
 
     note right of NORMAL
         모든 API 정상 동작
@@ -106,9 +107,10 @@ stateDiagram-v2
     end note
 
     note right of RECOVERING
-        복구 진행 중
+        복구 개시됨 (대기 중) [v0.8]
         세션 인증 여전히 거부
         Owner 복구 API만 허용
+        recovery_eligible_at 경과 대기
     end note
 ```
 
@@ -118,7 +120,7 @@ stateDiagram-v2
 |------|------|----------|-----------|
 | **NORMAL** | 정상 운영 상태 | 모든 API 정상 | 전체 서비스 활성 |
 | **ACTIVATED** | Kill Switch 발동됨 | 세션 인증 거부, Owner 복구만 허용 | 키스토어 잠김, 워커 정지 |
-| **RECOVERING** | 복구 진행 중 | ACTIVATED와 동일 제한 | 인증 검증 중 |
+| **RECOVERING** | 복구 개시됨, 대기 시간 경과 대기 중 [v0.8 보완] | ACTIVATED와 동일 제한 | 대기 시간 경과 후 Step 2로 복구 완료 |
 
 ### 2.3 시스템 상태 저장
 
@@ -635,6 +637,369 @@ interface RecoveryAttemptTracker {
 // - lockout 기간 중 복구 시도 -> 429 TOO_MANY_ATTEMPTS
 // - 복구 성공 시 failedAttempts 초기화
 // - lockout 만료 후 자동 해제 (다음 시도 시 확인)
+```
+
+### 4.7 [v0.8] Owner 유무별 복구 대기 시간 분기
+
+> **v0.8 변경 사유:** Owner 등록이 선택적이므로, Owner가 없는 시스템에서도 Kill Switch 복구가 가능해야 한다. Owner가 없으면 이중 인증(ownerAuth)이 불가하므로, 시간 지연으로 보안을 보상한다.
+
+#### 4.7.1 Owner 유무별 복구 대기 시간 분기 테이블
+
+| 시나리오 | 인증 | 대기 시간 | 근거 |
+|---------|------|----------|------|
+| **Owner 있음** (시스템 내 1개라도) | ownerAuth + masterAuth | 30분 (1,800초) | Owner 서명이 이중 인증 역할 |
+| **Owner 없음** (모든 에이전트 미등록) | masterAuth만 | 24시간 (86,400초) | 이중 인증 부재를 시간으로 보상 |
+
+#### 4.7.2 Owner 유무 판단 기준
+
+Kill Switch는 **시스템 전체** 동작이므로 에이전트별 분기는 부적절하다. 시스템 내에 Owner가 등록된 에이전트가 하나라도 있는지로 판단한다.
+
+**판단 쿼리:**
+```sql
+SELECT 1 FROM agents WHERE owner_address IS NOT NULL LIMIT 1
+```
+
+| 쿼리 결과 | 시나리오 | 적용 |
+|----------|---------|------|
+| 행 존재 | "Owner 있음" | ownerAuth 요구 + 30분 대기 |
+| 행 없음 | "Owner 없음" | masterAuth만 + 24시간 대기 |
+
+**근거:**
+- 에이전트별 분기 부적절: Kill Switch 복구는 시스템 전체를 정상으로 되돌리는 동작이므로 개별 에이전트 상태로 분기할 수 없다.
+- Owner가 있는 에이전트의 자금 보호 최우선: Owner가 등록된 에이전트가 하나라도 있으면, 해당 에이전트의 자금을 보호하기 위해 ownerAuth를 요구한다.
+- agents.owner_address는 Kill Switch 캐스케이드 6단계(섹션 3)에서 변경되지 않으므로, 복구 시점에서 agents 테이블의 현재 값을 읽으면 정확하다.
+
+#### 4.7.3 2단계 복구 패턴
+
+복구 대기 시간을 HTTP 요청 내에서 sleep으로 처리할 수 없다 (24시간 대기는 불가). 따라서 **2단계 복구 패턴**을 적용한다.
+
+**Step 1: POST /v1/admin/recover (최초 요청 -- 복구 개시)**
+```
+요청: { masterPassword }
++ Owner 있음 시: Authorization 헤더에 ownerAuth 서명
+
+처리:
+1. kill_switch_status === 'ACTIVATED' 확인
+   - NORMAL → 409 KILL_SWITCH_NOT_ACTIVE
+   - RECOVERING → 409 RECOVERY_ALREADY_STARTED
+2. masterAuth 검증 (Argon2id)
+3. Owner 유무 판단: SELECT 1 FROM agents WHERE owner_address IS NOT NULL LIMIT 1
+4. Owner 있음: ownerAuth 검증 (action='recover')
+   - ownerAuth 미제공 → 401 OWNER_AUTH_REQUIRED
+5. waitSeconds 결정: hasOwner ? 1800 : 86400
+6. system_state 기록:
+   - kill_switch_status = 'RECOVERING'
+   - recovery_eligible_at = now + waitSeconds (Unix epoch 초)
+   - recovery_wait_seconds = waitSeconds
+7. audit_log INSERT: KILL_SWITCH_RECOVERY_STARTED
+
+응답: 202 Accepted
+{
+  "status": "RECOVERING",
+  "recoveryEligibleAt": "2026-02-10T02:26:30Z",
+  "waitSeconds": 1800,
+  "hasOwner": true
+}
+```
+
+**Step 2: POST /v1/admin/recover (대기 후 요청 -- 복구 완료)**
+```
+요청: { masterPassword }
+(ownerAuth는 Step 1에서 검증 완료이므로 Step 2에서 불필요)
+
+처리:
+1. kill_switch_status === 'RECOVERING' 확인
+   - NORMAL → 409 KILL_SWITCH_NOT_ACTIVE
+   - ACTIVATED → Step 1부터 재시작 필요
+2. masterAuth 검증 (Argon2id)
+3. now >= recovery_eligible_at 확인
+   - 미경과 → 409 RECOVERY_WAIT_REQUIRED + { remainingSeconds }
+4. 실제 복구 수행 (기존 4.2 시퀀스: 키스토어 해제 → 에이전트 복원 → NORMAL 전이)
+5. system_state 초기화:
+   - kill_switch_status = 'NORMAL'
+   - kill_switch_activated_at = NULL
+   - kill_switch_reason = NULL
+   - recovery_eligible_at = NULL
+   - recovery_wait_seconds = NULL
+6. audit_log INSERT: KILL_SWITCH_RECOVERED
+
+응답: 200 OK
+{
+  "recovered": true,
+  "timestamp": "2026-02-10T02:56:30Z",
+  "agentsReactivated": 5
+}
+```
+
+**Kill Switch 상태 전이 (v0.8 확정):**
+```
+NORMAL → ACTIVATED (발동: 기존 4가지 트리거)
+ACTIVATED → RECOVERING (Step 1: 복구 개시, 대기 시간 기록)
+RECOVERING → NORMAL (Step 2: 대기 완료 + masterAuth 재검증)
+RECOVERING → ACTIVATED (복구 실패: masterAuth 오류 / lockout)
+```
+
+#### 4.7.4 RecoverRequest 스키마 변경 [v0.8]
+
+```typescript
+// v0.7 이전: ownerAuth 헤더 필수
+// v0.8: ownerAuth 헤더는 Owner 있을 때만 필수
+
+// POST /v1/admin/recover
+const RecoverRequest = z.object({
+  masterPassword: z.string().min(8),
+})
+// ownerAuth 미들웨어: Owner 유무에 따라 동적 적용
+// - Owner 있음: ownerAuth 검증 (action='recover') -- 기존 동작
+// - Owner 없음: ownerAuth 미적용 -- masterAuth만으로 복구
+
+// authRouter 분기 의사 코드:
+// const hasOwner = db.prepare(
+//   'SELECT 1 FROM agents WHERE owner_address IS NOT NULL LIMIT 1'
+// ).get() !== undefined
+//
+// if (hasOwner) {
+//   requireOwnerAuth(c, 'recover')  // 401 if missing/invalid
+// }
+```
+
+**응답 스키마 변경:**
+
+```typescript
+// Step 1 응답 (202 Accepted)
+const RecoverInitiatedResponse = z.object({
+  status: z.literal('RECOVERING'),
+  recoveryEligibleAt: z.string().datetime(),  // 복구 가능 시각
+  waitSeconds: z.number().int(),               // 적용된 대기 시간
+  hasOwner: z.boolean(),                       // Owner 유무
+})
+
+// Step 2 응답 (200 OK) -- 기존 RecoverResponse 유지
+const RecoverResponse = z.object({
+  recovered: z.literal(true),
+  timestamp: z.string().datetime(),
+  agentsReactivated: z.number().int().nonnegative(),
+})
+```
+
+#### 4.7.5 system_state 키 추가 [v0.8]
+
+| key | value 타입 | 기본값 | 설명 |
+|-----|-----------|--------|------|
+| `kill_switch_status` | `'NORMAL' \| 'ACTIVATED' \| 'RECOVERING'` | `'NORMAL'` | 현재 상태 (기존) |
+| `kill_switch_activated_at` | ISO 8601 \| `null` | `null` | 발동 시각 (기존) |
+| `kill_switch_reason` | 문자열 \| `null` | `null` | 발동 사유 (기존) |
+| `kill_switch_actor` | 문자열 \| `null` | `null` | 발동 주체 (기존) |
+| `recovery_eligible_at` | Unix epoch 초 \| `null` | `null` | **[v0.8 추가]** 복구 가능 시각 |
+| `recovery_wait_seconds` | 정수 \| `null` | `null` | **[v0.8 추가]** 적용된 대기 시간 (1800 또는 86400) |
+
+**RECOVERING 상태 상세 설명:**
+- RECOVERING은 복구가 개시되었으나 대기 시간이 경과하지 않은 상태이다.
+- API 동작은 ACTIVATED와 동일: 세션 인증 거부, killSwitchGuard 허용 목록만 통과.
+- 차이점: Step 2(대기 후 복구 완료)가 가능하다.
+- ACTIVATED에서 직접 NORMAL로 전이할 수 없다 (반드시 RECOVERING을 거쳐야 한다).
+
+#### 4.7.6 config.toml 설정 [v0.8]
+
+기본값은 고정하되, config.toml로 재정의 가능하게 설계하여 운영 유연성을 제공한다.
+
+```toml
+[security]
+# Kill Switch 복구 대기 시간 (초)
+# Owner가 등록된 에이전트가 1개라도 있을 때 적용
+kill_switch_recovery_wait_owner = 1800      # 기본 30분
+
+# Owner가 등록된 에이전트가 없을 때 적용
+kill_switch_recovery_wait_no_owner = 86400  # 기본 24시간
+```
+
+| 키 | 타입 | 기본값 | 유효 범위 | 설명 |
+|----|------|--------|----------|------|
+| `kill_switch_recovery_wait_owner` | integer | 1800 | 300 ~ 86400 (5분 ~ 24시간) | Owner 있음 시 복구 대기 (초) |
+| `kill_switch_recovery_wait_no_owner` | integer | 86400 | 3600 ~ 604800 (1시간 ~ 7일) | Owner 없음 시 복구 대기 (초) |
+
+**Zod 스키마:**
+```typescript
+export const SecurityConfigSchema = z.object({
+  // ... 기존 필드 ...
+
+  // [v0.8] Kill Switch 복구 대기 시간
+  kill_switch_recovery_wait_owner: z.number()
+    .int().min(300).max(86400)
+    .optional().default(1800)
+    .describe('Owner 있음 시 Kill Switch 복구 대기 시간 (초). 기본 30분.'),
+
+  kill_switch_recovery_wait_no_owner: z.number()
+    .int().min(3600).max(604800)
+    .optional().default(86400)
+    .describe('Owner 없음 시 Kill Switch 복구 대기 시간 (초). 기본 24시간.'),
+})
+```
+
+#### 4.7.7 에러 코드 추가 [v0.8]
+
+| 에러 코드 | HTTP | 조건 | retryable |
+|-----------|------|------|-----------|
+| `KILL_SWITCH_NOT_ACTIVE` | 409 | 상태가 NORMAL일 때 복구 요청 | false |
+| `OWNER_AUTH_REQUIRED` | 401 | Owner 있는데 ownerAuth 미제공 | false |
+| `RECOVERY_WAIT_REQUIRED` | 409 | RECOVERING 상태에서 대기 미경과 | true (대기 후 재시도) |
+| `RECOVERY_ALREADY_STARTED` | 409 | 이미 RECOVERING 상태에서 새 Step 1 요청 | false |
+
+**RECOVERY_WAIT_REQUIRED 응답 상세:**
+```json
+{
+  "error": {
+    "code": "RECOVERY_WAIT_REQUIRED",
+    "message": "복구 대기 시간이 경과하지 않았습니다.",
+    "details": {
+      "recoveryEligibleAt": "2026-02-10T02:56:30Z",
+      "remainingSeconds": 1200
+    },
+    "requestId": "req_...",
+    "retryable": true
+  }
+}
+```
+
+#### 4.7.8 복구 서비스 코드 패턴 [v0.8]
+
+```typescript
+// KillSwitchService.recover() v0.8 확장
+async recover(
+  masterPassword: string,
+  ownerSignature?: OwnerSignaturePayload,
+): Promise<RecoverResult | RecoverInitiatedResult> {
+  const status = getSystemState(db, 'kill_switch_status')
+
+  // ── Phase 1: 상태 분기 ──
+  if (status === 'NORMAL') {
+    throw conflict('KILL_SWITCH_NOT_ACTIVE')
+  }
+
+  if (status === 'RECOVERING') {
+    // Step 2: 대기 경과 확인
+    return this.completeRecovery(masterPassword)
+  }
+
+  // status === 'ACTIVATED' → Step 1: 복구 개시
+  return this.initiateRecovery(masterPassword, ownerSignature)
+}
+
+private async initiateRecovery(
+  masterPassword: string,
+  ownerSignature?: OwnerSignaturePayload,
+): Promise<RecoverInitiatedResult> {
+  // 1. masterAuth 검증
+  await this.verifyMasterPassword(masterPassword)
+
+  // 2. Owner 유무 판단
+  const hasOwner = this.db.prepare(
+    'SELECT 1 FROM agents WHERE owner_address IS NOT NULL LIMIT 1'
+  ).get() !== undefined
+
+  // 3. Owner 있으면 ownerAuth 검증
+  if (hasOwner) {
+    if (!ownerSignature) throw unauthorized('OWNER_AUTH_REQUIRED')
+    await this.verifyOwnerSignature(ownerSignature, 'recover')
+  }
+
+  // 4. 대기 시간 결정
+  const waitSeconds = hasOwner
+    ? this.config.kill_switch_recovery_wait_owner
+    : this.config.kill_switch_recovery_wait_no_owner
+  const now = Math.floor(Date.now() / 1000)
+  const recoveryEligibleAt = now + waitSeconds
+
+  // 5. system_state 업데이트 (ACTIVATED → RECOVERING)
+  const tx = this.db.transaction(() => {
+    setSystemState(this.db, 'kill_switch_status', 'RECOVERING')
+    setSystemState(this.db, 'recovery_eligible_at', String(recoveryEligibleAt))
+    setSystemState(this.db, 'recovery_wait_seconds', String(waitSeconds))
+  })
+  tx.immediate()
+
+  // 6. 감사 로그
+  await insertAuditLog(this.db, {
+    eventType: 'KILL_SWITCH_RECOVERY_STARTED',
+    actor: hasOwner ? 'owner' : 'admin',
+    severity: 'critical',
+    details: JSON.stringify({
+      hasOwner,
+      waitSeconds,
+      recoveryEligibleAt: new Date(recoveryEligibleAt * 1000).toISOString(),
+    }),
+  })
+
+  return {
+    status: 'RECOVERING',
+    recoveryEligibleAt: new Date(recoveryEligibleAt * 1000).toISOString(),
+    waitSeconds,
+    hasOwner,
+  }
+}
+
+private async completeRecovery(
+  masterPassword: string,
+): Promise<RecoverResult> {
+  // 1. masterAuth 재검증
+  await this.verifyMasterPassword(masterPassword)
+
+  // 2. 대기 시간 경과 확인
+  const eligibleAt = Number(getSystemState(this.db, 'recovery_eligible_at'))
+  const now = Math.floor(Date.now() / 1000)
+
+  if (now < eligibleAt) {
+    const remaining = eligibleAt - now
+    throw conflict('RECOVERY_WAIT_REQUIRED', {
+      recoveryEligibleAt: new Date(eligibleAt * 1000).toISOString(),
+      remainingSeconds: remaining,
+    })
+  }
+
+  // 3. 실제 복구 수행 (기존 §4.2 시퀀스)
+  //    키스토어 해제 → 에이전트 복원 → NORMAL 전이
+  return this.executeRecovery()
+}
+```
+
+#### 4.7.9 IKillSwitchService 인터페이스 업데이트 [v0.8]
+
+```typescript
+interface IKillSwitchService {
+  /** Kill Switch 발동 (기존) */
+  activate(reason: string, actor: KillSwitchActor): Promise<KillSwitchResult>
+
+  /**
+   * Kill Switch 복구 [v0.8 확장].
+   * - ACTIVATED 상태: Step 1 (복구 개시, 대기 시간 기록)
+   * - RECOVERING 상태: Step 2 (대기 완료 확인 후 실제 복구)
+   *
+   * @param masterPassword - 마스터 패스워드
+   * @param ownerSignature - Owner 서명 (Owner 있을 때만 필수, Step 1에서만 사용)
+   */
+  recover(
+    masterPassword: string,
+    ownerSignature?: OwnerSignaturePayload,
+  ): Promise<RecoverResult | RecoverInitiatedResult>
+
+  /** 현재 Kill Switch 상태 조회 (기존) */
+  getStatus(): KillSwitchStatus
+}
+
+/** Step 1 응답 [v0.8 추가] */
+interface RecoverInitiatedResult {
+  status: 'RECOVERING'
+  recoveryEligibleAt: string   // ISO 8601
+  waitSeconds: number          // 적용된 대기 시간 (초)
+  hasOwner: boolean            // Owner 유무
+}
+
+/** Step 2 응답 (기존 RecoverResult) */
+interface RecoverResult {
+  recovered: true
+  timestamp: string            // ISO 8601
+  agentsReactivated: number
+}
 ```
 
 ---
