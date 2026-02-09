@@ -1,5 +1,32 @@
 # Project Milestones: WAIaaS
 
+## v0.9 MCP 세션 관리 자동화 설계 (Shipped: 2026-02-09)
+
+**Delivered:** MCP 환경에서 세션 토큰의 갱신·만료·재발급을 자동화하는 메커니즘을 설계 수준에서 완전히 정의 — SessionManager 핵심 로직, MCP tool handler 통합, CLI/Telegram 외부 연동, 18개 테스트 시나리오, 7개 기존 설계 문서 v0.9 통합
+
+**Phases completed:** 36-40 (10 plans total)
+
+**Key accomplishments:**
+
+- 토큰 파일 인프라 — getMcpTokenPath/writeMcpToken/readMcpToken 3개 공유 유틸리티, write-then-rename 원자적 쓰기, SESSION_EXPIRING_SOON 17번째 알림 이벤트
+- SessionManager 핵심 설계 — getToken/getState/start/dispose 4개 public 메서드, 9개 내부 상태, 60% TTL 자동 갱신, safeSetTimeout(32-bit overflow 방어), 5종 에러 분기 + lazy 401 reload
+- MCP 통합 설계 — ApiClient 래퍼 클래스, 6+3 tool/resource handler 통합, 50ms 대기 토큰 로테이션 동시성, 60초 polling 에러 복구, Claude Desktop isError 회피 전략
+- CLI + Telegram 연동 — mcp setup(7단계)/refresh-token(8단계) 커맨드, /newsession 인라인 키보드, resolveDefaultConstraints 공용 함수
+- 테스트 설계 + 문서 통합 — T-01~T-14 + S-01~S-04 시나리오 명시, pitfall 교차 참조 매트릭스, 7개 설계 문서 85개 [v0.9] 태그 통합
+
+**Stats:**
+
+- 47 files created/modified
+- +15,463 / -470 lines (Markdown design docs)
+- 5 phases, 10 plans, 21 requirements, 34 설계 결정, 7 설계 문서 수정 (85 [v0.9] 태그)
+- 1 day (2026-02-09)
+
+**Git range:** `cd8ef0a` (v0.8 complete) → `f15eed7` (Phase 40 complete)
+
+**What's next:** v0.10 구현 계획 — 설계 문서(24-64) 기반 구현 마일스톤 시작
+
+---
+
 ## v0.8 Owner 선택적 등록 + 점진적 보안 모델 (Shipped: 2026-02-09)
 
 **Delivered:** Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 따라 보안 기능이 점진적으로 해금되는 모델을 설계 — 3-State 상태 머신(NONE/GRACE/LOCKED), APPROVAL→DELAY 다운그레이드, sweepAll 자금 회수 프로토콜, 14개 기존 설계 문서 v0.8 통합

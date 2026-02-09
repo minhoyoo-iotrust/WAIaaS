@@ -8,22 +8,11 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## 현재 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-
-**목표:** MCP 환경에서 세션 토큰의 갱신·만료·재발급을 자동화하는 메커니즘을 설계 수준에서 정의한다.
-
-**대상 기능:**
-- SessionManager — MCP Server 내장 자동 세션 갱신 (토큰 로드·갱신·교체·영속화)
-- CLI `mcp setup` / `mcp refresh-token` — 토큰 파일 관리 커맨드
-- Telegram `/newsession` — 원클릭 세션 재생성 플로우
-- SESSION_EXPIRING_SOON — 17번째 알림 이벤트 추가
-- 7개 기존 설계 문서 v0.9 통합
-
 ## 현재 상태
 
-v0.1~v0.8 완료 (2026-02-09). 90개 플랜, 243개 요구사항, 35개 페이즈, 8개 마일스톤, 30개 설계 문서(24-64). 전체 설계 단계 완료.
+v0.1~v0.9 완료 (2026-02-09). 100개 플랜, 264개 요구사항, 40개 페이즈, 9개 마일스톤, 30개 설계 문서(24-64). 전체 설계 단계 완료.
 
-**v0.8 최종 결과:** Owner 선택적 등록 + 점진적 보안 모델 설계 완료. 3-State 상태 머신(NONE/GRACE/LOCKED), APPROVAL→DELAY 다운그레이드, sweepAll 자금 회수 프로토콜, 14개 설계 문서 v0.8 통합(240 [v0.8] 태그). Audit PASSED (33/33 reqs, 5/5 phases, 23/23 integrations, 5/5 E2E flows).
+**v0.9 최종 결과:** MCP 세션 관리 자동화 설계 완료. SessionManager 핵심 로직(4 public 메서드, 9 내부 상태, 5종 에러 분기), MCP tool handler 통합(ApiClient 래퍼, 동시성, 생명주기), CLI/Telegram 연동(mcp setup/refresh-token, /newsession), 18개 테스트 시나리오, 7개 설계 문서 v0.9 통합(85 [v0.9] 태그), 34 설계 결정. Audit PASSED (21/21 reqs, 5/5 phases, 34/34 integrations, 7/7 E2E flows).
 
 ## 요구사항
 
@@ -79,10 +68,15 @@ v0.1~v0.8 완료 (2026-02-09). 90개 플랜, 243개 요구사항, 35개 페이�
 - ✓ Kill Switch/세션 보안 Owner 유무 분기 (복구 24h vs 30min, 세션 갱신 [거부하기]) — v0.8 (SECURITY-01~04, NOTIF-03)
 - ✓ DX 변경 스펙 (set-owner/remove-owner/withdraw CLI 3개, --quickstart 간소화, agent info 안내) — v0.8 (DX-01~05)
 - ✓ 14개 설계 문서 v0.8 통합 + 18x3 Owner 상태 분기 매트릭스 SSoT — v0.8 (INTEG-01~02)
+- ✓ SessionManager 핵심 설계 (인터페이스, 토큰 로드, 자동 갱신, 실패 처리, lazy 401 reload) — v0.9 (SMGR-01~07)
+- ✓ MCP tool handler 통합 설계 (ApiClient, 동시성, 프로세스 생명주기, Claude Desktop 에러 처리) — v0.9 (SMGI-01~04)
+- ✓ CLI mcp setup/refresh-token + Telegram /newsession 연동 설계 — v0.9 (CLIP-01~02, TGSN-01~02)
+- ✓ SESSION_EXPIRING_SOON 알림 이벤트 + 만료 임박 판단 로직 설계 — v0.9 (NOTI-01~02)
+- ✓ 18개 테스트 시나리오 명시 + 7개 설계 문서 v0.9 통합(85 [v0.9] 태그) — v0.9 (TEST-01~02, INTEG-01~02)
 
 ### 활성
 
-(v0.9 REQUIREMENTS.md에서 정의 — 아래 참조)
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -107,8 +101,9 @@ v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9�
 v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11개 플랜, 30개 요구사항, 9개 신규 문서(56-64) + 기존 8개 문서 v0.6 통합.
 v0.7 구현 장애 요소 해소 완료 (2026-02-08). 5개 페이즈, 11개 플랜, 25개 요구사항, 기존 9개 설계 문서 직접 수정.
 v0.8 Owner 선택적 등록 + 점진적 보안 모델 완료 (2026-02-09). 5개 페이즈, 11개 플랜, 33개 요구사항, 14개 설계 문서 v0.8 통합(240 [v0.8] 태그).
+v0.9 MCP 세션 관리 자동화 설계 완료 (2026-02-09). 5개 페이즈, 10개 플랜, 21개 요구사항, 7개 설계 문서 v0.9 통합(85 [v0.9] 태그), 34 설계 결정.
 
-**누적:** 8 milestones (v0.1-v0.8), 35 phases, 90 plans, 243 requirements, 30 설계 문서 (24-64)
+**누적:** 9 milestones (v0.1-v0.9), 40 phases, 100 plans, 264 requirements, 30 설계 문서 (24-64)
 
 **기술 스택 (v0.2 확정, v0.6 확장 설계 완료, v0.7 의존성 정리):**
 - Runtime: Node.js 22 LTS
@@ -125,6 +120,7 @@ v0.8 Owner 선택적 등록 + 점진적 보안 모델 완료 (2026-02-09). 5개 
 **설계 문서:** 30개 (deliverables 24-64.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md) + 1개 확장 테스트 전략 (64.md)
 - v0.7 보완: ethers/siwe → viem/siwe 전환, 5개 타겟 플랫폼 확정, prebuildify 네이티브 번들 전략
 - v0.8 통합: Owner 선택적 등록(3-State), APPROVAL 다운그레이드, sweepAll, withdraw API, 18x3 매트릭스 SSoT
+- v0.9 통합: SessionManager 핵심/MCP 통합, CLI mcp/Telegram /newsession, SESSION_EXPIRING_SOON, 7개 문서 85 [v0.9] 태그
 
 ### 알려진 이슈
 
@@ -197,6 +193,13 @@ v0.8 Owner 선택적 등록 + 점진적 보안 모델 완료 (2026-02-09). 5개 
 | sweepAll masterAuth만 | 수신 주소 = owner_address 고정이므로 공격자 이득 없음 | ✓ Good — v0.8 설계 완성 |
 | Kill Switch withdraw 허용 (방안 A) | killSwitchGuard 5번째 허용 경로, Owner 자금 회수 보장 | ✓ Good — v0.8 설계 완성 |
 | OwnerState 런타임 파생 | DB 비저장, resolveOwnerState() 순수 함수로 SSoT 유지 | ✓ Good — v0.8 설계 완성 |
+| write-then-rename 원자적 쓰기 | Node.js 내장 API, 외부 의존 없이 POSIX rename 원자성 활용 | ✓ Good — v0.9 설계 완성 |
+| SessionManager Composition 패턴 | MCP SDK 독립, 단일 클래스 4 public 메서드 | ✓ Good — v0.9 설계 완성 |
+| safeSetTimeout 32-bit overflow 방어 | setTimeout 24.8일 한계 회피, 재귀 분할 래퍼 | ✓ Good — v0.9 설계 완성 |
+| 파일-우선 쓰기 순서 | writeMcpToken → 메모리 교체, 프로세스 kill 복구 보장 | ✓ Good — v0.9 설계 완성 |
+| Mutex 미사용, 50ms 대기 | Node.js 단일 스레드, 차단 지연 방지 | ✓ Good — v0.9 설계 완성 |
+| console.error 통일 (stdout 금지) | stdio stdout 오염 → JSON-RPC 파싱 실패 방지 | ✓ Good — v0.9 설계 완성 |
+| resolveDefaultConstraints 공용 함수 | CLI + Telegram constraints 결정 규칙 SSoT | ✓ Good — v0.9 설계 완성 |
 
 ---
-*최종 업데이트: 2026-02-09 after v0.9 milestone started*
+*최종 업데이트: 2026-02-09 after v0.9 milestone completed*
