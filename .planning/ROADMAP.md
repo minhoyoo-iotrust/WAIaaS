@@ -134,7 +134,7 @@
 
 **마일스톤 목표:** CLI로 init -> start -> SOL 전송 -> 확인까지 동작하는 최소 데몬
 
-- [ ] **Phase 48: 모노레포 스캐폴드 + @waiaas/core** — 빌드 인프라와 공유 타입/스키마/인터페이스 패키지
+- [x] **Phase 48: 모노레포 스캐폴드 + @waiaas/core** — 빌드 인프라와 공유 타입/스키마/인터페이스 패키지 (completed 2026-02-10)
 - [ ] **Phase 49: 데몬 인프라** — SQLite, 키스토어, config 로더, 라이프사이클
 - [ ] **Phase 50: API 서버 + SolanaAdapter + 파이프라인** — HTTP 엔드포인트, 체인 연동, 트랜잭션 실행
 - [ ] **Phase 51: CLI + E2E 통합 검증** — 사용자 CLI와 전 구간 자동 검증
