@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 34 of 35 (자금 회수 + 보안 분기 설계)
-플랜: 0 of 2 in current phase
-상태: Phase 33 complete, Phase 34 ready to plan
-마지막 활동: 2026-02-09 -- Phase 33 실행 완료 (2/2 plans, verified)
+플랜: 2 of 2 in current phase
+상태: Phase 34 plan 02 complete
+마지막 활동: 2026-02-09 -- Phase 34 Plan 02 실행 완료 (Kill Switch + 세션 갱신 Owner 분기)
 
-Progress: ██████░░░░░░░░░░░░░░ 55% (6/11 plans)
+Progress: ████████████████░░░░ 82% (9/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 6 plans, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 9 plans complete, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -56,6 +56,11 @@ v0.8 관련:
 - [33-02] Telegram 승인/거부 버튼은 url 기반 -- ownerAuth 서명이 필요하므로 callback_data 불가
 - [33-02] Discord Webhook은 Button 미지원 -- Embed markdown 링크로 대체
 - [33-02] ntfy.sh Actions는 view 타입만 -- http 타입은 ownerAuth 서명 불가
+- [34-02] Kill Switch 복구는 시스템별 분기 -- agents.owner_address IS NOT NULL 존재 여부로 판단
+- [34-02] config.toml로 복구 대기 시간 재정의 가능 (kill_switch_recovery_wait_owner/no_owner)
+- [34-02] Step 2에서 masterAuth만 재검증 -- ownerAuth는 Step 1에서 완료
+- [34-02] SESSION_RENEWED [거부하기]는 masterAuth(implicit)만 -- APPROVAL ownerAuth와 다름
+- [34-02] 거부 윈도우 비강제 -- Owner는 세션 유효 시 언제든 DELETE 가능
 
 ### 차단 요소/우려 사항
 
@@ -68,5 +73,5 @@ v0.8 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 33 실행 및 검증 완료. Phase 34 계획 시작 대기.
+중단 지점: Phase 34 Plan 02 실행 완료. Phase 34 전체 완료 확인 대기 (34-01 병행 실행 중).
 재개 파일: .planning/ROADMAP.md
