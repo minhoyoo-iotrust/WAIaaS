@@ -19,10 +19,10 @@
 
 ### SessionManager 통합 설계 (SMGI)
 
-- [ ] **SMGI-01**: MCP tool handler 통합 설계 — ApiClient 리팩토링, 모든 tool/resource handler가 sessionManager.getToken() 참조, 401 자동 재시도
-- [ ] **SMGI-02**: 토큰 로테이션 동시성 설계 — 갱신 중 tool 호출 시 현재(이전) 토큰 사용, 갱신 완료 후 다음 호출부터 새 토큰, in-flight 충돌 방지
-- [ ] **SMGI-03**: MCP 프로세스 생명주기 설계 — Claude Desktop 재시작 시 파일에서 토큰 복원, 갱신 도중 프로세스 kill 시 파일-우선 쓰기 순서
-- [ ] **SMGI-04**: Claude Desktop 에러 처리 설계 — 세션 만료 시 tool 응답 형식(isError 대신 안내 메시지), 반복 에러 시 연결 해제 방지
+- [x] **SMGI-01**: MCP tool handler 통합 설계 — ApiClient 리팩토링, 모든 tool/resource handler가 sessionManager.getToken() 참조, 401 자동 재시도
+- [x] **SMGI-02**: 토큰 로테이션 동시성 설계 — 갱신 중 tool 호출 시 현재(이전) 토큰 사용, 갱신 완료 후 다음 호출부터 새 토큰, in-flight 충돌 방지
+- [x] **SMGI-03**: MCP 프로세스 생명주기 설계 — Claude Desktop 재시작 시 파일에서 토큰 복원, 갱신 도중 프로세스 kill 시 파일-우선 쓰기 순서
+- [x] **SMGI-04**: Claude Desktop 에러 처리 설계 — 세션 만료 시 tool 응답 형식(isError 대신 안내 메시지), 반복 에러 시 연결 해제 방지
 
 ### CLI MCP 커맨드 (CLIP)
 

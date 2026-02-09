@@ -25,7 +25,7 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 
 - [x] **Phase 36: 토큰 파일 인프라 + 알림 이벤트** - 공유 파일 유틸리티와 SESSION_EXPIRING_SOON 이벤트 설계
 - [x] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
-- [ ] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
+- [x] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
 - [x] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
 - [ ] **Phase 40: 테스트 설계 + 설계 문서 통합** - 18개 테스트 시나리오 명시 + 7개 기존 문서 v0.9 통합
 
@@ -74,8 +74,8 @@ Plans:
 **Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
 
 Plans:
-- [ ] 38-01-PLAN.md -- ApiClient 래퍼 클래스 + tool/resource handler 통합 패턴 설계 (SMGI-01)
-- [ ] 38-02-PLAN.md -- 토큰 로테이션 동시성 + 프로세스 생명주기 + Claude Desktop 에러 처리 설계 (SMGI-02, SMGI-03, SMGI-04)
+- [x] 38-01-PLAN.md -- ApiClient 래퍼 클래스 + tool/resource handler 통합 패턴 설계 (SMGI-01)
+- [x] 38-02-PLAN.md -- 토큰 로테이션 동시성 + 프로세스 생명주기 + Claude Desktop 에러 처리 설계 (SMGI-02, SMGI-03, SMGI-04)
 
 ### Phase 39: CLI + Telegram 연동 설계
 **Goal**: CLI mcp setup/refresh-token 커맨드와 Telegram /newsession 플로우가 인터페이스, 동작, 출력 수준으로 정의된다
@@ -123,7 +123,7 @@ Phase 36 ─┬─→ Phase 37 ──→ Phase 38 ──┐
 |-------|----------------|--------|-----------|
 | 36. 토큰 파일 인프라 + 알림 이벤트 | 2/2 | Complete | 2026-02-09 |
 | 37. SessionManager 핵심 설계 | 2/2 | Complete | 2026-02-09 |
-| 38. SessionManager MCP 통합 설계 | 0/2 | Not started | - |
+| 38. SessionManager MCP 통합 설계 | 2/2 | Complete | 2026-02-09 |
 | 39. CLI + Telegram 연동 설계 | 2/2 | Complete | 2026-02-09 |
 | 40. 테스트 설계 + 설계 문서 통합 | 0/2 | Not started | - |
 
