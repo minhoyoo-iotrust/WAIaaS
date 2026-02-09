@@ -5,22 +5,22 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-08)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- Owner 등록 없이도 기본 보안을 제공하고, Owner 등록 시 강화된 보안이 점진적으로 해금된다.
-**현재 초점:** Phase 35 -- DX + 설계 문서 통합
+**현재 초점:** v0.8 마일스톤 완료 -- 구현 준비 완료
 
 ## 현재 위치
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 35 of 35 (DX + 설계 문서 통합)
-플랜: 2 of 3 in current phase
-상태: In progress -- 35-02 완료, 35-03 대기
-마지막 활동: 2026-02-09 -- 35-02 Owner 상태 분기 매트릭스 SSoT 완료
+플랜: 3 of 3 in current phase
+상태: Phase 35 완료 -- v0.8 마일스톤 설계 완료
+마지막 활동: 2026-02-09 -- 35-03 14개 설계 문서 v0.8 통합 반영 완료
 
-Progress: ██████████████████░░ 91% (10/11 plans)
+Progress: ████████████████████ 100% (11/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 10 plans complete, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 완료:** 11 plans complete, 33 reqs, 5 phases (31-35), 30 설계 문서 v0.8 통합
 
 ## 누적 컨텍스트
 
@@ -74,6 +74,9 @@ v0.8 관련:
 - [35-02] v0.8 objective 본문 3-State 전환: §3, §7, §8의 이분법을 NONE/GRACE vs LOCKED로 정정
 - [35-02] §3 코드 스니펫 정정: !agent.owner_address -> resolveOwnerState() !== 'LOCKED' (33-time-lock 일관)
 - [35-02] Owner 상태 분기 매트릭스 SSoT: 18행x3열, 교차 검증 10건 전건 일치
+- [35-03] 37-rest-api §8.18.2 Kill Switch withdraw Open Question 해소: 방안 A 확정 반영
+- [35-03] 30-session 세션 토큰 Owner 독립성 명시: JWT 자체는 Owner 무관
+- [35-03] 40-telegram url 기반 InlineKeyboard 통일: APPROVAL + SESSION_RENEWED 모두 url 기반
 
 ### 차단 요소/우려 사항
 
@@ -81,11 +84,11 @@ v0.8 관련:
 - 유예 구간 withdraw 공격 (H-02): owner_verified=1에서만 withdraw 활성화 **설계 완료** (32-02, 34-01 API 스펙 확정)
 - 보안 다운그레이드 공격 (C-02): LOCKED 해제 금지 + 알림 + killSwitchGuard **설계 완료** (32-02)
 - sweepAll 부분 실패 (C-03): SOL 마지막 전송 + HTTP 207 부분 성공 처리 **설계 완료** (31-02, 34-01 상세 확정)
-- Kill Switch Owner 변경 (H-03): killSwitchGuard 4개 허용 경로 외 503 차단 **설계 완료** (32-02)
-- Kill Switch withdraw: **방안 A 채택 완료** -- killSwitchGuard 5번째 허용 경로 추가 (35-01)
+- Kill Switch Owner 변경 (H-03): killSwitchGuard 5개 허용 경로 외 503 차단 **설계 완료** (32-02, 35-03 통합 반영)
+- Kill Switch withdraw: **방안 A 채택 + 전 문서 반영 완료** -- killSwitchGuard 5번째 허용 경로 (35-01, 35-03)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: 35-02 완료. 35-03 (14개 설계 문서 v0.8 통합 반영) 실행 대기.
-재개 파일: .planning/phases/35-dx-설계-문서-통합/35-03-PLAN.md
+중단 지점: v0.8 마일스톤 설계 완료. 구현 Phase 준비.
+재개 파일: None
