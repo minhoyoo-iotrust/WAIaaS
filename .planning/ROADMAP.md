@@ -71,11 +71,11 @@ Plans:
   2. 갱신 중 tool 호출 시 동시성 처리(현재 토큰 사용, 갱신 완료 후 전환, in-flight 충돌 방지)가 정의되어 있다
   3. Claude Desktop 재시작 시 파일 복원, 갱신 도중 프로세스 kill 시 파일-우선 쓰기 순서가 정의되어 있다
   4. 세션 만료 시 tool 응답 형식(isError 대신 안내 메시지)과 반복 에러 시 연결 해제 방지 전략이 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
 
 Plans:
-- [ ] 38-01: MCP tool handler 통합 + ApiClient 리팩토링 설계
-- [ ] 38-02: 동시성 + 프로세스 생명주기 + Claude Desktop 에러 처리 설계
+- [ ] 38-01-PLAN.md -- ApiClient 래퍼 클래스 + tool/resource handler 통합 패턴 설계 (SMGI-01)
+- [ ] 38-02-PLAN.md -- 토큰 로테이션 동시성 + 프로세스 생명주기 + Claude Desktop 에러 처리 설계 (SMGI-02, SMGI-03, SMGI-04)
 
 ### Phase 39: CLI + Telegram 연동 설계
 **Goal**: CLI mcp setup/refresh-token 커맨드와 Telegram /newsession 플로우가 인터페이스, 동작, 출력 수준으로 정의된다
