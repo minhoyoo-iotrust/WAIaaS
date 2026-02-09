@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 39 진행 중 (CLI+Telegram) — Plan 01 완료, Plan 02 대기
+**현재 초점:** v0.9 Phase 38/39 병렬 진행 중 -- 38-01, 39-01 완료. 38-02, 39-02 대기
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 39 of 40 (CLI+Telegram 통합 설계) -- In progress
-플랜: 1 of 2 in current phase (39-01 완료)
+페이즈: 38/39 of 40 (MCP 통합 + CLI+Telegram, 병렬) -- In progress
+플랜: 38-01, 39-01 완료 / 38-02, 39-02 대기
 상태: In progress
-마지막 활동: 2026-02-09 — Completed 39-01-PLAN.md (CLI MCP 서브커맨드 설계)
+마지막 활동: 2026-02-09 — Completed 38-01-PLAN.md (ApiClient + tool/resource handler 통합 설계)
 
-Progress: ██████████░░░░░░░░░░ 50%
+Progress: ████████████░░░░░░░░ 60%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 5/10 plans complete, 2/5 phases complete (Phase 36, 37) + Phase 39 1/2
+**v0.9 진행:** 6/10 plans complete, 2/5 phases complete (Phase 36, 37) + Phase 38 1/2 + Phase 39 1/2
 
 ## 누적 컨텍스트
 
@@ -67,6 +67,9 @@ Phase 37-02 설계 결정:
 - SM-13: MCP SessionManager는 알림 직접 발송하지 않음 (데몬 자동, NOTI-01)
 - SM-14: 갱신 중 getToken()은 구 토큰 반환 (동시성 안전)
 
+Phase 38-01 설계 결정:
+- SMGI-D01: getState()를 4번째 public 메서드로 추가 (3-public -> 4-public: getToken/getState/start/dispose)
+
 Phase 39-01 설계 결정:
 - CLI-01: mcp 서브커맨드 그룹 (setup + refresh-token) 진입점 패턴
 - CLI-02: mcp setup 7단계 동작 플로우 (데몬확인 -> 에이전트결정 -> constraints -> 세션생성 -> 파일저장 -> 출력 -> config안내)
@@ -82,5 +85,5 @@ Phase 39-01 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 39-01 실행 완료. 다음: `/gsd:execute-plan 39-02` (Telegram /newsession) 또는 `/gsd:execute-plan 38-01` (MCP 통합, 병렬 가능)
+중단 지점: Phase 38-01, 39-01 실행 완료. 다음: `/gsd:execute-plan 38-02` (동시성/생명주기/에러) 또는 `/gsd:execute-plan 39-02` (Telegram /newsession)
 재개 파일: None
