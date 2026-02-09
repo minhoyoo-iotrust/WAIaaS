@@ -5,7 +5,7 @@
 **v0.5 업데이트:** 2026-02-07
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 API 통합 프로토콜:** 2026-02-08
-**v0.9 SessionManager 핵심 설계:** 2026-02-09
+**v0.9 SessionManager 핵심 설계:** 2026-02-09 (Phase 37-01: 인터페이스 + 토큰 로드, Phase 37-02: 갱신 + 실패 + reload)
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -2825,7 +2825,7 @@ waiaas session create \
 |------|-------------------|-------------|
 | 만료 | 기본 24시간 | 최대 7일 (604800초) |
 | 제약 | 사용 패턴별 최적화 | 보수적 제한 (MCP 도구 범위 내) |
-| 갱신 | SDK에서 자동 교체 가능 | [v0.9] SessionManager 자동 갱신 (섹션 6.4 참조) |
+| 갱신 | SDK에서 자동 교체 가능 | [v0.9] SessionManager 자동 갱신 -- scheduleRenewal + 5종 실패 대응 + lazy 401 reload (섹션 6.4.3~6.4.7 참조) |
 | 주체 | AI 에이전트 프레임워크 | Claude Desktop, Cursor 등 |
 
 ### 6.2 Claude Desktop 설정 예시
@@ -3213,6 +3213,558 @@ private loadToken(): void {
 
 > **방어적 범위 검증 (C-03 대응):** JWT payload 무검증 디코딩의 보안 한계를 보완한다. 조작된 토큰이 mcp-token 파일에 심어지더라도, exp 범위가 과거 10년 ~ 미래 1년 범위를 벗어나면 로드를 거부한다. 실제 API 호출은 데몬에서 서명 검증으로 거부되지만, SessionManager 내부 상태 오염을 방지하는 추가 방어선이다.
 
+#### 6.4.3 [v0.9] safeSetTimeout 래퍼 (C-01 Pitfall 대응) (SMGR-04)
+
+`setTimeout`에 2,147,483,647ms(약 24.85일, 2^31 - 1) 초과 딜레이를 전달하면 Node.js 내부적으로 signed 32-bit 정수로 처리하여 **즉시 실행**된다. 기본 7일 TTL의 60%=4.2일은 안전하지만, `config.toml`에서 `expiresIn`을 42일 이상으로 설정하면 오버플로우가 발생한다.
+
+**safeSetTimeout 함수 명세:**
+
+```typescript
+// packages/mcp/src/session-manager.ts 내 모듈 스코프 함수
+// [v0.9] C-01 Pitfall 대응: 32-bit 정수 오버플로우 방지
+
+const MAX_TIMEOUT_MS = 2_147_483_647  // 2^31 - 1
+
+function safeSetTimeout(callback: () => void, delayMs: number): NodeJS.Timeout {
+  if (delayMs > MAX_TIMEOUT_MS) {
+    // 체이닝: MAX_TIMEOUT_MS만큼 대기 후 남은 시간으로 재스케줄
+    return setTimeout(() => {
+      safeSetTimeout(callback, delayMs - MAX_TIMEOUT_MS)
+    }, MAX_TIMEOUT_MS)
+  }
+  return setTimeout(callback, Math.max(delayMs, 0))
+}
+```
+
+**사용 위치:**
+
+| 메서드 | 용도 |
+|--------|------|
+| `scheduleRenewal()` | 다음 갱신 시점까지 대기 타이머 설정 |
+| `handleRenewalError()` | RENEWAL_TOO_EARLY 30초 재시도 타이머 |
+| `retryRenewal()` | NETWORK_ERROR 60초 재시도 타이머 |
+
+**파일 위치:** `packages/mcp/src/session-manager.ts` 내 모듈 스코프 함수 (클래스 외부, export하지 않음)
+
+**오버플로우 발생 조건 테이블:**
+
+| TTL | 갱신 시점 (60%) | 잔여 시간 | delayMs | safeSetTimeout 체이닝 필요 |
+|-----|----------------|----------|---------|--------------------------|
+| 1시간 | 36분 후 | 24분 | 2,160,000ms | 아니오 |
+| 7일 | 4.2일 후 | 2.8일 | 362,880,000ms | 아니오 |
+| 30일 | 18일 후 | 12일 | 1,555,200,000ms | 아니오 |
+| 42일+ | 25.2일+ 후 | 16.8일+ | 2,177,280,000ms+ | **예** (체이닝) |
+
+> **설계 결정 SM-08:** safeSetTimeout 래퍼로 32-bit overflow 방어. 10줄 래퍼 함수로 충분하며, 외부 라이브러리(`safe-timers` 등) 추가 불필요.
+
+#### 6.4.4 [v0.9] 자동 갱신 스케줄 (SMGR-04)
+
+SessionManager는 TTL의 60% 경과 시점에 자동 갱신을 수행한다. 서버 응답의 `expiresAt`을 기준으로 다음 갱신 시점을 절대 시간으로 재계산하여, setTimeout 누적 드리프트를 매 갱신마다 0으로 리셋한다 (self-correcting timer).
+
+**scheduleRenewal() 메서드 설계:**
+
+```typescript
+// [v0.9] SessionManager 내부 메서드
+// 갱신 스케줄 설정 -- 절대 시간 기준 + 드리프트 보정 + safeSetTimeout
+
+private scheduleRenewal(): void {
+  // Step 1: 기존 타이머 해제
+  if (this.timer) clearTimeout(this.timer)
+
+  // Step 2: 절대 시간 기준 갱신 시점 계산 (드리프트 보정)
+  //   renewAtMs = expiresAt - (잔여 40% 구간)
+  //   = expiresAt - (expiresIn * (1 - RENEWAL_RATIO))
+  //   = expiresAt - (expiresIn * 0.4)
+  const renewAtMs = this.expiresAt - (this.expiresIn * (1 - RENEWAL_RATIO))
+  const delayMs = Math.max(renewAtMs - Date.now(), 0)
+
+  // Step 3: delayMs === 0이면 즉시 갱신 (이미 갱신 시점 경과)
+  if (delayMs === 0) {
+    setImmediate(() => this.renew())
+    return
+  }
+
+  // Step 4: safeSetTimeout으로 갱신 타이머 설정 (C-01 대응)
+  this.timer = safeSetTimeout(() => this.renew(), delayMs)
+
+  // Step 5: unref() -- 프로세스 종료를 막지 않음
+  this.timer.unref()
+
+  const minutesUntilRenewal = Math.round(delayMs / 60_000)
+  console.error(
+    `[waiaas-mcp] Next renewal scheduled in ${minutesUntilRenewal}m`,
+  )
+}
+```
+
+**드리프트 보정 원리:**
+
+```
+갱신 성공 시:
+  서버 응답: { token, expiresAt, renewalCount, maxRenewals }
+                          |
+                          v
+  this.expiresAt = new Date(data.expiresAt).getTime()  <-- 서버 시간 기준
+  this.expiresIn = this.expiresAt - Date.now()          <-- 드리프트 보정된 TTL
+                          |
+                          v
+  scheduleRenewal() --> renewAtMs = this.expiresAt - (this.expiresIn * 0.4)
+                                    ^^^^^^^^^^^^^^^^^
+                                    서버 절대 시간 기준
+
+매 갱신마다:
+  1. 서버 응답 expiresAt = 새로운 절대 기준점
+  2. 로컬 Date.now()와의 차이 = 새로운 expiresIn
+  3. 다음 갱신 시점 = expiresAt 기반 절대 시간 계산
+  → 누적 드리프트가 0으로 리셋 (self-correcting)
+  → 응답 전송 지연(수십 ms)은 무시 가능 (ms 단위 vs 시간 단위 갱신 주기)
+```
+
+**50% 규칙과의 관계:**
+
+| 주체 | 규칙 | 역할 |
+|------|------|------|
+| 서버 (데몬) | 잔여 50% 이하에서만 갱신 허용 (53-session-renewal-protocol.md) | Safety guard |
+| 클라이언트 (SessionManager) | 60% 경과(= 잔여 40%)에 시도 | 갱신 트리거 |
+
+SessionManager의 60% 경과 시점은 서버 safety guard(잔여 50% 이하)를 만족한다 (잔여 40% < 50%).
+
+**갱신 주기 예시 테이블:**
+
+| TTL | 갱신 시점 (60% 경과) | 잔여 시간 | delayMs | safeSetTimeout 필요 |
+|-----|---------------------|----------|---------|-------------------|
+| 1시간 | 36분 후 | 24분 | 2,160,000ms | 아니오 |
+| 7일 (기본) | 4.2일 후 | 2.8일 | 362,880,000ms | 아니오 |
+| 30일 | 18일 후 | 12일 | 1,555,200,000ms | 아니오 |
+| 42일+ | 25.2일+ 후 | 16.8일+ | 2,177,280,000ms+ | 예 (체이닝) |
+
+> **설계 결정 SM-09:** 서버 응답 `expiresAt` 기준 절대 시간 갱신 스케줄 (self-correcting timer, H-01 대응). 로컬 상대 시간(`expiresIn * 0.6`) 대신 서버-클라이언트 간 절대 시간 동기화로 누적 드리프트 제거.
+
+#### 6.4.5 [v0.9] 갱신 실행 -- renew() 메서드 (SMGR-04)
+
+`renew()` 메서드는 `PUT /v1/sessions/{sessionId}/renew` API를 호출하여 토큰을 갱신한다. **파일-우선 쓰기 순서** (H-02 Pitfall 대응)를 준수한다.
+
+**renew() 메서드 설계:**
+
+```typescript
+// [v0.9] SessionManager 내부 메서드
+// 갱신 실행 -- 파일-우선 쓰기 (H-02 방어) + 중복 방지
+
+private async renew(): Promise<void> {
+  // Step 1: 중복 갱신 방지
+  if (this.isRenewing) return
+  // Step 2: 갱신 플래그 설정
+  this.isRenewing = true
+
+  console.error(
+    `[waiaas-mcp] Renewing session ${this.sessionId} ` +
+    `(count: ${this.renewalCount}/${this.maxRenewals})`,
+  )
+
+  try {
+    // Step 3: PUT /v1/sessions/{sessionId}/renew 호출
+    const res = await fetch(
+      `${this.baseUrl}/v1/sessions/${this.sessionId}/renew`,
+      {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${this.token}` },
+      },
+    )
+
+    if (res.ok) {
+      // Step 4: 200 OK 성공
+      const data = await res.json() as {
+        token: string
+        expiresAt: string      // ISO 8601
+        renewalCount: number
+        maxRenewals: number
+      }
+
+      // Step 4a: 파일 먼저 쓰기 (H-02 방어)
+      // writeMcpToken = Phase 36-01 확정 @waiaas/core 유틸리티
+      await writeMcpToken(this.tokenFilePath, data.token)
+
+      // Step 4b: 메모리 교체 (파일 쓰기 완료 후)
+      this.token = data.token
+      this.expiresAt = new Date(data.expiresAt).getTime()
+      this.renewalCount = data.renewalCount
+      this.maxRenewals = data.maxRenewals
+
+      // Step 4c: expiresIn 재계산 (드리프트 보정)
+      this.expiresIn = this.expiresAt - Date.now()
+
+      // Step 4d: 다음 갱신 스케줄
+      this.scheduleRenewal()
+
+      const minutesLeft = Math.round(this.expiresIn / 60_000)
+      console.error(
+        `[waiaas-mcp] Session renewed. Next renewal in ${minutesLeft}m`,
+      )
+    } else {
+      // Step 5: 에러 응답
+      const errorData = await res.json().catch(() => ({}))
+      console.error(
+        `[waiaas-mcp] Renewal failed: ` +
+        `${(errorData as Record<string, any>)?.error?.code ?? 'UNKNOWN'} ` +
+        `(HTTP ${res.status})`,
+      )
+      this.handleRenewalError({
+        status: res.status,
+        code: (errorData as Record<string, any>)?.error?.code ?? 'UNKNOWN',
+      })
+    }
+  } catch (err) {
+    // Step 6: 네트워크 에러 (fetch 실패)
+    console.error(
+      `[waiaas-mcp] Renewal failed: NETWORK_ERROR (HTTP 0)`,
+    )
+    this.handleRenewalError({ status: 0, code: 'NETWORK_ERROR' })
+  } finally {
+    // Step 7: 갱신 플래그 해제
+    this.isRenewing = false
+  }
+}
+```
+
+**파일-우선 쓰기 순서 (H-02 Pitfall 대응):**
+
+```
+PUT /v1/sessions/{id}/renew → 200 OK
+  |
+  v
+  1. await writeMcpToken(파일)    <-- 먼저 (SIGTERM 대비)
+  |
+  v
+  2. this.token = data.token     <-- 나중 (메모리 교체)
+  |
+  v
+  3. scheduleRenewal()           <-- 다음 갱신 스케줄
+```
+
+| 순서 | 이유 |
+|------|------|
+| **파일 먼저** | SIGTERM이 메모리 교체 전에 오면, 파일에 새 토큰이 이미 저장됨. 프로세스 재시작 시 파일에서 유효 토큰 복원 가능 |
+| **역순(메모리 먼저) 금지** | SIGTERM 시 새 토큰 유실. 데몬 DB에서 구 token_hash 이미 교체 → 영구 인증 실패 |
+
+> **설계 결정 SM-10:** 파일-우선 쓰기 순서 (`writeMcpToken` -> 메모리 교체, H-02 대응). SIGTERM race condition에서 토큰 유실 방지.
+
+**갱신 중 tool 호출 동시성 (Pitfall 5 대응):**
+
+| 상황 | getToken() 반환 | 근거 |
+|------|-----------------|------|
+| 갱신 시작 전 | 현재 토큰 | 갱신 미발생 |
+| 갱신 진행 중 | 현재(구) 토큰 | 갱신 API 자체가 구 토큰의 sessionAuth 사용. inflight tool 호출과 동일 토큰 |
+| 갱신 완료 후 | 새 토큰 | 메모리 교체 완료. 다음 getToken() 호출부터 새 토큰 |
+
+> **설계 결정 SM-14:** 갱신 중 `getToken()`은 구 토큰 반환 (동시성 안전). 갱신 API와 inflight tool 호출이 동일 토큰을 사용하므로, 토큰 로테이션에 의한 inflight 실패가 발생하지 않음.
+
+**로그 출력:**
+
+| 상황 | 로그 메시지 |
+|------|-----------|
+| 갱신 시도 | `[waiaas-mcp] Renewing session {sessionId} (count: {renewalCount}/{maxRenewals})` |
+| 갱신 성공 | `[waiaas-mcp] Session renewed. Next renewal in {minutes}m` |
+| 갱신 실패 | `[waiaas-mcp] Renewal failed: {code} (HTTP {status})` |
+
+#### 6.4.6 [v0.9] 5종 갱신 실패 대응 -- handleRenewalError + retryRenewal (SMGR-05)
+
+갱신 API 응답의 에러 코드에 따라 5종 분기 처리를 수행한다. 각 에러마다 재시도 정책, 상태 전이, 알림 관계가 정의되어 있다.
+
+**RenewalError 인터페이스:**
+
+```typescript
+// [v0.9] 갱신 에러 정보
+interface RenewalError {
+  status: number  // HTTP 상태 코드 (0 = fetch 실패)
+  code: string    // 서버 에러 코드
+}
+```
+
+**handleRenewalError 분기 테이블:**
+
+| # | 에러 코드 | HTTP 상태 | 대응 전략 | 재시도 | 상태 전이 | 알림 |
+|---|-----------|----------|----------|--------|----------|------|
+| 1 | `RENEWAL_TOO_EARLY` | 400 | 30초 후 1회 재시도 (서버 시간 차이 보정) | 1회 | 유지 (`active`) | 없음 |
+| 2 | `RENEWAL_LIMIT_REACHED` | 403 | 갱신 포기, 현재 토큰으로 만료까지 사용 | 없음 | 유지 (`active`) | 데몬이 SESSION_EXPIRING_SOON 자동 발송 (NOTI-01) |
+| 3 | `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` | 403 | 갱신 포기, 현재 토큰으로 만료까지 사용 | 없음 | 유지 (`active`) | 데몬이 SESSION_EXPIRING_SOON 자동 발송 (NOTI-01) |
+| 4 | `NETWORK_ERROR` | 0 (fetch 실패) | 60초 후 재시도, 최대 3회 | 최대 3회 | 3회 실패 시 `error` | 없음 (일시적) |
+| 5 | `AUTH_TOKEN_EXPIRED` 등 401 | 401 | `handleUnauthorized()` 호출 (lazy reload) | 조건부 | 조건부 (`expired`/`active`) | 없음 |
+
+**handleRenewalError 메서드 설계:**
+
+```typescript
+// [v0.9] SessionManager 내부 메서드
+// 5종 갱신 실패 에러 분기 처리
+
+private handleRenewalError(error: RenewalError): void {
+  switch (error.code) {
+    // ── 에러 #1: RENEWAL_TOO_EARLY ──
+    case 'RENEWAL_TOO_EARLY':
+      // 원인: 서버-클라이언트 시간 차이로 60% 미달
+      // 30초 대기 후 1회만 재시도 (무한 루프 방지)
+      // 2회째도 TOO_EARLY면 다음 정규 스케줄까지 대기
+      console.error(
+        '[waiaas-mcp] Renewal too early. Retrying in 30s (1 attempt).',
+      )
+      this.retryRenewal(30_000, 1)
+      break
+
+    // ── 에러 #2: RENEWAL_LIMIT_REACHED ──
+    case 'RENEWAL_LIMIT_REACHED':
+      // 갱신 스케줄 중단 (타이머 설정 없음)
+      // 현재 토큰으로 잔여 TTL만큼 사용
+      // SESSION_EXPIRING_SOON 알림은 데몬이 자동 처리 (Phase 36-02, NOTI-01)
+      // MCP SessionManager는 알림을 직접 발송하지 않음
+      console.error(
+        '[waiaas-mcp] Renewal limit reached. ' +
+        'Session will expire naturally.',
+      )
+      break
+
+    // ── 에러 #3: SESSION_ABSOLUTE_LIFETIME_EXCEEDED ──
+    case 'SESSION_ABSOLUTE_LIFETIME_EXCEEDED':
+      // 절대 수명 초과. 갱신 포기
+      // 데몬이 SESSION_EXPIRING_SOON 알림 자동 발송 (NOTI-01)
+      console.error(
+        '[waiaas-mcp] Absolute lifetime exceeded. ' +
+        'Session will expire naturally.',
+      )
+      break
+
+    // ── 에러 #4: NETWORK_ERROR ──
+    case 'NETWORK_ERROR':
+      // 데몬 프로세스 미응답 또는 네트워크 단절
+      // 60초 간격, 최대 3회
+      // 3회 실패 → state = 'error'
+      // error 상태에서도 getToken()은 현재 토큰 반환 (유효 기간 내라면 사용 가능)
+      console.error(
+        '[waiaas-mcp] Network error. Retrying in 60s (max 3 attempts).',
+      )
+      this.retryRenewal(60_000, 3)
+      break
+
+    // ── 에러 #5: AUTH_TOKEN_EXPIRED 또는 기타 401 ──
+    default:
+      if (error.status === 401) {
+        // handleUnauthorized()로 lazy reload 시도
+        this.handleUnauthorized().then(canRetry => {
+          if (canRetry) {
+            // 외부 갱신 감지 → 새 토큰으로 갱신 재시도
+            this.renew()
+          }
+          // canRetry === false: handleUnauthorized 내부에서 state 변경 완료
+        })
+      } else {
+        // 알 수 없는 에러
+        console.error(
+          `[waiaas-mcp] Unknown renewal error: ${error.code} ` +
+          `(HTTP ${error.status}). Entering error state.`,
+        )
+        this.state = 'error'
+      }
+      break
+  }
+}
+```
+
+**retryRenewal 메서드 설계:**
+
+```typescript
+// [v0.9] 갱신 재시도 -- safeSetTimeout + 최대 횟수 제한
+
+private retryRenewal(
+  delayMs: number,
+  maxRetries: number,
+  attempt: number = 0,
+): void {
+  if (attempt >= maxRetries) {
+    console.error(
+      `[waiaas-mcp] Renewal failed after ${maxRetries} retries. ` +
+      `Entering error state.`,
+    )
+    this.state = 'error'
+    return
+  }
+
+  this.timer = safeSetTimeout(() => {
+    this.renew().catch(() => {
+      this.retryRenewal(delayMs, maxRetries, attempt + 1)
+    })
+  }, delayMs)
+  this.timer.unref()
+}
+```
+
+**에러별 상세 설명:**
+
+**#1 RENEWAL_TOO_EARLY 재시도:**
+- 원인: 서버-클라이언트 시간 차이로 safety guard(잔여 50% 이하) 미충족
+- 30초 대기 후 1회만 재시도 (무한 루프 방지)
+- 2회째도 TOO_EARLY면 retryRenewal이 `state = 'error'` 설정하지만, 실제로는 다음 정규 스케줄에서 재시도 가능 (renew 내부에서 scheduleRenewal 호출)
+- **주의:** TOO_EARLY는 retryRenewal의 catch에서 다시 handleRenewalError를 호출하므로, 무한 재귀 방지를 위해 maxRetries=1로 제한
+
+**#2 RENEWAL_LIMIT_REACHED / #3 LIFETIME_EXCEEDED:**
+- 갱신 스케줄 중단 (타이머 설정 없음)
+- 현재 토큰으로 잔여 TTL만큼 사용
+- SESSION_EXPIRING_SOON 알림은 데몬이 자동 처리 (Phase 36-02 설계, NOTI-01)
+- MCP SessionManager는 알림을 **직접 발송하지 않음** (설계 결정 SM-13)
+
+**#4 NETWORK_ERROR 재시도:**
+- 데몬 프로세스 미응답 또는 localhost 연결 실패
+- 60초 간격, 최대 3회
+- 3회 실패 → `state = 'error'`
+- `error` 상태에서도 `getToken()`은 현재 토큰 반환 (유효 기간 내라면 API 호출 자체는 가능)
+
+**#5 401 lazy reload:**
+- 이미 만료된 토큰으로 갱신 시도 시 401 수신
+- `handleUnauthorized()` 호출로 파일에서 새 토큰 확인 (6.4.7 참조)
+- 새 토큰 발견 시 교체 후 갱신 재시도
+- 같은 토큰이면 진짜 만료 → `state = 'expired'`
+
+> **설계 결정 SM-11:** 5종 에러 분기 -- TOO_EARLY 30초x1회, LIMIT/LIFETIME 포기, NETWORK 60초x3회, EXPIRED lazy reload. 각 에러의 재시도 횟수와 상태 전이가 명확히 정의됨.
+
+> **설계 결정 SM-13:** MCP SessionManager는 알림을 직접 발송하지 않음. 데몬이 갱신 API 처리 시 자동으로 SESSION_EXPIRING_SOON 알림 발송 여부를 판단 (Phase 36-02, NOTI-01).
+
+#### 6.4.7 [v0.9] Lazy 401 Reload -- handleUnauthorized (SMGR-06)
+
+API 호출이 401을 반환할 때, 토큰 파일을 재로드하여 외부에서 갱신된 토큰(Telegram `/newsession` 또는 CLI `mcp refresh-token`으로 생성)을 감지하는 메커니즘이다.
+
+**handleUnauthorized() 메서드 설계 (4-Step 절차):**
+
+```typescript
+// [v0.9] SessionManager 내부 메서드
+// Lazy 401 Reload -- 파일 재로드 + 토큰 비교 + 교체/에러
+
+async handleUnauthorized(): Promise<boolean> {
+  console.error(
+    '[waiaas-mcp] 401 received. Reloading token from file...',
+  )
+
+  // Step 1: 파일 재로드
+  // readMcpToken = Phase 36-01 확정 @waiaas/core 유틸리티
+  const fileToken = readMcpToken(this.tokenFilePath)
+
+  // Step 2: 파일 없음 → error 상태
+  if (!fileToken) {
+    console.error(
+      '[waiaas-mcp] Token file not found. Entering error state.',
+    )
+    this.state = 'error'
+    return false
+  }
+
+  // Step 3: 파일 토큰 === 현재 토큰 → 진짜 만료
+  if (fileToken === this.token) {
+    console.error(
+      '[waiaas-mcp] Token in file is same as current. ' +
+      'Session truly expired.',
+    )
+    this.state = 'expired'
+    return false
+  }
+
+  // Step 4: 파일 토큰 !== 현재 토큰 → 외부 갱신 감지
+  console.error(
+    '[waiaas-mcp] New token detected from file. Switching session.',
+  )
+
+  // 새 토큰 JWT 디코딩 (loadToken과 동일 절차)
+  const jwt = fileToken.startsWith(TOKEN_PREFIX)
+    ? fileToken.slice(TOKEN_PREFIX.length)
+    : fileToken
+  const payload = decodeJwt(jwt)
+
+  const sid = (payload as Record<string, unknown>).sid as string | undefined
+  const exp = payload.exp
+  const iat = payload.iat
+
+  if (!sid || typeof exp !== 'number' || typeof iat !== 'number') {
+    console.error(
+      '[waiaas-mcp] New token has invalid JWT. Entering error state.',
+    )
+    this.state = 'error'
+    return false
+  }
+
+  // 내부 상태 교체
+  this.token = fileToken
+  this.sessionId = sid
+  this.expiresAt = exp * 1000
+  this.expiresIn = (exp - iat) * 1000
+  this.renewalCount = 0          // 새 세션이므로 카운터 리셋
+  this.maxRenewals = Infinity    // 첫 갱신 응답에서 업데이트
+  this.state = 'active'
+
+  // 갱신 스케줄 재설정
+  this.scheduleRenewal()
+
+  return true  // 재시도 가능
+}
+```
+
+**4-Step 절차 플로우:**
+
+```
+401 수신 (tool handler API 호출 또는 renew 응답)
+  |
+  v
+  Step 1: readMcpToken(파일) 재로드
+  |
+  +-- 파일 없음 ──> Step 2: state = 'error', return false
+  |
+  +-- 파일 있음
+       |
+       +-- 파일 토큰 === 현재 토큰 ──> Step 3: state = 'expired', return false
+       |                                         (진짜 만료)
+       |
+       +-- 파일 토큰 !== 현재 토큰 ──> Step 4: 외부 갱신 감지
+            |
+            v
+            JWT 디코딩 + 내부 상태 교체
+            + scheduleRenewal() 재설정
+            + return true (재시도 가능)
+```
+
+**호출 시점:**
+
+| 호출자 | 상황 | 설명 |
+|--------|------|------|
+| `handleRenewalError()` | 갱신 API 401 응답 | 갱신 중 토큰 만료 감지 |
+| tool handler (Phase 38) | API 호출 401 응답 | tool 실행 중 토큰 만료 감지. Phase 38에서 상세 통합 설계 |
+
+**외부 갱신 시나리오:**
+
+```
+시나리오 A: CLI에서 토큰 교체
+  Owner: waiaas mcp refresh-token --agent-id trading-bot
+    → 새 세션 생성 → mcp-token 파일 교체
+    → SessionManager의 현재 토큰은 구 세션
+    → 다음 API 호출 → 401 수신
+    → handleUnauthorized() → 파일 재로드 → 새 토큰 감지 → 교체
+    → API 재시도 → 성공
+
+시나리오 B: Telegram에서 새 세션
+  Owner: /newsession → 에이전트 선택 → 새 세션 생성
+    → mcp-token 파일 교체
+    → (동일 플로우)
+```
+
+**로그 출력:**
+
+| 상황 | 로그 메시지 |
+|------|-----------|
+| 파일 재로드 시도 | `[waiaas-mcp] 401 received. Reloading token from file...` |
+| 새 토큰 감지 | `[waiaas-mcp] New token detected from file. Switching session.` |
+| 진짜 만료 | `[waiaas-mcp] Token in file is same as current. Session truly expired.` |
+| 파일 없음 | `[waiaas-mcp] Token file not found. Entering error state.` |
+| 새 토큰 JWT 에러 | `[waiaas-mcp] New token has invalid JWT. Entering error state.` |
+
+> **설계 결정 SM-12:** `handleUnauthorized` 4-step (파일 재로드 -> 비교 -> 교체/에러). `fs.watch` 미사용, lazy reload 방식으로 플랫폼별 불안정성 회피.
+
+> **Phase 36 연결:** `readMcpToken()` 함수는 Phase 36-01에서 확정된 `@waiaas/core` `utils/token-file.ts`의 공유 유틸리티이다. symlink 거부, 형식 검증이 내장되어 있으므로 handleUnauthorized에서 추가 검증 불필요.
+
+> **Phase 36-02 연결:** SESSION_EXPIRING_SOON 알림은 데몬이 갱신 API 처리 시 자동 발송한다 (NOTI-01). MCP SessionManager가 RENEWAL_LIMIT_REACHED/LIFETIME_EXCEEDED를 수신해도 별도 알림 호출 없이 로그만 출력한다.
+
 ---
 
 ## 7. MCP Transport 설계
@@ -3520,7 +4072,7 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 
 | 항목 | v0.2 (현재) | v0.3 (계획) |
 |------|-----------|-----------|
-| MCP 토큰 갱신 | 수동 (환경변수 재설정) | 자동 갱신 (Owner 서명 내장) |
+| MCP 토큰 갱신 | 수동 (환경변수 재설정) → **[v0.9 설계 완료]** SessionManager 자동 갱신 (섹션 6.4.3~6.4.7) | 자동 갱신 (Owner 서명 내장) |
 | SDK 토큰 로테이션 | 수동 (`setSessionToken`) | 자동 로테이션 (만료 전 갱신) |
 | MCP 인증 | 세션 토큰 only | OAuth 2.1 (Streamable HTTP) |
 | SDK Transport | HTTP only | HTTP + WebSocket (실시간 알림) |
@@ -3763,7 +4315,7 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 *문서 ID: SDK-MCP*
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
-*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01*
+*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01 (인터페이스 + 토큰 로드), Phase 37-02 (갱신 + 실패 + reload)*
 *Phase: 09-integration-client-interface-design*
 *상태: 완료*
 
@@ -3777,4 +4329,6 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 
 - 24-monorepo-data-directory.md 섹션 4 -- mcp-token 파일 사양 (Phase 36-01 확정)
 - 53-session-renewal-protocol.md 섹션 5.6 -- shouldNotifyExpiringSession 순수 함수 (Phase 36-02 확정)
+- 53-session-renewal-protocol.md 섹션 3.7 -- 5종 갱신 에러 코드 및 HTTP 상태 (Phase 37-02 연동)
+- 35-notification-architecture.md -- SESSION_EXPIRING_SOON 알림 이벤트 (Phase 36-02 확정, NOTI-01)
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 이벤트 (Phase 36-02 확정)
