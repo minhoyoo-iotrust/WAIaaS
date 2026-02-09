@@ -1,12 +1,13 @@
-# Owner 지갑 연결 + 인증 프로토콜 설계 (OWNR-CONN v0.7)
+# Owner 지갑 연결 + 인증 프로토콜 설계 (OWNR-CONN v0.8)
 
 **문서 ID:** OWNR-CONN
 **작성일:** 2026-02-05
 **v0.5 업데이트:** 2026-02-07
 **v0.7 보완:** 2026-02-08
-**상태:** v0.7 보완
+**v0.8 업데이트:** 2026-02-09
+**상태:** v0.8 보완
 **참조:** SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), LOCK-MECH (33-time-lock-approval-mechanism.md), AUTH-REDESIGN (52-auth-model-redesign.md)
-**요구사항:** OWNR-01 (브라우저 지갑), OWNR-02 (WalletConnect QR), OWNR-03 (서명 승인), API-05 (Owner 엔드포인트), OWNR-05 (CLI 수동 서명), OWNR-06 (APPROVAL 타임아웃 설정)
+**요구사항:** OWNR-01 (브라우저 지갑), OWNR-02 (WalletConnect QR), OWNR-03 (서명 승인), API-05 (Owner 엔드포인트), OWNR-05 (CLI 수동 서명), OWNR-06 (APPROVAL 타임아웃 설정), OWNER-02 (--owner 선택적 등록), OWNER-03 (set-owner 사후 등록), OWNER-04 (유예 구간 masterAuth), OWNER-05 (잠금 구간 ownerAuth+masterAuth), OWNER-06 (잠금 해제 불가)
 
 ---
 
@@ -26,6 +27,11 @@ Owner는 WAIaaS에서 **자금 관련 인가 주체**이다. 시스템 관리는
 | API-05 | Owner 관련 API 엔드포인트 | 섹션 6 (Owner API 엔드포인트) |
 | OWNR-05 | CLI 수동 서명 플로우 (v0.5) | 섹션 8.2 (CLI 직접 서명), 52-auth-model-redesign.md 섹션 5 |
 | OWNR-06 | APPROVAL 타임아웃 설정 가능 (v0.5) | 52-auth-model-redesign.md 섹션 3.2 |
+| OWNER-02 | 에이전트 생성 시 --owner 선택적 등록 (v0.8) | 섹션 10.6, 10.7 |
+| OWNER-03 | set-owner 사후 등록 (masterAuth) (v0.8) | 섹션 10.2(전이 #1), 10.3, 10.6 |
+| OWNER-04 | 유예 구간 masterAuth만으로 변경/해제 (v0.8) | 섹션 10.2(전이 #2, #4), 10.3 |
+| OWNER-05 | 잠금 구간 ownerAuth+masterAuth 변경 (v0.8) | 섹션 10.2(전이 #5), 10.3 |
+| OWNER-06 | 잠금 구간 해제 불가 (v0.8) | 섹션 10.2(전이 #6), 10.3 |
 
 ### 1.3 v0.1 -> v0.2 변경 요약
 
@@ -45,7 +51,18 @@ Owner는 WAIaaS에서 **자금 관련 인가 주체**이다. 시스템 관리는
 | WalletConnect 역할 | 유일한 Owner 연결 경로 | 선택적 편의 기능 (CLI 대안 존재) | WC 외부 의존성 최소화 |
 | Owner API 인증 | ownerAuth 8개 엔드포인트 | ownerAuth 2개 + masterAuth 나머지 | 3-tier 분리 |
 
-### 1.5 Tauri WebView 제약사항
+### 1.5 v0.7 -> v0.8 변경 요약 (v0.8 변경)
+
+| 항목 | v0.7 | v0.8 | 근거 |
+|------|------|------|------|
+| Owner 등록 | 필수 (NOT NULL) | 선택적 (nullable) | 자율 에이전트 시나리오 지원 + 온보딩 마찰 제거 |
+| Owner 생명주기 | 미정의 | 3-State 상태 머신 (NONE/GRACE/LOCKED) | 등록/변경/해제 인증 요건 확정 |
+| Owner 변경 인증 | 항상 ownerAuth | GRACE: masterAuth, LOCKED: ownerAuth+masterAuth | 유예 구간 유연성 확보 |
+| Owner 해제 | 항상 가능 | LOCKED에서 불가 | 보안 다운그레이드 방지 |
+| ownerAuth 자동 잠금 | 없음 | Step 8.5 markOwnerVerified() | GRACE->LOCKED 자동 전이 |
+| 문서 범위 | 연결 프로토콜 중심 | + Owner 생명주기 상태 머신 (섹션 10) | Phase 32 산출물 |
+
+### 1.6 Tauri WebView 제약사항
 
 Tauri 2는 시스템 네이티브 WebView(WKWebView/WebView2/WebKitGTK)를 사용하며, **Chrome Extension API를 지원하지 않는다**. 따라서:
 
@@ -1641,7 +1658,796 @@ Tauri WebView의 Content Security Policy에 WalletConnect Relay 도메인을 허
 
 ---
 
-*문서 ID: OWNR-CONN v0.7*
-*작성일: 2026-02-05, v0.5 업데이트: 2026-02-07, v0.7 보완: 2026-02-08*
-*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation + 29-api-integration-protocol*
-*상태: v0.7 보완 (API-03 cascade 추가)*
+## 10. Owner 생명주기 상태 머신 [v0.8]
+
+> **v0.8 신규 섹션.** Phase 32(Owner 생명주기 설계)의 산출물로, Owner 등록/변경/해제의 전체 생명주기를 3-State 상태 머신으로 정의한다. Phase 31에서 확정된 데이터 모델(agents.owner_address nullable, owner_verified, OwnerState 타입, resolveOwnerState(), markOwnerVerified())을 기반으로 한다.
+
+### 10.1 3-State 상태 머신 (NONE / GRACE / LOCKED)
+
+Owner 생명주기는 3가지 상태(NONE, GRACE, LOCKED)와 6가지 전이로 구성된다. **상태는 DB 컬럼이 아닌 `resolveOwnerState()` 순수 함수로 런타임 산출한다** (Phase 31 결정 -- 33-time-lock-approval-mechanism.md 참조).
+
+**상태 다이어그램:**
+
+```
+                 ┌─────────────────────────────────┐
+                 │         (없음) NONE              │
+                 │  owner_address = NULL            │
+                 │  owner_verified = 0              │
+                 │  보안: Base (DELAY까지)           │
+                 └──────────────┬──────────────────┘
+                                │
+                   set-owner 또는 agent create --owner
+                   인증: masterAuth
+                                │
+                                v
+                 ┌─────────────────────────────────┐
+                 │        (유예) GRACE              │
+      ┌─────────│  owner_address = <addr>          │─────────┐
+      │         │  owner_verified = 0              │         │
+      │         │  보안: Enhanced (APPROVAL 해금)   │         │
+      │         │  변경/해제 인증: masterAuth만     │         │
+      │         └──────────┬───────────┬──────────┘         │
+      │                    │           │                     │
+      │      ownerAuth 첫 사용         │                     │
+      │      (approve 또는 recover)    │                     │
+      │                    │    remove-owner (masterAuth)    │
+      │                    v           v                     │
+      │         ┌──────────────────┐  (없음) NONE 으로 복귀  │
+      │         │   (잠금) LOCKED   │                        │
+      │         │  owner_address = <addr>                   │
+      │         │  owner_verified = 1                       │
+      │         │  보안: Enhanced   │                        │
+      │         │  변경: ownerAuth + masterAuth             │
+      │         │  해제: 불가       │                        │
+      │         └──────────────────┘                        │
+      │                                                     │
+      └── set-owner <new-addr> (masterAuth) ────────────────┘
+           GRACE -> GRACE (주소변경)
+
+      ※ LOCKED -> LOCKED (주소변경): ownerAuth(기존) + masterAuth
+      ※ LOCKED -> NONE: 불가 (보안 다운그레이드 방지)
+```
+
+**상태별 상세:**
+
+| 상태 | owner_address | owner_verified | 보안 수준 | 변경/해제 인증 |
+|------|:------------:|:--------------:|:---------:|:-------------:|
+| NONE | NULL | 0 | Base (DELAY까지) | - |
+| GRACE (유예) | `<addr>` | 0 | Enhanced (APPROVAL 해금) | masterAuth만 |
+| LOCKED (잠금) | `<addr>` | 1 | Enhanced | 변경: ownerAuth + masterAuth / 해제: 불가 |
+
+**resolveOwnerState() 파생 로직 (Phase 31 확정):**
+
+```typescript
+// packages/core/src/domain/owner-presence.ts
+import { z } from 'zod'
+
+export const OwnerStateSchema = z.enum(['NONE', 'GRACE', 'LOCKED'])
+export type OwnerState = z.infer<typeof OwnerStateSchema>
+
+export interface AgentOwnerInfo {
+  ownerAddress: string | null
+  ownerVerified: boolean  // 0 | 1 in SQLite
+}
+
+export function resolveOwnerState(agent: AgentOwnerInfo): OwnerState {
+  if (!agent.ownerAddress) return 'NONE'
+  return agent.ownerVerified ? 'LOCKED' : 'GRACE'
+}
+```
+
+### 10.2 상태 전이 조건표 (6가지)
+
+| # | 전이 | 트리거 | 인증 | DB 변경 | 부작용 |
+|---|------|--------|------|---------|--------|
+| 1 | NONE -> GRACE | `set-owner` 또는 `agent create --owner` | masterAuth | `owner_address = <addr>` | audit_log: `OWNER_REGISTERED` |
+| 2 | GRACE -> NONE | `remove-owner` | masterAuth | `owner_address = NULL`, `owner_verified = 0` | audit_log: `OWNER_REMOVED` |
+| 3 | GRACE -> LOCKED | ownerAuth 첫 사용 (자동) | ownerAuth | `owner_verified = 1` (BEGIN IMMEDIATE) | audit_log: `OWNER_VERIFIED` |
+| 4 | GRACE -> GRACE (주소변경) | `set-owner <new-addr>` | masterAuth | `owner_address = <new-addr>` | audit_log: `OWNER_ADDRESS_CHANGED` |
+| 5 | LOCKED -> LOCKED (주소변경) | `set-owner <new-addr>` | ownerAuth(기존) + masterAuth | `owner_address = <new-addr>` | audit_log: `OWNER_ADDRESS_CHANGED` |
+| 6 | LOCKED -> NONE | **불가** | - | - | 보안 다운그레이드 방지 |
+
+**중요 설계 결정:**
+
+- **전이 #3 (GRACE -> LOCKED):** ownerAuth 미들웨어 Step 8.5에서 `markOwnerVerified()`를 자동 호출한다. Owner가 approve 또는 recover를 처음 사용하는 순간 자동으로 잠금 상태로 전환된다. 이는 "ownerAuth를 사용할 수 있다 = Owner 주소가 유효하다"는 논리에 기반한다.
+- **전이 #5 (LOCKED 주소변경):** 주소 변경 시 `owner_verified`를 리셋하지 않는다. 기존 Owner가 서명으로 변경을 승인했으므로, 새 주소에 대한 신뢰가 이미 확보된 것이다. 리셋하면 새 Owner가 GRACE 상태로 전환되어 masterAuth만으로 재변경이 가능해지는 보안 허점이 발생한다.
+- **전이 #6 (LOCKED -> NONE 불가):** LOCKED 상태에서 Owner를 해제하면 APPROVAL 티어가 DELAY로 다운그레이드되고, Kill Switch 복구가 24시간으로 증가한다. 이는 보안 다운그레이드 공격 벡터가 되므로 원천 차단한다.
+
+### 10.3 OwnerLifecycleService 클래스 설계
+
+Owner 등록/변경/해제 비즈니스 로직을 캡슐화하는 도메인 서비스이다. 32-RESEARCH.md의 "Pattern 2: OwnerLifecycleService 클래스 설계"를 공식 반영한다.
+
+**위치:** `packages/daemon/src/domain/owner-lifecycle.ts`
+
+```typescript
+// packages/daemon/src/domain/owner-lifecycle.ts
+
+import { eq } from 'drizzle-orm'
+import type { DrizzleInstance } from '../infrastructure/database/types'
+import type { Database } from 'better-sqlite3'
+import { agents } from '../infrastructure/database/schema'
+import { resolveOwnerState } from './owner-presence'
+import type { AuditLogService } from './audit-log'
+import type { AuthContext } from '../middleware/auth-types'
+import { validateOwnerAddress } from '@waiaas/core/schemas/owner.schema'
+import { ForbiddenError, NotFoundError } from '../errors'
+
+export class OwnerLifecycleService {
+  constructor(
+    private db: DrizzleInstance,
+    private sqlite: Database,  // better-sqlite3 (BEGIN IMMEDIATE용)
+    private auditLog: AuditLogService,
+  ) {}
+
+  /**
+   * Owner 주소 등록/변경
+   *
+   * NONE/GRACE: masterAuth만 (미들웨어에서 이미 검증)
+   * LOCKED: ownerAuth(기존 주소) + masterAuth (auth.ownerVerified 확인)
+   *
+   * 전이:
+   * - NONE -> GRACE: OWNER_REGISTERED 이벤트
+   * - GRACE -> GRACE (주소변경): OWNER_ADDRESS_CHANGED 이벤트
+   * - LOCKED -> LOCKED (주소변경): OWNER_ADDRESS_CHANGED 이벤트, owner_verified = 1 유지
+   */
+  async setOwner(agentId: string, newAddress: string, auth: AuthContext): Promise<void> {
+    const agent = await this.getAgent(agentId)
+    const state = resolveOwnerState(agent)
+
+    // 체인별 주소 형식 검증
+    validateOwnerAddress(agent.chain, newAddress)
+
+    switch (state) {
+      case 'NONE':
+      case 'GRACE':
+        // masterAuth만 필요 (미들웨어에서 이미 검증)
+        break
+      case 'LOCKED':
+        // ownerAuth(기존 주소) 필수
+        if (!auth.ownerVerified) {
+          throw new ForbiddenError('OWNER_AUTH_REQUIRED',
+            '잠금 구간에서는 기존 Owner 서명이 필요합니다')
+        }
+        break
+    }
+
+    await this.db.update(agents)
+      .set({
+        ownerAddress: newAddress,
+        updatedAt: new Date(),
+      })
+      .where(eq(agents.id, agentId))
+
+    // LOCKED 주소 변경 시 owner_verified = 1 유지 (리셋 금지)
+
+    const eventType = state === 'NONE' ? 'OWNER_REGISTERED' : 'OWNER_ADDRESS_CHANGED'
+    await this.auditLog.record(eventType, agentId, {
+      newAddress,
+      previousState: state,
+    })
+  }
+
+  /**
+   * Owner 해제 (유예 구간에서만 가능)
+   *
+   * GRACE -> NONE: owner_address = NULL, owner_verified = 0
+   * LOCKED: ForbiddenError('OWNER_LOCKED')
+   * NONE: NotFoundError('NO_OWNER')
+   *
+   * 이벤트: OWNER_REMOVED
+   */
+  async removeOwner(agentId: string): Promise<void> {
+    const agent = await this.getAgent(agentId)
+    const state = resolveOwnerState(agent)
+
+    if (state === 'LOCKED') {
+      throw new ForbiddenError('OWNER_LOCKED',
+        '잠금 구간에서는 Owner를 해제할 수 없습니다')
+    }
+    if (state === 'NONE') {
+      throw new NotFoundError('NO_OWNER', '등록된 Owner가 없습니다')
+    }
+
+    await this.db.update(agents)
+      .set({
+        ownerAddress: null,
+        ownerVerified: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(agents.id, agentId))
+
+    await this.auditLog.record('OWNER_REMOVED', agentId)
+  }
+
+  /**
+   * ownerAuth 미들웨어에서 자동 호출 (GRACE -> LOCKED 전이)
+   *
+   * Phase 31에서 설계 완료 (33-time-lock-approval-mechanism.md 참조).
+   * BEGIN IMMEDIATE + WHERE owner_verified = 0 원자화 패턴.
+   *
+   * @returns true: 전이 발생 (GRACE -> LOCKED), false: 이미 LOCKED
+   */
+  markOwnerVerified(agentId: string): boolean {
+    return this.sqlite.transaction(() => {
+      const result = this.sqlite.prepare(
+        `UPDATE agents
+         SET owner_verified = 1, updated_at = ?
+         WHERE id = ? AND owner_verified = 0`
+      ).run(Math.floor(Date.now() / 1000), agentId)
+
+      if (result.changes > 0) {
+        // 전이 발생 시 감사 로그 (같은 트랜잭션 내)
+        this.sqlite.prepare(
+          `INSERT INTO audit_log (id, event_type, agent_id, created_at)
+           VALUES (?, 'OWNER_VERIFIED', ?, ?)`
+        ).run(generateUUIDv7(), agentId, Math.floor(Date.now() / 1000))
+      }
+
+      return result.changes > 0
+    }).immediate()
+  }
+
+  private async getAgent(agentId: string) {
+    const agent = await this.db.select()
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .get()
+    if (!agent) {
+      throw new NotFoundError('AGENT_NOT_FOUND', '에이전트를 찾을 수 없습니다')
+    }
+    return agent
+  }
+}
+```
+
+**핵심 설계 결정:**
+
+- `setOwner()`에서 NONE->GRACE와 GRACE->GRACE(주소변경)를 동일 코드 경로로 처리 (둘 다 masterAuth만)
+- LOCKED 상태에서 주소 변경 시 `owner_verified`를 0으로 리셋하지 않음 -- 기존 Owner가 서명으로 승인했으므로 새 주소도 잠금 상태 유지
+- `removeOwner()`에서 LOCKED 상태는 무조건 거부 -- 보안 다운그레이드 방지
+- `markOwnerVerified()`는 better-sqlite3 `.immediate()` 트랜잭션으로 직렬화 -- BEGIN IMMEDIATE가 RESERVED 잠금을 획득하여 레이스 컨디션 방지
+
+### 10.4 감사 로그 이벤트 [v0.8 추가 4개]
+
+v0.8에서 Owner 생명주기 관련 감사 이벤트 4개를 추가한다. 기존 13개 이벤트 + 4개 = 17개 (25-sqlite-schema.md `audit_log_event_type`과 일관).
+
+| 이벤트 | 발생 시점 | 상태 전이 | severity |
+|--------|----------|----------|----------|
+| `OWNER_REGISTERED` | `set-owner` 또는 `agent create --owner` 실행 | NONE -> GRACE | info |
+| `OWNER_ADDRESS_CHANGED` | Owner 주소 변경 (GRACE 또는 LOCKED 내) | GRACE -> GRACE / LOCKED -> LOCKED | info |
+| `OWNER_REMOVED` | `remove-owner` 실행 | GRACE -> NONE | warning |
+| `OWNER_VERIFIED` | ownerAuth 첫 사용 (자동 잠금 전환) | GRACE -> LOCKED | info |
+
+```typescript
+// v0.8에서 추가되는 감사 이벤트 (45-enum-unified-mapping.md 확장)
+type OwnerLifecycleAuditEvent =
+  | 'OWNER_REGISTERED'          // set-owner/agent create --owner (NONE -> GRACE)
+  | 'OWNER_ADDRESS_CHANGED'     // Owner 주소 변경 (GRACE/LOCKED 내)
+  | 'OWNER_REMOVED'             // remove-owner (GRACE -> NONE)
+  | 'OWNER_VERIFIED'            // ownerAuth 첫 사용 (GRACE -> LOCKED)
+```
+
+> **참고:** `OWNER_REMOVED`의 severity가 `warning`인 이유: Owner 해제는 보안 수준 다운그레이드(Enhanced -> Base)를 동반하므로, 운영자 주의가 필요하다.
+
+### 10.5 에러 코드 [v0.8 추가 3개]
+
+| 에러 코드 | HTTP | 발생 조건 | 메시지 |
+|----------|:----:|----------|--------|
+| `OWNER_AUTH_REQUIRED` | 403 | 잠금 구간에서 ownerAuth 없이 Owner 변경 시도 | "잠금 구간에서는 기존 Owner 서명이 필요합니다" |
+| `OWNER_LOCKED` | 403 | 잠금 구간에서 Owner 해제 시도 | "잠금 구간에서는 Owner를 해제할 수 없습니다" |
+| `NO_OWNER` | 404 | Owner 미등록 에이전트에서 Owner 관련 작업 시도 | "등록된 Owner가 없습니다" |
+
+```typescript
+// packages/core/src/errors/owner-errors.ts
+type OwnerErrorCode =
+  | 'OWNER_AUTH_REQUIRED'   // 403: 잠금 구간에서 ownerAuth 없이 변경 시도
+  | 'OWNER_LOCKED'          // 403: 잠금 구간에서 Owner 해제 시도
+  | 'NO_OWNER'              // 404: Owner 미등록 에이전트에서 Owner 관련 작업 시도
+```
+
+### 10.6 REST API 스펙 변경 [v0.8]
+
+Owner 생명주기를 지원하기 위한 REST API 변경 사항이다. 기존 섹션 6 엔드포인트와 함께, 에이전트 생성/수정 API에 Owner 관련 필드를 추가한다.
+
+| 동작 | HTTP | 경로 | 인증 | 요청 바디 | 응답 | 비고 |
+|------|------|------|------|----------|------|------|
+| 에이전트 생성 (Owner 선택적) | POST | `/v1/agents` | masterAuth (implicit) | `{ name, chain, ..., owner?: string }` | 201 Created | `body.owner` = optional. 제공 시 NONE -> GRACE |
+| Owner 등록/변경 | PATCH | `/v1/agents/:id` | masterAuth (implicit) | `{ owner: string }` | 200 OK | LOCKED 시 ownerAuth 헤더 추가 필요 |
+| Owner 해제 | PATCH | `/v1/agents/:id` | masterAuth (implicit) | `{ owner: null }` | 200 OK | GRACE에서만 가능. LOCKED시 403 `OWNER_LOCKED` |
+
+**POST /v1/agents -- body.owner optional (v0.8 추가):**
+
+```typescript
+// packages/core/src/schemas/agent.schema.ts 확장
+const CreateAgentRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  chain: z.enum(['solana', 'ethereum']),
+  // ... 기존 필드 ...
+  owner: z.string().optional().openapi({
+    description: 'Owner 지갑 주소 (선택적). 제공 시 NONE -> GRACE 전이',
+    example: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  }),
+})
+```
+
+에이전트 생성 시 `body.owner`가 제공되면:
+1. 체인별 주소 형식 검증 (`validateOwnerAddress()`)
+2. `agents.owner_address = body.owner`로 INSERT
+3. `OWNER_REGISTERED` 감사 로그 기록
+4. 생성 즉시 GRACE 상태 (resolveOwnerState 파생)
+
+**PATCH /v1/agents/:id -- Owner 변경 (v0.8 추가):**
+
+미들웨어 인증 레벨은 masterAuth(implicit)로 고정한다. LOCKED 상태에서 Owner 변경 시 `OwnerLifecycleService.setOwner()` 내부에서 `auth.ownerVerified`를 검증한다. 이는 "인증 분기를 비즈니스 로직에서 처리" 원칙에 따른다 -- 미들웨어에서 요청 바디를 파싱하여 인증 레벨을 결정하는 것은 안티 패턴이다.
+
+```typescript
+// PATCH /v1/agents/:id 핸들러 (v0.8 확장)
+async function handleUpdateAgent(c: Context): Promise<Response> {
+  const agentId = c.req.param('id')
+  const body = await c.req.json()
+
+  // Owner 필드가 포함된 경우 OwnerLifecycleService로 위임
+  if ('owner' in body) {
+    const auth: AuthContext = {
+      ownerVerified: c.get('ownerVerified') ?? false,
+    }
+
+    if (body.owner === null) {
+      // Owner 해제: GRACE -> NONE만 허용
+      await ownerLifecycleService.removeOwner(agentId)
+    } else {
+      // Owner 등록/변경: 상태별 인증 분기는 setOwner() 내부에서 처리
+      await ownerLifecycleService.setOwner(agentId, body.owner, auth)
+    }
+  }
+
+  // ... 기존 필드(name 등) 업데이트 로직 ...
+
+  return c.json({ /* updated agent */ }, 200)
+}
+```
+
+**LOCKED 상태에서 PATCH 요청 시 ownerAuth 전달 방법:**
+
+LOCKED 상태에서 Owner 주소를 변경하려면, 클라이언트는 `Authorization: Bearer <ownerSignaturePayload>` 헤더를 추가한다. PATCH /v1/agents/:id 엔드포인트의 미들웨어는 masterAuth(implicit)이므로, ownerAuth 헤더는 선택적으로 파싱된다. 비즈니스 로직에서 LOCKED 상태임을 감지하면 `auth.ownerVerified`를 확인한다.
+
+```
+# GRACE 상태 (masterAuth만)
+PATCH /v1/agents/:id
+Content-Type: application/json
+{ "owner": "NewAddr..." }
+
+# LOCKED 상태 (ownerAuth + masterAuth)
+PATCH /v1/agents/:id
+Authorization: Bearer <ownerSignaturePayload>
+Content-Type: application/json
+{ "owner": "NewAddr..." }
+```
+
+### 10.7 CLI 명령어 스펙 변경 [v0.8]
+
+| 명령어 | 동작 | 인증 | OwnerState 전제 |
+|--------|------|------|----------------|
+| `agent create --owner <addr>` | 에이전트 생성 + Owner 등록 (NONE -> GRACE) | masterAuth | - |
+| `agent create` (--owner 없이) | Owner 없이 에이전트 생성 (NONE) | masterAuth | - |
+| `agent set-owner <agent> <addr>` | Owner 등록/변경 | masterAuth (NONE/GRACE), ownerAuth+masterAuth (LOCKED) | 상태에 따라 분기 |
+| `agent remove-owner <agent>` | Owner 해제 (GRACE -> NONE) | masterAuth | GRACE만 |
+
+**agent create --owner 플로우:**
+
+```
+$ waiaas agent create --name "trading-bot" --chain solana --owner 7xKXtg...
+
+에이전트 생성 완료
+  ID: 01945a2e-...
+  이름: trading-bot
+  체인: solana
+  Owner: 7xKXtg... (GRACE 상태 -- ownerAuth 사용 시 자동 잠금 전환)
+```
+
+**agent set-owner 플로우 (LOCKED 상태 분기):**
+
+```
+$ waiaas agent set-owner 01945a2e NewAddr...
+
+# 1. GET /v1/agents/:id로 현재 상태 확인
+# 2-a. NONE/GRACE인 경우:
+#   -> PATCH /v1/agents/:id { owner: "NewAddr..." }
+#   -> 완료
+
+# 2-b. LOCKED인 경우:
+#   -> "현재 에이전트가 잠금 상태입니다. 기존 Owner 서명이 필요합니다."
+#   -> CLI 수동 서명 플로우 시작 (nonce -> 메시지 구성 -> 서명 -> API 호출)
+#   -> 상세는 Phase 35 DX에서 설계
+```
+
+**agent remove-owner 플로우:**
+
+```
+$ waiaas agent remove-owner 01945a2e
+
+# 1. GET /v1/agents/:id로 현재 상태 확인
+# 2-a. GRACE인 경우:
+#   -> "Owner를 해제하면 보안 수준이 Enhanced에서 Base로 다운그레이드됩니다."
+#   -> "계속하시겠습니까? (y/N)"
+#   -> PATCH /v1/agents/:id { owner: null }
+#   -> 완료
+
+# 2-b. LOCKED인 경우:
+#   -> "잠금 구간에서는 Owner를 해제할 수 없습니다. (OWNER_LOCKED)"
+#   -> 종료
+
+# 2-c. NONE인 경우:
+#   -> "등록된 Owner가 없습니다. (NO_OWNER)"
+#   -> 종료
+```
+
+### 10.8 Owner 주소 형식 검증 [v0.8]
+
+Owner 주소 등록/변경 시 체인별 주소 형식 검증을 수행한다. 에이전트의 `chain` 필드에 따라 분기한다. Zod SSoT 원칙에 따라 런타임 검증과 타입 추론을 동시에 제공한다.
+
+```typescript
+// packages/core/src/schemas/owner.schema.ts (설계 스펙)
+import { z } from 'zod'
+
+/**
+ * Solana 주소: Base58 인코딩 32바이트
+ * - 보통 32-44자
+ * - 0, O, I, l 문자 제외 (Base58 특성)
+ */
+const solanaAddressSchema = z.string()
+  .min(32).max(44)
+  .regex(/^[1-9A-HJ-NP-Za-km-z]+$/, 'Invalid Solana address (Base58)')
+
+/**
+ * EVM 주소: 0x + 40 hex 문자
+ * - EIP-55 체크섬은 viem의 getAddress()로 별도 정규화/검증
+ */
+const evmAddressSchema = z.string()
+  .regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid EVM address')
+
+/**
+ * OwnerLifecycleService.setOwner() 내부에서 호출
+ * 에이전트의 chain에 맞는 주소 형식인지 검증
+ *
+ * @throws ZodError - 주소 형식이 유효하지 않을 때
+ */
+export function validateOwnerAddress(chain: 'solana' | 'ethereum', address: string): void {
+  if (chain === 'solana') {
+    solanaAddressSchema.parse(address)
+  } else {
+    evmAddressSchema.parse(address)
+  }
+}
+
+// 타입 추론용 export
+export type SolanaAddress = z.infer<typeof solanaAddressSchema>
+export type EvmAddress = z.infer<typeof evmAddressSchema>
+```
+
+**체인별 검증 규칙:**
+
+| 체인 | 형식 | 길이 | 인코딩 | 추가 검증 |
+|------|------|:----:|--------|----------|
+| Solana | Base58 | 32-44자 | `[1-9A-HJ-NP-Za-km-z]+` | - |
+| EVM | `0x` + 40 hex | 42자 | `0x[0-9a-fA-F]{40}` | EIP-55 체크섬 (viem `getAddress()`) |
+
+> **참고:** EVM 주소의 EIP-55 체크섬 검증은 Zod 스키마 단계에서는 수행하지 않는다. 이는 `viem`의 `getAddress()` 함수를 통해 주소를 정규화할 때 자동으로 처리된다. Zod 스키마는 형식 레벨 검증만 담당한다.
+
+### 10.9 Anti-Patterns 및 설계 결정 근거 [v0.8]
+
+구현 시 반드시 회피해야 하는 안티 패턴을 정리한다. 각 패턴에 대해 "왜 위험한지"와 "올바른 접근"을 명시한다.
+
+| # | Anti-Pattern | 위험 | 올바른 접근 |
+|---|-------------|------|-----------|
+| 1 | LOCKED 주소 변경 시 `owner_verified` 리셋 | 새 Owner가 GRACE 상태로 전환 -> masterAuth만으로 재변경 가능 (보안 허점) | `owner_verified = 1` 유지. 기존 Owner 서명 승인 = 새 주소 신뢰 |
+| 2 | `OwnerState` DB 컬럼 저장 | `owner_address`/`owner_verified`와의 동기화 오류 발생 가능 | `resolveOwnerState()` 순수 함수로 런타임 산출 (Phase 31 결정) |
+| 3 | 미들웨어에서 인증 분기 | PATCH 요청 바디를 미들웨어에서 파싱해야 함 -- 미들웨어 책임 위반 | `OwnerLifecycleService` 비즈니스 로직에서 상태 기반 검증 |
+| 4 | Kill Switch ACTIVATED에서 Owner 변경 | 복구 요건이 동적으로 변경되는 보안 위험 (H-03) | `killSwitchGuard`가 허용 경로 4개만 통과 -> `set-owner`/`remove-owner` 자동 차단 |
+| 5 | ownerAuth 검증 후 비동기 `markOwnerVerified()` | 검증과 전이 사이 레이스 윈도우 발생 (C-01) | 동일 요청 처리 내 동기적 전이 (Step 8.5, BEGIN IMMEDIATE) |
+
+**Anti-Pattern #1 상세: LOCKED 주소 변경 시 owner_verified 리셋**
+
+```
+시나리오: LOCKED 상태, owner_address = Alice
+1. Alice가 ownerAuth + masterAuth로 set-owner Bob 요청
+2. [위험] owner_verified = 0으로 리셋 -> OwnerState = GRACE
+3. 공격자가 masterAuth만으로 set-owner Mallory 요청 (GRACE이므로 masterAuth만 필요)
+4. Mallory가 ownerAuth 수행 -> LOCKED
+5. Alice와 Bob 모두 제어권 상실
+
+올바른 접근: owner_verified = 1 유지 -> OwnerState = LOCKED 유지
+-> Mallory가 set-owner하려면 Bob의 ownerAuth + masterAuth 필요
+```
+
+**Anti-Pattern #4 상세: Kill Switch와 Owner 생명주기 연동**
+
+Kill Switch ACTIVATED 상태에서 Owner 변경/제거를 허용하면:
+- Owner를 변경하면 복구(recover)에 필요한 ownerAuth 주소가 변경됨
+- Owner를 제거하면 복구 자체가 불가능해짐 (ownerAuth 필수인 recover가 실행 불가)
+- `killSwitchGuard` 미들웨어가 허용하는 4개 경로 외의 모든 요청은 503 `SERVICE_UNAVAILABLE`로 차단되므로, `set-owner`/`remove-owner`는 자동으로 차단된다. 별도 로직 불필요.
+
+```
+killSwitchGuard 허용 경로 (4개):
+1. POST /v1/owner/recover (ownerAuth + masterAuth explicit)
+2. GET  /v1/status (health check)
+3. GET  /v1/agents/:id (상태 조회)
+4. GET  /v1/owner/pending-approvals (대기 거래 조회)
+
+-> PATCH /v1/agents/:id (owner 변경) = 503 차단
+```
+
+### 10.10 보안 공격 방어 메커니즘 [v0.8]
+
+> **v0.8 신규 섹션.** Phase 32 Plan 02의 산출물로, Owner 생명주기에서 발생 가능한 보안 공격 시나리오 4건(C-01, C-02, H-02, H-03)에 대한 방어 메커니즘을 설계한다.
+
+#### C-01: Grace-to-Locked 레이스 컨디션 (CRITICAL)
+
+**위협 시나리오:**
+
+```
+1. 공격자가 masterAuth를 탈취 (로컬 접근 확보)
+2. set-owner로 자신의 주소를 등록 (GRACE 상태)
+3. ownerAuth를 수행하여 LOCKED 전환
+4. 원래 Owner가 변경 불가 상태에 빠짐
+```
+
+**방어 3중 보호:**
+
+| 방어 계층 | 메커니즘 | 설계 문서 참조 |
+|----------|---------|--------------|
+| 1. markOwnerVerified 원자화 | BEGIN IMMEDIATE + WHERE owner_verified = 0 | 33-time-lock-approval-mechanism.md |
+| 2. setOwner BEGIN IMMEDIATE | set-owner API에서도 BEGIN IMMEDIATE 내에서 ownerState 재확인 | 본 섹션 (아래 상세) |
+| 3. 감사 로그 즉시 기록 | GRACE->LOCKED 전이 시 OWNER_VERIFIED 이벤트 | 25-sqlite-schema.md |
+
+**계층 1: markOwnerVerified 원자화 (Phase 31 설계)**
+
+```
+BEGIN IMMEDIATE 트랜잭션:
+  UPDATE agents SET owner_verified = 1
+  WHERE id = ? AND owner_verified = 0
+  -- changes === 0이면 이미 LOCKED (Idempotent)
+  -- 동시 요청이 RESERVED 잠금에 의해 직렬화됨
+```
+
+**계층 2: setOwner BEGIN IMMEDIATE 직렬화**
+
+`OwnerLifecycleService.setOwner()`에서도 BEGIN IMMEDIATE 트랜잭션으로 ownerState를 재확인하고 주소 변경을 원자화한다. 이를 통해 "상태 확인 -> 변경" 사이의 레이스 윈도우를 제거한다.
+
+```typescript
+// OwnerLifecycleService.setOwner() 내부 - BEGIN IMMEDIATE 직렬화 버전
+async setOwner(agentId: string, newAddress: string, auth: AuthContext): Promise<void> {
+  // 체인별 주소 형식 검증 (트랜잭션 외부)
+  validateOwnerAddress(agent.chain, newAddress)
+
+  // BEGIN IMMEDIATE 트랜잭션으로 ownerState 재확인 + 주소 변경 원자화
+  this.sqlite.transaction(() => {
+    const agent = this.sqlite.prepare(
+      'SELECT owner_address, owner_verified FROM agents WHERE id = ?'
+    ).get(agentId) as { owner_address: string | null, owner_verified: number } | undefined
+
+    if (!agent) throw new NotFoundError('AGENT_NOT_FOUND')
+
+    const state = resolveOwnerState({
+      ownerAddress: agent.owner_address,
+      ownerVerified: !!agent.owner_verified,
+    })
+
+    // LOCKED 상태에서는 ownerAuth 필수
+    if (state === 'LOCKED' && !auth.ownerVerified) {
+      throw new ForbiddenError('OWNER_AUTH_REQUIRED',
+        '잠금 구간에서는 기존 Owner 서명이 필요합니다')
+    }
+
+    // 주소 변경
+    this.sqlite.prepare(
+      'UPDATE agents SET owner_address = ?, updated_at = ? WHERE id = ?'
+    ).run(newAddress, Math.floor(Date.now() / 1000), agentId)
+
+    // 감사 로그도 트랜잭션 내에서 기록
+    const eventType = state === 'NONE' ? 'OWNER_REGISTERED' : 'OWNER_ADDRESS_CHANGED'
+    this.sqlite.prepare(
+      `INSERT INTO audit_log (id, event_type, agent_id, details, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(
+      generateUUIDv7(),
+      eventType,
+      agentId,
+      JSON.stringify({ newAddress, previousState: state }),
+      Math.floor(Date.now() / 1000)
+    )
+  }).immediate()
+}
+```
+
+> **BEGIN IMMEDIATE 일관성:** 33-time-lock-approval-mechanism.md의 BEGIN IMMEDIATE 사용처 테이블에 setOwner를 추가해야 한다 (Phase 35 통합 시 반영).
+
+**계층 3: 감사 로그 즉시 기록**
+
+모든 상태 전이에서 감사 로그가 트랜잭션 내에서 기록되므로, 전이가 성공하면 감사 로그도 반드시 존재한다. 이상 탐지 시 OWNER_REGISTERED -> OWNER_VERIFIED 이벤트 순서와 시간 간격으로 비정상 패턴을 식별할 수 있다.
+
+---
+
+#### C-02: 보안 다운그레이드 공격 (CRITICAL)
+
+**위협 시나리오:**
+
+```
+1. 공격자가 masterAuth를 탈취 (유예 구간)
+2. remove-owner로 Owner를 제거
+3. APPROVAL 티어가 DELAY로 다운그레이드됨
+4. Kill Switch 복구 대기가 30분 -> 24시간으로 변경됨
+5. 공격자가 보안 수준 저하를 이용해 자금 탈취
+```
+
+**방어 3중 보호:**
+
+| 방어 계층 | 메커니즘 | 상세 |
+|----------|---------|------|
+| 1. LOCKED 해제 금지 | `OwnerLifecycleService.removeOwner()` -> `ForbiddenError('OWNER_LOCKED')` | 잠금 구간에서는 근본적으로 불가 |
+| 2. 유예 구간 remove-owner 알림 | 전 채널 알림: "보안 수준이 Base로 전환됩니다. APPROVAL 거래가 DELAY로 다운그레이드됩니다." | 알림 템플릿은 Phase 33에서 설계 |
+| 3. killSwitchGuard 연동 | Kill Switch ACTIVATED 상태에서 set-owner/remove-owner 자동 차단 (허용 경로 4개에 미포함) | 36-killswitch-autostop-evm.md 참조 |
+
+**계층 1: LOCKED 해제 금지 (섹션 10.2 전이 #6)**
+
+LOCKED 상태에서 Owner 해제(remove-owner)는 무조건 거부된다. 이는 보안 다운그레이드 공격의 근본적 차단이다.
+
+```typescript
+// OwnerLifecycleService.removeOwner() - 섹션 10.3 참조
+if (state === 'LOCKED') {
+  throw new ForbiddenError('OWNER_LOCKED',
+    '잠금 구간에서는 Owner를 해제할 수 없습니다')
+}
+```
+
+**계층 2: 유예 구간 remove-owner 알림**
+
+GRACE 상태에서 remove-owner가 실행되면 전 채널 알림이 발송된다:
+
+| 알림 항목 | 내용 |
+|----------|------|
+| 제목 | "Owner 해제 -- 보안 수준 다운그레이드" |
+| 본문 | "에이전트 [{agentId}]의 Owner가 해제되었습니다. 보안 수준이 Base로 전환됩니다. APPROVAL 거래가 DELAY로 다운그레이드됩니다." |
+| severity | warning |
+| 채널 | 전 채널 (설정된 알림 채널 모두) |
+
+> 알림 템플릿 상세 설계는 Phase 33(정책 다운그레이드 + 알림 설계)에서 진행한다.
+
+**계층 3: killSwitchGuard 연동**
+
+Kill Switch ACTIVATED 상태에서는 허용 경로 4개만 통과 가능하다. set-owner(PATCH /v1/agents/:id)와 remove-owner(PATCH /v1/agents/:id)는 허용 경로에 포함되지 않으므로 자동으로 503 SERVICE_UNAVAILABLE로 차단된다. 별도 로직 불필요.
+
+**추가 방어 (v0.9+ 고려):**
+
+- remove-owner 실행 시 audit_log에 `SECURITY_LEVEL_DOWNGRADE` 이벤트 기록 고려
+- CLI에서 remove-owner 실행 전 확인 프롬프트 표시 (Phase 35 DX에서 설계)
+
+---
+
+#### H-02: 유예 구간 withdraw 공격
+
+**위협 시나리오:**
+
+```
+1. 공격자가 masterAuth를 탈취
+2. set-owner로 자신의 주소를 등록 (GRACE)
+3. withdraw로 자금을 자신의 주소(owner_address)로 회수
+```
+
+**방어:**
+
+| 방어 항목 | 메커니즘 |
+|----------|---------|
+| withdraw 활성화 조건 | `owner_verified = 1` (LOCKED 상태)에서만 활성화 (WITHDRAW-08) |
+| GRACE 상태 withdraw | 403 Forbidden 응답 |
+| 근거 | GRACE 상태는 Owner 주소가 "아직 검증되지 않은" 상태이므로, 해당 주소로 자금을 전송하는 것은 보안 위험 |
+
+```typescript
+// WithdrawService.withdraw() - Phase 34에서 설계
+if (resolveOwnerState(agent) !== 'LOCKED') {
+  throw new ForbiddenError('WITHDRAW_LOCKED_ONLY',
+    '자금 회수는 Owner가 잠금 상태(LOCKED)에서만 가능합니다')
+}
+// 수신 주소 = agent.ownerAddress (고정, 사용자 지정 불가)
+```
+
+> **상세 API 설계는 Phase 34(자금 회수 + 보안 분기 설계)에서 진행한다.** 여기서는 보안 정책만 확정한다.
+
+---
+
+#### H-03: Kill Switch ACTIVATED 상태 Owner 변경
+
+**위협 시나리오:**
+
+```
+1. Kill Switch가 발동된 상태 (ACTIVATED)
+2. 공격자가 Owner를 변경/제거하여 복구 요건 변경
+   - Owner 변경 -> 복구(recover)에 필요한 ownerAuth 주소가 변경됨
+   - Owner 제거 -> 복구 자체가 불가능해짐 (ownerAuth 필수인 recover 실행 불가)
+```
+
+**방어:**
+
+| 방어 항목 | 메커니즘 |
+|----------|---------|
+| killSwitchGuard 허용 경로 | 4개만 통과: GET /v1/health, GET /v1/admin/status, POST /v1/admin/recover, GET /v1/admin/kill-switch |
+| set-owner/remove-owner | 허용 경로에 미포함 -> 자동 503 SERVICE_UNAVAILABLE 차단 |
+| 에러 코드 | `SYSTEM_LOCKED` (36-killswitch-autostop-evm.md 참조) |
+| 별도 로직 | 불필요 -- killSwitchGuard 미들웨어가 일괄 차단 |
+
+```
+Kill Switch ACTIVATED/RECOVERING 상태 동작:
+
+요청: PATCH /v1/agents/:id (owner 변경)
+-> killSwitchGuard 미들웨어 (#7)
+-> 허용 목록 4개에 미포함
+-> 503 SERVICE_UNAVAILABLE { code: 'SYSTEM_LOCKED' }
+
+요청: POST /v1/admin/recover (Kill Switch 복구)
+-> killSwitchGuard 미들웨어 (#7)
+-> 허용 목록에 포함
+-> 통과 -> dualAuth (ownerAuth + masterAuth explicit)
+-> 복구 처리
+```
+
+> 이 동작은 36-killswitch-autostop-evm.md에서 이미 설계되어 있으며 (52-auth-model-redesign.md 섹션 7.4 참조), 본 섹션에서 Owner 생명주기 관점으로 명시적으로 재확인한다.
+
+---
+
+### 10.11 ownerAuth 미들웨어 v0.8 변경 요약 [v0.8]
+
+52-auth-model-redesign.md에서 상세 설계된 ownerAuth 미들웨어 v0.8 변경의 요약을 교차 참조로 포함한다.
+
+| 변경 항목 | 상세 | 참조 |
+|----------|------|------|
+| Step 8.5 추가 | markOwnerVerified() 자동 호출 (GRACE->LOCKED) | 52-auth-model-redesign.md 섹션 3.2 |
+| action enum 확장 | approve_tx, recover + **change_owner** [v0.8] | 52-auth-model-redesign.md 섹션 3.2 |
+| ROUTE_ACTION_MAP | PATCH /v1/agents/:id -> change_owner | 52-auth-model-redesign.md 섹션 3.2 |
+| 인증 맵 갱신 | PATCH /v1/agents/:id의 LOCKED 분기 주석 | 52-auth-model-redesign.md 섹션 4.2 |
+
+**Step 8.5 타이밍 다이어그램:**
+
+```
+ownerAuth 미들웨어 실행 순서:
+
+Step 1-4: 서명 검증 (Authorization 헤더 -> SIWS/SIWE)
+Step 5:   서명자 == agents.owner_address 확인
+Step 6:   action == 라우트 기대 action 확인
+Step 7:   컨텍스트 설정 (ownerAddress, ownerChain)
+          ↓
+Step 8.5: [v0.8] agent.ownerVerified === false ?
+          → YES: markOwnerVerified(agent.id)
+                 BEGIN IMMEDIATE + WHERE owner_verified = 0
+                 감사 로그 OWNER_VERIFIED (같은 트랜잭션)
+          → NO:  이미 LOCKED, skip (Idempotent)
+          ↓
+Step 8:   next() 호출 → 핸들러 실행
+          (이 시점에서 LOCKED 상태 보장)
+```
+
+**change_owner action 사용 시나리오:**
+
+```
+LOCKED 상태에서 set-owner 실행:
+
+1. CLI: waiaas agent set-owner <agentId> --address <newAddr>
+2. CLI가 현재 Owner 상태 확인 -> LOCKED
+3. CLI가 ownerAuth 서명 요청 (action: 'change_owner')
+4. API 호출: PATCH /v1/agents/:id
+   - 헤더: Authorization: Bearer <ownerSignaturePayload>
+   - 바디: { ownerAddress: <newAddr> }
+5. 핸들러: OwnerLifecycleService.setOwner()
+   - resolveOwnerState() -> LOCKED
+   - auth.ownerVerified === true (ownerAuth 미들웨어에서 설정)
+   - BEGIN IMMEDIATE 내에서 주소 변경 + 감사 로그
+6. 응답: 200 OK
+```
+
+> 이 교차 참조로 34 문서(Owner 생명주기)와 52 문서(인증 모델)의 일관성을 보장한다. 구현 시 두 문서를 함께 참조해야 한다.
+
+---
+
+*문서 ID: OWNR-CONN v0.8*
+*작성일: 2026-02-05, v0.5 업데이트: 2026-02-07, v0.7 보완: 2026-02-08, v0.8 업데이트: 2026-02-09*
+*Phase: 08-security-layers-design, v0.5 업데이트: 19-auth-owner-redesign, v0.7 보완: 27-daemon-security-foundation + 29-api-integration-protocol, v0.8 업데이트: 32-owner-생명주기-설계 (Plan 01 + Plan 02)*
+*상태: v0.8 보완 (Owner 생명주기 상태 머신 + OwnerLifecycleService + 보안 공격 방어 메커니즘)*

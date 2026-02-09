@@ -19,7 +19,7 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 ## Phases
 
 - [x] **Phase 31: 데이터 모델 + 타입 기반 설계** - agents 스키마 nullable 전환 + 핵심 타입 정의
-- [ ] **Phase 32: Owner 생명주기 설계** - 등록/변경/해제 + 유예/잠금 2단계 상태 머신
+- [x] **Phase 32: Owner 생명주기 설계** - 등록/변경/해제 + 유예/잠금 2단계 상태 머신
 - [ ] **Phase 33: 정책 다운그레이드 + 알림 설계** - APPROVAL->DELAY 다운그레이드 + 알림 템플릿
 - [ ] **Phase 34: 자금 회수 + 보안 분기 설계** - sweepAll 프로토콜 + Kill Switch/세션 Owner 분기
 - [ ] **Phase 35: DX + 설계 문서 통합** - CLI 변경 + 14개 설계 문서 v0.8 반영
@@ -54,8 +54,8 @@ Plans:
 **Plans**: 2 plans (Wave 1 -> Wave 2 sequential)
 
 Plans:
-- [ ] 32-01-PLAN.md -- Owner 생명주기 상태 머신(3-State, 6전이) + OwnerLifecycleService + REST API/CLI 스펙 + 감사 이벤트/에러 코드 (34-owner-wallet-connection.md)
-- [ ] 32-02-PLAN.md -- ownerAuth Step 8.5 + change_owner action + 인증 맵 갱신 (52-auth-model-redesign.md) + 보안 공격 방어 C-01/C-02/H-02/H-03 (34-owner-wallet-connection.md)
+- [x] 32-01-PLAN.md -- Owner 생명주기 상태 머신(3-State, 6전이) + OwnerLifecycleService + REST API/CLI 스펙 + 감사 이벤트/에러 코드 (34-owner-wallet-connection.md)
+- [x] 32-02-PLAN.md -- ownerAuth Step 8.5 + change_owner action + 인증 맵 갱신 (52-auth-model-redesign.md) + 보안 공격 방어 C-01/C-02/H-02/H-03 (34-owner-wallet-connection.md)
 
 ### Phase 33: 정책 다운그레이드 + 알림 설계
 **Goal**: Owner 없는 에이전트의 APPROVAL 거래가 차단 없이 DELAY로 다운그레이드되어 실행되고, 알림에 Owner 등록 안내가 포함되는 설계가 완성된다
@@ -67,11 +67,11 @@ Plans:
   3. Owner 등록 후 동일 금액 거래가 정상 APPROVAL로 처리되는 흐름이 명세되어 있다
   4. 다운그레이드 알림 템플릿에 Owner 등록 CLI 안내 메시지가 포함되어 있다
   5. Owner 있는 에이전트의 APPROVAL 대기 알림에 [승인]/[거부] 버튼이 명세되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 33-01: DatabasePolicyEngine 다운그레이드 로직 + PolicyDecision 확장 설계
-- [ ] 33-02: 다운그레이드/APPROVAL 알림 템플릿 + Owner 등록 안내 설계
+- [ ] 33-01-PLAN.md -- evaluate() Step 9.5 다운그레이드 로직 + evaluateBatch 다운그레이드 + evaluate 시그니처 확장 + TX_DOWNGRADED 감사 로그 + Owner LOCKED 후 정상 APPROVAL 복원 흐름 (33-time-lock-approval-mechanism.md)
+- [ ] 33-02-PLAN.md -- TX_DOWNGRADED_DELAY 이벤트 추가 + 채널별(Telegram/Discord/ntfy.sh) 다운그레이드 알림 템플릿 + APPROVAL 대기 [승인]/[거부] 버튼 명세 (35-notification-architecture.md)
 
 ### Phase 34: 자금 회수 + 보안 분기 설계
 **Goal**: Owner 등록된 에이전트의 자금 전량 회수 프로토콜과, Owner 유무별 Kill Switch 복구/세션 갱신 분기가 설계된다
@@ -115,11 +115,11 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-08 |
-| 32. Owner 생명주기 설계 | v0.8 | 0/2 | Not started | - |
+| 32. Owner 생명주기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 0/2 | Not started | - |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
 | 35. DX + 설계 문서 통합 | v0.8 | 0/3 | Not started | - |
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-08 after Phase 31 execution complete*
+*Last updated: 2026-02-09 after Phase 32 execution complete*
