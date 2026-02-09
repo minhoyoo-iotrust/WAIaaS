@@ -1,0 +1,368 @@
+/**
+ * DaemonLifecycle - orchestrates daemon startup (6 steps) and shutdown (10 steps).
+ *
+ * Startup sequence (doc 28 section 2):
+ *   1. Environment validation + config + flock (5s timeout, fail-fast)
+ *   2. Database initialization (30s timeout, fail-fast)
+ *   3. Keystore unlock (30s timeout, fail-fast)
+ *   4. Adapter initialization -- STUB for v1.1 (10s, fail-soft)
+ *   5. HTTP server start -- STUB for v1.1 (5s, fail-fast)
+ *   6. Background workers + PID (no timeout, fail-soft)
+ *
+ * Shutdown sequence (doc 28 section 3):
+ *   1. Set isShuttingDown, start force timer, log signal
+ *   2-4. HTTP server close -- STUB (Phase 50)
+ *   5. In-flight signing -- STUB (Phase 50)
+ *   6. Pending queue persistence -- STUB (Phase 50)
+ *   7. workers.stopAll()
+ *   8. WAL checkpoint(TRUNCATE)
+ *   9. keyStore.lockAll()
+ *   10. sqlite.close(), unlink PID, close lockFd, process.exit(0)
+ *
+ * @see docs/28-daemon-lifecycle-cli.md
+ */
+
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { WAIaaSError } from '@waiaas/core';
+import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
+import { loadConfig } from '../infrastructure/config/index.js';
+import type { DaemonConfig } from '../infrastructure/config/index.js';
+import { BackgroundWorkers } from './workers.js';
+
+// ---------------------------------------------------------------------------
+// proper-lockfile import (CJS package, use dynamic import)
+// ---------------------------------------------------------------------------
+
+interface LockfileModule {
+  lock(path: string, opts?: Record<string, unknown>): Promise<() => Promise<void>>;
+  unlock(path: string, opts?: Record<string, unknown>): Promise<void>;
+  check(path: string, opts?: Record<string, unknown>): Promise<boolean>;
+}
+
+let _lockfile: LockfileModule | null = null;
+
+async function getLockfile(): Promise<LockfileModule> {
+  if (_lockfile) return _lockfile;
+  // proper-lockfile is CJS; use dynamic import
+  _lockfile = (await import('proper-lockfile')) as unknown as LockfileModule;
+  return _lockfile;
+}
+
+// ---------------------------------------------------------------------------
+// Timeout utility
+// ---------------------------------------------------------------------------
+
+/**
+ * Race a promise against a timeout. Rejects with WAIaaSError on timeout.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, errorCode: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        new WAIaaSError('SYSTEM_LOCKED', {
+          message: `${errorCode}: Timeout after ${ms}ms`,
+        }),
+      );
+    }, ms);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+// Export for testing
+export { withTimeout };
+
+// ---------------------------------------------------------------------------
+// DaemonLifecycle
+// ---------------------------------------------------------------------------
+
+export class DaemonLifecycle {
+  private _isShuttingDown = false;
+  private sqlite: DatabaseType | null = null;
+  private keyStore: LocalKeyStore | null = null;
+  private workers: BackgroundWorkers | null = null;
+  private releaseLock: (() => Promise<void>) | null = null;
+  private pidPath = '';
+  private _config: DaemonConfig | null = null;
+  private forceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Whether shutdown has been initiated. */
+  get isShuttingDown(): boolean {
+    return this._isShuttingDown;
+  }
+
+  /** Current config (available after start). */
+  get config(): DaemonConfig | null {
+    return this._config;
+  }
+
+  /**
+   * 6-step startup sequence with per-step timeouts and 90s overall cap.
+   */
+  async start(dataDir: string, masterPassword: string): Promise<void> {
+    // Wrap everything in a 90-second overall timeout
+    await withTimeout(this._startInternal(dataDir, masterPassword), 90_000, 'STARTUP_TIMEOUT');
+  }
+
+  private async _startInternal(dataDir: string, masterPassword: string): Promise<void> {
+    // ------------------------------------------------------------------
+    // Step 1: Environment validation + config + flock (5s, fail-fast)
+    // ------------------------------------------------------------------
+    await withTimeout(
+      (async () => {
+        // Ensure data directory exists
+        if (!existsSync(dataDir)) {
+          mkdirSync(dataDir, { recursive: true });
+        }
+
+        // Load config
+        this._config = loadConfig(dataDir);
+
+        // Acquire daemon lock (flock-like via proper-lockfile)
+        await this.acquireDaemonLock(dataDir);
+
+        console.log('Step 1: Config loaded, daemon lock acquired');
+      })(),
+      5_000,
+      'STEP1_CONFIG_LOCK',
+    );
+
+    // ------------------------------------------------------------------
+    // Step 2: Database initialization (30s, fail-fast)
+    // ------------------------------------------------------------------
+    await withTimeout(
+      (async () => {
+        const dbPath = join(dataDir, this._config!.database.path);
+
+        // Ensure DB directory exists
+        const dbDir = dirname(dbPath);
+        if (!existsSync(dbDir)) {
+          mkdirSync(dbDir, { recursive: true });
+        }
+
+        const { sqlite } = createDatabase(dbPath);
+        this.sqlite = sqlite;
+
+        // Create all tables (idempotent)
+        pushSchema(sqlite);
+
+        console.log('Step 2: Database initialized');
+      })(),
+      30_000,
+      'STEP2_DATABASE',
+    );
+
+    // ------------------------------------------------------------------
+    // Step 3: Keystore unlock (30s, fail-fast)
+    // ------------------------------------------------------------------
+    await withTimeout(
+      (async () => {
+        // Dynamic import to avoid circular dependency issues
+        const { LocalKeyStore: KeyStoreCls } = await import(
+          '../infrastructure/keystore/index.js'
+        );
+        const keystoreDir = join(dataDir, 'keystore');
+        if (!existsSync(keystoreDir)) {
+          mkdirSync(keystoreDir, { recursive: true });
+        }
+        this.keyStore = new KeyStoreCls(keystoreDir);
+
+        // v1.1: just verify keystore infrastructure is accessible
+        // Full key decryption happens when agents are accessed
+        if (masterPassword) {
+          console.log('Step 3: Keystore infrastructure verified (master password provided)');
+        } else {
+          console.log('Step 3: Keystore infrastructure verified (no master password)');
+        }
+      })(),
+      30_000,
+      'STEP3_KEYSTORE',
+    );
+
+    // ------------------------------------------------------------------
+    // Step 4: Adapter initialization -- STUB for v1.1 (10s, fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      console.log('Step 4: Adapter initialization deferred to Phase 50');
+    } catch (err) {
+      console.warn('Step 4 (fail-soft): Adapter init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
+    // Step 5: HTTP server start -- STUB for v1.1 (5s, fail-fast)
+    // ------------------------------------------------------------------
+    console.log('Step 5: HTTP server deferred to Phase 50');
+
+    // ------------------------------------------------------------------
+    // Step 6: Background workers + PID (no timeout, fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      this.workers = new BackgroundWorkers();
+
+      // Register WAL checkpoint worker (default: 5 min = 300s)
+      const walInterval = this._config!.database.wal_checkpoint_interval * 1000;
+      this.workers.register('wal-checkpoint', {
+        interval: walInterval,
+        handler: () => {
+          if (this.sqlite && !this._isShuttingDown) {
+            this.sqlite.pragma('wal_checkpoint(PASSIVE)');
+          }
+        },
+      });
+
+      // Register session cleanup worker (1 min = 60s)
+      this.workers.register('session-cleanup', {
+        interval: 60_000,
+        handler: () => {
+          if (this.sqlite && !this._isShuttingDown) {
+            this.sqlite.exec(
+              "DELETE FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+            );
+          }
+        },
+      });
+
+      this.workers.startAll();
+
+      // Write PID file
+      this.pidPath = join(dataDir, this._config!.daemon.pid_file);
+      writeFileSync(this.pidPath, String(process.pid), 'utf-8');
+
+      console.log(`Step 6: Workers started, PID file written`);
+      console.log(`WAIaaS daemon ready (PID: ${process.pid})`);
+    } catch (err) {
+      console.warn('Step 6 (fail-soft): Worker/PID warning:', err);
+    }
+  }
+
+  /**
+   * 10-step graceful shutdown cascade.
+   */
+  async shutdown(signal: string): Promise<void> {
+    // Guard against double shutdown
+    if (this._isShuttingDown) return;
+    this._isShuttingDown = true;
+
+    console.log(`Shutdown initiated by ${signal}`);
+
+    // Start force-exit timer (configurable, default 30s)
+    const timeout = this._config?.daemon.shutdown_timeout ?? 30;
+    this.forceTimer = setTimeout(() => {
+      console.error('Force exit: shutdown timeout exceeded');
+      process.exit(1);
+    }, timeout * 1000);
+    this.forceTimer.unref(); // don't prevent exit
+
+    try {
+      // Steps 1: Set flag + log (done above)
+
+      // Steps 2-4: HTTP server close -- STUB (Phase 50)
+      // Steps 5: In-flight signing -- STUB (Phase 50)
+      // Steps 6: Pending queue persistence -- STUB (Phase 50)
+
+      // Step 7: Stop background workers
+      if (this.workers) {
+        await this.workers.stopAll();
+        console.log('Step 7: Workers stopped');
+      }
+
+      // Step 8: WAL checkpoint(TRUNCATE)
+      if (this.sqlite) {
+        try {
+          this.sqlite.pragma('wal_checkpoint(TRUNCATE)');
+          console.log('Step 8: WAL checkpoint complete');
+        } catch (err) {
+          console.warn('Step 8: WAL checkpoint warning:', err);
+        }
+      }
+
+      // Step 9: Keystore lock (sodium_memzero all guarded buffers)
+      if (this.keyStore) {
+        this.keyStore.lockAll();
+        console.log('Step 9: Keystore locked');
+      }
+
+      // Step 10: Close DB, unlink PID, release lock
+      if (this.sqlite) {
+        try {
+          this.sqlite.close();
+          console.log('Step 10: Database closed');
+        } catch (err) {
+          console.warn('Step 10: DB close warning:', err);
+        }
+        this.sqlite = null;
+      }
+
+      // Delete PID file
+      if (this.pidPath) {
+        try {
+          unlinkSync(this.pidPath);
+        } catch {
+          // Ignore if already deleted
+        }
+      }
+
+      // Release daemon lock
+      if (this.releaseLock) {
+        try {
+          await this.releaseLock();
+        } catch {
+          // Ignore lock release errors during shutdown
+        }
+        this.releaseLock = null;
+      }
+
+      // Cancel force timer
+      if (this.forceTimer) {
+        clearTimeout(this.forceTimer);
+        this.forceTimer = null;
+      }
+
+      console.log('Shutdown complete');
+    } catch (err) {
+      console.error('Shutdown error:', err);
+    }
+  }
+
+  /**
+   * Acquire an exclusive daemon lock to prevent multiple instances.
+   * Uses proper-lockfile for cross-platform support.
+   */
+  private async acquireDaemonLock(dataDir: string): Promise<void> {
+    const lockPath = join(dataDir, 'daemon.lock');
+
+    // Ensure the lock file exists (proper-lockfile requires it)
+    if (!existsSync(lockPath)) {
+      writeFileSync(lockPath, '', 'utf-8');
+    }
+
+    try {
+      const lockfile = await getLockfile();
+      this.releaseLock = await lockfile.lock(lockPath, {
+        stale: 10_000, // Consider lock stale after 10s without update
+        update: 5_000, // Update lock mtime every 5s
+        retries: 0, // No retries -- fail immediately if locked
+      });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('already being held') || errMsg.includes('ELOCKED')) {
+        throw new WAIaaSError('SYSTEM_LOCKED', {
+          message: 'Another WAIaaS daemon is already running (daemon.lock is held)',
+        });
+      }
+      throw err;
+    }
+  }
+}
