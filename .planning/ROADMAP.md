@@ -18,7 +18,7 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 
 ## Phases
 
-- [ ] **Phase 31: 데이터 모델 + 타입 기반 설계** - agents 스키마 nullable 전환 + 핵심 타입 정의
+- [x] **Phase 31: 데이터 모델 + 타입 기반 설계** - agents 스키마 nullable 전환 + 핵심 타입 정의
 - [ ] **Phase 32: Owner 생명주기 설계** - 등록/변경/해제 + 유예/잠금 2단계 상태 머신
 - [ ] **Phase 33: 정책 다운그레이드 + 알림 설계** - APPROVAL->DELAY 다운그레이드 + 알림 템플릿
 - [ ] **Phase 34: 자금 회수 + 보안 분기 설계** - sweepAll 프로토콜 + Kill Switch/세션 Owner 분기
@@ -38,8 +38,8 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 **Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 31-01-PLAN.md -- agents 스키마 v0.8 변경(nullable owner_address, owner_verified) + 마이그레이션 SQL + OwnerState/SweepResult 타입 + PolicyDecision 확장
-- [ ] 31-02-PLAN.md -- IChainAdapter.sweepAll 시그니처(20번째 메서드) + resolveOwnerState() 유틸리티 + Grace->Locked BEGIN IMMEDIATE 원자화
+- [x] 31-01-PLAN.md -- agents 스키마 v0.8 변경(nullable owner_address, owner_verified) + 마이그레이션 SQL + OwnerState/SweepResult 타입 + PolicyDecision 확장
+- [x] 31-02-PLAN.md -- IChainAdapter.sweepAll 시그니처(20번째 메서드) + resolveOwnerState() 유틸리티 + Grace->Locked BEGIN IMMEDIATE 원자화
 
 ### Phase 32: Owner 생명주기 설계
 **Goal**: Owner 주소의 등록/변경/해제 전체 생명주기가 설계되어, 유예/잠금 2단계에 따른 인증 요건과 제약이 명확하다
@@ -51,11 +51,11 @@ Plans:
   3. 유예 구간(owner_verified=0)에서 masterAuth만으로 변경/해제가 가능한 정책이 명세되어 있다
   4. 잠금 구간(owner_verified=1)에서 ownerAuth+masterAuth로만 변경이 가능하고, 해제가 불가능한 정책이 명세되어 있다
   5. OwnerLifecycleService의 상태 전이 다이어그램과 보안 다운그레이드 방지 메커니즘이 명세되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 -> Wave 2 sequential)
 
 Plans:
-- [ ] 32-01: Owner 등록/변경/해제 정책 + 유예/잠금 2단계 상태 머신 설계
-- [ ] 32-02: OwnerLifecycleService + ownerAuth 미들웨어 통합 + 보안 공격 방어 설계
+- [ ] 32-01-PLAN.md -- Owner 생명주기 상태 머신(3-State, 6전이) + OwnerLifecycleService + REST API/CLI 스펙 + 감사 이벤트/에러 코드 (34-owner-wallet-connection.md)
+- [ ] 32-02-PLAN.md -- ownerAuth Step 8.5 + change_owner action + 인증 맵 갱신 (52-auth-model-redesign.md) + 보안 공격 방어 C-01/C-02/H-02/H-03 (34-owner-wallet-connection.md)
 
 ### Phase 33: 정책 다운그레이드 + 알림 설계
 **Goal**: Owner 없는 에이전트의 APPROVAL 거래가 차단 없이 DELAY로 다운그레이드되어 실행되고, 알림에 Owner 등록 안내가 포함되는 설계가 완성된다
@@ -114,7 +114,7 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 0/2 | Planned | - |
+| 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-08 |
 | 32. Owner 생명주기 설계 | v0.8 | 0/2 | Not started | - |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 0/2 | Not started | - |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
@@ -122,4 +122,4 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-08 after Phase 31 planning*
+*Last updated: 2026-02-08 after Phase 31 execution complete*

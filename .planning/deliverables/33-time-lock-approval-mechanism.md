@@ -3,9 +3,10 @@
 **문서 ID:** LOCK-MECH
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
+**v0.8 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** TX-PIPE (32-transaction-pipeline-api.md), SESS-PROTO (30-session-token-protocol.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md)
-**요구사항:** LOCK-01 (4단계 분류), LOCK-02 (Delay 큐잉), LOCK-03 (Approval 승인), LOCK-04 (미승인 만료)
+**참조:** TX-PIPE (32-transaction-pipeline-api.md), SESS-PROTO (30-session-token-protocol.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), objectives/v0.8-optional-owner-progressive-security.md, CORE-02 (25-sqlite-schema.md -- OwnerState, owner_verified)
+**요구사항:** LOCK-01 (4단계 분류), LOCK-02 (Delay 큐잉), LOCK-03 (Approval 승인), LOCK-04 (미승인 만료), OWNER-07 (유예->잠금 전이), OWNER-08 (BEGIN IMMEDIATE 원자화)
 **v0.6 통합:** INTEG-01 (PolicyType 10개, evaluate() 11단계, USD 정책, 배치/컨트랙트/approve 정책)
 
 ---
@@ -2136,6 +2137,7 @@ DatabasePolicyEngine 우회를 방지하는 설계적 장치:
 2. **TOCTOU 방지**: BEGIN IMMEDIATE로 정책 평가와 예약 기록이 원자적
 3. **정책 없음 = INSTANT (기본)**: 정책 미설정은 보안 약화가 아닌 Phase 7 호환 동작
 4. **감사 로그**: 정책 변경/평가 결과가 모두 audit_log에 기록되어 사후 감사 가능
+5. **[v0.8] Grace -> Locked 전이 (markOwnerVerified)**: `WHERE owner_verified = 0` + `.immediate()` -- OWNER-08
 
 ### 10.6 DELAY/APPROVAL 거래 정보 노출 범위
 
@@ -2283,8 +2285,219 @@ async function evaluateBatch(
 
 ---
 
+## 12. [v0.8] resolveOwnerState() -- Owner 상태 파생 유틸리티
+
+> **[v0.8 추가]** Owner 선택적 등록 모델 도입에 따라, 에이전트의 Owner 상태(NONE/GRACE/LOCKED)를 DB 컬럼 조합에서 런타임에 산출하는 순수 함수 유틸리티.
+> OWNER-07 요구사항을 충족한다.
+
+### 12.1 설계
+
+```typescript
+// packages/daemon/src/domain/owner-presence.ts
+import type { OwnerState } from '@waiaas/core'
+
+interface AgentOwnerInfo {
+  ownerAddress: string | null
+  ownerVerified: boolean       // Drizzle mode: 'boolean' 적용 후 값
+}
+
+/**
+ * 에이전트의 Owner 상태를 산출한다.
+ * DB 컬럼 2개(owner_address, owner_verified) 조합으로 3-state를 결정.
+ *
+ * 순수 함수(pure function): DB 접근 없이 입력값만으로 결정.
+ * 호출 시점에 이미 DB에서 로드된 agent 객체를 전달받는다.
+ *
+ * 소비자:
+ * - DatabasePolicyEngine.evaluate(): 다운그레이드 분기 (Phase 33)
+ * - OwnerLifecycleService: 변경/해제 가드 (Phase 32)
+ * - WithdrawService: withdraw 활성화 가드 (Phase 34)
+ * - KillSwitchService: 복구 대기 시간 분기 (Phase 34)
+ * - SessionService: 갱신 거부 윈도우 분기 (Phase 34)
+ */
+export function resolveOwnerState(agent: AgentOwnerInfo): OwnerState {
+  if (agent.ownerAddress === null) return 'NONE'
+  if (!agent.ownerVerified) return 'GRACE'
+  return 'LOCKED'
+}
+```
+
+### 12.2 파생 상태 원칙
+
+- **OwnerState는 DB에 저장하지 않는다.** `owner_address`와 `owner_verified` 조합에서 런타임에 산출한다. 별도 컬럼으로 저장하면 동기화 오류 발생.
+- **입력 타입:** `AgentOwnerInfo`는 agents 테이블에서 SELECT한 결과의 부분 집합. Drizzle ORM의 `{ mode: 'boolean' }` 적용 후 `ownerVerified`가 boolean으로 전달됨.
+- **호출 시점:** 모든 Owner 관련 분기 지점에서 호출. 하나의 요청 처리 중 여러 번 호출될 수 있으나, agent 객체가 동일하면 결과도 동일 (순수 함수).
+
+### 12.3 상태 결정 매트릭스
+
+| owner_address | owner_verified | OwnerState | 설명 |
+|---------------|----------------|------------|------|
+| `null` | `false` | `NONE` | Owner 미등록. 기본 보안(Base) 적용 |
+| `'addr...'` | `false` | `GRACE` | Owner 등록됨, 검증 미완료. 유예 기간 |
+| `'addr...'` | `true` | `LOCKED` | Owner 등록 + 검증 완료. 강화 보안(Enhanced) 활성화 |
+
+> `owner_address`가 `null`이면서 `owner_verified`가 `true`인 조합은 **불가능 상태(impossible state)**이다. DB 레벨에서 CHECK 제약(`CHECK (owner_address IS NOT NULL OR owner_verified = 0)`)으로 방지한다 (25-sqlite-schema.md 참조).
+
+### 12.4 테스트 가능성
+
+순수 함수이므로 단위 테스트로 3가지 상태를 완전히 커버 가능:
+
+```typescript
+// 단위 테스트 예시
+describe('resolveOwnerState', () => {
+  it('returns NONE when ownerAddress is null', () => {
+    expect(resolveOwnerState({ ownerAddress: null, ownerVerified: false })).toBe('NONE')
+  })
+
+  it('returns GRACE when ownerAddress exists but not verified', () => {
+    expect(resolveOwnerState({ ownerAddress: 'So1ana...', ownerVerified: false })).toBe('GRACE')
+  })
+
+  it('returns LOCKED when ownerAddress exists and verified', () => {
+    expect(resolveOwnerState({ ownerAddress: 'So1ana...', ownerVerified: true })).toBe('LOCKED')
+  })
+})
+```
+
+---
+
+## 13. [v0.8] Grace -> Locked 전이 -- BEGIN IMMEDIATE 원자화 (OWNER-08)
+
+> **[v0.8 추가]** ownerAuth 미들웨어에서 SIWS/SIWE 서명 검증 성공 직후, Grace -> Locked 전이를 원자적으로 수행하는 설계.
+> OWNER-08 요구사항을 충족한다.
+
+### 13.1 전이 트리거
+
+ownerAuth 미들웨어에서 SIWS/SIWE 서명 검증이 성공한 직후, 해당 에이전트의 `owner_verified`를 확인하고 `0`이면 `1`로 전환한다.
+
+```
+ownerAuth 미들웨어
+  └─ SIWS/SIWE 서명 검증 성공
+       └─ markOwnerVerified(sqlite, agentId)
+            └─ owner_verified: 0 -> 1 (원자적)
+                 └─ resolveOwnerState(): 'GRACE' -> 'LOCKED'
+```
+
+### 13.2 Race Condition 시나리오와 방어
+
+**시나리오:** 동시에 2개의 ownerAuth 요청이 들어온다.
+
+```
+시간 ----->
+
+Request A: 서명검증 성공 -> owner_verified=0 읽기 -> 1로 설정 -> COMMIT
+Request B: 서명검증 성공 -> owner_verified=? 읽기 ->  ...
+
+BEGIN IMMEDIATE 직렬화:
+- Request A가 먼저 IMMEDIATE 잠금 획득 -> 0을 읽고 -> 1로 설정 -> COMMIT
+- Request B가 잠금 획득 대기 -> A COMMIT 후 -> 1을 읽음 -> WHERE owner_verified = 0 매칭 실패 -> changes = 0 -> no-op
+```
+
+**방어 메커니즘:**
+- `BEGIN IMMEDIATE`로 직렬화하면 첫 번째 요청만 전이가 발생
+- 두 번째 요청은 이미 `owner_verified = 1`인 상태를 읽어 `WHERE owner_verified = 0` 조건 미매칭 -> `changes = 0` -> no-op
+- 두 요청 모두 정상 응답 반환 (오류 아님)
+
+### 13.3 구현 설계
+
+```typescript
+// packages/daemon/src/domain/owner-lifecycle.ts
+import type Database from 'better-sqlite3'
+
+/**
+ * ownerAuth 성공 시 Grace -> Locked 전이를 원자적으로 수행한다. (OWNER-08)
+ *
+ * BEGIN IMMEDIATE로:
+ * 1. owner_verified 상태를 읽고
+ * 2. 0이면 1로 전환하고
+ * 3. COMMIT한다
+ *
+ * WHERE owner_verified = 0 조건이 idempotency를 보장:
+ * 첫 요청만 전이가 발생하고, 이후 요청은 changes = 0으로 no-op.
+ *
+ * @returns true면 전이 발생 (GRACE -> LOCKED), false면 이미 LOCKED 상태
+ */
+function markOwnerVerified(sqlite: Database, agentId: string): boolean {
+  return sqlite.transaction(() => {
+    const result = sqlite.prepare(
+      `UPDATE agents
+       SET owner_verified = 1, updated_at = ?
+       WHERE id = ? AND owner_verified = 0`
+    ).run(Math.floor(Date.now() / 1000), agentId)
+
+    return result.changes > 0  // 실제 변경이 발생했는지
+  }).immediate()
+}
+```
+
+### 13.4 Idempotency 보장 메커니즘
+
+| 요소 | 설명 |
+|------|------|
+| `WHERE owner_verified = 0` | 이미 `1`이면 UPDATE가 매칭되지 않아 no-op |
+| `result.changes > 0` | 실제 변경 발생 여부를 반환값으로 구분 |
+| `.immediate()` | `BEGIN IMMEDIATE`로 쓰기 잠금을 트랜잭션 시작 시 획득 |
+| 타임스탬프 `updated_at` | 초 단위 (프로젝트 규약), 전이 발생 시에만 갱신 |
+
+**핵심 패턴:** `UPDATE ... WHERE <current_state> = <expected_value>` + `.immediate()` -> `result.changes > 0`으로 성공 여부 판단
+
+### 13.5 프로젝트 내 BEGIN IMMEDIATE 패턴 일관성
+
+이 패턴은 프로젝트에서 이미 사용 중인 BEGIN IMMEDIATE 패턴과 동일하다:
+
+| 사용 위치 | WHERE 조건 | 목적 | 문서 |
+|----------|-----------|------|------|
+| TOCTOU 방지 (Stage 3 evaluateAndReserve) | `WHERE ... AND amount <= available` | 동시 정책 평가 직렬화 | 33-time-lock (섹션 5.2) |
+| DELAY 상태 전이 (processDelayedTransaction) | `WHERE status = 'QUEUED'` | DELAY 큐 직렬화 | 33-time-lock (섹션 6.2) |
+| 세션 토큰 로테이션 | `WHERE nonce = ?` | 토큰 교체 직렬화 | 30-session-token-protocol |
+| Owner 승인/거절 | `WHERE status = 'PENDING_APPROVAL'` | 승인 상태 직렬화 | 34-owner-wallet-connection |
+| **[v0.8] Grace -> Locked 전이** | **`WHERE owner_verified = 0`** | **Owner 검증 직렬화** | **33-time-lock (섹션 13)** |
+
+### 13.6 감사 로그
+
+전이가 발생하면(`result.changes > 0`) audit_log에 다음 이벤트를 기록한다:
+
+```typescript
+if (transitioned) {
+  sqlite.prepare(
+    `INSERT INTO audit_log (id, agent_id, event_type, details, created_at)
+     VALUES (?, ?, 'OWNER_VERIFIED', ?, ?)`
+  ).run(
+    generateUUIDv7(),
+    agentId,
+    JSON.stringify({ previousState: 'GRACE', newState: 'LOCKED' }),
+    Math.floor(Date.now() / 1000)
+  )
+}
+```
+
+| 필드 | 값 | 설명 |
+|------|-----|------|
+| `event_type` | `'OWNER_VERIFIED'` | Owner 검증 완료 이벤트 |
+| `agent_id` | agentId | 전이 대상 에이전트 |
+| `details` | `{ previousState: 'GRACE', newState: 'LOCKED' }` | 상태 전이 정보 |
+| `created_at` | `Math.floor(Date.now() / 1000)` | 전이 시각 (초 단위) |
+
+> **"언제 verified되었는가"**는 이 audit_log 이벤트의 `created_at`으로 추적한다. `owner_verified` 컬럼에 타임스탬프를 저장하지 않는다 (boolean 컬럼 유지).
+
+### 13.7 호출 위치 설계
+
+```
+ownerAuth 미들웨어 (52-auth-model-redesign.md)
+  └─ SIWS/SIWE 서명 검증 성공
+       └─ markOwnerVerified(sqlite, agentId) 호출
+            ├─ true  -> 로그: OWNER_VERIFIED 이벤트 기록
+            └─ false -> 이미 LOCKED (no-op, 로그 불필요)
+```
+
+- Phase 32에서 `OwnerLifecycleService`가 이 함수를 포함하는 전체 생명주기를 설계
+- ownerAuth 미들웨어의 기존 흐름(52-auth-model-redesign.md)에 `markOwnerVerified()` 호출이 삽입되는 정확한 지점은 Phase 32에서 명세
+
+---
+
 *문서 ID: LOCK-MECH*
 *작성일: 2026-02-05*
 *v0.6 업데이트: 2026-02-08*
+*v0.8 업데이트: 2026-02-08*
 *Phase: 08-security-layers-design*
 *상태: 완료*

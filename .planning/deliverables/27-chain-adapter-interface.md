@@ -4,8 +4,9 @@
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
 **v0.7 업데이트:** 2026-02-08
+**v0.8 업데이트:** 2026-02-08
 **상태:** 완료
-**참조:** ARCH-05 (12-multichain-extension.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), 06-CONTEXT.md, 06-RESEARCH.md, CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md)
+**참조:** ARCH-05 (12-multichain-extension.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), 06-CONTEXT.md, 06-RESEARCH.md, CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), objectives/v0.8-optional-owner-progressive-security.md, CORE-02 (25-sqlite-schema.md -- SweepResult 타입)
 
 ---
 
@@ -929,6 +930,32 @@ interface IChainAdapter {
    * @param address - 리셋 대상 주소 (생략 시 전체 리셋)
    */
   resetNonceTracker(address?: string): void
+
+  // ═══════════════════════════════════════════════════════════
+  // 자금 회수 (v0.8 추가)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * [20] 에이전트 지갑의 전체 자산을 목표 주소로 회수한다. [v0.8 추가] (WITHDRAW-06)
+   *
+   * 실행 순서:
+   * 1. getAssets(from) -> 보유 자산 전수 조사
+   * 2. 토큰별 transfer + closeAccount -> 배치 처리 (buildBatch 활용)
+   * 3. 네이티브 전량 전송 (잔액 - tx fee) -- 반드시 마지막 (WITHDRAW-07)
+   *
+   * 정책 엔진을 우회한다 (WithdrawService에서 직접 호출).
+   * 수신 주소가 agents.owner_address로 고정되므로 공격자 이득 없음.
+   *
+   * @param from - 에이전트 지갑 주소 (소스)
+   * @param to - Owner 지갑 주소 (목적지, agents.owner_address)
+   * @returns 회수 결과 (성공/실패 분리, 부분 실패 시 failed 배열 비어있지 않음)
+   *
+   * @throws {ChainError} code=INSUFFICIENT_BALANCE -- 잔액 부족 (fee도 없음)
+   * @throws {ChainError} code=RPC_ERROR -- RPC 호출 실패
+   *
+   * @see WITHDRAW-06 (메서드 추가), WITHDRAW-07 (SOL 마지막 전송)
+   */
+  sweepAll(from: string, to: string): Promise<SweepResult>
 }
 ```
 
@@ -955,12 +982,52 @@ interface IChainAdapter {
 | 17 | `buildBatch` | 파이프라인 | `BatchRequest` | `UnsignedTransaction` | O | (v0.6 추가) |
 | 18 | `getCurrentNonce` | **Nonce 관리 (v0.7 추가)** | `address: string` | `number` | O | **(v0.7 추가)** EVM: max(onchain, local), Solana: 0 |
 | 19 | `resetNonceTracker` | **Nonce 관리 (v0.7 추가)** | `address?: string` | `void` | X | **(v0.7 추가)** EVM: Map 삭제, Solana: no-op |
+| 20 | `sweepAll` | **자금 회수 (v0.8 추가)** | `from: string, to: string` | `SweepResult` | O | **(v0.8 추가)** 전체 자산 회수, 정책 엔진 우회 |
 
 **Note:** v0.2 대비 변경 이력:
 - **v0.6:** `getAssets` 복원(14번째), `buildContractCall`(15번째), `buildApprove`(16번째), `buildBatch`(17번째) 추가. `estimateFee` 반환 타입 bigint -> FeeEstimate 변경.
-- **[v0.7 보완]:** `getCurrentNonce`(18번째), `resetNonceTracker`(19번째) 추가. `UnsignedTransaction.nonce` 명시적 optional 필드 승격. **총 19개 메서드.**
+- **[v0.7 보완]:** `getCurrentNonce`(18번째), `resetNonceTracker`(19번째) 추가. `UnsignedTransaction.nonce` 명시적 optional 필드 승격. 총 19개 메서드.
+- **[v0.8 추가]:** `sweepAll`(20번째) 추가. 에이전트 지갑 전량 회수 (WITHDRAW-06). **총 20개 메서드.**
 
 > **DeFi 메서드 미추가 원칙 (v0.6 핵심 결정):** IChainAdapter는 저수준 실행 엔진으로 유지한다. swap(), stake(), lend() 같은 DeFi 프로토콜 지식은 IChainAdapter에 추가하지 않으며, IActionProvider 계층에 위임한다. Action Provider의 resolve()는 ContractCallRequest를 반환하고, 이를 IChainAdapter.buildContractCall()이 실행한다. 이 패턴(resolve-then-execute)은 모든 DeFi 작업이 기존 6단계 파이프라인의 정책 평가를 거치도록 보장한다. (CHAIN-EXT-07 참조)
+
+### 3.2 [v0.8] sweepAll -- 자금 전량 회수
+
+> **[v0.8 추가]** 에이전트 지갑의 전체 자산을 Owner 주소로 회수하는 20번째 메서드. WITHDRAW-06, WITHDRAW-07 요구사항을 충족한다.
+
+**호출자:** WithdrawService (정책 엔진 우회, 파이프라인 외부)
+
+**정책 우회 근거:**
+- 수신 주소가 `agents.owner_address`로 고정되어 공격자가 자금을 탈취할 수 없음
+- masterAuth(OWNER_VERIFIED=1 필수)로 호출되므로 인증 충분
+- 정책 엔진의 SPENDING_LIMIT/RATE_LIMIT 등이 자금 회수를 차단하면 Owner가 자신의 자금을 회수할 수 없는 역설 발생
+
+**SOL 마지막 전송 근거 (WITHDRAW-07):**
+- SOL이 트랜잭션 fee 지불에 필요하므로, 토큰 전송이 모두 완료된 후 SOL 잔액에서 fee를 차감하여 전량 전송
+- 토큰 계정 closeAccount로 회수된 rent lamports가 최종 SOL 잔액에 합산됨
+- SOL을 먼저 보내면 이후 토큰 전송 tx fee를 지불할 수 없어 실패
+
+**부분 실패 처리:**
+- 특정 토큰 전송 실패 시 `failed` 배열에 기록하고 나머지 토큰 계속 처리
+- 하나라도 실패하면 HTTP 207 (Multi-Status) 응답 -- WithdrawService 수준에서 처리
+- 전체 실패(SOL 전송도 실패)가 아닌 한 성공으로 간주
+
+**SweepResult 타입 참조:**
+- 25-sqlite-schema.md에서 정의된 SweepResult 타입 사용
+- `{ succeeded: SweepTransfer[], failed: SweepTransferError[], rentRecovered: string }`
+
+**scope 분기:**
+- `scope: "all"` (네이티브+토큰+rent)과 `scope: "native"` (네이티브만) 분기는 WithdrawService 수준에서 처리
+- `sweepAll` 메서드 자체는 항상 전량 회수 (scope 파라미터 없음)
+
+**인터페이스 변경 이력:**
+
+| 버전 | 변경 | 메서드 수 | 근거 |
+|------|------|----------|------|
+| v0.2 | IChainAdapter 초기 설계 | 13 | CORE-04 기본 |
+| v0.6 | getAssets 복원, buildContractCall/buildApprove/buildBatch 추가 | 13 -> 17 | 체인 기능 확장 (CHAIN-EXT) |
+| v0.7 | getCurrentNonce, resetNonceTracker 추가 | 17 -> 19 | EVM nonce 관리 |
+| v0.8 | sweepAll 추가 | 19 -> 20 | 자금 전량 회수 (WITHDRAW-06) |
 
 ---
 
@@ -2224,6 +2291,91 @@ resetNonceTracker(_address?: string): void {
 }
 ```
 
+### 6.11 [v0.8 추가] sweepAll -- 에이전트 지갑 자금 전량 회수
+
+> **[v0.8 추가]** IChainAdapter가 20개 메서드로 확장되면서 추가된 sweepAll의 SolanaAdapter 구현 지침. WithdrawService에서 직접 호출하며 정책 엔진을 우회한다. (WITHDRAW-06, WITHDRAW-07)
+
+**SolanaAdapter.sweepAll 구현 전략:**
+
+1. `getAssets(from)` 호출로 SPL 토큰 목록 전수 조사
+2. 각 SPL 토큰에 대해 transfer + closeAccount 일괄 수행 (buildBatch 활용 가능)
+   - transfer: 토큰 잔액 전량을 `to`의 ATA(Associated Token Account)로 전송
+   - closeAccount: 빈 토큰 계정을 닫아 rent 회수 (lamports -> from 주소)
+3. SOL 전량 전송은 **반드시 마지막** -- 잔액에서 tx fee를 차감하고 전송
+   - 토큰 계정 closeAccount로 회수된 rent lamports를 포함한 최종 잔액 기준
+   - SOL이 먼저 전송되면 이후 토큰 전송의 tx fee를 지불할 수 없음 (WITHDRAW-07)
+4. 부분 실패 허용: 특정 토큰 전송 실패 시 `failed` 배열에 기록하고 나머지 계속 처리
+
+```typescript
+/**
+ * [v0.8 추가] 에이전트 지갑의 전체 자산을 Owner 주소로 회수한다.
+ *
+ * @param from - 에이전트 지갑 주소 (Base58)
+ * @param to - Owner 지갑 주소 (Base58, agents.owner_address)
+ * @returns SweepResult -- succeeded/failed 분리, rentRecovered 기록
+ */
+async sweepAll(from: string, to: string): Promise<SweepResult> {
+  if (!this.rpc) throw this.notConnectedError()
+
+  // 1. 보유 자산 전수 조사
+  const assets = await this.getAssets(from)
+  const splTokens = assets.filter(a => !a.isNative)
+
+  const succeeded: SweepTransfer[] = []
+  const failed: SweepTransferError[] = []
+  let rentRecovered = 0n
+
+  // 2. SPL 토큰별 transfer + closeAccount (배치 처리)
+  for (const token of splTokens) {
+    try {
+      // transfer 전량 + closeAccount -> rent 회수
+      // buildBatch 활용 가능 (2 instructions per token)
+      const result = await this.transferAndClose(from, to, token)
+      succeeded.push(result.transfer)
+      rentRecovered += result.rentLamports
+    } catch (error) {
+      failed.push({
+        mint: token.mint!,
+        symbol: token.symbol,
+        amount: token.balance.raw.toString(),
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  // 3. SOL 전량 전송 (마지막 -- WITHDRAW-07)
+  try {
+    const balance = await this.getBalance(from)
+    const fee = await this.estimateNativeTransferFee()
+    const transferAmount = balance.balance.raw - fee.totalFee
+    if (transferAmount > 0n) {
+      // SOL 전송 (잔액 - fee)
+      succeeded.push({
+        type: 'native',
+        symbol: 'SOL',
+        amount: transferAmount.toString(),
+        txHash: '...', // 실제 구현에서 채워짐
+      })
+    }
+  } catch (error) {
+    failed.push({
+      mint: null,
+      symbol: 'SOL',
+      amount: '0',
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+
+  return { succeeded, failed, rentRecovered: rentRecovered.toString() }
+}
+```
+
+**Solana 토큰 계정 rent 회수:**
+- SPL 토큰 계정은 생성 시 rent-exempt 최소 금액(약 0.00203928 SOL)을 예치한다
+- closeAccount로 토큰 계정을 닫으면 이 rent가 from 주소로 반환된다
+- 반환된 rent는 `rentRecovered` 필드에 누적 기록한다
+- 최종 SOL 전송 시 이 rent 회수분이 잔액에 포함된다
+
 ---
 
 ## 7. EVM Adapter 상세 명세
@@ -3018,6 +3170,28 @@ private notConnectedError(): ChainError {
 }
 ```
 
+### 7.11 [v0.8 추가] sweepAll -- EvmStub (NOT_IMPLEMENTED)
+
+> **[v0.8 추가]** v0.8은 Solana 1순위 구현이며, EVM sweepAll은 설계만 확정하고 구현은 미래로 미룬다.
+
+```typescript
+/**
+ * [v0.8 추가] EVM sweepAll은 미구현 상태이다.
+ * v0.8 마일스톤에서는 Solana sweepAll만 구현한다.
+ * EVM 구현 시에는 ERC-20 토큰 목록 조회 -> 개별 transfer -> ETH 전량 전송 순서를 따른다.
+ *
+ * @throws {ChainError} code=NOT_IMPLEMENTED -- 항상 발생
+ */
+async sweepAll(_from: string, _to: string): Promise<SweepResult> {
+  throw new ChainError({
+    code: ChainErrorCode.NOT_IMPLEMENTED,
+    chain: this.chain,
+    message: `sweepAll is not implemented for ${this.chain}. EVM support is planned for a future release.`,
+    retryable: false,
+  })
+}
+```
+
 ---
 
 ## 8. 체인 간 차이점 비교 매트릭스
@@ -3139,5 +3313,6 @@ function parseAmount(amount: string, decimals: number): bigint
 *작성일: 2026-02-05*
 *v0.6 업데이트: 2026-02-08*
 *v0.7 업데이트: 2026-02-08*
+*v0.8 업데이트: 2026-02-08*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
