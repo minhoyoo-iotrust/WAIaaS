@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 36 — 토큰 파일 인프라 + 알림 이벤트
+**현재 초점:** v0.9 Phase 37 — MCP SessionManager 설계
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 36 of 40 (토큰 파일 인프라 + 알림 이벤트)
-플랜: 1 of 2 in current phase
-상태: In progress
-마지막 활동: 2026-02-09 — Completed 36-01-PLAN.md (토큰 파일 인프라 설계)
+페이즈: 36 of 40 (토큰 파일 인프라 + 알림 이벤트) -- Phase complete
+플랜: 2 of 2 in current phase (complete)
+상태: Phase complete
+마지막 활동: 2026-02-09 — Completed 36-02-PLAN.md (SESSION_EXPIRING_SOON 알림 이벤트 설계)
 
-Progress: ██░░░░░░░░░░░░░░░░░░ 10%
+Progress: ████░░░░░░░░░░░░░░░░ 20%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 1/10 plans complete
+**v0.9 진행:** 2/10 plans complete
 
 ## 누적 컨텍스트
 
@@ -42,6 +42,13 @@ Phase 36-01 설계 결정:
 - TF-04: Windows EPERM 10-50ms 랜덤 대기, 최대 3회 재시도
 - TF-05: Last-Writer-Wins 소유권 모델 (MCP/CLI/Telegram 3개 쓰기 주체)
 
+Phase 36-02 설계 결정:
+- NOTI-01: 데몬 측 자동 판단 (MCP SessionManager가 별도 알림 발송하지 않음)
+- NOTI-02: notification_log 기반 중복 방지 (sessions 테이블 컬럼 추가나 인메모리 Set 대신 기존 인프라 활용)
+- NOTI-03: OR 논리 트리거 (잔여 3회 이하 OR 24h 전)
+- NOTI-04: 갱신 실패 경로 보완 알림 (Guard 1/2 실패 시 미발송이면 보완 발송)
+- NOTI-05: shouldNotifyExpiringSession 순수 함수 (판단과 부수효과 분리)
+
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
@@ -49,5 +56,5 @@ Phase 36-01 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Completed 36-01-PLAN.md. 다음: 36-02-PLAN.md (SESSION_EXPIRING_SOON 이벤트)
-재개 파일: .planning/phases/36-토큰-파일-인프라-알림-이벤트/36-02-PLAN.md
+중단 지점: Phase 36 완료 (2/2 plans). 다음: Phase 37 플래닝 (MCP SessionManager 설계)
+재개 파일: None
