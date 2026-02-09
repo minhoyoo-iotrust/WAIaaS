@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 38/39 병렬 진행 중 -- 38-01, 39-01 완료. 38-02, 39-02 대기
+**현재 초점:** v0.9 Phase 39 완료 + Phase 38/40 진행 중 -- 39-02 완료로 Phase 39 complete
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 38/39 of 40 (MCP 통합 + CLI+Telegram, 병렬) -- In progress
-플랜: 38-01, 39-01 완료 / 38-02, 39-02 대기
-상태: In progress
-마지막 활동: 2026-02-09 — Completed 38-01-PLAN.md (ApiClient + tool/resource handler 통합 설계)
+페이즈: 39 of 40 (CLI+Telegram 통합 설계) -- Phase 39 Complete
+플랜: 38-01, 39-01, 39-02 완료 / 38-02 대기
+상태: In progress (Phase 39 complete, Phase 38 1/2, Phase 40 대기)
+마지막 활동: 2026-02-09 — Completed 39-02-PLAN.md (Telegram /newsession + 기본 Constraints 설계)
 
-Progress: ████████████░░░░░░░░ 60%
+Progress: ██████████████░░░░░░ 70%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 6/10 plans complete, 2/5 phases complete (Phase 36, 37) + Phase 38 1/2 + Phase 39 1/2
+**v0.9 진행:** 7/10 plans complete, 3/5 phases complete (Phase 36, 37, 39) + Phase 38 1/2
 
 ## 누적 컨텍스트
 
@@ -78,6 +78,14 @@ Phase 39-01 설계 결정:
 - CLI-05: Claude Desktop config.json 플랫폼별 경로 안내 (macOS/Windows/Linux)
 - CLI-06: constraints 계승 규칙 (기존 세션 constraints 그대로 전달, renewalCount 리셋)
 
+Phase 39-02 설계 결정:
+- TG-01: /newsession 9번째 명령어 등록 (Tier 1 chatId 인증)
+- TG-02: 에이전트 인라인 키보드 (1개 자동, 2개+ 선택, callback_data 47바이트)
+- TG-03: createNewSession private 메서드 (세션 생성 + writeMcpToken + 완료 메시지)
+- TG-04: 기본 constraints 2-level (config.toml > 하드코딩), EXT-03 3-level 확장 예약
+- TG-05: resolveDefaultConstraints 공용 함수 (CLI + Telegram 공유)
+- TG-06: 최소 보안 보장 (expiresIn/maxRenewals 항상 값 존재, Pitfall 4 대응)
+
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
@@ -85,5 +93,5 @@ Phase 39-01 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 38-01, 39-01 실행 완료. 다음: `/gsd:execute-plan 38-02` (동시성/생명주기/에러) 또는 `/gsd:execute-plan 39-02` (Telegram /newsession)
+중단 지점: Phase 39-02 실행 완료 (Phase 39 complete). 다음: `/gsd:execute-plan 38-02` (동시성/생명주기/에러)
 재개 파일: None
