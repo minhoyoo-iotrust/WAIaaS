@@ -6,7 +6,7 @@
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 API 통합 프로토콜:** 2026-02-08
 **v0.9 SessionManager 핵심 설계:** 2026-02-09 (Phase 37-01: 인터페이스 + 토큰 로드, Phase 37-02: 갱신 + 실패 + reload)
-**v0.9 SessionManager MCP 통합 설계:** 2026-02-09 (Phase 38-01: ApiClient + tool/resource handler 통합)
+**v0.9 SessionManager MCP 통합 설계:** 2026-02-09 (Phase 38-01: ApiClient + tool/resource handler 통합, Phase 38-02: 동시성 + 생명주기 + 에러 처리)
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -4522,7 +4522,355 @@ Phase 38 설계 과정에서 38-RESEARCH.md의 Open Question들을 다음과 같
 | 3 | Resource handler의 세션 만료 처리 | 동일 ApiClient + toResourceResult() 패턴. 만료 시 안내 텍스트를 resource 내용으로 반환 | 섹션 6.5.4.1 |
 | 4 | previous_token_hash 유예 기간 (H-05 데몬 측 대응) | v0.9에서는 MCP 측 401 재시도로 대응 (ApiClient handle401). 데몬 측 유예 기간은 EXT-04로 이연 확정 | 섹션 6.5.2.4 |
 
-> **Open Question 2 (에러 복구 루프):** SessionManager에 `startRecoveryLoop()` 추가는 Phase 38-02에서 설계 예정 (SMGI-03 프로세스 생명주기).
+> **Open Question 2 (에러 복구 루프):** SessionManager에 `startRecoveryLoop()` 추가 -- **[해결: Phase 38-02, 섹션 6.5.6 참조]**
+
+#### 6.5.5 [v0.9] 토큰 로테이션 동시성 처리 (SMGI-02)
+
+토큰 갱신 중 tool 호출이 발생하는 동시성 시나리오를 정의한다. Node.js 단일 스레드 특성을 활용하여 Mutex/Lock 없이 안전한 동시성을 보장한다.
+
+##### 6.5.5.1 갱신 중 tool 호출 시나리오 시퀀스 다이어그램
+
+**정상 케이스 (갱신 완료 전 데몬이 구 토큰 수용):**
+
+```
+시간 →
+T0: renew() 시작 (isRenewing=true)
+T1: tool handler 호출 → apiClient.request()
+     → getState()='active' → getToken()=구 토큰
+     → doFetch(구 토큰) → 성공 (데몬이 아직 구 토큰 수용)
+T2: renew() API 응답 수신 → 데몬 DB에서 token_hash 교체
+T3: renew() writeMcpToken(새 토큰) → this.token = 새 토큰 (isRenewing=false)
+T4: tool handler 호출 → getToken()=새 토큰 → doFetch(새 토큰) → 성공
+```
+
+**핵심:** T1~T2 사이에서 tool handler는 구 토큰으로 API를 호출한다. 데몬이 아직 token_hash를 교체하지 않았으므로 구 토큰이 유효하다. SM-14(갱신 중 getToken() 구 토큰 반환) 설계와 일치한다.
+
+##### 6.5.5.2 T1~T2 사이 경쟁 시나리오 (401 발생 케이스)
+
+```
+시간 →
+T0: renew() 시작
+T1: tool handler 호출 → getToken()=구 토큰
+T2: renew() 데몬 응답 수신 → DB에서 token_hash 교체됨
+T3: tool handler의 doFetch(구 토큰) 도착 → 401 (DB에는 새 hash)
+T4: handle401() → 50ms 대기
+T5: renew() writeMcpToken → this.token = 새 토큰
+T6: handle401() getToken()=새 토큰 (≠ 구 토큰) → doFetch(새 토큰) → 성공
+```
+
+**핵심:** T2~T3 사이의 좁은 창에서 tool handler의 fetch가 도착하면 401이 발생한다. handle401()의 50ms 대기가 renew()의 메모리 교체(T5)를 대기하는 역할을 한다.
+
+##### 6.5.5.3 50ms 대기 근거
+
+| 항목 | 값 | 근거 |
+|------|-----|------|
+| Node.js 이벤트 루프 지연 | 1-5ms | 일반적 microtask 처리 시간 |
+| renew() 응답 처리 (JSON 파싱 + JWT 디코딩) | 1-3ms | jose decodeJwt + 범위 검증 |
+| writeMcpToken 파일 I/O | 1-10ms | write-then-rename, SSD 기준 |
+| 메모리 교체 (this.token = 새 토큰) | <1ms | 동기 할당 |
+| **합계** | **5-19ms** | |
+| **안전 마진 포함** | **50ms** | 2.5~10배 여유 |
+
+- 50ms 이내에 갱신이 완료되면 `getToken()` 재호출에서 새 토큰 획득 → 재시도 성공
+- 50ms 이후에도 동일 토큰이면 갱신이 아닌 다른 원인 → `handleUnauthorized()` 진행 (파일 재로드 시도)
+- 50ms는 사용자 체감 지연에 영향 없음 (tool 호출 전체 RTT가 수백ms 이상)
+
+##### 6.5.5.4 동시성 보장 테이블
+
+| 시나리오 | getToken() 반환 | 401 발생? | 복구 방법 |
+|---------|----------------|----------|----------|
+| 갱신 미진행 | 현재 토큰 | No | - |
+| 갱신 중 (데몬 미교체) | 구 토큰 | No | - (데몬이 구 토큰 수용) |
+| 갱신 중 (데몬 교체됨, MCP 미교체) | 구 토큰 | Yes | handle401: 50ms 대기 → getToken() 재호출 → 새 토큰으로 재시도 |
+| 갱신 완료 | 새 토큰 | No | - |
+| 외부 갱신 (CLI/Telegram) | 구 토큰 | Yes | handleUnauthorized: 파일 재로드 → 토큰 비교 → 교체 (SM-12) |
+
+##### 6.5.5.5 설계 결정 SMGI-D02
+
+> **SMGI-D02: Mutex/Lock 미사용. Node.js 단일 스레드에서 getToken()의 동기 반환 + 401 재시도가 충분하다. 갱신 중 tool 호출을 차단하면 사용자 체감 지연 발생.**
+
+근거:
+- Node.js는 단일 스레드이므로 `getToken()`의 메모리 읽기와 `renew()`의 메모리 쓰기가 동시 실행되지 않음
+- `getToken()`은 동기 함수 → 호출 시점의 `this.token` 스냅샷을 즉시 반환
+- 경쟁 조건은 DB 교체(서버 측)와 메모리 교체(클라이언트 측) 사이의 시간차에서만 발생
+- handle401()의 50ms 대기 + getToken() 재호출이 이 시간차를 안전하게 처리
+
+참조: Research Anti-Patterns "갱신 중 Mutex로 tool 호출 차단"
+
+#### 6.5.6 [v0.9] MCP 프로세스 생명주기 (SMGI-03)
+
+MCP Server 프로세스의 시작부터 종료까지 5단계 생명주기와, 실패 상태에서의 에러 복구 루프를 정의한다.
+
+##### 6.5.6.1 index.ts 엔트리포인트 생명주기 5단계
+
+| 단계 | 동작 | 실패 시 |
+|------|------|---------|
+| 1. SessionManager 생성 | `new SessionManager(options)` | 예외 없음 (생성자는 상태 초기화만) |
+| 2. SessionManager 시작 | `await sessionManager.start()` | catch → console.error, degraded mode 진입 |
+| 3. ApiClient 생성 | `new ApiClient(sessionManager, baseUrl)` | 예외 없음 |
+| 4. MCP Server 생성 + 연결 | `createMcpServer(apiClient)` + `server.connect(transport)` | throw → process.exit(1) |
+| 5. SIGTERM/SIGINT 핸들링 | `sessionManager.dispose()` → `process.exit(0)` | dispose는 안전 (timer 정리, 예외 무시) |
+
+**단계별 실패 격리:**
+- 단계 1~3 실패: MCP Server 미시작 (process.exit(1) 또는 degraded mode)
+- 단계 4 실패: MCP Server 자체 시작 불가 (transport 연결 실패) → process.exit(1) (불가피)
+- 단계 5: dispose()는 모든 예외를 무시하므로 실패하지 않음
+
+##### 6.5.6.2 Degraded Mode 정의
+
+**진입 조건:** `SessionManager.start()` 실패 (토큰 없음, 만료된 토큰, 파일 읽기 에러 등)
+
+**상태:**
+- `SessionManager.state` = `'expired'` 또는 `'error'`
+- MCP Server는 정상 기동 (Claude Desktop과 stdio 연결 유지)
+- 모든 tool/resource 호출 시 `ApiClient.request()`가 `getState()` 확인 → expired/error 반환
+- `toToolResult()`/`toResourceResult()`가 안내 메시지 반환 (isError 미설정, H-04 대응)
+- **에러 복구 루프** 자동 활성화
+
+**Degraded mode의 핵심 목적:**
+
+| 목적 | 방법 |
+|------|------|
+| Claude Desktop 연결 유지 | MCP Server를 정상 기동하여 stdio 연결 유지. 프로세스 종료 방지 |
+| 사용자에게 상황 안내 | tool 호출 시 session_expired 안내 메시지 반환 |
+| 자동 복구 시도 | 에러 복구 루프로 외부 토큰 감지 시 active 전환 |
+| 재시작 없는 서비스 복원 | 외부에서 토큰 파일 갱신 시 자동 감지 → Claude Desktop 재시작 불필요 |
+
+##### 6.5.6.3 에러 복구 루프 설계 (SMGI-D03)
+
+**소속:** SessionManager 내부 메서드 `startRecoveryLoop()` / `stopRecoveryLoop()`
+
+**트리거:** state가 `'expired'` 또는 `'error'`로 전환될 때 자동 시작
+
+**중단:** state가 `'active'`로 전환될 때 자동 중단
+
+**동작:**
+
+```
+60초 간격으로 readMcpToken() 호출
+  ↓
+  1. 파일에서 토큰 읽기 시도
+     ├─ 파일 없음/읽기 실패 → 무시, 다음 루프 대기
+     └─ 토큰 읽음 → 계속
+  ↓
+  2. jose decodeJwt()로 디코딩 + 방어적 범위 검증 (SM-05)
+     ├─ 디코딩 실패 → 무시, 다음 루프 대기
+     └─ 디코딩 성공 → 계속
+  ↓
+  3. exp > now 확인
+     ├─ exp <= now (만료) → 무시, 다음 루프 대기
+     └─ exp > now (유효) → 토큰 교체 + state='active' + scheduleRenewal()
+  ↓
+  4. stopRecoveryLoop() (active 전환으로 자동 중단)
+```
+
+**타이머:** `safeSetTimeout(recoveryCheck, 60_000)` 체이닝 (setInterval 미사용, C-01 safeSetTimeout 패턴 일관성)
+
+**60초 간격 근거:**
+- 너무 짧으면 (1-5초): 불필요한 파일 I/O, CPU 낭비
+- 너무 길면 (5-10분): 외부 토큰 저장 후 사용자 대기 시간 길어짐
+- 60초: 파일 I/O 비용 무시 가능 (~500byte readFileSync), 사용자 체감 대기 합리적
+
+**로그:**
+```
+[waiaas-mcp:session] Recovery: checking token file...
+[waiaas-mcp:session] Recovery: found fresh token, resuming active mode
+[waiaas-mcp:session] Recovery: token file not found or still expired, retrying in 60s
+```
+
+**TypeScript 의사 코드:**
+
+```typescript
+// SessionManager 내부 메서드
+
+private recoveryTimer: ReturnType<typeof setTimeout> | null = null
+
+private startRecoveryLoop(): void {
+  if (this.recoveryTimer !== null) return  // 이미 실행 중
+  console.error('[waiaas-mcp:session] Starting recovery loop (60s interval)')
+  this.scheduleRecoveryCheck()
+}
+
+private stopRecoveryLoop(): void {
+  if (this.recoveryTimer !== null) {
+    clearTimeout(this.recoveryTimer)
+    this.recoveryTimer = null
+    console.error('[waiaas-mcp:session] Recovery loop stopped')
+  }
+}
+
+private scheduleRecoveryCheck(): void {
+  this.recoveryTimer = safeSetTimeout(() => {
+    this.recoveryCheck()
+  }, 60_000)
+}
+
+private recoveryCheck(): void {
+  console.error('[waiaas-mcp:session] Recovery: checking token file...')
+  try {
+    const fileToken = readMcpToken()
+    if (fileToken === null || fileToken === this.token) {
+      console.error('[waiaas-mcp:session] Recovery: token file not found or still expired, retrying in 60s')
+      this.scheduleRecoveryCheck()
+      return
+    }
+
+    // 새 토큰 발견 -- 디코딩 + 검증
+    const payload = decodeJwt(fileToken)
+    const exp = (payload.exp ?? 0) * 1000  // sec → ms
+    if (exp <= Date.now()) {
+      console.error('[waiaas-mcp:session] Recovery: token file contains expired token, retrying in 60s')
+      this.scheduleRecoveryCheck()
+      return
+    }
+
+    // 유효한 새 토큰 -- active 전환
+    this.token = fileToken
+    this.sessionId = payload.sub ?? ''
+    this.expiresAt = exp
+    this.expiresIn = (exp - (payload.iat ?? 0) * 1000)
+    this.state = 'active'
+    this.recoveryTimer = null  // stopRecoveryLoop 대신 직접 정리
+    console.error('[waiaas-mcp:session] Recovery: found fresh token, resuming active mode')
+    this.scheduleRenewal()
+  } catch {
+    console.error('[waiaas-mcp:session] Recovery: error reading/decoding token, retrying in 60s')
+    this.scheduleRecoveryCheck()
+  }
+}
+```
+
+**내부 상태 확장:**
+
+| 필드 | 타입 | 초기값 | 용도 |
+|------|------|--------|------|
+| `recoveryTimer` | `ReturnType<typeof setTimeout> \| null` | `null` | 에러 복구 루프 타이머 |
+
+기존 9개 내부 상태(SM-03) + recoveryTimer = **10개 내부 상태**로 확장.
+
+**설계 결정 SMGI-D03:**
+
+> **SMGI-D03: 에러 복구 루프는 SessionManager 소속. ApiClient가 아닌 SessionManager가 세션 상태 관리 책임을 가지며, 토큰 파일 감시 역할을 한다. fs.watch 대신 주기적 polling으로 플랫폼 안정성 확보 (SM-12 일관).**
+
+근거:
+- SessionManager가 state 전이 책임을 가짐 (SM-01 단일 클래스)
+- ApiClient는 HTTP 요청/응답에만 집중 (관심사 분리)
+- fs.watch는 macOS FSEvents race condition, Linux inotify limit 등 플랫폼 불안정성 (SM-12 lazy reload와 동일 근거)
+- 60초 polling은 readMcpToken()의 동기 ~500byte 파일 I/O로 성능 영향 무시 가능
+
+참조: Research Open Question 2 (에러 복구 루프 범위), SM-12 (fs.watch 미사용), C-01 (safeSetTimeout).
+
+##### 6.5.6.4 Claude Desktop 재시작 시나리오
+
+```
+Claude Desktop 재시작
+  → MCP Server 프로세스 종료 (SIGTERM → dispose())
+  → Claude Desktop이 새 MCP Server 프로세스 시작
+  → 새 프로세스의 SessionManager.start():
+     (1) readMcpToken()으로 파일에서 토큰 로드 (SM-04)
+     (2) 이전 갱신에서 writeMcpToken으로 저장된 최신 토큰 존재 → 정상 시작
+     (3) 파일 없으면 → env var fallback → 만료 가능성 → degraded mode + recovery loop
+```
+
+**핵심:** 이전 프로세스의 갱신 결과가 파일에 영속화되어 있으므로 (SM-10 파일-우선 쓰기), 재시작 시 최신 토큰 복원 가능. Claude Desktop config.json의 `WAIAAS_SESSION_TOKEN` 환경변수가 오래된 값이라도 파일이 우선하므로 문제 없음.
+
+| 시나리오 | 파일 상태 | env var 상태 | 결과 |
+|---------|----------|-------------|------|
+| 정상 재시작 | 최신 토큰 | 구 토큰 | 파일에서 최신 토큰 로드 → active |
+| 파일 삭제됨 | 없음 | 구 토큰 | env var fallback → 만료 가능성 → degraded → recovery loop |
+| 파일 + env var 모두 만료 | 만료 토큰 | 만료 토큰 | degraded mode → recovery loop (외부 갱신 대기) |
+
+##### 6.5.6.5 갱신 도중 프로세스 kill 시나리오
+
+renew() 7-step(섹션 6.4.5) 중 프로세스가 kill되는 경우의 토큰 상태를 분석한다.
+
+| kill 시점 | 파일 상태 | 메모리 상태 | 재시작 시 |
+|----------|----------|-----------|----------|
+| Step 1~4 (API 호출 전/중) | 구 토큰 | 구 토큰 (소멸) | 파일에서 구 토큰 로드 → 유효하면 active |
+| Step 5 (writeMcpToken 완료) 직후 | 새 토큰 | 구 토큰 (소멸) | 파일에서 새 토큰 로드 → active |
+| Step 6 (메모리 교체) 직후 | 새 토큰 | 새 토큰 (소멸) | 파일에서 새 토큰 로드 → active |
+| Step 7 (scheduleRenewal) 직후 | 새 토큰 | 새 토큰 (소멸) | 파일에서 새 토큰 로드 → active |
+
+**보장:** SM-10(파일-우선 쓰기) 덕분에 파일은 항상 "적어도 마지막 성공 갱신" 상태를 유지한다.
+
+- Step 5 전 kill: 파일에 구 토큰. 구 토큰이 아직 유효하면(데몬 DB도 구 hash 유지 -- API 미완료) active로 시작
+- Step 5 후 kill: 파일에 새 토큰. 데몬 DB에는 새 hash(renew API 성공). 새 토큰으로 active 시작
+- **최악의 경우:** Step 5 직전(writeMcpToken 실패)에 kill + 데몬 DB는 이미 새 hash 교체 → 파일에 구 토큰, DB에 새 hash → 401 → handleUnauthorized → 파일 재로드(동일 구 토큰) → 복구 실패 → expired → recovery loop → 외부 갱신 대기
+
+**SIGTERM 수신 시 동작:**
+
+```typescript
+const shutdown = () => {
+  sessionManager.dispose()  // timer 정리, renew() inflight 확인하지 않음
+  process.exit(0)
+}
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)
+```
+
+- `dispose()`에서 `isRenewing`이 true여도 timer만 정리하고 exit
+- 갱신 API 응답이 도착하지 않으면 파일에 구 토큰 유지 (안전)
+- 갱신 API 응답이 이미 도착하여 writeMcpToken 완료 후라면 파일에 새 토큰 유지 (안전)
+- 어느 경우든 파일의 토큰은 일관된 상태
+
+##### 6.5.6.6 TypeScript 의사 코드 -- index.ts main() 함수
+
+```typescript
+// packages/mcp/src/index.ts
+// [v0.9] Phase 38-02 -- MCP 프로세스 생명주기 설계
+
+import { SessionManager } from './session-manager.js'
+import { ApiClient } from './internal/api-client.js'
+import { createMcpServer } from './server.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+
+const BASE_URL = process.env.WAIAAS_BASE_URL ?? 'http://127.0.0.1:3100'
+
+async function main(): Promise<void> {
+  // 단계 1: SessionManager 생성
+  const sessionManager = new SessionManager({
+    baseUrl: BASE_URL,
+    dataDir: process.env.WAIAAS_DATA_DIR,
+    envToken: process.env.WAIAAS_SESSION_TOKEN,
+  })
+
+  // 단계 2: SessionManager 시작 (실패해도 MCP Server는 기동)
+  try {
+    await sessionManager.start()
+    console.error('[waiaas-mcp] SessionManager started successfully')
+  } catch (err) {
+    console.error(`[waiaas-mcp] SessionManager start failed: ${err}`)
+    console.error('[waiaas-mcp] MCP Server will start in degraded mode')
+    // degraded mode: state='expired'/'error', recovery loop 자동 시작
+  }
+
+  // 단계 3: ApiClient 생성
+  const apiClient = new ApiClient(sessionManager, BASE_URL)
+
+  // 단계 4: MCP Server 생성 + stdio transport 연결
+  const server = createMcpServer(apiClient)
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+
+  console.error('[waiaas-mcp] MCP Server connected via stdio transport')
+
+  // 단계 5: graceful shutdown
+  const shutdown = () => {
+    console.error('[waiaas-mcp] Shutting down...')
+    sessionManager.dispose()
+    process.exit(0)
+  }
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
+}
+
+main().catch((err) => {
+  console.error(`[waiaas-mcp] Fatal: ${err}`)
+  process.exit(1)
+})
+```
+
+**참조:** Research Pattern 3 (프로세스 생명주기), Pitfall 3 (만료 환경변수), Pitfall 5 (start 실패). SM-04, SM-10, SM-12.
 
 ---
 
