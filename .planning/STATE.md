@@ -11,17 +11,17 @@
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
 페이즈: 48 of 51 (모노레포 스캐폴드 + @waiaas/core)
-플랜: 1 of 3 in current phase
+플랜: 2 of 3 in current phase
 상태: In progress
-마지막 활동: 2026-02-10 -- Completed 48-01-PLAN.md
+마지막 활동: 2026-02-10 -- Completed 48-02-PLAN.md
 
-진행률: [█...........] 8% (1/12 plans)
+진행률: [██..........] 17% (2/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 1 plan (48-01)
+**v1.1 완료:** 2 plans (48-01, 48-02)
 
 ## 누적 컨텍스트
 
@@ -36,6 +36,11 @@
 | TD-04: Vitest workspace (루트 + 패키지별 config) | Turborepo test 파이프라인과 자연스러운 연동 | 48-01 |
 | TD-05: TypeScript project references (composite: true) | 모노레포 증분 빌드, 패키지 간 타입 참조 | 48-01 |
 | TD-11: tsc only (빌드 도구 불필요) | ESM 단일 출력, 번들러 불필요, 복잡도 최소화 | 48-01 |
+| as const -> TS type -> Zod enum SSoT pipeline | 배열 SSoT에서 타입, Zod, Drizzle CHECK 모두 파생 | 48-02 |
+| Zod z.infer 타입 파생 (수동 interface 없음) | 스키마 정의 단일 소스, 타입 자동 동기화 | 48-02 |
+| ERROR_CODES as const satisfies Record | 타입 안전 키 + 런타임 접근, exhaustive 매칭 | 48-02 |
+| WAIaaSError.toJSON()에서 httpStatus 제외 | httpStatus는 HTTP 전송 계층 관심사, API 본문에 불포함 | 48-02 |
+| Amount 필드는 string 타입 | bigint (lamports/wei) JSON 직렬화 + SQLite TEXT 호환 | 48-02 |
 
 v1.1 구현 시 확정 필요: TD-09(UUID v7), TD-10(CLI 프레임워크)
 
@@ -48,5 +53,5 @@ v1.1 구현 시 확정 필요: TD-09(UUID v7), TD-10(CLI 프레임워크)
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Completed 48-01-PLAN.md
-재개 파일: .planning/phases/48-monorepo-scaffold-core/48-01-SUMMARY.md
+중단 지점: Completed 48-02-PLAN.md
+재개 파일: .planning/phases/48-monorepo-scaffold-core/48-02-SUMMARY.md
