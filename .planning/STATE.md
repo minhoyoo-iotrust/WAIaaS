@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-10)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.1 Phase 48 - 모노레포 스캐폴드 + @waiaas/core
+**현재 초점:** v1.1 Phase 48 완료 -- Phase 49 (SQLite + Keystore + Config) 준비
 
 ## 현재 위치
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
 페이즈: 48 of 51 (모노레포 스캐폴드 + @waiaas/core)
-플랜: 2 of 3 in current phase
-상태: In progress
-마지막 활동: 2026-02-10 -- Completed 48-02-PLAN.md
+플랜: 3 of 3 in current phase (Phase 48 complete)
+상태: Phase complete
+마지막 활동: 2026-02-10 -- Completed 48-03-PLAN.md
 
-진행률: [██..........] 17% (2/12 plans)
+진행률: [███.........] 25% (3/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 2 plans (48-01, 48-02)
+**v1.1 완료:** 3 plans (48-01, 48-02, 48-03)
 
 ## 누적 컨텍스트
 
@@ -41,6 +41,9 @@
 | ERROR_CODES as const satisfies Record | 타입 안전 키 + 런타임 접근, exhaustive 매칭 | 48-02 |
 | WAIaaSError.toJSON()에서 httpStatus 제외 | httpStatus는 HTTP 전송 계층 관심사, API 본문에 불포함 | 48-02 |
 | Amount 필드는 string 타입 | bigint (lamports/wei) JSON 직렬화 + SQLite TEXT 호환 | 48-02 |
+| Messages 인터페이스: Record<ErrorCode, string> | 컴파일러가 66개 에러 코드 키 일치를 locale 간 강제 | 48-03 |
+| i18n: as const 대신 명시적 Messages 인터페이스 | as const는 리터럴 타입으로 고정되어 다국어 값 할당 불가 | 48-03 |
+| IPolicyEngine.evaluate(): 일반 객체 파라미터 | 인터페이스-스키마 간 순환 의존 방지, 경량 계약 | 48-03 |
 
 v1.1 구현 시 확정 필요: TD-09(UUID v7), TD-10(CLI 프레임워크)
 
@@ -53,5 +56,5 @@ v1.1 구현 시 확정 필요: TD-09(UUID v7), TD-10(CLI 프레임워크)
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Completed 48-02-PLAN.md
-재개 파일: .planning/phases/48-monorepo-scaffold-core/48-02-SUMMARY.md
+중단 지점: Completed 48-03-PLAN.md (Phase 48 complete)
+재개 파일: .planning/phases/48-monorepo-scaffold-core/48-03-SUMMARY.md
