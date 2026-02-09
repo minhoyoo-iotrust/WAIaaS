@@ -56,7 +56,7 @@ Plans:
   3. 자동 갱신 스케줄(60% TTL 경과, safeSetTimeout 래퍼, 서버 응답 기반 드리프트 보정)이 정의되어 있다
   4. 5종 갱신 실패 에러 각각의 대응 전략(재시도 횟수, 알림 트리거, 에러 상태 전이)이 정의되어 있다
   5. Lazy 401 reload(파일 재로드, 토큰 비교, API 재시도) 메커니즘이 정의되어 있다
-**Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
+**Plans**: 2 plans (Wave 1 -> Wave 2: 순차 실행)
 
 Plans:
 - [x] 37-01-PLAN.md -- SessionManager 인터페이스 + 토큰 로드 전략 설계 (SMGR-01, SMGR-03)
@@ -71,7 +71,7 @@ Plans:
   2. 갱신 중 tool 호출 시 동시성 처리(현재 토큰 사용, 갱신 완료 후 전환, in-flight 충돌 방지)가 정의되어 있다
   3. Claude Desktop 재시작 시 파일 복원, 갱신 도중 프로세스 kill 시 파일-우선 쓰기 순서가 정의되어 있다
   4. 세션 만료 시 tool 응답 형식(isError 대신 안내 메시지)과 반복 에러 시 연결 해제 방지 전략이 정의되어 있다
-**Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
+**Plans**: 2 plans (Wave 1 -> Wave 2: 순차 실행)
 
 Plans:
 - [x] 38-01-PLAN.md -- ApiClient 래퍼 클래스 + tool/resource handler 통합 패턴 설계 (SMGI-01)
@@ -101,22 +101,22 @@ Plans:
   2. S-01~S-04 보안 시나리오(파일 권한/악성 내용/미인증/심볼릭 링크)의 검증 방법이 정의되어 있다
   3. 7개 기존 설계 문서(38, 35, 40, 54, 53, 24, 25)에 v0.9 변경이 [v0.9] 태그로 통합되어 있다
   4. 리서치 pitfall 5건(safeSetTimeout C-01, 원자적 쓰기 C-02, JWT 미검증 디코딩 C-03, Claude Desktop 에러 처리 H-04, 토큰 로테이션 충돌 H-05)의 대응이 설계 문서에 반영되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 40-01: 18개 테스트 시나리오 설계 문서 명시
-- [ ] 40-02: 7개 기존 설계 문서 v0.9 통합 + pitfall 반영
+- [ ] 40-01-PLAN.md -- 18개 테스트 시나리오(T-01~T-14, S-01~S-04) 설계 문서 명시: 검증 방법 + 테스트 레벨 + 관련 설계 결정 ID (TEST-01, TEST-02)
+- [ ] 40-02-PLAN.md -- 7개 기존 설계 문서 v0.9 통합 검증 + 25-sqlite EXT-03 이연 태그 + pitfall 교차 참조 매트릭스 + REQUIREMENTS.md 갱신 (INTEG-01, INTEG-02)
 
 ## Progress
 
 **Execution Order:**
-Phase 36 → Phase 37 → Phase 38 (Phase 39는 Phase 36 이후 병렬 가능) → Phase 40
+Phase 36 -> Phase 37 -> Phase 38 (Phase 39는 Phase 36 이후 병렬 가능) -> Phase 40
 
 **Dependencies:**
 ```
-Phase 36 ─┬─→ Phase 37 ──→ Phase 38 ──┐
-           └─→ Phase 39 ───────────────┤
-                                        └──→ Phase 40
+Phase 36 -+---> Phase 37 ---> Phase 38 --+
+           +---> Phase 39 ---------------+
+                                          +---> Phase 40
 ```
 
 | Phase | Plans Complete | Status | Completed |
