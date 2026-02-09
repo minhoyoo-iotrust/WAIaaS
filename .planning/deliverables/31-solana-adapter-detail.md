@@ -4,7 +4,8 @@
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
 **v0.7 업데이트:** 2026-02-08
-**상태:** 완료
+**v0.8 보완:** 2026-02-09
+**상태:** v0.8 보완
 **참조:** CORE-04 (27-chain-adapter-interface.md), CORE-03 (26-keystore-spec.md), CORE-01 (24-monorepo-data-directory.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63)
 **요구사항:** CHAIN-02 (Solana Adapter 완전 구현)
 **v0.6 통합:** INTEG-01 (SPL 정식화, Token-2022, getAssets, approve/batch, Jupiter 참조)
@@ -29,9 +30,11 @@ SolanaAdapter는 IChainAdapter 인터페이스(CORE-04)의 Solana 구현체이�
 
 **WAIaaS 방침:** `@solana/kit` latest를 사용한다. 문서에서는 `@solana/kit (구 @solana/web3.js 2.x)`로 표기하되, 버전 번호보다 기능(pipe API, createSolanaRpc 등)에 초점을 둔다.
 
-### 1.3 IChainAdapter 메서드 -- SolanaAdapter 매핑 (v0.6 변경: 13 -> 17, v0.7: IChainAdapter 19개로 확장)
+### 1.3 IChainAdapter 메서드 -- SolanaAdapter 매핑 (v0.6 변경: 13 -> 17, v0.7: IChainAdapter 19개로 확장, v0.8: 20개)
 
-> **[v0.7 보완]** IChainAdapter는 v0.7에서 19개 메서드로 확장되었다 (getCurrentNonce, resetNonceTracker 추가). 추가된 2개는 EVM nonce 관리 전용이며, SolanaAdapter에서는 no-op으로 구현한다 (Solana는 blockhash 기반, nonce 개념 없음). 아래 테이블은 SolanaAdapter가 실질적으로 구현하는 17개 메서드를 나열한다.
+> **[v0.7 보완]** IChainAdapter는 v0.7에서 19개 메서드로 확장되었다 (getCurrentNonce, resetNonceTracker 추가). 추가된 2개는 EVM nonce 관리 전용이며, SolanaAdapter에서는 no-op으로 구현한다 (Solana는 blockhash 기반, nonce 개념 없음). 아래 테이블은 SolanaAdapter가 실질적으로 구현하는 17개 + sweepAll 1개 = 18개 메서드를 나열한다.
+>
+> **[v0.8] IChainAdapter는 v0.8에서 sweepAll 1개가 추가되어 20개 메서드로 확장되었다 (27-chain-adapter-interface.md §6.11 참조).**
 
 | # | IChainAdapter 메서드 | 카테고리 | SolanaAdapter 구현 | @solana/kit API | 비동기 |
 |---|---------------------|---------|-------------------|----------------|--------|
@@ -52,6 +55,7 @@ SolanaAdapter는 IChainAdapter 인터페이스(CORE-04)의 Solana 구현체이�
 | 15 | `buildContractCall(req)` **(v0.6 추가)** | 파이프라인 | Solana: programId + accounts + data 기반 instruction 빌드 | `pipe` + instruction 직접 구성 | O |
 | 16 | `buildApprove(req)` **(v0.6 추가)** | 파이프라인 | `createApproveCheckedInstruction` -- SPL delegate 설정 | `@solana-program/token` approve | O |
 | 17 | `buildBatch(req)` **(v0.6 추가)** | 파이프라인 | 다중 instruction VersionedTransaction 구성 (min 2 / max 20) | `pipe` + 다중 `appendTransactionMessageInstruction` | O |
+| 18 | `sweepAll(from, to)` **(v0.8 추가)** | 회수 | 전량 회수: getAssets → buildBatch(SPL) → 개별 fallback → SOL 전송 | `getTokenAccountsByOwner` + `pipe` + `createTransferCheckedInstruction` + `createCloseAccountInstruction` | O |
 
 ### 1.4 참조 문서 관계
 
@@ -2563,3 +2567,29 @@ JupiterSwapActionProvider.resolve(params)
 - `/swap` 대신 `/swap-instructions` 사용: 직렬화 전체 트랜잭션이 아닌 instruction 분해를 받아 정책 엔진 개입 보장
 
 **참조:** 63-jupiter-swap-action-provider.md 전체, 62-action-provider-architecture.md 섹션 5
+
+---
+
+### 12.5 [v0.8] sweepAll Solana 구현 참조
+
+> **[v0.8] sweepAll(destinationAddress):** 에이전트 지갑의 전량을 owner_address로 회수하는 메서드이다. IChainAdapter의 20번째 메서드로 27-chain-adapter-interface.md §6.11에서 시그니처와 SweepResult 타입이 정의된다. SolanaAdapter에서는 아래 4단계 실행 순서를 따른다.
+
+**Solana sweepAll 4단계 실행 순서 (27-chain-adapter-interface.md §6.11 참조):**
+
+```
+1. getAssets(address) → 보유 자산 전수 조사 (v0.6 AssetInfo[])
+2. buildBatch(SPL 토큰 transfer + closeAccount)
+   └─ min 2 / max 20 instruction per batch (tx 크기 제한)
+   └─ Token-2022도 동일 패턴 (createTransferCheckedInstruction 사용)
+   └─ 배치 실패 시 개별 토큰 fallback (partial sweep 허용)
+3. 개별 fallback: 배치 실패한 토큰을 건별 transfer + closeAccount
+4. SOL 전송 (잔액 - tx fee) -- 반드시 마지막
+   └─ 모든 토큰 계정 rent가 회수된 후 SOL 잔액이 최대가 됨
+   └─ fee는 getRecentPrioritizationFees()로 추정
+```
+
+**정책 엔진 우회:** sweepAll은 수신 주소가 owner_address로 고정되므로 정책 엔진(evaluate)을 우회한다. buildBatch()의 2단계 정책(개별+합산)도 적용하지 않는다 (v0.8 §5.2 참조).
+
+**SweepResult 반환:** tokensRecovered는 v0.6 AssetInfo를 직접 재사용한다 (57-asset-query-fee-estimation-spec.md 참조). rentRecovered는 Solana 토큰 계정 closeAccount 시 반환되는 rent를 나타낸다.
+
+**참조:** 27-chain-adapter-interface.md §6.11, objectives/v0.8 §5.3-5.4

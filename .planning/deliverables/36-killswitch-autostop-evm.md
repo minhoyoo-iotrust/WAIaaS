@@ -158,11 +158,12 @@ INSERT INTO system_state (key, value, updated_at)
 VALUES ('kill_switch_status', '"NORMAL"', unixepoch());
 ```
 
-### 2.4 ACTIVATED 상태에서의 API 동작 [v0.7 보완: 허용 목록 4개 확정, 503 응답, recover 경로 변경]
+### 2.4 ACTIVATED 상태에서의 API 동작 [v0.7 보완: 허용 목록 4개 확정, 503 응답, recover 경로 변경] [v0.8: 5번째 허용 경로 추가]
 
 ```typescript
 // killSwitchGuard 미들웨어 -- 미들웨어 체인 #7 (authRouter 이전에 실행)
 // [v0.7 보완] 허용 목록 4개로 확장, HTTP 503 응답, recover 경로 /v1/admin/recover로 통일
+// [v0.8] 5번째 허용 경로 추가: POST /v1/owner/agents/:agentId/withdraw (자금 회수)
 async function killSwitchGuard(c: Context, next: Next): Promise<void> {
   const status = getSystemState(c.get('db'), 'kill_switch_status')
 
@@ -175,16 +176,20 @@ async function killSwitchGuard(c: Context, next: Next): Promise<void> {
   const method = c.req.method
 
   // [v0.7 보완] 허용 목록 4개 확정 (DAEMON-04 해소)
+  // [v0.8] 5번째 허용 경로 추가: 자금 회수 (35-01 방안 A 결정)
   const KILL_SWITCH_ALLOWED_PATHS = [
     { method: 'GET',  path: '/v1/health' },
     { method: 'GET',  path: '/v1/admin/status' },
     { method: 'POST', path: '/v1/admin/recover' },
     { method: 'GET',  path: '/v1/admin/kill-switch' },
+    { method: 'POST', path: '/v1/owner/agents/:agentId/withdraw' },  // [v0.8] 자금 회수 허용
   ]
 
+  // [v0.8] withdraw 경로는 :agentId가 동적이므로 패턴 매칭 사용
   const isAllowed = KILL_SWITCH_ALLOWED_PATHS.some(
-    p => p.method === method && path === p.path
+    p => p.method === method && matchPath(path, p.path)
   )
+  // matchPath: 정적 경로는 === 비교, :param 포함 경로는 정규식 매칭
 
   if (isAllowed) {
     return next()
@@ -219,6 +224,9 @@ killSwitchGuard(#7)는 CORS 이후, 인증(authRouter) 이전에 위치한다. A
 > 1. **허용 목록 3개 -> 4개:** `GET /v1/admin/kill-switch` (Kill Switch 상태 조회) 추가. 외부 모니터링 도구가 Kill Switch 상태를 확인할 수 있어야 함.
 > 2. **recover 경로 변경:** `/v1/owner/recover` -> `/v1/admin/recover`. Kill Switch 복구는 시스템 관리 작업이므로 `/v1/admin/` 네임스페이스가 적절.
 > 3. **HTTP 상태 코드 변경:** 401 -> 503 Service Unavailable. Kill Switch는 인증 실패(401)가 아니라 시스템 가용성 문제(503)에 해당.
+>
+> **[v0.8] 변경 사항:**
+> 4. **허용 목록 4개 -> 5개:** `POST /v1/owner/agents/:agentId/withdraw` (자금 회수) 추가. Kill Switch 발동 시 자금 회수는 가장 시급한 보안 조치이며, 수신 주소가 owner_address로 고정되어 공격자 이득 없음 (35-01 방안 A 결정). LOCKED 상태에서만 활성화되므로 Kill Switch + withdraw 모두 보안 가드를 통과한다. 동적 경로(:agentId)이므로 패턴 매칭 함수(matchPath) 사용.
 
 **`/v1/health` 엔드포인트 확장:**
 

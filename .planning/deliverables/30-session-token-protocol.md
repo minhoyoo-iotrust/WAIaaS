@@ -3,8 +3,9 @@
 **문서 ID:** SESS-PROTO
 **작성일:** 2026-02-05
 **v0.7 보완:** 2026-02-08
-**상태:** v0.7 보완
-**참조:** CORE-02 (25-sqlite-schema.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), SESS-RENEW (53-session-renewal-protocol.md, Phase 20 추가)
+**v0.8 보완:** 2026-02-09
+**상태:** v0.8 보완
+**참조:** CORE-02 (25-sqlite-schema.md), CORE-06 (29-api-framework-design.md), CORE-01 (24-monorepo-data-directory.md), SESS-RENEW (53-session-renewal-protocol.md, Phase 20 추가), OWNR-CONN (34-owner-wallet-connection.md)
 **요구사항:** SESS-01 (세션 토큰 발급), SESS-02 (세션 제약), SESS-03 (사용량 추적), SESS-04 (즉시 폐기), SESS-05 (활성 세션 목록)
 
 ---
@@ -1401,6 +1402,9 @@ sequenceDiagram
     Server-->>Agent: 200 { token: "wai_sess_...(새 토큰)", expiresAt, renewalCount }
     Note over Agent: 구 토큰 자동 무효화 (token_hash 교체)
     Note over Agent: 갱신 상세: 53-session-renewal-protocol.md 참조
+    Note over Owner,Worker: [v0.8] Owner 유무별 갱신 분기
+    Note over Server: NONE/GRACE: 갱신 즉시 확정 (거부자 없음/미검증)
+    Note over Server: LOCKED: 갱신 후 [거부하기] 윈도우 활성 (기본 1시간)
 
     Note over Owner,Worker: ═══ 4단계: 폐기 (Revoke) ═══
 
@@ -1866,7 +1870,18 @@ jose 내부: crypto.timingSafeEqual(computed_signature, received_signature)
 
 ---
 
+---
+
+### v0.8 보완 (2026-02-09)
+
+> **[v0.8] 세션 토큰과 Owner 상태의 관계:** 세션 토큰 자체(JWT 구조, 발급, 검증, 폐기)는 Owner 유무와 무관하게 동일하게 동작한다. JWT claims에 Owner 관련 정보는 포함되지 않으며, 세션 제약(constraints) 모델도 Owner 상태에 의존하지 않는다. Owner 유무에 따라 달라지는 것은 **세션 갱신(Renew) 후속 동작**뿐이다:
+>
+> - **Owner 미등록(NONE) / 유예(GRACE):** 갱신 즉시 확정. 거부 윈도우 없음. (53-session-renewal-protocol.md 참조)
+> - **Owner 잠금(LOCKED):** 갱신 후 [거부하기] 윈도우 활성 (기본 1시간). Owner가 의심스러운 갱신을 거부 가능. (34-02 설계, 53-session-renewal-protocol.md §6.6.1 참조)
+>
+> 이 분기는 세션 토큰 프로토콜 자체가 아닌 53-session-renewal-protocol.md에서 상세 정의한다. 본 문서의 섹션 7.1 "갱신(Renew)" 단계에서 Owner 분기 참조를 추가한다.
+
 *문서 ID: SESS-PROTO*
-*작성일: 2026-02-05, v0.7 보완: 2026-02-08*
+*작성일: 2026-02-05, v0.7 보완: 2026-02-08, v0.8 보완: 2026-02-09*
 *Phase: 07-session-transaction-protocol-design, v0.7 보완: 27-daemon-security-foundation*
-*상태: v0.7 보완*
+*상태: v0.8 보완*
