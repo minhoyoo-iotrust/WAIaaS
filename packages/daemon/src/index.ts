@@ -1,0 +1,2 @@
+// @waiaas/daemon
+export {};

@@ -1,0 +1,21 @@
+{
+  "name": "@waiaas/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "waiaas": "./bin/waiaas"
+  },
+  "files": ["dist", "bin"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "@waiaas/daemon": "workspace:*"
+  }
+}

@@ -1,0 +1,2 @@
+// @waiaas/cli
+export {};
