@@ -5,6 +5,7 @@
 **v0.5 업데이트:** 2026-02-07
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 API 통합 프로토콜:** 2026-02-08
+**v0.9 SessionManager 핵심 설계:** 2026-02-09
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -2288,6 +2289,8 @@ AI 에이전트가 직접 호출하는 **행동(Action)** 도구. Agent API(Sess
 > **(v0.5 변경) MCP tool 호출 인증:** MCP tool은 WAIAAS_SESSION_TOKEN(sessionAuth)으로 인증. 세션 생성은 masterAuth(implicit)이므로 MCP 프로세스 외부에서 수행. 세션 토큰 불편함 완화 방안으로 `mcp setup` 커맨드, 세션 자동 갱신, env 파일 생성을 검토 중.
 >
 > **(v0.5 참고) 세션 갱신:** 에이전트가 세션 갱신을 자율적으로 수행 가능. MCP tool에 `renew_session` 추가 검토 가능 (미래 확장).
+>
+> **[v0.9] SessionManager 자동 갱신:** MCP Server 내부의 SessionManager가 TTL 60% 경과 시점에 자동 갱신을 수행한다. tool handler에서 `sessionManager.getToken()`으로 항상 최신 토큰을 참조한다. 상세: 섹션 6.4.
 
 #### 5.3.2 send_token
 
@@ -2822,7 +2825,7 @@ waiaas session create \
 |------|-------------------|-------------|
 | 만료 | 기본 24시간 | 최대 7일 (604800초) |
 | 제약 | 사용 패턴별 최적화 | 보수적 제한 (MCP 도구 범위 내) |
-| 갱신 | SDK에서 자동 교체 가능 | 수동 갱신 (환경변수 재설정) |
+| 갱신 | SDK에서 자동 교체 가능 | [v0.9] SessionManager 자동 갱신 (섹션 6.4 참조) |
 | 주체 | AI 에이전트 프레임워크 | Claude Desktop, Cursor 등 |
 
 ### 6.2 Claude Desktop 설정 예시
@@ -2855,7 +2858,360 @@ MCP Server가 만료된 세션 토큰으로 API를 호출하면:
 4. 사용자가 Owner CLI로 새 세션 발급 후 Claude Desktop 설정 업데이트
 5. MCP Server 재시작 (Claude Desktop이 프로세스 재생성)
 
-**v0.3 확장 계획:** MCP Server 내장 토큰 갱신 메커니즘 (Owner 서명 자동화)
+> **[v0.9] SessionManager 도입으로 위 수동 흐름이 자동화됨.** SessionManager가 토큰 갱신을 자동 수행하고, 외부 갱신(CLI/Telegram)에 대해서는 lazy 401 reload로 무중단 토큰 전환을 수행한다. 상세는 섹션 6.4 참조.
+
+---
+
+### 6.4 [v0.9] SessionManager 핵심 설계
+
+MCP Server 프로세스 내부에 SessionManager를 추가하여 세션 토큰의 로드, 갱신, 교체, 영속화를 자동 처리하는 구조를 설계한다. 섹션 6.3의 수동 토큰 갱신 흐름을 대체한다.
+
+#### 6.4.1 [v0.9] SessionManager 클래스 인터페이스 (SMGR-01)
+
+**파일 위치:** `packages/mcp/src/session-manager.ts`
+
+**SessionManagerOptions 인터페이스:**
+
+```typescript
+interface SessionManagerOptions {
+  baseUrl?: string    // 데몬 베이스 URL (기본값: 'http://127.0.0.1:3100')
+  dataDir?: string    // 데이터 디렉토리 (기본값: '~/.waiaas')
+  envToken?: string   // 환경변수 토큰 (WAIAAS_SESSION_TOKEN, 테스트 주입용)
+}
+```
+
+**SessionState 타입:**
+
+```typescript
+type SessionState = 'active' | 'expired' | 'error'
+```
+
+| 값 | 설명 |
+|----|------|
+| `active` | 토큰이 유효하고 갱신 스케줄이 동작 중 |
+| `expired` | 토큰이 만료됨. 외부 갱신(CLI/Telegram) 대기 |
+| `error` | 토큰 로드 실패 또는 복구 불가 에러 |
+
+**내부 상태 9개:**
+
+| # | 필드 | 타입 | 설명 |
+|---|------|------|------|
+| 1 | `token` | `string` | 현재 유효 JWT (`wai_sess_` 접두어 포함) |
+| 2 | `sessionId` | `string` | JWT claims의 `sid` |
+| 3 | `expiresAt` | `number` | epoch ms (서버 응답 기준, 드리프트 보정용) |
+| 4 | `expiresIn` | `number` | original TTL ms (갱신 스케줄 계산용) |
+| 5 | `renewalCount` | `number` | 현재 갱신 횟수 (초기값 0, 첫 갱신 응답에서 업데이트) |
+| 6 | `maxRenewals` | `number` | 최대 갱신 횟수 (초기값 Infinity, 첫 갱신 응답에서 업데이트) |
+| 7 | `timer` | `NodeJS.Timeout \| null` | 갱신 타이머 핸들 |
+| 8 | `isRenewing` | `boolean` | 갱신 진행 중 플래그 (중복 갱신 방지) |
+| 9 | `state` | `SessionState` | 현재 세션 상태 |
+
+**Public 메서드 3개:**
+
+| 메서드 | 시그니처 | 설명 |
+|--------|---------|------|
+| `getToken()` | `getToken(): string` | 현재 유효 토큰 반환. 모든 tool handler가 이 메서드 사용. 갱신 중에도 현재(구) 토큰 반환, 갱신 완료 후 다음 호출부터 새 토큰 |
+| `start()` | `async start(): Promise<void>` | `loadToken()` + `scheduleRenewal()` 호출. 프로세스 시작 시 1회 호출. 데몬 미기동 시 graceful degradation (로컬 JWT exp 기준 동작) |
+| `dispose()` | `dispose(): void` | `clearTimeout(timer)` + `timer = null`. SIGTERM 시 호출. inflight 갱신이 있으면 `renewPromise` 완료 대기(최대 5초) |
+
+**내부 메서드 5개 (Plan 37-02에서 상세 설계):**
+
+| 메서드 | 시그니처 | 설명 |
+|--------|---------|------|
+| `loadToken()` | `private loadToken(): void` | 토큰 로드 + JWT 디코딩 + 내부 상태 설정 (상세: 섹션 6.4.2) |
+| `scheduleRenewal()` | `private scheduleRenewal(): void` | 갱신 타이머 설정 (safeSetTimeout, 서버 응답 기준 드리프트 보정) |
+| `renew()` | `private async renew(): Promise<void>` | PUT /renew 호출 + 파일 쓰기 + 메모리 교체. 순서: 파일 먼저, 메모리 나중 (H-02 방어) |
+| `handleRenewalError()` | `private handleRenewalError(error: RenewalError): void` | 5종 에러 분기 (RENEWAL_TOO_EARLY, RENEWAL_LIMIT_REACHED, SESSION_ABSOLUTE_LIFETIME_EXCEEDED, NETWORK_ERROR, AUTH_TOKEN_EXPIRED) |
+| `handleUnauthorized()` | `async handleUnauthorized(): Promise<boolean>` | lazy 401 reload -- 파일 재로드 + 토큰 비교 + 갱신 스케줄 재설정 |
+
+**상수:**
+
+| 상수 | 값 | 설명 |
+|------|-----|------|
+| `RENEWAL_RATIO` | `0.6` | TTL의 60% 경과 시점에 갱신 |
+| `MAX_TIMEOUT_MS` | `2_147_483_647` | setTimeout 32-bit 상한 (2^31 - 1) |
+| `TOKEN_PREFIX` | `'wai_sess_'` | 토큰 접두어 |
+
+**TypeScript 의사 코드 (설계 문서 수준):**
+
+```typescript
+// packages/mcp/src/session-manager.ts
+// [v0.9] SessionManager -- MCP SDK(@modelcontextprotocol/sdk)와 완전 독립, Composition 패턴
+
+import { decodeJwt } from 'jose'
+import {
+  readMcpToken,
+  writeMcpToken,
+  getMcpTokenPath,
+} from '@waiaas/core/utils/token-file.js'
+
+// ── 상수 ──
+const RENEWAL_RATIO = 0.6
+const MAX_TIMEOUT_MS = 2_147_483_647  // 2^31 - 1
+const TOKEN_PREFIX = 'wai_sess_'
+
+// ── 타입 ──
+type SessionState = 'active' | 'expired' | 'error'
+
+interface SessionManagerOptions {
+  baseUrl?: string
+  dataDir?: string
+  envToken?: string
+}
+
+// ── safeSetTimeout 래퍼 (C-01 방어) ──
+function safeSetTimeout(
+  callback: () => void,
+  delayMs: number,
+): NodeJS.Timeout {
+  if (delayMs > MAX_TIMEOUT_MS) {
+    return setTimeout(
+      () => safeSetTimeout(callback, delayMs - MAX_TIMEOUT_MS),
+      MAX_TIMEOUT_MS,
+    )
+  }
+  return setTimeout(callback, Math.max(delayMs, 0))
+}
+
+class SessionManager {
+  // ── 내부 상태 (9개) ──
+  private token: string = ''
+  private sessionId: string = ''
+  private expiresAt: number = 0       // epoch ms
+  private expiresIn: number = 0       // original TTL (ms)
+  private renewalCount: number = 0
+  private maxRenewals: number = Infinity
+  private timer: NodeJS.Timeout | null = null
+  private isRenewing: boolean = false
+  private state: SessionState = 'active'
+
+  // ── 내부 보조 필드 ──
+  private renewPromise: Promise<void> | null = null
+  private readonly tokenFilePath: string
+  private readonly baseUrl: string
+
+  constructor(options: SessionManagerOptions = {}) {
+    this.baseUrl = (options.baseUrl ?? 'http://127.0.0.1:3100')
+      .replace(/\/$/, '')
+    this.tokenFilePath = getMcpTokenPath(options.dataDir)
+  }
+
+  // ── Public: 현재 유효 토큰 반환 ──
+  getToken(): string {
+    return this.token
+  }
+
+  // ── Public: 갱신 스케줄러 시작 ──
+  async start(): Promise<void> {
+    this.loadToken()
+    this.scheduleRenewal()
+    console.error(
+      `[waiaas-mcp] SessionManager started (sid=${this.sessionId}, ` +
+      `expires=${new Date(this.expiresAt).toISOString()})`,
+    )
+  }
+
+  // ── Public: 정리 (타이머 해제) ──
+  dispose(): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    // inflight 갱신 완료 대기 (최대 5초)
+    if (this.renewPromise) {
+      const timeout = new Promise<void>(r => setTimeout(r, 5000))
+      Promise.race([this.renewPromise, timeout])
+    }
+  }
+
+  // ── Private: loadToken (섹션 6.4.2 참조) ──
+  private loadToken(): void { /* ... */ }
+
+  // ── Private: scheduleRenewal (Plan 37-02에서 상세 설계) ──
+  private scheduleRenewal(): void { /* ... */ }
+
+  // ── Private: renew (Plan 37-02에서 상세 설계) ──
+  private async renew(): Promise<void> { /* ... */ }
+
+  // ── Private: handleRenewalError (Plan 37-02에서 상세 설계) ──
+  private handleRenewalError(error: RenewalError): void { /* ... */ }
+
+  // ── handleUnauthorized: lazy 401 reload (Plan 37-02에서 상세 설계) ──
+  async handleUnauthorized(): Promise<boolean> { /* ... */ }
+}
+```
+
+**MCP Server 통합 (Composition 패턴):**
+
+```typescript
+// packages/mcp/src/index.ts (엔트리포인트에서 SessionManager 초기화)
+import { SessionManager } from './session-manager.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+
+const sessionManager = new SessionManager({
+  baseUrl: process.env.WAIAAS_BASE_URL,
+  dataDir: process.env.WAIAAS_DATA_DIR,
+  envToken: process.env.WAIAAS_SESSION_TOKEN,
+})
+
+await sessionManager.start()
+
+// Tool handler에서 토큰 참조
+const token = sessionManager.getToken()
+
+// SIGTERM 시 정리
+process.on('SIGTERM', () => {
+  sessionManager.dispose()
+  process.exit(0)
+})
+```
+
+> **MCP SDK 독립 근거:** MCP SDK v1.x에는 세션/인증 lifecycle hook이 없다. SessionManager를 독립 클래스로 설계하고 tool handler에서 `getToken()`을 참조하는 composition 패턴을 사용한다. MCP SDK v2 마이그레이션 시에도 SessionManager는 변경 없이 사용 가능하다.
+
+#### 6.4.2 [v0.9] 토큰 로드 전략 (SMGR-03)
+
+`loadToken()` 메서드는 MCP Server 프로세스 시작 시 호출되어, 토큰 파일 또는 환경변수에서 JWT를 로드하고 내부 상태를 설정한다.
+
+**토큰 로드 8-Step 절차:**
+
+| Step | 동작 | 실패 시 |
+|------|------|---------|
+| 1 | `readMcpToken(this.tokenFilePath)` 호출 (Phase 36-01 확정 유틸리티) | Step 2로 이동 |
+| 2 | 파일 없으면 `process.env.WAIAAS_SESSION_TOKEN ?? null` fallback | Step 3으로 이동 |
+| 3 | 둘 다 없으면 `Error('[waiaas-mcp] No session token found')` throw | 프로세스 시작 실패 |
+| 4 | `wai_sess_` 접두어 제거 후 `jose decodeJwt(jwt)` 호출 | JWT 파싱 에러 throw |
+| 5 | 필수 claim 추출 -- `sid` (string), `exp` (number, epoch seconds), `iat` (number, epoch seconds) | Step 6 에러 |
+| 6 | **방어적 범위 검증 (C-03 대응)** -- exp가 과거 10년 ~ 미래 1년 범위 내인지 확인 | 범위 외 에러 throw |
+| 7 | 만료 확인 -- `exp <= Math.floor(Date.now() / 1000)` 이면 `state = 'expired'` + throw | 만료 에러 throw |
+| 8 | 내부 상태 설정 -- `token`, `sessionId`, `expiresAt` (exp * 1000), `expiresIn` ((exp - iat) * 1000), `state = 'active'` | - |
+
+**토큰 로드 우선순위:**
+
+```
+프로세스 시작
+  |
+  v
+  1. ~/.waiaas/mcp-token 파일 존재?
+     |-- Yes --> 파일에서 토큰 로드 (readMcpToken)
+     +-- No  --> 2. WAIAAS_SESSION_TOKEN 환경변수에서 로드
+                    |-- Yes --> 환경변수 토큰 사용
+                    +-- No  --> Error: No session token found
+  |
+  v
+  3. wai_sess_ 접두어 제거
+  4. jose decodeJwt(jwt) -- 서명 검증 없이 payload base64url 디코딩
+  5. 필수 claim 추출: sid, exp, iat
+  6. 방어적 범위 검증 (C-03 대응)
+  7. 만료 여부 확인
+  8. 내부 상태 설정 --> scheduleRenewal()
+```
+
+**TypeScript 의사 코드:**
+
+```typescript
+// SessionManager 내부 메서드
+// [v0.9] Phase 36-01 readMcpToken 유틸리티 + jose decodeJwt 연동
+
+private loadToken(): void {
+  // Step 1: 파일 우선 로드 (Phase 36-01 확정 유틸리티)
+  let rawToken = readMcpToken(this.tokenFilePath)
+
+  if (rawToken) {
+    console.error(
+      `[waiaas-mcp] Token loaded from file (${this.tokenFilePath})`,
+    )
+  }
+
+  // Step 2: 파일 없으면 환경변수 fallback
+  if (!rawToken) {
+    rawToken = process.env.WAIAAS_SESSION_TOKEN ?? null
+    if (rawToken) {
+      console.error(
+        '[waiaas-mcp] Token loaded from WAIAAS_SESSION_TOKEN env var',
+      )
+    }
+  }
+
+  // Step 3: 둘 다 없으면 에러
+  if (!rawToken) {
+    throw new Error('[waiaas-mcp] No session token found')
+  }
+
+  // Step 4: wai_sess_ 접두어 제거 + jose decodeJwt
+  const jwt = rawToken.startsWith(TOKEN_PREFIX)
+    ? rawToken.slice(TOKEN_PREFIX.length)
+    : rawToken
+  const payload = decodeJwt(jwt)
+
+  // Step 5: 필수 claim 추출
+  const sid = (payload as Record<string, unknown>).sid as string | undefined
+  const exp = payload.exp   // epoch seconds
+  const iat = payload.iat   // epoch seconds
+
+  if (!sid || typeof exp !== 'number' || typeof iat !== 'number') {
+    throw new Error('[waiaas-mcp] Invalid JWT: missing sid/exp/iat')
+  }
+
+  // Step 6: 방어적 범위 검증 (C-03 대응)
+  // exp가 과거 10년(315,360,000초) ~ 미래 1년(31,536,000초) 범위 내인지 확인
+  const nowSec = Math.floor(Date.now() / 1000)
+  if (exp < nowSec - 315_360_000 || exp > nowSec + 31_536_000) {
+    throw new Error(
+      `[waiaas-mcp] JWT exp out of reasonable range: ` +
+      `${new Date(exp * 1000).toISOString()}`,
+    )
+  }
+
+  // Step 7: 만료 확인
+  if (exp <= nowSec) {
+    this.state = 'expired'
+    console.error(
+      `[waiaas-mcp] Token expired at ` +
+      `${new Date(exp * 1000).toISOString()}. ` +
+      `Waiting for external refresh.`,
+    )
+    throw new Error(
+      `[waiaas-mcp] Token expired: ` +
+      `${new Date(exp * 1000).toISOString()}`,
+    )
+  }
+
+  // Step 8: 내부 상태 설정
+  this.token = rawToken
+  this.sessionId = sid
+  this.expiresAt = exp * 1000           // epoch ms
+  this.expiresIn = (exp - iat) * 1000   // original TTL (ms)
+  this.state = 'active'
+
+  console.error(
+    `[waiaas-mcp] Token loaded from file ` +
+    `(expires: ${new Date(this.expiresAt).toISOString()})`,
+  )
+}
+```
+
+**에러 케이스 3종:**
+
+| # | 조건 | 에러 메시지 | state 변경 |
+|---|------|-----------|-----------|
+| 1 | 토큰 미존재 (파일 + env var 모두 없음) | `[waiaas-mcp] No session token found` | - (throw, 프로세스 미시작) |
+| 2 | JWT 파싱 실패 (sid/exp/iat 누락 또는 범위 초과) | `[waiaas-mcp] Invalid JWT: missing sid/exp/iat` 또는 `JWT exp out of reasonable range` | - (throw, 프로세스 미시작) |
+| 3 | 토큰 만료 | `[waiaas-mcp] Token expired: {iso8601}` | `state = 'expired'` |
+
+**로그 출력 (console.error 기반):**
+
+| 상황 | 로그 메시지 |
+|------|-----------|
+| 파일 로드 성공 | `[waiaas-mcp] Token loaded from file (expires: {iso8601})` |
+| 환경변수 fallback | `[waiaas-mcp] Token loaded from WAIAAS_SESSION_TOKEN env var` |
+| 만료 경고 | `[waiaas-mcp] Token expired at {iso8601}. Waiting for external refresh.` |
+| SessionManager 시작 | `[waiaas-mcp] SessionManager started (sid={sid}, expires={iso8601})` |
+
+> **Phase 36 연결:** `readMcpToken()` 함수는 Phase 36-01에서 확정된 `@waiaas/core` `utils/token-file.ts`의 공유 유틸리티이다. symlink 거부, 형식 검증, 동기 API(readFileSync)가 내장되어 있다. 상세 사양은 24-monorepo-data-directory.md 섹션 4.2 참조.
+
+> **jose decodeJwt 사용 근거:** MCP Server에는 JWT 서명 비밀키가 없어 서명 검증이 불가하다. `jose` `decodeJwt()`는 서명 검증 없이 payload만 base64url 디코딩하며, base64url 패딩 처리와 타입 안전성을 제공한다. 수동 `JSON.parse(atob(...))` 대신 jose를 사용하여 10+ 엣지 케이스를 방어한다. 프로젝트에 이미 jose가 의존성으로 포함되어 있으므로 추가 설치가 불필요하다.
+
+> **방어적 범위 검증 (C-03 대응):** JWT payload 무검증 디코딩의 보안 한계를 보완한다. 조작된 토큰이 mcp-token 파일에 심어지더라도, exp 범위가 과거 10년 ~ 미래 1년 범위를 벗어나면 로드를 거부한다. 실제 API 호출은 데몬에서 서명 검증으로 거부되지만, SessionManager 내부 상태 오염을 방지하는 추가 방어선이다.
 
 ---
 
@@ -3407,6 +3763,7 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 *문서 ID: SDK-MCP*
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
+*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01*
 *Phase: 09-integration-client-interface-design*
 *상태: 완료*
 
@@ -3415,3 +3772,9 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 - 52-auth-model-redesign.md -- masterAuth/ownerAuth/sessionAuth 3-tier 인증 (Owner 메서드 인증 변경)
 - 53-session-renewal-protocol.md -- 세션 낙관적 갱신 프로토콜 (sessions.renew() 메서드)
 - 55-dx-improvement-spec.md -- MCP 내장 옵션 검토 결과, hint 필드
+
+### v0.9 참조 문서
+
+- 24-monorepo-data-directory.md 섹션 4 -- mcp-token 파일 사양 (Phase 36-01 확정)
+- 53-session-renewal-protocol.md 섹션 5.6 -- shouldNotifyExpiringSession 순수 함수 (Phase 36-02 확정)
+- 35-notification-architecture.md -- SESSION_EXPIRING_SOON 이벤트 (Phase 36-02 확정)
