@@ -4872,6 +4872,171 @@ main().catch((err) => {
 
 **참조:** Research Pattern 3 (프로세스 생명주기), Pitfall 3 (만료 환경변수), Pitfall 5 (start 실패). SM-04, SM-10, SM-12.
 
+#### 6.5.7 [v0.9] Claude Desktop 에러 처리 전략 (SMGI-04)
+
+세션 만료, 네트워크 에러, Kill Switch 등 다양한 에러 상황에서 Claude Desktop과의 연결을 유지하면서 사용자에게 적절한 안내를 제공하는 전략을 정의한다.
+
+##### 6.5.7.1 isError 사용 원칙 테이블
+
+| 상황 | isError 설정 | 근거 |
+|------|------------|------|
+| API 에러 (400 Bad Request, 403 Forbidden 등) | `true` | 도구 실행 에러 (MCP 스펙 정상 사용) |
+| 세션 만료 (expired) | 미설정 | H-04: Claude Desktop 반복 에러 연결 해제 방지 |
+| 네트워크 에러 (daemon unavailable) | 미설정 | 일시적 문제, 연결 해제 방지 |
+| 정책 거부 (DELAY tier pending) | `true` | 정상적 도구 실행 에러 (사용자 행동 필요) |
+| Kill Switch 활성 (503) | 미설정 | 일시적 상태, 연결 해제 방지 |
+
+**원칙 요약:**
+- `isError: true` = tool 실행 자체의 에러 (잘못된 입력, 권한 부족, 정책 거부)
+- `isError` 미설정 = 일시적/외부 요인 에러 (만료, 네트워크, Kill Switch)
+- 반복 발생 가능한 에러에 isError를 설정하면 Claude Desktop이 연결을 해제할 위험
+
+##### 6.5.7.2 세션 만료 안내 메시지 형식
+
+```json
+{
+  "status": "session_expired",
+  "message": "Session has expired. The owner has been notified. Please try again in a few minutes after a new session is created.",
+  "hint": "Run 'waiaas mcp refresh-token' or use Telegram /newsession to create a new session.",
+  "retryable": true
+}
+```
+
+| 필드 | 용도 |
+|------|------|
+| `status` | 기계적 상태 식별 (LLM이 파싱 가능) |
+| `message` | 사용자 대면 메시지 (LLM이 사용자에게 전달) |
+| `hint` | 복구 방법 안내 (CLI 또는 Telegram) |
+| `retryable` | LLM이 나중에 재시도 가능함을 암시 |
+
+##### 6.5.7.3 데몬 미가동 안내 메시지 형식
+
+```json
+{
+  "status": "daemon_unavailable",
+  "message": "WAIaaS daemon is not responding. Please check if the daemon is running with 'waiaas status'.",
+  "retryable": true
+}
+```
+
+- 네트워크 에러(fetch 실패, ECONNREFUSED 등)를 ApiClient.request()의 catch 블록에서 감지
+- isError 미설정으로 Claude Desktop 연결 유지
+- 데몬이 재시작되면 다음 tool 호출에서 자동 복구
+
+##### 6.5.7.4 Kill Switch 활성 안내 메시지 형식
+
+```json
+{
+  "status": "kill_switch_active",
+  "message": "Emergency kill switch is active. All transaction operations are suspended.",
+  "retryable": true
+}
+```
+
+- 503 응답을 `ApiClient.parseResponse()`에서 감지하여 특별 처리
+- isError 미설정 (Kill Switch는 Owner가 해제할 때까지 지속, 반복 에러 방지)
+- 조회 API(get_balance, list_transactions)는 Kill Switch 영향 없이 동작 (데몬 측에서 조회는 허용)
+
+**parseResponse() Kill Switch 분기 추가:**
+
+```typescript
+// ApiClient.parseResponse() 내부 -- 섹션 6.5.2.5 확장
+private async parseResponse<T>(res: Response): Promise<ApiResult<T>> {
+  if (res.status === 503) {
+    return { ok: false, killSwitch: true }
+  }
+  // ... 기존 분기 (200, 4xx, 5xx)
+}
+```
+
+**ApiResult<T> 타입 확장:**
+
+```typescript
+type ApiResult<T = unknown> =
+  | { ok: true; data: T; status: number }
+  | { ok: false; error: { code: string; message: string }; status: number }
+  | { ok: false; expired: true }
+  | { ok: false; networkError: true }
+  | { ok: false; killSwitch: true }   // [Phase 38-02 추가]
+```
+
+**toToolResult() Kill Switch 분기 추가:**
+
+```typescript
+function toToolResult(result: ApiResult): CallToolResult {
+  // Kill Switch -- isError 미설정
+  if ('killSwitch' in result && result.killSwitch) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: 'kill_switch_active',
+          message: 'Emergency kill switch is active. All transaction operations are suspended.',
+          retryable: true,
+        }),
+      }],
+    }
+  }
+  // ... 기존 분기 (expired, networkError, error, ok)
+}
+```
+
+##### 6.5.7.5 반복 에러 연결 해제 방지 종합 전략
+
+| 전략 | 방법 | 대응 에러 |
+|------|------|----------|
+| (a) isError 회피 | 일시적/복구 가능 에러에 isError 미설정 | expired, networkError, killSwitch |
+| (b) retryable 안내 | 안내 메시지에 `retryable: true` 포함 | 모든 비-isError 에러 |
+| (c) 에러 복구 루프 | 60초 파일 확인으로 외부 토큰 감지 (섹션 6.5.6) | expired, error |
+| (d) stdout 오염 방지 | SessionManager/ApiClient 모든 로그 console.error 통일 | JSON-RPC 파싱 실패 |
+
+**전략 간 상호작용:**
+- (a) + (b): Claude Desktop이 연결을 유지하면서 LLM이 사용자에게 상황 설명
+- (c): 사용자가 외부에서 토큰을 갱신하면 자동으로 active 복귀, 다음 tool 호출 성공
+- (d): 모든 전략의 기반 -- stdout이 오염되면 JSON-RPC 자체가 깨져 연결 해제
+
+##### 6.5.7.6 stdout 오염 방지 규칙
+
+**MCP stdio transport 제약:**
+- stdout = JSON-RPC 메시지만 (MCP SDK가 관리)
+- stderr = 로그, 디버그 출력
+
+**규칙:**
+
+| 허용 | 금지 |
+|------|------|
+| `console.error(msg)` | `console.log(msg)` |
+| `process.stderr.write(msg)` | `process.stdout.write(msg)` (로그 용도) |
+
+**로그 접두사 규약:**
+
+| 모듈 | 접두사 | 예시 |
+|------|--------|------|
+| SessionManager | `[waiaas-mcp:session]` | `[waiaas-mcp:session] Renewal scheduled in 362880s` |
+| ApiClient | `[waiaas-mcp:api-client]` | `[waiaas-mcp:api-client] 401 received, retrying with fresh token` |
+| index.ts | `[waiaas-mcp]` | `[waiaas-mcp] MCP Server connected via stdio transport` |
+
+**설계 결정 SMGI-D04:**
+
+> **SMGI-D04: console.log 사용 금지. 모든 내부 로그를 console.error로 통일. stdio transport에서 stdout 오염은 JSON-RPC 파싱 실패 → 즉시 연결 해제를 유발한다.**
+
+근거:
+- MCP SDK의 StdioServerTransport는 stdout을 JSON-RPC 전용으로 사용
+- `console.log`는 Node.js에서 `process.stdout.write`로 출력됨
+- 로그 문자열이 stdout에 섞이면 Claude Desktop의 JSON 파서가 예외 발생 → 연결 해제
+- `console.error`는 stderr로 출력되어 JSON-RPC에 영향 없음
+
+참조: Research Pitfall 4 (stdout 오염으로 MCP 연결 끊김), MCP Protocol stdio 사양.
+
+##### 6.5.7.7 Phase 38 설계 결정 요약 테이블
+
+| ID | 결정 | 근거 | 섹션 |
+|----|------|------|------|
+| SMGI-D01 | getState() 4번째 public 메서드 추가 | ApiClient의 세션 상태 사전 확인 필요 | 6.5.1 |
+| SMGI-D02 | Mutex/Lock 미사용, 50ms 대기 + 401 재시도 | Node.js 단일 스레드, 차단 지연 방지 | 6.5.5 |
+| SMGI-D03 | 에러 복구 루프 SessionManager 소속, 60초 polling | fs.watch 대신 안정적 polling, SM-12 일관 | 6.5.6 |
+| SMGI-D04 | console.log 금지, console.error 통일 | stdio stdout 오염 → JSON-RPC 파싱 실패 방지 | 6.5.7 |
+
 ---
 
 ## 7. MCP Transport 설계
@@ -5422,7 +5587,7 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 *문서 ID: SDK-MCP*
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
-*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01 (인터페이스 + 토큰 로드), Phase 37-02 (갱신 + 실패 + reload)*
+*v0.9 SessionManager 핵심 설계: 2026-02-09 -- Phase 37-01 (인터페이스 + 토큰 로드), Phase 37-02 (갱신 + 실패 + reload), Phase 38-02 (동시성 + 생명주기 + 에러 처리)*
 *Phase: 09-integration-client-interface-design*
 *상태: 완료*
 
@@ -5440,3 +5605,5 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 알림 이벤트 (Phase 36-02 확정, NOTI-01)
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 이벤트 (Phase 36-02 확정)
 - 38-RESEARCH.md -- Phase 38 ApiClient 래퍼 패턴, tool/resource handler 통합 패턴, 프로세스 생명주기 리서치 (Phase 38-01 참조)
+- v0.9-PITFALLS.md -- H-04 (반복 에러 연결 해제), H-05 (401 자동 재시도), M-03 (만료 환경변수) (Phase 38-02 참조)
+- MCP Protocol stdio 사양 -- stdout JSON-RPC 전용, stderr 로그 (Phase 38-02 SMGI-D04 근거)
