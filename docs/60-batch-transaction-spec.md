@@ -1234,94 +1234,90 @@ RATE_LIMIT 정책에서 배치는 **1건**으로 계산한다. 배치 내 instru
 
 ---
 
-## 6. 감사 로그 전략
+## 6. 부모-자식 2계층 저장 + 감사 로그 전략
 
-### 6.1 transactions 테이블 기록
+### 6.1 부모-자식 2계층 저장 전략 [v0.10]
 
-배치 트랜잭션은 transactions 테이블에 **단일 레코드**로 기록한다. 개별 instruction의 상세 정보는 `metadata` JSON 컬럼에 포함한다.
+배치 트랜잭션은 transactions 테이블에 **부모-자식 2계층**으로 기록한다 [v0.10 변경: 기존 단일 레코드 -> 2계층].
+- 부모 레코드: type='BATCH', 배치 전체를 대표하는 1건
+- 자식 레코드: 개별 instruction별 N건, parent_id로 부모 참조, batch_index로 순서 보장
 
 ```typescript
-/**
- * BATCH 트랜잭션의 transactions 테이블 레코드.
- */
-const batchRecord = {
+// 부모 레코드 (배치 전체)
+const parentRecord = {
   id: generateUUIDv7(),
   agentId: agent.id,
   sessionId: session.id,
   chain: 'solana',
-  txHash: submitResult.txHash,  // 최종 트랜잭션 해시 (단일)
-
-  // type: BATCH
+  txHash: submitResult.txHash,  // Solana: 단일 TX 해시 (자식과 공유)
   type: 'BATCH',
-
-  // amount: 합산 네이티브 금액 (Phase B에서 계산한 batchTotalAmount)
-  amount: batchTotalAmount.toString(),
-
-  // toAddress: 배치는 단일 수신자 없음 -- 첫 번째 instruction의 to
-  toAddress: instructions[0]?.to ?? null,
-
-  status: 'CONFIRMED',
+  amount: batchTotalAmount.toString(),  // 합산 네이티브 금액
+  toAddress: null,                       // 배치는 단일 수신자 없음
+  status: 'CONFIRMED',                  // 또는 FAILED, PARTIAL_FAILURE
   tier: finalTier,
-
-  // 감사 컬럼 (CHAIN-EXT-03 섹션 7.3)
-  // 배치 내 첫 번째 CONTRACT_CALL의 프로그램 주소 (복수면 metadata에 전체 기록)
+  parentId: null,                        // 부모 자신은 parent_id NULL
+  batchIndex: null,                      // 부모 자신은 batch_index NULL
+  // 감사 컬럼은 기존 §6.3 규칙 적용 (대표값 저장)
   contractAddress: findFirst(instructions, 'CONTRACT_CALL')?.programId ?? null,
-  // 배치 내에서는 method_signature 미사용 (Solana 전용, selector 규약 없음)
   methodSignature: null,
-  // 배치 내 첫 번째 토큰 관련 instruction의 토큰 주소
   tokenAddress: findFirstToken(instructions)?.token?.address ?? null,
-  // 배치 내 첫 번째 APPROVE의 spender
   spenderAddress: findFirst(instructions, 'APPROVE')?.spender ?? null,
-
-  // metadata: 배치 상세 정보 JSON
   metadata: JSON.stringify({
-    batch_instructions: instructions.map((instr, i) => ({
-      index: i,
-      type: instr.type,
-      ...serializeInstructionSummary(instr),
-    })),
     batch_size: instructions.length,
     total_native_amount: batchTotalAmount.toString(),
-    ata_created: ataCreatedCount,  // 자동 생성된 ATA 수
+    ata_created: ataCreatedCount,
     compute_units_consumed: simResult.unitsConsumed,
   }),
-
   createdAt: new Date(),
 }
 ```
 
-### 6.2 metadata JSON 구조
+```typescript
+// 자식 레코드 (개별 instruction별 N건)
+const childRecords = instructions.map((instr, index) => ({
+  id: generateUUIDv7(),
+  agentId: agent.id,
+  sessionId: session.id,
+  chain: 'solana',
+  txHash: submitResult.txHash,  // Solana 원자적 배치: 부모와 동일 해시 공유
+  type: instr.type,             // TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE
+  amount: resolveInstructionAmount(instr),
+  toAddress: 'to' in instr ? instr.to : null,
+  status: 'CONFIRMED',          // Solana 원자적: 부모와 동일
+  tier: finalTier,
+  parentId: parentRecord.id,    // 부모 배치 참조
+  batchIndex: index,            // 0-based 순서
+  // 개별 감사 컬럼
+  contractAddress: instr.type === 'CONTRACT_CALL' ? instr.programId : null,
+  tokenAddress: ('token' in instr) ? instr.token.address : null,
+  spenderAddress: instr.type === 'APPROVE' ? instr.spender : null,
+  approvedAmount: instr.type === 'APPROVE' ? instr.amount.toString() : null,
+  metadata: null,               // 자식은 개별 metadata 불필요 (부모에 요약)
+  createdAt: new Date(),
+}))
+```
+
+### 6.1.1 부모-자식 상태 전이 테이블
+
+| 시나리오 | 부모 상태 | 자식 상태 | tx_hash |
+|----------|----------|----------|---------|
+| 전체 성공 (Solana 원자적) | CONFIRMED | 전체 CONFIRMED | 부모-자식 동일 해시 공유 |
+| Solana 원자적 실패 | FAILED | 전체 FAILED (원자적 롤백) | 실패한 TX 해시 또는 NULL |
+| EVM 순차 부분 실패 | **PARTIAL_FAILURE** | 성공분 CONFIRMED + 실패분 FAILED | 자식별 독립 해시 |
+
+> **PARTIAL_FAILURE 적용 범위:** PARTIAL_FAILURE는 EVM 순차 배치 전용 상태이다. 현재 Solana-only 배치에서는 원자적 실행이므로 CONFIRMED 또는 FAILED만 발생한다. PARTIAL_FAILURE는 향후 EVM 배치 지원 시를 위한 예비 상태이며, v0.10에서 status CHECK에 미리 포함한다.
+
+### 6.1.2 Solana vs EVM 자식 tx_hash 차이
+
+- **Solana 원자적 배치:** 자식 레코드 전체가 부모와 동일한 tx_hash를 공유 (단일 트랜잭션)
+- **EVM 순차 배치(향후):** 자식별 독립 tx_hash (개별 트랜잭션)
+
+### 6.2 metadata JSON 구조 [v0.10 변경]
+
+[v0.10 변경] 기존 metadata의 `batch_instructions` 배열을 제거하였다. 개별 instruction 상세는 자식 레코드로 정규화되었으므로, metadata에는 **요약 정보만** 유지한다.
 
 ```json
 {
-  "batch_instructions": [
-    {
-      "index": 0,
-      "type": "TRANSFER",
-      "to": "5xYzAbcD...",
-      "amount": "1000000000"
-    },
-    {
-      "index": 1,
-      "type": "TOKEN_TRANSFER",
-      "to": "8wQrStUv...",
-      "amount": "1000000",
-      "token": {
-        "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        "symbol": "USDC"
-      }
-    },
-    {
-      "index": 2,
-      "type": "APPROVE",
-      "spender": "9aBcDeFg...",
-      "token": {
-        "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        "symbol": "USDC"
-      },
-      "amount": "5000000"
-    }
-  ],
   "batch_size": 3,
   "total_native_amount": "1000000000",
   "ata_created": 1,
@@ -1329,43 +1325,57 @@ const batchRecord = {
 }
 ```
 
-### 6.3 감사 컬럼 채우기 규칙
+> **v0.10 변경 근거:** 기존에는 metadata.batch_instructions에 개별 instruction 상세를 JSON으로 저장했으나, 부모-자식 2계층 구조 도입으로 자식 레코드가 정규화된 테이블 행으로 존재한다. 따라서 metadata에서 중복 저장할 필요가 없으며, 요약 통계만 유지한다.
+
+### 6.3 감사 컬럼 채우기 규칙 [v0.10 보완]
 
 배치는 다수 instruction을 포함하므로, CHAIN-EXT-03에서 추가한 감사 컬럼(contract_address, method_signature, token_address, spender_address)을 다음 규칙으로 채운다.
 
-| 감사 컬럼 | 값 | 복수인 경우 |
+**부모 레코드에 대표값 저장** (기존 규칙 동일), **자식 레코드에 개별값 저장** [v0.10 추가].
+
+| 감사 컬럼 | 부모 레코드 (대표값) | 자식 레코드 (개별값) |
 |----------|------|-----------|
-| `contract_address` | 첫 번째 CONTRACT_CALL의 programId | metadata.batch_instructions에 전체 기록 |
-| `method_signature` | null (Solana 배치, selector 규약 없음) | - |
-| `token_address` | 첫 번째 TOKEN_TRANSFER 또는 APPROVE의 token.address | metadata.batch_instructions에 전체 기록 |
-| `spender_address` | 첫 번째 APPROVE의 spender | metadata.batch_instructions에 전체 기록 |
+| `contract_address` | 첫 번째 CONTRACT_CALL의 programId | 해당 자식의 programId (CONTRACT_CALL인 경우) |
+| `method_signature` | null (Solana 배치, selector 규약 없음) | null |
+| `token_address` | 첫 번째 TOKEN_TRANSFER 또는 APPROVE의 token.address | 해당 자식의 token.address (TOKEN_TRANSFER/APPROVE인 경우) |
+| `spender_address` | 첫 번째 APPROVE의 spender | 해당 자식의 spender (APPROVE인 경우) |
 
-> **설계 근거:** 독립 컬럼은 인덱싱/쿼리 효율을 위해 "대표 값"을 저장하고, 전체 상세는 metadata JSON에 저장한다. "특정 컨트랙트가 포함된 배치 조회"는 독립 컬럼 인덱스로 빠르게 검색하고, "해당 배치의 모든 instruction 상세"는 metadata에서 조회한다.
+> **설계 근거:** 부모 레코드의 독립 컬럼은 인덱싱/쿼리 효율을 위해 "대표 값"을 저장하고, 전체 상세는 자식 레코드의 정규화된 컬럼에서 조회한다. "특정 컨트랙트가 포함된 배치 조회"는 부모 레코드의 독립 컬럼 인덱스로 빠르게 검색하고, "해당 배치의 모든 instruction 상세"는 자식 레코드 조회(`parent_id = :batchId`)로 조회한다. [v0.10 변경] 자식 레코드가 있으므로 metadata 내 batch_instructions로의 fallback 조회는 더 이상 필요 없다.
 
-### 6.4 감사 쿼리 패턴
+### 6.4 감사 쿼리 패턴 [v0.10 보완]
 
 ```sql
--- 특정 프로그램이 포함된 배치 조회 (인덱스 활용)
+-- 배치의 자식 instruction 조회 (부모-자식 관계) [v0.10 추가]
+SELECT * FROM transactions
+WHERE parent_id = :batchId
+ORDER BY batch_index ASC;
+
+-- 특정 에이전트의 배치 부모만 조회 [v0.10 추가]
+SELECT * FROM transactions
+WHERE agent_id = :agentId AND type = 'BATCH' AND parent_id IS NULL
+ORDER BY created_at DESC;
+
+-- 특정 프로그램이 포함된 배치 조회 (부모 레코드 대표값 인덱스 활용)
 SELECT * FROM transactions
 WHERE type = 'BATCH'
   AND contract_address = '9aBcDeFg...'
+  AND parent_id IS NULL
 ORDER BY created_at DESC;
 
--- metadata 내 특정 instruction type 조회 (JSON 함수)
+-- 자식 레코드에서 특정 instruction type 조회 [v0.10 변경: JSON -> 정규 컬럼]
 SELECT * FROM transactions
-WHERE type = 'BATCH'
-  AND json_extract(metadata, '$.batch_instructions') LIKE '%"type":"APPROVE"%'
+WHERE parent_id IS NOT NULL
+  AND type = 'APPROVE'
 ORDER BY created_at DESC;
 
--- 배치 내 특정 spender가 포함된 거래 조회
+-- 배치 내 특정 spender가 포함된 자식 조회 [v0.10 변경: JSON -> 정규 컬럼]
 SELECT * FROM transactions
-WHERE type = 'BATCH'
-  AND (
-    spender_address = '9aBcDeFg...'
-    OR metadata LIKE '%"spender":"9aBcDeFg..."%'
-  )
+WHERE parent_id IS NOT NULL
+  AND spender_address = '9aBcDeFg...'
 ORDER BY created_at DESC;
 ```
+
+> **v0.10 쿼리 개선:** 기존에는 metadata JSON 내 batch_instructions를 `json_extract()` 또는 `LIKE`로 검색했으나, 자식 레코드 정규화로 인해 표준 SQL 컬럼 쿼리로 대체되었다. 인덱스 활용이 가능해져 성능이 개선된다.
 
 ---
 

@@ -528,6 +528,149 @@ function writePidAndReady(
 | Step 6 | 워커 핸들러 에러 | **로그 후 계속** | 없음 (다음 주기 재시도) |
 | Step 7 | PID 파일 쓰기 실패 | **경고 후 계속** | 없음 (기능에 영향 없음) |
 
+### 2.5 시작 단계별 타임아웃 + fail-fast/soft 정책 [v0.10]
+
+§2.3의 "예상 시간"과 §2.4의 "실패 처리 요약"을 보완하여, 각 단계의 **강제 타임아웃**과 **에러 코드**, **v0.10 objectives D-1과의 매핑**을 정의한다. 구현자는 이 테이블을 기준으로 각 단계에 타임아웃을 적용한다.
+
+> **참고:** v0.10 objectives D-1은 6단계(Step 1-2를 하나로, Step 6-7 제외)로 기술하지만, 28-daemon의 기존 7단계 구조를 유지한다. "v0.10 D-1 매핑" 컬럼으로 대응 관계를 명시하여 혼동을 방지한다.
+
+#### 2.5.1 단계별 타임아웃 테이블
+
+| Step | 작업 | 타임아웃 | 실패 정책 | 에러 코드 | v0.10 D-1 매핑 | 비고 |
+|------|------|---------|----------|----------|--------------|------|
+| 1 | 환경 검증 (flock + config.toml + Zod) | **5초** | fail-fast | `DAEMON_ALREADY_RUNNING` / `CONFIG_LOAD_ERROR` | D-1 Step 1+2 | flock 획득(5초) + TOML 파싱 + Zod 검증 포함 |
+| 2 | DB 초기화 (better-sqlite3 + PRAGMA + migrate) | **30초** | fail-fast | `DB_MIGRATION_TIMEOUT` | D-1 Step 3 | 대규모 마이그레이션 시 시간 소요 가능 |
+| 3 | 키스토어 잠금 해제 (Argon2id + AES-GCM) | **30초** | fail-fast | `KEYSTORE_UNLOCK_TIMEOUT` | D-1 Step 4 | Argon2id ~1-3초 + 다수 에이전트 키 복호화 |
+| 4 | 어댑터 초기화 (RPC connect + healthCheck) | **10초/체인** | **fail-soft** | 경고 로그 + 체인 비활성화 | D-1 Step 5 | 해당 체인 비활성화, 데몬은 계속 시작 |
+| 5 | HTTP 서버 시작 (Hono serve 127.0.0.1) | **5초** | fail-fast | `PORT_BIND_ERROR` | D-1 Step 6 | 포트 충돌(EADDRINUSE) 포함 |
+| 6 | 백그라운드 워커 시작 | 타임아웃 없음 | fail-soft | - | (D-1 범위 외) | 비동기 시작, 개별 실패 시 다음 주기 재시도 |
+| 7 | PID 파일 기록 + Ready 메시지 | 타임아웃 없음 | fail-fast | - | (D-1 범위 외) | 파일 I/O 즉시 완료 |
+
+**정책 요약:**
+- **fail-fast:** 해당 단계 실패 시 데몬 즉시 종료 (`process.exit(1)`). 불완전 상태로 서빙하지 않음
+- **fail-soft:** 해당 단계 실패 시 경고 로그 후 다음 단계로 진행. 데몬은 제한된 기능으로 시작
+
+#### 2.5.2 전체 시작 시간 상한: 90초
+
+전체 시작 시퀀스(Step 1~7)에 **90초 상한**을 적용한다. 개별 단계 타임아웃의 합계(5+30+30+10+5=80초)보다 여유를 두되, 무한 대기를 방지한다. 90초를 초과하면 데몬을 강제 종료한다.
+
+```typescript
+// packages/daemon/src/lifecycle/daemon.ts (v0.10 타임아웃 래퍼)
+async function startDaemon(options: StartOptions): Promise<void> {
+  const STARTUP_TIMEOUT_MS = 90_000  // 전체 90초 상한
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), STARTUP_TIMEOUT_MS)
+
+  try {
+    // Step 1: 환경 검증 (5초)
+    const config = await withTimeout(
+      validateEnvironment(options), 5_000, 'CONFIG_LOAD_ERROR'
+    )
+
+    // Step 2: DB 초기화 (30초)
+    const db = await withTimeout(
+      initializeDatabase(config), 30_000, 'DB_MIGRATION_TIMEOUT'
+    )
+
+    // Step 3: 키스토어 잠금 해제 (30초)
+    const keyStore = await withTimeout(
+      unlockKeyStore(config, db), 30_000, 'KEYSTORE_UNLOCK_TIMEOUT'
+    )
+
+    // Step 4: 어댑터 초기화 (10초/체인, fail-soft)
+    const adapters = await initializeAdapters(config, {
+      timeoutPerChain: 10_000,
+      failSoft: true,  // 실패 시 경고 로그 + 체인 비활성화
+    })
+
+    // Step 5: HTTP 서버 시작 (5초)
+    const server = await withTimeout(
+      startHttpServer(config, { db, keyStore, adapters }),
+      5_000, 'PORT_BIND_ERROR'
+    )
+
+    // Step 6: 백그라운드 워커 시작 (타임아웃 없음, fail-soft)
+    startBackgroundWorkers(db)  // setInterval 등록, 즉시 반환
+
+    // Step 7: PID 파일 + Ready 메시지 (타임아웃 없음)
+    writePidFile(config.dataDir)
+
+    // 전체 상한 초과 확인
+    if (ac.signal.aborted) {
+      throw new DaemonError('DAEMON_STARTUP_TIMEOUT',
+        `Daemon startup exceeded ${STARTUP_TIMEOUT_MS / 1000}s limit`)
+    }
+
+    logger.info(`WAIaaS daemon ready on ${config.host}:${config.port}`)
+  } catch (err) {
+    if (ac.signal.aborted && !(err instanceof DaemonError)) {
+      throw new DaemonError('DAEMON_STARTUP_TIMEOUT',
+        `Daemon startup exceeded ${STARTUP_TIMEOUT_MS / 1000}s limit`)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** 개별 단계에 타임아웃을 적용하는 유틸리티 */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  errorCode: string
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new DaemonError(errorCode, `Timeout after ${ms}ms`)),
+        ms
+      )
+    ),
+  ])
+}
+```
+
+**90초 상한 초과 시 동작:**
+1. `AbortController`가 abort 신호 발생
+2. 현재 진행 중인 단계가 자체 타임아웃으로 먼저 실패할 가능성이 높음
+3. 만약 자체 타임아웃 이전에 전체 상한에 도달하면 `DAEMON_STARTUP_TIMEOUT` 에러로 강제 종료
+4. `finally` 블록에서 타이머 정리. 이미 초기화된 리소스는 프로세스 종료 시 OS가 회수
+
+#### 2.5.3 Step 6/7 타임아웃 면제 사유
+
+| Step | 타임아웃 면제 사유 |
+|------|-----------------|
+| Step 6 (백그라운드 워커) | `setInterval` 기반 비동기 시작. 등록 자체는 즉시 완료(~1ms)되며, 개별 워커의 첫 실행 실패는 다음 주기에 재시도. 워커 등록이 지연될 수 있는 시나리오가 존재하지 않음 |
+| Step 7 (PID/Ready) | `writeFileSync` 파일 I/O로 즉시 완료(~1ms). 실패 시 동기 예외가 발생하므로 타임아웃 불필요. 디스크 I/O 지연은 OS 수준에서 처리 |
+
+#### 2.5.4 fail-soft 동작 상세 (Step 4: 어댑터 초기화)
+
+Step 4는 유일하게 **fail-soft** 정책을 적용한다. 체인별 독립 타임아웃(10초/체인)으로 한 체인의 실패가 다른 체인에 영향을 주지 않는다.
+
+**fail-soft 동작 흐름:**
+
+```
+Step 4 시작
+├── Solana 어댑터 초기화 (10초 타임아웃)
+│   ├── 성공 → 활성화
+│   └── 실패/타임아웃 → 경고 로그 + Solana 비활성화
+│
+├── EVM 어댑터 초기화 (10초 타임아웃)
+│   ├── 성공 → 활성화
+│   └── 실패/타임아웃 → 경고 로그 + EVM 비활성화
+│
+└── 최소 1개 이상 활성화 → Step 5로 진행
+    전체 실패 → fail-fast (데몬 종료)
+```
+
+**비활성화된 체인의 동작:**
+- 해당 체인의 에이전트 API 요청은 `503 SERVICE_UNAVAILABLE` 반환
+- 어댑터는 기존 §2.4의 `healthCheck` 로직에 따라 자체적으로 재연결 시도
+- 재연결 성공 시 자동으로 활성화 상태 복원
+
+> **보완 사항:** 모든 어댑터가 실패한 경우(체인 0개 활성화)에도 데몬을 시작할 것인지에 대해 -- 이 경우 fail-fast로 전환한다. 체인 연결 없이는 데몬의 핵심 기능(거래 처리)이 불가능하기 때문이다.
+
 ---
 
 ## 3. 종료 시퀀스 (Shutdown Sequence)

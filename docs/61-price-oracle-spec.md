@@ -887,20 +887,79 @@ class OracleChain implements IPriceOracle {
     this.sharedCache = sharedCache
   }
 
+  /**
+   * [v0.10] 교차 검증이 동기적으로 인라인된 getPrice().
+   *
+   * 기존: Primary 성공 시 즉시 반환, 교차 검증은 비동기 백그라운드
+   * 변경: Primary 성공 후 Fallback으로 동기적 교차 검증 수행
+   *
+   * 교차 검증 플로우:
+   * 1. Primary(CoinGecko) 조회
+   * 2. Primary 성공 + Fallback 존재 → Fallback으로 교차 검증
+   * 3. 10% 초과 괴리 → 높은 가격 채택 (보수적) + 감사 로그 + 알림
+   * 4. 10% 이내 또는 Fallback 실패 → Primary 가격 채택
+   */
   async getPrice(token: TokenRef): Promise<PriceInfo> {
     let lastError: Error | undefined
+    let primaryPrice: PriceInfo | undefined
 
-    for (const oracle of this.oracles) {
+    for (let i = 0; i < this.oracles.length; i++) {
       try {
-        const price = await oracle.getPrice(token)
+        const price = await this.oracles[i].getPrice(token)
 
-        // 다중 소스 교차 검증 (섹션 7 참조)
-        // Primary 성공 후 다른 소스와 +-10% 이내 일치 확인은
-        // 선택적 비동기 백그라운드 검증으로 수행
+        if (i === 0) {
+          // Primary 성공: 교차 검증 시도
+          primaryPrice = price
+
+          if (this.oracles.length > 1) {
+            try {
+              const fallbackPrice = await this.oracles[1].getPrice(token)
+              const deviation = Math.abs(
+                (price.usdPrice - fallbackPrice.usdPrice) / price.usdPrice
+              ) * 100
+
+              if (deviation > 10) {
+                // 10% 초과 괴리: 높은 가격 채택 (보수적)
+                // 높은 가격 = 정책 평가에서 더 높은 USD 금액 = 더 높은 보안 티어
+                const conservativePrice = price.usdPrice >= fallbackPrice.usdPrice
+                  ? price : fallbackPrice
+
+                // 감사 로그 기록
+                await this.auditLog.record({
+                  event: 'PRICE_DEVIATION_WARNING',
+                  details: {
+                    token: `${token.chain}:${token.address}`,
+                    primarySource: price.source,
+                    primaryPrice: price.usdPrice,
+                    fallbackSource: fallbackPrice.source,
+                    fallbackPrice: fallbackPrice.usdPrice,
+                    deviationPercent: deviation.toFixed(2),
+                    adoptedSource: conservativePrice.source,
+                    adoptedPrice: conservativePrice.usdPrice,
+                  },
+                })
+
+                // SYSTEM_WARNING 알림 이벤트 발송
+                this.notifier?.emit('SYSTEM_WARNING', {
+                  type: 'PRICE_DEVIATION',
+                  message: `Price deviation ${deviation.toFixed(1)}% detected for ${token.chain}:${token.address}`,
+                })
+
+                return conservativePrice
+              }
+            } catch {
+              // 교차 검증 실패 (Fallback 소스 장애): Primary 신뢰
+              // Fallback 호출 타임아웃(5초)은 각 오라클 구현체에서 설정
+            }
+          }
+
+          return price
+        }
+
+        // i > 0: Primary 실패 후 Fallback 성공
         return price
       } catch (error) {
         lastError = error as Error
-        // 다음 소스로 fallback
         continue
       }
     }
@@ -976,6 +1035,8 @@ function createDefaultOracleChain(config: OracleConfig): IPriceOracle {
   return new OracleChain([coingecko, pyth, chainlink], cache)
 }
 ```
+
+> **[v0.10 변경] 교차 검증 동기 전환 근거:** 기존 §7.1.1의 비동기 백그라운드 교차 검증을 동기적 인라인으로 전환했다. 보수적 가격 채택을 getPrice() 반환값에 반영하려면, 교차 검증 결과가 반환 전에 확정되어야 한다. Fallback 호출 타임아웃(5초)은 각 오라클 구현체에 이미 설정되어 있어, 최악의 경우 추가 5초의 latency가 발생한다. 이는 트랜잭션 파이프라인의 전체 타임아웃(INSTANT/NOTIFY=30초)에 비해 허용 범위이다.
 
 ---
 
@@ -1192,6 +1253,19 @@ tokens: [USDC, USDT, BONK, RAY, JUP]
 | TTL 이내 (fresh) | 정상 | 캐시 가격 반환, `isStale=false` |
 | TTL 만료 + staleMaxAge 이내 | stale 허용 | 캐시 가격 반환, `isStale=true` |
 | TTL 만료 + staleMaxAge 초과 | stale 거부 | 캐시 삭제, PriceNotAvailableError |
+
+### 5.2.1 가격 나이별 3단계 정책 평가 동작 [v0.10]
+
+| 상태 | 가격 나이 | USD 평가 | 정책 평가 동작 | 로그/알림 |
+|------|----------|---------|---------------|---------|
+| **FRESH** | < 5분 | 정상 수행 | resolveEffectiveAmountUsd() 정상 실행 | 없음 |
+| **AGING** | 5분~30분 | 정상 수행 + 보수적 상향 | resolveEffectiveAmountUsd() 실행 + adjustTierForStalePrice() (INSTANT→NOTIFY) | PRICE_STALE 경고 로그 |
+| **STALE** | > 30분 | **스킵** | resolveEffectiveAmountUsd() → PriceNotAvailableError → applyFallbackStrategy() → 네이티브 금액만으로 티어 결정 | PRICE_UNAVAILABLE 감사 로그 |
+| **UNAVAILABLE** | 오라클 전체 실패 | **스킵** | applyFallbackStrategy() → 네이티브 금액만으로 티어 결정 (§5.4 Phase 22-23 과도기 전략) | PRICE_UNAVAILABLE 감사 로그 + 알림 |
+
+> **FRESH vs AGING vs STALE 구분:** "stale"이라는 용어가 5분(TTL 만료)과 30분(staleMaxAge 초과) 양쪽에 사용되어 혼동될 수 있다. 5분~30분 구간은 **AGING**(가격을 사용하되 보수적 상향)이고, 30분 초과는 **STALE**(가격 자체를 버리고 네이티브 전용 평가)이다. 구현 시 `isStale` 플래그는 TTL 만료(>5분) 시 true가 되지만, **STALE(>30분) 처리는 PriceNotAvailableError를 통해** 별도로 처리된다 (staleMaxAge 초과 시 캐시에서 삭제 → 조회 실패).
+
+> **[v0.10] STALE(>30분) 가격 USD 평가 스킵 근거:** stale 가격으로 잘못된 INSTANT 판정을 내리는 것보다, USD 평가를 스킵하고 네이티브 금액 기준으로만 평가하는 것이 더 안전하다. 네이티브 금액 기준 SPENDING_LIMIT는 항상 유효하므로 최소한의 보호를 보장한다.
 
 ### 5.3 Stale 가격 사용 시 보수적 판단
 
@@ -1447,7 +1521,10 @@ async function resolveEffectiveAmountUsd(
         return { usdAmount: 0, fallbackToNative: true, isStale: false }
     }
   } catch {
-    // 오라클 완전 장애: Phase 22-23 과도기 전략으로 fallback
+    // 오라클 완전 장애 또는 STALE(>30분) 가격:
+    // PriceNotAvailableError 발생 → Phase 22-23 과도기 전략으로 fallback
+    // → applyFallbackStrategy() (§5.4) → 네이티브 금액만으로 티어 결정
+    // [v0.10] §5.2.1 가격 나이별 3단계 참조
     return { usdAmount: 0, fallbackToNative: true, isStale: false }
   }
 }
@@ -1735,14 +1812,19 @@ async function evaluate(input: PolicyEvaluationInput): Promise<PolicyDecision> {
 
 #### 7.1.1 다중 소스 교차 검증
 
+> **[v0.10] 교차 검증은 §3.6 OracleChain.getPrice()에 동기적으로 인라인됨. 이 섹션의 비동기 백그라운드 검증은 폐기.** 아래 코드는 v0.10 이전 설계의 참고 기록으로 유지한다.
+
 ```typescript
+// [v0.10 폐기] 비동기 백그라운드 교차 검증 (§3.6 인라인으로 대체됨)
+
 /**
- * 다중 소스 교차 검증.
+ * [v0.10 폐기] 다중 소스 교차 검증.
  * Primary 소스(CoinGecko) 가격과 Fallback 소스(Pyth/Chainlink) 가격이
  * +-10% 이내에서 일치하는지 확인한다.
  *
  * 불일치 시 보수적 판단: 더 높은 가격을 채택 (더 높은 USD 금액 -> 더 높은 티어).
- * 교차 검증은 비동기 백그라운드에서 수행하여 레이턴시에 영향 없음.
+ * [v0.10 폐기] 교차 검증은 비동기 백그라운드에서 수행하여 레이턴시에 영향 없음.
+ * → v0.10부터 §3.6 getPrice()에서 동기적으로 수행. 보수적 가격 채택이 반환값에 반영됨.
  */
 async function crossValidatePrice(
   token: TokenRef,

@@ -1,5 +1,31 @@
 # Project Milestones: WAIaaS
 
+## v0.10 구현 전 설계 완결성 확보 (Shipped: 2026-02-09)
+
+**Delivered:** v0.2~v0.9에서 작성한 30개 설계 문서의 BLOCKING 4건 + HIGH 8건 = 12건의 구현 차단 미비점을 4개 영역(정책 엔진, 에러 처리, 동시성/실행, 운영 로직)에서 전수 해소하여, 설계 문서만으로 코드를 작성할 수 있는 상태를 확립
+
+**Phases completed:** 41-44 (10 plans total)
+
+**Key accomplishments:**
+
+- 정책 엔진 완결 — PolicyRuleSchema SSoT 교차 참조(25-sqlite↔33-time-lock), GRACE 무기한+markOwnerVerified() 배타적 전이, APPROVAL 타임아웃 3단계 우선순위(정책별>config>3600초)
+- 에러 처리 체계 완결 — 66개 에러 코드 통합 매트릭스(SS10.12 SSoT), ChainError 25코드 3-카테고리 분류(PERMANENT 17/TRANSIENT 4/STALE 4), PolicyType 10개 확장+superRefine 검증
+- 동시성+실행 로직 완결 — Stage 5 완전 의사코드(build→simulate→sign→submit+에러분기+재시도), 세션 갱신 낙관적 잠금(token_hash CAS), Kill Switch 4전이 CAS ACID 패턴
+- 운영 로직 완결 — 데몬 6단계 시작 타임아웃(5~30초/90초 상한, fail-fast/soft), Batch 부모-자식 2계층 DB+PARTIAL_FAILURE, Oracle 교차 검증 인라인+가격 나이 3단계(FRESH/AGING/STALE)
+- 12건 구현 차단 미비점 전수 해소 — 설계 문서 11개 직접 수정, 22개 설계 결정 확정
+
+**Stats:**
+
+- 30 files changed, +4,972 / -195 lines (Markdown design docs)
+- 4 phases, 10 plans, 12 requirements, 22 설계 결정
+- 1 day (2026-02-09)
+
+**Git range:** `dd7def4` (Phase 41 start) → `4e2357e` (Phase 44 complete)
+
+**What's next:** v1.0 구현 계획 — 설계 문서(24-64) 기반 구현 마일스톤 시작
+
+---
+
 ## v0.9 MCP 세션 관리 자동화 설계 (Shipped: 2026-02-09)
 
 **Delivered:** MCP 환경에서 세션 토큰의 갱신·만료·재발급을 자동화하는 메커니즘을 설계 수준에서 완전히 정의 — SessionManager 핵심 로직, MCP tool handler 통합, CLI/Telegram 외부 연동, 18개 테스트 시나리오, 7개 기존 설계 문서 v0.9 통합
@@ -244,3 +270,5 @@
 **What's next:** 구현 마일스톤 — 코어 지갑 서비스, 트랜잭션 서비스, 정책 엔진, API 서버 구현
 
 ---
+
+

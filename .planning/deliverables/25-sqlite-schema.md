@@ -9,6 +9,7 @@
 **v0.7 스키마 설정 확정:** 2026-02-08
 **v0.7 스키마 CHECK/amount 보강:** 2026-02-08
 **v0.8 업데이트:** 2026-02-08
+**v0.10 업데이트:** 2026-02-09
 **상태:** 완료
 **참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT), objectives/v0.8-optional-owner-progressive-security.md
 
@@ -302,9 +303,14 @@ export const transactions = sqliteTable('transactions', {
   spenderAddress: text('spender_address'),               // (v0.6 추가) 승인 대상 (APPROVE)
   approvedAmount: text('approved_amount'),               // (v0.6 추가) 승인 금액 (APPROVE, TEXT=bigint 안전)
 
+  // ── 배치 관련 [v0.10 추가] ──
+  parentId: text('parent_id')
+    .references(() => transactions.id, { onDelete: 'cascade' }),  // 부모 배치 TX (NULL = 단독 TX). ON DELETE CASCADE: 부모-자식은 논리적 단위이므로 함께 관리. 거래 기록 보존은 agents RESTRICT에서 보장
+  batchIndex: integer('batch_index'),                              // 배치 내 순서 (0-based, NULL = 단독 TX)
+
   // ── 파이프라인 상태 ──
   status: text('status', {
-    enum: ['PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED']
+    enum: ['PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'PARTIAL_FAILURE']  // (v0.10 추가) PARTIAL_FAILURE: EVM 순차 배치 부분 실패
   }).notNull().default('PENDING'),
 
   // ── 보안 티어 ──
@@ -328,6 +334,7 @@ export const transactions = sqliteTable('transactions', {
   index('idx_transactions_created_at').on(table.createdAt),
   index('idx_transactions_type').on(table.type),                                    // (v0.6 추가) type별 조회 최적화
   index('idx_transactions_contract_address').on(table.contractAddress),              // (v0.6 추가) 컨트랙트 주소 조회
+  index('idx_transactions_parent_id').on(table.parentId),                            // (v0.10 추가) 배치 자식 조회용
 ]);
 ```
 
@@ -349,15 +356,17 @@ CREATE TABLE transactions (
   method_signature TEXT,                                 -- (v0.6 추가) 감사 컬럼: 메서드 시그니처 (EVM)
   spender_address TEXT,                                  -- (v0.6 추가) 감사 컬럼: 승인 대상
   approved_amount TEXT,                                  -- (v0.6 추가) 감사 컬럼: 승인 금액
+  parent_id TEXT REFERENCES transactions(id) ON DELETE CASCADE,   -- (v0.10 추가) 부모 배치 TX (NULL = 단독 TX). 부모-자식은 논리적 단위이므로 함께 관리. 거래 기록 보존은 agents RESTRICT에서 보장
+  batch_index INTEGER,                                             -- (v0.10 추가) 배치 내 순서 (0-based, NULL = 단독 TX)
   status TEXT NOT NULL DEFAULT 'PENDING'
-    CHECK (status IN ('PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED')),
+    CHECK (status IN ('PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'PARTIAL_FAILURE')),
   tier TEXT
     CHECK (tier IN ('INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL') OR tier IS NULL),
   queued_at INTEGER,
   executed_at INTEGER,
   created_at INTEGER NOT NULL,
   error TEXT,
-  metadata TEXT              -- JSON (v0.6: actionSource, batchInstructions 등 확장)
+  metadata TEXT              -- JSON (v0.6: actionSource 등 확장, v0.10: batch_instructions 제거 -- 자식 레코드로 정규화)
 );
 
 CREATE INDEX idx_transactions_agent_status ON transactions(agent_id, status);
@@ -368,6 +377,8 @@ CREATE INDEX idx_transactions_created_at ON transactions(created_at);
 CREATE INDEX idx_transactions_type ON transactions(type);                            -- (v0.6 추가)
 CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)
   WHERE contract_address IS NOT NULL;                                                -- (v0.6 추가) partial index
+CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)
+  WHERE parent_id IS NOT NULL;                                                       -- (v0.10 추가) partial index
 ```
 
 #### 컬럼 설명
@@ -387,7 +398,9 @@ CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)
 | `method_signature` | TEXT | NULL | - | (v0.6 추가) 함수 selector + 이름 (CONTRACT_CALL, EVM 전용). 예: '0x70a08231 (balanceOf)'. 감사 컬럼 |
 | `spender_address` | TEXT | NULL | - | (v0.6 추가) 토큰 승인 대상 주소 (APPROVE). 감사 컬럼 |
 | `approved_amount` | TEXT | NULL | - | (v0.6 추가) 토큰 승인 금액 (APPROVE, TEXT=bigint 안전). 감사 컬럼 |
-| `status` | TEXT (ENUM) | NOT NULL | `'PENDING'` | 파이프라인 상태. CHECK 제약 |
+| `parent_id` | TEXT (FK, self-ref) | NULL | - | (v0.10 추가) 부모 배치 트랜잭션 ID. 자기 참조 FK. NULL = 단독 트랜잭션. ON DELETE CASCADE |
+| `batch_index` | INTEGER | NULL | - | (v0.10 추가) 배치 내 순서 (0-based). NULL = 단독 트랜잭션 |
+| `status` | TEXT (ENUM) | NOT NULL | `'PENDING'` | 파이프라인 상태. CHECK 제약 9개: PENDING, QUEUED, EXECUTING, SUBMITTED, CONFIRMED, FAILED, CANCELLED, EXPIRED + PARTIAL_FAILURE(v0.10) |
 | `tier` | TEXT (ENUM) | NULL | - | 보안 티어. 정책 평가 후 결정 |
 | `queued_at` | INTEGER | NULL | - | 큐 진입 시각 (DELAY/APPROVAL 티어) |
 | `executed_at` | INTEGER | NULL | - | 실행 완료(온체인 확정) 시각 |
@@ -1649,6 +1662,42 @@ v0.8 변경에 따라 추가되는 안티패턴 경고:
 | SweepResult를 Drizzle 스키마에 정의 | 체인 어댑터 반환 타입이지 DB 저장 타입이 아님 | `chain-adapter.types.ts`에 인터페이스로 정의 |
 | Drizzle `{ mode: 'boolean' }` 혼용 | ORM에서는 true/false, raw SQL에서는 0/1 사용. 혼용 시 비교 오류 | raw SQL: `owner_verified = 0`, Drizzle ORM: `agent.ownerVerified` (boolean) |
 
+### 4.14 [v0.10] 마이그레이션: parent_id + batch_index 추가 + PARTIAL_FAILURE 상태
+
+v0.10에서 transactions 테이블에 배치 부모-자식 2계층 지원을 위한 컬럼과 상태를 추가한다.
+
+**전제 조건:**
+- v0.8 마이그레이션(섹션 4.11) 완료 상태
+- 기존 transactions.status 값은 모두 유효 (기존 8개 값이므로 PARTIAL_FAILURE CHECK 추가 시 충돌 없음)
+
+**마이그레이션 SQL:**
+
+```sql
+-- v0.10 마이그레이션: 배치 부모-자식 2계층 지원
+
+-- 1. parent_id + batch_index 컬럼 추가
+ALTER TABLE transactions ADD COLUMN parent_id TEXT REFERENCES transactions(id) ON DELETE CASCADE;
+ALTER TABLE transactions ADD COLUMN batch_index INTEGER;
+
+-- 2. 인덱스 추가
+CREATE INDEX idx_transactions_parent_id ON transactions(parent_id) WHERE parent_id IS NOT NULL;
+
+-- 3. status CHECK 변경: PARTIAL_FAILURE 추가
+-- 주의: SQLite는 ALTER TABLE으로 CHECK 변경 불가.
+-- drizzle-kit이 테이블 재생성(CREATE new -> INSERT INTO -> DROP old -> ALTER RENAME)으로 처리.
+-- 기존 데이터의 status 값은 모두 유효(기존 8개 값)이므로 재생성 시 CHECK 위반 없음.
+```
+
+**주의사항:**
+
+| 단계 | 설명 | 실패 시 대응 |
+|------|------|------------|
+| Step 1 | NULL 컬럼 추가. SQLite ALTER TABLE ADD COLUMN 안전 범위 | 롤백 불필요 |
+| Step 2 | partial index 생성. parent_id IS NOT NULL 조건 | `CREATE INDEX IF NOT EXISTS` 사용 |
+| Step 3 | CHECK 제약 변경은 테이블 재생성 필요 | Drizzle Kit push 사용 권장 (섹션 4.6 참조) |
+
+**ON DELETE CASCADE 선택 근거:** 부모-자식은 논리적 단위이므로 함께 관리한다. 거래 기록 보존은 agents -> transactions의 `ON DELETE RESTRICT`에서 보장되므로, 부모 삭제 시 자식도 함께 삭제되어야 일관성이 유지된다.
+
 ---
 
 ## 5. SQLite 운영 가이드
@@ -1851,6 +1900,7 @@ export const sessions = sqliteTable('sessions', {
 
 // ══════════════════════════════════════════
 // transactions (v0.6: TransactionType CHECK, 감사 컬럼 4개, 인덱스 2개 추가)
+// (v0.10: parent_id + batch_index 추가, PARTIAL_FAILURE 상태 추가)
 // ══════════════════════════════════════════
 export const transactions = sqliteTable('transactions', {
   id: text('id').primaryKey(),
@@ -1870,8 +1920,12 @@ export const transactions = sqliteTable('transactions', {
   methodSignature: text('method_signature'),                                // (v0.6 추가) 감사 컬럼
   spenderAddress: text('spender_address'),                                  // (v0.6 추가) 감사 컬럼
   approvedAmount: text('approved_amount'),                                  // (v0.6 추가) 감사 컬럼
+  // ── 배치 관련 [v0.10 추가] ──
+  parentId: text('parent_id')
+    .references(() => transactions.id, { onDelete: 'cascade' }),            // (v0.10 추가) 부모 배치 TX
+  batchIndex: integer('batch_index'),                                        // (v0.10 추가) 배치 내 순서
   status: text('status', {
-    enum: ['PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED']
+    enum: ['PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'PARTIAL_FAILURE']  // (v0.10 추가) PARTIAL_FAILURE
   }).notNull().default('PENDING'),
   tier: text('tier', {
     enum: ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL']
@@ -1889,6 +1943,7 @@ export const transactions = sqliteTable('transactions', {
   index('idx_transactions_created_at').on(table.createdAt),
   index('idx_transactions_type').on(table.type),                            // (v0.6 추가)
   index('idx_transactions_contract_address').on(table.contractAddress),      // (v0.6 추가)
+  index('idx_transactions_parent_id').on(table.parentId),                    // (v0.10 추가)
 ]);
 
 // ══════════════════════════════════════════
