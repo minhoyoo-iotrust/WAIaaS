@@ -4,6 +4,7 @@
 **작성일:** 2026-02-05
 **v0.6 업데이트:** 2026-02-08
 **v0.8 업데이트:** 2026-02-08
+**v0.10 업데이트:** 2026-02-09
 **상태:** 완료
 **참조:** SESS-PROTO (30-session-token-protocol.md), CHAIN-SOL (31-solana-adapter-detail.md), CORE-02 (25-sqlite-schema.md), CORE-04 (27-chain-adapter-interface.md), CORE-06 (29-api-framework-design.md), ENUM-MAP (45-enum-unified-mapping.md), CHAIN-EXT-01~08 (56~63), objectives/v0.8-optional-owner-progressive-security.md
 **요구사항:** API-02 (지갑 엔드포인트), API-03 (세션 엔드포인트), API-04 (거래 엔드포인트)
@@ -737,6 +738,167 @@ await insertAuditLog(db, {
 - Owner 승인 후 Stage 5a부터 재실행한다 (새 blockhash 필요)
 - 승인 시점의 blockhash를 사용해야 하므로 이전 빌드 결과 재사용 불가
 - Phase 8에서 승인 트리거 -> Stage 5 재진입 로직 상세화
+
+#### [v0.10] Stage 5 통합 실행 루프 (CONC-01)
+
+위 Stage 5a-5d 개별 단계를 하나의 `executeStage5()` 실행 루프로 통합하여, ChainError category 기반 에러 분기와 티어별 타임아웃을 포함한 완전한 의사코드를 정의한다. 구현자는 이 `executeStage5()` 함수를 기반으로 Stage 5 실행 로직을 작성한다.
+
+> **SSoT:** 27-chain-adapter SS4.5 ChainError category + 복구 전략 테이블이 에러 분기 로직의 단일 진실 공급원(SSoT)이다. 이 의사코드는 해당 SSoT의 **소비자**이며, `err.category` 필드로 PERMANENT/TRANSIENT/STALE 3-분기를 수행한다.
+
+```typescript
+// [v0.10] Stage 5 통합 실행 루프
+// SSoT: 27-chain-adapter SS4.5 ChainError category + 복구 전략 테이블
+
+interface Stage5Options {
+  txId: string
+  request: TransactionRequest  // 5-type discriminatedUnion
+  tier: 'INSTANT' | 'NOTIFY' | 'DELAY' | 'APPROVAL'
+  adapter: IChainAdapter
+  keyStore: ILocalKeyStore
+  agentId: string
+  sqlite: Database.Database  // better-sqlite3
+}
+
+async function executeStage5(opts: Stage5Options): Promise<SubmitResult> {
+  const { txId, request, tier, adapter, keyStore, agentId, sqlite } = opts
+
+  // 티어별 타임아웃 (아래 "Stage 5 티어별 타임아웃" 테이블 참조)
+  const timeoutMs = (tier === 'INSTANT' || tier === 'NOTIFY') ? 30_000 : 60_000
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+  let retryCount = 0
+
+  try {
+    // 외부 재시도 루프 (STALE은 여기로 복귀)
+    buildLoop:
+    while (!controller.signal.aborted) {
+      try {
+        // Stage 5a: build
+        const unsignedTx = await buildByType(adapter, request, agentId)
+
+        // Stage 5b: simulate
+        const simResult = await adapter.simulateTransaction(unsignedTx)
+        if (!simResult.success) {
+          throw new ChainError({
+            code: 'SIMULATION_FAILED',
+            chain: request.chain,
+            message: simResult.error ?? '시뮬레이션 실패',
+            category: 'TRANSIENT',
+          })
+        }
+
+        // DB 상태 전이: QUEUED -> EXECUTING (CAS 패턴)
+        transitionTo(sqlite, txId, 'QUEUED', 'EXECUTING')
+
+        // Stage 5c: sign (guarded memory)
+        const privateKey = await keyStore.getPrivateKey(agentId)
+        let signedTx: SignedTransaction
+        try {
+          signedTx = await adapter.signTransaction(unsignedTx, privateKey)
+        } finally {
+          sodium_memzero(privateKey)  // 서명 후 즉시 키 제거
+        }
+
+        // Stage 5d: submit
+        const submitResult = await adapter.submitTransaction(signedTx)
+
+        // DB 상태 전이: EXECUTING -> SUBMITTED
+        transitionTo(sqlite, txId, 'EXECUTING', 'SUBMITTED', {
+          txHash: submitResult.txHash
+        })
+
+        return submitResult
+
+      } catch (err) {
+        if (controller.signal.aborted) {
+          // 타임아웃으로 인한 abort
+          transitionTo(sqlite, txId, 'EXECUTING', 'FAILED', {
+            error: `STAGE5_TIMEOUT (${timeoutMs}ms)`
+          })
+          throw new WaiaasError('STAGE5_TIMEOUT', `Stage 5 타임아웃 (${timeoutMs}ms)`, 408)
+        }
+
+        if (!(err instanceof ChainError)) throw err
+
+        switch (err.category) {
+          case 'PERMANENT':
+            // 즉시 실패, 재시도 없음
+            transitionTo(sqlite, txId, 'EXECUTING', 'FAILED', {
+              error: err.code
+            })
+            throw err
+
+          case 'TRANSIENT':
+            if (retryCount >= 3) {
+              transitionTo(sqlite, txId, 'EXECUTING', 'FAILED', {
+                error: `${err.code} (max retries exceeded)`
+              })
+              throw err
+            }
+            // EVM_GAS_TOO_LOW: gas limit 1.2x 상향 후 Stage 5a 재빌드
+            if (err.code === 'EVM_GAS_TOO_LOW') {
+              retryCount++
+              continue buildLoop  // Stage 5a로 복귀 (재빌드)
+            }
+            // 일반 TRANSIENT: 지수 백오프 후 실패한 단계에서 재시도
+            await sleep(1000 * Math.pow(2, retryCount))  // 1s, 2s, 4s
+            retryCount++
+            continue  // 실패한 단계에서 재시도
+
+          case 'STALE':
+            if (retryCount >= 1) {
+              transitionTo(sqlite, txId, 'EXECUTING', 'FAILED', {
+                error: `${err.code} (stale retry exhausted)`
+              })
+              throw err
+            }
+            retryCount++
+            continue buildLoop  // Stage 5a로 복귀 (새 blockhash/nonce로 재빌드)
+        }
+      }
+    }
+
+    // AbortController에 의한 루프 종료
+    throw new WaiaasError('STAGE5_TIMEOUT', `Stage 5 타임아웃 (${timeoutMs}ms)`, 408)
+
+  } finally {
+    clearTimeout(timer)
+  }
+}
+```
+
+**핵심 설명 노트:**
+
+- **`buildByType(adapter, request, agentId)`**: `executeStage5()` 내부에서 `request.type`에 따라 `adapter.buildTransfer()` / `adapter.buildContractCall()` / `adapter.buildApprove()` / `adapter.buildBatch()` 분기. 5-type discriminatedUnion의 `type` 필드가 결정. Stage 5a 개별 설명의 switch문 참조.
+- **`transitionTo(sqlite, txId, fromState, toState, metadata?)`**: `BEGIN IMMEDIATE` 트랜잭션 내에서 `UPDATE transactions SET status = :toState WHERE id = :txId AND status = :fromState` 실행. `changes === 0`이면 상태 불일치 에러. CAS(Compare-And-Swap) 패턴으로 동시 접근 안전성 보장. 섹션 2.4의 `validateTransition()`과 동일한 허용 전이 매트릭스 준수.
+- **TRANSIENT 재시도 단계 규칙**: `err.category === 'TRANSIENT'`일 때 **실패한 단계에서** 재시도한다. simulate(5b)에서 `RPC_ERROR` 발생 시 simulate만 재시도. submit(5d)에서 `NETWORK_ERROR` 발생 시 submit만 재시도. build(5a)와 sign(5c)은 로컬 연산이므로 TRANSIENT 에러가 발생하지 않는다 (27-chain-adapter SS4.5 참조).
+- **STALE 재시도 규칙**: `err.category === 'STALE'`일 때 반드시 **Stage 5a(buildTransaction)**부터 재실행한다. 동일 빌드 결과를 재제출하면 같은 STALE 에러가 반복된다 (blockhash 만료, nonce 충돌).
+- **DELAY/APPROVAL 티어의 재진입**: 동일한 `executeStage5()`를 호출하되 tier 파라미터로 60초 타임아웃이 적용된다. 재진입 트리거 자체는 Stage 4(APPROVAL 승인 대기)에서 관리한다.
+- **AbortController signal**: `executeStage5()` 내부에서 각 단계 시작 전 `controller.signal.aborted` 검사로 타임아웃을 감지한다. IChainAdapter 메서드 시그니처 변경(`signal` 파라미터 추가)은 구현 단계 검토 사항.
+
+**[v0.10] Stage 5 티어별 타임아웃:**
+
+| 티어 | 타임아웃 | 근거 |
+|------|:--------:|------|
+| INSTANT | 30초 | Solana blockhash ~60초 수명의 절반. 빠른 실패 원칙 |
+| NOTIFY | 30초 | INSTANT과 동일. 알림은 Stage 4에서 발송 |
+| DELAY | 60초 | 시간 지연 후 실행이므로 새 blockhash로 빌드. 여유 확보 |
+| APPROVAL | 60초 | 승인 후 새 blockhash로 빌드. 여유 확보 |
+
+> 기존 SS5 타임아웃 항목("Stage 5 전체 30초")은 INSTANT 티어 기준이며, 위 테이블이 전체 티어별 타임아웃의 SSoT이다.
+
+**[v0.10] Stage 5 에러 분기 요약:**
+
+| 에러 발생 단계 | 카테고리 | 재시도 행동 | 재시도 시작 | 최대 횟수 |
+|--------------|----------|-----------|:---------:|:--------:|
+| 5b simulate | TRANSIENT | 지수 백오프 대기 후 5b 재시도 | 5b | 3 |
+| 5d submit | TRANSIENT | 지수 백오프 대기 후 5d 재시도 | 5d | 3 |
+| 5d submit | STALE | 즉시 5a로 복귀 (재빌드) | 5a | 1 |
+| 어디든 | PERMANENT | 즉시 FAILED, 재시도 없음 | - | 0 |
+| 5a build (EVM) | TRANSIENT (GAS_TOO_LOW) | gas 1.2x 상향 후 5a 재빌드 | 5a | 1 |
+
+> **Note:** `executeStage5()` 내 `retryCount`는 TRANSIENT과 STALE을 합산한다. 예를 들어 STALE로 1회 재빌드 후 동일 실행에서 TRANSIENT이 발생하면 `retryCount`는 이미 1이므로 TRANSIENT 재시도는 최대 2회까지만 가능하다. 이는 전체 재시도 횟수를 제한하여 타임아웃 내에서 완료를 보장한다.
 
 ---
 
@@ -2475,5 +2637,6 @@ export type TransactionRequest = z.infer<typeof TransactionRequestSchema>
 *작성일: 2026-02-05*
 *v0.6 업데이트: 2026-02-08*
 *v0.8 업데이트: 2026-02-08*
+*v0.10 업데이트: 2026-02-09 -- SS5: Stage 5 통합 실행 루프 의사코드 + 에러 분기 + 티어별 타임아웃 추가 (CONC-01)*
 *Phase: 07-session-transaction-protocol-design*
 *상태: 완료*

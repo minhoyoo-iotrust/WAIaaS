@@ -2,7 +2,7 @@
 
 **Status:** In progress
 **Phases:** 41-44
-**Total Plans:** 2 (Phase 41) + 2 (Phase 42) + 3 (Phase 43) + TBD (Phase 44)
+**Total Plans:** 2 (Phase 41) + 2 (Phase 42) + 3 (Phase 43) + 3 (Phase 44) = 10
 
 ## Overview
 
@@ -17,7 +17,7 @@ v0.2~v0.9에서 작성한 30개 설계 문서의 교차 지점에서 구현자�
 
 - [x] **Phase 41: 정책 엔진 완결** - PolicyRuleSchema 교차 참조 정리, Owner 상태 전이 확정, APPROVAL 타임아웃 우선순위 명시 ✓ (2026-02-09)
 - [x] **Phase 42: 에러 처리 체계 완결** - 66개 에러 코드 통합 매트릭스, ChainError 3-카테고리 분류, PolicyType enum 10개 확장 ✓ (2026-02-09)
-- [ ] **Phase 43: 동시성 + 실행 로직 완결** - Stage 5 완전 의사코드, 세션 갱신 낙관적 잠금, Kill Switch ACID 전이
+- [x] **Phase 43: 동시성 + 실행 로직 완결** - Stage 5 완전 의사코드, 세션 갱신 낙관적 잠금, Kill Switch ACID 전이 ✓ (2026-02-09)
 - [ ] **Phase 44: 운영 로직 완결** - 데몬 6단계 타임아웃, Batch 부모-자식 DB 전략, Oracle 다중 소스 충돌 해결
 
 ## Phase Details
@@ -74,16 +74,16 @@ Plans:
 3. 36-killswitch §3.1의 모든 상태 전이(NORMAL->ACTIVATED, ACTIVATED->RECOVERING, RECOVERING->NORMAL)에 `WHERE value = :expectedState` 조건이 포함된 ACID 패턴이 정의되어 있다
 
 Plans:
-- [ ] 43-01-PLAN.md -- Stage 5 통합 실행 루프 의사코드 + 에러 분기 + 티어별 타임아웃 (CONC-01)
-- [ ] 43-02-PLAN.md -- 세션 갱신 낙관적 잠금 + RENEWAL_CONFLICT(409) 에러 (CONC-02)
-- [ ] 43-03-PLAN.md -- Kill Switch 4개 상태 전이 CAS ACID 패턴 (CONC-03)
+- [x] 43-01-PLAN.md -- Stage 5 통합 실행 루프 의사코드 + 에러 분기 + 티어별 타임아웃 (CONC-01)
+- [x] 43-02-PLAN.md -- 세션 갱신 낙관적 잠금 + RENEWAL_CONFLICT(409) 에러 (CONC-02)
+- [x] 43-03-PLAN.md -- Kill Switch 4개 상태 전이 CAS ACID 패턴 (CONC-03)
 
 ### Phase 44: 운영 로직 완결
 
 **Goal**: 구현자가 데몬 시작 절차, Batch 트랜잭션 저장, Price Oracle 충돌 해결을 추측 없이 구현할 수 있다
 **Depends on**: Phase 41 (PLCY-01의 25-sqlite 수정이 OPER-02 parent_id/batch_index 컬럼 추가와 동일 문서)
 **Requirements**: OPER-01, OPER-02, OPER-03
-**Plans**: TBD
+**Plans**: 3 plans
 
 **대상 설계 문서:** 28-daemon-lifecycle-cli.md, 60-batch-transaction-spec.md, 25-sqlite-schema.md, 61-price-oracle-spec.md
 
@@ -92,6 +92,11 @@ Plans:
 2. 60-batch-tx §4에 부모-자식 2계층 DB 저장 전략(부모 type=BATCH, 자식 parent_id + batch_index)이 정의되어 있고, PARTIAL_FAILURE 상태 전이(EVM 부분 실패 시)가 명시되어 있다
 3. 25-sqlite에 transactions 테이블의 parent_id TEXT REFERENCES transactions(id) + batch_index INTEGER 컬럼이 추가되어 있다
 4. 61-price-oracle §3.6에 다중 소스 10% 괴리 시 보수적 선택(높은 가격 채택) 로직이 정의되어 있고, stale(>30분) 가격 시 USD 평가 스킵 -> 네이티브 금액 전용 평가 정책이 명시되어 있다
+
+Plans:
+- [ ] 44-01-PLAN.md -- 데몬 시작 단계별 타임아웃 + fail-fast/soft 정책 + 90초 상한 (OPER-01)
+- [ ] 44-02-PLAN.md -- 배치 부모-자식 2계층 DB 저장 전략 + parent_id/batch_index 컬럼 + PARTIAL_FAILURE (OPER-02)
+- [ ] 44-03-PLAN.md -- 다중 소스 교차 검증 인라인 + 가격 나이별 3단계 stale 정책 (OPER-03)
 
 ## Progress
 
@@ -109,8 +114,8 @@ Phase 41 (정책 엔진) ---> Phase 42 (에러 처리) ---> Phase 43 (동시성/
 |-------|----------------|--------|-----------|
 | 41. 정책 엔진 완결 | 2/2 | Complete ✓ | 2026-02-09 |
 | 42. 에러 처리 체계 완결 | 2/2 | Complete ✓ | 2026-02-09 |
-| 43. 동시성 + 실행 로직 완결 | 0/3 | Planned | - |
-| 44. 운영 로직 완결 | 0/TBD | Not started | - |
+| 43. 동시성 + 실행 로직 완결 | 3/3 | Complete ✓ | 2026-02-09 |
+| 44. 운영 로직 완결 | 0/3 | Not started | - |
 
 ---
 

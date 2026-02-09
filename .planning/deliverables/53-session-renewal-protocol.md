@@ -4,6 +4,7 @@
 **작성일:** 2026-02-07
 **v0.8 보완:** 2026-02-09
 **v0.9 보완:** 2026-02-09
+**v0.10 보완:** 2026-02-09 -- SS5: 낙관적 잠금(token_hash WHERE 조건) + RENEWAL_CONFLICT(409) 에러 추가 (CONC-02)
 **상태:** 완료
 **참조:** SESS-PROTO (30-session-token-protocol.md), AUTH-REDESIGN (52-auth-model-redesign.md), CORE-02 (25-sqlite-schema.md), NOTI-ARCH (35-notification-architecture.md), CORE-01 (24-monorepo-data-directory.md)
 **요구사항:** SESS-01 (갱신 API 스펙), SESS-02 (안전 장치 5종), SESS-04 (SessionConstraints 확장), SESS-05 (Owner 거부 + 알림)
@@ -241,6 +242,9 @@ export const renewSessionRoute = createRoute({
     404: {
       description: 'SESSION_NOT_FOUND',
     },
+    409: {
+      description: '[v0.10] RENEWAL_CONFLICT -- 동시 갱신으로 token_hash 불일치 (낙관적 잠금 실패)',
+    },
   },
 })
 ```
@@ -254,6 +258,7 @@ export const renewSessionRoute = createRoute({
 | `RENEWAL_TOO_EARLY` | 403 | Guard 3 검증 | 현재 세션 기간의 50% 미경과 | true (시간 경과 후 재시도) |
 | `SESSION_RENEWAL_MISMATCH` | 403 | 세션 일치 확인 | JWT의 sid와 요청의 :id 불일치 (타인의 세션 갱신 시도) | false |
 | `SESSION_NOT_FOUND` | 404 | DB 조회 | 세션 ID가 존재하지 않음 | false |
+| `RENEWAL_CONFLICT` | 409 | DB 업데이트 | [v0.10] 동시 갱신으로 token_hash 불일치 (낙관적 잠금 실패) | false |
 
 **참고:** `AUTH_TOKEN_MISSING`, `AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`, `SESSION_REVOKED`는 sessionAuth 미들웨어에서 발생하는 기존 에러 코드 (SESS-PROTO 섹션 8.5 참조).
 
@@ -547,11 +552,12 @@ JWT는 서명된 불변(immutable) 토큰이다. `exp` claim을 변경하면 서
    │
 5. BEGIN IMMEDIATE 트랜잭션
    │  UPDATE sessions SET
-   │    token_hash = newTokenHash,
-   │    expires_at = now + expiresIn,
+   │    token_hash = :newTokenHash,
+   │    expires_at = :newExpiresAt,
    │    renewal_count = renewal_count + 1,
-   │    last_renewed_at = now
-   │  WHERE id = :id
+   │    last_renewed_at = :now
+   │  WHERE id = :id AND token_hash = :currentTokenHash
+   │  -- [v0.10] changes === 0 -> RENEWAL_CONFLICT(409)
    │
 6. 응답 반환
    │  { sessionId, token: `wai_sess_${newJwt}`, expiresAt, ... }
@@ -581,6 +587,22 @@ JWT는 서명된 불변(immutable) 토큰이다. `exp` claim을 변경하면 서
 5. 401 AUTH_TOKEN_INVALID 반환
 
 결과: 첫 번째 갱신만 성공하고, 두 번째는 자연스럽게 거부된다. 별도의 동시성 제어 코드가 불필요하다.
+
+[v0.10] **낙관적 잠금 강화:**
+
+BEGIN IMMEDIATE는 동시 WRITE 충돌(SQLITE_BUSY)을 방지하지만, 다음 시나리오를 해결하지 못한다:
+1. 요청 A가 세션을 SELECT로 읽고 token_hash_A를 확인
+2. 요청 B가 같은 세션을 SELECT로 읽고 동일한 token_hash_A를 확인
+3. 요청 A가 UPDATE 실행 -> token_hash를 hash_B로 변경 -> 성공
+4. 요청 B가 UPDATE 실행 -> token_hash를 hash_C로 변경 -> 성공 (hash_B를 덮어씀!)
+
+요청 A가 발급한 토큰(hash_B)이 무효화되는데, 요청 A의 클라이언트는 이를 모른다.
+
+**해결:** UPDATE의 WHERE 절에 `token_hash = :currentTokenHash`를 추가하여, 조회 시점과 갱신 시점의 token_hash가 동일할 때만 UPDATE가 성공한다. `changes === 0`이면 다른 요청이 먼저 갱신한 것이므로 RENEWAL_CONFLICT(409)를 반환한다.
+
+이 패턴은 34-owner-wallet-connection의 `markOwnerVerified()` CAS와 동일한 프로젝트 내 선례를 따른다:
+- markOwnerVerified: `WHERE id = ? AND owner_verified = 0` -> `changes === 0`이면 이미 LOCKED (Idempotent)
+- renewSession: `WHERE id = :id AND token_hash = :currentTokenHash` -> `changes === 0`이면 RENEWAL_CONFLICT(409)
 
 ### 5.5 갱신 서비스 코드 패턴
 
@@ -647,23 +669,53 @@ async function renewSession(
   // 4. 새 token_hash 계산
   const newTokenHash = createHash('sha256').update(newToken).digest('hex')
 
-  // 5. DB 원자적 업데이트
+  // 5. DB 원자적 업데이트 (낙관적 잠금)
+  const currentTokenHash = session.token_hash  // [v0.10] 조회 시점 token_hash 보존
   const newExpiresAt = now + expiresIn
-  const newRenewalCount = session.renewal_count + 1
   const maxRenewals = constraints.maxRenewals ?? config.default_max_renewals
 
   const updateTx = sqlite.transaction(() => {
-    sqlite.prepare(`
+    // [v0.10] WHERE 절에 token_hash = :currentTokenHash 낙관적 잠금 추가
+    // renewal_count는 renewal_count + 1로 원자적 증가 (애플리케이션 계산이 아닌 DB 수준)
+    const result = sqlite.prepare(`
       UPDATE sessions SET
-        token_hash = ?,
-        expires_at = ?,
-        renewal_count = ?,
-        last_renewed_at = ?
-      WHERE id = ?
-    `).run(newTokenHash, newExpiresAt, newRenewalCount, now, sessionId)
+        token_hash = :newTokenHash,
+        expires_at = :newExpiresAt,
+        renewal_count = renewal_count + 1,
+        last_renewed_at = :now
+      WHERE id = :id AND token_hash = :currentTokenHash
+    `).run({
+      newTokenHash,
+      newExpiresAt,
+      now,
+      id: sessionId,
+      currentTokenHash,
+    })
+
+    // [v0.10] 낙관적 잠금 실패 감지: 다른 요청이 먼저 token_hash를 교체함
+    if (result.changes === 0) {
+      throw new RenewalConflictError()
+    }
   })
 
-  updateTx.immediate()
+  try {
+    updateTx.immediate()  // BEGIN IMMEDIATE
+  } catch (err) {
+    if (err instanceof RenewalConflictError) {
+      return {
+        success: false,
+        error: {
+          code: 'RENEWAL_CONFLICT',
+          message: '다른 요청이 먼저 세션을 갱신했습니다. 새 토큰으로 재시도하세요.',
+          status: 409,
+          retryable: false,
+        },
+      }
+    }
+    throw err
+  }
+
+  const newRenewalCount = session.renewal_count + 1
 
   // 6. 감사 로그
   sqlite.prepare(`
@@ -694,6 +746,38 @@ async function renewSession(
   }
 }
 ```
+
+### 5.5.1 [v0.10] RENEWAL_CONFLICT 에러 코드
+
+| 필드 | 값 |
+|------|-----|
+| code | RENEWAL_CONFLICT |
+| HTTP | 409 Conflict |
+| domain | SESSION |
+| retryable | false |
+| message | "다른 요청이 먼저 세션을 갱신했습니다. 새 토큰으로 재시도하세요." |
+
+**클라이언트 처리 가이드:**
+- 409를 받은 클라이언트는 구 토큰으로 재시도하면 안 된다 (이미 무효화됨)
+- 새 API 호출로 현재 세션 상태를 확인하거나, 다른 세션 생성이 필요
+- AI 에이전트의 단일 프로세스 환경에서 동시 갱신은 거의 발생하지 않음 -- 이 패턴은 방어적 설계
+
+**Note:** 이 에러 코드는 37-rest-api SS10.12 통합 매트릭스에도 등록되어야 한다. 구현 시 SS10.12에 SESSION 도메인 행으로 추가.
+
+**Hono 라우트 응답 확장 (섹션 3.6 보완):**
+
+기존 `renewSessionRoute.responses`에 409를 추가:
+```typescript
+409: {
+  description: 'RENEWAL_CONFLICT -- 다른 요청이 먼저 세션을 갱신함 (낙관적 잠금 실패)',
+},
+```
+
+**에러 코드 요약표 확장 (섹션 3.7 보완):**
+
+| 에러 코드 | HTTP 상태 | 발생 시점 | 설명 | retryable |
+|----------|----------|----------|------|-----------|
+| `RENEWAL_CONFLICT` | 409 | DB 업데이트 | 동시 갱신으로 token_hash 불일치 (낙관적 잠금 실패) | false |
 
 ---
 
@@ -1326,5 +1410,6 @@ export const SecurityConfigSchema = z.object({
 *문서 ID: SESS-RENEW*
 *작성일: 2026-02-07*
 *v0.9 보완: 2026-02-09*
+*v0.10 보완: 2026-02-09 -- SS5: 낙관적 잠금(token_hash WHERE 조건) + RENEWAL_CONFLICT(409) 에러 추가 (CONC-02)*
 *Phase: 20-session-renewal-protocol*
 *상태: 완료*

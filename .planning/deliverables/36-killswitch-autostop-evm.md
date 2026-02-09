@@ -4,6 +4,7 @@
 **작성일:** 2026-02-05
 **v0.7 보완:** 2026-02-08
 **v0.8 보완:** 2026-02-09
+**v0.10 보완:** 2026-02-09
 **상태:** 완료
 **참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), OWNR-CONN (34-owner-wallet-connection.md), NOTI-ARCH (35-notification-architecture.md), CORE-04 (27-chain-adapter-interface.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-03 (26-keystore-spec.md)
 
@@ -264,8 +265,11 @@ sequenceDiagram
     Trigger->>KS: activate(reason, actor)
     activate KS
 
-    Note over KS: 상태 전이: NORMAL -> ACTIVATED
-    KS->>KS: system_state UPDATE<br/>kill_switch_status = 'ACTIVATED'
+    Note over KS: [v0.10] CAS 상태 전이: NORMAL -> ACTIVATED
+    KS->>KS: system_state UPDATE<br/>SET value = 'ACTIVATED'<br/>WHERE key = 'kill_switch_status'<br/>AND value = 'NORMAL'
+    alt changes === 0
+        KS-->>Trigger: 409 KILL_SWITCH_ALREADY_ACTIVE
+    end
 
     rect rgb(255, 235, 235)
         Note over KS,Audit: Step 1-3: SQLite BEGIN IMMEDIATE (원자적)
@@ -303,6 +307,30 @@ sequenceDiagram
     KS-->>Trigger: KillSwitchResult
     deactivate KS
 ```
+
+### 3.1.1 [v0.10] CAS (Compare-And-Swap) 패턴 원칙
+
+> **CONC-03:** Kill Switch 상태 전이의 동시성 안전성 확보. 선례: 34-owner-wallet-connection markOwnerVerified() `WHERE owner_verified = 0` + changes 확인.
+
+1. CAS UPDATE는 BEGIN IMMEDIATE 트랜잭션의 **첫 번째 문장**이어야 한다
+2. `changes === 0`이면 즉시 throw -- 이후 캐스케이드 로직이 실행되지 않음
+3. 현재 상태가 예상과 다른 경우, SELECT로 실제 상태를 조회하여 적절한 에러 코드를 선택한다
+4. CAS 범위는 `kill_switch_status` 전이에만 적용한다. Step 1-3 캐스케이드(세션 폐기, 거래 취소, 에이전트 정지)는 동일 트랜잭션 내에서 원자적으로 실행되므로 별도 CAS 불필요
+5. 선례: 34-owner-wallet-connection markOwnerVerified() `WHERE owner_verified = 0` + changes 확인
+
+### 3.1.2 [v0.10] Kill Switch CAS 에러 코드
+
+| 전이 시도 | CAS 실패 원인 | 에러 코드 | HTTP |
+|----------|-------------|----------|:----:|
+| NORMAL -> ACTIVATED | 이미 ACTIVATED 또는 RECOVERING | KILL_SWITCH_ALREADY_ACTIVE | 409 |
+| ACTIVATED -> RECOVERING | 이미 NORMAL (비활성) | KILL_SWITCH_NOT_ACTIVE | 409 |
+| ACTIVATED -> RECOVERING | 이미 RECOVERING (중복 복구) | RECOVERY_ALREADY_STARTED | 409 |
+| RECOVERING -> NORMAL | 복구 중 재발동으로 상태 변경됨 | INVALID_RECOVERY_STATE | 409 |
+| RECOVERING -> ACTIVATED | 복구 중 다른 전이로 상태 변경됨 | INVALID_RECOVERY_STATE | 409 |
+
+모든 CAS 실패는 HTTP 409 Conflict로 반환한다. 이는 "클라이언트 요청은 올바르나, 현재 서버 상태와 충돌"을 의미한다.
+
+**Note:** 이 에러 코드들은 37-rest-api SS10.12 통합 매트릭스에도 등록되어야 한다. 구현 시 SYSTEM 도메인 행으로 추가.
 
 ### 3.2 6단계 상세
 
@@ -443,6 +471,48 @@ await insertAuditLog(db, {
 - Step 4-6은 순차 실행하되 개별 실패가 다음 단계를 블로킹하지 않음
 - system_state의 `kill_switch_status`는 Step 1-3 트랜잭션 내에서 ACTIVATED로 변경
 
+#### 3.3.1 [v0.10] activate() CAS 트랜잭션 전체 의사코드 (CONC-03)
+
+```typescript
+// [v0.10] CAS (Compare-And-Swap) 패턴: NORMAL -> ACTIVATED
+// 선례: 34-owner-wallet markOwnerVerified() WHERE owner_verified = 0
+const activateTx = sqlite.transaction(() => {
+  // CAS: 현재 상태가 NORMAL일 때만 ACTIVATED로 전이
+  const result = sqlite.prepare(`
+    UPDATE system_state
+    SET value = '"ACTIVATED"', updated_at = :now
+    WHERE key = 'kill_switch_status' AND value = '"NORMAL"'
+  `).run({ now: nowEpoch })
+
+  if (result.changes === 0) {
+    // 이미 ACTIVATED이거나 RECOVERING 상태
+    throw new KillSwitchAlreadyActiveError()
+  }
+
+  // Step 1: 모든 활성 세션 폐기
+  sqlite.prepare(`
+    UPDATE sessions SET revoked_at = :now WHERE revoked_at IS NULL
+  `).run({ now: nowEpoch })
+
+  // Step 2: 진행 중 거래 취소 (QUEUED/EXECUTING -> CANCELLED)
+  sqlite.prepare(`
+    UPDATE transactions SET status = 'CANCELLED', updated_at = :now
+    WHERE status IN ('QUEUED', 'EXECUTING')
+  `).run({ now: nowEpoch })
+
+  // Step 3: 감사 로그
+  sqlite.prepare(`
+    INSERT INTO audit_log (id, event_type, actor, severity, details, timestamp)
+    VALUES (:id, 'KILL_SWITCH_ACTIVATED', 'system', 'critical',
+            :details, :now)
+  `).run({ id: generateUuidV7(), details: JSON.stringify({ trigger: reason }), now: nowEpoch })
+})
+
+activateTx.immediate()  // BEGIN IMMEDIATE로 직렬화
+```
+
+**핵심:** CAS UPDATE가 트랜잭션의 **첫 번째 문장**이어야 한다. `changes === 0`이면 즉시 throw하여 이후 캐스케이드(세션 폐기, 거래 취소)가 실행되지 않는다.
+
 ### 3.4 KillSwitchService 인터페이스
 
 ```typescript
@@ -535,8 +605,16 @@ sequenceDiagram
         KS-->>Owner: 409 KILL_SWITCH_NOT_ACTIVE
     end
 
-    Note over KS: 상태 전이: ACTIVATED -> RECOVERING
-    KS->>KS: system_state UPDATE<br/>kill_switch_status = 'RECOVERING'
+    Note over KS: [v0.10] CAS 상태 전이: ACTIVATED -> RECOVERING
+    KS->>KS: system_state UPDATE<br/>SET value = 'RECOVERING'<br/>WHERE key = 'kill_switch_status'<br/>AND value = 'ACTIVATED'
+    alt changes === 0 (CAS 실패)
+        KS->>KS: SELECT value로 현재 상태 조회
+        alt NORMAL
+            KS-->>Owner: 409 KILL_SWITCH_NOT_ACTIVE
+        else RECOVERING
+            KS-->>Owner: 409 RECOVERY_ALREADY_STARTED
+        end
+    end
 
     KS->>Key: Step 1: 키스토어 잠금 해제 시도
     Key->>Key: Argon2id 키 파생<br/>(masterPassword + salt)
@@ -549,7 +627,8 @@ sequenceDiagram
             KS->>KS: 30분 lockout 설정
             KS-->>Owner: 429 TOO_MANY_ATTEMPTS
         else
-            KS->>KS: system_state -> ACTIVATED (복구 실패)
+            Note over KS: [v0.10] CAS 롤백: RECOVERING -> ACTIVATED
+            KS->>KS: system_state UPDATE<br/>SET value = 'ACTIVATED'<br/>WHERE key = 'kill_switch_status'<br/>AND value = 'RECOVERING'
             KS-->>Owner: 401 INVALID_MASTER_PASSWORD
         end
     end
@@ -561,8 +640,12 @@ sequenceDiagram
     Agent->>Agent: UPDATE agents<br/>SET status='ACTIVE',<br/>suspended_at=NULL,<br/>suspension_reason=NULL<br/>WHERE suspension_reason LIKE 'KILL_SWITCH%'<br/>AND status='SUSPENDED'
     Agent-->>KS: agentsReactivated: N건
 
-    Note over KS: Step 3: 상태 전이: RECOVERING -> NORMAL
-    KS->>KS: system_state UPDATE<br/>kill_switch_status = 'NORMAL'<br/>kill_switch_activated_at = NULL<br/>kill_switch_reason = NULL
+    Note over KS: [v0.10] Step 3: CAS 상태 전이: RECOVERING -> NORMAL
+    KS->>KS: system_state UPDATE<br/>SET value = 'NORMAL'<br/>WHERE key = 'kill_switch_status'<br/>AND value = 'RECOVERING'
+    alt changes === 0 (CAS 실패)
+        KS-->>Owner: 409 INVALID_RECOVERY_STATE
+    end
+    KS->>KS: kill_switch 관련 상태 초기화
 
     KS->>Noti: Step 4: 복구 알림
     Noti->>Noti: broadcast({<br/>  level: 'CRITICAL',<br/>  event: 'KILL_SWITCH_RECOVERED'<br/>})
@@ -739,12 +822,12 @@ SELECT 1 FROM agents WHERE owner_address IS NOT NULL LIMIT 1
 }
 ```
 
-**Kill Switch 상태 전이 (v0.8 확정):**
+**Kill Switch 상태 전이 (v0.8 확정, v0.10 CAS 보강):**
 ```
-NORMAL → ACTIVATED (발동: 기존 4가지 트리거)
-ACTIVATED → RECOVERING (Step 1: 복구 개시, 대기 시간 기록)
-RECOVERING → NORMAL (Step 2: 대기 완료 + masterAuth 재검증)
-RECOVERING → ACTIVATED (복구 실패: masterAuth 오류 / lockout)
+NORMAL → ACTIVATED (발동: 기존 4가지 트리거) [v0.10] WHERE value = '"NORMAL"'
+ACTIVATED → RECOVERING (Step 1: 복구 개시, 대기 시간 기록) [v0.10] WHERE value = '"ACTIVATED"'
+RECOVERING → NORMAL (Step 2: 대기 완료 + masterAuth 재검증) [v0.10] WHERE value = '"RECOVERING"'
+RECOVERING → ACTIVATED (복구 실패: masterAuth 오류 / lockout) [v0.10] WHERE value = '"RECOVERING"'
 ```
 
 #### 4.7.4 RecoverRequest 스키마 변경 [v0.8]
@@ -918,25 +1001,45 @@ private async initiateRecovery(
   const now = Math.floor(Date.now() / 1000)
   const recoveryEligibleAt = now + waitSeconds
 
-  // 5. system_state 업데이트 (ACTIVATED → RECOVERING)
-  const tx = this.db.transaction(() => {
-    setSystemState(this.db, 'kill_switch_status', 'RECOVERING')
+  // 5. [v0.10] CAS: ACTIVATED -> RECOVERING
+  const beginRecoveryTx = this.db.transaction(() => {
+    const result = this.db.prepare(`
+      UPDATE system_state
+      SET value = '"RECOVERING"', updated_at = :now
+      WHERE key = 'kill_switch_status' AND value = '"ACTIVATED"'
+    `).run({ now })
+
+    if (result.changes === 0) {
+      // 현재 상태 조회하여 적절한 에러 반환
+      const current = this.db.prepare(
+        'SELECT value FROM system_state WHERE key = ?'
+      ).get('kill_switch_status')
+
+      if (current?.value === '"NORMAL"') throw new KillSwitchNotActiveError()
+      if (current?.value === '"RECOVERING"') throw new RecoveryAlreadyStartedError()
+      throw new InvalidKillSwitchStateError()
+    }
+
     setSystemState(this.db, 'recovery_eligible_at', String(recoveryEligibleAt))
     setSystemState(this.db, 'recovery_wait_seconds', String(waitSeconds))
-  })
-  tx.immediate()
 
-  // 6. 감사 로그
-  await insertAuditLog(this.db, {
-    eventType: 'KILL_SWITCH_RECOVERY_STARTED',
-    actor: hasOwner ? 'owner' : 'admin',
-    severity: 'critical',
-    details: JSON.stringify({
-      hasOwner,
-      waitSeconds,
-      recoveryEligibleAt: new Date(recoveryEligibleAt * 1000).toISOString(),
-    }),
+    // 감사 로그 (동일 트랜잭션 내)
+    this.db.prepare(`
+      INSERT INTO audit_log (id, event_type, actor, severity, details, timestamp)
+      VALUES (:id, 'KILL_SWITCH_RECOVERY_STARTED', :actor, 'warning', :details, :now)
+    `).run({
+      id: generateUuidV7(),
+      actor: hasOwner ? 'owner' : 'admin',
+      details: JSON.stringify({
+        hasOwner,
+        waitSeconds,
+        recoveryEligibleAt: new Date(recoveryEligibleAt * 1000).toISOString(),
+      }),
+      now,
+    })
   })
+
+  beginRecoveryTx.immediate()
 
   return {
     status: 'RECOVERING',
@@ -964,9 +1067,77 @@ private async completeRecovery(
     })
   }
 
-  // 3. 실제 복구 수행 (기존 §4.2 시퀀스)
-  //    키스토어 해제 → 에이전트 복원 → NORMAL 전이
-  return this.executeRecovery()
+  // 3. [v0.10] CAS: RECOVERING -> NORMAL (실제 복구 수행)
+  const completeRecoveryTx = this.db.transaction(() => {
+    const result = this.db.prepare(`
+      UPDATE system_state
+      SET value = '"NORMAL"', updated_at = :now
+      WHERE key = 'kill_switch_status' AND value = '"RECOVERING"'
+    `).run({ now })
+
+    if (result.changes === 0) {
+      // 복구 중 다시 Kill Switch가 발동되었을 수 있음
+      throw new InvalidRecoveryStateError()
+    }
+
+    // kill_switch 관련 상태 초기화
+    setSystemState(this.db, 'kill_switch_activated_at', 'null')
+    setSystemState(this.db, 'kill_switch_reason', 'null')
+    setSystemState(this.db, 'recovery_eligible_at', 'null')
+    setSystemState(this.db, 'recovery_wait_seconds', 'null')
+
+    // 에이전트 재활성화 (KILL_SWITCH로 정지된 것만)
+    this.db.prepare(`
+      UPDATE agents
+      SET status = 'ACTIVE', suspended_at = NULL, suspension_reason = NULL
+      WHERE suspension_reason LIKE 'KILL_SWITCH%' AND status = 'SUSPENDED'
+    `).run()
+
+    // 감사 로그
+    this.db.prepare(`
+      INSERT INTO audit_log (id, event_type, actor, severity, details, timestamp)
+      VALUES (:id, 'KILL_SWITCH_RECOVERY_COMPLETED', 'owner', 'info', '{}', :now)
+    `).run({ id: generateUuidV7(), now })
+  })
+
+  completeRecoveryTx.immediate()
+
+  // 키스토어 해제 (트랜잭션 외부 -- 메모리 작업)
+  await this.keyStore.unlock(masterPassword)
+
+  return { recovered: true, timestamp: new Date().toISOString(), agentsReactivated: 0 }
+}
+
+// [v0.10] CAS: RECOVERING -> ACTIVATED (복구 실패 시 롤백)
+private rollbackRecovery(failureReason: string): void {
+  const rollbackRecoveryTx = this.db.transaction(() => {
+    const result = this.db.prepare(`
+      UPDATE system_state
+      SET value = '"ACTIVATED"', updated_at = :now
+      WHERE key = 'kill_switch_status' AND value = '"RECOVERING"'
+    `).run({ now: Math.floor(Date.now() / 1000) })
+
+    if (result.changes === 0) {
+      throw new InvalidRecoveryStateError()
+    }
+
+    // 대기 관련 상태 초기화
+    setSystemState(this.db, 'recovery_eligible_at', 'null')
+    setSystemState(this.db, 'recovery_wait_seconds', 'null')
+
+    // 감사 로그
+    this.db.prepare(`
+      INSERT INTO audit_log (id, event_type, actor, severity, details, timestamp)
+      VALUES (:id, 'KILL_SWITCH_RECOVERY_FAILED', 'owner', 'critical',
+              :details, :now)
+    `).run({
+      id: generateUuidV7(),
+      details: JSON.stringify({ reason: failureReason }),
+      now: Math.floor(Date.now() / 1000),
+    })
+  })
+
+  rollbackRecoveryTx.immediate()
 }
 ```
 
@@ -2181,3 +2352,16 @@ Phase 8 완료 후 미들웨어 체인 (CORE-06 대비 추가). v0.7에서 Rate 
 *Phase: 08-security-layers-design*
 *Deliverable: KILL-AUTO-EVM*
 *Requirements: NOTI-03, NOTI-04, NOTI-05, CHAIN-03*
+
+---
+
+**[v0.10] SS3.1/SS4: 모든 상태 전이에 CAS(Compare-And-Swap) ACID 패턴 추가 (CONC-03)**
+- SS3.1: NORMAL->ACTIVATED 전이에 `WHERE value = '"NORMAL"'` CAS 조건 추가
+- SS3.1.1: CAS 패턴 원칙 5항목 문서화
+- SS3.1.2: Kill Switch CAS 에러 코드 테이블 (5행, 모두 HTTP 409)
+- SS3.3.1: activate() 완전한 CAS 트랜잭션 의사코드
+- SS4.2: 복구 시퀀스 다이어그램에 CAS 조건 반영
+- SS4.7.8: initiateRecovery() ACTIVATED->RECOVERING CAS 추가
+- SS4.7.8: completeRecovery() RECOVERING->NORMAL CAS 추가
+- SS4.7.8: rollbackRecovery() RECOVERING->ACTIVATED CAS 추가 (신규)
+- 선례: 34-owner-wallet markOwnerVerified() WHERE owner_verified = 0
