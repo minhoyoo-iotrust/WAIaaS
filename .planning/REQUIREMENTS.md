@@ -9,9 +9,9 @@
 
 ### 정책 엔진 완결
 
-- [ ] **PLCY-01**: 25-sqlite §4.4 `rules` 컬럼의 "LOCK-MECH Phase에서 확정" 이연 표기를 제거하고, 33-time-lock §2.2 PolicyRuleSchema를 SSoT로 참조한다
-- [ ] **PLCY-02**: 34-owner §10에 GRACE 기간 정책(무기한)과 LOCKED 전이 트리거(ownerAuth Step 8.5 단일)를 명시하고, 33-time-lock §11.6 다운그레이드와의 우선순위를 확정한다
-- [ ] **PLCY-03**: 33-time-lock §4에 APPROVAL 타임아웃 결정 순서(정책별 > 글로벌 config > 하드코딩 3600초)를 명시한다
+- [x] **PLCY-01**: 25-sqlite §4.4 `rules` 컬럼의 "LOCK-MECH Phase에서 확정" 이연 표기를 제거하고, 33-time-lock §2.2 PolicyRuleSchema를 SSoT로 참조한다
+- [x] **PLCY-02**: 34-owner §10에 GRACE 기간 정책(무기한)과 LOCKED 전이 트리거(ownerAuth Step 8.5 단일)를 명시하고, 33-time-lock §11.6 다운그레이드와의 우선순위를 확정한다
+- [x] **PLCY-03**: 33-time-lock §4에 APPROVAL 타임아웃 결정 순서(정책별 > 글로벌 config > 하드코딩 3600초)를 명시한다
 
 ### 에러 처리 체계 완결
 
@@ -49,9 +49,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLCY-01 | Phase 41 | Pending |
-| PLCY-02 | Phase 41 | Pending |
-| PLCY-03 | Phase 41 | Pending |
+| PLCY-01 | Phase 41 | Complete |
+| PLCY-02 | Phase 41 | Complete |
+| PLCY-03 | Phase 41 | Complete |
 | ERRH-01 | Phase 42 | Pending |
 | ERRH-02 | Phase 42 | Pending |
 | ERRH-03 | Phase 42 | Pending |

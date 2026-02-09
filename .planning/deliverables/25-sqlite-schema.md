@@ -477,16 +477,16 @@ CREATE INDEX idx_policies_type ON policies(type);
 | `id` | TEXT (PK) | NOT NULL | - | 정책 UUID v7 |
 | `agent_id` | TEXT (FK) | NULL | - | 대상 에이전트. NULL이면 모든 에이전트에 적용되는 글로벌 정책 |
 | `type` | TEXT (ENUM) | NOT NULL | - | (v0.6 변경) 정책 유형. 10개: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT, ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE |
-| `rules` | TEXT (JSON) | NOT NULL | - | 정책별 규칙 JSON. LOCK-MECH (Phase 8)에서 각 type별 JSON 구조 확정 |
+| `rules` | TEXT (JSON) | NOT NULL | - | 정책별 규칙 JSON. **SSoT: 33-time-lock-approval-mechanism.md §2.2 PolicyRuleSchema** (10개 PolicyType의 Zod discriminatedUnion). 각 type별 JSON 구조와 필드 제약을 정의 |
 | `priority` | INTEGER | NOT NULL | `0` | 평가 우선순위. 동일 type 내에서 높은 priority 먼저 적용 |
 | `enabled` | INTEGER (BOOL) | NOT NULL | `1` (true) | 활성화 여부. 비활성 정책은 평가에서 제외 |
 | `created_at` | INTEGER | NOT NULL | - | 정책 생성 시각 |
 | `updated_at` | INTEGER | NOT NULL | - | 정책 최종 수정 시각 |
 
-**rules JSON 구조 예시 (Phase 8 LOCK-MECH에서 확정, v0.6 확장):**
+**rules JSON 구조 예시 (SSoT: 33-time-lock §2.2 PolicyRuleSchema, v0.6에서 10개 타입 확장):**
 
 ```json
-// SPENDING_LIMIT (Phase 8 기존 + v0.6 USD 확장)
+// SPENDING_LIMIT (v0.6 USD 확장 -- 전체 스키마: 33-time-lock §2.2 SpendingLimitRuleSchema)
 {
   "per_transaction": "1000000000",
   "daily_total": "5000000000",

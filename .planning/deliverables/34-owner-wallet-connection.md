@@ -1718,6 +1718,15 @@ Owner 생명주기는 3가지 상태(NONE, GRACE, LOCKED)와 6가지 전이로 �
 | GRACE (유예) | `<addr>` | 0 | Enhanced (APPROVAL 해금) | masterAuth만 |
 | LOCKED (잠금) | `<addr>` | 1 | Enhanced | 변경: ownerAuth + masterAuth / 해제: 불가 |
 
+**[v0.10] GRACE 기간 정책:**
+
+- GRACE 기간은 **무기한**이다 (시간 제한 없음, 타이머/크론 기반 자동 전이 없음)
+- GRACE -> LOCKED 전이 트리거는 **ownerAuth 미들웨어 Step 8.5 markOwnerVerified() 단일**이다
+  - approve 또는 recover 엔드포인트에서 ownerAuth 서명 검증 성공 시 자동 전이
+  - 이 외의 전이 경로는 존재하지 않음 (타이머, 크론, 수동 CLI 명령 등 없음)
+- GRACE 상태에서 APPROVAL 티어 거래는 DELAY로 다운그레이드된다 (**SSoT: 33-time-lock-approval-mechanism.md §11.6 Step 9.5**)
+- **정책 평가 로직(다운그레이드 포함)의 SSoT: 33-time-lock-approval-mechanism.md §11.6**
+
 **resolveOwnerState() 파생 로직 (Phase 31 확정):**
 
 ```typescript
@@ -1748,6 +1757,17 @@ export function resolveOwnerState(agent: AgentOwnerInfo): OwnerState {
 | 4 | GRACE -> GRACE (주소변경) | `set-owner <new-addr>` | masterAuth | `owner_address = <new-addr>` | audit_log: `OWNER_ADDRESS_CHANGED` |
 | 5 | LOCKED -> LOCKED (주소변경) | `set-owner <new-addr>` | ownerAuth(기존) + masterAuth | `owner_address = <new-addr>` | audit_log: `OWNER_ADDRESS_CHANGED` |
 | 6 | LOCKED -> NONE | **불가** | - | - | 보안 다운그레이드 방지 |
+
+**[v0.10] 33-time-lock §11.6 다운그레이드와의 SSoT 우선순위:**
+
+| 관심사 | SSoT 문서 | 섹션 |
+|--------|----------|------|
+| Owner 상태 전이 (NONE/GRACE/LOCKED) | 34-owner-wallet-connection.md | §10 |
+| 정책 평가 내 다운그레이드 로직 | 33-time-lock-approval-mechanism.md | §11.6 (Step 9.5) |
+| resolveOwnerState() 함수 정의 | 34-owner-wallet-connection.md | §10.1 |
+| evaluate() 알고리즘 | 33-time-lock-approval-mechanism.md | §3.2, §3.3 |
+
+> 34-owner §10은 Owner 상태 전이(NONE/GRACE/LOCKED)와 전이 인증 요건을 정의한다. 33-time-lock §11.6 Step 9.5는 evaluate() 내부에서 resolveOwnerState() 결과를 사용하여 APPROVAL -> DELAY 다운그레이드를 결정한다. **다운그레이드 정책 결정의 SSoT는 33-time-lock §11.6이다.**
 
 **중요 설계 결정:**
 

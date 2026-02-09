@@ -556,6 +556,7 @@ class DatabasePolicyEngine implements IPolicyEngine {
   constructor(
     private db: DrizzleInstance,
     private sqlite: Database,  // better-sqlite3 (TOCTOU 방지용 raw 쿼리)
+    private globalConfig: { policy_defaults_approval_timeout?: number },  // [v0.10] config.toml [security] 섹션
   ) {}
 
   /**
@@ -907,10 +908,20 @@ class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // APPROVAL: amount > delay_max
+    // [v0.10] 타임아웃 결정 순서 (3단계 우선순위):
+    //   1. 정책별: 해당 SPENDING_LIMIT rules의 approval_timeout (Zod default: 3600)
+    //   2. 글로벌: config.toml [security].policy_defaults_approval_timeout
+    //   3. 하드코딩: 3600초 (1시간)
+    // 참고: SpendingLimitRuleSchema의 approval_timeout은 .default(3600)이므로
+    // Zod 파싱 후 항상 값이 존재한다. 글로벌 config fallback은 향후
+    // approval_timeout을 optional로 변경할 때의 설계 의도를 보존한다.
+    const approvalTimeout = config.approval_timeout        // 1. 정책별 (Zod default: 3600)
+      ?? this.globalConfig.policy_defaults_approval_timeout // 2. 글로벌 config
+      ?? 3600                                               // 3. 하드코딩 fallback
     return {
       allowed: true,
       tier: 'APPROVAL',
-      approvalTimeoutSeconds: config.approval_timeout,
+      approvalTimeoutSeconds: approvalTimeout,
     }
   }
 }
@@ -1104,6 +1115,8 @@ async function stageTierClassifyPhase8(
 
     case 'APPROVAL':
       // Owner 승인 대기 큐잉
+      // [v0.10] decision.approvalTimeoutSeconds는 evaluate()에서 이미 3단계 우선순위로 결정됨:
+      //   1. 정책별 approval_timeout -> 2. 글로벌 config -> 3. 3600초
       validateTransition('PENDING', 'QUEUED')
       await db.update(transactions).set({
         tier,
@@ -2469,6 +2482,10 @@ if (tierResult.allowed && tierResult.tier === 'APPROVAL') {
 | APPROVE 트랜잭션 처리 | 동일하게 다운그레이드 | APPROVE도 Owner 서명이 필요한 APPROVAL 티어면 다운그레이드. token approve 권한 위임도 보안 관련 |
 | Step 10 스킵 메커니즘 | return으로 즉시 반환 | 다운그레이드 후 APPROVE_TIER_OVERRIDE가 DELAY를 APPROVAL로 복원하는 것 방지 |
 | PolicyDecision 확장 필드 | downgraded: true, originalTier: 'APPROVAL' | 32-transaction-pipeline §3.1에서 정의된 optional 필드. 알림 분기 조건(POLICY-02) |
+
+**[v0.10] Owner 상태 전이 SSoT 참조:**
+
+> Owner 상태 전이(NONE/GRACE/LOCKED)의 정의, resolveOwnerState() 함수, 전이 조건표(6가지)의 **SSoT는 34-owner-wallet-connection.md §10**이다. 본 섹션(11.6)은 evaluate() 내부에서 resolveOwnerState() 결과를 소비하여 다운그레이드 여부를 결정하는 역할만 담당한다. Owner 상태 자체의 정의나 전이 규칙을 변경할 때는 34-owner §10을 수정해야 한다.
 
 #### 안티패턴 주의사항
 
