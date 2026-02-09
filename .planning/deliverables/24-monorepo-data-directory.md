@@ -5,8 +5,9 @@
 **v0.5 업데이트:** 2026-02-07
 **v0.7 API 통합 프로토콜:** 2026-02-08
 **v0.7 스키마 설정 확정:** 2026-02-08
+**v0.9 토큰 파일 인프라:** 2026-02-09
 **상태:** 완료
-**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 38-sdk-mcp-interface.md (v0.7), 35-notification-architecture.md (v0.7 notifications 확장 키)
+**참조:** ARCH-02, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 38-sdk-mcp-interface.md (v0.7), 35-notification-architecture.md (v0.7 notifications 확장 키), v0.9-session-management-automation.md (v0.9 토큰 파일 사양)
 
 ---
 
@@ -38,6 +39,8 @@ waiaas/
 │   │   │   ├── errors/                # 도메인 에러 코드
 │   │   │   │   ├── error-codes.ts     # v0.1 46개 재사용 + 확장
 │   │   │   │   └── base-error.ts      # WAIaaSError 베이스 클래스
+│   │   │   ├── utils/                 # 공유 유틸리티
+│   │   │   │   └── token-file.ts      # [v0.9] getMcpTokenPath, writeMcpToken, readMcpToken
 │   │   │   └── index.ts               # 패키지 진입점
 │   │   ├── package.json
 │   │   └── tsconfig.json
@@ -605,6 +608,7 @@ WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
 ├── .master-password                   # (v0.5 추가) 마스터 패스워드 파일. --quickstart 시 자동 생성 (600)
 ├── daemon.lock                        # [v0.7 보완] flock 기반 인스턴스 잠금 파일. fd 유지 기반 (644)
 ├── daemon.pid                         # PID 파일 - 보조 정보 [v0.7: 보조로 격하] (644)
+├── mcp-token                          # [v0.9] MCP 세션 토큰 (600)
 ├── data/                              # 데이터 파일 (700)
 │   ├── waiaas.db                      # SQLite 메인 데이터베이스 (600)
 │   ├── waiaas.db-wal                  # WAL 저널 (자동 생성) (600)
@@ -628,6 +632,7 @@ WAIAAS_DATA_DIR=~/.waiaas-mainnet waiaas start
 | `.master-password` | (v0.5 추가) 마스터 패스워드 파일. `--quickstart`로 자동 생성되거나 `--password-file`로 참조됨 | `waiaas init --quickstart` | `600` (rw-------) | 실행 사용자 |
 | `daemon.lock` | [v0.7 보완] flock 기반 인스턴스 잠금 파일. fd 유지 기반 잠금. 내용물은 PID (보조 정보) | `waiaas start` (Step 1) | `644` (rw-r--r--) | 실행 사용자 |
 | `daemon.pid` | 데몬 PID (보조 정보, [v0.7 보완] status 명령 표시용으로 격하) | `waiaas start --daemon` | `644` (rw-r--r--) | 실행 사용자 |
+| `mcp-token` | [v0.9] MCP 세션 토큰 파일. `wai_sess_` + JWT 문자열 (개행 없음). MCP SessionManager/CLI/Telegram Bot이 `writeMcpToken()`으로 공유 쓰기 | `waiaas mcp setup`, `mcp refresh-token`, Telegram `/newsession`, SessionManager 자동 갱신 | `600` (rw-------) | 실행 사용자 |
 | `data/` | SQLite 데이터베이스 디렉토리 | `waiaas init` | `700` (rwx------) | 실행 사용자 |
 | `data/waiaas.db` | SQLite 메인 DB (WAL 모드) | 데몬 첫 시작 시 마이그레이션으로 생성 | `600` (rw-------) | 실행 사용자 |
 | `data/waiaas.db-wal` | WAL 저널 파일 | SQLite가 WAL 모드 진입 시 자동 생성 | `600` (rw-------) | 실행 사용자 |
@@ -1204,7 +1209,88 @@ hostname: z.union([
 
 ---
 
-## 4. v0.1 대비 변경 사항
+## 4. 토큰 파일 사양 (v0.9)
+
+> **[v0.9 추가]** MCP/CLI/Telegram 3개 컴포넌트가 공유하는 `~/.waiaas/mcp-token` 파일의 사양과 원자적 쓰기 패턴을 정의한다. Phase 37(SessionManager), Phase 38(MCP 통합), Phase 39(CLI+Telegram)의 공통 기반이다.
+
+### 4.1 파일 사양
+
+| 항목 | 값 | 근거 |
+|------|-----|------|
+| 경로 | `~/.waiaas/mcp-token` | 데이터 디렉토리 체계 확장. `WAIAAS_DATA_DIR` 환경변수로 오버라이드 가능 |
+| 포맷 | `wai_sess_` + JWT 문자열 (개행 없음) | 30-session-token-protocol.md 토큰 포맷. JSON 메타데이터 포함 금지 (AF-7) |
+| 인코딩 | UTF-8 | JWT는 ASCII-safe base64url이지만 파일 인코딩으로 UTF-8 명시 |
+| 권한 | `0o600` (POSIX, Owner read/write only) | SSH keys, AWS credentials와 동일한 업계 표준 |
+| 디렉토리 권한 | `0o700` | 데이터 디렉토리 기존 사양과 동일 |
+| symlink | 거부 (`lstatSync` 검사) | 보안 시나리오 S-04: 공격자가 symlink로 토큰 탈취 방지 |
+| 최대 크기 | ~500 bytes | JWT Claims 기준 (header ~50 + payload ~200 + sig ~50 + prefix 9) |
+| 소유권 모델 | Last-Writer-Wins | MCP/CLI/Telegram 3개 쓰기 주체 중 마지막 쓰기가 유효 |
+| Windows 제한 | `0o600` 미적용, 사용자 프로필 격리에 의존 | NTFS ACL은 POSIX 모델과 다름. 경고 로그 출력 |
+
+### 4.2 공유 유틸리티 API 설계
+
+`@waiaas/core` 패키지의 `utils/token-file.ts`에 3개 함수를 정의한다:
+
+```typescript
+// 1. 토큰 파일 경로 계산
+export function getMcpTokenPath(dataDir?: string): string
+// - WAIAAS_DATA_DIR 환경변수 > 인자 > os.homedir()/.waiaas 순서
+// - 반환: 절대 경로 문자열
+
+// 2. 원자적 토큰 파일 쓰기 (비동기)
+export async function writeMcpToken(filePath: string, token: string): Promise<void>
+// - mkdir(dir, { recursive: true, mode: 0o700 })
+// - lstat로 symlink 검사 -> symlink이면 Error throw
+// - 임시 파일: ${dir}/.mcp-token.${pid}.${randomBytes(4).hex()}.tmp
+// - writeFile(tmp, token, { encoding: 'utf-8', mode: 0o600 })
+// - rename(tmp, filePath) -- POSIX 원자적
+// - 실패 시 임시 파일 unlink (cleanup)
+// - Windows EPERM: 10-50ms 랜덤 대기 후 최대 3회 재시도
+
+// 3. 토큰 파일 읽기 (동기)
+export function readMcpToken(filePath: string): string | null
+// - lstatSync: symlink이면 console.error + return null
+// - readFileSync + trim
+// - wai_sess_ 접두어 확인 -> 없으면 null
+// - JWT 3-part 구조 확인 (split('.').length === 3) -> 아니면 null
+// - 반환: 유효한 토큰 문자열 또는 null
+```
+
+**readMcpToken 동기 API 근거:** MCP tool handler에서 토큰 확인은 동기적으로 수행해야 하며(I/O 비용 무시 가능한 ~500byte 파일), 비동기 버전은 필요 시 Phase 37에서 추가한다.
+
+### 4.3 원자적 쓰기 패턴 상세 (write-then-rename)
+
+**단계별 절차:**
+
+1. **데이터 디렉토리 보장:** `mkdir(dir, { recursive: true, mode: 0o700 })` -- 최초 생성 또는 no-op
+2. **기존 파일 symlink 검사:** `lstat(filePath)` -> `isSymbolicLink()` -> Error throw
+3. **임시 파일 생성:** PID + randomBytes(4) 접미사로 충돌 방지. 형식: `${dir}/.mcp-token.${pid}.${randomBytes(4).hex()}.tmp`
+4. **임시 파일에 토큰 쓰기:** `writeFile(tmp, token, { encoding: 'utf-8', mode: 0o600 })`
+5. **원자적 이름 변경:** `rename(tmp, filePath)` -- POSIX에서 원자적 보장
+6. **실패 시 정리:** `unlink(tmp)` -- best-effort (catch 무시)
+
+**플랫폼별 동작:**
+
+| 플랫폼 | rename 원자성 | 파일 권한 0o600 | 추가 대응 |
+|--------|:----------:|:---------:|----------|
+| macOS (APFS/HFS+) | O | O | 없음 |
+| Linux (ext4/xfs) | O | O | 없음 |
+| Windows (NTFS) | 조건부 | X (제한적) | EPERM 재시도 (10-50ms 랜덤 대기, 최대 3회) + 권한 경고 로그 |
+| Docker (bind mount) | O (호스트 FS 의존) | O (호스트 FS 의존) | 없음 |
+
+### 4.4 쓰기 주체와 Last-Writer-Wins 정책
+
+| 컴포넌트 | 프로세스 | 쓰기 시점 | 사용 함수 |
+|----------|---------|----------|----------|
+| MCP SessionManager | Claude Desktop 자식 프로세스 | 갱신 성공 시 | `writeMcpToken()` |
+| Telegram Bot | 데몬 메인 프로세스 | `/newsession` 시 | `writeMcpToken()` |
+| CLI | 독립 프로세스 | `mcp setup`, `mcp refresh-token` | `writeMcpToken()` |
+
+**Last-Writer-Wins 정책 근거:** Self-Hosted 단일 머신 환경에서 3개 쓰기 주체가 동시에 같은 파일에 쓰는 상황은 극히 드물다. 발생하더라도 write-then-rename 원자성으로 파일 손상은 방지되며, 마지막으로 쓰인 토큰이 최신 세션을 반영한다. 동시 쓰기 시나리오에서 "잘못된 토큰이 남는" 경우, MCP SessionManager가 401 응답 시 파일을 재로드하여 자동 복구된다.
+
+---
+
+## 5. v0.1 대비 변경 사항
 
 | 항목 | v0.1 (ARCH-02) | v0.2 (CORE-01) |
 |------|---------------|----------------|
@@ -1221,7 +1307,7 @@ hostname: z.union([
 
 ---
 
-## 4b. v0.5 Owner 모델 변경 노트
+## 5b. v0.5 Owner 모델 변경 노트
 
 > **v0.5 업데이트 (2026-02-07):** 인증 모델 재설계에 따른 config.toml 변경사항.
 
@@ -1255,7 +1341,7 @@ v0.5에서 Owner 개념이 **config.toml(데몬 전역)**에서 **agents 테이�
 
 ---
 
-## 5. 요구사항 매핑
+## 6. 요구사항 매핑
 
 | 요구사항 | 커버리지 |
 |---------|---------|
@@ -1264,12 +1350,15 @@ v0.5에서 Owner 개념이 **config.toml(데몬 전역)**에서 **agents 테이�
 | KEYS-01 (키스토어 경로) | 섹션 2.2 -- `keystore/<agent-id>.json` |
 | API-01 (localhost 전용) | 섹션 3.6 -- hostname 보안 강제 |
 | API-06 (OpenAPI 자동 생성) | 섹션 1.5 -- daemon의 @hono/zod-openapi 의존성 |
-| OWNR-02 (config.toml Owner 개념 제거) | 섹션 3.3 [walletconnect] 선택적 전환 + 섹션 4b Owner 모델 변경 노트 |
+| OWNR-02 (config.toml Owner 개념 제거) | 섹션 3.3 [walletconnect] 선택적 전환 + 섹션 5b Owner 모델 변경 노트 |
+| SMGR-02 (토큰 파일 영속화 사양) | [v0.9] 섹션 4.1 -- mcp-token 파일 사양 (경로, 포맷, 권한, symlink 거부 등 9개 항목) |
+| SMGR-07 (원자적 토큰 파일 쓰기) | [v0.9] 섹션 4.3 -- write-then-rename 원자적 쓰기 패턴 (6단계, 4개 플랫폼) |
 
 ---
 
 *문서 ID: CORE-01*
 *작성일: 2026-02-05*
 *v0.5 업데이트: 2026-02-07*
+*v0.9 업데이트: 2026-02-09 -- 토큰 파일 인프라 사양 추가 (섹션 4)*
 *Phase: 06-core-architecture-design*
 *상태: 완료*
