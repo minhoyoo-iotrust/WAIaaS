@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 35 of 35 (DX + 설계 문서 통합)
-플랜: 0 of 3 in current phase
-상태: Phase 34 complete (verified), Phase 35 ready to plan
-마지막 활동: 2026-02-09 -- Phase 34 실행 완료 (2/2 plans, verified)
+플랜: 1 of 3 in current phase
+상태: In progress -- 35-01 완료, 35-02 대기
+마지막 활동: 2026-02-09 -- 35-01 CLI 플로우 v0.8 전면 갱신 완료
 
-Progress: ████████████████░░░░ 73% (8/11 plans)
+Progress: █████████████████░░░ 82% (9/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 8 plans complete, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 9 plans complete, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -59,13 +59,17 @@ v0.8 관련:
 - [34-01] withdraw API masterAuth(implicit)만 -- 수신 주소 owner_address 고정으로 ownerAuth 불필요 (v0.8 §5.2)
 - [34-01] scope 분기 WithdrawService 수준 -- IChainAdapter.sweepAll에 scope 파라미터 없음 (31-02 결정)
 - [34-01] WITHDRAW 에러 코드 4개 신설 + AGENT 도메인 2개 재사용 (중복 정의 금지)
-- [34-01] Kill Switch withdraw Open Question -- 방안 A(허용 목록 추가) vs 방안 B(CLI 직접) 구현 시 결정
 - [34-01] 감사 로그 3종: FUND_WITHDRAWN/FUND_PARTIALLY_WITHDRAWN/FUND_WITHDRAWAL_FAILED
 - [34-02] Kill Switch 복구는 시스템별 분기 -- agents.owner_address IS NOT NULL 존재 여부로 판단
 - [34-02] config.toml로 복구 대기 시간 재정의 가능 (kill_switch_recovery_wait_owner/no_owner)
 - [34-02] Step 2에서 masterAuth만 재검증 -- ownerAuth는 Step 1에서 완료
 - [34-02] SESSION_RENEWED [거부하기]는 masterAuth(implicit)만 -- APPROVAL ownerAuth와 다름
 - [34-02] 거부 윈도우 비강제 -- Owner는 세션 유효 시 언제든 DELETE 가능
+- [35-01] Kill Switch withdraw 방안 A 채택 -- killSwitchGuard 허용 경로 4->5개 (POST /v1/owner/agents/:agentId/withdraw 추가)
+- [35-01] set-owner LOCKED 분기: CLI에서 SIWS/SIWE 수동 서명 플로우 시작
+- [35-01] remove-owner GRACE 제약: LOCKED 해제 불가, 확인 프롬프트 포함
+- [35-01] quickstart --chain만 필수: --owner 선택으로 온보딩 마찰 최소화
+- [35-01] agent info 안내 메시지: NONE 상태에서 set-owner 가이드 표시 (DX-05)
 
 ### 차단 요소/우려 사항
 
@@ -74,10 +78,10 @@ v0.8 관련:
 - 보안 다운그레이드 공격 (C-02): LOCKED 해제 금지 + 알림 + killSwitchGuard **설계 완료** (32-02)
 - sweepAll 부분 실패 (C-03): SOL 마지막 전송 + HTTP 207 부분 성공 처리 **설계 완료** (31-02, 34-01 상세 확정)
 - Kill Switch Owner 변경 (H-03): killSwitchGuard 4개 허용 경로 외 503 차단 **설계 완료** (32-02)
-- Kill Switch withdraw (Open Question): 방안 A/B 문서화, Phase 35 CLI 설계 시 결정 (34-01)
+- Kill Switch withdraw: **방안 A 채택 완료** -- killSwitchGuard 5번째 허용 경로 추가 (35-01)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 34 실행 및 검증 완료. Phase 35 계획 시작 대기.
-재개 파일: .planning/ROADMAP.md
+중단 지점: 35-01 완료. 35-02 (Owner 상태 분기 매트릭스 SSoT) 실행 대기.
+재개 파일: .planning/phases/35-dx-설계-문서-통합/35-02-PLAN.md
