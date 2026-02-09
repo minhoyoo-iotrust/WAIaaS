@@ -78,37 +78,37 @@
 
 ## Traceability
 
-요구사항 → 페이즈 매핑. 로드맵 생성 시 업데이트.
+요구사항 -> 페이즈 매핑.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SMGR-01 | — | Pending |
-| SMGR-02 | — | Pending |
-| SMGR-03 | — | Pending |
-| SMGR-04 | — | Pending |
-| SMGR-05 | — | Pending |
-| SMGR-06 | — | Pending |
-| SMGR-07 | — | Pending |
-| SMGI-01 | — | Pending |
-| SMGI-02 | — | Pending |
-| SMGI-03 | — | Pending |
-| SMGI-04 | — | Pending |
-| CLIP-01 | — | Pending |
-| CLIP-02 | — | Pending |
-| TGSN-01 | — | Pending |
-| TGSN-02 | — | Pending |
-| NOTI-01 | — | Pending |
-| NOTI-02 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| INTEG-01 | — | Pending |
-| INTEG-02 | — | Pending |
+| SMGR-01 | Phase 37 | Pending |
+| SMGR-02 | Phase 36 | Pending |
+| SMGR-03 | Phase 37 | Pending |
+| SMGR-04 | Phase 37 | Pending |
+| SMGR-05 | Phase 37 | Pending |
+| SMGR-06 | Phase 37 | Pending |
+| SMGR-07 | Phase 36 | Pending |
+| SMGI-01 | Phase 38 | Pending |
+| SMGI-02 | Phase 38 | Pending |
+| SMGI-03 | Phase 38 | Pending |
+| SMGI-04 | Phase 38 | Pending |
+| CLIP-01 | Phase 39 | Pending |
+| CLIP-02 | Phase 39 | Pending |
+| TGSN-01 | Phase 39 | Pending |
+| TGSN-02 | Phase 39 | Pending |
+| NOTI-01 | Phase 36 | Pending |
+| NOTI-02 | Phase 36 | Pending |
+| TEST-01 | Phase 40 | Pending |
+| TEST-02 | Phase 40 | Pending |
+| INTEG-01 | Phase 40 | Pending |
+| INTEG-02 | Phase 40 | Pending |
 
 **Coverage:**
 - v0.9 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after initial definition*
+*Last updated: 2026-02-09 after roadmap creation*
