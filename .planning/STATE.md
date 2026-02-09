@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.0 구현 계획 수립 — Phase 46 plan 01 완료, Phase 46 plan 02 대기
+**현재 초점:** v1.0 구현 계획 수립 — Phase 46 완료, Phase 47 대기
 
 ## 현재 위치
 
 마일스톤: v1.0 -- 구현 계획 수립
 페이즈: 46 of 47 (확장+릴리스 objective 문서 생성)
-플랜: 1 of 2 in current phase (진행 중)
-상태: In progress
-마지막 활동: 2026-02-09 -- 46-01-PLAN.md 완료 (v1.5/v1.6 objective 문서 생성)
+플랜: 2 of 2 in current phase (완료)
+상태: Phase 46 완료
+마지막 활동: 2026-02-09 -- 46-02-PLAN.md 완료 (v1.7/v2.0 objective 문서 생성)
 
-진행: [██████░░░░] 60% (v1.0 기준 3/5 plans)
+진행: [████████░░] 80% (v1.0 기준 4/5 plans)
 
 ## 성과 지표
 
 **v0.1-v0.10 누적:** 110 plans, 276 reqs, 44 phases, 10 milestones, 30 설계 문서 (24-64)
 
-**v1.0 현재:** 3 phases, 5 plans (예정), 10 requirements, 3 plans 완료
+**v1.0 현재:** 3 phases, 5 plans (예정), 10 requirements, 4 plans 완료
 
 ## 누적 컨텍스트
 
@@ -52,6 +52,10 @@
 - v1.0-46-01: v1.6 Docker base node:22-slim (native addon 호환성)
 - v1.0-46-01: v1.6 Kill Switch CAS SQLite BEGIN IMMEDIATE + WHERE state=expected (CONC-03)
 - v1.0-46-01: v1.6 AutoStop 규칙 config.toml [autostop] 저장
+- v1.0-46-02: v1.7 보안 237건(71+166) 전수 자동화 ([HUMAN] 0건)
+- v1.0-46-02: v2.0 [HUMAN] 3건 — README 영문, CHANGELOG, 설계 부채 이연
+- v1.0-46-02: v2.0 npm 전체 7패키지 공개, MIT 라이선스, release-please 자동화
+- v1.0-46-02: v2.0 Docker 태깅 latest+semver+SHA, pre-release(rc) 3일 관찰 후 정식 발행
 
 ### 차단 요소/우려 사항
 
@@ -60,6 +64,6 @@
 
 ## 세션 연속성
 
-마지막 세션: 2026-02-09 14:04 UTC
-중단 지점: Phase 46 plan 01 완료 (v1.5/v1.6 objective 2개 생성). v1.1~v1.6 objective 6개 완료. Phase 46 plan 02 (v1.7/v2.0) 대기.
-재개 파일: .planning/phases/46-ext-release-objectives/46-01-SUMMARY.md
+마지막 세션: 2026-02-09 14:05 UTC
+중단 지점: Phase 46 완료 (plan 01 + plan 02). v1.1~v2.0 objective 8개 생성 완료. Phase 47 대기.
+재개 파일: .planning/phases/46-ext-release-objectives/46-02-SUMMARY.md
