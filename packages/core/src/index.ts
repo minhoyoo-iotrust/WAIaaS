@@ -66,3 +66,20 @@ export {
   type ErrorCodeEntry,
   WAIaaSError,
 } from './errors/index.js';
+
+// Interfaces (4 contracts + chain adapter types)
+export type {
+  TokenAmount,
+  TransferRequest,
+  UnsignedTransaction,
+  SimulationResult,
+  SubmitResult,
+  BalanceInfo,
+  HealthInfo,
+  IChainAdapter,
+  ILocalKeyStore,
+  IPolicyEngine,
+  PolicyEvaluation,
+  INotificationChannel,
+  NotificationPayload,
+} from './interfaces/index.js';
