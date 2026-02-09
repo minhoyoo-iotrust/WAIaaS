@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 37 — SessionManager 핵심 설계
+**현재 초점:** v0.9 Phase 37 완료 + 검증 PASSED — 다음: Phase 38 또는 39 (병렬 가능)
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 37 of 40 (SessionManager 핵심 설계) -- Ready to plan
-플랜: 0 of 2 in current phase
-상태: Ready to plan
-마지막 활동: 2026-02-09 — Phase 36 완료 + 검증 PASSED (4/4 must-haves)
+페이즈: 37 of 40 (SessionManager 핵심 설계) -- Complete + Verified
+플랜: 2 of 2 in current phase (완료)
+상태: Phase complete + verified (5/5 must-haves)
+마지막 활동: 2026-02-09 — Phase 37 완료 + 검증 PASSED (5/5 must-haves)
 
-Progress: ████░░░░░░░░░░░░░░░░ 20%
+Progress: ████████░░░░░░░░░░░░ 40%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 2/10 plans complete, 1/5 phases complete
+**v0.9 진행:** 4/10 plans complete, 2/5 phases complete (Phase 36, 37)
 
 ## 누적 컨텍스트
 
@@ -49,6 +49,24 @@ Phase 36-02 설계 결정:
 - NOTI-04: 갱신 실패 경로 보완 알림 (Guard 1/2 실패 시 미발송이면 보완 발송)
 - NOTI-05: shouldNotifyExpiringSession 순수 함수 (판단과 부수효과 분리)
 
+Phase 37-01 설계 결정:
+- SM-01: SessionManager 단일 클래스, MCP SDK 독립 (Composition 패턴)
+- SM-02: getToken/start/dispose 3개 public 메서드
+- SM-03: 내부 상태 9개 (token, sessionId, expiresAt, expiresIn, renewalCount, maxRenewals, timer, isRenewing, state)
+- SM-04: 토큰 로드 우선순위 파일 > env var
+- SM-05: jose decodeJwt 기반 무검증 디코딩 + 방어적 범위 검증 (C-03 대응)
+- SM-06: renewalCount/maxRenewals 초기값 0/Infinity, 첫 갱신 응답에서 업데이트
+- SM-07: 데몬 미기동 시 graceful degradation (로컬 JWT exp 기준 동작)
+
+Phase 37-02 설계 결정:
+- SM-08: safeSetTimeout 래퍼로 32-bit overflow 방어 (C-01)
+- SM-09: 서버 응답 expiresAt 기준 절대 시간 갱신 스케줄 (self-correcting timer, H-01 대응)
+- SM-10: 파일-우선 쓰기 순서 (writeMcpToken -> 메모리 교체, H-02 대응)
+- SM-11: 5종 에러 분기 (TOO_EARLY 30초x1, LIMIT 포기, LIFETIME 포기, NETWORK 60초x3, EXPIRED lazy reload)
+- SM-12: handleUnauthorized 4-step (파일 재로드 -> 비교 -> 교체/에러)
+- SM-13: MCP SessionManager는 알림 직접 발송하지 않음 (데몬 자동, NOTI-01)
+- SM-14: 갱신 중 getToken()은 구 토큰 반환 (동시성 안전)
+
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
@@ -56,5 +74,5 @@ Phase 36-02 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 36 실행+검증 완료. 다음: Phase 37 플래닝 (`/gsd:plan-phase 37`)
+중단 지점: Phase 37 실행+검증 완료. 다음: `/gsd:plan-phase 38` (MCP 통합) 또는 `/gsd:plan-phase 39` (CLI+Telegram, Phase 36 이후 독립)
 재개 파일: None

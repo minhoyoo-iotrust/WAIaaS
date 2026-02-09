@@ -9,12 +9,12 @@
 
 ### SessionManager 핵심 설계 (SMGR)
 
-- [ ] **SMGR-01**: SessionManager 클래스 인터페이스 설계 — getToken/start/dispose 메서드, 내부 상태(token, sessionId, expiresAt, renewalCount, timer)
+- [x] **SMGR-01**: SessionManager 클래스 인터페이스 설계 — getToken/start/dispose 메서드, 내부 상태(token, sessionId, expiresAt, renewalCount, timer)
 - [x] **SMGR-02**: 토큰 파일 영속화 사양 설계 — ~/.waiaas/mcp-token 경로, JWT 문자열만, 0o600 권한, UTF-8, symlink 거부
-- [ ] **SMGR-03**: 토큰 로드 우선순위 설계 — 파일 > env var, JWT payload base64url 디코딩(jose decodeJwt), 만료 여부 확인
-- [ ] **SMGR-04**: 자동 갱신 스케줄 설계 — 60% TTL 경과 시 갱신 시도, safeSetTimeout 래퍼(32-bit overflow 방지), 서버 응답 기반 드리프트 보정
-- [ ] **SMGR-05**: 갱신 실패 처리 설계 — 5종 에러(RENEWAL_TOO_EARLY/LIMIT_REACHED/LIFETIME_EXCEEDED/네트워크/TOKEN_EXPIRED) 대응 + 재시도 전략
-- [ ] **SMGR-06**: Lazy 401 reload 설계 — 401 수신 시 토큰 파일 재로드, 파일 토큰 ≠ 현재 토큰이면 교체 + API 재시도, 같으면 에러 상태
+- [x] **SMGR-03**: 토큰 로드 우선순위 설계 — 파일 > env var, JWT payload base64url 디코딩(jose decodeJwt), 만료 여부 확인
+- [x] **SMGR-04**: 자동 갱신 스케줄 설계 — 60% TTL 경과 시 갱신 시도, safeSetTimeout 래퍼(32-bit overflow 방지), 서버 응답 기반 드리프트 보정
+- [x] **SMGR-05**: 갱신 실패 처리 설계 — 5종 에러(RENEWAL_TOO_EARLY/LIMIT_REACHED/LIFETIME_EXCEEDED/네트워크/TOKEN_EXPIRED) 대응 + 재시도 전략
+- [x] **SMGR-06**: Lazy 401 reload 설계 — 401 수신 시 토큰 파일 재로드, 파일 토큰 ≠ 현재 토큰이면 교체 + API 재시도, 같으면 에러 상태
 - [x] **SMGR-07**: 원자적 토큰 파일 쓰기 설계 — write-then-rename 패턴(POSIX rename 원자성), Windows NTFS 대응, 임시 파일 + rename
 
 ### SessionManager 통합 설계 (SMGI)
@@ -82,12 +82,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SMGR-01 | Phase 37 | Pending |
+| SMGR-01 | Phase 37 | Complete |
 | SMGR-02 | Phase 36 | Complete |
-| SMGR-03 | Phase 37 | Pending |
-| SMGR-04 | Phase 37 | Pending |
-| SMGR-05 | Phase 37 | Pending |
-| SMGR-06 | Phase 37 | Pending |
+| SMGR-03 | Phase 37 | Complete |
+| SMGR-04 | Phase 37 | Complete |
+| SMGR-05 | Phase 37 | Complete |
+| SMGR-06 | Phase 37 | Complete |
 | SMGR-07 | Phase 36 | Complete |
 | SMGI-01 | Phase 38 | Pending |
 | SMGI-02 | Phase 38 | Pending |
@@ -111,4 +111,4 @@
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after Phase 36 completion*
+*Last updated: 2026-02-09 after Phase 37 completion*
