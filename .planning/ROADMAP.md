@@ -170,12 +170,12 @@ Plans:
   3. config.toml 파일의 값이 로드되고, 같은 키에 환경변수가 설정되어 있으면 환경변수 값이 우선한다
   4. 데몬 프로세스를 시작한 후 SIGTERM을 보내면 WAL 체크포인트 완료 후 정상 종료되고, PID 파일이 제거된다
   5. 이미 실행 중인 데몬이 있을 때 두 번째 인스턴스를 시작하면 flock 잠금 충돌로 즉시 실패한다
-**플랜**: TBD
+**플랜**: 3 plans
 
 Plans:
-- [ ] 49-01: SQLite 스키마 + Drizzle ORM (7 테이블, PRAGMA, UUID v7, CHECK 제약)
-- [ ] 49-02: 키스토어 모듈 (AES-256-GCM, Argon2id, sodium guarded memory, 파일 포맷 v1)
-- [ ] 49-03: config.toml 로더 + 데몬 라이프사이클 (시작/종료/flock/PID/BackgroundWorkers)
+- [ ] 49-01-PLAN.md — SQLite 7-table Drizzle ORM 스키마 + PRAGMA 7개 + UUID v7 + CHECK 제약 (TDD, Wave 1)
+- [ ] 49-02-PLAN.md — AES-256-GCM 키스토어 + Argon2id KDF + sodium guarded memory + 파일 포맷 v1 (TDD, Wave 1)
+- [ ] 49-03-PLAN.md — config.toml 로더 (smol-toml + Zod) + 데몬 라이프사이클 (6-step 시작/10-step 종료/flock/PID/BackgroundWorkers) (TDD, Wave 2)
 
 ### Phase 50: API 서버 + SolanaAdapter + 파이프라인
 
@@ -229,7 +229,7 @@ Plans:
 | v0.9 MCP 세션 자동화 | 36-40 | 10 | Complete | 2026-02-09 |
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
-| **v1.1 코어 인프라** | **48-51** | **0/12** | **Not started** | - |
+| **v1.1 코어 인프라** | **48-51** | **3/12** | **In progress** | - |
 
 **Total:** 11 milestones shipped, 47 phases, 115 plans completed + v1.1 진행 중 (4 phases, 12 plans)
 
