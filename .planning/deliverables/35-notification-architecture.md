@@ -3,6 +3,7 @@
 **문서 ID:** NOTI-ARCH
 **작성일:** 2026-02-05
 **v0.8 보완:** 2026-02-09
+**v0.9 보완:** 2026-02-09
 **상태:** 완료
 **참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), TX-PIPE (32-transaction-pipeline-api.md), SESS-RENEW (53-session-renewal-protocol.md)
 **요구사항:** NOTI-01 (멀티 채널 알림), NOTI-02 (최소 2채널 + 폴백)
@@ -19,7 +20,7 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 - **INotificationChannel 인터페이스**: 채널 추상화 계약 (type/name/send/healthCheck)
 - **3개 채널 어댑터**: Telegram Bot API, Discord Webhook, ntfy.sh Push
 - **NotificationService 오케스트레이터**: 우선순위 기반 전송 + 폴백 체인 + broadcast
-- **알림 이벤트 타입 체계**: 16개 NotificationEventType 열거형
+- **알림 이벤트 타입 체계**: 17개 NotificationEventType 열거형 (v0.8: 16개 + v0.9: SESSION_EXPIRING_SOON 1개)
 - **DB 스키마**: notification_channels + notification_log 테이블
 - **채널별 Rate Limit 준수**: 토큰 버킷 기반 내장 rate limiter
 - **전달 추적**: 성공/실패/폴백 기록 + 30일 보존 정책
@@ -84,6 +85,7 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 | 세션 폐기 | SESSION_REVOKED | notify() (표준) | DELETE /v1/sessions/:id |
 | 세션 갱신 성공 | SESSION_RENEWED | notify() (표준) | session-renewal-service (PUT /v1/sessions/:id/renew 200 응답 후) (Phase 20 추가) |
 | 세션 갱신 거부 | SESSION_RENEWAL_REJECTED | notify() (표준) | session-service (DELETE /v1/sessions/:id, details.trigger='renewal_rejected') (Phase 20 추가) |
+| [v0.9] 세션 갱신 후 만료 임박 판단 | SESSION_EXPIRING_SOON | notify() (표준) | SessionService.renewSession() 200 OK 후 + 403 에러 경로 보완 |
 | 일일 요약 | DAILY_SUMMARY | notify() (표준) | 일일 스케줄러 (선택) |
 
 ---
@@ -218,7 +220,7 @@ export const NotificationEventType = {
   /** 자동 정지 규칙 발동 */
   AUTO_STOP_TRIGGERED: 'AUTO_STOP_TRIGGERED',
 
-  // ── 세션 관련 ──
+  // ── 세션 관련 (5개, 기존 4 + v0.9 추가 1) ──
   /** 새 세션 생성 알림 */
   SESSION_CREATED: 'SESSION_CREATED',
   /** 세션 폐기 알림 */
@@ -227,6 +229,8 @@ export const NotificationEventType = {
   SESSION_RENEWED: 'SESSION_RENEWED',
   /** 세션 갱신 거부(폐기) 알림 (Phase 20 추가) */
   SESSION_RENEWAL_REJECTED: 'SESSION_RENEWAL_REJECTED',
+  /** [v0.9] 세션 만료 임박 알림 — 절대 수명 만료 24h 전 OR 잔여 갱신 3회 이하 */
+  SESSION_EXPIRING_SOON: 'SESSION_EXPIRING_SOON',
 
   // ── 운영 ──
   /** 일일 요약 (선택적 활성화) */
@@ -255,6 +259,7 @@ export type NotificationEventType = typeof NotificationEventType[keyof typeof No
 | SESSION_REVOKED | INFO | 세션 폐기 |
 | SESSION_RENEWED | INFO | 세션 갱신 완료 (Phase 20 추가) |
 | SESSION_RENEWAL_REJECTED | WARNING | 세션 갱신 거부 -- Owner가 세션을 폐기함 (Phase 20 추가) |
+| SESSION_EXPIRING_SOON | WARNING | [v0.9] 세션 만료 임박 -- Owner 행동 필요 (절대 수명 24h 전 OR 잔여 갱신 3회 이하) |
 | DAILY_SUMMARY | INFO | 일일 운영 요약 |
 
 ---
@@ -2428,6 +2433,121 @@ Body:
 
 > **참고:** SESSION_RENEWAL_REJECTED 알림은 Owner가 갱신 후 세션을 폐기한 경우에만 전송된다. 기존 DELETE /v1/sessions/:id의 감사 로그 `details.trigger`가 `renewal_rejected`인 경우에 해당한다.
 
+#### [v0.9] SESSION_EXPIRING_SOON (세션 만료 임박)
+
+> **심각도:** WARNING -- Owner의 사전 대응이 필요하지만 즉시 위험은 아님. TX_APPROVAL_REQUEST와 동일 레벨.
+> **전송 방식:** notify() (표준, priority 순 폴백)
+> **발생 조건:** 절대 수명 만료 24시간 전 OR 잔여 갱신 3회 이하 (OR 논리)
+> **트리거 위치:** SessionService.renewSession() -- 갱신 성공(200 OK) 후 + 갱신 실패(403) 경로 보완
+
+**[v0.9] SessionExpiringSoonDataSchema (Zod 알림 데이터 스키마):**
+
+```typescript
+// [v0.9] SESSION_EXPIRING_SOON 알림 데이터
+// packages/core/src/schemas/notification.schema.ts
+
+import { z } from '@hono/zod-openapi'
+
+export const SessionExpiringSoonDataSchema = z.object({
+  sessionId: z.string().uuid(),            // 세션 UUID v7
+  agentName: z.string(),                   // 에이전트 이름 (표시용)
+  expiresAt: z.number().int(),             // 절대 만료 시각 (epoch seconds)
+  remainingRenewals: z.number().int(),     // 잔여 갱신 횟수
+})
+```
+
+**Telegram (MarkdownV2):**
+```
+⚠️ *세션 만료 임박* \(WARNING\)
+
+에이전트 `{agentName}`의 세션이 곧 만료됩니다\.
+
+세션 ID: `{sessionId_short}`
+만료 시각: {expiresAt_formatted}
+잔여 갱신: {remainingRenewals}회
+
+새 세션을 생성하거나 갱신을 확인하세요\.
+```
+
+**Discord (Embed):**
+```json
+{
+  "embeds": [{
+    "title": "⚠️ 세션 만료 임박",
+    "color": 16776960,
+    "fields": [
+      { "name": "에이전트", "value": "{agentName}", "inline": true },
+      { "name": "세션 ID", "value": "`{sessionId_short}`", "inline": true },
+      { "name": "만료 시각", "value": "{expiresAt_formatted}", "inline": false },
+      { "name": "잔여 갱신", "value": "{remainingRenewals}회", "inline": true }
+    ],
+    "footer": { "text": "새 세션을 생성하거나 갱신을 확인하세요." },
+    "timestamp": "{createdAt}"
+  }]
+}
+```
+
+**ntfy.sh:**
+```
+Title: 세션 만료 임박 - {agentName}
+Priority: 4 (high)
+Tags: warning,session,expiring
+Body:
+에이전트 "{agentName}"의 세션이 곧 만료됩니다.
+세션 ID: {sessionId_short}
+만료 시각: {expiresAt_formatted}
+잔여 갱신: {remainingRenewals}회
+새 세션을 생성하거나 갱신을 확인하세요.
+```
+
+**context 필드:**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `sessionId` | string | 만료 임박 세션 ID (UUID v7) |
+| `agentName` | string | 에이전트 이름 (agents.name) |
+| `expiresAt` | number | 절대 만료 시각 (epoch seconds) |
+| `remainingRenewals` | number | 잔여 갱신 횟수 |
+
+#### [v0.9] SESSION_EXPIRING_SOON 중복 알림 방지 메커니즘
+
+SESSION_EXPIRING_SOON은 갱신 조건 충족 후 매 갱신마다 반복 트리거될 수 있다. 기존 `notification_log` 테이블을 활용한 중복 방지 로직을 정의한다:
+
+```
+중복 방지: notification_log 테이블 조회
+- 조건: event = 'SESSION_EXPIRING_SOON' AND reference_id = sessionId AND status = 'DELIVERED'
+- 이미 발송 성공 기록이 있으면 알림 스킵
+- 인덱스: idx_notification_log_event (event, sent_at DESC) 기존 인덱스 활용
+  + [v0.9 추가 권장] (event, reference_id) 복합 인덱스 -- 세션별 중복 조회 최적화
+- 근거: DB 스키마 변경 최소화, 기존 알림 로그 인프라 활용, 데몬 재시작에도 상태 유지
+```
+
+**중복 확인 의사 코드:**
+
+```typescript
+// [v0.9] 중복 알림 확인
+async function isExpiringSoonAlreadySent(
+  db: Database,
+  sessionId: string,
+): Promise<boolean> {
+  const existing = db.prepare(`
+    SELECT 1 FROM notification_log
+    WHERE event = 'SESSION_EXPIRING_SOON'
+      AND reference_id = ?
+      AND status = 'DELIVERED'
+    LIMIT 1
+  `).get(sessionId)
+  return !!existing
+}
+```
+
+**대안 분석 (채택하지 않음):**
+
+| 대안 | 장점 | 단점 | 미채택 근거 |
+|------|------|------|-----------|
+| sessions 테이블에 `expiring_notified_at` 컬럼 추가 | 조회 빠름, 세션과 1:1 | DB 스키마 변경 필요, 관심사 혼합 | sessions 테이블은 인증/수명 전용, 알림 상태는 알림 인프라에 위임 |
+| 인메모리 Set<sessionId> | DB 조회 불필요 | 데몬 재시작 시 상태 소실, 중복 발송 위험 | Self-Hosted 데몬 재시작 빈번, 상태 유지 보장 불가 |
+
 ### 11.4 주소 축약 표시 규칙
 
 | 체인 | 원본 | 축약 |
@@ -2591,7 +2711,7 @@ function evaluate(request):
 
 | 요구사항 | 충족 여부 | 충족 근거 |
 |---------|----------|----------|
-| **NOTI-01** (멀티 채널 알림) | **충족** | 섹션 2-5: INotificationChannel + Telegram/Discord/ntfy.sh 3개 어댑터 |
+| **NOTI-01** (멀티 채널 알림) | **충족** | 섹션 2-5: INotificationChannel + Telegram/Discord/ntfy.sh 3개 어댑터 + [v0.9] SESSION_EXPIRING_SOON 이벤트 (섹션 11.3) |
 | **NOTI-02** (최소 2채널 + 폴백) | **충족** | 섹션 6: NotificationService 폴백 체인 + 섹션 9: 최소 2채널 검증 + 제한 모드 |
 
 ---
