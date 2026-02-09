@@ -5,8 +5,9 @@
 **v0.5 인증 모델 업데이트:** 2026-02-07
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 보완:** 2026-02-08
+**v0.8 보완:** 2026-02-09
 **상태:** 완료
-**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md)
+**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md), objectives/v0.8-optional-owner-progressive-security.md
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
 
 ---
@@ -15,7 +16,7 @@
 
 ### 1.1 목적
 
-WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트, Phase 22-24(v0.6)에서 추가하는 5개 엔드포인트, Phase 27(v0.7)에서 추가하는 1개 엔드포인트를 합쳐 총 **37개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
+WAIaaS v0.2의 **전체 REST API 스펙 통합 문서**이다. Phase 6-8에서 분산 정의된 23개 엔드포인트와 Phase 9에서 추가하는 7개 엔드포인트, Phase 20에서 추가하는 1개 엔드포인트, Phase 22-24(v0.6)에서 추가하는 5개 엔드포인트, Phase 27(v0.7)에서 추가하는 1개 엔드포인트, Phase 34(v0.8)에서 추가하는 1개 엔드포인트를 합쳐 총 **38개 엔드포인트**의 요청/응답 Zod 스키마, 인증 체계, 에러 코드 체계, OpenAPI 3.0 구조를 정의한다.
 
 SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참조하는 **API 단일 소스(Single Source of Truth)** 역할을 한다.
 
@@ -42,21 +43,23 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 | 거래 파이프라인 | 8단계 (Enclave + Squads) | 6단계 (로컬 키스토어 + 정책 엔진) |
 | 에러 포맷 | RFC 9457 + 46개 코드 | 간소화 JSON + 도메인별 에러 코드 |
 
-### 1.4 전체 엔드포인트 요약 (v0.6 변경)
+### 1.4 전체 엔드포인트 요약 (v0.8 변경)
 
 | 카테고리 | 수 | 인증 | 범위 |
 |----------|---|------|------|
 | Public API | 3 | None | 헬스체크, 문서, nonce |
 | Session API (Agent) | 12 | Session Bearer | 지갑, 거래, 세션 조회, 세션 갱신, 자산 조회, Action API (v0.6 추가: +5) |
-| System Management API | 16 | masterAuth (implicit) | 세션 CRUD, 에이전트 CRUD, 정책, 설정, 대시보드 |
+| System Management API | 17 | masterAuth (implicit) | 세션 CRUD, 에이전트 CRUD, 정책, 설정, 대시보드, **자금 회수 [v0.8 추가: +1]** |
 | Owner Auth API | 1 | Owner Signature | 거래 승인 (APPROVAL 티어) |
 | Dual Auth API | 1 | Owner Signature + Master Password | Kill Switch 복구 |
 | Admin API | 4 | Master Password (explicit) | Kill Switch, Shutdown, Secret Rotation, Status [v0.7 보완: +1] |
-| **합계** | **37** | | `/doc` 포함 시 38 |
+| **합계** | **38** | | `/doc` 포함 시 39 |
 
 > **v0.5 변경:** v0.2의 "Session Management API 3 (ownerAuth)" + "Owner API 17 (ownerAuth)"가 3-tier 재분류로 통합 재편성되었다. ownerAuth 적용은 2곳(거래 승인, KS 복구)으로 축소. 나머지 시스템 관리 엔드포인트는 masterAuth(implicit)로 이동. 52-auth-model-redesign.md 섹션 4 참조.
 >
 > **v0.6 변경:** 5개 엔드포인트 추가: GET /v1/wallet/assets (자산 조회), GET /v1/actions (Action Provider 목록), GET /v1/actions/:provider/:action (Action 상세), POST /v1/actions/:provider/:action/resolve (Action resolve), POST /v1/actions/:provider/:action/execute (Action 실행). POST /v1/transactions/send 요청 바디가 discriminatedUnion 5-type으로 확장. 에러 코드 20개 추가 (40개 -> 60개). 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
+>
+> **[v0.8] 변경:** 1개 엔드포인트 추가: POST /v1/owner/agents/:agentId/withdraw (자금 회수). WithdrawService 도메인 서비스 설계 추가. WITHDRAW 도메인 에러 코드 4개 추가 (60개 -> 64개). objectives/v0.8-optional-owner-progressive-security.md §5 참조.
 
 ---
 
@@ -266,11 +269,14 @@ X-Master-Password: my-secure-master-password-2026
 | `POST /v1/owner/connect` | None (localhost 보안) | hostValidation |
 | `/v1/wallet/*`, `/v1/transactions/*`, `GET /v1/sessions`, `PUT /v1/sessions/:id/renew`, `/v1/actions/*` (v0.6 추가) | Session Bearer | sessionAuth |
 | `POST /v1/sessions`, `DELETE /v1/sessions/:id`, 에이전트 CRUD, 정책 CRUD, 설정, 조회 등 | masterAuth (implicit) | masterAuth(implicit) |
+| `POST /v1/owner/agents/:agentId/withdraw` **[v0.8]** | masterAuth (implicit) | masterAuth(implicit) |
 | `POST /v1/owner/approve/:txId` | Owner Signature | ownerAuth |
 | `POST /v1/admin/recover` | Owner Signature + Master Password (dual-auth) | ownerAuth + masterAuth(explicit) | [v0.7 보완: 경로 변경]
 | `/v1/admin/*` | Master Password (explicit) | masterAuth(explicit) |
 
 > **v0.5 주요 변경 요약:** (1) `POST /v1/sessions`가 ownerAuth에서 masterAuth(implicit)로 전환. (2) `GET /v1/sessions`가 ownerAuth에서 sessionAuth로 전환 (에이전트 자기 세션 조회). (3) `/v1/owner/*` 대부분이 ownerAuth에서 masterAuth(implicit)로 전환. ownerAuth가 유지되는 것은 approve/:txId 1곳 + recover 1곳(dual-auth) = 2곳뿐.
+>
+> **[v0.8] 추가:** `POST /v1/owner/agents/:agentId/withdraw`가 masterAuth(implicit)로 추가. 수신 주소가 agents.owner_address로 고정이므로 ownerAuth 불필요 (v0.8 objectives §5.2 근거). 시스템 관리 masterAuth(implicit) 엔드포인트 16 -> 17개.
 
 ---
 
@@ -1648,7 +1654,7 @@ const SessionRevokeResponseSchema = z.object({
 
 > **(v0.5 변경)** Owner API의 대부분이 ownerAuth에서 masterAuth(implicit)으로 변경되었다. ownerAuth(SIWS/SIWE 서명)는 보안상 반드시 Owner 본인 확인이 필요한 **2곳에만 한정**: `POST /v1/owner/approve/:txId` (거래 승인), `POST /v1/admin/recover` (Kill Switch 복구) [v0.7 보완: recover 경로 변경]. 나머지는 데몬 구동 시 마스터 패스워드 인증으로 충분. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
 
-Owner가 에이전트, 거래, 정책, 시스템을 관리하는 엔드포인트. Phase 8에서 정의된 기존 10개 + Phase 9에서 추가하는 7개 = 총 **17개** 엔드포인트.
+Owner가 에이전트, 거래, 정책, 시스템을 관리하는 엔드포인트. Phase 8에서 정의된 기존 10개 + Phase 9에서 추가하는 7개 + Phase 34(v0.8)에서 추가하는 1개 = 총 **18개** 엔드포인트.
 
 ### 8.1 POST /v1/owner/connect (Owner 지갑 등록)
 
@@ -2616,6 +2622,316 @@ const DashboardResponseSchema = z.object({
 }
 ```
 
+### 8.18 [v0.8] POST /v1/owner/agents/:agentId/withdraw (자금 회수)
+
+> **[v0.8 추가]** Owner가 등록된 에이전트의 자금을 owner_address로 전량 회수한다. WITHDRAW-01 ~ WITHDRAW-05, WITHDRAW-07, WITHDRAW-08 요구사항을 충족한다. v0.8 objectives §5 참조.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `POST` |
+| **Path** | `/v1/owner/agents/:agentId/withdraw` |
+| **Auth** | masterAuth(implicit) |
+| **Tags** | `Owner` |
+| **operationId** | `withdrawAgentFunds` |
+| **정의 원본** | v0.8 objectives §5.1 |
+
+**ownerAuth 불필요 근거 (WITHDRAW-02):**
+수신 주소가 `agents.owner_address`로 **고정**되어 변경할 수 없다. 따라서 masterAuth 유출 시에도 자금은 Owner 지갑으로만 이동하며, 공격자에게 이득이 없다 (v0.8 objectives §5.2 참조).
+
+| 공격 시나리오 | 결과 |
+|-------------|------|
+| masterAuth 유출 -> withdraw 호출 | 자금 -> Owner 지갑 (공격자 이득 없음) |
+| masterAuth 유출 -> 주소 변경 -> withdraw | 잠금 구간이면 ownerAuth 필요 -> **차단** |
+| masterAuth 유출 -> 유예 구간에서 주소 변경 -> withdraw | **withdraw 비활성화** (WITHDRAW_LOCKED_ONLY) |
+
+**Path Parameters:**
+
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| `agentId` | string (UUID v7) | 대상 에이전트 ID |
+
+**Request Zod 스키마:**
+
+```typescript
+const WithdrawRequestSchema = z.object({
+  scope: z.enum(['all', 'native']).default('all').openapi({
+    description: '"all" = 네이티브 + SPL 토큰 + rent 전량 회수, "native" = 네이티브 자산만 회수',
+    example: 'all',
+  }),
+}).openapi('WithdrawRequest')
+```
+
+**scope 분기 (WITHDRAW-03, WITHDRAW-04):**
+
+| scope | 동작 | IChainAdapter 호출 |
+|-------|------|-------------------|
+| `"all"` | 네이티브 + SPL 토큰 + rent 전량 회수 | `sweepAll(from, to)` |
+| `"native"` | 네이티브 자산만 회수 (토큰/rent 미포함) | `getBalance()` + `estimateFee()` + `sendNative()` 조합 |
+
+**Response Zod 스키마:**
+
+```typescript
+const WithdrawResponseSchema = z.object({
+  totalTransactions: z.number().int().nonnegative().openapi({
+    description: '실행된 트랜잭션 수',
+    example: 3,
+  }),
+  nativeRecovered: z.string().openapi({
+    description: '회수된 네이티브 자산 금액 (최소 단위 문자열)',
+    example: '2458000000',
+  }),
+  tokensRecovered: z.array(z.object({
+    symbol: z.string().openapi({ description: '토큰 심볼', example: 'USDC' }),
+    amount: z.string().openapi({ description: '회수 금액 (최소 단위 문자열)', example: '150000000' }),
+    mint: z.string().openapi({ description: '토큰 민트 주소', example: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }),
+  })).openapi({
+    description: '회수된 토큰 목록',
+  }),
+  rentRecovered: z.string().optional().openapi({
+    description: 'Solana 토큰 계정 rent 회수분 (최소 단위 문자열, Solana 전용)',
+    example: '12000000',
+  }),
+  failed: z.array(z.object({
+    mint: z.string().openapi({ description: '실패한 토큰 민트 주소', example: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263' }),
+    error: z.string().openapi({ description: '실패 사유', example: 'Token account frozen' }),
+  })).openapi({
+    description: '전송 실패한 토큰 목록 (부분 실패 시 비어있지 않음)',
+  }),
+}).openapi('WithdrawResponse')
+```
+
+> **SweepResult 타입 참조:** 응답 스키마는 25-sqlite-schema.md §4.12.2에 정의된 `SweepResult` 타입의 HTTP 표현이다. `SweepResult.transactions`는 API 응답에서 `totalTransactions` 숫자로 축약되며, `tokensRecovered`는 `AssetInfo[]`에서 `{ symbol, amount, mint }` 서브셋으로 변환된다.
+
+**HTTP 상태 코드 (WITHDRAW-05):**
+
+| HTTP | 조건 | 설명 |
+|------|------|------|
+| **200** | `failed.length === 0` | 전량 회수 성공 |
+| **207** | `failed.length > 0 && totalTransactions > 0` | 부분 회수 성공 (일부 토큰 전송 실패) |
+| **403** | `WITHDRAW_LOCKED_ONLY` 또는 `AGENT_SUSPENDED` | 회수 불가 상태 |
+| **404** | `AGENT_NOT_FOUND` 또는 `NO_OWNER` | 에이전트/Owner 없음 |
+| **500** | `SWEEP_TOTAL_FAILURE` | 모든 전송 실패 |
+
+**에러 코드 매트릭스:**
+
+| 에러 코드 | HTTP | retryable | 조건 |
+|-----------|------|-----------|------|
+| `AGENT_NOT_FOUND` | 404 | false | agentId에 해당하는 에이전트 없음 |
+| `NO_OWNER` | 404 | false | `agents.owner_address IS NULL` (Owner 미등록) |
+| `WITHDRAW_LOCKED_ONLY` | 403 | false | `resolveOwnerState() !== LOCKED` (유예 구간 포함) -- WITHDRAW-08 |
+| `AGENT_SUSPENDED` | 403 | false | `agents.status === 'SUSPENDED'` |
+| `SWEEP_TOTAL_FAILURE` | 500 | true | 모든 전송 실패 (SOL 전송 포함) |
+
+> **WITHDRAW_LOCKED_ONLY 보안 근거 (WITHDRAW-08):** 유예 구간(`owner_verified = 0`)에서 withdraw를 허용하면, 공격자가 masterAuth 탈취 후 `set-owner(자기 주소)` -> 즉시 withdraw로 자금을 탈취할 수 있다. LOCKED 상태(`owner_verified = 1`)에서만 활성화하여 이 공격을 차단한다 (32-02 H-02 방어). `resolveOwnerState(agent) !== 'LOCKED'`이면 GRACE, NONE 모두 거부된다.
+
+**응답 예시 (200 OK -- 전량 성공):**
+
+```json
+{
+  "totalTransactions": 3,
+  "nativeRecovered": "2458000000",
+  "tokensRecovered": [
+    { "symbol": "USDC", "amount": "150000000", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+    { "symbol": "BONK", "amount": "5000000000000", "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263" }
+  ],
+  "rentRecovered": "12000000",
+  "failed": []
+}
+```
+
+**응답 예시 (207 Multi-Status -- 부분 성공):**
+
+```json
+{
+  "totalTransactions": 2,
+  "nativeRecovered": "2458000000",
+  "tokensRecovered": [
+    { "symbol": "USDC", "amount": "150000000", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" }
+  ],
+  "rentRecovered": "4000000",
+  "failed": [
+    { "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", "error": "Token account frozen" }
+  ]
+}
+```
+
+#### 8.18.1 [v0.8] WithdrawService 도메인 서비스 설계
+
+> **[v0.8 추가]** POST /v1/owner/agents/:agentId/withdraw의 비즈니스 로직을 캡슐화하는 도메인 서비스. OwnerLifecycleService(32-01)와 동일한 서비스 레이어 패턴을 따른다.
+
+**파일 위치:** `packages/daemon/src/services/withdraw-service.ts`
+
+**책임:**
+1. OwnerState 검증 (LOCKED에서만 활성화 -- WITHDRAW-08)
+2. scope 분기 ("all" vs "native" -- WITHDRAW-03, WITHDRAW-04)
+3. IChainAdapter.sweepAll() 또는 getBalance+estimateFee+sendNative 조합 호출
+4. SweepResult -> HTTP 200/207/500 응답 매핑 (WITHDRAW-05)
+5. 감사 로그 기록
+
+**의사 코드:**
+
+```typescript
+// packages/daemon/src/services/withdraw-service.ts
+import { resolveOwnerState } from '../utils/owner-state'
+import type { IChainAdapter, SweepResult } from '@waiaas/core'
+
+interface WithdrawResult {
+  totalTransactions: number
+  nativeRecovered: string
+  tokensRecovered: Array<{ symbol: string; amount: string; mint: string }>
+  rentRecovered?: string
+  failed: Array<{ mint: string; error: string }>
+}
+
+class WithdrawService {
+  constructor(
+    private db: Database,
+    private chainAdapter: IChainAdapter,
+    private auditLogger: AuditLogger,
+  ) {}
+
+  async withdraw(agentId: string, scope: 'all' | 'native'): Promise<WithdrawResult> {
+    // 1. 에이전트 조회
+    const agent = getAgent(this.db, agentId)
+    if (!agent) throw new NotFoundError('AGENT_NOT_FOUND')
+
+    // 2. Owner 등록 확인
+    if (!agent.ownerAddress) throw new NotFoundError('NO_OWNER')
+
+    // 3. 에이전트 상태 확인
+    if (agent.status === 'SUSPENDED') throw new ForbiddenError('AGENT_SUSPENDED')
+
+    // 4. OwnerState 검증 (LOCKED만 허용 -- WITHDRAW-08, H-02 방어)
+    if (resolveOwnerState(agent) !== 'LOCKED') {
+      throw new ForbiddenError('WITHDRAW_LOCKED_ONLY')
+    }
+
+    // 5. scope 분기 실행
+    const result = scope === 'all'
+      ? await this.sweepAll(agent)
+      : await this.sweepNative(agent)
+
+    // 6. HTTP 응답 코드 결정 (핸들러에서 사용)
+    if (result.totalTransactions === 0 && result.failed.length > 0) {
+      // 감사 로그: 전체 실패
+      this.auditLogger.log('FUND_WITHDRAWAL_FAILED', {
+        agentId, scope, failed: result.failed,
+      })
+      throw new InternalError('SWEEP_TOTAL_FAILURE')
+    }
+
+    // 7. 감사 로그: 성공 또는 부분 성공
+    this.auditLogger.log(
+      result.failed.length > 0 ? 'FUND_PARTIALLY_WITHDRAWN' : 'FUND_WITHDRAWN',
+      { agentId, scope, ...result },
+    )
+
+    return result
+  }
+
+  /**
+   * scope "all": IChainAdapter.sweepAll() 호출 (정책 엔진 우회 -- 31-02 확정)
+   */
+  private async sweepAll(agent: Agent): Promise<WithdrawResult> {
+    const sweepResult: SweepResult = await this.chainAdapter.sweepAll(
+      agent.publicKey,
+      agent.ownerAddress!,
+    )
+    return this.mapSweepResult(sweepResult)
+  }
+
+  /**
+   * scope "native": 기존 IChainAdapter 메서드 조합 (신규 메서드 추가 없음)
+   * getBalance() -> estimateFee() -> sendNative() 3단계
+   */
+  private async sweepNative(agent: Agent): Promise<WithdrawResult> {
+    const balance = await this.chainAdapter.getBalance(agent.publicKey)
+    if (balance.balance === 0n) {
+      return {
+        totalTransactions: 0,
+        nativeRecovered: '0',
+        tokensRecovered: [],
+        failed: [],
+      }
+    }
+
+    const fee = await this.chainAdapter.estimateFee({
+      type: 'transfer',
+      to: agent.ownerAddress!,
+      amount: balance.balance.toString(),
+    })
+    const amount = balance.balance - fee.total
+    if (amount <= 0n) throw new InternalError('INSUFFICIENT_FOR_FEE')
+
+    const txResult = await this.chainAdapter.sendNative(
+      agent.publicKey,
+      agent.ownerAddress!,
+      amount.toString(),
+    )
+
+    return {
+      totalTransactions: 1,
+      nativeRecovered: amount.toString(),
+      tokensRecovered: [],
+      failed: [],
+    }
+  }
+
+  /**
+   * SweepResult (chain-adapter.types.ts) -> WithdrawResult (HTTP 응답) 매핑
+   */
+  private mapSweepResult(sweep: SweepResult): WithdrawResult {
+    return {
+      totalTransactions: sweep.transactions.length,
+      nativeRecovered: sweep.nativeRecovered,
+      tokensRecovered: sweep.tokensRecovered.map(t => ({
+        symbol: t.symbol,
+        amount: t.balance.toString(),
+        mint: t.tokenAddress,
+      })),
+      rentRecovered: sweep.rentRecovered,
+      failed: sweep.failed,
+    }
+  }
+}
+```
+
+**감사 로그 이벤트:**
+
+| 이벤트 | severity | 조건 | metadata |
+|--------|----------|------|----------|
+| `FUND_WITHDRAWN` | info | 전량 성공 (`failed.length === 0`) | `{ agentId, scope, totalTransactions, nativeRecovered, tokensRecovered }` |
+| `FUND_PARTIALLY_WITHDRAWN` | warning | 부분 성공 (`failed.length > 0 && totalTransactions > 0`) | `{ agentId, scope, totalTransactions, failed }` |
+| `FUND_WITHDRAWAL_FAILED` | error | 전체 실패 (`totalTransactions === 0`) | `{ agentId, scope, failed }` |
+
+**SweepResult -> HTTP 응답 매핑 규칙:**
+
+| SweepResult 상태 | HTTP | 감사 로그 이벤트 |
+|-----------------|------|----------------|
+| `failed.length === 0` | 200 | FUND_WITHDRAWN |
+| `failed.length > 0 && transactions.length > 0` | 207 | FUND_PARTIALLY_WITHDRAWN |
+| `transactions.length === 0` (모든 전송 실패) | 500 (throw) | FUND_WITHDRAWAL_FAILED |
+
+#### 8.18.2 [v0.8] Kill Switch 상태에서의 withdraw 처리 (Open Question)
+
+> **구현 시 결정 사항.** Phase 35 DX에서 CLI withdraw 명령 설계 시 함께 결정한다.
+
+Kill Switch ACTIVATED 상태에서 killSwitchGuard(미들웨어 #7)가 4개 허용 경로만 통과시킨다. `POST /v1/owner/agents/:agentId/withdraw`는 이 허용 목록에 없다.
+
+**방안 A: killSwitchGuard 허용 목록 추가**
+- 허용 목록 4 -> 5개로 확장
+- API 경유로 withdraw 가능
+- 장점: 일관된 API 접근 패턴
+- 단점: Kill Switch의 "모든 거래 차단" 의미가 약화
+
+**방안 B: CLI/데몬 내부에서 직접 실행**
+- API를 우회하여 WithdrawService를 직접 호출
+- `waiaas withdraw --agent <id>` CLI 명령으로 구현
+- 장점: Kill Switch 허용 목록 변경 없음, 보안 의미 유지
+- 단점: API 경유와 별도 경로 관리 필요
+
+> **v0.8 설계 마일스톤에서는 두 방안을 기록하고 구현을 이연한다.** (v0.8 objectives §5.5 참조)
+
 ---
 
 ## 9. Admin API (masterAuth -- explicit/implicit)
@@ -2954,7 +3270,20 @@ const ErrorResponseSchema = z.object({
 | `AGENT_SUSPENDED` | 409 | false | 에이전트 정지 상태 |
 | `AGENT_TERMINATED` | 410 | false | 에이전트 종료됨 |
 
-### 10.9 ACTION 도메인 에러 (v0.6 추가)
+### 10.9 [v0.8] WITHDRAW 도메인 에러
+
+> **[v0.8 추가]** 자금 회수(withdraw) 관련 에러. POST /v1/owner/agents/:agentId/withdraw 전용.
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `NO_OWNER` | 404 | false | `agents.owner_address IS NULL` -- Owner 미등록 에이전트 |
+| `WITHDRAW_LOCKED_ONLY` | 403 | false | `resolveOwnerState() !== LOCKED` -- 유예 구간 또는 Owner 없음 (WITHDRAW-08) |
+| `SWEEP_TOTAL_FAILURE` | 500 | true | 모든 전송 실패 (SOL 전송 포함). 재시도 가능 (일시적 RPC 장애 등) |
+| `INSUFFICIENT_FOR_FEE` | 500 | false | scope="native"에서 잔액이 tx fee보다 적어 전송 불가 |
+
+> **AGENT_NOT_FOUND, AGENT_SUSPENDED:** 기존 AGENT 도메인 에러(§10.8)를 재사용한다. 중복 정의하지 않는다.
+
+### 10.10 ACTION 도메인 에러 (v0.6 추가)
 
 > **(v0.6 추가)** Action Provider 관련 에러. 45-enum-unified-mapping.md ActionErrorCode 7개 참조.
 
@@ -2968,7 +3297,7 @@ const ErrorResponseSchema = z.object({
 | `ACTION_NAME_CONFLICT` | 409 | false | 동일 액션 이름 중복 등록 시도 |
 | `ACTION_CHAIN_MISMATCH` | 400 | false | 요청 체인과 Provider 지원 체인 불일치 |
 
-### 10.10 에러 코드 요약 통계 (v0.6 변경)
+### 10.11 에러 코드 요약 통계 (v0.8 변경)
 
 | 도메인 | 코드 수 | 주요 HTTP |
 |--------|--------|-----------|
@@ -2979,12 +3308,15 @@ const ErrorResponseSchema = z.object({
 | OWNER | 4 | 404, 409, 410 |
 | SYSTEM | 6 | 400, 409, 503 |
 | AGENT | 3 | 404, 409, 410 |
+| WITHDRAW | 4 | 403, 404, 500 **(v0.8 추가)** |
 | ACTION | 7 | 400, 404, 409, 500, 502 (v0.6 추가) |
-| **합계** | **60** | |
+| **합계** | **64** | |
 
 > **(v0.5 추가) hint 매핑:** v0.5 기준 40개 에러 코드 중 31개(78%)에 hint가 매핑되어 있다. v0.6 추가 20개 에러 코드의 hint 매핑은 구현 시 확장 예정. 전체 hint 맵은 **55-dx-improvement-spec.md 섹션 2.2 errorHintMap** 참조.
 >
 > **(v0.6 추가) 에러 코드 교차 참조:** v0.6 에러 코드 20개(TX 도메인 13개 + ACTION 도메인 7개)의 전체 목록과 소스 문서 매핑은 **45-enum-unified-mapping.md v0.6 에러 코드 교차 참조** 섹션 참조.
+>
+> **[v0.8] 추가:** WITHDRAW 도메인 4개 에러 코드 신설 + AGENT 도메인 기존 코드 2개 재사용. WITHDRAW-08(유예 구간 비활성화) 전용 `WITHDRAW_LOCKED_ONLY` 코드가 핵심. hint 매핑은 구현 시 추가.
 
 ---
 
@@ -3202,7 +3534,9 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 
 > **(v0.5 변경)** Auth 열이 v0.5 인증 모델을 반영하여 업데이트되었다. ownerAuth는 #15(approve)과 #18(recover) 2곳에만 유지. 상세: **52-auth-model-redesign.md 섹션 4.2** 참조.
 >
-> **(v0.6 변경)** 5개 엔드포인트 추가: #33 GET /v1/wallet/assets, #34~37 /v1/actions/* (Action Provider API). 총 36개 엔드포인트. 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
+> **(v0.6 변경)** 5개 엔드포인트 추가: #33 GET /v1/wallet/assets, #34~37 /v1/actions/* (Action Provider API). 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
+>
+> **[v0.8] 변경:** 1개 엔드포인트 추가: #39 POST /v1/owner/agents/:agentId/withdraw (자금 회수). 총 **38개** 엔드포인트. v0.8 objectives §5 참조.
 
 | # | Method | Path | Auth (v0.5) | Tags | operationId | 정의 원본 |
 |---|--------|------|-------------|------|-------------|----------|
@@ -3244,3 +3578,4 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 36 | GET | `/v1/actions/:provider/:action` | sessionAuth | Action | getAction | **v0.6** ACTION |
 | 37 | POST | `/v1/actions/:provider/:action/resolve` | sessionAuth | Action | resolveAction | **v0.6** ACTION |
 | 38 | POST | `/v1/actions/:provider/:action/execute` | sessionAuth | Action | executeAction | **v0.6** ACTION |
+| 39 | POST | `/v1/owner/agents/:agentId/withdraw` | masterAuth(implicit) | Owner | withdrawAgentFunds | **[v0.8]** objectives §5 |
