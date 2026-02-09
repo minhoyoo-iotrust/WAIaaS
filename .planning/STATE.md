@@ -11,17 +11,17 @@
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
 페이즈: 49 of 51 (데몬 인프라)
-플랜: 0 of 3 in current phase
-상태: 플래닝 대기
-마지막 활동: 2026-02-10 -- Phase 48 완료 + 검증 통과
+플랜: 1 of 3 in current phase
+상태: In progress
+마지막 활동: 2026-02-10 -- Completed 49-01-PLAN.md
 
-진행률: [███.........] 25% (3/12 plans)
+진행률: [████........] 33% (4/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 3 plans (48-01, 48-02, 48-03)
+**v1.1 완료:** 4 plans (48-01, 48-02, 48-03, 49-01)
 
 ## 누적 컨텍스트
 
@@ -44,17 +44,22 @@
 | Messages 인터페이스: Record<ErrorCode, string> | 컴파일러가 66개 에러 코드 키 일치를 locale 간 강제 | 48-03 |
 | i18n: as const 대신 명시적 Messages 인터페이스 | as const는 리터럴 타입으로 고정되어 다국어 값 할당 불가 | 48-03 |
 | IPolicyEngine.evaluate(): 일반 객체 파라미터 | 인터페이스-스키마 간 순환 의존 방지, 경량 계약 | 48-03 |
+| TD-09 확정: uuidv7 npm 패키지 사용 | 수동 구현 대비 정확성 우선, ms 정밀도 시간순 정렬 보장 | 49-01 |
+| pushSchema(): raw SQL (CREATE TABLE IF NOT EXISTS) | drizzle-kit CLI 대신 프로그래매틱 데몬 시작에 적합 | 49-01 |
+| PARTIAL_FAILURE를 core TRANSACTION_STATUSES에 추가 | doc 25 v0.10에 정의되었으나 core enum에 누락, CHECK 제약 파생에 필요 | 49-01 |
 
-v1.1 구현 시 확정 필요: TD-09(UUID v7), TD-10(CLI 프레임워크)
+v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 
 ### 차단 요소/우려 사항
 
-- sodium-native + better-sqlite3 네이티브 addon 빌드 호환성 (Phase 49에서 검증)
+- better-sqlite3 네이티브 addon 빌드 검증 완료 (49-01에서 성공)
+- sodium-native 네이티브 addon 빌드 호환성 (Phase 49-02에서 검증 필요)
 - 설계 부채 DD-01~03 (v1.1 구현 시 인라인 처리)
 - @solana/kit 3.x API 안정성 (Phase 50에서 검증)
+- 기존 keystore 파일 (49-02) TypeScript 에러 수정 필요
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Phase 48 검증 완료 (passed). 다음: `/gsd:plan-phase 49`
-재개 파일: .planning/phases/48-monorepo-scaffold-core/48-VERIFICATION.md
+중단 지점: Completed 49-01-PLAN.md. 다음: 49-02-PLAN.md (keystore)
+재개 파일: .planning/phases/49-daemon-infra/49-01-SUMMARY.md
