@@ -6,6 +6,7 @@
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 API 통합 프로토콜:** 2026-02-08
 **v0.9 SessionManager 핵심 설계:** 2026-02-09 (Phase 37-01: 인터페이스 + 토큰 로드, Phase 37-02: 갱신 + 실패 + reload)
+**v0.9 SessionManager MCP 통합 설계:** 2026-02-09 (Phase 38-01: ApiClient + tool/resource handler 통합)
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -3764,6 +3765,394 @@ async handleUnauthorized(): Promise<boolean> {
 > **Phase 36 연결:** `readMcpToken()` 함수는 Phase 36-01에서 확정된 `@waiaas/core` `utils/token-file.ts`의 공유 유틸리티이다. symlink 거부, 형식 검증이 내장되어 있으므로 handleUnauthorized에서 추가 검증 불필요.
 
 > **Phase 36-02 연결:** SESSION_EXPIRING_SOON 알림은 데몬이 갱신 API 처리 시 자동 발송한다 (NOTI-01). MCP SessionManager가 RENEWAL_LIMIT_REACHED/LIFETIME_EXCEEDED를 수신해도 별도 알림 호출 없이 로그만 출력한다.
+
+### 6.5 [v0.9] SessionManager MCP 통합 설계 (Phase 38)
+
+Phase 37에서 확정된 SessionManager(getToken/start/dispose, 9개 내부 상태, 5개 내부 메서드)를 MCP tool/resource handler와 실제로 통합하기 위한 설계이다. MCP SDK v1.x에 미들웨어/hook 시스템이 없으므로, 모든 데몬 API 호출을 캡슐화하는 **ApiClient 래퍼 클래스**를 도입하여 인증 헤더 관리, 401 자동 재시도, 세션 만료 graceful 응답을 한 곳에 집중시킨다.
+
+**Phase 38 목표:**
+1. **ApiClient 래퍼 클래스** -- 9개 handler(6 tool + 3 resource)의 인증/재시도/에러 처리를 단일 클래스에 캡슐화 (SMGI-01)
+2. **Tool handler 통합** -- 기존 환경변수+직접 fetch 패턴을 apiClient.get()/post() + toToolResult() 공통 변환으로 리팩토링
+3. **Resource handler 통합** -- 동일 ApiClient + toResourceResult() 패턴으로 리소스 핸들러도 통합
+
+#### 6.5.1 [v0.9] SessionManager.getState() 추가 (Phase 38 확장)
+
+Phase 37에서 `state` 필드가 private으로 정의되었으나(SM-03), ApiClient가 API 호출 전 세션 상태를 사전 확인하려면 public 접근이 필요하다.
+
+**getState() public 메서드:**
+
+| 항목 | 내용 |
+|------|------|
+| 시그니처 | `getState(): SessionState` |
+| 반환 타입 | `'active' \| 'expired' \| 'error'` |
+| 동작 | 현재 내부 `state` 필드를 그대로 반환 (순수 getter, 부수효과 없음) |
+| 호출자 | `ApiClient.request()` -- API 호출 전 세션 상태 확인용 |
+
+```typescript
+// SessionManager에 추가되는 4번째 public 메서드
+getState(): SessionState {
+  return this.state
+}
+```
+
+> **설계 결정 SMGI-D01:** `getState()`를 4번째 public 메서드로 추가. Phase 37의 3-public(getToken/start/dispose)에서 4-public(getToken/getState/start/dispose)으로 확장. Research Open Question 1 해결.
+
+> **섹션 6.4.1 업데이트 노트:** Phase 38에서 getState() public 메서드가 추가되어 Public 메서드 테이블이 3개에서 4개로 확장된다. 전체 Public 메서드는 getToken, getState, start, dispose이다.
+
+**Public 메서드 4개 (Phase 38 확장 후):**
+
+| 메서드 | 시그니처 | 설명 |
+|--------|---------|------|
+| `getToken()` | `getToken(): string` | 현재 유효 토큰 반환. 갱신 중에도 구 토큰 반환 (SM-14) |
+| `getState()` | `getState(): SessionState` | 현재 세션 상태 반환 (`'active' \| 'expired' \| 'error'`). Phase 38 추가 (SMGI-D01) |
+| `start()` | `async start(): Promise<void>` | loadToken() + scheduleRenewal(). 프로세스 시작 시 1회 호출 |
+| `dispose()` | `dispose(): void` | clearTimeout(timer) + 정리. SIGTERM 시 호출 |
+
+#### 6.5.2 [v0.9] ApiClient 래퍼 클래스 설계 (SMGI-01)
+
+**파일 위치:** `packages/mcp/src/internal/api-client.ts`
+
+모든 MCP tool/resource handler가 데몬 REST API를 호출할 때 사용하는 공통 래퍼 클래스이다. 개별 handler는 인증 헤더, 401 재시도, 세션 만료 처리를 직접 다루지 않고 ApiClient에 위임한다.
+
+##### 6.5.2.1 ApiResult<T> Discriminated Union 타입
+
+```typescript
+/**
+ * [v0.9] ApiClient 응답 타입 -- 4종 분기 discriminated union
+ * 모든 ApiClient 메서드의 반환 타입
+ */
+type ApiResult<T = unknown> =
+  | { ok: true; data: T; status: number }                                    // 성공 (2xx)
+  | { ok: false; error: { code: string; message: string }; status: number }  // API 에러 (4xx/5xx)
+  | { ok: false; expired: true }                                             // 세션 만료/에러 상태
+  | { ok: false; networkError: true }                                        // 네트워크 에러 (ECONNREFUSED 등)
+```
+
+**4종 분기 설명:**
+
+| 분기 | 조건 | 설명 | 후속 처리 |
+|------|------|------|-----------|
+| 성공 | `ok: true` | 데몬 API가 2xx를 반환 | `data`를 JSON.stringify하여 tool result로 반환 |
+| API 에러 | `ok: false, error` | 데몬 API가 4xx/5xx를 반환 (400 Bad Request, 403 Forbidden 등) | `isError: true`로 tool result 반환 |
+| 세션 만료 | `ok: false, expired: true` | SessionManager가 expired/error 상태이거나, 401 복구 실패 | `isError` 미설정으로 안내 메시지 반환 (H-04) |
+| 네트워크 에러 | `ok: false, networkError: true` | fetch 자체가 throw (ECONNREFUSED, DNS 실패 등) | `isError` 미설정으로 안내 메시지 반환 |
+
+##### 6.5.2.2 ApiClient 클래스 인터페이스
+
+```typescript
+class ApiClient {
+  constructor(sessionManager: SessionManager, baseUrl: string)
+
+  // ── Public 메서드 (3개) ──
+  async get<T>(path: string): Promise<ApiResult<T>>              // GET 요청
+  async post<T>(path: string, body?: unknown): Promise<ApiResult<T>>  // POST 요청
+  async put<T>(path: string, body?: unknown): Promise<ApiResult<T>>   // PUT 요청
+
+  // ── Private 메서드 (4개) ──
+  private async request<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>>
+  private async handle401<T>(method: string, path: string, originalToken: string, body?: unknown): Promise<ApiResult<T>>
+  private async doFetch(method: string, path: string, token: string, body?: unknown): Promise<Response>
+  private parseResponse<T>(res: Response): Promise<ApiResult<T>>
+}
+```
+
+**메서드 요약:**
+
+| # | 메서드 | 가시성 | 역할 |
+|---|--------|--------|------|
+| 1 | `get<T>(path)` | public | GET 요청. `request('GET', path)` 위임 |
+| 2 | `post<T>(path, body?)` | public | POST 요청. `request('POST', path, body)` 위임 |
+| 3 | `put<T>(path, body?)` | public | PUT 요청. `request('PUT', path, body)` 위임 |
+| 4 | `request<T>(method, path, body?)` | private | 공통 요청 처리. 7-step 절차 |
+| 5 | `handle401<T>(method, path, originalToken, body?)` | private | 401 재시도. 3-step 절차 |
+| 6 | `doFetch(method, path, token, body?)` | private | 실제 fetch 호출 |
+| 7 | `parseResponse<T>(res)` | private | Response -> ApiResult 변환 |
+
+##### 6.5.2.3 request() 메서드 7-Step 절차
+
+| Step | 동작 | 실패 시 | 참조 |
+|------|------|---------|------|
+| 1 | `getState()` 확인 | `expired` 또는 `error`이면 즉시 `{ ok: false, expired: true }` 반환 | SMGI-D01 |
+| 2 | `getToken()`으로 현재 토큰 획득 | - | SM-02 |
+| 3 | `doFetch(method, path, token, body)`로 API 호출 | fetch throw 시 Step 6으로 | - |
+| 4 | 401 응답이면 `handle401(method, path, token, body)` 호출 | handle401 결과 반환 | H-05 |
+| 5 | 기타 응답이면 `parseResponse(res)` 호출 | 파싱 결과 반환 | - |
+| 6 | fetch 실패(ECONNREFUSED 등)이면 `{ ok: false, networkError: true }` 반환 | - | Pitfall 3 |
+| 7 | 결과 반환 | - | - |
+
+##### 6.5.2.4 handle401() 메서드 3-Step 재시도 절차
+
+| Step | 동작 | 설명 | 참조 |
+|------|------|------|------|
+| 1 | 50ms 대기 | 갱신 중일 수 있음. SM-14에서 갱신 중 getToken()은 구 토큰을 반환하므로 갱신 완료를 대기 | SM-14 |
+| 2 | `getToken()` 재호출 + `originalToken`과 비교 | **다르면:** 갱신 완료. 새 토큰으로 `doFetch()` 1회 재시도 후 `parseResponse()` 반환. **같으면:** Step 3으로 | H-05 |
+| 3 | `sessionManager.handleUnauthorized()` 호출 | **recovered=true:** 새 토큰으로 `doFetch()` 1회 재시도 후 반환. **recovered=false:** `{ ok: false, expired: true }` 반환 | SM-12 |
+
+**handle401 플로우:**
+
+```
+401 수신
+  |
+  v
+  Step 1: await 50ms (갱신 완료 대기)
+  |
+  v
+  Step 2: getToken() 재호출
+  |
+  +-- token !== originalToken ──> 새 토큰으로 doFetch() 재시도 ──> parseResponse()
+  |
+  +-- token === originalToken ──> Step 3
+       |
+       v
+       Step 3: handleUnauthorized() (파일 재로드)
+       |
+       +-- recovered: true ──> getToken() → doFetch() 재시도 → parseResponse()
+       |
+       +-- recovered: false ──> { ok: false, expired: true }
+```
+
+##### 6.5.2.5 parseResponse() 동작
+
+| 응답 | 처리 | 반환 |
+|------|------|------|
+| 2xx | JSON 파싱 성공 | `{ ok: true, data: parsed, status: res.status }` |
+| 4xx/5xx | JSON 파싱 성공 | `{ ok: false, error: { code: parsed.error?.code ?? 'UNKNOWN', message: parsed.error?.message ?? 'Unknown error' }, status: res.status }` |
+| JSON 파싱 실패 | catch | `{ ok: false, error: { code: 'PARSE_ERROR', message: 'Failed to parse response' }, status: res.status }` |
+
+##### 6.5.2.6 doFetch() 동작
+
+```typescript
+private async doFetch(
+  method: string,
+  path: string,
+  token: string,
+  body?: unknown,
+): Promise<Response> {
+  return fetch(`${this.baseUrl}${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+```
+
+fetch 자체가 throw(ECONNREFUSED, DNS 실패, 타임아웃 등)하면 상위 `request()`의 try-catch에서 `{ ok: false, networkError: true }`로 변환한다.
+
+##### 6.5.2.7 TypeScript 의사 코드 (전체)
+
+```typescript
+// packages/mcp/src/internal/api-client.ts
+// [v0.9] Phase 38 -- MCP tool/resource handler 통합용 API 클라이언트
+// 참조: 38-RESEARCH.md Example 1, SM-12, SM-14, H-04, H-05
+
+import type { SessionManager } from '../session-manager.js'
+
+// ── ApiResult discriminated union ──
+
+type ApiResult<T = unknown> =
+  | { ok: true; data: T; status: number }
+  | { ok: false; error: { code: string; message: string }; status: number }
+  | { ok: false; expired: true }
+  | { ok: false; networkError: true }
+
+// ── ApiClient 클래스 ──
+
+class ApiClient {
+  constructor(
+    private readonly sessionManager: SessionManager,
+    private readonly baseUrl: string,
+  ) {}
+
+  // ── Public 메서드 ──
+
+  async get<T>(path: string): Promise<ApiResult<T>> {
+    return this.request<T>('GET', path)
+  }
+
+  async post<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+    return this.request<T>('POST', path, body)
+  }
+
+  async put<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+    return this.request<T>('PUT', path, body)
+  }
+
+  // ── Private: 공통 요청 처리 (7-Step) ──
+
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<ApiResult<T>> {
+    // Step 1: 세션 상태 사전 확인 (SMGI-D01)
+    const state = this.sessionManager.getState()
+    if (state === 'expired' || state === 'error') {
+      return { ok: false, expired: true }
+    }
+
+    try {
+      // Step 2: 현재 토큰 획득
+      const token = this.sessionManager.getToken()
+
+      // Step 3: API 호출
+      const res = await this.doFetch(method, path, token, body)
+
+      // Step 4: 401 처리
+      if (res.status === 401) {
+        return await this.handle401<T>(method, path, token, body)
+      }
+
+      // Step 5: 응답 파싱
+      return await this.parseResponse<T>(res)
+    } catch (err) {
+      // Step 6: 네트워크 에러
+      console.error(
+        `[waiaas-mcp:api-client] Network error: ${method} ${path}`,
+        err,
+      )
+      return { ok: false, networkError: true }
+    }
+    // Step 7: 결과는 각 Step에서 직접 반환
+  }
+
+  // ── Private: 401 재시도 (3-Step) ──
+
+  private async handle401<T>(
+    method: string,
+    path: string,
+    originalToken: string,
+    body?: unknown,
+  ): Promise<ApiResult<T>> {
+    console.error(
+      `[waiaas-mcp:api-client] 401 received for ${method} ${path}. ` +
+      'Starting retry sequence.',
+    )
+
+    // Step 1: 50ms 대기 (갱신 중일 수 있음, SM-14)
+    await new Promise(r => setTimeout(r, 50))
+
+    // Step 2: 토큰 변경 확인
+    const freshToken = this.sessionManager.getToken()
+    if (freshToken !== originalToken) {
+      // 갱신 완료됨 -- 새 토큰으로 1회 재시도
+      console.error(
+        '[waiaas-mcp:api-client] Token changed during wait. ' +
+        'Retrying with fresh token.',
+      )
+      try {
+        const retryRes = await this.doFetch(method, path, freshToken, body)
+        return await this.parseResponse<T>(retryRes)
+      } catch {
+        return { ok: false, networkError: true }
+      }
+    }
+
+    // Step 3: handleUnauthorized (파일 재로드, SM-12)
+    console.error(
+      '[waiaas-mcp:api-client] Token unchanged. ' +
+      'Calling handleUnauthorized for file reload.',
+    )
+    const recovered = await this.sessionManager.handleUnauthorized()
+    if (recovered) {
+      const newToken = this.sessionManager.getToken()
+      console.error(
+        '[waiaas-mcp:api-client] Recovered via file reload. ' +
+        'Retrying with new token.',
+      )
+      try {
+        const retryRes = await this.doFetch(method, path, newToken, body)
+        return await this.parseResponse<T>(retryRes)
+      } catch {
+        return { ok: false, networkError: true }
+      }
+    }
+
+    // 복구 실패
+    console.error(
+      '[waiaas-mcp:api-client] Recovery failed. Session expired.',
+    )
+    return { ok: false, expired: true }
+  }
+
+  // ── Private: 실제 fetch 호출 ──
+
+  private async doFetch(
+    method: string,
+    path: string,
+    token: string,
+    body?: unknown,
+  ): Promise<Response> {
+    return fetch(`${this.baseUrl}${path}`, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  }
+
+  // ── Private: 응답 파싱 ──
+
+  private async parseResponse<T>(res: Response): Promise<ApiResult<T>> {
+    try {
+      const data = await res.json()
+
+      if (res.ok) {
+        return { ok: true, data: data as T, status: res.status }
+      }
+
+      // API 에러 (4xx/5xx)
+      const error = data.error ?? data
+      return {
+        ok: false,
+        error: {
+          code: error.code ?? 'UNKNOWN',
+          message: error.message ?? 'Unknown error',
+        },
+        status: res.status,
+      }
+    } catch {
+      // JSON 파싱 실패
+      return {
+        ok: false,
+        error: {
+          code: 'PARSE_ERROR',
+          message: 'Failed to parse response body as JSON',
+        },
+        status: res.status,
+      }
+    }
+  }
+}
+
+export { ApiClient, type ApiResult }
+```
+
+##### 6.5.2.8 console.error 통일 규칙
+
+| 규칙 | 내용 |
+|------|------|
+| 출력 대상 | `console.error` 전용 (stdout 오염 방지, Pitfall 4) |
+| 로그 접두사 | `[waiaas-mcp:api-client]` |
+| 사용 금지 | `console.log`, `console.info`, `console.warn` |
+| 근거 | MCP stdio transport에서 JSON-RPC 메시지만 stdout으로 전달되어야 함. 로그가 stdout에 출력되면 Claude Desktop의 JSON 파서가 깨짐 |
+
+**로그 메시지 목록:**
+
+| 상황 | 메시지 |
+|------|--------|
+| 네트워크 에러 | `[waiaas-mcp:api-client] Network error: {method} {path}` |
+| 401 수신 | `[waiaas-mcp:api-client] 401 received for {method} {path}. Starting retry sequence.` |
+| 토큰 변경 감지 | `[waiaas-mcp:api-client] Token changed during wait. Retrying with fresh token.` |
+| 토큰 미변경 | `[waiaas-mcp:api-client] Token unchanged. Calling handleUnauthorized for file reload.` |
+| 파일 재로드 복구 | `[waiaas-mcp:api-client] Recovered via file reload. Retrying with new token.` |
+| 복구 실패 | `[waiaas-mcp:api-client] Recovery failed. Session expired.` |
+
+> **참조:** 38-RESEARCH.md Pattern 1 (ApiClient 래퍼 패턴), Pattern 2 (Tool Handler에서 ApiClient 사용). SM-12 (handleUnauthorized 4-step), SM-14 (갱신 중 구 토큰 반환). v0.9-PITFALLS.md H-04 (isError 회피), H-05 (401 자동 재시도), Pitfall 4 (stdout 오염).
 
 ---
 
