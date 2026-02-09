@@ -8,14 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.0 구현 계획 수립
+## Current State
 
-**Goal:** v0.1~v0.10 설계 산출물(30개 설계 문서, 276 요구사항)을 실제 동작하는 소프트웨어로 전환하기 위한 구현 로드맵, 마일스톤별 objective 문서, 운영 전략을 확정한다.
+v1.0 구현 계획 수립 완료 (2026-02-09). 전체 설계+계획 단계 완료 (v0.1~v1.0, 11 milestones). 다음: v1.1 코어 인프라 구현 착수.
 
-**Target features:**
-- v1.1~v2.0 각 마일스톤 objective 문서 생성 (8개)
-- 설계 부채 추적 파일 초기화
-- 설계 문서 → 구현 마일스톤 매핑 확정
+**구현 로드맵 (v1.1~v2.0):**
+- v1.1 코어 인프라 + 기본 전송 (모노레포, SQLite, 키스토어, 데몬, CLI, 6-stage 파이프라인, SOL 전송)
+- v1.2 인증 + 정책 엔진 (3-tier 인증, 4-tier 정책, Owner 상태 머신, 세션 관리)
+- v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)
+- v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
+- v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
+- v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
+- v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
+- v2.0 전 기능 완성 릴리스 (npm 7패키지, Docker, Desktop 5플랫폼, GitHub Release)
 
 ## 현재 상태
 
@@ -91,11 +96,13 @@ v0.1~v0.10 완료 (2026-02-09). 110개 플랜, 276개 요구사항, 44개 페이
 - ✓ Batch 부모-자식 2계층 DB + PARTIAL_FAILURE — v0.10 (OPER-02)
 - ✓ Price Oracle 교차 검증 인라인 + 가격 나이 3단계 stale 정책 — v0.10 (OPER-03)
 
+- ✓ v1.1~v2.0 마일스톤별 objective 문서 8개 생성 — v1.0
+- ✓ 설계 부채 추적 체계 초기화 (objectives/design-debt.md) — v1.0
+- ✓ 설계 문서 37개 → 구현 마일스톤 매핑 확정 + 양방향 교차 검증 — v1.0
+
 ### 활성
 
-- [ ] v1.1~v2.0 마일스톤별 objective 문서 8개 생성
-- [ ] 설계 부채 추적 파일 초기화 (objectives/design-debt.md)
-- [ ] 설계 문서 → 구현 마일스톤 매핑 확정 (objectives/v1.0-implementation-planning.md 기반)
+(v1.1 `/gsd:new-milestone`에서 정의)
 
 ### 범위 외
 
@@ -124,7 +131,9 @@ v0.9 MCP 세션 관리 자동화 설계 완료 (2026-02-09). 5개 페이즈, 10�
 
 v0.10 구현 전 설계 완결성 확보 완료 (2026-02-09). 4개 페이즈, 10개 플랜, 12개 요구사항, 설계 문서 11개 직접 수정, 22 설계 결정.
 
-**누적:** 10 milestones (v0.1-v0.10), 44 phases, 110 plans, 276 requirements, 30 설계 문서 (24-64)
+v1.0 구현 계획 수립 완료 (2026-02-09). 3개 페이즈, 5개 플랜, 10개 요구사항, 8개 objective 문서(v1.1~v2.0), 설계 부채 추적 초기화, 37개 설계 문서 전수 매핑 검증.
+
+**누적:** 11 milestones (v0.1-v1.0), 47 phases, 115 plans, 286 requirements, 30 설계 문서 (24-64), 8 objective 문서
 
 **기술 스택 (v0.2 확정, v0.6 확장 설계 완료, v0.7 의존성 정리):**
 - Runtime: Node.js 22 LTS
@@ -231,6 +240,9 @@ v0.10 구현 전 설계 완결성 확보 완료 (2026-02-09). 4개 페이즈, 10
 | Batch 부모-자식 2계층 DB | metadata JSON→정규화, ON DELETE CASCADE | ✓ Good — v0.10 완결 |
 | Oracle 교차 검증 동기 인라인 | 비동기 백그라운드→getPrice() 동기 인라인 전환 | ✓ Good — v0.10 완결 |
 | 가격 나이 3단계 FRESH/AGING/STALE | STALE(>30분) USD 평가 스킵→네이티브 전용 | ✓ Good — v0.10 완결 |
+| 구현 마일스톤 8개 순서 확정 | 의존 그래프: 코어→인증→SDK→토큰→DeFi→클라이언트→품질→릴리스 | ✓ Good — v1.0 계획 |
+| objective 문서 7-section 부록 구조 | 목표/설계문서/산출물/기술결정/E2E/의존/리스크 통일 | ✓ Good — v1.0 계획 |
+| 설계 부채 Tier 1~3 추적 체계 | 매 마일스톤 리뷰, v2.0 전 0건 달성 목표 | ✓ Good — v1.0 계획 |
 
 ---
-*최종 업데이트: 2026-02-09 after v1.0 milestone started*
+*최종 업데이트: 2026-02-09 after v1.0 milestone complete*
