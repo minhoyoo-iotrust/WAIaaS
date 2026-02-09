@@ -152,12 +152,12 @@
   3. WAIaaSError를 throw하고 catch하면 에러 코드(code)와 HTTP 상태(httpStatus)를 프로그래밍적으로 조회할 수 있다
   4. `getMessages('ko')` 호출 시 한글 메시지 객체가 반환되고, `getMessages('en')` 호출 시 영문 메시지 객체가 반환된다
   5. Enum 값과 Zod 스키마가 일치하는지 검증하는 단위 테스트가 통과한다
-**플랜**: TBD
+**플랜**: 3 plans
 
 Plans:
-- [ ] 48-01: 모노레포 스캐폴드 (pnpm workspace, Turborepo, tsconfig, ESLint, Prettier, Vitest, .nvmrc)
-- [ ] 48-02: @waiaas/core Enum SSoT + Zod 스키마 + 에러 코드
-- [ ] 48-03: @waiaas/core 인터페이스 + i18n + 패키지 빌드 검증
+- [ ] 48-01-PLAN.md — 모노레포 스캐폴드 (pnpm workspace, Turborepo, tsconfig, ESLint flat config, Prettier, Vitest workspace, .nvmrc, 4개 패키지 셸)
+- [ ] 48-02-PLAN.md — @waiaas/core Enum SSoT 12개 + Zod 스키마 5개 + 에러 코드 66개 + WAIaaSError (TDD)
+- [ ] 48-03-PLAN.md — @waiaas/core 인터페이스 4개 + i18n (en/ko) + 패키지 전체 빌드/export 검증 (TDD)
 
 ### Phase 49: 데몬 인프라
 
