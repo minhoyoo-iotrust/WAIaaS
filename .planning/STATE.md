@@ -11,17 +11,17 @@
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
 페이즈: 49 of 51 (데몬 인프라)
-플랜: 1 of 3 in current phase
+플랜: 2 of 3 in current phase
 상태: In progress
-마지막 활동: 2026-02-10 -- Completed 49-01-PLAN.md
+마지막 활동: 2026-02-10 -- Completed 49-02-PLAN.md
 
-진행률: [████........] 33% (4/12 plans)
+진행률: [█████.......] 42% (5/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 4 plans (48-01, 48-02, 48-03, 49-01)
+**v1.1 완료:** 5 plans (48-01, 48-02, 48-03, 49-01, 49-02)
 
 ## 누적 컨텍스트
 
@@ -47,19 +47,22 @@
 | TD-09 확정: uuidv7 npm 패키지 사용 | 수동 구현 대비 정확성 우선, ms 정밀도 시간순 정렬 보장 | 49-01 |
 | pushSchema(): raw SQL (CREATE TABLE IF NOT EXISTS) | drizzle-kit CLI 대신 프로그래매틱 데몬 시작에 적합 | 49-01 |
 | PARTIAL_FAILURE를 core TRANSACTION_STATUSES에 추가 | doc 25 v0.10에 정의되었으나 core enum에 누락, CHECK 제약 파생에 필요 | 49-01 |
+| createRequire(import.meta.url) for CJS native modules | sodium-native는 CJS-only; ESM에서 createRequire 패턴 사용 | 49-02 |
+| Vitest forks pool for sodium mprotect | sodium mprotect_noaccess가 SIGSEGV 유발, threads 대신 forks 사용 | 49-02 |
+| INVALID_MASTER_PASSWORD for GCM authTag mismatch | 잘못된 비밀번호 시 기존 에러 코드 활용 | 49-02 |
+| Inline base58 encoding (외부 의존성 없음) | 단순 인코딩에 외부 패키지 불필요 | 49-02 |
 
 v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 
 ### 차단 요소/우려 사항
 
 - better-sqlite3 네이티브 addon 빌드 검증 완료 (49-01에서 성공)
-- sodium-native 네이티브 addon 빌드 호환성 (Phase 49-02에서 검증 필요)
+- sodium-native 네이티브 addon 빌드 검증 완료 (49-02에서 성공, argon2도 성공)
 - 설계 부채 DD-01~03 (v1.1 구현 시 인라인 처리)
 - @solana/kit 3.x API 안정성 (Phase 50에서 검증)
-- 기존 keystore 파일 (49-02) TypeScript 에러 수정 필요
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Completed 49-01-PLAN.md. 다음: 49-02-PLAN.md (keystore)
-재개 파일: .planning/phases/49-daemon-infra/49-01-SUMMARY.md
+중단 지점: Completed 49-02-PLAN.md. 다음: 49-03 (Config + Lifecycle)
+재개 파일: .planning/phases/49-daemon-infra/49-02-SUMMARY.md
