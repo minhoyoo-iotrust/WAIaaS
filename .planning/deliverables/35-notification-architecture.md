@@ -2,6 +2,7 @@
 
 **문서 ID:** NOTI-ARCH
 **작성일:** 2026-02-05
+**v0.8 보완:** 2026-02-09
 **상태:** 완료
 **참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), TX-PIPE (32-transaction-pipeline-api.md), SESS-RENEW (53-session-renewal-protocol.md)
 **요구사항:** NOTI-01 (멀티 채널 알림), NOTI-02 (최소 2채널 + 폴백)
@@ -2211,7 +2212,18 @@ Tags: rotating_light,skull,octagonal_sign
 복구하려면 Owner 인증이 필요합니다.
 ```
 
-#### SESSION_RENEWED (세션 갱신 완료) [Phase 20 추가]
+#### SESSION_RENEWED (세션 갱신 완료) [Phase 20 추가, v0.8 Owner 분기 확장]
+
+> **[v0.8] Owner 유무별 분기:** SESSION_RENEWED 알림은 OwnerState에 따라 두 가지 템플릿으로 분기된다.
+>
+> | OwnerState | 템플릿 | [거부하기] 버튼 | 거부 윈도우 안내 |
+> |-----------|--------|-------------|-------------|
+> | **NONE / GRACE** | 정보성 알림 (기존) | 없음 | 없음 |
+> | **LOCKED** | 정보성 + [거부하기] 버튼 | **있음** | 있음 (기본 1시간) |
+>
+> 분기 기준: `context.rejectButton` 플래그 (53-session-renewal-protocol.md 섹션 6.6 참조)
+
+##### SESSION_RENEWED -- Owner 없음/GRACE (rejectButton = false)
 
 **Telegram (MarkdownV2):**
 ```
@@ -2221,9 +2233,6 @@ Tags: rotating_light,skull,octagonal_sign
 
 갱신 횟수: {renewalCount}/{maxRenewals}
 남은 총 수명: {remainingAbsoluteLife}
-확인 기한: {rejectWindowExpiry}
-
-세션을 폐기하면 갱신이 취소됩니다\.
 ```
 
 **Discord (Embed):**
@@ -2236,10 +2245,8 @@ Tags: rotating_light,skull,octagonal_sign
       { "name": "세션 ID", "value": "{sessionId}", "inline": true },
       { "name": "에이전트", "value": "{agentName}", "inline": true },
       { "name": "갱신 횟수", "value": "{renewalCount}/{maxRenewals}", "inline": true },
-      { "name": "남은 총 수명", "value": "{remainingAbsoluteLife}", "inline": true },
-      { "name": "확인 기한", "value": "{rejectWindowExpiry}", "inline": false }
+      { "name": "남은 총 수명", "value": "{remainingAbsoluteLife}", "inline": true }
     ],
-    "footer": { "text": "세션을 폐기하면 갱신이 취소됩니다." },
     "timestamp": "{createdAt}"
   }]
 }
@@ -2254,19 +2261,118 @@ Body:
 세션 {sessionId} (에이전트: {agentName})이 갱신되었습니다.
 갱신 횟수: {renewalCount}/{maxRenewals}
 남은 총 수명: {remainingAbsoluteLife}
-확인 기한: {rejectWindowExpiry}
 ```
 
-**context 필드:**
+##### SESSION_RENEWED -- Owner LOCKED (rejectButton = true) [v0.8 추가]
 
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `sessionId` | string | 갱신된 세션 ID |
-| `agentName` | string | 에이전트 이름 (agents.name) |
-| `renewalCount` | number | 누적 갱신 횟수 (갱신 후) |
-| `maxRenewals` | number | 최대 갱신 횟수 |
-| `remainingAbsoluteLife` | string | 남은 절대 수명 (예: "27d 12h") |
-| `rejectWindowExpiry` | string (ISO 8601) | 거부 윈도우 만료 시각 |
+> **전제 조건:** rejectButton=true는 OwnerState === LOCKED인 에이전트에서만 설정된다. NONE/GRACE 에이전트에서는 rejectButton=false로 위의 정보성 템플릿을 사용한다.
+
+**[거부하기] URL 패턴:**
+```
+거부: http://127.0.0.1:3100/v1/dashboard/sessions/{sessionId}/reject?nonce={nonce}
+```
+
+> **주의:** 이 URL은 세션 거부 대시보드 페이지(Tauri/브라우저)로 이동하는 링크이다. 버튼 클릭만으로 세션이 폐기되지 않는다 -- masterAuth(implicit)가 데몬 접근으로 충족되고, DELETE /v1/sessions/:id를 실행한다.
+
+**Telegram (MarkdownV2 + InlineKeyboardMarkup):**
+
+```
+*세션 갱신 알림* \(INFO\)
+
+세션 `{sessionId}` \(에이전트: {agentName}\)이 갱신되었습니다\.
+
+갱신 횟수: {renewalCount}/{maxRenewals}
+남은 총 수명: {remainingAbsoluteLife}
+확인 기한: {rejectWindowExpiry}
+
+이 갱신이 예상치 못한 것이라면 아래 버튼으로 세션을 폐기하세요\.
+```
+
+InlineKeyboardMarkup (url 기반 -- callback 아님):
+```json
+{
+  "reply_markup": {
+    "inline_keyboard": [[
+      { "text": "❌ 거부하기 (세션 폐기)", "url": "http://127.0.0.1:3100/v1/dashboard/sessions/{sessionId}/reject?nonce={nonce}" }
+    ]]
+  }
+}
+```
+
+설계 결정:
+- `url` 기반 버튼 사용 (callback_data 아님): TX_APPROVAL_REQUEST 버튼과 동일 패턴 (33-02 확정). 대시보드에서 DELETE /v1/sessions/:id를 실행
+- 단일 버튼 [거부하기]만 표시: 승인 불필요 (갱신은 이미 확정됨, 거부만 가능)
+
+**Discord (Embed + Markdown 링크):**
+
+> Discord Webhook은 Interactive Components(Button)를 지원하지 않으므로 Embed 내 markdown 링크로 안내한다 (33-02 확정 패턴).
+
+```json
+{
+  "embeds": [{
+    "title": "세션 갱신 알림",
+    "color": 3447003,
+    "fields": [
+      { "name": "세션 ID", "value": "{sessionId}", "inline": true },
+      { "name": "에이전트", "value": "{agentName}", "inline": true },
+      { "name": "갱신 횟수", "value": "{renewalCount}/{maxRenewals}", "inline": true },
+      { "name": "남은 총 수명", "value": "{remainingAbsoluteLife}", "inline": true },
+      { "name": "확인 기한", "value": "{rejectWindowExpiry}", "inline": false },
+      { "name": "❌ 거부하기", "value": "[세션 폐기]({rejectUrl})\n예상치 못한 갱신이라면 위 링크로 세션을 폐기하세요.", "inline": false }
+    ],
+    "footer": { "text": "WAIaaS Security" },
+    "timestamp": "{createdAt}"
+  }]
+}
+```
+
+설계 결정:
+- Embed 내 markdown 링크로 [거부하기] URL 안내 (33-02 확정 패턴과 동일)
+- Discord Bot 전환 시 Button Component로 업그레이드 가능
+
+**ntfy.sh (Actions 헤더):**
+
+```
+Title: 세션 갱신 알림
+Priority: 3 (default)
+Tags: session,renewal,key
+Actions: view, ❌ 거부하기, {rejectUrl}
+Body:
+세션 {sessionId} (에이전트: {agentName})이 갱신되었습니다.
+갱신 횟수: {renewalCount}/{maxRenewals}
+남은 총 수명: {remainingAbsoluteLife}
+확인 기한: {rejectWindowExpiry}
+예상치 못한 갱신이라면 위 버튼으로 세션을 폐기하세요.
+```
+
+설계 결정:
+- ntfy.sh Actions는 `view` 타입으로 브라우저에서 URL을 열도록 설정 (33-02 확정 패턴과 동일)
+- `http` 타입(직접 API 호출)은 사용하지 않음: 대시보드를 통한 DELETE 실행이 필요
+
+##### [v0.8] SESSION_RENEWED [거부하기] URL 보안 고려사항
+
+| 항목 | 설명 |
+|------|------|
+| **nonce 1회용** | nonce는 1회용 토큰으로 URL 재사용 방지. 세션 폐기 완료 시 nonce 무효화 |
+| **localhost 한정** | URL은 localhost(127.0.0.1:3100)로 외부 네트워크 노출 없음 |
+| **masterAuth(implicit)** | 데몬 접근 = masterAuth 충족. 별도 서명 불필요 (ownerAuth와 달리 비서명 인증) |
+| **DELETE /v1/sessions/:id 재활용** | 새 엔드포인트 없음. 기존 세션 폐기 API 사용 (53 섹션 6.1 확정) |
+| **거부 윈도우 비강제** | 거부 윈도우(기본 1시간)는 안내 문구일 뿐. URL은 세션 유효 시 항상 동작 |
+| **APPROVAL 버튼과의 차이** | APPROVAL 승인은 ownerAuth 서명 필수. SESSION_RENEWED 거부는 masterAuth(implicit)만 필요 |
+
+**context 필드 (v0.8 확장):**
+
+| 필드 | 타입 | 조건 | 설명 |
+|------|------|------|------|
+| `sessionId` | string | 항상 | 갱신된 세션 ID |
+| `agentName` | string | 항상 | 에이전트 이름 (agents.name) |
+| `renewalCount` | number | 항상 | 누적 갱신 횟수 (갱신 후) |
+| `maxRenewals` | number | 항상 | 최대 갱신 횟수 |
+| `remainingAbsoluteLife` | string | 항상 | 남은 절대 수명 (예: "27d 12h") |
+| `rejectButton` | boolean | 항상 | **[v0.8]** true = LOCKED, false = NONE/GRACE |
+| `rejectWindowExpiry` | string (ISO 8601) | rejectButton=true | **[v0.8]** 거부 윈도우 만료 시각 |
+| `rejectUrl` | string | rejectButton=true | **[v0.8]** [거부하기] 대시보드 URL (nonce 포함) |
+| `nonce` | string | rejectButton=true | **[v0.8]** 1회용 토큰 |
 
 #### SESSION_RENEWAL_REJECTED (세션 갱신 거부) [Phase 20 추가]
 

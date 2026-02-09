@@ -2,6 +2,7 @@
 
 **문서 ID:** SESS-RENEW
 **작성일:** 2026-02-07
+**v0.8 보완:** 2026-02-09
 **상태:** 완료
 **참조:** SESS-PROTO (30-session-token-protocol.md), AUTH-REDESIGN (52-auth-model-redesign.md), CORE-02 (25-sqlite-schema.md), NOTI-ARCH (35-notification-architecture.md), CORE-01 (24-monorepo-data-directory.md)
 **요구사항:** SESS-01 (갱신 API 스펙), SESS-02 (안전 장치 5종), SESS-04 (SessionConstraints 확장), SESS-05 (Owner 거부 + 알림)
@@ -773,6 +774,106 @@ async function renewSession(
 
 audit_log의 `details` JSON 내 `trigger` 필드로 일반 폐기와 갱신 거부를 구분한다.
 
+### 6.6 [v0.8] 세션 갱신 후 Owner 유무별 분기
+
+> **v0.8 변경 사유:** Owner 등록이 선택적이므로, Owner가 없는 에이전트의 세션 갱신은 거부자가 없어 즉시 확정된다. Owner가 등록되고 검증이 완료된(LOCKED) 에이전트에서만 [거부하기] 버튼을 포함한 알림이 의미가 있다.
+
+#### 6.6.1 OwnerState별 갱신 분기 테이블
+
+| OwnerState | 갱신 동작 | 알림 내용 | 거부 윈도우 | 근거 |
+|-----------|---------|---------|-----------|------|
+| **NONE** (Owner 없음) | 즉시 확정 | "세션 갱신됨 (3/30)" 정보성 | 없음 | 거부할 Owner가 없음 |
+| **GRACE** (Owner 유예) | 즉시 확정 | "세션 갱신됨 (3/30)" 정보성 | 없음 | Owner 검증 미완료, 거부 기능 비활성 |
+| **LOCKED** (Owner 잠금) | 갱신 후 알림 | "세션 갱신됨 (3/30)" + **[거부하기]** | 활성 (기본 1시간) | Owner가 검증 완료, 거부 권한 보유 |
+
+**설계 근거:**
+- NONE/GRACE에서 [거부하기] 버튼을 표시하면 UX 혼란 (클릭해도 masterAuth 외 인증 수단이 없음)
+- LOCKED에서만 Owner가 알림을 통해 세션을 감독하는 것이 자연스러움
+- 갱신 자체는 모든 OwnerState에서 동일하게 실행됨 (안전 장치 5종은 동일 적용)
+
+#### 6.6.2 갱신 처리 후 알림 분기 의사 코드
+
+```typescript
+// renewSession() 내부, 갱신 DB 업데이트 완료 후
+const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(session.agent_id)
+const ownerState = resolveOwnerState({
+  ownerAddress: agent.owner_address,
+  ownerVerified: !!agent.owner_verified,
+})
+
+const notificationContext = {
+  sessionId: session.id,
+  agentName: agent.name,
+  renewalCount: newRenewalCount,
+  maxRenewals,
+  remainingAbsoluteLife: formatDuration(
+    session.absolute_expires_at - now
+  ),
+}
+
+if (ownerState === 'LOCKED') {
+  // LOCKED: [거부하기] 버튼 포함 알림
+  const rejectWindowSeconds = constraints.renewalRejectWindow
+    ?? config.default_renewal_reject_window
+    ?? 3600
+  const nonce = generateNonce()
+
+  notificationService.notify({
+    type: 'SESSION_RENEWED',
+    severity: 'INFO',
+    context: {
+      ...notificationContext,
+      rejectButton: true,
+      rejectWindowExpiry: new Date(
+        (now + rejectWindowSeconds) * 1000
+      ).toISOString(),
+      rejectUrl: `http://127.0.0.1:3100/v1/dashboard/sessions/${session.id}/reject?nonce=${nonce}`,
+    },
+  })
+} else {
+  // NONE 또는 GRACE: 정보성 알림만 (즉시 확정)
+  notificationService.notify({
+    type: 'SESSION_RENEWED',
+    severity: 'INFO',
+    context: {
+      ...notificationContext,
+      rejectButton: false,
+    },
+  })
+}
+```
+
+#### 6.6.3 SESSION_RENEWED context 확장 [v0.8]
+
+기존 context 필드(섹션 7.1)에 다음 3개 필드를 추가한다:
+
+| 필드 | 타입 | 조건 | 설명 |
+|------|------|------|------|
+| `rejectButton` | `boolean` | 항상 | true = [거부하기] 버튼 렌더링, false = 버튼 없음 |
+| `rejectWindowExpiry` | `string` (ISO 8601) \| undefined | rejectButton === true | 거부 윈도우 만료 시각 |
+| `rejectUrl` | `string` \| undefined | rejectButton === true | [거부하기] 대시보드 URL (nonce 포함) |
+
+**rejectButton 플래그가 채널 어댑터에 미치는 영향:**
+- `rejectButton === true`: 채널별 [거부하기] 버튼 렌더링 (35-notification-architecture.md 참조)
+- `rejectButton === false`: 기존 정보성 알림 템플릿 사용 (Phase 20 기존 동작)
+
+#### 6.6.4 거부 메커니즘 변경 없음 확인
+
+- 기존 DELETE /v1/sessions/:id 재활용 (섹션 6.1 확정)
+- [거부하기] URL은 대시보드 페이지로 이동 -> masterAuth(implicit)로 DELETE 호출
+- 새로운 거부 전용 API 엔드포인트를 생성하지 않는다
+
+#### 6.6.5 거부 윈도우 의미 명확화 [v0.8]
+
+거부 윈도우(renewalRejectWindow, 기본 1시간)는 **알림 문구에 표시되는 안내**일 뿐이다 (섹션 4.5 확정 유지).
+
+| 항목 | 동작 |
+|------|------|
+| 거부 윈도우 내 | 알림에 "1시간 내 확인하세요" 표시 |
+| 거부 윈도우 후 | Owner는 여전히 DELETE로 세션 폐기 가능 |
+| [거부하기] URL 유효 기간 | 세션이 유효한 한 계속 동작 |
+| 거부 윈도우의 하드 차단 | **없음** -- Owner의 DELETE 권한을 시간적으로 제한하지 않음 |
+
 ---
 
 ## 7. 알림 이벤트 2종
@@ -795,7 +896,9 @@ audit_log의 `details` JSON 내 `trigger` 필드로 일반 폐기와 갱신 거�
 | `renewalCount` | `number` | 누적 갱신 횟수 (갱신 후) |
 | `maxRenewals` | `number` | 최대 갱신 횟수 |
 | `remainingAbsoluteLife` | `string` | 남은 절대 수명 (예: "27d 12h") |
-| `rejectWindowExpiry` | `string` (ISO 8601) | 거부 윈도우 만료 시각 |
+| `rejectWindowExpiry` | `string` (ISO 8601) | 거부 윈도우 만료 시각 (LOCKED에서만) |
+| `rejectButton` | `boolean` | **[v0.8]** true = [거부하기] 버튼 렌더링 (LOCKED만), false = 버튼 없음 |
+| `rejectUrl` | `string` \| undefined | **[v0.8]** [거부하기] 대시보드 URL (rejectButton=true일 때만, nonce 포함) |
 
 ### 7.2 SESSION_RENEWAL_REJECTED (세션 갱신 거부)
 
