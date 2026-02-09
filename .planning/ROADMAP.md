@@ -2,7 +2,7 @@
 
 **Status:** In progress
 **Phases:** 41-44
-**Total Plans:** TBD
+**Total Plans:** 2 (Phase 41) + TBD (Phases 42-44)
 
 ## Overview
 
@@ -27,7 +27,7 @@ v0.2~v0.9에서 작성한 30개 설계 문서의 교차 지점에서 구현자�
 **Goal**: 구현자가 정책 엔진(PolicyRuleSchema, Owner 상태 전이, APPROVAL 타임아웃)을 추측 없이 구현할 수 있다
 **Depends on**: Nothing (v0.10 첫 Phase)
 **Requirements**: PLCY-01, PLCY-02, PLCY-03
-**Plans**: TBD
+**Plans**: 2 plans
 
 **대상 설계 문서:** 25-sqlite-schema.md, 33-time-lock-approval-mechanism.md, 34-owner-wallet-connection.md
 
@@ -38,7 +38,8 @@ v0.2~v0.9에서 작성한 30개 설계 문서의 교차 지점에서 구현자�
 4. 33-time-lock §4 evaluate() 내에 APPROVAL 타임아웃 결정 순서(정책별 approvalTimeout > 글로벌 config > 하드코딩 3600초)가 명시되어 있다
 
 Plans:
-- [ ] 41-01-PLAN.md: (TBD)
+- [ ] 41-01-PLAN.md -- PolicyRuleSchema SSoT 교차 참조 + APPROVAL 타임아웃 3단계 우선순위 (PLCY-01, PLCY-03)
+- [ ] 41-02-PLAN.md -- GRACE 기간 정책 + Owner 상태 전이 SSoT 우선순위 양방향 확정 (PLCY-02)
 
 ### Phase 42: 에러 처리 체계 완결
 
@@ -103,7 +104,7 @@ Phase 41 (정책 엔진) ---> Phase 42 (에러 처리) ---> Phase 43 (동시성/
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 41. 정책 엔진 완결 | 0/TBD | Not started | - |
+| 41. 정책 엔진 완결 | 0/2 | Planned | - |
 | 42. 에러 처리 체계 완결 | 0/TBD | Not started | - |
 | 43. 동시성 + 실행 로직 완결 | 0/TBD | Not started | - |
 | 44. 운영 로직 완결 | 0/TBD | Not started | - |
