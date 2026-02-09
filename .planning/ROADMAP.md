@@ -24,7 +24,7 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 - Decimal phases (36.1, 36.2): 긴급 삽입 (INSERTED 표기)
 
 - [x] **Phase 36: 토큰 파일 인프라 + 알림 이벤트** - 공유 파일 유틸리티와 SESSION_EXPIRING_SOON 이벤트 설계
-- [ ] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
+- [x] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
 - [ ] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
 - [ ] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
 - [ ] **Phase 40: 테스트 설계 + 설계 문서 통합** - 18개 테스트 시나리오 명시 + 7개 기존 문서 v0.9 통합
@@ -59,8 +59,8 @@ Plans:
 **Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
 
 Plans:
-- [ ] 37-01-PLAN.md -- SessionManager 인터페이스 + 토큰 로드 전략 설계 (SMGR-01, SMGR-03)
-- [ ] 37-02-PLAN.md -- 자동 갱신 스케줄 + 실패 처리 + lazy reload 설계 (SMGR-04, SMGR-05, SMGR-06)
+- [x] 37-01-PLAN.md -- SessionManager 인터페이스 + 토큰 로드 전략 설계 (SMGR-01, SMGR-03)
+- [x] 37-02-PLAN.md -- 자동 갱신 스케줄 + 실패 처리 + lazy reload 설계 (SMGR-04, SMGR-05, SMGR-06)
 
 ### Phase 38: SessionManager MCP 통합 설계
 **Goal**: SessionManager가 MCP tool/resource handler와 통합되어, 토큰 로테이션 동시성, 프로세스 생명주기, Claude Desktop 에러 처리가 설계 수준에서 해결된다
@@ -122,7 +122,7 @@ Phase 36 ─┬─→ Phase 37 ──→ Phase 38 ──┐
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 36. 토큰 파일 인프라 + 알림 이벤트 | 2/2 | Complete | 2026-02-09 |
-| 37. SessionManager 핵심 설계 | 0/2 | Not started | - |
+| 37. SessionManager 핵심 설계 | 2/2 | Complete | 2026-02-09 |
 | 38. SessionManager MCP 통합 설계 | 0/2 | Not started | - |
 | 39. CLI + Telegram 연동 설계 | 0/2 | Not started | - |
 | 40. 테스트 설계 + 설계 문서 통합 | 0/2 | Not started | - |
