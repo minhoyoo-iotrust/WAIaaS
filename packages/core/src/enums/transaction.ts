@@ -9,6 +9,7 @@ export const TRANSACTION_STATUSES = [
   'FAILED',
   'CANCELLED',
   'EXPIRED',
+  'PARTIAL_FAILURE',
 ] as const;
 export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number];
 export const TransactionStatusEnum = z.enum(TRANSACTION_STATUSES);
