@@ -548,6 +548,53 @@ async function runAgentCreate(args: string[]): Promise<void> {
 }
 ```
 
+### 3.8 createAgent() 데몬 핸들러 수도코드 [v0.8]
+
+```typescript
+// packages/daemon/src/handlers/agent.ts (v0.8)
+async function handleCreateAgent(c: Context): Promise<Response> {
+  const body = await c.req.json()
+  const { name, chain, network } = body
+  const ownerAddress: string | undefined = body.ownerAddress  // [v0.8] 선택적
+
+  // 에이전트 키 쌍 생성
+  const keyPair = await keyStore.generateKeyPair(chain)
+
+  // agents 테이블 INSERT
+  const agent = await db.insert(agents).values({
+    id: generateUUIDv7(),
+    name: name ?? generateAgentName(),
+    chain,
+    network: network ?? 'devnet',
+    publicKey: keyPair.publicKey,
+    status: 'ACTIVE',
+    ownerAddress: ownerAddress ?? null,  // [v0.8] nullable -- undefined -> NULL
+    ownerVerified: 0,                    // [v0.8] 항상 0 (GRACE 상태 시작)
+    createdAt: Math.floor(Date.now() / 1000),
+    updatedAt: Math.floor(Date.now() / 1000),
+  }).returning()
+
+  // [v0.8] Owner 제공 시 감사 로그
+  if (ownerAddress) {
+    await auditLog.record('OWNER_REGISTERED', agent[0].id, {
+      ownerAddress,
+      source: 'agent_create',
+    })
+  }
+
+  return c.json({
+    id: agent[0].id,
+    name: agent[0].name,
+    chain: agent[0].chain,
+    network: agent[0].network,
+    address: agent[0].publicKey,
+    ownerAddress: agent[0].ownerAddress,  // [v0.8] null | string
+    ownerState: resolveOwnerState(agent[0]),  // [v0.8] 'NONE' | 'GRACE'
+    createdAt: new Date(agent[0].createdAt * 1000).toISOString(),
+  }, 201)
+}
+```
+
 ---
 
 ## 4. waiaas session create (DX-03)
@@ -873,6 +920,270 @@ Agent: trading-bot
 ```
 
 > [v0.8] Owner 미등록 시 안내 메시지는 `--output json` 모드에서는 `ownerState: "NONE"` 필드로 대체된다. 안내 메시지는 텍스트 출력에서만 표시.
+
+### 5.6 waiaas agent set-owner [v0.8] (DX-02, OWNER-03)
+
+Owner 주소를 사후에 등록하거나 변경한다. 34-owner-wallet-connection.md 섹션 10.3 인증 맵과 1:1 대응.
+
+**커맨드 인터페이스:**
+
+```
+waiaas agent set-owner <agent-name|id> <address>
+
+Arguments:
+  <agent-name|id>          대상 에이전트 (이름 또는 UUID)
+  <address>                Owner 지갑 주소 (Solana base58 또는 EVM 0x)
+
+Options:
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**인증:** masterAuth(implicit). 단, LOCKED 상태에서는 기존 Owner의 ownerAuth 서명이 추가로 필요하다 (34-owner-wallet-connection.md 섹션 10.2 전이 #5).
+
+**동작:**
+
+```
+waiaas agent set-owner <agent> <addr>
+  1. 데몬 실행 확인 (http://127.0.0.1:3100/health)
+  2. GET /v1/agents/:id로 현재 에이전트 상태 조회
+  3. OwnerState 확인:
+     - NONE: PATCH /v1/agents/:id { owner: "<addr>" } -- masterAuth만
+     - GRACE: PATCH /v1/agents/:id { owner: "<addr>" } -- masterAuth만
+     - LOCKED: CLI 수동 서명 플로우 시작:
+       a) GET /v1/auth/nonce로 nonce 획득
+       b) SIWS/SIWE 메시지 구성 + 서명 안내 출력
+       c) 사용자 서명 입력 대기 (또는 WalletConnect)
+       d) PATCH /v1/agents/:id + Authorization: Bearer <ownerSignaturePayload>
+  4. 응답 출력
+```
+
+**출력 예시 (NONE/GRACE -> 성공):**
+
+```
+$ waiaas agent set-owner trading-bot 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+Owner registered successfully!
+
+  Agent:  trading-bot
+  Owner:  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (GRACE)
+
+  ownerAuth를 처음 사용하면 자동으로 LOCKED 상태로 전환됩니다.
+```
+
+**출력 예시 (LOCKED -> ownerAuth 필요):**
+
+```
+$ waiaas agent set-owner trading-bot NewAddr...
+
+  현재 에이전트가 LOCKED 상태입니다. 기존 Owner 서명이 필요합니다.
+
+  서명할 메시지:
+  ---
+  WAIaaS wants you to sign in with your Solana account:
+  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+  Change owner address for agent trading-bot
+
+  Nonce: abc123...
+  Issued At: 2026-02-09T12:00:00.000Z
+  ---
+
+  서명을 Base58로 입력하세요: <사용자 입력>
+
+Owner address changed successfully!
+
+  Agent:  trading-bot
+  Owner:  NewAddr... (LOCKED)
+```
+
+**에러 처리:**
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| 에이전트 미존재 | `Error: Agent 'trading-bot' not found. (AGENT_NOT_FOUND)` | 1 |
+| 유효하지 않은 주소 | `Error: Invalid owner address format. (INVALID_OWNER_ADDRESS)` | 1 |
+| LOCKED + ownerAuth 없음 | `Error: Owner change requires current owner signature. (OWNER_CHANGE_REQUIRES_CURRENT_OWNER)` | 1 |
+| Kill Switch 활성화 | `Error: System is locked. (503 SYSTEM_LOCKED)` | 1 |
+
+### 5.7 waiaas agent remove-owner [v0.8] (DX-03, OWNER-06)
+
+Owner 등록을 해제한다. **GRACE 상태에서만 동작**하며, LOCKED 상태에서는 보안 다운그레이드 방지를 위해 거부된다.
+
+**커맨드 인터페이스:**
+
+```
+waiaas agent remove-owner <agent-name|id>
+
+Arguments:
+  <agent-name|id>          대상 에이전트 (이름 또는 UUID)
+
+Options:
+  --force                  확인 프롬프트 건너뛰기 (비대화형 모드)
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**인증:** masterAuth(implicit).
+
+**동작:**
+
+```
+waiaas agent remove-owner <agent>
+  1. 데몬 실행 확인
+  2. GET /v1/agents/:id로 현재 에이전트 상태 조회
+  3. OwnerState 확인:
+     - NONE: 에러 (NO_OWNER)
+     - GRACE: 확인 프롬프트 -> PATCH /v1/agents/:id { owner: null }
+     - LOCKED: 에러 (OWNER_REMOVAL_BLOCKED)
+  4. 응답 출력
+```
+
+**출력 예시 (GRACE -> 성공):**
+
+```
+$ waiaas agent remove-owner trading-bot
+
+  WARNING: Owner를 해제하면 보안 수준이 Enhanced에서 Base로 다운그레이드됩니다.
+  - APPROVAL 티어가 DELAY로 다운그레이드됩니다.
+  - 자금 회수(withdraw)가 비활성화됩니다.
+  - Kill Switch 복구 대기 시간이 30분에서 24시간으로 증가합니다.
+
+  계속하시겠습니까? (y/N): y
+
+Owner removed successfully.
+
+  Agent:  trading-bot
+  Owner:  (미등록)
+  보안 수준: Base
+```
+
+**에러 처리:**
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| 에이전트 미존재 | `Error: Agent 'trading-bot' not found. (AGENT_NOT_FOUND)` | 1 |
+| Owner 미등록 | `Error: No owner registered for agent 'trading-bot'. (OWNER_NOT_FOUND)` | 1 |
+| LOCKED 상태 | `Error: Cannot remove owner in LOCKED state. Owner has been verified via ownerAuth. (OWNER_REMOVAL_BLOCKED)` | 1 |
+| Kill Switch 활성화 | `Error: System is locked. (503 SYSTEM_LOCKED)` | 1 |
+
+### 5.8 waiaas owner withdraw [v0.8] (WITHDRAW-01~08)
+
+에이전트 자금을 Owner 지갑으로 전량 회수한다. **LOCKED 상태(owner_verified=1)에서만 동작**한다.
+
+**커맨드 인터페이스:**
+
+```
+waiaas owner withdraw [options]
+
+Required:
+  --agent <agent-name|id>  대상 에이전트
+
+Options:
+  --scope <all|native>     회수 범위 (기본: "all")
+                           all: 네이티브 + SPL 토큰 + rent
+                           native: 네이티브만
+  --output <format>        출력 형식: text (기본), json
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**인증:** masterAuth(implicit). 수신 주소가 agents.owner_address로 고정되므로 ownerAuth는 불필요하다 (34-01 결정, v0.8 §5.2 근거).
+
+**동작:**
+
+```
+waiaas owner withdraw --agent <agent>
+  1. 데몬 실행 확인
+  2. POST /v1/owner/agents/:agentId/withdraw 호출 (masterAuth implicit)
+     Body: { scope: "all" | "native" }
+  3. 데몬 내부: OwnerState LOCKED 검증 -> WithdrawService -> IChainAdapter.sweepAll()
+     - sweepAll 4단계: getAssets -> SPL 배치(transfer+closeAccount) -> SOL 마지막 전송
+  4. 응답 출력 (HTTP 200 전량 성공 / HTTP 207 부분 성공)
+```
+
+**Kill Switch 상태 동작: [v0.8] 허용 (방안 A 채택)**
+
+> [v0.8] Kill Switch withdraw: **방안 A 채택** -- killSwitchGuard 허용 경로에 `POST /v1/owner/agents/:agentId/withdraw` 추가.
+> 근거: 자금 회수는 Kill Switch 발동 시 **가장 시급한 보안 조치**이며, 기존 API 인프라(masterAuth, 감사 로그, WithdrawService)를 재사용한다. 방안 B(CLI 직접 실행)는 데몬 API를 우회하므로 일관성이 저하된다.
+> 36-killswitch-autostop-evm.md에 반영 필요: killSwitchGuard 5번째 허용 경로 `POST /v1/owner/agents/:agentId/withdraw` 추가.
+
+**출력 예시 (scope: all, 성공 -- HTTP 200):**
+
+```
+$ waiaas owner withdraw --agent trading-bot
+
+Withdrawal complete!
+
+  Agent:        trading-bot
+  Destination:  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (owner)
+
+  Native:       2.458 SOL
+  Tokens:
+    USDC:       150.00 (EPjFW...)
+    BONK:       5,000,000 (DezXA...)
+  Rent:         0.012 SOL
+  Transactions: 3
+
+  Total recovered: 2.470 SOL + 2 tokens
+```
+
+**출력 예시 (scope: all, 부분 실패 -- HTTP 207):**
+
+```
+$ waiaas owner withdraw --agent trading-bot
+
+Withdrawal partially complete (some tokens failed).
+
+  Agent:        trading-bot
+  Destination:  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (owner)
+
+  Native:       2.458 SOL
+  Tokens recovered:
+    USDC:       150.00 (EPjFW...)
+  Tokens failed:
+    BONK:       DezXA... -- TransactionError: insufficient funds for fee
+  Rent:         0.006 SOL
+  Transactions: 2 (1 failed)
+
+  WARNING: Some tokens could not be recovered. Retry with:
+    waiaas owner withdraw --agent trading-bot
+```
+
+**JSON 출력 (--output json):**
+
+```json
+{
+  "totalTransactions": 3,
+  "nativeRecovered": "2.458",
+  "tokensRecovered": [
+    { "symbol": "USDC", "amount": "150.00", "mint": "EPjFW..." }
+  ],
+  "rentRecovered": "0.012",
+  "failed": [
+    { "mint": "DezXA...", "error": "insufficient funds for fee" }
+  ]
+}
+```
+
+**에러 처리:**
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| `--agent` 미지정 | `Error: --agent <name\|id> is required.` | 1 |
+| 에이전트 미존재 | `Error: Agent 'trading-bot' not found. (AGENT_NOT_FOUND)` | 1 |
+| Owner 미등록 | `Error: No owner registered. Cannot withdraw. (NO_OWNER)` | 1 |
+| GRACE 상태 (LOCKED만 허용) | `Error: Withdrawal requires LOCKED state (owner must be verified via ownerAuth). (WITHDRAW_LOCKED_ONLY)` | 1 |
+| 전체 실패 | `Error: All withdrawal transactions failed. (SWEEP_TOTAL_FAILURE)` | 1 |
+| 수수료 부족 | `Error: Insufficient balance for transaction fee. (INSUFFICIENT_FOR_FEE)` | 1 |
+
+**감사 로그:**
+
+| 이벤트 | Severity | 조건 |
+|--------|----------|------|
+| `FUND_WITHDRAWN` | info | 전량 회수 성공 (HTTP 200) |
+| `FUND_PARTIALLY_WITHDRAWN` | warning | 부분 회수 (HTTP 207) |
+| `FUND_WITHDRAWAL_FAILED` | error | 전체 실패 (HTTP 500) |
 
 ---
 
@@ -1655,7 +1966,64 @@ Phase 35 완료 후 전체 설계 문서의 v0.8 용어 일관성을 검증하�
 
 **총 검증 대상:** 6개 핵심 용어, 17개 문서 참조 (일부 문서 중복 카운트), 29개 확인 항목.
 
-Phase 21 Plan 03 (21-03) 검증 단계에서 이 체크리스트를 사용하여 문서 간 일관성을 최종 확인한다.
+Phase 35 Plan 03 (35-03) 검증 단계에서 이 체크리스트를 사용하여 문서 간 일관성을 최종 확인한다.
+
+---
+
+## 부록 B: v0.8 변경 이력 [v0.8]
+
+### B.1 Kill Switch withdraw 결정 [v0.8]
+
+> [v0.8] Kill Switch withdraw: **방안 A 채택** -- killSwitchGuard 허용 경로에 withdraw 추가.
+> 근거: 자금 회수는 Kill Switch 발동 시 가장 시급한 보안 조치이며, 기존 API 인프라를 재사용한다.
+
+| 항목 | 방안 A (채택) | 방안 B (기각) |
+|------|-------------|-------------|
+| 방식 | killSwitchGuard 허용 목록 4->5개 | CLI에서 데몬 API 우회하여 직접 실행 |
+| 허용 경로 | `POST /v1/owner/agents/:agentId/withdraw` 추가 | 허용 경로 변경 없음 |
+| 일관성 | API 인프라 재사용 (masterAuth, 감사 로그, WithdrawService) | API 우회로 감사 로그/인증 일관성 저하 |
+| 보안 | 기존 인증 체계 적용 | 별도 인증 로직 필요 |
+| 구현 복잡도 | 낮음 (허용 목록 1줄 추가) | 높음 (CLI에 sweepAll 직접 구현) |
+
+**반영 대상:**
+- 36-killswitch-autostop-evm.md: killSwitchGuard 허용 경로 5번째 추가
+- 37-rest-api-complete-spec.md: withdraw 엔드포인트 Kill Switch 상태 동작 명시
+- 이 문서 섹션 5.8: `owner withdraw` CLI 명령어에 Kill Switch 허용 기록
+
+### B.2 v0.8 변경 위치 요약
+
+| # | 섹션 | 변경 규모 | 변경 내용 |
+|---|------|----------|----------|
+| 1 | 1.2 | 소 | DX-02 Owner Optional |
+| 2 | 1.4 | 중 | 변경 요약표에 v0.8 열 추가 |
+| 3 | 2.2 | 소 | init 안내 메시지 갱신 |
+| 4 | 2.3 | 소 | 출력 예시 갱신 |
+| 5 | 2.8 | 소 | 제거 단계 nullable 근거 |
+| 6 | 3.1 | 중 | 설계 원칙 v0.8 갱신 |
+| 7 | 3.2 | 중 | --owner Required -> Options |
+| 8 | 3.3 | 소 | ownerAddress 선택적 Body |
+| 9 | 3.4 | 중 | Owner 없음/있음 두 가지 출력 |
+| 10 | 3.5 | 중 | --owner 미지정 에러 제거 |
+| 11 | 3.6 | 소 | parseArgs owner optional |
+| 12 | 3.7 | 중 | API 호출 ownerAddress 선택적 |
+| 13 | 3.8 | 대 | createAgent() 데몬 핸들러 수도코드 **신규** |
+| 14 | 5.1 | 중 | 커맨드 표 v0.8 갱신 (3개 신규) |
+| 15 | 5.2 | 중 | 변경 요약 v0.8 |
+| 16 | 5.3 | 중 | 인증 분류 v0.8 갱신 |
+| 17 | 5.5 | 대 | agent info Owner 안내 메시지 **신규** (DX-05) |
+| 18 | 5.6 | 대 | set-owner CLI 명령 **신규** (DX-02) |
+| 19 | 5.7 | 대 | remove-owner CLI 명령 **신규** (DX-03) |
+| 20 | 5.8 | 대 | owner withdraw CLI 명령 **신규** (WITHDRAW-01~08) |
+| 21 | 6.2 | 중 | --quickstart --owner Optional |
+| 22 | 6.3 | 중 | --chain 필수, --owner 선택 |
+| 23 | 6.5 | 대 | Owner 없음/있음 두 가지 출력 |
+| 24 | 6.7 | 소 | 비대화형 예시 --owner 선택 |
+| 25 | 6.8 | 중 | 수도코드 ownerAddress 선택적 |
+| 26 | 8.1-8.4 | 중 | 마이그레이션 가이드 v0.8 |
+| 27 | 9 | 소 | 요구사항 매핑 v0.8 |
+| 28 | A.3, A.6 | 소 | 체크리스트 nullable 갱신 |
+
+**총 28개 위치 변경 (계획 22개 + 추가 6개).**
 
 ---
 
