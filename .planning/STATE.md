@@ -5,24 +5,24 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.9 Phase 40 진행 중 -- Plan 40-01 완료, Plan 40-02 대기
+**현재 초점:** v0.9 마일스톤 완료 -- Phase 36-40 전체 완료, 21/21 요구사항 Complete
 
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 40 of 40 (테스트 설계 + 문서 통합) -- Phase 40 In Progress
-플랜: 40-01 완료 (Phase 40 1/2)
-상태: Phase 36, 37, 38, 39 완료. Phase 40 Plan 01 완료 (테스트 시나리오 18개 설계 문서 명시). Plan 02 대기
-마지막 활동: 2026-02-09 — 40-01-PLAN.md 완료 (TEST-01, TEST-02 설계 완료)
+페이즈: 40 of 40 (테스트 설계 + 문서 통합) -- Phase 40 Complete
+플랜: 40-02 완료 (Phase 40 2/2)
+상태: v0.9 마일스톤 완료. Phase 36, 37, 38, 39, 40 모두 완료. 10/10 plans, 21/21 requirements Complete
+마지막 활동: 2026-02-09 — 40-02-PLAN.md 완료 (INTEG-01, INTEG-02 설계 완료)
 
-Progress: ██████████████████░░ 90%
+Progress: ████████████████████ 100%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 9/10 plans complete, 4/5 phases complete (Phase 36, 37, 38, 39 완료, Phase 40 진행중 1/2)
+**v0.9 진행:** 10/10 plans complete, 5/5 phases complete (Phase 36, 37, 38, 39, 40 모두 완료)
 
 ## 누적 컨텍스트
 
@@ -91,6 +91,11 @@ Phase 39-02 설계 결정:
 - TG-05: resolveDefaultConstraints 공용 함수 (CLI + Telegram 공유)
 - TG-06: 최소 보안 보장 (expiresIn/maxRenewals 항상 값 존재, Pitfall 4 대응)
 
+Phase 40 결정:
+- 25-sqlite EXT-03 이연 결정을 HTML 주석으로 기록 (스키마 무변경)
+- pitfall 매트릭스를 38-sdk-mcp 섹션 12.3에 배치 (12.1/12.2 뒤)
+- SMGI-01~04를 Phase 38 SUMMARY 존재 근거로 Complete 갱신
+
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
@@ -98,5 +103,5 @@ Phase 39-02 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: 40-01-PLAN.md 완료. 다음: 40-02-PLAN.md 실행 (설계 문서 v0.9 통합 + pitfall 반영)
-재개 파일: .planning/phases/40-test-design-doc-integration/40-02-PLAN.md
+중단 지점: v0.9 마일스톤 완료. 다음: v0.9 마일스톤 마무리 (브랜치 병합 등) 또는 v0.10 시작
+재개 파일: None
