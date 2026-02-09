@@ -156,11 +156,11 @@ Plans:
   3. objectives/v1.7-quality-cicd.md가 존재하며, 설계 문서 46-51/64를 참조하고, 보안 시나리오 237건 + CI/CD 4-stage + 5 플랫폼 크로스 빌드 범위를 정의하며, 커버리지 게이트(Soft 60%/Hard 80%) 기준이 포함된다
   4. objectives/v2.0-release.md가 존재하며, 릴리스 체크리스트(CI 3일 연속 통과, 237건 보안 전수, npm/Docker/GitHub Release) + 설계 부채 0건 기준 + [HUMAN] 항목(README, CHANGELOG)이 포함된다
   5. 4개 문서 모두 부록 구조를 갖추고, 각 마일스톤 리스크 섹션에서 알려진 기술적 위험(네이티브 addon 호환성, 외부 API 의존성, UI 수동 검증 비용 등)을 최소 2건 이상 식별한다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 46-01: v1.5 DeFi/오라클 + v1.6 Desktop/Telegram/Docker objective 문서 생성
-- [ ] 46-02: v1.7 품질/CI/CD + v2.0 릴리스 objective 문서 생성
+- [ ] 46-01-PLAN.md — v1.5 DeFi/가격 오라클 + v1.6 Desktop/Telegram/Docker objective 문서 생성
+- [ ] 46-02-PLAN.md — v1.7 품질 강화/CI/CD + v2.0 전 기능 완성 릴리스 objective 문서 생성
 
 ### Phase 47: 설계 부채 + 로드맵 최종 검증
 **Goal**: 설계 부채 추적 체계가 초기화되고, 30개 설계 문서가 구현 마일스톤(v1.1~v2.0)에 빠짐없이 매핑되어, 구현 착수 준비가 완료된 상태
