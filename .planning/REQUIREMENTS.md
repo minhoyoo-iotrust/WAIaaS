@@ -6,17 +6,17 @@
 
 ## v1.1 Requirements
 
-CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬을 구현한다.
+CLI로 init -> start -> SOL 전송 -> 확인까지 동작하는 최소 데몬을 구현한다.
 
 ### 모노레포 인프라
 
-- [ ] **MONO-01**: pnpm workspace + Turborepo 기반 모노레포가 구성되고, 4개 패키지(core, daemon, adapter-solana, cli)가 빌드·테스트·린트 파이프라인으로 연결된다
+- [ ] **MONO-01**: pnpm workspace + Turborepo 기반 모노레포가 구성되고, 4개 패키지(core, daemon, adapter-solana, cli)가 빌드-테스트-린트 파이프라인으로 연결된다
 - [ ] **MONO-02**: 공유 tsconfig.base.json, ESLint + Prettier, Vitest 설정이 모든 패키지에 적용된다
 - [ ] **MONO-03**: .nvmrc(Node.js 22 LTS)가 존재하고, 각 패키지가 ESM으로 빌드된다
 
 ### @waiaas/core 패키지
 
-- [ ] **CORE-01**: 12개 Enum(ChainType, NetworkType, AgentStatus, TransactionStatus, TransactionType, PolicyType, PolicyTier, SessionStatus, NotificationEventType, AuditAction, KillSwitchState, OwnerState)이 as const → Zod literal union 파이프라인으로 정의된다
+- [ ] **CORE-01**: 12개 Enum(ChainType, NetworkType, AgentStatus, TransactionStatus, TransactionType, PolicyType, PolicyTier, SessionStatus, NotificationEventType, AuditAction, KillSwitchState, OwnerState)이 as const -> Zod literal union 파이프라인으로 정의된다
 - [ ] **CORE-02**: Agent, Session, Transaction, Policy, Config에 대한 Zod SSoT 스키마가 정의되고 TypeScript 타입이 자동 파생된다
 - [ ] **CORE-03**: 66개 에러 코드 통합 매트릭스가 error-codes.ts에 정의되고, WAIaaSError 베이스 클래스로 throw할 수 있다
 - [ ] **CORE-04**: IChainAdapter(10개 메서드), ILocalKeyStore, IPolicyEngine, INotificationChannel 인터페이스가 정의된다
@@ -50,12 +50,12 @@ CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬
 
 - [ ] **API-01**: OpenAPIHono 인스턴스가 127.0.0.1에 바인딩되고, 포트 3100에서 요청을 수신한다
 - [ ] **API-02**: 6개 미들웨어(requestId, hostGuard, killSwitchGuard, requestLogger, errorHandler, zodValidator)가 순서대로 적용된다
-- [ ] **API-03**: POST /v1/agents — 에이전트를 생성하고 키 쌍을 생성·암호화 저장한다 (201 Created)
-- [ ] **API-04**: GET /v1/wallet/balance — 에이전트의 SOL 잔액을 RPC로 조회하여 반환한다 (200 OK)
-- [ ] **API-05**: GET /v1/wallet/address — 에이전트의 Solana 공개키를 base58로 반환한다 (200 OK)
-- [ ] **API-06**: POST /v1/transactions/send — SOL 전송 요청을 파이프라인에 투입한다 (201 Created)
-- [ ] **API-07**: GET /v1/transactions/:id — 트랜잭션 상태를 단건 조회한다 (200 OK)
-- [ ] **API-08**: GET /health — 데몬 상태를 반환한다 (200 OK, 인증 불필요)
+- [ ] **API-03**: POST /v1/agents -- 에이전트를 생성하고 키 쌍을 생성-암호화 저장한다 (201 Created)
+- [ ] **API-04**: GET /v1/wallet/balance -- 에이전트의 SOL 잔액을 RPC로 조회하여 반환한다 (200 OK)
+- [ ] **API-05**: GET /v1/wallet/address -- 에이전트의 Solana 공개키를 base58로 반환한다 (200 OK)
+- [ ] **API-06**: POST /v1/transactions/send -- SOL 전송 요청을 파이프라인에 투입한다 (201 Created)
+- [ ] **API-07**: GET /v1/transactions/:id -- 트랜잭션 상태를 단건 조회한다 (200 OK)
+- [ ] **API-08**: GET /health -- 데몬 상태를 반환한다 (200 OK, 인증 불필요)
 
 ### SolanaAdapter
 
@@ -70,7 +70,7 @@ CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬
 
 - [ ] **PIPE-01**: 6-stage 파이프라인 골격이 구현되고, Stage 1(Zod 검증 + DB INSERT)이 동작한다
 - [ ] **PIPE-02**: Stage 2(인증)와 Stage 4(대기)는 패스스루로 구현되고, Stage 3은 INSTANT 고정(DefaultPolicyEngine)으로 구현된다
-- [ ] **PIPE-03**: Stage 5(온체인 실행)가 IChainAdapter 4단계(build→simulate→sign→submit)를 순차 호출한다
+- [ ] **PIPE-03**: Stage 5(온체인 실행)가 IChainAdapter 4단계(build->simulate->sign->submit)를 순차 호출한다
 - [ ] **PIPE-04**: Stage 6(확정 대기)가 waitForConfirmation 후 DB를 CONFIRMED 또는 FAILED로 업데이트한다
 
 ### CLI 명령어
@@ -82,9 +82,9 @@ CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬
 
 ### 통합 검증
 
-- [ ] **E2E-01**: init → start → stop → status 라이프사이클이 정상 동작한다 (E-01~E-04)
-- [ ] **E2E-02**: 에이전트 생성 → 주소 조회 → 잔액 조회가 정상 동작한다 (E-05~E-07)
-- [ ] **E2E-03**: SOL 전송 요청 → 트랜잭션 폴링 → CONFIRMED 전이가 완료된다 (E-08~E-09)
+- [ ] **E2E-01**: init -> start -> stop -> status 라이프사이클이 정상 동작한다 (E-01~E-04)
+- [ ] **E2E-02**: 에이전트 생성 -> 주소 조회 -> 잔액 조회가 정상 동작한다 (E-05~E-07)
+- [ ] **E2E-03**: SOL 전송 요청 -> 트랜잭션 폴링 -> CONFIRMED 전이가 완료된다 (E-08~E-09)
 - [ ] **E2E-04**: 잘못된 config, 미존재 에이전트, 중복 시작 에러가 올바르게 처리된다 (E-10~E-12)
 
 ## v1.2+ Requirements (이연)
@@ -112,25 +112,74 @@ CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬
 
 | 기능 | 사유 |
 |------|------|
-| sessionAuth / ownerAuth 인증 | v1.2에서 구현 — v1.1은 masterAuth implicit |
-| 4-tier 정책 엔진 | v1.2에서 구현 — v1.1은 INSTANT 고정 |
-| SPL/ERC-20 토큰 전송 | v1.4에서 구현 — v1.1은 네이티브 SOL만 |
-| EVM 체인 어댑터 | v1.4에서 구현 — v1.1은 Solana만 |
+| sessionAuth / ownerAuth 인증 | v1.2에서 구현 -- v1.1은 masterAuth implicit |
+| 4-tier 정책 엔진 | v1.2에서 구현 -- v1.1은 INSTANT 고정 |
+| SPL/ERC-20 토큰 전송 | v1.4에서 구현 -- v1.1은 네이티브 SOL만 |
+| EVM 체인 어댑터 | v1.4에서 구현 -- v1.1은 Solana만 |
 | SDK / MCP / 알림 | v1.3에서 구현 |
 | Desktop / Telegram / Docker | v1.6에서 구현 |
-| CI/CD 파이프라인 | v1.7에서 구현 — v1.1은 로컬 빌드·테스트만 |
+| CI/CD 파이프라인 | v1.7에서 구현 -- v1.1은 로컬 빌드-테스트만 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (로드맵 생성 시 매핑) | | |
+| MONO-01 | Phase 48 | Pending |
+| MONO-02 | Phase 48 | Pending |
+| MONO-03 | Phase 48 | Pending |
+| CORE-01 | Phase 48 | Pending |
+| CORE-02 | Phase 48 | Pending |
+| CORE-03 | Phase 48 | Pending |
+| CORE-04 | Phase 48 | Pending |
+| CORE-05 | Phase 48 | Pending |
+| DB-01 | Phase 49 | Pending |
+| DB-02 | Phase 49 | Pending |
+| DB-03 | Phase 49 | Pending |
+| KEY-01 | Phase 49 | Pending |
+| KEY-02 | Phase 49 | Pending |
+| KEY-03 | Phase 49 | Pending |
+| CFG-01 | Phase 49 | Pending |
+| CFG-02 | Phase 49 | Pending |
+| LIFE-01 | Phase 49 | Pending |
+| LIFE-02 | Phase 49 | Pending |
+| LIFE-03 | Phase 49 | Pending |
+| LIFE-04 | Phase 49 | Pending |
+| API-01 | Phase 50 | Pending |
+| API-02 | Phase 50 | Pending |
+| API-03 | Phase 50 | Pending |
+| API-04 | Phase 50 | Pending |
+| API-05 | Phase 50 | Pending |
+| API-06 | Phase 50 | Pending |
+| API-07 | Phase 50 | Pending |
+| API-08 | Phase 50 | Pending |
+| SOL-01 | Phase 50 | Pending |
+| SOL-02 | Phase 50 | Pending |
+| SOL-03 | Phase 50 | Pending |
+| SOL-04 | Phase 50 | Pending |
+| SOL-05 | Phase 50 | Pending |
+| SOL-06 | Phase 50 | Pending |
+| PIPE-01 | Phase 50 | Pending |
+| PIPE-02 | Phase 50 | Pending |
+| PIPE-03 | Phase 50 | Pending |
+| PIPE-04 | Phase 50 | Pending |
+| CLI-01 | Phase 51 | Pending |
+| CLI-02 | Phase 51 | Pending |
+| CLI-03 | Phase 51 | Pending |
+| CLI-04 | Phase 51 | Pending |
+| E2E-01 | Phase 51 | Pending |
+| E2E-02 | Phase 51 | Pending |
+| E2E-03 | Phase 51 | Pending |
+| E2E-04 | Phase 51 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37
+- v1.1 requirements: 46 total
+- Mapped to phases: 46
+- Unmapped: 0
+- Phase 48: 8 requirements (MONO-01~03, CORE-01~05)
+- Phase 49: 12 requirements (DB-01~03, KEY-01~03, CFG-01~02, LIFE-01~04)
+- Phase 50: 18 requirements (API-01~08, SOL-01~06, PIPE-01~04)
+- Phase 51: 8 requirements (CLI-01~04, E2E-01~04)
 
 ---
 *Requirements defined: 2026-02-10*
-*Last updated: 2026-02-10 after initial definition*
+*Last updated: 2026-02-10 after roadmap creation (traceability mapped, count corrected 37->46)*
