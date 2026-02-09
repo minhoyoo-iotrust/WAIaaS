@@ -4154,6 +4154,376 @@ export { ApiClient, type ApiResult }
 
 > **참조:** 38-RESEARCH.md Pattern 1 (ApiClient 래퍼 패턴), Pattern 2 (Tool Handler에서 ApiClient 사용). SM-12 (handleUnauthorized 4-step), SM-14 (갱신 중 구 토큰 반환). v0.9-PITFALLS.md H-04 (isError 회피), H-05 (401 자동 재시도), Pitfall 4 (stdout 오염).
 
+#### 6.5.3 [v0.9] Tool Handler 통합 패턴 (SMGI-01)
+
+기존 tool handler(섹션 5.3.2~5.3.7)는 환경변수 `SESSION_TOKEN`을 직접 참조하고 `fetch`를 인라인 호출하는 구조이다. Phase 38에서 이를 `ApiClient.get()/post()` + `toToolResult()` 공통 변환 패턴으로 리팩토링한다.
+
+##### 6.5.3.1 toToolResult() 공통 변환 함수
+
+`ApiResult<T>`를 MCP SDK의 `CallToolResult` 타입으로 변환하는 함수이다. 4가지 분기를 처리한다.
+
+| # | 분기 | isError | 응답 내용 | 근거 |
+|---|------|---------|-----------|------|
+| (a) | `expired: true` | **미설정** | `{ status: 'session_expired', message: '...', retryable: true }` | H-04: Claude Desktop 연결 해제 방지 |
+| (b) | `networkError: true` | **미설정** | `{ status: 'daemon_unavailable', message: '...', retryable: true }` | 일시적 에러, 연결 유지 |
+| (c) | `ok: false` (API 에러) | `true` | `{ error: true, code, message }` | 클라이언트/서버 에러는 isError 적합 |
+| (d) | `ok: true` (성공) | 미설정 | `JSON.stringify(data)` | 정상 응답 |
+
+**핵심 설계: (a), (b)에서 `isError`를 설정하지 않는다.** Claude Desktop은 반복적인 `isError: true` 응답을 감지하면 MCP 서버 연결을 해제할 수 있다 (H-04). 세션 만료와 네트워크 에러는 MCP 서버 자체의 오류가 아니므로 정상 응답으로 안내 메시지를 반환하여 LLM이 사용자에게 상황을 설명하도록 한다.
+
+```typescript
+// packages/mcp/src/internal/tool-result.ts
+// [v0.9] Phase 38 -- H-04 대응: ApiResult -> CallToolResult 변환
+
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { ApiResult } from './api-client.js'
+
+function toToolResult<T>(result: ApiResult<T>): CallToolResult {
+  // (a) 세션 만료/에러 -- isError 미설정
+  if ('expired' in result && result.expired) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: 'session_expired',
+          message: 'Session has expired. The owner has been notified. '
+            + 'Please try again in a few minutes after a new session is created.',
+          retryable: true,
+        }),
+      }],
+      // isError를 설정하지 않음! Claude Desktop 연결 해제 방지 (H-04)
+    }
+  }
+
+  // (b) 네트워크 에러 -- isError 미설정 (일시적)
+  if ('networkError' in result && result.networkError) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: 'daemon_unavailable',
+          message: 'WAIaaS daemon is not responding. '
+            + 'Please check if the daemon is running.',
+          retryable: true,
+        }),
+      }],
+    }
+  }
+
+  // (c) API 에러 (400, 403 등) -- isError 설정
+  if (!result.ok) {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          error: true,
+          code: result.error.code,
+          message: result.error.message,
+        }),
+      }],
+      isError: true,
+    }
+  }
+
+  // (d) 성공
+  return {
+    content: [{
+      type: 'text',
+      text: JSON.stringify(result.data),
+    }],
+  }
+}
+
+export { toToolResult }
+```
+
+##### 6.5.3.2 Tool Handler Factory 패턴
+
+각 tool을 `registerXxx(server: McpServer, apiClient: ApiClient): void` 형태의 독립 함수로 모듈화한다. 기존 패턴에서 `apiClient` 파라미터가 추가되고, 내부 구현이 ApiClient + toToolResult로 단순화된다.
+
+**6개 Tool Handler 리팩토링 전후 비교:**
+
+| # | Tool | Before (v0.2: 환경변수 + 직접 fetch) | After (v0.9: ApiClient + toToolResult) |
+|---|------|---------------------------------------|----------------------------------------|
+| 1 | `send_token` | `process.env.WAIAAS_SESSION_TOKEN` + `fetch(POST)` + 인라인 에러 분기 | `apiClient.post('/v1/transactions/send', body)` + `toToolResult(result)` |
+| 2 | `get_balance` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `apiClient.get('/v1/wallet/balance')` + `toToolResult(result)` |
+| 3 | `get_address` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `apiClient.get('/v1/wallet/address')` + `toToolResult(result)` |
+| 4 | `list_transactions` | `SESSION_TOKEN` + `fetch(GET)` + 쿼리 파라미터 조립 + 인라인 에러 | `apiClient.get('/v1/transactions?...')` + `toToolResult(result)` |
+| 5 | `get_transaction` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `` apiClient.get(`/v1/transactions/${id}`) `` + `toToolResult(result)` |
+| 6 | `get_nonce` | `SESSION_TOKEN` + `fetch(GET)` + 인라인 에러 | `apiClient.get('/v1/nonce')` + `toToolResult(result)` |
+
+**코드 변화 요약:**
+- 각 handler에서 `Authorization` 헤더 설정, `res.ok` 분기, `isError` 판단 로직 제거
+- 인증/재시도/만료 처리가 ApiClient에 위임되어 handler 코드 ~50% 감소
+- **기존 도구 이름, 파라미터, 설명은 변경 없음** (MCP 호환성 유지)
+
+**send_token 리팩토링 예시 (가장 복잡한 케이스):**
+
+```typescript
+// packages/mcp/src/tools/send-token.ts
+// [v0.9] Phase 38 리팩토링 -- ApiClient 사용
+
+import { z } from 'zod'
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from '../internal/api-client.js'
+import { toToolResult } from '../internal/tool-result.js'
+
+export function registerSendToken(
+  server: McpServer,
+  apiClient: ApiClient,
+): void {
+  server.tool(
+    'send_token',
+    'Send SOL or tokens from the agent wallet to a destination address. ' +
+    'Amount is in the smallest unit (lamports for SOL: 1 SOL = 1_000_000_000 lamports). ' +
+    'Returns transaction ID and status. INSTANT tier returns CONFIRMED with txHash, ' +
+    'DELAY/APPROVAL tier returns QUEUED for owner action.',
+    {
+      to: z.string().describe('Destination wallet address (Solana: base58, EVM: 0x hex)'),
+      amount: z.string().describe('Amount in smallest unit (lamports/wei as string)'),
+      memo: z.string().optional().describe('Optional transaction memo (max 200 chars)'),
+      priority: z.enum(['low', 'medium', 'high']).optional()
+        .describe('Fee priority: low=minimum, medium=average, high=maximum. Default: medium'),
+    },
+    async ({ to, amount, memo, priority }) => {
+      const body: Record<string, unknown> = { to, amount }
+      if (memo) body.memo = memo
+      if (priority) body.priority = priority
+
+      const result = await apiClient.post('/v1/transactions/send', body)
+      return toToolResult(result)
+    },
+  )
+}
+```
+
+**get_balance 리팩토링 예시 (단순 GET):**
+
+```typescript
+// packages/mcp/src/tools/get-balance.ts
+// [v0.9] Phase 38 리팩토링
+
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from '../internal/api-client.js'
+import { toToolResult } from '../internal/tool-result.js'
+
+export function registerGetBalance(
+  server: McpServer,
+  apiClient: ApiClient,
+): void {
+  server.tool(
+    'get_balance',
+    'Get the current balance of the agent wallet. ' +
+    'Returns balance in smallest unit (lamports/wei), decimals, symbol, and formatted string.',
+    {},
+    async () => {
+      const result = await apiClient.get('/v1/wallet/balance')
+      return toToolResult(result)
+    },
+  )
+}
+```
+
+##### 6.5.3.3 createMcpServer() 함수 설계
+
+MCP Server 생성과 tool/resource 등록을 캡슐화하는 팩토리 함수이다. ApiClient를 DI 패턴으로 전달받아 6개 tool + 3개 resource를 등록한다.
+
+```typescript
+// packages/mcp/src/server.ts
+// [v0.9] Phase 38 -- MCP Server 팩토리 + DI
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from './internal/api-client.js'
+
+// Tool handlers
+import { registerSendToken } from './tools/send-token.js'
+import { registerGetBalance } from './tools/get-balance.js'
+import { registerGetAddress } from './tools/get-address.js'
+import { registerListTransactions } from './tools/list-transactions.js'
+import { registerGetTransaction } from './tools/get-transaction.js'
+import { registerGetNonce } from './tools/get-nonce.js'
+
+// Resource handlers (Phase 38에서 동일 패턴 적용)
+import { registerWalletBalance } from './resources/wallet-balance.js'
+import { registerWalletAddress } from './resources/wallet-address.js'
+import { registerSystemStatus } from './resources/system-status.js'
+
+export function createMcpServer(apiClient: ApiClient): McpServer {
+  const server = new McpServer({
+    name: 'waiaas-mcp',
+    version: '0.2.0',
+  })
+
+  // 6개 Tool 등록
+  registerSendToken(server, apiClient)
+  registerGetBalance(server, apiClient)
+  registerGetAddress(server, apiClient)
+  registerListTransactions(server, apiClient)
+  registerGetTransaction(server, apiClient)
+  registerGetNonce(server, apiClient)
+
+  // 3개 Resource 등록
+  registerWalletBalance(server, apiClient)
+  registerWalletAddress(server, apiClient)
+  registerSystemStatus(server, apiClient)
+
+  return server
+}
+```
+
+**DI 패턴의 이점:**
+- 테스트 시 mock ApiClient 주입 가능
+- ApiClient 생성 책임이 index.ts(엔트리포인트)에 집중
+- tool/resource handler가 SessionManager에 직접 의존하지 않음
+
+##### 6.5.3.4 기존 섹션 5.3 코드와의 관계
+
+| 항목 | 설명 |
+|------|------|
+| 기존 5.3.2~5.3.7 | v0.2 원본 설계. 환경변수 + 직접 fetch 패턴 |
+| v0.9 리팩토링 | ApiClient 기반으로 전환. 코드 라인 수 ~50% 감소 |
+| 호환성 | **기존 도구 이름, 파라미터, 설명 등은 변경 없음**. MCP 프로토콜 수준의 호환성 완전 유지 |
+| 동작 차이 | 401 자동 재시도, 세션 만료 시 isError 회피 (v0.2에서는 isError: true) |
+| 기존 코드 유지 | v0.2 구현 코드는 참조용으로 유지. v0.9 리팩토링 코드가 실제 구현 기준 |
+
+#### 6.5.4 [v0.9] Resource Handler 통합 패턴 (SMGI-01)
+
+MCP Resource(섹션 5.4.1~5.4.3)도 동일한 ApiClient 패턴을 적용한다. Resource는 tool과 달리 `isError` 개념이 없고 `contents` 배열로 반환하므로, 별도의 `toResourceResult()` 변환 함수를 사용한다.
+
+##### 6.5.4.1 toResourceResult() 공통 변환 함수
+
+`ApiResult<T>`를 MCP SDK의 `ReadResourceResult` 타입으로 변환한다.
+
+| # | 분기 | 응답 내용 | 설명 |
+|---|------|-----------|------|
+| (a) | `expired: true` | 안내 텍스트: "Session expired. Please create a new session..." | 만료 안내가 resource 내용 자체가 됨 |
+| (b) | `networkError: true` | 안내 텍스트: "WAIaaS daemon is not responding..." | 데몬 미응답 안내 |
+| (c) | `ok: true` | `JSON.stringify(data)` | 정상 데이터 |
+| (d) | `ok: false` (API 에러) | `JSON.stringify({ error: true, code, message })` | 에러 JSON 텍스트 |
+
+**Resource는 `isError` 개념이 없다.** MCP Resource의 `ReadResourceResult`는 `contents` 배열을 반환하며, 에러 플래그가 존재하지 않는다. 따라서 만료/에러 시에도 안내 텍스트가 resource 내용으로 직접 반환된다. LLM이 이 텍스트를 컨텍스트로 읽고 상황을 파악한다.
+
+```typescript
+// packages/mcp/src/internal/resource-result.ts
+// [v0.9] Phase 38 -- ApiResult -> ReadResourceResult 변환
+
+import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
+import type { ApiResult } from './api-client.js'
+
+function toResourceResult<T>(
+  result: ApiResult<T>,
+  uri: string,
+): ReadResourceResult {
+  // (a) 세션 만료/에러
+  if ('expired' in result && result.expired) {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          status: 'session_expired',
+          message: 'Session expired. Please create a new session '
+            + 'via CLI (waiaas mcp setup) or Telegram (/newsession).',
+        }),
+      }],
+    }
+  }
+
+  // (b) 네트워크 에러
+  if ('networkError' in result && result.networkError) {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify({
+          status: 'daemon_unavailable',
+          message: 'WAIaaS daemon is not responding. '
+            + 'Please check if the daemon is running.',
+        }),
+      }],
+    }
+  }
+
+  // (c) 성공
+  if (result.ok) {
+    return {
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify(result.data),
+      }],
+    }
+  }
+
+  // (d) API 에러
+  return {
+    contents: [{
+      uri,
+      mimeType: 'application/json',
+      text: JSON.stringify({
+        error: true,
+        code: result.error.code,
+        message: result.error.message,
+      }),
+    }],
+  }
+}
+
+export { toResourceResult }
+```
+
+##### 6.5.4.2 3개 Resource Handler 리팩토링
+
+| # | Resource | API 경로 | 변환 |
+|---|----------|----------|------|
+| 1 | `wallet-balance` | `apiClient.get('/v1/wallet/balance')` | `toResourceResult(result, uri.href)` |
+| 2 | `wallet-address` | `apiClient.get('/v1/wallet/address')` | `toResourceResult(result, uri.href)` |
+| 3 | `system-status` | `apiClient.get('/v1/system/status')` | `toResourceResult(result, uri.href)` |
+
+**대표 예시: wallet-balance 리팩토링:**
+
+```typescript
+// packages/mcp/src/resources/wallet-balance.ts
+// [v0.9] Phase 38 리팩토링 -- ApiClient 사용
+
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ApiClient } from '../internal/api-client.js'
+import { toResourceResult } from '../internal/resource-result.js'
+
+export function registerWalletBalance(
+  server: McpServer,
+  apiClient: ApiClient,
+): void {
+  server.resource(
+    'wallet-balance',
+    'waiaas://wallet/balance',
+    {
+      description: 'Current balance of the agent wallet. Returns balance in lamports/wei, ' +
+        'human-readable format, chain, and network.',
+      mimeType: 'application/json',
+    },
+    async (uri) => {
+      const result = await apiClient.get('/v1/wallet/balance')
+      return toResourceResult(result, uri.href)
+    },
+  )
+}
+```
+
+**기존 5.4.1 코드와의 비교:** 기존 코드에서 `fetch` + `SESSION_TOKEN` + `res.ok` 분기 + 인라인 에러 처리가 모두 제거되고, `apiClient.get()` + `toResourceResult()` 2줄로 대체된다.
+
+##### 6.5.4.3 Open Question 해결 기록
+
+Phase 38 설계 과정에서 38-RESEARCH.md의 Open Question들을 다음과 같이 해결하였다:
+
+| # | Open Question | 해결 방법 | 결정 ID |
+|---|---------------|-----------|---------|
+| 1 | SessionManager.getState() public 메서드 추가 여부 | `getState(): SessionState` 4번째 public 메서드로 추가 | SMGI-D01 (섹션 6.5.1) |
+| 3 | Resource handler의 세션 만료 처리 | 동일 ApiClient + toResourceResult() 패턴. 만료 시 안내 텍스트를 resource 내용으로 반환 | 섹션 6.5.4.1 |
+| 4 | previous_token_hash 유예 기간 (H-05 데몬 측 대응) | v0.9에서는 MCP 측 401 재시도로 대응 (ApiClient handle401). 데몬 측 유예 기간은 EXT-04로 이연 확정 | 섹션 6.5.2.4 |
+
+> **Open Question 2 (에러 복구 루프):** SessionManager에 `startRecoveryLoop()` 추가는 Phase 38-02에서 설계 예정 (SMGI-03 프로세스 생명주기).
+
 ---
 
 ## 7. MCP Transport 설계
@@ -4721,3 +5091,4 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 - 53-session-renewal-protocol.md 섹션 3.7 -- 5종 갱신 에러 코드 및 HTTP 상태 (Phase 37-02 연동)
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 알림 이벤트 (Phase 36-02 확정, NOTI-01)
 - 35-notification-architecture.md -- SESSION_EXPIRING_SOON 이벤트 (Phase 36-02 확정)
+- 38-RESEARCH.md -- Phase 38 ApiClient 래퍼 패턴, tool/resource handler 통합 패턴, 프로세스 생명주기 리서치 (Phase 38-01 참조)
