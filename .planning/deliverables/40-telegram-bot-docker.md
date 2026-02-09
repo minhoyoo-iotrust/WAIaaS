@@ -2,7 +2,8 @@
 
 **문서 ID:** TGBOT-DOCK
 **작성일:** 2026-02-05
-**상태:** 완료
+**v0.8 보완:** 2026-02-09
+**상태:** v0.8 보완
 **참조:** API-SPEC (37-rest-api-complete-spec.md), NOTI-ARCH (35-notification-architecture.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-05 (28-daemon-lifecycle-cli.md), CORE-01 (24-monorepo-data-directory.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CLI-REDESIGN (54-cli-flow-redesign.md)
 **요구사항:** TGBOT-01 (인라인 키보드 거래 승인/거부), TGBOT-02 (봇 명령어), DOCK-01 (Docker 이미지 + docker-compose)
 
@@ -1113,6 +1114,46 @@ private async sendUnauthorized(chatId: number | string): Promise<void> {
   await this.sendMessage(chatId,
     'Unauthorized\\. Use /auth to link your Telegram account\\.')
 }
+```
+
+### 5.6 [v0.8] v0.8 알림 유형 추가
+
+> **[v0.8]** Owner 선택적 등록 모델 도입으로 3개의 신규 알림 유형이 추가된다. TelegramBotService가 처리하는 알림 유형 목록에 아래 항목을 추가한다.
+
+**v0.8 신규 알림 유형:**
+
+| 이벤트 유형 | 발생 조건 | 알림 내용 | InlineKeyboard | 참조 |
+|------------|----------|----------|:--------------:|------|
+| **TX_DOWNGRADED_DELAY** | NONE/GRACE 에이전트의 APPROVAL 거래가 DELAY로 다운그레이드 | 다운그레이드 안내 + Owner 등록/검증 안내 + `[취소하기]` | url 기반 `[취소하기]` | 33-time-lock §11.8, 35-notification |
+| **APPROVAL 대기 (LOCKED)** | LOCKED 에이전트의 APPROVAL 거래 승인 대기 | 거래 상세 + 승인/거부 버튼 | url 기반 `[승인]` `[거부]` | 33-time-lock §11.7, 35-notification |
+| **SESSION_RENEWED (LOCKED)** | LOCKED 에이전트의 세션 갱신 완료 | 갱신 정보 + [거부하기] 버튼 | url 기반 `[거부하기]` (masterAuth implicit) | 53-session-renewal §6.6, 34-02 설계 |
+
+> **[v0.8] url 기반 버튼 사용 근거:** APPROVAL 승인/거부 버튼은 ownerAuth 서명이 필요하므로 callback_data 방식이 불가하다. url 기반 InlineKeyboard 버튼으로 Desktop/CLI에서 ownerAuth 서명을 수행하도록 유도한다 (33-02 결정). SESSION_RENEWED [거부하기]는 masterAuth(implicit)만 필요하지만, 일관성을 위해 url 기반으로 통일한다 (34-02 결정).
+
+**TX_DOWNGRADED_DELAY 알림 메시지 예시:**
+
+```
+⏳ 대액 거래 대기 중 (APPROVAL → DELAY 다운그레이드)
+에이전트: trading-bot
+금액: 15 SOL (≈ $2,250) → 9bKrTD...
+실행 예정: 15분 후 (14:45 UTC)
+[취소하기]
+
+💡 Owner 지갑을 등록하면 대액 거래에
+   승인 정책을 적용할 수 있습니다.
+   waiaas agent set-owner trading-bot <address>
+```
+
+> **[v0.8] Owner 미등록 에이전트(NONE) 안내:** TX_DOWNGRADED_DELAY 알림 본문에 `set-owner` CLI 안내를 포함한다. GRACE 에이전트는 "Owner가 등록되었으나 아직 검증되지 않았습니다. 승인/복구 기능을 사용하면 자동으로 검증됩니다." 메시지로 대체한다.
+
+**SESSION_RENEWED (LOCKED) 알림 메시지 예시:**
+
+```
+🔄 세션 갱신됨 (3/30)
+에이전트: trading-bot
+세션 ID: 019502a8...
+만료 예정: 24시간 후
+[거부하기]
 ```
 
 ---
@@ -2315,3 +2356,14 @@ QUEUED
 | 10 | wget healthcheck (curl 아님) | Alpine 기본 포함 (추가 설치 불필요) |
 | 11 | stop_grace_period: 35s | 데몬 30초 graceful shutdown + 5초 마진 |
 | 12 | direct_approve 기본 비활성 | 보안 최우선, 편의 기능은 명시적 활성화 |
+
+---
+
+### v0.8 보완 (2026-02-09)
+
+| 변경 | 근거 | 영향 섹션 |
+|------|------|----------|
+| [v0.8] TX_DOWNGRADED_DELAY 알림 유형 추가 | Owner 미등록/유예 에이전트의 APPROVAL 다운그레이드 알림 (33-time-lock §11.8) | §5.6 |
+| [v0.8] APPROVAL url 기반 InlineKeyboard 버튼 | ownerAuth 서명 필요 → callback_data 불가 (33-02 결정) | §5.6 |
+| [v0.8] SESSION_RENEWED [거부하기] 버튼 | LOCKED 에이전트 세션 갱신 시 거부 윈도우 활성 (34-02 설계) | §5.6 |
+| [v0.8] Owner 미등록 에이전트 안내 메시지 | TX_DOWNGRADED_DELAY 알림에 set-owner CLI 안내 포함 | §5.6 |

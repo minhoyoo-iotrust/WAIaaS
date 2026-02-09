@@ -28,6 +28,8 @@
 
 v0.1의 `IBlockchainAdapter`에 존재하던 `getAssets(walletAddress): Promise<Asset[]>` 메서드가 v0.2에서 "v0.3 이연"으로 제거되었다(27-chain-adapter-interface.md 1.1절). v0.6에서 토큰 전송이 추가되면서 에이전트가 보유한 자산 목록을 조회할 수 있어야 하므로, getAssets()를 IChainAdapter의 14번째 메서드로 복원한다.
 
+> **[v0.8] sweepAll 교차 참조:** v0.8에서 추가된 `sweepAll()`(27-chain-adapter-interface.md §6.11, IChainAdapter 20번째 메서드)은 `getAssets()`로 에이전트 보유 토큰 잔액을 조회한 후 배치 전송한다. sweepAll의 1단계가 `getAssets(address) -> AssetInfo[]`이며, 이 결과로 토큰별 transfer + closeAccount instruction을 구성한다 (objectives/v0.8 §5.4 참조).
+
 ### 1.4 핵심 원칙
 
 | 원칙 | 설명 | 적용 |

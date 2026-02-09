@@ -2912,25 +2912,19 @@ class WithdrawService {
 | `failed.length > 0 && transactions.length > 0` | 207 | FUND_PARTIALLY_WITHDRAWN |
 | `transactions.length === 0` (모든 전송 실패) | 500 (throw) | FUND_WITHDRAWAL_FAILED |
 
-#### 8.18.2 [v0.8] Kill Switch 상태에서의 withdraw 처리 (Open Question)
+#### 8.18.2 [v0.8] Kill Switch 상태에서의 withdraw 처리 (방안 A 확정)
 
-> **구현 시 결정 사항.** Phase 35 DX에서 CLI withdraw 명령 설계 시 함께 결정한다.
+> **[v0.8] 35-01 결정 (방안 A 채택):** killSwitchGuard(미들웨어 #7)의 허용 목록에 `POST /v1/owner/agents/:agentId/withdraw`를 5번째 경로로 추가한다. 기존 4개 허용 경로 + 1개 = 총 5개. 자금 회수는 Kill Switch 발동 시 가장 시급한 조치이며, 기존 API 인프라(masterAuth, 감사 로그, WithdrawService)를 재사용한다. LOCKED 상태에서만 활성화되므로 Kill Switch + withdraw 모두 보안 가드를 통과한다 (36-killswitch-autostop-evm.md §2.4, objectives/v0.8 부록 매트릭스 행 11 참조).
 
-Kill Switch ACTIVATED 상태에서 killSwitchGuard(미들웨어 #7)가 4개 허용 경로만 통과시킨다. `POST /v1/owner/agents/:agentId/withdraw`는 이 허용 목록에 없다.
+Kill Switch ACTIVATED 상태에서 killSwitchGuard(미들웨어 #7)가 5개 허용 경로를 통과시킨다:
 
-**방안 A: killSwitchGuard 허용 목록 추가**
-- 허용 목록 4 -> 5개로 확장
-- API 경유로 withdraw 가능
-- 장점: 일관된 API 접근 패턴
-- 단점: Kill Switch의 "모든 거래 차단" 의미가 약화
+1. `GET /v1/health`
+2. `GET /v1/admin/status`
+3. `POST /v1/admin/recover`
+4. `GET /v1/admin/kill-switch`
+5. `POST /v1/owner/agents/:agentId/withdraw` **[v0.8]**
 
-**방안 B: CLI/데몬 내부에서 직접 실행**
-- API를 우회하여 WithdrawService를 직접 호출
-- `waiaas withdraw --agent <id>` CLI 명령으로 구현
-- 장점: Kill Switch 허용 목록 변경 없음, 보안 의미 유지
-- 단점: API 경유와 별도 경로 관리 필요
-
-> **v0.8 설계 마일스톤에서는 두 방안을 기록하고 구현을 이연한다.** (v0.8 objectives §5.5 참조)
+> **보안 근거:** 수신 주소가 `agents.owner_address`로 고정되므로 공격자가 자금을 탈취할 수 없다. 동적 경로(:agentId)이므로 killSwitchGuard에서 패턴 매칭(matchPath) 사용. (36-killswitch-autostop-evm.md 참조)
 
 ---
 

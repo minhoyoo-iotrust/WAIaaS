@@ -2,8 +2,9 @@
 
 **문서 ID:** CLI-REDESIGN
 **작성일:** 2026-02-07
-**상태:** 완료
-**참조:** CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CORE-01 (24-monorepo-data-directory.md), API-SPEC (37-rest-api-complete-spec.md)
+**v0.8 업데이트:** 2026-02-09
+**상태:** v0.8 갱신
+**참조:** CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), CORE-01 (24-monorepo-data-directory.md), API-SPEC (37-rest-api-complete-spec.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md)
 **요구사항:** DX-01, DX-02, DX-03, DX-04, DX-05
 
 ---
@@ -12,37 +13,39 @@
 
 ### 1.1 목적
 
-WAIaaS v0.5 CLI 플로우 재설계를 정의한다. v0.2의 `waiaas init` 4단계를 v0.5의 2단계로 간소화하고, `waiaas agent create --owner`, `waiaas session create`, `--quickstart`, `--dev` 모드를 신규 정의한다. 이 문서는 DX-01~DX-05 5개 요구사항을 단일 SSoT에서 해결한다.
+WAIaaS CLI 플로우 재설계를 정의한다. v0.2의 `waiaas init` 4단계를 v0.5의 2단계로 간소화하고, `waiaas agent create`, `waiaas session create`, `--quickstart`, `--dev` 모드를 신규 정의한다. [v0.8] v0.8에서는 `--owner`를 선택 옵션으로 전환하고, `set-owner`, `remove-owner`, `owner withdraw` 3개 CLI 명령어를 추가하며, agent info에 Owner 미등록 안내 메시지를 신규 정의한다. 이 문서는 DX-01~DX-05 5개 요구사항을 단일 SSoT에서 해결한다.
 
 ### 1.2 요구사항 매핑
 
 | 요구사항 | 설명 | 충족 섹션 |
 |---------|------|-----------|
 | DX-01 | `waiaas init` 순수 인프라 초기화 (에이전트/Owner 제거) | 섹션 2 |
-| DX-02 | `waiaas agent create --owner <addr>` (Owner 주소 필수, 서명 불필요) | 섹션 3 |
+| DX-02 | [v0.8] `waiaas agent create` (Owner 주소 선택, 서명 불필요) + `set-owner`/`remove-owner` 사후 등록/해제 | 섹션 3, 5 |
 | DX-03 | `waiaas session create` masterAuth(implicit) 기반 | 섹션 4 |
 | DX-04 | `--quickstart` 4단계 오케스트레이션 | 섹션 6 |
-| DX-05 | `--dev` 모드 고정 패스워드 + 보안 경고 | 섹션 7 |
+| DX-05 | `--dev` 모드 고정 패스워드 + 보안 경고; [v0.8] Owner 미등록 시 agent info 안내 메시지 | 섹션 5, 7 |
 
 ### 1.3 참조 문서
 
 | 문서 ID | 파일 | 핵심 내용 |
 |---------|------|-----------|
 | CORE-05 | 28-daemon-lifecycle-cli.md | v0.2 CLI 플로우 (init 4단계, start/stop/status), parseArgs 패턴, Exit Code |
-| AUTH-REDESIGN | 52-auth-model-redesign.md | masterAuth implicit/explicit, agents.owner_address NOT NULL, authRouter |
+| AUTH-REDESIGN | 52-auth-model-redesign.md | masterAuth implicit/explicit, [v0.8] agents.owner_address nullable, authRouter |
 | SESS-RENEW | 53-session-renewal-protocol.md | 세션 갱신 API, 토큰 회전, 5종 안전 장치 |
 | CORE-01 | 24-monorepo-data-directory.md | config.toml 스펙, 데이터 디렉토리 구조 (~/.waiaas/) |
 | API-SPEC | 37-rest-api-complete-spec.md | 31 엔드포인트 스펙, 에러 코드 체계, 인증 맵 |
 
-### 1.4 v0.2 -> v0.5 변경 요약
+### 1.4 v0.2 -> v0.5 -> v0.8 변경 요약
 
-| 영역 | v0.2 (CORE-05) | v0.5 (이 문서) | 변경 근거 |
-|------|----------------|---------------|-----------|
-| init | 4단계 (PW + Agent + Noti + Owner) | 2단계 (PW + Infra) | DX-01: 관심사 분리. init은 인프라만 담당 |
-| 에이전트 생성 | init 내 선택적 (Step 2) | `agent create --owner <addr>` 별도 커맨드 | DX-02: agents.owner_address NOT NULL 필수화 |
-| 세션 생성 | CLI에서 직접 커맨드 없음 (API 호출만) | `session create` CLI 커맨드 신규 | DX-03: masterAuth(implicit)로 간소화 |
-| 빠른 시작 | 없음 | `init --quickstart` 4단계 오케스트레이션 | DX-04: 단일 커맨드로 토큰 발급까지 완료 |
-| 개발 모드 | 없음 | `start --dev` 고정 패스워드 | DX-05: 프롬프트 없이 즉시 시작 |
+| 영역 | v0.2 (CORE-05) | v0.5 (이 문서) | v0.8 변경 | 변경 근거 |
+|------|----------------|---------------|-----------|-----------|
+| init | 4단계 (PW + Agent + Noti + Owner) | 2단계 (PW + Infra) | 유지 | DX-01: 관심사 분리. init은 인프라만 담당 |
+| 에이전트 생성 | init 내 선택적 (Step 2) | `agent create --owner <addr>` 별도 커맨드 | [v0.8] `--owner` 필수 -> **선택** | DX-02: agents.owner_address nullable 전환 (v0.8 Owner 선택적 모델) |
+| 세션 생성 | CLI에서 직접 커맨드 없음 (API 호출만) | `session create` CLI 커맨드 신규 | 유지 | DX-03: masterAuth(implicit)로 간소화 |
+| 빠른 시작 | 없음 | `init --quickstart` 4단계 오케스트레이션 | [v0.8] `--owner` 필수 -> **선택** (`--chain`만 필수) | DX-04: 단일 커맨드로 토큰 발급까지 완료 |
+| 개발 모드 | 없음 | `start --dev` 고정 패스워드 | 유지 | DX-05: 프롬프트 없이 즉시 시작 |
+| Owner 관리 | 없음 | 없음 | [v0.8] `set-owner`, `remove-owner`, `owner withdraw` **신규** | DX-02: Owner 사후 등록/변경/해제/자금 회수 |
+| agent info | 기본 정보 표시 | 유지 | [v0.8] Owner 미등록 시 **등록 안내 메시지** | DX-05: 사용자를 자발적 보안 강화로 유도 |
 
 ### 1.5 v0.2 CLI와의 관계
 
@@ -70,7 +73,7 @@ WAIaaS v0.5 CLI 플로우 재설계를 정의한다. v0.2의 `waiaas init` 4단�
 | Step 3 | 알림 채널 설정 (선택) | **제거** | API/config.toml으로 설정 |
 | Step 4 | Owner 지갑 등록 (선택) | **제거** | `agent create --owner`에 통합 |
 
-**근거:** v0.5에서 agents.owner_address가 NOT NULL이므로, init 시점에 Owner 주소 없이 에이전트를 생성할 수 없다. init과 에이전트 생성의 관심사를 분리하면 각 커맨드의 책임이 명확해진다.
+**근거:** init과 에이전트 생성의 관심사를 분리하면 각 커맨드의 책임이 명확해진다. [v0.8] v0.8에서 agents.owner_address가 nullable로 전환되어, Owner 주소 없이도 에이전트를 생성할 수 있다. init은 순수 인프라만 담당한다.
 
 ### 2.2 v0.5 init 플로우 (2단계)
 
@@ -102,10 +105,10 @@ flowchart TD
     Config --> DBInit["SQLite DB 초기화 + 마이그레이션"]
     DBInit --> KSInit["키스토어 초기화 (Argon2id 키 파생)"]
     KSInit --> Done([초기화 완료])
-    Done --> NextStep["'Next: waiaas agent create --owner <addr>'"]
+    Done --> NextStep["'Next: waiaas agent create'"]
 ```
 
-**핵심:** init 완료 후 에이전트는 0개 상태. 다음 단계로 `waiaas agent create --owner <addr>`를 안내한다.
+**핵심:** init 완료 후 에이전트는 0개 상태. 다음 단계로 `waiaas agent create`를 안내한다. [v0.8] `--owner` 옵션은 선택이므로 안내 메시지에서 필수로 표기하지 않는다.
 
 ### 2.3 대화형 모드 출력 예시
 
@@ -137,8 +140,11 @@ $ waiaas init
   Keystore:       ~/.waiaas/keystore/
 
   Next steps:
-    waiaas agent create --owner <owner-address>   Create your first agent
+    waiaas agent create                           Create your first agent
     waiaas start                                  Start the daemon
+
+  [v0.8] Tip: Owner 지갑을 함께 등록하려면:
+    waiaas agent create --owner <owner-address>
 ```
 
 ### 2.4 비대화형 모드 예시
@@ -201,11 +207,11 @@ waiaas init --non-interactive --data-dir /opt/waiaas/data
 
 다음 기능은 v0.5 init에서 **의도적으로 제거**되었다:
 
-| v0.2 기능 | v0.5 대안 | 제거 근거 |
-|----------|----------|----------|
-| Step 2: 첫 에이전트 생성 (선택) | `waiaas agent create --owner <addr>` | agents.owner_address NOT NULL 필수. init 시점에 Owner 주소를 모를 수 있음. |
-| Step 3: 알림 채널 설정 (선택) | `PUT /v1/owner/settings` API 또는 config.toml 직접 편집 | 알림 설정은 데몬 시작 후 언제든 가능. init에서 강제할 필요 없음. |
-| Step 4: Owner 지갑 등록 (선택) | `waiaas agent create --owner <addr>` | Owner 주소는 에이전트별 속성(agents.owner_address)으로 이동. 글로벌 등록 개념 폐기. |
+| v0.2 기능 | v0.5 대안 | v0.8 갱신 | 제거 근거 |
+|----------|----------|----------|----------|
+| Step 2: 첫 에이전트 생성 (선택) | `waiaas agent create` | [v0.8] `--owner` 선택 옵션 (nullable) | init과 에이전트 생성의 관심사 분리. v0.8에서 Owner 없이도 에이전트 생성 가능. |
+| Step 3: 알림 채널 설정 (선택) | `PUT /v1/owner/settings` API 또는 config.toml 직접 편집 | 유지 | 알림 설정은 데몬 시작 후 언제든 가능. init에서 강제할 필요 없음. |
+| Step 4: Owner 지갑 등록 (선택) | `waiaas agent create --owner <addr>` | [v0.8] `agent set-owner`로 사후 등록 가능 | Owner 주소는 에이전트별 속성(agents.owner_address)으로 이동. v0.8에서 nullable 전환. |
 
 ### 2.9 구현 수도코드
 
@@ -310,32 +316,35 @@ async function runInit(args: string[]): Promise<void> {
   console.log('WAIaaS initialized successfully!')
   console.log('')
   console.log('Next steps:')
-  console.log('  waiaas agent create --owner <owner-address>   Create your first agent')
+  console.log('  waiaas agent create                           Create your first agent')
   console.log('  waiaas start                                  Start the daemon')
+  // [v0.8] --owner는 선택이므로 Tip으로 안내
+  console.log('')
+  console.log('  Tip: Owner 지갑을 함께 등록하려면:')
+  console.log('    waiaas agent create --owner <owner-address>')
 }
 ```
 
 ---
 
-## 3. waiaas agent create --owner (DX-02)
+## 3. waiaas agent create (DX-02) [v0.8]
 
 ### 3.1 설계 원칙
 
-에이전트 생성은 **데몬이 실행 중인 상태**에서 API를 호출하여 수행한다. `--owner` 옵션으로 Owner 주소를 필수 지정하며, SIWS/SIWE 서명은 불필요하다 (masterAuth implicit 범위).
+에이전트 생성은 **데몬이 실행 중인 상태**에서 API를 호출하여 수행한다. [v0.8] `--owner` 옵션은 **선택적**이며, SIWS/SIWE 서명은 불필요하다 (masterAuth implicit 범위). Owner 없이 생성된 에이전트는 Base 보안 수준(INSTANT/NOTIFY/DELAY)으로 동작하며, 이후 `agent set-owner`로 Owner를 사후 등록할 수 있다.
 
 **핵심 변경:**
 - v0.2: init 내 선택적 에이전트 생성 (Owner 주소 선택)
-- v0.5: `agent create --owner` 별도 커맨드 (Owner 주소 필수, NOT NULL)
+- v0.5: `agent create --owner` 별도 커맨드 (Owner 주소 필수)
+- [v0.8] `agent create` 별도 커맨드 (Owner 주소 **선택**, agents.owner_address nullable)
 
-### 3.2 커맨드 인터페이스
+### 3.2 커맨드 인터페이스 [v0.8]
 
 ```
 waiaas agent create [options]
 
-Required:
-  --owner <address>        Owner 지갑 주소 (Solana base58 또는 EVM 0x)
-
 Options:
+  --owner <address>        [v0.8] Owner 지갑 주소 (선택, Solana base58 또는 EVM 0x)
   --name <string>          에이전트 이름 (기본: 자동 생성, e.g. "agent-01")
   --chain <string>         블록체인 (solana / ethereum, 기본: solana)
   --network <string>       네트워크 (mainnet-beta / devnet / testnet / sepolia 등, 기본: devnet)
@@ -343,65 +352,99 @@ Options:
   -h, --help               도움말
 ```
 
-### 3.3 동작 설명
+> [v0.8] `--owner`가 Required에서 Options로 이동. Owner 없이 에이전트를 생성하면 OwnerState = NONE (Base 보안 수준). 이후 `agent set-owner`로 사후 등록 가능.
+
+### 3.3 동작 설명 [v0.8]
 
 ```
-waiaas agent create --owner <addr>
+waiaas agent create [--owner <addr>]
   1. 데몬 실행 확인 (http://127.0.0.1:3100/health)
   2. POST /v1/agents 호출 (masterAuth implicit -- 추가 헤더 불필요)
-     Body: { name, chain, network, ownerAddress }
+     Body: { name, chain, network, ownerAddress? }    // [v0.8] ownerAddress 선택적
   3. 데몬 내부: 에이전트 키 쌍 생성 -> 키스토어 암호화 저장 -> agents 테이블 INSERT
+     - --owner 제공 시: owner_address = <addr>, OwnerState = GRACE
+     - --owner 미제공 시: owner_address = NULL, OwnerState = NONE
   4. 응답 출력
 ```
 
 **인증:** masterAuth(implicit). 데몬이 실행 중 = 마스터 패스워드 인증 완료 상태이므로 추가 인증이 불필요하다. 52-auth-model-redesign.md 섹션 3.1 참조.
 
-**서명 불필요:** Owner 주소는 단순 문자열로 전달된다. SIWS/SIWE 서명으로 소유권을 증명할 필요가 없는 이유는 Self-Hosted 환경에서 `agent create` 커맨드를 실행하는 사람 = 데몬 운영자 = 시스템 관리자이기 때문이다. 운영자가 자신이 관리하는 Owner 주소를 입력하는 것이므로 소유권 증명의 필요성이 없다.
+**서명 불필요:** Owner 주소는 단순 문자열로 전달된다. SIWS/SIWE 서명으로 소유권을 증명할 필요가 없는 이유는 Self-Hosted 환경에서 `agent create` 커맨드를 실행하는 사람 = 데몬 운영자 = 시스템 관리자이기 때문이다. 운영자가 자신이 관리하는 Owner 주소를 입력하는 것이므로 소유권 증명의 필요성이 없다. [v0.8] Owner 없이 생성하면 Base 보안 수준으로 동작하며, 이후 `agent set-owner`로 사후 등록 가능하다 (34-owner-wallet-connection.md 섹션 10 참조).
 
-### 3.4 출력 예시
+### 3.4 출력 예시 [v0.8]
+
+**Owner 없이 생성 (OwnerState = NONE):**
 
 ```
-$ waiaas agent create --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+$ waiaas agent create --name trading-bot --chain solana
 
 Agent created successfully!
 
   ID:       019502a8-7b3c-7d4e-8f5a-1234567890ab
-  Name:     agent-01
+  Name:     trading-bot
   Chain:    solana
   Network:  devnet
   Address:  9wB3Lz8n...AgentPublicKey...
-  Owner:    7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+  Owner:    (미등록)
 
 Next steps:
-  waiaas session create --agent agent-01   Create a session token
+  waiaas session create --agent trading-bot   Create a session token
+
+  [v0.8] Owner 지갑을 등록하면 대액 거래 승인, 자금 회수 등
+  추가 보안 기능을 사용할 수 있습니다:
+    waiaas agent set-owner trading-bot <owner-address>
 ```
+
+**Owner와 함께 생성 (OwnerState = GRACE):**
+
+```
+$ waiaas agent create --name trading-bot --chain solana \
+    --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+Agent created successfully!
+
+  ID:       019502a8-7b3c-7d4e-8f5a-1234567890ab
+  Name:     trading-bot
+  Chain:    solana
+  Network:  devnet
+  Address:  9wB3Lz8n...AgentPublicKey...
+  Owner:    7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (GRACE)
+
+Next steps:
+  waiaas session create --agent trading-bot   Create a session token
+```
+
+> [v0.8] Owner와 함께 생성하면 즉시 GRACE 상태. ownerAuth 첫 사용 시 자동으로 LOCKED 전환 (34-owner-wallet-connection.md 섹션 10.2 전이 #3).
 
 **JSON 출력 (--output json):**
 
 ```
-$ waiaas agent create --owner 7xKXtg... --output json
+$ waiaas agent create --name trading-bot --output json
 {
   "id": "019502a8-7b3c-7d4e-8f5a-1234567890ab",
-  "name": "agent-01",
+  "name": "trading-bot",
   "chain": "solana",
   "network": "devnet",
   "address": "9wB3Lz8n...AgentPublicKey...",
-  "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "ownerAddress": null,
+  "ownerState": "NONE",
   "createdAt": "2026-02-07T10:30:00.000Z"
 }
 ```
 
-### 3.5 에러 처리
+### 3.5 에러 처리 [v0.8]
 
 | 상황 | 에러 메시지 | Exit Code |
 |------|-----------|-----------|
-| `--owner` 미지정 | `Error: --owner <address> is required. Provide the Owner wallet address.` | 1 |
 | 데몬 미실행 | `Error: Cannot connect to WAIaaS daemon at 127.0.0.1:3100. Run 'waiaas start' first.` | 1 |
 | 유효하지 않은 Owner 주소 | `Error: Invalid owner address format. Expected Solana base58 or EVM 0x address.` | 1 |
 | 에이전트 이름 중복 | `Error: Agent name 'trading-bot' already exists. Choose a different name.` | 1 |
 | 지원하지 않는 체인 | `Error: Unsupported chain 'bitcoin'. Supported: solana, ethereum.` | 1 |
+| Kill Switch 활성화 | `Error: System is locked (Kill Switch active). Cannot create agent.` | 1 |
 
-### 3.6 parseArgs 구현
+> [v0.8] `--owner` 미지정 에러가 **제거**되었다. Owner 없이 에이전트를 생성할 수 있다 (OwnerState = NONE).
+
+### 3.6 parseArgs 구현 [v0.8]
 
 ```typescript
 // packages/cli/src/commands/agent.ts
@@ -409,7 +452,7 @@ function parseAgentCreateOptions(args: string[]): AgentCreateOptions {
   const { values } = parseArgs({
     args,
     options: {
-      owner: { type: 'string' },
+      owner: { type: 'string' },  // [v0.8] optional (required 검증 제거)
       name: { type: 'string' },
       chain: { type: 'string' },
       network: { type: 'string' },
@@ -420,14 +463,10 @@ function parseAgentCreateOptions(args: string[]): AgentCreateOptions {
     strict: true,
   })
 
-  if (!values.owner) {
-    console.error('Error: --owner <address> is required.')
-    console.error('Provide the Owner wallet address (e.g., Solana base58 or EVM 0x).')
-    process.exit(1)
-  }
+  // [v0.8] --owner 필수 검증 제거. undefined 허용.
 
   return {
-    owner: values.owner,
+    owner: values.owner,           // [v0.8] string | undefined
     name: values.name,
     chain: values.chain ?? 'solana',
     network: values.network ?? 'devnet',
@@ -437,7 +476,7 @@ function parseAgentCreateOptions(args: string[]): AgentCreateOptions {
 }
 ```
 
-### 3.7 API 호출 구현
+### 3.7 API 호출 구현 [v0.8]
 
 ```typescript
 async function runAgentCreate(args: string[]): Promise<void> {
@@ -455,15 +494,20 @@ async function runAgentCreate(args: string[]): Promise<void> {
   }
 
   // POST /v1/agents (masterAuth implicit -- 헤더 불필요)
+  // [v0.8] ownerAddress는 선택적 -- undefined일 때 body에 포함하지 않음
+  const body: Record<string, unknown> = {
+    name: options.name,
+    chain: options.chain,
+    network: options.network,
+  }
+  if (options.owner) {
+    body.ownerAddress = options.owner  // [v0.8] 제공 시에만 전달
+  }
+
   const response = await fetch(`${baseUrl}/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: options.name,
-      chain: options.chain,
-      network: options.network,
-      ownerAddress: options.owner,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
@@ -484,11 +528,70 @@ async function runAgentCreate(args: string[]): Promise<void> {
     console.log(`  Chain:    ${agent.chain}`)
     console.log(`  Network:  ${agent.network}`)
     console.log(`  Address:  ${agent.address}`)
-    console.log(`  Owner:    ${agent.ownerAddress}`)
+    // [v0.8] Owner 유무에 따른 출력 분기
+    if (agent.ownerAddress) {
+      console.log(`  Owner:    ${agent.ownerAddress} (GRACE)`)
+    } else {
+      console.log(`  Owner:    (미등록)`)
+    }
     console.log('')
     console.log('Next steps:')
     console.log(`  waiaas session create --agent ${agent.name}   Create a session token`)
+    // [v0.8] Owner 미등록 시 안내 메시지
+    if (!agent.ownerAddress) {
+      console.log('')
+      console.log('  [v0.8] Owner 지갑을 등록하면 대액 거래 승인, 자금 회수 등')
+      console.log('  추가 보안 기능을 사용할 수 있습니다:')
+      console.log(`    waiaas agent set-owner ${agent.name} <owner-address>`)
+    }
   }
+}
+```
+
+### 3.8 createAgent() 데몬 핸들러 수도코드 [v0.8]
+
+```typescript
+// packages/daemon/src/handlers/agent.ts (v0.8)
+async function handleCreateAgent(c: Context): Promise<Response> {
+  const body = await c.req.json()
+  const { name, chain, network } = body
+  const ownerAddress: string | undefined = body.ownerAddress  // [v0.8] 선택적
+
+  // 에이전트 키 쌍 생성
+  const keyPair = await keyStore.generateKeyPair(chain)
+
+  // agents 테이블 INSERT
+  const agent = await db.insert(agents).values({
+    id: generateUUIDv7(),
+    name: name ?? generateAgentName(),
+    chain,
+    network: network ?? 'devnet',
+    publicKey: keyPair.publicKey,
+    status: 'ACTIVE',
+    ownerAddress: ownerAddress ?? null,  // [v0.8] nullable -- undefined -> NULL
+    ownerVerified: 0,                    // [v0.8] 항상 0 (GRACE 상태 시작)
+    createdAt: Math.floor(Date.now() / 1000),
+    updatedAt: Math.floor(Date.now() / 1000),
+  }).returning()
+
+  // [v0.8] Owner 제공 시 감사 로그
+  if (ownerAddress) {
+    await auditLog.record('OWNER_REGISTERED', agent[0].id, {
+      ownerAddress,
+      source: 'agent_create',
+    })
+  }
+
+  return c.json({
+    id: agent[0].id,
+    name: agent[0].name,
+    chain: agent[0].chain,
+    network: agent[0].network,
+    address: agent[0].publicKey,
+    ownerAddress: agent[0].ownerAddress,  // [v0.8] null | string
+    ownerState: resolveOwnerState(agent[0]),  // [v0.8] 'NONE' | 'GRACE'
+    createdAt: new Date(agent[0].createdAt * 1000).toISOString(),
+  }, 201)
 }
 ```
 
@@ -670,45 +773,51 @@ function parseSessionCreateOptions(args: string[]): SessionCreateOptions {
 
 ---
 
-## 5. CLI 커맨드 전체 요약표 (v0.5)
+## 5. CLI 커맨드 전체 요약표 (v0.8) [v0.8]
 
 ### 5.1 전체 커맨드 목록
 
-| 커맨드 | 인증 수준 | 데몬 필요 | v0.5 변경 | 설명 |
+| 커맨드 | 인증 수준 | 데몬 필요 | v0.8 변경 | 설명 |
 |--------|----------|----------|----------|------|
-| `waiaas init` | 없음 (로컬) | X | **변경**: 2단계로 간소화 | 데이터 디렉토리 + 키스토어 초기화 |
-| `waiaas init --quickstart` | 없음 (로컬) | X | **신규** | init -> start -> agent -> session 통합 |
+| `waiaas init` | 없음 (로컬) | X | 유지 (v0.5 변경) | 데이터 디렉토리 + 키스토어 초기화 |
+| `waiaas init --quickstart` | 없음 (로컬) | X | [v0.8] `--owner` 선택 | init -> start -> agent -> session 통합 |
 | `waiaas start` | 마스터 패스워드 (1회) | X | 유지 | 데몬 시작 (foreground/background) |
-| `waiaas start --dev` | 없음 (고정 PW) | X | **신규** | 개발 모드 (고정 패스워드 + 보안 경고) |
+| `waiaas start --dev` | 없음 (고정 PW) | X | 유지 (v0.5 신규) | 개발 모드 (고정 패스워드 + 보안 경고) |
 | `waiaas stop` | 없음 (PID 기반) | O (간접) | 유지 | 데몬 정지 (SIGTERM) |
 | `waiaas status` | 없음 (API 호출) | O | 유지 | 데몬 상태 조회 |
-| `waiaas agent create` | masterAuth (implicit) | O | **신규**: --owner 필수 | 에이전트 생성 + Owner 등록 |
+| `waiaas agent create` | masterAuth (implicit) | O | [v0.8] `--owner` **선택** | 에이전트 생성 (Owner 선택적 등록) |
 | `waiaas agent list` | masterAuth (implicit) | O | 유지 | 에이전트 목록 조회 |
-| `waiaas agent info <name\|id>` | masterAuth (implicit) | O | 유지 | 에이전트 상세 정보 |
-| `waiaas session create` | masterAuth (implicit) | O | **신규**: masterAuth로 변경 | 세션 토큰 발급 |
+| `waiaas agent info <name\|id>` | masterAuth (implicit) | O | [v0.8] Owner 미등록 시 **안내 메시지** | 에이전트 상세 정보 |
+| `waiaas agent set-owner <name\|id> <addr>` | masterAuth (implicit) | O | [v0.8] **신규** | Owner 등록/변경 (LOCKED 시 ownerAuth 추가 필요) |
+| `waiaas agent remove-owner <name\|id>` | masterAuth (implicit) | O | [v0.8] **신규** | Owner 해제 (GRACE에서만 동작) |
+| `waiaas session create` | masterAuth (implicit) | O | 유지 (v0.5 신규) | 세션 토큰 발급 |
 | `waiaas session list` | masterAuth (implicit) | O | 유지 | 세션 목록 조회 |
-| `waiaas session revoke <id>` | masterAuth (implicit) | O | **변경**: ownerAuth -> masterAuth | 세션 폐기 |
+| `waiaas session revoke <id>` | masterAuth (implicit) | O | 유지 (v0.5 변경) | 세션 폐기 |
 | `waiaas owner approve <txId>` | ownerAuth (SIWS/SIWE) | O | 유지 | APPROVAL 거래 승인 |
-| `waiaas owner reject <txId>` | masterAuth (implicit) | O | **변경**: ownerAuth -> masterAuth | 거래 거절 |
+| `waiaas owner reject <txId>` | masterAuth (implicit) | O | 유지 (v0.5 변경) | 거래 거절 |
+| `waiaas owner withdraw --agent <name\|id>` | masterAuth (implicit) | O | [v0.8] **신규** | 에이전트 자금 회수 (LOCKED에서만 동작) |
 | `waiaas owner recover` | dualAuth (owner + master) | O | 유지 | Kill Switch 복구 |
 | `waiaas backup create` | 없음 (파일 시스템) | X | 유지 | 데이터 백업 생성 |
 | `waiaas backup restore <path>` | 없음 (파일 시스템) | X | 유지 | 백업 복원 |
 
-### 5.2 v0.5 변경 요약
+### 5.2 v0.8 변경 요약 [v0.8]
 
 | 변경 유형 | 수 | 커맨드 |
 |----------|---|--------|
-| **신규** | 4 | `init --quickstart`, `start --dev`, `agent create --owner`, `session create` |
-| **변경** (인증 다운그레이드) | 2 | `session revoke` (ownerAuth -> masterAuth), `owner reject` (ownerAuth -> masterAuth) |
-| **변경** (플로우 변경) | 1 | `init` (4단계 -> 2단계) |
-| **유지** | 10 | `start`, `stop`, `status`, `agent list/info`, `session list`, `owner approve/recover`, `backup create/restore` |
+| [v0.8] **신규** | 3 | `agent set-owner`, `agent remove-owner`, `owner withdraw` |
+| [v0.8] **변경** (옵션 전환) | 2 | `agent create` (--owner 필수 -> 선택), `init --quickstart` (--owner 필수 -> 선택) |
+| [v0.8] **변경** (출력 확장) | 1 | `agent info` (Owner 미등록 안내 메시지 추가) |
+| v0.5 **신규** | 4 | `init --quickstart`, `start --dev`, `agent create`, `session create` |
+| v0.5 **변경** | 3 | `init` (4단계 -> 2단계), `session revoke` (ownerAuth -> masterAuth), `owner reject` (ownerAuth -> masterAuth) |
+| **유지** | 7 | `start`, `stop`, `status`, `agent list`, `session list`, `owner approve`, `backup create/restore` |
 
-### 5.3 인증 수준별 분류
+### 5.3 인증 수준별 분류 [v0.8]
 
 | 인증 수준 | 커맨드 | 보안 근거 |
 |----------|--------|----------|
 | 없음 | `init`, `start`, `stop`, `status`, `backup` | 로컬 파일 시스템/PID 기반 동작. 데몬 API 미사용 또는 공개 엔드포인트만 사용. |
-| masterAuth (implicit) | `agent create/list/info`, `session create/list/revoke`, `owner reject` | 데몬 실행 중 = 마스터 패스워드 인증 완료. localhost 바인딩으로 보호. |
+| masterAuth (implicit) | `agent create/list/info/set-owner/remove-owner`, `session create/list/revoke`, `owner reject/withdraw` | 데몬 실행 중 = 마스터 패스워드 인증 완료. localhost 바인딩으로 보호. [v0.8] set-owner/remove-owner/withdraw 추가. |
+| masterAuth + ownerAuth (조건부) | `agent set-owner` (LOCKED 상태) | [v0.8] LOCKED 상태에서 Owner 주소 변경 시 기존 Owner 서명 필요. NONE/GRACE에서는 masterAuth만. |
 | ownerAuth (SIWS/SIWE) | `owner approve` | 자금 이동 승인. Owner 지갑의 암호학적 서명 필요. 52-auth-model-redesign.md 참조. |
 | dualAuth (owner + master) | `owner recover` | Kill Switch 복구. 동결 해제는 가장 높은 인증 수준 요구. |
 
@@ -750,12 +859,335 @@ switch (subcommand) {
 
 **v0.2 대비 변경:**
 - `session` 서브커맨드 그룹 신규 추가 (`session create`, `session list`, `session revoke`)
-- `owner` 서브커맨드 그룹 신규 추가 (`owner approve`, `owner reject`, `owner recover`)
+- `owner` 서브커맨드 그룹 신규 추가 (`owner approve`, `owner reject`, `owner recover`, [v0.8] `owner withdraw`)
 - `agent` 서브커맨드에 `create` 액션 추가 (기존 `list`, `info`에 더하여)
+- [v0.8] `agent` 서브커맨드에 `set-owner`, `remove-owner` 액션 추가
+
+### 5.5 agent info 출력 확장 [v0.8] (DX-05)
+
+Owner 미등록 에이전트의 `agent info` 출력에 Owner 등록 안내 메시지를 포함한다.
+
+**Owner 미등록 (OwnerState = NONE):**
+
+```
+$ waiaas agent info trading-bot
+
+Agent: trading-bot
+  ID:       01950288-7b3c-7d4e-8f5a-1234567890ab
+  Chain:    solana
+  Network:  devnet
+  Address:  9bKrTD...AgentPublicKey...
+  Status:   ACTIVE
+  Owner:    (미등록)
+
+  [v0.8] Owner 지갑을 등록하면 대액 거래 승인, 자금 회수 등
+  추가 보안 기능을 사용할 수 있습니다:
+    waiaas agent set-owner trading-bot <owner-address>
+```
+
+**Owner 등록 완료 -- GRACE (OwnerState = GRACE):**
+
+```
+$ waiaas agent info trading-bot
+
+Agent: trading-bot
+  ID:       01950288-7b3c-7d4e-8f5a-1234567890ab
+  Chain:    solana
+  Network:  devnet
+  Address:  9bKrTD...AgentPublicKey...
+  Status:   ACTIVE
+  Owner:    9wB3Lz... (pending)    # GRACE -- ownerAuth 미사용
+
+  보안 수준: Enhanced (APPROVAL 해금)
+  Owner 상태: GRACE (ownerAuth 첫 사용 시 LOCKED 자동 전환)
+```
+
+**Owner 등록 완료 -- LOCKED (OwnerState = LOCKED):**
+
+```
+$ waiaas agent info trading-bot
+
+Agent: trading-bot
+  ID:       01950288-7b3c-7d4e-8f5a-1234567890ab
+  Chain:    solana
+  Network:  devnet
+  Address:  9bKrTD...AgentPublicKey...
+  Status:   ACTIVE
+  Owner:    9wB3Lz... (verified)   # LOCKED -- ownerAuth 사용 완료
+
+  보안 수준: Enhanced (APPROVAL 해금, 자금 회수 가능)
+  Owner 상태: LOCKED (변경 시 기존 Owner 서명 필요)
+```
+
+> [v0.8] Owner 미등록 시 안내 메시지는 `--output json` 모드에서는 `ownerState: "NONE"` 필드로 대체된다. 안내 메시지는 텍스트 출력에서만 표시.
+
+### 5.6 waiaas agent set-owner [v0.8] (DX-02, OWNER-03)
+
+Owner 주소를 사후에 등록하거나 변경한다. 34-owner-wallet-connection.md 섹션 10.3 인증 맵과 1:1 대응.
+
+**커맨드 인터페이스:**
+
+```
+waiaas agent set-owner <agent-name|id> <address>
+
+Arguments:
+  <agent-name|id>          대상 에이전트 (이름 또는 UUID)
+  <address>                Owner 지갑 주소 (Solana base58 또는 EVM 0x)
+
+Options:
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**인증:** masterAuth(implicit). 단, LOCKED 상태에서는 기존 Owner의 ownerAuth 서명이 추가로 필요하다 (34-owner-wallet-connection.md 섹션 10.2 전이 #5).
+
+**동작:**
+
+```
+waiaas agent set-owner <agent> <addr>
+  1. 데몬 실행 확인 (http://127.0.0.1:3100/health)
+  2. GET /v1/agents/:id로 현재 에이전트 상태 조회
+  3. OwnerState 확인:
+     - NONE: PATCH /v1/agents/:id { owner: "<addr>" } -- masterAuth만
+     - GRACE: PATCH /v1/agents/:id { owner: "<addr>" } -- masterAuth만
+     - LOCKED: CLI 수동 서명 플로우 시작:
+       a) GET /v1/auth/nonce로 nonce 획득
+       b) SIWS/SIWE 메시지 구성 + 서명 안내 출력
+       c) 사용자 서명 입력 대기 (또는 WalletConnect)
+       d) PATCH /v1/agents/:id + Authorization: Bearer <ownerSignaturePayload>
+  4. 응답 출력
+```
+
+**출력 예시 (NONE/GRACE -> 성공):**
+
+```
+$ waiaas agent set-owner trading-bot 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+Owner registered successfully!
+
+  Agent:  trading-bot
+  Owner:  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (GRACE)
+
+  ownerAuth를 처음 사용하면 자동으로 LOCKED 상태로 전환됩니다.
+```
+
+**출력 예시 (LOCKED -> ownerAuth 필요):**
+
+```
+$ waiaas agent set-owner trading-bot NewAddr...
+
+  현재 에이전트가 LOCKED 상태입니다. 기존 Owner 서명이 필요합니다.
+
+  서명할 메시지:
+  ---
+  WAIaaS wants you to sign in with your Solana account:
+  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+  Change owner address for agent trading-bot
+
+  Nonce: abc123...
+  Issued At: 2026-02-09T12:00:00.000Z
+  ---
+
+  서명을 Base58로 입력하세요: <사용자 입력>
+
+Owner address changed successfully!
+
+  Agent:  trading-bot
+  Owner:  NewAddr... (LOCKED)
+```
+
+**에러 처리:**
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| 에이전트 미존재 | `Error: Agent 'trading-bot' not found. (AGENT_NOT_FOUND)` | 1 |
+| 유효하지 않은 주소 | `Error: Invalid owner address format. (INVALID_OWNER_ADDRESS)` | 1 |
+| LOCKED + ownerAuth 없음 | `Error: Owner change requires current owner signature. (OWNER_CHANGE_REQUIRES_CURRENT_OWNER)` | 1 |
+| Kill Switch 활성화 | `Error: System is locked. (503 SYSTEM_LOCKED)` | 1 |
+
+### 5.7 waiaas agent remove-owner [v0.8] (DX-03, OWNER-06)
+
+Owner 등록을 해제한다. **GRACE 상태에서만 동작**하며, LOCKED 상태에서는 보안 다운그레이드 방지를 위해 거부된다.
+
+**커맨드 인터페이스:**
+
+```
+waiaas agent remove-owner <agent-name|id>
+
+Arguments:
+  <agent-name|id>          대상 에이전트 (이름 또는 UUID)
+
+Options:
+  --force                  확인 프롬프트 건너뛰기 (비대화형 모드)
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**인증:** masterAuth(implicit).
+
+**동작:**
+
+```
+waiaas agent remove-owner <agent>
+  1. 데몬 실행 확인
+  2. GET /v1/agents/:id로 현재 에이전트 상태 조회
+  3. OwnerState 확인:
+     - NONE: 에러 (NO_OWNER)
+     - GRACE: 확인 프롬프트 -> PATCH /v1/agents/:id { owner: null }
+     - LOCKED: 에러 (OWNER_REMOVAL_BLOCKED)
+  4. 응답 출력
+```
+
+**출력 예시 (GRACE -> 성공):**
+
+```
+$ waiaas agent remove-owner trading-bot
+
+  WARNING: Owner를 해제하면 보안 수준이 Enhanced에서 Base로 다운그레이드됩니다.
+  - APPROVAL 티어가 DELAY로 다운그레이드됩니다.
+  - 자금 회수(withdraw)가 비활성화됩니다.
+  - Kill Switch 복구 대기 시간이 30분에서 24시간으로 증가합니다.
+
+  계속하시겠습니까? (y/N): y
+
+Owner removed successfully.
+
+  Agent:  trading-bot
+  Owner:  (미등록)
+  보안 수준: Base
+```
+
+**에러 처리:**
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| 에이전트 미존재 | `Error: Agent 'trading-bot' not found. (AGENT_NOT_FOUND)` | 1 |
+| Owner 미등록 | `Error: No owner registered for agent 'trading-bot'. (OWNER_NOT_FOUND)` | 1 |
+| LOCKED 상태 | `Error: Cannot remove owner in LOCKED state. Owner has been verified via ownerAuth. (OWNER_REMOVAL_BLOCKED)` | 1 |
+| Kill Switch 활성화 | `Error: System is locked. (503 SYSTEM_LOCKED)` | 1 |
+
+### 5.8 waiaas owner withdraw [v0.8] (WITHDRAW-01~08)
+
+에이전트 자금을 Owner 지갑으로 전량 회수한다. **LOCKED 상태(owner_verified=1)에서만 동작**한다.
+
+**커맨드 인터페이스:**
+
+```
+waiaas owner withdraw [options]
+
+Required:
+  --agent <agent-name|id>  대상 에이전트
+
+Options:
+  --scope <all|native>     회수 범위 (기본: "all")
+                           all: 네이티브 + SPL 토큰 + rent
+                           native: 네이티브만
+  --output <format>        출력 형식: text (기본), json
+  --data-dir <path>        데이터 디렉토리
+  -h, --help               도움말
+```
+
+**인증:** masterAuth(implicit). 수신 주소가 agents.owner_address로 고정되므로 ownerAuth는 불필요하다 (34-01 결정, v0.8 §5.2 근거).
+
+**동작:**
+
+```
+waiaas owner withdraw --agent <agent>
+  1. 데몬 실행 확인
+  2. POST /v1/owner/agents/:agentId/withdraw 호출 (masterAuth implicit)
+     Body: { scope: "all" | "native" }
+  3. 데몬 내부: OwnerState LOCKED 검증 -> WithdrawService -> IChainAdapter.sweepAll()
+     - sweepAll 4단계: getAssets -> SPL 배치(transfer+closeAccount) -> SOL 마지막 전송
+  4. 응답 출력 (HTTP 200 전량 성공 / HTTP 207 부분 성공)
+```
+
+**Kill Switch 상태 동작: [v0.8] 허용 (방안 A 채택)**
+
+> [v0.8] Kill Switch withdraw: **방안 A 채택** -- killSwitchGuard 허용 경로에 `POST /v1/owner/agents/:agentId/withdraw` 추가.
+> 근거: 자금 회수는 Kill Switch 발동 시 **가장 시급한 보안 조치**이며, 기존 API 인프라(masterAuth, 감사 로그, WithdrawService)를 재사용한다. 방안 B(CLI 직접 실행)는 데몬 API를 우회하므로 일관성이 저하된다.
+> 36-killswitch-autostop-evm.md에 반영 필요: killSwitchGuard 5번째 허용 경로 `POST /v1/owner/agents/:agentId/withdraw` 추가.
+
+**출력 예시 (scope: all, 성공 -- HTTP 200):**
+
+```
+$ waiaas owner withdraw --agent trading-bot
+
+Withdrawal complete!
+
+  Agent:        trading-bot
+  Destination:  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (owner)
+
+  Native:       2.458 SOL
+  Tokens:
+    USDC:       150.00 (EPjFW...)
+    BONK:       5,000,000 (DezXA...)
+  Rent:         0.012 SOL
+  Transactions: 3
+
+  Total recovered: 2.470 SOL + 2 tokens
+```
+
+**출력 예시 (scope: all, 부분 실패 -- HTTP 207):**
+
+```
+$ waiaas owner withdraw --agent trading-bot
+
+Withdrawal partially complete (some tokens failed).
+
+  Agent:        trading-bot
+  Destination:  7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (owner)
+
+  Native:       2.458 SOL
+  Tokens recovered:
+    USDC:       150.00 (EPjFW...)
+  Tokens failed:
+    BONK:       DezXA... -- TransactionError: insufficient funds for fee
+  Rent:         0.006 SOL
+  Transactions: 2 (1 failed)
+
+  WARNING: Some tokens could not be recovered. Retry with:
+    waiaas owner withdraw --agent trading-bot
+```
+
+**JSON 출력 (--output json):**
+
+```json
+{
+  "totalTransactions": 3,
+  "nativeRecovered": "2.458",
+  "tokensRecovered": [
+    { "symbol": "USDC", "amount": "150.00", "mint": "EPjFW..." }
+  ],
+  "rentRecovered": "0.012",
+  "failed": [
+    { "mint": "DezXA...", "error": "insufficient funds for fee" }
+  ]
+}
+```
+
+**에러 처리:**
+
+| 상황 | 에러 메시지 | Exit Code |
+|------|-----------|-----------|
+| `--agent` 미지정 | `Error: --agent <name\|id> is required.` | 1 |
+| 에이전트 미존재 | `Error: Agent 'trading-bot' not found. (AGENT_NOT_FOUND)` | 1 |
+| Owner 미등록 | `Error: No owner registered. Cannot withdraw. (NO_OWNER)` | 1 |
+| GRACE 상태 (LOCKED만 허용) | `Error: Withdrawal requires LOCKED state (owner must be verified via ownerAuth). (WITHDRAW_LOCKED_ONLY)` | 1 |
+| 전체 실패 | `Error: All withdrawal transactions failed. (SWEEP_TOTAL_FAILURE)` | 1 |
+| 수수료 부족 | `Error: Insufficient balance for transaction fee. (INSUFFICIENT_FOR_FEE)` | 1 |
+
+**감사 로그:**
+
+| 이벤트 | Severity | 조건 |
+|--------|----------|------|
+| `FUND_WITHDRAWN` | info | 전량 회수 성공 (HTTP 200) |
+| `FUND_PARTIALLY_WITHDRAWN` | warning | 부분 회수 (HTTP 207) |
+| `FUND_WITHDRAWAL_FAILED` | error | 전체 실패 (HTTP 500) |
 
 ---
 
-## 6. waiaas init --quickstart (DX-04)
+## 6. waiaas init --quickstart (DX-04) [v0.8]
 
 ### 6.1 설계 원칙
 
@@ -766,21 +1198,21 @@ switch (subcommand) {
 ```
 [1/4] init       -- 인프라 초기화 (디렉토리 + DB + 키스토어)
 [2/4] start      -- 데몬 시작 (foreground)
-[3/4] agent      -- 에이전트 생성 + Owner 등록
+[3/4] agent      -- 에이전트 생성 (+ Owner 등록 선택)    // [v0.8] Owner 선택
 [4/4] session    -- 세션 토큰 발급
 ```
 
-### 6.2 커맨드 인터페이스
+### 6.2 커맨드 인터페이스 [v0.8]
 
 ```
 waiaas init --quickstart [options]
 
 Required (quickstart 모드):
-  --owner <address>        Owner 지갑 주소
+  --chain <string>         [v0.8] 블록체인 (solana / ethereum) -- 유일한 필수 옵션
 
 Options:
+  --owner <address>        [v0.8] Owner 지갑 주소 (선택)
   --agent-name <string>    에이전트 이름 (기본: "agent-01")
-  --chain <string>         블록체인 (기본: solana)
   --network <string>       네트워크 (기본: devnet)
   --expires-in <seconds>   세션 만료 시간 (기본: 86400)
   --data-dir <path>        데이터 디렉토리
@@ -789,13 +1221,15 @@ Options:
   -h, --help               도움말
 ```
 
-### 6.3 --quickstart 필수 옵션
+> [v0.8] `--owner`가 Required에서 Options로 이동. `--chain`만 필수 옵션. Owner 없이도 quickstart 가능.
+
+### 6.3 --quickstart 옵션 [v0.8]
 
 | 옵션 | 필수 | 기본값 | 설명 |
 |------|------|--------|------|
-| `--owner <address>` | **필수** | - | Owner 지갑 주소. agents.owner_address NOT NULL이므로 반드시 필요. |
+| `--chain <string>` | **필수** | - | [v0.8] 블록체인. quickstart의 유일한 필수 옵션. |
+| `--owner <address>` | [v0.8] 선택 | - | Owner 지갑 주소. 제공 시 GRACE 상태로 시작, 미제공 시 NONE. |
 | `--agent-name <string>` | 선택 | `agent-01` | 에이전트 이름 |
-| `--chain <string>` | 선택 | `solana` | 블록체인 |
 | `--network <string>` | 선택 | `devnet` | 네트워크 |
 | `--expires-in <seconds>` | 선택 | `86400` | 세션 만료 시간 (24시간) |
 
@@ -836,14 +1270,12 @@ writeFileSync(passwordPath, password, { mode: 0o600 })
 - 터미널 히스토리에 패스워드가 남지 않음 (파일 기반)
 - 프로덕션에서는 `--quickstart`를 사용하지 않고 대화형 init + 수동 패스워드 설정을 권장
 
-### 6.5 출력 예시
+### 6.5 출력 예시 [v0.8]
+
+**Owner 없이 quickstart (OwnerState = NONE):**
 
 ```
-$ waiaas init --quickstart \
-    --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
-    --agent-name my-bot \
-    --chain solana \
-    --network devnet
+$ waiaas init --quickstart --chain solana
 
   WAIaaS Quickstart
   -----------------
@@ -852,20 +1284,69 @@ $ waiaas init --quickstart \
         Data directory: ~/.waiaas/
         Master password: auto-generated
         Saved to: ~/.waiaas/.master-password (chmod 600)
-        Database: 7 tables, migration v5
+        Database: 8 tables, migration v8
         Keystore: initialized
 
   [2/4] Starting daemon...
-        WAIaaS daemon v0.5.0 ready on 127.0.0.1:3100 (PID: 12345)
+        WAIaaS daemon v0.8.0 ready on 127.0.0.1:3100 (PID: 12345)
+
+  [3/4] Creating agent...
+        Name:    agent-01
+        Chain:   solana (devnet)
+        Address: 9wB3Lz8n...AgentPublicKey...
+        Owner:   (미등록)
+
+  [4/4] Creating session...
+        Expires: 2026-02-10T10:30:00.000Z (24h)
+
+  -----------------
+  Quickstart complete!
+
+  Session token:
+  wai_sess_eyJhbGciOiJIUzI1NiIs...
+
+  Quick copy:
+    export WAIAAS_SESSION_TOKEN="wai_sess_eyJhbGciOiJIUzI1NiIs..."
+
+  Master password saved to:
+    ~/.waiaas/.master-password
+
+  Next time, start the daemon with:
+    waiaas start --password-file ~/.waiaas/.master-password
+
+  [v0.8] Owner 지갑을 등록하면 대액 거래 승인, 자금 회수 등
+  추가 보안 기능을 사용할 수 있습니다:
+    waiaas agent set-owner agent-01 <owner-address>
+```
+
+**Owner와 함께 quickstart (OwnerState = GRACE):**
+
+```
+$ waiaas init --quickstart --chain solana \
+    --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
+    --agent-name my-bot
+
+  WAIaaS Quickstart
+  -----------------
+
+  [1/4] Initializing...
+        Data directory: ~/.waiaas/
+        Master password: auto-generated
+        Saved to: ~/.waiaas/.master-password (chmod 600)
+        Database: 8 tables, migration v8
+        Keystore: initialized
+
+  [2/4] Starting daemon...
+        WAIaaS daemon v0.8.0 ready on 127.0.0.1:3100 (PID: 12345)
 
   [3/4] Creating agent...
         Name:    my-bot
         Chain:   solana (devnet)
         Address: 9wB3Lz8n...AgentPublicKey...
-        Owner:   7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+        Owner:   7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU (GRACE)
 
   [4/4] Creating session...
-        Expires: 2026-02-08T10:30:00.000Z (24h)
+        Expires: 2026-02-10T10:30:00.000Z (24h)
 
   -----------------
   Quickstart complete!
@@ -916,28 +1397,40 @@ Stage 4 (session create) 실패:
 - init 이후 실패: 데이터 디렉토리는 유지 (init은 성공했으므로 수동으로 재시도 가능)
 - 부분 성공 상태를 명확히 안내하여 사용자가 수동 복구 가능
 
-### 6.7 비대화형 통합 예시
+### 6.7 비대화형 통합 예시 [v0.8]
 
 ```bash
-# CI/CD에서 완전 비대화형 quickstart
+# [v0.8] CI/CD에서 완전 비대화형 quickstart (--owner 선택)
 export WAIAAS_MASTER_PASSWORD="test-password-12345"
 waiaas init --quickstart \
-  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
-  --agent-name ci-bot \
   --chain solana \
+  --agent-name ci-bot \
   --network devnet
 
-# Docker 환경에서
-docker run -d waiaas:latest init --quickstart \
+# Owner 포함 quickstart
+waiaas init --quickstart \
+  --chain solana \
   --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
+  --agent-name ci-bot
+
+# Docker 환경에서 (--owner 선택)
+docker run -d waiaas:latest init --quickstart \
+  --chain solana \
   --non-interactive
 ```
 
-### 6.8 구현 수도코드
+### 6.8 구현 수도코드 [v0.8]
 
 ```typescript
 async function runQuickstart(options: InitOptions): Promise<void> {
   const dataDir = resolveDataDir(options.dataDir)
+
+  // [v0.8] --chain 필수 검증 (유일한 필수 옵션)
+  if (!options.chain) {
+    console.error('Error: --chain is required for quickstart mode.')
+    console.error('  Example: waiaas init --quickstart --chain solana')
+    process.exit(1)
+  }
 
   // === Stage 1: init ===
   console.log('  [1/4] Initializing...')
@@ -990,15 +1483,25 @@ async function runQuickstart(options: InitOptions): Promise<void> {
   console.log('  [3/4] Creating agent...')
   let agent: AgentResponse
   try {
-    agent = await createAgentViaApi({
+    // [v0.8] ownerAddress는 선택적 -- undefined일 때 미전달
+    const agentBody: Record<string, unknown> = {
       name: options.agentName ?? 'agent-01',
-      chain: options.chain ?? 'solana',
+      chain: options.chain,
       network: options.network ?? 'devnet',
-      ownerAddress: options.owner,
-    })
+    }
+    if (options.owner) {
+      agentBody.ownerAddress = options.owner  // [v0.8] 제공 시에만 전달
+    }
+    agent = await createAgentViaApi(agentBody)
     console.log(`        Name:    ${agent.name}`)
+    console.log(`        Chain:   ${agent.chain} (${agent.network})`)
     console.log(`        Address: ${agent.address}`)
-    console.log(`        Owner:   ${agent.ownerAddress}`)
+    // [v0.8] Owner 유무에 따른 출력 분기
+    if (agent.ownerAddress) {
+      console.log(`        Owner:   ${agent.ownerAddress} (GRACE)`)
+    } else {
+      console.log(`        Owner:   (미등록)`)
+    }
   } catch (err) {
     await stopDaemonProcess(daemonProcess)
     console.error(`  [3/4] Failed: ${err.message}`)
@@ -1021,6 +1524,14 @@ async function runQuickstart(options: InitOptions): Promise<void> {
     console.log('')
     console.log('  Quick copy:')
     console.log(`    export WAIAAS_SESSION_TOKEN="${session.token}"`)
+
+    // [v0.8] Owner 미등록 시 안내 메시지
+    if (!agent.ownerAddress) {
+      console.log('')
+      console.log('  [v0.8] Owner 지갑을 등록하면 대액 거래 승인, 자금 회수 등')
+      console.log('  추가 보안 기능을 사용할 수 있습니다:')
+      console.log(`    waiaas agent set-owner ${agent.name} <owner-address>`)
+    }
   } catch (err) {
     await stopDaemonProcess(daemonProcess)
     console.error(`  [4/4] Failed: ${err.message}`)
@@ -1174,14 +1685,18 @@ const DaemonConfigSchema = z.object({
 `--dev`와 `--quickstart`를 함께 사용하면 가장 빠른 개발 환경 구축이 가능하다:
 
 ```bash
-waiaas init --quickstart --dev \
+# [v0.8] --owner 선택. --chain만 필수.
+waiaas init --quickstart --dev --chain solana
+
+# Owner 포함
+waiaas init --quickstart --dev --chain solana \
   --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
 ```
 
 동작:
 1. init: 고정 패스워드 `waiaas-dev`로 인프라 초기화 (자동 생성 대신 고정값)
 2. start: `--dev` 모드로 데몬 시작 (보안 경고 3종 활성화)
-3. agent create: 에이전트 생성
+3. agent create: 에이전트 생성 [v0.8] (--owner 미제공 시 Owner 없이 생성)
 4. session create: 세션 토큰 발급
 
 `--dev`와 `--quickstart` 조합 시 마스터 패스워드는 항상 `waiaas-dev`이며, `.master-password` 파일은 생성하지 않는다 (고정값이므로 파일 저장 불필요).
@@ -1208,8 +1723,8 @@ Remove --dev for production/remote use, or remove --expose for local development
 `--dev` 모드에서 init --force를 실행하면 기존 dev 환경을 재초기화한다:
 
 ```bash
-waiaas init --quickstart --dev --force \
-  --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+# [v0.8] --owner 선택
+waiaas init --quickstart --dev --force --chain solana
 ```
 
 ### 7.7 구현 수도코드
@@ -1279,91 +1794,103 @@ async function runStart(args: string[]): Promise<void> {
 
 ---
 
-## 8. v0.2 -> v0.5 마이그레이션 가이드
+## 8. v0.2 -> v0.5 -> v0.8 마이그레이션 가이드
 
 ### 8.1 변경 영향
 
 | 영역 | 변경 사항 | 영향도 | 조치 필요 |
 |------|----------|--------|----------|
-| `waiaas init` | 4단계 -> 2단계 | **HIGH** | 기존 init 스크립트 업데이트 |
-| 에이전트 생성 | init 내 -> `agent create --owner` | **HIGH** | 에이전트 생성 워크플로우 변경 |
-| 세션 생성 | ownerAuth -> masterAuth | **MEDIUM** | CLI에서 서명 프로세스 제거 |
-| CLI 커맨드 | 4개 신규, 2개 변경 | **MEDIUM** | 스크립트/자동화 업데이트 |
+| `waiaas init` | 4단계 -> 2단계 (v0.5) | **HIGH** | 기존 init 스크립트 업데이트 |
+| 에이전트 생성 | init 내 -> `agent create` | **HIGH** | 에이전트 생성 워크플로우 변경 |
+| [v0.8] `--owner` 옵션 | 필수 -> **선택** | **HIGH** | `--owner` 필수 의존 스크립트 업데이트 |
+| [v0.8] Owner 관리 | 없음 -> `set-owner`/`remove-owner`/`withdraw` | **MEDIUM** | 신규 CLI 명령어 학습 |
+| 세션 생성 | ownerAuth -> masterAuth (v0.5) | **MEDIUM** | CLI에서 서명 프로세스 제거 |
+| CLI 커맨드 | v0.5: 4개 신규, v0.8: 3개 신규 | **MEDIUM** | 스크립트/자동화 업데이트 |
 | config.toml | `dev_mode` 추가 | **LOW** | 기존 설정 파일 호환 (기본값 false) |
 
 ### 8.2 마이그레이션 절차
 
 기존 v0.2 환경에서 v0.5로 전환하는 절차를 안내한다.
 
-#### 기존 v0.2 사용자
+#### 기존 v0.5 사용자 -> v0.8
 
 ```bash
-# v0.2에서 이미 init + agent 생성이 완료된 경우:
+# v0.5에서 이미 init + agent 생성이 완료된 경우:
 
 # 1. 데몬 정지
 waiaas stop
 
-# 2. v0.5 바이너리로 업데이트
-npm install -g @waiaas/cli@0.5.0
+# 2. v0.8 바이너리로 업데이트
+npm install -g @waiaas/cli@0.8.0
 
-# 3. 데몬 재시작 (v0.5)
+# 3. 데몬 재시작 (v0.8)
+# [v0.8] DB 마이그레이션: agents.owner_address nullable 전환
+# 31-01에서 정의된 테이블 재생성 패턴 (PRAGMA foreign_keys OFF/ON)
 waiaas start
 
-# 4. 기존 에이전트에 Owner 주소 설정 (v0.5 필수)
-#    v0.2에서 Owner 미등록 에이전트가 있으면 v0.5 시작 시 경고
-#    PUT /v1/agents/:id API로 ownerAddress 설정
-curl -X PUT http://127.0.0.1:3100/v1/agents/<agent-id> \
-  -H "Content-Type: application/json" \
-  -d '{"ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"}'
+# 4. 기존 에이전트는 그대로 동작 (Owner 있으면 GRACE/LOCKED)
+# [v0.8] Owner 없는 에이전트도 정상 동작 (Base 보안 수준)
 
-# 5. 새 세션 생성 (v0.5 방식 -- masterAuth implicit)
-export WAIAAS_SESSION_TOKEN=$(waiaas session create --agent my-bot)
+# 5. 신규 CLI 명령어 사용 가능
+waiaas agent set-owner my-bot <owner-address>   # Owner 사후 등록
+waiaas owner withdraw --agent my-bot             # 자금 회수 (LOCKED만)
 ```
 
-#### 신규 v0.5 사용자
+#### 신규 v0.8 사용자
 
 ```bash
-# 가장 빠른 시작 (개발용)
-waiaas init --quickstart --dev \
+# [v0.8] 가장 빠른 시작 (개발용, Owner 없이)
+waiaas init --quickstart --dev --chain solana
+
+# Owner 포함 시작 (개발용)
+waiaas init --quickstart --dev --chain solana \
   --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
 
-# 프로덕션용
+# 프로덕션용 (Owner 없이 시작, 이후 사후 등록)
 waiaas init
 waiaas start
-waiaas agent create --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+waiaas agent create --chain solana
+export WAIAAS_SESSION_TOKEN=$(waiaas session create --agent agent-01)
+# ... 필요 시 사후 등록 ...
+waiaas agent set-owner agent-01 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
+
+# 프로덕션용 (Owner 포함)
+waiaas init
+waiaas start
+waiaas agent create --chain solana --owner 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU
 export WAIAAS_SESSION_TOKEN=$(waiaas session create --agent agent-01)
 ```
 
-### 8.3 DB 마이그레이션
+### 8.3 DB 마이그레이션 [v0.8]
 
-v0.5 데몬 시작 시 Drizzle ORM의 자동 마이그레이션이 실행된다. 52-auth-model-redesign.md에서 정의된 스키마 변경(agents.owner_address NOT NULL, wallet_connections 테이블 등)이 자동으로 적용된다. 수동 DB 조작은 불필요하다.
+v0.8 데몬 시작 시 Drizzle ORM의 자동 마이그레이션이 실행된다. [v0.8] agents.owner_address가 nullable로 전환되고 owner_verified 컬럼이 추가된다. 31-01에서 정의된 **테이블 재생성 패턴**(PRAGMA foreign_keys OFF -> CREATE TABLE new -> INSERT INTO new SELECT -> DROP TABLE old -> ALTER TABLE new RENAME -> PRAGMA foreign_keys ON)이 적용된다.
 
 **주의사항:**
-- v0.2에서 owner_address가 NULL인 에이전트가 있으면 마이그레이션 시 경고 (NOT NULL 제약 위반)
+- [v0.8] owner_address nullable 전환: 기존 Owner 있는 에이전트는 자동으로 GRACE 상태 (owner_verified = 0)
 - 마이그레이션 전 `waiaas backup create`로 백업 권장
-- 마이그레이션은 역방향(v0.5 -> v0.2) 불가. 백업 필수.
+- 마이그레이션은 역방향 불가. 백업 필수.
 
 ### 8.4 주요 삭제 항목
 
-| 삭제된 기능 | v0.5 대안 | 비고 |
+| 삭제된 기능 | v0.8 대안 | 비고 |
 |-----------|----------|------|
-| `init` Step 2 (에이전트 생성) | `waiaas agent create --owner` | 별도 커맨드로 분리 |
+| `init` Step 2 (에이전트 생성) | `waiaas agent create` | 별도 커맨드로 분리 |
 | `init` Step 3 (알림 설정) | API/config.toml | 데몬 시작 후 설정 |
-| `init` Step 4 (Owner 등록) | `--owner` 옵션 | 에이전트별 속성으로 변경 |
+| `init` Step 4 (Owner 등록) | [v0.8] `--owner` 선택 옵션 또는 `agent set-owner` 사후 등록 | 에이전트별 속성으로 변경. v0.8에서 선택적. |
 | 세션 생성 시 ownerAuth | masterAuth (implicit) | 서명 불필요 |
-| ownerAuth 적용 대상 15개 엔드포인트 | masterAuth (implicit) | 2곳만 ownerAuth 유지 |
+| [v0.8] `--owner` 필수 의존 | `--owner` 선택, `agent set-owner` 사후 등록 | Owner 없이 에이전트 운영 가능 |
 
 ---
 
-## 9. 요구사항 매핑 총괄
+## 9. 요구사항 매핑 총괄 [v0.8]
 
 | 요구사항 | 설명 | 충족 섹션 | 충족 상태 |
 |---------|------|-----------|----------|
 | DX-01 | `waiaas init` 순수 인프라 초기화 (에이전트/Owner 제거) | 섹션 2 (2단계 플로우, 제거된 단계 명시, 구현 수도코드) | 완료 |
-| DX-02 | `waiaas agent create --owner <addr>` (Owner 필수, 서명 불필요) | 섹션 3 (커맨드 인터페이스, 동작 설명, API 호출 구현) | 완료 |
+| DX-02 | [v0.8] `waiaas agent create` (Owner **선택**, 서명 불필요) + `set-owner`/`remove-owner` 사후 등록/해제 | 섹션 3 (커맨드 인터페이스, 동작 설명, API 호출 구현), 섹션 5 (신규 CLI 명령어) | 완료 |
 | DX-03 | `waiaas session create` masterAuth(implicit) 기반 | 섹션 4 (3가지 출력 포맷, 사용 패턴, parseArgs 구현) | 완료 |
-| DX-04 | `--quickstart` 4단계 오케스트레이션 | 섹션 6 (init->start->agent->session, 에러 롤백, 패스워드 자동 생성) | 완료 |
-| DX-05 | `--dev` 모드 (고정 패스워드 + 보안 경고) | 섹션 7 (3가지 경고 메커니즘, config.toml, --expose 금지) | 완료 |
+| DX-04 | [v0.8] `--quickstart` 4단계 오케스트레이션 (`--chain`만 필수, `--owner` 선택) | 섹션 6 (init->start->agent->session, 에러 롤백, 패스워드 자동 생성) | 완료 |
+| DX-05 | `--dev` 모드 (고정 패스워드 + 보안 경고); [v0.8] Owner 미등록 시 agent info 안내 메시지 | 섹션 5.5 (agent info 출력 확장), 섹션 7 (3가지 경고 메커니즘) | 완료 |
 
 **5/5 요구사항 완료.**
 
@@ -1371,9 +1898,9 @@ v0.5 데몬 시작 시 Drizzle ORM의 자동 마이그레이션이 실행된다.
 
 ---
 
-## 부록 A: v0.5 설계 문서 통합 검증 체크리스트
+## 부록 A: v0.8 설계 문서 통합 검증 체크리스트 [v0.8]
 
-Phase 21 완료 후 전체 설계 문서의 v0.5 용어 일관성을 검증하기 위한 체크리스트이다. 6개 핵심 용어별로 관련 문서와 확인 항목을 정리한다.
+Phase 35 완료 후 전체 설계 문서의 v0.8 용어 일관성을 검증하기 위한 체크리스트이다. 6개 핵심 용어별로 관련 문서와 확인 항목을 정리한다.
 
 ### A.1 masterAuth (implicit/explicit)
 
@@ -1396,14 +1923,15 @@ Phase 21 완료 후 전체 설계 문서의 v0.5 용어 일관성을 검증하�
 | [ ] | 33-time-lock-approval-mechanism.md | approve는 ownerAuth 유지, reject는 masterAuth 변경 참조 노트 |
 | [ ] | 36-killswitch-autostop-evm.md | recover는 ownerAuth 유지, activate는 masterAuth 변경 참조 노트 |
 
-### A.3 agents.owner_address NOT NULL
+### A.3 agents.owner_address nullable [v0.8]
 
 | 상태 | 문서 | 확인 항목 |
 |------|------|----------|
-| [ ] | 52-auth-model-redesign.md | agents 테이블 owner_address 컬럼 변경 정의 |
-| [ ] | 25-sqlite-schema.md | owner_address NOT NULL 컬럼 추가 (Phase 19 완료) |
-| [ ] | 54-cli-flow-redesign.md | agent create --owner 필수 옵션으로 기술 |
-| [ ] | 37-rest-api-complete-spec.md | POST /v1/agents에 ownerAddress 필수 필드 |
+| [ ] | 52-auth-model-redesign.md | [v0.8] agents 테이블 owner_address nullable 변경 정의 |
+| [ ] | 25-sqlite-schema.md | [v0.8] owner_address nullable + owner_verified 추가 |
+| [ ] | 54-cli-flow-redesign.md | [v0.8] agent create --owner **선택** 옵션으로 기술 |
+| [ ] | 37-rest-api-complete-spec.md | [v0.8] POST /v1/agents에 ownerAddress **선택** 필드 |
+| [ ] | 34-owner-wallet-connection.md | [v0.8] Owner 생명주기 3-State (NONE/GRACE/LOCKED) |
 
 ### A.4 세션 갱신 프로토콜
 
@@ -1424,20 +1952,78 @@ Phase 21 완료 후 전체 설계 문서의 v0.5 용어 일관성을 검증하�
 | [ ] | 29-api-framework-design.md | ErrorResponseSchema에 hint: z.string().optional() 추가 |
 | [ ] | 37-rest-api-complete-spec.md | 에러 응답 포맷에 hint 필드 존재 |
 
-### A.6 CLI 플로우 (init / agent create / session create / --quickstart / --dev)
+### A.6 CLI 플로우 (init / agent create / set-owner / remove-owner / withdraw / session create / --quickstart / --dev) [v0.8]
 
 | 상태 | 문서 | 확인 항목 |
 |------|------|----------|
-| [ ] | 54-cli-flow-redesign.md | SSoT (9개 섹션): init 2단계, agent create, session create, --quickstart, --dev |
-| [ ] | 28-daemon-lifecycle-cli.md | v0.5 변경 반영 (섹션 6 CLI 커맨드를 54로 대체) |
+| [ ] | 54-cli-flow-redesign.md | SSoT (9개 섹션 + v0.8 확장): init 2단계, agent create (--owner 선택), set-owner, remove-owner, owner withdraw, session create, --quickstart, --dev |
+| [ ] | 28-daemon-lifecycle-cli.md | v0.5/v0.8 변경 반영 (섹션 6 CLI 커맨드를 54로 대체) |
 | [ ] | 24-monorepo-data-directory.md | dev_mode config + .master-password 파일 설명 |
-| [ ] | 39-tauri-desktop-architecture.md | Setup Wizard v0.5 재구성 반영 |
+| [ ] | 39-tauri-desktop-architecture.md | Setup Wizard v0.8 재구성 반영 |
+| [ ] | 34-owner-wallet-connection.md | [v0.8] 섹션 10.7 CLI 명령어 스펙이 54와 1:1 대응 |
 
 ---
 
 **총 검증 대상:** 6개 핵심 용어, 17개 문서 참조 (일부 문서 중복 카운트), 29개 확인 항목.
 
-Phase 21 Plan 03 (21-03) 검증 단계에서 이 체크리스트를 사용하여 문서 간 일관성을 최종 확인한다.
+Phase 35 Plan 03 (35-03) 검증 단계에서 이 체크리스트를 사용하여 문서 간 일관성을 최종 확인한다.
+
+---
+
+## 부록 B: v0.8 변경 이력 [v0.8]
+
+### B.1 Kill Switch withdraw 결정 [v0.8]
+
+> [v0.8] Kill Switch withdraw: **방안 A 채택** -- killSwitchGuard 허용 경로에 withdraw 추가.
+> 근거: 자금 회수는 Kill Switch 발동 시 가장 시급한 보안 조치이며, 기존 API 인프라를 재사용한다.
+
+| 항목 | 방안 A (채택) | 방안 B (기각) |
+|------|-------------|-------------|
+| 방식 | killSwitchGuard 허용 목록 4->5개 | CLI에서 데몬 API 우회하여 직접 실행 |
+| 허용 경로 | `POST /v1/owner/agents/:agentId/withdraw` 추가 | 허용 경로 변경 없음 |
+| 일관성 | API 인프라 재사용 (masterAuth, 감사 로그, WithdrawService) | API 우회로 감사 로그/인증 일관성 저하 |
+| 보안 | 기존 인증 체계 적용 | 별도 인증 로직 필요 |
+| 구현 복잡도 | 낮음 (허용 목록 1줄 추가) | 높음 (CLI에 sweepAll 직접 구현) |
+
+**반영 대상:**
+- 36-killswitch-autostop-evm.md: killSwitchGuard 허용 경로 5번째 추가
+- 37-rest-api-complete-spec.md: withdraw 엔드포인트 Kill Switch 상태 동작 명시
+- 이 문서 섹션 5.8: `owner withdraw` CLI 명령어에 Kill Switch 허용 기록
+
+### B.2 v0.8 변경 위치 요약
+
+| # | 섹션 | 변경 규모 | 변경 내용 |
+|---|------|----------|----------|
+| 1 | 1.2 | 소 | DX-02 Owner Optional |
+| 2 | 1.4 | 중 | 변경 요약표에 v0.8 열 추가 |
+| 3 | 2.2 | 소 | init 안내 메시지 갱신 |
+| 4 | 2.3 | 소 | 출력 예시 갱신 |
+| 5 | 2.8 | 소 | 제거 단계 nullable 근거 |
+| 6 | 3.1 | 중 | 설계 원칙 v0.8 갱신 |
+| 7 | 3.2 | 중 | --owner Required -> Options |
+| 8 | 3.3 | 소 | ownerAddress 선택적 Body |
+| 9 | 3.4 | 중 | Owner 없음/있음 두 가지 출력 |
+| 10 | 3.5 | 중 | --owner 미지정 에러 제거 |
+| 11 | 3.6 | 소 | parseArgs owner optional |
+| 12 | 3.7 | 중 | API 호출 ownerAddress 선택적 |
+| 13 | 3.8 | 대 | createAgent() 데몬 핸들러 수도코드 **신규** |
+| 14 | 5.1 | 중 | 커맨드 표 v0.8 갱신 (3개 신규) |
+| 15 | 5.2 | 중 | 변경 요약 v0.8 |
+| 16 | 5.3 | 중 | 인증 분류 v0.8 갱신 |
+| 17 | 5.5 | 대 | agent info Owner 안내 메시지 **신규** (DX-05) |
+| 18 | 5.6 | 대 | set-owner CLI 명령 **신규** (DX-02) |
+| 19 | 5.7 | 대 | remove-owner CLI 명령 **신규** (DX-03) |
+| 20 | 5.8 | 대 | owner withdraw CLI 명령 **신규** (WITHDRAW-01~08) |
+| 21 | 6.2 | 중 | --quickstart --owner Optional |
+| 22 | 6.3 | 중 | --chain 필수, --owner 선택 |
+| 23 | 6.5 | 대 | Owner 없음/있음 두 가지 출력 |
+| 24 | 6.7 | 소 | 비대화형 예시 --owner 선택 |
+| 25 | 6.8 | 중 | 수도코드 ownerAddress 선택적 |
+| 26 | 8.1-8.4 | 중 | 마이그레이션 가이드 v0.8 |
+| 27 | 9 | 소 | 요구사항 매핑 v0.8 |
+| 28 | A.3, A.6 | 소 | 체크리스트 nullable 갱신 |
+
+**총 28개 위치 변경 (계획 22개 + 추가 6개).**
 
 ---
 
@@ -1445,3 +2031,4 @@ Phase 21 Plan 03 (21-03) 검증 단계에서 이 체크리스트를 사용하여
 *Phase: 21-dx-improvement, Plan: 01*
 *CLI-REDESIGN v1.0*
 *부록 A 추가: 2026-02-07 (Plan: 04)*
+*v0.8 전면 갱신: 2026-02-09 (Phase 35-01) -- --owner 선택, set-owner/remove-owner/withdraw 신규, agent info 안내, --quickstart 간소화, Kill Switch withdraw 방안 A 채택*
