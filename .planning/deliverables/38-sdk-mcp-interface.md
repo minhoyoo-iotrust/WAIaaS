@@ -7,6 +7,7 @@
 **v0.7 API 통합 프로토콜:** 2026-02-08
 **v0.9 SessionManager 핵심 설계:** 2026-02-09 (Phase 37-01: 인터페이스 + 토큰 로드, Phase 37-02: 갱신 + 실패 + reload)
 **v0.9 SessionManager MCP 통합 설계:** 2026-02-09 (Phase 38-01: ApiClient + tool/resource handler 통합, Phase 38-02: 동시성 + 생명주기 + 에러 처리)
+**v0.9 테스트 설계:** 2026-02-09 (Phase 40-01: T-01~T-14 핵심 검증 + S-01~S-04 보안 시나리오, 섹션 12)
 **상태:** 완료
 **참조:** API-SPEC (37-rest-api-complete-spec.md), CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (v0.5), 55-dx-improvement-spec.md (v0.5), 62-action-provider-architecture.md (v0.6), 57-asset-query-fee-estimation-spec.md (v0.6), 61-price-oracle-spec.md (v0.6)
 **요구사항:** SDK-01 (TypeScript SDK), SDK-02 (Python SDK), MCP-01 (MCP Server), MCP-02 (Claude Desktop 통합)
@@ -5581,6 +5582,50 @@ REST API camelCase 필드 -> Python SDK snake_case 필드 변환의 일관성을
 
 **Owner API Python SDK:**
 - v0.2에서는 TS Owner SDK만 설계됨. Python Owner SDK는 v0.3+ 확장 시 동일 WAIaaSBaseModel 상속 규칙 적용
+
+---
+
+## 12. v0.9 테스트 설계 [v0.9]
+
+v0.9 마일스톤에서 설계된 MCP 세션 관리 자동화의 핵심 검증 시나리오와 보안 시나리오를 정의한다. 각 시나리오는 Phase 36-39에서 확정된 설계 결정과 매핑되어, 구현 단계(v1.3 SDK+MCP 마일스톤 이후)에서 테스트 계획의 기반이 된다.
+
+### 12.1 핵심 검증 시나리오 (T-01~T-14) [v0.9 Phase 40]
+
+| # | 시나리오 | 검증 내용 | 테스트 레벨 | 검증 방법 | 관련 설계 결정 |
+|---|----------|----------|------------|----------|--------------|
+| T-01 | 최초 기동 (env var만) | env var에서 토큰 로드, 갱신 스케줄링 | Unit | readMcpToken mock -> null, WAIAAS_SESSION_TOKEN 설정 -> SessionManager.start() -> getToken() 비교 | SM-04, SM-06 |
+| T-02 | 최초 기동 (파일 존재) | 파일 우선 로드, env var 무시 | Unit | readMcpToken mock -> valid JWT, env var도 설정 -> start() -> getToken()이 파일 토큰인지 검증 | SM-04, TF-01 |
+| T-03 | 자동 갱신 성공 | 60% 경과 시점 갱신 -> 새 토큰 메모리 교체 + 파일 저장 | Integration | fake timer 사용, PUT /renew mock -> 200 OK -> writeMcpToken 호출 확인 + getToken() 새 토큰 확인 | SM-09, SM-10 |
+| T-04 | 자동 갱신 실패 (TOO_EARLY) | 30초 후 1회 재시도 | Unit | PUT /renew mock -> 403 RENEWAL_TOO_EARLY -> 30초 timer 재설정 확인 | SM-11 |
+| T-05 | 갱신 한도 도달 (LIMIT_REACHED) | 갱신 포기, 알림 트리거 | Unit | PUT /renew mock -> 403 RENEWAL_LIMIT_REACHED -> scheduleRenewal 미호출 확인 | SM-11, SM-13, NOTI-01~05 |
+| T-06 | 절대 수명 만료 | 갱신 불가, 에러 상태 진입 | Unit | PUT /renew mock -> 403 SESSION_LIFETIME_EXCEEDED -> state = 'expired' 확인 | SM-11 |
+| T-07 | 외부 토큰 교체 감지 | 401 수신 -> 파일 재로드 -> 새 토큰 사용 -> 재시도 성공 | Integration | GET mock -> 401 -> readMcpToken mock 새 토큰 반환 -> handleUnauthorized() true -> 재시도 성공 | SM-12, SMGI-D02 |
+| T-08 | Telegram /newsession | 에이전트 선택 -> 세션 생성 -> 파일 저장 -> 완료 메시지 | Integration | mock agentService.listActive, mock sessionService.create -> writeMcpToken 호출 + sendMessage 확인 | TG-01~TG-06 |
+| T-09 | CLI mcp setup | 세션 생성 + 파일 저장 + 안내 출력 | Integration | mock fetch (health + sessions POST) -> writeMcpToken 호출 + stdout Claude Desktop config 포함 | CLI-01~CLI-06 |
+| T-10 | CLI mcp refresh-token | 기존 세션 폐기 + 새 세션 생성 + 파일 교체 | Integration | mock fetch (health + sessions GET/POST/DELETE) -> 생성->파일->폐기 순서 검증 | CLI-03, CLI-06 |
+| T-11 | 토큰 파일 권한 | 파일 생성 시 0o600, 타 사용자 읽기 불가 | Unit | writeMcpToken 호출 후 statSync -> mode & 0o777 === 0o600 검증 (POSIX만) | TF-01, TF-04 |
+| T-12 | 동시 갱신 방지 | 갱신 진행 중 tool 호출 -> 현재 토큰 사용, 중복 갱신 없음 | Unit | renew() inflight 중 getToken() 호출 -> 구 토큰 반환 + isRenewing true 검증 | SM-14, SMGI-D02 |
+| T-13 | 데몬 미기동 상태 | 네트워크 에러 -> 60초 후 재시도 x 3회 -> 에러 상태 | Unit | fetch mock -> network error -> retryRenewal(60000, 3) 호출 + 3회 후 state = 'error' | SM-11, SM-07 |
+| T-14 | SESSION_EXPIRING_SOON 알림 | 만료 24h 전 또는 잔여 3회 시 알림 발송 | Integration | shouldNotifyExpiringSession(remainingRenewals=2, absoluteExpiresAt=future) -> true + notificationService.notify mock 호출 | NOTI-01~NOTI-05 |
+
+### 12.2 보안 시나리오 (S-01~S-04) [v0.9 Phase 40]
+
+| # | 시나리오 | 검증 내용 | 검증 방법 | 관련 설계 결정 |
+|---|----------|----------|----------|--------------|
+| S-01 | mcp-token 파일 권한 | 0o600 외 권한 시 로드 거부 (또는 경고) | POSIX: 0o644 mode 파일 생성 -> readMcpToken -> null 또는 경고 로그. Windows: 권한 검증 스킵 + 경고 (H-03). POSIX 전용 테스트 | TF-01, H-03 |
+| S-02 | 토큰 파일 악성 내용 | JWT 형식 검증 실패 -> 로드 거부 | 파일에 "not-a-jwt" 작성 -> readMcpToken -> null. 잘린 JWT 작성 -> readMcpToken -> null | TF-01 |
+| S-03 | /newsession 미인증 사용자 | chatId 불일치 -> 거부 메시지 | 잘못된 chatId로 handleNewSession 호출 -> sendUnauthorized 호출 확인 | TG-01 |
+| S-04 | 토큰 파일 심볼릭 링크 | symlink 감지 -> 로드 거부 | symlink 생성 -> readMcpToken -> null + console.error 로그 확인 | TF-01 |
+
+**테스트 시나리오 원본:** v0.9 objectives "테스트 전략" 섹션 (T-01~T-14, S-01~S-04)
+
+**설계 결정 참조:**
+- Phase 36: TF-01~TF-05 (토큰 파일 인프라), NOTI-01~NOTI-05 (만료 임박 알림)
+- Phase 37: SM-01~SM-14 (SessionManager 핵심 설계)
+- Phase 38: SMGI-D01~SMGI-D04 (MCP 통합 설계)
+- Phase 39: CLI-01~CLI-06 (CLI MCP 서브커맨드), TG-01~TG-06 (Telegram /newsession)
+
+**구현 시점:** v1.3 (SDK+MCP 마일스톤) 이후. 본 섹션은 설계 수준의 테스트 시나리오 정의이며, 테스트 코드 작성은 구현 마일스톤에서 수행한다.
 
 ---
 
