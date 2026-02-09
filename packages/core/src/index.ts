@@ -83,3 +83,6 @@ export type {
   INotificationChannel,
   NotificationPayload,
 } from './interfaces/index.js';
+
+// i18n (multilingual messages)
+export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
