@@ -11,16 +11,16 @@
 
 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
 페이즈: 35 of 35 (DX + 설계 문서 통합)
-플랜: 1 of 3 in current phase
-상태: In progress -- 35-01 완료, 35-02 대기
-마지막 활동: 2026-02-09 -- 35-01 CLI 플로우 v0.8 전면 갱신 완료
+플랜: 2 of 3 in current phase
+상태: In progress -- 35-02 완료, 35-03 대기
+마지막 활동: 2026-02-09 -- 35-02 Owner 상태 분기 매트릭스 SSoT 완료
 
-Progress: █████████████████░░░ 82% (9/11 plans)
+Progress: ██████████████████░░ 91% (10/11 plans)
 
 ## 성과 지표
 
 **v0.1-v0.7 누적:** 79 plans, 210 reqs, 30 phases, 30 설계 문서 (24-64)
-**v0.8 현재:** 9 plans complete, 33 reqs, 5 phases (31-35), 11 plans 예정
+**v0.8 현재:** 10 plans complete, 33 reqs, 5 phases (31-35), 11 plans 예정
 
 ## 누적 컨텍스트
 
@@ -70,6 +70,10 @@ v0.8 관련:
 - [35-01] remove-owner GRACE 제약: LOCKED 해제 불가, 확인 프롬프트 포함
 - [35-01] quickstart --chain만 필수: --owner 선택으로 온보딩 마찰 최소화
 - [35-01] agent info 안내 메시지: NONE 상태에서 set-owner 가이드 표시 (DX-05)
+- [35-02] GRACE APPROVAL = DELAY 다운그레이드 확정: resolveOwnerState() !== 'LOCKED' 조건 (33-time-lock §11.6 준수)
+- [35-02] v0.8 objective 본문 3-State 전환: §3, §7, §8의 이분법을 NONE/GRACE vs LOCKED로 정정
+- [35-02] §3 코드 스니펫 정정: !agent.owner_address -> resolveOwnerState() !== 'LOCKED' (33-time-lock 일관)
+- [35-02] Owner 상태 분기 매트릭스 SSoT: 18행x3열, 교차 검증 10건 전건 일치
 
 ### 차단 요소/우려 사항
 
@@ -83,5 +87,5 @@ v0.8 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: 35-01 완료. 35-02 (Owner 상태 분기 매트릭스 SSoT) 실행 대기.
-재개 파일: .planning/phases/35-dx-설계-문서-통합/35-02-PLAN.md
+중단 지점: 35-02 완료. 35-03 (14개 설계 문서 v0.8 통합 반영) 실행 대기.
+재개 파일: .planning/phases/35-dx-설계-문서-통합/35-03-PLAN.md
