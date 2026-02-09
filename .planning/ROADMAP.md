@@ -40,11 +40,11 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
   2. 원자적 토큰 파일 쓰기 패턴(write-then-rename, Windows NTFS 대응)이 설계 문서에 정의되어 있다
   3. SESSION_EXPIRING_SOON 이벤트의 발생 조건(만료 24h 전 OR 잔여 갱신 3회 이하), 심각도(WARNING), 알림 내용(세션ID, 에이전트명, 만료시각, 잔여횟수)이 정의되어 있다
   4. 데몬 측 만료 임박 판단 로직(갱신 API 응답 처리 시 잔여 횟수/절대 만료 체크, 알림 트리거)이 설계 문서에 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 36-01: 토큰 파일 사양 + 원자적 쓰기 패턴 설계
-- [ ] 36-02: SESSION_EXPIRING_SOON 이벤트 + 데몬 판단 로직 설계
+- [ ] 36-01-PLAN.md -- 토큰 파일 사양 + 원자적 쓰기 패턴 설계 (SMGR-02, SMGR-07)
+- [ ] 36-02-PLAN.md -- SESSION_EXPIRING_SOON 이벤트 + 데몬 판단 로직 설계 (NOTI-01, NOTI-02)
 
 ### Phase 37: SessionManager 핵심 설계
 **Goal**: SessionManager 클래스의 인터페이스, 토큰 로드 전략, 자동 갱신 스케줄, 실패 처리, lazy 401 reload가 구현 가능한 수준으로 정의된다
