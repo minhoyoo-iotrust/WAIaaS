@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.0 구현 계획 수립 — Phase 45 완료, Phase 46-47 대기
+**현재 초점:** v1.0 구현 계획 수립 — Phase 46 plan 01 완료, Phase 46 plan 02 대기
 
 ## 현재 위치
 
 마일스톤: v1.0 -- 구현 계획 수립
-페이즈: 45 of 47 (코어 구현 objective 문서 생성)
-플랜: 2 of 2 in current phase (완료)
-상태: Phase 45 완료
-마지막 활동: 2026-02-09 -- 45-02-PLAN.md 완료 (v1.3/v1.4 objective 문서 생성)
+페이즈: 46 of 47 (확장+릴리스 objective 문서 생성)
+플랜: 1 of 2 in current phase (진행 중)
+상태: In progress
+마지막 활동: 2026-02-09 -- 46-01-PLAN.md 완료 (v1.5/v1.6 objective 문서 생성)
 
-진행: [████░░░░░░] 40% (v1.0 기준 2/5 plans)
+진행: [██████░░░░] 60% (v1.0 기준 3/5 plans)
 
 ## 성과 지표
 
 **v0.1-v0.10 누적:** 110 plans, 276 reqs, 44 phases, 10 milestones, 30 설계 문서 (24-64)
 
-**v1.0 현재:** 3 phases, 5 plans (예정), 10 requirements, 2 plans 완료
+**v1.0 현재:** 3 phases, 5 plans (예정), 10 requirements, 3 plans 완료
 
 ## 누적 컨텍스트
 
@@ -41,13 +41,25 @@
 - v1.0-45-02: v1.4 EVM 테스트 노드 Anvil (Foundry) 선택
 - v1.0-45-02: v1.4 CONTRACT_WHITELIST DB policies 테이블 저장 (에이전트별 독립 정책)
 - v1.0-45-02: v1.4 batch_items 테이블 정규화 (v0.10 OPER-02)
+- v1.0-46-01: v1.5 CoinGecko 무료 Demo API 기본 (Pro 키 선택적, 5분 TTL 캐시로 rate limit 완화)
+- v1.0-46-01: v1.5 Pyth Oracle Hermes HTTP API 우선 (온체인 대비 단순성/비용)
+- v1.0-46-01: v1.5 Chainlink EVM 전용 (Solana는 Pyth 대안)
+- v1.0-46-01: v1.5 Jupiter API fetch 직접 호출 (SDK 미사용)
+- v1.0-46-01: v1.5 Action Provider ESM dynamic import (Node.js 22)
+- v1.0-46-01: v1.5 MCP Tool 16개 초과 시 config.toml tool_priority 우선순위
+- v1.0-46-01: v1.5 가격 캐시 인메모리 Map LRU 128항목 (외부 라이브러리 미사용)
+- v1.0-46-01: v1.6 Telegram Bot native fetch 전용 (프레임워크 미사용)
+- v1.0-46-01: v1.6 Docker base node:22-slim (native addon 호환성)
+- v1.0-46-01: v1.6 Kill Switch CAS SQLite BEGIN IMMEDIATE + WHERE state=expected (CONC-03)
+- v1.0-46-01: v1.6 AutoStop 규칙 config.toml [autostop] 저장
 
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
+- Tauri 2 + @reown/appkit 호환성 미검증 (v1.6 스파이크에서 검증 필요)
 
 ## 세션 연속성
 
-마지막 세션: 2026-02-09
-중단 지점: Phase 45 완료 (plan 01 + plan 02). v1.1~v1.4 objective 4개 생성 완료. Phase 46-47 대기.
-재개 파일: .planning/phases/45-core-impl-objectives/45-02-SUMMARY.md
+마지막 세션: 2026-02-09 14:04 UTC
+중단 지점: Phase 46 plan 01 완료 (v1.5/v1.6 objective 2개 생성). v1.1~v1.6 objective 6개 완료. Phase 46 plan 02 (v1.7/v2.0) 대기.
+재개 파일: .planning/phases/46-ext-release-objectives/46-01-SUMMARY.md
