@@ -125,7 +125,7 @@
 **Milestone Goal:** v0.1~v0.10 설계 산출물(30개 설계 문서, 276 요구사항)을 실제 동작하는 소프트웨어로 전환하기 위한 구현 마일스톤별 objective 문서 8개를 생성하고, 설계 부채 추적 체계를 초기화하며, 설계 문서 30개의 구현 마일스톤 매핑을 최종 검증한다.
 
 - [x] **Phase 45: 코어 구현 objective 문서 생성** — v1.1~v1.4 마일스톤 objective 문서 4개 작성 — 2026-02-09
-- [ ] **Phase 46: 확장 + 릴리스 objective 문서 생성** — v1.5~v2.0 마일스톤 objective 문서 4개 작성
+- [x] **Phase 46: 확장 + 릴리스 objective 문서 생성** — v1.5~v2.0 마일스톤 objective 문서 4개 작성 — 2026-02-09
 - [ ] **Phase 47: 설계 부채 + 로드맵 최종 검증** — 설계 부채 추적 파일 초기화 + 설계 문서 30개 전수 매핑 확인
 
 ## Phase Details
@@ -159,8 +159,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 46-01-PLAN.md — v1.5 DeFi/가격 오라클 + v1.6 Desktop/Telegram/Docker objective 문서 생성
-- [ ] 46-02-PLAN.md — v1.7 품질 강화/CI/CD + v2.0 전 기능 완성 릴리스 objective 문서 생성
+- [x] 46-01-PLAN.md — v1.5 DeFi/가격 오라클 + v1.6 Desktop/Telegram/Docker objective 문서 생성
+- [x] 46-02-PLAN.md — v1.7 품질 강화/CI/CD + v2.0 전 기능 완성 릴리스 objective 문서 생성
 
 ### Phase 47: 설계 부채 + 로드맵 최종 검증
 **Goal**: 설계 부채 추적 체계가 초기화되고, 30개 설계 문서가 구현 마일스톤(v1.1~v2.0)에 빠짐없이 매핑되어, 구현 착수 준비가 완료된 상태
@@ -170,10 +170,10 @@ Plans:
   1. objectives/design-debt.md가 존재하며, 설계 부채 추적 테이블(ID/발견 시점/내용/영향 문서/Tier/처리 예정) 구조와 관리 규칙(Tier 1~3 허용 기준, 마일스톤 시작 시 리뷰, v2.0 전 0건 달성 목표)이 정의된다
   2. objectives/v1.0-implementation-planning.md의 "설계 문서 -> 구현 마일스톤 매핑" 테이블에서 30개 설계 문서(24~64번, 대응표 41~44 제외)가 각각 하나 이상의 구현 마일스톤에 매핑되고, 매핑 누락 0건이 확인된다
   3. 8개 objective 문서(v1.1~v2.0)에서 참조하는 설계 문서 번호의 합집합이 30개 설계 문서를 전수 포함하여, objective 문서와 매핑 테이블이 양방향 일치한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 47-01: 설계 부채 추적 파일 초기화 + 로드맵 최종 검증
+- [ ] 47-01-PLAN.md — 설계 부채 추적 파일 초기화 + 설계 문서 30개 전수 매핑 검증
 
 ## Progress
 
@@ -182,7 +182,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 45. 코어 구현 objective | v1.0 | 2/2 | ✓ Complete | 2026-02-09 |
-| 46. 확장+릴리스 objective | v1.0 | 0/2 | Not started | - |
+| 46. 확장+릴리스 objective | v1.0 | 2/2 | ✓ Complete | 2026-02-09 |
 | 47. 설계 부채+검증 | v1.0 | 0/1 | Not started | - |
 
 **Cumulative:**
@@ -199,10 +199,10 @@ Plans:
 | v0.8 Owner 선택적 등록 | 31-35 | 11 | Complete | 2026-02-09 |
 | v0.9 MCP 세션 자동화 | 36-40 | 10 | Complete | 2026-02-09 |
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
-| v1.0 구현 계획 수립 | 45-47 | 2/5 | In progress | - |
+| v1.0 구현 계획 수립 | 45-47 | 4/5 | In progress | - |
 
-**Total:** 11 milestones (10 shipped + 1 in progress), 47 phases, 112 plans completed
+**Total:** 11 milestones (10 shipped + 1 in progress), 47 phases, 114 plans completed
 
 ---
 
-*Last updated: 2026-02-09 after Phase 45 executed*
+*Last updated: 2026-02-09 after Phase 47 planned*
