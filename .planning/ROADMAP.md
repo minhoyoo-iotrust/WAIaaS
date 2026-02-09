@@ -14,7 +14,7 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 
 </details>
 
-- [ ] **v0.8 Owner 선택적 등록 + 점진적 보안 모델** - Phases 31-35 (in progress)
+- [x] **v0.8 Owner 선택적 등록 + 점진적 보안 모델** - Phases 31-35 (complete)
 
 ## Phases
 
@@ -22,7 +22,7 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 - [x] **Phase 32: Owner 생명주기 설계** - 등록/변경/해제 + 유예/잠금 2단계 상태 머신
 - [x] **Phase 33: 정책 다운그레이드 + 알림 설계** - APPROVAL->DELAY 다운그레이드 + 알림 템플릿
 - [x] **Phase 34: 자금 회수 + 보안 분기 설계** - sweepAll 프로토콜 + Kill Switch/세션 Owner 분기
-- [ ] **Phase 35: DX + 설계 문서 통합** - CLI 변경 + 14개 설계 문서 v0.8 반영
+- [x] **Phase 35: DX + 설계 문서 통합** - CLI 변경 + 14개 설계 문서 v0.8 반영
 
 ## Phase Details
 
@@ -102,9 +102,9 @@ Plans:
 **Plans**: 3 plans (Wave 1 → Wave 2 → Wave 3 sequential)
 
 Plans:
-- [ ] 35-01-PLAN.md -- 54-cli-flow-redesign.md v0.8 전면 갱신: agent create --owner 선택, set-owner/remove-owner/withdraw 신규 CLI, --quickstart 간소화, agent info 안내 메시지
-- [ ] 35-02-PLAN.md -- Owner 상태 분기 매트릭스 SSoT 작성: API x OwnerState(NONE/GRACE/LOCKED) 18행 매트릭스를 objectives/v0.8에 추가
-- [ ] 35-03-PLAN.md -- 14개 설계 문서 v0.8 통합 반영: 4개 첫 v0.8 반영(30/31/40 + killswitch withdraw 허용) + 10개 교차 검증 + 3개 참조 문서(57/60/61) 보강
+- [x] 35-01-PLAN.md -- 54-cli-flow-redesign.md v0.8 전면 갱신: agent create --owner 선택, set-owner/remove-owner/withdraw 신규 CLI, --quickstart 간소화, agent info 안내 메시지
+- [x] 35-02-PLAN.md -- Owner 상태 분기 매트릭스 SSoT 작성: API x OwnerState(NONE/GRACE/LOCKED) 18행 매트릭스를 objectives/v0.8에 추가
+- [x] 35-03-PLAN.md -- 14개 설계 문서 v0.8 통합 반영: 4개 첫 v0.8 반영(30/31/40 + killswitch withdraw 허용) + 10개 교차 검증 + 3개 참조 문서(57/60/61) 보강
 
 ## Progress
 
@@ -118,8 +118,8 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 | 32. Owner 생명주기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 34. 자금 회수 + 보안 분기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
-| 35. DX + 설계 문서 통합 | v0.8 | 0/3 | Not started | - |
+| 35. DX + 설계 문서 통합 | v0.8 | 3/3 | ✓ Complete | 2026-02-09 |
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-09 after Phase 34 execution complete*
+*Last updated: 2026-02-09 after Phase 35 execution complete — v0.8 milestone complete*
