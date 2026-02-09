@@ -56,11 +56,11 @@ Plans:
   3. 자동 갱신 스케줄(60% TTL 경과, safeSetTimeout 래퍼, 서버 응답 기반 드리프트 보정)이 정의되어 있다
   4. 5종 갱신 실패 에러 각각의 대응 전략(재시도 횟수, 알림 트리거, 에러 상태 전이)이 정의되어 있다
   5. Lazy 401 reload(파일 재로드, 토큰 비교, API 재시도) 메커니즘이 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 → Wave 2: 순차 실행)
 
 Plans:
-- [ ] 37-01: SessionManager 인터페이스 + 토큰 로드 전략 설계
-- [ ] 37-02: 자동 갱신 스케줄 + 실패 처리 + lazy reload 설계
+- [ ] 37-01-PLAN.md -- SessionManager 인터페이스 + 토큰 로드 전략 설계 (SMGR-01, SMGR-03)
+- [ ] 37-02-PLAN.md -- 자동 갱신 스케줄 + 실패 처리 + lazy reload 설계 (SMGR-04, SMGR-05, SMGR-06)
 
 ### Phase 38: SessionManager MCP 통합 설계
 **Goal**: SessionManager가 MCP tool/resource handler와 통합되어, 토큰 로테이션 동시성, 프로세스 생명주기, Claude Desktop 에러 처리가 설계 수준에서 해결된다
