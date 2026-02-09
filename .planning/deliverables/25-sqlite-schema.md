@@ -168,6 +168,12 @@ CREATE INDEX idx_agents_owner_address ON agents(owner_address);
 | `suspended_at` | INTEGER | NULL | - | 정지 시각. status가 SUSPENDED일 때만 값 존재 |
 | `suspension_reason` | TEXT | NULL | - | 정지 사유 (수동 정지, 정책 위반, Kill Switch 등) |
 
+<!-- [v0.9] agents.default_constraints: EXT-03으로 이연.
+     v0.9에서 기본 constraints 결정 규칙 설계 (TG-04, TG-05: resolveDefaultConstraints 공용 함수).
+     config.toml > 하드코딩 기본값 2-level 우선순위로 동작.
+     agents 테이블에 default_constraints 컬럼 추가 여부는 구현 시점(v1.x)에 최종 결정.
+     추가 시 3-level: agents.default_constraints > config.toml > 하드코딩. -->
+
 ---
 
 ### 2.2 sessions 테이블 -- 세션 정보

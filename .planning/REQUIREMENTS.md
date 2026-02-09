@@ -41,13 +41,13 @@
 
 ### 테스트 설계 (TEST)
 
-- [ ] **TEST-01**: 14개 핵심 검증 시나리오 설계 문서 명시 — T-01~T-14 각 시나리오의 검증 내용 + 테스트 레벨(Unit/Integration) 정의
-- [ ] **TEST-02**: 4개 보안 시나리오 설계 문서 명시 — S-01~S-04(파일 권한/악성 내용/미인증/심볼릭 링크) 검증 방법 정의
+- [x] **TEST-01**: 14개 핵심 검증 시나리오 설계 문서 명시 — T-01~T-14 각 시나리오의 검증 내용 + 테스트 레벨(Unit/Integration) 정의
+- [x] **TEST-02**: 4개 보안 시나리오 설계 문서 명시 — S-01~S-04(파일 권한/악성 내용/미인증/심볼릭 링크) 검증 방법 정의
 
 ### 설계 문서 통합 (INTEG)
 
-- [ ] **INTEG-01**: 7개 기존 설계 문서 v0.9 통합 — 38(SDK-MCP), 35(알림), 40(Telegram), 54(CLI), 53(세션 갱신), 24(모노레포), 25(SQLite)
-- [ ] **INTEG-02**: 리서치 pitfall 반영 — safeSetTimeout(C-01), 원자적 쓰기(C-02), JWT 미검증 디코딩 보안(C-03), Claude Desktop 에러 처리(H-04), 토큰 로테이션 충돌(H-05)
+- [x] **INTEG-01**: 7개 기존 설계 문서 v0.9 통합 — 38(SDK-MCP), 35(알림), 40(Telegram), 54(CLI), 53(세션 갱신), 24(모노레포), 25(SQLite)
+- [x] **INTEG-02**: 리서치 pitfall 반영 — safeSetTimeout(C-01), 원자적 쓰기(C-02), JWT 미검증 디코딩 보안(C-03), Claude Desktop 에러 처리(H-04), 토큰 로테이션 충돌(H-05)
 
 ## Future Requirements
 
@@ -89,20 +89,20 @@
 | SMGR-05 | Phase 37 | Complete |
 | SMGR-06 | Phase 37 | Complete |
 | SMGR-07 | Phase 36 | Complete |
-| SMGI-01 | Phase 38 | Pending |
-| SMGI-02 | Phase 38 | Pending |
-| SMGI-03 | Phase 38 | Pending |
-| SMGI-04 | Phase 38 | Pending |
+| SMGI-01 | Phase 38 | Complete |
+| SMGI-02 | Phase 38 | Complete |
+| SMGI-03 | Phase 38 | Complete |
+| SMGI-04 | Phase 38 | Complete |
 | CLIP-01 | Phase 39 | Complete |
 | CLIP-02 | Phase 39 | Complete |
 | TGSN-01 | Phase 39 | Complete |
 | TGSN-02 | Phase 39 | Complete |
 | NOTI-01 | Phase 36 | Complete |
 | NOTI-02 | Phase 36 | Complete |
-| TEST-01 | Phase 40 | Pending |
-| TEST-02 | Phase 40 | Pending |
-| INTEG-01 | Phase 40 | Pending |
-| INTEG-02 | Phase 40 | Pending |
+| TEST-01 | Phase 40 | Complete |
+| TEST-02 | Phase 40 | Complete |
+| INTEG-01 | Phase 40 | Complete |
+| INTEG-02 | Phase 40 | Complete |
 
 **Coverage:**
 - v0.9 requirements: 21 total
@@ -111,4 +111,4 @@
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after Phase 39 completion*
+*Last updated: 2026-02-09 after Phase 40 completion -- all 21 requirements Complete*

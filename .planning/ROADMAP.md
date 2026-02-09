@@ -10,7 +10,7 @@
 - v0.6 블록체인 기능 확장 설계 (shipped 2026-02-08)
 - v0.7 구현 장애 요소 해소 (shipped 2026-02-08)
 - v0.8 Owner 선택적 등록 + 점진적 보안 모델 (shipped 2026-02-09)
-- **v0.9 MCP 세션 관리 자동화 설계** (in progress)
+- **v0.9 MCP 세션 관리 자동화 설계** (shipped 2026-02-09)
 
 ## Overview
 
@@ -27,7 +27,7 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 - [x] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
 - [x] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
 - [x] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
-- [ ] **Phase 40: 테스트 설계 + 설계 문서 통합** - 18개 테스트 시나리오 명시 + 7개 기존 문서 v0.9 통합
+- [x] **Phase 40: 테스트 설계 + 설계 문서 통합** - 18개 테스트 시나리오 명시 + 7개 기존 문서 v0.9 통합
 
 ## Phase Details
 
@@ -104,8 +104,8 @@ Plans:
 **Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 40-01-PLAN.md -- 18개 테스트 시나리오(T-01~T-14, S-01~S-04) 설계 문서 명시: 검증 방법 + 테스트 레벨 + 관련 설계 결정 ID (TEST-01, TEST-02)
-- [ ] 40-02-PLAN.md -- 7개 기존 설계 문서 v0.9 통합 검증 + 25-sqlite EXT-03 이연 태그 + pitfall 교차 참조 매트릭스 + REQUIREMENTS.md 갱신 (INTEG-01, INTEG-02)
+- [x] 40-01-PLAN.md -- 18개 테스트 시나리오(T-01~T-14, S-01~S-04) 설계 문서 명시: 검증 방법 + 테스트 레벨 + 관련 설계 결정 ID (TEST-01, TEST-02)
+- [x] 40-02-PLAN.md -- 7개 기존 설계 문서 v0.9 통합 검증 + 25-sqlite EXT-03 이연 태그 + pitfall 교차 참조 매트릭스 + REQUIREMENTS.md 갱신 (INTEG-01, INTEG-02)
 
 ## Progress
 
@@ -125,7 +125,7 @@ Phase 36 -+---> Phase 37 ---> Phase 38 --+
 | 37. SessionManager 핵심 설계 | 2/2 | Complete | 2026-02-09 |
 | 38. SessionManager MCP 통합 설계 | 2/2 | Complete | 2026-02-09 |
 | 39. CLI + Telegram 연동 설계 | 2/2 | Complete | 2026-02-09 |
-| 40. 테스트 설계 + 설계 문서 통합 | 0/2 | Not started | - |
+| 40. 테스트 설계 + 설계 문서 통합 | 2/2 | Complete | 2026-02-09 |
 
 ---
 *로드맵 생성: 2026-02-09*
