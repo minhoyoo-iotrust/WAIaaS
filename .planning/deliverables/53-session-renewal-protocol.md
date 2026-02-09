@@ -3,6 +3,7 @@
 **문서 ID:** SESS-RENEW
 **작성일:** 2026-02-07
 **v0.8 보완:** 2026-02-09
+**v0.9 보완:** 2026-02-09
 **상태:** 완료
 **참조:** SESS-PROTO (30-session-token-protocol.md), AUTH-REDESIGN (52-auth-model-redesign.md), CORE-02 (25-sqlite-schema.md), NOTI-ARCH (35-notification-architecture.md), CORE-01 (24-monorepo-data-directory.md)
 **요구사항:** SESS-01 (갱신 API 스펙), SESS-02 (안전 장치 5종), SESS-04 (SessionConstraints 확장), SESS-05 (Owner 거부 + 알림)
@@ -696,6 +697,234 @@ async function renewSession(
 
 ---
 
+## 5.6 [v0.9] 갱신 후 만료 임박 판단 및 SESSION_EXPIRING_SOON 알림
+
+### 5.6.1 개요
+
+갱신 성공/실패 후 세션의 만료 임박 여부를 판단하고, 조건 충족 시 Owner에게 SESSION_EXPIRING_SOON 알림을 발송한다. 이를 통해 Owner가 예방적으로 새 세션을 생성하거나 갱신 전략을 조정할 수 있다.
+
+**참조:** 35-notification-architecture.md의 SESSION_EXPIRING_SOON 이벤트 정의, SessionExpiringSoonDataSchema Zod 스키마, notification_log 중복 방지 메커니즘.
+
+### 5.6.2 shouldNotifyExpiringSession 순수 함수
+
+```typescript
+// [v0.9] 만료 임박 판단 순수 함수
+// packages/daemon/src/services/session-renewal-service.ts
+
+/**
+ * 세션 만료 임박 여부를 판단하는 순수 함수.
+ * 부수 효과 없이 판단만 수행한다.
+ * 알림 발송(notify)과 중복 확인(notification_log 조회)은 호출부(SessionService)에서 처리한다.
+ *
+ * @param remainingRenewals - 잔여 갱신 횟수 (maxRenewals - renewalCount)
+ * @param absoluteExpiresAt - 절대 만료 시각 (epoch seconds)
+ * @param nowEpochSeconds - 현재 시각 (epoch seconds)
+ * @returns true = 만료 임박, false = 아직 여유 있음
+ */
+function shouldNotifyExpiringSession(
+  remainingRenewals: number,
+  absoluteExpiresAt: number,   // epoch seconds
+  nowEpochSeconds: number,
+): boolean {
+  const EXPIRING_THRESHOLD_SECONDS = 24 * 60 * 60  // 24시간
+  const RENEWAL_THRESHOLD = 3                       // 잔여 3회 이하
+  const timeToExpiry = absoluteExpiresAt - nowEpochSeconds
+  return remainingRenewals <= RENEWAL_THRESHOLD
+    || timeToExpiry <= EXPIRING_THRESHOLD_SECONDS
+}
+```
+
+**상수 설계 근거:**
+
+| 상수 | 값 | 근거 |
+|------|-----|------|
+| `EXPIRING_THRESHOLD_SECONDS` | 86,400 (24시간) | Owner가 Telegram /newsession 또는 CLI로 새 세션을 준비하기에 충분한 여유 시간 |
+| `RENEWAL_THRESHOLD` | 3 (잔여 3회 이하) | 기본 expiresIn=7일 기준, 잔여 3회 = 약 21일 남음. 절대 수명 30일과 교차 시점에서 알림 발생 |
+
+### 5.6.3 갱신 성공 경로 알림 판단
+
+기존 갱신 성공 시퀀스에 알림 판단 단계를 삽입한다:
+
+```
+[기존] Guard 1-3 통과 -> 토큰 회전 -> DB renewal_count++, last_renewed_at 설정
+[v0.9 추가] -> 만료 임박 판단:
+  remainingRenewals = maxRenewals - newRenewalCount
+  absoluteExpiresAt = session.absolute_expires_at (epoch seconds)
+
+  if shouldNotifyExpiringSession(remainingRenewals, absoluteExpiresAt, now):
+    notification_log에서 중복 확인:
+      SELECT 1 FROM notification_log
+      WHERE event = 'SESSION_EXPIRING_SOON'
+        AND reference_id = sessionId
+        AND status = 'DELIVERED'
+      LIMIT 1
+
+    중복이 아니면:
+      notificationService.notify(SESSION_EXPIRING_SOON, {
+        sessionId,
+        agentName: agent.name,
+        expiresAt: absoluteExpiresAt,
+        remainingRenewals,
+      })
+[기존] -> 200 OK 응답
+```
+
+**갱신 성공 경로 의사 코드:**
+
+```typescript
+// [v0.9] renewSession() 내부, DB 업데이트 완료 + 알림 분기 전
+// (기존 섹션 5.5의 7번 응답 반환 직전에 삽입)
+
+const maxRenewals = constraints.maxRenewals ?? config.default_max_renewals
+const remainingRenewals = maxRenewals - newRenewalCount
+const absoluteExpiresAt = session.absolute_expires_at  // epoch seconds
+
+if (shouldNotifyExpiringSession(remainingRenewals, absoluteExpiresAt, now)) {
+  const alreadySent = await isExpiringSoonAlreadySent(sqlite, sessionId)
+  if (!alreadySent) {
+    // fire-and-forget: 알림 실패가 갱신 응답을 블로킹하지 않음
+    notificationService.notify({
+      level: 'WARNING',
+      event: 'SESSION_EXPIRING_SOON',
+      title: `세션 만료 임박: ${agent.name}`,
+      body: `에이전트 "${agent.name}"의 세션이 곧 만료됩니다.`,
+      metadata: {
+        sessionId,
+        agentName: agent.name,
+        expiresAt: absoluteExpiresAt,
+        remainingRenewals,
+      },
+      createdAt: new Date().toISOString(),
+    }).catch(err => {
+      logger.error('SESSION_EXPIRING_SOON notification failed', { sessionId, error: err })
+    })
+  }
+}
+```
+
+### 5.6.4 갱신 실패 경로 보완 알림
+
+403 RENEWAL_LIMIT_REACHED (Guard 1 실패)와 403 SESSION_ABSOLUTE_LIFETIME_EXCEEDED (Guard 2 실패) 에러 경로에서도 SESSION_EXPIRING_SOON 알림이 이전에 발송되지 않았을 경우 보완 발송한다.
+
+**근거:** 이전 갱신에서 알림이 발송되었어야 하지만, 데몬 재시작이나 타이밍 이슈로 놓쳤을 수 있다. 보완 트리거로 Owner에게 최소 1회 알림을 보장한다.
+
+```
+[v0.9 추가] Guard 1 실패 (RENEWAL_LIMIT_REACHED):
+  -> notification_log 중복 확인 (event='SESSION_EXPIRING_SOON', reference_id=sessionId)
+  -> 미발송이면: notify(SESSION_EXPIRING_SOON, {
+       sessionId,
+       agentName: agent.name,
+       expiresAt: session.absolute_expires_at,
+       remainingRenewals: 0,   // 갱신 한도 도달
+     })
+  -> 403 응답
+
+[v0.9 추가] Guard 2 실패 (SESSION_ABSOLUTE_LIFETIME_EXCEEDED):
+  -> notification_log 중복 확인 (event='SESSION_EXPIRING_SOON', reference_id=sessionId)
+  -> 미발송이면: notify(SESSION_EXPIRING_SOON, {
+       sessionId,
+       agentName: agent.name,
+       expiresAt: session.absolute_expires_at,
+       remainingRenewals: maxRenewals - session.renewal_count,   // 현재 잔여 횟수
+     })
+  -> 403 응답
+```
+
+**갱신 실패 경로 의사 코드:**
+
+```typescript
+// [v0.9] validateRenewalGuards() 실패 후, 403 응답 반환 전에 삽입
+
+if (!validation.allowed) {
+  // Guard 1 또는 Guard 2 실패 시 보완 알림
+  if (validation.code === 'RENEWAL_LIMIT_REACHED'
+    || validation.code === 'SESSION_ABSOLUTE_LIFETIME_EXCEEDED') {
+    const alreadySent = await isExpiringSoonAlreadySent(sqlite, sessionId)
+    if (!alreadySent) {
+      const agent = sqlite.prepare('SELECT name FROM agents WHERE id = ?')
+        .get(session.agent_id) as { name: string }
+      const remainingRenewals = validation.code === 'RENEWAL_LIMIT_REACHED'
+        ? 0
+        : maxRenewals - session.renewal_count
+
+      notificationService.notify({
+        level: 'WARNING',
+        event: 'SESSION_EXPIRING_SOON',
+        title: `세션 만료 임박: ${agent.name}`,
+        body: `에이전트 "${agent.name}"의 세션이 곧 만료됩니다.`,
+        metadata: {
+          sessionId,
+          agentName: agent.name,
+          expiresAt: session.absolute_expires_at,
+          remainingRenewals,
+        },
+        createdAt: new Date().toISOString(),
+      }).catch(err => {
+        logger.error('SESSION_EXPIRING_SOON fallback notification failed', { sessionId, error: err })
+      })
+    }
+  }
+
+  return { success: false, error: { code: validation.code!, message: validation.reason!, status: 403 } }
+}
+```
+
+### 5.6.5 갱신 API 응답과 클라이언트 측 정보
+
+갱신 API 200 OK 응답의 `renewalCount`와 `maxRenewals` 필드는 클라이언트(MCP SessionManager)에게도 잔여 횟수 정보를 제공한다. 그러나 **알림 트리거는 데몬 측에서 자동으로 수행**되므로, MCP SessionManager가 별도로 알림을 발송하지 않는다.
+
+| 역할 | 담당 |
+|------|------|
+| 만료 임박 판단 | 데몬 SessionService (shouldNotifyExpiringSession) |
+| 중복 알림 방지 | 데몬 notification_log 테이블 조회 |
+| 알림 발송 | 데몬 NotificationService.notify() |
+| 잔여 횟수 표시 (참고용) | MCP SessionManager가 200 응답의 renewalCount/maxRenewals 활용 |
+
+### 5.6.6 시퀀스 다이어그램 (갱신 + 만료 임박 알림)
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI 에이전트
+    participant Daemon as WAIaaS 데몬
+    participant DB as SQLite
+    participant Notify as NotificationService
+    participant Owner as Owner
+
+    Note over Agent,Owner: ═══ [v0.9] 갱신 성공 + 만료 임박 알림 ═══
+
+    Agent->>Daemon: PUT /v1/sessions/:id/renew
+    Daemon->>Daemon: Guard 1-3 통과
+    Daemon->>Daemon: 토큰 회전 + DB 업데이트
+
+    Note over Daemon: [v0.9] 만료 임박 판단
+    Daemon->>Daemon: shouldNotifyExpiringSession()
+    alt 만료 임박 (remainingRenewals<=3 OR timeToExpiry<=24h)
+        Daemon->>DB: SELECT notification_log (중복 확인)
+        alt 미발송
+            Daemon->>Notify: SESSION_EXPIRING_SOON
+            Notify->>Owner: "세션 만료 임박 - 새 세션 생성 권장"
+        end
+    end
+
+    Daemon-->>Agent: 200 { token, expiresAt, renewalCount, ... }
+
+    Note over Agent,Owner: ═══ [v0.9] 갱신 실패 + 보완 알림 ═══
+
+    Agent->>Daemon: PUT /v1/sessions/:id/renew
+    Daemon->>Daemon: Guard 1 실패 (RENEWAL_LIMIT_REACHED)
+
+    Note over Daemon: [v0.9] 보완 알림 판단
+    Daemon->>DB: SELECT notification_log (중복 확인)
+    alt 미발송
+        Daemon->>Notify: SESSION_EXPIRING_SOON (remainingRenewals: 0)
+        Notify->>Owner: "세션 갱신 한도 도달 - 새 세션 필요"
+    end
+
+    Daemon-->>Agent: 403 { code: "RENEWAL_LIMIT_REACHED" }
+```
+
+---
+
 ## 6. Owner 사후 거부 플로우
 
 ### 6.1 거부 메커니즘
@@ -1096,5 +1325,6 @@ export const SecurityConfigSchema = z.object({
 
 *문서 ID: SESS-RENEW*
 *작성일: 2026-02-07*
+*v0.9 보완: 2026-02-09*
 *Phase: 20-session-renewal-protocol*
 *상태: 완료*
