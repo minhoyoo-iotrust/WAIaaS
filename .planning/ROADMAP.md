@@ -21,7 +21,7 @@ Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 
 - [x] **Phase 31: 데이터 모델 + 타입 기반 설계** - agents 스키마 nullable 전환 + 핵심 타입 정의
 - [x] **Phase 32: Owner 생명주기 설계** - 등록/변경/해제 + 유예/잠금 2단계 상태 머신
 - [x] **Phase 33: 정책 다운그레이드 + 알림 설계** - APPROVAL->DELAY 다운그레이드 + 알림 템플릿
-- [ ] **Phase 34: 자금 회수 + 보안 분기 설계** - sweepAll 프로토콜 + Kill Switch/세션 Owner 분기
+- [x] **Phase 34: 자금 회수 + 보안 분기 설계** - sweepAll 프로토콜 + Kill Switch/세션 Owner 분기
 - [ ] **Phase 35: DX + 설계 문서 통합** - CLI 변경 + 14개 설계 문서 v0.8 반영
 
 ## Phase Details
@@ -86,8 +86,8 @@ Plans:
 **Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 34-01-PLAN.md -- withdraw API 엔드포인트 + WithdrawService 도메인 서비스 + sweepAll Solana 실행 순서 + scope 분기 + HTTP 207 부분 실패 (37-rest-api + 27-chain-adapter)
-- [ ] 34-02-PLAN.md -- Kill Switch 복구 Owner 유무 분기(24h vs 30min) + 2단계 복구 패턴 + 세션 갱신 Owner 분기 + [거부하기] 버튼 3채널 명세 (36-killswitch + 53-session + 35-notification)
+- [x] 34-01-PLAN.md -- withdraw API 엔드포인트 + WithdrawService 도메인 서비스 + sweepAll Solana 실행 순서 + scope 분기 + HTTP 207 부분 실패 (37-rest-api + 27-chain-adapter)
+- [x] 34-02-PLAN.md -- Kill Switch 복구 Owner 유무 분기(24h vs 30min) + 2단계 복구 패턴 + 세션 갱신 Owner 분기 + [거부하기] 버튼 3채널 명세 (36-killswitch + 53-session + 35-notification)
 
 ### Phase 35: DX + 설계 문서 통합
 **Goal**: CLI 명령어 변경이 설계되고, 14개 기존 설계 문서에 v0.8 Owner 선택적 모델이 일관되게 반영된다
@@ -117,9 +117,9 @@ Note: Phase 32 and 33 can proceed in parallel (both depend on 31, not on each ot
 | 31. 데이터 모델 + 타입 기반 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-08 |
 | 32. Owner 생명주기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 33. 정책 다운그레이드 + 알림 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
-| 34. 자금 회수 + 보안 분기 설계 | v0.8 | 0/2 | Not started | - |
+| 34. 자금 회수 + 보안 분기 설계 | v0.8 | 2/2 | ✓ Complete | 2026-02-09 |
 | 35. DX + 설계 문서 통합 | v0.8 | 0/3 | Not started | - |
 
 ---
 *Created: 2026-02-08*
-*Last updated: 2026-02-09 after Phase 33 execution complete*
+*Last updated: 2026-02-09 after Phase 34 execution complete*
