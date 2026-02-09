@@ -23,7 +23,7 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 - Integer phases (36, 37, ...): 계획된 마일스톤 작업
 - Decimal phases (36.1, 36.2): 긴급 삽입 (INSERTED 표기)
 
-- [ ] **Phase 36: 토큰 파일 인프라 + 알림 이벤트** - 공유 파일 유틸리티와 SESSION_EXPIRING_SOON 이벤트 설계
+- [x] **Phase 36: 토큰 파일 인프라 + 알림 이벤트** - 공유 파일 유틸리티와 SESSION_EXPIRING_SOON 이벤트 설계
 - [ ] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
 - [ ] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
 - [ ] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
@@ -43,8 +43,8 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 **Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 36-01-PLAN.md -- 토큰 파일 사양 + 원자적 쓰기 패턴 설계 (SMGR-02, SMGR-07)
-- [ ] 36-02-PLAN.md -- SESSION_EXPIRING_SOON 이벤트 + 데몬 판단 로직 설계 (NOTI-01, NOTI-02)
+- [x] 36-01-PLAN.md -- 토큰 파일 사양 + 원자적 쓰기 패턴 설계 (SMGR-02, SMGR-07)
+- [x] 36-02-PLAN.md -- SESSION_EXPIRING_SOON 이벤트 + 데몬 판단 로직 설계 (NOTI-01, NOTI-02)
 
 ### Phase 37: SessionManager 핵심 설계
 **Goal**: SessionManager 클래스의 인터페이스, 토큰 로드 전략, 자동 갱신 스케줄, 실패 처리, lazy 401 reload가 구현 가능한 수준으로 정의된다
@@ -121,7 +121,7 @@ Phase 36 ─┬─→ Phase 37 ──→ Phase 38 ──┐
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 36. 토큰 파일 인프라 + 알림 이벤트 | 0/2 | Not started | - |
+| 36. 토큰 파일 인프라 + 알림 이벤트 | 2/2 | Complete | 2026-02-09 |
 | 37. SessionManager 핵심 설계 | 0/2 | Not started | - |
 | 38. SessionManager MCP 통합 설계 | 0/2 | Not started | - |
 | 39. CLI + Telegram 연동 설계 | 0/2 | Not started | - |
