@@ -10,19 +10,19 @@
 ## 현재 위치
 
 마일스톤: v0.9 MCP 세션 관리 자동화 설계
-페이즈: 37 of 40 (SessionManager 핵심 설계) -- Ready to plan
-플랜: 0 of 2 in current phase
-상태: Ready to plan
-마지막 활동: 2026-02-09 — Phase 36 완료 + 검증 PASSED (4/4 must-haves)
+페이즈: 37 of 40 (SessionManager 핵심 설계) -- In progress
+플랜: 1 of 2 in current phase
+상태: In progress
+마지막 활동: 2026-02-09 — Completed 37-01-PLAN.md (SessionManager 인터페이스 + 토큰 로드)
 
-Progress: ████░░░░░░░░░░░░░░░░ 20%
+Progress: ██████░░░░░░░░░░░░░░ 30%
 
 ## 성과 지표
 
 **v0.1-v0.8 누적:** 90 plans, 243 reqs, 35 phases, 8 milestones, 30 설계 문서 (24-64)
 
 **v0.9 계획:** 5 phases (36-40), 10 plans, 21 requirements
-**v0.9 진행:** 2/10 plans complete, 1/5 phases complete
+**v0.9 진행:** 3/10 plans complete, 1/5 phases complete
 
 ## 누적 컨텍스트
 
@@ -49,6 +49,15 @@ Phase 36-02 설계 결정:
 - NOTI-04: 갱신 실패 경로 보완 알림 (Guard 1/2 실패 시 미발송이면 보완 발송)
 - NOTI-05: shouldNotifyExpiringSession 순수 함수 (판단과 부수효과 분리)
 
+Phase 37-01 설계 결정:
+- SM-01: SessionManager 단일 클래스, MCP SDK 독립 (Composition 패턴)
+- SM-02: getToken/start/dispose 3개 public 메서드
+- SM-03: 내부 상태 9개 (token, sessionId, expiresAt, expiresIn, renewalCount, maxRenewals, timer, isRenewing, state)
+- SM-04: 토큰 로드 우선순위 파일 > env var
+- SM-05: jose decodeJwt 기반 무검증 디코딩 + 방어적 범위 검증 (C-03 대응)
+- SM-06: renewalCount/maxRenewals 초기값 0/Infinity, 첫 갱신 응답에서 업데이트
+- SM-07: 데몬 미기동 시 graceful degradation (로컬 JWT exp 기준 동작)
+
 ### 차단 요소/우려 사항
 
 - Node.js SEA + native addon 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료, 구현 시 스파이크 필요)
@@ -56,5 +65,5 @@ Phase 36-02 설계 결정:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 36 실행+검증 완료. 다음: Phase 37 플래닝 (`/gsd:plan-phase 37`)
+중단 지점: Completed 37-01-PLAN.md. 다음: 37-02-PLAN.md 실행 (`/gsd:execute-phase 37-02`)
 재개 파일: None
