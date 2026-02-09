@@ -5,17 +5,17 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-09)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v0.10 Phase 41 완료, Phase 42 진행 대기
+**현재 초점:** v0.10 Phase 42 완료, Phase 43 계획 수립 대기
 
 ## 현재 위치
 
 마일스톤: v0.10 -- 구현 전 설계 완결성 확보
-페이즈: Phase 41 of 44 (정책 엔진 완결) -- Phase complete
+페이즈: Phase 42 of 44 (에러 처리 체계 완결) -- Phase complete
 플랜: 2 of 2 in current phase (complete)
 상태: Phase complete
-마지막 활동: 2026-02-09 -- Completed 41-02-PLAN.md (PLCY-02)
+마지막 활동: 2026-02-09 -- Completed 42-02-PLAN.md (ERRH-01, ERRH-03)
 
-Progress: ████░░░░░░░░░░░░░░░░ 25%
+Progress: ██████████░░░░░░░░░░ 50%
 
 ## 성과 지표
 
@@ -39,6 +39,9 @@ v0.10 관련:
 - PLCY-01: 25-sqlite §4.4 rules 컬럼 SSoT를 33-time-lock §2.2 PolicyRuleSchema로 확정
 - PLCY-02: GRACE 기간 무기한 확정, markOwnerVerified() 배타적 전이 트리거, SSoT 우선순위 양방향 확정
 - PLCY-03: APPROVAL 타임아웃 3단계 우선순위 확정 (정책별 > config > 3600초)
+- ERRH-01: 통합 매트릭스를 SS10.12에 배치 (objectives SS3.3이 아닌 SS10 내), ADMIN 도메인 독립 등록, 합계 64->66
+- ERRH-02: ChainError 25개 코드를 PERMANENT(17)/TRANSIENT(4)/STALE(4)로 분류, 카테고리별 복구 전략 테이블 확정, category 필드가 retryable을 자동 파생
+- ERRH-03: PolicyTypeEnum + superRefine 패턴으로 type별 rules 검증
 
 ### 차단 요소/우려 사항
 
@@ -47,5 +50,5 @@ v0.10 관련:
 ## 세션 연속성
 
 마지막 세션: 2026-02-09
-중단 지점: Phase 41 완료. Phase 42 계획 수립 대기.
+중단 지점: Phase 42 완료. Phase 43 계획 수립 대기.
 재개 파일: .planning/ROADMAP.md

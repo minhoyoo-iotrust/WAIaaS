@@ -6,6 +6,7 @@
 **v0.6 블록체인 기능 확장:** 2026-02-08
 **v0.7 보완:** 2026-02-08
 **v0.8 보완:** 2026-02-09
+**v0.10 보완:** 2026-02-09
 **상태:** 완료
 **참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md), objectives/v0.8-optional-owner-progressive-security.md
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
@@ -60,6 +61,8 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 > **v0.6 변경:** 5개 엔드포인트 추가: GET /v1/wallet/assets (자산 조회), GET /v1/actions (Action Provider 목록), GET /v1/actions/:provider/:action (Action 상세), POST /v1/actions/:provider/:action/resolve (Action resolve), POST /v1/actions/:provider/:action/execute (Action 실행). POST /v1/transactions/send 요청 바디가 discriminatedUnion 5-type으로 확장. 에러 코드 20개 추가 (40개 -> 60개). 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
 >
 > **[v0.8] 변경:** 1개 엔드포인트 추가: POST /v1/owner/agents/:agentId/withdraw (자금 회수). WithdrawService 도메인 서비스 설계 추가. WITHDRAW 도메인 에러 코드 4개 추가 (60개 -> 64개). objectives/v0.8-optional-owner-progressive-security.md §5 참조.
+>
+> **[v0.10] 변경:** SS10.12 에러 코드 통합 매트릭스 추가 (66개 에러 코드 전수 HTTP/retryable/backoff 매핑). OWNER 도메인 4->5 정정, ADMIN 도메인 1개 신설, 합계 64->66 정정. 429 응답 포맷 확정. SS8.9 PolicyType enum 4->10개 확장 + superRefine type별 rules 검증 분기 추가.
 
 ---
 
@@ -2122,6 +2125,24 @@ const OwnerStatusResponseSchema = z.object({
 | **operationId** | `createPolicy` |
 | **정의 원본** | OWNR-CONN (섹션 6.7) |
 
+**[v0.10] PolicyType 10개 enum 공통 상수:**
+
+```typescript
+// [v0.10] PolicyType 10개 enum -- SSoT: 45-enum-unified-mapping.md §2.5
+const PolicyTypeEnum = z.enum([
+  'SPENDING_LIMIT',
+  'WHITELIST',
+  'TIME_RESTRICTION',
+  'RATE_LIMIT',
+  'ALLOWED_TOKENS',
+  'CONTRACT_WHITELIST',
+  'METHOD_WHITELIST',
+  'APPROVED_SPENDERS',
+  'APPROVE_AMOUNT_LIMIT',
+  'APPROVE_TIER_OVERRIDE',
+]).openapi({ description: '정책 유형 (10개)' })
+```
+
 **Request Zod 스키마:**
 
 ```typescript
@@ -2129,18 +2150,59 @@ const CreatePolicyRequestSchema = z.object({
   agentId: z.string().uuid().optional().openapi({
     description: '대상 에이전트 ID. 미지정 시 글로벌 정책',
   }),
-  type: z.enum(['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']).openapi({
-    description: '정책 유형',
+  type: PolicyTypeEnum.openapi({
+    description: '정책 유형. SSoT: 45-enum §2.5',
   }),
   rules: z.unknown().openapi({
-    description: '정책 규칙 JSON (type에 맞는 Zod 스키마로 런타임 검증)',
+    description: '정책 규칙 JSON. type에 따라 .superRefine()으로 검증. SSoT: 33-time-lock §2.2 PolicyRuleSchema',
   }),
   priority: z.number().int().optional().default(0).openapi({
     description: '우선순위 (높을수록 먼저 평가)',
   }),
   enabled: z.boolean().optional().default(true),
+}).superRefine((data, ctx) => {
+  // [v0.10] type별 rules JSON 검증 분기
+  // SSoT: 33-time-lock-approval-mechanism.md §2.2 PolicyRuleSchema
+  const schemaMap: Record<string, ZodSchema> = {
+    SPENDING_LIMIT: SpendingLimitRuleSchema,
+    WHITELIST: WhitelistRuleSchema,
+    TIME_RESTRICTION: TimeRestrictionRuleSchema,
+    RATE_LIMIT: RateLimitRuleSchema,
+    ALLOWED_TOKENS: AllowedTokensRuleSchema,
+    CONTRACT_WHITELIST: ContractWhitelistRuleSchema,
+    METHOD_WHITELIST: MethodWhitelistRuleSchema,
+    APPROVED_SPENDERS: ApprovedSpendersRuleSchema,
+    APPROVE_AMOUNT_LIMIT: ApproveAmountLimitRuleSchema,
+    APPROVE_TIER_OVERRIDE: ApproveTierOverrideRuleSchema,
+  }
+  const schema = schemaMap[data.type]
+  if (!schema) return  // enum 검증에서 이미 걸림
+  const result = schema.safeParse(data.rules)
+  if (!result.success) {
+    result.error.issues.forEach(issue => {
+      ctx.addIssue({
+        ...issue,
+        path: ['rules', ...issue.path],
+      })
+    })
+  }
 }).openapi('CreatePolicyRequest')
 ```
+
+**[v0.10] type별 rules 스키마 요약 (SSoT: 33-time-lock §2.2 PolicyRuleSchema):**
+
+| PolicyType | rules 스키마 | 핵심 필드 |
+|------------|-------------|----------|
+| SPENDING_LIMIT | SpendingLimitRuleSchema | tiers: { INSTANT, NOTIFY, DELAY, APPROVAL }, usdEquivalent? |
+| WHITELIST | WhitelistRuleSchema | addresses: string[] |
+| TIME_RESTRICTION | TimeRestrictionRuleSchema | allowedHours: { start, end }, allowedDays: number[], timezone |
+| RATE_LIMIT | RateLimitRuleSchema | maxTransactions: number, windowSeconds: number |
+| ALLOWED_TOKENS | AllowedTokensRuleSchema | tokens: { mint/address, symbol, decimals }[] |
+| CONTRACT_WHITELIST | ContractWhitelistRuleSchema | contracts: { address, name?, methods? }[] |
+| METHOD_WHITELIST | MethodWhitelistRuleSchema | methods: { selector, name?, contracts? }[] |
+| APPROVED_SPENDERS | ApprovedSpendersRuleSchema | spenders: { address, label?, maxAmount? }[] |
+| APPROVE_AMOUNT_LIMIT | ApproveAmountLimitRuleSchema | maxApproveAmount: string, allowUnlimited: boolean |
+| APPROVE_TIER_OVERRIDE | ApproveTierOverrideRuleSchema | overrides: { tokenMint/address, tier }[] |
 
 **Response Zod 스키마:**
 
@@ -2148,7 +2210,7 @@ const CreatePolicyRequestSchema = z.object({
 const PolicySummarySchema = z.object({
   id: z.string().uuid(),
   agentId: z.string().uuid().nullable(),
-  type: z.enum(['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT']),
+  type: PolicyTypeEnum,
   rules: z.unknown(),
   priority: z.number().int(),
   enabled: z.boolean(),
@@ -2216,6 +2278,9 @@ const UpdatePolicyResponseSchema = z.object({
   policy: PolicySummarySchema,
 }).openapi('UpdatePolicyResponse')
 ```
+
+> **[v0.10] UpdatePolicyRequest의 rules 검증:**
+> `rules` 필드가 제공된 경우, 서비스 계층에서 `policies.type`을 조회하여 33-time-lock §2.2의 해당 PolicyRuleSchema로 검증한다. Zod 스키마 수준의 `.superRefine()`은 `type` 필드가 요청에 포함되지 않으므로 적용 불가 -- 서비스 계층 검증으로 대체.
 
 **에러:**
 
@@ -3291,7 +3356,7 @@ const ErrorResponseSchema = z.object({
 | `ACTION_NAME_CONFLICT` | 409 | false | 동일 액션 이름 중복 등록 시도 |
 | `ACTION_CHAIN_MISMATCH` | 400 | false | 요청 체인과 Provider 지원 체인 불일치 |
 
-### 10.11 에러 코드 요약 통계 (v0.8 변경)
+### 10.11 에러 코드 요약 통계 (v0.10 변경)
 
 | 도메인 | 코드 수 | 주요 HTTP |
 |--------|--------|-----------|
@@ -3299,18 +3364,117 @@ const ErrorResponseSchema = z.object({
 | SESSION | 8 | 401, 403, 404 (Phase 20: +4 갱신 에러) |
 | TX | 20 | 400, 403, 404, 409, 410, 422, 502 (v0.6: +13 토큰/컨트랙트/approve/배치 에러) |
 | POLICY | 4 | 403, 429 |
-| OWNER | 4 | 404, 409, 410 |
+| OWNER | 5 | 404, 409, 410 **[v0.10 정정: 4->5, OWNER_NOT_FOUND 포함]** |
 | SYSTEM | 6 | 400, 409, 503 |
 | AGENT | 3 | 404, 409, 410 |
 | WITHDRAW | 4 | 403, 404, 500 **(v0.8 추가)** |
 | ACTION | 7 | 400, 404, 409, 500, 502 (v0.6 추가) |
-| **합계** | **64** | |
+| ADMIN | 1 | 429 **[v0.10 추가: ROTATION_TOO_RECENT]** |
+| **합계** | **66** | **[v0.10 정정: 64->66]** |
 
 > **(v0.5 추가) hint 매핑:** v0.5 기준 40개 에러 코드 중 31개(78%)에 hint가 매핑되어 있다. v0.6 추가 20개 에러 코드의 hint 매핑은 구현 시 확장 예정. 전체 hint 맵은 **55-dx-improvement-spec.md 섹션 2.2 errorHintMap** 참조.
 >
 > **(v0.6 추가) 에러 코드 교차 참조:** v0.6 에러 코드 20개(TX 도메인 13개 + ACTION 도메인 7개)의 전체 목록과 소스 문서 매핑은 **45-enum-unified-mapping.md v0.6 에러 코드 교차 참조** 섹션 참조.
 >
 > **[v0.8] 추가:** WITHDRAW 도메인 4개 에러 코드 신설 + AGENT 도메인 기존 코드 2개 재사용. WITHDRAW-08(유예 구간 비활성화) 전용 `WITHDRAW_LOCKED_ONLY` 코드가 핵심. hint 매핑은 구현 시 추가.
+>
+> **[v0.10] 정정:** OWNER 도메인 4->5 (OWNER_NOT_FOUND가 v0.7에서 추가되었으나 v0.8 통계에서 누락), ADMIN 도메인 1개 신설 (ROTATION_TOO_RECENT -- SS9.3에만 존재하던 코드를 정식 도메인으로 등록), 합계 64->66. 도메인 수: 9->10개(AUTH, SESSION, TX, POLICY, OWNER, SYSTEM, AGENT, WITHDRAW, ACTION, ADMIN).
+
+### 10.12 [v0.10] 에러 코드 통합 매트릭스
+
+> 이 매트릭스가 에러 코드 -> HTTP 매핑의 **SSoT**이다. SS10.2~10.10의 도메인별 테이블은 상세 설명 참조용이며, HTTP status/retryable/backoff는 이 매트릭스를 따른다.
+
+| # | 에러 코드 | 도메인 | HTTP | retryable | backoff | hint |
+|---|----------|--------|------|-----------|---------|------|
+| 1 | INVALID_TOKEN | AUTH | 401 | false | - | O |
+| 2 | TOKEN_EXPIRED | AUTH | 401 | false | - | O |
+| 3 | SESSION_REVOKED | AUTH | 401 | false | - | O |
+| 4 | INVALID_SIGNATURE | AUTH | 401 | false | - | O |
+| 5 | INVALID_NONCE | AUTH | 401 | false | - | O |
+| 6 | INVALID_MASTER_PASSWORD | AUTH | 401 | false | - | O |
+| 7 | MASTER_PASSWORD_LOCKED | AUTH | 429 | false | 30분 대기 | O |
+| 8 | SYSTEM_LOCKED | AUTH | 503 | false | - | O |
+| 9 | SESSION_NOT_FOUND | SESSION | 404 | false | - | O |
+| 10 | SESSION_EXPIRED | SESSION | 401 | false | - | O |
+| 11 | SESSION_LIMIT_EXCEEDED | SESSION | 403 | false | - | O |
+| 12 | CONSTRAINT_VIOLATED | SESSION | 403 | false | - | O |
+| 13 | RENEWAL_LIMIT_REACHED | SESSION | 403 | false | - | O |
+| 14 | SESSION_ABSOLUTE_LIFETIME_EXCEEDED | SESSION | 403 | false | - | O |
+| 15 | RENEWAL_TOO_EARLY | SESSION | 403 | true | exp(1,2,4) | O |
+| 16 | SESSION_RENEWAL_MISMATCH | SESSION | 403 | false | - | O |
+| 17 | INSUFFICIENT_BALANCE | TX | 400 | false | - | O |
+| 18 | INVALID_ADDRESS | TX | 400 | false | - | O |
+| 19 | TX_NOT_FOUND | TX | 404 | false | - | - |
+| 20 | TX_EXPIRED | TX | 410 | false | - | O |
+| 21 | TX_ALREADY_PROCESSED | TX | 409 | false | - | - |
+| 22 | CHAIN_ERROR | TX | 502 | true | exp(1,2,4) | O |
+| 23 | SIMULATION_FAILED | TX | 422 | false | - | O |
+| 24 | TOKEN_NOT_FOUND | TX | 404 | false | - | - |
+| 25 | TOKEN_NOT_ALLOWED | TX | 403 | false | - | - |
+| 26 | INSUFFICIENT_TOKEN_BALANCE | TX | 400 | false | - | - |
+| 27 | CONTRACT_CALL_DISABLED | TX | 403 | false | - | - |
+| 28 | CONTRACT_NOT_WHITELISTED | TX | 403 | false | - | - |
+| 29 | METHOD_NOT_WHITELISTED | TX | 403 | false | - | - |
+| 30 | APPROVE_DISABLED | TX | 403 | false | - | - |
+| 31 | SPENDER_NOT_APPROVED | TX | 403 | false | - | - |
+| 32 | APPROVE_AMOUNT_EXCEEDED | TX | 403 | false | - | - |
+| 33 | UNLIMITED_APPROVE_BLOCKED | TX | 403 | false | - | - |
+| 34 | BATCH_NOT_SUPPORTED | TX | 400 | false | - | - |
+| 35 | BATCH_SIZE_EXCEEDED | TX | 400 | false | - | - |
+| 36 | BATCH_POLICY_VIOLATION | TX | 403 | false | - | - |
+| 37 | POLICY_DENIED | POLICY | 403 | false | - | O |
+| 38 | SPENDING_LIMIT_EXCEEDED | POLICY | 403 | false | - | O |
+| 39 | RATE_LIMIT_EXCEEDED | POLICY | 429 | true | Retry-After | O |
+| 40 | WHITELIST_DENIED | POLICY | 403 | false | - | O |
+| 41 | OWNER_ALREADY_CONNECTED | OWNER | 409 | false | - | - |
+| 42 | OWNER_NOT_CONNECTED | OWNER | 404 | false | - | - |
+| 43 | OWNER_NOT_FOUND | OWNER | 404 | false | - | - |
+| 44 | APPROVAL_TIMEOUT | OWNER | 410 | false | - | O |
+| 45 | APPROVAL_NOT_FOUND | OWNER | 404 | false | - | - |
+| 46 | KILL_SWITCH_ACTIVE | SYSTEM | 409 | false | - | - |
+| 47 | KILL_SWITCH_NOT_ACTIVE | SYSTEM | 409 | false | - | - |
+| 48 | KEYSTORE_LOCKED | SYSTEM | 503 | true | exp(1,2,4) | - |
+| 49 | CHAIN_NOT_SUPPORTED | SYSTEM | 400 | false | - | - |
+| 50 | SHUTTING_DOWN | SYSTEM | 503 | false | Retry-After | - |
+| 51 | ADAPTER_NOT_AVAILABLE | SYSTEM | 503 | true | exp(1,2,4) | - |
+| 52 | AGENT_NOT_FOUND | AGENT | 404 | false | - | - |
+| 53 | AGENT_SUSPENDED | AGENT | 409 | false | - | - |
+| 54 | AGENT_TERMINATED | AGENT | 410 | false | - | - |
+| 55 | NO_OWNER | WITHDRAW | 404 | false | - | - |
+| 56 | WITHDRAW_LOCKED_ONLY | WITHDRAW | 403 | false | - | - |
+| 57 | SWEEP_TOTAL_FAILURE | WITHDRAW | 500 | true | exp(1,2,4) | - |
+| 58 | INSUFFICIENT_FOR_FEE | WITHDRAW | 500 | false | - | - |
+| 59 | ACTION_NOT_FOUND | ACTION | 404 | false | - | - |
+| 60 | ACTION_VALIDATION_FAILED | ACTION | 400 | false | - | - |
+| 61 | ACTION_RESOLVE_FAILED | ACTION | 502 | true | exp(1,2,4) | - |
+| 62 | ACTION_RETURN_INVALID | ACTION | 500 | false | - | - |
+| 63 | ACTION_PLUGIN_LOAD_FAILED | ACTION | 500 | false | - | - |
+| 64 | ACTION_NAME_CONFLICT | ACTION | 409 | false | - | - |
+| 65 | ACTION_CHAIN_MISMATCH | ACTION | 400 | false | - | - |
+| 66 | ROTATION_TOO_RECENT | ADMIN | 429 | false | 5분 대기 | - |
+
+> **backoff 범례:**
+> - `-`: 재시도 불필요 (retryable=false) 또는 재시도 전략 불필요
+> - `Retry-After`: 서버가 응답 헤더로 제공하는 대기 시간(초) 참조
+> - `exp(1,2,4)`: 지수 백오프 1초/2초/4초, 최대 3회
+> - `N분 대기`: 고정 대기 시간 (lockout 해제 대기)
+
+**429 응답 포맷 (SSoT: 29-api-framework SS7.5):**
+
+429 응답에는 반드시 다음을 포함한다:
+- `Retry-After` HTTP 헤더 (초 단위)
+- 본문 `details.retryAfter` 필드 (초 단위, 헤더와 동일 값)
+- 본문 `details.stage` 필드 (`"global"` 또는 `"session"`) -- Rate Limiter 제한 단계 식별
+
+429를 사용하는 에러 코드:
+
+| 에러 코드 | 도메인 | retryable | backoff 특성 |
+|-----------|--------|-----------|-------------|
+| MASTER_PASSWORD_LOCKED | AUTH | false | 30분 lockout, 재시도 무의미 |
+| RATE_LIMIT_EXCEEDED | POLICY | true | Retry-After 헤더 참조 |
+| ROTATION_TOO_RECENT | ADMIN | false | 5분 대기 (전환 윈도우) |
+
+> MASTER_PASSWORD_LOCKED는 429이지만 retryable=false이다. 30분 lockout은 보안 메커니즘이며 "동일 요청 재시도"로 해결되지 않는다.
 
 ---
 

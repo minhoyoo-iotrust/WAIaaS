@@ -5,6 +5,7 @@
 **v0.6 업데이트:** 2026-02-08
 **v0.7 업데이트:** 2026-02-08
 **v0.8 업데이트:** 2026-02-08
+**v0.10 업데이트:** 2026-02-09
 **상태:** 완료
 **참조:** ARCH-05 (12-multichain-extension.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), 06-CONTEXT.md, 06-RESEARCH.md, CHAIN-EXT-01 (56-token-transfer-extension-spec.md), CHAIN-EXT-02 (57-asset-query-fee-estimation-spec.md), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), objectives/v0.8-optional-owner-progressive-security.md, CORE-02 (25-sqlite-schema.md -- SweepResult 타입)
 
@@ -1028,6 +1029,7 @@ interface IChainAdapter {
 | v0.6 | getAssets 복원, buildContractCall/buildApprove/buildBatch 추가 | 13 -> 17 | 체인 기능 확장 (CHAIN-EXT) |
 | v0.7 | getCurrentNonce, resetNonceTracker 추가 | 17 -> 19 | EVM nonce 관리 |
 | v0.8 | sweepAll 추가 | 19 -> 20 | 자금 전량 회수 (WITHDRAW-06) |
+| v0.10 | ChainError에 category 필드 추가, 에러 코드 3-카테고리 분류 | 20 (변경 없음) | §4 에러 카테고리 추가 (ERRH-02) |
 
 ---
 
@@ -1196,7 +1198,7 @@ enum EVMErrorCode {
  * - ChainError는 WAIaaSError의 하위 타입
  * - HTTP 응답 시 WAIaaSError로 래핑되어 RFC 9457 형식으로 반환
  *
- * @example
+ * @example 코드별 분기 (기존)
  * try {
  *   await adapter.submitTransaction(signedTx)
  * } catch (err) {
@@ -1209,6 +1211,24 @@ enum EVMErrorCode {
  *         // nonce 재조회 후 재빌드
  *         break
  *     }
+ *   }
+ * }
+ *
+ * @example 카테고리별 분기 (v0.10 -- Stage 5 파이프라인 권장 패턴)
+ * // Phase 43 Stage 5 의사코드가 이 패턴으로 err.category를 참조한다.
+ * if (err instanceof ChainError) {
+ *   switch (err.category) {
+ *     case 'PERMANENT':
+ *       // 즉시 실패 반환, 재시도 없음
+ *       return { status: 'FAILED', error: err }
+ *     case 'TRANSIENT':
+ *       // 지수 백오프 재시도 (max 3회, 1s -> 2s -> 4s)
+ *       if (retryCount < 3) { await backoff(retryCount); continue }
+ *       return { status: 'FAILED', error: err }
+ *     case 'STALE':
+ *       // 즉시 1회 재빌드 재시도 (Stage 5a로 돌아가 새 데이터로 재빌드)
+ *       if (retryCount < 1) { retryCount++; goto buildTransaction }
+ *       return { status: 'FAILED', error: err }
  *   }
  * }
  */
@@ -1241,8 +1261,25 @@ class ChainError extends Error {
    * 재시도 가능 여부.
    * true면 동일 요청으로 재시도 가능 (일시적 장애).
    * false면 입력 수정 필요.
+   *
+   * category와의 관계:
+   * - PERMANENT → retryable = false (항상)
+   * - TRANSIENT → retryable = true (항상)
+   * - STALE → retryable = true (항상)
+   *
+   * category가 복구 전략을 결정하고, retryable은 클라이언트 hint 역할.
+   * backward compatibility를 위해 유지한다.
    */
   readonly retryable: boolean
+
+  /**
+   * [v0.10] 에러 카테고리.
+   * Stage 5 파이프라인에서 재시도 전략을 결정하는 기준.
+   * - PERMANENT: 입력 수정 없이 재시도 불가. 클라이언트 수정 필요.
+   * - TRANSIENT: 일시적 외부 장애. 동일 요청으로 지수 백오프 재시도 가능.
+   * - STALE: 데이터 유효기간 만료. 새 데이터로 재빌드 후 즉시 1회 재시도.
+   */
+  readonly category: 'PERMANENT' | 'TRANSIENT' | 'STALE'
 
   constructor(params: {
     code: ChainErrorCode | SolanaErrorCode | EVMErrorCode
@@ -1250,6 +1287,7 @@ class ChainError extends Error {
     message: string
     details?: Record<string, unknown>
     retryable?: boolean
+    category: 'PERMANENT' | 'TRANSIENT' | 'STALE'
     cause?: Error
   }) {
     super(params.message)
@@ -1257,7 +1295,8 @@ class ChainError extends Error {
     this.code = params.code
     this.chain = params.chain
     this.details = params.details
-    this.retryable = params.retryable ?? false
+    this.category = params.category
+    this.retryable = params.retryable ?? (params.category !== 'PERMANENT')
     if (params.cause) {
       this.cause = params.cause
     }
@@ -1267,33 +1306,68 @@ class ChainError extends Error {
 
 ### 4.5 에러 코드 매핑 테이블
 
-| 에러 코드 | 체인 | HTTP | 재시도 | 복구 방법 |
-|-----------|------|------|--------|----------|
-| `INSUFFICIENT_BALANCE` | 공통 | 400 | 조건부 | 잔액 충전 후 재시도 |
-| `INVALID_ADDRESS` | 공통 | 400 | X | 주소 수정 |
-| `TRANSACTION_FAILED` | 공통 | 500 | 조건부 | 원인 분석 |
-| `TRANSACTION_EXPIRED` | 공통 | 408 | O | 새 트랜잭션 빌드 |
-| `RPC_ERROR` | 공통 | 502 | O | 재시도 (exponential backoff) |
-| `NETWORK_ERROR` | 공통 | 503 | O | 네트워크 복구 대기 |
-| `SIMULATION_FAILED` | 공통 | 502 | O | 재시도 |
-| `TOKEN_NOT_FOUND` | 공통 | 404 | X | 토큰 주소 확인 | (v0.6 추가) |
-| `TOKEN_NOT_ALLOWED` | 공통 | 403 | X | ALLOWED_TOKENS 정책 추가 | (v0.6 추가) |
-| `INSUFFICIENT_TOKEN_BALANCE` | 공통 | 400 | 조건부 | 토큰 잔액 충전 | (v0.6 추가) |
-| `CONTRACT_NOT_WHITELISTED` | 공통 | 403 | X | CONTRACT_WHITELIST에 주소 추가 | (v0.6 추가) |
-| `METHOD_NOT_WHITELISTED` | EVM | 403 | X | METHOD_WHITELIST에 selector 추가 | (v0.6 추가) |
-| `CONTRACT_CALL_FAILED` | 공통 | 500 | 조건부 | 호출 파라미터 확인 | (v0.6 추가) |
-| `APPROVE_LIMIT_EXCEEDED` | 공통 | 403 | X | APPROVE_AMOUNT_LIMIT 설정 확인 | (v0.6 추가) |
-| `SPENDER_NOT_APPROVED` | 공통 | 403 | X | APPROVED_SPENDERS에 주소 추가 | (v0.6 추가) |
-| `UNLIMITED_APPROVE_BLOCKED` | 공통 | 403 | X | 금액 제한 후 재시도 | (v0.6 추가) |
-| `BATCH_NOT_SUPPORTED` | EVM | 400 | X | Solana에서만 사용 | (v0.6 추가) |
-| `BATCH_SIZE_EXCEEDED` | Solana | 400 | X | instruction 수 줄이기 | (v0.6 추가) |
-| `BATCH_INSTRUCTION_INVALID` | Solana | 400 | X | instruction 데이터 확인 | (v0.6 추가) |
-| `SOLANA_BLOCKHASH_EXPIRED` | Solana | 408 | O | buildTransaction() 재실행 |
-| `SOLANA_BLOCKHASH_STALE` | Solana | 408 | O | **[v0.7 추가]** refreshBlockhash() 호출 후 re-sign. EXPIRED보다 복구 비용 낮음 |
-| `SOLANA_PROGRAM_ERROR` | Solana | 400 | X | 프로그램 에러 분석 |
-| `EVM_NONCE_TOO_LOW` | EVM | 409 | O | nonce 재조회 후 재빌드 |
-| `EVM_GAS_TOO_LOW` | EVM | 400 | O | gas limit 상향 후 재빌드 |
-| `EVM_REVERT` | EVM | 400 | X | revert reason 분석 |
+> **[v0.10 업데이트]** 카테고리 열 추가. 모든 에러 코드를 PERMANENT/TRANSIENT/STALE 3-카테고리로 분류.
+> 카테고리가 Stage 5 파이프라인의 재시도 전략을 결정하고, `retryable`은 클라이언트 hint 역할.
+> - PERMANENT → `retryable: false` (항상)
+> - TRANSIENT/STALE → `retryable: true` (항상)
+
+| 에러 코드 | 체인 | HTTP | 카테고리 | 재시도 | 복구 방법 |
+|-----------|------|------|----------|--------|----------|
+| `INSUFFICIENT_BALANCE` | 공통 | 400 | PERMANENT | X | 잔액 충전 후 새 요청 |
+| `INVALID_ADDRESS` | 공통 | 400 | PERMANENT | X | 주소 수정 |
+| `TRANSACTION_FAILED` | 공통 | 500 | PERMANENT | X | 원인 분석 후 새 요청 |
+| `TRANSACTION_EXPIRED` | 공통 | 408 | STALE | O (1회) | 새 트랜잭션 빌드 (Stage 5a 재실행) |
+| `RPC_ERROR` | 공통 | 502 | TRANSIENT | O (3회) | 지수 백오프 재시도 (1s, 2s, 4s) |
+| `NETWORK_ERROR` | 공통 | 503 | TRANSIENT | O (3회) | 지수 백오프 재시도 (1s, 2s, 4s) |
+| `SIMULATION_FAILED` | 공통 | 502 | TRANSIENT | O (3회) | 지수 백오프 재시도 (1s, 2s, 4s) |
+| `TOKEN_NOT_FOUND` | 공통 | 404 | PERMANENT | X | 토큰 주소 확인 (v0.6 추가) |
+| `TOKEN_NOT_ALLOWED` | 공통 | 403 | PERMANENT | X | ALLOWED_TOKENS 정책 추가 (v0.6 추가) |
+| `INSUFFICIENT_TOKEN_BALANCE` | 공통 | 400 | PERMANENT | X | 토큰 잔액 충전 후 새 요청 (v0.6 추가) |
+| `CONTRACT_NOT_WHITELISTED` | 공통 | 403 | PERMANENT | X | CONTRACT_WHITELIST에 주소 추가 (v0.6 추가) |
+| `METHOD_NOT_WHITELISTED` | EVM | 403 | PERMANENT | X | METHOD_WHITELIST에 selector 추가 (v0.6 추가) |
+| `CONTRACT_CALL_FAILED` | 공통 | 500 | PERMANENT | X | 호출 파라미터 확인 (v0.6 추가) ※ |
+| `APPROVE_LIMIT_EXCEEDED` | 공통 | 403 | PERMANENT | X | APPROVE_AMOUNT_LIMIT 설정 확인 (v0.6 추가) |
+| `SPENDER_NOT_APPROVED` | 공통 | 403 | PERMANENT | X | APPROVED_SPENDERS에 주소 추가 (v0.6 추가) |
+| `UNLIMITED_APPROVE_BLOCKED` | 공통 | 403 | PERMANENT | X | 금액 제한 후 재시도 (v0.6 추가) |
+| `BATCH_NOT_SUPPORTED` | EVM | 400 | PERMANENT | X | Solana에서만 사용 (v0.6 추가) |
+| `BATCH_SIZE_EXCEEDED` | Solana | 400 | PERMANENT | X | instruction 수 줄이기 (v0.6 추가) |
+| `BATCH_INSTRUCTION_INVALID` | Solana | 400 | PERMANENT | X | instruction 데이터 확인 (v0.6 추가) |
+| `SOLANA_BLOCKHASH_EXPIRED` | Solana | 408 | STALE | O (1회) | buildTransaction() 재실행 (Stage 5a) |
+| `SOLANA_BLOCKHASH_STALE` | Solana | 408 | STALE | O (1회) | **[v0.7 추가]** refreshBlockhash() 호출 후 re-sign. EXPIRED보다 복구 비용 낮음 |
+| `SOLANA_PROGRAM_ERROR` | Solana | 400 | PERMANENT | X | 프로그램 에러 분석 |
+| `EVM_NONCE_TOO_LOW` | EVM | 409 | STALE | O (1회) | nonce 재조회 후 재빌드 (Stage 5a) |
+| `EVM_GAS_TOO_LOW` | EVM | 400 | TRANSIENT | O (1회) | gas limit 1.2x 상향 후 재빌드 (Stage 5a) ※※ |
+| `EVM_REVERT` | EVM | 400 | PERMANENT | X | revert reason 분석 |
+
+> **※ `CONTRACT_CALL_FAILED` 카테고리 결정 근거:** 기본 PERMANENT으로 분류한다. 컨트랙트 호출 실패는 대부분 입력 오류(잘못된 함수 시그니처, 부적절한 파라미터 등)이며, 동일 호출 재시도로는 해결되지 않는다. RPC 일시 장애로 인한 호출 실패는 `RPC_ERROR`로 별도 분류된다. 구현 시 특정 컨트랙트의 일시적 상태(예: 슬리피지 초과)에 의한 실패를 TRANSIENT으로 재분류해야 하는 경우, Action Provider 레벨에서 개별 판단한다.
+>
+> **※※ `EVM_GAS_TOO_LOW` 카테고리 결정 근거:** TRANSIENT으로 분류하되, 일반적인 TRANSIENT(동일 요청 재시도)와 달리 gas limit을 1.2x로 상향하여 재빌드하는 특수 케이스이다. 재시도 횟수는 1회로 제한한다 (1회 상향으로도 해결되지 않으면 근본적 문제).
+
+**카테고리별 복구 전략:**
+
+| 카테고리 | 재시도 횟수 | 백오프 방식 | 재시도 시작 단계 | 복구 방법 |
+|----------|:----------:|-----------|:---------------:|----------|
+| PERMANENT | 0 | - | - | 클라이언트에 에러 반환. 입력 수정 또는 정책 변경 필요 |
+| TRANSIENT | max 3회 | 지수 백오프 (1s, 2s, 4s) | 실패한 단계에서 재시도 | 대기 후 동일 호출 재시도 |
+| STALE | 1회 | 즉시 (대기 없음) | Stage 5a (buildTransaction) | 새 데이터(blockhash/nonce)로 재빌드 후 재시도 |
+
+> **STALE vs TRANSIENT 구분:**
+> - TRANSIENT: "동일 요청으로 재시도" -- 외부 인프라 일시 장애가 해소되면 동일 호출이 성공
+> - STALE: "새 데이터로 재빌드" -- blockhash 만료, nonce 충돌 등 데이터 유효기간 문제. 동일 트랜잭션을 재제출하면 같은 에러 반복
+> - `SOLANA_BLOCKHASH_STALE`는 STALE 중 가장 빠른 복구: `refreshBlockhash()` 호출로 새 blockhash를 얻고 re-sign하면 됨 (buildTransaction() 전체 재실행 불필요)
+> - `EVM_GAS_TOO_LOW`는 TRANSIENT이지만 재시도 시 gas limit 상향이 필요한 특수 케이스 (1회만 시도, Stage 5a에서 재빌드)
+>
+> **Phase 43 연동:** Phase 43(CONC-01)의 Stage 5 완전 의사코드는 이 카테고리를 `err.category` 필드로 직접 참조하여 `switch (err.category)` 분기한다. 위 복구 전략 테이블이 Stage 5 재시도 로직의 SSoT이다.
+
+**카테고리 분류 요약 (25개):**
+
+| 카테고리 | 에러 코드 수 | 에러 코드 |
+|----------|:----------:|----------|
+| PERMANENT | 17 | INSUFFICIENT_BALANCE, INVALID_ADDRESS, TRANSACTION_FAILED, SOLANA_PROGRAM_ERROR, EVM_REVERT, TOKEN_NOT_FOUND, TOKEN_NOT_ALLOWED, INSUFFICIENT_TOKEN_BALANCE, CONTRACT_NOT_WHITELISTED, METHOD_NOT_WHITELISTED, CONTRACT_CALL_FAILED, APPROVE_LIMIT_EXCEEDED, SPENDER_NOT_APPROVED, UNLIMITED_APPROVE_BLOCKED, BATCH_NOT_SUPPORTED, BATCH_SIZE_EXCEEDED, BATCH_INSTRUCTION_INVALID |
+| TRANSIENT | 4 | RPC_ERROR, NETWORK_ERROR, SIMULATION_FAILED, EVM_GAS_TOO_LOW |
+| STALE | 4 | TRANSACTION_EXPIRED, SOLANA_BLOCKHASH_EXPIRED, SOLANA_BLOCKHASH_STALE, EVM_NONCE_TOO_LOW |
+
+> **Note:** 공통 7개(SS4.1) + Solana 3개(SS4.2) + EVM 3개(SS4.3) = 13개 기본 코드에 v0.6 추가 12개를 합산하여 총 25개. PERMANENT 17개, TRANSIENT 4개, STALE 4개.
 
 ### 4.6 v0.1 에러 체계와의 통합
 
@@ -1310,6 +1384,8 @@ WalletApiError (HTTP 응답 레벨)
 ChainError (어댑터 레벨)
 ├── code: ChainErrorCode | SolanaErrorCode | EVMErrorCode
 ├── chain: ChainType
+├── category: 'PERMANENT' | 'TRANSIENT' | 'STALE'  [v0.10]
+├── retryable: boolean (category에서 파생)
 └── details: 체인별 상세 정보
 ```
 
@@ -1317,6 +1393,7 @@ ChainError (어댑터 레벨)
 - `ChainError.code=INSUFFICIENT_BALANCE` -> `WalletApiError.code=CHAIN_INSUFFICIENT_BALANCE`
 - `ChainError.code=EVM_NONCE_TOO_LOW` -> `WalletApiError.code=CHAIN_EVM_NONCE_TOO_LOW`
 - `ChainError.retryable=true` -> `WalletApiError.retryable=true` + `Retry-After` 헤더
+- `ChainError.category` -> `WalletApiError.details.category` (클라이언트가 재시도 전략 판단에 활용) [v0.10]
 
 ---
 
