@@ -99,12 +99,12 @@ Plans:
   3. Owner 미등록 에이전트의 agent info 출력에 등록 안내 메시지가 명세되어 있다
   4. 14개 기존 설계 문서에 [v0.8] 태그로 변경 사항이 반영되어 있다
   5. Owner 상태 분기 매트릭스(API x Owner NONE/GRACE/LOCKED)가 SSoT로 작성되어 문서 간 일관성이 보장된다
-**Plans**: TBD
+**Plans**: 3 plans (Wave 1 → Wave 2 → Wave 3 sequential)
 
 Plans:
-- [ ] 35-01: CLI 명령어 변경 + 출력 메시지 + --quickstart 간소화 설계
-- [ ] 35-02: Owner 상태 분기 매트릭스 SSoT 작성
-- [ ] 35-03: 14개 설계 문서 v0.8 통합 반영 (25, 52, 33, 34, 37, 27, 31, 36, 30, 53, 35, 54, 40, 57/60/61 참조)
+- [ ] 35-01-PLAN.md -- 54-cli-flow-redesign.md v0.8 전면 갱신: agent create --owner 선택, set-owner/remove-owner/withdraw 신규 CLI, --quickstart 간소화, agent info 안내 메시지
+- [ ] 35-02-PLAN.md -- Owner 상태 분기 매트릭스 SSoT 작성: API x OwnerState(NONE/GRACE/LOCKED) 18행 매트릭스를 objectives/v0.8에 추가
+- [ ] 35-03-PLAN.md -- 14개 설계 문서 v0.8 통합 반영: 4개 첫 v0.8 반영(30/31/40 + killswitch withdraw 허용) + 10개 교차 검증 + 3개 참조 문서(57/60/61) 보강
 
 ## Progress
 
