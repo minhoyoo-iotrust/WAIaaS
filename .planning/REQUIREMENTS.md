@@ -26,13 +26,13 @@
 
 ### CLI MCP 커맨드 (CLIP)
 
-- [ ] **CLIP-01**: `waiaas mcp setup` 커맨드 인터페이스 설계 — 세션 생성 + 토큰 파일 저장 + Claude Desktop config.json 안내 출력
-- [ ] **CLIP-02**: `waiaas mcp refresh-token` 커맨드 인터페이스 설계 — 기존 세션 폐기 + 새 세션 생성(constraints 계승) + 토큰 파일 교체
+- [x] **CLIP-01**: `waiaas mcp setup` 커맨드 인터페이스 설계 — 세션 생성 + 토큰 파일 저장 + Claude Desktop config.json 안내 출력
+- [x] **CLIP-02**: `waiaas mcp refresh-token` 커맨드 인터페이스 설계 — 기존 세션 폐기 + 새 세션 생성(constraints 계승) + 토큰 파일 교체
 
 ### Telegram /newsession (TGSN)
 
-- [ ] **TGSN-01**: `/newsession` 명령어 플로우 설계 — chatId Tier 1 인증, 에이전트 목록 인라인 키보드, 세션 생성 + 토큰 파일 저장 + 완료 메시지
-- [ ] **TGSN-02**: 기본 constraints 결정 규칙 설계 — 3-level 우선순위(agents.default_constraints > config.toml > 하드코딩 기본값)
+- [x] **TGSN-01**: `/newsession` 명령어 플로우 설계 — chatId Tier 1 인증, 에이전트 목록 인라인 키보드, 세션 생성 + 토큰 파일 저장 + 완료 메시지
+- [x] **TGSN-02**: 기본 constraints 결정 규칙 설계 — 3-level 우선순위(agents.default_constraints > config.toml > 하드코딩 기본값)
 
 ### 알림 확장 (NOTI)
 
@@ -93,10 +93,10 @@
 | SMGI-02 | Phase 38 | Pending |
 | SMGI-03 | Phase 38 | Pending |
 | SMGI-04 | Phase 38 | Pending |
-| CLIP-01 | Phase 39 | Pending |
-| CLIP-02 | Phase 39 | Pending |
-| TGSN-01 | Phase 39 | Pending |
-| TGSN-02 | Phase 39 | Pending |
+| CLIP-01 | Phase 39 | Complete |
+| CLIP-02 | Phase 39 | Complete |
+| TGSN-01 | Phase 39 | Complete |
+| TGSN-02 | Phase 39 | Complete |
 | NOTI-01 | Phase 36 | Complete |
 | NOTI-02 | Phase 36 | Complete |
 | TEST-01 | Phase 40 | Pending |
@@ -111,4 +111,4 @@
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after Phase 37 completion*
+*Last updated: 2026-02-09 after Phase 39 completion*

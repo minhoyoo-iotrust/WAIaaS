@@ -26,7 +26,7 @@ MCP 환경에서 세션 토큰의 갱신/만료/재발급을 자동화하는 메
 - [x] **Phase 36: 토큰 파일 인프라 + 알림 이벤트** - 공유 파일 유틸리티와 SESSION_EXPIRING_SOON 이벤트 설계
 - [x] **Phase 37: SessionManager 핵심 설계** - 토큰 로드/갱신/실패처리/lazy reload 핵심 메커니즘
 - [ ] **Phase 38: SessionManager MCP 통합 설계** - MCP tool handler 연동, 동시성, 프로세스 생명주기, 에러 처리
-- [ ] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
+- [x] **Phase 39: CLI + Telegram 연동 설계** - mcp setup/refresh-token 커맨드 + /newsession 플로우
 - [ ] **Phase 40: 테스트 설계 + 설계 문서 통합** - 18개 테스트 시나리오 명시 + 7개 기존 문서 v0.9 통합
 
 ## Phase Details
@@ -89,8 +89,8 @@ Plans:
 **Plans**: 2 plans (Wave 1: 병렬 실행)
 
 Plans:
-- [ ] 39-01-PLAN.md -- CLI mcp 서브커맨드 그룹 설계: mcp setup (7단계 플로우, Claude Desktop config 안내) + mcp refresh-token (8단계 플로우, constraints 계승) (CLIP-01, CLIP-02)
-- [ ] 39-02-PLAN.md -- Telegram /newsession 명령어 플로우 (인라인 키보드 에이전트 선택) + 기본 constraints 결정 규칙 (2-level + EXT-03 확장 예약) (TGSN-01, TGSN-02)
+- [x] 39-01-PLAN.md -- CLI mcp 서브커맨드 그룹 설계: mcp setup (7단계 플로우, Claude Desktop config 안내) + mcp refresh-token (8단계 플로우, constraints 계승) (CLIP-01, CLIP-02)
+- [x] 39-02-PLAN.md -- Telegram /newsession 명령어 플로우 (인라인 키보드 에이전트 선택) + 기본 constraints 결정 규칙 (2-level + EXT-03 확장 예약) (TGSN-01, TGSN-02)
 
 ### Phase 40: 테스트 설계 + 설계 문서 통합
 **Goal**: 18개 테스트 시나리오(14 핵심 + 4 보안)가 설계 문서에 명시되고, 7개 기존 설계 문서에 v0.9 변경이 일관되게 통합된다
@@ -124,7 +124,7 @@ Phase 36 ─┬─→ Phase 37 ──→ Phase 38 ──┐
 | 36. 토큰 파일 인프라 + 알림 이벤트 | 2/2 | Complete | 2026-02-09 |
 | 37. SessionManager 핵심 설계 | 2/2 | Complete | 2026-02-09 |
 | 38. SessionManager MCP 통합 설계 | 0/2 | Not started | - |
-| 39. CLI + Telegram 연동 설계 | 0/2 | Not started | - |
+| 39. CLI + Telegram 연동 설계 | 2/2 | Complete | 2026-02-09 |
 | 40. 테스트 설계 + 설계 문서 통합 | 0/2 | Not started | - |
 
 ---
