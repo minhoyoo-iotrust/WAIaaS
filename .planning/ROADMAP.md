@@ -140,11 +140,11 @@
   3. objectives/v1.3-sdk-mcp-notifications.md가 존재하며, 설계 문서 35/37-38/55 + v0.9 SessionManager를 참조하고, TS/Python SDK + MCP 6+3 도구 + 3채널 알림 구현 범위와 MCP 세션 자동 갱신 E2E 시나리오를 포함한다
   4. objectives/v1.4-token-contract-extension.md가 존재하며, 설계 문서 27/36/56-60을 참조하고, SPL/ERC-20 토큰 + 컨트랙트 호출 + Approve + 배치 + EVM 어댑터 구현 범위를 정의하며, Stage 5 완전 의사코드 기반 E2E 시나리오를 포함한다
   5. 4개 문서 모두 부록 구조(목표, 구현 대상 설계 문서, 산출물, 기술 결정 사항, E2E 검증 시나리오, 의존, 리스크)를 갖추고, 각 E2E 시나리오에 자동화 수준 태그([L0]~[L3], [HUMAN])가 부여된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 45-01: v1.1 코어 인프라 + v1.2 인증 정책 objective 문서 생성
-- [ ] 45-02: v1.3 SDK/MCP/알림 + v1.4 토큰/컨트랙트 objective 문서 생성
+- [ ] 45-01-PLAN.md — v1.1 코어 인프라 + v1.2 인증 정책 objective 문서 생성
+- [ ] 45-02-PLAN.md — v1.3 SDK/MCP/알림 + v1.4 토큰/컨트랙트 objective 문서 생성
 
 ### Phase 46: 확장 + 릴리스 objective 문서 생성
 **Goal**: v1.5(DeFi) ~ v2.0(릴리스)까지 4개 구현 마일스톤의 objective 문서가 완성되어, 전체 구현 로드맵(v1.1~v2.0) 8개 마일스톤의 실행 계획이 확정된 상태
@@ -205,4 +205,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-09 after v1.0 roadmap created*
+*Last updated: 2026-02-09 after Phase 45 plans created*
