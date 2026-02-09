@@ -1,5 +1,32 @@
 # Project Milestones: WAIaaS
 
+## v0.8 Owner 선택적 등록 + 점진적 보안 모델 (Shipped: 2026-02-09)
+
+**Delivered:** Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 따라 보안 기능이 점진적으로 해금되는 모델을 설계 — 3-State 상태 머신(NONE/GRACE/LOCKED), APPROVAL→DELAY 다운그레이드, sweepAll 자금 회수 프로토콜, 14개 기존 설계 문서 v0.8 통합
+
+**Phases completed:** 31-35 (11 plans total)
+
+**Key accomplishments:**
+
+- Owner 선택적 데이터 모델 — agents.owner_address nullable 전환, OwnerState(NONE/GRACE/LOCKED) 런타임 파생 타입, IChainAdapter.sweepAll 20번째 메서드 추가
+- Owner 생명주기 상태 머신 — 3-State 6-전이 설계, OwnerLifecycleService, 유예/잠금 2단계 인증 분기, 보안 공격 방어 4건(C-01/C-02/H-02/H-03)
+- 정책 다운그레이드 메커니즘 — evaluate() Step 9.5 APPROVAL→DELAY 다운그레이드, TX_DOWNGRADED_DELAY 16번째 알림 이벤트, 3채널 Owner 등록 안내 템플릿
+- 자금 회수 프로토콜 — withdraw API(38번째 엔드포인트), sweepAll Solana 4단계 실행, HTTP 207 부분 실패, Kill Switch/세션 갱신 Owner 유무 분기
+- DX + 설계 문서 통합 — 3개 신규 CLI 명령(set-owner/remove-owner/withdraw), 18x3 Owner 상태 분기 매트릭스 SSoT, 14개 설계 문서 + 3개 참조 문서 v0.8 통합(240 [v0.8] 태그)
+
+**Stats:**
+
+- 53 files created/modified
+- +13,651 / -386 lines (Markdown design docs)
+- 5 phases, 11 plans, 33 requirements, 17 설계 문서 수정 (240 [v0.8] 태그)
+- 2 days (2026-02-08 → 2026-02-09)
+
+**Git range:** `227b495` (milestone start) → `bfa407d` (Phase 35 complete)
+
+**What's next:** v0.9 구현 준비 — 설계 문서(24-64) 기반 구현 마일스톤 시작
+
+---
+
 ## v0.7 구현 장애 요소 해소 (Shipped: 2026-02-08)
 
 **Delivered:** v0.1~v0.6 설계 문서 전수 분석에서 도출된 25건의 구현 장애 요소(CRITICAL 7 + HIGH 10 + MEDIUM 8)를 기존 설계 문서 9개를 직접 수정하여 해소, 코드 작성 첫날부터 차단 없이 구현 가능한 상태를 확립

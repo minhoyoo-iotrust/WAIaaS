@@ -8,24 +8,11 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## 현재 마일스톤: v0.8 Owner 선택적 등록 + 점진적 보안 모델
-
-**목표:** Owner 지갑 등록을 필수에서 선택으로 전환하고, 등록 여부에 따라 보안 기능이 점진적으로 해금되는 모델을 설계한다.
-
-**대상 기능:**
-- agents.owner_address NOT NULL → nullable 전환
-- 점진적 보안 해금 모델 (Base/Enhanced)
-- APPROVAL 티어 → DELAY 다운그레이드 (Owner 없을 때)
-- sweepAll 자금 회수 프로토콜
-- Owner 등록/변경/해제 생명주기 (유예/잠금 2단계)
-- Kill Switch/세션 갱신 Owner 유무별 분기
-- 14개 기존 설계 문서 수정
-
 ## 현재 상태
 
-v0.1~v0.7 완료 (2026-02-08). 79개 플랜, 210개 요구사항, 30개 설계 문서(24-64) + 5개 대응표 + 11개 테스트 전략 문서. 전체 설계 단계 완료 + 구현 장애 요소 25건 해소. v0.8 설계 마일스톤 진행 중.
+v0.1~v0.8 완료 (2026-02-09). 90개 플랜, 243개 요구사항, 35개 페이즈, 8개 마일스톤, 30개 설계 문서(24-64). 전체 설계 단계 완료.
 
-**v0.7 최종 결과:** 25건 구현 장애 요소(CRITICAL 7 + HIGH 10 + MEDIUM 8) 기존 설계 문서 9개 직접 수정으로 해소. 150+ [v0.7 보완] 태그. Audit PASSED (25/25 reqs, 5/5 phases, 7/7 integrations, 5/5 E2E flows).
+**v0.8 최종 결과:** Owner 선택적 등록 + 점진적 보안 모델 설계 완료. 3-State 상태 머신(NONE/GRACE/LOCKED), APPROVAL→DELAY 다운그레이드, sweepAll 자금 회수 프로토콜, 14개 설계 문서 v0.8 통합(240 [v0.8] 태그). Audit PASSED (33/33 reqs, 5/5 phases, 23/23 integrations, 5/5 E2E flows).
 
 ## 요구사항
 
@@ -75,15 +62,16 @@ v0.1~v0.7 완료 (2026-02-08). 79개 플랜, 210개 요구사항, 30개 설계 �
 - ✓ IActionProvider resolve-then-execute + MCP 자동 변환 + Jupiter Swap — v0.6 (ACTION-01~05)
 - ✓ 확장 기능 테스트 전략 166건 + 기존 문서 8개 v0.6 통합 — v0.6 (TEST-01~03, INTEG-01~02)
 - ✓ 구현 장애 요소 25건 해소 (CRITICAL 7 + HIGH 10 + MEDIUM 8) — v0.7 (CHAIN-01~04, DAEMON-01~06, DEPS-01~02, API-01~07, SCHEMA-01~06)
+- ✓ Owner 선택적 등록 스펙 (3-State 상태 머신, 6전이, 유예/잠금 구간, 보안 공격 방어 4건) — v0.8 (OWNER-01~08)
+- ✓ 점진적 보안 해금 모델 (APPROVAL→DELAY 다운그레이드, TX_DOWNGRADED_DELAY 이벤트, 3채널 알림) — v0.8 (POLICY-01~03, NOTIF-01~02)
+- ✓ 자금 회수 프로토콜 (withdraw API 38번째 엔드포인트, sweepAll 20번째 메서드, HTTP 207 부분 실패) — v0.8 (WITHDRAW-01~08)
+- ✓ Kill Switch/세션 보안 Owner 유무 분기 (복구 24h vs 30min, 세션 갱신 [거부하기]) — v0.8 (SECURITY-01~04, NOTIF-03)
+- ✓ DX 변경 스펙 (set-owner/remove-owner/withdraw CLI 3개, --quickstart 간소화, agent info 안내) — v0.8 (DX-01~05)
+- ✓ 14개 설계 문서 v0.8 통합 + 18x3 Owner 상태 분기 매트릭스 SSoT — v0.8 (INTEG-01~02)
 
 ### 활성
 
-- [ ] Owner 선택적 등록 스펙 (등록/변경/해제 생명주기, 유예/잠금 구간) — v0.8
-- [ ] 점진적 보안 해금 모델 (Base: Owner 없음 / Enhanced: Owner 있음) — v0.8
-- [ ] APPROVAL 다운그레이드 정책 (Owner 없을 때 DELAY 대체 + 알림 안내) — v0.8
-- [ ] 자금 회수 프로토콜 (withdraw API, sweepAll 메서드) — v0.8
-- [ ] DX 변경 스펙 (CLI 명령어, 출력 메시지, --quickstart 간소화) — v0.8
-- [ ] 기존 설계 문서 14개 v0.8 통합 반영 — v0.8
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -107,8 +95,9 @@ v0.4 테스트 전략 및 계획 수립 완료 (2026-02-07). 5개 페이즈, 9�
 v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9개 플랜, 24개 요구사항, 4개 신규 문서(52-55) + 11개 기존 문서 수정.
 v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11개 플랜, 30개 요구사항, 9개 신규 문서(56-64) + 기존 8개 문서 v0.6 통합.
 v0.7 구현 장애 요소 해소 완료 (2026-02-08). 5개 페이즈, 11개 플랜, 25개 요구사항, 기존 9개 설계 문서 직접 수정.
+v0.8 Owner 선택적 등록 + 점진적 보안 모델 완료 (2026-02-09). 5개 페이즈, 11개 플랜, 33개 요구사항, 14개 설계 문서 v0.8 통합(240 [v0.8] 태그).
 
-**누적:** 7 milestones (v0.1-v0.7), 30 phases, 79 plans, 210 requirements, 30 설계 문서 (24-64)
+**누적:** 8 milestones (v0.1-v0.8), 35 phases, 90 plans, 243 requirements, 30 설계 문서 (24-64)
 
 **기술 스택 (v0.2 확정, v0.6 확장 설계 완료, v0.7 의존성 정리):**
 - Runtime: Node.js 22 LTS
@@ -124,6 +113,7 @@ v0.7 구현 장애 요소 해소 완료 (2026-02-08). 5개 페이즈, 11개 플�
 
 **설계 문서:** 30개 (deliverables 24-64.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md) + 1개 확장 테스트 전략 (64.md)
 - v0.7 보완: ethers/siwe → viem/siwe 전환, 5개 타겟 플랫폼 확정, prebuildify 네이티브 번들 전략
+- v0.8 통합: Owner 선택적 등록(3-State), APPROVAL 다운그레이드, sweepAll, withdraw API, 18x3 매트릭스 SSoT
 
 ### 알려진 이슈
 
@@ -190,10 +180,12 @@ v0.7 구현 장애 요소 해소 완료 (2026-02-08). 5개 페이즈, 11개 플�
 | config.toml 중첩 섹션 금지 | WAIAAS_{SECTION}_{KEY} 1:1 매핑 단순성 | ✓ Good — v0.7 해소 |
 | SQLite 타임스탬프 초 단위 통일 | UUID v7 ms 정밀도가 동일 초 내 순서 보장 | ✓ Good — v0.7 해소 |
 
-| Owner 선택적 등록 | 자율 에이전트 시나리오 지원, 초기 온보딩 마찰 제거 | — Pending — v0.8 |
-| 점진적 보안 해금 | Base(DELAY까지) / Enhanced(APPROVAL) 이분법 대신 연속 스펙트럼 | — Pending — v0.8 |
-| APPROVAL 다운그레이드 | Owner 없어도 차단 없이 DELAY로 대체, 알림에 등록 안내 포함 | — Pending — v0.8 |
-| sweepAll masterAuth만 | 수신 주소 = owner_address 고정이므로 공격자 이득 없음 | — Pending — v0.8 |
+| Owner 선택적 등록 | 자율 에이전트 시나리오 지원, 초기 온보딩 마찰 제거 | ✓ Good — v0.8 설계 완성 |
+| 점진적 보안 해금 (3-State) | NONE/GRACE/LOCKED 3단계, ownerAuth 사용 시점 기반 전이 | ✓ Good — v0.8 설계 완성 |
+| APPROVAL→DELAY 다운그레이드 | Owner 없어도 차단 없이 DELAY로 대체, 알림에 등록 안내 포함 | ✓ Good — v0.8 설계 완성 |
+| sweepAll masterAuth만 | 수신 주소 = owner_address 고정이므로 공격자 이득 없음 | ✓ Good — v0.8 설계 완성 |
+| Kill Switch withdraw 허용 (방안 A) | killSwitchGuard 5번째 허용 경로, Owner 자금 회수 보장 | ✓ Good — v0.8 설계 완성 |
+| OwnerState 런타임 파생 | DB 비저장, resolveOwnerState() 순수 함수로 SSoT 유지 | ✓ Good — v0.8 설계 완성 |
 
 ---
-*최종 업데이트: 2026-02-08 after v0.8 milestone start*
+*최종 업데이트: 2026-02-09 after v0.8 milestone complete*
