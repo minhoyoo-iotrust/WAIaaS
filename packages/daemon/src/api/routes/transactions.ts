@@ -35,6 +35,9 @@ import {
   stage6Confirm,
 } from '../../pipeline/stages.js';
 import type { PipelineContext } from '../../pipeline/stages.js';
+import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
+import type { DelayQueue } from '../../workflow/delay-queue.js';
+import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -42,6 +45,9 @@ export interface TransactionRouteDeps {
   keyStore: LocalKeyStore;
   policyEngine: IPolicyEngine;
   masterPassword: string;
+  approvalWorkflow?: ApprovalWorkflow;
+  delayQueue?: DelayQueue;
+  ownerLifecycle?: OwnerLifecycleService;
 }
 
 /**
@@ -185,6 +191,130 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // POST /transactions/:id/approve (ownerAuth)
+  // ---------------------------------------------------------------------------
+
+  if (deps.approvalWorkflow && deps.ownerLifecycle) {
+    const approvalWorkflow = deps.approvalWorkflow;
+    const ownerLifecycle = deps.ownerLifecycle;
+
+    router.post('/transactions/:id/approve', async (c) => {
+      const txId = c.req.param('id');
+
+      // Verify the tx exists and get agentId for ownerAuth verification
+      const tx = await deps.db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.id, txId))
+        .get();
+
+      if (!tx) {
+        throw new WAIaaSError('TX_NOT_FOUND', {
+          message: `Transaction '${txId}' not found`,
+        });
+      }
+
+      // Get owner signature from header (set by ownerAuth middleware)
+      const ownerSignature = c.req.header('X-Owner-Signature') ?? '';
+
+      // Approve the transaction
+      const result = approvalWorkflow.approve(txId, ownerSignature);
+
+      // ownerAuth success -> mark owner verified (GRACE -> LOCKED auto-transition)
+      try {
+        ownerLifecycle.markOwnerVerified(tx.agentId);
+      } catch {
+        // If markOwnerVerified fails (e.g., NONE state), don't fail the approval
+      }
+
+      return c.json({
+        id: txId,
+        status: 'EXECUTING',
+        approvedAt: result.approvedAt,
+      });
+    });
+
+    // ---------------------------------------------------------------------------
+    // POST /transactions/:id/reject (ownerAuth)
+    // ---------------------------------------------------------------------------
+
+    router.post('/transactions/:id/reject', async (c) => {
+      const txId = c.req.param('id');
+
+      // Verify the tx exists
+      const tx = await deps.db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.id, txId))
+        .get();
+
+      if (!tx) {
+        throw new WAIaaSError('TX_NOT_FOUND', {
+          message: `Transaction '${txId}' not found`,
+        });
+      }
+
+      // Reject the transaction
+      const result = approvalWorkflow.reject(txId);
+
+      // ownerAuth success -> mark owner verified (GRACE -> LOCKED auto-transition)
+      try {
+        ownerLifecycle.markOwnerVerified(tx.agentId);
+      } catch {
+        // If markOwnerVerified fails (e.g., NONE state), don't fail the rejection
+      }
+
+      return c.json({
+        id: txId,
+        status: 'CANCELLED',
+        rejectedAt: result.rejectedAt,
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /transactions/:id/cancel (sessionAuth -- agent cancels own DELAY tx)
+  // ---------------------------------------------------------------------------
+
+  if (deps.delayQueue) {
+    const delayQueue = deps.delayQueue;
+
+    router.post('/transactions/:id/cancel', async (c) => {
+      const txId = c.req.param('id');
+
+      // Get agentId from sessionAuth context
+      const sessionAgentId = c.get('agentId' as never) as string;
+
+      // Verify the tx exists and belongs to this agent
+      const tx = await deps.db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.id, txId))
+        .get();
+
+      if (!tx) {
+        throw new WAIaaSError('TX_NOT_FOUND', {
+          message: `Transaction '${txId}' not found`,
+        });
+      }
+
+      if (tx.agentId !== sessionAgentId) {
+        throw new WAIaaSError('TX_NOT_FOUND', {
+          message: `Transaction '${txId}' not found`,
+        });
+      }
+
+      // Cancel the delay
+      delayQueue.cancelDelay(txId);
+
+      return c.json({
+        id: txId,
+        status: 'CANCELLED',
+      });
+    });
+  }
 
   return router;
 }
