@@ -21,11 +21,13 @@ export async function startCommand(dataDir: string): Promise<void> {
       process.kill(pid, 0); // check if process is alive
       console.error(`Daemon already running (PID: ${pid})`);
       process.exit(1);
+      return; // Ensure no further execution after exit
     } catch (err) {
       // ESRCH = process not found, stale PID file -- continue
       if ((err as NodeJS.ErrnoException).code !== 'ESRCH') {
         console.error(`Daemon already running (PID file exists: ${pidPath})`);
         process.exit(1);
+        return; // Ensure no further execution after exit
       }
       // Stale PID file, continue with startup
     }
@@ -38,7 +40,7 @@ export async function startCommand(dataDir: string): Promise<void> {
   } catch (err) {
     console.error(`Failed to resolve master password: ${(err as Error).message}`);
     process.exit(1);
-    return; // unreachable but helps TS
+    return; // Ensure no further execution after exit
   }
 
   // Start daemon (in-process)

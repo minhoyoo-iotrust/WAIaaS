@@ -50,8 +50,8 @@ describe('Enum SSoT', () => {
     expect(AGENT_STATUSES).toContain('TERMINATED');
   });
 
-  it('TransactionStatus has 8 values', () => {
-    expect(TRANSACTION_STATUSES).toHaveLength(8);
+  it('TransactionStatus has 9 values', () => {
+    expect(TRANSACTION_STATUSES).toHaveLength(9);
   });
 
   it('TransactionType has 5 values', () => {

@@ -64,7 +64,7 @@ export class BackgroundWorkers {
    * for any in-progress handlers to complete.
    */
   async stopAll(): Promise<void> {
-    for (const [_name, timer] of this.timers) {
+    for (const [, timer] of this.timers) {
       clearInterval(timer);
     }
     this.timers.clear();
