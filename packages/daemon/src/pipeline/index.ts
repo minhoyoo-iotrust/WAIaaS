@@ -4,6 +4,7 @@
 
 export { TransactionPipeline, type PipelineDeps } from './pipeline.js';
 export { DefaultPolicyEngine } from './default-policy-engine.js';
+export { DatabasePolicyEngine } from './database-policy-engine.js';
 export {
   stage1Validate,
   stage2Auth,
