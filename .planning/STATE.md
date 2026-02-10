@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 55 (4 of 6 in v1.2) (워크플로우 + Owner 상태)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-10 -- Completed 55-02-PLAN.md (ApprovalWorkflow TDD)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-10 -- Completed 55-03-PLAN.md (Owner 3-State Machine + API Routes)
 
-Progress: [████████░░░░░] 62% (8/13 plans)
+Progress: [█████████░░░░] 69% (9/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 54 phases, 135 plans, 332 reqs, 392 tests, ~13,500 LOC
+**Cumulative:** 13 milestones, 54 phases, 136 plans, 332 reqs, 410 tests, ~14,000 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 8
-- Average duration: 5.5min
-- Total execution time: 44min
+- Total plans completed: 9
+- Average duration: 5.4min
+- Total execution time: 49min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 52 | 2/2 | 16min | 8min |
 | 53 | 2/2 | 10min | 5min |
 | 54 | 2/2 | 11min | 5.5min |
-| 55 | 2/3 | 7min | 3.5min |
+| 55 | 3/3 | 12min | 4min |
 
 ## Accumulated Context
 
@@ -78,6 +78,11 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [55-02]: ApprovalWorkflow uses raw sqlite (not Drizzle ORM) for all queries -- BEGIN IMMEDIATE requires sync raw SQL
 - [55-02]: expired != rejected: processExpiredApprovals does NOT set rejectedAt, only tx EXPIRED
 - [55-02]: reserved_amount cleared on all 3 exit paths (approve, reject, expire)
+- [55-03]: resolveOwnerState is a pure function (no DB, no side effects) -- reusable anywhere
+- [55-03]: ownerAuth success auto-triggers markOwnerVerified (GRACE->LOCKED, no separate endpoint)
+- [55-03]: LOCKED returns 409 OWNER_ALREADY_CONNECTED on PUT /agents/:id/owner (conflict, not auth error)
+- [55-03]: cancel uses sessionAuth (agent self-service), approve/reject use ownerAuth (owner action)
+- [55-03]: sqlite dep added to CreateAppDeps for raw DB access in route sub-routers
 
 ### Blockers/Concerns
 
@@ -89,5 +94,5 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 55-02-PLAN.md (ApprovalWorkflow TDD)
+Stopped at: Completed 55-03-PLAN.md (Owner 3-State Machine + API Routes) -- Phase 55 complete
 Resume file: None
