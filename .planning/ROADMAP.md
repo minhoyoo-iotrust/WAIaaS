@@ -233,8 +233,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 56-01: Stage 2(Auth) + Stage 3(Policy) 파이프라인 통합
-- [ ] 56-02: Stage 4(Wait) 파이프라인 통합 + 감사 로그
+- [ ] 56-01-PLAN.md -- stage2Auth sessionId + stage3Policy evaluateAndReserve + Owner downgrade (TDD)
+- [ ] 56-02-PLAN.md -- stage4Wait DELAY/APPROVAL branching + BackgroundWorkers integration (TDD)
 
 #### Phase 57: 통합 테스트
 **Goal**: 인증/세션/정책/워크플로우/Owner/파이프라인 전 구간이 테스트로 검증되어, 리그레션 없이 다음 마일스톤으로 진행할 수 있는 상태
