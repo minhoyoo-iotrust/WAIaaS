@@ -201,8 +201,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 54-01-PLAN.md -- DatabasePolicyEngine TDD (SPENDING_LIMIT 4-tier + WHITELIST evaluation)
-- [ ] 54-02-PLAN.md -- 정책 CRUD API + TOCTOU 방지 (BEGIN IMMEDIATE + reserved amount)
+- [x] 54-01-PLAN.md -- DatabasePolicyEngine TDD (SPENDING_LIMIT 4-tier + WHITELIST evaluation)
+- [x] 54-02-PLAN.md -- 정책 CRUD API + TOCTOU 방지 (BEGIN IMMEDIATE + reserved amount)
 
 #### Phase 55: 워크플로우 + Owner 상태
 **Goal**: DELAY 거래가 쿨다운 후 자동 실행되고, APPROVAL 거래가 Owner 승인을 거치며, Owner 등록 여부에 따라 보안 수준이 점진적으로 해금되는 상태
@@ -217,9 +217,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 55-01: DELAY 쿨다운 큐잉 + 취소/자동실행
-- [ ] 55-02: APPROVAL 승인/거절/만료 워크플로우
-- [ ] 55-03: Owner 3-State 상태 머신 + 다운그레이드
+- [ ] 55-01-PLAN.md -- DelayQueue TDD (queueDelay/cancelDelay/processExpired)
+- [ ] 55-02-PLAN.md -- ApprovalWorkflow TDD (requestApproval/approve/reject/processExpiredApprovals)
+- [ ] 55-03-PLAN.md -- Owner 3-State 상태 머신 + 다운그레이드 + approve/reject/cancel API routes
 
 #### Phase 56: 파이프라인 통합
 **Goal**: 트랜잭션 파이프라인 전 단계가 인증/정책/워크플로우를 실제로 사용하여, 거래 요청이 인증 → 정책 평가 → 대기/승인 → 실행 흐름을 완전히 따르는 상태
