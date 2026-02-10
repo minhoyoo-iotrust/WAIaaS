@@ -323,3 +323,44 @@ describe('createApp integration', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /doc - OpenAPI spec (3 tests)
+// ---------------------------------------------------------------------------
+
+describe('GET /doc (OpenAPI spec)', () => {
+  it('should return 200 with valid OpenAPI 3.0 JSON', async () => {
+    const app = createTestApp();
+    const res = await app.request('/doc', {
+      headers: { Host: '127.0.0.1:3100' },
+    });
+
+    expect(res.status).toBe(200);
+    const doc = await res.json() as Record<string, unknown>;
+    expect(doc.openapi).toBe('3.0.0');
+    expect((doc.info as Record<string, unknown>)?.title).toBe('WAIaaS API');
+  });
+
+  it('should include health route path in spec', async () => {
+    const app = createTestApp();
+    const res = await app.request('/doc', {
+      headers: { Host: '127.0.0.1:3100' },
+    });
+
+    const doc = await res.json() as Record<string, unknown>;
+    const paths = doc.paths as Record<string, unknown>;
+    expect(paths).toBeDefined();
+    expect(paths['/health']).toBeDefined();
+  });
+
+  it('should include HealthResponse schema in components', async () => {
+    const app = createTestApp();
+    const res = await app.request('/doc', {
+      headers: { Host: '127.0.0.1:3100' },
+    });
+
+    const doc = await res.json() as Record<string, unknown>;
+    const schemas = ((doc.components as Record<string, unknown>)?.schemas ?? {}) as Record<string, unknown>;
+    expect(schemas['HealthResponse']).toBeDefined();
+  });
+});

@@ -198,5 +198,15 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     );
   }
 
+  // Register OpenAPI spec endpoint (GET /doc)
+  app.doc('/doc', {
+    openapi: '3.0.0',
+    info: {
+      title: 'WAIaaS API',
+      version: '0.0.0',
+      description: 'AI Agent Wallet-as-a-Service REST API',
+    },
+  });
+
   return app;
 }
