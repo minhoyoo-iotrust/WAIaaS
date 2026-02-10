@@ -99,10 +99,10 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   });
 
   if (!evaluation.allowed) {
-    // Update tx status to REJECTED
+    // Update tx status to CANCELLED (REJECTED not in TRANSACTION_STATUSES enum)
     await ctx.db
       .update(transactions)
-      .set({ status: 'REJECTED', error: evaluation.reason ?? 'Policy denied' })
+      .set({ status: 'CANCELLED', error: evaluation.reason ?? 'Policy denied' })
       .where(eq(transactions.id, ctx.txId));
 
     throw new WAIaaSError('POLICY_DENIED', {

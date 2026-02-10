@@ -132,7 +132,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
             .where(eq(transactions.id, txId))
             .get();
 
-          if (tx && tx.status !== 'CONFIRMED' && tx.status !== 'FAILED' && tx.status !== 'REJECTED') {
+          if (tx && tx.status !== 'CONFIRMED' && tx.status !== 'FAILED' && tx.status !== 'CANCELLED') {
             const errorMessage = error instanceof Error ? error.message : 'Pipeline execution failed';
             await deps.db
               .update(transactions)
