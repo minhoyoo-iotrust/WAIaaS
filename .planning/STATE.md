@@ -10,24 +10,25 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 53 (2 of 6 in v1.2) (세션 관리)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-10 -- Phase 52 complete (3-tier auth: masterAuth + sessionAuth + ownerAuth)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-10 -- Completed 53-01-PLAN.md (session CRUD API)
 
-Progress: [██░░░░░░░░░░░] 15% (2/13 plans)
+Progress: [███░░░░░░░░░░] 23% (3/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 51 phases, 129 plans, 332 reqs, 318 tests, ~11,500 LOC
+**Cumulative:** 13 milestones, 51 phases, 130 plans, 332 reqs, 328 tests, ~12,100 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 2
-- Average duration: 8min
-- Total execution time: 16min
+- Total plans completed: 3
+- Average duration: 7min
+- Total execution time: 22min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 52 | 2/2 | 16min | 8min |
+| 53 | 1/2 | 6min | 6min |
 
 ## Accumulated Context
 
@@ -49,14 +50,20 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [52-02]: ownerAuth uses sodium-native createRequire + inline base58 decode (Ed25519 only for v1.2)
 - [52-02]: masterPasswordHash in CreateAppDeps (Argon2id hash injected, not raw password for auth)
 - [52-02]: No X-Agent-Id fallback -- wallet/tx routes exclusively use sessionAuth context agentId
+- [53-01]: masterAuth on /v1/sessions (session CRUD = admin operation, not agent self-service)
+- [53-01]: Token hash via sha256 (raw JWT never persisted in DB)
+- [53-01]: 30-day absolute session lifetime (absoluteExpiresAt hardcoded)
+- [53-01]: Idempotent DELETE /sessions/:id (re-revoke returns 200 with message)
+- [53-01]: GET /sessions excludes revoked (runtime ACTIVE/EXPIRED status from expiresAt)
 
 ### Blockers/Concerns
 
 - ~~jose (JWT) 패키지 미설치~~ -- RESOLVED in 52-01
 - ~~SIWS/SIWE 검증 라이브러리 미설치~~ -- RESOLVED in 52-02 (sodium-native Ed25519 for Solana, SIWE deferred to v1.4)
+- Pre-existing CLI E2E test failures (4 tests) -- not blocking, caused by E2E harness sessionAuth integration gap
 
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 52 verified and complete, ready for Phase 53 planning
+Stopped at: Completed 53-01-PLAN.md (session CRUD API)
 Resume file: None
