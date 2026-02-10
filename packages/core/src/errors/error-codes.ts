@@ -139,6 +139,15 @@ export const ERROR_CODES = {
     message: 'Session renewal count mismatch',
   },
 
+  // --- PIPELINE domain (1) ---
+  PIPELINE_HALTED: {
+    code: 'PIPELINE_HALTED',
+    domain: 'TX',
+    httpStatus: 200,
+    retryable: false,
+    message: 'Pipeline halted (transaction queued for delay or approval)',
+  },
+
   // --- TX domain (20) ---
   INSUFFICIENT_BALANCE: {
     code: 'INSUFFICIENT_BALANCE',

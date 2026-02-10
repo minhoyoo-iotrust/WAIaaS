@@ -30,6 +30,8 @@ import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from './database-policy-engine.js';
 import { downgradeIfNoOwner } from '../workflow/owner-state.js';
+import type { DelayQueue } from '../workflow/delay-queue.js';
+import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 
 // ---------------------------------------------------------------------------
 // Pipeline context
@@ -57,6 +59,13 @@ export interface PipelineContext {
   sqlite?: SQLiteDatabase;
   delaySeconds?: number;
   downgraded?: boolean;
+  // v1.2: workflow dependencies for stage4Wait
+  delayQueue?: DelayQueue;
+  approvalWorkflow?: ApprovalWorkflow;
+  config?: {
+    policy_defaults_delay_seconds: number;
+    policy_defaults_approval_timeout: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
