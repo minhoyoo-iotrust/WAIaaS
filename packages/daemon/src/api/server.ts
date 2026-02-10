@@ -22,6 +22,7 @@
 
 import { Hono } from 'hono';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { IChainAdapter } from '@waiaas/core';
 import {
   requestId,
@@ -31,6 +32,7 @@ import {
   errorHandler,
   createSessionAuth,
   createMasterAuth,
+  createOwnerAuth,
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
 import { health } from './routes/health.js';
@@ -43,11 +45,15 @@ import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { IPolicyEngine } from '@waiaas/core';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
+import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
+import type { DelayQueue } from '../workflow/delay-queue.js';
+import type { OwnerLifecycleService } from '../workflow/owner-state.js';
 import type * as schema from '../infrastructure/database/schema.js';
 
 export interface CreateAppDeps {
   getKillSwitchState?: GetKillSwitchState;
   db?: BetterSQLite3Database<typeof schema>;
+  sqlite?: SQLiteDatabase;
   keyStore?: LocalKeyStore;
   masterPassword?: string;
   masterPasswordHash?: string; // Argon2id hash for masterAuth middleware
@@ -55,6 +61,9 @@ export interface CreateAppDeps {
   adapter?: IChainAdapter | null;
   policyEngine?: IPolicyEngine;
   jwtSecretManager?: JwtSecretManager;
+  approvalWorkflow?: ApprovalWorkflow;
+  delayQueue?: DelayQueue;
+  ownerLifecycle?: OwnerLifecycleService;
 }
 
 /**
@@ -93,6 +102,12 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
     });
   }
 
+  // masterAuth for PUT /v1/agents/:id/owner
+  if (deps.masterPasswordHash !== undefined) {
+    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+    app.use('/v1/agents/:id/owner', masterAuthForOwner);
+  }
+
   if (deps.jwtSecretManager && deps.db) {
     const sessionAuth = createSessionAuth({ jwtSecretManager: deps.jwtSecretManager, db: deps.db });
     // sessionAuth for session renewal (uses own token)
@@ -101,15 +116,23 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
     app.use('/v1/transactions/*', sessionAuth);
   }
 
+  // ownerAuth for approve and reject routes (requires DB for agent lookup)
+  if (deps.db) {
+    const ownerAuth = createOwnerAuth({ db: deps.db });
+    app.use('/v1/transactions/:id/approve', ownerAuth);
+    app.use('/v1/transactions/:id/reject', ownerAuth);
+  }
+
   // Register routes
   app.route('/health', health);
 
   // Register agent routes when deps are available
-  if (deps.db && deps.keyStore && deps.masterPassword !== undefined && deps.config) {
+  if (deps.db && deps.sqlite && deps.keyStore && deps.masterPassword !== undefined && deps.config) {
     app.route(
       '/v1',
       agentRoutes({
         db: deps.db,
+        sqlite: deps.sqlite,
         keyStore: deps.keyStore,
         masterPassword: deps.masterPassword,
         config: deps.config,
@@ -163,6 +186,9 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
         keyStore: deps.keyStore,
         policyEngine: deps.policyEngine,
         masterPassword: deps.masterPassword,
+        approvalWorkflow: deps.approvalWorkflow,
+        delayQueue: deps.delayQueue,
+        ownerLifecycle: deps.ownerLifecycle,
       }),
     );
   }

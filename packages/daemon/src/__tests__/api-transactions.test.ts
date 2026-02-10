@@ -187,6 +187,7 @@ beforeEach(async () => {
 
   app = createApp({
     db: conn.db,
+    sqlite: conn.sqlite,
     keyStore: mockKeyStore(),
     masterPassword: TEST_MASTER_PASSWORD,
     masterPasswordHash,
