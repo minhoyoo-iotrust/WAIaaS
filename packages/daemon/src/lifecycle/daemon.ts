@@ -34,6 +34,8 @@ import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
 import { BackgroundWorkers } from './workers.js';
 import type * as schema from '../infrastructure/database/schema.js';
+import { DelayQueue } from '../workflow/delay-queue.js';
+import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -104,6 +106,8 @@ export class DaemonLifecycle {
   private pidPath = '';
   private _config: DaemonConfig | null = null;
   private forceTimer: ReturnType<typeof setTimeout> | null = null;
+  private delayQueue: DelayQueue | null = null;
+  private approvalWorkflow: ApprovalWorkflow | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -233,6 +237,21 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4b: Create workflow instances (DelayQueue + ApprovalWorkflow)
+    // ------------------------------------------------------------------
+    if (this._db && this.sqlite && this._config) {
+      this.delayQueue = new DelayQueue({ db: this._db, sqlite: this.sqlite });
+      this.approvalWorkflow = new ApprovalWorkflow({
+        db: this._db,
+        sqlite: this.sqlite,
+        config: {
+          policy_defaults_approval_timeout: this._config.security.policy_defaults_approval_timeout,
+        },
+      });
+      console.log('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -246,6 +265,8 @@ export class DaemonLifecycle {
           masterPassword: this.masterPassword,
           config: this._config!,
           adapter: this.adapter,
+          delayQueue: this.delayQueue ?? undefined,
+          approvalWorkflow: this.approvalWorkflow ?? undefined,
         });
 
         this.httpServer = serve({
@@ -290,6 +311,33 @@ export class DaemonLifecycle {
           }
         },
       });
+
+      // Register delay-expired worker (every 5s: check for expired DELAY transactions)
+      if (this.delayQueue) {
+        this.workers.register('delay-expired', {
+          interval: 5_000,
+          handler: () => {
+            if (this._isShuttingDown) return;
+            const now = Math.floor(Date.now() / 1000);
+            const expired = this.delayQueue!.processExpired(now);
+            for (const tx of expired) {
+              void this.executeFromStage5(tx.txId, tx.agentId);
+            }
+          },
+        });
+      }
+
+      // Register approval-expired worker (every 30s: expire timed-out approvals)
+      if (this.approvalWorkflow) {
+        this.workers.register('approval-expired', {
+          interval: 30_000,
+          handler: () => {
+            if (this._isShuttingDown) return;
+            const now = Math.floor(Date.now() / 1000);
+            this.approvalWorkflow!.processExpiredApprovals(now);
+          },
+        });
+      }
 
       this.workers.startAll();
 
@@ -410,6 +458,83 @@ export class DaemonLifecycle {
       console.log('Shutdown complete');
     } catch (err) {
       console.error('Shutdown error:', err);
+    }
+  }
+
+  /**
+   * Re-enter the pipeline at stage5 for a delay-expired transaction.
+   *
+   * Called by the delay-expired BackgroundWorker when processExpired()
+   * returns transactions whose cooldown has elapsed.
+   *
+   * @param txId - Transaction ID to execute
+   * @param agentId - Agent that owns the transaction
+   */
+  private async executeFromStage5(txId: string, agentId: string): Promise<void> {
+    try {
+      if (!this._db || !this.adapter || !this.keyStore) {
+        console.warn(`executeFromStage5(${txId}): missing deps, skipping`);
+        return;
+      }
+
+      // Import stages and schema
+      const { stage5Execute, stage6Confirm } = await import('../pipeline/stages.js');
+      const { agents, transactions } = await import('../infrastructure/database/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      // Look up agent from DB
+      const agent = this._db.select().from(agents).where(eq(agents.id, agentId)).get();
+      if (!agent) {
+        console.warn(`executeFromStage5(${txId}): agent ${agentId} not found`);
+        return;
+      }
+
+      // Look up transaction to get request data
+      const tx = this._db.select().from(transactions).where(eq(transactions.id, txId)).get();
+      if (!tx) {
+        console.warn(`executeFromStage5(${txId}): transaction not found`);
+        return;
+      }
+
+      // Construct minimal PipelineContext for stages 5-6
+      const ctx: import('../pipeline/stages.js').PipelineContext = {
+        db: this._db,
+        adapter: this.adapter,
+        keyStore: this.keyStore,
+        policyEngine: null as any, // Not needed for stages 5-6
+        masterPassword: this.masterPassword,
+        agentId,
+        agent: {
+          publicKey: agent.publicKey,
+          chain: agent.chain,
+          network: agent.network,
+        },
+        request: {
+          to: tx.toAddress ?? '',
+          amount: tx.amount ?? '0',
+          memo: undefined,
+        },
+        txId,
+      };
+
+      await stage5Execute(ctx);
+      await stage6Confirm(ctx);
+    } catch (error) {
+      // Mark as FAILED if stages 5-6 throw
+      try {
+        if (this._db) {
+          const { transactions } = await import('../infrastructure/database/schema.js');
+          const { eq } = await import('drizzle-orm');
+          const errorMessage = error instanceof Error ? error.message : 'Pipeline re-entry failed';
+          this._db
+            .update(transactions)
+            .set({ status: 'FAILED', error: errorMessage })
+            .where(eq(transactions.id, txId))
+            .run();
+        }
+      } catch {
+        // Swallow DB update errors in background
+      }
     }
   }
 

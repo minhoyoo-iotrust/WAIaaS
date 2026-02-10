@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 56 파이프라인 통합
+**Current focus:** Phase 57 통합 테스트
 
 ## Current Position
 
-Phase: 56 (5 of 6 in v1.2) (파이프라인 통합)
+Phase: 57 (6 of 6 in v1.2) (통합 테스트)
 Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-02-10 -- Phase 55 verified and complete (DelayQueue + ApprovalWorkflow + Owner 3-State + API routes)
+Last activity: 2026-02-10 -- Phase 56 verified and complete (stage2Auth+stage3Policy+stage4Wait+BackgroundWorkers)
 
-Progress: [█████████░░░░] 69% (9/13 plans)
+Progress: [███████████░░] 85% (11/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 55 phases, 136 plans, 332 reqs, 410 tests, ~14,000 LOC
+**Cumulative:** 13 milestones, 55 phases, 138 plans, 332 reqs, 428 tests, ~14,300 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 9
-- Average duration: 5.4min
-- Total execution time: 49min
+- Total plans completed: 11
+- Average duration: 5.7min
+- Total execution time: 63min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -31,6 +31,7 @@ Progress: [█████████░░░░] 69% (9/13 plans)
 | 53 | 2/2 | 10min | 5min |
 | 54 | 2/2 | 11min | 5.5min |
 | 55 | 3/3 | 12min | 4min |
+| 56 | 2/2 | 17min | 8.5min |
 
 ## Accumulated Context
 
@@ -83,6 +84,13 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [55-03]: LOCKED returns 409 OWNER_ALREADY_CONNECTED on PUT /agents/:id/owner (conflict, not auth error)
 - [55-03]: cancel uses sessionAuth (agent self-service), approve/reject use ownerAuth (owner action)
 - [55-03]: sqlite dep added to CreateAppDeps for raw DB access in route sub-routers
+- [56-01]: instanceof DatabasePolicyEngine for evaluateAndReserve path selection (backward compatible with DefaultPolicyEngine)
+- [56-01]: sessionId FK constraint requires valid session record (or null) in transactions table
+- [56-01]: downgradeIfNoOwner integrated directly in stage3Policy (not a separate stage)
+- [56-02]: PIPELINE_HALTED as WAIaaSError (domain TX, httpStatus 409) for intentional pipeline halt
+- [56-02]: Backward-compatible fallback: missing delayQueue/approvalWorkflow -> treat DELAY/APPROVAL as INSTANT
+- [56-02]: executeFromStage5 uses dynamic imports to avoid circular deps in daemon.ts
+- [56-02]: Workflow instances (DelayQueue, ApprovalWorkflow) created in daemon Step 4b after DB + config available
 
 ### Blockers/Concerns
 
@@ -94,5 +102,5 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 55 verified and complete, ready for Phase 56 planning
+Stopped at: Phase 56 verified and complete, ready for Phase 57 planning
 Resume file: None

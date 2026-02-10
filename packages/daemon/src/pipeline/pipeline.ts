@@ -9,6 +9,7 @@
 
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type { IChainAdapter, IPolicyEngine, SendTransactionRequest } from '@waiaas/core';
 import { agents, transactions } from '../infrastructure/database/schema.js';
@@ -34,6 +35,7 @@ export interface PipelineDeps {
   keyStore: LocalKeyStore;
   policyEngine: IPolicyEngine;
   masterPassword: string;
+  sqlite?: SQLiteDatabase;
 }
 
 // ---------------------------------------------------------------------------

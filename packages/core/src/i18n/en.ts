@@ -2,7 +2,7 @@ import type { ErrorCode } from '../errors/error-codes.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
- * Keys in errors must match ERROR_CODES keys exactly (66 error codes).
+ * Keys in errors must match ERROR_CODES keys exactly (67 error codes).
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
@@ -22,8 +22,10 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (66 error codes from SS10.12 unified matrix)
+  // Error messages (67 error codes from SS10.12 unified matrix)
   errors: {
+    // PIPELINE domain (1)
+    PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
     // AUTH domain (8)
     INVALID_TOKEN: 'Invalid authentication token',
     TOKEN_EXPIRED: 'Authentication token has expired',

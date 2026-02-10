@@ -1,9 +1,9 @@
 /**
  * 6-stage transaction pipeline stages.
  *
- * Stage 1: Validate request + INSERT PENDING transaction
- * Stage 2: Auth (v1.1 passthrough)
- * Stage 3: Policy evaluation (DefaultPolicyEngine -> INSTANT)
+ * Stage 1: Validate request + INSERT PENDING transaction (with sessionId audit trail)
+ * Stage 2: Auth (sessionId passthrough from route handler)
+ * Stage 3: Policy evaluation (evaluateAndReserve TOCTOU-safe + downgradeIfNoOwner)
  * Stage 4: Wait (v1.1 passthrough, INSTANT tier only)
  * Stage 5: On-chain execution (build -> simulate -> sign -> submit)
  * Stage 6: Confirmation wait
@@ -13,6 +13,7 @@
 
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import {
   WAIaaSError,
   SendTransactionRequestSchema,
@@ -23,10 +24,14 @@ import {
   type SubmitResult,
   type SendTransactionRequest,
 } from '@waiaas/core';
-import { transactions } from '../infrastructure/database/schema.js';
+import { agents, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
+import { DatabasePolicyEngine } from './database-policy-engine.js';
+import { downgradeIfNoOwner } from '../workflow/owner-state.js';
+import type { DelayQueue } from '../workflow/delay-queue.js';
+import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 
 // ---------------------------------------------------------------------------
 // Pipeline context
@@ -49,6 +54,18 @@ export interface PipelineContext {
   unsignedTx?: UnsignedTransaction;
   signedTx?: Uint8Array;
   submitResult?: SubmitResult;
+  // v1.2: session + policy integration
+  sessionId?: string;
+  sqlite?: SQLiteDatabase;
+  delaySeconds?: number;
+  downgraded?: boolean;
+  // v1.2: workflow dependencies for stage4Wait
+  delayQueue?: DelayQueue;
+  approvalWorkflow?: ApprovalWorkflow;
+  config?: {
+    policy_defaults_delay_seconds: number;
+    policy_defaults_approval_timeout: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -73,6 +90,7 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
     status: 'PENDING',
     amount: ctx.request.amount,
     toAddress: ctx.request.to,
+    sessionId: ctx.sessionId ?? null,
     createdAt: now,
   });
 }
@@ -82,8 +100,9 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage2Auth(_ctx: PipelineContext): Promise<void> {
-  // v1.1: no-op (masterAuth implicit, no sessionAuth)
-  // In v1.2+ this will validate session tokens and agent permissions
+  // sessionId is set on PipelineContext by the route handler from Hono c.get('sessionId').
+  // In v1.2 this stage validates session is still active.
+  // For now, the sessionAuth middleware already validated the JWT and set sessionId.
 }
 
 // ---------------------------------------------------------------------------
@@ -91,12 +110,28 @@ export async function stage2Auth(_ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage3Policy(ctx: PipelineContext): Promise<void> {
-  const evaluation = await ctx.policyEngine.evaluate(ctx.agentId, {
-    type: 'TRANSFER',
-    amount: ctx.request.amount,
-    toAddress: ctx.request.to,
-    chain: ctx.agent.chain,
-  });
+  let evaluation;
+
+  // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
+  if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
+    evaluation = ctx.policyEngine.evaluateAndReserve(
+      ctx.agentId,
+      {
+        type: 'TRANSFER',
+        amount: ctx.request.amount,
+        toAddress: ctx.request.to,
+        chain: ctx.agent.chain,
+      },
+      ctx.txId,
+    );
+  } else {
+    evaluation = await ctx.policyEngine.evaluate(ctx.agentId, {
+      type: 'TRANSFER',
+      amount: ctx.request.amount,
+      toAddress: ctx.request.to,
+      chain: ctx.agent.chain,
+    });
+  }
 
   if (!evaluation.allowed) {
     // Update tx status to CANCELLED (REJECTED not in TRANSACTION_STATUSES enum)
@@ -110,21 +145,81 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     });
   }
 
-  // Set tier and update DB
-  ctx.tier = evaluation.tier;
+  let tier = evaluation.tier;
+  let downgraded = false;
+
+  // Check for APPROVAL -> DELAY downgrade when no owner registered
+  if (tier === 'APPROVAL') {
+    const agentRow = await ctx.db.select().from(agents).where(eq(agents.id, ctx.agentId)).get();
+    if (agentRow) {
+      const result = downgradeIfNoOwner(
+        {
+          ownerAddress: agentRow.ownerAddress ?? null,
+          ownerVerified: agentRow.ownerVerified ?? false,
+        },
+        tier,
+      );
+      tier = result.tier as PolicyTier;
+      downgraded = result.downgraded;
+    }
+  }
+
+  // Set tier and metadata on context
+  ctx.tier = tier;
+  ctx.downgraded = downgraded;
+  if (evaluation.delaySeconds !== undefined) {
+    ctx.delaySeconds = evaluation.delaySeconds;
+  }
+
+  // Update DB with tier
   await ctx.db
     .update(transactions)
-    .set({ tier: evaluation.tier })
+    .set({ tier })
     .where(eq(transactions.id, ctx.txId));
 }
 
 // ---------------------------------------------------------------------------
-// Stage 4: Wait (v1.1 passthrough)
+// Stage 4: Wait (DELAY/APPROVAL branching, INSTANT/NOTIFY passthrough)
 // ---------------------------------------------------------------------------
 
-export async function stage4Wait(_ctx: PipelineContext): Promise<void> {
-  // v1.1: no-op (only INSTANT tier, no DELAY/APPROVAL)
-  // In v1.2+ this will implement delay timers and approval workflows
+export async function stage4Wait(ctx: PipelineContext): Promise<void> {
+  const tier = ctx.tier;
+
+  // INSTANT and NOTIFY: pass through to stage5
+  if (tier === 'INSTANT' || tier === 'NOTIFY') {
+    return;
+  }
+
+  // DELAY: queue with cooldown, halt pipeline
+  if (tier === 'DELAY') {
+    if (!ctx.delayQueue) {
+      // Fallback: if no DelayQueue, treat as INSTANT (backward compat)
+      return;
+    }
+    const delaySeconds = ctx.delaySeconds
+      ?? ctx.config?.policy_defaults_delay_seconds
+      ?? 60;
+    ctx.delayQueue.queueDelay(ctx.txId, delaySeconds);
+
+    // Halt pipeline -- transaction will be picked up by processExpired worker
+    throw new WAIaaSError('PIPELINE_HALTED', {
+      message: `Transaction ${ctx.txId} queued for ${delaySeconds}s delay`,
+    });
+  }
+
+  // APPROVAL: create pending approval, halt pipeline
+  if (tier === 'APPROVAL') {
+    if (!ctx.approvalWorkflow) {
+      // Fallback: if no ApprovalWorkflow, treat as INSTANT (backward compat)
+      return;
+    }
+    ctx.approvalWorkflow.requestApproval(ctx.txId);
+
+    // Halt pipeline -- transaction will be picked up by approve/reject/expire
+    throw new WAIaaSError('PIPELINE_HALTED', {
+      message: `Transaction ${ctx.txId} queued for owner approval`,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

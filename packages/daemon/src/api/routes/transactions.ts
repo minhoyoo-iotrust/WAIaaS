@@ -21,6 +21,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, SendTransactionRequestSchema } from '@waiaas/core';
 import type { IChainAdapter, IPolicyEngine } from '@waiaas/core';
 import { agents, transactions } from '../../infrastructure/database/schema.js';
@@ -48,6 +49,11 @@ export interface TransactionRouteDeps {
   approvalWorkflow?: ApprovalWorkflow;
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
+  sqlite?: SQLiteDatabase;
+  config?: {
+    policy_defaults_delay_seconds: number;
+    policy_defaults_approval_timeout: number;
+  };
 }
 
 /**
@@ -91,6 +97,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       status: 'PENDING',
       amount: request.amount,
       toAddress: request.to,
+      sessionId: (c.get('sessionId' as never) as string | undefined) ?? null,
       createdAt: now,
     });
 
@@ -118,6 +125,14 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       },
       request,
       txId,
+      // v1.2: sessionId from Hono context (set by sessionAuth middleware)
+      sessionId: c.get('sessionId' as never) as string | undefined,
+      // v1.2: raw sqlite for evaluateAndReserve TOCTOU safety
+      sqlite: deps.sqlite,
+      // v1.2: workflow dependencies for stage4Wait
+      delayQueue: deps.delayQueue,
+      approvalWorkflow: deps.approvalWorkflow,
+      config: deps.config,
     };
 
     void (async () => {
@@ -128,6 +143,12 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
         await stage5Execute(ctx);
         await stage6Confirm(ctx);
       } catch (error) {
+        // PIPELINE_HALTED is intentional -- do NOT mark as FAILED
+        // Transaction is QUEUED, waiting for delay expiry or owner approval
+        if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {
+          return;
+        }
+
         // If stages 2-6 fail and DB hasn't been updated yet, mark as FAILED
         try {
           const tx = await deps.db

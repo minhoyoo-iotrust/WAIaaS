@@ -19,7 +19,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 66 error codes from SS10.12 unified error code matrix.
+ * 68 error codes from SS10.12 unified error code matrix.
  * SSoT: 37-rest-api-complete-spec.md section 10.12
  */
 export const ERROR_CODES = {
@@ -137,6 +137,15 @@ export const ERROR_CODES = {
     httpStatus: 403,
     retryable: false,
     message: 'Session renewal count mismatch',
+  },
+
+  // --- PIPELINE domain (1) ---
+  PIPELINE_HALTED: {
+    code: 'PIPELINE_HALTED',
+    domain: 'TX',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Pipeline halted (transaction queued for delay or approval)',
   },
 
   // --- TX domain (20) ---
