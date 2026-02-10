@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, pendingApprovals } from '../infrastructure/database/schema.js';
+import { agents } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { WAIaaSError } from '@waiaas/core';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
@@ -166,7 +166,7 @@ describe('ApprovalWorkflow - requestApproval', () => {
     const txId = insertTransaction({ agentId });
 
     // No policyTimeoutSeconds provided -> config default (7200)
-    const result = workflow.requestApproval(txId);
+    workflow.requestApproval(txId);
 
     const approval = getApproval(txId);
     expect(approval).toBeDefined();
@@ -184,7 +184,7 @@ describe('ApprovalWorkflow - requestApproval', () => {
     });
 
     const txId = insertTransaction({ agentId });
-    const result = wf.requestApproval(txId);
+    wf.requestApproval(txId);
 
     const approval = getApproval(txId);
     expect(approval).toBeDefined();
