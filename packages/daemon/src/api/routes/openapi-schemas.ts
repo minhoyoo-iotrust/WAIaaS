@@ -290,6 +290,84 @@ export function openApiValidationHook(result: { success: boolean; error?: unknow
   }
 }
 
+// ---------------------------------------------------------------------------
+// Wallet Assets Response Schema (GET /v1/wallet/assets)
+// ---------------------------------------------------------------------------
+
+export const WalletAssetsResponseSchema = z
+  .object({
+    agentId: z.string().uuid(),
+    chain: z.string(),
+    network: z.string(),
+    assets: z.array(
+      z.object({
+        mint: z.string(),
+        symbol: z.string(),
+        name: z.string(),
+        balance: z.string(),
+        decimals: z.number().int(),
+        isNative: z.boolean(),
+        usdValue: z.number().optional(),
+      }),
+    ),
+  })
+  .openapi('WalletAssetsResponse');
+
+// ---------------------------------------------------------------------------
+// Transaction List Response Schemas (GET /v1/transactions, /pending)
+// ---------------------------------------------------------------------------
+
+export const TxListResponseSchema = z
+  .object({
+    items: z.array(TxDetailResponseSchema),
+    cursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  })
+  .openapi('TxListResponse');
+
+export const TxPendingListResponseSchema = z
+  .object({
+    items: z.array(TxDetailResponseSchema),
+  })
+  .openapi('TxPendingListResponse');
+
+// ---------------------------------------------------------------------------
+// Nonce Response Schema (GET /v1/nonce)
+// ---------------------------------------------------------------------------
+
+export const NonceResponseSchema = z
+  .object({
+    nonce: z.string(),
+    expiresAt: z.number().int(),
+  })
+  .openapi('NonceResponse');
+
+// ---------------------------------------------------------------------------
+// Agent List / Detail Response Schemas (GET /v1/agents, GET /v1/agents/:id)
+// ---------------------------------------------------------------------------
+
+export const AgentListResponseSchema = z
+  .object({
+    items: z.array(AgentResponseSchema),
+  })
+  .openapi('AgentListResponse');
+
+export const AgentDetailResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    network: z.string(),
+    publicKey: z.string(),
+    status: z.string(),
+    ownerAddress: z.string().nullable(),
+    ownerVerified: z.boolean().nullable(),
+    ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
+    createdAt: z.number().int(),
+    updatedAt: z.number().int().nullable(),
+  })
+  .openapi('AgentDetailResponse');
+
 // Owner address request body schema (for PUT /agents/:id/owner)
 export const SetOwnerRequestSchema = z
   .object({
