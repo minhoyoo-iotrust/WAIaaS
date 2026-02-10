@@ -72,6 +72,8 @@ export const DaemonConfigSchema = z.object({
       discord_webhook_url: z.string().default(''),
       ntfy_server: z.string().default('https://ntfy.sh'),
       ntfy_topic: z.string().default(''),
+      locale: z.enum(['en', 'ko']).default('en'),
+      rate_limit_rpm: z.number().int().min(1).max(60).default(20),
     })
     .default({}),
   security: z

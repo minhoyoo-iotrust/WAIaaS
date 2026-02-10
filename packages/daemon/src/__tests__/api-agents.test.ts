@@ -79,6 +79,8 @@ function mockConfig(): DaemonConfig {
       discord_webhook_url: '',
       ntfy_server: 'https://ntfy.sh',
       ntfy_topic: '',
+      locale: 'en' as const,
+      rate_limit_rpm: 20,
     },
     security: {
       session_ttl: 86400,
