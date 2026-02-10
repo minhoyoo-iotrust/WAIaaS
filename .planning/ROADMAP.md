@@ -201,8 +201,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 54-01: DatabasePolicyEngine 구현 (SPENDING_LIMIT + WHITELIST)
-- [ ] 54-02: 정책 CRUD API + TOCTOU 방지 패턴
+- [ ] 54-01-PLAN.md -- DatabasePolicyEngine TDD (SPENDING_LIMIT 4-tier + WHITELIST evaluation)
+- [ ] 54-02-PLAN.md -- 정책 CRUD API + TOCTOU 방지 (BEGIN IMMEDIATE + reserved amount)
 
 #### Phase 55: 워크플로우 + Owner 상태
 **Goal**: DELAY 거래가 쿨다운 후 자동 실행되고, APPROVAL 거래가 Owner 승인을 거치며, Owner 등록 여부에 따라 보안 수준이 점진적으로 해금되는 상태
