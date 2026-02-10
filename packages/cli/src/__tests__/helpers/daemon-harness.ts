@@ -36,6 +36,7 @@ export interface ManualHarness {
   dataDir: string;
   port: number;
   baseUrl: string;
+  masterPassword: string;
   httpServer: { close: () => void };
   sqlite: { close: () => void };
   cleanup: () => Promise<void>;
@@ -223,7 +224,9 @@ export async function startTestDaemonWithAdapter(
     LocalKeyStore,
     createApp,
     DefaultPolicyEngine,
+    JwtSecretManager,
   } = await import('@waiaas/daemon');
+  const argon2 = await import('argon2');
   const { serve } = await import('@hono/node-server');
 
   // Step 1: Load config
@@ -241,15 +244,30 @@ export async function startTestDaemonWithAdapter(
   // Step 4: Mock adapter
   const adapter = new MockChainAdapter();
 
-  // Step 5: Create app with all deps
+  // Step 5: JWT secret manager init
+  const jwtSecretManager = new JwtSecretManager(db);
+  await jwtSecretManager.initialize();
+
+  // Step 6: Hash master password for auth middleware
+  const masterPasswordHash = await argon2.hash(masterPassword, {
+    type: argon2.argon2id,
+    memoryCost: 4096, // Lower for test speed
+    timeCost: 2,
+    parallelism: 1,
+  });
+
+  // Step 7: Create app with all deps (including auth deps)
   const policyEngine = new DefaultPolicyEngine();
   const app = createApp({
     db,
+    sqlite,
     keyStore,
     masterPassword,
+    masterPasswordHash,
     config,
     adapter: adapter as unknown as IChainAdapter,
     policyEngine,
+    jwtSecretManager,
   });
 
   // Start HTTP server
@@ -266,6 +284,7 @@ export async function startTestDaemonWithAdapter(
     dataDir,
     port,
     baseUrl,
+    masterPassword,
     httpServer,
     sqlite,
     cleanup: async () => {
