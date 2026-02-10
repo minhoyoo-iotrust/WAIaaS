@@ -179,12 +179,47 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Stage 4: Wait (v1.1 passthrough)
+// Stage 4: Wait (DELAY/APPROVAL branching, INSTANT/NOTIFY passthrough)
 // ---------------------------------------------------------------------------
 
-export async function stage4Wait(_ctx: PipelineContext): Promise<void> {
-  // v1.1: no-op (only INSTANT tier, no DELAY/APPROVAL)
-  // In v1.2+ this will implement delay timers and approval workflows
+export async function stage4Wait(ctx: PipelineContext): Promise<void> {
+  const tier = ctx.tier;
+
+  // INSTANT and NOTIFY: pass through to stage5
+  if (tier === 'INSTANT' || tier === 'NOTIFY') {
+    return;
+  }
+
+  // DELAY: queue with cooldown, halt pipeline
+  if (tier === 'DELAY') {
+    if (!ctx.delayQueue) {
+      // Fallback: if no DelayQueue, treat as INSTANT (backward compat)
+      return;
+    }
+    const delaySeconds = ctx.delaySeconds
+      ?? ctx.config?.policy_defaults_delay_seconds
+      ?? 60;
+    ctx.delayQueue.queueDelay(ctx.txId, delaySeconds);
+
+    // Halt pipeline -- transaction will be picked up by processExpired worker
+    throw new WAIaaSError('PIPELINE_HALTED', {
+      message: `Transaction ${ctx.txId} queued for ${delaySeconds}s delay`,
+    });
+  }
+
+  // APPROVAL: create pending approval, halt pipeline
+  if (tier === 'APPROVAL') {
+    if (!ctx.approvalWorkflow) {
+      // Fallback: if no ApprovalWorkflow, treat as INSTANT (backward compat)
+      return;
+    }
+    ctx.approvalWorkflow.requestApproval(ctx.txId);
+
+    // Halt pipeline -- transaction will be picked up by approve/reject/expire
+    throw new WAIaaSError('PIPELINE_HALTED', {
+      message: `Transaction ${ctx.txId} queued for owner approval`,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

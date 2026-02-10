@@ -15,13 +15,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, sessions, transactions, pendingApprovals } from '../infrastructure/database/schema.js';
+import { agents, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import {
   stage2Auth,
-  stage3Policy,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -102,21 +101,6 @@ async function insertTestAgent(
     ownerVerified: overrides.ownerVerified ?? false,
     createdAt: now,
     updatedAt: now,
-  });
-  return id;
-}
-
-async function insertTestSession(agentId: string): Promise<string> {
-  const id = generateId();
-  const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  const expires = new Date(now.getTime() + 86400000);
-  await conn.db.insert(sessions).values({
-    id,
-    agentId,
-    tokenHash: 'hash_' + id,
-    expiresAt: expires,
-    absoluteExpiresAt: expires,
-    createdAt: now,
   });
   return id;
 }
@@ -537,8 +521,8 @@ describe('56-02 stage4Wait', () => {
       const now = Math.floor(Date.now() / 1000);
       const expired = delayQueue.processExpired(now);
       expect(expired).toHaveLength(1);
-      expect(expired[0].txId).toBe(txId);
-      expect(expired[0].agentId).toBe(agentId);
+      expect(expired[0]!.txId).toBe(txId);
+      expect(expired[0]!.agentId).toBe(agentId);
 
       // Verify transaction status changed to EXECUTING
       const txAfterExpiry = await conn.db

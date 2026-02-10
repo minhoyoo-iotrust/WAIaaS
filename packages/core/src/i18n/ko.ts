@@ -1,8 +1,10 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (66 error codes)
+  // Error messages (67 error codes)
   errors: {
+    // PIPELINE domain (1)
+    PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
     // AUTH domain (8)
     INVALID_TOKEN: '유효하지 않은 인증 토큰입니다',
     TOKEN_EXPIRED: '인증 토큰이 만료되었습니다',

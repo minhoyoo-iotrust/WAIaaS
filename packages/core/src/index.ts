@@ -64,7 +64,7 @@ export {
   type Config,
 } from './schemas/index.js';
 
-// Errors (67 error codes + WAIaaSError)
+// Errors (68 error codes + WAIaaSError)
 export {
   ERROR_CODES,
   type ErrorCode,

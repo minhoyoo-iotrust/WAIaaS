@@ -41,9 +41,9 @@ describe('i18n message system', () => {
     expect(Object.keys(en.cli).sort()).toEqual(Object.keys(ko.cli).sort());
   });
 
-  it('all 66 error codes have corresponding messages', () => {
+  it('all 68 error codes have corresponding messages', () => {
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(66);
+    expect(Object.keys(en.errors).length).toBe(68);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

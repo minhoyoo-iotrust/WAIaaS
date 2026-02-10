@@ -190,6 +190,10 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
         delayQueue: deps.delayQueue,
         ownerLifecycle: deps.ownerLifecycle,
         sqlite: deps.sqlite,
+        config: deps.config ? {
+          policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
+          policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
+        } : undefined,
       }),
     );
   }

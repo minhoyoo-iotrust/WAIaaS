@@ -50,6 +50,10 @@ export interface TransactionRouteDeps {
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
   sqlite?: SQLiteDatabase;
+  config?: {
+    policy_defaults_delay_seconds: number;
+    policy_defaults_approval_timeout: number;
+  };
 }
 
 /**
@@ -125,6 +129,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       sessionId: c.get('sessionId' as never) as string | undefined,
       // v1.2: raw sqlite for evaluateAndReserve TOCTOU safety
       sqlite: deps.sqlite,
+      // v1.2: workflow dependencies for stage4Wait
+      delayQueue: deps.delayQueue,
+      approvalWorkflow: deps.approvalWorkflow,
+      config: deps.config,
     };
 
     void (async () => {
@@ -135,6 +143,12 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
         await stage5Execute(ctx);
         await stage6Confirm(ctx);
       } catch (error) {
+        // PIPELINE_HALTED is intentional -- do NOT mark as FAILED
+        // Transaction is QUEUED, waiting for delay expiry or owner approval
+        if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {
+          return;
+        }
+
         // If stages 2-6 fail and DB hasn't been updated yet, mark as FAILED
         try {
           const tx = await deps.db
