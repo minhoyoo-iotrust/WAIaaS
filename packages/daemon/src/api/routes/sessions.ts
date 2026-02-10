@@ -10,16 +10,25 @@
  * @see docs/37-rest-api-complete-spec.md
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, and, isNull, gt, sql } from 'drizzle-orm';
-import { CreateSessionRequestSchema, WAIaaSError } from '@waiaas/core';
+import { WAIaaSError } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { agents, sessions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
+import {
+  CreateSessionRequestOpenAPI,
+  SessionCreateResponseSchema,
+  SessionListItemSchema,
+  SessionRevokeResponseSchema,
+  SessionRenewResponseSchema,
+  buildErrorResponses,
+  openApiValidationHook,
+} from './openapi-schemas.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +39,91 @@ export interface SessionRouteDeps {
   jwtSecretManager: JwtSecretManager;
   config: DaemonConfig;
 }
+
+// ---------------------------------------------------------------------------
+// Route definitions
+// ---------------------------------------------------------------------------
+
+const createSessionRoute = createRoute({
+  method: 'post',
+  path: '/sessions',
+  tags: ['Sessions'],
+  summary: 'Create a new session',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: CreateSessionRequestOpenAPI },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Session created with JWT token',
+      content: { 'application/json': { schema: SessionCreateResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'SESSION_LIMIT_EXCEEDED']),
+  },
+});
+
+const listSessionsRoute = createRoute({
+  method: 'get',
+  path: '/sessions',
+  tags: ['Sessions'],
+  summary: 'List active sessions',
+  request: {
+    query: z.object({
+      agentId: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'List of active sessions',
+      content: { 'application/json': { schema: z.array(SessionListItemSchema) } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
+const revokeSessionRoute = createRoute({
+  method: 'delete',
+  path: '/sessions/{id}',
+  tags: ['Sessions'],
+  summary: 'Revoke a session',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Session revoked',
+      content: { 'application/json': { schema: SessionRevokeResponseSchema } },
+    },
+    ...buildErrorResponses(['SESSION_NOT_FOUND']),
+  },
+});
+
+const renewSessionRoute = createRoute({
+  method: 'put',
+  path: '/sessions/{id}/renew',
+  tags: ['Sessions'],
+  summary: 'Renew session token',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Session renewed with new token',
+      content: { 'application/json': { schema: SessionRenewResponseSchema } },
+    },
+    ...buildErrorResponses([
+      'SESSION_NOT_FOUND',
+      'SESSION_REVOKED',
+      'SESSION_RENEWAL_MISMATCH',
+      'RENEWAL_LIMIT_REACHED',
+      'SESSION_ABSOLUTE_LIFETIME_EXCEEDED',
+      'RENEWAL_TOO_EARLY',
+    ]),
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Route factory
@@ -43,15 +137,14 @@ export interface SessionRouteDeps {
  * DELETE /sessions/:id   -> revoke session (200)
  * PUT /sessions/:id/renew -> renew session token (200)
  */
-export function sessionRoutes(deps: SessionRouteDeps): Hono {
-  const router = new Hono();
+export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
+  const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
   // -------------------------------------------------------------------------
   // POST /sessions -- create a new session
   // -------------------------------------------------------------------------
-  router.post('/sessions', async (c) => {
-    const body = await c.req.json();
-    const parsed = CreateSessionRequestSchema.parse(body);
+  router.openapi(createSessionRoute, async (c) => {
+    const parsed = c.req.valid('json');
 
     // Verify agent exists
     const agent = deps.db
@@ -136,8 +229,8 @@ export function sessionRoutes(deps: SessionRouteDeps): Hono {
   // -------------------------------------------------------------------------
   // GET /sessions -- list active sessions for an agent
   // -------------------------------------------------------------------------
-  router.get('/sessions', (c) => {
-    const agentId = c.req.query('agentId');
+  router.openapi(listSessionsRoute, (c) => {
+    const { agentId } = c.req.valid('query');
 
     if (!agentId) {
       throw new WAIaaSError('AGENT_NOT_FOUND', {
@@ -184,8 +277,8 @@ export function sessionRoutes(deps: SessionRouteDeps): Hono {
   // -------------------------------------------------------------------------
   // DELETE /sessions/:id -- revoke a session
   // -------------------------------------------------------------------------
-  router.delete('/sessions/:id', (c) => {
-    const sessionId = c.req.param('id');
+  router.openapi(revokeSessionRoute, (c) => {
+    const { id: sessionId } = c.req.valid('param');
 
     const session = deps.db
       .select()
@@ -216,8 +309,8 @@ export function sessionRoutes(deps: SessionRouteDeps): Hono {
   // -------------------------------------------------------------------------
   // PUT /sessions/:id/renew -- renew session token with 5 safety checks
   // -------------------------------------------------------------------------
-  router.put('/sessions/:id/renew', async (c) => {
-    const sessionId = c.req.param('id');
+  router.openapi(renewSessionRoute, async (c) => {
+    const { id: sessionId } = c.req.valid('param');
 
     // Verify caller owns the session (sessionAuth sets sessionId from JWT)
     const callerSessionId = c.get('sessionId' as never) as string;

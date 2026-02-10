@@ -10,11 +10,11 @@
  * @see docs/37-rest-api-complete-spec.md
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { CreateAgentRequestSchema, WAIaaSError } from '@waiaas/core';
+import { WAIaaSError } from '@waiaas/core';
 import type { ChainType } from '@waiaas/core';
 import { agents } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -22,6 +22,14 @@ import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
+import {
+  CreateAgentRequestOpenAPI,
+  SetOwnerRequestSchema,
+  AgentResponseSchema,
+  AgentOwnerResponseSchema,
+  buildErrorResponses,
+  openApiValidationHook,
+} from './openapi-schemas.js';
 
 export interface AgentRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -31,24 +39,74 @@ export interface AgentRouteDeps {
   config: DaemonConfig;
 }
 
+// ---------------------------------------------------------------------------
+// Route definitions
+// ---------------------------------------------------------------------------
+
+const createAgentRoute = createRoute({
+  method: 'post',
+  path: '/agents',
+  tags: ['Agents'],
+  summary: 'Create a new agent',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: CreateAgentRequestOpenAPI },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Agent created',
+      content: { 'application/json': { schema: AgentResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
+const setOwnerRoute = createRoute({
+  method: 'put',
+  path: '/agents/{id}/owner',
+  tags: ['Agents'],
+  summary: 'Set agent owner address',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: SetOwnerRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Owner updated',
+      content: { 'application/json': { schema: AgentOwnerResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'OWNER_ALREADY_CONNECTED']),
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Route factory
+// ---------------------------------------------------------------------------
+
 /**
  * Create agent route sub-router.
  *
  * POST /agents -> creates agent with Solana key pair, inserts to DB, returns 201.
  * PUT /agents/:id/owner -> register/change owner address (masterAuth).
  */
-export function agentRoutes(deps: AgentRouteDeps): Hono {
-  const router = new Hono();
+export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
+  const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
   const ownerLifecycle = new OwnerLifecycleService({ db: deps.db, sqlite: deps.sqlite });
 
   // ---------------------------------------------------------------------------
   // POST /agents
   // ---------------------------------------------------------------------------
 
-  router.post('/agents', async (c) => {
-    // Parse and validate request body
-    const body = await c.req.json();
-    const parsed = CreateAgentRequestSchema.parse(body);
+  router.openapi(createAgentRoute, async (c) => {
+    // OpenAPIHono validates the body automatically via createRoute schema
+    const parsed = c.req.valid('json');
 
     // Generate agent ID
     const id = generateId();
@@ -93,8 +151,8 @@ export function agentRoutes(deps: AgentRouteDeps): Hono {
   // PUT /agents/:id/owner
   // ---------------------------------------------------------------------------
 
-  router.put('/agents/:id/owner', async (c) => {
-    const agentId = c.req.param('id');
+  router.openapi(setOwnerRoute, async (c) => {
+    const { id: agentId } = c.req.valid('param');
 
     // Look up agent
     const agent = await deps.db
@@ -121,9 +179,9 @@ export function agentRoutes(deps: AgentRouteDeps): Hono {
       });
     }
 
-    // Parse body
-    const body = await c.req.json();
-    const ownerAddress = body?.owner_address as string | undefined;
+    // Parse body via validated input
+    const body = c.req.valid('json');
+    const ownerAddress = body.owner_address;
 
     if (!ownerAddress || typeof ownerAddress !== 'string') {
       throw new WAIaaSError('AGENT_NOT_FOUND', {
@@ -141,17 +199,20 @@ export function agentRoutes(deps: AgentRouteDeps): Hono {
       .where(eq(agents.id, agentId))
       .get();
 
-    return c.json({
-      id: updated!.id,
-      name: updated!.name,
-      chain: updated!.chain,
-      network: updated!.network,
-      publicKey: updated!.publicKey,
-      status: updated!.status,
-      ownerAddress: updated!.ownerAddress,
-      ownerVerified: updated!.ownerVerified,
-      updatedAt: updated!.updatedAt ? Math.floor(updated!.updatedAt.getTime() / 1000) : null,
-    });
+    return c.json(
+      {
+        id: updated!.id,
+        name: updated!.name,
+        chain: updated!.chain,
+        network: updated!.network,
+        publicKey: updated!.publicKey,
+        status: updated!.status,
+        ownerAddress: updated!.ownerAddress,
+        ownerVerified: updated!.ownerVerified,
+        updatedAt: updated!.updatedAt ? Math.floor(updated!.updatedAt.getTime() / 1000) : null,
+      },
+      200,
+    );
   });
 
   return router;

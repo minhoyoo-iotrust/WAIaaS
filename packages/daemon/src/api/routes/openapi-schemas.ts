@@ -12,6 +12,7 @@
 import { z } from '@hono/zod-openapi';
 import {
   ERROR_CODES,
+  WAIaaSError,
   CreateAgentRequestSchema,
   CreateSessionRequestSchema,
   SendTransactionRequestSchema,
@@ -270,6 +271,24 @@ export const CreateSessionRequestOpenAPI = CreateSessionRequestSchema.openapi('C
 export const SendTransactionRequestOpenAPI = SendTransactionRequestSchema.openapi('SendTransactionRequest');
 export const CreatePolicyRequestOpenAPI = CreatePolicyRequestSchema.openapi('CreatePolicyRequest');
 export const UpdatePolicyRequestOpenAPI = UpdatePolicyRequestSchema.openapi('UpdatePolicyRequest');
+
+// ---------------------------------------------------------------------------
+// Default validation hook for OpenAPIHono
+// ---------------------------------------------------------------------------
+
+/**
+ * Default validation hook that throws WAIaaSError on validation failure.
+ * This ensures OpenAPIHono's built-in Zod validation produces the same
+ * error format as our existing errorHandler (code, message, retryable).
+ */
+export function openApiValidationHook(result: { success: boolean; error?: unknown }, _c: unknown): void | Response {
+  if (!result.success) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message: 'Validation error',
+      details: { issues: (result.error as { issues?: unknown[] })?.issues ?? [] },
+    });
+  }
+}
 
 // Owner address request body schema (for PUT /agents/:id/owner)
 export const SetOwnerRequestSchema = z

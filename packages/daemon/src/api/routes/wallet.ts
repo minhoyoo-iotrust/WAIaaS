@@ -19,6 +19,7 @@ import {
   WalletAddressResponseSchema,
   WalletBalanceResponseSchema,
   buildErrorResponses,
+  openApiValidationHook,
 } from './openapi-schemas.js';
 
 export interface WalletRouteDeps {
@@ -87,7 +88,7 @@ const walletBalanceRoute = createRoute({
  * GET /wallet/balance -> calls adapter.getBalance() and returns lamports
  */
 export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
-  const router = new OpenAPIHono();
+  const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
   router.openapi(walletAddressRoute, async (c) => {
     // Get agentId from sessionAuth context (set by middleware at server level)
