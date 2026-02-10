@@ -6,7 +6,10 @@
   "bin": {
     "waiaas": "./bin/waiaas"
   },
-  "files": ["dist", "bin"],
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
@@ -16,6 +19,7 @@
   },
   "dependencies": {
     "@waiaas/core": "workspace:*",
-    "@waiaas/daemon": "workspace:*"
+    "@waiaas/daemon": "workspace:*",
+    "commander": "^13.0.0"
   }
 }
