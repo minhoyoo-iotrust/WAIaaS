@@ -255,8 +255,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 63-01: @waiaas/mcp 패키지 (6 도구 + 3 리소스 + ApiClient + stdio transport)
-- [ ] 63-02: SessionManager (자동 갱신 + 실패 처리 + 동시성 제어) + CLI mcp setup
+- [ ] 63-01-PLAN.md -- @waiaas/mcp 패키지 스캐폴드 + SessionManager (토큰 로드 + 갱신 스케줄) + ApiClient + 6 도구 + 3 리소스 + stdio transport + ~60 tests
+- [ ] 63-02-PLAN.md -- SessionManager 강화 (지수 백오프 재시도 + isRenewing + 409 CONFLICT + 복구 루프) + CLI mcp setup + ~50 tests
 
 ## Progress
 
