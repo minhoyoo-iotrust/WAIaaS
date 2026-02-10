@@ -1,2 +1,2 @@
 // @waiaas/adapter-solana
-export {};
+export { SolanaAdapter } from './adapter.js';
