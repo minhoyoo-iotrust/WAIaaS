@@ -206,11 +206,11 @@ Plans:
   2. `waiaas start`로 데몬을 기동한 후 `waiaas status`가 `running` + 포트 3100을 표시하고, `waiaas stop`으로 종료하면 `stopped`로 전환된다
   3. 데몬 실행 중 `POST /v1/agents` -> `POST /v1/transactions/send` -> `GET /v1/transactions/:id` 폴링으로 SOL 전송이 CONFIRMED까지 완료된다
   4. E2E 테스트 12건(라이프사이클 4 + 에이전트 3 + 트랜잭션 2 + 에러 3)이 모두 자동으로 통과한다
-**플랜**: TBD
+**플랜**: 2 plans
 
 Plans:
-- [ ] 51-01: CLI 4개 명령어 (init, start, stop, status)
-- [ ] 51-02: E2E 테스트 12건 (라이프사이클 + 에이전트 + 트랜잭션 + 에러)
+- [ ] 51-01-PLAN.md -- CLI 4개 명령어 (init, start, stop, status) + commander ^13.x + unit tests (Wave 1)
+- [ ] 51-02-PLAN.md -- E2E 테스트 12건 (라이프사이클 4 + 에이전트 3 + 트랜잭션 2 + 에러 3) + MockChainAdapter (Wave 2)
 
 ## Progress
 
