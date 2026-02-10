@@ -123,3 +123,59 @@ export interface RenewSessionResponse {
   expiresAt: number;
   renewalCount: number;
 }
+
+// ---------------------------------------------------------------------------
+// Owner Client Types (61-02)
+// ---------------------------------------------------------------------------
+
+export interface WAIaaSOwnerClientOptions {
+  /** Base URL of the WAIaaS daemon (e.g., "http://localhost:3000") */
+  baseUrl: string;
+  /** Owner wallet address (base58 for Solana) */
+  ownerAddress: string;
+  /** Callback to sign a message with the owner's private key (Ed25519) */
+  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
+  /** Master password for recover() operation */
+  masterPassword?: string;
+  /** Request timeout in milliseconds (default: 30000) */
+  timeout?: number;
+  /** Retry options for exponential backoff */
+  retryOptions?: RetryOptions;
+}
+
+// ---------------------------------------------------------------------------
+// Owner Responses (matching daemon OpenAPI schemas)
+// ---------------------------------------------------------------------------
+
+export interface ApproveResponse {
+  id: string;
+  status: string;
+  approvedAt: number;
+}
+
+export interface RejectResponse {
+  id: string;
+  status: string;
+  rejectedAt: number;
+}
+
+export interface KillSwitchActivateResponse {
+  state: 'ACTIVATED';
+  activatedAt: number;
+}
+
+export interface KillSwitchStatusResponse {
+  state: string;
+  activatedAt: number | null;
+  activatedBy: string | null;
+}
+
+export interface RecoverResponse {
+  state: 'NORMAL';
+  recoveredAt: number;
+}
+
+export interface NonceResponse {
+  nonce: string;
+  expiresAt: number;
+}

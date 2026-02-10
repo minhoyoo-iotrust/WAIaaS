@@ -18,9 +18,13 @@
  */
 
 export { WAIaaSClient } from './client.js';
+export { WAIaaSOwnerClient } from './owner-client.js';
 export { WAIaaSError } from './error.js';
+export { withRetry } from './retry.js';
+export { validateSendToken } from './validation.js';
 export type {
   WAIaaSClientOptions,
+  WAIaaSOwnerClientOptions,
   RetryOptions,
   BalanceResponse,
   AddressResponse,
@@ -33,5 +37,10 @@ export type {
   ListTransactionsParams,
   PendingTransactionsResponse,
   RenewSessionResponse,
+  ApproveResponse,
+  RejectResponse,
+  KillSwitchActivateResponse,
+  KillSwitchStatusResponse,
+  RecoverResponse,
+  NonceResponse,
 } from './types.js';
-// WAIaaSOwnerClient will be added in 61-02

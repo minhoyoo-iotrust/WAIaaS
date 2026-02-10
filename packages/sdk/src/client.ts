@@ -6,14 +6,18 @@
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - renewSession() (session management)
  *
- * Full implementation in Task 2.
+ * All methods use exponential backoff retry for 429/5xx responses.
+ * sendToken() performs inline pre-validation before making the HTTP request.
  */
 
 import { HttpClient } from './internal/http.js';
 import { WAIaaSError } from './error.js';
+import { withRetry } from './retry.js';
+import { validateSendToken } from './validation.js';
 import { DEFAULT_TIMEOUT } from './internal/constants.js';
 import type {
   WAIaaSClientOptions,
+  RetryOptions,
   BalanceResponse,
   AddressResponse,
   AssetsResponse,
@@ -30,6 +34,7 @@ export class WAIaaSClient {
   private http: HttpClient;
   private sessionToken: string | undefined;
   private sessionId: string | undefined;
+  private retryOptions?: RetryOptions;
 
   constructor(options: WAIaaSClientOptions) {
     this.http = new HttpClient(
@@ -37,6 +42,7 @@ export class WAIaaSClient {
       options.timeout ?? DEFAULT_TIMEOUT,
     );
     this.sessionToken = options.sessionToken;
+    this.retryOptions = options.retryOptions;
   }
 
   // --- Token management ---
@@ -63,30 +69,47 @@ export class WAIaaSClient {
 
   // --- Wallet queries ---
   async getBalance(): Promise<BalanceResponse> {
-    return this.http.get<BalanceResponse>('/v1/wallet/balance', this.authHeaders());
+    return withRetry(
+      () => this.http.get<BalanceResponse>('/v1/wallet/balance', this.authHeaders()),
+      this.retryOptions,
+    );
   }
 
   async getAddress(): Promise<AddressResponse> {
-    return this.http.get<AddressResponse>('/v1/wallet/address', this.authHeaders());
+    return withRetry(
+      () => this.http.get<AddressResponse>('/v1/wallet/address', this.authHeaders()),
+      this.retryOptions,
+    );
   }
 
   async getAssets(): Promise<AssetsResponse> {
-    return this.http.get<AssetsResponse>('/v1/wallet/assets', this.authHeaders());
+    return withRetry(
+      () => this.http.get<AssetsResponse>('/v1/wallet/assets', this.authHeaders()),
+      this.retryOptions,
+    );
   }
 
   // --- Transaction operations ---
   async sendToken(params: SendTokenParams): Promise<SendTokenResponse> {
-    return this.http.post<SendTokenResponse>(
-      '/v1/transactions/send',
-      params,
-      this.authHeaders(),
+    // Pre-validate before making HTTP request
+    validateSendToken(params);
+    return withRetry(
+      () => this.http.post<SendTokenResponse>(
+        '/v1/transactions/send',
+        params,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
     );
   }
 
   async getTransaction(id: string): Promise<TransactionResponse> {
-    return this.http.get<TransactionResponse>(
-      `/v1/transactions/${id}`,
-      this.authHeaders(),
+    return withRetry(
+      () => this.http.get<TransactionResponse>(
+        `/v1/transactions/${id}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
     );
   }
 
@@ -95,16 +118,22 @@ export class WAIaaSClient {
     if (params?.cursor) query.set('cursor', params.cursor);
     if (params?.limit) query.set('limit', String(params.limit));
     const qs = query.toString();
-    return this.http.get<TransactionListResponse>(
-      `/v1/transactions${qs ? `?${qs}` : ''}`,
-      this.authHeaders(),
+    return withRetry(
+      () => this.http.get<TransactionListResponse>(
+        `/v1/transactions${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
     );
   }
 
   async listPendingTransactions(): Promise<PendingTransactionsResponse> {
-    return this.http.get<PendingTransactionsResponse>(
-      '/v1/transactions/pending',
-      this.authHeaders(),
+    return withRetry(
+      () => this.http.get<PendingTransactionsResponse>(
+        '/v1/transactions/pending',
+        this.authHeaders(),
+      ),
+      this.retryOptions,
     );
   }
 
@@ -113,10 +142,13 @@ export class WAIaaSClient {
     if (!this.sessionId) {
       this.sessionId = this.extractSessionId();
     }
-    const result = await this.http.put<RenewSessionResponse>(
-      `/v1/sessions/${this.sessionId}/renew`,
-      {},
-      this.authHeaders(),
+    const result = await withRetry(
+      () => this.http.put<RenewSessionResponse>(
+        `/v1/sessions/${this.sessionId}/renew`,
+        {},
+        this.authHeaders(),
+      ),
+      this.retryOptions,
     );
     // Auto-update token after successful renewal
     this.sessionToken = result.token;
