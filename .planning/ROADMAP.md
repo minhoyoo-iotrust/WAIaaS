@@ -178,8 +178,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 58-01: OpenAPIHono 전환 (기존 18 라우트 리팩터링 + GET /doc + 에러 코드 매핑 + 회귀 검증)
-- [ ] 58-02: IChainAdapter getAssets() 구현 (인터페이스 확장 + SolanaAdapter + AssetInfo 스키마)
+- [ ] 58-01-PLAN.md — OpenAPIHono 전환 (기존 18 라우트 리팩터링 + GET /doc + 에러 코드 매핑 + 회귀 검증)
+- [ ] 58-02-PLAN.md — IChainAdapter getAssets() 구현 (인터페이스 확장 + SolanaAdapter + AssetInfo 스키마)
 
 #### Phase 59: REST API 확장
 **Goal**: SDK와 MCP가 소비할 15개 신규 엔드포인트가 OpenAPIHono로 동작하여 누적 33개 API가 완성된다
