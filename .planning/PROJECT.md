@@ -8,27 +8,12 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.1 코어 인프라 + 기본 전송
-
-**목표:** CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬
-
-**구현 대상:**
-- 모노레포 구조 (pnpm workspace + Turborepo, 4 패키지)
-- SQLite 7-table 스키마 (Drizzle ORM, UUID v7, WAL 모드)
-- AES-256-GCM 키스토어 (Argon2id KDF, sodium guarded memory)
-- 데몬 라이프사이클 (6단계 시작, 10-step 종료, flock 잠금)
-- Hono API 서버 (6개 미들웨어, 6개 엔드포인트)
-- SolanaAdapter SOL 전송 (6개 메서드, @solana/kit 3.x)
-- 6-stage 트랜잭션 파이프라인 골격 (Stage 2~4 패스스루)
-- CLI 4개 명령어 (init, start, stop, status)
-- 12 Enum SSoT (as const → Zod → Drizzle CHECK)
-
 ## Current State
 
-v1.1 코어 인프라 구현 착수 (2026-02-10). 전체 설계+계획 단계 완료 (v0.1~v1.0, 11 milestones). 첫 번째 구현 마일스톤.
+v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일, 10,925 LOC, 281 테스트 통과. CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬 완성.
 
-**구현 로드맵 (v1.1~v2.0):**
-- v1.1 코어 인프라 + 기본 전송 (모노레포, SQLite, 키스토어, 데몬, CLI, 6-stage 파이프라인, SOL 전송)
+**구현 로드맵 (v1.2~v2.0):**
+- ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
 - v1.2 인증 + 정책 엔진 (3-tier 인증, 4-tier 정책, Owner 상태 머신, 세션 관리)
 - v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
@@ -37,9 +22,11 @@ v1.1 코어 인프라 구현 착수 (2026-02-10). 전체 설계+계획 단계 �
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 7패키지, Docker, Desktop 5플랫폼, GitHub Release)
 
-## 현재 상태
-
-v0.1~v0.10 완료 (2026-02-09). 110개 플랜, 276개 요구사항, 44개 페이즈, 10개 마일스톤, 30개 설계 문서(24-64). 전체 설계 단계 완료, 구현 착수 차단 미비점 12건 전수 해소. 설계 문서만으로 코드를 작성할 수 있는 상태.
+**코드베이스 현황:**
+- 4-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli
+- 97 TypeScript 파일, 10,925 LOC (ESM-only, Node.js 22)
+- 281 테스트 (65 core + 17 adapter + 167 daemon + 32 CLI)
+- pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 
 ## 요구사항
 
@@ -115,21 +102,28 @@ v0.1~v0.10 완료 (2026-02-09). 110개 플랜, 276개 요구사항, 44개 페이
 - ✓ 설계 부채 추적 체계 초기화 (objectives/design-debt.md) — v1.0
 - ✓ 설계 문서 37개 → 구현 마일스톤 매핑 확정 + 양방향 교차 검증 — v1.0
 
+- ✓ 모노레포 인프라 구축 (pnpm workspace + Turborepo, 4 패키지, ESM-only) — v1.1 (MONO-01~03)
+- ✓ @waiaas/core 패키지 (12 Enum SSoT, 5 Zod 스키마, 66 에러 코드, 4 인터페이스, i18n en/ko) — v1.1 (CORE-01~05)
+- ✓ SQLite 7-table Drizzle ORM + CHECK 제약 + UUID v7 + WAL 모드 — v1.1 (DB-01~03)
+- ✓ AES-256-GCM 키스토어 + Argon2id KDF + sodium guarded memory — v1.1 (KEY-01~03)
+- ✓ config.toml 로더 (smol-toml + Zod 17키 검증 + 환경변수 오버라이드) — v1.1 (CFG-01~02)
+- ✓ 데몬 라이프사이클 (6단계 시작/10-step 종료/flock 잠금/PID/BackgroundWorkers) — v1.1 (LIFE-01~04)
+- ✓ Hono API 서버 (5 미들웨어 + errorHandler + 6 엔드포인트) — v1.1 (API-01~08)
+- ✓ SolanaAdapter 10개 IChainAdapter 메서드 (@solana/kit 6.x) — v1.1 (SOL-01~06)
+- ✓ 6-stage 트랜잭션 파이프라인 (DefaultPolicyEngine INSTANT, async fire-and-forget) — v1.1 (PIPE-01~04)
+- ✓ CLI 4개 명령어 (init/start/stop/status, commander 13.x) — v1.1 (CLI-01~04)
+- ✓ E2E 통합 검증 12건 (MockChainAdapter, 281 total tests) — v1.1 (E2E-01~04)
+
 ### 활성
 
-(v1.1 REQUIREMENTS.md에서 상세 정의 — 아래는 카테고리 요약)
+(v1.2 REQUIREMENTS.md에서 정의 예정 — 아래는 카테고리 요약)
 
-- [ ] 모노레포 인프라 구축 (pnpm workspace, Turborepo, tsconfig, ESLint+Prettier, Vitest)
-- [ ] @waiaas/core 패키지 (Zod 스키마, 12 Enum SSoT, 66 에러 코드, 인터페이스, i18n)
-- [ ] SQLite 스키마 + Drizzle ORM (7 테이블, PRAGMA, 마이그레이션)
-- [ ] 키스토어 모듈 (AES-256-GCM, Argon2id, sodium guarded memory, 파일 포맷 v1)
-- [ ] config.toml 로더 (smol-toml, Zod 검증, 환경변수 오버라이드)
-- [ ] 데몬 라이프사이클 (6단계 시작, 10-step 종료, flock, PID, BackgroundWorkers)
-- [ ] Hono API 서버 (6개 미들웨어, 6개 엔드포인트, masterAuth implicit)
-- [ ] SolanaAdapter 네이티브 SOL 전송 (6 메서드, @solana/kit 3.x)
-- [ ] 6-stage 트랜잭션 파이프라인 골격 (Stage 2~4 패스스루)
-- [ ] CLI 4개 명령어 (init, start, stop, status)
-- [ ] E2E 검증 12건 (라이프사이클 4 + 에이전트 3 + 트랜잭션 2 + 에러 3)
+- [ ] sessionAuth JWT HS256 검증 미들웨어
+- [ ] masterAuth explicit 헤더 검증 미들웨어
+- [ ] ownerAuth SIWS/SIWE 서명 검증 미들웨어
+- [ ] 4-tier 정책 엔진 (INSTANT/NOTIFY/DELAY/APPROVAL)
+- [ ] Owner 3-State 상태 머신 (NONE/GRACE/LOCKED)
+- [ ] 세션 관리 API (create/list/revoke)
 
 ### 범위 외
 
@@ -146,42 +140,29 @@ v0.1~v0.10 완료 (2026-02-09). 110개 플랜, 276개 요구사항, 44개 페이
 
 ## 컨텍스트
 
-v0.1 Research & Design 완료 (2026-02-05). 5개 페이즈, 15개 플랜, 23개 요구사항.
-v0.2 Self-Hosted Secure Wallet Design 완료 (2026-02-05). 4개 페이즈, 16개 플랜, 45개 요구사항, 17개 설계 문서.
-v0.3 설계 논리 일관성 확보 완료 (2026-02-06). 4개 페이즈, 8개 플랜, 37개 요구사항, 5개 대응표/매핑 문서.
-v0.4 테스트 전략 및 계획 수립 완료 (2026-02-07). 5개 페이즈, 9개 플랜, 26개 요구사항, 11개 테스트 전략 문서 (docs 41-51).
-v0.5 인증 모델 재설계 + DX 개선 완료 (2026-02-07). 3개 페이즈, 9개 플랜, 24개 요구사항, 4개 신규 문서(52-55) + 11개 기존 문서 수정.
-v0.6 블록체인 기능 확장 설계 완료 (2026-02-08). 4개 페이즈, 11개 플랜, 30개 요구사항, 9개 신규 문서(56-64) + 기존 8개 문서 v0.6 통합.
-v0.7 구현 장애 요소 해소 완료 (2026-02-08). 5개 페이즈, 11개 플랜, 25개 요구사항, 기존 9개 설계 문서 직접 수정.
-v0.8 Owner 선택적 등록 + 점진적 보안 모델 완료 (2026-02-09). 5개 페이즈, 11개 플랜, 33개 요구사항, 14개 설계 문서 v0.8 통합(240 [v0.8] 태그).
-v0.9 MCP 세션 관리 자동화 설계 완료 (2026-02-09). 5개 페이즈, 10개 플랜, 21개 요구사항, 7개 설계 문서 v0.9 통합(85 [v0.9] 태그), 34 설계 결정.
+**누적:** 13 milestones (v0.1-v1.1), 51 phases, 127 plans, 332 requirements, 30 설계 문서, 8 objective 문서, 10,925 LOC TypeScript, 281 테스트
 
-v0.10 구현 전 설계 완결성 확보 완료 (2026-02-09). 4개 페이즈, 10개 플랜, 12개 요구사항, 설계 문서 11개 직접 수정, 22 설계 결정.
+v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
+v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
+v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플랜, 46 요구사항, 97 TS 파일, 10,925 LOC, 281 테스트.
 
-v1.0 구현 계획 수립 완료 (2026-02-09). 3개 페이즈, 5개 플랜, 10개 요구사항, 8개 objective 문서(v1.1~v2.0), 설계 부채 추적 초기화, 37개 설계 문서 전수 매핑 검증.
-
-**누적:** 11 milestones (v0.1-v1.0), 47 phases, 115 plans, 286 requirements, 30 설계 문서 (24-64), 8 objective 문서
-
-**기술 스택 (v0.2 확정, v0.6 확장 설계 완료, v0.7 의존성 정리):**
-- Runtime: Node.js 22 LTS
-- Server: Hono 4.x (OpenAPIHono)
+**기술 스택 (v0.2 확정, v1.1 구현 검증):**
+- Runtime: Node.js 22 LTS (ESM-only)
+- Server: Hono 4.x
 - DB: SQLite (better-sqlite3) + Drizzle ORM
-- Crypto: sodium-native (guarded memory), argon2 (KDF), jose (JWT)
-- Chain: @solana/kit 3.x (Solana), viem 2.x (EVM stub)
-- Chain 확장: @solana-program/token (SPL), Jupiter Aggregator API
-- Oracle: CoinGecko API, Pyth Network, Chainlink (v0.6 설계)
-- Test: Hardhat/Anvil (EVM 로컬 노드, v0.6 설계)
-- Desktop: Tauri 2.x + React 18 + TailwindCSS 4
-- Schema: Zod SSoT → TypeScript → OpenAPI 3.0
+- Crypto: sodium-native (guarded memory), argon2 (KDF)
+- Chain: @solana/kit 6.0.1 (Solana), viem 2.x (EVM stub, 미구현)
+- Build: pnpm workspace + Turborepo, tsc only
+- Test: Vitest (forks pool for sodium mprotect)
+- Schema: Zod SSoT → TypeScript → Drizzle CHECK
+- 미구현: jose (JWT), @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
 
-**설계 문서:** 30개 (deliverables 24-64.md) + 5개 대응표 (41-45.md) + 11개 테스트 전략 (41-51.md) + 1개 확장 테스트 전략 (64.md)
-- v0.7 보완: ethers/siwe → viem/siwe 전환, 5개 타겟 플랫폼 확정, prebuildify 네이티브 번들 전략
-- v0.8 통합: Owner 선택적 등록(3-State), APPROVAL 다운그레이드, sweepAll, withdraw API, 18x3 매트릭스 SSoT
-- v0.9 통합: SessionManager 핵심/MCP 통합, CLI mcp/Telegram /newsession, SESSION_EXPIRING_SOON, 7개 문서 85 [v0.9] 태그
+**설계 문서:** 30개 (deliverables 24-64.md) + 대응표/테스트 전략/objective
 
 ### 알려진 이슈
 
-- Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.4 스파이크, v0.7 prebuildify 전략 설계 완료)
+- Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료)
+- @solana/kit 실제 버전 6.0.1 (설계서는 3.x 언급, API 동일)
 
 ## 제약사항
 
@@ -270,6 +251,16 @@ v1.0 구현 계획 수립 완료 (2026-02-09). 3개 페이즈, 5개 플랜, 10�
 | 구현 마일스톤 8개 순서 확정 | 의존 그래프: 코어→인증→SDK→토큰→DeFi→클라이언트→품질→릴리스 | ✓ Good — v1.0 계획 |
 | objective 문서 7-section 부록 구조 | 목표/설계문서/산출물/기술결정/E2E/의존/리스크 통일 | ✓ Good — v1.0 계획 |
 | 설계 부채 Tier 1~3 추적 체계 | 매 마일스톤 리뷰, v2.0 전 0건 달성 목표 | ✓ Good — v1.0 계획 |
+| tsc only (빌드 도구 불필요) | ESM 단일 출력, 번들러 불필요, 복잡도 최소화 | ✓ Good — v1.1 구현 |
+| as const → Zod enum SSoT pipeline | 배열 SSoT에서 타입, Zod, Drizzle CHECK 모두 파생 | ✓ Good — v1.1 구현 |
+| Amount 필드 string 타입 | bigint JSON 직렬화 + SQLite TEXT 호환 | ✓ Good — v1.1 구현 |
+| createRequire for CJS native modules | sodium-native CJS-only → ESM에서 createRequire 패턴 | ✓ Good — v1.1 구현 |
+| Vitest forks pool | sodium mprotect SIGSEGV 방지 | ✓ Good — v1.1 구현 |
+| proper-lockfile 크로스플랫폼 잠금 | native flock/PID-only 대비 플랫폼 호환성 | ✓ Good — v1.1 구현 |
+| @solana/kit 6.0.1 functional pipe | 설계서 3.x → 실제 6.x, API 동일 | ✓ Good — v1.1 구현 |
+| Hono createMiddleware DI pattern | typed c.set/c.get + createApp(deps) factory | ✓ Good — v1.1 구현 |
+| Async pipeline fire-and-forget | Stage 1 sync 201, stages 2-6 async | ✓ Good — v1.1 구현 |
+| MockChainAdapter for E2E | CI에서 실제 RPC 없이 전 구간 테스트 | ✓ Good — v1.1 구현 |
 
 ---
-*최종 업데이트: 2026-02-10 after v1.1 milestone start*
+*최종 업데이트: 2026-02-10 after v1.1 milestone shipped*

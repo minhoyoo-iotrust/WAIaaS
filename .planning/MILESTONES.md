@@ -272,3 +272,54 @@
 ---
 
 
+
+## v1.1 코어 인프라 + 기본 전송 (Shipped: 2026-02-10)
+
+**Delivered:** CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬 구현 — 모노레포 스캐폴드, SQLite 7-table, AES-256-GCM 키스토어, 6단계 데몬 라이프사이클, Hono API 서버, SolanaAdapter, 6-stage 트랜잭션 파이프라인, CLI 4개 명령어, 281개 테스트 통과
+
+**Phases completed:** 48-51 (12 plans total)
+
+**Key accomplishments:**
+
+- 모노레포 스캐폴드 — pnpm workspace + Turborepo 4-패키지 (core, daemon, adapter-solana, cli), ESLint flat config, Vitest workspace, ESM-only TypeScript
+- @waiaas/core 패키지 완성 — 12 Enum SSoT (as const→Zod pipeline), 5 Zod 스키마, 66 에러 코드 통합 매트릭스, WAIaaSError, 4 인터페이스, i18n (en/ko), 65 단위 테스트
+- 데몬 인프라 — SQLite 7-table Drizzle ORM + CHECK 제약, AES-256-GCM 키스토어 (Argon2id KDF, sodium guarded memory), config.toml 로더 (smol-toml + Zod), DaemonLifecycle (6-step 시작/10-step 종료/flock 잠금/BackgroundWorkers)
+- API + SolanaAdapter — Hono 4.x 서버 (5 미들웨어 + errorHandler), SolanaAdapter 10개 IChainAdapter 메서드 (@solana/kit 6.x), 에이전트/지갑 라우트, 167 데몬 테스트
+- 트랜잭션 파이프라인 — 6-stage (validate→auth→policy→wait→execute→confirm), DefaultPolicyEngine INSTANT 패스스루, async fire-and-forget (201 즉시 반환), guarded memory release
+- CLI + E2E — commander 13.x CLI 4개 명령어 (init/start/stop/status), 12 E2E 통합 테스트 (MockChainAdapter), 전체 281 테스트 통과
+
+**Stats:**
+
+- 97 TypeScript files, 10,925 LOC
+- 4 phases, 12 plans, 24 tasks, 46 requirements
+- 281 tests (65 core + 17 adapter + 167 daemon + 32 CLI)
+- 40 commits, 1 day (2026-02-10)
+
+**Git range:** `fffcb2f` (Phase 48 start) → `3bf9d8d` (Phase 51 complete)
+
+**What's next:** v1.2 인증 + 정책 엔진 — 3-tier 인증 (masterAuth/ownerAuth/sessionAuth), 4-tier 정책, Owner 상태 머신
+
+---
+
+## v1.0 구현 계획 수립 (Shipped: 2026-02-09)
+
+**Delivered:** v0.1~v0.10 설계 완료 후 구현 착수를 위한 8개 마일스톤별 objective 문서(v1.1~v2.0) 생성, 설계 부채 추적 체계 초기화, 37개 설계 문서 전수 매핑 검증
+
+**Phases completed:** 45-47 (5 plans total)
+
+**Key accomplishments:**
+
+- objective 문서 8개 (v1.1~v2.0) — 7-section 부록 구조로 목표/설계문서/산출물/기술결정/E2E/의존/리스크 통일
+- 설계 부채 추적 — objectives/design-debt.md, Tier 1~3 분류, v2.0 전 0건 목표
+- 설계 문서 매핑 검증 — 37개 설계 문서→구현 마일스톤 양방향 교차 검증 완료
+- 구현 마일스톤 8개 순서 확정 — 의존 그래프: 코어→인증→SDK→토큰→DeFi→클라이언트→품질→릴리스
+
+**Stats:**
+
+- 3 phases, 5 plans, 10 requirements, 28 설계 결정
+- 1 day (2026-02-09)
+
+**What's next:** v1.1 코어 인프라 + 기본 전송 — 모노레포, SQLite, 키스토어, 데몬, CLI, 파이프라인 구현
+
+---
+
