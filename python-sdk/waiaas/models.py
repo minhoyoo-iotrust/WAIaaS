@@ -1,0 +1,124 @@
+"""Pydantic v2 models for WAIaaS API request/response data."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+# ---------------------------------------------------------------------------
+# Wallet models
+# ---------------------------------------------------------------------------
+
+
+class WalletAddress(BaseModel):
+    agent_id: str = Field(alias="agentId")
+    chain: str
+    network: str
+    address: str
+
+    model_config = {"populate_by_name": True}
+
+
+class WalletBalance(BaseModel):
+    agent_id: str = Field(alias="agentId")
+    chain: str
+    network: str
+    address: str
+    balance: str
+    decimals: int
+    symbol: str
+
+    model_config = {"populate_by_name": True}
+
+
+class AssetInfo(BaseModel):
+    mint: str
+    symbol: str
+    name: str
+    balance: str
+    decimals: int
+    is_native: bool = Field(alias="isNative")
+    usd_value: Optional[float] = Field(default=None, alias="usdValue")
+
+    model_config = {"populate_by_name": True}
+
+
+class WalletAssets(BaseModel):
+    agent_id: str = Field(alias="agentId")
+    chain: str
+    network: str
+    assets: list[AssetInfo]
+
+    model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
+# Transaction models
+# ---------------------------------------------------------------------------
+
+
+class SendTokenRequest(BaseModel):
+    """Request body for POST /v1/transactions/send."""
+
+    to: str
+    amount: str
+    memo: Optional[str] = None
+
+
+class TransactionResponse(BaseModel):
+    """Response from POST /v1/transactions/send (201)."""
+
+    id: str
+    status: str
+
+
+class TransactionDetail(BaseModel):
+    """Response from GET /v1/transactions/:id."""
+
+    id: str
+    agent_id: str = Field(alias="agentId")
+    type: str
+    status: str
+    tier: Optional[str] = None
+    chain: str
+    to_address: Optional[str] = Field(default=None, alias="toAddress")
+    amount: Optional[str] = None
+    tx_hash: Optional[str] = Field(default=None, alias="txHash")
+    error: Optional[str] = None
+    created_at: Optional[int] = Field(default=None, alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class TransactionList(BaseModel):
+    """Response from GET /v1/transactions."""
+
+    items: list[TransactionDetail]
+    cursor: Optional[str] = None
+    has_more: bool = Field(alias="hasMore")
+
+    model_config = {"populate_by_name": True}
+
+
+class PendingTransactionList(BaseModel):
+    """Response from GET /v1/transactions/pending."""
+
+    items: list[TransactionDetail]
+
+
+# ---------------------------------------------------------------------------
+# Session models
+# ---------------------------------------------------------------------------
+
+
+class SessionRenewResponse(BaseModel):
+    """Response from PUT /v1/sessions/:id/renew."""
+
+    id: str
+    token: str
+    expires_at: int = Field(alias="expiresAt")
+    renewal_count: int = Field(alias="renewalCount")
+
+    model_config = {"populate_by_name": True}

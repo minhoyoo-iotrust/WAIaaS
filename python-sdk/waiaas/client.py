@@ -1,0 +1,205 @@
+"""WAIaaS async HTTP client for AI agent wallet operations."""
+
+from __future__ import annotations
+
+from typing import Any, Optional
+
+import httpx
+
+from waiaas.errors import WAIaaSError
+from waiaas.models import (
+    PendingTransactionList,
+    SendTokenRequest,
+    SessionRenewResponse,
+    TransactionDetail,
+    TransactionList,
+    TransactionResponse,
+    WalletAddress,
+    WalletAssets,
+    WalletBalance,
+)
+from waiaas.retry import RetryPolicy, with_retry
+
+
+class WAIaaSClient:
+    """Async client for WAIaaS daemon REST API.
+
+    Usage:
+        async with WAIaaSClient("http://localhost:3000", "wai_sess_xxx") as client:
+            balance = await client.get_balance()
+            print(balance.balance, balance.symbol)
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        session_token: str,
+        *,
+        retry_policy: Optional[RetryPolicy] = None,
+        timeout: float = 30.0,
+        http_client: Optional[httpx.AsyncClient] = None,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._session_token = session_token
+        self._retry_policy = retry_policy or RetryPolicy()
+        self._timeout = timeout
+        self._owns_client = http_client is None
+        self._client = http_client or httpx.AsyncClient(
+            base_url=self._base_url,
+            timeout=timeout,
+            headers=self._build_headers(),
+        )
+
+    def _build_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self._session_token}",
+            "Content-Type": "application/json",
+        }
+
+    @property
+    def session_token(self) -> str:
+        return self._session_token
+
+    def set_session_token(self, token: str) -> None:
+        """Update the session token for subsequent requests."""
+        self._session_token = token
+        self._client.headers["Authorization"] = f"Bearer {token}"
+
+    async def __aenter__(self) -> "WAIaaSClient":
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.close()
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        if self._owns_client:
+            await self._client.aclose()
+
+    # -----------------------------------------------------------------
+    # Internal HTTP helpers
+    # -----------------------------------------------------------------
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, Any]] = None,
+    ) -> httpx.Response:
+        """Make an HTTP request with retry logic."""
+
+        async def _do_request() -> httpx.Response:
+            response = await self._client.request(
+                method,
+                path,
+                json=json_body,
+                params=params,
+            )
+            if response.status_code >= 400:
+                try:
+                    body = response.json()
+                except Exception:
+                    body = {"code": "UNKNOWN_ERROR", "message": response.text}
+                raise WAIaaSError.from_response(response.status_code, body)
+            return response
+
+        return await with_retry(_do_request, self._retry_policy)
+
+    # -----------------------------------------------------------------
+    # Wallet API
+    # -----------------------------------------------------------------
+
+    async def get_address(self) -> WalletAddress:
+        """GET /v1/wallet/address -- Get agent wallet address."""
+        resp = await self._request("GET", "/v1/wallet/address")
+        return WalletAddress.model_validate(resp.json())
+
+    async def get_balance(self) -> WalletBalance:
+        """GET /v1/wallet/balance -- Get agent wallet balance."""
+        resp = await self._request("GET", "/v1/wallet/balance")
+        return WalletBalance.model_validate(resp.json())
+
+    async def get_assets(self) -> WalletAssets:
+        """GET /v1/wallet/assets -- Get all assets held by agent wallet."""
+        resp = await self._request("GET", "/v1/wallet/assets")
+        return WalletAssets.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # Transaction API
+    # -----------------------------------------------------------------
+
+    async def send_token(
+        self,
+        to: str,
+        amount: str,
+        *,
+        memo: Optional[str] = None,
+    ) -> TransactionResponse:
+        """POST /v1/transactions/send -- Send native token transfer.
+
+        Args:
+            to: Recipient address.
+            amount: Amount in base units (lamports for SOL).
+            memo: Optional memo string.
+
+        Returns:
+            TransactionResponse with id and status.
+        """
+        request = SendTokenRequest(to=to, amount=amount, memo=memo)
+        body = request.model_dump(exclude_none=True)
+        resp = await self._request("POST", "/v1/transactions/send", json_body=body)
+        return TransactionResponse.model_validate(resp.json())
+
+    async def get_transaction(self, tx_id: str) -> TransactionDetail:
+        """GET /v1/transactions/:id -- Get transaction details."""
+        resp = await self._request("GET", f"/v1/transactions/{tx_id}")
+        return TransactionDetail.model_validate(resp.json())
+
+    async def list_transactions(
+        self,
+        *,
+        limit: int = 20,
+        cursor: Optional[str] = None,
+    ) -> TransactionList:
+        """GET /v1/transactions -- List transactions with cursor pagination.
+
+        Args:
+            limit: Number of transactions per page (1-100, default 20).
+            cursor: Cursor for pagination (UUID of last item).
+
+        Returns:
+            TransactionList with items, cursor, and has_more.
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if cursor:
+            params["cursor"] = cursor
+        resp = await self._request("GET", "/v1/transactions", params=params)
+        return TransactionList.model_validate(resp.json())
+
+    async def list_pending_transactions(self) -> PendingTransactionList:
+        """GET /v1/transactions/pending -- List pending transactions."""
+        resp = await self._request("GET", "/v1/transactions/pending")
+        return PendingTransactionList.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # Session API
+    # -----------------------------------------------------------------
+
+    async def renew_session(self, session_id: str) -> SessionRenewResponse:
+        """PUT /v1/sessions/:id/renew -- Renew session token.
+
+        After renewal, the client automatically updates its session token.
+
+        Args:
+            session_id: Session ID to renew.
+
+        Returns:
+            SessionRenewResponse with new token, expiry, and renewal count.
+        """
+        resp = await self._request("PUT", f"/v1/sessions/{session_id}/renew")
+        result = SessionRenewResponse.model_validate(resp.json())
+        # Auto-update session token
+        self.set_session_token(result.token)
+        return result
