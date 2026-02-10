@@ -113,6 +113,7 @@ export class DaemonLifecycle {
   private approvalWorkflow: ApprovalWorkflow | null = null;
   private jwtSecretManager: JwtSecretManager | null = null;
   private masterPasswordHash = '';
+  private notificationService: import('../notifications/notification-service.js').NotificationService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -272,6 +273,63 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4d: Notification Service initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this._config!.notifications.enabled) {
+        const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel } =
+          await import('../notifications/index.js');
+
+        this.notificationService = new NotificationService({
+          db: this._db ?? undefined,
+          config: {
+            locale: (this._config!.notifications.locale ?? 'en') as 'en' | 'ko',
+            rateLimitRpm: this._config!.notifications.rate_limit_rpm ?? 20,
+          },
+        });
+
+        // Initialize configured channels from config
+        const notifConfig = this._config!.notifications;
+
+        if (notifConfig.telegram_bot_token && notifConfig.telegram_chat_id) {
+          const telegram = new TelegramChannel();
+          await telegram.initialize({
+            telegram_bot_token: notifConfig.telegram_bot_token,
+            telegram_chat_id: notifConfig.telegram_chat_id,
+          });
+          this.notificationService.addChannel(telegram);
+        }
+
+        if (notifConfig.discord_webhook_url) {
+          const discord = new DiscordChannel();
+          await discord.initialize({
+            discord_webhook_url: notifConfig.discord_webhook_url,
+          });
+          this.notificationService.addChannel(discord);
+        }
+
+        if (notifConfig.ntfy_topic) {
+          const ntfy = new NtfyChannel();
+          await ntfy.initialize({
+            ntfy_server: notifConfig.ntfy_server,
+            ntfy_topic: notifConfig.ntfy_topic,
+          });
+          this.notificationService.addChannel(ntfy);
+        }
+
+        const channelNames = this.notificationService.getChannelNames();
+        console.log(
+          `Step 4d: NotificationService initialized (${channelNames.length} channels: ${channelNames.join(', ') || 'none'})`,
+        );
+      } else {
+        console.log('Step 4d: Notifications disabled');
+      }
+    } catch (err) {
+      console.warn('Step 4d (fail-soft): NotificationService init warning:', err);
+      this.notificationService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -291,6 +349,7 @@ export class DaemonLifecycle {
           jwtSecretManager: this.jwtSecretManager ?? undefined,
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,
+          notificationService: this.notificationService ?? undefined,
         });
 
         this.httpServer = serve({

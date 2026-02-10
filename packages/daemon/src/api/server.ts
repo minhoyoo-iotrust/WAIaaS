@@ -51,6 +51,7 @@ import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../workflow/owner-state.js';
+import type { NotificationService } from '../notifications/notification-service.js';
 import type * as schema from '../infrastructure/database/schema.js';
 
 export interface CreateAppDeps {
@@ -70,6 +71,7 @@ export interface CreateAppDeps {
   approvalWorkflow?: ApprovalWorkflow;
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
+  notificationService?: NotificationService;
 }
 
 /**

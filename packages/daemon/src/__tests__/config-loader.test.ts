@@ -136,6 +136,8 @@ port = 5000
     expect(config.rpc.solana_devnet).toBe('https://api.devnet.solana.com');
     expect(config.security.session_ttl).toBe(86400);
     expect(config.notifications.enabled).toBe(false);
+    expect(config.notifications.locale).toBe('en');
+    expect(config.notifications.rate_limit_rpm).toBe(20);
     expect(config.walletconnect.project_id).toBe('');
   });
 
