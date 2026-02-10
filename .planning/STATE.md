@@ -12,18 +12,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 Phase: 58 of 63 (OpenAPIHono 전환 + getAssets())
 Plan: 2 of 2 in current phase
 Status: In progress
-Last activity: 2026-02-10 -- Completed 58-02-PLAN.md (getAssets TDD)
+Last activity: 2026-02-10 -- Completed 58-01-PLAN.md (OpenAPIHono conversion)
 
-Progress: [█░░░░░░░░░] 9% (1/11 plans)
+Progress: [██░░░░░░░░] 18% (2/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 57 phases, 141 plans, 367 reqs, 472 tests, 25,526 LOC
+**Cumulative:** 14 milestones, 57 phases, 142 plans, 367 reqs, 475 tests, 25,526 LOC
 
 **v1.3 Velocity:**
-- Plans completed: 1
-- Average duration: 6min
-- Total execution time: 6min
+- Plans completed: 2
+- Average duration: 13.5min
+- Total execution time: 27min
 
 **v1.2 Velocity (reference):**
 - Total plans completed: 13
@@ -45,6 +45,8 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - Hard-coded SPL_TOKEN_PROGRAM_ID (avoids @solana-program/token dependency)
 - AssetInfo.symbol/name empty for SPL tokens (Metaplex metadata = v1.4+)
 - AssetInfoSchema.balance is string for JSON bigint serialization
+- @hono/zod-openapi v0.19.10 선택 (v1.x는 zod@^4.0.0 필요, 프로젝트는 zod@3.x)
+- openApiValidationHook defaultHook으로 WAIaaSError 포맷 보존
 
 ### Blockers/Concerns
 
@@ -53,6 +55,6 @@ Full log in PROJECT.md. Key decisions for v1.3:
 
 ## Session Continuity
 
-Last session: 2026-02-10T13:57Z
-Stopped at: Completed 58-02-PLAN.md
+Last session: 2026-02-10T14:12Z
+Stopped at: Completed 58-01-PLAN.md
 Resume file: None
