@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-10)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.1 Phase 50 진행 중. 50-01 완료 (Hono API server). 다음: 50-02
+**현재 초점:** v1.1 Phase 50 진행 중. 50-02 완료 (Solana adapter). 다음: 50-03
 
 ## 현재 위치
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
 페이즈: 50 of 51 (API + Solana Pipeline)
-플랜: 1 of 4 in current phase
+플랜: 2 of 4 in current phase
 상태: In progress
-마지막 활동: 2026-02-10 -- Completed 50-01-PLAN.md
+마지막 활동: 2026-02-10 -- Completed 50-02-PLAN.md
 
-진행률: [███████.....] 58% (7/12 plans)
+진행률: [████████....] 67% (8/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 7 plans (48-01, 48-02, 48-03, 49-01, 49-02, 49-03, 50-01)
+**v1.1 완료:** 8 plans (48-01, 48-02, 48-03, 49-01, 49-02, 49-03, 50-01, 50-02)
 
 ## 누적 컨텍스트
 
@@ -62,6 +62,11 @@
 | Generic errors -> SYSTEM_LOCKED (500) | 매핑되지 않은 에러는 SYSTEM_LOCKED 500 사용 | 50-01 |
 | errorHandler via app.onError | Hono 빌트인 에러 핸들러 등록, 미들웨어 아님 | 50-01 |
 | createApp(deps) factory pattern for DI | getKillSwitchState 주입, 향후 확장 가능 | 50-01 |
+| @solana/kit 6.0.1 (실제 버전, 설계서 3.x 참조) | 설계서는 3.x 언급했으나 실제 npm 버전은 6.0.1, API 동일 | 50-02 |
+| createNoopSigner for unsigned tx building | getTransferSolInstruction source가 TransactionSigner 타입 요구 | 50-02 |
+| getTransactionEncoder/Decoder 쌍 | encode-only, decode-only 분리 사용 (codec 대신) | 50-02 |
+| createKeyPairFromBytes (64B) + createKeyPairFromPrivateKeyBytes (32B) | 키스토어 포맷에 따라 듀얼 키 포맷 지원 | 50-02 |
+| signBytes(CryptoKey, messageBytes) | Ed25519 서명: 디코드된 tx의 messageBytes에 직접 서명 | 50-02 |
 
 v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 
@@ -71,11 +76,11 @@ v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 - sodium-native 네이티브 addon 빌드 검증 완료 (49-02에서 성공, argon2도 성공)
 - proper-lockfile 크로스플랫폼 잠금 검증 완료 (49-03에서 성공)
 - Hono 4.x 설치 및 동작 검증 완료 (50-01에서 성공, 19 tests)
+- @solana/kit 6.0.1 API 안정성 검증 완료 (50-02에서 성공, 17 tests)
 - 설계 부채 DD-01~03 (v1.1 구현 시 인라인 처리)
-- @solana/kit 3.x API 안정성 (Phase 50-02에서 검증)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Completed 50-01-PLAN.md. Phase 50 진행 중. 다음: 50-02 (Solana adapter)
-재개 파일: .planning/phases/50-api-solana-pipeline/50-01-SUMMARY.md
+중단 지점: Completed 50-02-PLAN.md. Phase 50 진행 중. 다음: 50-03 (JWT session auth)
+재개 파일: .planning/phases/50-api-solana-pipeline/50-02-SUMMARY.md
