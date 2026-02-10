@@ -210,8 +210,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 60-01: INotificationChannel + 3개 채널 어댑터 (Telegram, Discord, ntfy)
-- [ ] 60-02: NotificationService 오케스트레이터 + 21개 이벤트 템플릿 + config 통합
+- [ ] 60-01-PLAN.md -- NotificationEventType 21개 확장 + en/ko 메시지 템플릿 + 3 채널 어댑터 (TelegramChannel, DiscordChannel, NtfyChannel) + 25+ 테스트
+- [ ] 60-02-PLAN.md -- NotificationService 오케스트레이터 (우선순위 폴백 + broadcast + 채널별 Rate Limit + CRITICAL audit_log) + config 확장 + 데몬 통합 + 30+ 테스트
 
 #### Phase 61: TypeScript SDK
 **Goal**: AI 에이전트 개발자가 @waiaas/sdk를 npm install하여 지갑 조회, 토큰 전송, 세션 갱신, Owner 승인/거절을 프로그래밍 방식으로 수행할 수 있다
