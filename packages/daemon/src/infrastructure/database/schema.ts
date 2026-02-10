@@ -129,6 +129,7 @@ export const transactions = sqliteTable(
     queuedAt: integer('queued_at', { mode: 'timestamp' }),
     executedAt: integer('executed_at', { mode: 'timestamp' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    reservedAmount: text('reserved_amount'),
     error: text('error'),
     metadata: text('metadata'),
   },

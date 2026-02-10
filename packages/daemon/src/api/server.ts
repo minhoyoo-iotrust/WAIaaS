@@ -8,7 +8,7 @@
  *   4. requestLogger
  *
  * Auth middleware (route-level, registered on app before sub-routers):
- *   - masterAuth: /v1/agents, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
+ *   - masterAuth: /v1/agents, /v1/policies, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
  *   - sessionAuth: /v1/sessions/:id/renew, /v1/wallet/*, /v1/transactions/*
  *   - /health remains public (no auth required)
  *
@@ -38,6 +38,7 @@ import { agentRoutes } from './routes/agents.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { walletRoutes } from './routes/wallet.js';
 import { transactionRoutes } from './routes/transactions.js';
+import { policyRoutes } from './routes/policies.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { IPolicyEngine } from '@waiaas/core';
@@ -78,6 +79,8 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
   if (deps.masterPasswordHash !== undefined) {
     const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
     app.use('/v1/agents', masterAuth);
+    app.use('/v1/policies', masterAuth);
+    app.use('/v1/policies/:id', masterAuth);
     // masterAuth on /v1/sessions (POST create, GET list)
     app.use('/v1/sessions', masterAuth);
     // masterAuth on /v1/sessions/:id for DELETE -- skip /renew sub-path (sessionAuth handles it)
@@ -123,6 +126,14 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
         jwtSecretManager: deps.jwtSecretManager,
         config: deps.config,
       }),
+    );
+  }
+
+  // Register policy routes when DB is available (masterAuth covers /v1/policies)
+  if (deps.db) {
+    app.route(
+      '/v1',
+      policyRoutes({ db: deps.db }),
     );
   }
 

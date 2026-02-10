@@ -281,7 +281,14 @@ export const ERROR_CODES = {
     message: 'Policy violation in batch transaction',
   },
 
-  // --- POLICY domain (4) ---
+  // --- POLICY domain (5) ---
+  POLICY_NOT_FOUND: {
+    code: 'POLICY_NOT_FOUND',
+    domain: 'POLICY',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Policy not found',
+  },
   POLICY_DENIED: {
     code: 'POLICY_DENIED',
     domain: 'POLICY',

@@ -63,7 +63,8 @@ export const messages: Messages = {
     BATCH_NOT_SUPPORTED: 'Batch transactions not supported on this chain',
     BATCH_SIZE_EXCEEDED: 'Batch size exceeded',
     BATCH_POLICY_VIOLATION: 'Batch policy violation',
-    // POLICY domain (4)
+    // POLICY domain (5)
+    POLICY_NOT_FOUND: 'Policy not found',
     POLICY_DENIED: 'Policy denied',
     SPENDING_LIMIT_EXCEEDED: 'Spending limit exceeded',
     RATE_LIMIT_EXCEEDED: 'Rate limit exceeded',
