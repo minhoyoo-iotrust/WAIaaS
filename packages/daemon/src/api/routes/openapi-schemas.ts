@@ -32,6 +32,7 @@ export const ErrorResponseSchema = z
     retryable: z.boolean(),
     details: z.record(z.unknown()).optional(),
     requestId: z.string().optional(),
+    hint: z.string().optional(),
   })
   .openapi('ErrorResponse');
 

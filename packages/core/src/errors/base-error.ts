@@ -6,6 +6,7 @@ export class WAIaaSError extends Error {
   readonly retryable: boolean;
   readonly details?: Record<string, unknown>;
   readonly requestId?: string;
+  readonly hint?: string;
 
   constructor(
     code: ErrorCode,
@@ -13,6 +14,7 @@ export class WAIaaSError extends Error {
       message?: string;
       details?: Record<string, unknown>;
       requestId?: string;
+      hint?: string;
       cause?: Error;
     },
   ) {
@@ -24,6 +26,7 @@ export class WAIaaSError extends Error {
     this.retryable = entry.retryable;
     this.details = options?.details;
     this.requestId = options?.requestId;
+    this.hint = options?.hint;
     if (options?.cause) this.cause = options.cause;
   }
 
@@ -34,6 +37,7 @@ export class WAIaaSError extends Error {
       details: this.details,
       requestId: this.requestId,
       retryable: this.retryable,
+      ...(this.hint && { hint: this.hint }),
     };
   }
 }
