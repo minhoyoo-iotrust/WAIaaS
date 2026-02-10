@@ -64,6 +64,7 @@ function createMockAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapte
       status: 'confirmed' as const,
       confirmations: 1,
     }),
+    getAssets: async () => [],
     ...overrides,
   };
 }

@@ -160,6 +160,7 @@ function mockAdapter(): IChainAdapter {
       status: 'confirmed',
       confirmations: 1,
     }),
+    getAssets: async () => [],
   };
 }
 

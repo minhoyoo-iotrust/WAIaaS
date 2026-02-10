@@ -59,6 +59,7 @@ function createMockAdapter(): IChainAdapter {
       status: 'confirmed' as const,
       confirmations: 1,
     }),
+    getAssets: async () => [],
   };
 }
 

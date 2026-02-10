@@ -477,18 +477,18 @@ describe('SolanaAdapter', () => {
       const assets = await adapter.getAssets(testFromAddress);
       expect(assets).toHaveLength(3);
       // First entry is always native SOL
-      expect(assets[0].mint).toBe('native');
-      expect(assets[0].isNative).toBe(true);
-      expect(assets[0].balance).toBe(1_000_000_000n);
+      expect(assets[0]!.mint).toBe('native');
+      expect(assets[0]!.isNative).toBe(true);
+      expect(assets[0]!.balance).toBe(1_000_000_000n);
       // Second entry is USDC-like token
-      expect(assets[1].mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-      expect(assets[1].balance).toBe(500000n);
-      expect(assets[1].decimals).toBe(6);
-      expect(assets[1].isNative).toBe(false);
+      expect(assets[1]!.mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      expect(assets[1]!.balance).toBe(500000n);
+      expect(assets[1]!.decimals).toBe(6);
+      expect(assets[1]!.isNative).toBe(false);
       // Third entry
-      expect(assets[2].mint).toBe('So11111111111111111111111111111111111111112');
-      expect(assets[2].balance).toBe(200000000n);
-      expect(assets[2].decimals).toBe(9);
+      expect(assets[2]!.mint).toBe('So11111111111111111111111111111111111111112');
+      expect(assets[2]!.balance).toBe(200000000n);
+      expect(assets[2]!.decimals).toBe(9);
     });
 
     it('returns native SOL with 0 balance when account is empty', async () => {
@@ -545,8 +545,8 @@ describe('SolanaAdapter', () => {
       const assets = await adapter.getAssets(testFromAddress);
       // Should be 2: native SOL + non-zero USDC, zero-balance token filtered out
       expect(assets).toHaveLength(2);
-      expect(assets[0].mint).toBe('native');
-      expect(assets[1].mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      expect(assets[0]!.mint).toBe('native');
+      expect(assets[1]!.mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
     });
 
     it('throws WAIaaSError CHAIN_ERROR when RPC fails', async () => {

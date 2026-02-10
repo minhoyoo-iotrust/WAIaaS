@@ -153,6 +153,7 @@ function mockAdapter(): IChainAdapter {
     waitForConfirmation: async () => {
       throw new Error('not implemented');
     },
+    getAssets: async () => [],
   };
 }
 

@@ -1,0 +1,279 @@
+/**
+ * Shared OpenAPI Zod response schemas and error code mapping.
+ *
+ * This file provides:
+ * 1. Response schemas for all 18 routes (using z from @hono/zod-openapi)
+ * 2. Error code -> OpenAPI response mapping via buildErrorResponses()
+ * 3. Re-exported request schemas with .openapi() metadata
+ *
+ * @see docs/37-rest-api-complete-spec.md
+ */
+
+import { z } from '@hono/zod-openapi';
+import {
+  ERROR_CODES,
+  CreateAgentRequestSchema,
+  CreateSessionRequestSchema,
+  SendTransactionRequestSchema,
+  CreatePolicyRequestSchema,
+  UpdatePolicyRequestSchema,
+} from '@waiaas/core';
+import type { ErrorCode } from '@waiaas/core';
+
+// ---------------------------------------------------------------------------
+// Error Response Schema
+// ---------------------------------------------------------------------------
+
+export const ErrorResponseSchema = z
+  .object({
+    code: z.string(),
+    message: z.string(),
+    retryable: z.boolean(),
+    details: z.record(z.unknown()).optional(),
+    requestId: z.string().optional(),
+  })
+  .openapi('ErrorResponse');
+
+// ---------------------------------------------------------------------------
+// Health Response Schema
+// ---------------------------------------------------------------------------
+
+export const HealthResponseSchema = z
+  .object({
+    status: z.string(),
+    version: z.string(),
+    uptime: z.number().int(),
+    timestamp: z.number().int(),
+  })
+  .openapi('HealthResponse');
+
+// ---------------------------------------------------------------------------
+// Agent Response Schemas
+// ---------------------------------------------------------------------------
+
+export const AgentResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    network: z.string(),
+    publicKey: z.string(),
+    status: z.string(),
+    createdAt: z.number().int(),
+  })
+  .openapi('AgentResponse');
+
+export const AgentOwnerResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    network: z.string(),
+    publicKey: z.string(),
+    status: z.string(),
+    ownerAddress: z.string().nullable(),
+    ownerVerified: z.boolean().nullable(),
+    updatedAt: z.number().int().nullable(),
+  })
+  .openapi('AgentOwnerResponse');
+
+// ---------------------------------------------------------------------------
+// Wallet Response Schemas
+// ---------------------------------------------------------------------------
+
+export const WalletAddressResponseSchema = z
+  .object({
+    agentId: z.string().uuid(),
+    chain: z.string(),
+    network: z.string(),
+    address: z.string(),
+  })
+  .openapi('WalletAddressResponse');
+
+export const WalletBalanceResponseSchema = z
+  .object({
+    agentId: z.string().uuid(),
+    chain: z.string(),
+    network: z.string(),
+    address: z.string(),
+    balance: z.string(),
+    decimals: z.number().int(),
+    symbol: z.string(),
+  })
+  .openapi('WalletBalanceResponse');
+
+// ---------------------------------------------------------------------------
+// Session Response Schemas
+// ---------------------------------------------------------------------------
+
+export const SessionCreateResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    token: z.string(),
+    expiresAt: z.number().int(),
+    agentId: z.string().uuid(),
+  })
+  .openapi('SessionCreateResponse');
+
+export const SessionListItemSchema = z
+  .object({
+    id: z.string().uuid(),
+    agentId: z.string().uuid(),
+    status: z.string(),
+    renewalCount: z.number().int(),
+    maxRenewals: z.number().int(),
+    expiresAt: z.number().int(),
+    absoluteExpiresAt: z.number().int(),
+    createdAt: z.number().int(),
+    lastRenewedAt: z.number().int().nullable(),
+  })
+  .openapi('SessionListItem');
+
+export const SessionRevokeResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.string(),
+    message: z.string().optional(),
+  })
+  .openapi('SessionRevokeResponse');
+
+export const SessionRenewResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    token: z.string(),
+    expiresAt: z.number().int(),
+    renewalCount: z.number().int(),
+  })
+  .openapi('SessionRenewResponse');
+
+// ---------------------------------------------------------------------------
+// Transaction Response Schemas
+// ---------------------------------------------------------------------------
+
+export const TxSendResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.string(),
+  })
+  .openapi('TxSendResponse');
+
+export const TxDetailResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    agentId: z.string().uuid(),
+    type: z.string(),
+    status: z.string(),
+    tier: z.string().nullable(),
+    chain: z.string(),
+    toAddress: z.string().nullable(),
+    amount: z.string().nullable(),
+    txHash: z.string().nullable(),
+    error: z.string().nullable(),
+    createdAt: z.number().int().nullable(),
+  })
+  .openapi('TxDetailResponse');
+
+export const TxApproveResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.string(),
+    approvedAt: z.number().int(),
+  })
+  .openapi('TxApproveResponse');
+
+export const TxRejectResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.string(),
+    rejectedAt: z.number().int(),
+  })
+  .openapi('TxRejectResponse');
+
+export const TxCancelResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.string(),
+  })
+  .openapi('TxCancelResponse');
+
+// ---------------------------------------------------------------------------
+// Policy Response Schemas
+// ---------------------------------------------------------------------------
+
+export const PolicyResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    agentId: z.string().uuid().nullable(),
+    type: z.string(),
+    rules: z.record(z.unknown()),
+    priority: z.number().int(),
+    enabled: z.boolean(),
+    createdAt: z.number().int(),
+    updatedAt: z.number().int(),
+  })
+  .openapi('PolicyResponse');
+
+export const PolicyDeleteResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    deleted: z.boolean(),
+  })
+  .openapi('PolicyDeleteResponse');
+
+// ---------------------------------------------------------------------------
+// Error Code -> OpenAPI Response Mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * Build OpenAPI error response entries from a list of error codes.
+ * Groups error codes by httpStatus, merging multiple codes into a single
+ * response entry with description listing which codes can occur.
+ *
+ * @param codes - Array of error code keys from ERROR_CODES
+ * @returns Record of HTTP status code string -> OpenAPI response definition
+ */
+export function buildErrorResponses(
+  codes: ErrorCode[],
+): Record<string, { description: string; content: { 'application/json': { schema: typeof ErrorResponseSchema } } }> {
+  const grouped = new Map<number, ErrorCode[]>();
+
+  for (const code of codes) {
+    const entry = ERROR_CODES[code];
+    const status = entry.httpStatus;
+    if (!grouped.has(status)) {
+      grouped.set(status, []);
+    }
+    grouped.get(status)!.push(code);
+  }
+
+  const result: Record<string, { description: string; content: { 'application/json': { schema: typeof ErrorResponseSchema } } }> = {};
+
+  for (const [status, codelist] of grouped) {
+    const descriptions = codelist.map((c) => `${c}: ${ERROR_CODES[c].message}`);
+    result[String(status)] = {
+      description: descriptions.join(' | '),
+      content: {
+        'application/json': { schema: ErrorResponseSchema },
+      },
+    };
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Re-exported Request Schemas with OpenAPI metadata
+// ---------------------------------------------------------------------------
+
+export const CreateAgentRequestOpenAPI = CreateAgentRequestSchema.openapi('CreateAgentRequest');
+export const CreateSessionRequestOpenAPI = CreateSessionRequestSchema.openapi('CreateSessionRequest');
+export const SendTransactionRequestOpenAPI = SendTransactionRequestSchema.openapi('SendTransactionRequest');
+export const CreatePolicyRequestOpenAPI = CreatePolicyRequestSchema.openapi('CreatePolicyRequest');
+export const UpdatePolicyRequestOpenAPI = UpdatePolicyRequestSchema.openapi('UpdatePolicyRequest');
+
+// Owner address request body schema (for PUT /agents/:id/owner)
+export const SetOwnerRequestSchema = z
+  .object({
+    owner_address: z.string().min(1),
+  })
+  .openapi('SetOwnerRequest');

@@ -115,6 +115,7 @@ function createMockAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapte
       status: 'confirmed' as const,
       confirmations: 1,
     }),
+    getAssets: async () => [],
     ...overrides,
   };
 }
@@ -164,9 +165,9 @@ function masterAuthJsonHeaders(): Record<string, string> {
   };
 }
 
-function masterAuthHeader(): Record<string, string> {
-  return { Host: HOST, 'X-Master-Password': TEST_PASSWORD };
-}
+// function masterAuthHeader(): Record<string, string> {
+//   return { Host: HOST, 'X-Master-Password': TEST_PASSWORD };
+// }
 
 function bearerJsonHeader(token: string): Record<string, string> {
   return {
