@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 59 of 63 (REST API 확장)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-10 -- Phase 58 complete (2/2 plans, verification passed)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-10 -- Completed 59-01-PLAN.md
 
-Progress: [██░░░░░░░░] 18% (2/11 plans)
+Progress: [███░░░░░░░] 27% (3/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 58 phases, 142 plans, 367 reqs, 475 tests, 26,000+ LOC
+**Cumulative:** 14 milestones, 58 phases, 143 plans, 367 reqs, 492 tests, 26,500+ LOC
 
 **v1.3 Velocity:**
-- Plans completed: 2
-- Average duration: 13.5min
-- Total execution time: 27min
+- Plans completed: 3
+- Average duration: 12.3min
+- Total execution time: 37min
 
 **v1.2 Velocity (reference):**
 - Total plans completed: 13
@@ -47,6 +47,9 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - AssetInfoSchema.balance is string for JSON bigint serialization
 - @hono/zod-openapi v0.19.10 선택 (v1.x는 zod@^4.0.0 필요, 프로젝트는 zod@3.x)
 - openApiValidationHook defaultHook으로 WAIaaSError 포맷 보존
+- Pending tx filter = PENDING + QUEUED (DELAYED/PENDING_APPROVAL 미존재)
+- Cursor pagination uses UUID v7 ID column (not createdAt)
+- Hono wildcard * does not match base path -- explicit sessionAuth on /v1/transactions required
 
 ### Blockers/Concerns
 
@@ -56,5 +59,5 @@ Full log in PROJECT.md. Key decisions for v1.3:
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 58 complete -- ready to plan Phase 59
+Stopped at: Completed 59-01-PLAN.md
 Resume file: None
