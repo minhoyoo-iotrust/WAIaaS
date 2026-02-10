@@ -6,5 +6,12 @@ export {
   SendTransactionRequestSchema,
   type SendTransactionRequest,
 } from './transaction.schema.js';
-export { PolicySchema, type Policy } from './policy.schema.js';
+export {
+  PolicySchema,
+  type Policy,
+  CreatePolicyRequestSchema,
+  type CreatePolicyRequest,
+  UpdatePolicyRequestSchema,
+  type UpdatePolicyRequest,
+} from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';

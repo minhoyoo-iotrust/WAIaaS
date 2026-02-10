@@ -56,6 +56,10 @@ export {
   type SendTransactionRequest,
   PolicySchema,
   type Policy,
+  CreatePolicyRequestSchema,
+  type CreatePolicyRequest,
+  UpdatePolicyRequestSchema,
+  type UpdatePolicyRequest,
   ConfigSchema,
   type Config,
 } from './schemas/index.js';
