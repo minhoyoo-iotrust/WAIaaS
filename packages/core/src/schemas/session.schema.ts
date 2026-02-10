@@ -13,3 +13,10 @@ export const SessionSchema = z.object({
   updatedAt: z.number().int(),
 });
 export type Session = z.infer<typeof SessionSchema>;
+
+export const CreateSessionRequestSchema = z.object({
+  agentId: z.string().uuid(),
+  ttl: z.number().int().min(300).max(604800).optional(), // defaults to config security.session_ttl (86400)
+  constraints: z.record(z.unknown()).nullable().optional(),
+});
+export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;

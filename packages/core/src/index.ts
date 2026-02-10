@@ -48,6 +48,8 @@ export {
   type CreateAgentRequest,
   SessionSchema,
   type Session,
+  CreateSessionRequestSchema,
+  type CreateSessionRequest,
   TransactionSchema,
   type Transaction,
   SendTransactionRequestSchema,

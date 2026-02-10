@@ -8,7 +8,7 @@
  *   4. requestLogger
  *
  * Auth middleware (route-level, registered on app before sub-routers):
- *   - masterAuth: /v1/agents (admin operations)
+ *   - masterAuth: /v1/agents, /v1/sessions (admin operations)
  *   - sessionAuth: /v1/wallet/*, /v1/transactions/* (session-authenticated)
  *   - /health remains public (no auth required)
  *
@@ -35,6 +35,7 @@ import {
 import type { GetKillSwitchState } from './middleware/index.js';
 import { health } from './routes/health.js';
 import { agentRoutes } from './routes/agents.js';
+import { sessionRoutes } from './routes/sessions.js';
 import { walletRoutes } from './routes/wallet.js';
 import { transactionRoutes } from './routes/transactions.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
@@ -76,6 +77,8 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
   // Register route-level auth middleware on the app (before sub-routers)
   if (deps.masterPasswordHash !== undefined) {
     app.use('/v1/agents', createMasterAuth({ masterPasswordHash: deps.masterPasswordHash }));
+    app.use('/v1/sessions', createMasterAuth({ masterPasswordHash: deps.masterPasswordHash }));
+    app.use('/v1/sessions/*', createMasterAuth({ masterPasswordHash: deps.masterPasswordHash }));
   }
 
   if (deps.jwtSecretManager && deps.db) {
@@ -95,6 +98,18 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
         db: deps.db,
         keyStore: deps.keyStore,
         masterPassword: deps.masterPassword,
+        config: deps.config,
+      }),
+    );
+  }
+
+  // Register session routes when deps are available (masterAuth + JWT)
+  if (deps.db && deps.jwtSecretManager && deps.config) {
+    app.route(
+      '/v1',
+      sessionRoutes({
+        db: deps.db,
+        jwtSecretManager: deps.jwtSecretManager,
         config: deps.config,
       }),
     );
