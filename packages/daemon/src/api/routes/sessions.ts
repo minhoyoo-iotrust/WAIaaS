@@ -1,8 +1,10 @@
 /**
- * Session CRUD routes: POST /sessions (create + JWT issuance),
- * GET /sessions (list active), DELETE /sessions/:id (revoke).
+ * Session routes: POST /sessions (create + JWT issuance),
+ * GET /sessions (list active), DELETE /sessions/:id (revoke),
+ * PUT /sessions/:id/renew (token renewal with 5 safety checks).
  *
- * All routes are protected by masterAuth middleware at the server level.
+ * CRUD routes are protected by masterAuth middleware at the server level.
+ * Renewal route is protected by sessionAuth (session's own token).
  *
  * @see docs/52-auth-redesign.md
  * @see docs/37-rest-api-complete-spec.md
@@ -36,9 +38,10 @@ export interface SessionRouteDeps {
 /**
  * Create session route sub-router.
  *
- * POST /sessions   -> create session + JWT issuance (201)
- * GET /sessions    -> list active sessions for agent (200)
- * DELETE /sessions/:id -> revoke session (200)
+ * POST /sessions         -> create session + JWT issuance (201)
+ * GET /sessions          -> list active sessions for agent (200)
+ * DELETE /sessions/:id   -> revoke session (200)
+ * PUT /sessions/:id/renew -> renew session token (200)
  */
 export function sessionRoutes(deps: SessionRouteDeps): Hono {
   const router = new Hono();
@@ -208,6 +211,111 @@ export function sessionRoutes(deps: SessionRouteDeps): Hono {
       .run();
 
     return c.json({ id: sessionId, status: 'REVOKED' }, 200);
+  });
+
+  // -------------------------------------------------------------------------
+  // PUT /sessions/:id/renew -- renew session token with 5 safety checks
+  // -------------------------------------------------------------------------
+  router.put('/sessions/:id/renew', async (c) => {
+    const sessionId = c.req.param('id');
+
+    // Verify caller owns the session (sessionAuth sets sessionId from JWT)
+    const callerSessionId = c.get('sessionId' as never) as string;
+    if (sessionId !== callerSessionId) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', {
+        message: 'Cannot renew a different session',
+      });
+    }
+
+    // Extract current token from Authorization header
+    const authHeader = c.req.header('Authorization');
+    const currentToken = authHeader!.slice('Bearer '.length);
+    const currentTokenHash = createHash('sha256').update(currentToken).digest('hex');
+
+    // Verify JWT payload to get iat/exp for TTL calculation
+    const jwtPayload = await deps.jwtSecretManager.verifyToken(currentToken);
+
+    // ----- Check 1: Session exists and not revoked -----
+    const session = deps.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .get();
+
+    if (!session) {
+      throw new WAIaaSError('SESSION_NOT_FOUND');
+    }
+    if (session.revokedAt !== null) {
+      throw new WAIaaSError('SESSION_REVOKED');
+    }
+
+    // ----- Check 2: token_hash CAS (Compare-And-Swap) -----
+    if (session.tokenHash !== currentTokenHash) {
+      throw new WAIaaSError('SESSION_RENEWAL_MISMATCH');
+    }
+
+    // ----- Check 3: maxRenewals limit -----
+    if (session.renewalCount >= session.maxRenewals) {
+      throw new WAIaaSError('RENEWAL_LIMIT_REACHED');
+    }
+
+    // ----- Check 4: Absolute lifetime -----
+    const nowSec = Math.floor(Date.now() / 1000);
+    const absoluteExpiresAtSec = Math.floor(session.absoluteExpiresAt.getTime() / 1000);
+    if (nowSec >= absoluteExpiresAtSec) {
+      throw new WAIaaSError('SESSION_ABSOLUTE_LIFETIME_EXCEEDED');
+    }
+
+    // ----- Check 5: 50% TTL elapsed -----
+    const currentTtl = jwtPayload.exp - jwtPayload.iat;
+    const elapsed = nowSec - jwtPayload.iat;
+    if (elapsed < currentTtl * 0.5) {
+      throw new WAIaaSError('RENEWAL_TOO_EARLY');
+    }
+
+    // ----- Issue new token -----
+    const newTtl = currentTtl;
+    const newExpiresAt = Math.min(nowSec + newTtl, absoluteExpiresAtSec);
+
+    const newPayload: JwtPayload = {
+      sub: sessionId,
+      agt: session.agentId,
+      iat: nowSec,
+      exp: newExpiresAt,
+    };
+    const newToken = await deps.jwtSecretManager.signToken(newPayload);
+    const newTokenHash = createHash('sha256').update(newToken).digest('hex');
+
+    // Atomic update with CAS guard on token_hash
+    const result = deps.db
+      .update(sessions)
+      .set({
+        tokenHash: newTokenHash,
+        expiresAt: new Date(newExpiresAt * 1000),
+        renewalCount: session.renewalCount + 1,
+        lastRenewedAt: new Date(nowSec * 1000),
+      })
+      .where(
+        and(
+          eq(sessions.id, sessionId),
+          eq(sessions.tokenHash, currentTokenHash), // CAS guard
+        ),
+      )
+      .run();
+
+    if (result.changes === 0) {
+      throw new WAIaaSError('SESSION_RENEWAL_MISMATCH');
+    }
+
+    return c.json(
+      {
+        id: sessionId,
+        token: newToken,
+        expiresAt: newExpiresAt,
+        renewalCount: session.renewalCount + 1,
+      },
+      200,
+    );
   });
 
   return router;

@@ -8,8 +8,8 @@
  *   4. requestLogger
  *
  * Auth middleware (route-level, registered on app before sub-routers):
- *   - masterAuth: /v1/agents, /v1/sessions (admin operations)
- *   - sessionAuth: /v1/wallet/*, /v1/transactions/* (session-authenticated)
+ *   - masterAuth: /v1/agents, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
+ *   - sessionAuth: /v1/sessions/:id/renew, /v1/wallet/*, /v1/transactions/*
  *   - /health remains public (no auth required)
  *
  * Error handler is registered via app.onError.
@@ -76,13 +76,24 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
 
   // Register route-level auth middleware on the app (before sub-routers)
   if (deps.masterPasswordHash !== undefined) {
-    app.use('/v1/agents', createMasterAuth({ masterPasswordHash: deps.masterPasswordHash }));
-    app.use('/v1/sessions', createMasterAuth({ masterPasswordHash: deps.masterPasswordHash }));
-    app.use('/v1/sessions/*', createMasterAuth({ masterPasswordHash: deps.masterPasswordHash }));
+    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+    app.use('/v1/agents', masterAuth);
+    // masterAuth on /v1/sessions (POST create, GET list)
+    app.use('/v1/sessions', masterAuth);
+    // masterAuth on /v1/sessions/:id for DELETE -- skip /renew sub-path (sessionAuth handles it)
+    app.use('/v1/sessions/:id', async (c, next) => {
+      if (c.req.path.endsWith('/renew')) {
+        await next();
+        return;
+      }
+      return masterAuth(c, next);
+    });
   }
 
   if (deps.jwtSecretManager && deps.db) {
     const sessionAuth = createSessionAuth({ jwtSecretManager: deps.jwtSecretManager, db: deps.db });
+    // sessionAuth for session renewal (uses own token)
+    app.use('/v1/sessions/:id/renew', sessionAuth);
     app.use('/v1/wallet/*', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);
   }
