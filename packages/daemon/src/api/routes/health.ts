@@ -5,17 +5,34 @@
  * No authentication required.
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
+import { HealthResponseSchema } from './openapi-schemas.js';
 
-const health = new Hono();
+const healthRoute = createRoute({
+  method: 'get',
+  path: '/',
+  tags: ['Health'],
+  summary: 'Health check',
+  responses: {
+    200: {
+      description: 'Daemon health status',
+      content: { 'application/json': { schema: HealthResponseSchema } },
+    },
+  },
+});
 
-health.get('/', (c) => {
-  return c.json({
-    status: 'ok',
-    version: '0.0.0',
-    uptime: Math.floor(process.uptime()),
-    timestamp: Math.floor(Date.now() / 1000),
-  });
+const health = new OpenAPIHono();
+
+health.openapi(healthRoute, (c) => {
+  return c.json(
+    {
+      status: 'ok',
+      version: '0.0.0',
+      uptime: Math.floor(process.uptime()),
+      timestamp: Math.floor(Date.now() / 1000),
+    },
+    200,
+  );
 });
 
 export { health };

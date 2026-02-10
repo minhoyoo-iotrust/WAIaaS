@@ -25,7 +25,7 @@ import { createDatabase, pushSchema, generateId } from '../infrastructure/databa
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import { createApp } from '../api/server.js';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -72,7 +72,7 @@ function masterAuthHeader(): Record<string, string> {
 
 /** Helper: create a session via API and return { id, token, expiresAt } */
 async function createSessionViaApi(
-  app: Hono,
+  app: OpenAPIHono,
   agentId: string,
   ttl: number = SESSION_TTL,
 ): Promise<{ id: string; token: string; expiresAt: number }> {
@@ -95,7 +95,7 @@ async function createSessionViaApi(
 
 /** Helper: renew a session via API */
 async function renewSessionViaApi(
-  app: Hono,
+  app: OpenAPIHono,
   sessionId: string,
   token: string,
 ): Promise<Response> {
@@ -115,7 +115,7 @@ async function renewSessionViaApi(
 let sqlite: DatabaseType;
 let db: ReturnType<typeof createDatabase>['db'];
 let jwtManager: JwtSecretManager;
-let app: Hono;
+let app: OpenAPIHono;
 let testAgentId: string;
 
 beforeAll(async () => {

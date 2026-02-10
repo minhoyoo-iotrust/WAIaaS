@@ -12,7 +12,7 @@ import { createDatabase, pushSchema, generateId } from '../infrastructure/databa
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -101,7 +101,7 @@ function mockConfig(): DaemonConfig {
 // ---------------------------------------------------------------------------
 
 let conn: DatabaseConnection;
-let app: Hono;
+let app: OpenAPIHono;
 let masterPasswordHash: string;
 
 beforeEach(async () => {

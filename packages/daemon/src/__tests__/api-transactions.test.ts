@@ -25,7 +25,7 @@ import type {
   SimulationResult,
   SubmitResult,
 } from '@waiaas/core';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -169,7 +169,7 @@ function mockAdapter(): IChainAdapter {
 // ---------------------------------------------------------------------------
 
 let conn: DatabaseConnection;
-let app: Hono;
+let app: OpenAPIHono;
 let jwtSecretManager: JwtSecretManager;
 
 beforeEach(async () => {

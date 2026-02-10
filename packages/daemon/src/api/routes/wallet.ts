@@ -8,13 +8,18 @@
  * @see docs/37-rest-api-complete-spec.md
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type { IChainAdapter } from '@waiaas/core';
 import { agents } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
+import {
+  WalletAddressResponseSchema,
+  WalletBalanceResponseSchema,
+  buildErrorResponses,
+} from './openapi-schemas.js';
 
 export interface WalletRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -39,29 +44,68 @@ async function resolveAgentById(
   return agent;
 }
 
+// ---------------------------------------------------------------------------
+// Route definitions
+// ---------------------------------------------------------------------------
+
+const walletAddressRoute = createRoute({
+  method: 'get',
+  path: '/wallet/address',
+  tags: ['Wallet'],
+  summary: 'Get wallet address',
+  responses: {
+    200: {
+      description: 'Agent wallet address',
+      content: { 'application/json': { schema: WalletAddressResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
+const walletBalanceRoute = createRoute({
+  method: 'get',
+  path: '/wallet/balance',
+  tags: ['Wallet'],
+  summary: 'Get wallet balance',
+  responses: {
+    200: {
+      description: 'Agent wallet balance',
+      content: { 'application/json': { schema: WalletBalanceResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'CHAIN_ERROR']),
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Route factory
+// ---------------------------------------------------------------------------
+
 /**
  * Create wallet route sub-router.
  *
  * GET /wallet/address -> returns agent's public key
  * GET /wallet/balance -> calls adapter.getBalance() and returns lamports
  */
-export function walletRoutes(deps: WalletRouteDeps): Hono {
-  const router = new Hono();
+export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
+  const router = new OpenAPIHono();
 
-  router.get('/wallet/address', async (c) => {
+  router.openapi(walletAddressRoute, async (c) => {
     // Get agentId from sessionAuth context (set by middleware at server level)
     const agentId = c.get('agentId' as never) as string;
     const agent = await resolveAgentById(deps.db, agentId);
 
-    return c.json({
-      agentId: agent.id,
-      chain: agent.chain,
-      network: agent.network,
-      address: agent.publicKey,
-    });
+    return c.json(
+      {
+        agentId: agent.id,
+        chain: agent.chain,
+        network: agent.network,
+        address: agent.publicKey,
+      },
+      200,
+    );
   });
 
-  router.get('/wallet/balance', async (c) => {
+  router.openapi(walletBalanceRoute, async (c) => {
     const agentId = c.get('agentId' as never) as string;
     const agent = await resolveAgentById(deps.db, agentId);
 
@@ -73,15 +117,18 @@ export function walletRoutes(deps: WalletRouteDeps): Hono {
 
     const balanceInfo = await deps.adapter.getBalance(agent.publicKey);
 
-    return c.json({
-      agentId: agent.id,
-      chain: agent.chain,
-      network: agent.network,
-      address: agent.publicKey,
-      balance: balanceInfo.balance.toString(),
-      decimals: balanceInfo.decimals,
-      symbol: balanceInfo.symbol,
-    });
+    return c.json(
+      {
+        agentId: agent.id,
+        chain: agent.chain,
+        network: agent.network,
+        address: agent.publicKey,
+        balance: balanceInfo.balance.toString(),
+        decimals: balanceInfo.decimals,
+        symbol: balanceInfo.symbol,
+      },
+      200,
+    );
   });
 
   return router;

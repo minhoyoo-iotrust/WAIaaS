@@ -24,7 +24,7 @@ import { createDatabase, pushSchema, generateId } from '../infrastructure/databa
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import { createApp } from '../api/server.js';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -75,7 +75,7 @@ function masterAuthJsonHeaders(): Record<string, string> {
 let sqlite: DatabaseType;
 let db: ReturnType<typeof createDatabase>['db'];
 let jwtManager: JwtSecretManager;
-let app: Hono;
+let app: OpenAPIHono;
 let testAgentId: string;
 
 beforeAll(async () => {

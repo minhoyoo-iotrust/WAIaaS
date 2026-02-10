@@ -16,7 +16,7 @@ import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { IChainAdapter, BalanceInfo, HealthInfo } from '@waiaas/core';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -162,7 +162,7 @@ function mockAdapter(): IChainAdapter {
 // ---------------------------------------------------------------------------
 
 let conn: DatabaseConnection;
-let app: Hono;
+let app: OpenAPIHono;
 let jwtSecretManager: JwtSecretManager;
 let masterPasswordHash: string;
 

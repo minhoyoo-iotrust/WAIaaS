@@ -20,7 +20,7 @@
  * @see docs/52-auth-redesign.md
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { IChainAdapter } from '@waiaas/core';
@@ -70,10 +70,10 @@ export interface CreateAppDeps {
  * Create a Hono app instance with all middleware and routes configured.
  *
  * @param deps - Optional dependencies (extensible for future use)
- * @returns Configured Hono instance (not started)
+ * @returns Configured OpenAPIHono instance (not started)
  */
-export function createApp(deps: CreateAppDeps = {}): Hono {
-  const app = new Hono();
+export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
+  const app = new OpenAPIHono();
 
   // Register global middleware in order
   app.use('*', requestId);

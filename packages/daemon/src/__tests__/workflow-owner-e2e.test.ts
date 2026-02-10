@@ -27,7 +27,7 @@ import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { OwnerLifecycleService } from '../workflow/owner-state.js';
 import type { IChainAdapter } from '@waiaas/core';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
 // sodium-native for ownerAuth Ed25519 signatures
@@ -254,7 +254,7 @@ let policyEngine: DatabasePolicyEngine;
 let delayQueue: DelayQueue;
 let approvalWorkflow: ApprovalWorkflow;
 let ownerLifecycle: OwnerLifecycleService;
-let app: Hono;
+let app: OpenAPIHono;
 
 beforeAll(async () => {
   passwordHash = await argon2.hash(TEST_PASSWORD, {
