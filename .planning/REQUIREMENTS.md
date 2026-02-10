@@ -114,13 +114,61 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated by roadmapper) | | |
+| OAPI-01 | Phase 58 | Pending |
+| OAPI-02 | Phase 58 | Pending |
+| OAPI-03 | Phase 58 | Pending |
+| OAPI-04 | Phase 58 | Pending |
+| CHAIN-01 | Phase 58 | Pending |
+| CHAIN-02 | Phase 58 | Pending |
+| API-01 | Phase 59 | Pending |
+| API-02 | Phase 59 | Pending |
+| API-03 | Phase 59 | Pending |
+| API-04 | Phase 59 | Pending |
+| API-05 | Phase 59 | Pending |
+| API-06 | Phase 59 | Pending |
+| API-07 | Phase 59 | Pending |
+| API-08 | Phase 59 | Pending |
+| API-09 | Phase 59 | Pending |
+| API-10 | Phase 59 | Pending |
+| API-11 | Phase 59 | Pending |
+| API-12 | Phase 59 | Pending |
+| API-13 | Phase 59 | Pending |
+| API-14 | Phase 59 | Pending |
+| API-15 | Phase 59 | Pending |
+| NOTIF-01 | Phase 60 | Pending |
+| NOTIF-02 | Phase 60 | Pending |
+| NOTIF-03 | Phase 60 | Pending |
+| NOTIF-04 | Phase 60 | Pending |
+| NOTIF-05 | Phase 60 | Pending |
+| NOTIF-06 | Phase 60 | Pending |
+| NOTIF-07 | Phase 60 | Pending |
+| NOTIF-08 | Phase 60 | Pending |
+| TSDK-01 | Phase 61 | Pending |
+| TSDK-02 | Phase 61 | Pending |
+| TSDK-03 | Phase 61 | Pending |
+| TSDK-04 | Phase 61 | Pending |
+| TSDK-05 | Phase 61 | Pending |
+| TSDK-06 | Phase 61 | Pending |
+| TSDK-07 | Phase 61 | Pending |
+| TSDK-08 | Phase 61 | Pending |
+| PYDK-01 | Phase 62 | Pending |
+| PYDK-02 | Phase 62 | Pending |
+| PYDK-03 | Phase 62 | Pending |
+| PYDK-04 | Phase 62 | Pending |
+| PYDK-05 | Phase 62 | Pending |
+| PYDK-06 | Phase 62 | Pending |
+| MCP-01 | Phase 63 | Pending |
+| MCP-02 | Phase 63 | Pending |
+| MCP-03 | Phase 63 | Pending |
+| MCP-04 | Phase 63 | Pending |
+| MCP-05 | Phase 63 | Pending |
+| MCP-06 | Phase 63 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 45 total
-- Mapped to phases: 0
-- Unmapped: 45 ⚠️
+- v1.3 requirements: 49 total
+- Mapped to phases: 49
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-10*
-*Last updated: 2026-02-10 after initial definition*
+*Last updated: 2026-02-10 after roadmap creation (traceability populated)*
