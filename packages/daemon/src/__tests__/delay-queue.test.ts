@@ -190,8 +190,8 @@ describe('DelayQueue - processExpired', () => {
     const expired = queue.processExpired(now);
 
     expect(expired).toHaveLength(1);
-    expect(expired[0].txId).toBe(txId);
-    expect(expired[0].agentId).toBe(agentId);
+    expect(expired[0]!.txId).toBe(txId);
+    expect(expired[0]!.agentId).toBe(agentId);
 
     // Verify DB status changed to EXECUTING
     const row = conn.sqlite
