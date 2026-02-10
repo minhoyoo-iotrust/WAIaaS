@@ -13,7 +13,7 @@
 - ✅ **v0.9 MCP 세션 관리 자동화 설계** — Phases 36-40 (shipped 2026-02-09)
 - ✅ **v0.10 구현 전 설계 완결성 확보** — Phases 41-44 (shipped 2026-02-09)
 - ✅ **v1.0 구현 계획 수립** — Phases 45-47 (shipped 2026-02-09)
-- ✅ **v1.1 코어 인프라 + 기본 전송** — Phases 48-51 (shipped 2026-02-10)
+- ✅ **v1.1 코어 인프라 + 기본 전송** — Phases 48-51 (shipped 2026-02-10, 281 tests, 10,925 LOC)
 
 ## Phases
 
@@ -130,91 +130,17 @@
 
 </details>
 
-### v1.1 코어 인프라 + 기본 전송 (Shipped 2026-02-10)
+<details>
+<summary>✅ v1.1 코어 인프라 + 기본 전송 (Phases 48-51) — SHIPPED 2026-02-10</summary>
 
-**마일스톤 목표:** CLI로 init -> start -> SOL 전송 -> 확인까지 동작하는 최소 데몬
+- [x] Phase 48: 모노레포 스캐폴드 + @waiaas/core (3/3 plans) — completed 2026-02-10
+- [x] Phase 49: 데몬 인프라 (3/3 plans) — completed 2026-02-10
+- [x] Phase 50: API 서버 + SolanaAdapter + 파이프라인 (4/4 plans) — completed 2026-02-10
+- [x] Phase 51: CLI + E2E 통합 검증 (2/2 plans) — completed 2026-02-10
 
-- [x] **Phase 48: 모노레포 스캐폴드 + @waiaas/core** — 빌드 인프라와 공유 타입/스키마/인터페이스 패키지 (completed 2026-02-10)
-- [x] **Phase 49: 데몬 인프라** — SQLite, 키스토어, config 로더, 라이프사이클 (completed 2026-02-10)
-- [x] **Phase 50: API 서버 + SolanaAdapter + 파이프라인** — HTTP 엔드포인트, 체인 연동, 트랜잭션 실행 (completed 2026-02-10)
-- [x] **Phase 51: CLI + E2E 통합 검증** — 사용자 CLI와 전 구간 자동 검증 (completed 2026-02-10)
-
-## Phase Details
-
-### Phase 48: 모노레포 스캐폴드 + @waiaas/core
-
-**목표**: 4개 패키지가 빌드-테스트-린트 파이프라인으로 연결되고, 모든 다운스트림 패키지가 import할 공유 타입/스키마/에러/인터페이스가 준비된다
-**의존**: 없음 (첫 번째 구현 페이즈)
-**요구사항**: MONO-01, MONO-02, MONO-03, CORE-01, CORE-02, CORE-03, CORE-04, CORE-05
-**성공 기준** (페이즈 완료 시 참이어야 하는 것):
-  1. `pnpm install && pnpm build && pnpm test && pnpm lint`가 루트에서 한 번에 성공한다
-  2. `@waiaas/core`를 다른 패키지에서 import하면 12개 Enum, Zod 스키마, 66개 에러 코드, 4개 인터페이스에 대한 타입 추론이 IDE에서 동작한다
-  3. WAIaaSError를 throw하고 catch하면 에러 코드(code)와 HTTP 상태(httpStatus)를 프로그래밍적으로 조회할 수 있다
-  4. `getMessages('ko')` 호출 시 한글 메시지 객체가 반환되고, `getMessages('en')` 호출 시 영문 메시지 객체가 반환된다
-  5. Enum 값과 Zod 스키마가 일치하는지 검증하는 단위 테스트가 통과한다
-**플랜**: 3 plans
-
-Plans:
-- [ ] 48-01-PLAN.md — 모노레포 스캐폴드 (pnpm workspace, Turborepo, tsconfig, ESLint flat config, Prettier, Vitest workspace, .nvmrc, 4개 패키지 셸)
-- [ ] 48-02-PLAN.md — @waiaas/core Enum SSoT 12개 + Zod 스키마 5개 + 에러 코드 66개 + WAIaaSError (TDD)
-- [ ] 48-03-PLAN.md — @waiaas/core 인터페이스 4개 + i18n (en/ko) + 패키지 전체 빌드/export 검증 (TDD)
-
-### Phase 49: 데몬 인프라
-
-**목표**: @waiaas/daemon 패키지가 SQLite DB, 키스토어, config 로더, 데몬 라이프사이클을 갖추어 "시작-실행-종료"가 가능한 프로세스가 된다
-**의존**: Phase 48 (@waiaas/core 타입/스키마/인터페이스)
-**요구사항**: DB-01, DB-02, DB-03, KEY-01, KEY-02, KEY-03, CFG-01, CFG-02, LIFE-01, LIFE-02, LIFE-03, LIFE-04
-**성공 기준** (페이즈 완료 시 참이어야 하는 것):
-  1. 데몬이 시작되면 7개 테이블이 생성되고 PRAGMA 7개가 적용된 SQLite DB 파일이 존재한다
-  2. 마스터 패스워드로 에이전트 개인키를 암호화 저장한 후, 같은 패스워드로 복호화하면 원본 키와 일치하며, 틀린 패스워드로는 복호화가 실패한다
-  3. config.toml 파일의 값이 로드되고, 같은 키에 환경변수가 설정되어 있으면 환경변수 값이 우선한다
-  4. 데몬 프로세스를 시작한 후 SIGTERM을 보내면 WAL 체크포인트 완료 후 정상 종료되고, PID 파일이 제거된다
-  5. 이미 실행 중인 데몬이 있을 때 두 번째 인스턴스를 시작하면 flock 잠금 충돌로 즉시 실패한다
-**플랜**: 3 plans
-
-Plans:
-- [ ] 49-01-PLAN.md — SQLite 7-table Drizzle ORM 스키마 + PRAGMA 7개 + UUID v7 + CHECK 제약 (TDD, Wave 1)
-- [ ] 49-02-PLAN.md — AES-256-GCM 키스토어 + Argon2id KDF + sodium guarded memory + 파일 포맷 v1 (TDD, Wave 1)
-- [ ] 49-03-PLAN.md — config.toml 로더 (smol-toml + Zod) + 데몬 라이프사이클 (6-step 시작/10-step 종료/flock/PID/BackgroundWorkers) (TDD, Wave 2)
-
-### Phase 50: API 서버 + SolanaAdapter + 파이프라인
-
-**목표**: HTTP로 에이전트를 생성하고 SOL 잔액 조회와 전송을 요청하면, SolanaAdapter가 온체인 트랜잭션을 실행하고 확정 상태까지 추적된다
-**의존**: Phase 49 (데몬 인프라 — DB, 키스토어, 라이프사이클)
-**요구사항**: API-01, API-02, API-03, API-04, API-05, API-06, API-07, API-08, SOL-01, SOL-02, SOL-03, SOL-04, SOL-05, SOL-06, PIPE-01, PIPE-02, PIPE-03, PIPE-04
-**성공 기준** (페이즈 완료 시 참이어야 하는 것):
-  1. `curl http://127.0.0.1:3100/health`가 200 OK를 반환하고, 외부 IP에서의 요청은 hostGuard에 의해 거부된다
-  2. `POST /v1/agents`로 에이전트를 생성하면 Solana 키 쌍이 생성-암호화 저장되고, `GET /v1/wallet/address`로 base58 공개키를 조회할 수 있다
-  3. `GET /v1/wallet/balance`가 Solana RPC에서 조회한 실제 SOL 잔액을 lamports 단위로 반환한다
-  4. `POST /v1/transactions/send`로 SOL 전송을 요청하면 파이프라인 6-stage를 거쳐 온체인에 제출되고, `GET /v1/transactions/:id` 폴링으로 CONFIRMED 상태를 확인할 수 있다
-  5. 존재하지 않는 에이전트 ID로 API를 호출하면 WAIaaSError 기반 404 JSON 응답이 반환된다
-**플랜**: 4 plans
-
-Plans:
-- [ ] 50-01-PLAN.md — Hono API 서버 프레임워크 + 미들웨어 6개 + health 엔드포인트 (Wave 1)
-- [ ] 50-02-PLAN.md — SolanaAdapter 10개 IChainAdapter 메서드 (@solana/kit 3.x) (TDD, Wave 1)
-- [ ] 50-03-PLAN.md — 에이전트/지갑 API 라우트 + DaemonLifecycle Step 4/5 통합 (Wave 2)
-- [ ] 50-04-PLAN.md — 트랜잭션 파이프라인 6-stage + DefaultPolicyEngine + 전송 API (TDD, Wave 3)
-
-### Phase 51: CLI + E2E 통합 검증
-
-**목표**: 사용자가 CLI만으로 init -> start -> SOL 전송 -> 확인까지 완수할 수 있고, 12건의 자동화된 E2E 테스트가 전 구간을 검증한다
-**의존**: Phase 50 (API 서버 + SolanaAdapter + 파이프라인)
-**요구사항**: CLI-01, CLI-02, CLI-03, CLI-04, E2E-01, E2E-02, E2E-03, E2E-04
-**성공 기준** (페이즈 완료 시 참이어야 하는 것):
-  1. `waiaas init`을 실행하면 `~/.waiaas/` 디렉토리, config.toml 기본값, keystore/ 디렉토리가 생성된다
-  2. `waiaas start`로 데몬을 기동한 후 `waiaas status`가 `running` + 포트 3100을 표시하고, `waiaas stop`으로 종료하면 `stopped`로 전환된다
-  3. 데몬 실행 중 `POST /v1/agents` -> `POST /v1/transactions/send` -> `GET /v1/transactions/:id` 폴링으로 SOL 전송이 CONFIRMED까지 완료된다
-  4. E2E 테스트 12건(라이프사이클 4 + 에이전트 3 + 트랜잭션 2 + 에러 3)이 모두 자동으로 통과한다
-**플랜**: 2 plans
-
-Plans:
-- [ ] 51-01-PLAN.md -- CLI 4개 명령어 (init, start, stop, status) + commander ^13.x + unit tests (Wave 1)
-- [ ] 51-02-PLAN.md -- E2E 테스트 12건 (라이프사이클 4 + 에이전트 3 + 트랜잭션 2 + 에러 3) + MockChainAdapter (Wave 2)
+</details>
 
 ## Progress
-
-**실행 순서:** Phase 48 -> 49 -> 50 -> 51
 
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
@@ -229,10 +155,10 @@ Plans:
 | v0.9 MCP 세션 자동화 | 36-40 | 10 | Complete | 2026-02-09 |
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
-| **v1.1 코어 인프라** | **48-51** | **12** | **Complete** | 2026-02-10 |
+| v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
 
-**Total:** 12 milestones shipped, 51 phases, 127 plans completed
+**Total:** 13 milestones shipped, 51 phases, 127 plans completed
 
 ---
 
-*Last updated: 2026-02-10 after Phase 51 complete — v1.1 milestone shipped*
+*Last updated: 2026-02-10 after v1.1 milestone archived*
