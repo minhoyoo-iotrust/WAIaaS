@@ -8,6 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.3 SDK + MCP + 알림
+
+**Goal:** AI 에이전트가 TS/Python SDK 또는 MCP로 지갑을 사용하고, Owner가 Telegram/Discord/ntfy로 알림을 받는 상태. OpenAPIHono 전환으로 전 엔드포인트 타입 안전 라우팅 + OpenAPI 3.0 자동 생성 완성.
+
+**Target features:**
+- TypeScript SDK (`@waiaas/sdk`) — WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성, fetch 기반
+- Python SDK (`waiaas`) — httpx + Pydantic v2, 동일 인터페이스
+- MCP Server (`@waiaas/mcp`) — 6 도구 + 3 리소스, SessionManager 내장, stdio transport
+- 알림 시스템 — Telegram/Discord/ntfy 3채널, NotificationService, 21개 이벤트
+- OpenAPIHono 전면 전환 — 기존 18 + 신규 15 = 33 엔드포인트, GET /doc OpenAPI 자동 생성
+- REST API 15개 추가 (누적 33개)
+- IChainAdapter getAssets() 선행 구현
+
 ## Current State
 
 v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 LOC, 457 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송(INSTANT/DELAY/APPROVAL 분류) → Owner 승인/거절 → 확인까지 동작하는 인증+정책 적용 데몬 완성.
@@ -15,7 +28,7 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 
 **구현 로드맵 (v1.3~v2.0):**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
 - ✅ v1.2 인증 + 정책 엔진 — shipped 2026-02-10
-- v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)
+- **→ v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)**
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -129,13 +142,15 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 
 
 ### 활성
 
-(v1.3 REQUIREMENTS.md에서 정의 예정)
+(v1.3 — REQUIREMENTS.md에서 상세 정의)
 
-- [ ] TypeScript SDK (SessionManager 포함)
-- [ ] Python SDK
-- [ ] MCP Server 6 도구 + 3 리소스
-- [ ] 멀티 채널 알림 (console/webhook/telegram)
-- [ ] SessionManager 자동 갱신
+- [ ] TypeScript SDK (@waiaas/sdk) — WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
+- [ ] Python SDK (waiaas) — httpx + Pydantic v2, 동일 인터페이스
+- [ ] MCP Server (@waiaas/mcp) — 6 도구 + 3 리소스, SessionManager 자동 갱신
+- [ ] 알림 시스템 — Telegram/Discord/ntfy 3채널, NotificationService, 21 이벤트
+- [ ] OpenAPIHono 전면 전환 — 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
+- [ ] REST API 15개 추가 (누적 33개)
+- [ ] IChainAdapter getAssets() + GET /v1/wallet/assets
 
 ### 범위 외
 
@@ -217,4 +232,4 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요
 | SQLite 타임스탬프 초 단위 | UUID v7 ms가 동일 초 내 순서 보장 | ✓ Good — v0.7 해소 |
 
 ---
-*최종 업데이트: 2026-02-10 after v1.2 milestone*
+*최종 업데이트: 2026-02-10 after v1.3 milestone started*
