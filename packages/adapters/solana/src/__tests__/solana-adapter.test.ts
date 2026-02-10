@@ -28,6 +28,7 @@ const { mockRpc } = vi.hoisted(() => {
     simulateTransaction: vi.fn(),
     sendTransaction: vi.fn(),
     getSignatureStatuses: vi.fn(),
+    getTokenAccountsByOwner: vi.fn(),
   };
   return { mockRpc };
 });
@@ -416,6 +417,162 @@ describe('SolanaAdapter', () => {
       const result = await adapter.waitForConfirmation(txHash, 100);
       expect(result.txHash).toBe(txHash);
       expect(result.status).toBe('submitted');
+    });
+  });
+
+  // -- getAssets (6 tests) --
+
+  describe('getAssets', () => {
+    it('returns native SOL only when no SPL token accounts exist', async () => {
+      await adapter.connect(TEST_RPC_URL);
+      mockRpc.getBalance = mockSend({ value: 1_000_000_000n });
+      mockRpc.getTokenAccountsByOwner = mockSend({ value: [] });
+
+      const assets = await adapter.getAssets(testFromAddress);
+      expect(assets).toHaveLength(1);
+      expect(assets[0]).toEqual({
+        mint: 'native',
+        symbol: 'SOL',
+        name: 'Solana',
+        balance: 1_000_000_000n,
+        decimals: 9,
+        isNative: true,
+      });
+    });
+
+    it('returns native SOL + SPL tokens when token accounts exist', async () => {
+      await adapter.connect(TEST_RPC_URL);
+      mockRpc.getBalance = mockSend({ value: 1_000_000_000n });
+      mockRpc.getTokenAccountsByOwner = mockSend({
+        value: [
+          {
+            account: {
+              data: {
+                parsed: {
+                  info: {
+                    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                    tokenAmount: { amount: '500000', decimals: 6, uiAmountString: '0.5' },
+                  },
+                  type: 'account',
+                },
+              },
+            },
+          },
+          {
+            account: {
+              data: {
+                parsed: {
+                  info: {
+                    mint: 'So11111111111111111111111111111111111111112',
+                    tokenAmount: { amount: '200000000', decimals: 9, uiAmountString: '0.2' },
+                  },
+                  type: 'account',
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      const assets = await adapter.getAssets(testFromAddress);
+      expect(assets).toHaveLength(3);
+      // First entry is always native SOL
+      expect(assets[0].mint).toBe('native');
+      expect(assets[0].isNative).toBe(true);
+      expect(assets[0].balance).toBe(1_000_000_000n);
+      // Second entry is USDC-like token
+      expect(assets[1].mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      expect(assets[1].balance).toBe(500000n);
+      expect(assets[1].decimals).toBe(6);
+      expect(assets[1].isNative).toBe(false);
+      // Third entry
+      expect(assets[2].mint).toBe('So11111111111111111111111111111111111111112');
+      expect(assets[2].balance).toBe(200000000n);
+      expect(assets[2].decimals).toBe(9);
+    });
+
+    it('returns native SOL with 0 balance when account is empty', async () => {
+      await adapter.connect(TEST_RPC_URL);
+      mockRpc.getBalance = mockSend({ value: 0n });
+      mockRpc.getTokenAccountsByOwner = mockSend({ value: [] });
+
+      const assets = await adapter.getAssets(testFromAddress);
+      expect(assets).toHaveLength(1);
+      expect(assets[0]).toEqual({
+        mint: 'native',
+        symbol: 'SOL',
+        name: 'Solana',
+        balance: 0n,
+        decimals: 9,
+        isNative: true,
+      });
+    });
+
+    it('filters out zero-balance SPL token accounts', async () => {
+      await adapter.connect(TEST_RPC_URL);
+      mockRpc.getBalance = mockSend({ value: 1_000_000_000n });
+      mockRpc.getTokenAccountsByOwner = mockSend({
+        value: [
+          {
+            account: {
+              data: {
+                parsed: {
+                  info: {
+                    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                    tokenAmount: { amount: '100000', decimals: 6, uiAmountString: '0.1' },
+                  },
+                  type: 'account',
+                },
+              },
+            },
+          },
+          {
+            account: {
+              data: {
+                parsed: {
+                  info: {
+                    mint: 'ZeroTokenMintAddress11111111111111111111111',
+                    tokenAmount: { amount: '0', decimals: 9, uiAmountString: '0' },
+                  },
+                  type: 'account',
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      const assets = await adapter.getAssets(testFromAddress);
+      // Should be 2: native SOL + non-zero USDC, zero-balance token filtered out
+      expect(assets).toHaveLength(2);
+      expect(assets[0].mint).toBe('native');
+      expect(assets[1].mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+    });
+
+    it('throws WAIaaSError CHAIN_ERROR when RPC fails', async () => {
+      await adapter.connect(TEST_RPC_URL);
+      mockRpc.getBalance = mockSendReject(new Error('RPC timeout'));
+
+      await expect(adapter.getAssets(testFromAddress)).rejects.toThrow(WAIaaSError);
+      try {
+        await adapter.getAssets(testFromAddress);
+      } catch (error) {
+        expect(error).toBeInstanceOf(WAIaaSError);
+        expect((error as WAIaaSError).code).toBe('CHAIN_ERROR');
+      }
+    });
+
+    it('throws WAIaaSError ADAPTER_NOT_AVAILABLE when not connected', async () => {
+      // adapter not connected
+      expect(adapter.isConnected()).toBe(false);
+
+      await expect(adapter.getAssets(testFromAddress)).rejects.toThrow(WAIaaSError);
+      try {
+        await adapter.getAssets(testFromAddress);
+      } catch (error) {
+        expect(error).toBeInstanceOf(WAIaaSError);
+        expect((error as WAIaaSError).code).toBe('ADAPTER_NOT_AVAILABLE');
+      }
     });
   });
 
