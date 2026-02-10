@@ -5,29 +5,29 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 52 인증 기반
+**Current focus:** Phase 52 인증 기반 -- COMPLETE
 
 ## Current Position
 
 Phase: 52 (1 of 6 in v1.2) (인증 기반)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-10 -- Completed 52-01-PLAN.md (JWT Secret + sessionAuth)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-10 -- Completed 52-02-PLAN.md (masterAuth + ownerAuth + endpoint auth)
 
-Progress: [█░░░░░░░░░░░░] 7% (1/13 plans)
+Progress: [██░░░░░░░░░░░] 15% (2/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 51 phases, 128 plans, 332 reqs, 301 tests, ~11,200 LOC
+**Cumulative:** 13 milestones, 51 phases, 129 plans, 332 reqs, 318 tests, ~11,500 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 1
-- Average duration: 5min
-- Total execution time: 5min
+- Total plans completed: 2
+- Average duration: 8min
+- Total execution time: 16min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 52 | 1/2 | 5min | 5min |
+| 52 | 2/2 | 16min | 8min |
 
 ## Accumulated Context
 
@@ -45,14 +45,18 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [52-01]: wai_sess_ token prefix for visual identification + format validation
 - [52-01]: JwtSecretManager in-memory cache + DB persistence, dual-key 5-min rotation window
 - [52-01]: sessionAuth factory pattern with JwtSecretManager + DB deps injection
+- [52-02]: Server-level auth middleware (app.use() at createApp level, not sub-router use('*'))
+- [52-02]: ownerAuth uses sodium-native createRequire + inline base58 decode (Ed25519 only for v1.2)
+- [52-02]: masterPasswordHash in CreateAppDeps (Argon2id hash injected, not raw password for auth)
+- [52-02]: No X-Agent-Id fallback -- wallet/tx routes exclusively use sessionAuth context agentId
 
 ### Blockers/Concerns
 
 - ~~jose (JWT) 패키지 미설치~~ -- RESOLVED in 52-01
-- SIWS/SIWE 검증 라이브러리 미설치 -- Phase 52 ownerAuth에서 필요
+- ~~SIWS/SIWE 검증 라이브러리 미설치~~ -- RESOLVED in 52-02 (sodium-native Ed25519 for Solana, SIWE deferred to v1.4)
 
 ## Session Continuity
 
-Last session: 2026-02-10T06:27:18Z
-Stopped at: Completed 52-01-PLAN.md
+Last session: 2026-02-10T06:40:41Z
+Stopped at: Completed 52-02-PLAN.md (Phase 52 complete)
 Resume file: None
