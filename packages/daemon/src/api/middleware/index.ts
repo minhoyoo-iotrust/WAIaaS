@@ -8,3 +8,5 @@ export { createKillSwitchGuard, type GetKillSwitchState } from './kill-switch-gu
 export { requestLogger } from './request-logger.js';
 export { errorHandler } from './error-handler.js';
 export { createSessionAuth, type SessionAuthDeps } from './session-auth.js';
+export { createMasterAuth, type MasterAuthDeps } from './master-auth.js';
+export { createOwnerAuth, type OwnerAuthDeps } from './owner-auth.js';
