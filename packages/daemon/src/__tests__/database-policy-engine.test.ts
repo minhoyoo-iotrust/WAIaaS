@@ -20,6 +20,7 @@ import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 let conn: DatabaseConnection;
 let engine: DatabasePolicyEngine;
+let engineWithSqlite: DatabasePolicyEngine;
 let agentId: string;
 
 async function insertTestAgent(): Promise<string> {
@@ -68,10 +69,38 @@ function tx(amount: string, toAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2K
 // Setup
 // ---------------------------------------------------------------------------
 
+async function insertTransaction(overrides: {
+  agentId: string;
+  status?: string;
+  amount?: string;
+  reservedAmount?: string | null;
+}): Promise<string> {
+  const id = generateId();
+  const now = Math.floor(Date.now() / 1000);
+  conn.sqlite
+    .prepare(
+      `INSERT INTO transactions (id, agent_id, chain, type, amount, to_address, status, reserved_amount, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      id,
+      overrides.agentId,
+      'solana',
+      'TRANSFER',
+      overrides.amount ?? '0',
+      'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      overrides.status ?? 'PENDING',
+      overrides.reservedAmount ?? null,
+      now,
+    );
+  return id;
+}
+
 beforeEach(async () => {
   conn = createDatabase(':memory:');
   pushSchema(conn.sqlite);
   engine = new DatabasePolicyEngine(conn.db);
+  engineWithSqlite = new DatabasePolicyEngine(conn.db, conn.sqlite);
   agentId = await insertTestAgent();
 });
 
@@ -367,5 +396,117 @@ describe('DatabasePolicyEngine - Priority + Override', () => {
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TOCTOU Prevention tests (evaluateAndReserve)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - TOCTOU Prevention', () => {
+  it('should set reserved_amount on the transaction row', async () => {
+    // Setup: SPENDING_LIMIT policy with 10 SOL instant_max
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '10000000000', // 10 SOL
+        notify_max: '50000000000',
+        delay_max: '100000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // Create a PENDING transaction row
+    const txId = await insertTransaction({
+      agentId,
+      status: 'PENDING',
+      amount: '5000000000',
+    });
+
+    // Evaluate and reserve 5 SOL (under 10 SOL instant_max)
+    const result = engineWithSqlite.evaluateAndReserve(
+      agentId,
+      tx('5000000000'),
+      txId,
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+
+    // Verify reserved_amount was set in DB
+    const row = conn.sqlite
+      .prepare('SELECT reserved_amount FROM transactions WHERE id = ?')
+      .get(txId) as { reserved_amount: string | null };
+
+    expect(row.reserved_amount).toBe('5000000000');
+  });
+
+  it('should accumulate reserved amounts across sequential calls', async () => {
+    // Setup: SPENDING_LIMIT with 10 SOL instant_max, 50 SOL notify_max
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '10000000000', // 10 SOL
+        notify_max: '50000000000', // 50 SOL
+        delay_max: '100000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // First request: 5 SOL (INSTANT -- 5 <= 10)
+    const txId1 = await insertTransaction({
+      agentId,
+      status: 'PENDING',
+      amount: '5000000000',
+    });
+    const result1 = engineWithSqlite.evaluateAndReserve(
+      agentId,
+      tx('5000000000'),
+      txId1,
+    );
+    expect(result1.tier).toBe('INSTANT');
+
+    // Second request: 6 SOL
+    // Without TOCTOU: 6 SOL alone would be INSTANT (6 <= 10)
+    // With TOCTOU: effective = 5 (reserved) + 6 = 11 -> NOTIFY (11 > 10, 11 <= 50)
+    const txId2 = await insertTransaction({
+      agentId,
+      status: 'PENDING',
+      amount: '6000000000',
+    });
+    const result2 = engineWithSqlite.evaluateAndReserve(
+      agentId,
+      tx('6000000000'),
+      txId2,
+    );
+
+    expect(result2.tier).toBe('NOTIFY');
+  });
+
+  it('should release reservation when releaseReservation is called', async () => {
+    // Create a transaction with reserved amount
+    const txId = await insertTransaction({
+      agentId,
+      status: 'PENDING',
+      amount: '5000000000',
+      reservedAmount: '5000000000',
+    });
+
+    // Verify reservation exists
+    const before = conn.sqlite
+      .prepare('SELECT reserved_amount FROM transactions WHERE id = ?')
+      .get(txId) as { reserved_amount: string | null };
+    expect(before.reserved_amount).toBe('5000000000');
+
+    // Release reservation
+    engineWithSqlite.releaseReservation(txId);
+
+    // Verify reservation cleared
+    const after = conn.sqlite
+      .prepare('SELECT reserved_amount FROM transactions WHERE id = ?')
+      .get(txId) as { reserved_amount: string | null };
+    expect(after.reserved_amount).toBeNull();
   });
 });

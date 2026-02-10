@@ -85,6 +85,7 @@ function getCreateTableStatements(): string[] {
   queued_at INTEGER,
   executed_at INTEGER,
   created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
   error TEXT,
   metadata TEXT
 )`,
