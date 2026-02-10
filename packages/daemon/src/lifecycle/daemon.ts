@@ -36,6 +36,7 @@ import { BackgroundWorkers } from './workers.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
+import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -261,10 +262,12 @@ export class DaemonLifecycle {
 
         const app = createApp({
           db: this._db!,
+          sqlite: this.sqlite ?? undefined,
           keyStore: this.keyStore!,
           masterPassword: this.masterPassword,
           config: this._config!,
           adapter: this.adapter,
+          policyEngine: new DatabasePolicyEngine(this._db!, this.sqlite ?? undefined),
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,
         });
