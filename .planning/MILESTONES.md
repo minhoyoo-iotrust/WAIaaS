@@ -323,3 +323,33 @@
 
 ---
 
+
+## v1.2 인증 + 정책 엔진 (Shipped: 2026-02-10)
+
+**Delivered:** v1.1 코어 인프라 위에 3-tier 인증 체계(sessionAuth JWT HS256 + masterAuth Argon2id + ownerAuth Ed25519)와 4-tier 정책 엔진(DatabasePolicyEngine)을 구현하여, 세션 기반 에이전트 접근 제어, 금액별 보안 분류, DELAY/APPROVAL 워크플로우, Owner 3-State 점진적 보안 해금이 동작하는 상태를 달성
+
+**Phases completed:** 52-57 (13 plans total)
+
+**Key accomplishments:**
+
+- 3-Tier 인증 체계 구축 — sessionAuth(JWT HS256 dual-key rotation) + masterAuth(Argon2id) + ownerAuth(Ed25519 서명) 미들웨어, 전 엔드포인트 인증 적용 (37 tests)
+- 세션 관리 API 완성 — CRUD(create/list/revoke) + 낙관적 갱신(5종 안전 장치: maxRenewals 30, absoluteExpiresAt 30일, 50% TTL, token_hash CAS, revocation check) (21 tests)
+- DatabasePolicyEngine 4-tier 분류 — SPENDING_LIMIT BigInt + WHITELIST 대소문자 무관 평가, 정책 CRUD API, TOCTOU 방지(BEGIN IMMEDIATE + reserved_amount) (28 tests)
+- DELAY/APPROVAL 워크플로우 — DelayQueue 쿨다운 자동 실행 + ApprovalWorkflow Owner 서명 승인/거절/3단계 타임아웃 만료, BackgroundWorkers 통합 (25 tests)
+- Owner 3-State 상태 머신 — NONE/GRACE/LOCKED 점진적 보안 해금, resolveOwnerState 순수 함수, APPROVAL→DELAY 자동 다운그레이드, ownerAuth 성공 시 GRACE→LOCKED 자동 전이 (18 tests)
+- 파이프라인 전 구간 통합 + 457 테스트 — Stage 2(Auth) sessionId + Stage 3(Policy) evaluateAndReserve + Stage 4(Wait) DELAY/APPROVAL 분기, E2E 통합 검증 29건, 전체 457 테스트 통과
+
+**Stats:**
+
+- 238 TypeScript files, 25,526 LOC (10,925 → 25,526, +14,601)
+- 6 phases, 13 plans, 35 requirements
+- 457 tests (281 → 457, +176 new tests)
+- 50 commits, ~6 hours (14:29 → 20:37 KST, 2026-02-10)
+- 99 files changed, +16,828 / -181 lines
+
+**Git range:** `v1.1` → `gsd/phase-57-integration-tests`
+
+**What's next:** v1.3 SDK + MCP + 알림 — TypeScript/Python SDK, MCP Server, SessionManager, 알림 3채널
+
+---
+

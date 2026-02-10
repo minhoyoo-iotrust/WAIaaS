@@ -8,26 +8,13 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.2 인증 + 정책 엔진
-
-**Goal:** v1.1에서 구축한 코어 인프라 위에 3-tier 인증 체계(masterAuth/ownerAuth/sessionAuth)와 4-tier 정책 엔진(DatabasePolicyEngine)을 구현하여, 세션 기반 에이전트 접근 제어와 금액별 보안 분류가 동작하는 상태를 달성한다.
-
-**Target features:**
-- sessionAuth JWT HS256 검증 미들웨어 + 세션 CRUD API
-- masterAuth 명시적 헤더 검증 미들웨어
-- ownerAuth SIWS/SIWE 서명 검증 (거래 승인 + KS 복구 2곳 한정)
-- DatabasePolicyEngine (policies 테이블 기반 4-tier 분류)
-- DELAY 쿨다운 큐잉 + APPROVAL Owner 승인 워크플로우
-- Owner 3-State 상태 머신 (NONE/GRACE/LOCKED)
-- 파이프라인 Stage 2(Auth) + Stage 4(Wait) 실제 구현
-
 ## Current State
 
-v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일, 10,925 LOC, 281 테스트 통과. CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬 완성.
+v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 LOC, 457 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송(INSTANT/DELAY/APPROVAL 분류) → Owner 승인/거절 → 확인까지 동작하는 인증+정책 적용 데몬 완성.
 
-**구현 로드맵 (v1.2~v2.0):**
+**구현 로드맵 (v1.3~v2.0):**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
-- ◆ v1.2 인증 + 정책 엔진 (3-tier 인증, 4-tier 정책, Owner 상태 머신, 세션 관리)
+- ✅ v1.2 인증 + 정책 엔진 — shipped 2026-02-10
 - v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
@@ -37,8 +24,8 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일
 
 **코드베이스 현황:**
 - 4-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli
-- 97 TypeScript 파일, 10,925 LOC (ESM-only, Node.js 22)
-- 281 테스트 (65 core + 17 adapter + 167 daemon + 32 CLI)
+- 238 TypeScript 파일, 25,526 LOC (ESM-only, Node.js 22)
+- 457 테스트 (core + adapter + daemon + CLI)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 
 ## 요구사항
@@ -102,7 +89,7 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일
 - ✓ 18개 테스트 시나리오 명시 + 7개 설계 문서 v0.9 통합(85 [v0.9] 태그) — v0.9 (TEST-01~02, INTEG-01~02)
 - ✓ PolicyRuleSchema ↔ 25-sqlite 교차 참조 + APPROVAL 타임아웃 3단계 우선순위 — v0.10 (PLCY-01, PLCY-03)
 - ✓ Owner GRACE→LOCKED 상태 전이 + 다운그레이드 우선순위 양방향 확정 — v0.10 (PLCY-02)
-- ✓ 66개 에러 코드 통합 매트릭스 + PolicyType 10개 확장 + superRefine 검증 — v0.10 (ERRH-01, ERRH-03)
+- ✓ 66개 에러 코드 통합 매트릭스 + PolicyType 10개 확장 + superRefin 검증 — v0.10 (ERRH-01, ERRH-03)
 - ✓ ChainError 3-카테고리(PERMANENT/TRANSIENT/STALE) 분류 + 복구 전략 — v0.10 (ERRH-02)
 - ✓ Stage 5 완전 의사코드 + 티어별 타임아웃 — v0.10 (CONC-01)
 - ✓ 세션 갱신 낙관적 잠금(token_hash CAS) + RENEWAL_CONFLICT(409) — v0.10 (CONC-02)
@@ -127,16 +114,28 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일
 - ✓ CLI 4개 명령어 (init/start/stop/status, commander 13.x) — v1.1 (CLI-01~04)
 - ✓ E2E 통합 검증 12건 (MockChainAdapter, 281 total tests) — v1.1 (E2E-01~04)
 
+- ✓ sessionAuth JWT HS256 미들웨어 + dual-key rotation + DB session lookup — v1.2 (AUTH-01, SESS-06)
+- ✓ masterAuth Argon2id 미들웨어 + ownerAuth Ed25519 서명 검증 미들웨어 — v1.2 (AUTH-02~05)
+- ✓ 세션 CRUD API (create/list/revoke) + masterAuth 보호 — v1.2 (SESS-01~03)
+- ✓ 세션 낙관적 갱신 + 5종 안전 장치 (maxRenewals, absoluteExpiresAt, 50% TTL, CAS, revocation) — v1.2 (SESS-04~05)
+- ✓ DatabasePolicyEngine 4-tier 분류 (SPENDING_LIMIT BigInt + WHITELIST) + 정책 CRUD API — v1.2 (PLCY-01~04)
+- ✓ TOCTOU 방지 (BEGIN IMMEDIATE + reserved_amount) — v1.2 (PLCY-05)
+- ✓ DelayQueue 쿨다운 자동 실행 + 취소 — v1.2 (FLOW-01, FLOW-06)
+- ✓ ApprovalWorkflow Owner 승인/거절 + 3단계 타임아웃 만료 — v1.2 (FLOW-02~05)
+- ✓ Owner 3-State 상태 머신 (resolveOwnerState 순수 함수, NONE/GRACE/LOCKED) — v1.2 (OWNR-01~05)
+- ✓ APPROVAL→DELAY 자동 다운그레이드 (TX_DOWNGRADED_DELAY 이벤트) — v1.2 (OWNR-06)
+- ✓ 파이프라인 Stage 2(Auth) + Stage 3(Policy) + Stage 4(Wait) 실제 구현 — v1.2 (PIPE-01~04)
+- ✓ 인증/정책/세션/워크플로우/Owner 통합 테스트 457건 — v1.2 (TEST-01~05)
+
 ### 활성
 
-(v1.2 REQUIREMENTS.md에서 정의 예정 — 아래는 카테고리 요약)
+(v1.3 REQUIREMENTS.md에서 정의 예정)
 
-- [ ] sessionAuth JWT HS256 검증 미들웨어
-- [ ] masterAuth explicit 헤더 검증 미들웨어
-- [ ] ownerAuth SIWS/SIWE 서명 검증 미들웨어
-- [ ] 4-tier 정책 엔진 (INSTANT/NOTIFY/DELAY/APPROVAL)
-- [ ] Owner 3-State 상태 머신 (NONE/GRACE/LOCKED)
-- [ ] 세션 관리 API (create/list/revoke)
+- [ ] TypeScript SDK (SessionManager 포함)
+- [ ] Python SDK
+- [ ] MCP Server 6 도구 + 3 리소스
+- [ ] 멀티 채널 알림 (console/webhook/telegram)
+- [ ] SessionManager 자동 갱신
 
 ### 범위 외
 
@@ -153,22 +152,24 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일
 
 ## 컨텍스트
 
-**누적:** 13 milestones (v0.1-v1.1), 51 phases, 127 plans, 332 requirements, 30 설계 문서, 8 objective 문서, 10,925 LOC TypeScript, 281 테스트
+**누적:** 14 milestones (v0.1-v1.2), 57 phases, 140 plans, 367 requirements, 30 설계 문서, 8 objective 문서, 25,526 LOC TypeScript, 457 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
 v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플랜, 46 요구사항, 97 TS 파일, 10,925 LOC, 281 테스트.
+v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요구사항, 238 TS 파일, 25,526 LOC, 457 테스트.
 
-**기술 스택 (v0.2 확정, v1.1 구현 검증):**
+**기술 스택 (v0.2 확정, v1.2 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
 - Server: Hono 4.x
 - DB: SQLite (better-sqlite3) + Drizzle ORM
 - Crypto: sodium-native (guarded memory), argon2 (KDF)
+- Auth: jose (JWT HS256), sodium-native (Ed25519 ownerAuth)
 - Chain: @solana/kit 6.0.1 (Solana), viem 2.x (EVM stub, 미구현)
 - Build: pnpm workspace + Turborepo, tsc only
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → Drizzle CHECK
-- 미구현: jose (JWT), @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
+- 미구현: @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
 
 **설계 문서:** 30개 (deliverables 24-64.md) + 대응표/테스트 전략/objective
 
@@ -176,6 +177,7 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플�
 
 - Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료)
 - @solana/kit 실제 버전 6.0.1 (설계서는 3.x 언급, API 동일)
+- Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) — not blocking
 
 ## 제약사항
 
@@ -191,89 +193,28 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플�
 |------|------|------|
 | Solana 우선 타겟 | 빠른 속도, 낮은 수수료, AI 에이전트 생태계 활발 | ✓ Good |
 | API 우선 설계 | 에이전트는 UI가 아닌 API로 상호작용 | ✓ Good |
-| AWS KMS + Nitro Enclaves + Squads 하이브리드 | 5년 36% 비용 절감, 벤더 락인 방지 | ✓ Good → Self-Hosted로 전환 (v0.2) |
-| Turnkey 결정 철회 → 직접 구축 | Phase 2 분석 결과 직접 구축이 비용/기능 모두 우위 | ✓ Good |
 | Hono + SQLite (v0.2 전환) | Self-Hosted 경량화, 외부 의존 최소화 | ✓ Good |
 | Dual Key 아키텍처 | Owner(통제) + Agent(자율) 역할 분리, defense-in-depth | ✓ Good |
-| Cloud → Self-Hosted 전환 | 서비스 제공자 의존 제거, 사용자 완전 통제 | ✓ Good — v0.2 설계 완성 |
-| 3계층 보안 (세션→시간지연→모니터링) | 다층 방어, 키 유출 시에도 피해 최소화 | ✓ Good — v0.2 설계 완성 |
-| 체인 무관 정책 엔진 | Squads 등 온체인 의존 제거, 모든 체인에 동일 보안 | ✓ Good — v0.2 설계 완성 |
-| 세션 기반 에이전트 인증 | 영구 키 대신 단기 JWT, 유출 시 만료로 자동 무효화 | ✓ Good — v0.2 설계 완성 |
+| Cloud → Self-Hosted 전환 | 서비스 제공자 의존 제거, 사용자 완전 통제 | ✓ Good |
+| 3계층 보안 (세션→시간지연→모니터링) | 다층 방어, 키 유출 시에도 피해 최소화 | ✓ Good |
+| 체인 무관 정책 엔진 | Squads 등 온체인 의존 제거, 모든 체인에 동일 보안 | ✓ Good |
+| 세션 기반 에이전트 인증 | 영구 키 대신 단기 JWT, 유출 시 만료로 자동 무효화 | ✓ Good |
 | Zod SSoT | 스키마 → 타입 + OpenAPI + 런타임 검증 통합 | ✓ Good |
-| Budget Pool + Hub-and-Spoke | 다수 에이전트 효율적 관리, 예산 격리 | ✓ Good |
-| 기본 포트 3100 | 3000/3001/8080 충돌 회피 | ✓ Good — v0.3 통일 |
-| DB 8개 TransactionStatus SSoT | 클라이언트 표시는 상태+tier 조합 | ✓ Good — v0.3 통일 |
-| Docker hostname z.union | 기본 127.0.0.1, Docker 0.0.0.0 오버라이드 | ✓ Good — v0.3 통일 |
-| Enum SSoT 대응표 | DB CHECK = Drizzle = Zod = TypeScript 1:1 | ✓ Good — v0.3 통일 |
-| config.toml 중첩 섹션 | security.auto_stop, policy_defaults, kill_switch | ✓ Good — v0.3 통일 |
-| rate_limit 3-level | global 100, session 300, tx 10 RPM | ✓ Good — v0.3 통일 |
-| ownerAuth 9단계 미들웨어 | 라우트 레벨 미들웨어로 분리 | ✓ Good — v0.3 통일 |
-| MCP 의도적 미커버 24개 | 보안 원칙: AI 에이전트에 Owner/Admin 권한 미노출 | ✓ Good — v0.3 확정 |
-| Telegram Tier 2 TELEGRAM_PRE_APPROVED | SIWS는 Desktop/CLI 필수, Telegram은 알림+방어 채널 | ✓ Good — v0.3 확정 |
-
-| 테스트 전략 선행 수립 | 구현 전 "무엇을 테스트할지" 확정 → 테스트 불가 설계 사전 발견 | ✓ Good — v0.4 완성 (300+ 시나리오) |
-| IClock/ISigner 인터페이스 추가 | 테스트 격리를 위한 시간/서명 추상화 필요 | ✓ Good — v0.4 스펙 확정 |
-| Enum SSoT 단방향 파생 체인 | as const -> TS -> Zod -> Drizzle -> DB CHECK | ✓ Good — v0.4 빌드타임 검증 |
-| CI/CD 4단계 파이프라인 | push/PR/nightly/release 분리 | ✓ Good — v0.4 설계 |
-| Soft/Hard 커버리지 게이트 | 초기 유연성 후 점진적 엄격화 | ✓ Good — v0.4 전환 우선순위 6단계 |
-| masterAuth/ownerAuth 책임 분리 | Owner 서명은 자금 영향 시에만 요구, 로컬 관리는 마스터 패스워드 | ✓ Good — v0.5 설계 완성 |
-| Owner 주소 에이전트별 귀속 | 멀티Owner/멀티체인 자연 지원, 에이전트간 Owner 격리 | ✓ Good — v0.5 설계 완성 |
-| 세션 낙관적 갱신 | 에이전트 자율성 보장 + Owner 사후 거부권 | ✓ Good — v0.5 설계 완성 |
-| WalletConnect 선택적 전환 | 초기 설정 마찰 제거, CLI 수동 서명으로 모든 기능 동작 | ✓ Good — v0.5 설계 완성 |
-
-| IChainAdapter 저수준 유지 | 어댑터는 실행 엔진, DeFi 지식은 Action Provider에 분리 | ✓ Good — v0.6 설계 완성 |
-| resolve-then-execute 패턴 | Action Provider가 요청 생성 → 파이프라인이 정책 평가 후 실행 | ✓ Good — v0.6 설계 완성 |
-| 임의 컨트랙트 기본 거부 | CONTRACT_WHITELIST 비어있으면 모든 호출 거부 (opt-in) | ✓ Good — v0.6 설계 완성 |
-| approve 독립 정책 카테고리 | 권한 위임은 전송보다 위험, 별도 정책 규칙 필요 | ✓ Good — v0.6 설계 완성 |
-| USD 기준 정책 평가 | 토큰 종류 무관하게 달러 금액으로 티어 분류 | ✓ Good — v0.6 설계 완성 |
-
-| Solana blockhash freshness guard | sign 직전 잔여 수명 < 20초이면 갱신, 경쟁 조건 제거 | ✓ Good — v0.7 해소 |
-| AES-GCM nonce 충돌 구조적 불가능 | 매번 새 salt→새 AES 키→n=1, Birthday Problem 전제 미충족 | ✓ Good — v0.7 정정 |
-| JWT Secret dual-key 5분 윈도우 | 로테이션 시 기존 세션 즉시 무효화 방지, 운영 단순성 | ✓ Good — v0.7 해소 |
-| flock 기반 인스턴스 잠금 | OS 커널 원자적 잠금, PID TOCTOU 제거, Windows 포트 바인딩 fallback | ✓ Good — v0.7 해소 |
-| Rate Limiter 2단계 분리 | 미인증 공격자가 인증 사용자 rate limit 소진 불가 | ✓ Good — v0.7 해소 |
-| Master Password Argon2id 통일 | SHA-256 폐기, X-Master-Password 평문 (localhost only) | ✓ Good — v0.7 해소 |
-| SIWE viem/siwe 전환 | ethers 130KB+ 제거, 3단계 검증 (parse→validate→verify) | ✓ Good — v0.7 해소 |
-| Tauri sidecar 종료 35초 | 데몬 30초 + 5초 마진, SQLite WAL 손상 방지 | ✓ Good — v0.7 해소 |
-| config.toml 중첩 섹션 금지 | WAIAAS_{SECTION}_{KEY} 1:1 매핑 단순성 | ✓ Good — v0.7 해소 |
-| SQLite 타임스탬프 초 단위 통일 | UUID v7 ms 정밀도가 동일 초 내 순서 보장 | ✓ Good — v0.7 해소 |
-
-| Owner 선택적 등록 | 자율 에이전트 시나리오 지원, 초기 온보딩 마찰 제거 | ✓ Good — v0.8 설계 완성 |
-| 점진적 보안 해금 (3-State) | NONE/GRACE/LOCKED 3단계, ownerAuth 사용 시점 기반 전이 | ✓ Good — v0.8 설계 완성 |
-| APPROVAL→DELAY 다운그레이드 | Owner 없어도 차단 없이 DELAY로 대체, 알림에 등록 안내 포함 | ✓ Good — v0.8 설계 완성 |
-| sweepAll masterAuth만 | 수신 주소 = owner_address 고정이므로 공격자 이득 없음 | ✓ Good — v0.8 설계 완성 |
-| Kill Switch withdraw 허용 (방안 A) | killSwitchGuard 5번째 허용 경로, Owner 자금 회수 보장 | ✓ Good — v0.8 설계 완성 |
-| OwnerState 런타임 파생 | DB 비저장, resolveOwnerState() 순수 함수로 SSoT 유지 | ✓ Good — v0.8 설계 완성 |
-| write-then-rename 원자적 쓰기 | Node.js 내장 API, 외부 의존 없이 POSIX rename 원자성 활용 | ✓ Good — v0.9 설계 완성 |
-| SessionManager Composition 패턴 | MCP SDK 독립, 단일 클래스 4 public 메서드 | ✓ Good — v0.9 설계 완성 |
-| safeSetTimeout 32-bit overflow 방어 | setTimeout 24.8일 한계 회피, 재귀 분할 래퍼 | ✓ Good — v0.9 설계 완성 |
-| 파일-우선 쓰기 순서 | writeMcpToken → 메모리 교체, 프로세스 kill 복구 보장 | ✓ Good — v0.9 설계 완성 |
-| Mutex 미사용, 50ms 대기 | Node.js 단일 스레드, 차단 지연 방지 | ✓ Good — v0.9 설계 완성 |
-| console.error 통일 (stdout 금지) | stdio stdout 오염 → JSON-RPC 파싱 실패 방지 | ✓ Good — v0.9 설계 완성 |
-| resolveDefaultConstraints 공용 함수 | CLI + Telegram constraints 결정 규칙 SSoT | ✓ Good — v0.9 설계 완성 |
-| APPROVAL 타임아웃 3단계 우선순위 | 정책별 > config > 3600초 하드코딩 fallback | ✓ Good — v0.10 완결 |
-| ChainError category 3-카테고리 | PERMANENT/TRANSIENT/STALE, category→retryable 자동 파생 | ✓ Good — v0.10 완결 |
-| 에러 코드 통합 매트릭스 SS10.12 SSoT | 도메인별 분산에서 단일 통합 테이블로 | ✓ Good — v0.10 완결 |
-| Stage 5 TRANSIENT 재시도 실패 단계 재진입 | 5b/5d 실패 시 해당 단계에서만 재시도 | ✓ Good — v0.10 완결 |
-| 세션 갱신 token_hash CAS 낙관적 잠금 | RENEWAL_CONFLICT(409) retryable:false | ✓ Good — v0.10 완결 |
-| Kill Switch CAS BEGIN IMMEDIATE 첫 문장 원칙 | 모든 상태 전이 원자성 보장 | ✓ Good — v0.10 완결 |
-| 데몬 Step 4만 fail-soft | 체인 어댑터 부분 실패 허용, 나머지 fail-fast | ✓ Good — v0.10 완결 |
-| Batch 부모-자식 2계층 DB | metadata JSON→정규화, ON DELETE CASCADE | ✓ Good — v0.10 완결 |
-| Oracle 교차 검증 동기 인라인 | 비동기 백그라운드→getPrice() 동기 인라인 전환 | ✓ Good — v0.10 완결 |
-| 가격 나이 3단계 FRESH/AGING/STALE | STALE(>30분) USD 평가 스킵→네이티브 전용 | ✓ Good — v0.10 완결 |
-| 구현 마일스톤 8개 순서 확정 | 의존 그래프: 코어→인증→SDK→토큰→DeFi→클라이언트→품질→릴리스 | ✓ Good — v1.0 계획 |
-| objective 문서 7-section 부록 구조 | 목표/설계문서/산출물/기술결정/E2E/의존/리스크 통일 | ✓ Good — v1.0 계획 |
-| 설계 부채 Tier 1~3 추적 체계 | 매 마일스톤 리뷰, v2.0 전 0건 달성 목표 | ✓ Good — v1.0 계획 |
-| tsc only (빌드 도구 불필요) | ESM 단일 출력, 번들러 불필요, 복잡도 최소화 | ✓ Good — v1.1 구현 |
-| as const → Zod enum SSoT pipeline | 배열 SSoT에서 타입, Zod, Drizzle CHECK 모두 파생 | ✓ Good — v1.1 구현 |
-| Amount 필드 string 타입 | bigint JSON 직렬화 + SQLite TEXT 호환 | ✓ Good — v1.1 구현 |
-| createRequire for CJS native modules | sodium-native CJS-only → ESM에서 createRequire 패턴 | ✓ Good — v1.1 구현 |
-| Vitest forks pool | sodium mprotect SIGSEGV 방지 | ✓ Good — v1.1 구현 |
-| proper-lockfile 크로스플랫폼 잠금 | native flock/PID-only 대비 플랫폼 호환성 | ✓ Good — v1.1 구현 |
-| @solana/kit 6.0.1 functional pipe | 설계서 3.x → 실제 6.x, API 동일 | ✓ Good — v1.1 구현 |
-| Hono createMiddleware DI pattern | typed c.set/c.get + createApp(deps) factory | ✓ Good — v1.1 구현 |
-| Async pipeline fire-and-forget | Stage 1 sync 201, stages 2-6 async | ✓ Good — v1.1 구현 |
-| MockChainAdapter for E2E | CI에서 실제 RPC 없이 전 구간 테스트 | ✓ Good — v1.1 구현 |
+| masterAuth/ownerAuth 책임 분리 | Owner 서명은 자금 영향 시에만 요구 | ✓ Good — v1.2 구현 검증 |
+| Owner 선택적 등록 (3-State) | 자율 에이전트 시나리오 지원, 초기 마찰 제거 | ✓ Good — v1.2 구현 검증 |
+| APPROVAL→DELAY 다운그레이드 | Owner 없어도 차단 없이 DELAY로 대체 | ✓ Good — v1.2 구현 검증 |
+| tsc only (빌드 도구 불필요) | ESM 단일 출력, 번들러 불필요 | ✓ Good — v1.1 구현 |
+| jose for JWT HS256 | ESM-native, Buffer.from(hex) 대칭키 | ✓ Good — v1.2 구현 |
+| BigInt for amount comparisons | floating point 정밀도 이슈 방지 | ✓ Good — v1.2 구현 |
+| BEGIN IMMEDIATE + reserved_amount | TOCTOU 방지, SQLite 동시 정책 평가 | ✓ Good — v1.2 구현 |
+| resolveOwnerState 순수 함수 | DB 비저장, 런타임 파생, 재사용 가능 | ✓ Good — v1.2 구현 |
+| PIPELINE_HALTED 에러 코드 | DELAY/APPROVAL 의도적 중단 표현 (409) | ✓ Good — v1.2 구현 |
+| ownerAuth 성공 시 자동 GRACE→LOCKED | 별도 전이 엔드포인트 불필요 | ✓ Good — v1.2 구현 |
+| server-level auth middleware | sub-router 레벨 대신 app.use() 적용 | ✓ Good — v1.2 구현 |
+| IChainAdapter 저수준 유지 | DeFi 지식은 Action Provider에 분리 | ✓ Good — v0.6 설계 |
+| resolve-then-execute 패턴 | Action Provider가 요청 생성 → 파이프라인 실행 | ✓ Good — v0.6 설계 |
+| config.toml 중첩 금지 | WAIAAS_{SECTION}_{KEY} 1:1 매핑 | ✓ Good — v0.7 해소 |
+| SQLite 타임스탬프 초 단위 | UUID v7 ms가 동일 초 내 순서 보장 | ✓ Good — v0.7 해소 |
 
 ---
-*최종 업데이트: 2026-02-10 after v1.2 milestone started*
+*최종 업데이트: 2026-02-10 after v1.2 milestone*
