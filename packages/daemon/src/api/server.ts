@@ -41,6 +41,7 @@ import { sessionRoutes } from './routes/sessions.js';
 import { walletRoutes } from './routes/wallet.js';
 import { transactionRoutes } from './routes/transactions.js';
 import { policyRoutes } from './routes/policies.js';
+import { nonceRoutes } from './routes/nonce.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { IPolicyEngine } from '@waiaas/core';
@@ -102,6 +103,19 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     });
   }
 
+  // masterAuth for GET /v1/agents/:id (agent detail) -- skip /owner sub-path
+  if (deps.masterPasswordHash !== undefined) {
+    const masterAuthForAgentDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+    app.use('/v1/agents/:id', async (c, next) => {
+      // Skip /v1/agents/:id/owner (has its own masterAuth below)
+      if (c.req.path.includes('/owner')) {
+        await next();
+        return;
+      }
+      return masterAuthForAgentDetail(c, next);
+    });
+  }
+
   // masterAuth for PUT /v1/agents/:id/owner
   if (deps.masterPasswordHash !== undefined) {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
@@ -113,6 +127,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // sessionAuth for session renewal (uses own token)
     app.use('/v1/sessions/:id/renew', sessionAuth);
     app.use('/v1/wallet/*', sessionAuth);
+    // sessionAuth for GET /v1/transactions (exact path -- wildcard won't match base)
+    app.use('/v1/transactions', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);
   }
 
@@ -125,6 +141,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // Register routes
   app.route('/health', health);
+
+  // Register nonce route (public, no auth required)
+  app.route('/v1', nonceRoutes());
 
   // Register agent routes when deps are available
   if (deps.db && deps.sqlite && deps.keyStore && deps.masterPassword !== undefined && deps.config) {

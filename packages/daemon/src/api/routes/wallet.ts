@@ -1,5 +1,6 @@
 /**
- * Wallet query routes: GET /v1/wallet/address and GET /v1/wallet/balance.
+ * Wallet query routes: GET /v1/wallet/address, GET /v1/wallet/balance,
+ * GET /v1/wallet/assets.
  *
  * v1.2: Protected by sessionAuth middleware (Authorization: Bearer wai_sess_<token>),
  *       applied at server level in createApp().
@@ -18,6 +19,7 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import {
   WalletAddressResponseSchema,
   WalletBalanceResponseSchema,
+  WalletAssetsResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -77,6 +79,20 @@ const walletBalanceRoute = createRoute({
   },
 });
 
+const walletAssetsRoute = createRoute({
+  method: 'get',
+  path: '/wallet/assets',
+  tags: ['Wallet'],
+  summary: 'Get wallet assets',
+  responses: {
+    200: {
+      description: 'All assets (native + tokens) held by agent wallet',
+      content: { 'application/json': { schema: WalletAssetsResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'CHAIN_ERROR']),
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
@@ -86,6 +102,7 @@ const walletBalanceRoute = createRoute({
  *
  * GET /wallet/address -> returns agent's public key
  * GET /wallet/balance -> calls adapter.getBalance() and returns lamports
+ * GET /wallet/assets  -> calls adapter.getAssets() and returns all token balances
  */
 export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -127,6 +144,41 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
         balance: balanceInfo.balance.toString(),
         decimals: balanceInfo.decimals,
         symbol: balanceInfo.symbol,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /wallet/assets
+  // ---------------------------------------------------------------------------
+
+  router.openapi(walletAssetsRoute, async (c) => {
+    const agentId = c.get('agentId' as never) as string;
+    const agent = await resolveAgentById(deps.db, agentId);
+
+    if (!deps.adapter) {
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: 'Chain adapter not available',
+      });
+    }
+
+    const assets = await deps.adapter.getAssets(agent.publicKey);
+
+    return c.json(
+      {
+        agentId: agent.id,
+        chain: agent.chain,
+        network: agent.network,
+        assets: assets.map((a) => ({
+          mint: a.mint,
+          symbol: a.symbol,
+          name: a.name,
+          balance: a.balance.toString(),
+          decimals: a.decimals,
+          isNative: a.isNative,
+          usdValue: a.usdValue,
+        })),
       },
       200,
     );

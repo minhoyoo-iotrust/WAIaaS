@@ -1,7 +1,10 @@
 /**
- * Agent route handlers: POST /v1/agents, PUT /v1/agents/:id/owner.
+ * Agent route handlers: POST /v1/agents, GET /v1/agents, GET /v1/agents/:id,
+ * PUT /v1/agents/:id/owner.
  *
  * POST /v1/agents: create an agent with Solana key pair.
+ * GET /v1/agents: list all agents (masterAuth).
+ * GET /v1/agents/:id: get agent detail including ownerState (masterAuth).
  * PUT /v1/agents/:id/owner: register/change owner address (masterAuth).
  *
  * v1.2: Protected by masterAuth middleware (X-Master-Password header required),
@@ -27,6 +30,8 @@ import {
   SetOwnerRequestSchema,
   AgentResponseSchema,
   AgentOwnerResponseSchema,
+  AgentListResponseSchema,
+  AgentDetailResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -86,6 +91,36 @@ const setOwnerRoute = createRoute({
   },
 });
 
+const listAgentsRoute = createRoute({
+  method: 'get',
+  path: '/agents',
+  tags: ['Agents'],
+  summary: 'List all agents',
+  responses: {
+    200: {
+      description: 'Agent list',
+      content: { 'application/json': { schema: AgentListResponseSchema } },
+    },
+  },
+});
+
+const agentDetailRoute = createRoute({
+  method: 'get',
+  path: '/agents/{id}',
+  tags: ['Agents'],
+  summary: 'Get agent details',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Agent detail with owner state',
+      content: { 'application/json': { schema: AgentDetailResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
@@ -93,12 +128,79 @@ const setOwnerRoute = createRoute({
 /**
  * Create agent route sub-router.
  *
+ * GET  /agents -> list all agents (masterAuth).
+ * GET  /agents/:id -> get agent detail with ownerState (masterAuth).
  * POST /agents -> creates agent with Solana key pair, inserts to DB, returns 201.
- * PUT /agents/:id/owner -> register/change owner address (masterAuth).
+ * PUT  /agents/:id/owner -> register/change owner address (masterAuth).
  */
 export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
   const ownerLifecycle = new OwnerLifecycleService({ db: deps.db, sqlite: deps.sqlite });
+
+  // ---------------------------------------------------------------------------
+  // GET /agents (list)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(listAgentsRoute, async (c) => {
+    const allAgents = await deps.db.select().from(agents);
+
+    return c.json(
+      {
+        items: allAgents.map((a) => ({
+          id: a.id,
+          name: a.name,
+          chain: a.chain,
+          network: a.network,
+          publicKey: a.publicKey,
+          status: a.status,
+          createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
+        })),
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /agents/:id (detail)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(agentDetailRoute, async (c) => {
+    const { id: agentId } = c.req.valid('param');
+
+    const agent = await deps.db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .get();
+
+    if (!agent) {
+      throw new WAIaaSError('AGENT_NOT_FOUND', {
+        message: `Agent '${agentId}' not found`,
+      });
+    }
+
+    const ownerState = resolveOwnerState({
+      ownerAddress: agent.ownerAddress,
+      ownerVerified: agent.ownerVerified,
+    });
+
+    return c.json(
+      {
+        id: agent.id,
+        name: agent.name,
+        chain: agent.chain,
+        network: agent.network,
+        publicKey: agent.publicKey,
+        status: agent.status,
+        ownerAddress: agent.ownerAddress,
+        ownerVerified: agent.ownerVerified,
+        ownerState,
+        createdAt: agent.createdAt ? Math.floor(agent.createdAt.getTime() / 1000) : 0,
+        updatedAt: agent.updatedAt ? Math.floor(agent.updatedAt.getTime() / 1000) : null,
+      },
+      200,
+    );
+  });
 
   // ---------------------------------------------------------------------------
   // POST /agents

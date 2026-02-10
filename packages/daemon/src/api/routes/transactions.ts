@@ -21,7 +21,7 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
@@ -45,6 +45,8 @@ import {
   SendTransactionRequestOpenAPI,
   TxSendResponseSchema,
   TxDetailResponseSchema,
+  TxListResponseSchema,
+  TxPendingListResponseSchema,
   TxApproveResponseSchema,
   TxRejectResponseSchema,
   TxCancelResponseSchema,
@@ -161,6 +163,38 @@ const cancelTransactionRoute = createRoute({
   },
 });
 
+const listTransactionsRoute = createRoute({
+  method: 'get',
+  path: '/transactions',
+  tags: ['Transactions'],
+  summary: 'List transactions',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+      cursor: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Paginated transaction list',
+      content: { 'application/json': { schema: TxListResponseSchema } },
+    },
+  },
+});
+
+const pendingTransactionsRoute = createRoute({
+  method: 'get',
+  path: '/transactions/pending',
+  tags: ['Transactions'],
+  summary: 'List pending transactions',
+  responses: {
+    200: {
+      description: 'Pending transactions (QUEUED/DELAYED/PENDING_APPROVAL)',
+      content: { 'application/json': { schema: TxPendingListResponseSchema } },
+    },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
@@ -169,7 +203,9 @@ const cancelTransactionRoute = createRoute({
  * Create transaction route sub-router.
  *
  * POST /transactions/send -> submits to pipeline, returns 201 with txId
- * GET /transactions/:id -> returns transaction status
+ * GET  /transactions -> list transactions with cursor pagination
+ * GET  /transactions/pending -> list QUEUED/DELAYED/PENDING_APPROVAL txs
+ * GET  /transactions/:id -> returns transaction status
  * POST /transactions/:id/approve -> approve pending tx (ownerAuth)
  * POST /transactions/:id/reject -> reject pending tx (ownerAuth)
  * POST /transactions/:id/cancel -> cancel delayed tx (sessionAuth)
@@ -282,6 +318,93 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     })();
 
     return response;
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /transactions (list with cursor pagination)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(listTransactionsRoute, async (c) => {
+    const agentId = c.get('agentId' as never) as string;
+    const { limit: rawLimit, cursor } = c.req.valid('query');
+    const limit = rawLimit ?? 20;
+
+    // Build conditions
+    const conditions = [eq(transactions.agentId, agentId)];
+    if (cursor) {
+      conditions.push(lt(transactions.id, cursor));
+    }
+
+    // Fetch limit + 1 to detect hasMore
+    const rows = await deps.db
+      .select()
+      .from(transactions)
+      .where(and(...conditions))
+      .orderBy(desc(transactions.id))
+      .limit(limit + 1);
+
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = items.length > 0 ? items[items.length - 1]!.id : null;
+
+    return c.json(
+      {
+        items: items.map((tx) => ({
+          id: tx.id,
+          agentId: tx.agentId,
+          type: tx.type,
+          status: tx.status,
+          tier: tx.tier,
+          chain: tx.chain,
+          toAddress: tx.toAddress,
+          amount: tx.amount,
+          txHash: tx.txHash,
+          error: tx.error,
+          createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+        })),
+        cursor: hasMore ? nextCursor : null,
+        hasMore,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /transactions/pending
+  // ---------------------------------------------------------------------------
+
+  router.openapi(pendingTransactionsRoute, async (c) => {
+    const agentId = c.get('agentId' as never) as string;
+
+    const rows = await deps.db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.agentId, agentId),
+          inArray(transactions.status, ['QUEUED', 'DELAYED', 'PENDING_APPROVAL']),
+        ),
+      )
+      .orderBy(desc(transactions.id));
+
+    return c.json(
+      {
+        items: rows.map((tx) => ({
+          id: tx.id,
+          agentId: tx.agentId,
+          type: tx.type,
+          status: tx.status,
+          tier: tx.tier,
+          chain: tx.chain,
+          toAddress: tx.toAddress,
+          amount: tx.amount,
+          txHash: tx.txHash,
+          error: tx.error,
+          createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+        })),
+      },
+      200,
+    );
   });
 
   // ---------------------------------------------------------------------------
