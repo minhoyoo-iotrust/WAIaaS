@@ -95,49 +95,49 @@ v1.2 인증 + 정책 엔진 마일스톤 요구사항. 각 항목은 로드맵 �
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| SESS-01 | — | Pending |
-| SESS-02 | — | Pending |
-| SESS-03 | — | Pending |
-| SESS-04 | — | Pending |
-| SESS-05 | — | Pending |
-| SESS-06 | — | Pending |
-| PLCY-01 | — | Pending |
-| PLCY-02 | — | Pending |
-| PLCY-03 | — | Pending |
-| PLCY-04 | — | Pending |
-| PLCY-05 | — | Pending |
-| FLOW-01 | — | Pending |
-| FLOW-02 | — | Pending |
-| FLOW-03 | — | Pending |
-| FLOW-04 | — | Pending |
-| FLOW-05 | — | Pending |
-| FLOW-06 | — | Pending |
-| OWNR-01 | — | Pending |
-| OWNR-02 | — | Pending |
-| OWNR-03 | — | Pending |
-| OWNR-04 | — | Pending |
-| OWNR-05 | — | Pending |
-| OWNR-06 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
+| AUTH-01 | Phase 52 | Pending |
+| AUTH-02 | Phase 52 | Pending |
+| AUTH-03 | Phase 52 | Pending |
+| AUTH-04 | Phase 52 | Pending |
+| AUTH-05 | Phase 52 | Pending |
+| SESS-01 | Phase 53 | Pending |
+| SESS-02 | Phase 53 | Pending |
+| SESS-03 | Phase 53 | Pending |
+| SESS-04 | Phase 53 | Pending |
+| SESS-05 | Phase 53 | Pending |
+| SESS-06 | Phase 52 | Pending |
+| PLCY-01 | Phase 54 | Pending |
+| PLCY-02 | Phase 54 | Pending |
+| PLCY-03 | Phase 54 | Pending |
+| PLCY-04 | Phase 54 | Pending |
+| PLCY-05 | Phase 54 | Pending |
+| FLOW-01 | Phase 55 | Pending |
+| FLOW-02 | Phase 55 | Pending |
+| FLOW-03 | Phase 55 | Pending |
+| FLOW-04 | Phase 55 | Pending |
+| FLOW-05 | Phase 55 | Pending |
+| FLOW-06 | Phase 55 | Pending |
+| OWNR-01 | Phase 55 | Pending |
+| OWNR-02 | Phase 55 | Pending |
+| OWNR-03 | Phase 55 | Pending |
+| OWNR-04 | Phase 55 | Pending |
+| OWNR-05 | Phase 55 | Pending |
+| OWNR-06 | Phase 55 | Pending |
+| PIPE-01 | Phase 56 | Pending |
+| PIPE-02 | Phase 56 | Pending |
+| PIPE-03 | Phase 56 | Pending |
+| PIPE-04 | Phase 56 | Pending |
+| TEST-01 | Phase 57 | Pending |
+| TEST-02 | Phase 57 | Pending |
+| TEST-03 | Phase 57 | Pending |
+| TEST-04 | Phase 57 | Pending |
+| TEST-05 | Phase 57 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35 ⚠️
+- Mapped to phases: 35/35
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-10*
-*Last updated: 2026-02-10 after initial definition*
+*Last updated: 2026-02-10 after roadmap phase mapping*
