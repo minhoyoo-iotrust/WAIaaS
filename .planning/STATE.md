@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 57 통합 테스트
+**Current focus:** Phase 57 통합 테스트 -- v1.2 complete
 
 ## Current Position
 
 Phase: 57 (6 of 6 in v1.2) (통합 테스트)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-10 -- Completed 57-01-PLAN.md (auth/policy audit + CLI E2E harness fix)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-10 -- Completed 57-02-PLAN.md (session lifecycle + workflow + owner E2E tests)
 
-Progress: [████████████░] 92% (12/13 plans)
+Progress: [█████████████] 100% (13/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 55 phases, 139 plans, 332 reqs, 444 tests, ~14,500 LOC
+**Cumulative:** 13 milestones, 55 phases, 140 plans, 332 reqs, 457 tests, ~15,800 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 12
-- Average duration: 5.8min
-- Total execution time: 69min
+- Total plans completed: 13
+- Average duration: 5.7min
+- Total execution time: 74min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -32,7 +32,7 @@ Progress: [████████████░] 92% (12/13 plans)
 | 54 | 2/2 | 11min | 5.5min |
 | 55 | 3/3 | 12min | 4min |
 | 56 | 2/2 | 17min | 8.5min |
-| 57 | 1/2 | 6min | 6min |
+| 57 | 2/2 | 11min | 5.5min |
 
 ## Accumulated Context
 
@@ -96,6 +96,8 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [57-01]: argon2 as CLI devDependency (pnpm strict isolation)
 - [57-01]: DB expires_at NOT checked by sessionAuth (JWT exp is authoritative, DB expires_at for admin listing only)
 - [57-01]: Coverage audit tests in separate files (not appended to existing test files)
+- [57-02]: ownerAuth agentId resolution: prefer c.get('agentId') (sessionAuth context) over c.req.param('id') for /transactions/:id/* routes
+- [57-02]: APPROVAL E2E requires both sessionAuth Bearer + ownerAuth Ed25519 headers (dual middleware)
 
 ### Blockers/Concerns
 
@@ -107,5 +109,5 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 57-01-PLAN.md
+Stopped at: Completed 57-02-PLAN.md -- Phase 57 complete, v1.2 milestone complete
 Resume file: None
