@@ -1,5 +1,5 @@
 export { AgentSchema, type Agent, CreateAgentRequestSchema, type CreateAgentRequest } from './agent.schema.js';
-export { SessionSchema, type Session } from './session.schema.js';
+export { SessionSchema, type Session, CreateSessionRequestSchema, type CreateSessionRequest } from './session.schema.js';
 export {
   TransactionSchema,
   type Transaction,

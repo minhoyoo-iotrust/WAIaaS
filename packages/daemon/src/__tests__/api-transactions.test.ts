@@ -3,11 +3,16 @@
  *
  * Uses in-memory SQLite + mock adapter + mock keyStore + Hono app.request().
  * Follows same pattern as api-agents.test.ts.
+ *
+ * v1.2: POST /v1/agents requires X-Master-Password (masterAuth).
+ *        POST /v1/transactions/send and GET /v1/transactions/:id require sessionAuth.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
-import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
+import { JwtSecretManager, type JwtPayload } from '../infrastructure/jwt/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
@@ -31,6 +36,7 @@ async function json(res: Response): Promise<Record<string, unknown>> {
 }
 
 const HOST = '127.0.0.1:3100';
+const TEST_MASTER_PASSWORD = 'test-master-password';
 
 function mockConfig(): DaemonConfig {
   return {
@@ -163,18 +169,31 @@ function mockAdapter(): IChainAdapter {
 
 let conn: DatabaseConnection;
 let app: Hono;
+let jwtSecretManager: JwtSecretManager;
 
-beforeEach(() => {
+beforeEach(async () => {
   conn = createDatabase(':memory:');
   pushSchema(conn.sqlite);
+
+  const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+    type: argon2.argon2id,
+    memoryCost: 4096,
+    timeCost: 2,
+    parallelism: 1,
+  });
+
+  jwtSecretManager = new JwtSecretManager(conn.db);
+  await jwtSecretManager.initialize();
 
   app = createApp({
     db: conn.db,
     keyStore: mockKeyStore(),
-    masterPassword: 'test-master-password',
+    masterPassword: TEST_MASTER_PASSWORD,
+    masterPasswordHash,
     config: mockConfig(),
     adapter: mockAdapter(),
     policyEngine: new DefaultPolicyEngine(),
+    jwtSecretManager,
   });
 });
 
@@ -182,31 +201,60 @@ afterEach(() => {
   conn.sqlite.close();
 });
 
-/** Create an agent and return its ID. */
+// ---------------------------------------------------------------------------
+// Auth helpers
+// ---------------------------------------------------------------------------
+
+/** Create an agent (with masterAuth) and return its ID. */
 async function createTestAgent(): Promise<string> {
   const res = await app.request('/v1/agents', {
     method: 'POST',
-    headers: { Host: HOST, 'Content-Type': 'application/json' },
+    headers: {
+      Host: HOST,
+      'Content-Type': 'application/json',
+      'X-Master-Password': TEST_MASTER_PASSWORD,
+    },
     body: JSON.stringify({ name: 'tx-test-agent' }),
   });
   const body = await json(res);
   return body.id as string;
 }
 
+/** Create a session token for the given agent. Returns "Bearer wai_sess_<token>". */
+async function createSessionToken(agentId: string): Promise<string> {
+  const sessionId = generateId();
+  const now = Math.floor(Date.now() / 1000);
+
+  conn.sqlite.prepare(
+    `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+
+  const payload: JwtPayload = {
+    sub: sessionId,
+    agt: agentId,
+    iat: now,
+    exp: now + 3600,
+  };
+  const token = await jwtSecretManager.signToken(payload);
+  return `Bearer ${token}`;
+}
+
 // ---------------------------------------------------------------------------
-// POST /v1/transactions/send (4 tests)
+// POST /v1/transactions/send (6 tests)
 // ---------------------------------------------------------------------------
 
 describe('POST /v1/transactions/send', () => {
   it('should return 201 with txId for valid request', async () => {
     const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: {
         Host: HOST,
         'Content-Type': 'application/json',
-        'X-Agent-Id': agentId,
+        Authorization: authHeader,
       },
       body: JSON.stringify({
         to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -222,13 +270,14 @@ describe('POST /v1/transactions/send', () => {
 
   it('should return 400 for invalid amount (non-numeric)', async () => {
     const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: {
         Host: HOST,
         'Content-Type': 'application/json',
-        'X-Agent-Id': agentId,
+        Authorization: authHeader,
       },
       body: JSON.stringify({
         to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -241,7 +290,7 @@ describe('POST /v1/transactions/send', () => {
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
   });
 
-  it('should return 400 for missing X-Agent-Id header', async () => {
+  it('should return 401 without Authorization header', async () => {
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: {
@@ -254,18 +303,26 @@ describe('POST /v1/transactions/send', () => {
       }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const body = await json(res);
-    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+    expect(body.code).toBe('INVALID_TOKEN');
   });
 
-  it('should return 404 for non-existent agent', async () => {
+  it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
+    // Sign a JWT with valid format but session not in DB
+    const fakeSessionId = generateId();
+    const fakeAgentId = '00000000-0000-7000-8000-000000000000';
+    const now = Math.floor(Date.now() / 1000);
+
+    const payload: JwtPayload = { sub: fakeSessionId, agt: fakeAgentId, iat: now, exp: now + 3600 };
+    const token = await jwtSecretManager.signToken(payload);
+
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: {
         Host: HOST,
         'Content-Type': 'application/json',
-        'X-Agent-Id': '00000000-0000-7000-8000-000000000000',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -275,17 +332,69 @@ describe('POST /v1/transactions/send', () => {
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('SESSION_NOT_FOUND');
+  });
+
+  it('should return 401 with invalid token', async () => {
+    const res = await app.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer wai_sess_invalid.jwt.token',
+      },
+      body: JSON.stringify({
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000000',
+      }),
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_TOKEN');
+  });
+
+  it('should persist transaction with correct agentId from session', async () => {
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await app.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '500000',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    const txId = body.id as string;
+
+    // Verify in DB
+    const row = conn.sqlite.prepare('SELECT * FROM transactions WHERE id = ?').get(txId) as Record<
+      string,
+      unknown
+    >;
+    expect(row).toBeTruthy();
+    expect(row.agent_id).toBe(agentId);
+    expect(row.amount).toBe('500000');
+    expect(row.to_address).toBe('Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
   });
 });
 
 // ---------------------------------------------------------------------------
-// GET /v1/transactions/:id (3 tests)
+// GET /v1/transactions/:id (5 tests)
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/transactions/:id', () => {
   it('should return 200 with transaction JSON for existing transaction', async () => {
     const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
 
     // Create a transaction via POST
     const sendRes = await app.request('/v1/transactions/send', {
@@ -293,7 +402,7 @@ describe('GET /v1/transactions/:id', () => {
       headers: {
         Host: HOST,
         'Content-Type': 'application/json',
-        'X-Agent-Id': agentId,
+        Authorization: authHeader,
       },
       body: JSON.stringify({
         to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -305,7 +414,7 @@ describe('GET /v1/transactions/:id', () => {
 
     // Query the transaction
     const res = await app.request(`/v1/transactions/${txId}`, {
-      headers: { Host: HOST },
+      headers: { Host: HOST, Authorization: authHeader },
     });
 
     expect(res.status).toBe(200);
@@ -319,8 +428,11 @@ describe('GET /v1/transactions/:id', () => {
   });
 
   it('should return 404 for non-existent transaction ID', async () => {
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
     const res = await app.request('/v1/transactions/00000000-0000-7000-8000-000000000000', {
-      headers: { Host: HOST },
+      headers: { Host: HOST, Authorization: authHeader },
     });
 
     expect(res.status).toBe(404);
@@ -330,6 +442,7 @@ describe('GET /v1/transactions/:id', () => {
 
   it('should include all expected fields in response', async () => {
     const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
 
     // Create a transaction
     const sendRes = await app.request('/v1/transactions/send', {
@@ -337,7 +450,7 @@ describe('GET /v1/transactions/:id', () => {
       headers: {
         Host: HOST,
         'Content-Type': 'application/json',
-        'X-Agent-Id': agentId,
+        Authorization: authHeader,
       },
       body: JSON.stringify({
         to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -349,7 +462,7 @@ describe('GET /v1/transactions/:id', () => {
 
     // Query the transaction
     const res = await app.request(`/v1/transactions/${txId}`, {
-      headers: { Host: HOST },
+      headers: { Host: HOST, Authorization: authHeader },
     });
 
     const body = await json(res);
@@ -366,5 +479,25 @@ describe('GET /v1/transactions/:id', () => {
     expect(body).toHaveProperty('txHash');
     expect(body).toHaveProperty('error');
     expect(body).toHaveProperty('createdAt');
+  });
+
+  it('should return 401 without Authorization header', async () => {
+    const res = await app.request('/v1/transactions/some-id', {
+      headers: { Host: HOST },
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_TOKEN');
+  });
+
+  it('should return 401 with malformed Bearer token', async () => {
+    const res = await app.request('/v1/transactions/some-id', {
+      headers: { Host: HOST, Authorization: 'Bearer bad-token' },
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_TOKEN');
   });
 });

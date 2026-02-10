@@ -2,16 +2,18 @@
  * Transaction routes: POST /v1/transactions/send and GET /v1/transactions/:id.
  *
  * POST /v1/transactions/send:
- *   - Requires X-Agent-Id header
+ *   - Requires sessionAuth (Authorization: Bearer wai_sess_<token>),
+ *     applied at server level in createApp()
  *   - Parses body with SendTransactionRequestSchema
  *   - Stage 1 runs synchronously (DB INSERT -> returns 201 with txId)
  *   - Stages 2-6 run asynchronously (fire-and-forget with error catching)
  *
  * GET /v1/transactions/:id:
+ *   - Requires sessionAuth
  *   - Returns transaction status JSON
  *   - 404 if not found
  *
- * v1.1: Agent identification via X-Agent-Id header (no sessionAuth).
+ * v1.2: Agent identification via JWT agentId from sessionAuth context.
  *
  * @see docs/37-rest-api-complete-spec.md
  */
@@ -56,12 +58,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
   // ---------------------------------------------------------------------------
 
   router.post('/transactions/send', async (c) => {
-    const agentId = c.req.header('X-Agent-Id');
-    if (!agentId) {
-      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-        message: 'X-Agent-Id header is required',
-      });
-    }
+    // Get agentId from sessionAuth context (set by middleware at server level)
+    const agentId = c.get('agentId' as never) as string;
 
     // Look up agent
     const agent = await deps.db.select().from(agents).where(eq(agents.id, agentId)).get();
@@ -154,6 +152,12 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
 
   router.get('/transactions/:id', async (c) => {
     const txId = c.req.param('id');
+
+    if (!txId) {
+      throw new WAIaaSError('TX_NOT_FOUND', {
+        message: 'Transaction ID is required',
+      });
+    }
 
     const tx = await deps.db
       .select()

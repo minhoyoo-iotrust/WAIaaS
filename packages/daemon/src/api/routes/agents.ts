@@ -4,7 +4,8 @@
  * Parses body with CreateAgentRequestSchema, generates UUID v7 ID,
  * calls keyStore.generateKeyPair(), inserts into agents table, returns 201.
  *
- * v1.1: No sessionAuth. Agent identification via X-Agent-Id header.
+ * v1.2: Protected by masterAuth middleware (X-Master-Password header required),
+ *       applied at server level in createApp().
  *
  * @see docs/37-rest-api-complete-spec.md
  */

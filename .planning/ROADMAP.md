@@ -149,8 +149,8 @@
 - Integer phases (52, 53, ...): Planned milestone work
 - Decimal phases (52.1, 52.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 52: 인증 기반** - JWT Secret 관리 + 3종 인증 미들웨어 + 엔드포인트 인증 적용
-- [ ] **Phase 53: 세션 관리** - 세션 CRUD API + 낙관적 갱신 + 안전 장치
+- [x] **Phase 52: 인증 기반** - JWT Secret 관리 + 3종 인증 미들웨어 + 엔드포인트 인증 적용 — completed 2026-02-10
+- [x] **Phase 53: 세션 관리** - 세션 CRUD API + 낙관적 갱신 + 안전 장치 — completed 2026-02-10
 - [ ] **Phase 54: 정책 엔진** - DatabasePolicyEngine + 정책 CRUD API + TOCTOU 방지
 - [ ] **Phase 55: 워크플로우 + Owner 상태** - DELAY/APPROVAL 워크플로우 + Owner 3-State 상태 머신
 - [ ] **Phase 56: 파이프라인 통합** - Stage 2/3/4 실제 구현 + 감사 로그
@@ -169,8 +169,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 52-01: JWT Secret 관리 + sessionAuth 미들웨어
-- [ ] 52-02: masterAuth + ownerAuth 미들웨어 + authRouter + 기존 엔드포인트 적용
+- [x] 52-01: JWT Secret 관리 + sessionAuth 미들웨어
+- [x] 52-02: masterAuth + ownerAuth 미들웨어 + authRouter + 기존 엔드포인트 적용
 
 #### Phase 53: 세션 관리
 **Goal**: 에이전트가 세션을 생성하여 API에 인증 접근하고, 세션을 갱신/폐기하여 수명 주기를 완전히 제어할 수 있는 상태
@@ -185,8 +185,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 53-01: 세션 생성 + 조회 + 폐기 API
-- [ ] 53-02: 세션 낙관적 갱신 + 5종 안전 장치
+- [x] 53-01: 세션 생성 + 조회 + 폐기 API
+- [x] 53-02: 세션 낙관적 갱신 + 5종 안전 장치
 
 #### Phase 54: 정책 엔진
 **Goal**: 모든 거래 요청이 정책 규칙에 따라 4-tier(INSTANT/NOTIFY/DELAY/APPROVAL)로 자동 분류되고, 관리자가 정책을 CRUD할 수 있는 상태
@@ -201,8 +201,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 54-01: DatabasePolicyEngine 구현 (SPENDING_LIMIT + WHITELIST)
-- [ ] 54-02: 정책 CRUD API + TOCTOU 방지 패턴
+- [ ] 54-01-PLAN.md -- DatabasePolicyEngine TDD (SPENDING_LIMIT 4-tier + WHITELIST evaluation)
+- [ ] 54-02-PLAN.md -- 정책 CRUD API + TOCTOU 방지 (BEGIN IMMEDIATE + reserved amount)
 
 #### Phase 55: 워크플로우 + Owner 상태
 **Goal**: DELAY 거래가 쿨다운 후 자동 실행되고, APPROVAL 거래가 Owner 승인을 거치며, Owner 등록 여부에 따라 보안 수준이 점진적으로 해금되는 상태
@@ -271,7 +271,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 → 57
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
-| v1.2 인증 + 정책 엔진 | 52-57 | 0/13 | In progress | - |
+| v1.2 인증 + 정책 엔진 | 52-57 | 4/13 | In progress | - |
 
 **Total:** 13 milestones shipped, 51 phases completed, 127 plans completed
 **v1.2:** 6 phases, 13 plans planned

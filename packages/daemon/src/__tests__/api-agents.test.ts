@@ -2,11 +2,16 @@
  * Tests for agent creation and wallet query API routes.
  *
  * Uses in-memory SQLite + mock keyStore + mock adapter + Hono app.request().
+ *
+ * v1.2: POST /v1/agents requires X-Master-Password (masterAuth).
+ *        GET /v1/wallet/* requires Authorization: Bearer wai_sess_<token> (sessionAuth).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
-import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
+import { JwtSecretManager, type JwtPayload } from '../infrastructure/jwt/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
@@ -24,6 +29,8 @@ async function json(res: Response): Promise<Record<string, unknown>> {
 
 /** Default Host header for all requests (passes hostGuard). */
 const HOST = '127.0.0.1:3100';
+
+const TEST_MASTER_PASSWORD = 'test-master-password';
 
 /** Create a minimal DaemonConfig with defaults needed for tests. */
 function mockConfig(): DaemonConfig {
@@ -155,17 +162,33 @@ function mockAdapter(): IChainAdapter {
 
 let conn: DatabaseConnection;
 let app: Hono;
+let jwtSecretManager: JwtSecretManager;
+let masterPasswordHash: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   conn = createDatabase(':memory:');
   pushSchema(conn.sqlite);
+
+  // Hash master password for masterAuth
+  masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+    type: argon2.argon2id,
+    memoryCost: 4096,
+    timeCost: 2,
+    parallelism: 1,
+  });
+
+  // Initialize JWT secret manager for sessionAuth
+  jwtSecretManager = new JwtSecretManager(conn.db);
+  await jwtSecretManager.initialize();
 
   app = createApp({
     db: conn.db,
     keyStore: mockKeyStore(),
-    masterPassword: 'test-master-password',
+    masterPassword: TEST_MASTER_PASSWORD,
+    masterPasswordHash,
     config: mockConfig(),
     adapter: mockAdapter(),
+    jwtSecretManager,
   });
 });
 
@@ -174,14 +197,59 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /v1/agents (5 tests)
+// Auth test helpers
+// ---------------------------------------------------------------------------
+
+/** Create an agent via POST with masterAuth header. Returns agent ID. */
+async function createTestAgent(): Promise<string> {
+  const res = await app.request('/v1/agents', {
+    method: 'POST',
+    headers: {
+      Host: HOST,
+      'Content-Type': 'application/json',
+      'X-Master-Password': TEST_MASTER_PASSWORD,
+    },
+    body: JSON.stringify({ name: 'test-agent' }),
+  });
+  const body = await json(res);
+  return body.id as string;
+}
+
+/** Create a session and sign a JWT for the given agent. Returns "Bearer wai_sess_<token>". */
+async function createSessionToken(agentId: string): Promise<string> {
+  const sessionId = generateId();
+  const now = Math.floor(Date.now() / 1000);
+
+  // Insert session into DB
+  conn.sqlite.prepare(
+    `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+
+  // Sign JWT
+  const payload: JwtPayload = {
+    sub: sessionId,
+    agt: agentId,
+    iat: now,
+    exp: now + 3600,
+  };
+  const token = await jwtSecretManager.signToken(payload);
+  return `Bearer ${token}`;
+}
+
+// ---------------------------------------------------------------------------
+// POST /v1/agents (7 tests)
 // ---------------------------------------------------------------------------
 
 describe('POST /v1/agents', () => {
   it('should return 201 with agent JSON on valid request', async () => {
     const res = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({ name: 'test-agent' }),
     });
 
@@ -197,7 +265,11 @@ describe('POST /v1/agents', () => {
   it('should create agent with status ACTIVE', async () => {
     const res = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({ name: 'active-agent' }),
     });
 
@@ -208,7 +280,11 @@ describe('POST /v1/agents', () => {
   it('should return 400 on missing name field (Zod validation)', async () => {
     const res = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({}),
     });
 
@@ -220,7 +296,11 @@ describe('POST /v1/agents', () => {
   it('should generate UUID-format agent ID', async () => {
     const res = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({ name: 'uuid-agent' }),
     });
 
@@ -233,7 +313,11 @@ describe('POST /v1/agents', () => {
   it('should persist agent in database (SELECT after POST)', async () => {
     const res = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({ name: 'persisted-agent' }),
     });
 
@@ -252,29 +336,55 @@ describe('POST /v1/agents', () => {
     expect(row.status).toBe('ACTIVE');
     expect(row.public_key).toBe(MOCK_PUBLIC_KEY);
   });
+
+  it('should return 401 without X-Master-Password header', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'no-auth-agent' }),
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_MASTER_PASSWORD');
+  });
+
+  it('should return 401 with wrong master password', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': 'wrong-password',
+      },
+      body: JSON.stringify({ name: 'bad-auth-agent' }),
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_MASTER_PASSWORD');
+  });
 });
 
 // ---------------------------------------------------------------------------
-// GET /v1/wallet/address (3 tests)
+// GET /v1/wallet/address (4 tests)
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/wallet/address', () => {
   let agentId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
-    // Create an agent first
-    const res = await app.request('/v1/agents', {
-      method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'wallet-test-agent' }),
-    });
-    const body = await json(res);
-    agentId = body.id as string;
+    agentId = await createTestAgent();
+    authHeader = await createSessionToken(agentId);
   });
 
   it('should return 200 with address JSON for valid agent', async () => {
     const res = await app.request('/v1/wallet/address', {
-      headers: { Host: HOST, 'X-Agent-Id': agentId },
+      headers: { Host: HOST, Authorization: authHeader },
     });
 
     expect(res.status).toBe(200);
@@ -285,47 +395,61 @@ describe('GET /v1/wallet/address', () => {
     expect(body.address).toBe(MOCK_PUBLIC_KEY);
   });
 
-  it('should return 404 for non-existent agent ID', async () => {
+  it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
+    // Sign a JWT with valid format but session not in DB
+    const fakeSessionId = generateId();
+    const fakeAgentId = '00000000-0000-7000-8000-000000000000';
+    const now = Math.floor(Date.now() / 1000);
+
+    const payload: JwtPayload = { sub: fakeSessionId, agt: fakeAgentId, iat: now, exp: now + 3600 };
+    const token = await jwtSecretManager.signToken(payload);
+
     const res = await app.request('/v1/wallet/address', {
-      headers: { Host: HOST, 'X-Agent-Id': '00000000-0000-7000-8000-000000000000' },
+      headers: { Host: HOST, Authorization: `Bearer ${token}` },
     });
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('SESSION_NOT_FOUND');
   });
 
-  it('should return 400 for missing X-Agent-Id header', async () => {
+  it('should return 401 without Authorization header', async () => {
     const res = await app.request('/v1/wallet/address', {
       headers: { Host: HOST },
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const body = await json(res);
-    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+    expect(body.code).toBe('INVALID_TOKEN');
+  });
+
+  it('should return 401 with invalid token format', async () => {
+    const res = await app.request('/v1/wallet/address', {
+      headers: { Host: HOST, Authorization: 'Bearer not-a-valid-token' },
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_TOKEN');
   });
 });
 
 // ---------------------------------------------------------------------------
-// GET /v1/wallet/balance (3 tests)
+// GET /v1/wallet/balance (4 tests)
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/wallet/balance', () => {
   let agentId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
-    const res = await app.request('/v1/agents', {
-      method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'balance-test-agent' }),
-    });
-    const body = await json(res);
-    agentId = body.id as string;
+    agentId = await createTestAgent();
+    authHeader = await createSessionToken(agentId);
   });
 
   it('should return 200 with balance as string for valid agent', async () => {
     const res = await app.request('/v1/wallet/balance', {
-      headers: { Host: HOST, 'X-Agent-Id': agentId },
+      headers: { Host: HOST, Authorization: authHeader },
     });
 
     expect(res.status).toBe(200);
@@ -335,7 +459,7 @@ describe('GET /v1/wallet/balance', () => {
 
   it('should include correct decimals and symbol', async () => {
     const res = await app.request('/v1/wallet/balance', {
-      headers: { Host: HOST, 'X-Agent-Id': agentId },
+      headers: { Host: HOST, Authorization: authHeader },
     });
 
     const body = await json(res);
@@ -347,14 +471,40 @@ describe('GET /v1/wallet/balance', () => {
     expect(body.address).toBe(MOCK_PUBLIC_KEY);
   });
 
-  it('should return 404 for non-existent agent', async () => {
+  it('should return 401 without Authorization header', async () => {
     const res = await app.request('/v1/wallet/balance', {
-      headers: { Host: HOST, 'X-Agent-Id': '00000000-0000-7000-8000-000000000000' },
+      headers: { Host: HOST },
     });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('INVALID_TOKEN');
+  });
+
+  it('should return 401 with expired token', async () => {
+    const sessionId = generateId();
+    const now = Math.floor(Date.now() / 1000);
+
+    conn.sqlite.prepare(
+      `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+
+    const payload: JwtPayload = {
+      sub: sessionId,
+      agt: agentId,
+      iat: now - 7200,
+      exp: now - 3600, // expired
+    };
+    const token = await jwtSecretManager.signToken(payload);
+
+    const res = await app.request('/v1/wallet/balance', {
+      headers: { Host: HOST, Authorization: `Bearer ${token}` },
+    });
+
+    expect(res.status).toBe(401);
+    const body = await json(res);
+    expect(body.code).toBe('TOKEN_EXPIRED');
   });
 });
 
@@ -367,15 +517,22 @@ describe('Integration flow', () => {
     // Create
     const createRes = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({ name: 'flow-agent' }),
     });
     const created = await json(createRes);
     const agentId = created.id as string;
 
+    // Create session for wallet query
+    const authHeader = await createSessionToken(agentId);
+
     // Get address
     const addrRes = await app.request('/v1/wallet/address', {
-      headers: { Host: HOST, 'X-Agent-Id': agentId },
+      headers: { Host: HOST, Authorization: authHeader },
     });
     const addr = await json(addrRes);
 
@@ -388,15 +545,22 @@ describe('Integration flow', () => {
     // Create
     const createRes = await app.request('/v1/agents', {
       method: 'POST',
-      headers: { Host: HOST, 'Content-Type': 'application/json' },
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
       body: JSON.stringify({ name: 'balance-flow-agent' }),
     });
     const created = await json(createRes);
     const agentId = created.id as string;
 
+    // Create session for wallet query
+    const authHeader = await createSessionToken(agentId);
+
     // Get balance
     const balRes = await app.request('/v1/wallet/balance', {
-      headers: { Host: HOST, 'X-Agent-Id': agentId },
+      headers: { Host: HOST, Authorization: authHeader },
     });
     const bal = await json(balRes);
 
