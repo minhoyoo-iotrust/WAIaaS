@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 57 (6 of 6 in v1.2) (통합 테스트)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-10 -- Phase 56 verified and complete (stage2Auth+stage3Policy+stage4Wait+BackgroundWorkers)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-10 -- Completed 57-01-PLAN.md (auth/policy audit + CLI E2E harness fix)
 
-Progress: [███████████░░] 85% (11/13 plans)
+Progress: [████████████░] 92% (12/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 55 phases, 138 plans, 332 reqs, 428 tests, ~14,300 LOC
+**Cumulative:** 13 milestones, 55 phases, 139 plans, 332 reqs, 444 tests, ~14,500 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 11
-- Average duration: 5.7min
-- Total execution time: 63min
+- Total plans completed: 12
+- Average duration: 5.8min
+- Total execution time: 69min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -32,6 +32,7 @@ Progress: [███████████░░] 85% (11/13 plans)
 | 54 | 2/2 | 11min | 5.5min |
 | 55 | 3/3 | 12min | 4min |
 | 56 | 2/2 | 17min | 8.5min |
+| 57 | 1/2 | 6min | 6min |
 
 ## Accumulated Context
 
@@ -91,16 +92,20 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [56-02]: Backward-compatible fallback: missing delayQueue/approvalWorkflow -> treat DELAY/APPROVAL as INSTANT
 - [56-02]: executeFromStage5 uses dynamic imports to avoid circular deps in daemon.ts
 - [56-02]: Workflow instances (DelayQueue, ApprovalWorkflow) created in daemon Step 4b after DB + config available
+- [57-01]: JwtSecretManager + DatabasePolicyEngine exported from @waiaas/daemon (E2E harness needs them)
+- [57-01]: argon2 as CLI devDependency (pnpm strict isolation)
+- [57-01]: DB expires_at NOT checked by sessionAuth (JWT exp is authoritative, DB expires_at for admin listing only)
+- [57-01]: Coverage audit tests in separate files (not appended to existing test files)
 
 ### Blockers/Concerns
 
 - ~~jose (JWT) 패키지 미설치~~ -- RESOLVED in 52-01
 - ~~SIWS/SIWE 검증 라이브러리 미설치~~ -- RESOLVED in 52-02 (sodium-native Ed25519 for Solana, SIWE deferred to v1.4)
-- Pre-existing CLI E2E test failures (4 tests) -- not blocking, caused by E2E harness sessionAuth integration gap
+- ~~Pre-existing CLI E2E test failures (4 tests)~~ -- RESOLVED in 57-01 (harness fixed with jwtSecretManager + masterPasswordHash)
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) -- not blocking, unrelated to policy engine
 
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 56 verified and complete, ready for Phase 57 planning
+Stopped at: Completed 57-01-PLAN.md
 Resume file: None
