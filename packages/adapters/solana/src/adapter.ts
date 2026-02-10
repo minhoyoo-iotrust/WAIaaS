@@ -53,7 +53,6 @@ const txEncoder = getTransactionEncoder();
 /** Re-usable transaction decoder (stateless, safe to share). */
 const txDecoder = getTransactionDecoder();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SolanaRpc = ReturnType<typeof createSolanaRpc>;
 
 /**
