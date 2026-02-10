@@ -38,6 +38,7 @@ import type {
   SubmitResult,
   BalanceInfo,
   HealthInfo,
+  AssetInfo,
 } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
 
@@ -46,6 +47,9 @@ const DEFAULT_SOL_TRANSFER_FEE = 5000n;
 
 /** Default confirmation polling interval in milliseconds. */
 const CONFIRMATION_POLL_INTERVAL_MS = 2000;
+
+/** SPL Token Program ID (hard-coded to avoid @solana-program/token dependency). */
+const SPL_TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 
 /** Re-usable transaction encoder (stateless, safe to share). */
 const txEncoder = getTransactionEncoder();
@@ -121,6 +125,64 @@ export class SolanaAdapter implements IChainAdapter {
     } catch (error) {
       throw new WAIaaSError('CHAIN_ERROR', {
         message: `Failed to get balance: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  // -- Asset query (1) --
+
+  async getAssets(addr: string): Promise<AssetInfo[]> {
+    const rpc = this.getRpc();
+    try {
+      // 1. Get native SOL balance
+      const balanceResult = await rpc.getBalance(address(addr)).send();
+
+      // 2. Get all SPL token accounts via getTokenAccountsByOwner
+      const tokenResult = await rpc
+        .getTokenAccountsByOwner(
+          address(addr),
+          { programId: address(SPL_TOKEN_PROGRAM_ID) },
+          { encoding: 'jsonParsed' },
+        )
+        .send();
+
+      // 3. Build result array -- native SOL first
+      const assets: AssetInfo[] = [
+        {
+          mint: 'native',
+          symbol: 'SOL',
+          name: 'Solana',
+          balance: balanceResult.value,
+          decimals: 9,
+          isNative: true,
+        },
+      ];
+
+      // 4. Append non-zero SPL token accounts
+      for (const item of tokenResult.value) {
+        const parsed = (item.account.data as { parsed: { info: { mint: string; tokenAmount: { amount: string; decimals: number } } } }).parsed;
+        const info = parsed.info;
+        const tokenBalance = BigInt(info.tokenAmount.amount);
+
+        // Filter out zero-balance token accounts
+        if (tokenBalance === 0n) continue;
+
+        assets.push({
+          mint: info.mint,
+          symbol: '',
+          name: '',
+          balance: tokenBalance,
+          decimals: info.tokenAmount.decimals,
+          isNative: false,
+        });
+      }
+
+      return assets;
+    } catch (error) {
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to get assets: ${error instanceof Error ? error.message : String(error)}`,
         cause: error instanceof Error ? error : undefined,
       });
     }

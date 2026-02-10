@@ -62,6 +62,8 @@ export {
   type UpdatePolicyRequest,
   ConfigSchema,
   type Config,
+  AssetInfoSchema,
+  type AssetInfoDto,
 } from './schemas/index.js';
 
 // Errors (68 error codes + WAIaaSError)
@@ -82,6 +84,7 @@ export type {
   SubmitResult,
   BalanceInfo,
   HealthInfo,
+  AssetInfo,
   IChainAdapter,
   ILocalKeyStore,
   IPolicyEngine,

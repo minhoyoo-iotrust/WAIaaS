@@ -6,6 +6,7 @@ import type {
   SubmitResult,
   BalanceInfo,
   HealthInfo,
+  AssetInfo,
 } from './chain-adapter.types.js';
 
 /**
@@ -14,7 +15,8 @@ import type {
  * build -> simulate -> sign -> submit.
  *
  * v1.1 scope: 10 methods (connection 4 + balance 1 + tx pipeline 4 + confirm 1).
- * v1.4 scope: +10 methods (assets, fee estimation, contract calls, approve, batch, sweep, nonce, status, validate).
+ * v1.3 scope: +1 method (getAssets).
+ * v1.4 scope: +9 methods (fee estimation, contract calls, approve, batch, sweep, nonce, status, validate).
  */
 export interface IChainAdapter {
   readonly chain: ChainType;
@@ -58,8 +60,12 @@ export interface IChainAdapter {
   /** Wait for transaction confirmation with optional timeout. */
   waitForConfirmation(txHash: string, timeoutMs?: number): Promise<SubmitResult>;
 
+  // -- Asset query (1) --
+
+  /** Get all assets (native + token accounts) for an address. */
+  getAssets(address: string): Promise<AssetInfo[]>;
+
   // v1.4 planned methods:
-  // getAssets(address: string): Promise<AssetInfo[]>;
   // estimateFee(request: TransferRequest): Promise<FeeEstimate>;
   // buildContractCall(request: ContractCallRequest): Promise<UnsignedTransaction>;
   // buildApprove(request: ApproveRequest): Promise<UnsignedTransaction>;
@@ -68,5 +74,5 @@ export interface IChainAdapter {
   // getCurrentNonce(address: string): Promise<number>;
   // resetNonceTracker(address: string): void;
   // getTransactionStatus(txHash: string): Promise<SubmitResult>;
-  // validateAddress(address: string): boolean;
+  // isValidAddress(address: string): boolean;
 }

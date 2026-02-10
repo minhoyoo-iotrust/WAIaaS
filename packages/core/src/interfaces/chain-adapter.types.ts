@@ -78,6 +78,24 @@ export interface BalanceInfo {
   usdValue?: number;
 }
 
+/** Asset information for a token held by an address. */
+export interface AssetInfo {
+  /** Token mint address. 'native' for SOL/ETH. */
+  mint: string;
+  /** Token symbol. 'SOL', 'USDC', etc. */
+  symbol: string;
+  /** Token name. 'Solana', 'USD Coin', etc. Empty string if unknown. */
+  name: string;
+  /** Balance in smallest unit (lamports/wei). */
+  balance: bigint;
+  /** Decimal places. */
+  decimals: number;
+  /** Whether this is the native token. */
+  isNative: boolean;
+  /** USD value if available (from price oracle). */
+  usdValue?: number;
+}
+
 /** RPC health check result. */
 export interface HealthInfo {
   /** Whether the RPC endpoint is healthy. */

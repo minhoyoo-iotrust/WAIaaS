@@ -7,6 +7,7 @@ export type {
   SubmitResult,
   BalanceInfo,
   HealthInfo,
+  AssetInfo,
 } from './chain-adapter.types.js';
 
 // Interfaces

@@ -15,3 +15,4 @@ export {
   type UpdatePolicyRequest,
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
+export { AssetInfoSchema, type AssetInfoDto } from './asset.schema.js';
