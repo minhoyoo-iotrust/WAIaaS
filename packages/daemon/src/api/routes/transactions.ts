@@ -189,7 +189,7 @@ const pendingTransactionsRoute = createRoute({
   summary: 'List pending transactions',
   responses: {
     200: {
-      description: 'Pending transactions (QUEUED/DELAYED/PENDING_APPROVAL)',
+      description: 'Pending transactions (PENDING/QUEUED)',
       content: { 'application/json': { schema: TxPendingListResponseSchema } },
     },
   },
@@ -382,7 +382,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       .where(
         and(
           eq(transactions.agentId, agentId),
-          inArray(transactions.status, ['QUEUED', 'DELAYED', 'PENDING_APPROVAL']),
+          inArray(transactions.status, ['PENDING', 'QUEUED']),
         ),
       )
       .orderBy(desc(transactions.id));
