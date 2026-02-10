@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3 Phase 62 Python SDK complete
+**Current focus:** v1.3 Phase 61 TypeScript SDK
 
 ## Current Position
 
-Phase: 62 of 63 (Python SDK)
-Plan: 1 of 1 in current phase
-Status: Phase 62 complete
-Last activity: 2026-02-11 -- Phase 62 complete (1/1 plan, 47 tests, 14 files)
+Phase: 61 of 63 (TypeScript SDK)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-11 -- Completed 61-01-PLAN.md (SDK core client, 44 tests)
 
 Progress: [███████░░░] 64% (7/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 62 phases, 147 plans, 367 reqs, 638 tests, 30,100+ LOC
+**Cumulative:** 14 milestones, 61 phases, 147 plans, 367 reqs, 635 tests, 29,500+ LOC
 
 **v1.3 Velocity:**
 - Plans completed: 7
@@ -62,6 +62,9 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - Pydantic v2 populate_by_name=True: camelCase JSON + snake_case Python dual access on all models
 - RetryPolicy defaults: 3 retries, 1s base delay, {429,500,502,503,504} retryable codes
 - renew_session() auto-updates client session token + Authorization header
+- SDK WAIaaSError standalone class (not imported from @waiaas/core) for zero dependency
+- HttpClient differentiates AbortError (REQUEST_TIMEOUT) from TypeError (NETWORK_ERROR)
+- renewSession() extracts sessionId from JWT base64url payload, caches for reuse
 
 ### Blockers/Concerns
 
@@ -71,5 +74,5 @@ Full log in PROJECT.md. Key decisions for v1.3:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 62 complete -- ready to plan Phase 63
+Stopped at: Completed 61-01-PLAN.md -- ready for 61-02-PLAN.md
 Resume file: None
