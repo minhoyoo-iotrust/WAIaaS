@@ -10,25 +10,26 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 54 (3 of 6 in v1.2) (정책 엔진)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-10 -- Phase 53 complete (session CRUD + renewal with 5 safety checks)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-10 -- Completed 54-01-PLAN.md (DatabasePolicyEngine with TDD)
 
-Progress: [████░░░░░░░░░] 31% (4/13 plans)
+Progress: [█████░░░░░░░░] 38% (5/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 51 phases, 131 plans, 332 reqs, 339 tests, ~12,600 LOC
+**Cumulative:** 13 milestones, 51 phases, 131 plans, 332 reqs, 353 tests, ~12,800 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 4
-- Average duration: 7min
-- Total execution time: 26min
+- Total plans completed: 5
+- Average duration: 6min
+- Total execution time: 29min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 52 | 2/2 | 16min | 8min |
 | 53 | 2/2 | 10min | 5min |
+| 54 | 1/2 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -59,15 +60,21 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [53-02]: Conditional masterAuth bypass via path.endsWith('/renew') in middleware wrapper
 - [53-02]: CAS double-check: pre-read + WHERE clause for concurrent renewal race prevention
 - [53-02]: Token TTL preserved across renewals, expiresAt clamped by absoluteExpiresAt
+- [54-01]: BigInt for all amount comparisons (string -> BigInt, no floating point for on-chain amounts)
+- [54-01]: WHITELIST evaluated before SPENDING_LIMIT (deny-first ordering)
+- [54-01]: Empty allowed_addresses = whitelist inactive (prevents accidental lockout)
+- [54-01]: Case-insensitive address comparison via toLowerCase() (EVM checksum compat)
+- [54-01]: resolveOverrides deduplicates by type, agent-specific preferred over global
 
 ### Blockers/Concerns
 
 - ~~jose (JWT) 패키지 미설치~~ -- RESOLVED in 52-01
 - ~~SIWS/SIWE 검증 라이브러리 미설치~~ -- RESOLVED in 52-02 (sodium-native Ed25519 for Solana, SIWE deferred to v1.4)
 - Pre-existing CLI E2E test failures (4 tests) -- not blocking, caused by E2E harness sessionAuth integration gap
+- Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) -- not blocking, unrelated to policy engine
 
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Phase 53 verified and complete, ready for Phase 54 planning
+Stopped at: Completed 54-01-PLAN.md (DatabasePolicyEngine with 14 TDD tests)
 Resume file: None
