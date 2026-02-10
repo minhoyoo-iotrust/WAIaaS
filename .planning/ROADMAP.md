@@ -149,7 +149,7 @@
 - Integer phases (52, 53, ...): Planned milestone work
 - Decimal phases (52.1, 52.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 52: 인증 기반** - JWT Secret 관리 + 3종 인증 미들웨어 + 엔드포인트 인증 적용
+- [x] **Phase 52: 인증 기반** - JWT Secret 관리 + 3종 인증 미들웨어 + 엔드포인트 인증 적용 — completed 2026-02-10
 - [ ] **Phase 53: 세션 관리** - 세션 CRUD API + 낙관적 갱신 + 안전 장치
 - [ ] **Phase 54: 정책 엔진** - DatabasePolicyEngine + 정책 CRUD API + TOCTOU 방지
 - [ ] **Phase 55: 워크플로우 + Owner 상태** - DELAY/APPROVAL 워크플로우 + Owner 3-State 상태 머신
@@ -169,8 +169,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 52-01: JWT Secret 관리 + sessionAuth 미들웨어
-- [ ] 52-02: masterAuth + ownerAuth 미들웨어 + authRouter + 기존 엔드포인트 적용
+- [x] 52-01: JWT Secret 관리 + sessionAuth 미들웨어
+- [x] 52-02: masterAuth + ownerAuth 미들웨어 + authRouter + 기존 엔드포인트 적용
 
 #### Phase 53: 세션 관리
 **Goal**: 에이전트가 세션을 생성하여 API에 인증 접근하고, 세션을 갱신/폐기하여 수명 주기를 완전히 제어할 수 있는 상태
@@ -271,7 +271,7 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 → 57
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
-| v1.2 인증 + 정책 엔진 | 52-57 | 0/13 | In progress | - |
+| v1.2 인증 + 정책 엔진 | 52-57 | 2/13 | In progress | - |
 
 **Total:** 13 milestones shipped, 51 phases completed, 127 plans completed
 **v1.2:** 6 phases, 13 plans planned
