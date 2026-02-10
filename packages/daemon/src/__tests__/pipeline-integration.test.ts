@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, policies, transactions } from '../infrastructure/database/schema.js';
+import { agents, policies, sessions, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import {
@@ -23,7 +23,7 @@ import {
 } from '../pipeline/stages.js';
 import type { PipelineContext } from '../pipeline/stages.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
-import type { IChainAdapter, IPolicyEngine, SendTransactionRequest } from '@waiaas/core';
+import type { IChainAdapter } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -99,6 +99,21 @@ async function insertTestAgent(
   return id;
 }
 
+async function insertTestSession(agentId: string): Promise<string> {
+  const id = generateId();
+  const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+  const expires = new Date(now.getTime() + 86400000); // +1 day
+  await conn.db.insert(sessions).values({
+    id,
+    agentId,
+    tokenHash: 'hash_' + id,
+    expiresAt: expires,
+    absoluteExpiresAt: expires,
+    createdAt: now,
+  });
+  return id;
+}
+
 async function insertPolicy(overrides: {
   agentId?: string | null;
   type: string;
@@ -165,19 +180,20 @@ describe('56-01 Pipeline Integration', () => {
       const agentId = await insertTestAgent();
       const ctx = createPipelineContext(agentId, {
         sessionId: 'sess_123',
-      } as any);
+      });
 
       await stage2Auth(ctx);
 
       // sessionId should remain on context (passthrough)
-      expect((ctx as any).sessionId).toBe('sess_123');
+      expect(ctx.sessionId).toBe('sess_123');
     });
 
     it('stage1Validate inserts sessionId into transactions table', async () => {
       const agentId = await insertTestAgent();
+      const sessionId = await insertTestSession(agentId);
       const ctx = createPipelineContext(agentId, {
-        sessionId: 'sess_abc',
-      } as any);
+        sessionId,
+      });
 
       await stage1Validate(ctx);
 
@@ -189,7 +205,7 @@ describe('56-01 Pipeline Integration', () => {
         .get();
 
       expect(tx).toBeTruthy();
-      expect(tx!.sessionId).toBe('sess_abc');
+      expect(tx!.sessionId).toBe(sessionId);
     });
 
     it('stage1Validate inserts null sessionId when not provided', async () => {
@@ -236,7 +252,7 @@ describe('56-01 Pipeline Integration', () => {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '50' },
-      } as any);
+      });
 
       // Run stage1 to create the tx row first
       await stage1Validate(ctx);
@@ -273,7 +289,7 @@ describe('56-01 Pipeline Integration', () => {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '700' },
-      } as any);
+      });
 
       await stage1Validate(ctx);
       await stage3Policy(ctx);
@@ -306,7 +322,7 @@ describe('56-01 Pipeline Integration', () => {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'addr_not_whitelisted', amount: '50' },
-      } as any);
+      });
 
       await stage1Validate(ctx);
 
@@ -350,14 +366,14 @@ describe('56-01 Pipeline Integration', () => {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '2000' },
-      } as any);
+      });
 
       await stage1Validate(ctx);
       await stage3Policy(ctx);
 
       // Should be downgraded from APPROVAL to DELAY
       expect(ctx.tier).toBe('DELAY');
-      expect((ctx as any).downgraded).toBe(true);
+      expect(ctx.downgraded).toBe(true);
     });
 
     it('stage3Policy keeps APPROVAL when owner exists', async () => {
@@ -385,7 +401,7 @@ describe('56-01 Pipeline Integration', () => {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '2000' },
-      } as any);
+      });
 
       await stage1Validate(ctx);
       await stage3Policy(ctx);

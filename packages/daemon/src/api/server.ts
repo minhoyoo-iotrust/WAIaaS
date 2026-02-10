@@ -189,6 +189,7 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
         approvalWorkflow: deps.approvalWorkflow,
         delayQueue: deps.delayQueue,
         ownerLifecycle: deps.ownerLifecycle,
+        sqlite: deps.sqlite,
       }),
     );
   }

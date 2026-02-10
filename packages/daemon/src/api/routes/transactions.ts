@@ -21,6 +21,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, SendTransactionRequestSchema } from '@waiaas/core';
 import type { IChainAdapter, IPolicyEngine } from '@waiaas/core';
 import { agents, transactions } from '../../infrastructure/database/schema.js';
@@ -48,6 +49,7 @@ export interface TransactionRouteDeps {
   approvalWorkflow?: ApprovalWorkflow;
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
+  sqlite?: SQLiteDatabase;
 }
 
 /**
@@ -91,6 +93,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       status: 'PENDING',
       amount: request.amount,
       toAddress: request.to,
+      sessionId: (c.get('sessionId' as never) as string | undefined) ?? null,
       createdAt: now,
     });
 
@@ -118,6 +121,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       },
       request,
       txId,
+      // v1.2: sessionId from Hono context (set by sessionAuth middleware)
+      sessionId: c.get('sessionId' as never) as string | undefined,
+      // v1.2: raw sqlite for evaluateAndReserve TOCTOU safety
+      sqlite: deps.sqlite,
     };
 
     void (async () => {
