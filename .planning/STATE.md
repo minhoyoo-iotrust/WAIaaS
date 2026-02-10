@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 55 (4 of 6 in v1.2) (워크플로우 + Owner 상태)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-10 -- Completed 55-01-PLAN.md (DelayQueue TDD)
+Last activity: 2026-02-10 -- Completed 55-02-PLAN.md (ApprovalWorkflow TDD)
 
-Progress: [███████░░░░░░] 54% (7/13 plans)
+Progress: [████████░░░░░] 62% (8/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 54 phases, 134 plans, 332 reqs, 378 tests, ~13,300 LOC
+**Cumulative:** 13 milestones, 54 phases, 135 plans, 332 reqs, 392 tests, ~13,500 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 7
-- Average duration: 6min
-- Total execution time: 40min
+- Total plans completed: 8
+- Average duration: 5.5min
+- Total execution time: 44min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 52 | 2/2 | 16min | 8min |
 | 53 | 2/2 | 10min | 5min |
 | 54 | 2/2 | 11min | 5.5min |
-| 55 | 1/3 | 3min | 3min |
+| 55 | 2/3 | 7min | 3.5min |
 
 ## Accumulated Context
 
@@ -75,6 +75,9 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [55-01]: JSON_EXTRACT for expired query (queued_at + delaySeconds <= now in single SELECT)
 - [55-01]: processExpired CAS guard (WHERE status = 'QUEUED' prevents double-processing)
 - [55-01]: cancelDelay clears reserved_amount inline (single UPDATE for CANCELLED + NULL)
+- [55-02]: ApprovalWorkflow uses raw sqlite (not Drizzle ORM) for all queries -- BEGIN IMMEDIATE requires sync raw SQL
+- [55-02]: expired != rejected: processExpiredApprovals does NOT set rejectedAt, only tx EXPIRED
+- [55-02]: reserved_amount cleared on all 3 exit paths (approve, reject, expire)
 
 ### Blockers/Concerns
 
@@ -82,10 +85,9 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - ~~SIWS/SIWE 검증 라이브러리 미설치~~ -- RESOLVED in 52-02 (sodium-native Ed25519 for Solana, SIWE deferred to v1.4)
 - Pre-existing CLI E2E test failures (4 tests) -- not blocking, caused by E2E harness sessionAuth integration gap
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) -- not blocking, unrelated to policy engine
-- Pre-existing approval-workflow.test.ts typecheck errors -- not blocking, RED test for 55-02 plan
 
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 55-01-PLAN.md (DelayQueue TDD)
+Stopped at: Completed 55-02-PLAN.md (ApprovalWorkflow TDD)
 Resume file: None
