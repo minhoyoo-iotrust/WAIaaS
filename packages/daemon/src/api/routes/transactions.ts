@@ -1,5 +1,7 @@
 /**
- * Transaction routes: POST /v1/transactions/send and GET /v1/transactions/:id.
+ * Transaction routes: POST /v1/transactions/send, GET /v1/transactions/:id,
+ * POST /v1/transactions/:id/approve, POST /v1/transactions/:id/reject,
+ * POST /v1/transactions/:id/cancel.
  *
  * POST /v1/transactions/send:
  *   - Requires sessionAuth (Authorization: Bearer wai_sess_<token>),
@@ -18,11 +20,11 @@
  * @see docs/37-rest-api-complete-spec.md
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, SendTransactionRequestSchema } from '@waiaas/core';
+import { WAIaaSError } from '@waiaas/core';
 import type { IChainAdapter, IPolicyEngine } from '@waiaas/core';
 import { agents, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -39,6 +41,16 @@ import type { PipelineContext } from '../../pipeline/stages.js';
 import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
+import {
+  SendTransactionRequestOpenAPI,
+  TxSendResponseSchema,
+  TxDetailResponseSchema,
+  TxApproveResponseSchema,
+  TxRejectResponseSchema,
+  TxCancelResponseSchema,
+  buildErrorResponses,
+  openApiValidationHook,
+} from './openapi-schemas.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -56,20 +68,120 @@ export interface TransactionRouteDeps {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Route definitions
+// ---------------------------------------------------------------------------
+
+const sendTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/send',
+  tags: ['Transactions'],
+  summary: 'Send a transaction',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: SendTransactionRequestOpenAPI },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Transaction submitted to pipeline',
+      content: { 'application/json': { schema: TxSendResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
+const getTransactionRoute = createRoute({
+  method: 'get',
+  path: '/transactions/{id}',
+  tags: ['Transactions'],
+  summary: 'Get transaction details',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Transaction details',
+      content: { 'application/json': { schema: TxDetailResponseSchema } },
+    },
+    ...buildErrorResponses(['TX_NOT_FOUND']),
+  },
+});
+
+const approveTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/{id}/approve',
+  tags: ['Transactions'],
+  summary: 'Approve a pending transaction (ownerAuth)',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Transaction approved',
+      content: { 'application/json': { schema: TxApproveResponseSchema } },
+    },
+    ...buildErrorResponses(['TX_NOT_FOUND']),
+  },
+});
+
+const rejectTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/{id}/reject',
+  tags: ['Transactions'],
+  summary: 'Reject a pending transaction (ownerAuth)',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Transaction rejected',
+      content: { 'application/json': { schema: TxRejectResponseSchema } },
+    },
+    ...buildErrorResponses(['TX_NOT_FOUND']),
+  },
+});
+
+const cancelTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/{id}/cancel',
+  tags: ['Transactions'],
+  summary: 'Cancel a delayed transaction (sessionAuth)',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Transaction cancelled',
+      content: { 'application/json': { schema: TxCancelResponseSchema } },
+    },
+    ...buildErrorResponses(['TX_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Route factory
+// ---------------------------------------------------------------------------
+
 /**
  * Create transaction route sub-router.
  *
  * POST /transactions/send -> submits to pipeline, returns 201 with txId
  * GET /transactions/:id -> returns transaction status
+ * POST /transactions/:id/approve -> approve pending tx (ownerAuth)
+ * POST /transactions/:id/reject -> reject pending tx (ownerAuth)
+ * POST /transactions/:id/cancel -> cancel delayed tx (sessionAuth)
  */
-export function transactionRoutes(deps: TransactionRouteDeps): Hono {
-  const router = new Hono();
+export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
+  const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
   // ---------------------------------------------------------------------------
   // POST /transactions/send
   // ---------------------------------------------------------------------------
 
-  router.post('/transactions/send', async (c) => {
+  router.openapi(sendTransactionRoute, async (c) => {
     // Get agentId from sessionAuth context (set by middleware at server level)
     const agentId = c.get('agentId' as never) as string;
 
@@ -81,9 +193,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       });
     }
 
-    // Parse and validate request body
-    const body = await c.req.json();
-    const request = SendTransactionRequestSchema.parse(body);
+    // Get validated request body
+    const request = c.req.valid('json');
 
     // Stage 1: Validate + INSERT PENDING (synchronous)
     const txId = generateId();
@@ -177,8 +288,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
   // GET /transactions/:id
   // ---------------------------------------------------------------------------
 
-  router.get('/transactions/:id', async (c) => {
-    const txId = c.req.param('id');
+  router.openapi(getTransactionRoute, async (c) => {
+    const { id: txId } = c.req.valid('param');
 
     if (!txId) {
       throw new WAIaaSError('TX_NOT_FOUND', {
@@ -198,19 +309,22 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       });
     }
 
-    return c.json({
-      id: tx.id,
-      agentId: tx.agentId,
-      type: tx.type,
-      status: tx.status,
-      tier: tx.tier,
-      chain: tx.chain,
-      toAddress: tx.toAddress,
-      amount: tx.amount,
-      txHash: tx.txHash,
-      error: tx.error,
-      createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
-    });
+    return c.json(
+      {
+        id: tx.id,
+        agentId: tx.agentId,
+        type: tx.type,
+        status: tx.status,
+        tier: tx.tier,
+        chain: tx.chain,
+        toAddress: tx.toAddress,
+        amount: tx.amount,
+        txHash: tx.txHash,
+        error: tx.error,
+        createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+      },
+      200,
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -221,8 +335,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
     const approvalWorkflow = deps.approvalWorkflow;
     const ownerLifecycle = deps.ownerLifecycle;
 
-    router.post('/transactions/:id/approve', async (c) => {
-      const txId = c.req.param('id');
+    router.openapi(approveTransactionRoute, async (c) => {
+      const { id: txId } = c.req.valid('param');
 
       // Verify the tx exists and get agentId for ownerAuth verification
       const tx = await deps.db
@@ -250,19 +364,22 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
         // If markOwnerVerified fails (e.g., NONE state), don't fail the approval
       }
 
-      return c.json({
-        id: txId,
-        status: 'EXECUTING',
-        approvedAt: result.approvedAt,
-      });
+      return c.json(
+        {
+          id: txId,
+          status: 'EXECUTING',
+          approvedAt: result.approvedAt,
+        },
+        200,
+      );
     });
 
     // ---------------------------------------------------------------------------
     // POST /transactions/:id/reject (ownerAuth)
     // ---------------------------------------------------------------------------
 
-    router.post('/transactions/:id/reject', async (c) => {
-      const txId = c.req.param('id');
+    router.openapi(rejectTransactionRoute, async (c) => {
+      const { id: txId } = c.req.valid('param');
 
       // Verify the tx exists
       const tx = await deps.db
@@ -287,11 +404,14 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
         // If markOwnerVerified fails (e.g., NONE state), don't fail the rejection
       }
 
-      return c.json({
-        id: txId,
-        status: 'CANCELLED',
-        rejectedAt: result.rejectedAt,
-      });
+      return c.json(
+        {
+          id: txId,
+          status: 'CANCELLED',
+          rejectedAt: result.rejectedAt,
+        },
+        200,
+      );
     });
   }
 
@@ -302,8 +422,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
   if (deps.delayQueue) {
     const delayQueue = deps.delayQueue;
 
-    router.post('/transactions/:id/cancel', async (c) => {
-      const txId = c.req.param('id');
+    router.openapi(cancelTransactionRoute, async (c) => {
+      const { id: txId } = c.req.valid('param');
 
       // Get agentId from sessionAuth context
       const sessionAgentId = c.get('agentId' as never) as string;
@@ -330,10 +450,13 @@ export function transactionRoutes(deps: TransactionRouteDeps): Hono {
       // Cancel the delay
       delayQueue.cancelDelay(txId);
 
-      return c.json({
-        id: txId,
-        status: 'CANCELLED',
-      });
+      return c.json(
+        {
+          id: txId,
+          status: 'CANCELLED',
+        },
+        200,
+      );
     });
   }
 

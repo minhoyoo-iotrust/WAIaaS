@@ -12,17 +12,21 @@
  * @see docs/37-rest-api-complete-spec.md
  */
 
-import { Hono } from 'hono';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, or, isNull, desc } from 'drizzle-orm';
-import {
-  CreatePolicyRequestSchema,
-  UpdatePolicyRequestSchema,
-  WAIaaSError,
-} from '@waiaas/core';
+import { WAIaaSError } from '@waiaas/core';
 import { generateId } from '../../infrastructure/database/id.js';
 import { agents, policies } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
+import {
+  CreatePolicyRequestOpenAPI,
+  UpdatePolicyRequestOpenAPI,
+  PolicyResponseSchema,
+  PolicyDeleteResponseSchema,
+  buildErrorResponses,
+  openApiValidationHook,
+} from './openapi-schemas.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -100,6 +104,88 @@ function validateRules(type: string, rules: Record<string, unknown>): void {
 }
 
 // ---------------------------------------------------------------------------
+// Route definitions
+// ---------------------------------------------------------------------------
+
+const createPolicyRoute = createRoute({
+  method: 'post',
+  path: '/policies',
+  tags: ['Policies'],
+  summary: 'Create a new policy',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: CreatePolicyRequestOpenAPI },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Policy created',
+      content: { 'application/json': { schema: PolicyResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
+  },
+});
+
+const listPoliciesRoute = createRoute({
+  method: 'get',
+  path: '/policies',
+  tags: ['Policies'],
+  summary: 'List policies',
+  request: {
+    query: z.object({
+      agentId: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'List of policies',
+      content: { 'application/json': { schema: z.array(PolicyResponseSchema) } },
+    },
+  },
+});
+
+const updatePolicyRoute = createRoute({
+  method: 'put',
+  path: '/policies/{id}',
+  tags: ['Policies'],
+  summary: 'Update a policy',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: UpdatePolicyRequestOpenAPI },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Policy updated',
+      content: { 'application/json': { schema: PolicyResponseSchema } },
+    },
+    ...buildErrorResponses(['POLICY_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
+  },
+});
+
+const deletePolicyRoute = createRoute({
+  method: 'delete',
+  path: '/policies/{id}',
+  tags: ['Policies'],
+  summary: 'Delete a policy',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Policy deleted',
+      content: { 'application/json': { schema: PolicyDeleteResponseSchema } },
+    },
+    ...buildErrorResponses(['POLICY_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
@@ -111,17 +197,16 @@ function validateRules(type: string, rules: Record<string, unknown>): void {
  * PUT /policies/:id      -> update policy (200)
  * DELETE /policies/:id   -> delete policy (200)
  */
-export function policyRoutes(deps: PolicyRouteDeps): Hono {
-  const router = new Hono();
+export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
+  const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
   // -------------------------------------------------------------------------
   // POST /policies -- create a new policy
   // -------------------------------------------------------------------------
-  router.post('/policies', async (c) => {
-    const body = await c.req.json();
-    const parsed = CreatePolicyRequestSchema.parse(body);
+  router.openapi(createPolicyRoute, async (c) => {
+    const parsed = c.req.valid('json');
 
-    // Validate rules based on type
+    // Validate rules based on type (custom validation beyond Zod)
     validateRules(parsed.type, parsed.rules as Record<string, unknown>);
 
     // If agentId provided, verify agent exists
@@ -170,8 +255,8 @@ export function policyRoutes(deps: PolicyRouteDeps): Hono {
   // -------------------------------------------------------------------------
   // GET /policies -- list policies with optional agentId filter
   // -------------------------------------------------------------------------
-  router.get('/policies', (c) => {
-    const agentId = c.req.query('agentId');
+  router.openapi(listPoliciesRoute, (c) => {
+    const { agentId } = c.req.valid('query');
 
     let rows;
     if (agentId) {
@@ -210,8 +295,8 @@ export function policyRoutes(deps: PolicyRouteDeps): Hono {
   // -------------------------------------------------------------------------
   // PUT /policies/:id -- update a policy
   // -------------------------------------------------------------------------
-  router.put('/policies/:id', async (c) => {
-    const policyId = c.req.param('id');
+  router.openapi(updatePolicyRoute, async (c) => {
+    const { id: policyId } = c.req.valid('param');
 
     // Check policy exists
     const existing = deps.db
@@ -224,8 +309,7 @@ export function policyRoutes(deps: PolicyRouteDeps): Hono {
       throw new WAIaaSError('POLICY_NOT_FOUND');
     }
 
-    const body = await c.req.json();
-    const parsed = UpdatePolicyRequestSchema.parse(body);
+    const parsed = c.req.valid('json');
 
     // Validate rules if provided (use existing type for validation context)
     if (parsed.rules) {
@@ -277,8 +361,8 @@ export function policyRoutes(deps: PolicyRouteDeps): Hono {
   // -------------------------------------------------------------------------
   // DELETE /policies/:id -- delete a policy
   // -------------------------------------------------------------------------
-  router.delete('/policies/:id', (c) => {
-    const policyId = c.req.param('id');
+  router.openapi(deletePolicyRoute, (c) => {
+    const { id: policyId } = c.req.valid('param');
 
     // Check policy exists
     const existing = deps.db
