@@ -161,7 +161,7 @@
 - [x] **Phase 58: OpenAPIHono 전환 + getAssets()** - 기존 18 라우트 OpenAPIHono 리팩터링 + IChainAdapter getAssets() 선행 구현
 - [x] **Phase 59: REST API 확장** - 15개 신규 엔드포인트를 OpenAPIHono로 작성하여 누적 33개 달성
 - [x] **Phase 60: 알림 시스템** - 3채널(Telegram/Discord/ntfy) NotificationService + 21개 이벤트 템플릿
-- [ ] **Phase 61: TypeScript SDK** - @waiaas/sdk 패키지, WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
+- [x] **Phase 61: TypeScript SDK** - @waiaas/sdk 패키지, WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
 - [ ] **Phase 62: Python SDK** - waiaas 패키지, httpx + Pydantic v2, TS SDK 동일 인터페이스
 - [ ] **Phase 63: MCP Server** - @waiaas/mcp 패키지, 6 도구 + 3 리소스, SessionManager 자동 갱신, CLI mcp setup
 
@@ -226,8 +226,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 61-01-PLAN.md -- @waiaas/sdk 패키지 스캐폴드 + WAIaaSError + HTTP layer + WAIaaSClient (getBalance/getAddress/getAssets/sendToken/getTransaction/listTransactions/listPendingTransactions/renewSession) + ~36 tests
-- [ ] 61-02-PLAN.md -- WAIaaSOwnerClient (approve/reject/killSwitch/recover) + 지수 백오프 재시도 + 인라인 사전 검증 + ~33 tests
+- [x] 61-01-PLAN.md -- @waiaas/sdk 패키지 스캐폴드 + WAIaaSError + HTTP layer + WAIaaSClient (getBalance/getAddress/getAssets/sendToken/getTransaction/listTransactions/listPendingTransactions/renewSession) + ~36 tests
+- [x] 61-02-PLAN.md -- WAIaaSOwnerClient (approve/reject/killSwitch/recover) + 지수 백오프 재시도 + 인라인 사전 검증 + ~33 tests
 
 #### Phase 62: Python SDK
 **Goal**: Python 기반 AI 에이전트 프레임워크에서 waiaas 패키지를 pip install하여 TS SDK와 동일한 인터페이스로 지갑을 사용할 수 있다
@@ -268,7 +268,7 @@ Plans:
 | 58. OpenAPIHono 전환 + getAssets() | v1.3 | 2/2 | Complete | 2026-02-10 |
 | 59. REST API 확장 | v1.3 | 2/2 | Complete | 2026-02-11 |
 | 60. 알림 시스템 | v1.3 | 2/2 | Complete | 2026-02-11 |
-| 61. TypeScript SDK | v1.3 | 0/2 | Not started | - |
+| 61. TypeScript SDK | v1.3 | 2/2 | Complete | 2026-02-11 |
 | 62. Python SDK | v1.3 | 0/1 | Not started | - |
 | 63. MCP Server | v1.3 | 0/2 | Not started | - |
 
@@ -289,10 +289,10 @@ Plans:
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
-| v1.3 SDK + MCP + 알림 | 58-63 | 6/11 | In progress | - |
+| v1.3 SDK + MCP + 알림 | 58-63 | 8/11 | In progress | - |
 
-**Total:** 14 milestones shipped, 60 phases completed, 146 plans completed + v1.3 in progress (6 phases, 11 plans)
+**Total:** 14 milestones shipped, 61 phases completed, 148 plans completed + v1.3 in progress (6 phases, 11 plans)
 
 ---
 
-*Last updated: 2026-02-11 after Phase 60 complete*
+*Last updated: 2026-02-11 after Phase 61 complete*
