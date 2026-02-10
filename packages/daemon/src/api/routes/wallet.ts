@@ -1,7 +1,9 @@
 /**
  * Wallet query routes: GET /v1/wallet/address and GET /v1/wallet/balance.
  *
- * Agent identification via X-Agent-Id header (v1.1 simplified, no sessionAuth).
+ * v1.2: Protected by sessionAuth middleware (Authorization: Bearer wai_sess_<token>),
+ *       applied at server level in createApp().
+ * Agent identification via JWT payload agentId (set by sessionAuth on context).
  *
  * @see docs/37-rest-api-complete-spec.md
  */
@@ -20,18 +22,12 @@ export interface WalletRouteDeps {
 }
 
 /**
- * Look up agent by X-Agent-Id header. Throws 400 if missing, 404 if not found.
+ * Resolve agent by ID from database. Throws 404 if not found.
  */
-async function resolveAgent(
+async function resolveAgentById(
   db: BetterSQLite3Database<typeof schema>,
-  agentId: string | undefined,
+  agentId: string,
 ) {
-  if (!agentId) {
-    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-      message: 'X-Agent-Id header is required',
-    });
-  }
-
   const agent = await db.select().from(agents).where(eq(agents.id, agentId)).get();
 
   if (!agent) {
@@ -53,8 +49,9 @@ export function walletRoutes(deps: WalletRouteDeps): Hono {
   const router = new Hono();
 
   router.get('/wallet/address', async (c) => {
-    const agentId = c.req.header('X-Agent-Id');
-    const agent = await resolveAgent(deps.db, agentId);
+    // Get agentId from sessionAuth context (set by middleware at server level)
+    const agentId = c.get('agentId' as never) as string;
+    const agent = await resolveAgentById(deps.db, agentId);
 
     return c.json({
       agentId: agent.id,
@@ -65,8 +62,8 @@ export function walletRoutes(deps: WalletRouteDeps): Hono {
   });
 
   router.get('/wallet/balance', async (c) => {
-    const agentId = c.req.header('X-Agent-Id');
-    const agent = await resolveAgent(deps.db, agentId);
+    const agentId = c.get('agentId' as never) as string;
+    const agent = await resolveAgentById(deps.db, agentId);
 
     if (!deps.adapter) {
       throw new WAIaaSError('CHAIN_ERROR', {
