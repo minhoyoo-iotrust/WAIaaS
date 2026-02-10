@@ -8,13 +8,26 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.2 인증 + 정책 엔진
+
+**Goal:** v1.1에서 구축한 코어 인프라 위에 3-tier 인증 체계(masterAuth/ownerAuth/sessionAuth)와 4-tier 정책 엔진(DatabasePolicyEngine)을 구현하여, 세션 기반 에이전트 접근 제어와 금액별 보안 분류가 동작하는 상태를 달성한다.
+
+**Target features:**
+- sessionAuth JWT HS256 검증 미들웨어 + 세션 CRUD API
+- masterAuth 명시적 헤더 검증 미들웨어
+- ownerAuth SIWS/SIWE 서명 검증 (거래 승인 + KS 복구 2곳 한정)
+- DatabasePolicyEngine (policies 테이블 기반 4-tier 분류)
+- DELAY 쿨다운 큐잉 + APPROVAL Owner 승인 워크플로우
+- Owner 3-State 상태 머신 (NONE/GRACE/LOCKED)
+- 파이프라인 Stage 2(Auth) + Stage 4(Wait) 실제 구현
+
 ## Current State
 
 v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 97 TypeScript 파일, 10,925 LOC, 281 테스트 통과. CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬 완성.
 
 **구현 로드맵 (v1.2~v2.0):**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
-- v1.2 인증 + 정책 엔진 (3-tier 인증, 4-tier 정책, Owner 상태 머신, 세션 관리)
+- ◆ v1.2 인증 + 정책 엔진 (3-tier 인증, 4-tier 정책, Owner 상태 머신, 세션 관리)
 - v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
@@ -263,4 +276,4 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플�
 | MockChainAdapter for E2E | CI에서 실제 RPC 없이 전 구간 테스트 | ✓ Good — v1.1 구현 |
 
 ---
-*최종 업데이트: 2026-02-10 after v1.1 milestone shipped*
+*최종 업데이트: 2026-02-10 after v1.2 milestone started*

@@ -5,13 +5,15 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-10)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.1 마일스톤 아카이브 완료. 다음: v1.2 인증 + 정책 엔진 (`/gsd:new-milestone`)
+**현재 초점:** v1.2 인증 + 정책 엔진
 
 ## 현재 위치
 
-마일스톤: v1.1 코어 인프라 + 기본 전송 (SHIPPED 2026-02-10)
-상태: Milestone archived
-마지막 활동: 2026-02-10 -- v1.1 milestone archived
+마일스톤: v1.2 인증 + 정책 엔진
+Phase: Not started (defining requirements)
+Plan: —
+상태: Defining requirements
+마지막 활동: 2026-02-10 — Milestone v1.2 started
 
 ## 성과 지표
 
@@ -34,4 +36,4 @@
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: v1.1 마일스톤 아카이브 완료. 다음: `/gsd:new-milestone` (v1.2 인증 + 정책 엔진)
+중단 지점: v1.2 마일스톤 시작. 요구사항 정의 진행 중.
