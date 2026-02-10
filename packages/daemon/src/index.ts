@@ -54,8 +54,13 @@ export type { AgentRouteDeps } from './api/routes/agents.js';
 export type { WalletRouteDeps } from './api/routes/wallet.js';
 export type { TransactionRouteDeps } from './api/routes/transactions.js';
 
+// JWT module
+export { JwtSecretManager } from './infrastructure/jwt/index.js';
+export type { JwtPayload } from './infrastructure/jwt/index.js';
+
 // Pipeline module
 export { TransactionPipeline, DefaultPolicyEngine } from './pipeline/index.js';
+export { DatabasePolicyEngine } from './pipeline/database-policy-engine.js';
 export type { PipelineDeps, PipelineContext } from './pipeline/index.js';
 
 // ---------------------------------------------------------------------------

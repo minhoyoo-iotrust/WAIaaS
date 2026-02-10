@@ -23,6 +23,7 @@
     "commander": "^13.0.0"
   },
   "devDependencies": {
-    "@hono/node-server": "^1.19.9"
+    "@hono/node-server": "^1.19.9",
+    "argon2": "^0.44.0"
   }
 }

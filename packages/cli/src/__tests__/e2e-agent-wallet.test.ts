@@ -3,6 +3,10 @@
  *
  * Tests agent creation, address lookup, and balance query via mock adapter.
  * Uses startTestDaemonWithAdapter for full pipeline support without real Solana RPC.
+ *
+ * Auth flow:
+ * - E-05: POST /v1/agents requires masterAuth (X-Master-Password header)
+ * - E-06, E-07: GET /v1/wallet/* requires sessionAuth (Bearer token from session)
  */
 
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
@@ -14,9 +18,36 @@ import {
   fetchApi,
 } from './helpers/daemon-harness.js';
 
+/**
+ * Helper: create a session for the given agent and return the JWT token.
+ * Requires masterAuth (X-Master-Password) since POST /v1/sessions is admin-only.
+ */
+async function createTestSession(
+  harness: ManualHarness,
+  agentId: string,
+): Promise<string> {
+  const res = await fetchApi(harness, '/v1/sessions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Password': harness.masterPassword,
+    },
+    body: JSON.stringify({ agentId }),
+  });
+
+  if (res.status !== 201) {
+    const body = await res.text();
+    throw new Error(`Failed to create session (${res.status}): ${body}`);
+  }
+
+  const body = (await res.json()) as { token: string };
+  return body.token;
+}
+
 describe('E2E Agent Management', () => {
   let harness: ManualHarness;
   let agentId: string;
+  let sessionToken: string;
 
   beforeAll(async () => {
     const { dataDir } = await initTestDataDir();
@@ -33,7 +64,10 @@ describe('E2E Agent Management', () => {
   test('E-05: POST /v1/agents creates agent with Solana address', async () => {
     const res = await fetchApi(harness, '/v1/agents', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Password': harness.masterPassword,
+      },
       body: JSON.stringify({ name: 'test-agent', chain: 'solana', network: 'devnet' }),
     });
 
@@ -53,11 +87,14 @@ describe('E2E Agent Management', () => {
 
     // Store agentId for subsequent tests
     agentId = body.id;
+
+    // Create a session for wallet/transaction endpoints (sessionAuth required)
+    sessionToken = await createTestSession(harness, agentId);
   });
 
   test('E-06: GET /v1/wallet/address returns base58 public key', async () => {
     const res = await fetchApi(harness, '/v1/wallet/address', {
-      headers: { 'X-Agent-Id': agentId },
+      headers: { Authorization: `Bearer ${sessionToken}` },
     });
 
     expect(res.status).toBe(200);
@@ -71,7 +108,7 @@ describe('E2E Agent Management', () => {
 
   test('E-07: GET /v1/wallet/balance returns SOL balance', async () => {
     const res = await fetchApi(harness, '/v1/wallet/balance', {
-      headers: { 'X-Agent-Id': agentId },
+      headers: { Authorization: `Bearer ${sessionToken}` },
     });
 
     expect(res.status).toBe(200);

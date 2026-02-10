@@ -14,7 +14,7 @@
 - ✅ **v0.10 구현 전 설계 완결성 확보** — Phases 41-44 (shipped 2026-02-09)
 - ✅ **v1.0 구현 계획 수립** — Phases 45-47 (shipped 2026-02-09)
 - ✅ **v1.1 코어 인프라 + 기본 전송** — Phases 48-51 (shipped 2026-02-10, 281 tests, 10,925 LOC)
-- 🚧 **v1.2 인증 + 정책 엔진** — Phases 52-57 (in progress)
+- ✅ **v1.2 인증 + 정책 엔진** — Phases 52-57 (shipped 2026-02-10, 457 tests, ~15,800 LOC)
 
 ## Phases
 
@@ -141,7 +141,7 @@
 
 </details>
 
-### 🚧 v1.2 인증 + 정책 엔진 (In Progress)
+### ✅ v1.2 인증 + 정책 엔진 (SHIPPED 2026-02-10)
 
 **Milestone Goal:** v1.1에서 구축한 코어 인프라 위에 3-tier 인증 체계(masterAuth/ownerAuth/sessionAuth)와 4-tier 정책 엔진(DatabasePolicyEngine)을 구현하여, 세션 기반 에이전트 접근 제어와 금액별 보안 분류가 동작하는 상태를 달성한다.
 
@@ -154,7 +154,7 @@
 - [x] **Phase 54: 정책 엔진** - DatabasePolicyEngine + 정책 CRUD API + TOCTOU 방지 — completed 2026-02-10
 - [x] **Phase 55: 워크플로우 + Owner 상태** - DELAY/APPROVAL 워크플로우 + Owner 3-State 상태 머신 — completed 2026-02-10
 - [x] **Phase 56: 파이프라인 통합** - Stage 2/3/4 실제 구현 + 감사 로그 — completed 2026-02-10
-- [ ] **Phase 57: 통합 테스트** - 전 구간 인증/정책/워크플로우/Owner 검증
+- [x] **Phase 57: 통합 테스트** - 전 구간 인증/정책/워크플로우/Owner 검증 — completed 2026-02-10
 
 #### Phase 52: 인증 기반
 **Goal**: API 호출 시 요청자의 신원이 검증되고, 인증 없이는 어떤 엔드포인트도 접근할 수 없는 상태
@@ -249,8 +249,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 57-01-PLAN.md -- CLI E2E harness 수정 + auth/policy 커버리지 갭 테스트
-- [ ] 57-02-PLAN.md -- 세션 라이프사이클 + DELAY/APPROVAL 워크플로우 + Owner 상태 전이 E2E 테스트
+- [x] 57-01-PLAN.md -- CLI E2E harness 수정 + auth/policy 커버리지 갭 테스트
+- [x] 57-02-PLAN.md -- 세션 라이프사이클 + DELAY/APPROVAL 워크플로우 + Owner 상태 전이 E2E 테스트
 
 ## Progress
 
@@ -271,11 +271,11 @@ Phases execute in numeric order: 52 → 53 → 54 → 55 → 56 → 57
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
-| v1.2 인증 + 정책 엔진 | 52-57 | 11/13 | In progress | - |
+| v1.2 인증 + 정책 엔진 | 52-57 | 13/13 | Complete | 2026-02-10 |
 
-**Total:** 13 milestones shipped, 56 phases completed, 138 plans completed
-**v1.2:** 6 phases, 13 plans planned (11 complete)
+**Total:** 14 milestones shipped, 57 phases completed, 140 plans completed
+**v1.2:** 6 phases, 13 plans — SHIPPED 2026-02-10
 
 ---
 
-*Last updated: 2026-02-10 after Phase 56 verified*
+*Last updated: 2026-02-10 after Phase 57 verified — v1.2 milestone complete*

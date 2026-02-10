@@ -3,6 +3,11 @@
  *
  * Tests transaction send and status polling via mock adapter.
  * Uses startTestDaemonWithAdapter for full pipeline support without real Solana RPC.
+ *
+ * Auth flow:
+ * - Agent creation: masterAuth (X-Master-Password header)
+ * - Session creation: masterAuth (X-Master-Password header)
+ * - Transaction endpoints: sessionAuth (Bearer token from session)
  */
 
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
@@ -17,6 +22,7 @@ import {
 describe('E2E Transaction', () => {
   let harness: ManualHarness;
   let agentId: string;
+  let sessionToken: string;
   let txId: string;
 
   beforeAll(async () => {
@@ -24,14 +30,29 @@ describe('E2E Transaction', () => {
     harness = await startTestDaemonWithAdapter(dataDir);
     await waitForHealth(harness);
 
-    // Create agent first
+    // Create agent with masterAuth
     const agentRes = await fetchApi(harness, '/v1/agents', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Password': harness.masterPassword,
+      },
       body: JSON.stringify({ name: 'tx-test-agent', chain: 'solana', network: 'devnet' }),
     });
     const agentBody = (await agentRes.json()) as { id: string };
     agentId = agentBody.id;
+
+    // Create session for sessionAuth on wallet/transaction endpoints
+    const sessionRes = await fetchApi(harness, '/v1/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Password': harness.masterPassword,
+      },
+      body: JSON.stringify({ agentId }),
+    });
+    const sessionBody = (await sessionRes.json()) as { token: string };
+    sessionToken = sessionBody.token;
   });
 
   afterAll(async () => {
@@ -45,7 +66,7 @@ describe('E2E Transaction', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Agent-Id': agentId,
+        Authorization: `Bearer ${sessionToken}`,
       },
       body: JSON.stringify({
         to: '11111111111111111111111111111112', // System program address as dummy recipient
@@ -70,7 +91,9 @@ describe('E2E Transaction', () => {
     const maxAttempts = 30; // 30 * 500ms = 15s max
 
     while (attempts < maxAttempts) {
-      const res = await fetchApi(harness, `/v1/transactions/${txId}`);
+      const res = await fetchApi(harness, `/v1/transactions/${txId}`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { status: string };
       status = body.status;

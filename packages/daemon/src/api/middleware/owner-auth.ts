@@ -106,8 +106,11 @@ export function createOwnerAuth(deps: OwnerAuthDeps) {
       });
     }
 
-    // Look up agent to verify owner_address match
-    const agentId = c.req.param('id') || (c.get('agentId' as never) as string | undefined);
+    // Look up agent to verify owner_address match.
+    // Prefer agentId from sessionAuth context (set on /v1/transactions/* routes)
+    // over c.req.param('id') which is the TRANSACTION ID on /v1/transactions/:id/*.
+    // For direct agent routes like /v1/agents/:id/*, c.req.param('id') IS the agent ID.
+    const agentId = (c.get('agentId' as never) as string | undefined) || c.req.param('id');
     if (!agentId) {
       throw new WAIaaSError('AGENT_NOT_FOUND', {
         message: 'Agent ID required for owner authentication',
