@@ -5,31 +5,31 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 54 정책 엔진
+**Current focus:** Phase 54 정책 엔진 complete, next phase ready
 
 ## Current Position
 
 Phase: 54 (3 of 6 in v1.2) (정책 엔진)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-10 -- Completed 54-01-PLAN.md (DatabasePolicyEngine with TDD)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-10 -- Completed 54-02-PLAN.md (Policy CRUD API + TOCTOU Prevention)
 
-Progress: [█████░░░░░░░░] 38% (5/13 plans)
+Progress: [██████░░░░░░░] 46% (6/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 51 phases, 131 plans, 332 reqs, 353 tests, ~12,800 LOC
+**Cumulative:** 13 milestones, 51 phases, 132 plans, 332 reqs, 367 tests, ~13,100 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 6min
-- Total execution time: 29min
+- Total execution time: 37min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 52 | 2/2 | 16min | 8min |
 | 53 | 2/2 | 10min | 5min |
-| 54 | 1/2 | 3min | 3min |
+| 54 | 2/2 | 11min | 5.5min |
 
 ## Accumulated Context
 
@@ -65,6 +65,11 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [54-01]: Empty allowed_addresses = whitelist inactive (prevents accidental lockout)
 - [54-01]: Case-insensitive address comparison via toLowerCase() (EVM checksum compat)
 - [54-01]: resolveOverrides deduplicates by type, agent-specific preferred over global
+- [54-02]: POLICY_NOT_FOUND error code added to POLICY domain (5 codes total)
+- [54-02]: masterAuth on /v1/policies and /v1/policies/:id (explicit per-path registration)
+- [54-02]: evaluateAndReserve is synchronous (better-sqlite3 is sync, no async wrapper needed)
+- [54-02]: reserved_amount as TEXT column (consistent with amount for BigInt string representation)
+- [54-02]: SUM(CAST(reserved_amount AS INTEGER)) for SQLite aggregation within BEGIN IMMEDIATE
 
 ### Blockers/Concerns
 
@@ -76,5 +81,5 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 54-01-PLAN.md (DatabasePolicyEngine with 14 TDD tests)
+Stopped at: Completed 54-02-PLAN.md (Policy CRUD API + TOCTOU Prevention)
 Resume file: None
