@@ -70,8 +70,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 16 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(16);
+  it('NotificationEventType has 21 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(21);
   });
 
   it('AuditAction has 23 values', () => {
