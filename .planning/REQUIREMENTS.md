@@ -1,0 +1,126 @@
+# Requirements: WAIaaS
+
+**Defined:** 2026-02-10
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+
+## v1.3 Requirements
+
+Requirements for v1.3 SDK + MCP + 알림. Each maps to roadmap phases.
+
+### OpenAPIHono 전환
+
+- [ ] **OAPI-01**: 기존 18개 Hono 라우트를 OpenAPIHono createRoute() 기반으로 전환하여 요청/응답 Zod 스키마와 OpenAPI 메타데이터가 통합된 타입 안전 라우팅으로 동작한다
+- [ ] **OAPI-02**: GET /doc 엔드포인트가 33개 전 라우트의 OpenAPI 3.0 JSON 스펙을 자동 생성하여 반환한다
+- [ ] **OAPI-03**: 68개 에러 코드가 OpenAPI 응답 스키마에 매핑되어 에러 응답 구조가 문서화된다
+- [ ] **OAPI-04**: OpenAPIHono 전환 후 v1.2 기존 457개 테스트가 전수 통과한다 (회귀 검증)
+
+### REST API 확장
+
+- [ ] **API-01**: GET /v1/wallet/assets가 에이전트 보유 네이티브+토큰 자산 목록을 반환한다
+- [ ] **API-02**: GET /v1/transactions가 커서 페이지네이션으로 거래 이력을 반환한다
+- [ ] **API-03**: GET /v1/transactions/pending이 대기 중(QUEUED/DELAYED/PENDING_APPROVAL) 거래 목록을 반환한다
+- [ ] **API-04**: GET /v1/nonce가 ownerAuth 서명용 nonce를 발급한다
+- [ ] **API-05**: GET /v1/agents가 masterAuth로 보호된 에이전트 목록을 반환한다
+- [ ] **API-06**: GET /v1/agents/:id가 에이전트 상세 정보(Owner 상태 포함)를 반환한다
+- [ ] **API-07**: PUT /v1/agents/:id가 masterAuth로 에이전트 정보를 수정한다
+- [ ] **API-08**: DELETE /v1/agents/:id가 masterAuth로 에이전트를 삭제/종료한다
+- [ ] **API-09**: GET /v1/admin/status가 masterAuth로 데몬 상태를 반환한다
+- [ ] **API-10**: POST /v1/admin/kill-switch가 masterAuth/ownerAuth로 Kill Switch를 활성화한다
+- [ ] **API-11**: GET /v1/admin/kill-switch가 Kill Switch 상태를 반환한다
+- [ ] **API-12**: POST /v1/admin/recover가 masterAuth로 Kill Switch를 복구한다
+- [ ] **API-13**: POST /v1/admin/shutdown이 masterAuth로 데몬을 종료한다
+- [ ] **API-14**: POST /v1/admin/rotate-secret이 masterAuth로 JWT 비밀키를 로테이션한다
+- [ ] **API-15**: 31/40개 에러에 hint 필드가 포함된 응답이 반환된다
+
+### TypeScript SDK
+
+- [ ] **TSDK-01**: WAIaaSClient가 baseUrl과 sessionToken으로 초기화되어 getBalance/getAddress/getAssets를 호출할 수 있다
+- [ ] **TSDK-02**: WAIaaSClient.sendToken()이 TRANSFER 요청을 전송하고 트랜잭션 ID를 반환한다
+- [ ] **TSDK-03**: WAIaaSClient가 getTransaction/listTransactions/listPendingTransactions로 거래 이력을 조회할 수 있다
+- [ ] **TSDK-04**: WAIaaSClient가 renewSession()으로 세션을 갱신할 수 있다
+- [ ] **TSDK-05**: WAIaaSOwnerClient가 ownerAuth 서명 기반으로 approve/reject/killSwitch/recover를 호출할 수 있다
+- [ ] **TSDK-06**: Zod 사전 검증이 잘못된 입력을 서버 요청 전에 차단하여 WAIaaSError를 throw한다
+- [ ] **TSDK-07**: 429/5xx 응답 시 지수 백오프 자동 재시도가 동작한다
+- [ ] **TSDK-08**: WAIaaSError가 code, message, status, retryable, hint 속성을 포함한다
+
+### Python SDK
+
+- [ ] **PYDK-01**: WAIaaSClient가 async httpx로 get_balance/get_address/get_assets를 호출할 수 있다
+- [ ] **PYDK-02**: WAIaaSClient.send_token()이 TRANSFER 요청을 전송하고 트랜잭션 ID를 반환한다
+- [ ] **PYDK-03**: WAIaaSClient가 get_transaction/list_transactions로 거래 이력을 조회할 수 있다
+- [ ] **PYDK-04**: WAIaaSClient.renew_session()으로 세션을 갱신할 수 있다
+- [ ] **PYDK-05**: Pydantic v2 모델이 요청/응답 데이터를 검증하고 잘못된 입력 시 ValidationError를 발생시킨다
+- [ ] **PYDK-06**: 429/5xx 응답 시 지수 백오프 자동 재시도가 동작한다
+
+### MCP Server
+
+- [ ] **MCP-01**: stdio transport로 MCP 서버가 연결되고 6개 도구(send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce)가 등록된다
+- [ ] **MCP-02**: 3개 리소스(waiaas://wallet/balance, waiaas://wallet/address, waiaas://system/status)가 등록되고 조회 가능하다
+- [ ] **MCP-03**: SessionManager가 서버 시작 시 토큰을 로드하고 TTL 60% 경과 시 자동 갱신한다
+- [ ] **MCP-04**: 갱신 실패 시 지수 백오프 재시도(1s/2s/4s, max 3회)가 동작하고 stderr에 에러를 로그한다
+- [ ] **MCP-05**: 갱신 중 재진입이 isRenewing flag로 방지되고 409 RENEWAL_CONFLICT 시 현재 토큰 유효성을 확인한다
+- [ ] **MCP-06**: CLI mcp setup 커맨드가 config.json 자동 생성 + 세션 토큰 발급 + mcp-token 파일 기록을 수행한다
+
+### 알림 시스템
+
+- [ ] **NOTIF-01**: INotificationChannel 인터페이스로 TelegramChannel이 Bot API + MarkdownV2 포맷으로 알림을 전송한다
+- [ ] **NOTIF-02**: DiscordChannel이 Webhook + Embed 포맷으로 알림을 전송한다
+- [ ] **NOTIF-03**: NtfyChannel이 ntfy.sh + plain text + Priority 매핑으로 알림을 전송한다
+- [ ] **NOTIF-04**: NotificationService가 우선순위 전송 + 폴백 체인으로 채널 장애 시 다른 채널로 자동 전환한다
+- [ ] **NOTIF-05**: 21개 NotificationEventType(기존 16 + 신규 5)이 정의되고 각 이벤트에 en/ko 메시지 템플릿이 제공된다
+- [ ] **NOTIF-06**: Kill Switch 등 broadcast 이벤트가 전 채널에 동시 전송된다
+- [ ] **NOTIF-07**: 전 채널 실패 시 audit_log에 CRITICAL 레벨로 기록된다
+- [ ] **NOTIF-08**: config.toml에 알림 채널 설정 6키가 추가되고(notification_telegram_bot_token 등) 채널별 Rate Limit이 적용된다
+
+### IChainAdapter 확장
+
+- [ ] **CHAIN-01**: IChainAdapter에 getAssets() 메서드가 추가되어 AssetInfo[] 타입을 반환한다
+- [ ] **CHAIN-02**: SolanaAdapter.getAssets()가 getTokenAccountsByOwner 단일 RPC로 네이티브+토큰 자산 목록을 반환한다
+
+## Future Requirements
+
+Deferred to v1.4+. Tracked but not in current roadmap.
+
+### 토큰 + 컨트랙트 확장 (v1.4)
+
+- **TOKEN-01**: SPL/ERC-20 토큰 전송 (TransferRequest.token 확장)
+- **TOKEN-02**: ContractCallRequest + CONTRACT_WHITELIST 기본 거부 정책
+- **TOKEN-03**: ApproveRequest 독립 정책 카테고리
+- **TOKEN-04**: BatchRequest Solana 원자적 배치
+- **TOKEN-05**: IChainAdapter 나머지 9개 메서드 (buildContractCall, buildApprove, buildBatch, sweepAll 등)
+
+### Action API (v1.4)
+
+- **ACTION-01**: Action Provider 4개 엔드포인트 (list/detail/resolve/execute)
+- **ACTION-02**: POST /v1/agents/:agentId/withdraw (sweepAll 필요)
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| send 5-type 확장 (TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH) | IChainAdapter 9개 메서드 필요 → v1.4 |
+| Action Provider API (list/detail/resolve/execute) | Action Provider 인프라 필요 → v1.4 |
+| 자금 회수 API (withdraw) | sweepAll() 필요 → v1.4 |
+| estimateFee 확장 | v1.4 IChainAdapter 확장과 함께 |
+| EVM 어댑터 구현 | v1.4 체인 확장과 함께 |
+| CJS 빌드 (TypeScript SDK) | ESM-only, AI 에이전트 프레임워크 대부분 ESM |
+| OpenAPI → SDK 자동 코드 생성 | 향후 가능하지만 v1.3은 수동 작성 |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| (Populated by roadmapper) | | |
+
+**Coverage:**
+- v1.3 requirements: 45 total
+- Mapped to phases: 0
+- Unmapped: 45 ⚠️
+
+---
+*Requirements defined: 2026-02-10*
+*Last updated: 2026-02-10 after initial definition*
