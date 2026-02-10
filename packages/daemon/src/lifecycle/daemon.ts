@@ -37,6 +37,8 @@ import type * as schema from '../infrastructure/database/schema.js';
 import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
+import { JwtSecretManager } from '../infrastructure/jwt/index.js';
+import argon2 from 'argon2';
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -109,6 +111,8 @@ export class DaemonLifecycle {
   private forceTimer: ReturnType<typeof setTimeout> | null = null;
   private delayQueue: DelayQueue | null = null;
   private approvalWorkflow: ApprovalWorkflow | null = null;
+  private jwtSecretManager: JwtSecretManager | null = null;
+  private masterPasswordHash = '';
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -253,6 +257,21 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c: JWT Secret Manager + master password hash
+    // ------------------------------------------------------------------
+    if (this._db) {
+      this.jwtSecretManager = new JwtSecretManager(this._db);
+      await this.jwtSecretManager.initialize();
+      this.masterPasswordHash = await argon2.hash(masterPassword, {
+        type: argon2.argon2id,
+        memoryCost: 19456,
+        timeCost: 2,
+        parallelism: 1,
+      });
+      console.log('Step 4c: JWT secret manager initialized, master password hashed');
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -265,9 +284,11 @@ export class DaemonLifecycle {
           sqlite: this.sqlite ?? undefined,
           keyStore: this.keyStore!,
           masterPassword: this.masterPassword,
+          masterPasswordHash: this.masterPasswordHash || undefined,
           config: this._config!,
           adapter: this.adapter,
           policyEngine: new DatabasePolicyEngine(this._db!, this.sqlite ?? undefined),
+          jwtSecretManager: this.jwtSecretManager ?? undefined,
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,
         });
@@ -418,8 +439,9 @@ export class DaemonLifecycle {
         console.log('Step 9: Keystore locked');
       }
 
-      // Clear master password from memory
+      // Clear master password and hash from memory
       this.masterPassword = '';
+      this.masterPasswordHash = '';
 
       // Step 10: Close DB, unlink PID, release lock
       if (this.sqlite) {

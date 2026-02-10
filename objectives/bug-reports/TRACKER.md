@@ -16,11 +16,12 @@
 | ID | 심각도 | 제목 | 마일스톤 | 상태 | 수정일 |
 |----|--------|------|----------|------|--------|
 | BUG-001 | HIGH | 트랜잭션 라우트 미등록 (POST /v1/transactions/send 404) | v1.1 | FIXED | 2026-02-10 |
+| BUG-002 | CRITICAL | 세션 라우트 미등록 + masterAuth 미적용 (POST /v1/sessions 404) | v1.2 | FIXED | 2026-02-10 |
 
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 1
+- **FIXED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 1
+- **Total:** 2
