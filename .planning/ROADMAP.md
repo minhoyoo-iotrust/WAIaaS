@@ -194,8 +194,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 59-01: SDK/MCP 필수 엔드포인트 6개 (assets, transactions, pending, nonce, agents list, agent detail)
-- [ ] 59-02: 에이전트 관리 + 관리자 운영 엔드포인트 9개 (agent CRUD 2 + admin 6 + hint 필드)
+- [ ] 59-01-PLAN.md — SDK/MCP 필수 엔드포인트 6개 (assets, transactions, pending, nonce, agents list, agent detail)
+- [ ] 59-02-PLAN.md — 에이전트 관리 + 관리자 운영 엔드포인트 9개 (agent PUT/DELETE + admin 6 + hint 필드)
 
 #### Phase 60: 알림 시스템
 **Goal**: Owner가 거래/보안/세션 이벤트를 Telegram, Discord, ntfy 중 설정된 채널로 실시간 수신하고, 채널 장애 시 자동 폴백이 동작한다
