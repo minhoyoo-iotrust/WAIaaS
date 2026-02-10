@@ -158,7 +158,7 @@
 
 **Milestone Goal:** AI 에이전트가 TS/Python SDK 또는 MCP로 지갑을 사용하고, Owner가 Telegram/Discord/ntfy로 알림을 받는 상태. OpenAPIHono 전환으로 전 엔드포인트 타입 안전 라우팅 + OpenAPI 3.0 자동 생성 완성.
 
-- [ ] **Phase 58: OpenAPIHono 전환 + getAssets()** - 기존 18 라우트 OpenAPIHono 리팩터링 + IChainAdapter getAssets() 선행 구현
+- [x] **Phase 58: OpenAPIHono 전환 + getAssets()** - 기존 18 라우트 OpenAPIHono 리팩터링 + IChainAdapter getAssets() 선행 구현
 - [ ] **Phase 59: REST API 확장** - 15개 신규 엔드포인트를 OpenAPIHono로 작성하여 누적 33개 달성
 - [ ] **Phase 60: 알림 시스템** - 3채널(Telegram/Discord/ntfy) NotificationService + 21개 이벤트 템플릿
 - [ ] **Phase 61: TypeScript SDK** - @waiaas/sdk 패키지, WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
@@ -178,8 +178,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 58-01-PLAN.md — OpenAPIHono 전환 (기존 18 라우트 리팩터링 + GET /doc + 에러 코드 매핑 + 회귀 검증)
-- [ ] 58-02-PLAN.md — IChainAdapter getAssets() 구현 (인터페이스 확장 + SolanaAdapter + AssetInfo 스키마)
+- [x] 58-01-PLAN.md — OpenAPIHono 전환 (기존 18 라우트 리팩터링 + GET /doc + 에러 코드 매핑 + 회귀 검증)
+- [x] 58-02-PLAN.md — IChainAdapter getAssets() 구현 (인터페이스 확장 + SolanaAdapter + AssetInfo 스키마)
 
 #### Phase 59: REST API 확장
 **Goal**: SDK와 MCP가 소비할 15개 신규 엔드포인트가 OpenAPIHono로 동작하여 누적 33개 API가 완성된다
@@ -265,7 +265,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 58. OpenAPIHono 전환 + getAssets() | v1.3 | 0/2 | Not started | - |
+| 58. OpenAPIHono 전환 + getAssets() | v1.3 | 2/2 | Complete | 2026-02-10 |
 | 59. REST API 확장 | v1.3 | 0/2 | Not started | - |
 | 60. 알림 시스템 | v1.3 | 0/2 | Not started | - |
 | 61. TypeScript SDK | v1.3 | 0/2 | Not started | - |
@@ -289,7 +289,7 @@ Plans:
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
-| v1.3 SDK + MCP + 알림 | 58-63 | 0/11 | In progress | - |
+| v1.3 SDK + MCP + 알림 | 58-63 | 2/11 | In progress | - |
 
 **Total:** 14 milestones shipped, 57 phases completed, 140 plans completed + v1.3 in progress (6 phases, 11 plans)
 
