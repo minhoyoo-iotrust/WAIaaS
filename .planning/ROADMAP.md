@@ -162,7 +162,7 @@
 - [x] **Phase 59: REST API 확장** - 15개 신규 엔드포인트를 OpenAPIHono로 작성하여 누적 33개 달성
 - [x] **Phase 60: 알림 시스템** - 3채널(Telegram/Discord/ntfy) NotificationService + 21개 이벤트 템플릿
 - [x] **Phase 61: TypeScript SDK** - @waiaas/sdk 패키지, WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
-- [ ] **Phase 62: Python SDK** - waiaas 패키지, httpx + Pydantic v2, TS SDK 동일 인터페이스
+- [x] **Phase 62: Python SDK** - waiaas 패키지, httpx + Pydantic v2, TS SDK 동일 인터페이스
 - [ ] **Phase 63: MCP Server** - @waiaas/mcp 패키지, 6 도구 + 3 리소스, SessionManager 자동 갱신, CLI mcp setup
 
 #### Phase 58: OpenAPIHono 전환 + getAssets()
@@ -241,7 +241,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 62-01: waiaas Python 패키지 (WAIaaSClient + Pydantic 모델 + 재시도 + 테스트)
+- [x] 62-01: waiaas Python 패키지 (WAIaaSClient + Pydantic 모델 + 재시도 + 테스트)
 
 #### Phase 63: MCP Server
 **Goal**: Claude Desktop 등 MCP 클라이언트에서 WAIaaS 지갑 도구 6개와 리소스 3개를 사용할 수 있고, SessionManager가 세션을 자동 갱신하며, CLI mcp setup으로 원클릭 설정이 가능하다
@@ -269,7 +269,7 @@ Plans:
 | 59. REST API 확장 | v1.3 | 2/2 | Complete | 2026-02-11 |
 | 60. 알림 시스템 | v1.3 | 2/2 | Complete | 2026-02-11 |
 | 61. TypeScript SDK | v1.3 | 2/2 | Complete | 2026-02-11 |
-| 62. Python SDK | v1.3 | 0/1 | Not started | - |
+| 62. Python SDK | v1.3 | 1/1 | Complete | 2026-02-11 |
 | 63. MCP Server | v1.3 | 0/2 | Not started | - |
 
 **Cumulative:**
@@ -289,10 +289,10 @@ Plans:
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
-| v1.3 SDK + MCP + 알림 | 58-63 | 8/11 | In progress | - |
+| v1.3 SDK + MCP + 알림 | 58-63 | 9/11 | In progress | - |
 
-**Total:** 14 milestones shipped, 61 phases completed, 148 plans completed + v1.3 in progress (6 phases, 11 plans)
+**Total:** 14 milestones shipped, 62 phases completed, 149 plans completed + v1.3 in progress (6 phases, 11 plans)
 
 ---
 
-*Last updated: 2026-02-11 after Phase 61 complete*
+*Last updated: 2026-02-11 after Phase 61+62 merged*

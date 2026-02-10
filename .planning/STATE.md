@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3 Phase 62 Python SDK
+**Current focus:** v1.3 Phase 63 MCP Server
 
 ## Current Position
 
-Phase: 62 of 63 (Python SDK)
-Plan: 0 of 1 in current phase
-Status: Phase 61 complete, ready for Phase 62
-Last activity: 2026-02-11 -- Completed 61-02-PLAN.md (SDK OwnerClient + retry + validation, 91 tests)
+Phase: 63 of 63 (MCP Server)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-11 -- Phase 61+62 complete, merged to main
 
-Progress: [████████░░] 73% (8/11 plans)
+Progress: [█████████░] 82% (9/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 61 phases, 148 plans, 367 reqs, 682 tests, 30,200+ LOC
+**Cumulative:** 14 milestones, 62 phases, 149 plans, 367 reqs, 682 tests, 30,500+ LOC
 
 **v1.3 Velocity:**
-- Plans completed: 8
+- Plans completed: 9
 - Average duration: 9.3min
 - Total execution time: 76min
 
@@ -64,6 +64,10 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - Inline validation (no Zod) for SDK sendToken -- zero runtime dependency 유지
 - withRetry: status 0 + retryable=false는 즉시 throw (NO_TOKEN, VALIDATION_ERROR 등)
 - ownerAuth SDK: X-Owner-Message header (daemon middleware 실제 API 일치)
+- Python SDK httpx AsyncClient: optional http_client param for MockTransport test injection
+- Pydantic v2 populate_by_name=True: camelCase JSON + snake_case Python dual access on all models
+- RetryPolicy defaults: 3 retries, 1s base delay, {429,500,502,503,504} retryable codes
+- renew_session() auto-updates client session token + Authorization header
 
 ### Blockers/Concerns
 
@@ -73,5 +77,5 @@ Full log in PROJECT.md. Key decisions for v1.3:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 61-02-PLAN.md -- Phase 61 TypeScript SDK complete, ready for Phase 62
+Stopped at: Phase 61+62 complete -- ready to plan Phase 63
 Resume file: None
