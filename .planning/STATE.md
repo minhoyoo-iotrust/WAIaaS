@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-10)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.1 Phase 50 진행 중. 50-03 완료 (Agent/wallet routes + DaemonLifecycle). 다음: 50-04
+**현재 초점:** v1.1 Phase 50 완료. 6-stage pipeline + transaction API 구현 완료. 다음: Phase 51 (통합 테스트)
 
 ## 현재 위치
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
 페이즈: 50 of 51 (API + Solana Pipeline)
-플랜: 3 of 4 in current phase
-상태: In progress
-마지막 활동: 2026-02-10 -- Completed 50-03-PLAN.md
+플랜: 4 of 4 in current phase (Phase 50 complete)
+상태: Phase complete
+마지막 활동: 2026-02-10 -- Completed 50-04-PLAN.md
 
-진행률: [█████████...] 75% (9/12 plans)
+진행률: [██████████..] 83% (10/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 9 plans (48-01, 48-02, 48-03, 49-01, 49-02, 49-03, 50-01, 50-02, 50-03)
+**v1.1 완료:** 10 plans (48-01, 48-02, 48-03, 49-01, 49-02, 49-03, 50-01, 50-02, 50-03, 50-04)
 
 ## 누적 컨텍스트
 
@@ -72,6 +72,11 @@
 | DaemonLifecycle stores Drizzle db + masterPassword | 라우트 핸들러에서 DB/키스토어 접근 필요 | 50-03 |
 | Step 4 fail-soft: adapter init failure -> daemon continues | 체인 어댑터 없이도 데몬 기본 동작 보장 | 50-03 |
 | Balance as string (bigint -> string for JSON) | JSON.stringify bigint 비호환, string으로 변환 | 50-03 |
+| Async pipeline: Stage 1 sync response, stages 2-6 fire-and-forget | 30초+ 대기 없이 201 즉시 반환, 클라이언트가 GET /:id로 폴링 | 50-04 |
+| CANCELLED for policy-denied transactions | REJECTED가 TRANSACTION_STATUSES enum에 없음, CANCELLED 사용 | 50-04 |
+| PipelineContext mutable state pattern | 6개 스테이지가 공유 context 객체 수정, 균일한 시그니처 | 50-04 |
+| Private key release in finally block | stage5Execute에서 decryptPrivateKey 후 반드시 releaseKey 호출 | 50-04 |
+| createApp extended with policyEngine dep | 트랜잭션 라우트 조건부 등록을 위한 PolicyEngine 의존성 추가 | 50-04 |
 
 v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 
@@ -84,10 +89,11 @@ v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 - @solana/kit 6.0.1 API 안정성 검증 완료 (50-02에서 성공, 17 tests)
 - Agent/wallet routes 동작 검증 완료 (50-03에서 성공, 13 tests, 146 total)
 - DaemonLifecycle Steps 4-5 구현 완료 (50-03에서 성공)
+- 6-stage pipeline + transaction API 검증 완료 (50-04에서 성공, 21 tests, 167 total)
 - 설계 부채 DD-01~03 (v1.1 구현 시 인라인 처리)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Completed 50-03-PLAN.md. Phase 50 진행 중. 다음: 50-04 (transaction pipeline)
-재개 파일: .planning/phases/50-api-solana-pipeline/50-03-SUMMARY.md
+중단 지점: Completed 50-04-PLAN.md. Phase 50 완료. 다음: Phase 51 (통합 테스트)
+재개 파일: .planning/phases/50-api-solana-pipeline/50-04-SUMMARY.md
