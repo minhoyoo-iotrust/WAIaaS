@@ -312,7 +312,7 @@ ACTIVATED 또는 RECOVERING 상태에서 **허용 엔드포인트 목록만 통�
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/v1/health` | 헬스체크 (모니터링) |
+| GET | `/health` | 헬스체크 (모니터링) [v1.1 DD-03 수정: /v1/health → /health] |
 | GET | `/v1/admin/status` | 데몬 상태 조회 |
 | POST | `/v1/admin/recover` | Kill Switch 복구 (dual-auth) [v0.7 보완: 경로 변경] |
 | GET | `/v1/admin/kill-switch` | Kill Switch 상태 조회 [v0.7 보완: 추가] |
@@ -1380,6 +1380,114 @@ const ActionResolveResponseSchema = z.object({
 - **202 Accepted** (DELAY/APPROVAL 티어): `status: 'QUEUED'`, `txHash` 없음
 
 **에러:** ActionResolveRequest의 에러 + TransactionSend의 에러 전체 (resolve 실패 또는 파이프라인 실패)
+
+---
+
+### 6.12 POST /v1/agents (에이전트 생성) [v1.1 추가]
+
+> [v1.1 구현 중 변경] DD-01 해소: "미래 확장"에서 정식 엔드포인트로 승격. doc 54 (CLI redesign) §3에서 `waiaas agent create`가 호출하는 엔드포인트로 설계되었으나 doc 37에 정식 정의가 없었음. v1.1 구현 시 추가.
+
+에이전트를 생성하고 체인별 키 쌍을 생성-암호화 저장한다.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `POST` |
+| **Path** | `/v1/agents` |
+| **Auth** | masterAuth(implicit) |
+| **Tags** | `Agent` |
+| **operationId** | `createAgent` |
+| **Rate Limit** | globalRateLimit 1000 req/min |
+| **정의 원본** | **v1.1** (objectives/v1.1-core-infrastructure.md) |
+
+**Request Zod 스키마:**
+
+```typescript
+const CreateAgentRequestSchema = z.object({
+  name: z.string().min(1).max(100).openapi({
+    description: '에이전트 이름',
+    example: 'my-trading-agent',
+  }),
+  chain: ChainTypeEnum.default('solana').openapi({
+    description: '체인 식별자 (기본값: solana)',
+    example: 'solana',
+  }),
+  network: NetworkTypeEnum.default('devnet').openapi({
+    description: '네트워크 식별자 (기본값: devnet)',
+    example: 'devnet',
+  }),
+}).openapi('CreateAgentRequest')
+```
+
+**응답 예시 (201 Created):**
+```json
+{
+  "id": "01950288-1a2b-7c4d-5e6f-abcdef012345",
+  "name": "my-trading-agent",
+  "chain": "solana",
+  "network": "devnet",
+  "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "status": "ACTIVE",
+  "createdAt": 1738800000
+}
+```
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `ACTION_VALIDATION_FAILED` | 400 | false | 요청 바디 Zod 검증 실패 (name 누락, chain 미지원 등) |
+
+---
+
+### 6.13 GET /v1/transactions/:id (트랜잭션 단건 조회) [v1.1 추가]
+
+> [v1.1 구현 중 변경] DD-02 해소: doc 37:860, doc 32:576에서 폴링 엔드포인트로 참조되나 38개 엔드포인트 목록에 미포함이었음. v1.1 구현 시 정식 추가.
+
+트랜잭션 상태를 단건 조회한다. 클라이언트는 `POST /v1/transactions/send` 응답의 `id`로 이 엔드포인트를 폴링하여 최종 상태(CONFIRMED/FAILED)를 확인한다.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | `GET` |
+| **Path** | `/v1/transactions/:id` |
+| **Auth** | sessionAuth (v1.1은 masterAuth implicit, v1.2에서 sessionAuth 전환) |
+| **Tags** | `Transaction` |
+| **operationId** | `getTransaction` |
+| **Rate Limit** | 세션 300 req/min |
+| **정의 원본** | **v1.1** (objectives/v1.1-core-infrastructure.md) |
+
+**Path Parameters:**
+
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| `id` | `string` (UUID v7) | 트랜잭션 ID |
+
+**응답 예시 (200 OK):**
+```json
+{
+  "id": "01950288-1a2b-7c4d-5e6f-abcdef012345",
+  "agentId": "01950288-0000-7000-0000-000000000001",
+  "type": "TRANSFER",
+  "status": "CONFIRMED",
+  "tier": "INSTANT",
+  "chain": "solana",
+  "toAddress": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+  "amount": "1000000000",
+  "txHash": "5KtP...abc123",
+  "error": null,
+  "createdAt": 1738800000
+}
+```
+
+**폴링 권장:**
+- 간격: 2초
+- 최대 대기: 30초 (INSTANT 타임아웃)
+- 상태 전이: PENDING → EXECUTING → SUBMITTED → CONFIRMED (또는 FAILED)
+
+**에러:**
+
+| 코드 | HTTP | retryable | 설명 |
+|------|------|-----------|------|
+| `TX_NOT_FOUND` | 404 | false | 해당 ID의 트랜잭션이 존재하지 않음 |
 
 ---
 
@@ -2983,7 +3091,7 @@ class WithdrawService {
 
 Kill Switch ACTIVATED 상태에서 killSwitchGuard(미들웨어 #7)가 5개 허용 경로를 통과시킨다:
 
-1. `GET /v1/health`
+1. `GET /health` [v1.1 DD-03 수정: /v1/health → /health]
 2. `GET /v1/admin/status`
 3. `POST /v1/admin/recover`
 4. `GET /v1/admin/kill-switch`
@@ -3605,7 +3713,7 @@ if (config.daemon.log_level === 'debug') {
 | Action Provider | v0.6 설계 완료 | `GET/POST /v1/actions/*` (resolve-then-execute 패턴) |
 | 가격 오라클 | v0.6 설계 완료 | IPriceOracle (USD 기준 정책 평가), 내부 서비스 (REST API 미노출) |
 | EVM 체인 | 구현 대기 | `EvmAdapter` 구현, `eip155` 네임스페이스 활성화 |
-| 멀티 에이전트 | 미래 확장 | `POST /v1/agents`, `DELETE /v1/agents/:id` 관리 API |
+| 멀티 에이전트 | **v1.1 부분 구현** | `POST /v1/agents` (v1.1 구현 완료, §6.12), `DELETE /v1/agents/:id` (미래 확장) |
 | Remote MCP | 미래 확장 | Streamable HTTP transport, OAuth 2.1 인증 |
 
 ---
@@ -3694,7 +3802,9 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 >
 > **(v0.6 변경)** 5개 엔드포인트 추가: #33 GET /v1/wallet/assets, #34~37 /v1/actions/* (Action Provider API). 62-action-provider-architecture.md, 57-asset-query-fee-estimation-spec.md 참조.
 >
-> **[v0.8] 변경:** 1개 엔드포인트 추가: #39 POST /v1/owner/agents/:agentId/withdraw (자금 회수). 총 **38개** 엔드포인트. v0.8 objectives §5 참조.
+> **[v0.8] 변경:** 1개 엔드포인트 추가: #39 POST /v1/owner/agents/:agentId/withdraw (자금 회수). v0.8 objectives §5 참조.
+>
+> **[v1.1] 변경:** 2개 엔드포인트 추가: #40 POST /v1/agents (에이전트 생성), #41 GET /v1/transactions/:id (트랜잭션 단건 조회). DD-01, DD-02 해소. 총 **41개** 엔드포인트.
 
 | # | Method | Path | Auth (v0.5) | Tags | operationId | 정의 원본 |
 |---|--------|------|-------------|------|-------------|----------|
@@ -3737,3 +3847,5 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 37 | POST | `/v1/actions/:provider/:action/resolve` | sessionAuth | Action | resolveAction | **v0.6** ACTION |
 | 38 | POST | `/v1/actions/:provider/:action/execute` | sessionAuth | Action | executeAction | **v0.6** ACTION |
 | 39 | POST | `/v1/owner/agents/:agentId/withdraw` | masterAuth(implicit) | Owner | withdrawAgentFunds | **[v0.8]** objectives §5 |
+| 40 | POST | `/v1/agents` | masterAuth(implicit) | Agent | createAgent | **[v1.1]** DD-01 |
+| 41 | GET | `/v1/transactions/:id` | sessionAuth | Transaction | getTransaction | **[v1.1]** DD-02 |
