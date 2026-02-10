@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// NotificationEventType: event types from 35-notification-architecture
+// NotificationEventType: event types from 35-notification-architecture (21 total)
 export const NOTIFICATION_EVENT_TYPES = [
   'TX_REQUESTED',
   'TX_QUEUED',
@@ -9,15 +9,20 @@ export const NOTIFICATION_EVENT_TYPES = [
   'TX_FAILED',
   'TX_CANCELLED',
   'TX_DOWNGRADED_DELAY',
+  'TX_APPROVAL_REQUIRED',
+  'TX_APPROVAL_EXPIRED',
   'POLICY_VIOLATION',
   'AGENT_SUSPENDED',
   'KILL_SWITCH_ACTIVATED',
   'KILL_SWITCH_RECOVERED',
+  'AUTO_STOP_TRIGGERED',
   'SESSION_EXPIRING_SOON',
   'SESSION_EXPIRED',
+  'SESSION_CREATED',
   'OWNER_SET',
   'OWNER_REMOVED',
   'OWNER_VERIFIED',
+  'DAILY_SUMMARY',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

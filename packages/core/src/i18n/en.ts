@@ -1,11 +1,14 @@
 import type { ErrorCode } from '../errors/error-codes.js';
+import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
  * Keys in errors must match ERROR_CODES keys exactly (67 error codes).
+ * Notification templates cover all 21 event types.
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
+  notifications: Record<NotificationEventType, { title: string; body: string }>;
   system: {
     daemon_started: string;
     daemon_stopped: string;
@@ -103,6 +106,30 @@ export const messages: Messages = {
     ACTION_CHAIN_MISMATCH: 'Action chain mismatch',
     // ADMIN domain (1)
     ROTATION_TOO_RECENT: 'Secret rotation too recent',
+  },
+  // Notification templates (21 event types)
+  notifications: {
+    TX_REQUESTED: { title: 'Transaction Requested', body: 'Agent {agentId} requested {amount} transfer to {to}' },
+    TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
+    TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain' },
+    TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount}' },
+    TX_FAILED: { title: 'Transaction Failed', body: 'Transaction {txId} failed: {error}' },
+    TX_CANCELLED: { title: 'Transaction Cancelled', body: 'Transaction {txId} cancelled' },
+    TX_DOWNGRADED_DELAY: { title: 'Transaction Delayed', body: 'Transaction {txId} downgraded to delay queue ({seconds}s cooldown)' },
+    TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to}' },
+    TX_APPROVAL_EXPIRED: { title: 'Approval Expired', body: 'Approval for transaction {txId} has expired' },
+    POLICY_VIOLATION: { title: 'Policy Violation', body: 'Agent {agentId} policy violation: {reason}' },
+    AGENT_SUSPENDED: { title: 'Agent Suspended', body: 'Agent {agentId} has been suspended: {reason}' },
+    KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
+    KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },
+    AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Daemon auto-stopped after {failures} consecutive failures' },
+    SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for agent {agentId} expires in {minutes} minutes' },
+    SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for agent {agentId} has expired' },
+    SESSION_CREATED: { title: 'Session Created', body: 'New session created for agent {agentId}' },
+    OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for agent {agentId}: {ownerAddress}' },
+    OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from agent {agentId}' },
+    OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for agent {agentId}' },
+    DAILY_SUMMARY: { title: 'Daily Summary', body: 'Agents: {agentCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
   },
   // System messages
   system: {
