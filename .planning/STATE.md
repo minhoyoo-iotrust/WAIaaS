@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3 Phase 61 TypeScript SDK
+**Current focus:** v1.3 Phase 62 Python SDK
 
 ## Current Position
 
-Phase: 61 of 63 (TypeScript SDK)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-11 -- Completed 61-01-PLAN.md (SDK core client, 44 tests)
+Phase: 62 of 63 (Python SDK)
+Plan: 0 of 1 in current phase
+Status: Phase 61 complete, ready for Phase 62
+Last activity: 2026-02-11 -- Completed 61-02-PLAN.md (SDK OwnerClient + retry + validation, 91 tests)
 
-Progress: [███████░░░] 64% (7/11 plans)
+Progress: [████████░░] 73% (8/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 61 phases, 147 plans, 367 reqs, 635 tests, 29,500+ LOC
+**Cumulative:** 14 milestones, 61 phases, 148 plans, 367 reqs, 682 tests, 30,200+ LOC
 
 **v1.3 Velocity:**
-- Plans completed: 7
-- Average duration: 9.4min
-- Total execution time: 66min
+- Plans completed: 8
+- Average duration: 9.3min
+- Total execution time: 76min
 
 **v1.2 Velocity (reference):**
 - Total plans completed: 13
@@ -61,6 +61,9 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - SDK WAIaaSError standalone class (not imported from @waiaas/core) for zero dependency
 - HttpClient differentiates AbortError (REQUEST_TIMEOUT) from TypeError (NETWORK_ERROR)
 - renewSession() extracts sessionId from JWT base64url payload, caches for reuse
+- Inline validation (no Zod) for SDK sendToken -- zero runtime dependency 유지
+- withRetry: status 0 + retryable=false는 즉시 throw (NO_TOKEN, VALIDATION_ERROR 등)
+- ownerAuth SDK: X-Owner-Message header (daemon middleware 실제 API 일치)
 
 ### Blockers/Concerns
 
@@ -70,5 +73,5 @@ Full log in PROJECT.md. Key decisions for v1.3:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 61-01-PLAN.md -- ready for 61-02-PLAN.md
+Stopped at: Completed 61-02-PLAN.md -- Phase 61 TypeScript SDK complete, ready for Phase 62
 Resume file: None
