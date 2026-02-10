@@ -5,23 +5,23 @@
 참고: .planning/PROJECT.md (업데이트: 2026-02-10)
 
 **핵심 가치:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**현재 초점:** v1.1 Phase 50 완료. 6-stage pipeline + transaction API 구현 완료. 다음: Phase 51 (통합 테스트)
+**현재 초점:** v1.1 Phase 51 진행 중. CLI 4 commands 구현 완료. 다음: 51-02 E2E 통합 테스트
 
 ## 현재 위치
 
 마일스톤: v1.1 코어 인프라 + 기본 전송
-페이즈: 50 of 51 (API + Solana Pipeline)
-플랜: 4 of 4 in current phase (Phase 50 complete)
-상태: Phase complete
-마지막 활동: 2026-02-10 -- Completed 50-04-PLAN.md
+페이즈: 51 of 51 (CLI + E2E Integration)
+플랜: 1 of 2 in current phase
+상태: In progress
+마지막 활동: 2026-02-10 -- Completed 51-01-PLAN.md
 
-진행률: [██████████..] 83% (10/12 plans)
+진행률: [███████████.] 92% (11/12 plans)
 
 ## 성과 지표
 
 **v0.1-v1.0 누적:** 115 plans, 286 reqs, 47 phases, 11 milestones
 **v1.1 목표:** 4 phases, 12 plans, 46 requirements
-**v1.1 완료:** 10 plans (48-01, 48-02, 48-03, 49-01, 49-02, 49-03, 50-01, 50-02, 50-03, 50-04)
+**v1.1 완료:** 11 plans (48-01, 48-02, 48-03, 49-01, 49-02, 49-03, 50-01, 50-02, 50-03, 50-04, 51-01)
 
 ## 누적 컨텍스트
 
@@ -77,8 +77,9 @@
 | PipelineContext mutable state pattern | 6개 스테이지가 공유 context 객체 수정, 균일한 시그니처 | 50-04 |
 | Private key release in finally block | stage5Execute에서 decryptPrivateKey 후 반드시 releaseKey 호출 | 50-04 |
 | createApp extended with policyEngine dep | 트랜잭션 라우트 조건부 등록을 위한 PolicyEngine 의존성 추가 | 50-04 |
-
-v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
+| TD-10 확정: commander ^13.x | 경량, 안정, ESM-native; 4개 커맨드에 적합 | 51-01 |
+| ExitError throw pattern for testing process.exit | process.exit mock을 no-op으로 하면 코드 실행 계속됨; throw로 중단 | 51-01 |
+| Simple TOML regex for status port resolution | 전체 config loader import 회피 (daemon 의존성 무거움) | 51-01 |
 
 ### 차단 요소/우려 사항
 
@@ -90,10 +91,11 @@ v1.1 구현 시 확정 필요: TD-10(CLI 프레임워크)
 - Agent/wallet routes 동작 검증 완료 (50-03에서 성공, 13 tests, 146 total)
 - DaemonLifecycle Steps 4-5 구현 완료 (50-03에서 성공)
 - 6-stage pipeline + transaction API 검증 완료 (50-04에서 성공, 21 tests, 167 total)
+- CLI 4 commands 구현 + 20 tests 완료 (51-01에서 성공, 269 total)
 - 설계 부채 DD-01~03 (v1.1 구현 시 인라인 처리)
 
 ## 세션 연속성
 
 마지막 세션: 2026-02-10
-중단 지점: Completed 50-04-PLAN.md. Phase 50 완료. 다음: Phase 51 (통합 테스트)
-재개 파일: .planning/phases/50-api-solana-pipeline/50-04-SUMMARY.md
+중단 지점: Completed 51-01-PLAN.md. 다음: 51-02 (E2E 통합 테스트)
+재개 파일: .planning/phases/51-cli-e2e-integration/51-01-SUMMARY.md
