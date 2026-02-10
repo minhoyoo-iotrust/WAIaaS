@@ -249,8 +249,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 57-01: 인증 미들웨어 + 정책 엔진 단위 테스트
-- [ ] 57-02: 세션/워크플로우/Owner E2E 통합 테스트
+- [ ] 57-01-PLAN.md -- CLI E2E harness 수정 + auth/policy 커버리지 갭 테스트
+- [ ] 57-02-PLAN.md -- 세션 라이프사이클 + DELAY/APPROVAL 워크플로우 + Owner 상태 전이 E2E 테스트
 
 ## Progress
 
