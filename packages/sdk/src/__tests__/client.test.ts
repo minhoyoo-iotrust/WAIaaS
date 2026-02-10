@@ -313,26 +313,45 @@ describe('WAIaaSClient', () => {
       });
     });
 
-    it('should throw WAIaaSError with hint on 400', async () => {
+    it('should throw VALIDATION_ERROR for invalid amount before HTTP call', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      // sendToken with invalid amount '-1' triggers pre-validation
+      const err = await client
+        .sendToken({ to: 'addr', amount: '-1' })
+        .catch((e: unknown) => e) as WAIaaSError;
+
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect(err.code).toBe('VALIDATION_ERROR');
+      expect(err.status).toBe(0);
+      // fetch should NOT have been called
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('should throw WAIaaSError with hint on 400 server response', async () => {
       const client = new WAIaaSClient({
         baseUrl: 'http://localhost:3000',
         sessionToken: mockToken,
       });
 
       fetchSpy.mockResolvedValue(
-        mockErrorResponse('ACTION_VALIDATION_FAILED', 'Invalid amount', 400, {
-          hint: 'Amount must be a positive string in lamports',
+        mockErrorResponse('ACTION_VALIDATION_FAILED', 'Insufficient balance', 400, {
+          hint: 'Balance too low for this transfer',
         }),
       );
 
+      // Valid params that pass pre-validation, but server returns 400
       const err = await client
-        .sendToken({ to: 'addr', amount: '-1' })
+        .sendToken({ to: 'addr', amount: '999999999999' })
         .catch((e: unknown) => e) as WAIaaSError;
 
       expect(err).toBeInstanceOf(WAIaaSError);
       expect(err.code).toBe('ACTION_VALIDATION_FAILED');
       expect(err.status).toBe(400);
-      expect(err.hint).toBe('Amount must be a positive string in lamports');
+      expect(err.hint).toBe('Balance too low for this transfer');
     });
   });
 
@@ -677,6 +696,70 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // Retry Integration
+  // =========================================================================
+
+  describe('retry integration', () => {
+    it('should retry on 429 and succeed on second attempt', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 2, baseDelayMs: 1, maxDelayMs: 10 },
+      });
+
+      // First call: 429, second call: 200
+      fetchSpy
+        .mockResolvedValueOnce(
+          mockErrorResponse('RATE_LIMIT_EXCEEDED', 'Too many requests', 429, { retryable: true }),
+        )
+        .mockResolvedValueOnce(
+          mockResponse({
+            agentId: 'a', chain: 'solana', network: 'devnet', address: 'x',
+            balance: '100', decimals: 9, symbol: 'SOL',
+          }),
+        );
+
+      const result = await client.getBalance();
+      expect(result.balance).toBe('100');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should NOT retry on 401 (non-retryable)', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 3, baseDelayMs: 1 },
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockErrorResponse('AUTH_FAILED', 'Unauthorized', 401),
+      );
+
+      const err = await client.getBalance().catch((e: unknown) => e) as WAIaaSError;
+      expect(err.code).toBe('AUTH_FAILED');
+      // Should only call once -- no retry for 401
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sendToken with invalid params throws VALIDATION_ERROR without calling fetch', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 3, baseDelayMs: 1 },
+      });
+
+      await expect(
+        client.sendToken({ to: '', amount: '100' }),
+      ).rejects.toMatchObject({
+        code: 'VALIDATION_ERROR',
+      });
+
+      // Validation happens BEFORE retry wrapper, so fetch is never called
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
   // HTTP Layer
   // =========================================================================
 
@@ -686,6 +769,7 @@ describe('WAIaaSClient', () => {
         baseUrl: 'http://localhost:3000',
         sessionToken: mockToken,
         timeout: 1, // 1ms timeout
+        retryOptions: { maxRetries: 0 }, // disable retry for timeout test
       });
 
       fetchSpy.mockImplementation(
@@ -708,6 +792,7 @@ describe('WAIaaSClient', () => {
       const client = new WAIaaSClient({
         baseUrl: 'http://localhost:3000',
         sessionToken: mockToken,
+        retryOptions: { maxRetries: 0 }, // disable retry to test single error response
       });
 
       // Response that fails JSON parsing

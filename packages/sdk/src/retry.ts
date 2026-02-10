@@ -36,11 +36,17 @@ export async function withRetry<T>(
       if (attempt === maxRetries) break;
 
       if (err instanceof WAIaaSError) {
-        // Non-retryable WAIaaSError (4xx except those in retryableStatuses) -> throw immediately
-        if (!retryableStatuses.includes(err.status) && err.status !== 0) {
+        // status 0 with retryable=false means client-side error (NO_TOKEN, VALIDATION_ERROR)
+        // -> throw immediately, these won't succeed on retry
+        if (err.status === 0 && !err.retryable) {
           throw err;
         }
-        // status 0 means network/timeout error -> always retryable
+        // Non-retryable HTTP status (4xx except those in retryableStatuses) -> throw immediately
+        if (err.status !== 0 && !retryableStatuses.includes(err.status)) {
+          throw err;
+        }
+        // status 0 with retryable=true means network/timeout -> retry
+        // status in retryableStatuses (429, 5xx) -> retry
       }
       // Unknown errors (non-WAIaaSError) are treated as retryable (network failures etc.)
 
