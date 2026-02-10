@@ -19,3 +19,4 @@ export {
 export { health } from './routes/health.js';
 export { agentRoutes, type AgentRouteDeps } from './routes/agents.js';
 export { walletRoutes, type WalletRouteDeps } from './routes/wallet.js';
+export { transactionRoutes, type TransactionRouteDeps } from './routes/transactions.js';

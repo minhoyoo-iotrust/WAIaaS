@@ -29,8 +29,10 @@ import type { GetKillSwitchState } from './middleware/index.js';
 import { health } from './routes/health.js';
 import { agentRoutes } from './routes/agents.js';
 import { walletRoutes } from './routes/wallet.js';
+import { transactionRoutes } from './routes/transactions.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
+import type { IPolicyEngine } from '@waiaas/core';
 import type * as schema from '../infrastructure/database/schema.js';
 
 export interface CreateAppDeps {
@@ -40,6 +42,7 @@ export interface CreateAppDeps {
   masterPassword?: string;
   config?: DaemonConfig;
   adapter?: IChainAdapter | null;
+  policyEngine?: IPolicyEngine;
 }
 
 /**
@@ -82,6 +85,26 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
       walletRoutes({
         db: deps.db,
         adapter: deps.adapter ?? null,
+      }),
+    );
+  }
+
+  // Register transaction routes when all pipeline deps are available
+  if (
+    deps.db &&
+    deps.keyStore &&
+    deps.masterPassword !== undefined &&
+    deps.adapter &&
+    deps.policyEngine
+  ) {
+    app.route(
+      '/v1',
+      transactionRoutes({
+        db: deps.db,
+        adapter: deps.adapter,
+        keyStore: deps.keyStore,
+        policyEngine: deps.policyEngine,
+        masterPassword: deps.masterPassword,
       }),
     );
   }

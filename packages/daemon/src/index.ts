@@ -49,9 +49,14 @@ export { BackgroundWorkers } from './lifecycle/index.js';
 // API module
 export { createApp } from './api/index.js';
 export type { CreateAppDeps } from './api/index.js';
-export { agentRoutes, walletRoutes } from './api/routes/index.js';
+export { agentRoutes, walletRoutes, transactionRoutes } from './api/routes/index.js';
 export type { AgentRouteDeps } from './api/routes/agents.js';
 export type { WalletRouteDeps } from './api/routes/wallet.js';
+export type { TransactionRouteDeps } from './api/routes/transactions.js';
+
+// Pipeline module
+export { TransactionPipeline, DefaultPolicyEngine } from './pipeline/index.js';
+export type { PipelineDeps, PipelineContext } from './pipeline/index.js';
 
 // ---------------------------------------------------------------------------
 // Convenience: top-level startDaemon()
