@@ -13,7 +13,7 @@
 - ✅ **v0.9 MCP 세션 관리 자동화 설계** — Phases 36-40 (shipped 2026-02-09)
 - ✅ **v0.10 구현 전 설계 완결성 확보** — Phases 41-44 (shipped 2026-02-09)
 - ✅ **v1.0 구현 계획 수립** — Phases 45-47 (shipped 2026-02-09)
-- **v1.1 코어 인프라 + 기본 전송** — Phases 48-51 (in progress)
+- ✅ **v1.1 코어 인프라 + 기본 전송** — Phases 48-51 (shipped 2026-02-10)
 
 ## Phases
 
@@ -130,14 +130,14 @@
 
 </details>
 
-### v1.1 코어 인프라 + 기본 전송 (In Progress)
+### v1.1 코어 인프라 + 기본 전송 (Shipped 2026-02-10)
 
 **마일스톤 목표:** CLI로 init -> start -> SOL 전송 -> 확인까지 동작하는 최소 데몬
 
 - [x] **Phase 48: 모노레포 스캐폴드 + @waiaas/core** — 빌드 인프라와 공유 타입/스키마/인터페이스 패키지 (completed 2026-02-10)
 - [x] **Phase 49: 데몬 인프라** — SQLite, 키스토어, config 로더, 라이프사이클 (completed 2026-02-10)
 - [x] **Phase 50: API 서버 + SolanaAdapter + 파이프라인** — HTTP 엔드포인트, 체인 연동, 트랜잭션 실행 (completed 2026-02-10)
-- [ ] **Phase 51: CLI + E2E 통합 검증** — 사용자 CLI와 전 구간 자동 검증
+- [x] **Phase 51: CLI + E2E 통합 검증** — 사용자 CLI와 전 구간 자동 검증 (completed 2026-02-10)
 
 ## Phase Details
 
@@ -229,10 +229,10 @@ Plans:
 | v0.9 MCP 세션 자동화 | 36-40 | 10 | Complete | 2026-02-09 |
 | v0.10 설계 완결성 | 41-44 | 10 | Complete | 2026-02-09 |
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
-| **v1.1 코어 인프라** | **48-51** | **10/12** | **In progress** | - |
+| **v1.1 코어 인프라** | **48-51** | **12** | **Complete** | 2026-02-10 |
 
-**Total:** 11 milestones shipped, 47 phases, 115 plans completed + v1.1 진행 중 (4 phases, 10/12 plans complete)
+**Total:** 12 milestones shipped, 51 phases, 127 plans completed
 
 ---
 
-*Last updated: 2026-02-10 after Phase 50 complete*
+*Last updated: 2026-02-10 after Phase 51 complete — v1.1 milestone shipped*
