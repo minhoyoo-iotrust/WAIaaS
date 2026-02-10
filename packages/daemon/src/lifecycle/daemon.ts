@@ -5,15 +5,15 @@
  *   1. Environment validation + config + flock (5s timeout, fail-fast)
  *   2. Database initialization (30s timeout, fail-fast)
  *   3. Keystore unlock (30s timeout, fail-fast)
- *   4. Adapter initialization -- STUB for v1.1 (10s, fail-soft)
- *   5. HTTP server start -- STUB for v1.1 (5s, fail-fast)
+ *   4. Adapter initialization (10s, fail-soft)
+ *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
  * Shutdown sequence (doc 28 section 3):
  *   1. Set isShuttingDown, start force timer, log signal
- *   2-4. HTTP server close -- STUB (Phase 50)
- *   5. In-flight signing -- STUB (Phase 50)
- *   6. Pending queue persistence -- STUB (Phase 50)
+ *   2-4. HTTP server close
+ *   5. In-flight signing -- STUB (Phase 50-04)
+ *   6. Pending queue persistence -- STUB (Phase 50-04)
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
  *   9. keyStore.lockAll()
@@ -25,12 +25,15 @@
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
+import type { IChainAdapter } from '@waiaas/core';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
 import { BackgroundWorkers } from './workers.js';
+import type * as schema from '../infrastructure/database/schema.js';
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -91,7 +94,11 @@ export { withTimeout };
 export class DaemonLifecycle {
   private _isShuttingDown = false;
   private sqlite: DatabaseType | null = null;
+  private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
+  private masterPassword = '';
+  private adapter: IChainAdapter | null = null;
+  private httpServer: { close: () => void } | null = null;
   private workers: BackgroundWorkers | null = null;
   private releaseLock: (() => Promise<void>) | null = null;
   private pidPath = '';
@@ -108,6 +115,11 @@ export class DaemonLifecycle {
     return this._config;
   }
 
+  /** Drizzle database instance (available after start, used by route handlers). */
+  get db(): BetterSQLite3Database<typeof schema> | null {
+    return this._db;
+  }
+
   /**
    * 6-step startup sequence with per-step timeouts and 90s overall cap.
    */
@@ -117,6 +129,9 @@ export class DaemonLifecycle {
   }
 
   private async _startInternal(dataDir: string, masterPassword: string): Promise<void> {
+    // Store master password for route handlers
+    this.masterPassword = masterPassword;
+
     // ------------------------------------------------------------------
     // Step 1: Environment validation + config + flock (5s, fail-fast)
     // ------------------------------------------------------------------
@@ -152,8 +167,9 @@ export class DaemonLifecycle {
           mkdirSync(dbDir, { recursive: true });
         }
 
-        const { sqlite } = createDatabase(dbPath);
+        const { sqlite, db } = createDatabase(dbPath);
         this.sqlite = sqlite;
+        this._db = db;
 
         // Create all tables (idempotent)
         pushSchema(sqlite);
@@ -192,18 +208,59 @@ export class DaemonLifecycle {
     );
 
     // ------------------------------------------------------------------
-    // Step 4: Adapter initialization -- STUB for v1.1 (10s, fail-soft)
+    // Step 4: Adapter initialization (10s, fail-soft)
     // ------------------------------------------------------------------
     try {
-      console.log('Step 4: Adapter initialization deferred to Phase 50');
+      await withTimeout(
+        (async () => {
+          // Dynamic import for @waiaas/adapter-solana
+          const { SolanaAdapter } = await import('@waiaas/adapter-solana');
+          this.adapter = new SolanaAdapter('devnet');
+
+          // Determine RPC URL from config (v1.1: devnet only)
+          const rpcUrl = this._config!.rpc.solana_devnet;
+          await this.adapter.connect(rpcUrl);
+
+          console.log('Step 4: SolanaAdapter connected to', rpcUrl);
+        })(),
+        10_000,
+        'STEP4_ADAPTER',
+      );
     } catch (err) {
+      // fail-soft: log warning but continue (daemon runs without chain adapter)
       console.warn('Step 4 (fail-soft): Adapter init warning:', err);
+      this.adapter = null;
     }
 
     // ------------------------------------------------------------------
-    // Step 5: HTTP server start -- STUB for v1.1 (5s, fail-fast)
+    // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
-    console.log('Step 5: HTTP server deferred to Phase 50');
+    await withTimeout(
+      (async () => {
+        const { createApp } = await import('../api/index.js');
+        const { serve } = await import('@hono/node-server');
+
+        const app = createApp({
+          db: this._db!,
+          keyStore: this.keyStore!,
+          masterPassword: this.masterPassword,
+          config: this._config!,
+          adapter: this.adapter,
+        });
+
+        this.httpServer = serve({
+          fetch: app.fetch,
+          hostname: this._config!.daemon.hostname,
+          port: this._config!.daemon.port,
+        });
+
+        console.log(
+          `Step 5: HTTP server listening on ${this._config!.daemon.hostname}:${this._config!.daemon.port}`,
+        );
+      })(),
+      5_000,
+      'STEP5_HTTP_SERVER',
+    );
 
     // ------------------------------------------------------------------
     // Step 6: Background workers + PID (no timeout, fail-soft)
@@ -268,9 +325,25 @@ export class DaemonLifecycle {
     try {
       // Steps 1: Set flag + log (done above)
 
-      // Steps 2-4: HTTP server close -- STUB (Phase 50)
-      // Steps 5: In-flight signing -- STUB (Phase 50)
-      // Steps 6: Pending queue persistence -- STUB (Phase 50)
+      // Steps 2-4: HTTP server close
+      if (this.httpServer) {
+        this.httpServer.close();
+        console.log('Steps 2-4: HTTP server closed');
+      }
+
+      // Steps 5: In-flight signing -- STUB (Phase 50-04)
+      // Steps 6: Pending queue persistence -- STUB (Phase 50-04)
+
+      // Disconnect chain adapter
+      if (this.adapter) {
+        try {
+          await this.adapter.disconnect();
+          console.log('Adapter disconnected');
+        } catch (err) {
+          console.warn('Adapter disconnect warning:', err);
+        }
+        this.adapter = null;
+      }
 
       // Step 7: Stop background workers
       if (this.workers) {
@@ -294,6 +367,9 @@ export class DaemonLifecycle {
         console.log('Step 9: Keystore locked');
       }
 
+      // Clear master password from memory
+      this.masterPassword = '';
+
       // Step 10: Close DB, unlink PID, release lock
       if (this.sqlite) {
         try {
@@ -303,6 +379,7 @@ export class DaemonLifecycle {
           console.warn('Step 10: DB close warning:', err);
         }
         this.sqlite = null;
+        this._db = null;
       }
 
       // Delete PID file

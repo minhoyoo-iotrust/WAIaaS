@@ -8,7 +8,7 @@
  *   4. requestLogger
  *
  * Error handler is registered via app.onError.
- * Routes registered: /health
+ * Routes registered: /health, /v1/agents, /v1/wallet/*
  *
  * The returned app instance is NOT started -- starting is DaemonLifecycle's job.
  *
@@ -16,6 +16,8 @@
  */
 
 import { Hono } from 'hono';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { IChainAdapter } from '@waiaas/core';
 import {
   requestId,
   hostGuard,
@@ -25,9 +27,19 @@ import {
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
 import { health } from './routes/health.js';
+import { agentRoutes } from './routes/agents.js';
+import { walletRoutes } from './routes/wallet.js';
+import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
+import type { DaemonConfig } from '../infrastructure/config/loader.js';
+import type * as schema from '../infrastructure/database/schema.js';
 
 export interface CreateAppDeps {
   getKillSwitchState?: GetKillSwitchState;
+  db?: BetterSQLite3Database<typeof schema>;
+  keyStore?: LocalKeyStore;
+  masterPassword?: string;
+  config?: DaemonConfig;
+  adapter?: IChainAdapter | null;
 }
 
 /**
@@ -50,6 +62,29 @@ export function createApp(deps: CreateAppDeps = {}): Hono {
 
   // Register routes
   app.route('/health', health);
+
+  // Register agent/wallet routes when deps are available
+  if (deps.db && deps.keyStore && deps.masterPassword !== undefined && deps.config) {
+    app.route(
+      '/v1',
+      agentRoutes({
+        db: deps.db,
+        keyStore: deps.keyStore,
+        masterPassword: deps.masterPassword,
+        config: deps.config,
+      }),
+    );
+  }
+
+  if (deps.db) {
+    app.route(
+      '/v1',
+      walletRoutes({
+        db: deps.db,
+        adapter: deps.adapter ?? null,
+      }),
+    );
+  }
 
   return app;
 }

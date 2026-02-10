@@ -46,6 +46,13 @@ export { DaemonLifecycle, withTimeout } from './lifecycle/index.js';
 export { registerSignalHandlers } from './lifecycle/index.js';
 export { BackgroundWorkers } from './lifecycle/index.js';
 
+// API module
+export { createApp } from './api/index.js';
+export type { CreateAppDeps } from './api/index.js';
+export { agentRoutes, walletRoutes } from './api/routes/index.js';
+export type { AgentRouteDeps } from './api/routes/agents.js';
+export type { WalletRouteDeps } from './api/routes/wallet.js';
+
 // ---------------------------------------------------------------------------
 // Convenience: top-level startDaemon()
 // ---------------------------------------------------------------------------

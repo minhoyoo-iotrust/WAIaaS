@@ -17,3 +17,5 @@ export {
 
 // Routes
 export { health } from './routes/health.js';
+export { agentRoutes, type AgentRouteDeps } from './routes/agents.js';
+export { walletRoutes, type WalletRouteDeps } from './routes/wallet.js';
