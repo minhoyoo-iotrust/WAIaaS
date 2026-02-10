@@ -375,3 +375,71 @@ export const SetOwnerRequestSchema = z
     owner_address: z.string().min(1),
   })
   .openapi('SetOwnerRequest');
+
+// ---------------------------------------------------------------------------
+// Agent CRUD Schemas (PUT /agents/:id, DELETE /agents/:id)
+// ---------------------------------------------------------------------------
+
+export const UpdateAgentRequestSchema = z
+  .object({
+    name: z.string().min(1).max(100),
+  })
+  .openapi('UpdateAgentRequest');
+
+export const AgentDeleteResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.literal('TERMINATED'),
+  })
+  .openapi('AgentDeleteResponse');
+
+// ---------------------------------------------------------------------------
+// Admin Response Schemas (6 admin endpoints)
+// ---------------------------------------------------------------------------
+
+export const AdminStatusResponseSchema = z
+  .object({
+    status: z.string(),
+    version: z.string(),
+    uptime: z.number().int(),
+    agentCount: z.number().int(),
+    activeSessionCount: z.number().int(),
+    killSwitchState: z.string(),
+    timestamp: z.number().int(),
+  })
+  .openapi('AdminStatusResponse');
+
+export const KillSwitchResponseSchema = z
+  .object({
+    state: z.string(),
+    activatedAt: z.number().int().nullable(),
+    activatedBy: z.string().nullable(),
+  })
+  .openapi('KillSwitchResponse');
+
+export const KillSwitchActivateResponseSchema = z
+  .object({
+    state: z.literal('ACTIVATED'),
+    activatedAt: z.number().int(),
+  })
+  .openapi('KillSwitchActivateResponse');
+
+export const RecoverResponseSchema = z
+  .object({
+    state: z.literal('NORMAL'),
+    recoveredAt: z.number().int(),
+  })
+  .openapi('RecoverResponse');
+
+export const ShutdownResponseSchema = z
+  .object({
+    message: z.string(),
+  })
+  .openapi('ShutdownResponse');
+
+export const RotateSecretResponseSchema = z
+  .object({
+    rotatedAt: z.number().int(),
+    message: z.string(),
+  })
+  .openapi('RotateSecretResponse');

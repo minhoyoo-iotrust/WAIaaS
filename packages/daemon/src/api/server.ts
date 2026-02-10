@@ -42,6 +42,8 @@ import { walletRoutes } from './routes/wallet.js';
 import { transactionRoutes } from './routes/transactions.js';
 import { policyRoutes } from './routes/policies.js';
 import { nonceRoutes } from './routes/nonce.js';
+import { adminRoutes } from './routes/admin.js';
+import type { KillSwitchState } from './routes/admin.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { IPolicyEngine } from '@waiaas/core';
@@ -53,6 +55,9 @@ import type * as schema from '../infrastructure/database/schema.js';
 
 export interface CreateAppDeps {
   getKillSwitchState?: GetKillSwitchState;
+  setKillSwitchState?: (state: string, activatedBy?: string) => void;
+  requestShutdown?: () => void;
+  startTime?: number; // epoch seconds for uptime calculation
   db?: BetterSQLite3Database<typeof schema>;
   sqlite?: SQLiteDatabase;
   keyStore?: LocalKeyStore;
@@ -139,6 +144,22 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/transactions/:id/reject', ownerAuth);
   }
 
+  // masterAuth for admin routes (except GET /admin/kill-switch which is public)
+  if (deps.masterPasswordHash !== undefined) {
+    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+    app.use('/v1/admin/status', masterAuthForAdmin);
+    app.use('/v1/admin/kill-switch', async (c, next) => {
+      // POST requires masterAuth, GET is public
+      if (c.req.method === 'POST') {
+        return masterAuthForAdmin(c, next);
+      }
+      await next();
+    });
+    app.use('/v1/admin/recover', masterAuthForAdmin);
+    app.use('/v1/admin/shutdown', masterAuthForAdmin);
+    app.use('/v1/admin/rotate-secret', masterAuthForAdmin);
+  }
+
   // Register routes
   app.route('/health', health);
 
@@ -213,6 +234,43 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
           policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
           policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
         } : undefined,
+      }),
+    );
+  }
+
+  // Register admin routes when DB is available
+  if (deps.db) {
+    // Kill switch state holder: wraps getKillSwitchState callback with enriched state
+    const killSwitchHolder: KillSwitchState = {
+      state: 'NORMAL',
+      activatedAt: null,
+      activatedBy: null,
+    };
+
+    // Sync initial state from callback if provided
+    if (deps.getKillSwitchState) {
+      killSwitchHolder.state = deps.getKillSwitchState();
+    }
+
+    app.route(
+      '/v1',
+      adminRoutes({
+        db: deps.db,
+        jwtSecretManager: deps.jwtSecretManager,
+        getKillSwitchState: () => killSwitchHolder,
+        setKillSwitchState: (state: string, activatedBy?: string) => {
+          killSwitchHolder.state = state;
+          if (state === 'ACTIVATED') {
+            killSwitchHolder.activatedAt = Math.floor(Date.now() / 1000);
+            killSwitchHolder.activatedBy = activatedBy ?? null;
+          } else {
+            killSwitchHolder.activatedAt = null;
+            killSwitchHolder.activatedBy = null;
+          }
+        },
+        requestShutdown: deps.requestShutdown,
+        startTime: deps.startTime ?? Math.floor(Date.now() / 1000),
+        version: '0.0.0',
       }),
     );
   }

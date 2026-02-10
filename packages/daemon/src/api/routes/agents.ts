@@ -28,10 +28,12 @@ import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-s
 import {
   CreateAgentRequestOpenAPI,
   SetOwnerRequestSchema,
+  UpdateAgentRequestSchema,
   AgentResponseSchema,
   AgentOwnerResponseSchema,
   AgentListResponseSchema,
   AgentDetailResponseSchema,
+  AgentDeleteResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -118,6 +120,45 @@ const agentDetailRoute = createRoute({
       content: { 'application/json': { schema: AgentDetailResponseSchema } },
     },
     ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
+const updateAgentRoute = createRoute({
+  method: 'put',
+  path: '/agents/{id}',
+  tags: ['Agents'],
+  summary: 'Update agent name',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: UpdateAgentRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Agent updated',
+      content: { 'application/json': { schema: AgentResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+  },
+});
+
+const deleteAgentRoute = createRoute({
+  method: 'delete',
+  path: '/agents/{id}',
+  tags: ['Agents'],
+  summary: 'Terminate agent',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Agent terminated',
+      content: { 'application/json': { schema: AgentDeleteResponseSchema } },
+    },
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'AGENT_TERMINATED']),
   },
 });
 
@@ -246,6 +287,88 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
         createdAt: Math.floor(now.getTime() / 1000),
       },
       201,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /agents/:id (update name)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(updateAgentRoute, async (c) => {
+    const { id: agentId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const agent = await deps.db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .get();
+
+    if (!agent) {
+      throw new WAIaaSError('AGENT_NOT_FOUND', {
+        message: `Agent '${agentId}' not found`,
+      });
+    }
+
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await deps.db
+      .update(agents)
+      .set({ name: body.name, updatedAt: now })
+      .where(eq(agents.id, agentId))
+      .run();
+
+    return c.json(
+      {
+        id: agent.id,
+        name: body.name,
+        chain: agent.chain,
+        network: agent.network,
+        publicKey: agent.publicKey,
+        status: agent.status,
+        createdAt: agent.createdAt ? Math.floor(agent.createdAt.getTime() / 1000) : 0,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /agents/:id (terminate)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(deleteAgentRoute, async (c) => {
+    const { id: agentId } = c.req.valid('param');
+
+    const agent = await deps.db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .get();
+
+    if (!agent) {
+      throw new WAIaaSError('AGENT_NOT_FOUND', {
+        message: `Agent '${agentId}' not found`,
+      });
+    }
+
+    if (agent.status === 'TERMINATED') {
+      throw new WAIaaSError('AGENT_TERMINATED', {
+        message: `Agent '${agentId}' is already terminated`,
+      });
+    }
+
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await deps.db
+      .update(agents)
+      .set({ status: 'TERMINATED', updatedAt: now })
+      .where(eq(agents.id, agentId))
+      .run();
+
+    return c.json(
+      {
+        id: agentId,
+        status: 'TERMINATED' as const,
+      },
+      200,
     );
   });
 

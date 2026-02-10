@@ -1,5 +1,5 @@
 /**
- * Route barrel export: health, agents, wallet, sessions, transactions, policies, nonce.
+ * Route barrel export: health, agents, wallet, sessions, transactions, policies, nonce, admin.
  */
 
 export { health } from './health.js';
@@ -9,3 +9,4 @@ export { sessionRoutes, type SessionRouteDeps } from './sessions.js';
 export { transactionRoutes, type TransactionRouteDeps } from './transactions.js';
 export { policyRoutes, type PolicyRouteDeps } from './policies.js';
 export { nonceRoutes } from './nonce.js';
+export { adminRoutes, type AdminRouteDeps, type KillSwitchState } from './admin.js';

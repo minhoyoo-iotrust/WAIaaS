@@ -26,6 +26,12 @@ export function createKillSwitchGuard(getState: GetKillSwitchState = DEFAULT_GET
       return;
     }
 
+    // Admin paths bypass kill switch (need to manage kill switch state)
+    if (c.req.path.startsWith('/v1/admin/')) {
+      await next();
+      return;
+    }
+
     const state = getState();
     if (state === 'ACTIVATED') {
       throw new WAIaaSError('KILL_SWITCH_ACTIVE');
