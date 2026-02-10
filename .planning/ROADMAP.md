@@ -188,13 +188,13 @@ Plans:
   3. `GET /v1/wallet/balance`가 Solana RPC에서 조회한 실제 SOL 잔액을 lamports 단위로 반환한다
   4. `POST /v1/transactions/send`로 SOL 전송을 요청하면 파이프라인 6-stage를 거쳐 온체인에 제출되고, `GET /v1/transactions/:id` 폴링으로 CONFIRMED 상태를 확인할 수 있다
   5. 존재하지 않는 에이전트 ID로 API를 호출하면 WAIaaSError 기반 404 JSON 응답이 반환된다
-**플랜**: TBD
+**플랜**: 4 plans
 
 Plans:
-- [ ] 50-01: Hono API 서버 프레임워크 + 미들웨어 6개 + health 엔드포인트
-- [ ] 50-02: SolanaAdapter 6개 메서드 (@solana/kit 3.x, connect~waitForConfirmation)
-- [ ] 50-03: 에이전트/지갑 API 라우트 (POST /v1/agents, GET /v1/wallet/balance, GET /v1/wallet/address)
-- [ ] 50-04: 트랜잭션 파이프라인 6-stage + 전송 API (POST /v1/transactions/send, GET /v1/transactions/:id)
+- [ ] 50-01-PLAN.md — Hono API 서버 프레임워크 + 미들웨어 6개 + health 엔드포인트 (Wave 1)
+- [ ] 50-02-PLAN.md — SolanaAdapter 10개 IChainAdapter 메서드 (@solana/kit 3.x) (TDD, Wave 1)
+- [ ] 50-03-PLAN.md — 에이전트/지갑 API 라우트 + DaemonLifecycle Step 4/5 통합 (Wave 2)
+- [ ] 50-04-PLAN.md — 트랜잭션 파이프라인 6-stage + DefaultPolicyEngine + 전송 API (TDD, Wave 3)
 
 ### Phase 51: CLI + E2E 통합 검증
 
