@@ -226,8 +226,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 61-01: @waiaas/sdk 패키지 스캐폴드 + WAIaaSClient (조회/전송/세션)
-- [ ] 61-02: WAIaaSOwnerClient + Zod 사전 검증 + 지수 백오프 재시도 + WAIaaSError
+- [ ] 61-01-PLAN.md -- @waiaas/sdk 패키지 스캐폴드 + WAIaaSError + HTTP layer + WAIaaSClient (getBalance/getAddress/getAssets/sendToken/getTransaction/listTransactions/listPendingTransactions/renewSession) + ~36 tests
+- [ ] 61-02-PLAN.md -- WAIaaSOwnerClient (approve/reject/killSwitch/recover) + 지수 백오프 재시도 + 인라인 사전 검증 + ~33 tests
 
 #### Phase 62: Python SDK
 **Goal**: Python 기반 AI 에이전트 프레임워크에서 waiaas 패키지를 pip install하여 TS SDK와 동일한 인터페이스로 지갑을 사용할 수 있다
