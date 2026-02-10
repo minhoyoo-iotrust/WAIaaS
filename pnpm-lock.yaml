@@ -62,6 +62,10 @@ importers:
       commander:
         specifier: ^13.0.0
         version: 13.1.0
+    devDependencies:
+      '@hono/node-server':
+        specifier: ^1.19.9
+        version: 1.19.9(hono@4.11.9)
 
   packages/core:
     dependencies:

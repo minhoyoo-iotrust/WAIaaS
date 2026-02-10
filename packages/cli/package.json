@@ -21,5 +21,8 @@
     "@waiaas/core": "workspace:*",
     "@waiaas/daemon": "workspace:*",
     "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.19.9"
   }
 }
