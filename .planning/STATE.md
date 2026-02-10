@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 56 파이프라인 통합
+**Current focus:** Phase 56 파이프라인 통합 완료
 
 ## Current Position
 
 Phase: 56 (5 of 6 in v1.2) (파이프라인 통합)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-10 -- Completed 56-01-PLAN.md (stage2Auth sessionId + stage3Policy evaluateAndReserve + downgrade)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-10 -- Completed 56-02-PLAN.md (stage4Wait DELAY/APPROVAL + BackgroundWorkers)
 
-Progress: [██████████░░░] 77% (10/13 plans)
+Progress: [███████████░░] 85% (11/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 13 milestones, 55 phases, 137 plans, 332 reqs, 418 tests, ~14,100 LOC
+**Cumulative:** 13 milestones, 55 phases, 138 plans, 332 reqs, 428 tests, ~14,300 LOC
 
 **v1.2 Velocity:**
-- Total plans completed: 10
-- Average duration: 5.6min
-- Total execution time: 56min
+- Total plans completed: 11
+- Average duration: 5.7min
+- Total execution time: 63min
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -31,7 +31,7 @@ Progress: [██████████░░░] 77% (10/13 plans)
 | 53 | 2/2 | 10min | 5min |
 | 54 | 2/2 | 11min | 5.5min |
 | 55 | 3/3 | 12min | 4min |
-| 56 | 1/2 | 7min | 7min |
+| 56 | 2/2 | 17min | 8.5min |
 
 ## Accumulated Context
 
@@ -87,6 +87,10 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 - [56-01]: instanceof DatabasePolicyEngine for evaluateAndReserve path selection (backward compatible with DefaultPolicyEngine)
 - [56-01]: sessionId FK constraint requires valid session record (or null) in transactions table
 - [56-01]: downgradeIfNoOwner integrated directly in stage3Policy (not a separate stage)
+- [56-02]: PIPELINE_HALTED as WAIaaSError (domain TX, httpStatus 409) for intentional pipeline halt
+- [56-02]: Backward-compatible fallback: missing delayQueue/approvalWorkflow -> treat DELAY/APPROVAL as INSTANT
+- [56-02]: executeFromStage5 uses dynamic imports to avoid circular deps in daemon.ts
+- [56-02]: Workflow instances (DelayQueue, ApprovalWorkflow) created in daemon Step 4b after DB + config available
 
 ### Blockers/Concerns
 
@@ -98,5 +102,5 @@ Full log in PROJECT.md. Recent decisions affecting v1.2:
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 56-01-PLAN.md, ready for 56-02-PLAN.md
+Stopped at: Completed 56-02-PLAN.md, Phase 56 complete. Ready for Phase 57.
 Resume file: None
