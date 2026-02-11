@@ -222,21 +222,15 @@ Plans:
 - [x] 76-02-PLAN.md — DB 마이그레이션 러너 + discriminatedUnion 5-type 스키마 (Wave 1)
 - [x] 76-03-PLAN.md — IChainAdapter 20 메서드 확장 + 6개 PolicyType superRefine (Wave 2)
 
-#### Phase 77: EVM 어댑터
+#### Phase 77: EVM 어댑터 — completed 2026-02-12
 **Goal**: @waiaas/adapter-evm 패키지가 viem 2.x 기반으로 IChainAdapter 20개 메서드를 구현하여, EVM 네이티브 전송/ERC-20 전송/approve/gas 추정/nonce 관리가 동작한다
 **Depends on**: Phase 76 (IChainAdapter 인터페이스 20 메서드 정의)
 **Requirements**: INFRA-03, EVM-01, EVM-02, EVM-03, EVM-04, EVM-05, EVM-06
-**Success Criteria** (what must be TRUE):
-  1. @waiaas/adapter-evm 패키지가 monorepo workspace에 등록되고, viem 2.x 의존성으로 빌드가 성공한다
-  2. EvmAdapter가 IChainAdapter 20개 메서드를 구현하여 타입 에러 없이 인스턴스화된다
-  3. EVM에서 네이티브 토큰(ETH) 전송이 EIP-1559 트랜잭션으로 빌드/시뮬레이션/서명/제출된다
-  4. EVM에서 ERC-20 전송과 approve가 buildTokenTransfer/buildApprove 메서드로 동작한다
-  5. buildBatch() 호출 시 BATCH_NOT_SUPPORTED 에러가 반환된다
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 77-01-PLAN.md — @waiaas/adapter-evm 패키지 스캐폴딩 + viem 연결/헬스 기본 메서드 + ERC20 ABI
-- [ ] 77-02-PLAN.md — EVM 네이티브 전송 파이프라인 + gas 추정 1.2x + nonce 관리 + ERC-20 approve + getTokenInfo
+- [x] 77-01-PLAN.md — @waiaas/adapter-evm 패키지 스캐폴딩 + viem 연결/헬스 기본 메서드 + ERC20 ABI
+- [x] 77-02-PLAN.md — EVM 네이티브 전송 파이프라인 + gas 추정 1.2x + nonce 관리 + ERC-20 approve + getTokenInfo
 
 #### Phase 78: 토큰 전송 + 자산 조회
 **Goal**: 에이전트가 SPL/ERC-20 토큰을 전송하고, ALLOWED_TOKENS 정책으로 허용 토큰을 제한하며, getAssets()가 토큰 잔액을 포함하고, estimateFee()가 토큰 전송 수수료를 추정한다
@@ -321,11 +315,11 @@ Plans:
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
-| **v1.4 토큰 + 컨트랙트** | **76-81** | **3/12** | **In progress** | - |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **5/12** | **In progress** | - |
 
-**Total:** 18 milestones shipped, 76 phases completed, 173 plans completed, 959 tests, 43,545 LOC
-**v1.4:** 6 phases (1 complete), 12 plans (3 complete), 35 requirements
+**Total:** 18 milestones shipped, 77 phases completed, 175 plans completed, 34 new tests, 43,545+ LOC
+**v1.4:** 6 phases (2 complete), 12 plans (5 complete), 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after Phase 76 completed*
+*Last updated: 2026-02-12 after Phase 77 completed*
