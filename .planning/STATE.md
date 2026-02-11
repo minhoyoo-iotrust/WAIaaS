@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 69 complete, continuing to Phase 70
+**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 70 in progress (integration tests)
 
 ## Current Position
 
-Phase: 69 of 70 (Policies + Settings)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 69-02-PLAN.md (Settings Page)
+Phase: 70 of 70 (Integration Tests)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-11 — Completed 70-01-PLAN.md (Auth + Security Test Infrastructure)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
-**Cumulative:** 16 milestones, 69 phases, 162 plans, 434 reqs, 784 tests, 33,929 LOC
+**Cumulative:** 16 milestones, 70 phases, 163 plans, 434 reqs, 798 tests, 33,929 LOC
 
 **v1.3.2 Plan:**
 - 5 phases (66-70), 10 plans, 22 requirements
 - Target: Preact SPA 5 pages + 22 tests
-- Completed: 8/10 plans
+- Completed: 9/10 plans
 
 ## Accumulated Context
 
@@ -42,6 +42,7 @@ v1.3.2 구현 결정:
 - Phase 68-02 (3건): currentPath signal exported for sub-route parsing, openRevoke helper with signal refs, session columns inside component for signal access
 - Phase 69-01 (3건): Sentinel filter values (__all__, __global__) for dropdown disambiguation, Global-only filter client-side, Policy type read-only in edit modal
 - Phase 69-02 (3건): Modal confirmDisabled prop for type-to-confirm pattern, No confirmation modal for Kill Switch (emergency speed), Post-shutdown overlay z-index 300 above modal
+- Phase 70-01 (3건): Preact signal reset via beforeEach for module-level signals, CSP header presence as proxy for route registration, Kill switch bypass verified via 409 vs non-409 status
 
 ### Blockers/Concerns
 
@@ -52,6 +53,6 @@ v1.3.2 구현 결정:
 
 ## Session Continuity
 
-Last session: 2026-02-11T08:16:01Z
-Stopped at: Completed 69-02-PLAN.md (Settings Page)
+Last session: 2026-02-11T10:26:00Z
+Stopped at: Completed 70-01-PLAN.md (Auth + Security Test Infrastructure)
 Resume file: None
