@@ -217,9 +217,10 @@ Plans:
   3. `--all` + 에이전트 0개 시 에러 메시지를 표시하고, slug 충돌 시 `{slug}-{agentId 앞 8자}` 접미사를 추가한다
   4. `--agent` 미지정 + 에이전트 1개 자동 선택 시에도 새 경로(`mcp-tokens/<agentId>`)를 사용한다
 **Plans**: 1 plan
+**Status**: ✅ completed 2026-02-11 — 4/4 must-haves verified
 
 Plans:
-- [ ] 72-01-PLAN.md -- slug 유틸리티 + mcp-setup 다중 에이전트 지원 (경로 변경, --all 플래그, config 스니펫, slug 충돌) + 테스트
+- [x] 72-01-PLAN.md -- slug 유틸리티 + mcp-setup 다중 에이전트 지원 (경로 변경, --all 플래그, config 스니펫, slug 충돌) + 테스트 ✓
 
 ## Progress
 
@@ -241,10 +242,10 @@ Plans:
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
-| v1.3.3 MCP 다중 에이전트 | 71-72 | 1/2 | In progress | - |
+| v1.3.3 MCP 다중 에이전트 | 71-72 | 2/2 | In progress | - |
 
-**Total:** 17 milestones shipped, 71 phases completed, 164 plans completed
+**Total:** 17 milestones shipped, 72 phases completed, 165 plans completed
 
 ---
 
-*Last updated: 2026-02-11 after phase 71 completed*
+*Last updated: 2026-02-11 after phase 72 completed*
