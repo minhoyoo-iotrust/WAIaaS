@@ -1,5 +1,6 @@
 import { isAuthenticated, daemonShutdown } from './auth/store';
 import { Login } from './auth/login';
+import { Layout } from './components/layout';
 
 const shutdownStyles = {
   overlay: {
@@ -47,11 +48,5 @@ export function App() {
   if (!isAuthenticated.value) {
     return <Login />;
   }
-  // Phase 67-02 will add Layout+Router here
-  return (
-    <div style={{ padding: 'var(--space-8)' }}>
-      <h1>Authenticated</h1>
-      <p>Layout component coming in Plan 67-02</p>
-    </div>
-  );
+  return <Layout />;
 }
