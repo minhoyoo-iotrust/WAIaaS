@@ -1,5 +1,33 @@
 # Project Milestones: WAIaaS
 
+## v1.3.3 MCP 다중 에이전트 지원 (Shipped: 2026-02-11)
+
+**Delivered:** 하나의 WAIaaS 데몬에 등록된 여러 에이전트를 Claude Desktop(MCP)에서 동시에 사용할 수 있도록, 에이전트별 토큰 경로 분리(mcp-tokens/<agentId>), MCP 서버 이름/description 에이전트 식별, CLI `mcp setup --all` 일괄 설정을 구현
+
+**Phases completed:** 71-72 (2 plans total)
+
+**Key accomplishments:**
+
+- SessionManager 에이전트별 토큰 경로 분리 — `mcp-tokens/<agentId>` 경로 + 기존 `mcp-token` fallback(ENOENT only), AgentContext DI 패턴
+- MCP 서버 에이전트 식별 — `waiaas-{agentName}` 동적 서버 이름, 6 도구 + 3 리소스 `[agentName]` description prefix, withAgentPrefix 재사용 헬퍼
+- CLI `mcp setup` 다중 에이전트 — `--agent` 개별 + `--all` 일괄 설정, config 스니펫에 WAIAAS_AGENT_ID/NAME 환경변수, `waiaas-{slug}` 키 이름
+- Slug 유틸리티 — toSlug + resolveSlugCollisions, 충돌 시 agentId 앞 8자 접미사
+- 45 신규 테스트 — 14 MCP 경로/서버 + 9 slug 단위 + 22 CLI mcp-setup 통합
+
+**Stats:**
+
+- 19 files changed, +961 / -125 lines
+- 2 phases, 2 plans, 4 tasks, 14 requirements, 11 설계 결정
+- 847 tests (816 → 847, +31 new tests)
+- 44,639 LOC total
+- 1 day (2026-02-11)
+
+**Git range:** `8fd6439` (Phase 71 start) → `d147147` (Phase 72 complete)
+
+**What's next:** v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
+
+---
+
 ## v0.10 구현 전 설계 완결성 확보 (Shipped: 2026-02-09)
 
 **Delivered:** v0.2~v0.9에서 작성한 30개 설계 문서의 BLOCKING 4건 + HIGH 8건 = 12건의 구현 차단 미비점을 4개 영역(정책 엔진, 에러 처리, 동시성/실행, 운영 로직)에서 전수 해소하여, 설계 문서만으로 코드를 작성할 수 있는 상태를 확립
@@ -437,6 +465,16 @@
 **Git range:** `3f5b57f` (Phase 66 start) → `afd7ca8` (Phase 70 complete)
 
 **What's next:** v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
+
+---
+
+
+## v1.3.3 MCP 다중 에이전트 지원 (Shipped: 2026-02-11)
+
+**Phases completed:** 72 phases, 165 plans, 38 tasks
+
+**Key accomplishments:**
+- (none recorded)
 
 ---
 
