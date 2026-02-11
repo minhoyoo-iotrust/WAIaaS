@@ -69,13 +69,17 @@ export {
   type AssetInfoDto,
 } from './schemas/index.js';
 
-// Errors (68 error codes + WAIaaSError)
+// Errors (68 error codes + WAIaaSError + ChainError)
 export {
   ERROR_CODES,
   type ErrorCode,
   type ErrorDomain,
   type ErrorCodeEntry,
   WAIaaSError,
+  ChainError,
+  type ChainErrorCategory,
+  type ChainErrorCode,
+  CHAIN_ERROR_CATEGORIES,
 } from './errors/index.js';
 
 // Interfaces (4 contracts + chain adapter types)

@@ -455,8 +455,8 @@ export const ERROR_CODES = {
   },
   INSUFFICIENT_FOR_FEE: {
     code: 'INSUFFICIENT_FOR_FEE',
-    domain: 'WITHDRAW',
-    httpStatus: 500,
+    domain: 'TX',
+    httpStatus: 400,
     retryable: false,
     message: 'Insufficient balance for transaction fee',
   },
