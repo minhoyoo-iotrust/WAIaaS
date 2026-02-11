@@ -51,6 +51,11 @@ export class NotificationService {
     return this.channels.map((c) => c.name);
   }
 
+  /** Get list of configured channels (for admin test send). */
+  getChannels(): INotificationChannel[] {
+    return [...this.channels];
+  }
+
   /**
    * Send notification via priority-based delivery with fallback.
    * Tries channels in order; on failure, falls back to next channel.

@@ -912,3 +912,28 @@ table .table-loading {
   border-color: var(--color-danger);
   box-shadow: 0 0 0 2px var(--color-danger-bg);
 }
+
+/* Notification page */
+.channel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-bottom: var(--space-6); }
+.channel-card { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+.channel-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
+.channel-card-name { font-weight: var(--font-weight-semibold); font-size: var(--font-size-base); text-transform: capitalize; }
+
+.test-results { margin-top: var(--space-4); }
+.test-result-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; }
+.test-result-success { color: var(--color-success); }
+.test-result-failure { color: var(--color-danger); }
+
+.config-guidance { margin-top: var(--space-6); padding: var(--space-4); background: var(--color-info-bg); border: 1px solid var(--color-info); border-radius: var(--radius-md); font-size: var(--font-size-sm); }
+.config-guidance pre { margin-top: var(--space-2); padding: var(--space-3); background: var(--color-bg-tertiary); border-radius: var(--radius-sm); font-family: monospace; font-size: var(--font-size-xs); overflow-x: auto; white-space: pre; }
+.config-guidance p { color: var(--color-text-secondary); margin-bottom: var(--space-2); }
+
+.pagination { display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-4); }
+.pagination-info { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+.pagination-buttons { display: flex; gap: var(--space-2); }
+
+.notif-disabled-banner { padding: var(--space-3) var(--space-4); background: var(--color-warning-bg); border: 1px solid var(--color-warning); border-radius: var(--radius-md); margin-bottom: var(--space-4); font-size: var(--font-size-sm); color: var(--color-text); }
+
+@media (max-width: 768px) {
+  .channel-grid { grid-template-columns: 1fr; }
+}

@@ -469,12 +469,31 @@
 ---
 
 
-## v1.3.3 MCP 다중 에이전트 지원 (Shipped: 2026-02-11)
+## v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 (Shipped: 2026-02-12)
 
-**Phases completed:** 72 phases, 165 plans, 38 tasks
+**Delivered:** v1.3 알림 인프라(NotificationService, 3채널, 21 이벤트 템플릿)를 파이프라인/라우트에 실제 연결하고, notification_logs DB 테이블 + 어드민 UI 알림 패널을 추가하여, 데몬에서 발생하는 주요 이벤트가 실제로 사용자에게 알림으로 전달되고 어드민이 브라우저에서 상태를 확인/테스트/로그 조회할 수 있는 상태를 달성
+
+**Phases completed:** 73-75 (5 plans total)
 
 **Key accomplishments:**
-- (none recorded)
+
+- notification_logs DB 테이블 + 증분 마이그레이션 — schema_version 기반 MIG-01 준수, fire-and-forget logDelivery(), 채널별 sent/failed 개별 기록
+- 파이프라인 5개 이벤트 트리거 — Stage 1 TX_REQUESTED, Stage 3 POLICY_VIOLATION, Stage 5 TX_SUBMITTED/TX_FAILED, Stage 6 TX_CONFIRMED, void notify() fire-and-forget 패턴
+- 라우트/워커 3개 이벤트 트리거 — POST /sessions SESSION_CREATED, PUT /agents/:id/owner OWNER_SET, session-cleanup worker SESSION_EXPIRED
+- 어드민 알림 API 3개 엔드포인트 — GET /admin/notifications/status (credential 마스킹), POST /admin/notifications/test, GET /admin/notifications/log (Drizzle 페이지네이션)
+- 어드민 알림 패널 UI — 3-column 채널 상태 카드, 테스트 발송 버튼, 발송 로그 테이블(20건/페이지), config.toml 안내 info box
+
+**Stats:**
+
+- 42 files changed, +5,590 / -52 lines
+- 3 phases, 5 plans, 10 tasks, 18 requirements, 13 설계 결정
+- 895 tests (847 → 895, +48 new tests)
+- 42,123 LOC total
+- 2 hours (2026-02-11 22:39 → 2026-02-12 00:38)
+
+**Git range:** `0fe6723` (Phase 73 start) → `2891558` (Phase 75 complete)
+
+**What's next:** v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
 
 ---
 

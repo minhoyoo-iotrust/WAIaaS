@@ -13,6 +13,7 @@
 | DD-01 | v1.1 사전 점검 | `POST /v1/agents` (에이전트 생성) 정식 스펙이 doc 37에 없음. doc 54 §3에서 CLI `agent create`가 호출하는 엔드포인트로 설계되어 있으나, doc 37에는 "미래 확장" 테이블에만 언급. 요청/응답 스키마, 에러 코드, 인증 방식 정식 정의 필요. | 37-rest-api-complete-spec.md | Tier 1 | **v1.1 구현 후 처리 완료** — §6.12 추가, 엔드포인트 맵 #40, 확장 포인트 테이블 갱신 |
 | DD-02 | v1.1 사전 점검 | `GET /v1/transactions/:id` (트랜잭션 단건 조회) 정식 스펙이 doc 37에 없음. doc 37:860, doc 32:576에서 폴링 엔드포인트로 참조되나 38개 엔드포인트 목록에 미포함. v1.1 E-09 시나리오가 의존. | 37-rest-api-complete-spec.md | Tier 1 | **v1.1 구현 후 처리 완료** — §6.13 추가, 엔드포인트 맵 #41 |
 | DD-03 | v1.1 사전 점검 | doc 37 내 health 엔드포인트 경로 불일치. 정식 정의(§5.1, 테이블 #1)는 `GET /health`이나, doc 37 내부 다른 위치(line 315, 2986)에서 `GET /v1/health`로 참조. v1.1에서 `GET /health`로 확정. | 37-rest-api-complete-spec.md | Tier 1 | **v1.1 구현 후 처리 완료** — §4.2 killSwitchGuard 허용 목록 및 §8.18.2 Kill Switch 허용 경로 수정 |
+| DD-04 | v1.3 검토 | 가스비/수수료 부족과 전송 금액 부족을 에이전트가 구분할 수 없음. `INSUFFICIENT_FOR_FEE` 에러 코드가 WITHDRAW 도메인에만 정의되어 있고, 설계 문서 57(§7.4)의 `estimateFee()` 잔액 검증에서도 `INSUFFICIENT_BALANCE`를 사용. 에이전트가 에러 코드만으로 "잔액 부족"과 "가스비 부족"을 구분할 수 없어 적절한 복구 조치(충전 vs 금액 조정)를 판단 불가. | 57-asset-query-fee-estimation-spec.md, 27-chain-adapter-interface.md, core/errors/error-codes.ts | Tier 1 | **v1.4에서 처리 예정** — `INSUFFICIENT_FOR_FEE`를 TX 도메인으로 확장, estimateFee() 및 Stage 5에서 가스비 부족 시 전용 코드 사용, hint에 필요/보유/부족 금액 포함 |
 
 ---
 
