@@ -8,7 +8,6 @@ import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import { NotificationService } from '../notifications/notification-service.js';
 import { createDatabase, pushSchema, auditLog } from '../infrastructure/database/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
-import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mock channel factory
@@ -51,7 +50,7 @@ describe('Priority delivery', () => {
     await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-1', amount: '1 SOL' });
 
     expect(ch.send).toHaveBeenCalledTimes(1);
-    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
+    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.eventType).toBe('TX_CONFIRMED');
     expect(payload.agentId).toBe('agent-1');
   });
@@ -91,7 +90,7 @@ describe('Priority delivery', () => {
 
     await service.notify('TX_FAILED', 'agent-2', { txId: 'tx-fail' }, { error: 'timeout' });
 
-    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
+    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.eventType).toBe('TX_FAILED');
     expect(payload.agentId).toBe('agent-2');
     expect(payload.message).toContain('Transaction Failed');
@@ -158,8 +157,8 @@ describe('Fallback chain', () => {
 
     await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-99' });
 
-    const p1 = (ch1.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
-    const p2 = (ch2.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
+    const p1 = (ch1.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
+    const p2 = (ch2.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(p1.eventType).toBe(p2.eventType);
     expect(p1.agentId).toBe(p2.agentId);
     expect(p1.message).toBe(p2.message);
@@ -456,7 +455,7 @@ describe('Message template integration', () => {
 
     await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-123', amount: '1 SOL' });
 
-    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
+    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.message).toContain('Transaction Confirmed');
     expect(payload.message).toContain('tx-123');
     expect(payload.message).toContain('1 SOL');
@@ -469,7 +468,7 @@ describe('Message template integration', () => {
 
     await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1', { activatedBy: 'owner' });
 
-    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
+    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.message).toContain('Kill Switch');
   });
 
@@ -480,7 +479,7 @@ describe('Message template integration', () => {
 
     await service.notify('SESSION_EXPIRED', 'agent-1', { sessionId: 'sess-abc' });
 
-    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as NotificationPayload;
+    const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.message).toContain('sess-abc');
   });
 });
