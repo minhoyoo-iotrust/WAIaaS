@@ -15,7 +15,7 @@
 - ✅ **v1.0 구현 계획 수립** — Phases 45-47 (shipped 2026-02-09)
 - ✅ **v1.1 코어 인프라 + 기본 전송** — Phases 48-51 (shipped 2026-02-10, 281 tests, 10,925 LOC)
 - ✅ **v1.2 인증 + 정책 엔진** — Phases 52-57 (shipped 2026-02-10, 457 tests, 25,526 LOC)
-- 🚧 **v1.3 SDK + MCP + 알림** — Phases 58-63 (in progress)
+- ✅ **v1.3 SDK + MCP + 알림** — Phases 58-63 (shipped 2026-02-11)
 
 ## Phases
 
@@ -154,7 +154,7 @@
 
 </details>
 
-### 🚧 v1.3 SDK + MCP + 알림 (In Progress)
+### ✅ v1.3 SDK + MCP + 알림 (Shipped 2026-02-11)
 
 **Milestone Goal:** AI 에이전트가 TS/Python SDK 또는 MCP로 지갑을 사용하고, Owner가 Telegram/Discord/ntfy로 알림을 받는 상태. OpenAPIHono 전환으로 전 엔드포인트 타입 안전 라우팅 + OpenAPI 3.0 자동 생성 완성.
 
@@ -163,7 +163,7 @@
 - [x] **Phase 60: 알림 시스템** - 3채널(Telegram/Discord/ntfy) NotificationService + 21개 이벤트 템플릿
 - [x] **Phase 61: TypeScript SDK** - @waiaas/sdk 패키지, WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
 - [x] **Phase 62: Python SDK** - waiaas 패키지, httpx + Pydantic v2, TS SDK 동일 인터페이스
-- [ ] **Phase 63: MCP Server** - @waiaas/mcp 패키지, 6 도구 + 3 리소스, SessionManager 자동 갱신, CLI mcp setup
+- [x] **Phase 63: MCP Server** - @waiaas/mcp 패키지, 6 도구 + 3 리소스, SessionManager 자동 갱신, CLI mcp setup
 
 #### Phase 58: OpenAPIHono 전환 + getAssets()
 **Goal**: 전 엔드포인트가 타입 안전 라우팅으로 동작하고, GET /doc에서 OpenAPI 3.0 스펙이 자동 생성되며, getAssets()로 자산 목록을 조회할 수 있다
@@ -255,8 +255,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 63-01-PLAN.md -- @waiaas/mcp 패키지 스캐폴드 + SessionManager (토큰 로드 + 갱신 스케줄) + ApiClient + 6 도구 + 3 리소스 + stdio transport + ~60 tests
-- [ ] 63-02-PLAN.md -- SessionManager 강화 (지수 백오프 재시도 + isRenewing + 409 CONFLICT + 복구 루프) + CLI mcp setup + ~50 tests
+- [x] 63-01-PLAN.md -- @waiaas/mcp 패키지 스캐폴드 + SessionManager (토큰 로드 + 갱신 스케줄) + ApiClient + 6 도구 + 3 리소스 + stdio transport + 79 tests
+- [x] 63-02-PLAN.md -- SessionManager 강화 (지수 백오프 재시도 + isRenewing + 409 CONFLICT + 복구 루프) + CLI mcp setup + 50 tests
 
 ## Progress
 
@@ -270,7 +270,7 @@ Plans:
 | 60. 알림 시스템 | v1.3 | 2/2 | Complete | 2026-02-11 |
 | 61. TypeScript SDK | v1.3 | 2/2 | Complete | 2026-02-11 |
 | 62. Python SDK | v1.3 | 1/1 | Complete | 2026-02-11 |
-| 63. MCP Server | v1.3 | 0/2 | Not started | - |
+| 63. MCP Server | v1.3 | 2/2 | Complete | 2026-02-11 |
 
 **Cumulative:**
 
@@ -289,10 +289,10 @@ Plans:
 | v1.0 구현 계획 수립 | 45-47 | 5 | Complete | 2026-02-09 |
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
-| v1.3 SDK + MCP + 알림 | 58-63 | 9/11 | In progress | - |
+| v1.3 SDK + MCP + 알림 | 58-63 | 11/11 | Complete | 2026-02-11 |
 
-**Total:** 14 milestones shipped, 62 phases completed, 149 plans completed + v1.3 in progress (6 phases, 11 plans)
+**Total:** 15 milestones shipped, 63 phases completed, 151 plans completed
 
 ---
 
-*Last updated: 2026-02-11 after Phase 61+62 merged*
+*Last updated: 2026-02-11 after Phase 63 complete — v1.3 milestone shipped*
