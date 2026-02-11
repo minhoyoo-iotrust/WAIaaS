@@ -2,44 +2,32 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3에서 SDK/MCP/알림 계층이 완성되어 AI 에이전트가 프로그래밍 방식으로 지갑을 사용하고 Owner가 실시간 알림을 받을 수 있다.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.3 SDK + MCP + 알림
-
-**Goal:** AI 에이전트가 TS/Python SDK 또는 MCP로 지갑을 사용하고, Owner가 Telegram/Discord/ntfy로 알림을 받는 상태. OpenAPIHono 전환으로 전 엔드포인트 타입 안전 라우팅 + OpenAPI 3.0 자동 생성 완성.
-
-**Target features:**
-- TypeScript SDK (`@waiaas/sdk`) — WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성, fetch 기반
-- Python SDK (`waiaas`) — httpx + Pydantic v2, 동일 인터페이스
-- MCP Server (`@waiaas/mcp`) — 6 도구 + 3 리소스, SessionManager 내장, stdio transport
-- 알림 시스템 — Telegram/Discord/ntfy 3채널, NotificationService, 21개 이벤트
-- OpenAPIHono 전면 전환 — 기존 18 + 신규 15 = 33 엔드포인트, GET /doc OpenAPI 자동 생성
-- REST API 15개 추가 (누적 33개)
-- IChainAdapter getAssets() 선행 구현
-
 ## Current State
 
-v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 LOC, 457 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송(INSTANT/DELAY/APPROVAL 분류) → Owner 승인/거절 → 확인까지 동작하는 인증+정책 적용 데몬 완성.
+v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python SDK, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림까지 동작.
 
-**구현 로드맵 (v1.3~v2.0):**
+**구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
 - ✅ v1.2 인증 + 정책 엔진 — shipped 2026-02-10
-- **→ v1.3 SDK + MCP + 알림 (TS/Python SDK, MCP Server, 알림 3채널, SessionManager)**
-- v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
+- ✅ v1.3 SDK + MCP + 알림 — shipped 2026-02-11
+- **→ v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)**
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 7패키지, Docker, Desktop 5플랫폼, GitHub Release)
 
 **코드베이스 현황:**
-- 4-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli
-- 238 TypeScript 파일, 25,526 LOC (ESM-only, Node.js 22)
-- 457 테스트 (core + adapter + daemon + CLI)
+- 7-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli, @waiaas/sdk, @waiaas/mcp + waiaas (Python)
+- 32,337 TypeScript LOC + 1,592 Python LOC = 33,929 LOC (ESM-only, Node.js 22)
+- 784 테스트 (core + adapter + daemon + CLI + SDK + MCP)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
+- OpenAPIHono 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 
 ## 요구사항
 
@@ -140,17 +128,25 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 
 - ✓ 파이프라인 Stage 2(Auth) + Stage 3(Policy) + Stage 4(Wait) 실제 구현 — v1.2 (PIPE-01~04)
 - ✓ 인증/정책/세션/워크플로우/Owner 통합 테스트 457건 — v1.2 (TEST-01~05)
 
+- ✓ OpenAPIHono 전면 전환 — 33 엔드포인트 createRoute() + GET /doc OpenAPI 3.0 자동 생성 + 68개 에러 코드 매핑 — v1.3 (OAPI-01~04)
+- ✓ IChainAdapter getAssets() + SolanaAdapter 구현 — v1.3 (CHAIN-01~02)
+- ✓ REST API 15개 추가 (누적 33개) — assets, transactions, agents CRUD, admin 6종, error hint 32개 — v1.3 (API-01~15)
+- ✓ 3채널 알림 시스템 — Telegram/Discord/ntfy, NotificationService 우선순위 폴백, 21 이벤트 en/ko 템플릿 — v1.3 (NOTIF-01~08)
+- ✓ TypeScript SDK (@waiaas/sdk) — WAIaaSClient 9 메서드 + WAIaaSOwnerClient 4 메서드, 0 외부 의존성 — v1.3 (TSDK-01~08)
+- ✓ Python SDK (waiaas) — async httpx + Pydantic v2, 동일 인터페이스 — v1.3 (PYDK-01~06)
+- ✓ MCP Server (@waiaas/mcp) — 6 도구 + 3 리소스, SessionManager 자동 갱신, CLI mcp setup — v1.3 (MCP-01~06)
+
 ### 활성
 
-(v1.3 — REQUIREMENTS.md에서 상세 정의)
+(v1.4 — 다음 마일스톤에서 정의 예정)
 
-- [ ] TypeScript SDK (@waiaas/sdk) — WAIaaSClient + WAIaaSOwnerClient, 0 외부 의존성
-- [ ] Python SDK (waiaas) — httpx + Pydantic v2, 동일 인터페이스
-- [ ] MCP Server (@waiaas/mcp) — 6 도구 + 3 리소스, SessionManager 자동 갱신
-- [ ] 알림 시스템 — Telegram/Discord/ntfy 3채널, NotificationService, 21 이벤트
-- [ ] OpenAPIHono 전면 전환 — 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
-- [ ] REST API 15개 추가 (누적 33개)
-- [ ] IChainAdapter getAssets() + GET /v1/wallet/assets
+- [ ] SPL/ERC-20 토큰 전송 (TransferRequest.token 확장)
+- [ ] ContractCallRequest + CONTRACT_WHITELIST 기본 거부 정책
+- [ ] ApproveRequest 독립 정책 카테고리
+- [ ] BatchRequest Solana 원자적 배치
+- [ ] IChainAdapter 나머지 메서드 (buildContractCall, buildApprove, buildBatch, sweepAll 등)
+- [ ] EVM 어댑터 구현
+- [ ] DB 마이그레이션 체계 (ALTER TABLE 증분)
 
 ### 범위 외
 
@@ -167,23 +163,26 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 238 TypeScript 파일, 25,526 
 
 ## 컨텍스트
 
-**누적:** 14 milestones (v0.1-v1.2), 57 phases, 140 plans, 367 requirements, 30 설계 문서, 8 objective 문서, 25,526 LOC TypeScript, 457 테스트
+**누적:** 15 milestones (v0.1-v1.3), 63 phases, 151 plans, 416 requirements, 30 설계 문서, 8 objective 문서, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
-v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플랜, 46 요구사항, 97 TS 파일, 10,925 LOC, 281 테스트.
-v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요구사항, 238 TS 파일, 25,526 LOC, 457 테스트.
+v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플랜, 46 요구사항, 10,925 LOC, 281 테스트.
+v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요구사항, 25,526 LOC, 457 테스트.
+v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구사항, 33,929 LOC, 784 테스트.
 
-**기술 스택 (v0.2 확정, v1.2 구현 검증):**
+**기술 스택 (v0.2 확정, v1.3 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
-- Server: Hono 4.x
+- Server: OpenAPIHono 4.x (@hono/zod-openapi)
 - DB: SQLite (better-sqlite3) + Drizzle ORM
 - Crypto: sodium-native (guarded memory), argon2 (KDF)
 - Auth: jose (JWT HS256), sodium-native (Ed25519 ownerAuth)
 - Chain: @solana/kit 6.0.1 (Solana), viem 2.x (EVM stub, 미구현)
+- SDK: @waiaas/sdk (TS, 0 의존성), waiaas (Python, httpx + Pydantic v2)
+- MCP: @waiaas/mcp (@modelcontextprotocol/sdk, stdio transport)
 - Build: pnpm workspace + Turborepo, tsc only
 - Test: Vitest (forks pool for sodium mprotect)
-- Schema: Zod SSoT → TypeScript → Drizzle CHECK
+- Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - 미구현: @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
 
 **설계 문서:** 30개 (deliverables 24-64.md) + 대응표/테스트 전략/objective
@@ -193,6 +192,8 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요
 - Node.js SEA + native addon (sodium-native, better-sqlite3) 크로스 컴파일 호환성 미검증 (v0.7 prebuildify 전략 설계 완료)
 - @solana/kit 실제 버전 6.0.1 (설계서는 3.x 언급, API 동일)
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) — not blocking
+- Pre-existing e2e-errors.test.ts failure (expects 404, gets 401) — OpenAPIHono 전환 side effect
+- Kill switch state in-memory 관리 (v1.3에서는 DB 미저장)
 
 ## 제약사항
 
@@ -230,6 +231,14 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요
 | resolve-then-execute 패턴 | Action Provider가 요청 생성 → 파이프라인 실행 | ✓ Good — v0.6 설계 |
 | config.toml 중첩 금지 | WAIAAS_{SECTION}_{KEY} 1:1 매핑 | ✓ Good — v0.7 해소 |
 | SQLite 타임스탬프 초 단위 | UUID v7 ms가 동일 초 내 순서 보장 | ✓ Good — v0.7 해소 |
+| OpenAPIHono 전면 전환 | Zod SSoT → OpenAPI 자동 생성, 타입 안전 라우팅 | ✓ Good — v1.3 구현 |
+| @hono/zod-openapi v0.19.10 | v1.x는 zod@^4.0.0 필요, 프로젝트는 zod@3.x | ✓ Good — v1.3 구현 |
+| TS SDK 0 외부 의존성 | Node.js 22 내장 fetch, 번들 크기 최소화 | ✓ Good — v1.3 구현 |
+| Python SDK httpx + Pydantic v2 | 비동기 HTTP + 타입 안전 모델 | ✓ Good — v1.3 구현 |
+| MCP SessionManager eager init | 서버 시작 시 즉시 토큰 로드 + 갱신 타이머 | ✓ Good — v1.3 구현 |
+| 알림 채널 native fetch | 외부 Bot 프레임워크 미사용, 의존성 최소화 | ✓ Good — v1.3 구현 |
+| Error hint resolveHint() | AI 에이전트 자율 복구용 32개 hint 매핑 | ✓ Good — v1.3 구현 |
+| 커서 페이지네이션 UUID v7 | createdAt 대신 ID 컬럼 사용, 순서 보장 | ✓ Good — v1.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-10 after v1.3 milestone started*
+*최종 업데이트: 2026-02-11 after v1.3 milestone shipped*

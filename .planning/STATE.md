@@ -2,23 +2,23 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-10)
+See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3 Phase 63 MCP Server -- COMPLETE
+**Current focus:** v1.3 shipped — planning next milestone
 
 ## Current Position
 
-Phase: 63 of 63 (MCP Server)
-Plan: 2 of 2 in current phase
-Status: Phase complete (v1.3 milestone complete)
-Last activity: 2026-02-11 -- Completed 63-02-PLAN.md
+Phase: 63 of 63 (v1.3 complete)
+Plan: All complete
+Status: Milestone v1.3 shipped and archived
+Last activity: 2026-02-11 — v1.3 milestone archived
 
-Progress: [███████████] 100% (11/11 plans)
+Progress: [███████████] 100% (151/151 plans cumulative)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 63 phases, 151 plans, 367 reqs, 811 tests, 32,000+ LOC
+**Cumulative:** 15 milestones, 63 phases, 151 plans, 416 reqs, 784 tests, 33,929 LOC
 
 **v1.3 Velocity:**
 - Plans completed: 11
@@ -34,57 +34,16 @@ Progress: [███████████] 100% (11/11 plans)
 
 ### Decisions
 
-Full log in PROJECT.md. Key decisions for v1.3:
-
-- OpenAPIHono 전면 전환 (@hono/zod-openapi): 기존 18 라우트 리팩터링 + 신규 15 작성
-- getAssets() v1.3 선행 구현: doc 57에서 getAssets만 당김, estimateFee는 v1.4 유지
-- TS SDK 0 외부 의존성 (Node.js 22 내장 fetch), Python SDK httpx + Pydantic v2
-- MCP SessionManager eager init (서버 시작 시 즉시 토큰 로드 + 타이머 등록)
-- 알림 채널 native fetch 전용 (외부 Bot 프레임워크 미사용)
-- config.toml 알림 키 8개 추가 (17->25키): locale, rate_limit_rpm 포함
-- Hard-coded SPL_TOKEN_PROGRAM_ID (avoids @solana-program/token dependency)
-- AssetInfo.symbol/name empty for SPL tokens (Metaplex metadata = v1.4+)
-- AssetInfoSchema.balance is string for JSON bigint serialization
-- @hono/zod-openapi v0.19.10 선택 (v1.x는 zod@^4.0.0 필요, 프로젝트는 zod@3.x)
-- openApiValidationHook defaultHook으로 WAIaaSError 포맷 보존
-- Pending tx filter = PENDING + QUEUED (DELAYED/PENDING_APPROVAL 미존재)
-- Cursor pagination uses UUID v7 ID column (not createdAt)
-- Hono wildcard * does not match base path -- explicit sessionAuth on /v1/transactions required
-- Error hint 32개 (31이 아닌 32): RATE_LIMIT_EXCEEDED 포함. AI agent self-recovery용 resolveHint()
-- Admin 경로 (/v1/admin/*) kill switch guard bypass: 비상 관리 필수
-- Kill switch state in-memory 관리 (v1.3에서는 DB 미저장)
-- Drizzle timestamp 컬럼 비교 시 integer 직접 비교 (Date 객체 사용 시 SQLite 오류)
-- Notification templates: {variable} 문자열 플레이스홀더 (JS 템플릿 리터럴 아님) for cross-language i18n safety
-- Discord mock: Node.js Response constructor rejects 204+body, use status 200 in tests
-- Fallback mode logCriticalFailure: errors field is 'All channels failed' (not individual errors)
-- Config locale/rate_limit_rpm in DaemonConfigSchema.notifications (not core ConfigSchema)
-- SDK WAIaaSError standalone class (not imported from @waiaas/core) for zero dependency
-- HttpClient differentiates AbortError (REQUEST_TIMEOUT) from TypeError (NETWORK_ERROR)
-- renewSession() extracts sessionId from JWT base64url payload, caches for reuse
-- Inline validation (no Zod) for SDK sendToken -- zero runtime dependency 유지
-- withRetry: status 0 + retryable=false는 즉시 throw (NO_TOKEN, VALIDATION_ERROR 등)
-- ownerAuth SDK: X-Owner-Message header (daemon middleware 실제 API 일치)
-- Python SDK httpx AsyncClient: optional http_client param for MockTransport test injection
-- Pydantic v2 populate_by_name=True: camelCase JSON + snake_case Python dual access on all models
-- RetryPolicy defaults: 3 retries, 1s base delay, {429,500,502,503,504} retryable codes
-- renew_session() auto-updates client session token + Authorization header
-- MCP: Import CallToolResult/ReadResourceResult from SDK types.js (avoids $loose index signature issue)
-- MCP: ApiResult discriminated union with 4 variants (ok/error/expired/networkError)
-- MCP: H-04 toToolResult never sets isError on session_expired/networkError
-- MCP: File > env token priority in SessionManager (SM-04)
-- MCP: safeSetTimeout exported for testing, recovery loop only with dataDir
-- MCP: 409 RENEWAL_CONFLICT re-reads file token and validates before rescheduling
-- MCP: TOO_EARLY schedules single 30s retry (not exponential backoff)
-- CLI: mcp setup uses resolvePassword for master auth, auto-detects single agent
+Full log in PROJECT.md. v1.3 decisions archived in MILESTONES.md.
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) -- not blocking
-- Pre-existing @waiaas/cli e2e-errors.test.ts failure (expects 404, gets 401) -- likely from 58-01 OpenAPIHono work
-- Pre-existing @waiaas/daemon notification-service.test.ts typecheck errors (unused import, possibly undefined) -- not blocking
+- Pre-existing e2e-errors.test.ts failure (expects 404, gets 401) -- OpenAPIHono side effect
+- Kill switch state in-memory only (v1.3 DB 미저장)
 
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 63-02-PLAN.md (v1.3 milestone complete)
+Stopped at: v1.3 milestone archived
 Resume file: None
