@@ -9,16 +9,16 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 74 of 75 (파이프라인 이벤트 트리거) — COMPLETE
-Plan: 3 of ~5 in milestone
-Status: Phase 74 verified (2 plans, 14 new tests, 877 total), ready to plan Phase 75
-Last activity: 2026-02-11 — Phase 74 executed + verified
+Phase: 75 of 75 (어드민 알림 API + UI) — In progress
+Plan: 1 of 2 in phase (75-01 complete)
+Status: 75-01 executed (3 endpoints, 10 tests, 506 total daemon tests), ready for 75-02
+Last activity: 2026-02-11 — Completed 75-01-PLAN.md
 
-Progress: [██████░░░░] 3/5 plans in v1.3.4
+Progress: [████████░░] 4/5 plans in v1.3.4
 
 ## Performance Metrics
 
-**Cumulative:** 18 milestones, 74 phases, 168 plans, 470 reqs, 877 tests, 44,800+ LOC
+**Cumulative:** 18 milestones, 75 phases, 169 plans, 470 reqs, 887 tests, 44,800+ LOC
 
 ## Accumulated Context
 
@@ -38,6 +38,10 @@ Recent for v1.3.4:
 - 74-02: Route handler notify uses void deps.notificationService?.notify() pattern (same as pipeline)
 - 74-02: session-cleanup worker uses raw SQL prepare().all() for pre-deletion expired session query
 - 74-02: SESSION_EXPIRED tested via unit pattern (DB + mock) rather than full daemon integration
+- 75-01: getChannels() method on NotificationService for admin test send (avoids modifying notify())
+- 75-01: Channel status = config credential + registered channel (both required for enabled=true)
+- 75-01: Admin test send bypasses rate limiter via direct channel.send()
+- 75-01: Notification log pagination via Drizzle count() + offset/limit
 
 ### Blockers/Concerns
 
@@ -47,5 +51,5 @@ Recent for v1.3.4:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 74 executed and verified
+Stopped at: Completed 75-01-PLAN.md
 Resume file: None
