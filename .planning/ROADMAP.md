@@ -235,8 +235,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 77-01: @waiaas/adapter-evm 패키지 스캐폴딩 + viem 연결/헬스 기본 메서드
-- [ ] 77-02: EVM 네이티브 전송 + gas 추정 + nonce 관리 + ERC-20/approve 구현
+- [ ] 77-01-PLAN.md — @waiaas/adapter-evm 패키지 스캐폴딩 + viem 연결/헬스 기본 메서드 + ERC20 ABI
+- [ ] 77-02-PLAN.md — EVM 네이티브 전송 파이프라인 + gas 추정 1.2x + nonce 관리 + ERC-20 approve + getTokenInfo
 
 #### Phase 78: 토큰 전송 + 자산 조회
 **Goal**: 에이전트가 SPL/ERC-20 토큰을 전송하고, ALLOWED_TOKENS 정책으로 허용 토큰을 제한하며, getAssets()가 토큰 잔액을 포함하고, estimateFee()가 토큰 전송 수수료를 추정한다
