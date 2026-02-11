@@ -3,6 +3,9 @@
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
+ *
+ * AgentContext (MCPS-01..03): optional agentName for server naming
+ * and description prefixing to identify agent in Claude Desktop.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -21,24 +24,39 @@ import { registerWalletBalance } from './resources/wallet-balance.js';
 import { registerWalletAddress } from './resources/wallet-address.js';
 import { registerSystemStatus } from './resources/system-status.js';
 
-export function createMcpServer(apiClient: ApiClient): McpServer {
+export interface AgentContext {
+  agentName?: string; // e.g., 'trading-bot'
+}
+
+/**
+ * Prefix description with agent name for multi-agent identification (MCPS-03).
+ */
+export function withAgentPrefix(description: string, agentName?: string): string {
+  return agentName ? `[${agentName}] ${description}` : description;
+}
+
+export function createMcpServer(apiClient: ApiClient, agentContext?: AgentContext): McpServer {
+  const serverName = agentContext?.agentName
+    ? `waiaas-${agentContext.agentName}`
+    : 'waiaas-wallet';
+
   const server = new McpServer({
-    name: 'waiaas-wallet',
+    name: serverName,
     version: '0.0.0',
   });
 
   // Register 6 tools
-  registerSendToken(server, apiClient);
-  registerGetBalance(server, apiClient);
-  registerGetAddress(server, apiClient);
-  registerListTransactions(server, apiClient);
-  registerGetTransaction(server, apiClient);
-  registerGetNonce(server, apiClient);
+  registerSendToken(server, apiClient, agentContext);
+  registerGetBalance(server, apiClient, agentContext);
+  registerGetAddress(server, apiClient, agentContext);
+  registerListTransactions(server, apiClient, agentContext);
+  registerGetTransaction(server, apiClient, agentContext);
+  registerGetNonce(server, apiClient, agentContext);
 
   // Register 3 resources
-  registerWalletBalance(server, apiClient);
-  registerWalletAddress(server, apiClient);
-  registerSystemStatus(server, apiClient);
+  registerWalletBalance(server, apiClient, agentContext);
+  registerWalletAddress(server, apiClient, agentContext);
+  registerSystemStatus(server, apiClient, agentContext);
 
   return server;
 }
