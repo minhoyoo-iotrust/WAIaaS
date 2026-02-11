@@ -180,7 +180,7 @@
 
 **Milestone Goal:** v1.3.1에서 설계한 Admin Web UI를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태.
 
-- [ ] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장
+- [x] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장 — completed 2026-02-11
 - [ ] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트
 - [ ] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기
 - [ ] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료
@@ -201,8 +201,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 66-01-PLAN.md — Preact 패키지 스캐폴드 + Vite 빌드 파이프라인 (INFRA-01, INFRA-06)
-- [ ] 66-02-PLAN.md — daemon 정적 서빙 + CSP + Kill Switch bypass + config 확장 + 버전 수정 (INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-07)
+- [x] 66-01-PLAN.md — Preact 패키지 스캐폴드 + Vite 빌드 파이프라인 (INFRA-01, INFRA-06)
+- [x] 66-02-PLAN.md — daemon 정적 서빙 + CSP + Kill Switch bypass + config 확장 + 버전 수정 (INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-07)
 
 ### Phase 67: 인증 + API Client + 공통 컴포넌트
 **Goal**: 사용자가 마스터 비밀번호로 로그인하여 인증된 상태로 SPA를 사용하고, 비활성 시 자동 로그아웃되며, 모든 페이지에서 공통 레이아웃/테이블/폼/모달/토스트 컴포넌트를 사용할 수 있는 상태
@@ -286,11 +286,11 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
-| v1.3.2 Admin Web UI 구현 | 66-70 | 2/10 | In progress | - |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 4/10 | In progress | - |
 
 **Total:** 15 milestones shipped, 65 phases completed, 153 plans completed
 **Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after Phase 66 plans created (2 plans, 2 waves)*
+*Last updated: 2026-02-11 after Phase 66 executed (2/2 plans complete, verified)*
