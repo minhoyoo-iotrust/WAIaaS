@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 77 EVM 어댑터 진행 중 (Plan 01 완료)
+**Current focus:** v1.4 Phase 77 EVM 어댑터 완료, Phase 78 진행 대기
 
 ## Current Position
 
 Phase: 77 of 81 (EVM 어댑터)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-12 — Completed 77-01-PLAN.md (EVM adapter scaffolding + viem 2.x + 13 tests)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-12 — Completed 77-02-PLAN.md (EvmAdapter 17/20 methods + 34 tests)
 
-Progress: [████░░░░░░] 33% (4/12 plans)
+Progress: [█████░░░░░] 42% (5/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 174 plans, 488 reqs, 972 tests, 43,775 LOC
+**Cumulative:** 19 milestones, 75 phases, 175 plans, 488 reqs, 993 tests, 44,205 LOC
 
 ## Accumulated Context
 
@@ -42,6 +42,12 @@ Recent decisions affecting current work:
 - ERC20_ABI uses `as const` for viem type inference -- abi parameter requires literal types
 - EvmAdapter에서 _rpcUrl 필드 제거 (noUnusedLocals strict) -- 필요시 재추가
 - buildBatch throws BATCH_NOT_SUPPORTED (EVM no native atomic batch)
+- Gas safety margin: (estimatedGas * 120n) / 100n bigint 산술 -- buildTransaction/estimateFee/buildApprove 일관 적용
+- ChainError 매핑: viem 에러 메시지 패턴 매칭 (mapError 헬퍼) -- typed error 미제공 대응
+- EVM chainId defaults to 1 (mainnet) when client.chain undefined
+- getAssets는 네이티브 ETH만 반환 (ERC-20 토큰은 Phase 78에서 ALLOWED_TOKENS 기반 multicall로 확장)
+- getTokenInfo multicall 부분 실패 시 defaults (18 decimals, empty strings)
+- buildApprove metadata에 tokenAddress/spender/approveAmount 포함 (audit 추적)
 
 ### Blockers/Concerns
 
@@ -51,5 +57,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 77-01-PLAN.md (EVM adapter scaffolding)
+Stopped at: Completed 77-02-PLAN.md (Phase 77 complete)
 Resume file: None
