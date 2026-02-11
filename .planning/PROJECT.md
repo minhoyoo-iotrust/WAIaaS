@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3.2에서 브라우저 기반 Admin Web UI(Preact SPA)가 추가되었고, v1.3.3에서 MCP 다중 에이전트를 지원하여 하나의 데몬에 등록된 여러 에이전트를 Claude Desktop에서 동시에 사용할 수 있다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3.2에서 브라우저 기반 Admin Web UI(Preact SPA)가 추가되었고, v1.3.3에서 MCP 다중 에이전트를 지원하며, v1.3.4에서 알림 이벤트 트리거 연결 + 어드민 알림 패널이 추가되어 데몬에서 발생하는 주요 이벤트(거래, 세션, Owner)가 실제 알림으로 전달되고 어드민이 브라우저에서 상태 확인/테스트/로그 조회가 가능하다.
 
 ## 핵심 가치
 
@@ -10,9 +10,9 @@
 
 ## Current State
 
-v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토큰 경로 분리(`mcp-tokens/<agentId>`), MCP 서버 에이전트 식별(`waiaas-{agentName}`), CLI `mcp setup --all` 일괄 설정이 동작하여 하나의 데몬에 등록된 여러 에이전트를 Claude Desktop에서 동시에 사용 가능.
+v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026-02-12). 파이프라인 8개 이벤트(TX_REQUESTED~OWNER_SET) fire-and-forget 트리거 연결, notification_logs DB 테이블(증분 마이그레이션), 어드민 알림 API 3개(status/test/log), 어드민 알림 패널 UI(채널 상태 카드, 테스트 발송, 로그 조회, config 안내)가 동작.
 
-코드베이스(v1.3.3 기준): 8-패키지 모노레포 + Python SDK, 44,639 LOC, 847 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림 + Admin Web UI(`/admin`) 관리 + 다중 에이전트 MCP 설정까지 동작.
+코드베이스(v1.3.4 기준): 8-패키지 모노레포 + Python SDK, 42,123 LOC, 895 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 에이전트 MCP 설정까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -21,7 +21,7 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토�
 - ✅ v1.3.1 Admin Web UI 설계 — shipped 2026-02-11
 - ✅ v1.3.2 Admin Web UI 구현 — shipped 2026-02-11
 - ✅ v1.3.3 MCP 다중 에이전트 지원 — shipped 2026-02-11
-- ◆ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 (진행 중)
+- ✅ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 — shipped 2026-02-12
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -30,10 +30,10 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토�
 
 **코드베이스 현황:**
 - 8-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 44,639 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 847 테스트 (core + adapter + daemon + CLI + SDK + MCP + admin)
+- 42,123 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 895 테스트 (core + adapter + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
+- OpenAPIHono 36 엔드포인트 (33 + admin 알림 3), GET /doc OpenAPI 3.0 자동 생성
 - 설계 문서 31개 (24-67), 8 objective 문서
 
 ## 요구사항
@@ -159,17 +159,18 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토�
 - ✓ MCP 서버 에이전트 식별 — waiaas-{agentName} 동적 이름 + 도구/리소스 description prefix + 하위 호환 — v1.3.3 (MCPS-01~03)
 - ✓ CLI mcp setup 다중 에이전트 — --agent 개별 + --all 일괄 설정 + waiaas-{slug} config 키 + slug 충돌 해소 + 자동 감지 새 경로 — v1.3.3 (CLIP-01~07)
 
+- ✓ 파이프라인 8개 이벤트 알림 트리거 연결 — TX_REQUESTED/TX_SUBMITTED/TX_CONFIRMED/TX_FAILED/POLICY_VIOLATION/SESSION_CREATED/SESSION_EXPIRED/OWNER_SET fire-and-forget — v1.3.4 (TRIG-01~08)
+- ✓ notification_logs 테이블 증분 마이그레이션 + 발송 성공/실패 로깅 — schema_version 기반, MIG-01 준수 — v1.3.4 (LOG-01~03)
+- ✓ 어드민 알림 API 3개 엔드포인트 — GET status(credential 마스킹)/POST test/GET log(페이지네이션) — v1.3.4 (API-01~03)
+- ✓ 어드민 알림 패널 UI — 채널 상태 카드, 테스트 발송, 발송 로그, config.toml 안내 — v1.3.4 (UI-01~04)
+
 ### 활성
 
-## Current Milestone: v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널
+## Next Milestone Goals
 
-**Goal:** v1.3 알림 인프라를 파이프라인/라우트에 실제 연결하고, 어드민 UI에 알림 상태/테스트/로그 패널을 추가한다.
-
-**Target features:**
-- 파이프라인 8개 이벤트 트리거 연결 (TX_REQUESTED~OWNER_SET)
-- notification_logs 테이블 + DB 마이그레이션
-- 어드민 알림 API 3개 (status/test/log)
-- 어드민 알림 패널 UI (채널 상태, 테스트 발송, 로그 조회)
+- v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
+- v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
+- v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
 
 ### 범위 외
 
@@ -186,7 +187,7 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토�
 
 ## 컨텍스트
 
-**누적:** 18 milestones (v0.1-v1.3.3), 72 phases, 165 plans, 470 requirements, 31 설계 문서(24-67), 8 objective 문서, 44,639 LOC, 847 테스트
+**누적:** 19 milestones (v0.1-v1.3.4), 75 phases, 170 plans, 488 requirements, 31 설계 문서(24-67), 8 objective 문서, 42,123 LOC, 895 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -196,6 +197,7 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구�
 v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요구사항, 설계 문서 67(10섹션).
 v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요구사항, 45,332 LOC, 816 테스트.
 v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플랜, 14 요구사항, 44,639 LOC, 847 테스트.
+v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이즈, 5 플랜, 18 요구사항, 42,123 LOC, 895 테스트.
 
 **기술 스택 (v0.2 확정, v1.3 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -282,6 +284,12 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플�
 | AgentContext DI 패턴 (글로벌 상태 아님) | 테스트 용이, 모듈 간 의존 최소화 | ✓ Good — v1.3.3 구현 |
 | CLI 토큰 경로 항상 mcp-tokens/<agentId> | 단일 에이전트도 새 경로 사용, 일관성 확보 | ✓ Good — v1.3.3 구현 |
 | toSlug + resolveSlugCollisions 유틸리티 | 에이전트 이름→config-safe 키 변환, 충돌 시 agentId 접미사 | ✓ Good — v1.3.3 구현 |
+| schema_version 테이블로 DB 마이그레이션 추적 | INTEGER PK 버전 순서, MIG-01~06 준수 | ✓ Good — v1.3.4 구현 |
+| fire-and-forget notify() 패턴 (void + optional chaining) | 알림이 파이프라인 실행을 차단하지 않음, 역방향 호환 | ✓ Good — v1.3.4 구현 |
+| 어드민 UI 알림 설정 읽기 전용 | config.toml SSoT 유지, 설정 변경은 파일 직접 수정 | ✓ Good — v1.3.4 구현 |
+| credential 마스킹 (boolean enabled만 반환) | bot token/webhook URL 미노출, 보안 원칙 준수 | ✓ Good — v1.3.4 구현 |
+| getChannels() + channel.send() 직접 호출 (테스트 발송) | rate limiter 우회, notify() 수정 불필요 | ✓ Good — v1.3.4 구현 |
+| Drizzle count() + offset/limit 페이지네이션 | 알림 로그 역순 조회, 간단하고 효과적 | ✓ Good — v1.3.4 구현 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.4 milestone started*
+*최종 업데이트: 2026-02-12 after v1.3.4 milestone shipped*
