@@ -9,6 +9,14 @@
  *
  * Renewal scheduling (SM-09): 60% TTL default, PUT /v1/sessions/:id/renew.
  *
+ * Hardened features (63-02):
+ *   - Exponential backoff retry (1s/2s/4s, max 3) (MCP-04, SM-11)
+ *   - isRenewing concurrency guard (MCP-05)
+ *   - 409 RENEWAL_CONFLICT file re-read (MCP-05, CONC-02)
+ *   - 5-type error handling: TOO_EARLY/LIMIT/LIFETIME/NETWORK/EXPIRED
+ *   - Recovery loop (60s polling) (SMGI-D03)
+ *   - safeSetTimeout overflow guard (SM-08)
+ *
  * CRITICAL: All logging via console.error (SMGI-D04).
  * Never use console.log -- stdout is stdio JSON-RPC transport.
  */
@@ -30,7 +38,7 @@ export interface SessionManagerOptions {
 // Safe setTimeout wrapper for delays > 2^31-1 ms (SM-08)
 const MAX_TIMEOUT = 2_147_483_647; // 2^31 - 1
 
-function safeSetTimeout(cb: () => void, delayMs: number): NodeJS.Timeout {
+export function safeSetTimeout(cb: () => void, delayMs: number): NodeJS.Timeout {
   if (delayMs <= MAX_TIMEOUT) {
     return setTimeout(cb, delayMs);
   }
@@ -40,6 +48,19 @@ function safeSetTimeout(cb: () => void, delayMs: number): NodeJS.Timeout {
     safeSetTimeout(cb, remaining);
   }, MAX_TIMEOUT);
 }
+
+// Retryable HTTP status codes
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+// Retry delays in ms: 1s, 2s, 4s (exponential backoff)
+const RETRY_DELAYS = [1_000, 2_000, 4_000] as const;
+const MAX_RETRIES = 3;
+
+// Recovery loop interval (60s)
+const RECOVERY_POLL_MS = 60_000;
+
+// TOO_EARLY retry delay (30s)
+const TOO_EARLY_RETRY_MS = 30_000;
 
 export class SessionManager {
   private readonly baseUrl: string;
@@ -55,6 +76,8 @@ export class SessionManager {
   private timer: NodeJS.Timeout | null = null;
   private isRenewing = false;
   private state: SessionState = 'error';
+  private recoveryTimer: NodeJS.Timeout | null = null;
+  private isRecoveryRunning = false;
 
   constructor(options: SessionManagerOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
@@ -84,6 +107,7 @@ export class SessionManager {
       console.error(`${LOG_PREFIX} Started with active session, renewal scheduled`);
     } else {
       console.error(`${LOG_PREFIX} Started in ${this.state} state (degraded mode)`);
+      this.startRecoveryLoop();
     }
   }
 
@@ -92,6 +116,7 @@ export class SessionManager {
       clearTimeout(this.timer);
       this.timer = null;
     }
+    this.stopRecoveryLoop();
     this.state = 'expired';
     console.error(`${LOG_PREFIX} Disposed`);
   }
@@ -121,7 +146,15 @@ export class SessionManager {
       return;
     }
 
-    // Step 4: Decode JWT payload (base64url, no signature verification)
+    this.applyToken(rawToken);
+  }
+
+  /**
+   * Parse JWT and update internal state.
+   * Returns true if the token is valid, false otherwise.
+   */
+  private applyToken(rawToken: string): boolean {
+    // Decode JWT payload (base64url, no signature verification)
     let payload: Record<string, unknown>;
     try {
       const parts = rawToken.split('.');
@@ -133,15 +166,15 @@ export class SessionManager {
     } catch {
       this.state = 'error';
       console.error(`${LOG_PREFIX} Failed to decode JWT payload`);
-      return;
+      return false;
     }
 
-    // Step 5: Validate exp range (C-03)
+    // Validate exp range (C-03)
     const exp = payload['exp'];
     if (typeof exp !== 'number') {
       this.state = 'error';
       console.error(`${LOG_PREFIX} JWT missing exp claim`);
-      return;
+      return false;
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -150,28 +183,30 @@ export class SessionManager {
     if (exp < now - tenYears || exp > now + oneYear) {
       this.state = 'error';
       console.error(`${LOG_PREFIX} JWT exp out of valid range`);
-      return;
+      return false;
     }
 
-    // Step 6: Extract sessionId
+    // Extract sessionId
     const sessionId = payload['sessionId'];
     if (typeof sessionId !== 'string' || !sessionId) {
       this.state = 'error';
       console.error(`${LOG_PREFIX} JWT missing sessionId claim`);
-      return;
+      return false;
     }
 
     this.token = rawToken;
     this.sessionId = sessionId;
     this.expiresAt = exp;
 
-    // Step 7-8: Check expiration
+    // Check expiration
     if (exp < now) {
       this.state = 'expired';
       console.error(`${LOG_PREFIX} Token already expired`);
+      return false;
     } else {
       this.state = 'active';
       console.error(`${LOG_PREFIX} Token loaded, expires in ${exp - now}s`);
+      return true;
     }
   }
 
@@ -203,52 +238,34 @@ export class SessionManager {
   }
 
   private async renew(): Promise<void> {
-    if (this.isRenewing) return;
+    // MCP-05: isRenewing concurrency guard
+    if (this.isRenewing) {
+      console.error(`${LOG_PREFIX} Renewal already in progress, skipping`);
+      return;
+    }
     if (!this.sessionId || !this.token) return;
 
     this.isRenewing = true;
     console.error(`${LOG_PREFIX} Renewing session...`);
 
     try {
-      const url = `${this.baseUrl}/v1/sessions/${this.sessionId}/renew`;
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.token}`,
-          'User-Agent': '@waiaas/mcp/0.0.0',
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null) as Record<string, unknown> | null;
-        throw new Error(
-          `Renewal failed: ${res.status} ${body?.['message'] ?? res.statusText}`,
-        );
-      }
-
-      const data = await res.json() as {
-        token: string;
-        id: string;
-        expiresAt: number;
-        renewalCount: number;
-        maxRenewals?: number;
-      };
+      const result = await this.retryRenewal();
+      if (!result) return; // Error already handled in retryRenewal/handleRenewalError
 
       // Write file first, then update memory (H-02 defense)
       if (this.dataDir) {
-        await this.writeMcpToken(data.token);
+        await this.writeMcpToken(result.token);
       }
 
-      this.token = data.token;
-      this.sessionId = data.id;
-      this.expiresAt = data.expiresAt;
-      this.renewalCount = data.renewalCount;
-      if (typeof data.maxRenewals === 'number') {
-        this.maxRenewals = data.maxRenewals;
+      this.token = result.token;
+      this.sessionId = result.id;
+      this.expiresAt = result.expiresAt;
+      this.renewalCount = result.renewalCount;
+      if (typeof result.maxRenewals === 'number') {
+        this.maxRenewals = result.maxRenewals;
       }
       this.state = 'active';
+      this.stopRecoveryLoop();
 
       console.error(
         `${LOG_PREFIX} Renewed (${this.renewalCount}/${this.maxRenewals === Infinity ? 'inf' : this.maxRenewals})`,
@@ -256,30 +273,229 @@ export class SessionManager {
 
       this.scheduleRenewal();
     } catch (err) {
-      this.handleRenewalError(err);
+      // Unexpected error (should have been handled in retryRenewal)
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${LOG_PREFIX} Unexpected renewal error: ${msg}`);
+      this.state = 'error';
+      this.startRecoveryLoop();
     } finally {
       this.isRenewing = false;
     }
   }
 
-  private handleRenewalError(err: unknown): void {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${LOG_PREFIX} Renewal error: ${msg}`);
+  /**
+   * Attempt renewal with exponential backoff retry (MCP-04, SM-11).
+   *
+   * Only retries on NETWORK errors and retryable HTTP statuses (429, 500, 502, 503, 504).
+   * Returns renewal data on success, null on handled failure.
+   */
+  private async retryRenewal(): Promise<{
+    token: string;
+    id: string;
+    expiresAt: number;
+    renewalCount: number;
+    maxRenewals?: number;
+  } | null> {
+    const url = `${this.baseUrl}/v1/sessions/${this.sessionId}/renew`;
 
-    // If renewal fails, try to schedule another attempt
-    // unless the token is already expired
-    const now = Math.floor(Date.now() / 1000);
-    if (this.expiresAt > now) {
-      // Retry in 30s or at 90% of remaining TTL, whichever is sooner
-      const remaining = this.expiresAt - now;
-      const retryDelay = Math.min(30, Math.floor(remaining * 0.9)) * 1000;
-      this.timer = safeSetTimeout(() => {
-        void this.renew();
-      }, retryDelay);
-      console.error(`${LOG_PREFIX} Retry scheduled in ${Math.floor(retryDelay / 1000)}s`);
-    } else {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.token}`,
+            'User-Agent': '@waiaas/mcp/0.0.0',
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (res.ok) {
+          return await res.json() as {
+            token: string;
+            id: string;
+            expiresAt: number;
+            renewalCount: number;
+            maxRenewals?: number;
+          };
+        }
+
+        // Non-OK response -- handle specific error codes
+        const status = res.status;
+        const body = await res.json().catch(() => null) as Record<string, unknown> | null;
+        const errorCode = body?.['code'] as string | undefined;
+
+        // 409 RENEWAL_CONFLICT (MCP-05, CONC-02)
+        if (status === 409) {
+          await this.handleConflict();
+          return null;
+        }
+
+        // 400 TOO_EARLY -- wait 30s, retry once (no exponential backoff)
+        if (status === 400 && (errorCode === 'RENEWAL_TOO_EARLY' || !errorCode)) {
+          this.handleTooEarly();
+          return null;
+        }
+
+        // 403 LIMIT or LIFETIME
+        if (status === 403) {
+          const msg = errorCode === 'SESSION_LIFETIME_EXPIRED'
+            ? 'Session lifetime expired'
+            : 'Renewal limit exceeded';
+          console.error(`${LOG_PREFIX} ${msg}`);
+          this.state = 'expired';
+          this.startRecoveryLoop();
+          return null;
+        }
+
+        // 401 SESSION_EXPIRED
+        if (status === 401) {
+          console.error(`${LOG_PREFIX} Session expired (401)`);
+          this.state = 'expired';
+          this.startRecoveryLoop();
+          return null;
+        }
+
+        // Retryable HTTP status -- retry with backoff
+        if (RETRYABLE_STATUSES.has(status) && attempt < MAX_RETRIES) {
+          const delay = RETRY_DELAYS[attempt]!;
+          console.error(
+            `${LOG_PREFIX} Renewal retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms (HTTP ${status})`,
+          );
+          await this.delay(delay);
+          continue;
+        }
+
+        // Non-retryable or max retries exhausted
+        const errMsg = body?.['message'] ?? res.statusText;
+        console.error(`${LOG_PREFIX} Renewal failed: ${status} ${errMsg}`);
+        this.state = 'error';
+        this.startRecoveryLoop();
+        return null;
+      } catch (err) {
+        // Network error -- retry with backoff
+        if (attempt < MAX_RETRIES) {
+          const delay = RETRY_DELAYS[attempt]!;
+          console.error(
+            `${LOG_PREFIX} Renewal retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms (network error)`,
+          );
+          await this.delay(delay);
+          continue;
+        }
+
+        // All retries exhausted
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${LOG_PREFIX} Renewal failed after ${MAX_RETRIES} retries: ${msg}`);
+        this.state = 'error';
+        this.startRecoveryLoop();
+        return null;
+      }
+    }
+
+    return null; // Should not reach here
+  }
+
+  /**
+   * Handle 409 RENEWAL_CONFLICT (MCP-05, CONC-02).
+   *
+   * Another process already renewed the token. Check if file has a newer valid token.
+   */
+  private async handleConflict(): Promise<void> {
+    console.error(`${LOG_PREFIX} Renewal conflict (409), checking current token`);
+
+    if (!this.dataDir) {
+      console.error(`${LOG_PREFIX} No dataDir, cannot check file for newer token`);
       this.state = 'expired';
-      console.error(`${LOG_PREFIX} Token expired, no more retries`);
+      this.startRecoveryLoop();
+      return;
+    }
+
+    try {
+      const fileToken = await this.readMcpToken();
+
+      // If file token is different from memory token
+      if (fileToken && fileToken !== this.token) {
+        // Try to apply the new token
+        if (this.applyToken(fileToken)) {
+          console.error(`${LOG_PREFIX} Found valid newer token in file, rescheduling`);
+          this.scheduleRenewal();
+          return;
+        }
+      }
+
+      // Same token or invalid -- start recovery
+      console.error(`${LOG_PREFIX} No valid newer token in file`);
+      this.state = 'expired';
+      this.startRecoveryLoop();
+    } catch {
+      // File read failed
+      console.error(`${LOG_PREFIX} Failed to read token file after conflict`);
+      this.state = 'expired';
+      this.startRecoveryLoop();
+    }
+  }
+
+  /**
+   * Handle 400 TOO_EARLY: wait 30s and retry once.
+   */
+  private handleTooEarly(): void {
+    console.error(`${LOG_PREFIX} Renewal too early, retrying in 30s`);
+    this.timer = safeSetTimeout(() => {
+      void this.renew();
+    }, TOO_EARLY_RETRY_MS);
+  }
+
+  /**
+   * Recovery loop (SMGI-D03): polls readMcpToken every 60s when expired/error.
+   */
+  private startRecoveryLoop(): void {
+    if (this.isRecoveryRunning) {
+      return;
+    }
+    if (!this.dataDir) {
+      console.error(`${LOG_PREFIX} No dataDir, recovery loop cannot poll for token`);
+      return;
+    }
+
+    this.isRecoveryRunning = true;
+    console.error(`${LOG_PREFIX} Starting recovery loop (polling every 60s)`);
+
+    this.recoveryTimer = safeSetTimeout(() => {
+      void this.recoveryPoll();
+    }, RECOVERY_POLL_MS);
+  }
+
+  private stopRecoveryLoop(): void {
+    if (this.recoveryTimer) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+    this.isRecoveryRunning = false;
+  }
+
+  private async recoveryPoll(): Promise<void> {
+    if (!this.isRecoveryRunning || !this.dataDir) return;
+
+    try {
+      const fileToken = await this.readMcpToken();
+
+      if (fileToken && fileToken !== this.token) {
+        if (this.applyToken(fileToken)) {
+          console.error(`${LOG_PREFIX} Recovery: found valid token, resuming active state`);
+          this.stopRecoveryLoop();
+          this.scheduleRenewal();
+          return;
+        }
+      }
+    } catch {
+      // File not readable, continue polling
+    }
+
+    // Schedule next poll
+    if (this.isRecoveryRunning) {
+      this.recoveryTimer = safeSetTimeout(() => {
+        void this.recoveryPoll();
+      }, RECOVERY_POLL_MS);
     }
   }
 
@@ -299,5 +515,12 @@ export class SessionManager {
     // Atomic write: write to .tmp then rename
     await writeFile(tmpPath, token, 'utf-8');
     await rename(tmpPath, filePath);
+  }
+
+  /**
+   * Async delay helper (uses real setTimeout, not safeSetTimeout).
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
