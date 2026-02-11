@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 68 complete, moving to 69
+**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 69 plan 01 complete, continuing to 69-02
 
 ## Current Position
 
-Phase: 68 of 70 (Dashboard + Agents + Sessions)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 68-02-PLAN.md (Agents + Sessions Pages)
+Phase: 69 of 70 (Policies + Settings)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-11 — Completed 69-01-PLAN.md (Policies Page)
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
-**Cumulative:** 16 milestones, 68 phases, 161 plans, 434 reqs, 784 tests, 33,929 LOC
+**Cumulative:** 16 milestones, 69 phases, 162 plans, 434 reqs, 784 tests, 33,929 LOC
 
 **v1.3.2 Plan:**
 - 5 phases (66-70), 10 plans, 22 requirements
 - Target: Preact SPA 5 pages + 22 tests
-- Completed: 6/10 plans
+- Completed: 7/10 plans
 
 ## Accumulated Context
 
@@ -40,6 +40,7 @@ v1.3.2 구현 결정:
 - Phase 67-02 (3건): Custom hash routing via signal + hashchange (no preact-router), Toast module-level signal vs CopyButton useSignal for per-instance state, error messages standalone duplicate for frontend independence
 - Phase 68-01 (2건): isInitialLoad pattern (skeleton only on first load, stale data visible during subsequent polls), Error banner non-destructive (shows error above cards without hiding stale data)
 - Phase 68-02 (3건): currentPath signal exported for sub-route parsing, openRevoke helper with signal refs, session columns inside component for signal access
+- Phase 69-01 (3건): Sentinel filter values (__all__, __global__) for dropdown disambiguation, Global-only filter client-side, Policy type read-only in edit modal
 
 ### Blockers/Concerns
 
@@ -50,6 +51,6 @@ v1.3.2 구현 결정:
 
 ## Session Continuity
 
-Last session: 2026-02-11T07:49:59Z
-Stopped at: Completed 68-02-PLAN.md (Agents + Sessions Pages)
+Last session: 2026-02-11T08:12:01Z
+Stopped at: Completed 69-01-PLAN.md (Policies Page)
 Resume file: None
