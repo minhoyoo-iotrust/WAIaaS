@@ -444,3 +444,60 @@ export const RotateSecretResponseSchema = z
     message: z.string(),
   })
   .openapi('RotateSecretResponse');
+
+// ---------------------------------------------------------------------------
+// Notification Admin Response Schemas (3 notification admin endpoints)
+// ---------------------------------------------------------------------------
+
+export const NotificationChannelStatusSchema = z
+  .object({
+    name: z.string(),
+    enabled: z.boolean(),
+  })
+  .openapi('NotificationChannelStatus');
+
+export const NotificationStatusResponseSchema = z
+  .object({
+    enabled: z.boolean(),
+    channels: z.array(NotificationChannelStatusSchema),
+  })
+  .openapi('NotificationStatusResponse');
+
+export const NotificationTestRequestSchema = z
+  .object({
+    channel: z.string().optional(),
+  })
+  .openapi('NotificationTestRequest');
+
+export const NotificationTestResponseSchema = z
+  .object({
+    results: z.array(
+      z.object({
+        channel: z.string(),
+        success: z.boolean(),
+        error: z.string().optional(),
+      }),
+    ),
+  })
+  .openapi('NotificationTestResponse');
+
+export const NotificationLogEntrySchema = z
+  .object({
+    id: z.string(),
+    eventType: z.string(),
+    agentId: z.string().nullable(),
+    channel: z.string(),
+    status: z.string(),
+    error: z.string().nullable(),
+    createdAt: z.number(),
+  })
+  .openapi('NotificationLogEntry');
+
+export const NotificationLogResponseSchema = z
+  .object({
+    logs: z.array(NotificationLogEntrySchema),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+  })
+  .openapi('NotificationLogResponse');

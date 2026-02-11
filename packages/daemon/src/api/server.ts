@@ -174,6 +174,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/recover', masterAuthForAdmin);
     app.use('/v1/admin/shutdown', masterAuthForAdmin);
     app.use('/v1/admin/rotate-secret', masterAuthForAdmin);
+    app.use('/v1/admin/notifications/*', masterAuthForAdmin);
   }
 
   // Register routes
@@ -291,6 +292,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         startTime: deps.startTime ?? Math.floor(Date.now() / 1000),
         version: DAEMON_VERSION,
         adminTimeout: deps.config?.daemon?.admin_timeout ?? 900,
+        notificationService: deps.notificationService,
+        notificationConfig: deps.config?.notifications,
       }),
     );
   }
