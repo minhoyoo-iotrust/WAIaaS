@@ -183,7 +183,7 @@
 - [x] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장 — completed 2026-02-11
 - [x] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트 — completed 2026-02-11
 - [x] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기 — completed 2026-02-11
-- [ ] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료
+- [x] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료 — completed 2026-02-11
 - [ ] **Phase 70: 통합 테스트** — 인증 4건, 페이지 14건, 보안+서빙 4건 테스트
 
 ## Phase Details
@@ -231,8 +231,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 68-01-PLAN.md — Dashboard 페이지: stat card grid + 30s polling + loading/error states (PAGE-01)
-- [ ] 68-02-PLAN.md — Agents 페이지 (list/detail/CRUD) + Sessions 페이지 (agent dropdown, create/revoke, JWT token display) (PAGE-02, PAGE-03)
+- [x] 68-01-PLAN.md — Dashboard 페이지: stat card grid + 30s polling + loading/error states (PAGE-01)
+- [x] 68-02-PLAN.md — Agents 페이지 (list/detail/CRUD) + Sessions 페이지 (agent dropdown, create/revoke, JWT token display) (PAGE-02, PAGE-03)
 
 ### Phase 69: Policies + Settings 페이지
 **Goal**: 사용자가 Policies 페이지에서 10가지 정책 유형의 CRUD를 수행하고 4-tier 색상 구분을 확인하며, Settings 페이지에서 Kill Switch/JWT 회전/데몬 종료 등 관리 작업을 수행할 수 있는 상태
@@ -246,8 +246,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 69-01-PLAN.md — Policies 페이지: 10 유형 CRUD + 에이전트 필터 + 4-tier SPENDING_LIMIT 시각화 (PAGE-04)
-- [ ] 69-02-PLAN.md — Settings 페이지: Kill Switch 토글 + JWT 회전 + 데몬 종료 (PAGE-05)
+- [x] 69-01-PLAN.md — Policies 페이지: 10 유형 CRUD + 에이전트 필터 + 4-tier SPENDING_LIMIT 시각화 (PAGE-04)
+- [x] 69-02-PLAN.md — Settings 페이지: Kill Switch 토글 + JWT 회전 + 데몬 종료 (PAGE-05)
 
 ### Phase 70: 통합 테스트
 **Goal**: 인증/페이지/보안 전 영역을 커버하는 22건의 Vitest + Testing Library 테스트가 통과하여, Admin UI의 핵심 사용자 흐름과 보안 요구사항이 검증된 상태
@@ -261,8 +261,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 70-01: 인증 + 보안/서빙 테스트 (TEST-01, TEST-03)
-- [ ] 70-02: 페이지 테스트 (TEST-02)
+- [ ] 70-01-PLAN.md — Vitest 인프라 + 인증 4건 + 유틸리티 테스트 + daemon 보안/서빙 4건 (TEST-01, TEST-03)
+- [ ] 70-02-PLAN.md — Dashboard(3) + Agents(5) + Sessions(3) + Policies(3) + Settings(3) 페이지 테스트 (TEST-02)
 
 ## Progress
 
@@ -288,9 +288,9 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
 | v1.3.2 Admin Web UI 구현 | 66-70 | 8/10 | In progress | - |
 
-**Total:** 15 milestones shipped, 68 phases completed, 161 plans completed
+**Total:** 15 milestones shipped, 69 phases completed, 163 plans completed
 **Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after Phase 68 executed (2/2 plans complete, verified)*
+*Last updated: 2026-02-11 after Phase 69 executed (2/2 plans complete, verified)*
