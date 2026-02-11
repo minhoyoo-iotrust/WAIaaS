@@ -216,10 +216,10 @@
   2. NotificationService.notify() 호출 후 발송 성공 시 notification_logs에 status='sent' 레코드가 존재한다
   3. 채널 발송 실패 시 notification_logs에 status='failed' + error 메시지가 기록된다
   4. 기존 847 테스트가 깨지지 않고, 신규 마이그레이션/로깅 테스트가 통과한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 73-01: notification_logs 테이블 스키마 + DB 마이그레이션 + NotificationService 로깅 통합
+- [ ] 73-01-PLAN.md -- notification_logs 스키마 + 증분 마이그레이션 + NotificationService 로깅 통합 + 테스트
 
 ### Phase 74: 파이프라인 이벤트 트리거 연결
 **Goal**: 파이프라인 스테이지와 라우트 핸들러에서 주요 이벤트 발생 시 실제 알림이 발송된다
@@ -274,7 +274,7 @@ Plans:
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
-| v1.3.4 알림 트리거 + 어드민 | 73-75 | 0/5 | In progress | - |
+| v1.3.4 알림 트리거 + 어드민 | 73-75 | 1/5 | In progress | - |
 
 **Total:** 18 milestones shipped, 72 phases completed, 165 plans completed + v1.3.4 in progress (3 phases, ~5 plans)
 
