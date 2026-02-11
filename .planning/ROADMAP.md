@@ -171,20 +171,12 @@
 
 **Milestone Goal:** 데몬 내장 경량 관리 웹 UI(5 페이지 SPA)의 설계 문서(67-admin-web-ui-spec.md)를 작성하여 v1.3.2 구현 착수에 필요한 모든 설계 결정을 완료한다
 
-#### Phase 64: 인프라 + 인증 + 보안 기반 설계
+#### Phase 64: 인프라 + 인증 + 보안 기반 설계 — completed 2026-02-11
 **Goal**: SPA 서빙 방식, 패키지 구조, 빌드 전략, config.toml 확장, masterAuth 인증 흐름, 보안 제약이 설계 문서에 확정되어 페이지 설계의 기반이 준비된다
-**Depends on**: Nothing (v1.3 shipped)
-**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, AUTH-01, AUTH-02, SEC-01
-**Success Criteria** (what must be TRUE):
-  1. 설계 문서에 Hono serveStatic SPA 서빙 설정(/admin/* fallback, /admin/assets/* 정적, CSP 헤더, 캐시 정책)이 구체적으로 정의되어 있다
-  2. packages/admin 디렉토리 레이아웃, Vite 빌드 설정, daemon/public/admin/ 복사 전략(시점, 방법, git 추적 여부)이 확정되어 있다
-  3. config.toml 신규 키(admin_ui boolean, admin_timeout 초)와 WAIAAS_DAEMON_ADMIN_UI/WAIAAS_DAEMON_ADMIN_TIMEOUT 환경변수 오버라이드, admin_ui=false 시 404 동작이 명세되어 있다
-  4. masterAuth 로그인 화면, X-Master-Password 헤더 검증, Auth Store(signal), 비활성 타임아웃(15분), 로그아웃, 401 응답 시 리다이렉트 흐름이 설계되어 있다
-  5. CSP 정책, 메모리 전용 비밀번호 보관, 민감 데이터 노출 금지, Docker 포트 포워딩 보안 고려사항이 문서화되어 있다
-**Plans**: 1 plan
+**Status**: ✓ Complete (1/1 plans, 5/5 must-haves verified)
 
 Plans:
-- [ ] 64-01-PLAN.md — 설계 문서 67 섹션 1-7 (개요, 기술 스택, Hono 서빙, 패키지 구조, config 확장, 인증 흐름, 보안)
+- [x] 64-01-PLAN.md — 설계 문서 67 섹션 1-7 (개요, 기술 스택, Hono 서빙, 패키지 구조, config 확장, 인증 흐름, 보안)
 
 #### Phase 65: 페이지 + 컴포넌트 + API 연동 설계
 **Goal**: Dashboard/Agents/Sessions/Policies/Settings 5개 화면의 레이아웃, 컴포넌트 구조, 데이터 흐름과 공통 컴포넌트 체계, API 연동 패턴이 설계 문서에 확정되어 v1.3.2에서 즉시 구현 착수할 수 있다
@@ -221,10 +213,10 @@ Plans:
 | v1.1 코어 인프라 | 48-51 | 12 | Complete | 2026-02-10 |
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
-| **v1.3.1 Admin Web UI 설계** | **64-65** | **0/2** | **In progress** | — |
+| **v1.3.1 Admin Web UI 설계** | **64-65** | **1/2** | **In progress** | — |
 
 **Total:** 15 milestones shipped, 63 phases completed, 151 plans completed + v1.3.1 in progress (2 phases, 2 plans)
 
 ---
 
-*Last updated: 2026-02-11 after v1.3.1 roadmap created*
+*Last updated: 2026-02-11 after Phase 64 completed*
