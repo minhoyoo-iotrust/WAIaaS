@@ -211,22 +211,16 @@
 
 **Milestone Goal:** SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve 관리, 배치 트랜잭션, EVM 어댑터가 동작하는 상태
 
-#### Phase 76: 기반 인프라 + 파이프라인 기초
+#### Phase 76: 기반 인프라 + 파이프라인 기초 — completed 2026-02-12
 **Goal**: 모든 토큰/컨트랙트/배치 기능이 의존하는 기반 인프라가 준비되어, ChainError 카테고리 분기, DB 스키마 증분 마이그레이션, 5-type discriminatedUnion 파싱, IChainAdapter 20 메서드 인터페이스, 6개 신규 PolicyType 검증이 동작한다
 **Depends on**: Nothing (v1.4 첫 번째 phase)
 **Requirements**: INFRA-01, INFRA-02, INFRA-04, INFRA-05, PIPE-05, PIPE-06
-**Success Criteria** (what must be TRUE):
-  1. ChainError 인스턴스가 category(PERMANENT/TRANSIENT/STALE)에서 retryable을 자동 파생하고, 25개 에러 코드가 올바른 카테고리에 매핑된다
-  2. DB 마이그레이션 러너가 schema_version 기반으로 증분 마이그레이션을 순차 실행하고, 이미 적용된 버전은 건너뛴다
-  3. discriminatedUnion 스키마가 5-type(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)을 type 필드로 식별하고, 기존 SendTransactionRequestSchema를 대체한다
-  4. IChainAdapter 인터페이스에 20개 메서드가 선언되고, SolanaAdapter가 신규 9개 메서드의 스텁(또는 실제 구현)을 갖는다
-  5. 6개 신규 PolicyType(ALLOWED_TOKENS~APPROVE_TIER_OVERRIDE)의 정책 생성 시 Zod superRefine이 type별 rules 스키마를 검증한다
-**Plans**: 3 plans
+**Plans**: 3/3 plans complete
 
 Plans:
-- [ ] 76-01-PLAN.md — ChainError 클래스 + 3-카테고리 시스템 + INFRA-05 에러 코드 이동 (Wave 1, TDD)
-- [ ] 76-02-PLAN.md — DB 마이그레이션 러너 + discriminatedUnion 5-type 스키마 (Wave 1)
-- [ ] 76-03-PLAN.md — IChainAdapter 20 메서드 확장 + 6개 PolicyType superRefine (Wave 2)
+- [x] 76-01-PLAN.md — ChainError 클래스 + 3-카테고리 시스템 + INFRA-05 에러 코드 이동 (Wave 1, TDD)
+- [x] 76-02-PLAN.md — DB 마이그레이션 러너 + discriminatedUnion 5-type 스키마 (Wave 1)
+- [x] 76-03-PLAN.md — IChainAdapter 20 메서드 확장 + 6개 PolicyType superRefine (Wave 2)
 
 #### Phase 77: EVM 어댑터
 **Goal**: @waiaas/adapter-evm 패키지가 viem 2.x 기반으로 IChainAdapter 20개 메서드를 구현하여, EVM 네이티브 전송/ERC-20 전송/approve/gas 추정/nonce 관리가 동작한다
@@ -327,11 +321,11 @@ Plans:
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
-| **v1.4 토큰 + 컨트랙트** | **76-81** | **0/12** | **In progress** | - |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **3/12** | **In progress** | - |
 
-**Total:** 18 milestones shipped, 75 phases completed, 170 plans completed, 895 tests, 42,123 LOC
-**v1.4:** 6 phases, 12 plans, 35 requirements
+**Total:** 18 milestones shipped, 76 phases completed, 173 plans completed, 959 tests, 43,545 LOC
+**v1.4:** 6 phases (1 complete), 12 plans (3 complete), 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after v1.4 roadmap created*
+*Last updated: 2026-02-12 after Phase 76 completed*
