@@ -17,7 +17,7 @@
 - ✅ **v1.2 인증 + 정책 엔진** — Phases 52-57 (shipped 2026-02-10, 457 tests, 25,526 LOC)
 - ✅ **v1.3 SDK + MCP + 알림** — Phases 58-63 (shipped 2026-02-11, 784 tests, 33,929 LOC)
 - ✅ **v1.3.1 Admin Web UI 설계** — Phases 64-65 (shipped 2026-02-11)
-- 🚧 **v1.3.2 Admin Web UI 구현** — Phases 66-70 (in progress)
+- ✅ **v1.3.2 Admin Web UI 구현** — Phases 66-70 (shipped 2026-02-11, 816 tests, 31 new tests)
 
 ## Phases
 
@@ -176,7 +176,7 @@
 
 </details>
 
-### 🚧 v1.3.2 Admin Web UI 구현 (In Progress)
+### ✅ v1.3.2 Admin Web UI 구현 — SHIPPED 2026-02-11
 
 **Milestone Goal:** v1.3.1에서 설계한 Admin Web UI를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태.
 
@@ -184,7 +184,7 @@
 - [x] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트 — completed 2026-02-11
 - [x] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기 — completed 2026-02-11
 - [x] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료 — completed 2026-02-11
-- [ ] **Phase 70: 통합 테스트** — 인증 4건, 페이지 14건, 보안+서빙 4건 테스트
+- [x] **Phase 70: 통합 테스트** — 인증 4건, 페이지 17건, 보안+서빙 4건, 유틸 6건 테스트 — completed 2026-02-11
 
 ## Phase Details
 
@@ -261,8 +261,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 70-01-PLAN.md — Vitest 인프라 + 인증 4건 + 유틸리티 테스트 + daemon 보안/서빙 4건 (TEST-01, TEST-03)
-- [ ] 70-02-PLAN.md — Dashboard(3) + Agents(5) + Sessions(3) + Policies(3) + Settings(3) 페이지 테스트 (TEST-02)
+- [x] 70-01-PLAN.md — Vitest 인프라 + 인증 4건 + 유틸리티 테스트 + daemon 보안/서빙 4건 (TEST-01, TEST-03)
+- [x] 70-02-PLAN.md — Dashboard(3) + Agents(5) + Sessions(3) + Policies(3) + Settings(3) 페이지 테스트 (TEST-02)
 
 ## Progress
 
@@ -286,11 +286,10 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
-| v1.3.2 Admin Web UI 구현 | 66-70 | 8/10 | In progress | - |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 10/10 | Complete | 2026-02-11 |
 
-**Total:** 15 milestones shipped, 69 phases completed, 163 plans completed
-**Current:** v1.3.2 — 5 phases, 10 plans planned
+**Total:** 16 milestones shipped, 70 phases completed, 165 plans completed
 
 ---
 
-*Last updated: 2026-02-11 after Phase 69 executed (2/2 plans complete, verified)*
+*Last updated: 2026-02-11 after Phase 70 executed (2/2 plans complete, verified) — v1.3.2 milestone complete*
