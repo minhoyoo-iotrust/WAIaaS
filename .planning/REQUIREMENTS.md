@@ -56,8 +56,8 @@
 
 - [ ] **PIPE-01**: Stage 1이 discriminatedUnion 5-type을 파싱한다 — TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH 자동 식별
 - [ ] **PIPE-02**: Stage 3이 type별 적용 가능 정책을 필터링하여 평가한다 — 기존 SPENDING_LIMIT/WHITELIST + 6개 신규 PolicyType(ALLOWED_TOKENS/CONTRACT_WHITELIST/METHOD_WHITELIST/APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE)
-- [ ] **PIPE-03**: Stage 5가 완전 의사코드(CONC-01)를 구현한다 — build→simulate→sign→submit, PERMANENT 즉시 실패/TRANSIENT 지수 백오프/STALE 재빌드, MAX_RETRIES=2
-- [ ] **PIPE-04**: Stage 5가 type별 adapter 메서드를 라우팅한다 — TRANSFER→buildTransaction, TOKEN_TRANSFER→buildTokenTransfer, CONTRACT_CALL→buildContractCall, APPROVE→buildApprove, BATCH→buildBatch
+- [ ] **PIPE-03**: Stage 5가 완전 의사코드(CONC-01)를 구현한다 — build->simulate->sign->submit, PERMANENT 즉시 실패/TRANSIENT 지수 백오프/STALE 재빌드, MAX_RETRIES=2
+- [ ] **PIPE-04**: Stage 5가 type별 adapter 메서드를 라우팅한다 — TRANSFER->buildTransaction, TOKEN_TRANSFER->buildTokenTransfer, CONTRACT_CALL->buildContractCall, APPROVE->buildApprove, BATCH->buildBatch
 - [ ] **PIPE-05**: IChainAdapter 인터페이스가 20개 메서드로 확장된다 — 기존 11개 + 신규 9개(estimateFee, buildTokenTransfer, buildContractCall, buildApprove, buildBatch, getTransactionFee, getTokenInfo, getCurrentNonce, sweepAll)
 - [ ] **PIPE-06**: 6개 신규 PolicyType의 Zod superRefine 검증이 동작한다 — type별 rules 스키마 검증
 
@@ -94,47 +94,47 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| TOKEN-01 | — | Pending |
-| TOKEN-02 | — | Pending |
-| TOKEN-03 | — | Pending |
-| TOKEN-04 | — | Pending |
-| TOKEN-05 | — | Pending |
-| TOKEN-06 | — | Pending |
-| CONTRACT-01 | — | Pending |
-| CONTRACT-02 | — | Pending |
-| CONTRACT-03 | — | Pending |
-| CONTRACT-04 | — | Pending |
-| APPROVE-01 | — | Pending |
-| APPROVE-02 | — | Pending |
-| APPROVE-03 | — | Pending |
-| APPROVE-04 | — | Pending |
-| BATCH-01 | — | Pending |
-| BATCH-02 | — | Pending |
-| BATCH-03 | — | Pending |
-| BATCH-04 | — | Pending |
-| EVM-01 | — | Pending |
-| EVM-02 | — | Pending |
-| EVM-03 | — | Pending |
-| EVM-04 | — | Pending |
-| EVM-05 | — | Pending |
-| EVM-06 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| PIPE-05 | — | Pending |
-| PIPE-06 | — | Pending |
+| INFRA-01 | Phase 76 | Pending |
+| INFRA-02 | Phase 76 | Pending |
+| INFRA-03 | Phase 77 | Pending |
+| INFRA-04 | Phase 76 | Pending |
+| INFRA-05 | Phase 76 | Pending |
+| TOKEN-01 | Phase 78 | Pending |
+| TOKEN-02 | Phase 78 | Pending |
+| TOKEN-03 | Phase 78 | Pending |
+| TOKEN-04 | Phase 78 | Pending |
+| TOKEN-05 | Phase 78 | Pending |
+| TOKEN-06 | Phase 78 | Pending |
+| CONTRACT-01 | Phase 79 | Pending |
+| CONTRACT-02 | Phase 79 | Pending |
+| CONTRACT-03 | Phase 79 | Pending |
+| CONTRACT-04 | Phase 79 | Pending |
+| APPROVE-01 | Phase 79 | Pending |
+| APPROVE-02 | Phase 79 | Pending |
+| APPROVE-03 | Phase 79 | Pending |
+| APPROVE-04 | Phase 79 | Pending |
+| BATCH-01 | Phase 80 | Pending |
+| BATCH-02 | Phase 80 | Pending |
+| BATCH-03 | Phase 80 | Pending |
+| BATCH-04 | Phase 80 | Pending |
+| EVM-01 | Phase 77 | Pending |
+| EVM-02 | Phase 77 | Pending |
+| EVM-03 | Phase 77 | Pending |
+| EVM-04 | Phase 77 | Pending |
+| EVM-05 | Phase 77 | Pending |
+| EVM-06 | Phase 77 | Pending |
+| PIPE-01 | Phase 81 | Pending |
+| PIPE-02 | Phase 81 | Pending |
+| PIPE-03 | Phase 81 | Pending |
+| PIPE-04 | Phase 81 | Pending |
+| PIPE-05 | Phase 76 | Pending |
+| PIPE-06 | Phase 76 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35 ⚠️
+- Mapped to phases: 35
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after initial definition*
+*Last updated: 2026-02-12 after roadmap creation — all 35 requirements mapped to phases 76-81*

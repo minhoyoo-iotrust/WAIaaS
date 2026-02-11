@@ -19,7 +19,8 @@
 - ✅ **v1.3.1 Admin Web UI 설계** — Phases 64-65 (shipped 2026-02-11)
 - ✅ **v1.3.2 Admin Web UI 구현** — Phases 66-70 (shipped 2026-02-11, 816 tests, 45,332 LOC)
 - ✅ **v1.3.3 MCP 다중 에이전트 지원** — Phases 71-72 (shipped 2026-02-11, 847 tests, 44,639 LOC)
-- ✅ **v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널** — Phases 73-75 (shipped 2026-02-12, 895 tests, 45,100+ LOC)
+- ✅ **v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널** — Phases 73-75 (shipped 2026-02-12, 895 tests, 42,123 LOC)
+- 🚧 **v1.4 토큰 + 컨트랙트 확장** — Phases 76-81 (in progress)
 
 ## Phases
 
@@ -206,6 +207,104 @@
 
 </details>
 
+### 🚧 v1.4 토큰 + 컨트랙트 확장 (In Progress)
+
+**Milestone Goal:** SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve 관리, 배치 트랜잭션, EVM 어댑터가 동작하는 상태
+
+#### Phase 76: 기반 인프라 + 파이프라인 기초
+**Goal**: 모든 토큰/컨트랙트/배치 기능이 의존하는 기반 인프라가 준비되어, ChainError 카테고리 분기, DB 스키마 증분 마이그레이션, 5-type discriminatedUnion 파싱, IChainAdapter 20 메서드 인터페이스, 6개 신규 PolicyType 검증이 동작한다
+**Depends on**: Nothing (v1.4 첫 번째 phase)
+**Requirements**: INFRA-01, INFRA-02, INFRA-04, INFRA-05, PIPE-05, PIPE-06
+**Success Criteria** (what must be TRUE):
+  1. ChainError 인스턴스가 category(PERMANENT/TRANSIENT/STALE)에서 retryable을 자동 파생하고, 25개 에러 코드가 올바른 카테고리에 매핑된다
+  2. DB 마이그레이션 러너가 schema_version 기반으로 증분 마이그레이션을 순차 실행하고, 이미 적용된 버전은 건너뛴다
+  3. discriminatedUnion 스키마가 5-type(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)을 type 필드로 식별하고, 기존 SendTransactionRequestSchema를 대체한다
+  4. IChainAdapter 인터페이스에 20개 메서드가 선언되고, SolanaAdapter가 신규 9개 메서드의 스텁(또는 실제 구현)을 갖는다
+  5. 6개 신규 PolicyType(ALLOWED_TOKENS~APPROVE_TIER_OVERRIDE)의 정책 생성 시 Zod superRefine이 type별 rules 스키마를 검증한다
+**Plans**: 3 plans
+
+Plans:
+- [ ] 76-01: ChainError 클래스 + 3-카테고리 시스템 + INFRA-05 에러 코드 이동
+- [ ] 76-02: DB 마이그레이션 러너 + discriminatedUnion 5-type 스키마
+- [ ] 76-03: IChainAdapter 20 메서드 인터페이스 확장 + 6개 PolicyType superRefine
+
+#### Phase 77: EVM 어댑터
+**Goal**: @waiaas/adapter-evm 패키지가 viem 2.x 기반으로 IChainAdapter 20개 메서드를 구현하여, EVM 네이티브 전송/ERC-20 전송/approve/gas 추정/nonce 관리가 동작한다
+**Depends on**: Phase 76 (IChainAdapter 인터페이스 20 메서드 정의)
+**Requirements**: INFRA-03, EVM-01, EVM-02, EVM-03, EVM-04, EVM-05, EVM-06
+**Success Criteria** (what must be TRUE):
+  1. @waiaas/adapter-evm 패키지가 monorepo workspace에 등록되고, viem 2.x 의존성으로 빌드가 성공한다
+  2. EvmAdapter가 IChainAdapter 20개 메서드를 구현하여 타입 에러 없이 인스턴스화된다
+  3. EVM에서 네이티브 토큰(ETH) 전송이 EIP-1559 트랜잭션으로 빌드/시뮬레이션/서명/제출된다
+  4. EVM에서 ERC-20 전송과 approve가 buildTokenTransfer/buildApprove 메서드로 동작한다
+  5. buildBatch() 호출 시 BATCH_NOT_SUPPORTED 에러가 반환된다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 77-01: @waiaas/adapter-evm 패키지 스캐폴딩 + viem 연결/헬스 기본 메서드
+- [ ] 77-02: EVM 네이티브 전송 + gas 추정 + nonce 관리 + ERC-20/approve 구현
+
+#### Phase 78: 토큰 전송 + 자산 조회
+**Goal**: 에이전트가 SPL/ERC-20 토큰을 전송하고, ALLOWED_TOKENS 정책으로 허용 토큰을 제한하며, getAssets()가 토큰 잔액을 포함하고, estimateFee()가 토큰 전송 수수료를 추정한다
+**Depends on**: Phase 76 (discriminatedUnion TOKEN_TRANSFER type, IChainAdapter buildTokenTransfer), Phase 77 (EVM adapter)
+**Requirements**: TOKEN-01, TOKEN-02, TOKEN-03, TOKEN-04, TOKEN-05, TOKEN-06
+**Success Criteria** (what must be TRUE):
+  1. 에이전트가 SPL 토큰(USDC 등)을 buildSplTokenTransfer로 전송할 수 있고, Token-2022 프로그램도 자동 분기된다
+  2. 에이전트가 ERC-20 토큰을 buildErc20Transfer로 전송할 수 있다
+  3. ALLOWED_TOKENS 정책 미설정 에이전트는 토큰 전송이 거부되고(네이티브만 허용), 설정된 에이전트는 화이트리스트 토큰만 전송 가능하다
+  4. getAssets()가 네이티브 토큰 + SPL/ERC-20 토큰 잔액을 반환하고, 네이티브가 첫 번째 + 잔액 내림차순으로 정렬된다
+  5. estimateFee()가 SPL ATA 생성 비용과 ERC-20 gas를 정확히 추정한다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 78-01: SPL 토큰 전송 + Token-2022 분기 + ALLOWED_TOKENS 정책
+- [ ] 78-02: ERC-20 토큰 전송 + getAssets 토큰 확장 + getTokenInfo + estimateFee
+
+#### Phase 79: 컨트랙트 호출 + Approve 관리
+**Goal**: 에이전트가 화이트리스트된 스마트 컨트랙트를 호출하고, Approve를 요청할 수 있으며, CONTRACT_WHITELIST/METHOD_WHITELIST/APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT 정책이 기본 거부 원칙으로 동작한다
+**Depends on**: Phase 76 (discriminatedUnion CONTRACT_CALL/APPROVE type, PolicyType), Phase 77 (EVM buildContractCall/buildApprove)
+**Requirements**: CONTRACT-01, CONTRACT-02, CONTRACT-03, CONTRACT-04, APPROVE-01, APPROVE-02, APPROVE-03, APPROVE-04
+**Success Criteria** (what must be TRUE):
+  1. 에이전트가 CONTRACT_WHITELIST에 등록된 컨트랙트를 호출할 수 있고(EVM calldata + Solana programId), 미등록 컨트랙트는 거부된다
+  2. METHOD_WHITELIST로 컨트랙트별 허용 메서드를 제한할 수 있다
+  3. CONTRACT_WHITELIST 미설정 에이전트는 모든 컨트랙트 호출이 CONTRACT_DISABLED로 차단된다
+  4. 에이전트가 APPROVED_SPENDERS에 등록된 spender에게 토큰 Approve를 요청할 수 있고, 미등록 spender는 거부된다
+  5. 무제한 금액 Approve가 기본 차단(UNLIMITED_APPROVE_BLOCKED)되고, APPROVE_TIER_OVERRIDE 미설정 시 기본 APPROVAL 티어가 강제된다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 79-01: ContractCallRequest + CONTRACT_WHITELIST + METHOD_WHITELIST 정책
+- [ ] 79-02: ApproveRequest + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE
+
+#### Phase 80: 배치 트랜잭션
+**Goal**: 에이전트가 Solana에서 원자적 배치 트랜잭션을 실행하고, 2단계 합산 정책으로 소액 분할 우회를 방지하며, 부모-자식 DB 구조로 배치 상태를 추적한다
+**Depends on**: Phase 76 (discriminatedUnion BATCH type, IChainAdapter buildBatch), Phase 78 (토큰 전송 -- 배치 내 토큰 instruction)
+**Requirements**: BATCH-01, BATCH-02, BATCH-03, BATCH-04
+**Success Criteria** (what must be TRUE):
+  1. 에이전트가 Solana에서 2~20개 instruction을 단일 원자적 트랜잭션으로 실행할 수 있다
+  2. 배치 정책이 개별 instruction 평가 + 합산 SPENDING_LIMIT 2단계로 평가되고, 1개 위반 시 전체 거부(All-or-Nothing)된다
+  3. 배치 트랜잭션이 transactions 테이블에 부모-자식 자기참조(parentId + batchIndex)로 저장되고, 자식 개별 상태가 추적된다
+  4. EVM에서 배치 요청 시 BATCH_NOT_SUPPORTED 에러가 반환된다
+**Plans**: 1 plan
+
+Plans:
+- [ ] 80-01: BatchRequest + Solana 원자적 빌드 + 2단계 합산 정책 + 부모-자식 DB
+
+#### Phase 81: 파이프라인 통합 + Stage 5
+**Goal**: 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)이 6-stage 파이프라인을 완주하고, Stage 5가 ChainError 카테고리별 재시도/실패 분기를 수행한다
+**Depends on**: Phase 76 (ChainError, discriminatedUnion), Phase 77 (EVM adapter), Phase 78 (토큰), Phase 79 (컨트랙트/Approve), Phase 80 (배치)
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04
+**Success Criteria** (what must be TRUE):
+  1. Stage 1이 discriminatedUnion으로 5-type 요청을 자동 식별하고, 잘못된 type은 즉시 거부한다
+  2. Stage 3이 트랜잭션 type별로 적용 가능한 정책만 필터링하여 평가한다 (TOKEN_TRANSFER에 ALLOWED_TOKENS, CONTRACT_CALL에 CONTRACT_WHITELIST 등)
+  3. Stage 5가 build->simulate->sign->submit 완전 의사코드를 구현하고, PERMANENT 즉시 실패/TRANSIENT 지수 백오프/STALE 재빌드 분기가 동작한다
+  4. Stage 5가 type별로 올바른 adapter 메서드를 호출한다 (TRANSFER->buildTransaction, TOKEN_TRANSFER->buildTokenTransfer, CONTRACT_CALL->buildContractCall 등)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 81-01: Stage 1 discriminatedUnion 파싱 + Stage 3 type별 정책 필터링
+- [ ] 81-02: Stage 5 완전 의사코드 구현 (CONC-01) + type별 adapter 라우팅 + 통합 테스트
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
@@ -228,9 +327,11 @@
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **0/12** | **In progress** | - |
 
-**Total:** 19 milestones shipped, 75 phases completed, 170 plans completed, 895 tests, 42,123 LOC
+**Total:** 18 milestones shipped, 75 phases completed, 170 plans completed, 895 tests, 42,123 LOC
+**v1.4:** 6 phases, 12 plans, 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after v1.3.4 shipped*
+*Last updated: 2026-02-12 after v1.4 roadmap created*
