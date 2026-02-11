@@ -1,11 +1,15 @@
 /**
- * Schema push for daemon SQLite database.
+ * Schema push + incremental migration runner for daemon SQLite database.
  *
  * Creates all 9 tables with indexes, foreign keys, and CHECK constraints
- * using CREATE TABLE IF NOT EXISTS statements. This approach is preferred
- * for v1.1 over drizzle-kit migrations to keep daemon startup simple.
+ * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
+ * runs incremental migrations via runMigrations() for ALTER TABLE changes.
+ *
+ * v1.4+: DB schema changes MUST use ALTER TABLE incremental migrations (MIG-01~06).
+ * DB deletion and recreation is prohibited.
  *
  * @see docs/25-sqlite-schema.md
+ * @see docs/65-migration-strategy.md
  */
 
 import type { Database } from 'better-sqlite3';
@@ -207,11 +211,96 @@ function getCreateIndexStatements(): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Migration runner (v1.4+ incremental ALTER TABLE migrations)
+// ---------------------------------------------------------------------------
+
+/** A single incremental migration (ALTER TABLE, CREATE INDEX, etc.). */
+export interface Migration {
+  /** Monotonically increasing version number (must be > 1, since version 1 = initial schema). */
+  version: number;
+  /** Human-readable description for schema_version table. */
+  description: string;
+  /** DDL statements to execute. Runs inside a transaction. */
+  up: (sqlite: Database) => void;
+}
+
+/**
+ * Global migration registry. v1.4 migrations will be added here in subsequent phases.
+ * Each migration's version must be unique and greater than 1.
+ */
+export const MIGRATIONS: Migration[] = [];
+// v1.4 마이그레이션은 향후 phase에서 추가
+
+/**
+ * Run incremental migrations against the database.
+ *
+ * - Reads the current max version from schema_version table
+ * - Executes each migration with version > current in ascending order
+ * - Each migration runs in its own transaction (BEGIN/COMMIT)
+ * - On failure: ROLLBACK the failed migration, throw error, skip remaining
+ *
+ * @param sqlite - Raw better-sqlite3 database instance.
+ * @param migrations - Migration list to apply. Defaults to global MIGRATIONS array.
+ * @returns Count of applied and skipped migrations.
+ */
+export function runMigrations(
+  sqlite: Database,
+  migrations: Migration[] = MIGRATIONS,
+): { applied: number; skipped: number } {
+  // Get current schema version (pushSchema always inserts version 1)
+  const row = sqlite
+    .prepare('SELECT MAX(version) AS max_version FROM schema_version')
+    .get() as { max_version: number | null } | undefined;
+  const currentVersion = row?.max_version ?? 1;
+
+  // Sort migrations by version ascending to guarantee order
+  const sorted = [...migrations].sort((a, b) => a.version - b.version);
+
+  let applied = 0;
+  let skipped = 0;
+
+  for (const migration of sorted) {
+    if (migration.version <= currentVersion) {
+      skipped++;
+      continue;
+    }
+
+    // Run each migration in its own transaction
+    sqlite.exec('BEGIN');
+    try {
+      migration.up(sqlite);
+
+      // Record successful migration
+      sqlite
+        .prepare(
+          'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
+        )
+        .run(
+          migration.version,
+          Math.floor(Date.now() / 1000),
+          migration.description,
+        );
+
+      sqlite.exec('COMMIT');
+      applied++;
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw new Error(
+        `Migration v${migration.version} (${migration.description}) failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  return { applied, skipped };
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
  * Push the full schema to the database (CREATE TABLE IF NOT EXISTS + indexes).
+ * Then run any pending incremental migrations.
  * Safe to call on every daemon startup -- idempotent.
  *
  * @param sqlite - Raw better-sqlite3 database instance (PRAGMAs must already be applied).
@@ -238,7 +327,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, Math.floor(Date.now() / 1000), 'Add notification_logs table');
+        .run(1, Math.floor(Date.now() / 1000), 'Initial schema (9 tables)');
     }
 
     sqlite.exec('COMMIT');
@@ -246,4 +335,7 @@ export function pushSchema(sqlite: Database): void {
     sqlite.exec('ROLLBACK');
     throw err;
   }
+
+  // Run incremental migrations after initial schema is established
+  runMigrations(sqlite);
 }
