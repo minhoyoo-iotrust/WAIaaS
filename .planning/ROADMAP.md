@@ -231,11 +231,11 @@ Plans:
   3. 전송 실패 시 TX_FAILED 알림이 발송되고, 정책 위반 시 POLICY_VIOLATION 알림이 발송된다
   4. 세션 생성 시 SESSION_CREATED, 세션 만료 시 SESSION_EXPIRED, Owner 등록 시 OWNER_SET 알림이 발송된다
   5. 알림 발송이 파이프라인 실행을 차단하지 않는다 (fire-and-forget)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 74-01: 파이프라인 stage 1/3/5/6 이벤트 트리거 연결
-- [ ] 74-02: 라우트 핸들러 이벤트 트리거 연결 (세션/Owner) + 통합 테스트
+- [ ] 74-01-PLAN.md -- 파이프라인 stage 1/3/5/6에 fire-and-forget notify() 연결 + 단위 테스트
+- [ ] 74-02-PLAN.md -- 라우트 핸들러(세션/Owner) + 백그라운드 워커 이벤트 트리거 연결 + 통합 테스트
 
 ### Phase 75: 어드민 알림 API + UI
 **Goal**: 어드민이 브라우저에서 알림 채널 상태를 확인하고 테스트 발송하며 발송 이력을 조회할 수 있다
