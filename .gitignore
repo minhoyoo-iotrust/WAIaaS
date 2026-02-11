@@ -33,3 +33,6 @@ Thumbs.db
 
 # Admin UI build artifacts (copied by @waiaas/admin postbuild)
 packages/daemon/public/
+
+# How to test temporal docs.
+how-to-test/

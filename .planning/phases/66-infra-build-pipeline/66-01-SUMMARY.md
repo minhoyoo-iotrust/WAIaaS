@@ -77,7 +77,7 @@ Each task was committed atomically:
 1. **Task 1: Create @waiaas/admin package with Vite + Preact build config** - `3f5b57f` (feat)
 2. **Task 2: Configure turbo.json build dependency + gitignore + daemon package.json** - `ae29dcd` (chore)
 
-**Plan metadata:** TBD (docs: complete plan)
+**Plan metadata:** `ff9a63c` (docs: complete plan)
 
 ## Files Created/Modified
 - `packages/admin/package.json` - Admin package definition with Vite build scripts and Preact devDependencies

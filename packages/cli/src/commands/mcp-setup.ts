@@ -2,9 +2,9 @@
  * `waiaas mcp setup` -- Set up MCP integration for Claude Desktop.
  *
  * 7-step flow (CLI-02):
- *   1. Check daemon is running
- *   2. Resolve agent ID (auto-detect if single agent)
- *   3. Build session constraints
+ *   1. Check daemon is running (GET /health)
+ *   2. Resolve master password
+ *   3. Resolve agent ID (auto-detect if single agent, masterAuth)
  *   4. Create session via POST /v1/sessions (masterAuth)
  *   5. Write token to mcp-token file (atomic)
  *   6. Output result
@@ -29,7 +29,7 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
 
   // Step 1: Check daemon is running
   try {
-    const healthRes = await fetch(`${baseUrl}/v1/admin/status`, {
+    const healthRes = await fetch(`${baseUrl}/health`, {
       signal: AbortSignal.timeout(5000),
     });
     if (!healthRes.ok) {
@@ -38,18 +38,24 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     }
   } catch {
     console.error('Error: Cannot reach WAIaaS daemon.');
-    console.error(`  Tried: ${baseUrl}/v1/admin/status`);
+    console.error(`  Tried: ${baseUrl}/health`);
     console.error('  Make sure the daemon is running: waiaas start');
     process.exit(1);
   }
 
-  // Step 2: Resolve agent ID
+  // Step 2: Resolve master password (before agent list which requires masterAuth)
+  const password = opts.masterPassword ?? await resolvePassword();
+
+  // Step 3: Resolve agent ID
   let agentId = opts.agent;
 
   if (!agentId) {
     try {
       const agentsRes = await fetch(`${baseUrl}/v1/agents`, {
-        headers: { 'Accept': 'application/json' },
+        headers: {
+          'Accept': 'application/json',
+          'X-Master-Password': password,
+        },
       });
 
       if (!agentsRes.ok) {
@@ -57,8 +63,8 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
         process.exit(1);
       }
 
-      const agentsData = await agentsRes.json() as { agents: Array<{ id: string; name?: string }> };
-      const agents = agentsData.agents ?? [];
+      const agentsData = await agentsRes.json() as { items: Array<{ id: string; name?: string }> };
+      const agents = agentsData.items ?? [];
 
       if (agents.length === 0) {
         console.error('Error: No agents found. Run waiaas init first.');
@@ -86,10 +92,7 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     }
   }
 
-  // Step 3: Resolve master password
-  const password = opts.masterPassword ?? await resolvePassword();
-
-  // Step 4: Create session via POST /v1/sessions
+  // Step 4: Create session via POST /v1/sessions (masterAuth)
   let sessionData: { id: string; token: string; expiresAt: number };
   try {
     const sessionRes = await fetch(`${baseUrl}/v1/sessions`, {

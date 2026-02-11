@@ -1,0 +1,224 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
+
+vi.mock('../api/client', () => ({
+  apiGet: vi.fn(),
+  apiPost: vi.fn(),
+  apiPut: vi.fn(),
+  apiDelete: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number;
+    code: string;
+    serverMessage: string;
+    constructor(status: number, code: string, msg: string) {
+      super(`[${status}] ${code}: ${msg}`);
+      this.name = 'ApiError';
+      this.status = status;
+      this.code = code;
+      this.serverMessage = msg;
+    }
+  },
+  apiCall: vi.fn(),
+}));
+
+vi.mock('../components/toast', () => ({
+  showToast: vi.fn(),
+  ToastContainer: () => null,
+}));
+
+vi.mock('../auth/store', () => ({
+  masterPassword: { value: 'test-pw' },
+  isAuthenticated: { value: true },
+  adminTimeout: { value: 900 },
+  daemonShutdown: { value: false },
+  login: vi.fn(),
+  logout: vi.fn(),
+  resetInactivityTimer: vi.fn(),
+}));
+
+vi.mock('../components/layout', async () => {
+  const { signal } = await import('@preact/signals');
+  return { currentPath: signal('/agents') };
+});
+
+vi.mock('../components/copy-button', () => ({
+  CopyButton: ({ value }: { value: string }) => <button>Copy</button>,
+}));
+
+vi.mock('../components/empty-state', () => ({
+  EmptyState: ({ title, description }: { title: string; description?: string }) => (
+    <div>
+      <h3>{title}</h3>
+      {description && <p>{description}</p>}
+    </div>
+  ),
+}));
+
+vi.mock('../utils/error-messages', () => ({
+  getErrorMessage: (code: string) => `Error: ${code}`,
+}));
+
+import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
+import { currentPath } from '../components/layout';
+import AgentsPage from '../pages/agents';
+
+const mockAgents = {
+  items: [
+    {
+      id: 'agent-1',
+      name: 'bot-alpha',
+      chain: 'solana',
+      network: 'devnet',
+      publicKey: 'abc123def456',
+      status: 'ACTIVE',
+      createdAt: 1707609600,
+    },
+    {
+      id: 'agent-2',
+      name: 'bot-beta',
+      chain: 'solana',
+      network: 'devnet',
+      publicKey: 'xyz789uvw012',
+      status: 'ACTIVE',
+      createdAt: 1707609600,
+    },
+  ],
+};
+
+const mockAgentDetail = {
+  ...mockAgents.items[0],
+  ownerAddress: null,
+  ownerVerified: null,
+  ownerState: 'NONE' as const,
+  updatedAt: null,
+};
+
+describe('AgentsPage', () => {
+  beforeEach(() => {
+    currentPath.value = '/agents';
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('should render agent list table', async () => {
+    vi.mocked(apiGet).mockResolvedValue(mockAgents);
+
+    render(<AgentsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    expect(screen.getByText('bot-beta')).toBeTruthy();
+    expect(screen.getByText('Name')).toBeTruthy();
+    expect(screen.getByText('Chain')).toBeTruthy();
+    expect(screen.getByText('Network')).toBeTruthy();
+  });
+
+  it('should show create form and call POST on submit', async () => {
+    vi.mocked(apiGet).mockResolvedValue(mockAgents);
+    vi.mocked(apiPost).mockResolvedValue({
+      id: 'agent-3',
+      name: 'new-bot',
+      chain: 'solana',
+      network: 'devnet',
+      publicKey: 'newkey123',
+      status: 'ACTIVE',
+      createdAt: 1707609600,
+    });
+
+    render(<AgentsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Agent'));
+
+    const nameInput = screen.getByPlaceholderText('e.g. trading-bot');
+    fireEvent.input(nameInput, { target: { value: 'new-bot' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/agents', {
+        name: 'new-bot',
+        chain: 'solana',
+        network: 'devnet',
+      });
+    });
+  });
+
+  it('should render agent detail view', async () => {
+    currentPath.value = '/agents/agent-1';
+    vi.mocked(apiGet).mockResolvedValue(mockAgentDetail);
+
+    render(<AgentsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    expect(screen.getByText('Chain')).toBeTruthy();
+    expect(screen.getByText('Network')).toBeTruthy();
+    expect(screen.getByText('Owner State')).toBeTruthy();
+    expect(screen.getByText('NONE')).toBeTruthy();
+  });
+
+  it('should edit agent name', async () => {
+    currentPath.value = '/agents/agent-1';
+    vi.mocked(apiGet).mockResolvedValue(mockAgentDetail);
+    vi.mocked(apiPut).mockResolvedValue({ ...mockAgentDetail, name: 'renamed-bot' });
+
+    render(<AgentsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    // Click the edit button (pencil icon with title "Edit name")
+    const editButton = screen.getByTitle('Edit name');
+    fireEvent.click(editButton);
+
+    // Find inline edit input and type new name
+    const editInput = screen.getByDisplayValue('bot-alpha');
+    fireEvent.input(editInput, { target: { value: 'renamed-bot' } });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/agents/agent-1', {
+        name: 'renamed-bot',
+      });
+    });
+  });
+
+  it('should delete agent with confirmation modal', async () => {
+    currentPath.value = '/agents/agent-1';
+    vi.mocked(apiGet).mockResolvedValue(mockAgentDetail);
+    vi.mocked(apiDelete).mockResolvedValue(undefined);
+
+    render(<AgentsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Terminate Agent'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Are you sure you want to terminate agent/),
+      ).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Terminate'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/agents/agent-1');
+    });
+  });
+});

@@ -17,11 +17,15 @@
 |----|--------|------|----------|------|--------|
 | BUG-001 | HIGH | 트랜잭션 라우트 미등록 (POST /v1/transactions/send 404) | v1.1 | FIXED | 2026-02-10 |
 | BUG-002 | CRITICAL | 세션 라우트 미등록 + masterAuth 미적용 (POST /v1/sessions 404) | v1.2 | FIXED | 2026-02-10 |
+| BUG-003 | LOW | mcp setup 헬스체크가 인증 필요 엔드포인트 호출 (/v1/admin/status) | v1.3 | FIXED | 2026-02-11 |
+| BUG-004 | MEDIUM | mcp setup 에이전트 목록 조회 시 X-Master-Password 헤더 누락 | v1.3 | FIXED | 2026-02-11 |
+| BUG-005 | CRITICAL | MCP SessionManager가 JWT의 sub 대신 sessionId 클레임 참조 | v1.3 | FIXED | 2026-02-11 |
+| BUG-006 | MEDIUM | mcp setup 에이전트 자동 감지 시 API 응답 필드 불일치 (items vs agents) | v1.3 | FIXED | 2026-02-11 |
 
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 2
+- **FIXED:** 6
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 2
+- **Total:** 6
