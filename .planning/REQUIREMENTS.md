@@ -65,30 +65,30 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAGE-01 | TBD | Pending |
-| PAGE-02 | TBD | Pending |
-| PAGE-03 | TBD | Pending |
-| PAGE-04 | TBD | Pending |
-| PAGE-05 | TBD | Pending |
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
-| APIC-01 | TBD | Pending |
-| APIC-02 | TBD | Pending |
-| APIC-03 | TBD | Pending |
-| COMP-01 | TBD | Pending |
-| COMP-02 | TBD | Pending |
-| COMP-03 | TBD | Pending |
-| SEC-01 | TBD | Pending |
+| PAGE-01 | Phase 65 | Pending |
+| PAGE-02 | Phase 65 | Pending |
+| PAGE-03 | Phase 65 | Pending |
+| PAGE-04 | Phase 65 | Pending |
+| PAGE-05 | Phase 65 | Pending |
+| AUTH-01 | Phase 64 | Pending |
+| AUTH-02 | Phase 64 | Pending |
+| INFRA-01 | Phase 64 | Pending |
+| INFRA-02 | Phase 64 | Pending |
+| INFRA-03 | Phase 64 | Pending |
+| INFRA-04 | Phase 64 | Pending |
+| APIC-01 | Phase 65 | Pending |
+| APIC-02 | Phase 65 | Pending |
+| APIC-03 | Phase 65 | Pending |
+| COMP-01 | Phase 65 | Pending |
+| COMP-02 | Phase 65 | Pending |
+| COMP-03 | Phase 65 | Pending |
+| SEC-01 | Phase 64 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after roadmap created — traceability updated*
