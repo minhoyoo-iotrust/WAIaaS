@@ -216,10 +216,10 @@ Plans:
   2. `--all` 플래그로 전체 에이전트의 토큰을 일괄 생성하고 통합 config 스니펫을 출력한다
   3. `--all` + 에이전트 0개 시 에러 메시지를 표시하고, slug 충돌 시 `{slug}-{agentId 앞 8자}` 접미사를 추가한다
   4. `--agent` 미지정 + 에이전트 1개 자동 선택 시에도 새 경로(`mcp-tokens/<agentId>`)를 사용한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 72-01: mcp setup 경로 변경 + slug 유틸 + --all 플래그 + config 스니펫 + 통합 테스트
+- [ ] 72-01-PLAN.md -- slug 유틸리티 + mcp-setup 다중 에이전트 지원 (경로 변경, --all 플래그, config 스니펫, slug 충돌) + 테스트
 
 ## Progress
 
