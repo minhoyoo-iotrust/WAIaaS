@@ -21,6 +21,7 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토�
 - ✅ v1.3.1 Admin Web UI 설계 — shipped 2026-02-11
 - ✅ v1.3.2 Admin Web UI 구현 — shipped 2026-02-11
 - ✅ v1.3.3 MCP 다중 에이전트 지원 — shipped 2026-02-11
+- ◆ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 (진행 중)
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -160,7 +161,15 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토�
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+## Current Milestone: v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널
+
+**Goal:** v1.3 알림 인프라를 파이프라인/라우트에 실제 연결하고, 어드민 UI에 알림 상태/테스트/로그 패널을 추가한다.
+
+**Target features:**
+- 파이프라인 8개 이벤트 트리거 연결 (TX_REQUESTED~OWNER_SET)
+- notification_logs 테이블 + DB 마이그레이션
+- 어드민 알림 API 3개 (status/test/log)
+- 어드민 알림 패널 UI (채널 상태, 테스트 발송, 로그 조회)
 
 ### 범위 외
 
@@ -275,4 +284,4 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플�
 | toSlug + resolveSlugCollisions 유틸리티 | 에이전트 이름→config-safe 키 변환, 충돌 시 agentId 접미사 | ✓ Good — v1.3.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.3 milestone shipped*
+*최종 업데이트: 2026-02-11 after v1.3.4 milestone started*

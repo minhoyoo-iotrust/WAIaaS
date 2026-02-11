@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3.3 shipped — Planning next milestone
+**Current focus:** v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널
 
 ## Current Position
 
-Phase: Milestone complete
-Plan: N/A
-Status: v1.3.3 shipped
-Last activity: 2026-02-11 -- v1.3.3 MCP 다중 에이전트 지원 shipped
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-11 — Milestone v1.3.4 started
 
 ## Performance Metrics
 
@@ -34,5 +32,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: v1.3.3 milestone shipped
+Stopped at: Milestone v1.3.4 requirements definition
 Resume file: None
