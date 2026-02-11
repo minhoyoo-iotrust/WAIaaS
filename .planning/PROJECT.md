@@ -8,6 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.3.1 Admin Web UI 설계
+
+**Goal:** 데몬에 내장된 경량 관리 웹 UI(5 페이지 SPA)를 설계하여, v1.3.2에서 즉시 구현할 수 있는 상태를 확립
+
+**Target features:**
+- Dashboard/Agents/Sessions/Policies/Settings 5 페이지 화면 설계
+- masterAuth 기반 인증 흐름 + 비활성 타임아웃
+- Preact 10.x + Vite 6.x + CSS Variables 기술 스택 확정
+- Hono serveStatic SPA 서빙 + CSP + 캐시 설정
+- API 연동 패턴(fetch 래퍼, 에러 코드 매핑, 로딩/빈 상태)
+- 보완사항 7건 해소 (GET kill-switch 누락, 에러 코드 모호성, shutdown 후 UI 등)
+
 ## Current State
 
 v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python SDK, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림까지 동작.
@@ -16,7 +28,9 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python 
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
 - ✅ v1.2 인증 + 정책 엔진 — shipped 2026-02-10
 - ✅ v1.3 SDK + MCP + 알림 — shipped 2026-02-11
-- **→ v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)**
+- **→ v1.3.1 Admin Web UI 설계 (Preact SPA 5페이지, 설계 문서 67)**
+- v1.3.2 Admin Web UI 구현
+- v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
@@ -138,15 +152,15 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python 
 
 ### 활성
 
-(v1.4 — 다음 마일스톤에서 정의 예정)
+(v1.3.1 — Admin Web UI 설계)
 
-- [ ] SPL/ERC-20 토큰 전송 (TransferRequest.token 확장)
-- [ ] ContractCallRequest + CONTRACT_WHITELIST 기본 거부 정책
-- [ ] ApproveRequest 독립 정책 카테고리
-- [ ] BatchRequest Solana 원자적 배치
-- [ ] IChainAdapter 나머지 메서드 (buildContractCall, buildApprove, buildBatch, sweepAll 등)
-- [ ] EVM 어댑터 구현
-- [ ] DB 마이그레이션 체계 (ALTER TABLE 증분)
+- [ ] Admin Web UI 전체 설계 문서 (67-admin-web-ui-spec.md)
+- [ ] 5 페이지 화면 설계 (Dashboard, Agents, Sessions, Policies, Settings)
+- [ ] masterAuth 인증 흐름 + Auth Store 설계
+- [ ] Preact + Vite + CSS Variables 기술 스택 + 패키지 구조 설계
+- [ ] Hono SPA 서빙 + CSP + 캐시 + config.toml 확장 설계
+- [ ] API 연동 패턴 + 에러 코드 매핑 + UX 상태 설계
+- [ ] 보완사항 7건 해소 (이전 리뷰에서 도출)
 
 ### 범위 외
 
@@ -241,4 +255,4 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구�
 | 커서 페이지네이션 UUID v7 | createdAt 대신 ID 컬럼 사용, 순서 보장 | ✓ Good — v1.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3 milestone shipped*
+*최종 업데이트: 2026-02-11 after v1.3.1 milestone started*
