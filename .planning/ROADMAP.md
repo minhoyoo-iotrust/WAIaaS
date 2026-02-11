@@ -246,8 +246,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 69-01: Policies 페이지 (PAGE-04)
-- [ ] 69-02: Settings 페이지 (PAGE-05)
+- [ ] 69-01-PLAN.md — Policies 페이지: 10 유형 CRUD + 에이전트 필터 + 4-tier SPENDING_LIMIT 시각화 (PAGE-04)
+- [ ] 69-02-PLAN.md — Settings 페이지: Kill Switch 토글 + JWT 회전 + 데몬 종료 (PAGE-05)
 
 ### Phase 70: 통합 테스트
 **Goal**: 인증/페이지/보안 전 영역을 커버하는 22건의 Vitest + Testing Library 테스트가 통과하여, Admin UI의 핵심 사용자 흐름과 보안 요구사항이 검증된 상태
