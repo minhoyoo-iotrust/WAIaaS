@@ -9,16 +9,16 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 73 of 75 (알림 로그 인프라) — COMPLETE
-Plan: 1 of ~5 in milestone
-Status: Phase 73 verified, ready to plan Phase 74
-Last activity: 2026-02-11 — Phase 73 executed + verified (1 plan, 16 new tests, 863 total)
+Phase: 74 of 75 (파이프라인 이벤트 트리거) — Plan 01 COMPLETE
+Plan: 2 of ~5 in milestone
+Status: Phase 74 Plan 01 executed (2 tasks, 8 new tests, 871 total)
+Last activity: 2026-02-11 — Completed 74-01-PLAN.md
 
-Progress: [██░░░░░░░░] 1/5 plans in v1.3.4
+Progress: [████░░░░░░] 2/5 plans in v1.3.4
 
 ## Performance Metrics
 
-**Cumulative:** 18 milestones, 73 phases, 166 plans, 470 reqs, 863 tests, 44,639+ LOC
+**Cumulative:** 18 milestones, 74 phases, 167 plans, 470 reqs, 871 tests, 44,639+ LOC
 
 ## Accumulated Context
 
@@ -32,6 +32,9 @@ Recent for v1.3.4:
 - 73-01: schema_version 테이블로 마이그레이션 버전 추적 (version=1: notification_logs)
 - 73-01: logDelivery() fire-and-forget 패턴 (try/catch 빈 catch로 DB 에러 흡수)
 - 73-01: schema import를 type-only에서 runtime으로 변경하여 DB 직접 접근
+- 74-01: void prefix on notify() calls for fire-and-forget (Promise detached from pipeline await)
+- 74-01: Optional chaining (?.) on notificationService for backward-compatible DI
+- 74-01: Route handler inline Stage 1 also fires TX_REQUESTED (mirrors stage1Validate)
 
 ### Blockers/Concerns
 
@@ -41,5 +44,5 @@ Recent for v1.3.4:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 73 executed and verified
+Stopped at: Completed 74-01-PLAN.md
 Resume file: None
