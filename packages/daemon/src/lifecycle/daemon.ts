@@ -388,6 +388,21 @@ export class DaemonLifecycle {
         interval: 60_000,
         handler: () => {
           if (this.sqlite && !this._isShuttingDown) {
+            // Notify expired sessions before deletion (fire-and-forget)
+            if (this.notificationService) {
+              try {
+                const expired = this.sqlite.prepare(
+                  "SELECT id, agent_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+                ).all() as Array<{ id: string; agent_id: string }>;
+                for (const session of expired) {
+                  void this.notificationService.notify('SESSION_EXPIRED', session.agent_id, {
+                    sessionId: session.id,
+                  });
+                }
+              } catch {
+                // Fire-and-forget: never block cleanup
+              }
+            }
             this.sqlite.exec(
               "DELETE FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
             );

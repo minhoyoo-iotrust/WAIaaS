@@ -23,6 +23,7 @@ import { agents } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
+import type { NotificationService } from '../../notifications/notification-service.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
 import {
@@ -44,6 +45,7 @@ export interface AgentRouteDeps {
   keyStore: LocalKeyStore;
   masterPassword: string;
   config: DaemonConfig;
+  notificationService?: NotificationService;
 }
 
 // ---------------------------------------------------------------------------
@@ -416,6 +418,11 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
 
     // Set owner
     ownerLifecycle.setOwner(agentId, ownerAddress);
+
+    // Fire-and-forget: notify owner set
+    void deps.notificationService?.notify('OWNER_SET', agentId, {
+      ownerAddress,
+    });
 
     // Fetch updated agent
     const updated = await deps.db

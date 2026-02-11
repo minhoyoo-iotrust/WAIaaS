@@ -20,6 +20,7 @@ import { generateId } from '../../infrastructure/database/id.js';
 import { agents, sessions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
+import type { NotificationService } from '../../notifications/notification-service.js';
 import {
   CreateSessionRequestOpenAPI,
   SessionCreateResponseSchema,
@@ -38,6 +39,7 @@ export interface SessionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   jwtSecretManager: JwtSecretManager;
   config: DaemonConfig;
+  notificationService?: NotificationService;
 }
 
 // ---------------------------------------------------------------------------
@@ -214,6 +216,11 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       maxRenewals: 30,
       constraints: parsed.constraints ? JSON.stringify(parsed.constraints) : null,
     }).run();
+
+    // Fire-and-forget: notify session creation
+    void deps.notificationService?.notify('SESSION_CREATED', parsed.agentId, {
+      sessionId,
+    });
 
     return c.json(
       {
