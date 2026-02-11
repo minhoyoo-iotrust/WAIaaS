@@ -41,6 +41,7 @@ function mockConfig(): DaemonConfig {
     daemon: {
       port: 3100, hostname: '127.0.0.1', log_level: 'info', log_file: 'logs/daemon.log',
       log_max_size: '50MB', log_max_files: 5, pid_file: 'daemon.pid', shutdown_timeout: 30, dev_mode: false,
+      admin_ui: true, admin_timeout: 900,
     },
     keystore: { argon2_memory: 65536, argon2_time: 3, argon2_parallelism: 4, backup_on_rotate: true },
     database: { path: ':memory:', wal_checkpoint_interval: 300, busy_timeout: 5000, cache_size: 64000, mmap_size: 268435456 },
@@ -288,7 +289,7 @@ describe('GET /v1/admin/status', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.status).toBe('running');
-    expect(body.version).toBe('0.0.0');
+    expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
     expect(typeof body.uptime).toBe('number');
     expect(body.uptime).toBeGreaterThanOrEqual(59); // started 60s ago
     expect(body.agentCount).toBe(1);

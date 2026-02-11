@@ -249,7 +249,7 @@ describe('health route', () => {
 
     const body = await json(res);
     expect(body.status).toBe('ok');
-    expect(body.version).toBe('0.0.0');
+    expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
     expect(typeof body.uptime).toBe('number');
     expect(typeof body.timestamp).toBe('number');
   });

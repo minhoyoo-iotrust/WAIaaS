@@ -20,7 +20,11 @@
  * @see docs/52-auth-redesign.md
  */
 
+import { createRequire } from 'node:module';
 import { OpenAPIHono } from '@hono/zod-openapi';
+
+const require = createRequire(import.meta.url);
+const { version: DAEMON_VERSION } = require('../../package.json') as { version: string };
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { IChainAdapter } from '@waiaas/core';
@@ -272,7 +276,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         },
         requestShutdown: deps.requestShutdown,
         startTime: deps.startTime ?? Math.floor(Date.now() / 1000),
-        version: '0.0.0',
+        version: DAEMON_VERSION,
+        adminTimeout: deps.config?.daemon?.admin_timeout ?? 900,
       }),
     );
   }
@@ -282,7 +287,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     openapi: '3.0.0',
     info: {
       title: 'WAIaaS API',
-      version: '0.0.0',
+      version: DAEMON_VERSION,
       description: 'AI Agent Wallet-as-a-Service REST API',
     },
   });

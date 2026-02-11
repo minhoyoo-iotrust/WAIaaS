@@ -405,6 +405,7 @@ export const AdminStatusResponseSchema = z
     agentCount: z.number().int(),
     activeSessionCount: z.number().int(),
     killSwitchState: z.string(),
+    adminTimeout: z.number().int(),
     timestamp: z.number().int(),
   })
   .openapi('AdminStatusResponse');

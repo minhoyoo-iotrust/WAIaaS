@@ -5,8 +5,12 @@
  * No authentication required.
  */
 
+import { createRequire } from 'node:module';
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { HealthResponseSchema } from './openapi-schemas.js';
+
+const require = createRequire(import.meta.url);
+const { version: DAEMON_VERSION } = require('../../../package.json') as { version: string };
 
 const healthRoute = createRoute({
   method: 'get',
@@ -27,7 +31,7 @@ health.openapi(healthRoute, (c) => {
   return c.json(
     {
       status: 'ok',
-      version: '0.0.0',
+      version: DAEMON_VERSION,
       uptime: Math.floor(process.uptime()),
       timestamp: Math.floor(Date.now() / 1000),
     },

@@ -48,6 +48,7 @@ export interface AdminRouteDeps {
   requestShutdown?: () => void;
   startTime: number; // epoch seconds
   version: string;
+  adminTimeout: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +189,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         agentCount,
         activeSessionCount,
         killSwitchState: ksState.state,
+        adminTimeout: deps.adminTimeout,
         timestamp: nowSec,
       },
       200,
