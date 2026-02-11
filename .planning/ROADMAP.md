@@ -182,7 +182,7 @@
 
 - [x] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장 — completed 2026-02-11
 - [x] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트 — completed 2026-02-11
-- [ ] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기
+- [x] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기 — completed 2026-02-11
 - [ ] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료
 - [ ] **Phase 70: 통합 테스트** — 인증 4건, 페이지 14건, 보안+서빙 4건 테스트
 
@@ -286,11 +286,11 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
-| v1.3.2 Admin Web UI 구현 | 66-70 | 6/10 | In progress | - |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 8/10 | In progress | - |
 
-**Total:** 15 milestones shipped, 66 phases completed, 157 plans completed
+**Total:** 15 milestones shipped, 68 phases completed, 161 plans completed
 **Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after Phase 67 executed (2/2 plans complete, verified)*
+*Last updated: 2026-02-11 after Phase 68 executed (2/2 plans complete, verified)*
