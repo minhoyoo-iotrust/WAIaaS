@@ -15,5 +15,6 @@ export {
   pendingApprovals,
   auditLog,
   keyValueStore,
+  notificationLogs,
 } from './schema.js';
 export { generateId } from './id.js';

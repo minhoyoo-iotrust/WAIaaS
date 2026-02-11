@@ -1,7 +1,7 @@
 /**
  * Schema push for daemon SQLite database.
  *
- * Creates all 7 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 9 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. This approach is preferred
  * for v1.1 over drizzle-kit migrations to keep daemon startup simple.
  *
@@ -17,6 +17,7 @@ import {
   TRANSACTION_TYPES,
   POLICY_TYPES,
   POLICY_TIERS,
+  NOTIFICATION_LOG_STATUSES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -26,7 +27,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 7 tables
+// DDL statements for all 9 tables
 // ---------------------------------------------------------------------------
 
 function getCreateTableStatements(): string[] {
@@ -134,6 +135,24 @@ function getCreateTableStatements(): string[] {
   value TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
+
+    // Table 8: notification_logs
+    `CREATE TABLE IF NOT EXISTS notification_logs (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  agent_id TEXT,
+  channel TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN (${inList(NOTIFICATION_LOG_STATUSES)})),
+  error TEXT,
+  created_at INTEGER NOT NULL
+)`,
+
+    // Table 9: schema_version
+    `CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER PRIMARY KEY,
+  applied_at INTEGER NOT NULL,
+  description TEXT NOT NULL
+)`,
   ];
 }
 
@@ -178,6 +197,12 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_audit_log_agent_id ON audit_log(agent_id)',
     'CREATE INDEX IF NOT EXISTS idx_audit_log_severity ON audit_log(severity)',
     'CREATE INDEX IF NOT EXISTS idx_audit_log_agent_timestamp ON audit_log(agent_id, timestamp)',
+
+    // notification_logs indexes
+    'CREATE INDEX IF NOT EXISTS idx_notification_logs_event_type ON notification_logs(event_type)',
+    'CREATE INDEX IF NOT EXISTS idx_notification_logs_agent_id ON notification_logs(agent_id)',
+    'CREATE INDEX IF NOT EXISTS idx_notification_logs_status ON notification_logs(status)',
+    'CREATE INDEX IF NOT EXISTS idx_notification_logs_created_at ON notification_logs(created_at)',
   ];
 }
 
@@ -203,6 +228,19 @@ export function pushSchema(sqlite: Database): void {
     for (const stmt of indexes) {
       sqlite.exec(stmt);
     }
+
+    // Record schema version 1 if not already recorded
+    const existing = sqlite
+      .prepare('SELECT version FROM schema_version WHERE version = 1')
+      .get() as { version: number } | undefined;
+    if (!existing) {
+      sqlite
+        .prepare(
+          'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
+        )
+        .run(1, Math.floor(Date.now() / 1000), 'Add notification_logs table');
+    }
+
     sqlite.exec('COMMIT');
   } catch (err) {
     sqlite.exec('ROLLBACK');

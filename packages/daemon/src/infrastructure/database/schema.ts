@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 7 tables: agents, sessions, transactions, policies, pending_approvals, audit_log, key_value_store
+ * 8 tables: agents, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -28,6 +28,7 @@ import {
   TRANSACTION_TYPES,
   POLICY_TYPES,
   POLICY_TIERS,
+  NOTIFICATION_LOG_STATUSES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -237,3 +238,27 @@ export const keyValueStore = sqliteTable('key_value_store', {
   value: text('value').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Table 8: notification_logs -- notification delivery history
+// ---------------------------------------------------------------------------
+
+export const notificationLogs = sqliteTable(
+  'notification_logs',
+  {
+    id: text('id').primaryKey(), // UUID v7
+    eventType: text('event_type').notNull(),
+    agentId: text('agent_id'),
+    channel: text('channel').notNull(), // telegram / discord / ntfy
+    status: text('status').notNull(), // sent / failed
+    error: text('error'), // failure error message (nullable)
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_notification_logs_event_type').on(table.eventType),
+    index('idx_notification_logs_agent_id').on(table.agentId),
+    index('idx_notification_logs_status').on(table.status),
+    index('idx_notification_logs_created_at').on(table.createdAt),
+    check('check_notif_log_status', buildCheckSql('status', NOTIFICATION_LOG_STATUSES)),
+  ],
+);

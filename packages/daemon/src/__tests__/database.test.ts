@@ -50,7 +50,7 @@ const now = () => Math.floor(Date.now() / 1000);
 // ---------------------------------------------------------------------------
 
 describe('Schema creation', () => {
-  it('should create all 7 tables', () => {
+  it('should create all 9 tables', () => {
     const tables = sqlite
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all() as Array<{ name: string }>;
@@ -60,8 +60,10 @@ describe('Schema creation', () => {
       'agents',
       'audit_log',
       'key_value_store',
+      'notification_logs',
       'pending_approvals',
       'policies',
+      'schema_version',
       'sessions',
       'transactions',
     ]);

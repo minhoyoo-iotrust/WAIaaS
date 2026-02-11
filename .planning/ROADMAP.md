@@ -201,7 +201,7 @@
 
 **Milestone Goal:** v1.3 알림 인프라(NotificationService, 3채널, 21 이벤트 템플릿)를 파이프라인/라우트에 실제 연결하고, 어드민 UI에 알림 상태/테스트/로그 패널을 추가하여, 데몬에서 발생하는 주요 이벤트가 실제로 사용자에게 알림으로 전달되는 상태를 달성한다.
 
-- [ ] **Phase 73: 알림 로그 인프라** — notification_logs DB 마이그레이션 + NotificationService 로깅 통합
+- [x] **Phase 73: 알림 로그 인프라** (1/1 plan) — completed 2026-02-11
 - [ ] **Phase 74: 파이프라인 이벤트 트리거 연결** — 파이프라인 8개 이벤트에서 notify() 호출 연결
 - [ ] **Phase 75: 어드민 알림 API + UI** — 알림 상태/테스트/로그 API 3개 + 어드민 알림 패널
 
@@ -231,11 +231,11 @@ Plans:
   3. 전송 실패 시 TX_FAILED 알림이 발송되고, 정책 위반 시 POLICY_VIOLATION 알림이 발송된다
   4. 세션 생성 시 SESSION_CREATED, 세션 만료 시 SESSION_EXPIRED, Owner 등록 시 OWNER_SET 알림이 발송된다
   5. 알림 발송이 파이프라인 실행을 차단하지 않는다 (fire-and-forget)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 74-01: 파이프라인 stage 1/3/5/6 이벤트 트리거 연결
-- [ ] 74-02: 라우트 핸들러 이벤트 트리거 연결 (세션/Owner) + 통합 테스트
+- [ ] 74-01-PLAN.md -- 파이프라인 stage 1/3/5/6에 fire-and-forget notify() 연결 + 단위 테스트
+- [ ] 74-02-PLAN.md -- 라우트 핸들러(세션/Owner) + 백그라운드 워커 이벤트 트리거 연결 + 통합 테스트
 
 ### Phase 75: 어드민 알림 API + UI
 **Goal**: 어드민이 브라우저에서 알림 채널 상태를 확인하고 테스트 발송하며 발송 이력을 조회할 수 있다
