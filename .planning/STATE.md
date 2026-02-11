@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 76 기반 인프라 + 파이프라인 기초
+**Current focus:** v1.4 Phase 76 완료, Phase 77 진행 예정
 
 ## Current Position
 
 Phase: 76 of 81 (기반 인프라 + 파이프라인 기초)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-12 — Completed 76-02-PLAN.md (Migration runner + discriminatedUnion 5-type schema)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-12 — Completed 76-03-PLAN.md (IChainAdapter 20-method extension + PolicyType superRefine)
 
-Progress: [██░░░░░░░░] 17% (2/12 plans)
+Progress: [███░░░░░░░] 25% (3/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 172 plans, 488 reqs, 936 tests, 42,785 LOC
+**Cumulative:** 19 milestones, 75 phases, 173 plans, 488 reqs, 959 tests, 43,545 LOC
 
 ## Accumulated Context
 
@@ -36,6 +36,9 @@ Recent decisions affecting current work:
 - TransferRequestInput 타입명 (TransferRequest 아님) -- IChainAdapter.TransferRequest 인터페이스와 충돌 방지
 - runMigrations() 테스트용 migrations 파라미터 옵션 (기본값 = 전역 MIGRATIONS 배열)
 - schema_version v1 설명 'Initial schema (9 tables)'로 정정
+- getCurrentNonce는 Solana에서 0 반환 (스텁 아닌 실제 구현) -- EVM 전용 개념
+- superRefine uses POLICY_RULES_SCHEMAS map lookup (switch/case 대신) -- 확장성
+- 6개 rules 스키마는 module-level const (비공개) -- 내부 검증 전용
 
 ### Blockers/Concerns
 
@@ -45,5 +48,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 76-02-PLAN.md
+Stopped at: Completed 76-03-PLAN.md (Phase 76 complete)
 Resume file: None
