@@ -410,3 +410,33 @@
 
 ---
 
+
+## v1.3.2 Admin Web UI 구현 (Shipped: 2026-02-11)
+
+**Delivered:** v1.3.1 설계 문서 67(10섹션) 기반으로 Preact 10.x + Vite 6.x Admin Web UI SPA를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태를 달성
+
+**Phases completed:** 66-70 (10 plans total)
+
+**Key accomplishments:**
+
+- Preact + Vite 빌드 파이프라인 — @waiaas/admin 패키지 스캐폴드, postbuild daemon/public/admin/ 복사, CSP(default-src 'none') 미들웨어, Kill Switch bypass, admin_ui/admin_timeout config 확장
+- masterAuth 로그인 + Auth Store — @preact/signals 기반 상태 관리, 비활성 타임아웃 자동 로그아웃, fetch 래퍼(X-Master-Password 자동 주입), 70 에러 코드 사용자 친화적 매핑
+- Dashboard/Agents/Sessions 페이지 — 6-카드 데몬 상태 요약 + 30초 폴링, 에이전트 CRUD + Owner 상태 읽기 전용, 세션 생성/조회/폐기 + JWT 토큰 원타임 표시
+- Policies/Settings 페이지 — 10 유형 정책 CRUD + 4-tier SPENDING_LIMIT 시각화(초록/파랑/노랑/빨강), Kill Switch 토글, JWT 회전, 데몬 종료(type-to-confirm)
+- Vitest + Testing Library 27 테스트 — 인증 4건, 유틸 6건, 페이지 14건(Dashboard 3 + Agents 5 + Sessions 3 + Policies 3 + Settings 3), 보안/서빙 4건(CSP, admin_ui toggle, Kill Switch bypass)
+
+**Stats:**
+
+- 79 files changed, +13,046 / -47 lines
+- @waiaas/admin: 4,440 LOC (TSX/TS/CSS)
+- Total project: 45,332 LOC
+- 5 phases, 10 plans, 22 requirements, 32 구현 결정
+- 816 tests (784 → 816, +32 new admin tests)
+- 37 commits, ~4 hours (15:34 → 19:39 KST, 2026-02-11)
+
+**Git range:** `3f5b57f` (Phase 66 start) → `afd7ca8` (Phase 70 complete)
+
+**What's next:** v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
+
+---
+

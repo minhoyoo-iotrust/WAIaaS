@@ -2,45 +2,34 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3에서 SDK/MCP/알림 계층이 완성되어 AI 에이전트가 프로그래밍 방식으로 지갑을 사용하고 Owner가 실시간 알림을 받을 수 있다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3.2에서 브라우저 기반 Admin Web UI(Preact SPA)가 추가되어 에이전트 등록, 세션 관리, 정책 설정, Kill Switch 등 핵심 관리 기능을 GUI로 수행할 수 있다.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.3.2 Admin Web UI 구현
-
-**Goal:** v1.3.1에서 설계한 Admin Web UI를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태.
-
-**Target features:**
-- Preact 10.x SPA 5페이지 (Dashboard/Agents/Sessions/Policies/Settings)
-- Hono serveStatic 정적 파일 서빙 + SPA fallback + CSP 미들웨어
-- masterAuth 로그인 + @preact/signals Auth Store + 비활성 타임아웃
-- 33 REST API 연동 (fetch 래퍼 + 68 에러 코드 매핑)
-- Vite 6.x 빌드 → daemon/public/ 복사 파이프라인
-
 ## Current State
 
-v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)로 Preact SPA 5페이지 관리 UI의 인프라/인증/보안/페이지/컴포넌트/API 연동이 모두 확정되어 v1.3.2에서 즉시 구현 착수.
+v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(Preact SPA 5페이지)가 동작하여 CLI 없이도 에이전트 등록, 세션 관리, 정책 설정, Kill Switch 관리가 가능.
 
-코드베이스(v1.3 기준): 7-패키지 모노레포 + Python SDK, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림까지 동작.
+코드베이스(v1.3.2 기준): 8-패키지 모노레포 + Python SDK, 45,332 LOC, 816 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림 + Admin Web UI(`/admin`) 관리까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
 - ✅ v1.2 인증 + 정책 엔진 — shipped 2026-02-10
 - ✅ v1.3 SDK + MCP + 알림 — shipped 2026-02-11
 - ✅ v1.3.1 Admin Web UI 설계 — shipped 2026-02-11
-- v1.3.2 Admin Web UI 구현
+- ✅ v1.3.2 Admin Web UI 구현 — shipped 2026-02-11
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
-- v2.0 전 기능 완성 릴리스 (npm 7패키지, Docker, Desktop 5플랫폼, GitHub Release)
+- v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
 
 **코드베이스 현황:**
-- 7-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli, @waiaas/sdk, @waiaas/mcp + waiaas (Python)
-- 32,337 TypeScript LOC + 1,592 Python LOC = 33,929 LOC (ESM-only, Node.js 22)
-- 784 테스트 (core + adapter + daemon + CLI + SDK + MCP)
+- 8-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
+- 45,332 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 816 테스트 (core + adapter + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 설계 문서 31개 (24-67), 8 objective 문서
@@ -159,17 +148,14 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)�
 - ✓ 8개 공통 컴포넌트 인터페이스 + CSS Variables 디자인 토큰 + 폼 유효성 검증 전략 — v1.3.1
 - ✓ fetch 래퍼 + 68개 에러 코드 전체 매핑 + 로딩/빈/에러/셧다운 UX 패턴 — v1.3.1
 
+- ✓ @waiaas/admin Preact + Vite 패키지 스캐폴드 + 빌드 파이프라인 + CSP + Kill Switch bypass — v1.3.2 (INFRA-01~07)
+- ✓ masterAuth 로그인 + Auth Store + 비활성 타임아웃 + API Client fetch 래퍼 + 70 에러 코드 매핑 — v1.3.2 (AUTH-01~03, COMP-01~03)
+- ✓ Dashboard/Agents/Sessions/Policies/Settings 5개 페이지 구현 + 4-tier SPENDING_LIMIT 시각화 — v1.3.2 (PAGE-01~05)
+- ✓ Admin UI 통합 테스트 27건 (인증 4 + 유틸 6 + 페이지 14 + 보안/서빙 4) — v1.3.2 (TEST-01~03)
+
 ### 활성
 
-- [ ] Admin UI 패키지 스캐폴드 + Vite 빌드 파이프라인 + daemon 정적 서빙
-- [ ] masterAuth 로그인 + Auth Store + 비활성 타임아웃 + API Client fetch 래퍼
-- [ ] Dashboard 페이지 (데몬 상태 요약, 30초 폴링)
-- [ ] Agents 페이지 (CRUD, Owner 상태 읽기 전용)
-- [ ] Sessions 페이지 (에이전트별 생성/조회/폐기, JWT 토큰 복사)
-- [ ] Policies 페이지 (10 유형, rules JSON 편집, 4-tier 시각화)
-- [ ] Settings 페이지 (Kill Switch 토글, JWT 회전, 데몬 종료)
-- [ ] 공통 컴포넌트 (Layout, Table, Form, Modal, Toast, CopyButton, EmptyState)
-- [ ] CSP 미들웨어 + Kill Switch guard bypass + config 확장 (admin_ui, admin_timeout)
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -186,7 +172,7 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)�
 
 ## 컨텍스트
 
-**누적:** 16 milestones (v0.1-v1.3.1), 65 phases, 153 plans, 434 requirements, 31 설계 문서(24-67), 8 objective 문서, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트
+**누적:** 17 milestones (v0.1-v1.3.2), 70 phases, 163 plans, 456 requirements, 31 설계 문서(24-67), 8 objective 문서, 45,332 LOC, 816 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -194,6 +180,7 @@ v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플�
 v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요구사항, 25,526 LOC, 457 테스트.
 v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구사항, 33,929 LOC, 784 테스트.
 v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요구사항, 설계 문서 67(10섹션).
+v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요구사항, 45,332 LOC, 816 테스트.
 
 **기술 스택 (v0.2 확정, v1.3 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -207,6 +194,7 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요�
 - Build: pnpm workspace + Turborepo, tsc only
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
+- Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
 - 미구현: @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
 
 **설계 문서:** 31개 (deliverables 24-67.md) + 대응표/테스트 전략/objective
@@ -268,6 +256,12 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요�
 | CSP default-src 'none' + CSRF 토큰 불필요 | 가장 엄격한 CSP 기본값, 커스텀 헤더로 CSRF 방어 | ✓ Good — v1.3.1 설계 |
 | 클라이언트 검증 Zod 미임포트 | ~13KB gzip 절약, 빌드 커플링 제거 | ✓ Good — v1.3.1 설계 |
 | 68 에러 코드 전체 매핑 | Admin UI 미사용 코드 포함, 향후 견고성 확보 | ✓ Good — v1.3.1 설계 |
+| All Preact/Vite deps as devDependencies | 빌드 타임만 필요, 런타임 번들에 미포함 | ✓ Good — v1.3.2 구현 |
+| CSP default-src 'none' 최엄격 정책 | XSS 방어 극대화, script-src/style-src/img-src 'self' 개별 허용 | ✓ Good — v1.3.2 구현 |
+| Custom hash routing (@preact/signals) | preact-router 의존 제거, hashchange 이벤트 + signal 단순 구현 | ✓ Good — v1.3.2 구현 |
+| Preact signal reset via beforeEach | module-level signals 테스트 격리, 상태 누수 방지 | ✓ Good — v1.3.2 구현 |
+| Type-to-confirm 데몬 종료 패턴 | 실수 방지, "SHUTDOWN" 입력 필수 | ✓ Good — v1.3.2 구현 |
+| isInitialLoad 패턴 (스켈레톤 vs 스테일 데이터) | 첫 로드만 스켈레톤, 이후 폴링은 stale 데이터 위 에러 표시 | ✓ Good — v1.3.2 구현 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.2 milestone started*
+*최종 업데이트: 2026-02-11 after v1.3.2 milestone shipped*
