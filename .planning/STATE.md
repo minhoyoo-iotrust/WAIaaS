@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Phase: 63 of 63 (MCP Server)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-11 -- Phase 61+62 complete, merged to main
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-11 -- Completed 63-01-PLAN.md
 
-Progress: [█████████░] 82% (9/11 plans)
+Progress: [██████████░] 91% (10/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 62 phases, 149 plans, 367 reqs, 682 tests, 30,500+ LOC
+**Cumulative:** 14 milestones, 62 phases, 150 plans, 367 reqs, 761 tests, 31,500+ LOC
 
 **v1.3 Velocity:**
-- Plans completed: 9
-- Average duration: 9.3min
-- Total execution time: 76min
+- Plans completed: 10
+- Average duration: 9.2min
+- Total execution time: 85min
 
 **v1.2 Velocity (reference):**
 - Total plans completed: 13
@@ -68,6 +68,10 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - Pydantic v2 populate_by_name=True: camelCase JSON + snake_case Python dual access on all models
 - RetryPolicy defaults: 3 retries, 1s base delay, {429,500,502,503,504} retryable codes
 - renew_session() auto-updates client session token + Authorization header
+- MCP: Import CallToolResult/ReadResourceResult from SDK types.js (avoids $loose index signature issue)
+- MCP: ApiResult discriminated union with 4 variants (ok/error/expired/networkError)
+- MCP: H-04 toToolResult never sets isError on session_expired/networkError
+- MCP: File > env token priority in SessionManager (SM-04)
 
 ### Blockers/Concerns
 
@@ -77,5 +81,5 @@ Full log in PROJECT.md. Key decisions for v1.3:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 61+62 complete -- ready to plan Phase 63
+Stopped at: Completed 63-01-PLAN.md
 Resume file: None
