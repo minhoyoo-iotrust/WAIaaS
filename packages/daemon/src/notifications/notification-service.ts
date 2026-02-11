@@ -10,7 +10,8 @@ import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { getNotificationMessage } from './templates/message-templates.js';
-import type * as schema from '../infrastructure/database/schema.js';
+import * as schema from '../infrastructure/database/schema.js';
+import { generateId } from '../infrastructure/database/id.js';
 
 // Broadcast event types -- sent to ALL channels simultaneously
 const BROADCAST_EVENTS: Set<string> = new Set([
@@ -85,7 +86,15 @@ export class NotificationService {
    */
   private async broadcast(payload: NotificationPayload): Promise<void> {
     const results = await Promise.allSettled(
-      this.channels.map((ch) => this.sendToChannel(ch, payload)),
+      this.channels.map(async (ch) => {
+        try {
+          await this.sendToChannel(ch, payload);
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          this.logDelivery(ch.name, payload, 'failed', errorMsg);
+          throw err; // re-throw so allSettled records rejection
+        }
+      }),
     );
 
     const allFailed = results.every((r) => r.status === 'rejected');
@@ -103,8 +112,10 @@ export class NotificationService {
       try {
         await this.sendToChannel(channel, payload);
         return; // Success -- stop trying
-      } catch {
-        // Channel failed, try next
+      } catch (err) {
+        // Log failed delivery attempt
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        this.logDelivery(channel.name, payload, 'failed', errorMsg);
         continue;
       }
     }
@@ -124,6 +135,8 @@ export class NotificationService {
     }
     await channel.send(payload);
     this.recordSend(channel.name);
+    // Log successful delivery
+    this.logDelivery(channel.name, payload, 'sent');
   }
 
   /** Check if channel is rate limited (sliding window). */
@@ -145,6 +158,36 @@ export class NotificationService {
   }
 
   /**
+   * Record notification delivery result to notification_logs table.
+   * Fire-and-forget: errors are swallowed to never block the pipeline.
+   */
+  private logDelivery(
+    channelName: string,
+    payload: NotificationPayload,
+    status: 'sent' | 'failed',
+    error?: string,
+  ): void {
+    if (!this.db) return;
+
+    try {
+      this.db
+        .insert(schema.notificationLogs)
+        .values({
+          id: generateId(),
+          eventType: payload.eventType,
+          agentId: payload.agentId,
+          channel: channelName,
+          status,
+          error: error ?? null,
+          createdAt: new Date(payload.timestamp * 1000),
+        })
+        .run();
+    } catch {
+      // Fire-and-forget: swallow DB errors to never block notification flow
+    }
+  }
+
+  /**
    * Log CRITICAL failure to audit_log when all channels fail.
    */
   private async logCriticalFailure(
@@ -160,9 +203,6 @@ export class NotificationService {
     }
 
     try {
-      // Dynamic import to avoid circular deps
-      const { auditLog } = await import('../infrastructure/database/schema.js');
-
       const errorDetails = results
         ? results
             .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
@@ -171,7 +211,7 @@ export class NotificationService {
         : 'All channels failed';
 
       this.db
-        .insert(auditLog)
+        .insert(schema.auditLog)
         .values({
           timestamp: new Date(payload.timestamp * 1000),
           eventType: 'NOTIFICATION_TOTAL_FAILURE',
