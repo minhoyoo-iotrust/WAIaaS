@@ -201,8 +201,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 66-01: Preact 패키지 스캐폴드 + Vite 빌드 파이프라인 (INFRA-01, INFRA-06, INFRA-07)
-- [ ] 66-02: daemon 정적 서빙 + CSP + Kill Switch bypass + config 확장 (INFRA-02, INFRA-03, INFRA-04, INFRA-05)
+- [ ] 66-01-PLAN.md — Preact 패키지 스캐폴드 + Vite 빌드 파이프라인 (INFRA-01, INFRA-06)
+- [ ] 66-02-PLAN.md — daemon 정적 서빙 + CSP + Kill Switch bypass + config 확장 + 버전 수정 (INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-07)
 
 ### Phase 67: 인증 + API Client + 공통 컴포넌트
 **Goal**: 사용자가 마스터 비밀번호로 로그인하여 인증된 상태로 SPA를 사용하고, 비활성 시 자동 로그아웃되며, 모든 페이지에서 공통 레이아웃/테이블/폼/모달/토스트 컴포넌트를 사용할 수 있는 상태
@@ -286,11 +286,11 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
-| v1.3.2 Admin Web UI 구현 | 66-70 | 0/10 | In progress | - |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 2/10 | In progress | - |
 
 **Total:** 15 milestones shipped, 65 phases completed, 153 plans completed
 **Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after v1.3.2 roadmap created*
+*Last updated: 2026-02-11 after Phase 66 plans created (2 plans, 2 waves)*
