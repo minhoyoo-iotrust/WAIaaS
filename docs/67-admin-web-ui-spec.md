@@ -1347,6 +1347,803 @@ App (app.tsx)
 
 ---
 
+## 9. 공통 컴포넌트 (COMP-01, COMP-02, COMP-03)
+
+### 9.1 Preact 컴포넌트 트리 (COMP-01)
+
+파일-컴포넌트 매핑을 포함한 전체 트리:
+
+```
+App (app.tsx)
+├── Login (auth/login.tsx) — !isAuthenticated 일 때
+└── Layout (components/layout.tsx) — isAuthenticated 일 때
+    ├── Sidebar — 네비게이션 링크 (활성 상태 표시)
+    │   └── NavLink × 5 (Dashboard, Agents, Sessions, Policies, Settings)
+    ├── Header — 현재 페이지 제목 + Logout 버튼
+    └── Router (preact-iso)
+        ├── #/dashboard → DashboardPage (pages/dashboard.tsx)
+        │   ├── StatCard × 4 (version, uptime, agents, sessions)
+        │   └── KillSwitchBadge
+        ├── #/agents → AgentListPage (pages/agents.tsx)
+        │   ├── CreateAgentForm
+        │   ├── Table (agents data)
+        │   └── CopyButton (per public key)
+        ├── #/agents/:id → AgentDetailPage (pages/agents.tsx)
+        │   ├── ReadOnlyFieldGroup
+        │   ├── InlineEditField (name)
+        │   ├── CopyButton (public key)
+        │   └── DeleteButton → Modal
+        ├── #/sessions → SessionsPage (pages/sessions.tsx)
+        │   ├── AgentSelector (dropdown)
+        │   ├── CreateSessionButton → Modal (token display)
+        │   ├── Table (sessions data)
+        │   └── CopyButton (token, one-time)
+        ├── #/policies → PoliciesPage (pages/policies.tsx)
+        │   ├── AgentFilterDropdown
+        │   ├── PolicyForm (create/edit)
+        │   │   ├── TypeSelector
+        │   │   ├── RulesEditor (dynamic per type)
+        │   │   └── TierVisualization (SPENDING_LIMIT only)
+        │   ├── Table (policies data)
+        │   └── DeleteButton → Modal
+        └── #/settings → SettingsPage (pages/settings.tsx)
+            ├── DaemonStatusCard
+            ├── KillSwitchCard → Modal
+            ├── JwtRotationCard → Modal
+            └── ShutdownCard → Modal
+```
+
+**해시 라우터 경로 매핑 테이블**:
+
+| 해시 경로 | 컴포넌트 | 파일 |
+|-----------|----------|------|
+| `#/login` | Login | `auth/login.tsx` |
+| `#/dashboard` | DashboardPage | `pages/dashboard.tsx` |
+| `#/agents` | AgentListPage | `pages/agents.tsx` |
+| `#/agents/:id` | AgentDetailPage | `pages/agents.tsx` |
+| `#/sessions` | SessionsPage | `pages/sessions.tsx` |
+| `#/policies` | PoliciesPage | `pages/policies.tsx` |
+| `#/settings` | SettingsPage | `pages/settings.tsx` |
+
+> `#/agents`와 `#/agents/:id`는 동일 파일(`pages/agents.tsx`)에서 URL 파라미터 유무로 분기한다.
+
+### 9.2 CSS Variables 디자인 토큰 (COMP-02)
+
+`packages/admin/src/styles/global.css`에 정의하는 전체 토큰 세트:
+
+```css
+:root {
+  /* ─── Primary ──────────────────────────────────── */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+
+  /* ─── Neutral ──────────────────────────────────── */
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  /* ─── Status ───────────────────────────────────── */
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-info: #2563eb;
+  --color-info-bg: #eff6ff;
+
+  /* ─── Tier colors (policy visualization) ───────── */
+  --color-tier-instant: #16a34a;  /* green — INSTANT */
+  --color-tier-delay: #d97706;    /* amber — DELAY */
+  --color-tier-blocked: #dc2626;  /* red — BLOCKED */
+
+  /* ─── Spacing (4px base) ───────────────────────── */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+
+  /* ─── Typography ───────────────────────────────── */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.875rem;  /* 14px */
+  --font-size-base: 1rem;    /* 16px */
+  --font-size-lg: 1.125rem;  /* 18px */
+  --font-size-xl: 1.25rem;   /* 20px */
+  --font-size-2xl: 1.5rem;   /* 24px */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height: 1.5;
+
+  /* ─── Borders ──────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+  --border-width: 1px;
+
+  /* ─── Shadows ──────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+
+  /* ─── Layout ───────────────────────────────────── */
+  --sidebar-width: 220px;
+  --header-height: 56px;
+  --content-max-width: 1200px;
+}
+```
+
+**토큰 설계 근거**:
+
+| 카테고리 | 근거 |
+|----------|------|
+| Primary (#2563eb) | Tailwind blue-600 계열. 접근성 대비비(contrast ratio) 4.5:1 이상 |
+| Neutral | Slate 계열 (cool gray). 텍스트 가독성 우선 |
+| Status 4색 | 녹색(성공), 황색(경고), 적색(위험), 청색(정보) — 표준 의미 색상 |
+| Tier 3색 | 정책 티어(INSTANT/DELAY/BLOCKED)와 1:1 매핑 |
+| Spacing 4px base | 일관된 8px 그리드 시스템 (4, 8, 12, 16, 24, 32) |
+| Typography | 시스템 폰트 스택. 외부 폰트 CDN 불필요. CSP `font-src 'self'`와 호환 |
+
+> 다크 모드: 현재 범위 외. CSS Variables 구조이므로 향후 `@media (prefers-color-scheme: dark)` 또는 `.dark` 클래스로 확장 가능.
+
+### 9.3 공통 컴포넌트 인터페이스 (COMP-02)
+
+2개 이상 페이지에서 재사용되는 공통 컴포넌트의 TypeScript props 인터페이스와 동작 명세.
+
+#### 9.3.1 Table (`components/table.tsx`)
+
+```typescript
+interface Column<T> {
+  key: keyof T | string;
+  header: string;
+  render?: (row: T) => preact.VNode;
+  width?: string;
+}
+
+interface TableProps<T> {
+  columns: Column<T>[];
+  data: T[];
+  onRowClick?: (row: T) => void;
+  emptyMessage?: string;       // default: "No data"
+  loading?: boolean;
+}
+```
+
+**동작**:
+
+| 상태 | 렌더링 |
+|------|--------|
+| `loading=true` | Skeleton 행 3개 (회색 직사각형 플레이스홀더) |
+| `data.length === 0` | EmptyState 컴포넌트 (`emptyMessage` 표시) |
+| `data.length > 0` | `<table>` + `<thead>` + `<tbody>` 정상 렌더링 |
+
+- `render` 함수가 있으면 커스텀 렌더링 (Badge, CopyButton 등)
+- `render` 없으면 `row[column.key]` 텍스트 출력
+- `onRowClick`: 행 클릭 시 콜백 (커서 pointer 표시)
+
+#### 9.3.2 Form / FormField (`components/form.tsx`)
+
+```typescript
+interface FormFieldProps {
+  label: string;
+  name: string;
+  type: 'text' | 'number' | 'select' | 'textarea' | 'checkbox';
+  value: string | number | boolean;
+  onChange: (value: string | number | boolean) => void;
+  options?: { value: string; label: string }[];  // select 타입용
+  error?: string;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+}
+```
+
+**동작**:
+
+- 각 필드: `<label>` + `<input>` (또는 `<select>`, `<textarea>`, `<input type="checkbox">`) + 에러 메시지
+- `error` 문자열이 있으면 입력 아래 적색 텍스트로 표시
+- `disabled=true`: 입력 비활성화 (수정 불가, 읽기 전용 스타일)
+- `type="select"`: `options` 배열로 `<option>` 렌더링
+- `type="textarea"`: 여러 줄 입력 (WHITELIST 주소 목록, JSON 편집)
+- `type="checkbox"`: 체크박스 (Enabled 토글)
+
+#### 9.3.3 Modal (`components/modal.tsx`)
+
+```typescript
+interface ModalProps {
+  open: boolean;
+  title: string;
+  children: preact.ComponentChildren;
+  onConfirm?: () => void;
+  onCancel: () => void;
+  confirmText?: string;            // default: "Confirm"
+  cancelText?: string;             // default: "Cancel"
+  confirmVariant?: 'primary' | 'danger';  // default: "primary"
+  loading?: boolean;
+}
+```
+
+**동작**:
+
+- `open=true`: 반투명 오버레이 + 중앙 정렬 카드
+- `open=false`: 렌더링하지 않음 (DOM에서 제거)
+- ESC 키: `onCancel` 호출 → 모달 닫기
+- 오버레이 클릭 (모달 외부): `onCancel` 호출 → 모달 닫기
+- `onConfirm` 미제공 시: 확인 버튼 미표시 (정보 표시 전용 모달)
+- `loading=true`: 확인 버튼에 로딩 스피너 + 비활성화
+- `confirmVariant='danger'`: 확인 버튼 적색 스타일 (삭제, 종료 등 위험 동작)
+
+#### 9.3.4 Toast (`components/toast.tsx`)
+
+```typescript
+type ToastType = 'success' | 'error' | 'info';
+
+interface Toast {
+  id: string;
+  type: ToastType;
+  message: string;
+}
+
+// 전역 signal — 앱 전체에서 공유
+const toasts = signal<Toast[]>([]);
+
+// 호출 인터페이스
+function showToast(type: ToastType, message: string): void;
+```
+
+**동작**:
+
+| 속성 | 값 |
+|------|-----|
+| 위치 | 화면 우상단 (`position: fixed`) |
+| 자동 닫기 | 5초 후 자동 제거 |
+| 다중 표시 | 수직 스택 (최신이 위) |
+| success | 녹색 좌측 보더 (`--color-success`) |
+| error | 적색 좌측 보더 (`--color-danger`) |
+| info | 청색 좌측 보더 (`--color-info`) |
+
+**사용 예시**:
+
+```typescript
+showToast('success', 'Agent created');
+showToast('error', getErrorMessage(response.code));
+```
+
+#### 9.3.5 Button (`components/form.tsx`)
+
+Button은 FormField와 함께 `components/form.tsx`에서 export.
+
+```typescript
+interface ButtonProps {
+  variant: 'primary' | 'secondary' | 'danger' | 'ghost';
+  size?: 'sm' | 'md';  // default: 'md'
+  loading?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: preact.ComponentChildren;
+}
+```
+
+**variant 스타일 매핑**:
+
+| Variant | 배경 | 텍스트 | 보더 | 용도 |
+|---------|------|--------|------|------|
+| primary | `--color-primary` | white | none | 주요 동작 (Create, Save) |
+| secondary | `--color-bg` | `--color-text` | `--color-border` | 보조 동작 (Cancel, Refresh) |
+| danger | `--color-danger` | white | none | 위험 동작 (Delete, Shutdown) |
+| ghost | transparent | `--color-text-secondary` | none | 최소 강조 (Logout) |
+
+- `loading=true`: 텍스트 대신 로딩 스피너 표시 + 버튼 비활성화
+- `disabled=true`: 연한 색상 + 커서 `not-allowed`
+
+#### 9.3.6 Badge (`components/form.tsx`)
+
+Badge도 FormField와 함께 export.
+
+```typescript
+interface BadgeProps {
+  variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  children: preact.ComponentChildren;
+}
+```
+
+**variant 스타일 매핑**:
+
+| Variant | 배경 | 텍스트 | 사용처 |
+|---------|------|--------|--------|
+| success | `--color-success-bg` | `--color-success` | ACTIVE, NORMAL, LOCKED (owner) |
+| warning | `--color-warning-bg` | `--color-warning` | SUSPENDED, GRACE (owner) |
+| danger | `--color-danger-bg` | `--color-danger` | TERMINATED, ACTIVATED (kill switch) |
+| info | `--color-info-bg` | `--color-info` | CREATING, 정책 타입 |
+| neutral | `--color-bg-tertiary` | `--color-text-secondary` | NONE (owner), EXPIRED |
+
+**상태-variant 매핑 규칙**:
+
+| 데이터 | 값 → Variant |
+|--------|-------------|
+| Agent status | CREATING=info, ACTIVE=success, SUSPENDED=warning, TERMINATING=warning, TERMINATED=danger |
+| Kill Switch | NORMAL=success, ACTIVATED=danger |
+| Session status | ACTIVE=success, EXPIRED=neutral |
+| Owner state | NONE=neutral, GRACE=warning, LOCKED=success |
+| Policy type | 모든 타입 = info |
+
+#### 9.3.7 CopyButton (`components/copy-button.tsx`)
+
+```typescript
+interface CopyButtonProps {
+  value: string;
+  label?: string;  // default: "Copy"
+}
+```
+
+**동작**:
+
+1. 클릭: `navigator.clipboard.writeText(value)` 호출
+2. 성공: 아이콘이 체크마크(✓)로 2초간 변경 → 원래 복사 아이콘으로 복원
+3. 실패 (Clipboard API 미지원 시): 숨겨진 textarea에 값 설정 → `select()` + `document.execCommand('copy')` 폴백
+4. `label` 제공 시: 아이콘 옆에 텍스트 표시
+
+#### 9.3.8 EmptyState (`components/empty-state.tsx`)
+
+```typescript
+interface EmptyStateProps {
+  title: string;            // e.g., "No agents yet"
+  description?: string;     // e.g., "Create your first agent to get started"
+  actionLabel?: string;     // e.g., "Create Agent"
+  onAction?: () => void;
+}
+```
+
+**동작**:
+
+- 중앙 정렬: 아이콘(빈 상자) + 제목 + 설명 + (선택) 액션 버튼
+- Table 컴포넌트의 빈 데이터 상태에서 사용
+- `onAction` 제공 시: primary 버튼 표시 (바로 생성 동작 유도)
+
+**페이지별 EmptyState 메시지**:
+
+| 페이지 | title | description | actionLabel |
+|--------|-------|-------------|-------------|
+| Agents | "No agents yet" | "Create your first agent to get started" | "Create Agent" |
+| Sessions | "No sessions" | "Select an agent and create a session" | - |
+| Policies | "No policies" | "Create a policy to define transaction rules" | "Create Policy" |
+
+### 9.4 폼 유효성 검증 방침 (COMP-03)
+
+**전략: 클라이언트 독립 검증 (서버 Zod 스키마를 재사용하지 않음)**
+
+**근거**: `packages/admin`은 `@waiaas/core`에 런타임 의존성이 없는 Preact 프론트엔드이다. Zod 스키마를 임포트하면 Zod(~13KB gzip)가 프론트엔드 번들에 추가되고 빌드 타임 커플링이 발생한다. 대신 서버 규칙을 미러링하는 경량 검증 함수를 admin 패키지 내에 정의한다.
+
+**필드별 검증 규칙** (서버 `@waiaas/core` 스키마 미러):
+
+| 필드 | 페이지 | 규칙 | 에러 메시지 |
+|------|--------|------|-------------|
+| Agent name | Agents | 1-100자, 트림 후 비어있지 않음 | "Name must be 1-100 characters" |
+| Chain | Agents | `"solana"` 또는 `"ethereum"` 중 하나 | "Select a chain" |
+| Network | Agents | `"devnet"`, `"testnet"`, `"mainnet"` 중 하나 | "Select a network" |
+| Policy type | Policies | 10개 POLICY_TYPES 값 중 하나 | "Select a policy type" |
+| Priority | Policies | 정수 (기본값 0) | "Priority must be an integer" |
+| instant_max | Policies (SPENDING_LIMIT) | 숫자 문자열 (regex: `/^\d+$/`) | "Must be a positive number string" |
+| notify_max | Policies (SPENDING_LIMIT) | 숫자 문자열 | "Must be a positive number string" |
+| delay_max | Policies (SPENDING_LIMIT) | 숫자 문자열 | "Must be a positive number string" |
+| allowed_addresses | Policies (WHITELIST) | 비어있지 않은 문자열 배열 | "Enter at least one address" |
+| Rules JSON | Policies (기타 타입) | 유효한 JSON 객체 | "Invalid JSON format" |
+
+**검증 시점**: Submit 시 검증 (blur 시 아님). 유효하지 않은 필드 아래에 에러 메시지 표시. 사용자가 필드를 다시 편집하기 시작하면 해당 에러 클리어.
+
+**검증 함수 구조**:
+
+```typescript
+// packages/admin/src/utils/validators.ts — 설계
+
+interface ValidationResult {
+  valid: boolean;
+  errors: Record<string, string>;  // fieldName → error message
+}
+
+function validateCreateAgent(data: {
+  name: string;
+  chain: string;
+  network: string;
+}): ValidationResult;
+
+function validateCreatePolicy(data: {
+  type: string;
+  rules: unknown;
+  priority: number;
+}): ValidationResult;
+```
+
+---
+
+## 10. API 연동 패턴 (APIC-01, APIC-02, APIC-03)
+
+### 10.1 fetch 래퍼 상세 (APIC-01)
+
+섹션 6.4의 `apiCall()` 설계를 확장한 전체 명세:
+
+```typescript
+// packages/admin/src/api/client.ts
+
+import { masterPassword, logout, resetInactivityTimer } from '../auth/store';
+import { getErrorMessage } from '../utils/error-messages';
+
+// ─── 에러 타입 ──────────────────────────────────────────
+
+interface ApiErrorBody {
+  code: string;       // WAIaaS 에러 코드 (e.g., 'AGENT_NOT_FOUND')
+  message: string;    // 서버 에러 메시지
+}
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    public serverMessage: string,
+  ) {
+    super(serverMessage);
+    this.name = 'ApiError';
+  }
+}
+
+// ─── 핵심 호출 함수 ────────────────────────────────────
+
+export async function apiCall<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(options.headers);
+
+  // X-Master-Password 헤더 자동 주입
+  if (masterPassword.value) {
+    headers.set('X-Master-Password', masterPassword.value);
+  }
+  headers.set('Content-Type', 'application/json');
+
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(10_000),  // 10초 타임아웃
+    });
+  } catch (e) {
+    // 네트워크 에러 (fetch 자체 실패)
+    throw new ApiError(0, 'NETWORK_ERROR', 'Cannot connect to daemon');
+  }
+
+  // 401 응답 → 로그아웃 + 로그인 리다이렉트
+  if (response.status === 401) {
+    logout();
+    throw new ApiError(401, 'UNAUTHORIZED', 'Session expired');
+  }
+
+  // 비정상 응답 → body에서 code 추출 → ApiError
+  if (!response.ok) {
+    const body: ApiErrorBody = await response.json().catch(() => ({
+      code: 'UNKNOWN',
+      message: 'Unknown error',
+    }));
+    throw new ApiError(response.status, body.code, body.message);
+  }
+
+  // 성공 시 비활성 타이머 리셋
+  resetInactivityTimer();
+
+  return response.json() as Promise<T>;
+}
+
+// ─── 편의 헬퍼 ─────────────────────────────────────────
+
+export async function apiGet<T>(path: string): Promise<T> {
+  return apiCall<T>(path, { method: 'GET' });
+}
+
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  return apiCall<T>(path, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return apiCall<T>(path, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  return apiCall<T>(path, { method: 'DELETE' });
+}
+```
+
+**동작 요약**:
+
+| 상황 | 처리 |
+|------|------|
+| 모든 요청 | `X-Master-Password` 헤더 자동 주입 (Auth Store에서) |
+| 모든 요청 | `Content-Type: application/json` 설정 |
+| 모든 요청 | `AbortSignal.timeout(10_000)` — 10초 타임아웃 |
+| 401 응답 | `logout()` → `#/login` 리다이렉트 → `ApiError` throw |
+| 비정상 응답 (non-200) | body 파싱 → `code` 추출 → `ApiError` throw |
+| 네트워크 에러 | `ApiError(0, 'NETWORK_ERROR', ...)` throw |
+| 성공 (200/201) | `resetInactivityTimer()` 호출 후 JSON 반환 |
+
+**에러 처리 패턴 (페이지에서의 사용)**:
+
+```typescript
+try {
+  await apiPost(API.AGENTS, { name, chain, network });
+  showToast('success', 'Agent created');
+  refreshList();
+} catch (e) {
+  if (e instanceof ApiError) {
+    showToast('error', getErrorMessage(e.code));
+  }
+}
+```
+
+### 10.2 에러 코드 매핑 (APIC-02)
+
+`packages/core/src/errors/error-codes.ts`의 68개 에러 코드 전체를 Admin UI 사용자 친화 메시지로 매핑. Admin UI는 masterAuth 엔드포인트만 사용하므로 TX/ACTION/WITHDRAW 에러를 직접 받을 가능성은 낮지만, 견고성을 위해 전체 매핑을 제공한다.
+
+```typescript
+// packages/admin/src/utils/error-messages.ts
+
+export const ERROR_MESSAGES: Record<string, string> = {
+  // ─── AUTH domain (8) ──────────────────────────────
+  INVALID_TOKEN: 'Invalid authentication token.',
+  TOKEN_EXPIRED: 'Authentication token has expired.',
+  SESSION_REVOKED: 'Session has been revoked.',
+  INVALID_SIGNATURE: 'Invalid cryptographic signature.',
+  INVALID_NONCE: 'Invalid or expired nonce.',
+  INVALID_MASTER_PASSWORD: 'Invalid master password. Please check and try again.',
+  MASTER_PASSWORD_LOCKED: 'Master password locked due to too many failed attempts. Please wait before trying again.',
+  SYSTEM_LOCKED: 'System is locked. Kill switch may be active.',
+
+  // ─── SESSION domain (8) ──────────────────────────
+  SESSION_NOT_FOUND: 'Session not found.',
+  SESSION_EXPIRED: 'Session has expired.',
+  SESSION_LIMIT_EXCEEDED: 'Maximum session limit reached for this agent.',
+  CONSTRAINT_VIOLATED: 'Session constraint violated.',
+  RENEWAL_LIMIT_REACHED: 'Session renewal limit reached. Create a new session.',
+  SESSION_ABSOLUTE_LIFETIME_EXCEEDED: 'Session has exceeded its absolute lifetime.',
+  RENEWAL_TOO_EARLY: 'Session renewal attempted too early. Please wait.',
+  SESSION_RENEWAL_MISMATCH: 'Session token mismatch. The session may have been renewed elsewhere.',
+
+  // ─── PIPELINE domain (1) ─────────────────────────
+  PIPELINE_HALTED: 'Transaction is queued for delay or requires approval.',
+
+  // ─── TX domain (20) ──────────────────────────────
+  INSUFFICIENT_BALANCE: 'Insufficient balance for this transaction.',
+  INVALID_ADDRESS: 'Invalid blockchain address format.',
+  TX_NOT_FOUND: 'Transaction not found.',
+  TX_EXPIRED: 'Transaction has expired.',
+  TX_ALREADY_PROCESSED: 'Transaction has already been processed.',
+  CHAIN_ERROR: 'Blockchain RPC error. Please try again.',
+  SIMULATION_FAILED: 'Transaction simulation failed.',
+  TOKEN_NOT_FOUND: 'Token not found.',
+  TOKEN_NOT_ALLOWED: 'Token is not allowed by the current policy.',
+  INSUFFICIENT_TOKEN_BALANCE: 'Insufficient token balance.',
+  CONTRACT_CALL_DISABLED: 'Contract calls are disabled. Configure CONTRACT_WHITELIST to enable.',
+  CONTRACT_NOT_WHITELISTED: 'Contract address is not whitelisted.',
+  METHOD_NOT_WHITELISTED: 'Contract method is not whitelisted.',
+  APPROVE_DISABLED: 'Token approvals are disabled. Configure APPROVED_SPENDERS to enable.',
+  SPENDER_NOT_APPROVED: 'Spender address is not in the approved list.',
+  APPROVE_AMOUNT_EXCEEDED: 'Approve amount exceeds the configured limit.',
+  UNLIMITED_APPROVE_BLOCKED: 'Unlimited token approval is blocked by policy.',
+  BATCH_NOT_SUPPORTED: 'Batch transactions are not supported on this chain.',
+  BATCH_SIZE_EXCEEDED: 'Batch instruction count exceeds the maximum (20).',
+  BATCH_POLICY_VIOLATION: 'Policy violation in batch transaction.',
+
+  // ─── POLICY domain (5) ───────────────────────────
+  POLICY_NOT_FOUND: 'Policy not found.',
+  POLICY_DENIED: 'Transaction denied by policy.',
+  SPENDING_LIMIT_EXCEEDED: 'Spending limit exceeded.',
+  RATE_LIMIT_EXCEEDED: 'Rate limit exceeded. Please wait before trying again.',
+  WHITELIST_DENIED: 'Address is not in the whitelist.',
+
+  // ─── OWNER domain (5) ────────────────────────────
+  OWNER_ALREADY_CONNECTED: 'Owner wallet is already connected to this agent.',
+  OWNER_NOT_CONNECTED: 'No owner wallet connected.',
+  OWNER_NOT_FOUND: 'Owner not found.',
+  APPROVAL_TIMEOUT: 'Approval request has timed out.',
+  APPROVAL_NOT_FOUND: 'Approval request not found.',
+
+  // ─── SYSTEM domain (6) ───────────────────────────
+  KILL_SWITCH_ACTIVE: 'Kill switch is active. All operations are suspended.',
+  KILL_SWITCH_NOT_ACTIVE: 'Kill switch is not currently active.',
+  KEYSTORE_LOCKED: 'Keystore is locked. Please try again.',
+  CHAIN_NOT_SUPPORTED: 'This blockchain is not supported.',
+  SHUTTING_DOWN: 'Server is shutting down.',
+  ADAPTER_NOT_AVAILABLE: 'Chain adapter is not available. Please try again.',
+
+  // ─── AGENT domain (3) ────────────────────────────
+  AGENT_NOT_FOUND: 'Agent not found.',
+  AGENT_SUSPENDED: 'Agent is currently suspended.',
+  AGENT_TERMINATED: 'Agent has been terminated.',
+
+  // ─── WITHDRAW domain (4) ─────────────────────────
+  NO_OWNER: 'No owner registered for this agent.',
+  WITHDRAW_LOCKED_ONLY: 'Withdrawal requires the owner to be in LOCKED state.',
+  SWEEP_TOTAL_FAILURE: 'All sweep operations failed. Please try again.',
+  INSUFFICIENT_FOR_FEE: 'Insufficient balance for transaction fee.',
+
+  // ─── ACTION domain (7) ───────────────────────────
+  ACTION_NOT_FOUND: 'Action not found.',
+  ACTION_VALIDATION_FAILED: 'Action input validation failed.',
+  ACTION_RESOLVE_FAILED: 'Action resolve failed. External API may be unavailable.',
+  ACTION_RETURN_INVALID: 'Action returned an invalid result.',
+  ACTION_PLUGIN_LOAD_FAILED: 'Action plugin failed to load.',
+  ACTION_NAME_CONFLICT: 'Action name is already registered.',
+  ACTION_CHAIN_MISMATCH: 'Action does not support the requested chain.',
+
+  // ─── ADMIN domain (1) ────────────────────────────
+  ROTATION_TOO_RECENT: 'Secret rotation was performed too recently. Please wait.',
+};
+
+/**
+ * 에러 코드 → 사용자 친화 메시지 조회.
+ * 매핑에 없는 코드는 fallback 메시지 반환.
+ */
+export function getErrorMessage(code: string): string {
+  return ERROR_MESSAGES[code] ?? `An unexpected error occurred (${code}).`;
+}
+```
+
+**에러 코드 통계** (도메인별):
+
+| 도메인 | 개수 | Admin UI에서 발생 가능성 |
+|--------|------|------------------------|
+| AUTH | 8 | 높음 (INVALID_MASTER_PASSWORD, MASTER_PASSWORD_LOCKED) |
+| SESSION | 8 | 높음 (SESSION_NOT_FOUND, SESSION_LIMIT_EXCEEDED) |
+| PIPELINE | 1 | 없음 (sessionAuth 파이프라인) |
+| TX | 20 | 없음 (sessionAuth 트랜잭션) |
+| POLICY | 5 | 높음 (POLICY_NOT_FOUND, POLICY_DENIED) |
+| OWNER | 5 | 낮음 (OWNER_ALREADY_CONNECTED) |
+| SYSTEM | 6 | 높음 (KILL_SWITCH_ACTIVE, SHUTTING_DOWN) |
+| AGENT | 3 | 높음 (AGENT_NOT_FOUND, AGENT_TERMINATED) |
+| WITHDRAW | 4 | 없음 (sessionAuth/ownerAuth) |
+| ACTION | 7 | 없음 (sessionAuth) |
+| ADMIN | 1 | 높음 (ROTATION_TOO_RECENT) |
+| **합계** | **68** | |
+
+### 10.3 UX 상태 패턴 (APIC-03)
+
+모든 데이터 패칭 컴포넌트가 처리해야 하는 4가지 표준 UX 상태:
+
+| 상태 | 트리거 | UI |
+|------|--------|-----|
+| Loading | 초기 fetch 또는 새로고침 진행 중 | Skeleton 플레이스홀더 (테이블: 회색 행 3개, 카드: 맥동 직사각형) |
+| Success | 데이터 로드 완료, items > 0 | 정상 데이터 표시 |
+| Empty | 데이터 로드 완료, items = 0 | EmptyState 컴포넌트 ("No {items} yet" + 생성 액션 링크) |
+| Error | fetch 실패 또는 API 에러 | 에러 배너 (적색 배경) + 메시지 + "Retry" 버튼 |
+
+**상태 관리 패턴** (각 페이지에서 반복):
+
+```typescript
+const data = signal<T[]>([]);
+const loading = signal(true);
+const error = signal<string | null>(null);
+
+async function fetchData() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const result = await apiGet<T[]>(path);
+    data.value = result;
+  } catch (e) {
+    if (e instanceof ApiError) {
+      error.value = getErrorMessage(e.code);
+    } else {
+      error.value = 'Cannot connect to daemon. Is the daemon running?';
+    }
+  } finally {
+    loading.value = false;
+  }
+}
+```
+
+**연결 실패 처리**:
+
+| 상황 | 감지 방법 | UI |
+|------|----------|-----|
+| fetch throws (네트워크 에러) | `ApiError.code === 'NETWORK_ERROR'` | "Cannot connect to daemon. Is the daemon running?" + Retry 버튼 |
+| Retry 버튼 클릭 | — | fetch 재실행 |
+
+**Shutdown 상태 (전역)**:
+
+```typescript
+// packages/admin/src/auth/store.ts
+export const daemonShutdown = signal(false);
+```
+
+- `POST /v1/admin/shutdown` 성공 후: `daemonShutdown.value = true`
+- 전체 화면 오버레이: "Daemon has been shut down" + 인터랙티브 요소 없음
+- Auth Guard 확인 순서: `daemonShutdown === true` → 오버레이 렌더링 (인증 상태 무시)
+- 오버레이는 모든 네비게이션과 API 호출을 차단
+
+**오버레이 렌더링 조건** (app.tsx 의사코드):
+
+```typescript
+function App() {
+  // 1순위: Shutdown 오버레이
+  if (daemonShutdown.value) {
+    return <ShutdownOverlay />;
+  }
+
+  // 2순위: 인증 확인
+  if (!isAuthenticated.value) {
+    return <Login />;
+  }
+
+  // 3순위: 정상 라우팅
+  return <Layout><Router>...</Router></Layout>;
+}
+```
+
+### 10.4 폼 검증 참조
+
+폼 검증 전략과 필드별 규칙은 **섹션 9.4**를 참조한다.
+
+- 전략: 클라이언트 독립 검증 (Zod 미사용)
+- 검증 시점: Submit 시
+- 에러 표시: 필드 하단 적색 텍스트
+- 에러 클리어: 사용자 편집 시작 시
+
+### 10.5 API 엔드포인트 상수
+
+타입 안전한 API 경로 관리를 위해 모든 엔드포인트를 상수로 정의:
+
+```typescript
+// packages/admin/src/api/endpoints.ts
+
+export const API = {
+  // Admin
+  ADMIN_STATUS: '/v1/admin/status',
+  ADMIN_KILL_SWITCH: '/v1/admin/kill-switch',
+  ADMIN_RECOVER: '/v1/admin/recover',
+  ADMIN_SHUTDOWN: '/v1/admin/shutdown',
+  ADMIN_ROTATE_SECRET: '/v1/admin/rotate-secret',
+
+  // Agents
+  AGENTS: '/v1/agents',
+  AGENT: (id: string) => `/v1/agents/${id}` as const,
+
+  // Sessions
+  SESSIONS: '/v1/sessions',
+  SESSION: (id: string) => `/v1/sessions/${id}` as const,
+
+  // Policies
+  POLICIES: '/v1/policies',
+  POLICY: (id: string) => `/v1/policies/${id}` as const,
+} as const;
+```
+
+**사용 예시**:
+
+```typescript
+const status = await apiGet<AdminStatus>(API.ADMIN_STATUS);
+const agent = await apiGet<AgentDetail>(API.AGENT(agentId));
+const sessions = await apiGet<Session[]>(`${API.SESSIONS}?agentId=${agentId}`);
+```
+
+> 모든 API 호출은 `endpoints.ts`의 상수를 사용한다. 문자열 직접 사용 금지 (타이포 방지, 리팩토링 용이).
+
+---
+
 ## 관련 설계 문서
 
 | 문서 | 이름 | 관련 내용 |
@@ -1360,4 +2157,4 @@ App (app.tsx)
 
 ---
 
-*최종 업데이트: 2026-02-11 — Phase 64에서 섹션 1-7 작성 완료. Phase 65에서 섹션 8-10 작성 예정*
+*최종 업데이트: 2026-02-11 — Phase 64 섹션 1-7, Phase 65 섹션 8-10 작성 완료. 전체 10개 섹션 완성.*
