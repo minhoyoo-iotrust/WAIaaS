@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3 Phase 63 MCP Server
+**Current focus:** v1.3 Phase 63 MCP Server -- COMPLETE
 
 ## Current Position
 
 Phase: 63 of 63 (MCP Server)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-11 -- Completed 63-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete (v1.3 milestone complete)
+Last activity: 2026-02-11 -- Completed 63-02-PLAN.md
 
-Progress: [██████████░] 91% (10/11 plans)
+Progress: [███████████] 100% (11/11 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 14 milestones, 62 phases, 150 plans, 367 reqs, 761 tests, 31,500+ LOC
+**Cumulative:** 14 milestones, 63 phases, 151 plans, 367 reqs, 811 tests, 32,000+ LOC
 
 **v1.3 Velocity:**
-- Plans completed: 10
-- Average duration: 9.2min
-- Total execution time: 85min
+- Plans completed: 11
+- Average duration: 8.6min
+- Total execution time: 91min
 
 **v1.2 Velocity (reference):**
 - Total plans completed: 13
@@ -72,14 +72,19 @@ Full log in PROJECT.md. Key decisions for v1.3:
 - MCP: ApiResult discriminated union with 4 variants (ok/error/expired/networkError)
 - MCP: H-04 toToolResult never sets isError on session_expired/networkError
 - MCP: File > env token priority in SessionManager (SM-04)
+- MCP: safeSetTimeout exported for testing, recovery loop only with dataDir
+- MCP: 409 RENEWAL_CONFLICT re-reads file token and validates before rescheduling
+- MCP: TOO_EARLY schedules single 30s retry (not exponential backoff)
+- CLI: mcp setup uses resolvePassword for master auth, auto-detects single agent
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) -- not blocking
 - Pre-existing @waiaas/cli e2e-errors.test.ts failure (expects 404, gets 401) -- likely from 58-01 OpenAPIHono work
+- Pre-existing @waiaas/daemon notification-service.test.ts typecheck errors (unused import, possibly undefined) -- not blocking
 
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 63-01-PLAN.md
+Stopped at: Completed 63-02-PLAN.md (v1.3 milestone complete)
 Resume file: None
