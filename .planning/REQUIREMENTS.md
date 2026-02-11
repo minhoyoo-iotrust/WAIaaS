@@ -52,26 +52,26 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TOKEN-01 | — | Pending |
-| TOKEN-02 | — | Pending |
-| TOKEN-03 | — | Pending |
-| TOKEN-04 | — | Pending |
-| MCPS-01 | — | Pending |
-| MCPS-02 | — | Pending |
-| MCPS-03 | — | Pending |
-| CLIP-01 | — | Pending |
-| CLIP-02 | — | Pending |
-| CLIP-03 | — | Pending |
-| CLIP-04 | — | Pending |
-| CLIP-05 | — | Pending |
-| CLIP-06 | — | Pending |
-| CLIP-07 | — | Pending |
+| TOKEN-01 | Phase 71 | Pending |
+| TOKEN-02 | Phase 71 | Pending |
+| TOKEN-03 | Phase 71 | Pending |
+| TOKEN-04 | Phase 71 | Pending |
+| MCPS-01 | Phase 71 | Pending |
+| MCPS-02 | Phase 71 | Pending |
+| MCPS-03 | Phase 71 | Pending |
+| CLIP-01 | Phase 72 | Pending |
+| CLIP-02 | Phase 72 | Pending |
+| CLIP-03 | Phase 72 | Pending |
+| CLIP-04 | Phase 72 | Pending |
+| CLIP-05 | Phase 72 | Pending |
+| CLIP-06 | Phase 72 | Pending |
+| CLIP-07 | Phase 72 | Pending |
 
 **Coverage:**
 - v1.3.3 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after roadmap created*
