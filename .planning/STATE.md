@@ -9,16 +9,16 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 74 of 75 (파이프라인 이벤트 트리거) — Plan 01 COMPLETE
-Plan: 2 of ~5 in milestone
-Status: Phase 74 Plan 01 executed (2 tasks, 8 new tests, 871 total)
-Last activity: 2026-02-11 — Completed 74-01-PLAN.md
+Phase: 74 of 75 (파이프라인 이벤트 트리거) — Plan 02 COMPLETE
+Plan: 3 of ~5 in milestone
+Status: Phase 74 Plan 02 executed (2 tasks, 6 new tests, 496 total daemon tests)
+Last activity: 2026-02-11 — Completed 74-02-PLAN.md
 
-Progress: [████░░░░░░] 2/5 plans in v1.3.4
+Progress: [██████░░░░] 3/5 plans in v1.3.4
 
 ## Performance Metrics
 
-**Cumulative:** 18 milestones, 74 phases, 167 plans, 470 reqs, 871 tests, 44,639+ LOC
+**Cumulative:** 18 milestones, 74 phases, 168 plans, 470 reqs, 877 tests, 44,639+ LOC
 
 ## Accumulated Context
 
@@ -35,6 +35,9 @@ Recent for v1.3.4:
 - 74-01: void prefix on notify() calls for fire-and-forget (Promise detached from pipeline await)
 - 74-01: Optional chaining (?.) on notificationService for backward-compatible DI
 - 74-01: Route handler inline Stage 1 also fires TX_REQUESTED (mirrors stage1Validate)
+- 74-02: Route handler notify uses void deps.notificationService?.notify() pattern (same as pipeline)
+- 74-02: session-cleanup worker uses raw SQL prepare().all() for pre-deletion expired session query
+- 74-02: SESSION_EXPIRED tested via unit pattern (DB + mock) rather than full daemon integration
 
 ### Blockers/Concerns
 
@@ -44,5 +47,5 @@ Recent for v1.3.4:
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 74-01-PLAN.md
+Stopped at: Completed 74-02-PLAN.md
 Resume file: None
