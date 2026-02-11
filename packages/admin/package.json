@@ -1,0 +1,20 @@
+{
+  "name": "@waiaas/admin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "postbuild": "mkdir -p ../daemon/public/admin && cp -r dist/* ../daemon/public/admin/",
+    "dev": "vite",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "@preact/signals": "^2.0.0",
+    "preact": "^10.25.0",
+    "preact-router": "^4.1.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.1.0"
+  }
+}

@@ -37,6 +37,8 @@ function mockConfig(): DaemonConfig {
       pid_file: 'daemon.pid',
       shutdown_timeout: 30,
       dev_mode: false,
+      admin_ui: true,
+      admin_timeout: 900,
     },
     keystore: {
       argon2_memory: 65536,

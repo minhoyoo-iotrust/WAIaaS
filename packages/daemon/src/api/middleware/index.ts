@@ -10,3 +10,4 @@ export { errorHandler } from './error-handler.js';
 export { createSessionAuth, type SessionAuthDeps } from './session-auth.js';
 export { createMasterAuth, type MasterAuthDeps } from './master-auth.js';
 export { createOwnerAuth, type OwnerAuthDeps } from './owner-auth.js';
+export { cspMiddleware } from './csp.js';

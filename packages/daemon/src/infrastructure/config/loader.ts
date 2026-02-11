@@ -30,6 +30,8 @@ export const DaemonConfigSchema = z.object({
       pid_file: z.string().default('daemon.pid'),
       shutdown_timeout: z.number().int().min(5).max(300).default(30),
       dev_mode: z.boolean().default(false),
+      admin_ui: z.boolean().default(true),
+      admin_timeout: z.number().int().min(60).max(7200).default(900),
     })
     .default({}),
   keystore: z
