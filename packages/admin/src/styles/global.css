@@ -816,3 +816,99 @@ table .table-loading {
   padding: var(--space-2) 0;
   margin-bottom: var(--space-2);
 }
+
+/* Settings */
+.settings-section {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.settings-section--danger {
+  border-color: var(--color-danger);
+}
+
+.settings-section-header {
+  margin-bottom: var(--space-4);
+}
+
+.settings-section-header h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.settings-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.settings-section-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ks-state-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.ks-state-info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.shutdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  color: white;
+}
+
+.shutdown-overlay h2 {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--space-4);
+  color: white;
+}
+
+.shutdown-overlay p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+}
+
+.shutdown-confirm-input {
+  margin-top: var(--space-3);
+}
+
+.shutdown-confirm-input label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.shutdown-confirm-input input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+}
+
+.shutdown-confirm-input input:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 2px var(--color-danger-bg);
+}
