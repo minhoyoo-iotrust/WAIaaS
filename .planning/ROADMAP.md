@@ -247,11 +247,11 @@ Plans:
   3. 어드민 UI에서 최근 알림 발송 로그(이벤트 타입, 채널, 상태, 시각)를 페이지네이션으로 조회할 수 있다
   4. 어드민 UI에 config.toml 설정 변경 안내 문구가 표시된다
   5. API 응답에 bot token, webhook URL 등 credential이 포함되지 않는다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 75-01: 알림 상태/테스트/로그 Admin API 3개 엔드포인트
-- [ ] 75-02: 어드민 알림 패널 UI (채널 상태 + 테스트 + 로그 + 설정 안내)
+- [ ] 75-01-PLAN.md -- 알림 상태/테스트/로그 Admin API 3개 엔드포인트 + OpenAPI 스키마 + 테스트
+- [ ] 75-02-PLAN.md -- 어드민 알림 패널 UI (채널 상태 + 테스트 + 로그 + 설정 안내) + 테스트
 
 ## Progress
 
