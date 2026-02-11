@@ -8,6 +8,21 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.4 토큰 + 컨트랙트 확장
+
+**Goal:** SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터가 동작하는 상태
+
+**Target features:**
+- SPL/ERC-20 토큰 전송 (ALLOWED_TOKENS 정책)
+- 컨트랙트 호출 (CONTRACT_WHITELIST 기본 거부)
+- Approve 관리 (APPROVED_SPENDERS, 무제한 차단)
+- Solana 원자적 배치 (2단계 합산 정책)
+- `@waiaas/adapter-evm` 패키지 (viem 2.x)
+- IChainAdapter 11→20 메서드 확장
+- ChainError 3-카테고리 + Stage 5 완전 의사코드
+- discriminatedUnion 5-type 파이프라인
+- 6개 신규 PolicyType 평가 로직
+
 ## Current State
 
 v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026-02-12). 파이프라인 8개 이벤트(TX_REQUESTED~OWNER_SET) fire-and-forget 트리거 연결, notification_logs DB 테이블(증분 마이그레이션), 어드민 알림 API 3개(status/test/log), 어드민 알림 패널 UI(채널 상태 카드, 테스트 발송, 로그 조회, config 안내)가 동작.
@@ -166,11 +181,21 @@ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026
 
 ### 활성
 
+- [ ] SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 정책
+- [ ] ContractCallRequest + CONTRACT_WHITELIST 기본 거부
+- [ ] ApproveRequest 독립 정책 + 무제한 차단
+- [ ] BatchRequest Solana 원자적 + 2단계 합산 정책
+- [ ] @waiaas/adapter-evm (viem 2.x)
+- [ ] IChainAdapter 20 메서드 확장
+- [ ] ChainError 3-카테고리 + Stage 5 재시도
+- [ ] discriminatedUnion 5-type 파이프라인
+- [ ] 6개 신규 PolicyType 평가 로직 + superRefine
+
 ## Next Milestone Goals
 
-- v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
+- v1.4.1 EVM 지갑 인프라 — secp256k1 키 생성, 어댑터 팩토리, Config EVM RPC
 - v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
-- v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
+- v1.6 운영 인프라 + 잔액 모니터링
 
 ### 범위 외
 
@@ -292,4 +317,4 @@ v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이
 | Drizzle count() + offset/limit 페이지네이션 | 알림 로그 역순 조회, 간단하고 효과적 | ✓ Good — v1.3.4 구현 |
 
 ---
-*최종 업데이트: 2026-02-12 after v1.3.4 milestone shipped*
+*최종 업데이트: 2026-02-12 after v1.4 milestone started*
