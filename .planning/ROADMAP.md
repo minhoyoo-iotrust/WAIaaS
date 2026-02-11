@@ -261,8 +261,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 70-01: 인증 + 보안/서빙 테스트 (TEST-01, TEST-03)
-- [ ] 70-02: 페이지 테스트 (TEST-02)
+- [ ] 70-01-PLAN.md — Vitest 인프라 + 인증 4건 + 유틸리티 테스트 + daemon 보안/서빙 4건 (TEST-01, TEST-03)
+- [ ] 70-02-PLAN.md — Dashboard(3) + Agents(5) + Sessions(3) + Policies(3) + Settings(3) 페이지 테스트 (TEST-02)
 
 ## Progress
 
