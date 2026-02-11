@@ -6,7 +6,7 @@ import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import SettingsPage from '../pages/settings';
 
-const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
+export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
 
 window.addEventListener('hashchange', () => {
   currentPath.value = window.location.hash.slice(1) || '/dashboard';
@@ -20,6 +20,11 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings': 'Settings',
 };
 
+function getPageTitle(path: string): string {
+  if (path.startsWith('/agents/')) return 'Agent Detail';
+  return PAGE_TITLES[path] ?? 'Dashboard';
+}
+
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/agents', label: 'Agents' },
@@ -29,18 +34,12 @@ const NAV_ITEMS = [
 ];
 
 function PageRouter() {
-  switch (currentPath.value) {
-    case '/agents':
-      return <AgentsPage />;
-    case '/sessions':
-      return <SessionsPage />;
-    case '/policies':
-      return <PoliciesPage />;
-    case '/settings':
-      return <SettingsPage />;
-    default:
-      return <DashboardPage />;
-  }
+  const path = currentPath.value;
+  if (path === '/sessions') return <SessionsPage />;
+  if (path === '/policies') return <PoliciesPage />;
+  if (path === '/settings') return <SettingsPage />;
+  if (path.startsWith('/agents')) return <AgentsPage />;
+  return <DashboardPage />;
 }
 
 export function Layout() {
@@ -49,20 +48,25 @@ export function Layout() {
       <aside class="sidebar">
         <div class="sidebar-brand">WAIaaS</div>
         <nav class="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
-            <a
-              href={`#${item.path}`}
-              class={`sidebar-link ${currentPath.value === item.path ? 'active' : ''}`}
-            >
-              {item.label}
-            </a>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const isActive = item.path === '/agents'
+              ? currentPath.value.startsWith('/agents')
+              : currentPath.value === item.path;
+            return (
+              <a
+                href={`#${item.path}`}
+                class={`sidebar-link ${isActive ? 'active' : ''}`}
+              >
+                {item.label}
+              </a>
+            );
+          })}
         </nav>
       </aside>
       <main class="main">
         <header class="header">
           <h1 class="header-title">
-            {PAGE_TITLES[currentPath.value] ?? 'Dashboard'}
+            {getPageTitle(currentPath.value)}
           </h1>
           <button class="btn-logout" onClick={() => logout()}>
             Logout

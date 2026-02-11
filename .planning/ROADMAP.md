@@ -182,7 +182,7 @@
 
 - [x] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장 — completed 2026-02-11
 - [x] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트 — completed 2026-02-11
-- [ ] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기
+- [x] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기 — completed 2026-02-11
 - [ ] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료
 - [ ] **Phase 70: 통합 테스트** — 인증 4건, 페이지 14건, 보안+서빙 4건 테스트
 
@@ -246,8 +246,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 69-01: Policies 페이지 (PAGE-04)
-- [ ] 69-02: Settings 페이지 (PAGE-05)
+- [ ] 69-01-PLAN.md — Policies 페이지: 10 유형 CRUD + 에이전트 필터 + 4-tier SPENDING_LIMIT 시각화 (PAGE-04)
+- [ ] 69-02-PLAN.md — Settings 페이지: Kill Switch 토글 + JWT 회전 + 데몬 종료 (PAGE-05)
 
 ### Phase 70: 통합 테스트
 **Goal**: 인증/페이지/보안 전 영역을 커버하는 22건의 Vitest + Testing Library 테스트가 통과하여, Admin UI의 핵심 사용자 흐름과 보안 요구사항이 검증된 상태
@@ -286,11 +286,11 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
-| v1.3.2 Admin Web UI 구현 | 66-70 | 6/10 | In progress | - |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 8/10 | In progress | - |
 
-**Total:** 15 milestones shipped, 66 phases completed, 157 plans completed
+**Total:** 15 milestones shipped, 68 phases completed, 161 plans completed
 **Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after Phase 67 executed (2/2 plans complete, verified)*
+*Last updated: 2026-02-11 after Phase 68 executed (2/2 plans complete, verified)*

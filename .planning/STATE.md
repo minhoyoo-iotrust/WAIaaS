@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 67 complete
+**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 68 complete, moving to 69
 
 ## Current Position
 
-Phase: 67 of 70 (인증 + API 클라이언트 + 컴포넌트)
+Phase: 68 of 70 (Dashboard + Agents + Sessions)
 Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-02-11 — Completed 67-02-PLAN.md (Layout + Components)
+Last activity: 2026-02-11 — Completed 68-02-PLAN.md (Agents + Sessions Pages)
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
-**Cumulative:** 16 milestones, 67 phases, 158 plans, 434 reqs, 784 tests, 33,929 LOC
+**Cumulative:** 16 milestones, 68 phases, 161 plans, 434 reqs, 784 tests, 33,929 LOC
 
 **v1.3.2 Plan:**
 - 5 phases (66-70), 10 plans, 22 requirements
 - Target: Preact SPA 5 pages + 22 tests
-- Completed: 4/10 plans
+- Completed: 6/10 plans
 
 ## Accumulated Context
 
@@ -38,6 +38,8 @@ v1.3.2 구현 결정:
 - Phase 66-02 (5건): CSP default-src 'none' strictest policy, ADMIN_STATIC_ROOT absolute path via import.meta.url, createRequire for version JSON import, admin_ui=false skips route registration (404), Kill Switch bypasses /admin and /admin/*
 - Phase 67-01 (3건): Login uses direct fetch (not apiCall) to avoid circular auth store dependency, inline style objects for Preact components, module-level signals for single-instance Login form state
 - Phase 67-02 (3건): Custom hash routing via signal + hashchange (no preact-router), Toast module-level signal vs CopyButton useSignal for per-instance state, error messages standalone duplicate for frontend independence
+- Phase 68-01 (2건): isInitialLoad pattern (skeleton only on first load, stale data visible during subsequent polls), Error banner non-destructive (shows error above cards without hiding stale data)
+- Phase 68-02 (3건): currentPath signal exported for sub-route parsing, openRevoke helper with signal refs, session columns inside component for signal access
 
 ### Blockers/Concerns
 
@@ -48,6 +50,6 @@ v1.3.2 구현 결정:
 
 ## Session Continuity
 
-Last session: 2026-02-11T07:23:54Z
-Stopped at: Completed 67-02-PLAN.md (Layout + Components)
+Last session: 2026-02-11T07:49:59Z
+Stopped at: Completed 68-02-PLAN.md (Agents + Sessions Pages)
 Resume file: None
