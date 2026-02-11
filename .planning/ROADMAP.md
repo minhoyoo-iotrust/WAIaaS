@@ -202,10 +202,10 @@
   3. 새 경로에 토큰이 없고 기존 `mcp-token` 파일이 존재하면 fallback으로 로드한다
   4. `WAIAAS_AGENT_NAME` 설정 시 MCP 서버 이름이 `waiaas-{agentName}`이 되고, 도구/리소스 description에 에이전트 이름이 포함된다
   5. `WAIAAS_AGENT_NAME` 미설정 시 서버 이름이 `waiaas-wallet`을 유지한다 (하위 호환)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 71-01: SessionManager 토큰 경로 분리 + createMcpServer agentContext + 도구/리소스 description + index.ts 환경변수 + 테스트
+- [ ] 71-01-PLAN.md -- SessionManager agentId 토큰 경로 분리 + createMcpServer agentContext + 도구/리소스 description + index.ts 환경변수 + 테스트
 
 #### Phase 72: CLI mcp setup 다중 에이전트
 **Goal**: CLI `mcp setup` 명령어가 에이전트별 토큰 파일과 config 스니펫을 생성하고, `--all` 플래그로 전체 에이전트를 일괄 설정할 수 있는 상태
