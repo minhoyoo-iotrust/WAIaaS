@@ -5,25 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3.2 Admin Web UI 구현 shipped -- 다음 마일스톤 TBD
+**Current focus:** v1.3.3 MCP 다중 에이전트 지원
 
 ## Current Position
 
-Phase: 70 of 70 (all phases complete)
-Plan: N/A (milestone archived)
-Status: Milestone v1.3.2 shipped
-Last activity: 2026-02-11 — v1.3.2 milestone archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-11 — Milestone v1.3.3 started
 
 ## Performance Metrics
 
 **Cumulative:** 17 milestones, 70 phases, 163 plans, 456 reqs, 816 tests, 45,332 LOC
-
-**v1.3.2 Delivered:**
-- 5 phases (66-70), 10 plans, 22 requirements
-- @waiaas/admin: Preact SPA 5 pages + 27 tests
-- Completed: 10/10 plans, 22/22 requirements
 
 ## Accumulated Context
 
@@ -40,5 +33,5 @@ Full log in PROJECT.md. Key v1.3.2 decisions (32건) documented in MILESTONES.md
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: v1.3.2 milestone archived
+Stopped at: Milestone v1.3.3 started, defining requirements
 Resume file: None

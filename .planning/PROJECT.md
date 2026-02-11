@@ -8,6 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.3.3 MCP 다중 에이전트 지원
+
+**Goal:** 하나의 WAIaaS 데몬에 등록된 여러 에이전트를 Claude Desktop(MCP)에서 동시에 사용할 수 있는 상태
+
+**Target features:**
+- 에이전트별 토큰 파일 분리 (`mcp-tokens/<agentId>` + 기존 `mcp-token` fallback)
+- MCP 서버 에이전트 식별 (`waiaas-{agentName}` 동적 서버 이름 + 도구 description)
+- CLI `mcp setup --all` 일괄 설정 + 에이전트 이름 slug 충돌 처리
+- `WAIAAS_AGENT_ID` / `WAIAAS_AGENT_NAME` 환경변수 지원
+
 ## Current State
 
 v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(Preact SPA 5페이지)가 동작하여 CLI 없이도 에이전트 등록, 세션 관리, 정책 설정, Kill Switch 관리가 가능.
@@ -155,7 +165,7 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(P
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+(v1.3.3 REQUIREMENTS.md에서 정의 — MCP 다중 에이전트 지원)
 
 ### 범위 외
 
@@ -264,4 +274,4 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요�
 | isInitialLoad 패턴 (스켈레톤 vs 스테일 데이터) | 첫 로드만 스켈레톤, 이후 폴링은 stale 데이터 위 에러 표시 | ✓ Good — v1.3.2 구현 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.2 milestone shipped*
+*최종 업데이트: 2026-02-11 after v1.3.3 milestone started*
