@@ -66,30 +66,30 @@ v1.3.4 마일스톤 범위: 알림 이벤트 트리거 연결 + 어드민 알림
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRIG-01 | — | Pending |
-| TRIG-02 | — | Pending |
-| TRIG-03 | — | Pending |
-| TRIG-04 | — | Pending |
-| TRIG-05 | — | Pending |
-| TRIG-06 | — | Pending |
-| TRIG-07 | — | Pending |
-| TRIG-08 | — | Pending |
-| LOG-01 | — | Pending |
-| LOG-02 | — | Pending |
-| LOG-03 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
+| TRIG-01 | Phase 74 | Pending |
+| TRIG-02 | Phase 74 | Pending |
+| TRIG-03 | Phase 74 | Pending |
+| TRIG-04 | Phase 74 | Pending |
+| TRIG-05 | Phase 74 | Pending |
+| TRIG-06 | Phase 74 | Pending |
+| TRIG-07 | Phase 74 | Pending |
+| TRIG-08 | Phase 74 | Pending |
+| LOG-01 | Phase 73 | Pending |
+| LOG-02 | Phase 73 | Pending |
+| LOG-03 | Phase 73 | Pending |
+| API-01 | Phase 75 | Pending |
+| API-02 | Phase 75 | Pending |
+| API-03 | Phase 75 | Pending |
+| UI-01 | Phase 75 | Pending |
+| UI-02 | Phase 75 | Pending |
+| UI-03 | Phase 75 | Pending |
+| UI-04 | Phase 75 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18/18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after roadmap creation (traceability updated)*
