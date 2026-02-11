@@ -353,3 +353,33 @@
 
 ---
 
+
+## v1.3 SDK + MCP + 알림 (Shipped: 2026-02-11)
+
+**Delivered:** v1.2 인증+정책 엔진 위에 OpenAPIHono 전면 전환(33 엔드포인트 + OpenAPI 3.0 자동 생성), REST API 15개 추가, 3채널 알림 시스템, TypeScript/Python SDK, MCP Server를 구현하여, AI 에이전트가 SDK 또는 MCP로 지갑을 프로그래밍 방식으로 사용하고 Owner가 실시간 알림을 받을 수 있는 상태를 달성
+
+**Phases completed:** 58-63 (11 plans total)
+
+**Key accomplishments:**
+
+- OpenAPIHono 전면 전환 — 기존 18 라우트 createRoute() 리팩터링 + 신규 15 작성 = 33 엔드포인트, GET /doc OpenAPI 3.0 JSON 자동 생성, 68개 에러 코드 OpenAPI 매핑, IChainAdapter.getAssets() 선행 구현
+- REST API 확장 — 15개 신규 엔드포인트(assets, transactions, pending, nonce, agents CRUD, admin 6종), error hint 32개(AI 에이전트 자율 복구용 resolveHint), 커서 페이지네이션(UUID v7)
+- 3채널 알림 시스템 — TelegramChannel(Bot API MarkdownV2), DiscordChannel(Webhook Embed), NtfyChannel(plain text Priority), NotificationService 우선순위 폴백 + broadcast, 21개 이벤트 en/ko 템플릿, config.toml 8키 확장
+- TypeScript SDK (@waiaas/sdk) — WAIaaSClient 9 메서드 + WAIaaSOwnerClient 4 메서드, 0 외부 의존성(Node.js 22 fetch), WAIaaSError 구조화 에러, 지수 백오프 재시도, 인라인 사전 검증
+- Python SDK (waiaas) — async httpx WAIaaSClient, 10 Pydantic v2 모델, snake_case↔camelCase dual access, 지수 백오프 재시도, TS SDK 동일 인터페이스
+- MCP Server (@waiaas/mcp) — 6 도구 + 3 리소스, SessionManager(토큰 로드 + 60% TTL 자동 갱신 + 지수 백오프 재시도 + 409 CONFLICT 처리 + 복구 루프), CLI `waiaas mcp setup` 원클릭 설정
+
+**Stats:**
+
+- 32,337 TypeScript LOC + 1,592 Python LOC = 33,929 총 LOC
+- 6 phases, 11 plans, 49 requirements
+- 784 tests (457 → 784, +327 new tests)
+- 41 commits, 104 files changed, +13,392 / -171 lines
+- 7 days (2026-02-04 → 2026-02-11)
+
+**Git range:** `v1.2` → `gsd/phase-63-mcp-server`
+
+**What's next:** v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
+
+---
+
