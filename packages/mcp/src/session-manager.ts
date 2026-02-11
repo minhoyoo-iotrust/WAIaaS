@@ -33,6 +33,7 @@ export interface SessionManagerOptions {
   dataDir?: string;
   envToken?: string;
   renewalRatio?: number; // default 0.6 (60% of TTL)
+  agentId?: string; // Per-agent token path isolation (TOKEN-01)
 }
 
 // Safe setTimeout wrapper for delays > 2^31-1 ms (SM-08)
@@ -67,6 +68,7 @@ export class SessionManager {
   private readonly dataDir: string | undefined;
   private readonly envToken: string | undefined;
   private readonly renewalRatio: number;
+  private readonly agentId: string | undefined;
 
   private token: string | null = null;
   private sessionId: string | null = null;
@@ -84,6 +86,7 @@ export class SessionManager {
     this.dataDir = options.dataDir;
     this.envToken = options.envToken;
     this.renewalRatio = options.renewalRatio ?? 0.6;
+    this.agentId = options.agentId;
   }
 
   // --- Public API (SM-02) ---
@@ -499,14 +502,45 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Resolve token file path based on agentId (TOKEN-01, TOKEN-02).
+   * - agentId set: DATA_DIR/mcp-tokens/<agentId>
+   * - agentId unset: DATA_DIR/mcp-token (backward compatible)
+   */
+  private resolveTokenPath(): string {
+    if (this.agentId) {
+      return join(this.dataDir!, 'mcp-tokens', this.agentId);
+    }
+    return join(this.dataDir!, 'mcp-token');
+  }
+
+  /**
+   * Legacy token path for fallback reads (TOKEN-03).
+   * Always returns DATA_DIR/mcp-token.
+   */
+  private legacyTokenPath(): string {
+    return join(this.dataDir!, 'mcp-token');
+  }
+
   private async readMcpToken(): Promise<string> {
-    const filePath = join(this.dataDir!, 'mcp-token');
-    const content = await readFile(filePath, 'utf-8');
-    return content.trim();
+    const filePath = this.resolveTokenPath();
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      return content.trim();
+    } catch (err: unknown) {
+      // TOKEN-03: fallback to legacy path when agentId is set
+      if (this.agentId && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        const legacyPath = this.legacyTokenPath();
+        const content = await readFile(legacyPath, 'utf-8');
+        console.error(`${LOG_PREFIX} Loaded token from legacy path (fallback)`);
+        return content.trim();
+      }
+      throw err;
+    }
   }
 
   private async writeMcpToken(token: string): Promise<void> {
-    const filePath = join(this.dataDir!, 'mcp-token');
+    const filePath = this.resolveTokenPath();
     const tmpPath = `${filePath}.tmp`;
 
     // Ensure directory exists
