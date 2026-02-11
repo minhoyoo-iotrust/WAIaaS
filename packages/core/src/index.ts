@@ -43,7 +43,7 @@ export {
   OwnerStateEnum,
 } from './enums/index.js';
 
-// Schemas (5 domain Zod SSoT schemas)
+// Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
 export {
   AgentSchema,
   type Agent,
@@ -57,6 +57,19 @@ export {
   type Transaction,
   SendTransactionRequestSchema,
   type SendTransactionRequest,
+  // v1.4 discriminatedUnion 5-type transaction request schemas
+  TransactionRequestSchema,
+  type TransactionRequest,
+  TransferRequestSchema,
+  type TransferRequestInput,
+  TokenTransferRequestSchema,
+  type TokenTransferRequest,
+  ContractCallRequestSchema,
+  type ContractCallRequest,
+  ApproveRequestSchema,
+  type ApproveRequest,
+  BatchRequestSchema,
+  type BatchRequest,
   PolicySchema,
   type Policy,
   CreatePolicyRequestSchema,

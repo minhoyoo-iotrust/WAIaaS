@@ -5,6 +5,19 @@ export {
   type Transaction,
   SendTransactionRequestSchema,
   type SendTransactionRequest,
+  // v1.4 discriminatedUnion 5-type transaction request schemas
+  TransactionRequestSchema,
+  type TransactionRequest,
+  TransferRequestSchema,
+  type TransferRequestInput,
+  TokenTransferRequestSchema,
+  type TokenTransferRequest,
+  ContractCallRequestSchema,
+  type ContractCallRequest,
+  ApproveRequestSchema,
+  type ApproveRequest,
+  BatchRequestSchema,
+  type BatchRequest,
 } from './transaction.schema.js';
 export {
   PolicySchema,
