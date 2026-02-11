@@ -39,6 +39,13 @@ import type {
   BalanceInfo,
   HealthInfo,
   AssetInfo,
+  FeeEstimate,
+  TokenInfo,
+  SweepResult,
+  TokenTransferParams,
+  ContractCallParams,
+  ApproveParams,
+  BatchParams,
 } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
 
@@ -60,12 +67,18 @@ const txDecoder = getTransactionDecoder();
 type SolanaRpc = ReturnType<typeof createSolanaRpc>;
 
 /**
- * Solana chain adapter implementing the 10-method IChainAdapter contract.
+ * Solana chain adapter implementing the 20-method IChainAdapter contract.
  *
  * Connection: connect, disconnect, isConnected, getHealth
  * Balance: getBalance
  * Pipeline: buildTransaction, simulateTransaction, signTransaction, submitTransaction
  * Confirmation: waitForConfirmation
+ * Assets: getAssets
+ * Fee: estimateFee
+ * Token: buildTokenTransfer, getTokenInfo
+ * Contract: buildContractCall, buildApprove
+ * Batch: buildBatch
+ * Utility: getTransactionFee, getCurrentNonce, sweepAll
  */
 export class SolanaAdapter implements IChainAdapter {
   readonly chain: ChainType = 'solana';
@@ -379,6 +392,53 @@ export class SolanaAdapter implements IChainAdapter {
 
     // Timeout: return current status without confirmed
     return { txHash, status: 'submitted' };
+  }
+
+  // -- Fee estimation (1) --
+
+  async estimateFee(_request: TransferRequest | TokenTransferParams): Promise<FeeEstimate> {
+    throw new Error('Not implemented: estimateFee will be implemented in Phase 78');
+  }
+
+  // -- Token operations (2) --
+
+  async buildTokenTransfer(_request: TokenTransferParams): Promise<UnsignedTransaction> {
+    throw new Error('Not implemented: buildTokenTransfer will be implemented in Phase 78');
+  }
+
+  async getTokenInfo(_tokenAddress: string): Promise<TokenInfo> {
+    throw new Error('Not implemented: getTokenInfo will be implemented in Phase 78');
+  }
+
+  // -- Contract operations (2) --
+
+  async buildContractCall(_request: ContractCallParams): Promise<UnsignedTransaction> {
+    throw new Error('Not implemented: buildContractCall will be implemented in Phase 79');
+  }
+
+  async buildApprove(_request: ApproveParams): Promise<UnsignedTransaction> {
+    throw new Error('Not implemented: buildApprove will be implemented in Phase 79');
+  }
+
+  // -- Batch operations (1) --
+
+  async buildBatch(_request: BatchParams): Promise<UnsignedTransaction> {
+    throw new Error('Not implemented: buildBatch will be implemented in Phase 80');
+  }
+
+  // -- Utility operations (3) --
+
+  async getTransactionFee(_tx: UnsignedTransaction): Promise<bigint> {
+    throw new Error('Not implemented: getTransactionFee will be implemented in Phase 78');
+  }
+
+  async getCurrentNonce(_address: string): Promise<number> {
+    // Solana doesn't use nonces in the EVM sense; return 0 as specified.
+    return 0;
+  }
+
+  async sweepAll(_from: string, _to: string, _privateKey: Uint8Array): Promise<SweepResult> {
+    throw new Error('Not implemented: sweepAll will be implemented in Phase 80');
   }
 
   // -- Private helpers --

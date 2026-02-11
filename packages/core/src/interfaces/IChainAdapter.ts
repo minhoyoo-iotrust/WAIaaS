@@ -7,6 +7,13 @@ import type {
   BalanceInfo,
   HealthInfo,
   AssetInfo,
+  FeeEstimate,
+  TokenInfo,
+  SweepResult,
+  TokenTransferParams,
+  ContractCallParams,
+  ApproveParams,
+  BatchParams,
 } from './chain-adapter.types.js';
 
 /**
@@ -15,8 +22,8 @@ import type {
  * build -> simulate -> sign -> submit.
  *
  * v1.1 scope: 10 methods (connection 4 + balance 1 + tx pipeline 4 + confirm 1).
- * v1.3 scope: +1 method (getAssets).
- * v1.4 scope: +9 methods (fee estimation, contract calls, approve, batch, sweep, nonce, status, validate).
+ * v1.3 scope: +1 method (getAssets). Total: 11.
+ * v1.4 scope: +9 methods (fee estimation 1, token ops 2, contract ops 2, batch 1, utility 3). Total: 20.
  */
 export interface IChainAdapter {
   readonly chain: ChainType;
@@ -65,14 +72,40 @@ export interface IChainAdapter {
   /** Get all assets (native + token accounts) for an address. */
   getAssets(address: string): Promise<AssetInfo[]>;
 
-  // v1.4 planned methods:
-  // estimateFee(request: TransferRequest): Promise<FeeEstimate>;
-  // buildContractCall(request: ContractCallRequest): Promise<UnsignedTransaction>;
-  // buildApprove(request: ApproveRequest): Promise<UnsignedTransaction>;
-  // buildBatch(request: BatchRequest): Promise<UnsignedTransaction>;
-  // sweepAll(address: string, toAddress: string, privateKey: Uint8Array): Promise<SweepResult>;
-  // getCurrentNonce(address: string): Promise<number>;
-  // resetNonceTracker(address: string): void;
-  // getTransactionStatus(txHash: string): Promise<SubmitResult>;
-  // isValidAddress(address: string): boolean;
+  // -- Fee estimation (1) --
+
+  /** Estimate fee for a transfer or token transfer. */
+  estimateFee(request: TransferRequest | TokenTransferParams): Promise<FeeEstimate>;
+
+  // -- Token operations (2) --
+
+  /** Build token transfer transaction (SPL/ERC-20). */
+  buildTokenTransfer(request: TokenTransferParams): Promise<UnsignedTransaction>;
+
+  /** Get token info by address. */
+  getTokenInfo(tokenAddress: string): Promise<TokenInfo>;
+
+  // -- Contract operations (2) --
+
+  /** Build contract call transaction. */
+  buildContractCall(request: ContractCallParams): Promise<UnsignedTransaction>;
+
+  /** Build approve transaction. */
+  buildApprove(request: ApproveParams): Promise<UnsignedTransaction>;
+
+  // -- Batch operations (1) --
+
+  /** Build batch transaction (Solana only). Throws BATCH_NOT_SUPPORTED on EVM. */
+  buildBatch(request: BatchParams): Promise<UnsignedTransaction>;
+
+  // -- Utility operations (3) --
+
+  /** Get transaction fee from a built transaction. */
+  getTransactionFee(tx: UnsignedTransaction): Promise<bigint>;
+
+  /** Get current nonce for an address (EVM). Returns 0 for Solana. */
+  getCurrentNonce(address: string): Promise<number>;
+
+  /** Sweep all assets from one address to another. */
+  sweepAll(from: string, to: string, privateKey: Uint8Array): Promise<SweepResult>;
 }
