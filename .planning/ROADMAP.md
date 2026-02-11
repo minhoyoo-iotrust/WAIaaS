@@ -224,9 +224,9 @@
 **Plans**: 3 plans
 
 Plans:
-- [ ] 76-01: ChainError 클래스 + 3-카테고리 시스템 + INFRA-05 에러 코드 이동
-- [ ] 76-02: DB 마이그레이션 러너 + discriminatedUnion 5-type 스키마
-- [ ] 76-03: IChainAdapter 20 메서드 인터페이스 확장 + 6개 PolicyType superRefine
+- [ ] 76-01-PLAN.md — ChainError 클래스 + 3-카테고리 시스템 + INFRA-05 에러 코드 이동 (Wave 1, TDD)
+- [ ] 76-02-PLAN.md — DB 마이그레이션 러너 + discriminatedUnion 5-type 스키마 (Wave 1)
+- [ ] 76-03-PLAN.md — IChainAdapter 20 메서드 확장 + 6개 PolicyType superRefine (Wave 2)
 
 #### Phase 77: EVM 어댑터
 **Goal**: @waiaas/adapter-evm 패키지가 viem 2.x 기반으로 IChainAdapter 20개 메서드를 구현하여, EVM 네이티브 전송/ERC-20 전송/approve/gas 추정/nonce 관리가 동작한다
