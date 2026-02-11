@@ -50,12 +50,12 @@ function mockResponse(status: number, body: unknown): Response {
 function createSuccessFetchMock(agentId = 'agent-1') {
   return vi.fn((url: string | URL) => {
     const urlStr = String(url);
-    if (urlStr.includes('/v1/admin/status')) {
+    if (urlStr.includes('/health')) {
       return Promise.resolve(mockResponse(200, { status: 'ok' }));
     }
     if (urlStr.includes('/v1/agents')) {
       return Promise.resolve(mockResponse(200, {
-        agents: [{ id: agentId, name: 'Test Agent' }],
+        items: [{ id: agentId, name: 'Test Agent' }],
       }));
     }
     if (urlStr.includes('/v1/sessions') && !urlStr.includes('/renew')) {
@@ -120,7 +120,7 @@ describe('mcpSetupCommand', () => {
   it('--agent flag passed to session creation', async () => {
     const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
       const urlStr = String(url);
-      if (urlStr.includes('/v1/admin/status')) {
+      if (urlStr.includes('/health')) {
         return Promise.resolve(mockResponse(200, { status: 'ok' }));
       }
       if (urlStr.includes('/v1/sessions')) {
@@ -154,12 +154,12 @@ describe('mcpSetupCommand', () => {
   it('multiple agents without --agent -> error', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string | URL) => {
       const urlStr = String(url);
-      if (urlStr.includes('/v1/admin/status')) {
+      if (urlStr.includes('/health')) {
         return Promise.resolve(mockResponse(200, { status: 'ok' }));
       }
       if (urlStr.includes('/v1/agents')) {
         return Promise.resolve(mockResponse(200, {
-          agents: [
+          items: [
             { id: 'agent-1', name: 'First' },
             { id: 'agent-2', name: 'Second' },
           ],
@@ -182,11 +182,11 @@ describe('mcpSetupCommand', () => {
   it('no agents -> error', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string | URL) => {
       const urlStr = String(url);
-      if (urlStr.includes('/v1/admin/status')) {
+      if (urlStr.includes('/health')) {
         return Promise.resolve(mockResponse(200, { status: 'ok' }));
       }
       if (urlStr.includes('/v1/agents')) {
-        return Promise.resolve(mockResponse(200, { agents: [] }));
+        return Promise.resolve(mockResponse(200, { items: [] }));
       }
       return Promise.reject(new Error(`Unexpected: ${urlStr}`));
     }));
@@ -221,12 +221,12 @@ describe('mcpSetupCommand', () => {
   it('session creation failure (401 bad password) -> error', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string | URL) => {
       const urlStr = String(url);
-      if (urlStr.includes('/v1/admin/status')) {
+      if (urlStr.includes('/health')) {
         return Promise.resolve(mockResponse(200, { status: 'ok' }));
       }
       if (urlStr.includes('/v1/agents')) {
         return Promise.resolve(mockResponse(200, {
-          agents: [{ id: 'agent-1' }],
+          items: [{ id: 'agent-1' }],
         }));
       }
       if (urlStr.includes('/v1/sessions')) {
@@ -328,12 +328,12 @@ describe('mcpSetupCommand', () => {
   it('--expires-in passed correctly', async () => {
     const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
       const urlStr = String(url);
-      if (urlStr.includes('/v1/admin/status')) {
+      if (urlStr.includes('/health')) {
         return Promise.resolve(mockResponse(200, { status: 'ok' }));
       }
       if (urlStr.includes('/v1/agents')) {
         return Promise.resolve(mockResponse(200, {
-          agents: [{ id: 'agent-1' }],
+          items: [{ id: 'agent-1' }],
         }));
       }
       if (urlStr.includes('/v1/sessions')) {
@@ -374,6 +374,45 @@ describe('mcpSetupCommand', () => {
 
     // .tmp file should NOT exist (was renamed)
     expect(existsSync(`${tokenPath}.tmp`)).toBe(false);
+  });
+
+  it('agent auto-detect sends X-Master-Password header (BUG-004)', async () => {
+    const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/health')) {
+        return Promise.resolve(mockResponse(200, { status: 'ok' }));
+      }
+      if (urlStr.includes('/v1/agents')) {
+        // Verify X-Master-Password header is present
+        const headers = init?.headers as Record<string, string> | undefined;
+        expect(headers?.['X-Master-Password']).toBe('test-pw');
+        return Promise.resolve(mockResponse(200, {
+          items: [{ id: 'agent-1', name: 'Test Agent' }],
+        }));
+      }
+      if (urlStr.includes('/v1/sessions') && !urlStr.includes('/renew')) {
+        return Promise.resolve(mockResponse(200, {
+          id: 'session-123',
+          token: 'jwt.token.here',
+          expiresAt: Math.floor(Date.now() / 1000) + 86400,
+        }));
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${urlStr}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
+    await mcpSetupCommand({
+      dataDir: testDir,
+      baseUrl: 'http://127.0.0.1:3100',
+      masterPassword: 'test-pw',
+    });
+
+    // Verify /v1/agents was called
+    const agentCalls = fetchMock.mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes('/v1/agents'),
+    );
+    expect(agentCalls.length).toBe(1);
   });
 
   it('auto-detects single agent (CLI-04)', async () => {

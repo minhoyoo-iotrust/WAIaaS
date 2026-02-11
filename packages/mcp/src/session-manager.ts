@@ -186,11 +186,11 @@ export class SessionManager {
       return false;
     }
 
-    // Extract sessionId
-    const sessionId = payload['sessionId'];
+    // Extract sessionId (JWT standard 'sub' first, 'sessionId' fallback for compat)
+    const sessionId = payload['sub'] ?? payload['sessionId'];
     if (typeof sessionId !== 'string' || !sessionId) {
       this.state = 'error';
-      console.error(`${LOG_PREFIX} JWT missing sessionId claim`);
+      console.error(`${LOG_PREFIX} JWT missing sub/sessionId claim`);
       return false;
     }
 

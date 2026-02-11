@@ -86,7 +86,7 @@ describe('SessionManager', () => {
   describe('token loading', () => {
     it('loads token from envToken when no dataDir', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 3600 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 3600 });
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         envToken: token,
@@ -100,7 +100,7 @@ describe('SessionManager', () => {
 
     it('loads token from mcp-token file when dataDir provided', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-file', exp: now + 3600 });
+      const token = createFakeJWT({ sub: 'sess-file', exp: now + 3600 });
       mockedReadFile.mockResolvedValueOnce(token);
 
       const sm = new SessionManager({
@@ -116,8 +116,8 @@ describe('SessionManager', () => {
 
     it('file takes priority over env var (SM-04)', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const fileToken = createFakeJWT({ sessionId: 'sess-file', exp: now + 3600 });
-      const envToken = createFakeJWT({ sessionId: 'sess-env', exp: now + 3600 });
+      const fileToken = createFakeJWT({ sub: 'sess-file', exp: now + 3600 });
+      const envToken = createFakeJWT({ sub: 'sess-env', exp: now + 3600 });
       mockedReadFile.mockResolvedValueOnce(fileToken);
 
       const sm = new SessionManager({
@@ -131,8 +131,50 @@ describe('SessionManager', () => {
       expect(sm.getToken()).toBe(fileToken);
     });
 
+    it('loads token with legacy sessionId claim (backward compat)', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const token = createFakeJWT({ sessionId: 'sess-legacy', exp: now + 3600 });
+      const sm = new SessionManager({
+        baseUrl: 'http://localhost:3100',
+        envToken: token,
+      });
+
+      await sm.start();
+
+      expect(sm.getState()).toBe('active');
+      expect(sm.getToken()).toBe(token);
+    });
+
+    it('sub claim takes priority over sessionId claim', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const token = createFakeJWT({ sub: 'sess-sub', sessionId: 'sess-legacy', exp: now + 3600 });
+      const sm = new SessionManager({
+        baseUrl: 'http://localhost:3100',
+        envToken: token,
+      });
+
+      await sm.start();
+
+      expect(sm.getState()).toBe('active');
+      expect(sm.getToken()).toBe(token);
+    });
+
+    it('missing both sub and sessionId sets state to error', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const token = createFakeJWT({ agt: 'agent-1', exp: now + 3600 });
+      const sm = new SessionManager({
+        baseUrl: 'http://localhost:3100',
+        envToken: token,
+      });
+
+      await sm.start();
+
+      expect(sm.getState()).toBe('error');
+      expect(sm.getToken()).toBeNull();
+    });
+
     it('invalid JWT (no exp) sets state to error', async () => {
-      const token = createFakeJWT({ sessionId: 'sess-1' });
+      const token = createFakeJWT({ sub: 'sess-1' });
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         envToken: token,
@@ -145,7 +187,7 @@ describe('SessionManager', () => {
 
     it('expired token sets state to expired', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now - 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now - 100 });
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         envToken: token,
@@ -164,8 +206,8 @@ describe('SessionManager', () => {
     it('scheduleRenewal sets timer at 60% of TTL', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 3600 });
-      const newToken = createFakeJWT({ sessionId: 'sess-renewed', exp: now + 7200 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 3600 });
+      const newToken = createFakeJWT({ sub: 'sess-renewed', exp: now + 7200 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(200, {
@@ -197,8 +239,8 @@ describe('SessionManager', () => {
     it('timer fires and calls renew()', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newToken = createFakeJWT({ sessionId: 'sess-2', exp: now + 3700 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newToken = createFakeJWT({ sub: 'sess-2', exp: now + 3700 });
 
       mockedWriteFile.mockResolvedValue(undefined);
       mockedRename.mockResolvedValue(undefined);
@@ -231,8 +273,8 @@ describe('SessionManager', () => {
     it('successful renewal updates token and reschedules', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const oldToken = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newToken = createFakeJWT({ sessionId: 'sess-renewed', exp: now + 3700 });
+      const oldToken = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newToken = createFakeJWT({ sub: 'sess-renewed', exp: now + 3700 });
 
       mockedWriteFile.mockResolvedValue(undefined);
       mockedRename.mockResolvedValue(undefined);
@@ -264,8 +306,8 @@ describe('SessionManager', () => {
     it('renewal writes to file first, then updates memory (H-02 file-first)', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const oldToken = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newToken = createFakeJWT({ sessionId: 'sess-2', exp: now + 3700 });
+      const oldToken = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newToken = createFakeJWT({ sub: 'sess-2', exp: now + 3700 });
 
       const writeCalls: string[] = [];
       mockedWriteFile.mockImplementation(async (_path, data) => {
@@ -303,14 +345,14 @@ describe('SessionManager', () => {
     it('getToken() returns old token during renewal (SM-14)', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const oldToken = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const oldToken = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       // Create a fetch that "hangs" for a bit
       const fetchResolvers: Array<() => void> = [];
       vi.stubGlobal('fetch', vi.fn(() =>
         new Promise<Response>((resolve) => {
           fetchResolvers.push(() => resolve(mockFetchResponse(200, {
-            token: createFakeJWT({ sessionId: 'sess-2', exp: now + 3700 }),
+            token: createFakeJWT({ sub: 'sess-2', exp: now + 3700 }),
             id: 'sess-2',
             expiresAt: now + 3700,
             renewalCount: 1,
@@ -344,8 +386,8 @@ describe('SessionManager', () => {
     it('network error triggers retry with exponential backoff', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newToken = createFakeJWT({ sessionId: 'sess-2', exp: now + 3700 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newToken = createFakeJWT({ sub: 'sess-2', exp: now + 3700 });
 
       let callCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
@@ -383,7 +425,7 @@ describe('SessionManager', () => {
     it('retries 3 times with delays 1s, 2s, 4s then gives up', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       let callCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
@@ -416,7 +458,7 @@ describe('SessionManager', () => {
     it('gives up after max retries and transitions to error state', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(503, { message: 'Service Unavailable' })),
@@ -443,8 +485,8 @@ describe('SessionManager', () => {
     it('400 TOO_EARLY: waits 30s and retries once', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 3600 });
-      const newToken = createFakeJWT({ sessionId: 'sess-2', exp: now + 7200 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 3600 });
+      const newToken = createFakeJWT({ sub: 'sess-2', exp: now + 7200 });
 
       let callCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
@@ -481,7 +523,7 @@ describe('SessionManager', () => {
     it('non-retryable errors (403, 401) skip retry', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       let callCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
@@ -512,7 +554,7 @@ describe('SessionManager', () => {
     it('concurrent renew() call is skipped when isRenewing=true', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       let fetchCallCount = 0;
       const fetchResolvers: Array<(v: Response) => void> = [];
@@ -558,7 +600,7 @@ describe('SessionManager', () => {
 
       // Resolve fetch
       fetchResolvers[0]?.(mockFetchResponse(200, {
-        token: createFakeJWT({ sessionId: 'sess-2', exp: now + 3700 }),
+        token: createFakeJWT({ sub: 'sess-2', exp: now + 3700 }),
         id: 'sess-2',
         expiresAt: now + 3700,
         renewalCount: 1,
@@ -572,13 +614,13 @@ describe('SessionManager', () => {
     it('isRenewing reset to false after successful renewal', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       let callCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
         callCount++;
         return Promise.resolve(mockFetchResponse(200, {
-          token: createFakeJWT({ sessionId: `sess-${callCount + 1}`, exp: now + 3700 }),
+          token: createFakeJWT({ sub: `sess-${callCount + 1}`, exp: now + 3700 }),
           id: `sess-${callCount + 1}`,
           expiresAt: now + 3700,
           renewalCount: callCount,
@@ -606,7 +648,7 @@ describe('SessionManager', () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
       // Short-lived token so renewal fires quickly
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       let callCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
@@ -614,7 +656,7 @@ describe('SessionManager', () => {
         return Promise.resolve(mockFetchResponse(401, { code: 'SESSION_EXPIRED' }));
       }));
 
-      const recoveredToken = createFakeJWT({ sessionId: 'sess-recovered', exp: now + 7200 });
+      const recoveredToken = createFakeJWT({ sub: 'sess-recovered', exp: now + 7200 });
       mockedReadFile.mockResolvedValueOnce(token); // start() reads file
       // Recovery loop reads: first poll returns the recovered token
       mockedReadFile.mockResolvedValueOnce(recoveredToken);
@@ -646,8 +688,8 @@ describe('SessionManager', () => {
     it('409 triggers file re-read', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newerToken = createFakeJWT({ sessionId: 'sess-newer', exp: now + 3600 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newerToken = createFakeJWT({ sub: 'sess-newer', exp: now + 3600 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(409, { code: 'RENEWAL_CONFLICT' })),
@@ -673,8 +715,8 @@ describe('SessionManager', () => {
     it('if file has newer valid token, update and reschedule', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newerToken = createFakeJWT({ sessionId: 'sess-newer', exp: now + 7200 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newerToken = createFakeJWT({ sub: 'sess-newer', exp: now + 7200 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(409, { code: 'RENEWAL_CONFLICT' })),
@@ -699,7 +741,7 @@ describe('SessionManager', () => {
     it('if file has same token, start recovery loop', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(409, { code: 'RENEWAL_CONFLICT' })),
@@ -724,7 +766,7 @@ describe('SessionManager', () => {
     it('if no file (no dataDir), start recovery loop', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(409, { code: 'RENEWAL_CONFLICT' })),
@@ -750,7 +792,7 @@ describe('SessionManager', () => {
     it('recovery loop polls every 60s', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(401, { code: 'SESSION_EXPIRED' })),
@@ -783,8 +825,8 @@ describe('SessionManager', () => {
     it('valid token in file -> active + scheduleRenewal + stop loop', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const oldToken = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
-      const newToken = createFakeJWT({ sessionId: 'sess-new', exp: now + 7200 });
+      const oldToken = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
+      const newToken = createFakeJWT({ sub: 'sess-new', exp: now + 7200 });
 
       let fetchCallCount = 0;
       vi.stubGlobal('fetch', vi.fn(() => {
@@ -794,7 +836,7 @@ describe('SessionManager', () => {
         }
         // Second call after recovery should work
         return Promise.resolve(mockFetchResponse(200, {
-          token: createFakeJWT({ sessionId: 'sess-3', exp: now + 10800 }),
+          token: createFakeJWT({ sub: 'sess-3', exp: now + 10800 }),
           id: 'sess-3',
           expiresAt: now + 10800,
           renewalCount: 1,
@@ -826,7 +868,7 @@ describe('SessionManager', () => {
     it('invalid token in file -> continue polling', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(401, { code: 'SESSION_EXPIRED' })),
@@ -835,7 +877,7 @@ describe('SessionManager', () => {
       mockedReadFile.mockResolvedValueOnce(token); // start()
       // Recovery polls: first returns same expired-ish token, then valid one
       mockedReadFile.mockResolvedValueOnce(token); // same token (no change)
-      const validToken = createFakeJWT({ sessionId: 'sess-new', exp: now + 7200 });
+      const validToken = createFakeJWT({ sub: 'sess-new', exp: now + 7200 });
       mockedReadFile.mockResolvedValueOnce(validToken); // valid token
 
       const sm = new SessionManager({
@@ -862,7 +904,7 @@ describe('SessionManager', () => {
     it('dispose() stops recovery loop', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(401, { code: 'SESSION_EXPIRED' })),
@@ -892,7 +934,7 @@ describe('SessionManager', () => {
     it('recovery loop does not start when already running', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       // First call: 401, triggers recovery
       // We won't resolve recovery, so if a second 401 came, recovery should not restart
@@ -928,7 +970,7 @@ describe('SessionManager', () => {
     it('RENEWAL_LIMIT_EXCEEDED -> expired state + recovery loop', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(403, { code: 'RENEWAL_LIMIT_EXCEEDED' })),
@@ -954,7 +996,7 @@ describe('SessionManager', () => {
     it('SESSION_LIFETIME_EXPIRED -> expired state + recovery loop', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(403, { code: 'SESSION_LIFETIME_EXPIRED' })),
@@ -979,7 +1021,7 @@ describe('SessionManager', () => {
 
     it('getToken() returns null when state is expired', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now - 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now - 100 });
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         envToken: token,
@@ -997,11 +1039,11 @@ describe('SessionManager', () => {
     it('dispose() clears renewal timer', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 3600 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 3600 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(200, {
-          token: createFakeJWT({ sessionId: 'sess-2', exp: now + 7200 }),
+          token: createFakeJWT({ sub: 'sess-2', exp: now + 7200 }),
           id: 'sess-2',
           expiresAt: now + 7200,
           renewalCount: 1,
@@ -1029,7 +1071,7 @@ describe('SessionManager', () => {
     it('dispose() clears recovery timer', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sessionId: 'sess-1', exp: now + 100 });
+      const token = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
 
       vi.stubGlobal('fetch', vi.fn(() =>
         Promise.resolve(mockFetchResponse(401, { code: 'SESSION_EXPIRED' })),
@@ -1037,7 +1079,7 @@ describe('SessionManager', () => {
 
       mockedReadFile.mockResolvedValueOnce(token);
       mockedReadFile.mockResolvedValue(
-        createFakeJWT({ sessionId: 'sess-new', exp: now + 7200 }),
+        createFakeJWT({ sub: 'sess-new', exp: now + 7200 }),
       );
 
       const sm = new SessionManager({
