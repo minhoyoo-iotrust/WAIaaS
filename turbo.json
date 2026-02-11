@@ -5,6 +5,14 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@waiaas/admin#build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
+    "@waiaas/daemon#build": {
+      "dependsOn": ["@waiaas/admin#build", "^build"],
+      "outputs": ["dist/**"]
+    },
     "test": {
       "dependsOn": ["build"],
       "outputs": []

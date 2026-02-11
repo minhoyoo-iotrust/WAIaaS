@@ -30,3 +30,6 @@ Thumbs.db
 
 # Temporary
 *.tsbuildinfo
+
+# Admin UI build artifacts (copied by @waiaas/admin postbuild)
+packages/daemon/public/
