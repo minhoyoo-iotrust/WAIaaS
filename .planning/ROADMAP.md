@@ -245,8 +245,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 78-01: SPL 토큰 전송 + Token-2022 분기 + ALLOWED_TOKENS 정책
-- [ ] 78-02: ERC-20 토큰 전송 + getAssets 토큰 확장 + getTokenInfo + estimateFee
+- [ ] 78-01-PLAN.md — SolanaAdapter buildTokenTransfer + Token-2022 분기 + getTokenInfo/estimateFee/getTransactionFee + getAssets Token-2022 + ALLOWED_TOKENS 정책 평가 (Wave 1, TDD)
+- [ ] 78-02-PLAN.md — EvmAdapter buildTokenTransfer ERC-20 + getAssets ERC-20 multicall 확장 (Wave 2, TDD)
 
 #### Phase 79: 컨트랙트 호출 + Approve 관리
 **Goal**: 에이전트가 화이트리스트된 스마트 컨트랙트를 호출하고, Approve를 요청할 수 있으며, CONTRACT_WHITELIST/METHOD_WHITELIST/APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT 정책이 기본 거부 원칙으로 동작한다
