@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.3.2 Admin Web UI 구현 — Phase 70 in progress (integration tests)
+**Current focus:** v1.3.2 Admin Web UI 구현 완료 -- Phase 70 complete (integration tests)
 
 ## Current Position
 
 Phase: 70 of 70 (Integration Tests)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-11 — Completed 70-01-PLAN.md (Auth + Security Test Infrastructure)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-11 — Completed 70-02-PLAN.md (Page Tests)
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 16 milestones, 70 phases, 163 plans, 434 reqs, 798 tests, 33,929 LOC
+**Cumulative:** 16 milestones, 70 phases, 164 plans, 434 reqs, 816 tests, 33,929 LOC
 
 **v1.3.2 Plan:**
 - 5 phases (66-70), 10 plans, 22 requirements
 - Target: Preact SPA 5 pages + 22 tests
-- Completed: 9/10 plans
+- Completed: 10/10 plans
 
 ## Accumulated Context
 
@@ -43,6 +43,7 @@ v1.3.2 구현 결정:
 - Phase 69-01 (3건): Sentinel filter values (__all__, __global__) for dropdown disambiguation, Global-only filter client-side, Policy type read-only in edit modal
 - Phase 69-02 (3건): Modal confirmDisabled prop for type-to-confirm pattern, No confirmation modal for Kill Switch (emergency speed), Post-shutdown overlay z-index 300 above modal
 - Phase 70-01 (3건): Preact signal reset via beforeEach for module-level signals, CSP header presence as proxy for route registration, Kill switch bypass verified via 409 vs non-409 status
+- Phase 70-02 (3건): Mock api/client module entirely for page tests, Mock auth/store as plain signal-like objects, Placeholder-based modal detection for split-element text
 
 ### Blockers/Concerns
 
@@ -53,6 +54,6 @@ v1.3.2 구현 결정:
 
 ## Session Continuity
 
-Last session: 2026-02-11T10:26:00Z
-Stopped at: Completed 70-01-PLAN.md (Auth + Security Test Infrastructure)
+Last session: 2026-02-11T10:32:43Z
+Stopped at: Completed 70-02-PLAN.md (Page Tests) -- Phase 70 complete
 Resume file: None
