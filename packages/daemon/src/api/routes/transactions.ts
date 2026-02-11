@@ -41,6 +41,7 @@ import type { PipelineContext } from '../../pipeline/stages.js';
 import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
+import type { NotificationService } from '../../notifications/notification-service.js';
 import {
   SendTransactionRequestOpenAPI,
   TxSendResponseSchema,
@@ -68,6 +69,7 @@ export interface TransactionRouteDeps {
     policy_defaults_delay_seconds: number;
     policy_defaults_approval_timeout: number;
   };
+  notificationService?: NotificationService;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +250,12 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       createdAt: now,
     });
 
+    // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
+    void deps.notificationService?.notify('TX_REQUESTED', agentId, {
+      amount: request.amount,
+      to: request.to,
+    }, { txId });
+
     // Return 201 immediately with txId (Stage 1 complete)
     const response = c.json(
       {
@@ -280,6 +288,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       delayQueue: deps.delayQueue,
       approvalWorkflow: deps.approvalWorkflow,
       config: deps.config,
+      // v1.3.4: notification service for pipeline event triggers
+      notificationService: deps.notificationService,
     };
 
     void (async () => {

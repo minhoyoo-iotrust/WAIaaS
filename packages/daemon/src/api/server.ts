@@ -250,6 +250,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
           policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
           policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
         } : undefined,
+        notificationService: deps.notificationService,
       }),
     );
   }
