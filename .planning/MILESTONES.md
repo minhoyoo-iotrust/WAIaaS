@@ -383,3 +383,30 @@
 
 ---
 
+
+## v1.3.1 Admin Web UI 설계 (Shipped: 2026-02-11)
+
+**Delivered:** 데몬 내장 경량 관리 웹 UI(5 페이지 SPA)의 전체 설계 문서(67-admin-web-ui-spec.md, 10개 섹션)를 작성하여 v1.3.2에서 즉시 구현 착수할 수 있는 상태를 확립
+
+**Phases completed:** 64-65 (2 plans total)
+
+**Key accomplishments:**
+
+- Hono serveStatic SPA 서빙 + CSP 보안(default-src 'none') + 캐시 정책(해시 immutable + no-cache) + admin_ui 토글 설계
+- masterAuth 로그인 흐름 + @preact/signals Auth Store + 15분 비활성 타임아웃 + 4종 로그아웃 트리거 설계
+- 5개 페이지 화면 설계 (Dashboard/Agents/Sessions/Policies/Settings) — ASCII 와이어프레임, 컴포넌트 계층, API 매핑, 상호작용 흐름
+- CSS Variables 디자인 토큰(색상/간격/타이포/티어) + 8개 공통 컴포넌트 인터페이스(Table/Form/Modal/Toast/Button/Badge/CopyButton/EmptyState)
+- 68개 에러 코드 전체 매핑 + fetch 래퍼(X-Master-Password 자동 주입, 10초 타임아웃) + 로딩/빈/에러/셧다운 4종 UX 패턴
+
+**Stats:**
+
+- 1 file created (docs/67-admin-web-ui-spec.md, 10 sections)
+- 2 phases, 2 plans, 4 tasks, 18 requirements, 13 설계 결정
+- 1 day (2026-02-11)
+
+**Git range:** `8f8bddc` (Phase 64 start) → `fb012b0` (Phase 65 complete)
+
+**What's next:** v1.3.2 Admin Web UI 구현 — 설계 문서 67 기반 Preact SPA 구현
+
+---
+
