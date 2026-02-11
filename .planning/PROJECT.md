@@ -8,27 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.3.1 Admin Web UI 설계
-
-**Goal:** 데몬에 내장된 경량 관리 웹 UI(5 페이지 SPA)를 설계하여, v1.3.2에서 즉시 구현할 수 있는 상태를 확립
-
-**Target features:**
-- Dashboard/Agents/Sessions/Policies/Settings 5 페이지 화면 설계
-- masterAuth 기반 인증 흐름 + 비활성 타임아웃
-- Preact 10.x + Vite 6.x + CSS Variables 기술 스택 확정
-- Hono serveStatic SPA 서빙 + CSP + 캐시 설정
-- API 연동 패턴(fetch 래퍼, 에러 코드 매핑, 로딩/빈 상태)
-- 보완사항 7건 해소 (GET kill-switch 누락, 에러 코드 모호성, shutdown 후 UI 등)
-
 ## Current State
 
-v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python SDK, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림까지 동작.
+v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)로 Preact SPA 5페이지 관리 UI의 인프라/인증/보안/페이지/컴포넌트/API 연동이 모두 확정되어 v1.3.2에서 즉시 구현 착수 가능.
+
+코드베이스(v1.3 기준): 7-패키지 모노레포 + Python SDK, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
 - ✅ v1.2 인증 + 정책 엔진 — shipped 2026-02-10
 - ✅ v1.3 SDK + MCP + 알림 — shipped 2026-02-11
-- **→ v1.3.1 Admin Web UI 설계 (Preact SPA 5페이지, 설계 문서 67)**
+- ✅ v1.3.1 Admin Web UI 설계 — shipped 2026-02-11
 - v1.3.2 Admin Web UI 구현
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
@@ -42,6 +32,7 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python 
 - 784 테스트 (core + adapter + daemon + CLI + SDK + MCP)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
+- 설계 문서 31개 (24-67), 8 objective 문서
 
 ## 요구사항
 
@@ -150,17 +141,16 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python 
 - ✓ Python SDK (waiaas) — async httpx + Pydantic v2, 동일 인터페이스 — v1.3 (PYDK-01~06)
 - ✓ MCP Server (@waiaas/mcp) — 6 도구 + 3 리소스, SessionManager 자동 갱신, CLI mcp setup — v1.3 (MCP-01~06)
 
+- ✓ Admin Web UI 전체 설계 문서 67(10개 섹션) — Preact 10.x + Vite 6.x + CSS Variables — v1.3.1 (PAGE-01~05, AUTH-01~02, INFRA-01~04, APIC-01~03, COMP-01~03, SEC-01)
+- ✓ 5개 페이지 화면 설계 (Dashboard/Agents/Sessions/Policies/Settings) — 와이어프레임, 컴포넌트 계층, API 매핑, 상호작용 흐름 — v1.3.1
+- ✓ masterAuth 로그인 흐름 + @preact/signals Auth Store + 15분 비활성 타임아웃 + 4종 로그아웃 — v1.3.1
+- ✓ Hono serveStatic SPA 서빙 + CSP(default-src 'none') + 캐시 정책 + admin_ui 토글 — v1.3.1
+- ✓ 8개 공통 컴포넌트 인터페이스 + CSS Variables 디자인 토큰 + 폼 유효성 검증 전략 — v1.3.1
+- ✓ fetch 래퍼 + 68개 에러 코드 전체 매핑 + 로딩/빈/에러/셧다운 UX 패턴 — v1.3.1
+
 ### 활성
 
-(v1.3.1 — Admin Web UI 설계)
-
-- [ ] Admin Web UI 전체 설계 문서 (67-admin-web-ui-spec.md)
-- [ ] 5 페이지 화면 설계 (Dashboard, Agents, Sessions, Policies, Settings)
-- [ ] masterAuth 인증 흐름 + Auth Store 설계
-- [ ] Preact + Vite + CSS Variables 기술 스택 + 패키지 구조 설계
-- [ ] Hono SPA 서빙 + CSP + 캐시 + config.toml 확장 설계
-- [ ] API 연동 패턴 + 에러 코드 매핑 + UX 상태 설계
-- [ ] 보완사항 7건 해소 (이전 리뷰에서 도출)
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -177,13 +167,14 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 7-패키지 모노레포 + Python 
 
 ## 컨텍스트
 
-**누적:** 15 milestones (v0.1-v1.3), 63 phases, 151 plans, 416 requirements, 30 설계 문서, 8 objective 문서, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트
+**누적:** 16 milestones (v0.1-v1.3.1), 65 phases, 153 plans, 434 requirements, 31 설계 문서(24-67), 8 objective 문서, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
 v1.1 코어 인프라 + 기본 전송 shipped (2026-02-10). 4 페이즈, 12 플랜, 46 요구사항, 10,925 LOC, 281 테스트.
 v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요구사항, 25,526 LOC, 457 테스트.
 v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구사항, 33,929 LOC, 784 테스트.
+v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요구사항, 설계 문서 67(10섹션).
 
 **기술 스택 (v0.2 확정, v1.3 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -199,7 +190,7 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구�
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - 미구현: @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
 
-**설계 문서:** 30개 (deliverables 24-64.md) + 대응표/테스트 전략/objective
+**설계 문서:** 31개 (deliverables 24-67.md) + 대응표/테스트 전략/objective
 
 ### 알려진 이슈
 
@@ -253,6 +244,11 @@ v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구�
 | 알림 채널 native fetch | 외부 Bot 프레임워크 미사용, 의존성 최소화 | ✓ Good — v1.3 구현 |
 | Error hint resolveHint() | AI 에이전트 자율 복구용 32개 hint 매핑 | ✓ Good — v1.3 구현 |
 | 커서 페이지네이션 UUID v7 | createdAt 대신 ID 컬럼 사용, 순서 보장 | ✓ Good — v1.3 구현 |
+| Admin UI masterAuth only (JWT 미사용) | 관리 도구 저빈도 요청, Argon2id 300ms/req 허용 | ✓ Good — v1.3.1 설계 |
+| Preact 10.x (3KB gzip) + @preact/signals | 경량 SPA, React 호환 API, 시그널 기반 상태 관리 | ✓ Good — v1.3.1 설계 |
+| CSP default-src 'none' + CSRF 토큰 불필요 | 가장 엄격한 CSP 기본값, 커스텀 헤더로 CSRF 방어 | ✓ Good — v1.3.1 설계 |
+| 클라이언트 검증 Zod 미임포트 | ~13KB gzip 절약, 빌드 커플링 제거 | ✓ Good — v1.3.1 설계 |
+| 68 에러 코드 전체 매핑 | Admin UI 미사용 코드 포함, 향후 견고성 확보 | ✓ Good — v1.3.1 설계 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.1 milestone started*
+*최종 업데이트: 2026-02-11 after v1.3.1 milestone completed*
