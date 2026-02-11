@@ -17,6 +17,7 @@
 - ✅ **v1.2 인증 + 정책 엔진** — Phases 52-57 (shipped 2026-02-10, 457 tests, 25,526 LOC)
 - ✅ **v1.3 SDK + MCP + 알림** — Phases 58-63 (shipped 2026-02-11, 784 tests, 33,929 LOC)
 - ✅ **v1.3.1 Admin Web UI 설계** — Phases 64-65 (shipped 2026-02-11)
+- 🚧 **v1.3.2 Admin Web UI 구현** — Phases 66-70 (in progress)
 
 ## Phases
 
@@ -175,7 +176,98 @@
 
 </details>
 
+### 🚧 v1.3.2 Admin Web UI 구현 (In Progress)
+
+**Milestone Goal:** v1.3.1에서 설계한 Admin Web UI를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태.
+
+- [ ] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장
+- [ ] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트
+- [ ] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기
+- [ ] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료
+- [ ] **Phase 70: 통합 테스트** — 인증 4건, 페이지 14건, 보안+서빙 4건 테스트
+
+## Phase Details
+
+### Phase 66: 인프라 + 빌드 파이프라인
+**Goal**: `pnpm build` 실행 시 admin SPA가 빌드되어 daemon이 `/admin`에서 정적 파일을 서빙하고, CSP 헤더가 적용되며, Kill Switch 활성 시에도 SPA가 로딩되는 상태
+**Depends on**: Phase 65 (v1.3.1 Admin Web UI 설계 완료)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06, INFRA-07
+**Success Criteria** (what must be TRUE):
+  1. `pnpm --filter @waiaas/admin build`가 성공하고, 빌드 산출물이 `packages/daemon/public/admin/`에 복사된다
+  2. 데몬 시작 후 `GET /admin`으로 접근하면 SPA index.html이 반환되고, `admin_ui = false` 설정 시 404가 반환된다
+  3. `/admin` 응답에 `Content-Security-Policy` 헤더가 포함되고 `script-src 'self'`를 포함한다
+  4. Kill Switch ACTIVATED 상태에서도 `GET /admin`은 200으로 SPA가 로딩된다
+  5. `GET /v1/admin/status` 응답에 `adminTimeout` 필드가 포함되고, 데몬 버전이 실제 package.json 버전을 반영한다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 66-01: Preact 패키지 스캐폴드 + Vite 빌드 파이프라인 (INFRA-01, INFRA-06, INFRA-07)
+- [ ] 66-02: daemon 정적 서빙 + CSP + Kill Switch bypass + config 확장 (INFRA-02, INFRA-03, INFRA-04, INFRA-05)
+
+### Phase 67: 인증 + API Client + 공통 컴포넌트
+**Goal**: 사용자가 마스터 비밀번호로 로그인하여 인증된 상태로 SPA를 사용하고, 비활성 시 자동 로그아웃되며, 모든 페이지에서 공통 레이아웃/테이블/폼/모달/토스트 컴포넌트를 사용할 수 있는 상태
+**Depends on**: Phase 66
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, COMP-01, COMP-02, COMP-03
+**Success Criteria** (what must be TRUE):
+  1. 마스터 비밀번호 입력 후 `GET /v1/admin/status`로 검증 성공 시 Dashboard로 이동하고, 틀린 비밀번호는 에러 메시지를 표시한다
+  2. 15분(설정 가능) 비활성 시 자동 로그아웃되어 로그인 화면으로 돌아가고, 마우스/키보드 이벤트로 타이머가 리셋된다
+  3. API 호출 시 `X-Master-Password` 헤더가 자동 주입되고, 인증 후 401 응답 시 자동 로그아웃된다
+  4. 사이드바 네비게이션으로 5개 페이지를 해시 라우팅으로 전환할 수 있고, 각 페이지에 헤더 + 콘텐츠 레이아웃이 적용된다
+  5. 68개 에러 코드가 사용자 친화적 영문 메시지로 매핑되고, 날짜/주소 포맷팅 유틸이 동작한다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 67-01: masterAuth 로그인 + Auth Store + API Client (AUTH-01, AUTH-02, AUTH-03)
+- [ ] 67-02: Layout + 재사용 컴포넌트 + 에러 매핑 유틸 (COMP-01, COMP-02, COMP-03)
+
+### Phase 68: Dashboard + Agents + Sessions 페이지
+**Goal**: 사용자가 Dashboard에서 데몬 상태를 확인하고, Agents 페이지에서 에이전트 CRUD를 수행하며, Sessions 페이지에서 에이전트별 세션을 생성/조회/폐기하고 JWT 토큰을 복사할 수 있는 상태
+**Depends on**: Phase 67
+**Requirements**: PAGE-01, PAGE-02, PAGE-03
+**Success Criteria** (what must be TRUE):
+  1. Dashboard에 데몬 상태/버전/uptime/에이전트 수/활성 세션 수/Kill Switch 상태가 카드로 표시되고, 30초마다 자동 갱신된다
+  2. Agents 페이지에서 에이전트 목록 조회, 생성(name/chain/network), 이름 수정, 상세(주소/Owner 상태), 삭제(확인 모달)가 동작한다
+  3. Sessions 페이지에서 에이전트 드롭다운 선택 후 세션 생성, 에이전트별 세션 목록 조회, 만료시간 표시, 폐기, JWT 토큰 복사가 동작한다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 68-01: Dashboard 페이지 (PAGE-01)
+- [ ] 68-02: Agents + Sessions 페이지 (PAGE-02, PAGE-03)
+
+### Phase 69: Policies + Settings 페이지
+**Goal**: 사용자가 Policies 페이지에서 10가지 정책 유형의 CRUD를 수행하고 4-tier 색상 구분을 확인하며, Settings 페이지에서 Kill Switch/JWT 회전/데몬 종료 등 관리 작업을 수행할 수 있는 상태
+**Depends on**: Phase 68
+**Requirements**: PAGE-04, PAGE-05
+**Success Criteria** (what must be TRUE):
+  1. Policies 페이지에서 에이전트별/글로벌 정책 목록 조회, 10 유형 드롭다운 선택, rules JSON 편집(textarea), priority/enabled 설정이 동작한다
+  2. SPENDING_LIMIT 정책의 4-tier 한도가 INSTANT=초록, NOTIFY=파랑, DELAY=노랑, APPROVAL=빨강으로 시각적 구분된다
+  3. Settings 페이지에서 Kill Switch 활성화/복구 토글, JWT 시크릿 회전(확인 모달), 데몬 종료(이중 확인 모달)가 동작한다
+  4. 이미 활성 상태에서 재활성화 시 `KILL_SWITCH_ACTIVE` 에러 토스트가 표시되고, 비활성 상태에서 복구 시 `KILL_SWITCH_NOT_ACTIVE` 에러 토스트가 표시된다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 69-01: Policies 페이지 (PAGE-04)
+- [ ] 69-02: Settings 페이지 (PAGE-05)
+
+### Phase 70: 통합 테스트
+**Goal**: 인증/페이지/보안 전 영역을 커버하는 22건의 Vitest + Testing Library 테스트가 통과하여, Admin UI의 핵심 사용자 흐름과 보안 요구사항이 검증된 상태
+**Depends on**: Phase 69
+**Requirements**: TEST-01, TEST-02, TEST-03
+**Success Criteria** (what must be TRUE):
+  1. 인증 테스트 4건(로그인 성공/실패, 비활성 타임아웃, 로그아웃)이 통과한다
+  2. 페이지 테스트 14건(Dashboard 3건, Agents 5건, Sessions 3건, Policies 3건, Settings 3건 -- objective v1.3.2 E2E 시나리오 기반)이 통과한다
+  3. 보안+서빙 테스트 4건(SPA 로드, admin_ui=false 404, CSP 헤더, Kill Switch bypass)이 통과한다
+  4. 전체 테스트 스위트(`pnpm test`)가 기존 784건 + 신규 22건 = 806건 이상 통과한다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 70-01: 인증 + 보안/서빙 테스트 (TEST-01, TEST-03)
+- [ ] 70-02: 페이지 테스트 (TEST-02)
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
@@ -194,9 +286,11 @@
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 0/10 | In progress | - |
 
-**Total:** 16 milestones shipped, 65 phases completed, 153 plans completed
+**Total:** 15 milestones shipped, 65 phases completed, 153 plans completed
+**Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after v1.3.1 milestone completed*
+*Last updated: 2026-02-11 after v1.3.2 roadmap created*

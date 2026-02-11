@@ -64,13 +64,33 @@ Requirements for Admin Web UI 구현. 설계 문서 67 + objective v1.3.2 기반
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (roadmap 생성 시 채워짐) | | |
+| INFRA-01 | Phase 66 | Pending |
+| INFRA-02 | Phase 66 | Pending |
+| INFRA-03 | Phase 66 | Pending |
+| INFRA-04 | Phase 66 | Pending |
+| INFRA-05 | Phase 66 | Pending |
+| INFRA-06 | Phase 66 | Pending |
+| INFRA-07 | Phase 66 | Pending |
+| AUTH-01 | Phase 67 | Pending |
+| AUTH-02 | Phase 67 | Pending |
+| AUTH-03 | Phase 67 | Pending |
+| COMP-01 | Phase 67 | Pending |
+| COMP-02 | Phase 67 | Pending |
+| COMP-03 | Phase 67 | Pending |
+| PAGE-01 | Phase 68 | Pending |
+| PAGE-02 | Phase 68 | Pending |
+| PAGE-03 | Phase 68 | Pending |
+| PAGE-04 | Phase 69 | Pending |
+| PAGE-05 | Phase 69 | Pending |
+| TEST-01 | Phase 70 | Pending |
+| TEST-02 | Phase 70 | Pending |
+| TEST-03 | Phase 70 | Pending |
 
 **Coverage:**
 - v1.3.2 requirements: 22 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 22
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after roadmap created (traceability populated)*
