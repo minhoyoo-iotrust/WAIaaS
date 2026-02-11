@@ -2,27 +2,17 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3.2에서 브라우저 기반 Admin Web UI(Preact SPA)가 추가되어 에이전트 등록, 세션 관리, 정책 설정, Kill Switch 등 핵심 관리 기능을 GUI로 수행할 수 있다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3.2에서 브라우저 기반 Admin Web UI(Preact SPA)가 추가되었고, v1.3.3에서 MCP 다중 에이전트를 지원하여 하나의 데몬에 등록된 여러 에이전트를 Claude Desktop에서 동시에 사용할 수 있다.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.3.3 MCP 다중 에이전트 지원
-
-**Goal:** 하나의 WAIaaS 데몬에 등록된 여러 에이전트를 Claude Desktop(MCP)에서 동시에 사용할 수 있는 상태
-
-**Target features:**
-- 에이전트별 토큰 파일 분리 (`mcp-tokens/<agentId>` + 기존 `mcp-token` fallback)
-- MCP 서버 에이전트 식별 (`waiaas-{agentName}` 동적 서버 이름 + 도구 description)
-- CLI `mcp setup --all` 일괄 설정 + 에이전트 이름 slug 충돌 처리
-- `WAIAAS_AGENT_ID` / `WAIAAS_AGENT_NAME` 환경변수 지원
-
 ## Current State
 
-v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(Preact SPA 5페이지)가 동작하여 CLI 없이도 에이전트 등록, 세션 관리, 정책 설정, Kill Switch 관리가 가능.
+v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 에이전트별 토큰 경로 분리(`mcp-tokens/<agentId>`), MCP 서버 에이전트 식별(`waiaas-{agentName}`), CLI `mcp setup --all` 일괄 설정이 동작하여 하나의 데몬에 등록된 여러 에이전트를 Claude Desktop에서 동시에 사용 가능.
 
-코드베이스(v1.3.2 기준): 8-패키지 모노레포 + Python SDK, 45,332 LOC, 816 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림 + Admin Web UI(`/admin`) 관리까지 동작.
+코드베이스(v1.3.3 기준): 8-패키지 모노레포 + Python SDK, 44,639 LOC, 847 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림 + Admin Web UI(`/admin`) 관리 + 다중 에이전트 MCP 설정까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -30,6 +20,7 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(P
 - ✅ v1.3 SDK + MCP + 알림 — shipped 2026-02-11
 - ✅ v1.3.1 Admin Web UI 설계 — shipped 2026-02-11
 - ✅ v1.3.2 Admin Web UI 구현 — shipped 2026-02-11
+- ✅ v1.3.3 MCP 다중 에이전트 지원 — shipped 2026-02-11
 - v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -38,8 +29,8 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(P
 
 **코드베이스 현황:**
 - 8-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 45,332 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 816 테스트 (core + adapter + daemon + CLI + SDK + MCP + admin)
+- 44,639 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 847 테스트 (core + adapter + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 33 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 설계 문서 31개 (24-67), 8 objective 문서
@@ -163,9 +154,13 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(P
 - ✓ Dashboard/Agents/Sessions/Policies/Settings 5개 페이지 구현 + 4-tier SPENDING_LIMIT 시각화 — v1.3.2 (PAGE-01~05)
 - ✓ Admin UI 통합 테스트 27건 (인증 4 + 유틸 6 + 페이지 14 + 보안/서빙 4) — v1.3.2 (TEST-01~03)
 
+- ✓ 에이전트별 토큰 경로 분리 (mcp-tokens/<agentId>) + 기존 mcp-token fallback + 토큰 갱신 경로 격리 — v1.3.3 (TOKEN-01~04)
+- ✓ MCP 서버 에이전트 식별 — waiaas-{agentName} 동적 이름 + 도구/리소스 description prefix + 하위 호환 — v1.3.3 (MCPS-01~03)
+- ✓ CLI mcp setup 다중 에이전트 — --agent 개별 + --all 일괄 설정 + waiaas-{slug} config 키 + slug 충돌 해소 + 자동 감지 새 경로 — v1.3.3 (CLIP-01~07)
+
 ### 활성
 
-(v1.3.3 REQUIREMENTS.md에서 정의 — MCP 다중 에이전트 지원)
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -182,7 +177,7 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 브라우저 기반 관리 UI(P
 
 ## 컨텍스트
 
-**누적:** 17 milestones (v0.1-v1.3.2), 70 phases, 163 plans, 456 requirements, 31 설계 문서(24-67), 8 objective 문서, 45,332 LOC, 816 테스트
+**누적:** 18 milestones (v0.1-v1.3.3), 72 phases, 165 plans, 470 requirements, 31 설계 문서(24-67), 8 objective 문서, 44,639 LOC, 847 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -191,6 +186,7 @@ v1.2 인증 + 정책 엔진 shipped (2026-02-10). 6 페이즈, 13 플랜, 35 요
 v1.3 SDK + MCP + 알림 shipped (2026-02-11). 6 페이즈, 11 플랜, 49 요구사항, 33,929 LOC, 784 테스트.
 v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요구사항, 설계 문서 67(10섹션).
 v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요구사항, 45,332 LOC, 816 테스트.
+v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플랜, 14 요구사항, 44,639 LOC, 847 테스트.
 
 **기술 스택 (v0.2 확정, v1.3 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -272,6 +268,11 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요�
 | Preact signal reset via beforeEach | module-level signals 테스트 격리, 상태 누수 방지 | ✓ Good — v1.3.2 구현 |
 | Type-to-confirm 데몬 종료 패턴 | 실수 방지, "SHUTDOWN" 입력 필수 | ✓ Good — v1.3.2 구현 |
 | isInitialLoad 패턴 (스켈레톤 vs 스테일 데이터) | 첫 로드만 스켈레톤, 이후 폴링은 stale 데이터 위 에러 표시 | ✓ Good — v1.3.2 구현 |
+| 프로세스 분리 방식 (에이전트당 MCP 서버 1개) | MCP 프로토콜 표준 부합, 서버 단위 capability 노출 | ✓ Good — v1.3.3 구현 |
+| mcp-tokens/<agentId> 서브디렉토리 격리 | 동일 디렉토리 파일명 패턴보다 깨끗한 분리 | ✓ Good — v1.3.3 구현 |
+| AgentContext DI 패턴 (글로벌 상태 아님) | 테스트 용이, 모듈 간 의존 최소화 | ✓ Good — v1.3.3 구현 |
+| CLI 토큰 경로 항상 mcp-tokens/<agentId> | 단일 에이전트도 새 경로 사용, 일관성 확보 | ✓ Good — v1.3.3 구현 |
+| toSlug + resolveSlugCollisions 유틸리티 | 에이전트 이름→config-safe 키 변환, 충돌 시 agentId 접미사 | ✓ Good — v1.3.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.3 milestone started*
+*최종 업데이트: 2026-02-11 after v1.3.3 milestone shipped*
