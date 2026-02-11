@@ -26,8 +26,14 @@ export function createKillSwitchGuard(getState: GetKillSwitchState = DEFAULT_GET
       return;
     }
 
-    // Admin paths bypass kill switch (need to manage kill switch state)
+    // Admin API paths bypass kill switch (need to manage kill switch state)
     if (c.req.path.startsWith('/v1/admin/')) {
+      await next();
+      return;
+    }
+
+    // Admin SPA paths bypass kill switch (need to serve UI for recovery)
+    if (c.req.path === '/admin' || c.req.path.startsWith('/admin/')) {
       await next();
       return;
     }

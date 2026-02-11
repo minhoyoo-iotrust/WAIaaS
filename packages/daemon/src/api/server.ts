@@ -21,10 +21,19 @@
  */
 
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { serveStatic } from '@hono/node-server/serve-static';
 
 const require = createRequire(import.meta.url);
 const { version: DAEMON_VERSION } = require('../../package.json') as { version: string };
+
+// Compute absolute path to admin static files (from dist/api/server.js -> ../../public/admin)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const ADMIN_STATIC_ROOT = join(__dirname, '..', '..', 'public', 'admin');
+
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { IChainAdapter } from '@waiaas/core';
@@ -37,6 +46,7 @@ import {
   createSessionAuth,
   createMasterAuth,
   createOwnerAuth,
+  cspMiddleware,
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
 import { health } from './routes/health.js';
@@ -291,6 +301,27 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       description: 'AI Agent Wallet-as-a-Service REST API',
     },
   });
+
+  // Register Admin UI static serving (conditional on config)
+  if (deps.config?.daemon?.admin_ui !== false) {
+    // CSP headers for admin paths
+    app.use('/admin/*', cspMiddleware);
+
+    // Serve static files from public/admin/ using absolute path
+    app.use('/admin/*', serveStatic({
+      root: ADMIN_STATIC_ROOT,
+      rewriteRequestPath: (path: string) => path.replace(/^\/admin/, ''),
+    }));
+
+    // SPA fallback: any /admin/* path that didn't match a static file -> index.html
+    app.get('/admin/*', serveStatic({
+      root: ADMIN_STATIC_ROOT,
+      path: 'index.html',
+    }));
+
+    // Redirect /admin to /admin/ for consistency
+    app.get('/admin', (c) => c.redirect('/admin/'));
+  }
 
   return app;
 }
