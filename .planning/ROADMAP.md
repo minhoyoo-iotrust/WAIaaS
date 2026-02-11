@@ -181,10 +181,10 @@
   3. config.toml 신규 키(admin_ui boolean, admin_timeout 초)와 WAIAAS_DAEMON_ADMIN_UI/WAIAAS_DAEMON_ADMIN_TIMEOUT 환경변수 오버라이드, admin_ui=false 시 404 동작이 명세되어 있다
   4. masterAuth 로그인 화면, X-Master-Password 헤더 검증, Auth Store(signal), 비활성 타임아웃(15분), 로그아웃, 401 응답 시 리다이렉트 흐름이 설계되어 있다
   5. CSP 정책, 메모리 전용 비밀번호 보관, 민감 데이터 노출 금지, Docker 포트 포워딩 보안 고려사항이 문서화되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 64-01: Hono 서빙 + 패키지 구조 + config 확장 + 인증 흐름 + 보안 설계
+- [ ] 64-01-PLAN.md — 설계 문서 67 섹션 1-7 (개요, 기술 스택, Hono 서빙, 패키지 구조, config 확장, 인증 흐름, 보안)
 
 #### Phase 65: 페이지 + 컴포넌트 + API 연동 설계
 **Goal**: Dashboard/Agents/Sessions/Policies/Settings 5개 화면의 레이아웃, 컴포넌트 구조, 데이터 흐름과 공통 컴포넌트 체계, API 연동 패턴이 설계 문서에 확정되어 v1.3.2에서 즉시 구현 착수할 수 있다
