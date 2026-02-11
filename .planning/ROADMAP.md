@@ -217,8 +217,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 67-01: masterAuth 로그인 + Auth Store + API Client (AUTH-01, AUTH-02, AUTH-03)
-- [ ] 67-02: Layout + 재사용 컴포넌트 + 에러 매핑 유틸 (COMP-01, COMP-02, COMP-03)
+- [ ] 67-01-PLAN.md — masterAuth 로그인 + Auth Store + API Client (AUTH-01, AUTH-02, AUTH-03)
+- [ ] 67-02-PLAN.md — Layout + 재사용 컴포넌트 + 에러 매핑 유틸 (COMP-01, COMP-02, COMP-03)
 
 ### Phase 68: Dashboard + Agents + Sessions 페이지
 **Goal**: 사용자가 Dashboard에서 데몬 상태를 확인하고, Agents 페이지에서 에이전트 CRUD를 수행하며, Sessions 페이지에서 에이전트별 세션을 생성/조회/폐기하고 JWT 토큰을 복사할 수 있는 상태
