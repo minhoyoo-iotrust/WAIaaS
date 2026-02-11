@@ -10,15 +10,15 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 76 of 81 (기반 인프라 + 파이프라인 기초)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-12 — Completed 76-01-PLAN.md (ChainError + 3-category system)
+Last activity: 2026-02-12 — Completed 76-02-PLAN.md (Migration runner + discriminatedUnion 5-type schema)
 
-Progress: [█░░░░░░░░░] 8% (1/12 plans)
+Progress: [██░░░░░░░░] 17% (2/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 171 plans, 488 reqs, 916 tests, 42,445 LOC
+**Cumulative:** 19 milestones, 75 phases, 172 plans, 488 reqs, 936 tests, 42,785 LOC
 
 ## Accumulated Context
 
@@ -30,9 +30,12 @@ Recent decisions affecting current work:
 - v1.4에서 DB 마이그레이션 필수: 스키마 변경 시 ALTER TABLE 증분 마이그레이션 제공 (MIG-01~06)
 - ChainError 25개 코드 3-카테고리 (PERMANENT 17/TRANSIENT 4/STALE 4) -- 구현 완료
 - Stage 5 완전 의사코드 CONC-01: build->simulate->sign->submit + 에러 분기
-- discriminatedUnion 5-type으로 SendTransactionRequestSchema 교체
+- discriminatedUnion 5-type으로 SendTransactionRequestSchema 교체 -- TransactionRequestSchema 구현 완료
 - INFRA-05: INSUFFICIENT_FOR_FEE 에러 코드 TX 도메인으로 이동 -- 구현 완료 (DD-04 해소)
 - ChainError extends Error (not WAIaaSError) -- chain adapter 내부 에러, Stage 5에서 WAIaaSError 변환
+- TransferRequestInput 타입명 (TransferRequest 아님) -- IChainAdapter.TransferRequest 인터페이스와 충돌 방지
+- runMigrations() 테스트용 migrations 파라미터 옵션 (기본값 = 전역 MIGRATIONS 배열)
+- schema_version v1 설명 'Initial schema (9 tables)'로 정정
 
 ### Blockers/Concerns
 
@@ -42,5 +45,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 76-01-PLAN.md
+Stopped at: Completed 76-02-PLAN.md
 Resume file: None
