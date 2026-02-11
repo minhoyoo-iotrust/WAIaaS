@@ -188,10 +188,10 @@ Plans:
   3. Preact 컴포넌트 트리(App -> Router -> Page -> Section -> Widget)와 preact-iso 해시 라우터 경로 매핑이 정의되어 있다
   4. CSS Variables 디자인 토큰(색상, 간격, 타이포그래피)과 공통 컴포넌트(Table, Form, Modal, Toast, Button, Badge) 인터페이스가 정의되어 있다
   5. fetch 래퍼(X-Master-Password 자동 주입), 68개 에러 코드 -> 사용자 메시지 매핑, 로딩/빈 상태/연결 실패 UX 패턴, 폼 검증 방침이 정의되어 있다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 65-01: 5개 페이지 화면 설계 + 컴포넌트 체계 + API 연동 패턴
+- [ ] 65-01-PLAN.md — 설계 문서 67 섹션 8-10 (5개 페이지 화면 설계 + 공통 컴포넌트 + API 연동 패턴)
 
 ## Progress
 
