@@ -41,6 +41,9 @@ export {
   NOTIFICATION_EVENT_TYPES,
   type NotificationEventType,
   NotificationEventTypeEnum,
+  NOTIFICATION_LOG_STATUSES,
+  type NotificationLogStatus,
+  NotificationLogStatusEnum,
 } from './notification.js';
 
 export {
