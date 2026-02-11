@@ -10,4 +10,12 @@ export default defineConfig({
     sourcemap: false,
   },
   base: '/admin/',
+  server: {
+    proxy: {
+      '/v1': {
+        target: 'http://127.0.0.1:3100',
+        changeOrigin: true,
+      },
+    },
+  },
 });

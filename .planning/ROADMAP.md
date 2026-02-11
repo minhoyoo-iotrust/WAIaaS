@@ -181,7 +181,7 @@
 **Milestone Goal:** v1.3.1에서 설계한 Admin Web UI를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태.
 
 - [x] **Phase 66: 인프라 + 빌드 파이프라인** — Preact 패키지 스캐폴드, Vite 빌드, daemon 정적 서빙, CSP, config 확장 — completed 2026-02-11
-- [ ] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트
+- [x] **Phase 67: 인증 + API Client + 공통 컴포넌트** — masterAuth 로그인, Auth Store, fetch 래퍼, 재사용 컴포넌트 — completed 2026-02-11
 - [ ] **Phase 68: Dashboard + Agents + Sessions 페이지** — 상태 요약, 에이전트 CRUD, 세션 생성/조회/폐기
 - [ ] **Phase 69: Policies + Settings 페이지** — 10 유형 정책 CRUD, 4-tier 시각화, Kill Switch, JWT 회전, 종료
 - [ ] **Phase 70: 통합 테스트** — 인증 4건, 페이지 14건, 보안+서빙 4건 테스트
@@ -217,8 +217,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 67-01-PLAN.md — masterAuth 로그인 + Auth Store + API Client (AUTH-01, AUTH-02, AUTH-03)
-- [ ] 67-02-PLAN.md — Layout + 재사용 컴포넌트 + 에러 매핑 유틸 (COMP-01, COMP-02, COMP-03)
+- [x] 67-01-PLAN.md — masterAuth 로그인 + Auth Store + API Client (AUTH-01, AUTH-02, AUTH-03)
+- [x] 67-02-PLAN.md — Layout + 재사용 컴포넌트 + 에러 매핑 유틸 (COMP-01, COMP-02, COMP-03)
 
 ### Phase 68: Dashboard + Agents + Sessions 페이지
 **Goal**: 사용자가 Dashboard에서 데몬 상태를 확인하고, Agents 페이지에서 에이전트 CRUD를 수행하며, Sessions 페이지에서 에이전트별 세션을 생성/조회/폐기하고 JWT 토큰을 복사할 수 있는 상태
@@ -231,8 +231,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 68-01: Dashboard 페이지 (PAGE-01)
-- [ ] 68-02: Agents + Sessions 페이지 (PAGE-02, PAGE-03)
+- [ ] 68-01-PLAN.md — Dashboard 페이지: stat card grid + 30s polling + loading/error states (PAGE-01)
+- [ ] 68-02-PLAN.md — Agents 페이지 (list/detail/CRUD) + Sessions 페이지 (agent dropdown, create/revoke, JWT token display) (PAGE-02, PAGE-03)
 
 ### Phase 69: Policies + Settings 페이지
 **Goal**: 사용자가 Policies 페이지에서 10가지 정책 유형의 CRUD를 수행하고 4-tier 색상 구분을 확인하며, Settings 페이지에서 Kill Switch/JWT 회전/데몬 종료 등 관리 작업을 수행할 수 있는 상태
@@ -286,11 +286,11 @@ Phases execute in numeric order: 66 → 67 → 68 → 69 → 70
 | v1.2 인증 + 정책 엔진 | 52-57 | 13 | Complete | 2026-02-10 |
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
-| v1.3.2 Admin Web UI 구현 | 66-70 | 4/10 | In progress | - |
+| v1.3.2 Admin Web UI 구현 | 66-70 | 6/10 | In progress | - |
 
-**Total:** 15 milestones shipped, 65 phases completed, 153 plans completed
+**Total:** 15 milestones shipped, 66 phases completed, 157 plans completed
 **Current:** v1.3.2 — 5 phases, 10 plans planned
 
 ---
 
-*Last updated: 2026-02-11 after Phase 66 executed (2/2 plans complete, verified)*
+*Last updated: 2026-02-11 after Phase 67 executed (2/2 plans complete, verified)*
