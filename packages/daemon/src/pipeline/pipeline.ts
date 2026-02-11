@@ -15,6 +15,7 @@ import type { IChainAdapter, IPolicyEngine, SendTransactionRequest } from '@waia
 import { agents, transactions } from '../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
+import type { NotificationService } from '../notifications/notification-service.js';
 import type { PipelineContext } from './stages.js';
 import {
   stage1Validate,
@@ -36,6 +37,7 @@ export interface PipelineDeps {
   policyEngine: IPolicyEngine;
   masterPassword: string;
   sqlite?: SQLiteDatabase;
+  notificationService?: NotificationService;
 }
 
 // ---------------------------------------------------------------------------

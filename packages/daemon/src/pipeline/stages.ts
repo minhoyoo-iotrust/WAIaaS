@@ -32,6 +32,7 @@ import { DatabasePolicyEngine } from './database-policy-engine.js';
 import { downgradeIfNoOwner } from '../workflow/owner-state.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
+import type { NotificationService } from '../notifications/notification-service.js';
 
 // ---------------------------------------------------------------------------
 // Pipeline context
@@ -66,6 +67,8 @@ export interface PipelineContext {
     policy_defaults_delay_seconds: number;
     policy_defaults_approval_timeout: number;
   };
+  // v1.3.4: notification service for pipeline event triggers
+  notificationService?: NotificationService;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +96,12 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
     sessionId: ctx.sessionId ?? null,
     createdAt: now,
   });
+
+  // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
+  void ctx.notificationService?.notify('TX_REQUESTED', ctx.agentId, {
+    amount: ctx.request.amount,
+    to: ctx.request.to,
+  }, { txId: ctx.txId });
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +148,13 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       .update(transactions)
       .set({ status: 'CANCELLED', error: evaluation.reason ?? 'Policy denied' })
       .where(eq(transactions.id, ctx.txId));
+
+    // Fire-and-forget: notify POLICY_VIOLATION (never blocks pipeline)
+    void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.agentId, {
+      reason: evaluation.reason ?? 'Policy denied',
+      amount: ctx.request.amount,
+      to: ctx.request.to,
+    }, { txId: ctx.txId });
 
     throw new WAIaaSError('POLICY_DENIED', {
       message: evaluation.reason ?? 'Transaction denied by policy',
@@ -243,6 +259,12 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       .set({ status: 'FAILED', error: simResult.error ?? 'Simulation failed' })
       .where(eq(transactions.id, ctx.txId));
 
+    // Fire-and-forget: notify TX_FAILED on simulation failure (never blocks pipeline)
+    void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+      reason: simResult.error ?? 'Simulation failed',
+      amount: ctx.request.amount,
+    }, { txId: ctx.txId });
+
     throw new WAIaaSError('SIMULATION_FAILED', {
       message: simResult.error ?? 'Transaction simulation failed',
     });
@@ -271,6 +293,13 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
     .update(transactions)
     .set({ status: 'SUBMITTED', txHash: ctx.submitResult.txHash })
     .where(eq(transactions.id, ctx.txId));
+
+  // Fire-and-forget: notify TX_SUBMITTED (never blocks pipeline)
+  void ctx.notificationService?.notify('TX_SUBMITTED', ctx.agentId, {
+    txHash: ctx.submitResult.txHash,
+    amount: ctx.request.amount,
+    to: ctx.request.to,
+  }, { txId: ctx.txId });
 }
 
 // ---------------------------------------------------------------------------
@@ -287,6 +316,13 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .update(transactions)
       .set({ status: 'CONFIRMED', executedAt })
       .where(eq(transactions.id, ctx.txId));
+
+    // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
+    void ctx.notificationService?.notify('TX_CONFIRMED', ctx.agentId, {
+      txHash: ctx.submitResult!.txHash,
+      amount: ctx.request.amount,
+      to: ctx.request.to,
+    }, { txId: ctx.txId });
   } catch (error) {
     // Timeout or RPC error: mark FAILED
     const errorMessage =
@@ -296,6 +332,12 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .update(transactions)
       .set({ status: 'FAILED', error: errorMessage })
       .where(eq(transactions.id, ctx.txId));
+
+    // Fire-and-forget: notify TX_FAILED on confirmation failure (never blocks pipeline)
+    void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+      reason: errorMessage,
+      amount: ctx.request.amount,
+    }, { txId: ctx.txId });
 
     throw new WAIaaSError('CHAIN_ERROR', {
       message: errorMessage,

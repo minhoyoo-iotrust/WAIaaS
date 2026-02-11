@@ -192,6 +192,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         keyStore: deps.keyStore,
         masterPassword: deps.masterPassword,
         config: deps.config,
+        notificationService: deps.notificationService,
       }),
     );
   }
@@ -204,6 +205,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         db: deps.db,
         jwtSecretManager: deps.jwtSecretManager,
         config: deps.config,
+        notificationService: deps.notificationService,
       }),
     );
   }
@@ -250,6 +252,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
           policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
           policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
         } : undefined,
+        notificationService: deps.notificationService,
       }),
     );
   }
