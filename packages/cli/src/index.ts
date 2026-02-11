@@ -71,12 +71,14 @@ mcp
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
   .option('--agent <id>', 'Agent ID (auto-detected if only one)')
+  .option('--all', 'Set up all agents at once')
   .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
   .option('--password <password>', 'Master password')
   .action(async (opts: {
     dataDir?: string;
     baseUrl?: string;
     agent?: string;
+    all?: boolean;
     expiresIn?: string;
     password?: string;
   }) => {
@@ -85,6 +87,7 @@ mcp
       dataDir,
       baseUrl: opts.baseUrl,
       agent: opts.agent,
+      all: opts.all ?? false,
       expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
       masterPassword: opts.password,
     });
