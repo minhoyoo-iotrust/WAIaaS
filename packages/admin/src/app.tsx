@@ -1,6 +1,7 @@
 import { isAuthenticated, daemonShutdown } from './auth/store';
 import { Login } from './auth/login';
 import { Layout } from './components/layout';
+import { ToastContainer } from './components/toast';
 
 const shutdownStyles = {
   overlay: {
@@ -48,5 +49,10 @@ export function App() {
   if (!isAuthenticated.value) {
     return <Login />;
   }
-  return <Layout />;
+  return (
+    <>
+      <Layout />
+      <ToastContainer />
+    </>
+  );
 }
