@@ -231,8 +231,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 68-01: Dashboard 페이지 (PAGE-01)
-- [ ] 68-02: Agents + Sessions 페이지 (PAGE-02, PAGE-03)
+- [ ] 68-01-PLAN.md — Dashboard 페이지: stat card grid + 30s polling + loading/error states (PAGE-01)
+- [ ] 68-02-PLAN.md — Agents 페이지 (list/detail/CRUD) + Sessions 페이지 (agent dropdown, create/revoke, JWT token display) (PAGE-02, PAGE-03)
 
 ### Phase 69: Policies + Settings 페이지
 **Goal**: 사용자가 Policies 페이지에서 10가지 정책 유형의 CRUD를 수행하고 4-tier 색상 구분을 확인하며, Settings 페이지에서 Kill Switch/JWT 회전/데몬 종료 등 관리 작업을 수행할 수 있는 상태
