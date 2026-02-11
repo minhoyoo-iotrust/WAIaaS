@@ -205,7 +205,7 @@
 **Plans**: 1 plan
 
 Plans:
-- [ ] 71-01-PLAN.md -- SessionManager agentId 토큰 경로 분리 + createMcpServer agentContext + 도구/리소스 description + index.ts 환경변수 + 테스트
+- [x] 71-01-PLAN.md -- SessionManager agentId 토큰 경로 분리 + createMcpServer agentContext + 도구/리소스 description + index.ts 환경변수 + 테스트 ✓
 
 #### Phase 72: CLI mcp setup 다중 에이전트
 **Goal**: CLI `mcp setup` 명령어가 에이전트별 토큰 파일과 config 스니펫을 생성하고, `--all` 플래그로 전체 에이전트를 일괄 설정할 수 있는 상태
@@ -241,10 +241,10 @@ Plans:
 | v1.3 SDK + MCP + 알림 | 58-63 | 11 | Complete | 2026-02-11 |
 | v1.3.1 Admin Web UI 설계 | 64-65 | 2 | Complete | 2026-02-11 |
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
-| v1.3.3 MCP 다중 에이전트 | 71-72 | 0/2 | In progress | - |
+| v1.3.3 MCP 다중 에이전트 | 71-72 | 1/2 | In progress | - |
 
-**Total:** 17 milestones shipped, 70 phases completed, 163 plans completed
+**Total:** 17 milestones shipped, 71 phases completed, 164 plans completed
 
 ---
 
-*Last updated: 2026-02-11 after v1.3.3 roadmap created*
+*Last updated: 2026-02-11 after phase 71 completed*
