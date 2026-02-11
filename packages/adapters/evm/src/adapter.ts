@@ -1,23 +1,33 @@
 /**
  * EvmAdapter -- IChainAdapter implementation for EVM chains using viem 2.x.
  *
- * Phase 77-01: Scaffolding with 5 real implementations + 15 stubs.
+ * Phase 77-01: Scaffolding with 6 real implementations.
+ * Phase 77-02: 11 more real implementations (build/simulate/sign/submit/confirm/fee/nonce/assets/tokenInfo/approve/txFee).
  *
- * Real implementations (5):
- *   connect, disconnect, isConnected, getHealth, getBalance, getCurrentNonce
- *
- * Stubs for Phase 77-02+:
+ * Real implementations (17):
+ *   connect, disconnect, isConnected, getHealth, getBalance, getCurrentNonce,
  *   buildTransaction, simulateTransaction, signTransaction, submitTransaction,
- *   waitForConfirmation, getAssets, estimateFee, buildTokenTransfer, getTokenInfo,
- *   buildContractCall, buildApprove, buildBatch (BATCH_NOT_SUPPORTED), getTransactionFee, sweepAll
+ *   waitForConfirmation, estimateFee, getTransactionFee, getAssets, getTokenInfo,
+ *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED)
+ *
+ * Stubs for later phases (3):
+ *   buildTokenTransfer (Phase 78), buildContractCall (Phase 79), sweepAll (Phase 80)
  */
 
 import {
   createPublicClient,
   http,
+  serializeTransaction,
+  parseTransaction,
+  encodeFunctionData,
+  hexToBytes,
+  toHex,
   type PublicClient,
   type Chain,
+  type TransactionSerializedEIP1559,
+  type Hex,
 } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import type {
   IChainAdapter,
   ChainType,
@@ -37,7 +47,12 @@ import type {
   ApproveParams,
   BatchParams,
 } from '@waiaas/core';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, ChainError } from '@waiaas/core';
+import { ERC20_ABI } from './abi/erc20.js';
+
+/** Gas safety margin multiplier: 1.2x (120/100). */
+const GAS_SAFETY_NUMERATOR = 120n;
+const GAS_SAFETY_DENOMINATOR = 100n;
 
 /**
  * EVM chain adapter implementing the 20-method IChainAdapter contract.
@@ -123,60 +138,396 @@ export class EvmAdapter implements IChainAdapter {
     }
   }
 
-  // -- Asset query (1 stub) --
+  // -- Asset query (1) --
 
-  async getAssets(_addr: string): Promise<AssetInfo[]> {
-    throw new Error('Not implemented: getAssets will be implemented in Phase 78');
+  async getAssets(addr: string): Promise<AssetInfo[]> {
+    const client = this.getClient();
+    try {
+      const balance = await client.getBalance({
+        address: addr as `0x${string}`,
+      });
+      // Phase 78 will add ERC-20 token accounts via ALLOWED_TOKENS-based multicall
+      return [
+        {
+          mint: 'native',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          balance,
+          decimals: 18,
+          isNative: true,
+        },
+      ];
+    } catch (error) {
+      throw this.mapError(error, 'Failed to get assets');
+    }
   }
 
-  // -- Transaction 4-stage pipeline (4 stubs) --
+  // -- Transaction 4-stage pipeline (4) --
 
-  async buildTransaction(_request: TransferRequest): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildTransaction will be implemented in Phase 77 Plan 02');
+  async buildTransaction(request: TransferRequest): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    try {
+      const fromAddr = request.from as `0x${string}`;
+      const toAddr = request.to as `0x${string}`;
+
+      // 1. Get nonce
+      const nonce = await client.getTransactionCount({ address: fromAddr });
+
+      // 2. Get EIP-1559 fee data
+      const fees = await client.estimateFeesPerGas();
+
+      // 3. Estimate gas with 1.2x safety margin
+      const estimatedGas = await client.estimateGas({
+        account: fromAddr,
+        to: toAddr,
+        value: request.amount,
+        data: request.memo
+          ? (`0x${Buffer.from(request.memo).toString('hex')}` as Hex)
+          : undefined,
+      });
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+
+      // 4. Build EIP-1559 transaction request
+      const chainId = client.chain?.id ?? 1;
+      const txRequest = {
+        type: 'eip1559' as const,
+        to: toAddr,
+        value: request.amount,
+        nonce,
+        gas: gasLimit,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        chainId,
+        data: request.memo
+          ? (`0x${Buffer.from(request.memo).toString('hex')}` as Hex)
+          : undefined,
+      };
+
+      // 5. Serialize transaction
+      const serializedHex = serializeTransaction(txRequest);
+      const serializedBytes = hexToBytes(serializedHex);
+
+      // 6. Calculate estimated fee
+      const estimatedFee = gasLimit * maxFeePerGas;
+
+      return {
+        chain: 'ethereum',
+        serialized: serializedBytes,
+        estimatedFee,
+        expiresAt: undefined, // EVM uses nonce, no expiry
+        metadata: {
+          nonce,
+          chainId,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          gasLimit,
+          type: 'eip1559',
+        },
+        nonce,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.toLowerCase().includes('insufficient funds')) {
+        throw new ChainError('INSUFFICIENT_BALANCE', 'evm', {
+          message: `Insufficient funds for transfer: ${msg}`,
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
+      if (msg.toLowerCase().includes('nonce too low')) {
+        throw new ChainError('NONCE_TOO_LOW', 'evm', {
+          message: `Nonce too low: ${msg}`,
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
+      throw this.mapError(error, 'Failed to build transaction');
+    }
   }
 
-  async simulateTransaction(_tx: UnsignedTransaction): Promise<SimulationResult> {
-    throw new Error('Not implemented: simulateTransaction will be implemented in Phase 77 Plan 02');
+  async simulateTransaction(tx: UnsignedTransaction): Promise<SimulationResult> {
+    const client = this.getClient();
+    try {
+      // Deserialize the tx from serialized bytes back to tx params
+      const serializedHex = toHex(tx.serialized);
+      const parsed = parseTransaction(serializedHex as TransactionSerializedEIP1559);
+
+      // Use client.call() to simulate via eth_call
+      await client.call({
+        to: parsed.to!,
+        value: parsed.value,
+        data: parsed.data,
+        account: tx.metadata.from as `0x${string}` | undefined,
+      });
+
+      return {
+        success: true,
+        logs: [],
+        unitsConsumed: tx.metadata.gasLimit != null ? BigInt(tx.metadata.gasLimit as bigint) : undefined,
+      };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        logs: [],
+        error: msg,
+      };
+    }
   }
 
-  async signTransaction(_tx: UnsignedTransaction, _privateKey: Uint8Array): Promise<Uint8Array> {
-    throw new Error('Not implemented: signTransaction will be implemented in Phase 77 Plan 02');
+  async signTransaction(tx: UnsignedTransaction, privateKey: Uint8Array): Promise<Uint8Array> {
+    this.ensureConnected();
+    try {
+      // Convert private key bytes to hex
+      const privateKeyHex = `0x${Buffer.from(privateKey).toString('hex')}` as Hex;
+
+      // Create account from private key
+      const account = privateKeyToAccount(privateKeyHex);
+
+      // Deserialize tx bytes back to tx object
+      const serializedHex = toHex(tx.serialized);
+      const parsed = parseTransaction(serializedHex as TransactionSerializedEIP1559);
+
+      // Sign the transaction
+      const signedHex = await account.signTransaction({
+        ...parsed,
+        type: 'eip1559',
+      } as Parameters<typeof account.signTransaction>[0]);
+
+      // Convert signed hex to Uint8Array
+      return hexToBytes(signedHex as Hex);
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to sign transaction');
+    }
   }
 
-  async submitTransaction(_signedTx: Uint8Array): Promise<SubmitResult> {
-    throw new Error('Not implemented: submitTransaction will be implemented in Phase 77 Plan 02');
+  async submitTransaction(signedTx: Uint8Array): Promise<SubmitResult> {
+    const client = this.getClient();
+    try {
+      // Convert bytes to hex
+      const hex = toHex(signedTx);
+
+      // Submit via eth_sendRawTransaction
+      const txHash = await client.sendRawTransaction({
+        serializedTransaction: hex as Hex,
+      });
+
+      return {
+        txHash,
+        status: 'submitted',
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.toLowerCase().includes('nonce') && msg.toLowerCase().includes('already')) {
+        throw new ChainError('NONCE_ALREADY_USED', 'evm', {
+          message: `Nonce already used: ${msg}`,
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
+      throw this.mapError(error, 'Failed to submit transaction');
+    }
   }
 
-  // -- Confirmation wait (1 stub) --
+  // -- Confirmation wait (1) --
 
-  async waitForConfirmation(_txHash: string, _timeoutMs?: number): Promise<SubmitResult> {
-    throw new Error('Not implemented: waitForConfirmation will be implemented in Phase 77 Plan 02');
+  async waitForConfirmation(txHash: string, timeoutMs = 30_000): Promise<SubmitResult> {
+    const client = this.getClient();
+    try {
+      const receipt = await client.waitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+        timeout: timeoutMs,
+      });
+
+      return {
+        txHash,
+        status: receipt.status === 'success' ? 'confirmed' : 'submitted',
+        blockNumber: receipt.blockNumber,
+        fee: receipt.gasUsed * receipt.effectiveGasPrice,
+      };
+    } catch (error) {
+      // Timeout: return submitted status
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('timed out')) {
+        return { txHash, status: 'submitted' };
+      }
+      throw this.mapError(error, 'Failed to wait for confirmation');
+    }
   }
 
-  // -- Fee estimation (1 stub) --
+  // -- Fee estimation (1) --
 
-  async estimateFee(_request: TransferRequest | TokenTransferParams): Promise<FeeEstimate> {
-    throw new Error('Not implemented: estimateFee will be implemented in Phase 77 Plan 02');
+  async estimateFee(request: TransferRequest | TokenTransferParams): Promise<FeeEstimate> {
+    const client = this.getClient();
+    try {
+      // Get EIP-1559 fee data
+      const fees = await client.estimateFeesPerGas();
+
+      // Determine gas estimate based on request type
+      let gasEstimateParams: { account: `0x${string}`; to: `0x${string}`; value?: bigint; data?: Hex };
+
+      if ('token' in request) {
+        // TokenTransferParams: estimate for ERC-20 transfer calldata
+        const tokenRequest = request as TokenTransferParams;
+        const transferData = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: 'transfer',
+          args: [tokenRequest.to as `0x${string}`, tokenRequest.amount],
+        });
+        gasEstimateParams = {
+          account: tokenRequest.from as `0x${string}`,
+          to: tokenRequest.token.address as `0x${string}`,
+          data: transferData,
+        };
+      } else {
+        // TransferRequest: native transfer
+        gasEstimateParams = {
+          account: request.from as `0x${string}`,
+          to: request.to as `0x${string}`,
+          value: request.amount,
+        };
+      }
+
+      const estimatedGas = await client.estimateGas(gasEstimateParams);
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+      const fee = gasLimit * maxFeePerGas;
+
+      return {
+        fee,
+        details: {
+          gasLimit,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to estimate fee');
+    }
   }
 
-  // -- Token operations (2 stubs) --
+  // -- Token operations (2) --
 
   async buildTokenTransfer(_request: TokenTransferParams): Promise<UnsignedTransaction> {
     throw new Error('Not implemented: buildTokenTransfer will be implemented in Phase 78');
   }
 
-  async getTokenInfo(_tokenAddress: string): Promise<TokenInfo> {
-    throw new Error('Not implemented: getTokenInfo will be implemented in Phase 77 Plan 02');
+  async getTokenInfo(tokenAddress: string): Promise<TokenInfo> {
+    const client = this.getClient();
+    try {
+      const contractAddr = tokenAddress as `0x${string}`;
+
+      // Use multicall to batch decimals, symbol, name in a single RPC
+      const results = await client.multicall({
+        contracts: [
+          { address: contractAddr, abi: ERC20_ABI, functionName: 'decimals' },
+          { address: contractAddr, abi: ERC20_ABI, functionName: 'symbol' },
+          { address: contractAddr, abi: ERC20_ABI, functionName: 'name' },
+        ],
+      });
+
+      // Extract results with defaults for failed calls
+      const decimals = results[0].status === 'success' ? Number(results[0].result) : 18;
+      const symbol = results[1].status === 'success' ? String(results[1].result) : '';
+      const name = results[2].status === 'success' ? String(results[2].result) : '';
+
+      return {
+        address: tokenAddress,
+        symbol,
+        name,
+        decimals,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to get token info');
+    }
   }
 
-  // -- Contract operations (2 stubs) --
+  // -- Contract operations (2) --
 
   async buildContractCall(_request: ContractCallParams): Promise<UnsignedTransaction> {
     throw new Error('Not implemented: buildContractCall will be implemented in Phase 79');
   }
 
-  async buildApprove(_request: ApproveParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildApprove will be implemented in Phase 77 Plan 02');
+  async buildApprove(request: ApproveParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    try {
+      const fromAddr = request.from as `0x${string}`;
+      const tokenAddr = request.token.address as `0x${string}`;
+      const spenderAddr = request.spender as `0x${string}`;
+
+      // 1. Encode approve calldata
+      const approveData = encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spenderAddr, request.amount],
+      });
+
+      // 2. Get nonce
+      const nonce = await client.getTransactionCount({ address: fromAddr });
+
+      // 3. Get EIP-1559 fee data
+      const fees = await client.estimateFeesPerGas();
+
+      // 4. Estimate gas for approve call
+      const estimatedGas = await client.estimateGas({
+        account: fromAddr,
+        to: tokenAddr,
+        data: approveData,
+      });
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+      const chainId = client.chain?.id ?? 1;
+
+      // 5. Build EIP-1559 tx to token contract with approve calldata, value=0
+      const txRequest = {
+        type: 'eip1559' as const,
+        to: tokenAddr,
+        value: 0n,
+        nonce,
+        gas: gasLimit,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        chainId,
+        data: approveData,
+      };
+
+      // 6. Serialize
+      const serializedHex = serializeTransaction(txRequest);
+      const serializedBytes = hexToBytes(serializedHex);
+
+      const estimatedFee = gasLimit * maxFeePerGas;
+
+      return {
+        chain: 'ethereum',
+        serialized: serializedBytes,
+        estimatedFee,
+        expiresAt: undefined,
+        metadata: {
+          nonce,
+          chainId,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          gasLimit,
+          type: 'eip1559',
+          tokenAddress: request.token.address,
+          spender: request.spender,
+          approveAmount: request.amount,
+        },
+        nonce,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to build approve transaction');
+    }
   }
 
   // -- Batch operations (1) --
@@ -189,8 +540,14 @@ export class EvmAdapter implements IChainAdapter {
 
   // -- Utility operations (3) --
 
-  async getTransactionFee(_tx: UnsignedTransaction): Promise<bigint> {
-    throw new Error('Not implemented: getTransactionFee will be implemented in Phase 77 Plan 02');
+  async getTransactionFee(tx: UnsignedTransaction): Promise<bigint> {
+    // Extract gasLimit and maxFeePerGas from metadata
+    const metadata = tx.metadata;
+    if (metadata.gasLimit != null && metadata.maxFeePerGas != null) {
+      return BigInt(metadata.gasLimit as bigint) * BigInt(metadata.maxFeePerGas as bigint);
+    }
+    // Fallback to estimatedFee
+    return tx.estimatedFee;
   }
 
   async getCurrentNonce(addr: string): Promise<number> {
@@ -225,5 +582,44 @@ export class EvmAdapter implements IChainAdapter {
   private getClient(): PublicClient {
     this.ensureConnected();
     return this._client!;
+  }
+
+  /**
+   * Map unknown errors to appropriate ChainError or WAIaaSError.
+   * Inspects error message for known patterns.
+   */
+  private mapError(error: unknown, context: string): ChainError | WAIaaSError {
+    const msg = error instanceof Error ? error.message : String(error);
+    const lowerMsg = msg.toLowerCase();
+
+    if (lowerMsg.includes('insufficient funds') || lowerMsg.includes('insufficient balance')) {
+      return new ChainError('INSUFFICIENT_BALANCE', 'evm', {
+        message: `${context}: ${msg}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+    if (lowerMsg.includes('nonce too low')) {
+      return new ChainError('NONCE_TOO_LOW', 'evm', {
+        message: `${context}: ${msg}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+    if (lowerMsg.includes('connection') || lowerMsg.includes('econnrefused') || lowerMsg.includes('fetch failed')) {
+      return new ChainError('RPC_CONNECTION_ERROR', 'evm', {
+        message: `${context}: ${msg}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+    if (lowerMsg.includes('timeout') || lowerMsg.includes('timed out')) {
+      return new ChainError('RPC_TIMEOUT', 'evm', {
+        message: `${context}: ${msg}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+
+    return new WAIaaSError('CHAIN_ERROR', {
+      message: `${context}: ${msg}`,
+      cause: error instanceof Error ? error : undefined,
+    });
   }
 }
