@@ -8,9 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.3.2 Admin Web UI 구현
+
+**Goal:** v1.3.1에서 설계한 Admin Web UI를 구현하여, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태.
+
+**Target features:**
+- Preact 10.x SPA 5페이지 (Dashboard/Agents/Sessions/Policies/Settings)
+- Hono serveStatic 정적 파일 서빙 + SPA fallback + CSP 미들웨어
+- masterAuth 로그인 + @preact/signals Auth Store + 비활성 타임아웃
+- 33 REST API 연동 (fetch 래퍼 + 68 에러 코드 매핑)
+- Vite 6.x 빌드 → daemon/public/ 복사 파이프라인
+
 ## Current State
 
-v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)로 Preact SPA 5페이지 관리 UI의 인프라/인증/보안/페이지/컴포넌트/API 연동이 모두 확정되어 v1.3.2에서 즉시 구현 착수 가능.
+v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)로 Preact SPA 5페이지 관리 UI의 인프라/인증/보안/페이지/컴포넌트/API 연동이 모두 확정되어 v1.3.2에서 즉시 구현 착수.
 
 코드베이스(v1.3 기준): 7-패키지 모노레포 + Python SDK, 33,929 LOC (TS 32,337 + Python 1,592), 784 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림까지 동작.
 
@@ -150,7 +161,15 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 설계 문서 67(10개 섹션)�
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+- [ ] Admin UI 패키지 스캐폴드 + Vite 빌드 파이프라인 + daemon 정적 서빙
+- [ ] masterAuth 로그인 + Auth Store + 비활성 타임아웃 + API Client fetch 래퍼
+- [ ] Dashboard 페이지 (데몬 상태 요약, 30초 폴링)
+- [ ] Agents 페이지 (CRUD, Owner 상태 읽기 전용)
+- [ ] Sessions 페이지 (에이전트별 생성/조회/폐기, JWT 토큰 복사)
+- [ ] Policies 페이지 (10 유형, rules JSON 편집, 4-tier 시각화)
+- [ ] Settings 페이지 (Kill Switch 토글, JWT 회전, 데몬 종료)
+- [ ] 공통 컴포넌트 (Layout, Table, Form, Modal, Toast, CopyButton, EmptyState)
+- [ ] CSP 미들웨어 + Kill Switch guard bypass + config 확장 (admin_ui, admin_timeout)
 
 ### 범위 외
 
@@ -251,4 +270,4 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요�
 | 68 에러 코드 전체 매핑 | Admin UI 미사용 코드 포함, 향후 견고성 확보 | ✓ Good — v1.3.1 설계 |
 
 ---
-*최종 업데이트: 2026-02-11 after v1.3.1 milestone completed*
+*최종 업데이트: 2026-02-11 after v1.3.2 milestone started*
