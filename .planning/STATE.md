@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 82 (1 of 7 in v1.4.1) — Config + NetworkType + EVM 의존성
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
-Last activity: 2026-02-12 — Completed 82-01-PLAN.md
+Last activity: 2026-02-12 — Completed 82-02-PLAN.md
 
-Progress: [███░░░░░░░] 33% (1/3 plans in Phase 82)
+Progress: [██████░░░░] 67% (2/3 plans in Phase 82)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 82 phases, 183 plans, 523 reqs, 1,126 tests, 51,750 LOC
+**Cumulative:** 20 milestones, 82 phases, 184 plans, 523 reqs, 1,213 tests, 51,750 LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 1 plan completed
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 2 plans completed
 
 *Updated after each plan completion*
 
@@ -39,6 +39,9 @@ Recent decisions affecting current work:
 - [82-01]: Polygon nativeSymbol = 'POL' (post MATIC-to-POL rebrand)
 - [82-01]: validateChainNetwork throws plain Error (not WAIaaSError) to keep @waiaas/core free of circular deps
 - [82-01]: EVM_CHAIN_MAP typed as Record<EvmNetworkType, EvmChainEntry> for compile-time completeness
+- [82-02]: EVM RPC defaults use drpc.org public endpoints (non-empty defaults replacing old empty strings)
+- [82-02]: evm_default_network validated by EvmNetworkTypeEnum from @waiaas/core
+- [82-02]: EvmAdapter nativeName = 'Ether' (token name) not 'Ethereum' (blockchain name)
 
 ### Blockers/Concerns
 
@@ -47,6 +50,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12T07:43:16Z
-Stopped at: Completed 82-01-PLAN.md
+Last session: 2026-02-12T07:50:23Z
+Stopped at: Completed 82-02-PLAN.md
 Resume file: None
