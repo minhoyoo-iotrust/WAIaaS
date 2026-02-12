@@ -27,10 +27,10 @@
   3. 모든 인덱스 이름이 `idx_wallets_*` 또는 `idx_*_wallet_*` 패턴이다
   4. `audit_log.action`에 `AGENT_*` 값이 0건이고 `WALLET_*` 값이 존재한다
   5. `schema_version`이 3이다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 89-01: schema_version 3 마이그레이션 구현 + Drizzle 스키마 갱신 + 마이그레이션 테스트
+- [ ] 89-01-PLAN.md — schema_version 3 마이그레이션 (agents -> wallets) + Drizzle 스키마 갱신 + TDD 테스트 7건
 
 ### Phase 90: 코어 타입 + 에러 코드
 **Goal**: @waiaas/core 패키지의 모든 agent 용어를 wallet으로 변경하여, 다운스트림 패키지가 참조하는 SSoT가 갱신된다
