@@ -1221,3 +1221,252 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     expect(result.tier).toBe('APPROVAL'); // default tier
   });
 });
+
+// ---------------------------------------------------------------------------
+// evaluateBatch tests (10 tests)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - evaluateBatch', () => {
+  const UNISWAP_ROUTER = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+  it('Phase A: denies entire batch when one TRANSFER violates WHITELIST', async () => {
+    await insertPolicy({
+      type: 'WHITELIST',
+      rules: JSON.stringify({
+        allowed_addresses: ['AllowedAddr1'],
+      }),
+      priority: 20,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'AllowedAddr1', chain: 'solana' },
+      { type: 'TRANSFER', amount: '200', toAddress: 'NotAllowedAddr', chain: 'solana' },
+    ]);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Batch policy violation');
+    expect(result.reason).toContain('[1]');
+    expect(result.reason).toContain('TRANSFER');
+  });
+
+  it('Phase A: denies entire batch when TOKEN_TRANSFER has no ALLOWED_TOKENS policy', async () => {
+    // Need at least one non-passthrough policy
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '100000000000',
+        notify_max: '200000000000',
+        delay_max: '500000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
+      { type: 'TOKEN_TRANSFER', amount: '1000000', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana', tokenAddress: USDC_MINT },
+    ]);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Batch policy violation');
+    expect(result.reason).toContain('TOKEN_TRANSFER');
+  });
+
+  it('Phase A: denies entire batch when CONTRACT_CALL has no CONTRACT_WHITELIST policy', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '100000000000',
+        notify_max: '200000000000',
+        delay_max: '500000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
+      { type: 'CONTRACT_CALL', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', contractAddress: UNISWAP_ROUTER },
+    ]);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Batch policy violation');
+    expect(result.reason).toContain('CONTRACT_CALL');
+  });
+
+  it('Phase A: denies entire batch when APPROVE has no APPROVED_SPENDERS policy', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '100000000000',
+        notify_max: '200000000000',
+        delay_max: '500000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
+      { type: 'APPROVE', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' },
+    ]);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Batch policy violation');
+    expect(result.reason).toContain('APPROVE');
+  });
+
+  it('Phase A: all pass -> proceeds to Phase B', async () => {
+    // WHITELIST with both addresses allowed
+    await insertPolicy({
+      type: 'WHITELIST',
+      rules: JSON.stringify({
+        allowed_addresses: ['Addr1', 'Addr2'],
+      }),
+      priority: 20,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
+      { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
+    ]);
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('Phase B: aggregate SPENDING_LIMIT sums TRANSFER amounts (100+200+300=600 -> NOTIFY)', async () => {
+    // SPENDING_LIMIT: instant_max=500, notify_max=1000
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '500',
+        notify_max: '1000',
+        delay_max: '5000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
+      { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
+      { type: 'TRANSFER', amount: '300', toAddress: 'Addr3', chain: 'solana' },
+    ]);
+
+    // Aggregate = 600 > instant_max(500) but <= notify_max(1000) -> NOTIFY
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('Phase B: APPROVE_TIER_OVERRIDE max -- batch with TRANSFER (INSTANT) + APPROVE = max(INSTANT, APPROVAL)', async () => {
+    // SPENDING_LIMIT: instant_max=1000 (so 100 = INSTANT)
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000',
+        notify_max: '10000',
+        delay_max: '100000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // APPROVED_SPENDERS to allow the approve through Phase A
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
+      { type: 'APPROVE', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' },
+    ]);
+
+    // TRANSFER amount=100 -> INSTANT tier from SPENDING_LIMIT
+    // APPROVE -> APPROVE_TIER_OVERRIDE default=APPROVAL
+    // Final tier = max(INSTANT, APPROVAL) = APPROVAL
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+
+  it('No policies -> INSTANT passthrough', async () => {
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
+      { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
+    ]);
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('All-or-Nothing: returns violation details with index, type, reason', async () => {
+    // WHITELIST that allows Addr1 but not Addr2 or Addr3
+    await insertPolicy({
+      type: 'WHITELIST',
+      rules: JSON.stringify({
+        allowed_addresses: ['Addr1'],
+      }),
+      priority: 20,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
+      { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
+      { type: 'TRANSFER', amount: '300', toAddress: 'Addr3', chain: 'solana' },
+    ]);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('2 instruction(s) denied');
+    expect(result.reason).toContain('[1]');
+    expect(result.reason).toContain('[2]');
+    expect(result.reason).toContain('whitelist');
+  });
+
+  it('Phase B: TOKEN_TRANSFER and APPROVE amounts NOT counted in aggregate SPENDING_LIMIT', async () => {
+    // SPENDING_LIMIT: instant_max=500
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '500',
+        notify_max: '10000',
+        delay_max: '100000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // ALLOWED_TOKENS to pass Phase A for TOKEN_TRANSFER
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // APPROVED_SPENDERS to pass Phase A for APPROVE
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    const result = await engine.evaluateBatch(agentId, [
+      { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
+      { type: 'TOKEN_TRANSFER', amount: '99999999', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana', tokenAddress: USDC_MINT },
+      { type: 'APPROVE', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' },
+    ]);
+
+    // Only TRANSFER amount (100) counted for SPENDING_LIMIT: 100 <= 500 -> INSTANT from amount
+    // APPROVE present -> max(INSTANT, APPROVAL) = APPROVAL
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+});

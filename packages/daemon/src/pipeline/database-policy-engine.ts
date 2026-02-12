@@ -211,6 +211,168 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   }
 
   // -------------------------------------------------------------------------
+  // Batch evaluation: evaluateBatch
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate a batch of instructions using 2-stage policy evaluation.
+   *
+   * Phase A: Evaluate each instruction individually against its applicable policies.
+   *          All-or-Nothing: if any instruction is denied, entire batch is denied.
+   *
+   * Phase B: Sum native amounts (TRANSFER.amount) and evaluate
+   *          aggregate against SPENDING_LIMIT. If batch contains APPROVE, apply
+   *          APPROVE_TIER_OVERRIDE and take max(amount tier, approve tier).
+   *
+   * @param agentId - Agent whose policies to evaluate
+   * @param instructions - Array of instruction parameters (same shape as TransactionParam)
+   * @returns PolicyEvaluation with final tier or denial with violation details
+   */
+  async evaluateBatch(
+    agentId: string,
+    instructions: TransactionParam[],
+  ): Promise<PolicyEvaluation> {
+    // Step 1: Load policies (reuse existing query logic)
+    const rows = await this.db
+      .select()
+      .from(policies)
+      .where(
+        and(
+          or(eq(policies.agentId, agentId), isNull(policies.agentId)),
+          eq(policies.enabled, true),
+        ),
+      )
+      .orderBy(desc(policies.priority))
+      .all();
+
+    if (rows.length === 0) {
+      return { allowed: true, tier: 'INSTANT' };
+    }
+
+    const resolved = this.resolveOverrides(rows as PolicyRow[], agentId);
+
+    // Phase A: Evaluate each instruction individually
+    const violations: Array<{ index: number; type: string; reason: string }> = [];
+
+    for (let i = 0; i < instructions.length; i++) {
+      const instr = instructions[i]!;
+      const result = this.evaluateInstructionPolicies(resolved, instr);
+      if (result !== null && !result.allowed) {
+        violations.push({
+          index: i,
+          type: instr.type,
+          reason: result.reason ?? 'Policy violation',
+        });
+      }
+    }
+
+    // All-or-Nothing: 1 violation = entire batch denied
+    if (violations.length > 0) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason:
+          `Batch policy violation: ${violations.length} instruction(s) denied. ` +
+          violations.map((v) => `[${v.index}] ${v.type}: ${v.reason}`).join('; '),
+      };
+    }
+
+    // Phase B: Aggregate amount for SPENDING_LIMIT
+    let totalNativeAmount = 0n;
+    for (const instr of instructions) {
+      if (instr.type === 'TRANSFER') {
+        totalNativeAmount += BigInt(instr.amount);
+      }
+      // TOKEN_TRANSFER and APPROVE: 0 (no native amount)
+      // CONTRACT_CALL: Solana has no native value attachment in CPI, so 0
+    }
+
+    // Evaluate aggregate against SPENDING_LIMIT
+    const amountTier = this.evaluateSpendingLimit(resolved, totalNativeAmount.toString());
+    let finalTier = amountTier ? (amountTier.tier as PolicyTier) : ('INSTANT' as PolicyTier);
+
+    // If batch contains APPROVE, apply APPROVE_TIER_OVERRIDE
+    const hasApprove = instructions.some((i) => i.type === 'APPROVE');
+    if (hasApprove) {
+      // Get approve tier from APPROVE_TIER_OVERRIDE policy (or default APPROVAL)
+      const approveTierPolicy = resolved.find((p) => p.type === 'APPROVE_TIER_OVERRIDE');
+      let approveTier: PolicyTier;
+      if (approveTierPolicy) {
+        const rules: { tier: string } = JSON.parse(approveTierPolicy.rules);
+        approveTier = rules.tier as PolicyTier;
+      } else {
+        approveTier = 'APPROVAL';
+      }
+
+      // Final tier = max(amount tier, approve tier)
+      const tierOrder: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
+      const amountIdx = tierOrder.indexOf(finalTier);
+      const approveIdx = tierOrder.indexOf(approveTier);
+      finalTier = tierOrder[Math.max(amountIdx, approveIdx)]!;
+    }
+
+    return {
+      allowed: true,
+      tier: finalTier,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: Per-instruction policy evaluation (Phase A helper)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate applicable policies for a single instruction in a batch.
+   *
+   * Only evaluates type-specific policies:
+   * - TRANSFER: WHITELIST
+   * - TOKEN_TRANSFER: WHITELIST + ALLOWED_TOKENS
+   * - CONTRACT_CALL: CONTRACT_WHITELIST + METHOD_WHITELIST
+   * - APPROVE: APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT
+   *
+   * Does NOT evaluate SPENDING_LIMIT (that's Phase B aggregate) or
+   * APPROVE_TIER_OVERRIDE (that's Phase B).
+   *
+   * Returns null if all policies pass, PolicyEvaluation with allowed=false if denied.
+   */
+  private evaluateInstructionPolicies(
+    resolved: PolicyRow[],
+    instr: TransactionParam,
+  ): PolicyEvaluation | null {
+    // WHITELIST applies to TRANSFER and TOKEN_TRANSFER
+    if (instr.type === 'TRANSFER' || instr.type === 'TOKEN_TRANSFER') {
+      const whitelistResult = this.evaluateWhitelist(resolved, instr.toAddress);
+      if (whitelistResult !== null) return whitelistResult;
+    }
+
+    // ALLOWED_TOKENS applies to TOKEN_TRANSFER
+    if (instr.type === 'TOKEN_TRANSFER') {
+      const allowedTokensResult = this.evaluateAllowedTokens(resolved, instr);
+      if (allowedTokensResult !== null) return allowedTokensResult;
+    }
+
+    // CONTRACT_WHITELIST applies to CONTRACT_CALL
+    if (instr.type === 'CONTRACT_CALL') {
+      const contractResult = this.evaluateContractWhitelist(resolved, instr);
+      if (contractResult !== null) return contractResult;
+
+      const methodResult = this.evaluateMethodWhitelist(resolved, instr);
+      if (methodResult !== null) return methodResult;
+    }
+
+    // APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT apply to APPROVE
+    if (instr.type === 'APPROVE') {
+      const spendersResult = this.evaluateApprovedSpenders(resolved, instr);
+      if (spendersResult !== null) return spendersResult;
+
+      const amountResult = this.evaluateApproveAmountLimit(resolved, instr);
+      if (amountResult !== null) return amountResult;
+    }
+
+    return null; // All applicable policies passed
+  }
+
+  // -------------------------------------------------------------------------
   // TOCTOU Prevention: evaluateAndReserve
   // -------------------------------------------------------------------------
 

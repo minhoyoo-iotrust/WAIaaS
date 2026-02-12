@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 79 완료 (컨트랙트 호출 + 승인 관리)
+**Current focus:** v1.4 Phase 80 완료 (배치 트랜잭션)
 
 ## Current Position
 
-Phase: 79 of 81 (컨트랙트 호출 + 승인 관리)
-Plan: 2 of 2 in current phase
+Phase: 80 of 81 (배치 트랜잭션)
+Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-02-12 — Completed 79-02-PLAN.md (buildApprove + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE)
+Last activity: 2026-02-12 — Completed Phase 80 (SolanaAdapter.buildBatch + evaluateBatch 2-stage policy)
 
-Progress: [█████████░] 75% (9/12 plans)
+Progress: [██████████] 83% (10/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 179 plans, 488 reqs, 1074 tests, 44,205 LOC
+**Cumulative:** 19 milestones, 80 phases, 180 plans, 488 reqs, 1095 tests, 44,205+ LOC
 
 ## Accumulated Context
 
@@ -28,7 +28,7 @@ Full log in PROJECT.md.
 Recent decisions affecting current work:
 
 - v1.4에서 DB 마이그레이션 필수: 스키마 변경 시 ALTER TABLE 증분 마이그레이션 제공 (MIG-01~06)
-- ChainError 25개 코드 3-카테고리 (PERMANENT 17/TRANSIENT 4/STALE 4) -- 구현 완료
+- ChainError 27개 코드 3-카테고리 (PERMANENT 19/TRANSIENT 4/STALE 4) -- BATCH_NOT_SUPPORTED + BATCH_SIZE_EXCEEDED 추가
 - Stage 5 완전 의사코드 CONC-01: build->simulate->sign->submit + 에러 분기
 - discriminatedUnion 5-type으로 SendTransactionRequestSchema 교체 -- TransactionRequestSchema 구현 완료
 - INFRA-05: INSUFFICIENT_FOR_FEE 에러 코드 TX 도메인으로 이동 -- 구현 완료 (DD-04 해소)
@@ -66,6 +66,10 @@ Recent decisions affecting current work:
 - UNLIMITED_THRESHOLD = (2^256 - 1) / 2 -- EVM MAX_UINT256 + Solana MAX_U64 통합 임계값
 - APPROVE_TIER_OVERRIDE 기본 APPROVAL tier (Owner 승인 필수), SPENDING_LIMIT 건너뜀
 - 대소문자 구분 없는 spender 주소 비교 (EVM hex 주소 호환성)
+- classifyInstruction 필드 기반 union 판별: spender->APPROVE, token->TOKEN_TRANSFER, programId->CONTRACT_CALL, else->TRANSFER
+- evaluateBatch Phase B 합산: TRANSFER.amount만 카운트 (TOKEN_TRANSFER/APPROVE/CONTRACT_CALL = 0)
+- APPROVE in batch: max(amount tier, APPROVE_TIER_OVERRIDE tier) 해상도 -- 기본 APPROVAL
+- evaluateBatch violations: index + type + reason 포함하여 어느 instruction이 거부되었는지 추적
 
 ### Blockers/Concerns
 
@@ -74,6 +78,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12T02:18:06Z
-Stopped at: Completed 79-02-PLAN.md
+Last session: 2026-02-12
+Stopped at: Completed Phase 80
 Resume file: None

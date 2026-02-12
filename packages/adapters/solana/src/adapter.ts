@@ -893,8 +893,328 @@ export class SolanaAdapter implements IChainAdapter {
 
   // -- Batch operations (1) --
 
-  async buildBatch(_request: BatchParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildBatch will be implemented in Phase 80');
+  async buildBatch(request: BatchParams): Promise<UnsignedTransaction> {
+    const rpc = this.getRpc();
+    try {
+      const from = address(request.from);
+      const fromSigner = createNoopSigner(from);
+
+      // 1. Validate instruction count (2-20)
+      if (request.instructions.length < 2) {
+        throw new ChainError('BATCH_SIZE_EXCEEDED', 'solana', {
+          message: 'Batch requires at least 2 instructions',
+        });
+      }
+      if (request.instructions.length > 20) {
+        throw new ChainError('BATCH_SIZE_EXCEEDED', 'solana', {
+          message: 'Batch maximum 20 instructions',
+        });
+      }
+
+      // 2. Get latest blockhash
+      const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+
+      // 3. Build base transaction message
+      let txMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(from, tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: blockhashInfo.blockhash,
+              lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
+            },
+            tx,
+          ),
+      );
+
+      // 4. Convert each instruction and append
+      let ataCount = 0;
+      const instructionTypes: string[] = [];
+
+      for (const instr of request.instructions) {
+        const solanaInstructions = await this.convertBatchInstruction(instr, from, fromSigner, rpc);
+        // Count ATA creations (TOKEN_TRANSFER may insert extra ATA create instruction)
+        if ('token' in instr && !('spender' in instr) && solanaInstructions.length > 1) {
+          ataCount++;
+        }
+        instructionTypes.push(this.classifyInstruction(instr));
+        for (const ix of solanaInstructions) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+          txMessage = appendTransactionMessageInstruction(ix as any, txMessage) as unknown as typeof txMessage;
+        }
+      }
+
+      // 5. Compile and encode
+      const compiled = compileTransaction(txMessage);
+      const serialized = new Uint8Array(txEncoder.encode(compiled));
+
+      // 6. Estimate fee: base fee + ATA rent for each needed ATA
+      const estimatedFee = DEFAULT_SOL_TRANSFER_FEE + (BigInt(ataCount) * ATA_RENT_LAMPORTS);
+
+      return {
+        chain: 'solana',
+        serialized,
+        estimatedFee,
+        expiresAt: new Date(Date.now() + 60_000),
+        metadata: {
+          blockhash: blockhashInfo.blockhash,
+          lastValidBlockHeight: Number(blockhashInfo.lastValidBlockHeight),
+          version: 0,
+          instructionCount: request.instructions.length,
+          instructionTypes,
+          ataCreations: ataCount,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to build batch: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  // -- Batch helpers --
+
+  /**
+   * Classify an instruction into its type string based on the fields present.
+   * Discriminator logic (no `type` field on union members):
+   *   has `spender` -> APPROVE
+   *   has `token` but no `spender` -> TOKEN_TRANSFER
+   *   has `programId` -> CONTRACT_CALL
+   *   else -> TRANSFER
+   */
+  private classifyInstruction(
+    instr: import('@waiaas/core').TransferRequest
+      | import('@waiaas/core').TokenTransferParams
+      | import('@waiaas/core').ContractCallParams
+      | import('@waiaas/core').ApproveParams,
+  ): string {
+    if ('spender' in instr) return 'APPROVE';
+    if ('token' in instr) return 'TOKEN_TRANSFER';
+    if ('programId' in instr) return 'CONTRACT_CALL';
+    return 'TRANSFER';
+  }
+
+  /**
+   * Convert a single batch instruction into one or more Solana instructions.
+   * Returns an array because TOKEN_TRANSFER may prepend an ATA create instruction.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async convertBatchInstruction(
+    instr: import('@waiaas/core').TransferRequest
+      | import('@waiaas/core').TokenTransferParams
+      | import('@waiaas/core').ContractCallParams
+      | import('@waiaas/core').ApproveParams,
+    from: ReturnType<typeof address>,
+    fromSigner: ReturnType<typeof createNoopSigner>,
+    rpc: SolanaRpc,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any[]> {
+    const type = this.classifyInstruction(instr);
+
+    if (type === 'TRANSFER') {
+      const transfer = instr as import('@waiaas/core').TransferRequest;
+      const to = address(transfer.to);
+      return [
+        getTransferSolInstruction({
+          source: fromSigner,
+          destination: to,
+          amount: transfer.amount,
+        }),
+      ];
+    }
+
+    if (type === 'TOKEN_TRANSFER') {
+      const tokenTx = instr as import('@waiaas/core').TokenTransferParams;
+      const mintAddr = address(tokenTx.token.address);
+      const to = address(tokenTx.to);
+
+      // Query mint to determine token program
+      const mintAccountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!mintAccountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `Token mint not found: ${tokenTx.token.address}`,
+        });
+      }
+
+      const mintOwner = String(mintAccountInfo.value.owner);
+      let tokenProgramId: string;
+
+      if (mintOwner === SPL_TOKEN_PROGRAM_ID) {
+        tokenProgramId = SPL_TOKEN_PROGRAM_ID;
+      } else if (mintOwner === TOKEN_2022_PROGRAM_ID) {
+        tokenProgramId = TOKEN_2022_PROGRAM_ID;
+      } else {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Invalid token mint: owner is not a token program',
+        });
+      }
+
+      // Compute source and destination ATA
+      const [sourceAta] = await findAssociatedTokenPda({
+        owner: from,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      const [destinationAta] = await findAssociatedTokenPda({
+        owner: to,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      // Check if destination ATA exists
+      const destAtaInfo = await rpc
+        .getAccountInfo(destinationAta, { encoding: 'base64' })
+        .send();
+
+      const needCreateAta = !destAtaInfo.value;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const instructions: any[] = [];
+
+      if (needCreateAta) {
+        instructions.push(
+          getCreateAssociatedTokenIdempotentInstruction({
+            payer: fromSigner,
+            ata: destinationAta,
+            owner: to,
+            mint: mintAddr,
+            tokenProgram: address(tokenProgramId),
+          }),
+        );
+      }
+
+      instructions.push(
+        getTransferCheckedInstruction(
+          {
+            source: sourceAta,
+            mint: mintAddr,
+            destination: destinationAta,
+            authority: fromSigner,
+            amount: tokenTx.amount,
+            decimals: tokenTx.token.decimals,
+          },
+          { programAddress: address(tokenProgramId) },
+        ),
+      );
+
+      return instructions;
+    }
+
+    if (type === 'CONTRACT_CALL') {
+      const contractCall = instr as import('@waiaas/core').ContractCallParams;
+
+      if (!contractCall.programId) {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Missing programId for Solana contract call in batch',
+        });
+      }
+      if (!contractCall.instructionData) {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Missing instructionData for Solana contract call in batch',
+        });
+      }
+      if (!contractCall.accounts || contractCall.accounts.length === 0) {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Missing accounts for Solana contract call in batch',
+        });
+      }
+
+      // Map account roles
+      const mappedAccounts = contractCall.accounts.map((acc) => {
+        let role: AccountRole;
+        if (acc.isSigner && acc.isWritable) {
+          role = AccountRole.WRITABLE_SIGNER;
+        } else if (acc.isSigner && !acc.isWritable) {
+          role = AccountRole.READONLY_SIGNER;
+        } else if (!acc.isSigner && acc.isWritable) {
+          role = AccountRole.WRITABLE;
+        } else {
+          role = AccountRole.READONLY;
+        }
+        return {
+          address: address(acc.pubkey),
+          role,
+        };
+      });
+
+      // Handle instructionData: Uint8Array or base64 string
+      let dataBytes: Uint8Array;
+      if (contractCall.instructionData instanceof Uint8Array) {
+        dataBytes = contractCall.instructionData;
+      } else {
+        dataBytes = new Uint8Array(Buffer.from(contractCall.instructionData as unknown as string, 'base64'));
+      }
+
+      return [
+        {
+          programAddress: address(contractCall.programId),
+          accounts: mappedAccounts,
+          data: dataBytes,
+        },
+      ];
+    }
+
+    if (type === 'APPROVE') {
+      const approve = instr as import('@waiaas/core').ApproveParams;
+      const mintAddr = address(approve.token.address);
+
+      // Query mint to determine token program
+      const mintAccountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!mintAccountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `Token mint not found: ${approve.token.address}`,
+        });
+      }
+
+      const mintOwner = String(mintAccountInfo.value.owner);
+      let tokenProgramId: string;
+
+      if (mintOwner === SPL_TOKEN_PROGRAM_ID) {
+        tokenProgramId = SPL_TOKEN_PROGRAM_ID;
+      } else if (mintOwner === TOKEN_2022_PROGRAM_ID) {
+        tokenProgramId = TOKEN_2022_PROGRAM_ID;
+      } else {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Invalid token mint: owner is not a token program',
+        });
+      }
+
+      // Compute owner's ATA
+      const [ownerAta] = await findAssociatedTokenPda({
+        owner: from,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      return [
+        getApproveCheckedInstruction(
+          {
+            source: ownerAta,
+            mint: mintAddr,
+            delegate: address(approve.spender),
+            owner: fromSigner,
+            amount: approve.amount,
+            decimals: approve.token.decimals,
+          },
+          { programAddress: address(tokenProgramId) },
+        ),
+      ];
+    }
+
+    throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+      message: `Unknown instruction type in batch`,
+    });
   }
 
   // -- Utility operations (3) --
