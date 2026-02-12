@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 91 (3 of 6 in v1.4.2) — 데몬 API + JWT + Config
-Plan: 1 of 2 complete
-Status: Executing
-Last activity: 2026-02-13 — Plan 91-01 complete (27 files renamed, tsc passes)
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-02-13 — Plan 91-02 complete (37 test files + 1 source fix, 681 tests pass)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Total plans: 10
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -30,6 +30,7 @@ Progress: [████░░░░░░] 40%
 | 90    | 01   | 4min     | 2     | 19    |
 | 90    | 02   | 2min     | 2     | 2     |
 | 91    | 01   | 20min    | 2     | 27    |
+| 91    | 02   | 18min    | 2     | 38    |
 
 *Updated after each plan completion*
 
@@ -56,6 +57,9 @@ Recent decisions for v1.4.2:
 - Core interfaces (ILocalKeyStore, IPolicyEngine, NotificationPayload) keep agentId -- daemon maps at boundary
 - PipelineContext.agent field renamed to .wallet for consistency
 - error-hints.ts: AGENT_NOT_FOUND -> WALLET_NOT_FOUND, /v1/agents -> /v1/wallets
+- database-policy-engine.ts raw SQL agent_id -> wallet_id (missed in 91-01, fixed in 91-02)
+- Notification test assertions use payload.agentId (core interface boundary preserved)
+- migration-runner.test.ts excluded from rename (tests v3 migration DDL correctness)
 
 ### Blockers/Concerns
 
@@ -65,5 +69,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 91-01-PLAN.md (daemon API/JWT/config wallet rename)
+Stopped at: Completed 91-02-PLAN.md (37 test files wallet rename + source fix)
 Resume file: None
