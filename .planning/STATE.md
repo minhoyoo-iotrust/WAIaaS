@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 81 파이프라인 통합 Stage 1/3
+**Current focus:** v1.4 Phase 81 파이프라인 통합 완료
 
 ## Current Position
 
 Phase: 81 of 81 (파이프라인 통합 Stage 5)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-12 — Completed 81-01-PLAN.md (Stage 1 discriminatedUnion + Stage 3 type-based policy)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-12 — Completed 81-02-PLAN.md (Stage 5 CONC-01 retry + buildByType)
 
-Progress: [███████████] 92% (11/12 plans)
+Progress: [████████████] 100% (12/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 81 phases, 181 plans, 488 reqs, 1111 tests, 44,205+ LOC
+**Cumulative:** 19 milestones, 81 phases, 182 plans, 488 reqs, 1111 tests, 44,205+ LOC
 
 ## Accumulated Context
 
@@ -74,6 +74,9 @@ Recent decisions affecting current work:
 - Route handler는 SendTransactionRequestOpenAPI 유지 (discriminatedUnion OpenAPI 스키마는 향후 작업)
 - BATCH는 evaluateBatch 직접 호출 (evaluateAndReserve 건너뜀)
 - Safe accessor helpers (getRequestAmount/To/Memo) 패턴: union 타입 필드 접근
+- sleep() extracted to pipeline/sleep.ts for vi.mock testability
+- CONC-01 TRANSIENT retry rebuilds from Stage 5a (continue buildLoop) -- 단순한 루프 구조
+- buildByType default case uses CHAIN_ERROR error code (INVALID_REQUEST 미존재)
 
 ### Blockers/Concerns
 
@@ -83,5 +86,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 81-01-PLAN.md
+Stopped at: Completed 81-02-PLAN.md
 Resume file: None
