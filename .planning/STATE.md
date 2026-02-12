@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 86 (5 of 7 in v1.4.1) — REST API 5-type + MCP/SDK 확장
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 85 complete (1/1 plans, verified)
+Plan: 2 of 2 complete
+Status: In progress (plan 01 pending)
+Last activity: 2026-02-12 — Plan 86-02 complete (MCP/SDK 5-type extension)
 
 Progress: [██████░░░░] 57% (4/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 85 phases, 190 plans, 533 reqs, 1,242 tests, 52,000+ LOC
+**Cumulative:** 20 milestones, 85 phases, 191 plans, 533 reqs, 1,268 tests, 52,400+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 8 plans completed (Phases 82-85 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 9 plans completed (Phases 82-85 done, 86-02 done)
 
 *Updated after each plan completion*
 
@@ -62,6 +62,11 @@ Recent decisions affecting current work:
 - [85-01]: v2 up() re-enables FK and runs foreign_key_check before returning (defense-in-depth)
 - [85-01]: Existing migration tests bumped to version 10+ to avoid conflict with real v2 migration
 - [85-01]: v2 test suite uses dedicated v1-only DB (manual schema, no auto-migrations)
+- [86-02]: MCP send_token exposes only TRANSFER+TOKEN_TRANSFER (MCPSDK-04 security enforced)
+- [86-02]: TS SDK SendTokenParams.to/amount optional (APPROVE/BATCH don't have top-level to/amount)
+- [86-02]: Python SDK send_token uses **kwargs for type-specific fields (calldata, spender, instructions)
+- [86-02]: Python SDK TokenInfo as separate Pydantic model for validation (not inline dict)
+- [86-02]: Pydantic by_alias=True for camelCase serialization of programId/instructionData
 
 ### Blockers/Concerns
 
@@ -71,5 +76,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 85 complete, verified, ready for Phase 86 planning
+Stopped at: Completed 86-02-PLAN.md (MCP/SDK 5-type extension). Plan 86-01 still pending.
 Resume file: None
