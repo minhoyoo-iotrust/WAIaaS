@@ -73,6 +73,23 @@ function tokenTx(
   return { type: 'TOKEN_TRANSFER', amount, toAddress, chain: 'solana', tokenAddress };
 }
 
+function contractCallTx(opts: {
+  amount?: string;
+  contractAddress: string;
+  selector?: string;
+  toAddress?: string;
+  chain?: string;
+}) {
+  return {
+    type: 'CONTRACT_CALL',
+    amount: opts.amount ?? '0',
+    toAddress: opts.toAddress ?? opts.contractAddress,
+    chain: opts.chain ?? 'ethereum',
+    contractAddress: opts.contractAddress,
+    selector: opts.selector,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
@@ -665,5 +682,203 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CONTRACT_WHITELIST + METHOD_WHITELIST tests (8 tests)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
+  const UNISWAP_ROUTER = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
+  const AAVE_POOL = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';
+  const SWAP_SELECTOR = '0x38ed1739'; // swapExactTokensForTokens
+  const SUPPLY_SELECTOR = '0x617ba037'; // supply
+
+  it('should deny CONTRACT_CALL when no CONTRACT_WHITELIST policy exists (CONTRACT_CALL_DISABLED)', async () => {
+    // Need at least one policy so we don't get the "no policies" passthrough
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '100000000000',
+        notify_max: '200000000000',
+        delay_max: '500000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: SWAP_SELECTOR }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no CONTRACT_WHITELIST policy configured');
+  });
+
+  it('should allow CONTRACT_CALL when contract is in CONTRACT_WHITELIST', async () => {
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [
+          { address: UNISWAP_ROUTER, name: 'Uniswap V2 Router' },
+          { address: AAVE_POOL, name: 'Aave V3 Pool' },
+        ],
+      }),
+      priority: 15,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: SWAP_SELECTOR }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should deny CONTRACT_CALL when contract is NOT in CONTRACT_WHITELIST', async () => {
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: UNISWAP_ROUTER, name: 'Uniswap V2 Router' }],
+      }),
+      priority: 15,
+    });
+
+    const unknownContract = '0x1111111111111111111111111111111111111111';
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: unknownContract, selector: SWAP_SELECTOR }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Contract not whitelisted');
+    expect(result.reason).toContain(unknownContract);
+  });
+
+  it('should allow CONTRACT_CALL when CONTRACT_WHITELIST passes and METHOD_WHITELIST selector matches', async () => {
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'METHOD_WHITELIST',
+      rules: JSON.stringify({
+        methods: [
+          { contractAddress: UNISWAP_ROUTER, selectors: [SWAP_SELECTOR] },
+        ],
+      }),
+      priority: 14,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: SWAP_SELECTOR }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should deny CONTRACT_CALL when CONTRACT_WHITELIST passes but METHOD_WHITELIST selector does NOT match', async () => {
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'METHOD_WHITELIST',
+      rules: JSON.stringify({
+        methods: [
+          { contractAddress: UNISWAP_ROUTER, selectors: [SWAP_SELECTOR] },
+        ],
+      }),
+      priority: 14,
+    });
+
+    const forbiddenSelector = '0xdeadbeef';
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: forbiddenSelector }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Method not whitelisted');
+    expect(result.reason).toContain(forbiddenSelector);
+    expect(result.reason).toContain(UNISWAP_ROUTER);
+  });
+
+  it('should allow CONTRACT_CALL when METHOD_WHITELIST has no entry for this contract (no restriction)', async () => {
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: UNISWAP_ROUTER }, { address: AAVE_POOL }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'METHOD_WHITELIST',
+      rules: JSON.stringify({
+        methods: [
+          // Only restrict Uniswap, not Aave
+          { contractAddress: UNISWAP_ROUTER, selectors: [SWAP_SELECTOR] },
+        ],
+      }),
+      priority: 14,
+    });
+
+    // Aave has no METHOD_WHITELIST entry -> no method restriction -> allow
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: AAVE_POOL, selector: SUPPLY_SELECTOR }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should NOT affect non-CONTRACT_CALL types (TRANSFER passthrough)', async () => {
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    // Native TRANSFER -> CONTRACT_WHITELIST not applicable -> passthrough
+    const result = await engine.evaluate(agentId, tx('1000000000'));
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should match contract addresses case-insensitively (EVM hex compat)', async () => {
+    const mixedCaseAddress = '0x7a250D5630B4cF539739dF2C5dAcB4c659F2488D';
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: mixedCaseAddress.toLowerCase() }],
+      }),
+      priority: 15,
+    });
+
+    // Send with mixed-case address -> should still match
+    const result = await engine.evaluate(
+      agentId,
+      contractCallTx({ contractAddress: mixedCaseAddress, selector: SWAP_SELECTOR }),
+    );
+
+    expect(result.allowed).toBe(true);
   });
 });

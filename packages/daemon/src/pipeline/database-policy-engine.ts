@@ -3,7 +3,9 @@
  *
  * Evaluates transactions against policies stored in the policies table.
  * Supports SPENDING_LIMIT (4-tier classification), WHITELIST (address filtering),
- * and ALLOWED_TOKENS (token transfer whitelist, default deny).
+ * ALLOWED_TOKENS (token transfer whitelist, default deny),
+ * CONTRACT_WHITELIST (contract call whitelist, default deny),
+ * and METHOD_WHITELIST (optional method-level restriction for contract calls).
  *
  * Algorithm:
  * 1. Load enabled policies for agent (agent-specific + global), ORDER BY priority DESC
@@ -11,6 +13,8 @@
  * 3. Resolve overrides: agent-specific policies override global policies of same type
  * 4. Evaluate WHITELIST: deny if toAddress not in allowed_addresses
  * 4b. Evaluate ALLOWED_TOKENS: deny TOKEN_TRANSFER if no policy or token not whitelisted
+ * 4c. Evaluate CONTRACT_WHITELIST: deny CONTRACT_CALL if no policy or contract not whitelisted
+ * 4d. Evaluate METHOD_WHITELIST: deny CONTRACT_CALL if method selector not whitelisted (optional)
  * 5. Evaluate SPENDING_LIMIT: classify amount into INSTANT/NOTIFY/DELAY/APPROVAL
  *
  * TOCTOU Prevention (evaluateAndReserve):
@@ -47,6 +51,14 @@ interface AllowedTokensRules {
   tokens: Array<{ address: string }>;
 }
 
+interface ContractWhitelistRules {
+  contracts: Array<{ address: string; name?: string }>;
+}
+
+interface MethodWhitelistRules {
+  methods: Array<{ contractAddress: string; selectors: string[] }>;
+}
+
 interface PolicyRow {
   id: string;
   agentId: string | null;
@@ -64,6 +76,10 @@ interface TransactionParam {
   chain: string;
   /** Token address for ALLOWED_TOKENS evaluation (TOKEN_TRANSFER only). */
   tokenAddress?: string;
+  /** Contract address for CONTRACT_WHITELIST evaluation (CONTRACT_CALL only). */
+  contractAddress?: string;
+  /** Function selector (4-byte hex, e.g. '0x12345678') for METHOD_WHITELIST evaluation (CONTRACT_CALL only). */
+  selector?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,7 +87,8 @@ interface TransactionParam {
 // ---------------------------------------------------------------------------
 
 /**
- * DB-backed policy engine with SPENDING_LIMIT 4-tier, WHITELIST, and ALLOWED_TOKENS evaluation.
+ * DB-backed policy engine with SPENDING_LIMIT 4-tier, WHITELIST, ALLOWED_TOKENS,
+ * CONTRACT_WHITELIST, and METHOD_WHITELIST evaluation.
  *
  * Constructor takes a Drizzle DB instance typed with the full schema,
  * and optionally a raw better-sqlite3 Database instance for BEGIN IMMEDIATE transactions.
@@ -124,6 +141,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const allowedTokensResult = this.evaluateAllowedTokens(resolved, transaction);
     if (allowedTokensResult !== null) {
       return allowedTokensResult;
+    }
+
+    // Step 4c: Evaluate CONTRACT_WHITELIST (contract call whitelist)
+    const contractWhitelistResult = this.evaluateContractWhitelist(resolved, transaction);
+    if (contractWhitelistResult !== null) {
+      return contractWhitelistResult;
+    }
+
+    // Step 4d: Evaluate METHOD_WHITELIST (method-level restriction)
+    const methodWhitelistResult = this.evaluateMethodWhitelist(resolved, transaction);
+    if (methodWhitelistResult !== null) {
+      return methodWhitelistResult;
     }
 
     // Step 5: Evaluate SPENDING_LIMIT (tier classification)
@@ -200,6 +229,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       const allowedTokensResult = this.evaluateAllowedTokens(resolved, transaction);
       if (allowedTokensResult !== null) {
         return allowedTokensResult;
+      }
+
+      // Step 4c: Evaluate CONTRACT_WHITELIST (contract call whitelist)
+      const contractWhitelistResult = this.evaluateContractWhitelist(resolved, transaction);
+      if (contractWhitelistResult !== null) {
+        return contractWhitelistResult;
+      }
+
+      // Step 4d: Evaluate METHOD_WHITELIST (method-level restriction)
+      const methodWhitelistResult = this.evaluateMethodWhitelist(resolved, transaction);
+      if (methodWhitelistResult !== null) {
+        return methodWhitelistResult;
       }
 
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
@@ -409,6 +450,129 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     return null; // Token is allowed, continue evaluation
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: CONTRACT_WHITELIST evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate CONTRACT_WHITELIST policy.
+   *
+   * Logic:
+   * - Only applies to CONTRACT_CALL transaction type
+   * - If transaction type is CONTRACT_CALL and no CONTRACT_WHITELIST policy exists:
+   *   -> deny with reason 'Contract calls disabled: no CONTRACT_WHITELIST policy configured'
+   * - If CONTRACT_WHITELIST policy exists, check if contract address is in rules.contracts[].address:
+   *   -> If found: return null (continue to next evaluation)
+   *   -> If not found: deny with reason 'Contract not whitelisted: {address}'
+   * - For non-CONTRACT_CALL types: return null (not applicable)
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
+   */
+  private evaluateContractWhitelist(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only evaluate for CONTRACT_CALL transactions
+    if (transaction.type !== 'CONTRACT_CALL') return null;
+
+    const contractWhitelistPolicy = resolved.find((p) => p.type === 'CONTRACT_WHITELIST');
+
+    // No CONTRACT_WHITELIST policy -> deny contract calls (default deny)
+    if (!contractWhitelistPolicy) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Contract calls disabled: no CONTRACT_WHITELIST policy configured',
+      };
+    }
+
+    // Parse rules.contracts array
+    const rules: ContractWhitelistRules = JSON.parse(contractWhitelistPolicy.rules);
+    const contractAddress = transaction.contractAddress ?? transaction.toAddress;
+
+    // Check if contract is in whitelist (case-insensitive comparison for EVM addresses)
+    const isWhitelisted = rules.contracts.some(
+      (c) => c.address.toLowerCase() === contractAddress.toLowerCase(),
+    );
+
+    if (!isWhitelisted) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Contract not whitelisted: ${contractAddress}`,
+      };
+    }
+
+    return null; // Contract is whitelisted, continue evaluation
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: METHOD_WHITELIST evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate METHOD_WHITELIST policy.
+   *
+   * Logic:
+   * - Only applies to CONTRACT_CALL transaction type
+   * - If no METHOD_WHITELIST policy exists: return null (method restriction is optional)
+   * - If METHOD_WHITELIST policy exists, find matching entry for transaction's contract address:
+   *   -> If no entry for this contract: return null (no method restriction for this contract)
+   *   -> If entry found, check if transaction's selector is in entry.selectors:
+   *     -> If found: return null (method allowed)
+   *     -> If not found: deny with reason 'Method not whitelisted: {selector} on contract {address}'
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
+   */
+  private evaluateMethodWhitelist(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only evaluate for CONTRACT_CALL transactions
+    if (transaction.type !== 'CONTRACT_CALL') return null;
+
+    const methodWhitelistPolicy = resolved.find((p) => p.type === 'METHOD_WHITELIST');
+
+    // No METHOD_WHITELIST policy -> no method restriction (optional policy)
+    if (!methodWhitelistPolicy) return null;
+
+    // Parse rules.methods array
+    const rules: MethodWhitelistRules = JSON.parse(methodWhitelistPolicy.rules);
+    const contractAddress = transaction.contractAddress ?? transaction.toAddress;
+    const selector = transaction.selector;
+
+    // Find matching entry for this contract (case-insensitive)
+    const entry = rules.methods.find(
+      (m) => m.contractAddress.toLowerCase() === contractAddress.toLowerCase(),
+    );
+
+    // No entry for this contract -> no method restriction for this specific contract
+    if (!entry) return null;
+
+    // Check if selector is in the allowed list (case-insensitive)
+    if (!selector) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Method not whitelisted: missing selector on contract ${contractAddress}`,
+      };
+    }
+
+    const isAllowed = entry.selectors.some(
+      (s) => s.toLowerCase() === selector.toLowerCase(),
+    );
+
+    if (!isAllowed) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Method not whitelisted: ${selector} on contract ${contractAddress}`,
+      };
+    }
+
+    return null; // Method is whitelisted, continue evaluation
   }
 
   // -------------------------------------------------------------------------
