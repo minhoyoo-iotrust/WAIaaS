@@ -255,8 +255,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 79-01: ContractCallRequest + CONTRACT_WHITELIST + METHOD_WHITELIST 정책
-- [ ] 79-02: ApproveRequest + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE
+- [ ] 79-01-PLAN.md — buildContractCall (EVM + Solana) + CONTRACT_WHITELIST + METHOD_WHITELIST 정책 평가 (Wave 1, TDD)
+- [ ] 79-02-PLAN.md — SolanaAdapter buildApprove (SPL ApproveChecked) + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE 정책 평가 (Wave 2, TDD)
 
 #### Phase 80: 배치 트랜잭션
 **Goal**: 에이전트가 Solana에서 원자적 배치 트랜잭션을 실행하고, 2단계 합산 정책으로 소액 분할 우회를 방지하며, 부모-자식 DB 구조로 배치 상태를 추적한다
