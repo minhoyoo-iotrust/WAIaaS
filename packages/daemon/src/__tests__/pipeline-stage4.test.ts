@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, transactions } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
@@ -101,9 +101,9 @@ async function insertTestAgent(
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: MOCK_PUBLIC_KEY + '-' + id.slice(0, 8),
@@ -117,7 +117,7 @@ async function insertTestAgent(
 }
 
 async function insertPendingTransaction(
-  agentId: string,
+  walletId: string,
   overrides: {
     status?: string;
     queuedAt?: number;
@@ -128,7 +128,7 @@ async function insertPendingTransaction(
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   await conn.db.insert(transactions).values({
     id,
-    agentId,
+    walletId,
     chain: 'solana',
     type: 'TRANSFER',
     status: overrides.status ?? 'PENDING',
@@ -159,7 +159,7 @@ async function insertPendingTransaction(
 }
 
 function createPipelineContext(
-  agentId: string,
+  walletId: string,
   txId: string,
   overrides: Partial<PipelineContext> = {},
 ): PipelineContext {
@@ -169,8 +169,8 @@ function createPipelineContext(
     keyStore: createMockKeyStore(),
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
-    agentId,
-    agent: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
+    walletId,
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
     request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '1000000000' },
     txId,
     ...overrides,
@@ -201,8 +201,8 @@ describe('56-02 stage4Wait', () => {
 
   describe('Test group 1: INSTANT/NOTIFY passthrough', () => {
     it('stage4Wait passes through INSTANT tier (no queue, no approval)', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -211,7 +211,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'INSTANT',
         delayQueue,
         approvalWorkflow,
@@ -236,8 +236,8 @@ describe('56-02 stage4Wait', () => {
     });
 
     it('stage4Wait passes through NOTIFY tier (no queue, no approval)', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -246,7 +246,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'NOTIFY',
         delayQueue,
         approvalWorkflow,
@@ -274,8 +274,8 @@ describe('56-02 stage4Wait', () => {
 
   describe('Test group 2: DELAY tier', () => {
     it('stage4Wait queues DELAY tier via DelayQueue.queueDelay()', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -284,7 +284,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'DELAY',
         delaySeconds: 300,
         delayQueue,
@@ -314,8 +314,8 @@ describe('56-02 stage4Wait', () => {
     });
 
     it('stage4Wait uses default delaySeconds when not set on ctx', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -324,7 +324,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'DELAY',
         // No delaySeconds set -- should use config default or 60s fallback
         delayQueue,
@@ -349,8 +349,8 @@ describe('56-02 stage4Wait', () => {
 
   describe('Test group 3: APPROVAL tier', () => {
     it('stage4Wait creates pending approval for APPROVAL tier', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -359,7 +359,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'APPROVAL',
         delayQueue,
         approvalWorkflow,
@@ -386,8 +386,8 @@ describe('56-02 stage4Wait', () => {
     });
 
     it('stage4Wait halts pipeline for APPROVAL tier (throws PIPELINE_HALTED)', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -396,7 +396,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'APPROVAL',
         delayQueue,
         approvalWorkflow,
@@ -420,8 +420,8 @@ describe('56-02 stage4Wait', () => {
 
   describe('Test group 4: Pipeline halt mechanism', () => {
     it('async pipeline stops at stage4 for DELAY tier (stage5 not called)', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -430,7 +430,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'DELAY',
         delaySeconds: 60,
         delayQueue,
@@ -468,8 +468,8 @@ describe('56-02 stage4Wait', () => {
     });
 
     it('async pipeline stops at stage4 for APPROVAL tier (stage5 not called)', async () => {
-      const agentId = await insertTestAgent();
-      const txId = await insertPendingTransaction(agentId);
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
 
       const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
       const approvalWorkflow = new ApprovalWorkflow({
@@ -478,7 +478,7 @@ describe('56-02 stage4Wait', () => {
         config: { policy_defaults_approval_timeout: 3600 },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         tier: 'APPROVAL',
         delayQueue,
         approvalWorkflow,
@@ -516,11 +516,11 @@ describe('56-02 stage4Wait', () => {
 
   describe('Test group 5: executeFromStage5 re-entry', () => {
     it('processExpired returns expired transactions and stage5+stage6 runs to CONFIRMED', async () => {
-      const agentId = await insertTestAgent();
+      const walletId = await insertTestAgent();
 
       // Insert a QUEUED transaction with queued_at in the past and delaySeconds=1
       const pastTime = Math.floor(Date.now() / 1000) - 10; // 10 seconds ago
-      const txId = await insertPendingTransaction(agentId, {
+      const txId = await insertPendingTransaction(walletId, {
         status: 'QUEUED',
         queuedAt: pastTime,
         metadata: JSON.stringify({ delaySeconds: 1 }),
@@ -533,7 +533,7 @@ describe('56-02 stage4Wait', () => {
       const expired = delayQueue.processExpired(now);
       expect(expired).toHaveLength(1);
       expect(expired[0]!.txId).toBe(txId);
-      expect(expired[0]!.agentId).toBe(agentId);
+      expect(expired[0]!.walletId).toBe(walletId);
 
       // Verify transaction status changed to EXECUTING
       const txAfterExpiry = await conn.db
@@ -544,7 +544,7 @@ describe('56-02 stage4Wait', () => {
       expect(txAfterExpiry!.status).toBe('EXECUTING');
 
       // Now construct a PipelineContext for stages 5-6 (executeFromStage5 equivalent)
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         adapter: createMockAdapter(),
       });
 
@@ -562,10 +562,10 @@ describe('56-02 stage4Wait', () => {
     });
 
     it('executeFromStage5 marks transaction FAILED on stage5 error', async () => {
-      const agentId = await insertTestAgent();
+      const walletId = await insertTestAgent();
 
       const pastTime = Math.floor(Date.now() / 1000) - 10;
-      const txId = await insertPendingTransaction(agentId, {
+      const txId = await insertPendingTransaction(walletId, {
         status: 'QUEUED',
         queuedAt: pastTime,
         metadata: JSON.stringify({ delaySeconds: 1 }),
@@ -584,7 +584,7 @@ describe('56-02 stage4Wait', () => {
         },
       });
 
-      const ctx = createPipelineContext(agentId, txId, {
+      const ctx = createPipelineContext(walletId, txId, {
         adapter: failingAdapter,
       });
 

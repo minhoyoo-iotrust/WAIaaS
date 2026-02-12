@@ -218,23 +218,23 @@ function ownerAuthHeaders(
 // Seed helpers
 // ---------------------------------------------------------------------------
 
-function seedAgent(
+function seedWallet(
   sqlite: DatabaseType,
-  agentId: string,
+  walletId: string,
   opts?: { ownerAddress?: string | null; ownerVerified?: boolean },
 ): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
-      agentId,
-      'Test Agent',
+      walletId,
+      'Test Wallet',
       'solana',
       'devnet',
-      `pk-${agentId}`,
+      `pk-${walletId}`,
       'ACTIVE',
       opts?.ownerVerified ? 1 : 0,
       opts?.ownerAddress ?? null,
@@ -245,7 +245,7 @@ function seedAgent(
 
 function seedSpendingLimitPolicy(
   sqlite: DatabaseType,
-  agentId: string,
+  walletId: string,
   rules: {
     instant_max: string;
     notify_max: string;
@@ -257,10 +257,10 @@ function seedSpendingLimitPolicy(
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO policies (id, agent_id, type, rules, priority, enabled, created_at, updated_at)
+      `INSERT INTO policies (id, wallet_id, type, rules, priority, enabled, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(id, agentId, 'SPENDING_LIMIT', JSON.stringify(rules), 100, 1, ts, ts);
+    .run(id, walletId, 'SPENDING_LIMIT', JSON.stringify(rules), 100, 1, ts, ts);
 }
 
 // ---------------------------------------------------------------------------
@@ -341,13 +341,13 @@ afterEach(() => {
 // ===========================================================================
 
 describe('Owner State Transitions E2E (TEST-05)', () => {
-  it('NONE -> GRACE: PUT /v1/agents/:id/owner sets owner address', async () => {
-    const agentId = generateId();
-    seedAgent(sqlite, agentId); // NONE state -- no owner
+  it('NONE -> GRACE: PUT /v1/wallets/:id/owner sets owner address', async () => {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId); // NONE state -- no owner
 
     const ownerKeypair = generateTestKeypair();
 
-    const res = await app.request(`/v1/agents/${agentId}/owner`, {
+    const res = await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: ownerKeypair.address }),
@@ -359,22 +359,22 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
 
     // Verify DB state: GRACE (ownerAddress set, ownerVerified=false)
     const row = sqlite
-      .prepare('SELECT owner_address, owner_verified FROM agents WHERE id = ?')
-      .get(agentId) as { owner_address: string | null; owner_verified: number };
+      .prepare('SELECT owner_address, owner_verified FROM wallets WHERE id = ?')
+      .get(walletId) as { owner_address: string | null; owner_verified: number };
     expect(row.owner_address).toBe(ownerKeypair.address);
     expect(row.owner_verified).toBe(0);
   });
 
   it('GRACE -> LOCKED: ownerAuth success triggers markOwnerVerified', async () => {
     const ownerKeypair = generateTestKeypair();
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: ownerKeypair.address,
       ownerVerified: false,
     });
 
     // Setup policy so we can trigger an APPROVAL transaction
-    seedSpendingLimitPolicy(sqlite, agentId, {
+    seedSpendingLimitPolicy(sqlite, walletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -385,7 +385,7 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -409,8 +409,8 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
 
     // Verify ownerVerified is still false (GRACE)
     const beforeRow = sqlite
-      .prepare('SELECT owner_verified FROM agents WHERE id = ?')
-      .get(agentId) as { owner_verified: number };
+      .prepare('SELECT owner_verified FROM wallets WHERE id = ?')
+      .get(walletId) as { owner_verified: number };
     expect(beforeRow.owner_verified).toBe(0);
 
     // Owner approves -- this triggers ownerAuth middleware + markOwnerVerified
@@ -423,21 +423,21 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
 
     // Verify ownerVerified is now true (LOCKED)
     const afterRow = sqlite
-      .prepare('SELECT owner_verified FROM agents WHERE id = ?')
-      .get(agentId) as { owner_verified: number };
+      .prepare('SELECT owner_verified FROM wallets WHERE id = ?')
+      .get(walletId) as { owner_verified: number };
     expect(afterRow.owner_verified).toBe(1);
   });
 
-  it('LOCKED: PUT /v1/agents/:id/owner returns 409 OWNER_ALREADY_CONNECTED', async () => {
+  it('LOCKED: PUT /v1/wallets/:id/owner returns 409 OWNER_ALREADY_CONNECTED', async () => {
     const ownerKeypair = generateTestKeypair();
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: ownerKeypair.address,
       ownerVerified: true, // LOCKED state
     });
 
     const newKeypair = generateTestKeypair();
-    const res = await app.request(`/v1/agents/${agentId}/owner`, {
+    const res = await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: newKeypair.address }),
@@ -449,14 +449,14 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
 
   it('GRACE: owner can be changed before verification', async () => {
     const firstKeypair = generateTestKeypair();
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: firstKeypair.address,
       ownerVerified: false, // GRACE state
     });
 
     const secondKeypair = generateTestKeypair();
-    const res = await app.request(`/v1/agents/${agentId}/owner`, {
+    const res = await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: secondKeypair.address }),
@@ -467,22 +467,22 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
 
     // Verify DB updated
     const row = sqlite
-      .prepare('SELECT owner_address FROM agents WHERE id = ?')
-      .get(agentId) as { owner_address: string | null };
+      .prepare('SELECT owner_address FROM wallets WHERE id = ?')
+      .get(walletId) as { owner_address: string | null };
     expect(row.owner_address).toBe(secondKeypair.address);
   });
 
-  it('NONE: owner removal is a no-op (DELETE /v1/agents/:id/owner not implemented, use lifecycle directly)', async () => {
-    const agentId = generateId();
-    seedAgent(sqlite, agentId); // NONE state
+  it('NONE: owner removal is a no-op (DELETE /v1/wallets/:id/owner not implemented, use lifecycle directly)', async () => {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId); // NONE state
 
-    // Since DELETE /v1/agents/:id/owner is not an API route,
+    // Since DELETE /v1/wallets/:id/owner is not an API route,
     // verify the lifecycle service directly (NONE state = no-op)
-    ownerLifecycle.removeOwner(agentId);
+    ownerLifecycle.removeOwner(walletId);
 
     const row = sqlite
-      .prepare('SELECT owner_address, owner_verified FROM agents WHERE id = ?')
-      .get(agentId) as { owner_address: string | null; owner_verified: number };
+      .prepare('SELECT owner_address, owner_verified FROM wallets WHERE id = ?')
+      .get(walletId) as { owner_address: string | null; owner_verified: number };
     expect(row.owner_address).toBeNull();
     expect(row.owner_verified).toBe(0);
   });
@@ -495,11 +495,11 @@ describe('Owner State Transitions E2E (TEST-05)', () => {
 describe('APPROVAL -> DELAY Downgrade E2E (TEST-05)', () => {
   it('APPROVAL downgraded to DELAY when no owner is connected', async () => {
     // Create agent WITHOUT owner address (NONE state)
-    const agentId = generateId();
-    seedAgent(sqlite, agentId); // No owner
+    const walletId = generateId();
+    seedWallet(sqlite, walletId); // No owner
 
     // Policy where 20 SOL triggers APPROVAL tier
-    seedSpendingLimitPolicy(sqlite, agentId, {
+    seedSpendingLimitPolicy(sqlite, walletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -510,7 +510,7 @@ describe('APPROVAL -> DELAY Downgrade E2E (TEST-05)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -548,13 +548,13 @@ describe('APPROVAL -> DELAY Downgrade E2E (TEST-05)', () => {
 
   it('APPROVAL NOT downgraded when owner IS connected', async () => {
     const ownerKeypair = generateTestKeypair();
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: ownerKeypair.address,
       ownerVerified: false, // GRACE state -- owner connected
     });
 
-    seedSpendingLimitPolicy(sqlite, agentId, {
+    seedSpendingLimitPolicy(sqlite, walletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -565,7 +565,7 @@ describe('APPROVAL -> DELAY Downgrade E2E (TEST-05)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);

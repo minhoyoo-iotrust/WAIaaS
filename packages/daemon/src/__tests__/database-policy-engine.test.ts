@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, policies } from '../infrastructure/database/schema.js';
+import { wallets, policies } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
@@ -21,14 +21,14 @@ import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 let conn: DatabaseConnection;
 let engine: DatabasePolicyEngine;
 let engineWithSqlite: DatabasePolicyEngine;
-let agentId: string;
+let walletId: string;
 
 async function insertTestAgent(): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: '11111111111111111111111111111112',
@@ -40,7 +40,7 @@ async function insertTestAgent(): Promise<string> {
 }
 
 async function insertPolicy(overrides: {
-  agentId?: string | null;
+  walletId?: string | null;
   type: string;
   rules: string;
   priority?: number;
@@ -50,7 +50,7 @@ async function insertPolicy(overrides: {
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   await conn.db.insert(policies).values({
     id,
-    agentId: overrides.agentId ?? null,
+    walletId: overrides.walletId ?? null,
     type: overrides.type,
     rules: overrides.rules,
     priority: overrides.priority ?? 0,
@@ -112,7 +112,7 @@ function approveTx(opts: {
 // ---------------------------------------------------------------------------
 
 async function insertTransaction(overrides: {
-  agentId: string;
+  walletId: string;
   status?: string;
   amount?: string;
   reservedAmount?: string | null;
@@ -121,12 +121,12 @@ async function insertTransaction(overrides: {
   const now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
-      `INSERT INTO transactions (id, agent_id, chain, type, amount, to_address, status, reserved_amount, created_at)
+      `INSERT INTO transactions (id, wallet_id, chain, type, amount, to_address, status, reserved_amount, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
-      overrides.agentId,
+      overrides.walletId,
       'solana',
       'TRANSFER',
       overrides.amount ?? '0',
@@ -143,7 +143,7 @@ beforeEach(async () => {
   pushSchema(conn.sqlite);
   engine = new DatabasePolicyEngine(conn.db);
   engineWithSqlite = new DatabasePolicyEngine(conn.db, conn.sqlite);
-  agentId = await insertTestAgent();
+  walletId = await insertTestAgent();
 });
 
 afterEach(() => {
@@ -156,7 +156,7 @@ afterEach(() => {
 
 describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
   it('should return INSTANT passthrough when no policies exist', async () => {
-    const result = await engine.evaluate(agentId, tx('500000000'));
+    const result = await engine.evaluate(walletId, tx('500000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -175,7 +175,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
     });
 
     // 0.5 SOL = 500M lamports < 1B instant_max
-    const result = await engine.evaluate(agentId, tx('500000000'));
+    const result = await engine.evaluate(walletId, tx('500000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -194,7 +194,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
     });
 
     // 5 SOL = 5B lamports: instant_max < 5B <= notify_max
-    const result = await engine.evaluate(agentId, tx('5000000000'));
+    const result = await engine.evaluate(walletId, tx('5000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
@@ -213,7 +213,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
     });
 
     // 30 SOL = 30B lamports: notify_max < 30B <= delay_max
-    const result = await engine.evaluate(agentId, tx('30000000000'));
+    const result = await engine.evaluate(walletId, tx('30000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('DELAY');
@@ -233,16 +233,16 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
     });
 
     // 100 SOL = 100B lamports > 50B delay_max
-    const result = await engine.evaluate(agentId, tx('100000000000'));
+    const result = await engine.evaluate(walletId, tx('100000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
   });
 
-  it('should use agent-specific policy over global policy of same type', async () => {
+  it('should use wallet-specific policy over global policy of same type', async () => {
     // Global: generous limits
     await insertPolicy({
-      agentId: null,
+      walletId: null,
       type: 'SPENDING_LIMIT',
       rules: JSON.stringify({
         instant_max: '100000000000', // 100 SOL
@@ -255,7 +255,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
 
     // Agent-specific: restrictive limits
     await insertPolicy({
-      agentId,
+      walletId,
       type: 'SPENDING_LIMIT',
       rules: JSON.stringify({
         instant_max: '1000000000', // 1 SOL
@@ -267,7 +267,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
     });
 
     // 5 SOL = 5B: under global instant_max but at agent notify_max
-    const result = await engine.evaluate(agentId, tx('5000000000'));
+    const result = await engine.evaluate(walletId, tx('5000000000'));
 
     // Agent-specific should win: 5B <= 5B notify_max -> NOTIFY
     expect(result.allowed).toBe(true);
@@ -288,7 +288,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
     });
 
     // No enabled policies -> INSTANT passthrough
-    const result = await engine.evaluate(agentId, tx('999999999999'));
+    const result = await engine.evaluate(walletId, tx('999999999999'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -301,7 +301,7 @@ describe('DatabasePolicyEngine - SPENDING_LIMIT', () => {
 
 describe('DatabasePolicyEngine - WHITELIST', () => {
   it('should allow transaction when no whitelist policy exists', async () => {
-    const result = await engine.evaluate(agentId, tx('1000'));
+    const result = await engine.evaluate(walletId, tx('1000'));
 
     expect(result.allowed).toBe(true);
   });
@@ -313,7 +313,7 @@ describe('DatabasePolicyEngine - WHITELIST', () => {
       priority: 20,
     });
 
-    const result = await engine.evaluate(agentId, tx('1000'));
+    const result = await engine.evaluate(walletId, tx('1000'));
 
     expect(result.allowed).toBe(true);
   });
@@ -326,7 +326,7 @@ describe('DatabasePolicyEngine - WHITELIST', () => {
       priority: 20,
     });
 
-    const result = await engine.evaluate(agentId, tx('1000', target));
+    const result = await engine.evaluate(walletId, tx('1000', target));
 
     expect(result.allowed).toBe(true);
   });
@@ -341,7 +341,7 @@ describe('DatabasePolicyEngine - WHITELIST', () => {
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       tx('1000', 'UnknownAddress999'),
     );
 
@@ -362,7 +362,7 @@ describe('DatabasePolicyEngine - WHITELIST', () => {
 
     // Send with mixed-case address -> should still match
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       tx('1000', evmAddress),
     );
 
@@ -399,17 +399,17 @@ describe('DatabasePolicyEngine - Priority + Override', () => {
 
     // WHITELIST should still deny since it filters regardless of priority
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       tx('500000000', 'NotWhitelisted'),
     );
 
     expect(result.allowed).toBe(false);
   });
 
-  it('should override global SPENDING_LIMIT with agent-specific SPENDING_LIMIT', async () => {
+  it('should override global SPENDING_LIMIT with wallet-specific SPENDING_LIMIT', async () => {
     // Global policy
     await insertPolicy({
-      agentId: null,
+      walletId: null,
       type: 'SPENDING_LIMIT',
       rules: JSON.stringify({
         instant_max: '1000000000',
@@ -422,7 +422,7 @@ describe('DatabasePolicyEngine - Priority + Override', () => {
 
     // Agent-specific override with higher limits
     await insertPolicy({
-      agentId,
+      walletId,
       type: 'SPENDING_LIMIT',
       rules: JSON.stringify({
         instant_max: '100000000000', // 100 SOL
@@ -433,8 +433,8 @@ describe('DatabasePolicyEngine - Priority + Override', () => {
       priority: 10,
     });
 
-    // 50 SOL: would be DELAY under global but INSTANT under agent-specific
-    const result = await engine.evaluate(agentId, tx('50000000000'));
+    // 50 SOL: would be DELAY under global but INSTANT under wallet-specific
+    const result = await engine.evaluate(walletId, tx('50000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -461,14 +461,14 @@ describe('DatabasePolicyEngine - TOCTOU Prevention', () => {
 
     // Create a PENDING transaction row
     const txId = await insertTransaction({
-      agentId,
+      walletId,
       status: 'PENDING',
       amount: '5000000000',
     });
 
     // Evaluate and reserve 5 SOL (under 10 SOL instant_max)
     const result = engineWithSqlite.evaluateAndReserve(
-      agentId,
+      walletId,
       tx('5000000000'),
       txId,
     );
@@ -499,12 +499,12 @@ describe('DatabasePolicyEngine - TOCTOU Prevention', () => {
 
     // First request: 5 SOL (INSTANT -- 5 <= 10)
     const txId1 = await insertTransaction({
-      agentId,
+      walletId,
       status: 'PENDING',
       amount: '5000000000',
     });
     const result1 = engineWithSqlite.evaluateAndReserve(
-      agentId,
+      walletId,
       tx('5000000000'),
       txId1,
     );
@@ -514,12 +514,12 @@ describe('DatabasePolicyEngine - TOCTOU Prevention', () => {
     // Without TOCTOU: 6 SOL alone would be INSTANT (6 <= 10)
     // With TOCTOU: effective = 5 (reserved) + 6 = 11 -> NOTIFY (11 > 10, 11 <= 50)
     const txId2 = await insertTransaction({
-      agentId,
+      walletId,
       status: 'PENDING',
       amount: '6000000000',
     });
     const result2 = engineWithSqlite.evaluateAndReserve(
-      agentId,
+      walletId,
       tx('6000000000'),
       txId2,
     );
@@ -530,7 +530,7 @@ describe('DatabasePolicyEngine - TOCTOU Prevention', () => {
   it('should release reservation when releaseReservation is called', async () => {
     // Create a transaction with reserved amount
     const txId = await insertTransaction({
-      agentId,
+      walletId,
       status: 'PENDING',
       amount: '5000000000',
       reservedAmount: '5000000000',
@@ -576,7 +576,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
     });
 
     // No ALLOWED_TOKENS policy -> deny TOKEN_TRANSFER
-    const result = await engine.evaluate(agentId, tokenTx('1000000', USDC_MINT));
+    const result = await engine.evaluate(walletId, tokenTx('1000000', USDC_MINT));
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('no ALLOWED_TOKENS policy configured');
@@ -594,7 +594,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
       priority: 15,
     });
 
-    const result = await engine.evaluate(agentId, tokenTx('1000000', USDC_MINT));
+    const result = await engine.evaluate(walletId, tokenTx('1000000', USDC_MINT));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -610,7 +610,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
     });
 
     const unknownMint = 'UnknownMint111111111111111111111111111111111';
-    const result = await engine.evaluate(agentId, tokenTx('1000000', unknownMint));
+    const result = await engine.evaluate(walletId, tokenTx('1000000', unknownMint));
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('Token not in allowed list');
@@ -628,7 +628,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
     });
 
     // Send with mixed-case address
-    const result = await engine.evaluate(agentId, tokenTx('1000000', evmToken));
+    const result = await engine.evaluate(walletId, tokenTx('1000000', evmToken));
 
     expect(result.allowed).toBe(true);
   });
@@ -644,7 +644,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
     });
 
     // Native TRANSFER -> ALLOWED_TOKENS not applicable -> INSTANT passthrough
-    const result = await engine.evaluate(agentId, tx('1000000000'));
+    const result = await engine.evaluate(walletId, tx('1000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -660,7 +660,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
     });
 
     // TOKEN_TRANSFER without tokenAddress
-    const result = await engine.evaluate(agentId, {
+    const result = await engine.evaluate(walletId, {
       type: 'TOKEN_TRANSFER',
       amount: '1000000',
       toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -695,7 +695,7 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
     });
 
     // 5 USDC = 5M -> NOTIFY (between instant_max and notify_max)
-    const result = await engine.evaluate(agentId, tokenTx('5000000', USDC_MINT));
+    const result = await engine.evaluate(walletId, tokenTx('5000000', USDC_MINT));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
@@ -726,7 +726,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: SWAP_SELECTOR }),
     );
 
@@ -747,7 +747,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: SWAP_SELECTOR }),
     );
 
@@ -766,7 +766,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
 
     const unknownContract = '0x1111111111111111111111111111111111111111';
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: unknownContract, selector: SWAP_SELECTOR }),
     );
 
@@ -795,7 +795,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: SWAP_SELECTOR }),
     );
 
@@ -824,7 +824,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
 
     const forbiddenSelector = '0xdeadbeef';
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: UNISWAP_ROUTER, selector: forbiddenSelector }),
     );
 
@@ -856,7 +856,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
 
     // Aave has no METHOD_WHITELIST entry -> no method restriction -> allow
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: AAVE_POOL, selector: SUPPLY_SELECTOR }),
     );
 
@@ -874,7 +874,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
     });
 
     // Native TRANSFER -> CONTRACT_WHITELIST not applicable -> passthrough
-    const result = await engine.evaluate(agentId, tx('1000000000'));
+    const result = await engine.evaluate(walletId, tx('1000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -892,7 +892,7 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
 
     // Send with mixed-case address -> should still match
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       contractCallTx({ contractAddress: mixedCaseAddress, selector: SWAP_SELECTOR }),
     );
 
@@ -922,7 +922,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER }),
     );
 
@@ -943,7 +943,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
     );
 
@@ -963,7 +963,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
 
     const unknownSpender = '0x1111111111111111111111111111111111111111';
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: unknownSpender }),
     );
 
@@ -984,7 +984,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     // MAX_UINT256 = 2^256 - 1
     const maxUint256 = (2n ** 256n - 1n).toString();
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
     );
 
@@ -1012,7 +1012,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
 
     const maxUint256 = (2n ** 256n - 1n).toString();
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
     );
 
@@ -1039,7 +1039,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
 
     const maxUint256 = (2n ** 256n - 1n).toString();
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
     );
 
@@ -1067,7 +1067,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '2000000' }),
     );
 
@@ -1094,7 +1094,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '500000' }),
     );
 
@@ -1113,7 +1113,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
     );
 
@@ -1137,7 +1137,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
     );
 
@@ -1161,7 +1161,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
     );
 
@@ -1195,7 +1195,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     });
 
     // Native TRANSFER -> approve policies not applicable -> INSTANT passthrough
-    const result = await engine.evaluate(agentId, tx('1000000000'));
+    const result = await engine.evaluate(walletId, tx('1000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -1213,7 +1213,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
 
     // Send with mixed-case spender address -> should still match
     const result = await engine.evaluate(
-      agentId,
+      walletId,
       approveTx({ spenderAddress: mixedCaseSpender, approveAmount: '1000000' }),
     );
 
@@ -1239,7 +1239,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 20,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'AllowedAddr1', chain: 'solana' },
       { type: 'TRANSFER', amount: '200', toAddress: 'NotAllowedAddr', chain: 'solana' },
     ]);
@@ -1263,7 +1263,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 10,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
       { type: 'TOKEN_TRANSFER', amount: '1000000', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana', tokenAddress: USDC_MINT },
     ]);
@@ -1285,7 +1285,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 10,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
       { type: 'CONTRACT_CALL', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', contractAddress: UNISWAP_ROUTER },
     ]);
@@ -1307,7 +1307,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 10,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
       { type: 'APPROVE', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' },
     ]);
@@ -1327,7 +1327,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 20,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
       { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
     ]);
@@ -1349,7 +1349,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 10,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
       { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
       { type: 'TRANSFER', amount: '300', toAddress: 'Addr3', chain: 'solana' },
@@ -1382,7 +1382,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 15,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
       { type: 'APPROVE', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' },
     ]);
@@ -1395,7 +1395,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
   });
 
   it('No policies -> INSTANT passthrough', async () => {
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
       { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
     ]);
@@ -1414,7 +1414,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 20,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
       { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
       { type: 'TRANSFER', amount: '300', toAddress: 'Addr3', chain: 'solana' },
@@ -1458,7 +1458,7 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
       priority: 15,
     });
 
-    const result = await engine.evaluateBatch(agentId, [
+    const result = await engine.evaluateBatch(walletId, [
       { type: 'TRANSFER', amount: '100', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana' },
       { type: 'TOKEN_TRANSFER', amount: '99999999', toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', chain: 'solana', tokenAddress: USDC_MINT },
       { type: 'APPROVE', amount: '0', toAddress: UNISWAP_ROUTER, chain: 'ethereum', spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' },

@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents } from '../infrastructure/database/schema.js';
+import { wallets } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { WAIaaSError } from '@waiaas/core';
 import { DelayQueue } from '../workflow/delay-queue.js';
@@ -21,14 +21,14 @@ import { DelayQueue } from '../workflow/delay-queue.js';
 
 let conn: DatabaseConnection;
 let queue: DelayQueue;
-let agentId: string;
+let walletId: string;
 
 async function insertTestAgent(): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: `pk-${id}`,
@@ -40,7 +40,7 @@ async function insertTestAgent(): Promise<string> {
 }
 
 function insertTransaction(overrides: {
-  agentId: string;
+  walletId: string;
   status?: string;
   amount?: string;
   reservedAmount?: string | null;
@@ -49,12 +49,12 @@ function insertTransaction(overrides: {
   const now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
-      `INSERT INTO transactions (id, agent_id, chain, type, amount, to_address, status, reserved_amount, created_at)
+      `INSERT INTO transactions (id, wallet_id, chain, type, amount, to_address, status, reserved_amount, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
-      overrides.agentId,
+      overrides.walletId,
       'solana',
       'TRANSFER',
       overrides.amount ?? '1000000000',
@@ -74,7 +74,7 @@ beforeEach(async () => {
   conn = createDatabase(':memory:');
   pushSchema(conn.sqlite);
   queue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
-  agentId = await insertTestAgent();
+  walletId = await insertTestAgent();
 });
 
 afterEach(() => {
@@ -87,7 +87,7 @@ afterEach(() => {
 
 describe('DelayQueue - queueDelay', () => {
   it('should set QUEUED status, queuedAt, and metadata with delaySeconds', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING' });
+    const txId = insertTransaction({ walletId, status: 'PENDING' });
     const delaySeconds = 300;
 
     const result = queue.queueDelay(txId, delaySeconds);
@@ -114,7 +114,7 @@ describe('DelayQueue - queueDelay', () => {
 
 describe('DelayQueue - cancelDelay', () => {
   it('should cancel a QUEUED transaction and set status to CANCELLED', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING', reservedAmount: '1000000000' });
+    const txId = insertTransaction({ walletId, status: 'PENDING', reservedAmount: '1000000000' });
     queue.queueDelay(txId, 300);
 
     queue.cancelDelay(txId);
@@ -128,7 +128,7 @@ describe('DelayQueue - cancelDelay', () => {
   });
 
   it('should throw TX_ALREADY_PROCESSED when cancelling a non-QUEUED transaction', () => {
-    const txId = insertTransaction({ agentId, status: 'CONFIRMED' });
+    const txId = insertTransaction({ walletId, status: 'CONFIRMED' });
 
     expect(() => queue.cancelDelay(txId)).toThrow(WAIaaSError);
     try {
@@ -149,7 +149,7 @@ describe('DelayQueue - cancelDelay', () => {
 
   it('should clear reserved_amount on cancellation', () => {
     const txId = insertTransaction({
-      agentId,
+      walletId,
       status: 'PENDING',
       reservedAmount: '5000000000',
     });
@@ -176,7 +176,7 @@ describe('DelayQueue - cancelDelay', () => {
 
 describe('DelayQueue - processExpired', () => {
   it('should return expired QUEUED transactions and set them to EXECUTING', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING' });
+    const txId = insertTransaction({ walletId, status: 'PENDING' });
     // Queue with 60 second delay
     queue.queueDelay(txId, 60);
 
@@ -191,7 +191,7 @@ describe('DelayQueue - processExpired', () => {
 
     expect(expired).toHaveLength(1);
     expect(expired[0]!.txId).toBe(txId);
-    expect(expired[0]!.agentId).toBe(agentId);
+    expect(expired[0]!.walletId).toBe(walletId);
 
     // Verify DB status changed to EXECUTING
     const row = conn.sqlite
@@ -201,7 +201,7 @@ describe('DelayQueue - processExpired', () => {
   });
 
   it('should ignore QUEUED transactions whose cooldown has not elapsed', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING' });
+    const txId = insertTransaction({ walletId, status: 'PENDING' });
     // Queue with 600 second delay (10 minutes into the future)
     queue.queueDelay(txId, 600);
 
@@ -218,7 +218,7 @@ describe('DelayQueue - processExpired', () => {
   });
 
   it('should be idempotent -- already EXECUTING transactions are not returned', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING' });
+    const txId = insertTransaction({ walletId, status: 'PENDING' });
     queue.queueDelay(txId, 60);
 
     // Force expire
@@ -239,10 +239,10 @@ describe('DelayQueue - processExpired', () => {
   });
 
   it('should handle multiple expired transactions from different agents', async () => {
-    const agentId2 = await insertTestAgent();
+    const walletId2 = await insertTestAgent();
 
-    const txId1 = insertTransaction({ agentId, status: 'PENDING' });
-    const txId2 = insertTransaction({ agentId: agentId2, status: 'PENDING' });
+    const txId1 = insertTransaction({ walletId, status: 'PENDING' });
+    const txId2 = insertTransaction({ walletId: walletId2, status: 'PENDING' });
 
     queue.queueDelay(txId1, 60);
     queue.queueDelay(txId2, 60);
@@ -269,7 +269,7 @@ describe('DelayQueue - processExpired', () => {
 
 describe('DelayQueue - isExpired', () => {
   it('should return true when cooldown has elapsed', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING' });
+    const txId = insertTransaction({ walletId, status: 'PENDING' });
     queue.queueDelay(txId, 60);
 
     // Set queuedAt to 120 seconds ago
@@ -282,7 +282,7 @@ describe('DelayQueue - isExpired', () => {
   });
 
   it('should return false when cooldown has not elapsed', () => {
-    const txId = insertTransaction({ agentId, status: 'PENDING' });
+    const txId = insertTransaction({ walletId, status: 'PENDING' });
     queue.queueDelay(txId, 600);
 
     expect(queue.isExpired(txId)).toBe(false);

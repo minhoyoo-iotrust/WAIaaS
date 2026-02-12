@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents } from '../infrastructure/database/schema.js';
+import { wallets } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { WAIaaSError } from '@waiaas/core';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
@@ -21,7 +21,7 @@ import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 
 let conn: DatabaseConnection;
 let workflow: ApprovalWorkflow;
-let agentId: string;
+let walletId: string;
 
 function nowEpoch(): number {
   return Math.floor(Date.now() / 1000);
@@ -30,9 +30,9 @@ function nowEpoch(): number {
 async function insertTestAgent(): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: generateId(), // unique per test
@@ -44,7 +44,7 @@ async function insertTestAgent(): Promise<string> {
 }
 
 function insertTransaction(overrides: {
-  agentId: string;
+  walletId: string;
   status?: string;
   amount?: string;
   reservedAmount?: string | null;
@@ -54,12 +54,12 @@ function insertTransaction(overrides: {
   const now = nowEpoch();
   conn.sqlite
     .prepare(
-      `INSERT INTO transactions (id, agent_id, chain, type, amount, to_address, status, tier, reserved_amount, created_at)
+      `INSERT INTO transactions (id, wallet_id, chain, type, amount, to_address, status, tier, reserved_amount, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
-      overrides.agentId,
+      overrides.walletId,
       'solana',
       'TRANSFER',
       overrides.amount ?? '100000000000',
@@ -112,7 +112,7 @@ beforeEach(async () => {
     sqlite: conn.sqlite,
     config: { policy_defaults_approval_timeout: 7200 },
   });
-  agentId = await insertTestAgent();
+  walletId = await insertTestAgent();
 });
 
 afterEach(() => {
@@ -125,7 +125,7 @@ afterEach(() => {
 
 describe('ApprovalWorkflow - requestApproval', () => {
   it('should create pending_approvals record and set QUEUED status', () => {
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
 
     const result = workflow.requestApproval(txId);
 
@@ -145,7 +145,7 @@ describe('ApprovalWorkflow - requestApproval', () => {
   });
 
   it('should use policy-specific timeout when provided', () => {
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
 
     const result = workflow.requestApproval(txId, {
       policyTimeoutSeconds: 600,
@@ -163,7 +163,7 @@ describe('ApprovalWorkflow - requestApproval', () => {
   });
 
   it('should use config timeout when no policy timeout', () => {
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
 
     // No policyTimeoutSeconds provided -> config default (7200)
     workflow.requestApproval(txId);
@@ -183,7 +183,7 @@ describe('ApprovalWorkflow - requestApproval', () => {
       config: { policy_defaults_approval_timeout: undefined as unknown as number },
     });
 
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
     wf.requestApproval(txId);
 
     const approval = getApproval(txId);
@@ -200,7 +200,7 @@ describe('ApprovalWorkflow - requestApproval', () => {
 
 describe('ApprovalWorkflow - approve', () => {
   it('should set EXECUTING + approvedAt + ownerSignature on valid pending', () => {
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
     workflow.requestApproval(txId);
 
     const signature = 'owner-sig-abc123';
@@ -220,7 +220,7 @@ describe('ApprovalWorkflow - approve', () => {
   });
 
   it('should throw APPROVAL_TIMEOUT on expired approval', () => {
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
     workflow.requestApproval(txId, { policyTimeoutSeconds: 1 });
 
     // Force expiration by updating expiresAt to past
@@ -252,7 +252,7 @@ describe('ApprovalWorkflow - approve', () => {
   });
 
   it('should clear reserved_amount on approve', () => {
-    const txId = insertTransaction({ agentId, reservedAmount: '100000000000' });
+    const txId = insertTransaction({ walletId, reservedAmount: '100000000000' });
     workflow.requestApproval(txId);
 
     workflow.approve(txId, 'sig');
@@ -268,7 +268,7 @@ describe('ApprovalWorkflow - approve', () => {
 
 describe('ApprovalWorkflow - reject', () => {
   it('should set CANCELLED + rejectedAt on valid pending', () => {
-    const txId = insertTransaction({ agentId });
+    const txId = insertTransaction({ walletId });
     workflow.requestApproval(txId);
 
     const result = workflow.reject(txId);
@@ -300,7 +300,7 @@ describe('ApprovalWorkflow - reject', () => {
   });
 
   it('should clear reserved_amount on reject', () => {
-    const txId = insertTransaction({ agentId, reservedAmount: '100000000000' });
+    const txId = insertTransaction({ walletId, reservedAmount: '100000000000' });
     workflow.requestApproval(txId);
 
     workflow.reject(txId);
@@ -316,8 +316,8 @@ describe('ApprovalWorkflow - reject', () => {
 
 describe('ApprovalWorkflow - processExpiredApprovals', () => {
   it('should expire timed-out approvals and set EXPIRED status', () => {
-    const txId1 = insertTransaction({ agentId });
-    const txId2 = insertTransaction({ agentId });
+    const txId1 = insertTransaction({ walletId });
+    const txId2 = insertTransaction({ walletId });
 
     workflow.requestApproval(txId1, { policyTimeoutSeconds: 1 });
     workflow.requestApproval(txId2, { policyTimeoutSeconds: 1 });
@@ -341,8 +341,8 @@ describe('ApprovalWorkflow - processExpiredApprovals', () => {
   });
 
   it('should ignore non-expired approvals', () => {
-    const txId1 = insertTransaction({ agentId });
-    const txId2 = insertTransaction({ agentId });
+    const txId1 = insertTransaction({ walletId });
+    const txId2 = insertTransaction({ walletId });
 
     workflow.requestApproval(txId1, { policyTimeoutSeconds: 99999 }); // far future
     workflow.requestApproval(txId2, { policyTimeoutSeconds: 1 });
@@ -363,7 +363,7 @@ describe('ApprovalWorkflow - processExpiredApprovals', () => {
   });
 
   it('should clear reserved_amount on expired transactions', () => {
-    const txId = insertTransaction({ agentId, reservedAmount: '100000000000' });
+    const txId = insertTransaction({ walletId, reservedAmount: '100000000000' });
     workflow.requestApproval(txId, { policyTimeoutSeconds: 1 });
 
     // Force expiration

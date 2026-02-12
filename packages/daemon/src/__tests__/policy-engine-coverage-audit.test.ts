@@ -12,7 +12,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, policies } from '../infrastructure/database/schema.js';
+import { wallets, policies } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
@@ -22,12 +22,12 @@ import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 let conn: DatabaseConnection;
 let engine: DatabasePolicyEngine;
-let agentId: string;
+let walletId: string;
 
 async function insertTestAgent(): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
     name: 'audit-agent',
     chain: 'solana',
@@ -41,7 +41,7 @@ async function insertTestAgent(): Promise<string> {
 }
 
 async function insertPolicy(overrides: {
-  agentId?: string | null;
+  walletId?: string | null;
   type: string;
   rules: string;
   priority?: number;
@@ -51,7 +51,7 @@ async function insertPolicy(overrides: {
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   await conn.db.insert(policies).values({
     id,
-    agentId: overrides.agentId ?? null,
+    walletId: overrides.walletId ?? null,
     type: overrides.type,
     rules: overrides.rules,
     priority: overrides.priority ?? 0,
@@ -74,7 +74,7 @@ beforeEach(async () => {
   conn = createDatabase(':memory:');
   pushSchema(conn.sqlite);
   engine = new DatabasePolicyEngine(conn.db);
-  agentId = await insertTestAgent();
+  walletId = await insertTestAgent();
 });
 
 afterEach(() => {
@@ -101,7 +101,7 @@ describe('DatabasePolicyEngine - Boundary Values (coverage audit)', () => {
     });
 
     // Amount == instant_max (1 SOL exactly)
-    const result = await engine.evaluate(agentId, tx('1000000000'));
+    const result = await engine.evaluate(walletId, tx('1000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -115,7 +115,7 @@ describe('DatabasePolicyEngine - Boundary Values (coverage audit)', () => {
     });
 
     // Amount == notify_max (10 SOL exactly)
-    const result = await engine.evaluate(agentId, tx('10000000000'));
+    const result = await engine.evaluate(walletId, tx('10000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
@@ -129,7 +129,7 @@ describe('DatabasePolicyEngine - Boundary Values (coverage audit)', () => {
     });
 
     // Amount == delay_max (50 SOL exactly)
-    const result = await engine.evaluate(agentId, tx('50000000000'));
+    const result = await engine.evaluate(walletId, tx('50000000000'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('DELAY');
@@ -144,7 +144,7 @@ describe('DatabasePolicyEngine - Boundary Values (coverage audit)', () => {
     });
 
     // instant_max + 1
-    const result = await engine.evaluate(agentId, tx('1000000001'));
+    const result = await engine.evaluate(walletId, tx('1000000001'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
@@ -158,7 +158,7 @@ describe('DatabasePolicyEngine - Boundary Values (coverage audit)', () => {
     });
 
     // delay_max + 1
-    const result = await engine.evaluate(agentId, tx('50000000001'));
+    const result = await engine.evaluate(walletId, tx('50000000001'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
@@ -191,7 +191,7 @@ describe('DatabasePolicyEngine - Combined WHITELIST + SPENDING_LIMIT (coverage a
     });
 
     // Whitelisted address with amount in NOTIFY range
-    const result = await engine.evaluate(agentId, tx('5000000000', whitelistedAddr));
+    const result = await engine.evaluate(walletId, tx('5000000000', whitelistedAddr));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
@@ -218,7 +218,7 @@ describe('DatabasePolicyEngine - Combined WHITELIST + SPENDING_LIMIT (coverage a
     });
 
     // Non-whitelisted address with tiny amount (would be INSTANT if whitelist passed)
-    const result = await engine.evaluate(agentId, tx('100', 'NotWhitelisted'));
+    const result = await engine.evaluate(walletId, tx('100', 'NotWhitelisted'));
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toBeDefined();
@@ -244,7 +244,7 @@ describe('DatabasePolicyEngine - Combined WHITELIST + SPENDING_LIMIT (coverage a
     });
 
     // Any address should pass since whitelist is inactive
-    const result = await engine.evaluate(agentId, tx('500000000', 'AnyAddress'));
+    const result = await engine.evaluate(walletId, tx('500000000', 'AnyAddress'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');
@@ -269,7 +269,7 @@ describe('DatabasePolicyEngine - Zero Amount (coverage audit)', () => {
     });
 
     // Amount = 0 (below all thresholds)
-    const result = await engine.evaluate(agentId, tx('0'));
+    const result = await engine.evaluate(walletId, tx('0'));
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT');

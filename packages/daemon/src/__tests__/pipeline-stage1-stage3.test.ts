@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, transactions, policies } from '../infrastructure/database/schema.js';
+import { wallets, transactions, policies } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import {
   stage1Validate,
@@ -114,9 +114,9 @@ const MOCK_PUBLIC_KEY = '11111111111111111111111111111112';
 async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: MOCK_PUBLIC_KEY,
@@ -129,7 +129,7 @@ async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
 
 function createPipelineContext(
   conn: DatabaseConnection,
-  agentId: string,
+  walletId: string,
   overrides: Partial<PipelineContext> = {},
 ): PipelineContext {
   return {
@@ -138,8 +138,8 @@ function createPipelineContext(
     keyStore: createMockKeyStore(),
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
-    agentId,
-    agent: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
+    walletId,
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
     request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '1000000000' },
     txId: '',
     ...overrides,
@@ -149,7 +149,7 @@ function createPipelineContext(
 // Helper: insert a policy into the DB
 async function insertPolicy(
   conn: DatabaseConnection,
-  agentId: string | null,
+  walletId: string | null,
   type: string,
   rules: Record<string, unknown>,
   priority: number = 100,
@@ -158,7 +158,7 @@ async function insertPolicy(
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   await conn.db.insert(policies).values({
     id,
-    agentId,
+    walletId,
     type,
     rules: JSON.stringify(rules),
     priority,
@@ -190,13 +190,13 @@ afterEach(() => {
 
 describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   it('should parse TRANSFER type and INSERT type=TRANSFER', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request: TransferRequestInput = {
       type: 'TRANSFER',
       to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
       amount: '1000000000',
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -214,14 +214,14 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should parse TOKEN_TRANSFER type and INSERT type=TOKEN_TRANSFER', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request: TokenTransferRequest = {
       type: 'TOKEN_TRANSFER',
       to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
       amount: '5000000',
       token: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, symbol: 'USDC' },
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -237,13 +237,13 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should parse CONTRACT_CALL type and INSERT type=CONTRACT_CALL', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: '0x1234567890abcdef1234567890abcdef12345678',
       calldata: '0xa9059cbb0000000000000000',
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -259,14 +259,14 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should parse APPROVE type and INSERT type=APPROVE', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request: ApproveRequest = {
       type: 'APPROVE',
       spender: '0xabcdef1234567890abcdef1234567890abcdef12',
       token: { address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', decimals: 6, symbol: 'USDC' },
       amount: '1000000',
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -282,7 +282,7 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should parse BATCH type and INSERT type=BATCH', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request: BatchRequest = {
       type: 'BATCH',
       instructions: [
@@ -290,7 +290,7 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
         { to: 'addr2', amount: '2000000' },
       ],
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -306,13 +306,13 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should maintain backward compat: no type field defaults to TRANSFER', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     // Legacy request with no type field
     const request: SendTransactionRequest = {
       to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
       amount: '1000000000',
     };
-    const ctx = createPipelineContext(conn, agentId, { request });
+    const ctx = createPipelineContext(conn, walletId, { request });
 
     await stage1Validate(ctx);
 
@@ -326,13 +326,13 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should reject invalid type value', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request = {
       type: 'INVALID',
       to: 'addr1',
       amount: '1000',
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -340,14 +340,14 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
   });
 
   it('should reject TOKEN_TRANSFER with missing token object', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const request = {
       type: 'TOKEN_TRANSFER',
       to: 'addr1',
       amount: '1000',
       // missing token
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
     });
 
@@ -361,14 +361,14 @@ describe('Stage 1: discriminatedUnion 5-type parsing', () => {
 
 describe('Stage 3: type-based policy filtering', () => {
   it('should apply ALLOWED_TOKENS for TOKEN_TRANSFER and allow whitelisted token', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
     // Set up ALLOWED_TOKENS policy
-    await insertPolicy(conn, agentId, 'ALLOWED_TOKENS', {
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
       tokens: [{ address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }],
     });
     // Set up SPENDING_LIMIT so we don't hit passthrough
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -383,7 +383,7 @@ describe('Stage 3: type-based policy filtering', () => {
     };
 
     const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -397,13 +397,13 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should apply ALLOWED_TOKENS for TOKEN_TRANSFER and deny non-whitelisted token', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
     // Set up ALLOWED_TOKENS policy (different token)
-    await insertPolicy(conn, agentId, 'ALLOWED_TOKENS', {
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
       tokens: [{ address: 'SomeOtherMint' }],
     });
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -418,7 +418,7 @@ describe('Stage 3: type-based policy filtering', () => {
     };
 
     const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -430,12 +430,12 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should apply CONTRACT_WHITELIST for CONTRACT_CALL and allow whitelisted contract', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
-    await insertPolicy(conn, agentId, 'CONTRACT_WHITELIST', {
+    await insertPolicy(conn, walletId, 'CONTRACT_WHITELIST', {
       contracts: [{ address: '0x1234567890abcdef1234567890abcdef12345678' }],
     });
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -449,7 +449,7 @@ describe('Stage 3: type-based policy filtering', () => {
     };
 
     const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -462,12 +462,12 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should apply APPROVED_SPENDERS for APPROVE and deny unapproved spender', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
-    await insertPolicy(conn, agentId, 'APPROVED_SPENDERS', {
+    await insertPolicy(conn, walletId, 'APPROVED_SPENDERS', {
       spenders: [{ address: '0xDifferentSpender' }],
     });
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -482,7 +482,7 @@ describe('Stage 3: type-based policy filtering', () => {
     };
 
     const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -494,10 +494,10 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should use evaluateBatch for BATCH type requests', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
     // Set up policies for batch evaluation
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -516,7 +516,7 @@ describe('Stage 3: type-based policy filtering', () => {
     // Spy on evaluateBatch to verify it gets called
     const evaluateBatchSpy = vi.spyOn(policyEngine, 'evaluateBatch');
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -531,15 +531,15 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should apply only SPENDING_LIMIT + WHITELIST for plain TRANSFER (no type-specific policies)', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '500000000',
       notify_max: '1000000000',
       delay_max: '5000000000',
       delay_seconds: 60,
     });
-    await insertPolicy(conn, agentId, 'WHITELIST', {
+    await insertPolicy(conn, walletId, 'WHITELIST', {
       allowed_addresses: ['Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr'],
     });
 
@@ -550,7 +550,7 @@ describe('Stage 3: type-based policy filtering', () => {
     };
 
     const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -564,13 +564,13 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should pass correct TransactionParam with tokenAddress for TOKEN_TRANSFER', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
     // Set up policy that checks tokenAddress
-    await insertPolicy(conn, agentId, 'ALLOWED_TOKENS', {
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
       tokens: [{ address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }],
     });
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -588,7 +588,7 @@ describe('Stage 3: type-based policy filtering', () => {
     // Spy on evaluate to check the TransactionParam passed
     const evaluateSpy = vi.spyOn(policyEngine, 'evaluateAndReserve');
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,
@@ -605,12 +605,12 @@ describe('Stage 3: type-based policy filtering', () => {
   });
 
   it('should pass correct TransactionParam with contractAddress and selector for CONTRACT_CALL', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
-    await insertPolicy(conn, agentId, 'CONTRACT_WHITELIST', {
+    await insertPolicy(conn, walletId, 'CONTRACT_WHITELIST', {
       contracts: [{ address: '0x1234567890abcdef1234567890abcdef12345678' }],
     });
-    await insertPolicy(conn, agentId, 'SPENDING_LIMIT', {
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
       instant_max: '999999999999',
       notify_max: '999999999999',
       delay_max: '999999999999',
@@ -626,7 +626,7 @@ describe('Stage 3: type-based policy filtering', () => {
     const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
     const evaluateSpy = vi.spyOn(policyEngine, 'evaluateAndReserve');
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       request: request as unknown as SendTransactionRequest,
       policyEngine,
       sqlite: conn.sqlite,

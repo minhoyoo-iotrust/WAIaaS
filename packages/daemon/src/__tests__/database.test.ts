@@ -57,7 +57,6 @@ describe('Schema creation', () => {
 
     const tableNames = tables.map((t) => t.name).sort();
     expect(tableNames).toEqual([
-      'agents',
       'audit_log',
       'key_value_store',
       'notification_logs',
@@ -66,11 +65,12 @@ describe('Schema creation', () => {
       'schema_version',
       'sessions',
       'transactions',
+      'wallets',
     ]);
   });
 
-  it('agents table should have correct columns', () => {
-    const columns = sqlite.prepare("PRAGMA table_info('agents')").all() as Array<{
+  it('wallets table should have correct columns', () => {
+    const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{
       name: string;
       type: string;
       notnull: number;
@@ -227,47 +227,47 @@ describe('PRAGMA verification (file-based)', () => {
 describe('CHECK constraints', () => {
   const ts = now();
 
-  describe('agents', () => {
+  describe('wallets', () => {
     it('should accept valid status ACTIVE', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+          `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Agent', 'solana', 'mainnet', 'pubkey1', 'ACTIVE', 0, ts, ts);
+        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'pubkey1', 'ACTIVE', 0, ts, ts);
       }).not.toThrow();
     });
 
     it('should reject invalid status INVALID_STATUS', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+          `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Agent', 'solana', 'mainnet', 'pubkey2', 'INVALID_STATUS', 0, ts, ts);
+        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'pubkey2', 'INVALID_STATUS', 0, ts, ts);
       }).toThrow(/CHECK/i);
     });
 
     it('should accept valid chain solana', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+          `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Agent', 'solana', 'mainnet', 'pubkey3', 'CREATING', 0, ts, ts);
+        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'pubkey3', 'CREATING', 0, ts, ts);
       }).not.toThrow();
     });
 
     it('should reject invalid chain bitcoin', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+          `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Agent', 'bitcoin', 'mainnet', 'pubkey4', 'CREATING', 0, ts, ts);
+        ).run(generateId(), 'Test Wallet', 'bitcoin', 'mainnet', 'pubkey4', 'CREATING', 0, ts, ts);
       }).toThrow(/CHECK/i);
     });
 
     it('should accept valid EVM network ethereum-mainnet', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+          `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(generateId(), 'EVM Agent', 'ethereum', 'ethereum-mainnet', 'pubkey-evm1', 'CREATING', 0, ts, ts);
       }).not.toThrow();
@@ -276,7 +276,7 @@ describe('CHECK constraints', () => {
     it('should accept valid EVM network polygon-amoy', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+          `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(generateId(), 'EVM Agent', 'ethereum', 'polygon-amoy', 'pubkey-evm2', 'CREATING', 0, ts, ts);
       }).not.toThrow();
@@ -284,58 +284,58 @@ describe('CHECK constraints', () => {
   });
 
   describe('transactions', () => {
-    let agentId: string;
+    let walletId: string;
 
     beforeEach(() => {
-      agentId = generateId();
+      walletId = generateId();
       sqlite.prepare(
-        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+        `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(agentId, 'Test Agent', 'solana', 'mainnet', `pubkey-tx-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+      ).run(walletId, 'Test Wallet', 'solana', 'mainnet', `pubkey-tx-${Math.random()}`, 'ACTIVE', 0, ts, ts);
     });
 
     it('should accept valid type TRANSFER', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+          `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), agentId, 'solana', 'TRANSFER', 'PENDING', ts);
+        ).run(generateId(), walletId, 'solana', 'TRANSFER', 'PENDING', ts);
       }).not.toThrow();
     });
 
     it('should reject invalid type INVALID_TYPE', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+          `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), agentId, 'solana', 'INVALID_TYPE', 'PENDING', ts);
+        ).run(generateId(), walletId, 'solana', 'INVALID_TYPE', 'PENDING', ts);
       }).toThrow(/CHECK/i);
     });
 
     it('should accept valid status PARTIAL_FAILURE', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+          `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), agentId, 'solana', 'BATCH', 'PARTIAL_FAILURE', ts);
+        ).run(generateId(), walletId, 'solana', 'BATCH', 'PARTIAL_FAILURE', ts);
       }).not.toThrow();
     });
 
     it('should accept NULL tier (nullable with CHECK)', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO transactions (id, agent_id, chain, type, status, tier, created_at)
+          `INSERT INTO transactions (id, wallet_id, chain, type, status, tier, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), agentId, 'solana', 'TRANSFER', 'PENDING', null, ts);
+        ).run(generateId(), walletId, 'solana', 'TRANSFER', 'PENDING', null, ts);
       }).not.toThrow();
     });
 
     it('should accept valid tier INSTANT', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO transactions (id, agent_id, chain, type, status, tier, created_at)
+          `INSERT INTO transactions (id, wallet_id, chain, type, status, tier, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), agentId, 'solana', 'TRANSFER', 'PENDING', 'INSTANT', ts);
+        ).run(generateId(), walletId, 'solana', 'TRANSFER', 'PENDING', 'INSTANT', ts);
       }).not.toThrow();
     });
   });
@@ -398,7 +398,7 @@ describe('UUID v7 ordering', () => {
     expect(sorted).toEqual(ids);
   });
 
-  it('should order agents by id matching chronological creation order', async () => {
+  it('should order wallets by id matching chronological creation order', async () => {
     const ts0 = now();
     const createdIds: string[] = [];
 
@@ -406,14 +406,14 @@ describe('UUID v7 ordering', () => {
       const id = generateId();
       createdIds.push(id);
       sqlite.prepare(
-        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+        `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(id, `Agent ${i}`, 'solana', 'mainnet', `uuid-test-pk-${i}`, 'ACTIVE', 0, ts0, ts0);
       await new Promise((r) => setTimeout(r, 2));
     }
 
     const rows = sqlite
-      .prepare('SELECT id FROM agents ORDER BY id')
+      .prepare('SELECT id FROM wallets ORDER BY id')
       .all() as Array<{ id: string }>;
 
     const dbIds = rows.map((r) => r.id);
@@ -428,79 +428,79 @@ describe('UUID v7 ordering', () => {
 describe('Foreign key constraints', () => {
   const ts0 = now();
 
-  it('should reject session with non-existent agentId', () => {
+  it('should reject session with non-existent walletId', () => {
     expect(() => {
       sqlite.prepare(
-        `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(generateId(), 'non-existent-agent-id', 'hash123', ts0 + 3600, ts0 + 86400, ts0);
+      ).run(generateId(), 'non-existent-wallet-id', 'hash123', ts0 + 3600, ts0 + 86400, ts0);
     }).toThrow(/FOREIGN KEY/i);
   });
 
-  it('should CASCADE delete sessions when agent is deleted', () => {
-    const agentId = generateId();
+  it('should CASCADE delete sessions when wallet is deleted', () => {
+    const walletId = generateId();
     const sessionId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(agentId, 'Agent', 'solana', 'mainnet', 'pk-fk-cascade', 'ACTIVE', 0, ts0, ts0);
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-cascade', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
-      `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(sessionId, agentId, 'hash456', ts0 + 3600, ts0 + 86400, ts0);
+    ).run(sessionId, walletId, 'hash456', ts0 + 3600, ts0 + 86400, ts0);
 
     // Verify session exists
     const before = sqlite.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE id = ?').get(sessionId) as { cnt: number };
     expect(before.cnt).toBe(1);
 
     // Delete agent -> should cascade
-    sqlite.prepare('DELETE FROM agents WHERE id = ?').run(agentId);
+    sqlite.prepare('DELETE FROM wallets WHERE id = ?').run(walletId);
 
     const after = sqlite.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE id = ?').get(sessionId) as { cnt: number };
     expect(after.cnt).toBe(0);
   });
 
-  it('should RESTRICT delete agent with transactions', () => {
-    const agentId = generateId();
+  it('should RESTRICT delete wallet with transactions', () => {
+    const walletId = generateId();
     const txId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(agentId, 'Agent', 'solana', 'mainnet', 'pk-fk-restrict', 'ACTIVE', 0, ts0, ts0);
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-restrict', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
-      `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+      `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(txId, agentId, 'solana', 'TRANSFER', 'CONFIRMED', ts0);
+    ).run(txId, walletId, 'solana', 'TRANSFER', 'CONFIRMED', ts0);
 
     // Delete should fail due to RESTRICT
     expect(() => {
-      sqlite.prepare('DELETE FROM agents WHERE id = ?').run(agentId);
+      sqlite.prepare('DELETE FROM wallets WHERE id = ?').run(walletId);
     }).toThrow(/FOREIGN KEY/i);
   });
 
   it('should SET NULL session_id on transactions when session is deleted', () => {
-    const agentId = generateId();
+    const walletId = generateId();
     const sessionId = generateId();
     const txId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(agentId, 'Agent', 'solana', 'mainnet', 'pk-fk-setnull', 'ACTIVE', 0, ts0, ts0);
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-setnull', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
-      `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(sessionId, agentId, 'hash789', ts0 + 3600, ts0 + 86400, ts0);
+    ).run(sessionId, walletId, 'hash789', ts0 + 3600, ts0 + 86400, ts0);
 
     sqlite.prepare(
-      `INSERT INTO transactions (id, agent_id, session_id, chain, type, status, created_at)
+      `INSERT INTO transactions (id, wallet_id, session_id, chain, type, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(txId, agentId, sessionId, 'solana', 'TRANSFER', 'PENDING', ts0);
+    ).run(txId, walletId, sessionId, 'solana', 'TRANSFER', 'PENDING', ts0);
 
     // Delete session -> transaction.session_id should become NULL
     sqlite.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
@@ -510,31 +510,31 @@ describe('Foreign key constraints', () => {
   });
 
   it('should CASCADE delete pending_approvals when transaction is deleted', () => {
-    const agentId = generateId();
+    const walletId = generateId();
     const txId = generateId();
     const approvalId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(agentId, 'Agent', 'solana', 'mainnet', 'pk-fk-pa-cascade', 'ACTIVE', 0, ts0, ts0);
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-pa-cascade', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
-      `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+      `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(txId, agentId, 'solana', 'TRANSFER', 'PENDING', ts0);
+    ).run(txId, walletId, 'solana', 'TRANSFER', 'PENDING', ts0);
 
     sqlite.prepare(
       `INSERT INTO pending_approvals (id, tx_id, required_by, expires_at, created_at)
        VALUES (?, ?, ?, ?, ?)`,
     ).run(approvalId, txId, ts0 + 1800, ts0 + 3600, ts0);
 
-    // We need to delete the transaction. But RESTRICT on agents prevents deleting agent.
+    // We need to delete the transaction. But RESTRICT on wallets prevents deleting agent.
     // So we directly delete the transaction (which would fail if it has FK from pending_approvals with RESTRICT, but it's CASCADE).
     // Actually, we can't delete the transaction because agents FK is RESTRICT.
     // But that's the other direction. Let's delete the transaction directly.
     // Wait -- can we? Yes, we delete the transaction row itself, which cascades to pending_approvals.
-    // The RESTRICT is on agents -> transactions (you can't delete the agent), not on transactions themselves.
+    // The RESTRICT is on wallets -> transactions (you can't delete the wallet), not on transactions themselves.
     sqlite.prepare('DELETE FROM transactions WHERE id = ?').run(txId);
 
     const after = sqlite.prepare('SELECT COUNT(*) as cnt FROM pending_approvals WHERE id = ?').get(approvalId) as { cnt: number };

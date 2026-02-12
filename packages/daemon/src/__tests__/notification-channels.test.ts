@@ -60,7 +60,7 @@ describe('NotificationEventType', () => {
     const originalTypes = [
       'TX_REQUESTED', 'TX_QUEUED', 'TX_SUBMITTED', 'TX_CONFIRMED',
       'TX_FAILED', 'TX_CANCELLED', 'TX_DOWNGRADED_DELAY',
-      'POLICY_VIOLATION', 'AGENT_SUSPENDED',
+      'POLICY_VIOLATION', 'WALLET_SUSPENDED',
       'KILL_SWITCH_ACTIVATED', 'KILL_SWITCH_RECOVERED',
       'SESSION_EXPIRING_SOON', 'SESSION_EXPIRED',
       'OWNER_SET', 'OWNER_REMOVED', 'OWNER_VERIFIED',
@@ -99,14 +99,14 @@ describe('getNotificationMessage', () => {
 
   it('returns template with unresolved vars when vars not provided', () => {
     const msg = getNotificationMessage('DAILY_SUMMARY', 'en');
-    expect(msg.body).toContain('{agentCount}');
+    expect(msg.body).toContain('{walletCount}');
     expect(msg.body).toContain('{txCount}');
     expect(msg.body).toContain('{sessionCount}');
   });
 
   it('returns Korean template for DAILY_SUMMARY', () => {
     const msg = getNotificationMessage('DAILY_SUMMARY', 'ko', {
-      agentCount: '5',
+      walletCount: '5',
       txCount: '42',
       sessionCount: '10',
     });
@@ -363,12 +363,12 @@ describe('NtfyChannel', () => {
 
   it('send() sends plain text body with agent and timestamp', async () => {
     await channel.initialize({ ntfy_topic: 'alerts' });
-    const payload = makePayload({ agentId: 'test-agent' });
+    const payload = makePayload({ agentId: 'test-wallet' });
     await channel.send(payload);
 
     const body = mockFetch.mock.calls[0]![1]!.body as string;
     expect(body).toContain('Transaction abc123 confirmed. Amount: 1.5 SOL');
-    expect(body).toContain('Agent: test-agent');
+    expect(body).toContain('Agent: test-wallet');
     expect(body).toContain('Time:');
   });
 

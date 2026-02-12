@@ -47,12 +47,12 @@ describe('Priority delivery', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-1', amount: '1 SOL' });
+    await service.notify('TX_CONFIRMED', 'wallet-1', { txId: 'tx-1', amount: '1 SOL' });
 
     expect(ch.send).toHaveBeenCalledTimes(1);
     const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.eventType).toBe('TX_CONFIRMED');
-    expect(payload.agentId).toBe('agent-1');
+    expect(payload.agentId).toBe('wallet-1');
   });
 
   it('notify() with 2 channels sends to first only (on success)', async () => {
@@ -62,7 +62,7 @@ describe('Priority delivery', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe('Priority delivery', () => {
   it('no channels configured -- no error (silent no-op)', async () => {
     const service = new NotificationService();
     // Should not throw
-    await expect(service.notify('TX_CONFIRMED', 'agent-1')).resolves.toBeUndefined();
+    await expect(service.notify('TX_CONFIRMED', 'wallet-1')).resolves.toBeUndefined();
   });
 
   it('getChannelNames() returns configured channel names', () => {
@@ -115,7 +115,7 @@ describe('Fallback chain', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -130,7 +130,7 @@ describe('Fallback chain', () => {
     service.addChannel(ch2);
     service.addChannel(ch3);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -145,7 +145,7 @@ describe('Fallback chain', () => {
     service.addChannel(ch2);
 
     // Should not throw despite ch1 failing
-    await expect(service.notify('TX_REQUESTED', 'agent-1')).resolves.toBeUndefined();
+    await expect(service.notify('TX_REQUESTED', 'wallet-1')).resolves.toBeUndefined();
   });
 
   it('fallback preserves same payload across attempts', async () => {
@@ -155,7 +155,7 @@ describe('Fallback chain', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-99' });
+    await service.notify('TX_CONFIRMED', 'wallet-1', { txId: 'tx-99' });
 
     const p1 = (ch1.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     const p2 = (ch2.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
@@ -174,7 +174,7 @@ describe('Fallback chain', () => {
     service.addChannel(ch2);
     service.addChannel(ch3);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -200,7 +200,7 @@ describe('Broadcast', () => {
     service.addChannel(ch2);
     service.addChannel(ch3);
 
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1');
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -214,7 +214,7 @@ describe('Broadcast', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('KILL_SWITCH_RECOVERED', 'agent-1');
+    await service.notify('KILL_SWITCH_RECOVERED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -227,7 +227,7 @@ describe('Broadcast', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('AUTO_STOP_TRIGGERED', 'agent-1');
+    await service.notify('AUTO_STOP_TRIGGERED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -240,7 +240,7 @@ describe('Broadcast', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     // Non-broadcast: should NOT fall through to ch2 if ch1 succeeds
@@ -256,7 +256,7 @@ describe('Broadcast', () => {
     service.addChannel(ch2);
     service.addChannel(ch3);
 
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1');
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(1);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -279,14 +279,14 @@ describe('Total failure + audit_log', () => {
     service.addChannel(createMockChannel('telegram', true));
     service.addChannel(createMockChannel('discord', true));
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     const logs = db.select().from(auditLog).all();
     expect(logs).toHaveLength(1);
     expect(logs[0]!.eventType).toBe('NOTIFICATION_TOTAL_FAILURE');
     expect(logs[0]!.severity).toBe('critical');
     expect(logs[0]!.actor).toBe('system');
-    expect(logs[0]!.agentId).toBe('agent-1');
+    expect(logs[0]!.walletId).toBe('wallet-1');
   });
 
   it('all channels fail in broadcast -> CRITICAL audit_log entry', async () => {
@@ -295,7 +295,7 @@ describe('Total failure + audit_log', () => {
     service.addChannel(createMockChannel('telegram', true));
     service.addChannel(createMockChannel('discord', true));
 
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1');
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1');
 
     const logs = db.select().from(auditLog).all();
     expect(logs).toHaveLength(1);
@@ -323,7 +323,7 @@ describe('Total failure + audit_log', () => {
     const service = new NotificationService({ db });
     service.addChannel(createMockChannel('ch1', true));
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     const logs = db.select().from(auditLog).all();
     expect(logs[0]!.severity).toBe('critical');
@@ -334,11 +334,11 @@ describe('Total failure + audit_log', () => {
     const service = new NotificationService(); // no db
     service.addChannel(createMockChannel('telegram', true));
 
-    await expect(service.notify('TX_CONFIRMED', 'agent-1')).resolves.toBeUndefined();
+    await expect(service.notify('TX_CONFIRMED', 'wallet-1')).resolves.toBeUndefined();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining('CRITICAL'),
-      expect.objectContaining({ eventType: 'TX_CONFIRMED', agentId: 'agent-1' }),
+      expect.objectContaining({ eventType: 'TX_CONFIRMED', agentId: 'wallet-1' }),
     );
     consoleErrorSpy.mockRestore();
   });
@@ -363,7 +363,7 @@ describe('Rate limiter', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     expect(ch.send).toHaveBeenCalledTimes(1);
   });
@@ -376,11 +376,11 @@ describe('Rate limiter', () => {
     service.addChannel(ch2);
 
     // Send 2 (at limit)
-    await service.notify('TX_CONFIRMED', 'agent-1');
-    await service.notify('TX_REQUESTED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
+    await service.notify('TX_REQUESTED', 'wallet-1');
 
     // 3rd should be rate limited on ch1, falls back to ch2
-    await service.notify('TX_SUBMITTED', 'agent-1');
+    await service.notify('TX_SUBMITTED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(2);
     expect(ch2.send).toHaveBeenCalledTimes(1);
@@ -391,13 +391,13 @@ describe('Rate limiter', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
     expect(ch.send).toHaveBeenCalledTimes(1);
 
     // Advance past the 1-minute window
     vi.advanceTimersByTime(61_000);
 
-    await service.notify('TX_REQUESTED', 'agent-1');
+    await service.notify('TX_REQUESTED', 'wallet-1');
     expect(ch.send).toHaveBeenCalledTimes(2);
   });
 
@@ -409,11 +409,11 @@ describe('Rate limiter', () => {
     service.addChannel(ch2);
 
     // First notify goes to ch1 (succeeds, non-broadcast)
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
     expect(ch1.send).toHaveBeenCalledTimes(1);
 
     // Second notify: ch1 is rate limited, falls back to ch2
-    await service.notify('TX_REQUESTED', 'agent-1');
+    await service.notify('TX_REQUESTED', 'wallet-1');
     expect(ch1.send).toHaveBeenCalledTimes(1); // still 1 (rate limited)
     expect(ch2.send).toHaveBeenCalledTimes(1); // fallback worked
   });
@@ -426,14 +426,14 @@ describe('Rate limiter', () => {
     service.addChannel(ch2);
 
     // Send 3 times (at limit)
-    await service.notify('TX_CONFIRMED', 'agent-1');
-    await service.notify('TX_REQUESTED', 'agent-1');
-    await service.notify('TX_SUBMITTED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
+    await service.notify('TX_REQUESTED', 'wallet-1');
+    await service.notify('TX_SUBMITTED', 'wallet-1');
 
     expect(ch1.send).toHaveBeenCalledTimes(3);
 
     // 4th should fall back
-    await service.notify('TX_QUEUED', 'agent-1');
+    await service.notify('TX_QUEUED', 'wallet-1');
     expect(ch1.send).toHaveBeenCalledTimes(3); // still 3
     expect(ch2.send).toHaveBeenCalledTimes(1);
   });
@@ -453,7 +453,7 @@ describe('Message template integration', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-123', amount: '1 SOL' });
+    await service.notify('TX_CONFIRMED', 'wallet-1', { txId: 'tx-123', amount: '1 SOL' });
 
     const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.message).toContain('Transaction Confirmed');
@@ -466,7 +466,7 @@ describe('Message template integration', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1', { activatedBy: 'owner' });
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1', { activatedBy: 'owner' });
 
     const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.message).toContain('Kill Switch');
@@ -477,7 +477,7 @@ describe('Message template integration', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('SESSION_EXPIRED', 'agent-1', { sessionId: 'sess-abc' });
+    await service.notify('SESSION_EXPIRED', 'wallet-1', { sessionId: 'sess-abc' });
 
     const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.message).toContain('sess-abc');

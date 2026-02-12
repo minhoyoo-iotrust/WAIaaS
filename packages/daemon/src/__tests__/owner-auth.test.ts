@@ -3,7 +3,7 @@
  *
  * Tests cover:
  * 1. rejects with 401 INVALID_SIGNATURE when headers missing
- * 2. rejects with 404 AGENT_NOT_FOUND when agent does not exist
+ * 2. rejects with 404 WALLET_NOT_FOUND when agent does not exist
  * 3. rejects with 404 OWNER_NOT_CONNECTED when agent has no owner
  * 4. rejects with 401 INVALID_SIGNATURE when owner address does not match
  * 5. rejects with 401 INVALID_SIGNATURE when signature is invalid
@@ -101,7 +101,7 @@ let db: ReturnType<typeof createDatabase>['db'];
 let app: Hono;
 let ownerKeypair: TestKeypair;
 
-const TEST_AGENT_ID = '00000001-0001-7001-8001-000000000001';
+const TEST_WALLET_ID = '00000001-0001-7001-8001-000000000001';
 
 /** Type-safe JSON body extraction from Response. */
 async function json(res: Response): Promise<Record<string, unknown>> {
@@ -123,14 +123,14 @@ function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
 }
 
 /** Seed a test agent with optional owner address */
-function seedAgent(opts?: { ownerAddress?: string | null }) {
+function seedWallet(opts?: { ownerAddress?: string | null }) {
   const ts = nowSeconds();
   sqlite.prepare(
-    `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+    `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    TEST_AGENT_ID,
-    'Owner Test Agent',
+    TEST_WALLET_ID,
+    'Owner Test Wallet',
     'solana',
     'mainnet',
     `pk-owner-auth-test`,
@@ -166,10 +166,10 @@ afterEach(() => {
 
 describe('ownerAuth middleware', () => {
   it('rejects with 401 INVALID_SIGNATURE when headers missing', async () => {
-    seedAgent({ ownerAddress: ownerKeypair.address });
+    seedWallet({ ownerAddress: ownerKeypair.address });
 
     // No headers at all
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
     });
     expect(res.status).toBe(401);
@@ -178,7 +178,7 @@ describe('ownerAuth middleware', () => {
     expect(body.code).toBe('INVALID_SIGNATURE');
   });
 
-  it('rejects with 404 AGENT_NOT_FOUND when agent does not exist', async () => {
+  it('rejects with 404 WALLET_NOT_FOUND when agent does not exist', async () => {
     const message = 'test-message';
     const sig = signMessage(message, ownerKeypair.secretKey);
 
@@ -193,16 +193,16 @@ describe('ownerAuth middleware', () => {
     expect(res.status).toBe(404);
 
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 
   it('rejects with 404 OWNER_NOT_CONNECTED when agent has no owner', async () => {
-    seedAgent({ ownerAddress: null });
+    seedWallet({ ownerAddress: null });
 
     const message = 'test-message';
     const sig = signMessage(message, ownerKeypair.secretKey);
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': sig,
@@ -219,12 +219,12 @@ describe('ownerAuth middleware', () => {
   it('rejects with 401 INVALID_SIGNATURE when owner address does not match', async () => {
     // Register a different address as owner
     const otherKeypair = generateTestKeypair();
-    seedAgent({ ownerAddress: otherKeypair.address });
+    seedWallet({ ownerAddress: otherKeypair.address });
 
     const message = 'test-message';
     const sig = signMessage(message, ownerKeypair.secretKey);
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': sig,
@@ -239,13 +239,13 @@ describe('ownerAuth middleware', () => {
   });
 
   it('rejects with 401 INVALID_SIGNATURE when signature is invalid', async () => {
-    seedAgent({ ownerAddress: ownerKeypair.address });
+    seedWallet({ ownerAddress: ownerKeypair.address });
 
     const message = 'test-message';
     // Sign a different message to produce invalid signature for this message
     const wrongSig = signMessage('different-message', ownerKeypair.secretKey);
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': wrongSig,
@@ -260,12 +260,12 @@ describe('ownerAuth middleware', () => {
   });
 
   it('passes through when valid Ed25519 signature matches owner address', async () => {
-    seedAgent({ ownerAddress: ownerKeypair.address });
+    seedWallet({ ownerAddress: ownerKeypair.address });
 
     const message = 'approve-transaction-1234';
     const sig = signMessage(message, ownerKeypair.secretKey);
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': sig,

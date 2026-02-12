@@ -3,14 +3,14 @@
  *
  * Verifies that:
  * 1. POST /v1/sessions fires SESSION_CREATED notify
- * 2. PUT /v1/agents/:id/owner fires OWNER_SET notify
+ * 2. PUT /v1/wallets/:id/owner fires OWNER_SET notify
  * 3. Routes work correctly when notificationService is not provided
  * 4. SESSION_EXPIRED notify fires for expired sessions (unit test pattern)
  *
  * Uses createApp() + app.request() integration pattern with mock NotificationService.
  *
  * @see packages/daemon/src/api/routes/sessions.ts
- * @see packages/daemon/src/api/routes/agents.ts
+ * @see packages/daemon/src/api/routes/wallets.ts
  * @see packages/daemon/src/lifecycle/daemon.ts
  */
 
@@ -69,14 +69,14 @@ async function json(res: Response): Promise<Record<string, unknown>> {
   return (await res.json()) as Record<string, unknown>;
 }
 
-function seedAgent(sqlite: DatabaseType, agentId: string): void {
+function seedWallet(sqlite: DatabaseType, walletId: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(agentId, 'Test Agent', 'solana', 'mainnet', `pk-${agentId}`, 'ACTIVE', 0, ts, ts);
+    .run(walletId, 'Test Wallet', 'solana', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 function masterAuthJsonHeaders(): Record<string, string> {
@@ -130,8 +130,8 @@ describe('POST /v1/sessions: SESSION_CREATED notification', () => {
   it('should fire SESSION_CREATED notify on successful session creation', async () => {
     const notificationService = createMockNotificationService();
     const config = DaemonConfigSchema.parse({});
-    const testAgentId = generateId();
-    seedAgent(sqlite, testAgentId);
+    const testWalletId = generateId();
+    seedWallet(sqlite, testWalletId);
 
     const app = createApp({
       db,
@@ -144,7 +144,7 @@ describe('POST /v1/sessions: SESSION_CREATED notification', () => {
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId, ttl: 3600 }),
+      body: JSON.stringify({ walletId: testWalletId, ttl: 3600 }),
     });
 
     expect(res.status).toBe(201);
@@ -156,7 +156,7 @@ describe('POST /v1/sessions: SESSION_CREATED notification', () => {
     expect(notificationService.notify).toHaveBeenCalledTimes(1);
     expect(notificationService.notify).toHaveBeenCalledWith(
       'SESSION_CREATED',
-      testAgentId,
+      testWalletId,
       { sessionId: expect.any(String) },
     );
 
@@ -170,12 +170,12 @@ describe('POST /v1/sessions: SESSION_CREATED notification', () => {
 // OWNER_SET notification
 // ---------------------------------------------------------------------------
 
-describe('PUT /v1/agents/:id/owner: OWNER_SET notification', () => {
+describe('PUT /v1/wallets/:id/owner: OWNER_SET notification', () => {
   it('should fire OWNER_SET notify on successful owner registration', async () => {
     const notificationService = createMockNotificationService();
     const config = DaemonConfigSchema.parse({});
-    const testAgentId = generateId();
-    seedAgent(sqlite, testAgentId);
+    const testWalletId = generateId();
+    seedWallet(sqlite, testWalletId);
 
     const app = createApp({
       db,
@@ -188,7 +188,7 @@ describe('PUT /v1/agents/:id/owner: OWNER_SET notification', () => {
     });
 
     const ownerAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
-    const res = await app.request(`/v1/agents/${testAgentId}/owner`, {
+    const res = await app.request(`/v1/wallets/${testWalletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: ownerAddress }),
@@ -200,7 +200,7 @@ describe('PUT /v1/agents/:id/owner: OWNER_SET notification', () => {
     expect(notificationService.notify).toHaveBeenCalledTimes(1);
     expect(notificationService.notify).toHaveBeenCalledWith(
       'OWNER_SET',
-      testAgentId,
+      testWalletId,
       { ownerAddress },
     );
   });
@@ -213,8 +213,8 @@ describe('PUT /v1/agents/:id/owner: OWNER_SET notification', () => {
 describe('Routes without notificationService', () => {
   it('POST /v1/sessions succeeds when notificationService is undefined', async () => {
     const config = DaemonConfigSchema.parse({});
-    const testAgentId = generateId();
-    seedAgent(sqlite, testAgentId);
+    const testWalletId = generateId();
+    seedWallet(sqlite, testWalletId);
 
     // No notificationService passed
     const app = createApp({
@@ -227,7 +227,7 @@ describe('Routes without notificationService', () => {
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
 
     expect(res.status).toBe(201);
@@ -236,10 +236,10 @@ describe('Routes without notificationService', () => {
     expect(body.token).toBeDefined();
   });
 
-  it('PUT /v1/agents/:id/owner succeeds when notificationService is undefined', async () => {
+  it('PUT /v1/wallets/:id/owner succeeds when notificationService is undefined', async () => {
     const config = DaemonConfigSchema.parse({});
-    const testAgentId = generateId();
-    seedAgent(sqlite, testAgentId);
+    const testWalletId = generateId();
+    seedWallet(sqlite, testWalletId);
 
     // No notificationService passed
     const app = createApp({
@@ -252,7 +252,7 @@ describe('Routes without notificationService', () => {
     });
 
     const ownerAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
-    const res = await app.request(`/v1/agents/${testAgentId}/owner`, {
+    const res = await app.request(`/v1/wallets/${testWalletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: ownerAddress }),
@@ -269,33 +269,33 @@ describe('Routes without notificationService', () => {
 describe('SESSION_EXPIRED notification', () => {
   it('should fire SESSION_EXPIRED notify for expired sessions via DB query pattern', async () => {
     const notificationService = createMockNotificationService();
-    const testAgentId = generateId();
-    seedAgent(sqlite, testAgentId);
+    const testWalletId = generateId();
+    seedWallet(sqlite, testWalletId);
 
     // Insert an expired session (expires_at in the past)
     const sessionId = generateId();
     const pastTimestamp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
     sqlite
       .prepare(
-        `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(sessionId, testAgentId, 'hash-expired', pastTimestamp, pastTimestamp + 86400, pastTimestamp);
+      .run(sessionId, testWalletId, 'hash-expired', pastTimestamp, pastTimestamp + 86400, pastTimestamp);
 
     // Simulate the session-cleanup worker's notify-before-delete pattern
     // This is the same logic as in daemon.ts session-cleanup handler
     const expired = sqlite.prepare(
-      "SELECT id, agent_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
-    ).all() as Array<{ id: string; agent_id: string }>;
+      "SELECT id, wallet_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+    ).all() as Array<{ id: string; wallet_id: string }>;
 
     // Should find our expired session
     expect(expired).toHaveLength(1);
     expect(expired[0]!.id).toBe(sessionId);
-    expect(expired[0]!.agent_id).toBe(testAgentId);
+    expect(expired[0]!.wallet_id).toBe(testWalletId);
 
     // Fire notify for each expired session (mimicking worker logic)
     for (const session of expired) {
-      void notificationService.notify('SESSION_EXPIRED', session.agent_id, {
+      void notificationService.notify('SESSION_EXPIRED', session.wallet_id, {
         sessionId: session.id,
       });
     }
@@ -304,7 +304,7 @@ describe('SESSION_EXPIRED notification', () => {
     expect(notificationService.notify).toHaveBeenCalledTimes(1);
     expect(notificationService.notify).toHaveBeenCalledWith(
       'SESSION_EXPIRED',
-      testAgentId,
+      testWalletId,
       { sessionId },
     );
 
@@ -320,23 +320,23 @@ describe('SESSION_EXPIRED notification', () => {
 
   it('should not fire SESSION_EXPIRED when no sessions are expired', async () => {
     const notificationService = createMockNotificationService();
-    const testAgentId = generateId();
-    seedAgent(sqlite, testAgentId);
+    const testWalletId = generateId();
+    seedWallet(sqlite, testWalletId);
 
     // Insert a non-expired session (expires_at in the future)
     const sessionId = generateId();
     const futureTimestamp = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
     sqlite
       .prepare(
-        `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(sessionId, testAgentId, 'hash-active', futureTimestamp, futureTimestamp + 86400, Math.floor(Date.now() / 1000));
+      .run(sessionId, testWalletId, 'hash-active', futureTimestamp, futureTimestamp + 86400, Math.floor(Date.now() / 1000));
 
     // Query for expired sessions
     const expired = sqlite.prepare(
-      "SELECT id, agent_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
-    ).all() as Array<{ id: string; agent_id: string }>;
+      "SELECT id, wallet_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+    ).all() as Array<{ id: string; wallet_id: string }>;
 
     // No expired sessions
     expect(expired).toHaveLength(0);

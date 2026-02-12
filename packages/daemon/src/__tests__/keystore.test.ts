@@ -325,54 +325,54 @@ describe('Full round-trip', () => {
   });
 
   it('decryptPrivateKey -> releaseKey -> hasKey returns true (key file still exists)', async () => {
-    const agentId = 'test-agent-release';
-    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
-    const key = await keystore.decryptPrivateKey(agentId, TEST_PASSWORD);
+    const walletId = 'test-agent-release';
+    await keystore.generateKeyPair(walletId, 'solana', 'devnet', TEST_PASSWORD);
+    const key = await keystore.decryptPrivateKey(walletId, TEST_PASSWORD);
 
     keystore.releaseKey(key);
 
     // hasKey checks file existence, not memory
-    const exists = await keystore.hasKey(agentId);
+    const exists = await keystore.hasKey(walletId);
     expect(exists).toBe(true);
   });
 
   it('deleteKey removes keystore file from disk', async () => {
-    const agentId = 'test-agent-delete';
-    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
+    const walletId = 'test-agent-delete';
+    await keystore.generateKeyPair(walletId, 'solana', 'devnet', TEST_PASSWORD);
 
-    const filePath = join(keystoreDir, `${agentId}.json`);
+    const filePath = join(keystoreDir, `${walletId}.json`);
     expect(existsSync(filePath)).toBe(true);
 
-    await keystore.deleteKey(agentId);
+    await keystore.deleteKey(walletId);
 
     expect(existsSync(filePath)).toBe(false);
-    const exists = await keystore.hasKey(agentId);
+    const exists = await keystore.hasKey(walletId);
     expect(exists).toBe(false);
   });
 
-  it('hasKey returns false for non-existent agent', async () => {
+  it('hasKey returns false for non-existent wallet', async () => {
     const exists = await keystore.hasKey('non-existent-agent');
     expect(exists).toBe(false);
   });
 
   it('decryptPrivateKey with wrong password throws WAIaaSError', async () => {
-    const agentId = 'test-agent-wrongpw';
-    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
+    const walletId = 'test-agent-wrongpw';
+    await keystore.generateKeyPair(walletId, 'solana', 'devnet', TEST_PASSWORD);
 
-    await expect(keystore.decryptPrivateKey(agentId, WRONG_PASSWORD)).rejects.toThrow(WAIaaSError);
+    await expect(keystore.decryptPrivateKey(walletId, WRONG_PASSWORD)).rejects.toThrow(WAIaaSError);
   });
 
   it('lastUnlockedAt is updated after decryptPrivateKey', async () => {
-    const agentId = 'test-agent-unlocked';
-    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
+    const walletId = 'test-agent-unlocked';
+    await keystore.generateKeyPair(walletId, 'solana', 'devnet', TEST_PASSWORD);
 
     // Before decrypt, lastUnlockedAt should be null
-    const filePath = join(keystoreDir, `${agentId}.json`);
+    const filePath = join(keystoreDir, `${walletId}.json`);
     const contentBefore = await readFile(filePath, 'utf-8');
     const parsedBefore = JSON.parse(contentBefore) as KeystoreFileV1;
     expect(parsedBefore.metadata.lastUnlockedAt).toBeNull();
 
-    const key = await keystore.decryptPrivateKey(agentId, TEST_PASSWORD);
+    const key = await keystore.decryptPrivateKey(walletId, TEST_PASSWORD);
 
     // After decrypt, lastUnlockedAt should be set
     const contentAfter = await readFile(filePath, 'utf-8');
@@ -383,20 +383,20 @@ describe('Full round-trip', () => {
   });
 
   it('lockAll releases all keys from guarded memory', async () => {
-    const agentId1 = 'test-agent-lockall-1';
-    const agentId2 = 'test-agent-lockall-2';
-    await keystore.generateKeyPair(agentId1, 'solana', 'devnet', TEST_PASSWORD);
-    await keystore.generateKeyPair(agentId2, 'solana', 'devnet', TEST_PASSWORD);
+    const walletId1 = 'test-agent-lockall-1';
+    const walletId2 = 'test-agent-lockall-2';
+    await keystore.generateKeyPair(walletId1, 'solana', 'devnet', TEST_PASSWORD);
+    await keystore.generateKeyPair(walletId2, 'solana', 'devnet', TEST_PASSWORD);
 
-    await keystore.decryptPrivateKey(agentId1, TEST_PASSWORD);
-    await keystore.decryptPrivateKey(agentId2, TEST_PASSWORD);
+    await keystore.decryptPrivateKey(walletId1, TEST_PASSWORD);
+    await keystore.decryptPrivateKey(walletId2, TEST_PASSWORD);
 
     // lockAll should not throw
     expect(() => keystore.lockAll()).not.toThrow();
 
     // Files should still exist
-    expect(await keystore.hasKey(agentId1)).toBe(true);
-    expect(await keystore.hasKey(agentId2)).toBe(true);
+    expect(await keystore.hasKey(walletId1)).toBe(true);
+    expect(await keystore.hasKey(walletId2)).toBe(true);
   });
 
   it('generateKeyPair rejects unsupported chain', async () => {
@@ -610,7 +610,7 @@ describe('secp256k1 / EVM multicurve', () => {
 
   it('backward compat: curve-less keystore reads as ed25519', async () => {
     // Manually create a keystore file WITHOUT curve field
-    const agentId = 'agent-legacy-no-curve';
+    const walletId = 'agent-legacy-no-curve';
 
     // First generate a real Solana keystore to get valid crypto data
     await keystore.generateKeyPair('agent-legacy-source', 'solana', 'devnet', TEST_PASSWORD);
@@ -620,14 +620,14 @@ describe('secp256k1 / EVM multicurve', () => {
 
     // Remove curve field if present and write as the legacy agent
     delete sourceData.curve;
-    const legacyPath = join(keystoreDir, `${agentId}.json`);
+    const legacyPath = join(keystoreDir, `${walletId}.json`);
     writeFileSync(legacyPath, JSON.stringify(sourceData, null, 2), { encoding: 'utf-8', mode: 0o600 });
 
     // Read the legacy keystore - curve should default to 'ed25519'
     // Access readKeystoreFile indirectly via decryptPrivateKey (it reads the file)
     // But we also need to verify the curve field is set after reading
     // So we read the file directly after a decryptPrivateKey call (which calls readKeystoreFile + writeKeystoreFile to update lastUnlockedAt)
-    const decryptedKey = await keystore.decryptPrivateKey(agentId, TEST_PASSWORD);
+    const decryptedKey = await keystore.decryptPrivateKey(walletId, TEST_PASSWORD);
     expect(decryptedKey.byteLength).toBe(64); // ed25519 secret key
 
     // After decryptPrivateKey, the file is re-written with lastUnlockedAt updated

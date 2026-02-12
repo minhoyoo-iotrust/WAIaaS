@@ -412,7 +412,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         .prepare(
           `SELECT id, wallet_id AS walletId, type, rules, priority, enabled
            FROM policies
-           WHERE (agent_id = ? OR agent_id IS NULL)
+           WHERE (wallet_id = ? OR wallet_id IS NULL)
              AND enabled = 1
            ORDER BY priority DESC`,
         )
@@ -476,7 +476,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
           .prepare(
             `SELECT COALESCE(SUM(CAST(reserved_amount AS INTEGER)), 0) AS total
              FROM transactions
-             WHERE agent_id = ?
+             WHERE wallet_id = ?
                AND status IN ('PENDING', 'QUEUED')
                AND reserved_amount IS NOT NULL`,
           )

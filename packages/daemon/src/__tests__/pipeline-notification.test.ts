@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, transactions } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import {
@@ -125,9 +125,9 @@ function createTestRequest(): SendTransactionRequest {
 async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: MOCK_PUBLIC_KEY,
@@ -140,7 +140,7 @@ async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
 
 function createPipelineContext(
   conn: DatabaseConnection,
-  agentId: string,
+  walletId: string,
   overrides: Partial<PipelineContext> = {},
 ): PipelineContext {
   return {
@@ -149,8 +149,8 @@ function createPipelineContext(
     keyStore: createMockKeyStore(),
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
-    agentId,
-    agent: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
+    walletId,
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
     request: createTestRequest(),
     txId: '',
     ...overrides,
@@ -178,16 +178,16 @@ afterEach(() => {
 
 describe('stage1Validate: TX_REQUESTED notification', () => {
   it('should fire TX_REQUESTED notify after DB INSERT', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
-    const ctx = createPipelineContext(conn, agentId, { notificationService });
+    const ctx = createPipelineContext(conn, walletId, { notificationService });
 
     await stage1Validate(ctx);
 
     expect(notificationService.notify).toHaveBeenCalledTimes(1);
     expect(notificationService.notify).toHaveBeenCalledWith(
       'TX_REQUESTED',
-      agentId,
+      walletId,
       { amount: '1000000000', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', type: 'TRANSFER' },
       { txId: ctx.txId },
     );
@@ -200,7 +200,7 @@ describe('stage1Validate: TX_REQUESTED notification', () => {
 
 describe('stage3Policy: POLICY_VIOLATION notification', () => {
   it('should fire POLICY_VIOLATION notify when policy denies', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
     const denyEngine: IPolicyEngine = {
       evaluate: async () => ({
@@ -209,7 +209,7 @@ describe('stage3Policy: POLICY_VIOLATION notification', () => {
         reason: 'limit exceeded',
       }),
     };
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       notificationService,
       policyEngine: denyEngine,
     });
@@ -222,7 +222,7 @@ describe('stage3Policy: POLICY_VIOLATION notification', () => {
     expect(notificationService.notify).toHaveBeenCalledTimes(2);
     expect(notificationService.notify).toHaveBeenCalledWith(
       'POLICY_VIOLATION',
-      agentId,
+      walletId,
       { reason: 'limit exceeded', amount: '1000000000', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr' },
       { txId: ctx.txId },
     );
@@ -235,9 +235,9 @@ describe('stage3Policy: POLICY_VIOLATION notification', () => {
 
 describe('stage5Execute: TX_SUBMITTED notification', () => {
   it('should fire TX_SUBMITTED notify on successful submit', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
-    const ctx = createPipelineContext(conn, agentId, { notificationService });
+    const ctx = createPipelineContext(conn, walletId, { notificationService });
 
     await stage1Validate(ctx);
     await stage3Policy(ctx);
@@ -249,7 +249,7 @@ describe('stage5Execute: TX_SUBMITTED notification', () => {
       (c: unknown[]) => c[0] === 'TX_SUBMITTED',
     );
     expect(submittedCall).toBeTruthy();
-    expect(submittedCall![1]).toBe(agentId);
+    expect(submittedCall![1]).toBe(walletId);
     expect(submittedCall![2]).toHaveProperty('txHash');
     expect(submittedCall![2]).toHaveProperty('amount', '1000000000');
     expect(submittedCall![2]).toHaveProperty('to', 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
@@ -263,7 +263,7 @@ describe('stage5Execute: TX_SUBMITTED notification', () => {
 
 describe('stage5Execute: TX_FAILED notification on simulation failure', () => {
   it('should fire TX_FAILED notify when simulation fails', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
     const adapter = createMockAdapter({
       simulateTransaction: async (): Promise<SimulationResult> => ({
@@ -272,7 +272,7 @@ describe('stage5Execute: TX_FAILED notification on simulation failure', () => {
         error: 'Insufficient funds',
       }),
     });
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       notificationService,
       adapter,
     });
@@ -287,7 +287,7 @@ describe('stage5Execute: TX_FAILED notification on simulation failure', () => {
       (c: unknown[]) => c[0] === 'TX_FAILED',
     );
     expect(failedCall).toBeTruthy();
-    expect(failedCall![1]).toBe(agentId);
+    expect(failedCall![1]).toBe(walletId);
     expect(failedCall![2]).toHaveProperty('reason', 'Insufficient funds');
     expect(failedCall![2]).toHaveProperty('amount', '1000000000');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
@@ -300,9 +300,9 @@ describe('stage5Execute: TX_FAILED notification on simulation failure', () => {
 
 describe('stage6Confirm: TX_CONFIRMED notification', () => {
   it('should fire TX_CONFIRMED notify on successful confirmation', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
-    const ctx = createPipelineContext(conn, agentId, { notificationService });
+    const ctx = createPipelineContext(conn, walletId, { notificationService });
 
     await stage1Validate(ctx);
     await stage3Policy(ctx);
@@ -314,7 +314,7 @@ describe('stage6Confirm: TX_CONFIRMED notification', () => {
       (c: unknown[]) => c[0] === 'TX_CONFIRMED',
     );
     expect(confirmedCall).toBeTruthy();
-    expect(confirmedCall![1]).toBe(agentId);
+    expect(confirmedCall![1]).toBe(walletId);
     expect(confirmedCall![2]).toHaveProperty('txHash');
     expect(confirmedCall![2]).toHaveProperty('amount', '1000000000');
     expect(confirmedCall![2]).toHaveProperty('to', 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
@@ -328,14 +328,14 @@ describe('stage6Confirm: TX_CONFIRMED notification', () => {
 
 describe('stage6Confirm: TX_FAILED notification on confirmation failure', () => {
   it('should fire TX_FAILED notify when confirmation times out', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
     const adapter = createMockAdapter({
       waitForConfirmation: async () => {
         throw new Error('Timeout waiting for confirmation');
       },
     });
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       notificationService,
       adapter,
     });
@@ -351,7 +351,7 @@ describe('stage6Confirm: TX_FAILED notification on confirmation failure', () => 
       (c: unknown[]) => c[0] === 'TX_FAILED',
     );
     expect(failedCall).toBeTruthy();
-    expect(failedCall![1]).toBe(agentId);
+    expect(failedCall![1]).toBe(walletId);
     expect(failedCall![2]).toHaveProperty('reason', 'Timeout waiting for confirmation');
     expect(failedCall![2]).toHaveProperty('amount', '1000000000');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
@@ -364,9 +364,9 @@ describe('stage6Confirm: TX_FAILED notification on confirmation failure', () => 
 
 describe('Pipeline stages without notificationService', () => {
   it('should complete full pipeline without errors when notificationService is undefined', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     // No notificationService set -- should use optional chaining safely
-    const ctx = createPipelineContext(conn, agentId);
+    const ctx = createPipelineContext(conn, walletId);
 
     await stage1Validate(ctx);
     await stage2Auth(ctx);
@@ -390,12 +390,12 @@ describe('Pipeline stages without notificationService', () => {
 
 describe('Fire-and-forget safety', () => {
   it('should not block stage1Validate even when notify rejects', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
     (notificationService.notify as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error('channel down'),
     );
-    const ctx = createPipelineContext(conn, agentId, { notificationService });
+    const ctx = createPipelineContext(conn, walletId, { notificationService });
 
     // stage1Validate should complete despite notify rejection
     // void fire-and-forget means the rejection is detached from the stage's await
