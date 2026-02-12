@@ -83,11 +83,14 @@ describe('Migration: notification_logs + schema_version', () => {
     // Already called once in beforeEach
     expect(() => pushSchema(conn.sqlite)).not.toThrow();
 
-    // schema_version should still have exactly 1 row
+    // schema_version should have versions from initial schema + migrations
+    // (v1 = initial schema, v2 = EVM network CHECK expansion)
     const rows = conn.sqlite
-      .prepare('SELECT version FROM schema_version')
+      .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as Array<{ version: number }>;
-    expect(rows).toHaveLength(1);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(rows[0]!.version).toBe(1);
+    expect(rows[1]!.version).toBe(2);
   });
 
   it('notification_logs CHECK constraint rejects invalid status', () => {

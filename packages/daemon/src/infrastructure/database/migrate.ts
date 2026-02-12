@@ -220,7 +220,13 @@ export interface Migration {
   version: number;
   /** Human-readable description for schema_version table. */
   description: string;
-  /** DDL statements to execute. Runs inside a transaction. */
+  /**
+   * If true, runMigrations will NOT wrap up() in BEGIN/COMMIT.
+   * The up() function manages its own PRAGMA foreign_keys=OFF + BEGIN/COMMIT.
+   * Use for table recreation (12-step) migrations that require foreign_keys disabled.
+   */
+  managesOwnTransaction?: boolean;
+  /** DDL statements to execute. Runs inside a transaction (unless managesOwnTransaction). */
   up: (sqlite: Database) => void;
 }
 
@@ -229,7 +235,83 @@ export interface Migration {
  * Each migration's version must be unique and greater than 1.
  */
 export const MIGRATIONS: Migration[] = [];
-// v1.4 마이그레이션은 향후 phase에서 추가
+
+// ---------------------------------------------------------------------------
+// v2: Expand agents.network CHECK to include EVM networks
+// ---------------------------------------------------------------------------
+// SQLite cannot ALTER CHECK constraints, so we use 12-step table recreation.
+// This requires PRAGMA foreign_keys=OFF (handled by managesOwnTransaction).
+
+MIGRATIONS.push({
+  version: 2,
+  description: 'Expand agents network CHECK to include EVM networks',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    // Step 1: Begin transaction (foreign_keys already OFF via runner)
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 2: Create new agents table with expanded CHECK (uses SSoT arrays)
+      sqlite.exec(`CREATE TABLE agents_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
+  public_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(AGENT_STATUSES)})),
+  owner_address TEXT,
+  owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  suspended_at INTEGER,
+  suspension_reason TEXT
+)`);
+
+      // Step 3: Copy existing data
+      sqlite.exec('INSERT INTO agents_new SELECT * FROM agents');
+
+      // Step 4: Drop old table
+      sqlite.exec('DROP TABLE agents');
+
+      // Step 5: Rename new table
+      sqlite.exec('ALTER TABLE agents_new RENAME TO agents');
+
+      // Step 6: Recreate indexes
+      sqlite.exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_public_key ON agents(public_key)',
+      );
+      sqlite.exec(
+        'CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status)',
+      );
+      sqlite.exec(
+        'CREATE INDEX IF NOT EXISTS idx_agents_chain_network ON agents(chain, network)',
+      );
+      sqlite.exec(
+        'CREATE INDEX IF NOT EXISTS idx_agents_owner_address ON agents(owner_address)',
+      );
+
+      // Step 7: Commit transaction
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 8: Re-enable foreign keys to run integrity check
+    sqlite.pragma('foreign_keys = ON');
+
+    // Step 9: Verify FK integrity
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(
+        `FK integrity check failed after v2 migration: ${JSON.stringify(fkErrors)}`,
+      );
+    }
+
+    // Note: Runner will also set foreign_keys = ON after we return,
+    // but we set it here to run the integrity check with FK enabled.
+  },
+});
 
 /**
  * Run incremental migrations against the database.
@@ -265,29 +347,63 @@ export function runMigrations(
       continue;
     }
 
-    // Run each migration in its own transaction
-    sqlite.exec('BEGIN');
-    try {
-      migration.up(sqlite);
+    if (migration.managesOwnTransaction) {
+      // Migration manages its own PRAGMA + transaction (e.g. 12-step table recreation)
+      // Disable foreign keys so the migration can DROP/RENAME tables
+      sqlite.pragma('foreign_keys = OFF');
+      try {
+        migration.up(sqlite);
 
-      // Record successful migration
-      sqlite
-        .prepare(
-          'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
-        )
-        .run(
-          migration.version,
-          Math.floor(Date.now() / 1000),
-          migration.description,
+        // Record successful migration (up() must have committed its own transaction)
+        sqlite
+          .prepare(
+            'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
+          )
+          .run(
+            migration.version,
+            Math.floor(Date.now() / 1000),
+            migration.description,
+          );
+
+        applied++;
+      } catch (err) {
+        // Ensure foreign_keys is restored even on failure
+        try {
+          sqlite.pragma('foreign_keys = ON');
+        } catch {
+          /* best effort */
+        }
+        throw new Error(
+          `Migration v${migration.version} (${migration.description}) failed: ${err instanceof Error ? err.message : String(err)}`,
         );
+      }
+      // Re-enable foreign keys after successful migration
+      sqlite.pragma('foreign_keys = ON');
+    } else {
+      // Standard migration: wrap in BEGIN/COMMIT
+      sqlite.exec('BEGIN');
+      try {
+        migration.up(sqlite);
 
-      sqlite.exec('COMMIT');
-      applied++;
-    } catch (err) {
-      sqlite.exec('ROLLBACK');
-      throw new Error(
-        `Migration v${migration.version} (${migration.description}) failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
+        // Record successful migration
+        sqlite
+          .prepare(
+            'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
+          )
+          .run(
+            migration.version,
+            Math.floor(Date.now() / 1000),
+            migration.description,
+          );
+
+        sqlite.exec('COMMIT');
+        applied++;
+      } catch (err) {
+        sqlite.exec('ROLLBACK');
+        throw new Error(
+          `Migration v${migration.version} (${migration.description}) failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
   }
 

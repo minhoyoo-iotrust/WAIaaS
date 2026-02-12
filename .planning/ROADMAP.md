@@ -12,8 +12,8 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 
 - [x] **Phase 82: Config + NetworkType + EVM 의존성** - EVM RPC 설정, 네트워크 enum 확장, chain-network 교차 검증
 - [x] **Phase 83: Keystore 멀티커브** - secp256k1 키 생성 + EIP-55 주소 파생
-- [ ] **Phase 84: 어댑터 팩토리** - AdapterPool lazy init + 기존 adapter 주입 패턴 전환
-- [ ] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
+- [x] **Phase 84: 어댑터 팩토리** - AdapterPool lazy init + 기존 adapter 주입 패턴 전환
+- [x] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
 - [ ] **Phase 86: REST API 5-type + MCP/SDK 확장** - 5-type 트랜잭션 엔드포인트 + MCP/SDK 토큰 전송
 - [ ] **Phase 87: Owner Auth SIWE** - EIP-4361 SIWE 검증 + chain별 owner_address 형식 검증
 - [ ] **Phase 88: 통합 검증** - EVM 풀 라이프사이클 E2E + 회귀 검증
@@ -90,11 +90,11 @@ Plans:
   3. GET /doc OpenAPI 스펙이 oneOf 6-variant(5-type + legacy) 스키마를 정확히 반영한다
   4. MCP send_token에서 TRANSFER + TOKEN_TRANSFER를 실행할 수 있고, CONTRACT_CALL/APPROVE/BATCH는 노출되지 않는다
   5. TS/Python SDK send 메서드가 type/token 파라미터를 지원한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 86-01: TBD
-- [ ] 86-02: TBD
+- [ ] 86-01-PLAN.md — REST API route schema separation (방안 C) + 5-type OpenAPI components (TDD)
+- [ ] 86-02-PLAN.md — MCP send_token type/token + TS SDK + Python SDK 5-type extension
 
 ### Phase 87: Owner Auth SIWE
 **Goal**: EVM 에이전트의 Owner가 SIWE(EIP-4361) 서명으로 인증하고, Owner 주소가 chain별 형식으로 검증되며, 기존 Solana owner-auth가 회귀 없이 동작하는 상태
@@ -134,7 +134,7 @@ Plans:
 | 82. Config + NetworkType | v1.4.1 | 3/3 | Complete | 2026-02-12 |
 | 83. Keystore 멀티커브 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 84. 어댑터 팩토리 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 85. DB 마이그레이션 | v1.4.1 | 0/1 | Not started | - |
+| 85. DB 마이그레이션 | v1.4.1 | 1/1 | Complete | 2026-02-12 |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 0/TBD | Not started | - |
 | 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |
 | 88. 통합 검증 | v1.4.1 | 0/TBD | Not started | - |
