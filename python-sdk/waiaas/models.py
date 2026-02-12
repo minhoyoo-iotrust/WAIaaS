@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -59,12 +59,35 @@ class WalletAssets(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class SendTokenRequest(BaseModel):
-    """Request body for POST /v1/transactions/send."""
+class TokenInfo(BaseModel):
+    """Token identification for TOKEN_TRANSFER/APPROVE transactions."""
 
-    to: str
-    amount: str
+    address: str
+    decimals: int
+    symbol: str
+
+
+class SendTokenRequest(BaseModel):
+    """Request body for POST /v1/transactions/send (5-type support)."""
+
+    to: Optional[str] = None
+    amount: Optional[str] = None
     memo: Optional[str] = None
+    type: Optional[str] = None
+    token: Optional[TokenInfo] = None
+    # CONTRACT_CALL fields
+    calldata: Optional[str] = None
+    abi: Optional[list[dict[str, Any]]] = None
+    value: Optional[str] = None
+    program_id: Optional[str] = Field(default=None, alias="programId")
+    instruction_data: Optional[str] = Field(default=None, alias="instructionData")
+    accounts: Optional[list[dict[str, Any]]] = None
+    # APPROVE fields
+    spender: Optional[str] = None
+    # BATCH fields
+    instructions: Optional[list[dict[str, Any]]] = None
+
+    model_config = {"populate_by_name": True}
 
 
 class TransactionResponse(BaseModel):

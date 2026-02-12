@@ -11,6 +11,7 @@ from waiaas.models import (
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
+    TokenInfo,
     TransactionDetail,
     TransactionList,
     TransactionResponse,
@@ -132,23 +133,39 @@ class WAIaaSClient:
 
     async def send_token(
         self,
-        to: str,
-        amount: str,
+        to: Optional[str] = None,
+        amount: Optional[str] = None,
         *,
         memo: Optional[str] = None,
+        type: Optional[str] = None,
+        token: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
     ) -> TransactionResponse:
-        """POST /v1/transactions/send -- Send native token transfer.
+        """POST /v1/transactions/send -- Send transaction (5-type support).
+
+        For legacy TRANSFER: send_token(to="addr", amount="1000")
+        For TOKEN_TRANSFER: send_token(to="addr", amount="1000", type="TOKEN_TRANSFER", token={...})
+        For CONTRACT_CALL: send_token(type="CONTRACT_CALL", to="0xcontract", calldata="0x...")
+        For APPROVE: send_token(type="APPROVE", spender="0x...", token={...}, amount="1000")
+        For BATCH: send_token(type="BATCH", instructions=[...])
 
         Args:
-            to: Recipient address.
-            amount: Amount in base units (lamports for SOL).
+            to: Recipient/contract address.
+            amount: Amount in base units (lamports/wei).
             memo: Optional memo string.
+            type: Transaction type (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH).
+            token: Token info dict with address, decimals, symbol (for TOKEN_TRANSFER/APPROVE).
+            **kwargs: Additional fields (calldata, spender, instructions, etc.).
 
         Returns:
             TransactionResponse with id and status.
         """
-        request = SendTokenRequest(to=to, amount=amount, memo=memo)
-        body = request.model_dump(exclude_none=True)
+        token_obj = TokenInfo(**token) if isinstance(token, dict) else token
+        request = SendTokenRequest(
+            to=to, amount=amount, memo=memo, type=type,
+            token=token_obj, **kwargs,
+        )
+        body = request.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request("POST", "/v1/transactions/send", json_body=body)
         return TransactionResponse.model_validate(resp.json())
 

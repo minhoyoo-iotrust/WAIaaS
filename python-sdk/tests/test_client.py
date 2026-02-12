@@ -231,6 +231,66 @@ class TestSendToken:
         assert captured_body["memo"] == "test payment"
 
 
+class TestSendTokenWithType:
+    async def test_send_token_with_type_token_transfer(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/transactions/send" in str(
+                request.url
+            ):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    201,
+                    json={"id": TX_ID, "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.send_token(
+            "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+            "500000",
+            type="TOKEN_TRANSFER",
+            token={"address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "decimals": 6, "symbol": "USDC"},
+        )
+        assert isinstance(result, TransactionResponse)
+        assert result.id == TX_ID
+        assert captured_body["to"] == "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+        assert captured_body["amount"] == "500000"
+        assert captured_body["type"] == "TOKEN_TRANSFER"
+        assert captured_body["token"]["address"] == "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        assert captured_body["token"]["decimals"] == 6
+        assert captured_body["token"]["symbol"] == "USDC"
+
+    async def test_send_token_without_type_legacy_body(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/transactions/send" in str(
+                request.url
+            ):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    201,
+                    json={"id": TX_ID, "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.send_token(
+            "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM", "1000000"
+        )
+        assert isinstance(result, TransactionResponse)
+        assert captured_body["to"] == "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+        assert captured_body["amount"] == "1000000"
+        assert "type" not in captured_body
+        assert "token" not in captured_body
+
+
 class TestGetTransaction:
     async def test_returns_transaction_detail(self):
         handler = make_handler(

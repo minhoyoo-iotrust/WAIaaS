@@ -331,6 +331,57 @@ describe('WAIaaSClient', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
+    it('should send type and token in body when type=TOKEN_TRANSFER', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({ id: 'tx-005', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({
+        to: 'RecipientAddr',
+        amount: '500000',
+        type: 'TOKEN_TRANSFER',
+        token: { address: 'mint123', decimals: 6, symbol: 'USDC' },
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(JSON.parse(opts.body as string)).toEqual({
+        to: 'RecipientAddr',
+        amount: '500000',
+        type: 'TOKEN_TRANSFER',
+        token: { address: 'mint123', decimals: 6, symbol: 'USDC' },
+      });
+    });
+
+    it('should send legacy body without type/token when omitted (backward compat)', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({ id: 'tx-006', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({
+        to: 'RecipientAddr',
+        amount: '1000000',
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body).toEqual({
+        to: 'RecipientAddr',
+        amount: '1000000',
+      });
+      expect(body['type']).toBeUndefined();
+      expect(body['token']).toBeUndefined();
+    });
+
     it('should throw WAIaaSError with hint on 400 server response', async () => {
       const client = new WAIaaSClient({
         baseUrl: 'http://localhost:3000',
