@@ -1,9 +1,9 @@
 /**
- * Tests for agent creation and wallet query API routes.
+ * Tests for wallet creation and wallet query API routes.
  *
  * Uses in-memory SQLite + mock keyStore + mock adapter + Hono app.request().
  *
- * v1.2: POST /v1/agents requires X-Master-Password (masterAuth).
+ * v1.2: POST /v1/wallets requires X-Master-Password (masterAuth).
  *        GET /v1/wallet/* requires Authorization: Bearer wai_sess_<token> (sessionAuth).
  */
 
@@ -97,7 +97,7 @@ function mockConfig(): DaemonConfig {
     security: {
       session_ttl: 86400,
       jwt_secret: '',
-      max_sessions_per_agent: 5,
+      max_sessions_per_wallet: 5,
       max_pending_tx: 10,
       nonce_storage: 'memory',
       nonce_cache_max: 1000,
@@ -126,7 +126,7 @@ const MOCK_EVM_PUBLIC_KEY = '0x1234567890AbCDef1234567890abcdef12345678';
 function mockKeyStore() {
   const ks = {
     generateKeyPair: vi.fn().mockImplementation(
-      async (_agentId: string, chain: string, _network: string, _password: string) => {
+      async (_walletId: string, chain: string, _network: string, _password: string) => {
         if (chain === 'ethereum') {
           return { publicKey: MOCK_EVM_PUBLIC_KEY, encryptedPrivateKey: new Uint8Array(32) };
         }
@@ -245,9 +245,9 @@ afterEach(() => {
 // Auth test helpers
 // ---------------------------------------------------------------------------
 
-/** Create an agent via POST with masterAuth header. Returns agent ID. */
-async function createTestAgent(): Promise<string> {
-  const res = await app.request('/v1/agents', {
+/** Create a wallet via POST with masterAuth header. Returns wallet ID. */
+async function createTestWallet(): Promise<string> {
+  const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: {
       Host: HOST,
@@ -261,20 +261,20 @@ async function createTestAgent(): Promise<string> {
 }
 
 /** Create a session and sign a JWT for the given agent. Returns "Bearer wai_sess_<token>". */
-async function createSessionToken(agentId: string): Promise<string> {
+async function createSessionToken(walletId: string): Promise<string> {
   const sessionId = generateId();
   const now = Math.floor(Date.now() / 1000);
 
   // Insert session into DB
   conn.sqlite.prepare(
-    `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+    `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+  ).run(sessionId, walletId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
 
   // Sign JWT
   const payload: JwtPayload = {
     sub: sessionId,
-    agt: agentId,
+    wlt: walletId,
     iat: now,
     exp: now + 3600,
   };
@@ -283,12 +283,12 @@ async function createSessionToken(agentId: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// POST /v1/agents (7 tests)
+// POST /v1/wallets (7 tests)
 // ---------------------------------------------------------------------------
 
-describe('POST /v1/agents', () => {
-  it('should return 201 with agent JSON on valid request', async () => {
-    const res = await app.request('/v1/agents', {
+describe('POST /v1/wallets (wallet CRUD)', () => {
+  it('should return 201 with wallet JSON on valid request', async () => {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -307,8 +307,8 @@ describe('POST /v1/agents', () => {
     expect(body.id).toBeTruthy();
   });
 
-  it('should create agent with status ACTIVE', async () => {
-    const res = await app.request('/v1/agents', {
+  it('should create wallet with status ACTIVE', async () => {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -323,7 +323,7 @@ describe('POST /v1/agents', () => {
   });
 
   it('should return 400 on missing name field (Zod validation)', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -338,8 +338,8 @@ describe('POST /v1/agents', () => {
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
   });
 
-  it('should generate UUID-format agent ID', async () => {
-    const res = await app.request('/v1/agents', {
+  it('should generate UUID-format wallet ID', async () => {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -355,8 +355,8 @@ describe('POST /v1/agents', () => {
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
-  it('should persist agent in database (SELECT after POST)', async () => {
-    const res = await app.request('/v1/agents', {
+  it('should persist wallet in database (SELECT after POST)', async () => {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -367,10 +367,10 @@ describe('POST /v1/agents', () => {
     });
 
     const body = await json(res);
-    const agentId = body.id as string;
+    const walletId = body.id as string;
 
     // Verify in DB via raw SQL
-    const row = conn.sqlite.prepare('SELECT * FROM agents WHERE id = ?').get(agentId) as Record<
+    const row = conn.sqlite.prepare('SELECT * FROM wallets WHERE id = ?').get(walletId) as Record<
       string,
       unknown
     >;
@@ -383,7 +383,7 @@ describe('POST /v1/agents', () => {
   });
 
   it('should return 401 without X-Master-Password header', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -398,7 +398,7 @@ describe('POST /v1/agents', () => {
   });
 
   it('should return 401 with wrong master password', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -420,7 +420,7 @@ describe('POST /v1/agents', () => {
 
 describe('chain-network validation', () => {
   it('POST /agents with chain=solana, no network -> defaults to devnet', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -437,7 +437,7 @@ describe('chain-network validation', () => {
   });
 
   it('POST /agents with chain=ethereum, no network -> defaults to evm_default_network', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -454,7 +454,7 @@ describe('chain-network validation', () => {
   });
 
   it('POST /agents with chain=ethereum + network=ethereum-sepolia -> success', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -470,7 +470,7 @@ describe('chain-network validation', () => {
   });
 
   it('POST /agents with chain=ethereum + network=polygon-mainnet -> success', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -486,7 +486,7 @@ describe('chain-network validation', () => {
   });
 
   it('POST /agents with chain=ethereum + network=devnet -> 400 validation error', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -502,7 +502,7 @@ describe('chain-network validation', () => {
   });
 
   it('POST /agents with chain=solana + network=ethereum-sepolia -> 400 validation error', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -518,7 +518,7 @@ describe('chain-network validation', () => {
   });
 
   it('POST /agents with chain=solana + network=mainnet -> success', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -536,12 +536,12 @@ describe('chain-network validation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// EVM agent creation integration (5 tests)
+// EVM wallet creation integration (5 tests)
 // ---------------------------------------------------------------------------
 
-describe('EVM agent creation', () => {
+describe('EVM wallet creation', () => {
   it('POST /agents with chain=ethereum returns 201 with 0x-prefixed publicKey', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -560,7 +560,7 @@ describe('EVM agent creation', () => {
   });
 
   it('POST /agents with chain=ethereum and no network defaults to evm_default_network', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -576,8 +576,8 @@ describe('EVM agent creation', () => {
     expect(body.publicKey).toBe(MOCK_EVM_PUBLIC_KEY);
   });
 
-  it('generateKeyPair receives network as 3rd parameter for EVM agent', async () => {
-    await app.request('/v1/agents', {
+  it('generateKeyPair receives network as 3rd parameter for EVM wallet', async () => {
+    await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -590,14 +590,14 @@ describe('EVM agent creation', () => {
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(agentId, chain, network, masterPassword)
+    // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('ethereum');
     expect(lastCall[2]).toBe('polygon-mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
   });
 
-  it('generateKeyPair receives network as 3rd parameter for Solana agent', async () => {
-    await app.request('/v1/agents', {
+  it('generateKeyPair receives network as 3rd parameter for Solana wallet', async () => {
+    await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -610,14 +610,14 @@ describe('EVM agent creation', () => {
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(agentId, chain, network, masterPassword)
+    // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('solana');
     expect(lastCall[2]).toBe('mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
   });
 
-  it('EVM agent is persisted with 0x address in database', async () => {
-    const res = await app.request('/v1/agents', {
+  it('EVM wallet is persisted with 0x address in database', async () => {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -628,10 +628,10 @@ describe('EVM agent creation', () => {
     });
 
     const body = await json(res);
-    const agentId = body.id as string;
+    const walletId = body.id as string;
 
     // Verify in DB
-    const row = conn.sqlite.prepare('SELECT * FROM agents WHERE id = ?').get(agentId) as Record<
+    const row = conn.sqlite.prepare('SELECT * FROM wallets WHERE id = ?').get(walletId) as Record<
       string,
       unknown
     >;
@@ -648,22 +648,22 @@ describe('EVM agent creation', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/wallet/address', () => {
-  let agentId: string;
+  let walletId: string;
   let authHeader: string;
 
   beforeEach(async () => {
-    agentId = await createTestAgent();
-    authHeader = await createSessionToken(agentId);
+    walletId = await createTestWallet();
+    authHeader = await createSessionToken(walletId);
   });
 
-  it('should return 200 with address JSON for valid agent', async () => {
+  it('should return 200 with address JSON for valid wallet', async () => {
     const res = await app.request('/v1/wallet/address', {
       headers: { Host: HOST, Authorization: authHeader },
     });
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.agentId).toBe(agentId);
+    expect(body.walletId).toBe(walletId);
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
     expect(body.address).toBe(MOCK_SOLANA_PUBLIC_KEY);
@@ -672,10 +672,10 @@ describe('GET /v1/wallet/address', () => {
   it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
     // Sign a JWT with valid format but session not in DB
     const fakeSessionId = generateId();
-    const fakeAgentId = '00000000-0000-7000-8000-000000000000';
+    const fakeWalletId = '00000000-0000-7000-8000-000000000000';
     const now = Math.floor(Date.now() / 1000);
 
-    const payload: JwtPayload = { sub: fakeSessionId, agt: fakeAgentId, iat: now, exp: now + 3600 };
+    const payload: JwtPayload = { sub: fakeSessionId, wlt: fakeWalletId, iat: now, exp: now + 3600 };
     const token = await jwtSecretManager.signToken(payload);
 
     const res = await app.request('/v1/wallet/address', {
@@ -713,15 +713,15 @@ describe('GET /v1/wallet/address', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/wallet/balance', () => {
-  let agentId: string;
+  let walletId: string;
   let authHeader: string;
 
   beforeEach(async () => {
-    agentId = await createTestAgent();
-    authHeader = await createSessionToken(agentId);
+    walletId = await createTestWallet();
+    authHeader = await createSessionToken(walletId);
   });
 
-  it('should return 200 with balance as string for valid agent', async () => {
+  it('should return 200 with balance as string for valid wallet', async () => {
     const res = await app.request('/v1/wallet/balance', {
       headers: { Host: HOST, Authorization: authHeader },
     });
@@ -739,7 +739,7 @@ describe('GET /v1/wallet/balance', () => {
     const body = await json(res);
     expect(body.decimals).toBe(9);
     expect(body.symbol).toBe('SOL');
-    expect(body.agentId).toBe(agentId);
+    expect(body.walletId).toBe(walletId);
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
     expect(body.address).toBe(MOCK_SOLANA_PUBLIC_KEY);
@@ -760,13 +760,13 @@ describe('GET /v1/wallet/balance', () => {
     const now = Math.floor(Date.now() / 1000);
 
     conn.sqlite.prepare(
-      `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+    ).run(sessionId, walletId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
 
     const payload: JwtPayload = {
       sub: sessionId,
-      agt: agentId,
+      wlt: walletId,
       iat: now - 7200,
       exp: now - 3600, // expired
     };
@@ -787,9 +787,9 @@ describe('GET /v1/wallet/balance', () => {
 // ---------------------------------------------------------------------------
 
 describe('Integration flow', () => {
-  it('should create agent then get matching address', async () => {
+  it('should create wallet then get matching address', async () => {
     // Create
-    const createRes = await app.request('/v1/agents', {
+    const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -799,10 +799,10 @@ describe('Integration flow', () => {
       body: JSON.stringify({ name: 'flow-agent' }),
     });
     const created = await json(createRes);
-    const agentId = created.id as string;
+    const walletId = created.id as string;
 
     // Create session for wallet query
-    const authHeader = await createSessionToken(agentId);
+    const authHeader = await createSessionToken(walletId);
 
     // Get address
     const addrRes = await app.request('/v1/wallet/address', {
@@ -812,12 +812,12 @@ describe('Integration flow', () => {
 
     // Verify publicKey matches
     expect(addr.address).toBe(created.publicKey);
-    expect(addr.agentId).toBe(agentId);
+    expect(addr.walletId).toBe(walletId);
   });
 
-  it('should create agent then get balance with correct shape', async () => {
+  it('should create wallet then get balance with correct shape', async () => {
     // Create
-    const createRes = await app.request('/v1/agents', {
+    const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
         Host: HOST,
@@ -827,10 +827,10 @@ describe('Integration flow', () => {
       body: JSON.stringify({ name: 'balance-flow-agent' }),
     });
     const created = await json(createRes);
-    const agentId = created.id as string;
+    const walletId = created.id as string;
 
     // Create session for wallet query
-    const authHeader = await createSessionToken(agentId);
+    const authHeader = await createSessionToken(walletId);
 
     // Get balance
     const balRes = await app.request('/v1/wallet/balance', {
@@ -839,7 +839,7 @@ describe('Integration flow', () => {
     const bal = await json(balRes);
 
     expect(balRes.status).toBe(200);
-    expect(bal.agentId).toBe(agentId);
+    expect(bal.walletId).toBe(walletId);
     expect(bal.address).toBe(created.publicKey);
     expect(typeof bal.balance).toBe('string');
     expect(typeof bal.decimals).toBe('number');

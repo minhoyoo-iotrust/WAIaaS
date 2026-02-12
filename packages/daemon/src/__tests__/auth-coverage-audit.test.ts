@@ -99,7 +99,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   let manager: JwtSecretManager;
   let app: Hono;
 
-  const TEST_AGENT_ID = generateId();
+  const TEST_WALLET_ID = generateId();
   const TEST_SESSION_ID = generateId();
 
   function createTestApp(jwtManager: JwtSecretManager, database: ReturnType<typeof createDatabase>['db']) {
@@ -111,28 +111,28 @@ describe('sessionAuth edge cases (coverage audit)', () => {
     );
     testApp.get('/protected/data', (c) => {
       const sessionId = c.get('sessionId' as never) as string | undefined;
-      const agentId = c.get('agentId' as never) as string | undefined;
-      return c.json({ sessionId, agentId, ok: true });
+      const walletId = c.get('walletId' as never) as string | undefined;
+      return c.json({ sessionId, walletId, ok: true });
     });
     return testApp;
   }
 
-  function seedAgent() {
+  function seedWallet() {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(TEST_AGENT_ID, 'Audit Agent', 'solana', 'mainnet', `pk-audit-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+    ).run(TEST_WALLET_ID, 'Audit Wallet', 'solana', 'mainnet', `pk-audit-${Math.random()}`, 'ACTIVE', 0, ts, ts);
   }
 
   function seedSession(opts: { expiresAt?: number; revokedAt?: number | null } = {}) {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
+      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       TEST_SESSION_ID,
-      TEST_AGENT_ID,
+      TEST_WALLET_ID,
       'test-token-hash-audit',
       opts.expiresAt ?? ts + 86400,
       ts + 86400 * 30,
@@ -145,7 +145,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
     const ts = nowSeconds();
     const payload: JwtPayload = {
       sub: TEST_SESSION_ID,
-      agt: TEST_AGENT_ID,
+      wlt: TEST_WALLET_ID,
       iat: ts,
       exp: ts + 3600,
       ...overrides,
@@ -172,7 +172,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   });
 
   it('allows request when DB expires_at is in the past but JWT is still valid (JWT exp is authoritative)', async () => {
-    seedAgent();
+    seedWallet();
     // DB session expires_at in the past, but JWT token exp is in the future
     seedSession({ expiresAt: nowSeconds() - 3600 });
     const token = await signTestToken();
@@ -189,7 +189,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   });
 
   it('succeeds with the same valid token on multiple sequential requests (no one-time-use)', async () => {
-    seedAgent();
+    seedWallet();
     seedSession();
     const token = await signTestToken();
 
@@ -213,12 +213,12 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   });
 
   it('returns 404 SESSION_NOT_FOUND for valid JWT structure but unknown session ID', async () => {
-    seedAgent();
+    seedWallet();
     // Note: we do NOT seed a session row for this session ID
     const unknownSessionId = generateId();
     const token = await manager.signToken({
       sub: unknownSessionId,
-      agt: TEST_AGENT_ID,
+      wlt: TEST_WALLET_ID,
       iat: nowSeconds(),
       exp: nowSeconds() + 3600,
     });
@@ -293,7 +293,7 @@ describe('ownerAuth edge cases (coverage audit)', () => {
   let app: Hono;
   let ownerKeypair: ReturnType<typeof generateTestKeypair>;
 
-  const TEST_AGENT_ID = '00000001-0001-7001-8001-000000000002';
+  const TEST_WALLET_ID = '00000001-0001-7001-8001-000000000002';
 
   function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
     const testApp = new Hono();
@@ -306,13 +306,13 @@ describe('ownerAuth edge cases (coverage audit)', () => {
     return testApp;
   }
 
-  function seedAgent(ownerAddress: string) {
+  function seedWallet(ownerAddress: string) {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
-      TEST_AGENT_ID, 'Owner Audit Agent', 'solana', 'mainnet',
+      TEST_WALLET_ID, 'Owner Audit Wallet', 'solana', 'mainnet',
       'pk-owner-audit-test', 'ACTIVE', 0, ownerAddress, ts, ts,
     );
   }
@@ -335,11 +335,11 @@ describe('ownerAuth edge cases (coverage audit)', () => {
   });
 
   it('rejects with 401 INVALID_SIGNATURE when only X-Owner-Signature is missing', async () => {
-    seedAgent(ownerKeypair.address);
+    seedWallet(ownerKeypair.address);
 
     const message = 'test-missing-sig';
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         // X-Owner-Signature intentionally omitted
@@ -354,12 +354,12 @@ describe('ownerAuth edge cases (coverage audit)', () => {
   });
 
   it('rejects with 401 INVALID_SIGNATURE when X-Owner-Message is empty string', async () => {
-    seedAgent(ownerKeypair.address);
+    seedWallet(ownerKeypair.address);
 
     // Sign the empty message (the signature will be valid for empty string)
     const sig = signMessage('', ownerKeypair.secretKey);
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': sig,

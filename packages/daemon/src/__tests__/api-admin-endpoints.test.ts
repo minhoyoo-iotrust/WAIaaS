@@ -1,8 +1,8 @@
 /**
  * Tests for 9 new endpoints added in Phase 59-02 Task 2:
  *
- * PUT    /v1/agents/:id          (masterAuth) - Update agent name
- * DELETE /v1/agents/:id          (masterAuth) - Terminate agent
+ * PUT    /v1/wallets/:id          (masterAuth) - Update agent name
+ * DELETE /v1/wallets/:id          (masterAuth) - Terminate agent
  * GET    /v1/admin/status        (masterAuth) - Daemon status
  * POST   /v1/admin/kill-switch   (masterAuth) - Activate kill switch
  * GET    /v1/admin/kill-switch   (public)     - Get kill switch state
@@ -60,7 +60,7 @@ function mockConfig(): DaemonConfig {
       ntfy_server: 'https://ntfy.sh', ntfy_topic: '', locale: 'en' as const, rate_limit_rpm: 20,
     },
     security: {
-      session_ttl: 86400, jwt_secret: '', max_sessions_per_agent: 5, max_pending_tx: 10,
+      session_ttl: 86400, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
       nonce_storage: 'memory' as const, nonce_cache_max: 1000, nonce_cache_ttl: 300,
       rate_limit_global_ip_rpm: 1000, rate_limit_session_rpm: 300, rate_limit_tx_rpm: 10,
       cors_origins: ['http://localhost:3100'], auto_stop_consecutive_failures_threshold: 3,
@@ -163,8 +163,8 @@ afterEach(() => {
 // Auth test helpers
 // ---------------------------------------------------------------------------
 
-async function createTestAgent(name = 'test-agent'): Promise<string> {
-  const res = await app.request('/v1/agents', {
+async function createTestWallet(name = 'test-agent'): Promise<string> {
+  const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: {
       Host: HOST,
@@ -178,14 +178,14 @@ async function createTestAgent(name = 'test-agent'): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// PUT /v1/agents/:id (3 tests)
+// PUT /v1/wallets/:id (3 tests)
 // ---------------------------------------------------------------------------
 
-describe('PUT /v1/agents/:id', () => {
-  it('should update agent name with masterAuth -> 200', async () => {
-    const agentId = await createTestAgent('original-name');
+describe('PUT /v1/wallets/:id (update)', () => {
+  it('should update wallet name with masterAuth -> 200', async () => {
+    const walletId = await createTestWallet('original-name');
 
-    const res = await app.request(`/v1/agents/${agentId}`, {
+    const res = await app.request(`/v1/wallets/${walletId}`, {
       method: 'PUT',
       headers: {
         Host: HOST,
@@ -197,15 +197,15 @@ describe('PUT /v1/agents/:id', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.id).toBe(agentId);
+    expect(body.id).toBe(walletId);
     expect(body.name).toBe('updated-name');
     expect(body.chain).toBe('solana');
     expect(body.status).toBe('ACTIVE');
   });
 
-  it('should return 404 for non-existent agent', async () => {
+  it('should return 404 for non-existent wallet', async () => {
     const fakeId = '00000000-0000-7000-8000-000000000099';
-    const res = await app.request(`/v1/agents/${fakeId}`, {
+    const res = await app.request(`/v1/wallets/${fakeId}`, {
       method: 'PUT',
       headers: {
         Host: HOST,
@@ -217,13 +217,13 @@ describe('PUT /v1/agents/:id', () => {
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 
   it('should return 401 without masterAuth', async () => {
-    const agentId = await createTestAgent();
+    const walletId = await createTestWallet();
 
-    const res = await app.request(`/v1/agents/${agentId}`, {
+    const res = await app.request(`/v1/wallets/${walletId}`, {
       method: 'PUT',
       headers: {
         Host: HOST,
@@ -239,14 +239,14 @@ describe('PUT /v1/agents/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /v1/agents/:id (3 tests)
+// DELETE /v1/wallets/:id (3 tests)
 // ---------------------------------------------------------------------------
 
-describe('DELETE /v1/agents/:id', () => {
-  it('should terminate agent -> 200 with TERMINATED status', async () => {
-    const agentId = await createTestAgent();
+describe('DELETE /v1/wallets/:id', () => {
+  it('should terminate wallet -> 200 with TERMINATED status', async () => {
+    const walletId = await createTestWallet();
 
-    const res = await app.request(`/v1/agents/${agentId}`, {
+    const res = await app.request(`/v1/wallets/${walletId}`, {
       method: 'DELETE',
       headers: {
         Host: HOST,
@@ -256,13 +256,13 @@ describe('DELETE /v1/agents/:id', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.id).toBe(agentId);
+    expect(body.id).toBe(walletId);
     expect(body.status).toBe('TERMINATED');
   });
 
-  it('should return 404 for non-existent agent', async () => {
+  it('should return 404 for non-existent wallet', async () => {
     const fakeId = '00000000-0000-7000-8000-000000000099';
-    const res = await app.request(`/v1/agents/${fakeId}`, {
+    const res = await app.request(`/v1/wallets/${fakeId}`, {
       method: 'DELETE',
       headers: {
         Host: HOST,
@@ -272,27 +272,27 @@ describe('DELETE /v1/agents/:id', () => {
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 
-  it('should return 410 for already-terminated agent', async () => {
-    const agentId = await createTestAgent();
+  it('should return 410 for already-terminated wallet', async () => {
+    const walletId = await createTestWallet();
 
     // First delete
-    await app.request(`/v1/agents/${agentId}`, {
+    await app.request(`/v1/wallets/${walletId}`, {
       method: 'DELETE',
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
 
     // Second delete
-    const res = await app.request(`/v1/agents/${agentId}`, {
+    const res = await app.request(`/v1/wallets/${walletId}`, {
       method: 'DELETE',
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
 
     expect(res.status).toBe(410);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_TERMINATED');
+    expect(body.code).toBe('WALLET_TERMINATED');
   });
 });
 
@@ -302,8 +302,8 @@ describe('DELETE /v1/agents/:id', () => {
 
 describe('GET /v1/admin/status', () => {
   it('should return daemon status with masterAuth -> 200', async () => {
-    // Create an agent so agentCount > 0
-    await createTestAgent();
+    // Create a wallet so walletCount > 0
+    await createTestWallet();
 
     const res = await app.request('/v1/admin/status', {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
@@ -315,7 +315,7 @@ describe('GET /v1/admin/status', () => {
     expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
     expect(typeof body.uptime).toBe('number');
     expect(body.uptime).toBeGreaterThanOrEqual(59); // started 60s ago
-    expect(body.agentCount).toBe(1);
+    expect(body.walletCount).toBe(1);
     expect(typeof body.activeSessionCount).toBe('number');
     expect(body.killSwitchState).toBe('NORMAL');
     expect(typeof body.timestamp).toBe('number');
@@ -494,7 +494,7 @@ describe('Kill switch integration', () => {
     });
 
     // Regular route should be blocked
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
 
@@ -538,11 +538,11 @@ describe('Kill switch integration', () => {
     expect(body.status).toBe('running');
 
     // But regular routes should be blocked
-    const agentRes = await ksApp.request('/v1/agents', {
+    const walletRes = await ksApp.request('/v1/wallets', {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
-    expect(agentRes.status).toBe(409);
-    const agentBody = await json(agentRes);
-    expect(agentBody.code).toBe('KILL_SWITCH_ACTIVE');
+    expect(walletRes.status).toBe(409);
+    const walletBody = await json(walletRes);
+    expect(walletBody.code).toBe('KILL_SWITCH_ACTIVE');
   });
 });

@@ -3,11 +3,11 @@
  *
  * Tests cover:
  * 1. POST /v1/sessions returns 201 with JWT token
- * 2. POST /v1/sessions returns 404 when agent not found
+ * 2. POST /v1/sessions returns 404 when wallet not found
  * 3. POST /v1/sessions returns 403 SESSION_LIMIT_EXCEEDED
  * 4. POST /v1/sessions returns 401 without masterAuth
- * 5. GET /v1/sessions?agentId=X returns active sessions
- * 6. GET /v1/sessions?agentId=X excludes revoked sessions
+ * 5. GET /v1/sessions?walletId=X returns active sessions
+ * 6. GET /v1/sessions?walletId=X excludes revoked sessions
  * 7. DELETE /v1/sessions/:id revokes session
  * 8. DELETE /v1/sessions/:id returns SESSION_NOT_FOUND for unknown id
  * 9. Revoked session token rejected by sessionAuth
@@ -44,14 +44,14 @@ async function json(res: Response): Promise<Record<string, unknown>> {
 }
 
 /** Helper: seed a test agent into the database */
-function seedAgent(sqlite: DatabaseType, agentId: string): void {
+function seedWallet(sqlite: DatabaseType, walletId: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(agentId, 'Test Agent', 'solana', 'mainnet', `pk-${agentId}`, 'ACTIVE', 0, ts, ts);
+    .run(walletId, 'Test Wallet', 'solana', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 /** Helper: build masterAuth header (includes Host for hostGuard) */
@@ -76,7 +76,7 @@ let sqlite: DatabaseType;
 let db: ReturnType<typeof createDatabase>['db'];
 let jwtManager: JwtSecretManager;
 let app: OpenAPIHono;
-let testAgentId: string;
+let testWalletId: string;
 
 beforeAll(async () => {
   // Hash the test password once (Argon2id, low cost for test speed)
@@ -106,8 +106,8 @@ beforeEach(async () => {
     config,
   });
 
-  testAgentId = generateId();
-  seedAgent(sqlite, testAgentId);
+  testWalletId = generateId();
+  seedWallet(sqlite, testWalletId);
 });
 
 afterEach(() => {
@@ -131,7 +131,7 @@ describe('Session CRUD API', () => {
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId, ttl: 3600 }),
+      body: JSON.stringify({ walletId: testWalletId, ttl: 3600 }),
     });
     expect(res.status).toBe(201);
 
@@ -140,21 +140,21 @@ describe('Session CRUD API', () => {
     expect(typeof body.token).toBe('string');
     expect((body.token as string).startsWith('wai_sess_')).toBe(true);
     expect(body.expiresAt).toBeDefined();
-    expect(body.agentId).toBe(testAgentId);
+    expect(body.walletId).toBe(testWalletId);
   });
 
-  it('POST /v1/sessions returns 404 when agent not found', async () => {
-    const fakeAgentId = generateId();
+  it('POST /v1/sessions returns 404 when wallet not found', async () => {
+    const fakeWalletId = generateId();
 
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: fakeAgentId }),
+      body: JSON.stringify({ walletId: fakeWalletId }),
     });
     expect(res.status).toBe(404);
 
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 
   it('POST /v1/sessions returns 403 SESSION_LIMIT_EXCEEDED', async () => {
@@ -163,7 +163,7 @@ describe('Session CRUD API', () => {
       const res = await app.request('/v1/sessions', {
         method: 'POST',
         headers: masterAuthJsonHeaders(),
-        body: JSON.stringify({ agentId: testAgentId }),
+        body: JSON.stringify({ walletId: testWalletId }),
       });
       expect(res.status).toBe(201);
     }
@@ -172,7 +172,7 @@ describe('Session CRUD API', () => {
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     expect(res.status).toBe(403);
 
@@ -184,7 +184,7 @@ describe('Session CRUD API', () => {
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: { Host: HOST, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     expect(res.status).toBe(401);
 
@@ -196,17 +196,17 @@ describe('Session CRUD API', () => {
   // GET /v1/sessions
   // -----------------------------------------------------------------------
 
-  it('GET /v1/sessions?agentId=X returns active sessions', async () => {
+  it('GET /v1/sessions?walletId=X returns active sessions', async () => {
     // Create 2 sessions
     for (let i = 0; i < 2; i++) {
       await app.request('/v1/sessions', {
         method: 'POST',
         headers: masterAuthJsonHeaders(),
-        body: JSON.stringify({ agentId: testAgentId, ttl: 3600 }),
+        body: JSON.stringify({ walletId: testWalletId, ttl: 3600 }),
       });
     }
 
-    const res = await app.request(`/v1/sessions?agentId=${testAgentId}`, {
+    const res = await app.request(`/v1/sessions?walletId=${testWalletId}`, {
       headers: masterAuthHeader(),
     });
     expect(res.status).toBe(200);
@@ -216,7 +216,7 @@ describe('Session CRUD API', () => {
 
     const first = body[0]!;
     expect(first.status).toBe('ACTIVE');
-    expect(first.agentId).toBe(testAgentId);
+    expect(first.walletId).toBe(testWalletId);
     expect(first.renewalCount).toBe(0);
     expect(first.maxRenewals).toBe(30);
     expect(typeof first.expiresAt).toBe('number');
@@ -225,12 +225,12 @@ describe('Session CRUD API', () => {
     expect(first.lastRenewedAt).toBeNull();
   });
 
-  it('GET /v1/sessions?agentId=X excludes revoked sessions', async () => {
+  it('GET /v1/sessions?walletId=X excludes revoked sessions', async () => {
     // Create a session
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     expect(createRes.status).toBe(201);
     const created = await json(createRes);
@@ -244,7 +244,7 @@ describe('Session CRUD API', () => {
     expect(deleteRes.status).toBe(200);
 
     // List should be empty (revoked sessions excluded)
-    const listRes = await app.request(`/v1/sessions?agentId=${testAgentId}`, {
+    const listRes = await app.request(`/v1/sessions?walletId=${testWalletId}`, {
       headers: masterAuthHeader(),
     });
     expect(listRes.status).toBe(200);
@@ -262,7 +262,7 @@ describe('Session CRUD API', () => {
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     const created = await json(createRes);
     const sessionId = created.id as string;
@@ -301,7 +301,7 @@ describe('Session CRUD API', () => {
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     const created = await json(createRes);
     const sessionId = created.id as string;
@@ -331,7 +331,7 @@ describe('Session CRUD API', () => {
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId, ttl: 3600 }),
+      body: JSON.stringify({ walletId: testWalletId, ttl: 3600 }),
     });
     expect(createRes.status).toBe(201);
     const created = await json(createRes);

@@ -63,7 +63,7 @@ function fullConfig(overrides: Partial<DaemonConfig['notifications']> = {}): Dae
       rate_limit_rpm: 20, ...overrides,
     },
     security: {
-      session_ttl: 86400, jwt_secret: '', max_sessions_per_agent: 5, max_pending_tx: 10,
+      session_ttl: 86400, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
       nonce_storage: 'memory' as const, nonce_cache_max: 1000, nonce_cache_ttl: 300,
       rate_limit_global_ip_rpm: 1000, rate_limit_session_rpm: 300, rate_limit_tx_rpm: 10,
       cors_origins: ['http://localhost:3100'], auto_stop_consecutive_failures_threshold: 3,
@@ -328,7 +328,7 @@ describe('GET /admin/notifications/log', () => {
   function insertLog(
     opts: {
       eventType?: string;
-      agentId?: string;
+      walletId?: string;
       channel?: string;
       status?: string;
       error?: string | null;
@@ -339,13 +339,13 @@ describe('GET /admin/notifications/log', () => {
     const ts = opts.createdAt ?? Math.floor(Date.now() / 1000);
     sqlite
       .prepare(
-        `INSERT INTO notification_logs (id, event_type, agent_id, channel, status, error, created_at)
+        `INSERT INTO notification_logs (id, event_type, wallet_id, channel, status, error, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         opts.eventType ?? 'TX_CONFIRMED',
-        opts.agentId ?? 'agent-1',
+        opts.walletId ?? 'wallet-1',
         opts.channel ?? 'telegram',
         opts.status ?? 'sent',
         opts.error ?? null,

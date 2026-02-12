@@ -58,7 +58,7 @@ function mockConfig(): DaemonConfig {
       ntfy_server: 'https://ntfy.sh', ntfy_topic: '', locale: 'en' as const, rate_limit_rpm: 20,
     },
     security: {
-      session_ttl: 86400, jwt_secret: '', max_sessions_per_agent: 5, max_pending_tx: 10,
+      session_ttl: 86400, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
       nonce_storage: 'memory' as const, nonce_cache_max: 1000, nonce_cache_ttl: 300,
       rate_limit_global_ip_rpm: 1000, rate_limit_session_rpm: 300, rate_limit_tx_rpm: 10,
       cors_origins: ['http://localhost:3100'], auto_stop_consecutive_failures_threshold: 3,
@@ -152,20 +152,20 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// 1. AGENT_NOT_FOUND error includes hint field
+// 1. WALLET_NOT_FOUND error includes hint field
 // ---------------------------------------------------------------------------
 
 describe('hint field in error responses', () => {
-  it('should include hint for AGENT_NOT_FOUND', async () => {
+  it('should include hint for WALLET_NOT_FOUND', async () => {
     const fakeId = '00000000-0000-7000-8000-000000000099';
-    const res = await app.request(`/v1/agents/${fakeId}`, {
+    const res = await app.request(`/v1/wallets/${fakeId}`, {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
-    expect(body.hint).toBe('Verify the agent ID. List agents via GET /v1/agents.');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
+    expect(body.hint).toBe('Verify the wallet ID. List wallets via GET /v1/wallets.');
   });
 
   it('should include hint for INVALID_TOKEN (missing auth)', async () => {
@@ -180,7 +180,7 @@ describe('hint field in error responses', () => {
   });
 
   it('should include hint for INVALID_MASTER_PASSWORD', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       headers: { Host: HOST, 'X-Master-Password': 'wrong-password' },
     });
 
@@ -201,7 +201,7 @@ describe('hint field in error responses', () => {
       getKillSwitchState: () => 'ACTIVATED',
     });
 
-    const res = await ksApp.request('/v1/agents', {
+    const res = await ksApp.request('/v1/wallets', {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
 
@@ -218,8 +218,8 @@ describe('hint field in error responses', () => {
 
 describe('resolveHint()', () => {
   it('should return hint template for known error code', () => {
-    const hint = resolveHint('AGENT_NOT_FOUND');
-    expect(hint).toBe('Verify the agent ID. List agents via GET /v1/agents.');
+    const hint = resolveHint('WALLET_NOT_FOUND');
+    expect(hint).toBe('Verify the wallet ID. List wallets via GET /v1/wallets.');
   });
 
   it('should return undefined for unknown error code', () => {
@@ -228,13 +228,13 @@ describe('resolveHint()', () => {
   });
 
   it('should substitute variables from context map', () => {
-    const hint = resolveHint('OWNER_NOT_CONNECTED', { agentId: 'agent-123' });
-    expect(hint).toBe('Register an owner via PUT /v1/agents/agent-123/owner.');
+    const hint = resolveHint('OWNER_NOT_CONNECTED', { walletId: 'wallet-123' });
+    expect(hint).toBe('Register an owner via PUT /v1/wallets/wallet-123/owner.');
   });
 
   it('should preserve {variable} when context does not contain the key', () => {
     const hint = resolveHint('OWNER_NOT_CONNECTED');
-    expect(hint).toBe('Register an owner via PUT /v1/agents/{agentId}/owner.');
+    expect(hint).toBe('Register an owner via PUT /v1/wallets/{walletId}/owner.');
   });
 
   it('should have 32 hint entries', () => {
@@ -249,7 +249,7 @@ describe('resolveHint()', () => {
 
 describe('WAIaaSError hint property', () => {
   it('should include hint in toJSON() when set via constructor', () => {
-    const err = new WAIaaSError('AGENT_NOT_FOUND', {
+    const err = new WAIaaSError('WALLET_NOT_FOUND', {
       hint: 'Custom hint message',
     });
 
@@ -258,7 +258,7 @@ describe('WAIaaSError hint property', () => {
   });
 
   it('should NOT include hint in toJSON() when hint is undefined', () => {
-    const err = new WAIaaSError('AGENT_NOT_FOUND');
+    const err = new WAIaaSError('WALLET_NOT_FOUND');
 
     const jsonBody = err.toJSON();
     expect(jsonBody).not.toHaveProperty('hint');
@@ -266,7 +266,7 @@ describe('WAIaaSError hint property', () => {
 
   it('should use constructor hint over errorHintMap in error handler', async () => {
     // This tests that err.hint takes precedence over resolveHint()
-    const err = new WAIaaSError('AGENT_NOT_FOUND', {
+    const err = new WAIaaSError('WALLET_NOT_FOUND', {
       hint: 'Override hint',
     });
     // err.hint should be 'Override hint' and resolveHint would return the map value

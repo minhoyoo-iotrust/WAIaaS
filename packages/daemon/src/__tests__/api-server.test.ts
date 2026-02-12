@@ -154,8 +154,8 @@ describe('errorHandler', () => {
     app.use('*', requestId);
     app.onError(errorHandler);
     app.get('/err', () => {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: 'Agent xyz not found',
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: 'Wallet xyz not found',
       });
     });
 
@@ -163,8 +163,8 @@ describe('errorHandler', () => {
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
-    expect(body.message).toBe('Agent xyz not found');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
+    expect(body.message).toBe('Wallet xyz not found');
     expect(body.retryable).toBe(false);
   });
 

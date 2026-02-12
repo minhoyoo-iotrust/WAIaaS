@@ -46,14 +46,14 @@ async function json(res: Response): Promise<Record<string, unknown>> {
 }
 
 /** Helper: seed a test agent into the database */
-function seedAgent(sqlite: DatabaseType, agentId: string): void {
+function seedWallet(sqlite: DatabaseType, walletId: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(agentId, 'Test Agent', 'solana', 'mainnet', `pk-${agentId}`, 'ACTIVE', 0, ts, ts);
+    .run(walletId, 'Test Wallet', 'solana', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 /** Helper: build masterAuth + JSON content type headers (includes Host for hostGuard) */
@@ -73,13 +73,13 @@ function masterAuthHeader(): Record<string, string> {
 /** Helper: create a session via API and return { id, token, expiresAt } */
 async function createSessionViaApi(
   app: OpenAPIHono,
-  agentId: string,
+  walletId: string,
   ttl: number = SESSION_TTL,
 ): Promise<{ id: string; token: string; expiresAt: number }> {
   const res = await app.request('/v1/sessions', {
     method: 'POST',
     headers: masterAuthJsonHeaders(),
-    body: JSON.stringify({ agentId, ttl }),
+    body: JSON.stringify({ walletId, ttl }),
   });
   if (res.status !== 201) {
     const body = await json(res);
@@ -116,7 +116,7 @@ let sqlite: DatabaseType;
 let db: ReturnType<typeof createDatabase>['db'];
 let jwtManager: JwtSecretManager;
 let app: OpenAPIHono;
-let testAgentId: string;
+let testWalletId: string;
 
 beforeAll(async () => {
   // Hash the test password once (Argon2id, low cost for test speed)
@@ -150,8 +150,8 @@ beforeEach(async () => {
     config,
   });
 
-  testAgentId = generateId();
-  seedAgent(sqlite, testAgentId);
+  testWalletId = generateId();
+  seedWallet(sqlite, testWalletId);
 });
 
 afterEach(() => {
@@ -173,7 +173,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('successful renewal returns new token after 50% TTL elapsed', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Advance past 50% of TTL (1801 seconds > 1800 = 50% of 3600)
     vi.advanceTimersByTime(1801 * 1000);
@@ -195,7 +195,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('old token rejected after renewal', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Advance past 50% TTL
     vi.advanceTimersByTime(1801 * 1000);
@@ -221,7 +221,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal rejected when maxRenewals exceeded', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Directly set renewalCount to maxRenewals (30) in DB
     sqlite
@@ -243,7 +243,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal rejected when absolute lifetime exceeded', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Set absoluteExpiresAt to the past (1 second ago from "now + 1801s")
     const nowSec = Math.floor(Date.now() / 1000);
@@ -266,7 +266,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal rejected when less than 50% TTL elapsed', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Do NOT advance time -- 0 seconds elapsed is < 50% of 3600
     const res = await renewSessionViaApi(app, session.id, session.token);
@@ -281,7 +281,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal rejected for revoked session', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Revoke the session via DELETE (masterAuth)
     const deleteRes = await app.request(`/v1/sessions/${session.id}`, {
@@ -306,7 +306,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal rejected when token_hash CAS mismatch', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Manually change tokenHash in DB to simulate concurrent renewal
     const fakeHash = createHash('sha256').update('fake-token').digest('hex');
@@ -329,8 +329,8 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal rejected when param session ID does not match token session', async () => {
-    const sessionA = await createSessionViaApi(app, testAgentId, SESSION_TTL);
-    const sessionB = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const sessionA = await createSessionViaApi(app, testWalletId, SESSION_TTL);
+    const sessionB = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Advance past 50% TTL
     vi.advanceTimersByTime(1801 * 1000);
@@ -348,7 +348,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewalCount increments on each successive renewal', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // First renewal: advance past 50% of original TTL (3600s)
     vi.advanceTimersByTime(1801 * 1000);
@@ -382,7 +382,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('new token expiresAt clamped by absoluteExpiresAt', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Set absoluteExpiresAt to only 1800 seconds from now (less than full TTL renewal)
     const creationTime = Math.floor(Date.now() / 1000);
@@ -413,7 +413,7 @@ describe('Session Renewal API', () => {
   // -----------------------------------------------------------------------
 
   it('renewal works without masterAuth header (sessionAuth only)', async () => {
-    const session = await createSessionViaApi(app, testAgentId, SESSION_TTL);
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
     // Advance past 50% TTL
     vi.advanceTimersByTime(1801 * 1000);
