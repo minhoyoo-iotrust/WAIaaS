@@ -12,6 +12,7 @@ export interface ILocalKeyStore {
   generateKeyPair(
     agentId: string,
     chain: ChainType,
+    network: string,
     masterPassword: string,
   ): Promise<{
     publicKey: string;

@@ -168,7 +168,7 @@ describe('Keystore file format v1', () => {
   });
 
   it('generateKeyPair creates a valid JSON keystore file', async () => {
-    await keystore.generateKeyPair('test-agent-format', 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair('test-agent-format', 'solana', 'devnet', TEST_PASSWORD);
 
     const filePath = join(keystoreDir, 'test-agent-format.json');
     const content = await readFile(filePath, 'utf-8');
@@ -263,7 +263,7 @@ describe('File permissions', () => {
 
     const keystoreDir = mkdtempSync(join(tempDir, 'ks-perms-'));
     const keystore = new LocalKeyStore(keystoreDir);
-    await keystore.generateKeyPair('test-agent-perms', 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair('test-agent-perms', 'solana', 'devnet', TEST_PASSWORD);
 
     const filePath = join(keystoreDir, 'test-agent-perms.json');
     const stats = statSync(filePath);
@@ -290,6 +290,7 @@ describe('Full round-trip', () => {
     const { publicKey } = await keystore.generateKeyPair(
       'test-agent-sign',
       'solana',
+      'devnet',
       TEST_PASSWORD,
     );
 
@@ -325,7 +326,7 @@ describe('Full round-trip', () => {
 
   it('decryptPrivateKey -> releaseKey -> hasKey returns true (key file still exists)', async () => {
     const agentId = 'test-agent-release';
-    await keystore.generateKeyPair(agentId, 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
     const key = await keystore.decryptPrivateKey(agentId, TEST_PASSWORD);
 
     keystore.releaseKey(key);
@@ -337,7 +338,7 @@ describe('Full round-trip', () => {
 
   it('deleteKey removes keystore file from disk', async () => {
     const agentId = 'test-agent-delete';
-    await keystore.generateKeyPair(agentId, 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
 
     const filePath = join(keystoreDir, `${agentId}.json`);
     expect(existsSync(filePath)).toBe(true);
@@ -356,14 +357,14 @@ describe('Full round-trip', () => {
 
   it('decryptPrivateKey with wrong password throws WAIaaSError', async () => {
     const agentId = 'test-agent-wrongpw';
-    await keystore.generateKeyPair(agentId, 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
 
     await expect(keystore.decryptPrivateKey(agentId, WRONG_PASSWORD)).rejects.toThrow(WAIaaSError);
   });
 
   it('lastUnlockedAt is updated after decryptPrivateKey', async () => {
     const agentId = 'test-agent-unlocked';
-    await keystore.generateKeyPair(agentId, 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair(agentId, 'solana', 'devnet', TEST_PASSWORD);
 
     // Before decrypt, lastUnlockedAt should be null
     const filePath = join(keystoreDir, `${agentId}.json`);
@@ -384,8 +385,8 @@ describe('Full round-trip', () => {
   it('lockAll releases all keys from guarded memory', async () => {
     const agentId1 = 'test-agent-lockall-1';
     const agentId2 = 'test-agent-lockall-2';
-    await keystore.generateKeyPair(agentId1, 'solana', TEST_PASSWORD);
-    await keystore.generateKeyPair(agentId2, 'solana', TEST_PASSWORD);
+    await keystore.generateKeyPair(agentId1, 'solana', 'devnet', TEST_PASSWORD);
+    await keystore.generateKeyPair(agentId2, 'solana', 'devnet', TEST_PASSWORD);
 
     await keystore.decryptPrivateKey(agentId1, TEST_PASSWORD);
     await keystore.decryptPrivateKey(agentId2, TEST_PASSWORD);
@@ -400,7 +401,7 @@ describe('Full round-trip', () => {
 
   it('generateKeyPair rejects unsupported chain', async () => {
     await expect(
-      keystore.generateKeyPair('test-agent-evm', 'ethereum', TEST_PASSWORD),
+      keystore.generateKeyPair('test-agent-unsupported', 'bitcoin' as never, 'mainnet', TEST_PASSWORD),
     ).rejects.toThrow(WAIaaSError);
   });
 });

@@ -5,18 +5,20 @@
  * Design reference: 26-keystore-spec.md.
  *
  * - Generates Ed25519 key pairs (Solana) using sodium-native
+ * - Generates secp256k1 key pairs (EVM) using crypto.randomBytes + viem
  * - Encrypts private keys with AES-256-GCM + Argon2id KDF
  * - Stores as per-agent JSON keystore files (format v1)
  * - Protects decrypted keys in sodium guarded memory
  * - Atomic file writes (write-then-rename pattern)
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { writeFile, readFile, unlink, stat, rename } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import type { ILocalKeyStore, ChainType } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
+import { privateKeyToAccount } from 'viem/accounts';
 import { encrypt, decrypt, KDF_PARAMS, type EncryptedData } from './crypto.js';
 import { allocateGuarded, writeToGuarded, zeroAndRelease, isAvailable } from './memory.js';
 
@@ -34,6 +36,8 @@ export interface KeystoreFileV1 {
   id: string;
   chain: string;
   network: string;
+  /** Cryptographic curve. Defaults to 'ed25519' for backward compat with pre-v1.4.1 files. */
+  curve: 'ed25519' | 'secp256k1';
   publicKey: string;
   crypto: {
     cipher: 'aes-256-gcm';
@@ -75,19 +79,39 @@ export class LocalKeyStore implements ILocalKeyStore {
    * For Solana: generates Ed25519 keypair via sodium crypto_sign_keypair.
    * The full 64-byte secret key (seed + public) is encrypted.
    *
-   * @returns publicKey (base58 for Solana) and encrypted private key bytes
+   * For Ethereum (EVM): generates secp256k1 private key via crypto.randomBytes(32).
+   * Derives EIP-55 checksum address using viem privateKeyToAccount.
+   * The 32-byte private key is encrypted.
+   *
+   * @returns publicKey (base58 for Solana, 0x EIP-55 for EVM) and encrypted private key bytes
    */
   async generateKeyPair(
     agentId: string,
     chain: ChainType,
+    network: string,
     masterPassword: string,
   ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
-    if (chain !== 'solana') {
-      throw new WAIaaSError('CHAIN_NOT_SUPPORTED', {
-        message: `Key generation for chain '${chain}' is not yet supported. Only 'solana' is supported in v1.1.`,
-      });
+    if (chain === 'ethereum') {
+      return this.generateSecp256k1KeyPair(agentId, network, masterPassword);
     }
 
+    if (chain === 'solana') {
+      return this.generateEd25519KeyPair(agentId, network, masterPassword);
+    }
+
+    throw new WAIaaSError('CHAIN_NOT_SUPPORTED', {
+      message: `Key generation for chain '${chain}' is not supported. Supported: 'solana', 'ethereum'.`,
+    });
+  }
+
+  /**
+   * Generate an Ed25519 keypair for Solana using sodium-native.
+   */
+  private async generateEd25519KeyPair(
+    agentId: string,
+    network: string,
+    masterPassword: string,
+  ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
     const sodium = loadSodium();
 
     // Generate Ed25519 keypair using sodium
@@ -108,8 +132,69 @@ export class LocalKeyStore implements ILocalKeyStore {
     const keystoreFile: KeystoreFileV1 = {
       version: 1,
       id: randomUUID(),
-      chain,
-      network: 'devnet', // Default; can be parameterized later
+      chain: 'solana',
+      network,
+      curve: 'ed25519',
+      publicKey,
+      crypto: {
+        cipher: 'aes-256-gcm',
+        cipherparams: { iv: encrypted.iv.toString('hex') },
+        ciphertext: encrypted.ciphertext.toString('hex'),
+        authTag: encrypted.authTag.toString('hex'),
+        kdf: 'argon2id',
+        kdfparams: {
+          salt: encrypted.salt.toString('hex'),
+          ...KDF_PARAMS,
+        },
+      },
+      metadata: {
+        name: agentId,
+        createdAt: new Date().toISOString(),
+        lastUnlockedAt: null,
+      },
+    };
+
+    // Write keystore file atomically (write-then-rename)
+    await this.writeKeystoreFile(agentId, keystoreFile);
+
+    return {
+      publicKey,
+      encryptedPrivateKey: new Uint8Array(encrypted.ciphertext),
+    };
+  }
+
+  /**
+   * Generate a secp256k1 keypair for EVM chains.
+   * Uses crypto.randomBytes(32) for CSPRNG entropy and viem for EIP-55 address derivation.
+   */
+  private async generateSecp256k1KeyPair(
+    agentId: string,
+    network: string,
+    masterPassword: string,
+  ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
+    const sodium = loadSodium();
+
+    // Generate 32-byte random private key via CSPRNG
+    const privateKeyBuf = randomBytes(32);
+
+    // Derive EIP-55 checksum address using viem
+    const hexKey = `0x${privateKeyBuf.toString('hex')}` as `0x${string}`;
+    const account = privateKeyToAccount(hexKey);
+    const publicKey = account.address; // EIP-55 checksum address
+
+    // Encrypt the 32-byte private key
+    const encrypted = await encrypt(privateKeyBuf, masterPassword);
+
+    // Zero the plaintext private key immediately
+    sodium.sodium_memzero(privateKeyBuf);
+
+    // Build keystore file v1
+    const keystoreFile: KeystoreFileV1 = {
+      version: 1,
+      id: randomUUID(),
+      chain: 'ethereum',
+      network,
+      curve: 'secp256k1',
       publicKey,
       crypto: {
         cipher: 'aes-256-gcm',
@@ -284,6 +369,11 @@ export class LocalKeyStore implements ILocalKeyStore {
       throw new WAIaaSError('KEYSTORE_LOCKED', {
         message: `Unsupported keystore version: ${String(parsed.version)}`,
       });
+    }
+
+    // Backward compat: files created before v1.4.1 lack the curve field
+    if (!parsed.curve) {
+      parsed.curve = 'ed25519';
     }
 
     return parsed;
