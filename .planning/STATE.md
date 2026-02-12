@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 83 (2 of 7 in v1.4.1) — Keystore 멀티커브
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 82 complete (3/3 plans, verified)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-12 — Completed 83-01-PLAN.md (secp256k1 keystore multicurve)
 
-Progress: [█░░░░░░░░░] 14% (1/7 phases in v1.4.1)
+Progress: [██░░░░░░░░] 14% (1/7 phases in v1.4.1, 4/~14 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 82 phases, 185 plans, 529 reqs, 1,220 tests, 51,750+ LOC
+**Cumulative:** 20 milestones, 82 phases, 186 plans, 529 reqs, 1,220 tests, 51,750+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 3 plans completed (Phase 82 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 4 plans completed (Phase 82 done + 83-01 done)
 
 *Updated after each plan completion*
 
@@ -44,6 +44,11 @@ Recent decisions affecting current work:
 - [82-02]: EvmAdapter nativeName = 'Ether' (token name) not 'Ethereum' (blockchain name)
 - [82-03]: CreateAgentRequestSchema.network optional, service-layer resolves chain-based default
 - [82-03]: ACTION_VALIDATION_FAILED used for chain-network validation errors (not VALIDATION_ERROR)
+- [83-01]: viem privateKeyToAccount used for EIP-55 address derivation (not Node.js crypto)
+- [83-01]: crypto.randomBytes(32) for secp256k1 private key entropy (CSPRNG)
+- [83-01]: curve field backward compat: missing = 'ed25519' (pre-v1.4.1 files)
+- [83-01]: network parameter replaces hardcoded 'devnet' in keystore files
+- [83-01]: sodium.sodium_memzero used for secp256k1 plaintext zeroing (same pattern as ed25519)
 
 ### Blockers/Concerns
 
@@ -53,5 +58,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 82 complete, verified, ready for Phase 83 planning
+Stopped at: Completed 83-01-PLAN.md, ready for 83-02
 Resume file: None
