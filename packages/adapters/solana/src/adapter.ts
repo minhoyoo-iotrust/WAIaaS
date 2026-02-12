@@ -33,6 +33,7 @@ import {
   findAssociatedTokenPda,
   getCreateAssociatedTokenIdempotentInstruction,
   getTransferCheckedInstruction,
+  getApproveCheckedInstruction,
   TOKEN_PROGRAM_ADDRESS,
 } from '@solana-program/token';
 import type {
@@ -794,8 +795,100 @@ export class SolanaAdapter implements IChainAdapter {
     }
   }
 
-  async buildApprove(_request: ApproveParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildApprove will be implemented in Phase 79');
+  async buildApprove(request: ApproveParams): Promise<UnsignedTransaction> {
+    const rpc = this.getRpc();
+    try {
+      const from = address(request.from);
+      const mintAddr = address(request.token.address);
+
+      // Step 1: Query mint account to determine token program
+      const mintAccountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!mintAccountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `Token mint not found: ${request.token.address}`,
+        });
+      }
+
+      const mintOwner = String(mintAccountInfo.value.owner);
+      let tokenProgramId: string;
+
+      if (mintOwner === SPL_TOKEN_PROGRAM_ID) {
+        tokenProgramId = SPL_TOKEN_PROGRAM_ID;
+      } else if (mintOwner === TOKEN_2022_PROGRAM_ID) {
+        tokenProgramId = TOKEN_2022_PROGRAM_ID;
+      } else {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Invalid token mint: owner is not a token program',
+        });
+      }
+
+      // Step 2: Compute owner's ATA (the token account being approved)
+      const [ownerAta] = await findAssociatedTokenPda({
+        owner: from,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      // Step 3: Build ApproveChecked instruction
+      const instruction = getApproveCheckedInstruction({
+        source: ownerAta,
+        mint: mintAddr,
+        delegate: address(request.spender),
+        owner: createNoopSigner(from),
+        amount: request.amount,
+        decimals: request.token.decimals,
+      }, { programAddress: address(tokenProgramId) });
+
+      // Step 4: Get latest blockhash
+      const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+
+      // Step 5: Build transaction message using pipe pattern
+      let txMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(from, tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: blockhashInfo.blockhash,
+              lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
+            },
+            tx,
+          ),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
+
+      // Step 6: Compile and encode
+      const compiled = compileTransaction(txMessage);
+      const serialized = new Uint8Array(txEncoder.encode(compiled));
+
+      return {
+        chain: 'solana',
+        serialized,
+        estimatedFee: DEFAULT_SOL_TRANSFER_FEE,
+        expiresAt: new Date(Date.now() + 60_000),
+        metadata: {
+          blockhash: blockhashInfo.blockhash,
+          lastValidBlockHeight: Number(blockhashInfo.lastValidBlockHeight),
+          version: 0,
+          tokenProgram: tokenProgramId,
+          tokenAddress: request.token.address,
+          spender: request.spender,
+          approveAmount: request.amount,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to build approve: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
   }
 
   // -- Batch operations (1) --
