@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 83 - Keystore 멀티커브
+**Current focus:** v1.4.1 Phase 84 - 어댑터 팩토리
 
 ## Current Position
 
-Phase: 83 (2 of 7 in v1.4.1) — Keystore 멀티커브
+Phase: 84 (3 of 7 in v1.4.1) — 어댑터 팩토리
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-02-12 — Phase 82 complete (3/3 plans, verified)
+Last activity: 2026-02-12 — Phase 83 complete (2/2 plans, verified)
 
-Progress: [█░░░░░░░░░] 14% (1/7 phases in v1.4.1)
+Progress: [███░░░░░░░] 29% (2/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 82 phases, 185 plans, 529 reqs, 1,220 tests, 51,750+ LOC
+**Cumulative:** 20 milestones, 83 phases, 187 plans, 533 reqs, 1,231 tests, 52,000+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 3 plans completed (Phase 82 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 5 plans completed (Phases 82-83 done)
 
 *Updated after each plan completion*
 
@@ -44,6 +44,12 @@ Recent decisions affecting current work:
 - [82-02]: EvmAdapter nativeName = 'Ether' (token name) not 'Ethereum' (blockchain name)
 - [82-03]: CreateAgentRequestSchema.network optional, service-layer resolves chain-based default
 - [82-03]: ACTION_VALIDATION_FAILED used for chain-network validation errors (not VALIDATION_ERROR)
+- [83-01]: viem privateKeyToAccount used for EIP-55 address derivation (not Node.js crypto)
+- [83-01]: crypto.randomBytes(32) for secp256k1 private key entropy (CSPRNG)
+- [83-01]: curve field backward compat: missing = 'ed25519' (pre-v1.4.1 files)
+- [83-01]: network parameter replaces hardcoded 'devnet' in keystore files
+- [83-01]: sodium.sodium_memzero used for secp256k1 plaintext zeroing (same pattern as ed25519)
+- [83-02]: vi.fn() mock keyStore enables call inspection for 4-param signature verification
 
 ### Blockers/Concerns
 
@@ -53,5 +59,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 82 complete, verified, ready for Phase 83 planning
+Stopped at: Phase 83 complete, verified, ready for Phase 84 planning
 Resume file: None

@@ -11,7 +11,7 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 ## Phases
 
 - [x] **Phase 82: Config + NetworkType + EVM 의존성** - EVM RPC 설정, 네트워크 enum 확장, chain-network 교차 검증
-- [ ] **Phase 83: Keystore 멀티커브** - secp256k1 키 생성 + EIP-55 주소 파생
+- [x] **Phase 83: Keystore 멀티커브** - secp256k1 키 생성 + EIP-55 주소 파생
 - [ ] **Phase 84: 어댑터 팩토리** - AdapterPool lazy init + 기존 adapter 주입 패턴 전환
 - [ ] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
 - [ ] **Phase 86: REST API 5-type + MCP/SDK 확장** - 5-type 트랜잭션 엔드포인트 + MCP/SDK 토큰 전송
@@ -49,8 +49,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 83-01-PLAN.md — secp256k1 키 생성 + EIP-55 주소 파생 + curve/network 필드 (TDD)
-- [ ] 83-02-PLAN.md — Agent route generateKeyPair network 파라미터 연결 + 통합 테스트
+- [x] 83-01-PLAN.md — secp256k1 키 생성 + EIP-55 주소 파생 + curve/network 필드 (TDD)
+- [x] 83-02-PLAN.md — Agent route generateKeyPair network 파라미터 연결 + 통합 테스트
 
 ### Phase 84: 어댑터 팩토리
 **Goal**: 데몬이 에이전트의 chain/network 필드에 따라 적절한 어댑터를 자동 선택하고, 동일 네트워크는 인스턴스를 재사용하며, shutdown 시 모든 어댑터가 정리되는 상태
@@ -61,10 +61,11 @@ Plans:
   2. 동일 chain:network 조합의 에이전트들이 하나의 어댑터 인스턴스를 공유한다
   3. 기존 모든 라우트(wallet/transactions/agents)가 adapterPool 패턴으로 동작한다
   4. 데몬 shutdown 시 풀 내 모든 어댑터가 disconnect된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 84-01: TBD
+- [ ] 84-01-PLAN.md — AdapterPool 클래스 lazy init + 캐싱 + disconnectAll (TDD)
+- [ ] 84-02-PLAN.md — Daemon/Server/Route adapterPool 패턴 전환 + 테스트 수정
 
 ### Phase 85: DB 마이그레이션
 **Goal**: schema_version 2 마이그레이션이 agents 테이블의 network CHECK 제약을 EVM 네트워크를 포함하도록 확장하고, 기존 데이터가 100% 보존되며, FK 무결성이 검증되는 상태
@@ -131,8 +132,8 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 82. Config + NetworkType | v1.4.1 | 3/3 | Complete | 2026-02-12 |
-| 83. Keystore 멀티커브 | v1.4.1 | 0/TBD | Not started | - |
-| 84. 어댑터 팩토리 | v1.4.1 | 0/TBD | Not started | - |
+| 83. Keystore 멀티커브 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
+| 84. 어댑터 팩토리 | v1.4.1 | 0/2 | Not started | - |
 | 85. DB 마이그레이션 | v1.4.1 | 0/TBD | Not started | - |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 0/TBD | Not started | - |
 | 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |

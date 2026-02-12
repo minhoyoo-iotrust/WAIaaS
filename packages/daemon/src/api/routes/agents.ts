@@ -281,6 +281,7 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
     const { publicKey } = await deps.keyStore.generateKeyPair(
       id,
       chain,
+      network,
       deps.masterPassword,
     );
 
