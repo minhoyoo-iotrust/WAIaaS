@@ -264,7 +264,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 80-01: BatchRequest + Solana 원자적 빌드 + 2단계 합산 정책 + 부모-자식 DB
+- [ ] 80-01-PLAN.md — SolanaAdapter.buildBatch 원자적 빌드 + DatabasePolicyEngine.evaluateBatch 2단계 합산 정책
 
 #### Phase 81: 파이프라인 통합 + Stage 5
 **Goal**: 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)이 6-stage 파이프라인을 완주하고, Stage 5가 ChainError 카테고리별 재시도/실패 분기를 수행한다
