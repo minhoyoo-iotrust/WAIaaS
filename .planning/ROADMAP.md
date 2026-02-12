@@ -42,11 +42,11 @@ Plans:
   3. AuditAction/NotificationEvent enum에 `WALLET_*` 값만 존재한다
   4. i18n en/ko 템플릿에서 `{walletId}`, `{walletCount}` 변수가 사용되고 `{agentId}` 변수가 0건이다
   5. `tsc --noEmit` 컴파일이 성공한다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 90-01: Zod 스키마 + Enum + 에러 코드 rename (파일명 포함)
-- [ ] 90-02: i18n 템플릿 변수/키/텍스트 변경 + core 테스트 갱신
+- [ ] 90-01-PLAN.md — Zod 스키마 + Enum + 에러 코드 rename (파일명 포함, 13 파일)
+- [ ] 90-02-PLAN.md — i18n 템플릿 변수/키/텍스트 변경 + core 테스트 갱신 (7 파일)
 
 ### Phase 91: 데몬 API + JWT + Config
 **Goal**: REST API 경로/응답/JWT가 wallet 용어를 사용하여, 외부 소비자(SDK/MCP/Admin)가 walletId 기반으로 통신한다
