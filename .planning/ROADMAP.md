@@ -6,7 +6,7 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 
 ## Milestones
 
-- 🚧 **v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE** - Phases 82-88 (in progress)
+- ✅ **v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE** - Phases 82-88 (complete)
 
 ## Phases
 
@@ -16,7 +16,7 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 - [x] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
 - [x] **Phase 86: REST API 5-type + MCP/SDK 확장** - 5-type 트랜잭션 엔드포인트 + MCP/SDK 토큰 전송
 - [x] **Phase 87: Owner Auth SIWE** - EIP-4361 SIWE 검증 + chain별 owner_address 형식 검증
-- [ ] **Phase 88: 통합 검증** - EVM 풀 라이프사이클 E2E + 회귀 검증
+- [x] **Phase 88: 통합 검증** - EVM 풀 라이프사이클 E2E + 회귀 검증
 
 ## Phase Details
 
@@ -64,8 +64,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 84-01-PLAN.md — AdapterPool 클래스 lazy init + 캐싱 + disconnectAll (TDD)
-- [ ] 84-02-PLAN.md — Daemon/Server/Route adapterPool 패턴 전환 + 테스트 수정
+- [x] 84-01-PLAN.md — AdapterPool 클래스 lazy init + 캐싱 + disconnectAll (TDD)
+- [x] 84-02-PLAN.md — Daemon/Server/Route adapterPool 패턴 전환 + 테스트 수정
 
 ### Phase 85: DB 마이그레이션
 **Goal**: schema_version 2 마이그레이션이 agents 테이블의 network CHECK 제약을 EVM 네트워크를 포함하도록 확장하고, 기존 데이터가 100% 보존되며, FK 무결성이 검증되는 상태
@@ -78,7 +78,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 85-01-PLAN.md — managesOwnTransaction + v2 마이그레이션 agents network CHECK 확장 (TDD)
+- [x] 85-01-PLAN.md — managesOwnTransaction + v2 마이그레이션 agents network CHECK 확장 (TDD)
 
 ### Phase 86: REST API 5-type + MCP/SDK 확장
 **Goal**: POST /v1/transactions/send가 5가지 트랜잭션 타입을 수용하고, MCP send_token이 TOKEN_TRANSFER를 지원하며, TS/Python SDK가 5-type 전송을 지원하는 상태
@@ -124,9 +124,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 88-01-PLAN.md — EVM 풀 라이프사이클 E2E + 듀얼 체인 + SIWE owner-auth 통합 테스트
-- [ ] 88-02-PLAN.md — 5-type 트랜잭션 파이프라인 E2E + MCP/SDK type/token 통합 검증
-- [ ] 88-03-PLAN.md — 전체 회귀 테스트 실행 + 검증
+- [x] 88-01-PLAN.md — EVM 풀 라이프사이클 E2E + 듀얼 체인 + SIWE owner-auth 통합 테스트
+- [x] 88-02-PLAN.md — 5-type 트랜잭션 파이프라인 E2E + MCP/SDK type/token 통합 검증
+- [x] 88-03-PLAN.md — 전체 회귀 테스트 실행 + 검증
 
 ## Progress
 
@@ -140,4 +140,4 @@ Plans:
 | 85. DB 마이그레이션 | v1.4.1 | 1/1 | Complete | 2026-02-12 |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 87. Owner Auth SIWE | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 88. 통합 검증 | v1.4.1 | 0/3 | Not started | - |
+| 88. 통합 검증 | v1.4.1 | 3/3 | Complete | 2026-02-12 |
