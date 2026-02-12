@@ -121,10 +121,12 @@ Plans:
   3. 5-type 트랜잭션(TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH + 레거시 TRANSFER)이 REST API를 통해 E2E로 동작한다
   4. MCP send_token TOKEN_TRANSFER + SDK 토큰 전송이 E2E로 동작한다
   5. 기존 전체 테스트 스위트(1,126+ tests)가 회귀 없이 통과한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 88-01: TBD
+- [ ] 88-01-PLAN.md — EVM 풀 라이프사이클 E2E + 듀얼 체인 + SIWE owner-auth 통합 테스트
+- [ ] 88-02-PLAN.md — 5-type 트랜잭션 파이프라인 E2E + MCP/SDK type/token 통합 검증
+- [ ] 88-03-PLAN.md — 전체 회귀 테스트 실행 + 검증
 
 ## Progress
 
@@ -138,4 +140,4 @@ Plans:
 | 85. DB 마이그레이션 | v1.4.1 | 1/1 | Complete | 2026-02-12 |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 87. Owner Auth SIWE | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 88. 통합 검증 | v1.4.1 | 0/TBD | Not started | - |
+| 88. 통합 검증 | v1.4.1 | 0/3 | Not started | - |
