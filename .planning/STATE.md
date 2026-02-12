@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 85 - DB 마이그레이션
+**Current focus:** v1.4.1 Phase 86 - REST API 5-type + MCP/SDK 확장
 
 ## Current Position
 
-Phase: 85 (4 of 7 in v1.4.1) — DB 마이그레이션
-Plan: 1 of 1 complete
-Status: Phase complete
-Last activity: 2026-02-12 — Completed 85-01-PLAN.md (v2 migration + managesOwnTransaction)
+Phase: 86 (5 of 7 in v1.4.1) — REST API 5-type + MCP/SDK 확장
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-12 — Phase 85 complete (1/1 plans, verified)
 
 Progress: [██████░░░░] 57% (4/7 phases in v1.4.1)
 
@@ -71,5 +71,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 85-01-PLAN.md, Phase 85 complete
+Stopped at: Phase 85 complete, verified, ready for Phase 86 planning
 Resume file: None
