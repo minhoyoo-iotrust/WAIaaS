@@ -232,21 +232,15 @@ Plans:
 - [x] 77-01-PLAN.md — @waiaas/adapter-evm 패키지 스캐폴딩 + viem 연결/헬스 기본 메서드 + ERC20 ABI
 - [x] 77-02-PLAN.md — EVM 네이티브 전송 파이프라인 + gas 추정 1.2x + nonce 관리 + ERC-20 approve + getTokenInfo
 
-#### Phase 78: 토큰 전송 + 자산 조회
+#### Phase 78: 토큰 전송 + 자산 조회 — completed 2026-02-12
 **Goal**: 에이전트가 SPL/ERC-20 토큰을 전송하고, ALLOWED_TOKENS 정책으로 허용 토큰을 제한하며, getAssets()가 토큰 잔액을 포함하고, estimateFee()가 토큰 전송 수수료를 추정한다
 **Depends on**: Phase 76 (discriminatedUnion TOKEN_TRANSFER type, IChainAdapter buildTokenTransfer), Phase 77 (EVM adapter)
 **Requirements**: TOKEN-01, TOKEN-02, TOKEN-03, TOKEN-04, TOKEN-05, TOKEN-06
-**Success Criteria** (what must be TRUE):
-  1. 에이전트가 SPL 토큰(USDC 등)을 buildSplTokenTransfer로 전송할 수 있고, Token-2022 프로그램도 자동 분기된다
-  2. 에이전트가 ERC-20 토큰을 buildErc20Transfer로 전송할 수 있다
-  3. ALLOWED_TOKENS 정책 미설정 에이전트는 토큰 전송이 거부되고(네이티브만 허용), 설정된 에이전트는 화이트리스트 토큰만 전송 가능하다
-  4. getAssets()가 네이티브 토큰 + SPL/ERC-20 토큰 잔액을 반환하고, 네이티브가 첫 번째 + 잔액 내림차순으로 정렬된다
-  5. estimateFee()가 SPL ATA 생성 비용과 ERC-20 gas를 정확히 추정한다
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 78-01-PLAN.md — SolanaAdapter buildTokenTransfer + Token-2022 분기 + getTokenInfo/estimateFee/getTransactionFee + getAssets Token-2022 + ALLOWED_TOKENS 정책 평가 (Wave 1, TDD)
-- [ ] 78-02-PLAN.md — EvmAdapter buildTokenTransfer ERC-20 + getAssets ERC-20 multicall 확장 (Wave 2, TDD)
+- [x] 78-01-PLAN.md — SolanaAdapter buildTokenTransfer + Token-2022 분기 + getTokenInfo/estimateFee/getTransactionFee + getAssets Token-2022 + ALLOWED_TOKENS 정책 평가 (Wave 1, TDD)
+- [x] 78-02-PLAN.md — EvmAdapter buildTokenTransfer ERC-20 + getAssets ERC-20 multicall 확장 (Wave 2, TDD)
 
 #### Phase 79: 컨트랙트 호출 + Approve 관리
 **Goal**: 에이전트가 화이트리스트된 스마트 컨트랙트를 호출하고, Approve를 요청할 수 있으며, CONTRACT_WHITELIST/METHOD_WHITELIST/APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT 정책이 기본 거부 원칙으로 동작한다
@@ -315,11 +309,11 @@ Plans:
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
-| **v1.4 토큰 + 컨트랙트** | **76-81** | **5/12** | **In progress** | - |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **7/12** | **In progress** | - |
 
-**Total:** 18 milestones shipped, 77 phases completed, 175 plans completed, 34 new tests, 43,545+ LOC
-**v1.4:** 6 phases (2 complete), 12 plans (5 complete), 35 requirements
+**Total:** 18 milestones shipped, 78 phases completed, 177 plans completed, 44 new tests, 44,205+ LOC
+**v1.4:** 6 phases (3 complete), 12 plans (7 complete), 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after Phase 77 completed*
+*Last updated: 2026-02-12 after Phase 78 completed*
