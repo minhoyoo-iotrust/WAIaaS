@@ -24,6 +24,12 @@ import {
 } from '../pipeline/stages.js';
 import type { PipelineContext } from '../pipeline/stages.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
+
+// Mock sleep to avoid actual delays in tests (exponential backoff: 1s, 2s, 4s)
+vi.mock('../pipeline/sleep.js', () => ({
+  sleep: vi.fn(async () => {}),
+}));
+
 import {
   ChainError,
   WAIaaSError,
