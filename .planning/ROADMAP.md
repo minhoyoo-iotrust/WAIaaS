@@ -252,19 +252,14 @@ Plans:
 - [x] 79-01-PLAN.md — buildContractCall (EVM + Solana) + CONTRACT_WHITELIST + METHOD_WHITELIST 정책 평가 (Wave 1, TDD)
 - [x] 79-02-PLAN.md — SolanaAdapter buildApprove (SPL ApproveChecked) + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE 정책 평가 (Wave 2, TDD)
 
-#### Phase 80: 배치 트랜잭션
+#### Phase 80: 배치 트랜잭션 — completed 2026-02-12
 **Goal**: 에이전트가 Solana에서 원자적 배치 트랜잭션을 실행하고, 2단계 합산 정책으로 소액 분할 우회를 방지하며, 부모-자식 DB 구조로 배치 상태를 추적한다
 **Depends on**: Phase 76 (discriminatedUnion BATCH type, IChainAdapter buildBatch), Phase 78 (토큰 전송 -- 배치 내 토큰 instruction)
 **Requirements**: BATCH-01, BATCH-02, BATCH-03, BATCH-04
-**Success Criteria** (what must be TRUE):
-  1. 에이전트가 Solana에서 2~20개 instruction을 단일 원자적 트랜잭션으로 실행할 수 있다
-  2. 배치 정책이 개별 instruction 평가 + 합산 SPENDING_LIMIT 2단계로 평가되고, 1개 위반 시 전체 거부(All-or-Nothing)된다
-  3. 배치 트랜잭션이 transactions 테이블에 부모-자식 자기참조(parentId + batchIndex)로 저장되고, 자식 개별 상태가 추적된다
-  4. EVM에서 배치 요청 시 BATCH_NOT_SUPPORTED 에러가 반환된다
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 
 Plans:
-- [ ] 80-01-PLAN.md — SolanaAdapter.buildBatch 원자적 빌드 + DatabasePolicyEngine.evaluateBatch 2단계 합산 정책
+- [x] 80-01-PLAN.md — SolanaAdapter.buildBatch 원자적 빌드 + DatabasePolicyEngine.evaluateBatch 2단계 합산 정책
 
 #### Phase 81: 파이프라인 통합 + Stage 5
 **Goal**: 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)이 6-stage 파이프라인을 완주하고, Stage 5가 ChainError 카테고리별 재시도/실패 분기를 수행한다
@@ -303,11 +298,11 @@ Plans:
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
-| **v1.4 토큰 + 컨트랙트** | **76-81** | **9/12** | **In progress** | - |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **10/12** | **In progress** | - |
 
-**Total:** 18 milestones shipped, 79 phases completed, 179 plans completed, 37 new tests, 44,205+ LOC
-**v1.4:** 6 phases (4 complete), 12 plans (9 complete), 35 requirements
+**Total:** 18 milestones shipped, 80 phases completed, 180 plans completed, 19 new tests, 44,205+ LOC
+**v1.4:** 6 phases (5 complete), 12 plans (10 complete), 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after Phase 79 completed*
+*Last updated: 2026-02-12 after Phase 80 completed*
