@@ -31,7 +31,10 @@ function mockConfig(overrides: Partial<DaemonConfig['daemon']> = {}): DaemonConf
     database: { path: ':memory:', wal_checkpoint_interval: 300, busy_timeout: 5000, cache_size: 64000, mmap_size: 268435456 },
     rpc: {
       solana_mainnet: '', solana_devnet: '', solana_testnet: '',
-      solana_ws_mainnet: '', solana_ws_devnet: '', ethereum_mainnet: '', ethereum_sepolia: '',
+      solana_ws_mainnet: '', solana_ws_devnet: '',
+      evm_ethereum_mainnet: '', evm_ethereum_sepolia: '', evm_polygon_mainnet: '', evm_polygon_amoy: '',
+      evm_arbitrum_mainnet: '', evm_arbitrum_sepolia: '', evm_optimism_mainnet: '', evm_optimism_sepolia: '',
+      evm_base_mainnet: '', evm_base_sepolia: '', evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false, min_channels: 2, health_check_interval: 300, log_retention_days: 30,
