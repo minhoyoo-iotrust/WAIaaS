@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, statSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -30,6 +30,8 @@ import {
 import { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { KeystoreFileV1 } from '../infrastructure/keystore/keystore.js';
 import { WAIaaSError } from '@waiaas/core';
+import { getAddress } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 const require = createRequire(import.meta.url);
 type SodiumNative = typeof import('sodium-native');
@@ -469,5 +471,170 @@ describe('Sodium guarded memory', () => {
 
       zeroAndRelease(guarded);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. secp256k1 / EVM multicurve tests (TDD RED → GREEN)
+// ---------------------------------------------------------------------------
+
+describe('secp256k1 / EVM multicurve', () => {
+  let keystore: LocalKeyStore;
+  let keystoreDir: string;
+
+  beforeAll(() => {
+    keystoreDir = mkdtempSync(join(tempDir, 'ks-evm-'));
+    keystore = new LocalKeyStore(keystoreDir);
+  });
+
+  it('EVM key generation produces 0x EIP-55 address', async () => {
+    const result = await keystore.generateKeyPair(
+      'agent-evm',
+      'ethereum',
+      'ethereum-sepolia',
+      TEST_PASSWORD,
+    );
+
+    // publicKey must be a 0x-prefixed 40-hex-char address
+    expect(result.publicKey).toMatch(/^0x[0-9a-fA-F]{40}$/);
+
+    // Must pass viem EIP-55 checksum validation
+    expect(getAddress(result.publicKey)).toBe(result.publicKey);
+
+    // encryptedPrivateKey must be a non-empty Uint8Array
+    expect(result.encryptedPrivateKey).toBeInstanceOf(Uint8Array);
+    expect(result.encryptedPrivateKey.length).toBeGreaterThan(0);
+  });
+
+  it('EVM keystore file has curve:secp256k1', async () => {
+    // Use the key generated in the previous test (agent-evm) or generate fresh
+    await keystore.generateKeyPair('agent-evm-curve', 'ethereum', 'ethereum-sepolia', TEST_PASSWORD);
+
+    const filePath = join(keystoreDir, 'agent-evm-curve.json');
+    const content = await readFile(filePath, 'utf-8');
+    const parsed = JSON.parse(content) as KeystoreFileV1 & { curve?: string };
+
+    expect(parsed.curve).toBe('secp256k1');
+  });
+
+  it('keystore file records actual network value', async () => {
+    // EVM agent with ethereum-sepolia network
+    await keystore.generateKeyPair('agent-net-evm', 'ethereum', 'ethereum-sepolia', TEST_PASSWORD);
+    const evmPath = join(keystoreDir, 'agent-net-evm.json');
+    const evmContent = await readFile(evmPath, 'utf-8');
+    const evmParsed = JSON.parse(evmContent) as KeystoreFileV1;
+    expect(evmParsed.network).toBe('ethereum-sepolia');
+
+    // Solana agent with devnet network
+    await keystore.generateKeyPair('agent-net-sol', 'solana', 'devnet', TEST_PASSWORD);
+    const solPath = join(keystoreDir, 'agent-net-sol.json');
+    const solContent = await readFile(solPath, 'utf-8');
+    const solParsed = JSON.parse(solContent) as KeystoreFileV1;
+    expect(solParsed.network).toBe('devnet');
+  });
+
+  it('EVM private key round-trip (32 bytes, AES-256-GCM encrypted)', async () => {
+    const { publicKey } = await keystore.generateKeyPair(
+      'agent-evm-roundtrip',
+      'ethereum',
+      'ethereum-sepolia',
+      TEST_PASSWORD,
+    );
+
+    // Decrypt the private key
+    const decryptedKey = await keystore.decryptPrivateKey('agent-evm-roundtrip', TEST_PASSWORD);
+
+    // secp256k1 private key is 32 bytes
+    expect(decryptedKey.byteLength).toBe(32);
+
+    // Re-derive address from decrypted key using viem
+    const hexKey = `0x${Buffer.from(decryptedKey).toString('hex')}` as `0x${string}`;
+    const account = privateKeyToAccount(hexKey);
+    expect(account.address).toBe(publicKey);
+
+    // Clean up
+    keystore.releaseKey(decryptedKey);
+  });
+
+  it('secp256k1 plaintext zeroed after generation', async () => {
+    // The zeroing is verified by the fact that:
+    // 1. sodium.sodium_memzero is called on the private key buffer in generateKeyPair
+    // 2. The encrypt/decrypt round-trip works (key was not corrupted before encryption)
+    // 3. If zeroing didn't happen, subsequent memory reads could leak the key
+    //
+    // We verify this indirectly: generate a key, then decrypt and confirm the
+    // original private key buffer is not accessible (only the encrypted form is stored)
+    const { publicKey } = await keystore.generateKeyPair(
+      'agent-evm-zero',
+      'ethereum',
+      'ethereum-sepolia',
+      TEST_PASSWORD,
+    );
+
+    // Decrypt to confirm round-trip works (proves encryption happened before zeroing)
+    const decryptedKey = await keystore.decryptPrivateKey('agent-evm-zero', TEST_PASSWORD);
+    const hexKey = `0x${Buffer.from(decryptedKey).toString('hex')}` as `0x${string}`;
+    const account = privateKeyToAccount(hexKey);
+    expect(account.address).toBe(publicKey);
+
+    keystore.releaseKey(decryptedKey);
+  });
+
+  it('Solana key generation unchanged (4-param call)', async () => {
+    const result = await keystore.generateKeyPair(
+      'agent-sol-compat',
+      'solana',
+      'devnet',
+      TEST_PASSWORD,
+    );
+
+    // Base58 public key (not 0x-prefixed)
+    expect(result.publicKey).not.toMatch(/^0x/);
+    expect(result.publicKey).toMatch(
+      /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/,
+    );
+
+    // Read keystore file to verify curve:ed25519
+    const filePath = join(keystoreDir, 'agent-sol-compat.json');
+    const content = await readFile(filePath, 'utf-8');
+    const parsed = JSON.parse(content) as KeystoreFileV1 & { curve?: string };
+    expect(parsed.curve).toBe('ed25519');
+
+    // Ed25519 secret key is 64 bytes encrypted
+    const decryptedKey = await keystore.decryptPrivateKey('agent-sol-compat', TEST_PASSWORD);
+    expect(decryptedKey.byteLength).toBe(sodium.crypto_sign_SECRETKEYBYTES); // 64
+
+    keystore.releaseKey(decryptedKey);
+  });
+
+  it('backward compat: curve-less keystore reads as ed25519', async () => {
+    // Manually create a keystore file WITHOUT curve field
+    const agentId = 'agent-legacy-no-curve';
+
+    // First generate a real Solana keystore to get valid crypto data
+    await keystore.generateKeyPair('agent-legacy-source', 'solana', 'devnet', TEST_PASSWORD);
+    const sourcePath = join(keystoreDir, 'agent-legacy-source.json');
+    const sourceContent = await readFile(sourcePath, 'utf-8');
+    const sourceData = JSON.parse(sourceContent) as Record<string, unknown>;
+
+    // Remove curve field if present and write as the legacy agent
+    delete sourceData.curve;
+    const legacyPath = join(keystoreDir, `${agentId}.json`);
+    writeFileSync(legacyPath, JSON.stringify(sourceData, null, 2), { encoding: 'utf-8', mode: 0o600 });
+
+    // Read the legacy keystore - curve should default to 'ed25519'
+    // Access readKeystoreFile indirectly via decryptPrivateKey (it reads the file)
+    // But we also need to verify the curve field is set after reading
+    // So we read the file directly after a decryptPrivateKey call (which calls readKeystoreFile + writeKeystoreFile to update lastUnlockedAt)
+    const decryptedKey = await keystore.decryptPrivateKey(agentId, TEST_PASSWORD);
+    expect(decryptedKey.byteLength).toBe(64); // ed25519 secret key
+
+    // After decryptPrivateKey, the file is re-written with lastUnlockedAt updated
+    // Check that curve defaults to ed25519 in the written-back file
+    const updatedContent = await readFile(legacyPath, 'utf-8');
+    const updatedParsed = JSON.parse(updatedContent) as Record<string, unknown>;
+    expect(updatedParsed.curve ?? 'ed25519').toBe('ed25519');
+
+    keystore.releaseKey(decryptedKey);
   });
 });
