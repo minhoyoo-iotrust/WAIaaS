@@ -11,6 +11,27 @@
 
 import type { IChainAdapter, ChainType, NetworkType, EvmNetworkType } from '@waiaas/core';
 
+/**
+ * Resolve RPC URL from config rpc section for a given chain:network.
+ * Maps:
+ *   solana + 'devnet'          -> rpc.solana_devnet
+ *   ethereum + 'ethereum-sepolia' -> rpc.evm_ethereum_sepolia
+ */
+export function resolveRpcUrl(
+  rpcConfig: Record<string, string>,
+  chain: string,
+  network: string,
+): string {
+  if (chain === 'solana') {
+    const key = `solana_${network}`;
+    return rpcConfig[key] || '';
+  } else if (chain === 'ethereum') {
+    const key = `evm_${network.replace(/-/g, '_')}`;
+    return rpcConfig[key] || '';
+  }
+  return '';
+}
+
 export class AdapterPool {
   private readonly _pool = new Map<string, IChainAdapter>();
 

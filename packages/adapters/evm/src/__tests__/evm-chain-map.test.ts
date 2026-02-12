@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EVM_CHAIN_MAP, type EvmChainEntry } from '../evm-chain-map.js';
+import { EVM_CHAIN_MAP } from '../evm-chain-map.js';
 import { EVM_NETWORK_TYPES } from '@waiaas/core';
 
 describe('EVM_CHAIN_MAP', () => {

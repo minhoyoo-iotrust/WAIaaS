@@ -13,7 +13,10 @@ import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { IChainAdapter } from '@waiaas/core';
+import type { ChainType, NetworkType } from '@waiaas/core';
+import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
+import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import { agents } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
@@ -26,7 +29,8 @@ import {
 
 export interface WalletRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
-  adapter: IChainAdapter | null;
+  adapterPool: AdapterPool | null;
+  config: DaemonConfig | null;
 }
 
 /**
@@ -127,13 +131,24 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     const agentId = c.get('agentId' as never) as string;
     const agent = await resolveAgentById(deps.db, agentId);
 
-    if (!deps.adapter) {
+    if (!deps.adapterPool || !deps.config) {
       throw new WAIaaSError('CHAIN_ERROR', {
         message: 'Chain adapter not available',
       });
     }
 
-    const balanceInfo = await deps.adapter.getBalance(agent.publicKey);
+    const rpcUrl = resolveRpcUrl(
+      deps.config.rpc as unknown as Record<string, string>,
+      agent.chain,
+      agent.network,
+    );
+    const adapter = await deps.adapterPool.resolve(
+      agent.chain as ChainType,
+      agent.network as NetworkType,
+      rpcUrl,
+    );
+
+    const balanceInfo = await adapter.getBalance(agent.publicKey);
 
     return c.json(
       {
@@ -157,13 +172,24 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     const agentId = c.get('agentId' as never) as string;
     const agent = await resolveAgentById(deps.db, agentId);
 
-    if (!deps.adapter) {
+    if (!deps.adapterPool || !deps.config) {
       throw new WAIaaSError('CHAIN_ERROR', {
         message: 'Chain adapter not available',
       });
     }
 
-    const assets = await deps.adapter.getAssets(agent.publicKey);
+    const rpcUrl = resolveRpcUrl(
+      deps.config.rpc as unknown as Record<string, string>,
+      agent.chain,
+      agent.network,
+    );
+    const adapter = await deps.adapterPool.resolve(
+      agent.chain as ChainType,
+      agent.network as NetworkType,
+      rpcUrl,
+    );
+
+    const assets = await adapter.getAssets(agent.publicKey);
 
     return c.json(
       {
