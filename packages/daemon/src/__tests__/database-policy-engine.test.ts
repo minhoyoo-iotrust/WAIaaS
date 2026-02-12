@@ -1,8 +1,8 @@
 /**
  * TDD tests for DatabasePolicyEngine.
  *
- * Tests DB-backed policy evaluation with SPENDING_LIMIT 4-tier classification
- * and WHITELIST address filtering.
+ * Tests DB-backed policy evaluation with SPENDING_LIMIT 4-tier classification,
+ * WHITELIST address filtering, and ALLOWED_TOKENS token transfer whitelist.
  *
  * Uses in-memory SQLite + Drizzle (same pattern as pipeline.test.ts).
  */
@@ -63,6 +63,14 @@ async function insertPolicy(overrides: {
 
 function tx(amount: string, toAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr') {
   return { type: 'TRANSFER', amount, toAddress, chain: 'solana' };
+}
+
+function tokenTx(
+  amount: string,
+  tokenAddress: string,
+  toAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+) {
+  return { type: 'TOKEN_TRANSFER', amount, toAddress, chain: 'solana', tokenAddress };
 }
 
 // ---------------------------------------------------------------------------
@@ -508,5 +516,154 @@ describe('DatabasePolicyEngine - TOCTOU Prevention', () => {
       .prepare('SELECT reserved_amount FROM transactions WHERE id = ?')
       .get(txId) as { reserved_amount: string | null };
     expect(after.reserved_amount).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ALLOWED_TOKENS tests (7 tests)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
+
+  it('should deny TOKEN_TRANSFER when no ALLOWED_TOKENS policy exists (default deny)', async () => {
+    // Add a SPENDING_LIMIT policy so that policies array is non-empty
+    // (with zero policies, Step 2 returns INSTANT passthrough before ALLOWED_TOKENS check)
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '100000000000',
+        notify_max: '200000000000',
+        delay_max: '500000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // No ALLOWED_TOKENS policy -> deny TOKEN_TRANSFER
+    const result = await engine.evaluate(agentId, tokenTx('1000000', USDC_MINT));
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no ALLOWED_TOKENS policy configured');
+  });
+
+  it('should allow TOKEN_TRANSFER when token is in ALLOWED_TOKENS whitelist', async () => {
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [
+          { address: USDC_MINT },
+          { address: USDT_MINT },
+        ],
+      }),
+      priority: 15,
+    });
+
+    const result = await engine.evaluate(agentId, tokenTx('1000000', USDC_MINT));
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should deny TOKEN_TRANSFER when token is NOT in ALLOWED_TOKENS whitelist', async () => {
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    const unknownMint = 'UnknownMint111111111111111111111111111111111';
+    const result = await engine.evaluate(agentId, tokenTx('1000000', unknownMint));
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Token not in allowed list');
+    expect(result.reason).toContain(unknownMint);
+  });
+
+  it('should match token addresses case-insensitively (EVM hex addresses)', async () => {
+    const evmToken = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: evmToken.toLowerCase() }],
+      }),
+      priority: 15,
+    });
+
+    // Send with mixed-case address
+    const result = await engine.evaluate(agentId, tokenTx('1000000', evmToken));
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should NOT evaluate ALLOWED_TOKENS for native TRANSFER type (passthrough)', async () => {
+    // Only ALLOWED_TOKENS policy exists, no SPENDING_LIMIT or WHITELIST
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // Native TRANSFER -> ALLOWED_TOKENS not applicable -> INSTANT passthrough
+    const result = await engine.evaluate(agentId, tx('1000000000'));
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should deny TOKEN_TRANSFER when tokenAddress is missing', async () => {
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // TOKEN_TRANSFER without tokenAddress
+    const result = await engine.evaluate(agentId, {
+      type: 'TOKEN_TRANSFER',
+      amount: '1000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      // tokenAddress intentionally omitted
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('missing token address');
+  });
+
+  it('should continue to SPENDING_LIMIT after ALLOWED_TOKENS passes', async () => {
+    // ALLOWED_TOKENS allows USDC
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // SPENDING_LIMIT with tiers
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000',   // 1 USDC
+        notify_max: '10000000',   // 10 USDC
+        delay_max: '50000000',    // 50 USDC
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // 5 USDC = 5M -> NOTIFY (between instant_max and notify_max)
+    const result = await engine.evaluate(agentId, tokenTx('5000000', USDC_MINT));
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
   });
 });
