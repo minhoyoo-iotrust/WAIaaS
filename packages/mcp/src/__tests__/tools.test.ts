@@ -115,6 +115,51 @@ describe('send_token tool', () => {
     expect(parsed['code']).toBe('INSUFFICIENT_BALANCE');
   });
 
+  it('sends type and token fields when type=TOKEN_TRANSFER', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({
+      to: 'addr',
+      amount: '1000',
+      type: 'TOKEN_TRANSFER',
+      token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '1000',
+      type: 'TOKEN_TRANSFER',
+      token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+    });
+  });
+
+  it('sends legacy body without type/token when omitted (backward compat)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({ to: 'addr', amount: '1000' });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '1000',
+    });
+  });
+
+  it('sends type field in body when type=TRANSFER with memo', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({ to: 'addr', amount: '1000', type: 'TRANSFER', memo: 'test' });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '1000',
+      type: 'TRANSFER',
+      memo: 'test',
+    });
+  });
+
   it('returns session_expired without isError (H-04)', async () => {
     const responses = new Map<string, ApiResult<unknown>>([
       ['POST:/v1/transactions/send', {
