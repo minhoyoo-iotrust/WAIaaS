@@ -43,7 +43,7 @@ export {
   OwnerStateEnum,
 } from './enums/index.js';
 
-// Schemas (5 domain Zod SSoT schemas)
+// Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
 export {
   AgentSchema,
   type Agent,
@@ -57,6 +57,19 @@ export {
   type Transaction,
   SendTransactionRequestSchema,
   type SendTransactionRequest,
+  // v1.4 discriminatedUnion 5-type transaction request schemas
+  TransactionRequestSchema,
+  type TransactionRequest,
+  TransferRequestSchema,
+  type TransferRequestInput,
+  TokenTransferRequestSchema,
+  type TokenTransferRequest,
+  ContractCallRequestSchema,
+  type ContractCallRequest,
+  ApproveRequestSchema,
+  type ApproveRequest,
+  BatchRequestSchema,
+  type BatchRequest,
   PolicySchema,
   type Policy,
   CreatePolicyRequestSchema,
@@ -69,13 +82,17 @@ export {
   type AssetInfoDto,
 } from './schemas/index.js';
 
-// Errors (68 error codes + WAIaaSError)
+// Errors (68 error codes + WAIaaSError + ChainError)
 export {
   ERROR_CODES,
   type ErrorCode,
   type ErrorDomain,
   type ErrorCodeEntry,
   WAIaaSError,
+  ChainError,
+  type ChainErrorCategory,
+  type ChainErrorCode,
+  CHAIN_ERROR_CATEGORIES,
 } from './errors/index.js';
 
 // Interfaces (4 contracts + chain adapter types)
@@ -88,6 +105,14 @@ export type {
   BalanceInfo,
   HealthInfo,
   AssetInfo,
+  // v1.4 new types
+  FeeEstimate,
+  TokenInfo,
+  SweepResult,
+  TokenTransferParams,
+  ContractCallParams,
+  ApproveParams,
+  BatchParams,
   IChainAdapter,
   ILocalKeyStore,
   IPolicyEngine,

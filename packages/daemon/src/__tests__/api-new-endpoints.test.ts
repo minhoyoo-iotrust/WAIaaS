@@ -182,6 +182,16 @@ function mockAdapter(assets: AssetInfo[] = MOCK_ASSETS): IChainAdapter {
       throw new Error('not implemented');
     },
     getAssets: async () => assets,
+    // v1.4 stubs
+    estimateFee: async () => { throw new Error('not implemented'); },
+    buildTokenTransfer: async () => { throw new Error('not implemented'); },
+    getTokenInfo: async () => { throw new Error('not implemented'); },
+    buildContractCall: async () => { throw new Error('not implemented'); },
+    buildApprove: async () => { throw new Error('not implemented'); },
+    buildBatch: async () => { throw new Error('not implemented'); },
+    getTransactionFee: async () => { throw new Error('not implemented'); },
+    getCurrentNonce: async () => 0,
+    sweepAll: async () => { throw new Error('not implemented'); },
   };
 }
 

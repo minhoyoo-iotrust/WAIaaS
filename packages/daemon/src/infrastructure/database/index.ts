@@ -6,7 +6,8 @@
 
 export { createDatabase, closeDatabase } from './connection.js';
 export type { DatabaseConnection } from './connection.js';
-export { pushSchema } from './migrate.js';
+export { pushSchema, runMigrations, MIGRATIONS } from './migrate.js';
+export type { Migration } from './migrate.js';
 export {
   agents,
   sessions,

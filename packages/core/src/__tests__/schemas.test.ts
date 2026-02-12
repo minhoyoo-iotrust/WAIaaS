@@ -7,6 +7,12 @@ import {
   PolicySchema,
   SessionSchema,
   ConfigSchema,
+  TransactionRequestSchema,
+  TransferRequestSchema,
+  TokenTransferRequestSchema,
+  ContractCallRequestSchema,
+  ApproveRequestSchema,
+  BatchRequestSchema,
 } from '../index.js';
 
 describe('Zod SSoT Schemas', () => {
@@ -182,6 +188,214 @@ describe('Zod SSoT Schemas', () => {
       });
       expect(policy.type).toBe('SPENDING_LIMIT');
       expect(policy.enabled).toBe(true);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// discriminatedUnion 5-type TransactionRequestSchema (v1.4)
+// ---------------------------------------------------------------------------
+
+describe('TransactionRequestSchema (discriminatedUnion 5-type)', () => {
+  describe('TRANSFER', () => {
+    it('parses valid TRANSFER request', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'TRANSFER',
+        to: 'So11111111111111111111111111111112',
+        amount: '1000000000',
+      });
+      expect(result.type).toBe('TRANSFER');
+      if (result.type === 'TRANSFER') {
+        expect(result.to).toBe('So11111111111111111111111111111112');
+        expect(result.amount).toBe('1000000000');
+      }
+    });
+
+    it('accepts optional memo', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'TRANSFER',
+        to: 'addr',
+        amount: '100',
+        memo: 'test memo',
+      });
+      expect(result.type).toBe('TRANSFER');
+      if (result.type === 'TRANSFER') {
+        expect(result.memo).toBe('test memo');
+      }
+    });
+  });
+
+  describe('TOKEN_TRANSFER', () => {
+    it('parses valid TOKEN_TRANSFER request', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'TOKEN_TRANSFER',
+        to: 'recipientAddr',
+        amount: '1000000',
+        token: {
+          address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          decimals: 6,
+          symbol: 'USDC',
+        },
+      });
+      expect(result.type).toBe('TOKEN_TRANSFER');
+      if (result.type === 'TOKEN_TRANSFER') {
+        expect(result.token.symbol).toBe('USDC');
+        expect(result.token.decimals).toBe(6);
+      }
+    });
+  });
+
+  describe('CONTRACT_CALL', () => {
+    it('parses valid CONTRACT_CALL with EVM fields', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'CONTRACT_CALL',
+        to: '0x1234567890123456789012345678901234567890',
+        calldata: '0xa9059cbb',
+        value: '0',
+      });
+      expect(result.type).toBe('CONTRACT_CALL');
+      if (result.type === 'CONTRACT_CALL') {
+        expect(result.calldata).toBe('0xa9059cbb');
+      }
+    });
+
+    it('parses valid CONTRACT_CALL with Solana fields', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'CONTRACT_CALL',
+        to: 'programAddr',
+        programId: 'programAddr',
+        instructionData: 'AQID',
+        accounts: [
+          { pubkey: 'acc1', isSigner: true, isWritable: true },
+          { pubkey: 'acc2', isSigner: false, isWritable: false },
+        ],
+      });
+      expect(result.type).toBe('CONTRACT_CALL');
+      if (result.type === 'CONTRACT_CALL') {
+        expect(result.accounts).toHaveLength(2);
+      }
+    });
+  });
+
+  describe('APPROVE', () => {
+    it('parses valid APPROVE request', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'APPROVE',
+        spender: '0xSpenderAddress',
+        token: {
+          address: '0xTokenAddress',
+          decimals: 18,
+          symbol: 'WETH',
+        },
+        amount: '1000000000000000000',
+      });
+      expect(result.type).toBe('APPROVE');
+      if (result.type === 'APPROVE') {
+        expect(result.spender).toBe('0xSpenderAddress');
+        expect(result.token.symbol).toBe('WETH');
+      }
+    });
+  });
+
+  describe('BATCH', () => {
+    it('parses valid BATCH with 2 instructions', () => {
+      const result = TransactionRequestSchema.parse({
+        type: 'BATCH',
+        instructions: [
+          { to: 'addr1', amount: '1000' },
+          { to: 'addr2', amount: '2000' },
+        ],
+      });
+      expect(result.type).toBe('BATCH');
+      if (result.type === 'BATCH') {
+        expect(result.instructions).toHaveLength(2);
+      }
+    });
+
+    it('rejects BATCH with fewer than 2 instructions', () => {
+      expect(() =>
+        TransactionRequestSchema.parse({
+          type: 'BATCH',
+          instructions: [{ to: 'addr1', amount: '1000' }],
+        }),
+      ).toThrow(/at least 2/);
+    });
+
+    it('rejects BATCH with more than 20 instructions', () => {
+      const instructions = Array.from({ length: 21 }, (_, i) => ({
+        to: `addr${i}`,
+        amount: `${1000 + i}`,
+      }));
+      expect(() =>
+        TransactionRequestSchema.parse({
+          type: 'BATCH',
+          instructions,
+        }),
+      ).toThrow(/maximum 20/);
+    });
+  });
+
+  describe('invalid type', () => {
+    it('rejects unknown type', () => {
+      expect(() =>
+        TransactionRequestSchema.parse({
+          type: 'INVALID',
+          to: 'addr',
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('individual schemas', () => {
+    it('TransferRequestSchema is independently usable', () => {
+      const result = TransferRequestSchema.parse({
+        type: 'TRANSFER',
+        to: 'addr',
+        amount: '100',
+      });
+      expect(result.type).toBe('TRANSFER');
+    });
+
+    it('TokenTransferRequestSchema validates token field', () => {
+      expect(() =>
+        TokenTransferRequestSchema.parse({
+          type: 'TOKEN_TRANSFER',
+          to: 'addr',
+          amount: '100',
+          // missing token
+        }),
+      ).toThrow();
+    });
+
+    it('ApproveRequestSchema rejects non-numeric amount', () => {
+      expect(() =>
+        ApproveRequestSchema.parse({
+          type: 'APPROVE',
+          spender: 'addr',
+          token: { address: 'mint', decimals: 6, symbol: 'USDC' },
+          amount: 'abc',
+        }),
+      ).toThrow();
+    });
+
+    it('ContractCallRequestSchema accepts minimal fields', () => {
+      const result = ContractCallRequestSchema.parse({
+        type: 'CONTRACT_CALL',
+        to: '0xContractAddr',
+      });
+      expect(result.type).toBe('CONTRACT_CALL');
+      expect(result.to).toBe('0xContractAddr');
+    });
+
+    it('BatchRequestSchema accepts mixed instruction types', () => {
+      const result = BatchRequestSchema.parse({
+        type: 'BATCH',
+        instructions: [
+          { to: 'addr1', amount: '1000' }, // transfer-like
+          { to: 'addr2', amount: '2000', token: { address: 'mint', decimals: 6, symbol: 'USDC' } }, // token-transfer-like
+        ],
+      });
+      expect(result.instructions).toHaveLength(2);
     });
   });
 });

@@ -105,3 +105,89 @@ export interface HealthInfo {
   /** Current block height. */
   blockHeight?: bigint;
 }
+
+// ---------------------------------------------------------------------------
+// v1.4 new types for extended IChainAdapter methods
+// ---------------------------------------------------------------------------
+
+/** Fee estimation result. */
+export interface FeeEstimate {
+  /** Estimated fee in smallest unit (lamports/wei). */
+  fee: bigint;
+  /** Whether an ATA needs to be created (Solana SPL). */
+  needsAtaCreation?: boolean;
+  /** ATA creation rent cost (Solana SPL). */
+  ataRentCost?: bigint;
+  /** Breakdown details. */
+  details?: Record<string, unknown>;
+}
+
+/** Token information. */
+export interface TokenInfo {
+  /** Token address (mint for Solana, contract for EVM). */
+  address: string;
+  /** Token symbol. */
+  symbol: string;
+  /** Token name. */
+  name: string;
+  /** Decimal places. */
+  decimals: number;
+  /** Total supply if available. */
+  totalSupply?: bigint;
+  /** Token program (Solana: Token or Token-2022). */
+  programId?: string;
+}
+
+/** Sweep result (multi-asset withdrawal). */
+export interface SweepResult {
+  /** Total number of assets swept. */
+  total: number;
+  /** Number of successful sweeps. */
+  succeeded: number;
+  /** Number of failed sweeps. */
+  failed: number;
+  /** Individual sweep results. */
+  results: Array<{
+    mint: string;
+    txHash?: string;
+    error?: string;
+    amount: bigint;
+  }>;
+}
+
+/** Token transfer request for buildTokenTransfer(). */
+export interface TokenTransferParams {
+  from: string;
+  to: string;
+  amount: bigint;
+  token: { address: string; decimals: number; symbol: string };
+  memo?: string;
+}
+
+/** Contract call request for buildContractCall(). */
+export interface ContractCallParams {
+  from: string;
+  to: string; // contract address
+  // EVM
+  calldata?: string; // hex-encoded
+  abi?: Record<string, unknown>[];
+  value?: bigint;
+  // Solana
+  programId?: string;
+  instructionData?: Uint8Array;
+  accounts?: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+}
+
+/** Approve request for buildApprove(). */
+export interface ApproveParams {
+  from: string;
+  spender: string;
+  token: { address: string; decimals: number; symbol: string };
+  amount: bigint;
+}
+
+/** Batch request for buildBatch(). */
+export interface BatchParams {
+  from: string;
+  instructions: Array<TransferRequest | TokenTransferParams | ContractCallParams | ApproveParams>;
+}

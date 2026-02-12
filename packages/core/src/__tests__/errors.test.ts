@@ -37,9 +37,9 @@ describe('Error code matrix', () => {
     expect(authCodes).toHaveLength(8);
   });
 
-  it('TX domain has 21 codes', () => {
+  it('TX domain has 22 codes', () => {
     const txCodes = Object.values(ERROR_CODES).filter((e) => e.domain === 'TX');
-    expect(txCodes).toHaveLength(21);
+    expect(txCodes).toHaveLength(22);
   });
 
   it('ACTION domain has 7 codes', () => {

@@ -8,6 +8,14 @@ export type {
   BalanceInfo,
   HealthInfo,
   AssetInfo,
+  // v1.4 new types
+  FeeEstimate,
+  TokenInfo,
+  SweepResult,
+  TokenTransferParams,
+  ContractCallParams,
+  ApproveParams,
+  BatchParams,
 } from './chain-adapter.types.js';
 
 // Interfaces
