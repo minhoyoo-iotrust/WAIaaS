@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 83 - Keystore 멀티커브
+**Current focus:** v1.4.1 Phase 83 complete, ready for Phase 84
 
 ## Current Position
 
-Phase: 83 (2 of 7 in v1.4.1) — Keystore 멀티커브
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-12 — Completed 83-01-PLAN.md (secp256k1 keystore multicurve)
+Phase: 83 (2 of 7 in v1.4.1) — Keystore 멀티커브 [COMPLETE]
+Plan: 2 of 2 complete
+Status: Phase complete
+Last activity: 2026-02-12 — Completed 83-02-PLAN.md (EVM agent creation integration tests)
 
-Progress: [██░░░░░░░░] 14% (1/7 phases in v1.4.1, 4/~14 plans)
+Progress: [███░░░░░░░] 29% (2/7 phases in v1.4.1, 5/~14 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 82 phases, 186 plans, 529 reqs, 1,220 tests, 51,750+ LOC
+**Cumulative:** 20 milestones, 83 phases, 187 plans, 529 reqs, 1,225 tests, 51,750+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 4 plans completed (Phase 82 done + 83-01 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 5 plans completed (Phase 82 done + Phase 83 done)
 
 *Updated after each plan completion*
 
@@ -49,6 +49,7 @@ Recent decisions affecting current work:
 - [83-01]: curve field backward compat: missing = 'ed25519' (pre-v1.4.1 files)
 - [83-01]: network parameter replaces hardcoded 'devnet' in keystore files
 - [83-01]: sodium.sodium_memzero used for secp256k1 plaintext zeroing (same pattern as ed25519)
+- [83-02]: vi.fn() mock keyStore enables call inspection for 4-param signature verification
 
 ### Blockers/Concerns
 
@@ -58,5 +59,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 83-01-PLAN.md, ready for 83-02
+Stopped at: Completed 83-02-PLAN.md, Phase 83 complete. Ready for Phase 84.
 Resume file: None
