@@ -4,6 +4,10 @@ import {
   ChainTypeEnum,
   NETWORK_TYPES,
   NetworkTypeEnum,
+  EVM_NETWORK_TYPES,
+  EvmNetworkTypeEnum,
+  SOLANA_NETWORK_TYPES,
+  validateChainNetwork,
   AGENT_STATUSES,
   AgentStatusEnum,
   TRANSACTION_STATUSES,
@@ -34,11 +38,23 @@ describe('Enum SSoT', () => {
     expect(CHAIN_TYPES).toContain('ethereum');
   });
 
-  it('NetworkType has 3 values', () => {
-    expect(NETWORK_TYPES).toHaveLength(3);
+  it('NetworkType has 13 values', () => {
+    expect(NETWORK_TYPES).toHaveLength(13);
+    // Solana networks
     expect(NETWORK_TYPES).toContain('mainnet');
     expect(NETWORK_TYPES).toContain('devnet');
     expect(NETWORK_TYPES).toContain('testnet');
+    // EVM networks
+    expect(NETWORK_TYPES).toContain('ethereum-mainnet');
+    expect(NETWORK_TYPES).toContain('ethereum-sepolia');
+    expect(NETWORK_TYPES).toContain('polygon-mainnet');
+    expect(NETWORK_TYPES).toContain('polygon-amoy');
+    expect(NETWORK_TYPES).toContain('arbitrum-mainnet');
+    expect(NETWORK_TYPES).toContain('arbitrum-sepolia');
+    expect(NETWORK_TYPES).toContain('optimism-mainnet');
+    expect(NETWORK_TYPES).toContain('optimism-sepolia');
+    expect(NETWORK_TYPES).toContain('base-mainnet');
+    expect(NETWORK_TYPES).toContain('base-sepolia');
   });
 
   it('AgentStatus has 5 values', () => {
@@ -84,6 +100,78 @@ describe('Enum SSoT', () => {
 
   it('OwnerState has 3 values', () => {
     expect(OWNER_STATES).toHaveLength(3);
+  });
+
+  // EVM NetworkType subset
+  describe('EVM NetworkType subset', () => {
+    it('EVM_NETWORK_TYPES has 10 values', () => {
+      expect(EVM_NETWORK_TYPES).toHaveLength(10);
+      expect(EVM_NETWORK_TYPES).toContain('ethereum-mainnet');
+      expect(EVM_NETWORK_TYPES).toContain('ethereum-sepolia');
+      expect(EVM_NETWORK_TYPES).toContain('polygon-mainnet');
+      expect(EVM_NETWORK_TYPES).toContain('polygon-amoy');
+      expect(EVM_NETWORK_TYPES).toContain('arbitrum-mainnet');
+      expect(EVM_NETWORK_TYPES).toContain('arbitrum-sepolia');
+      expect(EVM_NETWORK_TYPES).toContain('optimism-mainnet');
+      expect(EVM_NETWORK_TYPES).toContain('optimism-sepolia');
+      expect(EVM_NETWORK_TYPES).toContain('base-mainnet');
+      expect(EVM_NETWORK_TYPES).toContain('base-sepolia');
+    });
+
+    it('EvmNetworkTypeEnum validates EVM networks', () => {
+      expect(EvmNetworkTypeEnum.parse('ethereum-sepolia')).toBe('ethereum-sepolia');
+      expect(() => EvmNetworkTypeEnum.parse('devnet')).toThrow();
+    });
+
+    it('SOLANA_NETWORK_TYPES has 3 values', () => {
+      expect(SOLANA_NETWORK_TYPES).toHaveLength(3);
+      expect(SOLANA_NETWORK_TYPES).toContain('mainnet');
+      expect(SOLANA_NETWORK_TYPES).toContain('devnet');
+      expect(SOLANA_NETWORK_TYPES).toContain('testnet');
+    });
+
+    it('every EVM network is in NETWORK_TYPES', () => {
+      for (const evmNetwork of EVM_NETWORK_TYPES) {
+        expect(NETWORK_TYPES).toContain(evmNetwork);
+      }
+    });
+  });
+
+  // validateChainNetwork
+  describe('validateChainNetwork', () => {
+    it('accepts valid Solana chain+network pairs', () => {
+      expect(() => validateChainNetwork('solana', 'devnet')).not.toThrow();
+      expect(() => validateChainNetwork('solana', 'mainnet')).not.toThrow();
+      expect(() => validateChainNetwork('solana', 'testnet')).not.toThrow();
+    });
+
+    it('accepts valid EVM chain+network pairs', () => {
+      expect(() => validateChainNetwork('ethereum', 'ethereum-sepolia')).not.toThrow();
+      expect(() => validateChainNetwork('ethereum', 'polygon-mainnet')).not.toThrow();
+      expect(() => validateChainNetwork('ethereum', 'base-mainnet')).not.toThrow();
+      expect(() => validateChainNetwork('ethereum', 'arbitrum-mainnet')).not.toThrow();
+      expect(() => validateChainNetwork('ethereum', 'optimism-mainnet')).not.toThrow();
+    });
+
+    it('rejects Solana network for ethereum chain', () => {
+      expect(() => validateChainNetwork('ethereum', 'devnet')).toThrow();
+      expect(() => validateChainNetwork('ethereum', 'mainnet')).toThrow();
+      expect(() => validateChainNetwork('ethereum', 'testnet')).toThrow();
+    });
+
+    it('rejects EVM network for solana chain', () => {
+      expect(() => validateChainNetwork('solana', 'ethereum-sepolia')).toThrow();
+      expect(() => validateChainNetwork('solana', 'polygon-mainnet')).toThrow();
+    });
+
+    it('rejects invalid network values', () => {
+      expect(() => validateChainNetwork('ethereum', 'nonexistent' as any)).toThrow();
+    });
+
+    it('error message is descriptive', () => {
+      expect(() => validateChainNetwork('ethereum', 'devnet')).toThrow(/Invalid network.*devnet.*ethereum/);
+      expect(() => validateChainNetwork('solana', 'ethereum-sepolia')).toThrow(/Invalid network.*ethereum-sepolia.*solana/);
+    });
   });
 
   // Zod enum options match as const arrays
