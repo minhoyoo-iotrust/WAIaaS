@@ -30,11 +30,12 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
   3. chain='ethereum' + network='devnet' 같은 무효 조합이 400 VALIDATION_ERROR로 거부된다
   4. EVM 어댑터가 네트워크별 정확한 네이티브 토큰 심볼을 반환한다 (Polygon=POL, Ethereum=ETH)
   5. EVM_CHAIN_MAP이 10개 네트워크에 대해 viem Chain + chainId + nativeSymbol/nativeName을 제공한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 82-01: TBD
-- [ ] 82-02: TBD
+- [ ] 82-01-PLAN.md — NetworkType 13값 확장 + EVM_CHAIN_MAP + validateChainNetwork (TDD)
+- [ ] 82-02-PLAN.md — DaemonConfigSchema EVM RPC 16키 + EvmAdapter nativeSymbol/nativeName
+- [ ] 82-03-PLAN.md — CreateAgentRequest network optional + chain-network 교차 검증 통합
 
 ### Phase 83: Keystore 멀티커브
 **Goal**: EVM 에이전트를 생성하면 secp256k1 키가 생성되고 EIP-55 체크섬 주소가 반환되며, 기존 Solana 키스토어가 무변경으로 동작하는 상태
