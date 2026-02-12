@@ -5,24 +5,37 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE
+**Current focus:** v1.4.1 Phase 82 - Config + NetworkType + EVM 의존성
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-12 — Milestone v1.4.1 started
+Phase: 82 (1 of 7 in v1.4.1) — Config + NetworkType + EVM 의존성
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-12 — Roadmap created for v1.4.1 (7 phases, 29 requirements)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 81 phases, 182 plans, 523 reqs, 1126 tests, 51,750 LOC
+**Cumulative:** 20 milestones, 81 phases, 182 plans, 523 reqs, 1,126 tests, 51,750 LOC
+
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 0 plans completed
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Decisions
 
 Full log in PROJECT.md.
+Recent decisions affecting current work:
+
+- [v1.4.1]: chain='ethereum'은 EVM 호환 체인 전체를 포괄 (ChainType enum 확장 없음)
+- [v1.4.1]: AdapterPool lazy init + 캐싱 (데몬 시작 시 전체 초기화 아님)
+- [v1.4.1]: 라우트 스키마 분리 방안 C (OpenAPI doc과 실제 Zod 검증 분리)
+- [v1.4.1]: SIWE nonce 미검증 (Solana owner-auth 일관성, expirationTime 의존)
+- [v1.4.1]: MCP는 TRANSFER + TOKEN_TRANSFER만 노출 (CONTRACT_CALL/APPROVE/BATCH 보안 차단)
 
 ### Blockers/Concerns
 
@@ -32,5 +45,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Milestone v1.4.1 requirements definition
+Stopped at: Roadmap created for v1.4.1 milestone
 Resume file: None
