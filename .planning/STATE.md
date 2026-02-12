@@ -76,6 +76,9 @@ Recent decisions affecting current work:
 - [87-02]: SIWE message base64-encoded in X-Owner-Message header (multi-line EIP-4361 invalid as raw HTTP headers)
 - [87-02]: setOwner stores normalized address (EIP-55 checksummed for EVM, as-is for Solana)
 - [87-02]: Chain branching via agent.chain: ethereum=SIWE, else=Ed25519 (default Solana path unchanged)
+- [88-01]: Real viem signatures for SIWE E2E tests (privateKeyToAccount with hardcoded test key)
+- [88-01]: No fake timers for E2E: mock adapters resolve immediately, setTimeout for pipeline wait
+- [88-01]: Direct SQLite row check for CONFIRMED status (pipeline async fire-and-forget)
 - [88-02]: waitForPipeline polling pattern for fire-and-forget E2E tests (50ms intervals, DB status check)
 - [88-02]: Cross-package MCP/SDK tests use dynamic import to avoid circular deps
 - [88-02]: DefaultPolicyEngine used for pipeline E2E to isolate type dispatch from policy evaluation
