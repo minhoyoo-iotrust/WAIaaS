@@ -7,7 +7,7 @@
  *        GET /v1/wallet/* requires Authorization: Bearer wai_sess_<token> (sessionAuth).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
@@ -117,16 +117,21 @@ function mockConfig(): DaemonConfig {
   };
 }
 
-// Consistent mock public key for all tests
-const MOCK_PUBLIC_KEY = '11111111111111111111111111111112';
+// Consistent mock public keys for all tests
+const MOCK_SOLANA_PUBLIC_KEY = '11111111111111111111111111111112';
+const MOCK_EVM_PUBLIC_KEY = '0x1234567890AbCDef1234567890abcdef12345678';
 
-/** Create a mock keyStore with generateKeyPair. */
-function mockKeyStore(): LocalKeyStore {
-  return {
-    generateKeyPair: async () => ({
-      publicKey: MOCK_PUBLIC_KEY,
-      encryptedPrivateKey: new Uint8Array(64),
-    }),
+/** Create a mock keyStore with generateKeyPair that dispatches by chain. */
+function mockKeyStore() {
+  const ks = {
+    generateKeyPair: vi.fn().mockImplementation(
+      async (_agentId: string, chain: string, _network: string, _password: string) => {
+        if (chain === 'ethereum') {
+          return { publicKey: MOCK_EVM_PUBLIC_KEY, encryptedPrivateKey: new Uint8Array(32) };
+        }
+        return { publicKey: MOCK_SOLANA_PUBLIC_KEY, encryptedPrivateKey: new Uint8Array(64) };
+      },
+    ),
     decryptPrivateKey: async () => new Uint8Array(64),
     releaseKey: () => {},
     hasKey: async () => true,
@@ -134,6 +139,7 @@ function mockKeyStore(): LocalKeyStore {
     lockAll: () => {},
     sodiumAvailable: true,
   } as unknown as LocalKeyStore;
+  return ks;
 }
 
 /** Create a mock adapter with getBalance. */
@@ -188,6 +194,7 @@ let conn: DatabaseConnection;
 let app: OpenAPIHono;
 let jwtSecretManager: JwtSecretManager;
 let masterPasswordHash: string;
+let testKeyStore: LocalKeyStore;
 
 beforeEach(async () => {
   conn = createDatabase(':memory:');
@@ -205,10 +212,12 @@ beforeEach(async () => {
   jwtSecretManager = new JwtSecretManager(conn.db);
   await jwtSecretManager.initialize();
 
+  testKeyStore = mockKeyStore();
+
   app = createApp({
     db: conn.db,
     sqlite: conn.sqlite,
-    keyStore: mockKeyStore(),
+    keyStore: testKeyStore,
     masterPassword: TEST_MASTER_PASSWORD,
     masterPasswordHash,
     config: mockConfig(),
@@ -283,7 +292,7 @@ describe('POST /v1/agents', () => {
     expect(body.name).toBe('test-agent');
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
-    expect(body.publicKey).toBe(MOCK_PUBLIC_KEY);
+    expect(body.publicKey).toBe(MOCK_SOLANA_PUBLIC_KEY);
     expect(body.id).toBeTruthy();
   });
 
@@ -359,7 +368,7 @@ describe('POST /v1/agents', () => {
     expect(row.chain).toBe('solana');
     expect(row.network).toBe('devnet');
     expect(row.status).toBe('ACTIVE');
-    expect(row.public_key).toBe(MOCK_PUBLIC_KEY);
+    expect(row.public_key).toBe(MOCK_SOLANA_PUBLIC_KEY);
   });
 
   it('should return 401 without X-Master-Password header', async () => {
@@ -516,6 +525,114 @@ describe('chain-network validation', () => {
 });
 
 // ---------------------------------------------------------------------------
+// EVM agent creation integration (5 tests)
+// ---------------------------------------------------------------------------
+
+describe('EVM agent creation', () => {
+  it('POST /agents with chain=ethereum returns 201 with 0x-prefixed publicKey', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'evm-test', chain: 'ethereum', network: 'ethereum-sepolia' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.publicKey).toBe(MOCK_EVM_PUBLIC_KEY);
+    expect((body.publicKey as string).startsWith('0x')).toBe(true);
+    expect(body.chain).toBe('ethereum');
+    expect(body.network).toBe('ethereum-sepolia');
+  });
+
+  it('POST /agents with chain=ethereum and no network defaults to evm_default_network', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'evm-default', chain: 'ethereum' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.network).toBe('ethereum-sepolia'); // config evm_default_network
+    expect(body.publicKey).toBe(MOCK_EVM_PUBLIC_KEY);
+  });
+
+  it('generateKeyPair receives network as 3rd parameter for EVM agent', async () => {
+    await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'evm-param-check', chain: 'ethereum', network: 'polygon-mainnet' }),
+    });
+
+    const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
+    const calls = mockFn.mock.calls;
+    const lastCall = calls[calls.length - 1]!;
+    // generateKeyPair(agentId, chain, network, masterPassword)
+    expect(lastCall[1]).toBe('ethereum');
+    expect(lastCall[2]).toBe('polygon-mainnet');
+    expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
+  });
+
+  it('generateKeyPair receives network as 3rd parameter for Solana agent', async () => {
+    await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'sol-param-check', chain: 'solana', network: 'mainnet' }),
+    });
+
+    const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
+    const calls = mockFn.mock.calls;
+    const lastCall = calls[calls.length - 1]!;
+    // generateKeyPair(agentId, chain, network, masterPassword)
+    expect(lastCall[1]).toBe('solana');
+    expect(lastCall[2]).toBe('mainnet');
+    expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
+  });
+
+  it('EVM agent is persisted with 0x address in database', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'evm-persist', chain: 'ethereum', network: 'ethereum-sepolia' }),
+    });
+
+    const body = await json(res);
+    const agentId = body.id as string;
+
+    // Verify in DB
+    const row = conn.sqlite.prepare('SELECT * FROM agents WHERE id = ?').get(agentId) as Record<
+      string,
+      unknown
+    >;
+    expect(row).toBeTruthy();
+    expect(row.chain).toBe('ethereum');
+    expect(row.network).toBe('ethereum-sepolia');
+    expect(row.public_key).toBe(MOCK_EVM_PUBLIC_KEY);
+    expect((row.public_key as string).startsWith('0x')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /v1/wallet/address (4 tests)
 // ---------------------------------------------------------------------------
 
@@ -538,7 +655,7 @@ describe('GET /v1/wallet/address', () => {
     expect(body.agentId).toBe(agentId);
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
-    expect(body.address).toBe(MOCK_PUBLIC_KEY);
+    expect(body.address).toBe(MOCK_SOLANA_PUBLIC_KEY);
   });
 
   it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
@@ -614,7 +731,7 @@ describe('GET /v1/wallet/balance', () => {
     expect(body.agentId).toBe(agentId);
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
-    expect(body.address).toBe(MOCK_PUBLIC_KEY);
+    expect(body.address).toBe(MOCK_SOLANA_PUBLIC_KEY);
   });
 
   it('should return 401 without Authorization header', async () => {
