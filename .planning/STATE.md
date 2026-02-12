@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 84 (3 of 7 in v1.4.1) — 어댑터 팩토리
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 83 complete (2/2 plans, verified)
+Plan: 01 of 3 complete
+Status: In progress
+Last activity: 2026-02-12 — Completed 84-01-PLAN.md (AdapterPool TDD)
 
-Progress: [███░░░░░░░] 29% (2/7 phases in v1.4.1)
+Progress: [███░░░░░░░] 29% (2/7 phases in v1.4.1, plan 1/3 in Phase 84)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 83 phases, 187 plans, 533 reqs, 1,231 tests, 52,000+ LOC
+**Cumulative:** 20 milestones, 83 phases, 188 plans, 533 reqs, 1,242 tests, 52,000+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 5 plans completed (Phases 82-83 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 6 plans completed (Phases 82-83 done, 84-01 done)
 
 *Updated after each plan completion*
 
@@ -50,6 +50,10 @@ Recent decisions affecting current work:
 - [83-01]: network parameter replaces hardcoded 'devnet' in keystore files
 - [83-01]: sodium.sodium_memzero used for secp256k1 plaintext zeroing (same pattern as ed25519)
 - [83-02]: vi.fn() mock keyStore enables call inspection for 4-param signature verification
+- [84-01]: AdapterPool dynamic import for both adapter packages (same pattern as daemon.ts Step 4)
+- [84-01]: EVM_CHAIN_MAP lookup in resolve() provides viemChain + nativeSymbol + nativeName automatically
+- [84-01]: disconnectAll() concurrent Promise.all with per-adapter catch (fail-soft)
+- [84-01]: Pool clears after disconnectAll -- subsequent resolves create fresh adapters
 
 ### Blockers/Concerns
 
@@ -58,6 +62,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Phase 83 complete, verified, ready for Phase 84 planning
+Last session: 2026-02-12T09:26:39Z
+Stopped at: Completed 84-01-PLAN.md (AdapterPool TDD)
 Resume file: None
