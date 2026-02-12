@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 6 tools + 3 resources.
+ * createMcpServer: factory that creates an MCP server with 7 tools + 3 resources.
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -11,10 +11,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiClient } from './api-client.js';
 
-// Tool registrations (Task 2)
+// Tool registrations
 import { registerSendToken } from './tools/send-token.js';
 import { registerGetBalance } from './tools/get-balance.js';
 import { registerGetAddress } from './tools/get-address.js';
+import { registerGetAssets } from './tools/get-assets.js';
 import { registerListTransactions } from './tools/list-transactions.js';
 import { registerGetTransaction } from './tools/get-transaction.js';
 import { registerGetNonce } from './tools/get-nonce.js';
@@ -45,10 +46,11 @@ export function createMcpServer(apiClient: ApiClient, agentContext?: AgentContex
     version: '0.0.0',
   });
 
-  // Register 6 tools
+  // Register 7 tools
   registerSendToken(server, apiClient, agentContext);
   registerGetBalance(server, apiClient, agentContext);
   registerGetAddress(server, apiClient, agentContext);
+  registerGetAssets(server, apiClient, agentContext);
   registerListTransactions(server, apiClient, agentContext);
   registerGetTransaction(server, apiClient, agentContext);
   registerGetNonce(server, apiClient, agentContext);

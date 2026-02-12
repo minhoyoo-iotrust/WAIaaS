@@ -24,11 +24,14 @@
 | BUG-007 | MEDIUM | Admin UI 알림 테스트 응답 파싱 오류 (results 래퍼 미처리) | v1.3.4 | FIXED | 2026-02-12 |
 | BUG-008 | MEDIUM | vitest fork pool 워커 프로세스가 고아 상태로 누적 | v1.3.4 | FIXED | 2026-02-12 |
 | BUG-009 | LOW | E2E E-11 테스트가 잘못된 인증 모델 전제 (X-Agent-Id 미사용, sessionAuth 누락) | v1.1 | FIXED | 2026-02-12 |
+| BUG-010 | HIGH | Admin UI EVM 에이전트 생성 시 network 값 불일치 (sepolia → ethereum-sepolia) | v1.4.1 | FIXED | 2026-02-12 |
+| BUG-011 | MEDIUM | MCP 서버 초기화 순서 레이스 컨디션 (sessionManager.start → server.connect) | v1.3 | FIXED | 2026-02-12 |
+| BUG-012 | MEDIUM | MCP에 get_assets 도구 미구현 — SPL/ERC-20 토큰 잔액 조회 불가 | v1.3 | FIXED | 2026-02-12 |
 
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 9
+- **FIXED:** 12
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 9
+- **Total:** 12

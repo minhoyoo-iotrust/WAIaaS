@@ -61,6 +61,20 @@ vi.mock('../utils/error-messages', () => ({
 import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
 import { currentPath } from '../components/layout';
 import AgentsPage from '../pages/agents';
+import { chainNetworkOptions } from '../pages/agents';
+
+// Mirrored from @waiaas/core/src/enums/chain.ts — admin SPA can't import core directly.
+// If core adds new networks, this test will NOT catch them automatically;
+// but it WILL catch value typos (e.g. 'sepolia' instead of 'ethereum-sepolia').
+const SOLANA_NETWORK_TYPES = ['mainnet', 'devnet', 'testnet'] as const;
+const EVM_NETWORK_TYPES = [
+  'ethereum-mainnet', 'ethereum-sepolia',
+  'polygon-mainnet', 'polygon-amoy',
+  'arbitrum-mainnet', 'arbitrum-sepolia',
+  'optimism-mainnet', 'optimism-sepolia',
+  'base-mainnet', 'base-sepolia',
+] as const;
+const NETWORK_TYPES = [...SOLANA_NETWORK_TYPES, ...EVM_NETWORK_TYPES] as const;
 
 const mockAgents = {
   items: [
@@ -220,5 +234,45 @@ describe('AgentsPage', () => {
     await waitFor(() => {
       expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/agents/agent-1');
     });
+  });
+});
+
+describe('chainNetworkOptions', () => {
+  it('all Solana option values are valid SOLANA_NETWORK_TYPES', () => {
+    const options = chainNetworkOptions('solana');
+    for (const opt of options) {
+      expect(SOLANA_NETWORK_TYPES as readonly string[]).toContain(opt.value);
+    }
+  });
+
+  it('all EVM option values are valid EVM_NETWORK_TYPES', () => {
+    const options = chainNetworkOptions('ethereum');
+    for (const opt of options) {
+      expect(EVM_NETWORK_TYPES as readonly string[]).toContain(opt.value);
+    }
+  });
+
+  it('all option values are valid NETWORK_TYPES', () => {
+    for (const chain of ['solana', 'ethereum']) {
+      const options = chainNetworkOptions(chain);
+      for (const opt of options) {
+        expect(NETWORK_TYPES as readonly string[]).toContain(opt.value);
+      }
+    }
+  });
+
+  it('EVM options cover all 10 EVM_NETWORK_TYPES', () => {
+    const options = chainNetworkOptions('ethereum');
+    const values = options.map((o) => o.value);
+    for (const net of EVM_NETWORK_TYPES) {
+      expect(values).toContain(net);
+    }
+  });
+
+  it('EVM options include ethereum-sepolia and ethereum-mainnet', () => {
+    const options = chainNetworkOptions('ethereum');
+    const values = options.map((o) => o.value);
+    expect(values).toContain('ethereum-sepolia');
+    expect(values).toContain('ethereum-mainnet');
   });
 });

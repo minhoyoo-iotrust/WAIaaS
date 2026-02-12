@@ -1,5 +1,5 @@
 /**
- * Tests for all 6 MCP tools.
+ * Tests for all 7 MCP tools.
  *
  * Uses mock ApiClient to test tool handlers return correct results.
  * Verifies:
@@ -14,6 +14,7 @@ import type { ApiClient, ApiResult } from '../api-client.js';
 import { registerSendToken } from '../tools/send-token.js';
 import { registerGetBalance } from '../tools/get-balance.js';
 import { registerGetAddress } from '../tools/get-address.js';
+import { registerGetAssets } from '../tools/get-assets.js';
 import { registerListTransactions } from '../tools/list-transactions.js';
 import { registerGetTransaction } from '../tools/get-transaction.js';
 import { registerGetNonce } from '../tools/get-nonce.js';
@@ -222,6 +223,45 @@ describe('get_balance tool', () => {
   });
 });
 
+describe('get_assets tool', () => {
+  it('calls GET /v1/wallet/assets', async () => {
+    const assetsData = {
+      agentId: 'agent-1',
+      chain: 'solana',
+      network: 'devnet',
+      assets: [
+        { mint: null, symbol: 'SOL', name: 'Solana', balance: '5000000000', decimals: 9, isNative: true, usdValue: null },
+        { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', symbol: 'USDC', name: 'USD Coin', balance: '1000000', decimals: 6, isNative: false, usdValue: null },
+      ],
+    };
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/assets', { ok: true, data: assetsData }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetAssets, apiClient);
+
+    const result = await handler({}) as { content: Array<{ text: string }> };
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/assets');
+    const parsed = JSON.parse(result.content[0]!.text) as { assets: unknown[] };
+    expect(parsed.assets).toHaveLength(2);
+  });
+
+  it('returns error on failure', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/assets', {
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'RPC error', retryable: true },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetAssets, apiClient);
+
+    const result = await handler({}) as { isError?: boolean };
+    expect(result.isError).toBe(true);
+  });
+});
+
 describe('get_address tool', () => {
   it('calls GET /v1/wallet/address', async () => {
     const responses = new Map<string, ApiResult<unknown>>([
@@ -409,6 +449,10 @@ describe('tool registration with McpServer', () => {
 
   it('registers get_address tool without error', () => {
     expect(() => registerGetAddress(server, apiClient)).not.toThrow();
+  });
+
+  it('registers get_assets tool without error', () => {
+    expect(() => registerGetAssets(server, apiClient)).not.toThrow();
   });
 
   it('registers list_transactions tool without error', () => {

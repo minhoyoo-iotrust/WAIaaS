@@ -31,18 +31,26 @@ interface AgentDetail extends Agent {
   updatedAt: number | null;
 }
 
-function chainNetworkOptions(chain: string): { label: string; value: string }[] {
+export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
     return [
       { label: 'Devnet', value: 'devnet' },
       { label: 'Testnet', value: 'testnet' },
-      { label: 'Mainnet Beta', value: 'mainnet-beta' },
+      { label: 'Mainnet', value: 'mainnet' },
     ];
   }
   if (chain === 'ethereum') {
     return [
-      { label: 'Sepolia', value: 'sepolia' },
-      { label: 'Mainnet', value: 'mainnet' },
+      { label: 'Ethereum Sepolia', value: 'ethereum-sepolia' },
+      { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
+      { label: 'Polygon Amoy', value: 'polygon-amoy' },
+      { label: 'Polygon Mainnet', value: 'polygon-mainnet' },
+      { label: 'Arbitrum Sepolia', value: 'arbitrum-sepolia' },
+      { label: 'Arbitrum Mainnet', value: 'arbitrum-mainnet' },
+      { label: 'Optimism Sepolia', value: 'optimism-sepolia' },
+      { label: 'Optimism Mainnet', value: 'optimism-mainnet' },
+      { label: 'Base Sepolia', value: 'base-sepolia' },
+      { label: 'Base Mainnet', value: 'base-mainnet' },
     ];
   }
   return [{ label: 'Devnet', value: 'devnet' }];

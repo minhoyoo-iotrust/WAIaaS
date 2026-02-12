@@ -80,8 +80,8 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { agentName: 'trading-bot' });
 
-    // 6 tools should be registered
-    expect(mockTool).toHaveBeenCalledTimes(6);
+    // 7 tools should be registered
+    expect(mockTool).toHaveBeenCalledTimes(7);
 
     // Every tool call's second argument (description) should have the prefix
     for (const call of mockTool.mock.calls) {
@@ -119,5 +119,21 @@ describe('createMcpServer', () => {
       const metadata = call[2] as { description: string };
       expect(metadata.description).not.toMatch(/^\[/);
     }
+  });
+});
+
+describe('BUG-011: init order — server.connect before sessionManager.start', () => {
+  it('index.ts에서 server.connect()가 sessionManager.start() 이전에 호출된다', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const { resolve } = await import('node:path');
+    const src = await readFile(resolve(__dirname, '..', 'index.ts'), 'utf-8');
+
+    const connectIdx = src.indexOf('await server.connect(transport)');
+    const startIdx = src.indexOf('await sessionManager.start()');
+
+    expect(connectIdx).toBeGreaterThan(-1);
+    expect(startIdx).toBeGreaterThan(-1);
+    // server.connect must appear BEFORE sessionManager.start in the source
+    expect(connectIdx).toBeLessThan(startIdx);
   });
 });

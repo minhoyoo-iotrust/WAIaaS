@@ -36,15 +36,17 @@ async function main(): Promise<void> {
     agentId: AGENT_ID,
   });
 
-  // Eager init (design decision) -- degraded mode if token missing
-  await sessionManager.start();
-
   const apiClient = new ApiClient(sessionManager, BASE_URL);
   const server = createMcpServer(apiClient, { agentName: AGENT_NAME });
   const transport = new StdioServerTransport();
 
+  // Connect transport FIRST so stdio JSON-RPC responds to initialize immediately.
+  // sessionManager.start() involves disk I/O that can delay under load (BUG-011).
+  // If a tool call arrives before start() completes, degraded mode handles it (SMGI-03).
   await server.connect(transport);
   console.error('[waiaas-mcp] Server started on stdio transport');
+
+  await sessionManager.start();
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
