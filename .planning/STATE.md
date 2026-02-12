@@ -10,24 +10,25 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 90 (2 of 6 in v1.4.2) — 코어 타입 + 에러 코드
-Plan: 01 of 02 complete
-Status: Executing
-Last activity: 2026-02-13 — Plan 90-01 complete (core types/enums/errors renamed)
+Plan: 02 of 02 complete
+Status: Phase Complete
+Last activity: 2026-02-13 — Plan 90-02 complete (i18n + tests wallet terminology)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Total plans: 10
 
 | Phase | Plan | Duration | Tasks | Files |
 | ----- | ---- | -------- | ----- | ----- |
 | 89    | 01   | 8min     | 2     | 4     |
 | 90    | 01   | 4min     | 2     | 19    |
+| 90    | 02   | 2min     | 2     | 2     |
 
 *Updated after each plan completion*
 
@@ -46,8 +47,10 @@ Recent decisions for v1.4.2:
 - AGENT_STATUSES import kept in schema.ts (Phase 90 renames) -- DONE in 90-01
 - wallets as agents backward-compat alias in index.ts (removed Phase 91)
 - i18n en/ko updated: wallet not found/suspended/terminated messages
-- Notification template uses {walletId} placeholder
+- Notification template uses {walletId} placeholder (all 21 events updated)
 - Core tests (5 files, 137 tests) all updated to wallet terminology
+- Korean particle correction: 지갑 {walletId}이 (consonant ending)
+- Error code count comment fixed 67 -> 68 in i18n files
 
 ### Blockers/Concerns
 
@@ -57,5 +60,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 90-01-PLAN.md (core types/enums/errors renamed to wallet)
+Stopped at: Completed 90-02-PLAN.md (i18n + tests wallet terminology -- Phase 90 complete)
 Resume file: None
