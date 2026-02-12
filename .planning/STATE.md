@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 88 - 통합 검증
+**Current focus:** v1.4.1 Phase 88 - 통합 검증 완료
 
 ## Current Position
 
 Phase: 88 (7 of 7 in v1.4.1) — 통합 검증
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 87 complete (2/2 plans, verified, 11/11 must-haves)
+Plan: 3 of 3 complete
+Status: Phase Complete
+Last activity: 2026-02-12 — 88-03 complete (full regression: 1,310 pass, 0 new failures)
 
-Progress: [████████░░] 85% (6/7 phases in v1.4.1)
+Progress: [██████████] 100% (7/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 87 phases, 195 plans, 533 reqs, 1,323+ tests, 52,800+ LOC
+**Cumulative:** 21 milestones, 88 phases, 199 plans, 533 reqs, 1,333+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 13 plans completed (Phases 82-87 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 17 plans completed (Phases 82-88 all done)
 
 *Updated after each plan completion*
 
@@ -76,6 +76,13 @@ Recent decisions affecting current work:
 - [87-02]: SIWE message base64-encoded in X-Owner-Message header (multi-line EIP-4361 invalid as raw HTTP headers)
 - [87-02]: setOwner stores normalized address (EIP-55 checksummed for EVM, as-is for Solana)
 - [87-02]: Chain branching via agent.chain: ethereum=SIWE, else=Ed25519 (default Solana path unchanged)
+- [88-01]: Real viem signatures for SIWE E2E tests (privateKeyToAccount with hardcoded test key)
+- [88-01]: No fake timers for E2E: mock adapters resolve immediately, setTimeout for pipeline wait
+- [88-01]: Direct SQLite row check for CONFIRMED status (pipeline async fire-and-forget)
+- [88-02]: waitForPipeline polling pattern for fire-and-forget E2E tests (50ms intervals, DB status check)
+- [88-02]: Cross-package MCP/SDK tests use dynamic import to avoid circular deps
+- [88-02]: DefaultPolicyEngine used for pipeline E2E to isolate type dispatch from policy evaluation
+- [88-03]: Full regression: 1,310 pass, 3 fail (pre-existing CLI e2e), 0 new regressions -- v1.4.1 milestone verified
 
 ### Blockers/Concerns
 
@@ -85,5 +92,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 87 complete, verified, ready for Phase 88 planning
+Stopped at: Completed 88-03-PLAN.md (full regression suite -- v1.4.1 milestone verified)
 Resume file: None
