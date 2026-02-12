@@ -63,7 +63,7 @@ Plans:
 Plans:
 - [x] 91-01-PLAN.md — OpenAPI 스키마 rename + agents.ts -> wallets.ts + 라우트/JWT/Config 소스 변경 (27 파일)
 - [x] 91-02-PLAN.md — 데몬 테스트 파일 전체 wallet 용어 갱신 + 테스트 통과 확인 (38 파일)
-- [ ] 91-03-PLAN.md — [gap closure] @waiaas/core 인터페이스 agentId -> walletId 갭 클로저 (10 파일)
+- [x] 91-03-PLAN.md — [gap closure] @waiaas/core 인터페이스 agentId -> walletId 갭 클로저 (10 파일)
 
 ### Phase 92: MCP + CLI + SDK
 **Goal**: MCP/CLI/SDK 소비자 패키지가 wallet 용어를 사용하여, AI 에이전트가 walletId 기반으로 지갑에 접근한다
@@ -119,7 +119,7 @@ Plans:
 |-------|---------------|--------|-----------|
 | 89. DB 마이그레이션 | 1/1 | ✓ Complete | 2026-02-13 |
 | 90. 코어 타입 + 에러 코드 | 2/2 | ✓ Complete | 2026-02-13 |
-| 91. 데몬 API + JWT + Config | 0/2 | Not started | - |
+| 91. 데몬 API + JWT + Config | 3/3 | ✓ Complete | 2026-02-13 |
 | 92. MCP + CLI + SDK | 0/2 | Not started | - |
 | 93. Admin Web UI | 0/1 | Not started | - |
 | 94. 설계 문서 + 검증 | 0/2 | Not started | - |
