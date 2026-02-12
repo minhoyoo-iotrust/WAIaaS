@@ -133,7 +133,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 82. Config + NetworkType | v1.4.1 | 3/3 | Complete | 2026-02-12 |
 | 83. Keystore 멀티커브 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 84. 어댑터 팩토리 | v1.4.1 | 0/2 | Not started | - |
+| 84. 어댑터 팩토리 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 85. DB 마이그레이션 | v1.4.1 | 0/TBD | Not started | - |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 0/TBD | Not started | - |
 | 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |
