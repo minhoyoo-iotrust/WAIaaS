@@ -105,10 +105,11 @@ Plans:
   2. owner-auth 미들웨어가 agent.chain에 따라 solana=Ed25519, ethereum=SIWE로 분기 검증한다
   3. setOwner 시 EVM 주소는 0x + EIP-55 체크섬, Solana 주소는 base58 32B로 검증된다
   4. 기존 Solana owner-auth 테스트가 전수 통과한다 (회귀 없음)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 87-01: TBD
+- [ ] 87-01-PLAN.md — verifySIWE 함수 + validateOwnerAddress 유틸리티 (TDD)
+- [ ] 87-02-PLAN.md — owner-auth 미들웨어 chain 분기 + setOwner 주소 검증 + 회귀 테스트
 
 ### Phase 88: 통합 검증
 **Goal**: EVM 에이전트의 풀 라이프사이클(생성 -> 잔액 조회 -> 전송 -> Owner 인증)이 E2E로 동작하고, Solana + EVM 동시 운용이 검증되며, 기존 전체 테스트가 회귀 없이 통과하는 상태
