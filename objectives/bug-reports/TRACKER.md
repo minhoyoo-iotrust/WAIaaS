@@ -23,11 +23,12 @@
 | BUG-006 | MEDIUM | mcp setup 에이전트 자동 감지 시 API 응답 필드 불일치 (items vs agents) | v1.3 | FIXED | 2026-02-11 |
 | BUG-007 | MEDIUM | Admin UI 알림 테스트 응답 파싱 오류 (results 래퍼 미처리) | v1.3.4 | FIXED | 2026-02-12 |
 | BUG-008 | MEDIUM | vitest fork pool 워커 프로세스가 고아 상태로 누적 | v1.3.4 | FIXED | 2026-02-12 |
+| BUG-009 | LOW | E2E E-11 테스트가 잘못된 인증 모델 전제 (X-Agent-Id 미사용, sessionAuth 누락) | v1.1 | FIXED | 2026-02-12 |
 
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 8
+- **FIXED:** 9
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 8
+- **Total:** 9

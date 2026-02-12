@@ -30,19 +30,20 @@ describe('E2E Error Handling', () => {
   });
 
   test('E-11: non-existent agent returns 404', async () => {
+    const masterPassword = 'test-password-12345';
     const { dataDir } = await initTestDataDir();
-    const harness = await startTestDaemon(dataDir);
+    const harness = await startTestDaemon(dataDir, masterPassword);
 
     try {
       await waitForHealth(harness);
 
-      const res = await fetchApi(harness, '/v1/wallet/balance', {
-        headers: { 'X-Agent-Id': 'non-existent-agent-id' },
+      const res = await fetchApi(harness, '/v1/agents/00000000-0000-0000-0000-000000000000', {
+        headers: { 'X-Master-Password': masterPassword },
       });
 
       expect(res.status).toBe(404);
       const body = (await res.json()) as { code: string };
-      expect(body).toHaveProperty('code');
+      expect(body.code).toBe('AGENT_NOT_FOUND');
     } finally {
       await stopTestDaemon(harness);
     }
