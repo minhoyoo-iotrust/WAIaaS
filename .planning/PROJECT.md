@@ -186,7 +186,22 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 
 ### 활성
 
-(v1.4.1 완료, 다음 마일스톤 TBD — `/gsd:new-milestone`로 시작)
+## Current Milestone: v1.4.2 용어 변경 (agent → wallet)
+
+**Goal:** 코드베이스와 설계 문서 전체에서 "agent"를 "wallet"으로 일괄 변경하여, WAIaaS가 관리하는 엔티티의 실체(AI 에이전트가 사용하는 지갑)를 정확히 반영한다.
+
+**Target features:**
+- DB 스키마 마이그레이션 (agents → wallets, FK 5개, 인덱스 10개, enum 데이터 5건)
+- REST API 엔드포인트 경로 변경 (6개 CRUD + 3개 세션 내부 변경)
+- REST API 응답 필드 변경 (9개 스키마 agentId → walletId)
+- JWT claim 변경 (agt → wlt)
+- Zod 스키마 + TypeScript 타입 14개 rename
+- 에러 코드 3개 + Enum 값 5개 + i18n 템플릿 ~35건
+- MCP/CLI/환경변수 용어 변경 (~11 파일)
+- Admin Web UI 4페이지 + 4 테스트
+- 설계 문서 15개 (~317건 치환)
+- README.md 용어 + 현황 갱신
+- SDK (TS + Python) 필드명 변경
 
 ## Next Milestone Goals
 

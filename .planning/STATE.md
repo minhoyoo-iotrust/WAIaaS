@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-12)
+See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 shipped — 다음 마일스톤 TBD
+**Current focus:** v1.4.2 용어 변경 (agent → wallet)
 
 ## Current Position
 
-Phase: None (milestone complete)
-Plan: N/A
-Status: Milestone v1.4.1 shipped
-Last activity: 2026-02-12 — v1.4.1 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-13 — Milestone v1.4.2 started
 
-Progress: [██████████] 100% (v1.4.1 complete)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -35,6 +35,6 @@ Full log in PROJECT.md.
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: v1.4.1 milestone archived
+Last session: 2026-02-13
+Stopped at: Milestone v1.4.2 started
 Resume file: None
