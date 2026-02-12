@@ -1,9 +1,9 @@
 /**
- * Route barrel export: health, agents, wallet, sessions, transactions, policies, nonce, admin.
+ * Route barrel export: health, wallets, wallet, sessions, transactions, policies, nonce, admin.
  */
 
 export { health } from './health.js';
-export { agentRoutes, type AgentRouteDeps } from './agents.js';
+export { walletCrudRoutes, type WalletCrudRouteDeps } from './wallets.js';
 export { walletRoutes, type WalletRouteDeps } from './wallet.js';
 export { sessionRoutes, type SessionRouteDeps } from './sessions.js';
 export { transactionRoutes, type TransactionRouteDeps } from './transactions.js';

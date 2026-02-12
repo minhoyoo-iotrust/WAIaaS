@@ -8,7 +8,7 @@
  * All text PKs use UUID v7 for ms-precision time ordering (except audit_log which uses AUTOINCREMENT).
  *
  * v1.4.2: agents table renamed to wallets, agent_id columns renamed to wallet_id.
- * AGENT_STATUSES import kept (Phase 90 renames it to WALLET_STATUSES).
+ * WALLET_STATUSES used for status CHECK constraint.
  *
  * @see docs/25-sqlite-schema.md
  */
@@ -24,7 +24,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import {
-  AGENT_STATUSES,
+  WALLET_STATUSES,
   CHAIN_TYPES,
   NETWORK_TYPES,
   TRANSACTION_STATUSES,
@@ -68,7 +68,7 @@ export const wallets = sqliteTable(
     index('idx_wallets_owner_address').on(table.ownerAddress),
     check('check_chain', buildCheckSql('chain', CHAIN_TYPES)),
     check('check_network', buildCheckSql('network', NETWORK_TYPES)),
-    check('check_status', buildCheckSql('status', AGENT_STATUSES)),
+    check('check_status', buildCheckSql('status', WALLET_STATUSES)),
     check('check_owner_verified', sql`owner_verified IN (0, 1)`),
   ],
 );

@@ -15,7 +15,7 @@
  *   - Returns transaction status JSON
  *   - 404 if not found
  *
- * v1.2: Agent identification via JWT agentId from sessionAuth context.
+ * v1.2: Wallet identification via JWT walletId from sessionAuth context.
  *
  * @see docs/37-rest-api-complete-spec.md
  */
@@ -29,7 +29,7 @@ import type { ChainType, NetworkType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
-import { agents, transactions } from '../../infrastructure/database/schema.js';
+import { wallets, transactions } from '../../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
@@ -99,7 +99,7 @@ const sendTransactionRoute = createRoute({
       description: 'Transaction submitted to pipeline',
       content: { 'application/json': { schema: TxSendResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
 });
 
@@ -237,14 +237,14 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(sendTransactionRoute, async (c) => {
-    // Get agentId from sessionAuth context (set by middleware at server level)
-    const agentId = c.get('agentId' as never) as string;
+    // Get walletId from sessionAuth context (set by middleware at server level)
+    const walletId = c.get('walletId' as never) as string;
 
-    // Look up agent
-    const agent = await deps.db.select().from(agents).where(eq(agents.id, agentId)).get();
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: `Agent '${agentId}' not found`,
+    // Look up wallet
+    const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
       });
     }
 
@@ -252,15 +252,15 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     // Actual Zod validation is delegated to stage1Validate (5-type or legacy).
     const request = await c.req.json();
 
-    // Resolve adapter from pool for this agent's chain:network
+    // Resolve adapter from pool for this wallet's chain:network
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
-      agent.chain,
-      agent.network,
+      wallet.chain,
+      wallet.network,
     );
     const adapter = await deps.adapterPool.resolve(
-      agent.chain as ChainType,
-      agent.network as NetworkType,
+      wallet.chain as ChainType,
+      wallet.network as NetworkType,
       rpcUrl,
     );
 
@@ -271,11 +271,11 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       keyStore: deps.keyStore,
       policyEngine: deps.policyEngine,
       masterPassword: deps.masterPassword,
-      agentId,
-      agent: {
-        publicKey: agent.publicKey,
-        chain: agent.chain,
-        network: agent.network,
+      walletId,
+      wallet: {
+        publicKey: wallet.publicKey,
+        chain: wallet.chain,
+        network: wallet.network,
       },
       request,
       txId: '', // stage1Validate will assign
@@ -346,12 +346,12 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(listTransactionsRoute, async (c) => {
-    const agentId = c.get('agentId' as never) as string;
+    const walletId = c.get('walletId' as never) as string;
     const { limit: rawLimit, cursor } = c.req.valid('query');
     const limit = rawLimit ?? 20;
 
     // Build conditions
-    const conditions = [eq(transactions.agentId, agentId)];
+    const conditions = [eq(transactions.walletId, walletId)];
     if (cursor) {
       conditions.push(lt(transactions.id, cursor));
     }
@@ -372,7 +372,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       {
         items: items.map((tx) => ({
           id: tx.id,
-          agentId: tx.agentId,
+          walletId: tx.walletId,
           type: tx.type,
           status: tx.status,
           tier: tx.tier,
@@ -395,14 +395,14 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(pendingTransactionsRoute, async (c) => {
-    const agentId = c.get('agentId' as never) as string;
+    const walletId = c.get('walletId' as never) as string;
 
     const rows = await deps.db
       .select()
       .from(transactions)
       .where(
         and(
-          eq(transactions.agentId, agentId),
+          eq(transactions.walletId, walletId),
           inArray(transactions.status, ['PENDING', 'QUEUED']),
         ),
       )
@@ -412,7 +412,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       {
         items: rows.map((tx) => ({
           id: tx.id,
-          agentId: tx.agentId,
+          walletId: tx.walletId,
           type: tx.type,
           status: tx.status,
           tier: tx.tier,
@@ -456,7 +456,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     return c.json(
       {
         id: tx.id,
-        agentId: tx.agentId,
+        walletId: tx.walletId,
         type: tx.type,
         status: tx.status,
         tier: tx.tier,
@@ -482,7 +482,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     router.openapi(approveTransactionRoute, async (c) => {
       const { id: txId } = c.req.valid('param');
 
-      // Verify the tx exists and get agentId for ownerAuth verification
+      // Verify the tx exists and get walletId for ownerAuth verification
       const tx = await deps.db
         .select()
         .from(transactions)
@@ -503,7 +503,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
       // ownerAuth success -> mark owner verified (GRACE -> LOCKED auto-transition)
       try {
-        ownerLifecycle.markOwnerVerified(tx.agentId);
+        ownerLifecycle.markOwnerVerified(tx.walletId);
       } catch {
         // If markOwnerVerified fails (e.g., NONE state), don't fail the approval
       }
@@ -543,7 +543,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
       // ownerAuth success -> mark owner verified (GRACE -> LOCKED auto-transition)
       try {
-        ownerLifecycle.markOwnerVerified(tx.agentId);
+        ownerLifecycle.markOwnerVerified(tx.walletId);
       } catch {
         // If markOwnerVerified fails (e.g., NONE state), don't fail the rejection
       }
@@ -560,7 +560,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   }
 
   // ---------------------------------------------------------------------------
-  // POST /transactions/:id/cancel (sessionAuth -- agent cancels own DELAY tx)
+  // POST /transactions/:id/cancel (sessionAuth -- wallet cancels own DELAY tx)
   // ---------------------------------------------------------------------------
 
   if (deps.delayQueue) {
@@ -569,10 +569,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     router.openapi(cancelTransactionRoute, async (c) => {
       const { id: txId } = c.req.valid('param');
 
-      // Get agentId from sessionAuth context
-      const sessionAgentId = c.get('agentId' as never) as string;
+      // Get walletId from sessionAuth context
+      const sessionWalletId = c.get('walletId' as never) as string;
 
-      // Verify the tx exists and belongs to this agent
+      // Verify the tx exists and belongs to this wallet
       const tx = await deps.db
         .select()
         .from(transactions)
@@ -585,7 +585,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         });
       }
 
-      if (tx.agentId !== sessionAgentId) {
+      if (tx.walletId !== sessionWalletId) {
         throw new WAIaaSError('TX_NOT_FOUND', {
           message: `Transaction '${txId}' not found`,
         });

@@ -5,7 +5,7 @@ export {
   createDatabase,
   closeDatabase,
   pushSchema,
-  agents,
+  wallets,
   sessions,
   transactions,
   policies,
@@ -49,8 +49,8 @@ export { BackgroundWorkers } from './lifecycle/index.js';
 // API module
 export { createApp } from './api/index.js';
 export type { CreateAppDeps } from './api/index.js';
-export { agentRoutes, walletRoutes, transactionRoutes } from './api/routes/index.js';
-export type { AgentRouteDeps } from './api/routes/agents.js';
+export { walletCrudRoutes, walletRoutes, transactionRoutes } from './api/routes/index.js';
+export type { WalletCrudRouteDeps } from './api/routes/wallets.js';
 export type { WalletRouteDeps } from './api/routes/wallet.js';
 export type { TransactionRouteDeps } from './api/routes/transactions.js';
 

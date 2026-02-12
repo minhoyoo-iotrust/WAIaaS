@@ -357,8 +357,8 @@ export class LocalKeyStore implements ILocalKeyStore {
       content = await readFile(filePath, 'utf-8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        throw new WAIaaSError('AGENT_NOT_FOUND', {
-          message: `Keystore file not found for agent '${agentId}'`,
+        throw new WAIaaSError('WALLET_NOT_FOUND', {
+          message: `Keystore file not found for wallet '${agentId}'`,
         });
       }
       throw error;

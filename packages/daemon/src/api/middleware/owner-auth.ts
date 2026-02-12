@@ -28,7 +28,7 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type * as schema from '../../infrastructure/database/schema.js';
-import { agents } from '../../infrastructure/database/schema.js';
+import { wallets } from '../../infrastructure/database/schema.js';
 import { verifySIWE } from './siwe-verify.js';
 import { decodeBase58 } from './address-validation.js';
 
@@ -64,39 +64,39 @@ export function createOwnerAuth(deps: OwnerAuthDeps) {
       });
     }
 
-    // Look up agent to verify owner_address match.
-    // Prefer agentId from sessionAuth context (set on /v1/transactions/* routes)
+    // Look up wallet to verify owner_address match.
+    // Prefer walletId from sessionAuth context (set on /v1/transactions/* routes)
     // over c.req.param('id') which is the TRANSACTION ID on /v1/transactions/:id/*.
-    // For direct agent routes like /v1/agents/:id/*, c.req.param('id') IS the agent ID.
-    const agentId = (c.get('agentId' as never) as string | undefined) || c.req.param('id');
-    if (!agentId) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: 'Agent ID required for owner authentication',
+    // For direct wallet routes like /v1/wallets/:id/*, c.req.param('id') IS the wallet ID.
+    const walletId = (c.get('walletId' as never) as string | undefined) || c.req.param('id');
+    if (!walletId) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: 'Wallet ID required for owner authentication',
       });
     }
 
-    const agent = deps.db
+    const wallet = deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, agentId))
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
       .get();
 
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND');
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
     }
-    if (!agent.ownerAddress) {
+    if (!wallet.ownerAddress) {
       throw new WAIaaSError('OWNER_NOT_CONNECTED', {
-        message: 'No owner address registered for this agent',
+        message: 'No owner address registered for this wallet',
       });
     }
-    if (agent.ownerAddress !== ownerAddress) {
+    if (wallet.ownerAddress !== ownerAddress) {
       throw new WAIaaSError('INVALID_SIGNATURE', {
-        message: 'Owner address does not match agent owner',
+        message: 'Owner address does not match wallet owner',
       });
     }
 
     // Branch verification by chain type
-    if (agent.chain === 'ethereum') {
+    if (wallet.chain === 'ethereum') {
       // EVM SIWE verification (EIP-4361 + EIP-191)
       // For SIWE: X-Owner-Message is base64-encoded EIP-4361 message (multi-line messages
       // cannot be sent as raw HTTP header values), X-Owner-Signature is 0x-prefixed hex

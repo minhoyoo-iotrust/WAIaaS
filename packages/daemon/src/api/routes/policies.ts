@@ -4,7 +4,7 @@
  * All routes are protected by masterAuth middleware at the server level.
  *
  * POST /policies         -> create a new policy (201)
- * GET /policies          -> list policies with optional agentId filter (200)
+ * GET /policies          -> list policies with optional walletId filter (200)
  * PUT /policies/:id      -> update a policy (200)
  * DELETE /policies/:id   -> delete a policy (200)
  *
@@ -17,7 +17,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, or, isNull, desc } from 'drizzle-orm';
 import { WAIaaSError } from '@waiaas/core';
 import { generateId } from '../../infrastructure/database/id.js';
-import { agents, policies } from '../../infrastructure/database/schema.js';
+import { wallets, policies } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
   CreatePolicyRequestOpenAPI,
@@ -124,7 +124,7 @@ const createPolicyRoute = createRoute({
       description: 'Policy created',
       content: { 'application/json': { schema: PolicyResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
   },
 });
 
@@ -135,7 +135,7 @@ const listPoliciesRoute = createRoute({
   summary: 'List policies',
   request: {
     query: z.object({
-      agentId: z.string().uuid().optional(),
+      walletId: z.string().uuid().optional(),
     }),
   },
   responses: {
@@ -209,16 +209,16 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
     // Validate rules based on type (custom validation beyond Zod)
     validateRules(parsed.type, parsed.rules as Record<string, unknown>);
 
-    // If agentId provided, verify agent exists
-    if (parsed.agentId) {
-      const agent = deps.db
+    // If walletId provided, verify wallet exists
+    if (parsed.walletId) {
+      const wallet = deps.db
         .select()
-        .from(agents)
-        .where(eq(agents.id, parsed.agentId))
+        .from(wallets)
+        .where(eq(wallets.id, parsed.walletId))
         .get();
 
-      if (!agent) {
-        throw new WAIaaSError('AGENT_NOT_FOUND');
+      if (!wallet) {
+        throw new WAIaaSError('WALLET_NOT_FOUND');
       }
     }
 
@@ -228,7 +228,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
 
     deps.db.insert(policies).values({
       id,
-      agentId: parsed.agentId ?? null,
+      walletId: parsed.walletId ?? null,
       type: parsed.type,
       rules: JSON.stringify(parsed.rules),
       priority: parsed.priority,
@@ -240,7 +240,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
     return c.json(
       {
         id,
-        agentId: parsed.agentId ?? null,
+        walletId: parsed.walletId ?? null,
         type: parsed.type,
         rules: parsed.rules,
         priority: parsed.priority,
@@ -253,19 +253,19 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
   });
 
   // -------------------------------------------------------------------------
-  // GET /policies -- list policies with optional agentId filter
+  // GET /policies -- list policies with optional walletId filter
   // -------------------------------------------------------------------------
   router.openapi(listPoliciesRoute, (c) => {
-    const { agentId } = c.req.valid('query');
+    const { walletId } = c.req.valid('query');
 
     let rows;
-    if (agentId) {
-      // Return agent-specific + global policies
+    if (walletId) {
+      // Return wallet-specific + global policies
       rows = deps.db
         .select()
         .from(policies)
         .where(
-          or(eq(policies.agentId, agentId), isNull(policies.agentId)),
+          or(eq(policies.walletId, walletId), isNull(policies.walletId)),
         )
         .orderBy(desc(policies.priority))
         .all();
@@ -280,7 +280,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
 
     const result = rows.map((row) => ({
       id: row.id,
-      agentId: row.agentId,
+      walletId: row.walletId,
       type: row.type,
       rules: JSON.parse(row.rules),
       priority: row.priority,
@@ -346,7 +346,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
     return c.json(
       {
         id: updated.id,
-        agentId: updated.agentId,
+        walletId: updated.walletId,
         type: updated.type,
         rules: JSON.parse(updated.rules),
         priority: updated.priority,
