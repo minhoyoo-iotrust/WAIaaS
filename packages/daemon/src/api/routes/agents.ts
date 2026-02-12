@@ -261,9 +261,8 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
     } else if (chain === 'solana') {
       network = 'devnet';
     } else {
-      // EVM: use config default (evm_default_network added by 82-02, fallback for safety)
-      const rpcConfig = deps.config.rpc as Record<string, unknown>;
-      network = (rpcConfig.evm_default_network as NetworkType) ?? 'ethereum-sepolia';
+      // EVM: use config default (evm_default_network from config.toml)
+      network = deps.config.rpc.evm_default_network as NetworkType;
     }
 
     // Cross-validate chain + network
