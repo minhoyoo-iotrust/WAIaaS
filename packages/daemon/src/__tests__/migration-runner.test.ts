@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
-import { createDatabase, pushSchema, runMigrations } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, runMigrations, MIGRATIONS } from '../infrastructure/database/index.js';
 import type { Migration } from '../infrastructure/database/index.js';
 
 // ---------------------------------------------------------------------------
@@ -230,5 +230,189 @@ describe('Migration Runner', () => {
       .get() as { description: string } | undefined;
     expect(row).toBeDefined();
     expect(row!.description).toBe('Add token_balances table');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// managesOwnTransaction + v2 migration tests (TDD RED phase for 85-01)
+// ---------------------------------------------------------------------------
+
+describe('managesOwnTransaction migrations', () => {
+  it('should manage its own PRAGMA and transaction', () => {
+    let fkValueInsideUp = -1;
+
+    const migrations: Migration[] = [
+      {
+        version: 2,
+        description: 'Self-managed PRAGMA migration',
+        managesOwnTransaction: true,
+        up: (db) => {
+          // Capture foreign_keys value inside up() -- should be OFF (0)
+          const fk = db.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
+          fkValueInsideUp = fk[0]!.foreign_keys;
+
+          // Do a trivial DDL to prove the migration ran
+          db.exec('BEGIN');
+          db.exec('ALTER TABLE agents ADD COLUMN self_managed_test TEXT');
+          db.exec('COMMIT');
+        },
+      },
+    ];
+
+    runMigrations(sqlite, migrations);
+
+    // Inside up(), foreign_keys should have been OFF (0)
+    expect(fkValueInsideUp).toBe(0);
+
+    // After migration, foreign_keys should be restored to ON (1)
+    const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
+    expect(fkAfter[0]!.foreign_keys).toBe(1);
+
+    // schema_version should record version 2
+    expect(getMaxVersion()).toBe(2);
+  });
+
+  it('should still allow retry after failure and restore foreign_keys', () => {
+    const migrations: Migration[] = [
+      {
+        version: 2,
+        description: 'Failing self-managed migration',
+        managesOwnTransaction: true,
+        up: () => {
+          throw new Error('Intentional self-managed failure');
+        },
+      },
+    ];
+
+    // Should throw the migration error
+    expect(() => runMigrations(sqlite, migrations)).toThrow(
+      /Migration v2.*failed.*Intentional self-managed failure/,
+    );
+
+    // Version 2 should NOT be recorded
+    expect(getMaxVersion()).toBe(1);
+    expect(getVersions()).toEqual([1]);
+
+    // foreign_keys should be restored to ON (1)
+    const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
+    expect(fkAfter[0]!.foreign_keys).toBe(1);
+  });
+});
+
+describe('v2 migration: expand agents network CHECK for EVM', () => {
+  // Get v2 migration from the global MIGRATIONS array (populated in migrate.ts)
+  function getV2Migration(): Migration {
+    const v2 = MIGRATIONS.find((m) => m.version === 2);
+    if (!v2) throw new Error('v2 migration not found in MIGRATIONS array');
+    return v2;
+  }
+
+  it('should preserve existing Solana agents', () => {
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert 3 Solana agents with different networks
+    const agents = [
+      { id: 'agent-sol-1', network: 'mainnet', pk: 'pk-sol-1' },
+      { id: 'agent-sol-2', network: 'devnet', pk: 'pk-sol-2' },
+      { id: 'agent-sol-3', network: 'testnet', pk: 'pk-sol-3' },
+    ];
+
+    for (const a of agents) {
+      sqlite.prepare(
+        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(a.id, `Agent ${a.network}`, 'solana', a.network, a.pk, 'ACTIVE', 0, ts, ts);
+    }
+
+    // Run v2 migration
+    const v2 = getV2Migration();
+    runMigrations(sqlite, [v2]);
+
+    // All 3 agents should still exist with identical data
+    const rows = sqlite
+      .prepare('SELECT id, name, chain, network, public_key, status, owner_verified, created_at, updated_at FROM agents ORDER BY id')
+      .all() as Array<Record<string, unknown>>;
+
+    expect(rows).toHaveLength(3);
+    for (let i = 0; i < agents.length; i++) {
+      const a = agents[i]!;
+      const row = rows.find((r) => r.id === a.id);
+      expect(row).toBeDefined();
+      expect(row!.chain).toBe('solana');
+      expect(row!.network).toBe(a.network);
+      expect(row!.public_key).toBe(a.pk);
+      expect(row!.status).toBe('ACTIVE');
+    }
+  });
+
+  it('should expand network CHECK to accept EVM networks', () => {
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Run v2 migration
+    const v2 = getV2Migration();
+    runMigrations(sqlite, [v2]);
+
+    // ethereum-mainnet should succeed
+    expect(() => {
+      sqlite.prepare(
+        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('evm-agent-1', 'EVM Agent 1', 'ethereum', 'ethereum-mainnet', 'pk-evm-1', 'CREATING', 0, ts, ts);
+    }).not.toThrow();
+
+    // polygon-amoy should succeed
+    expect(() => {
+      sqlite.prepare(
+        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('evm-agent-2', 'EVM Agent 2', 'ethereum', 'polygon-amoy', 'pk-evm-2', 'CREATING', 0, ts, ts);
+    }).not.toThrow();
+
+    // invalid-network should fail CHECK
+    expect(() => {
+      sqlite.prepare(
+        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('evm-agent-3', 'EVM Agent 3', 'ethereum', 'invalid-network', 'pk-evm-3', 'CREATING', 0, ts, ts);
+    }).toThrow(/CHECK/i);
+  });
+
+  it('should pass foreign_key_check after migration', () => {
+    const ts = Math.floor(Date.now() / 1000);
+    const agentId = 'fk-check-agent';
+    const sessionId = 'fk-check-session';
+    const txId = 'fk-check-tx';
+
+    // Insert agent, session, and transaction (FK relationships)
+    sqlite.prepare(
+      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(agentId, 'FK Agent', 'solana', 'mainnet', 'pk-fk-check', 'ACTIVE', 0, ts, ts);
+
+    sqlite.prepare(
+      `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(sessionId, agentId, 'hash-fk-check', ts + 3600, ts + 86400, ts);
+
+    sqlite.prepare(
+      `INSERT INTO transactions (id, agent_id, session_id, chain, type, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(txId, agentId, sessionId, 'solana', 'TRANSFER', 'PENDING', ts);
+
+    // Run v2 migration
+    const v2 = getV2Migration();
+    runMigrations(sqlite, [v2]);
+
+    // FK check should pass (empty array = no violations)
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    expect(fkErrors).toEqual([]);
+
+    // Session and transaction should still reference the agent
+    const session = sqlite.prepare('SELECT agent_id FROM sessions WHERE id = ?').get(sessionId) as { agent_id: string };
+    expect(session.agent_id).toBe(agentId);
+
+    const tx = sqlite.prepare('SELECT agent_id, session_id FROM transactions WHERE id = ?').get(txId) as { agent_id: string; session_id: string };
+    expect(tx.agent_id).toBe(agentId);
+    expect(tx.session_id).toBe(sessionId);
   });
 });
