@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'smol-toml';
 import { z } from 'zod';
+import { EvmNetworkTypeEnum } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Zod Schema: 7 sections, flat keys, with defaults
@@ -53,13 +54,27 @@ export const DaemonConfigSchema = z.object({
     .default({}),
   rpc: z
     .object({
+      // Solana (unchanged)
       solana_mainnet: z.string().default('https://api.mainnet-beta.solana.com'),
       solana_devnet: z.string().default('https://api.devnet.solana.com'),
       solana_testnet: z.string().default('https://api.testnet.solana.com'),
       solana_ws_mainnet: z.string().default('wss://api.mainnet-beta.solana.com'),
       solana_ws_devnet: z.string().default('wss://api.devnet.solana.com'),
-      ethereum_mainnet: z.string().default(''),
-      ethereum_sepolia: z.string().default(''),
+
+      // EVM Tier 1 (replaces ethereum_mainnet/ethereum_sepolia)
+      evm_ethereum_mainnet: z.string().default('https://eth.drpc.org'),
+      evm_ethereum_sepolia: z.string().default('https://sepolia.drpc.org'),
+      evm_polygon_mainnet: z.string().default('https://polygon.drpc.org'),
+      evm_polygon_amoy: z.string().default('https://polygon-amoy.drpc.org'),
+      evm_arbitrum_mainnet: z.string().default('https://arbitrum.drpc.org'),
+      evm_arbitrum_sepolia: z.string().default('https://arbitrum-sepolia.drpc.org'),
+      evm_optimism_mainnet: z.string().default('https://optimism.drpc.org'),
+      evm_optimism_sepolia: z.string().default('https://optimism-sepolia.drpc.org'),
+      evm_base_mainnet: z.string().default('https://base.drpc.org'),
+      evm_base_sepolia: z.string().default('https://base-sepolia.drpc.org'),
+
+      // EVM default network for agent creation when network not specified
+      evm_default_network: EvmNetworkTypeEnum.default('ethereum-sepolia'),
     })
     .default({}),
   notifications: z

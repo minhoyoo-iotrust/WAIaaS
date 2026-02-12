@@ -46,7 +46,10 @@ function mockConfig(): DaemonConfig {
     rpc: {
       solana_mainnet: 'https://api.mainnet-beta.solana.com', solana_devnet: 'https://api.devnet.solana.com',
       solana_testnet: 'https://api.testnet.solana.com', solana_ws_mainnet: 'wss://api.mainnet-beta.solana.com',
-      solana_ws_devnet: 'wss://api.devnet.solana.com', ethereum_mainnet: '', ethereum_sepolia: '',
+      solana_ws_devnet: 'wss://api.devnet.solana.com',
+      evm_ethereum_mainnet: '', evm_ethereum_sepolia: '', evm_polygon_mainnet: '', evm_polygon_amoy: '',
+      evm_arbitrum_mainnet: '', evm_arbitrum_sepolia: '', evm_optimism_mainnet: '', evm_optimism_sepolia: '',
+      evm_base_mainnet: '', evm_base_sepolia: '', evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false, min_channels: 2, health_check_interval: 300, log_retention_days: 30, dedup_ttl: 300,

@@ -1,6 +1,6 @@
 // @waiaas/core - shared types, schemas, errors, interfaces
 
-// Enums (12 SSoT enums)
+// Enums (12 SSoT enums + EVM/Solana subsets + validateChainNetwork)
 export {
   CHAIN_TYPES,
   type ChainType,
@@ -8,6 +8,12 @@ export {
   NETWORK_TYPES,
   type NetworkType,
   NetworkTypeEnum,
+  EVM_NETWORK_TYPES,
+  type EvmNetworkType,
+  EvmNetworkTypeEnum,
+  SOLANA_NETWORK_TYPES,
+  type SolanaNetworkType,
+  validateChainNetwork,
   AGENT_STATUSES,
   type AgentStatus,
   AgentStatusEnum,

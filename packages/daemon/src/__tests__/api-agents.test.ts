@@ -67,8 +67,17 @@ function mockConfig(): DaemonConfig {
       solana_testnet: 'https://api.testnet.solana.com',
       solana_ws_mainnet: 'wss://api.mainnet-beta.solana.com',
       solana_ws_devnet: 'wss://api.devnet.solana.com',
-      ethereum_mainnet: '',
-      ethereum_sepolia: '',
+      evm_ethereum_mainnet: 'https://eth.drpc.org',
+      evm_ethereum_sepolia: 'https://sepolia.drpc.org',
+      evm_polygon_mainnet: 'https://polygon.drpc.org',
+      evm_polygon_amoy: 'https://polygon-amoy.drpc.org',
+      evm_arbitrum_mainnet: 'https://arbitrum.drpc.org',
+      evm_arbitrum_sepolia: 'https://arbitrum-sepolia.drpc.org',
+      evm_optimism_mainnet: 'https://optimism.drpc.org',
+      evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
+      evm_base_mainnet: 'https://base.drpc.org',
+      evm_base_sepolia: 'https://base-sepolia.drpc.org',
+      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -382,6 +391,127 @@ describe('POST /v1/agents', () => {
     expect(res.status).toBe(401);
     const body = await json(res);
     expect(body.code).toBe('INVALID_MASTER_PASSWORD');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chain-network validation (7 tests)
+// ---------------------------------------------------------------------------
+
+describe('chain-network validation', () => {
+  it('POST /agents with chain=solana, no network -> defaults to devnet', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'sol-agent', chain: 'solana' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.network).toBe('devnet');
+    expect(body.chain).toBe('solana');
+  });
+
+  it('POST /agents with chain=ethereum, no network -> defaults to evm_default_network', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'eth-agent', chain: 'ethereum' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.network).toBe('ethereum-sepolia'); // config default
+    expect(body.chain).toBe('ethereum');
+  });
+
+  it('POST /agents with chain=ethereum + network=ethereum-sepolia -> success', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'eth-sepolia-agent', chain: 'ethereum', network: 'ethereum-sepolia' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.network).toBe('ethereum-sepolia');
+  });
+
+  it('POST /agents with chain=ethereum + network=polygon-mainnet -> success', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'poly-agent', chain: 'ethereum', network: 'polygon-mainnet' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.network).toBe('polygon-mainnet');
+  });
+
+  it('POST /agents with chain=ethereum + network=devnet -> 400 validation error', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'bad-agent', chain: 'ethereum', network: 'devnet' }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await json(res);
+    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+  });
+
+  it('POST /agents with chain=solana + network=ethereum-sepolia -> 400 validation error', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'bad-agent', chain: 'solana', network: 'ethereum-sepolia' }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await json(res);
+    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+  });
+
+  it('POST /agents with chain=solana + network=mainnet -> success', async () => {
+    const res = await app.request('/v1/agents', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'sol-main', chain: 'solana', network: 'mainnet' }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.network).toBe('mainnet');
+    expect(body.chain).toBe('solana');
   });
 });
 

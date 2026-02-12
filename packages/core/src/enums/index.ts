@@ -5,6 +5,12 @@ export {
   NETWORK_TYPES,
   type NetworkType,
   NetworkTypeEnum,
+  EVM_NETWORK_TYPES,
+  type EvmNetworkType,
+  EvmNetworkTypeEnum,
+  SOLANA_NETWORK_TYPES,
+  type SolanaNetworkType,
+  validateChainNetwork,
 } from './chain.js';
 
 export {

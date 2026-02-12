@@ -602,7 +602,7 @@ describe('EvmAdapter', () => {
       const native = assets[0]!;
       expect(native.mint).toBe('native');
       expect(native.symbol).toBe('ETH');
-      expect(native.name).toBe('Ethereum');
+      expect(native.name).toBe('Ether');
       expect(native.balance).toBe(2000000000000000000n);
       expect(native.decimals).toBe(18);
       expect(native.isNative).toBe(true);
@@ -811,6 +811,48 @@ describe('EvmAdapter', () => {
       expect(callArgs.value).toBe(0n);
       // Tx should go to token contract, not the spender
       expect(callArgs.to).toBe(TEST_TOKEN_ADDRESS);
+    });
+  });
+
+  // -- nativeSymbol/nativeName tests (3 tests) --
+
+  describe('nativeSymbol/nativeName', () => {
+    it('default constructor uses ETH/Ether', async () => {
+      const defaultAdapter = new EvmAdapter('ethereum-sepolia');
+      await defaultAdapter.connect('https://sepolia.drpc.org');
+      mockClient.getBalance.mockResolvedValue(1000000000000000000n);
+
+      const balance = await defaultAdapter.getBalance(TEST_ADDRESS_FROM);
+      expect(balance.symbol).toBe('ETH');
+
+      await defaultAdapter.disconnect();
+    });
+
+    it('custom nativeSymbol for Polygon', async () => {
+      const polyAdapter = new EvmAdapter('polygon-mainnet', undefined, 'POL', 'POL');
+      await polyAdapter.connect('https://polygon.drpc.org');
+      mockClient.getBalance.mockResolvedValue(5000000000000000000n);
+
+      const balance = await polyAdapter.getBalance(TEST_ADDRESS_FROM);
+      expect(balance.symbol).toBe('POL');
+
+      await polyAdapter.disconnect();
+    });
+
+    it('getAssets returns custom native symbol and name', async () => {
+      const polyAdapter = new EvmAdapter('polygon-mainnet', undefined, 'POL', 'POL');
+      await polyAdapter.connect('https://polygon.drpc.org');
+      mockClient.getBalance.mockResolvedValue(3000000000000000000n);
+
+      const assets = await polyAdapter.getAssets(TEST_ADDRESS_FROM);
+      expect(assets).toHaveLength(1);
+      const native = assets[0]!;
+      expect(native.symbol).toBe('POL');
+      expect(native.name).toBe('POL');
+      expect(native.isNative).toBe(true);
+      expect(native.decimals).toBe(18);
+
+      await polyAdapter.disconnect();
     });
   });
 });

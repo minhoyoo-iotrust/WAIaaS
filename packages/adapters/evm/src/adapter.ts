@@ -77,11 +77,20 @@ export class EvmAdapter implements IChainAdapter {
   private _client: PublicClient | null = null;
   private _connected = false;
   private _chain: Chain | undefined;
+  private _nativeSymbol: string;
+  private _nativeName: string;
   private _allowedTokens: Array<{ address: string; symbol?: string; name?: string; decimals?: number }> = [];
 
-  constructor(network: NetworkType, chain?: Chain) {
+  constructor(
+    network: NetworkType,
+    chain?: Chain,
+    nativeSymbol: string = 'ETH',
+    nativeName: string = 'Ether',
+  ) {
     this.network = network;
     this._chain = chain;
+    this._nativeSymbol = nativeSymbol;
+    this._nativeName = nativeName;
   }
 
   /** Set the allowed tokens list for getAssets ERC-20 queries. */
@@ -136,7 +145,7 @@ export class EvmAdapter implements IChainAdapter {
         address: addr,
         balance,
         decimals: 18,
-        symbol: 'ETH',
+        symbol: this._nativeSymbol,
       };
     } catch (error) {
       throw new WAIaaSError('CHAIN_ERROR', {
@@ -151,15 +160,15 @@ export class EvmAdapter implements IChainAdapter {
   async getAssets(addr: string): Promise<AssetInfo[]> {
     const client = this.getClient();
     try {
-      // 1. Get native ETH balance
+      // 1. Get native balance
       const ethBalance = await client.getBalance({
         address: addr as `0x${string}`,
       });
       const assets: AssetInfo[] = [
         {
           mint: 'native',
-          symbol: 'ETH',
-          name: 'Ethereum',
+          symbol: this._nativeSymbol,
+          name: this._nativeName,
           balance: ethBalance,
           decimals: 18,
           isNative: true,

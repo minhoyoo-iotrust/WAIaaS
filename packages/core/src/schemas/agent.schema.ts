@@ -22,6 +22,6 @@ export type Agent = z.infer<typeof AgentSchema>;
 export const CreateAgentRequestSchema = z.object({
   name: z.string().min(1).max(100),
   chain: ChainTypeEnum.default('solana'),
-  network: NetworkTypeEnum.default('devnet'),
+  network: NetworkTypeEnum.optional(),
 });
 export type CreateAgentRequest = z.infer<typeof CreateAgentRequestSchema>;

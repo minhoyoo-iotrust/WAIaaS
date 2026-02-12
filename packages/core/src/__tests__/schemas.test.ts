@@ -17,11 +17,34 @@ import {
 
 describe('Zod SSoT Schemas', () => {
   describe('CreateAgentRequestSchema', () => {
-    it('parses with minimal fields (defaults applied)', () => {
+    it('parses with minimal fields (network undefined when omitted)', () => {
       const result = CreateAgentRequestSchema.parse({ name: 'test-agent' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
+      expect(result.network).toBeUndefined();
+    });
+
+    it('parses with explicit network', () => {
+      const result = CreateAgentRequestSchema.parse({ name: 'test-agent', network: 'devnet' });
+      expect(result.name).toBe('test-agent');
+      expect(result.chain).toBe('solana');
       expect(result.network).toBe('devnet');
+    });
+
+    it('parses with chain=ethereum and EVM network', () => {
+      const result = CreateAgentRequestSchema.parse({
+        name: 'eth-agent',
+        chain: 'ethereum',
+        network: 'ethereum-sepolia',
+      });
+      expect(result.chain).toBe('ethereum');
+      expect(result.network).toBe('ethereum-sepolia');
+    });
+
+    it('rejects invalid network value', () => {
+      expect(() =>
+        CreateAgentRequestSchema.parse({ name: 'test-agent', network: 'invalid-network' }),
+      ).toThrow();
     });
 
     it('rejects empty name', () => {

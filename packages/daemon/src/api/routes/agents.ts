@@ -17,8 +17,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
-import type { ChainType } from '@waiaas/core';
+import { WAIaaSError, validateChainNetwork } from '@waiaas/core';
+import type { ChainType, NetworkType } from '@waiaas/core';
 import { agents } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
@@ -69,7 +69,7 @@ const createAgentRoute = createRoute({
       description: 'Agent created',
       content: { 'application/json': { schema: AgentResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+    ...buildErrorResponses(['AGENT_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
   },
 });
 
@@ -252,6 +252,27 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
   router.openapi(createAgentRoute, async (c) => {
     // OpenAPIHono validates the body automatically via createRoute schema
     const parsed = c.req.valid('json');
+    const chain = parsed.chain as ChainType;
+
+    // Resolve default network if not specified
+    let network: NetworkType;
+    if (parsed.network) {
+      network = parsed.network as NetworkType;
+    } else if (chain === 'solana') {
+      network = 'devnet';
+    } else {
+      // EVM: use config default (evm_default_network from config.toml)
+      network = deps.config.rpc.evm_default_network as NetworkType;
+    }
+
+    // Cross-validate chain + network
+    try {
+      validateChainNetwork(chain, network);
+    } catch (err) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     // Generate agent ID
     const id = generateId();
@@ -259,7 +280,7 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
     // Generate key pair via keystore
     const { publicKey } = await deps.keyStore.generateKeyPair(
       id,
-      parsed.chain as ChainType,
+      chain,
       deps.masterPassword,
     );
 
@@ -270,7 +291,7 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
       id,
       name: parsed.name,
       chain: parsed.chain,
-      network: parsed.network,
+      network,
       publicKey,
       status: 'ACTIVE',
       createdAt: now,
@@ -283,7 +304,7 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
         id,
         name: parsed.name,
         chain: parsed.chain,
-        network: parsed.network,
+        network,
         publicKey,
         status: 'ACTIVE',
         createdAt: Math.floor(now.getTime() / 1000),
