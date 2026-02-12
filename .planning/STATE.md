@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 77 EVM 어댑터 완료, Phase 78 진행 대기
+**Current focus:** v1.4 Phase 78 SPL 토큰 전송 + ALLOWED_TOKENS 정책 Plan 01 완료
 
 ## Current Position
 
-Phase: 77 of 81 (EVM 어댑터)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-12 — Completed 77-02-PLAN.md (EvmAdapter 17/20 methods + 34 tests)
+Phase: 78 of 81 (SPL 토큰 전송 + ALLOWED_TOKENS 정책)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-12 — Completed 78-01-PLAN.md (SolanaAdapter token transfer + ALLOWED_TOKENS policy)
 
-Progress: [█████░░░░░] 42% (5/12 plans)
+Progress: [██████░░░░] 50% (6/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 175 plans, 488 reqs, 993 tests, 44,205 LOC
+**Cumulative:** 19 milestones, 75 phases, 176 plans, 488 reqs, 1021 tests, 44,205 LOC
 
 ## Accumulated Context
 
@@ -48,6 +48,11 @@ Recent decisions affecting current work:
 - getAssets는 네이티브 ETH만 반환 (ERC-20 토큰은 Phase 78에서 ALLOWED_TOKENS 기반 multicall로 확장)
 - getTokenInfo multicall 부분 실패 시 defaults (18 decimals, empty strings)
 - buildApprove metadata에 tokenAddress/spender/approveAmount 포함 (audit 추적)
+- @solana-program/token 단일 패키지로 ATA + transferChecked 모두 제공 (별도 ATA 패키지 불필요)
+- Token-2022 감지: mint account owner 필드로 SPL_TOKEN_PROGRAM_ID vs TOKEN_2022_PROGRAM_ID 판별
+- getAssets 정렬: native first, balance descending
+- ALLOWED_TOKENS 기본 거부: TOKEN_TRANSFER 시 ALLOWED_TOKENS 정책 없으면 deny (정책 로드 필수)
+- tokenAddress? optional field -- 기존 호출자 영향 없음 (backward compatible)
 
 ### Blockers/Concerns
 
@@ -56,6 +61,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Completed 77-02-PLAN.md (Phase 77 complete)
+Last session: 2026-02-12T00:15:14Z
+Stopped at: Completed 78-01-PLAN.md
 Resume file: None
