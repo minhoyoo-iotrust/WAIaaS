@@ -55,7 +55,8 @@ Solana를 1순위로 지원하며, EVM(Ethereum 등) 체인을 추가 지원한�
 | **TypeScript SDK** | Node.js 에이전트 | 0 외부 의존성, 타입 안전 |
 | **Python SDK** | Python 에이전트 | httpx + Pydantic v2 |
 | **MCP** | AI 에이전트 (Claude 등) | 6개 도구, stdio 전송 |
-| **CLI** | 개발자/운영자 | init/start/stop/status |
+| **CLI** | 개발자/운영자 | init/start/stop/status/mcp setup |
+| **Admin Web UI** | 관리자 | 대시보드, 에이전트/세션/정책/알림 관리 |
 | **Desktop App** | Owner (주인) | Tauri 2, 트레이 앱, 승인 UI |
 | **Telegram Bot** | Owner (주인) | 인라인 키보드로 거래 승인/거부 |
 
@@ -113,47 +114,67 @@ waiaas/
 │   ├── core/               # 도메인 모델, 인터페이스, Zod 스키마, 에러 코드
 │   ├── daemon/             # Self-Hosted 데몬 (Hono HTTP, SQLite, Keystore)
 │   ├── adapters/
-│   │   ├── solana/         # Solana 어댑터 (@solana/kit 3.x)
-│   │   └── evm/            # EVM 어댑터 (viem 2.x)
+│   │   └── solana/         # Solana 어댑터 (@solana/kit 6.x)
 │   ├── cli/                # CLI 도구 (waiaas 명령어)
-│   ├── sdk/                # TypeScript SDK
-│   └── mcp/                # MCP Server
+│   ├── sdk/                # TypeScript SDK (0 외부 의존성)
+│   ├── mcp/                # MCP Server (stdio 전송)
+│   └── admin/              # Admin Web UI (Preact + Signals)
+├── python-sdk/             # Python SDK (httpx + Pydantic v2)
 ├── objectives/             # 마일스톤별 목표 문서
 └── docs/                   # 설계 문서
 ```
 
-## 빠른 시작
+## 빠른 시작 (Quick Start)
 
-> **참고:** WAIaaS는 현재 설계 단계이며 아래 명령어는 구현 예정 스펙이다.
+### 요구사항
 
-### 1. 설치
+- Node.js 22 LTS 이상
+- pnpm 9 이상
 
-```bash
-npm install -g @waiaas/cli
-```
-
-### 2. 초기화 + 데몬 시작 + 세션 발급 (quickstart)
+### 1. 소스 빌드
 
 ```bash
-# 한 번에 초기화, 데몬 시작, 에이전트 생성, 세션 토큰 발급
-waiaas init --quickstart --owner <your-wallet-address>
+git clone https://github.com/anthropics/waiaas.git
+cd waiaas
+pnpm install
+pnpm build
 ```
 
-출력:
+### 2. 초기화 + 데몬 시작
 
-```
-✓ 마스터 패스워드 생성 (~/.waiaas/.master-password)
-✓ 데몬 시작 (127.0.0.1:3100)
-✓ 에이전트 생성 (my-agent)
-✓ 세션 토큰 발급
+```bash
+# 데이터 디렉토리 + 키스토어 초기화
+pnpm --filter @waiaas/cli exec waiaas init
 
-세션 토큰: wai_sess_eyJhbGciOiJIUzI1NiJ9...
-
-다음 단계:
-  export WAIAAS_SESSION_TOKEN=wai_sess_eyJhbGciOiJIUzI1NiJ9...
+# 데몬 시작 (마스터 패스워드 입력 프롬프트)
+pnpm --filter @waiaas/cli exec waiaas start
 ```
 
-### 3. SDK로 첫 거래
+데몬이 `http://127.0.0.1:3100`에서 실행된다.
+
+### 3. 에이전트 생성 + 세션 발급
+
+```bash
+# 에이전트 생성 (masterAuth 필요)
+curl -X POST http://127.0.0.1:3100/v1/agents \
+  -H "Content-Type: application/json" \
+  -H "X-Master-Password: <your-master-password>" \
+  -d '{"name": "my-agent", "chain": "solana", "network": "devnet"}'
+
+# 세션 토큰 발급 (masterAuth 필요)
+curl -X POST http://127.0.0.1:3100/v1/sessions \
+  -H "Content-Type: application/json" \
+  -H "X-Master-Password: <your-master-password>" \
+  -d '{"agentId": "<agent-id-from-above>"}'
+```
+
+응답에서 받은 `token` 값을 에이전트에 설정한다:
+
+```bash
+export WAIAAS_SESSION_TOKEN=wai_sess_eyJhbGciOiJIUzI1NiJ9...
+```
+
+### 4. SDK로 첫 거래
 
 ```typescript
 import { WAIaaSClient } from '@waiaas/sdk';
@@ -175,60 +196,153 @@ const tx = await client.sendToken({
 console.log(`트랜잭션: ${tx.signature}`);
 ```
 
-## 설치 방법
+## 설정 (Configuration)
 
-### CLI
+설정 파일은 `~/.waiaas/config.toml`에 위치한다. 모든 섹션은 **평탄(flat) 구조**이며 중첩을 허용하지 않는다.
+
+### 기본 설정
+
+```toml
+# 데몬 설정
+[daemon]
+port = 3100                     # 리스닝 포트
+hostname = "127.0.0.1"          # localhost 전용 (보안상 변경 비권장)
+log_level = "info"              # trace | debug | info | warn | error
+dev_mode = false                # true: 고정 패스워드 "dev-password"
+admin_ui = true                 # Admin Web UI 활성화
+admin_timeout = 900             # Admin 세션 타임아웃 (초)
+
+# 블록체인 RPC 엔드포인트
+[rpc]
+solana_mainnet = "https://api.mainnet-beta.solana.com"
+solana_devnet = "https://api.devnet.solana.com"
+# ethereum_mainnet = "https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY"
+
+# 보안 설정
+[security]
+session_ttl = 86400                         # 세션 수명 (초, 기본 24시간)
+max_sessions_per_agent = 5                  # 에이전트당 최대 세션 수
+rate_limit_global_ip_rpm = 1000             # 전역 IP당 RPM
+rate_limit_session_rpm = 300                # 세션당 RPM
+rate_limit_tx_rpm = 10                      # 거래 요청 RPM
+policy_defaults_delay_seconds = 300         # DELAY 티어 대기 시간 (초)
+policy_defaults_approval_timeout = 3600     # APPROVAL 티어 타임아웃 (초)
+
+# 키스토어 설정
+[keystore]
+argon2_memory = 65536           # Argon2id 메모리 (KB)
+argon2_time = 3                 # Argon2id 반복 횟수
+argon2_parallelism = 4          # Argon2id 병렬도
+
+# 데이터베이스
+[database]
+path = "data/waiaas.db"         # SQLite 파일 경로 (data-dir 상대)
+wal_checkpoint_interval = 300   # WAL 체크포인트 주기 (초)
+
+# WalletConnect (선택)
+[walletconnect]
+project_id = ""                 # Reown Cloud 프로젝트 ID
+```
+
+### 환경변수 오버라이드
+
+모든 설정은 `WAIAAS_{SECTION}_{KEY}` 형식의 환경변수로 오버라이드할 수 있다:
 
 ```bash
-# npm 글로벌 설치
-npm install -g @waiaas/cli
-
-# 또는 npx로 직접 실행
-npx @waiaas/cli init
+WAIAAS_DAEMON_PORT=4000
+WAIAAS_DAEMON_LOG_LEVEL=debug
+WAIAAS_RPC_SOLANA_MAINNET="https://my-rpc.example.com"
+WAIAAS_SECURITY_SESSION_TTL=43200
+WAIAAS_NOTIFICATIONS_ENABLED=true
+WAIAAS_NOTIFICATIONS_TELEGRAM_BOT_TOKEN="123456:ABC-DEF..."
 ```
 
-**요구사항:** Node.js 22 LTS 이상
+## 알림 설정 (Notifications)
 
-### Desktop App (Tauri)
+WAIaaS는 Telegram, Discord, ntfy 세 가지 알림 채널을 지원한다. 거래 실행, 대기, 승인 요청, Kill Switch 등 8개 이벤트에 대해 실시간 알림을 보낸다.
 
-macOS, Windows, Linux용 데스크톱 앱을 제공한다. 시스템 트레이에서 데몬 상태를 확인하고 거래를 승인/거부할 수 있다.
+### config.toml 알림 섹션
 
-- 3색 트레이 아이콘: 정상(초록), 대기 중(노랑), 긴급 정지(빨강)
-- Setup Wizard로 5단계 초기 설정
-- WalletConnect로 모바일 지갑 연결
+```toml
+[notifications]
+enabled = true                  # 알림 활성화
+min_channels = 2                # 최소 활성 채널 수 (권장: 2)
+locale = "ko"                   # 알림 언어 (en | ko)
+log_retention_days = 30         # 알림 로그 보관 기간
 
+# Telegram
+telegram_bot_token = ""         # BotFather에서 발급받은 토큰
+telegram_chat_id = ""           # 알림을 받을 채팅 ID
+
+# Discord
+discord_webhook_url = ""        # Discord 웹훅 URL
+
+# ntfy
+ntfy_server = "https://ntfy.sh" # ntfy 서버 (기본: ntfy.sh 공개 서버)
+ntfy_topic = ""                  # 구독할 토픽명
 ```
-다운로드: https://github.com/anthropics/waiaas/releases (구현 예정)
+
+### Telegram 연결 가이드
+
+1. **Bot 생성**: Telegram에서 [@BotFather](https://t.me/BotFather)에게 `/newbot` 명령을 보내 봇을 생성한다. 발급받은 토큰을 기록한다.
+
+2. **Chat ID 확인**: 봇에게 아무 메시지를 보낸 후, 다음 URL로 Chat ID를 확인한다:
+   ```
+   https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
+   ```
+   응답의 `result[0].message.chat.id` 값이 Chat ID이다.
+
+3. **config.toml에 설정**:
+   ```toml
+   [notifications]
+   enabled = true
+   telegram_bot_token = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+   telegram_chat_id = "987654321"
+   ```
+
+4. **테스트**: 데몬 재시작 후 Admin UI 또는 API로 테스트 알림을 보낼 수 있다:
+   ```bash
+   curl -X POST http://127.0.0.1:3100/v1/admin/notifications/test \
+     -H "X-Master-Password: <your-master-password>" \
+     -H "Content-Type: application/json" \
+     -d '{"channel": "telegram"}'
+   ```
+
+### Discord 설정
+
+1. Discord 서버 설정 → 연동 → 웹후크 → 새 웹후크 → URL 복사
+2. config.toml에 설정:
+   ```toml
+   [notifications]
+   discord_webhook_url = "https://discord.com/api/webhooks/..."
+   ```
+
+### ntfy 설정
+
+```toml
+[notifications]
+ntfy_topic = "waiaas-my-alerts"
+ntfy_server = "https://ntfy.sh"   # 또는 자체 호스팅 서버
 ```
 
-### Docker
+구독: `ntfy subscribe waiaas-my-alerts` 또는 [ntfy 앱](https://ntfy.sh) 사용
 
-```yaml
-# docker-compose.yml
-services:
-  waiaas:
-    image: waiaas/daemon:latest
-    ports:
-      - "127.0.0.1:3100:3100"
-    volumes:
-      - waiaas-data:/home/waiaas/.waiaas
-    environment:
-      - WAIAAS_MASTER_PASSWORD_FILE=/run/secrets/master_password
-    secrets:
-      - master_password
-    stop_grace_period: 35s
-    user: "1001:1001"
+### Admin UI에서 알림 관리
 
-volumes:
-  waiaas-data:
+`http://127.0.0.1:3100/admin` → Notifications 페이지에서:
+- 채널별 상태 확인 및 테스트 알림 전송
+- 알림 로그 조회 (이벤트 타입, 채널, 전송 결과)
 
-secrets:
-  master_password:
-    file: ./master_password.txt
-```
+### 알림 로그 API
 
 ```bash
-docker compose up -d
+# 알림 채널 상태 조회
+curl http://127.0.0.1:3100/v1/admin/notifications/status \
+  -H "X-Master-Password: <your-master-password>"
+
+# 알림 로그 조회 (최근 50건)
+curl "http://127.0.0.1:3100/v1/admin/notifications/log?limit=50" \
+  -H "X-Master-Password: <your-master-password>"
 ```
 
 ## 사용 방법
@@ -239,26 +353,19 @@ docker compose up -d
 # 초기화 (데이터 디렉토리 + 키스토어 생성)
 waiaas init
 
-# 개발 모드 시작 (고정 패스워드 "waiaas-dev")
-waiaas start --dev
-
-# 데몬 시작 (포그라운드)
+# 데몬 시작 (마스터 패스워드 프롬프트)
 waiaas start
-
-# 백그라운드 데몬
-waiaas start --daemon
 
 # 상태 확인
 waiaas status
 
-# 에이전트 생성
-waiaas agent create --owner <wallet-address>
-
-# 세션 토큰 발급
-waiaas session create --agent <agent-name>
-
 # 데몬 중지
 waiaas stop
+
+# MCP 연동 설정 (Claude Desktop에 자동 등록)
+waiaas mcp setup
+waiaas mcp setup --agent <agent-id>    # 특정 에이전트
+waiaas mcp setup --all                 # 모든 에이전트 일괄 설정
 ```
 
 ### TypeScript SDK
@@ -274,76 +381,77 @@ const client = new WAIaaSClient({
 // 지갑
 const balance = await client.getBalance();
 const address = await client.getAddress();
-const assets = await client.getAssets();        // 네이티브 + SPL/ERC-20
+const assets = await client.getAssets();
 
 // 토큰 전송
 const tx = await client.sendToken({
   to: 'recipient...',
   amount: '0.5',
-  token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',  // USDC (없으면 네이티브)
-});
-
-// 컨트랙트 호출
-await client.contractCall({
-  chain: 'solana',
-  programId: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
-  instructionData: '...',
-  accounts: [...],
-});
-
-// DeFi 액션 (Action Provider)
-const actions = await client.listActions();
-await client.executeAction('jupiter-swap', 'swap', {
-  inputMint: 'So11111111111111111111111111111111111111112',
-  outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-  amount: '1000000000',  // 1 SOL
-  slippageBps: 50,
 });
 
 // 트랜잭션 조회
 const txList = await client.listTransactions({ limit: 20 });
 const txDetail = await client.getTransaction(txId);
+const pending = await client.listPendingTransactions();
+
+// 세션 갱신
+const renewed = await client.renewSession(sessionId);
 ```
 
 ### Python SDK
 
+```bash
+cd python-sdk && pip install -e .
+```
+
 ```python
 from waiaas import WAIaaSClient
 
-client = WAIaaSClient(
-    base_url="http://127.0.0.1:3100",
-    session_token="wai_sess_..."
-)
+async with WAIaaSClient("http://127.0.0.1:3100", "wai_sess_...") as client:
+    # 잔액 조회
+    balance = await client.get_balance()
+    print(f"{balance.balance} {balance.symbol}")
 
-# 잔액 조회
-balance = await client.get_balance()
+    # 지갑 주소
+    address = await client.get_address()
 
-# 토큰 전송
-tx = await client.send_token({
-    "to": "recipient...",
-    "amount": "0.5",
-})
+    # 토큰 전송
+    tx = await client.send_token("recipient...", "0.5")
 
-# 보유 자산 목록
-assets = await client.get_assets()
+    # 보유 자산 목록
+    assets = await client.get_assets()
 
-# 트랜잭션 목록
-txs = await client.list_transactions(limit=20)
+    # 트랜잭션 조회
+    txs = await client.list_transactions(limit=20)
+    detail = await client.get_transaction(tx_id)
+
+    # 세션 갱신
+    renewed = await client.renew_session(session_id)
 ```
 
 ### MCP 연동 (AI 에이전트)
 
 MCP(Model Context Protocol)를 지원하는 AI 에이전트(Claude 등)에서 WAIaaS를 도구로 사용할 수 있다.
 
-**Claude Desktop 설정 예시:**
+**자동 설정 (권장):**
+
+```bash
+# Claude Desktop에 MCP 서버 자동 등록
+waiaas mcp setup
+```
+
+`waiaas mcp setup`은 에이전트별 세션 토큰을 자동 발급하고, Claude Desktop 설정 파일에 MCP 서버를 등록한다. `--all` 플래그로 모든 에이전트를 일괄 설정할 수 있다.
+
+**수동 설정:**
 
 ```json
 {
   "mcpServers": {
     "waiaas": {
-      "command": "npx",
-      "args": ["@waiaas/mcp"],
+      "command": "node",
+      "args": ["/path/to/waiaas/packages/mcp/dist/index.js"],
       "env": {
+        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
         "WAIAAS_SESSION_TOKEN": "wai_sess_..."
       }
     }
@@ -355,20 +463,41 @@ MCP(Model Context Protocol)를 지원하는 AI 에이전트(Claude 등)에서 WA
 
 | 도구 | 설명 |
 |------|------|
-| `waiaas_get_balance` | 지갑 잔액 조회 |
-| `waiaas_send_transaction` | 트랜잭션 전송 |
-| `waiaas_list_transactions` | 트랜잭션 내역 조회 |
-| `waiaas_create_session` | 새 세션 생성 |
-| `waiaas_get_session` | 세션 정보 조회 |
-| `waiaas_renew_session` | 세션 갱신 |
+| `send_token` | 토큰 전송 (SOL 등) |
+| `get_balance` | 지갑 잔액 조회 |
+| `get_address` | 지갑 주소 조회 |
+| `list_transactions` | 트랜잭션 내역 조회 |
+| `get_transaction` | 트랜잭션 상세 조회 |
+| `get_nonce` | Owner 서명 검증용 nonce 조회 |
 
 **MCP 리소스:**
 
 | 리소스 | 설명 |
 |--------|------|
-| `waiaas://balance` | 현재 잔액 |
-| `waiaas://transactions` | 트랜잭션 목록 |
-| `waiaas://sessions` | 활성 세션 목록 |
+| `waiaas://wallet/balance` | 현재 잔액 |
+| `waiaas://wallet/address` | 지갑 주소 |
+| `waiaas://system/status` | 데몬 상태 |
+
+### Admin Web UI
+
+데몬이 실행 중이면 브라우저에서 Admin Web UI에 접속할 수 있다:
+
+```
+http://127.0.0.1:3100/admin
+```
+
+마스터 패스워드로 로그인하면 다음 기능을 사용할 수 있다:
+
+| 페이지 | 기능 |
+|--------|------|
+| **Dashboard** | 시스템 상태, Kill Switch 제어, 데몬 정보 |
+| **Agents** | 에이전트 목록/생성, 상세 정보, 키 재생성 |
+| **Sessions** | 활성 세션 목록, 세션 발급/해지 |
+| **Policies** | 정책 티어 조회/수정 |
+| **Notifications** | 알림 채널 상태, 테스트 전송, 알림 로그 |
+| **Settings** | JWT 시크릿 교체, 데몬 종료 |
+
+> Admin UI는 `config.toml`의 `daemon.admin_ui = true` (기본값)일 때 활성화된다.
 
 ## 보안 모델
 
@@ -378,9 +507,9 @@ WAIaaS는 세 가지 수준의 인증을 분리하여, 각 행위자에게 필�
 
 | 인증 수준 | 대상 | 방식 | 용도 |
 |-----------|------|------|------|
-| **masterAuth** | 데몬 운영자 | 마스터 패스워드 | 시스템 관리 (에이전트 생성, 정책 설정, 세션 관리) |
-| **ownerAuth** | 자금 소유자 | SIWS/SIWE 서명 (요청마다) | 거래 승인, Kill Switch 복구 (2개 엔드포인트만) |
-| **sessionAuth** | AI 에이전트 | JWT Bearer 토큰 | 지갑 조회, 거래 요청, 세션 조회 |
+| **masterAuth** | 데몬 운영자 | 마스터 패스워드 (Argon2id) | 시스템 관리 (에이전트 생성, 정책 설정, 세션 관리) |
+| **ownerAuth** | 자금 소유자 | SIWS/SIWE 서명 (요청마다) | 거래 승인, Kill Switch 복구 |
+| **sessionAuth** | AI 에이전트 | JWT Bearer 토큰 (HS256) | 지갑 조회, 거래 요청, 세션 조회 |
 
 ### 4-tier 정책
 
@@ -404,112 +533,113 @@ WAIaaS는 세 가지 수준의 인증을 분리하여, 각 행위자에게 필�
 | **DELAY** | ≤ $500 | 5분 대기 후 자동 실행 (Owner가 취소 가능) |
 | **APPROVAL** | > $500 | Owner가 직접 서명해야 실행 |
 
-> 기준 금액은 `config.toml`에서 커스터마이징 가능하다.
+> 기준 금액은 `config.toml`의 정책 설정 또는 Admin UI에서 커스터마이징 가능하다.
 
 ### 추가 보안 기능
 
 - **Kill Switch** — 비상 시 모든 세션 즉시 해지, 키스토어 잠금, 진행 중 거래 취소
-- **AutoStop Engine** — 연속 실패, 이상 시간대 거래, 임계값 근접 등 5가지 규칙 기반 자동 정지
+- **AutoStop Engine** — 연속 실패, 이상 시간대 거래, 임계값 근접 등 규칙 기반 자동 정지
 - **알림** — Telegram, Discord, ntfy.sh 멀티 채널 알림 (최소 2개 채널 권장)
 - **감사 로그** — 모든 거래와 관리 행위를 SQLite에 기록
-
-## 설정
-
-WAIaaS의 설정 파일은 `~/.waiaas/config.toml`에 위치한다.
-
-```toml
-# 데몬 설정
-[daemon]
-hostname = "127.0.0.1"      # localhost 전용 (보안상 변경 비권장)
-port = 3100
-log_level = "info"
-
-# 블록체인 RPC 엔드포인트
-[rpc]
-solana = "https://api.mainnet-beta.solana.com"
-# ethereum = "https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY"
-
-# 보안 설정
-[security]
-session_max_ttl = "7d"       # 세션 최대 수명
-session_default_ttl = "24h"  # 세션 기본 수명
-
-[security.rate_limit]
-global = 100                 # 전역 RPM
-per_session = 300            # 세션당 RPM
-per_transaction = 10         # 거래 요청 RPM
-
-[security.policy_defaults]
-instant_threshold_usd = 10
-notify_threshold_usd = 100
-delay_threshold_usd = 500
-delay_cooldown = "5m"
-approval_timeout = "1h"
-
-# 알림 채널
-[notifications.telegram]
-bot_token = ""
-chat_id = ""
-
-[notifications.discord]
-webhook_url = ""
-
-[notifications.ntfy]
-topic = ""
-server = "https://ntfy.sh"
-
-# WalletConnect (선택)
-[walletconnect]
-project_id = ""              # Reown Cloud 프로젝트 ID
-```
-
-## 프로젝트 상태
-
-WAIaaS는 현재 **설계 단계**이며, 코드 구현은 아직 시작되지 않았다.
-
-### 완료된 마일스톤
-
-| 버전 | 이름 | 내용 | 완료일 |
-|------|------|------|--------|
-| v0.1 | 리서치 및 기획 | 에이전트 지갑 컨셉, 기술 스택 비교, 아키텍처 조사 | 2026-02-05 |
-| v0.2 | Self-Hosted 보안 지갑 설계 | 코어 아키텍처, 세션/트랜잭션, 보안 계층, 클라이언트 인터페이스 | 2026-02-05 |
-| v0.3 | 설계 논리 일관성 확보 | 37건 비일관성 해소, Enum SSoT, config.toml 통일 | 2026-02-06 |
-| v0.4 | 테스트 전략 수립 | 300+ 테스트 시나리오, 보안 공격 71건, CI/CD 파이프라인 | 2026-02-07 |
-| v0.5 | 인증 모델 재설계 + DX 개선 | 3-tier 인증, 세션 갱신, CLI 플로우, DX 스펙 | 2026-02-07 |
-| v0.6 | 블록체인 기능 확장 설계 | 토큰 확장, 컨트랙트 호출, DeFi 추상화, 가격 오라클 | 2026-02-08 |
-
-### 설계 산출물
-
-- **68개 플랜**, **185개 요구사항**, **25개 페이즈** 완료
-- **30개 설계 문서** (아키텍처, 프로토콜, 보안, API 스펙, 테스트 전략)
-
-### 향후 계획
-
-| 버전 | 이름 | 내용 |
-|------|------|------|
-| v0.7 | 구현 장애 요소 해소 | 설계→구현 전환을 위한 29건 차단 요소 제거 |
-| v0.8 | Owner 선택적 등록 | Owner 없이 시작, 점진적 보안 해금 모델 |
-| v0.9 | MCP 세션 관리 자동화 | MCP 환경 세션 자동 갱신/재발급 |
-| v1.0 | 코어 구현 | 데몬, 키스토어, 세션, 트랜잭션 파이프라인 구현 (예정) |
 
 ## 기술 스택
 
 | 영역 | 기술 |
 |------|------|
 | Runtime | Node.js 22 LTS |
+| Package Manager | pnpm 9.x + Turborepo |
 | HTTP Server | Hono 4.x (OpenAPIHono) |
 | Database | SQLite (better-sqlite3) + Drizzle ORM |
-| Crypto | sodium-native (guarded memory), argon2 (KDF), jose (JWT) |
-| Solana | @solana/kit 3.x |
+| Crypto | sodium-native (guarded memory), Argon2id (KDF), jose (JWT) |
+| Solana | @solana/kit 6.x |
 | EVM | viem 2.x |
-| Desktop | Tauri 2.x + React 18 + TailwindCSS 4 |
-| Schema | Zod SSoT → TypeScript → OpenAPI 3.0 |
+| Admin UI | Preact 10.x + @preact/signals + Vite 6.x |
+| Desktop | Tauri 2.x (예정) |
+| Schema | Zod SSoT → TypeScript → OpenAPI 3.0 → Drizzle |
 | Oracle | CoinGecko API, Pyth Network, Chainlink |
+| Test | Vitest 3.x |
+
+## 프로젝트 상태
+
+WAIaaS는 **활발히 개발 중**이며, v1.3.4까지 구현이 완료되었다.
+
+- **42,123 LOC** / **895 테스트** / **8 패키지** 모노레포 + Python SDK
+- **170개 플랜**, **488개 요구사항**, **75개 페이즈**, **19개 마일스톤** 완료
+
+### 마일스톤 이력
+
+| 버전 | 이름 | 내용 | 완료일 |
+|------|------|------|--------|
+| v0.1 | 리서치 및 기획 | 에이전트 지갑 컨셉, 기술 스택 비교, 아키텍처 조사 | 2026-02-05 |
+| v0.2 | Self-Hosted 보안 지갑 설계 | 코어 아키텍처, 세션/트랜잭션, 보안 계층 | 2026-02-05 |
+| v0.3 | 설계 논리 일관성 확보 | 37건 비일관성 해소, Enum SSoT | 2026-02-06 |
+| v0.4 | 테스트 전략 수립 | 300+ 테스트 시나리오, 보안 공격 71건 | 2026-02-07 |
+| v0.5 | 인증 모델 재설계 | 3-tier 인증, 세션 갱신, CLI 플로우 | 2026-02-07 |
+| v0.6 | 블록체인 기능 확장 설계 | 토큰, 컨트랙트, DeFi, 가격 오라클 | 2026-02-08 |
+| v0.7 | 구현 장애 요소 해소 | 25건 차단 요소 제거 | 2026-02-08 |
+| v0.8 | Owner 선택적 등록 | 점진적 보안 해금 모델 | 2026-02-09 |
+| v0.9 | MCP 세션 관리 자동화 | MCP 환경 세션 자동 갱신 | 2026-02-09 |
+| v0.10 | 구현 전 설계 완결성 확보 | 설계 완결성 검증 | 2026-02-09 |
+| v1.0 | 구현 계획 수립 | 구현 로드맵, 목표 문서 | 2026-02-09 |
+| **v1.1** | **코어 인프라 + 기본 전송** | 모노레포, 데몬, 키스토어, Solana 전송 | 2026-02-10 |
+| **v1.2** | **인증 + 정책 엔진** | masterAuth, sessionAuth, 4-tier 정책 | 2026-02-10 |
+| **v1.3** | **SDK + MCP + 알림** | TS/Python SDK, MCP 서버, 알림 시스템 | 2026-02-11 |
+| v1.3.1 | Admin Web UI 설계 | Preact SPA 설계 문서 | 2026-02-11 |
+| **v1.3.2** | **Admin Web UI 구현** | 6페이지 관리 대시보드 | 2026-02-11 |
+| v1.3.3 | MCP 다중 에이전트 지원 | 에이전트별 MCP 토큰 격리 | 2026-02-11 |
+| **v1.3.4** | **알림 이벤트 트리거 + 어드민 알림** | 8개 이벤트, 알림 로그, Admin 알림 패널 | 2026-02-12 |
+
+### 향후 계획
+
+| 버전 | 이름 | 내용 |
+|------|------|------|
+| v1.4 | 토큰 + 컨트랙트 확장 | SPL/ERC-20 전송, 컨트랙트 호출, Approve |
+| v1.5 | DeFi + 가격 오라클 | Action Provider, Jupiter Swap, IPriceOracle, USD 정책 |
+| v1.5.1 | x402 클라이언트 | x402 자동 결제, 유료 API 자율 소비, 도메인 정책 |
+| v1.6 | 운영 인프라 | 모니터링, 잔액 알림, 백업 |
+
+## 개발 참여 (Development)
+
+### 소스 빌드
+
+```bash
+git clone https://github.com/anthropics/waiaas.git
+cd waiaas
+pnpm install
+pnpm build
+```
+
+### 테스트
+
+```bash
+# 전체 테스트
+pnpm test
+
+# 특정 패키지 테스트
+pnpm --filter @waiaas/core test
+pnpm --filter @waiaas/daemon test
+
+# 커버리지
+pnpm --filter @waiaas/daemon exec vitest run --coverage
+```
+
+### 린트 + 타입 체크
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm format:check
+```
+
+### Admin UI 개발 모드
+
+```bash
+# Vite dev server (HMR)
+pnpm --filter @waiaas/admin dev
+```
+
+Admin UI를 수정하면 Vite가 자동으로 핫 리로드한다. 빌드 시 결과물은 `packages/daemon/public/admin/`에 복사된다.
 
 ## 라이선스
 
 TBD
-
----
-
-> **이 프로젝트는 설계 단계입니다.** 위 명령어와 코드 예시는 설계 문서 기반의 예정 스펙이며, 실제 구현은 진행 중입니다.
