@@ -8,17 +8,27 @@
  * 4. rejects with 401 when headers missing (same as Solana test)
  * 5. rejects with 404 when EVM agent has no owner
  *
+ * setOwner address validation integration tests:
+ * 6. setOwner accepts EVM agent with valid EIP-55 address
+ * 7. setOwner rejects EVM agent with all-lowercase address
+ * 8. setOwner accepts Solana agent with valid base58 32-byte address
+ * 9. setOwner rejects Solana agent with 0x ethereum address
+ *
  * Uses Hono app.request() testing pattern + in-memory SQLite + viem real crypto.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
+import argon2 from 'argon2';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createSiweMessage } from 'viem/siwe';
 import type { Database as DatabaseType } from 'better-sqlite3';
-import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import { createOwnerAuth } from '../api/middleware/owner-auth.js';
+import { createApp } from '../api/server.js';
+import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import { errorHandler } from '../api/middleware/error-handler.js';
+import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 
 // Hardhat account #0 -- well-known test private key
 const testAccount = privateKeyToAccount(
@@ -31,7 +41,49 @@ const otherAccount = privateKeyToAccount(
 );
 
 // ---------------------------------------------------------------------------
-// Test setup
+// Constants for setOwner integration tests
+// ---------------------------------------------------------------------------
+
+const SET_OWNER_TEST_PASSWORD = 'test-master-password-siwe-setowner';
+const HOST = '127.0.0.1:3100';
+let passwordHash: string;
+
+const MOCK_PUBLIC_KEY = '11111111111111111111111111111112';
+
+function mockKeyStore(): LocalKeyStore {
+  return {
+    generateKeyPair: async () => ({
+      publicKey: MOCK_PUBLIC_KEY,
+      encryptedPrivateKey: new Uint8Array(64),
+    }),
+    decryptPrivateKey: async () => new Uint8Array(64),
+    releaseKey: () => {},
+    hasKey: async () => true,
+    deleteKey: async () => {},
+    lockAll: () => {},
+    sodiumAvailable: true,
+  } as unknown as LocalKeyStore;
+}
+
+function masterAuthJsonHeaders(): Record<string, string> {
+  return {
+    Host: HOST,
+    'X-Master-Password': SET_OWNER_TEST_PASSWORD,
+    'Content-Type': 'application/json',
+  };
+}
+
+beforeAll(async () => {
+  passwordHash = await argon2.hash(SET_OWNER_TEST_PASSWORD, {
+    type: argon2.argon2id,
+    memoryCost: 1024,
+    timeCost: 1,
+    parallelism: 1,
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test setup (ownerAuth middleware tests)
 // ---------------------------------------------------------------------------
 
 let sqlite: DatabaseType;
@@ -223,5 +275,142 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
 
     const body = await json(res);
     expect(body.code).toBe('OWNER_NOT_CONNECTED');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// setOwner chain-aware address validation integration tests (SIWE-03)
+// ---------------------------------------------------------------------------
+
+describe('setOwner address validation (SIWE-03)', () => {
+  /** Seed an agent for setOwner tests (no owner set -- NONE state) */
+  function seedSetOwnerAgent(
+    sqliteDb: DatabaseType,
+    agentId: string,
+    chain: string,
+    network: string,
+  ): void {
+    const ts = Math.floor(Date.now() / 1000);
+    sqliteDb
+      .prepare(
+        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(agentId, `SetOwner Test ${chain}`, chain, network, `pk-setowner-${agentId}`, 'ACTIVE', 0, ts, ts);
+  }
+
+  it('setOwner accepts EVM agent with valid EIP-55 address', async () => {
+    const conn = createDatabase(':memory:');
+    pushSchema(conn.sqlite);
+    const agentId = generateId();
+    seedSetOwnerAgent(conn.sqlite, agentId, 'ethereum', 'mainnet');
+
+    const fullApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: SET_OWNER_TEST_PASSWORD,
+      masterPasswordHash: passwordHash,
+      config: DaemonConfigSchema.parse({}),
+    });
+
+    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+      method: 'PUT',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ owner_address: testAccount.address }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.ownerAddress).toBe(testAccount.address);
+
+    conn.sqlite.close();
+  });
+
+  it('setOwner rejects EVM agent with all-lowercase address', async () => {
+    const conn = createDatabase(':memory:');
+    pushSchema(conn.sqlite);
+    const agentId = generateId();
+    seedSetOwnerAgent(conn.sqlite, agentId, 'ethereum', 'mainnet');
+
+    const fullApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: SET_OWNER_TEST_PASSWORD,
+      masterPasswordHash: passwordHash,
+      config: DaemonConfigSchema.parse({}),
+    });
+
+    const lowercaseAddress = testAccount.address.toLowerCase();
+    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+      method: 'PUT',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ owner_address: lowercaseAddress }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await json(res);
+    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+
+    conn.sqlite.close();
+  });
+
+  it('setOwner accepts Solana agent with valid base58 32-byte address', async () => {
+    const conn = createDatabase(':memory:');
+    pushSchema(conn.sqlite);
+    const agentId = generateId();
+    seedSetOwnerAgent(conn.sqlite, agentId, 'solana', 'mainnet');
+
+    const fullApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: SET_OWNER_TEST_PASSWORD,
+      masterPasswordHash: passwordHash,
+      config: DaemonConfigSchema.parse({}),
+    });
+
+    // Well-known Solana System Program address (32 bytes)
+    const solanaAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
+    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+      method: 'PUT',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ owner_address: solanaAddress }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.ownerAddress).toBe(solanaAddress);
+
+    conn.sqlite.close();
+  });
+
+  it('setOwner rejects Solana agent with 0x ethereum address', async () => {
+    const conn = createDatabase(':memory:');
+    pushSchema(conn.sqlite);
+    const agentId = generateId();
+    seedSetOwnerAgent(conn.sqlite, agentId, 'solana', 'mainnet');
+
+    const fullApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: SET_OWNER_TEST_PASSWORD,
+      masterPasswordHash: passwordHash,
+      config: DaemonConfigSchema.parse({}),
+    });
+
+    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+      method: 'PUT',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ owner_address: testAccount.address }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await json(res);
+    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+
+    conn.sqlite.close();
   });
 });

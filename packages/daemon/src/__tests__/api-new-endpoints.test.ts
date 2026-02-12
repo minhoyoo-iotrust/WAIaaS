@@ -638,6 +638,9 @@ describe('GET /v1/agents/:id', () => {
   it('should return ownerState=GRACE when owner set but unverified', async () => {
     const agentId = await createTestAgent();
 
+    // Valid Solana base58 32-byte address (Solana System Program)
+    const validSolanaAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
+
     // Set owner address via PUT
     await app.request(`/v1/agents/${agentId}/owner`, {
       method: 'PUT',
@@ -646,7 +649,7 @@ describe('GET /v1/agents/:id', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ owner_address: 'owner-wallet-address' }),
+      body: JSON.stringify({ owner_address: validSolanaAddress }),
     });
 
     const res = await app.request(`/v1/agents/${agentId}`, {
@@ -659,7 +662,7 @@ describe('GET /v1/agents/:id', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.ownerState).toBe('GRACE');
-    expect(body.ownerAddress).toBe('owner-wallet-address');
+    expect(body.ownerAddress).toBe(validSolanaAddress);
     expect(body.ownerVerified).toBe(false);
   });
 
