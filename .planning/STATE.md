@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 87 (6 of 7 in v1.4.1) — Owner Auth SIWE
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 86 complete (2/2 plans, verified)
+Plan: 1 of 2 complete
+Status: Executing
+Last activity: 2026-02-12 — Plan 87-01 complete (verifySIWE + validateOwnerAddress, 14 tests)
 
-Progress: [███████░░░] 71% (5/7 phases in v1.4.1)
+Progress: [████████░░] 78% (5.5/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 86 phases, 192 plans, 533 reqs, 1,300+ tests, 52,800+ LOC
+**Cumulative:** 20 milestones, 86 phases, 193 plans, 533 reqs, 1,314+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 10 plans completed (Phases 82-86 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 11 plans completed (Phases 82-86 done, 87-01 done)
 
 *Updated after each plan completion*
 
@@ -70,6 +70,9 @@ Recent decisions affecting current work:
 - [Phase 86]: TransactionRequestOpenAPI = z.any() + manual oneOf 6-variant (route schema separation pattern C)
 - [Phase 86]: stage1Validate is single Zod validation SSoT for transaction route (not Hono built-in)
 - [Phase 86]: openAPIRegistry.register() for schemas not directly referenced by routes (component inclusion)
+- [87-01]: viem isAddress strict:true accepts all-lowercase -- manual mixed-case enforcement for EIP-55 security
+- [87-01]: decodeBase58 canonical location = address-validation.ts (owner-auth.ts imports in 87-02)
+- [87-01]: Pure function verification pattern: crypto as standalone testable modules separate from middleware
 
 ### Blockers/Concerns
 
@@ -79,5 +82,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 86 complete, verified, ready for Phase 87 planning
+Stopped at: Completed 87-01-PLAN.md (verifySIWE + validateOwnerAddress)
 Resume file: None
