@@ -16,6 +16,7 @@ import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { IChainAdapter, BalanceInfo, HealthInfo } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
@@ -186,6 +187,16 @@ function mockAdapter(): IChainAdapter {
   };
 }
 
+/** Create a mock AdapterPool that resolves to mockAdapter. */
+function mockAdapterPool(adapter?: IChainAdapter): AdapterPool {
+  const a = adapter ?? mockAdapter();
+  return {
+    resolve: vi.fn().mockResolvedValue(a),
+    disconnectAll: vi.fn().mockResolvedValue(undefined),
+    get size() { return 0; },
+  } as unknown as AdapterPool;
+}
+
 // ---------------------------------------------------------------------------
 // Test setup
 // ---------------------------------------------------------------------------
@@ -221,7 +232,7 @@ beforeEach(async () => {
     masterPassword: TEST_MASTER_PASSWORD,
     masterPasswordHash,
     config: mockConfig(),
-    adapter: mockAdapter(),
+    adapterPool: mockAdapterPool(),
     jwtSecretManager,
   });
 });

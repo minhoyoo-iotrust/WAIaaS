@@ -36,7 +36,7 @@ const ADMIN_STATIC_ROOT = join(__dirname, '..', '..', 'public', 'admin');
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import type { IChainAdapter } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import {
   requestId,
   hostGuard,
@@ -79,7 +79,7 @@ export interface CreateAppDeps {
   masterPassword?: string;
   masterPasswordHash?: string; // Argon2id hash for masterAuth middleware
   config?: DaemonConfig;
-  adapter?: IChainAdapter | null;
+  adapterPool?: AdapterPool | null;
   policyEngine?: IPolicyEngine;
   jwtSecretManager?: JwtSecretManager;
   approvalWorkflow?: ApprovalWorkflow;
@@ -224,7 +224,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       '/v1',
       walletRoutes({
         db: deps.db,
-        adapter: deps.adapter ?? null,
+        adapterPool: deps.adapterPool ?? null,
+        config: deps.config ?? null,
       }),
     );
   }
@@ -234,14 +235,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     deps.db &&
     deps.keyStore &&
     deps.masterPassword !== undefined &&
-    deps.adapter &&
-    deps.policyEngine
+    deps.adapterPool &&
+    deps.policyEngine &&
+    deps.config
   ) {
     app.route(
       '/v1',
       transactionRoutes({
         db: deps.db,
-        adapter: deps.adapter,
+        adapterPool: deps.adapterPool,
+        config: deps.config,
         keyStore: deps.keyStore,
         policyEngine: deps.policyEngine,
         masterPassword: deps.masterPassword,
@@ -249,10 +252,6 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         delayQueue: deps.delayQueue,
         ownerLifecycle: deps.ownerLifecycle,
         sqlite: deps.sqlite,
-        config: deps.config ? {
-          policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
-          policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
-        } : undefined,
         notificationService: deps.notificationService,
       }),
     );

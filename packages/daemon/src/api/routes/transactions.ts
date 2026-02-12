@@ -25,7 +25,10 @@ import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { IChainAdapter, IPolicyEngine } from '@waiaas/core';
+import type { ChainType, NetworkType, IPolicyEngine } from '@waiaas/core';
+import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
+import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import { agents, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
@@ -57,7 +60,8 @@ import {
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
-  adapter: IChainAdapter;
+  adapterPool: AdapterPool;
+  config: DaemonConfig;
   keyStore: LocalKeyStore;
   policyEngine: IPolicyEngine;
   masterPassword: string;
@@ -65,10 +69,6 @@ export interface TransactionRouteDeps {
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
   sqlite?: SQLiteDatabase;
-  config?: {
-    policy_defaults_delay_seconds: number;
-    policy_defaults_approval_timeout: number;
-  };
   notificationService?: NotificationService;
 }
 
@@ -265,10 +265,22 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       201,
     );
 
+    // Resolve adapter from pool for this agent's chain:network
+    const rpcUrl = resolveRpcUrl(
+      deps.config.rpc as unknown as Record<string, string>,
+      agent.chain,
+      agent.network,
+    );
+    const adapter = await deps.adapterPool.resolve(
+      agent.chain as ChainType,
+      agent.network as NetworkType,
+      rpcUrl,
+    );
+
     // Stages 2-6 run asynchronously (fire-and-forget)
     const ctx: PipelineContext = {
       db: deps.db,
-      adapter: deps.adapter,
+      adapter,
       keyStore: deps.keyStore,
       policyEngine: deps.policyEngine,
       masterPassword: deps.masterPassword,
@@ -287,7 +299,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       // v1.2: workflow dependencies for stage4Wait
       delayQueue: deps.delayQueue,
       approvalWorkflow: deps.approvalWorkflow,
-      config: deps.config,
+      config: {
+        policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
+        policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
+      },
       // v1.3.4: notification service for pipeline event triggers
       notificationService: deps.notificationService,
     };

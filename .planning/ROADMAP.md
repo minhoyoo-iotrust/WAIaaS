@@ -75,10 +75,10 @@ Plans:
   1. v1 DB로 데몬 시작 시 schema_version 2로 자동 마이그레이션되고 기존 에이전트 데이터가 유지된다
   2. managesOwnTransaction=true인 마이그레이션이 자체 PRAGMA/트랜잭션을 관리한다
   3. 마이그레이션 후 sqlite.pragma('foreign_key_check') 결과가 빈 배열이다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 85-01: TBD
+- [ ] 85-01-PLAN.md — managesOwnTransaction + v2 마이그레이션 agents network CHECK 확장 (TDD)
 
 ### Phase 86: REST API 5-type + MCP/SDK 확장
 **Goal**: POST /v1/transactions/send가 5가지 트랜잭션 타입을 수용하고, MCP send_token이 TOKEN_TRANSFER를 지원하며, TS/Python SDK가 5-type 전송을 지원하는 상태
@@ -133,8 +133,8 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 82. Config + NetworkType | v1.4.1 | 3/3 | Complete | 2026-02-12 |
 | 83. Keystore 멀티커브 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 84. 어댑터 팩토리 | v1.4.1 | 0/2 | Not started | - |
-| 85. DB 마이그레이션 | v1.4.1 | 0/TBD | Not started | - |
+| 84. 어댑터 팩토리 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
+| 85. DB 마이그레이션 | v1.4.1 | 0/1 | Not started | - |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 0/TBD | Not started | - |
 | 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |
 | 88. 통합 검증 | v1.4.1 | 0/TBD | Not started | - |

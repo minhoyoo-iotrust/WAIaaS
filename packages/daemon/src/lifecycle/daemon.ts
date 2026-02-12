@@ -27,7 +27,9 @@ import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { IChainAdapter } from '@waiaas/core';
+import type { ChainType, NetworkType } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
+import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
@@ -102,7 +104,7 @@ export class DaemonLifecycle {
   private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
   private masterPassword = '';
-  private adapter: IChainAdapter | null = null;
+  private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
   private workers: BackgroundWorkers | null = null;
   private releaseLock: (() => Promise<void>) | null = null;
@@ -218,28 +220,22 @@ export class DaemonLifecycle {
     );
 
     // ------------------------------------------------------------------
-    // Step 4: Adapter initialization (10s, fail-soft)
+    // Step 4: Adapter pool initialization (10s, fail-soft)
     // ------------------------------------------------------------------
     try {
       await withTimeout(
         (async () => {
-          // Dynamic import for @waiaas/adapter-solana
-          const { SolanaAdapter } = await import('@waiaas/adapter-solana');
-          this.adapter = new SolanaAdapter('devnet');
-
-          // Determine RPC URL from config (v1.1: devnet only)
-          const rpcUrl = this._config!.rpc.solana_devnet;
-          await this.adapter.connect(rpcUrl);
-
-          console.log('Step 4: SolanaAdapter connected to', rpcUrl);
+          const { AdapterPool } = await import('../infrastructure/adapter-pool.js');
+          this.adapterPool = new AdapterPool();
+          console.log('Step 4: AdapterPool created (lazy init)');
         })(),
         10_000,
         'STEP4_ADAPTER',
       );
     } catch (err) {
       // fail-soft: log warning but continue (daemon runs without chain adapter)
-      console.warn('Step 4 (fail-soft): Adapter init warning:', err);
-      this.adapter = null;
+      console.warn('Step 4 (fail-soft): AdapterPool init warning:', err);
+      this.adapterPool = null;
     }
 
     // ------------------------------------------------------------------
@@ -344,7 +340,7 @@ export class DaemonLifecycle {
           masterPassword: this.masterPassword,
           masterPasswordHash: this.masterPasswordHash || undefined,
           config: this._config!,
-          adapter: this.adapter,
+          adapterPool: this.adapterPool,
           policyEngine: new DatabasePolicyEngine(this._db!, this.sqlite ?? undefined),
           jwtSecretManager: this.jwtSecretManager ?? undefined,
           delayQueue: this.delayQueue ?? undefined,
@@ -480,15 +476,15 @@ export class DaemonLifecycle {
       // Steps 5: In-flight signing -- STUB (Phase 50-04)
       // Steps 6: Pending queue persistence -- STUB (Phase 50-04)
 
-      // Disconnect chain adapter
-      if (this.adapter) {
+      // Disconnect all chain adapters
+      if (this.adapterPool) {
         try {
-          await this.adapter.disconnect();
-          console.log('Adapter disconnected');
+          await this.adapterPool.disconnectAll();
+          console.log('Adapter pool disconnected');
         } catch (err) {
-          console.warn('Adapter disconnect warning:', err);
+          console.warn('Adapter pool disconnect warning:', err);
         }
-        this.adapter = null;
+        this.adapterPool = null;
       }
 
       // Step 7: Stop background workers
@@ -571,7 +567,7 @@ export class DaemonLifecycle {
    */
   private async executeFromStage5(txId: string, agentId: string): Promise<void> {
     try {
-      if (!this._db || !this.adapter || !this.keyStore) {
+      if (!this._db || !this.adapterPool || !this.keyStore || !this._config) {
         console.warn(`executeFromStage5(${txId}): missing deps, skipping`);
         return;
       }
@@ -595,10 +591,22 @@ export class DaemonLifecycle {
         return;
       }
 
+      // Resolve adapter from pool using agent chain:network
+      const rpcUrl = resolveRpcUrl(
+        this._config.rpc as unknown as Record<string, string>,
+        agent.chain,
+        agent.network,
+      );
+      const adapter = await this.adapterPool.resolve(
+        agent.chain as ChainType,
+        agent.network as NetworkType,
+        rpcUrl,
+      );
+
       // Construct minimal PipelineContext for stages 5-6
       const ctx: import('../pipeline/stages.js').PipelineContext = {
         db: this._db,
-        adapter: this.adapter,
+        adapter,
         keyStore: this.keyStore,
         policyEngine: null as any, // Not needed for stages 5-6
         masterPassword: this.masterPassword,

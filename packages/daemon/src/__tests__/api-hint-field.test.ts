@@ -9,7 +9,7 @@
  * 5. hint from WAIaaSError constructor overrides errorHintMap
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import argon2 from 'argon2';
 import { WAIaaSError } from '@waiaas/core';
 import { createApp } from '../api/server.js';
@@ -21,6 +21,7 @@ import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { IChainAdapter, BalanceInfo, HealthInfo, AssetInfo } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
@@ -109,6 +110,15 @@ function mockAdapter(): IChainAdapter {
   };
 }
 
+/** Create a mock AdapterPool that resolves to mockAdapter. */
+function mockAdapterPool(): AdapterPool {
+  return {
+    resolve: vi.fn().mockResolvedValue(mockAdapter()),
+    disconnectAll: vi.fn().mockResolvedValue(undefined),
+    get size() { return 0; },
+  } as unknown as AdapterPool;
+}
+
 // ---------------------------------------------------------------------------
 // Test setup
 // ---------------------------------------------------------------------------
@@ -132,7 +142,7 @@ beforeEach(async () => {
   app = createApp({
     db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
     masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
-    config: mockConfig(), adapter: mockAdapter(), jwtSecretManager,
+    config: mockConfig(), adapterPool: mockAdapterPool(), jwtSecretManager,
     policyEngine: new DefaultPolicyEngine(),
   });
 });
@@ -185,7 +195,7 @@ describe('hint field in error responses', () => {
     const ksApp = createApp({
       db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
       masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
-      config: mockConfig(), adapter: mockAdapter(),
+      config: mockConfig(), adapterPool: mockAdapterPool(),
       jwtSecretManager: new JwtSecretManager(conn.db),
       policyEngine: new DefaultPolicyEngine(),
       getKillSwitchState: () => 'ACTIVATED',

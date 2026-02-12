@@ -24,6 +24,7 @@
   "dependencies": {
     "@hono/node-server": "^1.19.9",
     "@hono/zod-openapi": "^0.19.10",
+    "@waiaas/adapter-evm": "workspace:*",
     "@waiaas/adapter-solana": "workspace:*",
     "@waiaas/core": "workspace:*",
     "argon2": "^0.44.0",

@@ -23,6 +23,7 @@ import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { IChainAdapter, BalanceInfo, HealthInfo, AssetInfo } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,15 @@ function mockAdapter(): IChainAdapter {
   };
 }
 
+/** Create a mock AdapterPool that resolves to mockAdapter. */
+function mockAdapterPool(): AdapterPool {
+  return {
+    resolve: vi.fn().mockResolvedValue(mockAdapter()),
+    disconnectAll: vi.fn().mockResolvedValue(undefined),
+    get size() { return 0; },
+  } as unknown as AdapterPool;
+}
+
 // ---------------------------------------------------------------------------
 // Test setup
 // ---------------------------------------------------------------------------
@@ -138,7 +148,7 @@ beforeEach(async () => {
   app = createApp({
     db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
     masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
-    config: mockConfig(), adapter: mockAdapter(), jwtSecretManager,
+    config: mockConfig(), adapterPool: mockAdapterPool(), jwtSecretManager,
     policyEngine: new DefaultPolicyEngine(),
     requestShutdown: shutdownFn,
     startTime: Math.floor(Date.now() / 1000) - 60, // started 60s ago
@@ -453,7 +463,7 @@ describe('POST /v1/admin/rotate-secret', () => {
     app = createApp({
       db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
       masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
-      config: mockConfig(), adapter: mockAdapter(), jwtSecretManager,
+      config: mockConfig(), adapterPool: mockAdapterPool(), jwtSecretManager,
       policyEngine: new DefaultPolicyEngine(),
       requestShutdown: shutdownFn,
       startTime: Math.floor(Date.now() / 1000) - 60,
@@ -513,7 +523,7 @@ describe('Kill switch integration', () => {
     const ksApp = createApp({
       db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
       masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
-      config: mockConfig(), adapter: mockAdapter(),
+      config: mockConfig(), adapterPool: mockAdapterPool(),
       jwtSecretManager,
       policyEngine: new DefaultPolicyEngine(),
       getKillSwitchState: () => 'ACTIVATED',
