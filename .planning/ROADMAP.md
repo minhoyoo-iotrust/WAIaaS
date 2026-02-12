@@ -20,7 +20,7 @@
 - ✅ **v1.3.2 Admin Web UI 구현** — Phases 66-70 (shipped 2026-02-11, 816 tests, 45,332 LOC)
 - ✅ **v1.3.3 MCP 다중 에이전트 지원** — Phases 71-72 (shipped 2026-02-11, 847 tests, 44,639 LOC)
 - ✅ **v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널** — Phases 73-75 (shipped 2026-02-12, 895 tests, 42,123 LOC)
-- 🚧 **v1.4 토큰 + 컨트랙트 확장** — Phases 76-81 (in progress)
+- ✅ **v1.4 토큰 + 컨트랙트 확장** — Phases 76-81 (shipped 2026-02-12)
 
 ## Phases
 
@@ -207,7 +207,7 @@
 
 </details>
 
-### 🚧 v1.4 토큰 + 컨트랙트 확장 (In Progress)
+### ✅ v1.4 토큰 + 컨트랙트 확장 — SHIPPED 2026-02-12
 
 **Milestone Goal:** SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve 관리, 배치 트랜잭션, EVM 어댑터가 동작하는 상태
 
@@ -261,20 +261,15 @@ Plans:
 Plans:
 - [x] 80-01-PLAN.md — SolanaAdapter.buildBatch 원자적 빌드 + DatabasePolicyEngine.evaluateBatch 2단계 합산 정책
 
-#### Phase 81: 파이프라인 통합 + Stage 5
+#### Phase 81: 파이프라인 통합 + Stage 5 — completed 2026-02-12
 **Goal**: 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)이 6-stage 파이프라인을 완주하고, Stage 5가 ChainError 카테고리별 재시도/실패 분기를 수행한다
 **Depends on**: Phase 76 (ChainError, discriminatedUnion), Phase 77 (EVM adapter), Phase 78 (토큰), Phase 79 (컨트랙트/Approve), Phase 80 (배치)
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04
-**Success Criteria** (what must be TRUE):
-  1. Stage 1이 discriminatedUnion으로 5-type 요청을 자동 식별하고, 잘못된 type은 즉시 거부한다
-  2. Stage 3이 트랜잭션 type별로 적용 가능한 정책만 필터링하여 평가한다 (TOKEN_TRANSFER에 ALLOWED_TOKENS, CONTRACT_CALL에 CONTRACT_WHITELIST 등)
-  3. Stage 5가 build->simulate->sign->submit 완전 의사코드를 구현하고, PERMANENT 즉시 실패/TRANSIENT 지수 백오프/STALE 재빌드 분기가 동작한다
-  4. Stage 5가 type별로 올바른 adapter 메서드를 호출한다 (TRANSFER->buildTransaction, TOKEN_TRANSFER->buildTokenTransfer, CONTRACT_CALL->buildContractCall 등)
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 81-01-PLAN.md — Stage 1 discriminatedUnion 5-type 파싱 + Stage 3 type별 정책 필터링 (Wave 1, TDD)
-- [ ] 81-02-PLAN.md — Stage 5 CONC-01 완전 구현 + buildByType type별 adapter 라우팅 + ChainError 재시도 (Wave 2, TDD)
+- [x] 81-01-PLAN.md — Stage 1 discriminatedUnion 5-type 파싱 + Stage 3 type별 정책 필터링 (Wave 1, TDD)
+- [x] 81-02-PLAN.md — Stage 5 CONC-01 완전 구현 + buildByType type별 adapter 라우팅 + ChainError 재시도 (Wave 2, TDD)
 
 ## Progress
 
@@ -298,11 +293,11 @@ Plans:
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
-| **v1.4 토큰 + 컨트랙트** | **76-81** | **10/12** | **In progress** | - |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **12/12** | **Complete** | 2026-02-12 |
 
-**Total:** 18 milestones shipped, 80 phases completed, 180 plans completed, 19 new tests, 44,205+ LOC
-**v1.4:** 6 phases (5 complete), 12 plans (10 complete), 35 requirements
+**Total:** 19 milestones shipped, 81 phases completed, 182 plans completed, 31 new tests, 44,205+ LOC
+**v1.4:** 6 phases (6 complete), 12 plans (12 complete), 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after Phase 80 completed*
+*Last updated: 2026-02-12 after Phase 81 completed*

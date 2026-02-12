@@ -16,13 +16,20 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import {
   WAIaaSError,
+  ChainError,
   SendTransactionRequestSchema,
+  TransactionRequestSchema,
   type IChainAdapter,
   type IPolicyEngine,
   type PolicyTier,
   type UnsignedTransaction,
   type SubmitResult,
   type SendTransactionRequest,
+  type TransactionRequest,
+  type BatchRequest,
+  type TokenTransferRequest,
+  type ContractCallRequest,
+  type ApproveRequest,
 } from '@waiaas/core';
 import { agents, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -33,6 +40,7 @@ import { downgradeIfNoOwner } from '../workflow/owner-state.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import { sleep } from './sleep.js';
 
 // ---------------------------------------------------------------------------
 // Pipeline context
@@ -48,7 +56,7 @@ export interface PipelineContext {
   // Request data
   agentId: string;
   agent: { publicKey: string; chain: string; network: string };
-  request: SendTransactionRequest;
+  request: SendTransactionRequest | TransactionRequest;
   // State accumulated through stages
   txId: string;
   tier?: PolicyTier;
@@ -72,12 +80,111 @@ export interface PipelineContext {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: safe request field accessors for union type
+// ---------------------------------------------------------------------------
+
+/** Safely extract `amount` from SendTransactionRequest | TransactionRequest. */
+function getRequestAmount(req: SendTransactionRequest | TransactionRequest): string {
+  if ('amount' in req && typeof req.amount === 'string') return req.amount;
+  return '0';
+}
+
+/** Safely extract `to` from SendTransactionRequest | TransactionRequest. */
+function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
+  if ('to' in req && typeof req.to === 'string') return req.to;
+  return '';
+}
+
+/** Safely extract `memo` from SendTransactionRequest | TransactionRequest. */
+function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
+  if ('memo' in req && typeof req.memo === 'string') return req.memo;
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: build type-specific TransactionParam for policy evaluation
+// ---------------------------------------------------------------------------
+
+interface TransactionParam {
+  type: string;
+  amount: string;
+  toAddress: string;
+  chain: string;
+  tokenAddress?: string;
+  contractAddress?: string;
+  selector?: string;
+  spenderAddress?: string;
+  approveAmount?: string;
+}
+
+function buildTransactionParam(
+  req: SendTransactionRequest | TransactionRequest,
+  txType: string,
+  chain: string,
+): TransactionParam {
+  switch (txType) {
+    case 'TOKEN_TRANSFER': {
+      const r = req as { to: string; amount: string; token: { address: string } };
+      return {
+        type: 'TOKEN_TRANSFER',
+        amount: r.amount,
+        toAddress: r.to,
+        chain,
+        tokenAddress: r.token.address,
+      };
+    }
+    case 'CONTRACT_CALL': {
+      const r = req as { to: string; calldata?: string; value?: string };
+      return {
+        type: 'CONTRACT_CALL',
+        amount: r.value ?? '0',
+        toAddress: r.to,
+        chain,
+        contractAddress: r.to,
+        selector: r.calldata?.slice(0, 10),
+      };
+    }
+    case 'APPROVE': {
+      const r = req as { spender: string; amount: string };
+      return {
+        type: 'APPROVE',
+        amount: r.amount,
+        toAddress: r.spender,
+        chain,
+        spenderAddress: r.spender,
+        approveAmount: r.amount,
+      };
+    }
+    case 'TRANSFER':
+    default: {
+      const r = req as { to: string; amount: string };
+      return {
+        type: 'TRANSFER',
+        amount: r.amount,
+        toAddress: r.to,
+        chain,
+      };
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Stage 1: Validate + DB INSERT
 // ---------------------------------------------------------------------------
 
 export async function stage1Validate(ctx: PipelineContext): Promise<void> {
-  // Validate request with Zod schema
-  SendTransactionRequestSchema.parse(ctx.request);
+  // Validate request with appropriate Zod schema
+  // If request has a `type` field, use discriminatedUnion schema (5-type)
+  // Otherwise, use legacy SendTransactionRequestSchema (backward compat)
+  const req = ctx.request;
+  if ('type' in req && req.type) {
+    TransactionRequestSchema.parse(req);
+  } else {
+    SendTransactionRequestSchema.parse(req);
+  }
+
+  // Determine transaction type from request
+  const txType = ('type' in req && req.type) ? req.type : 'TRANSFER';
 
   // Generate transaction ID
   ctx.txId = generateId();
@@ -85,22 +192,27 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   // INSERT PENDING transaction into DB
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
 
+  // Extract common and type-specific fields for DB INSERT
+  const amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
+  const toAddress = 'to' in req ? (req as { to?: string }).to : undefined;
+
   await ctx.db.insert(transactions).values({
     id: ctx.txId,
     agentId: ctx.agentId,
     chain: ctx.agent.chain,
-    type: 'TRANSFER',
+    type: txType,
     status: 'PENDING',
-    amount: ctx.request.amount,
-    toAddress: ctx.request.to,
+    amount: amount ?? null,
+    toAddress: toAddress ?? null,
     sessionId: ctx.sessionId ?? null,
     createdAt: now,
   });
 
   // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
   void ctx.notificationService?.notify('TX_REQUESTED', ctx.agentId, {
-    amount: ctx.request.amount,
-    to: ctx.request.to,
+    amount: amount ?? '0',
+    to: toAddress ?? '',
+    type: txType,
   }, { txId: ctx.txId });
 }
 
@@ -121,25 +233,48 @@ export async function stage2Auth(_ctx: PipelineContext): Promise<void> {
 export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   let evaluation;
 
-  // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
-  if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
-    evaluation = ctx.policyEngine.evaluateAndReserve(
-      ctx.agentId,
-      {
-        type: 'TRANSFER',
-        amount: ctx.request.amount,
-        toAddress: ctx.request.to,
+  // Determine transaction type from request
+  const req = ctx.request;
+  const txType = ('type' in req && req.type) ? req.type : 'TRANSFER';
+
+  // BATCH type uses evaluateBatch (2-stage policy evaluation)
+  if (txType === 'BATCH' && ctx.policyEngine instanceof DatabasePolicyEngine) {
+    const batchReq = req as BatchRequest;
+    // Classify each instruction and build TransactionParam array
+    const params = batchReq.instructions.map((instr) => {
+      let instrType = 'TRANSFER';
+      if ('spender' in instr) instrType = 'APPROVE';
+      else if ('token' in instr) instrType = 'TOKEN_TRANSFER';
+      else if ('programId' in instr || 'calldata' in instr) instrType = 'CONTRACT_CALL';
+
+      return {
+        type: instrType,
+        amount: 'amount' in instr ? (instr as { amount?: string }).amount ?? '0' : '0',
+        toAddress: 'to' in instr ? (instr as { to?: string }).to ?? '' : '',
         chain: ctx.agent.chain,
-      },
-      ctx.txId,
-    );
-  } else {
-    evaluation = await ctx.policyEngine.evaluate(ctx.agentId, {
-      type: 'TRANSFER',
-      amount: ctx.request.amount,
-      toAddress: ctx.request.to,
-      chain: ctx.agent.chain,
+        tokenAddress: 'token' in instr ? (instr as { token?: { address: string } }).token?.address : undefined,
+        contractAddress: instrType === 'CONTRACT_CALL' ? ('to' in instr ? (instr as { to?: string }).to : undefined) : undefined,
+        selector: 'calldata' in instr ? (instr as { calldata?: string }).calldata?.slice(0, 10) : undefined,
+        spenderAddress: 'spender' in instr ? (instr as { spender?: string }).spender : undefined,
+        approveAmount: instrType === 'APPROVE' && 'amount' in instr ? (instr as { amount?: string }).amount : undefined,
+      };
     });
+
+    evaluation = await ctx.policyEngine.evaluateBatch(ctx.agentId, params);
+  } else {
+    // Build type-specific TransactionParam
+    const txParam = buildTransactionParam(req, txType, ctx.agent.chain);
+
+    // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
+    if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
+      evaluation = ctx.policyEngine.evaluateAndReserve(
+        ctx.agentId,
+        txParam,
+        ctx.txId,
+      );
+    } else {
+      evaluation = await ctx.policyEngine.evaluate(ctx.agentId, txParam);
+    }
   }
 
   if (!evaluation.allowed) {
@@ -152,8 +287,8 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify POLICY_VIOLATION (never blocks pipeline)
     void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.agentId, {
       reason: evaluation.reason ?? 'Policy denied',
-      amount: ctx.request.amount,
-      to: ctx.request.to,
+      amount: getRequestAmount(ctx.request),
+      to: getRequestTo(ctx.request),
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('POLICY_DENIED', {
@@ -239,67 +374,302 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Stage 5: On-chain execution
+// Helper: buildByType -- route to correct adapter method based on request.type
 // ---------------------------------------------------------------------------
 
-export async function stage5Execute(ctx: PipelineContext): Promise<void> {
-  // Build unsigned transaction
-  ctx.unsignedTx = await ctx.adapter.buildTransaction({
-    from: ctx.agent.publicKey,
-    to: ctx.request.to,
-    amount: BigInt(ctx.request.amount),
-    memo: ctx.request.memo,
-  });
+/**
+ * Build unsigned transaction by dispatching to the correct IChainAdapter method
+ * based on request.type (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH).
+ */
+async function buildByType(
+  adapter: IChainAdapter,
+  request: SendTransactionRequest | TransactionRequest,
+  agentPublicKey: string,
+): Promise<UnsignedTransaction> {
+  const type = ('type' in request && request.type) || 'TRANSFER';
 
-  // Simulate
-  const simResult = await ctx.adapter.simulateTransaction(ctx.unsignedTx);
-  if (!simResult.success) {
-    await ctx.db
-      .update(transactions)
-      .set({ status: 'FAILED', error: simResult.error ?? 'Simulation failed' })
-      .where(eq(transactions.id, ctx.txId));
+  switch (type) {
+    case 'TRANSFER': {
+      return adapter.buildTransaction({
+        from: agentPublicKey,
+        to: getRequestTo(request),
+        amount: BigInt(getRequestAmount(request)),
+        memo: getRequestMemo(request),
+      });
+    }
 
-    // Fire-and-forget: notify TX_FAILED on simulation failure (never blocks pipeline)
-    void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
-      reason: simResult.error ?? 'Simulation failed',
-      amount: ctx.request.amount,
-    }, { txId: ctx.txId });
+    case 'TOKEN_TRANSFER': {
+      const req = request as TokenTransferRequest;
+      return adapter.buildTokenTransfer({
+        from: agentPublicKey,
+        to: req.to,
+        amount: BigInt(req.amount),
+        token: req.token,
+        memo: req.memo,
+      });
+    }
 
-    throw new WAIaaSError('SIMULATION_FAILED', {
-      message: simResult.error ?? 'Transaction simulation failed',
-    });
+    case 'CONTRACT_CALL': {
+      const req = request as ContractCallRequest;
+      return adapter.buildContractCall({
+        from: agentPublicKey,
+        to: req.to,
+        calldata: req.calldata,
+        abi: req.abi as Record<string, unknown>[] | undefined,
+        value: req.value ? BigInt(req.value) : undefined,
+        programId: req.programId,
+        instructionData: req.instructionData
+          ? Buffer.from(req.instructionData, 'base64')
+          : undefined,
+        accounts: req.accounts,
+      });
+    }
+
+    case 'APPROVE': {
+      const req = request as ApproveRequest;
+      return adapter.buildApprove({
+        from: agentPublicKey,
+        spender: req.spender,
+        token: req.token,
+        amount: BigInt(req.amount),
+      });
+    }
+
+    case 'BATCH': {
+      const req = request as BatchRequest;
+      return adapter.buildBatch({
+        from: agentPublicKey,
+        instructions: req.instructions.map((instr) => {
+          // Classify by field presence (same logic as classifyInstruction in Phase 80)
+          if ('spender' in instr) {
+            const a = instr as { spender: string; token: { address: string; decimals: number; symbol: string }; amount: string };
+            return {
+              from: agentPublicKey,
+              spender: a.spender,
+              token: a.token,
+              amount: BigInt(a.amount),
+            };
+          }
+          if ('token' in instr) {
+            const t = instr as { to: string; amount: string; token: { address: string; decimals: number; symbol: string }; memo?: string };
+            return {
+              from: agentPublicKey,
+              to: t.to,
+              amount: BigInt(t.amount),
+              token: t.token,
+              memo: t.memo,
+            };
+          }
+          if ('programId' in instr || 'calldata' in instr) {
+            const c = instr as {
+              to: string;
+              calldata?: string;
+              programId?: string;
+              instructionData?: string;
+              accounts?: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+              value?: string;
+            };
+            return {
+              from: agentPublicKey,
+              to: c.to,
+              calldata: c.calldata,
+              programId: c.programId,
+              instructionData: c.instructionData
+                ? Buffer.from(c.instructionData, 'base64')
+                : undefined,
+              accounts: c.accounts,
+              value: c.value ? BigInt(c.value) : undefined,
+            };
+          }
+          // Default: TRANSFER instruction
+          const tr = instr as { to: string; amount: string; memo?: string };
+          return {
+            from: agentPublicKey,
+            to: tr.to,
+            amount: BigInt(tr.amount),
+            memo: tr.memo,
+          };
+        }),
+      });
+    }
+
+    default:
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Unknown transaction type: ${type}`,
+      });
   }
+}
 
-  // Decrypt private key, sign, and submit
-  // CRITICAL: key MUST be released in finally block
-  let privateKey: Uint8Array | null = null;
-  try {
-    privateKey = await ctx.keyStore.decryptPrivateKey(ctx.agentId, ctx.masterPassword);
+// ---------------------------------------------------------------------------
+// Stage 5: On-chain execution (CONC-01 retry loop)
+// ---------------------------------------------------------------------------
 
-    // Sign
-    ctx.signedTx = await ctx.adapter.signTransaction(ctx.unsignedTx, privateKey);
-  } finally {
-    // Always release the key, even if sign throws
-    if (privateKey) {
-      ctx.keyStore.releaseKey(privateKey);
+/**
+ * Stage 5: Build -> Simulate -> Sign -> Submit with CONC-01 retry logic.
+ *
+ * ChainError category-based retry:
+ * - PERMANENT: immediate FAILED, no retry
+ * - TRANSIENT: exponential backoff (1s, 2s, 4s), max 3 retries (retryCount >= 3 guard)
+ * - STALE: rebuild from Stage 5a, max 1 (retryCount >= 1 guard)
+ *
+ * retryCount is shared between TRANSIENT and STALE to limit total retry count.
+ * Total attempts: initial 1 + up to 3 retries = 4 max.
+ */
+export async function stage5Execute(ctx: PipelineContext): Promise<void> {
+  const reqAmount = getRequestAmount(ctx.request);
+  const reqTo = getRequestTo(ctx.request);
+
+  let retryCount = 0;
+
+  // Outer buildLoop: STALE errors return here to rebuild from Stage 5a
+  // eslint-disable-next-line no-constant-condition
+  buildLoop: while (true) {
+    try {
+      // Stage 5a: Build unsigned transaction (type-routed)
+      ctx.unsignedTx = await buildByType(ctx.adapter, ctx.request, ctx.agent.publicKey);
+
+      // Stage 5b: Simulate
+      const simResult = await ctx.adapter.simulateTransaction(ctx.unsignedTx);
+      if (!simResult.success) {
+        await ctx.db
+          .update(transactions)
+          .set({ status: 'FAILED', error: simResult.error ?? 'Simulation failed' })
+          .where(eq(transactions.id, ctx.txId));
+
+        // Fire-and-forget: notify TX_FAILED on simulation failure
+        void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+          reason: simResult.error ?? 'Simulation failed',
+          amount: reqAmount,
+        }, { txId: ctx.txId });
+
+        throw new WAIaaSError('SIMULATION_FAILED', {
+          message: simResult.error ?? 'Transaction simulation failed',
+        });
+      }
+
+      // Stage 5c: Decrypt private key, sign
+      // CRITICAL: key MUST be released in finally block
+      let privateKey: Uint8Array | null = null;
+      try {
+        privateKey = await ctx.keyStore.decryptPrivateKey(ctx.agentId, ctx.masterPassword);
+        ctx.signedTx = await ctx.adapter.signTransaction(ctx.unsignedTx, privateKey);
+      } finally {
+        if (privateKey) {
+          ctx.keyStore.releaseKey(privateKey);
+        }
+      }
+
+      // Stage 5d: Submit
+      ctx.submitResult = await ctx.adapter.submitTransaction(ctx.signedTx);
+
+      // Success: Update DB SUBMITTED + txHash
+      await ctx.db
+        .update(transactions)
+        .set({ status: 'SUBMITTED', txHash: ctx.submitResult.txHash })
+        .where(eq(transactions.id, ctx.txId));
+
+      // Fire-and-forget: notify TX_SUBMITTED
+      void ctx.notificationService?.notify('TX_SUBMITTED', ctx.agentId, {
+        txHash: ctx.submitResult.txHash,
+        amount: reqAmount,
+        to: reqTo,
+      }, { txId: ctx.txId });
+
+      return; // Success -- exit the loop
+
+    } catch (err) {
+      // Non-ChainError: rethrow as-is (WAIaaSError, validation errors, etc.)
+      if (!(err instanceof ChainError)) {
+        throw err;
+      }
+
+      // ChainError: category-based retry logic
+      switch (err.category) {
+        case 'PERMANENT': {
+          // Immediate failure, no retry
+          await ctx.db
+            .update(transactions)
+            .set({ status: 'FAILED', error: err.message })
+            .where(eq(transactions.id, ctx.txId));
+
+          // Fire-and-forget: notify TX_FAILED
+          void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+            reason: err.message,
+            amount: reqAmount,
+          }, { txId: ctx.txId });
+
+          throw new WAIaaSError('CHAIN_ERROR', {
+            message: err.message,
+            cause: err,
+          });
+        }
+
+        case 'TRANSIENT': {
+          if (retryCount >= 3) {
+            // Max retries exhausted
+            await ctx.db
+              .update(transactions)
+              .set({ status: 'FAILED', error: `${err.code} (max retries exceeded)` })
+              .where(eq(transactions.id, ctx.txId));
+
+            // Fire-and-forget: notify TX_FAILED
+            void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+              reason: `${err.code} (max retries exceeded)`,
+              amount: reqAmount,
+            }, { txId: ctx.txId });
+
+            throw new WAIaaSError('CHAIN_ERROR', {
+              message: `${err.message} (max retries exceeded)`,
+              cause: err,
+            });
+          }
+
+          // Exponential backoff: 1s, 2s, 4s
+          await sleep(1000 * Math.pow(2, retryCount));
+          retryCount++;
+          continue buildLoop; // Retry from Stage 5a (rebuild)
+        }
+
+        case 'STALE': {
+          if (retryCount >= 1) {
+            // Stale retry exhausted (shared retryCount)
+            await ctx.db
+              .update(transactions)
+              .set({ status: 'FAILED', error: `${err.code} (stale retry exhausted)` })
+              .where(eq(transactions.id, ctx.txId));
+
+            // Fire-and-forget: notify TX_FAILED
+            void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+              reason: `${err.code} (stale retry exhausted)`,
+              amount: reqAmount,
+            }, { txId: ctx.txId });
+
+            throw new WAIaaSError('CHAIN_ERROR', {
+              message: `${err.message} (stale retry exhausted)`,
+              cause: err,
+            });
+          }
+
+          // Rebuild from Stage 5a with new blockhash/nonce
+          retryCount++;
+          continue buildLoop;
+        }
+
+        default: {
+          // Unknown category: treat as permanent
+          await ctx.db
+            .update(transactions)
+            .set({ status: 'FAILED', error: err.message })
+            .where(eq(transactions.id, ctx.txId));
+
+          throw new WAIaaSError('CHAIN_ERROR', {
+            message: err.message,
+            cause: err,
+          });
+        }
+      }
     }
   }
-
-  // Submit
-  ctx.submitResult = await ctx.adapter.submitTransaction(ctx.signedTx);
-
-  // Update DB: SUBMITTED with txHash
-  await ctx.db
-    .update(transactions)
-    .set({ status: 'SUBMITTED', txHash: ctx.submitResult.txHash })
-    .where(eq(transactions.id, ctx.txId));
-
-  // Fire-and-forget: notify TX_SUBMITTED (never blocks pipeline)
-  void ctx.notificationService?.notify('TX_SUBMITTED', ctx.agentId, {
-    txHash: ctx.submitResult.txHash,
-    amount: ctx.request.amount,
-    to: ctx.request.to,
-  }, { txId: ctx.txId });
 }
 
 // ---------------------------------------------------------------------------
@@ -307,6 +677,9 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
+  const reqAmount = getRequestAmount(ctx.request);
+  const reqTo = getRequestTo(ctx.request);
+
   try {
     await ctx.adapter.waitForConfirmation(ctx.submitResult!.txHash, 30_000);
 
@@ -320,8 +693,8 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.agentId, {
       txHash: ctx.submitResult!.txHash,
-      amount: ctx.request.amount,
-      to: ctx.request.to,
+      amount: reqAmount,
+      to: reqTo,
     }, { txId: ctx.txId });
   } catch (error) {
     // Timeout or RPC error: mark FAILED
@@ -336,7 +709,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify TX_FAILED on confirmation failure (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
       reason: errorMessage,
-      amount: ctx.request.amount,
+      amount: reqAmount,
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('CHAIN_ERROR', {
