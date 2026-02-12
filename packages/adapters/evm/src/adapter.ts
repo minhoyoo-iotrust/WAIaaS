@@ -4,15 +4,16 @@
  * Phase 77-01: Scaffolding with 6 real implementations.
  * Phase 77-02: 11 more real implementations (build/simulate/sign/submit/confirm/fee/nonce/assets/tokenInfo/approve/txFee).
  * Phase 78-02: buildTokenTransfer real implementation + getAssets ERC-20 multicall expansion.
+ * Phase 79-01: buildContractCall real implementation.
  *
- * Real implementations (18):
+ * Real implementations (19):
  *   connect, disconnect, isConnected, getHealth, getBalance, getCurrentNonce,
  *   buildTransaction, simulateTransaction, signTransaction, submitTransaction,
  *   waitForConfirmation, estimateFee, getTransactionFee, getAssets, getTokenInfo,
- *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED), buildTokenTransfer
+ *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED), buildTokenTransfer, buildContractCall
  *
- * Stubs for later phases (2):
- *   buildContractCall (Phase 79), sweepAll (Phase 80)
+ * Stubs for later phases (1):
+ *   sweepAll (Phase 80)
  */
 
 import {
@@ -576,8 +577,91 @@ export class EvmAdapter implements IChainAdapter {
 
   // -- Contract operations (2) --
 
-  async buildContractCall(_request: ContractCallParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildContractCall will be implemented in Phase 79');
+  async buildContractCall(request: ContractCallParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    try {
+      const fromAddr = request.from as `0x${string}`;
+      const toAddr = request.to as `0x${string}`;
+
+      // Validate calldata: must be hex string with 0x prefix + at least 4-byte selector (8 hex chars)
+      if (!request.calldata || !/^0x[0-9a-fA-F]{8,}$/.test(request.calldata)) {
+        throw new ChainError('INVALID_INSTRUCTION', 'evm', {
+          message: 'Invalid calldata: must be hex string with 0x prefix and at least 4-byte function selector',
+        });
+      }
+
+      const calldata = request.calldata as `0x${string}`;
+
+      // 1. Get nonce
+      const nonce = await client.getTransactionCount({ address: fromAddr });
+
+      // 2. Get EIP-1559 fee data
+      const fees = await client.estimateFeesPerGas();
+
+      // 3. Estimate gas with 1.2x safety margin
+      const estimatedGas = await client.estimateGas({
+        account: fromAddr,
+        to: toAddr,
+        data: calldata,
+        value: request.value ?? 0n,
+      });
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+      const chainId = client.chain?.id ?? 1;
+
+      // 4. Build EIP-1559 tx targeting the contract address with calldata
+      const txRequest = {
+        type: 'eip1559' as const,
+        to: toAddr,
+        value: request.value ?? 0n,
+        nonce,
+        gas: gasLimit,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        chainId,
+        data: calldata,
+      };
+
+      // 5. Serialize
+      const serializedHex = serializeTransaction(txRequest);
+      const serializedBytes = hexToBytes(serializedHex);
+
+      const estimatedFee = gasLimit * maxFeePerGas;
+
+      // 6. Extract function selector (first 10 chars: 0x + 4-byte selector)
+      const selector = calldata.slice(0, 10);
+
+      return {
+        chain: 'ethereum',
+        serialized: serializedBytes,
+        estimatedFee,
+        expiresAt: undefined,
+        metadata: {
+          nonce,
+          chainId,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          gasLimit,
+          type: 'eip1559',
+          selector,
+          contractAddress: request.to,
+          value: request.value ?? 0n,
+        },
+        nonce,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.toLowerCase().includes('insufficient funds')) {
+        throw new ChainError('INSUFFICIENT_BALANCE', 'evm', {
+          message: `Insufficient funds for contract call: ${msg}`,
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
+      throw this.mapError(error, 'Failed to build contract call');
+    }
   }
 
   async buildApprove(request: ApproveParams): Promise<UnsignedTransaction> {

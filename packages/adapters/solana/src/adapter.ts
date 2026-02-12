@@ -11,6 +11,7 @@
 
 import {
   address,
+  AccountRole,
   createNoopSigner,
   createSolanaRpc,
   createTransactionMessage,
@@ -691,8 +692,106 @@ export class SolanaAdapter implements IChainAdapter {
 
   // -- Contract operations (2) --
 
-  async buildContractCall(_request: ContractCallParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildContractCall will be implemented in Phase 79');
+  async buildContractCall(request: ContractCallParams): Promise<UnsignedTransaction> {
+    const rpc = this.getRpc();
+    try {
+      // Validate required Solana contract call fields
+      if (!request.programId) {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Missing programId for Solana contract call',
+        });
+      }
+      if (!request.instructionData) {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Missing instructionData for Solana contract call',
+        });
+      }
+      if (!request.accounts || request.accounts.length === 0) {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Missing accounts for Solana contract call',
+        });
+      }
+
+      const from = address(request.from);
+
+      // Map account roles: isSigner + isWritable -> AccountRole
+      const mappedAccounts = request.accounts.map((acc) => {
+        let role: AccountRole;
+        if (acc.isSigner && acc.isWritable) {
+          role = AccountRole.WRITABLE_SIGNER;
+        } else if (acc.isSigner && !acc.isWritable) {
+          role = AccountRole.READONLY_SIGNER;
+        } else if (!acc.isSigner && acc.isWritable) {
+          role = AccountRole.WRITABLE;
+        } else {
+          role = AccountRole.READONLY;
+        }
+        return {
+          address: address(acc.pubkey),
+          role,
+        };
+      });
+
+      // Handle instructionData: may be Uint8Array or base64 string from REST API
+      let dataBytes: Uint8Array;
+      if (request.instructionData instanceof Uint8Array) {
+        dataBytes = request.instructionData;
+      } else {
+        // base64 string from REST API
+        dataBytes = new Uint8Array(Buffer.from(request.instructionData as unknown as string, 'base64'));
+      }
+
+      // Build the instruction
+      const instruction = {
+        programAddress: address(request.programId),
+        accounts: mappedAccounts,
+        data: dataBytes,
+      };
+
+      // Get latest blockhash
+      const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+
+      // Build transaction message using pipe pattern
+      let txMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(from, tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: blockhashInfo.blockhash,
+              lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
+            },
+            tx,
+          ),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
+
+      // Compile and encode
+      const compiled = compileTransaction(txMessage);
+      const serialized = new Uint8Array(txEncoder.encode(compiled));
+
+      return {
+        chain: 'solana',
+        serialized,
+        estimatedFee: DEFAULT_SOL_TRANSFER_FEE,
+        expiresAt: new Date(Date.now() + 60_000),
+        metadata: {
+          programId: request.programId,
+          blockhash: blockhashInfo.blockhash,
+          lastValidBlockHeight: Number(blockhashInfo.lastValidBlockHeight),
+          version: 0,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to build contract call: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
   }
 
   async buildApprove(_request: ApproveParams): Promise<UnsignedTransaction> {
