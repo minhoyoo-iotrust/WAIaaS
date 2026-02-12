@@ -46,10 +46,11 @@ Plans:
   2. 키스토어 파일에 curve 필드('ed25519'|'secp256k1')가 기록되고, 기존 Solana 파일은 curve 없이도 ed25519로 동작한다
   3. secp256k1 비밀키가 AES-256-GCM으로 암호화되고 평문 버퍼가 즉시 제로화된다
   4. 키스토어 파일에 실제 network 값이 기록된다 (하드코딩 'devnet' 제거)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 83-01: TBD
+- [ ] 83-01-PLAN.md — secp256k1 키 생성 + EIP-55 주소 파생 + curve/network 필드 (TDD)
+- [ ] 83-02-PLAN.md — Agent route generateKeyPair network 파라미터 연결 + 통합 테스트
 
 ### Phase 84: 어댑터 팩토리
 **Goal**: 데몬이 에이전트의 chain/network 필드에 따라 적절한 어댑터를 자동 선택하고, 동일 네트워크는 인스턴스를 재사용하며, shutdown 시 모든 어댑터가 정리되는 상태
