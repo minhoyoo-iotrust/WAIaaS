@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 86 - REST API 5-type + MCP/SDK 확장
+**Current focus:** v1.4.1 Phase 87 - Owner Auth SIWE
 
 ## Current Position
 
-Phase: 86 (5 of 7 in v1.4.1) — REST API 5-type + MCP/SDK 확장
-Plan: 2 of 2 complete
-Status: Phase complete
-Last activity: 2026-02-12 — Plan 86-01 complete (REST API 5-type route + OpenAPI)
+Phase: 87 (6 of 7 in v1.4.1) — Owner Auth SIWE
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-12 — Phase 86 complete (2/2 plans, verified)
 
-Progress: [██████░░░░] 57% (4/7 phases in v1.4.1)
+Progress: [███████░░░] 71% (5/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 85 phases, 191 plans, 533 reqs, 1,268 tests, 52,400+ LOC
+**Cumulative:** 20 milestones, 86 phases, 192 plans, 533 reqs, 1,300+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 9 plans completed (Phases 82-85 done, 86-02 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 10 plans completed (Phases 82-86 done)
 
 *Updated after each plan completion*
 
@@ -79,5 +79,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 86-01-PLAN.md (REST API 5-type route + OpenAPI). Phase 86 complete (2/2 plans).
+Stopped at: Phase 86 complete, verified, ready for Phase 87 planning
 Resume file: None
