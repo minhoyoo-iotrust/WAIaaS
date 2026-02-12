@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Phase: 86 (5 of 7 in v1.4.1) — REST API 5-type + MCP/SDK 확장
 Plan: 2 of 2 complete
-Status: In progress (plan 01 pending)
-Last activity: 2026-02-12 — Plan 86-02 complete (MCP/SDK 5-type extension)
+Status: Phase complete
+Last activity: 2026-02-12 — Plan 86-01 complete (REST API 5-type route + OpenAPI)
 
 Progress: [██████░░░░] 57% (4/7 phases in v1.4.1)
 
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [86-02]: Python SDK send_token uses **kwargs for type-specific fields (calldata, spender, instructions)
 - [86-02]: Python SDK TokenInfo as separate Pydantic model for validation (not inline dict)
 - [86-02]: Pydantic by_alias=True for camelCase serialization of programId/instructionData
+- [Phase 86]: TransactionRequestOpenAPI = z.any() + manual oneOf 6-variant (route schema separation pattern C)
+- [Phase 86]: stage1Validate is single Zod validation SSoT for transaction route (not Hono built-in)
+- [Phase 86]: openAPIRegistry.register() for schemas not directly referenced by routes (component inclusion)
 
 ### Blockers/Concerns
 
@@ -76,5 +79,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 86-02-PLAN.md (MCP/SDK 5-type extension). Plan 86-01 still pending.
+Stopped at: Completed 86-01-PLAN.md (REST API 5-type route + OpenAPI). Phase 86 complete (2/2 plans).
 Resume file: None
