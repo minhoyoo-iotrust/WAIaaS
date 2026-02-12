@@ -443,36 +443,39 @@ describe('SolanaAdapter', () => {
     it('returns native SOL + SPL tokens when token accounts exist', async () => {
       await adapter.connect(TEST_RPC_URL);
       mockRpc.getBalance = mockSend({ value: 1_000_000_000n });
-      mockRpc.getTokenAccountsByOwner = mockSend({
-        value: [
-          {
-            account: {
-              data: {
-                parsed: {
-                  info: {
-                    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-                    tokenAmount: { amount: '500000', decimals: 6, uiAmountString: '0.5' },
+      // getTokenAccountsByOwner is called twice: SPL Token Program, then Token-2022
+      mockRpc.getTokenAccountsByOwner = vi.fn()
+        .mockReturnValueOnce({ send: vi.fn().mockResolvedValue({
+          value: [
+            {
+              account: {
+                data: {
+                  parsed: {
+                    info: {
+                      mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                      tokenAmount: { amount: '500000', decimals: 6, uiAmountString: '0.5' },
+                    },
+                    type: 'account',
                   },
-                  type: 'account',
                 },
               },
             },
-          },
-          {
-            account: {
-              data: {
-                parsed: {
-                  info: {
-                    mint: 'So11111111111111111111111111111111111111112',
-                    tokenAmount: { amount: '200000000', decimals: 9, uiAmountString: '0.2' },
+            {
+              account: {
+                data: {
+                  parsed: {
+                    info: {
+                      mint: 'So11111111111111111111111111111111111111112',
+                      tokenAmount: { amount: '200000000', decimals: 9, uiAmountString: '0.2' },
+                    },
+                    type: 'account',
                   },
-                  type: 'account',
                 },
               },
             },
-          },
-        ],
-      });
+          ],
+        }) })
+        .mockReturnValueOnce({ send: vi.fn().mockResolvedValue({ value: [] }) }); // Token-2022: empty
 
       const assets = await adapter.getAssets(testFromAddress);
       expect(assets).toHaveLength(3);
@@ -480,15 +483,16 @@ describe('SolanaAdapter', () => {
       expect(assets[0]!.mint).toBe('native');
       expect(assets[0]!.isNative).toBe(true);
       expect(assets[0]!.balance).toBe(1_000_000_000n);
-      // Second entry is USDC-like token
-      expect(assets[1]!.mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-      expect(assets[1]!.balance).toBe(500000n);
-      expect(assets[1]!.decimals).toBe(6);
+      // Token entries sorted by balance descending
+      // 200000000 > 500000, so wrapped SOL comes before USDC
+      expect(assets[1]!.mint).toBe('So11111111111111111111111111111111111111112');
+      expect(assets[1]!.balance).toBe(200000000n);
+      expect(assets[1]!.decimals).toBe(9);
       expect(assets[1]!.isNative).toBe(false);
-      // Third entry
-      expect(assets[2]!.mint).toBe('So11111111111111111111111111111111111111112');
-      expect(assets[2]!.balance).toBe(200000000n);
-      expect(assets[2]!.decimals).toBe(9);
+      // USDC last (smaller balance)
+      expect(assets[2]!.mint).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      expect(assets[2]!.balance).toBe(500000n);
+      expect(assets[2]!.decimals).toBe(6);
     });
 
     it('returns native SOL with 0 balance when account is empty', async () => {
@@ -511,36 +515,39 @@ describe('SolanaAdapter', () => {
     it('filters out zero-balance SPL token accounts', async () => {
       await adapter.connect(TEST_RPC_URL);
       mockRpc.getBalance = mockSend({ value: 1_000_000_000n });
-      mockRpc.getTokenAccountsByOwner = mockSend({
-        value: [
-          {
-            account: {
-              data: {
-                parsed: {
-                  info: {
-                    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-                    tokenAmount: { amount: '100000', decimals: 6, uiAmountString: '0.1' },
+      // getTokenAccountsByOwner called twice: SPL Token then Token-2022
+      mockRpc.getTokenAccountsByOwner = vi.fn()
+        .mockReturnValueOnce({ send: vi.fn().mockResolvedValue({
+          value: [
+            {
+              account: {
+                data: {
+                  parsed: {
+                    info: {
+                      mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                      tokenAmount: { amount: '100000', decimals: 6, uiAmountString: '0.1' },
+                    },
+                    type: 'account',
                   },
-                  type: 'account',
                 },
               },
             },
-          },
-          {
-            account: {
-              data: {
-                parsed: {
-                  info: {
-                    mint: 'ZeroTokenMintAddress11111111111111111111111',
-                    tokenAmount: { amount: '0', decimals: 9, uiAmountString: '0' },
+            {
+              account: {
+                data: {
+                  parsed: {
+                    info: {
+                      mint: 'ZeroTokenMintAddress11111111111111111111111',
+                      tokenAmount: { amount: '0', decimals: 9, uiAmountString: '0' },
+                    },
+                    type: 'account',
                   },
-                  type: 'account',
                 },
               },
             },
-          },
-        ],
-      });
+          ],
+        }) })
+        .mockReturnValueOnce({ send: vi.fn().mockResolvedValue({ value: [] }) }); // Token-2022: empty
 
       const assets = await adapter.getAssets(testFromAddress);
       // Should be 2: native SOL + non-zero USDC, zero-balance token filtered out

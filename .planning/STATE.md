@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 77 EVM 어댑터 완료, Phase 78 진행 대기
+**Current focus:** v1.4 Phase 78 완료 (EVM ERC-20 토큰 전송 + getAssets multicall)
 
 ## Current Position
 
-Phase: 77 of 81 (EVM 어댑터)
+Phase: 78 of 81 (SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 정책)
 Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-02-12 — Completed 77-02-PLAN.md (EvmAdapter 17/20 methods + 34 tests)
+Last activity: 2026-02-12 — Completed 78-02-PLAN.md (EvmAdapter buildTokenTransfer + getAssets multicall)
 
-Progress: [█████░░░░░] 42% (5/12 plans)
+Progress: [███████░░░] 58% (7/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 175 plans, 488 reqs, 993 tests, 44,205 LOC
+**Cumulative:** 19 milestones, 75 phases, 177 plans, 488 reqs, 1037 tests, 44,205 LOC
 
 ## Accumulated Context
 
@@ -45,9 +45,18 @@ Recent decisions affecting current work:
 - Gas safety margin: (estimatedGas * 120n) / 100n bigint 산술 -- buildTransaction/estimateFee/buildApprove 일관 적용
 - ChainError 매핑: viem 에러 메시지 패턴 매칭 (mapError 헬퍼) -- typed error 미제공 대응
 - EVM chainId defaults to 1 (mainnet) when client.chain undefined
-- getAssets는 네이티브 ETH만 반환 (ERC-20 토큰은 Phase 78에서 ALLOWED_TOKENS 기반 multicall로 확장)
+- getAssets는 네이티브 ETH + ERC-20 토큰 반환 (setAllowedTokens 설정 시 multicall로 balanceOf 조회)
 - getTokenInfo multicall 부분 실패 시 defaults (18 decimals, empty strings)
 - buildApprove metadata에 tokenAddress/spender/approveAmount 포함 (audit 추적)
+- @solana-program/token 단일 패키지로 ATA + transferChecked 모두 제공 (별도 ATA 패키지 불필요)
+- Token-2022 감지: mint account owner 필드로 SPL_TOKEN_PROGRAM_ID vs TOKEN_2022_PROGRAM_ID 판별
+- getAssets 정렬: native first, balance descending, alphabetical tie-break
+- ALLOWED_TOKENS 기본 거부: TOKEN_TRANSFER 시 ALLOWED_TOKENS 정책 없으면 deny (정책 로드 필수)
+- tokenAddress? optional field -- 기존 호출자 영향 없음 (backward compatible)
+- setAllowedTokens() approach: IChainAdapter 인터페이스 변경 없이 어댑터 레벨 설정
+- buildTokenTransfer metadata에 tokenAddress/recipient/tokenAmount 포함 (audit 추적)
+- Zero-balance 토큰 getAssets 결과에서 제외 (양수 잔액만 반환)
+- Failed multicall 결과 silent skip (존재하지 않는 토큰 계약 graceful 처리)
 
 ### Blockers/Concerns
 
@@ -56,6 +65,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Completed 77-02-PLAN.md (Phase 77 complete)
+Last session: 2026-02-12T00:22:48Z
+Stopped at: Completed 78-02-PLAN.md
 Resume file: None

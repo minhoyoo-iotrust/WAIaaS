@@ -28,6 +28,12 @@ import {
   getAddressFromPublicKey,
 } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
+import {
+  findAssociatedTokenPda,
+  getCreateAssociatedTokenIdempotentInstruction,
+  getTransferCheckedInstruction,
+  TOKEN_PROGRAM_ADDRESS,
+} from '@solana-program/token';
 import type {
   IChainAdapter,
   ChainType,
@@ -47,7 +53,7 @@ import type {
   ApproveParams,
   BatchParams,
 } from '@waiaas/core';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, ChainError } from '@waiaas/core';
 
 /** Default SOL transfer fee in lamports (5000 = 0.000005 SOL). */
 const DEFAULT_SOL_TRANSFER_FEE = 5000n;
@@ -55,8 +61,14 @@ const DEFAULT_SOL_TRANSFER_FEE = 5000n;
 /** Default confirmation polling interval in milliseconds. */
 const CONFIRMATION_POLL_INTERVAL_MS = 2000;
 
-/** SPL Token Program ID (hard-coded to avoid @solana-program/token dependency). */
-const SPL_TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+/** SPL Token Program ID. */
+const SPL_TOKEN_PROGRAM_ID = TOKEN_PROGRAM_ADDRESS;
+
+/** Token-2022 (Token Extensions) Program ID. */
+const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+
+/** Rent-exempt minimum for an Associated Token Account (~0.00204 SOL). */
+const ATA_RENT_LAMPORTS = 2_039_280n;
 
 /** Re-usable transaction encoder (stateless, safe to share). */
 const txEncoder = getTransactionEncoder();
@@ -151,7 +163,7 @@ export class SolanaAdapter implements IChainAdapter {
       // 1. Get native SOL balance
       const balanceResult = await rpc.getBalance(address(addr)).send();
 
-      // 2. Get all SPL token accounts via getTokenAccountsByOwner
+      // 2. Get SPL Token Program accounts
       const tokenResult = await rpc
         .getTokenAccountsByOwner(
           address(addr),
@@ -160,7 +172,16 @@ export class SolanaAdapter implements IChainAdapter {
         )
         .send();
 
-      // 3. Build result array -- native SOL first
+      // 3. Get Token-2022 program accounts
+      const token2022Result = await rpc
+        .getTokenAccountsByOwner(
+          address(addr),
+          { programId: address(TOKEN_2022_PROGRAM_ID) },
+          { encoding: 'jsonParsed' },
+        )
+        .send();
+
+      // 4. Build result array -- native SOL first
       const assets: AssetInfo[] = [
         {
           mint: 'native',
@@ -172,7 +193,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       ];
 
-      // 4. Append non-zero SPL token accounts
+      // 5. Append non-zero SPL token accounts
       for (const item of tokenResult.value) {
         const parsed = (item.account.data as { parsed: { info: { mint: string; tokenAmount: { amount: string; decimals: number } } } }).parsed;
         const info = parsed.info;
@@ -190,6 +211,33 @@ export class SolanaAdapter implements IChainAdapter {
           isNative: false,
         });
       }
+
+      // 6. Append non-zero Token-2022 accounts
+      for (const item of token2022Result.value) {
+        const parsed = (item.account.data as { parsed: { info: { mint: string; tokenAmount: { amount: string; decimals: number } } } }).parsed;
+        const info = parsed.info;
+        const tokenBalance = BigInt(info.tokenAmount.amount);
+
+        if (tokenBalance === 0n) continue;
+
+        assets.push({
+          mint: info.mint,
+          symbol: '',
+          name: '',
+          balance: tokenBalance,
+          decimals: info.tokenAmount.decimals,
+          isNative: false,
+        });
+      }
+
+      // 7. Sort: native first, then by balance descending
+      assets.sort((a, b) => {
+        if (a.isNative) return -1;
+        if (b.isNative) return 1;
+        if (a.balance > b.balance) return -1;
+        if (a.balance < b.balance) return 1;
+        return 0;
+      });
 
       return assets;
     } catch (error) {
@@ -396,18 +444,249 @@ export class SolanaAdapter implements IChainAdapter {
 
   // -- Fee estimation (1) --
 
-  async estimateFee(_request: TransferRequest | TokenTransferParams): Promise<FeeEstimate> {
-    throw new Error('Not implemented: estimateFee will be implemented in Phase 78');
+  async estimateFee(request: TransferRequest | TokenTransferParams): Promise<FeeEstimate> {
+    this.ensureConnected();
+    try {
+      // Check if this is a token transfer (has 'token' field)
+      if ('token' in request) {
+        const tokenRequest = request as TokenTransferParams;
+        const rpc = this.getRpc();
+
+        // Compute destination ATA and check if it exists
+        const mintAddr = address(tokenRequest.token.address);
+        const toAddr = address(tokenRequest.to);
+
+        // Determine token program by querying mint account owner
+        const mintAccountInfo = await rpc
+          .getAccountInfo(mintAddr, { encoding: 'base64' })
+          .send();
+
+        let tokenProgramId: string;
+        if (!mintAccountInfo.value) {
+          throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+            message: `Token mint not found: ${tokenRequest.token.address}`,
+          });
+        }
+        tokenProgramId = String(mintAccountInfo.value.owner);
+
+        // Compute destination ATA address
+        const [destinationAta] = await findAssociatedTokenPda({
+          owner: toAddr,
+          tokenProgram: address(tokenProgramId),
+          mint: mintAddr,
+        });
+
+        // Check if destination ATA exists
+        const ataAccountInfo = await rpc
+          .getAccountInfo(destinationAta, { encoding: 'base64' })
+          .send();
+
+        const needCreateAta = !ataAccountInfo.value;
+        const fee = DEFAULT_SOL_TRANSFER_FEE + (needCreateAta ? ATA_RENT_LAMPORTS : 0n);
+
+        return {
+          fee,
+          needsAtaCreation: needCreateAta,
+          ataRentCost: needCreateAta ? ATA_RENT_LAMPORTS : undefined,
+        };
+      }
+
+      // Native SOL transfer
+      return { fee: DEFAULT_SOL_TRANSFER_FEE };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to estimate fee: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
   }
 
   // -- Token operations (2) --
 
-  async buildTokenTransfer(_request: TokenTransferParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildTokenTransfer will be implemented in Phase 78');
+  async buildTokenTransfer(request: TokenTransferParams): Promise<UnsignedTransaction> {
+    const rpc = this.getRpc();
+    try {
+      const from = address(request.from);
+      const to = address(request.to);
+      const mintAddr = address(request.token.address);
+
+      // Step 1: Query mint account to determine token program
+      const mintAccountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!mintAccountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `Token mint not found: ${request.token.address}`,
+        });
+      }
+
+      const mintOwner = String(mintAccountInfo.value.owner);
+      let tokenProgramId: string;
+
+      if (mintOwner === SPL_TOKEN_PROGRAM_ID) {
+        tokenProgramId = SPL_TOKEN_PROGRAM_ID;
+      } else if (mintOwner === TOKEN_2022_PROGRAM_ID) {
+        tokenProgramId = TOKEN_2022_PROGRAM_ID;
+      } else {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Invalid token mint: owner is not a token program',
+        });
+      }
+
+      // Step 2: Compute source and destination ATA addresses
+      const [sourceAta] = await findAssociatedTokenPda({
+        owner: from,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      const [destinationAta] = await findAssociatedTokenPda({
+        owner: to,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      // Step 3: Check if destination ATA exists
+      const destAtaInfo = await rpc
+        .getAccountInfo(destinationAta, { encoding: 'base64' })
+        .send();
+
+      const needCreateAta = !destAtaInfo.value;
+
+      // Step 4: Get latest blockhash
+      const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+
+      // Step 5: Build transaction message
+      const fromSigner = createNoopSigner(from);
+
+      // Collect instructions: optionally ATA creation + transferChecked
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const instructions: any[] = [];
+
+      if (needCreateAta) {
+        instructions.push(
+          getCreateAssociatedTokenIdempotentInstruction({
+            payer: fromSigner,
+            ata: destinationAta,
+            owner: to,
+            mint: mintAddr,
+            tokenProgram: address(tokenProgramId),
+          }),
+        );
+      }
+
+      instructions.push(
+        getTransferCheckedInstruction(
+          {
+            source: sourceAta,
+            mint: mintAddr,
+            destination: destinationAta,
+            authority: fromSigner,
+            amount: request.amount,
+            decimals: request.token.decimals,
+          },
+          { programAddress: address(tokenProgramId) },
+        ),
+      );
+
+      // Build transaction message in a single pipe (avoids TS brand issues with reassignment)
+      let txMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(from, tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: blockhashInfo.blockhash,
+              lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
+            },
+            tx,
+          ),
+      );
+
+      for (const ix of instructions) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        txMessage = appendTransactionMessageInstruction(ix, txMessage) as unknown as typeof txMessage;
+      }
+
+      // Step 6: Compile and encode
+      const compiled = compileTransaction(txMessage);
+      const serialized = new Uint8Array(txEncoder.encode(compiled));
+
+      // Estimated fee: base fee + ATA creation rent if needed
+      const estimatedFee = DEFAULT_SOL_TRANSFER_FEE + (needCreateAta ? ATA_RENT_LAMPORTS : 0n);
+
+      return {
+        chain: 'solana',
+        serialized,
+        estimatedFee,
+        expiresAt: new Date(Date.now() + 60_000),
+        metadata: {
+          blockhash: blockhashInfo.blockhash,
+          lastValidBlockHeight: Number(blockhashInfo.lastValidBlockHeight),
+          version: 0,
+          tokenProgram: tokenProgramId,
+          needCreateAta,
+          token: request.token,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to build token transfer: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
   }
 
-  async getTokenInfo(_tokenAddress: string): Promise<TokenInfo> {
-    throw new Error('Not implemented: getTokenInfo will be implemented in Phase 78');
+  async getTokenInfo(tokenAddress: string): Promise<TokenInfo> {
+    const rpc = this.getRpc();
+    try {
+      const mintAddr = address(tokenAddress);
+      const accountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!accountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `Token mint not found: ${tokenAddress}`,
+        });
+      }
+
+      // Extract decimals from raw mint data at offset 44 (1 byte uint8)
+      // SPL Token Mint layout: mintAuthorityOption(4) + mintAuthority(32) + supply(8) + decimals(1)
+      // Offset: 4 + 32 + 8 = 44
+      const rawData = accountInfo.value.data;
+      let decimals = 0;
+
+      if (Array.isArray(rawData) && rawData.length >= 2) {
+        // base64 encoded data: [base64string, encoding]
+        const decoded = Buffer.from(rawData[0] as string, 'base64');
+        if (decoded.length >= 45) {
+          decimals = decoded[44]!;
+        }
+      }
+
+      const programId = String(accountInfo.value.owner);
+
+      return {
+        address: tokenAddress,
+        symbol: '',
+        name: '',
+        decimals,
+        programId,
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to get token info: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
   }
 
   // -- Contract operations (2) --
@@ -428,8 +707,9 @@ export class SolanaAdapter implements IChainAdapter {
 
   // -- Utility operations (3) --
 
-  async getTransactionFee(_tx: UnsignedTransaction): Promise<bigint> {
-    throw new Error('Not implemented: getTransactionFee will be implemented in Phase 78');
+  async getTransactionFee(tx: UnsignedTransaction): Promise<bigint> {
+    // Solana fees are known at build time (estimatedFee is set during build)
+    return tx.estimatedFee;
   }
 
   async getCurrentNonce(_address: string): Promise<number> {

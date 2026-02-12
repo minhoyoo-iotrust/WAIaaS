@@ -2,13 +2,15 @@
  * DatabasePolicyEngine - v1.2 DB-backed policy engine.
  *
  * Evaluates transactions against policies stored in the policies table.
- * Supports SPENDING_LIMIT (4-tier classification) and WHITELIST (address filtering).
+ * Supports SPENDING_LIMIT (4-tier classification), WHITELIST (address filtering),
+ * and ALLOWED_TOKENS (token transfer whitelist, default deny).
  *
  * Algorithm:
  * 1. Load enabled policies for agent (agent-specific + global), ORDER BY priority DESC
  * 2. If no policies found, return INSTANT passthrough (Phase 7 compat)
  * 3. Resolve overrides: agent-specific policies override global policies of same type
  * 4. Evaluate WHITELIST: deny if toAddress not in allowed_addresses
+ * 4b. Evaluate ALLOWED_TOKENS: deny TOKEN_TRANSFER if no policy or token not whitelisted
  * 5. Evaluate SPENDING_LIMIT: classify amount into INSTANT/NOTIFY/DELAY/APPROVAL
  *
  * TOCTOU Prevention (evaluateAndReserve):
@@ -41,6 +43,10 @@ interface WhitelistRules {
   allowed_addresses: string[];
 }
 
+interface AllowedTokensRules {
+  tokens: Array<{ address: string }>;
+}
+
 interface PolicyRow {
   id: string;
   agentId: string | null;
@@ -50,12 +56,22 @@ interface PolicyRow {
   enabled: boolean | null;
 }
 
+/** Transaction parameter for policy evaluation. */
+interface TransactionParam {
+  type: string;
+  amount: string;
+  toAddress: string;
+  chain: string;
+  /** Token address for ALLOWED_TOKENS evaluation (TOKEN_TRANSFER only). */
+  tokenAddress?: string;
+}
+
 // ---------------------------------------------------------------------------
 // DatabasePolicyEngine
 // ---------------------------------------------------------------------------
 
 /**
- * DB-backed policy engine with SPENDING_LIMIT 4-tier and WHITELIST evaluation.
+ * DB-backed policy engine with SPENDING_LIMIT 4-tier, WHITELIST, and ALLOWED_TOKENS evaluation.
  *
  * Constructor takes a Drizzle DB instance typed with the full schema,
  * and optionally a raw better-sqlite3 Database instance for BEGIN IMMEDIATE transactions.
@@ -75,12 +91,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    */
   async evaluate(
     agentId: string,
-    transaction: {
-      type: string;
-      amount: string;
-      toAddress: string;
-      chain: string;
-    },
+    transaction: TransactionParam,
   ): Promise<PolicyEvaluation> {
     // Step 1: Load enabled policies (agent-specific + global)
     const rows = await this.db
@@ -107,6 +118,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
     if (whitelistResult !== null) {
       return whitelistResult;
+    }
+
+    // Step 4b: Evaluate ALLOWED_TOKENS (token transfer whitelist)
+    const allowedTokensResult = this.evaluateAllowedTokens(resolved, transaction);
+    if (allowedTokensResult !== null) {
+      return allowedTokensResult;
     }
 
     // Step 5: Evaluate SPENDING_LIMIT (tier classification)
@@ -143,12 +160,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    */
   evaluateAndReserve(
     agentId: string,
-    transaction: {
-      type: string;
-      amount: string;
-      toAddress: string;
-      chain: string;
-    },
+    transaction: TransactionParam,
     txId: string,
   ): PolicyEvaluation {
     if (!this.sqlite) {
@@ -182,6 +194,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
       if (whitelistResult !== null) {
         return whitelistResult;
+      }
+
+      // Step 4b: Evaluate ALLOWED_TOKENS (token transfer whitelist)
+      const allowedTokensResult = this.evaluateAllowedTokens(resolved, transaction);
+      if (allowedTokensResult !== null) {
+        return allowedTokensResult;
       }
 
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
@@ -327,6 +345,70 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: ALLOWED_TOKENS evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate ALLOWED_TOKENS policy.
+   *
+   * Logic:
+   * - Only applies to TOKEN_TRANSFER transaction type
+   * - If transaction type is TOKEN_TRANSFER and no ALLOWED_TOKENS policy exists:
+   *   -> deny with reason 'Token transfer not allowed: no ALLOWED_TOKENS policy configured'
+   * - If ALLOWED_TOKENS policy exists, check if transaction's token address is in rules.tokens[].address:
+   *   -> If found: return null (continue to next evaluation)
+   *   -> If not found: deny with reason 'Token not in allowed list: {tokenAddress}'
+   * - For non-TOKEN_TRANSFER types: return null (not applicable)
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
+   */
+  private evaluateAllowedTokens(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only evaluate for TOKEN_TRANSFER transactions
+    if (transaction.type !== 'TOKEN_TRANSFER') return null;
+
+    const allowedTokensPolicy = resolved.find((p) => p.type === 'ALLOWED_TOKENS');
+
+    // No ALLOWED_TOKENS policy -> deny token transfers (default deny)
+    if (!allowedTokensPolicy) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Token transfer not allowed: no ALLOWED_TOKENS policy configured',
+      };
+    }
+
+    // Parse rules.tokens array
+    const rules: AllowedTokensRules = JSON.parse(allowedTokensPolicy.rules);
+    const tokenAddress = transaction.tokenAddress;
+
+    if (!tokenAddress) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Token transfer missing token address',
+      };
+    }
+
+    // Check if token is in allowed list (case-insensitive comparison for EVM addresses)
+    const isAllowed = rules.tokens.some(
+      (t) => t.address.toLowerCase() === tokenAddress.toLowerCase(),
+    );
+
+    if (!isAllowed) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Token not in allowed list: ${tokenAddress}`,
+      };
+    }
+
+    return null; // Token is allowed, continue evaluation
   }
 
   // -------------------------------------------------------------------------

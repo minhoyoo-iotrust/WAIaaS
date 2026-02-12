@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@solana-program/system": "^0.11.0",
+    "@solana-program/token": "^0.10.0",
     "@solana/kit": "^6.0.1",
     "@waiaas/core": "workspace:*"
   }
