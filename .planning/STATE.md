@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 shipped — 다음 마일스톤 준비
+**Current focus:** v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE
 
 ## Current Position
 
-Phase: 81 of 81 (all phases complete)
-Plan: N/A (milestone complete)
-Status: v1.4 Milestone shipped — archived to milestones/
-Last activity: 2026-02-12 — v1.4 milestone archived
-
-Progress: [████████████] 100% — milestone shipped
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-12 — Milestone v1.4.1 started
 
 ## Performance Metrics
 
@@ -34,5 +32,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: v1.4 milestone archived
+Stopped at: Milestone v1.4.1 requirements definition
 Resume file: None

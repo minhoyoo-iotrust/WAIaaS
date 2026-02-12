@@ -24,7 +24,7 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송
 - ✅ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 — shipped 2026-02-12
 - ✅ v1.4 토큰 + 컨트랙트 확장 — shipped 2026-02-12 (1,126 tests, 51,750 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
-- v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, facilitator 연동)
+- v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
@@ -176,13 +176,25 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+#### Current Milestone: v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE
+
+**Goal:** EVM 체인용 에이전트 생성(secp256k1)이 동작하고, 어댑터 팩토리로 멀티체인 운용이 가능하며, REST API가 5가지 트랜잭션 타입을 수용하고, Owner Auth SIWE가 지원되는 상태
+
+**Target features:**
+- Keystore 멀티커브 (secp256k1 + EIP-55 주소 파생)
+- AdapterPool (lazy init, agent.chain 기반 어댑터 선택)
+- Config EVM RPC Tier 1 (5체인 10네트워크) + evm_default_network
+- EVM_CHAIN_MAP (viem Chain + nativeSymbol/nativeName)
+- DB 마이그레이션 v2 (agents CHECK 확장, managesOwnTransaction)
+- REST API 5-type 통합 (loose passthrough + stage1Validate + oneOf OpenAPI)
+- MCP send_token TOKEN_TRANSFER + TS/Python SDK 확장
+- Owner Auth SIWE (viem/siwe, chain 분기) + chain별 주소 형식 검증
 
 ## Next Milestone Goals
 
-- v1.4.1 EVM 지갑 인프라 — secp256k1 키 생성, 어댑터 팩토리, Config EVM RPC
+- v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 — secp256k1 키 생성, 어댑터 팩토리, Config EVM RPC, 5-type 트랜잭션 엔드포인트, MCP/SDK 토큰 전송
 - v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
-- v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, facilitator 연동
+- v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성
 - v1.6 운영 인프라 + 잔액 모니터링
 
 ### 범위 외
