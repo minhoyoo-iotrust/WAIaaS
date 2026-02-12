@@ -273,8 +273,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 81-01: Stage 1 discriminatedUnion 파싱 + Stage 3 type별 정책 필터링
-- [ ] 81-02: Stage 5 완전 의사코드 구현 (CONC-01) + type별 adapter 라우팅 + 통합 테스트
+- [ ] 81-01-PLAN.md — Stage 1 discriminatedUnion 5-type 파싱 + Stage 3 type별 정책 필터링 (Wave 1, TDD)
+- [ ] 81-02-PLAN.md — Stage 5 CONC-01 완전 구현 + buildByType type별 adapter 라우팅 + ChainError 재시도 (Wave 2, TDD)
 
 ## Progress
 
