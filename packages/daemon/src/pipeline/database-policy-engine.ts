@@ -5,7 +5,10 @@
  * Supports SPENDING_LIMIT (4-tier classification), WHITELIST (address filtering),
  * ALLOWED_TOKENS (token transfer whitelist, default deny),
  * CONTRACT_WHITELIST (contract call whitelist, default deny),
- * and METHOD_WHITELIST (optional method-level restriction for contract calls).
+ * METHOD_WHITELIST (optional method-level restriction for contract calls),
+ * APPROVED_SPENDERS (approve spender whitelist, default deny),
+ * APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap),
+ * and APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions).
  *
  * Algorithm:
  * 1. Load enabled policies for agent (agent-specific + global), ORDER BY priority DESC
@@ -15,6 +18,9 @@
  * 4b. Evaluate ALLOWED_TOKENS: deny TOKEN_TRANSFER if no policy or token not whitelisted
  * 4c. Evaluate CONTRACT_WHITELIST: deny CONTRACT_CALL if no policy or contract not whitelisted
  * 4d. Evaluate METHOD_WHITELIST: deny CONTRACT_CALL if method selector not whitelisted (optional)
+ * 4e. Evaluate APPROVED_SPENDERS: deny APPROVE if no policy or spender not approved
+ * 4f. Evaluate APPROVE_AMOUNT_LIMIT: deny APPROVE if unlimited or exceeds max amount
+ * 4g. Evaluate APPROVE_TIER_OVERRIDE: force tier for APPROVE (defaults to APPROVAL, skips SPENDING_LIMIT)
  * 5. Evaluate SPENDING_LIMIT: classify amount into INSTANT/NOTIFY/DELAY/APPROVAL
  *
  * TOCTOU Prevention (evaluateAndReserve):
@@ -59,6 +65,22 @@ interface MethodWhitelistRules {
   methods: Array<{ contractAddress: string; selectors: string[] }>;
 }
 
+interface ApprovedSpendersRules {
+  spenders: Array<{ address: string; name?: string; maxAmount?: string }>;
+}
+
+interface ApproveAmountLimitRules {
+  maxAmount?: string;
+  blockUnlimited: boolean;
+}
+
+interface ApproveTierOverrideRules {
+  tier: string; // PolicyTier value
+}
+
+/** Threshold for detecting "unlimited" approve amounts. */
+const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
+
 interface PolicyRow {
   id: string;
   agentId: string | null;
@@ -80,6 +102,10 @@ interface TransactionParam {
   contractAddress?: string;
   /** Function selector (4-byte hex, e.g. '0x12345678') for METHOD_WHITELIST evaluation (CONTRACT_CALL only). */
   selector?: string;
+  /** Spender address for APPROVED_SPENDERS evaluation (APPROVE only). */
+  spenderAddress?: string;
+  /** Approve amount in raw units for APPROVE_AMOUNT_LIMIT evaluation (APPROVE only). */
+  approveAmount?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +114,8 @@ interface TransactionParam {
 
 /**
  * DB-backed policy engine with SPENDING_LIMIT 4-tier, WHITELIST, ALLOWED_TOKENS,
- * CONTRACT_WHITELIST, and METHOD_WHITELIST evaluation.
+ * CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT,
+ * and APPROVE_TIER_OVERRIDE evaluation.
  *
  * Constructor takes a Drizzle DB instance typed with the full schema,
  * and optionally a raw better-sqlite3 Database instance for BEGIN IMMEDIATE transactions.
@@ -153,6 +180,24 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const methodWhitelistResult = this.evaluateMethodWhitelist(resolved, transaction);
     if (methodWhitelistResult !== null) {
       return methodWhitelistResult;
+    }
+
+    // Step 4e: Evaluate APPROVED_SPENDERS (approve spender whitelist)
+    const approvedSpendersResult = this.evaluateApprovedSpenders(resolved, transaction);
+    if (approvedSpendersResult !== null) {
+      return approvedSpendersResult;
+    }
+
+    // Step 4f: Evaluate APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap)
+    const approveAmountResult = this.evaluateApproveAmountLimit(resolved, transaction);
+    if (approveAmountResult !== null) {
+      return approveAmountResult;
+    }
+
+    // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
+    const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
+    if (approveTierResult !== null) {
+      return approveTierResult; // FINAL result, skips SPENDING_LIMIT
     }
 
     // Step 5: Evaluate SPENDING_LIMIT (tier classification)
@@ -241,6 +286,24 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       const methodWhitelistResult = this.evaluateMethodWhitelist(resolved, transaction);
       if (methodWhitelistResult !== null) {
         return methodWhitelistResult;
+      }
+
+      // Step 4e: Evaluate APPROVED_SPENDERS (approve spender whitelist)
+      const approvedSpendersResult = this.evaluateApprovedSpenders(resolved, transaction);
+      if (approvedSpendersResult !== null) {
+        return approvedSpendersResult;
+      }
+
+      // Step 4f: Evaluate APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap)
+      const approveAmountResult = this.evaluateApproveAmountLimit(resolved, transaction);
+      if (approveAmountResult !== null) {
+        return approveAmountResult;
+      }
+
+      // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
+      const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
+      if (approveTierResult !== null) {
+        return approveTierResult; // FINAL result, skips SPENDING_LIMIT
       }
 
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
@@ -573,6 +636,169 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     return null; // Method is whitelisted, continue evaluation
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: APPROVED_SPENDERS evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate APPROVED_SPENDERS policy.
+   *
+   * Logic:
+   * - Only applies to APPROVE transaction type
+   * - If transaction type is APPROVE and no APPROVED_SPENDERS policy exists:
+   *   -> deny with reason 'Token approvals disabled: no APPROVED_SPENDERS policy configured'
+   * - If APPROVED_SPENDERS policy exists, check if transaction's spenderAddress is in rules.spenders[]:
+   *   -> If found: return null (continue evaluation)
+   *   -> If not found: deny with reason 'Spender not in approved list: {address}'
+   * - Case-insensitive comparison (EVM addresses)
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
+   */
+  private evaluateApprovedSpenders(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only evaluate for APPROVE transactions
+    if (transaction.type !== 'APPROVE') return null;
+
+    const approvedSpendersPolicy = resolved.find((p) => p.type === 'APPROVED_SPENDERS');
+
+    // No APPROVED_SPENDERS policy -> deny approvals (default deny)
+    if (!approvedSpendersPolicy) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Token approvals disabled: no APPROVED_SPENDERS policy configured',
+      };
+    }
+
+    // Parse rules.spenders array
+    const rules: ApprovedSpendersRules = JSON.parse(approvedSpendersPolicy.rules);
+    const spenderAddress = transaction.spenderAddress;
+
+    if (!spenderAddress) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Approve missing spender address',
+      };
+    }
+
+    // Check if spender is in approved list (case-insensitive for EVM addresses)
+    const isApproved = rules.spenders.some(
+      (s) => s.address.toLowerCase() === spenderAddress.toLowerCase(),
+    );
+
+    if (!isApproved) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Spender not in approved list: ${spenderAddress}`,
+      };
+    }
+
+    return null; // Spender is approved, continue evaluation
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: APPROVE_AMOUNT_LIMIT evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate APPROVE_AMOUNT_LIMIT policy.
+   *
+   * Logic:
+   * - Only applies to APPROVE transaction type
+   * - Checks for unlimited approve amounts (>= UNLIMITED_THRESHOLD)
+   * - Checks for amount cap (maxAmount)
+   * - If no policy exists: default block_unlimited=true (block unlimited approvals)
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
+   */
+  private evaluateApproveAmountLimit(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only evaluate for APPROVE transactions
+    if (transaction.type !== 'APPROVE') return null;
+
+    const approveAmount = transaction.approveAmount;
+    if (!approveAmount) return null; // No amount to check
+
+    const amount = BigInt(approveAmount);
+
+    const approveAmountPolicy = resolved.find((p) => p.type === 'APPROVE_AMOUNT_LIMIT');
+
+    if (!approveAmountPolicy) {
+      // No policy: default block unlimited
+      if (amount >= UNLIMITED_THRESHOLD) {
+        return {
+          allowed: false,
+          tier: 'INSTANT',
+          reason: 'Unlimited token approval is blocked',
+        };
+      }
+      return null;
+    }
+
+    // Parse rules
+    const rules: ApproveAmountLimitRules = JSON.parse(approveAmountPolicy.rules);
+
+    // Check unlimited block
+    if (rules.blockUnlimited && amount >= UNLIMITED_THRESHOLD) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Unlimited token approval is blocked',
+      };
+    }
+
+    // Check maxAmount cap
+    if (rules.maxAmount && amount > BigInt(rules.maxAmount)) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'Approve amount exceeds limit',
+      };
+    }
+
+    return null; // Amount within limits, continue evaluation
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: APPROVE_TIER_OVERRIDE evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate APPROVE_TIER_OVERRIDE policy.
+   *
+   * Logic:
+   * - Only applies to APPROVE transaction type
+   * - If no APPROVE_TIER_OVERRIDE policy exists: return APPROVAL tier (default: Owner approval required)
+   * - If policy exists: return configured tier
+   * - This is a FINAL result -- skips SPENDING_LIMIT entirely for APPROVE transactions
+   *
+   * Returns PolicyEvaluation (always returns result for APPROVE type, null for others).
+   */
+  private evaluateApproveTierOverride(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only evaluate for APPROVE transactions
+    if (transaction.type !== 'APPROVE') return null;
+
+    const approveTierPolicy = resolved.find((p) => p.type === 'APPROVE_TIER_OVERRIDE');
+
+    if (!approveTierPolicy) {
+      // Default: APPROVAL tier (Owner approval required for approvals)
+      return { allowed: true, tier: 'APPROVAL' as PolicyTier };
+    }
+
+    // Parse rules
+    const rules: ApproveTierOverrideRules = JSON.parse(approveTierPolicy.rules);
+    return { allowed: true, tier: rules.tier as PolicyTier };
   }
 
   // -------------------------------------------------------------------------

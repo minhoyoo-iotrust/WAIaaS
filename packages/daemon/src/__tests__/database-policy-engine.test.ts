@@ -90,6 +90,23 @@ function contractCallTx(opts: {
   };
 }
 
+function approveTx(opts: {
+  amount?: string;
+  spenderAddress: string;
+  approveAmount?: string;
+  toAddress?: string;
+  chain?: string;
+}) {
+  return {
+    type: 'APPROVE',
+    amount: opts.amount ?? '0',
+    toAddress: opts.toAddress ?? opts.spenderAddress,
+    chain: opts.chain ?? 'ethereum',
+    spenderAddress: opts.spenderAddress,
+    approveAmount: opts.approveAmount ?? '1000000',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
@@ -880,5 +897,327 @@ describe('DatabasePolicyEngine - CONTRACT_WHITELIST + METHOD_WHITELIST', () => {
     );
 
     expect(result.allowed).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE tests (13 tests)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE', () => {
+  const UNISWAP_ROUTER = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
+  const AAVE_POOL = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';
+
+  it('should deny APPROVE when no APPROVED_SPENDERS policy exists (APPROVE_DISABLED)', async () => {
+    // Need at least one policy so we don't get the "no policies" passthrough
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '100000000000',
+        notify_max: '200000000000',
+        delay_max: '500000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no APPROVED_SPENDERS policy configured');
+  });
+
+  it('should allow APPROVE when spender is in APPROVED_SPENDERS list', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [
+          { address: UNISWAP_ROUTER, name: 'Uniswap V2 Router' },
+          { address: AAVE_POOL, name: 'Aave V3 Pool' },
+        ],
+      }),
+      priority: 15,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
+    );
+
+    // Should pass APPROVED_SPENDERS and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL'); // default tier for APPROVE
+  });
+
+  it('should deny APPROVE when spender is NOT in APPROVED_SPENDERS list (SPENDER_NOT_APPROVED)', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER, name: 'Uniswap V2 Router' }],
+      }),
+      priority: 15,
+    });
+
+    const unknownSpender = '0x1111111111111111111111111111111111111111';
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: unknownSpender }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Spender not in approved list');
+    expect(result.reason).toContain(unknownSpender);
+  });
+
+  it('should deny APPROVE with large amount (~MAX_UINT256) + no APPROVE_AMOUNT_LIMIT (default block)', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    // MAX_UINT256 = 2^256 - 1
+    const maxUint256 = (2n ** 256n - 1n).toString();
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Unlimited token approval is blocked');
+  });
+
+  it('should deny APPROVE with APPROVE_AMOUNT_LIMIT (blockUnlimited=true) + unlimited amount (UNLIMITED_APPROVE_BLOCKED)', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_AMOUNT_LIMIT',
+      rules: JSON.stringify({
+        blockUnlimited: true,
+        maxAmount: '10000000',
+      }),
+      priority: 14,
+    });
+
+    const maxUint256 = (2n ** 256n - 1n).toString();
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Unlimited token approval is blocked');
+  });
+
+  it('should allow APPROVE with APPROVE_AMOUNT_LIMIT (blockUnlimited=false) + unlimited amount', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_AMOUNT_LIMIT',
+      rules: JSON.stringify({
+        blockUnlimited: false,
+      }),
+      priority: 14,
+    });
+
+    const maxUint256 = (2n ** 256n - 1n).toString();
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
+    );
+
+    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+
+  it('should deny APPROVE with APPROVE_AMOUNT_LIMIT (maxAmount=1000000) + amount=2000000 (APPROVE_AMOUNT_EXCEEDED)', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_AMOUNT_LIMIT',
+      rules: JSON.stringify({
+        blockUnlimited: true,
+        maxAmount: '1000000',
+      }),
+      priority: 14,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '2000000' }),
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Approve amount exceeds limit');
+  });
+
+  it('should allow APPROVE with APPROVE_AMOUNT_LIMIT (maxAmount=1000000) + amount=500000', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_AMOUNT_LIMIT',
+      rules: JSON.stringify({
+        blockUnlimited: true,
+        maxAmount: '1000000',
+      }),
+      priority: 14,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '500000' }),
+    );
+
+    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+
+  it('should default to APPROVAL tier with no APPROVE_TIER_OVERRIDE policy', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+
+  it('should use INSTANT tier with APPROVE_TIER_OVERRIDE (tier=INSTANT)', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'INSTANT' }),
+      priority: 14,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should use NOTIFY tier with APPROVE_TIER_OVERRIDE (tier=NOTIFY)', async () => {
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'NOTIFY' }),
+      priority: 14,
+    });
+
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('should NOT affect non-APPROVE types (TRANSFER passthrough)', async () => {
+    // Only approve-related policies
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER }],
+      }),
+      priority: 15,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_AMOUNT_LIMIT',
+      rules: JSON.stringify({
+        blockUnlimited: true,
+        maxAmount: '1000000',
+      }),
+      priority: 14,
+    });
+
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'INSTANT' }),
+      priority: 13,
+    });
+
+    // Native TRANSFER -> approve policies not applicable -> INSTANT passthrough
+    const result = await engine.evaluate(agentId, tx('1000000000'));
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('should match spender addresses case-insensitively (EVM hex compat)', async () => {
+    const mixedCaseSpender = '0x7a250D5630B4cF539739dF2C5dAcB4c659F2488D';
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: mixedCaseSpender.toLowerCase() }],
+      }),
+      priority: 15,
+    });
+
+    // Send with mixed-case spender address -> should still match
+    const result = await engine.evaluate(
+      agentId,
+      approveTx({ spenderAddress: mixedCaseSpender, approveAmount: '1000000' }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL'); // default tier
   });
 });
