@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 90 - 코어 타입 + 에러 코드 (v1.4.2 용어 변경)
+**Current focus:** Phase 91 - 데몬 API + JWT + Config (v1.4.2 용어 변경)
 
 ## Current Position
 
-Phase: 90 (2 of 6 in v1.4.2) — 코어 타입 + 에러 코드
-Plan: 02 of 02 complete
-Status: Phase Complete
-Last activity: 2026-02-13 — Plan 90-02 complete (i18n + tests wallet terminology)
+Phase: 91 (3 of 6 in v1.4.2) — 데몬 API + JWT + Config
+Plan: —
+Status: Ready to plan
+Last activity: 2026-02-13 — Phase 90 complete (7/7 verified, 137 core tests passing)
 
 Progress: [███░░░░░░░] 30%
 
@@ -60,5 +60,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 90-02-PLAN.md (i18n + tests wallet terminology -- Phase 90 complete)
+Stopped at: Phase 90 verified (7/7), ready to plan Phase 91
 Resume file: None
