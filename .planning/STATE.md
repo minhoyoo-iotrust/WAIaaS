@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 87 - Owner Auth SIWE
+**Current focus:** v1.4.1 Phase 87 complete - Owner Auth SIWE
 
 ## Current Position
 
 Phase: 87 (6 of 7 in v1.4.1) — Owner Auth SIWE
-Plan: 1 of 2 complete
-Status: Executing
-Last activity: 2026-02-12 — Plan 87-01 complete (verifySIWE + validateOwnerAddress, 14 tests)
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-02-12 — Plan 87-02 complete (owner-auth chain branching + setOwner validation, 9 new tests)
 
-Progress: [████████░░] 78% (5.5/7 phases in v1.4.1)
+Progress: [████████░░] 85% (6/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 86 phases, 193 plans, 533 reqs, 1,314+ tests, 52,800+ LOC
+**Cumulative:** 20 milestones, 87 phases, 195 plans, 533 reqs, 1,323+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 11 plans completed (Phases 82-86 done, 87-01 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 13 plans completed (Phases 82-87 done)
 
 *Updated after each plan completion*
 
@@ -73,6 +73,9 @@ Recent decisions affecting current work:
 - [87-01]: viem isAddress strict:true accepts all-lowercase -- manual mixed-case enforcement for EIP-55 security
 - [87-01]: decodeBase58 canonical location = address-validation.ts (owner-auth.ts imports in 87-02)
 - [87-01]: Pure function verification pattern: crypto as standalone testable modules separate from middleware
+- [87-02]: SIWE message base64-encoded in X-Owner-Message header (multi-line EIP-4361 invalid as raw HTTP headers)
+- [87-02]: setOwner stores normalized address (EIP-55 checksummed for EVM, as-is for Solana)
+- [87-02]: Chain branching via agent.chain: ethereum=SIWE, else=Ed25519 (default Solana path unchanged)
 
 ### Blockers/Concerns
 
@@ -82,5 +85,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 87-01-PLAN.md (verifySIWE + validateOwnerAddress)
+Stopped at: Completed 87-02-PLAN.md (owner-auth chain branching + setOwner validation)
 Resume file: None
