@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 78 완료 (EVM ERC-20 토큰 전송 + getAssets multicall)
+**Current focus:** v1.4 Phase 79 완료 (컨트랙트 호출 + 승인 관리)
 
 ## Current Position
 
-Phase: 78 of 81 (SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 정책)
+Phase: 79 of 81 (컨트랙트 호출 + 승인 관리)
 Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-02-12 — Completed 78-02-PLAN.md (EvmAdapter buildTokenTransfer + getAssets multicall)
+Last activity: 2026-02-12 — Completed 79-02-PLAN.md (buildApprove + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE)
 
-Progress: [███████░░░] 58% (7/12 plans)
+Progress: [█████████░] 75% (9/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 177 plans, 488 reqs, 1037 tests, 44,205 LOC
+**Cumulative:** 19 milestones, 75 phases, 179 plans, 488 reqs, 1074 tests, 44,205 LOC
 
 ## Accumulated Context
 
@@ -42,7 +42,7 @@ Recent decisions affecting current work:
 - ERC20_ABI uses `as const` for viem type inference -- abi parameter requires literal types
 - EvmAdapter에서 _rpcUrl 필드 제거 (noUnusedLocals strict) -- 필요시 재추가
 - buildBatch throws BATCH_NOT_SUPPORTED (EVM no native atomic batch)
-- Gas safety margin: (estimatedGas * 120n) / 100n bigint 산술 -- buildTransaction/estimateFee/buildApprove 일관 적용
+- Gas safety margin: (estimatedGas * 120n) / 100n bigint 산술 -- buildTransaction/estimateFee/buildApprove/buildContractCall 일관 적용
 - ChainError 매핑: viem 에러 메시지 패턴 매칭 (mapError 헬퍼) -- typed error 미제공 대응
 - EVM chainId defaults to 1 (mainnet) when client.chain undefined
 - getAssets는 네이티브 ETH + ERC-20 토큰 반환 (setAllowedTokens 설정 시 multicall로 balanceOf 조회)
@@ -57,6 +57,15 @@ Recent decisions affecting current work:
 - buildTokenTransfer metadata에 tokenAddress/recipient/tokenAmount 포함 (audit 추적)
 - Zero-balance 토큰 getAssets 결과에서 제외 (양수 잔액만 반환)
 - Failed multicall 결과 silent skip (존재하지 않는 토큰 계약 graceful 처리)
+- EVM calldata 검증: 0x prefix + 최소 8 hex chars (4-byte selector) 필수 -- INVALID_INSTRUCTION
+- Solana instructionData 이중 처리: Uint8Array (programmatic) 또는 base64 string (REST API)
+- CONTRACT_WHITELIST 기본 거부: CONTRACT_CALL 시 정책 없으면 deny (CONTRACT_CALL_DISABLED)
+- METHOD_WHITELIST 선택적: 정책 없으면 모든 메서드 허용 (컨트랙트별 엔트리 없으면 해당 컨트랙트 제한 없음)
+- 주소/셀렉터 대소문자 구분 없음 (EVM hex 주소 호환성)
+- APPROVED_SPENDERS 기본 거부: APPROVE 시 정책 없으면 deny (APPROVE_DISABLED)
+- UNLIMITED_THRESHOLD = (2^256 - 1) / 2 -- EVM MAX_UINT256 + Solana MAX_U64 통합 임계값
+- APPROVE_TIER_OVERRIDE 기본 APPROVAL tier (Owner 승인 필수), SPENDING_LIMIT 건너뜀
+- 대소문자 구분 없는 spender 주소 비교 (EVM hex 주소 호환성)
 
 ### Blockers/Concerns
 
@@ -65,6 +74,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12T00:22:48Z
-Stopped at: Completed 78-02-PLAN.md
+Last session: 2026-02-12T02:18:06Z
+Stopped at: Completed 79-02-PLAN.md
 Resume file: None

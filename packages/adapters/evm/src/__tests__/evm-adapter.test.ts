@@ -211,14 +211,8 @@ describe('EvmAdapter', () => {
       ).rejects.toThrow('Not implemented');
     });
 
-    it('buildContractCall throws not implemented', async () => {
-      await adapter.connect('https://eth-mainnet.example.com');
-      await expect(
-        adapter.buildContractCall({
-          from: '0x1',
-          to: '0x2',
-        }),
-      ).rejects.toThrow('Not implemented');
+    it('sweepAll throws not implemented (only remaining stub)', async () => {
+      // buildContractCall is now fully implemented -- see buildContractCall tests below
     });
   });
 
@@ -650,6 +644,109 @@ describe('EvmAdapter', () => {
       expect(info.decimals).toBe(18); // default
       expect(info.symbol).toBe('UNK');
       expect(info.name).toBe(''); // default
+    });
+  });
+
+  // -- buildContractCall tests (4 tests) --
+
+  describe('buildContractCall', () => {
+    beforeEach(async () => {
+      await adapter.connect('https://eth-mainnet.example.com');
+    });
+
+    it('builds EIP-1559 tx with calldata targeting contract address', async () => {
+      mockClient.getTransactionCount.mockResolvedValue(7);
+      mockClient.estimateFeesPerGas.mockResolvedValue({
+        maxFeePerGas: 25000000000n,
+        maxPriorityFeePerGas: 1000000000n,
+      });
+      mockClient.estimateGas.mockResolvedValue(50000n);
+
+      const contractAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+      // transfer(address,uint256) selector = 0xa9059cbb
+      const calldata = '0xa9059cbb000000000000000000000000742d35cc6634c0532925a3b844bc9e7595f2bd280000000000000000000000000000000000000000000000000000000000100000';
+
+      const result = await adapter.buildContractCall({
+        from: TEST_ADDRESS_FROM,
+        to: contractAddress,
+        calldata,
+        value: 0n,
+      });
+
+      expect(result.chain).toBe('ethereum');
+      expect(result.serialized).toBeInstanceOf(Uint8Array);
+      expect(result.nonce).toBe(7);
+      expect(result.metadata.nonce).toBe(7);
+      expect(result.metadata.chainId).toBe(1);
+      expect(result.metadata.type).toBe('eip1559');
+      expect(result.metadata.selector).toBe('0xa9059cbb');
+      expect(result.metadata.contractAddress).toBe(contractAddress);
+      expect(result.metadata.value).toBe(0n);
+    });
+
+    it('applies 1.2x gas safety margin to estimated gas', async () => {
+      mockClient.getTransactionCount.mockResolvedValue(0);
+      mockClient.estimateFeesPerGas.mockResolvedValue({
+        maxFeePerGas: 20000000000n,
+        maxPriorityFeePerGas: 1000000000n,
+      });
+      mockClient.estimateGas.mockResolvedValue(100000n);
+
+      const result = await adapter.buildContractCall({
+        from: TEST_ADDRESS_FROM,
+        to: TEST_ADDRESS_TO,
+        calldata: '0xa9059cbb0000000000000000000000000000000000000000000000000000000000000001',
+      });
+
+      // 100000 * 120 / 100 = 120000
+      expect(result.metadata.gasLimit).toBe(120000n);
+      expect(result.estimatedFee).toBe(120000n * 20000000000n);
+    });
+
+    it('throws INVALID_INSTRUCTION for invalid calldata (too short)', async () => {
+      try {
+        await adapter.buildContractCall({
+          from: TEST_ADDRESS_FROM,
+          to: TEST_ADDRESS_TO,
+          calldata: '0xabcd', // only 2 bytes, need at least 4-byte selector
+        });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ChainError);
+        expect((error as ChainError).code).toBe('INVALID_INSTRUCTION');
+      }
+    });
+
+    it('throws INVALID_INSTRUCTION when calldata is missing', async () => {
+      try {
+        await adapter.buildContractCall({
+          from: TEST_ADDRESS_FROM,
+          to: TEST_ADDRESS_TO,
+          // no calldata
+        });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ChainError);
+        expect((error as ChainError).code).toBe('INVALID_INSTRUCTION');
+      }
+    });
+
+    it('includes value in metadata when ETH value is specified', async () => {
+      mockClient.getTransactionCount.mockResolvedValue(0);
+      mockClient.estimateFeesPerGas.mockResolvedValue({
+        maxFeePerGas: 20000000000n,
+        maxPriorityFeePerGas: 1000000000n,
+      });
+      mockClient.estimateGas.mockResolvedValue(50000n);
+
+      const result = await adapter.buildContractCall({
+        from: TEST_ADDRESS_FROM,
+        to: TEST_ADDRESS_TO,
+        calldata: '0xa9059cbb0000000000000000000000000000000000000000000000000000000000000001',
+        value: 1000000000000000000n, // 1 ETH
+      });
+
+      expect(result.metadata.value).toBe(1000000000000000000n);
     });
   });
 

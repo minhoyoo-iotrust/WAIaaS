@@ -242,21 +242,15 @@ Plans:
 - [x] 78-01-PLAN.md — SolanaAdapter buildTokenTransfer + Token-2022 분기 + getTokenInfo/estimateFee/getTransactionFee + getAssets Token-2022 + ALLOWED_TOKENS 정책 평가 (Wave 1, TDD)
 - [x] 78-02-PLAN.md — EvmAdapter buildTokenTransfer ERC-20 + getAssets ERC-20 multicall 확장 (Wave 2, TDD)
 
-#### Phase 79: 컨트랙트 호출 + Approve 관리
+#### Phase 79: 컨트랙트 호출 + Approve 관리 — completed 2026-02-12
 **Goal**: 에이전트가 화이트리스트된 스마트 컨트랙트를 호출하고, Approve를 요청할 수 있으며, CONTRACT_WHITELIST/METHOD_WHITELIST/APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT 정책이 기본 거부 원칙으로 동작한다
 **Depends on**: Phase 76 (discriminatedUnion CONTRACT_CALL/APPROVE type, PolicyType), Phase 77 (EVM buildContractCall/buildApprove)
 **Requirements**: CONTRACT-01, CONTRACT-02, CONTRACT-03, CONTRACT-04, APPROVE-01, APPROVE-02, APPROVE-03, APPROVE-04
-**Success Criteria** (what must be TRUE):
-  1. 에이전트가 CONTRACT_WHITELIST에 등록된 컨트랙트를 호출할 수 있고(EVM calldata + Solana programId), 미등록 컨트랙트는 거부된다
-  2. METHOD_WHITELIST로 컨트랙트별 허용 메서드를 제한할 수 있다
-  3. CONTRACT_WHITELIST 미설정 에이전트는 모든 컨트랙트 호출이 CONTRACT_DISABLED로 차단된다
-  4. 에이전트가 APPROVED_SPENDERS에 등록된 spender에게 토큰 Approve를 요청할 수 있고, 미등록 spender는 거부된다
-  5. 무제한 금액 Approve가 기본 차단(UNLIMITED_APPROVE_BLOCKED)되고, APPROVE_TIER_OVERRIDE 미설정 시 기본 APPROVAL 티어가 강제된다
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 79-01-PLAN.md — buildContractCall (EVM + Solana) + CONTRACT_WHITELIST + METHOD_WHITELIST 정책 평가 (Wave 1, TDD)
-- [ ] 79-02-PLAN.md — SolanaAdapter buildApprove (SPL ApproveChecked) + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE 정책 평가 (Wave 2, TDD)
+- [x] 79-01-PLAN.md — buildContractCall (EVM + Solana) + CONTRACT_WHITELIST + METHOD_WHITELIST 정책 평가 (Wave 1, TDD)
+- [x] 79-02-PLAN.md — SolanaAdapter buildApprove (SPL ApproveChecked) + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE 정책 평가 (Wave 2, TDD)
 
 #### Phase 80: 배치 트랜잭션
 **Goal**: 에이전트가 Solana에서 원자적 배치 트랜잭션을 실행하고, 2단계 합산 정책으로 소액 분할 우회를 방지하며, 부모-자식 DB 구조로 배치 상태를 추적한다
@@ -270,7 +264,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 80-01: BatchRequest + Solana 원자적 빌드 + 2단계 합산 정책 + 부모-자식 DB
+- [ ] 80-01-PLAN.md — SolanaAdapter.buildBatch 원자적 빌드 + DatabasePolicyEngine.evaluateBatch 2단계 합산 정책
 
 #### Phase 81: 파이프라인 통합 + Stage 5
 **Goal**: 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)이 6-stage 파이프라인을 완주하고, Stage 5가 ChainError 카테고리별 재시도/실패 분기를 수행한다
@@ -309,11 +303,11 @@ Plans:
 | v1.3.2 Admin Web UI 구현 | 66-70 | 10 | Complete | 2026-02-11 |
 | v1.3.3 MCP 다중 에이전트 | 71-72 | 2 | Complete | 2026-02-11 |
 | v1.3.4 알림 트리거 + 어드민 | 73-75 | 5 | Complete | 2026-02-12 |
-| **v1.4 토큰 + 컨트랙트** | **76-81** | **7/12** | **In progress** | - |
+| **v1.4 토큰 + 컨트랙트** | **76-81** | **9/12** | **In progress** | - |
 
-**Total:** 18 milestones shipped, 78 phases completed, 177 plans completed, 44 new tests, 44,205+ LOC
-**v1.4:** 6 phases (3 complete), 12 plans (7 complete), 35 requirements
+**Total:** 18 milestones shipped, 79 phases completed, 179 plans completed, 37 new tests, 44,205+ LOC
+**v1.4:** 6 phases (4 complete), 12 plans (9 complete), 35 requirements
 
 ---
 
-*Last updated: 2026-02-12 after Phase 78 completed*
+*Last updated: 2026-02-12 after Phase 79 completed*
