@@ -8,6 +8,7 @@ from waiaas.models import (
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
+    TokenInfo,
     TransactionDetail,
     TransactionList,
     WalletAddress,
@@ -214,6 +215,72 @@ class TestSendTokenRequest:
         )
         data = req.model_dump(exclude_none=True)
         assert data["memo"] == "test payment"
+
+
+class TestTokenInfo:
+    def test_token_info_creation(self):
+        token = TokenInfo(address="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", decimals=6, symbol="USDC")
+        assert token.address == "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        assert token.decimals == 6
+        assert token.symbol == "USDC"
+
+    def test_token_info_serialization(self):
+        token = TokenInfo(address="mint1", decimals=9, symbol="SOL")
+        data = token.model_dump()
+        assert data == {"address": "mint1", "decimals": 9, "symbol": "SOL"}
+
+
+class TestSendTokenRequestWithType:
+    def test_serialization_with_type_and_token(self):
+        token = TokenInfo(address="mint1", decimals=6, symbol="USDC")
+        req = SendTokenRequest(
+            to="9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+            amount="500000",
+            type="TOKEN_TRANSFER",
+            token=token,
+        )
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data["to"] == "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+        assert data["amount"] == "500000"
+        assert data["type"] == "TOKEN_TRANSFER"
+        assert data["token"]["address"] == "mint1"
+        assert data["token"]["decimals"] == 6
+        assert data["token"]["symbol"] == "USDC"
+
+    def test_serialization_legacy_no_type(self):
+        req = SendTokenRequest(
+            to="9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+            amount="1000000",
+        )
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data == {
+            "to": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+            "amount": "1000000",
+        }
+        assert "type" not in data
+        assert "token" not in data
+
+    def test_serialization_with_contract_call_fields(self):
+        req = SendTokenRequest(
+            to="0xContractAddr",
+            type="CONTRACT_CALL",
+            calldata="0xabcdef",
+        )
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data["type"] == "CONTRACT_CALL"
+        assert data["to"] == "0xContractAddr"
+        assert data["calldata"] == "0xabcdef"
+
+    def test_serialization_with_program_id_alias(self):
+        req = SendTokenRequest(
+            to="program",
+            type="CONTRACT_CALL",
+            program_id="ProgramXYZ",
+            instruction_data="base64data",
+        )
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data["programId"] == "ProgramXYZ"
+        assert data["instructionData"] == "base64data"
 
 
 class TestValidationErrors:

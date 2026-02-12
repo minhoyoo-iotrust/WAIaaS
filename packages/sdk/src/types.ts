@@ -73,10 +73,29 @@ export interface AssetsResponse {
 // Transaction Types
 // ---------------------------------------------------------------------------
 
+export interface TokenInfo {
+  address: string;
+  decimals: number;
+  symbol: string;
+}
+
 export interface SendTokenParams {
-  to: string;
-  amount: string;
+  to?: string;
+  amount?: string;
   memo?: string;
+  type?: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH';
+  token?: TokenInfo;
+  // CONTRACT_CALL fields
+  calldata?: string;
+  abi?: Record<string, unknown>[];
+  value?: string;
+  programId?: string;
+  instructionData?: string;
+  accounts?: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  // APPROVE fields
+  spender?: string;
+  // BATCH fields
+  instructions?: Array<Record<string, unknown>>;
 }
 
 export interface SendTokenResponse {

@@ -30,10 +30,10 @@ import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import { agents, transactions } from '../../infrastructure/database/schema.js';
-import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
+  stage1Validate,
   stage2Auth,
   stage3Policy,
   stage4Wait,
@@ -46,6 +46,12 @@ import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import {
+  TransactionRequestOpenAPI,
+  TransferRequestOpenAPI,
+  TokenTransferRequestOpenAPI,
+  ContractCallRequestOpenAPI,
+  ApproveRequestOpenAPI,
+  BatchRequestOpenAPI,
   SendTransactionRequestOpenAPI,
   TxSendResponseSchema,
   TxDetailResponseSchema,
@@ -84,7 +90,7 @@ const sendTransactionRoute = createRoute({
   request: {
     body: {
       content: {
-        'application/json': { schema: SendTransactionRequestOpenAPI },
+        'application/json': { schema: TransactionRequestOpenAPI },
       },
     },
   },
@@ -215,6 +221,17 @@ const pendingTransactionsRoute = createRoute({
 export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
+  // Register 5-type transaction request schemas as OpenAPI components.
+  // These are referenced by TransactionRequestOpenAPI's oneOf $ref entries
+  // but aren't directly used by route definitions, so we register them
+  // explicitly to ensure they appear in GET /doc components/schemas.
+  router.openAPIRegistry.register('TransferRequest', TransferRequestOpenAPI);
+  router.openAPIRegistry.register('TokenTransferRequest', TokenTransferRequestOpenAPI);
+  router.openAPIRegistry.register('ContractCallRequest', ContractCallRequestOpenAPI);
+  router.openAPIRegistry.register('ApproveRequest', ApproveRequestOpenAPI);
+  router.openAPIRegistry.register('BatchRequest', BatchRequestOpenAPI);
+  router.openAPIRegistry.register('SendTransactionRequest', SendTransactionRequestOpenAPI);
+
   // ---------------------------------------------------------------------------
   // POST /transactions/send
   // ---------------------------------------------------------------------------
@@ -231,39 +248,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
-    // Get validated request body (SendTransactionRequestOpenAPI schema)
-    const request = c.req.valid('json');
-
-    // Stage 1: Validate + INSERT PENDING (synchronous)
-    const txId = generateId();
-    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-
-    await deps.db.insert(transactions).values({
-      id: txId,
-      agentId,
-      chain: agent.chain,
-      type: 'TRANSFER',
-      status: 'PENDING',
-      amount: request.amount,
-      toAddress: request.to,
-      sessionId: (c.get('sessionId' as never) as string | undefined) ?? null,
-      createdAt: now,
-    });
-
-    // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
-    void deps.notificationService?.notify('TX_REQUESTED', agentId, {
-      amount: request.amount,
-      to: request.to,
-    }, { txId });
-
-    // Return 201 immediately with txId (Stage 1 complete)
-    const response = c.json(
-      {
-        id: txId,
-        status: 'PENDING',
-      },
-      201,
-    );
+    // Raw JSON body -- bypass Hono Zod validation (z.any() passthrough).
+    // Actual Zod validation is delegated to stage1Validate (5-type or legacy).
+    const request = await c.req.json();
 
     // Resolve adapter from pool for this agent's chain:network
     const rpcUrl = resolveRpcUrl(
@@ -277,7 +264,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       rpcUrl,
     );
 
-    // Stages 2-6 run asynchronously (fire-and-forget)
+    // Build pipeline context
     const ctx: PipelineContext = {
       db: deps.db,
       adapter,
@@ -291,22 +278,31 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         network: agent.network,
       },
       request,
-      txId,
-      // v1.2: sessionId from Hono context (set by sessionAuth middleware)
+      txId: '', // stage1Validate will assign
       sessionId: c.get('sessionId' as never) as string | undefined,
-      // v1.2: raw sqlite for evaluateAndReserve TOCTOU safety
       sqlite: deps.sqlite,
-      // v1.2: workflow dependencies for stage4Wait
       delayQueue: deps.delayQueue,
       approvalWorkflow: deps.approvalWorkflow,
       config: {
         policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
         policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
       },
-      // v1.3.4: notification service for pipeline event triggers
       notificationService: deps.notificationService,
     };
 
+    // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
+    await stage1Validate(ctx);
+
+    // Return 201 immediately with txId (Stage 1 complete)
+    const response = c.json(
+      {
+        id: ctx.txId,
+        status: 'PENDING',
+      },
+      201,
+    );
+
+    // Stages 2-6 run asynchronously (fire-and-forget)
     void (async () => {
       try {
         await stage2Auth(ctx);
@@ -326,7 +322,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
           const tx = await deps.db
             .select()
             .from(transactions)
-            .where(eq(transactions.id, txId))
+            .where(eq(transactions.id, ctx.txId))
             .get();
 
           if (tx && tx.status !== 'CONFIRMED' && tx.status !== 'FAILED' && tx.status !== 'CANCELLED') {
@@ -334,7 +330,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
             await deps.db
               .update(transactions)
               .set({ status: 'FAILED', error: errorMessage })
-              .where(eq(transactions.id, txId));
+              .where(eq(transactions.id, ctx.txId));
           }
         } catch {
           // Swallow DB update errors in background

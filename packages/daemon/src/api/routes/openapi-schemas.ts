@@ -18,6 +18,11 @@ import {
   SendTransactionRequestSchema,
   CreatePolicyRequestSchema,
   UpdatePolicyRequestSchema,
+  TransferRequestSchema,
+  TokenTransferRequestSchema,
+  ContractCallRequestSchema,
+  ApproveRequestSchema,
+  BatchRequestSchema,
 } from '@waiaas/core';
 import type { ErrorCode } from '@waiaas/core';
 
@@ -272,6 +277,35 @@ export const CreateSessionRequestOpenAPI = CreateSessionRequestSchema.openapi('C
 export const SendTransactionRequestOpenAPI = SendTransactionRequestSchema.openapi('SendTransactionRequest');
 export const CreatePolicyRequestOpenAPI = CreatePolicyRequestSchema.openapi('CreatePolicyRequest');
 export const UpdatePolicyRequestOpenAPI = UpdatePolicyRequestSchema.openapi('UpdatePolicyRequest');
+
+// ---------------------------------------------------------------------------
+// 5-type Transaction Request OpenAPI Components (Phase 86-01)
+// ---------------------------------------------------------------------------
+
+export const TransferRequestOpenAPI = TransferRequestSchema.openapi('TransferRequest');
+export const TokenTransferRequestOpenAPI = TokenTransferRequestSchema.openapi('TokenTransferRequest');
+export const ContractCallRequestOpenAPI = ContractCallRequestSchema.openapi('ContractCallRequest');
+export const ApproveRequestOpenAPI = ApproveRequestSchema.openapi('ApproveRequest');
+export const BatchRequestOpenAPI = BatchRequestSchema.openapi('BatchRequest');
+
+/**
+ * Loose passthrough schema for the send transaction route.
+ * Uses z.any() to bypass Hono's built-in Zod validation (validation is delegated
+ * to stage1Validate which uses the correct discriminatedUnion or legacy schema).
+ * The OpenAPI doc uses manual oneOf to document all 6 request variants.
+ */
+export const TransactionRequestOpenAPI = z.any().openapi({
+  type: 'object',
+  oneOf: [
+    { $ref: '#/components/schemas/TransferRequest' },
+    { $ref: '#/components/schemas/TokenTransferRequest' },
+    { $ref: '#/components/schemas/ContractCallRequest' },
+    { $ref: '#/components/schemas/ApproveRequest' },
+    { $ref: '#/components/schemas/BatchRequest' },
+    { $ref: '#/components/schemas/SendTransactionRequest' },
+  ],
+  description: 'Transaction request. Legacy format (to/amount/memo without type) is treated as TRANSFER.',
+});
 
 // ---------------------------------------------------------------------------
 // Default validation hook for OpenAPIHono

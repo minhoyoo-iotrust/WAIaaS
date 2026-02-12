@@ -118,6 +118,121 @@ describe('validateSendToken', () => {
   });
 
   // =========================================================================
+  // 5-type validation: TOKEN_TRANSFER
+  // =========================================================================
+
+  it('should pass valid TOKEN_TRANSFER params', () => {
+    expect(() =>
+      validateSendToken({
+        to: 'addr',
+        amount: '1000',
+        type: 'TOKEN_TRANSFER',
+        token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('should throw VALIDATION_ERROR when TOKEN_TRANSFER is missing token', () => {
+    const err = getValidationError({
+      to: 'addr',
+      amount: '1000',
+      type: 'TOKEN_TRANSFER',
+    });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('"token"');
+  });
+
+  // =========================================================================
+  // 5-type validation: APPROVE
+  // =========================================================================
+
+  it('should throw VALIDATION_ERROR when APPROVE is missing spender', () => {
+    const err = getValidationError({
+      type: 'APPROVE',
+      token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+      amount: '1000',
+    });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('"spender"');
+  });
+
+  it('should throw VALIDATION_ERROR when APPROVE is missing token', () => {
+    const err = getValidationError({
+      type: 'APPROVE',
+      spender: '0xSpender',
+      amount: '1000',
+    });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('"token"');
+  });
+
+  it('should pass valid APPROVE params', () => {
+    expect(() =>
+      validateSendToken({
+        type: 'APPROVE',
+        spender: '0xSpender',
+        token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+        amount: '1000',
+      }),
+    ).not.toThrow();
+  });
+
+  // =========================================================================
+  // 5-type validation: BATCH
+  // =========================================================================
+
+  it('should throw VALIDATION_ERROR when BATCH is missing instructions', () => {
+    const err = getValidationError({ type: 'BATCH' });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('"instructions"');
+  });
+
+  it('should throw VALIDATION_ERROR when BATCH instructions has < 2 items', () => {
+    const err = getValidationError({ type: 'BATCH', instructions: [{ op: 'a' }] });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('at least 2');
+  });
+
+  it('should pass valid BATCH params', () => {
+    expect(() =>
+      validateSendToken({
+        type: 'BATCH',
+        instructions: [{ op: 'a' }, { op: 'b' }],
+      }),
+    ).not.toThrow();
+  });
+
+  // =========================================================================
+  // 5-type validation: CONTRACT_CALL
+  // =========================================================================
+
+  it('should pass valid CONTRACT_CALL params', () => {
+    expect(() =>
+      validateSendToken({
+        type: 'CONTRACT_CALL',
+        to: '0xContractAddress',
+        calldata: '0xabcdef',
+      }),
+    ).not.toThrow();
+  });
+
+  it('should throw VALIDATION_ERROR when CONTRACT_CALL is missing to', () => {
+    const err = getValidationError({ type: 'CONTRACT_CALL', calldata: '0xabcdef' });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('"to"');
+  });
+
+  // =========================================================================
+  // Unknown type
+  // =========================================================================
+
+  it('should throw VALIDATION_ERROR for unknown type', () => {
+    const err = getValidationError({ type: 'UNKNOWN', to: 'addr', amount: '100' });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('"type"');
+  });
+
+  // =========================================================================
   // Error properties
   // =========================================================================
 

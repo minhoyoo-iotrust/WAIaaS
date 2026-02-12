@@ -14,7 +14,7 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 - [x] **Phase 83: Keystore 멀티커브** - secp256k1 키 생성 + EIP-55 주소 파생
 - [x] **Phase 84: 어댑터 팩토리** - AdapterPool lazy init + 기존 adapter 주입 패턴 전환
 - [x] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
-- [ ] **Phase 86: REST API 5-type + MCP/SDK 확장** - 5-type 트랜잭션 엔드포인트 + MCP/SDK 토큰 전송
+- [x] **Phase 86: REST API 5-type + MCP/SDK 확장** - 5-type 트랜잭션 엔드포인트 + MCP/SDK 토큰 전송
 - [ ] **Phase 87: Owner Auth SIWE** - EIP-4361 SIWE 검증 + chain별 owner_address 형식 검증
 - [ ] **Phase 88: 통합 검증** - EVM 풀 라이프사이클 E2E + 회귀 검증
 
@@ -93,8 +93,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 86-01-PLAN.md — REST API route schema separation (방안 C) + 5-type OpenAPI components (TDD)
-- [ ] 86-02-PLAN.md — MCP send_token type/token + TS SDK + Python SDK 5-type extension
+- [x] 86-01-PLAN.md — REST API route schema separation (방안 C) + 5-type OpenAPI components (TDD)
+- [x] 86-02-PLAN.md — MCP send_token type/token + TS SDK + Python SDK 5-type extension
 
 ### Phase 87: Owner Auth SIWE
 **Goal**: EVM 에이전트의 Owner가 SIWE(EIP-4361) 서명으로 인증하고, Owner 주소가 chain별 형식으로 검증되며, 기존 Solana owner-auth가 회귀 없이 동작하는 상태
@@ -105,10 +105,11 @@ Plans:
   2. owner-auth 미들웨어가 agent.chain에 따라 solana=Ed25519, ethereum=SIWE로 분기 검증한다
   3. setOwner 시 EVM 주소는 0x + EIP-55 체크섬, Solana 주소는 base58 32B로 검증된다
   4. 기존 Solana owner-auth 테스트가 전수 통과한다 (회귀 없음)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 87-01: TBD
+- [ ] 87-01-PLAN.md — verifySIWE 함수 + validateOwnerAddress 유틸리티 (TDD)
+- [ ] 87-02-PLAN.md — owner-auth 미들웨어 chain 분기 + setOwner 주소 검증 + 회귀 테스트
 
 ### Phase 88: 통합 검증
 **Goal**: EVM 에이전트의 풀 라이프사이클(생성 -> 잔액 조회 -> 전송 -> Owner 인증)이 E2E로 동작하고, Solana + EVM 동시 운용이 검증되며, 기존 전체 테스트가 회귀 없이 통과하는 상태
@@ -135,6 +136,6 @@ Plans:
 | 83. Keystore 멀티커브 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 84. 어댑터 팩토리 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 85. DB 마이그레이션 | v1.4.1 | 1/1 | Complete | 2026-02-12 |
-| 86. REST API 5-type + MCP/SDK | v1.4.1 | 0/TBD | Not started | - |
+| 86. REST API 5-type + MCP/SDK | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |
 | 88. 통합 검증 | v1.4.1 | 0/TBD | Not started | - |

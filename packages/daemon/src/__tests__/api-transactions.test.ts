@@ -537,3 +537,371 @@ describe('GET /v1/transactions/:id', () => {
     expect(body.code).toBe('INVALID_TOKEN');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 5-type transaction request support (Phase 86-01)
+// ---------------------------------------------------------------------------
+
+describe('5-type transaction request support', () => {
+  /** Helper: mock adapter with vi.fn() spies for all 5 build methods. */
+  function mockAdapter5Type(): IChainAdapter {
+    const unsignedTx: UnsignedTransaction = {
+      chain: 'solana',
+      serialized: new Uint8Array(128),
+      estimatedFee: 5000n,
+      metadata: {},
+    };
+    return {
+      chain: 'solana' as const,
+      network: 'devnet' as const,
+      connect: async () => {},
+      disconnect: async () => {},
+      isConnected: () => true,
+      getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
+      getBalance: async (addr: string): Promise<BalanceInfo> => ({
+        address: addr,
+        balance: 1_000_000_000n,
+        decimals: 9,
+        symbol: 'SOL',
+      }),
+      buildTransaction: vi.fn().mockResolvedValue(unsignedTx),
+      buildTokenTransfer: vi.fn().mockResolvedValue(unsignedTx),
+      buildContractCall: vi.fn().mockResolvedValue(unsignedTx),
+      buildApprove: vi.fn().mockResolvedValue(unsignedTx),
+      buildBatch: vi.fn().mockResolvedValue(unsignedTx),
+      simulateTransaction: async (): Promise<SimulationResult> => ({
+        success: true,
+        logs: ['Program log: success'],
+      }),
+      signTransaction: async (): Promise<Uint8Array> => new Uint8Array(256),
+      submitTransaction: async (): Promise<SubmitResult> => ({
+        txHash: 'mock-tx-hash-' + Date.now(),
+        status: 'submitted',
+      }),
+      waitForConfirmation: async (txHash: string): Promise<SubmitResult> => ({
+        txHash,
+        status: 'confirmed',
+        confirmations: 1,
+      }),
+      getAssets: async () => [],
+      estimateFee: async () => { throw new Error('not implemented'); },
+      getTokenInfo: async () => { throw new Error('not implemented'); },
+      getTransactionFee: async () => { throw new Error('not implemented'); },
+      getCurrentNonce: async () => 0,
+      sweepAll: async () => { throw new Error('not implemented'); },
+    };
+  }
+
+  it('legacy fallback: POST without type field returns 201, DB type=TRANSFER', async () => {
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await app.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000000',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+
+    // Verify DB has type=TRANSFER
+    const row = conn.sqlite.prepare('SELECT type FROM transactions WHERE id = ?').get(body.id as string) as Record<string, unknown>;
+    expect(row.type).toBe('TRANSFER');
+  });
+
+  it('explicit TRANSFER type returns 201', async () => {
+    const adapter = mockAdapter5Type();
+    // Re-create app with spy adapter
+    const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+    const localApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD,
+      masterPasswordHash,
+      config: mockConfig(),
+      adapterPool: mockAdapterPool(adapter),
+      policyEngine: new DefaultPolicyEngine(),
+      jwtSecretManager,
+    });
+
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await localApp.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        type: 'TRANSFER',
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000000',
+        memo: 'test transfer',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+
+    // DB should have type=TRANSFER
+    const row = conn.sqlite.prepare('SELECT type FROM transactions WHERE id = ?').get(body.id as string) as Record<string, unknown>;
+    expect(row.type).toBe('TRANSFER');
+  });
+
+  it('TOKEN_TRANSFER type returns 201 and invokes buildTokenTransfer', async () => {
+    const adapter = mockAdapter5Type();
+    const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+    const localApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD,
+      masterPasswordHash,
+      config: mockConfig(),
+      adapterPool: mockAdapterPool(adapter),
+      policyEngine: new DefaultPolicyEngine(),
+      jwtSecretManager,
+    });
+
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await localApp.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        type: 'TOKEN_TRANSFER',
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000',
+        token: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, symbol: 'USDC' },
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+
+    // DB should have type=TOKEN_TRANSFER
+    const row = conn.sqlite.prepare('SELECT type FROM transactions WHERE id = ?').get(body.id as string) as Record<string, unknown>;
+    expect(row.type).toBe('TOKEN_TRANSFER');
+
+    // Wait a tick for fire-and-forget to start
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.buildTokenTransfer).toHaveBeenCalled();
+  });
+
+  it('CONTRACT_CALL type returns 201 and invokes buildContractCall', async () => {
+    const adapter = mockAdapter5Type();
+    const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+    const localApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD,
+      masterPasswordHash,
+      config: mockConfig(),
+      adapterPool: mockAdapterPool(adapter),
+      policyEngine: new DefaultPolicyEngine(),
+      jwtSecretManager,
+    });
+
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await localApp.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        type: 'CONTRACT_CALL',
+        to: '0x1234567890abcdef1234567890abcdef12345678',
+        calldata: '0x12345678',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+
+    // DB should have type=CONTRACT_CALL
+    const row = conn.sqlite.prepare('SELECT type FROM transactions WHERE id = ?').get(body.id as string) as Record<string, unknown>;
+    expect(row.type).toBe('CONTRACT_CALL');
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.buildContractCall).toHaveBeenCalled();
+  });
+
+  it('APPROVE type returns 201 and invokes buildApprove', async () => {
+    const adapter = mockAdapter5Type();
+    const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+    const localApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD,
+      masterPasswordHash,
+      config: mockConfig(),
+      adapterPool: mockAdapterPool(adapter),
+      policyEngine: new DefaultPolicyEngine(),
+      jwtSecretManager,
+    });
+
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await localApp.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        type: 'APPROVE',
+        spender: '0xspender1234567890abcdef1234567890abcdef',
+        token: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, symbol: 'USDC' },
+        amount: '1000000',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+
+    // DB should have type=APPROVE
+    const row = conn.sqlite.prepare('SELECT type FROM transactions WHERE id = ?').get(body.id as string) as Record<string, unknown>;
+    expect(row.type).toBe('APPROVE');
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.buildApprove).toHaveBeenCalled();
+  });
+
+  it('BATCH type returns 201 and invokes buildBatch', async () => {
+    const adapter = mockAdapter5Type();
+    const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+    const localApp = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD,
+      masterPasswordHash,
+      config: mockConfig(),
+      adapterPool: mockAdapterPool(adapter),
+      policyEngine: new DefaultPolicyEngine(),
+      jwtSecretManager,
+    });
+
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await localApp.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        type: 'BATCH',
+        instructions: [
+          { to: 'addr1', amount: '100' },
+          { to: 'addr2', amount: '200' },
+        ],
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+
+    // DB should have type=BATCH
+    const row = conn.sqlite.prepare('SELECT type FROM transactions WHERE id = ?').get(body.id as string) as Record<string, unknown>;
+    expect(row.type).toBe('BATCH');
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.buildBatch).toHaveBeenCalled();
+  });
+
+  it('invalid type returns 400', async () => {
+    const agentId = await createTestAgent();
+    const authHeader = await createSessionToken(agentId);
+
+    const res = await app.request('/v1/transactions/send', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        type: 'INVALID',
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000000',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await json(res);
+    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+  });
+
+  it('OpenAPI spec contains oneOf 6-variant for send transaction request', async () => {
+    const res = await app.request('/doc', {
+      headers: { Host: HOST },
+    });
+
+    expect(res.status).toBe(200);
+    const doc = await json(res) as Record<string, unknown>;
+
+    // Check components/schemas has all 5 type-specific schemas
+    const schemas = (doc.components as Record<string, unknown>)?.schemas as Record<string, unknown>;
+    expect(schemas).toBeTruthy();
+    expect(schemas.TransferRequest).toBeTruthy();
+    expect(schemas.TokenTransferRequest).toBeTruthy();
+    expect(schemas.ContractCallRequest).toBeTruthy();
+    expect(schemas.ApproveRequest).toBeTruthy();
+    expect(schemas.BatchRequest).toBeTruthy();
+    expect(schemas.SendTransactionRequest).toBeTruthy(); // legacy
+
+    // Check that the send route request body has oneOf with 6 entries
+    const paths = doc.paths as Record<string, Record<string, Record<string, unknown>>>;
+    const sendRoute = paths['/v1/transactions/send']?.post;
+    expect(sendRoute).toBeTruthy();
+
+    const requestBody = sendRoute?.requestBody as Record<string, unknown>;
+    const content = (requestBody?.content as Record<string, Record<string, unknown>>)?.['application/json'];
+    const schema = content?.schema as Record<string, unknown>;
+    expect(schema?.oneOf).toBeTruthy();
+    expect((schema?.oneOf as unknown[]).length).toBe(6);
+  });
+});

@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 86 - REST API 5-type + MCP/SDK 확장
+**Current focus:** v1.4.1 Phase 87 - Owner Auth SIWE
 
 ## Current Position
 
-Phase: 86 (5 of 7 in v1.4.1) — REST API 5-type + MCP/SDK 확장
+Phase: 87 (6 of 7 in v1.4.1) — Owner Auth SIWE
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-02-12 — Phase 85 complete (1/1 plans, verified)
+Last activity: 2026-02-12 — Phase 86 complete (2/2 plans, verified)
 
-Progress: [██████░░░░] 57% (4/7 phases in v1.4.1)
+Progress: [███████░░░] 71% (5/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 85 phases, 190 plans, 533 reqs, 1,242 tests, 52,000+ LOC
+**Cumulative:** 20 milestones, 86 phases, 192 plans, 533 reqs, 1,300+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 8 plans completed (Phases 82-85 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 10 plans completed (Phases 82-86 done)
 
 *Updated after each plan completion*
 
@@ -62,6 +62,14 @@ Recent decisions affecting current work:
 - [85-01]: v2 up() re-enables FK and runs foreign_key_check before returning (defense-in-depth)
 - [85-01]: Existing migration tests bumped to version 10+ to avoid conflict with real v2 migration
 - [85-01]: v2 test suite uses dedicated v1-only DB (manual schema, no auto-migrations)
+- [86-02]: MCP send_token exposes only TRANSFER+TOKEN_TRANSFER (MCPSDK-04 security enforced)
+- [86-02]: TS SDK SendTokenParams.to/amount optional (APPROVE/BATCH don't have top-level to/amount)
+- [86-02]: Python SDK send_token uses **kwargs for type-specific fields (calldata, spender, instructions)
+- [86-02]: Python SDK TokenInfo as separate Pydantic model for validation (not inline dict)
+- [86-02]: Pydantic by_alias=True for camelCase serialization of programId/instructionData
+- [Phase 86]: TransactionRequestOpenAPI = z.any() + manual oneOf 6-variant (route schema separation pattern C)
+- [Phase 86]: stage1Validate is single Zod validation SSoT for transaction route (not Hono built-in)
+- [Phase 86]: openAPIRegistry.register() for schemas not directly referenced by routes (component inclusion)
 
 ### Blockers/Concerns
 
@@ -71,5 +79,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 85 complete, verified, ready for Phase 86 planning
+Stopped at: Phase 86 complete, verified, ready for Phase 87 planning
 Resume file: None
