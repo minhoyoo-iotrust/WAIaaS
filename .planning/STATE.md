@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.1 Phase 87 - Owner Auth SIWE
+**Current focus:** v1.4.1 Phase 88 - 통합 검증
 
 ## Current Position
 
-Phase: 87 (6 of 7 in v1.4.1) — Owner Auth SIWE
+Phase: 88 (7 of 7 in v1.4.1) — 통합 검증
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-02-12 — Phase 86 complete (2/2 plans, verified)
+Last activity: 2026-02-12 — Phase 87 complete (2/2 plans, verified, 11/11 must-haves)
 
-Progress: [███████░░░] 71% (5/7 phases in v1.4.1)
+Progress: [████████░░] 85% (6/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 86 phases, 192 plans, 533 reqs, 1,300+ tests, 52,800+ LOC
+**Cumulative:** 20 milestones, 87 phases, 195 plans, 533 reqs, 1,323+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 10 plans completed (Phases 82-86 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 13 plans completed (Phases 82-87 done)
 
 *Updated after each plan completion*
 
@@ -70,6 +70,12 @@ Recent decisions affecting current work:
 - [Phase 86]: TransactionRequestOpenAPI = z.any() + manual oneOf 6-variant (route schema separation pattern C)
 - [Phase 86]: stage1Validate is single Zod validation SSoT for transaction route (not Hono built-in)
 - [Phase 86]: openAPIRegistry.register() for schemas not directly referenced by routes (component inclusion)
+- [87-01]: viem isAddress strict:true accepts all-lowercase -- manual mixed-case enforcement for EIP-55 security
+- [87-01]: decodeBase58 canonical location = address-validation.ts (owner-auth.ts imports in 87-02)
+- [87-01]: Pure function verification pattern: crypto as standalone testable modules separate from middleware
+- [87-02]: SIWE message base64-encoded in X-Owner-Message header (multi-line EIP-4361 invalid as raw HTTP headers)
+- [87-02]: setOwner stores normalized address (EIP-55 checksummed for EVM, as-is for Solana)
+- [87-02]: Chain branching via agent.chain: ethereum=SIWE, else=Ed25519 (default Solana path unchanged)
 
 ### Blockers/Concerns
 
@@ -79,5 +85,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 86 complete, verified, ready for Phase 87 planning
+Stopped at: Phase 87 complete, verified, ready for Phase 88 planning
 Resume file: None

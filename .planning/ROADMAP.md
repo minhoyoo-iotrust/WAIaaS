@@ -15,7 +15,7 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 - [x] **Phase 84: 어댑터 팩토리** - AdapterPool lazy init + 기존 adapter 주입 패턴 전환
 - [x] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
 - [x] **Phase 86: REST API 5-type + MCP/SDK 확장** - 5-type 트랜잭션 엔드포인트 + MCP/SDK 토큰 전송
-- [ ] **Phase 87: Owner Auth SIWE** - EIP-4361 SIWE 검증 + chain별 owner_address 형식 검증
+- [x] **Phase 87: Owner Auth SIWE** - EIP-4361 SIWE 검증 + chain별 owner_address 형식 검증
 - [ ] **Phase 88: 통합 검증** - EVM 풀 라이프사이클 E2E + 회귀 검증
 
 ## Phase Details
@@ -108,8 +108,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 87-01-PLAN.md — verifySIWE 함수 + validateOwnerAddress 유틸리티 (TDD)
-- [ ] 87-02-PLAN.md — owner-auth 미들웨어 chain 분기 + setOwner 주소 검증 + 회귀 테스트
+- [x] 87-01-PLAN.md — verifySIWE 함수 + validateOwnerAddress 유틸리티 (TDD)
+- [x] 87-02-PLAN.md — owner-auth 미들웨어 chain 분기 + setOwner 주소 검증 + 회귀 테스트
 
 ### Phase 88: 통합 검증
 **Goal**: EVM 에이전트의 풀 라이프사이클(생성 -> 잔액 조회 -> 전송 -> Owner 인증)이 E2E로 동작하고, Solana + EVM 동시 운용이 검증되며, 기존 전체 테스트가 회귀 없이 통과하는 상태
@@ -121,10 +121,12 @@ Plans:
   3. 5-type 트랜잭션(TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH + 레거시 TRANSFER)이 REST API를 통해 E2E로 동작한다
   4. MCP send_token TOKEN_TRANSFER + SDK 토큰 전송이 E2E로 동작한다
   5. 기존 전체 테스트 스위트(1,126+ tests)가 회귀 없이 통과한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 88-01: TBD
+- [ ] 88-01-PLAN.md — EVM 풀 라이프사이클 E2E + 듀얼 체인 + SIWE owner-auth 통합 테스트
+- [ ] 88-02-PLAN.md — 5-type 트랜잭션 파이프라인 E2E + MCP/SDK type/token 통합 검증
+- [ ] 88-03-PLAN.md — 전체 회귀 테스트 실행 + 검증
 
 ## Progress
 
@@ -137,5 +139,5 @@ Plans:
 | 84. 어댑터 팩토리 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
 | 85. DB 마이그레이션 | v1.4.1 | 1/1 | Complete | 2026-02-12 |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |
-| 88. 통합 검증 | v1.4.1 | 0/TBD | Not started | - |
+| 87. Owner Auth SIWE | v1.4.1 | 2/2 | Complete | 2026-02-12 |
+| 88. 통합 검증 | v1.4.1 | 0/3 | Not started | - |

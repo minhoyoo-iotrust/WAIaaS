@@ -26,6 +26,7 @@ import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
+import { validateOwnerAddress } from '../middleware/address-validation.js';
 import {
   CreateAgentRequestOpenAPI,
   SetOwnerRequestSchema,
@@ -438,12 +439,23 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
       });
     }
 
-    // Set owner
-    ownerLifecycle.setOwner(agentId, ownerAddress);
+    // Validate owner_address format by chain type
+    const validation = validateOwnerAddress(agent.chain as ChainType, ownerAddress);
+    if (!validation.valid) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: `Invalid owner address for ${agent.chain}: ${validation.error}`,
+      });
+    }
+
+    // Use normalized address (EIP-55 for ethereum, as-is for solana)
+    const normalizedAddress = validation.normalized!;
+
+    // Set owner with normalized address
+    ownerLifecycle.setOwner(agentId, normalizedAddress);
 
     // Fire-and-forget: notify owner set
     void deps.notificationService?.notify('OWNER_SET', agentId, {
-      ownerAddress,
+      ownerAddress: normalizedAddress,
     });
 
     // Fetch updated agent

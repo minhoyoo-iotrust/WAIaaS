@@ -1,16 +1,21 @@
 /**
- * Owner auth middleware: verifies Ed25519 signature from owner wallet.
+ * Owner auth middleware: verifies signature from owner wallet.
  *
  * Protects owner-only actions (transaction approval, KS recovery).
  * The owner signs a message with their wallet, and this middleware verifies
  * the signature against the registered owner_address on the agent.
  *
  * Headers required:
- *   - X-Owner-Signature: base64-encoded Ed25519 detached signature
- *   - X-Owner-Message: the signed message (UTF-8)
- *   - X-Owner-Address: the owner's wallet address (base58 for Solana)
+ *   - X-Owner-Signature: signature (base64 Ed25519 for Solana, 0x hex for EVM)
+ *   - X-Owner-Message: the signed message (UTF-8 for Solana, EIP-4361 for EVM)
+ *   - X-Owner-Address: the owner's wallet address (base58 for Solana, 0x for EVM)
  *
- * v1.2: Solana Ed25519 only. EVM (SIWE) deferred to v1.4+.
+ * v1.2: Solana Ed25519.
+ * v1.4.1: EVM SIWE (EIP-4361 + EIP-191) via verifySIWE.
+ *
+ * Chain branching: agent.chain determines verification path:
+ *   - solana  -> Ed25519 detached signature verification (sodium-native)
+ *   - ethereum -> SIWE (EIP-4361 + EIP-191) verification (viem)
  *
  * Factory pattern: createOwnerAuth(deps) returns middleware.
  *
@@ -24,6 +29,8 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { agents } from '../../infrastructure/database/schema.js';
+import { verifySIWE } from './siwe-verify.js';
+import { decodeBase58 } from './address-validation.js';
 
 type SodiumNative = typeof import('sodium-native');
 
@@ -39,55 +46,6 @@ function loadSodium(): SodiumNative {
 
 export interface OwnerAuthDeps {
   db: BetterSQLite3Database<typeof schema>;
-}
-
-// ---------------------------------------------------------------------------
-// Base58 decode (Bitcoin alphabet) -- inverse of keystore.ts encodeBase58
-// ---------------------------------------------------------------------------
-
-const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
-function decodeBase58(str: string): Buffer {
-  // Count leading '1's (zero bytes)
-  let zeroes = 0;
-  for (let i = 0; i < str.length && str[i] === '1'; i++) {
-    zeroes++;
-  }
-
-  // Allocate enough space in base256 representation
-  const size = Math.ceil((str.length * 733) / 1000) + 1;
-  const b256 = new Uint8Array(size);
-  let length = 0;
-
-  for (let i = zeroes; i < str.length; i++) {
-    const charIndex = BASE58_ALPHABET.indexOf(str[i]!);
-    if (charIndex === -1) {
-      throw new Error(`Invalid Base58 character: ${str[i]}`);
-    }
-
-    let carry = charIndex;
-    let j = 0;
-    for (let k = size - 1; k >= 0 && (carry !== 0 || j < length); k--, j++) {
-      carry += 58 * (b256[k] ?? 0);
-      b256[k] = carry % 256;
-      carry = Math.floor(carry / 256);
-    }
-    length = j;
-  }
-
-  // Skip leading zeros in b256
-  let start = 0;
-  while (start < size && b256[start] === 0) {
-    start++;
-  }
-
-  // Build result with leading zero bytes
-  const result = Buffer.alloc(zeroes + (size - start));
-  for (let i = start; i < size; i++) {
-    result[zeroes + (i - start)] = b256[i]!;
-  }
-
-  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,40 +95,60 @@ export function createOwnerAuth(deps: OwnerAuthDeps) {
       });
     }
 
-    // Verify the Ed25519 signature (Solana only for v1.2)
-    try {
-      const sodium = loadSodium();
-
-      const signatureBytes = Buffer.from(signature, 'base64');
-      const messageBytes = Buffer.from(message, 'utf8');
-      const publicKeyBytes = decodeBase58(ownerAddress);
-
-      // Validate key length
-      if (publicKeyBytes.length !== sodium.crypto_sign_PUBLICKEYBYTES) {
-        throw new WAIaaSError('INVALID_SIGNATURE', {
-          message: `Invalid public key length: expected ${String(sodium.crypto_sign_PUBLICKEYBYTES)}, got ${String(publicKeyBytes.length)}`,
-        });
-      }
-
-      // Validate signature length
-      if (signatureBytes.length !== sodium.crypto_sign_BYTES) {
-        throw new WAIaaSError('INVALID_SIGNATURE', {
-          message: `Invalid signature length: expected ${String(sodium.crypto_sign_BYTES)}, got ${String(signatureBytes.length)}`,
-        });
-      }
-
-      const valid = sodium.crypto_sign_verify_detached(signatureBytes, messageBytes, publicKeyBytes);
-      if (!valid) {
-        throw new WAIaaSError('INVALID_SIGNATURE', {
-          message: 'Ed25519 signature verification failed',
-        });
-      }
-    } catch (err) {
-      if (err instanceof WAIaaSError) throw err;
-      throw new WAIaaSError('INVALID_SIGNATURE', {
-        message: 'Signature verification failed',
-        cause: err instanceof Error ? err : undefined,
+    // Branch verification by chain type
+    if (agent.chain === 'ethereum') {
+      // EVM SIWE verification (EIP-4361 + EIP-191)
+      // For SIWE: X-Owner-Message is base64-encoded EIP-4361 message (multi-line messages
+      // cannot be sent as raw HTTP header values), X-Owner-Signature is 0x-prefixed hex
+      const decodedMessage = Buffer.from(message, 'base64').toString('utf8');
+      const result = await verifySIWE({
+        message: decodedMessage,
+        signature, // already hex 0x-prefixed from header
+        expectedAddress: ownerAddress,
       });
+
+      if (!result.valid) {
+        throw new WAIaaSError('INVALID_SIGNATURE', {
+          message: result.error ?? 'SIWE signature verification failed',
+        });
+      }
+    } else {
+      // Solana Ed25519 verification (existing logic)
+      // X-Owner-Signature is base64-encoded Ed25519 detached signature
+      try {
+        const sodium = loadSodium();
+
+        const signatureBytes = Buffer.from(signature, 'base64');
+        const messageBytes = Buffer.from(message, 'utf8');
+        const publicKeyBytes = decodeBase58(ownerAddress);
+
+        // Validate key length
+        if (publicKeyBytes.length !== sodium.crypto_sign_PUBLICKEYBYTES) {
+          throw new WAIaaSError('INVALID_SIGNATURE', {
+            message: `Invalid public key length: expected ${String(sodium.crypto_sign_PUBLICKEYBYTES)}, got ${String(publicKeyBytes.length)}`,
+          });
+        }
+
+        // Validate signature length
+        if (signatureBytes.length !== sodium.crypto_sign_BYTES) {
+          throw new WAIaaSError('INVALID_SIGNATURE', {
+            message: `Invalid signature length: expected ${String(sodium.crypto_sign_BYTES)}, got ${String(signatureBytes.length)}`,
+          });
+        }
+
+        const valid = sodium.crypto_sign_verify_detached(signatureBytes, messageBytes, publicKeyBytes);
+        if (!valid) {
+          throw new WAIaaSError('INVALID_SIGNATURE', {
+            message: 'Ed25519 signature verification failed',
+          });
+        }
+      } catch (err) {
+        if (err instanceof WAIaaSError) throw err;
+        throw new WAIaaSError('INVALID_SIGNATURE', {
+          message: 'Signature verification failed',
+          cause: err instanceof Error ? err : undefined,
+        });
+      }
     }
 
     c.set('ownerAddress', ownerAddress);
