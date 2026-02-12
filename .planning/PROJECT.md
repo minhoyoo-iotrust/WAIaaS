@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4에서 SPL/ERC-20 토큰 전송, 스마트 컨트랙트 호출, Approve 관리, Solana 원자적 배치가 기본 거부 정책으로 동작하며, @waiaas/adapter-evm 패키지(viem 2.x)로 EVM 체인을 지원하고, 5-type discriminatedUnion 파이프라인 + Stage 5 ChainError 카테고리별 재시도가 완전 구현되었다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.1에서 EVM 에이전트 풀 라이프사이클(secp256k1 키 생성 → AdapterPool 멀티체인 → REST API 5-type 통합 → Owner Auth SIWE)이 완성되어 Solana + EVM 동시 운용이 가능하다.
 
 ## 핵심 가치
 
@@ -10,9 +10,9 @@
 
 ## Current State
 
-v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송(ALLOWED_TOKENS 기본 거부), 컨트랙트 호출(CONTRACT_WHITELIST/METHOD_WHITELIST 기본 거부), Approve 관리(APPROVED_SPENDERS/무제한 차단), Solana 원자적 배치(2단계 합산 정책), @waiaas/adapter-evm 패키지(viem 2.x, 20메서드), ChainError 3-카테고리 + Stage 5 CONC-01 재시도, discriminatedUnion 5-type 파이프라인이 동작.
+v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (2026-02-12). EVM 에이전트 생성(secp256k1 키, 0x EIP-55 주소), AdapterPool 멀티체인 자동 선택, REST API 5-type 트랜잭션(oneOf 6-variant OpenAPI), MCP/TS/Python SDK 토큰 전송, Owner Auth SIWE(EIP-4361) chain별 분기가 동작.
 
-코드베이스(v1.4 기준): 9-패키지 모노레포 + Python SDK, 51,750 LOC, 1,126 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 에이전트 MCP 설정까지 동작.
+코드베이스(v1.4.1 기준): 9-패키지 모노레포 + Python SDK, 65,074 LOC, 1,313 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 에이전트 MCP 설정까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -23,6 +23,7 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송
 - ✅ v1.3.3 MCP 다중 에이전트 지원 — shipped 2026-02-11
 - ✅ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 — shipped 2026-02-12
 - ✅ v1.4 토큰 + 컨트랙트 확장 — shipped 2026-02-12 (1,126 tests, 51,750 LOC)
+- ✅ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE — shipped 2026-02-12 (1,313 tests, 65,074 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -31,11 +32,12 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 51,750 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,126 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- 65,074 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,313 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 36 엔드포인트 (33 + admin 알림 3), GET /doc OpenAPI 3.0 자동 생성
 - IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 10 PolicyType
+- AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - 설계 문서 31개 (24-67), 8 objective 문서
 
 ## 요구사항
@@ -174,25 +176,20 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송
 - ✓ ChainError 3-카테고리 + DB 마이그레이션 러너 + discriminatedUnion 5-type — v1.4 (INFRA-01~05)
 - ✓ Stage 5 CONC-01 재시도 + buildByType 5-type 라우팅 + 6개 PolicyType superRefine — v1.4 (PIPE-01~06)
 
+- ✓ NetworkType 13값 확장 + EVM_CHAIN_MAP 10 네트워크 + DaemonConfig EVM RPC 16키 + validateChainNetwork — v1.4.1 (CONF-01~06)
+- ✓ secp256k1 멀티커브 키스토어 + EIP-55 주소 파생 + curve/network 필드 + AES-256-GCM — v1.4.1 (KEYS-01~04)
+- ✓ AdapterPool lazy init + 캐싱 + agent.chain 기반 어댑터 자동 선택 + 데몬 라이프사이클 전환 — v1.4.1 (POOL-01~04)
+- ✓ managesOwnTransaction + schema_version 2 마이그레이션 + agents CHECK EVM 확장 — v1.4.1 (MIGR-01~03)
+- ✓ REST API 5-type 통합 + route schema separation 방안 C + oneOf 6-variant OpenAPI — v1.4.1 (API-01~04)
+- ✓ MCP send_token type/token + TS/Python SDK 5-type 확장 + CONTRACT_CALL/APPROVE/BATCH 보안 차단 — v1.4.1 (MCPSDK-01~04)
+- ✓ verifySIWE(EIP-4361) + owner-auth chain 분기 + setOwner 주소 형식 검증 + Solana 회귀 없음 — v1.4.1 (SIWE-01~04)
+
 ### 활성
 
-#### Current Milestone: v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE
-
-**Goal:** EVM 체인용 에이전트 생성(secp256k1)이 동작하고, 어댑터 팩토리로 멀티체인 운용이 가능하며, REST API가 5가지 트랜잭션 타입을 수용하고, Owner Auth SIWE가 지원되는 상태
-
-**Target features:**
-- Keystore 멀티커브 (secp256k1 + EIP-55 주소 파생)
-- AdapterPool (lazy init, agent.chain 기반 어댑터 선택)
-- Config EVM RPC Tier 1 (5체인 10네트워크) + evm_default_network
-- EVM_CHAIN_MAP (viem Chain + nativeSymbol/nativeName)
-- DB 마이그레이션 v2 (agents CHECK 확장, managesOwnTransaction)
-- REST API 5-type 통합 (loose passthrough + stage1Validate + oneOf OpenAPI)
-- MCP send_token TOKEN_TRANSFER + TS/Python SDK 확장
-- Owner Auth SIWE (viem/siwe, chain 분기) + chain별 주소 형식 검증
+(v1.4.1 완료, 다음 마일스톤 TBD — `/gsd:new-milestone`로 시작)
 
 ## Next Milestone Goals
 
-- v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 — secp256k1 키 생성, 어댑터 팩토리, Config EVM RPC, 5-type 트랜잭션 엔드포인트, MCP/SDK 토큰 전송
 - v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
 - v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성
 - v1.6 운영 인프라 + 잔액 모니터링
@@ -212,7 +209,7 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송
 
 ## 컨텍스트
 
-**누적:** 20 milestones (v0.1-v1.4), 81 phases, 182 plans, 523 requirements, 31 설계 문서(24-67), 8 objective 문서, 51,750 LOC, 1,126 테스트
+**누적:** 21 milestones (v0.1-v1.4.1), 88 phases, 197 plans, 552 requirements, 31 설계 문서(24-67), 8 objective 문서, 65,074 LOC, 1,313 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -224,8 +221,9 @@ v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요�
 v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플랜, 14 요구사항, 44,639 LOC, 847 테스트.
 v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이즈, 5 플랜, 18 요구사항, 42,123 LOC, 895 테스트.
 v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 35 요구사항, 51,750 LOC, 1,126 테스트.
+v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (2026-02-12). 7 페이즈, 15 플랜, 29 요구사항, 65,074 LOC, 1,313 테스트.
 
-**기술 스택 (v0.2 확정, v1.4 구현 검증):**
+**기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
 - Server: OpenAPIHono 4.x (@hono/zod-openapi)
 - DB: SQLite (better-sqlite3) + Drizzle ORM
@@ -238,7 +236,7 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
-- 미구현: Jupiter, Oracle, Tauri, Docker, EVM 키스토어(secp256k1)
+- 미구현: Jupiter, Oracle, Tauri, Docker
 
 **설계 문서:** 31개 (deliverables 24-67.md) + 대응표/테스트 전략/objective
 
@@ -328,6 +326,13 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 
 | CONC-01 TRANSIENT retry rebuilds from Stage 5a | 단순한 루프 구조, build/sign은 로컬 ops | ✓ Good — v1.4 구현 |
 | buildByType 5-type adapter 라우팅 | type별 IChainAdapter 메서드 디스패치 | ✓ Good — v1.4 구현 |
 | sleep() extracted to pipeline/sleep.ts | vi.mock 테스트 가능성, 모듈 레벨 분리 | ✓ Good — v1.4 구현 |
+| chain='ethereum' EVM 전체 포괄 | ChainType enum 확장 없이 EVM 호환 체인 지원 | ✓ Good — v1.4.1 구현 |
+| AdapterPool lazy init + 캐싱 | 데몬 시작 시 전체 초기화 아닌 요청 시 생성 | ✓ Good — v1.4.1 구현 |
+| Route schema separation 방안 C | OpenAPI doc과 실제 Zod 검증 분리, stage1Validate SSoT | ✓ Good — v1.4.1 구현 |
+| SIWE nonce 미검증 | Solana owner-auth 일관성, expirationTime 의존 | ✓ Good — v1.4.1 구현 |
+| SIWE message base64 인코딩 | 멀티라인 EIP-4361 HTTP 헤더 호환 | ✓ Good — v1.4.1 구현 |
+| managesOwnTransaction 마이그레이션 플래그 | 테이블 재생성 시 자체 PRAGMA/트랜잭션 관리 | ✓ Good — v1.4.1 구현 |
+| EVM_CHAIN_MAP Record<EvmNetworkType> | 컴파일 타임 완전성 보장, 네트워크 누락 방지 | ✓ Good — v1.4.1 구현 |
 
 ---
-*최종 업데이트: 2026-02-12 after v1.4 milestone shipped*
+*최종 업데이트: 2026-02-12 after v1.4.1 milestone shipped*

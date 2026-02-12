@@ -528,3 +528,34 @@
 
 ---
 
+
+## v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE (Shipped: 2026-02-12)
+
+**Delivered:** v1.4 EVM 어댑터를 데몬에 연결하여 EVM 에이전트 생성(secp256k1)부터 트랜잭션 실행까지 풀 라이프사이클이 동작하고, REST API가 5가지 트랜잭션 타입을 수용하며, Owner Auth SIWE(EIP-4361)가 지원되는 상태를 달성
+
+**Phases completed:** 82-88 (15 plans total)
+
+**Key accomplishments:**
+
+- EVM 네트워크 인프라 — NetworkType 13값 확장, EVM_CHAIN_MAP 10 네트워크→viem Chain 매핑, DaemonConfig EVM RPC 16키(drpc.org 기본값), evm_default_network, validateChainNetwork 교차 검증
+- secp256k1 멀티커브 키스토어 — EVM 에이전트 생성 시 0x EIP-55 체크섬 주소 파생, AES-256-GCM 암호화 + sodium_memzero, curve 필드 하위 호환(missing=ed25519), network 파라미터 연결
+- AdapterPool 어댑터 팩토리 — agent.chain/network 기반 SolanaAdapter/EvmAdapter 자동 선택, lazy init + 캐싱, disconnectAll Promise.all fail-soft, 데몬/서버/라우트 adapterPool 패턴 전환
+- DB 마이그레이션 v2 — managesOwnTransaction 플래그(자체 PRAGMA/트랜잭션), agents CHECK 제약 EVM 네트워크 확장, 12-step 테이블 재생성, foreign_key_check 검증
+- REST API 5-type 통합 — route schema separation 방안 C(OpenAPI oneOf 6-variant + stage1Validate Zod SSoT), 레거시 하위호환(type 미지정→TRANSFER), MCP send_token type/token + TS/Python SDK 5-type 확장
+- Owner Auth SIWE — verifySIWE(viem/siwe EIP-4361+EIP-191), owner-auth 미들웨어 chain 분기(ethereum=SIWE/solana=Ed25519), setOwner chain별 주소 형식 검증(EIP-55/base58)
+- E2E 통합 검증 — EVM 풀 라이프사이클(생성→잔액→전송→CONFIRMED), 듀얼 체인 동시 운용, 5-type 파이프라인 E2E, MCP/SDK 통합, 전체 회귀 1,310 pass / 0 new failures
+
+**Stats:**
+
+- 94 files changed, +11,604 / -389 lines
+- Total project: 65,074 LOC (63,174 TS/TSX + 950 Python + 950 CSS)
+- 7 phases, 15 plans, 29 requirements, 50+ 설계 결정
+- 1,313 tests (1,126 → 1,313, +187 new tests)
+- 53 commits, 1 day (2026-02-12)
+
+**Git range:** `d966065` (Phase 82 start) → `343d90f` (Phase 88 complete)
+
+**What's next:** v1.5 DeFi + 가격 오라클 또는 v1.5.1 x402 클라이언트 지원
+
+---
+
