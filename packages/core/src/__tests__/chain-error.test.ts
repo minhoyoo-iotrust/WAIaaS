@@ -60,7 +60,7 @@ describe('ChainError', () => {
     });
   });
 
-  describe('25 error code category mapping', () => {
+  describe('27 error code category mapping', () => {
     const PERMANENT_CODES: ChainErrorCode[] = [
       'INSUFFICIENT_BALANCE',
       'INVALID_ADDRESS',
@@ -79,6 +79,8 @@ describe('ChainError', () => {
       'ACCOUNT_ALREADY_EXISTS',
       'INVALID_TOKEN_PROGRAM',
       'INSUFFICIENT_FOR_FEE',
+      'BATCH_NOT_SUPPORTED',
+      'BATCH_SIZE_EXCEEDED',
     ];
 
     const TRANSIENT_CODES: ChainErrorCode[] = [
@@ -95,12 +97,12 @@ describe('ChainError', () => {
       'SLOT_SKIPPED',
     ];
 
-    it('has exactly 25 error codes', () => {
-      expect(Object.keys(CHAIN_ERROR_CATEGORIES)).toHaveLength(25);
+    it('has exactly 27 error codes', () => {
+      expect(Object.keys(CHAIN_ERROR_CATEGORIES)).toHaveLength(27);
     });
 
-    it('PERMANENT category has 17 codes', () => {
-      expect(PERMANENT_CODES).toHaveLength(17);
+    it('PERMANENT category has 19 codes', () => {
+      expect(PERMANENT_CODES).toHaveLength(19);
       for (const code of PERMANENT_CODES) {
         expect(CHAIN_ERROR_CATEGORIES[code]).toBe('PERMANENT');
       }
@@ -120,9 +122,9 @@ describe('ChainError', () => {
       }
     });
 
-    it('all 25 codes accounted for (PERMANENT + TRANSIENT + STALE)', () => {
+    it('all 27 codes accounted for (PERMANENT + TRANSIENT + STALE)', () => {
       const allCodes = [...PERMANENT_CODES, ...TRANSIENT_CODES, ...STALE_CODES];
-      expect(allCodes).toHaveLength(25);
+      expect(allCodes).toHaveLength(27);
 
       const allKeys = Object.keys(CHAIN_ERROR_CATEGORIES);
       expect(allKeys.sort()).toEqual(allCodes.sort());
