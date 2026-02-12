@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 80 완료 (배치 트랜잭션)
+**Current focus:** v1.4 Phase 81 파이프라인 통합 Stage 1/3
 
 ## Current Position
 
-Phase: 80 of 81 (배치 트랜잭션)
-Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-02-12 — Completed Phase 80 (SolanaAdapter.buildBatch + evaluateBatch 2-stage policy)
+Phase: 81 of 81 (파이프라인 통합 Stage 5)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-12 — Completed 81-01-PLAN.md (Stage 1 discriminatedUnion + Stage 3 type-based policy)
 
-Progress: [██████████] 83% (10/12 plans)
+Progress: [███████████] 92% (11/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 80 phases, 180 plans, 488 reqs, 1095 tests, 44,205+ LOC
+**Cumulative:** 19 milestones, 81 phases, 181 plans, 488 reqs, 1111 tests, 44,205+ LOC
 
 ## Accumulated Context
 
@@ -70,6 +70,10 @@ Recent decisions affecting current work:
 - evaluateBatch Phase B 합산: TRANSFER.amount만 카운트 (TOKEN_TRANSFER/APPROVE/CONTRACT_CALL = 0)
 - APPROVE in batch: max(amount tier, APPROVE_TIER_OVERRIDE tier) 해상도 -- 기본 APPROVAL
 - evaluateBatch violations: index + type + reason 포함하여 어느 instruction이 거부되었는지 추적
+- Stage 1 type 필드 존재 여부로 분기: type 있으면 TransactionRequestSchema, 없으면 SendTransactionRequestSchema
+- Route handler는 SendTransactionRequestOpenAPI 유지 (discriminatedUnion OpenAPI 스키마는 향후 작업)
+- BATCH는 evaluateBatch 직접 호출 (evaluateAndReserve 건너뜀)
+- Safe accessor helpers (getRequestAmount/To/Memo) 패턴: union 타입 필드 접근
 
 ### Blockers/Concerns
 
@@ -79,5 +83,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed Phase 80
+Stopped at: Completed 81-01-PLAN.md
 Resume file: None
