@@ -90,11 +90,11 @@ Plans:
   3. GET /doc OpenAPI 스펙이 oneOf 6-variant(5-type + legacy) 스키마를 정확히 반영한다
   4. MCP send_token에서 TRANSFER + TOKEN_TRANSFER를 실행할 수 있고, CONTRACT_CALL/APPROVE/BATCH는 노출되지 않는다
   5. TS/Python SDK send 메서드가 type/token 파라미터를 지원한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 86-01: TBD
-- [ ] 86-02: TBD
+- [ ] 86-01-PLAN.md — REST API route schema separation (방안 C) + 5-type OpenAPI components (TDD)
+- [ ] 86-02-PLAN.md — MCP send_token type/token + TS SDK + Python SDK 5-type extension
 
 ### Phase 87: Owner Auth SIWE
 **Goal**: EVM 에이전트의 Owner가 SIWE(EIP-4361) 서명으로 인증하고, Owner 주소가 chain별 형식으로 검증되며, 기존 Solana owner-auth가 회귀 없이 동작하는 상태
