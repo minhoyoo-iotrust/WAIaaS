@@ -263,6 +263,24 @@ describe('CHECK constraints', () => {
         ).run(generateId(), 'Test Agent', 'bitcoin', 'mainnet', 'pubkey4', 'CREATING', 0, ts, ts);
       }).toThrow(/CHECK/i);
     });
+
+    it('should accept valid EVM network ethereum-mainnet', () => {
+      expect(() => {
+        sqlite.prepare(
+          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'EVM Agent', 'ethereum', 'ethereum-mainnet', 'pubkey-evm1', 'CREATING', 0, ts, ts);
+      }).not.toThrow();
+    });
+
+    it('should accept valid EVM network polygon-amoy', () => {
+      expect(() => {
+        sqlite.prepare(
+          `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'EVM Agent', 'ethereum', 'polygon-amoy', 'pubkey-evm2', 'CREATING', 0, ts, ts);
+      }).not.toThrow();
+    });
   });
 
   describe('transactions', () => {
