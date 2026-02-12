@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 89 - DB 마이그레이션 (v1.4.2 용어 변경)
+**Current focus:** Phase 90 - 코어 타입 + 에러 코드 (v1.4.2 용어 변경)
 
 ## Current Position
 
-Phase: 89 (1 of 6 in v1.4.2) — DB 마이그레이션
-Plan: 1 of 1 complete
-Status: Phase 89 complete
-Last activity: 2026-02-13 — v3 migration (agents->wallets) implemented
+Phase: 90 (2 of 6 in v1.4.2) — 코어 타입 + 에러 코드
+Plan: —
+Status: Ready to plan
+Last activity: 2026-02-13 — Phase 89 complete (v3 migration, 7/7 verified)
 
 Progress: [█░░░░░░░░░] 10%
 
@@ -53,5 +53,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 89-01-PLAN.md (v3 migration agents->wallets)
+Stopped at: Phase 89 verified (7/7), ready to plan Phase 90
 Resume file: None

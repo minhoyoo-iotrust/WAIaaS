@@ -8,7 +8,7 @@
 
 **Phase Numbering:** v1.4.1 Phase 88에 이어 89부터 시작.
 
-- [ ] **Phase 89: DB 마이그레이션** - schema_version 3: agents -> wallets 테이블 + FK 5개 + 인덱스 10개 + enum 데이터 5건
+- [x] **Phase 89: DB 마이그레이션** - schema_version 3: agents -> wallets 테이블 + FK 5개 + 인덱스 10개 + enum 데이터 5건
 - [ ] **Phase 90: 코어 타입 + 에러 코드** - @waiaas/core Zod 스키마/Enum/에러 코드/i18n 일괄 rename
 - [ ] **Phase 91: 데몬 API + JWT + Config** - REST API 경로/응답/JWT claim/OpenAPI 스키마/config 키 변경
 - [ ] **Phase 92: MCP + CLI + SDK** - MCP WalletContext + CLI --wallet + 환경변수 + TS/Python SDK 필드 변경
@@ -30,7 +30,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [ ] 89-01-PLAN.md — schema_version 3 마이그레이션 (agents -> wallets) + Drizzle 스키마 갱신 + TDD 테스트 7건
+- [x] 89-01-PLAN.md — schema_version 3 마이그레이션 (agents -> wallets) + Drizzle 스키마 갱신 + TDD 테스트 7건
 
 ### Phase 90: 코어 타입 + 에러 코드
 **Goal**: @waiaas/core 패키지의 모든 agent 용어를 wallet으로 변경하여, 다운스트림 패키지가 참조하는 SSoT가 갱신된다
@@ -116,7 +116,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 89. DB 마이그레이션 | 0/1 | Not started | - |
+| 89. DB 마이그레이션 | 1/1 | ✓ Complete | 2026-02-13 |
 | 90. 코어 타입 + 에러 코드 | 0/2 | Not started | - |
 | 91. 데몬 API + JWT + Config | 0/2 | Not started | - |
 | 92. MCP + CLI + SDK | 0/2 | Not started | - |
