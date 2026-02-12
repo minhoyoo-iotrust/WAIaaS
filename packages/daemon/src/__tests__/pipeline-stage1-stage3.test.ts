@@ -25,14 +25,12 @@ import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import type {
   IChainAdapter,
-  IPolicyEngine,
   UnsignedTransaction,
   SimulationResult,
   SubmitResult,
   BalanceInfo,
   HealthInfo,
   SendTransactionRequest,
-  TransactionRequest,
   TransferRequestInput,
   TokenTransferRequest,
   ContractCallRequest,
@@ -428,7 +426,7 @@ describe('Stage 3: type-based policy filtering', () => {
 
     await stage1Validate(ctx);
     // Stage 3 should deny -- token not in ALLOWED_TOKENS
-    await expect(stage3Policy(ctx)).rejects.toThrow(/policy/i);
+    await expect(stage3Policy(ctx)).rejects.toThrow(/not in allowed list/i);
   });
 
   it('should apply CONTRACT_WHITELIST for CONTRACT_CALL and allow whitelisted contract', async () => {
@@ -492,7 +490,7 @@ describe('Stage 3: type-based policy filtering', () => {
 
     await stage1Validate(ctx);
     // Stage 3 should deny -- spender not in APPROVED_SPENDERS
-    await expect(stage3Policy(ctx)).rejects.toThrow(/policy/i);
+    await expect(stage3Policy(ctx)).rejects.toThrow(/not in approved list/i);
   });
 
   it('should use evaluateBatch for BATCH type requests', async () => {

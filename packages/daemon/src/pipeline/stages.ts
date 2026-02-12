@@ -17,12 +17,15 @@ import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import {
   WAIaaSError,
   SendTransactionRequestSchema,
+  TransactionRequestSchema,
   type IChainAdapter,
   type IPolicyEngine,
   type PolicyTier,
   type UnsignedTransaction,
   type SubmitResult,
   type SendTransactionRequest,
+  type TransactionRequest,
+  type BatchRequest,
 } from '@waiaas/core';
 import { agents, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -48,7 +51,7 @@ export interface PipelineContext {
   // Request data
   agentId: string;
   agent: { publicKey: string; chain: string; network: string };
-  request: SendTransactionRequest;
+  request: SendTransactionRequest | TransactionRequest;
   // State accumulated through stages
   txId: string;
   tier?: PolicyTier;
@@ -72,12 +75,111 @@ export interface PipelineContext {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: safe request field accessors for union type
+// ---------------------------------------------------------------------------
+
+/** Safely extract `amount` from SendTransactionRequest | TransactionRequest. */
+function getRequestAmount(req: SendTransactionRequest | TransactionRequest): string {
+  if ('amount' in req && typeof req.amount === 'string') return req.amount;
+  return '0';
+}
+
+/** Safely extract `to` from SendTransactionRequest | TransactionRequest. */
+function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
+  if ('to' in req && typeof req.to === 'string') return req.to;
+  return '';
+}
+
+/** Safely extract `memo` from SendTransactionRequest | TransactionRequest. */
+function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
+  if ('memo' in req && typeof req.memo === 'string') return req.memo;
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: build type-specific TransactionParam for policy evaluation
+// ---------------------------------------------------------------------------
+
+interface TransactionParam {
+  type: string;
+  amount: string;
+  toAddress: string;
+  chain: string;
+  tokenAddress?: string;
+  contractAddress?: string;
+  selector?: string;
+  spenderAddress?: string;
+  approveAmount?: string;
+}
+
+function buildTransactionParam(
+  req: SendTransactionRequest | TransactionRequest,
+  txType: string,
+  chain: string,
+): TransactionParam {
+  switch (txType) {
+    case 'TOKEN_TRANSFER': {
+      const r = req as { to: string; amount: string; token: { address: string } };
+      return {
+        type: 'TOKEN_TRANSFER',
+        amount: r.amount,
+        toAddress: r.to,
+        chain,
+        tokenAddress: r.token.address,
+      };
+    }
+    case 'CONTRACT_CALL': {
+      const r = req as { to: string; calldata?: string; value?: string };
+      return {
+        type: 'CONTRACT_CALL',
+        amount: r.value ?? '0',
+        toAddress: r.to,
+        chain,
+        contractAddress: r.to,
+        selector: r.calldata?.slice(0, 10),
+      };
+    }
+    case 'APPROVE': {
+      const r = req as { spender: string; amount: string };
+      return {
+        type: 'APPROVE',
+        amount: r.amount,
+        toAddress: r.spender,
+        chain,
+        spenderAddress: r.spender,
+        approveAmount: r.amount,
+      };
+    }
+    case 'TRANSFER':
+    default: {
+      const r = req as { to: string; amount: string };
+      return {
+        type: 'TRANSFER',
+        amount: r.amount,
+        toAddress: r.to,
+        chain,
+      };
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Stage 1: Validate + DB INSERT
 // ---------------------------------------------------------------------------
 
 export async function stage1Validate(ctx: PipelineContext): Promise<void> {
-  // Validate request with Zod schema
-  SendTransactionRequestSchema.parse(ctx.request);
+  // Validate request with appropriate Zod schema
+  // If request has a `type` field, use discriminatedUnion schema (5-type)
+  // Otherwise, use legacy SendTransactionRequestSchema (backward compat)
+  const req = ctx.request;
+  if ('type' in req && req.type) {
+    TransactionRequestSchema.parse(req);
+  } else {
+    SendTransactionRequestSchema.parse(req);
+  }
+
+  // Determine transaction type from request
+  const txType = ('type' in req && req.type) ? req.type : 'TRANSFER';
 
   // Generate transaction ID
   ctx.txId = generateId();
@@ -85,22 +187,27 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   // INSERT PENDING transaction into DB
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
 
+  // Extract common and type-specific fields for DB INSERT
+  const amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
+  const toAddress = 'to' in req ? (req as { to?: string }).to : undefined;
+
   await ctx.db.insert(transactions).values({
     id: ctx.txId,
     agentId: ctx.agentId,
     chain: ctx.agent.chain,
-    type: 'TRANSFER',
+    type: txType,
     status: 'PENDING',
-    amount: ctx.request.amount,
-    toAddress: ctx.request.to,
+    amount: amount ?? null,
+    toAddress: toAddress ?? null,
     sessionId: ctx.sessionId ?? null,
     createdAt: now,
   });
 
   // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
   void ctx.notificationService?.notify('TX_REQUESTED', ctx.agentId, {
-    amount: ctx.request.amount,
-    to: ctx.request.to,
+    amount: amount ?? '0',
+    to: toAddress ?? '',
+    type: txType,
   }, { txId: ctx.txId });
 }
 
@@ -121,25 +228,48 @@ export async function stage2Auth(_ctx: PipelineContext): Promise<void> {
 export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   let evaluation;
 
-  // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
-  if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
-    evaluation = ctx.policyEngine.evaluateAndReserve(
-      ctx.agentId,
-      {
-        type: 'TRANSFER',
-        amount: ctx.request.amount,
-        toAddress: ctx.request.to,
+  // Determine transaction type from request
+  const req = ctx.request;
+  const txType = ('type' in req && req.type) ? req.type : 'TRANSFER';
+
+  // BATCH type uses evaluateBatch (2-stage policy evaluation)
+  if (txType === 'BATCH' && ctx.policyEngine instanceof DatabasePolicyEngine) {
+    const batchReq = req as BatchRequest;
+    // Classify each instruction and build TransactionParam array
+    const params = batchReq.instructions.map((instr) => {
+      let instrType = 'TRANSFER';
+      if ('spender' in instr) instrType = 'APPROVE';
+      else if ('token' in instr) instrType = 'TOKEN_TRANSFER';
+      else if ('programId' in instr || 'calldata' in instr) instrType = 'CONTRACT_CALL';
+
+      return {
+        type: instrType,
+        amount: 'amount' in instr ? (instr as { amount?: string }).amount ?? '0' : '0',
+        toAddress: 'to' in instr ? (instr as { to?: string }).to ?? '' : '',
         chain: ctx.agent.chain,
-      },
-      ctx.txId,
-    );
-  } else {
-    evaluation = await ctx.policyEngine.evaluate(ctx.agentId, {
-      type: 'TRANSFER',
-      amount: ctx.request.amount,
-      toAddress: ctx.request.to,
-      chain: ctx.agent.chain,
+        tokenAddress: 'token' in instr ? (instr as { token?: { address: string } }).token?.address : undefined,
+        contractAddress: instrType === 'CONTRACT_CALL' ? ('to' in instr ? (instr as { to?: string }).to : undefined) : undefined,
+        selector: 'calldata' in instr ? (instr as { calldata?: string }).calldata?.slice(0, 10) : undefined,
+        spenderAddress: 'spender' in instr ? (instr as { spender?: string }).spender : undefined,
+        approveAmount: instrType === 'APPROVE' && 'amount' in instr ? (instr as { amount?: string }).amount : undefined,
+      };
     });
+
+    evaluation = await ctx.policyEngine.evaluateBatch(ctx.agentId, params);
+  } else {
+    // Build type-specific TransactionParam
+    const txParam = buildTransactionParam(req, txType, ctx.agent.chain);
+
+    // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
+    if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
+      evaluation = ctx.policyEngine.evaluateAndReserve(
+        ctx.agentId,
+        txParam,
+        ctx.txId,
+      );
+    } else {
+      evaluation = await ctx.policyEngine.evaluate(ctx.agentId, txParam);
+    }
   }
 
   if (!evaluation.allowed) {
@@ -152,8 +282,8 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify POLICY_VIOLATION (never blocks pipeline)
     void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.agentId, {
       reason: evaluation.reason ?? 'Policy denied',
-      amount: ctx.request.amount,
-      to: ctx.request.to,
+      amount: getRequestAmount(ctx.request),
+      to: getRequestTo(ctx.request),
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('POLICY_DENIED', {
@@ -243,12 +373,16 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage5Execute(ctx: PipelineContext): Promise<void> {
+  const reqAmount = getRequestAmount(ctx.request);
+  const reqTo = getRequestTo(ctx.request);
+  const reqMemo = getRequestMemo(ctx.request);
+
   // Build unsigned transaction
   ctx.unsignedTx = await ctx.adapter.buildTransaction({
     from: ctx.agent.publicKey,
-    to: ctx.request.to,
-    amount: BigInt(ctx.request.amount),
-    memo: ctx.request.memo,
+    to: reqTo,
+    amount: BigInt(reqAmount),
+    memo: reqMemo,
   });
 
   // Simulate
@@ -262,7 +396,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify TX_FAILED on simulation failure (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
       reason: simResult.error ?? 'Simulation failed',
-      amount: ctx.request.amount,
+      amount: reqAmount,
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('SIMULATION_FAILED', {
@@ -297,8 +431,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
   // Fire-and-forget: notify TX_SUBMITTED (never blocks pipeline)
   void ctx.notificationService?.notify('TX_SUBMITTED', ctx.agentId, {
     txHash: ctx.submitResult.txHash,
-    amount: ctx.request.amount,
-    to: ctx.request.to,
+    amount: reqAmount,
+    to: reqTo,
   }, { txId: ctx.txId });
 }
 
@@ -307,6 +441,9 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
+  const reqAmount = getRequestAmount(ctx.request);
+  const reqTo = getRequestTo(ctx.request);
+
   try {
     await ctx.adapter.waitForConfirmation(ctx.submitResult!.txHash, 30_000);
 
@@ -320,8 +457,8 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.agentId, {
       txHash: ctx.submitResult!.txHash,
-      amount: ctx.request.amount,
-      to: ctx.request.to,
+      amount: reqAmount,
+      to: reqTo,
     }, { txId: ctx.txId });
   } catch (error) {
     // Timeout or RPC error: mark FAILED
@@ -336,7 +473,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify TX_FAILED on confirmation failure (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
       reason: errorMessage,
-      amount: ctx.request.amount,
+      amount: reqAmount,
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('CHAIN_ERROR', {

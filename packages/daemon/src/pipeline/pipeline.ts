@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { IChainAdapter, IPolicyEngine, SendTransactionRequest } from '@waiaas/core';
+import type { IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest } from '@waiaas/core';
 import { agents, transactions } from '../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
@@ -51,10 +51,10 @@ export class TransactionPipeline {
    * Execute a send transaction through the 6-stage pipeline.
    *
    * @param agentId - Agent initiating the transaction
-   * @param request - Send transaction request (to, amount, memo?)
+   * @param request - Send transaction request (legacy) or discriminatedUnion 5-type request
    * @returns The transaction ID (UUID v7)
    */
-  async executeSend(agentId: string, request: SendTransactionRequest): Promise<string> {
+  async executeSend(agentId: string, request: SendTransactionRequest | TransactionRequest): Promise<string> {
     // Look up agent
     const agent = await this.getAgent(agentId);
     if (!agent) {

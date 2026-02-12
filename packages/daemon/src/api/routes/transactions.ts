@@ -231,7 +231,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
-    // Get validated request body
+    // Get validated request body (SendTransactionRequestOpenAPI schema)
     const request = c.req.valid('json');
 
     // Stage 1: Validate + INSERT PENDING (synchronous)

@@ -188,7 +188,7 @@ describe('stage1Validate: TX_REQUESTED notification', () => {
     expect(notificationService.notify).toHaveBeenCalledWith(
       'TX_REQUESTED',
       agentId,
-      { amount: '1000000000', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr' },
+      { amount: '1000000000', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', type: 'TRANSFER' },
       { txId: ctx.txId },
     );
   });
