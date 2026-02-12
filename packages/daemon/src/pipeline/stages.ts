@@ -31,7 +31,7 @@ import {
   type ContractCallRequest,
   type ApproveRequest,
 } from '@waiaas/core';
-import { agents, transactions } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
@@ -54,8 +54,8 @@ export interface PipelineContext {
   policyEngine: IPolicyEngine;
   masterPassword: string;
   // Request data
-  agentId: string;
-  agent: { publicKey: string; chain: string; network: string };
+  walletId: string;
+  wallet: { publicKey: string; chain: string; network: string };
   request: SendTransactionRequest | TransactionRequest;
   // State accumulated through stages
   txId: string;
@@ -198,8 +198,8 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
 
   await ctx.db.insert(transactions).values({
     id: ctx.txId,
-    agentId: ctx.agentId,
-    chain: ctx.agent.chain,
+    walletId: ctx.walletId,
+    chain: ctx.wallet.chain,
     type: txType,
     status: 'PENDING',
     amount: amount ?? null,
@@ -209,7 +209,7 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   });
 
   // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
-  void ctx.notificationService?.notify('TX_REQUESTED', ctx.agentId, {
+  void ctx.notificationService?.notify('TX_REQUESTED', ctx.walletId, {
     amount: amount ?? '0',
     to: toAddress ?? '',
     type: txType,
@@ -251,7 +251,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
         type: instrType,
         amount: 'amount' in instr ? (instr as { amount?: string }).amount ?? '0' : '0',
         toAddress: 'to' in instr ? (instr as { to?: string }).to ?? '' : '',
-        chain: ctx.agent.chain,
+        chain: ctx.wallet.chain,
         tokenAddress: 'token' in instr ? (instr as { token?: { address: string } }).token?.address : undefined,
         contractAddress: instrType === 'CONTRACT_CALL' ? ('to' in instr ? (instr as { to?: string }).to : undefined) : undefined,
         selector: 'calldata' in instr ? (instr as { calldata?: string }).calldata?.slice(0, 10) : undefined,
@@ -260,20 +260,20 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       };
     });
 
-    evaluation = await ctx.policyEngine.evaluateBatch(ctx.agentId, params);
+    evaluation = await ctx.policyEngine.evaluateBatch(ctx.walletId, params);
   } else {
     // Build type-specific TransactionParam
-    const txParam = buildTransactionParam(req, txType, ctx.agent.chain);
+    const txParam = buildTransactionParam(req, txType, ctx.wallet.chain);
 
     // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
     if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
       evaluation = ctx.policyEngine.evaluateAndReserve(
-        ctx.agentId,
+        ctx.walletId,
         txParam,
         ctx.txId,
       );
     } else {
-      evaluation = await ctx.policyEngine.evaluate(ctx.agentId, txParam);
+      evaluation = await ctx.policyEngine.evaluate(ctx.walletId, txParam);
     }
   }
 
@@ -285,7 +285,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       .where(eq(transactions.id, ctx.txId));
 
     // Fire-and-forget: notify POLICY_VIOLATION (never blocks pipeline)
-    void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.agentId, {
+    void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.walletId, {
       reason: evaluation.reason ?? 'Policy denied',
       amount: getRequestAmount(ctx.request),
       to: getRequestTo(ctx.request),
@@ -301,12 +301,12 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 
   // Check for APPROVAL -> DELAY downgrade when no owner registered
   if (tier === 'APPROVAL') {
-    const agentRow = await ctx.db.select().from(agents).where(eq(agents.id, ctx.agentId)).get();
-    if (agentRow) {
+    const walletRow = await ctx.db.select().from(wallets).where(eq(wallets.id, ctx.walletId)).get();
+    if (walletRow) {
       const result = downgradeIfNoOwner(
         {
-          ownerAddress: agentRow.ownerAddress ?? null,
-          ownerVerified: agentRow.ownerVerified ?? false,
+          ownerAddress: walletRow.ownerAddress ?? null,
+          ownerVerified: walletRow.ownerVerified ?? false,
         },
         tier,
       );
@@ -384,14 +384,14 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
 async function buildByType(
   adapter: IChainAdapter,
   request: SendTransactionRequest | TransactionRequest,
-  agentPublicKey: string,
+  walletPublicKey: string,
 ): Promise<UnsignedTransaction> {
   const type = ('type' in request && request.type) || 'TRANSFER';
 
   switch (type) {
     case 'TRANSFER': {
       return adapter.buildTransaction({
-        from: agentPublicKey,
+        from: walletPublicKey,
         to: getRequestTo(request),
         amount: BigInt(getRequestAmount(request)),
         memo: getRequestMemo(request),
@@ -401,7 +401,7 @@ async function buildByType(
     case 'TOKEN_TRANSFER': {
       const req = request as TokenTransferRequest;
       return adapter.buildTokenTransfer({
-        from: agentPublicKey,
+        from: walletPublicKey,
         to: req.to,
         amount: BigInt(req.amount),
         token: req.token,
@@ -412,7 +412,7 @@ async function buildByType(
     case 'CONTRACT_CALL': {
       const req = request as ContractCallRequest;
       return adapter.buildContractCall({
-        from: agentPublicKey,
+        from: walletPublicKey,
         to: req.to,
         calldata: req.calldata,
         abi: req.abi as Record<string, unknown>[] | undefined,
@@ -428,7 +428,7 @@ async function buildByType(
     case 'APPROVE': {
       const req = request as ApproveRequest;
       return adapter.buildApprove({
-        from: agentPublicKey,
+        from: walletPublicKey,
         spender: req.spender,
         token: req.token,
         amount: BigInt(req.amount),
@@ -438,13 +438,13 @@ async function buildByType(
     case 'BATCH': {
       const req = request as BatchRequest;
       return adapter.buildBatch({
-        from: agentPublicKey,
+        from: walletPublicKey,
         instructions: req.instructions.map((instr) => {
           // Classify by field presence (same logic as classifyInstruction in Phase 80)
           if ('spender' in instr) {
             const a = instr as { spender: string; token: { address: string; decimals: number; symbol: string }; amount: string };
             return {
-              from: agentPublicKey,
+              from: walletPublicKey,
               spender: a.spender,
               token: a.token,
               amount: BigInt(a.amount),
@@ -453,7 +453,7 @@ async function buildByType(
           if ('token' in instr) {
             const t = instr as { to: string; amount: string; token: { address: string; decimals: number; symbol: string }; memo?: string };
             return {
-              from: agentPublicKey,
+              from: walletPublicKey,
               to: t.to,
               amount: BigInt(t.amount),
               token: t.token,
@@ -470,7 +470,7 @@ async function buildByType(
               value?: string;
             };
             return {
-              from: agentPublicKey,
+              from: walletPublicKey,
               to: c.to,
               calldata: c.calldata,
               programId: c.programId,
@@ -484,7 +484,7 @@ async function buildByType(
           // Default: TRANSFER instruction
           const tr = instr as { to: string; amount: string; memo?: string };
           return {
-            from: agentPublicKey,
+            from: walletPublicKey,
             to: tr.to,
             amount: BigInt(tr.amount),
             memo: tr.memo,
@@ -526,7 +526,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
   buildLoop: while (true) {
     try {
       // Stage 5a: Build unsigned transaction (type-routed)
-      ctx.unsignedTx = await buildByType(ctx.adapter, ctx.request, ctx.agent.publicKey);
+      ctx.unsignedTx = await buildByType(ctx.adapter, ctx.request, ctx.wallet.publicKey);
 
       // Stage 5b: Simulate
       const simResult = await ctx.adapter.simulateTransaction(ctx.unsignedTx);
@@ -537,7 +537,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
           .where(eq(transactions.id, ctx.txId));
 
         // Fire-and-forget: notify TX_FAILED on simulation failure
-        void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+        void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
           reason: simResult.error ?? 'Simulation failed',
           amount: reqAmount,
         }, { txId: ctx.txId });
@@ -551,7 +551,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       // CRITICAL: key MUST be released in finally block
       let privateKey: Uint8Array | null = null;
       try {
-        privateKey = await ctx.keyStore.decryptPrivateKey(ctx.agentId, ctx.masterPassword);
+        privateKey = await ctx.keyStore.decryptPrivateKey(ctx.walletId, ctx.masterPassword);
         ctx.signedTx = await ctx.adapter.signTransaction(ctx.unsignedTx, privateKey);
       } finally {
         if (privateKey) {
@@ -569,7 +569,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         .where(eq(transactions.id, ctx.txId));
 
       // Fire-and-forget: notify TX_SUBMITTED
-      void ctx.notificationService?.notify('TX_SUBMITTED', ctx.agentId, {
+      void ctx.notificationService?.notify('TX_SUBMITTED', ctx.walletId, {
         txHash: ctx.submitResult.txHash,
         amount: reqAmount,
         to: reqTo,
@@ -593,7 +593,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
             .where(eq(transactions.id, ctx.txId));
 
           // Fire-and-forget: notify TX_FAILED
-          void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+          void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
             reason: err.message,
             amount: reqAmount,
           }, { txId: ctx.txId });
@@ -613,7 +613,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
               .where(eq(transactions.id, ctx.txId));
 
             // Fire-and-forget: notify TX_FAILED
-            void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+            void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
               reason: `${err.code} (max retries exceeded)`,
               amount: reqAmount,
             }, { txId: ctx.txId });
@@ -639,7 +639,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
               .where(eq(transactions.id, ctx.txId));
 
             // Fire-and-forget: notify TX_FAILED
-            void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+            void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
               reason: `${err.code} (stale retry exhausted)`,
               amount: reqAmount,
             }, { txId: ctx.txId });
@@ -691,7 +691,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .where(eq(transactions.id, ctx.txId));
 
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
-    void ctx.notificationService?.notify('TX_CONFIRMED', ctx.agentId, {
+    void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
       txHash: ctx.submitResult!.txHash,
       amount: reqAmount,
       to: reqTo,
@@ -707,7 +707,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .where(eq(transactions.id, ctx.txId));
 
     // Fire-and-forget: notify TX_FAILED on confirmation failure (never blocks pipeline)
-    void ctx.notificationService?.notify('TX_FAILED', ctx.agentId, {
+    void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
       reason: errorMessage,
       amount: reqAmount,
     }, { txId: ctx.txId });

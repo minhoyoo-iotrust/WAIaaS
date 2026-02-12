@@ -180,7 +180,7 @@ export class NotificationService {
         .values({
           id: generateId(),
           eventType: payload.eventType,
-          agentId: payload.agentId,
+          walletId: payload.agentId,
           channel: channelName,
           status,
           error: error ?? null,
@@ -221,7 +221,7 @@ export class NotificationService {
           timestamp: new Date(payload.timestamp * 1000),
           eventType: 'NOTIFICATION_TOTAL_FAILURE',
           actor: 'system',
-          agentId: payload.agentId,
+          walletId: payload.agentId,
           details: JSON.stringify({
             originalEvent: payload.eventType,
             message: payload.message,

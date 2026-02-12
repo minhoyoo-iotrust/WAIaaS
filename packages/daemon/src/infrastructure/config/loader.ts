@@ -97,7 +97,7 @@ export const DaemonConfigSchema = z.object({
     .object({
       session_ttl: z.number().int().min(300).max(604800).default(86400),
       jwt_secret: z.string().default(''),
-      max_sessions_per_agent: z.number().int().min(1).max(50).default(5),
+      max_sessions_per_wallet: z.number().int().min(1).max(50).default(5),
       max_pending_tx: z.number().int().min(1).max(100).default(10),
       nonce_storage: z.enum(['memory', 'sqlite']).default('memory'),
       nonce_cache_max: z.number().int().min(100).max(10000).default(1000),

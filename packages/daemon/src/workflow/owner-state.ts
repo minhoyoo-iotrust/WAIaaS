@@ -110,7 +110,7 @@ export class OwnerLifecycleService {
     const now = Math.floor(Date.now() / 1000);
     this.sqlite
       .prepare(
-        'UPDATE agents SET owner_address = ?, owner_verified = 0, updated_at = ? WHERE id = ?',
+        'UPDATE wallets SET owner_address = ?, owner_verified = 0, updated_at = ? WHERE id = ?',
       )
       .run(ownerAddress, now, agentId);
   }
@@ -147,7 +147,7 @@ export class OwnerLifecycleService {
     const now = Math.floor(Date.now() / 1000);
     this.sqlite
       .prepare(
-        'UPDATE agents SET owner_address = NULL, owner_verified = 0, updated_at = ? WHERE id = ?',
+        'UPDATE wallets SET owner_address = NULL, owner_verified = 0, updated_at = ? WHERE id = ?',
       )
       .run(now, agentId);
   }
@@ -185,7 +185,7 @@ export class OwnerLifecycleService {
     // GRACE -> LOCKED
     const now = Math.floor(Date.now() / 1000);
     this.sqlite
-      .prepare('UPDATE agents SET owner_verified = 1, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE wallets SET owner_verified = 1, updated_at = ? WHERE id = ?')
       .run(now, agentId);
   }
 
@@ -195,12 +195,12 @@ export class OwnerLifecycleService {
 
   private getAgentRow(agentId: string): AgentRow {
     const row = this.sqlite
-      .prepare('SELECT owner_address, owner_verified FROM agents WHERE id = ?')
+      .prepare('SELECT owner_address, owner_verified FROM wallets WHERE id = ?')
       .get(agentId) as AgentRow | undefined;
 
     if (!row) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: `Agent '${agentId}' not found`,
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${agentId}' not found`,
       });
     }
 

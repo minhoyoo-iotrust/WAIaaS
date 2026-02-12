@@ -27,7 +27,7 @@ import { keyValueStore } from '../database/schema.js';
 
 export interface JwtPayload {
   sub: string; // sessionId
-  agt: string; // agentId
+  wlt: string; // walletId
   iat: number; // issued at (epoch seconds)
   exp: number; // expires at (epoch seconds)
 }
@@ -209,7 +209,7 @@ export class JwtSecretManager {
 
     const jwt = await new SignJWT({
       sub: payload.sub,
-      agt: payload.agt,
+      wlt: payload.wlt,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt(payload.iat)
@@ -244,7 +244,7 @@ export class JwtSecretManager {
 
         return {
           sub: payload.sub as string,
-          agt: payload.agt as string,
+          wlt: payload.wlt as string,
           iat: payload.iat as number,
           exp: payload.exp as number,
         };
