@@ -1,0 +1,119 @@
+# Requirements: WAIaaS v1.4.1
+
+**Defined:** 2026-02-12
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+
+## v1.4.1 Requirements
+
+EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE. 각 요구사항은 로드맵 페이즈에 매핑된다.
+
+### Keystore 멀티커브
+
+- [ ] **KEYS-01**: chain='ethereum' 에이전트 생성 시 secp256k1 키가 생성되고 0x EIP-55 체크섬 주소가 반환된다
+- [ ] **KEYS-02**: KeystoreFileV1에 curve 필드('ed25519'|'secp256k1')가 기록되고, 기존 Solana 키스토어는 curve 없이도 ed25519로 동작한다
+- [ ] **KEYS-03**: secp256k1 비밀키가 AES-256-GCM으로 암호화되고 평문은 즉시 제로화된다
+- [ ] **KEYS-04**: generateKeyPair에 network 파라미터가 추가되어 키스토어 파일에 실제 network 값이 기록된다
+
+### 어댑터 팩토리
+
+- [ ] **POOL-01**: AdapterPool이 agent.chain/network 기반으로 SolanaAdapter 또는 EvmAdapter를 선택한다
+- [ ] **POOL-02**: 동일 chain:network 조합은 어댑터 인스턴스를 캐싱하여 재사용한다
+- [ ] **POOL-03**: daemon.ts/server.ts/라우트의 단일 adapter 주입이 adapterPool 패턴으로 전환된다
+- [ ] **POOL-04**: 데몬 shutdown 시 모든 어댑터가 disconnect된다
+
+### Config EVM RPC
+
+- [ ] **CONF-01**: DaemonConfigSchema.rpc에 EVM Tier 1 10키 + evm_default_network가 추가된다 (기존 ethereum_* 2키 제거)
+- [ ] **CONF-02**: NetworkType에 EVM 10개 네트워크가 추가되고 EVM_NETWORK_TYPES/EvmNetworkTypeEnum 서브셋이 제공된다
+- [ ] **CONF-03**: EVM_CHAIN_MAP이 10개 네트워크 → viem Chain + chainId + nativeSymbol/nativeName을 매핑한다
+- [ ] **CONF-04**: EvmAdapter 생성자가 nativeSymbol/nativeName을 받아 getBalance/getAssets에서 체인별 정확한 심볼을 반환한다
+- [ ] **CONF-05**: CreateAgentRequestSchema의 network가 optional이 되고 chain별 기본값이 서비스 레이어에서 적용된다
+- [ ] **CONF-06**: validateChainNetwork()가 chain-network 교차 검증으로 무효 조합(solana+ethereum-sepolia 등)을 400 거부한다
+
+### DB 마이그레이션
+
+- [ ] **MIGR-01**: Migration 인터페이스에 managesOwnTransaction 플래그가 추가되어 v2 마이그레이션이 자체 PRAGMA/트랜잭션을 관리한다
+- [ ] **MIGR-02**: schema_version 2 마이그레이션이 agents 테이블을 재생성하여 network CHECK 제약이 EVM 네트워크를 포함한다
+- [ ] **MIGR-03**: 마이그레이션 후 FK 무결성이 sqlite.pragma('foreign_key_check')로 검증되고 기존 데이터가 100% 보존된다
+
+### REST API 5-type
+
+- [ ] **API-01**: POST /v1/transactions/send가 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)을 수용한다
+- [ ] **API-02**: type 필드 없는 레거시 요청({to, amount, memo})이 TRANSFER로 폴백하여 하위 호환을 유지한다
+- [ ] **API-03**: GET /doc OpenAPI 스펙이 oneOf 6-variant(5-type + legacy) 스키마를 정확하게 반영한다
+- [ ] **API-04**: stage1Validate가 실제 Zod 검증 SSoT이고 잘못된 type은 400 VALIDATION_ERROR로 거부된다
+
+### MCP/SDK 확장
+
+- [ ] **MCPSDK-01**: MCP send_token 도구가 type/token 파라미터를 지원하여 TRANSFER + TOKEN_TRANSFER를 실행한다
+- [ ] **MCPSDK-02**: TS SDK send 메서드가 type/token 파라미터를 옵션으로 지원하여 5가지 트랜잭션 타입을 전송한다
+- [ ] **MCPSDK-03**: Python SDK send 메서드가 type/token 파라미터를 옵션으로 지원하여 5가지 트랜잭션 타입을 전송한다
+- [ ] **MCPSDK-04**: MCP에서 CONTRACT_CALL/APPROVE/BATCH는 노출되지 않는다 (보안 정책)
+
+### Owner Auth SIWE
+
+- [ ] **SIWE-01**: verifySIWE 함수가 viem/siwe로 EIP-4361 메시지를 파싱하고 EIP-191 서명을 검증한다
+- [ ] **SIWE-02**: owner-auth 미들웨어가 agent.chain에 따라 solana→Ed25519, ethereum→SIWE 분기 검증한다
+- [ ] **SIWE-03**: setOwner 라우트가 chain별 owner_address 형식을 검증한다 (solana: base58 32B, ethereum: 0x EIP-55)
+- [ ] **SIWE-04**: 기존 Solana owner-auth가 회귀 없이 동작한다
+
+## Future Requirements
+
+### v1.5 DeFi + 가격 오라클
+
+- **ORACLE-01**: IPriceOracle 인터페이스 + CoinGecko 구현
+- **ACTION-01**: IActionProvider resolve-then-execute 패턴
+- **SWAP-01**: Jupiter Swap Action Provider
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| EIP-1271 스마트 계정 SIWE | RPC 필요, EOA ecRecover만 지원 — 향후 확장 |
+| SIWE nonce 서버 발급 | Solana owner-auth와 일관성 유지, expirationTime 의존 |
+| Tier 2+ EVM 체인 config 기본값 | 사용자 직접 config.toml 설정 |
+| MCP CONTRACT_CALL/APPROVE/BATCH 도구 | AI 에이전트 자율 실행 보안 위험, SDK/REST 전용 |
+| @waiaas/core ConfigSchema 정리 | 현재 미사용, 별도 정리 대상 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CONF-01 | Phase 82 | Pending |
+| CONF-02 | Phase 82 | Pending |
+| CONF-03 | Phase 82 | Pending |
+| CONF-04 | Phase 82 | Pending |
+| CONF-05 | Phase 82 | Pending |
+| CONF-06 | Phase 82 | Pending |
+| KEYS-01 | Phase 83 | Pending |
+| KEYS-02 | Phase 83 | Pending |
+| KEYS-03 | Phase 83 | Pending |
+| KEYS-04 | Phase 83 | Pending |
+| POOL-01 | Phase 84 | Pending |
+| POOL-02 | Phase 84 | Pending |
+| POOL-03 | Phase 84 | Pending |
+| POOL-04 | Phase 84 | Pending |
+| MIGR-01 | Phase 85 | Pending |
+| MIGR-02 | Phase 85 | Pending |
+| MIGR-03 | Phase 85 | Pending |
+| API-01 | Phase 86 | Pending |
+| API-02 | Phase 86 | Pending |
+| API-03 | Phase 86 | Pending |
+| API-04 | Phase 86 | Pending |
+| MCPSDK-01 | Phase 86 | Pending |
+| MCPSDK-02 | Phase 86 | Pending |
+| MCPSDK-03 | Phase 86 | Pending |
+| MCPSDK-04 | Phase 86 | Pending |
+| SIWE-01 | Phase 87 | Pending |
+| SIWE-02 | Phase 87 | Pending |
+| SIWE-03 | Phase 87 | Pending |
+| SIWE-04 | Phase 87 | Pending |
+
+**Coverage:**
+- v1.4.1 requirements: 29 total
+- Mapped to phases: 29
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-02-12*
+*Last updated: 2026-02-12 after initial definition*
