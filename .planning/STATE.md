@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4 Phase 79 진행 중 (컨트랙트 호출 + 승인 관리)
+**Current focus:** v1.4 Phase 79 완료 (컨트랙트 호출 + 승인 관리)
 
 ## Current Position
 
 Phase: 79 of 81 (컨트랙트 호출 + 승인 관리)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-12 — Completed 79-01-PLAN.md (buildContractCall + CONTRACT_WHITELIST + METHOD_WHITELIST)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-12 — Completed 79-02-PLAN.md (buildApprove + APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPROVE_TIER_OVERRIDE)
 
-Progress: [████████░░] 67% (8/12 plans)
+Progress: [█████████░] 75% (9/12 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 19 milestones, 75 phases, 178 plans, 488 reqs, 1056 tests, 44,205 LOC
+**Cumulative:** 19 milestones, 75 phases, 179 plans, 488 reqs, 1074 tests, 44,205 LOC
 
 ## Accumulated Context
 
@@ -62,6 +62,10 @@ Recent decisions affecting current work:
 - CONTRACT_WHITELIST 기본 거부: CONTRACT_CALL 시 정책 없으면 deny (CONTRACT_CALL_DISABLED)
 - METHOD_WHITELIST 선택적: 정책 없으면 모든 메서드 허용 (컨트랙트별 엔트리 없으면 해당 컨트랙트 제한 없음)
 - 주소/셀렉터 대소문자 구분 없음 (EVM hex 주소 호환성)
+- APPROVED_SPENDERS 기본 거부: APPROVE 시 정책 없으면 deny (APPROVE_DISABLED)
+- UNLIMITED_THRESHOLD = (2^256 - 1) / 2 -- EVM MAX_UINT256 + Solana MAX_U64 통합 임계값
+- APPROVE_TIER_OVERRIDE 기본 APPROVAL tier (Owner 승인 필수), SPENDING_LIMIT 건너뜀
+- 대소문자 구분 없는 spender 주소 비교 (EVM hex 주소 호환성)
 
 ### Blockers/Concerns
 
@@ -70,6 +74,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-12T02:09:34Z
-Stopped at: Completed 79-01-PLAN.md
+Last session: 2026-02-12T02:18:06Z
+Stopped at: Completed 79-02-PLAN.md
 Resume file: None
