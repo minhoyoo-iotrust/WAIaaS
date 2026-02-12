@@ -58,11 +58,11 @@ Plans:
   3. JWT payload claim이 `wlt`이고 `agt` claim 토큰이 401로 거부된다
   4. `GET /doc` OpenAPI 스펙에서 `agentId` 0건, `walletId` 존재한다
   5. `max_sessions_per_wallet` config 키가 파싱되고 `max_sessions_per_agent`는 거부된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 91-01: OpenAPI 스키마 rename + agents.ts -> wallets.ts 라우트 파일 변경
-- [ ] 91-02: JWT claim + session-auth + Hono context + config 키 변경 + 데몬 테스트 갱신
+- [ ] 91-01-PLAN.md — OpenAPI 스키마 rename + agents.ts -> wallets.ts + 라우트/JWT/Config 소스 변경 (19 파일)
+- [ ] 91-02-PLAN.md — 데몬 테스트 파일 전체 wallet 용어 갱신 + 테스트 통과 확인 (37+ 파일)
 
 ### Phase 92: MCP + CLI + SDK
 **Goal**: MCP/CLI/SDK 소비자 패키지가 wallet 용어를 사용하여, AI 에이전트가 walletId 기반으로 지갑에 접근한다
