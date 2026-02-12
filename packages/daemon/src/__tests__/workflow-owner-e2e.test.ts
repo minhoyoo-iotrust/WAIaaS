@@ -27,6 +27,7 @@ import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { OwnerLifecycleService } from '../workflow/owner-state.js';
 import type { IChainAdapter } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
 // ---------------------------------------------------------------------------
@@ -128,6 +129,15 @@ function createMockAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapte
     sweepAll: async () => { throw new Error('not implemented'); },
     ...overrides,
   };
+}
+
+function createMockAdapterPool(adapter?: IChainAdapter): AdapterPool {
+  const a = adapter ?? createMockAdapter();
+  return {
+    resolve: vi.fn().mockResolvedValue(a),
+    disconnectAll: vi.fn().mockResolvedValue(undefined),
+    get size() { return 0; },
+  } as unknown as AdapterPool;
 }
 
 function createMockKeyStore() {
@@ -308,7 +318,7 @@ beforeEach(async () => {
     masterPasswordHash: passwordHash,
     masterPassword: TEST_PASSWORD,
     config,
-    adapter: createMockAdapter(),
+    adapterPool: createMockAdapterPool(),
     keyStore: createMockKeyStore(),
     policyEngine,
     delayQueue,

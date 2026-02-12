@@ -91,7 +91,7 @@ describe('AdapterPool', () => {
     const adapter = await pool.resolve('solana', 'devnet', 'https://api.devnet.solana.com');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
-    expect((adapter as MockSolanaAdapter).network).toBe('devnet');
+    expect((adapter as unknown as MockSolanaAdapter).network).toBe('devnet');
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://api.devnet.solana.com');
     expect(pool.size).toBe(1);
   });
@@ -101,7 +101,7 @@ describe('AdapterPool', () => {
     const adapter = await pool.resolve('ethereum', 'ethereum-sepolia', 'https://sepolia.drpc.org');
 
     expect(adapter).toBeInstanceOf(MockEvmAdapter);
-    const evmAdapter = adapter as MockEvmAdapter;
+    const evmAdapter = adapter as unknown as MockEvmAdapter;
     expect(evmAdapter.network).toBe('ethereum-sepolia');
     expect(evmAdapter.nativeSymbol).toBe('ETH');
     expect(evmAdapter.nativeName).toBe('Ether');
@@ -114,7 +114,7 @@ describe('AdapterPool', () => {
   it('resolve("ethereum", "polygon-mainnet", rpcUrl) creates EvmAdapter with POL nativeSymbol', async () => {
     const adapter = await pool.resolve('ethereum', 'polygon-mainnet', 'https://polygon.drpc.org');
 
-    const evmAdapter = adapter as MockEvmAdapter;
+    const evmAdapter = adapter as unknown as MockEvmAdapter;
     expect(evmAdapter.nativeSymbol).toBe('POL');
     expect(evmAdapter.nativeName).toBe('POL');
   });
