@@ -497,3 +497,34 @@
 
 ---
 
+
+## v1.4 토큰 + 컨트랙트 확장 (Shipped: 2026-02-12)
+
+**Delivered:** v1.3.4 알림 인프라 위에 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)을 지원하는 완전한 블록체인 기능 확장을 구현하여, SPL/ERC-20 토큰 전송, 스마트 컨트랙트 호출, Approve 관리, Solana 원자적 배치가 기본 거부 정책으로 동작하고, @waiaas/adapter-evm 패키지가 viem 2.x 기반으로 IChainAdapter 20메서드를 구현하며, Stage 5가 ChainError 카테고리별 재시도를 수행하는 상태를 달성
+
+**Phases completed:** 76-81 (12 plans total)
+
+**Key accomplishments:**
+
+- ChainError 3-카테고리 시스템 + DB 마이그레이션 러너 — 27개 에러 코드 PERMANENT/TRANSIENT/STALE 자동 분류, schema_version 기반 증분 마이그레이션, discriminatedUnion 5-type TransactionRequestSchema, IChainAdapter 11→20 메서드 확장, 6개 PolicyType superRefine 검증
+- @waiaas/adapter-evm 패키지 — viem 2.x Client/Action 패턴으로 IChainAdapter 20메서드 구현(17 실제 + 3 스텁), EIP-1559 네이티브 전송, ERC-20 전송/approve, gas 추정 1.2x, nonce 관리, ChainError viem 에러 패턴 매칭
+- SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 정책 — SolanaAdapter buildTokenTransfer(Token-2022 분기, ATA 자동 생성), EvmAdapter buildTokenTransfer(ERC-20 calldata), ALLOWED_TOKENS 기본 거부 정책, getAssets 토큰 잔액 포함(네이티브 첫 번째 + 잔액 내림차순), getTokenInfo/estimateFee 구현
+- 컨트랙트 호출 + Approve 관리 — buildContractCall(EVM calldata/Solana programId+instructionData), CONTRACT_WHITELIST/METHOD_WHITELIST 기본 거부 정책, buildApprove(EVM ERC-20/Solana SPL ApproveChecked), APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE 정책, 무제한 approve 차단
+- Solana 원자적 배치 + 2단계 합산 정책 — buildBatch(min 2/max 20 instructions), evaluateBatch(개별 평가 + 합산 SPENDING_LIMIT, All-or-Nothing), classifyInstruction 필드 기반 union 판별, EVM BATCH_NOT_SUPPORTED
+- Stage 5 CONC-01 + discriminatedUnion 파이프라인 — Stage 1 type 필드 기반 5-type 파싱, Stage 3 type별 정책 필터링(10 PolicyType), Stage 5 build→simulate→sign→submit 재시도 루프(PERMANENT 즉시 실패/TRANSIENT 지수 백오프/STALE 재빌드), buildByType 5-type adapter 라우팅
+
+**Stats:**
+
+- 50 files changed, +9,814 / -187 lines
+- @waiaas/adapter-evm: 신규 패키지 (9패키지 모노레포)
+- Total project: 51,750 LOC (42,123 → 51,750, +9,627)
+- 6 phases, 12 plans, 35 requirements, 50+ 설계 결정
+- 1,126 tests (895 → 1,126, +231 new tests)
+- 1 day (2026-02-12)
+
+**Git range:** `a9ba1e1` (Phase 76 start) → `34c2aec` (Phase 81 complete)
+
+**What's next:** v1.4.1 EVM 지갑 인프라 — secp256k1 키 생성, 어댑터 팩토리, Config EVM RPC
+
+---
+

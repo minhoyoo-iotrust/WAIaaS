@@ -2,32 +2,17 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.3.2에서 브라우저 기반 Admin Web UI(Preact SPA)가 추가되었고, v1.3.3에서 MCP 다중 에이전트를 지원하며, v1.3.4에서 알림 이벤트 트리거 연결 + 어드민 알림 패널이 추가되어 데몬에서 발생하는 주요 이벤트(거래, 세션, Owner)가 실제 알림으로 전달되고 어드민이 브라우저에서 상태 확인/테스트/로그 조회가 가능하다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4에서 SPL/ERC-20 토큰 전송, 스마트 컨트랙트 호출, Approve 관리, Solana 원자적 배치가 기본 거부 정책으로 동작하며, @waiaas/adapter-evm 패키지(viem 2.x)로 EVM 체인을 지원하고, 5-type discriminatedUnion 파이프라인 + Stage 5 ChainError 카테고리별 재시도가 완전 구현되었다.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.4 토큰 + 컨트랙트 확장
-
-**Goal:** SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터가 동작하는 상태
-
-**Target features:**
-- SPL/ERC-20 토큰 전송 (ALLOWED_TOKENS 정책)
-- 컨트랙트 호출 (CONTRACT_WHITELIST 기본 거부)
-- Approve 관리 (APPROVED_SPENDERS, 무제한 차단)
-- Solana 원자적 배치 (2단계 합산 정책)
-- `@waiaas/adapter-evm` 패키지 (viem 2.x)
-- IChainAdapter 11→20 메서드 확장
-- ChainError 3-카테고리 + Stage 5 완전 의사코드
-- discriminatedUnion 5-type 파이프라인
-- 6개 신규 PolicyType 평가 로직
-
 ## Current State
 
-v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026-02-12). 파이프라인 8개 이벤트(TX_REQUESTED~OWNER_SET) fire-and-forget 트리거 연결, notification_logs DB 테이블(증분 마이그레이션), 어드민 알림 API 3개(status/test/log), 어드민 알림 패널 UI(채널 상태 카드, 테스트 발송, 로그 조회, config 안내)가 동작.
+v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). SPL/ERC-20 토큰 전송(ALLOWED_TOKENS 기본 거부), 컨트랙트 호출(CONTRACT_WHITELIST/METHOD_WHITELIST 기본 거부), Approve 관리(APPROVED_SPENDERS/무제한 차단), Solana 원자적 배치(2단계 합산 정책), @waiaas/adapter-evm 패키지(viem 2.x, 20메서드), ChainError 3-카테고리 + Stage 5 CONC-01 재시도, discriminatedUnion 5-type 파이프라인이 동작.
 
-코드베이스(v1.3.4 기준): 8-패키지 모노레포 + Python SDK, 42,123 LOC, 895 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL 전송 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 에이전트 MCP 설정까지 동작.
+코드베이스(v1.4 기준): 9-패키지 모노레포 + Python SDK, 51,750 LOC, 1,126 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절 + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 에이전트 MCP 설정까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -37,18 +22,20 @@ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026
 - ✅ v1.3.2 Admin Web UI 구현 — shipped 2026-02-11
 - ✅ v1.3.3 MCP 다중 에이전트 지원 — shipped 2026-02-11
 - ✅ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 — shipped 2026-02-12
-- v1.4 토큰 + 컨트랙트 확장 (SPL/ERC-20, 컨트랙트 호출, Approve, Batch, EVM 어댑터)
+- ✅ v1.4 토큰 + 컨트랙트 확장 — shipped 2026-02-12 (1,126 tests, 51,750 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
+- v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, facilitator 연동)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
 
 **코드베이스 현황:**
-- 8-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 42,123 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 895 테스트 (core + adapter + daemon + CLI + SDK + MCP + admin)
+- 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
+- 51,750 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,126 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 36 엔드포인트 (33 + admin 알림 3), GET /doc OpenAPI 3.0 자동 생성
+- IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 10 PolicyType
 - 설계 문서 31개 (24-67), 8 objective 문서
 
 ## 요구사항
@@ -179,22 +166,23 @@ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026
 - ✓ 어드민 알림 API 3개 엔드포인트 — GET status(credential 마스킹)/POST test/GET log(페이지네이션) — v1.3.4 (API-01~03)
 - ✓ 어드민 알림 패널 UI — 채널 상태 카드, 테스트 발송, 발송 로그, config.toml 안내 — v1.3.4 (UI-01~04)
 
+- ✓ SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 기본 거부 정책 — v1.4 (TOKEN-01~06)
+- ✓ 컨트랙트 호출 + CONTRACT_WHITELIST/METHOD_WHITELIST 기본 거부 — v1.4 (CONTRACT-01~04)
+- ✓ Approve 관리 + APPROVED_SPENDERS/무제한 차단/TIER_OVERRIDE — v1.4 (APPROVE-01~04)
+- ✓ Solana 원자적 배치 + 2단계 합산 정책 + EVM BATCH_NOT_SUPPORTED — v1.4 (BATCH-01~04)
+- ✓ @waiaas/adapter-evm (viem 2.x, 20메서드, EIP-1559, gas 1.2x, nonce) — v1.4 (EVM-01~06)
+- ✓ ChainError 3-카테고리 + DB 마이그레이션 러너 + discriminatedUnion 5-type — v1.4 (INFRA-01~05)
+- ✓ Stage 5 CONC-01 재시도 + buildByType 5-type 라우팅 + 6개 PolicyType superRefine — v1.4 (PIPE-01~06)
+
 ### 활성
 
-- [ ] SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 정책
-- [ ] ContractCallRequest + CONTRACT_WHITELIST 기본 거부
-- [ ] ApproveRequest 독립 정책 + 무제한 차단
-- [ ] BatchRequest Solana 원자적 + 2단계 합산 정책
-- [ ] @waiaas/adapter-evm (viem 2.x)
-- [ ] IChainAdapter 20 메서드 확장
-- [ ] ChainError 3-카테고리 + Stage 5 재시도
-- [ ] discriminatedUnion 5-type 파이프라인
-- [ ] 6개 신규 PolicyType 평가 로직 + superRefine
+(다음 마일스톤에서 정의)
 
 ## Next Milestone Goals
 
 - v1.4.1 EVM 지갑 인프라 — secp256k1 키 생성, 어댑터 팩토리, Config EVM RPC
 - v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
+- v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, facilitator 연동
 - v1.6 운영 인프라 + 잔액 모니터링
 
 ### 범위 외
@@ -212,7 +200,7 @@ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 shipped (2026
 
 ## 컨텍스트
 
-**누적:** 19 milestones (v0.1-v1.3.4), 75 phases, 170 plans, 488 requirements, 31 설계 문서(24-67), 8 objective 문서, 42,123 LOC, 895 테스트
+**누적:** 20 milestones (v0.1-v1.4), 81 phases, 182 plans, 523 requirements, 31 설계 문서(24-67), 8 objective 문서, 51,750 LOC, 1,126 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -223,21 +211,22 @@ v1.3.1 Admin Web UI 설계 shipped (2026-02-11). 2 페이즈, 2 플랜, 18 요�
 v1.3.2 Admin Web UI 구현 shipped (2026-02-11). 5 페이즈, 10 플랜, 22 요구사항, 45,332 LOC, 816 테스트.
 v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플랜, 14 요구사항, 44,639 LOC, 847 테스트.
 v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이즈, 5 플랜, 18 요구사항, 42,123 LOC, 895 테스트.
+v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 35 요구사항, 51,750 LOC, 1,126 테스트.
 
-**기술 스택 (v0.2 확정, v1.3 구현 검증):**
+**기술 스택 (v0.2 확정, v1.4 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
 - Server: OpenAPIHono 4.x (@hono/zod-openapi)
 - DB: SQLite (better-sqlite3) + Drizzle ORM
 - Crypto: sodium-native (guarded memory), argon2 (KDF)
 - Auth: jose (JWT HS256), sodium-native (Ed25519 ownerAuth)
-- Chain: @solana/kit 6.0.1 (Solana), viem 2.x (EVM stub, 미구현)
+- Chain: @solana/kit 6.0.1 + @solana-program/token (Solana), viem 2.x (EVM, @waiaas/adapter-evm 구현)
 - SDK: @waiaas/sdk (TS, 0 의존성), waiaas (Python, httpx + Pydantic v2)
 - MCP: @waiaas/mcp (@modelcontextprotocol/sdk, stdio transport)
 - Build: pnpm workspace + Turborepo, tsc only
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
-- 미구현: @solana-program/token (SPL), Jupiter, Oracle, Tauri, Docker
+- 미구현: Jupiter, Oracle, Tauri, Docker, EVM 키스토어(secp256k1)
 
 **설계 문서:** 31개 (deliverables 24-67.md) + 대응표/테스트 전략/objective
 
@@ -315,6 +304,18 @@ v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이
 | credential 마스킹 (boolean enabled만 반환) | bot token/webhook URL 미노출, 보안 원칙 준수 | ✓ Good — v1.3.4 구현 |
 | getChannels() + channel.send() 직접 호출 (테스트 발송) | rate limiter 우회, notify() 수정 불필요 | ✓ Good — v1.3.4 구현 |
 | Drizzle count() + offset/limit 페이지네이션 | 알림 로그 역순 조회, 간단하고 효과적 | ✓ Good — v1.3.4 구현 |
+| ChainError extends Error (not WAIaaSError) | chain adapter 내부 에러, Stage 5에서 WAIaaSError 변환 | ✓ Good — v1.4 구현 |
+| ChainError 3-카테고리 retryable 자동 파생 | category !== 'PERMANENT' → retryable, 일관된 재시도 로직 | ✓ Good — v1.4 구현 |
+| schema_version 기반 증분 마이그레이션 | ALTER TABLE only, DB 삭제 금지, MIG-01~06 준수 | ✓ Good — v1.4 구현 |
+| discriminatedUnion 5-type (type 필드 기반) | TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH 자동 식별 | ✓ Good — v1.4 구현 |
+| 기본 거부 정책 원칙 (ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS) | 정책 미설정 시 deny, opt-in 화이트리스트 | ✓ Good — v1.4 구현 |
+| Gas safety margin (estimatedGas * 120n) / 100n | BigInt 산술로 1.2x 배수, 모든 build 메서드 일관 적용 | ✓ Good — v1.4 구현 |
+| viem 에러 메시지 패턴 매칭 (mapError 헬퍼) | typed error 미제공 대응, ChainError 자동 분류 | ✓ Good — v1.4 구현 |
+| Token-2022 mint account owner 필드 감지 | SPL_TOKEN_PROGRAM_ID vs TOKEN_2022_PROGRAM_ID 판별 | ✓ Good — v1.4 구현 |
+| evaluateBatch 2단계 (개별 + 합산) | 소액 분할 우회 방지, All-or-Nothing | ✓ Good — v1.4 구현 |
+| CONC-01 TRANSIENT retry rebuilds from Stage 5a | 단순한 루프 구조, build/sign은 로컬 ops | ✓ Good — v1.4 구현 |
+| buildByType 5-type adapter 라우팅 | type별 IChainAdapter 메서드 디스패치 | ✓ Good — v1.4 구현 |
+| sleep() extracted to pipeline/sleep.ts | vi.mock 테스트 가능성, 모듈 레벨 분리 | ✓ Good — v1.4 구현 |
 
 ---
-*최종 업데이트: 2026-02-12 after v1.4 milestone started*
+*최종 업데이트: 2026-02-12 after v1.4 milestone shipped*
