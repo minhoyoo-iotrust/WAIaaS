@@ -53,6 +53,9 @@ importers:
       '@solana-program/system':
         specifier: ^0.11.0
         version: 0.11.0(@solana/kit@6.0.1(typescript@5.9.3))
+      '@solana-program/token':
+        specifier: ^0.10.0
+        version: 0.10.0(@solana/kit@6.0.1(typescript@5.9.3))
       '@solana/kit':
         specifier: ^6.0.1
         version: 6.0.1(typescript@5.9.3)
@@ -1241,6 +1244,11 @@ packages:
 
   '@solana-program/system@0.11.0':
     resolution: {integrity: sha512-SJeQVTkqGZzIXd7XHlCxnfpKpvPZghB1IFwddPPG04ydVXtDLRWp9wLoTR5Prkl9FIWRe/c5VgT4nxyzW1cAuQ==}
+    peerDependencies:
+      '@solana/kit': ^6.0.0
+
+  '@solana-program/token@0.10.0':
+    resolution: {integrity: sha512-6JhgF4tywgbzIBnbEFiSLpXe9ZimPzNheRQU7ksgD98Y4YCakcRI5VIAt2CUh/lTiLUOxGerW/oaK1QGF00FMw==}
     peerDependencies:
       '@solana/kit': ^6.0.0
 
@@ -4362,6 +4370,10 @@ snapshots:
       '@scure/base': 1.2.6
 
   '@solana-program/system@0.11.0(@solana/kit@6.0.1(typescript@5.9.3))':
+    dependencies:
+      '@solana/kit': 6.0.1(typescript@5.9.3)
+
+  '@solana-program/token@0.10.0(@solana/kit@6.0.1(typescript@5.9.3))':
     dependencies:
       '@solana/kit': 6.0.1(typescript@5.9.3)
 
