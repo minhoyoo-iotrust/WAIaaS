@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 85 (4 of 7 in v1.4.1) — DB 마이그레이션
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 84 complete (2/2 plans, verified)
+Plan: 1 of 1 complete
+Status: Phase complete
+Last activity: 2026-02-12 — Completed 85-01-PLAN.md (v2 migration + managesOwnTransaction)
 
-Progress: [████░░░░░░] 43% (3/7 phases in v1.4.1)
+Progress: [██████░░░░] 57% (4/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 84 phases, 189 plans, 533 reqs, 1,242 tests, 52,000+ LOC
+**Cumulative:** 20 milestones, 85 phases, 190 plans, 533 reqs, 1,242 tests, 52,000+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 7 plans completed (Phases 82-84 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 8 plans completed (Phases 82-85 done)
 
 *Updated after each plan completion*
 
@@ -58,6 +58,10 @@ Recent decisions affecting current work:
 - [84-02]: TransactionRouteDeps.config changed from partial to full DaemonConfig (route extracts what it needs)
 - [84-02]: PipelineContext.adapter stays IChainAdapter (routes resolve before pipeline entry, stages chain-agnostic)
 - [84-02]: mockAdapterPool test pattern: resolve returns mockAdapter(), disconnectAll vi.fn()
+- [85-01]: managesOwnTransaction=true: runner sets FK OFF, up() manages own BEGIN/COMMIT
+- [85-01]: v2 up() re-enables FK and runs foreign_key_check before returning (defense-in-depth)
+- [85-01]: Existing migration tests bumped to version 10+ to avoid conflict with real v2 migration
+- [85-01]: v2 test suite uses dedicated v1-only DB (manual schema, no auto-migrations)
 
 ### Blockers/Concerns
 
@@ -67,5 +71,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 84 complete, verified, ready for Phase 85 planning
+Stopped at: Completed 85-01-PLAN.md, Phase 85 complete
 Resume file: None
