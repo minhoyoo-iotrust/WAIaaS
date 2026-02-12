@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 91 (3 of 6 in v1.4.2) — 데몬 API + JWT + Config
-Plan: —
-Status: Ready to plan
-Last activity: 2026-02-13 — Phase 90 complete (7/7 verified, 137 core tests passing)
+Plan: 1 of 2 complete
+Status: Executing
+Last activity: 2026-02-13 — Plan 91-01 complete (27 files renamed, tsc passes)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Total plans: 10
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -29,6 +29,7 @@ Progress: [███░░░░░░░] 30%
 | 89    | 01   | 8min     | 2     | 4     |
 | 90    | 01   | 4min     | 2     | 19    |
 | 90    | 02   | 2min     | 2     | 2     |
+| 91    | 01   | 20min    | 2     | 27    |
 
 *Updated after each plan completion*
 
@@ -51,6 +52,10 @@ Recent decisions for v1.4.2:
 - Core tests (5 files, 137 tests) all updated to wallet terminology
 - Korean particle correction: 지갑 {walletId}이 (consonant ending)
 - Error code count comment fixed 67 -> 68 in i18n files
+- walletCrudRoutes naming avoids collision with existing walletRoutes function
+- Core interfaces (ILocalKeyStore, IPolicyEngine, NotificationPayload) keep agentId -- daemon maps at boundary
+- PipelineContext.agent field renamed to .wallet for consistency
+- error-hints.ts: AGENT_NOT_FOUND -> WALLET_NOT_FOUND, /v1/agents -> /v1/wallets
 
 ### Blockers/Concerns
 
@@ -60,5 +65,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Phase 90 verified (7/7), ready to plan Phase 91
+Stopped at: Completed 91-01-PLAN.md (daemon API/JWT/config wallet rename)
 Resume file: None
