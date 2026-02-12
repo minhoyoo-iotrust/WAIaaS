@@ -7,17 +7,17 @@
  * - STALE: Stale state errors (retryable=true, rebuild tx)
  *
  * Stage 5 catches ChainError and converts to WAIaaSError for API responses.
- * 25 error codes mapped to 3 categories (PERMANENT 17, TRANSIENT 4, STALE 4).
+ * 27 error codes mapped to 3 categories (PERMANENT 19, TRANSIENT 4, STALE 4).
  */
 
 export type ChainErrorCategory = 'PERMANENT' | 'TRANSIENT' | 'STALE';
 
 /**
- * 25 chain-specific error codes for chain adapter internal use.
+ * 27 chain-specific error codes for chain adapter internal use.
  * Separate from ERROR_CODES (HTTP-level error codes for API responses).
  */
 export type ChainErrorCode =
-  // PERMANENT (17) -- non-recoverable, do not retry
+  // PERMANENT (19) -- non-recoverable, do not retry
   | 'INSUFFICIENT_BALANCE'
   | 'INVALID_ADDRESS'
   | 'ACCOUNT_NOT_FOUND'
@@ -35,6 +35,8 @@ export type ChainErrorCode =
   | 'ACCOUNT_ALREADY_EXISTS'
   | 'INVALID_TOKEN_PROGRAM'
   | 'INSUFFICIENT_FOR_FEE'
+  | 'BATCH_NOT_SUPPORTED'
+  | 'BATCH_SIZE_EXCEEDED'
   // TRANSIENT (4) -- temporary infrastructure issues, safe to retry
   | 'RPC_TIMEOUT'
   | 'RPC_CONNECTION_ERROR'
@@ -51,7 +53,7 @@ export type ChainErrorCode =
  * retryable is derived: category !== 'PERMANENT'.
  */
 export const CHAIN_ERROR_CATEGORIES: Record<ChainErrorCode, ChainErrorCategory> = {
-  // PERMANENT (17)
+  // PERMANENT (19)
   INSUFFICIENT_BALANCE: 'PERMANENT',
   INVALID_ADDRESS: 'PERMANENT',
   ACCOUNT_NOT_FOUND: 'PERMANENT',
@@ -69,6 +71,8 @@ export const CHAIN_ERROR_CATEGORIES: Record<ChainErrorCode, ChainErrorCategory> 
   ACCOUNT_ALREADY_EXISTS: 'PERMANENT',
   INVALID_TOKEN_PROGRAM: 'PERMANENT',
   INSUFFICIENT_FOR_FEE: 'PERMANENT',
+  BATCH_NOT_SUPPORTED: 'PERMANENT',
+  BATCH_SIZE_EXCEEDED: 'PERMANENT',
   // TRANSIENT (4)
   RPC_TIMEOUT: 'TRANSIENT',
   RPC_CONNECTION_ERROR: 'TRANSIENT',
