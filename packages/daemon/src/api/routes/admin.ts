@@ -434,7 +434,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
     const testPayload: NotificationPayload = {
       eventType: 'TX_CONFIRMED',
-      agentId: 'admin-test',
+      walletId: 'admin-test',
       message: '[Test] WAIaaS notification test',
       timestamp: Math.floor(Date.now() / 1000),
     };

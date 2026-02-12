@@ -63,7 +63,7 @@ export class NotificationService {
    */
   async notify(
     eventType: NotificationEventType,
-    agentId: string,
+    walletId: string,
     vars?: Record<string, string>,
     details?: Record<string, unknown>,
   ): Promise<void> {
@@ -72,7 +72,7 @@ export class NotificationService {
     const { title, body } = getNotificationMessage(eventType, this.config.locale, vars);
     const payload: NotificationPayload = {
       eventType,
-      agentId,
+      walletId,
       message: `${title}\n${body}`,
       details,
       timestamp: Math.floor(Date.now() / 1000),
@@ -180,7 +180,7 @@ export class NotificationService {
         .values({
           id: generateId(),
           eventType: payload.eventType,
-          walletId: payload.agentId,
+          walletId: payload.walletId,
           channel: channelName,
           status,
           error: error ?? null,
@@ -202,7 +202,7 @@ export class NotificationService {
     if (!this.db) {
       console.error('CRITICAL: All notification channels failed, no DB for audit log', {
         eventType: payload.eventType,
-        agentId: payload.agentId,
+        walletId: payload.walletId,
       });
       return;
     }
@@ -221,7 +221,7 @@ export class NotificationService {
           timestamp: new Date(payload.timestamp * 1000),
           eventType: 'NOTIFICATION_TOTAL_FAILURE',
           actor: 'system',
-          walletId: payload.agentId,
+          walletId: payload.walletId,
           details: JSON.stringify({
             originalEvent: payload.eventType,
             message: payload.message,

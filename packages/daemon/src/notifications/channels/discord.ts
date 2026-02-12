@@ -20,7 +20,7 @@ export class DiscordChannel implements INotificationChannel {
       description: payload.message,
       color,
       fields: [
-        { name: 'Agent', value: payload.agentId, inline: true },
+        { name: 'Wallet', value: payload.walletId, inline: true },
         { name: 'Event', value: payload.eventType, inline: true },
       ],
       timestamp: new Date(payload.timestamp * 1000).toISOString(),

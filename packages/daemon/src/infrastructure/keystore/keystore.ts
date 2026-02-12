@@ -7,7 +7,7 @@
  * - Generates Ed25519 key pairs (Solana) using sodium-native
  * - Generates secp256k1 key pairs (EVM) using crypto.randomBytes + viem
  * - Encrypts private keys with AES-256-GCM + Argon2id KDF
- * - Stores as per-agent JSON keystore files (format v1)
+ * - Stores as per-wallet JSON keystore files (format v1)
  * - Protects decrypted keys in sodium guarded memory
  * - Atomic file writes (write-then-rename pattern)
  */
@@ -66,7 +66,7 @@ export interface KeystoreFileV1 {
  */
 export class LocalKeyStore implements ILocalKeyStore {
   private readonly keystoreDir: string;
-  /** Map from guarded buffer identity to agentId for tracking */
+  /** Map from guarded buffer identity to walletId for tracking */
   private readonly guardedKeys: Map<Buffer, string> = new Map();
 
   constructor(keystoreDir: string) {
@@ -86,17 +86,17 @@ export class LocalKeyStore implements ILocalKeyStore {
    * @returns publicKey (base58 for Solana, 0x EIP-55 for EVM) and encrypted private key bytes
    */
   async generateKeyPair(
-    agentId: string,
+    walletId: string,
     chain: ChainType,
     network: string,
     masterPassword: string,
   ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
     if (chain === 'ethereum') {
-      return this.generateSecp256k1KeyPair(agentId, network, masterPassword);
+      return this.generateSecp256k1KeyPair(walletId, network, masterPassword);
     }
 
     if (chain === 'solana') {
-      return this.generateEd25519KeyPair(agentId, network, masterPassword);
+      return this.generateEd25519KeyPair(walletId, network, masterPassword);
     }
 
     throw new WAIaaSError('CHAIN_NOT_SUPPORTED', {
@@ -108,7 +108,7 @@ export class LocalKeyStore implements ILocalKeyStore {
    * Generate an Ed25519 keypair for Solana using sodium-native.
    */
   private async generateEd25519KeyPair(
-    agentId: string,
+    walletId: string,
     network: string,
     masterPassword: string,
   ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
@@ -148,14 +148,14 @@ export class LocalKeyStore implements ILocalKeyStore {
         },
       },
       metadata: {
-        name: agentId,
+        name: walletId,
         createdAt: new Date().toISOString(),
         lastUnlockedAt: null,
       },
     };
 
     // Write keystore file atomically (write-then-rename)
-    await this.writeKeystoreFile(agentId, keystoreFile);
+    await this.writeKeystoreFile(walletId, keystoreFile);
 
     return {
       publicKey,
@@ -168,7 +168,7 @@ export class LocalKeyStore implements ILocalKeyStore {
    * Uses crypto.randomBytes(32) for CSPRNG entropy and viem for EIP-55 address derivation.
    */
   private async generateSecp256k1KeyPair(
-    agentId: string,
+    walletId: string,
     network: string,
     masterPassword: string,
   ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
@@ -208,14 +208,14 @@ export class LocalKeyStore implements ILocalKeyStore {
         },
       },
       metadata: {
-        name: agentId,
+        name: walletId,
         createdAt: new Date().toISOString(),
         lastUnlockedAt: null,
       },
     };
 
     // Write keystore file atomically (write-then-rename)
-    await this.writeKeystoreFile(agentId, keystoreFile);
+    await this.writeKeystoreFile(walletId, keystoreFile);
 
     return {
       publicKey,
@@ -228,8 +228,8 @@ export class LocalKeyStore implements ILocalKeyStore {
    *
    * @returns Guarded buffer containing the decrypted private key (readonly)
    */
-  async decryptPrivateKey(agentId: string, masterPassword: string): Promise<Uint8Array> {
-    const keystoreFile = await this.readKeystoreFile(agentId);
+  async decryptPrivateKey(walletId: string, masterPassword: string): Promise<Uint8Array> {
+    const keystoreFile = await this.readKeystoreFile(walletId);
 
     const encrypted: EncryptedData = {
       iv: Buffer.from(keystoreFile.crypto.cipherparams.iv, 'hex'),
@@ -249,11 +249,11 @@ export class LocalKeyStore implements ILocalKeyStore {
     plaintext.fill(0);
 
     // Track the guarded buffer
-    this.guardedKeys.set(guarded, agentId);
+    this.guardedKeys.set(guarded, walletId);
 
     // Update lastUnlockedAt
     keystoreFile.metadata.lastUnlockedAt = new Date().toISOString();
-    await this.writeKeystoreFile(agentId, keystoreFile);
+    await this.writeKeystoreFile(walletId, keystoreFile);
 
     return new Uint8Array(guarded.buffer, guarded.byteOffset, guarded.byteLength);
   }
@@ -279,11 +279,11 @@ export class LocalKeyStore implements ILocalKeyStore {
   }
 
   /**
-   * Check if a keystore file exists for the given agent.
+   * Check if a keystore file exists for the given wallet.
    */
-  async hasKey(agentId: string): Promise<boolean> {
+  async hasKey(walletId: string): Promise<boolean> {
     try {
-      await stat(this.keystorePath(agentId));
+      await stat(this.keystorePath(walletId));
       return true;
     } catch {
       return false;
@@ -293,10 +293,10 @@ export class LocalKeyStore implements ILocalKeyStore {
   /**
    * Delete keystore file and release any loaded key from memory.
    */
-  async deleteKey(agentId: string): Promise<void> {
+  async deleteKey(walletId: string): Promise<void> {
     // Release from memory if loaded
     for (const [guarded, id] of this.guardedKeys) {
-      if (id === agentId) {
+      if (id === walletId) {
         zeroAndRelease(guarded);
         this.guardedKeys.delete(guarded);
       }
@@ -304,7 +304,7 @@ export class LocalKeyStore implements ILocalKeyStore {
 
     // Delete file
     try {
-      await unlink(this.keystorePath(agentId));
+      await unlink(this.keystorePath(walletId));
     } catch (error) {
       // Ignore if file doesn't exist
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -333,32 +333,32 @@ export class LocalKeyStore implements ILocalKeyStore {
 
   // --- Private helpers ---
 
-  private keystorePath(agentId: string): string {
-    return join(this.keystoreDir, `${agentId}.json`);
+  private keystorePath(walletId: string): string {
+    return join(this.keystoreDir, `${walletId}.json`);
   }
 
   /**
    * Write keystore file atomically using write-then-rename pattern.
    * Sets file permission to 0600 (owner read/write only).
    */
-  private async writeKeystoreFile(agentId: string, data: KeystoreFileV1): Promise<void> {
-    const targetPath = this.keystorePath(agentId);
-    const tempPath = join(dirname(targetPath), `.${agentId}.json.tmp`);
+  private async writeKeystoreFile(walletId: string, data: KeystoreFileV1): Promise<void> {
+    const targetPath = this.keystorePath(walletId);
+    const tempPath = join(dirname(targetPath), `.${walletId}.json.tmp`);
 
     const json = JSON.stringify(data, null, 2);
     await writeFile(tempPath, json, { encoding: 'utf-8', mode: 0o600 });
     await rename(tempPath, targetPath);
   }
 
-  private async readKeystoreFile(agentId: string): Promise<KeystoreFileV1> {
-    const filePath = this.keystorePath(agentId);
+  private async readKeystoreFile(walletId: string): Promise<KeystoreFileV1> {
+    const filePath = this.keystorePath(walletId);
     let content: string;
     try {
       content = await readFile(filePath, 'utf-8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new WAIaaSError('WALLET_NOT_FOUND', {
-          message: `Keystore file not found for wallet '${agentId}'`,
+          message: `Keystore file not found for wallet '${walletId}'`,
         });
       }
       throw error;

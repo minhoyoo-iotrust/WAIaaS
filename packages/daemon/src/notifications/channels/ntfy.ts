@@ -26,7 +26,7 @@ export class NtfyChannel implements INotificationChannel {
         'Priority': String(priority),
         'Tags': tags,
       },
-      body: `${payload.message}\n\nAgent: ${payload.agentId}\nTime: ${new Date(payload.timestamp * 1000).toISOString()}`,
+      body: `${payload.message}\n\nWallet: ${payload.walletId}\nTime: ${new Date(payload.timestamp * 1000).toISOString()}`,
     });
 
     if (!response.ok) {

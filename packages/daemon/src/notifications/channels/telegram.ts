@@ -41,7 +41,7 @@ export class TelegramChannel implements INotificationChannel {
 
     const title = `*${escape(payload.message.split('\n')[0] ?? payload.eventType)}*`;
     const body = escape(payload.message);
-    const agent = escape(`Agent: ${payload.agentId}`);
+    const agent = escape(`Wallet: ${payload.walletId}`);
     const time = escape(new Date(payload.timestamp * 1000).toISOString());
 
     return `${title}\n\n${body}\n\n${agent}\n${time}`;
