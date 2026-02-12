@@ -61,10 +61,11 @@ Plans:
   2. 동일 chain:network 조합의 에이전트들이 하나의 어댑터 인스턴스를 공유한다
   3. 기존 모든 라우트(wallet/transactions/agents)가 adapterPool 패턴으로 동작한다
   4. 데몬 shutdown 시 풀 내 모든 어댑터가 disconnect된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 84-01: TBD
+- [ ] 84-01-PLAN.md — AdapterPool 클래스 lazy init + 캐싱 + disconnectAll (TDD)
+- [ ] 84-02-PLAN.md — Daemon/Server/Route adapterPool 패턴 전환 + 테스트 수정
 
 ### Phase 85: DB 마이그레이션
 **Goal**: schema_version 2 마이그레이션이 agents 테이블의 network CHECK 제약을 EVM 네트워크를 포함하도록 확장하고, 기존 데이터가 100% 보존되며, FK 무결성이 검증되는 상태
@@ -132,7 +133,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 82. Config + NetworkType | v1.4.1 | 3/3 | Complete | 2026-02-12 |
 | 83. Keystore 멀티커브 | v1.4.1 | 2/2 | Complete | 2026-02-12 |
-| 84. 어댑터 팩토리 | v1.4.1 | 0/TBD | Not started | - |
+| 84. 어댑터 팩토리 | v1.4.1 | 0/2 | Not started | - |
 | 85. DB 마이그레이션 | v1.4.1 | 0/TBD | Not started | - |
 | 86. REST API 5-type + MCP/SDK | v1.4.1 | 0/TBD | Not started | - |
 | 87. Owner Auth SIWE | v1.4.1 | 0/TBD | Not started | - |
