@@ -63,10 +63,10 @@ export const messages: Messages = {
     CHAIN_NOT_SUPPORTED: '지원하지 않는 체인입니다',
     SHUTTING_DOWN: '서버가 종료 중입니다',
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
-    // AGENT domain (3)
-    AGENT_NOT_FOUND: '에이전트를 찾을 수 없습니다',
-    AGENT_SUSPENDED: '에이전트가 정지 상태입니다',
-    AGENT_TERMINATED: '에이전트가 종료되었습니다',
+    // WALLET domain (3)
+    WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
+    WALLET_SUSPENDED: '지갑이 정지 상태입니다',
+    WALLET_TERMINATED: '지갑이 종료되었습니다',
     // WITHDRAW domain (4)
     NO_OWNER: '이 에이전트에 등록된 Owner가 없습니다',
     WITHDRAW_LOCKED_ONLY: '출금에는 LOCKED Owner 상태가 필요합니다',
@@ -95,7 +95,7 @@ export const messages: Messages = {
     TX_APPROVAL_REQUIRED: { title: '승인 필요', body: '거래 {txId}에 Owner 승인이 필요합니다. 금액: {amount}, 수신: {to}' },
     TX_APPROVAL_EXPIRED: { title: '승인 만료', body: '거래 {txId}의 승인이 만료되었습니다' },
     POLICY_VIOLATION: { title: '정책 위반', body: '에이전트 {agentId} 정책 위반: {reason}' },
-    AGENT_SUSPENDED: { title: '에이전트 정지', body: '에이전트 {agentId}가 정지되었습니다: {reason}' },
+    WALLET_SUSPENDED: { title: '지갑 정지', body: '지갑 {walletId}가 정지되었습니다: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch 발동', body: '{activatedBy}에 의해 Kill Switch가 발동되었습니다. 모든 작업이 중단됩니다' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch 해제', body: 'Kill Switch가 해제되었습니다. 정상 운영이 재개됩니다' },
     AUTO_STOP_TRIGGERED: { title: '자동 정지 발동', body: '연속 {failures}회 실패로 데몬이 자동 정지되었습니다' },

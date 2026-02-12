@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  AgentSchema,
-  CreateAgentRequestSchema,
+  WalletSchema,
+  CreateWalletRequestSchema,
   TransactionSchema,
   SendTransactionRequestSchema,
   PolicySchema,
@@ -16,23 +16,23 @@ import {
 } from '../index.js';
 
 describe('Zod SSoT Schemas', () => {
-  describe('CreateAgentRequestSchema', () => {
+  describe('CreateWalletRequestSchema', () => {
     it('parses with minimal fields (network undefined when omitted)', () => {
-      const result = CreateAgentRequestSchema.parse({ name: 'test-agent' });
+      const result = CreateWalletRequestSchema.parse({ name: 'test-agent' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
       expect(result.network).toBeUndefined();
     });
 
     it('parses with explicit network', () => {
-      const result = CreateAgentRequestSchema.parse({ name: 'test-agent', network: 'devnet' });
+      const result = CreateWalletRequestSchema.parse({ name: 'test-agent', network: 'devnet' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
       expect(result.network).toBe('devnet');
     });
 
     it('parses with chain=ethereum and EVM network', () => {
-      const result = CreateAgentRequestSchema.parse({
+      const result = CreateWalletRequestSchema.parse({
         name: 'eth-agent',
         chain: 'ethereum',
         network: 'ethereum-sepolia',
@@ -43,16 +43,16 @@ describe('Zod SSoT Schemas', () => {
 
     it('rejects invalid network value', () => {
       expect(() =>
-        CreateAgentRequestSchema.parse({ name: 'test-agent', network: 'invalid-network' }),
+        CreateWalletRequestSchema.parse({ name: 'test-agent', network: 'invalid-network' }),
       ).toThrow();
     });
 
     it('rejects empty name', () => {
-      expect(() => CreateAgentRequestSchema.parse({ name: '' })).toThrow();
+      expect(() => CreateWalletRequestSchema.parse({ name: '' })).toThrow();
     });
 
     it('rejects name exceeding 100 characters', () => {
-      expect(() => CreateAgentRequestSchema.parse({ name: 'a'.repeat(101) })).toThrow();
+      expect(() => CreateWalletRequestSchema.parse({ name: 'a'.repeat(101) })).toThrow();
     });
   });
 
@@ -119,9 +119,9 @@ describe('Zod SSoT Schemas', () => {
     });
   });
 
-  describe('AgentSchema', () => {
-    it('parses valid agent with type inference', () => {
-      const agent = AgentSchema.parse({
+  describe('WalletSchema', () => {
+    it('parses valid wallet with type inference', () => {
+      const wallet = WalletSchema.parse({
         id: '01912345-6789-7abc-8def-0123456789ab',
         name: 'test',
         chain: 'solana',
@@ -133,14 +133,14 @@ describe('Zod SSoT Schemas', () => {
         createdAt: 1700000000,
         updatedAt: 1700000000,
       });
-      expect(agent.status).toBe('ACTIVE');
-      expect(agent.chain).toBe('solana');
-      expect(agent.ownerAddress).toBeNull();
+      expect(wallet.status).toBe('ACTIVE');
+      expect(wallet.chain).toBe('solana');
+      expect(wallet.ownerAddress).toBeNull();
     });
 
     it('rejects invalid chain', () => {
       expect(() =>
-        AgentSchema.parse({
+        WalletSchema.parse({
           id: '01912345-6789-7abc-8def-0123456789ab',
           name: 'test',
           chain: 'bitcoin',
@@ -160,7 +160,7 @@ describe('Zod SSoT Schemas', () => {
     it('parses valid session', () => {
       const session = SessionSchema.parse({
         id: '01912345-6789-7abc-8def-0123456789ab',
-        agentId: '01912345-6789-7abc-8def-0123456789ac',
+        walletId: '01912345-6789-7abc-8def-0123456789ac',
         tokenHash: 'sha256hash',
         constraints: null,
         renewalCount: 0,
@@ -178,7 +178,7 @@ describe('Zod SSoT Schemas', () => {
     it('parses valid transaction', () => {
       const tx = TransactionSchema.parse({
         id: '01912345-6789-7abc-8def-0123456789ab',
-        agentId: '01912345-6789-7abc-8def-0123456789ac',
+        walletId: '01912345-6789-7abc-8def-0123456789ac',
         sessionId: null,
         type: 'TRANSFER',
         status: 'PENDING',
@@ -202,7 +202,7 @@ describe('Zod SSoT Schemas', () => {
     it('parses valid policy', () => {
       const policy = PolicySchema.parse({
         id: '01912345-6789-7abc-8def-0123456789ab',
-        agentId: '01912345-6789-7abc-8def-0123456789ac',
+        walletId: '01912345-6789-7abc-8def-0123456789ac',
         type: 'SPENDING_LIMIT',
         ruleConfig: { per_transaction: '1000000000' },
         enabled: true,

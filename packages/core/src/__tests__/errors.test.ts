@@ -25,7 +25,7 @@ describe('Error code matrix', () => {
     expect(domains).toContain('POLICY');
     expect(domains).toContain('OWNER');
     expect(domains).toContain('SYSTEM');
-    expect(domains).toContain('AGENT');
+    expect(domains).toContain('WALLET');
     expect(domains).toContain('WITHDRAW');
     expect(domains).toContain('ACTION');
     expect(domains).toContain('ADMIN');
@@ -50,8 +50,8 @@ describe('Error code matrix', () => {
 
 describe('WAIaaSError', () => {
   it('creates error from code with auto-resolved httpStatus', () => {
-    const err = new WAIaaSError('AGENT_NOT_FOUND');
-    expect(err.code).toBe('AGENT_NOT_FOUND');
+    const err = new WAIaaSError('WALLET_NOT_FOUND');
+    expect(err.code).toBe('WALLET_NOT_FOUND');
     expect(err.httpStatus).toBe(404);
     expect(err.retryable).toBe(false);
     expect(err.name).toBe('WAIaaSError');
@@ -90,8 +90,8 @@ describe('WAIaaSError', () => {
   });
 
   it('uses default message when custom message not provided', () => {
-    const err = new WAIaaSError('AGENT_NOT_FOUND');
-    expect(err.message).toBe('Agent not found');
+    const err = new WAIaaSError('WALLET_NOT_FOUND');
+    expect(err.message).toBe('Wallet not found');
   });
 
   it('MASTER_PASSWORD_LOCKED is 429 but not retryable', () => {

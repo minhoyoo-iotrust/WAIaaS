@@ -87,10 +87,10 @@ export const messages: Messages = {
     CHAIN_NOT_SUPPORTED: 'Chain not supported',
     SHUTTING_DOWN: 'Server is shutting down',
     ADAPTER_NOT_AVAILABLE: 'Chain adapter not available',
-    // AGENT domain (3)
-    AGENT_NOT_FOUND: 'Agent not found',
-    AGENT_SUSPENDED: 'Agent is suspended',
-    AGENT_TERMINATED: 'Agent has been terminated',
+    // WALLET domain (3)
+    WALLET_NOT_FOUND: 'Wallet not found',
+    WALLET_SUSPENDED: 'Wallet is suspended',
+    WALLET_TERMINATED: 'Wallet has been terminated',
     // WITHDRAW domain (4)
     NO_OWNER: 'No owner registered for this agent',
     WITHDRAW_LOCKED_ONLY: 'Withdrawal requires LOCKED owner state',
@@ -119,7 +119,7 @@ export const messages: Messages = {
     TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to}' },
     TX_APPROVAL_EXPIRED: { title: 'Approval Expired', body: 'Approval for transaction {txId} has expired' },
     POLICY_VIOLATION: { title: 'Policy Violation', body: 'Agent {agentId} policy violation: {reason}' },
-    AGENT_SUSPENDED: { title: 'Agent Suspended', body: 'Agent {agentId} has been suspended: {reason}' },
+    WALLET_SUSPENDED: { title: 'Wallet Suspended', body: 'Wallet {walletId} has been suspended: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },
     AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Daemon auto-stopped after {failures} consecutive failures' },
