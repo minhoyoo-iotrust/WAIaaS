@@ -18,7 +18,7 @@ import { getNotificationMessage } from '../notifications/templates/message-templ
 function makePayload(overrides?: Partial<NotificationPayload>): NotificationPayload {
   return {
     eventType: 'TX_CONFIRMED',
-    agentId: 'agent-001',
+    walletId: 'agent-001',
     message: 'Transaction abc123 confirmed. Amount: 1.5 SOL',
     details: { txId: 'abc123', amount: '1.5 SOL' },
     timestamp: 1700000000,
@@ -266,7 +266,7 @@ describe('DiscordChannel', () => {
 
     const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
     const fields = body.embeds[0].fields;
-    // 2 default fields (Agent, Event) + 2 detail fields
+    // 2 default fields (Wallet, Event) + 2 detail fields
     expect(fields).toHaveLength(4);
     expect(fields[2].name).toBe('txHash');
     expect(fields[2].value).toBe('hash123');
@@ -361,14 +361,14 @@ describe('NtfyChannel', () => {
     expect((options.headers as Record<string, string>)['Tags']).toBe('key');
   });
 
-  it('send() sends plain text body with agent and timestamp', async () => {
+  it('send() sends plain text body with wallet and timestamp', async () => {
     await channel.initialize({ ntfy_topic: 'alerts' });
-    const payload = makePayload({ agentId: 'test-wallet' });
+    const payload = makePayload({ walletId: 'test-wallet' });
     await channel.send(payload);
 
     const body = mockFetch.mock.calls[0]![1]!.body as string;
     expect(body).toContain('Transaction abc123 confirmed. Amount: 1.5 SOL');
-    expect(body).toContain('Agent: test-wallet');
+    expect(body).toContain('Wallet: test-wallet');
     expect(body).toContain('Time:');
   });
 

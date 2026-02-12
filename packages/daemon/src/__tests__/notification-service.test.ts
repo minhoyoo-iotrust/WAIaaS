@@ -52,7 +52,7 @@ describe('Priority delivery', () => {
     expect(ch.send).toHaveBeenCalledTimes(1);
     const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.eventType).toBe('TX_CONFIRMED');
-    expect(payload.agentId).toBe('wallet-1');
+    expect(payload.walletId).toBe('wallet-1');
   });
 
   it('notify() with 2 channels sends to first only (on success)', async () => {
@@ -92,7 +92,7 @@ describe('Priority delivery', () => {
 
     const payload = (ch.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(payload.eventType).toBe('TX_FAILED');
-    expect(payload.agentId).toBe('agent-2');
+    expect(payload.walletId).toBe('agent-2');
     expect(payload.message).toContain('Transaction Failed');
     expect(payload.details).toEqual({ error: 'timeout' });
     expect(typeof payload.timestamp).toBe('number');
@@ -160,7 +160,7 @@ describe('Fallback chain', () => {
     const p1 = (ch1.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     const p2 = (ch2.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as NotificationPayload;
     expect(p1.eventType).toBe(p2.eventType);
-    expect(p1.agentId).toBe(p2.agentId);
+    expect(p1.walletId).toBe(p2.walletId);
     expect(p1.message).toBe(p2.message);
     expect(p1.timestamp).toBe(p2.timestamp);
   });
@@ -338,7 +338,7 @@ describe('Total failure + audit_log', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining('CRITICAL'),
-      expect.objectContaining({ eventType: 'TX_CONFIRMED', agentId: 'wallet-1' }),
+      expect.objectContaining({ eventType: 'TX_CONFIRMED', walletId: 'wallet-1' }),
     );
     consoleErrorSpy.mockRestore();
   });
