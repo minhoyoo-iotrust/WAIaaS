@@ -3,15 +3,16 @@
  *
  * Phase 77-01: Scaffolding with 6 real implementations.
  * Phase 77-02: 11 more real implementations (build/simulate/sign/submit/confirm/fee/nonce/assets/tokenInfo/approve/txFee).
+ * Phase 78-02: buildTokenTransfer real implementation + getAssets ERC-20 multicall expansion.
  *
- * Real implementations (17):
+ * Real implementations (18):
  *   connect, disconnect, isConnected, getHealth, getBalance, getCurrentNonce,
  *   buildTransaction, simulateTransaction, signTransaction, submitTransaction,
  *   waitForConfirmation, estimateFee, getTransactionFee, getAssets, getTokenInfo,
- *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED)
+ *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED), buildTokenTransfer
  *
- * Stubs for later phases (3):
- *   buildTokenTransfer (Phase 78), buildContractCall (Phase 79), sweepAll (Phase 80)
+ * Stubs for later phases (2):
+ *   buildContractCall (Phase 79), sweepAll (Phase 80)
  */
 
 import {
@@ -75,10 +76,16 @@ export class EvmAdapter implements IChainAdapter {
   private _client: PublicClient | null = null;
   private _connected = false;
   private _chain: Chain | undefined;
+  private _allowedTokens: Array<{ address: string; symbol?: string; name?: string; decimals?: number }> = [];
 
   constructor(network: NetworkType, chain?: Chain) {
     this.network = network;
     this._chain = chain;
+  }
+
+  /** Set the allowed tokens list for getAssets ERC-20 queries. */
+  setAllowedTokens(tokens: Array<{ address: string; symbol?: string; name?: string; decimals?: number }>): void {
+    this._allowedTokens = tokens;
   }
 
   // -- Connection management (4) --
@@ -143,20 +150,67 @@ export class EvmAdapter implements IChainAdapter {
   async getAssets(addr: string): Promise<AssetInfo[]> {
     const client = this.getClient();
     try {
-      const balance = await client.getBalance({
+      // 1. Get native ETH balance
+      const ethBalance = await client.getBalance({
         address: addr as `0x${string}`,
       });
-      // Phase 78 will add ERC-20 token accounts via ALLOWED_TOKENS-based multicall
-      return [
+      const assets: AssetInfo[] = [
         {
           mint: 'native',
           symbol: 'ETH',
           name: 'Ethereum',
-          balance,
+          balance: ethBalance,
           decimals: 18,
           isNative: true,
         },
       ];
+
+      // 2. Query ERC-20 balances if allowedTokens configured
+      if (this._allowedTokens.length > 0) {
+        // Build multicall contracts array for balanceOf queries
+        const balanceContracts = this._allowedTokens.map(token => ({
+          address: token.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf' as const,
+          args: [addr as `0x${string}`],
+        }));
+
+        const results = await client.multicall({ contracts: balanceContracts });
+
+        // 3. Process results, skip failed calls and zero balances
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i]!;
+          const tokenDef = this._allowedTokens[i]!;
+
+          if (result.status === 'success') {
+            const balance = result.result as bigint;
+            if (balance > 0n) {
+              assets.push({
+                mint: tokenDef.address,
+                symbol: tokenDef.symbol ?? '',
+                name: tokenDef.name ?? '',
+                balance,
+                decimals: tokenDef.decimals ?? 18,
+                isNative: false,
+              });
+            }
+          }
+          // Skip failed multicall results silently (token may not exist or revert)
+        }
+
+        // 4. Sort: native first (already first), then by balance descending
+        if (assets.length > 1) {
+          const native = assets[0]!;
+          const tokens = assets.slice(1).sort((a, b) => {
+            if (b.balance > a.balance) return 1;
+            if (b.balance < a.balance) return -1;
+            return a.symbol.localeCompare(b.symbol); // tie-break: alphabetical
+          });
+          return [native, ...tokens];
+        }
+      }
+
+      return assets;
     } catch (error) {
       throw this.mapError(error, 'Failed to get assets');
     }
@@ -414,8 +468,79 @@ export class EvmAdapter implements IChainAdapter {
 
   // -- Token operations (2) --
 
-  async buildTokenTransfer(_request: TokenTransferParams): Promise<UnsignedTransaction> {
-    throw new Error('Not implemented: buildTokenTransfer will be implemented in Phase 78');
+  async buildTokenTransfer(request: TokenTransferParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    try {
+      const fromAddr = request.from as `0x${string}`;
+      const tokenAddr = request.token.address as `0x${string}`;
+      const toAddr = request.to as `0x${string}`;
+
+      // 1. Encode ERC-20 transfer(address,uint256) calldata
+      const transferData = encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [toAddr, request.amount],
+      });
+
+      // 2. Get nonce
+      const nonce = await client.getTransactionCount({ address: fromAddr });
+
+      // 3. Get EIP-1559 fee data
+      const fees = await client.estimateFeesPerGas();
+
+      // 4. Estimate gas with 1.2x safety margin
+      const estimatedGas = await client.estimateGas({
+        account: fromAddr,
+        to: tokenAddr, // tx target is the TOKEN CONTRACT, not the recipient
+        data: transferData,
+      });
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+      const chainId = client.chain?.id ?? 1;
+
+      // 5. Build EIP-1559 tx to token contract with transfer calldata, value=0
+      const txRequest = {
+        type: 'eip1559' as const,
+        to: tokenAddr, // target is token contract
+        value: 0n, // no ETH value for ERC-20 transfer
+        nonce,
+        gas: gasLimit,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        chainId,
+        data: transferData,
+      };
+
+      // 6. Serialize
+      const serializedHex = serializeTransaction(txRequest);
+      const serializedBytes = hexToBytes(serializedHex);
+
+      const estimatedFee = gasLimit * maxFeePerGas;
+
+      return {
+        chain: 'ethereum',
+        serialized: serializedBytes,
+        estimatedFee,
+        expiresAt: undefined, // EVM uses nonce, no expiry
+        metadata: {
+          nonce,
+          chainId,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          gasLimit,
+          type: 'eip1559',
+          tokenAddress: request.token.address,
+          recipient: request.to,
+          tokenAmount: request.amount,
+        },
+        nonce,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to build token transfer');
+    }
   }
 
   async getTokenInfo(tokenAddress: string): Promise<TokenInfo> {

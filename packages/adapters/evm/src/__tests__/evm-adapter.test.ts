@@ -211,14 +211,12 @@ describe('EvmAdapter', () => {
       ).rejects.toThrow('Not implemented');
     });
 
-    it('buildTokenTransfer throws not implemented', async () => {
+    it('buildContractCall throws not implemented', async () => {
       await adapter.connect('https://eth-mainnet.example.com');
       await expect(
-        adapter.buildTokenTransfer({
+        adapter.buildContractCall({
           from: '0x1',
           to: '0x2',
-          amount: 1000n,
-          token: { address: '0xtoken', decimals: 18, symbol: 'USDC' },
         }),
       ).rejects.toThrow('Not implemented');
     });
