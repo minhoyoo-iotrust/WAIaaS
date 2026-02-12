@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 88 (7 of 7 in v1.4.1) — 통합 검증
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-12 — Phase 87 complete (2/2 plans, verified, 11/11 must-haves)
+Plan: 2 of 3 complete
+Status: Executing
+Last activity: 2026-02-12 — 88-02 complete (10 E2E tests, 5-type pipeline + MCP/SDK verification)
 
 Progress: [████████░░] 85% (6/7 phases in v1.4.1)
 
 ## Performance Metrics
 
-**Cumulative:** 20 milestones, 87 phases, 195 plans, 533 reqs, 1,323+ tests, 52,800+ LOC
+**Cumulative:** 20 milestones, 87 phases, 196 plans, 533 reqs, 1,333+ tests, 52,800+ LOC
 
-**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 13 plans completed (Phases 82-87 done)
+**v1.4.1 Scope:** 7 phases, 29 requirements mapped, 14 plans completed (Phases 82-87 done, 88 in progress)
 
 *Updated after each plan completion*
 
@@ -76,6 +76,9 @@ Recent decisions affecting current work:
 - [87-02]: SIWE message base64-encoded in X-Owner-Message header (multi-line EIP-4361 invalid as raw HTTP headers)
 - [87-02]: setOwner stores normalized address (EIP-55 checksummed for EVM, as-is for Solana)
 - [87-02]: Chain branching via agent.chain: ethereum=SIWE, else=Ed25519 (default Solana path unchanged)
+- [88-02]: waitForPipeline polling pattern for fire-and-forget E2E tests (50ms intervals, DB status check)
+- [88-02]: Cross-package MCP/SDK tests use dynamic import to avoid circular deps
+- [88-02]: DefaultPolicyEngine used for pipeline E2E to isolate type dispatch from policy evaluation
 
 ### Blockers/Concerns
 
@@ -85,5 +88,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Phase 87 complete, verified, ready for Phase 88 planning
+Stopped at: Completed 88-02-PLAN.md (5-type pipeline E2E + MCP/SDK verification)
 Resume file: None
