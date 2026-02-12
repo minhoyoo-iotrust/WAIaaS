@@ -147,11 +147,12 @@ describe('NotificationsPage', () => {
   it('should trigger POST on Send Test click and show results', async () => {
     setupMocks();
 
-    const testResults = [
-      { channel: 'telegram', success: true },
-      { channel: 'ntfy', success: true },
-    ];
-    vi.mocked(apiPost).mockResolvedValueOnce(testResults);
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [
+        { channel: 'telegram', success: true },
+        { channel: 'ntfy', success: true },
+      ],
+    });
 
     render(<NotificationsPage />);
 
@@ -259,11 +260,12 @@ describe('NotificationsPage', () => {
   it('should show error message for failed test channels', async () => {
     setupMocks();
 
-    const testResults = [
-      { channel: 'telegram', success: true },
-      { channel: 'ntfy', success: false, error: 'Connection timeout' },
-    ];
-    vi.mocked(apiPost).mockResolvedValueOnce(testResults);
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [
+        { channel: 'telegram', success: true },
+        { channel: 'ntfy', success: false, error: 'Connection timeout' },
+      ],
+    });
 
     render(<NotificationsPage />);
 

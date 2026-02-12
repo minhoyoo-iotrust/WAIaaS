@@ -84,7 +84,8 @@ export default function NotificationsPage() {
     testLoading.value = true;
     testResults.value = null;
     try {
-      const results = await apiPost<TestResult[]>(API.ADMIN_NOTIFICATIONS_TEST);
+      const body = await apiPost<{ results: TestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST);
+      const results = body.results;
       testResults.value = results;
       const allSuccess = results.every((r) => r.success);
       if (allSuccess) {

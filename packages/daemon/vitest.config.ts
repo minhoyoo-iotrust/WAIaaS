@@ -7,5 +7,10 @@ export default defineConfig({
     // sodium-native guarded memory (mprotect) requires forks pool
     // because thread workers crash on mprotect_noaccess calls
     pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 2, // Limit workers to reduce orphan processes on abnormal exit
+      },
+    },
   },
 });

@@ -21,11 +21,13 @@
 | BUG-004 | MEDIUM | mcp setup 에이전트 목록 조회 시 X-Master-Password 헤더 누락 | v1.3 | FIXED | 2026-02-11 |
 | BUG-005 | CRITICAL | MCP SessionManager가 JWT의 sub 대신 sessionId 클레임 참조 | v1.3 | FIXED | 2026-02-11 |
 | BUG-006 | MEDIUM | mcp setup 에이전트 자동 감지 시 API 응답 필드 불일치 (items vs agents) | v1.3 | FIXED | 2026-02-11 |
+| BUG-007 | MEDIUM | Admin UI 알림 테스트 응답 파싱 오류 (results 래퍼 미처리) | v1.3.4 | FIXED | 2026-02-12 |
+| BUG-008 | MEDIUM | vitest fork pool 워커 프로세스가 고아 상태로 누적 | v1.3.4 | FIXED | 2026-02-12 |
 
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 6
+- **FIXED:** 8
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 6
+- **Total:** 8
