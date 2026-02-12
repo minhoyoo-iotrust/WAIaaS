@@ -10,7 +10,7 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 
 ## Phases
 
-- [ ] **Phase 82: Config + NetworkType + EVM 의존성** - EVM RPC 설정, 네트워크 enum 확장, chain-network 교차 검증
+- [x] **Phase 82: Config + NetworkType + EVM 의존성** - EVM RPC 설정, 네트워크 enum 확장, chain-network 교차 검증
 - [ ] **Phase 83: Keystore 멀티커브** - secp256k1 키 생성 + EIP-55 주소 파생
 - [ ] **Phase 84: 어댑터 팩토리** - AdapterPool lazy init + 기존 adapter 주입 패턴 전환
 - [ ] **Phase 85: DB 마이그레이션** - schema_version 2, agents CHECK 확장, managesOwnTransaction
@@ -33,9 +33,9 @@ EVM 지갑 인프라를 완성하여 EVM 에이전트 생성(secp256k1 키)부�
 **Plans**: 3 plans
 
 Plans:
-- [ ] 82-01-PLAN.md — NetworkType 13값 확장 + EVM_CHAIN_MAP + validateChainNetwork (TDD)
-- [ ] 82-02-PLAN.md — DaemonConfigSchema EVM RPC 16키 + EvmAdapter nativeSymbol/nativeName
-- [ ] 82-03-PLAN.md — CreateAgentRequest network optional + chain-network 교차 검증 통합
+- [x] 82-01-PLAN.md — NetworkType 13값 확장 + EVM_CHAIN_MAP + validateChainNetwork (TDD)
+- [x] 82-02-PLAN.md — DaemonConfigSchema EVM RPC 16키 + EvmAdapter nativeSymbol/nativeName
+- [x] 82-03-PLAN.md — CreateAgentRequest network optional + chain-network 교차 검증 통합
 
 ### Phase 83: Keystore 멀티커브
 **Goal**: EVM 에이전트를 생성하면 secp256k1 키가 생성되고 EIP-55 체크섬 주소가 반환되며, 기존 Solana 키스토어가 무변경으로 동작하는 상태
@@ -129,7 +129,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 82. Config + NetworkType | v1.4.1 | 0/TBD | Not started | - |
+| 82. Config + NetworkType | v1.4.1 | 3/3 | Complete | 2026-02-12 |
 | 83. Keystore 멀티커브 | v1.4.1 | 0/TBD | Not started | - |
 | 84. 어댑터 팩토리 | v1.4.1 | 0/TBD | Not started | - |
 | 85. DB 마이그레이션 | v1.4.1 | 0/TBD | Not started | - |
