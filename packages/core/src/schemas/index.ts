@@ -1,4 +1,4 @@
-export { AgentSchema, type Agent, CreateAgentRequestSchema, type CreateAgentRequest } from './agent.schema.js';
+export { WalletSchema, type Wallet, CreateWalletRequestSchema, type CreateWalletRequest } from './wallet.schema.js';
 export { SessionSchema, type Session, CreateSessionRequestSchema, type CreateSessionRequest } from './session.schema.js';
 export {
   TransactionSchema,

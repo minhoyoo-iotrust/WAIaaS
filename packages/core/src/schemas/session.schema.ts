@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const SessionSchema = z.object({
   id: z.string().uuid(),
-  agentId: z.string().uuid(),
+  walletId: z.string().uuid(),
   tokenHash: z.string(),
   constraints: z.record(z.unknown()).nullable(),
   renewalCount: z.number().int().min(0),
@@ -15,7 +15,7 @@ export const SessionSchema = z.object({
 export type Session = z.infer<typeof SessionSchema>;
 
 export const CreateSessionRequestSchema = z.object({
-  agentId: z.string().uuid(),
+  walletId: z.string().uuid(),
   ttl: z.number().int().min(300).max(604800).optional(), // defaults to config security.session_ttl (86400)
   constraints: z.record(z.unknown()).nullable().optional(),
 });
