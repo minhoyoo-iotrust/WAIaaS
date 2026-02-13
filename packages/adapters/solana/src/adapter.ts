@@ -429,11 +429,10 @@ export class SolanaAdapter implements IChainAdapter {
             };
           }
         }
-      } catch (error) {
-        throw new WAIaaSError('CHAIN_ERROR', {
-          message: `Failed to check confirmation: ${error instanceof Error ? error.message : String(error)}`,
-          cause: error instanceof Error ? error : undefined,
-        });
+      } catch {
+        // RPC error during polling: return submitted (don't mark as failed)
+        // Stage 6 will keep SUBMITTED status, tx may confirm later
+        return { txHash, status: 'submitted' };
       }
 
       // Wait before next poll
