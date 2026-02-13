@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 9 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 10 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -35,7 +35,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 9 tables (latest schema: wallets + wallet_id)
+// DDL statements for all 10 tables (latest schema: wallets + wallet_id + token_registry)
 // ---------------------------------------------------------------------------
 
 /**
@@ -43,7 +43,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 3;
+export const LATEST_SCHEMA_VERSION = 4;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -162,7 +162,19 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL
 )`,
 
-    // Table 9: schema_version
+    // Table 9: token_registry
+    `CREATE TABLE IF NOT EXISTS token_registry (
+  id TEXT PRIMARY KEY,
+  network TEXT NOT NULL,
+  address TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  name TEXT NOT NULL,
+  decimals INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'custom' CHECK (source IN ('builtin', 'custom')),
+  created_at INTEGER NOT NULL
+)`,
+
+    // Table 10: schema_version
     `CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL,
@@ -218,6 +230,10 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_notification_logs_wallet_id ON notification_logs(wallet_id)',
     'CREATE INDEX IF NOT EXISTS idx_notification_logs_status ON notification_logs(status)',
     'CREATE INDEX IF NOT EXISTS idx_notification_logs_created_at ON notification_logs(created_at)',
+
+    // token_registry indexes
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_token_registry_network_address ON token_registry(network, address)',
+    'CREATE INDEX IF NOT EXISTS idx_token_registry_network ON token_registry(network)',
   ];
 }
 
@@ -513,6 +529,29 @@ MIGRATIONS.push({
   },
 });
 
+// ---------------------------------------------------------------------------
+// v4: Create token_registry table for EVM token management
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 4,
+  description: 'Create token_registry table for EVM token management',
+  up: (sqlite) => {
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS token_registry (
+  id TEXT PRIMARY KEY,
+  network TEXT NOT NULL,
+  address TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  name TEXT NOT NULL,
+  decimals INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'custom' CHECK (source IN ('builtin', 'custom')),
+  created_at INTEGER NOT NULL
+)`);
+    sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_token_registry_network_address ON token_registry(network, address)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_token_registry_network ON token_registry(network)');
+  },
+});
+
 /**
  * Run incremental migrations against the database.
  *
@@ -646,7 +685,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, ts, 'Initial schema (9 tables)');
+        .run(1, ts, 'Initial schema (10 tables)');
 
       // Record all migration versions as already applied (DDL is up-to-date)
       for (const migration of MIGRATIONS) {
