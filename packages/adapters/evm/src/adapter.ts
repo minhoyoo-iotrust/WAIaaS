@@ -408,17 +408,26 @@ export class EvmAdapter implements IChainAdapter {
 
       return {
         txHash,
-        status: receipt.status === 'success' ? 'confirmed' : 'submitted',
+        status: receipt.status === 'success' ? 'confirmed' : 'failed',
         blockNumber: receipt.blockNumber,
         fee: receipt.gasUsed * receipt.effectiveGasPrice,
       };
     } catch (error) {
-      // Timeout: return submitted status
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('timed out')) {
+      // Timeout or RPC error: fallback to direct receipt query
+      try {
+        const receipt = await client.getTransactionReceipt({
+          hash: txHash as `0x${string}`,
+        });
+        return {
+          txHash,
+          status: receipt.status === 'success' ? 'confirmed' : 'failed',
+          blockNumber: receipt.blockNumber,
+          fee: receipt.gasUsed * receipt.effectiveGasPrice,
+        };
+      } catch {
+        // Receipt not found: tx still pending
         return { txHash, status: 'submitted' };
       }
-      throw this.mapError(error, 'Failed to wait for confirmation');
     }
   }
 

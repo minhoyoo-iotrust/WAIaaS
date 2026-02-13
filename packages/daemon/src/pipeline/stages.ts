@@ -680,10 +680,10 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
   const reqAmount = getRequestAmount(ctx.request);
   const reqTo = getRequestTo(ctx.request);
 
-  try {
-    await ctx.adapter.waitForConfirmation(ctx.submitResult!.txHash, 30_000);
+  const result = await ctx.adapter.waitForConfirmation(ctx.submitResult!.txHash, 30_000);
 
-    // Confirmed: update DB
+  if (result.status === 'confirmed' || result.status === 'finalized') {
+    // On-chain confirmed
     const executedAt = new Date(Math.floor(Date.now() / 1000) * 1000);
     await ctx.db
       .update(transactions)
@@ -696,25 +696,28 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       amount: reqAmount,
       to: reqTo,
     }, { txId: ctx.txId });
-  } catch (error) {
-    // Timeout or RPC error: mark FAILED
-    const errorMessage =
-      error instanceof Error ? error.message : 'Confirmation failed';
 
+  } else if (result.status === 'failed') {
+    // On-chain revert
     await ctx.db
       .update(transactions)
-      .set({ status: 'FAILED', error: errorMessage })
+      .set({ status: 'FAILED', error: 'Transaction reverted on-chain' })
       .where(eq(transactions.id, ctx.txId));
 
-    // Fire-and-forget: notify TX_FAILED on confirmation failure (never blocks pipeline)
+    // Fire-and-forget: notify TX_FAILED on on-chain revert (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-      reason: errorMessage,
+      reason: 'Transaction reverted on-chain',
       amount: reqAmount,
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('CHAIN_ERROR', {
-      message: errorMessage,
-      cause: error instanceof Error ? error : undefined,
+      message: 'Transaction reverted on-chain',
     });
+
+  } else {
+    // status === 'submitted': still pending, NOT failed
+    // Keep SUBMITTED status (already set by Stage 5)
+    // Do NOT overwrite to FAILED -- tx may confirm later
+    // No notification: no state change occurred
   }
 }

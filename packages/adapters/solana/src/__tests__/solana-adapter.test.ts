@@ -624,20 +624,14 @@ describe('SolanaAdapter', () => {
       }
     });
 
-    it('waitForConfirmation() throws CHAIN_ERROR on RPC failure during polling', async () => {
+    it('waitForConfirmation() returns submitted on RPC failure during polling', async () => {
       await adapter.connect(TEST_RPC_URL);
       mockRpc.getSignatureStatuses = mockSendReject(new Error('RPC connection lost'));
 
       const txHash = 'test-hash';
-      await expect(adapter.waitForConfirmation(txHash, 5000)).rejects.toThrow(WAIaaSError);
-
-      try {
-        await adapter.waitForConfirmation(txHash, 5000);
-      } catch (error) {
-        expect(error).toBeInstanceOf(WAIaaSError);
-        expect((error as WAIaaSError).code).toBe('CHAIN_ERROR');
-        expect((error as WAIaaSError).message).toContain('RPC connection lost');
-      }
+      const result = await adapter.waitForConfirmation(txHash, 5000);
+      expect(result.txHash).toBe(txHash);
+      expect(result.status).toBe('submitted');
     });
   });
 });
