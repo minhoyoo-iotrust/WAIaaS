@@ -1,5 +1,5 @@
 /**
- * WAIaaSClient - Core agent client for WAIaaS daemon REST API.
+ * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
  * Wraps 9 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)

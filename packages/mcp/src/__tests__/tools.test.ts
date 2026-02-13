@@ -226,7 +226,7 @@ describe('get_balance tool', () => {
 describe('get_assets tool', () => {
   it('calls GET /v1/wallet/assets', async () => {
     const assetsData = {
-      agentId: 'agent-1',
+      walletId: 'wallet-1',
       chain: 'solana',
       network: 'devnet',
       assets: [

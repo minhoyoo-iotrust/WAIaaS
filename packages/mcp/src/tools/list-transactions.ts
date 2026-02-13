@@ -5,12 +5,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type ApiClient, toToolResult } from '../api-client.js';
-import { type AgentContext, withAgentPrefix } from '../server.js';
+import { type WalletContext, withWalletPrefix } from '../server.js';
 
-export function registerListTransactions(server: McpServer, apiClient: ApiClient, agentContext?: AgentContext): void {
+export function registerListTransactions(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
   server.tool(
     'list_transactions',
-    withAgentPrefix('List transaction history with cursor-based pagination.', agentContext?.agentName),
+    withWalletPrefix('List transaction history with cursor-based pagination.', walletContext?.walletName),
     {
       limit: z.number().optional().describe('Maximum number of transactions to return'),
       cursor: z.string().optional().describe('Pagination cursor from previous response'),

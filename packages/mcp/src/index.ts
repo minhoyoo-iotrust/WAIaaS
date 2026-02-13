@@ -21,23 +21,23 @@ import { ApiClient } from './api-client.js';
 const BASE_URL = process.env['WAIAAS_BASE_URL'] ?? 'http://127.0.0.1:3100';
 const DATA_DIR = process.env['WAIAAS_DATA_DIR'];
 const ENV_TOKEN = process.env['WAIAAS_SESSION_TOKEN'];
-const AGENT_ID = process.env['WAIAAS_AGENT_ID'];
-const AGENT_NAME = process.env['WAIAAS_AGENT_NAME'];
+const WALLET_ID = process.env['WAIAAS_WALLET_ID'];
+const WALLET_NAME = process.env['WAIAAS_WALLET_NAME'];
 
 async function main(): Promise<void> {
-  if (AGENT_NAME) {
-    console.error(`[waiaas-mcp] Agent: ${AGENT_NAME} (id: ${AGENT_ID ?? 'default'})`);
+  if (WALLET_NAME) {
+    console.error(`[waiaas-mcp] Wallet: ${WALLET_NAME} (id: ${WALLET_ID ?? 'default'})`);
   }
 
   const sessionManager = new SessionManager({
     baseUrl: BASE_URL,
     dataDir: DATA_DIR,
     envToken: ENV_TOKEN,
-    agentId: AGENT_ID,
+    walletId: WALLET_ID,
   });
 
   const apiClient = new ApiClient(sessionManager, BASE_URL);
-  const server = createMcpServer(apiClient, { agentName: AGENT_NAME });
+  const server = createMcpServer(apiClient, { walletName: WALLET_NAME });
   const transport = new StdioServerTransport();
 
   // Connect transport FIRST so stdio JSON-RPC responds to initialize immediately.

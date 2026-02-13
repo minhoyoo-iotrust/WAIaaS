@@ -20,7 +20,7 @@ from waiaas.models import (
 )
 from waiaas.retry import RetryPolicy
 
-from tests.conftest import AGENT_ID, SESSION_ID, TX_ID
+from tests.conftest import WALLET_ID, SESSION_ID, TX_ID
 
 
 def make_handler(responses: dict[tuple[str, str], tuple[int, dict]]):
@@ -69,7 +69,7 @@ class TestGetBalance:
                 ("GET", "/v1/wallet/balance"): (
                     200,
                     {
-                        "agentId": AGENT_ID,
+                        "walletId": WALLET_ID,
                         "chain": "solana",
                         "network": "devnet",
                         "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -83,7 +83,7 @@ class TestGetBalance:
         client = make_client(handler)
         result = await client.get_balance()
         assert isinstance(result, WalletBalance)
-        assert result.agent_id == AGENT_ID
+        assert result.wallet_id == WALLET_ID
         assert result.balance == "1000000000"
         assert result.symbol == "SOL"
         assert result.decimals == 9
@@ -96,7 +96,7 @@ class TestGetAddress:
                 ("GET", "/v1/wallet/address"): (
                     200,
                     {
-                        "agentId": AGENT_ID,
+                        "walletId": WALLET_ID,
                         "chain": "solana",
                         "network": "devnet",
                         "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -107,7 +107,7 @@ class TestGetAddress:
         client = make_client(handler)
         result = await client.get_address()
         assert isinstance(result, WalletAddress)
-        assert result.agent_id == AGENT_ID
+        assert result.wallet_id == WALLET_ID
         assert result.address == "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 
 
@@ -118,7 +118,7 @@ class TestGetAssets:
                 ("GET", "/v1/wallet/assets"): (
                     200,
                     {
-                        "agentId": AGENT_ID,
+                        "walletId": WALLET_ID,
                         "chain": "solana",
                         "network": "devnet",
                         "assets": [
@@ -158,7 +158,7 @@ class TestGetAssets:
                 ("GET", "/v1/wallet/assets"): (
                     200,
                     {
-                        "agentId": AGENT_ID,
+                        "walletId": WALLET_ID,
                         "chain": "solana",
                         "network": "devnet",
                         "assets": [],
@@ -299,7 +299,7 @@ class TestGetTransaction:
                     200,
                     {
                         "id": TX_ID,
-                        "agentId": AGENT_ID,
+                        "walletId": WALLET_ID,
                         "type": "TRANSFER",
                         "status": "CONFIRMED",
                         "tier": "INSTANT",
@@ -332,7 +332,7 @@ class TestListTransactions:
                         "items": [
                             {
                                 "id": TX_ID,
-                                "agentId": AGENT_ID,
+                                "walletId": WALLET_ID,
                                 "type": "TRANSFER",
                                 "status": "CONFIRMED",
                                 "chain": "solana",
@@ -364,7 +364,7 @@ class TestListPendingTransactions:
                         "items": [
                             {
                                 "id": TX_ID,
-                                "agentId": AGENT_ID,
+                                "walletId": WALLET_ID,
                                 "type": "TRANSFER",
                                 "status": "PENDING",
                                 "chain": "solana",
@@ -543,7 +543,7 @@ class TestRetryIntegration:
             return httpx.Response(
                 200,
                 json={
-                    "agentId": AGENT_ID,
+                    "walletId": WALLET_ID,
                     "chain": "solana",
                     "network": "devnet",
                     "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -585,7 +585,7 @@ class TestRetryIntegration:
             return httpx.Response(
                 200,
                 json={
-                    "agentId": AGENT_ID,
+                    "walletId": WALLET_ID,
                     "chain": "solana",
                     "network": "devnet",
                     "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -651,7 +651,7 @@ class TestContextManager:
                 ("GET", "/v1/wallet/balance"): (
                     200,
                     {
-                        "agentId": AGENT_ID,
+                        "walletId": WALLET_ID,
                         "chain": "solana",
                         "network": "devnet",
                         "address": "addr",

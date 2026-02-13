@@ -1101,30 +1101,30 @@ describe('SessionManager', () => {
     });
   });
 
-  // --- agentId token path tests (6 tests) ---
+  // --- walletId token path tests (6 tests) ---
 
-  describe('agentId token path', () => {
-    it('agentId 설정 시 mcp-tokens/<agentId> 경로에서 토큰 로드', async () => {
+  describe('walletId token path', () => {
+    it('walletId 설정 시 mcp-tokens/<walletId> 경로에서 토큰 로드', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const token = createFakeJWT({ sub: 'sess-agent', exp: now + 3600 });
+      const token = createFakeJWT({ sub: 'sess-wallet', exp: now + 3600 });
       mockedReadFile.mockResolvedValueOnce(token);
 
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         dataDir: '/tmp/waiaas',
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
       });
 
       await sm.start();
 
       expect(sm.getState()).toBe('active');
       expect(mockedReadFile).toHaveBeenCalledWith(
-        '/tmp/waiaas/mcp-tokens/agent-1',
+        '/tmp/waiaas/mcp-tokens/wallet-1',
         'utf-8',
       );
     });
 
-    it('agentId 미설정 시 기존 mcp-token 경로 사용 (하위 호환)', async () => {
+    it('walletId 미설정 시 기존 mcp-token 경로 사용 (하위 호환)', async () => {
       const now = Math.floor(Date.now() / 1000);
       const token = createFakeJWT({ sub: 'sess-default', exp: now + 3600 });
       mockedReadFile.mockResolvedValueOnce(token);
@@ -1143,19 +1143,19 @@ describe('SessionManager', () => {
       );
     });
 
-    it('agentId 설정 + 새 경로에 토큰 없음 + 기존 mcp-token 존재 시 fallback 로드', async () => {
+    it('walletId 설정 + 새 경로에 토큰 없음 + 기존 mcp-token 존재 시 fallback 로드', async () => {
       const now = Math.floor(Date.now() / 1000);
       const fallbackToken = createFakeJWT({ sub: 'sess-fallback', exp: now + 3600 });
       const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
 
-      // First call (agent path) -> ENOENT, second call (legacy path) -> token
+      // First call (wallet path) -> ENOENT, second call (legacy path) -> token
       mockedReadFile.mockRejectedValueOnce(enoent);
       mockedReadFile.mockResolvedValueOnce(fallbackToken);
 
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         dataDir: '/tmp/waiaas',
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
       });
 
       await sm.start();
@@ -1163,30 +1163,30 @@ describe('SessionManager', () => {
       expect(sm.getState()).toBe('active');
       expect(sm.getToken()).toBe(fallbackToken);
       expect(mockedReadFile).toHaveBeenCalledTimes(2);
-      expect(mockedReadFile).toHaveBeenNthCalledWith(1, '/tmp/waiaas/mcp-tokens/agent-1', 'utf-8');
+      expect(mockedReadFile).toHaveBeenNthCalledWith(1, '/tmp/waiaas/mcp-tokens/wallet-1', 'utf-8');
       expect(mockedReadFile).toHaveBeenNthCalledWith(2, '/tmp/waiaas/mcp-token', 'utf-8');
     });
 
-    it('agentId 설정 + 새 경로에 토큰 있음 -> fallback 시도 안 함', async () => {
+    it('walletId 설정 + 새 경로에 토큰 있음 -> fallback 시도 안 함', async () => {
       const now = Math.floor(Date.now() / 1000);
-      const agentToken = createFakeJWT({ sub: 'sess-agent', exp: now + 3600 });
-      mockedReadFile.mockResolvedValueOnce(agentToken);
+      const walletToken = createFakeJWT({ sub: 'sess-wallet', exp: now + 3600 });
+      mockedReadFile.mockResolvedValueOnce(walletToken);
 
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         dataDir: '/tmp/waiaas',
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
       });
 
       await sm.start();
 
       expect(sm.getState()).toBe('active');
-      expect(sm.getToken()).toBe(agentToken);
-      // readFile called exactly once (agent path only, no fallback)
+      expect(sm.getToken()).toBe(walletToken);
+      // readFile called exactly once (wallet path only, no fallback)
       expect(mockedReadFile).toHaveBeenCalledTimes(1);
     });
 
-    it('토큰 갱신 시 agentId 경로에 저장', async () => {
+    it('토큰 갱신 시 walletId 경로에 저장', async () => {
       vi.useFakeTimers();
       const now = Math.floor(Date.now() / 1000);
       const oldToken = createFakeJWT({ sub: 'sess-1', exp: now + 100 });
@@ -1209,36 +1209,36 @@ describe('SessionManager', () => {
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         dataDir: '/tmp/waiaas',
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
       });
 
       await sm.start();
       await vi.advanceTimersByTimeAsync(60 * 1000);
 
-      // Write to agent path
+      // Write to wallet path
       expect(mockedWriteFile).toHaveBeenCalledWith(
-        '/tmp/waiaas/mcp-tokens/agent-1.tmp',
+        '/tmp/waiaas/mcp-tokens/wallet-1.tmp',
         newToken,
         'utf-8',
       );
       expect(mockedRename).toHaveBeenCalledWith(
-        '/tmp/waiaas/mcp-tokens/agent-1.tmp',
-        '/tmp/waiaas/mcp-tokens/agent-1',
+        '/tmp/waiaas/mcp-tokens/wallet-1.tmp',
+        '/tmp/waiaas/mcp-tokens/wallet-1',
       );
       sm.dispose();
     });
 
-    it('agentId 설정 + 양쪽 모두 토큰 없음 -> error 상태', async () => {
+    it('walletId 설정 + 양쪽 모두 토큰 없음 -> error 상태', async () => {
       const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
 
       // Both paths fail with ENOENT
-      mockedReadFile.mockRejectedValueOnce(enoent); // agent path
+      mockedReadFile.mockRejectedValueOnce(enoent); // wallet path
       mockedReadFile.mockRejectedValueOnce(enoent); // legacy path
 
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
         dataDir: '/tmp/waiaas',
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
       });
 
       await sm.start();

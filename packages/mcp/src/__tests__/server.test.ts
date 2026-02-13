@@ -1,14 +1,14 @@
 /**
- * Tests for createMcpServer and withAgentPrefix.
+ * Tests for createMcpServer and withWalletPrefix.
  *
  * Verifies:
- * - Server name follows agentName setting (MCPS-01, MCPS-02)
- * - Tool/resource descriptions include agent prefix (MCPS-03)
- * - Without agentName, descriptions have no prefix
+ * - Server name follows walletName setting (MCPS-01, MCPS-02)
+ * - Tool/resource descriptions include wallet prefix (MCPS-03)
+ * - Without walletName, descriptions have no prefix
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { withAgentPrefix, createMcpServer } from '../server.js';
+import { withWalletPrefix, createMcpServer } from '../server.js';
 import type { ApiClient } from '../api-client.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -39,24 +39,24 @@ beforeEach(() => {
   vi.mocked(McpServer).mockClear();
 });
 
-describe('withAgentPrefix', () => {
-  it('returns original description when agentName is undefined', () => {
-    expect(withAgentPrefix('Some description')).toBe('Some description');
+describe('withWalletPrefix', () => {
+  it('returns original description when walletName is undefined', () => {
+    expect(withWalletPrefix('Some description')).toBe('Some description');
   });
 
-  it('prefixes description with [agentName] when set', () => {
-    expect(withAgentPrefix('Some description', 'trading-bot')).toBe(
+  it('prefixes description with [walletName] when set', () => {
+    expect(withWalletPrefix('Some description', 'trading-bot')).toBe(
       '[trading-bot] Some description',
     );
   });
 
-  it('handles empty string agentName as falsy (no prefix)', () => {
-    expect(withAgentPrefix('Some description', '')).toBe('Some description');
+  it('handles empty string walletName as falsy (no prefix)', () => {
+    expect(withWalletPrefix('Some description', '')).toBe('Some description');
   });
 });
 
 describe('createMcpServer', () => {
-  it('agentName 미설정 시 서버 이름이 waiaas-wallet', () => {
+  it('walletName 미설정 시 서버 이름이 waiaas-wallet', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient);
 
@@ -66,9 +66,9 @@ describe('createMcpServer', () => {
     });
   });
 
-  it('agentName 설정 시 서버 이름이 waiaas-{agentName}', () => {
+  it('walletName 설정 시 서버 이름이 waiaas-{walletName}', () => {
     const apiClient = createMockApiClient();
-    createMcpServer(apiClient, { agentName: 'trading-bot' });
+    createMcpServer(apiClient, { walletName: 'trading-bot' });
 
     expect(McpServer).toHaveBeenCalledWith({
       name: 'waiaas-trading-bot',
@@ -76,9 +76,9 @@ describe('createMcpServer', () => {
     });
   });
 
-  it('agentName 설정 시 도구 description에 에이전트 프리픽스 포함', () => {
+  it('walletName 설정 시 도구 description에 월렛 프리픽스 포함', () => {
     const apiClient = createMockApiClient();
-    createMcpServer(apiClient, { agentName: 'trading-bot' });
+    createMcpServer(apiClient, { walletName: 'trading-bot' });
 
     // 7 tools should be registered
     expect(mockTool).toHaveBeenCalledTimes(7);
@@ -90,9 +90,9 @@ describe('createMcpServer', () => {
     }
   });
 
-  it('agentName 설정 시 리소스 description에 에이전트 프리픽스 포함', () => {
+  it('walletName 설정 시 리소스 description에 월렛 프리픽스 포함', () => {
     const apiClient = createMockApiClient();
-    createMcpServer(apiClient, { agentName: 'trading-bot' });
+    createMcpServer(apiClient, { walletName: 'trading-bot' });
 
     // 3 resources should be registered
     expect(mockResource).toHaveBeenCalledTimes(3);
@@ -104,7 +104,7 @@ describe('createMcpServer', () => {
     }
   });
 
-  it('agentName 미설정 시 description에 프리픽스 없음', () => {
+  it('walletName 미설정 시 description에 프리픽스 없음', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient);
 

@@ -1,4 +1,4 @@
-"""WAIaaS async HTTP client for AI agent wallet operations."""
+"""WAIaaS async HTTP client for AI wallet operations."""
 
 from __future__ import annotations
 
@@ -113,17 +113,17 @@ class WAIaaSClient:
     # -----------------------------------------------------------------
 
     async def get_address(self) -> WalletAddress:
-        """GET /v1/wallet/address -- Get agent wallet address."""
+        """GET /v1/wallet/address -- Get wallet address."""
         resp = await self._request("GET", "/v1/wallet/address")
         return WalletAddress.model_validate(resp.json())
 
     async def get_balance(self) -> WalletBalance:
-        """GET /v1/wallet/balance -- Get agent wallet balance."""
+        """GET /v1/wallet/balance -- Get wallet balance."""
         resp = await self._request("GET", "/v1/wallet/balance")
         return WalletBalance.model_validate(resp.json())
 
     async def get_assets(self) -> WalletAssets:
-        """GET /v1/wallet/assets -- Get all assets held by agent wallet."""
+        """GET /v1/wallet/assets -- Get all assets held by wallet."""
         resp = await self._request("GET", "/v1/wallet/assets")
         return WalletAssets.model_validate(resp.json())
 

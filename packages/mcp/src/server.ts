@@ -4,8 +4,8 @@
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
  *
- * AgentContext (MCPS-01..03): optional agentName for server naming
- * and description prefixing to identify agent in Claude Desktop.
+ * WalletContext (MCPS-01..03): optional walletName for server naming
+ * and description prefixing to identify wallet in Claude Desktop.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -25,20 +25,20 @@ import { registerWalletBalance } from './resources/wallet-balance.js';
 import { registerWalletAddress } from './resources/wallet-address.js';
 import { registerSystemStatus } from './resources/system-status.js';
 
-export interface AgentContext {
-  agentName?: string; // e.g., 'trading-bot'
+export interface WalletContext {
+  walletName?: string; // e.g., 'trading-bot'
 }
 
 /**
- * Prefix description with agent name for multi-agent identification (MCPS-03).
+ * Prefix description with wallet name for multi-wallet identification (MCPS-03).
  */
-export function withAgentPrefix(description: string, agentName?: string): string {
-  return agentName ? `[${agentName}] ${description}` : description;
+export function withWalletPrefix(description: string, walletName?: string): string {
+  return walletName ? `[${walletName}] ${description}` : description;
 }
 
-export function createMcpServer(apiClient: ApiClient, agentContext?: AgentContext): McpServer {
-  const serverName = agentContext?.agentName
-    ? `waiaas-${agentContext.agentName}`
+export function createMcpServer(apiClient: ApiClient, walletContext?: WalletContext): McpServer {
+  const serverName = walletContext?.walletName
+    ? `waiaas-${walletContext.walletName}`
     : 'waiaas-wallet';
 
   const server = new McpServer({
@@ -47,18 +47,18 @@ export function createMcpServer(apiClient: ApiClient, agentContext?: AgentContex
   });
 
   // Register 7 tools
-  registerSendToken(server, apiClient, agentContext);
-  registerGetBalance(server, apiClient, agentContext);
-  registerGetAddress(server, apiClient, agentContext);
-  registerGetAssets(server, apiClient, agentContext);
-  registerListTransactions(server, apiClient, agentContext);
-  registerGetTransaction(server, apiClient, agentContext);
-  registerGetNonce(server, apiClient, agentContext);
+  registerSendToken(server, apiClient, walletContext);
+  registerGetBalance(server, apiClient, walletContext);
+  registerGetAddress(server, apiClient, walletContext);
+  registerGetAssets(server, apiClient, walletContext);
+  registerListTransactions(server, apiClient, walletContext);
+  registerGetTransaction(server, apiClient, walletContext);
+  registerGetNonce(server, apiClient, walletContext);
 
   // Register 3 resources
-  registerWalletBalance(server, apiClient, agentContext);
-  registerWalletAddress(server, apiClient, agentContext);
-  registerSystemStatus(server, apiClient, agentContext);
+  registerWalletBalance(server, apiClient, walletContext);
+  registerWalletAddress(server, apiClient, walletContext);
+  registerSystemStatus(server, apiClient, walletContext);
 
   return server;
 }

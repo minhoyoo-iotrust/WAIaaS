@@ -3,7 +3,7 @@
 import httpx
 
 # Standard response fixtures
-AGENT_ID = "01234567-89ab-cdef-0123-456789abcdef"
+WALLET_ID = "01234567-89ab-cdef-0123-456789abcdef"
 SESSION_ID = "fedcba98-7654-3210-fedc-ba9876543210"
 TX_ID = "aabbccdd-eeff-0011-2233-445566778899"
 

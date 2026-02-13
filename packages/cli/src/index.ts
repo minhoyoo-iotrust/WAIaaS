@@ -70,14 +70,14 @@ mcp
   .description('Set up MCP integration for Claude Desktop')
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
-  .option('--agent <id>', 'Agent ID (auto-detected if only one)')
-  .option('--all', 'Set up all agents at once')
+  .option('--wallet <id>', 'Wallet ID (auto-detected if only one)')
+  .option('--all', 'Set up all wallets at once')
   .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
   .option('--password <password>', 'Master password')
   .action(async (opts: {
     dataDir?: string;
     baseUrl?: string;
-    agent?: string;
+    wallet?: string;
     all?: boolean;
     expiresIn?: string;
     password?: string;
@@ -86,7 +86,7 @@ mcp
     await mcpSetupCommand({
       dataDir,
       baseUrl: opts.baseUrl,
-      agent: opts.agent,
+      wallet: opts.wallet,
       all: opts.all ?? false,
       expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
       masterPassword: opts.password,

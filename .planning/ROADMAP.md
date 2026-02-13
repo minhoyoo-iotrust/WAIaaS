@@ -10,8 +10,8 @@
 
 - [x] **Phase 89: DB 마이그레이션** - schema_version 3: agents -> wallets 테이블 + FK 5개 + 인덱스 10개 + enum 데이터 5건
 - [x] **Phase 90: 코어 타입 + 에러 코드** - @waiaas/core Zod 스키마/Enum/에러 코드/i18n 일괄 rename
-- [ ] **Phase 91: 데몬 API + JWT + Config** - REST API 경로/응답/JWT claim/OpenAPI 스키마/config 키 변경
-- [ ] **Phase 92: MCP + CLI + SDK** - MCP WalletContext + CLI --wallet + 환경변수 + TS/Python SDK 필드 변경
+- [x] **Phase 91: 데몬 API + JWT + Config** - REST API 경로/응답/JWT claim/OpenAPI 스키마/config 키 변경
+- [x] **Phase 92: MCP + CLI + SDK** - MCP WalletContext + CLI --wallet + 환경변수 + TS/Python SDK 필드 변경
 - [ ] **Phase 93: Admin Web UI** - Wallets 페이지 + Dashboard/Sessions/Policies/Notifications agentId 제거
 - [ ] **Phase 94: 설계 문서 + 검증** - 설계 문서 15개 용어 갱신 + README + grep 전수 검사 + 전체 테스트 통과
 
@@ -78,8 +78,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 92-01-PLAN.md — MCP WalletContext + withWalletPrefix + CLI --wallet + 환경변수 + 토큰 경로 + MCP/CLI 테스트 갱신
-- [ ] 92-02-PLAN.md — TS SDK walletId + Python SDK wallet_id 필드 변경 + SDK 테스트 갱신
+- [x] 92-01-PLAN.md — MCP WalletContext + withWalletPrefix + CLI --wallet + 환경변수 + 토큰 경로 + MCP/CLI 테스트 갱신
+- [x] 92-02-PLAN.md — TS SDK walletId + Python SDK wallet_id 필드 변경 + SDK 테스트 갱신
 
 ### Phase 93: Admin Web UI
 **Goal**: Admin UI가 wallet 용어를 사용하여, 관리자가 "Wallets" 페이지에서 지갑을 관리한다
@@ -90,10 +90,10 @@ Plans:
   2. Dashboard의 StatCard가 "Wallets"를 표시하고 `walletCount` 필드를 사용한다
   3. Sessions/Policies/Notifications 페이지에서 `agentId` 참조가 0건이다
   4. Admin 테스트 4개 파일이 `walletId`/`walletCount` fixture로 통과한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 93-01: Wallets 페이지 + Dashboard + Sessions/Policies/Notifications 용어 변경 + 테스트 갱신
+- [ ] 93-01-PLAN.md — Admin UI 전체 agent->wallet 용어 변경 (소스 11파일 + 테스트 5파일, 파일 rename 포함)
 
 ### Phase 94: 설계 문서 + 검증
 **Goal**: 설계 문서와 README가 코드와 일치하고, 전체 코드베이스에서 의도하지 않은 agent 잔존이 0건이다
@@ -120,7 +120,7 @@ Plans:
 | 89. DB 마이그레이션 | 1/1 | ✓ Complete | 2026-02-13 |
 | 90. 코어 타입 + 에러 코드 | 2/2 | ✓ Complete | 2026-02-13 |
 | 91. 데몬 API + JWT + Config | 3/3 | ✓ Complete | 2026-02-13 |
-| 92. MCP + CLI + SDK | 0/2 | Not started | - |
+| 92. MCP + CLI + SDK | 2/2 | ✓ Complete | 2026-02-13 |
 | 93. Admin Web UI | 0/1 | Not started | - |
 | 94. 설계 문서 + 검증 | 0/2 | Not started | - |
 

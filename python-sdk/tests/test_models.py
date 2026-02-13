@@ -16,13 +16,13 @@ from waiaas.models import (
     WalletBalance,
 )
 
-from tests.conftest import AGENT_ID, SESSION_ID, TX_ID
+from tests.conftest import WALLET_ID, SESSION_ID, TX_ID
 
 
 class TestWalletBalance:
     def test_from_camel_case_json(self):
         data = {
-            "agentId": AGENT_ID,
+            "walletId": WALLET_ID,
             "chain": "solana",
             "network": "devnet",
             "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -31,7 +31,7 @@ class TestWalletBalance:
             "symbol": "SOL",
         }
         model = WalletBalance.model_validate(data)
-        assert model.agent_id == AGENT_ID
+        assert model.wallet_id == WALLET_ID
         assert model.chain == "solana"
         assert model.network == "devnet"
         assert model.balance == "1000000000"
@@ -42,20 +42,20 @@ class TestWalletBalance:
 class TestWalletAddress:
     def test_from_camel_case_json(self):
         data = {
-            "agentId": AGENT_ID,
+            "walletId": WALLET_ID,
             "chain": "solana",
             "network": "devnet",
             "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
         }
         model = WalletAddress.model_validate(data)
-        assert model.agent_id == AGENT_ID
+        assert model.wallet_id == WALLET_ID
         assert model.address == "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 
 
 class TestWalletAssets:
     def test_with_nested_asset_info(self):
         data = {
-            "agentId": AGENT_ID,
+            "walletId": WALLET_ID,
             "chain": "solana",
             "network": "devnet",
             "assets": [
@@ -79,7 +79,7 @@ class TestWalletAssets:
             ],
         }
         model = WalletAssets.model_validate(data)
-        assert model.agent_id == AGENT_ID
+        assert model.wallet_id == WALLET_ID
         assert len(model.assets) == 2
         assert model.assets[0].is_native is True
         assert model.assets[0].usd_value == 150.25
@@ -91,7 +91,7 @@ class TestTransactionDetail:
     def test_with_null_optional_fields(self):
         data = {
             "id": TX_ID,
-            "agentId": AGENT_ID,
+            "walletId": WALLET_ID,
             "type": "TRANSFER",
             "status": "PENDING",
             "tier": None,
@@ -104,7 +104,7 @@ class TestTransactionDetail:
         }
         model = TransactionDetail.model_validate(data)
         assert model.id == TX_ID
-        assert model.agent_id == AGENT_ID
+        assert model.wallet_id == WALLET_ID
         assert model.tier is None
         assert model.to_address is None
         assert model.tx_hash is None
@@ -112,7 +112,7 @@ class TestTransactionDetail:
     def test_with_all_fields_populated(self):
         data = {
             "id": TX_ID,
-            "agentId": AGENT_ID,
+            "walletId": WALLET_ID,
             "type": "TRANSFER",
             "status": "CONFIRMED",
             "tier": "INSTANT",
@@ -136,7 +136,7 @@ class TestTransactionList:
             "items": [
                 {
                     "id": TX_ID,
-                    "agentId": AGENT_ID,
+                    "walletId": WALLET_ID,
                     "type": "TRANSFER",
                     "status": "CONFIRMED",
                     "chain": "solana",
@@ -168,7 +168,7 @@ class TestPendingTransactionList:
             "items": [
                 {
                     "id": TX_ID,
-                    "agentId": AGENT_ID,
+                    "walletId": WALLET_ID,
                     "type": "TRANSFER",
                     "status": "PENDING",
                     "chain": "solana",
@@ -288,7 +288,7 @@ class TestValidationErrors:
         with pytest.raises(ValidationError):
             WalletBalance.model_validate(
                 {
-                    "agentId": AGENT_ID,
+                    "walletId": WALLET_ID,
                     "chain": "solana",
                     # missing: network, address, balance, decimals, symbol
                 }
@@ -298,7 +298,7 @@ class TestValidationErrors:
         with pytest.raises(ValidationError):
             WalletBalance.model_validate(
                 {
-                    "agentId": AGENT_ID,
+                    "walletId": WALLET_ID,
                     "chain": "solana",
                     "network": "devnet",
                     "address": "xxx",
