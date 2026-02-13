@@ -350,6 +350,13 @@ export class DaemonLifecycle {
       (async () => {
         const { createApp } = await import('../api/index.js');
         const { serve } = await import('@hono/node-server');
+        const { HotReloadOrchestrator } = await import('../infrastructure/settings/index.js');
+
+        const hotReloader = new HotReloadOrchestrator({
+          settingsService: this._settingsService!,
+          notificationService: this.notificationService,
+          adapterPool: this.adapterPool,
+        });
 
         const app = createApp({
           db: this._db!,
@@ -365,7 +372,9 @@ export class DaemonLifecycle {
           approvalWorkflow: this.approvalWorkflow ?? undefined,
           notificationService: this.notificationService ?? undefined,
           settingsService: this._settingsService ?? undefined,
-          onSettingsChanged: undefined, // Wired in Phase 101-02 for hot-reload
+          onSettingsChanged: (changedKeys: string[]) => {
+            void hotReloader.handleChangedKeys(changedKeys);
+          },
           dataDir,
         });
 
