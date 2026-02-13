@@ -5,7 +5,7 @@ export type ErrorDomain =
   | 'POLICY'
   | 'OWNER'
   | 'SYSTEM'
-  | 'AGENT'
+  | 'WALLET'
   | 'WITHDRAW'
   | 'ACTION'
   | 'ADMIN';
@@ -408,27 +408,27 @@ export const ERROR_CODES = {
     message: 'Chain adapter not available',
   },
 
-  // --- AGENT domain (3) ---
-  AGENT_NOT_FOUND: {
-    code: 'AGENT_NOT_FOUND',
-    domain: 'AGENT',
+  // --- WALLET domain (3) ---
+  WALLET_NOT_FOUND: {
+    code: 'WALLET_NOT_FOUND',
+    domain: 'WALLET',
     httpStatus: 404,
     retryable: false,
-    message: 'Agent not found',
+    message: 'Wallet not found',
   },
-  AGENT_SUSPENDED: {
-    code: 'AGENT_SUSPENDED',
-    domain: 'AGENT',
+  WALLET_SUSPENDED: {
+    code: 'WALLET_SUSPENDED',
+    domain: 'WALLET',
     httpStatus: 409,
     retryable: false,
-    message: 'Agent is suspended',
+    message: 'Wallet is suspended',
   },
-  AGENT_TERMINATED: {
-    code: 'AGENT_TERMINATED',
-    domain: 'AGENT',
+  WALLET_TERMINATED: {
+    code: 'WALLET_TERMINATED',
+    domain: 'WALLET',
     httpStatus: 410,
     retryable: false,
-    message: 'Agent has been terminated',
+    message: 'Wallet has been terminated',
   },
 
   // --- WITHDRAW domain (4) ---

@@ -14,9 +14,9 @@ export {
   SOLANA_NETWORK_TYPES,
   type SolanaNetworkType,
   validateChainNetwork,
-  AGENT_STATUSES,
-  type AgentStatus,
-  AgentStatusEnum,
+  WALLET_STATUSES,
+  type WalletStatus,
+  WalletStatusEnum,
   TRANSACTION_STATUSES,
   type TransactionStatus,
   TransactionStatusEnum,
@@ -51,10 +51,10 @@ export {
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
 export {
-  AgentSchema,
-  type Agent,
-  CreateAgentRequestSchema,
-  type CreateAgentRequest,
+  WalletSchema,
+  type Wallet,
+  CreateWalletRequestSchema,
+  type CreateWalletRequest,
   SessionSchema,
   type Session,
   CreateSessionRequestSchema,

@@ -14,10 +14,10 @@ export {
 } from './chain.js';
 
 export {
-  AGENT_STATUSES,
-  type AgentStatus,
-  AgentStatusEnum,
-} from './agent.js';
+  WALLET_STATUSES,
+  type WalletStatus,
+  WalletStatusEnum,
+} from './wallet.js';
 
 export {
   TRANSACTION_STATUSES,

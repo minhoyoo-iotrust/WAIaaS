@@ -3,7 +3,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
- * Keys in errors must match ERROR_CODES keys exactly (67 error codes).
+ * Keys in errors must match ERROR_CODES keys exactly (68 error codes).
  * Notification templates cover all 21 event types.
  */
 export interface Messages {
@@ -25,7 +25,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (67 error codes from SS10.12 unified matrix)
+  // Error messages (68 error codes from SS10.12 unified matrix)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -87,12 +87,12 @@ export const messages: Messages = {
     CHAIN_NOT_SUPPORTED: 'Chain not supported',
     SHUTTING_DOWN: 'Server is shutting down',
     ADAPTER_NOT_AVAILABLE: 'Chain adapter not available',
-    // AGENT domain (3)
-    AGENT_NOT_FOUND: 'Agent not found',
-    AGENT_SUSPENDED: 'Agent is suspended',
-    AGENT_TERMINATED: 'Agent has been terminated',
+    // WALLET domain (3)
+    WALLET_NOT_FOUND: 'Wallet not found',
+    WALLET_SUSPENDED: 'Wallet is suspended',
+    WALLET_TERMINATED: 'Wallet has been terminated',
     // WITHDRAW domain (4)
-    NO_OWNER: 'No owner registered for this agent',
+    NO_OWNER: 'No owner registered for this wallet',
     WITHDRAW_LOCKED_ONLY: 'Withdrawal requires LOCKED owner state',
     SWEEP_TOTAL_FAILURE: 'All sweep operations failed',
     INSUFFICIENT_FOR_FEE: 'Insufficient balance for transaction fee',
@@ -109,7 +109,7 @@ export const messages: Messages = {
   },
   // Notification templates (21 event types)
   notifications: {
-    TX_REQUESTED: { title: 'Transaction Requested', body: 'Agent {agentId} requested {amount} transfer to {to}' },
+    TX_REQUESTED: { title: 'Transaction Requested', body: 'Wallet {walletId} requested {amount} transfer to {to}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
     TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain' },
     TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount}' },
@@ -118,18 +118,18 @@ export const messages: Messages = {
     TX_DOWNGRADED_DELAY: { title: 'Transaction Delayed', body: 'Transaction {txId} downgraded to delay queue ({seconds}s cooldown)' },
     TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to}' },
     TX_APPROVAL_EXPIRED: { title: 'Approval Expired', body: 'Approval for transaction {txId} has expired' },
-    POLICY_VIOLATION: { title: 'Policy Violation', body: 'Agent {agentId} policy violation: {reason}' },
-    AGENT_SUSPENDED: { title: 'Agent Suspended', body: 'Agent {agentId} has been suspended: {reason}' },
+    POLICY_VIOLATION: { title: 'Policy Violation', body: 'Wallet {walletId} policy violation: {reason}' },
+    WALLET_SUSPENDED: { title: 'Wallet Suspended', body: 'Wallet {walletId} has been suspended: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },
     AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Daemon auto-stopped after {failures} consecutive failures' },
-    SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for agent {agentId} expires in {minutes} minutes' },
-    SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for agent {agentId} has expired' },
-    SESSION_CREATED: { title: 'Session Created', body: 'New session created for agent {agentId}' },
-    OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for agent {agentId}: {ownerAddress}' },
-    OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from agent {agentId}' },
-    OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for agent {agentId}' },
-    DAILY_SUMMARY: { title: 'Daily Summary', body: 'Agents: {agentCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
+    SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for wallet {walletId} expires in {minutes} minutes' },
+    SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for wallet {walletId} has expired' },
+    SESSION_CREATED: { title: 'Session Created', body: 'New session created for wallet {walletId}' },
+    OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for wallet {walletId}: {ownerAddress}' },
+    OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from wallet {walletId}' },
+    OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for wallet {walletId}' },
+    DAILY_SUMMARY: { title: 'Daily Summary', body: 'Wallets: {walletCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
   },
   // System messages
   system: {

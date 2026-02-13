@@ -4,7 +4,7 @@ import { ChainTypeEnum } from '../enums/chain.js';
 
 export const PolicySchema = z.object({
   id: z.string().uuid(),
-  agentId: z.string().uuid(),
+  walletId: z.string().uuid(),
   type: PolicyTypeEnum,
   ruleConfig: z.record(z.unknown()),
   enabled: z.boolean(),
@@ -77,13 +77,13 @@ const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
 /**
  * CreatePolicyRequestSchema - body for POST /v1/policies.
  *
- * agentId is optional (null = global policy).
+ * walletId is optional (null = global policy).
  * rules is validated per-type via superRefine for the 6 v1.4 PolicyTypes.
  * Existing 4 types (SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT)
  * retain free-form rules for backward compatibility.
  */
 export const CreatePolicyRequestSchema = z.object({
-  agentId: z.string().uuid().optional(),
+  walletId: z.string().uuid().optional(),
   type: PolicyTypeEnum,
   rules: z.record(z.unknown()),
   priority: z.number().int().default(0),

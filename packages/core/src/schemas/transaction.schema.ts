@@ -5,7 +5,7 @@ import { ChainTypeEnum } from '../enums/chain.js';
 
 export const TransactionSchema = z.object({
   id: z.string().uuid(),
-  agentId: z.string().uuid(),
+  walletId: z.string().uuid(),
   sessionId: z.string().uuid().nullable(),
   type: TransactionTypeEnum,
   status: TransactionStatusEnum,

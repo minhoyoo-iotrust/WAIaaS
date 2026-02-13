@@ -8,8 +8,8 @@ import {
   EvmNetworkTypeEnum,
   SOLANA_NETWORK_TYPES,
   validateChainNetwork,
-  AGENT_STATUSES,
-  AgentStatusEnum,
+  WALLET_STATUSES,
+  WalletStatusEnum,
   TRANSACTION_STATUSES,
   TransactionStatusEnum,
   TRANSACTION_TYPES,
@@ -57,13 +57,13 @@ describe('Enum SSoT', () => {
     expect(NETWORK_TYPES).toContain('base-sepolia');
   });
 
-  it('AgentStatus has 5 values', () => {
-    expect(AGENT_STATUSES).toHaveLength(5);
-    expect(AGENT_STATUSES).toContain('CREATING');
-    expect(AGENT_STATUSES).toContain('ACTIVE');
-    expect(AGENT_STATUSES).toContain('SUSPENDED');
-    expect(AGENT_STATUSES).toContain('TERMINATING');
-    expect(AGENT_STATUSES).toContain('TERMINATED');
+  it('WalletStatus has 5 values', () => {
+    expect(WALLET_STATUSES).toHaveLength(5);
+    expect(WALLET_STATUSES).toContain('CREATING');
+    expect(WALLET_STATUSES).toContain('ACTIVE');
+    expect(WALLET_STATUSES).toContain('SUSPENDED');
+    expect(WALLET_STATUSES).toContain('TERMINATING');
+    expect(WALLET_STATUSES).toContain('TERMINATED');
   });
 
   it('TransactionStatus has 9 values', () => {
@@ -178,7 +178,7 @@ describe('Enum SSoT', () => {
   it('Zod enum options match as const arrays', () => {
     expect(ChainTypeEnum.options).toEqual([...CHAIN_TYPES]);
     expect(NetworkTypeEnum.options).toEqual([...NETWORK_TYPES]);
-    expect(AgentStatusEnum.options).toEqual([...AGENT_STATUSES]);
+    expect(WalletStatusEnum.options).toEqual([...WALLET_STATUSES]);
     expect(TransactionStatusEnum.options).toEqual([...TRANSACTION_STATUSES]);
     expect(TransactionTypeEnum.options).toEqual([...TRANSACTION_TYPES]);
     expect(PolicyTypeEnum.options).toEqual([...POLICY_TYPES]);
@@ -204,7 +204,7 @@ describe('Enum SSoT', () => {
   // All enum arrays contain only string values (no duplicates)
   it('enum arrays have no duplicate values', () => {
     const allArrays = [
-      CHAIN_TYPES, NETWORK_TYPES, AGENT_STATUSES,
+      CHAIN_TYPES, NETWORK_TYPES, WALLET_STATUSES,
       TRANSACTION_STATUSES, TRANSACTION_TYPES,
       POLICY_TYPES, POLICY_TIERS, SESSION_STATUSES,
       NOTIFICATION_EVENT_TYPES, AUDIT_ACTIONS,

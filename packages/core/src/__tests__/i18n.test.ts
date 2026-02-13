@@ -4,21 +4,21 @@ import { getMessages, ERROR_CODES } from '../index.js';
 describe('i18n message system', () => {
   it('getMessages("en") returns English messages', () => {
     const msg = getMessages('en');
-    expect(msg.errors.AGENT_NOT_FOUND).toBe('Agent not found');
+    expect(msg.errors.WALLET_NOT_FOUND).toBe('Wallet not found');
     expect(msg.system.daemon_started).toBe('WAIaaS daemon started');
     expect(msg.cli.prompt_master_password).toBe('Enter master password:');
   });
 
   it('getMessages("ko") returns Korean messages', () => {
     const msg = getMessages('ko');
-    expect(msg.errors.AGENT_NOT_FOUND).toBe('에이전트를 찾을 수 없습니다');
+    expect(msg.errors.WALLET_NOT_FOUND).toBe('지갑을 찾을 수 없습니다');
     expect(msg.system.daemon_started).toBe('WAIaaS 데몬이 시작되었습니다');
     expect(msg.cli.prompt_master_password).toBe('마스터 패스워드를 입력하세요:');
   });
 
   it('default locale is "en"', () => {
     const msg = getMessages();
-    expect(msg.errors.AGENT_NOT_FOUND).toBe('Agent not found');
+    expect(msg.errors.WALLET_NOT_FOUND).toBe('Wallet not found');
   });
 
   it('en and ko error message keys are identical', () => {

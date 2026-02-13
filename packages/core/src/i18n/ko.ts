@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (67 error codes)
+  // Error messages (68 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -63,12 +63,12 @@ export const messages: Messages = {
     CHAIN_NOT_SUPPORTED: '지원하지 않는 체인입니다',
     SHUTTING_DOWN: '서버가 종료 중입니다',
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
-    // AGENT domain (3)
-    AGENT_NOT_FOUND: '에이전트를 찾을 수 없습니다',
-    AGENT_SUSPENDED: '에이전트가 정지 상태입니다',
-    AGENT_TERMINATED: '에이전트가 종료되었습니다',
+    // WALLET domain (3)
+    WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
+    WALLET_SUSPENDED: '지갑이 정지 상태입니다',
+    WALLET_TERMINATED: '지갑이 종료되었습니다',
     // WITHDRAW domain (4)
-    NO_OWNER: '이 에이전트에 등록된 Owner가 없습니다',
+    NO_OWNER: '이 지갑에 등록된 Owner가 없습니다',
     WITHDRAW_LOCKED_ONLY: '출금에는 LOCKED Owner 상태가 필요합니다',
     SWEEP_TOTAL_FAILURE: '모든 sweep 작업이 실패했습니다',
     INSUFFICIENT_FOR_FEE: '트랜잭션 수수료에 필요한 잔액이 부족합니다',
@@ -85,7 +85,7 @@ export const messages: Messages = {
   },
   // Notification templates (21 event types)
   notifications: {
-    TX_REQUESTED: { title: '거래 요청', body: '에이전트 {agentId}가 {to}로 {amount} 전송을 요청했습니다' },
+    TX_REQUESTED: { title: '거래 요청', body: '지갑 {walletId}이 {to}로 {amount} 전송을 요청했습니다' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
     TX_SUBMITTED: { title: '거래 제출', body: '거래 {txId}가 블록체인에 제출되었습니다' },
     TX_CONFIRMED: { title: '거래 확인', body: '거래 {txId}가 확인되었습니다. 금액: {amount}' },
@@ -94,18 +94,18 @@ export const messages: Messages = {
     TX_DOWNGRADED_DELAY: { title: '거래 지연', body: '거래 {txId}가 지연 대기열로 이동되었습니다 ({seconds}초 대기)' },
     TX_APPROVAL_REQUIRED: { title: '승인 필요', body: '거래 {txId}에 Owner 승인이 필요합니다. 금액: {amount}, 수신: {to}' },
     TX_APPROVAL_EXPIRED: { title: '승인 만료', body: '거래 {txId}의 승인이 만료되었습니다' },
-    POLICY_VIOLATION: { title: '정책 위반', body: '에이전트 {agentId} 정책 위반: {reason}' },
-    AGENT_SUSPENDED: { title: '에이전트 정지', body: '에이전트 {agentId}가 정지되었습니다: {reason}' },
+    POLICY_VIOLATION: { title: '정책 위반', body: '지갑 {walletId} 정책 위반: {reason}' },
+    WALLET_SUSPENDED: { title: '지갑 정지', body: '지갑 {walletId}이 정지되었습니다: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch 발동', body: '{activatedBy}에 의해 Kill Switch가 발동되었습니다. 모든 작업이 중단됩니다' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch 해제', body: 'Kill Switch가 해제되었습니다. 정상 운영이 재개됩니다' },
     AUTO_STOP_TRIGGERED: { title: '자동 정지 발동', body: '연속 {failures}회 실패로 데몬이 자동 정지되었습니다' },
-    SESSION_EXPIRING_SOON: { title: '세션 만료 임박', body: '에이전트 {agentId}의 세션 {sessionId}이 {minutes}분 후 만료됩니다' },
-    SESSION_EXPIRED: { title: '세션 만료', body: '에이전트 {agentId}의 세션 {sessionId}이 만료되었습니다' },
-    SESSION_CREATED: { title: '세션 생성', body: '에이전트 {agentId}의 새 세션이 생성되었습니다' },
-    OWNER_SET: { title: 'Owner 등록', body: '에이전트 {agentId}에 Owner가 등록되었습니다: {ownerAddress}' },
-    OWNER_REMOVED: { title: 'Owner 제거', body: '에이전트 {agentId}에서 Owner가 제거되었습니다' },
-    OWNER_VERIFIED: { title: 'Owner 인증', body: '에이전트 {agentId}의 Owner가 인증되었습니다' },
-    DAILY_SUMMARY: { title: '일일 요약', body: '에이전트: {agentCount}개, 거래: {txCount}건, 세션: {sessionCount}개' },
+    SESSION_EXPIRING_SOON: { title: '세션 만료 임박', body: '지갑 {walletId}의 세션 {sessionId}이 {minutes}분 후 만료됩니다' },
+    SESSION_EXPIRED: { title: '세션 만료', body: '지갑 {walletId}의 세션 {sessionId}이 만료되었습니다' },
+    SESSION_CREATED: { title: '세션 생성', body: '지갑 {walletId}의 새 세션이 생성되었습니다' },
+    OWNER_SET: { title: 'Owner 등록', body: '지갑 {walletId}에 Owner가 등록되었습니다: {ownerAddress}' },
+    OWNER_REMOVED: { title: 'Owner 제거', body: '지갑 {walletId}에서 Owner가 제거되었습니다' },
+    OWNER_VERIFIED: { title: 'Owner 인증', body: '지갑 {walletId}의 Owner가 인증되었습니다' },
+    DAILY_SUMMARY: { title: '일일 요약', body: '지갑: {walletCount}개, 거래: {txCount}건, 세션: {sessionCount}개' },
   },
   // System messages
   system: {

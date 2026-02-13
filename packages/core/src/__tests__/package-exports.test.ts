@@ -5,7 +5,7 @@ describe('@waiaas/core package export verification', () => {
   it('12 enum as const arrays are exported', () => {
     expect(core.CHAIN_TYPES).toBeDefined();
     expect(core.NETWORK_TYPES).toBeDefined();
-    expect(core.AGENT_STATUSES).toBeDefined();
+    expect(core.WALLET_STATUSES).toBeDefined();
     expect(core.TRANSACTION_STATUSES).toBeDefined();
     expect(core.TRANSACTION_TYPES).toBeDefined();
     expect(core.POLICY_TYPES).toBeDefined();
@@ -20,7 +20,7 @@ describe('@waiaas/core package export verification', () => {
   it('12 Zod enums are exported', () => {
     expect(core.ChainTypeEnum).toBeDefined();
     expect(core.NetworkTypeEnum).toBeDefined();
-    expect(core.AgentStatusEnum).toBeDefined();
+    expect(core.WalletStatusEnum).toBeDefined();
     expect(core.TransactionStatusEnum).toBeDefined();
     expect(core.TransactionTypeEnum).toBeDefined();
     expect(core.PolicyTypeEnum).toBeDefined();
@@ -33,8 +33,8 @@ describe('@waiaas/core package export verification', () => {
   });
 
   it('Zod SSoT schemas are exported', () => {
-    expect(core.AgentSchema).toBeDefined();
-    expect(core.CreateAgentRequestSchema).toBeDefined();
+    expect(core.WalletSchema).toBeDefined();
+    expect(core.CreateWalletRequestSchema).toBeDefined();
     expect(core.SessionSchema).toBeDefined();
     expect(core.TransactionSchema).toBeDefined();
     expect(core.SendTransactionRequestSchema).toBeDefined();
