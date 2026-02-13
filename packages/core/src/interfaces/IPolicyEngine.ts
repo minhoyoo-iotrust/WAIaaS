@@ -27,7 +27,7 @@ export interface PolicyEvaluation {
 export interface IPolicyEngine {
   /** Evaluate a transaction against policies. */
   evaluate(
-    agentId: string,
+    walletId: string,
     transaction: {
       type: string;
       amount: string;

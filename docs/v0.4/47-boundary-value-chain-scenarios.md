@@ -70,37 +70,37 @@ Given:
   - MockChainAdapter (canned response)
 
 When (INSTANT/NOTIFY 경계 -1):
-  - evaluate(agentId, { amount: "999999999", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "999999999", to: addr, chain: "solana" })
 
 Then: tier = "INSTANT"  // 1 SOL 미만
 
 When (INSTANT/NOTIFY 경계 정확히):
-  - evaluate(agentId, { amount: "1000000000", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "1000000000", to: addr, chain: "solana" })
 
 Then: tier = "INSTANT"  // 정확히 1 SOL = instant_max 이하
 
 When (INSTANT/NOTIFY 경계 +1):
-  - evaluate(agentId, { amount: "1000000001", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "1000000001", to: addr, chain: "solana" })
 
 Then: tier = "NOTIFY"  // 1 SOL 초과, 10 SOL 이하
 
 When (NOTIFY/DELAY 경계 정확히):
-  - evaluate(agentId, { amount: "10000000000", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "10000000000", to: addr, chain: "solana" })
 
 Then: tier = "NOTIFY"  // 정확히 10 SOL = notify_max 이하
 
 When (NOTIFY/DELAY 경계 +1):
-  - evaluate(agentId, { amount: "10000000001", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "10000000001", to: addr, chain: "solana" })
 
 Then: tier = "DELAY"   // 10 SOL 초과, 50 SOL 이하
 
 When (DELAY/APPROVAL 경계 정확히):
-  - evaluate(agentId, { amount: "50000000000", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "50000000000", to: addr, chain: "solana" })
 
 Then: tier = "DELAY"   // 정확히 50 SOL = delay_max 이하
 
 When (DELAY/APPROVAL 경계 +1):
-  - evaluate(agentId, { amount: "50000000001", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "50000000001", to: addr, chain: "solana" })
 
 Then: tier = "APPROVAL"  // 50 SOL 초과
 ```
@@ -131,22 +131,22 @@ Given:
   - MockChainAdapter
 
 When (INSTANT/NOTIFY 경계 -1):
-  - evaluate(agentId, { amount: "99999999", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "99999999", to: addr, chain: "solana" })
 
 Then: tier = "INSTANT"
 
 When (INSTANT/NOTIFY 경계 정확히):
-  - evaluate(agentId, { amount: "100000000", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "100000000", to: addr, chain: "solana" })
 
 Then: tier = "INSTANT"  // 정확히 0.1 SOL = instant_max 이하
 
 When (INSTANT/NOTIFY 경계 +1):
-  - evaluate(agentId, { amount: "100000001", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "100000001", to: addr, chain: "solana" })
 
 Then: tier = "NOTIFY"
 
 When (DELAY/APPROVAL 경계 +1):
-  - evaluate(agentId, { amount: "10000000001", to: addr, chain: "solana" })
+  - evaluate(walletId, { amount: "10000000001", to: addr, chain: "solana" })
 
 Then: tier = "APPROVAL"
 ```
@@ -674,7 +674,7 @@ Then:
 Given:
   - 실제 SQLite DB (WAL 모드, tmpdir)
   - MockChainAdapter (100ms 지연)
-  - 에이전트 "agent-001": maxTotalAmount = "10000000000"
+  - 지갑 "wallet-001": maxTotalAmount = "10000000000"
   - usageStats: totalAmount = "8000000000"
   - 2개 세션 토큰: tokenA, tokenB
 
@@ -738,12 +738,12 @@ Then:
   공격자 행동: 만료 후 재시도 반복 (3회 연속 실패)
   시스템 반응:
   - AutoStopEngine: CONSECUTIVE_FAILURES 규칙 (threshold=3) 트리거
-  - AutoStopDecision: { action: "SUSPEND_AGENT", agentId: "agent-001" }
+  - AutoStopDecision: { action: "SUSPEND_WALLET", walletId: "wallet-001" }
   - 에이전트 상태: ACTIVE -> SUSPENDED
 
 [Step 6] 정지된 에이전트로 추가 시도
   공격자 행동: 정지된 에이전트의 세션으로 거래 시도
-  시스템 반응: 401 AGENT_SUSPENDED (sessionAuth Stage 2에서 에이전트 상태 확인)
+  시스템 반응: 401 WALLET_SUSPENDED (sessionAuth Stage 2에서 에이전트 상태 확인)
 
 [Step 7] (심각한 경우) AutoStop -> Kill Switch 에스컬레이션
   시스템 반응: AutoStop이 위험도 평가 후 Kill Switch 자동 발동 가능
@@ -807,9 +807,9 @@ Then:
   공격자 행동: Agent B가 Agent A의 토큰으로 거래 요청
   시스템 반응:
   - sessionAuth Stage 1: JWT 서명 유효 -> 통과
-  - sessionAuth Stage 2: DB 조회 -> 세션의 agentId = Agent A
-  - 거래 실행: Agent A의 지갑에서 자금 이동 (토큰의 agentId로 실행)
-  - **취약점:** agentId 검증이 토큰 내부 값에만 의존하면, 토큰 탈취 = 완전한 에이전트 제어
+  - sessionAuth Stage 2: DB 조회 -> 세션의 walletId = Agent A
+  - 거래 실행: Agent A의 지갑에서 자금 이동 (토큰의 walletId로 실행)
+  - **취약점:** walletId 검증이 토큰 내부 값에만 의존하면, 토큰 탈취 = 완전한 지갑 제어
 
 [Step 3] 이상 패턴 감지 -> AutoStop 트리거 (Layer 3)
   시스템 반응:
@@ -926,7 +926,7 @@ Then:
 
 [Step 5] 정지 후 시도
   공격자 행동: SUSPENDED 에이전트의 세션으로 요청
-  시스템 반응: 401 AGENT_SUSPENDED
+  시스템 반응: 401 WALLET_SUSPENDED
   - 세션은 여전히 유효하지만 에이전트 상태가 SUSPENDED이므로 Stage 2에서 거부
 ```
 
@@ -961,7 +961,7 @@ Then:
   - Step 3: 202 QUEUED (DELAY 티어)
   - Step 4: 3건 모두 403 POLICY_LIMIT_EXCEEDED
     -> AutoStop 트리거 -> 에이전트 SUSPENDED
-  - Step 5: 401 AGENT_SUSPENDED
+  - Step 5: 401 WALLET_SUSPENDED
   - MockNotificationChannel: DELAY 알림 + AutoStop 알림
 ```
 

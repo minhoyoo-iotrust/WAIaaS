@@ -19,7 +19,7 @@ import type { IPolicyEngine, PolicyEvaluation } from '@waiaas/core';
  */
 export class DefaultPolicyEngine implements IPolicyEngine {
   async evaluate(
-    _agentId: string,
+    _walletId: string,
     _transaction: {
       type: string;
       amount: string;

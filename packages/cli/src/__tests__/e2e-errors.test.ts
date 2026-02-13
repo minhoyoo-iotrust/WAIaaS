@@ -1,7 +1,7 @@
 /**
  * E2E Error Handling tests (E-10 to E-12).
  *
- * Tests error conditions: bad config, non-existent agent, duplicate daemon start.
+ * Tests error conditions: bad config, non-existent wallet, duplicate daemon start.
  */
 
 import { describe, test, expect } from 'vitest';
@@ -29,7 +29,7 @@ describe('E2E Error Handling', () => {
     }
   });
 
-  test('E-11: non-existent agent returns 404', async () => {
+  test('E-11: non-existent wallet returns 404', async () => {
     const masterPassword = 'test-password-12345';
     const { dataDir } = await initTestDataDir();
     const harness = await startTestDaemon(dataDir, masterPassword);
@@ -37,13 +37,13 @@ describe('E2E Error Handling', () => {
     try {
       await waitForHealth(harness);
 
-      const res = await fetchApi(harness, '/v1/agents/00000000-0000-0000-0000-000000000000', {
+      const res = await fetchApi(harness, '/v1/wallets/00000000-0000-0000-0000-000000000000', {
         headers: { 'X-Master-Password': masterPassword },
       });
 
       expect(res.status).toBe(404);
       const body = (await res.json()) as { code: string };
-      expect(body.code).toBe('AGENT_NOT_FOUND');
+      expect(body.code).toBe('WALLET_NOT_FOUND');
     } finally {
       await stopTestDaemon(harness);
     }

@@ -1,11 +1,11 @@
 /**
- * E2E Agent Management tests (E-05 to E-07).
+ * E2E Wallet Management tests (E-05 to E-07).
  *
- * Tests agent creation, address lookup, and balance query via mock adapter.
+ * Tests wallet creation, address lookup, and balance query via mock adapter.
  * Uses startTestDaemonWithAdapter for full pipeline support without real Solana RPC.
  *
  * Auth flow:
- * - E-05: POST /v1/agents requires masterAuth (X-Master-Password header)
+ * - E-05: POST /v1/wallets requires masterAuth (X-Master-Password header)
  * - E-06, E-07: GET /v1/wallet/* requires sessionAuth (Bearer token from session)
  */
 
@@ -19,12 +19,12 @@ import {
 } from './helpers/daemon-harness.js';
 
 /**
- * Helper: create a session for the given agent and return the JWT token.
+ * Helper: create a session for the given wallet and return the JWT token.
  * Requires masterAuth (X-Master-Password) since POST /v1/sessions is admin-only.
  */
 async function createTestSession(
   harness: ManualHarness,
-  agentId: string,
+  walletId: string,
 ): Promise<string> {
   const res = await fetchApi(harness, '/v1/sessions', {
     method: 'POST',
@@ -32,7 +32,7 @@ async function createTestSession(
       'Content-Type': 'application/json',
       'X-Master-Password': harness.masterPassword,
     },
-    body: JSON.stringify({ agentId }),
+    body: JSON.stringify({ walletId }),
   });
 
   if (res.status !== 201) {
@@ -44,9 +44,9 @@ async function createTestSession(
   return body.token;
 }
 
-describe('E2E Agent Management', () => {
+describe('E2E Wallet Management', () => {
   let harness: ManualHarness;
-  let agentId: string;
+  let walletId: string;
   let sessionToken: string;
 
   beforeAll(async () => {
@@ -61,14 +61,14 @@ describe('E2E Agent Management', () => {
     }
   });
 
-  test('E-05: POST /v1/agents creates agent with Solana address', async () => {
-    const res = await fetchApi(harness, '/v1/agents', {
+  test('E-05: POST /v1/wallets creates wallet with Solana address', async () => {
+    const res = await fetchApi(harness, '/v1/wallets', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Master-Password': harness.masterPassword,
       },
-      body: JSON.stringify({ name: 'test-agent', chain: 'solana', network: 'devnet' }),
+      body: JSON.stringify({ name: 'test-wallet', chain: 'solana', network: 'devnet' }),
     });
 
     expect(res.status).toBe(201);
@@ -82,14 +82,14 @@ describe('E2E Agent Management', () => {
     expect(body).toHaveProperty('id');
     expect(body).toHaveProperty('publicKey');
     expect(body.chain).toBe('solana');
-    expect(body.name).toBe('test-agent');
+    expect(body.name).toBe('test-wallet');
     expect(body.status).toBe('ACTIVE');
 
-    // Store agentId for subsequent tests
-    agentId = body.id;
+    // Store walletId for subsequent tests
+    walletId = body.id;
 
     // Create a session for wallet/transaction endpoints (sessionAuth required)
-    sessionToken = await createTestSession(harness, agentId);
+    sessionToken = await createTestSession(harness, walletId);
   });
 
   test('E-06: GET /v1/wallet/address returns base58 public key', async () => {

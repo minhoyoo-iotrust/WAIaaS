@@ -247,13 +247,13 @@ Given:
     - setSubmitResult(null)  // 제출 실패
   - MockDb:
     - auto_stop_rules: CONSECUTIVE_FAILURES { threshold: 3 }
-    - transactions: 에이전트 "agent-001"의 최근 거래 0건
+    - transactions: 지갑 "wallet-001"의 최근 거래 0건
 
 When (1~3번째 거래 -- 연속 실패):
   - 거래 1: POST /v1/transactions/send -> FAILED (MockChainAdapter 실패)
   - 거래 2: POST /v1/transactions/send -> FAILED
   - 거래 3: POST /v1/transactions/send -> FAILED
-  - 각 거래 실패 후 AutoStopEngine.evaluate({type: 'TX_FAILED', agentId: 'agent-001'})
+  - 각 거래 실패 후 AutoStopEngine.evaluate({type: 'TX_FAILED', walletId: 'wallet-001'})
 
 Then (3번째 실패 후):
   - AutoStopDecision: { action: "SUSPEND_AGENT", ruleType: "CONSECUTIVE_FAILURES" }
@@ -261,11 +261,11 @@ Then (3번째 실패 후):
   - suspension_reason: "auto_stop: CONSECUTIVE_FAILURES - 3 consecutive failures"
 
 When (4번째 거래 시도):
-  - POST /v1/transactions/send (agentId: "agent-001")
+  - POST /v1/transactions/send (walletId: "wallet-001")
 
 Then (4번째):
-  - HTTP 403 AGENT_SUSPENDED
-  - 에이전트가 SUSPENDED 상태이므로 새 거래 차단
+  - HTTP 403 WALLET_SUSPENDED
+  - 지갑이 SUSPENDED 상태이므로 새 거래 차단
 ```
 
 **Phase 14 Mock 참조:** FakeClock (DI), MockChainAdapter (`setSubmitResult(null)` 또는 예외 throw로 실패 시뮬레이션), MockDb (transactions 테이블에 FAILED 상태 기록).
@@ -344,7 +344,7 @@ Then:
 Given:
   - FakeOwnerSigner (유효한 Owner 키쌍)
   - MockDb:
-    - sessions: agent-001의 세션 1건 (발급 완료, revokedAt = null)
+    - sessions: wallet-001의 세션 1건 (발급 완료, revokedAt = null)
     - system_state: kill_switch_status = "NORMAL"
   - 유효한 세션 토큰: token-before-kill
 
@@ -432,7 +432,7 @@ Then:
     - audit_log에 KILL_SWITCH_ACTIVATED 이벤트 기록
     - details에 "keystoreLockFailed: true" 포함
   - 최종 반환:
-    - KillSwitchResult: { activated: true, sessionsRevoked: 3, transactionsCancelled: 2, agentsSuspended: 2 }
+    - KillSwitchResult: { activated: true, sessionsRevoked: 3, transactionsCancelled: 2, walletsSuspended: 2 }
     - 캐스케이드 부분 실패이지만 Kill Switch 자체는 성공
 ```
 
@@ -533,7 +533,7 @@ Given:
   - MockDb (transactions + auto_stop_rules 설정)
 
 When:
-  - SecurityEvent 전달: { type, agentId, timestamp, details }
+  - SecurityEvent 전달: { type, walletId, timestamp, details }
 
 Then:
   - AutoStopDecision: { action, ruleId, ruleType, reason }
@@ -631,7 +631,7 @@ When:
 
 Then:
   - kill_switch_status = "ACTIVATED"
-  - sessionsRevoked = 3, txCancelled = 2, agentsSuspended = 2
+  - sessionsRevoked = 3, txCancelled = 2, walletsSuspended = 2
   - MockKeyStore.lock() 호출됨
   - MockNotificationChannel: KILL_SWITCH_ACTIVATED 알림 전송
 
@@ -692,7 +692,7 @@ Then:
 | KILL_SWITCH_ALREADY_ACTIVE | 409 | SEC-03-05 (이중 발동) |
 | KILL_SWITCH_NOT_ACTIVE | 409 | 상태 전이 검증 (NORMAL에서 복구 시도) |
 | SESSION_REVOKED | 401 | SEC-03-06 (복구 후 이전 세션 토큰) |
-| AGENT_SUSPENDED | 403 | SEC-03-04 (AutoStop 후 에이전트 차단) |
+| WALLET_SUSPENDED | 403 | SEC-03-04 (AutoStop 후 지갑 차단) |
 
 ---
 

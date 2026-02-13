@@ -3,8 +3,8 @@
  *
  * Tests cover:
  * 1. rejects with 401 INVALID_SIGNATURE when headers missing
- * 2. rejects with 404 WALLET_NOT_FOUND when agent does not exist
- * 3. rejects with 404 OWNER_NOT_CONNECTED when agent has no owner
+ * 2. rejects with 404 WALLET_NOT_FOUND when wallet does not exist
+ * 3. rejects with 404 OWNER_NOT_CONNECTED when wallet has no owner
  * 4. rejects with 401 INVALID_SIGNATURE when owner address does not match
  * 5. rejects with 401 INVALID_SIGNATURE when signature is invalid
  * 6. passes through when valid Ed25519 signature matches owner address
@@ -122,7 +122,7 @@ function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
   return testApp;
 }
 
-/** Seed a test agent with optional owner address */
+/** Seed a test wallet with optional owner address */
 function seedWallet(opts?: { ownerAddress?: string | null }) {
   const ts = nowSeconds();
   sqlite.prepare(
@@ -178,11 +178,11 @@ describe('ownerAuth middleware', () => {
     expect(body.code).toBe('INVALID_SIGNATURE');
   });
 
-  it('rejects with 404 WALLET_NOT_FOUND when agent does not exist', async () => {
+  it('rejects with 404 WALLET_NOT_FOUND when wallet does not exist', async () => {
     const message = 'test-message';
     const sig = signMessage(message, ownerKeypair.secretKey);
 
-    const res = await app.request('/protected/nonexistent-agent-id/action', {
+    const res = await app.request('/protected/nonexistent-wallet-id/action', {
       method: 'POST',
       headers: {
         'X-Owner-Signature': sig,
@@ -196,7 +196,7 @@ describe('ownerAuth middleware', () => {
     expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 
-  it('rejects with 404 OWNER_NOT_CONNECTED when agent has no owner', async () => {
+  it('rejects with 404 OWNER_NOT_CONNECTED when wallet has no owner', async () => {
     seedWallet({ ownerAddress: null });
 
     const message = 'test-message';
@@ -229,7 +229,7 @@ describe('ownerAuth middleware', () => {
       headers: {
         'X-Owner-Signature': sig,
         'X-Owner-Message': message,
-        'X-Owner-Address': ownerKeypair.address, // different from agent owner
+        'X-Owner-Address': ownerKeypair.address, // different from wallet owner
       },
     });
     expect(res.status).toBe(401);

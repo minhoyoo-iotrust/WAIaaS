@@ -419,20 +419,20 @@ Then (Case B):
 ```
 Given:
   - MockDb: policies 테이블에 2건의 SPENDING_LIMIT 정책
-    - 글로벌 (agentId = null): { instant_max: "10000000000" }  // 10 SOL
-    - 에이전트별 (agentId = "agent-001"): { instant_max: "5000000000" }  // 5 SOL
-  - 요청 에이전트: "agent-001"
+    - 글로벌 (walletId = null): { instant_max: "10000000000" }  // 10 SOL
+    - 지갑별 (walletId = "wallet-001"): { instant_max: "5000000000" }  // 5 SOL
+  - 요청 지갑: "wallet-001"
 
 When:
   - 전송 요청: { amount: "7000000000", chain: "solana" }  // 7 SOL
 
 Then:
   - PolicyDecision: { allowed: true, tier: "NOTIFY" }
-  - 에이전트별 정책(5 SOL)이 글로벌 정책(10 SOL)을 오버라이드
+  - 지갑별 정책(5 SOL)이 글로벌 정책(10 SOL)을 오버라이드
   - 7 SOL > instant_max(5 SOL) 이므로 NOTIFY 티어
 
 When (Case B - 글로벌만 있는 에이전트):
-  - 요청 에이전트: "agent-002" (에이전트별 정책 없음)
+  - 요청 지갑: "wallet-002" (지갑별 정책 없음)
   - 전송 요청: { amount: "7000000000", chain: "solana" }  // 7 SOL
 
 Then (Case B):
@@ -441,7 +441,7 @@ Then (Case B):
   - 7 SOL <= instant_max(10 SOL) 이므로 INSTANT 티어
 ```
 
-**Phase 14 Mock 참조:** MockDb (policies 테이블에 글로벌 + 에이전트별 정책 동시 설정). Unit 레벨에서 resolveOverrides() 로직만 검증.
+**Phase 14 Mock 참조:** MockDb (policies 테이블에 글로벌 + 지갑별 정책 동시 설정). Unit 레벨에서 resolveOverrides() 로직만 검증.
 
 ---
 
@@ -468,7 +468,7 @@ Then (Case B):
 ```
 Given:
   - MockDb: policies 테이블 비어있음 (0건)
-  - 요청 에이전트: "agent-001"
+  - 요청 지갑: "wallet-001"
 
 When:
   - 전송 요청: { amount: "100000000000", chain: "solana" }  // 100 SOL
@@ -498,7 +498,7 @@ Then:
 │  │ SELECT COALESCE(SUM(CAST(reserved_amount   │              │
 │  │   AS INTEGER)), 0) as total                │              │
 │  │ FROM transactions                          │              │
-│  │ WHERE agent_id = ?                         │              │
+│  │ WHERE wallet_id = ?                         │              │
 │  │   AND reserved_amount IS NOT NULL          │              │
 │  │   AND status IN ('PENDING','QUEUED',       │              │
 │  │       'EXECUTING','SUBMITTED')             │              │
@@ -508,7 +508,7 @@ Then:
 │                                                              │
 │  Step 3: 정책 엔진 평가 (동기적, 같은 트랜잭션 내)          │
 │  ┌────────────────────────────────────────────┐              │
-│  │ evaluateSync(sqlite, agentId, request,     │              │
+│  │ evaluateSync(sqlite, walletId, request,     │              │
 │  │   effectiveAmount)                         │              │
 │  └────────────────────────────────────────────┘              │
 │                                                              │

@@ -11,9 +11,9 @@
  * and APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions).
  *
  * Algorithm:
- * 1. Load enabled policies for agent (agent-specific + global), ORDER BY priority DESC
+ * 1. Load enabled policies for wallet (wallet-specific + global), ORDER BY priority DESC
  * 2. If no policies found, return INSTANT passthrough (Phase 7 compat)
- * 3. Resolve overrides: agent-specific policies override global policies of same type
+ * 3. Resolve overrides: wallet-specific policies override global policies of same type
  * 4. Evaluate WHITELIST: deny if toAddress not in allowed_addresses
  * 4b. Evaluate ALLOWED_TOKENS: deny TOKEN_TRANSFER if no policy or token not whitelisted
  * 4c. Evaluate CONTRACT_WHITELIST: deny CONTRACT_CALL if no policy or contract not whitelisted
@@ -134,16 +134,16 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    * Evaluate a transaction against DB-stored policies.
    */
   async evaluate(
-    agentId: string,
+    walletId: string,
     transaction: TransactionParam,
   ): Promise<PolicyEvaluation> {
-    // Step 1: Load enabled policies (agent-specific + global)
+    // Step 1: Load enabled policies (wallet-specific + global)
     const rows = await this.db
       .select()
       .from(policies)
       .where(
         and(
-          or(eq(policies.walletId, agentId), isNull(policies.walletId)),
+          or(eq(policies.walletId, walletId), isNull(policies.walletId)),
           eq(policies.enabled, true),
         ),
       )
@@ -155,8 +155,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: 'INSTANT' };
     }
 
-    // Step 3: Resolve overrides (agent-specific wins over global for same type)
-    const resolved = this.resolveOverrides(rows as PolicyRow[], agentId);
+    // Step 3: Resolve overrides (wallet-specific wins over global for same type)
+    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId);
 
     // Step 4: Evaluate WHITELIST (deny-first)
     const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
@@ -224,12 +224,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    *          aggregate against SPENDING_LIMIT. If batch contains APPROVE, apply
    *          APPROVE_TIER_OVERRIDE and take max(amount tier, approve tier).
    *
-   * @param agentId - Agent whose policies to evaluate
+   * @param walletId - Wallet whose policies to evaluate
    * @param instructions - Array of instruction parameters (same shape as TransactionParam)
    * @returns PolicyEvaluation with final tier or denial with violation details
    */
   async evaluateBatch(
-    agentId: string,
+    walletId: string,
     instructions: TransactionParam[],
   ): Promise<PolicyEvaluation> {
     // Step 1: Load policies (reuse existing query logic)
@@ -238,7 +238,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       .from(policies)
       .where(
         and(
-          or(eq(policies.walletId, agentId), isNull(policies.walletId)),
+          or(eq(policies.walletId, walletId), isNull(policies.walletId)),
           eq(policies.enabled, true),
         ),
       )
@@ -249,7 +249,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: 'INSTANT' };
     }
 
-    const resolved = this.resolveOverrides(rows as PolicyRow[], agentId);
+    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId);
 
     // Phase A: Evaluate each instruction individually
     const violations: Array<{ index: number; type: string; reason: string }> = [];
@@ -388,14 +388,14 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    * 6. If allowed: sets reserved_amount on the transaction row
    * 7. Commits
    *
-   * @param agentId - The agent whose policies to evaluate
+   * @param walletId - The wallet whose policies to evaluate
    * @param transaction - Transaction details for evaluation
    * @param txId - The transaction ID to update with reserved_amount
    * @returns PolicyEvaluation result
    * @throws Error if sqlite instance not provided in constructor
    */
   evaluateAndReserve(
-    agentId: string,
+    walletId: string,
     transaction: TransactionParam,
     txId: string,
   ): PolicyEvaluation {
@@ -416,7 +416,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
              AND enabled = 1
            ORDER BY priority DESC`,
         )
-        .all(agentId) as PolicyRow[];
+        .all(walletId) as PolicyRow[];
 
       // Step 2: No policies -> INSTANT passthrough
       if (policyRows.length === 0) {
@@ -424,7 +424,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       }
 
       // Step 3: Resolve overrides
-      const resolved = this.resolveOverrides(policyRows, agentId);
+      const resolved = this.resolveOverrides(policyRows, walletId);
 
       // Step 4: Evaluate WHITELIST (deny-first)
       const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
@@ -471,7 +471,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
       const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
       if (spendingPolicy) {
-        // Sum of reserved_amount for agent's PENDING/QUEUED transactions
+        // Sum of reserved_amount for wallet's PENDING/QUEUED transactions
         const reservedRow = sqlite
           .prepare(
             `SELECT COALESCE(SUM(CAST(reserved_amount AS INTEGER)), 0) AS total
@@ -480,7 +480,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
                AND status IN ('PENDING', 'QUEUED')
                AND reserved_amount IS NOT NULL`,
           )
-          .get(agentId) as { total: number };
+          .get(walletId) as { total: number };
 
         const reservedTotal = BigInt(reservedRow.total);
         const requestAmount = BigInt(transaction.amount);
@@ -553,7 +553,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // -------------------------------------------------------------------------
 
   /**
-   * Resolve policy overrides: for each policy type, agent-specific wins over global.
+   * Resolve policy overrides: for each policy type, wallet-specific wins over global.
    * Returns deduplicated policy list (one per type, agent-specific preferred).
    */
   private resolveOverrides(rows: PolicyRow[], walletId: string): PolicyRow[] {

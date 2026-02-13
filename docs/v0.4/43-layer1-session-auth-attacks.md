@@ -171,7 +171,7 @@ Then:
 **우선순위:** Critical
 **공격자:** 악의적 AI 에이전트
 **테스트 레벨:** Integration | Security
-**공격 대상:** sessionAuth Stage 2 -- `agentId` 매칭 검증
+**공격 대상:** sessionAuth Stage 2 -- `walletId` 매칭 검증
 
 #### 공격 단계
 1. Agent A가 유효한 세션 토큰을 보유한다 (aid: "agent-A")
@@ -179,8 +179,8 @@ Then:
 3. Agent B가 Agent A 토큰으로 Agent B에 속한 리소스(지갑, 거래)에 접근을 시도한다
 
 #### 기대 방어
-- sessionAuth Stage 2에서 JWT claims의 `aid`(agent-A)와 요청 대상 리소스의 agentId를 비교한다
-- API 핸들러에서 `c.get('agentId')` != 요청 대상 agentId이면 접근을 거부한다
+- sessionAuth Stage 2에서 JWT claims의 `wid`(wallet-A)와 요청 대상 리소스의 walletId를 비교한다
+- API 핸들러에서 `c.get('walletId')` != 요청 대상 walletId이면 접근을 거부한다
 - 세션 토큰의 aid는 변경 불가 (JWT 서명으로 보호)
 
 #### Given-When-Then
@@ -193,11 +193,11 @@ Given:
   - DB에 Agent A의 지갑 레코드 존재
 When:
   - Agent B가 Agent A 토큰으로 Agent B의 거래를 조회 시도:
-    GET /v1/transactions?agentId=agent-B-id
+    GET /v1/transactions?walletId=wallet-B-id
     Authorization: Bearer {Agent A 토큰}
 Then:
   - HTTP 403 또는 빈 결과
-  - agentId 필터가 JWT claims의 aid("agent-A-id")로 강제 적용되어, agent-B-id의 거래는 조회 불가
+  - walletId 필터가 JWT claims의 wid("wallet-A-id")로 강제 적용되어, wallet-B-id의 거래는 조회 불가
   - 감사 로그에 AUTH_FAILED 이벤트 기록
 ```
 
@@ -593,7 +593,7 @@ sessionAuth 미들웨어는 특정 경로를 인증에서 제외한다. 이 경�
 | `/v1/transactions/:id` | GET | 401 INVALID_TOKEN |
 | `/v1/sessions` | GET | 401 INVALID_TOKEN |
 | `/v1/sessions/:id` | DELETE | 401 INVALID_TOKEN |
-| `/v1/agents` | GET | 401 INVALID_TOKEN |
+| `/v1/wallets` | GET | 401 INVALID_TOKEN |
 
 ### 4.3 Given-When-Then
 
@@ -612,7 +612,7 @@ Then: HTTP 200 (인증 불필요)
 When: GET /v1/nonce
 Then: HTTP 200 (인증 불필요)
 
-When: POST /v1/sessions { message, signature, publicKey, agentId, constraints }
+When: POST /v1/sessions { message, signature, publicKey, walletId, constraints }
 Then: HTTP 201 또는 401 (Owner 서명 기반 인증, sessionAuth 미적용)
 
 --- 필수 경로 검증 ---

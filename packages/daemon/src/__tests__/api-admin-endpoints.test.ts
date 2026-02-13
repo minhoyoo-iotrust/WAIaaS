@@ -1,8 +1,8 @@
 /**
  * Tests for 9 new endpoints added in Phase 59-02 Task 2:
  *
- * PUT    /v1/wallets/:id          (masterAuth) - Update agent name
- * DELETE /v1/wallets/:id          (masterAuth) - Terminate agent
+ * PUT    /v1/wallets/:id          (masterAuth) - Update wallet name
+ * DELETE /v1/wallets/:id          (masterAuth) - Terminate wallet
  * GET    /v1/admin/status        (masterAuth) - Daemon status
  * POST   /v1/admin/kill-switch   (masterAuth) - Activate kill switch
  * GET    /v1/admin/kill-switch   (public)     - Get kill switch state
@@ -163,7 +163,7 @@ afterEach(() => {
 // Auth test helpers
 // ---------------------------------------------------------------------------
 
-async function createTestWallet(name = 'test-agent'): Promise<string> {
+async function createTestWallet(name = 'test-wallet'): Promise<string> {
   const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: {

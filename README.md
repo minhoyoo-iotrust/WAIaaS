@@ -56,7 +56,7 @@ Solana를 1순위로 지원하며, EVM(Ethereum 등) 체인을 추가 지원한�
 | **Python SDK** | Python 에이전트 | httpx + Pydantic v2 |
 | **MCP** | AI 에이전트 (Claude 등) | 6개 도구, stdio 전송 |
 | **CLI** | 개발자/운영자 | init/start/stop/status/mcp setup |
-| **Admin Web UI** | 관리자 | 대시보드, 에이전트/세션/정책/알림 관리 |
+| **Admin Web UI** | 관리자 | 대시보드, 지갑/세션/정책/알림 관리 |
 | **Desktop App** | Owner (주인) | Tauri 2, 트레이 앱, 승인 UI |
 | **Telegram Bot** | Owner (주인) | 인라인 키보드로 거래 승인/거부 |
 
@@ -152,20 +152,20 @@ pnpm --filter @waiaas/cli exec waiaas start
 
 데몬이 `http://127.0.0.1:3100`에서 실행된다.
 
-### 3. 에이전트 생성 + 세션 발급
+### 3. 지갑 생성 + 세션 발급
 
 ```bash
-# 에이전트 생성 (masterAuth 필요)
-curl -X POST http://127.0.0.1:3100/v1/agents \
+# 지갑 생성 (masterAuth 필요)
+curl -X POST http://127.0.0.1:3100/v1/wallets \
   -H "Content-Type: application/json" \
   -H "X-Master-Password: <your-master-password>" \
-  -d '{"name": "my-agent", "chain": "solana", "network": "devnet"}'
+  -d '{"name": "my-wallet", "chain": "solana", "network": "devnet"}'
 
 # 세션 토큰 발급 (masterAuth 필요)
 curl -X POST http://127.0.0.1:3100/v1/sessions \
   -H "Content-Type: application/json" \
   -H "X-Master-Password: <your-master-password>" \
-  -d '{"agentId": "<agent-id-from-above>"}'
+  -d '{"walletId": "<wallet-id-from-above>"}'
 ```
 
 응답에서 받은 `token` 값을 에이전트에 설정한다:
@@ -221,7 +221,7 @@ solana_devnet = "https://api.devnet.solana.com"
 # 보안 설정
 [security]
 session_ttl = 86400                         # 세션 수명 (초, 기본 24시간)
-max_sessions_per_agent = 5                  # 에이전트당 최대 세션 수
+max_sessions_per_wallet = 5                 # 지갑당 최대 세션 수
 rate_limit_global_ip_rpm = 1000             # 전역 IP당 RPM
 rate_limit_session_rpm = 300                # 세션당 RPM
 rate_limit_tx_rpm = 10                      # 거래 요청 RPM
@@ -364,8 +364,8 @@ waiaas stop
 
 # MCP 연동 설정 (Claude Desktop에 자동 등록)
 waiaas mcp setup
-waiaas mcp setup --agent <agent-id>    # 특정 에이전트
-waiaas mcp setup --all                 # 모든 에이전트 일괄 설정
+waiaas mcp setup --wallet <wallet-id>  # 특정 지갑
+waiaas mcp setup --all                 # 모든 지갑 일괄 설정
 ```
 
 ### TypeScript SDK
@@ -440,7 +440,7 @@ MCP(Model Context Protocol)를 지원하는 AI 에이전트(Claude 등)에서 WA
 waiaas mcp setup
 ```
 
-`waiaas mcp setup`은 에이전트별 세션 토큰을 자동 발급하고, Claude Desktop 설정 파일에 MCP 서버를 등록한다. `--all` 플래그로 모든 에이전트를 일괄 설정할 수 있다.
+`waiaas mcp setup`은 지갑별 세션 토큰을 자동 발급하고, Claude Desktop 설정 파일에 MCP 서버를 등록한다. `--all` 플래그로 모든 지갑을 일괄 설정할 수 있다.
 
 **수동 설정:**
 
@@ -491,7 +491,7 @@ http://127.0.0.1:3100/admin
 | 페이지 | 기능 |
 |--------|------|
 | **Dashboard** | 시스템 상태, Kill Switch 제어, 데몬 정보 |
-| **Agents** | 에이전트 목록/생성, 상세 정보, 키 재생성 |
+| **Wallets** | 지갑 목록/생성, 상세 정보, 키 재생성 |
 | **Sessions** | 활성 세션 목록, 세션 발급/해지 |
 | **Policies** | 정책 티어 조회/수정 |
 | **Notifications** | 알림 채널 상태, 테스트 전송, 알림 로그 |
@@ -507,7 +507,7 @@ WAIaaS는 세 가지 수준의 인증을 분리하여, 각 행위자에게 필�
 
 | 인증 수준 | 대상 | 방식 | 용도 |
 |-----------|------|------|------|
-| **masterAuth** | 데몬 운영자 | 마스터 패스워드 (Argon2id) | 시스템 관리 (에이전트 생성, 정책 설정, 세션 관리) |
+| **masterAuth** | 데몬 운영자 | 마스터 패스워드 (Argon2id) | 시스템 관리 (지갑 생성, 정책 설정, 세션 관리) |
 | **ownerAuth** | 자금 소유자 | SIWS/SIWE 서명 (요청마다) | 거래 승인, Kill Switch 복구 |
 | **sessionAuth** | AI 에이전트 | JWT Bearer 토큰 (HS256) | 지갑 조회, 거래 요청, 세션 조회 |
 
@@ -561,10 +561,10 @@ WAIaaS는 세 가지 수준의 인증을 분리하여, 각 행위자에게 필�
 
 ## 프로젝트 상태
 
-WAIaaS는 **활발히 개발 중**이며, v1.3.4까지 구현이 완료되었다.
+WAIaaS는 **활발히 개발 중**이며, v1.4.1까지 구현이 완료되었다.
 
-- **42,123 LOC** / **895 테스트** / **8 패키지** 모노레포 + Python SDK
-- **170개 플랜**, **488개 요구사항**, **75개 페이즈**, **19개 마일스톤** 완료
+- **65,074 LOC** / **1,313+ 테스트** / **9 패키지** 모노레포 + Python SDK
+- **197개 플랜**, **552개 요구사항**, **88개 페이즈**, **21개 마일스톤** 완료
 
 ### 마일스톤 이력
 
@@ -586,14 +586,15 @@ WAIaaS는 **활발히 개발 중**이며, v1.3.4까지 구현이 완료되었다
 | **v1.3** | **SDK + MCP + 알림** | TS/Python SDK, MCP 서버, 알림 시스템 | 2026-02-11 |
 | v1.3.1 | Admin Web UI 설계 | Preact SPA 설계 문서 | 2026-02-11 |
 | **v1.3.2** | **Admin Web UI 구현** | 6페이지 관리 대시보드 | 2026-02-11 |
-| v1.3.3 | MCP 다중 에이전트 지원 | 에이전트별 MCP 토큰 격리 | 2026-02-11 |
+| v1.3.3 | MCP 다중 에이전트 지원 | 지갑별 MCP 토큰 격리 | 2026-02-11 |
 | **v1.3.4** | **알림 이벤트 트리거 + 어드민 알림** | 8개 이벤트, 알림 로그, Admin 알림 패널 | 2026-02-12 |
+| **v1.4** | **토큰 + 컨트랙트 확장** | SPL/ERC-20 전송, 컨트랙트 호출, Approve, Batch | 2026-02-12 |
+| **v1.4.1** | **EVM 지갑 인프라 + Owner Auth** | EVM 어댑터, 5-type discriminatedUnion, SIWE | 2026-02-12 |
 
 ### 향후 계획
 
 | 버전 | 이름 | 내용 |
 |------|------|------|
-| v1.4 | 토큰 + 컨트랙트 확장 | SPL/ERC-20 전송, 컨트랙트 호출, Approve |
 | v1.5 | DeFi + 가격 오라클 | Action Provider, Jupiter Swap, IPriceOracle, USD 정책 |
 | v1.5.1 | x402 클라이언트 | x402 자동 결제, 유료 API 자율 소비, 도메인 정책 |
 | v1.6 | 운영 인프라 | 모니터링, 잔액 알림, 백업 |

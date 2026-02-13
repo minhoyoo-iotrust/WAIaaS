@@ -5,7 +5,7 @@
  * Uses startTestDaemonWithAdapter for full pipeline support without real Solana RPC.
  *
  * Auth flow:
- * - Agent creation: masterAuth (X-Master-Password header)
+ * - Wallet creation: masterAuth (X-Master-Password header)
  * - Session creation: masterAuth (X-Master-Password header)
  * - Transaction endpoints: sessionAuth (Bearer token from session)
  */
@@ -21,7 +21,7 @@ import {
 
 describe('E2E Transaction', () => {
   let harness: ManualHarness;
-  let agentId: string;
+  let walletId: string;
   let sessionToken: string;
   let txId: string;
 
@@ -30,17 +30,17 @@ describe('E2E Transaction', () => {
     harness = await startTestDaemonWithAdapter(dataDir);
     await waitForHealth(harness);
 
-    // Create agent with masterAuth
-    const agentRes = await fetchApi(harness, '/v1/agents', {
+    // Create wallet with masterAuth
+    const walletRes = await fetchApi(harness, '/v1/wallets', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Master-Password': harness.masterPassword,
       },
-      body: JSON.stringify({ name: 'tx-test-agent', chain: 'solana', network: 'devnet' }),
+      body: JSON.stringify({ name: 'tx-test-wallet', chain: 'solana', network: 'devnet' }),
     });
-    const agentBody = (await agentRes.json()) as { id: string };
-    agentId = agentBody.id;
+    const walletBody = (await walletRes.json()) as { id: string };
+    walletId = walletBody.id;
 
     // Create session for sessionAuth on wallet/transaction endpoints
     const sessionRes = await fetchApi(harness, '/v1/sessions', {
@@ -49,7 +49,7 @@ describe('E2E Transaction', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': harness.masterPassword,
       },
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     const sessionBody = (await sessionRes.json()) as { token: string };
     sessionToken = sessionBody.token;

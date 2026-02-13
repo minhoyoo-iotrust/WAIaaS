@@ -1384,7 +1384,7 @@ interface PolicyEvaluationInput {
   amount: bigint
   to: string
   chain: 'solana' | 'ethereum'
-  agentId: string
+  walletId: string
   tokenAddress?: string       // TOKEN_TRANSFER, APPROVE 시
   tokenDecimals?: number      // TOKEN_TRANSFER, APPROVE 시
   contractAddress?: string    // CONTRACT_CALL 시

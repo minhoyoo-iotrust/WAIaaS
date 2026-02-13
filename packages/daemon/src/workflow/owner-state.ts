@@ -1,7 +1,7 @@
 /**
  * Owner 3-State Machine: NONE -> GRACE -> LOCKED.
  *
- * Manages the Owner lifecycle for agents:
+ * Manages the Owner lifecycle for wallets:
  * - NONE: No owner registered. APPROVAL tier auto-downgrades to DELAY.
  * - GRACE: Owner address set but not yet verified via signature.
  *   Owner can be changed/removed with masterAuth only.
@@ -9,7 +9,7 @@
  *   Owner change requires ownerAuth; removal blocked entirely.
  *
  * Provides:
- * - resolveOwnerState(): pure function to determine state from agent fields
+ * - resolveOwnerState(): pure function to determine state from wallet fields
  * - OwnerLifecycleService: setOwner/removeOwner/markOwnerVerified with DB ops
  * - downgradeIfNoOwner(): APPROVAL -> DELAY when no owner registered
  *
@@ -27,7 +27,7 @@ import type * as schema from '../infrastructure/database/schema.js';
 
 export type OwnerState = 'NONE' | 'GRACE' | 'LOCKED';
 
-interface AgentOwnerFields {
+interface WalletOwnerFields {
   ownerAddress: string | null;
   ownerVerified: boolean;
 }
@@ -47,18 +47,18 @@ interface DowngradeResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Determine the Owner state from agent fields.
+ * Determine the Owner state from wallet fields.
  *
  * Pure function, no DB access, no side effects.
  *
- * @param agent - Agent fields { ownerAddress, ownerVerified }
+ * @param wallet - Wallet fields { ownerAddress, ownerVerified }
  * @returns 'NONE' | 'GRACE' | 'LOCKED'
  */
-export function resolveOwnerState(agent: AgentOwnerFields): OwnerState {
-  if (agent.ownerAddress === null || agent.ownerAddress === undefined) {
+export function resolveOwnerState(wallet: WalletOwnerFields): OwnerState {
+  if (wallet.ownerAddress === null || wallet.ownerAddress === undefined) {
     return 'NONE';
   }
-  if (agent.ownerVerified) {
+  if (wallet.ownerVerified) {
     return 'LOCKED';
   }
   return 'GRACE';
@@ -68,7 +68,7 @@ export function resolveOwnerState(agent: AgentOwnerFields): OwnerState {
 // OwnerLifecycleService
 // ---------------------------------------------------------------------------
 
-interface AgentRow {
+interface WalletRow {
   owner_address: string | null;
   owner_verified: number; // SQLite boolean: 0 | 1
 }
@@ -84,21 +84,21 @@ export class OwnerLifecycleService {
   }
 
   /**
-   * Set the owner address for an agent.
+   * Set the owner address for a wallet.
    *
    * - NONE or GRACE: sets ownerAddress, ownerVerified = false
    * - LOCKED: throws OWNER_ALREADY_CONNECTED
    *
-   * @param agentId - Agent ID
+   * @param walletId - Wallet ID
    * @param ownerAddress - Owner wallet address to set
    * @throws WAIaaSError OWNER_ALREADY_CONNECTED if in LOCKED state
    */
-  setOwner(agentId: string, ownerAddress: string): void {
-    const agent = this.getAgentRow(agentId);
+  setOwner(walletId: string, ownerAddress: string): void {
+    const wallet = this.getWalletRow(walletId);
 
     const state = resolveOwnerState({
-      ownerAddress: agent.owner_address,
-      ownerVerified: agent.owner_verified === 1,
+      ownerAddress: wallet.owner_address,
+      ownerVerified: wallet.owner_verified === 1,
     });
 
     if (state === 'LOCKED') {
@@ -112,25 +112,25 @@ export class OwnerLifecycleService {
       .prepare(
         'UPDATE wallets SET owner_address = ?, owner_verified = 0, updated_at = ? WHERE id = ?',
       )
-      .run(ownerAddress, now, agentId);
+      .run(ownerAddress, now, walletId);
   }
 
   /**
-   * Remove the owner from an agent.
+   * Remove the owner from a wallet.
    *
    * - GRACE: clears ownerAddress, ownerVerified = false
    * - LOCKED: throws OWNER_ALREADY_CONNECTED
    * - NONE: no-op (already no owner)
    *
-   * @param agentId - Agent ID
+   * @param walletId - Wallet ID
    * @throws WAIaaSError OWNER_ALREADY_CONNECTED if in LOCKED state
    */
-  removeOwner(agentId: string): void {
-    const agent = this.getAgentRow(agentId);
+  removeOwner(walletId: string): void {
+    const wallet = this.getWalletRow(walletId);
 
     const state = resolveOwnerState({
-      ownerAddress: agent.owner_address,
-      ownerVerified: agent.owner_verified === 1,
+      ownerAddress: wallet.owner_address,
+      ownerVerified: wallet.owner_verified === 1,
     });
 
     if (state === 'LOCKED') {
@@ -149,7 +149,7 @@ export class OwnerLifecycleService {
       .prepare(
         'UPDATE wallets SET owner_address = NULL, owner_verified = 0, updated_at = ? WHERE id = ?',
       )
-      .run(now, agentId);
+      .run(now, walletId);
   }
 
   /**
@@ -161,20 +161,20 @@ export class OwnerLifecycleService {
    * - LOCKED: no-op (already verified)
    * - NONE: throws OWNER_NOT_CONNECTED
    *
-   * @param agentId - Agent ID
+   * @param walletId - Wallet ID
    * @throws WAIaaSError OWNER_NOT_CONNECTED if in NONE state
    */
-  markOwnerVerified(agentId: string): void {
-    const agent = this.getAgentRow(agentId);
+  markOwnerVerified(walletId: string): void {
+    const wallet = this.getWalletRow(walletId);
 
     const state = resolveOwnerState({
-      ownerAddress: agent.owner_address,
-      ownerVerified: agent.owner_verified === 1,
+      ownerAddress: wallet.owner_address,
+      ownerVerified: wallet.owner_verified === 1,
     });
 
     if (state === 'NONE') {
       throw new WAIaaSError('OWNER_NOT_CONNECTED', {
-        message: 'No owner address registered for this agent',
+        message: 'No owner address registered for this wallet',
       });
     }
 
@@ -186,21 +186,21 @@ export class OwnerLifecycleService {
     const now = Math.floor(Date.now() / 1000);
     this.sqlite
       .prepare('UPDATE wallets SET owner_verified = 1, updated_at = ? WHERE id = ?')
-      .run(now, agentId);
+      .run(now, walletId);
   }
 
   // -------------------------------------------------------------------------
   // Private
   // -------------------------------------------------------------------------
 
-  private getAgentRow(agentId: string): AgentRow {
+  private getWalletRow(walletId: string): WalletRow {
     const row = this.sqlite
       .prepare('SELECT owner_address, owner_verified FROM wallets WHERE id = ?')
-      .get(agentId) as AgentRow | undefined;
+      .get(walletId) as WalletRow | undefined;
 
     if (!row) {
       throw new WAIaaSError('WALLET_NOT_FOUND', {
-        message: `Wallet '${agentId}' not found`,
+        message: `Wallet '${walletId}' not found`,
       });
     }
 
@@ -217,12 +217,12 @@ export class OwnerLifecycleService {
  *
  * The caller should log a TX_DOWNGRADED_DELAY audit event when downgraded=true.
  *
- * @param agent - Agent fields for resolveOwnerState
+ * @param wallet - Wallet fields for resolveOwnerState
  * @param tier - Current policy tier
  * @returns { tier, downgraded }
  */
-export function downgradeIfNoOwner(agent: AgentOwnerFields, tier: string): DowngradeResult {
-  if (tier === 'APPROVAL' && resolveOwnerState(agent) === 'NONE') {
+export function downgradeIfNoOwner(wallet: WalletOwnerFields, tier: string): DowngradeResult {
+  if (tier === 'APPROVAL' && resolveOwnerState(wallet) === 'NONE') {
     return { tier: 'DELAY', downgraded: true };
   }
   return { tier, downgraded: false };

@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.1에서 EVM 에이전트 풀 라이프사이클(secp256k1 키 생성 → AdapterPool 멀티체인 → REST API 5-type 통합 → Owner Auth SIWE)이 완성되어 Solana + EVM 동시 운용이 가능하다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.2에서 엔티티 용어를 "agent"에서 "wallet"으로 일괄 변경하여, DB부터 API/SDK/MCP/Admin UI/설계 문서까지 일관된 용어를 사용한다.
 
 ## 핵심 가치
 
@@ -10,9 +10,9 @@
 
 ## Current State
 
-v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (2026-02-12). EVM 에이전트 생성(secp256k1 키, 0x EIP-55 주소), AdapterPool 멀티체인 자동 선택, REST API 5-type 트랜잭션(oneOf 6-variant OpenAPI), MCP/TS/Python SDK 토큰 전송, Owner Auth SIWE(EIP-4361) chain별 분기가 동작.
+v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 3(agents→wallets), REST API /v1/wallets, JWT wlt claim, Zod/Enum/에러 코드/i18n wallet 용어, MCP WalletContext + CLI --wallet + SDK walletId, Admin UI Wallets 페이지, 설계 문서 15개 갱신, grep 전수 검사 0건 확인.
 
-코드베이스(v1.4.1 기준): 9-패키지 모노레포 + Python SDK, 65,074 LOC, 1,313 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 에이전트 MCP 설정까지 동작.
+코드베이스(v1.4.2 기준): 9-패키지 모노레포 + Python SDK, 56,808 LOC, 1,326 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 지갑 MCP 설정까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -24,6 +24,7 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 - ✅ v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 — shipped 2026-02-12
 - ✅ v1.4 토큰 + 컨트랙트 확장 — shipped 2026-02-12 (1,126 tests, 51,750 LOC)
 - ✅ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE — shipped 2026-02-12 (1,313 tests, 65,074 LOC)
+- ✅ v1.4.2 용어 변경 (agent → wallet) — shipped 2026-02-13 (1,326 tests, 56,808 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -32,13 +33,14 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 65,074 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,313 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- 56,808 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,326 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 36 엔드포인트 (33 + admin 알림 3), GET /doc OpenAPI 3.0 자동 생성
 - IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 10 PolicyType
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - 설계 문서 31개 (24-67), 8 objective 문서
+- v1.4.2: 엔티티 용어 wallet 통일 (DB wallets 테이블, /v1/wallets, JWT wlt, WalletContext)
 
 ## 요구사항
 
@@ -184,24 +186,16 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 - ✓ MCP send_token type/token + TS/Python SDK 5-type 확장 + CONTRACT_CALL/APPROVE/BATCH 보안 차단 — v1.4.1 (MCPSDK-01~04)
 - ✓ verifySIWE(EIP-4361) + owner-auth chain 분기 + setOwner 주소 형식 검증 + Solana 회귀 없음 — v1.4.1 (SIWE-01~04)
 
+- ✓ DB schema_version 3 마이그레이션 (agents→wallets, FK 5개, 인덱스 10개, enum 데이터 5건) — v1.4.2 (DB-01~05)
+- ✓ Zod 스키마/Enum/에러 코드/i18n 전체 wallet 용어 rename — v1.4.2 (SCHEMA-01~04, ERR-01~04, I18N-01~03)
+- ✓ REST API /v1/wallets 엔드포인트 + JWT wlt claim + OpenAPI 스키마 + Config — v1.4.2 (API-01~05, CONF-01)
+- ✓ MCP WalletContext + CLI --wallet + WAIAAS_WALLET_ID + SDK walletId — v1.4.2 (MCP-01~05, SDK-01~02)
+- ✓ Admin UI Wallets 페이지 + Dashboard/Sessions/Policies walletId — v1.4.2 (ADMIN-01~04)
+- ✓ 설계 문서 15개 + README 갱신 + grep 전수 검사 0건 + 1,326 테스트 통과 — v1.4.2 (DOCS-01~02, VERIFY-01~03)
+
 ### 활성
 
-## Current Milestone: v1.4.2 용어 변경 (agent → wallet)
-
-**Goal:** 코드베이스와 설계 문서 전체에서 "agent"를 "wallet"으로 일괄 변경하여, WAIaaS가 관리하는 엔티티의 실체(AI 에이전트가 사용하는 지갑)를 정확히 반영한다.
-
-**Target features:**
-- DB 스키마 마이그레이션 (agents → wallets, FK 5개, 인덱스 10개, enum 데이터 5건)
-- REST API 엔드포인트 경로 변경 (6개 CRUD + 3개 세션 내부 변경)
-- REST API 응답 필드 변경 (9개 스키마 agentId → walletId)
-- JWT claim 변경 (agt → wlt)
-- Zod 스키마 + TypeScript 타입 14개 rename
-- 에러 코드 3개 + Enum 값 5개 + i18n 템플릿 ~35건
-- MCP/CLI/환경변수 용어 변경 (~11 파일)
-- Admin Web UI 4페이지 + 4 테스트
-- 설계 문서 15개 (~317건 치환)
-- README.md 용어 + 현황 갱신
-- SDK (TS + Python) 필드명 변경
+(다음 마일스톤에서 정의)
 
 ## Next Milestone Goals
 
@@ -224,7 +218,7 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 
 ## 컨텍스트
 
-**누적:** 21 milestones (v0.1-v1.4.1), 88 phases, 197 plans, 552 requirements, 31 설계 문서(24-67), 8 objective 문서, 65,074 LOC, 1,313 테스트
+**누적:** 22 milestones (v0.1-v1.4.2), 94 phases, 208 plans, 590 requirements, 31 설계 문서(24-67), 8 objective 문서, 56,808 LOC, 1,326 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -237,6 +231,7 @@ v1.3.3 MCP 다중 에이전트 지원 shipped (2026-02-11). 2 페이즈, 2 플�
 v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이즈, 5 플랜, 18 요구사항, 42,123 LOC, 895 테스트.
 v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 35 요구사항, 51,750 LOC, 1,126 테스트.
 v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (2026-02-12). 7 페이즈, 15 플랜, 29 요구사항, 65,074 LOC, 1,313 테스트.
+v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). 6 페이즈, 11 플랜, 38 요구사항, 56,808 LOC, 1,326 테스트.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -261,7 +256,9 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 - @solana/kit 실제 버전 6.0.1 (설계서는 3.x 언급, API 동일)
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) — not blocking
 - Pre-existing e2e-errors.test.ts failure (expects 404, gets 401) — OpenAPIHono 전환 side effect
+- Pre-existing 3 CLI E2E failures (E-07, E-08, E-09) — daemon-harness uses old adapter: param, not adapterPool:
 - Kill switch state in-memory 관리 (v1.3에서는 DB 미저장)
+- BUG-013~016 OPEN (Admin MCP 토큰, EVM getAssets ALLOWED_TOKENS, EVM confirmation timeout, 패키지 버전 0.0.0)
 
 ## 제약사항
 
@@ -348,6 +345,12 @@ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (
 | SIWE message base64 인코딩 | 멀티라인 EIP-4361 HTTP 헤더 호환 | ✓ Good — v1.4.1 구현 |
 | managesOwnTransaction 마이그레이션 플래그 | 테이블 재생성 시 자체 PRAGMA/트랜잭션 관리 | ✓ Good — v1.4.1 구현 |
 | EVM_CHAIN_MAP Record<EvmNetworkType> | 컴파일 타임 완전성 보장, 네트워크 누락 방지 | ✓ Good — v1.4.1 구현 |
+| 엔티티 이름 wallet 확정 | 서비스명 WaaS와 일치, 관리 대상의 실체(지갑) 반영 | ✓ Good — v1.4.2 구현 |
+| API v1 유지 (breaking change) | 외부 소비자 없음 (self-hosted 내부), 깔끔하게 일괄 변경 | ✓ Good — v1.4.2 구현 |
+| 하위 호환 shim 미제공 | 외부 배포 전이므로 불필요, deprecated alias 없이 직접 변경 | ✓ Good — v1.4.2 구현 |
+| MCP 기존 토큰 폐기 + 재설정 안내 | JWT claim 변경(agt→wlt)으로 기존 토큰 자동 무효화 | ✓ Good — v1.4.2 구현 |
+| AI agent 개념 참조 보존 | 설계 문서에서 코드 식별자만 rename, AI agent 설명은 유지 | ✓ Good — v1.4.2 구현 |
+| 한국어 용어 에이전트→지갑 (관리 엔티티) | AI agent 개념은 에이전트 유지, 관리 대상은 지갑으로 변경 | ✓ Good — v1.4.2 구현 |
 
 ---
-*최종 업데이트: 2026-02-12 after v1.4.1 milestone shipped*
+*최종 업데이트: 2026-02-13 after v1.4.2 milestone shipped*

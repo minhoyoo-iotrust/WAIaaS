@@ -212,8 +212,8 @@ export const ActionContextSchema = z.object({
   /** 체인 */
   chain: z.enum(['solana', 'ethereum']),
 
-  /** 에이전트 ID (UUID v7) -- 감사 로그용 */
-  agentId: z.string().uuid(),
+  /** 지갑 ID (UUID v7) -- 감사 로그용 */
+  walletId: z.string().uuid(),
 
   /** 세션 ID (UUID v7) -- 감사 로그용 */
   sessionId: z.string().uuid().optional(),
@@ -1231,7 +1231,7 @@ CORE-01에서 정의한 `~/.waiaas/` 구조에 `actions/` 디렉토리를 추가
 ├── data/
 │   └── waiaas.db                 # SQLite 데이터베이스
 ├── keystores/                    # 암호화된 키스토어
-│   └── agent-{id}.json
+│   └── wallet-{id}.json
 ├── logs/                         # 로그 파일
 │   └── waiaas.log
 └── actions/                      # Action Provider 플러그인 디렉토리
@@ -1676,7 +1676,7 @@ app.post('/v1/actions/:actionName/resolve', sessionAuth, async (c) => {
   const context: ActionContext = {
     walletAddress: c.get('session').walletAddress,
     chain: c.get('session').chain,
-    agentId: c.get('session').agentId,
+    walletId: c.get('session').walletId,
     sessionId: c.get('session').id,
   }
 
@@ -1702,7 +1702,7 @@ app.post('/v1/actions/:actionName/execute', sessionAuth, async (c) => {
   const context: ActionContext = {
     walletAddress: c.get('session').walletAddress,
     chain: c.get('session').chain,
-    agentId: c.get('session').agentId,
+    walletId: c.get('session').walletId,
     sessionId: c.get('session').id,
   }
 
@@ -1995,7 +1995,7 @@ test('ethereum 에이전트가 solana 전용 jupiter_swap 호출 시 ActionValid
   const evmContext: ActionContext = {
     walletAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD28',
     chain: 'ethereum',
-    agentId: '01935c2a-...',
+    walletId: '01935c2a-...',
   }
 
   await expect(registry.executeResolve('jupiter_swap', validParams, evmContext))

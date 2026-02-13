@@ -15,7 +15,7 @@ Admin Web UI는 **개발자/관리자용 경량 관리 도구**로, 데몬이 �
 | 목적 | 핵심 관리 기능 5 페이지 | 풀 UX 8 화면 |
 | 접근 | `http://127.0.0.1:{port}/admin` | 네이티브 앱 |
 | 인증 | masterAuth 전용 | masterAuth + ownerAuth + sessionAuth |
-| 범위 | 에이전트/세션/정책 CRUD, 상태 모니터링, Kill Switch | 트랜잭션 전송/이력/승인, 지갑 잔액 조회 포함 |
+| 범위 | 지갑/세션/정책 CRUD, 상태 모니터링, Kill Switch | 트랜잭션 전송/이력/승인, 지갑 잔액 조회 포함 |
 
 ### 1.2 접근 방식
 
@@ -28,7 +28,7 @@ http://127.0.0.1:{port}/admin
 ### 1.3 대상 사용자
 
 - **Self-Hosted 운영자**: 로컬 또는 서버에서 WAIaaS 데몬을 운영하는 관리자
-- **AI 에이전트 개발자**: 에이전트 등록, 세션 생성, 정책 설정을 웹 UI로 수행하는 개발자
+- **AI 에이전트 개발자**: 지갑 등록, 세션 생성, 정책 설정을 웹 UI로 수행하는 개발자
 - **Docker 환경 관리자**: 컨테이너 환경에서 데몬을 관리하는 DevOps 엔지니어
 
 ### 1.4 비대상
@@ -46,15 +46,15 @@ http://127.0.0.1:{port}/admin
 | 지갑 잔액 조회 | sessionAuth 필요 | SDK, MCP, CLI |
 | Owner 등록 | SIWS/SIWE 서명 필요 (브라우저 지갑 연동) | CLI `waiaas owner register` |
 
-> masterAuth로 보호되는 관리 엔드포인트(`/v1/agents`, `/v1/policies`, `/v1/sessions`, `/v1/admin/*`)만 Admin UI 범위이다.
+> masterAuth로 보호되는 관리 엔드포인트(`/v1/wallets`, `/v1/policies`, `/v1/sessions`, `/v1/admin/*`)만 Admin UI 범위이다.
 
 ### 1.6 5 페이지 요약
 
 | 화면 | 주요 기능 | API 요약 |
 |------|----------|---------|
-| **Dashboard** | 데몬 상태, 버전, uptime, 에이전트 수, 활성 세션 수, Kill Switch 상태. 30초 폴링 | `GET /v1/admin/status` |
-| **Agents** | 목록 조회, 생성, 이름 수정, 상세(주소/네트워크/Owner 상태 읽기 전용), 삭제(terminate) | `GET/POST /v1/agents`, `GET/PUT/DELETE /v1/agents/{id}` |
-| **Sessions** | 에이전트 선택 -> 세션 생성, 전체 목록(에이전트별 필터), 폐기, JWT 토큰 복사 | `GET /v1/agents`, `GET/POST /v1/sessions`, `DELETE /v1/sessions/{id}` |
+| **Dashboard** | 데몬 상태, 버전, uptime, 지갑 수, 활성 세션 수, Kill Switch 상태. 30초 폴링 | `GET /v1/admin/status` |
+| **Wallets** | 목록 조회, 생성, 이름 수정, 상세(주소/네트워크/Owner 상태 읽기 전용), 삭제(terminate) | `GET/POST /v1/wallets`, `GET/PUT/DELETE /v1/wallets/{id}` |
+| **Sessions** | 지갑 선택 -> 세션 생성, 전체 목록(지갑별 필터), 폐기, JWT 토큰 복사 | `GET /v1/wallets`, `GET/POST /v1/sessions`, `DELETE /v1/sessions/{id}` |
 | **Policies** | 정책 목록, 생성/수정, 티어별 한도 시각화(INSTANT/DELAY/BLOCKED 색상 구분), 삭제 | `GET/POST /v1/policies`, `PUT/DELETE /v1/policies/{id}` |
 | **Settings** | 데몬 상태 읽기 전용, Kill Switch 토글(활성화/복구), JWT 시크릿 회전, 데몬 종료 | `GET /v1/admin/status`, `POST /v1/admin/kill-switch`, `POST /v1/admin/recover`, `POST /v1/admin/rotate-secret`, `POST /v1/admin/shutdown` |
 
@@ -483,7 +483,7 @@ SPA가 서버 설정의 `admin_timeout` 값을 알아야 비활성 타임아웃�
 {
   "version": "1.3.2",
   "uptime": 3600,
-  "agentCount": 3,
+  "walletCount": 3,
   "activeSessionCount": 5,
   "killSwitch": { "state": "NORMAL" },
   "adminTimeout": 900          // 신규 필드: 서버 설정 admin_timeout 값
@@ -765,7 +765,7 @@ form-action 'self'
 
 | 데이터 | UI 표시 | 근거 |
 |--------|---------|------|
-| 개인 키 (Private Key) | **절대 노출 금지** | 에이전트 상세에서 publicKey(공개 키)만 표시 |
+| 개인 키 (Private Key) | **절대 노출 금지** | 지갑 상세에서 publicKey(공개 키)만 표시 |
 | 마스터 비밀번호 해시 | API 응답에 미포함 | 기존 구현에서 이미 제외 |
 | JWT 시크릿 | rotate-secret 결과에 미포함 | 성공/실패만 반환 |
 | 세션 토큰 (JWT) | 생성 시 1회만 표시 | 이후 마스킹 처리 (`eyJhb...****`) |
@@ -796,7 +796,7 @@ Docker에서 포트 포워딩(`-p 3100:3100`) 사용 시 외부 네트워크에�
 |--------|----------|
 | CSP | `script-src 'self'`로 인라인/외부 스크립트 실행 차단 |
 | Preact JSX | JSX 자동 이스케이프로 반사형 XSS 방어. `{userInput}`은 텍스트 노드로 렌더링 |
-| innerHTML 금지 | `dangerouslySetInnerHTML` 미사용. 사용자 입력(에이전트 이름 등)은 항상 텍스트로 렌더링 |
+| innerHTML 금지 | `dangerouslySetInnerHTML` 미사용. 사용자 입력(지갑 이름 등)은 항상 텍스트로 렌더링 |
 | URL 검증 | 해시 라우터가 URL 파라미터를 직접 사용하지 않음 (반사형 XSS 벡터 제거) |
 
 ### 7.7 CSRF 방어
@@ -857,7 +857,7 @@ DashboardPage
 
 | API | 시점 | 응답 필드 → 위젯 |
 |-----|------|-------------------|
-| `GET /v1/admin/status` | 마운트 즉시 + 30초 간격 | `version` → Version 카드, `uptime` → Uptime 카드 (초 → "Xd Xh Xm" 변환), `agentCount` → Agents 카드, `activeSessionCount` → Sessions 카드, `killSwitchState` → Kill Switch 배지 |
+| `GET /v1/admin/status` | 마운트 즉시 + 30초 간격 | `version` → Version 카드, `uptime` → Uptime 카드 (초 → "Xd Xh Xm" 변환), `walletCount` → Wallets 카드, `activeSessionCount` → Sessions 카드, `killSwitchState` → Kill Switch 배지 |
 
 **30초 폴링 구현**:
 
@@ -914,7 +914,7 @@ function formatUptime(seconds: number): string {
 
 ### 8.2 Agents (PAGE-02)
 
-**목적**: 에이전트 목록 조회, 생성, 상세 보기, 이름 수정, 삭제(terminate).
+**목적**: 지갑 목록 조회, 생성, 상세 보기, 이름 수정, 삭제(terminate).
 
 **두 가지 모드**: List 뷰 (기본) / Detail 뷰 (라우트 파라미터).
 
@@ -957,7 +957,7 @@ function formatUptime(seconds: number): string {
 | 동작 | 효과 |
 |------|------|
 | "Create Agent" 버튼 클릭 | 인라인 폼 펼침 (모달 아님) |
-| 폼 Submit | `POST /v1/agents` → 201: toast "Agent created" + 목록 새로고침. 에러: toast에 매핑된 에러 메시지 |
+| 폼 Submit | `POST /v1/wallets` → 201: toast "Wallet created" + 목록 새로고침. 에러: toast에 매핑된 에러 메시지 |
 | 폼 Cancel | 폼 접힘 |
 | 행 클릭 | `#/agents/{id}`로 이동 (Detail 뷰) |
 | CopyButton 클릭 | 공개 키 클립보드 복사 |
@@ -972,8 +972,8 @@ function formatUptime(seconds: number): string {
 
 **데이터 흐름**:
 
-- 마운트 시: `GET /v1/agents` → 목록 표시
-- 생성: `POST /v1/agents` `{ name, chain, network }` → 201 → toast + `GET /v1/agents` 재호출
+- 마운트 시: `GET /v1/wallets` → 목록 표시
+- 생성: `POST /v1/wallets` `{ name, chain, network }` → 201 → toast + `GET /v1/wallets` 재호출
 - 행 클릭: `window.location.hash = '#/agents/' + id`
 
 #### 8.2.2 Detail 뷰 (`#/agents/:id`)
@@ -1009,21 +1009,21 @@ function formatUptime(seconds: number): string {
 | 동작 | 효과 |
 |------|------|
 | 연필 아이콘 클릭 | 이름 필드가 텍스트 입력으로 전환 |
-| Save 클릭 | `PUT /v1/agents/{id}` `{ name }` → 200: toast "Agent updated" |
+| Save 클릭 | `PUT /v1/wallets/{id}` `{ name }` → 200: toast "Wallet updated" |
 | Cancel 클릭 | 원래 이름으로 복원 |
-| "Terminate Agent" 클릭 | Modal: "Terminate agent {name}? This action cannot be undone." → 확인 시 `DELETE /v1/agents/{id}` → toast + `#/agents`로 이동 |
+| "Terminate Wallet" 클릭 | Modal: "Terminate wallet {name}? This action cannot be undone." → 확인 시 `DELETE /v1/wallets/{id}` → toast + `#/wallets`로 이동 |
 
 **데이터 흐름**:
 
-- 마운트 시: `GET /v1/agents/{id}` → 상세 표시
-- 이름 수정: `PUT /v1/agents/{id}` `{ name }` → 200 → toast + 데이터 갱신
-- 삭제: `DELETE /v1/agents/{id}` → 200 → `window.location.hash = '#/agents'`
+- 마운트 시: `GET /v1/wallets/{id}` → 상세 표시
+- 이름 수정: `PUT /v1/wallets/{id}` `{ name }` → 200 → toast + 데이터 갱신
+- 삭제: `DELETE /v1/wallets/{id}` → 200 → `window.location.hash = '#/wallets'`
 
 **Owner 필드**: 읽기 전용. Owner 등록은 SIWS/SIWE 서명이 필요하므로 Admin UI 범위 밖 (CLI `waiaas owner register` 사용).
 
 ### 8.3 Sessions (PAGE-03)
 
-**목적**: 에이전트별 세션 생성, 목록 조회, 폐기(revoke). 생성 시 JWT 토큰 1회 표시.
+**목적**: 지갑별 세션 생성, 목록 조회, 폐기(revoke). 생성 시 JWT 토큰 1회 표시.
 
 **와이어프레임**:
 
@@ -1043,14 +1043,14 @@ function formatUptime(seconds: number): string {
 └─────────────────────────────────────────────────────┘
 ```
 
-**레이아웃**: 상단 = 에이전트 셀렉터 드롭다운 + "Create Session" 버튼. 하단 = 세션 테이블.
+**레이아웃**: 상단 = 지갑 셀렉터 드롭다운 + "Create Session" 버튼. 하단 = 세션 테이블.
 
 **컴포넌트 구성**:
 
 ```
 SessionsPage
 ├── AgentSelector (dropdown)
-│   └── 옵션: GET /v1/agents → agent name + ID
+│   └── 옵션: GET /v1/wallets → wallet name + ID
 ├── CreateSessionButton
 │   └── disabled if no agent selected
 ├── Table (sessions data)
@@ -1075,15 +1075,15 @@ SessionsPage
 
 | 동작 | 효과 |
 |------|------|
-| 에이전트 드롭다운 선택 | `GET /v1/sessions?agentId={id}` → 테이블 갱신 |
-| "Create Session" 클릭 | `POST /v1/sessions` `{ agentId }` → 201 → Modal: 토큰 표시 + CopyButton. 경고: "Copy this token now. It will not be shown again." |
+| 지갑 드롭다운 선택 | `GET /v1/sessions?walletId={id}` → 테이블 갱신 |
+| "Create Session" 클릭 | `POST /v1/sessions` `{ walletId }` → 201 → Modal: 토큰 표시 + CopyButton. 경고: "Copy this token now. It will not be shown again." |
 | Modal 닫기 | 목록 새로고침 |
 | Revoke 버튼 클릭 | Modal: "Revoke this session?" → 확인 시 `DELETE /v1/sessions/{id}` → toast + 목록 새로고침 |
 
 **데이터 흐름**:
 
-- 마운트 시: `GET /v1/agents` → 드롭다운 채움
-- 에이전트 선택: `GET /v1/sessions?agentId={id}` → 세션 목록 표시
+- 마운트 시: `GET /v1/wallets` → 드롭다운 채움
+- 지갑 선택: `GET /v1/sessions?walletId={id}` → 세션 목록 표시
 - 세션 생성: `POST /v1/sessions` → 201 → 토큰 Modal → 닫기 시 목록 재호출
 - 세션 폐기: `DELETE /v1/sessions/{id}` → 200 → 목록 재호출
 
@@ -1133,14 +1133,14 @@ const showTokenModal = signal<{ token: string } | null>(null);
 └─────────────────────────────────────────────────────┘
 ```
 
-**레이아웃**: 상단 = "Create Policy" 버튼 + 에이전트 필터 드롭다운. 중앙 = 정책 테이블. 하단 = 인라인 폼 (생성/수정 모드).
+**레이아웃**: 상단 = "Create Policy" 버튼 + 지갑 필터 드롭다운. 중앙 = 정책 테이블. 하단 = 인라인 폼 (생성/수정 모드).
 
 **테이블 컬럼**:
 
 | 컬럼 | 데이터 | 렌더링 |
 |------|--------|--------|
 | Type | `type` | Badge (info 변형) |
-| Agent | `agentId` | 에이전트 이름 또는 "Global" (agentId=null) |
+| Wallet | `walletId` | 지갑 이름 또는 "Global" (walletId=null) |
 | Priority | `priority` | 숫자 |
 | Enabled | `enabled` | 토글 아이콘 (✓/✗) |
 | Rules | `rules` | 요약 텍스트 (타입별 상이) |
@@ -1161,7 +1161,7 @@ const showTokenModal = signal<{ token: string } | null>(null);
 | 필드 | 타입 | 생성 시 | 수정 시 | 검증 |
 |------|------|---------|---------|------|
 | type | select | 선택 가능 (10 타입) | 불변 (읽기 전용) | 필수 |
-| agentId | select | 선택 가능 (에이전트 목록 + "Global") | 불변 (읽기 전용) | - |
+| walletId | select | 선택 가능 (지갑 목록 + "Global") | 불변 (읽기 전용) | - |
 | priority | number | 입력 | 수정 가능 | 정수 |
 | enabled | checkbox | 기본 true | 수정 가능 | - |
 | rules | 동적 폼 | 타입에 따라 분기 | 수정 가능 | 타입별 검증 |
@@ -1195,7 +1195,7 @@ SPENDING_LIMIT 정책에서 instant_max, delay_max 값을 기반으로 수평 �
 
 | 동작 | 효과 |
 |------|------|
-| 에이전트 필터 선택 | "All": `GET /v1/policies`, 특정 에이전트: `GET /v1/policies?agentId={id}` |
+| 지갑 필터 선택 | "All": `GET /v1/policies`, 특정 지갑: `GET /v1/policies?walletId={id}` |
 | "Create Policy" 클릭 | 인라인 폼 펼침 (생성 모드) |
 | 행 클릭 | 인라인 폼 펼침 (수정 모드, 기존 값 채움) |
 | 폼 Save | 생성: `POST /v1/policies` → 201 → toast + 목록 새로고침. 수정: `PUT /v1/policies/{id}` → 200 → toast + 목록 새로고침 |
@@ -1203,8 +1203,8 @@ SPENDING_LIMIT 정책에서 instant_max, delay_max 값을 기반으로 수평 �
 
 **데이터 흐름**:
 
-- 마운트 시: `GET /v1/agents` (필터 드롭다운) + `GET /v1/policies` (전체 목록)
-- 필터 변경: `GET /v1/policies?agentId={id}` 또는 `GET /v1/policies`
+- 마운트 시: `GET /v1/wallets` (필터 드롭다운) + `GET /v1/policies` (전체 목록)
+- 필터 변경: `GET /v1/policies?walletId={id}` 또는 `GET /v1/policies`
 - 생성: `POST /v1/policies` → 201 → 목록 재호출
 - 수정: `PUT /v1/policies/{id}` → 200 → 목록 재호출
 - 삭제: `DELETE /v1/policies/{id}` → 200 → 목록 재호출
@@ -1336,7 +1336,7 @@ App (app.tsx)
     └── Router (preact-iso)
         ├── #/dashboard  → DashboardPage
         ├── #/agents     → AgentListPage
-        ├── #/agents/:id → AgentDetailPage
+        ├── #/wallets/:id → WalletDetailPage
         ├── #/sessions   → SessionsPage
         ├── #/policies   → PoliciesPage
         ├── #/settings   → SettingsPage
@@ -1368,7 +1368,7 @@ App (app.tsx)
         │   ├── CreateAgentForm
         │   ├── Table (agents data)
         │   └── CopyButton (per public key)
-        ├── #/agents/:id → AgentDetailPage (pages/agents.tsx)
+        ├── #/wallets/:id → WalletDetailPage (pages/agents.tsx)
         │   ├── ReadOnlyFieldGroup
         │   ├── InlineEditField (name)
         │   ├── CopyButton (public key)
@@ -1400,7 +1400,7 @@ App (app.tsx)
 | `#/login` | Login | `auth/login.tsx` |
 | `#/dashboard` | DashboardPage | `pages/dashboard.tsx` |
 | `#/agents` | AgentListPage | `pages/agents.tsx` |
-| `#/agents/:id` | AgentDetailPage | `pages/agents.tsx` |
+| `#/wallets/:id` | WalletDetailPage | `pages/wallets.tsx` |
 | `#/sessions` | SessionsPage | `pages/sessions.tsx` |
 | `#/policies` | PoliciesPage | `pages/policies.tsx` |
 | `#/settings` | SettingsPage | `pages/settings.tsx` |
@@ -1782,7 +1782,7 @@ import { getErrorMessage } from '../utils/error-messages';
 // ─── 에러 타입 ──────────────────────────────────────────
 
 interface ApiErrorBody {
-  code: string;       // WAIaaS 에러 코드 (e.g., 'AGENT_NOT_FOUND')
+  code: string;       // WAIaaS 에러 코드 (e.g., 'WALLET_NOT_FOUND')
   message: string;    // 서버 에러 메시지
 }
 
@@ -1971,9 +1971,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   ADAPTER_NOT_AVAILABLE: 'Chain adapter is not available. Please try again.',
 
   // ─── AGENT domain (3) ────────────────────────────
-  AGENT_NOT_FOUND: 'Agent not found.',
-  AGENT_SUSPENDED: 'Agent is currently suspended.',
-  AGENT_TERMINATED: 'Agent has been terminated.',
+  WALLET_NOT_FOUND: 'Wallet not found.',
+  WALLET_SUSPENDED: 'Wallet is currently suspended.',
+  WALLET_TERMINATED: 'Wallet has been terminated.',
 
   // ─── WITHDRAW domain (4) ─────────────────────────
   NO_OWNER: 'No owner registered for this agent.',
@@ -2014,7 +2014,7 @@ export function getErrorMessage(code: string): string {
 | POLICY | 5 | 높음 (POLICY_NOT_FOUND, POLICY_DENIED) |
 | OWNER | 5 | 낮음 (OWNER_ALREADY_CONNECTED) |
 | SYSTEM | 6 | 높음 (KILL_SWITCH_ACTIVE, SHUTTING_DOWN) |
-| AGENT | 3 | 높음 (AGENT_NOT_FOUND, AGENT_TERMINATED) |
+| WALLET | 3 | 높음 (WALLET_NOT_FOUND, WALLET_TERMINATED) |
 | WITHDRAW | 4 | 없음 (sessionAuth/ownerAuth) |
 | ACTION | 7 | 없음 (sessionAuth) |
 | ADMIN | 1 | 높음 (ROTATION_TOO_RECENT) |
@@ -2119,8 +2119,8 @@ export const API = {
   ADMIN_ROTATE_SECRET: '/v1/admin/rotate-secret',
 
   // Agents
-  AGENTS: '/v1/agents',
-  AGENT: (id: string) => `/v1/agents/${id}` as const,
+  WALLETS: '/v1/wallets',
+  WALLET: (id: string) => `/v1/wallets/${id}` as const,
 
   // Sessions
   SESSIONS: '/v1/sessions',
@@ -2136,8 +2136,8 @@ export const API = {
 
 ```typescript
 const status = await apiGet<AdminStatus>(API.ADMIN_STATUS);
-const agent = await apiGet<AgentDetail>(API.AGENT(agentId));
-const sessions = await apiGet<Session[]>(`${API.SESSIONS}?agentId=${agentId}`);
+const wallet = await apiGet<WalletDetail>(API.WALLET(walletId));
+const sessions = await apiGet<Session[]>(`${API.SESSIONS}?walletId=${walletId}`);
 ```
 
 > 모든 API 호출은 `endpoints.ts`의 상수를 사용한다. 문자열 직접 사용 금지 (타이포 방지, 리팩토링 용이).

@@ -6,13 +6,13 @@
  * 2. rejects with 401 when SIWE signature is from different account
  * 3. rejects with 401 when SIWE message is expired
  * 4. rejects with 401 when headers missing (same as Solana test)
- * 5. rejects with 404 when EVM agent has no owner
+ * 5. rejects with 404 when EVM wallet has no owner
  *
  * setOwner address validation integration tests:
- * 6. setOwner accepts EVM agent with valid EIP-55 address
- * 7. setOwner rejects EVM agent with all-lowercase address
- * 8. setOwner accepts Solana agent with valid base58 32-byte address
- * 9. setOwner rejects Solana agent with 0x ethereum address
+ * 6. setOwner accepts EVM wallet with valid EIP-55 address
+ * 7. setOwner rejects EVM wallet with all-lowercase address
+ * 8. setOwner accepts Solana wallet with valid base58 32-byte address
+ * 9. setOwner rejects Solana wallet with 0x ethereum address
  *
  * Uses Hono app.request() testing pattern + in-memory SQLite + viem real crypto.
  */
@@ -111,7 +111,7 @@ function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
   return testApp;
 }
 
-/** Seed a test agent with optional owner address, chain, and network */
+/** Seed a test wallet with optional owner address, chain, and network */
 function seedWallet(opts?: { ownerAddress?: string | null; chain?: string; network?: string }) {
   const ts = nowSeconds();
   sqlite.prepare(
@@ -257,7 +257,7 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
     expect(body.code).toBe('INVALID_SIGNATURE');
   });
 
-  it('rejects with 404 when EVM agent has no owner', async () => {
+  it('rejects with 404 when EVM wallet has no owner', async () => {
     seedWallet({ ownerAddress: null });
 
     const siweMessage = buildSiweMessage(testAccount.address);
@@ -283,7 +283,7 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
 // ---------------------------------------------------------------------------
 
 describe('setOwner address validation (SIWE-03)', () => {
-  /** Seed an agent for setOwner tests (no owner set -- NONE state) */
+  /** Seed a wallet for setOwner tests (no owner set -- NONE state) */
   function seedSetOwnerAgent(
     sqliteDb: DatabaseType,
     walletId: string,
@@ -299,7 +299,7 @@ describe('setOwner address validation (SIWE-03)', () => {
       .run(walletId, `SetOwner Test ${chain}`, chain, network, `pk-setowner-${walletId}`, 'ACTIVE', 0, ts, ts);
   }
 
-  it('setOwner accepts EVM agent with valid EIP-55 address', async () => {
+  it('setOwner accepts EVM wallet with valid EIP-55 address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
     const walletId = generateId();
@@ -327,7 +327,7 @@ describe('setOwner address validation (SIWE-03)', () => {
     conn.sqlite.close();
   });
 
-  it('setOwner rejects EVM agent with all-lowercase address', async () => {
+  it('setOwner rejects EVM wallet with all-lowercase address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
     const walletId = generateId();
@@ -356,7 +356,7 @@ describe('setOwner address validation (SIWE-03)', () => {
     conn.sqlite.close();
   });
 
-  it('setOwner accepts Solana agent with valid base58 32-byte address', async () => {
+  it('setOwner accepts Solana wallet with valid base58 32-byte address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
     const walletId = generateId();
@@ -386,7 +386,7 @@ describe('setOwner address validation (SIWE-03)', () => {
     conn.sqlite.close();
   });
 
-  it('setOwner rejects Solana agent with 0x ethereum address', async () => {
+  it('setOwner rejects Solana wallet with 0x ethereum address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
     const walletId = generateId();
