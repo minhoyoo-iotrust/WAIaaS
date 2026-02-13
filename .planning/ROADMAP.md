@@ -26,11 +26,11 @@
   2. wallets.network -> wallets.environment + wallets.default_network 전환의 DB 마이그레이션 v6 전략이 12-step 재생성 순서, 데이터 변환 SQL, PRAGMA foreign_key_check 검증 쿼리까지 설계되어 있다
   3. transactions.network 컬럼 추가 및 기존 레코드 역참조(UPDATE SET network = wallet.network) 전략이 마이그레이션 순서 의존성과 함께 명시되어 있다
   4. 키스토어 경로/메타데이터의 환경 모델 영향이 분석되어 변경 필요 여부가 확정되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 105-01: EnvironmentType + 환경-네트워크 매핑 + 키스토어 영향 분석
-- [ ] 105-02: DB 마이그레이션 v6 전략 (wallets/transactions/default_network)
+- [ ] 105-01-PLAN.md — EnvironmentType SSoT 정의 + 환경-네트워크 매핑 함수 설계 + WalletSchema 변경 + 키스토어 영향 분석 (docs/68)
+- [ ] 105-02-PLAN.md — DB 마이그레이션 v6a(transactions.network) + v6b(wallets 12-step 재생성) 전략 설계 (docs/69)
 
 ### Phase 106: 파이프라인 + 네트워크 리졸브 설계
 **Goal**: 트랜잭션 요청에서 실제 네트워크가 리졸브되고 환경 격리가 검증되는 데이터 흐름이 설계되어, 구현자가 Stage 1부터 AdapterPool 호출까지 코드를 작성할 수 있다
