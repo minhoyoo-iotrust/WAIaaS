@@ -10,15 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 100 of 104 (Settings 인프라)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-13 -- Roadmap created for v1.4.4
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-13 -- Completed 100-01 settings infra (schema + crypto)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
-**Cumulative:** 23 milestones, 99 phases, 216 plans, 603 reqs, 1,357 tests, 59,993 LOC
+**Cumulative:** 23 milestones, 99 phases, 217 plans, 603 reqs, 1,378 tests, 60,485 LOC
+
+| Phase | Plan | Duration | Tasks | Files |
+| ----- | ---- | -------- | ----- | ----- |
+| 100-01 | settings-infra | 4min | 2 | 6 |
 
 *Updated after each plan completion*
 
@@ -29,6 +33,10 @@ Progress: [░░░░░░░░░░] 0%
 Full log in PROJECT.md.
 v1.4.3 decisions archived -- see .planning/milestones/v1.4.3-ROADMAP.md
 
+- 100-01: HKDF(SHA-256) with fixed salt for settings encryption (lightweight vs Argon2id for frequent reads)
+- 100-01: Encrypted value format base64(JSON({iv,ct,tag})) with hex fields for TEXT column storage
+- 100-01: CREDENTIAL_KEYS set defines which settings keys require encryption at rest
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -38,5 +46,5 @@ v1.4.3 decisions archived -- see .planning/milestones/v1.4.3-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: v1.4.4 roadmap created, ready to plan Phase 100
+Stopped at: Completed 100-01-PLAN.md (settings schema + crypto)
 Resume file: None
