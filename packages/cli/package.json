@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/cli",
-  "version": "0.0.0",
+  "version": "1.4.3",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
