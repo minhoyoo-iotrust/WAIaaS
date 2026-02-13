@@ -52,25 +52,25 @@ v1.4.3 마일스톤 요구사항. EVM 토큰 레지스트리 + MCP/Admin DX 개�
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REGISTRY-01 | — | Pending |
-| REGISTRY-02 | — | Pending |
-| REGISTRY-03 | — | Pending |
-| ASSETS-01 | — | Pending |
-| ASSETS-02 | — | Pending |
-| MCP-01 | — | Pending |
-| MCP-02 | — | Pending |
-| MCP-03 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| DX-01 | — | Pending |
-| DX-02 | — | Pending |
+| REGISTRY-01 | Phase 97 | Pending |
+| REGISTRY-02 | Phase 97 | Pending |
+| REGISTRY-03 | Phase 97 | Pending |
+| ASSETS-01 | Phase 98 | Pending |
+| ASSETS-02 | Phase 98 | Pending |
+| MCP-01 | Phase 99 | Pending |
+| MCP-02 | Phase 99 | Pending |
+| MCP-03 | Phase 99 | Pending |
+| PIPE-01 | Phase 96 | Pending |
+| PIPE-02 | Phase 96 | Pending |
+| PIPE-03 | Phase 96 | Pending |
+| DX-01 | Phase 95 | Pending |
+| DX-02 | Phase 95 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-13*
-*Last updated: 2026-02-13 after initial definition*
+*Last updated: 2026-02-13 after roadmap creation*
