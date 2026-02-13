@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.3 Phase 97 (EVM 토큰 레지스트리)
+**Current focus:** v1.4.3 Phase 98 (getAssets ERC-20 연동)
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 97: EVM 토큰 레지스트리)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 97 complete
-Last activity: 2026-02-13 -- Plan 97-02 complete
+Phase: 4 of 5 (Phase 98: getAssets ERC-20 연동)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-13 -- Phase 97 complete, verified
 
 Progress: [██████░░░░] 60%
 
@@ -51,5 +51,5 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 97-02-PLAN.md (Phase 97 complete)
+Stopped at: Phase 97 complete, verified
 Resume file: None

@@ -10,7 +10,7 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
 
 - [x] **Phase 95: 패키지 버전 관리** - 버전 일괄 갱신 스크립트 + 즉시 버전 적용 (BUG-016) ✓ 2026-02-13
 - [x] **Phase 96: 파이프라인 확인 로직 수정** - EVM/Solana 확인 타임아웃 fallback + Stage 6 상태 정합성 (BUG-015) ✓ 2026-02-13
-- [ ] **Phase 97: EVM 토큰 레지스트리** - 체인별 내장 토큰 목록 + 커스텀 토큰 CRUD + 역할 분리
+- [x] **Phase 97: EVM 토큰 레지스트리** - 체인별 내장 토큰 목록 + 커스텀 토큰 CRUD + 역할 분리 ✓ 2026-02-13
 - [ ] **Phase 98: getAssets ERC-20 연동** - 레지스트리 + ALLOWED_TOKENS 합집합 조회 (BUG-014)
 - [ ] **Phase 99: MCP 토큰 관리** - POST /v1/mcp/tokens API + Admin UI MCP 섹션 (BUG-013)
 
@@ -54,8 +54,8 @@ Plans:
   4. 내장 토큰 목록 업데이트 시 사용자가 추가한 커스텀 토큰이 보존된다
 **Plans**: 2 plans
 Plans:
-- [ ] 97-01-PLAN.md -- 내장 토큰 데이터 + DB 테이블 + 마이그레이션 v4 + TokenRegistryService
-- [ ] 97-02-PLAN.md -- 토큰 레지스트리 REST API (GET/POST/DELETE /v1/tokens) + 테스트
+- [x] 97-01-PLAN.md -- 내장 토큰 데이터 + DB 테이블 + 마이그레이션 v4 + TokenRegistryService ✓
+- [x] 97-02-PLAN.md -- 토큰 레지스트리 REST API (GET/POST/DELETE /v1/tokens) + 테스트 ✓
 
 ### Phase 98: getAssets ERC-20 연동
 **Goal**: EVM 지갑의 getAssets()가 토큰 레지스트리와 ALLOWED_TOKENS에 등록된 ERC-20 토큰 잔액을 자동으로 반환한다
@@ -86,7 +86,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 95. 패키지 버전 관리 | 1/1 | ✓ Complete | 2026-02-13 |
 | 96. 파이프라인 확인 로직 수정 | 2/2 | ✓ Complete | 2026-02-13 |
-| 97. EVM 토큰 레지스트리 | 0/2 | Not started | - |
+| 97. EVM 토큰 레지스트리 | 2/2 | ✓ Complete | 2026-02-13 |
 | 98. getAssets ERC-20 연동 | 0/TBD | Not started | - |
 | 99. MCP 토큰 관리 | 0/TBD | Not started | - |
 
