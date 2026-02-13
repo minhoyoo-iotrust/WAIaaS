@@ -87,11 +87,11 @@ Plans:
   2. transactions.skill.md가 5-type(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH) 전송을 모두 커버한다
   3. 각 스킬 파일에 YAML 프론트매터, 워크플로우, curl 예시, 파라미터 설명, 에러 핸들링이 포함된다
   4. 5개 스킬 파일이 skills/ 디렉토리에 배치되고, 기존 how-to-test/waiass-api.skill.md를 대체한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 104-01: quickstart + wallet + transactions 스킬 파일
-- [ ] 104-02: policies + admin 스킬 파일 + 기존 파일 정리
+- [ ] 104-01-PLAN.md -- quickstart + wallet + transactions 스킬 파일 (SKILL-01, SKILL-02, SKILL-03)
+- [ ] 104-02-PLAN.md -- policies + admin 스킬 파일 + 기존 파일 deprecation (SKILL-04, SKILL-05)
 
 ## Progress
 
