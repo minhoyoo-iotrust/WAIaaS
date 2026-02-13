@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents } from '../infrastructure/database/schema.js';
+import { wallets } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { WAIaaSError } from '@waiaas/core';
 import {
@@ -32,9 +32,9 @@ async function insertTestAgent(overrides?: {
 }): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: `pk-${id}`,
@@ -47,10 +47,10 @@ async function insertTestAgent(overrides?: {
   return id;
 }
 
-function getAgent(agentId: string) {
+function getAgent(walletId: string) {
   return conn.sqlite
-    .prepare('SELECT owner_address, owner_verified, updated_at FROM agents WHERE id = ?')
-    .get(agentId) as {
+    .prepare('SELECT owner_address, owner_verified, updated_at FROM wallets WHERE id = ?')
+    .get(walletId) as {
     owner_address: string | null;
     owner_verified: number;
     updated_at: number;
@@ -99,37 +99,37 @@ describe('resolveOwnerState', () => {
 
 describe('OwnerLifecycleService - setOwner', () => {
   it('should set ownerAddress in NONE state', async () => {
-    const agentId = await insertTestAgent(); // NONE state (no owner)
+    const walletId = await insertTestAgent(); // NONE state (no owner)
 
-    lifecycle.setOwner(agentId, 'OwnerWalletAddress123');
+    lifecycle.setOwner(walletId, 'OwnerWalletAddress123');
 
-    const row = getAgent(agentId);
+    const row = getAgent(walletId);
     expect(row!.owner_address).toBe('OwnerWalletAddress123');
     expect(row!.owner_verified).toBe(0); // false
   });
 
   it('should update ownerAddress in GRACE state (change allowed)', async () => {
-    const agentId = await insertTestAgent({
+    const walletId = await insertTestAgent({
       ownerAddress: 'OldAddress',
       ownerVerified: false,
     });
 
-    lifecycle.setOwner(agentId, 'NewAddress');
+    lifecycle.setOwner(walletId, 'NewAddress');
 
-    const row = getAgent(agentId);
+    const row = getAgent(walletId);
     expect(row!.owner_address).toBe('NewAddress');
     expect(row!.owner_verified).toBe(0);
   });
 
   it('should throw OWNER_ALREADY_CONNECTED in LOCKED state', async () => {
-    const agentId = await insertTestAgent({
+    const walletId = await insertTestAgent({
       ownerAddress: 'LockedOwner',
       ownerVerified: true,
     });
 
-    expect(() => lifecycle.setOwner(agentId, 'NewOwner')).toThrow(WAIaaSError);
+    expect(() => lifecycle.setOwner(walletId, 'NewOwner')).toThrow(WAIaaSError);
     try {
-      lifecycle.setOwner(agentId, 'NewOwner');
+      lifecycle.setOwner(walletId, 'NewOwner');
     } catch (err) {
       expect((err as WAIaaSError).code).toBe('OWNER_ALREADY_CONNECTED');
     }
@@ -142,39 +142,39 @@ describe('OwnerLifecycleService - setOwner', () => {
 
 describe('OwnerLifecycleService - removeOwner', () => {
   it('should clear ownerAddress in GRACE state', async () => {
-    const agentId = await insertTestAgent({
+    const walletId = await insertTestAgent({
       ownerAddress: 'GraceOwner',
       ownerVerified: false,
     });
 
-    lifecycle.removeOwner(agentId);
+    lifecycle.removeOwner(walletId);
 
-    const row = getAgent(agentId);
+    const row = getAgent(walletId);
     expect(row!.owner_address).toBeNull();
     expect(row!.owner_verified).toBe(0);
   });
 
   it('should throw OWNER_ALREADY_CONNECTED in LOCKED state', async () => {
-    const agentId = await insertTestAgent({
+    const walletId = await insertTestAgent({
       ownerAddress: 'LockedOwner',
       ownerVerified: true,
     });
 
-    expect(() => lifecycle.removeOwner(agentId)).toThrow(WAIaaSError);
+    expect(() => lifecycle.removeOwner(walletId)).toThrow(WAIaaSError);
     try {
-      lifecycle.removeOwner(agentId);
+      lifecycle.removeOwner(walletId);
     } catch (err) {
       expect((err as WAIaaSError).code).toBe('OWNER_ALREADY_CONNECTED');
     }
   });
 
   it('should be a no-op in NONE state (already no owner)', async () => {
-    const agentId = await insertTestAgent(); // NONE state
+    const walletId = await insertTestAgent(); // NONE state
 
     // Should not throw
-    lifecycle.removeOwner(agentId);
+    lifecycle.removeOwner(walletId);
 
-    const row = getAgent(agentId);
+    const row = getAgent(walletId);
     expect(row!.owner_address).toBeNull();
   });
 });
@@ -185,37 +185,37 @@ describe('OwnerLifecycleService - removeOwner', () => {
 
 describe('OwnerLifecycleService - markOwnerVerified', () => {
   it('should transition from GRACE to LOCKED', async () => {
-    const agentId = await insertTestAgent({
+    const walletId = await insertTestAgent({
       ownerAddress: 'GraceOwner',
       ownerVerified: false,
     });
 
-    lifecycle.markOwnerVerified(agentId);
+    lifecycle.markOwnerVerified(walletId);
 
-    const row = getAgent(agentId);
+    const row = getAgent(walletId);
     expect(row!.owner_verified).toBe(1); // true
     expect(row!.owner_address).toBe('GraceOwner');
   });
 
   it('should be a no-op in LOCKED state (already verified)', async () => {
-    const agentId = await insertTestAgent({
+    const walletId = await insertTestAgent({
       ownerAddress: 'LockedOwner',
       ownerVerified: true,
     });
 
     // Should not throw
-    lifecycle.markOwnerVerified(agentId);
+    lifecycle.markOwnerVerified(walletId);
 
-    const row = getAgent(agentId);
+    const row = getAgent(walletId);
     expect(row!.owner_verified).toBe(1);
   });
 
   it('should throw OWNER_NOT_CONNECTED in NONE state', async () => {
-    const agentId = await insertTestAgent(); // NONE state
+    const walletId = await insertTestAgent(); // NONE state
 
-    expect(() => lifecycle.markOwnerVerified(agentId)).toThrow(WAIaaSError);
+    expect(() => lifecycle.markOwnerVerified(walletId)).toThrow(WAIaaSError);
     try {
-      lifecycle.markOwnerVerified(agentId);
+      lifecycle.markOwnerVerified(walletId);
     } catch (err) {
       expect((err as WAIaaSError).code).toBe('OWNER_NOT_CONNECTED');
     }

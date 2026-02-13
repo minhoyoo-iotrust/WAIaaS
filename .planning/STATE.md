@@ -10,25 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 91 (3 of 6 in v1.4.2) — 데몬 API + JWT + Config
-Plan: —
-Status: Ready to plan
-Last activity: 2026-02-13 — Phase 90 complete (7/7 verified, 137 core tests passing)
+Plan: 3 of 3 complete
+Status: Phase Complete
+Last activity: 2026-02-13 — Plan 91-03 complete (core interface gap closure, 10 files, 681 tests pass)
 
-Progress: [███░░░░░░░] 30%
+Progress: [█████░░░░░] 55%
 
 ## Performance Metrics
 
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 3
-- Total plans: 10
+- Total plans completed: 6
+- Total plans: 11
 
 | Phase | Plan | Duration | Tasks | Files |
 | ----- | ---- | -------- | ----- | ----- |
 | 89    | 01   | 8min     | 2     | 4     |
 | 90    | 01   | 4min     | 2     | 19    |
 | 90    | 02   | 2min     | 2     | 2     |
+| 91    | 01   | 20min    | 2     | 27    |
+| 91    | 02   | 18min    | 2     | 38    |
+| 91    | 03   | 6min     | 2     | 10    |
 
 *Updated after each plan completion*
 
@@ -51,6 +54,13 @@ Recent decisions for v1.4.2:
 - Core tests (5 files, 137 tests) all updated to wallet terminology
 - Korean particle correction: 지갑 {walletId}이 (consonant ending)
 - Error code count comment fixed 67 -> 68 in i18n files
+- walletCrudRoutes naming avoids collision with existing walletRoutes function
+- Core interfaces ILocalKeyStore + NotificationPayload now use walletId (IPolicyEngine still uses agentId)
+- PipelineContext.agent field renamed to .wallet for consistency
+- error-hints.ts: AGENT_NOT_FOUND -> WALLET_NOT_FOUND, /v1/agents -> /v1/wallets
+- database-policy-engine.ts raw SQL agent_id -> wallet_id (missed in 91-01, fixed in 91-02)
+- Notification test assertions use payload.walletId (core interface updated in 91-03)
+- migration-runner.test.ts excluded from rename (tests v3 migration DDL correctness)
 
 ### Blockers/Concerns
 
@@ -60,5 +70,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Phase 90 verified (7/7), ready to plan Phase 91
+Stopped at: Completed 91-03-PLAN.md (core interface gap closure, 10 files)
 Resume file: None

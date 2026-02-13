@@ -8,7 +8,7 @@
  *   4. requestLogger
  *
  * Auth middleware (route-level, registered on app before sub-routers):
- *   - masterAuth: /v1/agents, /v1/policies, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
+ *   - masterAuth: /v1/wallets, /v1/policies, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
  *   - sessionAuth: /v1/sessions/:id/renew, /v1/wallet/*, /v1/transactions/*
  *   - /health remains public (no auth required)
  *
@@ -50,7 +50,7 @@ import {
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
 import { health } from './routes/health.js';
-import { agentRoutes } from './routes/agents.js';
+import { walletCrudRoutes } from './routes/wallets.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { walletRoutes } from './routes/wallet.js';
 import { transactionRoutes } from './routes/transactions.js';
@@ -109,7 +109,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // Register route-level auth middleware on the app (before sub-routers)
   if (deps.masterPasswordHash !== undefined) {
     const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
-    app.use('/v1/agents', masterAuth);
+    app.use('/v1/wallets', masterAuth);
     app.use('/v1/policies', masterAuth);
     app.use('/v1/policies/:id', masterAuth);
     // masterAuth on /v1/sessions (POST create, GET list)
@@ -124,23 +124,23 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     });
   }
 
-  // masterAuth for GET /v1/agents/:id (agent detail) -- skip /owner sub-path
+  // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip /owner sub-path
   if (deps.masterPasswordHash !== undefined) {
-    const masterAuthForAgentDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
-    app.use('/v1/agents/:id', async (c, next) => {
-      // Skip /v1/agents/:id/owner (has its own masterAuth below)
+    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+    app.use('/v1/wallets/:id', async (c, next) => {
+      // Skip /v1/wallets/:id/owner (has its own masterAuth below)
       if (c.req.path.includes('/owner')) {
         await next();
         return;
       }
-      return masterAuthForAgentDetail(c, next);
+      return masterAuthForWalletDetail(c, next);
     });
   }
 
-  // masterAuth for PUT /v1/agents/:id/owner
+  // masterAuth for PUT /v1/wallets/:id/owner
   if (deps.masterPasswordHash !== undefined) {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
-    app.use('/v1/agents/:id/owner', masterAuthForOwner);
+    app.use('/v1/wallets/:id/owner', masterAuthForOwner);
   }
 
   if (deps.jwtSecretManager && deps.db) {
@@ -183,11 +183,11 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // Register nonce route (public, no auth required)
   app.route('/v1', nonceRoutes());
 
-  // Register agent routes when deps are available
+  // Register wallet CRUD routes when deps are available
   if (deps.db && deps.sqlite && deps.keyStore && deps.masterPassword !== undefined && deps.config) {
     app.route(
       '/v1',
-      agentRoutes({
+      walletCrudRoutes({
         db: deps.db,
         sqlite: deps.sqlite,
         keyStore: deps.keyStore,

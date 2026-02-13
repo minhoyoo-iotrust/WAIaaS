@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, transactions } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import {
@@ -115,9 +115,9 @@ function createTestRequest(): SendTransactionRequest {
 async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: MOCK_PUBLIC_KEY,
@@ -130,7 +130,7 @@ async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
 
 function createPipelineContext(
   conn: DatabaseConnection,
-  agentId: string,
+  walletId: string,
   overrides: Partial<PipelineContext> = {},
 ): PipelineContext {
   return {
@@ -139,8 +139,8 @@ function createPipelineContext(
     keyStore: createMockKeyStore(),
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
-    agentId,
-    agent: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
+    walletId,
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
     request: createTestRequest(),
     txId: '',
     ...overrides,
@@ -169,7 +169,7 @@ afterEach(() => {
 describe('DefaultPolicyEngine', () => {
   it('should return INSTANT tier and allowed=true', async () => {
     const engine = new DefaultPolicyEngine();
-    const result = await engine.evaluate('some-agent-id', {
+    const result = await engine.evaluate('some-wallet-id', {
       type: 'TRANSFER',
       amount: '1000000000',
       toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
@@ -182,7 +182,7 @@ describe('DefaultPolicyEngine', () => {
 
   it('should work for any input combination', async () => {
     const engine = new DefaultPolicyEngine();
-    const result = await engine.evaluate('different-agent', {
+    const result = await engine.evaluate('different-wallet', {
       type: 'CONTRACT_CALL',
       amount: '999999999999',
       toAddress: 'random-address',
@@ -200,8 +200,8 @@ describe('DefaultPolicyEngine', () => {
 
 describe('Stage 1: Validate + INSERT', () => {
   it('should create PENDING transaction in DB for valid request', async () => {
-    const agentId = await insertTestAgent(conn);
-    const ctx = createPipelineContext(conn, agentId);
+    const walletId = await insertTestAgent(conn);
+    const ctx = createPipelineContext(conn, walletId);
 
     await stage1Validate(ctx);
 
@@ -219,8 +219,8 @@ describe('Stage 1: Validate + INSERT', () => {
   });
 
   it('should throw validation error for invalid request (missing to)', async () => {
-    const agentId = await insertTestAgent(conn);
-    const ctx = createPipelineContext(conn, agentId, {
+    const walletId = await insertTestAgent(conn);
+    const ctx = createPipelineContext(conn, walletId, {
       request: { amount: '1000' } as SendTransactionRequest,
     });
 
@@ -228,8 +228,8 @@ describe('Stage 1: Validate + INSERT', () => {
   });
 
   it('should generate UUID v7 format txId', async () => {
-    const agentId = await insertTestAgent(conn);
-    const ctx = createPipelineContext(conn, agentId);
+    const walletId = await insertTestAgent(conn);
+    const ctx = createPipelineContext(conn, walletId);
 
     await stage1Validate(ctx);
 
@@ -246,8 +246,8 @@ describe('Stage 1: Validate + INSERT', () => {
 
 describe('Stage 3: Policy', () => {
   it('should set INSTANT tier with DefaultPolicyEngine', async () => {
-    const agentId = await insertTestAgent(conn);
-    const ctx = createPipelineContext(conn, agentId);
+    const walletId = await insertTestAgent(conn);
+    const ctx = createPipelineContext(conn, walletId);
     await stage1Validate(ctx);
 
     await stage3Policy(ctx);
@@ -262,7 +262,7 @@ describe('Stage 3: Policy', () => {
   });
 
   it('should CANCEL transaction when policy engine returns allowed=false', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const denyEngine: IPolicyEngine = {
       evaluate: async () => ({
         tier: 'INSTANT' as const,
@@ -270,7 +270,7 @@ describe('Stage 3: Policy', () => {
         reason: 'Test denial',
       }),
     };
-    const ctx = createPipelineContext(conn, agentId, { policyEngine: denyEngine });
+    const ctx = createPipelineContext(conn, walletId, { policyEngine: denyEngine });
     await stage1Validate(ctx);
 
     await expect(stage3Policy(ctx)).rejects.toThrow('Test denial');
@@ -290,7 +290,7 @@ describe('Stage 3: Policy', () => {
 
 describe('Stage 5: Execute', () => {
   it('should call build -> simulate -> sign -> submit in order', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const callOrder: string[] = [];
 
     const adapter = createMockAdapter({
@@ -312,7 +312,7 @@ describe('Stage 5: Execute', () => {
       },
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -322,7 +322,7 @@ describe('Stage 5: Execute', () => {
   });
 
   it('should mark FAILED on simulation failure', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
       simulateTransaction: async (): Promise<SimulationResult> => ({
         success: false,
@@ -331,7 +331,7 @@ describe('Stage 5: Execute', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -347,7 +347,7 @@ describe('Stage 5: Execute', () => {
   });
 
   it('should release private key even when sign throws (finally block)', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const releaseKey = vi.fn();
 
     const adapter = createMockAdapter({
@@ -357,7 +357,7 @@ describe('Stage 5: Execute', () => {
     });
     const keyStore = createMockKeyStore({ releaseKey });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter, keyStore });
+    const ctx = createPipelineContext(conn, walletId, { adapter, keyStore });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -374,8 +374,8 @@ describe('Stage 5: Execute', () => {
 
 describe('Stage 6: Confirm', () => {
   it('should update DB to CONFIRMED on success', async () => {
-    const agentId = await insertTestAgent(conn);
-    const ctx = createPipelineContext(conn, agentId);
+    const walletId = await insertTestAgent(conn);
+    const ctx = createPipelineContext(conn, walletId);
     await stage1Validate(ctx);
     await stage3Policy(ctx);
     await stage5Execute(ctx);
@@ -392,14 +392,14 @@ describe('Stage 6: Confirm', () => {
   });
 
   it('should update DB to FAILED on timeout/error', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
       waitForConfirmation: async () => {
         throw new Error('Timeout waiting for confirmation');
       },
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
     await stage5Execute(ctx);
@@ -422,7 +422,7 @@ describe('Stage 6: Confirm', () => {
 
 describe('Full pipeline integration', () => {
   it('should complete executeSend with all mocks returning success -> CONFIRMED', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
 
     const pipeline = new TransactionPipeline({
       db: conn.db,
@@ -432,7 +432,7 @@ describe('Full pipeline integration', () => {
       masterPassword: 'test-master',
     });
 
-    const txId = await pipeline.executeSend(agentId, createTestRequest());
+    const txId = await pipeline.executeSend(walletId, createTestRequest());
 
     expect(txId).toBeTruthy();
     const tx = await pipeline.getTransaction(txId);
@@ -442,7 +442,7 @@ describe('Full pipeline integration', () => {
     expect(tx.amount).toBe('1000000000');
   });
 
-  it('should throw AGENT_NOT_FOUND for non-existent agent', async () => {
+  it('should throw WALLET_NOT_FOUND for non-existent wallet', async () => {
     const pipeline = new TransactionPipeline({
       db: conn.db,
       adapter: createMockAdapter(),
@@ -453,6 +453,6 @@ describe('Full pipeline integration', () => {
 
     await expect(
       pipeline.executeSend('00000000-0000-7000-8000-000000000000', createTestRequest()),
-    ).rejects.toThrow('Agent');
+    ).rejects.toThrow('Wallet');
   });
 });

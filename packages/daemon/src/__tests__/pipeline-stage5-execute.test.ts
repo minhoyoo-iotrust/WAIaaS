@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, transactions } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import {
   stage1Validate,
@@ -150,9 +150,9 @@ const MOCK_PUBLIC_KEY = '11111111111111111111111111111112';
 async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: MOCK_PUBLIC_KEY,
@@ -165,7 +165,7 @@ async function insertTestAgent(conn: DatabaseConnection): Promise<string> {
 
 function createPipelineContext(
   conn: DatabaseConnection,
-  agentId: string,
+  walletId: string,
   overrides: Partial<PipelineContext> = {},
 ): PipelineContext {
   return {
@@ -174,8 +174,8 @@ function createPipelineContext(
     keyStore: createMockKeyStore(),
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
-    agentId,
-    agent: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
+    walletId,
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
     request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '1000000000' },
     txId: '',
     ...overrides,
@@ -203,7 +203,7 @@ afterEach(() => {
 
 describe('Stage 5: buildByType routing', () => {
   it('should call adapter.buildTransaction for TRANSFER request', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter();
     const request = {
       type: 'TRANSFER' as const,
@@ -211,7 +211,7 @@ describe('Stage 5: buildByType routing', () => {
       amount: '1000000000',
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -230,7 +230,7 @@ describe('Stage 5: buildByType routing', () => {
   });
 
   it('should call adapter.buildTokenTransfer for TOKEN_TRANSFER request', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter();
     const request: TokenTransferRequest = {
       type: 'TOKEN_TRANSFER',
@@ -239,7 +239,7 @@ describe('Stage 5: buildByType routing', () => {
       token: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, symbol: 'USDC' },
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -259,7 +259,7 @@ describe('Stage 5: buildByType routing', () => {
   });
 
   it('should call adapter.buildContractCall for CONTRACT_CALL request', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter();
     const request: ContractCallRequest = {
       type: 'CONTRACT_CALL',
@@ -267,7 +267,7 @@ describe('Stage 5: buildByType routing', () => {
       calldata: '0xa9059cbb0000000000000000',
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -286,7 +286,7 @@ describe('Stage 5: buildByType routing', () => {
   });
 
   it('should call adapter.buildApprove for APPROVE request', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter();
     const request: ApproveRequest = {
       type: 'APPROVE',
@@ -295,7 +295,7 @@ describe('Stage 5: buildByType routing', () => {
       amount: '1000000',
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -315,7 +315,7 @@ describe('Stage 5: buildByType routing', () => {
   });
 
   it('should call adapter.buildBatch for BATCH request', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter();
     const request: BatchRequest = {
       type: 'BATCH',
@@ -325,7 +325,7 @@ describe('Stage 5: buildByType routing', () => {
       ],
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -352,7 +352,7 @@ describe('Stage 5: buildByType routing', () => {
 
 describe('Stage 5: ChainError category-based retry', () => {
   it('should immediately FAIL on PERMANENT ChainError with no retry', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
       simulateTransaction: vi.fn(async () => {
         throw new ChainError('INSUFFICIENT_BALANCE', 'solana', {
@@ -361,7 +361,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -380,7 +380,7 @@ describe('Stage 5: ChainError category-based retry', () => {
   });
 
   it('should retry TRANSIENT ChainError with exponential backoff', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     let callCount = 0;
     const adapter = createMockAdapter({
       simulateTransaction: vi.fn(async (): Promise<SimulationResult> => {
@@ -394,7 +394,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -406,7 +406,7 @@ describe('Stage 5: ChainError category-based retry', () => {
   });
 
   it('should FAIL after TRANSIENT retryCount >= 3 (initial + 3 retries = 4 total attempts)', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
       simulateTransaction: vi.fn(async () => {
         throw new ChainError('RPC_TIMEOUT', 'solana', {
@@ -415,7 +415,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -434,7 +434,7 @@ describe('Stage 5: ChainError category-based retry', () => {
   });
 
   it('should rebuild from Stage 5a on STALE ChainError', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     let submitCount = 0;
     const adapter = createMockAdapter({
       submitTransaction: vi.fn(async (): Promise<SubmitResult> => {
@@ -448,7 +448,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -461,7 +461,7 @@ describe('Stage 5: ChainError category-based retry', () => {
   });
 
   it('should succeed on STALE retry after rebuild', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     let submitCount = 0;
     const adapter = createMockAdapter({
       submitTransaction: vi.fn(async (): Promise<SubmitResult> => {
@@ -475,7 +475,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -492,7 +492,7 @@ describe('Stage 5: ChainError category-based retry', () => {
   });
 
   it('should FAIL on second STALE after rebuild (retryCount shared)', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
       submitTransaction: vi.fn(async () => {
         throw new ChainError('BLOCKHASH_EXPIRED', 'solana', {
@@ -501,7 +501,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -522,7 +522,7 @@ describe('Stage 5: ChainError category-based retry', () => {
   });
 
   it('should convert ChainError to WAIaaSError with CHAIN_ERROR code', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
       simulateTransaction: vi.fn(async () => {
         throw new ChainError('INVALID_ADDRESS', 'solana', {
@@ -531,7 +531,7 @@ describe('Stage 5: ChainError category-based retry', () => {
       }),
     });
 
-    const ctx = createPipelineContext(conn, agentId, { adapter });
+    const ctx = createPipelineContext(conn, walletId, { adapter });
     await stage1Validate(ctx);
     await stage3Policy(ctx);
 
@@ -552,7 +552,7 @@ describe('Stage 5: ChainError category-based retry', () => {
 
 describe('Stage 5: Integration tests', () => {
   it('should complete TOKEN_TRANSFER full flow: buildTokenTransfer -> simulate -> sign -> submit', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const callOrder: string[] = [];
 
     const adapter = createMockAdapter({
@@ -581,7 +581,7 @@ describe('Stage 5: Integration tests', () => {
       token: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, symbol: 'USDC' },
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -603,7 +603,7 @@ describe('Stage 5: Integration tests', () => {
   });
 
   it('should complete BATCH full flow: buildBatch -> simulate -> sign -> submit', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const callOrder: string[] = [];
 
     const adapter = createMockAdapter({
@@ -633,7 +633,7 @@ describe('Stage 5: Integration tests', () => {
       ],
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
     });
@@ -655,7 +655,7 @@ describe('Stage 5: Integration tests', () => {
   });
 
   it('should update DB PENDING -> SUBMITTED and fire TX_SUBMITTED notification on success', async () => {
-    const agentId = await insertTestAgent(conn);
+    const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
 
     const adapter = createMockAdapter({
@@ -671,7 +671,7 @@ describe('Stage 5: Integration tests', () => {
       amount: '1000000000',
     };
 
-    const ctx = createPipelineContext(conn, agentId, {
+    const ctx = createPipelineContext(conn, walletId, {
       adapter,
       request: request as unknown as SendTransactionRequest,
       notificationService,
@@ -701,7 +701,7 @@ describe('Stage 5: Integration tests', () => {
     // TX_SUBMITTED notification should have been fired
     expect(notificationService.notify).toHaveBeenCalledWith(
       'TX_SUBMITTED',
-      agentId,
+      walletId,
       expect.objectContaining({ txHash: 'notify-hash' }),
       expect.objectContaining({ txId: ctx.txId }),
     );

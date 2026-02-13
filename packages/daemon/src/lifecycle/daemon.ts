@@ -388,10 +388,10 @@ export class DaemonLifecycle {
             if (this.notificationService) {
               try {
                 const expired = this.sqlite.prepare(
-                  "SELECT id, agent_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
-                ).all() as Array<{ id: string; agent_id: string }>;
+                  "SELECT id, wallet_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+                ).all() as Array<{ id: string; wallet_id: string }>;
                 for (const session of expired) {
-                  void this.notificationService.notify('SESSION_EXPIRED', session.agent_id, {
+                  void this.notificationService.notify('SESSION_EXPIRED', session.wallet_id, {
                     sessionId: session.id,
                   });
                 }
@@ -415,7 +415,7 @@ export class DaemonLifecycle {
             const now = Math.floor(Date.now() / 1000);
             const expired = this.delayQueue!.processExpired(now);
             for (const tx of expired) {
-              void this.executeFromStage5(tx.txId, tx.agentId);
+              void this.executeFromStage5(tx.txId, tx.walletId);
             }
           },
         });
@@ -563,9 +563,9 @@ export class DaemonLifecycle {
    * returns transactions whose cooldown has elapsed.
    *
    * @param txId - Transaction ID to execute
-   * @param agentId - Agent that owns the transaction
+   * @param walletId - Wallet that owns the transaction
    */
-  private async executeFromStage5(txId: string, agentId: string): Promise<void> {
+  private async executeFromStage5(txId: string, walletId: string): Promise<void> {
     try {
       if (!this._db || !this.adapterPool || !this.keyStore || !this._config) {
         console.warn(`executeFromStage5(${txId}): missing deps, skipping`);
@@ -574,13 +574,13 @@ export class DaemonLifecycle {
 
       // Import stages and schema
       const { stage5Execute, stage6Confirm } = await import('../pipeline/stages.js');
-      const { agents, transactions } = await import('../infrastructure/database/schema.js');
+      const { wallets, transactions } = await import('../infrastructure/database/schema.js');
       const { eq } = await import('drizzle-orm');
 
-      // Look up agent from DB
-      const agent = this._db.select().from(agents).where(eq(agents.id, agentId)).get();
-      if (!agent) {
-        console.warn(`executeFromStage5(${txId}): agent ${agentId} not found`);
+      // Look up wallet from DB
+      const wallet = this._db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+      if (!wallet) {
+        console.warn(`executeFromStage5(${txId}): wallet ${walletId} not found`);
         return;
       }
 
@@ -591,15 +591,15 @@ export class DaemonLifecycle {
         return;
       }
 
-      // Resolve adapter from pool using agent chain:network
+      // Resolve adapter from pool using wallet chain:network
       const rpcUrl = resolveRpcUrl(
         this._config.rpc as unknown as Record<string, string>,
-        agent.chain,
-        agent.network,
+        wallet.chain,
+        wallet.network,
       );
       const adapter = await this.adapterPool.resolve(
-        agent.chain as ChainType,
-        agent.network as NetworkType,
+        wallet.chain as ChainType,
+        wallet.network as NetworkType,
         rpcUrl,
       );
 
@@ -610,11 +610,11 @@ export class DaemonLifecycle {
         keyStore: this.keyStore,
         policyEngine: null as any, // Not needed for stages 5-6
         masterPassword: this.masterPassword,
-        agentId,
-        agent: {
-          publicKey: agent.publicKey,
-          chain: agent.chain,
-          network: agent.network,
+        walletId,
+        wallet: {
+          publicKey: wallet.publicKey,
+          chain: wallet.chain,
+          network: wallet.network,
         },
         request: {
           to: tx.toAddress ?? '',

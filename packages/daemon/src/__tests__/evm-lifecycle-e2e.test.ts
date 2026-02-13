@@ -348,7 +348,7 @@ describe('EVM Agent Full Lifecycle E2E', () => {
   });
 
   it('Create EVM agent -> returns 201 with 0x address', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -377,7 +377,7 @@ describe('EVM Agent Full Lifecycle E2E', () => {
 
   it('GET /v1/wallet/balance returns ETH balance for EVM agent', async () => {
     // Create EVM agent
-    const createRes = await app.request('/v1/agents', {
+    const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -388,13 +388,13 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     });
     expect(createRes.status).toBe(201);
     const agent = await json(createRes);
-    const agentId = agent.id as string;
+    const walletId = agent.id as string;
 
     // Create session
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -422,7 +422,7 @@ describe('EVM Agent Full Lifecycle E2E', () => {
 
   it('POST /v1/transactions/send -> CONFIRMED for EVM agent', async () => {
     // Create EVM agent
-    const createRes = await app.request('/v1/agents', {
+    const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -433,13 +433,13 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     });
     expect(createRes.status).toBe(201);
     const agent = await json(createRes);
-    const agentId = agent.id as string;
+    const walletId = agent.id as string;
 
     // Create session
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -472,7 +472,7 @@ describe('EVM Agent Full Lifecycle E2E', () => {
 
   it('EVM agent with SIWE owner-auth', async () => {
     // Create EVM agent
-    const createRes = await app.request('/v1/agents', {
+    const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -483,14 +483,14 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     });
     expect(createRes.status).toBe(201);
     const agent = await json(createRes);
-    const agentId = agent.id as string;
+    const walletId = agent.id as string;
 
     // Get a viem account for SIWE signing
     const account = privateKeyToAccount(SIWE_TEST_PRIVATE_KEY as `0x${string}`);
     const ownerAddress = account.address; // EIP-55 checksummed
 
     // Set owner on agent
-    const setOwnerRes = await app.request(`/v1/agents/${agentId}/owner`, {
+    const setOwnerRes = await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: ownerAddress }),
@@ -504,12 +504,12 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     const ts = Math.floor(Date.now() / 1000);
     sqlite
       .prepare(
-        `INSERT INTO policies (id, agent_id, type, rules, priority, enabled, created_at, updated_at)
+        `INSERT INTO policies (id, wallet_id, type, rules, priority, enabled, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         policyId,
-        agentId,
+        walletId,
         'SPENDING_LIMIT',
         JSON.stringify({
           instant_max: '100',
@@ -527,7 +527,7 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -581,10 +581,10 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     expect(approveBody.approvedAt).toBeDefined();
 
     // Verify owner was auto-verified (GRACE -> LOCKED)
-    const agentRow = sqlite
-      .prepare('SELECT owner_verified FROM agents WHERE id = ?')
-      .get(agentId) as { owner_verified: number };
-    expect(agentRow.owner_verified).toBe(1);
+    const walletRow = sqlite
+      .prepare('SELECT owner_verified FROM wallets WHERE id = ?')
+      .get(walletId) as { owner_verified: number };
+    expect(walletRow.owner_verified).toBe(1);
   });
 });
 
@@ -658,7 +658,7 @@ describe('Dual Chain Simultaneous Operation', () => {
 
   it('Solana + EVM agents coexist and operate independently', async () => {
     // Create Solana agent
-    const solCreateRes = await app.request('/v1/agents', {
+    const solCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -672,7 +672,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     const solAgentId = solAgent.id as string;
 
     // Create EVM agent
-    const evmCreateRes = await app.request('/v1/agents', {
+    const evmCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -689,7 +689,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     const solSessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: solAgentId }),
+      body: JSON.stringify({ walletId: solAgentId }),
     });
     expect(solSessionRes.status).toBe(201);
     const solSession = await json(solSessionRes);
@@ -698,7 +698,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     const evmSessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: evmAgentId }),
+      body: JSON.stringify({ walletId: evmAgentId }),
     });
     expect(evmSessionRes.status).toBe(201);
     const evmSession = await json(evmSessionRes);
@@ -777,7 +777,7 @@ describe('Dual Chain Simultaneous Operation', () => {
 
   it('List agents shows both chains', async () => {
     // Create Solana agent
-    const solCreateRes = await app.request('/v1/agents', {
+    const solCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -789,7 +789,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     expect(solCreateRes.status).toBe(201);
 
     // Create EVM agent
-    const evmCreateRes = await app.request('/v1/agents', {
+    const evmCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
@@ -801,7 +801,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     expect(evmCreateRes.status).toBe(201);
 
     // List all agents
-    const listRes = await app.request('/v1/agents', {
+    const listRes = await app.request('/v1/wallets', {
       headers: masterAuthHeader(),
     });
     expect(listRes.status).toBe(200);

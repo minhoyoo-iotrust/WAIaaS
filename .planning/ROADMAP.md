@@ -58,11 +58,12 @@ Plans:
   3. JWT payload claim이 `wlt`이고 `agt` claim 토큰이 401로 거부된다
   4. `GET /doc` OpenAPI 스펙에서 `agentId` 0건, `walletId` 존재한다
   5. `max_sessions_per_wallet` config 키가 파싱되고 `max_sessions_per_agent`는 거부된다
-**Plans:** 2 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] 91-01-PLAN.md — OpenAPI 스키마 rename + agents.ts -> wallets.ts + 라우트/JWT/Config 소스 변경 (19 파일)
-- [ ] 91-02-PLAN.md — 데몬 테스트 파일 전체 wallet 용어 갱신 + 테스트 통과 확인 (37+ 파일)
+- [x] 91-01-PLAN.md — OpenAPI 스키마 rename + agents.ts -> wallets.ts + 라우트/JWT/Config 소스 변경 (27 파일)
+- [x] 91-02-PLAN.md — 데몬 테스트 파일 전체 wallet 용어 갱신 + 테스트 통과 확인 (38 파일)
+- [x] 91-03-PLAN.md — [gap closure] @waiaas/core 인터페이스 agentId -> walletId 갭 클로저 (10 파일)
 
 ### Phase 92: MCP + CLI + SDK
 **Goal**: MCP/CLI/SDK 소비자 패키지가 wallet 용어를 사용하여, AI 에이전트가 walletId 기반으로 지갑에 접근한다
@@ -74,11 +75,11 @@ Plans:
   3. `WAIAAS_WALLET_ID`/`WAIAAS_WALLET_NAME` 환경변수가 동작한다
   4. TS SDK 응답에 `walletId` 필드가 존재하고 Python SDK에 `wallet_id` 필드가 존재한다
   5. `mcp-tokens/<walletId>` 경로로 토큰이 저장된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 92-01: MCP WalletContext + withWalletPrefix + 환경변수 + 토큰 경로 변경
-- [ ] 92-02: CLI --wallet 플래그 + TS SDK + Python SDK 필드 변경 + 테스트 갱신
+- [ ] 92-01-PLAN.md — MCP WalletContext + withWalletPrefix + CLI --wallet + 환경변수 + 토큰 경로 + MCP/CLI 테스트 갱신
+- [ ] 92-02-PLAN.md — TS SDK walletId + Python SDK wallet_id 필드 변경 + SDK 테스트 갱신
 
 ### Phase 93: Admin Web UI
 **Goal**: Admin UI가 wallet 용어를 사용하여, 관리자가 "Wallets" 페이지에서 지갑을 관리한다
@@ -118,7 +119,7 @@ Plans:
 |-------|---------------|--------|-----------|
 | 89. DB 마이그레이션 | 1/1 | ✓ Complete | 2026-02-13 |
 | 90. 코어 타입 + 에러 코드 | 2/2 | ✓ Complete | 2026-02-13 |
-| 91. 데몬 API + JWT + Config | 0/2 | Not started | - |
+| 91. 데몬 API + JWT + Config | 3/3 | ✓ Complete | 2026-02-13 |
 | 92. MCP + CLI + SDK | 0/2 | Not started | - |
 | 93. Admin Web UI | 0/1 | Not started | - |
 | 94. 설계 문서 + 검증 | 0/2 | Not started | - |

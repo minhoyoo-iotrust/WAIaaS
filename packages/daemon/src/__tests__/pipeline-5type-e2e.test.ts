@@ -110,7 +110,7 @@ function mockConfig(): DaemonConfig {
     security: {
       session_ttl: 86400,
       jwt_secret: '',
-      max_sessions_per_agent: 5,
+      max_sessions_per_wallet: 5,
       max_pending_tx: 10,
       nonce_storage: 'memory',
       nonce_cache_max: 1000,
@@ -278,30 +278,30 @@ afterEach(() => {
 // Auth helpers
 // ---------------------------------------------------------------------------
 
-/** Create an agent via POST /v1/agents (masterAuth) and return its ID. */
-async function createTestAgent(): Promise<string> {
-  const res = await app.request('/v1/agents', {
+/** Create an agent via POST /v1/wallets (masterAuth) and return its ID. */
+async function createTestWallet(): Promise<string> {
+  const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: masterAuthJsonHeaders(),
-    body: JSON.stringify({ name: 'pipeline-5type-test-agent' }),
+    body: JSON.stringify({ name: 'pipeline-5type-test-wallet' }),
   });
   const body = await json(res);
   return body.id as string;
 }
 
 /** Create a session for the given agent and return Bearer token string. */
-async function createSessionToken(agentId: string): Promise<string> {
+async function createSessionToken(walletId: string): Promise<string> {
   const sessionId = generateId();
   const now = Math.floor(Date.now() / 1000);
 
   conn.sqlite.prepare(
-    `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+    `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+  ).run(sessionId, walletId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
 
   const payload: JwtPayload = {
     sub: sessionId,
-    agt: agentId,
+    wlt: walletId,
     iat: now,
     exp: now + 3600,
   };
@@ -341,8 +341,8 @@ async function waitForPipeline(
 
 describe('5-Type Transaction Pipeline E2E', () => {
   it('Legacy TRANSFER (no type field) -> calls buildTransaction', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -373,8 +373,8 @@ describe('5-Type Transaction Pipeline E2E', () => {
   });
 
   it('TRANSFER type -> calls buildTransaction', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -401,8 +401,8 @@ describe('5-Type Transaction Pipeline E2E', () => {
   });
 
   it('TOKEN_TRANSFER type -> calls buildTokenTransfer', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -434,8 +434,8 @@ describe('5-Type Transaction Pipeline E2E', () => {
   });
 
   it('CONTRACT_CALL type -> calls buildContractCall', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -462,8 +462,8 @@ describe('5-Type Transaction Pipeline E2E', () => {
   });
 
   it('APPROVE type -> calls buildApprove', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -495,8 +495,8 @@ describe('5-Type Transaction Pipeline E2E', () => {
   });
 
   it('BATCH type -> calls buildBatch', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -615,7 +615,7 @@ describe('SDK 5-Type Support', () => {
   /** Create a mock JWT for SDK client initialization. */
   function createMockJwt(sessionId: string): string {
     const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-    const payload = Buffer.from(JSON.stringify({ sessionId, agentId: 'agent-1' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ sessionId, walletId: 'wallet-1' })).toString('base64url');
     const signature = 'mock-signature';
     return `${header}.${payload}.${signature}`;
   }

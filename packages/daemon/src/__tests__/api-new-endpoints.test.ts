@@ -5,8 +5,8 @@
  * GET /v1/transactions          (sessionAuth, cursor pagination)
  * GET /v1/transactions/pending  (sessionAuth)
  * GET /v1/nonce                 (public)
- * GET /v1/agents                (masterAuth)
- * GET /v1/agents/:id            (masterAuth)
+ * GET /v1/wallets                (masterAuth)
+ * GET /v1/wallets/:id            (masterAuth)
  *
  * Uses in-memory SQLite + mock adapter + mock keyStore + Hono app.request().
  */
@@ -98,7 +98,7 @@ function mockConfig(): DaemonConfig {
     security: {
       session_ttl: 86400,
       jwt_secret: '',
-      max_sessions_per_agent: 5,
+      max_sessions_per_wallet: 5,
       max_pending_tx: 10,
       nonce_storage: 'memory',
       nonce_cache_max: 1000,
@@ -260,8 +260,8 @@ afterEach(() => {
 // Auth test helpers
 // ---------------------------------------------------------------------------
 
-async function createTestAgent(name = 'test-agent'): Promise<string> {
-  const res = await app.request('/v1/agents', {
+async function createTestWallet(name = 'test-agent'): Promise<string> {
+  const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: {
       Host: HOST,
@@ -274,18 +274,18 @@ async function createTestAgent(name = 'test-agent'): Promise<string> {
   return body.id as string;
 }
 
-async function createSessionToken(agentId: string): Promise<string> {
+async function createSessionToken(walletId: string): Promise<string> {
   const sessionId = generateId();
   const now = Math.floor(Date.now() / 1000);
 
   conn.sqlite.prepare(
-    `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+    `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+  ).run(sessionId, walletId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
 
   const payload: JwtPayload = {
     sub: sessionId,
-    agt: agentId,
+    wlt: walletId,
     iat: now,
     exp: now + 3600,
   };
@@ -295,18 +295,18 @@ async function createSessionToken(agentId: string): Promise<string> {
 
 /** Insert a transaction directly into DB for testing list endpoints. */
 function insertTransaction(
-  agentId: string,
+  walletId: string,
   overrides: { id?: string; status?: string; type?: string; amount?: string; toAddress?: string } = {},
 ): string {
   const id = overrides.id ?? generateId();
   const now = Math.floor(Date.now() / 1000);
 
   conn.sqlite.prepare(
-    `INSERT INTO transactions (id, agent_id, chain, type, status, amount, to_address, created_at)
+    `INSERT INTO transactions (id, wallet_id, chain, type, status, amount, to_address, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
-    agentId,
+    walletId,
     'solana',
     overrides.type ?? 'TRANSFER',
     overrides.status ?? 'CONFIRMED',
@@ -323,12 +323,12 @@ function insertTransaction(
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/wallet/assets', () => {
-  let agentId: string;
+  let walletId: string;
   let authHeader: string;
 
   beforeEach(async () => {
-    agentId = await createTestAgent();
-    authHeader = await createSessionToken(agentId);
+    walletId = await createTestWallet();
+    authHeader = await createSessionToken(walletId);
   });
 
   it('should return 200 with native SOL + SPL token assets', async () => {
@@ -338,7 +338,7 @@ describe('GET /v1/wallet/assets', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.agentId).toBe(agentId);
+    expect(body.walletId).toBe(walletId);
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
 
@@ -399,19 +399,19 @@ describe('GET /v1/wallet/assets', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/transactions', () => {
-  let agentId: string;
+  let walletId: string;
   let authHeader: string;
 
   beforeEach(async () => {
-    agentId = await createTestAgent();
-    authHeader = await createSessionToken(agentId);
+    walletId = await createTestWallet();
+    authHeader = await createSessionToken(walletId);
   });
 
   it('should return 200 with paginated list (hasMore=true when more exist)', async () => {
     // Insert 3 transactions
-    insertTransaction(agentId);
-    insertTransaction(agentId);
-    insertTransaction(agentId);
+    insertTransaction(walletId);
+    insertTransaction(walletId);
+    insertTransaction(walletId);
 
     const res = await app.request('/v1/transactions?limit=2', {
       headers: { Host: HOST, Authorization: authHeader },
@@ -427,9 +427,9 @@ describe('GET /v1/transactions', () => {
 
   it('should return cursor-based pagination (second page)', async () => {
     // Insert 3 transactions with distinct IDs (UUID v7 ordering)
-    insertTransaction(agentId);
-    insertTransaction(agentId);
-    insertTransaction(agentId);
+    insertTransaction(walletId);
+    insertTransaction(walletId);
+    insertTransaction(walletId);
 
     // Get first page
     const res1 = await app.request('/v1/transactions?limit=2', {
@@ -450,7 +450,7 @@ describe('GET /v1/transactions', () => {
     expect(body2.hasMore).toBe(false);
   });
 
-  it('should return 200 with empty list for agent with no transactions', async () => {
+  it('should return 200 with empty list for wallet with no transactions', async () => {
     const res = await app.request('/v1/transactions', {
       headers: { Host: HOST, Authorization: authHeader },
     });
@@ -479,19 +479,19 @@ describe('GET /v1/transactions', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/transactions/pending', () => {
-  let agentId: string;
+  let walletId: string;
   let authHeader: string;
 
   beforeEach(async () => {
-    agentId = await createTestAgent();
-    authHeader = await createSessionToken(agentId);
+    walletId = await createTestWallet();
+    authHeader = await createSessionToken(walletId);
   });
 
   it('should return 200 with only PENDING/QUEUED transactions', async () => {
-    insertTransaction(agentId, { status: 'PENDING' });
-    insertTransaction(agentId, { status: 'QUEUED' });
-    insertTransaction(agentId, { status: 'CONFIRMED' });
-    insertTransaction(agentId, { status: 'FAILED' });
+    insertTransaction(walletId, { status: 'PENDING' });
+    insertTransaction(walletId, { status: 'QUEUED' });
+    insertTransaction(walletId, { status: 'CONFIRMED' });
+    insertTransaction(walletId, { status: 'FAILED' });
 
     const res = await app.request('/v1/transactions/pending', {
       headers: { Host: HOST, Authorization: authHeader },
@@ -508,8 +508,8 @@ describe('GET /v1/transactions/pending', () => {
   });
 
   it('should exclude CONFIRMED and FAILED transactions', async () => {
-    insertTransaction(agentId, { status: 'CONFIRMED' });
-    insertTransaction(agentId, { status: 'FAILED' });
+    insertTransaction(walletId, { status: 'CONFIRMED' });
+    insertTransaction(walletId, { status: 'FAILED' });
 
     const res = await app.request('/v1/transactions/pending', {
       headers: { Host: HOST, Authorization: authHeader },
@@ -565,16 +565,16 @@ describe('GET /v1/nonce', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /v1/agents (2 tests)
+// GET /v1/wallets (2 tests)
 // ---------------------------------------------------------------------------
 
-describe('GET /v1/agents', () => {
-  it('should return 200 with agent list (masterAuth required)', async () => {
-    // Create two agents (mockKeyStore returns unique keys per call)
-    await createTestAgent('agent-1');
-    await createTestAgent('agent-2');
+describe('GET /v1/wallets (list)', () => {
+  it('should return 200 with wallet list (masterAuth required)', async () => {
+    // Create two wallets (mockKeyStore returns unique keys per call)
+    await createTestWallet('wallet-1');
+    await createTestWallet('agent-2');
 
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       headers: {
         Host: HOST,
         'X-Master-Password': TEST_MASTER_PASSWORD,
@@ -596,7 +596,7 @@ describe('GET /v1/agents', () => {
   });
 
   it('should return 401 without masterAuth header', async () => {
-    const res = await app.request('/v1/agents', {
+    const res = await app.request('/v1/wallets', {
       headers: { Host: HOST },
     });
 
@@ -607,14 +607,14 @@ describe('GET /v1/agents', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /v1/agents/:id (3 tests)
+// GET /v1/wallets/:id (3 tests)
 // ---------------------------------------------------------------------------
 
-describe('GET /v1/agents/:id', () => {
-  it('should return 200 with agent detail including ownerState=NONE', async () => {
-    const agentId = await createTestAgent();
+describe('GET /v1/wallets/:id (detail)', () => {
+  it('should return 200 with wallet detail including ownerState=NONE', async () => {
+    const walletId = await createTestWallet();
 
-    const res = await app.request(`/v1/agents/${agentId}`, {
+    const res = await app.request(`/v1/wallets/${walletId}`, {
       headers: {
         Host: HOST,
         'X-Master-Password': TEST_MASTER_PASSWORD,
@@ -623,7 +623,7 @@ describe('GET /v1/agents/:id', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.id).toBe(agentId);
+    expect(body.id).toBe(walletId);
     expect(body.name).toBe('test-agent');
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
@@ -636,13 +636,13 @@ describe('GET /v1/agents/:id', () => {
   });
 
   it('should return ownerState=GRACE when owner set but unverified', async () => {
-    const agentId = await createTestAgent();
+    const walletId = await createTestWallet();
 
     // Valid Solana base58 32-byte address (Solana System Program)
     const validSolanaAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
 
     // Set owner address via PUT
-    await app.request(`/v1/agents/${agentId}/owner`, {
+    await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: {
         Host: HOST,
@@ -652,7 +652,7 @@ describe('GET /v1/agents/:id', () => {
       body: JSON.stringify({ owner_address: validSolanaAddress }),
     });
 
-    const res = await app.request(`/v1/agents/${agentId}`, {
+    const res = await app.request(`/v1/wallets/${walletId}`, {
       headers: {
         Host: HOST,
         'X-Master-Password': TEST_MASTER_PASSWORD,
@@ -666,9 +666,9 @@ describe('GET /v1/agents/:id', () => {
     expect(body.ownerVerified).toBe(false);
   });
 
-  it('should return 404 for non-existent agent ID', async () => {
+  it('should return 404 for non-existent wallet ID', async () => {
     const fakeId = '00000000-0000-7000-8000-000000000099';
-    const res = await app.request(`/v1/agents/${fakeId}`, {
+    const res = await app.request(`/v1/wallets/${fakeId}`, {
       headers: {
         Host: HOST,
         'X-Master-Password': TEST_MASTER_PASSWORD,
@@ -677,6 +677,6 @@ describe('GET /v1/agents/:id', () => {
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 });

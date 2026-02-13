@@ -2,13 +2,13 @@ import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Notification payload sent to channels.
- * Contains event type, agent context, message, and timestamp.
+ * Contains event type, wallet context, message, and timestamp.
  */
 export interface NotificationPayload {
   /** Event type triggering the notification. */
   eventType: NotificationEventType;
-  /** Agent ID associated with the event. */
-  agentId: string;
+  /** Wallet ID associated with the event. */
+  walletId: string;
   /** Human-readable message. */
   message: string;
   /** Additional event-specific details. */

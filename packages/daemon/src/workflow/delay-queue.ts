@@ -35,7 +35,7 @@ export interface QueueResult {
 
 export interface ExpiredTransaction {
   txId: string;
-  agentId: string;
+  walletId: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ export class DelayQueue {
    * Reads delaySeconds from metadata JSON to calculate expiry.
    *
    * @param now - Current time in Unix seconds
-   * @returns Array of { txId, agentId } for pipeline to execute stages 5-6
+   * @returns Array of { txId, walletId } for pipeline to execute stages 5-6
    */
   processExpired(now: number): ExpiredTransaction[] {
     const sqlite = this.sqlite;
@@ -159,14 +159,14 @@ export class DelayQueue {
       // Expiry check: queued_at + JSON_EXTRACT(metadata, '$.delaySeconds') <= now
       const rows = sqlite
         .prepare(
-          `SELECT id, agent_id
+          `SELECT id, wallet_id
            FROM transactions
            WHERE status = 'QUEUED'
              AND queued_at IS NOT NULL
              AND metadata IS NOT NULL
              AND (queued_at + CAST(JSON_EXTRACT(metadata, '$.delaySeconds') AS INTEGER)) <= ?`,
         )
-        .all(now) as Array<{ id: string; agent_id: string }>;
+        .all(now) as Array<{ id: string; wallet_id: string }>;
 
       if (rows.length === 0) {
         return [];
@@ -182,7 +182,7 @@ export class DelayQueue {
         const changes = updateStmt.run(row.id);
         // Only include if we actually updated (guard against concurrent processing)
         if (changes.changes > 0) {
-          result.push({ txId: row.id, agentId: row.agent_id });
+          result.push({ txId: row.id, walletId: row.wallet_id });
         }
       }
 

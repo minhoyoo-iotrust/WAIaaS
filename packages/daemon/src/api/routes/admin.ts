@@ -21,7 +21,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
-import { agents, sessions, notificationLogs } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, notificationLogs } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -231,12 +231,12 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const nowSec = Math.floor(Date.now() / 1000);
     const uptime = nowSec - deps.startTime;
 
-    // Count agents
-    const agentCountResult = deps.db
+    // Count wallets
+    const walletCountResult = deps.db
       .select({ count: sql<number>`count(*)` })
-      .from(agents)
+      .from(wallets)
       .get();
-    const agentCount = agentCountResult?.count ?? 0;
+    const walletCount = walletCountResult?.count ?? 0;
 
     // Count active sessions (not expired, not revoked)
     // Use raw SQL with integer comparison (expiresAt is stored as epoch seconds)
@@ -256,7 +256,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         status: 'running',
         version: deps.version,
         uptime,
-        agentCount,
+        walletCount,
         activeSessionCount,
         killSwitchState: ksState.state,
         adminTimeout: deps.adminTimeout,
@@ -434,7 +434,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
     const testPayload: NotificationPayload = {
       eventType: 'TX_CONFIRMED',
-      agentId: 'admin-test',
+      walletId: 'admin-test',
       message: '[Test] WAIaaS notification test',
       timestamp: Math.floor(Date.now() / 1000),
     };
@@ -499,7 +499,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const logs = rows.map((row) => ({
       id: row.id,
       eventType: row.eventType,
-      agentId: row.agentId ?? null,
+      walletId: row.walletId ?? null,
       channel: row.channel,
       status: row.status,
       error: row.error ?? null,

@@ -29,7 +29,7 @@ export const errorHintMap: Record<string, string> = {
   // SESSION_RENEWAL_MISMATCH: no hint (security issue)
 
   // TX domain (6 of 20 actionable)
-  INSUFFICIENT_BALANCE: 'Fund the agent wallet. Check balance via GET /v1/wallet/balance.',
+  INSUFFICIENT_BALANCE: 'Fund the wallet. Check balance via GET /v1/wallet/balance.',
   INVALID_ADDRESS: 'Verify the recipient address format for the target blockchain.',
   TX_NOT_FOUND: 'Verify the transaction ID. List transactions via GET /v1/transactions.',
   TX_EXPIRED: 'The transaction expired. Submit a new transaction via POST /v1/transactions/send.',
@@ -44,7 +44,7 @@ export const errorHintMap: Record<string, string> = {
   // WHITELIST_DENIED: no hint (security)
 
   // OWNER domain (3 of 5)
-  OWNER_NOT_CONNECTED: 'Register an owner via PUT /v1/agents/{agentId}/owner.',
+  OWNER_NOT_CONNECTED: 'Register an owner via PUT /v1/wallets/{walletId}/owner.',
   APPROVAL_TIMEOUT: 'The approval request timed out. Submit a new transaction.',
   APPROVAL_NOT_FOUND: 'No pending approval for this transaction. Check status via GET /v1/transactions/{id}.',
   // OWNER_ALREADY_CONNECTED: no hint (state only)
@@ -57,10 +57,10 @@ export const errorHintMap: Record<string, string> = {
   // KILL_SWITCH_ACTIVE: no hint (agent cannot recover)
   // KILL_SWITCH_NOT_ACTIVE: no hint (info only)
 
-  // AGENT domain (2 of 3)
-  AGENT_NOT_FOUND: 'Verify the agent ID. List agents via GET /v1/agents.',
-  AGENT_SUSPENDED: 'Agent is suspended. Contact the administrator.',
-  // AGENT_TERMINATED: no hint (permanent)
+  // WALLET domain (2 of 3)
+  WALLET_NOT_FOUND: 'Verify the wallet ID. List wallets via GET /v1/wallets.',
+  WALLET_SUSPENDED: 'Wallet is suspended. Contact the administrator.',
+  // WALLET_TERMINATED: no hint (permanent)
 };
 
 /**

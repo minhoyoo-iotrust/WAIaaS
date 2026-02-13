@@ -4,7 +4,7 @@
  *
  * v1.2: Protected by sessionAuth middleware (Authorization: Bearer wai_sess_<token>),
  *       applied at server level in createApp().
- * Agent identification via JWT payload agentId (set by sessionAuth on context).
+ * Wallet identification via JWT payload walletId (set by sessionAuth on context).
  *
  * @see docs/37-rest-api-complete-spec.md
  */
@@ -17,7 +17,7 @@ import type { ChainType, NetworkType } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
-import { agents } from '../../infrastructure/database/schema.js';
+import { wallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
   WalletAddressResponseSchema,
@@ -34,21 +34,21 @@ export interface WalletRouteDeps {
 }
 
 /**
- * Resolve agent by ID from database. Throws 404 if not found.
+ * Resolve wallet by ID from database. Throws 404 if not found.
  */
-async function resolveAgentById(
+async function resolveWalletById(
   db: BetterSQLite3Database<typeof schema>,
-  agentId: string,
+  walletId: string,
 ) {
-  const agent = await db.select().from(agents).where(eq(agents.id, agentId)).get();
+  const wallet = await db.select().from(wallets).where(eq(wallets.id, walletId)).get();
 
-  if (!agent) {
-    throw new WAIaaSError('AGENT_NOT_FOUND', {
-      message: `Agent '${agentId}' not found`,
+  if (!wallet) {
+    throw new WAIaaSError('WALLET_NOT_FOUND', {
+      message: `Wallet '${walletId}' not found`,
     });
   }
 
-  return agent;
+  return wallet;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,10 +62,10 @@ const walletAddressRoute = createRoute({
   summary: 'Get wallet address',
   responses: {
     200: {
-      description: 'Agent wallet address',
+      description: 'Wallet address',
       content: { 'application/json': { schema: WalletAddressResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
 });
 
@@ -76,10 +76,10 @@ const walletBalanceRoute = createRoute({
   summary: 'Get wallet balance',
   responses: {
     200: {
-      description: 'Agent wallet balance',
+      description: 'Wallet balance',
       content: { 'application/json': { schema: WalletBalanceResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'CHAIN_ERROR']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'CHAIN_ERROR']),
   },
 });
 
@@ -90,10 +90,10 @@ const walletAssetsRoute = createRoute({
   summary: 'Get wallet assets',
   responses: {
     200: {
-      description: 'All assets (native + tokens) held by agent wallet',
+      description: 'All assets (native + tokens) held by wallet',
       content: { 'application/json': { schema: WalletAssetsResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'CHAIN_ERROR']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'CHAIN_ERROR']),
   },
 });
 
@@ -104,7 +104,7 @@ const walletAssetsRoute = createRoute({
 /**
  * Create wallet route sub-router.
  *
- * GET /wallet/address -> returns agent's public key
+ * GET /wallet/address -> returns wallet's public key
  * GET /wallet/balance -> calls adapter.getBalance() and returns lamports
  * GET /wallet/assets  -> calls adapter.getAssets() and returns all token balances
  */
@@ -112,24 +112,24 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
   router.openapi(walletAddressRoute, async (c) => {
-    // Get agentId from sessionAuth context (set by middleware at server level)
-    const agentId = c.get('agentId' as never) as string;
-    const agent = await resolveAgentById(deps.db, agentId);
+    // Get walletId from sessionAuth context (set by middleware at server level)
+    const walletId = c.get('walletId' as never) as string;
+    const wallet = await resolveWalletById(deps.db, walletId);
 
     return c.json(
       {
-        agentId: agent.id,
-        chain: agent.chain,
-        network: agent.network,
-        address: agent.publicKey,
+        walletId: wallet.id,
+        chain: wallet.chain,
+        network: wallet.network,
+        address: wallet.publicKey,
       },
       200,
     );
   });
 
   router.openapi(walletBalanceRoute, async (c) => {
-    const agentId = c.get('agentId' as never) as string;
-    const agent = await resolveAgentById(deps.db, agentId);
+    const walletId = c.get('walletId' as never) as string;
+    const wallet = await resolveWalletById(deps.db, walletId);
 
     if (!deps.adapterPool || !deps.config) {
       throw new WAIaaSError('CHAIN_ERROR', {
@@ -139,23 +139,23 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
-      agent.chain,
-      agent.network,
+      wallet.chain,
+      wallet.network,
     );
     const adapter = await deps.adapterPool.resolve(
-      agent.chain as ChainType,
-      agent.network as NetworkType,
+      wallet.chain as ChainType,
+      wallet.network as NetworkType,
       rpcUrl,
     );
 
-    const balanceInfo = await adapter.getBalance(agent.publicKey);
+    const balanceInfo = await adapter.getBalance(wallet.publicKey);
 
     return c.json(
       {
-        agentId: agent.id,
-        chain: agent.chain,
-        network: agent.network,
-        address: agent.publicKey,
+        walletId: wallet.id,
+        chain: wallet.chain,
+        network: wallet.network,
+        address: wallet.publicKey,
         balance: balanceInfo.balance.toString(),
         decimals: balanceInfo.decimals,
         symbol: balanceInfo.symbol,
@@ -169,8 +169,8 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(walletAssetsRoute, async (c) => {
-    const agentId = c.get('agentId' as never) as string;
-    const agent = await resolveAgentById(deps.db, agentId);
+    const walletId = c.get('walletId' as never) as string;
+    const wallet = await resolveWalletById(deps.db, walletId);
 
     if (!deps.adapterPool || !deps.config) {
       throw new WAIaaSError('CHAIN_ERROR', {
@@ -180,22 +180,22 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
-      agent.chain,
-      agent.network,
+      wallet.chain,
+      wallet.network,
     );
     const adapter = await deps.adapterPool.resolve(
-      agent.chain as ChainType,
-      agent.network as NetworkType,
+      wallet.chain as ChainType,
+      wallet.network as NetworkType,
       rpcUrl,
     );
 
-    const assets = await adapter.getAssets(agent.publicKey);
+    const assets = await adapter.getAssets(wallet.publicKey);
 
     return c.json(
       {
-        agentId: agent.id,
-        chain: agent.chain,
-        network: agent.network,
+        walletId: wallet.id,
+        chain: wallet.chain,
+        network: wallet.network,
         assets: assets.map((a) => ({
           mint: a.mint,
           symbol: a.symbol,

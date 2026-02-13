@@ -1,11 +1,11 @@
 /**
- * Agent route handlers: POST /v1/agents, GET /v1/agents, GET /v1/agents/:id,
- * PUT /v1/agents/:id/owner.
+ * Wallet route handlers: POST /v1/wallets, GET /v1/wallets, GET /v1/wallets/:id,
+ * PUT /v1/wallets/:id/owner.
  *
- * POST /v1/agents: create an agent with Solana key pair.
- * GET /v1/agents: list all agents (masterAuth).
- * GET /v1/agents/:id: get agent detail including ownerState (masterAuth).
- * PUT /v1/agents/:id/owner: register/change owner address (masterAuth).
+ * POST /v1/wallets: create a wallet with key pair.
+ * GET /v1/wallets: list all wallets (masterAuth).
+ * GET /v1/wallets/:id: get wallet detail including ownerState (masterAuth).
+ * PUT /v1/wallets/:id/owner: register/change owner address (masterAuth).
  *
  * v1.2: Protected by masterAuth middleware (X-Master-Password header required),
  *       applied at server level in createApp().
@@ -19,7 +19,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, validateChainNetwork } from '@waiaas/core';
 import type { ChainType, NetworkType } from '@waiaas/core';
-import { agents } from '../../infrastructure/database/schema.js';
+import { wallets } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -28,19 +28,19 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
 import { validateOwnerAddress } from '../middleware/address-validation.js';
 import {
-  CreateAgentRequestOpenAPI,
+  CreateWalletRequestOpenAPI,
   SetOwnerRequestSchema,
-  UpdateAgentRequestSchema,
-  AgentResponseSchema,
-  AgentOwnerResponseSchema,
-  AgentListResponseSchema,
-  AgentDetailResponseSchema,
-  AgentDeleteResponseSchema,
+  UpdateWalletRequestSchema,
+  WalletCrudResponseSchema,
+  WalletOwnerResponseSchema,
+  WalletListResponseSchema,
+  WalletDetailResponseSchema,
+  WalletDeleteResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
 
-export interface AgentRouteDeps {
+export interface WalletCrudRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   sqlite: SQLiteDatabase;
   keyStore: LocalKeyStore;
@@ -53,32 +53,32 @@ export interface AgentRouteDeps {
 // Route definitions
 // ---------------------------------------------------------------------------
 
-const createAgentRoute = createRoute({
+const createWalletRoute = createRoute({
   method: 'post',
-  path: '/agents',
-  tags: ['Agents'],
-  summary: 'Create a new agent',
+  path: '/wallets',
+  tags: ['Wallets'],
+  summary: 'Create a new wallet',
   request: {
     body: {
       content: {
-        'application/json': { schema: CreateAgentRequestOpenAPI },
+        'application/json': { schema: CreateWalletRequestOpenAPI },
       },
     },
   },
   responses: {
     201: {
-      description: 'Agent created',
-      content: { 'application/json': { schema: AgentResponseSchema } },
+      description: 'Wallet created',
+      content: { 'application/json': { schema: WalletCrudResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
   },
 });
 
 const setOwnerRoute = createRoute({
   method: 'put',
-  path: '/agents/{id}/owner',
-  tags: ['Agents'],
-  summary: 'Set agent owner address',
+  path: '/wallets/{id}/owner',
+  tags: ['Wallets'],
+  summary: 'Set wallet owner address',
   request: {
     params: z.object({ id: z.string().uuid() }),
     body: {
@@ -90,78 +90,78 @@ const setOwnerRoute = createRoute({
   responses: {
     200: {
       description: 'Owner updated',
-      content: { 'application/json': { schema: AgentOwnerResponseSchema } },
+      content: { 'application/json': { schema: WalletOwnerResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'OWNER_ALREADY_CONNECTED']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'OWNER_ALREADY_CONNECTED']),
   },
 });
 
-const listAgentsRoute = createRoute({
+const listWalletsRoute = createRoute({
   method: 'get',
-  path: '/agents',
-  tags: ['Agents'],
-  summary: 'List all agents',
+  path: '/wallets',
+  tags: ['Wallets'],
+  summary: 'List all wallets',
   responses: {
     200: {
-      description: 'Agent list',
-      content: { 'application/json': { schema: AgentListResponseSchema } },
+      description: 'Wallet list',
+      content: { 'application/json': { schema: WalletListResponseSchema } },
     },
   },
 });
 
-const agentDetailRoute = createRoute({
+const walletDetailRoute = createRoute({
   method: 'get',
-  path: '/agents/{id}',
-  tags: ['Agents'],
-  summary: 'Get agent details',
+  path: '/wallets/{id}',
+  tags: ['Wallets'],
+  summary: 'Get wallet details',
   request: {
     params: z.object({ id: z.string().uuid() }),
   },
   responses: {
     200: {
-      description: 'Agent detail with owner state',
-      content: { 'application/json': { schema: AgentDetailResponseSchema } },
+      description: 'Wallet detail with owner state',
+      content: { 'application/json': { schema: WalletDetailResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
 });
 
-const updateAgentRoute = createRoute({
+const updateWalletRoute = createRoute({
   method: 'put',
-  path: '/agents/{id}',
-  tags: ['Agents'],
-  summary: 'Update agent name',
+  path: '/wallets/{id}',
+  tags: ['Wallets'],
+  summary: 'Update wallet name',
   request: {
     params: z.object({ id: z.string().uuid() }),
     body: {
       content: {
-        'application/json': { schema: UpdateAgentRequestSchema },
+        'application/json': { schema: UpdateWalletRequestSchema },
       },
     },
   },
   responses: {
     200: {
-      description: 'Agent updated',
-      content: { 'application/json': { schema: AgentResponseSchema } },
+      description: 'Wallet updated',
+      content: { 'application/json': { schema: WalletCrudResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
 });
 
-const deleteAgentRoute = createRoute({
+const deleteWalletRoute = createRoute({
   method: 'delete',
-  path: '/agents/{id}',
-  tags: ['Agents'],
-  summary: 'Terminate agent',
+  path: '/wallets/{id}',
+  tags: ['Wallets'],
+  summary: 'Terminate wallet',
   request: {
     params: z.object({ id: z.string().uuid() }),
   },
   responses: {
     200: {
-      description: 'Agent terminated',
-      content: { 'application/json': { schema: AgentDeleteResponseSchema } },
+      description: 'Wallet terminated',
+      content: { 'application/json': { schema: WalletDeleteResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'AGENT_TERMINATED']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED']),
   },
 });
 
@@ -170,27 +170,27 @@ const deleteAgentRoute = createRoute({
 // ---------------------------------------------------------------------------
 
 /**
- * Create agent route sub-router.
+ * Create wallet CRUD route sub-router.
  *
- * GET  /agents -> list all agents (masterAuth).
- * GET  /agents/:id -> get agent detail with ownerState (masterAuth).
- * POST /agents -> creates agent with Solana key pair, inserts to DB, returns 201.
- * PUT  /agents/:id/owner -> register/change owner address (masterAuth).
+ * GET  /wallets -> list all wallets (masterAuth).
+ * GET  /wallets/:id -> get wallet detail with ownerState (masterAuth).
+ * POST /wallets -> creates wallet with key pair, inserts to DB, returns 201.
+ * PUT  /wallets/:id/owner -> register/change owner address (masterAuth).
  */
-export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
+export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
   const ownerLifecycle = new OwnerLifecycleService({ db: deps.db, sqlite: deps.sqlite });
 
   // ---------------------------------------------------------------------------
-  // GET /agents (list)
+  // GET /wallets (list)
   // ---------------------------------------------------------------------------
 
-  router.openapi(listAgentsRoute, async (c) => {
-    const allAgents = await deps.db.select().from(agents);
+  router.openapi(listWalletsRoute, async (c) => {
+    const allWallets = await deps.db.select().from(wallets);
 
     return c.json(
       {
-        items: allAgents.map((a) => ({
+        items: allWallets.map((a) => ({
           id: a.id,
           name: a.name,
           chain: a.chain,
@@ -205,52 +205,52 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
   });
 
   // ---------------------------------------------------------------------------
-  // GET /agents/:id (detail)
+  // GET /wallets/:id (detail)
   // ---------------------------------------------------------------------------
 
-  router.openapi(agentDetailRoute, async (c) => {
-    const { id: agentId } = c.req.valid('param');
+  router.openapi(walletDetailRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
 
-    const agent = await deps.db
+    const wallet = await deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, agentId))
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
       .get();
 
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: `Agent '${agentId}' not found`,
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
       });
     }
 
     const ownerState = resolveOwnerState({
-      ownerAddress: agent.ownerAddress,
-      ownerVerified: agent.ownerVerified,
+      ownerAddress: wallet.ownerAddress,
+      ownerVerified: wallet.ownerVerified,
     });
 
     return c.json(
       {
-        id: agent.id,
-        name: agent.name,
-        chain: agent.chain,
-        network: agent.network,
-        publicKey: agent.publicKey,
-        status: agent.status,
-        ownerAddress: agent.ownerAddress,
-        ownerVerified: agent.ownerVerified,
+        id: wallet.id,
+        name: wallet.name,
+        chain: wallet.chain,
+        network: wallet.network,
+        publicKey: wallet.publicKey,
+        status: wallet.status,
+        ownerAddress: wallet.ownerAddress,
+        ownerVerified: wallet.ownerVerified,
         ownerState,
-        createdAt: agent.createdAt ? Math.floor(agent.createdAt.getTime() / 1000) : 0,
-        updatedAt: agent.updatedAt ? Math.floor(agent.updatedAt.getTime() / 1000) : null,
+        createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
+        updatedAt: wallet.updatedAt ? Math.floor(wallet.updatedAt.getTime() / 1000) : null,
       },
       200,
     );
   });
 
   // ---------------------------------------------------------------------------
-  // POST /agents
+  // POST /wallets
   // ---------------------------------------------------------------------------
 
-  router.openapi(createAgentRoute, async (c) => {
+  router.openapi(createWalletRoute, async (c) => {
     // OpenAPIHono validates the body automatically via createRoute schema
     const parsed = c.req.valid('json');
     const chain = parsed.chain as ChainType;
@@ -275,7 +275,7 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
       });
     }
 
-    // Generate agent ID
+    // Generate wallet ID
     const id = generateId();
 
     // Generate key pair via keystore
@@ -286,10 +286,10 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
       deps.masterPassword,
     );
 
-    // Insert into agents table
+    // Insert into wallets table
     const now = new Date(Math.floor(Date.now() / 1000) * 1000); // truncate to seconds
 
-    await deps.db.insert(agents).values({
+    await deps.db.insert(wallets).values({
       id,
       name: parsed.name,
       chain: parsed.chain,
@@ -300,7 +300,7 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
       updatedAt: now,
     });
 
-    // Return 201 with agent JSON
+    // Return 201 with wallet JSON
     return c.json(
       {
         id,
@@ -316,81 +316,81 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
   });
 
   // ---------------------------------------------------------------------------
-  // PUT /agents/:id (update name)
+  // PUT /wallets/:id (update name)
   // ---------------------------------------------------------------------------
 
-  router.openapi(updateAgentRoute, async (c) => {
-    const { id: agentId } = c.req.valid('param');
+  router.openapi(updateWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
     const body = c.req.valid('json');
 
-    const agent = await deps.db
+    const wallet = await deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, agentId))
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
       .get();
 
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: `Agent '${agentId}' not found`,
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
       });
     }
 
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
     await deps.db
-      .update(agents)
+      .update(wallets)
       .set({ name: body.name, updatedAt: now })
-      .where(eq(agents.id, agentId))
+      .where(eq(wallets.id, walletId))
       .run();
 
     return c.json(
       {
-        id: agent.id,
+        id: wallet.id,
         name: body.name,
-        chain: agent.chain,
-        network: agent.network,
-        publicKey: agent.publicKey,
-        status: agent.status,
-        createdAt: agent.createdAt ? Math.floor(agent.createdAt.getTime() / 1000) : 0,
+        chain: wallet.chain,
+        network: wallet.network,
+        publicKey: wallet.publicKey,
+        status: wallet.status,
+        createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
       },
       200,
     );
   });
 
   // ---------------------------------------------------------------------------
-  // DELETE /agents/:id (terminate)
+  // DELETE /wallets/:id (terminate)
   // ---------------------------------------------------------------------------
 
-  router.openapi(deleteAgentRoute, async (c) => {
-    const { id: agentId } = c.req.valid('param');
+  router.openapi(deleteWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
 
-    const agent = await deps.db
+    const wallet = await deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, agentId))
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
       .get();
 
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: `Agent '${agentId}' not found`,
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
       });
     }
 
-    if (agent.status === 'TERMINATED') {
-      throw new WAIaaSError('AGENT_TERMINATED', {
-        message: `Agent '${agentId}' is already terminated`,
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED', {
+        message: `Wallet '${walletId}' is already terminated`,
       });
     }
 
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
     await deps.db
-      .update(agents)
+      .update(wallets)
       .set({ status: 'TERMINATED', updatedAt: now })
-      .where(eq(agents.id, agentId))
+      .where(eq(wallets.id, walletId))
       .run();
 
     return c.json(
       {
-        id: agentId,
+        id: walletId,
         status: 'TERMINATED' as const,
       },
       200,
@@ -398,29 +398,29 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
   });
 
   // ---------------------------------------------------------------------------
-  // PUT /agents/:id/owner
+  // PUT /wallets/:id/owner
   // ---------------------------------------------------------------------------
 
   router.openapi(setOwnerRoute, async (c) => {
-    const { id: agentId } = c.req.valid('param');
+    const { id: walletId } = c.req.valid('param');
 
-    // Look up agent
-    const agent = await deps.db
+    // Look up wallet
+    const wallet = await deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, agentId))
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
       .get();
 
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: `Agent '${agentId}' not found`,
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
       });
     }
 
     // Check if LOCKED -- needs ownerAuth, not just masterAuth
     const state = resolveOwnerState({
-      ownerAddress: agent.ownerAddress,
-      ownerVerified: agent.ownerVerified,
+      ownerAddress: wallet.ownerAddress,
+      ownerVerified: wallet.ownerVerified,
     });
 
     if (state === 'LOCKED') {
@@ -434,16 +434,16 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
     const ownerAddress = body.owner_address;
 
     if (!ownerAddress || typeof ownerAddress !== 'string') {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
         message: 'owner_address is required',
       });
     }
 
     // Validate owner_address format by chain type
-    const validation = validateOwnerAddress(agent.chain as ChainType, ownerAddress);
+    const validation = validateOwnerAddress(wallet.chain as ChainType, ownerAddress);
     if (!validation.valid) {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-        message: `Invalid owner address for ${agent.chain}: ${validation.error}`,
+        message: `Invalid owner address for ${wallet.chain}: ${validation.error}`,
       });
     }
 
@@ -451,18 +451,18 @@ export function agentRoutes(deps: AgentRouteDeps): OpenAPIHono {
     const normalizedAddress = validation.normalized!;
 
     // Set owner with normalized address
-    ownerLifecycle.setOwner(agentId, normalizedAddress);
+    ownerLifecycle.setOwner(walletId, normalizedAddress);
 
     // Fire-and-forget: notify owner set
-    void deps.notificationService?.notify('OWNER_SET', agentId, {
+    void deps.notificationService?.notify('OWNER_SET', walletId, {
       ownerAddress: normalizedAddress,
     });
 
-    // Fetch updated agent
+    // Fetch updated wallet
     const updated = await deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, agentId))
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
       .get();
 
     return c.json(

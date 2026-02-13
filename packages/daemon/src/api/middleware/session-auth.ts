@@ -4,7 +4,7 @@
  * Validates Authorization header format (Bearer wai_sess_...),
  * verifies JWT via JwtSecretManager (supports dual-key rotation),
  * checks session existence and revocation in SQLite,
- * and sets sessionId/agentId on Hono context.
+ * and sets sessionId/walletId on Hono context.
  *
  * Factory pattern: createSessionAuth(deps) returns middleware.
  *
@@ -64,7 +64,7 @@ export function createSessionAuth(deps: SessionAuthDeps) {
 
     // 5. Set context variables
     c.set('sessionId', payload.sub);
-    c.set('agentId', payload.agt);
+    c.set('walletId', payload.wlt);
 
     await next();
   });

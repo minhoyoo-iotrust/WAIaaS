@@ -17,7 +17,7 @@ import { eq, and, isNull, gt, sql } from 'drizzle-orm';
 import { WAIaaSError } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
-import { agents, sessions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -63,7 +63,7 @@ const createSessionRoute = createRoute({
       description: 'Session created with JWT token',
       content: { 'application/json': { schema: SessionCreateResponseSchema } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND', 'SESSION_LIMIT_EXCEEDED']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'SESSION_LIMIT_EXCEEDED']),
   },
 });
 
@@ -74,7 +74,7 @@ const listSessionsRoute = createRoute({
   summary: 'List active sessions',
   request: {
     query: z.object({
-      agentId: z.string().uuid().optional(),
+      walletId: z.string().uuid().optional(),
     }),
   },
   responses: {
@@ -82,7 +82,7 @@ const listSessionsRoute = createRoute({
       description: 'List of active sessions',
       content: { 'application/json': { schema: z.array(SessionListItemSchema) } },
     },
-    ...buildErrorResponses(['AGENT_NOT_FOUND']),
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
 });
 
@@ -135,7 +135,7 @@ const renewSessionRoute = createRoute({
  * Create session route sub-router.
  *
  * POST /sessions         -> create session + JWT issuance (201)
- * GET /sessions          -> list active sessions for agent (200)
+ * GET /sessions          -> list active sessions for wallet (200)
  * DELETE /sessions/:id   -> revoke session (200)
  * PUT /sessions/:id/renew -> renew session token (200)
  */
@@ -148,18 +148,18 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
   router.openapi(createSessionRoute, async (c) => {
     const parsed = c.req.valid('json');
 
-    // Verify agent exists
-    const agent = deps.db
+    // Verify wallet exists
+    const wallet = deps.db
       .select()
-      .from(agents)
-      .where(eq(agents.id, parsed.agentId))
+      .from(wallets)
+      .where(eq(wallets.id, parsed.walletId))
       .get();
 
-    if (!agent) {
-      throw new WAIaaSError('AGENT_NOT_FOUND');
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
     }
 
-    // Check active session count for this agent
+    // Check active session count for this wallet
     const nowSec = Math.floor(Date.now() / 1000);
     const nowDate = new Date(nowSec * 1000);
 
@@ -168,7 +168,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       .from(sessions)
       .where(
         and(
-          eq(sessions.agentId, parsed.agentId),
+          eq(sessions.walletId, parsed.walletId),
           isNull(sessions.revokedAt),
           gt(sessions.expiresAt, nowDate),
         ),
@@ -176,11 +176,11 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       .get();
 
     const activeCount = activeCountResult?.count ?? 0;
-    const maxSessions = deps.config.security.max_sessions_per_agent;
+    const maxSessions = deps.config.security.max_sessions_per_wallet;
 
     if (activeCount >= maxSessions) {
       throw new WAIaaSError('SESSION_LIMIT_EXCEEDED', {
-        message: `Agent has ${activeCount} active sessions (max: ${maxSessions})`,
+        message: `Wallet has ${activeCount} active sessions (max: ${maxSessions})`,
       });
     }
 
@@ -195,7 +195,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Create JWT payload and sign token
     const jwtPayload: JwtPayload = {
       sub: sessionId,
-      agt: parsed.agentId,
+      wlt: parsed.walletId,
       iat: nowSec,
       exp: expiresAt,
     };
@@ -207,7 +207,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Insert session into DB
     deps.db.insert(sessions).values({
       id: sessionId,
-      agentId: parsed.agentId,
+      walletId: parsed.walletId,
       tokenHash,
       expiresAt: new Date(expiresAt * 1000),
       absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
@@ -218,7 +218,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     }).run();
 
     // Fire-and-forget: notify session creation
-    void deps.notificationService?.notify('SESSION_CREATED', parsed.agentId, {
+    void deps.notificationService?.notify('SESSION_CREATED', parsed.walletId, {
       sessionId,
     });
 
@@ -227,21 +227,21 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         id: sessionId,
         token,
         expiresAt,
-        agentId: parsed.agentId,
+        walletId: parsed.walletId,
       },
       201,
     );
   });
 
   // -------------------------------------------------------------------------
-  // GET /sessions -- list active sessions for an agent
+  // GET /sessions -- list active sessions for a wallet
   // -------------------------------------------------------------------------
   router.openapi(listSessionsRoute, (c) => {
-    const { agentId } = c.req.valid('query');
+    const { walletId } = c.req.valid('query');
 
-    if (!agentId) {
-      throw new WAIaaSError('AGENT_NOT_FOUND', {
-        message: 'agentId query parameter required',
+    if (!walletId) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: 'walletId query parameter required',
       });
     }
 
@@ -250,7 +250,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       .from(sessions)
       .where(
         and(
-          eq(sessions.agentId, agentId),
+          eq(sessions.walletId, walletId),
           isNull(sessions.revokedAt),
         ),
       )
@@ -265,7 +265,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
       return {
         id: row.id,
-        agentId: row.agentId,
+        walletId: row.walletId,
         status,
         renewalCount: row.renewalCount,
         maxRenewals: row.maxRenewals,
@@ -379,7 +379,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     const newPayload: JwtPayload = {
       sub: sessionId,
-      agt: session.agentId,
+      wlt: session.walletId,
       iat: nowSec,
       exp: newExpiresAt,
     };

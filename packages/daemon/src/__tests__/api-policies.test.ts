@@ -88,7 +88,7 @@ function mockConfig(): DaemonConfig {
     security: {
       session_ttl: 86400,
       jwt_secret: '',
-      max_sessions_per_agent: 5,
+      max_sessions_per_wallet: 5,
       max_pending_tx: 10,
       nonce_storage: 'memory',
       nonce_cache_max: 1000,
@@ -157,15 +157,15 @@ function masterHeaders(extra?: Record<string, string>) {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: create an agent for agentId-linked policies
+// Helper: create an agent for walletId-linked policies
 // ---------------------------------------------------------------------------
 
-async function createTestAgent(): Promise<string> {
+async function createTestWallet(): Promise<string> {
   const id = generateId();
   const now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(id, 'test-agent', 'solana', 'devnet', '11111111111111111111111111111112', 'ACTIVE', now, now);
@@ -198,7 +198,7 @@ describe('POST /v1/policies', () => {
     expect(body.type).toBe('SPENDING_LIMIT');
     expect(body.priority).toBe(10);
     expect(body.enabled).toBe(true);
-    expect(body.agentId).toBeNull();
+    expect(body.walletId).toBeNull();
     expect(body.id).toBeTruthy();
     const rules = body.rules as Record<string, unknown>;
     expect(rules.instant_max).toBe('1000000000');
@@ -238,12 +238,12 @@ describe('POST /v1/policies', () => {
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
   });
 
-  it('should return 404 for non-existent agentId', async () => {
+  it('should return 404 for non-existent walletId', async () => {
     const res = await app.request('/v1/policies', {
       method: 'POST',
       headers: masterHeaders(),
       body: JSON.stringify({
-        agentId: '00000000-0000-7000-8000-000000000000',
+        walletId: '00000000-0000-7000-8000-000000000000',
         type: 'WHITELIST',
         rules: { allowed_addresses: [] },
       }),
@@ -251,7 +251,7 @@ describe('POST /v1/policies', () => {
 
     expect(res.status).toBe(404);
     const body = await json(res);
-    expect(body.code).toBe('AGENT_NOT_FOUND');
+    expect(body.code).toBe('WALLET_NOT_FOUND');
   });
 
   it('should return 401 without masterAuth header', async () => {
@@ -275,7 +275,7 @@ describe('POST /v1/policies', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /v1/policies', () => {
-  it('should return all policies when no agentId filter', async () => {
+  it('should return all policies when no walletId filter', async () => {
     // Create two policies
     await app.request('/v1/policies', {
       method: 'POST',
@@ -308,8 +308,8 @@ describe('GET /v1/policies', () => {
     expect((body[1] as Record<string, unknown>).type).toBe('SPENDING_LIMIT');
   });
 
-  it('should filter by agentId and include global policies', async () => {
-    const agentId = await createTestAgent();
+  it('should filter by walletId and include global policies', async () => {
+    const walletId = await createTestWallet();
 
     // Global policy
     await app.request('/v1/policies', {
@@ -320,24 +320,24 @@ describe('GET /v1/policies', () => {
         rules: { instant_max: '100', notify_max: '200', delay_max: '300' },
       }),
     });
-    // Agent-specific policy
+    // Wallet-specific policy
     await app.request('/v1/policies', {
       method: 'POST',
       headers: masterHeaders(),
       body: JSON.stringify({
-        agentId,
+        walletId,
         type: 'WHITELIST',
         rules: { allowed_addresses: ['Addr1'] },
       }),
     });
 
-    const res = await app.request(`/v1/policies?agentId=${agentId}`, {
+    const res = await app.request(`/v1/policies?walletId=${walletId}`, {
       headers: masterHeaders(),
     });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as unknown[];
-    expect(body).toHaveLength(2); // both global and agent-specific
+    expect(body).toHaveLength(2); // both global and wallet-specific
   });
 });
 

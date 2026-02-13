@@ -83,7 +83,7 @@ const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
 
 interface PolicyRow {
   id: string;
-  agentId: string | null;
+  walletId: string | null;
   type: string;
   rules: string;
   priority: number;
@@ -143,7 +143,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       .from(policies)
       .where(
         and(
-          or(eq(policies.agentId, agentId), isNull(policies.agentId)),
+          or(eq(policies.walletId, agentId), isNull(policies.walletId)),
           eq(policies.enabled, true),
         ),
       )
@@ -238,7 +238,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       .from(policies)
       .where(
         and(
-          or(eq(policies.agentId, agentId), isNull(policies.agentId)),
+          or(eq(policies.walletId, agentId), isNull(policies.walletId)),
           eq(policies.enabled, true),
         ),
       )
@@ -410,9 +410,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // Step 1: Load enabled policies via raw SQL (inside IMMEDIATE txn)
       const policyRows = sqlite
         .prepare(
-          `SELECT id, agent_id AS agentId, type, rules, priority, enabled
+          `SELECT id, wallet_id AS walletId, type, rules, priority, enabled
            FROM policies
-           WHERE (agent_id = ? OR agent_id IS NULL)
+           WHERE (wallet_id = ? OR wallet_id IS NULL)
              AND enabled = 1
            ORDER BY priority DESC`,
         )
@@ -476,7 +476,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
           .prepare(
             `SELECT COALESCE(SUM(CAST(reserved_amount AS INTEGER)), 0) AS total
              FROM transactions
-             WHERE agent_id = ?
+             WHERE wallet_id = ?
                AND status IN ('PENDING', 'QUEUED')
                AND reserved_amount IS NOT NULL`,
           )
@@ -556,17 +556,17 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    * Resolve policy overrides: for each policy type, agent-specific wins over global.
    * Returns deduplicated policy list (one per type, agent-specific preferred).
    */
-  private resolveOverrides(rows: PolicyRow[], agentId: string): PolicyRow[] {
+  private resolveOverrides(rows: PolicyRow[], walletId: string): PolicyRow[] {
     const typeMap = new Map<string, PolicyRow>();
 
     // Rows are already sorted by priority DESC.
-    // For each type, prefer agent-specific over global.
+    // For each type, prefer wallet-specific over global.
     for (const row of rows) {
       const existing = typeMap.get(row.type);
       if (!existing) {
         typeMap.set(row.type, row);
-      } else if (row.agentId === agentId && existing.agentId !== agentId) {
-        // Agent-specific overrides global
+      } else if (row.walletId === walletId && existing.walletId !== walletId) {
+        // Wallet-specific overrides global
         typeMap.set(row.type, row);
       }
     }

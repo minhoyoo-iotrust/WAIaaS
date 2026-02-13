@@ -18,7 +18,7 @@
 
 import type { Database } from 'better-sqlite3';
 import {
-  AGENT_STATUSES,
+  WALLET_STATUSES,
   CHAIN_TYPES,
   NETWORK_TYPES,
   TRANSACTION_STATUSES,
@@ -54,7 +54,7 @@ function getCreateTableStatements(): string[] {
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
   network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
   public_key TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(AGENT_STATUSES)})),
+  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
   owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
   created_at INTEGER NOT NULL,
@@ -269,7 +269,7 @@ MIGRATIONS.push({
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
   network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
   public_key TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(AGENT_STATUSES)})),
+  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
   owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
   created_at INTEGER NOT NULL,

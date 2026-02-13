@@ -90,7 +90,7 @@ let sqlite: DatabaseType;
 let db: ReturnType<typeof createDatabase>['db'];
 let app: Hono;
 
-const TEST_AGENT_ID = '00000002-0002-7002-8002-000000000002';
+const TEST_WALLET_ID = '00000002-0002-7002-8002-000000000002';
 
 /** Type-safe JSON body extraction from Response. */
 async function json(res: Response): Promise<Record<string, unknown>> {
@@ -112,14 +112,14 @@ function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
 }
 
 /** Seed a test agent with optional owner address, chain, and network */
-function seedAgent(opts?: { ownerAddress?: string | null; chain?: string; network?: string }) {
+function seedWallet(opts?: { ownerAddress?: string | null; chain?: string; network?: string }) {
   const ts = nowSeconds();
   sqlite.prepare(
-    `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+    `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    TEST_AGENT_ID,
-    'SIWE Test Agent',
+    TEST_WALLET_ID,
+    'SIWE Test Wallet',
     opts?.chain ?? 'ethereum',
     opts?.network ?? 'mainnet',
     'pk-siwe-test',
@@ -181,12 +181,12 @@ afterEach(() => {
 
 describe('ownerAuth middleware (SIWE / EVM)', () => {
   it('passes through when valid SIWE signature matches EVM owner address', async () => {
-    seedAgent({ ownerAddress: testAccount.address });
+    seedWallet({ ownerAddress: testAccount.address });
 
     const siweMessage = buildSiweMessage(testAccount.address);
     const signature = await testAccount.signMessage({ message: siweMessage });
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': signature,
@@ -202,13 +202,13 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
   });
 
   it('rejects with 401 when SIWE signature is from different account', async () => {
-    seedAgent({ ownerAddress: testAccount.address });
+    seedWallet({ ownerAddress: testAccount.address });
 
     const siweMessage = buildSiweMessage(testAccount.address);
     // Sign with a DIFFERENT account
     const signature = await otherAccount.signMessage({ message: siweMessage });
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': signature,
@@ -223,14 +223,14 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
   });
 
   it('rejects with 401 when SIWE message is expired', async () => {
-    seedAgent({ ownerAddress: testAccount.address });
+    seedWallet({ ownerAddress: testAccount.address });
 
     const siweMessage = buildSiweMessage(testAccount.address, {
       expirationTime: new Date(Date.now() - 60_000), // 1 minute in the past
     });
     const signature = await testAccount.signMessage({ message: siweMessage });
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': signature,
@@ -245,10 +245,10 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
   });
 
   it('rejects with 401 when headers missing', async () => {
-    seedAgent({ ownerAddress: testAccount.address });
+    seedWallet({ ownerAddress: testAccount.address });
 
     // No headers at all
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
     });
     expect(res.status).toBe(401);
@@ -258,12 +258,12 @@ describe('ownerAuth middleware (SIWE / EVM)', () => {
   });
 
   it('rejects with 404 when EVM agent has no owner', async () => {
-    seedAgent({ ownerAddress: null });
+    seedWallet({ ownerAddress: null });
 
     const siweMessage = buildSiweMessage(testAccount.address);
     const signature = await testAccount.signMessage({ message: siweMessage });
 
-    const res = await app.request(`/protected/${TEST_AGENT_ID}/action`, {
+    const res = await app.request(`/protected/${TEST_WALLET_ID}/action`, {
       method: 'POST',
       headers: {
         'X-Owner-Signature': signature,
@@ -286,24 +286,24 @@ describe('setOwner address validation (SIWE-03)', () => {
   /** Seed an agent for setOwner tests (no owner set -- NONE state) */
   function seedSetOwnerAgent(
     sqliteDb: DatabaseType,
-    agentId: string,
+    walletId: string,
     chain: string,
     network: string,
   ): void {
     const ts = Math.floor(Date.now() / 1000);
     sqliteDb
       .prepare(
-        `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+        `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(agentId, `SetOwner Test ${chain}`, chain, network, `pk-setowner-${agentId}`, 'ACTIVE', 0, ts, ts);
+      .run(walletId, `SetOwner Test ${chain}`, chain, network, `pk-setowner-${walletId}`, 'ACTIVE', 0, ts, ts);
   }
 
   it('setOwner accepts EVM agent with valid EIP-55 address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
-    const agentId = generateId();
-    seedSetOwnerAgent(conn.sqlite, agentId, 'ethereum', 'mainnet');
+    const walletId = generateId();
+    seedSetOwnerAgent(conn.sqlite, walletId, 'ethereum', 'mainnet');
 
     const fullApp = createApp({
       db: conn.db,
@@ -314,7 +314,7 @@ describe('setOwner address validation (SIWE-03)', () => {
       config: DaemonConfigSchema.parse({}),
     });
 
-    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+    const res = await fullApp.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: testAccount.address }),
@@ -330,8 +330,8 @@ describe('setOwner address validation (SIWE-03)', () => {
   it('setOwner rejects EVM agent with all-lowercase address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
-    const agentId = generateId();
-    seedSetOwnerAgent(conn.sqlite, agentId, 'ethereum', 'mainnet');
+    const walletId = generateId();
+    seedSetOwnerAgent(conn.sqlite, walletId, 'ethereum', 'mainnet');
 
     const fullApp = createApp({
       db: conn.db,
@@ -343,7 +343,7 @@ describe('setOwner address validation (SIWE-03)', () => {
     });
 
     const lowercaseAddress = testAccount.address.toLowerCase();
-    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+    const res = await fullApp.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: lowercaseAddress }),
@@ -359,8 +359,8 @@ describe('setOwner address validation (SIWE-03)', () => {
   it('setOwner accepts Solana agent with valid base58 32-byte address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
-    const agentId = generateId();
-    seedSetOwnerAgent(conn.sqlite, agentId, 'solana', 'mainnet');
+    const walletId = generateId();
+    seedSetOwnerAgent(conn.sqlite, walletId, 'solana', 'mainnet');
 
     const fullApp = createApp({
       db: conn.db,
@@ -373,7 +373,7 @@ describe('setOwner address validation (SIWE-03)', () => {
 
     // Well-known Solana System Program address (32 bytes)
     const solanaAddress = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
-    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+    const res = await fullApp.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: solanaAddress }),
@@ -389,8 +389,8 @@ describe('setOwner address validation (SIWE-03)', () => {
   it('setOwner rejects Solana agent with 0x ethereum address', async () => {
     const conn = createDatabase(':memory:');
     pushSchema(conn.sqlite);
-    const agentId = generateId();
-    seedSetOwnerAgent(conn.sqlite, agentId, 'solana', 'mainnet');
+    const walletId = generateId();
+    seedSetOwnerAgent(conn.sqlite, walletId, 'solana', 'mainnet');
 
     const fullApp = createApp({
       db: conn.db,
@@ -401,7 +401,7 @@ describe('setOwner address validation (SIWE-03)', () => {
       config: DaemonConfigSchema.parse({}),
     });
 
-    const res = await fullApp.request(`/v1/agents/${agentId}/owner`, {
+    const res = await fullApp.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({ owner_address: testAccount.address }),

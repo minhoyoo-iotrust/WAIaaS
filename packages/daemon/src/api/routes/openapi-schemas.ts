@@ -13,7 +13,7 @@ import { z } from '@hono/zod-openapi';
 import {
   ERROR_CODES,
   WAIaaSError,
-  CreateAgentRequestSchema,
+  CreateWalletRequestSchema,
   CreateSessionRequestSchema,
   SendTransactionRequestSchema,
   CreatePolicyRequestSchema,
@@ -55,10 +55,10 @@ export const HealthResponseSchema = z
   .openapi('HealthResponse');
 
 // ---------------------------------------------------------------------------
-// Agent Response Schemas
+// Wallet CRUD Response Schemas
 // ---------------------------------------------------------------------------
 
-export const AgentResponseSchema = z
+export const WalletCrudResponseSchema = z
   .object({
     id: z.string().uuid(),
     name: z.string(),
@@ -68,9 +68,9 @@ export const AgentResponseSchema = z
     status: z.string(),
     createdAt: z.number().int(),
   })
-  .openapi('AgentResponse');
+  .openapi('WalletCrudResponse');
 
-export const AgentOwnerResponseSchema = z
+export const WalletOwnerResponseSchema = z
   .object({
     id: z.string().uuid(),
     name: z.string(),
@@ -82,15 +82,15 @@ export const AgentOwnerResponseSchema = z
     ownerVerified: z.boolean().nullable(),
     updatedAt: z.number().int().nullable(),
   })
-  .openapi('AgentOwnerResponse');
+  .openapi('WalletOwnerResponse');
 
 // ---------------------------------------------------------------------------
-// Wallet Response Schemas
+// Wallet Query Response Schemas
 // ---------------------------------------------------------------------------
 
 export const WalletAddressResponseSchema = z
   .object({
-    agentId: z.string().uuid(),
+    walletId: z.string().uuid(),
     chain: z.string(),
     network: z.string(),
     address: z.string(),
@@ -99,7 +99,7 @@ export const WalletAddressResponseSchema = z
 
 export const WalletBalanceResponseSchema = z
   .object({
-    agentId: z.string().uuid(),
+    walletId: z.string().uuid(),
     chain: z.string(),
     network: z.string(),
     address: z.string(),
@@ -118,14 +118,14 @@ export const SessionCreateResponseSchema = z
     id: z.string().uuid(),
     token: z.string(),
     expiresAt: z.number().int(),
-    agentId: z.string().uuid(),
+    walletId: z.string().uuid(),
   })
   .openapi('SessionCreateResponse');
 
 export const SessionListItemSchema = z
   .object({
     id: z.string().uuid(),
-    agentId: z.string().uuid(),
+    walletId: z.string().uuid(),
     status: z.string(),
     renewalCount: z.number().int(),
     maxRenewals: z.number().int(),
@@ -167,7 +167,7 @@ export const TxSendResponseSchema = z
 export const TxDetailResponseSchema = z
   .object({
     id: z.string().uuid(),
-    agentId: z.string().uuid(),
+    walletId: z.string().uuid(),
     type: z.string(),
     status: z.string(),
     tier: z.string().nullable(),
@@ -210,7 +210,7 @@ export const TxCancelResponseSchema = z
 export const PolicyResponseSchema = z
   .object({
     id: z.string().uuid(),
-    agentId: z.string().uuid().nullable(),
+    walletId: z.string().uuid().nullable(),
     type: z.string(),
     rules: z.record(z.unknown()),
     priority: z.number().int(),
@@ -272,7 +272,7 @@ export function buildErrorResponses(
 // Re-exported Request Schemas with OpenAPI metadata
 // ---------------------------------------------------------------------------
 
-export const CreateAgentRequestOpenAPI = CreateAgentRequestSchema.openapi('CreateAgentRequest');
+export const CreateWalletRequestOpenAPI = CreateWalletRequestSchema.openapi('CreateWalletRequest');
 export const CreateSessionRequestOpenAPI = CreateSessionRequestSchema.openapi('CreateSessionRequest');
 export const SendTransactionRequestOpenAPI = SendTransactionRequestSchema.openapi('SendTransactionRequest');
 export const CreatePolicyRequestOpenAPI = CreatePolicyRequestSchema.openapi('CreatePolicyRequest');
@@ -331,7 +331,7 @@ export function openApiValidationHook(result: { success: boolean; error?: unknow
 
 export const WalletAssetsResponseSchema = z
   .object({
-    agentId: z.string().uuid(),
+    walletId: z.string().uuid(),
     chain: z.string(),
     network: z.string(),
     assets: z.array(
@@ -378,16 +378,16 @@ export const NonceResponseSchema = z
   .openapi('NonceResponse');
 
 // ---------------------------------------------------------------------------
-// Agent List / Detail Response Schemas (GET /v1/agents, GET /v1/agents/:id)
+// Wallet List / Detail Response Schemas (GET /v1/wallets, GET /v1/wallets/:id)
 // ---------------------------------------------------------------------------
 
-export const AgentListResponseSchema = z
+export const WalletListResponseSchema = z
   .object({
-    items: z.array(AgentResponseSchema),
+    items: z.array(WalletCrudResponseSchema),
   })
-  .openapi('AgentListResponse');
+  .openapi('WalletListResponse');
 
-export const AgentDetailResponseSchema = z
+export const WalletDetailResponseSchema = z
   .object({
     id: z.string().uuid(),
     name: z.string(),
@@ -401,9 +401,9 @@ export const AgentDetailResponseSchema = z
     createdAt: z.number().int(),
     updatedAt: z.number().int().nullable(),
   })
-  .openapi('AgentDetailResponse');
+  .openapi('WalletDetailResponse');
 
-// Owner address request body schema (for PUT /agents/:id/owner)
+// Owner address request body schema (for PUT /wallets/:id/owner)
 export const SetOwnerRequestSchema = z
   .object({
     owner_address: z.string().min(1),
@@ -411,21 +411,21 @@ export const SetOwnerRequestSchema = z
   .openapi('SetOwnerRequest');
 
 // ---------------------------------------------------------------------------
-// Agent CRUD Schemas (PUT /agents/:id, DELETE /agents/:id)
+// Wallet CRUD Schemas (PUT /wallets/:id, DELETE /wallets/:id)
 // ---------------------------------------------------------------------------
 
-export const UpdateAgentRequestSchema = z
+export const UpdateWalletRequestSchema = z
   .object({
     name: z.string().min(1).max(100),
   })
-  .openapi('UpdateAgentRequest');
+  .openapi('UpdateWalletRequest');
 
-export const AgentDeleteResponseSchema = z
+export const WalletDeleteResponseSchema = z
   .object({
     id: z.string().uuid(),
     status: z.literal('TERMINATED'),
   })
-  .openapi('AgentDeleteResponse');
+  .openapi('WalletDeleteResponse');
 
 // ---------------------------------------------------------------------------
 // Admin Response Schemas (6 admin endpoints)
@@ -436,7 +436,7 @@ export const AdminStatusResponseSchema = z
     status: z.string(),
     version: z.string(),
     uptime: z.number().int(),
-    agentCount: z.number().int(),
+    walletCount: z.number().int(),
     activeSessionCount: z.number().int(),
     killSwitchState: z.string(),
     adminTimeout: z.number().int(),
@@ -519,7 +519,7 @@ export const NotificationLogEntrySchema = z
   .object({
     id: z.string(),
     eventType: z.string(),
-    agentId: z.string().nullable(),
+    walletId: z.string().nullable(),
     channel: z.string(),
     status: z.string(),
     error: z.string().nullable(),

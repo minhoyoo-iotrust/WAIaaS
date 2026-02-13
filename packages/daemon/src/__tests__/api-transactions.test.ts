@@ -4,7 +4,7 @@
  * Uses in-memory SQLite + mock adapter + mock keyStore + Hono app.request().
  * Follows same pattern as api-agents.test.ts.
  *
- * v1.2: POST /v1/agents requires X-Master-Password (masterAuth).
+ * v1.2: POST /v1/wallets requires X-Master-Password (masterAuth).
  *        POST /v1/transactions/send and GET /v1/transactions/:id require sessionAuth.
  */
 
@@ -102,7 +102,7 @@ function mockConfig(): DaemonConfig {
     security: {
       session_ttl: 86400,
       jwt_secret: '',
-      max_sessions_per_agent: 5,
+      max_sessions_per_wallet: 5,
       max_pending_tx: 10,
       nonce_storage: 'memory',
       nonce_cache_max: 1000,
@@ -241,34 +241,34 @@ afterEach(() => {
 // Auth helpers
 // ---------------------------------------------------------------------------
 
-/** Create an agent (with masterAuth) and return its ID. */
-async function createTestAgent(): Promise<string> {
-  const res = await app.request('/v1/agents', {
+/** Create a wallet (with masterAuth) and return its ID. */
+async function createTestWallet(): Promise<string> {
+  const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: {
       Host: HOST,
       'Content-Type': 'application/json',
       'X-Master-Password': TEST_MASTER_PASSWORD,
     },
-    body: JSON.stringify({ name: 'tx-test-agent' }),
+    body: JSON.stringify({ name: 'tx-test-wallet' }),
   });
   const body = await json(res);
   return body.id as string;
 }
 
-/** Create a session token for the given agent. Returns "Bearer wai_sess_<token>". */
-async function createSessionToken(agentId: string): Promise<string> {
+/** Create a session token for the given wallet. Returns "Bearer wai_sess_<token>". */
+async function createSessionToken(walletId: string): Promise<string> {
   const sessionId = generateId();
   const now = Math.floor(Date.now() / 1000);
 
   conn.sqlite.prepare(
-    `INSERT INTO sessions (id, agent_id, token_hash, expires_at, absolute_expires_at, created_at)
+    `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(sessionId, agentId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+  ).run(sessionId, walletId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
 
   const payload: JwtPayload = {
     sub: sessionId,
-    agt: agentId,
+    wlt: walletId,
     iat: now,
     exp: now + 3600,
   };
@@ -282,8 +282,8 @@ async function createSessionToken(agentId: string): Promise<string> {
 
 describe('POST /v1/transactions/send', () => {
   it('should return 201 with txId for valid request', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -305,8 +305,8 @@ describe('POST /v1/transactions/send', () => {
   });
 
   it('should return 400 for invalid amount (non-numeric)', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -347,10 +347,10 @@ describe('POST /v1/transactions/send', () => {
   it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
     // Sign a JWT with valid format but session not in DB
     const fakeSessionId = generateId();
-    const fakeAgentId = '00000000-0000-7000-8000-000000000000';
+    const fakeWalletId = '00000000-0000-7000-8000-000000000000';
     const now = Math.floor(Date.now() / 1000);
 
-    const payload: JwtPayload = { sub: fakeSessionId, agt: fakeAgentId, iat: now, exp: now + 3600 };
+    const payload: JwtPayload = { sub: fakeSessionId, wlt: fakeWalletId, iat: now, exp: now + 3600 };
     const token = await jwtSecretManager.signToken(payload);
 
     const res = await app.request('/v1/transactions/send', {
@@ -390,9 +390,9 @@ describe('POST /v1/transactions/send', () => {
     expect(body.code).toBe('INVALID_TOKEN');
   });
 
-  it('should persist transaction with correct agentId from session', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+  it('should persist transaction with correct walletId from session', async () => {
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -417,7 +417,7 @@ describe('POST /v1/transactions/send', () => {
       unknown
     >;
     expect(row).toBeTruthy();
-    expect(row.agent_id).toBe(agentId);
+    expect(row.wallet_id).toBe(walletId);
     expect(row.amount).toBe('500000');
     expect(row.to_address).toBe('Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
   });
@@ -429,8 +429,8 @@ describe('POST /v1/transactions/send', () => {
 
 describe('GET /v1/transactions/:id', () => {
   it('should return 200 with transaction JSON for existing transaction', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     // Create a transaction via POST
     const sendRes = await app.request('/v1/transactions/send', {
@@ -456,7 +456,7 @@ describe('GET /v1/transactions/:id', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.id).toBe(txId);
-    expect(body.agentId).toBe(agentId);
+    expect(body.walletId).toBe(walletId);
     expect(body.type).toBe('TRANSFER');
     expect(body.amount).toBe('500000000');
     expect(body.toAddress).toBe('Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
@@ -464,8 +464,8 @@ describe('GET /v1/transactions/:id', () => {
   });
 
   it('should return 404 for non-existent transaction ID', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/00000000-0000-7000-8000-000000000000', {
       headers: { Host: HOST, Authorization: authHeader },
@@ -477,8 +477,8 @@ describe('GET /v1/transactions/:id', () => {
   });
 
   it('should include all expected fields in response', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     // Create a transaction
     const sendRes = await app.request('/v1/transactions/send', {
@@ -505,7 +505,7 @@ describe('GET /v1/transactions/:id', () => {
 
     // Verify all expected fields exist
     expect(body).toHaveProperty('id');
-    expect(body).toHaveProperty('agentId');
+    expect(body).toHaveProperty('walletId');
     expect(body).toHaveProperty('type');
     expect(body).toHaveProperty('status');
     expect(body).toHaveProperty('tier');
@@ -593,8 +593,8 @@ describe('5-type transaction request support', () => {
   }
 
   it('legacy fallback: POST without type field returns 201, DB type=TRANSFER', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
@@ -636,8 +636,8 @@ describe('5-type transaction request support', () => {
       jwtSecretManager,
     });
 
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await localApp.request('/v1/transactions/send', {
       method: 'POST',
@@ -680,8 +680,8 @@ describe('5-type transaction request support', () => {
       jwtSecretManager,
     });
 
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await localApp.request('/v1/transactions/send', {
       method: 'POST',
@@ -728,8 +728,8 @@ describe('5-type transaction request support', () => {
       jwtSecretManager,
     });
 
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await localApp.request('/v1/transactions/send', {
       method: 'POST',
@@ -774,8 +774,8 @@ describe('5-type transaction request support', () => {
       jwtSecretManager,
     });
 
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await localApp.request('/v1/transactions/send', {
       method: 'POST',
@@ -821,8 +821,8 @@ describe('5-type transaction request support', () => {
       jwtSecretManager,
     });
 
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await localApp.request('/v1/transactions/send', {
       method: 'POST',
@@ -853,8 +853,8 @@ describe('5-type transaction request support', () => {
   });
 
   it('invalid type returns 400', async () => {
-    const agentId = await createTestAgent();
-    const authHeader = await createSessionToken(agentId);
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
 
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',

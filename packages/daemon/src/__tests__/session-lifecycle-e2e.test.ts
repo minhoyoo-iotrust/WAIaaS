@@ -222,23 +222,23 @@ function ownerAuthHeaders(
 // Seed helpers
 // ---------------------------------------------------------------------------
 
-function seedAgent(
+function seedWallet(
   sqlite: DatabaseType,
-  agentId: string,
+  walletId: string,
   opts?: { ownerAddress?: string | null; ownerVerified?: boolean },
 ): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
-      agentId,
-      'Test Agent',
+      walletId,
+      'Test Wallet',
       'solana',
       'devnet',
-      `pk-${agentId}`,
+      `pk-${walletId}`,
       'ACTIVE',
       opts?.ownerVerified ? 1 : 0,
       opts?.ownerAddress ?? null,
@@ -249,7 +249,7 @@ function seedAgent(
 
 function seedSpendingLimitPolicy(
   sqlite: DatabaseType,
-  agentId: string,
+  walletId: string,
   rules: {
     instant_max: string;
     notify_max: string;
@@ -261,10 +261,10 @@ function seedSpendingLimitPolicy(
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO policies (id, agent_id, type, rules, priority, enabled, created_at, updated_at)
+      `INSERT INTO policies (id, wallet_id, type, rules, priority, enabled, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(id, agentId, 'SPENDING_LIMIT', JSON.stringify(rules), 100, 1, ts, ts);
+    .run(id, walletId, 'SPENDING_LIMIT', JSON.stringify(rules), 100, 1, ts, ts);
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +279,7 @@ let delayQueue: DelayQueue;
 let approvalWorkflow: ApprovalWorkflow;
 let ownerLifecycle: OwnerLifecycleService;
 let app: OpenAPIHono;
-let testAgentId: string;
+let testWalletId: string;
 
 beforeAll(async () => {
   passwordHash = await argon2.hash(TEST_PASSWORD, {
@@ -331,8 +331,8 @@ beforeEach(async () => {
     ownerLifecycle,
   });
 
-  testAgentId = generateId();
-  seedAgent(sqlite, testAgentId);
+  testWalletId = generateId();
+  seedWallet(sqlite, testWalletId);
 });
 
 afterEach(() => {
@@ -354,7 +354,7 @@ describe('Session Lifecycle E2E (TEST-03)', () => {
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId, ttl: SESSION_TTL }),
+      body: JSON.stringify({ walletId: testWalletId, ttl: SESSION_TTL }),
     });
     expect(createRes.status).toBe(201);
     const created = await json(createRes);
@@ -368,8 +368,8 @@ describe('Session Lifecycle E2E (TEST-03)', () => {
     });
     expect(walletRes.status).toBe(200);
     const walletBody = await json(walletRes);
-    expect(walletBody.agentId).toBe(testAgentId);
-    expect(walletBody.address).toBe(`pk-${testAgentId}`);
+    expect(walletBody.walletId).toBe(testWalletId);
+    expect(walletBody.address).toBe(`pk-${testWalletId}`);
 
     // 3. Advance time past 50% TTL (> 1800 seconds)
     vi.advanceTimersByTime(1801 * 1000);
@@ -392,7 +392,7 @@ describe('Session Lifecycle E2E (TEST-03)', () => {
     });
     expect(walletRes2.status).toBe(200);
     const walletBody2 = await json(walletRes2);
-    expect(walletBody2.agentId).toBe(testAgentId);
+    expect(walletBody2.walletId).toBe(testWalletId);
 
     // 6. DELETE /v1/sessions/:id with masterAuth -> 200
     const deleteRes = await app.request(`/v1/sessions/${sessionId}`, {
@@ -420,7 +420,7 @@ describe('Session Lifecycle E2E (TEST-03)', () => {
 describe('DELAY Workflow E2E (TEST-04)', () => {
   it('DELAY: send -> QUEUED status -> processExpired -> CONFIRMED', async () => {
     // Setup: SPENDING_LIMIT where 5 SOL (5_000_000_000) triggers DELAY tier
-    seedSpendingLimitPolicy(sqlite, testAgentId, {
+    seedSpendingLimitPolicy(sqlite, testWalletId, {
       instant_max: '1000000000',   // 1 SOL
       notify_max: '2000000000',     // 2 SOL
       delay_max: '10000000000',     // 10 SOL
@@ -431,7 +431,7 @@ describe('DELAY Workflow E2E (TEST-04)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -478,7 +478,7 @@ describe('DELAY Workflow E2E (TEST-04)', () => {
   });
 
   it('DELAY: send -> QUEUED -> cancel before expiry -> CANCELLED', async () => {
-    seedSpendingLimitPolicy(sqlite, testAgentId, {
+    seedSpendingLimitPolicy(sqlite, testWalletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -489,7 +489,7 @@ describe('DELAY Workflow E2E (TEST-04)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId: testAgentId }),
+      body: JSON.stringify({ walletId: testWalletId }),
     });
     const session = await json(sessionRes);
     const token = session.token as string;
@@ -547,14 +547,14 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
 
   it('APPROVAL: send -> QUEUED -> owner approves -> EXECUTING', async () => {
     // Create agent with owner address (GRACE state) so APPROVAL is not downgraded
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: ownerKeypair.address,
       ownerVerified: false,
     });
 
     // Setup policy: amount > 10 SOL triggers APPROVAL
-    seedSpendingLimitPolicy(sqlite, agentId, {
+    seedSpendingLimitPolicy(sqlite, walletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -565,7 +565,7 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     expect(sessionRes.status).toBe(201);
     const session = await json(sessionRes);
@@ -619,13 +619,13 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
   });
 
   it('APPROVAL: send -> QUEUED -> owner rejects -> CANCELLED', async () => {
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: ownerKeypair.address,
       ownerVerified: false,
     });
 
-    seedSpendingLimitPolicy(sqlite, agentId, {
+    seedSpendingLimitPolicy(sqlite, walletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -635,7 +635,7 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     const session = await json(sessionRes);
     const token = session.token as string;
@@ -680,13 +680,13 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
   });
 
   it('APPROVAL: send -> QUEUED -> timeout -> EXPIRED', async () => {
-    const agentId = generateId();
-    seedAgent(sqlite, agentId, {
+    const walletId = generateId();
+    seedWallet(sqlite, walletId, {
       ownerAddress: ownerKeypair.address,
       ownerVerified: false,
     });
 
-    seedSpendingLimitPolicy(sqlite, agentId, {
+    seedSpendingLimitPolicy(sqlite, walletId, {
       instant_max: '1000000000',
       notify_max: '2000000000',
       delay_max: '10000000000',
@@ -696,7 +696,7 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
     const sessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ agentId }),
+      body: JSON.stringify({ walletId }),
     });
     const session = await json(sessionRes);
     const token = session.token as string;

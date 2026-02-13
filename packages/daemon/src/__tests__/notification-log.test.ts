@@ -131,7 +131,7 @@ describe('Migration: notification_logs + schema_version', () => {
     expect(colNames).toEqual([
       'id',
       'event_type',
-      'agent_id',
+      'wallet_id',
       'channel',
       'status',
       'error',
@@ -157,14 +157,14 @@ describe('NotificationService delivery logging', () => {
     const ch = createMockChannel('telegram');
     service.addChannel(ch);
 
-    await service.notify('TX_CONFIRMED', 'agent-1', { txId: 'tx-1', amount: '1 SOL' });
+    await service.notify('TX_CONFIRMED', 'wallet-1', { txId: 'tx-1', amount: '1 SOL' });
 
     const logs = conn.db.select().from(notificationLogs).all();
     expect(logs).toHaveLength(1);
     expect(logs[0]!.channel).toBe('telegram');
     expect(logs[0]!.status).toBe('sent');
     expect(logs[0]!.eventType).toBe('TX_CONFIRMED');
-    expect(logs[0]!.agentId).toBe('agent-1');
+    expect(logs[0]!.walletId).toBe('wallet-1');
     expect(logs[0]!.error).toBeNull();
   });
 
@@ -175,7 +175,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(ch1);
     service.addChannel(ch2);
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     const logs = conn.db
       .select()
@@ -196,7 +196,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(createMockChannel('telegram', true));
     service.addChannel(createMockChannel('discord', true));
 
-    await service.notify('TX_CONFIRMED', 'agent-1');
+    await service.notify('TX_CONFIRMED', 'wallet-1');
 
     // notification_logs: 2 failed entries
     const logs = conn.db.select().from(notificationLogs).all();
@@ -219,7 +219,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(ch2);
     service.addChannel(ch3);
 
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1');
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1');
 
     const logs = conn.db.select().from(notificationLogs).all();
     expect(logs).toHaveLength(3);
@@ -238,7 +238,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(ch2);
     service.addChannel(ch3);
 
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1');
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1');
 
     const logs = conn.db.select().from(notificationLogs).all();
     expect(logs).toHaveLength(3);
@@ -259,7 +259,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(ch);
 
     await expect(
-      service.notify('TX_CONFIRMED', 'agent-1'),
+      service.notify('TX_CONFIRMED', 'wallet-1'),
     ).resolves.toBeUndefined();
 
     // Channel should still receive the notification
@@ -277,13 +277,13 @@ describe('NotificationService delivery logging', () => {
 
     // Notification should still succeed despite logging failure
     await expect(
-      service.notify('TX_CONFIRMED', 'agent-1'),
+      service.notify('TX_CONFIRMED', 'wallet-1'),
     ).resolves.toBeUndefined();
 
     expect(ch.send).toHaveBeenCalledTimes(1);
   });
 
-  it('notification log records correct eventType and agentId', async () => {
+  it('notification log records correct eventType and walletId', async () => {
     const service = new NotificationService({ db: conn.db });
     const ch = createMockChannel('ntfy');
     service.addChannel(ch);
@@ -293,11 +293,11 @@ describe('NotificationService delivery logging', () => {
     const logs = conn.db
       .select()
       .from(notificationLogs)
-      .where(eq(notificationLogs.agentId, 'agent-42'))
+      .where(eq(notificationLogs.walletId, 'agent-42'))
       .all();
     expect(logs).toHaveLength(1);
     expect(logs[0]!.eventType).toBe('SESSION_EXPIRED');
-    expect(logs[0]!.agentId).toBe('agent-42');
+    expect(logs[0]!.walletId).toBe('agent-42');
     expect(logs[0]!.channel).toBe('ntfy');
   });
 
@@ -308,7 +308,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(ch);
     service.addChannel(ch2);
 
-    await service.notify('TX_FAILED', 'agent-1', { txId: 'tx-fail' });
+    await service.notify('TX_FAILED', 'wallet-1', { txId: 'tx-fail' });
 
     const failedLogs = conn.db
       .select()
@@ -327,7 +327,7 @@ describe('NotificationService delivery logging', () => {
     service.addChannel(ch2);
 
     // Broadcast: both channels get logs
-    await service.notify('KILL_SWITCH_ACTIVATED', 'agent-1');
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1');
 
     const logs = conn.db.select().from(notificationLogs).all();
     expect(logs).toHaveLength(2);

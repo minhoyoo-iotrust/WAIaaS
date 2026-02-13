@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { agents, policies, sessions, transactions } from '../infrastructure/database/schema.js';
+import { wallets, policies, sessions, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import {
@@ -95,9 +95,9 @@ async function insertTestAgent(
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-  await conn.db.insert(agents).values({
+  await conn.db.insert(wallets).values({
     id,
-    name: 'test-agent',
+    name: 'test-wallet',
     chain: 'solana',
     network: 'devnet',
     publicKey: MOCK_PUBLIC_KEY + '-' + id.slice(0, 8), // unique per agent
@@ -110,13 +110,13 @@ async function insertTestAgent(
   return id;
 }
 
-async function insertTestSession(agentId: string): Promise<string> {
+async function insertTestSession(walletId: string): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   const expires = new Date(now.getTime() + 86400000); // +1 day
   await conn.db.insert(sessions).values({
     id,
-    agentId,
+    walletId,
     tokenHash: 'hash_' + id,
     expiresAt: expires,
     absoluteExpiresAt: expires,
@@ -126,7 +126,7 @@ async function insertTestSession(agentId: string): Promise<string> {
 }
 
 async function insertPolicy(overrides: {
-  agentId?: string | null;
+  walletId?: string | null;
   type: string;
   rules: string;
   priority?: number;
@@ -135,7 +135,7 @@ async function insertPolicy(overrides: {
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   await conn.db.insert(policies).values({
     id,
-    agentId: overrides.agentId ?? null,
+    walletId: overrides.walletId ?? null,
     type: overrides.type,
     rules: overrides.rules,
     priority: overrides.priority ?? 10,
@@ -147,7 +147,7 @@ async function insertPolicy(overrides: {
 }
 
 function createPipelineContext(
-  agentId: string,
+  walletId: string,
   overrides: Partial<PipelineContext> = {},
 ): PipelineContext {
   return {
@@ -156,8 +156,8 @@ function createPipelineContext(
     keyStore: createMockKeyStore(),
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
-    agentId,
-    agent: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
+    walletId,
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', network: 'devnet' },
     request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '1000000000' },
     txId: '',
     ...overrides,
@@ -188,8 +188,8 @@ describe('56-01 Pipeline Integration', () => {
 
   describe('Feature A: sessionId audit trail', () => {
     it('stage2Auth sets ctx.sessionId from provided value', async () => {
-      const agentId = await insertTestAgent();
-      const ctx = createPipelineContext(agentId, {
+      const walletId = await insertTestAgent();
+      const ctx = createPipelineContext(walletId, {
         sessionId: 'sess_123',
       });
 
@@ -200,9 +200,9 @@ describe('56-01 Pipeline Integration', () => {
     });
 
     it('stage1Validate inserts sessionId into transactions table', async () => {
-      const agentId = await insertTestAgent();
-      const sessionId = await insertTestSession(agentId);
-      const ctx = createPipelineContext(agentId, {
+      const walletId = await insertTestAgent();
+      const sessionId = await insertTestSession(walletId);
+      const ctx = createPipelineContext(walletId, {
         sessionId,
       });
 
@@ -220,8 +220,8 @@ describe('56-01 Pipeline Integration', () => {
     });
 
     it('stage1Validate inserts null sessionId when not provided', async () => {
-      const agentId = await insertTestAgent();
-      const ctx = createPipelineContext(agentId);
+      const walletId = await insertTestAgent();
+      const ctx = createPipelineContext(walletId);
 
       await stage1Validate(ctx);
 
@@ -242,11 +242,11 @@ describe('56-01 Pipeline Integration', () => {
 
   describe('Feature B: evaluateAndReserve TOCTOU-safe policy', () => {
     it('stage3Policy calls evaluateAndReserve for TOCTOU-safe evaluation', async () => {
-      const agentId = await insertTestAgent();
+      const walletId = await insertTestAgent();
 
       // Insert a SPENDING_LIMIT policy: instant_max=100, notify_max=500, delay_max=1000
       await insertPolicy({
-        agentId,
+        walletId,
         type: 'SPENDING_LIMIT',
         rules: JSON.stringify({
           instant_max: '100',
@@ -259,7 +259,7 @@ describe('56-01 Pipeline Integration', () => {
       // Create a DatabasePolicyEngine with sqlite for evaluateAndReserve
       const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
 
-      const ctx = createPipelineContext(agentId, {
+      const ctx = createPipelineContext(walletId, {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '50' },
@@ -281,10 +281,10 @@ describe('56-01 Pipeline Integration', () => {
     });
 
     it('stage3Policy sets DELAY tier for amount between notify_max and delay_max', async () => {
-      const agentId = await insertTestAgent();
+      const walletId = await insertTestAgent();
 
       await insertPolicy({
-        agentId,
+        walletId,
         type: 'SPENDING_LIMIT',
         rules: JSON.stringify({
           instant_max: '100',
@@ -296,7 +296,7 @@ describe('56-01 Pipeline Integration', () => {
 
       const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
 
-      const ctx = createPipelineContext(agentId, {
+      const ctx = createPipelineContext(walletId, {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '700' },
@@ -317,11 +317,11 @@ describe('56-01 Pipeline Integration', () => {
     });
 
     it('stage3Policy denies transaction when whitelist policy rejects', async () => {
-      const agentId = await insertTestAgent();
+      const walletId = await insertTestAgent();
 
       // Insert a WHITELIST policy with only 'addr1' allowed
       await insertPolicy({
-        agentId,
+        walletId,
         type: 'WHITELIST',
         rules: JSON.stringify({ allowed_addresses: ['addr1'] }),
         priority: 20,
@@ -329,7 +329,7 @@ describe('56-01 Pipeline Integration', () => {
 
       const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
 
-      const ctx = createPipelineContext(agentId, {
+      const ctx = createPipelineContext(walletId, {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'addr_not_whitelisted', amount: '50' },
@@ -357,11 +357,11 @@ describe('56-01 Pipeline Integration', () => {
   describe('Feature C: downgradeIfNoOwner integration', () => {
     it('stage3Policy downgrades APPROVAL to DELAY when owner is NONE', async () => {
       // Agent with NO owner address (NONE state)
-      const agentId = await insertTestAgent({ ownerAddress: null, ownerVerified: false });
+      const walletId = await insertTestAgent({ ownerAddress: null, ownerVerified: false });
 
       // Insert SPENDING_LIMIT where the amount triggers APPROVAL (above delay_max)
       await insertPolicy({
-        agentId,
+        walletId,
         type: 'SPENDING_LIMIT',
         rules: JSON.stringify({
           instant_max: '100',
@@ -373,7 +373,7 @@ describe('56-01 Pipeline Integration', () => {
 
       const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
 
-      const ctx = createPipelineContext(agentId, {
+      const ctx = createPipelineContext(walletId, {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '2000' },
@@ -389,14 +389,14 @@ describe('56-01 Pipeline Integration', () => {
 
     it('stage3Policy keeps APPROVAL when owner exists', async () => {
       // Agent WITH owner address (GRACE or LOCKED state)
-      const agentId = await insertTestAgent({
+      const walletId = await insertTestAgent({
         ownerAddress: 'OwnerWalletAddress123',
         ownerVerified: true,
       });
 
       // Same policy as above
       await insertPolicy({
-        agentId,
+        walletId,
         type: 'SPENDING_LIMIT',
         rules: JSON.stringify({
           instant_max: '100',
@@ -408,7 +408,7 @@ describe('56-01 Pipeline Integration', () => {
 
       const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
 
-      const ctx = createPipelineContext(agentId, {
+      const ctx = createPipelineContext(walletId, {
         policyEngine,
         sqlite: conn.sqlite,
         request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '2000' },
