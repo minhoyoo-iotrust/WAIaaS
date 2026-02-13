@@ -48,7 +48,7 @@ import DashboardPage from '../pages/dashboard';
 
 const mockStatus = {
   status: 'running',
-  version: '0.1.0',
+  version: '1.4.3',
   uptime: 3661,
   walletCount: 3,
   activeSessionCount: 5,
@@ -71,7 +71,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('0.1.0')).toBeTruthy();
+      expect(screen.getByText('1.4.3')).toBeTruthy();
     });
 
     expect(screen.getByText('3')).toBeTruthy();
@@ -120,7 +120,7 @@ describe('DashboardPage', () => {
     fireEvent.click(screen.getByText('Retry'));
 
     await waitFor(() => {
-      expect(screen.getByText('0.1.0')).toBeTruthy();
+      expect(screen.getByText('1.4.3')).toBeTruthy();
     });
   });
 });
