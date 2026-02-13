@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 9 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry
+ * 10 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -286,5 +286,23 @@ export const tokenRegistry = sqliteTable(
     uniqueIndex('idx_token_registry_network_address').on(table.network, table.address),
     index('idx_token_registry_network').on(table.network),
     check('check_token_source', sql`source IN ('builtin', 'custom')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 10: settings -- daemon operational settings (key-value)
+// ---------------------------------------------------------------------------
+
+export const settings = sqliteTable(
+  'settings',
+  {
+    key: text('key').primaryKey(), // e.g., 'notifications.telegram_bot_token'
+    value: text('value').notNull(), // plain or AES-GCM encrypted (base64 JSON)
+    encrypted: integer('encrypted', { mode: 'boolean' }).notNull().default(false),
+    category: text('category').notNull(), // 'notifications' | 'rpc' | 'security' | 'daemon' | 'walletconnect'
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_settings_category').on(table.category),
   ],
 );
