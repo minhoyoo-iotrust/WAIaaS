@@ -2,27 +2,21 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.3에서 EVM 토큰 레지스트리, getAssets ERC-20 연동, MCP 토큰 관리 API + Admin UI를 추가하여 EVM DX를 개선하고 BUG-013~016을 해소했다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.4에서 Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity, AI 에이전트용 스킬 파일 5개를 추가했다.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.4.4 Admin UI 설정 관리 + MCP 5-type + 스킬 파일
+## Current Milestone: Planning next milestone
 
-**Goal:** 운영 설정을 Admin UI에서 관리하고(hot-reload), MCP 5-type feature parity를 달성하며, AI 에이전트용 스킬 파일을 제공한다.
-
-**Target features:**
-- Admin UI 설정 관리 (알림/RPC/보안 파라미터 DB 저장 + hot-reload)
-- WalletConnect project_id 설정 (v1.6 Desktop App 대비)
-- MCP 5-type feature parity (BUG-017 수정 — CONTRACT_CALL/APPROVE/BATCH 지원)
-- API 스킬 파일 5개 (quickstart, wallet, transactions, policies, admin)
+**Last shipped:** v1.4.4 Admin UI 설정 관리 + MCP 5-type + Skill Files (2026-02-14)
 
 ## Current State
 
-v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped (2026-02-13). 체인별 내장 토큰 레지스트리(5 EVM 네트워크 24 토큰), getAssets() ERC-20 잔액 자동 조회(레지스트리 ∪ ALLOWED_TOKENS 합집합), POST /v1/mcp/tokens 원스톱 MCP 프로비저닝 API + Admin UI MCP Setup 섹션, EVM/Solana waitForConfirmation fallback 패턴, tag-release.sh 모노레포 버전 관리 스크립트.
+v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). Admin UI에서 운영 설정(알림/RPC/보안/WalletConnect/log_level)을 DB 기반으로 관리하며 hot-reload로 재시작 없이 즉시 반영. MCP가 REST API/SDK와 동등하게 5가지 트랜잭션 타입을 지원(Feature Parity 원칙 확립). AI 에이전트가 5개 스킬 파일을 로드하여 즉시 API 사용 가능.
 
-코드베이스(v1.4.3 기준): 9-패키지 모노레포 + Python SDK, 59,993 LOC, 1,357 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정 + 토큰 레지스트리 관리까지 동작.
+코드베이스(v1.4.4 기준): 9-패키지 모노레포 + Python SDK, 62,296 LOC, 1,467 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정 + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -36,6 +30,7 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped 
 - ✅ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE — shipped 2026-02-12 (1,313 tests, 65,074 LOC)
 - ✅ v1.4.2 용어 변경 (agent → wallet) — shipped 2026-02-13 (1,326 tests, 56,808 LOC)
 - ✅ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 — shipped 2026-02-13 (1,357 tests, 59,993 LOC)
+- ✅ v1.4.4 Admin Settings + MCP 5-type + Skill Files — shipped 2026-02-14 (1,467 tests, 62,296 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -44,10 +39,11 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped 
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 59,993 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,357 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- 62,296 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,467 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 39 엔드포인트 (33 + admin 알림 3 + 토큰 레지스트리 3), GET /doc OpenAPI 3.0 자동 생성
+- OpenAPIHono 42 엔드포인트 (33 + admin 알림 3 + 토큰 레지스트리 3 + admin settings 3), GET /doc OpenAPI 3.0 자동 생성
+- 5개 API 스킬 파일 (skills/ 디렉토리) — AI 에이전트 즉시 사용 가능
 - IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 10 PolicyType
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
@@ -211,12 +207,16 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped 
 - ✓ EVM/Solana waitForConfirmation fallback 패턴 (타임아웃 시 receipt 조회, SUBMITTED→FAILED 오판 방지) — v1.4.3 (PIPE-01~03)
 - ✓ tag-release.sh 모노레포 버전 관리 + 9 패키지 1.4.3 적용 — v1.4.3 (DX-01~02)
 
+- ✓ Admin UI 설정 관리 — 알림/RPC/보안 파라미터 DB 저장 + hot-reload, 5개 카테고리 섹션 — v1.4.4
+- ✓ WalletConnect 설정 — project_id Admin UI 입력 + DB 저장 — v1.4.4
+- ✓ MCP 5-type feature parity — call_contract/approve_token/send_batch MCP 도구 추가, BUG-017 해소 — v1.4.4
+- ✓ API 스킬 파일 — quickstart/wallet/transactions/policies/admin 5개 마크다운 — v1.4.4
+- ✓ Settings DB 인프라 — AES-GCM 암호화, fallback 체인, config.toml 자동 import — v1.4.4
+- ✓ HotReloadOrchestrator — 알림 채널 재생성, RPC 어댑터 evict, 보안 즉시 반영 — v1.4.4
+
 ### 활성
 
-- [ ] Admin UI 설정 관리 — 알림/RPC/보안 파라미터를 config.toml 대신 Admin UI에서 관리, DB 저장 + hot-reload
-- [ ] WalletConnect 설정 — project_id Admin UI 입력 + DB 저장, v1.6 Desktop App 대비
-- [ ] MCP 5-type feature parity — CONTRACT_CALL/APPROVE/BATCH MCP 도구 추가 (BUG-017)
-- [ ] API 스킬 파일 — 용도별 5개 마크다운 스킬 파일 제공
+(다음 마일스톤에서 정의)
 
 ## Next Milestone Goals
 
@@ -239,7 +239,7 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped 
 
 ## 컨텍스트
 
-**누적:** 23 milestones (v0.1-v1.4.3), 99 phases, 216 plans, 603 requirements, 31 설계 문서(24-67), 8 objective 문서, 59,993 LOC, 1,357 테스트
+**누적:** 24 milestones (v0.1-v1.4.4), 104 phases, 226 plans, 627 requirements, 31 설계 문서(24-67), 8 objective 문서, 62,296 LOC, 1,467 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -254,6 +254,7 @@ v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 
 v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (2026-02-12). 7 페이즈, 15 플랜, 29 요구사항, 65,074 LOC, 1,313 테스트.
 v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). 6 페이즈, 11 플랜, 38 요구사항, 56,808 LOC, 1,326 테스트.
 v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 shipped (2026-02-13). 5 페이즈, 8 플랜, 13 요구사항, 59,993 LOC, 1,357 테스트.
+v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). 5 페이즈, 10 플랜, 24 요구사항, 62,296 LOC, 1,467 테스트.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -379,6 +380,11 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 shipped (2026-0
 | POST /v1/mcp/tokens 원스톱 프로비저닝 | 세션 + 토큰 파일 + Claude Desktop config 단일 응답 | ✓ Good — v1.4.3 구현 |
 | tag-release.sh 모노레포 버전 관리 | jq in-place + git tag + git commit 일괄 처리 | ✓ Good — v1.4.3 구현 |
 | duck-typing adapter 감지 (getAssets) | instanceof 대신 메서드 존재 확인으로 registry 주입 | ✓ Good — v1.4.3 구현 |
+| HKDF(SHA-256) settings 암호화 | Argon2id 대비 경량, 빈번한 읽기에 적합 | ✓ Good — v1.4.4 구현 |
+| Settings fallback 체인 (DB>config>env>default) | DaemonConfig 재활용, importFromConfig 자동 | ✓ Good — v1.4.4 구현 |
+| HotReloadOrchestrator prefix/set 분류 | 알림/RPC/보안 3개 서브시스템별 reload 액션 | ✓ Good — v1.4.4 구현 |
+| MCP Feature Parity 원칙 (MCPSDK-04 철회) | MCP/SDK/API 동일 공격 면적, 정책 엔진이 보안 담당 | ✓ Good — v1.4.4 구현 |
+| 스킬 파일 5개 분리 (단일 파일 대체) | 컨텍스트 윈도우 절약, 용도별 로드 | ✓ Good — v1.4.4 구현 |
 
 ---
-*최종 업데이트: 2026-02-13 after v1.4.4 milestone started*
+*최종 업데이트: 2026-02-14 after v1.4.4 milestone shipped*
