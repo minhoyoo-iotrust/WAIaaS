@@ -50,7 +50,7 @@ const mockStatus = {
   status: 'running',
   version: '0.1.0',
   uptime: 3661,
-  agentCount: 3,
+  walletCount: 3,
   activeSessionCount: 5,
   killSwitchState: 'NORMAL',
   adminTimeout: 900,

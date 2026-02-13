@@ -64,8 +64,8 @@ const mockStatusDisabled = {
 
 const mockLogs = {
   logs: [
-    { id: '1', eventType: 'TX_CONFIRMED', agentId: 'agent-001-abcd', channel: 'telegram', status: 'sent', error: null, createdAt: 1707609600 },
-    { id: '2', eventType: 'TX_FAILED', agentId: 'agent-002-efgh', channel: 'discord', status: 'failed', error: 'Webhook error', createdAt: 1707609500 },
+    { id: '1', eventType: 'TX_CONFIRMED', walletId: 'wallet-001-abcd', channel: 'telegram', status: 'sent', error: null, createdAt: 1707609600 },
+    { id: '2', eventType: 'TX_FAILED', walletId: 'wallet-002-efgh', channel: 'discord', status: 'failed', error: 'Webhook error', createdAt: 1707609500 },
   ],
   total: 2,
   page: 1,
@@ -76,7 +76,7 @@ const mockLogsPage1 = {
   logs: Array.from({ length: 20 }, (_, i) => ({
     id: String(i + 1),
     eventType: 'TX_CONFIRMED',
-    agentId: `agent-${i}`,
+    walletId: `wallet-${i}`,
     channel: 'telegram',
     status: 'sent',
     error: null,
@@ -213,7 +213,7 @@ describe('NotificationsPage', () => {
       if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
       if (url.includes('page=2')) {
         return Promise.resolve({
-          logs: [{ id: '21', eventType: 'TX_SUBMITTED', agentId: 'agent-20', channel: 'ntfy', status: 'sent', error: null, createdAt: 1707607600 }],
+          logs: [{ id: '21', eventType: 'TX_SUBMITTED', walletId: 'wallet-20', channel: 'ntfy', status: 'sent', error: null, createdAt: 1707607600 }],
           total: 25,
           page: 2,
           pageSize: 20,
