@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.2에서 엔티티 용어를 "agent"에서 "wallet"으로 일괄 변경하여, DB부터 API/SDK/MCP/Admin UI/설계 문서까지 일관된 용어를 사용한다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.3에서 EVM 토큰 레지스트리, getAssets ERC-20 연동, MCP 토큰 관리 API + Admin UI를 추가하여 EVM DX를 개선하고 BUG-013~016을 해소했다.
 
 ## 핵심 가치
 
@@ -10,9 +10,9 @@
 
 ## Current State
 
-v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 3(agents→wallets), REST API /v1/wallets, JWT wlt claim, Zod/Enum/에러 코드/i18n wallet 용어, MCP WalletContext + CLI --wallet + SDK walletId, Admin UI Wallets 페이지, 설계 문서 15개 갱신, grep 전수 검사 0건 확인.
+v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped (2026-02-13). 체인별 내장 토큰 레지스트리(5 EVM 네트워크 24 토큰), getAssets() ERC-20 잔액 자동 조회(레지스트리 ∪ ALLOWED_TOKENS 합집합), POST /v1/mcp/tokens 원스톱 MCP 프로비저닝 API + Admin UI MCP Setup 섹션, EVM/Solana waitForConfirmation fallback 패턴, tag-release.sh 모노레포 버전 관리 스크립트.
 
-코드베이스(v1.4.2 기준): 9-패키지 모노레포 + Python SDK, 56,808 LOC, 1,326 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 포함) + 다중 지갑 MCP 설정까지 동작.
+코드베이스(v1.4.3 기준): 9-패키지 모노레포 + Python SDK, 59,993 LOC, 1,357 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정 + 토큰 레지스트리 관리까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -25,6 +25,7 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 
 - ✅ v1.4 토큰 + 컨트랙트 확장 — shipped 2026-02-12 (1,126 tests, 51,750 LOC)
 - ✅ v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE — shipped 2026-02-12 (1,313 tests, 65,074 LOC)
 - ✅ v1.4.2 용어 변경 (agent → wallet) — shipped 2026-02-13 (1,326 tests, 56,808 LOC)
+- ✅ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 — shipped 2026-02-13 (1,357 tests, 59,993 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -33,14 +34,15 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 56,808 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,326 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- 59,993 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,357 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 36 엔드포인트 (33 + admin 알림 3), GET /doc OpenAPI 3.0 자동 생성
+- OpenAPIHono 39 엔드포인트 (33 + admin 알림 3 + 토큰 레지스트리 3), GET /doc OpenAPI 3.0 자동 생성
 - IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 10 PolicyType
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
+- TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
 - 설계 문서 31개 (24-67), 8 objective 문서
-- v1.4.2: 엔티티 용어 wallet 통일 (DB wallets 테이블, /v1/wallets, JWT wlt, WalletContext)
+- v1.4.3: EVM getAssets ERC-20 연동, POST /v1/mcp/tokens, Admin MCP Setup, tag-release.sh
 
 ## 요구사항
 
@@ -193,18 +195,15 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 
 - ✓ Admin UI Wallets 페이지 + Dashboard/Sessions/Policies walletId — v1.4.2 (ADMIN-01~04)
 - ✓ 설계 문서 15개 + README 갱신 + grep 전수 검사 0건 + 1,326 테스트 통과 — v1.4.2 (DOCS-01~02, VERIFY-01~03)
 
+- ✓ EVM 네트워크별 내장 ERC-20 토큰 레지스트리 (5 네트워크 24 토큰) + 커스텀 토큰 CRUD — v1.4.3 (REGISTRY-01~03)
+- ✓ getAssets() ERC-20 잔액 자동 조회 (레지스트리 ∪ ALLOWED_TOKENS 합집합) — v1.4.3 (ASSETS-01~02)
+- ✓ POST /v1/mcp/tokens 원스톱 MCP 프로비저닝 API + Admin UI MCP Setup 섹션 — v1.4.3 (MCP-01~03)
+- ✓ EVM/Solana waitForConfirmation fallback 패턴 (타임아웃 시 receipt 조회, SUBMITTED→FAILED 오판 방지) — v1.4.3 (PIPE-01~03)
+- ✓ tag-release.sh 모노레포 버전 관리 + 9 패키지 1.4.3 적용 — v1.4.3 (DX-01~02)
+
 ### 활성
 
-## Current Milestone: v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정
-
-**Goal:** EVM 지갑이 ERC-20 토큰 잔액을 자동 조회하고, Admin UI에서 MCP 토큰 발급까지 원스톱 처리 가능한 상태 달성
-
-**Target features:**
-- 체인별 내장 토큰 레지스트리 (EVM 네트워크별 주요 ERC-20 토큰 목록)
-- getAssets() ERC-20 연동 (레지스트리 ∪ ALLOWED_TOKENS 합집합 조회)
-- MCP 토큰 API (`POST /v1/mcp/tokens`) + Admin UI MCP 섹션
-- EVM Stage 6 확인 타임아웃 FAILED 오판 수정 (BUG-015)
-- 패키지 버전 관리 스크립트 + 즉시 버전 갱신 (BUG-016)
+(없음 — 다음 마일스톤 요구사항 정의 필요)
 
 ## Next Milestone Goals
 
@@ -227,7 +226,7 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 
 
 ## 컨텍스트
 
-**누적:** 22 milestones (v0.1-v1.4.2), 94 phases, 208 plans, 590 requirements, 31 설계 문서(24-67), 8 objective 문서, 56,808 LOC, 1,326 테스트
+**누적:** 23 milestones (v0.1-v1.4.3), 99 phases, 216 plans, 603 requirements, 31 설계 문서(24-67), 8 objective 문서, 59,993 LOC, 1,357 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -241,6 +240,7 @@ v1.3.4 알림 트리거 + 어드민 알림 패널 shipped (2026-02-12). 3 페이
 v1.4 토큰 + 컨트랙트 확장 shipped (2026-02-12). 6 페이즈, 12 플랜, 35 요구사항, 51,750 LOC, 1,126 테스트.
 v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE shipped (2026-02-12). 7 페이즈, 15 플랜, 29 요구사항, 65,074 LOC, 1,313 테스트.
 v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). 6 페이즈, 11 플랜, 38 요구사항, 56,808 LOC, 1,326 테스트.
+v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 shipped (2026-02-13). 5 페이즈, 8 플랜, 13 요구사항, 59,993 LOC, 1,357 테스트.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -267,7 +267,7 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). 6 페이즈, 11 �
 - Pre-existing e2e-errors.test.ts failure (expects 404, gets 401) — OpenAPIHono 전환 side effect
 - Pre-existing 3 CLI E2E failures (E-07, E-08, E-09) — daemon-harness uses old adapter: param, not adapterPool:
 - Kill switch state in-memory 관리 (v1.3에서는 DB 미저장)
-- BUG-013~016 OPEN (Admin MCP 토큰, EVM getAssets ALLOWED_TOKENS, EVM confirmation timeout, 패키지 버전 0.0.0)
+- BUG-013~016 RESOLVED in v1.4.3 (Admin MCP 토큰, EVM getAssets, EVM confirmation timeout, 패키지 버전)
 
 ## 제약사항
 
@@ -360,6 +360,12 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). 6 페이즈, 11 �
 | MCP 기존 토큰 폐기 + 재설정 안내 | JWT claim 변경(agt→wlt)으로 기존 토큰 자동 무효화 | ✓ Good — v1.4.2 구현 |
 | AI agent 개념 참조 보존 | 설계 문서에서 코드 식별자만 rename, AI agent 설명은 유지 | ✓ Good — v1.4.2 구현 |
 | 한국어 용어 에이전트→지갑 (관리 엔티티) | AI agent 개념은 에이전트 유지, 관리 대상은 지갑으로 변경 | ✓ Good — v1.4.2 구현 |
+| 내장 토큰 레지스트리 merge layer | DB custom + built-in 병합, custom 우선, source 필드 구분 | ✓ Good — v1.4.3 구현 |
+| 레지스트리 ≠ 전송 허용 역할 분리 | 레지스트리(UX 조회용) vs ALLOWED_TOKENS(보안 전송 허용) 분리 | ✓ Good — v1.4.3 구현 |
+| waitForConfirmation never throws | fallback receipt 조회, return-value 3-way branching | ✓ Good — v1.4.3 구현 |
+| POST /v1/mcp/tokens 원스톱 프로비저닝 | 세션 + 토큰 파일 + Claude Desktop config 단일 응답 | ✓ Good — v1.4.3 구현 |
+| tag-release.sh 모노레포 버전 관리 | jq in-place + git tag + git commit 일괄 처리 | ✓ Good — v1.4.3 구현 |
+| duck-typing adapter 감지 (getAssets) | instanceof 대신 메서드 존재 확인으로 registry 주입 | ✓ Good — v1.4.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-13 after v1.4.2 milestone shipped*
+*최종 업데이트: 2026-02-13 after v1.4.3 milestone shipped*

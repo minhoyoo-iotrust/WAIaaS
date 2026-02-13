@@ -27,11 +27,15 @@
 | BUG-010 | HIGH | Admin UI EVM 에이전트 생성 시 network 값 불일치 (sepolia → ethereum-sepolia) | v1.4.1 | FIXED | 2026-02-12 |
 | BUG-011 | MEDIUM | MCP 서버 초기화 순서 레이스 컨디션 (sessionManager.start → server.connect) | v1.3 | FIXED | 2026-02-12 |
 | BUG-012 | MEDIUM | MCP에 get_assets 도구 미구현 — SPL/ERC-20 토큰 잔액 조회 불가 | v1.3 | FIXED | 2026-02-12 |
+| BUG-013 | LOW | Admin UI에서 MCP 토큰 발급 불가 — CLI 의존 | v1.4.1 | OPEN (v1.4.3) | — |
+| BUG-014 | MEDIUM | EVM getAssets()가 ERC-20 토큰 잔액 미반환 — ALLOWED_TOKENS 정책 미연동 | v1.4.1 | OPEN (v1.4.3) | — |
+| BUG-015 | HIGH | EVM 트랜잭션 확인 타임아웃 시 온체인 성공 건을 FAILED로 처리 | v1.4.1 | OPEN (v1.4.3) | — |
+| BUG-016 | LOW | 모든 패키지 버전이 0.0.0 — Admin UI/OpenAPI에 잘못된 버전 표시 | v1.4.1 | OPEN (v1.4.3) | — |
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 4
 - **FIXED:** 12
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 12
+- **Total:** 16

@@ -589,3 +589,32 @@
 
 ---
 
+
+## v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 (Shipped: 2026-02-13)
+
+**Delivered:** EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP 토큰 발급까지 원스톱 처리 가능한 상태를 달성 — 체인별 내장 토큰 레지스트리(5 네트워크 24 토큰), getAssets() ERC-20 연동, POST /v1/mcp/tokens API + Admin UI MCP 섹션, EVM/Solana 확인 타임아웃 fallback, 패키지 버전 관리 스크립트, BUG-013~016 전수 해소
+
+**Phases completed:** 95-99 (8 plans total)
+
+**Key accomplishments:**
+
+- 패키지 버전 관리 — tag-release.sh 모노레포 일괄 버전 갱신, 9 패키지 1.4.3 적용 (BUG-016)
+- 파이프라인 확인 fallback — EVM waitForConfirmation fallback receipt 조회 + stage6Confirm 3-way 분기, Solana 동일 패턴 적용, SUBMITTED→FAILED 오판 방지 (BUG-015)
+- EVM 토큰 레지스트리 — 5개 EVM 메인넷 24개 내장 ERC-20 토큰, tokenRegistry DB 테이블 + migration v4, TokenRegistryService merge layer, GET/POST/DELETE /v1/tokens REST API
+- getAssets ERC-20 연동 — 토큰 레지스트리 ∪ ALLOWED_TOKENS 합집합 ERC-20 잔액 자동 조회, case-insensitive 주소 dedup (BUG-014)
+- MCP 토큰 관리 API + Admin UI — POST /v1/mcp/tokens 원스톱 프로비저닝 (세션 생성 + 토큰 파일 + Claude Desktop 설정), Admin UI MCP Setup 섹션 (BUG-013)
+
+**Stats:**
+
+- 64 files changed, +5,691 / -104 lines
+- 5 phases, 8 plans, 13 requirements, 9 설계 결정
+- 1,357 tests (1,326 → 1,357, +31 new tests)
+- 59,993 LOC total
+- 1 day (2026-02-13)
+
+**Git range:** `345acf1` (Phase 95 start) → `fb27115` (Phase 99 complete)
+
+**What's next:** v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
+
+---
+
