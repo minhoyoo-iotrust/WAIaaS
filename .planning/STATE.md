@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.4 Phase 102 complete (2/2 plans done), ready for Phase 103
+**Current focus:** v1.4.4 Phase 103 in progress (1/2 plans done)
 
 ## Current Position
 
-Phase: 102 of 104 (Admin UI Settings Page)
-Plan: 2 of 2 in current phase
-Status: Complete
-Last activity: 2026-02-14 -- Completed 102-02 Settings Page Tests (14 tests)
+Phase: 103 of 104 (MCP 5-Type Feature Parity)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-14 -- Completed 103-01 MCP 5-Type Tool Implementation (3 tools)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [██████████] 100%
 | 101-02 | hot-reload | 5min | 2 | 6 |
 | 102-01 | settings-page | 4min | 2 | 3 |
 | 102-02 | settings-tests | 3min | 2 | 1 |
+| 103-01 | mcp-5type-tools | 3min | 2 | 6 |
 
 *Updated after each plan completion*
 
@@ -57,6 +58,8 @@ v1.4.3 decisions archived -- see .planning/milestones/v1.4.3-ROADMAP.md
 - 102-01: RPC test chain type inferred from setting key prefix (solana_ vs evm_)
 - 102-02: Path-based apiGet mock instead of sequential mockResolvedValueOnce for parallel fetch reliability
 - 102-02: Non-null assertion (!) for array index access to satisfy TypeScript strict mode
+- 103-01: z.record(z.unknown()) for batch instructions instead of full union schema (daemon Stage 1 validates)
+- 103-01: Each transaction type gets its own MCP tool (not merged into send_token) for clear Claude Desktop UX
 
 ### Blockers/Concerns
 
@@ -67,5 +70,5 @@ v1.4.3 decisions archived -- see .planning/milestones/v1.4.3-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 102-02-PLAN.md (Settings Page Tests: 14 tests, all passing)
+Stopped at: Completed 103-01-PLAN.md (MCP 5-Type Tool Implementation: 3 new tools, 120 tests passing)
 Resume file: None
