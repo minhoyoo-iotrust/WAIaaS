@@ -41,11 +41,11 @@ Plans:
   3. 알림 채널 credential 변경 시 채널 인스턴스가 재생성되어 새 credential로 발송된다
   4. RPC 엔드포인트 URL 변경 시 adapter가 재연결되어 새 URL로 체인 요청이 전달된다
   5. POST /v1/admin/settings/test-rpc로 RPC URL 연결 테스트가 가능하다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 101-01: GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트
-- [ ] 101-02: 알림 채널 + RPC 어댑터 + 보안 파라미터 hot-reload
+- [ ] 101-01-PLAN.md -- GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트 + OpenAPI 스키마 + 테스트
+- [ ] 101-02-PLAN.md -- 알림 채널 replaceChannels + RPC 어댑터 evict + HotReloadOrchestrator + daemon 연동
 
 ### Phase 102: Admin UI 설정 페이지
 **Goal**: Admin Web UI에서 알림/RPC/보안/WalletConnect/log_level 설정을 시각적으로 관리한다
