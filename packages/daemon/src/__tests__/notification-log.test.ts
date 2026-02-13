@@ -76,7 +76,7 @@ describe('Migration: notification_logs + schema_version', () => {
       .all() as Array<{ version: number; description: string }>;
     expect(rows).toHaveLength(1);
     expect(rows[0]!.version).toBe(1);
-    expect(rows[0]!.description).toBe('Initial schema (10 tables)');
+    expect(rows[0]!.description).toBe('Initial schema (11 tables)');
   });
 
   it('pushSchema() called twice is idempotent (no error)', () => {

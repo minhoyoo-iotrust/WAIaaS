@@ -1,9 +1,14 @@
 /**
- * Built-in ERC-20 token data for EVM mainnet networks.
+ * Built-in ERC-20 token data for EVM networks (mainnet + testnet).
  *
- * Provides well-known token addresses (USDC, USDT, WETH, DAI, etc.) for
- * 5 EVM mainnet networks. Testnet networks return empty arrays -- users
- * can add testnet tokens via the custom token API.
+ * Provides well-known token addresses (USDC, USDT, WETH, DAI, LINK, etc.)
+ * for 5 EVM mainnet networks and 5 testnet networks.
+ *
+ * Testnet token sources:
+ * - Circle official (USDC) — https://faucet.circle.com/
+ * - Chainlink official (LINK) — https://faucets.chain.link/
+ * - Aave TestnetMintableERC20 (USDT, DAI, WBTC, AAVE, GHO, EURS, cbETH)
+ * - Canonical wrapped tokens (WETH, WPOL)
  *
  * All addresses use EIP-55 checksum format.
  *
@@ -24,8 +29,8 @@ export interface TokenEntry {
 /**
  * Built-in ERC-20 tokens keyed by EvmNetworkType string.
  *
- * - Mainnet networks have curated token lists (USDC, USDT, WETH, DAI + chain-native wrapped).
- * - Testnet networks have empty arrays (add via custom token API).
+ * - Mainnet networks: curated token lists (USDC, USDT, WETH, DAI + chain-native wrapped).
+ * - Testnet networks: verified faucet-available tokens (Circle USDC, Chainlink LINK, Aave tokens).
  */
 export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
   // ---------------------------------------------------------------------------
@@ -83,13 +88,63 @@ export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
   ],
 
   // ---------------------------------------------------------------------------
-  // Testnet networks (empty -- add via custom token API)
+  // Ethereum Sepolia (10 tokens)
   // ---------------------------------------------------------------------------
-  'ethereum-sepolia': [],
-  'polygon-amoy': [],
-  'arbitrum-sepolia': [],
-  'optimism-sepolia': [],
-  'base-sepolia': [],
+  'ethereum-sepolia': [
+    { address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+    { address: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0', symbol: 'USDT', name: 'Tether USD', decimals: 6 },
+    { address: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
+    { address: '0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357', symbol: 'DAI', name: 'Dai Stablecoin', decimals: 18 },
+    { address: '0x779877A7B0D9E8603169DdbD7836e478b4624789', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
+    { address: '0x29f2D40B0605204364af54EC677bD022dA425d03', symbol: 'WBTC', name: 'Wrapped Bitcoin', decimals: 8 },
+    { address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', symbol: 'UNI', name: 'Uniswap', decimals: 18 },
+    { address: '0x88541670E55cC00bEEFD87eB59EDd1b7C511AC9a', symbol: 'AAVE', name: 'Aave Token', decimals: 18 },
+    { address: '0xc4bF5CbDaBE595361438F8c6a187bDc330539c60', symbol: 'GHO', name: 'Gho Token', decimals: 18 },
+    { address: '0x6d906e526a4e2Ca02097BA9d0caA3c382F52278E', symbol: 'EURS', name: 'EURS Stablecoin', decimals: 2 },
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Polygon Amoy (7 tokens)
+  // ---------------------------------------------------------------------------
+  'polygon-amoy': [
+    { address: '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+    { address: '0x1fdE0eCc619726f4cD597887C9F3b4c8740e19e2', symbol: 'USDT', name: 'Tether USD', decimals: 6 },
+    { address: '0x52eF3d68BaB452a294342DC3e5f464d7f610f72E', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
+    { address: '0xc8c0Cf9436F4862a8F60Ce680Ca5a9f0f99b5ded', symbol: 'DAI', name: 'Dai Stablecoin', decimals: 18 },
+    { address: '0x0Fd9e8d3aF1aaee056EB9e802c3A762a667b1904', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
+    { address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9', symbol: 'WPOL', name: 'Wrapped POL', decimals: 18 },
+    { address: '0x1558c6FadDe1bEaf0f6628BDd1DFf3461185eA24', symbol: 'AAVE', name: 'Aave Token', decimals: 18 },
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Arbitrum Sepolia (3 tokens)
+  // ---------------------------------------------------------------------------
+  'arbitrum-sepolia': [
+    { address: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+    { address: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
+    { address: '0xb1D4538B4571d411F07960EF2838Ce337FE1E80E', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Optimism Sepolia (3 tokens)
+  // ---------------------------------------------------------------------------
+  'optimism-sepolia': [
+    { address: '0x5fd84259d66Cd46123540766Be93DFE6D43130D7', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+    { address: '0x4200000000000000000000000000000000000006', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
+    { address: '0xE4aB69C077896252FAFBD49EFD26B5D171A32410', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Base Sepolia (6 tokens)
+  // ---------------------------------------------------------------------------
+  'base-sepolia': [
+    { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+    { address: '0x0a215D8ba66387DCA84B284D18c3B4ec3de6E54a', symbol: 'USDT', name: 'Tether USD', decimals: 6 },
+    { address: '0x4200000000000000000000000000000000000006', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
+    { address: '0x54114591963CF60EF3aA63bEfD6eC263D98145a4', symbol: 'WBTC', name: 'Wrapped Bitcoin', decimals: 8 },
+    { address: '0xE4aB69C077896252FAFBD49EFD26B5D171A32410', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
+    { address: '0xD171b9694f7A2597Ed006D41f7509aaD4B485c4B', symbol: 'cbETH', name: 'Coinbase Wrapped Staked ETH', decimals: 18 },
+  ],
 };
 
 /**

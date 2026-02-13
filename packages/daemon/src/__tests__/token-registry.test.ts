@@ -312,7 +312,51 @@ describe('TokenRegistryService', () => {
     const tokens = await service.getTokensForNetwork('ethereum-sepolia');
     const symbols = tokens.map((t) => t.symbol);
 
-    expect(symbols).toEqual(['AAA', 'MMM', 'ZZZ']);
+    // Verify entire list is sorted alphabetically (builtin + custom)
+    const sorted = [...symbols].sort();
+    expect(symbols).toEqual(sorted);
+
+    // Verify custom tokens are present
+    expect(symbols).toContain('AAA');
+    expect(symbols).toContain('MMM');
+    expect(symbols).toContain('ZZZ');
+  });
+
+  // -------------------------------------------------------------------------
+  // 11. getTokensForNetwork returns built-in tokens for ethereum-sepolia
+  // -------------------------------------------------------------------------
+  it('getTokensForNetwork returns built-in tokens for ethereum-sepolia', async () => {
+    const tokens = await service.getTokensForNetwork('ethereum-sepolia');
+
+    expect(tokens.length).toBeGreaterThanOrEqual(10);
+
+    const symbols = tokens.map((t) => t.symbol);
+    expect(symbols).toContain('USDC');
+    expect(symbols).toContain('USDT');
+    expect(symbols).toContain('WETH');
+    expect(symbols).toContain('DAI');
+    expect(symbols).toContain('LINK');
+
+    for (const t of tokens) {
+      expect(t.source).toBe('builtin');
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // 12. all 5 testnet networks have built-in tokens
+  // -------------------------------------------------------------------------
+  it('all 5 testnet networks have built-in tokens', async () => {
+    const testnets = ['ethereum-sepolia', 'polygon-amoy', 'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia'];
+
+    for (const network of testnets) {
+      const tokens = await service.getTokensForNetwork(network);
+      expect(tokens.length).toBeGreaterThanOrEqual(3);
+
+      // Every testnet should have USDC and LINK
+      const symbols = tokens.map((t) => t.symbol);
+      expect(symbols).toContain('USDC');
+      expect(symbols).toContain('LINK');
+    }
   });
 });
 
@@ -725,17 +769,21 @@ describe('getAssets ERC-20 wiring', () => {
     const body = await json(res);
     const assets = body.assets as Array<Record<string, unknown>>;
 
-    // Should have native ETH + AAVE token
-    expect(assets.length).toBe(2);
+    // Should have native ETH + builtin tokens + custom AAVE
+    expect(assets.length).toBeGreaterThanOrEqual(2);
     expect(assets[0]!.symbol).toBe('ETH');
     expect(assets[0]!.isNative).toBe(true);
-    expect(assets[1]!.mint).toBe(CUSTOM_TOKEN_AAVE.address);
-    expect(assets[1]!.symbol).toBe('AAVE');
-    expect(assets[1]!.isNative).toBe(false);
 
-    // Verify setAllowedTokens was called with registry token
-    expect(capturedTokens.length).toBe(1);
-    expect(capturedTokens[0]!.address).toBe(CUSTOM_TOKEN_AAVE.address);
+    // Custom AAVE token should be included
+    const aaveAsset = assets.find((a) => a.mint === CUSTOM_TOKEN_AAVE.address);
+    expect(aaveAsset).toBeDefined();
+    expect(aaveAsset!.symbol).toBe('AAVE');
+    expect(aaveAsset!.isNative).toBe(false);
+
+    // Verify setAllowedTokens was called with builtin + custom tokens
+    expect(capturedTokens.length).toBeGreaterThanOrEqual(1);
+    const customToken = capturedTokens.find((t) => t.address === CUSTOM_TOKEN_AAVE.address);
+    expect(customToken).toBeDefined();
   });
 
   // -------------------------------------------------------------------------
@@ -767,14 +815,17 @@ describe('getAssets ERC-20 wiring', () => {
     const body = await json(res);
     const assets = body.assets as Array<Record<string, unknown>>;
 
-    // Should have native ETH + COMP token from policy
-    expect(assets.length).toBe(2);
+    // Should have native ETH + builtin tokens + COMP from policy
+    expect(assets.length).toBeGreaterThanOrEqual(2);
     expect(assets[0]!.symbol).toBe('ETH');
-    expect(assets[1]!.mint).toBe(CUSTOM_TOKEN_COMP.address);
 
-    // Verify setAllowedTokens was called with policy token
-    expect(capturedTokens.length).toBe(1);
-    expect(capturedTokens[0]!.address).toBe(CUSTOM_TOKEN_COMP.address);
+    // COMP from policy should be included
+    const compAsset = assets.find((a) => a.mint === CUSTOM_TOKEN_COMP.address);
+    expect(compAsset).toBeDefined();
+
+    // Verify setAllowedTokens includes the policy token
+    const policyToken = capturedTokens.find((t) => t.address === CUSTOM_TOKEN_COMP.address);
+    expect(policyToken).toBeDefined();
   });
 
   // -------------------------------------------------------------------------
@@ -818,22 +869,27 @@ describe('getAssets ERC-20 wiring', () => {
     const body = await json(res);
     const assets = body.assets as Array<Record<string, unknown>>;
 
-    // Should have only native ETH + ONE AAVE token (deduplicated)
-    expect(assets.length).toBe(2);
+    // Should have native ETH + builtin tokens + ONE AAVE (deduplicated)
     expect(assets[0]!.symbol).toBe('ETH');
-    expect(assets[1]!.symbol).toBe('AAVE');
 
-    // capturedTokens should have exactly 1 token (not 2)
-    expect(capturedTokens.length).toBe(1);
+    // AAVE should appear exactly once (deduplicated from registry + policy)
+    const aaveAssets = assets.filter((a) => a.mint === CUSTOM_TOKEN_AAVE.address);
+    expect(aaveAssets.length).toBe(1);
+
+    // capturedTokens should have AAVE exactly once (not duplicated)
+    const aaveTokens = capturedTokens.filter(
+      (t) => t.address.toLowerCase() === CUSTOM_TOKEN_AAVE.address.toLowerCase(),
+    );
+    expect(aaveTokens.length).toBe(1);
   });
 
   // -------------------------------------------------------------------------
-  // 4. EVM getAssets returns only native ETH when no registry or policy tokens
+  // 4. EVM getAssets returns native ETH + builtin tokens when no custom or policy tokens
   // -------------------------------------------------------------------------
-  it('EVM getAssets returns only native ETH when no registry or policy tokens', async () => {
+  it('EVM getAssets returns native ETH + builtin tokens when no custom or policy tokens', async () => {
     const { token } = await createWalletAndSession();
 
-    // Call getAssets with no registry tokens and no policies
+    // Call getAssets with no custom tokens and no policies (builtin tokens still apply)
     const res = await app.request('/v1/wallet/assets', {
       headers: bearerHeader(token),
     });
@@ -841,12 +897,14 @@ describe('getAssets ERC-20 wiring', () => {
     const body = await json(res);
     const assets = body.assets as Array<Record<string, unknown>>;
 
-    // Should have exactly 1 asset (native ETH only)
-    expect(assets.length).toBe(1);
+    // Should have native ETH + builtin testnet tokens
+    expect(assets.length).toBeGreaterThanOrEqual(1);
     expect(assets[0]!.symbol).toBe('ETH');
     expect(assets[0]!.isNative).toBe(true);
 
-    // capturedTokens should be empty (setAllowedTokens was called with [])
-    expect(capturedTokens.length).toBe(0);
+    // capturedTokens should contain builtin tokens for ethereum-sepolia
+    expect(capturedTokens.length).toBeGreaterThanOrEqual(10);
+    const usdcToken = capturedTokens.find((t) => t.symbol === 'USDC');
+    expect(usdcToken).toBeDefined();
   });
 });
