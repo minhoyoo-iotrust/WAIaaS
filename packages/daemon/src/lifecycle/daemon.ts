@@ -346,6 +346,7 @@ export class DaemonLifecycle {
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,
           notificationService: this.notificationService ?? undefined,
+          dataDir,
         });
 
         this.httpServer = serve({
