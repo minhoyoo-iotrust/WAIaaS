@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 1 of 5 (Phase 95: 패키지 버전 관리)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-13 -- 로드맵 생성 완료
+Plan: 1 of 1 in current phase
+Status: Phase 95 complete
+Last activity: 2026-02-13 -- 95-01 plan executed
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Cumulative:** 22 milestones, 94 phases, 208 plans, 590 reqs, 1,326 tests, 56,808 LOC
 
 **v1.4.3 Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: -
+- Total plans completed: 1
+- Average duration: 2min
+- Total execution time: 2min
 
 *Updated after each plan completion*
 
@@ -35,6 +35,7 @@ Full log in PROJECT.md.
 v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 
 - v1.4.3 로드맵: BUG-016(버전) -> BUG-015(파이프라인) -> 레지스트리 -> getAssets -> MCP DX 순서
+- Phase 95: scripts/tag-release.sh for monorepo version management, all packages 1.4.3
 
 ### Blockers/Concerns
 
@@ -46,5 +47,5 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: 로드맵 생성 완료, Phase 95 계획 대기
+Stopped at: Completed 95-01-PLAN.md
 Resume file: None
