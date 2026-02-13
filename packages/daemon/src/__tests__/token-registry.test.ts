@@ -3,20 +3,25 @@
  *
  * Suite 1: TokenRegistryService unit tests (in-memory SQLite).
  * Suite 2: Token registry API integration tests (Hono app.request()).
+ * Suite 3: getAssets ERC-20 wiring integration tests (BUG-014 fix).
  *
  * @see packages/daemon/src/infrastructure/token-registry/token-registry-service.ts
  * @see packages/daemon/src/api/routes/tokens.ts
+ * @see packages/daemon/src/api/routes/wallet.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
-import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
+import { tokenRegistry, policies } from '../infrastructure/database/schema.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { IChainAdapter } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -534,5 +539,314 @@ describe('Token Registry API', () => {
     const body = await json(res);
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
     expect(String(body.message)).toContain('Invalid EVM network');
+  });
+});
+
+// ===========================================================================
+// Suite 3: getAssets ERC-20 wiring integration tests (BUG-014 fix)
+// ===========================================================================
+
+const EVM_TEST_ADDRESS = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
+
+describe('getAssets ERC-20 wiring', () => {
+  let conn: DatabaseConnection;
+  let app: OpenAPIHono;
+  let capturedTokens: Array<{ address: string; symbol?: string; name?: string; decimals?: number }>;
+
+  /**
+   * Create mock EVM adapter with setAllowedTokens spy that captures the token list
+   * and getAssets that returns native ETH + any captured tokens.
+   */
+  function createMockEvmAdapter(): IChainAdapter & { setAllowedTokens: (tokens: typeof capturedTokens) => void } {
+    return {
+      chain: 'ethereum' as const,
+      network: 'ethereum-sepolia' as const,
+      connect: async () => {},
+      disconnect: async () => {},
+      isConnected: () => true,
+      getHealth: async () => ({ healthy: true, latencyMs: 1 }),
+      getBalance: async (addr: string) => ({
+        address: addr,
+        balance: 1_000_000_000_000_000_000n,
+        decimals: 18,
+        symbol: 'ETH',
+      }),
+      setAllowedTokens: (tokens: typeof capturedTokens) => {
+        capturedTokens = tokens;
+      },
+      getAssets: async () => {
+        const assets: Array<{ mint: string; symbol: string; name: string; balance: bigint; decimals: number; isNative: boolean }> = [
+          { mint: 'native', symbol: 'ETH', name: 'Ether', balance: 1_000_000_000_000_000_000n, decimals: 18, isNative: true },
+        ];
+        for (const t of capturedTokens) {
+          assets.push({
+            mint: t.address,
+            symbol: t.symbol ?? '',
+            name: t.name ?? '',
+            balance: 500_000n,
+            decimals: t.decimals ?? 18,
+            isNative: false,
+          });
+        }
+        return assets;
+      },
+      buildTransaction: async () => ({ chain: 'ethereum', serialized: new Uint8Array(128), estimatedFee: 21000n, metadata: {} }),
+      simulateTransaction: async () => ({ success: true, logs: [] }),
+      signTransaction: async () => new Uint8Array(65),
+      submitTransaction: async () => ({ txHash: 'mock-hash', status: 'submitted' as const }),
+      waitForConfirmation: async (txHash: string) => ({ txHash, status: 'confirmed' as const, confirmations: 1 }),
+      estimateFee: async () => ({ fee: 21000n, decimals: 18, symbol: 'ETH' }),
+      buildTokenTransfer: async () => { throw new Error('not implemented'); },
+      getTokenInfo: async () => { throw new Error('not implemented'); },
+      buildContractCall: async () => { throw new Error('not implemented'); },
+      buildApprove: async () => { throw new Error('not implemented'); },
+      buildBatch: async () => { throw new Error('not implemented'); },
+      getTransactionFee: async () => { throw new Error('not implemented'); },
+      getCurrentNonce: async () => 0,
+      sweepAll: async () => { throw new Error('not implemented'); },
+    } as unknown as IChainAdapter & { setAllowedTokens: (tokens: typeof capturedTokens) => void };
+  }
+
+  function createMockAdapterPool(adapter: IChainAdapter): AdapterPool {
+    return {
+      resolve: vi.fn().mockResolvedValue(adapter),
+      disconnectAll: vi.fn().mockResolvedValue(undefined),
+      get size() { return 0; },
+    } as unknown as AdapterPool;
+  }
+
+  function createMockKeyStore() {
+    return {
+      generateKeyPair: vi.fn().mockImplementation(async () => ({
+        publicKey: EVM_TEST_ADDRESS,
+        encryptedPrivateKey: new Uint8Array(64),
+      })),
+      decryptPrivateKey: async () => new Uint8Array(64).fill(42),
+      releaseKey: () => {},
+      hasKey: async () => true,
+      deleteKey: async () => {},
+      lockAll: () => {},
+      sodiumAvailable: true,
+    } as any;
+  }
+
+  function bearerHeader(token: string): Record<string, string> {
+    return { Host: HOST, Authorization: `Bearer ${token}` };
+  }
+
+  /**
+   * Helper: create EVM wallet + session, return session token.
+   */
+  async function createWalletAndSession(): Promise<{ walletId: string; token: string }> {
+    // Create wallet
+    const createRes = await app.request('/v1/wallets', {
+      method: 'POST',
+      headers: masterHeaders(),
+      body: JSON.stringify({
+        name: 'evm-test-wallet',
+        chain: 'ethereum',
+        network: 'ethereum-sepolia',
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const wallet = await json(createRes);
+    const walletId = wallet.id as string;
+
+    // Create session
+    const sessionRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterHeaders(),
+      body: JSON.stringify({ walletId }),
+    });
+    expect(sessionRes.status).toBe(201);
+    const session = await json(sessionRes);
+    return { walletId, token: session.token as string };
+  }
+
+  beforeEach(async () => {
+    capturedTokens = [];
+    conn = createDatabase(':memory:');
+    pushSchema(conn.sqlite);
+
+    const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id,
+      memoryCost: 4096,
+      timeCost: 2,
+      parallelism: 1,
+    });
+
+    const jwtSecretManager = new JwtSecretManager(conn.db);
+    await jwtSecretManager.initialize();
+
+    const mockAdapter = createMockEvmAdapter();
+    const mockAdapterPool = createMockAdapterPool(mockAdapter);
+    const mockKeyStore = createMockKeyStore();
+
+    app = createApp({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      jwtSecretManager,
+      masterPasswordHash,
+      masterPassword: TEST_MASTER_PASSWORD,
+      config: mockConfig(),
+      adapterPool: mockAdapterPool,
+      keyStore: mockKeyStore,
+    });
+  });
+
+  afterEach(() => {
+    conn.sqlite.close();
+  });
+
+  // -------------------------------------------------------------------------
+  // 1. EVM getAssets returns registry tokens when token registry has entries
+  // -------------------------------------------------------------------------
+  it('EVM getAssets returns registry tokens when token registry has entries', async () => {
+    // Insert custom token into registry for ethereum-sepolia
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await conn.db.insert(tokenRegistry).values({
+      id: generateId(),
+      network: 'ethereum-sepolia',
+      address: CUSTOM_TOKEN_AAVE.address,
+      symbol: CUSTOM_TOKEN_AAVE.symbol,
+      name: CUSTOM_TOKEN_AAVE.name,
+      decimals: CUSTOM_TOKEN_AAVE.decimals,
+      source: 'custom',
+      createdAt: now,
+    });
+
+    const { token } = await createWalletAndSession();
+
+    // Call getAssets
+    const res = await app.request('/v1/wallet/assets', {
+      headers: bearerHeader(token),
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const assets = body.assets as Array<Record<string, unknown>>;
+
+    // Should have native ETH + AAVE token
+    expect(assets.length).toBe(2);
+    expect(assets[0]!.symbol).toBe('ETH');
+    expect(assets[0]!.isNative).toBe(true);
+    expect(assets[1]!.mint).toBe(CUSTOM_TOKEN_AAVE.address);
+    expect(assets[1]!.symbol).toBe('AAVE');
+    expect(assets[1]!.isNative).toBe(false);
+
+    // Verify setAllowedTokens was called with registry token
+    expect(capturedTokens.length).toBe(1);
+    expect(capturedTokens[0]!.address).toBe(CUSTOM_TOKEN_AAVE.address);
+  });
+
+  // -------------------------------------------------------------------------
+  // 2. EVM getAssets returns ALLOWED_TOKENS policy tokens
+  // -------------------------------------------------------------------------
+  it('EVM getAssets returns ALLOWED_TOKENS policy tokens', async () => {
+    const { walletId, token } = await createWalletAndSession();
+
+    // Insert ALLOWED_TOKENS policy directly into DB
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await conn.db.insert(policies).values({
+      id: generateId(),
+      walletId,
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: CUSTOM_TOKEN_COMP.address }],
+      }),
+      priority: 0,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Call getAssets
+    const res = await app.request('/v1/wallet/assets', {
+      headers: bearerHeader(token),
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const assets = body.assets as Array<Record<string, unknown>>;
+
+    // Should have native ETH + COMP token from policy
+    expect(assets.length).toBe(2);
+    expect(assets[0]!.symbol).toBe('ETH');
+    expect(assets[1]!.mint).toBe(CUSTOM_TOKEN_COMP.address);
+
+    // Verify setAllowedTokens was called with policy token
+    expect(capturedTokens.length).toBe(1);
+    expect(capturedTokens[0]!.address).toBe(CUSTOM_TOKEN_COMP.address);
+  });
+
+  // -------------------------------------------------------------------------
+  // 3. EVM getAssets deduplicates registry and policy tokens by address
+  // -------------------------------------------------------------------------
+  it('EVM getAssets deduplicates registry and policy tokens by address', async () => {
+    // Insert token into registry
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await conn.db.insert(tokenRegistry).values({
+      id: generateId(),
+      network: 'ethereum-sepolia',
+      address: CUSTOM_TOKEN_AAVE.address,
+      symbol: CUSTOM_TOKEN_AAVE.symbol,
+      name: CUSTOM_TOKEN_AAVE.name,
+      decimals: CUSTOM_TOKEN_AAVE.decimals,
+      source: 'custom',
+      createdAt: now,
+    });
+
+    const { walletId, token } = await createWalletAndSession();
+
+    // Insert ALLOWED_TOKENS policy with SAME token address (different case)
+    await conn.db.insert(policies).values({
+      id: generateId(),
+      walletId,
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: CUSTOM_TOKEN_AAVE.address.toLowerCase() }],
+      }),
+      priority: 0,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Call getAssets
+    const res = await app.request('/v1/wallet/assets', {
+      headers: bearerHeader(token),
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const assets = body.assets as Array<Record<string, unknown>>;
+
+    // Should have only native ETH + ONE AAVE token (deduplicated)
+    expect(assets.length).toBe(2);
+    expect(assets[0]!.symbol).toBe('ETH');
+    expect(assets[1]!.symbol).toBe('AAVE');
+
+    // capturedTokens should have exactly 1 token (not 2)
+    expect(capturedTokens.length).toBe(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // 4. EVM getAssets returns only native ETH when no registry or policy tokens
+  // -------------------------------------------------------------------------
+  it('EVM getAssets returns only native ETH when no registry or policy tokens', async () => {
+    const { token } = await createWalletAndSession();
+
+    // Call getAssets with no registry tokens and no policies
+    const res = await app.request('/v1/wallet/assets', {
+      headers: bearerHeader(token),
+    });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const assets = body.assets as Array<Record<string, unknown>>;
+
+    // Should have exactly 1 asset (native ETH only)
+    expect(assets.length).toBe(1);
+    expect(assets[0]!.symbol).toBe('ETH');
+    expect(assets[0]!.isNative).toBe(true);
+
+    // capturedTokens should be empty (setAllowedTokens was called with [])
+    expect(capturedTokens.length).toBe(0);
   });
 });
