@@ -11,7 +11,7 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 - [x] **Phase 100: Settings 인프라** - DB 테이블 + credential 암호화 + config.toml fallback + 자동 import
 - [x] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
 - [x] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
-- [ ] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
+- [x] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
 - [ ] **Phase 104: API 스킬 파일** - quickstart/wallet/transactions/policies/admin 5개 마크다운
 
 ## Phase Details
@@ -75,8 +75,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 103-01-PLAN.md -- call_contract + approve_token + send_batch MCP 도구 3개 생성 + server.ts 등록 + send-token.ts MCPSDK-04 정리
-- [ ] 103-02-PLAN.md -- 3개 신규 도구 테스트 11케이스 + 설계 문서 38 MCPSDK-04 철회 + BUG-017 해소
+- [x] 103-01-PLAN.md -- call_contract + approve_token + send_batch MCP 도구 3개 생성 + server.ts 등록 + send-token.ts MCPSDK-04 정리
+- [x] 103-02-PLAN.md -- 3개 신규 도구 테스트 11케이스 + 설계 문서 38 MCPSDK-04 철회 + BUG-017 해소
 
 ### Phase 104: API 스킬 파일
 **Goal**: AI 에이전트가 마크다운 스킬 파일을 로드하는 것만으로 WAIaaS API를 즉시 사용한다
@@ -104,5 +104,5 @@ Phase 100 -> 101 -> 102 순차. Phase 103, 104는 독립적이며 100~102와 병
 | 100. Settings 인프라 | 2/2 | ✓ Complete | 2026-02-13 |
 | 101. Settings API + Hot-Reload | 2/2 | ✓ Complete | 2026-02-13 |
 | 102. Admin UI 설정 페이지 | 2/2 | ✓ Complete | 2026-02-14 |
-| 103. MCP 5-type Feature Parity | 0/2 | Not started | - |
+| 103. MCP 5-type Feature Parity | 2/2 | ✓ Complete | 2026-02-14 |
 | 104. API 스킬 파일 | 0/2 | Not started | - |

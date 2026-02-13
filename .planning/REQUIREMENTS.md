@@ -33,10 +33,10 @@
 
 ### MCP (5-type Feature Parity)
 
-- [ ] **MCP-01**: MCP call_contract 도구 (CONTRACT_CALL 트랜잭션)
-- [ ] **MCP-02**: MCP approve_token 도구 (APPROVE 트랜잭션)
-- [ ] **MCP-03**: MCP send_batch 도구 (BATCH 트랜잭션)
-- [ ] **MCP-04**: MCPSDK-04 설계 결정 철회 + 설계 문서 38 업데이트
+- [x] **MCP-01**: MCP call_contract 도구 (CONTRACT_CALL 트랜잭션)
+- [x] **MCP-02**: MCP approve_token 도구 (APPROVE 트랜잭션)
+- [x] **MCP-03**: MCP send_batch 도구 (BATCH 트랜잭션)
+- [x] **MCP-04**: MCPSDK-04 설계 결정 철회 + 설계 문서 38 업데이트
 
 ### Skill (API 스킬 파일)
 
@@ -90,10 +90,10 @@
 | ADMIN-03 | Phase 102 | Pending |
 | ADMIN-04 | Phase 102 | Pending |
 | ADMIN-05 | Phase 102 | Pending |
-| MCP-01 | Phase 103 | Pending |
-| MCP-02 | Phase 103 | Pending |
-| MCP-03 | Phase 103 | Pending |
-| MCP-04 | Phase 103 | Pending |
+| MCP-01 | Phase 103 | Done |
+| MCP-02 | Phase 103 | Done |
+| MCP-03 | Phase 103 | Done |
+| MCP-04 | Phase 103 | Done |
 | SKILL-01 | Phase 104 | Pending |
 | SKILL-02 | Phase 104 | Pending |
 | SKILL-03 | Phase 104 | Pending |
