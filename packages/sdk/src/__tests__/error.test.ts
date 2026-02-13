@@ -70,23 +70,23 @@ describe('WAIaaSError', () => {
   describe('fromResponse', () => {
     it('should parse a valid JSON error body', () => {
       const body = {
-        code: 'AGENT_NOT_FOUND',
-        message: 'Agent not found',
+        code: 'WALLET_NOT_FOUND',
+        message: 'Wallet not found',
         retryable: false,
-        details: { agentId: 'abc' },
+        details: { walletId: 'abc' },
         requestId: 'req-456',
-        hint: 'Check the agent ID',
+        hint: 'Check the wallet ID',
       };
 
       const error = WAIaaSError.fromResponse(body, 404);
 
-      expect(error.code).toBe('AGENT_NOT_FOUND');
-      expect(error.message).toBe('Agent not found');
+      expect(error.code).toBe('WALLET_NOT_FOUND');
+      expect(error.message).toBe('Wallet not found');
       expect(error.status).toBe(404);
       expect(error.retryable).toBe(false);
-      expect(error.details).toEqual({ agentId: 'abc' });
+      expect(error.details).toEqual({ walletId: 'abc' });
       expect(error.requestId).toBe('req-456');
-      expect(error.hint).toBe('Check the agent ID');
+      expect(error.hint).toBe('Check the wallet ID');
     });
 
     it('should create fallback error for non-JSON body (null)', () => {

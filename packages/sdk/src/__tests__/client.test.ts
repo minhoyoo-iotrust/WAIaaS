@@ -7,7 +7,7 @@ import { WAIaaSError } from '../error.js';
  */
 function createMockJwt(sessionId: string): string {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({ sessionId, agentId: 'agent-1' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sessionId, walletId: 'wallet-1' })).toString('base64url');
   const signature = 'mock-signature';
   return `${header}.${payload}.${signature}`;
 }
@@ -78,7 +78,7 @@ describe('WAIaaSClient', () => {
       });
 
       fetchSpy.mockResolvedValue(
-        mockResponse({ agentId: 'a1', chain: 'solana', network: 'devnet', address: 'abc' }),
+        mockResponse({ walletId: 'w1', chain: 'solana', network: 'devnet', address: 'abc' }),
       );
 
       await client.getAddress();
@@ -112,7 +112,7 @@ describe('WAIaaSClient', () => {
       });
 
       const expected = {
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
         chain: 'solana',
         network: 'devnet',
         address: 'ABC123',
@@ -135,7 +135,7 @@ describe('WAIaaSClient', () => {
 
       fetchSpy.mockResolvedValue(
         mockResponse({
-          agentId: 'a', chain: 'solana', network: 'devnet',
+          walletId: 'a', chain: 'solana', network: 'devnet',
           address: 'x', balance: '0', decimals: 9, symbol: 'SOL',
         }),
       );
@@ -176,7 +176,7 @@ describe('WAIaaSClient', () => {
       });
 
       const expected = {
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
         chain: 'solana',
         network: 'devnet',
         address: 'PubKeyABC',
@@ -195,7 +195,7 @@ describe('WAIaaSClient', () => {
       });
 
       fetchSpy.mockResolvedValue(
-        mockResponse({ agentId: 'a', chain: 'solana', network: 'devnet', address: 'x' }),
+        mockResponse({ walletId: 'a', chain: 'solana', network: 'devnet', address: 'x' }),
       );
 
       await client.getAddress();
@@ -219,7 +219,7 @@ describe('WAIaaSClient', () => {
       });
 
       const expected = {
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
         chain: 'solana',
         network: 'devnet',
         assets: [
@@ -257,7 +257,7 @@ describe('WAIaaSClient', () => {
       });
 
       fetchSpy.mockResolvedValue(
-        mockResponse({ agentId: 'a', chain: 'solana', network: 'devnet', assets: [] }),
+        mockResponse({ walletId: 'a', chain: 'solana', network: 'devnet', assets: [] }),
       );
 
       await client.getAssets();
@@ -419,7 +419,7 @@ describe('WAIaaSClient', () => {
 
       const expected = {
         id: 'tx-001',
-        agentId: 'agent-1',
+        walletId: 'wallet-1',
         type: 'TRANSFER',
         status: 'CONFIRMED',
         tier: 'LOW',
@@ -445,7 +445,7 @@ describe('WAIaaSClient', () => {
 
       fetchSpy.mockResolvedValue(
         mockResponse({
-          id: 'tx-xyz', agentId: 'a', type: 'TRANSFER', status: 'PENDING',
+          id: 'tx-xyz', walletId: 'a', type: 'TRANSFER', status: 'PENDING',
           tier: null, chain: 'solana', toAddress: null, amount: null,
           txHash: null, error: null, createdAt: null,
         }),
@@ -472,7 +472,7 @@ describe('WAIaaSClient', () => {
       const expected = {
         items: [
           {
-            id: 'tx-1', agentId: 'a', type: 'TRANSFER', status: 'CONFIRMED',
+            id: 'tx-1', walletId: 'a', type: 'TRANSFER', status: 'CONFIRMED',
             tier: null, chain: 'solana', toAddress: 'addr', amount: '100',
             txHash: 'hash1', error: null, createdAt: 1707000000,
           },
@@ -538,7 +538,7 @@ describe('WAIaaSClient', () => {
       const expected = {
         items: [
           {
-            id: 'tx-p1', agentId: 'a', type: 'TRANSFER', status: 'PENDING',
+            id: 'tx-p1', walletId: 'a', type: 'TRANSFER', status: 'PENDING',
             tier: null, chain: 'solana', toAddress: 'addr', amount: '100',
             txHash: null, error: null, createdAt: 1707000000,
           },
@@ -620,7 +620,7 @@ describe('WAIaaSClient', () => {
       // Next call should use the new token
       fetchSpy.mockResolvedValue(
         mockResponse({
-          agentId: 'a', chain: 'solana', network: 'devnet', address: 'x',
+          walletId: 'a', chain: 'solana', network: 'devnet', address: 'x',
           balance: '0', decimals: 9, symbol: 'SOL',
         }),
       );
@@ -701,7 +701,7 @@ describe('WAIaaSClient', () => {
 
       fetchSpy.mockResolvedValue(
         mockResponse({
-          agentId: 'a', chain: 'solana', network: 'devnet', address: 'x',
+          walletId: 'a', chain: 'solana', network: 'devnet', address: 'x',
           balance: '0', decimals: 9, symbol: 'SOL',
         }),
       );
@@ -733,7 +733,7 @@ describe('WAIaaSClient', () => {
 
       fetchSpy.mockResolvedValue(
         mockResponse({
-          agentId: 'a', chain: 'solana', network: 'devnet', address: 'x',
+          walletId: 'a', chain: 'solana', network: 'devnet', address: 'x',
           balance: '0', decimals: 9, symbol: 'SOL',
         }),
       );
@@ -765,7 +765,7 @@ describe('WAIaaSClient', () => {
         )
         .mockResolvedValueOnce(
           mockResponse({
-            agentId: 'a', chain: 'solana', network: 'devnet', address: 'x',
+            walletId: 'a', chain: 'solana', network: 'devnet', address: 'x',
             balance: '100', decimals: 9, symbol: 'SOL',
           }),
         );
@@ -868,7 +868,7 @@ describe('WAIaaSClient', () => {
 
       fetchSpy.mockResolvedValue(
         mockResponse({
-          agentId: 'a', chain: 'solana', network: 'devnet', address: 'x',
+          walletId: 'a', chain: 'solana', network: 'devnet', address: 'x',
           balance: '0', decimals: 9, symbol: 'SOL',
         }),
       );
