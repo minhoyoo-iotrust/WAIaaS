@@ -65,7 +65,9 @@ Plans:
   1. EVM 지갑의 GET /v1/wallets/:id/assets 응답에 네이티브 ETH와 함께 레지스트리 + ALLOWED_TOKENS 합집합에 해당하는 ERC-20 토큰 잔액이 포함된다
   2. 토큰 레지스트리와 ALLOWED_TOKENS 모두 미설정인 EVM 지갑은 네이티브 ETH만 반환하며 에러가 발생하지 않는다
   3. Solana 지갑의 기존 getAssets() 동작에 회귀가 없다
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 98-01-PLAN.md -- 토큰 레지스트리 + ALLOWED_TOKENS 합집합 wiring + 통합 테스트 (ASSETS-01, ASSETS-02)
 
 ### Phase 99: MCP 토큰 관리
 **Goal**: Admin UI에서 지갑 생성부터 MCP 토큰 발급, Claude Desktop 설정까지 원스톱으로 처리할 수 있다
@@ -87,7 +89,7 @@ Plans:
 | 95. 패키지 버전 관리 | 1/1 | ✓ Complete | 2026-02-13 |
 | 96. 파이프라인 확인 로직 수정 | 2/2 | ✓ Complete | 2026-02-13 |
 | 97. EVM 토큰 레지스트리 | 2/2 | ✓ Complete | 2026-02-13 |
-| 98. getAssets ERC-20 연동 | 0/TBD | Not started | - |
+| 98. getAssets ERC-20 연동 | 0/1 | Not started | - |
 | 99. MCP 토큰 관리 | 0/TBD | Not started | - |
 
 ---
