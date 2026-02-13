@@ -11,7 +11,7 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
 - [x] **Phase 95: 패키지 버전 관리** - 버전 일괄 갱신 스크립트 + 즉시 버전 적용 (BUG-016) ✓ 2026-02-13
 - [x] **Phase 96: 파이프라인 확인 로직 수정** - EVM/Solana 확인 타임아웃 fallback + Stage 6 상태 정합성 (BUG-015) ✓ 2026-02-13
 - [x] **Phase 97: EVM 토큰 레지스트리** - 체인별 내장 토큰 목록 + 커스텀 토큰 CRUD + 역할 분리 ✓ 2026-02-13
-- [ ] **Phase 98: getAssets ERC-20 연동** - 레지스트리 + ALLOWED_TOKENS 합집합 조회 (BUG-014)
+- [x] **Phase 98: getAssets ERC-20 연동** - 레지스트리 + ALLOWED_TOKENS 합집합 조회 (BUG-014) ✓ 2026-02-13
 - [ ] **Phase 99: MCP 토큰 관리** - POST /v1/mcp/tokens API + Admin UI MCP 섹션 (BUG-013)
 
 ## Phase Details
@@ -67,7 +67,7 @@ Plans:
   3. Solana 지갑의 기존 getAssets() 동작에 회귀가 없다
 **Plans**: 1 plan
 Plans:
-- [ ] 98-01-PLAN.md -- 토큰 레지스트리 + ALLOWED_TOKENS 합집합 wiring + 통합 테스트 (ASSETS-01, ASSETS-02)
+- [x] 98-01-PLAN.md -- 토큰 레지스트리 + ALLOWED_TOKENS 합집합 wiring + 통합 테스트 (ASSETS-01, ASSETS-02) ✓
 
 ### Phase 99: MCP 토큰 관리
 **Goal**: Admin UI에서 지갑 생성부터 MCP 토큰 발급, Claude Desktop 설정까지 원스톱으로 처리할 수 있다
@@ -78,7 +78,10 @@ Plans:
   2. Admin UI 지갑 상세 페이지에서 MCP 토큰 발급 버튼 클릭으로 API를 호출하고 결과를 표시한다
   3. 발급된 Claude Desktop 설정 JSON이 복사 가능한 형태(코드 블록 + 복사 버튼)로 Admin UI에 표시된다
   4. 기존 CLI `waiaas mcp setup` 동작에 회귀가 없다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 99-01-PLAN.md -- POST /v1/mcp/tokens API (세션 생성 + 토큰 파일 저장 + Claude Desktop 설정 스니펫)
+- [ ] 99-02-PLAN.md -- Admin UI 지갑 상세 MCP Setup 섹션 (발급 버튼 + 설정 JSON 복사)
 
 ## Progress
 
@@ -89,8 +92,8 @@ Plans:
 | 95. 패키지 버전 관리 | 1/1 | ✓ Complete | 2026-02-13 |
 | 96. 파이프라인 확인 로직 수정 | 2/2 | ✓ Complete | 2026-02-13 |
 | 97. EVM 토큰 레지스트리 | 2/2 | ✓ Complete | 2026-02-13 |
-| 98. getAssets ERC-20 연동 | 0/1 | Not started | - |
-| 99. MCP 토큰 관리 | 0/TBD | Not started | - |
+| 98. getAssets ERC-20 연동 | 1/1 | ✓ Complete | 2026-02-13 |
+| 99. MCP 토큰 관리 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*

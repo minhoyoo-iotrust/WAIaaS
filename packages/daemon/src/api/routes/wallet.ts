@@ -10,14 +10,14 @@
  */
 
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type { ChainType, NetworkType } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
-import { wallets } from '../../infrastructure/database/schema.js';
+import { wallets, policies } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
   WalletAddressResponseSchema,
@@ -26,11 +26,13 @@ import {
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import type { TokenRegistryService } from '../../infrastructure/token-registry/index.js';
 
 export interface WalletRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   adapterPool: AdapterPool | null;
   config: DaemonConfig | null;
+  tokenRegistryService: TokenRegistryService | null;
 }
 
 /**
@@ -188,6 +190,47 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       wallet.network as NetworkType,
       rpcUrl,
     );
+
+    // Wire ERC-20 tokens for EVM adapters before getAssets
+    if (wallet.chain === 'ethereum' && 'setAllowedTokens' in adapter) {
+      const tokenList: Array<{ address: string; symbol?: string; name?: string; decimals?: number }> = [];
+      const seenAddresses = new Set<string>();
+
+      // Source 1: Token registry (builtin + custom for this network)
+      if (deps.tokenRegistryService) {
+        const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(wallet.network);
+        for (const t of registryTokens) {
+          const lower = t.address.toLowerCase();
+          if (!seenAddresses.has(lower)) {
+            seenAddresses.add(lower);
+            tokenList.push(t);
+          }
+        }
+      }
+
+      // Source 2: ALLOWED_TOKENS policy for this wallet
+      const allowedTokensPolicies = await deps.db.select().from(policies)
+        .where(
+          and(
+            eq(policies.walletId, wallet.id),
+            eq(policies.type, 'ALLOWED_TOKENS'),
+            eq(policies.enabled, true),
+          )
+        );
+      if (allowedTokensPolicies.length > 0) {
+        const rules = JSON.parse(allowedTokensPolicies[0]!.rules) as { tokens: Array<{ address: string }> };
+        for (const t of rules.tokens) {
+          const lower = t.address.toLowerCase();
+          if (!seenAddresses.has(lower)) {
+            seenAddresses.add(lower);
+            tokenList.push({ address: t.address });
+          }
+        }
+      }
+
+      // Set merged token list on adapter
+      (adapter as unknown as { setAllowedTokens: (t: typeof tokenList) => void }).setAllowedTokens(tokenList);
+    }
 
     const assets = await adapter.getAssets(wallet.publicKey);
 
