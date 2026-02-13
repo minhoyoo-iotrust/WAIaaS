@@ -1,342 +1,365 @@
-# Project Research Summary
+# WAIaaS v1.4.5 멀티체인 월렛 환경 모델 설계 -- 연구 요약
 
-**Project:** WAIaaS v0.9 - MCP Session Management Automation
-**Domain:** MCP Server token lifecycle automation for AI agent wallet daemon
-**Researched:** 2026-02-09
-**Confidence:** HIGH
+**Project:** WAIaaS v1.4.5 (멀티체인 월렛 모델 설계) + v1.4.6 (구현)
+**Domain:** Self-hosted AI agent wallet daemon -- 단일 네트워크 바인딩에서 환경 기반 멀티네트워크 모델로 전환
+**Researched:** 2026-02-14
+**Overall Confidence:** HIGH (62,296 LOC 코드베이스 직접 분석 + 1,467 테스트 + 업계 표준 패턴 크로스 검증)
+
+---
 
 ## Executive Summary
 
-WAIaaS v0.9 adds automatic session management to the MCP Server, solving the core problem that MCP stdio processes inherit environment variables only at startup, making token rotation impossible without process restart. The research confirms that no new dependencies are needed — all functionality uses existing libraries (jose, grammy, commander.js, Node.js built-ins) and the @modelcontextprotocol/sdk already in the stack.
+WAIaaS는 "1 월렛 = 1 체인 + 1 네트워크" 모델에서 "1 월렛 = 1 체인 + 1 환경(testnet/mainnet)"으로 전환한다. 이 변경은 AI 에이전트가 자연어로 네트워크를 지정하는 UX를 가능하게 하며("Polygon에서 ETH 보내줘"), 동시에 단일 키쌍으로 모든 EVM 체인(또는 Solana 네트워크)에서 트랜잭션을 실행하는 블록체인의 본질적 특성과 일치한다.
 
-The recommended architecture embeds a SessionManager in the MCP Server that handles token lifecycle transparently: loads tokens from `~/.waiaas/mcp-token` (file > env var priority), auto-renews at 60% TTL via existing PUT /v1/sessions/:id/renew API, and reloads from file on 401 (lazy reload pattern). This enables Telegram `/newsession` and CLI `mcp setup`/`mcp refresh-token` to update tokens without requiring Claude Desktop restart, maintaining conversation context and agent service continuity.
+핵심 아키텍처 변경은 **네트워크 리졸브 시점의 이동**이다. 현재는 월렛 생성 시 network가 고정되고 모든 후속 작업이 이를 따른다. 새 모델에서는 트랜잭션 요청 시 network를 지정(또는 default_network로 폴백)하여, 파이프라인이 실행 시점에 environment-network 일치를 검증한다. 기술 스택 변경은 불필요하다 -- viem PublicClient는 이미 네트워크별 인스턴스이고, AdapterPool의 `chain:network` 캐시 키가 정확한 추상화이며, DB 마이그레이션은 기존 12-step 패턴을 재사용한다.
 
-Critical risks center on timer accuracy (setTimeout 32-bit overflow), file write races (3 concurrent writers: MCP/Telegram/CLI), and MCP host behavior on repeated errors. Prevention requires safeSetTimeout wrappers, atomic write-then-rename patterns, and non-error responses for expired sessions. The architecture review confirms this is a natural extension of existing v0.5-v0.8 session renewal protocol, requiring changes to 7 design documents but no database schema modifications.
+가장 중요한 위험은 **환경 격리 실패**(testnet 키로 mainnet 트랜잭션)와 **DB 마이그레이션의 데이터 순서 의존성**이다. 환경 검증을 파이프라인 Stage 1에서 가장 먼저 수행하고, 마이그레이션에서 `transactions.network` 컬럼을 먼저 채운 후 `wallets.network` -> `wallets.environment` 변환을 진행하면 안전하다. 두 가지 모두 검증된 패턴이 있다.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Zero new dependencies.** All v0.9 features use existing libraries' previously unused APIs. This eliminates compatibility risk, version conflicts, and bundle size increase.
+**새 라이브러리 추가 불필요.** 기존 viem 2.x + better-sqlite3 + Drizzle ORM 스택이 환경 모델을 완전히 지원한다.
 
-**Core technologies activated:**
-- **jose (`decodeJwt`)** — JWT payload extraction without signature verification (MCP server has no signing key) — already in stack for server-side JWT operations
-- **grammy (`InlineKeyboard`, `callbackQuery`)** — Telegram inline keyboard for agent selection in `/newsession` — already in stack for notifications
-- **commander.js** — CLI `mcp` subcommand group for `setup`/`refresh-token` — already in stack for existing commands
-- **Node.js fs/promises (`writeFile mode: 0o600`, `lstat`)** — Token file management with owner-only permissions, symlink rejection — built-in API
-- **Node.js timers (`setTimeout`, `unref()`)** — Renewal scheduling with process-exit-friendly timers — built-in API
+**핵심 기술 유지:**
+- **viem 2.x (^2.45.3)**: PublicClient는 설계적으로 단일 체인. AdapterPool이 이미 per-network 인스턴스 맵 패턴을 올바르게 구현 중. 새 라이브러리 불필요
+- **better-sqlite3 12.6.2**: SQLite 3.51.2 번들로 ALTER TABLE RENAME COLUMN 지원. 하지만 CHECK 제약 변경은 12-step 테이블 재생성 필요 (v2, v3 마이그레이션에서 검증된 패턴)
+- **Drizzle ORM 0.45.x**: 스키마에서 `network` -> `environment` 필드 변경만으로 충분. DDL은 자체 migrate.ts에서 관리
+- **Zod 3.24.x**: 새 EnvironmentType enum 추가 + 환경-네트워크 매핑 함수. 기존 NETWORK_TYPES는 그대로 유지
 
-**Critical validation:** setTimeout supports delays up to 2,147,483,647ms (~24.85 days). Default 7-day expiresIn * 60% = 4.2 days is safe. Even max 30-day expiresIn * 60% = 18 days stays within limit. Defense: `Math.min(delay, MAX_TIMEOUT)` wrapper.
+**명시적으로 추가하지 않을 기술:**
+- wagmi / @wagmi/core: 프론트엔드 멀티체인 라이브러리. 서버 사이드에서는 viem PublicClient 맵이 더 가볍고 적합
+- chainlist / chains npm: viem/chains가 이미 Tier 1 체인 + testnet 정의 포함
+- drizzle-kit migrate: 프로그래매틱 Migration[] 배열이 12-step 같은 복잡한 마이그레이션에 더 적합
+
+**Source confidence:** HIGH (코드베이스 직접 분석 + viem PublicClient Map 패턴 공식 Discussion 확인)
+
+---
 
 ### Expected Features
 
-**Table stakes (7 features — must implement all):**
-- **TS-1: File-based token persistence** — `~/.waiaas/mcp-token` (0o600) as single source of truth across process restarts
-- **TS-2: Token load priority (File > Env)** — File overrides env var after first bootstrap
-- **TS-3: Auto-renewal at 60% TTL** — SessionManager calls PUT /renew, saves new token to memory + file
-- **TS-4: Expiration alerts** — SESSION_EXPIRING_SOON notification when remainingRenewals ≤ 3 or absoluteExpiresAt - now ≤ 24h
-- **TS-5: 401 lazy reload** — On AUTH_TOKEN_EXPIRED, reload `~/.waiaas/mcp-token` and retry (external token transition)
-- **TS-6: CLI `mcp setup`** — One-command session creation + file save + Claude Desktop config guide
-- **TS-7: CLI `mcp refresh-token`** — Revoke old session + create new + update file (absolute lifetime expiry)
+#### Table Stakes (필수)
 
-**Differentiators (5 features — competitive advantage):**
-- **DF-1: Telegram `/newsession`** — One-click session recreation from mobile, no SSH required
-- **DF-2: Transparent session management** — LLM never sees token lifecycle, `sessionManager.getToken()` always returns valid token
-- **DF-3: Agent-specific default constraints** — `/newsession` auto-applies role-based presets from agents.default_constraints or config
-- **DF-4: SESSION_EXPIRING_SOON proactive alerts** — Owner receives advance warning with [Create New Session] button
-- **DF-5: Race condition guard** — Renewal-in-progress flag prevents concurrent renewal attempts
+환경 모델 전환에 필수인 기능. 하나라도 빠지면 하위호환이 깨지거나 사용 불가.
 
-**Anti-features (7 explicitly excluded):**
-- fs.watch (OS-specific instability, lazy reload is safer)
-- Auto-edit claude_desktop_config.json (risky, host app format varies)
-- Multi-MCP-client support (single token file limitation)
-- OAuth 2.1 for stdio transport (MCP spec says SHOULD NOT)
-- Streamable HTTP transport (Claude Desktop uses stdio only)
-- Infinite session extension (30-day absolute lifetime is security boundary)
-- Metadata in token file (JWT already contains all needed claims)
+1. **wallets.network -> environment 마이그레이션**: 데이터 모델 전환의 핵심. 기존 월렛이 새 모델에서 동작해야 함. 12-step 재생성 + 데이터 변환 (complexity: High)
+2. **트랜잭션 레벨 network 지정**: `POST /v1/transactions/send`에 optional `network` 필드. 미지정 시 `default_network` 폴백 (complexity: Medium)
+3. **기본 네트워크(default_network)**: network 미지정 시 폴백. 하위호환 보장의 핵심 (complexity: Low)
+4. **환경-네트워크 매핑 함수**: `getNetworksForEnvironment(chain, environment)`, `validateNetworkEnvironment()` (complexity: Low)
+5. **transactions.network 컬럼**: 실행된 네트워크를 기록. 감사/추적에 필수 (complexity: Medium -- ADD COLUMN + 기존 레코드 역참조 UPDATE)
+6. **Zod SSoT EnvironmentType**: 타입 안전성 보장. Zod -> TypeScript -> DB CHECK 파생 체인 (complexity: Low)
+
+#### Differentiators (차별화)
+
+기본 동작에는 영향 없지만, 환경 모델의 가치를 극대화하는 기능.
+
+1. **ALLOWED_NETWORKS 정책**: 월렛이 사용할 수 있는 네트워크 제한. 보안 강화 (complexity: Medium)
+2. **네트워크 스코프 정책**: 네트워크별 차등 정책 (e.g., Polygon에서만 높은 한도). policies에 network 컬럼 추가 (complexity: Medium)
+3. **Quickstart 원스톱**: `waiaas quickstart --mode testnet` -> 2 월렛(6 네트워크) 일괄 생성. DX 핵심 개선 (complexity: High)
+4. **MCP network 파라미터**: AI 에이전트가 "Polygon에서 ETH 보내줘" 직접 지정 (complexity: Low)
+5. **월렛 네트워크 목록 API**: `GET /v1/wallets/:id/networks` -> 사용 가능 네트워크 (complexity: Low)
+
+#### Anti-Features (의도적으로 만들지 않는 기능)
+
+- **환경 간 키 공유**: testnet 키가 mainnet에서 사용되면 보안 위험
+- **자동 크로스체인 브리징**: 브리지는 보안 위험 높음 (2024-2025년 $3B+ 해킹). 명시적 CONTRACT_CALL로 사용자가 직접 실행
+- **동적 네트워크 추가**: 보안 위험 (악성 RPC 노드). 지원 네트워크는 소스 코드에 하드코딩 (EVM_CHAIN_MAP)
+
+**Source confidence:** HIGH (MetaMask/Dfns/Phantom 공식 문서 + WAIaaS 코드베이스 분석)
+
+---
 
 ### Architecture Approach
 
-v0.9 extends existing MCP Server (`@waiaas/mcp`) with SessionManager class that encapsulates all token lifecycle logic. MCP tool handlers shift from `SESSION_TOKEN` env var to `apiClient.getWithRetry()`, centralizing token injection and 401 retry. The 4-component file ownership model (MCP read/write, Daemon no access, Telegram write, CLI write) uses atomic write-then-rename to prevent partial writes, with last-writer-wins conflict resolution.
+**핵심 개념: Environment Model**
 
-**Major components:**
-1. **SessionManager** (`@waiaas/mcp/session-manager.ts`) — Loads token (file > env), schedules renewal at 60% TTL via setTimeout, persists new token atomically, reloads on 401
-2. **ApiClient refactor** (`@waiaas/mcp/api-client.ts`) — Wraps fetch with SessionManager.getToken() injection, auto-retries 401 after tryReloadFromFile()
-3. **token-file utilities** (`@waiaas/core/utils/token-file.ts`) — Shared by MCP/Telegram/CLI for getMcpTokenPath(), atomicWriteToken(), readMcpToken() with symlink rejection
-4. **Telegram `/newsession` handler** — InlineKeyboard agent list → create session → atomicWriteToken → MCP lazy reload on next 401
-5. **CLI `mcp` subcommands** — `setup` (bootstrap) and `refresh-token` (30-day renewal) both write token file, SessionManager picks up on next API call
-6. **Daemon SESSION_EXPIRING_SOON** — NotificationService adds 17th event type, triggered by SessionService when renewal response shows remainingRenewals ≤ 3
+```
+현재 모델:
+  Wallet Creation -> network 고정 (e.g., 'ethereum-sepolia')
+                  -> 모든 후속 작업이 이 network 사용
 
-**Integration with v0.5-v0.8:** Zero changes to session renewal API (PUT /v1/sessions/:id/renew). The 5 safety guards (maxRenewals, absolute lifetime, 50% guard, denial window, fixed renewal units) remain unchanged. SessionManager is a client of the existing protocol. Daemon side adds only the expiration alert trigger in renewal response handler.
+환경 모델:
+  Wallet Creation -> environment 고정 (e.g., 'testnet' 또는 'mainnet')
+                  -> 트랜잭션 요청 시 network 지정 (e.g., 'polygon-amoy')
+                  -> AdapterPool.resolve(chain, request.network)
+```
+
+**주요 컴포넌트 변경:**
+
+1. **NetworkResolver (신규)**: 트랜잭션 요청에서 network 해결 + environment 교차 검증. 우선순위: request.network > wallet.defaultNetwork > environment 기본값
+2. **PipelineContext 확장**: `wallet.network` -> `wallet.environment` + `wallet.network`(리졸브된). Stage 1에서 environment-network 일치를 가장 먼저 검증
+3. **PolicyEngine 확장**: `TransactionParam`에 `network` 필드 추가. ALLOWED_NETWORKS 정책 타입(11번째) 추가. 기존 정책의 네트워크 스코프 지정
+4. **AdapterPool**: 변경 불필요. 이미 `chain:network` 키로 올바른 캐싱. 호출자만 리졸브된 network를 전달
+5. **DB Schema**: `wallets.environment` + `wallets.default_network` + `transactions.network` + `policies.network` (선택적)
+
+**패턴:**
+
+- **Per-Network Adapter Instance**: viem PublicClient는 chain당 하나. AdapterPool이 `${chain}:${network}` 키로 캐싱
+- **12-step Table Recreation**: CHECK 제약 변경 시 테이블 재생성. v2, v3 마이그레이션의 검증된 패턴 재사용
+- **Zod SSoT Cascade**: EnvironmentType enum -> TypeScript -> DB CHECK -> Drizzle schema -> API validation 순서로 파생
+
+**Anti-Pattern 회피:**
+
+- AdapterPool 구조 변경 금지: 기존 캐시 키가 이미 정확한 추상화
+- 단일 마이그레이션에 모든 변경 집중 금지: 논리 단위로 분리 (v6a: ADD COLUMN, v6b: 12-step 재생성)
+- 기존 네트워크 값 삭제 금지: `default_network`에 보존하여 하위호환 유지
+
+**Source confidence:** HIGH (62,296 LOC 코드베이스 직접 분석 + 12-step 패턴 v2/v3에서 실전 검증 완료)
+
+---
 
 ### Critical Pitfalls
 
-1. **setTimeout 32-bit overflow (C-01)** — Delays > 2,147,483,647ms (24.85 days) wrap to 1ms, causing immediate renewal attempts that hit RENEWAL_TOO_EARLY. **Mitigation:** `Math.min(delay, MAX_TIMEOUT)` wrapper with chained setTimeout for long delays. Rare in practice (7-day default is safe) but config.toml allows custom expiresIn.
+환경 모델 전환의 가장 위험한 함정 5개:
 
-2. **Token file write race (C-02)** — MCP auto-renewal + Telegram /newsession + CLI refresh-token can write simultaneously, causing partial writes or file corruption. **Mitigation:** Atomic write-then-rename pattern (tmp file + fs.renameSync) shared via `@waiaas/core/utils/token-file.ts`. POSIX rename is atomic. Windows retry-on-EPERM with 10-50ms backoff.
+1. **Testnet 키로 Mainnet 트랜잭션 서명 -- 환경 격리 실패 (CRITICAL)**
+   - **문제**: environment 모델에서 `testnet` 환경의 지갑이 트랜잭션 요청 시 `network: 'ethereum-mainnet'`을 지정하면, 같은 개인키로 서명되어 실 자금이 이동
+   - **회피**: `validateEnvironmentNetwork(environment, network)` 함수를 파이프라인 Stage 1에서 가장 먼저 실행. mainnet 환경은 `*-mainnet` 네트워크만, testnet 환경은 `*-sepolia/*-amoy/devnet/testnet` 네트워크만 허용. AdapterPool.resolve()에서도 이중 검증
+   - **Phase**: environment 모델 설계 단계에서 반드시 해결. 구현 첫 번째 단계에서 이 검증부터 작성
 
-3. **JWT payload decoding without verification (C-03)** — SessionManager extracts exp/sid from JWT without signature check (no signing key in MCP). Attacker replacing mcp-token with exp=distant_future causes renewal skip. **Mitigation:** On load, call GET /v1/sessions/:sid with token to verify server-side validity. Base64url parsing with exp sanity check (past 10y to future 1y range).
+2. **DB 마이그레이션 v6 -- CHECK 제약 변경의 12-step 테이블 재생성 위험 (CRITICAL)**
+   - **문제**: `wallets.network` -> `wallets.environment` 변환 시 CHECK 제약 변경 필요. SQLite의 12-step 테이블 재생성(CREATE-COPY-RENAME)에서 5개 FK 테이블 모두 재생성 필요. 데이터 변환 로직 오류 시 기존 월렛 정보 유실
+   - **회피**: 마이그레이션을 2단계로 분리 (v6a: ADD COLUMN + 데이터 복사, v6b: 12-step 재생성). `transactions.network`를 먼저 채운 후 `wallets.network` 변환. `PRAGMA foreign_key_check` 후 COMMIT. 실제 데이터 시나리오(Solana mainnet + EVM sepolia 혼합)로 round-trip 테스트
+   - **Phase**: DB 마이그레이션 설계 단계. 마이그레이션 스크립트 TDD 작성이 최우선
 
-4. **Renewal inflight during process kill (H-02)** — SIGTERM during "API returned 200 but before file write" leaves token_hash updated in DB but old token in file. Next restart loads stale token → 401. **Mitigation:** Write file before updating memory. Graceful shutdown awaits inflight renewal (5s max). Start-time token validity check with daemon.
+3. **기존 지갑 network 정보의 비가역적 유실 -- 마이그레이션 데이터 변환 순서 오류 (CRITICAL)**
+   - **문제**: `transactions` 테이블에 `network` 컬럼이 없고, `wallets.network`를 `environment`로 변환하면 기존 트랜잭션이 어느 네트워크에서 실행됐는지 정보가 영구 유실
+   - **회피**: 마이그레이션 순서 엄격 준수. Step 1: `transactions`에 `network` 컬럼 추가 (ALTER TABLE ADD COLUMN). Step 2: `UPDATE transactions SET network = (SELECT network FROM wallets WHERE id = transactions.wallet_id)` -- 기존 wallet.network에서 복사. Step 3: 그 다음에야 `wallets.network` -> `wallets.environment` 변환
+   - **Phase**: DB 마이그레이션 구현 단계의 첫 번째 작업. 데이터 보존이 확인된 후에만 스키마 변경 진행
 
-5. **Timer drift over 30 renewals (H-01)** — setTimeout delays are minimums, not guarantees. Event loop busy/GC pause causes minutes of drift over 30 renewals → absolute lifetime approached later than expected → RENEWAL_LIMIT_REACHED surprise. **Mitigation:** Recalculate next renewal from server response expiresAt, not client-side iat + delay. Resets drift to zero each cycle.
+4. **API 하위 호환성 파괴 -- 선택적 network 파라미터의 암묵적 계약 변경 (HIGH)**
+   - **문제**: `POST /v1/transactions/send`에 optional `network` 필드 추가 시, 기존 SDK 클라이언트가 network를 보내지 않으면 어떤 network가 기본값인가? 응답의 `network` 필드 의미가 wallet-level에서 transaction-level로 바뀌어 혼란
+   - **회피**: `default_network` 전략. wallet에 `default_network`를 저장하고, network 미지정 시 default_network 사용 (기존 동작과 동일). 응답에 `resolvedNetwork` 필드 추가하여 실제 실행된 network 명시. SDK/MCP/Admin 동시 업데이트 필수
+   - **Phase**: API 설계 단계. 응답 스키마 변경 전에 하위 호환성 전략 확정
 
-6. **Claude Desktop disconnects on repeated errors (H-04)** — Session expiry → all tools return 401 → Claude Desktop marks server as disconnected → /newsession afterwards has no effect because MCP already disconnected. **Mitigation:** Return non-error status messages ("session_expired, please retry in 2 minutes") instead of isError=true, preventing disconnect cascade.
+5. **정책 엔진의 네트워크 범위 불일치 -- ALLOWED_TOKENS이 다른 네트워크의 토큰을 허용 (HIGH)**
+   - **문제**: 현재 ALLOWED_TOKENS 평가에서 네트워크 구분이 없음. 같은 contract address가 다른 네트워크에서 전혀 다른 컨트랙트일 수 있는데, 한 네트워크에서 허용된 주소가 다른 네트워크에서도 자동 허용됨
+   - **회피**: 정책 rules에 `network` 필드 추가. network가 명시되면 해당 네트워크에서만 적용, 미명시면 모든 네트워크에 적용. ALLOWED_NETWORKS 정책 타입 추가 (gate keeper). `TransactionParam`에 `network` 필드 추가하여 현재 어떤 네트워크인지 정책 엔진에 전달
+   - **Phase**: 정책 엔진 확장 설계 단계. 새 PolicyType 추가와 기존 정책의 네트워크 범위 지정을 동시에 설계
 
-7. **0o600 ignored on Windows (H-03)** — fs.chmod on Windows only sets read-only vs read-write, group/other distinction not enforced. mcp-token accessible to other users in multi-user Windows. **Mitigation:** Use %LOCALAPPDATA%\waiaas on Windows (user profile isolation), document limitation in 24-monorepo.md. macOS/Linux use 0o600 as designed.
+**Source confidence:** HIGH (코드베이스 직접 분석 + TheCharlatan의 Coin Isolation Bypass 연구 + SQLite 공식 문서)
 
-8. **Lazy reload transition delay (M-02)** — 401 lazy reload means first API call after Telegram /newsession fails with old token, 50ms delay to reload file, then retry. User-facing: transparent. LLM-facing: one transient failure if newToken not yet persisted → "session expired" message → LLM stops trying wallet tools. **Mitigation:** Err on side of "retryable, please wait" messages, not hard errors.
-
-9. **Renewal-in-flight tool call uses old token (H-05)** — During PUT /renew network RTT, tool call starts with old token. By time it reaches daemon, token_hash already swapped → 401. **Mitigation:** Auto-retry 401 after 50ms (enough for renewal completion), or extend 53-session-renewal-protocol.md with previous_token_hash grace period (like v0.7 JWT dual-key 5min rotation).
-
-10. **Telegram callback_query 15s timeout (M-01)** — Owner clicks inline keyboard button, but sessionService.create() + file write takes >15s? Unlikely (300ms Argon2id + 100ms writes = <1s typical). Real risk: stale keyboard (hours old) clicked → "query too old". **Mitigation:** Immediately answerCallbackQuery("Creating session...") then send completion message separately. Timestamp in callback_data, reject if >5min old.
-
-11. **Environment variable stale token bootstrap loop (M-03)** — config.json has 30-day-old TOKEN from initial setup. mcp-token file deleted by user. MCP restarts → loads expired env token → error state → never checks file again (lazy reload only triggers on 401 during API call). **Mitigation:** Error-recovery loop that checks file every 60s even when in expired state.
-
-12. **Timer leak on ungraceful exit (M-05)** — SessionManager setTimeout not cleared → Node.js process hangs on shutdown. Windows orphan process continues renewing. **Mitigation:** timer.unref() to not block exit + process.on('SIGTERM/SIGINT', () => sessionManager.dispose()) to clean timers.
+---
 
 ## Implications for Roadmap
 
-Based on the research, v0.9 is a **pure design milestone** (no code implementation). The natural phase structure follows the dependency graph: shared utilities → SessionManager core → daemon/CLI/Telegram integration → document updates.
+환경 모델 전환은 **설계 마일스톤(v1.4.5)과 구현 마일스톤(v1.4.6)으로 분리**를 권장한다.
 
-### Phase 36: Token File Infrastructure (Layer 0)
+### v1.4.5 (설계): 멀티체인 월렛 환경 모델 설계
 
-**Rationale:** All 3 integrations (SessionManager, Telegram, CLI) need shared file utilities. Building this foundation first eliminates code duplication and ensures consistent symlink/permission handling.
+**Rationale:** 62K LOC 시스템의 근본적 데이터 모델 변경은 구현 전에 설계 문서로 확정 필요. 특히 DB 마이그레이션, API 하위 호환성, 정책 엔진 확장의 3가지 고위험 영역은 코드 작성 전에 의사 결정 완료해야 함.
 
 **Delivers:**
-- `@waiaas/core/utils/token-file.ts` with getMcpTokenPath(), atomicWriteToken(), readMcpToken()
-- Atomic write-then-rename pattern with Windows EPERM retry
-- Symlink rejection (lstatSync check)
-- SESSION_EXPIRING_SOON event type added to NotificationEventType enum (16→17)
-
-**Addresses:**
-- TS-1 (file persistence spec)
-- C-02 (write race mitigation)
-- H-03 (Windows permission handling)
+- 설계 문서 신규 작성: `docs/68-multichain-environment-model.md` (아키텍처 변경, 데이터 흐름, NetworkResolver)
+- 설계 문서 수정: `docs/25-sqlite-schema.md` (wallets.environment), `docs/32-transaction-pipeline-api.md` (Stage 1 변경), `docs/52-auth-model.md` (환경 검증)
+- DB 마이그레이션 v6 설계: 12-step 재생성 전략, 데이터 변환 순서, 검증 쿼리
+- API 하위 호환성 전략: `default_network` + `resolvedNetwork` 응답 필드
+- Zod SSoT EnvironmentType enum 명세
 
 **Avoids:**
-- C-02 (partial writes) via atomic rename
-- C-03 (symlink attacks) via lstat check
+- C-02: DB 마이그레이션 v6 설계 오류
+- C-03: 데이터 변환 순서 의존성
+- H-01: API 하위 호환성 파괴
 
-**Design outputs:**
-- 24-monorepo.md update: `~/.waiaas/mcp-token` file spec (format, permissions, symlink rules)
-- 25-sqlite-schema.md review: agents.default_constraints column (add or defer)
+**Research Flag:** Standard patterns (기존 12-step 패턴 재사용, 새 연구 불필요)
 
-### Phase 37: SessionManager Core (Layer 1A — Milestone Heart)
+---
 
-**Rationale:** This is the differentiator. Once SessionManager works, everything else is integration glue. Focus on timer safety (C-01), token validation (C-03), drift correction (H-01), graceful shutdown (H-02).
+### v1.4.6 Phase 1: Core Types + DB Schema
 
-**Delivers:**
-- SessionManager class with loadToken(), start(), renew(), tryReloadFromFile(), dispose()
-- safeSetTimeout wrapper with MAX_TIMEOUT check and chaining
-- Start-time token validity check via GET /v1/sessions/:sid
-- Timer drift correction: recalculate delay from server response expiresAt
-- Graceful shutdown: await inflight renewal on SIGTERM/SIGINT
-- ApiClient refactor: SessionManager injection, 401 auto-retry with 50ms delay
-
-**Addresses:**
-- TS-2 (load priority), TS-3 (auto-renewal), TS-5 (401 lazy reload)
-- DF-2 (transparent management), DF-5 (race condition guard)
-
-**Avoids:**
-- C-01 (setTimeout overflow) via safeSetTimeout
-- C-03 (unvalidated JWT) via start-time check
-- H-01 (timer drift) via server-response recalc
-- H-02 (inflight write loss) via file-first, graceful-shutdown
-- H-04 (Claude disconnect) via non-error status messages
-- H-05 (renewal race) via 401 auto-retry
-- M-03 (expired env token loop) via error recovery polling
-- M-05 (timer leak) via unref() + dispose()
-
-**Design outputs:**
-- New design doc: `SESS-AUTO-01-session-manager.md` (SessionManager class spec, lifecycle, error handling, 12 pitfall mitigations)
-- 38-sdk-mcp-interface.md update: SessionManager integration, tool handler token reference changes, ApiClient refactor
-
-### Phase 38: Daemon-Side Integration (Layer 1B)
-
-**Rationale:** SessionManager is a client of existing renewal API. Daemon only adds expiration alert trigger and /newsession handler. Parallel to Phase 37 after Phase 36 completes.
+**Rationale:** 타입 시스템을 먼저 변경하여 컴파일러가 영향 범위를 가이드하게 함. DB 스키마가 바뀌어야 모든 후속 기능이 동작 가능.
 
 **Delivers:**
-- SessionService: SESSION_EXPIRING_SOON trigger in renewal response handler (remainingRenewals ≤ 3 or absoluteExpiresAt - now ≤ 24h)
-- TelegramBotService: `/newsession` command (9th command, Tier 1)
-  - InlineKeyboard agent list
-  - callback_query handler with immediate answerCallbackQuery
-  - sessionService.create() with default_constraints resolution
-  - atomicWriteToken() call
-- agents.default_constraints column decision (add, defer, or config-only)
+- `@waiaas/core`: EnvironmentType enum, validateEnvironmentNetwork() 함수, 환경-네트워크 매핑 함수
+- DB 마이그레이션 v6 구현: wallets.environment, transactions.network, policies.network 컬럼 추가
+- DDL pushSchema 업데이트: LATEST_SCHEMA_VERSION 갱신
+- Drizzle 스키마 동기화: schema.ts 필드 변경
 
-**Addresses:**
-- TS-4 (expiration alerts), DF-1 (Telegram one-click), DF-3 (default constraints), DF-4 (proactive notification)
+**Uses:** better-sqlite3 12.6.2 (12-step 패턴), Drizzle ORM (스키마 미러)
 
-**Avoids:**
-- M-01 (callback timeout) via immediate answerCallbackQuery + separate completion message
-- M-01 (stale keyboard) via timestamp in callback_data, 5-min expiry
+**Addresses:** TS-1 (환경 기반 월렛 모델), TS-5 (DB 마이그레이션)
 
-**Design outputs:**
-- New design doc: `SESS-AUTO-02-telegram-newsession.md` (command spec, inline keyboard flow, callback handling, timestamp validation)
-- 35-notification-architecture.md update: SESSION_EXPIRING_SOON event (severity: warning, channels: Telegram/Discord/ntfy)
-- 40-telegram-bot-docker.md update: /newsession command (8→9), Tier 1 auth, agent selection UX
-- 53-session-renewal-protocol.md update: Expiration alert trigger condition in Section 6 (renewal response handling)
+**Avoids:** C-02, C-03 (마이그레이션 안전성)
 
-### Phase 39: CLI MCP Commands (Layer 1C)
+**Research Flag:** Skip research (검증된 패턴)
 
-**Rationale:** Parallel to Phase 38 after Phase 36. CLI provides initial bootstrap (mcp setup) and 30-day manual refresh. Critical for first-time setup UX.
+---
+
+### v1.4.6 Phase 2: NetworkResolver + Pipeline Integration
+
+**Rationale:** 네트워크 해결 로직이 확정된 후에야 파이프라인과 라우트에서 사용 가능. 환경 격리 검증은 가장 중요한 보안 기능이므로 독립 단계로 분리.
 
 **Delivers:**
-- CLI `mcp` subcommand group
-- `waiaas mcp setup --agent-id <id> [--expires-in] [--constraints]`
-  - Daemon health check (GET /health) → error if not running
-  - masterAuth implicit session creation
-  - atomicWriteToken() call
-  - Claude Desktop config.json setup instructions output
-- `waiaas mcp refresh-token --agent-id <id>`
-  - Optional: revoke old session (if expired, skip)
-  - Create new session with same constraints
-  - atomicWriteToken() call
+- `daemon/infrastructure/network-resolver.ts`: NetworkResolver 클래스 (트랜잭션 요청 -> 실제 네트워크 해결 + 환경 교차 검증)
+- `daemon/pipeline/stages.ts`: PipelineContext 확장, Stage 1에 environment-network 검증 추가, transactions.network INSERT
+- `daemon/pipeline/database-policy-engine.ts`: TransactionParam에 network 추가, ALLOWED_NETWORKS 평가
 
-**Addresses:**
-- TS-6 (mcp setup), TS-7 (mcp refresh-token)
+**Implements:** Pipeline Stage 1 변경, 정책 엔진 확장
 
-**Avoids:**
-- C-02 (CLI write race) via shared atomicWriteToken
-- H-03 (Windows permissions) via platform-specific handling in token-file utils
+**Addresses:** TS-2 (트랜잭션 레벨 network 지정), TS-3 (ALLOWED_NETWORKS 정책)
 
-**Design outputs:**
-- New design doc: `SESS-AUTO-03-cli-mcp-commands.md` (command spec, daemon check, config guide output format, error handling for daemon-not-running)
-- 54-cli-flow-redesign.md update: `mcp` subcommand group, setup/refresh-token commands
+**Avoids:** C-01 (환경 격리 실패), H-03 (정책 네트워크 범위)
 
-### Phase 40: Design Document Integration (Layer 3)
+**Research Flag:** Skip research (파이프라인 로직 확장)
 
-**Rationale:** After all components designed, update 7 existing docs to reflect v0.9 changes. This phase is documentation-only, ensuring no design inconsistencies remain.
+---
+
+### v1.4.6 Phase 3: Route Integration + API 하위 호환성
+
+**Rationale:** NetworkResolver와 파이프라인 변경이 완료된 후 API 라우트에서 사용. 하위 호환성 전략(default_network)이 이 단계의 핵심.
 
 **Delivers:**
-- 38-sdk-mcp-interface.md: SessionManager integration, tool handler changes (8 files: send-token, get-balance, etc.), ApiClient refactor
-- 35-notification-architecture.md: SESSION_EXPIRING_SOON event (17th event)
-- 40-telegram-bot-docker.md: /newsession (9th command)
-- 54-cli-flow-redesign.md: mcp subcommands
-- 53-session-renewal-protocol.md: Expiration alert, optional previous_token_hash grace period
-- 24-monorepo-data-directory.md: mcp-token file spec
-- 25-sqlite-schema.md: agents.default_constraints review
+- `daemon/api/routes/wallets.ts`: POST /wallets에 environment 파라미터 처리
+- `daemon/api/routes/transactions.ts`: POST /transactions/send에 NetworkResolver 통합
+- `daemon/api/routes/wallet.ts`: GET /wallet/assets 멀티네트워크 집계 (optional `?network=` 파라미터)
+- `daemon/lifecycle/daemon.ts`: executeFromStage5에서 network 리졸브 변경
 
-**Rationale:** Unified review ensures cross-references are correct (e.g., 38→53→35 linkage). Prevents drift between design docs.
+**Addresses:** TS-4 (멀티 네트워크 잔액 조회), H-01 (API 하위 호환성)
 
-**Design outputs:**
-- 7 updated design documents with v0.9 sections clearly marked
-- Master checklist: v0.9 design completeness verification
+**Avoids:** H-02 (AdapterPool 캐시 키 변경 -- 변경 불필요 확인), M-01 (getAssets 성능 폭발)
+
+**Research Flag:** Skip research (기존 route 패턴 확장)
+
+---
+
+### v1.4.6 Phase 4: SDK + MCP Integration
+
+**Rationale:** REST API가 확정된 후 SDK/MCP 반영. 두 인터페이스는 독립적이므로 병렬 작업 가능.
+
+**Delivers:**
+- `@waiaas/sdk`: sendTransaction에 optional network 파라미터
+- `@waiaas/mcp`: MCP 도구에 network 파라미터 추가
+- Python SDK: send_transaction에 optional network 파라미터
+- skill 파일 업데이트: network 선택 가이드 추가
+
+**Addresses:** D-3 (AI 에이전트 네트워크 추론 -- MCP 자연어 네트워크 결정)
+
+**Avoids:** H-05 (MCP 토큰 + 세션의 하위 호환성 -- default_network가 해결)
+
+**Research Flag:** Skip research (SDK/MCP 메서드 확장)
+
+---
+
+### v1.4.6 Phase 5: Quickstart + Admin UI + Tests
+
+**Rationale:** 모든 기능 구현 후 DX 개선과 UI 반영. 통합 테스트가 마지막.
+
+**Delivers:**
+- CLI Quickstart: `waiaas quickstart --mode testnet` -> 2 월렛 일괄 생성
+- Admin UI: 지갑 상세에서 environment 표시, 네트워크 선택 UI
+- 단위 테스트: NetworkResolver, ALLOWED_NETWORKS 정책
+- 통합 테스트: 멀티네트워크 파이프라인 E2E
+- 마이그레이션 테스트: v6 마이그레이션 검증
+
+**Addresses:** D-1 (Quickstart 원스톱), M-05 (Admin UI 표시 혼란)
+
+**Avoids:** H-04 (1,467 테스트 광범위 실패 -- 타입 시스템으로 컴파일 에러 가이드)
+
+**Research Flag:** Skip research (테스트 확장)
+
+---
 
 ### Phase Ordering Rationale
 
-**Sequential dependency:**
-- Phase 36 (shared utils) must precede all others (37, 38, 39 depend on token-file utils)
-- Phase 37, 38, 39 can proceed in parallel after Phase 36
-- Phase 40 (doc integration) must wait for Phase 37+38+39 to finalize
+1. **타입 -> 스키마 -> 로직 -> 인터페이스 순서**: 타입 시스템이 먼저 변경되면 컴파일러가 영향 범위를 명확히 보여줌. DB 스키마가 바뀌어야 모든 기능이 동작 가능. NetworkResolver가 확정된 후 파이프라인과 라우트에서 사용. API가 확정된 후 SDK/MCP 반영.
+2. **설계와 구현 분리**: 62K LOC 시스템의 근본적 모델 변경은 코드 작성 전에 설계 문서로 확정 필요. DB 마이그레이션, API 하위 호환성, 정책 엔진 확장의 3가지 고위험 영역은 의사 결정 완료 후 구현.
+3. **마이그레이션 안전성 최우선**: C-02, C-03의 CRITICAL pitfall을 회피하기 위해 DB 마이그레이션을 Phase 1에서 먼저 완료. 12-step 패턴 TDD 작성 + 실제 데이터 round-trip 테스트.
+4. **환경 격리 검증 독립화**: C-01 (testnet/mainnet 격리 실패)은 자금 손실 위험이므로 Phase 2에서 NetworkResolver + 파이프라인 검증을 독립적으로 구현하고 집중 테스트.
 
-**Why this grouping:**
-- Layer 0 (Phase 36): Zero external dependencies, purely foundational
-- Layer 1 (Phase 37/38/39): Each Layer 1 phase is self-contained within its package boundary (mcp/daemon/cli)
-- Layer 3 (Phase 40): Integration review crosses all boundaries
-
-**How this avoids pitfalls:**
-- Phase 36 enforces atomic write pattern before any component implements file I/O → eliminates C-02 retroactive fixes
-- Phase 37 front-loads timer/validation complexity → remaining phases are straightforward integrations
-- Phase 40 prevents doc drift that would confuse v1.3 implementation milestone
+---
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- None. v0.9 is unique in that all 4 research files scored HIGH confidence. Stack research confirmed zero new deps. Features research drew directly from v0.5-v0.8 design precedents. Architecture research analyzed existing 7 docs. Pitfalls research cross-referenced Node.js official docs + Claude Desktop issues + Telegram Bot API + WAIaaS own renewal protocol.
-
 **Phases with standard patterns (skip research-phase):**
-- **All phases (36-40)** — This is a design milestone, not implementation. The research *is* the milestone. Implementation milestone (v1.3) will reference these 4 research files + 3 new design docs + 7 updated docs.
+- **Phase 1 (Core Types + DB Schema):** 12-step 패턴은 v2/v3에서 검증 완료. EnvironmentType enum은 CHAIN_TYPES/NETWORK_TYPES와 동일한 Zod SSoT 패턴
+- **Phase 2 (NetworkResolver + Pipeline):** 파이프라인 Stage 확장은 기존 6-stage 패턴 따름. 정책 엔진 확장도 기존 10 PolicyType 패턴 재사용
+- **Phase 3 (Route Integration):** API 라우트 확장은 기존 42 엔드포인트 패턴과 일관
+- **Phase 4 (SDK + MCP):** SDK/MCP 메서드 확장은 기존 인터페이스 패턴 따름
+- **Phase 5 (Quickstart + Tests):** CLI 명령 추가는 기존 commander 패턴, 테스트는 기존 1,467 테스트와 동일 프레임워크
 
-**Exception:** If Phase 38 chooses to add agents.default_constraints column, that's a minor schema change requiring a focused sub-task, but not a full research-phase (it's a nullable TEXT column with JSON constraints, established pattern from v0.6 policy design).
+**Phases needing deeper research (none):**
+- 환경 모델 전환에 새로운 연구 영역 없음. 모든 패턴이 기존 코드베이스 또는 검증된 업계 표준에서 파생
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new deps confirmed via npm registry checks. All APIs (jose.decodeJwt, grammy InlineKeyboard, Node.js fs/timers) verified in official docs. setTimeout 32-bit limit confirmed in Node.js source + MDN. |
-| Features | HIGH | Table stakes derived from MCP stdio constraints (env var immutability) + v0.5 session renewal protocol. Differentiators benchmarked against Claude Desktop/Cursor/Cline (all lack stdio auto-renewal). Anti-features explicitly justified (fs.watch instability, OAuth SHOULD NOT in MCP spec). |
-| Architecture | HIGH | SessionManager pattern mirrors v0.5 SDK's renewSession() but adapted for MCP stdio. 4-component file ownership analyzed with Self-Hosted single-machine race conditions exhaustively covered (C-02). Integration points map 1:1 to existing v0.5-v0.8 components (TelegramBotService, CLI commands, NotificationService). |
-| Pitfalls | HIGH | 12 pitfalls sourced from: Node.js official docs (C-01, H-01, H-03, M-05), npm package issues (C-02 write-file-atomic#28), Telegram Bot API spec (M-01), Claude Desktop issue tracker (H-02, H-04), WAIaaS own v0.5/v0.7 designs (H-05 token rotation, M-03 env var fallback). Critical pitfalls (C-01/02/03) have concrete mitigations designed. |
+| Stack | **HIGH** | 새 라이브러리 추가 불필요. 기존 viem 2.x + better-sqlite3 + Drizzle ORM이 환경 모델을 완전히 지원. 코드베이스 62,296 LOC 직접 분석으로 검증 |
+| Features | **HIGH** | Table stakes 6개, Differentiators 5개 모두 업계 표준 패턴과 일치. MetaMask Multichain Accounts, Dfns key-centric model, Phantom 멀티체인 사례로 검증 |
+| Architecture | **HIGH** | NetworkResolver + PipelineContext 확장은 기존 6-stage 패턴의 자연스러운 확장. AdapterPool 변경 불필요 (이미 올바른 구현). 12-step 패턴은 v2/v3에서 실전 검증 완료 |
+| Pitfalls | **HIGH** | 5개 CRITICAL/HIGH pitfall 모두 구체적 회피 방안 확인. C-01 (환경 격리)은 TheCharlatan 연구 + 하드웨어 지갑 취약점으로 검증. C-02/C-03 (마이그레이션)은 SQLite 공식 문서 + 기존 v2/v3 선례로 검증 |
 
-**Overall confidence:** HIGH
+**Overall confidence:** **HIGH**
 
-No research area scored below HIGH. This is the result of v0.9 being an *internal* milestone (extending existing WAIaaS architecture, not integrating external services) and MCP being a well-specified protocol with active community issue tracking.
+---
 
 ### Gaps to Address
 
-**Minor gaps (resolved during design phase):**
+환경 모델 전환에서 연구가 불완전하거나 구현 중 검증이 필요한 영역:
 
-1. **agents.default_constraints column:** TS-1/FEATURES.md identified 3 options (DB column, config.toml global, hardcoded). Research leans toward "config + hardcoded" to avoid DB schema change in design milestone, but Phase 38 should finalize this with a 15-minute decision matrix.
+1. **viem PublicClient 메모리 사용량 실측**: 13개 동시 연결 시 50-130MB 추가 메모리 추정은 경험적 추론. Phase 2 구현 시 실제 메모리 프로파일링으로 AdapterPool maxSize 튜닝 필요 (M-02 회피)
+   - **구현 중 대응**: 개발 환경에서 13개 네트워크 동시 연결 후 메모리 모니터링. maxSize 기본값 8로 시작, 필요시 조정
 
-2. **previous_token_hash grace period:** H-05 (renewal inflight 401) has two mitigations: 401 auto-retry (simple) vs daemon-side grace period (like v0.7 dual-key). Research recommends starting with auto-retry in SESS-AUTO-01, noting grace period as Phase 38 optional enhancement if testing reveals persistent race conditions.
+2. **getAssets N-way RPC 호출 성능 실측**: 6 네트워크 x 10 토큰 = 60 RPC 호출의 실제 응답 시간이 QuickNode 벤치마크(200-500ms)와 일치하는지 검증 필요 (M-01)
+   - **구현 중 대응**: 단일 네트워크 조회를 기본 동작으로 유지 (하위호환). 멀티네트워크 조회는 `?networks=all` opt-in. Phase 3에서 실제 RPC 타이밍 측정 후 캐싱 전략 튜닝
 
-3. **Windows %LOCALAPPDATA% path:** H-03 identified Windows 0o600 limitation. token-file utils should detect platform and use `%LOCALAPPDATA%\waiaas\mcp-token` on Windows. This is a 10-line change but must be specified in Phase 36.
+3. **기존 1,467 테스트의 영향 범위**: `wallet.network` 참조 42건이 모두 타입 에러로 나타나는지, 일부는 런타임 오류로 발견되는지 불확실 (H-04)
+   - **구현 중 대응**: Phase 1에서 EnvironmentType 타입 변경 후 전체 테스트 실행. 컴파일 에러로 나타나지 않는 곳은 grep으로 전수 검사
 
-4. **SESSION_EXPIRING_SOON notification template:** Phase 38 adds 17th event type but notification template (Telegram message format) is not in research. Phase 38 design doc should include: "⚠️ Session Expiring Soon\nAgent: {name}\nExpires: {timestamp}\nRemaining Renewals: {count}\n[Create New Session] button".
+4. **Solana testnet 환경의 devnet vs testnet 기본값**: devnet을 기본으로 할지 testnet을 기본으로 할지 사용자 설문 필요 (M-08)
+   - **구현 중 대응**: devnet을 기본으로 시작 (Solana 공식 문서가 devnet 우선 언급). v1.4.6 후 사용자 피드백으로 조정 가능
 
-5. **MCP notification for token transition:** M-06 notes MCP stdio can't push unsolicited messages, but MCP spec supports server→client notifications. Research says "Claude Desktop handling unclear, defer to future." Phase 40 doc update should note this as "v1.4+ consideration" in 38-sdk-mcp-interface.md.
-
-**No blocking gaps.** All gaps have defined resolution paths within the 4 phases. No additional research-phase invocations needed.
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Official Documentation:**
-- [Node.js v25 Timers](https://nodejs.org/api/timers.html) — setTimeout 32-bit limit (2^31-1 = 2,147,483,647ms), unref() behavior, delay minimums
-- [Node.js v25 File System](https://nodejs.org/api/fs.html) — writeFile mode option, lstat vs stat, Windows ACL limitations
-- [jose v6.x decodeJwt](https://github.com/panva/jose/blob/v6.x/docs/util/decode_jwt/functions/decodeJwt.md) — Signature-free JWT payload extraction
-- [grammy Inline Keyboard](https://grammy.dev/plugins/keyboard) — InlineKeyboard.text(), bot.callbackQuery() regex matching
-- [Telegram Bot API: answerCallbackQuery](https://core.telegram.org/bots/api#answercallbackquery) — 15-second timeout, show_alert parameter
-- [MCP Authorization Spec (Draft)](https://modelcontextprotocol.io/specification/draft/basic/authorization) — stdio SHOULD NOT use OAuth 2.1
-- [@modelcontextprotocol/sdk npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk) — v1.26.0 latest stable, Transport lifecycle hooks
+**코드베이스 직접 분석:**
+- `packages/daemon/src/infrastructure/database/schema.ts` -- 10 테이블 스키마
+- `packages/daemon/src/infrastructure/database/migrate.ts` -- v2-v5 마이그레이션 (12-step 패턴)
+- `packages/daemon/src/infrastructure/adapter-pool.ts` -- AdapterPool 구현 (cacheKey, resolve)
+- `packages/daemon/src/pipeline/pipeline.ts` -- 6-stage 파이프라인
+- `packages/daemon/src/pipeline/database-policy-engine.ts` -- 정책 엔진 1007라인
+- `packages/daemon/src/api/routes/transactions.ts` -- POST /v1/transactions/send
+- `packages/core/src/enums/chain.ts` -- NETWORK_TYPES 13개
+- `packages/adapters/evm/src/evm-chain-map.ts` -- EVM 10 네트워크 매핑
 
-**NPM Packages:**
-- [write-file-atomic#28](https://github.com/npm/write-file-atomic/issues/28) — Windows EPERM race condition
-- [nodejs/node#22860](https://github.com/nodejs/node/issues/22860) — setTimeout >MAX_INT32 wraps to 1ms
+**공식 문서:**
+- [SQLite ALTER TABLE 공식 문서](https://www.sqlite.org/lang_altertable.html) -- 12-step 테이블 재생성, CHECK 제약 제한사항
+- [viem Chains documentation](https://viem.sh/docs/chains/introduction) -- viem/chains 내장 정의
+- [viem Discussion #986: PublicClient Map pattern](https://github.com/wevm/viem/discussions/986) -- 네트워크별 PublicClient 인스턴스 패턴
+- [Drizzle ORM Custom Migrations](https://orm.drizzle.team/docs/kit-custom-migrations) -- 수동 마이그레이션 패턴
 
-**Claude Desktop Issues:**
-- [claude-code#1254](https://github.com/anthropics/claude-code/issues/1254), [#23216](https://github.com/anthropics/claude-code/issues/23216) — env var not passed to MCP server
-- [claude-code#15211](https://github.com/anthropics/claude-code/issues/15211) — Windows MCP process orphan
-- [claude-code#15945](https://github.com/anthropics/claude-code/issues/15945) — MCP server 16h hang
+### Secondary (MEDIUM-HIGH confidence)
 
-### Secondary (MEDIUM confidence)
+**업계 표준 패턴:**
+- [MetaMask Multichain Accounts](https://metamask.io/news/multichain-accounts) -- 계정 모델 리아키텍처, 런타임 네트워크 선택
+- [Dfns Multichain Wallets](https://www.dfns.co/article/introducing-multichain-wallets) -- key-centric 모델
+- [Phantom Multichain](https://phantom.com/learn/blog/introducing-phantom-multichain) -- 자동 멀티체인 주소 생성
+- [Zerion Multichain Portfolio APIs Guide 2026](https://zerion.io/blog/best-multichain-portfolio-apis-2026-guide/) -- 단일 API 호출 멀티체인 잔액 집계
 
-**Security Research:**
-- [Auth0: Critical JWT Vulnerabilities](https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/) — alg:none attacks, signature bypass
-- [OWASP JWT Testing Guide](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens) — Token validation checklist
-- [cross-platform-node-guide: permissions](https://github.com/ehmicky/cross-platform-node-guide/blob/main/docs/5_security/permissions.md) — Windows file permission limitations
+**보안 연구:**
+- [Hardware Wallet Coin Isolation Bypass](https://thecharlatan.ch/Coin-Isolation/) -- testnet/mainnet 격리 취약점 (Ledger/Trezor/KeepKey)
 
-**Competitor Analysis:**
-- [Cursor MCP Docs](https://cursor.com/docs/context/mcp) — env var + OAuth UI for remote only
-- [Continue.dev MCP Setup](https://docs.continue.dev/customize/deep-dives/mcp) — secrets reference, no auto-renewal
-- [Cline MCP Configuration](https://docs.cline.bot/mcp/configuring-mcp-servers) — mcp_settings.json, stdio only
-- [Apify MCP CLI](https://github.com/apify/mcp-cli) — OS keychain + sessions.json, OAuth profiles
+**성능 최적화:**
+- [QuickNode RPC 효율성 가이드](https://www.quicknode.com/guides/quicknode-products/apis/guide-to-efficient-rpc-requests) -- 병렬 vs 배치 요청, rate limiting
+- [Chainstack Multicall vs HTTP Batch 비교](https://docs.chainstack.com/docs/http-batch-request-vs-multicall-contract) -- EVM Multicall3 최적화
 
-**Community Discussions:**
-- [Stack Overflow: MCP Authentication](https://stackoverflow.blog/2026/01/21/is-that-allowed-authentication-and-authorization-in-model-context-protocol/) — Ecosystem PAT prevalence (53%)
-- [MCP Credential Weakness - ReversingLabs](https://www.reversinglabs.com/blog/mcp-server-credential-weakness) — 79% env var storage
-- [MCP Spec Update - Aaron Parecki](https://aaronparecki.com/2025/11/25/1/mcp-authorization-spec-update) — CIMD, enterprise auth
+**API 하위 호환성:**
+- [Zalando REST API Guidelines - Compatibility](https://github.com/zalando/restful-api-guidelines/blob/main/chapters/compatibility.adoc) -- breaking change 정의
 
-### Project-Internal (HIGH confidence)
+### Tertiary (MEDIUM confidence, WebSearch)
 
-**WAIaaS Design Documents:**
-- objectives/v0.9-session-management-automation.md — SessionManager objectives, lazy reload confirmation, security scenarios S-01 to S-04
-- 38-sdk-mcp-interface.md — MCP Server 6 tools + 3 resources, existing token passing
-- 53-session-renewal-protocol.md — 5 safety guards, token rotation (token_hash swap), 60%/50% timing
-- 35-notification-architecture.md — 16 event types (v0.8), INotificationChannel interface
-- 40-telegram-bot-docker.md — 8 existing commands, 2-Tier auth (Tier 1: chatId)
-- 54-cli-flow-redesign.md — CLI command structure, subcommand pattern
-- 24-monorepo-data-directory.md — ~/.waiaas data directory spec
-- 25-sqlite-schema.md — agents table schema, sessions table constraints
-
-**Previous Milestones:**
-- v0.5 outcomes — Session renewal protocol, 50% safety guard, maxRenewals=30, absolute lifetime
-- v0.7 outcomes — JWT dual-key rotation (5min grace period for key transitions), flock locking patterns
-- v0.8 outcomes — Owner 3-state model (NONE/GRACE/LOCKED), downgrade notifications
+- [Magic.link multichain documentation](https://magic.link/docs/blockchains/multichain) -- 서버 사이드 멀티체인 패턴 (정확한 일치 없음)
+- [Wepin multi-chain blog](https://www.wepin.io/en/blog/evm-non-evm-multi-chain) -- 환경 기반 월렛 그루핑 (간접 참조)
+- [Coinbase Wallet API v2](https://www.coinbase.com/developer-platform/products/wallet-sdk) -- chainId 트랜잭션 레벨 선택 (간접 참조)
 
 ---
-*Research completed: 2026-02-09*
+
+*Research completed: 2026-02-14*
 *Ready for roadmap: yes*
