@@ -178,13 +178,13 @@ export class MockChainAdapter implements IChainAdapter {
 **Mock 가능성:** HIGH
 **메소드 수:** 1개 (evaluate)
 
-단일 메소드에 명확한 입출력(agentId + TxRequest -> PolicyDecision)을 가지므로 Mock이 매우 간단하다.
+단일 메소드에 명확한 입출력(walletId + TxRequest -> PolicyDecision)을 가지므로 Mock이 매우 간단하다.
 
 #### 인터페이스 요약
 
 ```typescript
 interface IPolicyEngine {
-  evaluate(agentId: string, request: {
+  evaluate(walletId: string, request: {
     type: string
     amount: string
     to: string
@@ -214,10 +214,10 @@ export class MockPolicyEngine implements IPolicyEngine {
   private nextDecisions: PolicyDecision[] = []
 
   /** 호출 기록 */
-  readonly evaluateCalls: { agentId: string; request: unknown }[] = []
+  readonly evaluateCalls: { walletId: string; request: unknown }[] = []
 
-  async evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision> {
-    this.evaluateCalls.push({ agentId, request })
+  async evaluate(walletId: string, request: TxRequest): Promise<PolicyDecision> {
+    this.evaluateCalls.push({ walletId, request })
     if (this.nextDecisions.length > 0) {
       return this.nextDecisions.shift()!
     }
@@ -353,10 +353,10 @@ sodium-native C++ 바인딩에 의존하므로 Unit 테스트에서는 인터페
 interface ILocalKeyStore {
   unlock(password: string): Promise<void>
   lock(): void
-  sign(agentId: string, message: Uint8Array): Uint8Array
-  getPublicKey(agentId: string): string
-  addAgent(agentId: string, chain: ChainType, network: NetworkType, name: string): Promise<AgentKeyInfo>
-  exportKeyFile(agentId: string, exportPassword: string): Promise<Buffer>
+  sign(walletId: string, message: Uint8Array): Uint8Array
+  getPublicKey(walletId: string): string
+  addWallet(walletId: string, chain: ChainType, network: NetworkType, name: string): Promise<WalletKeyInfo>
+  exportKeyFile(walletId: string, exportPassword: string): Promise<Buffer>
 }
 ```
 
@@ -379,19 +379,19 @@ export class MockKeyStore implements ILocalKeyStore {
   /** 호출 기록 */
   readonly calls: { method: string; args: unknown[] }[] = []
 
-  /** 사전 등록된 에이전트 키 (결정적 시드 기반) */
-  constructor(preloadedAgents?: Array<{
-    agentId: string; chain: ChainType; network: NetworkType; name: string; seed: Uint8Array
+  /** 사전 등록된 지갑 키 (결정적 시드 기반) */
+  constructor(preloadedWallets?: Array<{
+    walletId: string; chain: ChainType; network: NetworkType; name: string; seed: Uint8Array
   }>) {
-    if (preloadedAgents) {
-      for (const agent of preloadedAgents) {
-        const keypair = nacl.sign.keyPair.fromSeed(agent.seed)
-        this.keys.set(agent.agentId, {
+    if (preloadedWallets) {
+      for (const wallet of preloadedWallets) {
+        const keypair = nacl.sign.keyPair.fromSeed(wallet.seed)
+        this.keys.set(wallet.walletId, {
           publicKey: keypair.publicKey,
           secretKey: keypair.secretKey,
-          chain: agent.chain,
-          network: agent.network,
-          name: agent.name,
+          chain: wallet.chain,
+          network: wallet.network,
+          name: wallet.name,
         })
       }
     }
@@ -410,42 +410,42 @@ export class MockKeyStore implements ILocalKeyStore {
     this.unlocked = false
   }
 
-  sign(agentId: string, message: Uint8Array): Uint8Array {
-    this.calls.push({ method: 'sign', args: [agentId, message] })
+  sign(walletId: string, message: Uint8Array): Uint8Array {
+    this.calls.push({ method: 'sign', args: [walletId, message] })
     if (!this.unlocked) throw new Error('KEYSTORE_NOT_UNLOCKED')
-    const key = this.keys.get(agentId)
-    if (!key) throw new Error('AGENT_NOT_FOUND')
+    const key = this.keys.get(walletId)
+    if (!key) throw new Error('WALLET_NOT_FOUND')
     return nacl.sign.detached(message, key.secretKey)
   }
 
-  getPublicKey(agentId: string): string {
-    this.calls.push({ method: 'getPublicKey', args: [agentId] })
-    const key = this.keys.get(agentId)
-    if (!key) throw new Error('AGENT_NOT_FOUND')
+  getPublicKey(walletId: string): string {
+    this.calls.push({ method: 'getPublicKey', args: [walletId] })
+    const key = this.keys.get(walletId)
+    if (!key) throw new Error('WALLET_NOT_FOUND')
     // Base58 인코딩 (Solana) 또는 0x hex (EVM)
     return encodePublicKey(key.publicKey, key.chain)
   }
 
-  async addAgent(
-    agentId: string, chain: ChainType, network: NetworkType, name: string
-  ): Promise<AgentKeyInfo> {
-    this.calls.push({ method: 'addAgent', args: [agentId, chain, network, name] })
+  async addWallet(
+    walletId: string, chain: ChainType, network: NetworkType, name: string
+  ): Promise<WalletKeyInfo> {
+    this.calls.push({ method: 'addWallet', args: [walletId, chain, network, name] })
     if (!this.unlocked) throw new Error('KEYSTORE_NOT_UNLOCKED')
-    // 결정적 시드에서 키 생성 (agentId 기반)
+    // 결정적 시드에서 키 생성 (walletId 기반)
     const seed = new Uint8Array(32)
-    new TextEncoder().encode(agentId).forEach((b, i) => { seed[i % 32] ^= b })
+    new TextEncoder().encode(walletId).forEach((b, i) => { seed[i % 32] ^= b })
     const keypair = nacl.sign.keyPair.fromSeed(seed)
-    this.keys.set(agentId, { publicKey: keypair.publicKey, secretKey: keypair.secretKey, chain, network, name })
-    return { id: agentId, name, chain, network, publicKey: encodePublicKey(keypair.publicKey, chain), createdAt: new Date().toISOString() }
+    this.keys.set(walletId, { publicKey: keypair.publicKey, secretKey: keypair.secretKey, chain, network, name })
+    return { id: walletId, name, chain, network, publicKey: encodePublicKey(keypair.publicKey, chain), createdAt: new Date().toISOString() }
   }
 
-  async exportKeyFile(agentId: string, exportPassword: string): Promise<Buffer> {
-    this.calls.push({ method: 'exportKeyFile', args: [agentId, exportPassword] })
+  async exportKeyFile(walletId: string, exportPassword: string): Promise<Buffer> {
+    this.calls.push({ method: 'exportKeyFile', args: [walletId, exportPassword] })
     if (!this.unlocked) throw new Error('KEYSTORE_NOT_UNLOCKED')
-    const key = this.keys.get(agentId)
-    if (!key) throw new Error('AGENT_NOT_FOUND')
+    const key = this.keys.get(walletId)
+    if (!key) throw new Error('WALLET_NOT_FOUND')
     // Mock: 단순 JSON 직렬화 (실제 암호화 없음)
-    return Buffer.from(JSON.stringify({ agentId, publicKey: encodePublicKey(key.publicKey, key.chain) }))
+    return Buffer.from(JSON.stringify({ walletId, publicKey: encodePublicKey(key.publicKey, key.chain) }))
   }
 
   /** 상태 초기화 */
@@ -662,7 +662,7 @@ ISigner를 `IOwnerSigner`(Owner 전용)로 한정한다. Agent 서명은 기존 
 | **키 위치** | 로컬 키스토어 (sodium guarded memory) | 외부 지갑 (WalletConnect v2) |
 | **서명 알고리즘** | Ed25519 (Solana) / secp256k1 (EVM) | Ed25519 (SIWS) / secp256k1 (SIWE) |
 | **호출 주체** | daemon 내부 (`IChainAdapter.signTransaction`) | 외부 (`ownerAuth` 미들웨어에서 검증) |
-| **기존 인터페이스** | `ILocalKeyStore.sign(agentId, message)` | 없음 -- 신규 추상화 필요 |
+| **기존 인터페이스** | `ILocalKeyStore.sign(walletId, message)` | 없음 -- 신규 추상화 필요 |
 | **테스트 필요** | 이미 MockKeyStore로 mock 가능 | 서명 생성+검증 페어를 mock해야 함 |
 
 **결론:** 두 서명은 용도, 키 위치, 호출 주체가 완전히 다르다. 하나의 인터페이스로 통합하면 오히려 책임이 혼재된다. Agent 서명은 이미 `ILocalKeyStore.sign()`으로 추상화되어 있으므로, 새 인터페이스는 Owner 서명만 담당한다.
@@ -1038,7 +1038,7 @@ policyEngineContractTests(factory):
 
   describe('evaluate 기본 계약')
     test('evaluate는 PolicyDecision을 반환해야 한다')
-      // const decision = await engine.evaluate('agent-001', { type: 'transfer', amount: '1000000000', to: '...', chain: 'solana' })
+      // const decision = await engine.evaluate('wallet-001', { type: 'transfer', amount: '1000000000', to: '...', chain: 'solana' })
       // expect(typeof decision.allowed).toBe('boolean')
       // expect(['INSTANT','NOTIFY','DELAY','APPROVAL']).toContain(decision.tier)
     test('PolicyDecision에 allowed 필드가 존재해야 한다')
@@ -1049,7 +1049,7 @@ policyEngineContractTests(factory):
       // if (!decision.allowed) expect(typeof decision.reason).toBe('string')
 
   describe('에러 처리')
-    test('빈 agentId에 대해 에러를 반환하거나 INSTANT을 반환해야 한다')
+    test('빈 walletId에 대해 에러를 반환하거나 INSTANT을 반환해야 한다')
       // 구현에 따라 에러 또는 기본 INSTANT 허용
 ```
 

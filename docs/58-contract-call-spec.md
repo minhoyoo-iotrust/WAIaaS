@@ -861,9 +861,9 @@ async function stage1Receive(rawBody: unknown): Promise<ValidatedRequest> {
   const txId = generateUUIDv7()
   await db.insert(transactions).values({
     id: txId,
-    agentId: session.agentId,
+    walletId: session.walletId,
     sessionId: session.id,
-    chain: agent.chain,
+    chain: wallet.chain,
     type: parsed.type,                          // Phase 23: 5가지 type
     amount: parsed.amount ?? parsed.value ?? '0',
     toAddress: parsed.to ?? parsed.spender,      // type별 의미 다름
@@ -1028,7 +1028,7 @@ export interface BatchInstructionInput {
  */
 async function evaluate(input: PolicyEvaluationInput): Promise<PolicyDecision> {
   // 1단계: 에이전트별 + 글로벌 활성 정책 로드
-  const policies = await loadActivePolicies(input.agentId)
+  const policies = await loadActivePolicies(input.walletId)
 
   // 2단계: WHITELIST 평가 (수신자 주소 허용 여부)
   const whitelistResult = evaluateWhitelist(input, policies)
@@ -1311,8 +1311,8 @@ export type PolicyType = z.infer<typeof PolicyTypeEnum>
 export const transactions = sqliteTable('transactions', {
   // ── 기존 14개 컬럼 (CORE-02) ──
   id: text('id').primaryKey(),
-  agentId: text('agent_id').notNull()
-    .references(() => agents.id, { onDelete: 'restrict' }),
+  walletId: text('wallet_id').notNull()
+    .references(() => wallets.id, { onDelete: 'restrict' }),
   sessionId: text('session_id')
     .references(() => sessions.id, { onDelete: 'set null' }),
   chain: text('chain').notNull(),
@@ -1366,7 +1366,7 @@ export const transactions = sqliteTable('transactions', {
   spenderAddress: text('spender_address'),
 }, (table) => [
   // 기존 인덱스
-  index('idx_transactions_agent_status').on(table.agentId, table.status),
+  index('idx_transactions_wallet_status').on(table.walletId, table.status),
   index('idx_transactions_session_id').on(table.sessionId),
   uniqueIndex('idx_transactions_tx_hash').on(table.txHash),
   index('idx_transactions_queued_at').on(table.queuedAt),
@@ -1497,7 +1497,7 @@ const TransactionResponseSchema = z.object({
     "message": "컨트랙트 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45는 화이트리스트에 없습니다.",
     "details": {
       "contractAddress": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
-      "agentId": "01JKABCDEF1234567890"
+      "walletId": "01JKABCDEF1234567890"
     }
   }
 }

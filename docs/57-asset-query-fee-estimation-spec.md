@@ -12,9 +12,9 @@
 
 ### 1.1 목적
 
-이 문서는 WAIaaS v0.6 Phase 22의 CHAIN-EXT-02 산출물로서, 에이전트 보유 자산 조회(getAssets), 토큰 전송 수수료 추정(estimateFee 확장), 토큰 전송 테스트 시나리오를 정의한다.
+이 문서는 WAIaaS v0.6 Phase 22의 CHAIN-EXT-02 산출물로서, 지갑 보유 자산 조회(getAssets), 토큰 전송 수수료 추정(estimateFee 확장), 토큰 전송 테스트 시나리오를 정의한다.
 
-에이전트가 보유한 모든 토큰(네이티브 + SPL/ERC-20)을 조회하고, 토큰 전송 전 정확한 수수료를 예측할 수 있도록 한다. 또한 SPL/ERC-20 토큰 전송의 테스트 전략을 정의하여 Phase 25 통합 테스트의 기초를 놓는다.
+지갑이 보유한 모든 토큰(네이티브 + SPL/ERC-20)을 조회하고, 토큰 전송 전 정확한 수수료를 예측할 수 있도록 한다. 또한 SPL/ERC-20 토큰 전송의 테스트 전략을 정의하여 Phase 25 통합 테스트의 기초를 놓는다.
 
 ### 1.2 범위
 
@@ -26,16 +26,16 @@
 
 ### 1.3 getAssets() 복원 배경
 
-v0.1의 `IBlockchainAdapter`에 존재하던 `getAssets(walletAddress): Promise<Asset[]>` 메서드가 v0.2에서 "v0.3 이연"으로 제거되었다(27-chain-adapter-interface.md 1.1절). v0.6에서 토큰 전송이 추가되면서 에이전트가 보유한 자산 목록을 조회할 수 있어야 하므로, getAssets()를 IChainAdapter의 14번째 메서드로 복원한다.
+v0.1의 `IBlockchainAdapter`에 존재하던 `getAssets(walletAddress): Promise<Asset[]>` 메서드가 v0.2에서 "v0.3 이연"으로 제거되었다(27-chain-adapter-interface.md 1.1절). v0.6에서 토큰 전송이 추가되면서 지갑이 보유한 자산 목록을 조회할 수 있어야 하므로, getAssets()를 IChainAdapter의 14번째 메서드로 복원한다.
 
-> **[v0.8] sweepAll 교차 참조:** v0.8에서 추가된 `sweepAll()`(27-chain-adapter-interface.md §6.11, IChainAdapter 20번째 메서드)은 `getAssets()`로 에이전트 보유 토큰 잔액을 조회한 후 배치 전송한다. sweepAll의 1단계가 `getAssets(address) -> AssetInfo[]`이며, 이 결과로 토큰별 transfer + closeAccount instruction을 구성한다 (objectives/v0.8 §5.4 참조).
+> **[v0.8] sweepAll 교차 참조:** v0.8에서 추가된 `sweepAll()`(27-chain-adapter-interface.md §6.11, IChainAdapter 20번째 메서드)은 `getAssets()`로 지갑 보유 토큰 잔액을 조회한 후 배치 전송한다. sweepAll의 1단계가 `getAssets(address) -> AssetInfo[]`이며, 이 결과로 토큰별 transfer + closeAccount instruction을 구성한다 (objectives/v0.8 §5.4 참조).
 
 ### 1.4 핵심 원칙
 
 | 원칙 | 설명 | 적용 |
 |------|------|------|
 | **Self-Hosted 원칙** | 외부 인덱서(Alchemy, Moralis)에 의존하지 않는다 | EVM getAssets()는 ALLOWED_TOKENS 기반 보수적 조회 |
-| **ALLOWED_TOKENS 기반 보수적 조회** | 에이전트에 명시적으로 허용된 토큰만 조회한다 | 미등록 토큰은 조회 대상에서 제외 |
+| **ALLOWED_TOKENS 기반 보수적 조회** | 지갑에 명시적으로 허용된 토큰만 조회한다 | 미등록 토큰은 조회 대상에서 제외 |
 | **RPC 효율성** | 최소 RPC 호출로 최대 정보를 조회한다 | Solana: getTokenAccountsByOwner 단일 호출, EVM: multicall |
 | **하위 호환** | 기존 네이티브 토큰 기능에 영향을 주지 않는다 | getAssets()는 네이티브 토큰을 첫 번째 항목으로 포함 |
 
@@ -49,7 +49,7 @@ v0.1의 `IBlockchainAdapter`에 존재하던 `getAssets(walletAddress): Promise<
 
 ```typescript
 /**
- * 에이전트가 보유한 개별 자산 정보.
+ * 지갑이 보유한 개별 자산 정보.
  * getAssets()의 반환값 배열 요소이다.
  *
  * 네이티브 토큰(SOL, ETH)과 프로그램/컨트랙트 토큰(SPL, ERC-20)을
@@ -471,7 +471,7 @@ EVM 체인에는 Solana의 `getTokenAccountsByOwner`처럼 단일 RPC 호출로 
 ```
 [1] getBalance(address) ──────────────────────────> 네이티브 ETH AssetInfo
          │
-[2] ALLOWED_TOKENS 정책에서 해당 에이전트의          정책 DB에서 토큰 목록 로드
+[2] ALLOWED_TOKENS 정책에서 해당 지갑의              정책 DB에서 토큰 목록 로드
     EVM 토큰 목록 로드
          │
     ┌── ALLOWED_TOKENS 미설정 시 ──┐
@@ -600,7 +600,7 @@ interface ITokenDiscovery {
 
 /**
  * ALLOWED_TOKENS 정책 기반 토큰 발견.
- * 에이전트에 설정된 ALLOWED_TOKENS 정책의 토큰 목록 + known_tokens 레지스트리를 반환한다.
+ * 지갑에 설정된 ALLOWED_TOKENS 정책의 토큰 목록 + known_tokens 레지스트리를 반환한다.
  */
 class AllowedTokensDiscovery implements ITokenDiscovery {
   constructor(
@@ -717,7 +717,7 @@ async getAssets(address: string): Promise<AssetInfo[]> {
 
 ### 6.1 GET /v1/wallet/assets
 
-에이전트가 보유한 모든 자산(네이티브 + 토큰)을 조회하는 엔드포인트.
+지갑이 보유한 모든 자산(네이티브 + 토큰)을 조회하는 엔드포인트.
 
 | 항목 | 값 |
 |------|-----|
@@ -733,8 +733,8 @@ async getAssets(address: string): Promise<AssetInfo[]> {
 ```typescript
 const AssetsQuerySchema = z.object({
   /**
-   * 체인 필터. 멀티 체인 에이전트 확장 시 사용.
-   * v0.6에서는 에이전트가 단일 체인에 바인딩되므로 생략 시 에이전트 체인 자동 사용.
+   * 체인 필터. 멀티 체인 지갑 확장 시 사용.
+   * v0.6에서는 지갑이 단일 체인에 바인딩되므로 생략 시 지갑 체인 자동 사용.
    */
   chain: z.enum(['solana', 'ethereum', 'polygon', 'arbitrum']).optional(),
 
@@ -842,7 +842,7 @@ const assetsRoute = createRoute({
   path: '/v1/wallet/assets',
   tags: ['Wallet'],
   summary: '보유 자산 목록 조회',
-  description: '에이전트가 보유한 모든 자산(네이티브 + 토큰)을 조회한다.',
+  description: '지갑이 보유한 모든 자산(네이티브 + 토큰)을 조회한다.',
   security: [{ bearerAuth: [] }],
   request: {
     query: AssetsQuerySchema,
@@ -865,9 +865,9 @@ app.openapi(assetsRoute, async (c) => {
   const session = c.get('session') // sessionAuth 미들웨어에서 주입
   const { chain, include_zero } = c.req.valid('query')
 
-  const agent = await agentService.getAgent(session.agentId)
-  const adapter = adapterRegistry.getAdapter(agent.chain)
-  const assets = await adapter.getAssets(agent.address)
+  const wallet = await walletService.getWallet(session.walletId)
+  const adapter = adapterRegistry.getAdapter(wallet.chain)
+  const assets = await adapter.getAssets(wallet.address)
 
   // include_zero 필터링
   const filtered = include_zero
@@ -879,7 +879,7 @@ app.openapi(assetsRoute, async (c) => {
       ...a,
       balance: a.balance.toString(), // bigint -> string 직렬화
     })),
-    chain: agent.chain,
+    chain: wallet.chain,
     timestamp: new Date().toISOString(),
   })
 })
@@ -1192,7 +1192,7 @@ Mock된 의존성으로 개별 함수/모듈의 로직을 검증한다.
 | VT-TOKEN-03 | ATA 미존재 수신자로 전송 | 수신자 ATA 미생성 상태 | ATA 자동 생성 + 토큰 전송 성공 |
 | VT-TOKEN-04 | 잔액 부족 전송 시도 | 발신자 토큰 잔액 < 전송량 | 트랜잭션 실패, 에러 코드 확인 |
 | VT-TOKEN-05 | SOL 잔액 부족으로 토큰 전송 실패 | 토큰 잔액 충분, SOL 잔액 0 | INSUFFICIENT_BALANCE (수수료 부족) |
-| VT-TOKEN-06 | getAssets() 실제 조회 | 에이전트가 SOL + 2개 SPL 보유 | AssetInfo[] 3개 반환, 잔액 정확 |
+| VT-TOKEN-06 | getAssets() 실제 조회 | 지갑이 SOL + 2개 SPL 보유 | AssetInfo[] 3개 반환, 잔액 정확 |
 | VT-TOKEN-07 | transferChecked decimals 검증 | decimals 불일치 전달 | 프로그램 에러 (TokenInvalidAccountError) |
 | VT-TOKEN-08 | estimateFee() ATA 비용 정확도 | 수신자 ATA 미존재 | ataCreationCost = 실제 rent-exempt 금액 |
 
@@ -1207,7 +1207,7 @@ Mock된 의존성으로 개별 함수/모듈의 로직을 검증한다.
 | ET-TOKEN-03 | gas 추정 정확도 | ERC-20 transfer estimateGas | 추정 gas >= 실제 gas used |
 | ET-TOKEN-04 | 잔액 부족 시뮬레이션 | 발신자 토큰 잔액 < 전송량 | simulateContract revert |
 | ET-TOKEN-05 | ETH 잔액 부족으로 ERC-20 전송 실패 | 토큰 잔액 충분, ETH 잔액 0 | 가스 부족 에러 |
-| ET-TOKEN-06 | getAssets() multicall 조회 | 에이전트가 ETH + 3개 ERC-20 보유 | AssetInfo[] 4개 반환 |
+| ET-TOKEN-06 | getAssets() multicall 조회 | 지갑이 ETH + 3개 ERC-20 보유 | AssetInfo[] 4개 반환 |
 | ET-TOKEN-07 | getAssets() 일부 토큰 조회 실패 | 1개 컨트랙트 주소 무효 | 유효한 토큰만 반환, 경고 로그 |
 | ET-TOKEN-08 | estimateFee() ERC-20 gas 정확도 | ERC-20 transfer | total >= 실제 수수료 |
 
@@ -1312,13 +1312,13 @@ interface MockEvmClient {
  */
 interface MockPolicyEngine {
   /**
-   * 에이전트의 정책 목록 반환.
+   * 지갑의 정책 목록 반환.
    * - 허용 토큰 설정 시: ALLOWED_TOKENS 정책 포함
    * - 미설정 시: 빈 배열
    * - 거부 설정 시: unknown_token_action = 'DENY'
    */
   getPolicies(
-    agentId: string,
+    walletId: string,
     policyType?: string,
   ): Promise<PolicyEntry[]>
 
@@ -1326,7 +1326,7 @@ interface MockPolicyEngine {
    * 단일 정책 평가 결과 반환.
    */
   evaluate(
-    agentId: string,
+    walletId: string,
     request: TransferRequest,
   ): Promise<PolicyEvaluationResult>
 }

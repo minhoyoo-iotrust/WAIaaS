@@ -869,7 +869,7 @@ CHAIN-EXT-03 섹션 6.2에서 정의한 `allowedSpenders` 세션 제약과 APPRO
 ```json
 {
   "type": "APPROVED_SPENDERS",
-  "agent_id": "01JKABCDEF1234567890",
+  "wallet_id": "01JKABCDEF1234567890",
   "enabled": true,
   "priority": 80,
   "rules": {
@@ -1090,7 +1090,7 @@ Phase 24에서 `max_approve_amount`를 USD 기준으로 전환할 때:
 ```json
 {
   "type": "APPROVE_AMOUNT_LIMIT",
-  "agent_id": "01JKABCDEF1234567890",
+  "wallet_id": "01JKABCDEF1234567890",
   "enabled": true,
   "priority": 90,
   "rules": {
@@ -1267,7 +1267,7 @@ Stage 3에서 `evaluateApproveTierOverride()`가 반환한 `tier`가 `PolicyDeci
 ```json
 {
   "type": "APPROVE_TIER_OVERRIDE",
-  "agent_id": "01JKABCDEF1234567890",
+  "wallet_id": "01JKABCDEF1234567890",
   "enabled": true,
   "priority": 100,
   "rules": {
@@ -1385,7 +1385,7 @@ SELECT
   created_at,
   metadata
 FROM transactions
-WHERE agent_id = ?
+WHERE wallet_id = ?
   AND type = 'APPROVE'
 ORDER BY created_at DESC;
 
@@ -1397,7 +1397,7 @@ SELECT
   amount,
   created_at
 FROM transactions
-WHERE agent_id = ?
+WHERE wallet_id = ?
   AND type = 'APPROVE'
   AND spender_address = ?
   AND status = 'CONFIRMED'

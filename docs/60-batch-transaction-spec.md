@@ -295,14 +295,14 @@ EVM(Ethereum, Polygon, Arbitrum 등)에서 BATCH 타입 요청 시 **즉시 거�
  * 검증 시점: TransactionSendRequestSchema 파싱 성공 후,
  *           에이전트의 chain 정보를 조회한 직후.
  */
-function validateBatchChain(request: BatchRequest, agentChain: ChainType): void {
-  if (agentChain !== 'solana') {
+function validateBatchChain(request: BatchRequest, walletChain: ChainType): void {
+  if (walletChain !== 'solana') {
     throw new ChainError('BATCH_NOT_SUPPORTED', {
       code: 'BATCH_NOT_SUPPORTED',
       httpStatus: 400,
       message: 'Batch transactions are only supported on Solana. '
         + 'EVM chains execute one call per transaction.',
-      chain: agentChain,
+      chain: walletChain,
       suggestion: 'EVM에서 복수 작업이 필요하면 개별 트랜잭션으로 분리하여 순차 실행하세요.',
     })
   }
@@ -784,7 +784,7 @@ Solana 런타임이 원자성을 보장한다:
 ```typescript
 // 서명: 에이전트 키로 단일 서명
 const signedTx = await signTransaction(
-  [agentKeyPair],
+  [walletKeyPair],
   compileTransaction(transactionMessage),
 )
 ```
@@ -1138,7 +1138,7 @@ function buildBatchPolicyInput(
     type: 'BATCH',
     amount: batchTotalAmount,
     to: '',  // BATCH는 단일 수신자 없음
-    chain: agent.chain,
+    chain: wallet.chain,
     batchTotalAmount,
     batchInstructions,
   }
@@ -1246,7 +1246,7 @@ RATE_LIMIT 정책에서 배치는 **1건**으로 계산한다. 배치 내 instru
 // 부모 레코드 (배치 전체)
 const parentRecord = {
   id: generateUUIDv7(),
-  agentId: agent.id,
+  walletId: wallet.id,
   sessionId: session.id,
   chain: 'solana',
   txHash: submitResult.txHash,  // Solana: 단일 TX 해시 (자식과 공유)
@@ -1276,7 +1276,7 @@ const parentRecord = {
 // 자식 레코드 (개별 instruction별 N건)
 const childRecords = instructions.map((instr, index) => ({
   id: generateUUIDv7(),
-  agentId: agent.id,
+  walletId: wallet.id,
   sessionId: session.id,
   chain: 'solana',
   txHash: submitResult.txHash,  // Solana 원자적 배치: 부모와 동일 해시 공유
@@ -1352,7 +1352,7 @@ ORDER BY batch_index ASC;
 
 -- 특정 에이전트의 배치 부모만 조회 [v0.10 추가]
 SELECT * FROM transactions
-WHERE agent_id = :agentId AND type = 'BATCH' AND parent_id IS NULL
+WHERE wallet_id = :walletId AND type = 'BATCH' AND parent_id IS NULL
 ORDER BY created_at DESC;
 
 -- 특정 프로그램이 포함된 배치 조회 (부모 레코드 대표값 인덱스 활용)
@@ -1432,7 +1432,7 @@ ORDER BY created_at DESC;
 
 | ID | 시나리오 | 입력 | 기대 결과 | 레벨 |
 |----|---------|------|----------|------|
-| **E-01** | EVM BATCH_NOT_SUPPORTED | agent.chain='ethereum', type='BATCH' | 400 BATCH_NOT_SUPPORTED, "Batch transactions are only supported on Solana" | L1, L2 |
+| **E-01** | EVM BATCH_NOT_SUPPORTED | wallet.chain='ethereum', type='BATCH' | 400 BATCH_NOT_SUPPORTED, "Batch transactions are only supported on Solana" | L1, L2 |
 | **E-02** | instruction 수 부족 (<2) | `instructions: [{type:'TRANSFER',...}]` -- 1개 | Zod 검증 실패: "배치는 최소 2개 instruction이 필요합니다" | L1 |
 | **E-03** | instruction 수 초과 (>20) | `instructions: [{...}, ...]` -- 21개 | Zod 검증 실패: "배치는 최대 20개 instruction까지 허용됩니다" | L1 |
 | **E-04** | 트랜잭션 크기 초과 (>1232 bytes) | 대형 accounts 배열을 가진 CONTRACT_CALL 10개 | 400 BATCH_SIZE_EXCEEDED, currentSize > 1232 | L2, L3 |

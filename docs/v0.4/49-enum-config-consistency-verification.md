@@ -130,7 +130,7 @@ export const AGENT_STATUSES = [
 export type AgentStatus = typeof AGENT_STATUSES[number]
 
 // [3] Zod 스키마
-export const AgentStatusEnum = z.enum(AGENT_STATUSES)
+export const WalletStatusEnum = z.enum(WALLET_STATUSES)
 ```
 
 ```typescript
@@ -288,10 +288,10 @@ CHECK (type IN ('CONSECUTIVE_FAILURES','TIME_RESTRICTION','DAILY_LIMIT_THRESHOLD
 ```typescript
 // [1] SSoT: as const 객체 (배열이 아닌 객체 패턴)
 export const AUDIT_LOG_EVENT_TYPES = {
-  AGENT_CREATED: 'AGENT_CREATED',
-  AGENT_ACTIVATED: 'AGENT_ACTIVATED',
-  AGENT_SUSPENDED: 'AGENT_SUSPENDED',
-  AGENT_TERMINATED: 'AGENT_TERMINATED',
+  WALLET_CREATED: 'WALLET_CREATED',
+  WALLET_ACTIVATED: 'WALLET_ACTIVATED',
+  WALLET_SUSPENDED: 'WALLET_SUSPENDED',
+  WALLET_TERMINATED: 'WALLET_TERMINATED',
   SESSION_ISSUED: 'SESSION_ISSUED',
   SESSION_REVOKED: 'SESSION_REVOKED',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
@@ -756,11 +756,11 @@ describe('config.toml 3단계 로딩', () => {
 
 | # | 테스트 케이스 | Given | When | Then |
 |---|-------------|-------|------|------|
-| N11-01 | 빈 목록 | 데이터 0건 | GET /v1/agents?limit=10 | items: [], nextCursor: null |
-| N11-02 | 1건 (단일 페이지) | 에이전트 1건 | GET /v1/agents?limit=10 | items: [1건], nextCursor: null |
-| N11-03 | limit+1건 (다음 페이지 존재) | 에이전트 11건 | GET /v1/agents?limit=10 | items: [10건], nextCursor: UUID v7 |
-| N11-04 | cursor로 다음 페이지 조회 | 에이전트 15건, 1페이지 cursor 확보 | GET /v1/agents?limit=10&cursor={cursor} | items: [5건], nextCursor: null |
-| N11-05 | 잘못된 cursor 형식 | 유효하지 않은 UUID | GET /v1/agents?cursor=invalid | 400 Bad Request |
+| N11-01 | 빈 목록 | 데이터 0건 | GET /v1/wallets?limit=10 | items: [], nextCursor: null |
+| N11-02 | 1건 (단일 페이지) | 지갑 1건 | GET /v1/wallets?limit=10 | items: [1건], nextCursor: null |
+| N11-03 | limit+1건 (다음 페이지 존재) | 지갑 11건 | GET /v1/wallets?limit=10 | items: [10건], nextCursor: UUID v7 |
+| N11-04 | cursor로 다음 페이지 조회 | 지갑 15건, 1페이지 cursor 확보 | GET /v1/wallets?limit=10&cursor={cursor} | items: [5건], nextCursor: null |
+| N11-05 | 잘못된 cursor 형식 | 유효하지 않은 UUID | GET /v1/wallets?cursor=invalid | 400 Bad Request |
 
 ### 5.3 추적성 매트릭스
 

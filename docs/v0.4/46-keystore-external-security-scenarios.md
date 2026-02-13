@@ -62,11 +62,11 @@ WAIaaS 키스토어(AES-256-GCM + Argon2id)의 보안 검증과 localhost 전용
 Given:
   - MockKeyStore (tweetnacl 기반 Unit Mock)
   - keyStore.lock() 호출 완료 (isUnlocked = false)
-  - 등록된 에이전트: "agent-001"
+  - 등록된 지갑: "wallet-001"
   - 유효한 세션 토큰 보유 (sessionAuth 통과)
 
 When:
-  - keyStore.sign("agent-001", Buffer.from("transfer 1 SOL to addr-X"))
+  - keyStore.sign("wallet-001", Buffer.from("transfer 1 SOL to addr-X"))
 
 Then:
   - 에러 throw: KEYSTORE_NOT_UNLOCKED
@@ -104,13 +104,13 @@ Then:
 ```
 Given:
   - 실제 파일시스템 (os.tmpdir() + 고유 디렉토리)
-  - 정상 키스토어 파일 생성: KeyStore.create("agent-001", "correct-password", "solana")
+  - 정상 키스토어 파일 생성: KeyStore.create("wallet-001", "correct-password", "solana")
   - 파일 읽기 -> JSON 파싱 -> crypto.authTag의 마지막 문자 1자 변경
   - 변조된 JSON을 파일에 다시 기록
 
 When:
   - keyStore.unlock("correct-password")
-  - keyStore.sign("agent-001", Buffer.from("test message"))
+  - keyStore.sign("wallet-001", Buffer.from("test message"))
 
 Then:
   - 에러 throw: KEYSTORE_CORRUPTED
@@ -149,7 +149,7 @@ Then:
 ```
 Given:
   - 실제 파일시스템 (os.tmpdir())
-  - 정상 키스토어 생성: KeyStore.create("agent-001", "correct-password-123!", "solana")
+  - 정상 키스토어 생성: KeyStore.create("wallet-001", "correct-password-123!", "solana")
   - Argon2id 파라미터: memoryCost=65536, timeCost=3, parallelism=4 (설계 문서 기본값)
 
 When:
@@ -177,13 +177,13 @@ Then:
 
 #### 공격 단계
 
-1. 에이전트 생성 시 agentId에 경로 순회 문자열 삽입: `"../../etc/passwd"`, `"../../../sensitive-file"`
-2. 키스토어 파일 경로가 `~/.waiaas/keystore/{agentId}.json`으로 구성되므로, 경로 순회로 디렉토리 탈출 시도
-3. 또는 agentId에 null byte, 슬래시, 백슬래시 포함: `"agent\x00.json"`, `"agent/../../root"`
+1. 지갑 생성 시 walletId에 경로 순회 문자열 삽입: `"../../etc/passwd"`, `"../../../sensitive-file"`
+2. 키스토어 파일 경로가 `~/.waiaas/keystore/{walletId}.json`으로 구성되므로, 경로 순회로 디렉토리 탈출 시도
+3. 또는 walletId에 null byte, 슬래시, 백슬래시 포함: `"wallet\x00.json"`, `"wallet/../../root"`
 
 #### 기대 방어
 
-- agentId 유효성 검증: UUID v7 형식만 허용 (Zod regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/`)
+- walletId 유효성 검증: UUID v7 형식만 허용 (Zod regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/`)
 - path.resolve() 결과가 keystoreDir 내부인지 확인 (추가 방어)
 - 경로 구성 요소에 `/`, `\`, `..`, null byte 포함 시 즉시 거부
 
@@ -203,7 +203,7 @@ Then (Case A):
   - 파일시스템 접근 없음 (경로 생성 단계에서 차단)
 
 When (Case B - null byte):
-  - resolveKeystorePath("agent-001\x00.json")
+  - resolveKeystorePath("wallet-001\x00.json")
 
 Then (Case B):
   - 에러 throw: INVALID_AGENT_ID
@@ -255,8 +255,8 @@ Then (Case D):
 Given:
   - MockKeyStore (tweetnacl 기반)
   - keyStore.unlock("test-password") 호출 완료 (isUnlocked = true)
-  - 에이전트 "agent-001" 등록됨
-  - 내부 keyMap에서 "agent-001"의 Buffer 참조를 저장: secretKeyRef = keyStore._getKeyBuffer("agent-001")
+  - 지갑 "wallet-001" 등록됨
+  - 내부 keyMap에서 "wallet-001"의 Buffer 참조를 저장: secretKeyRef = keyStore._getKeyBuffer("wallet-001")
   - secretKeyRef가 0이 아닌 바이트를 포함하는지 확인 (사전 조건)
 
 When:
@@ -265,8 +265,8 @@ When:
 Then:
   - keyStore.isUnlocked === false
   - secretKeyRef 버퍼의 모든 바이트가 0 (Buffer.alloc(64).equals(secretKeyRef) === true)
-  - keyStore._getKeyBuffer("agent-001") === undefined (keyMap에서 제거됨)
-  - keyStore.sign("agent-001", message) -> KEYSTORE_NOT_UNLOCKED throw
+  - keyStore._getKeyBuffer("wallet-001") === undefined (keyMap에서 제거됨)
+  - keyStore.sign("wallet-001", message) -> KEYSTORE_NOT_UNLOCKED throw
 ```
 
 **Phase 14 Mock 참조:** MockKeyStore (42-mock-boundaries-interfaces-contracts.md 섹션 3.3)
@@ -289,7 +289,7 @@ Then:
 
 #### 기대 방어
 
-- keyMap에서 agentId 조회 실패 시 AGENT_NOT_FOUND 에러 반환
+- keyMap에서 walletId 조회 실패 시 WALLET_NOT_FOUND 에러 반환
 - null/undefined 반환이 아닌 명시적 에러 throw (silent failure 방지)
 
 #### Given-When-Then
@@ -298,25 +298,25 @@ Then:
 Given:
   - MockKeyStore (tweetnacl 기반)
   - keyStore.unlock("test-password") 호출 완료
-  - 등록된 에이전트: ["agent-001", "agent-002"]
+  - 등록된 지갑: ["wallet-001", "wallet-002"]
   - "agent-999"는 등록되지 않음
 
 When (Case A - getPublicKey):
   - keyStore.getPublicKey("agent-999")
 
 Then (Case A):
-  - 에러 throw: AGENT_NOT_FOUND
+  - 에러 throw: WALLET_NOT_FOUND
   - 에러 메시지: "Agent key not found: agent-999"
 
 When (Case B - sign):
   - keyStore.sign("agent-999", Buffer.from("test message"))
 
 Then (Case B):
-  - 에러 throw: AGENT_NOT_FOUND
+  - 에러 throw: WALLET_NOT_FOUND
   - 서명 결과 반환 없음
 
 When (Case C - 등록된 에이전트):
-  - keyStore.getPublicKey("agent-001")
+  - keyStore.getPublicKey("wallet-001")
 
 Then (Case C):
   - 정상 반환: Base58 인코딩된 32바이트 Ed25519 공개키
@@ -429,7 +429,7 @@ Then (Case A):
   - 다른 사용자 접근 불가 (r/w/x 비트 없음)
 
 When (Case B - 파일 생성):
-  - 키스토어 파일 생성: writeKeystoreFile(agentId, encryptedJson)
+  - 키스토어 파일 생성: writeKeystoreFile(walletId, encryptedJson)
 
 Then (Case B):
   - fs.statSync(filePath).mode & 0o777 === 0o600

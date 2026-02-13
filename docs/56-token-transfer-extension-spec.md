@@ -191,16 +191,16 @@ REST API의 `POST /v1/transactions/send`는 `type`, `tokenMint` 필드를 사용
  * tokenMint가 존재하면 온체인에서 토큰 메타데이터를 조회하여 TokenInfo 객체를 구성한다.
  *
  * @param apiRequest REST API TransferRequestSchema 파싱 결과
- * @param agent 에이전트 정보 (publicKey, chain)
+ * @param wallet 지갑 정보 (publicKey, chain)
  * @param adapter IChainAdapter 인스턴스 (메타데이터 조회용)
  */
 async function buildTransferRequest(
   apiRequest: { to: string; amount: string; type?: string; tokenMint?: string; memo?: string },
-  agent: { publicKey: string; chain: ChainType },
+  wallet: { publicKey: string; chain: ChainType },
   adapter: IChainAdapter,
 ): Promise<TransferRequest> {
   const base: TransferRequest = {
-    from: agent.publicKey,
+    from: wallet.publicKey,
     to: apiRequest.to,
     amount: BigInt(apiRequest.amount),
     memo: apiRequest.memo,
@@ -212,7 +212,7 @@ async function buildTransferRequest(
   }
 
   // 토큰 전송: 온체인 메타데이터 조회
-  const tokenInfo = await resolveTokenInfo(apiRequest.tokenMint, agent.chain, adapter)
+  const tokenInfo = await resolveTokenInfo(apiRequest.tokenMint, wallet.chain, adapter)
   return { ...base, token: tokenInfo }
 }
 
@@ -392,7 +392,7 @@ const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as A
  * Compute Unit: SPL transfer ~200 CU, ATA 생성 ~250 CU (합산 ~450 CU)
  * 기본 200,000 CU limit 내에서 충분히 처리됨. 별도 setComputeUnitLimit 불필요.
  *
- * @param from 발신자 주소 (에이전트 public key)
+ * @param from 발신자 주소 (지갑 public key)
  * @param to 수신자 주소
  * @param amount 전송량 (토큰 최소 단위)
  * @param token 토큰 정보 (address, decimals, symbol)
@@ -504,7 +504,7 @@ async function buildSplTokenTransfer(
   //
   // 수신자 ATA가 존재하지 않으면 생성 instruction을 선행 추가한다.
   // ATA 생성 비용: rent-exempt 최소 잔액 ~0.00203928 SOL (2,039,280 lamports)
-  // payer = 발신자 (에이전트). 수신자가 아닌 발신자가 비용 부담.
+  // payer = 발신자 (지갑). 수신자가 아닌 발신자가 비용 부담.
   if (needCreateAta) {
     transactionMessage = appendTransactionMessageInstruction(
       getCreateAssociatedTokenAccountInstruction({
@@ -532,7 +532,7 @@ async function buildSplTokenTransfer(
       source: sourceAta,
       mint: mintAddress,
       destination: destinationAta,
-      authority: from,   // owner = 발신자 (에이전트)
+      authority: from,   // owner = 발신자 (지갑)
       amount,            // 토큰 최소 단위
       decimals: token.decimals,
       tokenProgram: tokenProgramId,
@@ -831,7 +831,7 @@ import { ERC20_ABI } from './abi/erc20.js'
  * - ERC-20 transfer: ~65,000 gas (컨트랙트에 따라 45,000~100,000)
  * - 수신자에게 처음 전송하는 경우 (storage slot 생성): ~80,000 gas
  *
- * @param from 발신자 주소 (에이전트 EOA)
+ * @param from 발신자 주소 (지갑 EOA)
  * @param to 수신자 주소 (최종 수신자)
  * @param amount 전송량 (토큰 최소 단위)
  * @param token 토큰 정보 (address = 컨트랙트 주소, decimals, symbol)
@@ -1124,7 +1124,7 @@ async function stageReceive(
   // 3. TransferRequest 구성 (서비스 레이어 변환)
   const transferRequest = await buildTransferRequest(
     apiRequest,
-    sessionContext.agent,
+    sessionContext.wallet,
     adapter,
   )
 
@@ -1133,7 +1133,7 @@ async function stageReceive(
   const txId = generateUUIDv7()
   await db.insert(transactions).values({
     id: txId,
-    agentId: sessionContext.agentId,
+    walletId: sessionContext.walletId,
     sessionId: sessionContext.sessionId,
     type: apiRequest.type ?? 'TRANSFER',       // 'TOKEN_TRANSFER' 정식 사용
     amount: apiRequest.amount,
@@ -1153,7 +1153,7 @@ async function stageReceive(
   await insertAuditLog({
     eventType: 'TX_REQUESTED',
     severity: 'info',
-    agentId: sessionContext.agentId,
+    walletId: sessionContext.walletId,
     metadata: {
       txId,
       type: apiRequest.type ?? 'TRANSFER',
@@ -1181,11 +1181,11 @@ Stage 3에 ALLOWED_TOKENS 검증이 추가된다. 상세는 섹션 6에서 정�
 ```typescript
 // DatabasePolicyEngine.evaluate() 확장 (의사코드)
 
-async evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision> {
-  const rules = await this.loadActivePolicies(agentId)
+async evaluate(walletId: string, request: TxRequest): Promise<PolicyDecision> {
+  const rules = await this.loadActivePolicies(walletId)
   if (rules.length === 0) return { allowed: true, tier: 'INSTANT' }
 
-  const effectiveRules = this.resolveOverrides(rules, agentId)
+  const effectiveRules = this.resolveOverrides(rules, walletId)
 
   // Step 2: WHITELIST 평가 (기존)
   const whitelistResult = this.evaluateWhitelist(effectiveRules, request)
@@ -1200,7 +1200,7 @@ async evaluate(agentId: string, request: TxRequest): Promise<PolicyDecision> {
   if (!timeResult.allowed) return timeResult
 
   // Step 4: RATE_LIMIT 평가 (기존)
-  const rateResult = await this.evaluateRateLimit(effectiveRules, agentId)
+  const rateResult = await this.evaluateRateLimit(effectiveRules, walletId)
   if (!rateResult.allowed) return rateResult
 
   // Step 5: SPENDING_LIMIT 평가 -> 4-티어 분류 (기존, 토큰은 미적용)
@@ -1296,10 +1296,10 @@ const TransferRequestSchema = z.object({
 // packages/core/src/schema/policy-rules.ts (확장)
 
 /**
- * ALLOWED_TOKENS: 에이전트별 허용 토큰 종류 화이트리스트.
+ * ALLOWED_TOKENS: 지갑별 허용 토큰 종류 화이트리스트.
  *
- * 이 정책이 설정된 에이전트는 allowed_tokens 목록에 있는 토큰만 전송할 수 있다.
- * 정책 미설정 에이전트는 네이티브 토큰만 전송 가능 (토큰 전송 거부).
+ * 이 정책이 설정된 지갑은 allowed_tokens 목록에 있는 토큰만 전송할 수 있다.
+ * 정책 미설정 지갑은 네이티브 토큰만 전송 가능 (토큰 전송 거부).
  *
  * 설계 원칙:
  * - 기본 거부 (allow_native: true, 나머지 모두 거부)
@@ -1410,7 +1410,7 @@ private evaluateAllowedTokens(
     return {
       allowed: false,
       tier: 'INSTANT',
-      reason: 'ALLOWED_TOKENS 정책 미설정: 토큰 전송이 허용되지 않습니다. 에이전트에 ALLOWED_TOKENS 정책을 먼저 설정하세요.',
+      reason: 'ALLOWED_TOKENS 정책 미설정: 토큰 전송이 허용되지 않습니다. 지갑에 ALLOWED_TOKENS 정책을 먼저 설정하세요.',
       policyId: undefined,
     }
   }
@@ -1456,7 +1456,7 @@ private evaluateAllowedTokens(
 
 /** 정책 엔진 인터페이스 */
 interface IPolicyEngine {
-  evaluate(agentId: string, request: {
+  evaluate(walletId: string, request: {
     type: string           // 'TRANSFER' | 'TOKEN_TRANSFER'
     amount: string
     to: string
@@ -1491,11 +1491,11 @@ type: text('type', {
 ### 6.7 ALLOWED_TOKENS 정책 예시
 
 ```typescript
-// 에이전트에 USDC(Solana) + USDT(Ethereum) 허용 설정
+// 지갑에 USDC(Solana) + USDT(Ethereum) 허용 설정
 
-const agentTokenPolicy = {
+const walletTokenPolicy = {
   id: generateUUIDv7(),
-  agentId: 'agent-001-uuid',
+  walletId: 'wallet-001-uuid',
   type: 'ALLOWED_TOKENS',
   rules: JSON.stringify({
     allowed_tokens: [
@@ -1715,11 +1715,11 @@ const tokenErrorHints: Record<string, string> = {
   INVALID_TOKEN_MINT:
     '토큰 주소를 확인하세요. Solana는 base58, EVM은 0x hex 형식이어야 합니다.',
   INSUFFICIENT_TOKEN_BALANCE:
-    '에이전트 지갑의 토큰 잔액을 확인하세요. waiaas status --tokens로 조회 가능합니다.',
+    '지갑의 토큰 잔액을 확인하세요. waiaas status --tokens로 조회 가능합니다.',
   TOKEN_NOT_ALLOWED:
     '이 토큰은 허용 목록에 없습니다. waiaas policy add --type ALLOWED_TOKENS로 토큰을 등록하세요.',
   ATA_CREATION_FAILED:
-    '에이전트 지갑에 SOL이 부족할 수 있습니다 (ATA 생성에 ~0.002 SOL 필요). waiaas status로 잔액을 확인하세요.',
+    '지갑에 SOL이 부족할 수 있습니다 (ATA 생성에 ~0.002 SOL 필요). waiaas status로 잔액을 확인하세요.',
   UNSUPPORTED_TOKEN_EXTENSION:
     '이 토큰은 Token-2022 확장(TransferFee 등)을 사용합니다. WAIaaS에서 아직 지원하지 않습니다.',
   ERC20_TRANSFER_FAILED:
