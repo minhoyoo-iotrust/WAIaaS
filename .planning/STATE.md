@@ -21,7 +21,7 @@ Progress: [███████░░░] 73%
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Total plans: 11
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -32,6 +32,7 @@ Progress: [███████░░░] 73%
 | 91    | 01   | 20min    | 2     | 27    |
 | 91    | 02   | 18min    | 2     | 38    |
 | 91    | 03   | 6min     | 2     | 10    |
+| 92    | 01   | 7min     | 2     | 21    |
 | 92    | 02   | 3min     | 2     | 9     |
 
 *Updated after each plan completion*
@@ -65,6 +66,10 @@ Recent decisions for v1.4.2:
 - Python __init__.py docstring kept as-is (service name WaaS, not entity name)
 - Python conftest.py AGENT_ID -> WALLET_ID constant rename
 - TS SDK error.test.ts AGENT_NOT_FOUND -> WALLET_NOT_FOUND for daemon consistency
+- MCP: AgentContext -> WalletContext, withAgentPrefix -> withWalletPrefix
+- MCP entrypoint: WAIAAS_AGENT_ID -> WAIAAS_WALLET_ID, WAIAAS_AGENT_NAME -> WAIAAS_WALLET_NAME
+- CLI: --agent -> --wallet, /v1/agents -> /v1/wallets, fetchAgents -> fetchWallets
+- slug.ts fallback 'agent' -> 'wallet'
 
 ### Blockers/Concerns
 
@@ -74,5 +79,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 92-02-PLAN.md (SDK walletId rename, 9 files, 159 tests)
+Stopped at: Completed 92-01-PLAN.md + 92-02-PLAN.md (MCP+CLI+SDK wallet rename)
 Resume file: None
