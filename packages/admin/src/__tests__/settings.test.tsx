@@ -316,7 +316,8 @@ describe('SettingsPage', () => {
 
     // Find the first Test button (Solana Mainnet)
     const testButtons = screen.getAllByText('Test');
-    fireEvent.click(testButtons[0]);
+    expect(testButtons.length).toBeGreaterThan(0);
+    fireEvent.click(testButtons[0]!);
 
     await waitFor(() => {
       expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', {
