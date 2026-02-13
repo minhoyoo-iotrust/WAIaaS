@@ -590,3 +590,24 @@ export const RemoveTokenResponseSchema = z
     address: z.string(),
   })
   .openapi('RemoveTokenResponse');
+
+// ---------------------------------------------------------------------------
+// MCP Token Provisioning Schemas (POST /v1/mcp/tokens) -- BUG-013 fix
+// ---------------------------------------------------------------------------
+
+export const McpTokenCreateRequestSchema = z
+  .object({
+    walletId: z.string().uuid(),
+    expiresIn: z.number().int().min(300).max(604800).optional(),
+  })
+  .openapi('McpTokenCreateRequest');
+
+export const McpTokenCreateResponseSchema = z
+  .object({
+    walletId: z.string(),
+    walletName: z.string().nullable(),
+    tokenPath: z.string(),
+    expiresAt: z.number(),
+    claudeDesktopConfig: z.record(z.unknown()),
+  })
+  .openapi('McpTokenCreateResponse');

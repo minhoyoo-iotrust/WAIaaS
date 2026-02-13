@@ -59,6 +59,7 @@ import { nonceRoutes } from './routes/nonce.js';
 import { adminRoutes } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
+import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { IPolicyEngine } from '@waiaas/core';
@@ -88,6 +89,7 @@ export interface CreateAppDeps {
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
   notificationService?: NotificationService;
+  dataDir?: string;
 }
 
 /**
@@ -178,6 +180,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/rotate-secret', masterAuthForAdmin);
     app.use('/v1/admin/notifications/*', masterAuthForAdmin);
     app.use('/v1/tokens', masterAuthForAdmin);
+    app.use('/v1/mcp/tokens', masterAuthForAdmin);
   }
 
   // Register routes
@@ -309,6 +312,20 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.route(
       '/v1',
       tokenRegistryRoutes({ tokenRegistryService }),
+    );
+  }
+
+  // Register MCP token provisioning routes when deps are available
+  if (deps.db && deps.jwtSecretManager && deps.config && deps.dataDir) {
+    app.route(
+      '/v1',
+      mcpTokenRoutes({
+        db: deps.db,
+        jwtSecretManager: deps.jwtSecretManager,
+        config: deps.config,
+        dataDir: deps.dataDir,
+        notificationService: deps.notificationService,
+      }),
     );
   }
 

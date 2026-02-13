@@ -20,3 +20,4 @@ export { health } from './routes/health.js';
 export { walletCrudRoutes, type WalletCrudRouteDeps } from './routes/wallets.js';
 export { walletRoutes, type WalletRouteDeps } from './routes/wallet.js';
 export { transactionRoutes, type TransactionRouteDeps } from './routes/transactions.js';
+export { mcpTokenRoutes, type McpTokenRouteDeps } from './routes/mcp.js';
