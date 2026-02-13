@@ -91,6 +91,31 @@ export class AdapterPool {
     this._pool.clear();
   }
 
+  /**
+   * Evict a cached adapter for a given chain:network.
+   * Disconnects the existing adapter and removes it from pool.
+   * Next resolve() call will create a fresh adapter with the new RPC URL.
+   */
+  async evict(chain: ChainType, network: NetworkType): Promise<void> {
+    const key = this.cacheKey(chain, network);
+    const existing = this._pool.get(key);
+    if (existing) {
+      try {
+        await existing.disconnect();
+      } catch (err) {
+        console.warn(`AdapterPool evict disconnect warning (${key}):`, err);
+      }
+      this._pool.delete(key);
+    }
+  }
+
+  /**
+   * Evict all cached adapters. Used when multiple RPC URLs change at once.
+   */
+  async evictAll(): Promise<void> {
+    await this.disconnectAll(); // Existing method already disconnects + clears
+  }
+
   /** Number of cached adapters. */
   get size(): number {
     return this._pool.size;
