@@ -38,7 +38,10 @@ Plans:
   2. Stage 6이 confirmed/failed/submitted 반환값에 따라 DB 상태를 정확히 기록하며, 이미 SUBMITTED인 트랜잭션을 잘못 FAILED로 덮어쓰지 않는다
   3. Solana adapter에도 동일한 fallback 패턴이 적용되어 getSignatureStatuses로 온체인 상태를 확인한다
   4. 기존 정상 경로(타임아웃 없는 확인)에 대한 회귀가 없다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 96-01-PLAN.md -- SubmitResult 타입 확장 + EVM adapter fallback + Stage 6 반환값 분기 (PIPE-01, PIPE-02)
+- [ ] 96-02-PLAN.md -- Solana adapter waitForConfirmation fallback 패턴 적용 (PIPE-03)
 
 ### Phase 97: EVM 토큰 레지스트리
 **Goal**: 데몬이 EVM 네트워크별 주요 ERC-20 토큰을 내장 목록으로 인식하고, 사용자가 커스텀 토큰을 추가/삭제할 수 있다
@@ -79,7 +82,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 95. 패키지 버전 관리 | 1/1 | ✓ Complete | 2026-02-13 |
-| 96. 파이프라인 확인 로직 수정 | 0/TBD | Not started | - |
+| 96. 파이프라인 확인 로직 수정 | 0/2 | Not started | - |
 | 97. EVM 토큰 레지스트리 | 0/TBD | Not started | - |
 | 98. getAssets ERC-20 연동 | 0/TBD | Not started | - |
 | 99. MCP 토큰 관리 | 0/TBD | Not started | - |
