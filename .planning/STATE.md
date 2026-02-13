@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 93 - Admin Web UI (v1.4.2 용어 변경)
+**Current focus:** Phase 94 - Design Docs Verification (v1.4.2 용어 변경)
 
 ## Current Position
 
-Phase: 93 (5 of 6 in v1.4.2) — Admin Web UI
-Plan: 1 of 1 complete
-Status: Phase Complete
-Last activity: 2026-02-13 — Plan 93-01 complete (Admin UI wallet rename, 15 files, 40 tests pass)
+Phase: 94 (6 of 6 in v1.4.2) — Design Docs Verification
+Plan: 1 of 2 complete
+Status: In Progress
+Last activity: 2026-02-13 — Plan 94-01 complete (15 design docs + README wallet terminology, 16 files)
 
-Progress: [████████░░] 82%
+Progress: [████████░░] 85%
 
 ## Performance Metrics
 
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 10
-- Total plans: 11
+- Total plans completed: 11
+- Total plans: 12
 
 | Phase | Plan | Duration | Tasks | Files |
 | ----- | ---- | -------- | ----- | ----- |
@@ -35,6 +35,7 @@ Progress: [████████░░] 82%
 | 92    | 01   | 7min     | 2     | 21    |
 | 92    | 02   | 3min     | 2     | 9     |
 | 93    | 01   | 8min     | 2     | 15    |
+| 94    | 01   | 16min    | 2     | 16    |
 
 *Updated after each plan completion*
 
@@ -72,6 +73,9 @@ Recent decisions for v1.4.2:
 - CLI: --agent -> --wallet, /v1/agents -> /v1/wallets, fetchAgents -> fetchWallets
 - slug.ts fallback 'agent' -> 'wallet'
 - Admin UI wallet terminology matches backend /v1/wallets API (zero shimming)
+- AI agent concept references preserved in design docs -- only code identifiers renamed
+- Korean 에이전트 -> 지갑 where referring to managed entity, preserved where describing AI agent concept
+- v1.4.2 project stats updated in README: 65,074 LOC, 1,313+ tests, 197 plans
 
 ### Blockers/Concerns
 
@@ -81,5 +85,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 93-01-PLAN.md (Admin UI wallet rename)
+Stopped at: Completed 94-01-PLAN.md (Design docs wallet terminology)
 Resume file: None
