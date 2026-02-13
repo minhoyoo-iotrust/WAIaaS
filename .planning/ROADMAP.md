@@ -78,7 +78,10 @@ Plans:
   2. Admin UI 지갑 상세 페이지에서 MCP 토큰 발급 버튼 클릭으로 API를 호출하고 결과를 표시한다
   3. 발급된 Claude Desktop 설정 JSON이 복사 가능한 형태(코드 블록 + 복사 버튼)로 Admin UI에 표시된다
   4. 기존 CLI `waiaas mcp setup` 동작에 회귀가 없다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 99-01-PLAN.md -- POST /v1/mcp/tokens API (세션 생성 + 토큰 파일 저장 + Claude Desktop 설정 스니펫)
+- [ ] 99-02-PLAN.md -- Admin UI 지갑 상세 MCP Setup 섹션 (발급 버튼 + 설정 JSON 복사)
 
 ## Progress
 
@@ -90,7 +93,7 @@ Plans:
 | 96. 파이프라인 확인 로직 수정 | 2/2 | ✓ Complete | 2026-02-13 |
 | 97. EVM 토큰 레지스트리 | 2/2 | ✓ Complete | 2026-02-13 |
 | 98. getAssets ERC-20 연동 | 1/1 | ✓ Complete | 2026-02-13 |
-| 99. MCP 토큰 관리 | 0/TBD | Not started | - |
+| 99. MCP 토큰 관리 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
