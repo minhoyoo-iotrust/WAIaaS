@@ -1,5 +1,5 @@
 /**
- * Tests for all 7 MCP tools.
+ * Tests for all 10 MCP tools.
  *
  * Uses mock ApiClient to test tool handlers return correct results.
  * Verifies:
@@ -18,6 +18,9 @@ import { registerGetAssets } from '../tools/get-assets.js';
 import { registerListTransactions } from '../tools/list-transactions.js';
 import { registerGetTransaction } from '../tools/get-transaction.js';
 import { registerGetNonce } from '../tools/get-nonce.js';
+import { registerCallContract } from '../tools/call-contract.js';
+import { registerApproveToken } from '../tools/approve-token.js';
+import { registerSendBatch } from '../tools/send-batch.js';
 
 // --- Mock ApiClient factory ---
 function createMockApiClient(responses: Map<string, ApiResult<unknown>>): ApiClient {
@@ -430,6 +433,175 @@ describe('get_nonce tool', () => {
   });
 });
 
+describe('call_contract tool', () => {
+  it('calls POST /v1/transactions/send with CONTRACT_CALL type and EVM params', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', { ok: true, data: { id: 'tx-cc-1', status: 'PENDING' } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerCallContract, apiClient);
+
+    const result = await handler({ to: '0xContractAddr', calldata: '0xabcdef', value: '1000' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'CONTRACT_CALL',
+      to: '0xContractAddr',
+      calldata: '0xabcdef',
+      value: '1000',
+    });
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['id']).toBe('tx-cc-1');
+  });
+
+  it('calls POST with Solana params (programId, instructionData, accounts)', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', { ok: true, data: { id: 'tx-cc-2', status: 'PENDING' } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerCallContract, apiClient);
+
+    const result = await handler({
+      to: 'ProgramAddr',
+      programId: 'Prog1',
+      instructionData: 'base64data',
+      accounts: [{ pubkey: 'pk1', isSigner: true, isWritable: true }],
+    }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'CONTRACT_CALL',
+      to: 'ProgramAddr',
+      programId: 'Prog1',
+      instructionData: 'base64data',
+      accounts: [{ pubkey: 'pk1', isSigner: true, isWritable: true }],
+    });
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['id']).toBe('tx-cc-2');
+  });
+
+  it('returns error with isError on policy rejection', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', {
+        ok: false,
+        error: { code: 'CONTRACT_NOT_WHITELISTED', message: 'Contract not in whitelist', retryable: false },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerCallContract, apiClient);
+
+    const result = await handler({ to: '0xMalicious' }) as {
+      content: Array<{ text: string }>;
+      isError?: boolean;
+    };
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['code']).toBe('CONTRACT_NOT_WHITELISTED');
+  });
+
+  it('omits undefined optional fields from body', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerCallContract, apiClient);
+
+    await handler({ to: '0xAddr' });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'CONTRACT_CALL',
+      to: '0xAddr',
+    });
+  });
+});
+
+describe('approve_token tool', () => {
+  it('calls POST /v1/transactions/send with APPROVE type', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', { ok: true, data: { id: 'tx-ap-1', status: 'PENDING' } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerApproveToken, apiClient);
+
+    const result = await handler({
+      spender: '0xSpenderAddr',
+      token: { address: '0xTokenAddr', decimals: 18, symbol: 'USDT' },
+      amount: '1000000',
+    }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'APPROVE',
+      spender: '0xSpenderAddr',
+      token: { address: '0xTokenAddr', decimals: 18, symbol: 'USDT' },
+      amount: '1000000',
+    });
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['id']).toBe('tx-ap-1');
+  });
+
+  it('returns error on SPENDER_NOT_APPROVED policy rejection', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', {
+        ok: false,
+        error: { code: 'SPENDER_NOT_APPROVED', message: 'Spender not in approved list', retryable: false },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerApproveToken, apiClient);
+
+    const result = await handler({
+      spender: '0xBadSpender',
+      token: { address: '0xToken', decimals: 18, symbol: 'TK' },
+      amount: '100',
+    }) as { isError?: boolean };
+
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('send_batch tool', () => {
+  it('calls POST /v1/transactions/send with BATCH type and instructions', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', { ok: true, data: { id: 'tx-batch-1', status: 'PENDING' } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerSendBatch, apiClient);
+
+    const result = await handler({
+      instructions: [
+        { to: 'addr1', amount: '100' },
+        { to: 'addr2', amount: '200' },
+      ],
+    }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'BATCH',
+      instructions: [
+        { to: 'addr1', amount: '100' },
+        { to: 'addr2', amount: '200' },
+      ],
+    });
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['id']).toBe('tx-batch-1');
+  });
+
+  it('returns error on BATCH_NOT_SUPPORTED for EVM', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/transactions/send', {
+        ok: false,
+        error: { code: 'BATCH_NOT_SUPPORTED', message: 'Batch not supported on EVM', retryable: false },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerSendBatch, apiClient);
+
+    const result = await handler({
+      instructions: [
+        { to: 'addr1', amount: '100' },
+        { to: 'addr2', amount: '200' },
+      ],
+    }) as { isError?: boolean };
+
+    expect(result.isError).toBe(true);
+  });
+});
+
 describe('tool registration with McpServer', () => {
   let server: McpServer;
   let apiClient: ApiClient;
@@ -465,5 +637,17 @@ describe('tool registration with McpServer', () => {
 
   it('registers get_nonce tool without error', () => {
     expect(() => registerGetNonce(server, apiClient)).not.toThrow();
+  });
+
+  it('registers call_contract tool without error', () => {
+    expect(() => registerCallContract(server, apiClient)).not.toThrow();
+  });
+
+  it('registers approve_token tool without error', () => {
+    expect(() => registerApproveToken(server, apiClient)).not.toThrow();
+  });
+
+  it('registers send_batch tool without error', () => {
+    expect(() => registerSendBatch(server, apiClient)).not.toThrow();
   });
 });

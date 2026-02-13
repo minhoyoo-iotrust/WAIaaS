@@ -2,8 +2,8 @@
  * send_token tool: Send SOL/ETH or tokens from the wallet.
  *
  * Supports TRANSFER (native) and TOKEN_TRANSFER (SPL/ERC-20) types.
- * CONTRACT_CALL, APPROVE, and BATCH are deliberately NOT exposed via MCP
- * for security (MCPSDK-04).
+ * For contract calls, approvals, and batch transactions, use the
+ * dedicated call_contract, approve_token, and send_batch tools.
  */
 
 import { z } from 'zod';
