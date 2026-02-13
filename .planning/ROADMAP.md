@@ -25,7 +25,9 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
   2. 스크립트가 git tag를 생성하고 커밋한다
   3. 현재 코드베이스의 모든 패키지 버전이 0.0.0이 아닌 실제 버전으로 표시된다
   4. Admin UI 대시보드와 OpenAPI 문서에 올바른 버전이 노출된다
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 95-01-PLAN.md -- tag-release.sh 스크립트 생성 + 전체 패키지 버전 1.4.3 갱신
 
 ### Phase 96: 파이프라인 확인 로직 수정
 **Goal**: 트랜잭션이 온체인에서 성공했으나 확인 단계에서 RPC 에러/타임아웃이 발생해도, DB 상태가 온체인 상태와 일치한다
@@ -76,7 +78,7 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 95. 패키지 버전 관리 | 0/TBD | Not started | - |
+| 95. 패키지 버전 관리 | 0/1 | Planning complete | - |
 | 96. 파이프라인 확인 로직 수정 | 0/TBD | Not started | - |
 | 97. EVM 토큰 레지스트리 | 0/TBD | Not started | - |
 | 98. getAssets ERC-20 연동 | 0/TBD | Not started | - |
