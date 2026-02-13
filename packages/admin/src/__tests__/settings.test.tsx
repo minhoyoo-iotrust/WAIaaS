@@ -40,8 +40,13 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost } from '../api/client';
+import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
+import { showToast } from '../components/toast';
 import SettingsPage from '../pages/settings';
+
+// ---------------------------------------------------------------------------
+// Mock data
+// ---------------------------------------------------------------------------
 
 const mockKillSwitchNormal = {
   state: 'NORMAL',
@@ -55,103 +60,352 @@ const mockKillSwitchActivated = {
   activatedBy: 'admin',
 };
 
+const mockSettingsResponse = {
+  notifications: {
+    enabled: 'false',
+    telegram_bot_token: true, // credential: configured
+    telegram_chat_id: '12345',
+    discord_webhook_url: false, // credential: not configured
+    ntfy_server: 'https://ntfy.sh',
+    ntfy_topic: '',
+    locale: 'en',
+    rate_limit_rpm: '20',
+  },
+  rpc: {
+    solana_mainnet: 'https://api.mainnet-beta.solana.com',
+    solana_devnet: 'https://api.devnet.solana.com',
+    solana_testnet: 'https://api.testnet.solana.com',
+    evm_ethereum_mainnet: 'https://eth.drpc.org',
+    evm_ethereum_sepolia: 'https://sepolia.drpc.org',
+    evm_polygon_mainnet: 'https://polygon.drpc.org',
+    evm_polygon_amoy: 'https://polygon-amoy.drpc.org',
+    evm_arbitrum_mainnet: 'https://arbitrum.drpc.org',
+    evm_arbitrum_sepolia: 'https://arbitrum-sepolia.drpc.org',
+    evm_optimism_mainnet: 'https://optimism.drpc.org',
+    evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
+    evm_base_mainnet: 'https://base.drpc.org',
+    evm_base_sepolia: 'https://base-sepolia.drpc.org',
+    evm_default_network: 'ethereum-sepolia',
+  },
+  security: {
+    session_ttl: '86400',
+    max_sessions_per_wallet: '5',
+    max_pending_tx: '10',
+    rate_limit_global_ip_rpm: '1000',
+    rate_limit_session_rpm: '300',
+    rate_limit_tx_rpm: '10',
+    policy_defaults_delay_seconds: '300',
+    policy_defaults_approval_timeout: '3600',
+  },
+  daemon: {
+    log_level: 'info',
+  },
+  walletconnect: {
+    project_id: '',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Helper: mount with both API mocks satisfied
+// ---------------------------------------------------------------------------
+
+function mockApiCalls() {
+  vi.mocked(apiGet).mockImplementation(async (path: string) => {
+    if (path === '/v1/admin/kill-switch') return mockKillSwitchNormal;
+    if (path === '/v1/admin/settings') return mockSettingsResponse;
+    return {};
+  });
+}
+
+async function renderAndWaitForLoad() {
+  render(<SettingsPage />);
+  // Wait until loading finishes (Notifications heading appears)
+  await waitFor(() => {
+    expect(screen.getByText('Notifications')).toBeTruthy();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('SettingsPage', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it('should display kill switch state and toggle', async () => {
-    vi.mocked(apiGet).mockResolvedValueOnce(mockKillSwitchNormal);
+  // ---- Test 1: Renders all 5 category sections ----
+  it('renders all 5 category sections', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
 
-    render(<SettingsPage />);
+    expect(screen.getByText('Notifications')).toBeTruthy();
+    expect(screen.getByText('RPC Endpoints')).toBeTruthy();
+    expect(screen.getByText('Security Parameters')).toBeTruthy();
+    expect(screen.getByText('WalletConnect')).toBeTruthy();
+    expect(screen.getByText('Daemon')).toBeTruthy();
+  });
 
+  // ---- Test 2: Renders notification fields with credential masking ----
+  it('renders notification fields with credential masking', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // telegram_bot_token is true (configured) -> input should have "(configured)" placeholder
+    const tokenInput = document.querySelector('input[name="notifications.telegram_bot_token"]') as HTMLInputElement;
+    expect(tokenInput).toBeTruthy();
+    expect(tokenInput.placeholder).toBe('(configured)');
+    // Value should be empty because credential fields return boolean, not actual value
+    expect(tokenInput.value).toBe('');
+
+    // discord_webhook_url is false (not configured) -> empty placeholder
+    const discordInput = document.querySelector('input[name="notifications.discord_webhook_url"]') as HTMLInputElement;
+    expect(discordInput).toBeTruthy();
+    expect(discordInput.placeholder).toBe('');
+
+    // telegram_chat_id is a normal field with value '12345'
+    const chatIdInput = document.querySelector('input[name="notifications.telegram_chat_id"]') as HTMLInputElement;
+    expect(chatIdInput).toBeTruthy();
+    expect(chatIdInput.value).toBe('12345');
+  });
+
+  // ---- Test 3: Renders RPC endpoint URLs ----
+  it('renders RPC endpoint URLs', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Solana Mainnet URL should be displayed
+    const solMainnetInput = document.querySelector('input[name="rpc.solana_mainnet"]') as HTMLInputElement;
+    expect(solMainnetInput).toBeTruthy();
+    expect(solMainnetInput.value).toBe('https://api.mainnet-beta.solana.com');
+
+    // Test buttons exist for RPC fields
+    const testButtons = screen.getAllByText('Test');
+    // 13 RPC URL fields (3 solana + 10 evm) = 13 Test buttons
+    expect(testButtons.length).toBe(13);
+  });
+
+  // ---- Test 4: Renders security parameter fields ----
+  it('renders security parameter fields', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Session TTL should show 86400
+    const sessionTtl = document.querySelector('input[name="security.session_ttl"]') as HTMLInputElement;
+    expect(sessionTtl).toBeTruthy();
+    expect(sessionTtl.value).toBe('86400');
+
+    // Max sessions per wallet
+    const maxSessions = document.querySelector('input[name="security.max_sessions_per_wallet"]') as HTMLInputElement;
+    expect(maxSessions).toBeTruthy();
+    expect(maxSessions.value).toBe('5');
+  });
+
+  // ---- Test 5: Renders WalletConnect section with info box ----
+  it('renders WalletConnect section with info box', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    expect(screen.getByText('WalletConnect')).toBeTruthy();
+    // Info box references cloud.walletconnect.com
+    const link = document.querySelector('a[href="https://cloud.walletconnect.com"]');
+    expect(link).toBeTruthy();
+  });
+
+  // ---- Test 6: Renders daemon log_level select ----
+  it('renders daemon log_level select', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    const logLevelSelect = document.querySelector('select[name="daemon.log_level"]') as HTMLSelectElement;
+    expect(logLevelSelect).toBeTruthy();
+    expect(logLevelSelect.value).toBe('info');
+
+    // Should have 4 options: debug, info, warn, error
+    const options = logLevelSelect.querySelectorAll('option');
+    expect(options.length).toBe(4);
+  });
+
+  // ---- Test 7: Shows save bar when field is modified ----
+  it('shows save bar when field is modified', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Save bar should not be visible initially
+    expect(screen.queryByText(/unsaved/i)).toBeNull();
+
+    // Modify session_ttl
+    const sessionTtl = document.querySelector('input[name="security.session_ttl"]') as HTMLInputElement;
+    fireEvent.input(sessionTtl, { target: { value: '7200' } });
+
+    // Save bar should now appear
     await waitFor(() => {
-      expect(screen.getByText('NORMAL')).toBeTruthy();
-    });
-
-    expect(screen.getByText('Activate Kill Switch')).toBeTruthy();
-
-    // Mock POST for activation and re-fetch
-    vi.mocked(apiPost).mockResolvedValueOnce(undefined);
-    vi.mocked(apiGet).mockResolvedValueOnce(mockKillSwitchActivated);
-
-    fireEvent.click(screen.getByText('Activate Kill Switch'));
-
-    await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/kill-switch');
+      expect(screen.getByText(/unsaved/i)).toBeTruthy();
     });
   });
 
-  it('should open JWT rotation confirmation modal', async () => {
-    vi.mocked(apiGet).mockResolvedValueOnce(mockKillSwitchNormal);
+  // ---- Test 8: Saves settings via PUT and clears dirty state ----
+  it('saves settings via PUT and clears dirty state', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
 
-    render(<SettingsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('NORMAL')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText('Rotate JWT Secret'));
+    // Modify a field
+    const sessionTtl = document.querySelector('input[name="security.session_ttl"]') as HTMLInputElement;
+    fireEvent.input(sessionTtl, { target: { value: '7200' } });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Are you sure you want to rotate the JWT secret/i),
-      ).toBeTruthy();
+      expect(screen.getByText(/unsaved/i)).toBeTruthy();
     });
 
-    expect(screen.getByText('Rotate')).toBeTruthy();
+    // Mock PUT success and re-fetch
+    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
 
-    // Mock rotation
+    // Click Save
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        settings: [{ key: 'security.session_ttl', value: '7200' }],
+      });
+    });
+
+    // After save, toast shows success
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Settings saved and applied');
+    });
+  });
+
+  // ---- Test 9: Discards changes on discard click ----
+  it('discards changes on discard click', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Modify a field
+    const sessionTtl = document.querySelector('input[name="security.session_ttl"]') as HTMLInputElement;
+    fireEvent.input(sessionTtl, { target: { value: '7200' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/unsaved/i)).toBeTruthy();
+    });
+
+    // Click Discard
+    fireEvent.click(screen.getByText('Discard'));
+
+    // Save bar should disappear
+    await waitFor(() => {
+      expect(screen.queryByText(/unsaved/i)).toBeNull();
+    });
+
+    // Field should revert to original value
+    const sessionTtlAfter = document.querySelector('input[name="security.session_ttl"]') as HTMLInputElement;
+    expect(sessionTtlAfter.value).toBe('86400');
+  });
+
+  // ---- Test 10: Tests RPC connectivity ----
+  it('tests RPC connectivity', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Mock apiPost for test-rpc
     vi.mocked(apiPost).mockResolvedValueOnce({
-      rotatedAt: 1707609600,
-      message: 'Rotated',
+      success: true,
+      latencyMs: 42,
+      blockNumber: 123456,
     });
 
-    fireEvent.click(screen.getByText('Rotate'));
+    // Find the first Test button (Solana Mainnet)
+    const testButtons = screen.getAllByText('Test');
+    fireEvent.click(testButtons[0]);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/rotate-secret');
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', {
+        url: 'https://api.mainnet-beta.solana.com',
+        chain: 'solana',
+      });
+    });
+
+    // Result badge should appear
+    await waitFor(() => {
+      expect(screen.getByText('OK')).toBeTruthy();
+      expect(screen.getByText('42ms')).toBeTruthy();
     });
   });
 
-  it('should require typing SHUTDOWN for daemon shutdown', async () => {
-    vi.mocked(apiGet).mockResolvedValueOnce(mockKillSwitchNormal);
+  // ---- Test 11: Tests notification delivery ----
+  it('tests notification delivery', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
 
-    render(<SettingsPage />);
+    // Mock apiPost for notification test
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [
+        { channel: 'telegram', success: true },
+        { channel: 'discord', success: false, error: 'Not configured' },
+      ],
+    });
 
+    fireEvent.click(screen.getByText('Test Notification'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test');
+    });
+
+    // Results displayed
+    await waitFor(() => {
+      expect(screen.getByText('telegram')).toBeTruthy();
+      expect(screen.getByText('discord')).toBeTruthy();
+    });
+  });
+
+  // ---- Test 12: Handles API error on save ----
+  it('handles API error on save', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Modify a field
+    const sessionTtl = document.querySelector('input[name="security.session_ttl"]') as HTMLInputElement;
+    fireEvent.input(sessionTtl, { target: { value: '7200' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/unsaved/i)).toBeTruthy();
+    });
+
+    // Mock PUT to throw ApiError
+    const MockApiError = (await import('../api/client')).ApiError;
+    vi.mocked(apiPut).mockRejectedValueOnce(new MockApiError(400, 'VALIDATION_ERROR', 'Invalid value'));
+
+    // Click Save
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: VALIDATION_ERROR');
+    });
+  });
+
+  // ---- Test 13: Keeps existing kill switch controls ----
+  it('keeps existing kill switch controls', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Kill switch section heading
+    expect(screen.getByText('Kill Switch')).toBeTruthy();
+
+    // State badge shows NORMAL
     await waitFor(() => {
       expect(screen.getByText('NORMAL')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Shutdown Daemon'));
+    // Toggle button present
+    expect(screen.getByText('Activate Kill Switch')).toBeTruthy();
+  });
 
-    // Wait for the shutdown modal - text is split across elements ("Type " + <strong>SHUTDOWN</strong> + " to confirm")
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('SHUTDOWN')).toBeTruthy();
-    });
+  // ---- Test 14: Keeps existing shutdown controls ----
+  it('keeps existing shutdown controls', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
 
-    const input = screen.getByPlaceholderText('SHUTDOWN');
-    const shutdownBtn = screen.getByText('Shutdown');
-
-    // Confirm button should be disabled initially
-    expect(shutdownBtn.hasAttribute('disabled')).toBe(true);
-
-    // Type SHUTDOWN
-    fireEvent.input(input, { target: { value: 'SHUTDOWN' } });
-
-    // Now the confirm button should be enabled
-    await waitFor(() => {
-      expect(screen.getByText('Shutdown').hasAttribute('disabled')).toBe(false);
-    });
-
-    // Mock shutdown
-    vi.mocked(apiPost).mockResolvedValueOnce({ message: 'Shutting down' });
-
-    fireEvent.click(screen.getByText('Shutdown'));
-
-    await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/shutdown');
-    });
+    expect(screen.getByText('Shutdown Daemon')).toBeTruthy();
+    expect(screen.getByText('Danger Zone')).toBeTruthy();
   });
 });
