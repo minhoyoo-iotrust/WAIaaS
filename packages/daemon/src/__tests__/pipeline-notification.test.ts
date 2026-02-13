@@ -326,14 +326,15 @@ describe('stage6Confirm: TX_CONFIRMED notification', () => {
 // Stage 6: TX_FAILED on confirmation failure
 // ---------------------------------------------------------------------------
 
-describe('stage6Confirm: TX_FAILED notification on confirmation failure', () => {
-  it('should fire TX_FAILED notify when confirmation times out', async () => {
+describe('stage6Confirm: TX_FAILED notification on on-chain revert', () => {
+  it('should fire TX_FAILED notify when waitForConfirmation returns failed', async () => {
     const walletId = await insertTestAgent(conn);
     const notificationService = createMockNotificationService();
     const adapter = createMockAdapter({
-      waitForConfirmation: async () => {
-        throw new Error('Timeout waiting for confirmation');
-      },
+      waitForConfirmation: async (txHash: string) => ({
+        txHash,
+        status: 'failed' as const,
+      }),
     });
     const ctx = createPipelineContext(conn, walletId, {
       notificationService,
@@ -344,7 +345,7 @@ describe('stage6Confirm: TX_FAILED notification on confirmation failure', () => 
     await stage3Policy(ctx);
     await stage5Execute(ctx);
 
-    await expect(stage6Confirm(ctx)).rejects.toThrow('Timeout waiting for confirmation');
+    await expect(stage6Confirm(ctx)).rejects.toThrow('Transaction reverted on-chain');
 
     const calls = (notificationService.notify as ReturnType<typeof vi.fn>).mock.calls;
     const failedCall = calls.find(
@@ -352,7 +353,7 @@ describe('stage6Confirm: TX_FAILED notification on confirmation failure', () => 
     );
     expect(failedCall).toBeTruthy();
     expect(failedCall![1]).toBe(walletId);
-    expect(failedCall![2]).toHaveProperty('reason', 'Timeout waiting for confirmation');
+    expect(failedCall![2]).toHaveProperty('reason', 'Transaction reverted on-chain');
     expect(failedCall![2]).toHaveProperty('amount', '1000000000');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
   });

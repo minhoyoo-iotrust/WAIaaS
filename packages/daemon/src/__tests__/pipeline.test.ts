@@ -391,12 +391,13 @@ describe('Stage 6: Confirm', () => {
     expect(tx!.executedAt).toBeTruthy();
   });
 
-  it('should update DB to FAILED on timeout/error', async () => {
+  it('should keep SUBMITTED when waitForConfirmation returns submitted', async () => {
     const walletId = await insertTestAgent(conn);
     const adapter = createMockAdapter({
-      waitForConfirmation: async () => {
-        throw new Error('Timeout waiting for confirmation');
-      },
+      waitForConfirmation: async (txHash: string): Promise<SubmitResult> => ({
+        txHash,
+        status: 'submitted',
+      }),
     });
 
     const ctx = createPipelineContext(conn, walletId, { adapter });
@@ -404,7 +405,33 @@ describe('Stage 6: Confirm', () => {
     await stage3Policy(ctx);
     await stage5Execute(ctx);
 
-    await expect(stage6Confirm(ctx)).rejects.toThrow('Timeout waiting for confirmation');
+    // Should NOT throw -- submitted is not a failure
+    await stage6Confirm(ctx);
+
+    const tx = await conn.db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, ctx.txId))
+      .get();
+    // DB status should remain SUBMITTED (set by Stage 5), NOT overwritten to FAILED
+    expect(tx!.status).toBe('SUBMITTED');
+  });
+
+  it('should mark FAILED when waitForConfirmation returns failed (on-chain revert)', async () => {
+    const walletId = await insertTestAgent(conn);
+    const adapter = createMockAdapter({
+      waitForConfirmation: async (txHash: string): Promise<SubmitResult> => ({
+        txHash,
+        status: 'failed',
+      }),
+    });
+
+    const ctx = createPipelineContext(conn, walletId, { adapter });
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+    await stage5Execute(ctx);
+
+    await expect(stage6Confirm(ctx)).rejects.toThrow('Transaction reverted on-chain');
 
     const tx = await conn.db
       .select()
@@ -412,7 +439,7 @@ describe('Stage 6: Confirm', () => {
       .where(eq(transactions.id, ctx.txId))
       .get();
     expect(tx!.status).toBe('FAILED');
-    expect(tx!.error).toBe('Timeout waiting for confirmation');
+    expect(tx!.error).toBe('Transaction reverted on-chain');
   });
 });
 
