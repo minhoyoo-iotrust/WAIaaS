@@ -9,7 +9,7 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 **Phase Numbering:** v1.4.3이 Phase 99에서 종료. v1.4.4는 Phase 100부터 시작.
 
 - [x] **Phase 100: Settings 인프라** - DB 테이블 + credential 암호화 + config.toml fallback + 자동 import
-- [ ] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
+- [x] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
 - [ ] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
 - [ ] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
 - [ ] **Phase 104: API 스킬 파일** - quickstart/wallet/transactions/policies/admin 5개 마크다운
@@ -44,8 +44,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 101-01-PLAN.md -- GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트 + OpenAPI 스키마 + 테스트
-- [ ] 101-02-PLAN.md -- 알림 채널 replaceChannels + RPC 어댑터 evict + HotReloadOrchestrator + daemon 연동
+- [x] 101-01-PLAN.md -- GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트 + OpenAPI 스키마 + 테스트
+- [x] 101-02-PLAN.md -- 알림 채널 replaceChannels + RPC 어댑터 evict + HotReloadOrchestrator + daemon 연동
 
 ### Phase 102: Admin UI 설정 페이지
 **Goal**: Admin Web UI에서 알림/RPC/보안/WalletConnect/log_level 설정을 시각적으로 관리한다
@@ -102,7 +102,7 @@ Phase 100 -> 101 -> 102 순차. Phase 103, 104는 독립적이며 100~102와 병
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 100. Settings 인프라 | 2/2 | ✓ Complete | 2026-02-13 |
-| 101. Settings API + Hot-Reload | 0/2 | Not started | - |
+| 101. Settings API + Hot-Reload | 2/2 | ✓ Complete | 2026-02-13 |
 | 102. Admin UI 설정 페이지 | 0/2 | Not started | - |
 | 103. MCP 5-type Feature Parity | 0/2 | Not started | - |
 | 104. API 스킬 파일 | 0/2 | Not started | - |

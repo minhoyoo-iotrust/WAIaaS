@@ -13,15 +13,15 @@
 - [x] **SETTINGS-02**: credential(bot token, webhook URL) AES-GCM 암호화 저장
 - [x] **SETTINGS-03**: 설정 우선순위 fallback (DB > config.toml > 환경변수 > 기본값)
 - [x] **SETTINGS-04**: 최초 기동 시 config.toml 기존 값 DB 자동 import
-- [ ] **SETTINGS-05**: 알림 채널 hot-reload (credential 변경 시 채널 인스턴스 재생성)
-- [ ] **SETTINGS-06**: RPC 엔드포인트 hot-reload (URL 변경 시 adapter 재연결)
-- [ ] **SETTINGS-07**: 보안 파라미터 hot-reload (session_ttl, rate_limit 등 즉시 반영)
+- [x] **SETTINGS-05**: 알림 채널 hot-reload (credential 변경 시 채널 인스턴스 재생성)
+- [x] **SETTINGS-06**: RPC 엔드포인트 hot-reload (URL 변경 시 adapter 재연결)
+- [x] **SETTINGS-07**: 보안 파라미터 hot-reload (session_ttl, rate_limit 등 즉시 반영)
 
 ### API (설정 관리 API)
 
-- [ ] **API-01**: GET /v1/admin/settings — 전체 설정 조회 (credential 마스킹)
-- [ ] **API-02**: PUT /v1/admin/settings — 설정 수정 + hot-reload 트리거
-- [ ] **API-03**: POST /v1/admin/settings/test-rpc — RPC 연결 테스트
+- [x] **API-01**: GET /v1/admin/settings — 전체 설정 조회 (credential 마스킹)
+- [x] **API-02**: PUT /v1/admin/settings — 설정 수정 + hot-reload 트리거
+- [x] **API-03**: POST /v1/admin/settings/test-rpc — RPC 연결 테스트
 
 ### Admin (Admin UI 설정 페이지)
 
@@ -79,12 +79,12 @@
 | SETTINGS-02 | Phase 100 | Done |
 | SETTINGS-03 | Phase 100 | Done |
 | SETTINGS-04 | Phase 100 | Done |
-| SETTINGS-05 | Phase 101 | Pending |
-| SETTINGS-06 | Phase 101 | Pending |
-| SETTINGS-07 | Phase 101 | Pending |
-| API-01 | Phase 101 | Pending |
-| API-02 | Phase 101 | Pending |
-| API-03 | Phase 101 | Pending |
+| SETTINGS-05 | Phase 101 | Done |
+| SETTINGS-06 | Phase 101 | Done |
+| SETTINGS-07 | Phase 101 | Done |
+| API-01 | Phase 101 | Done |
+| API-02 | Phase 101 | Done |
+| API-03 | Phase 101 | Done |
 | ADMIN-01 | Phase 102 | Pending |
 | ADMIN-02 | Phase 102 | Pending |
 | ADMIN-03 | Phase 102 | Pending |
@@ -107,4 +107,4 @@
 
 ---
 *Requirements defined: 2026-02-13*
-*Last updated: 2026-02-13 after roadmap creation*
+*Last updated: 2026-02-13 after Phase 101 completion*
