@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 
 class WalletAddress(BaseModel):
-    agent_id: str = Field(alias="agentId")
+    wallet_id: str = Field(alias="walletId")
     chain: str
     network: str
     address: str
@@ -22,7 +22,7 @@ class WalletAddress(BaseModel):
 
 
 class WalletBalance(BaseModel):
-    agent_id: str = Field(alias="agentId")
+    wallet_id: str = Field(alias="walletId")
     chain: str
     network: str
     address: str
@@ -46,7 +46,7 @@ class AssetInfo(BaseModel):
 
 
 class WalletAssets(BaseModel):
-    agent_id: str = Field(alias="agentId")
+    wallet_id: str = Field(alias="walletId")
     chain: str
     network: str
     assets: list[AssetInfo]
@@ -101,7 +101,7 @@ class TransactionDetail(BaseModel):
     """Response from GET /v1/transactions/:id."""
 
     id: str
-    agent_id: str = Field(alias="agentId")
+    wallet_id: str = Field(alias="walletId")
     type: str
     status: str
     tier: Optional[str] = None

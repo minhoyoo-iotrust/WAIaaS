@@ -36,7 +36,7 @@ export interface RetryOptions {
 // ---------------------------------------------------------------------------
 
 export interface BalanceResponse {
-  agentId: string;
+  walletId: string;
   chain: string;
   network: string;
   address: string;
@@ -46,7 +46,7 @@ export interface BalanceResponse {
 }
 
 export interface AddressResponse {
-  agentId: string;
+  walletId: string;
   chain: string;
   network: string;
   address: string;
@@ -63,7 +63,7 @@ export interface AssetInfo {
 }
 
 export interface AssetsResponse {
-  agentId: string;
+  walletId: string;
   chain: string;
   network: string;
   assets: AssetInfo[];
@@ -105,7 +105,7 @@ export interface SendTokenResponse {
 
 export interface TransactionResponse {
   id: string;
-  agentId: string;
+  walletId: string;
   type: string;
   status: string;
   tier: string | null;
