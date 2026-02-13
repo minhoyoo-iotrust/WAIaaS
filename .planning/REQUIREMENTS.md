@@ -75,36 +75,36 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETTINGS-01 | — | Pending |
-| SETTINGS-02 | — | Pending |
-| SETTINGS-03 | — | Pending |
-| SETTINGS-04 | — | Pending |
-| SETTINGS-05 | — | Pending |
-| SETTINGS-06 | — | Pending |
-| SETTINGS-07 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| MCP-01 | — | Pending |
-| MCP-02 | — | Pending |
-| MCP-03 | — | Pending |
-| MCP-04 | — | Pending |
-| SKILL-01 | — | Pending |
-| SKILL-02 | — | Pending |
-| SKILL-03 | — | Pending |
-| SKILL-04 | — | Pending |
-| SKILL-05 | — | Pending |
+| SETTINGS-01 | Phase 100 | Pending |
+| SETTINGS-02 | Phase 100 | Pending |
+| SETTINGS-03 | Phase 100 | Pending |
+| SETTINGS-04 | Phase 100 | Pending |
+| SETTINGS-05 | Phase 101 | Pending |
+| SETTINGS-06 | Phase 101 | Pending |
+| SETTINGS-07 | Phase 101 | Pending |
+| API-01 | Phase 101 | Pending |
+| API-02 | Phase 101 | Pending |
+| API-03 | Phase 101 | Pending |
+| ADMIN-01 | Phase 102 | Pending |
+| ADMIN-02 | Phase 102 | Pending |
+| ADMIN-03 | Phase 102 | Pending |
+| ADMIN-04 | Phase 102 | Pending |
+| ADMIN-05 | Phase 102 | Pending |
+| MCP-01 | Phase 103 | Pending |
+| MCP-02 | Phase 103 | Pending |
+| MCP-03 | Phase 103 | Pending |
+| MCP-04 | Phase 103 | Pending |
+| SKILL-01 | Phase 104 | Pending |
+| SKILL-02 | Phase 104 | Pending |
+| SKILL-03 | Phase 104 | Pending |
+| SKILL-04 | Phase 104 | Pending |
+| SKILL-05 | Phase 104 | Pending |
 
 **Coverage:**
 - v1.4.4 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-13*
-*Last updated: 2026-02-13 after initial definition*
+*Last updated: 2026-02-13 after roadmap creation*
