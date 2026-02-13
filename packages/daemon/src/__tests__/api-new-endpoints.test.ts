@@ -260,7 +260,7 @@ afterEach(() => {
 // Auth test helpers
 // ---------------------------------------------------------------------------
 
-async function createTestWallet(name = 'test-agent'): Promise<string> {
+async function createTestWallet(name = 'test-wallet'): Promise<string> {
   const res = await app.request('/v1/wallets', {
     method: 'POST',
     headers: {
@@ -572,7 +572,7 @@ describe('GET /v1/wallets (list)', () => {
   it('should return 200 with wallet list (masterAuth required)', async () => {
     // Create two wallets (mockKeyStore returns unique keys per call)
     await createTestWallet('wallet-1');
-    await createTestWallet('agent-2');
+    await createTestWallet('wallet-2');
 
     const res = await app.request('/v1/wallets', {
       headers: {
@@ -624,7 +624,7 @@ describe('GET /v1/wallets/:id (detail)', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.id).toBe(walletId);
-    expect(body.name).toBe('test-agent');
+    expect(body.name).toBe('test-wallet');
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
     expect(body.publicKey).toBeTruthy();

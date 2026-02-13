@@ -27,8 +27,8 @@ export interface TestDaemonHarness {
   baseUrl: string;
   daemon: DaemonLifecycle;
   cleanup: () => Promise<void>;
-  /** Test-scoped storage for agentId, txId, etc. */
-  _agentId?: string;
+  /** Test-scoped storage for walletId, txId, etc. */
+  _walletId?: string;
   _txId?: string;
 }
 
@@ -40,7 +40,7 @@ export interface ManualHarness {
   httpServer: { close: () => void };
   sqlite: { close: () => void };
   cleanup: () => Promise<void>;
-  _agentId?: string;
+  _walletId?: string;
   _txId?: string;
 }
 

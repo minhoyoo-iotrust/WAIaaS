@@ -254,13 +254,13 @@ async function createTestWallet(): Promise<string> {
       'Content-Type': 'application/json',
       'X-Master-Password': TEST_MASTER_PASSWORD,
     },
-    body: JSON.stringify({ name: 'test-agent' }),
+    body: JSON.stringify({ name: 'test-wallet' }),
   });
   const body = await json(res);
   return body.id as string;
 }
 
-/** Create a session and sign a JWT for the given agent. Returns "Bearer wai_sess_<token>". */
+/** Create a session and sign a JWT for the given wallet. Returns "Bearer wai_sess_<token>". */
 async function createSessionToken(walletId: string): Promise<string> {
   const sessionId = generateId();
   const now = Math.floor(Date.now() / 1000);
@@ -295,12 +295,12 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'test-agent' }),
+      body: JSON.stringify({ name: 'test-wallet' }),
     });
 
     expect(res.status).toBe(201);
     const body = await json(res);
-    expect(body.name).toBe('test-agent');
+    expect(body.name).toBe('test-wallet');
     expect(body.chain).toBe('solana');
     expect(body.network).toBe('devnet');
     expect(body.publicKey).toBe(MOCK_SOLANA_PUBLIC_KEY);
@@ -315,7 +315,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'active-agent' }),
+      body: JSON.stringify({ name: 'active-wallet' }),
     });
 
     const body = await json(res);
@@ -346,7 +346,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'uuid-agent' }),
+      body: JSON.stringify({ name: 'uuid-wallet' }),
     });
 
     const body = await json(res);
@@ -363,7 +363,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'persisted-agent' }),
+      body: JSON.stringify({ name: 'persisted-wallet' }),
     });
 
     const body = await json(res);
@@ -375,7 +375,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
       unknown
     >;
     expect(row).toBeTruthy();
-    expect(row.name).toBe('persisted-agent');
+    expect(row.name).toBe('persisted-wallet');
     expect(row.chain).toBe('solana');
     expect(row.network).toBe('devnet');
     expect(row.status).toBe('ACTIVE');
@@ -389,7 +389,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
         Host: HOST,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name: 'no-auth-agent' }),
+      body: JSON.stringify({ name: 'no-auth-wallet' }),
     });
 
     expect(res.status).toBe(401);
@@ -405,7 +405,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': 'wrong-password',
       },
-      body: JSON.stringify({ name: 'bad-auth-agent' }),
+      body: JSON.stringify({ name: 'bad-auth-wallet' }),
     });
 
     expect(res.status).toBe(401);
@@ -419,7 +419,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
 // ---------------------------------------------------------------------------
 
 describe('chain-network validation', () => {
-  it('POST /agents with chain=solana, no network -> defaults to devnet', async () => {
+  it('POST /wallets with chain=solana, no network -> defaults to devnet', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -427,7 +427,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'sol-agent', chain: 'solana' }),
+      body: JSON.stringify({ name: 'sol-wallet', chain: 'solana' }),
     });
 
     expect(res.status).toBe(201);
@@ -436,7 +436,7 @@ describe('chain-network validation', () => {
     expect(body.chain).toBe('solana');
   });
 
-  it('POST /agents with chain=ethereum, no network -> defaults to evm_default_network', async () => {
+  it('POST /wallets with chain=ethereum, no network -> defaults to evm_default_network', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -444,7 +444,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'eth-agent', chain: 'ethereum' }),
+      body: JSON.stringify({ name: 'eth-wallet', chain: 'ethereum' }),
     });
 
     expect(res.status).toBe(201);
@@ -453,7 +453,7 @@ describe('chain-network validation', () => {
     expect(body.chain).toBe('ethereum');
   });
 
-  it('POST /agents with chain=ethereum + network=ethereum-sepolia -> success', async () => {
+  it('POST /wallets with chain=ethereum + network=ethereum-sepolia -> success', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -461,7 +461,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'eth-sepolia-agent', chain: 'ethereum', network: 'ethereum-sepolia' }),
+      body: JSON.stringify({ name: 'eth-sepolia-wallet', chain: 'ethereum', network: 'ethereum-sepolia' }),
     });
 
     expect(res.status).toBe(201);
@@ -469,7 +469,7 @@ describe('chain-network validation', () => {
     expect(body.network).toBe('ethereum-sepolia');
   });
 
-  it('POST /agents with chain=ethereum + network=polygon-mainnet -> success', async () => {
+  it('POST /wallets with chain=ethereum + network=polygon-mainnet -> success', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -477,7 +477,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'poly-agent', chain: 'ethereum', network: 'polygon-mainnet' }),
+      body: JSON.stringify({ name: 'poly-wallet', chain: 'ethereum', network: 'polygon-mainnet' }),
     });
 
     expect(res.status).toBe(201);
@@ -485,7 +485,7 @@ describe('chain-network validation', () => {
     expect(body.network).toBe('polygon-mainnet');
   });
 
-  it('POST /agents with chain=ethereum + network=devnet -> 400 validation error', async () => {
+  it('POST /wallets with chain=ethereum + network=devnet -> 400 validation error', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -493,7 +493,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'bad-agent', chain: 'ethereum', network: 'devnet' }),
+      body: JSON.stringify({ name: 'bad-wallet', chain: 'ethereum', network: 'devnet' }),
     });
 
     expect(res.status).toBe(400);
@@ -501,7 +501,7 @@ describe('chain-network validation', () => {
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
   });
 
-  it('POST /agents with chain=solana + network=ethereum-sepolia -> 400 validation error', async () => {
+  it('POST /wallets with chain=solana + network=ethereum-sepolia -> 400 validation error', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -509,7 +509,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'bad-agent', chain: 'solana', network: 'ethereum-sepolia' }),
+      body: JSON.stringify({ name: 'bad-wallet', chain: 'solana', network: 'ethereum-sepolia' }),
     });
 
     expect(res.status).toBe(400);
@@ -517,7 +517,7 @@ describe('chain-network validation', () => {
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
   });
 
-  it('POST /agents with chain=solana + network=mainnet -> success', async () => {
+  it('POST /wallets with chain=solana + network=mainnet -> success', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -540,7 +540,7 @@ describe('chain-network validation', () => {
 // ---------------------------------------------------------------------------
 
 describe('EVM wallet creation', () => {
-  it('POST /agents with chain=ethereum returns 201 with 0x-prefixed publicKey', async () => {
+  it('POST /wallets with chain=ethereum returns 201 with 0x-prefixed publicKey', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -559,7 +559,7 @@ describe('EVM wallet creation', () => {
     expect(body.network).toBe('ethereum-sepolia');
   });
 
-  it('POST /agents with chain=ethereum and no network defaults to evm_default_network', async () => {
+  it('POST /wallets with chain=ethereum and no network defaults to evm_default_network', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -796,7 +796,7 @@ describe('Integration flow', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'flow-agent' }),
+      body: JSON.stringify({ name: 'flow-wallet' }),
     });
     const created = await json(createRes);
     const walletId = created.id as string;
@@ -824,7 +824,7 @@ describe('Integration flow', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'balance-flow-agent' }),
+      body: JSON.stringify({ name: 'balance-flow-wallet' }),
     });
     const created = await json(createRes);
     const walletId = created.id as string;

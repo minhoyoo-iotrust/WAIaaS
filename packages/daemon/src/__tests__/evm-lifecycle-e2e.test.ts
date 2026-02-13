@@ -2,9 +2,9 @@
  * EVM lifecycle E2E tests: full lifecycle, dual chain, SIWE owner-auth.
  *
  * Tests cover:
- * - EVM agent creation -> balance query -> ETH transfer -> CONFIRMED
+ * - EVM wallet creation -> balance query -> ETH transfer -> CONFIRMED
  * - Solana + EVM dual chain simultaneous operation
- * - SIWE owner-auth (EIP-4361 + EIP-191) for EVM agents
+ * - SIWE owner-auth (EIP-4361 + EIP-191) for EVM wallets
  *
  * Uses Hono createApp() with full deps: db, jwtSecretManager, masterPasswordHash,
  * config, policyEngine, delayQueue, approvalWorkflow, ownerLifecycle, sqlite,
@@ -287,10 +287,10 @@ beforeAll(async () => {
 });
 
 // ===========================================================================
-// Suite 1: EVM Agent Full Lifecycle E2E
+// Suite 1: EVM Wallet Full Lifecycle E2E
 // ===========================================================================
 
-describe('EVM Agent Full Lifecycle E2E', () => {
+describe('EVM Wallet Full Lifecycle E2E', () => {
   let app: OpenAPIHono;
   let mockKeyStore: ReturnType<typeof createMockKeyStore>;
   let mockEvmAdapter: IChainAdapter;
@@ -347,7 +347,7 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     }
   });
 
-  it('Create EVM agent -> returns 201 with 0x address', async () => {
+  it('Create EVM wallet -> returns 201 with 0x address', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -375,8 +375,8 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     );
   });
 
-  it('GET /v1/wallet/balance returns ETH balance for EVM agent', async () => {
-    // Create EVM agent
+  it('GET /v1/wallet/balance returns ETH balance for EVM wallet', async () => {
+    // Create EVM wallet
     const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -387,8 +387,8 @@ describe('EVM Agent Full Lifecycle E2E', () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const agent = await json(createRes);
-    const walletId = agent.id as string;
+    const wallet = await json(createRes);
+    const walletId = wallet.id as string;
 
     // Create session
     const sessionRes = await app.request('/v1/sessions', {
@@ -420,8 +420,8 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     );
   });
 
-  it('POST /v1/transactions/send -> CONFIRMED for EVM agent', async () => {
-    // Create EVM agent
+  it('POST /v1/transactions/send -> CONFIRMED for EVM wallet', async () => {
+    // Create EVM wallet
     const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -432,8 +432,8 @@ describe('EVM Agent Full Lifecycle E2E', () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const agent = await json(createRes);
-    const walletId = agent.id as string;
+    const wallet = await json(createRes);
+    const walletId = wallet.id as string;
 
     // Create session
     const sessionRes = await app.request('/v1/sessions', {
@@ -470,8 +470,8 @@ describe('EVM Agent Full Lifecycle E2E', () => {
     expect(row.tx_hash).toBeTruthy();
   });
 
-  it('EVM agent with SIWE owner-auth', async () => {
-    // Create EVM agent
+  it('EVM wallet with SIWE owner-auth', async () => {
+    // Create EVM wallet
     const createRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -482,14 +482,14 @@ describe('EVM Agent Full Lifecycle E2E', () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const agent = await json(createRes);
-    const walletId = agent.id as string;
+    const wallet = await json(createRes);
+    const walletId = wallet.id as string;
 
     // Get a viem account for SIWE signing
     const account = privateKeyToAccount(SIWE_TEST_PRIVATE_KEY as `0x${string}`);
     const ownerAddress = account.address; // EIP-55 checksummed
 
-    // Set owner on agent
+    // Set owner on wallet
     const setOwnerRes = await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
@@ -656,8 +656,8 @@ describe('Dual Chain Simultaneous Operation', () => {
     }
   });
 
-  it('Solana + EVM agents coexist and operate independently', async () => {
-    // Create Solana agent
+  it('Solana + EVM wallets coexist and operate independently', async () => {
+    // Create Solana wallet
     const solCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -668,10 +668,10 @@ describe('Dual Chain Simultaneous Operation', () => {
       }),
     });
     expect(solCreateRes.status).toBe(201);
-    const solAgent = await json(solCreateRes);
-    const solAgentId = solAgent.id as string;
+    const solWallet = await json(solCreateRes);
+    const solWalletId = solWallet.id as string;
 
-    // Create EVM agent
+    // Create EVM wallet
     const evmCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -682,14 +682,14 @@ describe('Dual Chain Simultaneous Operation', () => {
       }),
     });
     expect(evmCreateRes.status).toBe(201);
-    const evmAgent = await json(evmCreateRes);
-    const evmAgentId = evmAgent.id as string;
+    const evmWallet = await json(evmCreateRes);
+    const evmWalletId = evmWallet.id as string;
 
     // Create sessions for both
     const solSessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletId: solAgentId }),
+      body: JSON.stringify({ walletId: solWalletId }),
     });
     expect(solSessionRes.status).toBe(201);
     const solSession = await json(solSessionRes);
@@ -698,13 +698,13 @@ describe('Dual Chain Simultaneous Operation', () => {
     const evmSessionRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletId: evmAgentId }),
+      body: JSON.stringify({ walletId: evmWalletId }),
     });
     expect(evmSessionRes.status).toBe(201);
     const evmSession = await json(evmSessionRes);
     const evmToken = evmSession.token as string;
 
-    // Get balance for Solana agent
+    // Get balance for Solana wallet
     const solBalanceRes = await app.request('/v1/wallet/balance', {
       headers: bearerHeader(solToken),
     });
@@ -714,7 +714,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     expect(solBalance.decimals).toBe(9);
     expect(solBalance.balance).toBe('1000000000');
 
-    // Get balance for EVM agent
+    // Get balance for EVM wallet
     const evmBalanceRes = await app.request('/v1/wallet/balance', {
       headers: bearerHeader(evmToken),
     });
@@ -724,7 +724,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     expect(evmBalance.decimals).toBe(18);
     expect(evmBalance.balance).toBe('1000000000000000000');
 
-    // Send transactions for both agents
+    // Send transactions for both wallets
     const solSendRes = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: bearerJsonHeader(solToken),
@@ -775,8 +775,8 @@ describe('Dual Chain Simultaneous Operation', () => {
     expect(evmRow.status).toBe('CONFIRMED');
   });
 
-  it('List agents shows both chains', async () => {
-    // Create Solana agent
+  it('List wallets shows both chains', async () => {
+    // Create Solana wallet
     const solCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -788,7 +788,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     });
     expect(solCreateRes.status).toBe(201);
 
-    // Create EVM agent
+    // Create EVM wallet
     const evmCreateRes = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -800,7 +800,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     });
     expect(evmCreateRes.status).toBe(201);
 
-    // List all agents
+    // List all wallets
     const listRes = await app.request('/v1/wallets', {
       headers: masterAuthHeader(),
     });
@@ -810,17 +810,17 @@ describe('Dual Chain Simultaneous Operation', () => {
 
     expect(items).toHaveLength(2);
 
-    // Find each agent by chain
-    const solanaAgent = items.find((a) => a.chain === 'solana');
-    const evmAgent = items.find((a) => a.chain === 'ethereum');
+    // Find each wallet by chain
+    const solanaWallet = items.find((a) => a.chain === 'solana');
+    const evmWallet = items.find((a) => a.chain === 'ethereum');
 
-    expect(solanaAgent).toBeDefined();
-    expect(solanaAgent!.name).toBe('solana-list-test');
-    expect(solanaAgent!.network).toBe('devnet');
+    expect(solanaWallet).toBeDefined();
+    expect(solanaWallet!.name).toBe('solana-list-test');
+    expect(solanaWallet!.network).toBe('devnet');
 
-    expect(evmAgent).toBeDefined();
-    expect(evmAgent!.name).toBe('evm-list-test');
-    expect(evmAgent!.network).toBe('ethereum-sepolia');
-    expect((evmAgent!.publicKey as string).startsWith('0x')).toBe(true);
+    expect(evmWallet).toBeDefined();
+    expect(evmWallet!.name).toBe('evm-list-test');
+    expect(evmWallet!.network).toBe('ethereum-sepolia');
+    expect((evmWallet!.publicKey as string).startsWith('0x')).toBe(true);
   });
 });
