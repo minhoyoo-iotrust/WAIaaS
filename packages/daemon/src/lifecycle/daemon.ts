@@ -116,6 +116,7 @@ export class DaemonLifecycle {
   private jwtSecretManager: JwtSecretManager | null = null;
   private masterPasswordHash = '';
   private notificationService: import('../notifications/notification-service.js').NotificationService | null = null;
+  private _settingsService: import('../infrastructure/settings/settings-service.js').SettingsService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -130,6 +131,11 @@ export class DaemonLifecycle {
   /** Drizzle database instance (available after start, used by route handlers). */
   get db(): BetterSQLite3Database<typeof schema> | null {
     return this._db;
+  }
+
+  /** SettingsService instance (available after Step 2, used by route handlers). */
+  get settingsService(): import('../infrastructure/settings/settings-service.js').SettingsService | null {
+    return this._settingsService;
   }
 
   /**
@@ -185,6 +191,18 @@ export class DaemonLifecycle {
 
         // Create all tables (idempotent)
         pushSchema(sqlite);
+
+        // Auto-import config.toml operational settings into DB (first boot only)
+        const { SettingsService } = await import('../infrastructure/settings/index.js');
+        this._settingsService = new SettingsService({
+          db: this._db!,
+          config: this._config!,
+          masterPassword,
+        });
+        const importResult = this._settingsService.importFromConfig();
+        if (importResult.imported > 0) {
+          console.log(`Step 2: Settings imported from config.toml (${importResult.imported} keys)`);
+        }
 
         console.log('Step 2: Database initialized');
       })(),
