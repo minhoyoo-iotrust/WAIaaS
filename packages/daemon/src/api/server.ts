@@ -222,6 +222,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     );
   }
 
+  // Create shared TokenRegistryService for walletRoutes and tokenRegistryRoutes
+  const tokenRegistryService = deps.db ? new TokenRegistryService(deps.db) : null;
+
   if (deps.db) {
     app.route(
       '/v1',
@@ -229,6 +232,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         db: deps.db,
         adapterPool: deps.adapterPool ?? null,
         config: deps.config ?? null,
+        tokenRegistryService,
       }),
     );
   }
@@ -301,8 +305,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   }
 
   // Register token registry routes when DB is available
-  if (deps.db) {
-    const tokenRegistryService = new TokenRegistryService(deps.db);
+  if (deps.db && tokenRegistryService) {
     app.route(
       '/v1',
       tokenRegistryRoutes({ tokenRegistryService }),
