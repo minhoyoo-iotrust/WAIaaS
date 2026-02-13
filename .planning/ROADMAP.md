@@ -72,11 +72,11 @@ Plans:
   2. MCP approve_token 도구로 APPROVED_SPENDERS에 등록된 spender에게 토큰 승인을 실행할 수 있다
   3. MCP send_batch 도구로 여러 트랜잭션을 원자적 배치로 실행할 수 있다
   4. 설계 문서 38(sdk-mcp)에서 MCPSDK-04 결정이 철회되고, feature parity 원칙이 명시된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 103-01: call_contract + approve_token + send_batch MCP 도구 구현
-- [ ] 103-02: MCPSDK-04 철회 + 설계 문서 38 갱신 + MCP 통합 테스트
+- [ ] 103-01-PLAN.md -- call_contract + approve_token + send_batch MCP 도구 3개 생성 + server.ts 등록 + send-token.ts MCPSDK-04 정리
+- [ ] 103-02-PLAN.md -- 3개 신규 도구 테스트 11케이스 + 설계 문서 38 MCPSDK-04 철회 + BUG-017 해소
 
 ### Phase 104: API 스킬 파일
 **Goal**: AI 에이전트가 마크다운 스킬 파일을 로드하는 것만으로 WAIaaS API를 즉시 사용한다
