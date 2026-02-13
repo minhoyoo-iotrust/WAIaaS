@@ -364,6 +364,8 @@ export class DaemonLifecycle {
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,
           notificationService: this.notificationService ?? undefined,
+          settingsService: this._settingsService ?? undefined,
+          onSettingsChanged: undefined, // Wired in Phase 101-02 for hot-reload
           dataDir,
         });
 
