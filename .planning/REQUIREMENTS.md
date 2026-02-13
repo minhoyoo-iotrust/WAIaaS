@@ -9,10 +9,10 @@
 
 ### Settings (설정 인프라)
 
-- [ ] **SETTINGS-01**: settings key-value 테이블 DB 마이그레이션 (schema_version 5)
-- [ ] **SETTINGS-02**: credential(bot token, webhook URL) AES-GCM 암호화 저장
-- [ ] **SETTINGS-03**: 설정 우선순위 fallback (DB > config.toml > 환경변수 > 기본값)
-- [ ] **SETTINGS-04**: 최초 기동 시 config.toml 기존 값 DB 자동 import
+- [x] **SETTINGS-01**: settings key-value 테이블 DB 마이그레이션 (schema_version 5)
+- [x] **SETTINGS-02**: credential(bot token, webhook URL) AES-GCM 암호화 저장
+- [x] **SETTINGS-03**: 설정 우선순위 fallback (DB > config.toml > 환경변수 > 기본값)
+- [x] **SETTINGS-04**: 최초 기동 시 config.toml 기존 값 DB 자동 import
 - [ ] **SETTINGS-05**: 알림 채널 hot-reload (credential 변경 시 채널 인스턴스 재생성)
 - [ ] **SETTINGS-06**: RPC 엔드포인트 hot-reload (URL 변경 시 adapter 재연결)
 - [ ] **SETTINGS-07**: 보안 파라미터 hot-reload (session_ttl, rate_limit 등 즉시 반영)
@@ -75,10 +75,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETTINGS-01 | Phase 100 | Pending |
-| SETTINGS-02 | Phase 100 | Pending |
-| SETTINGS-03 | Phase 100 | Pending |
-| SETTINGS-04 | Phase 100 | Pending |
+| SETTINGS-01 | Phase 100 | Done |
+| SETTINGS-02 | Phase 100 | Done |
+| SETTINGS-03 | Phase 100 | Done |
+| SETTINGS-04 | Phase 100 | Done |
 | SETTINGS-05 | Phase 101 | Pending |
 | SETTINGS-06 | Phase 101 | Pending |
 | SETTINGS-07 | Phase 101 | Pending |
