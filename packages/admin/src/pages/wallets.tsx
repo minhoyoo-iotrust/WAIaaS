@@ -31,6 +31,14 @@ interface WalletDetail extends Wallet {
   updatedAt: number | null;
 }
 
+interface McpTokenResult {
+  walletId: string;
+  walletName: string | null;
+  tokenPath: string;
+  expiresAt: number;
+  claudeDesktopConfig: Record<string, unknown>;
+}
+
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
     return [
@@ -122,6 +130,8 @@ function WalletDetailView({ id }: { id: string }) {
   const editLoading = useSignal(false);
   const deleteModal = useSignal(false);
   const deleteLoading = useSignal(false);
+  const mcpLoading = useSignal(false);
+  const mcpResult = useSignal<McpTokenResult | null>(null);
 
   const fetchWallet = async () => {
     try {
@@ -171,6 +181,20 @@ function WalletDetailView({ id }: { id: string }) {
 
   const cancelEdit = () => {
     editing.value = false;
+  };
+
+  const handleMcpSetup = async () => {
+    mcpLoading.value = true;
+    try {
+      const result = await apiPost<McpTokenResult>(API.MCP_TOKENS, { walletId: id });
+      mcpResult.value = result;
+      showToast('success', 'MCP token provisioned successfully');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      mcpLoading.value = false;
+    }
   };
 
   useEffect(() => {
@@ -242,6 +266,56 @@ function WalletDetailView({ id }: { id: string }) {
               label="Updated"
               value={wallet.value.updatedAt ? formatDate(wallet.value.updatedAt) : 'Never'}
             />
+          </div>
+
+          <div class="mcp-setup-section" style={{ marginTop: 'var(--space-6)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>MCP Setup</h3>
+            {mcpResult.value ? (
+              <div>
+                <div class="detail-grid" style={{ marginBottom: 'var(--space-4)' }}>
+                  <DetailRow label="Token Path" value={mcpResult.value.tokenPath} />
+                  <DetailRow label="Expires At" value={formatDate(mcpResult.value.expiresAt)} />
+                </div>
+                <div style={{ marginBottom: 'var(--space-2)' }}>
+                  <strong>Claude Desktop Config</strong>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <pre><code style={{
+                    display: 'block',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    background: 'var(--color-bg-secondary)',
+                    padding: 'var(--space-3)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.85rem',
+                    maxHeight: '300px',
+                    overflow: 'auto',
+                  }}>
+                    {JSON.stringify({ mcpServers: mcpResult.value.claudeDesktopConfig }, null, 2)}
+                  </code></pre>
+                  <div style={{ marginTop: 'var(--space-2)' }}>
+                    <CopyButton
+                      value={JSON.stringify({ mcpServers: mcpResult.value.claudeDesktopConfig }, null, 2)}
+                      label="Copy Config"
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <Button variant="secondary" onClick={handleMcpSetup} loading={mcpLoading.value}>
+                    Re-provision
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)' }}>
+                  Provision an MCP token for Claude Desktop integration.
+                </p>
+                <Button onClick={handleMcpSetup} loading={mcpLoading.value}>
+                  Setup MCP
+                </Button>
+              </div>
+            )}
           </div>
 
           <Modal

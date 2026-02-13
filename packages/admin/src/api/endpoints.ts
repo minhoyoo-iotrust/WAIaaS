@@ -13,4 +13,5 @@ export const API = {
   ADMIN_NOTIFICATIONS_STATUS: '/v1/admin/notifications/status',
   ADMIN_NOTIFICATIONS_TEST: '/v1/admin/notifications/test',
   ADMIN_NOTIFICATIONS_LOG: '/v1/admin/notifications/log',
+  MCP_TOKENS: '/v1/mcp/tokens',
 } as const;
