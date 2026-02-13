@@ -618,3 +618,31 @@
 
 ---
 
+
+## v1.4.4 Admin Settings + MCP 5-type + Skill Files (Shipped: 2026-02-14)
+
+**Delivered:** Admin UI에서 운영 설정을 DB 기반으로 관리하고(hot-reload), MCP가 REST API/SDK와 동등하게 5가지 트랜잭션 타입을 지원하며, AI 에이전트가 5개 스킬 파일을 로드하여 즉시 API를 사용할 수 있는 상태를 달성
+
+**Phases completed:** 100-104 (10 plans total)
+
+**Key accomplishments:**
+
+- Settings DB 인프라 — settings key-value 테이블 + AES-GCM 암호화(HKDF SHA-256) + DB>config.toml>env>default fallback 체인 + 최초 기동 시 자동 import
+- Settings REST API + Hot-Reload — GET/PUT /v1/admin/settings + POST test-rpc 3개 엔드포인트, HotReloadOrchestrator(알림 채널 재생성/RPC 어댑터 evict/보안 즉시 반영)
+- Admin UI Settings 페이지 — 알림/RPC/보안/WalletConnect/log_level 5개 카테고리 섹션, credential 마스킹, RPC 테스트 버튼, 알림 테스트 발송, dirty tracking + save/discard bar
+- MCP 5-type Feature Parity — call_contract/approve_token/send_batch 3개 MCP 도구 추가, MCPSDK-04 설계 결정 철회, Feature Parity 원칙 확립, BUG-017 해소
+- API 스킬 파일 5개 — quickstart(7-step 온보딩), wallet(17+ 엔드포인트), transactions(5-type), policies(10 PolicyType), admin(12 엔드포인트) + 기존 파일 deprecation
+
+**Stats:**
+
+- 5 phases, 10 plans, 20 tasks, 24 requirements, 20 설계 결정
+- 1,467 tests (1,357 → 1,467, +110 new tests)
+- 62,296 LOC total
+- 2 days (2026-02-13 → 2026-02-14)
+
+**Git range:** `6b4e3b3` (Phase 100 start) → `177f78a` (Phase 104 complete)
+
+**What's next:** v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
+
+---
+
