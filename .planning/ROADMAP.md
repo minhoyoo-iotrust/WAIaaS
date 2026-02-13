@@ -8,7 +8,7 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
 
 **Phase Numbering:** 95-99 (v1.4.2 Phase 94에서 이어짐)
 
-- [ ] **Phase 95: 패키지 버전 관리** - 버전 일괄 갱신 스크립트 + 즉시 버전 적용 (BUG-016)
+- [x] **Phase 95: 패키지 버전 관리** - 버전 일괄 갱신 스크립트 + 즉시 버전 적용 (BUG-016) ✓ 2026-02-13
 - [ ] **Phase 96: 파이프라인 확인 로직 수정** - EVM/Solana 확인 타임아웃 fallback + Stage 6 상태 정합성 (BUG-015)
 - [ ] **Phase 97: EVM 토큰 레지스트리** - 체인별 내장 토큰 목록 + 커스텀 토큰 CRUD + 역할 분리
 - [ ] **Phase 98: getAssets ERC-20 연동** - 레지스트리 + ALLOWED_TOKENS 합집합 조회 (BUG-014)
@@ -27,7 +27,7 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
   4. Admin UI 대시보드와 OpenAPI 문서에 올바른 버전이 노출된다
 **Plans**: 1 plan
 Plans:
-- [ ] 95-01-PLAN.md -- tag-release.sh 스크립트 생성 + 전체 패키지 버전 1.4.3 갱신
+- [x] 95-01-PLAN.md -- tag-release.sh 스크립트 생성 + 전체 패키지 버전 1.4.3 갱신 ✓
 
 ### Phase 96: 파이프라인 확인 로직 수정
 **Goal**: 트랜잭션이 온체인에서 성공했으나 확인 단계에서 RPC 에러/타임아웃이 발생해도, DB 상태가 온체인 상태와 일치한다
@@ -78,7 +78,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 95. 패키지 버전 관리 | 0/1 | Planning complete | - |
+| 95. 패키지 버전 관리 | 1/1 | ✓ Complete | 2026-02-13 |
 | 96. 파이프라인 확인 로직 수정 | 0/TBD | Not started | - |
 | 97. EVM 토큰 레지스트리 | 0/TBD | Not started | - |
 | 98. getAssets ERC-20 연동 | 0/TBD | Not started | - |

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.3 Phase 95 (패키지 버전 관리)
+**Current focus:** v1.4.3 Phase 96 (파이프라인 확인 로직 수정)
 
 ## Current Position
 
-Phase: 1 of 5 (Phase 95: 패키지 버전 관리)
-Plan: 1 of 1 in current phase
-Status: Phase 95 complete
-Last activity: 2026-02-13 -- 95-01 plan executed
+Phase: 2 of 5 (Phase 96: 파이프라인 확인 로직 수정)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-13 -- Phase 95 complete, verified
 
-Progress: [##░░░░░░░░] 20%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
