@@ -105,11 +105,11 @@ Plans:
   3. `grep -r 'agent' packages/` 결과에서 의도적 잔존(AI agent 설명 등) 외 0건이다
   4. `pnpm test` 전체 테스트(1,313+)가 통과한다
   5. `GET /doc` OpenAPI 스펙에서 `agentId` 0건, `walletId` 존재한다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 94-01: 설계 문서 15개 용어 갱신 + README 갱신
-- [ ] 94-02: grep 전수 검사 + pnpm test + OpenAPI 스펙 검증
+- [ ] 94-01-PLAN.md — 설계 문서 15개 + README.md 용어 갱신 (~220건 substitution)
+- [ ] 94-02-PLAN.md — 잔존 agentId 코드 수정 + grep 전수 검사 + pnpm test + OpenAPI 스펙 검증 + Admin 빌드
 
 ## Progress
 
