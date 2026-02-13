@@ -13,7 +13,7 @@
 - [x] **Phase 91: 데몬 API + JWT + Config** - REST API 경로/응답/JWT claim/OpenAPI 스키마/config 키 변경
 - [x] **Phase 92: MCP + CLI + SDK** - MCP WalletContext + CLI --wallet + 환경변수 + TS/Python SDK 필드 변경
 - [x] **Phase 93: Admin Web UI** - Wallets 페이지 + Dashboard/Sessions/Policies/Notifications agentId 제거
-- [ ] **Phase 94: 설계 문서 + 검증** - 설계 문서 15개 용어 갱신 + README + grep 전수 검사 + 전체 테스트 통과
+- [x] **Phase 94: 설계 문서 + 검증** - 설계 문서 15개 용어 갱신 + README + grep 전수 검사 + 전체 테스트 통과
 
 ## Phase Details
 
@@ -108,8 +108,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 94-01-PLAN.md — 설계 문서 15개 + README.md 용어 갱신 (~220건 substitution)
-- [ ] 94-02-PLAN.md — 잔존 agentId 코드 수정 + grep 전수 검사 + pnpm test + OpenAPI 스펙 검증 + Admin 빌드
+- [x] 94-01-PLAN.md — 설계 문서 15개 + README.md 용어 갱신 (~236건 substitution, 16 파일)
+- [x] 94-02-PLAN.md — 잔존 agentId 코드 수정 + grep 전수 검사 + 1,326 테스트 통과 + OpenAPI 검증 (14 파일)
 
 ## Progress
 
@@ -122,7 +122,7 @@ Plans:
 | 91. 데몬 API + JWT + Config | 3/3 | ✓ Complete | 2026-02-13 |
 | 92. MCP + CLI + SDK | 2/2 | ✓ Complete | 2026-02-13 |
 | 93. Admin Web UI | 1/1 | ✓ Complete | 2026-02-13 |
-| 94. 설계 문서 + 검증 | 0/2 | Not started | - |
+| 94. 설계 문서 + 검증 | 2/2 | ✓ Complete | 2026-02-13 |
 
 ---
 *Roadmap created: 2026-02-13*
