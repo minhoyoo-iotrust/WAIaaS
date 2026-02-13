@@ -559,3 +559,33 @@
 
 ---
 
+
+## v1.4.2 용어 변경 (agent -> wallet) (Shipped: 2026-02-13)
+
+**Delivered:** 코드베이스 전체에서 "agent"를 "wallet"으로 일괄 변경하여 WAIaaS가 관리하는 엔티티의 실체(AI 에이전트가 사용하는 지갑)를 정확히 반영 — DB schema_version 3 마이그레이션, REST API /v1/wallets, JWT wlt claim, Zod/Enum/에러코드/i18n rename, MCP/CLI/SDK/Admin UI 전체 용어 통일, 설계 문서 15개 갱신, grep 전수 검사 0건 확인
+
+**Phases completed:** 89-94 (11 plans total)
+
+**Key accomplishments:**
+
+- DB schema_version 3 마이그레이션 — agents → wallets 테이블 + FK 5개 + 인덱스 10개 + enum 데이터 5건, Drizzle 스키마 갱신
+- @waiaas/core 전체 rename — Zod 스키마(WalletSchema, CreateWalletRequestSchema), Enum(WALLET_STATUSES), 에러 코드(WALLET_NOT_FOUND/SUSPENDED/TERMINATED), i18n en/ko 템플릿 {walletId}/{walletCount}, 19파일 137 테스트
+- REST API + JWT + Config — /v1/wallets 6개 CRUD 엔드포인트, JWT wlt claim, PipelineContext.walletId, OpenAPI Wallet 스키마, max_sessions_per_wallet config, 65파일 681 테스트
+- MCP + CLI + SDK — WalletContext + withWalletPrefix, CLI --wallet, WAIAAS_WALLET_ID/WAIAAS_WALLET_NAME 환경변수, TS/Python SDK walletId/wallet_id 필드, 30파일 159 테스트
+- Admin Web UI — Wallets 페이지 + Dashboard walletCount + Sessions/Policies/Notifications walletId, 15파일 40 테스트
+- 설계 문서 15개 + README 갱신 + grep 전수 검사 의도적 잔존 외 0건 + 1,326 테스트 통과 + OpenAPI agentId 0건
+
+**Stats:**
+
+- 194 files changed, +10,015 / -2,892 lines
+- 6 phases, 11 plans, 22 tasks, 38 requirements, 30+ 설계 결정
+- 1,326 tests (1,313 → 1,326, +13 tests, 3 pre-existing CLI E2E excluded)
+- 56,808 LOC total
+- 1 day (2026-02-13)
+
+**Git range:** `bc17415` (Phase 89 start) → `45f8607` (Phase 94 complete)
+
+**What's next:** v1.5 DeFi + 가격 오라클 또는 EVM 토큰 레지스트리 + MCP DX 개선
+
+---
+
