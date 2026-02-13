@@ -52,7 +52,10 @@ Plans:
   2. API를 통해 사용자가 커스텀 토큰(address/symbol/name/decimals)을 추가하고 삭제할 수 있다
   3. 토큰 레지스트리(조회용 UX)와 ALLOWED_TOKENS 정책(전송 허용 보안)의 역할이 분리되어, 레지스트리에 등록되어도 ALLOWED_TOKENS에 없으면 전송이 거부된다
   4. 내장 토큰 목록 업데이트 시 사용자가 추가한 커스텀 토큰이 보존된다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 97-01-PLAN.md -- 내장 토큰 데이터 + DB 테이블 + 마이그레이션 v4 + TokenRegistryService
+- [ ] 97-02-PLAN.md -- 토큰 레지스트리 REST API (GET/POST/DELETE /v1/tokens) + 테스트
 
 ### Phase 98: getAssets ERC-20 연동
 **Goal**: EVM 지갑의 getAssets()가 토큰 레지스트리와 ALLOWED_TOKENS에 등록된 ERC-20 토큰 잔액을 자동으로 반환한다
@@ -83,7 +86,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 95. 패키지 버전 관리 | 1/1 | ✓ Complete | 2026-02-13 |
 | 96. 파이프라인 확인 로직 수정 | 2/2 | ✓ Complete | 2026-02-13 |
-| 97. EVM 토큰 레지스트리 | 0/TBD | Not started | - |
+| 97. EVM 토큰 레지스트리 | 0/2 | Not started | - |
 | 98. getAssets ERC-20 연동 | 0/TBD | Not started | - |
 | 99. MCP 토큰 관리 | 0/TBD | Not started | - |
 
