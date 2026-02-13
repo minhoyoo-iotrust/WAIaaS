@@ -30,6 +30,7 @@ Progress: [██████████] 100%
 | 102-02 | settings-tests | 3min | 2 | 1 |
 | 103-01 | mcp-5type-tools | 3min | 2 | 6 |
 | 103-02 | mcp-5type-tests | 3min | 2 | 3 |
+| 104-01 | api-skill-files | 5min | 2 | 3 |
 | 104-02 | policies-admin-skills | 5min | 2 | 3 |
 
 *Updated after each plan completion*
@@ -64,6 +65,9 @@ v1.4.3 decisions archived -- see .planning/milestones/v1.4.3-ROADMAP.md
 - 103-01: Each transaction type gets its own MCP tool (not merged into send_token) for clear Claude Desktop UX
 - 103-02: MCPSDK-04 formally revoked -- MCP/SDK/API share identical attack surface, policy engine provides real security
 - 103-02: Feature Parity principle established -- MCP/SDK/API must support same transaction types
+- 104-01: Split API reference into 3 focused skill files (quickstart, wallet, transactions) for reduced context window usage
+- 104-01: YAML frontmatter includes dispatch.kind and dispatch.allowedCommands for tool-use agents
+- 104-01: Policy prerequisite examples inline with transaction types (ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS)
 - 104-02: SPENDING_LIMIT skill docs use actual field names (instant_max/notify_max/delay_max) from route handler validation
 - 104-02: Settings skill docs use exact DB key format (category.field) from SETTING_DEFINITIONS SSoT
 - 104-02: Old skill file deprecation is local-only (how-to-test/ is gitignored)
@@ -77,5 +81,5 @@ v1.4.3 decisions archived -- see .planning/milestones/v1.4.3-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 104-02-PLAN.md (Policies & Admin Skill Files, completing 5-file skill set)
+Stopped at: Completed 104-01-PLAN.md (quickstart, wallet, transactions skill files -- 3 core API references)
 Resume file: None
