@@ -10,7 +10,7 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 
 - [x] **Phase 100: Settings 인프라** - DB 테이블 + credential 암호화 + config.toml fallback + 자동 import
 - [x] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
-- [ ] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
+- [x] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
 - [ ] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
 - [ ] **Phase 104: API 스킬 파일** - quickstart/wallet/transactions/policies/admin 5개 마크다운
 
@@ -60,8 +60,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 102-01-PLAN.md -- Settings 페이지 전면 리뉴얼: 5개 카테고리 섹션 + RPC/알림 테스트 + CSS
-- [ ] 102-02-PLAN.md -- Settings 테스트 스위트 12+ 케이스 + 전체 Admin 테스트 무결성 확인
+- [x] 102-01-PLAN.md -- Settings 페이지 전면 리뉴얼: 5개 카테고리 섹션 + RPC/알림 테스트 + CSS
+- [x] 102-02-PLAN.md -- Settings 테스트 스위트 12+ 케이스 + 전체 Admin 테스트 무결성 확인
 
 ### Phase 103: MCP 5-type Feature Parity
 **Goal**: MCP 에이전트가 REST API/SDK와 동등하게 CONTRACT_CALL/APPROVE/BATCH 트랜잭션을 실행한다
@@ -72,11 +72,11 @@ Plans:
   2. MCP approve_token 도구로 APPROVED_SPENDERS에 등록된 spender에게 토큰 승인을 실행할 수 있다
   3. MCP send_batch 도구로 여러 트랜잭션을 원자적 배치로 실행할 수 있다
   4. 설계 문서 38(sdk-mcp)에서 MCPSDK-04 결정이 철회되고, feature parity 원칙이 명시된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 103-01: call_contract + approve_token + send_batch MCP 도구 구현
-- [ ] 103-02: MCPSDK-04 철회 + 설계 문서 38 갱신 + MCP 통합 테스트
+- [ ] 103-01-PLAN.md -- call_contract + approve_token + send_batch MCP 도구 3개 생성 + server.ts 등록 + send-token.ts MCPSDK-04 정리
+- [ ] 103-02-PLAN.md -- 3개 신규 도구 테스트 11케이스 + 설계 문서 38 MCPSDK-04 철회 + BUG-017 해소
 
 ### Phase 104: API 스킬 파일
 **Goal**: AI 에이전트가 마크다운 스킬 파일을 로드하는 것만으로 WAIaaS API를 즉시 사용한다
@@ -103,6 +103,6 @@ Phase 100 -> 101 -> 102 순차. Phase 103, 104는 독립적이며 100~102와 병
 |-------|----------------|--------|-----------|
 | 100. Settings 인프라 | 2/2 | ✓ Complete | 2026-02-13 |
 | 101. Settings API + Hot-Reload | 2/2 | ✓ Complete | 2026-02-13 |
-| 102. Admin UI 설정 페이지 | 0/2 | Not started | - |
+| 102. Admin UI 설정 페이지 | 2/2 | ✓ Complete | 2026-02-14 |
 | 103. MCP 5-type Feature Parity | 0/2 | Not started | - |
 | 104. API 스킬 파일 | 0/2 | Not started | - |

@@ -14,4 +14,6 @@ export const API = {
   ADMIN_NOTIFICATIONS_TEST: '/v1/admin/notifications/test',
   ADMIN_NOTIFICATIONS_LOG: '/v1/admin/notifications/log',
   MCP_TOKENS: '/v1/mcp/tokens',
+  ADMIN_SETTINGS: '/v1/admin/settings',
+  ADMIN_SETTINGS_TEST_RPC: '/v1/admin/settings/test-rpc',
 } as const;
