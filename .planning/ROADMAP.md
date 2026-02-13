@@ -25,11 +25,11 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
   2. credential(bot token, webhook URL)이 AES-GCM으로 암호화 저장되고, 평문으로 DB에 노출되지 않는다
   3. 설정 조회 시 DB > config.toml > 환경변수 > 기본값 순서로 fallback이 동작한다
   4. 데몬 최초 기동 시 config.toml에 설정된 운영 설정 값이 DB로 자동 import된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 100-01: settings DB 테이블 + 마이그레이션 + credential AES-GCM 암호화
-- [ ] 100-02: SettingsService fallback 체인 + config.toml 자동 import
+- [ ] 100-01-PLAN.md -- settings 테이블 Drizzle 스키마 + DDL + v5 마이그레이션 + AES-GCM 암호화 모듈
+- [ ] 100-02-PLAN.md -- SettingsService fallback 체인 + config.toml 자동 import + daemon.ts 통합
 
 ### Phase 101: Settings API + Hot-Reload
 **Goal**: Admin이 REST API로 설정을 조회/수정하고, 변경 사항이 데몬 재시작 없이 즉시 반영된다
