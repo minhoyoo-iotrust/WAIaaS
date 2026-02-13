@@ -9,7 +9,7 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 **Phase Numbering:** v1.4.3이 Phase 99에서 종료. v1.4.4는 Phase 100부터 시작.
 
 - [x] **Phase 100: Settings 인프라** - DB 테이블 + credential 암호화 + config.toml fallback + 자동 import
-- [ ] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
+- [x] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
 - [ ] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
 - [ ] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
 - [ ] **Phase 104: API 스킬 파일** - quickstart/wallet/transactions/policies/admin 5개 마크다운
@@ -44,8 +44,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 101-01-PLAN.md -- GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트 + OpenAPI 스키마 + 테스트
-- [ ] 101-02-PLAN.md -- 알림 채널 replaceChannels + RPC 어댑터 evict + HotReloadOrchestrator + daemon 연동
+- [x] 101-01-PLAN.md -- GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트 + OpenAPI 스키마 + 테스트
+- [x] 101-02-PLAN.md -- 알림 채널 replaceChannels + RPC 어댑터 evict + HotReloadOrchestrator + daemon 연동
 
 ### Phase 102: Admin UI 설정 페이지
 **Goal**: Admin Web UI에서 알림/RPC/보안/WalletConnect/log_level 설정을 시각적으로 관리한다
@@ -57,11 +57,11 @@ Plans:
   3. 보안 파라미터 섹션에서 session_ttl, rate_limit 등을 변경하면 즉시 반영된다
   4. WalletConnect 섹션에서 project_id를 입력하고 획득 방법 안내가 표시된다
   5. log_level을 Admin UI에서 변경하면 데몬 로그 수준이 즉시 변경된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 102-01: Settings 페이지 리뉴얼 - 알림/RPC/보안 섹션
-- [ ] 102-02: WalletConnect + log_level 섹션 + 통합 테스트
+- [ ] 102-01-PLAN.md -- Settings 페이지 전면 리뉴얼: 5개 카테고리 섹션 + RPC/알림 테스트 + CSS
+- [ ] 102-02-PLAN.md -- Settings 테스트 스위트 12+ 케이스 + 전체 Admin 테스트 무결성 확인
 
 ### Phase 103: MCP 5-type Feature Parity
 **Goal**: MCP 에이전트가 REST API/SDK와 동등하게 CONTRACT_CALL/APPROVE/BATCH 트랜잭션을 실행한다
@@ -102,7 +102,7 @@ Phase 100 -> 101 -> 102 순차. Phase 103, 104는 독립적이며 100~102와 병
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 100. Settings 인프라 | 2/2 | ✓ Complete | 2026-02-13 |
-| 101. Settings API + Hot-Reload | 0/2 | Not started | - |
+| 101. Settings API + Hot-Reload | 2/2 | ✓ Complete | 2026-02-13 |
 | 102. Admin UI 설정 페이지 | 0/2 | Not started | - |
 | 103. MCP 5-type Feature Parity | 0/2 | Not started | - |
 | 104. API 스킬 파일 | 0/2 | Not started | - |

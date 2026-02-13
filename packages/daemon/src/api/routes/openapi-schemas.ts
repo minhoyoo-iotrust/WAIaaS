@@ -592,6 +592,57 @@ export const RemoveTokenResponseSchema = z
   .openapi('RemoveTokenResponse');
 
 // ---------------------------------------------------------------------------
+// Settings Admin Schemas (GET/PUT /v1/admin/settings, POST /v1/admin/settings/test-rpc)
+// ---------------------------------------------------------------------------
+
+export const SettingsResponseSchema = z
+  .object({
+    notifications: z.record(z.union([z.string(), z.boolean()])),
+    rpc: z.record(z.union([z.string(), z.boolean()])),
+    security: z.record(z.union([z.string(), z.boolean()])),
+    daemon: z.record(z.union([z.string(), z.boolean()])),
+    walletconnect: z.record(z.union([z.string(), z.boolean()])),
+  })
+  .openapi('SettingsResponse');
+
+export const SettingsUpdateRequestSchema = z
+  .object({
+    settings: z
+      .array(
+        z.object({
+          key: z.string(),
+          value: z.string(),
+        }),
+      )
+      .min(1),
+  })
+  .openapi('SettingsUpdateRequest');
+
+export const SettingsUpdateResponseSchema = z
+  .object({
+    updated: z.number().int(),
+    settings: SettingsResponseSchema,
+  })
+  .openapi('SettingsUpdateResponse');
+
+export const TestRpcRequestSchema = z
+  .object({
+    url: z.string().url(),
+    chain: z.enum(['solana', 'ethereum']).optional().default('ethereum'),
+  })
+  .openapi('TestRpcRequest');
+
+export const TestRpcResponseSchema = z
+  .object({
+    success: z.boolean(),
+    latencyMs: z.number().optional(),
+    error: z.string().optional(),
+    chainId: z.string().optional(),
+    blockNumber: z.number().optional(),
+  })
+  .openapi('TestRpcResponse');
+
+// ---------------------------------------------------------------------------
 // MCP Token Provisioning Schemas (POST /v1/mcp/tokens) -- BUG-013 fix
 // ---------------------------------------------------------------------------
 

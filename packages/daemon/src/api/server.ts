@@ -68,6 +68,7 @@ import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../workflow/owner-state.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import type { SettingsService } from '../infrastructure/settings/index.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 
@@ -89,6 +90,8 @@ export interface CreateAppDeps {
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
   notificationService?: NotificationService;
+  settingsService?: SettingsService;
+  onSettingsChanged?: (changedKeys: string[]) => void;
   dataDir?: string;
 }
 
@@ -179,6 +182,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/shutdown', masterAuthForAdmin);
     app.use('/v1/admin/rotate-secret', masterAuthForAdmin);
     app.use('/v1/admin/notifications/*', masterAuthForAdmin);
+    app.use('/v1/admin/settings', masterAuthForAdmin);
+    app.use('/v1/admin/settings/*', masterAuthForAdmin);
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
   }
@@ -303,6 +308,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         adminTimeout: deps.config?.daemon?.admin_timeout ?? 900,
         notificationService: deps.notificationService,
         notificationConfig: deps.config?.notifications,
+        settingsService: deps.settingsService,
+        onSettingsChanged: deps.onSettingsChanged,
       }),
     );
   }

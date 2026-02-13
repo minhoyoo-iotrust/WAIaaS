@@ -57,6 +57,24 @@ export class NotificationService {
   }
 
   /**
+   * Replace all notification channels with new instances.
+   * Used by hot-reload when notification credentials change.
+   * Old channels are discarded (no cleanup needed -- they're stateless HTTP clients).
+   */
+  replaceChannels(newChannels: INotificationChannel[]): void {
+    this.channels = [...newChannels];
+    // Reset rate limiter for all channels (fresh start with new credentials)
+    this.rateLimitMap.clear();
+  }
+
+  /**
+   * Update config (locale, rateLimitRpm) without replacing channels.
+   */
+  updateConfig(config: Partial<NotificationServiceConfig>): void {
+    this.config = { ...this.config, ...config };
+  }
+
+  /**
    * Send notification via priority-based delivery with fallback.
    * Tries channels in order; on failure, falls back to next channel.
    * For broadcast events, sends to ALL channels.

@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 9 daemon administration endpoints.
+ * Admin route handlers: 12 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -10,6 +10,9 @@
  * GET    /admin/notifications/status - Notification channel status (masterAuth)
  * POST   /admin/notifications/test   - Send test notification (masterAuth)
  * GET    /admin/notifications/log    - Query notification logs (masterAuth)
+ * GET    /admin/settings            - Get all settings (masterAuth)
+ * PUT    /admin/settings            - Update settings (masterAuth)
+ * POST   /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
@@ -25,6 +28,8 @@ import { wallets, sessions, notificationLogs } from '../../infrastructure/databa
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
+import type { SettingsService } from '../../infrastructure/settings/index.js';
+import { getSettingDefinition } from '../../infrastructure/settings/index.js';
 import {
   AdminStatusResponseSchema,
   KillSwitchResponseSchema,
@@ -36,6 +41,11 @@ import {
   NotificationTestRequestSchema,
   NotificationTestResponseSchema,
   NotificationLogResponseSchema,
+  SettingsResponseSchema,
+  SettingsUpdateRequestSchema,
+  SettingsUpdateResponseSchema,
+  TestRpcRequestSchema,
+  TestRpcResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -61,6 +71,8 @@ export interface AdminRouteDeps {
   adminTimeout: number;
   notificationService?: NotificationService;
   notificationConfig?: DaemonConfig['notifications'];
+  settingsService?: SettingsService;
+  onSettingsChanged?: (changedKeys: string[]) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +216,62 @@ const notificationsLogRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Settings route definitions
+// ---------------------------------------------------------------------------
+
+const settingsGetRoute = createRoute({
+  method: 'get',
+  path: '/admin/settings',
+  tags: ['Admin'],
+  summary: 'Get all settings grouped by category',
+  responses: {
+    200: {
+      description: 'All settings with credentials masked as boolean',
+      content: { 'application/json': { schema: SettingsResponseSchema } },
+    },
+  },
+});
+
+const settingsPutRoute = createRoute({
+  method: 'put',
+  path: '/admin/settings',
+  tags: ['Admin'],
+  summary: 'Update settings',
+  request: {
+    body: {
+      content: { 'application/json': { schema: SettingsUpdateRequestSchema } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated settings',
+      content: { 'application/json': { schema: SettingsUpdateResponseSchema } },
+    },
+    ...buildErrorResponses(['ACTION_VALIDATION_FAILED']),
+  },
+});
+
+const testRpcRoute = createRoute({
+  method: 'post',
+  path: '/admin/settings/test-rpc',
+  tags: ['Admin'],
+  summary: 'Test RPC endpoint connectivity',
+  request: {
+    body: {
+      content: { 'application/json': { schema: TestRpcRequestSchema } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'RPC connectivity test result',
+      content: { 'application/json': { schema: TestRpcResponseSchema } },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
@@ -219,6 +287,9 @@ const notificationsLogRoute = createRoute({
  * GET  /admin/notifications/status - Notification channel status (masterAuth)
  * POST /admin/notifications/test   - Send test notification (masterAuth)
  * GET  /admin/notifications/log    - Query notification logs (masterAuth)
+ * GET  /admin/settings            - Get all settings (masterAuth)
+ * PUT  /admin/settings            - Update settings (masterAuth)
+ * POST /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
  */
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -509,6 +580,163 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }));
 
     return c.json({ logs, total, page, pageSize }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/settings
+  // ---------------------------------------------------------------------------
+
+  router.openapi(settingsGetRoute, async (c) => {
+    if (!deps.settingsService) {
+      return c.json(
+        {
+          notifications: {} as Record<string, string | boolean>,
+          rpc: {} as Record<string, string | boolean>,
+          security: {} as Record<string, string | boolean>,
+          daemon: {} as Record<string, string | boolean>,
+          walletconnect: {} as Record<string, string | boolean>,
+        },
+        200,
+      );
+    }
+
+    const masked = deps.settingsService.getAllMasked();
+    return c.json(
+      {
+        notifications: masked.notifications ?? {},
+        rpc: masked.rpc ?? {},
+        security: masked.security ?? {},
+        daemon: masked.daemon ?? {},
+        walletconnect: masked.walletconnect ?? {},
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /admin/settings
+  // ---------------------------------------------------------------------------
+
+  router.openapi(settingsPutRoute, async (c) => {
+    const body = c.req.valid('json');
+    const entries = body.settings;
+
+    // Validate all keys exist in SETTING_DEFINITIONS
+    for (const entry of entries) {
+      const def = getSettingDefinition(entry.key);
+      if (!def) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: `Unknown setting key: ${entry.key}`,
+        });
+      }
+    }
+
+    if (!deps.settingsService) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'Settings service not available',
+      });
+    }
+
+    // Persist all values
+    deps.settingsService.setMany(entries);
+
+    // Notify hot-reload callback if provided
+    if (deps.onSettingsChanged) {
+      deps.onSettingsChanged(entries.map((e) => e.key));
+    }
+
+    const masked = deps.settingsService.getAllMasked();
+    return c.json(
+      {
+        updated: entries.length,
+        settings: {
+          notifications: masked.notifications ?? {},
+          rpc: masked.rpc ?? {},
+          security: masked.security ?? {},
+          daemon: masked.daemon ?? {},
+          walletconnect: masked.walletconnect ?? {},
+        },
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/settings/test-rpc
+  // ---------------------------------------------------------------------------
+
+  router.openapi(testRpcRoute, async (c) => {
+    const body = c.req.valid('json');
+    const { url, chain } = body;
+
+    const rpcMethod = chain === 'solana' ? 'getBlockHeight' : 'eth_blockNumber';
+    const rpcBody = JSON.stringify({
+      jsonrpc: '2.0',
+      method: rpcMethod,
+      params: [],
+      id: 1,
+    });
+
+    const startMs = performance.now();
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: rpcBody,
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const latencyMs = Math.round(performance.now() - startMs);
+      const result = (await response.json()) as {
+        result?: unknown;
+        error?: { message?: string };
+      };
+
+      if (result.error) {
+        return c.json(
+          {
+            success: false,
+            latencyMs,
+            error: result.error.message ?? 'RPC error',
+          },
+          200,
+        );
+      }
+
+      // Parse block number from result
+      let blockNumber: number | undefined;
+      if (chain === 'solana') {
+        blockNumber = typeof result.result === 'number' ? result.result : undefined;
+      } else {
+        // eth_blockNumber returns hex string
+        blockNumber =
+          typeof result.result === 'string'
+            ? parseInt(result.result, 16)
+            : undefined;
+      }
+
+      return c.json(
+        {
+          success: true,
+          latencyMs,
+          blockNumber,
+        },
+        200,
+      );
+    } catch (err) {
+      const latencyMs = Math.round(performance.now() - startMs);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      return c.json(
+        {
+          success: false,
+          latencyMs,
+          error: errorMessage,
+        },
+        200,
+      );
+    }
   });
 
   return router;
