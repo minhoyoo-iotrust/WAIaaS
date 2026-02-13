@@ -195,7 +195,16 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). DB schema_version 
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+## Current Milestone: v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정
+
+**Goal:** EVM 지갑이 ERC-20 토큰 잔액을 자동 조회하고, Admin UI에서 MCP 토큰 발급까지 원스톱 처리 가능한 상태 달성
+
+**Target features:**
+- 체인별 내장 토큰 레지스트리 (EVM 네트워크별 주요 ERC-20 토큰 목록)
+- getAssets() ERC-20 연동 (레지스트리 ∪ ALLOWED_TOKENS 합집합 조회)
+- MCP 토큰 API (`POST /v1/mcp/tokens`) + Admin UI MCP 섹션
+- EVM Stage 6 확인 타임아웃 FAILED 오판 수정 (BUG-015)
+- 패키지 버전 관리 스크립트 + 즉시 버전 갱신 (BUG-016)
 
 ## Next Milestone Goals
 

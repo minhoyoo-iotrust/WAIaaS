@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone (v1.4.2 shipped)
+**Current focus:** Milestone v1.4.3 — EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정
 
 ## Current Position
 
-Phase: None (between milestones)
-Plan: None
-Status: Milestone v1.4.2 shipped
-Last activity: 2026-02-13 — v1.4.2 용어 변경 (agent → wallet) milestone completed
-
-Progress: N/A (milestone boundary)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-13 — Milestone v1.4.3 started
 
 ## Performance Metrics
 
