@@ -12,7 +12,7 @@ EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP �
 - [x] **Phase 96: 파이프라인 확인 로직 수정** - EVM/Solana 확인 타임아웃 fallback + Stage 6 상태 정합성 (BUG-015) ✓ 2026-02-13
 - [x] **Phase 97: EVM 토큰 레지스트리** - 체인별 내장 토큰 목록 + 커스텀 토큰 CRUD + 역할 분리 ✓ 2026-02-13
 - [x] **Phase 98: getAssets ERC-20 연동** - 레지스트리 + ALLOWED_TOKENS 합집합 조회 (BUG-014) ✓ 2026-02-13
-- [ ] **Phase 99: MCP 토큰 관리** - POST /v1/mcp/tokens API + Admin UI MCP 섹션 (BUG-013)
+- [x] **Phase 99: MCP 토큰 관리** - POST /v1/mcp/tokens API + Admin UI MCP 섹션 (BUG-013) ✓ 2026-02-13
 
 ## Phase Details
 
@@ -80,8 +80,8 @@ Plans:
   4. 기존 CLI `waiaas mcp setup` 동작에 회귀가 없다
 **Plans**: 2 plans
 Plans:
-- [ ] 99-01-PLAN.md -- POST /v1/mcp/tokens API (세션 생성 + 토큰 파일 저장 + Claude Desktop 설정 스니펫)
-- [ ] 99-02-PLAN.md -- Admin UI 지갑 상세 MCP Setup 섹션 (발급 버튼 + 설정 JSON 복사)
+- [x] 99-01-PLAN.md -- POST /v1/mcp/tokens API (세션 생성 + 토큰 파일 저장 + Claude Desktop 설정 스니펫) ✓
+- [x] 99-02-PLAN.md -- Admin UI 지갑 상세 MCP Setup 섹션 (발급 버튼 + 설정 JSON 복사) ✓
 
 ## Progress
 
@@ -93,7 +93,7 @@ Plans:
 | 96. 파이프라인 확인 로직 수정 | 2/2 | ✓ Complete | 2026-02-13 |
 | 97. EVM 토큰 레지스트리 | 2/2 | ✓ Complete | 2026-02-13 |
 | 98. getAssets ERC-20 연동 | 1/1 | ✓ Complete | 2026-02-13 |
-| 99. MCP 토큰 관리 | 0/2 | Not started | - |
+| 99. MCP 토큰 관리 | 2/2 | ✓ Complete | 2026-02-13 |
 
 ---
 *Roadmap created: 2026-02-13*
