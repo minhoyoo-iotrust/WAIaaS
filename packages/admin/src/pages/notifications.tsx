@@ -28,7 +28,7 @@ interface TestResult {
 interface NotificationLogEntry {
   id: string;
   eventType: string;
-  agentId: string | null;
+  walletId: string | null;
   channel: string;
   status: string;
   error: string | null;
@@ -130,9 +130,9 @@ export default function NotificationsPage() {
   const logColumns: Column<NotificationLogEntry>[] = [
     { key: 'eventType', header: 'Event Type' },
     {
-      key: 'agentId',
-      header: 'Agent ID',
-      render: (entry) => entry.agentId ? entry.agentId.slice(0, 8) + '...' : '\u2014',
+      key: 'walletId',
+      header: 'Wallet ID',
+      render: (entry) => entry.walletId ? entry.walletId.slice(0, 8) + '...' : '\u2014',
     },
     {
       key: 'channel',

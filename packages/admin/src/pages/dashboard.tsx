@@ -10,7 +10,7 @@ interface AdminStatus {
   status: string;
   version: string;
   uptime: number;
-  agentCount: number;
+  walletCount: number;
   activeSessionCount: number;
   killSwitchState: string;
   adminTimeout: number;
@@ -75,7 +75,7 @@ export default function DashboardPage() {
       <div class="stat-grid">
         <StatCard label="Version" value={data.value?.version ?? '\u2014'} loading={isInitialLoad} />
         <StatCard label="Uptime" value={data.value ? formatUptime(data.value.uptime) : '\u2014'} loading={isInitialLoad} />
-        <StatCard label="Agents" value={data.value?.agentCount?.toString() ?? '\u2014'} loading={isInitialLoad} />
+        <StatCard label="Wallets" value={data.value?.walletCount?.toString() ?? '\u2014'} loading={isInitialLoad} />
         <StatCard label="Active Sessions" value={data.value?.activeSessionCount?.toString() ?? '\u2014'} loading={isInitialLoad} />
       </div>
       <div class="stat-grid" style={{ marginTop: 'var(--space-4)' }}>

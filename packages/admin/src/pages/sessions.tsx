@@ -12,7 +12,7 @@ import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
 
-interface Agent {
+interface Wallet {
   id: string;
   name: string;
   chain: string;
@@ -24,7 +24,7 @@ interface Agent {
 
 interface Session {
   id: string;
-  agentId: string;
+  walletId: string;
   status: string;
   renewalCount: number;
   maxRenewals: number;
@@ -38,7 +38,7 @@ interface CreatedSession {
   id: string;
   token: string;
   expiresAt: number;
-  agentId: string;
+  walletId: string;
 }
 
 function openRevoke(
@@ -51,11 +51,11 @@ function openRevoke(
 }
 
 export default function SessionsPage() {
-  const agents = useSignal<Agent[]>([]);
-  const selectedAgentId = useSignal('');
+  const wallets = useSignal<Wallet[]>([]);
+  const selectedWalletId = useSignal('');
   const sessions = useSignal<Session[]>([]);
   const loading = useSignal(false);
-  const agentsLoading = useSignal(true);
+  const walletsLoading = useSignal(true);
   const createLoading = useSignal(false);
   const tokenModal = useSignal(false);
   const createdToken = useSignal('');
@@ -63,24 +63,24 @@ export default function SessionsPage() {
   const revokeSessionId = useSignal('');
   const revokeLoading = useSignal(false);
 
-  const fetchAgents = async () => {
+  const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Agent[] }>(API.AGENTS);
-      agents.value = result.items.filter((a) => a.status === 'ACTIVE');
+      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
+      wallets.value = result.items.filter((a) => a.status === 'ACTIVE');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
     } finally {
-      agentsLoading.value = false;
+      walletsLoading.value = false;
     }
   };
 
   const fetchSessions = async () => {
-    if (!selectedAgentId.value) return;
+    if (!selectedWalletId.value) return;
     loading.value = true;
     try {
       const result = await apiGet<Session[]>(
-        `${API.SESSIONS}?agentId=${selectedAgentId.value}`,
+        `${API.SESSIONS}?walletId=${selectedWalletId.value}`,
       );
       sessions.value = result;
     } catch (err) {
@@ -95,7 +95,7 @@ export default function SessionsPage() {
     createLoading.value = true;
     try {
       const result = await apiPost<CreatedSession>(API.SESSIONS, {
-        agentId: selectedAgentId.value,
+        walletId: selectedWalletId.value,
       });
       createdToken.value = result.token;
       tokenModal.value = true;
@@ -124,15 +124,15 @@ export default function SessionsPage() {
   };
 
   useEffect(() => {
-    fetchAgents();
+    fetchWallets();
   }, []);
 
   useEffect(() => {
     sessions.value = [];
-    if (selectedAgentId.value) {
+    if (selectedWalletId.value) {
       fetchSessions();
     }
-  }, [selectedAgentId.value]);
+  }, [selectedWalletId.value]);
 
   const sessionColumns: Column<Session>[] = [
     { key: 'id', header: 'ID', render: (s) => s.id.slice(0, 8) + '...' },
@@ -175,18 +175,18 @@ export default function SessionsPage() {
   return (
     <div class="page">
       <div class="session-controls">
-        <div class="session-agent-select">
-          <label for="agent-select">Agent</label>
+        <div class="session-wallet-select">
+          <label for="wallet-select">Wallet</label>
           <select
-            id="agent-select"
-            value={selectedAgentId.value}
+            id="wallet-select"
+            value={selectedWalletId.value}
             onChange={(e) => {
-              selectedAgentId.value = (e.target as HTMLSelectElement).value;
+              selectedWalletId.value = (e.target as HTMLSelectElement).value;
             }}
-            disabled={agentsLoading.value}
+            disabled={walletsLoading.value}
           >
-            <option value="">Select an agent...</option>
-            {agents.value.map((a) => (
+            <option value="">Select a wallet...</option>
+            {wallets.value.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} ({a.chain}/{a.network})
               </option>
@@ -195,24 +195,24 @@ export default function SessionsPage() {
         </div>
         <Button
           onClick={handleCreate}
-          disabled={!selectedAgentId.value}
+          disabled={!selectedWalletId.value}
           loading={createLoading.value}
         >
           Create Session
         </Button>
       </div>
 
-      {!selectedAgentId.value ? (
+      {!selectedWalletId.value ? (
         <EmptyState
-          title="Select an agent"
-          description="Choose an agent from the dropdown above to view its sessions."
+          title="Select a wallet"
+          description="Choose a wallet from the dropdown above to view its sessions."
         />
       ) : (
         <Table<Session>
           columns={sessionColumns}
           data={sessions.value}
           loading={loading.value}
-          emptyMessage="No sessions for this agent"
+          emptyMessage="No sessions for this wallet"
         />
       )}
 

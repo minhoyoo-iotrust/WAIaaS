@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import { logout } from '../auth/store';
 import DashboardPage from '../pages/dashboard';
-import AgentsPage from '../pages/agents';
+import WalletsPage from '../pages/wallets';
 import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
@@ -15,7 +15,7 @@ window.addEventListener('hashchange', () => {
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/agents': 'Agents',
+  '/wallets': 'Wallets',
   '/sessions': 'Sessions',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
@@ -23,13 +23,13 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 function getPageTitle(path: string): string {
-  if (path.startsWith('/agents/')) return 'Agent Detail';
+  if (path.startsWith('/wallets/')) return 'Wallet Detail';
   return PAGE_TITLES[path] ?? 'Dashboard';
 }
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard' },
-  { path: '/agents', label: 'Agents' },
+  { path: '/wallets', label: 'Wallets' },
   { path: '/sessions', label: 'Sessions' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
@@ -42,7 +42,7 @@ function PageRouter() {
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
   if (path === '/settings') return <SettingsPage />;
-  if (path.startsWith('/agents')) return <AgentsPage />;
+  if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;
 }
 
@@ -53,8 +53,8 @@ export function Layout() {
         <div class="sidebar-brand">WAIaaS</div>
         <nav class="sidebar-nav">
           {NAV_ITEMS.map((item) => {
-            const isActive = item.path === '/agents'
-              ? currentPath.value.startsWith('/agents')
+            const isActive = item.path === '/wallets'
+              ? currentPath.value.startsWith('/wallets')
               : currentPath.value === item.path;
             return (
               <a
