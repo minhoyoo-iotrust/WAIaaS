@@ -90,10 +90,10 @@ Plans:
   2. Dashboard의 StatCard가 "Wallets"를 표시하고 `walletCount` 필드를 사용한다
   3. Sessions/Policies/Notifications 페이지에서 `agentId` 참조가 0건이다
   4. Admin 테스트 4개 파일이 `walletId`/`walletCount` fixture로 통과한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 93-01: Wallets 페이지 + Dashboard + Sessions/Policies/Notifications 용어 변경 + 테스트 갱신
+- [ ] 93-01-PLAN.md — Admin UI 전체 agent->wallet 용어 변경 (소스 11파일 + 테스트 5파일, 파일 rename 포함)
 
 ### Phase 94: 설계 문서 + 검증
 **Goal**: 설계 문서와 README가 코드와 일치하고, 전체 코드베이스에서 의도하지 않은 agent 잔존이 0건이다
