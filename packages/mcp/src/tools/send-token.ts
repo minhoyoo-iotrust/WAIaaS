@@ -1,5 +1,5 @@
 /**
- * send_token tool: Send SOL/ETH or tokens from the agent wallet.
+ * send_token tool: Send SOL/ETH or tokens from the wallet.
  *
  * Supports TRANSFER (native) and TOKEN_TRANSFER (SPL/ERC-20) types.
  * CONTRACT_CALL, APPROVE, and BATCH are deliberately NOT exposed via MCP
@@ -9,12 +9,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type ApiClient, toToolResult } from '../api-client.js';
-import { type AgentContext, withAgentPrefix } from '../server.js';
+import { type WalletContext, withWalletPrefix } from '../server.js';
 
-export function registerSendToken(server: McpServer, apiClient: ApiClient, agentContext?: AgentContext): void {
+export function registerSendToken(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
   server.tool(
     'send_token',
-    withAgentPrefix('Send SOL/ETH or tokens from the agent wallet. For token transfers, specify type and token info.', agentContext?.agentName),
+    withWalletPrefix('Send SOL/ETH or tokens from the wallet. For token transfers, specify type and token info.', walletContext?.walletName),
     {
       to: z.string().describe('Destination wallet address'),
       amount: z.string().describe('Amount in smallest unit (lamports/wei)'),

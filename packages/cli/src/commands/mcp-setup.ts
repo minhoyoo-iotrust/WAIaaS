@@ -1,16 +1,16 @@
 /**
  * `waiaas mcp setup` -- Set up MCP integration for Claude Desktop.
  *
- * 7-step flow (CLI-02), extended for multi-agent (CLIP-01..07):
+ * 7-step flow (CLI-02), extended for multi-wallet (CLIP-01..07):
  *   1. Check daemon is running (GET /health)
  *   2. Resolve master password
- *   3. Resolve agent ID (auto-detect if single agent, masterAuth)
+ *   3. Resolve wallet ID (auto-detect if single wallet, masterAuth)
  *   4. Create session via POST /v1/sessions (masterAuth)
- *   5. Write token to mcp-tokens/<agentId> file (atomic)
+ *   5. Write token to mcp-tokens/<walletId> file (atomic)
  *   6. Output result
- *   7. Print Claude Desktop config.json snippet with WAIAAS_AGENT_ID/NAME
+ *   7. Print Claude Desktop config.json snippet with WAIAAS_WALLET_ID/NAME
  *
- * --all flag: set up all agents at once with a combined config snippet.
+ * --all flag: set up all wallets at once with a combined config snippet.
  */
 
 import { writeFile, rename, mkdir } from 'node:fs/promises';
@@ -21,41 +21,41 @@ import { toSlug, resolveSlugCollisions } from '../utils/slug.js';
 export interface McpSetupOptions {
   dataDir: string;
   baseUrl?: string;
-  agent?: string;
+  wallet?: string;
   expiresIn?: number;
   masterPassword?: string;
   all?: boolean;
 }
 
-interface AgentInfo {
+interface WalletInfo {
   id: string;
   name?: string;
 }
 
-/** Fetch agent list from daemon (masterAuth). */
-async function fetchAgents(baseUrl: string, password: string): Promise<AgentInfo[]> {
-  const agentsRes = await fetch(`${baseUrl}/v1/agents`, {
+/** Fetch wallet list from daemon (masterAuth). */
+async function fetchWallets(baseUrl: string, password: string): Promise<WalletInfo[]> {
+  const walletsRes = await fetch(`${baseUrl}/v1/wallets`, {
     headers: {
       'Accept': 'application/json',
       'X-Master-Password': password,
     },
   });
 
-  if (!agentsRes.ok) {
-    console.error(`Error: Failed to list agents (${agentsRes.status})`);
+  if (!walletsRes.ok) {
+    console.error(`Error: Failed to list wallets (${walletsRes.status})`);
     process.exit(1);
   }
 
-  const agentsData = await agentsRes.json() as { items: AgentInfo[] };
-  return agentsData.items ?? [];
+  const walletsData = await walletsRes.json() as { items: WalletInfo[] };
+  return walletsData.items ?? [];
 }
 
-/** Create session for a single agent and write token file atomically. */
-async function setupAgent(opts: {
+/** Create session for a single wallet and write token file atomically. */
+async function setupWallet(opts: {
   baseUrl: string;
   dataDir: string;
   password: string;
-  agentId: string;
+  walletId: string;
   expiresIn: number;
 }): Promise<{ token: string; expiresAt: number }> {
   const sessionRes = await fetch(`${opts.baseUrl}/v1/sessions`, {
@@ -65,7 +65,7 @@ async function setupAgent(opts: {
       'X-Master-Password': opts.password,
     },
     body: JSON.stringify({
-      agentId: opts.agentId,
+      walletId: opts.walletId,
       expiresIn: opts.expiresIn,
     }),
   });
@@ -79,8 +79,8 @@ async function setupAgent(opts: {
 
   const sessionData = await sessionRes.json() as { id: string; token: string; expiresAt: number };
 
-  // Write token to mcp-tokens/<agentId> (atomic: write tmp then rename)
-  const tokenPath = join(opts.dataDir, 'mcp-tokens', opts.agentId);
+  // Write token to mcp-tokens/<walletId> (atomic: write tmp then rename)
+  const tokenPath = join(opts.dataDir, 'mcp-tokens', opts.walletId);
   const tmpPath = `${tokenPath}.tmp`;
 
   await mkdir(dirname(tokenPath), { recursive: true });
@@ -90,20 +90,20 @@ async function setupAgent(opts: {
   return { token: sessionData.token, expiresAt: sessionData.expiresAt };
 }
 
-/** Build a single mcpServers config entry for an agent. */
+/** Build a single mcpServers config entry for a wallet. */
 function buildConfigEntry(opts: {
   dataDir: string;
   baseUrl: string;
-  agentId: string;
-  agentName?: string;
+  walletId: string;
+  walletName?: string;
 }): Record<string, unknown> {
   const env: Record<string, string> = {
     WAIAAS_DATA_DIR: opts.dataDir,
     WAIAAS_BASE_URL: opts.baseUrl,
-    WAIAAS_AGENT_ID: opts.agentId,
+    WAIAAS_WALLET_ID: opts.walletId,
   };
-  if (opts.agentName) {
-    env['WAIAAS_AGENT_NAME'] = opts.agentName;
+  if (opts.walletName) {
+    env['WAIAAS_WALLET_NAME'] = opts.walletName;
   }
   return {
     command: 'npx',
@@ -128,9 +128,9 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   const baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:3100').replace(/\/+$/, '');
   const expiresIn = opts.expiresIn ?? 86400;
 
-  // Validate: --all and --agent are mutually exclusive
-  if (opts.all && opts.agent) {
-    console.error('Error: Cannot use --all with --agent');
+  // Validate: --all and --wallet are mutually exclusive
+  if (opts.all && opts.wallet) {
+    console.error('Error: Cannot use --all with --wallet');
     process.exit(1);
   }
 
@@ -150,42 +150,42 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Step 2: Resolve master password (before agent list which requires masterAuth)
+  // Step 2: Resolve master password (before wallet list which requires masterAuth)
   const password = opts.masterPassword ?? await resolvePassword();
 
-  // --all: set up all agents at once
+  // --all: set up all wallets at once
   if (opts.all) {
-    const agents = await fetchAgents(baseUrl, password);
+    const wallets = await fetchWallets(baseUrl, password);
 
-    if (agents.length === 0) {
-      console.error('Error: No agents found. Run waiaas init first.');
+    if (wallets.length === 0) {
+      console.error('Error: No wallets found. Run waiaas init first.');
       process.exit(1);
     }
 
     // Resolve slug collisions
-    const slugMap = resolveSlugCollisions(agents);
+    const slugMap = resolveSlugCollisions(wallets);
 
-    // Set up each agent
+    // Set up each wallet
     const mcpServers: Record<string, Record<string, unknown>> = {};
-    for (const agent of agents) {
-      const result = await setupAgent({
+    for (const wallet of wallets) {
+      const result = await setupWallet({
         baseUrl,
         dataDir: opts.dataDir,
         password,
-        agentId: agent.id,
+        walletId: wallet.id,
         expiresIn,
       });
 
-      const slug = slugMap.get(agent.id)!;
-      console.log(`MCP session created for ${agent.name ?? agent.id}!`);
-      console.log(`  Token file: ${join(opts.dataDir, 'mcp-tokens', agent.id)}`);
+      const slug = slugMap.get(wallet.id)!;
+      console.log(`MCP session created for ${wallet.name ?? wallet.id}!`);
+      console.log(`  Token file: ${join(opts.dataDir, 'mcp-tokens', wallet.id)}`);
       console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
 
       mcpServers[`waiaas-${slug}`] = buildConfigEntry({
         dataDir: opts.dataDir,
         baseUrl,
-        agentId: agent.id,
-        agentName: agent.name,
+        walletId: wallet.id,
+        walletName: wallet.name,
       });
     }
 
@@ -197,46 +197,46 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     return;
   }
 
-  // Step 3: Resolve agent ID (single agent flow)
-  let agentId = opts.agent;
-  let agentName: string | undefined;
+  // Step 3: Resolve wallet ID (single wallet flow)
+  let walletId = opts.wallet;
+  let walletName: string | undefined;
 
-  if (!agentId) {
-    // Auto-detect: fetch agents list
+  if (!walletId) {
+    // Auto-detect: fetch wallets list
     try {
-      const agents = await fetchAgents(baseUrl, password);
+      const wallets = await fetchWallets(baseUrl, password);
 
-      if (agents.length === 0) {
-        console.error('Error: No agents found. Run waiaas init first.');
+      if (wallets.length === 0) {
+        console.error('Error: No wallets found. Run waiaas init first.');
         process.exit(1);
       }
 
-      if (agents.length > 1) {
-        console.error('Error: Multiple agents found. Specify --agent <id>');
-        console.error('  Available agents:');
-        for (const a of agents) {
-          console.error(`    ${a.id}${a.name ? ` (${a.name})` : ''}`);
+      if (wallets.length > 1) {
+        console.error('Error: Multiple wallets found. Specify --wallet <id>');
+        console.error('  Available wallets:');
+        for (const w of wallets) {
+          console.error(`    ${w.id}${w.name ? ` (${w.name})` : ''}`);
         }
         process.exit(1);
       }
 
-      agentId = agents[0]!.id;
-      agentName = agents[0]?.name ?? undefined;
-      console.error(`Auto-detected agent: ${agentId}`);
+      walletId = wallets[0]!.id;
+      walletName = wallets[0]?.name ?? undefined;
+      console.error(`Auto-detected wallet: ${walletId}`);
     } catch (err) {
       if (err instanceof Error && 'code' in err) {
         // Already handled exit cases above
         throw err;
       }
-      console.error('Error: Failed to list agents');
+      console.error('Error: Failed to list wallets');
       process.exit(1);
     }
   } else {
-    // --agent specified: look up name from agents list
+    // --wallet specified: look up name from wallets list
     try {
-      const agents = await fetchAgents(baseUrl, password);
-      const found = agents.find((a) => a.id === agentId);
-      agentName = found?.name ?? undefined;
+      const wallets = await fetchWallets(baseUrl, password);
+      const found = wallets.find((w) => w.id === walletId);
+      walletName = found?.name ?? undefined;
     } catch {
       // Name lookup failure is not fatal -- continue without name
     }
@@ -245,11 +245,11 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   // Step 4 + 5: Create session and write token file
   let result: { token: string; expiresAt: number };
   try {
-    result = await setupAgent({
+    result = await setupWallet({
       baseUrl,
       dataDir: opts.dataDir,
       password,
-      agentId,
+      walletId,
       expiresIn,
     });
   } catch (err) {
@@ -261,21 +261,21 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   }
 
   // Step 6: Output result
-  const tokenPath = join(opts.dataDir, 'mcp-tokens', agentId);
+  const tokenPath = join(opts.dataDir, 'mcp-tokens', walletId);
   console.log('MCP session created successfully!');
   console.log(`  Token file: ${tokenPath}`);
   console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
-  console.log(`  Agent: ${agentId}`);
+  console.log(`  Wallet: ${walletId}`);
 
   // Step 7: Print Claude Desktop config.json snippet (CLI-05 + CLIP-02/03)
-  const slug = toSlug(agentName ?? agentId);
+  const slug = toSlug(walletName ?? walletId);
   const configSnippet = {
     mcpServers: {
       [`waiaas-${slug}`]: buildConfigEntry({
         dataDir: opts.dataDir,
         baseUrl,
-        agentId,
-        agentName,
+        walletId,
+        walletName,
       }),
     },
   };

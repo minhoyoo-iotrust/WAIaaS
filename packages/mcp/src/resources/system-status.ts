@@ -4,16 +4,16 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type ApiClient, toResourceResult } from '../api-client.js';
-import { type AgentContext, withAgentPrefix } from '../server.js';
+import { type WalletContext, withWalletPrefix } from '../server.js';
 
 const RESOURCE_URI = 'waiaas://system/status';
 
-export function registerSystemStatus(server: McpServer, apiClient: ApiClient, agentContext?: AgentContext): void {
+export function registerSystemStatus(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
   server.resource(
     'System Status',
     RESOURCE_URI,
     {
-      description: withAgentPrefix('WAIaaS daemon system status', agentContext?.agentName),
+      description: withWalletPrefix('WAIaaS daemon system status', walletContext?.walletName),
       mimeType: 'application/json',
     },
     async () => {

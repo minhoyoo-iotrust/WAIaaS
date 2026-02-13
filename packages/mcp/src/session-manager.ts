@@ -33,7 +33,7 @@ export interface SessionManagerOptions {
   dataDir?: string;
   envToken?: string;
   renewalRatio?: number; // default 0.6 (60% of TTL)
-  agentId?: string; // Per-agent token path isolation (TOKEN-01)
+  walletId?: string; // Per-wallet token path isolation (TOKEN-01)
 }
 
 // Safe setTimeout wrapper for delays > 2^31-1 ms (SM-08)
@@ -68,7 +68,7 @@ export class SessionManager {
   private readonly dataDir: string | undefined;
   private readonly envToken: string | undefined;
   private readonly renewalRatio: number;
-  private readonly agentId: string | undefined;
+  private readonly walletId: string | undefined;
 
   private token: string | null = null;
   private sessionId: string | null = null;
@@ -86,7 +86,7 @@ export class SessionManager {
     this.dataDir = options.dataDir;
     this.envToken = options.envToken;
     this.renewalRatio = options.renewalRatio ?? 0.6;
-    this.agentId = options.agentId;
+    this.walletId = options.walletId;
   }
 
   // --- Public API (SM-02) ---
@@ -503,13 +503,13 @@ export class SessionManager {
   }
 
   /**
-   * Resolve token file path based on agentId (TOKEN-01, TOKEN-02).
-   * - agentId set: DATA_DIR/mcp-tokens/<agentId>
-   * - agentId unset: DATA_DIR/mcp-token (backward compatible)
+   * Resolve token file path based on walletId (TOKEN-01, TOKEN-02).
+   * - walletId set: DATA_DIR/mcp-tokens/<walletId>
+   * - walletId unset: DATA_DIR/mcp-token (backward compatible)
    */
   private resolveTokenPath(): string {
-    if (this.agentId) {
-      return join(this.dataDir!, 'mcp-tokens', this.agentId);
+    if (this.walletId) {
+      return join(this.dataDir!, 'mcp-tokens', this.walletId);
     }
     return join(this.dataDir!, 'mcp-token');
   }
@@ -528,8 +528,8 @@ export class SessionManager {
       const content = await readFile(filePath, 'utf-8');
       return content.trim();
     } catch (err: unknown) {
-      // TOKEN-03: fallback to legacy path when agentId is set
-      if (this.agentId && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      // TOKEN-03: fallback to legacy path when walletId is set
+      if (this.walletId && (err as NodeJS.ErrnoException).code === 'ENOENT') {
         const legacyPath = this.legacyTokenPath();
         const content = await readFile(legacyPath, 'utf-8');
         console.error(`${LOG_PREFIX} Loaded token from legacy path (fallback)`);
