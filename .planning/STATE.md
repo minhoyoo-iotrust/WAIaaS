@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 3 of 5 (Phase 97: EVM 토큰 레지스트리)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-13 -- Plan 97-01 complete
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 97 complete
+Last activity: 2026-02-13 -- Plan 97-02 complete
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
-**Cumulative:** 22 milestones, 94 phases, 210 plans, 590 reqs, 1,330 tests, 56,808 LOC
+**Cumulative:** 22 milestones, 94 phases, 211 plans, 590 reqs, 1,347 tests, 57,622 LOC
 
 **v1.4.3 Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 3min
-- Total execution time: 12min
+- Total execution time: 17min
 
 *Updated after each plan completion*
 
@@ -39,6 +39,7 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 - Phase 96-01: waitForConfirmation never throws, return-value 3-way branching, submitted != failed
 - Phase 96-02: Solana waitForConfirmation RPC error returns submitted (not throw), both adapters consistent
 - Phase 97-01: Built-in ERC-20 tokens (24) for 5 EVM mainnets, tokenRegistry DB table, migration v4, TokenRegistryService merge layer
+- Phase 97-02: GET/POST/DELETE /v1/tokens REST API, OpenAPI schemas, 17 tests (service + API integration)
 
 ### Blockers/Concerns
 
@@ -50,5 +51,5 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 97-01-PLAN.md
+Stopped at: Completed 97-02-PLAN.md (Phase 97 complete)
 Resume file: None
