@@ -12,7 +12,7 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 - [x] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
 - [x] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
 - [x] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
-- [ ] **Phase 104: API 스킬 파일** - quickstart/wallet/transactions/policies/admin 5개 마크다운
+- [x] **Phase 104: API 스킬 파일** - quickstart/wallet/transactions/policies/admin 5개 마크다운
 
 ## Phase Details
 
@@ -90,8 +90,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 104-01-PLAN.md -- quickstart + wallet + transactions 스킬 파일 (SKILL-01, SKILL-02, SKILL-03)
-- [ ] 104-02-PLAN.md -- policies + admin 스킬 파일 + 기존 파일 deprecation (SKILL-04, SKILL-05)
+- [x] 104-01-PLAN.md -- quickstart + wallet + transactions 스킬 파일 (SKILL-01, SKILL-02, SKILL-03)
+- [x] 104-02-PLAN.md -- policies + admin 스킬 파일 + 기존 파일 deprecation (SKILL-04, SKILL-05)
 
 ## Progress
 
@@ -105,4 +105,4 @@ Phase 100 -> 101 -> 102 순차. Phase 103, 104는 독립적이며 100~102와 병
 | 101. Settings API + Hot-Reload | 2/2 | ✓ Complete | 2026-02-13 |
 | 102. Admin UI 설정 페이지 | 2/2 | ✓ Complete | 2026-02-14 |
 | 103. MCP 5-type Feature Parity | 2/2 | ✓ Complete | 2026-02-14 |
-| 104. API 스킬 파일 | 0/2 | Not started | - |
+| 104. API 스킬 파일 | 2/2 | ✓ Complete | 2026-02-14 |
