@@ -2268,7 +2268,7 @@ export function createMcpServer(): McpServer {
 }
 ```
 
-### 5.3 MCP Tools (6개)
+### 5.3 MCP Tools (10개)
 
 AI 에이전트가 직접 호출하는 **행동(Action)** 도구. Agent API(Session Bearer)에 1:1 매핑.
 
@@ -2282,11 +2282,20 @@ AI 에이전트가 직접 호출하는 **행동(Action)** 도구. Agent API(Sess
 | 4 | `list_transactions` | GET /v1/transactions | 거래 이력 | status?, limit?, cursor?, order? |
 | 5 | `get_transaction` | GET /v1/transactions/:id | 단일 거래 | transaction_id |
 | 6 | `get_nonce` | GET /v1/nonce | nonce 조회 | (없음) |
+| 7 | `get_assets` | GET /v1/wallet/assets | 자산 목록 | (없음) |
+| 8 | `call_contract` | POST /v1/transactions/send | 컨트랙트 호출 (CONTRACT_CALL) | to, calldata?, abi?, value?, programId?, instructionData?, accounts? |
+| 9 | `approve_token` | POST /v1/transactions/send | 토큰 승인 (APPROVE) | spender, token, amount |
+| 10 | `send_batch` | POST /v1/transactions/send | 배치 트랜잭션 (BATCH) | instructions[] |
 
 **도구 선정 기준:**
 - Agent API 엔드포인트만 Tool로 노출 (Owner API, Admin API 미노출)
-- 6개로 제한 (MCP Pitfall 2: Tool 과다 등록 방지, LLM 컨텍스트 절약)
+- 10개 도구로 확장 (v1.4.4 Feature Parity -- 5-type discriminatedUnion 완전 지원)
 - 관리 작업(세션/정책/킬스위치)은 Tauri Desktop 또는 REST API 직접 호출
+
+> **[v1.4.4] MCPSDK-04 철회 (Phase 103):** MCP에서 CONTRACT_CALL/APPROVE/BATCH를 차단하던 보안 정책(MCPSDK-04)을 철회한다.
+> 근거: MCP/SDK/API 세 경로 모두 AI 에이전트가 호출하므로 프롬프트 인젝션 공격 표면이 동일하다.
+> 실제 보안은 정책 엔진(CONTRACT_WHITELIST, APPROVED_SPENDERS, 기본 거부)이 호출 경로와 무관하게 적용한다.
+> MCP만 차단하는 것은 보안 효과 없이 DX를 저하시킨다. **Feature Parity 원칙: MCP/SDK/API는 동일한 트랜잭션 타입을 지원한다.**
 
 > **(v0.5 변경) MCP tool 호출 인증:** MCP tool은 WAIAAS_SESSION_TOKEN(sessionAuth)으로 인증. 세션 생성은 masterAuth(implicit)이므로 MCP 프로세스 외부에서 수행. 세션 토큰 불편함 완화 방안으로 `mcp setup` 커맨드, 세션 자동 갱신, env 파일 생성을 검토 중.
 >
@@ -3772,7 +3781,7 @@ async handleUnauthorized(): Promise<boolean> {
 Phase 37에서 확정된 SessionManager(getToken/start/dispose, 9개 내부 상태, 5개 내부 메서드)를 MCP tool/resource handler와 실제로 통합하기 위한 설계이다. MCP SDK v1.x에 미들웨어/hook 시스템이 없으므로, 모든 데몬 API 호출을 캡슐화하는 **ApiClient 래퍼 클래스**를 도입하여 인증 헤더 관리, 401 자동 재시도, 세션 만료 graceful 응답을 한 곳에 집중시킨다.
 
 **Phase 38 목표:**
-1. **ApiClient 래퍼 클래스** -- 9개 handler(6 tool + 3 resource)의 인증/재시도/에러 처리를 단일 클래스에 캡슐화 (SMGI-01)
+1. **ApiClient 래퍼 클래스** -- 13개 handler(10 tool + 3 resource)의 인증/재시도/에러 처리를 단일 클래스에 캡슐화 (SMGI-01)
 2. **Tool handler 통합** -- 기존 환경변수+직접 fetch 패턴을 apiClient.get()/post() + toToolResult() 공통 변환으로 리팩토링
 3. **Resource handler 통합** -- 동일 ApiClient + toResourceResult() 패턴으로 리소스 핸들러도 통합
 
@@ -4327,7 +4336,7 @@ export function registerGetBalance(
 
 ##### 6.5.3.3 createMcpServer() 함수 설계
 
-MCP Server 생성과 tool/resource 등록을 캡슐화하는 팩토리 함수이다. ApiClient를 DI 패턴으로 전달받아 6개 tool + 3개 resource를 등록한다.
+MCP Server 생성과 tool/resource 등록을 캡슐화하는 팩토리 함수이다. ApiClient를 DI 패턴으로 전달받아 10개 tool + 3개 resource를 등록한다.
 
 ```typescript
 // packages/mcp/src/server.ts
@@ -4355,13 +4364,17 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
     version: '0.2.0',
   })
 
-  // 6개 Tool 등록
+  // 10개 Tool 등록
   registerSendToken(server, apiClient)
   registerGetBalance(server, apiClient)
   registerGetAddress(server, apiClient)
+  registerGetAssets(server, apiClient)
   registerListTransactions(server, apiClient)
   registerGetTransaction(server, apiClient)
   registerGetNonce(server, apiClient)
+  registerCallContract(server, apiClient)
+  registerApproveToken(server, apiClient)
+  registerSendBatch(server, apiClient)
 
   // 3개 Resource 등록
   registerWalletBalance(server, apiClient)
@@ -5239,12 +5252,12 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 |------|--------|-----------|----------|----------|
 | 잔액 조회 | `getBalance()` | `get_balance()` | `get_balance` | GET /v1/wallet/balance |
 | 주소 조회 | `getAddress()` | `get_address()` | `get_address` | GET /v1/wallet/address |
-| 자산 목록 (v0.6) | `getAssets()` | `get_assets()` | -- | GET /v1/wallet/assets |
+| 자산 목록 (v0.6) | `getAssets()` | `get_assets()` | `get_assets` | GET /v1/wallet/assets |
 | 네이티브 전송 | `sendToken()` | `send_token()` | `send_token` | POST /v1/transactions/send |
 | 토큰 전송 (v0.6) | `sendToken()` | `send_token_transfer()` | `send_token` (type 지정) | POST /v1/transactions/send (TOKEN_TRANSFER) |
-| 컨트랙트 호출 (v0.6) | `contractCall()` | `contract_call()` | -- | POST /v1/transactions/send (CONTRACT_CALL) |
-| 토큰 승인 (v0.6) | `approve()` | `approve_token()` | -- | POST /v1/transactions/send (APPROVE) |
-| 배치 (v0.6) | `batch()` | `batch_transaction()` | -- | POST /v1/transactions/send (BATCH) |
+| 컨트랙트 호출 (v0.6) | `contractCall()` | `contract_call()` | `call_contract` | POST /v1/transactions/send (CONTRACT_CALL) |
+| 토큰 승인 (v0.6) | `approve()` | `approve_token()` | `approve_token` | POST /v1/transactions/send (APPROVE) |
+| 배치 (v0.6) | `batch()` | `batch_transaction()` | `send_batch` | POST /v1/transactions/send (BATCH) |
 | 거래 목록 | `listTransactions()` | `list_transactions()` | `list_transactions` | GET /v1/transactions |
 | 거래 조회 | `getTransaction()` | `get_transaction()` | `get_transaction` | GET /v1/transactions/:id |
 | 대기 거래 | `listPendingTransactions()` | `list_pending_transactions()` | -- | GET /v1/transactions/pending |
