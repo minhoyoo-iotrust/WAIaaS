@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 7 tools + 3 resources.
+ * createMcpServer: factory that creates an MCP server with 10 tools + 3 resources.
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -19,6 +19,9 @@ import { registerGetAssets } from './tools/get-assets.js';
 import { registerListTransactions } from './tools/list-transactions.js';
 import { registerGetTransaction } from './tools/get-transaction.js';
 import { registerGetNonce } from './tools/get-nonce.js';
+import { registerCallContract } from './tools/call-contract.js';
+import { registerApproveToken } from './tools/approve-token.js';
+import { registerSendBatch } from './tools/send-batch.js';
 
 // Resource registrations (Task 2)
 import { registerWalletBalance } from './resources/wallet-balance.js';
@@ -46,7 +49,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 7 tools
+  // Register 10 tools
   registerSendToken(server, apiClient, walletContext);
   registerGetBalance(server, apiClient, walletContext);
   registerGetAddress(server, apiClient, walletContext);
@@ -54,6 +57,9 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerListTransactions(server, apiClient, walletContext);
   registerGetTransaction(server, apiClient, walletContext);
   registerGetNonce(server, apiClient, walletContext);
+  registerCallContract(server, apiClient, walletContext);
+  registerApproveToken(server, apiClient, walletContext);
+  registerSendBatch(server, apiClient, walletContext);
 
   // Register 3 resources
   registerWalletBalance(server, apiClient, walletContext);
