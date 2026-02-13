@@ -26,6 +26,7 @@ const mockClient = {
   call: vi.fn(),
   sendRawTransaction: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
+  getTransactionReceipt: vi.fn(),
   multicall: vi.fn(),
   chain: { id: 1 },
 };
@@ -453,14 +454,61 @@ describe('EvmAdapter', () => {
       expect(result.fee).toBe(21000n * 25000000000n); // 525000000000000
     });
 
-    it('returns submitted on timeout', async () => {
+    it('returns submitted on timeout when fallback also fails', async () => {
       mockClient.waitForTransactionReceipt.mockRejectedValue(new Error('Timed out waiting for transaction receipt'));
+      mockClient.getTransactionReceipt.mockRejectedValue(new Error('receipt not found'));
 
       const txHash = '0xabcdef1234567890';
       const result = await adapter.waitForConfirmation(txHash, 1000);
 
       expect(result.txHash).toBe(txHash);
       expect(result.status).toBe('submitted');
+    });
+
+    it('returns confirmed via fallback receipt on timeout', async () => {
+      mockClient.waitForTransactionReceipt.mockRejectedValue(new Error('Timed out waiting for transaction receipt'));
+      mockClient.getTransactionReceipt.mockResolvedValue({
+        status: 'success',
+        blockNumber: 18000001n,
+        gasUsed: 21000n,
+        effectiveGasPrice: 25000000000n,
+      });
+
+      const txHash = '0xabcdef1234567890';
+      const result = await adapter.waitForConfirmation(txHash, 1000);
+
+      expect(result.txHash).toBe(txHash);
+      expect(result.status).toBe('confirmed');
+      expect(result.blockNumber).toBe(18000001n);
+      expect(result.fee).toBe(21000n * 25000000000n);
+    });
+
+    it('returns submitted when RPC error and fallback receipt not found', async () => {
+      mockClient.waitForTransactionReceipt.mockRejectedValue(new Error('RPC connection error'));
+      mockClient.getTransactionReceipt.mockRejectedValue(new Error('RPC connection error'));
+
+      const txHash = '0xabcdef1234567890';
+      const result = await adapter.waitForConfirmation(txHash, 1000);
+
+      expect(result.txHash).toBe(txHash);
+      expect(result.status).toBe('submitted');
+    });
+
+    it('returns failed when receipt status is reverted', async () => {
+      mockClient.waitForTransactionReceipt.mockResolvedValue({
+        status: 'reverted',
+        blockNumber: 18000002n,
+        gasUsed: 21000n,
+        effectiveGasPrice: 25000000000n,
+      });
+
+      const txHash = '0xabcdef1234567890';
+      const result = await adapter.waitForConfirmation(txHash, 30000);
+
+      expect(result.txHash).toBe(txHash);
+      expect(result.status).toBe('failed');
+      expect(result.blockNumber).toBe(18000002n);
+      expect(result.fee).toBe(21000n * 25000000000n);
     });
   });
 

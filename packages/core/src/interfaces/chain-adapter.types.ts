@@ -55,7 +55,7 @@ export interface SubmitResult {
   /** Transaction hash. */
   txHash: string;
   /** Current status. */
-  status: 'submitted' | 'confirmed' | 'finalized';
+  status: 'submitted' | 'confirmed' | 'finalized' | 'failed';
   /** Number of confirmations. */
   confirmations?: number;
   /** Block number of inclusion. */
