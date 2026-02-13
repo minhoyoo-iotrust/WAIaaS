@@ -535,3 +535,58 @@ export const NotificationLogResponseSchema = z
     pageSize: z.number(),
   })
   .openapi('NotificationLogResponse');
+
+// ---------------------------------------------------------------------------
+// Token Registry Schemas (GET/POST/DELETE /v1/tokens)
+// ---------------------------------------------------------------------------
+
+export const TokenRegistryItemSchema = z
+  .object({
+    address: z.string(),
+    symbol: z.string(),
+    name: z.string(),
+    decimals: z.number().int(),
+    source: z.enum(['builtin', 'custom']),
+  })
+  .openapi('TokenRegistryItem');
+
+export const TokenRegistryListResponseSchema = z
+  .object({
+    network: z.string(),
+    tokens: z.array(TokenRegistryItemSchema),
+  })
+  .openapi('TokenRegistryListResponse');
+
+export const AddTokenRequestSchema = z
+  .object({
+    network: z.string().openapi({ example: 'ethereum-mainnet' }),
+    address: z.string().openapi({ example: '0x...' }),
+    symbol: z.string().min(1).max(20).openapi({ example: 'LINK' }),
+    name: z.string().min(1).max(100).openapi({ example: 'Chainlink Token' }),
+    decimals: z.number().int().min(0).max(18).openapi({ example: 18 }),
+  })
+  .openapi('AddTokenRequest');
+
+export const AddTokenResponseSchema = z
+  .object({
+    id: z.string(),
+    network: z.string(),
+    address: z.string(),
+    symbol: z.string(),
+  })
+  .openapi('AddTokenResponse');
+
+export const RemoveTokenRequestSchema = z
+  .object({
+    network: z.string(),
+    address: z.string(),
+  })
+  .openapi('RemoveTokenRequest');
+
+export const RemoveTokenResponseSchema = z
+  .object({
+    removed: z.boolean(),
+    network: z.string(),
+    address: z.string(),
+  })
+  .openapi('RemoveTokenResponse');

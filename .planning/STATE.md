@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.3 Phase 97 (EVM 토큰 레지스트리)
+**Current focus:** v1.4.3 Phase 98 (getAssets ERC-20 연동)
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 97: EVM 토큰 레지스트리)
+Phase: 4 of 5 (Phase 98: getAssets ERC-20 연동)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-02-13 -- Phase 96 complete, verified
+Last activity: 2026-02-13 -- Phase 97 complete, verified
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
-**Cumulative:** 22 milestones, 94 phases, 210 plans, 590 reqs, 1,330 tests, 56,808 LOC
+**Cumulative:** 22 milestones, 94 phases, 211 plans, 590 reqs, 1,347 tests, 57,622 LOC
 
 **v1.4.3 Velocity:**
-- Total plans completed: 3
-- Average duration: 2.3min
-- Total execution time: 7min
+- Total plans completed: 5
+- Average duration: 3min
+- Total execution time: 17min
 
 *Updated after each plan completion*
 
@@ -38,6 +38,8 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 - Phase 95: scripts/tag-release.sh for monorepo version management, all packages 1.4.3
 - Phase 96-01: waitForConfirmation never throws, return-value 3-way branching, submitted != failed
 - Phase 96-02: Solana waitForConfirmation RPC error returns submitted (not throw), both adapters consistent
+- Phase 97-01: Built-in ERC-20 tokens (24) for 5 EVM mainnets, tokenRegistry DB table, migration v4, TokenRegistryService merge layer
+- Phase 97-02: GET/POST/DELETE /v1/tokens REST API, OpenAPI schemas, 17 tests (service + API integration)
 
 ### Blockers/Concerns
 
@@ -49,5 +51,5 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Phase 96 complete, verified
+Stopped at: Phase 97 complete, verified
 Resume file: None

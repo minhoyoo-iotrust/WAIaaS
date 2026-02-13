@@ -17,5 +17,6 @@ export {
   auditLog,
   keyValueStore,
   notificationLogs,
+  tokenRegistry,
 } from './schema.js';
 export { generateId } from './id.js';

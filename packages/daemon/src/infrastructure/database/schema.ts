@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 8 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs
+ * 9 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -263,5 +263,28 @@ export const notificationLogs = sqliteTable(
     index('idx_notification_logs_status').on(table.status),
     index('idx_notification_logs_created_at').on(table.createdAt),
     check('check_notif_log_status', buildCheckSql('status', NOTIFICATION_LOG_STATUSES)),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 9: token_registry -- EVM ERC-20 token management (builtin + custom)
+// ---------------------------------------------------------------------------
+
+export const tokenRegistry = sqliteTable(
+  'token_registry',
+  {
+    id: text('id').primaryKey(), // UUID v7
+    network: text('network').notNull(), // EvmNetworkType
+    address: text('address').notNull(), // EIP-55 checksum address
+    symbol: text('symbol').notNull(),
+    name: text('name').notNull(),
+    decimals: integer('decimals').notNull(),
+    source: text('source').notNull().default('custom'), // 'builtin' | 'custom'
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_token_registry_network_address').on(table.network, table.address),
+    index('idx_token_registry_network').on(table.network),
+    check('check_token_source', sql`source IN ('builtin', 'custom')`),
   ],
 );
