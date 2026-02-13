@@ -8,7 +8,7 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 
 **Phase Numbering:** v1.4.3이 Phase 99에서 종료. v1.4.4는 Phase 100부터 시작.
 
-- [ ] **Phase 100: Settings 인프라** - DB 테이블 + credential 암호화 + config.toml fallback + 자동 import
+- [x] **Phase 100: Settings 인프라** - DB 테이블 + credential 암호화 + config.toml fallback + 자동 import
 - [ ] **Phase 101: Settings API + Hot-Reload** - REST 엔드포인트 3개 + 알림/RPC/보안 hot-reload
 - [ ] **Phase 102: Admin UI 설정 페이지** - 알림/RPC/보안/WalletConnect/log_level 5개 섹션
 - [ ] **Phase 103: MCP 5-type Feature Parity** - call_contract/approve_token/send_batch 도구 + 설계 문서 갱신
@@ -28,8 +28,8 @@ Admin UI 설정 관리(DB 저장 + hot-reload), MCP 5-type feature parity(BUG-01
 **Plans**: 2 plans
 
 Plans:
-- [ ] 100-01-PLAN.md -- settings 테이블 Drizzle 스키마 + DDL + v5 마이그레이션 + AES-GCM 암호화 모듈
-- [ ] 100-02-PLAN.md -- SettingsService fallback 체인 + config.toml 자동 import + daemon.ts 통합
+- [x] 100-01-PLAN.md -- settings 테이블 Drizzle 스키마 + DDL + v5 마이그레이션 + AES-GCM 암호화 모듈
+- [x] 100-02-PLAN.md -- SettingsService fallback 체인 + config.toml 자동 import + daemon.ts 통합
 
 ### Phase 101: Settings API + Hot-Reload
 **Goal**: Admin이 REST API로 설정을 조회/수정하고, 변경 사항이 데몬 재시작 없이 즉시 반영된다
@@ -41,11 +41,11 @@ Plans:
   3. 알림 채널 credential 변경 시 채널 인스턴스가 재생성되어 새 credential로 발송된다
   4. RPC 엔드포인트 URL 변경 시 adapter가 재연결되어 새 URL로 체인 요청이 전달된다
   5. POST /v1/admin/settings/test-rpc로 RPC URL 연결 테스트가 가능하다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 101-01: GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트
-- [ ] 101-02: 알림 채널 + RPC 어댑터 + 보안 파라미터 hot-reload
+- [ ] 101-01-PLAN.md -- GET/PUT /v1/admin/settings + POST test-rpc 엔드포인트 + OpenAPI 스키마 + 테스트
+- [ ] 101-02-PLAN.md -- 알림 채널 replaceChannels + RPC 어댑터 evict + HotReloadOrchestrator + daemon 연동
 
 ### Phase 102: Admin UI 설정 페이지
 **Goal**: Admin Web UI에서 알림/RPC/보안/WalletConnect/log_level 설정을 시각적으로 관리한다
@@ -101,7 +101,7 @@ Phase 100 -> 101 -> 102 순차. Phase 103, 104는 독립적이며 100~102와 병
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 100. Settings 인프라 | 0/2 | Not started | - |
+| 100. Settings 인프라 | 2/2 | ✓ Complete | 2026-02-13 |
 | 101. Settings API + Hot-Reload | 0/2 | Not started | - |
 | 102. Admin UI 설정 페이지 | 0/2 | Not started | - |
 | 103. MCP 5-type Feature Parity | 0/2 | Not started | - |

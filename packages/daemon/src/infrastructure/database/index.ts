@@ -18,5 +18,6 @@ export {
   keyValueStore,
   notificationLogs,
   tokenRegistry,
+  settings,
 } from './schema.js';
 export { generateId } from './id.js';
