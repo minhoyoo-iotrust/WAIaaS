@@ -1,11 +1,14 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 8 tables: agents, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs
+ * 8 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
  * All text PKs use UUID v7 for ms-precision time ordering (except audit_log which uses AUTOINCREMENT).
+ *
+ * v1.4.2: agents table renamed to wallets, agent_id columns renamed to wallet_id.
+ * AGENT_STATUSES import kept (Phase 90 renames it to WALLET_STATUSES).
  *
  * @see docs/25-sqlite-schema.md
  */
@@ -39,11 +42,11 @@ const buildCheckSql = (column: string, values: readonly string[]) =>
   sql.raw(`${column} IN (${values.map((v) => `'${v}'`).join(', ')})`);
 
 // ---------------------------------------------------------------------------
-// Table 1: agents -- agent identity and lifecycle state
+// Table 1: wallets -- wallet identity and lifecycle state (renamed from agents in v3)
 // ---------------------------------------------------------------------------
 
-export const agents = sqliteTable(
-  'agents',
+export const wallets = sqliteTable(
+  'wallets',
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
@@ -59,10 +62,10 @@ export const agents = sqliteTable(
     suspensionReason: text('suspension_reason'),
   },
   (table) => [
-    uniqueIndex('idx_agents_public_key').on(table.publicKey),
-    index('idx_agents_status').on(table.status),
-    index('idx_agents_chain_network').on(table.chain, table.network),
-    index('idx_agents_owner_address').on(table.ownerAddress),
+    uniqueIndex('idx_wallets_public_key').on(table.publicKey),
+    index('idx_wallets_status').on(table.status),
+    index('idx_wallets_chain_network').on(table.chain, table.network),
+    index('idx_wallets_owner_address').on(table.ownerAddress),
     check('check_chain', buildCheckSql('chain', CHAIN_TYPES)),
     check('check_network', buildCheckSql('network', NETWORK_TYPES)),
     check('check_status', buildCheckSql('status', AGENT_STATUSES)),
@@ -78,9 +81,9 @@ export const sessions = sqliteTable(
   'sessions',
   {
     id: text('id').primaryKey(),
-    agentId: text('agent_id')
+    walletId: text('wallet_id')
       .notNull()
-      .references(() => agents.id, { onDelete: 'cascade' }),
+      .references(() => wallets.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull(),
     expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
     constraints: text('constraints'),
@@ -93,7 +96,7 @@ export const sessions = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
-    index('idx_sessions_agent_id').on(table.agentId),
+    index('idx_sessions_wallet_id').on(table.walletId),
     index('idx_sessions_expires_at').on(table.expiresAt),
     index('idx_sessions_token_hash').on(table.tokenHash),
   ],
@@ -107,9 +110,9 @@ export const transactions = sqliteTable(
   'transactions',
   {
     id: text('id').primaryKey(),
-    agentId: text('agent_id')
+    walletId: text('wallet_id')
       .notNull()
-      .references(() => agents.id, { onDelete: 'restrict' }),
+      .references(() => wallets.id, { onDelete: 'restrict' }),
     sessionId: text('session_id').references(() => sessions.id, { onDelete: 'set null' }),
     chain: text('chain').notNull(),
     txHash: text('tx_hash'),
@@ -135,7 +138,7 @@ export const transactions = sqliteTable(
     metadata: text('metadata'),
   },
   (table) => [
-    index('idx_transactions_agent_status').on(table.agentId, table.status),
+    index('idx_transactions_wallet_status').on(table.walletId, table.status),
     index('idx_transactions_session_id').on(table.sessionId),
     uniqueIndex('idx_transactions_tx_hash').on(table.txHash),
     index('idx_transactions_queued_at').on(table.queuedAt),
@@ -155,14 +158,14 @@ export const transactions = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Table 4: policies -- agent and global policy rules
+// Table 4: policies -- wallet and global policy rules
 // ---------------------------------------------------------------------------
 
 export const policies = sqliteTable(
   'policies',
   {
     id: text('id').primaryKey(),
-    agentId: text('agent_id').references(() => agents.id, { onDelete: 'cascade' }),
+    walletId: text('wallet_id').references(() => wallets.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
     rules: text('rules').notNull(),
     priority: integer('priority').notNull().default(0),
@@ -171,7 +174,7 @@ export const policies = sqliteTable(
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
-    index('idx_policies_agent_enabled').on(table.agentId, table.enabled),
+    index('idx_policies_wallet_enabled').on(table.walletId, table.enabled),
     index('idx_policies_type').on(table.type),
     check('check_policy_type', buildCheckSql('type', POLICY_TYPES)),
   ],
@@ -212,7 +215,7 @@ export const auditLog = sqliteTable(
     timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
     eventType: text('event_type').notNull(),
     actor: text('actor').notNull(),
-    agentId: text('agent_id'),
+    walletId: text('wallet_id'),
     sessionId: text('session_id'),
     txId: text('tx_id'),
     details: text('details').notNull(),
@@ -222,9 +225,9 @@ export const auditLog = sqliteTable(
   (table) => [
     index('idx_audit_log_timestamp').on(table.timestamp),
     index('idx_audit_log_event_type').on(table.eventType),
-    index('idx_audit_log_agent_id').on(table.agentId),
+    index('idx_audit_log_wallet_id').on(table.walletId),
     index('idx_audit_log_severity').on(table.severity),
-    index('idx_audit_log_agent_timestamp').on(table.agentId, table.timestamp),
+    index('idx_audit_log_wallet_timestamp').on(table.walletId, table.timestamp),
     check('check_severity', sql`severity IN ('info', 'warning', 'critical')`),
   ],
 );
@@ -248,7 +251,7 @@ export const notificationLogs = sqliteTable(
   {
     id: text('id').primaryKey(), // UUID v7
     eventType: text('event_type').notNull(),
-    agentId: text('agent_id'),
+    walletId: text('wallet_id'),
     channel: text('channel').notNull(), // telegram / discord / ntfy
     status: text('status').notNull(), // sent / failed
     error: text('error'), // failure error message (nullable)
@@ -256,7 +259,7 @@ export const notificationLogs = sqliteTable(
   },
   (table) => [
     index('idx_notification_logs_event_type').on(table.eventType),
-    index('idx_notification_logs_agent_id').on(table.agentId),
+    index('idx_notification_logs_wallet_id').on(table.walletId),
     index('idx_notification_logs_status').on(table.status),
     index('idx_notification_logs_created_at').on(table.createdAt),
     check('check_notif_log_status', buildCheckSql('status', NOTIFICATION_LOG_STATUSES)),
