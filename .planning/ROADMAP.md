@@ -12,7 +12,7 @@
 - [x] **Phase 90: 코어 타입 + 에러 코드** - @waiaas/core Zod 스키마/Enum/에러 코드/i18n 일괄 rename
 - [x] **Phase 91: 데몬 API + JWT + Config** - REST API 경로/응답/JWT claim/OpenAPI 스키마/config 키 변경
 - [x] **Phase 92: MCP + CLI + SDK** - MCP WalletContext + CLI --wallet + 환경변수 + TS/Python SDK 필드 변경
-- [ ] **Phase 93: Admin Web UI** - Wallets 페이지 + Dashboard/Sessions/Policies/Notifications agentId 제거
+- [x] **Phase 93: Admin Web UI** - Wallets 페이지 + Dashboard/Sessions/Policies/Notifications agentId 제거
 - [ ] **Phase 94: 설계 문서 + 검증** - 설계 문서 15개 용어 갱신 + README + grep 전수 검사 + 전체 테스트 통과
 
 ## Phase Details
@@ -93,7 +93,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 93-01-PLAN.md — Admin UI 전체 agent->wallet 용어 변경 (소스 11파일 + 테스트 5파일, 파일 rename 포함)
+- [x] 93-01-PLAN.md — Admin UI 전체 agent->wallet 용어 변경 (소스 11파일 + 테스트 5파일, 파일 rename 포함)
 
 ### Phase 94: 설계 문서 + 검증
 **Goal**: 설계 문서와 README가 코드와 일치하고, 전체 코드베이스에서 의도하지 않은 agent 잔존이 0건이다
@@ -121,7 +121,7 @@ Plans:
 | 90. 코어 타입 + 에러 코드 | 2/2 | ✓ Complete | 2026-02-13 |
 | 91. 데몬 API + JWT + Config | 3/3 | ✓ Complete | 2026-02-13 |
 | 92. MCP + CLI + SDK | 2/2 | ✓ Complete | 2026-02-13 |
-| 93. Admin Web UI | 0/1 | Not started | - |
+| 93. Admin Web UI | 1/1 | ✓ Complete | 2026-02-13 |
 | 94. 설계 문서 + 검증 | 0/2 | Not started | - |
 
 ---
