@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 92 - MCP + CLI + SDK (v1.4.2 용어 변경)
+**Current focus:** Phase 93 - Admin Web UI (v1.4.2 용어 변경)
 
 ## Current Position
 
-Phase: 92 (4 of 6 in v1.4.2) — MCP + CLI + SDK
-Plan: 2 of 2 complete
+Phase: 93 (5 of 6 in v1.4.2) — Admin Web UI
+Plan: 1 of 1 complete
 Status: Phase Complete
-Last activity: 2026-02-13 — Plan 92-02 complete (SDK walletId rename, 9 files, 159 tests pass)
+Last activity: 2026-02-13 — Plan 93-01 complete (Admin UI wallet rename, 15 files, 40 tests pass)
 
-Progress: [███████░░░] 73%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
 **Cumulative:** 21 milestones, 88 phases, 197 plans, 552 reqs, 1,313+ tests, 65,074 LOC
 
 **v1.4.2 Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Total plans: 11
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -34,6 +34,7 @@ Progress: [███████░░░] 73%
 | 91    | 03   | 6min     | 2     | 10    |
 | 92    | 01   | 7min     | 2     | 21    |
 | 92    | 02   | 3min     | 2     | 9     |
+| 93    | 01   | 8min     | 2     | 15    |
 
 *Updated after each plan completion*
 
@@ -70,6 +71,7 @@ Recent decisions for v1.4.2:
 - MCP entrypoint: WAIAAS_AGENT_ID -> WAIAAS_WALLET_ID, WAIAAS_AGENT_NAME -> WAIAAS_WALLET_NAME
 - CLI: --agent -> --wallet, /v1/agents -> /v1/wallets, fetchAgents -> fetchWallets
 - slug.ts fallback 'agent' -> 'wallet'
+- Admin UI wallet terminology matches backend /v1/wallets API (zero shimming)
 
 ### Blockers/Concerns
 
@@ -79,5 +81,5 @@ Recent decisions for v1.4.2:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 92-01-PLAN.md + 92-02-PLAN.md (MCP+CLI+SDK wallet rename)
+Stopped at: Completed 93-01-PLAN.md (Admin UI wallet rename)
 Resume file: None

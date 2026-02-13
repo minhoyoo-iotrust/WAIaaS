@@ -12,7 +12,7 @@
 - [x] **Phase 90: 코어 타입 + 에러 코드** - @waiaas/core Zod 스키마/Enum/에러 코드/i18n 일괄 rename
 - [x] **Phase 91: 데몬 API + JWT + Config** - REST API 경로/응답/JWT claim/OpenAPI 스키마/config 키 변경
 - [x] **Phase 92: MCP + CLI + SDK** - MCP WalletContext + CLI --wallet + 환경변수 + TS/Python SDK 필드 변경
-- [ ] **Phase 93: Admin Web UI** - Wallets 페이지 + Dashboard/Sessions/Policies/Notifications agentId 제거
+- [x] **Phase 93: Admin Web UI** - Wallets 페이지 + Dashboard/Sessions/Policies/Notifications agentId 제거
 - [ ] **Phase 94: 설계 문서 + 검증** - 설계 문서 15개 용어 갱신 + README + grep 전수 검사 + 전체 테스트 통과
 
 ## Phase Details
@@ -93,7 +93,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 93-01-PLAN.md — Admin UI 전체 agent->wallet 용어 변경 (소스 11파일 + 테스트 5파일, 파일 rename 포함)
+- [x] 93-01-PLAN.md — Admin UI 전체 agent->wallet 용어 변경 (소스 11파일 + 테스트 5파일, 파일 rename 포함)
 
 ### Phase 94: 설계 문서 + 검증
 **Goal**: 설계 문서와 README가 코드와 일치하고, 전체 코드베이스에서 의도하지 않은 agent 잔존이 0건이다
@@ -105,11 +105,11 @@ Plans:
   3. `grep -r 'agent' packages/` 결과에서 의도적 잔존(AI agent 설명 등) 외 0건이다
   4. `pnpm test` 전체 테스트(1,313+)가 통과한다
   5. `GET /doc` OpenAPI 스펙에서 `agentId` 0건, `walletId` 존재한다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 94-01: 설계 문서 15개 용어 갱신 + README 갱신
-- [ ] 94-02: grep 전수 검사 + pnpm test + OpenAPI 스펙 검증
+- [ ] 94-01-PLAN.md — 설계 문서 15개 + README.md 용어 갱신 (~220건 substitution)
+- [ ] 94-02-PLAN.md — 잔존 agentId 코드 수정 + grep 전수 검사 + pnpm test + OpenAPI 스펙 검증 + Admin 빌드
 
 ## Progress
 
@@ -121,7 +121,7 @@ Plans:
 | 90. 코어 타입 + 에러 코드 | 2/2 | ✓ Complete | 2026-02-13 |
 | 91. 데몬 API + JWT + Config | 3/3 | ✓ Complete | 2026-02-13 |
 | 92. MCP + CLI + SDK | 2/2 | ✓ Complete | 2026-02-13 |
-| 93. Admin Web UI | 0/1 | Not started | - |
+| 93. Admin Web UI | 1/1 | ✓ Complete | 2026-02-13 |
 | 94. 설계 문서 + 검증 | 0/2 | Not started | - |
 
 ---

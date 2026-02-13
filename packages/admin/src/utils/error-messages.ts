@@ -54,8 +54,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   WHITELIST_DENIED: 'The destination address is not in the whitelist.',
 
   // OWNER domain (5)
-  OWNER_ALREADY_CONNECTED: 'An owner wallet is already connected to this agent.',
-  OWNER_NOT_CONNECTED: 'No owner wallet is connected to this agent.',
+  OWNER_ALREADY_CONNECTED: 'An owner wallet is already connected to this wallet.',
+  OWNER_NOT_CONNECTED: 'No owner wallet is connected to this wallet.',
   OWNER_NOT_FOUND: 'Owner not found.',
   APPROVAL_TIMEOUT: 'The approval request has timed out.',
   APPROVAL_NOT_FOUND: 'Approval request not found.',
@@ -68,10 +68,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   SHUTTING_DOWN: 'The daemon is shutting down.',
   ADAPTER_NOT_AVAILABLE: 'Chain adapter is not available. Please try again.',
 
-  // AGENT domain (3)
-  AGENT_NOT_FOUND: 'Agent not found.',
-  AGENT_SUSPENDED: 'This agent is currently suspended.',
-  AGENT_TERMINATED: 'This agent has been terminated.',
+  // WALLET domain (3)
+  WALLET_NOT_FOUND: 'Wallet not found.',
+  WALLET_SUSPENDED: 'This wallet is currently suspended.',
+  WALLET_TERMINATED: 'This wallet has been terminated.',
 
   // WITHDRAW domain (4)
   NO_OWNER: 'No owner connected. Withdrawal requires an owner wallet.',

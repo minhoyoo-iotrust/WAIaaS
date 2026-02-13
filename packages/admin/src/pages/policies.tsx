@@ -10,7 +10,7 @@ import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 
-interface Agent {
+interface Wallet {
   id: string;
   name: string;
   chain: string;
@@ -22,7 +22,7 @@ interface Agent {
 
 interface Policy {
   id: string;
-  agentId: string | null;
+  walletId: string | null;
   type: string;
   rules: Record<string, unknown>;
   priority: number;
@@ -125,10 +125,10 @@ function TierVisualization({ rules }: { rules: Record<string, unknown> }) {
   );
 }
 
-function getAgentName(agentId: string | null, agentList: Agent[]): string {
-  if (!agentId) return 'Global';
-  const agent = agentList.find((a) => a.id === agentId);
-  return agent ? agent.name : agentId.slice(0, 8) + '...';
+function getWalletName(walletId: string | null, walletList: Wallet[]): string {
+  if (!walletId) return 'Global';
+  const wallet = walletList.find((a) => a.id === walletId);
+  return wallet ? wallet.name : walletId.slice(0, 8) + '...';
 }
 
 function getPolicyTypeLabel(type: string): string {
@@ -137,16 +137,16 @@ function getPolicyTypeLabel(type: string): string {
 }
 
 export default function PoliciesPage() {
-  const agents = useSignal<Agent[]>([]);
+  const wallets = useSignal<Wallet[]>([]);
   const policies = useSignal<Policy[]>([]);
-  const filterAgentId = useSignal('__all__');
+  const filterWalletId = useSignal('__all__');
   const loading = useSignal(false);
-  const agentsLoading = useSignal(true);
+  const walletsLoading = useSignal(true);
 
   // Create form state
   const showForm = useSignal(false);
   const formType = useSignal('SPENDING_LIMIT');
-  const formAgentId = useSignal('');
+  const formWalletId = useSignal('');
   const formRules = useSignal(JSON.stringify(DEFAULT_RULES.SPENDING_LIMIT, null, 2));
   const formPriority = useSignal<number>(0);
   const formEnabled = useSignal(true);
@@ -167,15 +167,15 @@ export default function PoliciesPage() {
   const deletePolicy = useSignal<Policy | null>(null);
   const deleteLoading = useSignal(false);
 
-  const fetchAgents = async () => {
+  const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Agent[] }>(API.AGENTS);
-      agents.value = result.items;
+      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
+      wallets.value = result.items;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
     } finally {
-      agentsLoading.value = false;
+      walletsLoading.value = false;
     }
   };
 
@@ -183,12 +183,12 @@ export default function PoliciesPage() {
     loading.value = true;
     try {
       let url = API.POLICIES;
-      if (filterAgentId.value !== '__all__' && filterAgentId.value !== '__global__') {
-        url = `${API.POLICIES}?agentId=${filterAgentId.value}`;
+      if (filterWalletId.value !== '__all__' && filterWalletId.value !== '__global__') {
+        url = `${API.POLICIES}?walletId=${filterWalletId.value}`;
       }
       const result = await apiGet<Policy[]>(url);
-      if (filterAgentId.value === '__global__') {
-        policies.value = result.filter((p) => p.agentId === null);
+      if (filterWalletId.value === '__global__') {
+        policies.value = result.filter((p) => p.walletId === null);
       } else {
         policies.value = result;
       }
@@ -213,7 +213,7 @@ export default function PoliciesPage() {
     formLoading.value = true;
     try {
       await apiPost(API.POLICIES, {
-        agentId: formAgentId.value || undefined,
+        walletId: formWalletId.value || undefined,
         type: formType.value,
         rules: parsedRules,
         priority: formPriority.value,
@@ -222,7 +222,7 @@ export default function PoliciesPage() {
       showToast('success', 'Policy created');
       showForm.value = false;
       formType.value = 'SPENDING_LIMIT';
-      formAgentId.value = '';
+      formWalletId.value = '';
       formRules.value = JSON.stringify(DEFAULT_RULES.SPENDING_LIMIT, null, 2);
       formPriority.value = 0;
       formEnabled.value = true;
@@ -303,12 +303,12 @@ export default function PoliciesPage() {
   };
 
   useEffect(() => {
-    fetchAgents();
+    fetchWallets();
   }, []);
 
   useEffect(() => {
     fetchPolicies();
-  }, [filterAgentId.value]);
+  }, [filterWalletId.value]);
 
   const policyColumns: Column<Policy>[] = [
     {
@@ -321,9 +321,9 @@ export default function PoliciesPage() {
       ),
     },
     {
-      key: 'agentId',
-      header: 'Agent',
-      render: (p) => getAgentName(p.agentId, agents.value),
+      key: 'walletId',
+      header: 'Wallet',
+      render: (p) => getWalletName(p.walletId, wallets.value),
     },
     {
       key: 'rules',
@@ -380,18 +380,18 @@ export default function PoliciesPage() {
     <div class="page">
       <div class="policy-controls">
         <div class="policy-filter-select">
-          <label for="policy-agent-filter">Filter by Agent</label>
+          <label for="policy-wallet-filter">Filter by Wallet</label>
           <select
-            id="policy-agent-filter"
-            value={filterAgentId.value}
+            id="policy-wallet-filter"
+            value={filterWalletId.value}
             onChange={(e) => {
-              filterAgentId.value = (e.target as HTMLSelectElement).value;
+              filterWalletId.value = (e.target as HTMLSelectElement).value;
             }}
-            disabled={agentsLoading.value}
+            disabled={walletsLoading.value}
           >
             <option value="__all__">All Policies</option>
             <option value="__global__">Global Only</option>
-            {agents.value.map((a) => (
+            {wallets.value.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} ({a.chain}/{a.network})
               </option>
@@ -414,14 +414,14 @@ export default function PoliciesPage() {
             options={POLICY_TYPES}
           />
           <FormField
-            label="Agent"
-            name="agentId"
+            label="Wallet"
+            name="walletId"
             type="select"
-            value={formAgentId.value}
-            onChange={(v) => { formAgentId.value = v as string; }}
+            value={formWalletId.value}
+            onChange={(v) => { formWalletId.value = v as string; }}
             options={[
-              { label: 'Global (no agent)', value: '' },
-              ...agents.value.map((a) => ({
+              { label: 'Global (no wallet)', value: '' },
+              ...wallets.value.map((a) => ({
                 label: `${a.name} (${a.chain}/${a.network})`,
                 value: a.id,
               })),

@@ -14,7 +14,7 @@ import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate, formatAddress } from '../utils/format';
 
-interface Agent {
+interface Wallet {
   id: string;
   name: string;
   chain: string;
@@ -24,7 +24,7 @@ interface Agent {
   createdAt: number;
 }
 
-interface AgentDetail extends Agent {
+interface WalletDetail extends Wallet {
   ownerAddress: string | null;
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
@@ -56,7 +56,7 @@ export function chainNetworkOptions(chain: string): { label: string; value: stri
   return [{ label: 'Devnet', value: 'devnet' }];
 }
 
-const agentColumns: Column<Agent>[] = [
+const walletColumns: Column<Wallet>[] = [
   { key: 'name', header: 'Name' },
   { key: 'chain', header: 'Chain' },
   { key: 'network', header: 'Network' },
@@ -114,8 +114,8 @@ function DetailRow({
   );
 }
 
-function AgentDetailView({ id }: { id: string }) {
-  const agent = useSignal<AgentDetail | null>(null);
+function WalletDetailView({ id }: { id: string }) {
+  const wallet = useSignal<WalletDetail | null>(null);
   const loading = useSignal(true);
   const editing = useSignal(false);
   const editName = useSignal('');
@@ -123,10 +123,10 @@ function AgentDetailView({ id }: { id: string }) {
   const deleteModal = useSignal(false);
   const deleteLoading = useSignal(false);
 
-  const fetchAgent = async () => {
+  const fetchWallet = async () => {
     try {
-      const result = await apiGet<AgentDetail>(API.AGENT(id));
-      agent.value = result;
+      const result = await apiGet<WalletDetail>(API.WALLET(id));
+      wallet.value = result;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -138,10 +138,10 @@ function AgentDetailView({ id }: { id: string }) {
   const handleSaveName = async () => {
     editLoading.value = true;
     try {
-      const result = await apiPut<AgentDetail>(API.AGENT(id), { name: editName.value });
-      agent.value = result;
+      const result = await apiPut<WalletDetail>(API.WALLET(id), { name: editName.value });
+      wallet.value = result;
       editing.value = false;
-      showToast('success', 'Agent name updated');
+      showToast('success', 'Wallet name updated');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -153,9 +153,9 @@ function AgentDetailView({ id }: { id: string }) {
   const handleDelete = async () => {
     deleteLoading.value = true;
     try {
-      await apiDelete(API.AGENT(id));
-      showToast('success', 'Agent terminated');
-      window.location.hash = '#/agents';
+      await apiDelete(API.WALLET(id));
+      showToast('success', 'Wallet terminated');
+      window.location.hash = '#/wallets';
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -165,7 +165,7 @@ function AgentDetailView({ id }: { id: string }) {
   };
 
   const startEdit = () => {
-    editName.value = agent.value!.name;
+    editName.value = wallet.value!.name;
     editing.value = true;
   };
 
@@ -174,17 +174,17 @@ function AgentDetailView({ id }: { id: string }) {
   };
 
   useEffect(() => {
-    fetchAgent();
+    fetchWallet();
   }, [id]);
 
   return (
     <div class="page">
-      <a href="#/agents" class="back-link">&larr; Back to Agents</a>
+      <a href="#/wallets" class="back-link">&larr; Back to Wallets</a>
 
       {loading.value ? (
         <div class="stat-skeleton" style={{ height: '200px', marginTop: 'var(--space-4)' }} />
-      ) : agent.value ? (
-        <div class="agent-detail">
+      ) : wallet.value ? (
+        <div class="wallet-detail">
           <div class="detail-header">
             <div class="detail-name">
               {editing.value ? (
@@ -205,7 +205,7 @@ function AgentDetailView({ id }: { id: string }) {
                 </div>
               ) : (
                 <span>
-                  {agent.value.name}
+                  {wallet.value.name}
                   <button class="btn btn-ghost btn-sm" onClick={startEdit} title="Edit name">
                     &#9998;
                   </button>
@@ -213,40 +213,40 @@ function AgentDetailView({ id }: { id: string }) {
               )}
             </div>
             <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
-              Terminate Agent
+              Terminate Wallet
             </Button>
           </div>
 
           <div class="detail-grid">
-            <DetailRow label="ID" value={agent.value.id} copy />
-            <DetailRow label="Public Key" value={agent.value.publicKey} copy />
-            <DetailRow label="Chain" value={agent.value.chain} />
-            <DetailRow label="Network" value={agent.value.network} />
+            <DetailRow label="ID" value={wallet.value.id} copy />
+            <DetailRow label="Public Key" value={wallet.value.publicKey} copy />
+            <DetailRow label="Chain" value={wallet.value.chain} />
+            <DetailRow label="Network" value={wallet.value.network} />
             <DetailRow label="Status">
-              <Badge variant={agent.value.status === 'ACTIVE' ? 'success' : 'danger'}>
-                {agent.value.status}
+              <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : 'danger'}>
+                {wallet.value.status}
               </Badge>
             </DetailRow>
             <DetailRow
               label="Owner Address"
-              value={agent.value.ownerAddress ?? 'None'}
-              copy={!!agent.value.ownerAddress}
+              value={wallet.value.ownerAddress ?? 'None'}
+              copy={!!wallet.value.ownerAddress}
             />
             <DetailRow label="Owner State">
-              <Badge variant={ownerStateBadge(agent.value.ownerState)}>
-                {agent.value.ownerState}
+              <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
+                {wallet.value.ownerState}
               </Badge>
             </DetailRow>
-            <DetailRow label="Created" value={formatDate(agent.value.createdAt)} />
+            <DetailRow label="Created" value={formatDate(wallet.value.createdAt)} />
             <DetailRow
               label="Updated"
-              value={agent.value.updatedAt ? formatDate(agent.value.updatedAt) : 'Never'}
+              value={wallet.value.updatedAt ? formatDate(wallet.value.updatedAt) : 'Never'}
             />
           </div>
 
           <Modal
             open={deleteModal.value}
-            title="Terminate Agent"
+            title="Terminate Wallet"
             onCancel={() => { deleteModal.value = false; }}
             onConfirm={handleDelete}
             confirmText="Terminate"
@@ -254,20 +254,20 @@ function AgentDetailView({ id }: { id: string }) {
             loading={deleteLoading.value}
           >
             <p>
-              Are you sure you want to terminate agent <strong>{agent.value.name}</strong>? This
+              Are you sure you want to terminate wallet <strong>{wallet.value.name}</strong>? This
               action cannot be undone.
             </p>
           </Modal>
         </div>
       ) : (
-        <EmptyState title="Agent not found" description="The agent may have been deleted." />
+        <EmptyState title="Wallet not found" description="The wallet may have been deleted." />
       )}
     </div>
   );
 }
 
-function AgentListView() {
-  const agents = useSignal<Agent[]>([]);
+function WalletListView() {
+  const wallets = useSignal<Wallet[]>([]);
   const loading = useSignal(true);
   const showForm = useSignal(false);
   const formName = useSignal('');
@@ -276,10 +276,10 @@ function AgentListView() {
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
 
-  const fetchAgents = async () => {
+  const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Agent[] }>(API.AGENTS);
-      agents.value = result.items;
+      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
+      wallets.value = result.items;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -296,18 +296,18 @@ function AgentListView() {
     formError.value = null;
     formLoading.value = true;
     try {
-      await apiPost<Agent>(API.AGENTS, {
+      await apiPost<Wallet>(API.WALLETS, {
         name: formName.value.trim(),
         chain: formChain.value,
         network: formNetwork.value,
       });
-      showToast('success', 'Agent created');
+      showToast('success', 'Wallet created');
       formName.value = '';
       formChain.value = 'solana';
       formNetwork.value = 'devnet';
       showForm.value = false;
       loading.value = true;
-      await fetchAgents();
+      await fetchWallets();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       formError.value = getErrorMessage(e.code);
@@ -316,8 +316,8 @@ function AgentListView() {
     }
   };
 
-  const navigateToDetail = (agent: Agent) => {
-    window.location.hash = '#/agents/' + agent.id;
+  const navigateToDetail = (wallet: Wallet) => {
+    window.location.hash = '#/wallets/' + wallet.id;
   };
 
   const handleChainChange = (value: string | number | boolean) => {
@@ -328,14 +328,14 @@ function AgentListView() {
   };
 
   useEffect(() => {
-    fetchAgents();
+    fetchWallets();
   }, []);
 
   return (
     <div class="page">
       <div class="page-actions">
         {!showForm.value && (
-          <Button onClick={() => { showForm.value = true; }}>Create Agent</Button>
+          <Button onClick={() => { showForm.value = true; }}>Create Wallet</Button>
         )}
       </div>
 
@@ -381,23 +381,23 @@ function AgentListView() {
         </div>
       )}
 
-      <Table<Agent>
-        columns={agentColumns}
-        data={agents.value}
+      <Table<Wallet>
+        columns={walletColumns}
+        data={wallets.value}
         loading={loading.value}
         onRowClick={navigateToDetail}
-        emptyMessage="No agents yet"
+        emptyMessage="No wallets yet"
       />
     </div>
   );
 }
 
-export default function AgentsPage() {
+export default function WalletsPage() {
   const path = currentPath.value;
-  const agentId = path.startsWith('/agents/') ? path.slice('/agents/'.length) : null;
+  const walletId = path.startsWith('/wallets/') ? path.slice('/wallets/'.length) : null;
 
-  if (agentId) {
-    return <AgentDetailView id={agentId} />;
+  if (walletId) {
+    return <WalletDetailView id={walletId} />;
   }
-  return <AgentListView />;
+  return <WalletListView />;
 }

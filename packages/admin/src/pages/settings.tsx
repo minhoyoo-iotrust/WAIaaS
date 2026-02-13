@@ -106,7 +106,7 @@ export default function SettingsPage() {
       <div class="settings-section">
         <div class="settings-section-header">
           <h3>Kill Switch</h3>
-          <p class="settings-description">Emergency stop — suspends all agent operations immediately.</p>
+          <p class="settings-description">Emergency stop — suspends all wallet operations immediately.</p>
         </div>
         <div class="settings-section-body">
           {ksLoading.value ? (
@@ -171,7 +171,7 @@ export default function SettingsPage() {
       >
         <p>
           Are you sure you want to rotate the JWT secret? All existing session
-          tokens will remain valid for 5 more minutes, then expire. Agents will
+          tokens will remain valid for 5 more minutes, then expire. Wallets will
           need new sessions.
         </p>
       </Modal>

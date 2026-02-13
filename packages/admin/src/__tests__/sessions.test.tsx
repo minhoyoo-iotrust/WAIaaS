@@ -58,10 +58,10 @@ vi.mock('../utils/error-messages', () => ({
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import SessionsPage from '../pages/sessions';
 
-const mockAgents = {
+const mockWallets = {
   items: [
     {
-      id: 'agent-1',
+      id: 'wallet-1',
       name: 'bot-alpha',
       chain: 'solana',
       network: 'devnet',
@@ -75,7 +75,7 @@ const mockAgents = {
 const mockSessions = [
   {
     id: 'sess-1',
-    agentId: 'agent-1',
+    walletId: 'wallet-1',
     status: 'ACTIVE',
     renewalCount: 0,
     maxRenewals: 10,
@@ -90,7 +90,7 @@ const mockCreatedSession = {
   id: 'sess-2',
   token: 'jwt-token-abc123',
   expiresAt: 1707696000,
-  agentId: 'agent-1',
+  walletId: 'wallet-1',
 };
 
 describe('SessionsPage', () => {
@@ -101,19 +101,19 @@ describe('SessionsPage', () => {
 
   it('should load and display sessions for selected agent', async () => {
     vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockAgents) // agents load
-      .mockResolvedValueOnce(mockSessions); // sessions for agent
+      .mockResolvedValueOnce(mockWallets) // wallets load
+      .mockResolvedValueOnce(mockSessions); // sessions for wallet
 
     render(<SessionsPage />);
 
-    // Wait for agents dropdown to load
+    // Wait for wallets dropdown to load
     await waitFor(() => {
       expect(screen.getByText(/bot-alpha/)).toBeTruthy();
     });
 
-    // Select agent
-    const select = screen.getByLabelText('Agent') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'agent-1' } });
+    // Select wallet
+    const select = screen.getByLabelText('Wallet') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'wallet-1' } });
 
     // Wait for sessions to load
     await waitFor(() => {
@@ -126,22 +126,22 @@ describe('SessionsPage', () => {
 
   it('should create session and show token modal', async () => {
     vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockAgents) // initial agents load
-      .mockResolvedValueOnce(mockSessions) // sessions after agent select
+      .mockResolvedValueOnce(mockWallets) // initial wallets load
+      .mockResolvedValueOnce(mockSessions) // sessions after wallet select
       .mockResolvedValueOnce(mockSessions); // refresh after create
 
     vi.mocked(apiPost).mockResolvedValueOnce(mockCreatedSession);
 
     render(<SessionsPage />);
 
-    // Wait for agents dropdown
+    // Wait for wallets dropdown
     await waitFor(() => {
       expect(screen.getByText(/bot-alpha/)).toBeTruthy();
     });
 
-    // Select agent
-    const select = screen.getByLabelText('Agent') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'agent-1' } });
+    // Select wallet
+    const select = screen.getByLabelText('Wallet') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'wallet-1' } });
 
     // Wait for sessions to load
     await waitFor(() => {
@@ -158,28 +158,28 @@ describe('SessionsPage', () => {
 
     expect(screen.getByText('jwt-token-abc123')).toBeTruthy();
     expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/sessions', {
-      agentId: 'agent-1',
+      walletId: 'wallet-1',
     });
   });
 
   it('should revoke session with confirmation modal', async () => {
     vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockAgents) // agents load
-      .mockResolvedValueOnce(mockSessions) // sessions for agent
+      .mockResolvedValueOnce(mockWallets) // wallets load
+      .mockResolvedValueOnce(mockSessions) // sessions for wallet
       .mockResolvedValueOnce([]); // refresh after revoke
 
     vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
 
     render(<SessionsPage />);
 
-    // Wait for agents dropdown
+    // Wait for wallets dropdown
     await waitFor(() => {
       expect(screen.getByText(/bot-alpha/)).toBeTruthy();
     });
 
-    // Select agent
-    const select = screen.getByLabelText('Agent') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'agent-1' } });
+    // Select wallet
+    const select = screen.getByLabelText('Wallet') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'wallet-1' } });
 
     // Wait for sessions to load and Revoke button to appear
     await waitFor(() => {

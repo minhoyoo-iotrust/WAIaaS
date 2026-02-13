@@ -52,10 +52,10 @@ vi.mock('../utils/error-messages', () => ({
 import { apiGet, apiPost, apiDelete } from '../api/client';
 import PoliciesPage from '../pages/policies';
 
-const mockAgents = {
+const mockWallets = {
   items: [
     {
-      id: 'agent-1',
+      id: 'wallet-1',
       name: 'bot-alpha',
       chain: 'solana',
       network: 'devnet',
@@ -69,7 +69,7 @@ const mockAgents = {
 const mockPolicies = [
   {
     id: 'policy-1',
-    agentId: null,
+    walletId: null,
     type: 'SPENDING_LIMIT',
     rules: {
       instant_max: '1000000',
@@ -85,7 +85,7 @@ const mockPolicies = [
   },
   {
     id: 'policy-2',
-    agentId: 'agent-1',
+    walletId: 'wallet-1',
     type: 'WHITELIST',
     rules: { allowed_addresses: ['addr1'] },
     priority: 1,
@@ -103,8 +103,8 @@ describe('PoliciesPage', () => {
 
   it('should render policy list with tier visualization for SPENDING_LIMIT', async () => {
     vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockAgents) // agents load
-      .mockResolvedValueOnce(mockPolicies); // policies load (triggered by filterAgentId effect)
+      .mockResolvedValueOnce(mockWallets) // wallets load
+      .mockResolvedValueOnce(mockPolicies); // policies load (triggered by filterWalletId effect)
 
     render(<PoliciesPage />);
 
@@ -122,16 +122,16 @@ describe('PoliciesPage', () => {
     // Verify Whitelist type appears
     expect(screen.getByText('Whitelist')).toBeTruthy();
 
-    // Verify Global for null agentId policy
+    // Verify Global for null walletId policy
     expect(screen.getByText('Global')).toBeTruthy();
 
-    // Verify agent name for the agent-specific policy
+    // Verify wallet name for the wallet-specific policy
     expect(screen.getByText('bot-alpha')).toBeTruthy();
   });
 
   it('should create policy via form', async () => {
     vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockAgents) // agents load
+      .mockResolvedValueOnce(mockWallets) // wallets load
       .mockResolvedValueOnce(mockPolicies) // initial policies load
       .mockResolvedValueOnce(mockPolicies); // refresh after create
 
@@ -165,7 +165,7 @@ describe('PoliciesPage', () => {
 
   it('should delete policy with confirmation modal', async () => {
     vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockAgents) // agents load
+      .mockResolvedValueOnce(mockWallets) // wallets load
       .mockResolvedValueOnce(mockPolicies) // policies load
       .mockResolvedValueOnce([]); // refresh after delete
 

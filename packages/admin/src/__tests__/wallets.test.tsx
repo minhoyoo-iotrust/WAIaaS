@@ -38,7 +38,7 @@ vi.mock('../auth/store', () => ({
 
 vi.mock('../components/layout', async () => {
   const { signal } = await import('@preact/signals');
-  return { currentPath: signal('/agents') };
+  return { currentPath: signal('/wallets') };
 });
 
 vi.mock('../components/copy-button', () => ({
@@ -60,8 +60,8 @@ vi.mock('../utils/error-messages', () => ({
 
 import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
 import { currentPath } from '../components/layout';
-import AgentsPage from '../pages/agents';
-import { chainNetworkOptions } from '../pages/agents';
+import WalletsPage from '../pages/wallets';
+import { chainNetworkOptions } from '../pages/wallets';
 
 // Mirrored from @waiaas/core/src/enums/chain.ts — admin SPA can't import core directly.
 // If core adds new networks, this test will NOT catch them automatically;
@@ -76,10 +76,10 @@ const EVM_NETWORK_TYPES = [
 ] as const;
 const NETWORK_TYPES = [...SOLANA_NETWORK_TYPES, ...EVM_NETWORK_TYPES] as const;
 
-const mockAgents = {
+const mockWallets = {
   items: [
     {
-      id: 'agent-1',
+      id: 'wallet-1',
       name: 'bot-alpha',
       chain: 'solana',
       network: 'devnet',
@@ -88,7 +88,7 @@ const mockAgents = {
       createdAt: 1707609600,
     },
     {
-      id: 'agent-2',
+      id: 'wallet-2',
       name: 'bot-beta',
       chain: 'solana',
       network: 'devnet',
@@ -99,17 +99,17 @@ const mockAgents = {
   ],
 };
 
-const mockAgentDetail = {
-  ...mockAgents.items[0],
+const mockWalletDetail = {
+  ...mockWallets.items[0],
   ownerAddress: null,
   ownerVerified: null,
   ownerState: 'NONE' as const,
   updatedAt: null,
 };
 
-describe('AgentsPage', () => {
+describe('WalletsPage', () => {
   beforeEach(() => {
-    currentPath.value = '/agents';
+    currentPath.value = '/wallets';
   });
 
   afterEach(() => {
@@ -117,10 +117,10 @@ describe('AgentsPage', () => {
     vi.clearAllMocks();
   });
 
-  it('should render agent list table', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockAgents);
+  it('should render wallet list table', async () => {
+    vi.mocked(apiGet).mockResolvedValue(mockWallets);
 
-    render(<AgentsPage />);
+    render(<WalletsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('bot-alpha')).toBeTruthy();
@@ -133,9 +133,9 @@ describe('AgentsPage', () => {
   });
 
   it('should show create form and call POST on submit', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockAgents);
+    vi.mocked(apiGet).mockResolvedValue(mockWallets);
     vi.mocked(apiPost).mockResolvedValue({
-      id: 'agent-3',
+      id: 'wallet-3',
       name: 'new-bot',
       chain: 'solana',
       network: 'devnet',
@@ -144,13 +144,13 @@ describe('AgentsPage', () => {
       createdAt: 1707609600,
     });
 
-    render(<AgentsPage />);
+    render(<WalletsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('bot-alpha')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Create Agent'));
+    fireEvent.click(screen.getByText('Create Wallet'));
 
     const nameInput = screen.getByPlaceholderText('e.g. trading-bot');
     fireEvent.input(nameInput, { target: { value: 'new-bot' } });
@@ -158,7 +158,7 @@ describe('AgentsPage', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/agents', {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/wallets', {
         name: 'new-bot',
         chain: 'solana',
         network: 'devnet',
@@ -166,11 +166,11 @@ describe('AgentsPage', () => {
     });
   });
 
-  it('should render agent detail view', async () => {
-    currentPath.value = '/agents/agent-1';
-    vi.mocked(apiGet).mockResolvedValue(mockAgentDetail);
+  it('should render wallet detail view', async () => {
+    currentPath.value = '/wallets/wallet-1';
+    vi.mocked(apiGet).mockResolvedValue(mockWalletDetail);
 
-    render(<AgentsPage />);
+    render(<WalletsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('bot-alpha')).toBeTruthy();
@@ -182,12 +182,12 @@ describe('AgentsPage', () => {
     expect(screen.getByText('NONE')).toBeTruthy();
   });
 
-  it('should edit agent name', async () => {
-    currentPath.value = '/agents/agent-1';
-    vi.mocked(apiGet).mockResolvedValue(mockAgentDetail);
-    vi.mocked(apiPut).mockResolvedValue({ ...mockAgentDetail, name: 'renamed-bot' });
+  it('should edit wallet name', async () => {
+    currentPath.value = '/wallets/wallet-1';
+    vi.mocked(apiGet).mockResolvedValue(mockWalletDetail);
+    vi.mocked(apiPut).mockResolvedValue({ ...mockWalletDetail, name: 'renamed-bot' });
 
-    render(<AgentsPage />);
+    render(<WalletsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('bot-alpha')).toBeTruthy();
@@ -204,35 +204,35 @@ describe('AgentsPage', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/agents/agent-1', {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/wallets/wallet-1', {
         name: 'renamed-bot',
       });
     });
   });
 
-  it('should delete agent with confirmation modal', async () => {
-    currentPath.value = '/agents/agent-1';
-    vi.mocked(apiGet).mockResolvedValue(mockAgentDetail);
+  it('should delete wallet with confirmation modal', async () => {
+    currentPath.value = '/wallets/wallet-1';
+    vi.mocked(apiGet).mockResolvedValue(mockWalletDetail);
     vi.mocked(apiDelete).mockResolvedValue(undefined);
 
-    render(<AgentsPage />);
+    render(<WalletsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('bot-alpha')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Terminate Agent'));
+    fireEvent.click(screen.getByText('Terminate Wallet'));
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Are you sure you want to terminate agent/),
+        screen.getByText(/Are you sure you want to terminate wallet/),
       ).toBeTruthy();
     });
 
     fireEvent.click(screen.getByText('Terminate'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/agents/agent-1');
+      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/wallets/wallet-1');
     });
   });
 });

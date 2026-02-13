@@ -586,8 +586,8 @@ table .table-loading {
   color: var(--color-primary);
 }
 
-/* Agent Detail */
-.agent-detail {
+/* Wallet Detail */
+.wallet-detail {
   margin-top: var(--space-4);
 }
 
@@ -653,12 +653,12 @@ table .table-loading {
   margin-bottom: var(--space-4);
 }
 
-.session-agent-select {
+.session-wallet-select {
   flex: 1;
   max-width: 400px;
 }
 
-.session-agent-select label {
+.session-wallet-select label {
   display: block;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -666,7 +666,7 @@ table .table-loading {
   margin-bottom: var(--space-1);
 }
 
-.session-agent-select select {
+.session-wallet-select select {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
@@ -677,7 +677,7 @@ table .table-loading {
   outline: none;
 }
 
-.session-agent-select select:focus {
+.session-wallet-select select:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-light);
 }
