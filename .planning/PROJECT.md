@@ -8,9 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: Planning next milestone
+## Current Milestone: v1.4.5 멀티체인 월렛 모델 설계
 
-**Last shipped:** v1.4.4 Admin UI 설정 관리 + MCP 5-type + Skill Files (2026-02-14)
+**Goal:** "1 월렛 = 1 체인 + 1 네트워크" → "1 월렛 = 1 체인 + 1 환경(testnet/mainnet)" 전환 아키텍처를 설계한다.
+
+**Target features:**
+- Environment 모델 도입 (wallets.network → wallets.environment)
+- 트랜잭션 레벨 네트워크 지정 (network 파라미터)
+- ALLOWED_NETWORKS 정책 + 네트워크 스코프 정책
+- AdapterPool 확장 + Quickstart 워크플로우
+- DB 마이그레이션 전략 + MCP/SDK 인터페이스 변경 설계
 
 ## Current State
 
@@ -216,7 +223,13 @@ v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). Admin UI�
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+- [ ] 멀티체인 월렛 환경 모델 설계 (wallets.network → wallets.environment)
+- [ ] 트랜잭션 레벨 네트워크 지정 설계 (network 파라미터)
+- [ ] ALLOWED_NETWORKS 정책 + 네트워크 스코프 정책 설계
+- [ ] DB 마이그레이션 전략 설계 (wallets/transactions/policies 테이블)
+- [ ] AdapterPool 멀티네트워크 확장 설계
+- [ ] MCP/SDK 인터페이스 변경 설계
+- [ ] Quickstart 워크플로우 설계
 
 ## Next Milestone Goals
 
@@ -387,4 +400,4 @@ v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). 5 페이�
 | 스킬 파일 5개 분리 (단일 파일 대체) | 컨텍스트 윈도우 절약, 용도별 로드 | ✓ Good — v1.4.4 구현 |
 
 ---
-*최종 업데이트: 2026-02-14 after v1.4.4 milestone shipped*
+*최종 업데이트: 2026-02-14 after v1.4.5 milestone started*
