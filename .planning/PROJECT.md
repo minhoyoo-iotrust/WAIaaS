@@ -8,6 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.4.4 Admin UI 설정 관리 + MCP 5-type + 스킬 파일
+
+**Goal:** 운영 설정을 Admin UI에서 관리하고(hot-reload), MCP 5-type feature parity를 달성하며, AI 에이전트용 스킬 파일을 제공한다.
+
+**Target features:**
+- Admin UI 설정 관리 (알림/RPC/보안 파라미터 DB 저장 + hot-reload)
+- WalletConnect project_id 설정 (v1.6 Desktop App 대비)
+- MCP 5-type feature parity (BUG-017 수정 — CONTRACT_CALL/APPROVE/BATCH 지원)
+- API 스킬 파일 5개 (quickstart, wallet, transactions, policies, admin)
+
 ## Current State
 
 v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped (2026-02-13). 체인별 내장 토큰 레지스트리(5 EVM 네트워크 24 토큰), getAssets() ERC-20 잔액 자동 조회(레지스트리 ∪ ALLOWED_TOKENS 합집합), POST /v1/mcp/tokens 원스톱 MCP 프로비저닝 API + Admin UI MCP Setup 섹션, EVM/Solana waitForConfirmation fallback 패턴, tag-release.sh 모노레포 버전 관리 스크립트.
@@ -203,7 +213,10 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 shipped 
 
 ### 활성
 
-(없음 — 다음 마일스톤 요구사항 정의 필요)
+- [ ] Admin UI 설정 관리 — 알림/RPC/보안 파라미터를 config.toml 대신 Admin UI에서 관리, DB 저장 + hot-reload
+- [ ] WalletConnect 설정 — project_id Admin UI 입력 + DB 저장, v1.6 Desktop App 대비
+- [ ] MCP 5-type feature parity — CONTRACT_CALL/APPROVE/BATCH MCP 도구 추가 (BUG-017)
+- [ ] API 스킬 파일 — 용도별 5개 마크다운 스킬 파일 제공
 
 ## Next Milestone Goals
 
@@ -368,4 +381,4 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 shipped (2026-0
 | duck-typing adapter 감지 (getAssets) | instanceof 대신 메서드 존재 확인으로 registry 주입 | ✓ Good — v1.4.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-13 after v1.4.3 milestone shipped*
+*최종 업데이트: 2026-02-13 after v1.4.4 milestone started*
