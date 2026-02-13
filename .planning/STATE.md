@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-13)
 ## Current Position
 
 Phase: 4 of 5 (Phase 98: getAssets ERC-20 연동)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-13 -- Phase 97 complete, verified
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Phase 98 complete
+Last activity: 2026-02-13 -- Phase 98-01 complete, BUG-014 fixed
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
-**Cumulative:** 22 milestones, 94 phases, 211 plans, 590 reqs, 1,347 tests, 57,622 LOC
+**Cumulative:** 22 milestones, 94 phases, 212 plans, 590 reqs, 1,351 tests, 57,622 LOC
 
 **v1.4.3 Velocity:**
-- Total plans completed: 5
-- Average duration: 3min
-- Total execution time: 17min
+- Total plans completed: 6
+- Average duration: 4min
+- Total execution time: 21min
 
 *Updated after each plan completion*
 
@@ -40,6 +40,7 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 - Phase 96-02: Solana waitForConfirmation RPC error returns submitted (not throw), both adapters consistent
 - Phase 97-01: Built-in ERC-20 tokens (24) for 5 EVM mainnets, tokenRegistry DB table, migration v4, TokenRegistryService merge layer
 - Phase 97-02: GET/POST/DELETE /v1/tokens REST API, OpenAPI schemas, 17 tests (service + API integration)
+- Phase 98-01: getAssets ERC-20 wiring -- duck-typing adapter detection, registry + ALLOWED_TOKENS merge with address dedup, 4 integration tests
 
 ### Blockers/Concerns
 
@@ -51,5 +52,5 @@ v1.4.2 decisions archived -- see .planning/milestones/v1.4.2-ROADMAP.md
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Phase 97 complete, verified
+Stopped at: Phase 98-01 complete, BUG-014 fixed
 Resume file: None
