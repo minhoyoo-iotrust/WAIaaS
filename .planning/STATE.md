@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 107 - 정책 엔진 네트워크 확장 설계
+**Current focus:** Phase 108 - API/인터페이스 + DX 설계
 
 ## Current Position
 
-Phase: 107 (3 of 4 in v1.4.5) (정책 엔진 네트워크 확장 설계)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 107 Complete
-Last activity: 2026-02-14 -- Completed 107-01 (정책 엔진 네트워크 확장 설계)
+Phase: 108 (4 of 4 in v1.4.5) (API/인터페이스 + DX 설계)
+Plan: 1 of 2 in current phase (COMPLETE)
+Status: Executing Phase 108
+Last activity: 2026-02-14 -- Completed 108-01 (REST API 인터페이스 설계)
 
-Progress: [████████░░] 75%
+Progress: [████████▓░] 87%
 
 ## Performance Metrics
 
 **Cumulative:** 24 milestones, 104 phases, 226 plans, 627 reqs, 1,467 tests, 62,296 LOC
 
 **v1.4.5 Velocity:**
-- Total plans completed: 4
-- Total execution time: 0.32 hours
+- Total plans completed: 5
+- Total execution time: 0.40 hours
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -30,6 +30,7 @@ Progress: [████████░░] 75%
 | 105 | 02 | 4min | 2 | 1 |
 | 106 | 01 | 6min | 2 | 1 |
 | 107 | 01 | 6min | 2 | 1 |
+| 108 | 01 | 5min | 2 | 1 |
 
 *Updated after each plan completion*
 
@@ -62,6 +63,11 @@ Full log in PROJECT.md. Recent:
 - [107-01]: PLCY-D03: resolveOverrides() 4단계 typeMap[type] 단일 키 유지 -- 복합키 불필요 증명
 - [107-01]: PLCY-D04: policies.network DB 컬럼으로 (not rules JSON) -- SQL 쿼리 최적화
 - [107-01]: PLCY-D05: evaluateAndReserve() raw SQL에 network 필터 직접 추가
+- [108-01]: API-D01: environment optional + deriveEnvironment fallback (breaking change 방지)
+- [108-01]: API-D02: 멀티네트워크 잔액을 별도 masterAuth 엔드포인트로 분리
+- [108-01]: API-D03: 트랜잭션 응답에 network nullable 필드 추가 (실행 네트워크 추적)
+- [108-01]: API-D04: GET은 query parameter, POST는 body로 network 전달
+- [108-01]: API-D05: WalletResponse에 기존 network 유지 + environment, defaultNetwork 추가
 
 ### Blockers/Concerns
 
@@ -73,5 +79,5 @@ Full log in PROJECT.md. Recent:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 107-01-PLAN.md (Phase 107 complete)
+Stopped at: Completed 108-01-PLAN.md
 Resume file: None
