@@ -45,4 +45,9 @@ export type {
   KillSwitchStatusResponse,
   RecoverResponse,
   NonceResponse,
+  EncodeCalldataParams,
+  EncodeCalldataResponse,
+  SignTransactionParams,
+  SignTransactionOperation,
+  SignTransactionResponse,
 } from './types.js';

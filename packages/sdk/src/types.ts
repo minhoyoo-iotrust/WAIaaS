@@ -232,3 +232,42 @@ export interface EncodeCalldataResponse {
   /** Encoded function name */
   functionName: string;
 }
+
+// ---------------------------------------------------------------------------
+// Sign Transaction Types
+// ---------------------------------------------------------------------------
+
+export interface SignTransactionParams {
+  /** Raw unsigned transaction (base64 for Solana, hex for EVM) */
+  transaction: string;
+  /** Target network (e.g., 'polygon-mainnet') */
+  network?: string;
+}
+
+export interface SignTransactionOperation {
+  /** Operation type (e.g., NATIVE_TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL) */
+  type: string;
+  /** Destination address */
+  to?: string | null;
+  /** Amount in base units */
+  amount?: string | null;
+  /** Token mint/contract address */
+  token?: string | null;
+  /** Solana program ID */
+  programId?: string | null;
+  /** Contract method name */
+  method?: string | null;
+}
+
+export interface SignTransactionResponse {
+  /** Transaction record ID */
+  id: string;
+  /** Signed transaction (base64 for Solana, hex for EVM) */
+  signedTransaction: string;
+  /** Transaction hash (null if not available at sign time) */
+  txHash: string | null;
+  /** Parsed operations from the transaction */
+  operations: SignTransactionOperation[];
+  /** Policy evaluation result */
+  policyResult: { tier: string };
+}

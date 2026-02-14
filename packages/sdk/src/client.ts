@@ -1,11 +1,11 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 10 REST API methods with typed responses:
+ * Wraps 11 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - renewSession() (session management)
- * - encodeCalldata() (utils)
+ * - encodeCalldata(), signTransaction() (utils)
  *
  * All methods use exponential backoff retry for 429/5xx responses.
  * sendToken() performs inline pre-validation before making the HTTP request.
@@ -33,6 +33,8 @@ import type {
   RenewSessionResponse,
   EncodeCalldataParams,
   EncodeCalldataResponse,
+  SignTransactionParams,
+  SignTransactionResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -177,6 +179,17 @@ export class WAIaaSClient {
     return withRetry(
       () => this.http.post<EncodeCalldataResponse>(
         '/v1/utils/encode-calldata',
+        params,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async signTransaction(params: SignTransactionParams): Promise<SignTransactionResponse> {
+    return withRetry(
+      () => this.http.post<SignTransactionResponse>(
+        '/v1/transactions/sign',
         params,
         this.authHeaders(),
       ),
