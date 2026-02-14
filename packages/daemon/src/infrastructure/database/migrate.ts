@@ -1073,12 +1073,28 @@ export function pushSchema(sqlite: Database): void {
   const tables = getCreateTableStatements();
   const indexes = getCreateIndexStatements();
 
+  // Step 1: Create tables + record schema version (NO indexes yet)
+  // Indexes reference latest-schema columns (e.g. wallets.environment) that may
+  // not exist in pre-migration databases. Creating indexes before migrations
+  // causes "no such column" errors on existing DBs. (MIGR-01 fix)
+  //
+  // Pre-v3 databases have an `agents` table that gets renamed to `wallets` by
+  // v3 migration. We must skip creating `wallets` if `agents` still exists,
+  // otherwise v3 migration fails with "table already exists". (MIGR-01b fix)
+  const hasAgentsTable =
+    (
+      sqlite
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agents'")
+        .get() as { name: string } | undefined
+    ) !== undefined;
+
   sqlite.exec('BEGIN');
   try {
     for (const stmt of tables) {
-      sqlite.exec(stmt);
-    }
-    for (const stmt of indexes) {
+      // Skip wallets table creation if agents table exists (v3 migration will handle rename)
+      if (hasAgentsTable && stmt.includes('CREATE TABLE IF NOT EXISTS wallets')) {
+        continue;
+      }
       sqlite.exec(stmt);
     }
 
@@ -1112,6 +1128,20 @@ export function pushSchema(sqlite: Database): void {
     throw err;
   }
 
-  // Run incremental migrations for existing DBs (fresh DBs have all versions recorded)
+  // Step 2: Run incremental migrations (adds/transforms columns in existing DBs)
+  // Fresh DBs have all versions recorded above, so migrations are skipped.
   runMigrations(sqlite);
+
+  // Step 3: Create indexes AFTER migrations complete
+  // All columns are now guaranteed to exist (e.g. wallets.environment from v7).
+  sqlite.exec('BEGIN');
+  try {
+    for (const stmt of indexes) {
+      sqlite.exec(stmt);
+    }
+    sqlite.exec('COMMIT');
+  } catch (err) {
+    sqlite.exec('ROLLBACK');
+    throw err;
+  }
 }
