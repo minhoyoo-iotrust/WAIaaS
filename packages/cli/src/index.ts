@@ -6,6 +6,7 @@
  *   start      -- Start the WAIaaS daemon
  *   stop       -- Stop the WAIaaS daemon
  *   status     -- Check WAIaaS daemon status
+ *   quickstart -- Create Solana + EVM wallets for quick setup
  *   mcp setup  -- Set up MCP integration for Claude Desktop
  *
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
@@ -17,6 +18,7 @@ import { startCommand } from './commands/start.js';
 import { stopCommand } from './commands/stop.js';
 import { statusCommand } from './commands/status.js';
 import { mcpSetupCommand } from './commands/mcp-setup.js';
+import { quickstartCommand } from './commands/quickstart.js';
 import { resolveDataDir } from './utils/data-dir.js';
 
 const program = new Command();
@@ -60,6 +62,36 @@ program
   .action(async (opts: { dataDir?: string }) => {
     const dataDir = resolveDataDir(opts);
     await statusCommand(dataDir);
+  });
+
+program
+  .command('quickstart')
+  .description('Create Solana + EVM wallets for quick setup')
+  .option('--data-dir <path>', 'Data directory path')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'testnet')
+  .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
+  .option('--password <password>', 'Master password')
+  .action(async (opts: {
+    dataDir?: string;
+    baseUrl?: string;
+    mode?: string;
+    expiresIn?: string;
+    password?: string;
+  }) => {
+    const dataDir = resolveDataDir(opts);
+    const mode = opts.mode ?? 'testnet';
+    if (mode !== 'testnet' && mode !== 'mainnet') {
+      console.error("Error: --mode must be 'testnet' or 'mainnet'");
+      process.exit(1);
+    }
+    await quickstartCommand({
+      dataDir,
+      baseUrl: opts.baseUrl,
+      mode: mode as 'testnet' | 'mainnet',
+      expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
+      masterPassword: opts.password,
+    });
   });
 
 // MCP subcommand group
