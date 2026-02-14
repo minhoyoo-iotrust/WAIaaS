@@ -60,11 +60,11 @@ Plans:
   2. 환경과 불일치하는 네트워크 지정 시 ENVIRONMENT_NETWORK_MISMATCH 에러가 반환된다
   3. transactions 테이블에 실행 네트워크가 정확히 기록된다
   4. 네트워크 스코프 정책이 Stage 3에서 트랜잭션의 해결된 네트워크와 매칭되어 평가된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 111-01: resolveNetwork() 순수 함수 + PipelineContext 확장
-- [ ] 111-02: Stage 1 네트워크 해결/검증 + Stage 3 네트워크 스코프 매칭 + Stage 5 AdapterPool 연결
+- [ ] 111-01-PLAN.md -- resolveNetwork() TDD (순수 함수 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + PipelineContext 확장, Wave 1)
+- [ ] 111-02-PLAN.md -- Route/Daemon/Pipeline 네트워크 해결 통합 + 통합 테스트 (Wave 2, depends on 111-01)
 
 ### Phase 112: REST API 네트워크 확장
 **Goal**: REST API가 환경/네트워크 파라미터를 수용하고, 월렛별 네트워크 관리 엔드포인트가 동작하는 상태
