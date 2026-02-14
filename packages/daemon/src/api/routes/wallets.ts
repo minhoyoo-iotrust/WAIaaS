@@ -17,8 +17,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, validateChainNetwork, deriveEnvironment } from '@waiaas/core';
-import type { ChainType, NetworkType } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
+import type { ChainType, EnvironmentType } from '@waiaas/core';
 import { wallets } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
@@ -254,26 +254,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // OpenAPIHono validates the body automatically via createRoute schema
     const parsed = c.req.valid('json');
     const chain = parsed.chain as ChainType;
+    const environment = parsed.environment as EnvironmentType;
 
-    // Resolve default network if not specified
-    let network: NetworkType;
-    if (parsed.network) {
-      network = parsed.network as NetworkType;
-    } else if (chain === 'solana') {
-      network = 'devnet';
-    } else {
-      // EVM: use config default (evm_default_network from config.toml)
-      network = deps.config.rpc.evm_default_network as NetworkType;
-    }
-
-    // Cross-validate chain + network
-    try {
-      validateChainNetwork(chain, network);
-    } catch (err) {
-      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
+    // Derive default network from chain + environment
+    const defaultNetwork = getDefaultNetwork(chain, environment);
 
     // Generate wallet ID
     const id = generateId();
@@ -282,7 +266,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const { publicKey } = await deps.keyStore.generateKeyPair(
       id,
       chain,
-      network,
+      defaultNetwork,
       deps.masterPassword,
     );
 
@@ -293,21 +277,21 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       id,
       name: parsed.name,
       chain: parsed.chain,
-      environment: deriveEnvironment(network),
-      defaultNetwork: network,
+      environment,
+      defaultNetwork,
       publicKey,
       status: 'ACTIVE',
       createdAt: now,
       updatedAt: now,
     });
 
-    // Return 201 with wallet JSON
+    // Return 201 with wallet JSON (network field for backward compatibility)
     return c.json(
       {
         id,
         name: parsed.name,
         chain: parsed.chain,
-        network,
+        network: defaultNetwork,
         publicKey,
         status: 'ACTIVE',
         createdAt: Math.floor(now.getTime() / 1000),

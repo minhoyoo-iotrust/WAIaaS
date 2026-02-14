@@ -74,8 +74,8 @@ describe('Enum SSoT', () => {
     expect(TRANSACTION_TYPES).toHaveLength(5);
   });
 
-  it('PolicyType has 10 values', () => {
-    expect(POLICY_TYPES).toHaveLength(10);
+  it('PolicyType has 11 values', () => {
+    expect(POLICY_TYPES).toHaveLength(11);
   });
 
   it('PolicyTier has 4 values', () => {
