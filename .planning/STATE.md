@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 Phase: 119 of 119 (SDK + MCP + Notifications + Skill Resources)
 Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-15 -- 119-03 완료 (POLICY_VIOLATION enrichment + sign-only skill docs, 2 tasks, 4min)
+Last activity: 2026-02-15 -- 119-02 완료 (Skill Resources REST + MCP ResourceTemplate, 2 tasks, 5min)
 
 Progress: [########░░] 80%
 
@@ -34,6 +34,7 @@ Progress: [########░░] 80%
 | 118-01 | 1/2 | 5min | 5min |
 | 118-02 | 2/2 | 3min | 3min |
 | 119-01 | 1/3 | 3min | 3min |
+| 119-02 | 2/3 | 5min | 5min |
 | 119-03 | 3/3 | 4min | 4min |
 
 ## Accumulated Context
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - txParam을 stage3Policy 함수 스코프로 호이스팅 (BATCH/non-BATCH 공통 접근)
 - tokenAddress/contractAddress는 notification body에 미포함 (빈 값 방지), vars metadata로만 전달
 - sign-only 섹션을 transactions.skill.md 10번에 삽입, encode-calldata 11번으로 리넘버링
+- SKILL_NOT_FOUND를 SYSTEM 도메인에 배치 (스킬은 시스템 리소스)
+- skills 라우트는 public (인증 불필요) -- nonce/health와 동일 레벨
+- ResourceTemplate list callback에서 5개 스킬을 정적으로 나열 (VALID_SKILLS 배열 기반)
 
 ### Blockers/Concerns
 
@@ -83,5 +87,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 119-03-PLAN.md
+Stopped at: Completed 119-02-PLAN.md (all 3 plans of phase 119 now complete)
 Resume file: None
