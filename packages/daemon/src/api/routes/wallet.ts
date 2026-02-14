@@ -9,11 +9,11 @@
  * @see docs/37-rest-api-complete-spec.md
  */
 
-import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
-import type { ChainType, NetworkType } from '@waiaas/core';
+import { WAIaaSError, validateNetworkEnvironment } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -76,6 +76,11 @@ const walletBalanceRoute = createRoute({
   path: '/wallet/balance',
   tags: ['Wallet'],
   summary: 'Get wallet balance',
+  request: {
+    query: z.object({
+      network: z.string().optional(),
+    }),
+  },
   responses: {
     200: {
       description: 'Wallet balance',
@@ -90,6 +95,11 @@ const walletAssetsRoute = createRoute({
   path: '/wallet/assets',
   tags: ['Wallet'],
   summary: 'Get wallet assets',
+  request: {
+    query: z.object({
+      network: z.string().optional(),
+    }),
+  },
   responses: {
     200: {
       description: 'All assets (native + tokens) held by wallet',
@@ -123,6 +133,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
         walletId: wallet.id,
         chain: wallet.chain,
         network: wallet.defaultNetwork!,
+        environment: wallet.environment!,
         address: wallet.publicKey,
       },
       200,
@@ -139,14 +150,33 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       });
     }
 
+    // network query parameter -> specific network, fallback to wallet.defaultNetwork
+    const { network: queryNetwork } = c.req.valid('query');
+    const targetNetwork = queryNetwork ?? wallet.defaultNetwork!;
+
+    // Validate network-environment compatibility when query param specified
+    if (queryNetwork) {
+      try {
+        validateNetworkEnvironment(
+          wallet.chain as ChainType,
+          wallet.environment as EnvironmentType,
+          queryNetwork as NetworkType,
+        );
+      } catch (err) {
+        throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
+          message: err instanceof Error ? err.message : 'Network validation failed',
+        });
+      }
+    }
+
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      wallet.defaultNetwork!,
+      targetNetwork,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      wallet.defaultNetwork as NetworkType,
+      targetNetwork as NetworkType,
       rpcUrl,
     );
 
@@ -156,7 +186,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       {
         walletId: wallet.id,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        network: targetNetwork,
         address: wallet.publicKey,
         balance: balanceInfo.balance.toString(),
         decimals: balanceInfo.decimals,
@@ -180,14 +210,33 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       });
     }
 
+    // network query parameter -> specific network, fallback to wallet.defaultNetwork
+    const { network: queryNetwork } = c.req.valid('query');
+    const targetNetwork = queryNetwork ?? wallet.defaultNetwork!;
+
+    // Validate network-environment compatibility when query param specified
+    if (queryNetwork) {
+      try {
+        validateNetworkEnvironment(
+          wallet.chain as ChainType,
+          wallet.environment as EnvironmentType,
+          queryNetwork as NetworkType,
+        );
+      } catch (err) {
+        throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
+          message: err instanceof Error ? err.message : 'Network validation failed',
+        });
+      }
+    }
+
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      wallet.defaultNetwork!,
+      targetNetwork,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      wallet.defaultNetwork as NetworkType,
+      targetNetwork as NetworkType,
       rpcUrl,
     );
 
@@ -198,7 +247,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
       // Source 1: Token registry (builtin + custom for this network)
       if (deps.tokenRegistryService) {
-        const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(wallet.defaultNetwork!);
+        const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(targetNetwork);
         for (const t of registryTokens) {
           const lower = t.address.toLowerCase();
           if (!seenAddresses.has(lower)) {
@@ -238,7 +287,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       {
         walletId: wallet.id,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        network: targetNetwork,
         assets: assets.map((a) => ({
           mint: a.mint,
           symbol: a.symbol,
