@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 115 Core Types + DB Migration + Parsers
+**Current focus:** v1.4.7 Phase 116 Default Deny Toggles
 
 ## Current Position
 
-Phase: 115 of 119 (Core Types + DB Migration + Parsers)
-Plan: 3 of 3 in current phase
-Status: Phase 115 Complete
-Last activity: 2026-02-15 -- Plan 115-03 완료 (EVM parseTransaction + signExternalTransaction)
+Phase: 116 of 119 (Default Deny Toggles)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 -- Phase 115 완료 (Core Types + DB Migration + Parsers, 3/3 plans, verified)
 
-Progress: [###░░░░░░░] 25%
+Progress: [##░░░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -55,5 +55,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 115-03-PLAN.md (Phase 115 완료)
+Stopped at: Phase 115 완료, Phase 116 대기
 Resume file: None

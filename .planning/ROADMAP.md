@@ -25,7 +25,7 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
 
 ### v1.4.7 임의 트랜잭션 서명 API (In Progress)
 
-- [ ] **Phase 115: Core Types + DB Migration + Parsers** - SIGNED 상태/SIGN 타입 추가, IChainAdapter 파서 메서드, Solana/EVM unsigned tx 파싱 구현
+- [x] **Phase 115: Core Types + DB Migration + Parsers** - SIGNED 상태/SIGN 타입 추가, IChainAdapter 파서 메서드, Solana/EVM unsigned tx 파싱 구현
 - [ ] **Phase 116: Default Deny Toggles** - ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS 기본 거부 정책 ON/OFF 토글
 - [ ] **Phase 117: Sign-Only Pipeline + REST API** - POST /v1/transactions/sign 엔드포인트, 정책 평가 후 동기 서명 반환
 - [ ] **Phase 118: EVM Calldata Encoding** - POST /v1/utils/encode-calldata 유틸리티 엔드포인트
@@ -46,9 +46,9 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
 **Plans:** 3 plans (Wave 1: 115-01, Wave 2: 115-02 + 115-03 parallel)
 
 Plans:
-- [ ] 115-01-PLAN.md -- Core 타입 확장 + DB 마이그레이션 v9 (SIGNED/SIGN SSoT, ParsedTransaction 타입, 에러 코드 4+2개)
-- [ ] 115-02-PLAN.md -- SolanaAdapter parseTransaction + signExternalTransaction (TDD, tx-parser.ts)
-- [ ] 115-03-PLAN.md -- EvmAdapter parseTransaction + signExternalTransaction (TDD, tx-parser.ts)
+- [x] 115-01-PLAN.md -- Core 타입 확장 + DB 마이그레이션 v9 (SIGNED/SIGN SSoT, ParsedTransaction 타입, 에러 코드 4+2개)
+- [x] 115-02-PLAN.md -- SolanaAdapter parseTransaction + signExternalTransaction (TDD, tx-parser.ts)
+- [x] 115-03-PLAN.md -- EvmAdapter parseTransaction + signExternalTransaction (TDD, tx-parser.ts)
 
 ### Phase 116: Default Deny Toggles
 **Goal**: 관리자가 기본 거부 정책을 개별적으로 ON/OFF 전환하여 운영 유연성을 확보한 상태
@@ -121,7 +121,7 @@ Phases execute in numeric order: 115 -> 116 -> 117 -> 118 -> 119
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 115. Core Types + DB Migration + Parsers | v1.4.7 | 0/3 | Not started | - |
+| 115. Core Types + DB Migration + Parsers | v1.4.7 | 3/3 | ✓ Complete | 2026-02-15 |
 | 116. Default Deny Toggles | v1.4.7 | 0/2 | Not started | - |
 | 117. Sign-Only Pipeline + REST API | v1.4.7 | 0/2 | Not started | - |
 | 118. EVM Calldata Encoding | v1.4.7 | 0/2 | Not started | - |
