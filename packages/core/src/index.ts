@@ -97,7 +97,7 @@ export {
   type AssetInfoDto,
 } from './schemas/index.js';
 
-// Errors (68 error codes + WAIaaSError + ChainError)
+// Errors (73 error codes + WAIaaSError + ChainError)
 export {
   ERROR_CODES,
   type ErrorCode,
@@ -128,6 +128,11 @@ export type {
   ContractCallParams,
   ApproveParams,
   BatchParams,
+  // v1.4.7 sign-only types
+  ParsedOperationType,
+  ParsedOperation,
+  ParsedTransaction,
+  SignedTransaction,
   IChainAdapter,
   ILocalKeyStore,
   IPolicyEngine,

@@ -191,3 +191,47 @@ export interface BatchParams {
   from: string;
   instructions: Array<TransferRequest | TokenTransferParams | ContractCallParams | ApproveParams>;
 }
+
+// ---------------------------------------------------------------------------
+// v1.4.7 sign-only types for parseTransaction / signExternalTransaction
+// ---------------------------------------------------------------------------
+
+/** Operation type identified from an unsigned transaction. */
+export type ParsedOperationType =
+  | 'NATIVE_TRANSFER'
+  | 'TOKEN_TRANSFER'
+  | 'CONTRACT_CALL'
+  | 'APPROVE'
+  | 'UNKNOWN';
+
+/** A single operation extracted from an unsigned transaction. */
+export interface ParsedOperation {
+  /** Operation type. */
+  type: ParsedOperationType;
+  /** Recipient or target address. */
+  to?: string;
+  /** Transfer/approve amount in smallest unit. */
+  amount?: bigint;
+  /** Token address (mint for Solana, contract for EVM). */
+  token?: string;
+  /** Program/contract address (for CONTRACT_CALL). */
+  programId?: string;
+  /** Method selector or discriminator (hex string). */
+  method?: string;
+}
+
+/** Result of parsing an unsigned external transaction. */
+export interface ParsedTransaction {
+  /** List of operations in the transaction. */
+  operations: ParsedOperation[];
+  /** Original raw transaction string (base64 for Solana, hex for EVM). */
+  rawTx: string;
+}
+
+/** Result of signing an external transaction. */
+export interface SignedTransaction {
+  /** Signed transaction (base64 for Solana, hex for EVM). */
+  signedTransaction: string;
+  /** Transaction hash if computable before submission. */
+  txHash?: string;
+}

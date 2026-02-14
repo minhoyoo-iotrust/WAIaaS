@@ -48,6 +48,8 @@ import type {
   ContractCallParams,
   ApproveParams,
   BatchParams,
+  ParsedTransaction,
+  SignedTransaction,
 } from '@waiaas/core';
 import { WAIaaSError, ChainError } from '@waiaas/core';
 import { ERC20_ABI } from './abi/erc20.js';
@@ -798,6 +800,16 @@ export class EvmAdapter implements IChainAdapter {
 
   async sweepAll(_from: string, _to: string, _privateKey: Uint8Array): Promise<SweepResult> {
     throw new Error('Not implemented: sweepAll will be implemented in Phase 80');
+  }
+
+  // -- Sign-only operations (2) -- v1.4.7
+
+  async parseTransaction(_rawTx: string): Promise<ParsedTransaction> {
+    throw new Error('Not implemented: parseTransaction will be implemented in Phase 116');
+  }
+
+  async signExternalTransaction(_rawTx: string, _privateKey: Uint8Array): Promise<SignedTransaction> {
+    throw new Error('Not implemented: signExternalTransaction will be implemented in Phase 116');
   }
 
   // -- Private helpers --

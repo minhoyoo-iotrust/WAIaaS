@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (69 error codes)
+  // Error messages (73 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -23,7 +23,7 @@ export const messages: Messages = {
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: '세션 절대 수명을 초과했습니다',
     RENEWAL_TOO_EARLY: '세션 갱신이 너무 이릅니다',
     SESSION_RENEWAL_MISMATCH: '세션 갱신 토큰이 일치하지 않습니다',
-    // TX domain (20)
+    // TX domain (24)
     INSUFFICIENT_BALANCE: '잔액이 부족합니다',
     INVALID_ADDRESS: '유효하지 않은 주소 형식입니다',
     TX_NOT_FOUND: '트랜잭션을 찾을 수 없습니다',
@@ -45,6 +45,10 @@ export const messages: Messages = {
     BATCH_SIZE_EXCEEDED: '배치 크기를 초과했습니다',
     BATCH_POLICY_VIOLATION: '배치 정책 위반입니다',
     ENVIRONMENT_NETWORK_MISMATCH: '네트워크가 이 지갑의 환경에서 허용되지 않습니다',
+    INVALID_TRANSACTION: '유효하지 않은 원시 트랜잭션 형식입니다',
+    WALLET_NOT_SIGNER: '지갑이 이 트랜잭션의 서명자가 아닙니다',
+    UNSUPPORTED_TX_TYPE: '지원하지 않는 트랜잭션 유형입니다',
+    CHAIN_ID_MISMATCH: '트랜잭션의 체인 ID가 요청한 네트워크와 일치하지 않습니다',
     // POLICY domain (5)
     POLICY_NOT_FOUND: '정책을 찾을 수 없습니다',
     POLICY_DENIED: '정책에 의해 거부되었습니다',

@@ -14,6 +14,8 @@ import type {
   ContractCallParams,
   ApproveParams,
   BatchParams,
+  ParsedTransaction,
+  SignedTransaction,
 } from './chain-adapter.types.js';
 
 /**
@@ -24,6 +26,7 @@ import type {
  * v1.1 scope: 10 methods (connection 4 + balance 1 + tx pipeline 4 + confirm 1).
  * v1.3 scope: +1 method (getAssets). Total: 11.
  * v1.4 scope: +9 methods (fee estimation 1, token ops 2, contract ops 2, batch 1, utility 3). Total: 20.
+ * v1.4.7 scope: +2 methods (sign-only parse/sign). Total: 22.
  */
 export interface IChainAdapter {
   readonly chain: ChainType;
@@ -108,4 +111,12 @@ export interface IChainAdapter {
 
   /** Sweep all assets from one address to another. */
   sweepAll(from: string, to: string, privateKey: Uint8Array): Promise<SweepResult>;
+
+  // -- Sign-only operations (2) -- v1.4.7
+
+  /** Parse an unsigned external transaction into structured operations. */
+  parseTransaction(rawTx: string): Promise<ParsedTransaction>;
+
+  /** Sign an unsigned external transaction with wallet's private key. */
+  signExternalTransaction(rawTx: string, privateKey: Uint8Array): Promise<SignedTransaction>;
 }

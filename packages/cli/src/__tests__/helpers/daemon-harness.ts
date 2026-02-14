@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
-import type { IChainAdapter, UnsignedTransaction, SubmitResult, BalanceInfo, HealthInfo, SimulationResult, TransferRequest } from '@waiaas/core';
+import type { IChainAdapter, UnsignedTransaction, SubmitResult, BalanceInfo, HealthInfo, SimulationResult, TransferRequest, ParsedTransaction, SignedTransaction } from '@waiaas/core';
 import type { DaemonLifecycle } from '@waiaas/daemon';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,14 @@ export class MockChainAdapter implements IChainAdapter {
       status: 'confirmed',
       confirmations: 1,
     };
+  }
+
+  async parseTransaction(_rawTx: string): Promise<ParsedTransaction> {
+    return { operations: [{ type: 'UNKNOWN' }], rawTx: _rawTx };
+  }
+
+  async signExternalTransaction(_rawTx: string, _privateKey: Uint8Array): Promise<SignedTransaction> {
+    return { signedTransaction: 'mock-signed-tx' };
   }
 }
 
