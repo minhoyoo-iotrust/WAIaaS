@@ -5,30 +5,31 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 106 - 파이프라인 네트워크 리졸브 설계
+**Current focus:** Phase 107 - 정책 엔진 네트워크 확장 설계
 
 ## Current Position
 
-Phase: 106 (2 of 4 in v1.4.5) (파이프라인 네트워크 리졸브 설계)
+Phase: 107 (3 of 4 in v1.4.5) (정책 엔진 네트워크 확장 설계)
 Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 106 Complete
-Last activity: 2026-02-14 -- Completed 106-01 (파이프라인 네트워크 리졸브 설계)
+Status: Phase 107 Complete
+Last activity: 2026-02-14 -- Completed 107-01 (정책 엔진 네트워크 확장 설계)
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
 **Cumulative:** 24 milestones, 104 phases, 226 plans, 627 reqs, 1,467 tests, 62,296 LOC
 
 **v1.4.5 Velocity:**
-- Total plans completed: 3
-- Total execution time: 0.22 hours
+- Total plans completed: 4
+- Total execution time: 0.32 hours
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 105 | 01 | 3min | 1 | 1 |
 | 105 | 02 | 4min | 2 | 1 |
 | 106 | 01 | 6min | 2 | 1 |
+| 107 | 01 | 6min | 2 | 1 |
 
 *Updated after each plan completion*
 
@@ -56,6 +57,11 @@ Full log in PROJECT.md. Recent:
 - [106-01]: PIPE-D04: daemon.ts executeFromStage5에서 tx.network 직접 사용 (resolveNetwork 재호출 안 함)
 - [106-01]: PIPE-D05: AdapterPool 시그니처 변경 불필요 (호출부만 변경)
 - [106-01]: PIPE-D06: resolveNetwork()를 별도 파일(network-resolver.ts)에 배치
+- [107-01]: PLCY-D01: ALLOWED_NETWORKS permissive default -- 기존 월렛 하위호환
+- [107-01]: PLCY-D02: Stage 3 평가 순서 WHITELIST 직후 -- 네트워크 미허용 시 세부 정책 평가 무의미
+- [107-01]: PLCY-D03: resolveOverrides() 4단계 typeMap[type] 단일 키 유지 -- 복합키 불필요 증명
+- [107-01]: PLCY-D04: policies.network DB 컬럼으로 (not rules JSON) -- SQL 쿼리 최적화
+- [107-01]: PLCY-D05: evaluateAndReserve() raw SQL에 network 필터 직접 추가
 
 ### Blockers/Concerns
 
@@ -67,5 +73,5 @@ Full log in PROJECT.md. Recent:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 106-01-PLAN.md (Phase 106 complete)
+Stopped at: Completed 107-01-PLAN.md (Phase 107 complete)
 Resume file: None
