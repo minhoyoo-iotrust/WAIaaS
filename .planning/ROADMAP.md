@@ -6,14 +6,14 @@
 
 ## Milestones
 
-- 🚧 **v1.4.5 멀티체인 월렛 모델 설계** - Phases 105-108 (in progress)
+- ✅ **v1.4.5 멀티체인 월렛 모델 설계** - Phases 105-108 (completed 2026-02-14)
 
 ## Phases
 
 - [x] **Phase 105: Environment 데이터 모델 + DB 마이그레이션 설계** - EnvironmentType 정의, wallets/transactions 스키마 전환, 키스토어 영향 분석 *(completed 2026-02-14)*
 - [x] **Phase 106: 파이프라인 + 네트워크 리졸브 설계** - NetworkResolver 추상화, PipelineContext 확장, 환경-네트워크 교차 검증, AdapterPool 호출 변경 *(completed 2026-02-14)*
 - [x] **Phase 107: 정책 엔진 네트워크 확장 설계** - ALLOWED_NETWORKS 11번째 PolicyType, 네트워크 스코프 정책, policies 테이블 확장 *(completed 2026-02-14)*
-- [ ] **Phase 108: API/인터페이스 + DX 설계** - REST API network 파라미터, MCP/SDK 확장, 하위호환 전략, Quickstart 워크플로우
+- [x] **Phase 108: API/인터페이스 + DX 설계** - REST API network 파라미터, MCP/SDK 확장, 하위호환 전략, Quickstart 워크플로우 *(completed 2026-02-14)*
 
 ## Phase Details
 
@@ -71,8 +71,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 108-01-PLAN.md — REST API 7개 엔드포인트 network/environment 스키마 변경 + 멀티네트워크 잔액 집계 + 하위호환 전략 (docs/72 섹션 1~5)
-- [ ] 108-02-PLAN.md — MCP 6개 도구 + TS/Python SDK network 파라미터 확장 + Quickstart --mode 워크플로우 + 통합 설계 결정 (docs/72 섹션 6~10)
+- [x] 108-01-PLAN.md — REST API 7개 엔드포인트 network/environment 스키마 변경 + 멀티네트워크 잔액 집계 + 하위호환 전략 (docs/72 섹션 1~5)
+- [x] 108-02-PLAN.md — MCP 6개 도구 + TS/Python SDK network 파라미터 확장 + Quickstart --mode 워크플로우 + 통합 설계 결정 (docs/72 섹션 6~10)
 
 ## Progress
 
@@ -84,4 +84,4 @@ Phases execute in numeric order: 105 -> 106 -> 107 -> 108
 | 105. Environment 데이터 모델 + DB 마이그레이션 설계 | 2/2 | ✓ Complete | 2026-02-14 |
 | 106. 파이프라인 + 네트워크 리졸브 설계 | 1/1 | ✓ Complete | 2026-02-14 |
 | 107. 정책 엔진 네트워크 확장 설계 | 1/1 | ✓ Complete | 2026-02-14 |
-| 108. API/인터페이스 + DX 설계 | 0/2 | Not started | - |
+| 108. API/인터페이스 + DX 설계 | 2/2 | ✓ Complete | 2026-02-14 |
