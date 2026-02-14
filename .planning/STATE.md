@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 120 — DB 마이그레이션 안정성
+**Current focus:** Phase 121 — MCP 안정성
 
 ## Current Position
 
-Phase: 120 (1 of 5 in v1.4.8) — DB 마이그레이션 안정성
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 120 complete
-Last activity: 2026-02-15 — Phase 120 Plan 01 complete (pushSchema 순서 수정 + 마이그레이션 체인 테스트)
+Phase: 121 (2 of 5 in v1.4.8) — MCP 안정성
+Plan: 0 of 1 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 — Phase 120 complete (DB 마이그레이션 안정성, 1/1 plans, 23 tests added)
 
 Progress: [█░░░░░░░░░] 12% (1/8 plans)
 
@@ -42,5 +42,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 120-01-PLAN.md (pushSchema 순서 수정 + 마이그레이션 체인 테스트)
+Stopped at: Phase 120 complete, ready to plan Phase 121
 Resume file: None

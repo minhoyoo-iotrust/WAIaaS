@@ -9,9 +9,9 @@
 
 ### DB 마이그레이션
 
-- [ ] **MIGR-01**: pushSchema에서 인덱스 생성이 마이그레이션 완료 후 실행되어 기존 DB에서 데몬이 정상 시작된다
-- [ ] **MIGR-02**: 마이그레이션 체인 테스트가 과거 스키마 버전(v1, v5)에서 최신까지 전체 경로를 검증한다
-- [ ] **MIGR-03**: 데이터 변환 정확성 테스트가 environment 매핑, network 백필, 이름 변환을 검증한다
+- [x] **MIGR-01**: pushSchema에서 인덱스 생성이 마이그레이션 완료 후 실행되어 기존 DB에서 데몬이 정상 시작된다 — Phase 120
+- [x] **MIGR-02**: 마이그레이션 체인 테스트가 과거 스키마 버전(v1, v5)에서 최신까지 전체 경로를 검증한다 — Phase 120
+- [x] **MIGR-03**: 데이터 변환 정확성 테스트가 environment 매핑, network 백필, 이름 변환을 검증한다 — Phase 120
 
 ### MCP 안정성
 
@@ -69,9 +69,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MIGR-01 | Phase 120 | Pending |
-| MIGR-02 | Phase 120 | Pending |
-| MIGR-03 | Phase 120 | Pending |
+| MIGR-01 | Phase 120 | ✅ Done |
+| MIGR-02 | Phase 120 | ✅ Done |
+| MIGR-03 | Phase 120 | ✅ Done |
 | MCPS-01 | Phase 121 | Pending |
 | MCPS-02 | Phase 121 | Pending |
 | MCPS-03 | Phase 121 | Pending |

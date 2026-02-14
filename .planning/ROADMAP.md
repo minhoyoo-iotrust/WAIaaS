@@ -35,7 +35,7 @@
 
 **Milestone Goal:** OPEN 이슈 12건(020~031) 일괄 해소 — DB 마이그레이션 안정성, MCP 안정성, 멀티체인 DX 도구 확장, Admin UI UX 개선, 알림 시스템 개선
 
-- [ ] **Phase 120: DB 마이그레이션 안정성** — pushSchema 순서 수정 + 마이그레이션 체인 테스트
+- [x] **Phase 120: DB 마이그레이션 안정성** — pushSchema 순서 수정 + 마이그레이션 체인 테스트 (1/1 plans) — completed 2026-02-15
 - [ ] **Phase 121: MCP 안정성** — graceful shutdown + stdin 종료 감지
 - [ ] **Phase 122: MCP 도구 + 멀티체인 DX** — set_default_network, wallet info, network=all 잔액
 - [ ] **Phase 123: Admin UI 개선** — 대시보드 확장, 월렛 상세, 세션 전체 조회
@@ -55,7 +55,7 @@
 **Plans**: 1 plan
 
 Plans:
-- [ ] 120-01-PLAN.md — pushSchema 순서 수정 + 마이그레이션 체인 테스트 (TDD)
+- [x] 120-01-PLAN.md — pushSchema 순서 수정 + 마이그레이션 체인 테스트 (TDD)
 
 ### Phase 121: MCP 안정성
 **Goal**: MCP 서버 프로세스가 클라이언트 종료 시 고아로 잔류하지 않고 안전하게 종료된다
@@ -135,7 +135,7 @@ Phases 120~124 are all independent. Recommended order: 120 (HIGH bug) -> 121 -> 
 | 117. Sign-Only Pipeline + REST API | v1.4.7 | 2/2 | Complete | 2026-02-15 |
 | 118. EVM Calldata Encoding | v1.4.7 | 2/2 | Complete | 2026-02-15 |
 | 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 3/3 | Complete | 2026-02-15 |
-| 120. DB 마이그레이션 안정성 | v1.4.8 | 0/1 | Planned | - |
+| 120. DB 마이그레이션 안정성 | v1.4.8 | 1/1 | Complete | 2026-02-15 |
 | 121. MCP 안정성 | v1.4.8 | 0/1 | Not started | - |
 | 122. MCP 도구 + 멀티체인 DX | v1.4.8 | 0/2 | Not started | - |
 | 123. Admin UI 개선 | v1.4.8 | 0/2 | Not started | - |
