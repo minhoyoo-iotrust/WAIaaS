@@ -1,5 +1,5 @@
 /**
- * Tests for all 10 MCP tools.
+ * Tests for all 11 MCP tools.
  *
  * Uses mock ApiClient to test tool handlers return correct results.
  * Verifies:
@@ -21,6 +21,7 @@ import { registerGetNonce } from '../tools/get-nonce.js';
 import { registerCallContract } from '../tools/call-contract.js';
 import { registerApproveToken } from '../tools/approve-token.js';
 import { registerSendBatch } from '../tools/send-batch.js';
+import { registerGetWalletInfo } from '../tools/get-wallet-info.js';
 
 // --- Mock ApiClient factory ---
 function createMockApiClient(responses: Map<string, ApiResult<unknown>>): ApiClient {
@@ -184,6 +185,19 @@ describe('send_token tool', () => {
     const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
     expect(parsed['session_expired']).toBe(true);
   });
+
+  it('includes network in body when specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({ to: 'addr', amount: '100', network: 'polygon-mainnet' });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '100',
+      network: 'polygon-mainnet',
+    });
+  });
 });
 
 describe('get_balance tool', () => {
@@ -224,6 +238,24 @@ describe('get_balance tool', () => {
     const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
     expect(parsed['network_error']).toBe(true);
   });
+
+  it('appends network query parameter when specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerGetBalance, apiClient);
+
+    await handler({ network: 'ethereum-sepolia' });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/balance?network=ethereum-sepolia');
+  });
+
+  it('calls without query when network not specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerGetBalance, apiClient);
+
+    await handler({});
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/balance');
+  });
 });
 
 describe('get_assets tool', () => {
@@ -262,6 +294,15 @@ describe('get_assets tool', () => {
 
     const result = await handler({}) as { isError?: boolean };
     expect(result.isError).toBe(true);
+  });
+
+  it('appends network query parameter when specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerGetAssets, apiClient);
+
+    await handler({ network: 'polygon-mainnet' });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/assets?network=polygon-mainnet');
   });
 });
 
@@ -509,6 +550,19 @@ describe('call_contract tool', () => {
       to: '0xAddr',
     });
   });
+
+  it('includes network in body when specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerCallContract, apiClient);
+
+    await handler({ to: '0xAddr', network: 'arbitrum-mainnet' });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'CONTRACT_CALL',
+      to: '0xAddr',
+      network: 'arbitrum-mainnet',
+    });
+  });
 });
 
 describe('approve_token tool', () => {
@@ -552,6 +606,26 @@ describe('approve_token tool', () => {
     }) as { isError?: boolean };
 
     expect(result.isError).toBe(true);
+  });
+
+  it('includes network in body when specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerApproveToken, apiClient);
+
+    await handler({
+      spender: '0xSpender',
+      token: { address: '0xToken', decimals: 18, symbol: 'TK' },
+      amount: '100',
+      network: 'base-mainnet',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'APPROVE',
+      spender: '0xSpender',
+      token: { address: '0xToken', decimals: 18, symbol: 'TK' },
+      amount: '100',
+      network: 'base-mainnet',
+    });
   });
 });
 
@@ -599,6 +673,65 @@ describe('send_batch tool', () => {
     }) as { isError?: boolean };
 
     expect(result.isError).toBe(true);
+  });
+
+  it('includes network in body when specified', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendBatch, apiClient);
+
+    await handler({
+      instructions: [{ to: 'a', amount: '1' }, { to: 'b', amount: '2' }],
+      network: 'devnet',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'BATCH',
+      instructions: [{ to: 'a', amount: '1' }, { to: 'b', amount: '2' }],
+      network: 'devnet',
+    });
+  });
+});
+
+describe('get_wallet_info tool', () => {
+  it('returns combined wallet info with networks', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'ethereum', network: 'ethereum-sepolia', address: '0xabc' } }],
+      ['GET:/v1/wallets/w1/networks', { ok: true, data: { networks: [{ network: 'ethereum-sepolia', name: 'Sepolia', isDefault: true }] } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetWalletInfo, apiClient);
+
+    const result = await handler({}) as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(result.content[0]!.text);
+    expect(parsed.walletId).toBe('w1');
+    expect(parsed.networks).toHaveLength(1);
+    expect(parsed.networks[0].isDefault).toBe(true);
+  });
+
+  it('returns address info with empty networks on networks API failure', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'solana', network: 'devnet', address: 'abc' } }],
+      ['GET:/v1/wallets/w1/networks', { ok: false, error: { code: 'NOT_FOUND', message: 'Not found', retryable: false } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetWalletInfo, apiClient);
+
+    const result = await handler({}) as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(result.content[0]!.text);
+    expect(parsed.walletId).toBe('w1');
+    expect(parsed.networks).toEqual([]);
+  });
+
+  it('returns error when address API fails', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/address', { ok: false, expired: true, message: 'Token expired' }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetWalletInfo, apiClient);
+
+    const result = await handler({}) as { content: Array<{ text: string }>; isError?: boolean };
+    // Session expired should NOT have isError (H-04)
+    expect(result.isError).toBeUndefined();
   });
 });
 
@@ -649,5 +782,9 @@ describe('tool registration with McpServer', () => {
 
   it('registers send_batch tool without error', () => {
     expect(() => registerSendBatch(server, apiClient)).not.toThrow();
+  });
+
+  it('registers get_wallet_info tool without error', () => {
+    expect(() => registerGetWalletInfo(server, apiClient)).not.toThrow();
   });
 });
