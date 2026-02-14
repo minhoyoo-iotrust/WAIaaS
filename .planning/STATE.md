@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 
 ## Current Position
 
-Phase: 110 of 114 (스키마 전환 + 정책 엔진)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-14 -- 110-01 완료 (Zod 스키마 환경 모델 전환 + ALLOWED_NETWORKS)
+Phase: 110 of 114 (스키마 전환 + 정책 엔진) -- COMPLETE
+Plan: 2 of 2 in current phase (phase complete)
+Status: Phase Complete
+Last activity: 2026-02-14 -- 110-02 완료 (ALLOWED_NETWORKS 정책 엔진 + 4-level override)
 
-Progress: [██░░░░░░░░] 23% (3/13 plans)
+Progress: [███░░░░░░░] 31% (4/13 plans)
 
 ## Performance Metrics
 
@@ -25,6 +25,7 @@ Progress: [██░░░░░░░░] 23% (3/13 plans)
 | 109 | 01 | 3min | 2 | 3 |
 | 109 | 02 | 45min | 2 | 32 |
 | 110 | 01 | 7min | 2 | 10 |
+| 110 | 02 | 7min | 2 | 2 |
 
 ## Accumulated Context
 
@@ -47,6 +48,10 @@ Recent decisions affecting current work:
 - 110-01: CreateWalletRequest environment default 'testnet' (기존 network optional 대신)
 - 110-01: POST /wallets에서 validateChainNetwork 제거, getDefaultNetwork() 단순화
 - 110-01: AllowedNetworksRulesSchema: networks[].network + name(optional) 구조
+- 110-02: ALLOWED_NETWORKS permissive default 구현 (미설정 시 모든 네트워크 허용)
+- 110-02: resolveOverrides 4단계 typeMap[type] 단일 키 유지 (PLCY-D03)
+- 110-02: evaluate() Drizzle WHERE에도 network 필터 추가
+- 110-02: evaluateAndReserve raw SQL network 바인딩 (transaction.network ?? null)
 
 ### Blockers/Concerns
 
@@ -57,5 +62,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 110-01-PLAN.md (스키마 전환), ready to execute 110-02
+Stopped at: Completed 110-02-PLAN.md (정책 엔진), Phase 110 전체 완료
 Resume file: None
