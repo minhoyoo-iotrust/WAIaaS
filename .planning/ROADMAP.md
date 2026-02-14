@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 105: Environment 데이터 모델 + DB 마이그레이션 설계** - EnvironmentType 정의, wallets/transactions 스키마 전환, 키스토어 영향 분석
+- [x] **Phase 105: Environment 데이터 모델 + DB 마이그레이션 설계** - EnvironmentType 정의, wallets/transactions 스키마 전환, 키스토어 영향 분석 *(completed 2026-02-14)*
 - [ ] **Phase 106: 파이프라인 + 네트워크 리졸브 설계** - NetworkResolver 추상화, PipelineContext 확장, 환경-네트워크 교차 검증, AdapterPool 호출 변경
 - [ ] **Phase 107: 정책 엔진 네트워크 확장 설계** - ALLOWED_NETWORKS 11번째 PolicyType, 네트워크 스코프 정책, policies 테이블 확장
 - [ ] **Phase 108: API/인터페이스 + DX 설계** - REST API network 파라미터, MCP/SDK 확장, 하위호환 전략, Quickstart 워크플로우
@@ -29,8 +29,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 105-01-PLAN.md — EnvironmentType SSoT 정의 + 환경-네트워크 매핑 함수 설계 + WalletSchema 변경 + 키스토어 영향 분석 (docs/68)
-- [ ] 105-02-PLAN.md — DB 마이그레이션 v6a(transactions.network) + v6b(wallets 12-step 재생성) 전략 설계 (docs/69)
+- [x] 105-01-PLAN.md — EnvironmentType SSoT 정의 + 환경-네트워크 매핑 함수 설계 + WalletSchema 변경 + 키스토어 영향 분석 (docs/68)
+- [x] 105-02-PLAN.md — DB 마이그레이션 v6a(transactions.network) + v6b(wallets 12-step 재생성) 전략 설계 (docs/69)
 
 ### Phase 106: 파이프라인 + 네트워크 리졸브 설계
 **Goal**: 트랜잭션 요청에서 실제 네트워크가 리졸브되고 환경 격리가 검증되는 데이터 흐름이 설계되어, 구현자가 Stage 1부터 AdapterPool 호출까지 코드를 작성할 수 있다
@@ -41,10 +41,10 @@ Plans:
   2. PipelineContext에서 wallet.environment + resolvedNetwork가 전파되는 Stage 1~6 데이터 흐름도가 존재한다
   3. 환경-네트워크 교차 검증 로직(mainnet 월렛 + testnet 네트워크 차단)의 검증 시점, 에러 코드, 에러 메시지가 명시되어 있다
   4. AdapterPool.resolve() 호출부의 변경 방안(리졸브된 network 전달)이 기존 캐시 키 구조와 호환됨이 확인되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 106-01: NetworkResolver + PipelineContext + 환경 교차 검증 + AdapterPool 호출 변경
+- [ ] 106-01-PLAN.md — NetworkResolver 순수 함수 + PipelineContext 확장 + 환경 교차 검증 + AdapterPool 호출 변경 통합 설계 (docs/70)
 
 ### Phase 107: 정책 엔진 네트워크 확장 설계
 **Goal**: 정책 엔진이 네트워크 단위로 트랜잭션을 제어할 수 있는 확장이 설계되어, ALLOWED_NETWORKS 평가와 네트워크별 차등 정책의 스키마/로직/우선순위가 확정되어 있다
@@ -81,7 +81,7 @@ Phases execute in numeric order: 105 -> 106 -> 107 -> 108
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 105. Environment 데이터 모델 + DB 마이그레이션 설계 | 0/2 | Not started | - |
+| 105. Environment 데이터 모델 + DB 마이그레이션 설계 | 2/2 | ✓ Complete | 2026-02-14 |
 | 106. 파이프라인 + 네트워크 리졸브 설계 | 0/1 | Not started | - |
 | 107. 정책 엔진 네트워크 확장 설계 | 0/1 | Not started | - |
 | 108. API/인터페이스 + DX 설계 | 0/2 | Not started | - |
