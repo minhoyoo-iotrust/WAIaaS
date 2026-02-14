@@ -11,7 +11,7 @@
 ## Phases
 
 - [x] **Phase 105: Environment 데이터 모델 + DB 마이그레이션 설계** - EnvironmentType 정의, wallets/transactions 스키마 전환, 키스토어 영향 분석 *(completed 2026-02-14)*
-- [ ] **Phase 106: 파이프라인 + 네트워크 리졸브 설계** - NetworkResolver 추상화, PipelineContext 확장, 환경-네트워크 교차 검증, AdapterPool 호출 변경
+- [x] **Phase 106: 파이프라인 + 네트워크 리졸브 설계** - NetworkResolver 추상화, PipelineContext 확장, 환경-네트워크 교차 검증, AdapterPool 호출 변경 *(completed 2026-02-14)*
 - [ ] **Phase 107: 정책 엔진 네트워크 확장 설계** - ALLOWED_NETWORKS 11번째 PolicyType, 네트워크 스코프 정책, policies 테이블 확장
 - [ ] **Phase 108: API/인터페이스 + DX 설계** - REST API network 파라미터, MCP/SDK 확장, 하위호환 전략, Quickstart 워크플로우
 
@@ -44,7 +44,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 106-01-PLAN.md — NetworkResolver 순수 함수 + PipelineContext 확장 + 환경 교차 검증 + AdapterPool 호출 변경 통합 설계 (docs/70)
+- [x] 106-01-PLAN.md — NetworkResolver 순수 함수 + PipelineContext 확장 + 환경 교차 검증 + AdapterPool 호출 변경 통합 설계 (docs/70)
 
 ### Phase 107: 정책 엔진 네트워크 확장 설계
 **Goal**: 정책 엔진이 네트워크 단위로 트랜잭션을 제어할 수 있는 확장이 설계되어, ALLOWED_NETWORKS 평가와 네트워크별 차등 정책의 스키마/로직/우선순위가 확정되어 있다
@@ -54,10 +54,10 @@ Plans:
   1. ALLOWED_NETWORKS PolicyType의 Zod 스키마(ruleConfig), 평가 로직(허용/거부 판정), 미설정 시 기본 동작(환경 내 전체 허용)이 의사코드로 정의되어 있다
   2. 기존 정책(SPENDING_LIMIT 등)의 network 필드 추가 스키마와, 네트워크 매칭 시 4단계 override 우선순위(네트워크 특정 > 월렛 전체 > 글로벌 네트워크 > 글로벌 전체)가 명시되어 있다
   3. policies 테이블의 network 컬럼 추가 마이그레이션이 Phase 105의 DB 전략과 통합되어 설계되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 107-01: ALLOWED_NETWORKS + 네트워크 스코프 정책 + policies 테이블 확장
+- [ ] 107-01-PLAN.md — ALLOWED_NETWORKS PolicyType + 네트워크 스코프 정책 + policies 테이블 v8 마이그레이션 통합 설계 (docs/71)
 
 ### Phase 108: API/인터페이스 + DX 설계
 **Goal**: REST API, MCP, SDK의 network 파라미터 추가와 하위호환 전략이 설계되고, Quickstart 워크플로우가 환경 모델에 맞게 재설계되어, 구현자가 모든 인터페이스를 일관되게 변경할 수 있다
@@ -82,6 +82,6 @@ Phases execute in numeric order: 105 -> 106 -> 107 -> 108
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 105. Environment 데이터 모델 + DB 마이그레이션 설계 | 2/2 | ✓ Complete | 2026-02-14 |
-| 106. 파이프라인 + 네트워크 리졸브 설계 | 0/1 | Not started | - |
+| 106. 파이프라인 + 네트워크 리졸브 설계 | 1/1 | ✓ Complete | 2026-02-14 |
 | 107. 정책 엔진 네트워크 확장 설계 | 0/1 | Not started | - |
 | 108. API/인터페이스 + DX 설계 | 0/2 | Not started | - |
