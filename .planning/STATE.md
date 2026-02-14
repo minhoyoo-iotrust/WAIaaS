@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 117 of 119 (Sign-Only Pipeline + REST API)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Phase 116 완료 (Default Deny Toggles, 2/2 plans, verified)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 -- Plan 117-01 완료 (sign-only pipeline + reservation query, 2 tasks, 17 tests)
 
 Progress: [####░░░░░░] 40%
 
@@ -29,6 +29,7 @@ Progress: [####░░░░░░] 40%
 | 115-03 | 3/3 | 6min | 6min |
 | 116-01 | 1/2 | 3min | 3min |
 | 116-02 | 2/2 | 3min | 3min |
+| 117-01 | 1/2 | 5min | 5min |
 
 ## Accumulated Context
 
@@ -52,14 +53,18 @@ Recent decisions affecting current work:
 - 토글은 "no policy exists" 분기에서만 확인 -- 정책 존재 시 토글 무관 화이트리스트 평가
 - settingsService?.get() null-safe 패턴: 미전달 시 기본 거부 유지
 - 토글 테스트에서 SettingsService 실제 인스턴스 사용 (mock 대신) -- hot-reload DB 동작 검증
+- sign-only 파이프라인은 별도 모듈로 분리 (stages.ts 수정 없음)
+- reservation SUM 쿼리에 SIGNED 포함 (이중 지출 방지)
+- key release는 finally 블록에서만 수행 (catch에서 호출 금지)
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
+- Pre-existing settings-service.test.ts 실패 (SETTING_DEFINITIONS count 32 vs 35)
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 116 완료, Phase 117 plan+execute 대기
+Stopped at: Completed 117-01-PLAN.md
 Resume file: None
