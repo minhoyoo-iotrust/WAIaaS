@@ -10,19 +10,23 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 105 (1 of 4 in v1.4.5) (Environment 데이터 모델 + DB 마이그레이션 설계)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Roadmap created for v1.4.5 (4 phases, 19 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-14 -- Completed 105-01 (EnvironmentType SSoT + 환경-네트워크 매핑 설계)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 12%
 
 ## Performance Metrics
 
 **Cumulative:** 24 milestones, 104 phases, 226 plans, 627 reqs, 1,467 tests, 62,296 LOC
 
 **v1.4.5 Velocity:**
-- Total plans completed: 0
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Total execution time: 0.05 hours
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 105 | 01 | 3min | 1 | 1 |
 
 *Updated after each plan completion*
 
@@ -36,6 +40,10 @@ Full log in PROJECT.md. Recent:
 - [Roadmap]: 모든 산출물은 설계 문서 (코드 구현은 v1.4.6)
 - [Research]: AdapterPool 구조 변경 불필요 (기존 캐시 키가 이미 정확한 추상화)
 - [Research]: DB 마이그레이션 2단계 분리 (v6a: ADD COLUMN, v6b: 12-step 재생성)
+- [105-01]: ENV-01: EnvironmentType 2값(testnet/mainnet) 하드코딩, 제3 환경 배제
+- [105-01]: ENV-03: 환경-네트워크 매핑은 순수 함수 (DB 조회 없음)
+- [105-01]: ENV-07: default_network nullable (NULL=환경 기본값, NOT NULL=사용자 지정)
+- [105-01]: ENV-08: 키스토어 변경 불필요 (코드 참조 3개로 확인)
 
 ### Blockers/Concerns
 
@@ -47,5 +55,5 @@ Full log in PROJECT.md. Recent:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Roadmap created, ready to plan Phase 105
+Stopped at: Completed 105-01-PLAN.md
 Resume file: None
