@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 105: Environment 데이터 모델 + DB 마이그레이션 설계** - EnvironmentType 정의, wallets/transactions 스키마 전환, 키스토어 영향 분석
+- [x] **Phase 105: Environment 데이터 모델 + DB 마이그레이션 설계** - EnvironmentType 정의, wallets/transactions 스키마 전환, 키스토어 영향 분석 *(completed 2026-02-14)*
 - [ ] **Phase 106: 파이프라인 + 네트워크 리졸브 설계** - NetworkResolver 추상화, PipelineContext 확장, 환경-네트워크 교차 검증, AdapterPool 호출 변경
 - [ ] **Phase 107: 정책 엔진 네트워크 확장 설계** - ALLOWED_NETWORKS 11번째 PolicyType, 네트워크 스코프 정책, policies 테이블 확장
 - [ ] **Phase 108: API/인터페이스 + DX 설계** - REST API network 파라미터, MCP/SDK 확장, 하위호환 전략, Quickstart 워크플로우
@@ -29,8 +29,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 105-01-PLAN.md — EnvironmentType SSoT 정의 + 환경-네트워크 매핑 함수 설계 + WalletSchema 변경 + 키스토어 영향 분석 (docs/68)
-- [ ] 105-02-PLAN.md — DB 마이그레이션 v6a(transactions.network) + v6b(wallets 12-step 재생성) 전략 설계 (docs/69)
+- [x] 105-01-PLAN.md — EnvironmentType SSoT 정의 + 환경-네트워크 매핑 함수 설계 + WalletSchema 변경 + 키스토어 영향 분석 (docs/68)
+- [x] 105-02-PLAN.md — DB 마이그레이션 v6a(transactions.network) + v6b(wallets 12-step 재생성) 전략 설계 (docs/69)
 
 ### Phase 106: 파이프라인 + 네트워크 리졸브 설계
 **Goal**: 트랜잭션 요청에서 실제 네트워크가 리졸브되고 환경 격리가 검증되는 데이터 흐름이 설계되어, 구현자가 Stage 1부터 AdapterPool 호출까지 코드를 작성할 수 있다
@@ -81,7 +81,7 @@ Phases execute in numeric order: 105 -> 106 -> 107 -> 108
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 105. Environment 데이터 모델 + DB 마이그레이션 설계 | 0/2 | Not started | - |
+| 105. Environment 데이터 모델 + DB 마이그레이션 설계 | 2/2 | ✓ Complete | 2026-02-14 |
 | 106. 파이프라인 + 네트워크 리졸브 설계 | 0/1 | Not started | - |
 | 107. 정책 엔진 네트워크 확장 설계 | 0/1 | Not started | - |
 | 108. API/인터페이스 + DX 설계 | 0/2 | Not started | - |
