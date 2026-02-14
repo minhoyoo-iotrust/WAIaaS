@@ -842,3 +842,347 @@ router.openapi(walletMultiNetworkAssetsRoute, async (c) => {
 | GET /v1/wallets/:id/assets | masterAuth | 멀티네트워크 집계 | 관리자가 특정 월렛의 전체 환경 자산을 파악. 대시보드/모니터링 시나리오 |
 
 sessionAuth 엔드포인트에 멀티네트워크 집계를 추가하면 에이전트가 의도치 않게 다른 네트워크의 잔액을 노출할 수 있다. masterAuth 분리로 접근 제어를 명확히 한다.
+
+---
+
+## 4. REST API 하위호환 전략 (API-05)
+
+### 4.1 3-Layer 하위호환 원칙
+
+Phase 108에서 추가하는 모든 파라미터와 응답 필드는 기존 API 호출의 동작을 변경하지 않는다. 3가지 원칙을 모든 엔드포인트에 일관 적용한다.
+
+| # | 원칙 | 메커니즘 | 보장 |
+|---|------|---------|------|
+| L1 | network 미지정 = 기존 동작 유지 | `resolveNetwork()` 3단계 fallback (docs/70) | 기존 클라이언트가 network을 보내지 않아도 `wallet.defaultNetwork` 또는 `getDefaultNetwork()`가 기존과 동일한 네트워크를 결정 |
+| L2 | environment 미지정 = 자동 추론 | `deriveEnvironment()` 역추론 (docs/68) 또는 체인 기본값(`testnet`) | 기존 `{ name, chain, network }` 월렛 생성 요청이 동일하게 동작. environment는 network에서 역추론 |
+| L3 | 응답 필드 추가 only | 기존 필드 유지 + 새 필드 추가. 기존 필드 제거 안 함 | 기존 클라이언트가 미지원 필드를 무시하므로 파싱 오류 없음. REST API의 표준 확장 패턴 |
+
+### 4.2 엔드포인트별 하위호환 매트릭스
+
+| # | 엔드포인트 | L1 (network 미지정) | L2 (environment 미지정) | L3 (응답 필드) |
+|---|----------|-------|-------|-------|
+| 1 | POST /v1/wallets | network 미지정 -> `getDefaultNetwork(chain, env)` 자동 설정 | environment 미지정 -> `deriveEnvironment(network)` 역추론 또는 체인 기본값 `testnet` | `network` 유지 + `environment`, `defaultNetwork` 추가 |
+| 2 | POST /v1/transactions/send | network 미지정 -> `resolveNetwork()` 2순위(wallet.defaultNetwork) 또는 3순위(getDefaultNetwork) fallback | N/A (트랜잭션은 environment 파라미터 없음) | `TxSendResponse`는 id+status만 반환, 변경 없음 |
+| 3 | GET /v1/wallet/balance | `?network=` 미지정 -> `resolveNetwork(null, wallet.defaultNetwork, ...)` | N/A | `network` 필드가 실제 조회 네트워크를 반환 (기존과 동일 값) |
+| 4 | GET /v1/wallet/assets | `?network=` 미지정 -> `resolveNetwork(null, wallet.defaultNetwork, ...)` | N/A | `network` 필드가 실제 조회 네트워크를 반환 (기존과 동일 값) |
+| 5 | GET /v1/wallets/:id/assets | 신규 엔드포인트 (하위호환 대상 아님) | 환경 내 전체 네트워크 조회 | 신규 응답 형식 |
+| 6 | GET /v1/wallets | N/A (목록 조회) | N/A | `network` 유지 + `environment`, `defaultNetwork` 추가 |
+| 7 | GET /v1/wallets/:id | N/A (상세 조회) | N/A | `network` 유지 + `environment`, `defaultNetwork` 추가 |
+
+### 4.3 기존 API 호출 동작 증명
+
+#### 증명 1: 월렛 생성 (기존 요청 형식)
+
+```
+요청: POST /v1/wallets
+Body: { "name": "sol", "chain": "solana", "network": "devnet" }
+
+처리 흐름:
+  parsed.environment = undefined (미지정)
+  parsed.network = "devnet" (지정)
+  -> Case 3: env 미지정 + network 지정
+  -> validateChainNetwork("solana", "devnet") -> PASS
+  -> deriveEnvironment("devnet") -> "testnet"
+  -> environment = "testnet", defaultNetwork = "devnet"
+
+응답:
+{
+  "id": "w_01abc...",
+  "name": "sol",
+  "chain": "solana",
+  "network": "devnet",           <- 기존 클라이언트가 참조하는 필드 (변경 없음)
+  "environment": "testnet",      <- 새 필드 (기존 클라이언트 무시)
+  "defaultNetwork": "devnet",    <- 새 필드 (기존 클라이언트 무시)
+  "publicKey": "7xKX...",
+  "status": "ACTIVE",
+  "createdAt": 1707000000
+}
+
+결과: 기존 클라이언트는 id, name, chain, network, publicKey, status, createdAt만
+참조하므로 동작 변경 없음. QED
+```
+
+#### 증명 2: 트랜잭션 전송 (기존 요청 형식)
+
+```
+요청: POST /v1/transactions/send
+Body: { "type": "TRANSFER", "to": "7abc...", "amount": "1000000" }
+(network 미지정)
+
+처리 흐름:
+  request.network = undefined (미지정)
+  -> resolveNetwork(undefined, wallet.defaultNetwork, wallet.environment, wallet.chain)
+  -> wallet.defaultNetwork = "devnet" (NOT NULL, 마이그레이션에서 기존 network 값 복사)
+  -> resolved = "devnet" (2순위 fallback)
+  -> validateChainNetwork("solana", "devnet") -> PASS
+  -> validateNetworkEnvironment("solana", "testnet", "devnet") -> PASS
+  -> resolvedNetwork = "devnet"
+
+결과: 기존과 동일한 "devnet"에서 트랜잭션 실행. QED
+
+만약 wallet.defaultNetwork = null인 경우:
+  -> resolved = getDefaultNetwork("solana", "testnet") = "devnet" (3순위 fallback)
+  -> 동일한 결과. QED
+```
+
+#### 증명 3: 자산 조회 (기존 요청 형식)
+
+```
+요청: GET /v1/wallet/assets
+(쿼리 파라미터 없음)
+
+처리 흐름:
+  queryNetwork = undefined (미지정)
+  -> resolveNetwork(undefined, wallet.defaultNetwork, wallet.environment, wallet.chain)
+  -> wallet.defaultNetwork = "devnet"
+  -> targetNetwork = "devnet"
+  -> adapter = adapterPool.resolve("solana", "devnet", rpcUrl)
+  -> assets = adapter.getAssets(wallet.publicKey)
+
+응답:
+{
+  "walletId": "w_01abc...",
+  "chain": "solana",
+  "network": "devnet",    <- 기존과 동일한 값
+  "assets": [...]          <- 기존과 동일한 형식
+}
+
+결과: 기존과 동일한 네트워크에서 동일한 형식으로 자산 조회. QED
+```
+
+### 4.4 Breaking Change 방지 체크리스트
+
+| # | 항목 | 검증 방법 | 위반 시 영향 |
+|---|------|---------|------------|
+| 1 | 기존 필수 필드 제거 안 함 | WalletCrudResponseSchema에 기존 필드 모두 존재 | 기존 클라이언트 파싱 실패 |
+| 2 | 기존 optional 필드 required 전환 안 함 | CreateWalletRequestSchema.environment는 optional | 기존 요청 Zod 검증 실패 |
+| 3 | 기존 응답 형식 변경 안 함 | TxSendResponseSchema (id+status) 변경 없음 | 기존 SDK/MCP 파싱 실패 |
+| 4 | 기존 HTTP status code 변경 안 함 | 201 (create), 200 (query) 유지 | 기존 에러 핸들링 오동작 |
+| 5 | 기존 엔드포인트 URL 변경 안 함 | /v1/wallet/balance, /v1/wallet/assets 유지 | 기존 클라이언트 404 |
+
+---
+
+## 5. OpenAPI 스키마 변경 요약 + REST API 설계 결정
+
+### 5.1 OpenAPI 스키마 변경 전수 목록
+
+Phase 108에서 변경되는 Zod 스키마가 OpenAPI spec에 미치는 영향을 전수 나열한다. `openapi-schemas.ts`의 re-export 패턴(`XxxSchema.openapi('Xxx')`)에 의해 Zod 스키마 변경이 OpenAPI에 자동 반영된다.
+
+#### 요청 스키마 변경 (8개)
+
+| # | OpenAPI Component | 변경 내용 | 영향 |
+|---|-------------------|---------|------|
+| 1 | `TransferRequest` | `network` optional 필드 추가 | `properties.network: { enum: [...13 values] }` 추가 |
+| 2 | `TokenTransferRequest` | `network` optional 필드 추가 | 동일 |
+| 3 | `ContractCallRequest` | `network` optional 필드 추가 | 동일 |
+| 4 | `ApproveRequest` | `network` optional 필드 추가 | 동일 |
+| 5 | `BatchRequest` | `network` optional 필드 추가 (최상위) | 동일 |
+| 6 | `SendTransactionRequest` | `network` optional 필드 추가 (legacy) | 동일 |
+| 7 | `CreateWalletRequest` | `environment` optional 필드 추가 | `properties.environment: { enum: ['testnet', 'mainnet'] }` 추가 |
+| 8 | `CreatePolicyRequest` | `network` optional 필드 추가 (Phase 107) | `properties.network: { enum: [...13 values] }` 추가 |
+
+#### 응답 스키마 변경 (5개)
+
+| # | OpenAPI Component | 변경 내용 | 영향 |
+|---|-------------------|---------|------|
+| 1 | `WalletCrudResponse` | `environment`, `defaultNetwork` 필드 추가 | 기존 `network` 유지 + 2 필드 추가 |
+| 2 | `WalletDetailResponse` | `environment`, `defaultNetwork` 필드 추가 | 기존 `network` 유지 + 2 필드 추가 |
+| 3 | `TxDetailResponse` | `network` nullable 필드 추가 | 실행된 네트워크 반환 |
+| 4 | `PolicyResponse` | `network` nullable 필드 추가 (Phase 107) | 정책 네트워크 스코프 반환 |
+| 5 | `MultiNetworkAssetsResponse` | 신규 스키마 | 멀티네트워크 잔액 집계 응답 |
+
+#### 신규 OpenAPI 엔드포인트 (1개)
+
+| # | 엔드포인트 | 인증 | 설명 |
+|---|----------|------|------|
+| 1 | GET /v1/wallets/:id/assets | masterAuth | 멀티네트워크 잔액 집계. `MultiNetworkAssetsResponse` 반환 |
+
+#### 기존 엔드포인트 쿼리 파라미터 추가 (2개)
+
+| # | 엔드포인트 | 추가 파라미터 | 설명 |
+|---|----------|-------------|------|
+| 1 | GET /v1/wallet/balance | `?network=string` (optional) | 특정 네트워크 잔액 조회 |
+| 2 | GET /v1/wallet/assets | `?network=string` (optional) | 특정 네트워크 자산 조회 |
+
+### 5.2 openapi-schemas.ts 코드 변경 요약
+
+```typescript
+// packages/daemon/src/api/routes/openapi-schemas.ts -- 변경 사항 요약
+
+// 1. WalletCrudResponseSchema: environment, defaultNetwork 추가
+// 2. WalletDetailResponseSchema: environment, defaultNetwork 추가
+// 3. TxDetailResponseSchema: network nullable 추가
+// 4. PolicyResponseSchema: network nullable 추가
+// 5. MultiNetworkAssetsResponseSchema: 신규 스키마
+// 6. WalletBalanceResponseSchema: 변경 없음 (route의 query param은 별도)
+// 7. WalletAssetsResponseSchema: 변경 없음 (route의 query param은 별도)
+
+// 요청 스키마는 core 패키지에서 변경 -> re-export 자동 반영:
+// 8. TransferRequestOpenAPI -> network 필드 자동 포함
+// 9. TokenTransferRequestOpenAPI -> network 필드 자동 포함
+// 10. ContractCallRequestOpenAPI -> network 필드 자동 포함
+// 11. ApproveRequestOpenAPI -> network 필드 자동 포함
+// 12. BatchRequestOpenAPI -> network 필드 자동 포함
+// 13. SendTransactionRequestOpenAPI -> network 필드 자동 포함
+// 14. CreateWalletRequestOpenAPI -> environment 필드 자동 포함
+// 15. CreatePolicyRequestOpenAPI -> network 필드 자동 포함
+```
+
+### 5.3 REST API 설계 결정
+
+#### API-D01: environment optional + deriveEnvironment fallback (Breaking Change 방지)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | `CreateWalletRequestSchema.environment`를 optional로 추가하고, 미지정 시 `deriveEnvironment(network)` 역추론 또는 체인 기본값(`testnet`)으로 자동 결정 |
+| **근거** | 기존 API 호출 `{ name, chain, network }` 형식이 변경 없이 동작해야 함. environment를 required로 만들면 기존 모든 클라이언트(SDK, MCP, CLI, Admin UI)가 즉시 실패 |
+| **대안** | environment를 required로 전환 + 전체 클라이언트 마이그레이션 |
+| **기각 이유** | 동시 배포가 불가능하고, 하위호환 위반은 프로젝트 원칙(점진적 전환)에 반함 |
+
+#### API-D02: 멀티네트워크 잔액을 별도 엔드포인트로 분리
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | 멀티네트워크 잔액 집계를 `GET /v1/wallets/:id/assets` (masterAuth) 별도 엔드포인트로 신설. 기존 `GET /v1/wallet/assets` (sessionAuth)는 단일 네트워크 조회 유지 |
+| **근거** | (1) sessionAuth와 masterAuth는 사용 맥락이 다름 (에이전트 vs 관리자), (2) 기존 sessionAuth 응답 형식(`{ walletId, chain, network, assets }`)을 변경하면 기존 MCP 도구가 파싱 실패, (3) 멀티네트워크 집계는 2-5개 RPC 병렬 호출로 응답 시간이 김 (에이전트 시나리오에 부적합) |
+| **대안** | 기존 `GET /v1/wallet/assets` 확장 (`?multi=true` 파라미터) |
+| **기각 이유** | 기존 응답 형식 변경 위험 + sessionAuth로 멀티네트워크 노출은 보안 우려 |
+
+#### API-D03: 트랜잭션 응답에 network 필드 추가
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | `TxDetailResponseSchema`에 `network: z.string().nullable()` 필드를 추가하여 트랜잭션이 실행된 네트워크를 응답에 포함 |
+| **근거** | (1) 멀티네트워크 환경에서 "이 트랜잭션이 어떤 네트워크에서 실행되었는지" 추적이 필수, (2) `transactions` 테이블에 `network` 컬럼이 v6a 마이그레이션으로 추가되므로 DB 값을 그대로 노출, (3) nullable인 이유: 마이그레이션 이전 레코드의 network가 NULL일 수 있음 |
+| **대안** | 응답에 network를 포함하지 않고 트랜잭션 상세 조회 시 월렛의 defaultNetwork를 반환 |
+| **기각 이유** | 실제 실행 네트워크와 월렛 defaultNetwork가 다를 수 있음 (request-level override) |
+
+#### API-D04: GET 엔드포인트는 query parameter, POST 엔드포인트는 body로 network 전달
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | GET 엔드포인트(`/wallet/balance`, `/wallet/assets`)는 `?network=X` 쿼리 파라미터, POST 엔드포인트(`/transactions/send`, `/wallets`)는 request body에 network 포함 |
+| **근거** | (1) HTTP 표준: GET 요청은 body를 가지지 않으므로 쿼리 파라미터 사용, (2) POST 요청은 JSON body에 포함하는 것이 OpenAPIHono의 Zod 검증 패턴과 일관, (3) SDK/MCP에서 파라미터 전달 위치를 HTTP 메서드에 따라 명확히 구분해야 함 (Pitfall 5 방지) |
+| **대안** | 모든 엔드포인트에서 헤더(`X-Network`)로 전달 |
+| **기각 이유** | 비표준 헤더는 캐시/프록시 호환성 문제 + 기존 Zod 검증 패턴과 불일치 |
+
+#### API-D05: WalletResponse에 기존 network 필드 유지 + environment, defaultNetwork 추가
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | `WalletCrudResponseSchema`와 `WalletDetailResponseSchema`에 기존 `network` 필드를 유지하면서 `environment`와 `defaultNetwork` 필드를 추가 |
+| **근거** | (1) 기존 클라이언트가 `response.network`를 참조하므로 제거 불가, (2) `network` 값은 `defaultNetwork ?? getDefaultNetwork(chain, env)`로 계산 -- 기존과 동일한 값을 반환, (3) 향후 `network` 필드를 deprecated 처리하고 `defaultNetwork`로 전환 가능 (현재는 유지) |
+| **대안** | `network` 필드를 `defaultNetwork`로 즉시 교체 (breaking change) |
+| **기각 이유** | 기존 SDK/MCP/Admin UI 코드에서 `wallet.network` 참조하는 코드 전부 변경 필요 |
+
+### 5.4 Phase 108-02 이행 포인트
+
+Phase 108-01에서 확정된 REST API 설계를 Phase 108-02(MCP/SDK/CLI/Quickstart)에서 참조해야 하는 인터페이스 목록.
+
+#### MCP 도구 (6개 변경)
+
+| MCP 도구 | 참조하는 REST API | 변경 내용 |
+|----------|------------------|---------|
+| `send_token` | POST /v1/transactions/send | `network` optional 파라미터 추가 -> request body에 포함 |
+| `call_contract` | POST /v1/transactions/send | `network` optional 파라미터 추가 -> request body에 포함 |
+| `approve_token` | POST /v1/transactions/send | `network` optional 파라미터 추가 -> request body에 포함 |
+| `send_batch` | POST /v1/transactions/send | `network` optional 파라미터 추가 -> request body에 포함 |
+| `get_balance` | GET /v1/wallet/balance | `network` optional 파라미터 추가 -> `?network=X` 쿼리 파라미터 |
+| `get_assets` | GET /v1/wallet/assets | `network` optional 파라미터 추가 -> `?network=X` 쿼리 파라미터 |
+
+#### TS SDK (3개 변경)
+
+| SDK 메서드 | 참조하는 REST API | 변경 내용 |
+|-----------|------------------|---------|
+| `sendToken(params)` | POST /v1/transactions/send | `SendTokenParams.network?: string` 추가 -> body에 포함 |
+| `getBalance(network?)` | GET /v1/wallet/balance | `network?: string` 파라미터 추가 -> `?network=X` 쿼리 |
+| `getAssets(network?)` | GET /v1/wallet/assets | `network?: string` 파라미터 추가 -> `?network=X` 쿼리 |
+
+#### Python SDK (3개 변경)
+
+| SDK 메서드 | 참조하는 REST API | 변경 내용 |
+|-----------|------------------|---------|
+| `send_token(params)` | POST /v1/transactions/send | `SendTokenRequest.network: Optional[str]` 추가 |
+| `get_balance(network=None)` | GET /v1/wallet/balance | `network: Optional[str]` 파라미터 추가 |
+| `get_assets(network=None)` | GET /v1/wallet/assets | `network: Optional[str]` 파라미터 추가 |
+
+#### CLI (1개 신규)
+
+| CLI 명령어 | 참조하는 REST API | 설명 |
+|-----------|------------------|------|
+| `waiaas quickstart --mode testnet/mainnet` | POST /v1/wallets (environment 파라미터) | Solana+EVM 2개 월렛 일괄 생성 + MCP 토큰 자동 생성 |
+
+#### Skill Files (4개 변경)
+
+| 스킬 파일 | 변경 내용 |
+|----------|---------|
+| `quickstart.skill.md` | environment 모델 기반 워크플로우 + quickstart CLI 명령어 설명 |
+| `wallet.skill.md` | POST /v1/wallets environment 파라미터, 응답 변경, GET /v1/wallets/:id/assets 신규 |
+| `transactions.skill.md` | 5-type network 파라미터, 트랜잭션 응답에 network 필드 |
+| `policies.skill.md` | ALLOWED_NETWORKS 정책 타입, network 스코프 |
+
+---
+
+## 부록 A: 변경 대상 파일 전체 목록
+
+### Core 패키지 (Zod SSoT)
+
+| 파일 | 변경 유형 | 변경 내용 |
+|------|---------|---------|
+| `packages/core/src/schemas/transaction.schema.ts` | 수정 | 5-type + legacy 스키마에 `network: NetworkTypeEnum.optional()` 추가. TransactionSchema에 `network: NetworkTypeEnum.nullable()` 추가 |
+| `packages/core/src/schemas/wallet.schema.ts` | 수정 | CreateWalletRequestSchema에 `environment` 추가. WalletSchema: `network` -> `environment` + `defaultNetwork` |
+
+### Daemon 패키지 (Route + OpenAPI)
+
+| 파일 | 변경 유형 | 변경 내용 |
+|------|---------|---------|
+| `packages/daemon/src/api/routes/openapi-schemas.ts` | 수정 | WalletCrudResponseSchema, WalletDetailResponseSchema, TxDetailResponseSchema 변경. MultiNetworkAssetsResponseSchema 신규 |
+| `packages/daemon/src/api/routes/transactions.ts` | 수정 | resolveNetwork() 호출 + PipelineContext 변경 (Phase 106 설계 적용) |
+| `packages/daemon/src/api/routes/wallets.ts` | 수정 | 4가지 조합 처리 + 응답에 environment/defaultNetwork 추가. GET /v1/wallets/:id/assets 신규 route |
+| `packages/daemon/src/api/routes/wallet.ts` | 수정 | GET /wallet/balance, /wallet/assets에 `?network=` 쿼리 파라미터 + resolveNetwork() 호출 |
+
+### Phase 108-02 범위 (참조 목록)
+
+| 파일 | 변경 유형 | 변경 내용 |
+|------|---------|---------|
+| `packages/mcp/src/tools/send-token.ts` | 수정 | network optional 파라미터 추가 |
+| `packages/mcp/src/tools/call-contract.ts` | 수정 | network optional 파라미터 추가 |
+| `packages/mcp/src/tools/approve-token.ts` | 수정 | network optional 파라미터 추가 |
+| `packages/mcp/src/tools/send-batch.ts` | 수정 | network optional 파라미터 추가 |
+| `packages/mcp/src/tools/get-balance.ts` | 수정 | network optional 파라미터 추가 |
+| `packages/mcp/src/tools/get-assets.ts` | 수정 | network optional 파라미터 추가 |
+| `packages/sdk/src/types.ts` | 수정 | SendTokenParams.network 추가 |
+| `packages/sdk/src/client.ts` | 수정 | getBalance/getAssets network 파라미터 |
+| `python-sdk/waiaas/models.py` | 수정 | SendTokenRequest.network 추가 |
+| `python-sdk/waiaas/client.py` | 수정 | get_balance/get_assets network 파라미터 |
+| `packages/cli/src/commands/quickstart.ts` | 신규 | quickstart --mode testnet/mainnet |
+| `skills/wallet.skill.md` | 수정 | environment/defaultNetwork + 멀티네트워크 |
+| `skills/transactions.skill.md` | 수정 | network 파라미터 |
+| `skills/policies.skill.md` | 수정 | ALLOWED_NETWORKS |
+| `skills/quickstart.skill.md` | 수정 | environment 모델 + quickstart CLI |
+
+## 부록 B: Phase 105-108 참조 다이어그램
+
+```
+Phase 105 (docs/68)              Phase 106 (docs/70)              Phase 107 (docs/71)
+  EnvironmentType SSoT             resolveNetwork() 순수 함수        ALLOWED_NETWORKS PolicyType
+  ENVIRONMENT_NETWORK_MAP          PipelineContext.resolvedNetwork   policies.network 스코프
+  deriveEnvironment()              ENVIRONMENT_NETWORK_MISMATCH     evaluateAndReserve() SQL
+  getDefaultNetwork()              Stage 1 INSERT network           resolveOverrides() 4단계
+  validateNetworkEnvironment()
+         |                                |                                |
+         +--------------------------------+--------------------------------+
+                                          |
+                                          v
+                                Phase 108 (docs/72) -- THIS DOCUMENT
+                                  REST API 인터페이스 확장 (섹션 1~3)
+                                  하위호환 전략 (섹션 4)
+                                  OpenAPI + 설계 결정 (섹션 5)
+                                          |
+                                          v
+                                Phase 108-02 (docs/72 섹션 6~10)
+                                  MCP 도구 network 파라미터
+                                  SDK 메서드 확장
+                                  Quickstart CLI 워크플로우
+                                  Skill 파일 동기화
+```
