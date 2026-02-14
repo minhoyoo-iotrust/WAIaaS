@@ -43,12 +43,12 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
   3. EvmAdapter.parseTransaction()이 hex unsigned tx를 받아 ETH transfer, ERC-20 transfer/approve, 임의 contract call을 ParsedTransaction으로 식별한다
   4. IChainAdapter.signExternalTransaction()이 unsigned tx에 월렛 키로 서명하여 SignedTransaction을 반환한다
   5. 잘못된 rawTx, 월렛 미포함 서명자, 지원하지 않는 체인 등 에러가 명확한 에러 코드로 반환된다
-**Plans**: TBD
+**Plans:** 3 plans (Wave 1: 115-01, Wave 2: 115-02 + 115-03 parallel)
 
 Plans:
-- [ ] 115-01: Core 타입 확장 + DB 마이그레이션 v9 (SIGNED 상태, SIGN 타입, ParsedTransaction 타입, 에러 코드)
-- [ ] 115-02: IChainAdapter parseTransaction/signExternalTransaction + SolanaAdapter 구현
-- [ ] 115-03: EvmAdapter parseTransaction/signExternalTransaction 구현
+- [ ] 115-01-PLAN.md -- Core 타입 확장 + DB 마이그레이션 v9 (SIGNED/SIGN SSoT, ParsedTransaction 타입, 에러 코드 4+2개)
+- [ ] 115-02-PLAN.md -- SolanaAdapter parseTransaction + signExternalTransaction (TDD, tx-parser.ts)
+- [ ] 115-03-PLAN.md -- EvmAdapter parseTransaction + signExternalTransaction (TDD, tx-parser.ts)
 
 ### Phase 116: Default Deny Toggles
 **Goal**: 관리자가 기본 거부 정책을 개별적으로 ON/OFF 전환하여 운영 유연성을 확보한 상태
