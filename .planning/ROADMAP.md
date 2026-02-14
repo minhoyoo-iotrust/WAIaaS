@@ -91,12 +91,12 @@ Plans:
   2. TS SDK의 sendTransaction({network: 'polygon-mainnet'})와 Python SDK의 send_transaction(network='polygon-mainnet')이 동작한다
   3. Admin UI 월렛 생성 시 environment 라디오버튼(testnet/mainnet)으로 선택하고, 월렛 상세에서 사용 가능 네트워크 목록과 기본 네트워크 변경 UI가 동작한다
   4. Admin UI 트랜잭션 목록에 network 컬럼이 표시되고, 정책 생성에서 ALLOWED_NETWORKS 타입과 네트워크 스코프를 선택할 수 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 113-01: MCP 6개 도구 network 파라미터 + get_wallet_info 네트워크 목록
-- [ ] 113-02: TS SDK + Python SDK network 파라미터 확장
-- [ ] 113-03: Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI
+- [ ] 113-01-PLAN.md -- MCP 6개 도구 network 파라미터 + get_wallet_info 신규 도구 + 테스트 (Wave 1)
+- [ ] 113-02-PLAN.md -- TS SDK + Python SDK network 파라미터 확장 + 테스트 (Wave 1)
+- [ ] 113-03-PLAN.md -- Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI + 테스트 (Wave 1)
 
 ### Phase 114: CLI Quickstart + DX 통합
 **Goal**: quickstart 명령으로 테스트넷/메인넷 월렛을 원스톱 생성할 수 있고, 모든 변경이 하위호환되며 스킬 파일이 최신 상태인 상태
