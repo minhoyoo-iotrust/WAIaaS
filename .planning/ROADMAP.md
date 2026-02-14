@@ -13,7 +13,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 
 - [x] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 데이터 레이어 전환 + EnvironmentType 파생 체인 ✅ 2026-02-14
 - [x] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가 ✅ 2026-02-14
-- [ ] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름
+- [x] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름 ✅ 2026-02-14
 - [ ] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개
 - [ ] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환
 - [ ] **Phase 114: CLI Quickstart + DX 통합** - quickstart --mode + 스킬 파일 동기화 + 하위호환 검증
@@ -63,8 +63,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 111-01-PLAN.md -- resolveNetwork() TDD (순수 함수 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + PipelineContext 확장, Wave 1)
-- [ ] 111-02-PLAN.md -- Route/Daemon/Pipeline 네트워크 해결 통합 + 통합 테스트 (Wave 2, depends on 111-01)
+- [x] 111-01-PLAN.md -- resolveNetwork() TDD (순수 함수 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + PipelineContext 확장, Wave 1)
+- [x] 111-02-PLAN.md -- Route/Daemon/Pipeline 네트워크 해결 통합 + 통합 테스트 (Wave 2, depends on 111-01)
 
 ### Phase 112: REST API 네트워크 확장
 **Goal**: REST API가 환경/네트워크 파라미터를 수용하고, 월렛별 네트워크 관리 엔드포인트가 동작하는 상태
@@ -122,7 +122,7 @@ Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
 |-------|----------------|--------|-----------|
 | 109. DB 마이그레이션 + 환경 모델 SSoT | 2/2 | ✅ Complete | 2026-02-14 |
 | 110. 스키마 전환 + 정책 엔진 | 2/2 | ✅ Complete | 2026-02-14 |
-| 111. 파이프라인 네트워크 해결 | 0/2 | Not started | - |
+| 111. 파이프라인 네트워크 해결 | 2/2 | ✅ Complete | 2026-02-14 |
 | 112. REST API 네트워크 확장 | 0/2 | Not started | - |
 | 113. MCP + SDK + Admin UI | 0/3 | Not started | - |
 | 114. CLI Quickstart + DX 통합 | 0/2 | Not started | - |
