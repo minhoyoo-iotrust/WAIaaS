@@ -33,6 +33,7 @@ export interface IPolicyEngine {
       amount: string;
       toAddress: string;
       chain: string;
+      network?: string; // for ALLOWED_NETWORKS + network scoping
     },
   ): Promise<PolicyEvaluation>;
 }

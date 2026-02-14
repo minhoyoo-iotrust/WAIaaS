@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 110 - 스키마 전환 + 정책 엔진
+**Current focus:** Phase 111 - 파이프라인 네트워크 해결
 
 ## Current Position
 
-Phase: 110 of 114 (스키마 전환 + 정책 엔진)
+Phase: 111 of 114 (파이프라인 네트워크 해결)
 Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 109 완료 (verified: 8/8 must-haves)
+Last activity: 2026-02-14 -- Phase 110 완료 (verified: 4/4 must-haves)
 
-Progress: [██░░░░░░░░] 15% (2/13 plans)
+Progress: [███░░░░░░░] 31% (4/13 plans)
 
 ## Performance Metrics
 
@@ -24,6 +24,8 @@ Progress: [██░░░░░░░░] 15% (2/13 plans)
 |-------|------|----------|-------|-------|
 | 109 | 01 | 3min | 2 | 3 |
 | 109 | 02 | 45min | 2 | 32 |
+| 110 | 01 | 7min | 2 | 10 |
+| 110 | 02 | 7min | 2 | 2 |
 
 ## Accumulated Context
 
@@ -42,6 +44,14 @@ Recent decisions affecting current work:
 - 109-02: wallet.network -> wallet.defaultNetwork! 최소 변환 (비즈니스 로직은 Phase 110/111)
 - 109-02: default_network nullable (향후 멀티체인 월렛 미지정 지원 대비)
 - 109-02: v6a는 일반 ALTER, v6b/v8은 managesOwnTransaction: true (12-step recreation)
+- 110-01: WalletSchema network 필드 완전 제거, environment + defaultNetwork로 전환
+- 110-01: CreateWalletRequest environment default 'testnet' (기존 network optional 대신)
+- 110-01: POST /wallets에서 validateChainNetwork 제거, getDefaultNetwork() 단순화
+- 110-01: AllowedNetworksRulesSchema: networks[].network + name(optional) 구조
+- 110-02: ALLOWED_NETWORKS permissive default 구현 (미설정 시 모든 네트워크 허용)
+- 110-02: resolveOverrides 4단계 typeMap[type] 단일 키 유지 (PLCY-D03)
+- 110-02: evaluate() Drizzle WHERE에도 network 필터 추가
+- 110-02: evaluateAndReserve raw SQL network 바인딩 (transaction.network ?? null)
 
 ### Blockers/Concerns
 
@@ -52,5 +62,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 109 verified PASSED, ready to plan Phase 110
+Stopped at: Phase 110 verified PASSED, ready to plan Phase 111
 Resume file: None

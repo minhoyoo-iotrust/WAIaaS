@@ -1,8 +1,9 @@
 /**
- * DatabasePolicyEngine - v1.2 DB-backed policy engine.
+ * DatabasePolicyEngine - v1.2 DB-backed policy engine with network scoping.
  *
  * Evaluates transactions against policies stored in the policies table.
  * Supports SPENDING_LIMIT (4-tier classification), WHITELIST (address filtering),
+ * ALLOWED_NETWORKS (network whitelist, permissive default),
  * ALLOWED_TOKENS (token transfer whitelist, default deny),
  * CONTRACT_WHITELIST (contract call whitelist, default deny),
  * METHOD_WHITELIST (optional method-level restriction for contract calls),
@@ -13,8 +14,9 @@
  * Algorithm:
  * 1. Load enabled policies for wallet (wallet-specific + global), ORDER BY priority DESC
  * 2. If no policies found, return INSTANT passthrough (Phase 7 compat)
- * 3. Resolve overrides: wallet-specific policies override global policies of same type
+ * 3. Resolve overrides: 4-level priority (wallet+network > wallet+null > global+network > global+null)
  * 4. Evaluate WHITELIST: deny if toAddress not in allowed_addresses
+ * 4a.5. Evaluate ALLOWED_NETWORKS: deny if network not in allowed list (permissive default)
  * 4b. Evaluate ALLOWED_TOKENS: deny TOKEN_TRANSFER if no policy or token not whitelisted
  * 4c. Evaluate CONTRACT_WHITELIST: deny CONTRACT_CALL if no policy or contract not whitelisted
  * 4d. Evaluate METHOD_WHITELIST: deny CONTRACT_CALL if method selector not whitelisted (optional)
@@ -29,6 +31,7 @@
  * under the same spending limit.
  *
  * @see docs/33-time-lock-approval-mechanism.md
+ * @see docs/71-policy-engine-network-extension-design.md
  */
 
 import type { IPolicyEngine, PolicyEvaluation, PolicyTier } from '@waiaas/core';
@@ -88,6 +91,12 @@ interface PolicyRow {
   rules: string;
   priority: number;
   enabled: boolean | null;
+  network: string | null;
+}
+
+/** AllowedNetworksRules: rules JSON for ALLOWED_NETWORKS policy type. */
+interface AllowedNetworksRules {
+  networks: Array<{ network: string; name?: string }>;
 }
 
 /** Transaction parameter for policy evaluation. */
@@ -96,6 +105,8 @@ interface TransactionParam {
   amount: string;
   toAddress: string;
   chain: string;
+  /** Resolved network for ALLOWED_NETWORKS evaluation + network scoping. */
+  network?: string;
   /** Token address for ALLOWED_TOKENS evaluation (TOKEN_TRANSFER only). */
   tokenAddress?: string;
   /** Contract address for CONTRACT_WHITELIST evaluation (CONTRACT_CALL only). */
@@ -113,9 +124,12 @@ interface TransactionParam {
 // ---------------------------------------------------------------------------
 
 /**
- * DB-backed policy engine with SPENDING_LIMIT 4-tier, WHITELIST, ALLOWED_TOKENS,
- * CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT,
- * and APPROVE_TIER_OVERRIDE evaluation.
+ * DB-backed policy engine with SPENDING_LIMIT 4-tier, WHITELIST, ALLOWED_NETWORKS,
+ * ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS,
+ * APPROVE_AMOUNT_LIMIT, and APPROVE_TIER_OVERRIDE evaluation.
+ *
+ * Network scoping: policies can target specific networks via the `network` column.
+ * 4-level override priority: wallet+network > wallet+null > global+network > global+null.
  *
  * Constructor takes a Drizzle DB instance typed with the full schema,
  * and optionally a raw better-sqlite3 Database instance for BEGIN IMMEDIATE transactions.
@@ -137,13 +151,17 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     walletId: string,
     transaction: TransactionParam,
   ): Promise<PolicyEvaluation> {
-    // Step 1: Load enabled policies (wallet-specific + global)
+    // Step 1: Load enabled policies (wallet-specific + global, with network filter)
     const rows = await this.db
       .select()
       .from(policies)
       .where(
         and(
           or(eq(policies.walletId, walletId), isNull(policies.walletId)),
+          or(
+            transaction.network ? eq(policies.network, transaction.network) : isNull(policies.network),
+            isNull(policies.network),
+          ),
           eq(policies.enabled, true),
         ),
       )
@@ -155,13 +173,21 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: 'INSTANT' };
     }
 
-    // Step 3: Resolve overrides (wallet-specific wins over global for same type)
-    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId);
+    // Step 3: Resolve overrides (4-level: wallet+network > wallet+null > global+network > global+null)
+    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId, transaction.network);
 
     // Step 4: Evaluate WHITELIST (deny-first)
     const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
     if (whitelistResult !== null) {
       return whitelistResult;
+    }
+
+    // Step 4a.5: Evaluate ALLOWED_NETWORKS (network whitelist, permissive default)
+    if (transaction.network) {
+      const allowedNetworksResult = this.evaluateAllowedNetworks(resolved, transaction.network);
+      if (allowedNetworksResult !== null) {
+        return allowedNetworksResult;
+      }
     }
 
     // Step 4b: Evaluate ALLOWED_TOKENS (token transfer whitelist)
@@ -232,13 +258,20 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     walletId: string,
     instructions: TransactionParam[],
   ): Promise<PolicyEvaluation> {
-    // Step 1: Load policies (reuse existing query logic)
+    // Step 1: Load policies with network filter
+    // All instructions in a BATCH share the same network
+    const resolvedNetwork = instructions[0]?.network;
+
     const rows = await this.db
       .select()
       .from(policies)
       .where(
         and(
           or(eq(policies.walletId, walletId), isNull(policies.walletId)),
+          or(
+            resolvedNetwork ? eq(policies.network, resolvedNetwork) : isNull(policies.network),
+            isNull(policies.network),
+          ),
           eq(policies.enabled, true),
         ),
       )
@@ -249,7 +282,15 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: 'INSTANT' };
     }
 
-    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId);
+    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId, resolvedNetwork);
+
+    // ALLOWED_NETWORKS evaluation before Phase A
+    if (resolvedNetwork) {
+      const allowedNetworksResult = this.evaluateAllowedNetworks(resolved, resolvedNetwork);
+      if (allowedNetworksResult !== null) {
+        return allowedNetworksResult;
+      }
+    }
 
     // Phase A: Evaluate each instruction individually
     const violations: Array<{ index: number; type: string; reason: string }> = [];
@@ -407,29 +448,38 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     // Use better-sqlite3 transaction().immediate() for BEGIN IMMEDIATE
     const txn = sqlite.transaction(() => {
-      // Step 1: Load enabled policies via raw SQL (inside IMMEDIATE txn)
+      // Step 1: Load enabled policies via raw SQL with network filter (inside IMMEDIATE txn)
       const policyRows = sqlite
         .prepare(
-          `SELECT id, wallet_id AS walletId, type, rules, priority, enabled
+          `SELECT id, wallet_id AS walletId, type, rules, priority, enabled, network
            FROM policies
            WHERE (wallet_id = ? OR wallet_id IS NULL)
+             AND (network = ? OR network IS NULL)
              AND enabled = 1
            ORDER BY priority DESC`,
         )
-        .all(walletId) as PolicyRow[];
+        .all(walletId, transaction.network ?? null) as PolicyRow[];
 
       // Step 2: No policies -> INSTANT passthrough
       if (policyRows.length === 0) {
         return { allowed: true, tier: 'INSTANT' as PolicyTier };
       }
 
-      // Step 3: Resolve overrides
-      const resolved = this.resolveOverrides(policyRows, walletId);
+      // Step 3: Resolve overrides (4-level with network)
+      const resolved = this.resolveOverrides(policyRows, walletId, transaction.network);
 
       // Step 4: Evaluate WHITELIST (deny-first)
       const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
       if (whitelistResult !== null) {
         return whitelistResult;
+      }
+
+      // Step 4a.5: Evaluate ALLOWED_NETWORKS (network whitelist, permissive default)
+      if (transaction.network) {
+        const allowedNetworksResult = this.evaluateAllowedNetworks(resolved, transaction.network);
+        if (allowedNetworksResult !== null) {
+          return allowedNetworksResult;
+        }
       }
 
       // Step 4b: Evaluate ALLOWED_TOKENS (token transfer whitelist)
@@ -553,25 +603,105 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // -------------------------------------------------------------------------
 
   /**
-   * Resolve policy overrides: for each policy type, wallet-specific wins over global.
-   * Returns deduplicated policy list (one per type, agent-specific preferred).
+   * Resolve policy overrides with 4-level priority:
+   *   1. wallet-specific + network-specific (highest)
+   *   2. wallet-specific + all-networks
+   *   3. global + network-specific
+   *   4. global + all-networks (lowest)
+   *
+   * For each policy type, one policy is selected.
+   * Lower priority entries are inserted first, higher priority entries overwrite.
+   * Key: typeMap[row.type] (same as current -- no composite key needed, PLCY-D03).
+   *
+   * Backward compat: when all policies have network=NULL,
+   * phases 2+4 collapse into current 2-level (wallet > global) behavior.
    */
-  private resolveOverrides(rows: PolicyRow[], walletId: string): PolicyRow[] {
+  private resolveOverrides(
+    rows: PolicyRow[],
+    walletId: string,
+    resolvedNetwork?: string,
+  ): PolicyRow[] {
     const typeMap = new Map<string, PolicyRow>();
 
-    // Rows are already sorted by priority DESC.
-    // For each type, prefer wallet-specific over global.
+    // Phase 1: global + all-networks (4th priority, lowest)
     for (const row of rows) {
-      const existing = typeMap.get(row.type);
-      if (!existing) {
-        typeMap.set(row.type, row);
-      } else if (row.walletId === walletId && existing.walletId !== walletId) {
-        // Wallet-specific overrides global
+      if (row.walletId === null && row.network === null) {
         typeMap.set(row.type, row);
       }
     }
 
+    // Phase 2: global + network-specific (3rd priority)
+    if (resolvedNetwork) {
+      for (const row of rows) {
+        if (row.walletId === null && row.network === resolvedNetwork) {
+          typeMap.set(row.type, row);
+        }
+      }
+    }
+
+    // Phase 3: wallet-specific + all-networks (2nd priority)
+    for (const row of rows) {
+      if (row.walletId === walletId && row.network === null) {
+        typeMap.set(row.type, row);
+      }
+    }
+
+    // Phase 4: wallet-specific + network-specific (1st priority, highest)
+    if (resolvedNetwork) {
+      for (const row of rows) {
+        if (row.walletId === walletId && row.network === resolvedNetwork) {
+          typeMap.set(row.type, row);
+        }
+      }
+    }
+
     return Array.from(typeMap.values());
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: ALLOWED_NETWORKS evaluation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate ALLOWED_NETWORKS policy.
+   *
+   * Logic:
+   * - Applies to ALL 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH)
+   * - If no ALLOWED_NETWORKS policy exists: return null (permissive default -- all networks allowed)
+   * - If policy exists: check if resolvedNetwork is in rules.networks[].network
+   *   -> If found: return null (continue to next evaluation)
+   *   -> If not found: deny with reason 'Network not in allowed list'
+   * - Comparison: case-insensitive (toLowerCase)
+   * - Tier: INSTANT (immediate denial)
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or no policy).
+   */
+  private evaluateAllowedNetworks(
+    resolved: PolicyRow[],
+    resolvedNetwork: string,
+  ): PolicyEvaluation | null {
+    const policy = resolved.find((p) => p.type === 'ALLOWED_NETWORKS');
+
+    // No ALLOWED_NETWORKS policy -> permissive default (all networks allowed)
+    if (!policy) return null;
+
+    const rules: AllowedNetworksRules = JSON.parse(policy.rules);
+
+    // Case-insensitive comparison
+    const isAllowed = rules.networks.some(
+      (n) => n.network.toLowerCase() === resolvedNetwork.toLowerCase(),
+    );
+
+    if (!isAllowed) {
+      const allowedList = rules.networks.map((n) => n.network).join(', ');
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Network '${resolvedNetwork}' not in allowed networks list. Allowed: ${allowedList}`,
+      };
+    }
+
+    return null; // Network allowed, continue evaluation
   }
 
   // -------------------------------------------------------------------------

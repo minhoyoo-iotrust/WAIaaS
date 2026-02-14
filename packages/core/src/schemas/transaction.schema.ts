@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TransactionTypeEnum, TransactionStatusEnum } from '../enums/transaction.js';
 import { PolicyTierEnum } from '../enums/policy.js';
-import { ChainTypeEnum } from '../enums/chain.js';
+import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
 
 export const TransactionSchema = z.object({
   id: z.string().uuid(),
@@ -11,6 +11,7 @@ export const TransactionSchema = z.object({
   status: TransactionStatusEnum,
   tier: PolicyTierEnum.nullable(),
   chain: ChainTypeEnum,
+  network: NetworkTypeEnum.nullable(),
   fromAddress: z.string(),
   toAddress: z.string(),
   amount: z.string(), // bigint as string for JSON/SQLite
@@ -45,6 +46,7 @@ export const TransferRequestSchema = z.object({
   to: z.string().min(1),
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string (lamports/wei)'),
   memo: z.string().max(256).optional(),
+  network: NetworkTypeEnum.optional(),
 });
 export type TransferRequestInput = z.infer<typeof TransferRequestSchema>;
 
@@ -62,6 +64,7 @@ export const TokenTransferRequestSchema = z.object({
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
   token: TokenInfoSchema,
   memo: z.string().max(256).optional(),
+  network: NetworkTypeEnum.optional(),
 });
 export type TokenTransferRequest = z.infer<typeof TokenTransferRequestSchema>;
 
@@ -85,6 +88,7 @@ export const ContractCallRequestSchema = z.object({
       }),
     )
     .optional(),
+  network: NetworkTypeEnum.optional(),
 });
 export type ContractCallRequest = z.infer<typeof ContractCallRequestSchema>;
 
@@ -94,6 +98,7 @@ export const ApproveRequestSchema = z.object({
   spender: z.string().min(1),
   token: TokenInfoSchema,
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
+  network: NetworkTypeEnum.optional(),
 });
 export type ApproveRequest = z.infer<typeof ApproveRequestSchema>;
 
@@ -111,6 +116,7 @@ export const BatchRequestSchema = z.object({
     )
     .min(2, 'Batch requires at least 2 instructions')
     .max(20, 'Batch maximum 20 instructions'),
+  network: NetworkTypeEnum.optional(),
 });
 export type BatchRequest = z.infer<typeof BatchRequestSchema>;
 

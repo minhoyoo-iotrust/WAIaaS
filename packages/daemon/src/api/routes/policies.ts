@@ -233,6 +233,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
       rules: JSON.stringify(parsed.rules),
       priority: parsed.priority,
       enabled: parsed.enabled,
+      network: parsed.network ?? null,
       createdAt: now,
       updatedAt: now,
     }).run();
@@ -245,6 +246,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
         rules: parsed.rules,
         priority: parsed.priority,
         enabled: parsed.enabled,
+        network: parsed.network ?? null,
         createdAt: nowSec,
         updatedAt: nowSec,
       },
@@ -285,6 +287,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
       rules: JSON.parse(row.rules),
       priority: row.priority,
       enabled: row.enabled,
+      network: row.network,
       createdAt: Math.floor(row.createdAt.getTime() / 1000),
       updatedAt: Math.floor(row.updatedAt.getTime() / 1000),
     }));
@@ -351,6 +354,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
         rules: JSON.parse(updated.rules),
         priority: updated.priority,
         enabled: updated.enabled,
+        network: updated.network,
         createdAt: Math.floor(updated.createdAt.getTime() / 1000),
         updatedAt: Math.floor(updated.updatedAt.getTime() / 1000),
       },
