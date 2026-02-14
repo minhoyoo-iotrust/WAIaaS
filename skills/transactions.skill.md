@@ -3,7 +3,7 @@ name: "WAIaaS Transactions"
 description: "All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
-version: "1.4.4"
+version: "1.4.6"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -26,6 +26,8 @@ WAIaaS uses a **discriminatedUnion 5-type** system for transactions. The `type` 
 | `BATCH` | Multiple instructions (Solana only) | Depends on instruction types |
 
 All transaction types use `POST /v1/transactions/send` with the appropriate `type` field.
+
+All transaction types accept an optional `network` parameter to specify the target network for the transaction. If omitted, the wallet's default network is used. The specified network must be valid for the wallet's environment.
 
 ## 2. Type 1: TRANSFER (Native SOL/ETH)
 
@@ -50,6 +52,7 @@ Parameters:
 - `to` (required): recipient address (base58 for Solana, 0x-hex for EVM)
 - `amount` (required): string of digits in smallest unit (lamports for SOL, wei for ETH)
 - `memo` (optional): string, max 256 characters
+- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
 ### Response (201)
 
@@ -121,6 +124,7 @@ Parameters:
   - `decimals` (required): integer, 0-18
   - `symbol` (required): string, 1-10 characters
 - `memo` (optional): string, max 256 characters
+- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
 ## 4. Type 3: CONTRACT_CALL (Arbitrary Contract)
 
@@ -167,6 +171,7 @@ EVM-specific parameters:
 - `calldata` (optional): hex-encoded calldata (e.g., `"0x095ea7b3..."`)
 - `abi` (optional): JSON ABI fragment array for the function being called
 - `value` (optional): native token value to send with call, string of digits in wei
+- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
 ### Solana Program Call
 
@@ -193,6 +198,7 @@ Solana-specific parameters:
   - `pubkey`: account public key
   - `isSigner`: boolean
   - `isWritable`: boolean
+- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
 ## 5. Type 4: APPROVE (Token Spending Approval)
 
@@ -244,6 +250,7 @@ Parameters:
   - `decimals` (required): integer, 0-18
   - `symbol` (required): string, 1-10 characters
 - `amount` (required): string of digits, max approval amount in token's smallest unit
+- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
 ## 6. Type 5: BATCH (Multiple Instructions)
 
@@ -273,6 +280,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
 Parameters:
 - `type` (required): `"BATCH"`
 - `instructions` (required): array of 2-20 instruction objects. Each instruction follows the schema of TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, or APPROVE (without the `type` field)
+- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
 Batch instruction examples:
 
@@ -343,6 +351,7 @@ Response (200):
   "status": "CONFIRMED",
   "tier": "INSTANT",
   "chain": "solana",
+  "network": "devnet",
   "toAddress": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
   "amount": "100000000",
   "txHash": "5UfDaGz1ycBqAbW2RuVmuT8JcpBBbP2BdAfSLKXjzRYc",
@@ -375,6 +384,7 @@ Response (200):
       "status": "CONFIRMED",
       "tier": "INSTANT",
       "chain": "solana",
+      "network": "devnet",
       "toAddress": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
       "amount": "100000000",
       "txHash": "5UfDaGz1ycBqAbW2RuVmuT8JcpBBbP2BdAfSLKXjzRYc",
@@ -474,6 +484,7 @@ Policies control what transactions are allowed and how they are processed. Key p
 | `APPROVED_SPENDERS` | APPROVE | Required: whitelist spender addresses |
 | `APPROVE_AMOUNT_LIMIT` | APPROVE | Max approval amount |
 | `APPROVE_TIER_OVERRIDE` | APPROVE | Override tier for approvals |
+| `ALLOWED_NETWORKS` | All types | Restrict which networks a wallet can use |
 
 **Default-deny principle**: ALLOWED_TOKENS, CONTRACT_WHITELIST, and APPROVED_SPENDERS must be explicitly configured. Without them, the corresponding transaction types are rejected.
 
@@ -498,3 +509,4 @@ Policies can assign transaction tiers that determine the execution flow:
 | `CONTRACT_NOT_WHITELISTED` | 403 | Contract address not in whitelist | Add contract to CONTRACT_WHITELIST policy |
 | `TOKEN_NOT_ALLOWED` | 403 | Token not in allowed list | Add token to ALLOWED_TOKENS policy |
 | `SPENDER_NOT_APPROVED` | 403 | Spender not in approved list | Add spender to APPROVED_SPENDERS policy |
+| `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Specified network does not belong to wallet's environment | Use a network valid for the wallet's environment |
