@@ -10,21 +10,21 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 115 of 119 (Core Types + DB Migration + Parsers)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Roadmap created for v1.4.7 (5 phases, 12 plans, 30 requirements)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-15 -- Plan 115-01 완료 (Core 타입 확장 + DB migration v9)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#░░░░░░░░░] 8%
 
 ## Performance Metrics
 
 **Cumulative:** 26 milestones, 114 phases, 245 plans, 681 reqs, 1,580 tests, ~73,000 LOC
 
-**By Phase:** (v1.4.7 not yet started)
+**By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 115-01 | 1/3 | 8min | 8min |
 
 ## Accumulated Context
 
@@ -37,6 +37,9 @@ Recent decisions affecting current work:
 - reserved_amount TTL: 세션 TTL로 자동 해제 (별도 메커니즘 없음)
 - 파싱 실패 = DENY 원칙 (알려진 패턴만 통과)
 - 신규 의존성 없음 (viem/solana-kit/mcp-sdk 기존 API 활용)
+- ParsedOperationType 5종: NATIVE_TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, UNKNOWN
+- SignedTransaction.txHash optional (체인별 해시 계산 시점 차이)
+- v9 migration은 transactions 테이블만 재생성
 
 ### Blockers/Concerns
 
@@ -45,6 +48,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-14
-Stopped at: Roadmap created for v1.4.7
+Last session: 2026-02-15
+Stopped at: Completed 115-01-PLAN.md
 Resume file: None
