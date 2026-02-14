@@ -58,6 +58,7 @@ import type {
   SignedTransaction,
 } from '@waiaas/core';
 import { WAIaaSError, ChainError } from '@waiaas/core';
+import { parseSolanaTransaction } from './tx-parser.js';
 
 /** Default SOL transfer fee in lamports (5000 = 0.000005 SOL). */
 const DEFAULT_SOL_TRANSFER_FEE = 5000n;
@@ -83,7 +84,7 @@ const txDecoder = getTransactionDecoder();
 type SolanaRpc = ReturnType<typeof createSolanaRpc>;
 
 /**
- * Solana chain adapter implementing the 20-method IChainAdapter contract.
+ * Solana chain adapter implementing the 22-method IChainAdapter contract.
  *
  * Connection: connect, disconnect, isConnected, getHealth
  * Balance: getBalance
@@ -95,6 +96,7 @@ type SolanaRpc = ReturnType<typeof createSolanaRpc>;
  * Contract: buildContractCall, buildApprove
  * Batch: buildBatch
  * Utility: getTransactionFee, getCurrentNonce, sweepAll
+ * Sign-only: parseTransaction, signExternalTransaction
  */
 export class SolanaAdapter implements IChainAdapter {
   readonly chain: ChainType = 'solana';
@@ -1236,12 +1238,74 @@ export class SolanaAdapter implements IChainAdapter {
 
   // -- Sign-only operations (2) -- v1.4.7
 
-  async parseTransaction(_rawTx: string): Promise<ParsedTransaction> {
-    throw new Error('Not implemented: parseTransaction will be implemented in Phase 116');
+  async parseTransaction(rawTx: string): Promise<ParsedTransaction> {
+    // Offline operation -- no RPC connection needed.
+    // Delegates to tx-parser.ts which handles all instruction identification.
+    return parseSolanaTransaction(rawTx);
   }
 
-  async signExternalTransaction(_rawTx: string, _privateKey: Uint8Array): Promise<SignedTransaction> {
-    throw new Error('Not implemented: signExternalTransaction will be implemented in Phase 116');
+  async signExternalTransaction(rawTx: string, privateKey: Uint8Array): Promise<SignedTransaction> {
+    // Offline operation -- no RPC connection needed.
+    try {
+      // Step 1: Decode base64 rawTx to wire-format bytes
+      let txBytes: Uint8Array;
+      try {
+        txBytes = new Uint8Array(Buffer.from(rawTx, 'base64'));
+      } catch {
+        throw new ChainError('INVALID_RAW_TRANSACTION', 'solana', {
+          message: 'Failed to decode base64 rawTx',
+        });
+      }
+
+      // Step 2: Decode compiled transaction
+      let compiled;
+      try {
+        compiled = txDecoder.decode(txBytes);
+      } catch (error) {
+        throw new ChainError('INVALID_RAW_TRANSACTION', 'solana', {
+          message: `Failed to decode Solana transaction: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+
+      // Step 3: Create key pair (reuse existing 64-byte vs 32-byte detection pattern)
+      const keyPair =
+        privateKey.length === 64
+          ? await createKeyPairFromBytes(privateKey)
+          : await createKeyPairFromPrivateKeyBytes(privateKey.slice(0, 32));
+
+      // Step 4: Get signer address from public key
+      const signerAddress = await getAddressFromPublicKey(keyPair.publicKey);
+
+      // Step 5: Verify wallet is a signer in this transaction
+      if (!(signerAddress in compiled.signatures)) {
+        throw new ChainError('WALLET_NOT_SIGNER', 'solana', {
+          message: `Wallet ${signerAddress} is not a signer in this transaction`,
+        });
+      }
+
+      // Step 6: Sign the messageBytes with the private key
+      const signature = await signBytes(keyPair.privateKey, compiled.messageBytes);
+
+      // Step 7: Place signature in the correct slot
+      const signedTx = {
+        ...compiled,
+        signatures: {
+          ...compiled.signatures,
+          [signerAddress]: signature,
+        },
+      };
+
+      // Step 8: Re-encode and return as base64
+      const signedBytes = new Uint8Array(txEncoder.encode(signedTx));
+      const signedBase64 = Buffer.from(signedBytes).toString('base64');
+
+      return { signedTransaction: signedBase64 };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      throw new ChainError('INVALID_RAW_TRANSACTION', 'solana', {
+        message: `Failed to sign external transaction: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
   }
 
   // -- Private helpers --

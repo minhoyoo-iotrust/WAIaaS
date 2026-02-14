@@ -25,7 +25,7 @@ import {
   blockhash,
   AccountRole,
 } from '@solana/kit';
-import { getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system';
+import { getTransferSolInstruction } from '@solana-program/system';
 import {
   getTransferCheckedInstruction,
   getApproveCheckedInstruction,
