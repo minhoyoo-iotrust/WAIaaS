@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 8;
+export const LATEST_SCHEMA_VERSION = 9;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -877,6 +877,86 @@ FROM policies`);
     const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v8: ${JSON.stringify(fkErrors)}`);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v9: Add SIGNED status and SIGN type to transactions CHECK constraints
+// ---------------------------------------------------------------------------
+// SSoT arrays TRANSACTION_STATUSES/TRANSACTION_TYPES에 새 값이 추가되었으므로
+// transactions 테이블의 CHECK 제약을 갱신해야 한다. SQLite는 ALTER CHECK 불가 -> 12-step 재생성.
+// 이 마이그레이션은 transactions 테이블만 재생성한다 (다른 테이블에 영향 없음).
+
+MIGRATIONS.push({
+  version: 9,
+  description: 'Add SIGNED status and SIGN type to transactions CHECK constraints',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    // Step 1: Begin transaction
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 2: Create transactions_new with updated CHECK constraints
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions_new(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+)`);
+
+      // Step 3: Copy existing data
+      sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network FROM transactions`);
+
+      // Step 4: Drop old table
+      sqlite.exec('DROP TABLE transactions');
+
+      // Step 5: Rename new table
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+
+      // Step 6: Recreate all 8 existing indexes
+      sqlite.exec('CREATE INDEX idx_transactions_wallet_status ON transactions(wallet_id, status)');
+      sqlite.exec('CREATE INDEX idx_transactions_session_id ON transactions(session_id)');
+      sqlite.exec('CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash)');
+      sqlite.exec('CREATE INDEX idx_transactions_queued_at ON transactions(queued_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_created_at ON transactions(created_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_type ON transactions(type)');
+      sqlite.exec('CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)');
+      sqlite.exec('CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)');
+
+      // Step 7: Commit
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 8: Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v9: ${JSON.stringify(fkErrors)}`);
     }
   },
 });
