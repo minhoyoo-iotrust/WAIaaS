@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 112 of 114 (REST API 네트워크 확장)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-14 -- 112-01 완료 (balance/assets network 쿼리 + environment 보강)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-14 -- 112-02 완료 (PUT default-network + GET networks 엔드포인트 + ALLOWED_NETWORKS CRUD 검증)
 
-Progress: [█████░░░░░] 54% (7/13 plans)
+Progress: [██████░░░░] 62% (8/13 plans)
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ Progress: [█████░░░░░] 54% (7/13 plans)
 | 111 | 01 | 8min | 2 | 18 |
 | 111 | 02 | 5min | 2 | 4 |
 | 112 | 01 | 6min | 2 | 5 |
+| 112 | 02 | 4min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -63,6 +64,9 @@ Recent decisions affecting current work:
 - 112-01: 트랜잭션 응답 network 필드를 스키마와 함께 추가 (빌드 차단 Rule 3)
 - 112-01: WalletCrudResponseSchema environment 필드 required 전환
 - 112-01: api-agents 테스트 6개를 environment 기반으로 전환
+- 112-02: PUT default-network에서 WALLET_TERMINATED 사전 체크 (terminated 월렛 변경 차단)
+- 112-02: GET networks 응답에 isDefault 플래그 포함 (클라이언트 편의성)
+- 112-02: masterAuth sub-path skip 패턴 통합 (/owner, /default-network, /networks)
 
 ### Blockers/Concerns
 
@@ -73,5 +77,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 112-01-PLAN.md
+Stopped at: Completed 112-02-PLAN.md (Phase 112 complete)
 Resume file: None
