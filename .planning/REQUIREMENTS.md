@@ -84,16 +84,49 @@ v1.4.5 설계 문서(docs/68-72) 기반 멀티체인 월렛 모델 구현.
 
 ## Traceability
 
-(로드맵 생성 시 채워짐)
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| MIGR-01 | Phase 109 | Pending |
+| MIGR-02 | Phase 109 | Pending |
+| MIGR-03 | Phase 109 | Pending |
+| MIGR-04 | Phase 109 | Pending |
+| SCHEMA-01 | Phase 109 | Pending |
+| SCHEMA-02 | Phase 109 | Pending |
+| SCHEMA-03 | Phase 110 | Pending |
+| SCHEMA-04 | Phase 110 | Pending |
+| SCHEMA-05 | Phase 110 | Pending |
+| PLCY-01 | Phase 110 | Pending |
+| PLCY-02 | Phase 110 | Pending |
+| PLCY-03 | Phase 110 | Pending |
+| PIPE-01 | Phase 111 | Pending |
+| PIPE-02 | Phase 111 | Pending |
+| PIPE-03 | Phase 111 | Pending |
+| PIPE-04 | Phase 111 | Pending |
+| PIPE-05 | Phase 111 | Pending |
+| API-01 | Phase 112 | Pending |
+| API-02 | Phase 112 | Pending |
+| API-03 | Phase 112 | Pending |
+| API-04 | Phase 112 | Pending |
+| API-05 | Phase 112 | Pending |
+| API-06 | Phase 112 | Pending |
+| INTEG-01 | Phase 113 | Pending |
+| INTEG-02 | Phase 113 | Pending |
+| INTEG-03 | Phase 113 | Pending |
+| INTEG-04 | Phase 113 | Pending |
+| ADMIN-01 | Phase 113 | Pending |
+| ADMIN-02 | Phase 113 | Pending |
+| ADMIN-03 | Phase 113 | Pending |
+| ADMIN-04 | Phase 113 | Pending |
+| CLI-01 | Phase 114 | Pending |
+| CLI-02 | Phase 114 | Pending |
+| DX-01 | Phase 114 | Pending |
+| DX-02 | Phase 114 | Pending |
 
 **Coverage:**
 - v1 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35
+- Mapped to phases: 35
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-14*
-*Last updated: 2026-02-14 after initial definition*
+*Last updated: 2026-02-14 after roadmap creation*
