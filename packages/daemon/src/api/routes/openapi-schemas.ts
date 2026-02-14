@@ -704,3 +704,42 @@ export const McpTokenCreateResponseSchema = z
     claudeDesktopConfig: z.record(z.unknown()),
   })
   .openapi('McpTokenCreateResponse');
+
+// ---------------------------------------------------------------------------
+// Sign-Only Transaction Schemas (POST /v1/transactions/sign)
+// ---------------------------------------------------------------------------
+
+export const TxSignRequestSchema = z
+  .object({
+    transaction: z.string().min(1).openapi({
+      description: 'Unsigned transaction (base64 for Solana, 0x-hex for EVM)',
+    }),
+    chain: z.string().optional().openapi({
+      description: 'Chain type (optional -- inferred from wallet)',
+    }),
+    network: z.string().optional().openapi({
+      description: 'Network (optional -- resolved from wallet defaults)',
+    }),
+  })
+  .openapi('TxSignRequest');
+
+export const TxSignResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    signedTransaction: z.string(),
+    txHash: z.string().nullable(),
+    operations: z.array(
+      z.object({
+        type: z.string(),
+        to: z.string().nullable().optional(),
+        amount: z.string().nullable().optional(),
+        token: z.string().nullable().optional(),
+        programId: z.string().nullable().optional(),
+        method: z.string().nullable().optional(),
+      }),
+    ),
+    policyResult: z.object({
+      tier: z.string(),
+    }),
+  })
+  .openapi('TxSignResponse');
