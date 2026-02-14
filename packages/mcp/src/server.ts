@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 13 tools + 3 resources.
+ * createMcpServer: factory that creates an MCP server with 13 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -30,6 +30,7 @@ import { registerSignTransaction } from './tools/sign-transaction.js';
 import { registerWalletBalance } from './resources/wallet-balance.js';
 import { registerWalletAddress } from './resources/wallet-address.js';
 import { registerSystemStatus } from './resources/system-status.js';
+import { registerSkillResources } from './resources/skills.js';
 
 export interface WalletContext {
   walletName?: string; // e.g., 'trading-bot'
@@ -67,10 +68,11 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerEncodeCalldata(server, apiClient, walletContext);
   registerSignTransaction(server, apiClient, walletContext);
 
-  // Register 3 resources
+  // Register 4 resource groups (3 static + 1 template)
   registerWalletBalance(server, apiClient, walletContext);
   registerWalletAddress(server, apiClient, walletContext);
   registerSystemStatus(server, apiClient, walletContext);
+  registerSkillResources(server, apiClient, walletContext);
 
   return server;
 }
