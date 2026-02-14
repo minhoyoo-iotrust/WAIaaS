@@ -17,33 +17,33 @@ import {
 
 describe('Zod SSoT Schemas', () => {
   describe('CreateWalletRequestSchema', () => {
-    it('parses with minimal fields (network undefined when omitted)', () => {
+    it('parses with minimal fields (environment defaults to testnet)', () => {
       const result = CreateWalletRequestSchema.parse({ name: 'test-agent' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
-      expect(result.network).toBeUndefined();
+      expect(result.environment).toBe('testnet');
     });
 
-    it('parses with explicit network', () => {
-      const result = CreateWalletRequestSchema.parse({ name: 'test-agent', network: 'devnet' });
+    it('parses with explicit environment', () => {
+      const result = CreateWalletRequestSchema.parse({ name: 'test-agent', environment: 'mainnet' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
-      expect(result.network).toBe('devnet');
+      expect(result.environment).toBe('mainnet');
     });
 
-    it('parses with chain=ethereum and EVM network', () => {
+    it('parses with chain=ethereum and mainnet environment', () => {
       const result = CreateWalletRequestSchema.parse({
         name: 'eth-agent',
         chain: 'ethereum',
-        network: 'ethereum-sepolia',
+        environment: 'mainnet',
       });
       expect(result.chain).toBe('ethereum');
-      expect(result.network).toBe('ethereum-sepolia');
+      expect(result.environment).toBe('mainnet');
     });
 
-    it('rejects invalid network value', () => {
+    it('rejects invalid environment value', () => {
       expect(() =>
-        CreateWalletRequestSchema.parse({ name: 'test-agent', network: 'invalid-network' }),
+        CreateWalletRequestSchema.parse({ name: 'test-agent', environment: 'invalid-env' }),
       ).toThrow();
     });
 
@@ -125,7 +125,8 @@ describe('Zod SSoT Schemas', () => {
         id: '01912345-6789-7abc-8def-0123456789ab',
         name: 'test',
         chain: 'solana',
-        network: 'devnet',
+        environment: 'testnet',
+        defaultNetwork: 'devnet',
         publicKey: 'abc123',
         status: 'ACTIVE',
         ownerAddress: null,
@@ -135,6 +136,8 @@ describe('Zod SSoT Schemas', () => {
       });
       expect(wallet.status).toBe('ACTIVE');
       expect(wallet.chain).toBe('solana');
+      expect(wallet.environment).toBe('testnet');
+      expect(wallet.defaultNetwork).toBe('devnet');
       expect(wallet.ownerAddress).toBeNull();
     });
 
@@ -144,7 +147,8 @@ describe('Zod SSoT Schemas', () => {
           id: '01912345-6789-7abc-8def-0123456789ab',
           name: 'test',
           chain: 'bitcoin',
-          network: 'devnet',
+          environment: 'testnet',
+          defaultNetwork: 'devnet',
           publicKey: 'abc123',
           status: 'ACTIVE',
           ownerAddress: null,
@@ -184,6 +188,7 @@ describe('Zod SSoT Schemas', () => {
         status: 'PENDING',
         tier: null,
         chain: 'solana',
+        network: null,
         fromAddress: 'from_addr',
         toAddress: 'to_addr',
         amount: '1000000000',
@@ -206,6 +211,7 @@ describe('Zod SSoT Schemas', () => {
         type: 'SPENDING_LIMIT',
         ruleConfig: { per_transaction: '1000000000' },
         enabled: true,
+        network: null,
         createdAt: 1700000000,
         updatedAt: 1700000000,
       });

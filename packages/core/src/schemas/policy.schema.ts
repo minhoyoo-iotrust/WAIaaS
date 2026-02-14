@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PolicyTypeEnum, PolicyTierEnum } from '../enums/policy.js';
-import { ChainTypeEnum } from '../enums/chain.js';
+import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
 
 export const PolicySchema = z.object({
   id: z.string().uuid(),
@@ -8,6 +8,7 @@ export const PolicySchema = z.object({
   type: PolicyTypeEnum,
   ruleConfig: z.record(z.unknown()),
   enabled: z.boolean(),
+  network: NetworkTypeEnum.nullable(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
@@ -64,6 +65,14 @@ const ApproveTierOverrideRulesSchema = z.object({
   tier: PolicyTierEnum,
 });
 
+/** ALLOWED_NETWORKS: rules.networks array (permitted networks for wallet). */
+const AllowedNetworksRulesSchema = z.object({
+  networks: z.array(z.object({
+    network: NetworkTypeEnum,
+    name: z.string().optional(),
+  })).min(1, 'At least one network required'),
+});
+
 // Map of policy types to their rules schemas for superRefine lookup.
 const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
   ALLOWED_TOKENS: AllowedTokensRulesSchema,
@@ -72,6 +81,7 @@ const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
   APPROVED_SPENDERS: ApprovedSpendersRulesSchema,
   APPROVE_AMOUNT_LIMIT: ApproveAmountLimitRulesSchema,
   APPROVE_TIER_OVERRIDE: ApproveTierOverrideRulesSchema,
+  ALLOWED_NETWORKS: AllowedNetworksRulesSchema,
 };
 
 /**
@@ -88,6 +98,7 @@ export const CreatePolicyRequestSchema = z.object({
   rules: z.record(z.unknown()),
   priority: z.number().int().default(0),
   enabled: z.boolean().default(true),
+  network: NetworkTypeEnum.optional(),
 }).superRefine((data, ctx) => {
   const schema = POLICY_RULES_SCHEMAS[data.type];
   if (!schema) return; // existing 4 types: no additional validation
