@@ -8,6 +8,8 @@ import httpx
 
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
+    EncodeCalldataRequest,
+    EncodeCalldataResponse,
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
@@ -236,3 +238,30 @@ class WAIaaSClient:
         # Auto-update session token
         self.set_session_token(result.token)
         return result
+
+    # -----------------------------------------------------------------
+    # Utils API
+    # -----------------------------------------------------------------
+
+    async def encode_calldata(
+        self,
+        abi: list[dict[str, Any]],
+        function_name: str,
+        args: Optional[list[Any]] = None,
+    ) -> EncodeCalldataResponse:
+        """POST /v1/utils/encode-calldata -- Encode EVM function call into calldata hex.
+
+        Args:
+            abi: ABI fragment array (JSON objects).
+            function_name: Function name to encode (e.g., "transfer").
+            args: Function arguments (defaults to empty list for zero-arg functions).
+
+        Returns:
+            EncodeCalldataResponse with calldata hex, selector, and functionName.
+        """
+        request = EncodeCalldataRequest(
+            abi=abi, function_name=function_name, args=args or []
+        )
+        body = request.model_dump(exclude_none=True, by_alias=True)
+        resp = await self._request("POST", "/v1/utils/encode-calldata", json_body=body)
+        return EncodeCalldataResponse.model_validate(resp.json())

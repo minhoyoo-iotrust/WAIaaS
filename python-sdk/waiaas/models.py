@@ -147,3 +147,24 @@ class SessionRenewResponse(BaseModel):
     renewal_count: int = Field(alias="renewalCount")
 
     model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
+# Utils models
+# ---------------------------------------------------------------------------
+
+
+class EncodeCalldataRequest(BaseModel):
+    abi: list[dict[str, Any]] = Field(description="ABI fragment array")
+    function_name: str = Field(alias="functionName", description="Function name to encode")
+    args: list[Any] = Field(default_factory=list, description="Function arguments")
+
+    model_config = {"populate_by_name": True}
+
+
+class EncodeCalldataResponse(BaseModel):
+    calldata: str = Field(description="Hex-encoded calldata (0x-prefixed)")
+    selector: str = Field(description="Function selector (first 4 bytes)")
+    function_name: str = Field(alias="functionName", description="Encoded function name")
+
+    model_config = {"populate_by_name": True}

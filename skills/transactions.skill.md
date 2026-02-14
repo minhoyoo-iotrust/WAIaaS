@@ -510,3 +510,59 @@ Policies can assign transaction tiers that determine the execution flow:
 | `TOKEN_NOT_ALLOWED` | 403 | Token not in allowed list | Add token to ALLOWED_TOKENS policy |
 | `SPENDER_NOT_APPROVED` | 403 | Spender not in approved list | Add spender to APPROVED_SPENDERS policy |
 | `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Specified network does not belong to wallet's environment | Use a network valid for the wallet's environment |
+| `ABI_ENCODING_FAILED` | 400 | Function not found in ABI, or argument type mismatch | Verify ABI fragment contains the function and arguments match expected types |
+
+## 10. Encode Calldata (EVM Utility)
+
+Encode an EVM function call into hex calldata. This utility helps construct the `calldata` parameter for `CONTRACT_CALL` transactions without needing an ABI encoding library.
+
+### POST /v1/utils/encode-calldata
+
+**Auth:** sessionAuth (Bearer token)
+
+**Request:**
+
+```bash
+curl -s -X POST http://localhost:3100/v1/utils/encode-calldata \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "abi": [
+      {
+        "type": "function",
+        "name": "transfer",
+        "inputs": [
+          { "name": "to", "type": "address" },
+          { "name": "amount", "type": "uint256" }
+        ],
+        "outputs": [{ "name": "", "type": "bool" }],
+        "stateMutability": "nonpayable"
+      }
+    ],
+    "functionName": "transfer",
+    "args": ["0xRecipientAddress", "1000000"]
+  }'
+```
+
+**Response (200):**
+
+```json
+{
+  "calldata": "0xa9059cbb000000000000000000000000recipientaddress0000000000000000000000000000000000000000000000000000000000000f4240",
+  "selector": "0xa9059cbb",
+  "functionName": "transfer"
+}
+```
+
+**Errors:**
+- `400 ABI_ENCODING_FAILED` -- Function not found in ABI, or argument type mismatch.
+
+**Usage with CONTRACT_CALL:**
+1. Encode calldata: `POST /v1/utils/encode-calldata`
+2. Send contract call: `POST /v1/transactions/send` with `type: "CONTRACT_CALL"`, `to: contractAddress`, `calldata: encodedHex`
+
+**SDK:**
+- TypeScript: `client.encodeCalldata({ abi, functionName, args })`
+- Python: `await client.encode_calldata(abi, function_name, args)`
+
+**MCP Tool:** `encode_calldata` with parameters `abi`, `functionName`, `args`
