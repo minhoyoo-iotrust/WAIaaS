@@ -99,7 +99,8 @@ async function insertTestAgent(
     id,
     name: 'test-wallet',
     chain: 'solana',
-    network: 'devnet',
+    environment: 'testnet',
+    defaultNetwork: 'devnet',
     publicKey: MOCK_PUBLIC_KEY + '-' + id.slice(0, 8), // unique per agent
     status: 'ACTIVE',
     ownerAddress: overrides.ownerAddress ?? null,

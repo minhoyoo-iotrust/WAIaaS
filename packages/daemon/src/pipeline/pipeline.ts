@@ -70,7 +70,7 @@ export class TransactionPipeline {
       wallet: {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
       },
       request,
       txId: '',

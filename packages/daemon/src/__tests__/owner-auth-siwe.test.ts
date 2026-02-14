@@ -114,14 +114,17 @@ function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
 /** Seed a test wallet with optional owner address, chain, and network */
 function seedWallet(opts?: { ownerAddress?: string | null; chain?: string; network?: string }) {
   const ts = nowSeconds();
+  const network = opts?.network ?? 'mainnet';
+  const environment = ['mainnet', 'ethereum-mainnet', 'polygon-mainnet', 'arbitrum-mainnet', 'optimism-mainnet', 'base-mainnet'].includes(network) ? 'mainnet' : 'testnet';
   sqlite.prepare(
-    `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     TEST_WALLET_ID,
     'SIWE Test Wallet',
     opts?.chain ?? 'ethereum',
-    opts?.network ?? 'mainnet',
+    environment,
+    network,
     'pk-siwe-test',
     'ACTIVE',
     0,
@@ -291,12 +294,13 @@ describe('setOwner address validation (SIWE-03)', () => {
     network: string,
   ): void {
     const ts = Math.floor(Date.now() / 1000);
+    const environment = ['mainnet', 'ethereum-mainnet', 'polygon-mainnet', 'arbitrum-mainnet', 'optimism-mainnet', 'base-mainnet'].includes(network) ? 'mainnet' : 'testnet';
     sqliteDb
       .prepare(
-        `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(walletId, `SetOwner Test ${chain}`, chain, network, `pk-setowner-${walletId}`, 'ACTIVE', 0, ts, ts);
+      .run(walletId, `SetOwner Test ${chain}`, chain, environment, network, `pk-setowner-${walletId}`, 'ACTIVE', 0, ts, ts);
   }
 
   it('setOwner accepts EVM wallet with valid EIP-55 address', async () => {

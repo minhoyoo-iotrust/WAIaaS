@@ -120,9 +120,9 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   function seedWallet() {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(TEST_WALLET_ID, 'Audit Wallet', 'solana', 'mainnet', `pk-audit-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(TEST_WALLET_ID, 'Audit Wallet', 'solana', 'mainnet', 'mainnet', `pk-audit-${Math.random()}`, 'ACTIVE', 0, ts, ts);
   }
 
   function seedSession(opts: { expiresAt?: number; revokedAt?: number | null } = {}) {
@@ -309,10 +309,10 @@ describe('ownerAuth edge cases (coverage audit)', () => {
   function seedWallet(ownerAddress: string) {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
-      TEST_WALLET_ID, 'Owner Audit Wallet', 'solana', 'mainnet',
+      TEST_WALLET_ID, 'Owner Audit Wallet', 'solana', 'mainnet', 'mainnet',
       'pk-owner-audit-test', 'ACTIVE', 0, ownerAddress, ts, ts,
     );
   }

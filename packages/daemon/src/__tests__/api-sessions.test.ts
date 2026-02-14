@@ -48,10 +48,10 @@ function seedWallet(sqlite: DatabaseType, walletId: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, 'Test Wallet', 'solana', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
+    .run(walletId, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 /** Helper: build masterAuth header (includes Host for hostGuard) */

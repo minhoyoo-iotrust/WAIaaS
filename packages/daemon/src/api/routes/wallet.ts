@@ -122,7 +122,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       {
         walletId: wallet.id,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
         address: wallet.publicKey,
       },
       200,
@@ -142,11 +142,11 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      wallet.network,
+      wallet.defaultNetwork!,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      wallet.network as NetworkType,
+      wallet.defaultNetwork as NetworkType,
       rpcUrl,
     );
 
@@ -156,7 +156,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       {
         walletId: wallet.id,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
         address: wallet.publicKey,
         balance: balanceInfo.balance.toString(),
         decimals: balanceInfo.decimals,
@@ -183,11 +183,11 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      wallet.network,
+      wallet.defaultNetwork!,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      wallet.network as NetworkType,
+      wallet.defaultNetwork as NetworkType,
       rpcUrl,
     );
 
@@ -198,7 +198,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
       // Source 1: Token registry (builtin + custom for this network)
       if (deps.tokenRegistryService) {
-        const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(wallet.network);
+        const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(wallet.defaultNetwork!);
         for (const t of registryTokens) {
           const lower = t.address.toLowerCase();
           if (!seenAddresses.has(lower)) {
@@ -238,7 +238,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       {
         walletId: wallet.id,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
         assets: assets.map((a) => ({
           mint: a.mint,
           symbol: a.symbol,

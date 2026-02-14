@@ -256,11 +256,11 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      wallet.network,
+      wallet.defaultNetwork!,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      wallet.network as NetworkType,
+      wallet.defaultNetwork as NetworkType,
       rpcUrl,
     );
 
@@ -275,7 +275,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       wallet: {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
       },
       request,
       txId: '', // stage1Validate will assign

@@ -10,6 +10,9 @@
  * v1.4.2: agents table renamed to wallets, agent_id columns renamed to wallet_id.
  * WALLET_STATUSES used for status CHECK constraint.
  *
+ * v1.4.6: Environment model -- wallets.network replaced by wallets.environment + wallets.defaultNetwork.
+ * transactions.network and policies.network columns added.
+ *
  * @see docs/25-sqlite-schema.md
  */
 
@@ -27,6 +30,7 @@ import {
   WALLET_STATUSES,
   CHAIN_TYPES,
   NETWORK_TYPES,
+  ENVIRONMENT_TYPES,
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
   POLICY_TYPES,
@@ -43,6 +47,7 @@ const buildCheckSql = (column: string, values: readonly string[]) =>
 
 // ---------------------------------------------------------------------------
 // Table 1: wallets -- wallet identity and lifecycle state (renamed from agents in v3)
+// v1.4.6: network replaced by environment + defaultNetwork (environment model)
 // ---------------------------------------------------------------------------
 
 export const wallets = sqliteTable(
@@ -51,7 +56,8 @@ export const wallets = sqliteTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     chain: text('chain').notNull(),
-    network: text('network').notNull(),
+    environment: text('environment').notNull(),
+    defaultNetwork: text('default_network'),
     publicKey: text('public_key').notNull(),
     status: text('status').notNull().default('CREATING'),
     ownerAddress: text('owner_address'),
@@ -64,10 +70,16 @@ export const wallets = sqliteTable(
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),
     index('idx_wallets_status').on(table.status),
-    index('idx_wallets_chain_network').on(table.chain, table.network),
+    index('idx_wallets_chain_environment').on(table.chain, table.environment),
     index('idx_wallets_owner_address').on(table.ownerAddress),
     check('check_chain', buildCheckSql('chain', CHAIN_TYPES)),
-    check('check_network', buildCheckSql('network', NETWORK_TYPES)),
+    check('check_environment', buildCheckSql('environment', ENVIRONMENT_TYPES)),
+    check(
+      'check_default_network',
+      sql.raw(
+        `default_network IS NULL OR default_network IN (${NETWORK_TYPES.map((v) => `'${v}'`).join(', ')})`,
+      ),
+    ),
     check('check_status', buildCheckSql('status', WALLET_STATUSES)),
     check('check_owner_verified', sql`owner_verified IN (0, 1)`),
   ],
@@ -136,6 +148,7 @@ export const transactions = sqliteTable(
     reservedAmount: text('reserved_amount'),
     error: text('error'),
     metadata: text('metadata'),
+    network: text('network'),
   },
   (table) => [
     index('idx_transactions_wallet_status').on(table.walletId, table.status),
@@ -154,6 +167,12 @@ export const transactions = sqliteTable(
         `tier IS NULL OR tier IN (${POLICY_TIERS.map((v) => `'${v}'`).join(', ')})`,
       ),
     ),
+    check(
+      'check_tx_network',
+      sql.raw(
+        `network IS NULL OR network IN (${NETWORK_TYPES.map((v) => `'${v}'`).join(', ')})`,
+      ),
+    ),
   ],
 );
 
@@ -170,13 +189,21 @@ export const policies = sqliteTable(
     rules: text('rules').notNull(),
     priority: integer('priority').notNull().default(0),
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    network: text('network'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
     index('idx_policies_wallet_enabled').on(table.walletId, table.enabled),
     index('idx_policies_type').on(table.type),
+    index('idx_policies_network').on(table.network),
     check('check_policy_type', buildCheckSql('type', POLICY_TYPES)),
+    check(
+      'check_policy_network',
+      sql.raw(
+        `network IS NULL OR network IN (${NETWORK_TYPES.map((v) => `'${v}'`).join(', ')})`,
+      ),
+    ),
   ],
 );
 
