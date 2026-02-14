@@ -45,11 +45,11 @@ Plans:
   2. SendTransactionRequest 5-type 모두 network 선택 파라미터를 수용한다
   3. ALLOWED_NETWORKS 정책을 생성하면 지정되지 않은 네트워크에서의 트랜잭션이 POLICY_VIOLATION으로 거부된다
   4. 네트워크 스코프 정책이 4단계 override 우선순위(wallet+network > wallet+null > global+network > global+null)로 평가된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 110-01: WalletSchema/TransactionRequestSchema/PolicySchema environment/network 전환
-- [ ] 110-02: ALLOWED_NETWORKS PolicyType + 네트워크 스코프 정책 평가 로직
+- [ ] 110-01-PLAN.md -- Zod 스키마 환경 모델 전환 + ALLOWED_NETWORKS PolicyType SSoT + Route 레이어 적용 (Wave 1)
+- [ ] 110-02-PLAN.md -- ALLOWED_NETWORKS 평가 로직 + 4단계 override resolveOverrides + evaluateAndReserve network SQL (TDD, Wave 2, depends on 110-01)
 
 ### Phase 111: 파이프라인 네트워크 해결
 **Goal**: 트랜잭션 파이프라인이 네트워크를 자동 해결하고, 해결된 네트워크로 빌드/실행/확인하는 상태
