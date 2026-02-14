@@ -19,16 +19,24 @@ interface Wallet {
   name: string;
   chain: string;
   network: string;
+  environment: string;
   publicKey: string;
   status: string;
   createdAt: number;
 }
 
 interface WalletDetail extends Wallet {
+  defaultNetwork: string;
   ownerAddress: string | null;
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
   updatedAt: number | null;
+}
+
+interface NetworkInfo {
+  network: string;
+  name?: string;
+  isDefault: boolean;
 }
 
 interface McpTokenResult {
@@ -67,7 +75,13 @@ export function chainNetworkOptions(chain: string): { label: string; value: stri
 const walletColumns: Column<Wallet>[] = [
   { key: 'name', header: 'Name' },
   { key: 'chain', header: 'Chain' },
-  { key: 'network', header: 'Network' },
+  {
+    key: 'environment',
+    header: 'Environment',
+    render: (a) => (
+      <Badge variant={a.environment === 'mainnet' ? 'warning' : 'info'}>{a.environment}</Badge>
+    ),
+  },
   {
     key: 'publicKey',
     header: 'Public Key',
@@ -132,6 +146,9 @@ function WalletDetailView({ id }: { id: string }) {
   const deleteLoading = useSignal(false);
   const mcpLoading = useSignal(false);
   const mcpResult = useSignal<McpTokenResult | null>(null);
+  const networks = useSignal<NetworkInfo[]>([]);
+  const networksLoading = useSignal(true);
+  const defaultNetworkLoading = useSignal(false);
 
   const fetchWallet = async () => {
     try {
@@ -197,8 +214,37 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const fetchNetworks = async () => {
+    networksLoading.value = true;
+    try {
+      const result = await apiGet<{ networks: NetworkInfo[] }>(API.WALLET_NETWORKS(id));
+      networks.value = result.networks;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      networksLoading.value = false;
+    }
+  };
+
+  const handleChangeDefaultNetwork = async (network: string) => {
+    defaultNetworkLoading.value = true;
+    try {
+      await apiPut(API.WALLET_DEFAULT_NETWORK(id), { network });
+      showToast('success', `Default network changed to ${network}`);
+      await fetchWallet();
+      await fetchNetworks();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      defaultNetworkLoading.value = false;
+    }
+  };
+
   useEffect(() => {
     fetchWallet();
+    fetchNetworks();
   }, [id]);
 
   return (
@@ -245,7 +291,12 @@ function WalletDetailView({ id }: { id: string }) {
             <DetailRow label="ID" value={wallet.value.id} copy />
             <DetailRow label="Public Key" value={wallet.value.publicKey} copy />
             <DetailRow label="Chain" value={wallet.value.chain} />
-            <DetailRow label="Network" value={wallet.value.network} />
+            <DetailRow label="Environment">
+              <Badge variant={wallet.value.environment === 'mainnet' ? 'warning' : 'info'}>
+                {wallet.value.environment}
+              </Badge>
+            </DetailRow>
+            <DetailRow label="Default Network" value={wallet.value.defaultNetwork ?? wallet.value.network} />
             <DetailRow label="Status">
               <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : 'danger'}>
                 {wallet.value.status}
@@ -266,6 +317,38 @@ function WalletDetailView({ id }: { id: string }) {
               label="Updated"
               value={wallet.value.updatedAt ? formatDate(wallet.value.updatedAt) : 'Never'}
             />
+          </div>
+
+          <div class="networks-section" style={{ marginTop: 'var(--space-6)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>Available Networks</h3>
+            {networksLoading.value ? (
+              <div class="stat-skeleton" style={{ height: '80px' }} />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                {networks.value.map((n) => (
+                  <div key={n.network} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: 'var(--space-2) var(--space-3)',
+                    background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)',
+                  }}>
+                    <span>
+                      {n.name ?? n.network}
+                      {n.isDefault && <Badge variant="success" style={{ marginLeft: 'var(--space-2)' }}>Default</Badge>}
+                    </span>
+                    {!n.isDefault && wallet.value?.status === 'ACTIVE' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleChangeDefaultNetwork(n.network)}
+                        loading={defaultNetworkLoading.value}
+                      >
+                        Set Default
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div class="mcp-setup-section" style={{ marginTop: 'var(--space-6)' }}>
@@ -346,7 +429,7 @@ function WalletListView() {
   const showForm = useSignal(false);
   const formName = useSignal('');
   const formChain = useSignal('solana');
-  const formNetwork = useSignal('devnet');
+  const formEnvironment = useSignal('testnet');
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
 
@@ -373,12 +456,12 @@ function WalletListView() {
       await apiPost<Wallet>(API.WALLETS, {
         name: formName.value.trim(),
         chain: formChain.value,
-        network: formNetwork.value,
+        environment: formEnvironment.value,
       });
       showToast('success', 'Wallet created');
       formName.value = '';
       formChain.value = 'solana';
-      formNetwork.value = 'devnet';
+      formEnvironment.value = 'testnet';
       showForm.value = false;
       loading.value = true;
       await fetchWallets();
@@ -395,10 +478,7 @@ function WalletListView() {
   };
 
   const handleChainChange = (value: string | number | boolean) => {
-    const chain = value as string;
-    formChain.value = chain;
-    const options = chainNetworkOptions(chain);
-    formNetwork.value = options[0].value;
+    formChain.value = value as string;
   };
 
   useEffect(() => {
@@ -436,12 +516,15 @@ function WalletListView() {
             ]}
           />
           <FormField
-            label="Network"
-            name="network"
+            label="Environment"
+            name="environment"
             type="select"
-            value={formNetwork.value}
-            onChange={(v) => { formNetwork.value = v as string; }}
-            options={chainNetworkOptions(formChain.value)}
+            value={formEnvironment.value}
+            onChange={(v) => { formEnvironment.value = v as string; }}
+            options={[
+              { label: 'Testnet', value: 'testnet' },
+              { label: 'Mainnet', value: 'mainnet' },
+            ]}
           />
           <div class="inline-form-actions">
             <Button onClick={handleCreate} loading={formLoading.value}>Create</Button>

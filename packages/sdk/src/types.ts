@@ -96,6 +96,18 @@ export interface SendTokenParams {
   spender?: string;
   // BATCH fields
   instructions?: Array<Record<string, unknown>>;
+  // Network selection (multichain)
+  network?: string;
+}
+
+export interface BalanceOptions {
+  /** Query balance for a specific network (e.g., 'polygon-mainnet') */
+  network?: string;
+}
+
+export interface AssetsOptions {
+  /** Query assets for a specific network (e.g., 'polygon-mainnet') */
+  network?: string;
 }
 
 export interface SendTokenResponse {

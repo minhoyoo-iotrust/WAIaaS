@@ -59,6 +59,7 @@ const mockWallets = {
       name: 'bot-alpha',
       chain: 'solana',
       network: 'devnet',
+      environment: 'testnet',
       publicKey: 'abc',
       status: 'ACTIVE',
       createdAt: 1707609600,
@@ -71,6 +72,7 @@ const mockPolicies = [
     id: 'policy-1',
     walletId: null,
     type: 'SPENDING_LIMIT',
+    network: null,
     rules: {
       instant_max: '1000000',
       notify_max: '5000000',
@@ -87,6 +89,7 @@ const mockPolicies = [
     id: 'policy-2',
     walletId: 'wallet-1',
     type: 'WHITELIST',
+    network: null,
     rules: { allowed_addresses: ['addr1'] },
     priority: 1,
     enabled: true,
@@ -201,5 +204,48 @@ describe('PoliciesPage', () => {
         expect.stringMatching(/^\/v1\/policies\/policy-/),
       );
     });
+  });
+
+  it('shows ALLOWED_NETWORKS in policy type options', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPolicies);
+
+    render(<PoliciesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Spending Limit')).toBeTruthy();
+    });
+
+    // Open create form
+    fireEvent.click(screen.getByText('Create Policy'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Create')).toBeTruthy();
+    });
+
+    // Check that the Type select contains ALLOWED_NETWORKS option
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    const options = Array.from(typeSelect.querySelectorAll('option'));
+    const values = options.map((o) => o.value);
+    expect(values).toContain('ALLOWED_NETWORKS');
+  });
+
+  it('shows Network column in policy table', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPolicies);
+
+    render(<PoliciesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Spending Limit')).toBeTruthy();
+    });
+
+    // Check Network column header exists
+    expect(screen.getByText('Network')).toBeTruthy();
+    // Check "All" is displayed for null network
+    const allCells = screen.getAllByText('All');
+    expect(allCells.length).toBeGreaterThan(0);
   });
 });

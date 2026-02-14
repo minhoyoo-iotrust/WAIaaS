@@ -27,6 +27,7 @@ export function registerCallContract(server: McpServer, apiClient: ApiClient, wa
         isSigner: z.boolean(),
         isWritable: z.boolean(),
       })).optional().describe('Account metas (Solana)'),
+      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Defaults to wallet default network.'),
     },
     async (args) => {
       const body: Record<string, unknown> = { type: 'CONTRACT_CALL', to: args.to };
@@ -36,6 +37,7 @@ export function registerCallContract(server: McpServer, apiClient: ApiClient, wa
       if (args.programId !== undefined) body.programId = args.programId;
       if (args.instructionData !== undefined) body.instructionData = args.instructionData;
       if (args.accounts !== undefined) body.accounts = args.accounts;
+      if (args.network !== undefined) body.network = args.network;
       const result = await apiClient.post('/v1/transactions/send', body);
       return toToolResult(result);
     },

@@ -18,12 +18,14 @@ export function registerSendBatch(server: McpServer, apiClient: ApiClient, walle
     {
       instructions: z.array(z.record(z.unknown())).min(2).max(20)
         .describe('Array of instruction objects (each is a TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE without the type field)'),
+      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Defaults to wallet default network.'),
     },
     async (args) => {
       const body: Record<string, unknown> = {
         type: 'BATCH',
         instructions: args.instructions,
       };
+      if (args.network !== undefined) body.network = args.network;
       const result = await apiClient.post('/v1/transactions/send', body);
       return toToolResult(result);
     },

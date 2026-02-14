@@ -21,6 +21,7 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
       memo: z.string().optional().describe('Optional transaction memo'),
       type: z.enum(['TRANSFER', 'TOKEN_TRANSFER']).optional()
         .describe('Transaction type. Default: TRANSFER (native). TOKEN_TRANSFER for SPL/ERC-20'),
+      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Defaults to wallet default network.'),
       token: z.object({
         address: z.string().describe('Token mint (SPL) or contract address (ERC-20)'),
         decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
@@ -32,6 +33,7 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
       if (args.memo !== undefined) body.memo = args.memo;
       if (args.type) body.type = args.type;
       if (args.token) body.token = args.token;
+      if (args.network !== undefined) body.network = args.network;
       const result = await apiClient.post('/v1/transactions/send', body);
       return toToolResult(result);
     },

@@ -83,6 +83,7 @@ const mockWallets = {
       name: 'bot-alpha',
       chain: 'solana',
       network: 'devnet',
+      environment: 'testnet',
       publicKey: 'abc123def456',
       status: 'ACTIVE',
       createdAt: 1707609600,
@@ -92,6 +93,7 @@ const mockWallets = {
       name: 'bot-beta',
       chain: 'solana',
       network: 'devnet',
+      environment: 'testnet',
       publicKey: 'xyz789uvw012',
       status: 'ACTIVE',
       createdAt: 1707609600,
@@ -101,10 +103,18 @@ const mockWallets = {
 
 const mockWalletDetail = {
   ...mockWallets.items[0],
+  defaultNetwork: 'devnet',
   ownerAddress: null,
   ownerVerified: null,
   ownerState: 'NONE' as const,
   updatedAt: null,
+};
+
+const mockNetworks = {
+  networks: [
+    { network: 'devnet', name: 'Devnet', isDefault: true },
+    { network: 'testnet', name: 'Testnet', isDefault: false },
+  ],
 };
 
 describe('WalletsPage', () => {
@@ -129,7 +139,7 @@ describe('WalletsPage', () => {
     expect(screen.getByText('bot-beta')).toBeTruthy();
     expect(screen.getByText('Name')).toBeTruthy();
     expect(screen.getByText('Chain')).toBeTruthy();
-    expect(screen.getByText('Network')).toBeTruthy();
+    expect(screen.getByText('Environment')).toBeTruthy();
   });
 
   it('should show create form and call POST on submit', async () => {
@@ -139,6 +149,7 @@ describe('WalletsPage', () => {
       name: 'new-bot',
       chain: 'solana',
       network: 'devnet',
+      environment: 'testnet',
       publicKey: 'newkey123',
       status: 'ACTIVE',
       createdAt: 1707609600,
@@ -161,14 +172,16 @@ describe('WalletsPage', () => {
       expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/wallets', {
         name: 'new-bot',
         chain: 'solana',
-        network: 'devnet',
+        environment: 'testnet',
       });
     });
   });
 
   it('should render wallet detail view', async () => {
     currentPath.value = '/wallets/wallet-1';
-    vi.mocked(apiGet).mockResolvedValue(mockWalletDetail);
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWalletDetail)
+      .mockResolvedValueOnce(mockNetworks);
 
     render(<WalletsPage />);
 
@@ -177,14 +190,17 @@ describe('WalletsPage', () => {
     });
 
     expect(screen.getByText('Chain')).toBeTruthy();
-    expect(screen.getByText('Network')).toBeTruthy();
+    expect(screen.getByText('Environment')).toBeTruthy();
+    expect(screen.getByText('Default Network')).toBeTruthy();
     expect(screen.getByText('Owner State')).toBeTruthy();
     expect(screen.getByText('NONE')).toBeTruthy();
   });
 
   it('should edit wallet name', async () => {
     currentPath.value = '/wallets/wallet-1';
-    vi.mocked(apiGet).mockResolvedValue(mockWalletDetail);
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWalletDetail)
+      .mockResolvedValueOnce(mockNetworks);
     vi.mocked(apiPut).mockResolvedValue({ ...mockWalletDetail, name: 'renamed-bot' });
 
     render(<WalletsPage />);
@@ -212,7 +228,9 @@ describe('WalletsPage', () => {
 
   it('should delete wallet with confirmation modal', async () => {
     currentPath.value = '/wallets/wallet-1';
-    vi.mocked(apiGet).mockResolvedValue(mockWalletDetail);
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWalletDetail)
+      .mockResolvedValueOnce(mockNetworks);
     vi.mocked(apiDelete).mockResolvedValue(undefined);
 
     render(<WalletsPage />);

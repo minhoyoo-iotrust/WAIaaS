@@ -173,6 +173,130 @@ class TestGetAssets:
 
 
 # ---------------------------------------------------------------------------
+# Network parameter tests (multichain)
+# ---------------------------------------------------------------------------
+
+
+class TestGetBalanceWithNetwork:
+    async def test_passes_network_query_parameter(self):
+        captured_url = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_url["url"] = str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "evm",
+                    "network": "polygon-mainnet",
+                    "address": "0xabc",
+                    "balance": "1000000000000000000",
+                    "decimals": 18,
+                    "symbol": "MATIC",
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_balance(network="polygon-mainnet")
+        assert isinstance(result, WalletBalance)
+        assert "network=polygon-mainnet" in captured_url["url"]
+
+    async def test_no_network_backward_compat(self):
+        captured_url = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_url["url"] = str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "solana",
+                    "network": "devnet",
+                    "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+                    "balance": "1000000000",
+                    "decimals": 9,
+                    "symbol": "SOL",
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_balance()
+        assert isinstance(result, WalletBalance)
+        assert "network=" not in captured_url["url"]
+
+
+class TestGetAssetsWithNetwork:
+    async def test_passes_network_query_parameter(self):
+        captured_url = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_url["url"] = str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "evm",
+                    "network": "ethereum-sepolia",
+                    "assets": [],
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_assets(network="ethereum-sepolia")
+        assert isinstance(result, WalletAssets)
+        assert "network=ethereum-sepolia" in captured_url["url"]
+
+
+class TestSendTokenWithNetwork:
+    async def test_includes_network_in_body(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/transactions/send" in str(
+                request.url
+            ):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    201,
+                    json={"id": TX_ID, "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.send_token(
+            "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+            "1000000",
+            network="polygon-mainnet",
+        )
+        assert isinstance(result, TransactionResponse)
+        assert captured_body["network"] == "polygon-mainnet"
+
+    async def test_no_network_backward_compat(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/transactions/send" in str(
+                request.url
+            ):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    201,
+                    json={"id": TX_ID, "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        await client.send_token(
+            "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM", "1000000"
+        )
+        assert "network" not in captured_body
+
+
+# ---------------------------------------------------------------------------
 # Transaction methods
 # ---------------------------------------------------------------------------
 

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 113 of 114 (MCP + SDK + Admin UI)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 112 완료 (verified: 11/11 must-haves)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-14 -- 113-03 완료 (Admin UI 멀티체인 환경 모델 전환)
 
-Progress: [██████░░░░] 62% (8/13 plans)
+Progress: [████████░░] 85% (11/13 plans)
 
 ## Performance Metrics
 
@@ -30,6 +30,9 @@ Progress: [██████░░░░] 62% (8/13 plans)
 | 111 | 02 | 5min | 2 | 4 |
 | 112 | 01 | 6min | 2 | 5 |
 | 112 | 02 | 4min | 2 | 4 |
+| 113 | 01 | 3min | 2 | 10 |
+| 113 | 02 | 4min | 2 | 7 |
+| 113 | 03 | 3min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -67,6 +70,13 @@ Recent decisions affecting current work:
 - 112-02: PUT default-network에서 WALLET_TERMINATED 사전 체크 (terminated 월렛 변경 차단)
 - 112-02: GET networks 응답에 isDefault 플래그 포함 (클라이언트 편의성)
 - 112-02: masterAuth sub-path skip 패턴 통합 (/owner, /default-network, /networks)
+- 113-01: get_wallet_info은 파라미터 없는 도구 (address + networks 2단계 API 호출 조합)
+- 113-01: networks API 실패 시 빈 배열 반환 (graceful degradation)
+- 113-02: TS SDK BalanceOptions/AssetsOptions 별도 인터페이스로 분리 (확장성)
+- 113-02: Python SDK keyword-only network 파라미터 (기존 positional args 하위호환)
+- 113-03: 월렛 생성 폼 network dropdown -> environment select(testnet/mainnet) 전환
+- 113-03: 정책 테이블 Network 컬럼 null -> 'All' 표시
+- 113-03: ADMIN-03 트랜잭션 목록 건너뜀 (sessionAuth 필요, 범위 초과)
 
 ### Blockers/Concerns
 
@@ -77,5 +87,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 112 verified PASSED, ready to plan Phase 113
+Stopped at: Completed 113-03-PLAN.md (Phase 113 전체 완료)
 Resume file: None
