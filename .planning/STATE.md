@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 115 of 119 (Core Types + DB Migration + Parsers)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-15 -- Plan 115-01 완료 (Core 타입 확장 + DB migration v9)
+Last activity: 2026-02-15 -- Plan 115-02 완료 (Solana parseTransaction + signExternalTransaction)
 
-Progress: [#░░░░░░░░░] 8%
+Progress: [##░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -25,6 +25,7 @@ Progress: [#░░░░░░░░░] 8%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 115-01 | 1/3 | 8min | 8min |
+| 115-02 | 2/3 | 5min | 5min |
 
 ## Accumulated Context
 
@@ -40,6 +41,8 @@ Recent decisions affecting current work:
 - ParsedOperationType 5종: NATIVE_TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, UNKNOWN
 - SignedTransaction.txHash optional (체인별 해시 계산 시점 차이)
 - v9 migration은 transactions 테이블만 재생성
+- getCompiledTransactionMessageDecoder 사용 (decompileTransactionMessage 대신 -- v0 lookup table 회피)
+- parseTransaction/signExternalTransaction은 offline 연산 (RPC 불필요)
 
 ### Blockers/Concerns
 
@@ -49,5 +52,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 115-01-PLAN.md
+Stopped at: Completed 115-02-PLAN.md
 Resume file: None
