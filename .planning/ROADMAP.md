@@ -76,11 +76,11 @@ Plans:
   3. GET /v1/wallets/:id/balance?network=polygon-mainnet으로 특정 네트워크 잔액을 조회할 수 있다
   4. PUT /v1/wallets/:id/default-network로 기본 네트워크를 변경할 수 있고, GET /v1/wallets/:id/networks로 사용 가능 네트워크 목록을 조회할 수 있다
   5. ALLOWED_NETWORKS 정책을 REST API로 CRUD 할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 112-01: POST wallets environment + POST transactions network + GET balance/assets network 쿼리
-- [ ] 112-02: PUT default-network + GET networks 신규 엔드포인트 + ALLOWED_NETWORKS 정책 CRUD
+- [ ] 112-01-PLAN.md -- GET balance/assets network 쿼리 파라미터 + 트랜잭션/월렛 응답 network/environment 보강 + api-agents 테스트 수정 (Wave 1)
+- [ ] 112-02-PLAN.md -- PUT /wallets/:id/default-network + GET /wallets/:id/networks 신규 엔드포인트 + ALLOWED_NETWORKS CRUD 검증 + 통합 테스트 (Wave 2, depends on 112-01)
 
 ### Phase 113: MCP + SDK + Admin UI
 **Goal**: MCP 도구, TS/Python SDK, Admin UI가 멀티체인 환경 모델을 지원하여 모든 인터페이스에서 네트워크를 선택할 수 있는 상태
