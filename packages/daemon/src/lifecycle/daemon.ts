@@ -366,7 +366,11 @@ export class DaemonLifecycle {
           masterPasswordHash: this.masterPasswordHash || undefined,
           config: this._config!,
           adapterPool: this.adapterPool,
-          policyEngine: new DatabasePolicyEngine(this._db!, this.sqlite ?? undefined),
+          policyEngine: new DatabasePolicyEngine(
+            this._db!,
+            this.sqlite ?? undefined,
+            this._settingsService ?? undefined,
+          ),
           jwtSecretManager: this.jwtSecretManager ?? undefined,
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,

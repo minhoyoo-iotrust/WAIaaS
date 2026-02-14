@@ -81,6 +81,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'security.policy_defaults_delay_seconds', category: 'security', configPath: 'security.policy_defaults_delay_seconds', defaultValue: '300', isCredential: false },
   { key: 'security.policy_defaults_approval_timeout', category: 'security', configPath: 'security.policy_defaults_approval_timeout', defaultValue: '3600', isCredential: false },
 
+  // --- policy default deny toggles (Phase 116) ---
+  { key: 'policy.default_deny_tokens', category: 'security', configPath: 'security.default_deny_tokens', defaultValue: 'true', isCredential: false },
+  { key: 'policy.default_deny_contracts', category: 'security', configPath: 'security.default_deny_contracts', defaultValue: 'true', isCredential: false },
+  { key: 'policy.default_deny_spenders', category: 'security', configPath: 'security.default_deny_spenders', defaultValue: 'true', isCredential: false },
+
   // --- daemon category ---
   { key: 'daemon.log_level', category: 'daemon', configPath: 'daemon.log_level', defaultValue: 'info', isCredential: false },
 
