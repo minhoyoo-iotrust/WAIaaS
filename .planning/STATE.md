@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 113 - MCP + SDK + Admin UI
+**Current focus:** Phase 114 - CLI Quickstart + DX Integration
 
 ## Current Position
 
-Phase: 113 of 114 (MCP + SDK + Admin UI)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-14 -- 113-03 완료 (Admin UI 멀티체인 환경 모델 전환)
+Phase: 114 of 114 (CLI Quickstart + DX Integration)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-14 -- 114-01 완료 (CLI quickstart 명령 구현)
 
-Progress: [████████░░] 85% (11/13 plans)
+Progress: [█████████░] 92% (12/13 plans)
 
 ## Performance Metrics
 
@@ -33,6 +33,7 @@ Progress: [████████░░] 85% (11/13 plans)
 | 113 | 01 | 3min | 2 | 10 |
 | 113 | 02 | 4min | 2 | 7 |
 | 113 | 03 | 3min | 2 | 5 |
+| 114 | 01 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - 113-03: 월렛 생성 폼 network dropdown -> environment select(testnet/mainnet) 전환
 - 113-03: 정책 테이블 Network 컬럼 null -> 'All' 표시
 - 113-03: ADMIN-03 트랜잭션 목록 건너뜀 (sessionAuth 필요, 범위 초과)
+- 114-01: buildConfigEntry/printConfigPath 인라인 복제 (공통 유틸 추출은 scope 외)
+- 114-01: networks API 실패 시 빈 배열 fallback (113-01 graceful degradation 패턴 재사용)
 
 ### Blockers/Concerns
 
@@ -87,5 +90,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 113-03-PLAN.md (Phase 113 전체 완료)
+Stopped at: Completed 114-01-PLAN.md (CLI quickstart 명령 구현)
 Resume file: None
