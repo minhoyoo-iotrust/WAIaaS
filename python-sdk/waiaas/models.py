@@ -86,6 +86,8 @@ class SendTokenRequest(BaseModel):
     spender: Optional[str] = None
     # BATCH fields
     instructions: Optional[list[dict[str, Any]]] = None
+    # Network selection (multichain)
+    network: Optional[str] = None
 
     model_config = {"populate_by_name": True}
 

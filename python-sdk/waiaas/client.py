@@ -117,14 +117,28 @@ class WAIaaSClient:
         resp = await self._request("GET", "/v1/wallet/address")
         return WalletAddress.model_validate(resp.json())
 
-    async def get_balance(self) -> WalletBalance:
-        """GET /v1/wallet/balance -- Get wallet balance."""
-        resp = await self._request("GET", "/v1/wallet/balance")
+    async def get_balance(self, *, network: Optional[str] = None) -> WalletBalance:
+        """GET /v1/wallet/balance -- Get wallet balance.
+
+        Args:
+            network: Query balance for a specific network (e.g., 'polygon-mainnet').
+        """
+        params: dict[str, Any] = {}
+        if network is not None:
+            params["network"] = network
+        resp = await self._request("GET", "/v1/wallet/balance", params=params or None)
         return WalletBalance.model_validate(resp.json())
 
-    async def get_assets(self) -> WalletAssets:
-        """GET /v1/wallet/assets -- Get all assets held by wallet."""
-        resp = await self._request("GET", "/v1/wallet/assets")
+    async def get_assets(self, *, network: Optional[str] = None) -> WalletAssets:
+        """GET /v1/wallet/assets -- Get all assets held by wallet.
+
+        Args:
+            network: Query assets for a specific network (e.g., 'polygon-mainnet').
+        """
+        params: dict[str, Any] = {}
+        if network is not None:
+            params["network"] = network
+        resp = await self._request("GET", "/v1/wallet/assets", params=params or None)
         return WalletAssets.model_validate(resp.json())
 
     # -----------------------------------------------------------------
@@ -139,6 +153,7 @@ class WAIaaSClient:
         memo: Optional[str] = None,
         type: Optional[str] = None,
         token: Optional[dict[str, Any]] = None,
+        network: Optional[str] = None,
         **kwargs: Any,
     ) -> TransactionResponse:
         """POST /v1/transactions/send -- Send transaction (5-type support).
@@ -155,6 +170,7 @@ class WAIaaSClient:
             memo: Optional memo string.
             type: Transaction type (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH).
             token: Token info dict with address, decimals, symbol (for TOKEN_TRANSFER/APPROVE).
+            network: Target network (e.g., 'polygon-mainnet') for multichain transactions.
             **kwargs: Additional fields (calldata, spender, instructions, etc.).
 
         Returns:
@@ -163,7 +179,7 @@ class WAIaaSClient:
         token_obj = TokenInfo(**token) if isinstance(token, dict) else token
         request = SendTokenRequest(
             to=to, amount=amount, memo=memo, type=type,
-            token=token_obj, **kwargs,
+            token=token_obj, network=network, **kwargs,
         )
         body = request.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request("POST", "/v1/transactions/send", json_body=body)
