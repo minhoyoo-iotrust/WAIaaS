@@ -41,10 +41,10 @@ Plans:
   2. PipelineContext에서 wallet.environment + resolvedNetwork가 전파되는 Stage 1~6 데이터 흐름도가 존재한다
   3. 환경-네트워크 교차 검증 로직(mainnet 월렛 + testnet 네트워크 차단)의 검증 시점, 에러 코드, 에러 메시지가 명시되어 있다
   4. AdapterPool.resolve() 호출부의 변경 방안(리졸브된 network 전달)이 기존 캐시 키 구조와 호환됨이 확인되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 106-01: NetworkResolver + PipelineContext + 환경 교차 검증 + AdapterPool 호출 변경
+- [ ] 106-01-PLAN.md — NetworkResolver 순수 함수 + PipelineContext 확장 + 환경 교차 검증 + AdapterPool 호출 변경 통합 설계 (docs/70)
 
 ### Phase 107: 정책 엔진 네트워크 확장 설계
 **Goal**: 정책 엔진이 네트워크 단위로 트랜잭션을 제어할 수 있는 확장이 설계되어, ALLOWED_NETWORKS 평가와 네트워크별 차등 정책의 스키마/로직/우선순위가 확정되어 있다
