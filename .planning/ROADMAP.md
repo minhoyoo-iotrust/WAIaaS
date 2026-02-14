@@ -90,11 +90,11 @@ Plans:
   2. TS SDK encodeCalldata()와 Python SDK encode_calldata()로 동일 기능을 호출할 수 있다
   3. MCP encode_calldata 도구로 동일 기능을 사용할 수 있다
   4. 존재하지 않는 함수명이나 타입 불일치 시 ABI_ENCODING_FAILED 에러가 반환된다
-**Plans**: TBD
+**Plans:** 2 plans (Wave 1: 118-01, Wave 2: 118-02)
 
 Plans:
-- [ ] 118-01: POST /v1/utils/encode-calldata REST API + viem encodeFunctionData 래핑 + 에러 처리
-- [ ] 118-02: TS/Python SDK encodeCalldata + MCP encode_calldata 도구
+- [ ] 118-01-PLAN.md -- ABI_ENCODING_FAILED 에러 코드 + OpenAPI 스키마 + POST /v1/utils/encode-calldata 라우트 + server.ts 등록
+- [ ] 118-02-PLAN.md -- TS SDK encodeCalldata + Python SDK encode_calldata + MCP encode_calldata 도구 + 스킬 파일 업데이트
 
 ### Phase 119: SDK + MCP + Notifications + Skill Resources
 **Goal**: sign-only API가 TS/Python SDK, MCP에서 사용 가능하고, MCP 스킬 리소스로 API 문서가 노출되며, 정책 거부 알림이 보강된 상태
