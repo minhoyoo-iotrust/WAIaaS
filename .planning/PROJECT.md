@@ -8,9 +8,23 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v1.4.6 멀티체인 월렛 구현
+
+**Goal:** v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경)을 구현하여, 하나의 EVM 월렛이 5개 네트워크에서 트랜잭션을 실행할 수 있는 상태를 달성한다.
+
+**Target features:**
+- DB 마이그레이션 (wallets.network→environment, transactions.network, policies.network)
+- EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수
+- resolveNetwork() 순수 함수 + 파이프라인 Stage 1 네트워크 해결
+- ALLOWED_NETWORKS 11번째 PolicyType + 네트워크 스코프 정책
+- REST API/MCP/SDK network 파라미터 확장
+- Admin UI 환경 모델 전환
+- CLI Quickstart --mode testnet/mainnet 원스톱 셋업
+- Skill 파일 동기화
+
 ## Current State
 
-v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). "1 월렛 = 1 체인 + 1 네트워크" → "1 월렛 = 1 체인 + 1 환경(testnet/mainnet)" 전환 아키텍처를 5개 설계 문서(docs/68-72)로 완전히 정의. EnvironmentType SSoT, DB 마이그레이션 v6a/v6b, NetworkResolver 파이프라인 확장, ALLOWED_NETWORKS 정책, REST API/MCP/SDK network 파라미터, Quickstart 워크플로우까지 설계 완료. 코드 구현은 v1.4.6에서 수행.
+v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 설계 문서 5개(docs/68-72)로 전환 아키텍처 완전 정의. v1.4.6에서 코드 구현 진행 중.
 
 코드베이스(v1.4.4 기준, v1.4.5는 설계 only): 9-패키지 모노레포 + Python SDK, 62,296 LOC, 1,467 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정 + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
 
@@ -28,6 +42,7 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). "1 월렛 = 1 체
 - ✅ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 — shipped 2026-02-13 (1,357 tests, 59,993 LOC)
 - ✅ v1.4.4 Admin Settings + MCP 5-type + Skill Files — shipped 2026-02-14 (1,467 tests, 62,296 LOC)
 - ✅ v1.4.5 멀티체인 월렛 모델 설계 — shipped 2026-02-14 (설계 문서 5개, 설계 결정 31개)
+- **◆ v1.4.6 멀티체인 월렛 구현 — in progress**
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -221,7 +236,15 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). "1 월렛 = 1 체
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+- [ ] DB 마이그레이션 v6a/v6b/v8 (wallets environment 전환, transactions.network, policies.network)
+- [ ] EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개
+- [ ] resolveNetwork() + PipelineContext 확장 + Stage 1 네트워크 해결
+- [ ] ALLOWED_NETWORKS PolicyType + 네트워크 스코프 정책 4단계 override
+- [ ] REST API network/environment 파라미터 + 신규 엔드포인트
+- [ ] MCP 6개 도구 + TS/Python SDK network 파라미터 확장
+- [ ] Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI
+- [ ] CLI Quickstart --mode testnet/mainnet 원스톱 셋업
+- [ ] Skill 파일 4개 동기화
 
 ## Next Milestone Goals
 
@@ -404,4 +427,4 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 4 페이즈, 6 �
 | quickstart 에러 시 rollback 없음 (멱등성) | 복잡성 감소, 재실행으로 해결 | ✓ Good — v1.4.5 설계 |
 
 ---
-*최종 업데이트: 2026-02-14 after v1.4.5 milestone completed*
+*최종 업데이트: 2026-02-14 after v1.4.6 milestone started*
