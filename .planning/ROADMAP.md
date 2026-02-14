@@ -7,7 +7,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 ## Milestones
 
 - ✅ **v1.4.5 멀티체인 월렛 모델 설계** - Phases 105-108 (shipped 2026-02-14)
-- **v1.4.6 멀티체인 월렛 구현** - Phases 109-114 (in progress)
+- ✅ **v1.4.6 멀티체인 월렛 구현** - Phases 109-114 (shipped 2026-02-14)
 
 ## Phases
 
@@ -16,7 +16,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 - [x] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름 ✅ 2026-02-14
 - [x] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개 ✅ 2026-02-14
 - [x] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환 ✅ 2026-02-14
-- [ ] **Phase 114: CLI Quickstart + DX 통합** - quickstart --mode + 스킬 파일 동기화 + 하위호환 검증
+- [x] **Phase 114: CLI Quickstart + DX 통합** - quickstart --mode + 스킬 파일 동기화 + 하위호환 검증 ✅ 2026-02-14
 
 ## Phase Details
 
@@ -110,8 +110,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 114-01-PLAN.md -- CLI quickstart --mode testnet/mainnet 구현 + 테스트 (Wave 1)
-- [ ] 114-02-PLAN.md -- 스킬 파일 4개 동기화 (quickstart, wallet, transactions, policies) (Wave 1)
+- [x] 114-01-PLAN.md -- CLI quickstart --mode testnet/mainnet 구현 + 테스트 (Wave 1)
+- [x] 114-02-PLAN.md -- 스킬 파일 4개 동기화 (quickstart, wallet, transactions, policies) (Wave 1)
 
 ## Progress
 
@@ -125,4 +125,4 @@ Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
 | 111. 파이프라인 네트워크 해결 | 2/2 | ✅ Complete | 2026-02-14 |
 | 112. REST API 네트워크 확장 | 2/2 | ✅ Complete | 2026-02-14 |
 | 113. MCP + SDK + Admin UI | 3/3 | ✅ Complete | 2026-02-14 |
-| 114. CLI Quickstart + DX 통합 | 0/2 | Not started | - |
+| 114. CLI Quickstart + DX 통합 | 2/2 | ✅ Complete | 2026-02-14 |

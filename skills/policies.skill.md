@@ -1,9 +1,9 @@
 ---
 name: "WAIaaS Policies"
-description: "Policy engine CRUD: 10 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls"
+description: "Policy engine CRUD: 11 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
-version: "1.4.4"
+version: "1.4.6"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -11,7 +11,7 @@ dispatch:
 
 # WAIaaS Policy Management
 
-Policy engine for enforcing rules on wallet operations. Policies control spending limits, allowed recipients, time windows, rate limits, token whitelists, contract access, and approval requirements.
+Policy engine for enforcing rules on wallet operations. Policies control spending limits, allowed recipients, time windows, rate limits, token whitelists, contract access, approval requirements, and network restrictions.
 
 ## Base URL
 
@@ -49,10 +49,11 @@ curl -s -X POST http://localhost:3100/v1/policies \
 | Parameter  | Type    | Required | Description                                              |
 | ---------- | ------- | -------- | -------------------------------------------------------- |
 | `walletId` | UUID    | No       | Target wallet. Omit for global policy (applies to all).  |
-| `type`     | string  | Yes      | One of 10 policy types (see below).                      |
+| `type`     | string  | Yes      | One of 11 policy types (see below).                      |
 | `rules`    | object  | Yes      | Type-specific rules object (see type sections).          |
 | `priority` | integer | No       | Higher = more important. Default: 0.                     |
 | `enabled`  | boolean | No       | Whether policy is active. Default: true.                 |
+| `network`  | string  | No       | Network scope. When set, policy applies only to transactions on this network. Omit for all networks. |
 
 **Response (201):**
 ```json
@@ -63,6 +64,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
   "rules": {"instant_max": "100000000", "notify_max": "500000000", "delay_max": "1000000000"},
   "priority": 0,
   "enabled": true,
+  "network": null,
   "createdAt": 1707000000,
   "updatedAt": 1707000000
 }
@@ -120,7 +122,7 @@ curl -s -X DELETE http://localhost:3100/v1/policies/<policy-uuid> \
 
 ---
 
-## 2. Policy Types (10 Types)
+## 2. Policy Types (11 Types)
 
 Each policy type has a specific `rules` schema. The `type` field determines which rules structure is required.
 
@@ -386,16 +388,45 @@ curl -s -X POST http://localhost:3100/v1/policies \
   -d '{"walletId":"<uuid>","type":"APPROVE_TIER_OVERRIDE","rules":{"tier":"APPROVAL"}}'
 ```
 
+### k. ALLOWED_NETWORKS (v1.4.6)
+
+Restrict which networks a wallet can use for transactions. Permissive by default: if no ALLOWED_NETWORKS policy exists, all networks valid for the wallet's environment are allowed.
+
+**Rules schema:**
+```json
+{
+  "networks": [
+    {"network": "ethereum-sepolia"},
+    {"network": "polygon-amoy", "name": "Polygon Testnet"}
+  ]
+}
+```
+
+| Field      | Type   | Required | Description                            |
+| ---------- | ------ | -------- | -------------------------------------- |
+| `networks` | array  | Yes      | At least 1 network entry.              |
+| `network`  | string | Yes      | Network identifier (e.g., "ethereum-sepolia"). |
+| `name`     | string | No       | Display name for the network.          |
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
+```
+
+Note: ALLOWED_NETWORKS is permissive by default (all networks allowed until the first ALLOWED_NETWORKS policy is created for a wallet).
+
 ---
 
 ## 3. Policy Evaluation Flow
 
 When a transaction is submitted (`POST /v1/transactions/send`), the policy engine evaluates all applicable policies:
 
-1. **Collect policies** -- All enabled policies for the wallet + global policies, sorted by priority.
+1. **Collect policies** -- All enabled policies for the wallet + global policies, sorted by priority. If a policy has a `network` field set, it applies only to transactions on that specific network. Override priority: wallet+network > wallet+null > global+network > global+null.
 2. **Default deny checks** -- ALLOWED_TOKENS, CONTRACT_WHITELIST, and APPROVED_SPENDERS use **default deny**: if any policy of that type exists but the transaction's token/contract/spender is not in any matching policy, the transaction is blocked with `POLICY_VIOLATION`.
 3. **Tier assignment** -- SPENDING_LIMIT determines the transaction tier (INSTANT/NOTIFY/DELAY/APPROVAL) based on amount. APPROVE_TIER_OVERRIDE overrides the tier for APPROVE transactions.
-4. **Constraint checks** -- WHITELIST, TIME_RESTRICTION, RATE_LIMIT, METHOD_WHITELIST, APPROVE_AMOUNT_LIMIT are evaluated. Any violation blocks the transaction.
+4. **Constraint checks** -- WHITELIST, TIME_RESTRICTION, RATE_LIMIT, METHOD_WHITELIST, APPROVE_AMOUNT_LIMIT, ALLOWED_NETWORKS are evaluated. Any violation blocks the transaction.
 5. **Tier execution** -- INSTANT executes immediately, NOTIFY executes + sends notification, DELAY waits for cooldown, APPROVAL requires owner approval via `POST /v1/transactions/{id}/approve`.
 
 ### Default Deny Policy Types
@@ -471,16 +502,28 @@ curl -s -X POST http://localhost:3100/v1/policies \
   -d '{"walletId":"<uuid>","type":"APPROVE_TIER_OVERRIDE","rules":{"tier":"APPROVAL"}}'
 ```
 
+### Restrict wallet to specific networks
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
+```
+
+Transactions to unlisted networks will be blocked with POLICY_VIOLATION.
+
 ---
 
 ## 5. Error Reference
 
-| Error Code                 | HTTP | Description                                       |
-| -------------------------- | ---- | ------------------------------------------------- |
-| `POLICY_NOT_FOUND`         | 404  | Policy ID does not exist.                         |
-| `POLICY_VIOLATION`         | 403  | Transaction violates one or more active policies. |
-| `ACTION_VALIDATION_FAILED` | 400  | Invalid rules schema for the given policy type.   |
-| `WALLET_NOT_FOUND`         | 404  | walletId does not match any existing wallet.      |
+| Error Code                      | HTTP | Description                                       |
+| ------------------------------- | ---- | ------------------------------------------------- |
+| `POLICY_NOT_FOUND`              | 404  | Policy ID does not exist.                         |
+| `POLICY_VIOLATION`              | 403  | Transaction violates one or more active policies. |
+| `ACTION_VALIDATION_FAILED`      | 400  | Invalid rules schema for the given policy type.   |
+| `WALLET_NOT_FOUND`              | 404  | walletId does not match any existing wallet.      |
+| `ENVIRONMENT_NETWORK_MISMATCH`  | 400  | Network scope not valid for wallet's environment. |
 
 **Error response format:**
 ```json

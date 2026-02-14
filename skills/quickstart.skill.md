@@ -3,7 +3,7 @@ name: "WAIaaS Quickstart"
 description: "End-to-end quickstart: create wallet, session, check balance, send first transfer"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, quickstart, waiass]
-version: "1.4.4"
+version: "1.4.6"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -47,7 +47,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "1.4.4",
+  "version": "1.4.6",
   "uptime": 42,
   "timestamp": 1707000000
 }
@@ -55,7 +55,7 @@ Response:
 
 ### Step 2: Create a Wallet
 
-Create a new wallet with a key pair. Requires **masterAuth**.
+Create a new wallet with a key pair. Requires **masterAuth**. Each wallet belongs to an **environment** (testnet or mainnet) which determines the available networks.
 
 **Solana wallet (default):**
 
@@ -63,7 +63,7 @@ Create a new wallet with a key pair. Requires **masterAuth**.
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-first-wallet", "chain": "solana", "network": "devnet"}'
+  -d '{"name": "my-first-wallet", "chain": "solana", "environment": "testnet"}'
 ```
 
 **EVM wallet (Ethereum):**
@@ -72,13 +72,13 @@ curl -s -X POST http://localhost:3100/v1/wallets \
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-eth-wallet", "chain": "ethereum", "network": "ethereum-sepolia"}'
+  -d '{"name": "my-eth-wallet", "chain": "ethereum", "environment": "testnet"}'
 ```
 
 Parameters:
 - `name` (required): 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `network` (optional): Solana networks: `"mainnet"`, `"devnet"`, `"testnet"` (default: `"devnet"`). EVM networks: `"ethereum-mainnet"`, `"ethereum-sepolia"`, `"polygon-mainnet"`, `"arbitrum-mainnet"`, `"optimism-mainnet"`, `"base-mainnet"`, `"bsc-mainnet"`, `"avalanche-mainnet"`, `"linea-mainnet"`, `"scroll-mainnet"`, `"zksync-mainnet"`, `"blast-mainnet"`, `"mantle-mainnet"`
+- `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks
 
 Response (201):
 ```json
@@ -87,11 +87,14 @@ Response (201):
   "name": "my-first-wallet",
   "chain": "solana",
   "network": "devnet",
+  "environment": "testnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "createdAt": 1707000000
 }
 ```
+
+The `network` field shows the wallet's default network, automatically assigned based on the chain and environment. For Solana testnet, the default is `devnet`. For Ethereum testnet, the default is `ethereum-sepolia`.
 
 Save the `id` value -- you need it to create a session.
 
@@ -131,6 +134,8 @@ curl -s http://localhost:3100/v1/wallet/balance \
   -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
+Optional: Append `?network=<network>` to query a specific network (defaults to the wallet's default network).
+
 Response:
 ```json
 {
@@ -154,6 +159,8 @@ Get all assets including native token and SPL/ERC-20 tokens. Requires **sessionA
 curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
+
+Optional: Append `?network=<network>` to query a specific network (defaults to the wallet's default network).
 
 Response:
 ```json
@@ -203,6 +210,7 @@ Parameters:
 - `to` (required): recipient wallet address
 - `amount` (required): string of digits in smallest unit (lamports for SOL, wei for ETH)
 - `memo` (optional): max 256 characters
+- `network` (optional): target network for this transaction (defaults to wallet's default network)
 
 Response (201):
 ```json
@@ -232,6 +240,7 @@ Response:
   "status": "CONFIRMED",
   "tier": "INSTANT",
   "chain": "solana",
+  "network": "devnet",
   "toAddress": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
   "amount": "100000000",
   "txHash": "5UfD...abc",
@@ -246,6 +255,16 @@ Transaction status values:
 - `CONFIRMED` -- confirmed on-chain
 - `FAILED` -- execution or confirmation failed
 - `CANCELLED` -- cancelled by wallet or owner
+
+## CLI Quickstart (Alternative)
+
+If you have the CLI installed, create wallets in one step:
+
+```bash
+waiaas quickstart --mode testnet
+```
+
+This creates Solana + EVM wallets and prints MCP configuration.
 
 ## Error Handling
 
@@ -274,6 +293,7 @@ Common error codes:
 | `CHAIN_ERROR` | 502 | Blockchain RPC error -- check network connectivity |
 | `ACTION_VALIDATION_FAILED` | 400 | Request body validation failed |
 | `TX_NOT_FOUND` | 404 | Transaction ID does not exist |
+| `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Specified network does not belong to wallet's environment |
 
 ## Next Steps
 
