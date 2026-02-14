@@ -1,128 +1,128 @@
-# Roadmap: WAIaaS v1.4.6
+# Roadmap: WAIaaS v1.4.7
 
 ## Overview
 
-v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경)을 6개 페이즈에 걸쳐 구현한다. DB 마이그레이션과 환경 모델 SSoT를 기반으로, 파이프라인/정책/API/MCP/SDK/Admin UI/CLI를 순차적으로 확장하여, 하나의 EVM 월렛이 5개 네트워크에서 트랜잭션을 실행할 수 있는 상태를 달성한다.
+v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS가 정책 평가 후 서명하여 반환하는 sign-only API를 제공한다. 코어 타입/DB 마이그레이션/파서를 기반으로, sign-only 파이프라인, 기본 거부 토글, EVM calldata 인코딩 유틸리티를 구현하고, SDK/MCP/스킬 리소스/알림 보강으로 마무리한다.
 
 ## Milestones
 
-- ✅ **v1.4.5 멀티체인 월렛 모델 설계** - Phases 105-108 (shipped 2026-02-14)
 - ✅ **v1.4.6 멀티체인 월렛 구현** - Phases 109-114 (shipped 2026-02-14)
+- 🚧 **v1.4.7 임의 트랜잭션 서명 API** - Phases 115-119 (in progress)
 
 ## Phases
 
-- [x] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 데이터 레이어 전환 + EnvironmentType 파생 체인 ✅ 2026-02-14
-- [x] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가 ✅ 2026-02-14
-- [x] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름 ✅ 2026-02-14
-- [x] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개 ✅ 2026-02-14
-- [x] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환 ✅ 2026-02-14
-- [x] **Phase 114: CLI Quickstart + DX 통합** - quickstart --mode + 스킬 파일 동기화 + 하위호환 검증 ✅ 2026-02-14
+<details>
+<summary>v1.4.6 멀티체인 월렛 구현 (Phases 109-114) - SHIPPED 2026-02-14</summary>
+
+- [x] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 2/2 plans
+- [x] **Phase 110: 스키마 전환 + 정책 엔진** - 2/2 plans
+- [x] **Phase 111: 파이프라인 네트워크 해결** - 2/2 plans
+- [x] **Phase 112: REST API 네트워크 확장** - 2/2 plans
+- [x] **Phase 113: MCP + SDK + Admin UI** - 3/3 plans
+- [x] **Phase 114: CLI Quickstart + DX 통합** - 2/2 plans
+
+</details>
+
+### v1.4.7 임의 트랜잭션 서명 API (In Progress)
+
+- [ ] **Phase 115: Core Types + DB Migration + Parsers** - SIGNED 상태/SIGN 타입 추가, IChainAdapter 파서 메서드, Solana/EVM unsigned tx 파싱 구현
+- [ ] **Phase 116: Default Deny Toggles** - ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS 기본 거부 정책 ON/OFF 토글
+- [ ] **Phase 117: Sign-Only Pipeline + REST API** - POST /v1/transactions/sign 엔드포인트, 정책 평가 후 동기 서명 반환
+- [ ] **Phase 118: EVM Calldata Encoding** - POST /v1/utils/encode-calldata 유틸리티 엔드포인트
+- [ ] **Phase 119: SDK + MCP + Notifications + Skill Resources** - TS/Python SDK, MCP 도구, 스킬 리소스 노출, 알림 보강
 
 ## Phase Details
 
-### Phase 109: DB 마이그레이션 + 환경 모델 SSoT
-**Goal**: 데이터 레이어가 환경 모델로 완전히 전환되고, EnvironmentType SSoT가 코드베이스 전체에서 사용 가능한 상태
+### Phase 115: Core Types + DB Migration + Parsers
+**Goal**: 모든 downstream 컴포넌트가 의존하는 타입, DB 스키마, unsigned tx 파서가 준비된 상태
 **Depends on**: Nothing (first phase)
-**Requirements**: MIGR-01, MIGR-02, MIGR-03, MIGR-04, SCHEMA-01, SCHEMA-02
+**Requirements**: SIGN-09, SIGN-02, SIGN-03, SIGN-04, SIGN-05, SIGN-14
 **Success Criteria** (what must be TRUE):
-  1. v6a 마이그레이션 실행 후 transactions 테이블에 network 컬럼이 존재하고 기존 레코드가 wallets.network 역참조로 채워져 있다
-  2. v6b 마이그레이션 실행 후 wallets 테이블이 environment + default_network 컬럼을 가지며 기존 network 값이 정확히 변환되어 있다
-  3. v8 마이그레이션 실행 후 policies 테이블에 network 컬럼이 존재한다
-  4. EnvironmentType Zod SSoT에서 타입/OpenAPI/Drizzle CHECK가 파생되고, getNetworksForEnvironment/getDefaultNetwork/deriveEnvironment/validateNetworkEnvironment 4개 함수가 동작한다
-  5. 마이그레이션 전후 데이터 무결성이 보존된다 (기존 월렛/트랜잭션/정책 데이터 손실 없음)
-**Plans**: 2 plans
+  1. TransactionStatus에 SIGNED, TransactionType에 SIGN이 추가되어 DB CHECK 제약이 업데이트된다
+  2. SolanaAdapter.parseTransaction()이 base64 unsigned tx를 받아 SystemProgram.transfer, SPL Token transfer, Anchor program call을 ParsedTransaction으로 식별한다
+  3. EvmAdapter.parseTransaction()이 hex unsigned tx를 받아 ETH transfer, ERC-20 transfer/approve, 임의 contract call을 ParsedTransaction으로 식별한다
+  4. IChainAdapter.signExternalTransaction()이 unsigned tx에 월렛 키로 서명하여 SignedTransaction을 반환한다
+  5. 잘못된 rawTx, 월렛 미포함 서명자, 지원하지 않는 체인 등 에러가 명확한 에러 코드로 반환된다
+**Plans**: TBD
 
 Plans:
-- [x] 109-01-PLAN.md -- EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개 (TDD, Wave 1)
-- [x] 109-02-PLAN.md -- DB 마이그레이션 v6a/v6b/v8 + pushSchema DDL 동기화 + Drizzle 스키마 + 테스트 (Wave 2, depends on 109-01)
+- [ ] 115-01: Core 타입 확장 + DB 마이그레이션 v9 (SIGNED 상태, SIGN 타입, ParsedTransaction 타입, 에러 코드)
+- [ ] 115-02: IChainAdapter parseTransaction/signExternalTransaction + SolanaAdapter 구현
+- [ ] 115-03: EvmAdapter parseTransaction/signExternalTransaction 구현
 
-### Phase 110: 스키마 전환 + 정책 엔진
-**Goal**: Wallet/Transaction/Policy Zod 스키마가 환경 모델을 반영하고, ALLOWED_NETWORKS 정책이 네트워크 스코프로 평가되는 상태
-**Depends on**: Phase 109
-**Requirements**: SCHEMA-03, SCHEMA-04, SCHEMA-05, PLCY-01, PLCY-02, PLCY-03
+### Phase 116: Default Deny Toggles
+**Goal**: 관리자가 기본 거부 정책을 개별적으로 ON/OFF 전환하여 운영 유연성을 확보한 상태
+**Depends on**: Nothing (independent)
+**Requirements**: TOGGLE-01, TOGGLE-02, TOGGLE-03, TOGGLE-04, TOGGLE-05
 **Success Criteria** (what must be TRUE):
-  1. CreateWalletRequest에 environment 파라미터를 지정하여 testnet/mainnet 월렛을 생성할 수 있다
-  2. SendTransactionRequest 5-type 모두 network 선택 파라미터를 수용한다
-  3. ALLOWED_NETWORKS 정책을 생성하면 지정되지 않은 네트워크에서의 트랜잭션이 POLICY_VIOLATION으로 거부된다
-  4. 네트워크 스코프 정책이 4단계 override 우선순위(wallet+network > wallet+null > global+network > global+null)로 평가된다
-**Plans**: 2 plans
+  1. Admin UI/API에서 default_deny_tokens를 OFF로 전환하면 ALLOWED_TOKENS 미설정 월렛도 토큰 전송이 허용된다
+  2. Admin UI/API에서 default_deny_contracts를 OFF로 전환하면 CONTRACT_WHITELIST 미설정 월렛도 컨트랙트 호출이 허용된다
+  3. Admin UI/API에서 default_deny_spenders를 OFF로 전환하면 APPROVED_SPENDERS 미설정 월렛도 토큰 승인이 허용된다
+  4. 화이트리스트 정책이 설정된 월렛은 토글과 무관하게 정상 화이트리스트 평가가 수행된다
+  5. 3개 토글의 기본값은 모두 ON(기본 거부 유지)이며 변경 시 hot-reload로 즉시 반영된다
+**Plans**: TBD
 
 Plans:
-- [x] 110-01-PLAN.md -- Zod 스키마 환경 모델 전환 + ALLOWED_NETWORKS PolicyType SSoT + Route 레이어 적용 (Wave 1)
-- [x] 110-02-PLAN.md -- ALLOWED_NETWORKS 평가 로직 + 4단계 override resolveOverrides + evaluateAndReserve network SQL (TDD, Wave 2, depends on 110-01)
+- [ ] 116-01: SettingsService 3개 토글 추가 + DatabasePolicyEngine 분기 로직 + Admin UI 자동 노출
+- [ ] 116-02: 토글 동작 검증 테스트 (기본 거부 ON/OFF, 화이트리스트 공존, hot-reload)
 
-### Phase 111: 파이프라인 네트워크 해결
-**Goal**: 트랜잭션 파이프라인이 네트워크를 자동 해결하고, 해결된 네트워크로 빌드/실행/확인하는 상태
-**Depends on**: Phase 110
-**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05
+### Phase 117: Sign-Only Pipeline + REST API
+**Goal**: 외부 dApp이 빌드한 unsigned 트랜잭션을 POST /v1/transactions/sign으로 제출하면 정책 평가 후 서명된 트랜잭션을 동기 응답으로 받을 수 있는 상태
+**Depends on**: Phase 115
+**Requirements**: SIGN-01, SIGN-06, SIGN-07, SIGN-08, SIGN-10
 **Success Criteria** (what must be TRUE):
-  1. 트랜잭션 요청에 network를 지정하면 해당 네트워크에서 실행되고, 미지정 시 wallet.defaultNetwork가 사용된다
-  2. 환경과 불일치하는 네트워크 지정 시 ENVIRONMENT_NETWORK_MISMATCH 에러가 반환된다
-  3. transactions 테이블에 실행 네트워크가 정확히 기록된다
-  4. 네트워크 스코프 정책이 Stage 3에서 트랜잭션의 해결된 네트워크와 매칭되어 평가된다
-**Plans**: 2 plans
+  1. POST /v1/transactions/sign에 unsigned tx를 제출하면 파싱된 operations가 기존 정책 엔진으로 평가되어 모든 operation 통과 시 서명된 트랜잭션이 반환된다
+  2. DELAY/APPROVAL 티어에 해당하는 sign-only 요청은 즉시 거부되고 명확한 에러 메시지가 반환된다
+  3. 서명 결과가 transactions 테이블에 type='SIGN', status='SIGNED'로 기록된다
+  4. 서명 시 reserved_amount에 누적되어 SPENDING_LIMIT 이중 지출이 방지된다
+**Plans**: TBD
 
 Plans:
-- [x] 111-01-PLAN.md -- resolveNetwork() TDD (순수 함수 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + PipelineContext 확장, Wave 1)
-- [x] 111-02-PLAN.md -- Route/Daemon/Pipeline 네트워크 해결 통합 + 통합 테스트 (Wave 2, depends on 111-01)
+- [ ] 117-01: sign-only 파이프라인 (executeSignOnly, stage5SignOnly) + DELAY/APPROVAL 즉시 거부 + reservation
+- [ ] 117-02: POST /v1/transactions/sign REST API 라우트 + OpenAPI 스키마 + 통합 테스트
 
-### Phase 112: REST API 네트워크 확장
-**Goal**: REST API가 환경/네트워크 파라미터를 수용하고, 월렛별 네트워크 관리 엔드포인트가 동작하는 상태
-**Depends on**: Phase 111
-**Requirements**: API-01, API-02, API-03, API-04, API-05, API-06
+### Phase 118: EVM Calldata Encoding
+**Goal**: AI 에이전트가 ABI + 함수명 + 인자를 보내면 인코딩된 calldata hex를 받을 수 있는 상태
+**Depends on**: Nothing (independent)
+**Requirements**: ENCODE-01, ENCODE-02, ENCODE-03, ENCODE-04, ENCODE-05
 **Success Criteria** (what must be TRUE):
-  1. POST /v1/wallets에 environment 파라미터로 testnet/mainnet 월렛을 생성할 수 있고, 미지정 시 testnet 기본값이 적용된다
-  2. POST /v1/transactions/send에 network 파라미터로 특정 네트워크를 지정하여 트랜잭션을 실행할 수 있다
-  3. GET /v1/wallets/:id/balance?network=polygon-mainnet으로 특정 네트워크 잔액을 조회할 수 있다
-  4. PUT /v1/wallets/:id/default-network로 기본 네트워크를 변경할 수 있고, GET /v1/wallets/:id/networks로 사용 가능 네트워크 목록을 조회할 수 있다
-  5. ALLOWED_NETWORKS 정책을 REST API로 CRUD 할 수 있다
-**Plans**: 2 plans
+  1. POST /v1/utils/encode-calldata에 ABI + 함수명 + 인자를 보내면 인코딩된 calldata hex가 반환된다
+  2. TS SDK encodeCalldata()와 Python SDK encode_calldata()로 동일 기능을 호출할 수 있다
+  3. MCP encode_calldata 도구로 동일 기능을 사용할 수 있다
+  4. 존재하지 않는 함수명이나 타입 불일치 시 ABI_ENCODING_FAILED 에러가 반환된다
+**Plans**: TBD
 
 Plans:
-- [x] 112-01-PLAN.md -- GET balance/assets network 쿼리 파라미터 + 트랜잭션/월렛 응답 network/environment 보강 + api-agents 테스트 수정 (Wave 1)
-- [x] 112-02-PLAN.md -- PUT /wallets/:id/default-network + GET /wallets/:id/networks 신규 엔드포인트 + ALLOWED_NETWORKS CRUD 검증 + 통합 테스트 (Wave 2, depends on 112-01)
+- [ ] 118-01: POST /v1/utils/encode-calldata REST API + viem encodeFunctionData 래핑 + 에러 처리
+- [ ] 118-02: TS/Python SDK encodeCalldata + MCP encode_calldata 도구
 
-### Phase 113: MCP + SDK + Admin UI
-**Goal**: MCP 도구, TS/Python SDK, Admin UI가 멀티체인 환경 모델을 지원하여 모든 인터페이스에서 네트워크를 선택할 수 있는 상태
-**Depends on**: Phase 112
-**Requirements**: INTEG-01, INTEG-02, INTEG-03, INTEG-04, ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04
+### Phase 119: SDK + MCP + Notifications + Skill Resources
+**Goal**: sign-only API가 TS/Python SDK, MCP에서 사용 가능하고, MCP 스킬 리소스로 API 문서가 노출되며, 정책 거부 알림이 보강된 상태
+**Depends on**: Phase 117, Phase 118
+**Requirements**: SIGN-11, SIGN-12, SIGN-13, SIGN-15, MCPRES-01, MCPRES-02, MCPRES-03, NOTIF-01, NOTIF-02
 **Success Criteria** (what must be TRUE):
-  1. MCP send_transaction/send_token/get_balance/get_assets/call_contract/approve_token 도구에 network 파라미터를 지정하여 특정 네트워크에서 실행할 수 있다
-  2. TS SDK의 sendTransaction({network: 'polygon-mainnet'})와 Python SDK의 send_transaction(network='polygon-mainnet')이 동작한다
-  3. Admin UI 월렛 생성 시 environment 라디오버튼(testnet/mainnet)으로 선택하고, 월렛 상세에서 사용 가능 네트워크 목록과 기본 네트워크 변경 UI가 동작한다
-  4. Admin UI 트랜잭션 목록에 network 컬럼이 표시되고, 정책 생성에서 ALLOWED_NETWORKS 타입과 네트워크 스코프를 선택할 수 있다
-**Plans**: 3 plans
+  1. TS SDK signTransaction()과 Python SDK sign_transaction()으로 sign-only API를 호출할 수 있다
+  2. MCP sign_transaction 도구로 sign-only API를 사용할 수 있다
+  3. MCP resources/list에 waiaas://skills/{name} URI로 5개 스킬 파일이 포함되고 resources/read로 내용을 조회할 수 있다
+  4. POLICY_VIOLATION 알림에 contractAddress, tokenAddress, policyType 필드와 Admin UI 딥링크가 포함된다
+  5. transactions.skill.md가 sign-only API와 calldata encoding을 포함하도록 업데이트된다
+**Plans**: TBD
 
 Plans:
-- [x] 113-01-PLAN.md -- MCP 6개 도구 network 파라미터 + get_wallet_info 신규 도구 + 테스트 (Wave 1)
-- [x] 113-02-PLAN.md -- TS SDK + Python SDK network 파라미터 확장 + 테스트 (Wave 1)
-- [x] 113-03-PLAN.md -- Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI + 테스트 (Wave 1)
-
-### Phase 114: CLI Quickstart + DX 통합
-**Goal**: quickstart 명령으로 테스트넷/메인넷 월렛을 원스톱 생성할 수 있고, 모든 변경이 하위호환되며 스킬 파일이 최신 상태인 상태
-**Depends on**: Phase 113
-**Requirements**: CLI-01, CLI-02, DX-01, DX-02
-**Success Criteria** (what must be TRUE):
-  1. waiaas quickstart --mode testnet 실행 시 Solana + EVM 2개 월렛이 생성되고 체인별 네트워크/주소 목록 + MCP 설정 스니펫이 출력된다
-  2. waiaas quickstart --mode mainnet 실행 시 메인넷 환경의 동일한 결과가 출력된다
-  3. 기존 월렛/API/MCP/정책이 network 미지정 시 기존과 동일하게 동작한다 (하위호환)
-  4. quickstart/wallet/transactions/policies 4개 스킬 파일이 environment/network 파라미터를 반영하여 동기화되어 있다
-**Plans**: 2 plans
-
-Plans:
-- [x] 114-01-PLAN.md -- CLI quickstart --mode testnet/mainnet 구현 + 테스트 (Wave 1)
-- [x] 114-02-PLAN.md -- 스킬 파일 4개 동기화 (quickstart, wallet, transactions, policies) (Wave 1)
+- [ ] 119-01: TS/Python SDK signTransaction + MCP sign_transaction 도구
+- [ ] 119-02: MCP 스킬 리소스 (waiaas://skills/{name}) + GET /v1/skills/:name 엔드포인트
+- [ ] 119-03: 알림 보강 (POLICY_VIOLATION 상세 필드) + 스킬 파일 업데이트
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
+Phases execute in numeric order: 115 -> 116 -> 117 -> 118 -> 119
+(Phase 116 and 118 are independent; 117 depends on 115; 119 depends on 117+118)
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 109. DB 마이그레이션 + 환경 모델 SSoT | 2/2 | ✅ Complete | 2026-02-14 |
-| 110. 스키마 전환 + 정책 엔진 | 2/2 | ✅ Complete | 2026-02-14 |
-| 111. 파이프라인 네트워크 해결 | 2/2 | ✅ Complete | 2026-02-14 |
-| 112. REST API 네트워크 확장 | 2/2 | ✅ Complete | 2026-02-14 |
-| 113. MCP + SDK + Admin UI | 3/3 | ✅ Complete | 2026-02-14 |
-| 114. CLI Quickstart + DX 통합 | 2/2 | ✅ Complete | 2026-02-14 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 115. Core Types + DB Migration + Parsers | v1.4.7 | 0/3 | Not started | - |
+| 116. Default Deny Toggles | v1.4.7 | 0/2 | Not started | - |
+| 117. Sign-Only Pipeline + REST API | v1.4.7 | 0/2 | Not started | - |
+| 118. EVM Calldata Encoding | v1.4.7 | 0/2 | Not started | - |
+| 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 0/3 | Not started | - |

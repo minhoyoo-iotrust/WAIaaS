@@ -56,7 +56,7 @@ Requirements for v1.4.7: 임의 트랜잭션 서명 API. Each maps to roadmap ph
 
 ### v1.4.8
 
-- **ISSUE-020**: MCP 서버 프로세스가 Claude Desktop 종료 후 고아로 잔류 — stdin 종료 감지
+- **ISSUE-020**: MCP 서버 프로세스가 Claude Desktop 종료 후 고아로 잔류 -- stdin 종료 감지
 - **ISSUE-021**: 멀티체인 전체 네트워크 잔액 일괄 조회 (network=all)
 - **ISSUE-022**: 기본 네트워크 변경 MCP 도구 및 CLI 명령어
 - **ISSUE-024**: Admin UI 월렛 상세 페이지에 잔액 및 트랜잭션 내역
@@ -84,13 +84,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| SIGN-01 | Phase 117 | Pending |
+| SIGN-02 | Phase 115 | Pending |
+| SIGN-03 | Phase 115 | Pending |
+| SIGN-04 | Phase 115 | Pending |
+| SIGN-05 | Phase 115 | Pending |
+| SIGN-06 | Phase 117 | Pending |
+| SIGN-07 | Phase 117 | Pending |
+| SIGN-08 | Phase 117 | Pending |
+| SIGN-09 | Phase 115 | Pending |
+| SIGN-10 | Phase 117 | Pending |
+| SIGN-11 | Phase 119 | Pending |
+| SIGN-12 | Phase 119 | Pending |
+| SIGN-13 | Phase 119 | Pending |
+| SIGN-14 | Phase 115 | Pending |
+| SIGN-15 | Phase 119 | Pending |
+| ENCODE-01 | Phase 118 | Pending |
+| ENCODE-02 | Phase 118 | Pending |
+| ENCODE-03 | Phase 118 | Pending |
+| ENCODE-04 | Phase 118 | Pending |
+| ENCODE-05 | Phase 118 | Pending |
+| TOGGLE-01 | Phase 116 | Pending |
+| TOGGLE-02 | Phase 116 | Pending |
+| TOGGLE-03 | Phase 116 | Pending |
+| TOGGLE-04 | Phase 116 | Pending |
+| TOGGLE-05 | Phase 116 | Pending |
+| MCPRES-01 | Phase 119 | Pending |
+| MCPRES-02 | Phase 119 | Pending |
+| MCPRES-03 | Phase 119 | Pending |
+| NOTIF-01 | Phase 119 | Pending |
+| NOTIF-02 | Phase 119 | Pending |
 
 **Coverage:**
 - v1.4.7 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30
+- Mapped to phases: 30
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-14*
-*Last updated: 2026-02-14 after initial definition*
+*Last updated: 2026-02-14 after roadmap creation*
