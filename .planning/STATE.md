@@ -10,19 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 121 (2 of 5 in v1.4.8) — MCP 안정성
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 — Phase 120 complete (DB 마이그레이션 안정성, 1/1 plans, 23 tests added)
+Plan: 1 of 1 in current phase
+Status: Phase 121 complete
+Last activity: 2026-02-15 — Phase 121 complete (MCP 안정성, 1/1 plans, 10 tests added)
 
-Progress: [█░░░░░░░░░] 12% (1/8 plans)
+Progress: [██░░░░░░░░] 25% (2/8 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 27 milestones, 119 phases, 258 plans, 711 reqs, 1,659 tests, ~175,480 LOC
+**Cumulative:** 27 milestones, 119 phases, 259 plans, 711 reqs, 1,669 tests, ~175,480 LOC
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 120 | 01 | 6min | 1 (TDD) | 2 |
+| 121 | 01 | 2min | 1 (TDD) | 4 |
 
 ## Accumulated Context
 
@@ -31,6 +32,8 @@ Progress: [█░░░░░░░░░] 12% (1/8 plans)
 Full log in PROJECT.md.
 - pushSchema 순서를 테이블 -> 마이그레이션 -> 인덱스 3단계로 분리 (MIGR-01 해결)
 - v1 DB agents 테이블 존재 시 wallets 생성 스킵 (v3 마이그레이션 충돌 방지, MIGR-01b)
+- shutdown 로직을 createShutdownHandler() 팩토리로 추출하여 DI 기반 테스트 가능하게 함
+- shutdown 핸들러를 server.connect() 이전에 등록 -- stdin 즉시 닫힘 대비
 
 ### Blockers/Concerns
 
@@ -42,5 +45,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 120 complete, ready to plan Phase 121
+Stopped at: Phase 121 complete, ready to plan Phase 122
 Resume file: None
