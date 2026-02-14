@@ -7,7 +7,7 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
 ## Milestones
 
 - ✅ **v1.4.6 멀티체인 월렛 구현** - Phases 109-114 (shipped 2026-02-14)
-- 🚧 **v1.4.7 임의 트랜잭션 서명 API** - Phases 115-119 (in progress)
+- ✅ **v1.4.7 임의 트랜잭션 서명 API** - Phases 115-119 (shipped 2026-02-15)
 
 ## Phases
 
@@ -29,7 +29,7 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
 - [x] **Phase 116: Default Deny Toggles** - ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS 기본 거부 정책 ON/OFF 토글
 - [x] **Phase 117: Sign-Only Pipeline + REST API** - POST /v1/transactions/sign 엔드포인트, 정책 평가 후 동기 서명 반환
 - [x] **Phase 118: EVM Calldata Encoding** - POST /v1/utils/encode-calldata 유틸리티 엔드포인트
-- [ ] **Phase 119: SDK + MCP + Notifications + Skill Resources** - TS/Python SDK, MCP 도구, 스킬 리소스 노출, 알림 보강
+- [x] **Phase 119: SDK + MCP + Notifications + Skill Resources** - TS/Python SDK, MCP 도구, 스킬 리소스 노출, 알림 보강
 
 ## Phase Details
 
@@ -109,9 +109,9 @@ Plans:
 **Plans:** 3 plans (Wave 1: 119-01 + 119-02 + 119-03 parallel)
 
 Plans:
-- [ ] 119-01-PLAN.md -- TS/Python SDK signTransaction + MCP sign_transaction 도구 (13번째)
-- [ ] 119-02-PLAN.md -- SKILL_NOT_FOUND 에러 코드 + GET /v1/skills/:name 라우트 + MCP 스킬 리소스 (ResourceTemplate)
-- [ ] 119-03-PLAN.md -- POLICY_VIOLATION 알림 보강 (extractPolicyType + 상세 vars) + transactions.skill.md 업데이트
+- [x] 119-01-PLAN.md -- TS/Python SDK signTransaction + MCP sign_transaction 도구 (13번째)
+- [x] 119-02-PLAN.md -- SKILL_NOT_FOUND 에러 코드 + GET /v1/skills/:name 라우트 + MCP 스킬 리소스 (ResourceTemplate)
+- [x] 119-03-PLAN.md -- POLICY_VIOLATION 알림 보강 (extractPolicyType + 상세 vars) + transactions.skill.md 업데이트
 
 ## Progress
 
@@ -125,4 +125,4 @@ Phases execute in numeric order: 115 -> 116 -> 117 -> 118 -> 119
 | 116. Default Deny Toggles | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
 | 117. Sign-Only Pipeline + REST API | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
 | 118. EVM Calldata Encoding | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
-| 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 0/3 | Not started | - |
+| 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 3/3 | ✓ Complete | 2026-02-15 |
