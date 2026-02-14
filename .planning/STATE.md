@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 117 Sign-Only Pipeline + REST API
+**Current focus:** v1.4.7 Phase 118 EVM Calldata Encoding
 
 ## Current Position
 
-Phase: 117 of 119 (Sign-Only Pipeline + REST API)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-15 -- Plan 117-02 완료 (sign REST API + OpenAPI schemas + 11 integration tests)
+Phase: 118 of 119 (EVM Calldata Encoding)
+Plan: 0 of 2 in current phase
+Status: Ready to execute
+Last activity: 2026-02-15 -- Phase 117 완료 (Sign-Only Pipeline + REST API, 2/2 plans, verified)
 
-Progress: [####░░░░░░] 40%
+Progress: [######░░░░] 60%
 
 ## Performance Metrics
 
@@ -69,5 +69,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 117-02-PLAN.md (Phase 117 complete)
+Stopped at: Phase 117 완료, Phase 118 execute 대기
 Resume file: None
