@@ -6,8 +6,12 @@ from pydantic import ValidationError
 from waiaas.models import (
     AssetInfo,
     PendingTransactionList,
+    PolicyResult,
     SendTokenRequest,
     SessionRenewResponse,
+    SignTransactionOperation,
+    SignTransactionRequest,
+    SignTransactionResponse,
     TokenInfo,
     TransactionDetail,
     TransactionList,
@@ -335,3 +339,93 @@ class TestAssetInfo:
         model = AssetInfo.model_validate(data)
         assert model.usd_value is None
         assert model.is_native is False
+
+
+class TestSignTransactionResponse:
+    def test_from_camel_case_json(self):
+        data = {
+            "id": "tx-sign-001",
+            "signedTransaction": "base64signedtx...",
+            "txHash": None,
+            "operations": [
+                {
+                    "type": "NATIVE_TRANSFER",
+                    "to": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+                    "amount": "1000000",
+                    "token": None,
+                    "programId": None,
+                    "method": None,
+                }
+            ],
+            "policyResult": {"tier": "INSTANT"},
+        }
+        model = SignTransactionResponse.model_validate(data)
+        assert model.id == "tx-sign-001"
+        assert model.signed_transaction == "base64signedtx..."
+        assert model.tx_hash is None
+        assert len(model.operations) == 1
+        assert model.operations[0].type == "NATIVE_TRANSFER"
+        assert model.operations[0].to == "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+        assert model.operations[0].amount == "1000000"
+        assert model.operations[0].program_id is None
+        assert model.policy_result.tier == "INSTANT"
+
+    def test_with_tx_hash_and_multiple_operations(self):
+        data = {
+            "id": "tx-sign-002",
+            "signedTransaction": "0xsigned...",
+            "txHash": "0xhash123",
+            "operations": [
+                {"type": "CONTRACT_CALL", "to": "0xcontract", "method": "transfer"},
+                {"type": "TOKEN_TRANSFER", "to": "0xrecipient", "amount": "500", "token": "0xtoken"},
+            ],
+            "policyResult": {"tier": "LOW"},
+        }
+        model = SignTransactionResponse.model_validate(data)
+        assert model.tx_hash == "0xhash123"
+        assert len(model.operations) == 2
+        assert model.operations[0].method == "transfer"
+        assert model.operations[1].token == "0xtoken"
+        assert model.policy_result.tier == "LOW"
+
+
+class TestSignTransactionRequest:
+    def test_serialization_minimal(self):
+        req = SignTransactionRequest(transaction="base64tx...")
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data == {"transaction": "base64tx..."}
+        assert "chain" not in data
+        assert "network" not in data
+
+    def test_serialization_with_network(self):
+        req = SignTransactionRequest(
+            transaction="0xunsigned...", network="polygon-mainnet"
+        )
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data == {"transaction": "0xunsigned...", "network": "polygon-mainnet"}
+
+    def test_serialization_with_chain_and_network(self):
+        req = SignTransactionRequest(
+            transaction="0xtx", chain="evm", network="ethereum-sepolia"
+        )
+        data = req.model_dump(exclude_none=True, by_alias=True)
+        assert data["chain"] == "evm"
+        assert data["network"] == "ethereum-sepolia"
+
+
+class TestPolicyResult:
+    def test_policy_result(self):
+        pr = PolicyResult(tier="INSTANT")
+        assert pr.tier == "INSTANT"
+
+    def test_nested_in_response(self):
+        data = {
+            "id": "tx-1",
+            "signedTransaction": "signed...",
+            "txHash": None,
+            "operations": [],
+            "policyResult": {"tier": "DELAY"},
+        }
+        model = SignTransactionResponse.model_validate(data)
+        assert isinstance(model.policy_result, PolicyResult)
+        assert model.policy_result.tier == "DELAY"
