@@ -65,10 +65,10 @@ Plans:
   1. Claude Desktop 종료 시 MCP 서버가 stdin 종료를 감지하여 5초 내 자동 종료된다
   2. SIGTERM 수신 시 3초 타임아웃으로 graceful shutdown 후 강제 종료된다
   3. shutdown 함수를 여러 번 호출해도 에러 없이 안전하게 처리된다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 121-01: MCP graceful shutdown + stdin 감지
+- [ ] 121-01-PLAN.md — MCP graceful shutdown + stdin 감지 (TDD)
 
 ### Phase 122: MCP 도구 + 멀티체인 DX
 **Goal**: 사용자가 MCP/CLI/SDK 어느 인터페이스에서든 기본 네트워크를 변경하고, 월렛 상세 정보를 조회하고, 전체 네트워크 잔액을 한 번에 확인할 수 있다
