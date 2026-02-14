@@ -18,6 +18,8 @@ import { DEFAULT_TIMEOUT } from './internal/constants.js';
 import type {
   WAIaaSClientOptions,
   RetryOptions,
+  BalanceOptions,
+  AssetsOptions,
   BalanceResponse,
   AddressResponse,
   AssetsResponse,
@@ -68,9 +70,15 @@ export class WAIaaSClient {
   }
 
   // --- Wallet queries ---
-  async getBalance(): Promise<BalanceResponse> {
+  async getBalance(options?: BalanceOptions): Promise<BalanceResponse> {
+    const query = new URLSearchParams();
+    if (options?.network) query.set('network', options.network);
+    const qs = query.toString();
     return withRetry(
-      () => this.http.get<BalanceResponse>('/v1/wallet/balance', this.authHeaders()),
+      () => this.http.get<BalanceResponse>(
+        `/v1/wallet/balance${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
       this.retryOptions,
     );
   }
@@ -82,9 +90,15 @@ export class WAIaaSClient {
     );
   }
 
-  async getAssets(): Promise<AssetsResponse> {
+  async getAssets(options?: AssetsOptions): Promise<AssetsResponse> {
+    const query = new URLSearchParams();
+    if (options?.network) query.set('network', options.network);
+    const qs = query.toString();
     return withRetry(
-      () => this.http.get<AssetsResponse>('/v1/wallet/assets', this.authHeaders()),
+      () => this.http.get<AssetsResponse>(
+        `/v1/wallet/assets${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
       this.retryOptions,
     );
   }

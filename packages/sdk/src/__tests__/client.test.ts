@@ -147,6 +147,44 @@ describe('WAIaaSClient', () => {
       expect(headers['Authorization']).toBe(`Bearer ${mockToken}`);
     });
 
+    it('should pass network query parameter when specified', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          walletId: 'wallet-1', chain: 'evm', network: 'polygon-mainnet',
+          address: '0xabc', balance: '100', decimals: 18, symbol: 'ETH',
+        }),
+      );
+
+      await client.getBalance({ network: 'polygon-mainnet' });
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('/v1/wallet/balance?network=polygon-mainnet');
+    });
+
+    it('should work without network option (backward compat)', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          walletId: 'wallet-1', chain: 'solana', network: 'devnet',
+          address: 'ABC123', balance: '100', decimals: 9, symbol: 'SOL',
+        }),
+      );
+
+      await client.getBalance();
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/balance');
+    });
+
     it('should throw WAIaaSError on 401', async () => {
       const client = new WAIaaSClient({
         baseUrl: 'http://localhost:3000',
@@ -248,6 +286,24 @@ describe('WAIaaSClient', () => {
       const result = await client.getAssets();
       expect(result).toEqual(expected);
       expect(result.assets).toHaveLength(2);
+    });
+
+    it('should pass network query parameter when specified', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          walletId: 'wallet-1', chain: 'evm', network: 'ethereum-sepolia', assets: [],
+        }),
+      );
+
+      await client.getAssets({ network: 'ethereum-sepolia' });
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('/v1/wallet/assets?network=ethereum-sepolia');
     });
 
     it('should call GET /v1/wallet/assets', async () => {
@@ -355,6 +411,23 @@ describe('WAIaaSClient', () => {
         type: 'TOKEN_TRANSFER',
         token: { address: 'mint123', decimals: 6, symbol: 'USDC' },
       });
+    });
+
+    it('should include network in body when specified', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({ id: 'tx-net-1', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({ to: 'addr', amount: '100', network: 'polygon-mainnet' });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['network']).toBe('polygon-mainnet');
     });
 
     it('should send legacy body without type/token when omitted (backward compat)', async () => {
