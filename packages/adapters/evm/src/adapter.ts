@@ -283,6 +283,7 @@ export class EvmAdapter implements IChainAdapter {
         estimatedFee,
         expiresAt: undefined, // EVM uses nonce, no expiry
         metadata: {
+          from: request.from,
           nonce,
           chainId,
           maxFeePerGas,
@@ -544,6 +545,7 @@ export class EvmAdapter implements IChainAdapter {
         estimatedFee,
         expiresAt: undefined, // EVM uses nonce, no expiry
         metadata: {
+          from: request.from,
           nonce,
           chainId,
           maxFeePerGas,
@@ -657,6 +659,7 @@ export class EvmAdapter implements IChainAdapter {
         estimatedFee,
         expiresAt: undefined,
         metadata: {
+          from: request.from,
           nonce,
           chainId,
           maxFeePerGas,
@@ -739,6 +742,7 @@ export class EvmAdapter implements IChainAdapter {
         estimatedFee,
         expiresAt: undefined,
         metadata: {
+          from: request.from,
           nonce,
           chainId,
           maxFeePerGas,

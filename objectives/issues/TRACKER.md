@@ -33,6 +33,7 @@
 | 016 | BUG | LOW | 모든 패키지 버전이 0.0.0 — Admin UI/OpenAPI에 잘못된 버전 표시 | v1.4.1 | FIXED | 2026-02-13 |
 | 017 | BUG | MEDIUM | MCP에서 CONTRACT_CALL/APPROVE/BATCH 타입 차단 — 보안 근거 부재 | v1.4.1 | FIXED | 2026-02-14 |
 | 018 | ENHANCEMENT | LOW | 테스트넷 빌트인 ERC-20 토큰이 빈 배열 — 토큰 전송 테스트 시 수동 등록 필요 | v1.4.3 | FIXED | 2026-02-14 |
+| 019 | BUG | HIGH | EVM simulateTransaction에서 from 주소 누락 — ERC-20 전송 시뮬레이션 실패 | v1.4.4 | FIXED | 2026-02-14 |
 
 ## Type Legend
 
@@ -45,7 +46,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 18
+- **FIXED:** 19
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 18
+- **Total:** 19

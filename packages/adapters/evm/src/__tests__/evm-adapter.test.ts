@@ -862,6 +862,119 @@ describe('EvmAdapter', () => {
     });
   });
 
+  // -- metadata.from in build* methods (Issue 019) --
+
+  describe('metadata.from in build methods (Issue 019)', () => {
+    beforeEach(async () => {
+      await adapter.connect('https://eth-mainnet.example.com');
+      mockClient.getTransactionCount.mockResolvedValue(0);
+      mockClient.estimateFeesPerGas.mockResolvedValue({
+        maxFeePerGas: 20000000000n,
+        maxPriorityFeePerGas: 1000000000n,
+      });
+      mockClient.estimateGas.mockResolvedValue(21000n);
+    });
+
+    it('buildTransaction includes from in metadata', async () => {
+      const result = await adapter.buildTransaction({
+        from: TEST_ADDRESS_FROM,
+        to: TEST_ADDRESS_TO,
+        amount: 1000000000000000000n,
+      });
+      expect(result.metadata.from).toBe(TEST_ADDRESS_FROM);
+    });
+
+    it('buildTokenTransfer includes from in metadata', async () => {
+      const result = await adapter.buildTokenTransfer({
+        from: TEST_ADDRESS_FROM,
+        to: TEST_ADDRESS_TO,
+        amount: 1000000n,
+        token: { address: TEST_TOKEN_ADDRESS, decimals: 6, symbol: 'USDC' },
+      });
+      expect(result.metadata.from).toBe(TEST_ADDRESS_FROM);
+    });
+
+    it('buildContractCall includes from in metadata', async () => {
+      const result = await adapter.buildContractCall({
+        from: TEST_ADDRESS_FROM,
+        to: TEST_ADDRESS_TO,
+        calldata: '0xa9059cbb0000000000000000000000000000000000000000000000000000000000000001',
+      });
+      expect(result.metadata.from).toBe(TEST_ADDRESS_FROM);
+    });
+
+    it('buildApprove includes from in metadata', async () => {
+      const result = await adapter.buildApprove({
+        from: TEST_ADDRESS_FROM,
+        spender: TEST_ADDRESS_TO,
+        token: { address: TEST_TOKEN_ADDRESS, decimals: 6, symbol: 'USDC' },
+        amount: 1000000n,
+      });
+      expect(result.metadata.from).toBe(TEST_ADDRESS_FROM);
+    });
+
+    it('simulateTransaction passes metadata.from as account to eth_call', async () => {
+      mockClient.call.mockResolvedValue({ data: '0x' });
+
+      // Simulate a tx built with from address
+      const tx = {
+        chain: 'ethereum' as const,
+        serialized: new Uint8Array([0xf8, 0xde, 0xad]),
+        estimatedFee: 756000000000000n,
+        metadata: { from: TEST_ADDRESS_FROM, gasLimit: 25200n },
+      };
+
+      await adapter.simulateTransaction(tx);
+
+      expect(mockClient.call).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: TEST_ADDRESS_FROM,
+        }),
+      );
+    });
+
+    it('build → simulate chain: metadata.from flows to eth_call account', async () => {
+      mockClient.call.mockResolvedValue({ data: '0x' });
+
+      // Build a transaction
+      const builtTx = await adapter.buildTransaction({
+        from: TEST_ADDRESS_FROM,
+        to: TEST_ADDRESS_TO,
+        amount: 1000000000000000000n,
+      });
+
+      // Simulate the built transaction
+      const simResult = await adapter.simulateTransaction(builtTx);
+
+      expect(simResult.success).toBe(true);
+      expect(mockClient.call).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: TEST_ADDRESS_FROM,
+        }),
+      );
+    });
+
+    it('simulateTransaction with missing metadata.from passes undefined as account', async () => {
+      mockClient.call.mockResolvedValue({ data: '0x' });
+
+      const tx = {
+        chain: 'ethereum' as const,
+        serialized: new Uint8Array([0xf8, 0xde, 0xad]),
+        estimatedFee: 756000000000000n,
+        metadata: {},
+      };
+
+      await adapter.simulateTransaction(tx);
+
+      // Without metadata.from, account will be undefined
+      expect(mockClient.call).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: undefined,
+        }),
+      );
+    });
+  });
+
   // -- nativeSymbol/nativeName tests (3 tests) --
 
   describe('nativeSymbol/nativeName', () => {

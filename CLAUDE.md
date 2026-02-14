@@ -38,6 +38,11 @@
   - 엔드포인트 추가/삭제/변경, 요청/응답 스키마 변경, 인증 방식 변경, 에러 코드 추가 시 해당 skill 파일을 동기화한다.
   - 새로운 도메인이 추가되면 해당 skill 파일을 신규 생성한다.
 
+## Milestone Completion
+
+- 마일스톤 완료 시 `./scripts/tag-release.sh v{version}`을 실행하여 모든 패키지 버전을 범프하고 태그를 생성한다.
+- 태그가 이미 존재하는 경우 버전 범프만 수동으로 수행한다.
+
 ## Issue Tracking
 
 - 이슈는 `objectives/issues/` 디렉토리에 `v{milestone}-{NNN}-{slug}.md` 형식으로 작성한다.
