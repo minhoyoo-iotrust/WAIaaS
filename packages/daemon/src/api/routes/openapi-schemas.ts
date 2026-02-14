@@ -409,6 +409,42 @@ export const WalletDetailResponseSchema = z
   })
   .openapi('WalletDetailResponse');
 
+// ---------------------------------------------------------------------------
+// Wallet Network Management Schemas (PUT /wallets/:id/default-network, GET /wallets/:id/networks)
+// ---------------------------------------------------------------------------
+
+// PUT /wallets/:id/default-network request
+export const UpdateDefaultNetworkRequestSchema = z
+  .object({
+    network: z.string().min(1),
+  })
+  .openapi('UpdateDefaultNetworkRequest');
+
+// PUT /wallets/:id/default-network response
+export const UpdateDefaultNetworkResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    defaultNetwork: z.string(),
+    previousNetwork: z.string().nullable(),
+  })
+  .openapi('UpdateDefaultNetworkResponse');
+
+// GET /wallets/:id/networks response
+export const WalletNetworksResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    chain: z.string(),
+    environment: z.string(),
+    defaultNetwork: z.string().nullable(),
+    availableNetworks: z.array(
+      z.object({
+        network: z.string(),
+        isDefault: z.boolean(),
+      }),
+    ),
+  })
+  .openapi('WalletNetworksResponse');
+
 // Owner address request body schema (for PUT /wallets/:id/owner)
 export const SetOwnerRequestSchema = z
   .object({
