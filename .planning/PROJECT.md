@@ -2,31 +2,15 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. v1.4.5에서 멀티체인 월렛 환경 모델(1 월렛 = 1 체인 + 1 환경)로의 전환 아키텍처를 설계 완료했다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v1.4.6 멀티체인 월렛 구현
-
-**Goal:** v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경)을 구현하여, 하나의 EVM 월렛이 5개 네트워크에서 트랜잭션을 실행할 수 있는 상태를 달성한다.
-
-**Target features:**
-- DB 마이그레이션 (wallets.network→environment, transactions.network, policies.network)
-- EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수
-- resolveNetwork() 순수 함수 + 파이프라인 Stage 1 네트워크 해결
-- ALLOWED_NETWORKS 11번째 PolicyType + 네트워크 스코프 정책
-- REST API/MCP/SDK network 파라미터 확장
-- Admin UI 환경 모델 전환
-- CLI Quickstart --mode testnet/mainnet 원스톱 셋업
-- Skill 파일 동기화
-
 ## Current State
 
-v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 설계 문서 5개(docs/68-72)로 전환 아키텍처 완전 정의. v1.4.6에서 코드 구현 진행 중.
-
-코드베이스(v1.4.4 기준, v1.4.5는 설계 only): 9-패키지 모노레포 + Python SDK, 62,296 LOC, 1,467 테스트 통과. CLI로 init → start → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송 → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근 + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정 + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
+v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포 + Python SDK, ~73,000 LOC, 1,580 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송(네트워크 선택) → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터) + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + 설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정(get_wallet_info 포함 11 도구) + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -42,7 +26,7 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 설계 문서 5�
 - ✅ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 — shipped 2026-02-13 (1,357 tests, 59,993 LOC)
 - ✅ v1.4.4 Admin Settings + MCP 5-type + Skill Files — shipped 2026-02-14 (1,467 tests, 62,296 LOC)
 - ✅ v1.4.5 멀티체인 월렛 모델 설계 — shipped 2026-02-14 (설계 문서 5개, 설계 결정 31개)
-- **◆ v1.4.6 멀티체인 월렛 구현 — in progress**
+- ✅ v1.4.6 멀티체인 월렛 구현 — shipped 2026-02-14 (1,580 tests, ~73,000 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -51,16 +35,17 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 설계 문서 5�
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- 62,296 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,467 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~73,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,580 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 42 엔드포인트 (33 + admin 알림 3 + 토큰 레지스트리 3 + admin settings 3), GET /doc OpenAPI 3.0 자동 생성
+- OpenAPIHono 44 엔드포인트 (42 + PUT /default-network + GET /networks), GET /doc OpenAPI 3.0 자동 생성
 - 5개 API 스킬 파일 (skills/ 디렉토리) — AI 에이전트 즉시 사용 가능
-- IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 10 PolicyType
+- IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 11 PolicyType (ALLOWED_NETWORKS 추가)
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
+- EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- 설계 문서 31개 (24-67), 8 objective 문서
-- v1.4.3: EVM getAssets ERC-20 연동, POST /v1/mcp/tokens, Admin MCP Setup, tag-release.sh
+- MCP 11개 도구 (send_transaction, send_token, get_balance, get_assets, call_contract, approve_token, send_batch, get_wallet_info 등)
+- 설계 문서 36개 (24-72), 8 objective 문서
 
 ## 요구사항
 
@@ -234,23 +219,25 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 설계 문서 5�
 - ✓ MCP 6개 도구 + TS/Python SDK network 파라미터 확장 설계 — v1.4.5
 - ✓ Quickstart --mode testnet/mainnet 워크플로우 설계 (Solana+EVM 2월렛 일괄 생성) — v1.4.5
 
+- ✓ DB 마이그레이션 v6a/v6b/v8 (wallets.network→environment, transactions.network, policies.network) — v1.4.6
+- ✓ EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개 (getNetworksForEnvironment, getDefaultNetwork, deriveEnvironment, validateNetworkEnvironment) — v1.4.6
+- ✓ resolveNetwork() 순수 함수 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + PipelineContext 확장 + Stage 1~5 통합 — v1.4.6
+- ✓ ALLOWED_NETWORKS 11번째 PolicyType + permissive default + 네트워크 스코프 4단계 override — v1.4.6
+- ✓ REST API 7개 엔드포인트 network/environment 파라미터 + PUT /default-network + GET /networks 신규 2개 (44 엔드포인트) — v1.4.6
+- ✓ MCP 6개 도구 network 파라미터 + get_wallet_info 신규 도구 (11 도구) + TS/Python SDK network 확장 — v1.4.6
+- ✓ Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI + 네트워크 관리 UI — v1.4.6
+- ✓ CLI quickstart --mode testnet/mainnet 원스톱 Solana+EVM 2월렛 생성 — v1.4.6
+- ✓ Skill 파일 4개 동기화 (quickstart, wallet, transactions, policies) — v1.4.6
+
 ### 활성
 
-- [ ] DB 마이그레이션 v6a/v6b/v8 (wallets environment 전환, transactions.network, policies.network)
-- [ ] EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개
-- [ ] resolveNetwork() + PipelineContext 확장 + Stage 1 네트워크 해결
-- [ ] ALLOWED_NETWORKS PolicyType + 네트워크 스코프 정책 4단계 override
-- [ ] REST API network/environment 파라미터 + 신규 엔드포인트
-- [ ] MCP 6개 도구 + TS/Python SDK network 파라미터 확장
-- [ ] Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI
-- [ ] CLI Quickstart --mode testnet/mainnet 원스톱 셋업
-- [ ] Skill 파일 4개 동기화
+(v1.4.6 shipped — 다음 마일스톤에서 정의)
 
 ## Next Milestone Goals
 
 - v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
 - v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성
-- v1.6 운영 인프라 + 잔액 모니터링
+- v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
 
 ### 범위 외
 
@@ -267,7 +254,7 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 설계 문서 5�
 
 ## 컨텍스트
 
-**누적:** 25 milestones (v0.1-v1.4.5), 108 phases, 232 plans, 646 requirements, 36 설계 문서(24-72), 8 objective 문서, 62,296 LOC, 1,467 테스트
+**누적:** 26 milestones (v0.1-v1.4.6), 114 phases, 245 plans, 681 requirements, 36 설계 문서(24-72), 8 objective 문서, ~73,000 LOC, 1,580 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -284,6 +271,7 @@ v1.4.2 용어 변경 (agent → wallet) shipped (2026-02-13). 6 페이즈, 11 �
 v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 shipped (2026-02-13). 5 페이즈, 8 플랜, 13 요구사항, 59,993 LOC, 1,357 테스트.
 v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). 5 페이즈, 10 플랜, 24 요구사항, 62,296 LOC, 1,467 테스트.
 v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 4 페이즈, 6 플랜, 19 요구사항, 설계 문서 5개(68-72), 설계 결정 31개.
+v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 35 요구사항, ~73,000 LOC, 1,580 테스트, 38 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -425,6 +413,17 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 4 페이즈, 6 �
 | REST API environment optional + deriveEnvironment fallback | breaking change 방지 | ✓ Good — v1.4.5 설계 |
 | MCP network "omit for default" 패턴 | LLM 혼란 방지 | ✓ Good — v1.4.5 설계 |
 | quickstart 에러 시 rollback 없음 (멱등성) | 복잡성 감소, 재실행으로 해결 | ✓ Good — v1.4.5 설계 |
+| EnvironmentType Zod SSoT chain.ts 배치 | 기존 SSoT와 동일 위치, 코드 응집도 | ✓ Good — v1.4.6 구현 |
+| ALLOWED_NETWORKS permissive default 구현 | 기존 월렛 하위호환, ALLOWED_TOKENS과 반대 철학 | ✓ Good — v1.4.6 구현 |
+| resolveNetwork() 순수 함수 별도 파일 | stages.ts 비대 방지, 테스트 용이 | ✓ Good — v1.4.6 구현 |
+| ENVIRONMENT_NETWORK_MISMATCH 별도 에러 코드 | 보안 중요도 높은 에러 명시적 분류 | ✓ Good — v1.4.6 구현 |
+| 4단계 override 우선순위 (wallet+network > wallet+null > global+network > global+null) | 가장 구체적인 정책이 우선, 직관적 | ✓ Good — v1.4.6 구현 |
+| evaluateAndReserve raw SQL network 바인딩 | Drizzle ORM 제약 우회, 성능 최적화 | ✓ Good — v1.4.6 구현 |
+| daemon.ts tx.network DB 값 직접 사용 | Stage 5 재실행 시 안전성 보장 | ✓ Good — v1.4.6 구현 |
+| GET /networks 응답 isDefault 플래그 | 클라이언트 기본 네트워크 시각적 표시 | ✓ Good — v1.4.6 구현 |
+| get_wallet_info 파라미터 없는 MCP 도구 | address + networks 2단계 API 호출 조합 | ✓ Good — v1.4.6 구현 |
+| Python SDK keyword-only network 파라미터 | 기존 positional args 하위호환 유지 | ✓ Good — v1.4.6 구현 |
+| quickstart buildConfigEntry 인라인 복제 | 공통 유틸 추출은 scope 외, YAGNI | ✓ Good — v1.4.6 구현 |
 
 ---
-*최종 업데이트: 2026-02-14 after v1.4.6 milestone started*
+*최종 업데이트: 2026-02-14 after v1.4.6 milestone shipped*

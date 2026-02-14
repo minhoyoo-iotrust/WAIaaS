@@ -675,3 +675,33 @@
 
 ---
 
+
+## v1.4.6 멀티체인 월렛 구현 (Shipped: 2026-02-14)
+
+**Delivered:** v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경)을 전 레이어에 구현하여, 하나의 EVM 월렛이 testnet/mainnet 5개 네트워크에서 트랜잭션을 실행하고, ALLOWED_NETWORKS 정책으로 네트워크를 제한하며, REST API/MCP/SDK/Admin UI/CLI 모든 인터페이스에서 네트워크를 선택할 수 있는 상태를 달성
+
+**Phases completed:** 109-114 (13 plans total)
+
+**Key accomplishments:**
+
+- EnvironmentType Zod SSoT + DB 마이그레이션 3건 — v6a/v6b/v8로 wallets.network→environment 전환, transactions.network/policies.network 추가, 환경-네트워크 매핑 함수 4개
+- ALLOWED_NETWORKS 11번째 PolicyType — permissive default + 4단계 override 우선순위 (wallet+network > wallet+null > global+network > global+null)
+- resolveNetwork() 파이프라인 네트워크 해결 — 3단계 우선순위 순수 함수 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + Stage 1~5 전 구간 통합
+- REST API 네트워크 확장 — 7개 엔드포인트 network/environment 파라미터 + PUT /default-network + GET /networks 신규 2개 (44 엔드포인트)
+- MCP + SDK + Admin UI 멀티체인 — MCP 6개 도구 network 파라미터 + get_wallet_info 신규(11 도구) + TS/Python SDK network 확장 + Admin UI 환경 모델 전환
+- CLI quickstart --mode + 스킬 파일 동기화 — testnet/mainnet 원스톱 Solana+EVM 2월렛 생성 + 4개 스킬 파일 환경 모델 반영
+
+**Stats:**
+
+- 122 files changed, +10,922 / -370 lines
+- 6 phases, 13 plans, 26 tasks, 35 requirements, 38 설계 결정
+- 1,580 tests (1,467 → 1,580, +113 new tests)
+- ~73,000 LOC total
+- ~6 hours (17:08 → 22:58 KST, 2026-02-14)
+
+**Git range:** `8429893` (Phase 109 start) → `506cf80` (Phase 114 complete)
+
+**What's next:** v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
+
+---
+
