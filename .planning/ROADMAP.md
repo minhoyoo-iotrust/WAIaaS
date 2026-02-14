@@ -30,11 +30,11 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
   3. v8 마이그레이션 실행 후 policies 테이블에 network 컬럼이 존재한다
   4. EnvironmentType Zod SSoT에서 타입/OpenAPI/Drizzle CHECK가 파생되고, getNetworksForEnvironment/getDefaultNetwork/deriveEnvironment/validateNetworkEnvironment 4개 함수가 동작한다
   5. 마이그레이션 전후 데이터 무결성이 보존된다 (기존 월렛/트랜잭션/정책 데이터 손실 없음)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 109-01: EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개 구현
-- [ ] 109-02: DB 마이그레이션 v6a/v6b/v8 구현 + 데이터 무결성 검증
+- [ ] 109-01-PLAN.md -- EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개 (TDD, Wave 1)
+- [ ] 109-02-PLAN.md -- DB 마이그레이션 v6a/v6b/v8 + pushSchema DDL 동기화 + Drizzle 스키마 + 테스트 (Wave 2, depends on 109-01)
 
 ### Phase 110: 스키마 전환 + 정책 엔진
 **Goal**: Wallet/Transaction/Policy Zod 스키마가 환경 모델을 반영하고, ALLOWED_NETWORKS 정책이 네트워크 스코프로 평가되는 상태
