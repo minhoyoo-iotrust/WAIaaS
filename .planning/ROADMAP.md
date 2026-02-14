@@ -75,11 +75,11 @@ Plans:
   2. DELAY/APPROVAL 티어에 해당하는 sign-only 요청은 즉시 거부되고 명확한 에러 메시지가 반환된다
   3. 서명 결과가 transactions 테이블에 type='SIGN', status='SIGNED'로 기록된다
   4. 서명 시 reserved_amount에 누적되어 SPENDING_LIMIT 이중 지출이 방지된다
-**Plans**: TBD
+**Plans:** 2 plans (Wave 1: 117-01, Wave 2: 117-02)
 
 Plans:
-- [ ] 117-01: sign-only 파이프라인 (executeSignOnly, stage5SignOnly) + DELAY/APPROVAL 즉시 거부 + reservation
-- [ ] 117-02: POST /v1/transactions/sign REST API 라우트 + OpenAPI 스키마 + 통합 테스트
+- [ ] 117-01-PLAN.md -- sign-only 파이프라인 (executeSignOnly, mapOperationToParam) + evaluateAndReserve SIGNED 쿼리 확장 + 유닛 테스트
+- [ ] 117-02-PLAN.md -- POST /v1/transactions/sign REST API 라우트 + OpenAPI 스키마 + 통합 테스트
 
 ### Phase 118: EVM Calldata Encoding
 **Goal**: AI 에이전트가 ABI + 함수명 + 인자를 보내면 인코딩된 calldata hex를 받을 수 있는 상태
