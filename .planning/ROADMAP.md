@@ -15,7 +15,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 - [x] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가 ✅ 2026-02-14
 - [x] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름 ✅ 2026-02-14
 - [x] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개 ✅ 2026-02-14
-- [ ] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환
+- [x] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환 ✅ 2026-02-14
 - [ ] **Phase 114: CLI Quickstart + DX 통합** - quickstart --mode + 스킬 파일 동기화 + 하위호환 검증
 
 ## Phase Details
@@ -94,9 +94,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 113-01-PLAN.md -- MCP 6개 도구 network 파라미터 + get_wallet_info 신규 도구 + 테스트 (Wave 1)
-- [ ] 113-02-PLAN.md -- TS SDK + Python SDK network 파라미터 확장 + 테스트 (Wave 1)
-- [ ] 113-03-PLAN.md -- Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI + 테스트 (Wave 1)
+- [x] 113-01-PLAN.md -- MCP 6개 도구 network 파라미터 + get_wallet_info 신규 도구 + 테스트 (Wave 1)
+- [x] 113-02-PLAN.md -- TS SDK + Python SDK network 파라미터 확장 + 테스트 (Wave 1)
+- [x] 113-03-PLAN.md -- Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI + 테스트 (Wave 1)
 
 ### Phase 114: CLI Quickstart + DX 통합
 **Goal**: quickstart 명령으로 테스트넷/메인넷 월렛을 원스톱 생성할 수 있고, 모든 변경이 하위호환되며 스킬 파일이 최신 상태인 상태
@@ -124,5 +124,5 @@ Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
 | 110. 스키마 전환 + 정책 엔진 | 2/2 | ✅ Complete | 2026-02-14 |
 | 111. 파이프라인 네트워크 해결 | 2/2 | ✅ Complete | 2026-02-14 |
 | 112. REST API 네트워크 확장 | 2/2 | ✅ Complete | 2026-02-14 |
-| 113. MCP + SDK + Admin UI | 0/3 | Not started | - |
+| 113. MCP + SDK + Admin UI | 3/3 | ✅ Complete | 2026-02-14 |
 | 114. CLI Quickstart + DX 통합 | 0/2 | Not started | - |
