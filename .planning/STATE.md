@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 111 of 114 (파이프라인 네트워크 해결)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 110 완료 (verified: 4/4 must-haves)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-14 -- 111-01 resolveNetwork TDD 완료 (11 tests PASS)
 
-Progress: [███░░░░░░░] 31% (4/13 plans)
+Progress: [████░░░░░░] 38% (5/13 plans)
 
 ## Performance Metrics
 
@@ -26,6 +26,7 @@ Progress: [███░░░░░░░] 31% (4/13 plans)
 | 109 | 02 | 45min | 2 | 32 |
 | 110 | 01 | 7min | 2 | 10 |
 | 110 | 02 | 7min | 2 | 2 |
+| 111 | 01 | 8min | 2 | 18 |
 
 ## Accumulated Context
 
@@ -52,6 +53,9 @@ Recent decisions affecting current work:
 - 110-02: resolveOverrides 4단계 typeMap[type] 단일 키 유지 (PLCY-D03)
 - 110-02: evaluate() Drizzle WHERE에도 network 필터 추가
 - 110-02: evaluateAndReserve raw SQL network 바인딩 (transaction.network ?? null)
+- 111-01: resolveNetwork() 순수 함수 별도 파일 배치 (PIPE-D01, stages.ts 비대 방지)
+- 111-01: ENVIRONMENT_NETWORK_MISMATCH 별도 에러 코드 신설 (PIPE-D03, 보안 중요도)
+- 111-01: daemon.ts executeFromStage5에서 tx.network 직접 사용 (PIPE-D04, 안전성)
 
 ### Blockers/Concerns
 
@@ -62,5 +66,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 110 verified PASSED, ready to plan Phase 111
+Stopped at: Completed 111-01-PLAN.md (resolveNetwork TDD), ready for 111-02
 Resume file: None
