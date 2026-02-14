@@ -1,602 +1,637 @@
-# v0.8 Technology Stack: Owner 선택적 등록 + 점진적 보안 모델
+# Technology Stack: v1.4.7 Sign-Only Transaction Signing API
 
-**Project:** WAIaaS v0.8 - Owner Optional Registration + Progressive Security
-**Researched:** 2026-02-08
-**Scope:** Stack changes/patterns for nullable owner_address migration, sweepAll, progressive security unlock
-**Overall Confidence:** HIGH
+**Project:** WAIaaS v1.4.7 -- 임의 트랜잭션 서명 API
+**Researched:** 2026-02-14
+**Mode:** Subsequent Milestone (stack additions only)
 
 ---
 
 ## Executive Summary
 
-v0.8은 **새로운 라이브러리가 전혀 필요하지 않다.** 기존 스택(Drizzle ORM, @solana-program/token, Hono middleware, @solana/kit)으로 모든 기능을 구현할 수 있다. v0.8의 기술적 도전은 라이브러리 선택이 아니라, 기존 스택의 **패턴 확장**에 있다:
-
-1. **Drizzle + SQLite 마이그레이션:** NOT NULL 제거는 SQLite의 ALTER TABLE 제한으로 테이블 재생성이 필요하며, drizzle-kit 자동 마이그레이션 범위 밖이다. 수동 커스텀 마이그레이션 패턴을 사용한다.
-2. **@solana-program/token closeAccount:** sweepAll의 Solana 토큰 계정 닫기 + rent 회수는 기존 의존성(`@solana-program/token`)의 `getCloseAccountInstruction`으로 구현한다.
-3. **Hono Combine Middleware:** 점진적 보안 해금의 조건부 미들웨어는 Hono 빌트인 `hono/combine` (`every`, `some`, `except`)로 구현한다.
-
-**결론:** 의존성 변경 제로(0). 코드 패턴 변경만 필요.
+v1.4.7의 핵심 발견: **새로운 의존성 추가가 필요하지 않다.** 기존 스택(viem 2.45.3, @solana/kit 6.0.1, @modelcontextprotocol/sdk 1.26.0)이 unsigned tx 파싱, EVM calldata 인코딩, MCP 리소스 템플릿 기능을 모두 내장하고 있다. 이 마일스톤은 기존 라이브러리의 미사용 API를 활용하여 새 기능을 구현하는 것이 핵심이다.
 
 ---
 
-## Retained Stack (v0.1-v0.7 확정, 변경 없음)
+## Recommended Stack Additions
 
-이 기술들은 v0.8에서 그대로 유지된다. 재조사하지 않는다.
+### 신규 의존성: 없음
 
-| Technology | Version | Role in v0.8 |
-|------------|---------|-------------|
-| Node.js | 22.x LTS | Runtime |
-| TypeScript | 5.x | Primary language |
-| Hono | 4.x | API server + middleware |
-| Drizzle ORM | 0.45.x | SQLite ORM + migration |
-| better-sqlite3 | 12.6.x | SQLite driver |
-| drizzle-kit | latest | Migration file generation |
-| @solana/kit | 3.x | Solana RPC + transaction building |
-| @solana-program/token | latest | SPL token operations (v0.6 추가) |
-| viem | 2.x | EVM operations (stub) |
-| sodium-native | latest | Guarded memory, key encryption |
-| jose | latest | JWT HS256 session tokens |
-| Zod | 3.x | Schema SSoT |
-| lru-cache | 11.x | In-memory caching |
-| grammy | 1.39.x | Telegram notifications |
+v1.4.7에서 **새로운 npm 패키지를 추가하지 않는다.** 모든 필요 기능이 기존 의존성에 내장되어 있다.
 
 ---
 
-## Pattern 1: SQLite NOT NULL Removal Migration
+## 기존 라이브러리의 미사용 API 활성화
 
-### 문제
+### 1. EVM Unsigned Transaction 파싱 (viem 2.45.3)
 
-`agents.owner_address`를 `NOT NULL`에서 `nullable`로 변경하고, `owner_verified INTEGER NOT NULL DEFAULT 0` 컬럼을 추가해야 한다.
+| 함수 | 임포트 경로 | 용도 | 현재 사용 여부 |
+|------|------------|------|--------------|
+| `parseTransaction` | `viem` | unsigned hex -> to, value, data, chainId, nonce 추출 | O (simulateTransaction, signTransaction에서 사용 중) |
+| `decodeFunctionData` | `viem` | calldata -> functionName, args 디코딩 | X (신규 활용) |
+| `decodeAbiParameters` | `viem` | ABI 파라미터 디코딩 (개별 파라미터 수준) | X (신규 활용) |
+| `encodeFunctionData` | `viem` | ABI + functionName + args -> calldata hex 인코딩 | O (buildTokenTransfer, buildApprove에서 사용 중) |
 
-### SQLite 제약
+**신규 활용 상세:**
 
-SQLite는 기존 컬럼의 NOT NULL 제약을 ALTER TABLE로 변경할 수 없다. [SQLite ALTER TABLE 문서](https://www.sqlitetutor.com/alter-table/)에 명시된 제한이며, [drizzle-kit도 이를 자동 처리하지 못한다](https://orm.drizzle.team/docs/kit-custom-migrations).
+```typescript
+// 1. EVM unsigned tx 파싱: parseTransaction은 이미 사용 중
+import { parseTransaction } from 'viem';
+const parsed = parseTransaction(unsignedHex);
+// parsed.to, parsed.value, parsed.data, parsed.chainId, parsed.nonce 모두 접근 가능
 
-| 변경 유형 | ALTER TABLE 가능 | 대안 |
-|----------|:---------------:|------|
-| 컬럼 추가 | O | `ALTER TABLE ADD COLUMN` |
-| NOT NULL 추가 | X | 테이블 재생성 |
-| **NOT NULL 삭제** | **X** | **테이블 재생성** |
-| 컬럼 타입 변경 | X | 테이블 재생성 |
+// 2. EVM calldata 디코딩: decodeFunctionData 신규 활용
+import { decodeFunctionData } from 'viem';
+const { functionName, args } = decodeFunctionData({ abi: ERC20_ABI, data: parsed.data });
+// -> functionName: 'transfer', args: [to, amount]
 
-### 해결: 수동 커스텀 마이그레이션
-
-drizzle-kit의 `--custom` 플래그로 빈 마이그레이션 파일을 생성한 뒤 수동 SQL을 작성한다.
-
-**생성 명령:**
-
-```bash
-cd packages/daemon
-pnpm drizzle-kit generate --custom --name=v08-nullable-owner-address
+// 3. EVM calldata 인코딩 API: encodeFunctionData는 이미 사용 중
+// POST /v1/utils/encode-calldata 엔드포인트에서 래핑만 하면 됨
+import { encodeFunctionData } from 'viem';
+const calldata = encodeFunctionData({ abi, functionName, args });
 ```
 
-**마이그레이션 SQL (테이블 재생성 패턴):**
+**EVM tx 파싱 전략 (4byte selector 기반):**
 
-```sql
--- v0.8: agents.owner_address NOT NULL -> nullable + owner_verified 추가
--- SQLite ALTER TABLE 제한으로 테이블 재생성 필수
+```typescript
+// tx-parser.ts에서 ERC-20 메서드를 하드코딩으로 식별
+// decodeFunctionData는 ABI가 필요하므로 알려진 ABI(ERC-20)에만 사용
+// 알려지지 않은 컨트랙트는 4byte selector 추출만으로 CONTRACT_WHITELIST + METHOD_WHITELIST 평가 가능
+function parseEvmCalldata(data: Hex): ParsedOperation {
+  if (!data || data === '0x') {
+    return { type: 'NATIVE_TRANSFER' };  // data 없음 = ETH 전송
+  }
+  const selector = data.slice(0, 10);  // 0x + 8 hex chars = 4 bytes
 
-PRAGMA foreign_keys = OFF;
+  // 알려진 ERC-20 selectors
+  if (selector === '0xa9059cbb') {  // transfer(address,uint256)
+    const { args } = decodeFunctionData({ abi: ERC20_ABI, data });
+    return { type: 'TOKEN_TRANSFER', to: args[0], amount: args[1] };
+  }
+  if (selector === '0x095ea7b3') {  // approve(address,uint256)
+    const { args } = decodeFunctionData({ abi: ERC20_ABI, data });
+    return { type: 'APPROVE', to: args[0], amount: args[1] };
+  }
 
-BEGIN TRANSACTION;
+  // 미지의 컨트랙트 호출
+  return { type: 'CONTRACT_CALL', method: selector };
+}
+```
 
--- Step 1: 새 스키마로 테이블 생성
-CREATE TABLE agents_new (
-  id              TEXT PRIMARY KEY,
-  name            TEXT NOT NULL UNIQUE,
-  chain           TEXT NOT NULL CHECK (chain IN ('solana', 'ethereum')),
-  network         TEXT NOT NULL CHECK (network IN ('mainnet', 'devnet', 'testnet')),
-  public_key      TEXT NOT NULL,
-  status          TEXT NOT NULL DEFAULT 'CREATING'
-    CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED')),
-  owner_address   TEXT,                                    -- [v0.8] nullable
-  owner_verified  INTEGER NOT NULL DEFAULT 0,              -- [v0.8] 신규
-  created_at      INTEGER NOT NULL,
-  updated_at      INTEGER NOT NULL,
-  suspended_at    INTEGER,
-  suspension_reason TEXT
+**신뢰도: HIGH** -- viem 2.45.3의 `_types/index.d.ts`에서 `decodeFunctionData`, `decodeAbiParameters`, `encodeFunctionData` 모두 export 확인 완료. 기존 EvmAdapter에서 `parseTransaction`, `encodeFunctionData` 이미 실사용 중.
+
+### 2. Solana Unsigned Transaction 파싱 (@solana/kit 6.0.1)
+
+| 함수 | 임포트 경로 | 용도 | 현재 사용 여부 |
+|------|------------|------|--------------|
+| `getTransactionDecoder` | `@solana/kit` (via @solana/transactions) | wire bytes -> Transaction (signatures + messageBytes) | O (SolanaAdapter에서 사용 중) |
+| `getCompiledTransactionMessageDecoder` | `@solana/kit` (via @solana/transaction-messages) | messageBytes -> CompiledTransactionMessage | X (신규 활용) |
+| `decompileTransactionMessageFetchingLookupTables` | `@solana/kit` | CompiledTransactionMessage -> TransactionMessage (lookup table 해석 포함) | X (신규 활용) |
+
+**신규 활용 상세:**
+
+```typescript
+import {
+  getTransactionDecoder,
+  getCompiledTransactionMessageDecoder,
+} from '@solana/kit';
+
+// 1단계: wire bytes -> Transaction 객체 (이미 SolanaAdapter에서 사용 중)
+const txDecoder = getTransactionDecoder();
+const transaction = txDecoder.decode(rawBytes);
+// transaction.messageBytes, transaction.signatures
+
+// 2단계: messageBytes -> CompiledTransactionMessage (신규 활용)
+const msgDecoder = getCompiledTransactionMessageDecoder();
+const compiledMsg = msgDecoder.decode(transaction.messageBytes);
+// compiledMsg.header, compiledMsg.staticAccounts[], compiledMsg.instructions[]
+
+// 3단계: instruction에서 programId, accounts, data 추출
+for (const ix of compiledMsg.instructions) {
+  const programAddress = compiledMsg.staticAccounts[ix.programAddressIndex];
+  const accountAddresses = ix.accountIndices?.map(i => compiledMsg.staticAccounts[i]);
+  const instructionData = ix.data;  // Uint8Array
+}
+```
+
+**CompiledTransactionMessage 구조 (d.ts에서 확인):**
+
+```typescript
+{
+  header: { numSignerAccounts, numReadonlySignerAccounts, numReadonlyNonSignerAccounts },
+  staticAccounts: Address[],  // 모든 계정 주소 배열
+  instructions: Array<{
+    programAddressIndex: number,        // staticAccounts 인덱스
+    accountIndices?: number[],          // staticAccounts 인덱스 배열
+    data?: ReadonlyUint8Array,          // instruction data
+  }>,
+  lifetimeToken: string,  // blockhash
+  version: 'legacy' | 0,
+  addressTableLookups?: Array<{...}>,  // v0 only
+}
+```
+
+**Solana instruction 파싱 전략:**
+
+```typescript
+// tx-parser.ts에서 알려진 프로그램을 하드코딩으로 식별
+function classifySolanaInstruction(
+  programAddress: string,
+  data: Uint8Array | undefined,
+  accounts: string[],
+): ParsedOperation {
+  switch (programAddress) {
+    case '11111111111111111111111111111111': {
+      // System Program: instruction type은 data[0..3] LE uint32
+      if (data && data.length >= 4) {
+        const instructionType = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+        if (instructionType === 2) {  // Transfer
+          // amount는 data[4..11] LE uint64
+          const amount = readU64LE(data, 4);
+          return { type: 'NATIVE_TRANSFER', to: accounts[1], amount };
+        }
+      }
+      return { type: 'CONTRACT_CALL', programId: programAddress };
+    }
+    case 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA':
+    case 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb': {
+      // SPL Token / Token-2022: instruction type은 data[0] uint8
+      if (data && data.length >= 1) {
+        if (data[0] === 12) return { type: 'TOKEN_TRANSFER', token: accounts[1] };  // TransferChecked
+        if (data[0] === 13) return { type: 'APPROVE', token: accounts[1] };  // ApproveChecked
+      }
+      return { type: 'CONTRACT_CALL', programId: programAddress };
+    }
+    default:
+      // Anchor discriminator: 처음 8바이트
+      const discriminator = data ? toHex(data.slice(0, 8)) : undefined;
+      return { type: 'CONTRACT_CALL', programId: programAddress, method: discriminator };
+  }
+}
+```
+
+**Address Lookup Table 처리:**
+
+v0 트랜잭션에서 `addressTableLookups`가 있으면 `decompileTransactionMessageFetchingLookupTables`로 실제 주소를 해석해야 한다. 이 함수는 RPC 호출이 필요하므로, sign-only 파이프라인에서 RPC 연결이 활성화되어 있어야 한다.
+
+```typescript
+import { decompileTransactionMessageFetchingLookupTables } from '@solana/kit';
+
+// Address Lookup Table이 있는 v0 tx 처리
+if (compiledMsg.addressTableLookups && compiledMsg.addressTableLookups.length > 0) {
+  const fullMessage = await decompileTransactionMessageFetchingLookupTables(
+    compiledMsg,
+    rpc,
+  );
+  // fullMessage.instructions에서 실제 주소로 해석된 계정 목록 접근 가능
+}
+```
+
+**신뢰도: HIGH** -- `@solana/kit` 6.0.1의 index.d.ts에서 `@solana/transaction-messages` re-export 확인. `getCompiledTransactionMessageDecoder`는 `@solana/transaction-messages/dist/types/codecs/message.d.ts`에서 선언 확인. `decompileTransactionMessageFetchingLookupTables`는 `@solana/kit` 자체 export 확인.
+
+### 3. MCP 리소스 템플릿 (@modelcontextprotocol/sdk 1.26.0)
+
+| 클래스/함수 | 임포트 경로 | 용도 | 현재 사용 여부 |
+|------------|------------|------|--------------|
+| `ResourceTemplate` | `@modelcontextprotocol/sdk/server/mcp.js` | URI 템플릿 기반 동적 리소스 등록 | X (신규 활용) |
+| `server.resource()` (template overload) | `@modelcontextprotocol/sdk/server/mcp.js` | 템플릿 리소스 핸들러 등록 | X (신규 활용) |
+
+**현재 MCP 리소스 패턴 (정적 URI):**
+
+```typescript
+// 기존: 정적 URI 리소스 (3개)
+server.resource('Wallet Balance', 'waiaas://wallet/balance', { ... }, async () => { ... });
+server.resource('Wallet Address', 'waiaas://wallet/address', { ... }, async () => { ... });
+server.resource('System Status', 'waiaas://system/status', { ... }, async () => { ... });
+```
+
+**신규: 스킬 리소스 템플릿 패턴:**
+
+```typescript
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+// 스킬 파일 목록 (skills/ 디렉토리)
+const SKILL_FILES = ['quickstart', 'wallet', 'transactions', 'policies', 'admin'];
+
+// waiaas://skills/{name} 리소스 템플릿
+const skillTemplate = new ResourceTemplate(
+  'waiaas://skills/{name}',
+  {
+    list: async () => ({
+      resources: SKILL_FILES.map(name => ({
+        uri: `waiaas://skills/${name}`,
+        name: `${name} skill`,
+        description: `API reference for ${name}`,
+        mimeType: 'text/markdown',
+      })),
+    }),
+  },
 );
 
--- Step 2: 데이터 복사 (owner_verified = 0 기본값)
-INSERT INTO agents_new (id, name, chain, network, public_key, status,
-  owner_address, owner_verified, created_at, updated_at, suspended_at, suspension_reason)
-SELECT id, name, chain, network, public_key, status,
-  owner_address, 0, created_at, updated_at, suspended_at, suspension_reason
-FROM agents;
-
--- Step 3: 원본 테이블 삭제
-DROP TABLE agents;
-
--- Step 4: 새 테이블 이름 변경
-ALTER TABLE agents_new RENAME TO agents;
-
--- Step 5: 인덱스 재생성
-CREATE UNIQUE INDEX idx_agents_public_key ON agents(public_key);
-CREATE INDEX idx_agents_status ON agents(status);
-CREATE INDEX idx_agents_chain_network ON agents(chain, network);
-CREATE INDEX idx_agents_owner_address ON agents(owner_address);
-
-COMMIT;
-
-PRAGMA foreign_keys = ON;
+server.resource(
+  'API Skills',
+  skillTemplate,
+  {
+    description: 'WAIaaS API skill files for agent reference',
+    mimeType: 'text/markdown',
+  },
+  async (uri, { name }) => ({
+    contents: [{
+      uri: uri.href,
+      text: await readSkillFile(name as string),
+      mimeType: 'text/markdown',
+    }],
+  }),
+);
 ```
 
-### Drizzle 스키마 변경
+**ResourceTemplate API (v1.26.0 mcp.d.ts 확인):**
 
 ```typescript
-// packages/daemon/src/infrastructure/database/tables/agents.ts
-// v0.8 변경: ownerAddress nullable, ownerVerified 추가
+class ResourceTemplate {
+  constructor(
+    uriTemplate: string | UriTemplate,
+    callbacks: {
+      list: ListResourcesCallback | undefined;  // 필수 (undefined 허용)
+      complete?: { [variable: string]: CompleteResourceTemplateCallback };
+    },
+  );
+  get uriTemplate(): UriTemplate;
+  get listCallback(): ListResourcesCallback | undefined;
+  completeCallback(variable: string): CompleteResourceTemplateCallback | undefined;
+}
 
-export const agents = sqliteTable('agents', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  chain: text('chain').$type<'solana' | 'ethereum'>().notNull(),
-  network: text('network').$type<'mainnet' | 'devnet' | 'testnet'>().notNull(),
-  publicKey: text('public_key').notNull(),
-  status: text('status', {
-    enum: ['CREATING', 'ACTIVE', 'SUSPENDED', 'TERMINATING', 'TERMINATED']
-  }).notNull().default('CREATING'),
+// server.resource() template overload 시그니처
+resource(
+  name: string,
+  template: ResourceTemplate,
+  metadata: ResourceMetadata,
+  readCallback: ReadResourceTemplateCallback,
+): RegisteredResourceTemplate;
 
-  // [v0.8] NOT NULL -> nullable
-  ownerAddress: text('owner_address'),
-
-  // [v0.8] 신규: ownerAuth 사용 이력 (유예/잠금 구간 판단)
-  ownerVerified: integer('owner_verified').notNull().default(0),
-
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-  suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
-  suspensionReason: text('suspension_reason'),
-}, (table) => [
-  uniqueIndex('idx_agents_public_key').on(table.publicKey),
-  index('idx_agents_status').on(table.status),
-  index('idx_agents_chain_network').on(table.chain, table.network),
-  index('idx_agents_owner_address').on(table.ownerAddress),
-  check('check_chain', sql`chain IN ('solana', 'ethereum')`),
-  check('check_network', sql`network IN ('mainnet', 'devnet', 'testnet')`),
-]);
+// ReadResourceTemplateCallback 시그니처
+type ReadResourceTemplateCallback = (
+  uri: URL,
+  variables: Variables,
+  extra: RequestHandlerExtra,
+) => ReadResourceResult | Promise<ReadResourceResult>;
 ```
 
-### 주의사항
+`list` 콜백이 `undefined`가 아닌 함수이면 `resources/list` 요청 시 해당 콜백이 호출되어 동적 리소스 목록을 반환한다.
 
-| 위험 | 완화 |
-|------|------|
-| 테이블 재생성 중 FK 참조 깨짐 | `PRAGMA foreign_keys = OFF` 후 트랜잭션 내에서 수행 |
-| 기존 데이터 손실 | `INSERT INTO ... SELECT` 로 전량 복사. 마이그레이션 전 `VACUUM INTO` 백업 |
-| drizzle-kit snapshot 불일치 | 커스텀 마이그레이션 후 `drizzle-kit generate`로 snapshot 갱신 |
-| [drizzle-orm #4938](https://github.com/drizzle-team/drizzle-orm/issues/4938) 데이터 손실 버그 | CASCADE 관계 테이블을 수동으로 처리. drizzle-kit 자동 재생성에 맡기지 않음 |
+**스킬 파일 읽기 전략:**
 
-### Confidence: HIGH
+MCP 서버는 daemon과 별도 프로세스이므로 skills/ 파일 접근 방식을 결정해야 한다:
+- **옵션 A: 파일 시스템에서 직접 읽기** -- MCP 서버가 프로젝트 루트를 알아야 함
+- **옵션 B: daemon REST API 경유** -- `GET /v1/skills/{name}` 엔드포인트 추가
+- **권장: 옵션 B** -- 기존 ApiClient 패턴과 일관성 유지. daemon이 skills/ 파일을 서빙
 
-- 테이블 재생성 패턴은 25-sqlite-schema.md 섹션 4.6에 이미 정의됨
-- v0.5 마이그레이션(섹션 4.7)에서 동일 패턴 사용 경험 있음
-- drizzle-kit `--custom` 은 [공식 문서](https://orm.drizzle.team/docs/kit-custom-migrations)에서 확인됨
+**신뢰도: HIGH** -- `@modelcontextprotocol/sdk` 1.26.0의 `dist/esm/server/mcp.d.ts`에서 `ResourceTemplate` 클래스 선언 확인. `server.resource()` 메서드의 template overload 시그니처 확인.
+
+### 4. Solana Transaction 서명 (@solana/kit 6.0.1)
+
+기존 SolanaAdapter.signTransaction()과 동일 패턴. 외부 unsigned tx를 서명하는 `signExternalTransaction`은 기존 코드 재사용.
+
+```typescript
+import {
+  getTransactionDecoder,
+  getTransactionEncoder,
+  signBytes,
+  createKeyPairFromBytes,
+  createKeyPairFromPrivateKeyBytes,
+  getAddressFromPublicKey,
+} from '@solana/kit';
+
+// 외부 unsigned tx를 base64에서 디코딩
+const rawBytes = new Uint8Array(Buffer.from(base64Tx, 'base64'));
+const txDecoder = getTransactionDecoder();
+const txEncoder = getTransactionEncoder();
+const transaction = txDecoder.decode(rawBytes);
+
+// 월렛 키로 서명 (SolanaAdapter.signTransaction 기존 로직과 동일)
+const keyPair = privateKey.length === 64
+  ? await createKeyPairFromBytes(privateKey)
+  : await createKeyPairFromPrivateKeyBytes(privateKey.slice(0, 32));
+const signerAddress = await getAddressFromPublicKey(keyPair.publicKey);
+const signature = await signBytes(keyPair.privateKey, transaction.messageBytes);
+
+// 서명을 트랜잭션에 삽입
+const signedTx = {
+  ...transaction,
+  signatures: {
+    ...transaction.signatures,
+    [signerAddress]: signature,
+  },
+};
+
+// 서명된 트랜잭션을 base64로 인코딩하여 반환
+const signedBytes = new Uint8Array(txEncoder.encode(signedTx));
+return Buffer.from(signedBytes).toString('base64');
+```
+
+**이미 사용 중인 함수들이므로 추가 의존성 없음.** SolanaAdapter.signTransaction()의 기존 로직과 동일 패턴.
+
+### 5. EVM Transaction 서명 (viem 2.45.3)
+
+기존 EvmAdapter.signTransaction()과 동일 패턴. 외부에서 받은 unsigned hex를 파싱하고 서명.
+
+```typescript
+import { parseTransaction, toHex, hexToBytes } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import type { TransactionSerializedEIP1559, Hex } from 'viem';
+
+// 외부 unsigned tx를 파싱
+const parsed = parseTransaction(unsignedHex as TransactionSerializedEIP1559);
+
+// 월렛 키로 서명
+const privateKeyHex = `0x${Buffer.from(privateKey).toString('hex')}` as Hex;
+const account = privateKeyToAccount(privateKeyHex);
+const signedHex = await account.signTransaction({
+  ...parsed,
+  type: 'eip1559',
+} as Parameters<typeof account.signTransaction>[0]);
+
+// 서명된 tx를 hex로 반환
+return signedHex;
+```
+
+**이미 사용 중인 함수들이므로 추가 의존성 없음.**
 
 ---
 
-## Pattern 2: sweepAll -- Solana Token Account Close + Rent Recovery
+## 패키지별 변경 사항
 
-### 문제
+### @waiaas/core
 
-Owner가 에이전트 자금을 전량 회수(sweepAll)할 때, SPL 토큰을 전송하고 토큰 계정을 닫아 rent 를 회수해야 한다.
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| chain-adapter.types.ts | `ParsedTransaction`, `ParsedOperation`, `SignedTransaction` 타입 추가 | 없음 (Zod + TS만) |
+| IChainAdapter.ts | `parseTransaction()`, `signExternalTransaction()` 2개 메서드 추가 (20 -> 22) | 없음 |
+| enums/transaction.ts | `SIGNED` 상태, `SIGN` 타입 추가 | 없음 |
+| schemas/transaction.schema.ts | `SignTransactionRequestSchema` 추가 | 없음 (Zod만) |
 
-### 필요 API: `getCloseAccountInstruction`
+### @waiaas/daemon
 
-`@solana-program/token` 패키지에 이미 포함된 instruction이다. 별도 패키지 설치 불필요.
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| pipeline/sign-only.ts (신규) | sign-only 파이프라인 | 없음 |
+| api/routes/transactions.ts | `POST /v1/transactions/sign` 추가 | 없음 |
+| api/routes/utils.ts (신규) | `POST /v1/utils/encode-calldata` 추가 | 없음 (viem은 daemon에 이미 의존) |
+| api/routes/skills.ts (신규) | `GET /v1/skills/:name` 추가 (MCP 스킬 리소스용) | 없음 |
+| pipeline/database-policy-engine.ts | 기본 거부 토글 분기 추가 | 없음 |
+| DB 마이그레이션 | CHECK 제약 업데이트 (SIGNED 상태, SIGN 타입) | 없음 |
 
-**API ([Solana 공식 문서](https://solana.com/docs/tokens/basics/close-account) 확인):**
+**daemon의 viem 의존성:** daemon은 이미 `viem ^2.21.0`에 직접 의존하고 있으므로 (`packages/daemon/package.json` 확인) `encodeFunctionData`를 import하여 `POST /v1/utils/encode-calldata`에서 직접 사용 가능. adapter-evm을 경유할 필요 없음.
+
+### @waiaas/adapter-solana
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| adapter.ts | `parseTransaction()`, `signExternalTransaction()` 구현 | 없음 |
+| tx-parser.ts (신규) | Solana tx 파싱 유틸리티 | 없음 |
+
+**@solana/kit에서 추가 import:**
+- `getCompiledTransactionMessageDecoder` (기존 미사용, @solana/transaction-messages에서 re-export)
+- `decompileTransactionMessageFetchingLookupTables` (기존 미사용, @solana/kit 자체 export)
+
+### @waiaas/adapter-evm
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| adapter.ts | `parseTransaction()`, `signExternalTransaction()` 구현 | 없음 |
+| tx-parser.ts (신규) | EVM tx 파싱 유틸리티 | 없음 |
+
+**viem에서 추가 import:**
+- `decodeFunctionData` (기존 미사용)
+
+### @waiaas/sdk
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| client.ts | `signTransaction()`, `encodeCalldata()` 메서드 추가 | 없음 (0-dep SDK) |
+
+### @waiaas/mcp
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| tools/sign-transaction.ts (신규) | sign_transaction 도구 | 없음 |
+| tools/encode-calldata.ts (신규) | encode_calldata 도구 | 없음 |
+| resources/skills.ts (신규) | waiaas://skills/{name} 리소스 템플릿 | 없음 |
+| server.ts | 신규 도구 2개 + 리소스 1개 등록 (11 -> 13 도구, 3 -> 4 리소스) | 없음 |
+
+**@modelcontextprotocol/sdk에서 추가 import:**
+- `ResourceTemplate` (기존 미사용, `@modelcontextprotocol/sdk/server/mcp.js`에서 export)
+
+### python-sdk (waiaas)
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| client.py | `sign_transaction()`, `encode_calldata()` 메서드 추가 | 없음 (httpx + Pydantic) |
+
+### @waiaas/admin
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| Settings 페이지 | 기본 거부 토글 3개 추가 (보안 섹션) | 없음 |
+
+---
+
+## 설치 변경: 없음
+
+```bash
+# 신규 설치 명령 없음. 기존 의존성으로 모든 기능 구현 가능.
+# pnpm install 변경 불필요.
+```
+
+---
+
+## 명시적으로 추가하지 않는 것 (Anti-Dependencies)
+
+| 라이브러리 | 왜 추가하지 않는가 |
+|-----------|-----------------|
+| `@solana/web3.js` (legacy) | `@solana/kit` 6.x가 이미 모든 기능을 제공. legacy 라이브러리 혼용은 번들 크기 증가 + 타입 충돌 유발 |
+| `ethers.js` | viem 2.x가 이미 모든 ABI 인코딩/디코딩, tx 파싱 기능을 제공. 중복 의존성 불필요 |
+| `@project-serum/borsh` | Anchor discriminator 파싱에 사용 가능하나, 8바이트 discriminator는 단순 슬라이싱으로 충분. 별도 borsh 디코더 불필요 |
+| `abitype` | viem 2.x가 내부적으로 abitype에 의존하며 타입을 re-export. 직접 의존 불필요 |
+| `@4byte/directory` / 4byte API | 4byte selector -> 함수명 매핑은 외부 API 호출. sign-only에서는 selector 추출만으로 CONTRACT_WHITELIST + METHOD_WHITELIST 평가 가능. 함수명 해석은 불필요 |
+| `@coral-xyz/anchor` | Anchor IDL 기반 instruction 디코딩용이나, sign-only 정책 평가에는 programId + discriminator로 충분. 전체 Anchor 프레임워크 의존 불필요 |
+
+---
+
+## 알려진 프로그램/컨트랙트 식별을 위한 상수
+
+### Solana (tx-parser.ts에 정의)
 
 ```typescript
-import { getCloseAccountInstruction } from '@solana-program/token'
+// 알려진 프로그램 주소 -> 파싱 전략 매핑
+const KNOWN_PROGRAMS: Record<string, string> = {
+  '11111111111111111111111111111111': 'SYSTEM',
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA': 'SPL_TOKEN',
+  'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb': 'TOKEN_2022',
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL': 'ASSOCIATED_TOKEN',
+  'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr': 'MEMO',
+};
 
-const closeIx = getCloseAccountInstruction({
-  account: tokenAccountAddress,    // 닫을 토큰 계정 주소
-  destination: ownerAddress,       // rent SOL 수신 주소 = owner_address
-  owner: agentKeypair,             // 토큰 계정 소유자 (에이전트 키)
-})
+// SystemProgram instruction discriminator (4 bytes LE)
+const SYSTEM_TRANSFER_DISCRIMINATOR = 2;  // Transfer = instruction type 2
+// SPL Token instruction type (1 byte)
+const TOKEN_TRANSFER_CHECKED = 12;
+const TOKEN_APPROVE_CHECKED = 13;
 ```
 
-### 제약: 토큰 잔액 0 필수
-
-토큰 계정을 닫으려면 잔액이 0이어야 한다. 따라서 sweepAll 실행 순서는:
-
-```
-1. getAssets(agentAddress) -> 보유 자산 전수 조사
-2. 토큰별: transfer(전량) + closeAccount -> 하나의 배치 트랜잭션
-   - transfer: 토큰 잔액을 owner_address로 전송
-   - closeAccount: 빈 토큰 계정 닫기 -> rent SOL을 owner_address로
-3. 네이티브 SOL 전량 전송 (잔액 - tx fee)
-```
-
-### 배치 구성: 기존 buildBatch() 활용
-
-v0.6에서 추가된 `buildBatch()` (IChainAdapter 17번째 메서드)를 사용하여 토큰별 transfer + closeAccount를 원자적 배치로 묶는다.
+### EVM (tx-parser.ts에 정의)
 
 ```typescript
-// sweepAll 내부 구현 의사 코드
-async sweepAll(from: string, to: string): Promise<SweepResult> {
-  const assets = await this.getAssets(from)
-  const tokenAssets = assets.filter(a => a.type !== 'native' && a.balance > 0n)
+// ERC-20 4byte selectors
+const ERC20_SELECTORS: Record<string, { type: string; name: string }> = {
+  '0xa9059cbb': { type: 'TOKEN_TRANSFER', name: 'transfer(address,uint256)' },
+  '0x23b872dd': { type: 'TOKEN_TRANSFER', name: 'transferFrom(address,address,uint256)' },
+  '0x095ea7b3': { type: 'APPROVE', name: 'approve(address,uint256)' },
+};
+```
 
-  // 토큰별 transfer + close 배치 (Solana tx당 max 20 instructions)
-  const batches = chunkTokenAssets(tokenAssets, 10) // 토큰당 2 ix -> 10 토큰/배치
-  for (const batch of batches) {
-    const instructions = batch.flatMap(asset => [
-      getTransferCheckedInstruction({ /* 전량 전송 */ }),
-      getCloseAccountInstruction({ account: asset.ata, destination: to, owner: from })
-    ])
-    await this.buildBatch({ instructions })
-    // -> simulate -> sign -> submit 파이프라인
+---
+
+## 버전 핀 현황 (변경 없음)
+
+| 패키지 | package.json 범위 | 실제 설치 버전 | v1.4.7 활용 |
+|--------|------------------|-------------|-----------|
+| viem | ^2.21.0 | 2.45.3 | parseTransaction, decodeFunctionData, encodeFunctionData |
+| @solana/kit | ^6.0.1 | 6.0.1 | getTransactionDecoder, getCompiledTransactionMessageDecoder, decompileTransactionMessageFetchingLookupTables, signBytes |
+| @modelcontextprotocol/sdk | ^1.12.0 | 1.26.0 | McpServer, ResourceTemplate |
+| zod | ^3.24.0 | 3.25.76 | SignTransactionRequestSchema, EncodeCalldataRequestSchema |
+| hono | ^4.11.9 | 4.x | 신규 라우트 추가 |
+| drizzle-orm | ^0.45.0 | 0.45.x | DB 마이그레이션, CHECK 제약 |
+| sodium-native | ^4.3.1 | 4.x | 키 복호화 (기존 keyStore 경유) |
+| jose | ^6.1.3 | 6.x | sessionAuth (변경 없음) |
+
+---
+
+## Alternatives Considered
+
+| 카테고리 | 권장 | 대안 | 왜 대안이 아닌가 |
+|---------|------|------|-----------------|
+| EVM tx 파싱 | viem `parseTransaction` + `decodeFunctionData` | ethers `utils.parseTransaction` + `Interface.decodeFunctionData` | 이미 viem 2.x 의존 중. ethers 추가는 번들 +2MB, API 스타일 충돌 |
+| Solana tx 파싱 | @solana/kit `getTransactionDecoder` + `getCompiledTransactionMessageDecoder` | @solana/web3.js `Transaction.from()` + `VersionedTransaction.deserialize()` | 이미 @solana/kit 6.x 의존 중. web3.js 1.x 혼용은 타입 불일치 유발 |
+| MCP 리소스 | `ResourceTemplate` (SDK 내장) | 커스텀 request handler에서 URI 파싱 | SDK 내장 API가 URI 파싱, list, complete를 모두 처리. 커스텀은 불필요한 복잡도 |
+| EVM calldata 인코딩 | viem `encodeFunctionData` (이미 사용 중) | ethers `Interface.encodeFunctionData` | viem 이미 사용 중이므로 일관성 유지 |
+| Anchor instruction 파싱 | 8바이트 discriminator 슬라이싱 | `@coral-xyz/anchor` IDL 기반 디코딩 | programId + discriminator로 CONTRACT_WHITELIST 평가에 충분. IDL 파싱은 과잉 |
+
+---
+
+## Integration Points
+
+### sign-only 파이프라인과 기존 파이프라인의 관계
+
+```
+기존 executeSend():
+  Stage 1 (Validate + DB INSERT)
+  Stage 2 (Auth -- sessionId passthrough)
+  Stage 3 (Policy evaluation)
+  Stage 4 (Wait -- DELAY/APPROVAL)
+  Stage 5 (Build -> Simulate -> Sign -> Submit)
+  Stage 6 (Confirm)
+
+sign-only executeSign():
+  Step 1: Parse unsigned tx -> ParsedTransaction { operations[] }
+  Step 2: DB INSERT (type=SIGN, status=PENDING)
+  Step 3: Policy evaluation (operations[] -> 기존 evaluate/evaluateBatch)
+  Step 4: DELAY/APPROVAL 판정 -> 즉시 거부 (sign-only는 동기 API)
+  Step 5: Sign (키 복호화 -> signExternalTransaction)
+  Step 6: DB UPDATE (status=SIGNED) + Return signed tx
+
+차이점:
+  - Stage 4 (Wait): DELAY/APPROVAL 티어는 즉시 거부 (blockhash/nonce 만료 위험)
+  - Stage 5 (Build/Simulate): 건너뜀 (외부에서 빌드 완료)
+  - Stage 6 (Confirm): 건너뜀 (제출은 호출자 책임)
+  - SPENDING_LIMIT: 서명 시점에 reserved_amount에 포함 (evaluateAndReserve 활용)
+```
+
+### 기본 거부 토글과 DatabasePolicyEngine 통합
+
+```typescript
+// DatabasePolicyEngine에서 SettingsService를 통해 설정 읽기
+// v1.4.4에서 구현된 SettingsService + DB settings 테이블 + hot-reload 활용
+
+private evaluateContractPolicy(walletId: string, param: TransactionParam) {
+  const policies = this.getContractWhitelistPolicies(walletId);
+  if (policies.length === 0) {
+    // 기본 거부 토글 확인 (DB settings 테이블에서 hot-reload)
+    const defaultDeny = this.settingsService.get('default_deny_contracts');
+    if (defaultDeny === 'false') {
+      return null;  // 허용 -> 다음 정책 평가로 (SPENDING_LIMIT 등)
+    }
+    return { allowed: false, reason: 'Contract calls disabled: no CONTRACT_WHITELIST...' };
   }
-
-  // 마지막: 네이티브 SOL 전량 전송
-  const solBalance = await this.getBalance(from)
-  const fee = await this.estimateFee({ /* SOL transfer */ })
-  await this.buildTransaction({ to, amount: solBalance - fee })
+  // ... 기존 화이트리스트 평가 로직 그대로
 }
 ```
 
-### 기존 의존성으로 충분한 이유
+### encode-calldata 엔드포인트
 
-| 필요 기능 | 이미 존재하는 곳 | 추가 설치 |
-|-----------|----------------|----------|
-| `getCloseAccountInstruction` | `@solana-program/token` (v0.6 추가) | 불필요 |
-| `getTransferCheckedInstruction` | `@solana-program/token` (v0.6 추가) | 불필요 |
-| `getAssets()` | IChainAdapter 14번째 메서드 (v0.6 추가) | 불필요 |
-| `buildBatch()` | IChainAdapter 17번째 메서드 (v0.6 추가) | 불필요 |
-| `estimateFee()` | IChainAdapter 13번째 메서드 (v0.2 설계) | 불필요 |
-
-### Confidence: HIGH
-
-- `getCloseAccountInstruction` 은 [Solana 공식 문서](https://solana.com/docs/tokens/basics/close-account)에서 확인됨
-- `@solana-program/token`은 v0.6에서 이미 SPL 토큰 전송용으로 의존성에 포함됨
-- 배치 트랜잭션 패턴은 60-batch-transaction-spec.md에 이미 설계됨
-
----
-
-## Pattern 3: Progressive Security Unlock -- Conditional Middleware
-
-### 문제
-
-Owner 유무에 따라 미들웨어 동작을 분기해야 한다:
-- Owner 없음: APPROVAL 다운그레이드, 세션 갱신 즉시 확정, Kill Switch 24h 복구
-- Owner 있음: APPROVAL 정상 동작, 세션 갱신 거부 윈도우, Kill Switch 30min 복구
-
-### 해결: 런타임 조건 분기 (미들웨어 내부)
-
-Hono의 `hono/combine` (`every`, `some`, `except`)는 **라우트 레벨** 조건 분기에 유용하지만, v0.8의 Owner 유무 분기는 **요청별 런타임 데이터**(DB에서 에이전트 조회 후 owner_address 확인)에 기반하므로, 미들웨어 내부의 조건 분기가 적합하다.
-
-**패턴 A: PolicyEngine 내부 분기 (APPROVAL 다운그레이드)**
+daemon은 이미 `viem ^2.21.0`에 직접 의존하고 있으므로 (packages/daemon/package.json 확인) `encodeFunctionData`를 직접 import하여 사용 가능. adapter-evm을 경유할 필요 없음.
 
 ```typescript
-// PolicyEngine.evaluate() 내부, 기존 §9 maxTier 산출 직후
-const finalTier = maxTier(nativeTier, usdTier)
+// packages/daemon/src/api/routes/utils.ts
+import { encodeFunctionData } from 'viem';
 
-if (finalTier === 'APPROVAL' && !agent.ownerAddress) {
-  return {
-    tier: 'DELAY',
-    downgraded: true,
-    originalTier: 'APPROVAL',
-    // 알림에 Owner 등록 안내 포함
+// POST /v1/utils/encode-calldata
+app.post('/v1/utils/encode-calldata', async (c) => {
+  const { abi, functionName, args } = c.req.valid('json');
+  try {
+    const calldata = encodeFunctionData({ abi, functionName, args });
+    const selector = calldata.slice(0, 10);
+    return c.json({ calldata, selector, functionName });
+  } catch (err) {
+    return c.json({ error: 'ENCODE_ERROR', code: 'ABI_ENCODING_FAILED', message: ... }, 400);
   }
-}
-```
-
-이 패턴은 미들웨어가 아니라 **서비스 레이어**(PolicyEngine)의 내부 로직이다. 새로운 미들웨어 슬롯을 추가하지 않는다.
-
-**패턴 B: 기존 미들웨어의 분기 확장 (Kill Switch 복구)**
-
-```typescript
-// killSwitchRecoveryHandler 내부
-async function handleRecovery(c: Context) {
-  const agent = c.get('agent') // authRouter에서 설정된 에이전트 컨텍스트
-
-  if (agent.ownerAddress) {
-    // Enhanced: ownerAuth + masterAuth + 30min 대기
-    requireAuth(c, 'ownerAuth', 'masterAuth')
-    requireCooldown(30 * 60) // 30분
-  } else {
-    // Base: masterAuth + 24h 대기
-    requireAuth(c, 'masterAuth')
-    requireCooldown(24 * 60 * 60) // 24시간
-  }
-}
-```
-
-**패턴 C: Hono `except` 활용 (Owner 전용 라우트 보호)**
-
-```typescript
-import { except } from 'hono/combine'
-
-// Owner 전용 라우트 그룹
-const ownerRoutes = new Hono()
-
-// ownerAuth 미들웨어는 owner_address가 있는 에이전트만 통과
-ownerRoutes.use('/*', ownerAuthMiddleware)
-
-ownerRoutes.post('/agents/:agentId/withdraw', withdrawHandler)
-
-app.route('/v1/owner', ownerRoutes)
-```
-
-### 새로운 미들웨어 필요 없음
-
-v0.8은 기존 10단계 미들웨어 체인(29-api-framework-design.md 섹션 2.1)에 새로운 슬롯을 추가하지 않는다:
-
-| 미들웨어 | v0.8 변경 |
-|----------|----------|
-| #1 requestId | 변경 없음 |
-| #2 requestLogger | 변경 없음 |
-| #3 secureHeaders | 변경 없음 |
-| #3.5 globalRateLimit | 변경 없음 |
-| #4 corsHandler | 변경 없음 |
-| #5 bodyParser | 변경 없음 |
-| #6 zodValidator | 변경 없음 |
-| #7 killSwitchGuard | **허용 목록에 withdraw 추가 검토** (구현 시 결정) |
-| #8 authRouter | **Owner 유무 분기 추가** (ownerAuth 라우트 디스패치) |
-| #9 sessionRateLimit | 변경 없음 |
-| #10 agentStatusGuard | 변경 없음 |
-
-### Confidence: HIGH
-
-- Hono middleware 패턴은 [공식 문서](https://hono.dev/docs/guides/middleware)에서 확인됨
-- `hono/combine`의 `every`, `some`, `except`는 [Hono Combine 문서](https://hono.dev/docs/middleware/builtin/combine)에서 확인됨
-- 기존 미들웨어 체인은 29-api-framework-design.md에 10단계로 확정됨
-
----
-
-## Pattern 4: Owner Lifecycle State Machine (유예/잠금)
-
-### 문제
-
-Owner 등록 후 2단계 생명주기(유예 -> 잠금)를 추적해야 한다. ownerAuth를 한 번이라도 사용하면 유예에서 잠금으로 전환된다.
-
-### 해결: `owner_verified` INTEGER 컬럼
-
-별도의 상태 머신 라이브러리가 필요하지 않다. 2-state 전환이므로 단순 플래그로 충분하다.
-
-```typescript
-// 유예 구간: owner_address 존재 + owner_verified = 0
-// 잠금 구간: owner_address 존재 + owner_verified = 1
-
-type OwnerLifecyclePhase = 'none' | 'grace' | 'locked'
-
-function getOwnerPhase(agent: Agent): OwnerLifecyclePhase {
-  if (!agent.ownerAddress) return 'none'
-  return agent.ownerVerified ? 'locked' : 'grace'
-}
-
-// ownerAuth 최초 성공 시 owner_verified = 1로 전환
-async function onOwnerAuthSuccess(agentId: string): Promise<void> {
-  await db.update(agents)
-    .set({ ownerVerified: 1, updatedAt: nowEpochSeconds() })
-    .where(eq(agents.id, agentId))
-}
-```
-
-### 별도 라이브러리 불필요한 이유
-
-| 고려 사항 | 판단 |
-|-----------|------|
-| 상태 수 | 3개 (none/grace/locked) -> 단순 분기로 충분 |
-| 전환 조건 | 1개 (ownerAuth 최초 성공) -> if문 1개 |
-| 지속성 | DB 컬럼 1개 (INTEGER 0/1) |
-| 롤백 | 불가 (locked -> grace 전환 없음, 설계 의도) |
-
-XState 같은 상태 머신 라이브러리는 5+ 상태, 복잡한 전환 규칙, 병렬 상태가 있을 때 가치가 있다. 2-state 단방향 전환에는 과잉.
-
-### Confidence: HIGH
-
-- 이미 설계 문서에 `owner_verified INTEGER NOT NULL DEFAULT 0`으로 확정됨
-- 기존 agents.status (5-state)도 라이브러리 없이 관리 중
-
----
-
-## Pattern 5: Withdraw API + Kill Switch 분기
-
-### 문제
-
-`POST /v1/owner/agents/:agentId/withdraw`는 Kill Switch ACTIVATED 상태에서도 동작해야 할 수 있다.
-
-### 해결: killSwitchGuard 허용 목록 확장
-
-v0.7에서 killSwitchGuard는 4개 경로만 허용한다:
-- `GET /v1/health`
-- `GET /v1/admin/status`
-- `POST /v1/admin/recover`
-- `GET /v1/admin/kill-switch`
-
-v0.8에서 withdraw를 Kill Switch 상태에서 허용할지는 **구현 시 결정**이지만, 기술적으로 허용 목록에 경로를 추가하는 것은 단순한 배열 확장이다:
-
-```typescript
-const KILL_SWITCH_ALLOWED_PATHS = [
-  'GET /v1/health',
-  'GET /v1/admin/status',
-  'POST /v1/admin/recover',
-  'GET /v1/admin/kill-switch',
-  // v0.8: Owner 자금 회수 (구현 시 결정)
-  // 'POST /v1/owner/agents/:agentId/withdraw',
-]
-```
-
-### Confidence: HIGH
-
-- killSwitchGuard 패턴은 36-killswitch-autostop-evm.md에 확정됨
-- 허용 목록 확장은 코드 1줄 추가
-
----
-
-## What NOT to Add (and Why)
-
-v0.8에서 추가하지 말아야 할 기술들:
-
-| 기술 | 추가하지 않는 이유 |
-|------|-------------------|
-| **XState / xstate** | Owner 생명주기가 2-state 단방향. 과잉 엔지니어링 |
-| **@solana/spl-token (레거시)** | `@solana-program/token`이 이미 있음. 레거시 패키지와 중복 |
-| **ethers.js** | v0.7에서 제거 확정 (viem/siwe로 전환). sweepAll EVM은 EvmStub이므로 불필요 |
-| **event-emitter 라이브러리** | Node.js 내장 EventEmitter로 충분. 다운그레이드 알림 발행에 외부 라이브러리 불필요 |
-| **cron / scheduler 라이브러리** | Kill Switch 24h/30min 대기는 타임스탬프 비교로 구현. 스케줄러 불필요 |
-| **추가 ORM / query builder** | Drizzle ORM이 nullable 컬럼, 조건부 쿼리 모두 지원 |
-| **migration 전용 라이브러리** | drizzle-kit `--custom`이 수동 마이그레이션 파일 생성 지원 |
-
----
-
-## v0.8 Dependency Impact Summary
-
-```
-추가 패키지:       0개
-삭제 패키지:       0개
-버전 업데이트:     0개 (기존 버전 유지)
-Drizzle 스키마 변경: 1개 테이블 (agents)
-IChainAdapter 확장: 1개 메서드 (sweepAll, 19->20)
-미들웨어 변경:     0개 슬롯 추가, 2개 슬롯 내부 분기 확장
-마이그레이션 파일:  1개 수동 커스텀 SQL
+});
 ```
 
 ---
 
-## Drizzle ORM v0.8 활용 패턴
+## Confidence Assessment
 
-### Nullable 컬럼 쿼리
-
-```typescript
-import { isNull, isNotNull, eq } from 'drizzle-orm'
-
-// Owner 없는 에이전트 조회
-const ownerlessAgents = await db.select()
-  .from(agents)
-  .where(isNull(agents.ownerAddress))
-
-// Owner 있는 에이전트 조회
-const ownedAgents = await db.select()
-  .from(agents)
-  .where(isNotNull(agents.ownerAddress))
-
-// 특정 Owner의 에이전트 조회
-const myAgents = await db.select()
-  .from(agents)
-  .where(eq(agents.ownerAddress, ownerAddr))
-```
-
-### Owner 등록/변경 쿼리
-
-```typescript
-// Owner 등록 (set-owner)
-await db.update(agents)
-  .set({
-    ownerAddress: newOwnerAddress,
-    updatedAt: nowEpochSeconds(),
-  })
-  .where(eq(agents.id, agentId))
-
-// Owner 해제 (유예 구간에서만)
-await db.update(agents)
-  .set({
-    ownerAddress: null,
-    ownerVerified: 0,
-    updatedAt: nowEpochSeconds(),
-  })
-  .where(
-    and(
-      eq(agents.id, agentId),
-      eq(agents.ownerVerified, 0) // 유예 구간만
-    )
-  )
-```
-
-### Confidence: HIGH
-
-- Drizzle ORM의 `isNull`, `isNotNull` 연산자는 [공식 문서](https://orm.drizzle.team/docs/sql-schema-declaration)에서 확인됨
-- nullable 컬럼에 대한 UPDATE SET null은 Drizzle 표준 동작
-
----
-
-## Integration Points with Existing Stack
-
-v0.8 변경이 기존 스택 컴포넌트에 미치는 영향:
-
-| 컴포넌트 | 영향 | 변경 범위 |
-|----------|------|----------|
-| **Drizzle schema (agents)** | owner_address nullable, owner_verified 추가 | 스키마 정의 + 커스텀 마이그레이션 SQL 1개 |
-| **IChainAdapter** | sweepAll 메서드 1개 추가 (19->20) | 인터페이스 + SolanaAdapter 구현 + EvmStub no-op |
-| **SolanaAdapter** | sweepAll 구현: getAssets + transfer + closeAccount + buildBatch | 신규 메서드 1개 (~80 LOC) |
-| **PolicyEngine** | evaluate() 결과 후처리에 APPROVAL->DELAY 다운그레이드 | if 분기 1개 (~5 LOC) |
-| **NotificationService** | 다운그레이드 알림 템플릿 + Owner 등록 안내 | 알림 템플릿 1개 추가 |
-| **killSwitchGuard** | 복구 대기 시간 Owner 유무 분기 | 조건 분기 1개 |
-| **authRouter** | ownerAuth 라우트 디스패치에 Owner 유무 체크 | 조건 분기 1개 |
-| **SessionRenewalService** | 거부 윈도우 Owner 유무 분기 | 조건 분기 1개 |
-| **CLI (agent create)** | --owner 옵션 선택화 | commander option 변경 |
-| **CLI (신규 명령)** | agent set-owner, agent remove-owner | 신규 명령 2개 |
-| **REST API** | POST /v1/owner/agents/:agentId/withdraw | 신규 엔드포인트 1개 |
-
----
-
-## Version Matrix (2026-02-08)
-
-v0.8에서 사용하는 모든 패키지. **새로운 추가 없음.**
-
-| Package | Version | Role in v0.8 | v0.8 변경 |
-|---------|---------|-------------|----------|
-| `drizzle-orm` | 0.45.x | agents 테이블 스키마 변경 | nullable 컬럼 + 신규 컬럼 |
-| `drizzle-kit` | latest | 커스텀 마이그레이션 파일 생성 | `--custom` 플래그 활용 |
-| `better-sqlite3` | 12.6.x | 테이블 재생성 마이그레이션 실행 | 변경 없음 |
-| `@solana/kit` | 3.x | sweepAll SOL 전송 | buildTransaction 활용 |
-| `@solana-program/token` | latest | sweepAll closeAccount | getCloseAccountInstruction 활용 |
-| `hono` | 4.x | 조건부 미들웨어 분기 | 내부 로직 분기만 |
-| `jose` | latest | JWT 세션 토큰 | 변경 없음 |
-| `zod` | 3.x | withdraw API 스키마 | 신규 스키마 추가 |
-| `grammy` | 1.39.x | 다운그레이드 알림 | 템플릿 추가 |
-
----
-
-## Roadmap Implications
-
-### Phase Ordering Recommendation
-
-1. **Schema Migration (최우선):** agents 테이블 변경이 모든 기능의 전제 조건이다. owner_address nullable + owner_verified 추가가 완료되어야 후속 기능 구현 가능.
-
-2. **Owner Lifecycle (2순위):** 등록/변경/해제 로직 + CLI 명령 변경. 스키마 변경 직후 구현 가능. 다른 기능의 전제 조건(Owner 유무 판단 함수).
-
-3. **Progressive Security (3순위):** PolicyEngine 다운그레이드, Kill Switch 분기, 세션 갱신 분기. Owner 유무 판단 함수에 의존.
-
-4. **sweepAll + Withdraw API (4순위):** IChainAdapter 확장 + REST API. Owner 등록 기능 완료 후 구현.
-
-5. **Design Doc Updates (병렬 가능):** 14개 기존 설계 문서 수정. 코드 변경과 병렬로 진행 가능.
-
-### Stack Risk Assessment: LOW
-
-v0.8은 기존 스택의 패턴 확장만 수행하므로 기술적 위험이 매우 낮다:
-- 새로운 라이브러리 없음 -> 호환성 위험 없음
-- SQLite 마이그레이션은 이미 검증된 패턴 (v0.5 4.7절 동일 방식)
-- Solana closeAccount는 공식 API -> 안정성 검증됨
-- Hono 미들웨어 분기는 표준 패턴 -> 복잡성 낮음
+| 영역 | 신뢰도 | 근거 |
+|------|--------|------|
+| EVM tx 파싱 (viem) | HIGH | parseTransaction, encodeFunctionData 이미 기존 코드에서 실사용 중. decodeFunctionData는 viem 2.45.3 d.ts에서 export 확인 |
+| Solana tx 파싱 (@solana/kit) | HIGH | getTransactionDecoder 이미 사용 중. getCompiledTransactionMessageDecoder는 @solana/transaction-messages d.ts에서 확인. @solana/kit가 re-export |
+| MCP ResourceTemplate | HIGH | @modelcontextprotocol/sdk 1.26.0 mcp.d.ts에서 ResourceTemplate 클래스, server.resource() template overload 확인 |
+| EVM calldata 인코딩 | HIGH | encodeFunctionData는 EvmAdapter에서 이미 실사용 중. daemon도 viem 직접 의존 |
+| 기본 거부 토글 | HIGH | SettingsService는 v1.4.4에서 구현 완료. DB settings 테이블 + hot-reload 가능 |
+| Address Lookup Table 처리 | MEDIUM | decompileTransactionMessageFetchingLookupTables의 d.ts 확인했으나 실제 RPC 호출 동작은 미검증. 테스트에서 확인 필요 |
+| Solana instruction 데이터 파싱 (SystemProgram, SPL Token) | MEDIUM | instruction layout은 Solana 공식 스펙 기반이나 코드베이스에서 직접 검증 필요. 오프셋 계산 실수 가능성 |
 
 ---
 
 ## Sources
 
-### HIGH Confidence (공식 문서, npm registry)
+### 코드베이스 직접 검증 (HIGH)
 
-- [Drizzle ORM Custom Migrations](https://orm.drizzle.team/docs/kit-custom-migrations) -- `--custom` 플래그 워크플로우
-- [Drizzle Kit Generate](https://orm.drizzle.team/docs/drizzle-kit-generate) -- 마이그레이션 파일 생성
-- [SQLite ALTER TABLE](https://www.sqlitetutor.com/alter-table/) -- NOT NULL 변경 불가 제약
-- [Solana Close Token Account](https://solana.com/docs/tokens/basics/close-account) -- getCloseAccountInstruction API
-- [@solana-program/token Documentation](https://www.solana-program.com/docs/token) -- closeAccount instruction
-- [Hono Combine Middleware](https://hono.dev/docs/middleware/builtin/combine) -- every, some, except API
-- [Hono Middleware Guide](https://hono.dev/docs/guides/middleware) -- 커스텀 미들웨어 패턴
+- `packages/adapters/evm/src/adapter.ts` -- viem `parseTransaction`, `encodeFunctionData`, `serializeTransaction`, `hexToBytes` 실사용 패턴
+- `packages/adapters/solana/src/adapter.ts` -- @solana/kit `getTransactionDecoder`, `getTransactionEncoder`, `signBytes`, `createKeyPairFromBytes` 실사용 패턴
+- `packages/mcp/src/resources/wallet-address.ts` -- 정적 리소스 등록 패턴 (`server.resource()` 사용 중)
+- `packages/mcp/src/server.ts` -- McpServer 생성 + 11 도구 + 3 리소스 등록 구조
+- `packages/daemon/package.json` -- `viem: "^2.21.0"` 직접 의존 확인
 
-### MEDIUM Confidence (검증된 커뮤니티 소스)
+### 타입 선언 파일 검증 (HIGH)
 
-- [drizzle-orm #4938](https://github.com/drizzle-team/drizzle-orm/issues/4938) -- SQLite 테이블 재생성 데이터 손실 버그 보고
-- [Hono Factory Helper](https://hono.dev/docs/helpers/factory) -- createMiddleware 패턴
+- viem 2.45.3 `_types/index.d.ts` -- `decodeFunctionData`, `decodeAbiParameters`, `encodeFunctionData`, `parseTransaction` export
+- @solana/transaction-messages 6.0.1 `dist/types/codecs/message.d.ts` -- `getCompiledTransactionMessageDecoder` 선언
+- @solana/transactions 6.0.1 `dist/types/codecs/transaction-codec.d.ts` -- `getTransactionDecoder`, `getTransactionEncoder` 선언
+- @solana/kit 6.0.1 `dist/types/index.d.ts` -- `@solana/transaction-messages`, `@solana/transactions` re-export, `decompileTransactionMessageFetchingLookupTables` export
+- @modelcontextprotocol/sdk 1.26.0 `dist/esm/server/mcp.d.ts` -- `ResourceTemplate` 클래스, `server.resource()` template overload
 
-### Project-Internal (이전 마일스톤 설계 문서)
+### 공식 문서 (MEDIUM-HIGH)
 
-- 25-sqlite-schema.md 섹션 4.6 -- 테이블 재생성 패턴 (v0.2 정의)
-- 25-sqlite-schema.md 섹션 4.7 -- v0.5 마이그레이션 선례 (동일 패턴)
-- 27-chain-adapter-interface.md -- IChainAdapter 19 메서드 (v0.7 확정)
-- 29-api-framework-design.md 섹션 2.1 -- 10단계 미들웨어 체인 (v0.7 확정)
-- 31-solana-adapter-detail.md -- SolanaAdapter 구현 패턴
-- 57-asset-query-fee-estimation-spec.md -- getAssets() + AssetInfo 스키마
-- 60-batch-transaction-spec.md -- buildBatch() 배치 트랜잭션 패턴
+- [viem encodeFunctionData](https://viem.sh/docs/contract/encodeFunctionData)
+- [viem decodeFunctionData](https://viem.sh/docs/contract/decodeFunctionData)
+- [MCP Resources Specification](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)
+- [@modelcontextprotocol/sdk npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
+
+### 프로젝트 내부 (HIGH)
+
+- `objectives/v1.4.7-arbitrary-transaction-signing.md` -- 마일스톤 목표, 컴포넌트 정의, E2E 시나리오 50개
+- `packages/core/src/interfaces/IChainAdapter.ts` -- 현재 20 메서드 인터페이스
+- `packages/core/src/schemas/transaction.schema.ts` -- discriminatedUnion 5-type 스키마
+- `packages/core/src/enums/policy.ts` -- 11 PolicyType 정의
+- `packages/daemon/src/pipeline/stages.ts` -- 6-stage 파이프라인 구조, buildByType 라우팅

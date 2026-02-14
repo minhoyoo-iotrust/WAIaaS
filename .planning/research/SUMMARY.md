@@ -1,365 +1,209 @@
-# WAIaaS v1.4.5 멀티체인 월렛 환경 모델 설계 -- 연구 요약
+# Project Research Summary
 
-**Project:** WAIaaS v1.4.5 (멀티체인 월렛 모델 설계) + v1.4.6 (구현)
-**Domain:** Self-hosted AI agent wallet daemon -- 단일 네트워크 바인딩에서 환경 기반 멀티네트워크 모델로 전환
+**Project:** WAIaaS v1.4.7 -- 임의 트랜잭션 서명 API (Sign-Only Transaction Signing)
+**Domain:** Self-hosted AI agent wallet daemon -- sign-only pipeline + DX enhancements
 **Researched:** 2026-02-14
-**Overall Confidence:** HIGH (62,296 LOC 코드베이스 직접 분석 + 1,467 테스트 + 업계 표준 패턴 크로스 검증)
-
----
+**Confidence:** HIGH
 
 ## Executive Summary
 
-WAIaaS는 "1 월렛 = 1 체인 + 1 네트워크" 모델에서 "1 월렛 = 1 체인 + 1 환경(testnet/mainnet)"으로 전환한다. 이 변경은 AI 에이전트가 자연어로 네트워크를 지정하는 UX를 가능하게 하며("Polygon에서 ETH 보내줘"), 동시에 단일 키쌍으로 모든 EVM 체인(또는 Solana 네트워크)에서 트랜잭션을 실행하는 블록체인의 본질적 특성과 일치한다.
+v1.4.7의 핵심 발견: **새로운 의존성 추가 없이 기존 스택만으로 모든 기능 구현이 가능하다.** viem 2.45.3, @solana/kit 6.0.1, @modelcontextprotocol/sdk 1.26.0이 이미 unsigned tx 파싱, EVM calldata 인코딩, MCP 리소스 템플릿 기능을 모두 내장하고 있다. 이 마일스톤은 기존 라이브러리의 미사용 API를 활용하여 sign-only 파이프라인을 구축하는 것이 핵심이다.
 
-핵심 아키텍처 변경은 **네트워크 리졸브 시점의 이동**이다. 현재는 월렛 생성 시 network가 고정되고 모든 후속 작업이 이를 따른다. 새 모델에서는 트랜잭션 요청 시 network를 지정(또는 default_network로 폴백)하여, 파이프라인이 실행 시점에 environment-network 일치를 검증한다. 기술 스택 변경은 불필요하다 -- viem PublicClient는 이미 네트워크별 인스턴스이고, AdapterPool의 `chain:network` 캐시 키가 정확한 추상화이며, DB 마이그레이션은 기존 12-step 패턴을 재사용한다.
+sign-only 파이프라인의 본질은 **외부 dApp이 만든 unsigned transaction을 정책 평가 후 서명만 반환**하는 것으로, 기존 6-stage 파이프라인(build->simulate->sign->submit->confirm)과 근본적으로 다른 신뢰 경계를 갖는다. WAIaaS가 트랜잭션을 직접 빌드하는 기존 흐름과 달리, 외부에서 구성한 트랜잭션 내용을 파싱하여 검증해야 하므로 **파싱 불완전 시 정책 우회 가능성(C-01)**과 **DELAY/APPROVAL 티어와의 근본적 비호환(C-03)**이 가장 큰 위험이다.
 
-가장 중요한 위험은 **환경 격리 실패**(testnet 키로 mainnet 트랜잭션)와 **DB 마이그레이션의 데이터 순서 의존성**이다. 환경 검증을 파이프라인 Stage 1에서 가장 먼저 수행하고, 마이그레이션에서 `transactions.network` 컬럼을 먼저 채운 후 `wallets.network` -> `wallets.environment` 변환을 진행하면 안전하다. 두 가지 모두 검증된 패턴이 있다.
-
----
+권장 접근: (1) sign-only는 INSTANT/NOTIFY 티어만 허용하고 DELAY/APPROVAL은 즉시 거부, (2) unsigned tx 파싱 실패 시 무조건 deny (파싱 성공한 알려진 패턴만 통과), (3) TTL 기반 reservation 자동 해제로 SPENDING_LIMIT 소진 방지, (4) SIGNED 상태 추가 및 sign-only 전용 파이프라인 분기를 통해 기존 파이프라인과 격리. 이 전략으로 보안 구멍 없이 Jupiter, Agentra 등 외부 dApp과의 통합이 가능하다.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**새 라이브러리 추가 불필요.** 기존 viem 2.x + better-sqlite3 + Drizzle ORM 스택이 환경 모델을 완전히 지원한다.
+**신규 의존성: 없음.** 모든 필요 기능이 기존 의존성에 내장되어 있다.
 
-**핵심 기술 유지:**
-- **viem 2.x (^2.45.3)**: PublicClient는 설계적으로 단일 체인. AdapterPool이 이미 per-network 인스턴스 맵 패턴을 올바르게 구현 중. 새 라이브러리 불필요
-- **better-sqlite3 12.6.2**: SQLite 3.51.2 번들로 ALTER TABLE RENAME COLUMN 지원. 하지만 CHECK 제약 변경은 12-step 테이블 재생성 필요 (v2, v3 마이그레이션에서 검증된 패턴)
-- **Drizzle ORM 0.45.x**: 스키마에서 `network` -> `environment` 필드 변경만으로 충분. DDL은 자체 migrate.ts에서 관리
-- **Zod 3.24.x**: 새 EnvironmentType enum 추가 + 환경-네트워크 매핑 함수. 기존 NETWORK_TYPES는 그대로 유지
+**기존 라이브러리의 미사용 API 활성화:**
+- **viem 2.45.3**: `decodeFunctionData` (EVM calldata 디코딩 -- 신규 활용), `parseTransaction` (이미 사용 중), `encodeFunctionData` (이미 사용 중)
+- **@solana/kit 6.0.1**: `getCompiledTransactionMessageDecoder` (Solana tx 메시지 디코딩 -- 신규 활용), `decompileTransactionMessageFetchingLookupTables` (ALT 해석 -- 신규 활용), `getTransactionDecoder` (이미 사용 중)
+- **@modelcontextprotocol/sdk 1.26.0**: `ResourceTemplate` 클래스 (MCP 리소스 템플릿 -- 신규 활용), `server.resource()` template overload
 
-**명시적으로 추가하지 않을 기술:**
-- wagmi / @wagmi/core: 프론트엔드 멀티체인 라이브러리. 서버 사이드에서는 viem PublicClient 맵이 더 가볍고 적합
-- chainlist / chains npm: viem/chains가 이미 Tier 1 체인 + testnet 정의 포함
-- drizzle-kit migrate: 프로그래매틱 Migration[] 배열이 12-step 같은 복잡한 마이그레이션에 더 적합
+**신뢰도: HIGH** -- 모든 함수가 타입 선언 파일에서 확인되었으며, 일부는 기존 코드에서 이미 실사용 중이다.
 
-**Source confidence:** HIGH (코드베이스 직접 분석 + viem PublicClient Map 패턴 공식 Discussion 확인)
-
----
+**Anti-Dependencies (명시적으로 추가하지 않음):**
+- `@solana/web3.js` (legacy) -- @solana/kit가 모든 기능 제공
+- `ethers.js` -- viem이 모든 기능 제공
+- `@project-serum/borsh` -- 8바이트 discriminator는 단순 슬라이싱으로 충분
+- `@4byte/directory` / 4byte API -- selector 추출만으로 정책 평가 가능
 
 ### Expected Features
 
-#### Table Stakes (필수)
+**Must have (table stakes):**
+- **TS-01: Sign-only endpoint** (`POST /v1/transactions/sign`) -- dApp 통합의 핵심, Jupiter/NFT 마켓플레이스 등 모든 외부 프로토콜과의 상호작용에 필수
+- **TS-03: Unsigned tx parsing/validation** -- 보안 필수, 서명 전 내용 파싱으로 destination/amount/calldata 검증
+- **TS-04: Policy evaluation for sign-only** -- 서명도 정책 적용 필수, sign-only가 정책 우회 경로가 되면 안 됨
+- **TS-05: Return signed tx bytes** -- sign-only의 기본 응답, 제출은 호출자 책임
+- **TS-02: SIGN_ONLY transaction type** -- 파이프라인 분리, DB 구분, 감사 추적 구분
 
-환경 모델 전환에 필수인 기능. 하나라도 빠지면 하위호환이 깨지거나 사용 불가.
+**Should have (differentiators):**
+- **DF-02: EVM calldata encoding helper** (`POST /v1/utils/encode-calldata`) -- AI 에이전트가 ABI 인코딩 직접 처리 불필요
+- **DF-03: Default deny policy toggles** -- 운영 유연성, 신뢰 환경에서 기본 거부→기본 허용 전환 가능
+- **DF-04: MCP skill resources** -- AI 에이전트가 in-context로 API 문서 학습 가능
+- **DF-07: Enhanced policy denial notifications** -- 정책 거부 시 어떤 정책이 왜 거부했는지 + 해결 힌트 제공
 
-1. **wallets.network -> environment 마이그레이션**: 데이터 모델 전환의 핵심. 기존 월렛이 새 모델에서 동작해야 함. 12-step 재생성 + 데이터 변환 (complexity: High)
-2. **트랜잭션 레벨 network 지정**: `POST /v1/transactions/send`에 optional `network` 필드. 미지정 시 `default_network` 폴백 (complexity: Medium)
-3. **기본 네트워크(default_network)**: network 미지정 시 폴백. 하위호환 보장의 핵심 (complexity: Low)
-4. **환경-네트워크 매핑 함수**: `getNetworksForEnvironment(chain, environment)`, `validateNetworkEnvironment()` (complexity: Low)
-5. **transactions.network 컬럼**: 실행된 네트워크를 기록. 감사/추적에 필수 (complexity: Medium -- ADD COLUMN + 기존 레코드 역참조 UPDATE)
-6. **Zod SSoT EnvironmentType**: 타입 안전성 보장. Zod -> TypeScript -> DB CHECK 파생 체인 (complexity: Low)
+**Defer (v2+):**
+- **DF-01: Deep parsing with human-readable summaries** -- HIGH complexity, ABI 추론 휴리스틱 필요, 점진적 개선 항목
+- **DF-08: Optional broadcast on sign endpoint** -- sign-only/execute 분리를 흐리는 요소, 기본 흐름 검증 후 추가
 
-#### Differentiators (차별화)
-
-기본 동작에는 영향 없지만, 환경 모델의 가치를 극대화하는 기능.
-
-1. **ALLOWED_NETWORKS 정책**: 월렛이 사용할 수 있는 네트워크 제한. 보안 강화 (complexity: Medium)
-2. **네트워크 스코프 정책**: 네트워크별 차등 정책 (e.g., Polygon에서만 높은 한도). policies에 network 컬럼 추가 (complexity: Medium)
-3. **Quickstart 원스톱**: `waiaas quickstart --mode testnet` -> 2 월렛(6 네트워크) 일괄 생성. DX 핵심 개선 (complexity: High)
-4. **MCP network 파라미터**: AI 에이전트가 "Polygon에서 ETH 보내줘" 직접 지정 (complexity: Low)
-5. **월렛 네트워크 목록 API**: `GET /v1/wallets/:id/networks` -> 사용 가능 네트워크 (complexity: Low)
-
-#### Anti-Features (의도적으로 만들지 않는 기능)
-
-- **환경 간 키 공유**: testnet 키가 mainnet에서 사용되면 보안 위험
-- **자동 크로스체인 브리징**: 브리지는 보안 위험 높음 (2024-2025년 $3B+ 해킹). 명시적 CONTRACT_CALL로 사용자가 직접 실행
-- **동적 네트워크 추가**: 보안 위험 (악성 RPC 노드). 지원 네트워크는 소스 코드에 하드코딩 (EVM_CHAIN_MAP)
-
-**Source confidence:** HIGH (MetaMask/Dfns/Phantom 공식 문서 + WAIaaS 코드베이스 분석)
-
----
+**Anti-features (명시적으로 구현하지 않음):**
+- WalletConnect 세션 관리 -- 별도 마일스톤으로 분리
+- 전체 ABI 레지스트리/DB -- 유지보수 부담, 인라인 ABI 제공으로 대체
+- Sign-only에서 자동 broadcast -- 2-step 흐름 존중
+- 모든 instruction type 파싱 -- top-level만 파싱, 중첩/CPI는 deny
 
 ### Architecture Approach
 
-**핵심 개념: Environment Model**
+**핵심 설계 결정: Fork, Don't Duplicate.** sign-only 파이프라인은 기존 TransactionPipeline에 `executeSignOnly()` 메서드를 추가하고 Stage 5의 변형(`stage5SignOnly`)을 만드는 방식. 별도 클래스 생성 금지 (코드 중복, 행동 분기 위험).
 
-```
-현재 모델:
-  Wallet Creation -> network 고정 (e.g., 'ethereum-sepolia')
-                  -> 모든 후속 작업이 이 network 사용
+**Major components:**
 
-환경 모델:
-  Wallet Creation -> environment 고정 (e.g., 'testnet' 또는 'mainnet')
-                  -> 트랜잭션 요청 시 network 지정 (e.g., 'polygon-amoy')
-                  -> AdapterPool.resolve(chain, request.network)
-```
+1. **Sign-Only Pipeline (daemon)** -- 4단계 동기적 실행: (1) Parse & Validate (unsigned tx → ParsedTransaction), (2) Auth (sessionAuth), (3) Policy (parsed → TransactionParam → 기존 11개 정책 평가), (4) Sign (build→simulate→sign, NO submit). 기존 Stage 4 (DELAY/APPROVAL 대기) 스킵하고 즉시 거부.
 
-**주요 컴포넌트 변경:**
+2. **Unsigned Transaction Parser (adapters)** -- IChainAdapter에 `parseUnsignedTransaction()` 메서드 추가 (21번째 메서드). EVM: viem `parseTransaction` + `decodeFunctionData`로 calldata 4-byte selector 기반 분류. Solana: `getCompiledTransactionMessageDecoder` + ALT resolve로 instruction 분석. **파싱 실패 = DENY** 원칙.
 
-1. **NetworkResolver (신규)**: 트랜잭션 요청에서 network 해결 + environment 교차 검증. 우선순위: request.network > wallet.defaultNetwork > environment 기본값
-2. **PipelineContext 확장**: `wallet.network` -> `wallet.environment` + `wallet.network`(리졸브된). Stage 1에서 environment-network 일치를 가장 먼저 검증
-3. **PolicyEngine 확장**: `TransactionParam`에 `network` 필드 추가. ALLOWED_NETWORKS 정책 타입(11번째) 추가. 기존 정책의 네트워크 스코프 지정
-4. **AdapterPool**: 변경 불필요. 이미 `chain:network` 키로 올바른 캐싱. 호출자만 리졸브된 network를 전달
-5. **DB Schema**: `wallets.environment` + `wallets.default_network` + `transactions.network` + `policies.network` (선택적)
+3. **Default Deny Toggles (settings)** -- 3개 설정 추가 (`security.token_transfer_default_allow`, `security.contract_call_default_allow`, `security.approve_default_allow`). DatabasePolicyEngine에서 정책 없을 때 설정값 확인하여 default-allow/deny 분기. 기존 SettingsService + hot-reload 재사용.
 
-**패턴:**
+4. **MCP Skill Resources (mcp)** -- `waiaas://skills/{name}` 리소스 템플릿으로 5개 skill 파일 (quickstart, wallet, transactions, policies, admin) 노출. `ResourceTemplate` 클래스 활용. daemon이 `GET /v1/skills/:name` 엔드포인트로 파일 서빙, MCP는 ApiClient 경유.
 
-- **Per-Network Adapter Instance**: viem PublicClient는 chain당 하나. AdapterPool이 `${chain}:${network}` 키로 캐싱
-- **12-step Table Recreation**: CHECK 제약 변경 시 테이블 재생성. v2, v3 마이그레이션의 검증된 패턴 재사용
-- **Zod SSoT Cascade**: EnvironmentType enum -> TypeScript -> DB CHECK -> Drizzle schema -> API validation 순서로 파생
+5. **SIGNED Transaction Status (core)** -- `TRANSACTION_STATUSES` enum에 'SIGNED' 추가. DB migration v9로 CHECK 제약 업데이트. sign-only tx는 SIGNED 상태에서 TTL 후 EXPIRED 전이.
 
-**Anti-Pattern 회피:**
-
-- AdapterPool 구조 변경 금지: 기존 캐시 키가 이미 정확한 추상화
-- 단일 마이그레이션에 모든 변경 집중 금지: 논리 단위로 분리 (v6a: ADD COLUMN, v6b: 12-step 재생성)
-- 기존 네트워크 값 삭제 금지: `default_network`에 보존하여 하위호환 유지
-
-**Source confidence:** HIGH (62,296 LOC 코드베이스 직접 분석 + 12-step 패턴 v2/v3에서 실전 검증 완료)
-
----
+6. **TTL-Based Reservation Release (daemon)** -- sign-only tx의 `reserved_amount`는 별도 만료 시간 설정 (Solana: 90초, EVM: 10분). `processExpired()` 패턴 재사용하여 주기적 해제. 외부 제출 후 온체인 확인은 옵션.
 
 ### Critical Pitfalls
 
-환경 모델 전환의 가장 위험한 함정 5개:
+1. **C-01: Unsigned TX 파싱 불완전 → 정책 우회 (Parser Bypass)** -- EVM multicall/batch에 감싸진 호출, Solana ALT 미해석 시 실제 프로그램 ID/금액 누락 → CONTRACT_WHITELIST/SPENDING_LIMIT 우회. **방지:** 파싱 실패 = DENY, ALT resolve 필수, multicall은 1단계까지만 파싱, 알려진 프로토콜 화이트리스트.
 
-1. **Testnet 키로 Mainnet 트랜잭션 서명 -- 환경 격리 실패 (CRITICAL)**
-   - **문제**: environment 모델에서 `testnet` 환경의 지갑이 트랜잭션 요청 시 `network: 'ethereum-mainnet'`을 지정하면, 같은 개인키로 서명되어 실 자금이 이동
-   - **회피**: `validateEnvironmentNetwork(environment, network)` 함수를 파이프라인 Stage 1에서 가장 먼저 실행. mainnet 환경은 `*-mainnet` 네트워크만, testnet 환경은 `*-sepolia/*-amoy/devnet/testnet` 네트워크만 허용. AdapterPool.resolve()에서도 이중 검증
-   - **Phase**: environment 모델 설계 단계에서 반드시 해결. 구현 첫 번째 단계에서 이 검증부터 작성
+2. **C-02: SPENDING_LIMIT reserved_amount 영원히 해제되지 않는 문제** -- sign-only 서명 후 dApp이 제출 안 하면 reservation이 해제 안 되어 SPENDING_LIMIT 점점 소진. **방지:** TTL 기반 자동 해제 (Solana 90초, EVM 10분), `sign_only_reservations` 테이블 분리, 주기적 만료 처리.
 
-2. **DB 마이그레이션 v6 -- CHECK 제약 변경의 12-step 테이블 재생성 위험 (CRITICAL)**
-   - **문제**: `wallets.network` -> `wallets.environment` 변환 시 CHECK 제약 변경 필요. SQLite의 12-step 테이블 재생성(CREATE-COPY-RENAME)에서 5개 FK 테이블 모두 재생성 필요. 데이터 변환 로직 오류 시 기존 월렛 정보 유실
-   - **회피**: 마이그레이션을 2단계로 분리 (v6a: ADD COLUMN + 데이터 복사, v6b: 12-step 재생성). `transactions.network`를 먼저 채운 후 `wallets.network` 변환. `PRAGMA foreign_key_check` 후 COMMIT. 실제 데이터 시나리오(Solana mainnet + EVM sepolia 혼합)로 round-trip 테스트
-   - **Phase**: DB 마이그레이션 설계 단계. 마이그레이션 스크립트 TDD 작성이 최우선
+3. **C-03: DELAY/APPROVAL 티어와 동기적 Sign-Only 흐름의 근본적 비호환** -- DELAY(15분 대기) 또는 APPROVAL(무기한 대기) 시 blockhash 만료 (Solana) 또는 HTTP 요청 타임아웃. **방지:** **방안 A (권장): sign-only는 INSTANT/NOTIFY만 허용, DELAY/APPROVAL이면 즉시 거부** + 명확한 에러 메시지. 방안 B(2-phase sign)와 C(별도 정책)는 복잡도 증가.
 
-3. **기존 지갑 network 정보의 비가역적 유실 -- 마이그레이션 데이터 변환 순서 오류 (CRITICAL)**
-   - **문제**: `transactions` 테이블에 `network` 컬럼이 없고, `wallets.network`를 `environment`로 변환하면 기존 트랜잭션이 어느 네트워크에서 실행됐는지 정보가 영구 유실
-   - **회피**: 마이그레이션 순서 엄격 준수. Step 1: `transactions`에 `network` 컬럼 추가 (ALTER TABLE ADD COLUMN). Step 2: `UPDATE transactions SET network = (SELECT network FROM wallets WHERE id = transactions.wallet_id)` -- 기존 wallet.network에서 복사. Step 3: 그 다음에야 `wallets.network` -> `wallets.environment` 변환
-   - **Phase**: DB 마이그레이션 구현 단계의 첫 번째 작업. 데이터 보존이 확인된 후에만 스키마 변경 진행
+4. **H-01: Default Deny 토글의 기존 정책 의미 역전** -- "정책 없음 = 전부 허용" 기본 동작이 토글로 역전되면 기존 wallet 트랜잭션 갑자기 거부. **방지:** 정책 타입별 개별 토글, 전환 시 영향도 미리보기, 기존 wallet은 opt-in.
 
-4. **API 하위 호환성 파괴 -- 선택적 network 파라미터의 암묵적 계약 변경 (HIGH)**
-   - **문제**: `POST /v1/transactions/send`에 optional `network` 필드 추가 시, 기존 SDK 클라이언트가 network를 보내지 않으면 어떤 network가 기본값인가? 응답의 `network` 필드 의미가 wallet-level에서 transaction-level로 바뀌어 혼란
-   - **회피**: `default_network` 전략. wallet에 `default_network`를 저장하고, network 미지정 시 default_network 사용 (기존 동작과 동일). 응답에 `resolvedNetwork` 필드 추가하여 실제 실행된 network 명시. SDK/MCP/Admin 동시 업데이트 필수
-   - **Phase**: API 설계 단계. 응답 스키마 변경 전에 하위 호환성 전략 확정
-
-5. **정책 엔진의 네트워크 범위 불일치 -- ALLOWED_TOKENS이 다른 네트워크의 토큰을 허용 (HIGH)**
-   - **문제**: 현재 ALLOWED_TOKENS 평가에서 네트워크 구분이 없음. 같은 contract address가 다른 네트워크에서 전혀 다른 컨트랙트일 수 있는데, 한 네트워크에서 허용된 주소가 다른 네트워크에서도 자동 허용됨
-   - **회피**: 정책 rules에 `network` 필드 추가. network가 명시되면 해당 네트워크에서만 적용, 미명시면 모든 네트워크에 적용. ALLOWED_NETWORKS 정책 타입 추가 (gate keeper). `TransactionParam`에 `network` 필드 추가하여 현재 어떤 네트워크인지 정책 엔진에 전달
-   - **Phase**: 정책 엔진 확장 설계 단계. 새 PolicyType 추가와 기존 정책의 네트워크 범위 지정을 동시에 설계
-
-**Source confidence:** HIGH (코드베이스 직접 분석 + TheCharlatan의 Coin Isolation Bypass 연구 + SQLite 공식 문서)
-
----
+5. **H-02: Solana VersionedTransaction Legacy vs V0 분기 누락** -- Legacy만 지원 시 ALT 사용 DeFi 트랜잭션 파싱 실패, V0만 지원 시 간단한 SOL 전송 실패. **방지:** 양쪽 format 모두 지원, ALT resolve를 필수 단계로 포함, format 메타데이터 감사 로그 기록.
 
 ## Implications for Roadmap
 
-환경 모델 전환은 **설계 마일스톤(v1.4.5)과 구현 마일스톤(v1.4.6)으로 분리**를 권장한다.
+Based on research, suggested phase structure:
 
-### v1.4.5 (설계): 멀티체인 월렛 환경 모델 설계
+### Phase 1: Core Types + DB Migration (foundation)
+**Rationale:** 모든 downstream 컴포넌트가 의존하는 타입/스키마/마이그레이션을 먼저 완료해야 parallel 작업 가능.
+**Delivers:** `@waiaas/core`에 SIGNED 상태 + ParsedTransaction 타입 + IChainAdapter.parseUnsignedTransaction() 메서드 추가, DB migration v9 (SIGNED CHECK 제약), EvmAdapter/SolanaAdapter에 parseUnsignedTransaction() 구현.
+**Addresses:** H-05 (상태 모델 충돌) 해결, C-01/H-02/H-03 (파싱) 기반 마련.
+**Avoids:** 타입 불일치로 인한 재작업, DB 마이그레이션 지연으로 인한 병목.
 
-**Rationale:** 62K LOC 시스템의 근본적 데이터 모델 변경은 구현 전에 설계 문서로 확정 필요. 특히 DB 마이그레이션, API 하위 호환성, 정책 엔진 확장의 3가지 고위험 영역은 코드 작성 전에 의사 결정 완료해야 함.
+### Phase 2: Default Deny Toggles (quick DX win, independent)
+**Rationale:** Phase 1과 독립적이며 빠르게 완료 가능. 운영 편의성을 즉시 개선.
+**Delivers:** SettingsService에 3개 설정 추가 (security.*_default_allow), DatabasePolicyEngine 수정, Admin UI에 자동 노출.
+**Uses:** 기존 SettingsService + hot-reload 메커니즘.
+**Addresses:** H-01 (정책 의미 역전) 방지, DF-03 (DX 개선).
+**Avoids:** Phase 3 블로킹 없이 병렬 진행 가능.
 
-**Delivers:**
-- 설계 문서 신규 작성: `docs/68-multichain-environment-model.md` (아키텍처 변경, 데이터 흐름, NetworkResolver)
-- 설계 문서 수정: `docs/25-sqlite-schema.md` (wallets.environment), `docs/32-transaction-pipeline-api.md` (Stage 1 변경), `docs/52-auth-model.md` (환경 검증)
-- DB 마이그레이션 v6 설계: 12-step 재생성 전략, 데이터 변환 순서, 검증 쿼리
-- API 하위 호환성 전략: `default_network` + `resolvedNetwork` 응답 필드
-- Zod SSoT EnvironmentType enum 명세
+### Phase 3: Sign-Only Pipeline (depends on Phase 1)
+**Rationale:** Phase 1의 SIGNED 상태와 parseUnsignedTransaction() 필요. 핵심 기능.
+**Delivers:** `stage5SignOnly` + `executeSignOnly` + `POST /v1/transactions/sign` 라우트, MCP sign_transaction 도구, SDK signTransaction() 메서드.
+**Implements:** 4단계 동기적 파이프라인 (Parse→Auth→Policy→Sign), DELAY/APPROVAL 즉시 거부, TTL 기반 reservation.
+**Addresses:** TS-01/03/04/05 (table stakes), C-03 (DELAY/APPROVAL 비호환) 해결, C-02 (reservation 해제) 해결.
+**Avoids:** C-01 (파싱 불완전)은 Phase 1의 파서 구현 품질에 의존.
 
-**Avoids:**
-- C-02: DB 마이그레이션 v6 설계 오류
-- C-03: 데이터 변환 순서 의존성
-- H-01: API 하위 호환성 파괴
+### Phase 4: Calldata Encoding Utility (independent, parallel with Phase 3)
+**Rationale:** Phase 3 sign-only와 독립적. 공유 의존성은 Phase 1뿐.
+**Delivers:** `POST /v1/utils/encode-calldata` + `POST /v1/utils/decode-calldata` 라우트, MCP encode_calldata 도구, SDK encodeCalldata() 메서드.
+**Uses:** viem `encodeFunctionData` (daemon이 이미 직접 의존).
+**Addresses:** DF-02 (calldata 인코딩 도구).
+**Avoids:** M-03 (역할 혼동) -- sign-only와 명확히 분리된 유틸리티로 설계.
 
-**Research Flag:** Standard patterns (기존 12-step 패턴 재사용, 새 연구 불필요)
+### Phase 5: MCP Skill Resources + Enhanced Notifications (depends on Phases 2, 3)
+**Rationale:** Skill 리소스는 default deny toggles(Phase 2)와 sign-only(Phase 3)를 문서화해야 하므로 나중에.
+**Delivers:** `waiaas://skills/{name}` 리소스 템플릿 (5개 skill 파일), `GET /v1/skills/:name` 라우트, enhanced policy denial notifications (DF-07).
+**Implements:** ResourceTemplate + daemon skill 서빙, notification 메시지에 policyType/hint 추가.
+**Addresses:** DF-04 (MCP skill 리소스), DF-07 (enhanced notifications), M-01/M-05 (skill 리소스 설계).
+**Avoids:** Phase 3/4 완료 전 문서화로 인한 수정 부담.
 
----
-
-### v1.4.6 Phase 1: Core Types + DB Schema
-
-**Rationale:** 타입 시스템을 먼저 변경하여 컴파일러가 영향 범위를 가이드하게 함. DB 스키마가 바뀌어야 모든 후속 기능이 동작 가능.
-
-**Delivers:**
-- `@waiaas/core`: EnvironmentType enum, validateEnvironmentNetwork() 함수, 환경-네트워크 매핑 함수
-- DB 마이그레이션 v6 구현: wallets.environment, transactions.network, policies.network 컬럼 추가
-- DDL pushSchema 업데이트: LATEST_SCHEMA_VERSION 갱신
-- Drizzle 스키마 동기화: schema.ts 필드 변경
-
-**Uses:** better-sqlite3 12.6.2 (12-step 패턴), Drizzle ORM (스키마 미러)
-
-**Addresses:** TS-1 (환경 기반 월렛 모델), TS-5 (DB 마이그레이션)
-
-**Avoids:** C-02, C-03 (마이그레이션 안전성)
-
-**Research Flag:** Skip research (검증된 패턴)
-
----
-
-### v1.4.6 Phase 2: NetworkResolver + Pipeline Integration
-
-**Rationale:** 네트워크 해결 로직이 확정된 후에야 파이프라인과 라우트에서 사용 가능. 환경 격리 검증은 가장 중요한 보안 기능이므로 독립 단계로 분리.
-
-**Delivers:**
-- `daemon/infrastructure/network-resolver.ts`: NetworkResolver 클래스 (트랜잭션 요청 -> 실제 네트워크 해결 + 환경 교차 검증)
-- `daemon/pipeline/stages.ts`: PipelineContext 확장, Stage 1에 environment-network 검증 추가, transactions.network INSERT
-- `daemon/pipeline/database-policy-engine.ts`: TransactionParam에 network 추가, ALLOWED_NETWORKS 평가
-
-**Implements:** Pipeline Stage 1 변경, 정책 엔진 확장
-
-**Addresses:** TS-2 (트랜잭션 레벨 network 지정), TS-3 (ALLOWED_NETWORKS 정책)
-
-**Avoids:** C-01 (환경 격리 실패), H-03 (정책 네트워크 범위)
-
-**Research Flag:** Skip research (파이프라인 로직 확장)
-
----
-
-### v1.4.6 Phase 3: Route Integration + API 하위 호환성
-
-**Rationale:** NetworkResolver와 파이프라인 변경이 완료된 후 API 라우트에서 사용. 하위 호환성 전략(default_network)이 이 단계의 핵심.
-
-**Delivers:**
-- `daemon/api/routes/wallets.ts`: POST /wallets에 environment 파라미터 처리
-- `daemon/api/routes/transactions.ts`: POST /transactions/send에 NetworkResolver 통합
-- `daemon/api/routes/wallet.ts`: GET /wallet/assets 멀티네트워크 집계 (optional `?network=` 파라미터)
-- `daemon/lifecycle/daemon.ts`: executeFromStage5에서 network 리졸브 변경
-
-**Addresses:** TS-4 (멀티 네트워크 잔액 조회), H-01 (API 하위 호환성)
-
-**Avoids:** H-02 (AdapterPool 캐시 키 변경 -- 변경 불필요 확인), M-01 (getAssets 성능 폭발)
-
-**Research Flag:** Skip research (기존 route 패턴 확장)
-
----
-
-### v1.4.6 Phase 4: SDK + MCP Integration
-
-**Rationale:** REST API가 확정된 후 SDK/MCP 반영. 두 인터페이스는 독립적이므로 병렬 작업 가능.
-
-**Delivers:**
-- `@waiaas/sdk`: sendTransaction에 optional network 파라미터
-- `@waiaas/mcp`: MCP 도구에 network 파라미터 추가
-- Python SDK: send_transaction에 optional network 파라미터
-- skill 파일 업데이트: network 선택 가이드 추가
-
-**Addresses:** D-3 (AI 에이전트 네트워크 추론 -- MCP 자연어 네트워크 결정)
-
-**Avoids:** H-05 (MCP 토큰 + 세션의 하위 호환성 -- default_network가 해결)
-
-**Research Flag:** Skip research (SDK/MCP 메서드 확장)
-
----
-
-### v1.4.6 Phase 5: Quickstart + Admin UI + Tests
-
-**Rationale:** 모든 기능 구현 후 DX 개선과 UI 반영. 통합 테스트가 마지막.
-
-**Delivers:**
-- CLI Quickstart: `waiaas quickstart --mode testnet` -> 2 월렛 일괄 생성
-- Admin UI: 지갑 상세에서 environment 표시, 네트워크 선택 UI
-- 단위 테스트: NetworkResolver, ALLOWED_NETWORKS 정책
-- 통합 테스트: 멀티네트워크 파이프라인 E2E
-- 마이그레이션 테스트: v6 마이그레이션 검증
-
-**Addresses:** D-1 (Quickstart 원스톱), M-05 (Admin UI 표시 혼란)
-
-**Avoids:** H-04 (1,467 테스트 광범위 실패 -- 타입 시스템으로 컴파일 에러 가이드)
-
-**Research Flag:** Skip research (테스트 확장)
-
----
+### Phase 6: Integration Testing + Skill Files Update
+**Rationale:** 모든 기능 완료 후 E2E 검증 + 문서화.
+**Delivers:** E2E 테스트 (Jupiter 통합, Raydium 통합, multicall 시나리오), skills/transactions.skill.md 업데이트 (sign-only + calldata encoding 문서화), Admin UI sign-only tx 표시.
+**Addresses:** C-01/H-02/H-03 검증 (파싱 edge case), M-02/M-06 (API 인터페이스 검증).
 
 ### Phase Ordering Rationale
 
-1. **타입 -> 스키마 -> 로직 -> 인터페이스 순서**: 타입 시스템이 먼저 변경되면 컴파일러가 영향 범위를 명확히 보여줌. DB 스키마가 바뀌어야 모든 기능이 동작 가능. NetworkResolver가 확정된 후 파이프라인과 라우트에서 사용. API가 확정된 후 SDK/MCP 반영.
-2. **설계와 구현 분리**: 62K LOC 시스템의 근본적 모델 변경은 코드 작성 전에 설계 문서로 확정 필요. DB 마이그레이션, API 하위 호환성, 정책 엔진 확장의 3가지 고위험 영역은 의사 결정 완료 후 구현.
-3. **마이그레이션 안전성 최우선**: C-02, C-03의 CRITICAL pitfall을 회피하기 위해 DB 마이그레이션을 Phase 1에서 먼저 완료. 12-step 패턴 TDD 작성 + 실제 데이터 round-trip 테스트.
-4. **환경 격리 검증 독립화**: C-01 (testnet/mainnet 격리 실패)은 자금 손실 위험이므로 Phase 2에서 NetworkResolver + 파이프라인 검증을 독립적으로 구현하고 집중 테스트.
+- **Phase 1 필수 선행:** 타입/스키마/마이그레이션 없이 downstream 작업 불가능.
+- **Phase 2 독립 병렬:** 정책 토글은 Phase 1만 필요, Phase 3와 독립.
+- **Phase 3/4 병렬 가능:** sign-only 파이프라인과 calldata 도구는 서로 의존하지 않음.
+- **Phase 5는 Phase 2/3 후:** 문서화 대상(toggles + sign-only)이 구현되어야 정확한 문서 작성 가능.
+- **Phase 6 마지막:** 모든 기능 통합 후 검증.
 
----
+이 순서는 **dependency graph 최적화** (병목 최소화) + **위험 조기 발견** (파서 품질 검증을 Phase 1에서) + **점진적 가치 제공** (Phase 2에서 DX 즉시 개선)을 동시 달성.
 
 ### Research Flags
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Core Types + DB Schema):** 12-step 패턴은 v2/v3에서 검증 완료. EnvironmentType enum은 CHAIN_TYPES/NETWORK_TYPES와 동일한 Zod SSoT 패턴
-- **Phase 2 (NetworkResolver + Pipeline):** 파이프라인 Stage 확장은 기존 6-stage 패턴 따름. 정책 엔진 확장도 기존 10 PolicyType 패턴 재사용
-- **Phase 3 (Route Integration):** API 라우트 확장은 기존 42 엔드포인트 패턴과 일관
-- **Phase 4 (SDK + MCP):** SDK/MCP 메서드 확장은 기존 인터페이스 패턴 따름
-- **Phase 5 (Quickstart + Tests):** CLI 명령 추가는 기존 commander 패턴, 테스트는 기존 1,467 테스트와 동일 프레임워크
+**Needs deeper research during planning:**
+- **Phase 3 (Sign-Only Pipeline):** DELAY/APPROVAL 거부 메시지 정확한 wording, TTL 값 조정 (Solana 90초/EVM 10분이 최적인지), reservation 충돌 시나리오 추가 검증.
+- **Phase 5 (MCP Skill Resources):** MCP SDK ResourceTemplate API의 list callback 동작 검증 (현재 문서만 확인, 실제 테스트 미수행).
 
-**Phases needing deeper research (none):**
-- 환경 모델 전환에 새로운 연구 영역 없음. 모든 패턴이 기존 코드베이스 또는 검증된 업계 표준에서 파생
-
----
+**Standard patterns (skip research-phase):**
+- **Phase 1:** parseTransaction/encodeFunctionData는 viem 공식 문서 + 기존 코드 실사용 패턴 확립.
+- **Phase 2:** SettingsService 패턴은 v1.4.4에서 이미 구현 완료, hot-reload 검증 완료.
+- **Phase 4:** calldata encoding은 viem API 래핑만이므로 추가 연구 불필요.
+- **Phase 6:** E2E 테스트 패턴은 기존 1,580개 테스트에서 확립.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | 새 라이브러리 추가 불필요. 기존 viem 2.x + better-sqlite3 + Drizzle ORM이 환경 모델을 완전히 지원. 코드베이스 62,296 LOC 직접 분석으로 검증 |
-| Features | **HIGH** | Table stakes 6개, Differentiators 5개 모두 업계 표준 패턴과 일치. MetaMask Multichain Accounts, Dfns key-centric model, Phantom 멀티체인 사례로 검증 |
-| Architecture | **HIGH** | NetworkResolver + PipelineContext 확장은 기존 6-stage 패턴의 자연스러운 확장. AdapterPool 변경 불필요 (이미 올바른 구현). 12-step 패턴은 v2/v3에서 실전 검증 완료 |
-| Pitfalls | **HIGH** | 5개 CRITICAL/HIGH pitfall 모두 구체적 회피 방안 확인. C-01 (환경 격리)은 TheCharlatan 연구 + 하드웨어 지갑 취약점으로 검증. C-02/C-03 (마이그레이션)은 SQLite 공식 문서 + 기존 v2/v3 선례로 검증 |
+| Stack | HIGH | 모든 필요 함수가 기존 의존성에서 타입 선언 확인 완료. viem/Solana/MCP SDK의 일부는 이미 코드베이스에서 실사용 중. |
+| Features | HIGH | Table stakes 6개는 WaaS 표준 (Fireblocks/Circle 사례 교차 검증), Differentiators는 WAIaaS 특유 강점과 정렬. |
+| Architecture | HIGH | 기존 코드베이스 직접 분석으로 파이프라인 구조/정책 엔진/MCP 패턴 확인. Fork-not-duplicate 패턴 검증. |
+| Pitfalls | MEDIUM-HIGH | Critical pitfall 3개는 논리적 추론 + 외부 사례 (Fireblocks raw signing, Jupiter unsigned tx flow), 나머지는 코드 분석 기반. ALT resolve 동작은 실제 테스트 미수행. |
 
-**Overall confidence:** **HIGH**
-
----
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-환경 모델 전환에서 연구가 불완전하거나 구현 중 검증이 필요한 영역:
+**Gap 1: Solana Address Lookup Table resolve 동작 검증 미완료**
+- 현재: `decompileTransactionMessageFetchingLookupTables` 타입 선언만 확인, 실제 RPC 호출 동작 미검증.
+- 처리: Phase 1 파서 구현 시 ALT 포함 tx로 실제 테스트. RPC 실패 시 fallback 동작 명확히 정의.
 
-1. **viem PublicClient 메모리 사용량 실측**: 13개 동시 연결 시 50-130MB 추가 메모리 추정은 경험적 추론. Phase 2 구현 시 실제 메모리 프로파일링으로 AdapterPool maxSize 튜닝 필요 (M-02 회피)
-   - **구현 중 대응**: 개발 환경에서 13개 네트워크 동시 연결 후 메모리 모니터링. maxSize 기본값 8로 시작, 필요시 조정
+**Gap 2: SPENDING_LIMIT reservation TTL 최적값 경험적 검증 필요**
+- 현재: Solana 90초 (blockhash lifetime 60초 + 여유 30초), EVM 10분은 논리적 추론.
+- 처리: Phase 3 구현 시 실제 dApp 통합 패턴 관찰하여 TTL 조정. 설정으로 노출 검토.
 
-2. **getAssets N-way RPC 호출 성능 실측**: 6 네트워크 x 10 토큰 = 60 RPC 호출의 실제 응답 시간이 QuickNode 벤치마크(200-500ms)와 일치하는지 검증 필요 (M-01)
-   - **구현 중 대응**: 단일 네트워크 조회를 기본 동작으로 유지 (하위호환). 멀티네트워크 조회는 `?networks=all` opt-in. Phase 3에서 실제 RPC 타이밍 측정 후 캐싱 전략 튜닝
+**Gap 3: MCP ResourceTemplate의 list callback 실제 동작 미검증**
+- 현재: MCP SDK 문서와 타입 선언만 확인, 실제 list 호출 시 동작 미테스트.
+- 처리: Phase 5 구현 시 MCP 클라이언트 통합 테스트로 검증. list callback이 예상대로 작동하지 않으면 정적 리소스로 fallback.
 
-3. **기존 1,467 테스트의 영향 범위**: `wallet.network` 참조 42건이 모두 타입 에러로 나타나는지, 일부는 런타임 오류로 발견되는지 불확실 (H-04)
-   - **구현 중 대응**: Phase 1에서 EnvironmentType 타입 변경 후 전체 테스트 실행. 컴파일 에러로 나타나지 않는 곳은 grep으로 전수 검사
-
-4. **Solana testnet 환경의 devnet vs testnet 기본값**: devnet을 기본으로 할지 testnet을 기본으로 할지 사용자 설문 필요 (M-08)
-   - **구현 중 대응**: devnet을 기본으로 시작 (Solana 공식 문서가 devnet 우선 언급). v1.4.6 후 사용자 피드백으로 조정 가능
-
----
+**Gap 4: multicall/batch 중첩 패턴의 실제 발생 빈도 불확실**
+- 현재: 1단계 중첩까지만 파싱하는 전략이지만, 실제 Jupiter/Raydium이 2단계 이상 중첩을 사용하는지 미확인.
+- 처리: Phase 6 E2E 테스트에서 실제 프로토콜 tx 샘플로 검증. 필요 시 파서 확장.
 
 ## Sources
 
 ### Primary (HIGH confidence)
+- WAIaaS 코드베이스 직접 분석: `pipeline.ts`, `stages.ts`, `database-policy-engine.ts`, IChainAdapter (v1.4.6)
+- viem 2.45.3 타입 선언 (`_types/index.d.ts`) -- `decodeFunctionData`, `encodeFunctionData`, `parseTransaction` export 확인
+- @solana/kit 6.0.1 타입 선언 (`dist/types/index.d.ts`) -- `getCompiledTransactionMessageDecoder`, `decompileTransactionMessageFetchingLookupTables` export 확인
+- @modelcontextprotocol/sdk 1.26.0 타입 선언 (`dist/esm/server/mcp.d.ts`) -- `ResourceTemplate` 클래스 확인
+- [viem encodeFunctionData 문서](https://viem.sh/docs/contract/encodeFunctionData) -- ABI 인코딩 API
+- [viem decodeFunctionData 문서](https://viem.sh/docs/contract/decodeFunctionData) -- calldata 디코딩 API
+- [MCP Resources Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/resources) -- ResourceTemplate, list callback
 
-**코드베이스 직접 분석:**
-- `packages/daemon/src/infrastructure/database/schema.ts` -- 10 테이블 스키마
-- `packages/daemon/src/infrastructure/database/migrate.ts` -- v2-v5 마이그레이션 (12-step 패턴)
-- `packages/daemon/src/infrastructure/adapter-pool.ts` -- AdapterPool 구현 (cacheKey, resolve)
-- `packages/daemon/src/pipeline/pipeline.ts` -- 6-stage 파이프라인
-- `packages/daemon/src/pipeline/database-policy-engine.ts` -- 정책 엔진 1007라인
-- `packages/daemon/src/api/routes/transactions.ts` -- POST /v1/transactions/send
-- `packages/core/src/enums/chain.ts` -- NETWORK_TYPES 13개
-- `packages/adapters/evm/src/evm-chain-map.ts` -- EVM 10 네트워크 매핑
+### Secondary (MEDIUM confidence)
+- [Jupiter Ultra Swap API](https://dev.jup.ag/docs/ultra) -- unsigned tx flow: order → sign → execute
+- [Fireblocks Raw Signing](https://developers.fireblocks.com/docs/raw-signing) -- "policies reject all raw transactions by default"
+- [Solana Versioned Transactions Guide](https://solana.com/developers/guides/advanced/versions) -- Legacy vs V0, ALT 구조
+- [QuickNode: Transaction Calldata Demystified](https://www.quicknode.com/guides/ethereum-development/transactions/ethereum-transaction-calldata) -- 4-byte selector, ABI encoding
+- [SPL Token Program](https://spl.solana.com/token) -- instruction discriminators (Transfer=12, Approve=13)
 
-**공식 문서:**
-- [SQLite ALTER TABLE 공식 문서](https://www.sqlite.org/lang_altertable.html) -- 12-step 테이블 재생성, CHECK 제약 제한사항
-- [viem Chains documentation](https://viem.sh/docs/chains/introduction) -- viem/chains 내장 정의
-- [viem Discussion #986: PublicClient Map pattern](https://github.com/wevm/viem/discussions/986) -- 네트워크별 PublicClient 인스턴스 패턴
-- [Drizzle ORM Custom Migrations](https://orm.drizzle.team/docs/kit-custom-migrations) -- 수동 마이그레이션 패턴
-
-### Secondary (MEDIUM-HIGH confidence)
-
-**업계 표준 패턴:**
-- [MetaMask Multichain Accounts](https://metamask.io/news/multichain-accounts) -- 계정 모델 리아키텍처, 런타임 네트워크 선택
-- [Dfns Multichain Wallets](https://www.dfns.co/article/introducing-multichain-wallets) -- key-centric 모델
-- [Phantom Multichain](https://phantom.com/learn/blog/introducing-phantom-multichain) -- 자동 멀티체인 주소 생성
-- [Zerion Multichain Portfolio APIs Guide 2026](https://zerion.io/blog/best-multichain-portfolio-apis-2026-guide/) -- 단일 API 호출 멀티체인 잔액 집계
-
-**보안 연구:**
-- [Hardware Wallet Coin Isolation Bypass](https://thecharlatan.ch/Coin-Isolation/) -- testnet/mainnet 격리 취약점 (Ledger/Trezor/KeepKey)
-
-**성능 최적화:**
-- [QuickNode RPC 효율성 가이드](https://www.quicknode.com/guides/quicknode-products/apis/guide-to-efficient-rpc-requests) -- 병렬 vs 배치 요청, rate limiting
-- [Chainstack Multicall vs HTTP Batch 비교](https://docs.chainstack.com/docs/http-batch-request-vs-multicall-contract) -- EVM Multicall3 최적화
-
-**API 하위 호환성:**
-- [Zalando REST API Guidelines - Compatibility](https://github.com/zalando/restful-api-guidelines/blob/main/chapters/compatibility.adoc) -- breaking change 정의
-
-### Tertiary (MEDIUM confidence, WebSearch)
-
-- [Magic.link multichain documentation](https://magic.link/docs/blockchains/multichain) -- 서버 사이드 멀티체인 패턴 (정확한 일치 없음)
-- [Wepin multi-chain blog](https://www.wepin.io/en/blog/evm-non-evm-multi-chain) -- 환경 기반 월렛 그루핑 (간접 참조)
-- [Coinbase Wallet API v2](https://www.coinbase.com/developer-platform/products/wallet-sdk) -- chainId 트랜잭션 레벨 선택 (간접 참조)
+### Tertiary (LOW confidence, needs validation)
+- SPENDING_LIMIT reservation TTL 전략 -- 기존 WaaS 사례 미발견, 논리적 추론 기반
+- MCP ResourceTemplate list callback 동작 -- 타입 선언만 확인, 실제 테스트 미수행
+- multicall 중첩 깊이 실제 발생 빈도 -- 추론 기반, Jupiter/Raydium 실제 tx 샘플 검증 필요
 
 ---
-
 *Research completed: 2026-02-14*
 *Ready for roadmap: yes*

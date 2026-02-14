@@ -1,584 +1,515 @@
-# Feature Landscape: 멀티체인 월렛 환경 모델 (v1.4.5)
+# Feature Landscape: Sign-Only Pipeline + DX Enhancements
 
-**Domain:** 멀티체인 월렛 아키텍처 -- 환경 기반 월렛 모델, 트랜잭션 레벨 네트워크 선택, 멀티 네트워크 잔액 집계
+**Domain:** Self-hosted AI agent wallet daemon -- sign-only transaction signing, unsigned tx parsing, calldata encoding, default deny toggles, MCP skill resources, enhanced policy notifications
 **Researched:** 2026-02-14
-**Overall Confidence:** HIGH (업계 표준 패턴 + 공식 문서 + 실제 코드베이스 분석 기반)
-**Milestone:** v1.4.5 멀티체인 월렛 모델 설계
+**Overall Confidence:** HIGH (primary sources: existing codebase analysis + official docs for viem/MCP/Solana)
 
 ---
 
-## 개요
-
-v1.4.5는 WAIaaS의 "1 월렛 = 1 체인 + 1 네트워크" 모델을 "1 월렛 = 1 체인 + 1 환경(testnet/mainnet)"으로 전환한다. 이 전환은 업계의 보편적 흐름과 일치한다. MetaMask는 2025년 말 Multichain Accounts로 리아키텍처하여 하나의 계정이 여러 네트워크를 아우르도록 변경했고, Dfns는 key-centric 모델로 하나의 키가 여러 체인에서 월렛을 만드는 구조를 도입했으며, Phantom은 Solana/Ethereum/Bitcoin 잔액을 하나의 대시보드에서 보여준다.
-
-WAIaaS의 핵심 이점: secp256k1 키는 모든 EVM 체인에서 동일한 0x 주소를 생성하고, Ed25519 키는 Solana mainnet/devnet/testnet에서 동일한 주소를 생성한다. 현재 이 사실에도 불구하고 각 네트워크마다 별도 월렛을 만들어야 한다. 이는 AI 에이전트 관점에서 불필요한 복잡성이다 -- "Polygon에서 ETH 보내줘"라고 말하면 되어야 하는데, 별도 Polygon 월렛을 만들고 세션을 따로 발급받아야 한다.
-
-**핵심 설계 긴장:** 환경 모델의 단순성(testnet vs mainnet) 대 네트워크별 정책 세분성(Polygon에서만 DeFi 허용) 사이의 균형.
-
----
-
-## Table Stakes (필수 기능)
-
-사용자가 "멀티체인 월렛"에서 당연히 기대하는 기능. 빠지면 제품이 불완전하게 느껴진다.
-
-### TS-1: 환경 기반 월렛 모델 (wallets.network -> wallets.environment)
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Medium |
-| 기존 의존 | wallets 테이블, WalletSchema, CreateWalletRequestSchema, NETWORK_TYPES enum |
-| 우선순위 | CRITICAL -- 전체 아키텍처 전환의 기반 |
-
-**업계 표준 패턴 (HIGH confidence):**
-
-MetaMask, Phantom, Dfns, Coinbase 모두 "하나의 계정/키가 여러 네트워크에서 동작"하는 모델로 수렴했다. 핵심은 **월렛이 네트워크가 아닌 키 커브(cryptographic curve)에 바인딩**된다는 점이다.
-
-- **MetaMask Multichain Accounts:** 하나의 계정 = 1 EVM 주소 + 1 Solana 주소 + 1 Bitcoin 주소. 네트워크는 트랜잭션 시점에 선택.
-- **Dfns key-centric model:** 하나의 키 = 동일 커브의 모든 체인에서 월렛 생성 가능. `POST /wallets { network: "Polygon", signingKey: { id: "key-001" } }`
-- **Phantom:** 월렛 생성 시 자동으로 Solana + Ethereum + Bitcoin 주소 생성. 네트워크 전환 불필요.
-
-**WAIaaS 적용:**
-
-```
-현재 모델:
-  wallet A -> chain: ethereum, network: ethereum-sepolia  (테스트)
-  wallet B -> chain: ethereum, network: polygon-mainnet   (프로덕션)
-  wallet C -> chain: ethereum, network: base-mainnet      (프로덕션)
-  -> 같은 0x 주소인데 3개의 별도 월렛, 3개의 세션
-
-환경 모델:
-  wallet X -> chain: ethereum, environment: testnet
-    -> ethereum-sepolia, polygon-amoy, arbitrum-sepolia, base-sepolia 모두 사용
-  wallet Y -> chain: ethereum, environment: mainnet
-    -> ethereum-mainnet, polygon-mainnet, arbitrum-mainnet, base-mainnet 모두 사용
-  -> 같은 키로 2개 월렛, 각각 1개 세션
-```
-
-**DB 스키마 변경:**
-
-```sql
--- wallets 테이블
-ALTER TABLE wallets RENAME COLUMN network TO environment;
--- environment: 'testnet' | 'mainnet'
--- transactions 테이블에 network 컬럼 추가 (실행된 네트워크 기록)
-ALTER TABLE transactions ADD COLUMN network TEXT;
-```
-
-**서브 기능:**
-- [ ] `environment` 컬럼 도입 (`'testnet'` | `'mainnet'`)
-- [ ] Solana: testnet 환경 = devnet + testnet, mainnet 환경 = mainnet
-- [ ] EVM: testnet 환경 = all *-sepolia/*-amoy networks, mainnet 환경 = all *-mainnet networks
-- [ ] `EnvironmentType` Zod enum + SSoT 파생
-- [ ] DB 마이그레이션 (기존 network 값 -> environment 매핑)
-- [ ] 하위 호환: 기존 월렛의 network 값을 environment로 자동 변환
-
-**환경-네트워크 매핑:**
-
-| 환경 | Solana 네트워크 | EVM 네트워크 |
-|------|----------------|-------------|
-| `testnet` | devnet, testnet | ethereum-sepolia, polygon-amoy, arbitrum-sepolia, optimism-sepolia, base-sepolia |
-| `mainnet` | mainnet | ethereum-mainnet, polygon-mainnet, arbitrum-mainnet, optimism-mainnet, base-mainnet |
-
----
-
-### TS-2: 트랜잭션 레벨 네트워크 선택
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Medium |
-| 기존 의존 | TransactionRequestSchema (5-type discriminatedUnion), AdapterPool, 6-stage pipeline |
-| 우선순위 | CRITICAL -- 환경 모델의 핵심 사용성 |
-
-**업계 표준 패턴 (HIGH confidence):**
-
-- **MetaMask Multichain API:** "targeting specific chains as part of each method call, eliminating the need to detect and switch networks before executing signatures and transactions." 각 메서드 호출에서 체인을 지정.
-- **Coinbase Wallet API v2:** 트랜잭션에 `chainId` 파라미터를 포함하여 트랜잭션 레벨에서 체인 선택.
-- **Fireblocks:** 트랜잭션 생성 시 asset ID로 네트워크를 암시적으로 결정.
-- **Phantom:** 자산의 체인에 따라 자동으로 네트워크 결정. 사용자는 "어떤 체인의 어떤 자산"만 선택.
-
-**WAIaaS 적용:**
-
-```typescript
-// 현재: 월렛이 network를 결정
-POST /v1/transactions/send
-{ "type": "TRANSFER", "to": "0x...", "amount": "1000000000000000000" }
-// -> 월렛의 network (예: ethereum-sepolia)에서 실행
-
-// 환경 모델: 트랜잭션이 network를 지정
-POST /v1/transactions/send
-{
-  "type": "TRANSFER",
-  "to": "0x...",
-  "amount": "1000000000000000000",
-  "network": "polygon-mainnet"  // 선택적, 미지정시 기본 네트워크 사용
-}
-// -> polygon-mainnet에서 실행 (월렛은 mainnet 환경)
-```
-
-**네트워크 결정 우선순위:**
-1. 요청의 `network` 필드 (명시적 지정)
-2. 월렛의 기본 네트워크 (`default_network` 설정, 선택)
-3. 환경의 기본 네트워크 (Solana mainnet = mainnet, EVM mainnet = ethereum-mainnet)
-
-**AI 에이전트 UX 고려사항:**
-- "Send ETH on Polygon" -> MCP가 `network: "polygon-mainnet"` 추론
-- "Send ETH" -> 기본 네트워크 사용 (명시 불필요)
-- "Send ETH on Arbitrum Sepolia" -> `network: "arbitrum-sepolia"` 추론 (월렛이 testnet 환경인 경우만 유효)
-
-**서브 기능:**
-- [ ] 5-type TransactionRequestSchema에 `network` 옵션 필드 추가
-- [ ] 네트워크-환경 유효성 검증 (mainnet 월렛은 mainnet 네트워크만 사용 가능)
-- [ ] AdapterPool.resolve() 호출 시 요청의 network 사용
-- [ ] Pipeline Stage 1에서 네트워크 결정 + 유효성 검사
-- [ ] transactions 테이블에 실제 실행 네트워크 기록
-- [ ] SDK/MCP에서 network 파라미터 노출
-- [ ] 미지정 시 기본 네트워크 폴백 로직
-
----
-
-### TS-3: ALLOWED_NETWORKS 정책
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Low-Medium |
-| 기존 의존 | PolicyTypeEnum (10 types), PolicySchema, DatabasePolicyEngine |
-| 우선순위 | HIGH -- 보안 제어 (기본 거부 원칙과 일치) |
-
-**업계 표준 패턴 (MEDIUM confidence):**
-
-네트워크 레벨 제한은 WaaS 제품에서 일반적이다. Fireblocks는 vault account별로 활성 네트워크를 설정하고, Dfns는 키별로 허용 네트워크를 관리한다. WAIaaS의 기본 거부 정책 원칙과 자연스럽게 맞물린다.
-
-**설계 결정: 기본 허용 vs 기본 거부**
-
-`ALLOWED_TOKENS`와 `CONTRACT_WHITELIST`는 기본 거부이다. ALLOWED_NETWORKS도 기본 거부로 할 수 있지만, 환경 모델에서는 **환경이 이미 범위를 제한**하므로 다른 접근이 적절하다:
-
-- **권장: 환경 내 기본 허용, ALLOWED_NETWORKS로 제한 가능** -- testnet 환경의 월렛은 기본적으로 모든 testnet 네트워크 사용 가능. ALLOWED_NETWORKS 정책 설정 시 특정 네트워크로만 제한.
-- 이유: 환경 구분 자체가 mainnet/testnet 격리를 보장하므로 추가적인 기본 거부는 DX를 저하시킴.
-
-```typescript
-// PolicyType에 ALLOWED_NETWORKS 추가 (11번째)
-{
-  "walletId": "...",
-  "type": "ALLOWED_NETWORKS",
-  "rules": {
-    "networks": ["ethereum-mainnet", "polygon-mainnet"]
-    // 이 월렛은 Ethereum과 Polygon에서만 거래 가능
-    // Arbitrum, Optimism, Base는 차단
-  }
-}
-```
-
-**서브 기능:**
-- [ ] PolicyType enum에 `ALLOWED_NETWORKS` 추가 (11번째)
-- [ ] AllowedNetworksRulesSchema: `{ networks: string[] }` + 환경 유효성 검증
-- [ ] Pipeline Stage 2 (정책 평가)에서 ALLOWED_NETWORKS 체크
-- [ ] 미설정 시 환경 내 모든 네트워크 허용 (기본 허용)
-- [ ] 설정 시 명시된 네트워크만 허용 (제한적 거부)
-- [ ] 기존 10개 정책에 네트워크 스코프 선택 기능 추가 (SPENDING_LIMIT per network 등)
-
----
-
-### TS-4: 멀티 네트워크 잔액 조회 (getAssets 확장)
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Medium-High |
-| 기존 의존 | IChainAdapter.getAssets(), GET /v1/wallet/assets, AdapterPool |
-| 우선순위 | HIGH -- 가장 빈번한 조회 작업 |
-
-**업계 표준 패턴 (HIGH confidence):**
-
-- **Zerion API:** 단일 API 호출로 모든 지원 체인의 토큰 잔액, NFT, DeFi 포지션 반환
-- **Covalent API:** 100+ 블록체인에서 모든 토큰과 NFT를 단일 호출로 반환
-- **Ankr.js:** `getAccountBalance(address)` -> 모든 체인의 코인/토큰 잔액
-- **MetaMask:** Multichain Accounts에서 모든 네트워크의 잔액을 집계하여 표시
-- **Phantom:** 지원 체인의 모든 자산을 하나의 대시보드에서 표시
-
-**WAIaaS 적용:**
-
-```
-현재:
-  GET /v1/wallet/assets -> 월렛의 단일 네트워크 자산만 반환
-
-환경 모델:
-  GET /v1/wallet/assets -> 모든 네트워크의 자산을 집계하여 반환
-  GET /v1/wallet/assets?network=polygon-mainnet -> 특정 네트워크 필터
-
-응답 구조:
-{
-  "walletId": "...",
-  "chain": "ethereum",
-  "environment": "mainnet",
-  "assets": [
-    {
-      "network": "ethereum-mainnet",  // 네트워크 필드 추가
-      "mint": "native",
-      "symbol": "ETH",
-      "name": "Ether",
-      "balance": "1500000000000000000",
-      "decimals": 18,
-      "isNative": true
-    },
-    {
-      "network": "polygon-mainnet",   // 다른 네트워크의 자산
-      "mint": "native",
-      "symbol": "POL",
-      "name": "POL",
-      "balance": "50000000000000000000",
-      "decimals": 18,
-      "isNative": true
-    },
-    {
-      "network": "ethereum-mainnet",
-      "mint": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "symbol": "USDC",
-      "name": "USD Coin",
-      "balance": "10000000",
-      "decimals": 6,
-      "isNative": false
-    }
-  ]
-}
-```
-
-**RPC 호출 최적화:**
-- 모든 네트워크에 병렬로 `getAssets()` 호출 (Promise.allSettled)
-- 실패한 네트워크는 에러로 표시하되 성공한 네트워크 결과는 반환
-- 응답에 `errors` 배열로 실패 네트워크 정보 포함
-- 캐싱 전략: 짧은 TTL (10-30초) 인메모리 캐시로 동일 요청 중복 방지
-
-**서브 기능:**
-- [ ] AssetInfo에 `network` 필드 추가
-- [ ] 다중 네트워크 병렬 조회 로직 (Promise.allSettled)
-- [ ] `?network=` 쿼리 파라미터로 특정 네트워크 필터링
-- [ ] 부분 실패 허용 (일부 네트워크 RPC 실패 시 나머지 결과 반환)
-- [ ] getBalance 엔드포인트도 `?network=` 지원
-- [ ] 응답에 각 네트워크별 조회 상태 포함
-
----
-
-### TS-5: DB 마이그레이션 (ALTER TABLE 증분)
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Medium |
-| 기존 의존 | schema_version 테이블, MIG-01~06 전략 (docs/65), 기존 10 테이블 |
-| 우선순위 | CRITICAL -- v1.4 이후 스키마 변경 시 필수 |
-
-**마이그레이션 대상:**
-
-```sql
--- Migration: v_1_4_5_multichain_wallet_model
-
--- 1. wallets 테이블: network -> environment 변환
--- SQLite는 RENAME COLUMN 지원 (3.25.0+, Node.js 22의 better-sqlite3가 지원)
-ALTER TABLE wallets RENAME COLUMN network TO environment;
-
--- 2. 기존 network 값 -> environment 값 매핑
-UPDATE wallets SET environment = 'testnet'
-  WHERE environment IN ('devnet', 'testnet', 'ethereum-sepolia', 'polygon-amoy',
-    'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia');
-UPDATE wallets SET environment = 'mainnet'
-  WHERE environment IN ('mainnet', 'ethereum-mainnet', 'polygon-mainnet',
-    'arbitrum-mainnet', 'optimism-mainnet', 'base-mainnet');
-
--- 3. CHECK 제약 업데이트 (SQLite는 ALTER CHECK 미지원 -> 재생성 필요 없음, Drizzle 레벨에서 처리)
-
--- 4. transactions 테이블: network 컬럼 추가
-ALTER TABLE transactions ADD COLUMN network TEXT;
-
--- 5. wallets 테이블: default_network 컬럼 추가 (선택적 기본 네트워크)
-ALTER TABLE wallets ADD COLUMN default_network TEXT;
-
--- 6. idx_wallets_chain_network -> idx_wallets_chain_environment 인덱스 변경
-DROP INDEX IF EXISTS idx_wallets_chain_network;
-CREATE INDEX idx_wallets_chain_environment ON wallets(chain, environment);
-
--- 7. schema_version 업데이트
-INSERT INTO schema_version (version, applied_at, description)
-VALUES (5, unixepoch(), 'v1.4.5 multichain wallet environment model');
-```
-
-**서브 기능:**
-- [ ] 마이그레이션 스크립트 작성 (증분, 롤백 가능)
-- [ ] 기존 데이터 자동 변환 (network -> environment 매핑)
-- [ ] Drizzle 스키마 업데이트 (wallets.environment, transactions.network)
-- [ ] CHECK 제약 업데이트 (EnvironmentType SSoT)
-- [ ] schema_version 레코드 추가
-
----
-
-## Differentiators (차별화 기능)
-
-WAIaaS를 다른 월렛 제품과 구분짓는 기능. 기대되지는 않지만 AI 에이전트 use case에서 가치가 높다.
-
-### D-1: Quickstart 원스톱 셋업 (2 월렛 = 전체 체인 커버)
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Low |
-| 기존 의존 | CLI init 플로우, CreateWalletRequest, CreateSessionRequest |
-| 우선순위 | HIGH -- DX 핵심 개선 |
-
-**업계 패턴:**
-
-Phantom은 월렛 생성 시 자동으로 Solana + Ethereum + Bitcoin 주소를 생성한다. 사용자는 하나만 만들면 모든 체인에서 바로 사용할 수 있다. WAIaaS도 동일한 경험을 제공해야 한다.
-
-**현재 문제:**
-```bash
-# 현재: 5개 EVM 네트워크를 쓰려면 5개 월렛 + 5개 세션
-waiaas init  # config 생성
-waiaas start
-curl POST /v1/wallets -d '{"name":"eth-sepolia","chain":"ethereum","network":"ethereum-sepolia"}'
-curl POST /v1/wallets -d '{"name":"polygon-mainnet","chain":"ethereum","network":"polygon-mainnet"}'
-curl POST /v1/wallets -d '{"name":"arb-mainnet","chain":"ethereum","network":"arbitrum-mainnet"}'
-# ... 세션도 각각 생성
-```
-
-**환경 모델 Quickstart:**
-```bash
-# 환경 모델: 2개 월렛 = 전체 체인 커버 (Solana + EVM)
-waiaas init  # 자동으로:
-  # 1. config.toml 생성
-  # 2. Solana testnet 월렛 생성 (devnet, testnet 커버)
-  # 3. EVM testnet 월렛 생성 (5개 EVM testnet 커버)
-  # 4. 두 월렛의 세션 토큰 발급
-  # -> 즉시 10개 네트워크에서 거래 가능
-```
-
-**서브 기능:**
-- [ ] quickstart 모드에서 자동 2월렛 생성 (Solana testnet + EVM testnet)
-- [ ] mainnet 모드 옵션 (`--mainnet` 플래그)
-- [ ] 두 월렛의 세션을 자동 생성하여 즉시 사용 가능한 토큰 출력
-- [ ] MCP 설정 자동 생성 (Claude Desktop config snippet)
-
----
-
-### D-2: 네트워크 스코프 정책 (기존 정책의 네트워크별 세분화)
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Medium |
-| 기존 의존 | 10 PolicyType, DatabasePolicyEngine, policy.schema.ts |
-| 우선순위 | MEDIUM -- 고급 보안 사용자를 위한 세분화 |
-
-**개념:**
-
-현재 SPENDING_LIMIT 정책은 월렛 전체에 적용된다. 멀티 네트워크 환경에서는 "Polygon에서는 일일 100 USDC, Ethereum에서는 일일 1 ETH" 같은 네트워크별 차등 정책이 유용하다.
-
-```typescript
-// 네트워크 스코프 정책 예시
-{
-  "type": "SPENDING_LIMIT",
-  "rules": {
-    "daily": "1000000000000000000",  // 1 ETH
-    "network": "ethereum-mainnet"     // 이 네트워크에만 적용
-  }
-}
-
-// 또는 ALLOWED_TOKENS에 네트워크 스코프
-{
-  "type": "ALLOWED_TOKENS",
-  "rules": {
-    "tokens": [
-      { "address": "0xA0b86...", "symbol": "USDC", "network": "ethereum-mainnet" },
-      { "address": "0x2791Bca...", "symbol": "USDC", "network": "polygon-mainnet" }
-    ]
-  }
-}
-```
-
-**설계 결정:** 기존 정책 스키마에 선택적 `network` 필드를 추가하는 것이 가장 적은 변경으로 최대 유연성을 제공한다. `network` 미지정 시 월렛 전체(모든 네트워크)에 적용.
-
-**서브 기능:**
-- [ ] CreatePolicyRequestSchema에 선택적 `network` 필드 추가
-- [ ] policies 테이블에 `network` 컬럼 추가 (nullable)
-- [ ] DatabasePolicyEngine에서 네트워크 매칭 로직 추가
-- [ ] 전역 정책(network 미지정) + 네트워크 특정 정책 우선순위 규칙
-
----
-
-### D-3: AI 에이전트 네트워크 추론 (MCP 자연어 네트워크 결정)
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Low (MCP 도구 설명 개선만으로 달성) |
-| 기존 의존 | @waiaas/mcp 9 도구, skill 파일 5개 |
-| 우선순위 | MEDIUM -- AI 에이전트 DX의 핵심 차별화 |
-
-**개념:**
-
-AI 에이전트가 "Polygon에서 USDC 전송해줘"라고 하면 MCP 도구가 `network: "polygon-mainnet"`을 자동으로 추론한다. 이는 MetaMask의 "You don't have to worry about switching networks. Each flow will ask you to select the relevant network" 철학의 AI 버전이다.
-
-**구현:** MCP 도구 설명에 네트워크 파라미터와 유효 값을 명확히 기술하면 LLM이 자연어에서 올바른 네트워크를 추론한다. 별도의 복잡한 추론 엔진은 불필요하다.
-
-**서브 기능:**
-- [ ] MCP send_transaction 도구에 network 파라미터 추가
-- [ ] 도구 설명에 네트워크 목록과 사용법 명시
-- [ ] get_assets 도구에 network 필터 파라미터 추가
-- [ ] skill 파일 업데이트 (네트워크 선택 가이드 추가)
-
----
-
-### D-4: 환경 간 격리 보장
-
-| 속성 | 값 |
-|------|-----|
-| 복잡도 | Low |
-| 기존 의존 | validateChainNetwork(), Pipeline Stage 1-2 |
-| 우선순위 | HIGH -- 보안 기본 원칙 |
-
-**개념:**
-
-testnet 월렛이 절대로 mainnet 트랜잭션을 실행할 수 없어야 한다. 이는 실제 자금 손실을 방지하는 가장 기본적인 안전장치이다. MetaMask의 testnet 토글과 동일한 역할을 환경 모델이 강제한다.
-
-**Trust Wallet 경고 (공식 문서):** "Ethereum addresses and private keys work on both mainnet and testnets, so users must be extremely careful not to send real assets to testnet addresses." -- WAIaaS는 이를 시스템 레벨에서 강제한다.
-
-**서브 기능:**
-- [ ] Pipeline Stage 1에서 환경-네트워크 교차 검증
-- [ ] testnet 월렛은 mainnet 네트워크로 트랜잭션 불가 (하드 블록)
-- [ ] mainnet 월렛은 testnet 네트워크로 트랜잭션 불가 (하드 블록)
-- [ ] 에러 메시지에 명확한 설명과 hint 포함
-
----
-
-## Anti-Features (의도적으로 만들지 않는 기능)
-
-### AF-1: 자동 크로스체인 브리징
-
-| Anti-Feature | 회피 이유 | 대안 |
-|---|---|---|
-| "Polygon의 ETH를 Ethereum으로 자동 브리지" | 브리지는 보안 위험이 높고 (2024-2025년 브리지 해킹 누적 $3B+), 복잡한 외부 의존성을 도입. AI 에이전트가 자동으로 브리지하면 예측 불가능한 자금 이동 발생 가능. | 각 네트워크의 자산은 해당 네트워크에서만 사용. 브리징이 필요하면 명시적 CONTRACT_CALL로 사용자가 직접 실행. |
-
-### AF-2: 동적 환경 전환
-
-| Anti-Feature | 회피 이유 | 대안 |
-|---|---|---|
-| 월렛의 환경을 testnet에서 mainnet으로 전환하는 기능 | 환경 전환은 월렛의 근본적 속성을 바꾸는 것으로, 세션/정책/감사 로그의 맥락이 깨진다. 또한 testnet에서 개발하다가 실수로 mainnet으로 전환하는 사고 가능. | mainnet 사용이 필요하면 새 월렛 생성. 환경은 월렛 생성 시 고정 (immutable). |
-
-### AF-3: 글로벌 포트폴리오 집계 (크로스 월렛)
-
-| Anti-Feature | 회피 이유 | 대안 |
-|---|---|---|
-| 모든 월렛의 잔액을 하나로 합산하여 총 자산 표시 | 월렛 간 자산 합산은 보안 경계를 흐림. 각 월렛은 독립된 보안 도메인이어야 한다. Zerion/Covalent 같은 포트폴리오 API는 외부 서비스의 역할. | 단일 월렛 내 멀티 네트워크 집계만 제공. 크로스 월렛 집계는 Admin UI의 대시보드 레벨에서 표시 (정보 목적). |
-
-### AF-4: 네트워크별 별도 키
-
-| Anti-Feature | 회피 이유 | 대안 |
-|---|---|---|
-| 각 EVM 네트워크마다 다른 키페어 사용 | EVM의 핵심 이점은 하나의 secp256k1 키로 모든 체인에서 동일 주소를 사용하는 것. 네트워크별 별도 키는 이 이점을 무력화하고 키 관리 복잡도만 증가. | 환경별 하나의 키. EVM 환경 내 모든 네트워크는 동일 키/주소. |
-
-### AF-5: 자동 네트워크 탐지/추가
-
-| Anti-Feature | 회피 이유 | 대안 |
-|---|---|---|
-| 사용자가 임의의 EVM RPC URL을 추가하여 새 네트워크 자동 등록 | 보안 위험 (악성 RPC 노드), 정책 엔진이 미지원 네트워크의 동작을 예측 불가, 테스트되지 않은 네트워크에서의 트랜잭션 실패 위험. | 지원 네트워크는 소스 코드에 하드코딩 (EVM_CHAIN_MAP). 새 네트워크 추가는 코드 변경 + 릴리스 필요. 커스텀 RPC URL은 기존 지원 네트워크에 대해서만 허용. |
-
----
+## Table Stakes
+
+Features users expect when a wallet service supports dApp-generated transaction signing. Missing = the daemon cannot participate in the standard dApp integration flow.
+
+| # | Feature | Why Expected | Complexity | Depends On |
+|---|---------|--------------|------------|------------|
+| TS-01 | **Sign-only endpoint** (`POST /v1/transactions/sign`) | Industry standard 2-step flow: dApp builds unsigned tx, wallet signs it. Jupiter, Agentra, NFT marketplaces all return unsigned transactions for client to sign. Without this, agents cannot interact with ANY external protocol. | Med | IChainAdapter.signTransaction (exists), new pipeline variant |
+| TS-02 | **SIGN_ONLY transaction type** (6th discriminatedUnion type) | Distinguishes sign-only from execute flows in pipeline, DB, audit trail. Fireblocks, Circle, all WaaS providers have separate RAW/sign-only types. | Med | TransactionTypeEnum extension, Zod schema |
+| TS-03 | **Unsigned tx parsing/validation** (pre-sign analysis) | Security critical: before signing, parse the serialized tx to verify destination, amount, calldata match expectations. Prevents blind signing. Fireblocks requires policy rules for raw transactions -- policies reject all raw transactions by default. | High | viem parseTransaction (EVM), @solana/kit getTransactionDecoder (Solana) |
+| TS-04 | **Policy evaluation for sign-only** | Sign-only txs MUST go through policy engine (CONTRACT_WHITELIST, WHITELIST, SPENDING_LIMIT). Without policy evaluation, sign-only bypasses all security. Default deny for sign-only is essential. | High | DatabasePolicyEngine, unsigned tx parsing (TS-03) |
+| TS-05 | **Return signed tx bytes (not broadcast)** | Sign-only returns signed bytes to caller. Caller (dApp/agent) is responsible for broadcast. This is the fundamental difference from execute flow. Jupiter Ultra expects `/execute` with signed tx; the agent needs the raw signed bytes. | Low | signTransaction result (Uint8Array already) |
+| TS-06 | **Notification for sign-only events** | TX_SIGN_REQUESTED, TX_SIGNED events for audit trail. Owner must know what's being signed even if not broadcast through daemon. | Low | NotificationService (exists), new event types |
+
+## Differentiators
+
+Features that set WAIaaS apart from other WaaS solutions. Not expected, but create significant value for AI agent workflows.
+
+| # | Feature | Value Proposition | Complexity | Depends On |
+|---|---------|-------------------|------------|------------|
+| DF-01 | **Unsigned tx deep parsing with human-readable summary** | Parse EVM calldata with viem `decodeFunctionData` and Solana instructions to produce human-readable summaries like "Swap 100 USDC for SOL on Jupiter" instead of raw hex. AI agents can explain what they're signing. | High | viem decodeFunctionData, ABI registry or inline ABI, Solana instruction decoding |
+| DF-02 | **EVM calldata encoding helper** (`POST /v1/encode-calldata`) | AI agents can ask WAIaaS to encode `transfer(address,uint256)` with args into calldata hex. Eliminates need for agents to handle ABI encoding themselves. Uses viem `encodeFunctionData` which is already imported. | Med | viem encodeFunctionData (already imported in EvmAdapter) |
+| DF-03 | **Default deny policy toggles via Settings DB** | Admin can flip `policy.default_deny_tokens`, `policy.default_deny_contracts`, `policy.default_deny_spenders` to `false` in Settings to convert from default-deny to default-allow. Currently hardcoded. Reduces friction for trusted environments. | Med | SettingsService (exists), hot-reload (exists), DatabasePolicyEngine modification |
+| DF-04 | **MCP skill resources** (read-only context for AI agents) | Expose skill files (transactions.skill.md, policies.skill.md etc.) as MCP resources so AI agents can read API documentation in-context. Resource URI: `waiaas://skills/{skill-name}`. Agents learn how to use the wallet without being pre-prompted. | Med | MCP resource registration (pattern exists: wallet-balance, wallet-address, system-status) |
+| DF-05 | **MCP resource templates for transactions** | `waiaas://transactions/{id}` resource template allows AI agents to read transaction details via MCP resource protocol, not just tools. More natural for context injection. | Low | MCP resource template API (spec supports it), existing GET /v1/transactions/:id |
+| DF-06 | **Sign-only simulation pre-check** | Before signing, simulate the unsigned tx to detect reverts. Return simulation result alongside signature. Prevents signing dead transactions. | Low | simulateTransaction (exists on both adapters) |
+| DF-07 | **Enhanced policy denial notifications** | When policy denies a tx, notification includes specific policy type, rule details, and actionable hint (e.g., "Token 0xABC not in ALLOWED_TOKENS. Add via POST /v1/policies"). Currently just "Policy denied". | Low | NotificationService (exists), richer vars in notify() |
+| DF-08 | **Sign-only with optional broadcast** | Optional `broadcast: true` flag on sign endpoint that also submits the signed tx. Convenience for agents that want sign+execute in one call without the full pipeline build step. | Med | submitTransaction (exists) |
+
+## Anti-Features
+
+Features to explicitly NOT build in this milestone.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **WalletConnect session management** | Massive scope creep: WalletConnect v2 session/pairing is a full subsystem. The sign-only endpoint covers the same use case without protocol overhead. | Expose sign-only endpoint; WalletConnect can be added as a separate milestone via walletconnect.project_id setting that already exists. |
+| **Full ABI registry/database** | Maintaining a comprehensive ABI database is a maintenance burden. Token ABIs (ERC-20) are already embedded. | Accept inline ABI fragments in calldata encode requests. Use ERC20_ABI already in codebase for common operations. Let agents provide ABI for uncommon contracts. |
+| **Automatic transaction broadcasting from sign-only** | Sign-only should respect the 2-step flow. Auto-broadcasting defeats the purpose and breaks dApp patterns like Jupiter that handle their own submission with MEV protection. | Return signed bytes only. Offer optional broadcast flag as a separate parameter (DF-08). |
+| **Real-time tx parsing for ALL instruction types** | Parsing Solana CPI/inner instructions, Account Abstraction, and every EVM proxy pattern is unbounded scope. | Parse top-level instructions only: native transfer, ERC-20 transfer/approve, and known selectors. Return raw hex for unknown calldata. |
+| **Default-allow as the default** | Converting the ENTIRE system to default-allow undermines WAIaaS's security model. | Settings toggles (DF-03) are per-policy-type, explicitly opt-in per deployment, and logged to audit trail. Default remains deny. |
+| **Sign arbitrary messages** (EIP-191, EIP-712) | Message signing (not transaction signing) has different security implications and use cases (login, off-chain attestation). Scope creep for this milestone. | Add as separate feature in a future milestone. The signTransaction pipeline does not overlap with signMessage. |
+| **Multichain calldata encoding** | Solana instruction encoding is fundamentally different from EVM calldata (Borsh vs ABI). Supporting both in one endpoint adds confusion. | Calldata encode endpoint is EVM-only. Solana instructions use existing CONTRACT_CALL with programId/instructionData/accounts. |
 
 ## Feature Dependencies
 
 ```
-[TS-5: DB 마이그레이션] -- 반드시 먼저
-       |
-[TS-1: 환경 기반 월렛 모델]
-       |
-       +---> [TS-2: 트랜잭션 레벨 네트워크 선택]
-       |            |
-       |            +---> [TS-3: ALLOWED_NETWORKS 정책]
-       |            |
-       |            +---> [D-2: 네트워크 스코프 정책]
-       |
-       +---> [TS-4: 멀티 네트워크 잔액 조회]
-       |
-       +---> [D-4: 환경 간 격리 보장]
-       |
-       +---> [D-1: Quickstart 원스톱 셋업]
-       |
-       +---> [D-3: AI 에이전트 네트워크 추론]
+TS-02 (SIGN_ONLY type)
+  |
+  +--> TS-01 (sign endpoint) -- needs the type to exist
+  |     |
+  |     +--> TS-03 (unsigned tx parsing) -- sign endpoint must parse before signing
+  |     |     |
+  |     |     +--> TS-04 (policy for sign-only) -- policy needs parsed data to evaluate
+  |     |     |
+  |     |     +--> DF-01 (deep parsing summary) -- extends parsing with human-readable output
+  |     |
+  |     +--> TS-05 (return signed bytes) -- endpoint response format
+  |     |
+  |     +--> TS-06 (sign-only notifications) -- new event types
+  |     |
+  |     +--> DF-06 (simulation pre-check) -- optional but natural addition
+  |     |
+  |     +--> DF-08 (optional broadcast) -- extends sign endpoint
+  |
+DF-02 (calldata encode) -- independent, no deps on sign-only
+  |
+DF-03 (default deny toggles) -- independent
+  |   needs: SettingsService, DatabasePolicyEngine
+  |
+DF-04 (MCP skill resources) -- independent
+  |   needs: MCP server registration, skill files read
+  |
+DF-05 (MCP resource templates) -- independent
+  |   needs: MCP resource template API
+  |
+DF-07 (enhanced notifications) -- independent
+      needs: NotificationService, message-templates
 ```
 
-**순서 근거:**
-1. DB 마이그레이션은 모든 것의 전제조건 (스키마가 바뀌어야 모든 기능이 동작)
-2. 환경 모델이 핵심 기반 (월렛 생성/조회의 근본 변경)
-3. 트랜잭션 네트워크 선택과 잔액 조회는 환경 모델 위에 독립적으로 구축 가능
-4. 정책 기능은 트랜잭션 흐름이 안정된 후 추가
-5. Quickstart와 MCP는 마지막 (API가 확정된 후)
+## Detailed Feature Specifications
+
+### TS-01: Sign-Only Endpoint
+
+**Endpoint:** `POST /v1/transactions/sign`
+
+**Auth:** sessionAuth (same as /v1/transactions/send)
+
+**Request body:**
+```json
+{
+  "type": "SIGN_ONLY",
+  "chain": "solana",
+  "unsignedTx": "<base64-encoded-serialized-transaction>",
+  "network": "devnet"
+}
+```
+
+- `chain` is required because we need to know which adapter to use for signing.
+- `unsignedTx` is base64 for both Solana (VersionedTransaction bytes) and EVM (RLP-encoded unsigned tx bytes).
+- `network` is optional (for network-scoped policy evaluation).
+
+**Response (201):**
+```json
+{
+  "id": "<tx-uuid>",
+  "status": "SIGNED",
+  "signedTx": "<base64-encoded-signed-transaction>",
+  "parsed": {
+    "from": "0x1234...",
+    "to": "0xABCD...",
+    "value": "0",
+    "calldata": "0x095ea7b3...",
+    "functionName": "approve",
+    "args": ["0xSpender", "1000000"],
+    "estimatedFee": "42000000000000"
+  }
+}
+```
+
+**Pipeline:** Shortened 4-stage pipeline (sign-only variant):
+1. **Parse and Validate** -- Deserialize unsigned tx, extract fields for policy evaluation
+2. **Auth** -- sessionAuth verification (existing middleware)
+3. **Policy** -- Evaluate parsed fields against policy engine (same as send pipeline)
+4. **Sign** -- Decrypt key, sign, return bytes
+
+Stages 4 (Wait/Delay), 5 (Build), and 6 (Confirm) from the send pipeline are NOT needed because:
+- Building is done externally (dApp provides unsigned tx)
+- Broadcasting is the caller's responsibility
+- Confirmation tracking is out of scope (no txHash yet)
+
+**DELAY/APPROVAL tier handling:** When policy evaluates to DELAY or APPROVAL, the sign-only pipeline halts the same as the send pipeline. The transaction record is created with type=SIGN_ONLY and status=QUEUED. After delay expires or owner approves, the signing occurs and the signed bytes can be retrieved via `GET /v1/transactions/:id` (with `signedTx` field added to response).
+
+**DB record:** Transaction row with type=SIGN_ONLY, status=SIGNED (or QUEUED/CANCELLED for delayed/denied), metadata contains parsed info and the original unsignedTx base64.
+
+### TS-02: SIGN_ONLY Transaction Type
+
+**Enum extension:**
+```typescript
+export const TRANSACTION_TYPES = [
+  'TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL',
+  'APPROVE', 'BATCH', 'SIGN_ONLY',  // NEW
+] as const;
+```
+
+**Zod schema (separate from discriminatedUnion):**
+```typescript
+export const SignOnlyRequestSchema = z.object({
+  type: z.literal('SIGN_ONLY'),
+  chain: ChainTypeEnum,
+  unsignedTx: z.string().min(1),  // base64-encoded serialized tx
+  network: NetworkTypeEnum.optional(),
+});
+export type SignOnlyRequest = z.infer<typeof SignOnlyRequestSchema>;
+```
+
+Note: SIGN_ONLY does NOT join the existing discriminatedUnion for /v1/transactions/send. It has its own endpoint (/v1/transactions/sign) and its own schema. The 5-type discriminatedUnion (`TransactionRequestSchema`) remains unchanged.
+
+**Transaction status extension:**
+```typescript
+// Add SIGNED to TRANSACTION_STATUSES
+export const TRANSACTION_STATUSES = [
+  'PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED',
+  'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED',
+  'PARTIAL_FAILURE', 'SIGNED',  // NEW
+] as const;
+```
+
+### TS-03: Unsigned Transaction Parsing
+
+**EVM parsing (viem -- already imported):**
+```typescript
+import { parseTransaction, decodeFunctionData } from 'viem';
+
+// Parse RLP-encoded unsigned tx bytes
+const serializedHex = toHex(unsignedTxBytes);
+const parsed = parseTransaction(serializedHex);
+// Result: { to, value, data, nonce, gasLimit, maxFeePerGas, chainId, ... }
+
+// If calldata present, attempt decode with known ABIs
+if (parsed.data && parsed.data.length >= 10) {
+  const selector = parsed.data.slice(0, 10);
+  try {
+    const decoded = decodeFunctionData({ abi: ERC20_ABI, data: parsed.data });
+    // decoded: { functionName: 'transfer', args: ['0xRecipient', 1000000n] }
+  } catch {
+    // Unknown function -- return raw calldata + selector only
+  }
+}
+```
+
+**Solana parsing (@solana/kit -- already imported):**
+```typescript
+const txDecoder = getTransactionDecoder();  // already instantiated as module-level const
+const decoded = txDecoder.decode(unsignedTxBytes);
+// decoded: CompiledTransaction with staticAccounts, instructions, etc.
+// Extract: programIds, instruction data, account metas, fee payer
+```
+
+**Parsed output structure (chain-agnostic):**
+```typescript
+interface ParsedUnsignedTx {
+  chain: ChainType;
+  from?: string;        // sender (EVM: derived from metadata, Solana: fee payer)
+  to?: string;          // primary destination address
+  value?: string;       // native value in smallest unit (wei/lamports)
+  calldata?: string;    // raw calldata hex (EVM only)
+  functionName?: string; // decoded function name if ABI match found
+  args?: unknown[];     // decoded arguments if ABI match found
+  selector?: string;    // 4-byte function selector hex (EVM only)
+  instructions?: Array<{  // Solana instruction breakdown
+    programId: string;
+    data: string;       // base64 instruction data
+    accounts: string[]; // account pubkeys
+  }>;
+  nonce?: number;       // EVM nonce
+  chainId?: number;     // EVM chainId
+  estimatedFee?: string; // estimated fee from tx gas params
+  warnings: string[];   // e.g., "Unknown function selector", "High value transfer"
+}
+```
+
+**Known ABI matching (built-in):**
+- ERC-20: transfer, transferFrom, approve, balanceOf (ERC20_ABI already in codebase)
+- Native transfer: value > 0, no calldata
+- Unknown: return raw calldata with selector extracted
+
+### TS-04: Policy Evaluation for Sign-Only
+
+The parsed unsigned tx fields map directly to existing TransactionParam:
+
+| Parsed Field | TransactionParam Field | Policy Check |
+|-------------|----------------------|--------------|
+| `to` | `toAddress` | WHITELIST |
+| `to` (if contract call detected) | `contractAddress` | CONTRACT_WHITELIST |
+| `selector` | `selector` | METHOD_WHITELIST |
+| `value` | `amount` | SPENDING_LIMIT |
+| Token transfer detected via calldata | `tokenAddress` | ALLOWED_TOKENS |
+| Approve detected via calldata | `spenderAddress` | APPROVED_SPENDERS |
+| `network` (from request) | `network` | ALLOWED_NETWORKS |
+
+**Type inference from EVM calldata:**
+- Selector `0xa9059cbb` (ERC-20 transfer) -> evaluatedType = TOKEN_TRANSFER
+- Selector `0x095ea7b3` (ERC-20 approve) -> evaluatedType = APPROVE
+- No calldata, value > 0 -> evaluatedType = TRANSFER
+- Any other calldata -> evaluatedType = CONTRACT_CALL
+
+**Solana type inference:**
+- System Program transfer instruction -> evaluatedType = TRANSFER
+- Token Program transfer/transferChecked -> evaluatedType = TOKEN_TRANSFER
+- Token Program approve -> evaluatedType = APPROVE
+- Any other program -> evaluatedType = CONTRACT_CALL
+
+**Key design decision:** Sign-only is evaluated using the SAME policy engine as execute, against parsed content from the externally-built transaction. No new policy types needed. The `evaluatedType` from parsing drives which policies apply.
+
+### TS-05: Return Signed Transaction Bytes
+
+Response format:
+```json
+{
+  "signedTx": "<base64-encoded>",
+  "encoding": "base64"
+}
+```
+
+Base64 is the standard encoding for both chains:
+- **Solana:** `getBase64EncodedWireTransaction()` already in the codebase for submit
+- **EVM:** `toHex()` to hex, then base64 encode the raw bytes
+
+### TS-06: Sign-Only Notification Events
+
+New event types added to NOTIFICATION_EVENT_TYPES:
+```typescript
+'TX_SIGN_REQUESTED',  // When sign-only tx enters pipeline
+'TX_SIGNED',          // When sign-only tx is successfully signed
+```
+
+Message templates (en/ko):
+- TX_SIGN_REQUESTED: "Sign request received for {type} to {to} (value: {value})"
+- TX_SIGNED: "Transaction signed successfully. Destination: {to}, Value: {value}"
+
+These integrate with existing priority-based notification delivery (Telegram/Discord/ntfy).
+
+### DF-02: EVM Calldata Encoding Helper
+
+**Endpoint:** `POST /v1/encode-calldata`
+
+**Auth:** sessionAuth
+
+**Request:**
+```json
+{
+  "abi": [{"name": "transfer", "type": "function", "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [{"name": "", "type": "bool"}]}],
+  "functionName": "transfer",
+  "args": ["0xRecipientAddress", "1000000"]
+}
+```
+
+**Response:**
+```json
+{
+  "calldata": "0xa9059cbb000000000000000000000000recipientaddress0000000000000000000000000000000000000000000000000000000000000f4240",
+  "selector": "0xa9059cbb",
+  "functionName": "transfer"
+}
+```
+
+Implementation: thin wrapper around viem `encodeFunctionData`. The function is already imported in the EVM adapter. This endpoint is stateless (no wallet or session state needed beyond auth).
+
+**Use case flow:** Agent calls encode-calldata to build calldata, then uses the result in a CONTRACT_CALL request to /v1/transactions/send, or builds a full unsigned tx externally and submits to /v1/transactions/sign.
+
+### DF-03: Default Deny Policy Toggles
+
+New setting keys in SETTING_DEFINITIONS:
+```typescript
+{ key: 'policy.default_deny_tokens', category: 'security', configPath: 'security.default_deny_tokens', defaultValue: 'true', isCredential: false },
+{ key: 'policy.default_deny_contracts', category: 'security', configPath: 'security.default_deny_contracts', defaultValue: 'true', isCredential: false },
+{ key: 'policy.default_deny_spenders', category: 'security', configPath: 'security.default_deny_spenders', defaultValue: 'true', isCredential: false },
+{ key: 'policy.default_deny_sign_only', category: 'security', configPath: 'security.default_deny_sign_only', defaultValue: 'true', isCredential: false },
+```
+
+**Behavior change in DatabasePolicyEngine:**
+```typescript
+// BEFORE (hardcoded default deny):
+if (!allowedTokensPolicy) {
+  return { allowed: false, tier: 'INSTANT',
+    reason: 'Token transfer not allowed: no ALLOWED_TOKENS policy configured' };
+}
+
+// AFTER (settings-aware):
+if (!allowedTokensPolicy) {
+  const defaultDeny = this.settingsService?.get('policy.default_deny_tokens') !== 'false';
+  if (defaultDeny) {
+    return { allowed: false, tier: 'INSTANT',
+      reason: 'Token transfer not allowed: no ALLOWED_TOKENS policy configured' };
+  }
+  // default-allow mode: skip this check, continue evaluation
+}
+```
+
+Same pattern for CONTRACT_WHITELIST and APPROVED_SPENDERS.
+
+The `default_deny_sign_only` toggle is a master switch: when `true` (default), sign-only requests require explicit CONTRACT_WHITELIST or other policy to allow the target. When `false`, sign-only requests follow the same rules as send requests.
+
+**Hot-reload:** These settings use the existing hot-reload mechanism. Changing a toggle in Admin UI -> Settings immediately affects the next policy evaluation without daemon restart.
+
+**Audit trail:** Each toggle change is logged to audit_log with the setting key, old value, new value, and actor (masterAuth).
+
+### DF-04: MCP Skill Resources
+
+Register the 5 skill files as MCP read-only resources:
+
+```typescript
+const SKILL_FILES = [
+  { name: 'Quickstart Guide', uri: 'waiaas://skills/quickstart', file: 'quickstart.skill.md' },
+  { name: 'Transactions API', uri: 'waiaas://skills/transactions', file: 'transactions.skill.md' },
+  { name: 'Policies API', uri: 'waiaas://skills/policies', file: 'policies.skill.md' },
+  { name: 'Wallet API', uri: 'waiaas://skills/wallet', file: 'wallet.skill.md' },
+  { name: 'Admin API', uri: 'waiaas://skills/admin', file: 'admin.skill.md' },
+];
+
+for (const skill of SKILL_FILES) {
+  server.resource(skill.name, skill.uri, {
+    description: withWalletPrefix(`API reference: ${skill.name}`, walletContext?.walletName),
+    mimeType: 'text/markdown',
+  }, async () => {
+    const content = await readFile(resolve(skillsDir, skill.file), 'utf-8');
+    return { contents: [{ uri: skill.uri, mimeType: 'text/markdown', text: content }] };
+  });
+}
+```
+
+**Value:** AI agents using WAIaaS MCP server can `resources/read` the skill files to learn API patterns, transaction types, and policy configuration, all without needing the information pre-loaded in their system prompt. This is how the MCP spec intends resources to be used: "share data that provides context to language models."
+
+**URI scheme:** `waiaas://skills/{name}` follows MCP best practice of custom URI schemes being descriptive and RFC3986-compliant.
+
+### DF-05: MCP Resource Templates for Transactions
+
+```typescript
+// Register a resource template for transaction details
+server.resourceTemplate(
+  'Transaction Details',
+  'waiaas://transactions/{id}',
+  { description: 'Transaction details by ID', mimeType: 'application/json' },
+  async (uri, params) => {
+    const id = params.id;
+    const result = await apiClient.get(`/v1/transactions/${id}`);
+    return toResourceResult(uri, result);
+  },
+);
+```
+
+MCP resource templates use RFC 6570 URI templates. The `{id}` parameter can be auto-completed through the MCP completion API. This allows agents to reference transactions as context resources rather than making explicit tool calls.
+
+### DF-07: Enhanced Policy Denial Notifications
+
+**Current notification (generic):**
+```
+Policy Violation
+Transaction denied by policy
+```
+
+**Enhanced notification (specific and actionable):**
+```
+Policy Violation: TOKEN_TRANSFER denied by ALLOWED_TOKENS
+Token 0xA0b8...eB48 (USDC) not in allowed list.
+Hint: Add to ALLOWED_TOKENS policy via POST /v1/policies
+Wallet: trading-bot | Amount: 5,000,000 | To: 0x9aE4...Zcde
+```
+
+Implementation: enrich the `vars` record passed to `notificationService.notify('POLICY_VIOLATION', ...)` with:
+- `policyType`: which policy type triggered the denial
+- `tokenAddress` / `contractAddress` / `spenderAddress`: the specific entity that was blocked
+- `hint`: actionable remediation step
+
+Template interpolation already supports arbitrary `{key}` variables. The only change is passing richer data from the policy evaluation result to the notification call.
 
 ---
 
-## MVP 권장사항
+## MVP Recommendation
 
-### Phase 1: 환경 모델 전환 (핵심)
+### Phase 1: Sign-Only Core (highest priority -- enables dApp integration)
 
-| 기능 | 범위 |
-|------|------|
-| TS-5: DB 마이그레이션 | wallets.environment, transactions.network, default_network |
-| TS-1: 환경 기반 월렛 모델 | Zod 스키마, Drizzle 스키마, enum SSoT, 월렛 CRUD |
-| D-4: 환경 간 격리 | validateChainNetwork -> validateEnvironmentNetwork |
+Prioritize:
+1. **TS-02** SIGN_ONLY type + Zod schema + SIGNED status -- foundation
+2. **TS-03** Unsigned tx parsing (EVM + Solana) -- security gate
+3. **TS-04** Policy evaluation for sign-only -- security enforcement
+4. **TS-01** Sign endpoint with shortened pipeline -- the API surface
+5. **TS-05** Return signed bytes -- response format
+6. **TS-06** Sign-only notifications -- audit trail
 
-### Phase 2: 트랜잭션 + 잔액
+This forms a complete, secure sign-only pipeline that enables Jupiter, Agentra, and NFT marketplace integration.
 
-| 기능 | 범위 |
-|------|------|
-| TS-2: 트랜잭션 레벨 네트워크 선택 | 5-type 스키마 확장, Pipeline Stage 1, AdapterPool |
-| TS-4: 멀티 네트워크 잔액 조회 | 병렬 조회, AssetInfo.network, ?network= 필터 |
+### Phase 2: DX Enhancements (high value, independently shippable)
 
-### Phase 3: 정책 + DX
+7. **DF-02** Calldata encoding helper -- agents can build calldata without external tools
+8. **DF-03** Default deny toggles -- operational flexibility via Settings UI
+9. **DF-07** Enhanced policy notifications -- better error experience for operators
 
-| 기능 | 범위 |
-|------|------|
-| TS-3: ALLOWED_NETWORKS 정책 | 11번째 PolicyType, Stage 2 체크 |
-| D-2: 네트워크 스코프 정책 | 기존 정책 네트워크 옵션 |
-| D-1: Quickstart 원스톱 | CLI init 플로우 개선 |
-| D-3: AI 에이전트 네트워크 추론 | MCP 도구/skill 파일 업데이트 |
+### Phase 3: MCP Context Enhancement (moderate priority, independently shippable)
 
-### Deferred (v1.4.5 이후):
+10. **DF-04** MCP skill resources -- agent self-service documentation
+11. **DF-05** MCP resource templates -- transaction context injection
+12. **DF-06** Simulation pre-check -- safety net for sign-only
 
-| 기능 | 이유 |
-|------|------|
-| 크로스체인 브리징 | 보안 위험 + 복잡도 (AF-1) |
-| 포트폴리오 API (크로스 월렛) | Admin UI 개선 시 추후 검토 |
-| 동적 네트워크 추가 | 코드 변경 릴리스 모델 유지 (AF-5) |
+### Defer to Future Milestone
+
+- **DF-01** Deep parsing with human-readable summaries -- HIGH complexity, requires ABI inference heuristics and per-protocol knowledge. Better as an incremental enhancement after sign-only usage patterns are established.
+- **DF-08** Optional broadcast on sign endpoint -- Nice-to-have but complicates the clean sign-only / execute separation. Can be added once the base sign-only flow is proven.
 
 ---
 
-## 기존 기능과의 호환성 매트릭스
+## Complexity Assessment
 
-| 기존 기능 | v1.4.5 영향 | 변경 수준 |
-|-----------|-------------|----------|
-| `POST /v1/wallets` | `network` -> `environment` 파라미터, 하위 호환 가능 | **Breaking** (API 변경) |
-| `GET /v1/wallet/assets` | 응답에 `network` 필드 추가, 다중 네트워크 자산 | **Additive** |
-| `POST /v1/transactions/send` | 선택적 `network` 필드 추가 | **Additive** |
-| `GET /v1/wallet/balance` | `?network=` 쿼리 파라미터 추가 | **Additive** |
-| `GET /v1/wallet/address` | 응답에 `environment` + 모든 네트워크 주소 목록 | **Additive** |
-| PolicyEngine 10 types | 11번째 ALLOWED_NETWORKS 추가 | **Additive** |
-| SDK (TypeScript/Python) | `network` 파라미터 추가, `environment` 개념 반영 | **Breaking** (type 변경) |
-| MCP 9 도구 | `network` 파라미터 추가 | **Additive** |
-| Admin UI | 월렛 목록에 environment 표시, 네트워크 선택 UI | **UI 변경** |
-| skill 파일 5개 | 네트워크 선택 가이드 추가 | **문서 변경** |
+| Feature | Backend | Frontend (Admin) | Tests | Total |
+|---------|---------|-------------------|-------|-------|
+| TS-01 Sign endpoint | High (new pipeline variant, route) | Low (tx detail shows SIGN_ONLY) | High (pipeline tests) | **High** |
+| TS-02 SIGN_ONLY type | Low (enum + schema) | Low (type display) | Low (schema tests) | **Low** |
+| TS-03 Unsigned tx parsing | High (chain-specific parsing) | None | High (parsing edge cases) | **High** |
+| TS-04 Policy for sign-only | Med (map parsed -> TransactionParam) | None | High (policy combo tests) | **Med** |
+| TS-05 Return signed bytes | Low (base64 encode) | None | Low | **Low** |
+| TS-06 Notifications | Low (2 new event types) | None | Low | **Low** |
+| DF-02 Calldata encode | Low (viem wrapper) | None | Med (encoding edge cases) | **Low** |
+| DF-03 Default deny toggles | Med (settings + engine injection) | Med (Settings UI checkboxes) | Med (toggle behavior tests) | **Med** |
+| DF-04 MCP skill resources | Low (file read + register) | None | Low (resource read tests) | **Low** |
+| DF-05 MCP resource templates | Low (template registration) | None | Low | **Low** |
+| DF-06 Simulation pre-check | Low (existing simulateTransaction) | None | Low | **Low** |
+| DF-07 Enhanced notifications | Low (richer vars in notify) | None | Low | **Low** |
 
-**하위 호환 전략:**
-- 월렛 생성 시 `network` 파라미터를 계속 수용하되 자동으로 environment로 변환 (deprecation notice)
-- 트랜잭션의 `network` 필드는 선택적이므로 기존 코드는 수정 없이 동작 (기본 네트워크 사용)
-- SDK v2 릴리스 시 breaking change를 일괄 적용하되, v1 호환 레이어 유지
+**Estimated total:** ~800-1200 LOC production, ~400-600 LOC tests
+
+---
+
+## Existing Feature Compatibility Matrix
+
+| Existing Feature | Impact | Change Level |
+|-----------------|--------|-------------|
+| `POST /v1/transactions/send` (5-type) | No change. SIGN_ONLY uses its own endpoint. | **None** |
+| `GET /v1/transactions/:id` | Add `signedTx` field for SIGN_ONLY type txs. | **Additive** |
+| `GET /v1/transactions` (list) | SIGN_ONLY shows in list with type=SIGN_ONLY. | **Additive** |
+| Pipeline (6-stage) | Sign-only uses a separate 4-stage variant. Send pipeline unchanged. | **None** |
+| PolicyEngine (11 types) | No new policy types. Sign-only evaluated with existing policies via parsed TransactionParam. | **None** |
+| Settings DB (31 keys) | +4 new setting keys for default deny toggles. | **Additive** |
+| MCP Server (11 tools, 3 resources) | +5 skill resources, +1 resource template. No tool changes. | **Additive** |
+| Notification (21 event types) | +2 event types (TX_SIGN_REQUESTED, TX_SIGNED). | **Additive** |
+| SDK (TypeScript/Python) | New `sign()` method. Existing methods unchanged. | **Additive** |
+| Admin UI | Transaction detail shows SIGN_ONLY type, Settings page shows new toggles. | **Additive** |
+| skill files (5 files) | Update transactions.skill.md with sign-only documentation. | **Documentation** |
+
+**No breaking changes.** All new features are additive to existing API surface.
 
 ---
 
 ## Sources
 
-### HIGH Confidence (공식 문서 + 코드베이스 분석)
-- WAIaaS 코드베이스 직접 분석: `packages/core/src/enums/chain.ts`, `packages/daemon/src/infrastructure/database/schema.ts`, `packages/adapters/evm/src/evm-chain-map.ts`, `packages/daemon/src/infrastructure/adapter-pool.ts`
-- [MetaMask Multichain Accounts](https://metamask.io/news/multichain-accounts) -- 계정 모델 리아키텍처, EVM+Solana+Bitcoin 통합
-- [Dfns Multichain Wallets](https://www.dfns.co/article/introducing-multichain-wallets) -- key-centric 모델, ECDSA/EdDSA 커브 기반 멀티체인
-- [Dfns Wallet Creation API](https://docs.dfns.co/guides/developers/creating-wallets) -- keyId 재사용으로 멀티 네트워크 월렛 생성
-- [Phantom Multichain](https://phantom.com/learn/blog/introducing-phantom-multichain) -- 자동 멀티체인 주소 생성, 통합 포트폴리오 뷰
+### HIGH Confidence (official docs + codebase analysis)
+- WAIaaS codebase direct analysis: IChainAdapter interface, 6-stage pipeline, DatabasePolicyEngine, MCP server, EVM/Solana adapters, SettingsService, NotificationService
+- [viem encodeFunctionData](https://viem.sh/docs/contract/encodeFunctionData.html) -- calldata encoding API
+- [viem decodeFunctionData](https://viem.sh/docs/contract/decodeFunctionData) -- calldata decoding API
+- [MCP Resources Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/resources) -- resource templates, URI schemes, subscription model
 
-### MEDIUM Confidence (WebSearch + 크로스 검증)
-- [Zerion Multichain Portfolio APIs Guide 2026](https://zerion.io/blog/best-multichain-portfolio-apis-2026-guide/) -- 단일 API 호출 멀티체인 잔액 집계
-- [Coinbase Wallet API v2](https://www.coinbase.com/developer-platform/products/wallet-sdk) -- chainId 트랜잭션 레벨 선택
-- [Fireblocks Multichain Deployment](https://developers.fireblocks.com/reference/sdk-multichain-deployment) -- vault account 멀티체인 지원
-- [Ankr getAccountBalance](https://www.ankr.com/docs/advanced-api/quickstart/account-balance-ankrjs/) -- 크로스체인 잔액 조회 API
-- [Circle Unified Wallet Addressing](https://developers.circle.com/wallets/unified-wallet-addressing-evm) -- EVM 통합 주소 체계
-- [Trust Wallet Testnet/Mainnet](https://trustwallet.com/blog/guides/what-is-a-testnet-in-crypto) -- 환경 분리 UX 패턴
-- [MetaMask Multichain API](https://docs.metamask.io/wallet/how-to/manage-networks/use-multichain/) -- 멀티 네트워크 동시 인터랙션
+### MEDIUM Confidence (WebSearch + cross-verification)
+- [Jupiter Ultra Swap API](https://dev.jup.ag/docs/ultra) -- unsigned tx flow: order -> sign -> execute
+- [Jupiter V6 Swap API](https://hub.jup.ag/docs/apis/swap-api) -- swap tx generation pattern
+- [Fireblocks Raw Signing](https://developers.fireblocks.com/docs/raw-signing) -- sign-only policy model: "policies reject all raw transactions by default"
+- [Circle Signing APIs](https://developers.circle.com/wallets/signing-apis) -- WaaS sign endpoint: /sign/transaction
+- [WalletConnect Sign API](https://specs.walletconnect.com/2.0/specs/clients/sign) -- session-based signing protocol
+- [Solana VersionedTransaction](https://docs.rs/solana-sdk/latest/solana_sdk/transaction/struct.VersionedTransaction.html) -- transaction deserialization
+- [Solana Mobile Wallet Adapter](https://docs.solanamobile.com/developers/mobile-wallet-adapter-deep-dive) -- sign-only vs sign-and-send pattern comparison
