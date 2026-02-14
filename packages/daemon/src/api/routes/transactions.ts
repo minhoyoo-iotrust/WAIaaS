@@ -1,7 +1,7 @@
 /**
- * Transaction routes: POST /v1/transactions/send, GET /v1/transactions/:id,
- * POST /v1/transactions/:id/approve, POST /v1/transactions/:id/reject,
- * POST /v1/transactions/:id/cancel.
+ * Transaction routes: POST /v1/transactions/send, POST /v1/transactions/sign,
+ * GET /v1/transactions/:id, POST /v1/transactions/:id/approve,
+ * POST /v1/transactions/:id/reject, POST /v1/transactions/:id/cancel.
  *
  * POST /v1/transactions/send:
  *   - Requires sessionAuth (Authorization: Bearer wai_sess_<token>),
@@ -61,9 +61,12 @@ import {
   TxApproveResponseSchema,
   TxRejectResponseSchema,
   TxCancelResponseSchema,
+  TxSignRequestSchema,
+  TxSignResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import { executeSignOnly } from '../../pipeline/sign-only.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -101,6 +104,34 @@ const sendTransactionRoute = createRoute({
       content: { 'application/json': { schema: TxSendResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+const signTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/sign',
+  tags: ['Transactions'],
+  summary: 'Sign an external unsigned transaction',
+  description:
+    'Parse, evaluate against policies, and sign an unsigned transaction built by an external dApp. Returns the signed transaction synchronously. DELAY/APPROVAL tier requests are immediately rejected.',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: TxSignRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Transaction signed successfully',
+      content: { 'application/json': { schema: TxSignResponseSchema } },
+    },
+    ...buildErrorResponses([
+      'INVALID_TRANSACTION',
+      'WALLET_NOT_SIGNER',
+      'POLICY_DENIED',
+      'WALLET_NOT_FOUND',
+    ]),
   },
 });
 
@@ -212,6 +243,7 @@ const pendingTransactionsRoute = createRoute({
  * Create transaction route sub-router.
  *
  * POST /transactions/send -> submits to pipeline, returns 201 with txId
+ * POST /transactions/sign -> sign external unsigned tx, returns 200 with signed tx
  * GET  /transactions -> list transactions with cursor pagination
  * GET  /transactions/pending -> list QUEUED/DELAYED/PENDING_APPROVAL txs
  * GET  /transactions/:id -> returns transaction status
@@ -367,6 +399,67 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     })();
 
     return response;
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /transactions/sign (sessionAuth -- sign external unsigned tx)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(signTransactionRoute, async (c) => {
+    const walletId = c.get('walletId' as never) as string;
+    const sessionId = c.get('sessionId' as never) as string | undefined;
+    const body = c.req.valid('json');
+
+    // Look up wallet
+    const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', { message: `Wallet '${walletId}' not found` });
+    }
+
+    // Resolve network (same pattern as POST /transactions/send)
+    const resolvedNetwork = resolveNetwork(
+      body.network as NetworkType | undefined,
+      wallet.defaultNetwork as NetworkType | null,
+      wallet.environment as EnvironmentType,
+      wallet.chain as ChainType,
+    );
+
+    // Resolve adapter
+    const rpcUrl = resolveRpcUrl(
+      deps.config.rpc as unknown as Record<string, string>,
+      wallet.chain,
+      resolvedNetwork,
+    );
+    const adapter = await deps.adapterPool.resolve(
+      wallet.chain as ChainType,
+      resolvedNetwork as NetworkType,
+      rpcUrl,
+    );
+
+    // Execute sign-only pipeline (fully synchronous within request)
+    const result = await executeSignOnly(
+      {
+        db: deps.db,
+        sqlite: deps.sqlite,
+        adapter,
+        keyStore: deps.keyStore,
+        policyEngine: deps.policyEngine,
+        masterPassword: deps.masterPassword,
+        notificationService: deps.notificationService,
+      },
+      walletId,
+      { transaction: body.transaction, chain: wallet.chain, network: resolvedNetwork },
+      sessionId,
+    );
+
+    // Transform to match OpenAPI schema (txHash: string | null, not undefined)
+    return c.json(
+      {
+        ...result,
+        txHash: result.txHash ?? null,
+      },
+      200,
+    );
   });
 
   // ---------------------------------------------------------------------------

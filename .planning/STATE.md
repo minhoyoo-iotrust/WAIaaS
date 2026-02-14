@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 117 Sign-Only Pipeline + REST API
+**Current focus:** v1.4.7 Phase 118 EVM Calldata Encoding
 
 ## Current Position
 
-Phase: 117 of 119 (Sign-Only Pipeline + REST API)
+Phase: 118 of 119 (EVM Calldata Encoding)
 Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Phase 116 완료 (Default Deny Toggles, 2/2 plans, verified)
+Status: Ready to execute
+Last activity: 2026-02-15 -- Phase 117 완료 (Sign-Only Pipeline + REST API, 2/2 plans, verified)
 
-Progress: [####░░░░░░] 40%
+Progress: [######░░░░] 60%
 
 ## Performance Metrics
 
@@ -29,6 +29,8 @@ Progress: [####░░░░░░] 40%
 | 115-03 | 3/3 | 6min | 6min |
 | 116-01 | 1/2 | 3min | 3min |
 | 116-02 | 2/2 | 3min | 3min |
+| 117-01 | 1/2 | 5min | 5min |
+| 117-02 | 2/2 | 7min | 7min |
 
 ## Accumulated Context
 
@@ -46,20 +48,26 @@ Recent decisions affecting current work:
 - v9 migration은 transactions 테이블만 재생성
 - getCompiledTransactionMessageDecoder 사용 (decompileTransactionMessage 대신 -- v0 lookup table 회피)
 - parseTransaction/signExternalTransaction은 offline 연산 (RPC 불필요)
+- txHash: SignOnlyResult undefined -> API 응답에서 null 변환 (OpenAPI nullable 스키마 호환)
+- signTransactionRoute를 getTransactionRoute 앞에 배치 (route ordering pitfall 방지)
 - viem parseTransaction을 viemParseTransaction으로 alias import (IChainAdapter 메서드명 충돌 해소)
 - value + calldata 동시 존재 시 CONTRACT_CALL로 분류 (calldata 우선 원칙)
 - settingsService를 DatabasePolicyEngine 선택적 3번째 파라미터로 DI (하위 호환)
 - 토글은 "no policy exists" 분기에서만 확인 -- 정책 존재 시 토글 무관 화이트리스트 평가
 - settingsService?.get() null-safe 패턴: 미전달 시 기본 거부 유지
 - 토글 테스트에서 SettingsService 실제 인스턴스 사용 (mock 대신) -- hot-reload DB 동작 검증
+- sign-only 파이프라인은 별도 모듈로 분리 (stages.ts 수정 없음)
+- reservation SUM 쿼리에 SIGNED 포함 (이중 지출 방지)
+- key release는 finally 블록에서만 수행 (catch에서 호출 금지)
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
+- Pre-existing settings-service.test.ts 실패 (SETTING_DEFINITIONS count 32 vs 35)
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 116 완료, Phase 117 plan+execute 대기
+Stopped at: Phase 117 완료, Phase 118 execute 대기
 Resume file: None

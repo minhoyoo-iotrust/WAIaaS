@@ -525,13 +525,14 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
       const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
       if (spendingPolicy) {
-        // Sum of reserved_amount for wallet's PENDING/QUEUED transactions
+        // Sum of reserved_amount for wallet's PENDING/QUEUED/SIGNED transactions
+        // SIGNED included for sign-only pipeline reservation (TOCTOU prevention)
         const reservedRow = sqlite
           .prepare(
             `SELECT COALESCE(SUM(CAST(reserved_amount AS INTEGER)), 0) AS total
              FROM transactions
              WHERE wallet_id = ?
-               AND status IN ('PENDING', 'QUEUED')
+               AND status IN ('PENDING', 'QUEUED', 'SIGNED')
                AND reserved_amount IS NOT NULL`,
           )
           .get(walletId) as { total: number };
