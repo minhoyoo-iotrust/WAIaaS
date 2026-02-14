@@ -10,15 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 109 of 114 (DB 마이그레이션 + 환경 모델 SSoT)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Roadmap created for v1.4.6
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-14 -- 109-01 EnvironmentType SSoT 완료
 
-Progress: [░░░░░░░░░░] 0% (0/13 plans)
+Progress: [█░░░░░░░░░] 8% (1/13 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 25 milestones, 108 phases, 232 plans, 646 reqs, 1,467 tests, 62,296 LOC
+**Cumulative:** 25 milestones, 108 phases, 233 plans, 646 reqs, 1,498 tests, 62,296 LOC
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 109 | 01 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -32,6 +36,8 @@ Recent decisions affecting current work:
 - v1.4.5: resolveNetwork() 순수 함수 (클래스 아님)
 - v1.4.5: ALLOWED_NETWORKS permissive default (미설정 시 전체 허용)
 - v1.4.5: policies.network DB 컬럼 (not rules JSON)
+- 109-01: ENVIRONMENT_TYPES는 chain.ts에 기존 SSoT와 동일 위치에 배치 (ENV-02)
+- 109-01: ENVIRONMENT_DEFAULT_NETWORK은 getDefaultNetwork() 함수로 간접 검증
 
 ### Blockers/Concerns
 
@@ -42,5 +48,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Roadmap created, ready to plan Phase 109
+Stopped at: Completed 109-01-PLAN.md (EnvironmentType SSoT)
 Resume file: None
