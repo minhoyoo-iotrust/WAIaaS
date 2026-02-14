@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 119 of 119 (SDK + MCP + Notifications + Skill Resources)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-15 -- 119-01 완료 (Sign Transaction SDK/MCP, 2 tasks, 3min)
+Last activity: 2026-02-15 -- 119-03 완료 (POLICY_VIOLATION enrichment + sign-only skill docs, 2 tasks, 4min)
 
 Progress: [########░░] 80%
 
@@ -34,6 +34,7 @@ Progress: [########░░] 80%
 | 118-01 | 1/2 | 5min | 5min |
 | 118-02 | 2/2 | 3min | 3min |
 | 119-01 | 1/3 | 3min | 3min |
+| 119-03 | 3/3 | 4min | 4min |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - Python SDK function_name 파라미터명 (PEP8), Pydantic alias로 functionName 직렬화
 - MCP sign_transaction에 chain 파라미터 미노출 (wallet에서 자동 추론)
 - MCP sign_transaction이 13번째 도구로 등록 (12->13)
+- txParam을 stage3Policy 함수 스코프로 호이스팅 (BATCH/non-BATCH 공통 접근)
+- tokenAddress/contractAddress는 notification body에 미포함 (빈 값 방지), vars metadata로만 전달
+- sign-only 섹션을 transactions.skill.md 10번에 삽입, encode-calldata 11번으로 리넘버링
 
 ### Blockers/Concerns
 
@@ -79,5 +83,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 119-01-PLAN.md
+Stopped at: Completed 119-03-PLAN.md
 Resume file: None
