@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 118 of 119 (EVM Calldata Encoding)
-Plan: 0 of 2 in current phase
-Status: Ready to execute
-Last activity: 2026-02-15 -- Phase 117 완료 (Sign-Only Pipeline + REST API, 2/2 plans, verified)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 -- 118-01 완료 (encode-calldata REST endpoint, 2 tasks, 5min)
 
 Progress: [######░░░░] 60%
 
@@ -31,6 +31,7 @@ Progress: [######░░░░] 60%
 | 116-02 | 2/2 | 3min | 3min |
 | 117-01 | 1/2 | 5min | 5min |
 | 117-02 | 2/2 | 7min | 7min |
+| 118-01 | 1/2 | 5min | 5min |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ Recent decisions affecting current work:
 - sign-only 파이프라인은 별도 모듈로 분리 (stages.ts 수정 없음)
 - reservation SUM 쿼리에 SIGNED 포함 (이중 지출 방지)
 - key release는 finally 블록에서만 수행 (catch에서 호출 금지)
+- viem encodeFunctionData 직접 import (adapter-evm 경유 안 함)
+- abi 타입을 as unknown as Abi 이중 캐스트 (Record<string, unknown>[] -> Abi 직접 변환 불가)
+- utils 라우트 등록을 deps-check 밖에 배치 (DB/adapter 의존성 없음)
 
 ### Blockers/Concerns
 
@@ -69,5 +73,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 117 완료, Phase 118 execute 대기
+Stopped at: Completed 118-01-PLAN.md
 Resume file: None
