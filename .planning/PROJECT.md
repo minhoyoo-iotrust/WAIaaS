@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포 + Python SDK, ~73,000 LOC, 1,580 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송(네트워크 선택) → 컨트랙트 호출 → Approve → 배치 → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터) + Telegram/Discord/ntfy 알림(실제 트리거 연결) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + 설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정(get_wallet_info 포함 11 도구) + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
+v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~175,480 LOC, 1,636 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송(네트워크 선택) → 컨트랙트 호출 → Approve → 배치 → **외부 dApp unsigned tx 서명(sign-only)** → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, **signTransaction/encodeCalldata**) + Telegram/Discord/ntfy 알림(실제 트리거 연결, **POLICY_VIOLATION enrichment**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + **기본 거부 토글 3개** + 설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정(**13 도구 + 스킬 리소스**) + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -27,6 +27,7 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포
 - ✅ v1.4.4 Admin Settings + MCP 5-type + Skill Files — shipped 2026-02-14 (1,467 tests, 62,296 LOC)
 - ✅ v1.4.5 멀티체인 월렛 모델 설계 — shipped 2026-02-14 (설계 문서 5개, 설계 결정 31개)
 - ✅ v1.4.6 멀티체인 월렛 구현 — shipped 2026-02-14 (1,580 tests, ~73,000 LOC)
+- ✅ v1.4.7 임의 트랜잭션 서명 API — shipped 2026-02-15 (1,636 tests, ~175,480 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -35,16 +36,17 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~73,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,580 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~175,480 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,636 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 44 엔드포인트 (42 + PUT /default-network + GET /networks), GET /doc OpenAPI 3.0 자동 생성
-- 5개 API 스킬 파일 (skills/ 디렉토리) — AI 에이전트 즉시 사용 가능
-- IChainAdapter 20 메서드, discriminatedUnion 5-type 파이프라인, 11 PolicyType (ALLOWED_NETWORKS 추가)
+- OpenAPIHono 46 엔드포인트 (44 + POST /transactions/sign + POST /utils/encode-calldata), GET /doc OpenAPI 3.0 자동 생성
+- 5개 API 스킬 파일 (skills/ 디렉토리) — AI 에이전트 즉시 사용 가능 + MCP 스킬 리소스(waiaas://skills/{name})
+- IChainAdapter 22 메서드 (parseTransaction/signExternalTransaction 추가), discriminatedUnion 5-type 파이프라인, 11 PolicyType
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- MCP 11개 도구 (send_transaction, send_token, get_balance, get_assets, call_contract, approve_token, send_batch, get_wallet_info 등)
+- MCP 13개 도구 (+ sign_transaction, encode_calldata) + 5개 스킬 리소스
+- 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - 설계 문서 36개 (24-72), 8 objective 문서
 
 ## 요구사항
@@ -229,20 +231,16 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포
 - ✓ CLI quickstart --mode testnet/mainnet 원스톱 Solana+EVM 2월렛 생성 — v1.4.6
 - ✓ Skill 파일 4개 동기화 (quickstart, wallet, transactions, policies) — v1.4.6
 
+- ✓ Sign-only 파이프라인 — POST /v1/transactions/sign (unsigned tx 파싱 → 기존 정책 평가 → 동기 서명 반환), DELAY/APPROVAL 즉시 거부, reserved_amount SIGNED 이중 지출 방지 — v1.4.7 (SIGN-01~15)
+- ✓ Solana/EVM unsigned tx 파서 — IChainAdapter parseTransaction/signExternalTransaction 22메서드, ParsedOperationType 5종, DB 마이그레이션 v9 — v1.4.7 (SIGN-02~05,09,14)
+- ✓ EVM calldata 인코딩 유틸리티 — POST /v1/utils/encode-calldata, TS/Python SDK encodeCalldata, MCP encode_calldata 도구 — v1.4.7 (ENCODE-01~05)
+- ✓ 기본 거부 정책 3개 토글 — default_deny_tokens/contracts/spenders ON/OFF, SettingsService DI, hot-reload — v1.4.7 (TOGGLE-01~05)
+- ✓ MCP 스킬 리소스 — waiaas://skills/{name} ResourceTemplate 5개, SKILL_NOT_FOUND 에러 — v1.4.7 (MCPRES-01~03)
+- ✓ POLICY_VIOLATION 알림 보강 — policyType/contractAddress/tokenAddress/adminLink vars enrichment — v1.4.7 (NOTIF-01~02)
+
 ### 활성
 
-## Current Milestone: v1.4.7 임의 트랜잭션 서명 API
-
-**Goal:** 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS가 정책 평가 후 서명하여 반환하는 API 제공 (Solana + EVM)
-
-**Target features:**
-- sign-only 파이프라인 (접수 → 파싱 → 정책 평가 → 서명 → 반환)
-- Solana/EVM unsigned tx 파싱 → 기존 정책 엔진 매핑
-- EVM calldata 인코딩 유틸리티 (encodeFunctionData)
-- 기본 거부 정책 토글 (ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS)
-- MCP 스킬 리소스 노출 (waiaas://skills/{name})
-- 정책 거부 알림 보강 (contractAddress, policyType 포함)
-- REST API + TS/Python SDK + MCP 도구
+(다음 마일스톤에서 정의)
 
 ## Next Milestone Goals
 
@@ -265,7 +263,7 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포
 
 ## 컨텍스트
 
-**누적:** 26 milestones (v0.1-v1.4.6), 114 phases, 245 plans, 681 requirements, 36 설계 문서(24-72), 8 objective 문서, ~73,000 LOC, 1,580 테스트
+**누적:** 27 milestones (v0.1-v1.4.7), 119 phases, 257 plans, 711 requirements, 36 설계 문서(24-72), 8 objective 문서, ~175,480 LOC, 1,636 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -283,6 +281,7 @@ v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX + 버그 수정 shipped (2026-0
 v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). 5 페이즈, 10 플랜, 24 요구사항, 62,296 LOC, 1,467 테스트.
 v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 4 페이즈, 6 플랜, 19 요구사항, 설계 문서 5개(68-72), 설계 결정 31개.
 v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 35 요구사항, ~73,000 LOC, 1,580 테스트, 38 설계 결정.
+v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 5 페이즈, 12 플랜, 30 요구사항, ~175,480 LOC, 1,636 테스트, 33 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -435,6 +434,15 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 
 | get_wallet_info 파라미터 없는 MCP 도구 | address + networks 2단계 API 호출 조합 | ✓ Good — v1.4.6 구현 |
 | Python SDK keyword-only network 파라미터 | 기존 positional args 하위호환 유지 | ✓ Good — v1.4.6 구현 |
 | quickstart buildConfigEntry 인라인 복제 | 공통 유틸 추출은 scope 외, YAGNI | ✓ Good — v1.4.6 구현 |
+| DELAY/APPROVAL tier sign-only 즉시 거부 | 동기 API에서 blockhash/nonce 만료 위험 | ✓ Good — v1.4.7 구현 |
+| 파싱 실패 = DENY 원칙 | 알려진 패턴만 통과, 보안 기본값 | ✓ Good — v1.4.7 구현 |
+| ParsedOperationType 5종 | NATIVE_TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/UNKNOWN | ✓ Good — v1.4.7 구현 |
+| sign-only 파이프라인 별도 모듈 분리 | stages.ts 수정 없음, 독립 모듈 | ✓ Good — v1.4.7 구현 |
+| reservation SUM 쿼리에 SIGNED 포함 | 이중 지출 방지, TOCTOU 일관성 | ✓ Good — v1.4.7 구현 |
+| settingsService 선택적 3번째 파라미터 DI | 하위 호환, null-safe 패턴 | ✓ Good — v1.4.7 구현 |
+| skills 라우트 public (인증 불필요) | nonce/health와 동일 레벨 | ✓ Good — v1.4.7 구현 |
+| ResourceTemplate list callback 정적 나열 | VALID_SKILLS 배열 기반, 동적 조회 불필요 | ✓ Good — v1.4.7 구현 |
+| SKILL_NOT_FOUND SYSTEM 도메인 배치 | 스킬은 시스템 리소스 | ✓ Good — v1.4.7 구현 |
 
 ---
-*최종 업데이트: 2026-02-14 after v1.4.7 milestone started*
+*최종 업데이트: 2026-02-15 after v1.4.7 milestone completed*

@@ -705,3 +705,33 @@
 
 ---
 
+
+## v1.4.7 임의 트랜잭션 서명 API (Shipped: 2026-02-15)
+
+**Delivered:** 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS가 정책 평가 후 서명하여 반환하는 sign-only API를 구현 — Solana/EVM unsigned tx 파서, 기본 거부 정책 3개 토글, EVM calldata 인코딩 유틸리티, MCP 스킬 리소스 노출, 정책 거부 알림 보강까지 REST API + TS/Python SDK + MCP 전체 인터페이스 완성
+
+**Phases completed:** 115-119 (12 plans total)
+
+**Key accomplishments:**
+
+- Solana/EVM unsigned tx 파서 — IChainAdapter parseTransaction/signExternalTransaction 22메서드, ParsedOperationType 5종(NATIVE_TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/UNKNOWN), DB 마이그레이션 v9 (SIGNED/SIGN SSoT)
+- 기본 거부 정책 3개 토글 — default_deny_tokens/contracts/spenders ON/OFF, SettingsService DI, 화이트리스트 정책 공존 시 토글 무시, hot-reload 즉시 반영
+- Sign-only 파이프라인 + REST API — POST /v1/transactions/sign (접수→파싱→정책→서명→반환), DELAY/APPROVAL 즉시 거부, reserved_amount SIGNED 누적 이중 지출 방지
+- EVM calldata 인코딩 유틸리티 — POST /v1/utils/encode-calldata (viem encodeFunctionData), ABI_ENCODING_FAILED 에러 코드
+- TS/Python SDK + MCP 13개 도구 — signTransaction/encodeCalldata SDK 메서드, MCP sign_transaction(13번째)/encode_calldata(12번째) 도구
+- MCP 스킬 리소스 + 알림 보강 — waiaas://skills/{name} ResourceTemplate 5개, POLICY_VIOLATION 알림 enrichment (policyType/contractAddress/tokenAddress/adminLink)
+
+**Stats:**
+
+- 54 files changed, +4,356 / -73 lines
+- 5 phases, 12 plans, 30 requirements, 33 설계 결정
+- 1,636 tests (1,580 → 1,636, +56 new tests)
+- ~175,480 LOC total
+- 1 day (2026-02-14 → 2026-02-15)
+
+**Git range:** `9acdc6e` (Phase 115 start) → `3641cc3` (Phase 119 complete)
+
+**What's next:** v1.4.8 Admin DX + 알림 개선 또는 v1.5 DeFi + 가격 오라클
+
+---
+
