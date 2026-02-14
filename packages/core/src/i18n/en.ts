@@ -3,7 +3,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
- * Keys in errors must match ERROR_CODES keys exactly (68 error codes).
+ * Keys in errors must match ERROR_CODES keys exactly (69 error codes).
  * Notification templates cover all 21 event types.
  */
 export interface Messages {
@@ -25,7 +25,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (68 error codes from SS10.12 unified matrix)
+  // Error messages (69 error codes from SS10.12 unified matrix)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -68,6 +68,7 @@ export const messages: Messages = {
     BATCH_NOT_SUPPORTED: 'Batch transactions not supported on this chain',
     BATCH_SIZE_EXCEEDED: 'Batch size exceeded',
     BATCH_POLICY_VIOLATION: 'Batch policy violation',
+    ENVIRONMENT_NETWORK_MISMATCH: "Network is not allowed in this wallet's environment",
     // POLICY domain (5)
     POLICY_NOT_FOUND: 'Policy not found',
     POLICY_DENIED: 'Policy denied',

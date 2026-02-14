@@ -11,7 +11,8 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest } from '@waiaas/core';
+import { resolveNetwork } from './network-resolver.js';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
@@ -63,6 +64,14 @@ export class TransactionPipeline {
       });
     }
 
+    // Resolve network from request > wallet.defaultNetwork > environment default
+    const resolvedNetwork = resolveNetwork(
+      (request as { network?: string }).network as NetworkType | undefined,
+      wallet.defaultNetwork as NetworkType | null,
+      wallet.environment as EnvironmentType,
+      wallet.chain as ChainType,
+    );
+
     // Create pipeline context
     const ctx: PipelineContext = {
       ...this.deps,
@@ -70,8 +79,10 @@ export class TransactionPipeline {
       wallet: {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        environment: wallet.environment,
+        defaultNetwork: wallet.defaultNetwork ?? null,
       },
+      resolvedNetwork,
       request,
       txId: '',
     };

@@ -26,8 +26,8 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
-import type { ChainType, NetworkType } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
@@ -621,15 +621,20 @@ export class DaemonLifecycle {
         return;
       }
 
-      // Resolve adapter from pool using wallet chain:network
+      // Use network recorded at Stage 1 (NOT re-resolve -- wallet.defaultNetwork may have changed)
+      const resolvedNetwork: string =
+        tx.network
+        ?? getDefaultNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType);
+
+      // Resolve adapter from pool using recorded network
       const rpcUrl = resolveRpcUrl(
         this._config.rpc as unknown as Record<string, string>,
         wallet.chain,
-        wallet.defaultNetwork!,
+        resolvedNetwork,
       );
       const adapter = await this.adapterPool.resolve(
         wallet.chain as ChainType,
-        wallet.defaultNetwork as NetworkType,
+        resolvedNetwork as NetworkType,
         rpcUrl,
       );
 
@@ -644,8 +649,10 @@ export class DaemonLifecycle {
         wallet: {
           publicKey: wallet.publicKey,
           chain: wallet.chain,
-          network: wallet.defaultNetwork!,
+          environment: wallet.environment,
+          defaultNetwork: wallet.defaultNetwork ?? null,
         },
+        resolvedNetwork,
         request: {
           to: tx.toAddress ?? '',
           amount: tx.amount ?? '0',

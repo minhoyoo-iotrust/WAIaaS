@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 111 - 파이프라인 네트워크 해결
+**Current focus:** Phase 112 - REST API 네트워크 확장
 
 ## Current Position
 
-Phase: 111 of 114 (파이프라인 네트워크 해결)
+Phase: 112 of 114 (REST API 네트워크 확장)
 Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 110 완료 (verified: 4/4 must-haves)
+Last activity: 2026-02-14 -- Phase 111 완료 (verified: 4/4 must-haves)
 
-Progress: [███░░░░░░░] 31% (4/13 plans)
+Progress: [█████░░░░░] 46% (6/13 plans)
 
 ## Performance Metrics
 
@@ -26,6 +26,8 @@ Progress: [███░░░░░░░] 31% (4/13 plans)
 | 109 | 02 | 45min | 2 | 32 |
 | 110 | 01 | 7min | 2 | 10 |
 | 110 | 02 | 7min | 2 | 2 |
+| 111 | 01 | 8min | 2 | 18 |
+| 111 | 02 | 5min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -52,6 +54,11 @@ Recent decisions affecting current work:
 - 110-02: resolveOverrides 4단계 typeMap[type] 단일 키 유지 (PLCY-D03)
 - 110-02: evaluate() Drizzle WHERE에도 network 필터 추가
 - 110-02: evaluateAndReserve raw SQL network 바인딩 (transaction.network ?? null)
+- 111-01: resolveNetwork() 순수 함수 별도 파일 배치 (PIPE-D01, stages.ts 비대 방지)
+- 111-01: ENVIRONMENT_NETWORK_MISMATCH 별도 에러 코드 신설 (PIPE-D03, 보안 중요도)
+- 111-01: daemon.ts executeFromStage5에서 tx.network 직접 사용 (PIPE-D04, 안전성)
+- 111-02: resolveNetwork 에러 분류: environment 포함 -> ENVIRONMENT_NETWORK_MISMATCH, 나머지 -> ACTION_VALIDATION_FAILED
+- 111-02: pipeline.ts에도 resolveNetwork 호출 추가 (approve/reject 워크플로우 경로 커버)
 
 ### Blockers/Concerns
 
@@ -62,5 +69,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 110 verified PASSED, ready to plan Phase 111
+Stopped at: Phase 111 verified PASSED, ready to plan Phase 112
 Resume file: None

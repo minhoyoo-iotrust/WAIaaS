@@ -25,7 +25,7 @@ import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { ChainType, NetworkType, IPolicyEngine } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -41,6 +41,7 @@ import {
   stage6Confirm,
 } from '../../pipeline/stages.js';
 import type { PipelineContext } from '../../pipeline/stages.js';
+import { resolveNetwork } from '../../pipeline/network-resolver.js';
 import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
@@ -252,15 +253,40 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     // Actual Zod validation is delegated to stage1Validate (5-type or legacy).
     const request = await c.req.json();
 
-    // Resolve adapter from pool for this wallet's chain:network
+    // Resolve network: request > wallet.defaultNetwork > environment default
+    let resolvedNetwork: string;
+    try {
+      resolvedNetwork = resolveNetwork(
+        request.network as NetworkType | undefined,
+        wallet.defaultNetwork as NetworkType | null,
+        wallet.environment as EnvironmentType,
+        wallet.chain as ChainType,
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('environment')) {
+        console.warn(
+          `[SECURITY] Environment-network mismatch attempt: ` +
+          `wallet=${walletId}, chain=${wallet.chain}, env=${wallet.environment}, ` +
+          `requestedNetwork=${request.network ?? 'null'}`,
+        );
+        throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
+          message: err.message,
+        });
+      }
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: err instanceof Error ? err.message : 'Network validation failed',
+      });
+    }
+
+    // Resolve adapter from pool for this wallet's chain:resolvedNetwork
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      wallet.defaultNetwork!,
+      resolvedNetwork,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      wallet.defaultNetwork as NetworkType,
+      resolvedNetwork as NetworkType,
       rpcUrl,
     );
 
@@ -275,8 +301,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       wallet: {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        environment: wallet.environment,
+        defaultNetwork: wallet.defaultNetwork ?? null,
       },
+      resolvedNetwork,
       request,
       txId: '', // stage1Validate will assign
       sessionId: c.get('sessionId' as never) as string | undefined,

@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (68 error codes)
+  // Error messages (69 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -44,6 +44,7 @@ export const messages: Messages = {
     BATCH_NOT_SUPPORTED: '이 체인에서 배치 트랜잭션이 지원되지 않습니다',
     BATCH_SIZE_EXCEEDED: '배치 크기를 초과했습니다',
     BATCH_POLICY_VIOLATION: '배치 정책 위반입니다',
+    ENVIRONMENT_NETWORK_MISMATCH: '네트워크가 이 지갑의 환경에서 허용되지 않습니다',
     // POLICY domain (5)
     POLICY_NOT_FOUND: '정책을 찾을 수 없습니다',
     POLICY_DENIED: '정책에 의해 거부되었습니다',
