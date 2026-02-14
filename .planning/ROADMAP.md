@@ -107,11 +107,11 @@ Plans:
   2. waiaas quickstart --mode mainnet 실행 시 메인넷 환경의 동일한 결과가 출력된다
   3. 기존 월렛/API/MCP/정책이 network 미지정 시 기존과 동일하게 동작한다 (하위호환)
   4. quickstart/wallet/transactions/policies 4개 스킬 파일이 environment/network 파라미터를 반영하여 동기화되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 114-01: CLI quickstart --mode testnet/mainnet 구현
-- [ ] 114-02: 스킬 파일 4개 동기화 + 하위호환 검증 테스트
+- [ ] 114-01-PLAN.md -- CLI quickstart --mode testnet/mainnet 구현 + 테스트 (Wave 1)
+- [ ] 114-02-PLAN.md -- 스킬 파일 4개 동기화 (quickstart, wallet, transactions, policies) (Wave 1)
 
 ## Progress
 
