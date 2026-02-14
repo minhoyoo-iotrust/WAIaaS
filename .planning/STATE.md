@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 114 of 114 (CLI Quickstart + DX Integration)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-14 -- 114-01 완료 (CLI quickstart 명령 구현)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-14 -- 114-02 완료 (스킬 파일 v1.4.6 환경 모델 동기화)
 
-Progress: [█████████░] 92% (12/13 plans)
+Progress: [██████████] 100% (13/13 plans)
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [█████████░] 92% (12/13 plans)
 | 113 | 02 | 4min | 2 | 7 |
 | 113 | 03 | 3min | 2 | 5 |
 | 114 | 01 | 3min | 2 | 3 |
+| 114 | 02 | 6min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -80,6 +81,10 @@ Recent decisions affecting current work:
 - 113-03: ADMIN-03 트랜잭션 목록 건너뜀 (sessionAuth 필요, 범위 초과)
 - 114-01: buildConfigEntry/printConfigPath 인라인 복제 (공통 유틸 추출은 scope 외)
 - 114-01: networks API 실패 시 빈 배열 fallback (113-01 graceful degradation 패턴 재사용)
+- 114-02: 스킬 파일 월렛 생성에서 network 파라미터 완전 제거, environment만 사용
+- 114-02: ALLOWED_NETWORKS permissive default 강조 (Default Deny 테이블에 미추가)
+- 114-02: 환경-네트워크 매핑 테이블을 wallet.skill.md Section 7에 SSoT로 배치
+- 114-02: 정책 network 스코프 우선순위 명시: wallet+network > wallet+null > global+network > global+null
 
 ### Blockers/Concerns
 
@@ -90,5 +95,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 114-01-PLAN.md (CLI quickstart 명령 구현)
+Stopped at: Completed 114-02-PLAN.md (Phase 114 전체 완료)
 Resume file: None
