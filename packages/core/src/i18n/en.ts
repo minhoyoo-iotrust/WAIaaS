@@ -3,7 +3,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
- * Keys in errors must match ERROR_CODES keys exactly (73 error codes).
+ * Keys in errors must match ERROR_CODES keys exactly (74 error codes).
  * Notification templates cover all 21 event types.
  */
 export interface Messages {
@@ -25,7 +25,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (73 error codes from SS10.12 unified matrix)
+  // Error messages (74 error codes from SS10.12 unified matrix)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -86,13 +86,14 @@ export const messages: Messages = {
     OWNER_NOT_FOUND: 'Owner not found',
     APPROVAL_TIMEOUT: 'Approval request has timed out',
     APPROVAL_NOT_FOUND: 'Approval request not found',
-    // SYSTEM domain (6)
+    // SYSTEM domain (7)
     KILL_SWITCH_ACTIVE: 'Kill switch is already active',
     KILL_SWITCH_NOT_ACTIVE: 'Kill switch is not active',
     KEYSTORE_LOCKED: 'Keystore is locked',
     CHAIN_NOT_SUPPORTED: 'Chain not supported',
     SHUTTING_DOWN: 'Server is shutting down',
     ADAPTER_NOT_AVAILABLE: 'Chain adapter not available',
+    SKILL_NOT_FOUND: 'Skill not found',
     // WALLET domain (3)
     WALLET_NOT_FOUND: 'Wallet not found',
     WALLET_SUSPENDED: 'Wallet is suspended',
@@ -124,7 +125,7 @@ export const messages: Messages = {
     TX_DOWNGRADED_DELAY: { title: 'Transaction Delayed', body: 'Transaction {txId} downgraded to delay queue ({seconds}s cooldown)' },
     TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to}' },
     TX_APPROVAL_EXPIRED: { title: 'Approval Expired', body: 'Approval for transaction {txId} has expired' },
-    POLICY_VIOLATION: { title: 'Policy Violation', body: 'Wallet {walletId} policy violation: {reason}' },
+    POLICY_VIOLATION: { title: 'Policy Violation', body: 'Wallet {walletId} policy violation: {reason}. Policy: {policyType}. Manage: {adminLink}' },
     WALLET_SUSPENDED: { title: 'Wallet Suspended', body: 'Wallet {walletId} has been suspended: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },

@@ -3,7 +3,7 @@ name: "WAIaaS Transactions"
 description: "All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
-version: "1.4.6"
+version: "1.4.7"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -512,7 +512,84 @@ Policies can assign transaction tiers that determine the execution flow:
 | `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Specified network does not belong to wallet's environment | Use a network valid for the wallet's environment |
 | `ABI_ENCODING_FAILED` | 400 | Function not found in ABI, or argument type mismatch | Verify ABI fragment contains the function and arguments match expected types |
 
-## 10. Encode Calldata (EVM Utility)
+## 10. Sign External Transaction (sign-only)
+
+Sign an externally built unsigned transaction after policy evaluation. The signed transaction is returned without being submitted to the blockchain.
+
+### POST /v1/transactions/sign
+
+**Auth:** sessionAuth (Bearer token)
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| transaction | string | Yes | Unsigned transaction (base64 for Solana, 0x-hex for EVM) |
+| network | string | No | Target network (defaults to wallet default) |
+
+**Response (200):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Transaction record ID |
+| signedTransaction | string | Signed transaction bytes (same encoding as input) |
+| txHash | string/null | Transaction hash (null if not computable before submission) |
+| operations | array | Parsed operations from the unsigned tx |
+| policyResult | object | `{ tier: string }` - policy evaluation tier |
+
+**Operations object:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| type | string | NATIVE_TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, UNKNOWN |
+| to | string/null | Destination address |
+| amount | string/null | Amount in smallest unit |
+| token | string/null | Token address (for TOKEN_TRANSFER/APPROVE) |
+
+**Example (Solana):**
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/sign \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "transaction": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABhbG9uZQ=="
+  }'
+```
+
+**Example (EVM):**
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/sign \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "transaction": "0x02f86c0180843b9aca00850ba43b7400825208940x...",
+    "network": "polygon-mainnet"
+  }'
+```
+
+**Error Codes:**
+
+| Code | Status | Description |
+|------|--------|-------------|
+| `INVALID_TRANSACTION` | 400 | Raw transaction parsing failed |
+| `WALLET_NOT_SIGNER` | 400 | Wallet is not a signer in the transaction |
+| `CHAIN_ID_MISMATCH` | 400 | Transaction chain ID doesn't match network |
+| `POLICY_DENIED` | 403 | Policy evaluation denied one or more operations |
+| `UNSUPPORTED_TX_TYPE` | 400 | Transaction type not supported |
+
+**SDK Usage:**
+- TypeScript: `await client.signTransaction({ transaction: '...', network: 'polygon-mainnet' })`
+- Python: `await client.sign_transaction('...', network='polygon-mainnet')`
+- MCP tool: `sign_transaction` with `transaction` + optional `network`
+
+**Notes:**
+- DELAY/APPROVAL tier transactions are immediately rejected (incompatible with synchronous API)
+- Signed results are recorded in the transactions table with type='SIGN', status='SIGNED'
+- Amounts are accumulated in reserved_amount to prevent double-spending against SPENDING_LIMIT
+
+## 11. Encode Calldata (EVM Utility)
 
 Encode an EVM function call into hex calldata. This utility helps construct the `calldata` parameter for `CONTRACT_CALL` transactions without needing an ABI encoding library.
 

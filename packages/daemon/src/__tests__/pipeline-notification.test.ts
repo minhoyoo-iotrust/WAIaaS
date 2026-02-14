@@ -225,7 +225,15 @@ describe('stage3Policy: POLICY_VIOLATION notification', () => {
     expect(notificationService.notify).toHaveBeenCalledWith(
       'POLICY_VIOLATION',
       walletId,
-      { reason: 'limit exceeded', amount: '1000000000', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr' },
+      {
+        reason: 'limit exceeded',
+        amount: '1000000000',
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        policyType: '',
+        tokenAddress: '',
+        contractAddress: '',
+        adminLink: '/admin/policies',
+      },
       { txId: ctx.txId },
     );
   });

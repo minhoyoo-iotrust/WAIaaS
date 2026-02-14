@@ -23,6 +23,9 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
     tool: mockTool,
     resource: mockResource,
   })),
+  ResourceTemplate: vi.fn().mockImplementation(() => ({
+    uriTemplate: { toString: () => 'waiaas://skills/{name}' },
+  })),
 }));
 
 function createMockApiClient(): ApiClient {
@@ -80,8 +83,8 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 12 tools should be registered
-    expect(mockTool).toHaveBeenCalledTimes(12);
+    // 13 tools should be registered
+    expect(mockTool).toHaveBeenCalledTimes(13);
 
     // Every tool call's second argument (description) should have the prefix
     for (const call of mockTool.mock.calls) {
@@ -94,8 +97,8 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 3 resources should be registered
-    expect(mockResource).toHaveBeenCalledTimes(3);
+    // 4 resource groups should be registered (3 static + 1 template)
+    expect(mockResource).toHaveBeenCalledTimes(4);
 
     // Resource metadata (3rd argument) should have prefixed description
     for (const call of mockResource.mock.calls) {

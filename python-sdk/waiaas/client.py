@@ -13,6 +13,8 @@ from waiaas.models import (
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
+    SignTransactionRequest,
+    SignTransactionResponse,
     TokenInfo,
     TransactionDetail,
     TransactionList,
@@ -265,3 +267,27 @@ class WAIaaSClient:
         body = request.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request("POST", "/v1/utils/encode-calldata", json_body=body)
         return EncodeCalldataResponse.model_validate(resp.json())
+
+    async def sign_transaction(
+        self,
+        transaction: str,
+        *,
+        chain: Optional[str] = None,
+        network: Optional[str] = None,
+    ) -> SignTransactionResponse:
+        """POST /v1/transactions/sign -- Sign an unsigned transaction without broadcasting.
+
+        Args:
+            transaction: Raw unsigned transaction (base64 for Solana, hex for EVM).
+            chain: Chain hint (optional, usually auto-detected from wallet).
+            network: Target network (e.g., 'polygon-mainnet').
+
+        Returns:
+            SignTransactionResponse with signed transaction, operations, and policy result.
+        """
+        request = SignTransactionRequest(
+            transaction=transaction, chain=chain, network=network
+        )
+        body = request.model_dump(exclude_none=True, by_alias=True)
+        resp = await self._request("POST", "/v1/transactions/sign", json_body=body)
+        return SignTransactionResponse.model_validate(resp.json())

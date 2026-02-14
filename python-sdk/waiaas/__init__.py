@@ -13,6 +13,8 @@ from waiaas.models import (
     PendingTransactionList,
     SessionRenewResponse,
     SendTokenRequest,
+    SignTransactionRequest,
+    SignTransactionResponse,
 )
 
 __version__ = "0.1.0"
@@ -30,4 +32,6 @@ __all__ = [
     "PendingTransactionList",
     "SessionRenewResponse",
     "SendTokenRequest",
+    "SignTransactionRequest",
+    "SignTransactionResponse",
 ]

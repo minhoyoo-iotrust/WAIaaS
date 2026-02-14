@@ -168,3 +168,49 @@ class EncodeCalldataResponse(BaseModel):
     function_name: str = Field(alias="functionName", description="Encoded function name")
 
     model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
+# Sign Transaction models
+# ---------------------------------------------------------------------------
+
+
+class SignTransactionRequest(BaseModel):
+    """Request body for POST /v1/transactions/sign."""
+
+    transaction: str
+    chain: Optional[str] = None
+    network: Optional[str] = None
+
+    model_config = {"populate_by_name": True}
+
+
+class SignTransactionOperation(BaseModel):
+    """Parsed operation from a signed transaction."""
+
+    type: str
+    to: Optional[str] = None
+    amount: Optional[str] = None
+    token: Optional[str] = None
+    program_id: Optional[str] = Field(default=None, alias="programId")
+    method: Optional[str] = None
+
+    model_config = {"populate_by_name": True}
+
+
+class PolicyResult(BaseModel):
+    """Policy evaluation result."""
+
+    tier: str
+
+
+class SignTransactionResponse(BaseModel):
+    """Response from POST /v1/transactions/sign."""
+
+    id: str
+    signed_transaction: str = Field(alias="signedTransaction")
+    tx_hash: Optional[str] = Field(default=None, alias="txHash")
+    operations: list[SignTransactionOperation]
+    policy_result: PolicyResult = Field(alias="policyResult")
+
+    model_config = {"populate_by_name": True}

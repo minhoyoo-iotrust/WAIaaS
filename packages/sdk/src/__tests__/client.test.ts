@@ -884,6 +884,86 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // signTransaction
+  // =========================================================================
+
+  describe('signTransaction', () => {
+    it('should call POST /v1/transactions/sign with correct body and return SignTransactionResponse', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        id: 'tx-sign-001',
+        signedTransaction: 'base64signedtx...',
+        txHash: null,
+        operations: [
+          { type: 'NATIVE_TRANSFER', to: 'addr1', amount: '1000000', token: null, programId: null, method: null },
+        ],
+        policyResult: { tier: 'INSTANT' },
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.signTransaction({ transaction: 'base64unsignedtx...' });
+
+      expect(result).toEqual(expected);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/transactions/sign');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(opts.method).toBe('POST');
+      expect(JSON.parse(opts.body as string)).toEqual({ transaction: 'base64unsignedtx...' });
+
+      const headers = opts.headers as Record<string, string>;
+      expect(headers['Authorization']).toBe(`Bearer ${mockToken}`);
+    });
+
+    it('should include network in body when specified', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({
+          id: 'tx-sign-002',
+          signedTransaction: '0xsigned...',
+          txHash: '0xhash...',
+          operations: [{ type: 'CONTRACT_CALL', to: '0xcontract', amount: null, token: null, programId: null, method: 'transfer' }],
+          policyResult: { tier: 'INSTANT' },
+        }),
+      );
+
+      await client.signTransaction({ transaction: '0xunsigned...', network: 'polygon-mainnet' });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['transaction']).toBe('0xunsigned...');
+      expect(body['network']).toBe('polygon-mainnet');
+    });
+
+    it('should throw WAIaaSError on 403', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 0 },
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockErrorResponse('POLICY_DENIED', 'Transaction denied by policy', 403),
+      );
+
+      const err = await client.signTransaction({ transaction: 'tx...' }).catch((e: unknown) => e) as WAIaaSError;
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect(err.code).toBe('POLICY_DENIED');
+      expect(err.status).toBe(403);
+    });
+  });
+
+  // =========================================================================
   // HTTP Layer
   // =========================================================================
 

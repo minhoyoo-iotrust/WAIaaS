@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 119 SDK + MCP + Notifications + Skill Resources
+**Current focus:** v1.4.7 Milestone Complete
 
 ## Current Position
 
 Phase: 119 of 119 (SDK + MCP + Notifications + Skill Resources)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Phase 118 완료 (EVM Calldata Encoding, 2/2 plans, verified)
+Plan: 3 of 3 in current phase
+Status: Milestone v1.4.7 Complete
+Last activity: 2026-02-15 -- Phase 119 완료 (SDK + MCP + Notifications + Skill Resources, 3/3 plans, verified)
 
-Progress: [########░░] 80%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -33,6 +33,9 @@ Progress: [########░░] 80%
 | 117-02 | 2/2 | 7min | 7min |
 | 118-01 | 1/2 | 5min | 5min |
 | 118-02 | 2/2 | 3min | 3min |
+| 119-01 | 1/3 | 3min | 3min |
+| 119-02 | 2/3 | 5min | 5min |
+| 119-03 | 3/3 | 4min | 4min |
 
 ## Accumulated Context
 
@@ -66,6 +69,14 @@ Recent decisions affecting current work:
 - utils 라우트 등록을 deps-check 밖에 배치 (DB/adapter 의존성 없음)
 - MCP encode_calldata가 12번째 도구로 등록 (11->12)
 - Python SDK function_name 파라미터명 (PEP8), Pydantic alias로 functionName 직렬화
+- MCP sign_transaction에 chain 파라미터 미노출 (wallet에서 자동 추론)
+- MCP sign_transaction이 13번째 도구로 등록 (12->13)
+- txParam을 stage3Policy 함수 스코프로 호이스팅 (BATCH/non-BATCH 공통 접근)
+- tokenAddress/contractAddress는 notification body에 미포함 (빈 값 방지), vars metadata로만 전달
+- sign-only 섹션을 transactions.skill.md 10번에 삽입, encode-calldata 11번으로 리넘버링
+- SKILL_NOT_FOUND를 SYSTEM 도메인에 배치 (스킬은 시스템 리소스)
+- skills 라우트는 public (인증 불필요) -- nonce/health와 동일 레벨
+- ResourceTemplate list callback에서 5개 스킬을 정적으로 나열 (VALID_SKILLS 배열 기반)
 
 ### Blockers/Concerns
 
@@ -76,5 +87,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 118-02-PLAN.md (Phase 118 complete)
+Stopped at: Completed 119-02-PLAN.md (all 3 plans of phase 119 now complete)
 Resume file: None
