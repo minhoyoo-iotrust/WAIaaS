@@ -646,3 +646,32 @@
 
 ---
 
+
+## v1.4.5 멀티체인 월렛 모델 설계 (Shipped: 2026-02-14)
+
+**Delivered:** "1 월렛 = 1 체인 + 1 네트워크" 모델을 "1 월렛 = 1 체인 + 1 환경(testnet/mainnet)" 모델로 전환하는 아키텍처를 4개 설계 문서(docs/68-72)로 완전히 정의 — 데이터 모델, DB 마이그레이션, 파이프라인, 정책 엔진, REST API, MCP, SDK, Quickstart 인터페이스까지 포괄
+
+**Phases completed:** 105-108 (6 plans total)
+
+**Key accomplishments:**
+
+- EnvironmentType Zod SSoT 파생 체인 + 환경-네트워크 매핑 테이블 설계 (13 NETWORK_TYPES 전수, 매핑 함수 4개, 설계 결정 8개)
+- DB 마이그레이션 v6a/v6b(12-step 재생성) 전략 설계 — wallets.network → environment 전환, transactions.network 추가, FK dependent 4개 테이블 함께 재생성
+- NetworkResolver 순수 함수 + PipelineContext 확장 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + Stage 1~6 데이터 흐름도 설계
+- ALLOWED_NETWORKS 11번째 PolicyType + 네트워크 스코프 정책 4단계 override 우선순위 + policies 테이블 v8 마이그레이션 설계
+- REST API 7개 엔드포인트 network/environment 파라미터 + 3-Layer 하위호환 전략 + 멀티네트워크 잔액 집계 설계
+- MCP 6개 도구 + TS/Python SDK network 파라미터 확장 + Quickstart --mode testnet/mainnet 워크플로우 설계
+
+**Stats:**
+
+- 24 files changed, +10,642 / -30 lines (설계 문서)
+- 4 phases, 6 plans, 11 tasks, 19 requirements, 31 설계 결정
+- 설계 문서: docs/68 (EnvironmentType), docs/69 (DB 마이그레이션), docs/70 (파이프라인), docs/71 (정책 엔진), docs/72 (API/인터페이스)
+- 26 commits, 1 day (2026-02-14)
+
+**Git range:** `0eef0e1` (Phase 105 start) → `29439d3` (Phase 108 complete)
+
+**What's next:** v1.4.6 멀티체인 월렛 모델 구현 — 설계 문서 68-72 기반 코드 구현
+
+---
+
