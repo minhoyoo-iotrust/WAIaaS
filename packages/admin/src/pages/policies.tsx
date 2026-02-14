@@ -24,6 +24,7 @@ interface Policy {
   id: string;
   walletId: string | null;
   type: string;
+  network: string | null;
   rules: Record<string, unknown>;
   priority: number;
   enabled: boolean;
@@ -42,6 +43,7 @@ const POLICY_TYPES = [
   { label: 'Approved Spenders', value: 'APPROVED_SPENDERS' },
   { label: 'Approve Amount Limit', value: 'APPROVE_AMOUNT_LIMIT' },
   { label: 'Approve Tier Override', value: 'APPROVE_TIER_OVERRIDE' },
+  { label: 'Allowed Networks', value: 'ALLOWED_NETWORKS' },
 ];
 
 const DEFAULT_RULES: Record<string, unknown> = {
@@ -64,6 +66,7 @@ const DEFAULT_RULES: Record<string, unknown> = {
   APPROVED_SPENDERS: { spenders: [] },
   APPROVE_AMOUNT_LIMIT: { max_amount: '1000000' },
   APPROVE_TIER_OVERRIDE: { overrides: {} },
+  ALLOWED_NETWORKS: { networks: [] },
 };
 
 function formatNumber(value: string | number): string {
@@ -150,6 +153,7 @@ export default function PoliciesPage() {
   const formRules = useSignal(JSON.stringify(DEFAULT_RULES.SPENDING_LIMIT, null, 2));
   const formPriority = useSignal<number>(0);
   const formEnabled = useSignal(true);
+  const formNetwork = useSignal('');
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
 
@@ -218,11 +222,13 @@ export default function PoliciesPage() {
         rules: parsedRules,
         priority: formPriority.value,
         enabled: formEnabled.value,
+        network: formNetwork.value || undefined,
       });
       showToast('success', 'Policy created');
       showForm.value = false;
       formType.value = 'SPENDING_LIMIT';
       formWalletId.value = '';
+      formNetwork.value = '';
       formRules.value = JSON.stringify(DEFAULT_RULES.SPENDING_LIMIT, null, 2);
       formPriority.value = 0;
       formEnabled.value = true;
@@ -326,6 +332,11 @@ export default function PoliciesPage() {
       render: (p) => getWalletName(p.walletId, wallets.value),
     },
     {
+      key: 'network',
+      header: 'Network',
+      render: (p) => p.network ?? 'All',
+    },
+    {
       key: 'rules',
       header: 'Rules',
       render: (p) => {
@@ -426,6 +437,13 @@ export default function PoliciesPage() {
                 value: a.id,
               })),
             ]}
+          />
+          <FormField
+            label="Network Scope"
+            name="network"
+            value={formNetwork.value}
+            onChange={(v) => { formNetwork.value = v as string; }}
+            placeholder="e.g. polygon-mainnet (leave empty for all networks)"
           />
           <FormField
             label="Rules (JSON)"
