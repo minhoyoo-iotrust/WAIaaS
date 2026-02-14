@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 113 of 114 (MCP + SDK + Admin UI)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-14 -- 113-01 완료 (MCP network 파라미터 + get_wallet_info)
+Last activity: 2026-02-14 -- 113-02 완료 (SDK network 파라미터 추가)
 
-Progress: [██████░░░░] 69% (9/13 plans)
+Progress: [████████░░] 77% (10/13 plans)
 
 ## Performance Metrics
 
@@ -31,6 +31,7 @@ Progress: [██████░░░░] 69% (9/13 plans)
 | 112 | 01 | 6min | 2 | 5 |
 | 112 | 02 | 4min | 2 | 4 |
 | 113 | 01 | 3min | 2 | 10 |
+| 113 | 02 | 4min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Recent decisions affecting current work:
 - 112-02: masterAuth sub-path skip 패턴 통합 (/owner, /default-network, /networks)
 - 113-01: get_wallet_info은 파라미터 없는 도구 (address + networks 2단계 API 호출 조합)
 - 113-01: networks API 실패 시 빈 배열 반환 (graceful degradation)
+- 113-02: TS SDK BalanceOptions/AssetsOptions 별도 인터페이스로 분리 (확장성)
+- 113-02: Python SDK keyword-only network 파라미터 (기존 positional args 하위호환)
 
 ### Blockers/Concerns
 
@@ -80,5 +83,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 113-01-PLAN.md
+Stopped at: Completed 113-02-PLAN.md
 Resume file: None
