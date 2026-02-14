@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 116 of 119 (Default Deny Toggles)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Phase 115 완료 (Core Types + DB Migration + Parsers, 3/3 plans, verified)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 -- Plan 116-01 완료 (Default Deny Toggles 구현, 2/2 tasks)
 
 Progress: [##░░░░░░░░] 20%
 
@@ -27,6 +27,7 @@ Progress: [##░░░░░░░░] 20%
 | 115-01 | 1/3 | 8min | 8min |
 | 115-02 | 2/3 | 5min | 5min |
 | 115-03 | 3/3 | 6min | 6min |
+| 116-01 | 1/2 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -46,6 +47,9 @@ Recent decisions affecting current work:
 - parseTransaction/signExternalTransaction은 offline 연산 (RPC 불필요)
 - viem parseTransaction을 viemParseTransaction으로 alias import (IChainAdapter 메서드명 충돌 해소)
 - value + calldata 동시 존재 시 CONTRACT_CALL로 분류 (calldata 우선 원칙)
+- settingsService를 DatabasePolicyEngine 선택적 3번째 파라미터로 DI (하위 호환)
+- 토글은 "no policy exists" 분기에서만 확인 -- 정책 존재 시 토글 무관 화이트리스트 평가
+- settingsService?.get() null-safe 패턴: 미전달 시 기본 거부 유지
 
 ### Blockers/Concerns
 
@@ -55,5 +59,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 115 완료, Phase 116 대기
+Stopped at: Completed 116-01-PLAN.md
 Resume file: None
