@@ -240,7 +240,16 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노�
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+## Current Milestone: v1.4.8 Admin DX + 알림 개선
+
+**Goal:** OPEN 이슈 12건(020~031)을 일괄 해소 — MCP 안정성, Admin UI UX, 알림 시스템, MCP 도구 확장, DB 마이그레이션 안정성 개선
+
+**Target features:**
+- DB 마이그레이션 pushSchema 실행 순서 수정 (기존 DB 시작 차단 버그)
+- MCP 서버 graceful shutdown (고아 프로세스 방지)
+- MCP 도구/CLI/SDK 확장 (set_default_network, wallet info, network=all 잔액)
+- Admin UI 대시보드/월렛 상세/세션 페이지 개선
+- 알림 시스템 개선 (메시지 저장, 채널 선택, Slack 채널, 테스트 버그 수정)
 
 ## Next Milestone Goals
 
@@ -445,4 +454,4 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 5 페이즈, 12 플�
 | SKILL_NOT_FOUND SYSTEM 도메인 배치 | 스킬은 시스템 리소스 | ✓ Good — v1.4.7 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.4.7 milestone completed*
+*최종 업데이트: 2026-02-15 after v1.4.8 milestone started*
