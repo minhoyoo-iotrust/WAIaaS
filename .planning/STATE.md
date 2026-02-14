@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.6 shipped — 다음 마일스톤 계획 대기
+**Current focus:** v1.4.7 임의 트랜잭션 서명 API
 
 ## Current Position
 
-Phase: 114 of 114 (all milestone phases complete)
-Plan: -
-Status: Milestone v1.4.6 shipped
-Last activity: 2026-02-14 -- v1.4.6 멀티체인 월렛 구현 마일스톤 완료
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-14 — Milestone v1.4.7 started
 
 ## Performance Metrics
 
@@ -34,5 +32,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: v1.4.6 milestone archived
+Stopped at: v1.4.7 milestone started
 Resume file: None

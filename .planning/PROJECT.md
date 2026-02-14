@@ -231,7 +231,18 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 9-패키지 모노레포
 
 ### 활성
 
-(v1.4.6 shipped — 다음 마일스톤에서 정의)
+## Current Milestone: v1.4.7 임의 트랜잭션 서명 API
+
+**Goal:** 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS가 정책 평가 후 서명하여 반환하는 API 제공 (Solana + EVM)
+
+**Target features:**
+- sign-only 파이프라인 (접수 → 파싱 → 정책 평가 → 서명 → 반환)
+- Solana/EVM unsigned tx 파싱 → 기존 정책 엔진 매핑
+- EVM calldata 인코딩 유틸리티 (encodeFunctionData)
+- 기본 거부 정책 토글 (ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS)
+- MCP 스킬 리소스 노출 (waiaas://skills/{name})
+- 정책 거부 알림 보강 (contractAddress, policyType 포함)
+- REST API + TS/Python SDK + MCP 도구
 
 ## Next Milestone Goals
 
@@ -426,4 +437,4 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 
 | quickstart buildConfigEntry 인라인 복제 | 공통 유틸 추출은 scope 외, YAGNI | ✓ Good — v1.4.6 구현 |
 
 ---
-*최종 업데이트: 2026-02-14 after v1.4.6 milestone shipped*
+*최종 업데이트: 2026-02-14 after v1.4.7 milestone started*
