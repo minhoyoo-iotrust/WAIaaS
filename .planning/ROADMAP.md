@@ -11,7 +11,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 
 ## Phases
 
-- [ ] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 데이터 레이어 전환 + EnvironmentType 파생 체인
+- [x] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 데이터 레이어 전환 + EnvironmentType 파생 체인 ✅ 2026-02-14
 - [ ] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가
 - [ ] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름
 - [ ] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개
@@ -33,8 +33,8 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 **Plans**: 2 plans
 
 Plans:
-- [ ] 109-01-PLAN.md -- EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개 (TDD, Wave 1)
-- [ ] 109-02-PLAN.md -- DB 마이그레이션 v6a/v6b/v8 + pushSchema DDL 동기화 + Drizzle 스키마 + 테스트 (Wave 2, depends on 109-01)
+- [x] 109-01-PLAN.md -- EnvironmentType Zod SSoT + 환경-네트워크 매핑 함수 4개 (TDD, Wave 1)
+- [x] 109-02-PLAN.md -- DB 마이그레이션 v6a/v6b/v8 + pushSchema DDL 동기화 + Drizzle 스키마 + 테스트 (Wave 2, depends on 109-01)
 
 ### Phase 110: 스키마 전환 + 정책 엔진
 **Goal**: Wallet/Transaction/Policy Zod 스키마가 환경 모델을 반영하고, ALLOWED_NETWORKS 정책이 네트워크 스코프로 평가되는 상태
@@ -120,7 +120,7 @@ Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 109. DB 마이그레이션 + 환경 모델 SSoT | 0/2 | Not started | - |
+| 109. DB 마이그레이션 + 환경 모델 SSoT | 2/2 | ✅ Complete | 2026-02-14 |
 | 110. 스키마 전환 + 정책 엔진 | 0/2 | Not started | - |
 | 111. 파이프라인 네트워크 해결 | 0/2 | Not started | - |
 | 112. REST API 네트워크 확장 | 0/2 | Not started | - |

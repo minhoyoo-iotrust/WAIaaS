@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 109 - DB 마이그레이션 + 환경 모델 SSoT
+**Current focus:** Phase 110 - 스키마 전환 + 정책 엔진
 
 ## Current Position
 
-Phase: 109 of 114 (DB 마이그레이션 + 환경 모델 SSoT) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-14 -- 109-02 DB Migration v6a/v6b/v8 완료
+Phase: 110 of 114 (스키마 전환 + 정책 엔진)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-14 -- Phase 109 완료 (verified: 8/8 must-haves)
 
 Progress: [██░░░░░░░░] 15% (2/13 plans)
 
@@ -52,5 +52,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 109-02-PLAN.md (DB Migration v6a/v6b/v8 + Drizzle Schema)
+Stopped at: Phase 109 verified PASSED, ready to plan Phase 110
 Resume file: None
