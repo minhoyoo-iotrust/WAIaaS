@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 112 - REST API 네트워크 확장
+**Current focus:** Phase 113 - MCP + SDK + Admin UI
 
 ## Current Position
 
-Phase: 112 of 114 (REST API 네트워크 확장)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-02-14 -- 112-02 완료 (PUT default-network + GET networks 엔드포인트 + ALLOWED_NETWORKS CRUD 검증)
+Phase: 113 of 114 (MCP + SDK + Admin UI)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-02-14 -- Phase 112 완료 (verified: 11/11 must-haves)
 
 Progress: [██████░░░░] 62% (8/13 plans)
 
@@ -77,5 +77,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 112-02-PLAN.md (Phase 112 complete)
+Stopped at: Phase 112 verified PASSED, ready to plan Phase 113
 Resume file: None
