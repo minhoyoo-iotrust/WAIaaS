@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 112 of 114 (REST API 네트워크 확장)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 111 완료 (verified: 4/4 must-haves)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-14 -- 112-01 완료 (balance/assets network 쿼리 + environment 보강)
 
-Progress: [█████░░░░░] 46% (6/13 plans)
+Progress: [█████░░░░░] 54% (7/13 plans)
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [█████░░░░░] 46% (6/13 plans)
 | 110 | 02 | 7min | 2 | 2 |
 | 111 | 01 | 8min | 2 | 18 |
 | 111 | 02 | 5min | 2 | 4 |
+| 112 | 01 | 6min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ Recent decisions affecting current work:
 - 111-01: daemon.ts executeFromStage5에서 tx.network 직접 사용 (PIPE-D04, 안전성)
 - 111-02: resolveNetwork 에러 분류: environment 포함 -> ENVIRONMENT_NETWORK_MISMATCH, 나머지 -> ACTION_VALIDATION_FAILED
 - 111-02: pipeline.ts에도 resolveNetwork 호출 추가 (approve/reject 워크플로우 경로 커버)
+- 112-01: 트랜잭션 응답 network 필드를 스키마와 함께 추가 (빌드 차단 Rule 3)
+- 112-01: WalletCrudResponseSchema environment 필드 required 전환
+- 112-01: api-agents 테스트 6개를 environment 기반으로 전환
 
 ### Blockers/Concerns
 
@@ -69,5 +73,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 111 verified PASSED, ready to plan Phase 112
+Stopped at: Completed 112-01-PLAN.md
 Resume file: None
