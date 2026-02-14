@@ -11,6 +11,15 @@ export {
   SOLANA_NETWORK_TYPES,
   type SolanaNetworkType,
   validateChainNetwork,
+  ENVIRONMENT_TYPES,
+  type EnvironmentType,
+  EnvironmentTypeEnum,
+  ENVIRONMENT_NETWORK_MAP,
+  ENVIRONMENT_DEFAULT_NETWORK,
+  getNetworksForEnvironment,
+  getDefaultNetwork,
+  deriveEnvironment,
+  validateNetworkEnvironment,
 } from './chain.js';
 
 export {

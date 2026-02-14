@@ -3,7 +3,6 @@ import {
   ENVIRONMENT_TYPES,
   EnvironmentTypeEnum,
   ENVIRONMENT_NETWORK_MAP,
-  ENVIRONMENT_DEFAULT_NETWORK,
   getNetworksForEnvironment,
   getDefaultNetwork,
   deriveEnvironment,
