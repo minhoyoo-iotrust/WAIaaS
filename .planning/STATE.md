@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 110 of 114 (스키마 전환 + 정책 엔진)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 109 완료 (verified: 8/8 must-haves)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-14 -- 110-01 완료 (Zod 스키마 환경 모델 전환 + ALLOWED_NETWORKS)
 
-Progress: [██░░░░░░░░] 15% (2/13 plans)
+Progress: [██░░░░░░░░] 23% (3/13 plans)
 
 ## Performance Metrics
 
@@ -24,6 +24,7 @@ Progress: [██░░░░░░░░] 15% (2/13 plans)
 |-------|------|----------|-------|-------|
 | 109 | 01 | 3min | 2 | 3 |
 | 109 | 02 | 45min | 2 | 32 |
+| 110 | 01 | 7min | 2 | 10 |
 
 ## Accumulated Context
 
@@ -42,6 +43,10 @@ Recent decisions affecting current work:
 - 109-02: wallet.network -> wallet.defaultNetwork! 최소 변환 (비즈니스 로직은 Phase 110/111)
 - 109-02: default_network nullable (향후 멀티체인 월렛 미지정 지원 대비)
 - 109-02: v6a는 일반 ALTER, v6b/v8은 managesOwnTransaction: true (12-step recreation)
+- 110-01: WalletSchema network 필드 완전 제거, environment + defaultNetwork로 전환
+- 110-01: CreateWalletRequest environment default 'testnet' (기존 network optional 대신)
+- 110-01: POST /wallets에서 validateChainNetwork 제거, getDefaultNetwork() 단순화
+- 110-01: AllowedNetworksRulesSchema: networks[].network + name(optional) 구조
 
 ### Blockers/Concerns
 
@@ -52,5 +57,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 109 verified PASSED, ready to plan Phase 110
+Stopped at: Completed 110-01-PLAN.md (스키마 전환), ready to execute 110-02
 Resume file: None
