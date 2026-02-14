@@ -103,6 +103,23 @@ function getRequestMemo(req: SendTransactionRequest | TransactionRequest): strin
 }
 
 // ---------------------------------------------------------------------------
+// Helper: extract policy type from evaluation reason string
+// ---------------------------------------------------------------------------
+
+function extractPolicyType(reason: string | undefined): string {
+  if (!reason) return '';
+  if (reason.includes('not in allowed list') || reason.includes('Token transfer not allowed')) return 'ALLOWED_TOKENS';
+  if (reason.includes('not whitelisted') || reason.includes('Contract calls disabled')) return 'CONTRACT_WHITELIST';
+  if (reason.includes('Method not whitelisted')) return 'METHOD_WHITELIST';
+  if (reason.includes('not in approved list') || reason.includes('Token approvals disabled')) return 'APPROVED_SPENDERS';
+  if (reason.includes('not in whitelist') || reason.includes('not in allowed addresses')) return 'WHITELIST';
+  if (reason.includes('not in allowed networks')) return 'ALLOWED_NETWORKS';
+  if (reason.includes('exceeds limit') || reason.includes('Unlimited token approval')) return 'APPROVE_AMOUNT_LIMIT';
+  if (reason.includes('Spending limit')) return 'SPENDING_LIMIT';
+  return '';
+}
+
+// ---------------------------------------------------------------------------
 // Helper: build type-specific TransactionParam for policy evaluation
 // ---------------------------------------------------------------------------
 
@@ -240,6 +257,10 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   const req = ctx.request;
   const txType = ('type' in req && req.type) ? req.type : 'TRANSFER';
 
+  // Build type-specific TransactionParam (hoisted for notification use)
+  const txParam = buildTransactionParam(req, txType, ctx.wallet.chain);
+  txParam.network = ctx.resolvedNetwork;
+
   // BATCH type uses evaluateBatch (2-stage policy evaluation)
   if (txType === 'BATCH' && ctx.policyEngine instanceof DatabasePolicyEngine) {
     const batchReq = req as BatchRequest;
@@ -266,10 +287,6 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 
     evaluation = await ctx.policyEngine.evaluateBatch(ctx.walletId, params);
   } else {
-    // Build type-specific TransactionParam
-    const txParam = buildTransactionParam(req, txType, ctx.wallet.chain);
-    txParam.network = ctx.resolvedNetwork;
-
     // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
     if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
       evaluation = ctx.policyEngine.evaluateAndReserve(
@@ -294,6 +311,10 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       reason: evaluation.reason ?? 'Policy denied',
       amount: getRequestAmount(ctx.request),
       to: getRequestTo(ctx.request),
+      policyType: extractPolicyType(evaluation.reason),
+      tokenAddress: txParam.tokenAddress ?? '',
+      contractAddress: txParam.contractAddress ?? '',
+      adminLink: '/admin/policies',
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('POLICY_DENIED', {
