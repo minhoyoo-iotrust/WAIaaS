@@ -426,7 +426,7 @@ function getVersions(db: DatabaseType): number[] {
   return rows.map((r) => r.version);
 }
 
-/** All 31 expected indexes in the latest schema. */
+/** All 32 expected indexes in the latest schema. */
 const EXPECTED_INDEXES = [
   'idx_audit_log_event_type',
   'idx_audit_log_severity',
@@ -541,7 +541,7 @@ describe('pushSchema on existing databases', () => {
     }
   });
 
-  it('T-5: all 32 expected indexes exist after migration', () => {
+  it('T-5: all expected indexes exist after migration', () => {
     // Test with v5 DB (requires migration)
     db = createV5SchemaDatabase();
     pushSchema(db);
