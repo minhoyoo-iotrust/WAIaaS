@@ -60,11 +60,11 @@ Plans:
   3. Admin UI/API에서 default_deny_spenders를 OFF로 전환하면 APPROVED_SPENDERS 미설정 월렛도 토큰 승인이 허용된다
   4. 화이트리스트 정책이 설정된 월렛은 토글과 무관하게 정상 화이트리스트 평가가 수행된다
   5. 3개 토글의 기본값은 모두 ON(기본 거부 유지)이며 변경 시 hot-reload로 즉시 반영된다
-**Plans**: TBD
+**Plans:** 2 plans (Wave 1: 116-01, Wave 2: 116-02)
 
 Plans:
-- [ ] 116-01: SettingsService 3개 토글 추가 + DatabasePolicyEngine 분기 로직 + Admin UI 자동 노출
-- [ ] 116-02: 토글 동작 검증 테스트 (기본 거부 ON/OFF, 화이트리스트 공존, hot-reload)
+- [ ] 116-01-PLAN.md -- SETTING_DEFINITIONS 3개 토글 + DatabasePolicyEngine SettingsService DI + 분기 로직 + Admin UI 체크박스
+- [ ] 116-02-PLAN.md -- 토글 동작 검증 TDD 테스트 (기본 거부 ON/OFF, 화이트리스트 공존, hot-reload)
 
 ### Phase 117: Sign-Only Pipeline + REST API
 **Goal**: 외부 dApp이 빌드한 unsigned 트랜잭션을 POST /v1/transactions/sign으로 제출하면 정책 평가 후 서명된 트랜잭션을 동기 응답으로 받을 수 있는 상태
