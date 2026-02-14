@@ -26,7 +26,7 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
 ### v1.4.7 임의 트랜잭션 서명 API (In Progress)
 
 - [x] **Phase 115: Core Types + DB Migration + Parsers** - SIGNED 상태/SIGN 타입 추가, IChainAdapter 파서 메서드, Solana/EVM unsigned tx 파싱 구현
-- [ ] **Phase 116: Default Deny Toggles** - ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS 기본 거부 정책 ON/OFF 토글
+- [x] **Phase 116: Default Deny Toggles** - ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS 기본 거부 정책 ON/OFF 토글
 - [ ] **Phase 117: Sign-Only Pipeline + REST API** - POST /v1/transactions/sign 엔드포인트, 정책 평가 후 동기 서명 반환
 - [ ] **Phase 118: EVM Calldata Encoding** - POST /v1/utils/encode-calldata 유틸리티 엔드포인트
 - [ ] **Phase 119: SDK + MCP + Notifications + Skill Resources** - TS/Python SDK, MCP 도구, 스킬 리소스 노출, 알림 보강
@@ -63,8 +63,8 @@ Plans:
 **Plans:** 2 plans (Wave 1: 116-01, Wave 2: 116-02)
 
 Plans:
-- [ ] 116-01-PLAN.md -- SETTING_DEFINITIONS 3개 토글 + DatabasePolicyEngine SettingsService DI + 분기 로직 + Admin UI 체크박스
-- [ ] 116-02-PLAN.md -- 토글 동작 검증 TDD 테스트 (기본 거부 ON/OFF, 화이트리스트 공존, hot-reload)
+- [x] 116-01-PLAN.md -- SETTING_DEFINITIONS 3개 토글 + DatabasePolicyEngine SettingsService DI + 분기 로직 + Admin UI 체크박스
+- [x] 116-02-PLAN.md -- 토글 동작 검증 TDD 테스트 (기본 거부 ON/OFF, 화이트리스트 공존, hot-reload)
 
 ### Phase 117: Sign-Only Pipeline + REST API
 **Goal**: 외부 dApp이 빌드한 unsigned 트랜잭션을 POST /v1/transactions/sign으로 제출하면 정책 평가 후 서명된 트랜잭션을 동기 응답으로 받을 수 있는 상태
@@ -122,7 +122,7 @@ Phases execute in numeric order: 115 -> 116 -> 117 -> 118 -> 119
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 115. Core Types + DB Migration + Parsers | v1.4.7 | 3/3 | ✓ Complete | 2026-02-15 |
-| 116. Default Deny Toggles | v1.4.7 | 0/2 | Not started | - |
+| 116. Default Deny Toggles | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
 | 117. Sign-Only Pipeline + REST API | v1.4.7 | 0/2 | Not started | - |
 | 118. EVM Calldata Encoding | v1.4.7 | 0/2 | Not started | - |
 | 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 0/3 | Not started | - |

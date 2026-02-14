@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 116 Default Deny Toggles
+**Current focus:** v1.4.7 Phase 117 Sign-Only Pipeline + REST API
 
 ## Current Position
 
-Phase: 116 of 119 (Default Deny Toggles)
-Plan: 2 of 2 in current phase (DONE)
-Status: Phase Complete
-Last activity: 2026-02-15 -- Plan 116-02 완료 (Default Deny Toggles TDD 테스트 10개)
+Phase: 117 of 119 (Sign-Only Pipeline + REST API)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 -- Phase 116 완료 (Default Deny Toggles, 2/2 plans, verified)
 
-Progress: [###░░░░░░░] 33%
+Progress: [####░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -61,5 +61,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 116-02-PLAN.md (Phase 116 전체 완료)
+Stopped at: Phase 116 완료, Phase 117 plan+execute 대기
 Resume file: None
