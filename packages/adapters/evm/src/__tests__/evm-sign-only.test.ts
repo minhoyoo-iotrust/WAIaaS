@@ -7,7 +7,7 @@
  * test fixtures rather than hardcoded hex strings.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   serializeTransaction,
   encodeFunctionData,
