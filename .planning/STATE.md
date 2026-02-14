@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 113 of 114 (MCP + SDK + Admin UI)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-14 -- 113-02 완료 (SDK network 파라미터 추가)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-14 -- 113-03 완료 (Admin UI 멀티체인 환경 모델 전환)
 
-Progress: [████████░░] 77% (10/13 plans)
+Progress: [████████░░] 85% (11/13 plans)
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@ Progress: [████████░░] 77% (10/13 plans)
 | 112 | 02 | 4min | 2 | 4 |
 | 113 | 01 | 3min | 2 | 10 |
 | 113 | 02 | 4min | 2 | 7 |
+| 113 | 03 | 3min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - 113-01: networks API 실패 시 빈 배열 반환 (graceful degradation)
 - 113-02: TS SDK BalanceOptions/AssetsOptions 별도 인터페이스로 분리 (확장성)
 - 113-02: Python SDK keyword-only network 파라미터 (기존 positional args 하위호환)
+- 113-03: 월렛 생성 폼 network dropdown -> environment select(testnet/mainnet) 전환
+- 113-03: 정책 테이블 Network 컬럼 null -> 'All' 표시
+- 113-03: ADMIN-03 트랜잭션 목록 건너뜀 (sessionAuth 필요, 범위 초과)
 
 ### Blockers/Concerns
 
@@ -83,5 +87,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 113-02-PLAN.md
+Stopped at: Completed 113-03-PLAN.md (Phase 113 전체 완료)
 Resume file: None
