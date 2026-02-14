@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 111 of 114 (파이프라인 네트워크 해결)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-14 -- 111-01 resolveNetwork TDD 완료 (11 tests PASS)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-14 -- 111-02 네트워크 해결 통합 완료 (5 integration tests PASS)
 
-Progress: [████░░░░░░] 38% (5/13 plans)
+Progress: [█████░░░░░] 46% (6/13 plans)
 
 ## Performance Metrics
 
@@ -27,6 +27,7 @@ Progress: [████░░░░░░] 38% (5/13 plans)
 | 110 | 01 | 7min | 2 | 10 |
 | 110 | 02 | 7min | 2 | 2 |
 | 111 | 01 | 8min | 2 | 18 |
+| 111 | 02 | 5min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -56,6 +57,8 @@ Recent decisions affecting current work:
 - 111-01: resolveNetwork() 순수 함수 별도 파일 배치 (PIPE-D01, stages.ts 비대 방지)
 - 111-01: ENVIRONMENT_NETWORK_MISMATCH 별도 에러 코드 신설 (PIPE-D03, 보안 중요도)
 - 111-01: daemon.ts executeFromStage5에서 tx.network 직접 사용 (PIPE-D04, 안전성)
+- 111-02: resolveNetwork 에러 분류: environment 포함 -> ENVIRONMENT_NETWORK_MISMATCH, 나머지 -> ACTION_VALIDATION_FAILED
+- 111-02: pipeline.ts에도 resolveNetwork 호출 추가 (approve/reject 워크플로우 경로 커버)
 
 ### Blockers/Concerns
 
@@ -66,5 +69,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 111-01-PLAN.md (resolveNetwork TDD), ready for 111-02
+Stopped at: Completed 111-02-PLAN.md (Phase 111 전체 완료)
 Resume file: None
