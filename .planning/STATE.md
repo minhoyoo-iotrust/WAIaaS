@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 118 EVM Calldata Encoding
+**Current focus:** v1.4.7 Phase 119 SDK + MCP + Notifications + Skill Resources
 
 ## Current Position
 
-Phase: 118 of 119 (EVM Calldata Encoding)
-Plan: 2 of 2 in current phase (PHASE COMPLETE)
-Status: Phase 118 Complete
-Last activity: 2026-02-15 -- 118-02 완료 (SDK/MCP/Python/Skill 통합, 2 tasks, 3min)
+Phase: 119 of 119 (SDK + MCP + Notifications + Skill Resources)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 -- Phase 118 완료 (EVM Calldata Encoding, 2/2 plans, verified)
 
-Progress: [#######░░░] 70%
+Progress: [########░░] 80%
 
 ## Performance Metrics
 
