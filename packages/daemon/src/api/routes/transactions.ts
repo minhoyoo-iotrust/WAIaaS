@@ -275,8 +275,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       wallet: {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        environment: wallet.environment,
+        defaultNetwork: wallet.defaultNetwork ?? null,
       },
+      resolvedNetwork: wallet.defaultNetwork!,
       request,
       txId: '', // stage1Validate will assign
       sessionId: c.get('sessionId' as never) as string | undefined,

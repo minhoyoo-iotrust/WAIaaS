@@ -70,8 +70,10 @@ export class TransactionPipeline {
       wallet: {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        environment: wallet.environment,
+        defaultNetwork: wallet.defaultNetwork ?? null,
       },
+      resolvedNetwork: wallet.defaultNetwork!,
       request,
       txId: '',
     };

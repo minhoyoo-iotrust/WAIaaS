@@ -644,8 +644,10 @@ export class DaemonLifecycle {
         wallet: {
           publicKey: wallet.publicKey,
           chain: wallet.chain,
-          network: wallet.defaultNetwork!,
+          environment: wallet.environment,
+          defaultNetwork: wallet.defaultNetwork ?? null,
         },
+        resolvedNetwork: tx.network ?? wallet.defaultNetwork!,
         request: {
           to: tx.toAddress ?? '',
           amount: tx.amount ?? '0',
