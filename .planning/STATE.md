@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 115 of 119 (Core Types + DB Migration + Parsers)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-15 -- Plan 115-02 완료 (Solana parseTransaction + signExternalTransaction)
+Plan: 3 of 3 in current phase
+Status: Phase 115 Complete
+Last activity: 2026-02-15 -- Plan 115-03 완료 (EVM parseTransaction + signExternalTransaction)
 
-Progress: [##░░░░░░░░] 17%
+Progress: [###░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -26,6 +26,7 @@ Progress: [##░░░░░░░░] 17%
 |-------|-------|-------|----------|
 | 115-01 | 1/3 | 8min | 8min |
 | 115-02 | 2/3 | 5min | 5min |
+| 115-03 | 3/3 | 6min | 6min |
 
 ## Accumulated Context
 
@@ -43,6 +44,8 @@ Recent decisions affecting current work:
 - v9 migration은 transactions 테이블만 재생성
 - getCompiledTransactionMessageDecoder 사용 (decompileTransactionMessage 대신 -- v0 lookup table 회피)
 - parseTransaction/signExternalTransaction은 offline 연산 (RPC 불필요)
+- viem parseTransaction을 viemParseTransaction으로 alias import (IChainAdapter 메서드명 충돌 해소)
+- value + calldata 동시 존재 시 CONTRACT_CALL로 분류 (calldata 우선 원칙)
 
 ### Blockers/Concerns
 
@@ -52,5 +55,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 115-02-PLAN.md
+Stopped at: Completed 115-03-PLAN.md (Phase 115 완료)
 Resume file: None
