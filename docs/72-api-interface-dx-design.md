@@ -1819,3 +1819,551 @@ async with WAIaaSClient("http://localhost:3000", "wai_sess_xxx") as client:
 | 자산 조회 | `get_assets({ network: "X" })` -> `?network=X` | `getAssets("X")` -> `?network=X` | `get_assets(network="X")` -> `?network=X` | GET `?network=X` |
 
 **일관성:** POST 엔드포인트는 body, GET 엔드포인트는 query parameter. 3개 인터페이스 모두 동일한 REST API 전달 패턴을 따른다 (설계 결정 API-D04).
+
+---
+
+## 9. 통합 하위호환 전략 + Quickstart 워크플로우 (API-05, DX-01, DX-02)
+
+### 9.1 3-Layer 하위호환 원칙 -- 인터페이스 통합 매트릭스
+
+Phase 108에서 추가하는 모든 파라미터와 응답 필드는 기존 API 호출의 동작을 변경하지 않는다. 섹션 4에서 정의한 3-Layer 원칙이 REST API뿐 아니라 MCP, TS SDK, Python SDK 3개 인터페이스에 동일하게 적용된다.
+
+| 인터페이스 | L1: network 미지정 | L2: environment 미지정 | L3: 응답 변경 |
+|-----------|-------------------|---------------------|-------------|
+| REST API | resolveNetwork() 3단계 fallback (request.network > wallet.defaultNetwork > getDefaultNetwork) | deriveEnvironment() 역추론 또는 체인 기본값 `testnet` | 기존 필드 유지 + 새 필드(environment, defaultNetwork) 추가 only |
+| MCP | 도구 파라미터 미지정 -> REST API에 network 없이 전달 -> 동일 fallback 적용 | N/A (MCP는 wallet bound, 월렛 생성은 REST API/CLI) | 도구 응답은 REST API 응답 그대로 전달 (toToolResult) |
+| TS SDK | `getBalance()` -> URL에 query 없음 -> REST API 동일 fallback. `sendToken({to, amount})` -> body에 network 없음 -> 동일 fallback | N/A (SDK는 월렛 생성 API를 직접 호출하지 않음. Admin/CLI 범위) | 기존 타입(BalanceResponse, AssetsResponse) 유지 + TransactionResponse에 network 추가 |
+| Python SDK | `get_balance()` -> params=None -> REST API 동일 fallback. `send_token(to, amount)` -> body에 network 없음 -> 동일 fallback | N/A (SDK는 월렛 생성 API를 직접 호출하지 않음) | 기존 모델(WalletBalance, WalletAssets) 유지 + TransactionDetail에 network 추가 |
+
+**핵심 보장:** 기존 코드에서 `network` 파라미터를 전혀 사용하지 않아도 모든 인터페이스가 기존과 동일하게 동작한다. 이는 `resolveNetwork()` 3단계 fallback이 REST API 레이어에서 처리되고, MCP/SDK는 REST API에 요청을 전달하는 pass-through이기 때문이다.
+
+### 9.2 인터페이스별 하위호환 상세
+
+#### MCP 도구 하위호환
+
+```
+기존 MCP 호출 (변경 전):
+  LLM -> send_token({ to: "7abc...", amount: "1000" })
+    -> apiClient.post('/v1/transactions/send', { to: "7abc...", amount: "1000" })
+    -> daemon: resolveNetwork(undefined, wallet.defaultNetwork, ...)
+    -> 기존 네트워크에서 실행
+
+변경 후 (network 미지정):
+  LLM -> send_token({ to: "7abc...", amount: "1000" })
+    -> body = { to: "7abc...", amount: "1000" }   (network 미포함, args.network === undefined)
+    -> apiClient.post('/v1/transactions/send', body)
+    -> daemon: resolveNetwork(undefined, wallet.defaultNetwork, ...)
+    -> 기존 네트워크에서 실행 (동일)
+
+변경 후 (network 지정):
+  LLM -> send_token({ to: "7abc...", amount: "1000", network: "polygon-amoy" })
+    -> body = { to: "7abc...", amount: "1000", network: "polygon-amoy" }
+    -> apiClient.post('/v1/transactions/send', body)
+    -> daemon: resolveNetwork("polygon-amoy", ...)
+    -> polygon-amoy에서 실행 (신규 기능)
+```
+
+#### TS SDK 하위호환
+
+| 메서드 | 기존 시그니처 | 변경 후 시그니처 | 기존 호출 동작 |
+|--------|-------------|----------------|-------------|
+| `getBalance()` | `getBalance(): Promise<BalanceResponse>` | `getBalance(network?: string): Promise<BalanceResponse>` | `getBalance()` -> URL 변경 없음 -> 동일 |
+| `getAssets()` | `getAssets(): Promise<AssetsResponse>` | `getAssets(network?: string): Promise<AssetsResponse>` | `getAssets()` -> URL 변경 없음 -> 동일 |
+| `sendToken(params)` | `sendToken(params: SendTokenParams)` | `sendToken(params: SendTokenParams)` (타입 확장) | `sendToken({ to, amount })` -> body 동일 -> 동일 |
+
+#### Python SDK 하위호환
+
+| 메서드 | 기존 시그니처 | 변경 후 시그니처 | 기존 호출 동작 |
+|--------|-------------|----------------|-------------|
+| `get_balance()` | `get_balance() -> WalletBalance` | `get_balance(network=None) -> WalletBalance` | `get_balance()` -> params=None -> 동일 |
+| `get_assets()` | `get_assets() -> WalletAssets` | `get_assets(network=None) -> WalletAssets` | `get_assets()` -> params=None -> 동일 |
+| `send_token(to, amount)` | `send_token(to, amount, **kwargs)` | `send_token(to, amount, network=None, **kwargs)` | `send_token(to="x", amount="1")` -> network=None -> 동일 |
+
+### 9.3 Quickstart 워크플로우 (DX-01 + DX-02)
+
+#### CLI 명령 정의
+
+```
+waiaas quickstart --mode testnet    # Solana+EVM 2월렛 일괄 생성 (testnet 환경)
+waiaas quickstart --mode mainnet    # Solana+EVM 2월렛 일괄 생성 (mainnet 환경)
+```
+
+#### QuickstartOptions 인터페이스
+
+```typescript
+// packages/cli/src/commands/quickstart.ts -- 타입 정의
+
+export interface QuickstartOptions {
+  dataDir: string;
+  baseUrl?: string;
+  mode: 'testnet' | 'mainnet';
+  masterPassword?: string;
+}
+```
+
+#### 5단계 흐름 의사코드
+
+```typescript
+// packages/cli/src/commands/quickstart.ts -- 전체 흐름
+
+import { resolvePassword } from '../utils/password.js';
+import { writeFile, rename, mkdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+
+export async function quickstartCommand(opts: QuickstartOptions): Promise<void> {
+  const baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:3100').replace(/\/+$/, '');
+  const password = opts.masterPassword ?? await resolvePassword();
+
+  // ─── Step 0: Health check ───
+  console.log('[0/5] Checking daemon...');
+  try {
+    const healthRes = await fetch(`${baseUrl}/health`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!healthRes.ok) {
+      console.error(`Warning: daemon returned ${healthRes.status} on health check`);
+    }
+  } catch {
+    console.error('Error: Cannot reach WAIaaS daemon.');
+    console.error(`  Tried: ${baseUrl}/health`);
+    console.error('  Make sure the daemon is running:');
+    console.error('    waiaas init       # (if first time)');
+    console.error('    waiaas start');
+    process.exit(1);
+  }
+
+  // ─── Step 1: Create Solana wallet ───
+  console.log(`\n[1/5] Creating Solana ${opts.mode} wallet...`);
+  const solanaWallet = await createWallet(baseUrl, password, {
+    name: `solana-${opts.mode}`,
+    chain: 'solana',
+    environment: opts.mode,     // NEW: environment 파라미터 사용
+  });
+  console.log(`  Name: ${solanaWallet.name}`);
+  console.log(`  Environment: ${solanaWallet.environment}`);
+  console.log(`  Network: ${solanaWallet.defaultNetwork}`);
+  console.log(`  Address: ${solanaWallet.publicKey}`);
+
+  // ─── Step 2: Create Ethereum wallet ───
+  console.log(`\n[2/5] Creating Ethereum ${opts.mode} wallet...`);
+  const ethWallet = await createWallet(baseUrl, password, {
+    name: `eth-${opts.mode}`,
+    chain: 'ethereum',
+    environment: opts.mode,     // NEW: environment 파라미터 사용
+  });
+  console.log(`  Name: ${ethWallet.name}`);
+  console.log(`  Environment: ${ethWallet.environment}`);
+  console.log(`  Network: ${ethWallet.defaultNetwork}`);
+  console.log(`  Address: ${ethWallet.publicKey}`);
+
+  // ─── Step 3: Create sessions ───
+  console.log('\n[3/5] Creating sessions...');
+  const wallets = [solanaWallet, ethWallet];
+  const sessions: Array<{ walletId: string; token: string; expiresAt: number }> = [];
+
+  for (const wallet of wallets) {
+    const sessionRes = await fetch(`${baseUrl}/v1/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Password': password,
+      },
+      body: JSON.stringify({
+        walletId: wallet.id,
+        expiresIn: 86400,       // 24시간
+      }),
+    });
+
+    if (!sessionRes.ok) {
+      const body = await sessionRes.json().catch(() => null) as Record<string, unknown> | null;
+      console.error(`Error: Failed to create session for ${wallet.name}: ${body?.['message'] ?? sessionRes.statusText}`);
+      process.exit(1);
+    }
+
+    const sessionData = await sessionRes.json() as { id: string; token: string; expiresAt: number };
+    sessions.push({ walletId: wallet.id, token: sessionData.token, expiresAt: sessionData.expiresAt });
+    console.log(`  ${wallet.name}: session created (expires ${new Date(sessionData.expiresAt * 1000).toISOString()})`);
+  }
+
+  // ─── Step 4: Write MCP tokens ───
+  console.log('\n[4/5] Creating MCP tokens...');
+  for (const session of sessions) {
+    const tokenPath = join(opts.dataDir, 'mcp-tokens', session.walletId);
+    const tmpPath = `${tokenPath}.tmp`;
+    await mkdir(dirname(tokenPath), { recursive: true });
+    await writeFile(tmpPath, session.token, 'utf-8');
+    await rename(tmpPath, tokenPath);
+    console.log(`  Token file: ${tokenPath}`);
+  }
+
+  // ─── Step 5: Output Claude Desktop config snippet ───
+  console.log('\n[5/5] Done! Add to your Claude Desktop config.json:\n');
+
+  const mcpServers: Record<string, Record<string, unknown>> = {};
+  for (let i = 0; i < wallets.length; i++) {
+    const wallet = wallets[i]!;
+    const serverName = `waiaas-${wallet.name}`;
+    mcpServers[serverName] = {
+      command: 'npx',
+      args: ['@waiaas/mcp'],
+      env: {
+        WAIAAS_DATA_DIR: opts.dataDir,
+        WAIAAS_BASE_URL: baseUrl,
+        WAIAAS_WALLET_ID: wallet.id,
+        WAIAAS_WALLET_NAME: wallet.name,
+      },
+    };
+  }
+
+  console.log(JSON.stringify({ mcpServers }, null, 2));
+  printConfigPath();
+}
+
+// ─── Helper functions ───
+
+interface WalletCreateResponse {
+  id: string;
+  name: string;
+  chain: string;
+  environment: string;
+  defaultNetwork: string | null;
+  publicKey: string;
+  status: string;
+}
+
+async function createWallet(
+  baseUrl: string,
+  password: string,
+  params: { name: string; chain: string; environment: string },
+): Promise<WalletCreateResponse> {
+  const res = await fetch(`${baseUrl}/v1/wallets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Password': password,
+    },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as Record<string, unknown> | null;
+    console.error(`Error: Failed to create wallet "${params.name}": ${body?.['message'] ?? res.statusText}`);
+    process.exit(1);
+  }
+
+  return await res.json() as WalletCreateResponse;
+}
+
+function printConfigPath(): void {
+  const platform = process.platform;
+  if (platform === 'darwin') {
+    console.log('\nConfig location: ~/Library/Application Support/Claude/claude_desktop_config.json');
+  } else if (platform === 'win32') {
+    console.log('\nConfig location: %APPDATA%\\Claude\\claude_desktop_config.json');
+  } else {
+    console.log('\nConfig location: ~/.config/Claude/claude_desktop_config.json');
+  }
+}
+```
+
+#### CLI 등록 (commander)
+
+```typescript
+// packages/cli/src/commands/index.ts -- quickstart 서브커맨드 추가
+
+import { Command } from 'commander';
+
+export function registerQuickstartCommand(program: Command, dataDir: string): void {
+  program
+    .command('quickstart')
+    .description('Set up Solana + Ethereum wallets with MCP integration in one command')
+    .requiredOption('--mode <mode>', 'Environment mode: testnet or mainnet', 'testnet')
+    .option('--base-url <url>', 'Daemon base URL (default: http://127.0.0.1:3100)')
+    .option('--master-password <password>', 'Master password (or set WAIAAS_MASTER_PASSWORD)')
+    .action(async (opts: { mode: string; baseUrl?: string; masterPassword?: string }) => {
+      if (opts.mode !== 'testnet' && opts.mode !== 'mainnet') {
+        console.error('Error: --mode must be "testnet" or "mainnet"');
+        process.exit(1);
+      }
+      const { quickstartCommand } = await import('./quickstart.js');
+      await quickstartCommand({
+        dataDir,
+        baseUrl: opts.baseUrl,
+        mode: opts.mode as 'testnet' | 'mainnet',
+        masterPassword: opts.masterPassword,
+      });
+    });
+}
+```
+
+#### 에러 처리 전략
+
+| 단계 | 실패 시 동작 | 이유 |
+|------|------------|------|
+| Step 0 (Health check) | 에러 메시지 출력 + `process.exit(1)` | daemon 미실행 시 이후 모든 API 호출 실패 확정 |
+| Step 1 (Solana 월렛) | 에러 메시지 출력 + `process.exit(1)` | 월렛 생성 실패 시 세션/토큰 생성 불가 |
+| Step 2 (Ethereum 월렛) | 에러 메시지 출력 + `process.exit(1)` | 동일 |
+| Step 3 (세션 생성) | 에러 메시지 출력 + `process.exit(1)` | 토큰 생성 불가 |
+| Step 4 (토큰 파일) | 에러 메시지 출력 + `process.exit(1)` | 파일 시스템 에러 |
+| Step 5 (출력) | 에러 없음 (단순 출력) | - |
+
+**Rollback 없음 (설계 결정 DX-D03):** 실패 시 이미 생성된 월렛/세션을 삭제하지 않는다. 이유: (1) 재실행 시 중복 이름 에러로 기존 월렛 존재를 인지 가능, (2) 월렛/세션 삭제 API가 별도 masterAuth 연산이므로 rollback 로직이 복잡해짐, (3) 부분 생성 상태에서도 이미 생성된 리소스는 유효하므로 수동 정리 가능.
+
+#### 출력 예시
+
+```
+$ waiaas quickstart --mode testnet
+
+[0/5] Checking daemon...
+
+[1/5] Creating Solana testnet wallet...
+  Name: solana-testnet
+  Environment: testnet
+  Network: devnet
+  Address: 7xKXqPbzL...
+
+[2/5] Creating Ethereum testnet wallet...
+  Name: eth-testnet
+  Environment: testnet
+  Network: ethereum-sepolia
+  Address: 0xAb3f...
+
+[3/5] Creating sessions...
+  solana-testnet: session created (expires 2026-02-15T07:00:00.000Z)
+  eth-testnet: session created (expires 2026-02-15T07:00:00.000Z)
+
+[4/5] Creating MCP tokens...
+  Token file: ~/.waiaas/mcp-tokens/w_01abc...
+  Token file: ~/.waiaas/mcp-tokens/w_01def...
+
+[5/5] Done! Add to your Claude Desktop config.json:
+
+{
+  "mcpServers": {
+    "waiaas-solana-testnet": {
+      "command": "npx",
+      "args": ["@waiaas/mcp"],
+      "env": {
+        "WAIAAS_DATA_DIR": "~/.waiaas",
+        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
+        "WAIAAS_WALLET_ID": "w_01abc...",
+        "WAIAAS_WALLET_NAME": "solana-testnet"
+      }
+    },
+    "waiaas-eth-testnet": {
+      "command": "npx",
+      "args": ["@waiaas/mcp"],
+      "env": {
+        "WAIAAS_DATA_DIR": "~/.waiaas",
+        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
+        "WAIAAS_WALLET_ID": "w_01def...",
+        "WAIAAS_WALLET_NAME": "eth-testnet"
+      }
+    }
+  }
+}
+
+Config location: ~/Library/Application Support/Claude/claude_desktop_config.json
+```
+
+---
+
+## 10. 설계 결정 요약 + Phase 105-108 통합 참조
+
+### 10.1 설계 결정 전체 목록 (API-D01~D06 + DX-D01~D03)
+
+#### API-D01: environment optional + deriveEnvironment fallback (Breaking Change 방지)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | `CreateWalletRequestSchema.environment`를 optional로 추가하고, 미지정 시 `deriveEnvironment(network)` 역추론 또는 체인 기본값(`testnet`)으로 자동 결정 |
+| **근거** | 기존 API 호출 `{ name, chain, network }` 형식이 변경 없이 동작해야 함. environment를 required로 만들면 기존 모든 클라이언트(SDK, MCP, CLI, Admin UI)가 즉시 실패 |
+| **대안** | environment를 required로 전환 + 전체 클라이언트 마이그레이션 |
+| **기각 이유** | 동시 배포가 불가능하고, 하위호환 위반은 프로젝트 원칙(점진적 전환)에 반함 |
+
+#### API-D02: 멀티네트워크 잔액을 별도 masterAuth 엔드포인트로 분리
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | 멀티네트워크 잔액 집계를 `GET /v1/wallets/:id/assets` (masterAuth) 별도 엔드포인트로 신설. 기존 `GET /v1/wallet/assets` (sessionAuth)는 단일 네트워크 조회 유지 |
+| **근거** | (1) sessionAuth와 masterAuth는 사용 맥락이 다름, (2) 기존 sessionAuth 응답 형식 변경은 MCP 파싱 실패 위험, (3) 멀티네트워크 집계는 2-5개 RPC 병렬 호출로 응답 시간이 길어 에이전트 시나리오에 부적합 |
+| **대안** | 기존 `GET /v1/wallet/assets` 확장 (`?multi=true` 파라미터) |
+| **기각 이유** | 기존 응답 형식 변경 위험 + sessionAuth로 멀티네트워크 노출은 보안 우려 |
+
+#### API-D03: 트랜잭션 응답에 network nullable 필드 추가 (실행 네트워크 추적)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | `TxDetailResponseSchema`에 `network: z.string().nullable()` 필드 추가 |
+| **근거** | 멀티네트워크 환경에서 실행 네트워크 추적 필수. `transactions.network` 컬럼(v6a)을 그대로 노출. nullable인 이유: 마이그레이션 이전 레코드 호환 |
+| **대안** | 응답에 network를 포함하지 않고 월렛의 defaultNetwork를 반환 |
+| **기각 이유** | 실제 실행 네트워크와 월렛 defaultNetwork가 다를 수 있음 (request-level override) |
+
+#### API-D04: GET은 query parameter, POST는 body로 network 전달
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | GET 엔드포인트(`/wallet/balance`, `/wallet/assets`)는 `?network=X` 쿼리 파라미터, POST 엔드포인트(`/transactions/send`, `/wallets`)는 request body에 network 포함 |
+| **근거** | (1) HTTP 표준 준수, (2) OpenAPIHono Zod 검증 패턴 일관, (3) SDK/MCP에서 전달 위치 명확 구분 |
+| **대안** | 모든 엔드포인트에서 헤더(`X-Network`)로 전달 |
+| **기각 이유** | 비표준 헤더는 캐시/프록시 호환성 문제 + Zod 검증 패턴 불일치 |
+
+#### API-D05: WalletResponse에 기존 network 유지 + environment, defaultNetwork 추가
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | 기존 `network` 필드를 유지하면서 `environment`와 `defaultNetwork` 필드를 추가. `network` 값은 `defaultNetwork ?? getDefaultNetwork(chain, env)` |
+| **근거** | 기존 클라이언트가 `response.network`를 참조하므로 제거 불가. 향후 deprecated 전환 가능 |
+| **대안** | `network` 필드를 `defaultNetwork`로 즉시 교체 |
+| **기각 이유** | 기존 SDK/MCP/Admin UI 코드에서 `wallet.network` 참조 전부 변경 필요 |
+
+#### API-D06: MCP network description에 "omit for default" 명시 (LLM 혼란 방지)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | 모든 MCP 도구의 `network` 파라미터 description에 "If omitted, uses wallet's default network" 텍스트를 포함 |
+| **근거** | LLM은 description을 기반으로 도구 사용을 결정. "omit for default"를 명시하지 않으면 LLM이 매번 network를 지정하여 불필요한 복잡성 발생 |
+| **대안** | description 없이 Zod optional만 사용 |
+| **기각 이유** | LLM이 optional의 의미를 정확히 파악하지 못할 수 있음. 명시적 안내가 안전 |
+
+#### DX-D01: quickstart는 daemon 미실행 시 안내 메시지 출력 후 종료 (자동 시작 안 함)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | quickstart 첫 단계에서 health check 수행. daemon 미실행 시 `"Run 'waiaas init && waiaas start' first"` 안내 후 `process.exit(1)` |
+| **근거** | daemon 시작에는 master password, config.toml 등 설정 필요. 자동 시작 시 포트 충돌, 설정 누락 등 디버깅 어려움 |
+| **대안** | quickstart 내부에서 `waiaas start` 자동 호출 |
+| **기각 이유** | config 미설정 상태에서 daemon 시작 실패 시 사용자 혼란 가중. 기존 mcp-setup 패턴(건강 체크 -> 안내)과 일관 |
+
+#### DX-D02: quickstart는 Solana + EVM 2월렛 일괄 생성 (단일 체인 옵션 없음)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | quickstart는 항상 Solana + Ethereum 2개 월렛을 생성. `--chain solana` 같은 단일 체인 옵션을 제공하지 않음 |
+| **근거** | (1) quickstart의 목적은 "가장 빠르게 2개 체인 모두 시작"이므로 옵션 최소화가 DX에 유리, (2) 단일 체인만 필요하면 기존 `waiaas mcp setup --wallet <id>` 사용 가능, (3) 2개 월렛 생성은 멱등하지 않지만 에러 메시지로 중복 인지 가능 |
+| **대안** | `--chain solana` 옵션 추가 |
+| **기각 이유** | quickstart 명령의 심플함을 유지. 세부 제어는 기존 CLI 명령으로 |
+
+#### DX-D03: quickstart 에러 시 rollback 없음 (멱등성으로 해결)
+
+| 항목 | 내용 |
+|------|------|
+| **결정** | quickstart 중간 실패 시 이미 생성된 리소스(월렛, 세션)를 삭제하지 않음. 에러 메시지 출력 후 종료 |
+| **근거** | (1) 재실행 시 중복 이름 에러로 기존 리소스 존재 인지 가능, (2) rollback 로직이 별도 masterAuth 호출이므로 복잡도 증가, (3) 부분 생성 상태에서도 리소스는 유효 |
+| **대안** | try/catch로 감싸서 실패 시 모든 생성 리소스 삭제 |
+| **기각 이유** | 삭제 API 호출 자체가 실패할 수 있는 중첩 에러 위험. 단순한 "에러 출력 + 종료"가 안전 |
+
+### 10.2 Phase 105-108 통합 참조 다이어그램
+
+```
+ Phase 105 (docs/68+69)              Phase 106 (docs/70)              Phase 107 (docs/71)
+ ┌─────────────────────┐             ┌─────────────────────┐         ┌─────────────────────┐
+ │ EnvironmentType SSoT │             │ resolveNetwork()    │         │ ALLOWED_NETWORKS    │
+ │ ENVIRONMENT_NETWORK  │             │   순수 함수          │         │   PolicyType        │
+ │   _MAP               │             │ PipelineContext     │         │ policies.network    │
+ │ deriveEnvironment()  │────────────>│   .resolvedNetwork  │         │   스코프 컬럼        │
+ │ getDefaultNetwork()  │             │ ENVIRONMENT_NETWORK │<────────│ evaluateAndReserve()│
+ │ validateNetwork      │             │   _MISMATCH 에러    │         │   SQL 네트워크 필터  │
+ │   Environment()      │             │ Stage 1 INSERT      │         │ resolveOverrides()  │
+ │ DB Migration v6a/v6b │             │   network 기록      │         │   4단계 typeMap     │
+ └─────────┬───────────┘             └─────────┬───────────┘         └─────────┬───────────┘
+           │                                   │                               │
+           └───────────────────────────────────┼───────────────────────────────┘
+                                               │
+                                               v
+                           ┌─────────────────────────────────────┐
+                           │      Phase 108 (docs/72)            │
+                           │      -- THIS DOCUMENT --            │
+                           ├─────────────────────────────────────┤
+                           │ 섹션 1-3: REST API 스키마 변경       │
+                           │   5-type network, wallets env,      │
+                           │   멀티네트워크 잔액 집계              │
+                           │ 섹션 4: 하위호환 3-Layer 전략         │
+                           │ 섹션 5: OpenAPI 변경 + 설계 결정      │
+                           │ 섹션 6: MCP 도구 network 파라미터     │
+                           │ 섹션 7: TS SDK 확장                  │
+                           │ 섹션 8: Python SDK 확장               │
+                           │ 섹션 9: 통합 하위호환 + Quickstart    │
+                           │ 섹션 10: 설계 결정 요약 + 참조 다이어그램│
+                           └─────────────────────────────────────┘
+```
+
+### 10.3 v1.4.6 구현 시 참조 순서 가이드
+
+v1.4.6 구현 시 5개 설계 문서를 아래 순서로 참조한다:
+
+| 순서 | 문서 | 구현 범위 | 선행 조건 |
+|------|------|---------|---------|
+| 1 | docs/68 (Environment Model) | `packages/core/src/enums/chain.ts` -- EnvironmentType, 매핑 함수 4개 | 없음 |
+| 2 | docs/69 (DB Migration v6) | `packages/daemon/src/infrastructure/database/migrate.ts` -- v6a + v6b | docs/68 (EnvironmentType CHECK 제약) |
+| 3 | docs/70 (Pipeline Resolve) | `packages/daemon/src/pipeline/network-resolver.ts` + PipelineContext 변경 | docs/68 (매핑 함수), docs/69 (DB 스키마) |
+| 4 | docs/71 (Policy Extension) | `packages/daemon/src/pipeline/stage3-*.ts` + policies 확장 | docs/70 (resolvedNetwork) |
+| 5 | docs/72 (API/Interface/DX) | REST API routes + MCP 도구 + SDK + CLI quickstart | docs/68-71 전체 |
+
+**핵심:** docs/72는 최종 인터페이스 레이어이므로 docs/68-71의 모든 함수/타입이 구현된 후에 적용한다. 역순으로 구현하면 resolveNetwork() 등 의존 함수가 없어 컴파일 에러가 발생한다.
+
+### 10.4 변경 파일 전체 요약 (Phase 108 전체)
+
+| 패키지 | 파일 | 섹션 | 변경 유형 |
+|--------|------|------|---------|
+| @waiaas/core | schemas/transaction.schema.ts | 1 | 수정: 5-type + legacy에 network 추가 |
+| @waiaas/core | schemas/wallet.schema.ts | 2 | 수정: environment 추가, WalletSchema 확장 |
+| daemon | routes/openapi-schemas.ts | 1,2,3,5 | 수정: 응답 스키마 4개 + 신규 1개 |
+| daemon | routes/transactions.ts | 1 | 수정: resolveNetwork() + PipelineContext |
+| daemon | routes/wallets.ts | 2,3 | 수정: 4가지 조합 + 멀티네트워크 route |
+| daemon | routes/wallet.ts | 3 | 수정: query parameter + resolveNetwork() |
+| @waiaas/mcp | tools/send-token.ts | 6 | 수정: network Zod 파라미터 |
+| @waiaas/mcp | tools/call-contract.ts | 6 | 수정: network Zod 파라미터 |
+| @waiaas/mcp | tools/approve-token.ts | 6 | 수정: network Zod 파라미터 |
+| @waiaas/mcp | tools/send-batch.ts | 6 | 수정: network Zod 파라미터 |
+| @waiaas/mcp | tools/get-balance.ts | 6 | 수정: network Zod 파라미터 + query |
+| @waiaas/mcp | tools/get-assets.ts | 6 | 수정: network Zod 파라미터 + query |
+| @waiaas/sdk | types.ts | 7 | 수정: SendTokenParams.network + 응답 타입 |
+| @waiaas/sdk | client.ts | 7 | 수정: getBalance/getAssets network 파라미터 |
+| waiaas (Python) | models.py | 8 | 수정: SendTokenRequest.network + 응답 모델 |
+| waiaas (Python) | client.py | 8 | 수정: get_balance/get_assets network 파라미터 |
+| @waiaas/cli | commands/quickstart.ts | 9 | 신규: quickstart --mode |
+| skills/ | quickstart.skill.md | 부록 | 수정: environment + quickstart 설명 |
+| skills/ | wallet.skill.md | 부록 | 수정: environment/defaultNetwork + 멀티네트워크 |
+| skills/ | transactions.skill.md | 부록 | 수정: network 파라미터 + 응답 필드 |
+| skills/ | policies.skill.md | 부록 | 수정: ALLOWED_NETWORKS + network 스코프 |
+
+---
+
+## 부록 C: Skill Files 변경 포인트
+
+### quickstart.skill.md
+
+| 항목 | 변경 내용 |
+|------|---------|
+| Quickstart 워크플로우 | `waiaas quickstart --mode testnet/mainnet` 명령 추가 설명 |
+| Environment 모델 | testnet/mainnet 환경 개념 + 월렛 생성 시 environment 파라미터 설명 |
+| MCP 설정 | quickstart가 2개 MCP 서버(Solana + Ethereum) 자동 설정 |
+| 선행 조건 | `waiaas init && waiaas start` 선행 필요 안내 |
+
+### wallet.skill.md
+
+| 항목 | 변경 내용 |
+|------|---------|
+| POST /v1/wallets | `environment` optional 파라미터 추가, 4가지 조합 설명 |
+| GET /v1/wallets, GET /v1/wallets/:id | 응답에 `environment`, `defaultNetwork` 필드 추가 |
+| GET /v1/wallets/:id/assets | 신규 엔드포인트: 멀티네트워크 잔액 집계 (masterAuth) |
+| 환경 모델 | testnet/mainnet 환경별 네트워크 목록 설명 |
+
+### transactions.skill.md
+
+| 항목 | 변경 내용 |
+|------|---------|
+| POST /v1/transactions/send | 5-type 스키마에 `network` optional 파라미터 추가 |
+| 트랜잭션 응답 | `network` nullable 필드 추가 (실행된 네트워크) |
+| 네트워크 선택 | resolveNetwork() 3단계 fallback 설명 |
+| 에러 코드 | ENVIRONMENT_NETWORK_MISMATCH 에러 추가 |
+
+### policies.skill.md
+
+| 항목 | 변경 내용 |
+|------|---------|
+| ALLOWED_NETWORKS | 신규 PolicyType: 허용 네트워크 목록 정의 |
+| 네트워크 스코프 | 정책에 `network` 필드 추가: 네트워크별 정책 분리 |
+| 정책 생성 | POST /v1/policies에 `network` optional 파라미터 추가 |
+| 기본 동작 | ALLOWED_NETWORKS 미설정 시 permissive (하위호환) |
