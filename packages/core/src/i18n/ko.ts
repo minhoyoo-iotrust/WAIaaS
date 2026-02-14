@@ -23,7 +23,7 @@ export const messages: Messages = {
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: '세션 절대 수명을 초과했습니다',
     RENEWAL_TOO_EARLY: '세션 갱신이 너무 이릅니다',
     SESSION_RENEWAL_MISMATCH: '세션 갱신 토큰이 일치하지 않습니다',
-    // TX domain (24)
+    // TX domain (25)
     INSUFFICIENT_BALANCE: '잔액이 부족합니다',
     INVALID_ADDRESS: '유효하지 않은 주소 형식입니다',
     TX_NOT_FOUND: '트랜잭션을 찾을 수 없습니다',
@@ -49,6 +49,7 @@ export const messages: Messages = {
     WALLET_NOT_SIGNER: '지갑이 이 트랜잭션의 서명자가 아닙니다',
     UNSUPPORTED_TX_TYPE: '지원하지 않는 트랜잭션 유형입니다',
     CHAIN_ID_MISMATCH: '트랜잭션의 체인 ID가 요청한 네트워크와 일치하지 않습니다',
+    ABI_ENCODING_FAILED: 'ABI 인코딩에 실패했습니다',
     // POLICY domain (5)
     POLICY_NOT_FOUND: '정책을 찾을 수 없습니다',
     POLICY_DENIED: '정책에 의해 거부되었습니다',

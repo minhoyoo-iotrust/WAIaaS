@@ -148,7 +148,7 @@ export const ERROR_CODES = {
     message: 'Pipeline halted (transaction queued for delay or approval)',
   },
 
-  // --- TX domain (24) ---
+  // --- TX domain (25) ---
   INSUFFICIENT_BALANCE: {
     code: 'INSUFFICIENT_BALANCE',
     domain: 'TX',
@@ -323,6 +323,13 @@ export const ERROR_CODES = {
     httpStatus: 400,
     retryable: false,
     message: 'Transaction chain ID does not match requested network',
+  },
+  ABI_ENCODING_FAILED: {
+    code: 'ABI_ENCODING_FAILED',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: 'ABI encoding failed',
   },
 
   // --- POLICY domain (5) ---
