@@ -52,10 +52,10 @@
   2. v1 스키마 DB에서 v9까지 전체 마이그레이션 체인이 테스트로 검증된다
   3. environment 매핑, network 백필, 이름 변환 데이터 변환이 테스트로 검증된다
   4. pushSchema가 테이블 생성 후 마이그레이션을 실행하고, 인덱스는 마이그레이션 완료 후 생성한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 120-01: pushSchema 순서 수정 + 마이그레이션 체인 테스트
+- [ ] 120-01-PLAN.md — pushSchema 순서 수정 + 마이그레이션 체인 테스트 (TDD)
 
 ### Phase 121: MCP 안정성
 **Goal**: MCP 서버 프로세스가 클라이언트 종료 시 고아로 잔류하지 않고 안전하게 종료된다
@@ -135,7 +135,7 @@ Phases 120~124 are all independent. Recommended order: 120 (HIGH bug) -> 121 -> 
 | 117. Sign-Only Pipeline + REST API | v1.4.7 | 2/2 | Complete | 2026-02-15 |
 | 118. EVM Calldata Encoding | v1.4.7 | 2/2 | Complete | 2026-02-15 |
 | 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 3/3 | Complete | 2026-02-15 |
-| 120. DB 마이그레이션 안정성 | v1.4.8 | 0/1 | Not started | - |
+| 120. DB 마이그레이션 안정성 | v1.4.8 | 0/1 | Planned | - |
 | 121. MCP 안정성 | v1.4.8 | 0/1 | Not started | - |
 | 122. MCP 도구 + 멀티체인 DX | v1.4.8 | 0/2 | Not started | - |
 | 123. Admin UI 개선 | v1.4.8 | 0/2 | Not started | - |
