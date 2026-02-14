@@ -3,7 +3,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
- * Keys in errors must match ERROR_CODES keys exactly (69 error codes).
+ * Keys in errors must match ERROR_CODES keys exactly (73 error codes).
  * Notification templates cover all 21 event types.
  */
 export interface Messages {
@@ -25,7 +25,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (69 error codes from SS10.12 unified matrix)
+  // Error messages (73 error codes from SS10.12 unified matrix)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -47,7 +47,7 @@ export const messages: Messages = {
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: 'Session absolute lifetime exceeded',
     RENEWAL_TOO_EARLY: 'Session renewal too early',
     SESSION_RENEWAL_MISMATCH: 'Session renewal token mismatch',
-    // TX domain (20)
+    // TX domain (24)
     INSUFFICIENT_BALANCE: 'Insufficient balance',
     INVALID_ADDRESS: 'Invalid address format',
     TX_NOT_FOUND: 'Transaction not found',
@@ -69,6 +69,10 @@ export const messages: Messages = {
     BATCH_SIZE_EXCEEDED: 'Batch size exceeded',
     BATCH_POLICY_VIOLATION: 'Batch policy violation',
     ENVIRONMENT_NETWORK_MISMATCH: "Network is not allowed in this wallet's environment",
+    INVALID_TRANSACTION: 'Invalid raw transaction format',
+    WALLET_NOT_SIGNER: 'Wallet is not a signer in this transaction',
+    UNSUPPORTED_TX_TYPE: 'Unsupported transaction type',
+    CHAIN_ID_MISMATCH: 'Transaction chain ID does not match requested network',
     // POLICY domain (5)
     POLICY_NOT_FOUND: 'Policy not found',
     POLICY_DENIED: 'Policy denied',

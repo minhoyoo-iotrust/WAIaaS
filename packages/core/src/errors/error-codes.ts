@@ -19,7 +19,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 69 error codes from SS10.12 unified error code matrix.
+ * 73 error codes from SS10.12 unified error code matrix.
  * SSoT: 37-rest-api-complete-spec.md section 10.12
  */
 export const ERROR_CODES = {
@@ -148,7 +148,7 @@ export const ERROR_CODES = {
     message: 'Pipeline halted (transaction queued for delay or approval)',
   },
 
-  // --- TX domain (20) ---
+  // --- TX domain (24) ---
   INSUFFICIENT_BALANCE: {
     code: 'INSUFFICIENT_BALANCE',
     domain: 'TX',
@@ -295,6 +295,34 @@ export const ERROR_CODES = {
     httpStatus: 400,
     retryable: false,
     message: "Network is not allowed in this wallet's environment",
+  },
+  INVALID_TRANSACTION: {
+    code: 'INVALID_TRANSACTION',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Invalid raw transaction format',
+  },
+  WALLET_NOT_SIGNER: {
+    code: 'WALLET_NOT_SIGNER',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Wallet is not a signer in this transaction',
+  },
+  UNSUPPORTED_TX_TYPE: {
+    code: 'UNSUPPORTED_TX_TYPE',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Unsupported transaction type',
+  },
+  CHAIN_ID_MISMATCH: {
+    code: 'CHAIN_ID_MISMATCH',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Transaction chain ID does not match requested network',
   },
 
   // --- POLICY domain (5) ---

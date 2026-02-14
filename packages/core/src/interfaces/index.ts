@@ -16,6 +16,11 @@ export type {
   ContractCallParams,
   ApproveParams,
   BatchParams,
+  // v1.4.7 sign-only types
+  ParsedOperationType,
+  ParsedOperation,
+  ParsedTransaction,
+  SignedTransaction,
 } from './chain-adapter.types.js';
 
 // Interfaces

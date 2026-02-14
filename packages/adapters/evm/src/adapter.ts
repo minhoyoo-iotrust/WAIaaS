@@ -6,11 +6,12 @@
  * Phase 78-02: buildTokenTransfer real implementation + getAssets ERC-20 multicall expansion.
  * Phase 79-01: buildContractCall real implementation.
  *
- * Real implementations (19):
+ * Real implementations (21):
  *   connect, disconnect, isConnected, getHealth, getBalance, getCurrentNonce,
  *   buildTransaction, simulateTransaction, signTransaction, submitTransaction,
  *   waitForConfirmation, estimateFee, getTransactionFee, getAssets, getTokenInfo,
- *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED), buildTokenTransfer, buildContractCall
+ *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED), buildTokenTransfer, buildContractCall,
+ *   parseTransaction, signExternalTransaction
  *
  * Stubs for later phases (1):
  *   sweepAll (Phase 80)
@@ -20,7 +21,7 @@ import {
   createPublicClient,
   http,
   serializeTransaction,
-  parseTransaction,
+  parseTransaction as viemParseTransaction,
   encodeFunctionData,
   hexToBytes,
   toHex,
@@ -30,6 +31,7 @@ import {
   type Hex,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
+import { parseEvmTransaction } from './tx-parser.js';
 import type {
   IChainAdapter,
   ChainType,
@@ -48,6 +50,8 @@ import type {
   ContractCallParams,
   ApproveParams,
   BatchParams,
+  ParsedTransaction,
+  SignedTransaction,
 } from '@waiaas/core';
 import { WAIaaSError, ChainError } from '@waiaas/core';
 import { ERC20_ABI } from './abi/erc20.js';
@@ -317,7 +321,7 @@ export class EvmAdapter implements IChainAdapter {
     try {
       // Deserialize the tx from serialized bytes back to tx params
       const serializedHex = toHex(tx.serialized);
-      const parsed = parseTransaction(serializedHex as TransactionSerializedEIP1559);
+      const parsed = viemParseTransaction(serializedHex as TransactionSerializedEIP1559);
 
       // Use client.call() to simulate via eth_call
       await client.call({
@@ -353,7 +357,7 @@ export class EvmAdapter implements IChainAdapter {
 
       // Deserialize tx bytes back to tx object
       const serializedHex = toHex(tx.serialized);
-      const parsed = parseTransaction(serializedHex as TransactionSerializedEIP1559);
+      const parsed = viemParseTransaction(serializedHex as TransactionSerializedEIP1559);
 
       // Sign the transaction
       const signedHex = await account.signTransaction({
@@ -798,6 +802,46 @@ export class EvmAdapter implements IChainAdapter {
 
   async sweepAll(_from: string, _to: string, _privateKey: Uint8Array): Promise<SweepResult> {
     throw new Error('Not implemented: sweepAll will be implemented in Phase 80');
+  }
+
+  // -- Sign-only operations (2) -- v1.4.7
+
+  async parseTransaction(rawTx: string): Promise<ParsedTransaction> {
+    return parseEvmTransaction(rawTx);
+  }
+
+  async signExternalTransaction(rawTx: string, privateKey: Uint8Array): Promise<SignedTransaction> {
+    try {
+      // Convert private key bytes to hex
+      const privateKeyHex = `0x${Buffer.from(privateKey).toString('hex')}` as Hex;
+
+      // Create account from private key
+      const account = privateKeyToAccount(privateKeyHex);
+
+      // Parse the raw unsigned tx
+      let parsed: ReturnType<typeof viemParseTransaction>;
+      try {
+        parsed = viemParseTransaction(rawTx as Hex);
+      } catch {
+        throw new ChainError('INVALID_RAW_TRANSACTION', 'evm', {
+          message: 'Failed to parse unsigned transaction for signing',
+        });
+      }
+
+      // Sign the transaction
+      const signedHex = await account.signTransaction({
+        ...parsed,
+        type: parsed.type ?? 'eip1559',
+      } as Parameters<typeof account.signTransaction>[0]);
+
+      return { signedTransaction: signedHex };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      throw new ChainError('INVALID_RAW_TRANSACTION', 'evm', {
+        message: `Failed to sign external transaction: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
   }
 
   // -- Private helpers --
