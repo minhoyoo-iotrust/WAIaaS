@@ -1186,3 +1186,636 @@ Phase 105 (docs/68)              Phase 106 (docs/70)              Phase 107 (doc
                                   Quickstart CLI 워크플로우
                                   Skill 파일 동기화
 ```
+
+---
+
+## 6. MCP 도구 network 파라미터 추가 (API-04)
+
+### 6.1 변경 대상 6개 도구
+
+트랜잭션/잔액 관련 MCP 도구 6개에 `network` optional 파라미터를 추가한다. 변경하지 않는 4개 도구(get_address, get_wallets, get_wallet, create_wallet)는 월렛 메타데이터 조회/생성 도구로, 네트워크 선택이 불필요하다.
+
+| # | 도구 | 카테고리 | REST API | network 전달 위치 |
+|---|------|---------|----------|-----------------|
+| 1 | send_token | 트랜잭션 | POST /v1/transactions/send | request body |
+| 2 | call_contract | 트랜잭션 | POST /v1/transactions/send | request body |
+| 3 | approve_token | 트랜잭션 | POST /v1/transactions/send | request body |
+| 4 | send_batch | 트랜잭션 | POST /v1/transactions/send | request body |
+| 5 | get_balance | 조회 | GET /v1/wallet/balance | query parameter |
+| 6 | get_assets | 조회 | GET /v1/wallet/assets | query parameter |
+
+변경하지 않는 도구:
+
+| # | 도구 | 이유 |
+|---|------|------|
+| 1 | get_address | 월렛 주소는 네트워크 독립. 체인별 주소 파생이 동일 |
+| 2 | get_wallets | 월렛 목록 조회. 네트워크 필터는 필요 없음 |
+| 3 | get_wallet | 월렛 상세 조회. environment/defaultNetwork가 응답에 포함됨 |
+| 4 | create_wallet | 월렛 생성 시 environment 파라미터는 별도 도구 또는 REST API 직접 사용 |
+
+### 6.2 트랜잭션 도구 4개: network를 body에 포함
+
+#### send_token
+
+```typescript
+// packages/mcp/src/tools/send-token.ts -- 변경 후
+
+export function registerSendToken(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
+  server.tool(
+    'send_token',
+    withWalletPrefix('Send SOL/ETH or tokens from the wallet. For token transfers, specify type and token info.', walletContext?.walletName),
+    {
+      to: z.string().describe('Destination wallet address'),
+      amount: z.string().describe('Amount in smallest unit (lamports/wei)'),
+      memo: z.string().optional().describe('Optional transaction memo'),
+      type: z.enum(['TRANSFER', 'TOKEN_TRANSFER']).optional()
+        .describe('Transaction type. Default: TRANSFER (native). TOKEN_TRANSFER for SPL/ERC-20'),
+      token: z.object({
+        address: z.string().describe('Token mint (SPL) or contract address (ERC-20)'),
+        decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
+        symbol: z.string().describe('Token symbol (e.g., USDC)'),
+      }).optional().describe('Required for TOKEN_TRANSFER'),
+      network: z.string().optional().describe(                      // NEW
+        'Target network (e.g., devnet, ethereum-sepolia, polygon-amoy). '
+        + 'If omitted, uses wallet\'s default network.'
+      ),
+    },
+    async (args) => {
+      const body: Record<string, unknown> = { to: args.to, amount: args.amount };
+      if (args.memo !== undefined) body.memo = args.memo;
+      if (args.type) body.type = args.type;
+      if (args.token) body.token = args.token;
+      if (args.network !== undefined) body.network = args.network;  // NEW
+      const result = await apiClient.post('/v1/transactions/send', body);
+      return toToolResult(result);
+    },
+  );
+}
+```
+
+#### call_contract
+
+```typescript
+// packages/mcp/src/tools/call-contract.ts -- 변경 후
+
+export function registerCallContract(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
+  server.tool(
+    'call_contract',
+    withWalletPrefix('Call a whitelisted smart contract. Requires CONTRACT_WHITELIST policy. For EVM: provide calldata (hex). For Solana: provide programId + instructionData + accounts.', walletContext?.walletName),
+    {
+      to: z.string().describe('Contract address'),
+      calldata: z.string().optional().describe('Hex-encoded calldata (EVM)'),
+      abi: z.array(z.record(z.unknown())).optional().describe('ABI fragment for decoding (EVM)'),
+      value: z.string().optional().describe('Native token value in wei (EVM)'),
+      programId: z.string().optional().describe('Program ID (Solana)'),
+      instructionData: z.string().optional().describe('Base64-encoded instruction data (Solana)'),
+      accounts: z.array(z.object({
+        pubkey: z.string(),
+        isSigner: z.boolean(),
+        isWritable: z.boolean(),
+      })).optional().describe('Account metas (Solana)'),
+      network: z.string().optional().describe(                      // NEW
+        'Target network (e.g., devnet, ethereum-sepolia, polygon-amoy). '
+        + 'If omitted, uses wallet\'s default network.'
+      ),
+    },
+    async (args) => {
+      const body: Record<string, unknown> = { type: 'CONTRACT_CALL', to: args.to };
+      if (args.calldata !== undefined) body.calldata = args.calldata;
+      if (args.abi !== undefined) body.abi = args.abi;
+      if (args.value !== undefined) body.value = args.value;
+      if (args.programId !== undefined) body.programId = args.programId;
+      if (args.instructionData !== undefined) body.instructionData = args.instructionData;
+      if (args.accounts !== undefined) body.accounts = args.accounts;
+      if (args.network !== undefined) body.network = args.network;  // NEW
+      const result = await apiClient.post('/v1/transactions/send', body);
+      return toToolResult(result);
+    },
+  );
+}
+```
+
+#### approve_token
+
+```typescript
+// packages/mcp/src/tools/approve-token.ts -- 변경 후
+
+export function registerApproveToken(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
+  server.tool(
+    'approve_token',
+    withWalletPrefix('Approve a spender to transfer tokens on your behalf. Requires APPROVED_SPENDERS policy.', walletContext?.walletName),
+    {
+      spender: z.string().describe('Spender address'),
+      token: z.object({
+        address: z.string().describe('Token mint (SPL) or contract address (ERC-20)'),
+        decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
+        symbol: z.string().describe('Token symbol (e.g., USDC)'),
+      }).describe('Token info'),
+      amount: z.string().describe('Approval amount in smallest unit'),
+      network: z.string().optional().describe(                      // NEW
+        'Target network (e.g., devnet, ethereum-sepolia, polygon-amoy). '
+        + 'If omitted, uses wallet\'s default network.'
+      ),
+    },
+    async (args) => {
+      const body: Record<string, unknown> = {
+        type: 'APPROVE',
+        spender: args.spender,
+        token: args.token,
+        amount: args.amount,
+      };
+      if (args.network !== undefined) body.network = args.network;  // NEW
+      const result = await apiClient.post('/v1/transactions/send', body);
+      return toToolResult(result);
+    },
+  );
+}
+```
+
+#### send_batch
+
+```typescript
+// packages/mcp/src/tools/send-batch.ts -- 변경 후
+
+export function registerSendBatch(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
+  server.tool(
+    'send_batch',
+    withWalletPrefix('Send multiple instructions in a single atomic transaction (Solana only, 2-20 instructions).', walletContext?.walletName),
+    {
+      instructions: z.array(z.record(z.unknown())).min(2).max(20)
+        .describe('Array of instruction objects (each is a TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE without the type field)'),
+      network: z.string().optional().describe(                      // NEW
+        'Target network (e.g., devnet, testnet). '
+        + 'If omitted, uses wallet\'s default network. '
+        + 'All instructions execute on this single network.'
+      ),
+    },
+    async (args) => {
+      const body: Record<string, unknown> = {
+        type: 'BATCH',
+        instructions: args.instructions,
+      };
+      if (args.network !== undefined) body.network = args.network;  // NEW
+      const result = await apiClient.post('/v1/transactions/send', body);
+      return toToolResult(result);
+    },
+  );
+}
+```
+
+### 6.3 조회 도구 2개: network를 query parameter로 전달
+
+#### get_balance
+
+```typescript
+// packages/mcp/src/tools/get-balance.ts -- 변경 후
+
+import { z } from 'zod';                                            // NEW: Zod import 추가
+
+export function registerGetBalance(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
+  server.tool(
+    'get_balance',
+    withWalletPrefix('Get the current balance of the wallet.', walletContext?.walletName),
+    {
+      network: z.string().optional().describe(                      // NEW
+        'Target network to check balance (e.g., devnet, ethereum-sepolia, polygon-amoy). '
+        + 'If omitted, uses wallet\'s default network.'
+      ),
+    },
+    async (args) => {
+      // GET 엔드포인트이므로 query parameter로 전달
+      const query = args.network ? `?network=${encodeURIComponent(args.network)}` : '';
+      const result = await apiClient.get(`/v1/wallet/balance${query}`);
+      return toToolResult(result);
+    },
+  );
+}
+```
+
+**변경 포인트:** 기존 `get_balance`는 파라미터가 없는 도구였다 (Zod 스키마 없이 `async () => { ... }` 형태). `network` optional 파라미터를 추가하면서 Zod 입력 스키마 객체를 추가한다. 파라미터 없이 호출하면 `args.network`는 `undefined`이므로 기존 동작과 동일하다.
+
+#### get_assets
+
+```typescript
+// packages/mcp/src/tools/get-assets.ts -- 변경 후
+
+import { z } from 'zod';                                            // NEW: Zod import 추가
+
+export function registerGetAssets(server: McpServer, apiClient: ApiClient, walletContext?: WalletContext): void {
+  server.tool(
+    'get_assets',
+    withWalletPrefix('Get all assets (native + tokens) held by the wallet.', walletContext?.walletName),
+    {
+      network: z.string().optional().describe(                      // NEW
+        'Target network to check assets (e.g., devnet, ethereum-sepolia, polygon-amoy). '
+        + 'If omitted, uses wallet\'s default network.'
+      ),
+    },
+    async (args) => {
+      // GET 엔드포인트이므로 query parameter로 전달
+      const query = args.network ? `?network=${encodeURIComponent(args.network)}` : '';
+      const result = await apiClient.get(`/v1/wallet/assets${query}`);
+      return toToolResult(result);
+    },
+  );
+}
+```
+
+### 6.4 MCP 리소스로 월렛 환경 정보 노출
+
+LLM이 현재 월렛의 환경과 기본 네트워크를 파악할 수 있도록 MCP 리소스를 활용한다. 이미 `get_wallet` 도구가 월렛 상세 정보를 반환하지만, Phase 108 이후 응답에 `environment`와 `defaultNetwork`가 포함되므로 LLM이 현재 컨텍스트를 파악할 수 있다.
+
+```typescript
+// MCP 리소스 추가는 별도 구현 범위이지만, 설계 참고용으로 기록:
+// server.resource('wallet-context', 'waiaas://wallet/context', async () => {
+//   const walletInfo = await apiClient.get('/v1/wallet/info');
+//   return {
+//     contents: [{
+//       uri: 'waiaas://wallet/context',
+//       mimeType: 'application/json',
+//       text: JSON.stringify({
+//         chain: walletInfo.chain,
+//         environment: walletInfo.environment,
+//         defaultNetwork: walletInfo.defaultNetwork,
+//         availableNetworks: walletInfo.availableNetworks,
+//       }),
+//     }],
+//   };
+// });
+```
+
+**현재 설계:** MCP 리소스 추가는 v1.4.6 구현 범위에서 선택적으로 진행한다. 우선은 `get_wallet` 도구 응답에 포함되는 `environment`/`defaultNetwork` 필드로 LLM이 컨텍스트를 파악한다.
+
+### 6.5 network description 가이드 (LLM 혼란 방지)
+
+MCP 도구의 `network` 파라미터 description은 LLM이 올바르게 사용하도록 3가지 원칙을 따른다:
+
+| # | 원칙 | description 텍스트 패턴 | 이유 |
+|---|------|----------------------|------|
+| 1 | 기본값 명시 | "If omitted, uses wallet's default network" | LLM이 매번 network를 명시하는 것을 방지 |
+| 2 | 예시 네트워크 포함 | "e.g., devnet, ethereum-sepolia, polygon-amoy" | LLM이 유효한 네트워크명을 추론 가능 |
+| 3 | 특이사항 명시 (send_batch) | "All instructions execute on this single network" | BATCH 도구의 단일 네트워크 제약 설명 |
+
+**설계 결정 API-D06:** MCP network description에 "omit for default" 명시 (LLM 혼란 방지). LLM이 network를 optional로 인식하여 불필요한 network 지정을 줄이고, 기존 동작(월렛 기본 네트워크)을 자연스럽게 활용하도록 유도한다.
+
+---
+
+## 7. TS SDK 확장 설계 (API-04)
+
+### 7.1 SendTokenParams 인터페이스 확장
+
+```typescript
+// packages/sdk/src/types.ts -- 변경 후
+
+export interface SendTokenParams {
+  to?: string;
+  amount?: string;
+  memo?: string;
+  type?: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH';
+  token?: TokenInfo;
+  // CONTRACT_CALL fields
+  calldata?: string;
+  abi?: Record<string, unknown>[];
+  value?: string;
+  programId?: string;
+  instructionData?: string;
+  accounts?: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  // APPROVE fields
+  spender?: string;
+  // BATCH fields
+  instructions?: Array<Record<string, unknown>>;
+  // Network selection (Phase 108)
+  network?: string;  // NEW: 트랜잭션별 네트워크 선택. 미지정 시 월렛 기본 네트워크
+}
+```
+
+**하위호환:** `network`는 optional이므로 기존 `sendToken({ to, amount })` 호출이 변경 없이 동작한다. `network`는 `SendTokenParams` 전체를 `body`로 POST하므로 자동으로 request body에 포함된다.
+
+### 7.2 WAIaaSClient.sendToken() 변경
+
+```typescript
+// packages/sdk/src/client.ts -- sendToken 메서드 (변경 없음)
+
+async sendToken(params: SendTokenParams): Promise<SendTokenResponse> {
+  validateSendToken(params);
+  return withRetry(
+    () => this.http.post<SendTokenResponse>(
+      '/v1/transactions/send',
+      params,                    // params에 network가 포함되면 body에 자동 전달
+      this.authHeaders(),
+    ),
+    this.retryOptions,
+  );
+}
+```
+
+`sendToken()` 메서드 자체는 변경 불필요하다. `params` 객체를 그대로 body로 전달하므로 `SendTokenParams.network`가 추가되면 자동으로 body에 포함된다. `validateSendToken()`에서 network 검증이 필요하면 `validation.ts`에 추가한다.
+
+### 7.3 WAIaaSClient.getBalance(network?) 확장
+
+```typescript
+// packages/sdk/src/client.ts -- getBalance 메서드 변경 후
+
+async getBalance(network?: string): Promise<BalanceResponse> {
+  // GET 엔드포인트이므로 query parameter로 전달
+  const query = network ? `?network=${encodeURIComponent(network)}` : '';
+  return withRetry(
+    () => this.http.get<BalanceResponse>(
+      `/v1/wallet/balance${query}`,
+      this.authHeaders(),
+    ),
+    this.retryOptions,
+  );
+}
+```
+
+**변경 포인트:** 기존 `getBalance()`는 파라미터가 없었다. `network?: string` optional 파라미터를 추가하고, 지정 시 `?network=X` 쿼리 파라미터로 전달한다. 미지정 시 기존 URL과 동일(`/v1/wallet/balance`)하므로 하위호환 유지.
+
+### 7.4 WAIaaSClient.getAssets(network?) 확장
+
+```typescript
+// packages/sdk/src/client.ts -- getAssets 메서드 변경 후
+
+async getAssets(network?: string): Promise<AssetsResponse> {
+  // GET 엔드포인트이므로 query parameter로 전달
+  const query = network ? `?network=${encodeURIComponent(network)}` : '';
+  return withRetry(
+    () => this.http.get<AssetsResponse>(
+      `/v1/wallet/assets${query}`,
+      this.authHeaders(),
+    ),
+    this.retryOptions,
+  );
+}
+```
+
+**변경 포인트:** `getBalance()`와 동일 패턴. `network` 미지정 시 기존 동작 유지.
+
+### 7.5 응답 타입 확장
+
+```typescript
+// packages/sdk/src/types.ts -- 응답 타입 변경 후
+
+export interface BalanceResponse {
+  walletId: string;
+  chain: string;
+  network: string;           // 기존 유지 (실제 조회된 네트워크)
+  address: string;
+  balance: string;
+  decimals: number;
+  symbol: string;
+}
+
+export interface AddressResponse {
+  walletId: string;
+  chain: string;
+  network: string;           // 기존 유지
+  address: string;
+}
+
+export interface AssetsResponse {
+  walletId: string;
+  chain: string;
+  network: string;           // 기존 유지 (실제 조회된 네트워크)
+  assets: AssetInfo[];
+}
+
+// 트랜잭션 응답에 network 추가
+export interface TransactionResponse {
+  id: string;
+  walletId: string;
+  type: string;
+  status: string;
+  tier: string | null;
+  chain: string;
+  network: string | null;   // NEW: 실행된 네트워크 (nullable, 마이그레이션 이전 레코드)
+  toAddress: string | null;
+  amount: string | null;
+  txHash: string | null;
+  error: string | null;
+  createdAt: number | null;
+}
+```
+
+**WalletResponse 타입 추가 (신규):**
+
+```typescript
+// packages/sdk/src/types.ts -- WalletResponse 신규 (또는 기존 미정의 타입)
+
+export interface WalletResponse {
+  id: string;
+  name: string;
+  chain: string;
+  network: string;                    // 기존 유지 (하위호환)
+  environment: string;                // NEW: 'testnet' | 'mainnet'
+  defaultNetwork: string | null;      // NEW: 월렛 기본 네트워크
+  publicKey: string;
+  status: string;
+  createdAt: number;
+}
+```
+
+### 7.6 하위호환 증명
+
+```
+기존 호출:
+  const client = new WAIaaSClient({ baseUrl, sessionToken });
+  const balance = await client.getBalance();           // network 미지정
+  const tx = await client.sendToken({ to, amount });   // network 미지정
+
+변경 후:
+  const balance = await client.getBalance();           // 동일 동작 (query 없음)
+  const balance2 = await client.getBalance('polygon-amoy');  // 신규 기능
+
+  const tx = await client.sendToken({ to, amount });   // 동일 동작 (body에 network 없음)
+  const tx2 = await client.sendToken({ to, amount, network: 'polygon-amoy' });  // 신규 기능
+
+결과: 기존 코드 변경 없이 동작. 새 파라미터는 선택적. QED
+```
+
+---
+
+## 8. Python SDK 확장 설계 (API-04)
+
+### 8.1 SendTokenRequest Pydantic 모델 확장
+
+```python
+# python-sdk/waiaas/models.py -- 변경 후
+
+class SendTokenRequest(BaseModel):
+    """Request body for POST /v1/transactions/send (5-type support)."""
+
+    to: Optional[str] = None
+    amount: Optional[str] = None
+    memo: Optional[str] = None
+    type: Optional[str] = None
+    token: Optional[TokenInfo] = None
+    # CONTRACT_CALL fields
+    calldata: Optional[str] = None
+    abi: Optional[list[dict[str, Any]]] = None
+    value: Optional[str] = None
+    program_id: Optional[str] = Field(default=None, alias="programId")
+    instruction_data: Optional[str] = Field(default=None, alias="instructionData")
+    accounts: Optional[list[dict[str, Any]]] = None
+    # APPROVE fields
+    spender: Optional[str] = None
+    # BATCH fields
+    instructions: Optional[list[dict[str, Any]]] = None
+    # Network selection (Phase 108)
+    network: Optional[str] = None  # NEW: 트랜잭션별 네트워크 선택
+
+    model_config = {"populate_by_name": True}
+```
+
+### 8.2 WAIaaSClient.send_token() 변경
+
+```python
+# python-sdk/waiaas/client.py -- send_token 메서드 (변경 없음)
+
+async def send_token(
+    self,
+    to: Optional[str] = None,
+    amount: Optional[str] = None,
+    *,
+    memo: Optional[str] = None,
+    type: Optional[str] = None,
+    token: Optional[dict[str, Any]] = None,
+    network: Optional[str] = None,          # NEW
+    **kwargs: Any,
+) -> TransactionResponse:
+    """POST /v1/transactions/send -- Send transaction (5-type support).
+
+    Args:
+        to: Recipient/contract address.
+        amount: Amount in base units (lamports/wei).
+        memo: Optional memo string.
+        type: Transaction type (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH).
+        token: Token info dict with address, decimals, symbol.
+        network: Target network (e.g., 'devnet', 'ethereum-sepolia'). Omit for wallet default.
+        **kwargs: Additional fields (calldata, spender, instructions, etc.).
+
+    Returns:
+        TransactionResponse with id and status.
+    """
+    token_obj = TokenInfo(**token) if isinstance(token, dict) else token
+    request = SendTokenRequest(
+        to=to, amount=amount, memo=memo, type=type,
+        token=token_obj, network=network, **kwargs,    # network 전달
+    )
+    body = request.model_dump(exclude_none=True, by_alias=True)
+    resp = await self._request("POST", "/v1/transactions/send", json_body=body)
+    return TransactionResponse.model_validate(resp.json())
+```
+
+**하위호환:** `network` 파라미터는 `Optional[str] = None`이므로 기존 `client.send_token(to="...", amount="...")` 호출이 동일하게 동작한다. `exclude_none=True`로 직렬화하면 `network=None`인 경우 body에 포함되지 않는다.
+
+### 8.3 WAIaaSClient.get_balance(network?) 확장
+
+```python
+# python-sdk/waiaas/client.py -- get_balance 메서드 변경 후
+
+async def get_balance(self, network: Optional[str] = None) -> WalletBalance:
+    """GET /v1/wallet/balance -- Get wallet balance.
+
+    Args:
+        network: Target network to check balance (e.g., 'devnet', 'ethereum-sepolia').
+                 If omitted, uses wallet's default network.
+    """
+    params = {}
+    if network is not None:
+        params["network"] = network
+    resp = await self._request("GET", "/v1/wallet/balance", params=params or None)
+    return WalletBalance.model_validate(resp.json())
+```
+
+**변경 포인트:** 기존 `get_balance()`는 파라미터가 없었다. `network: Optional[str] = None` 파라미터를 추가하고, 지정 시 `params={"network": "..."}` 딕셔너리를 전달한다. `_request()` 메서드가 `params` 인자를 이미 지원하므로 httpx가 `?network=X` 쿼리 파라미터를 자동 생성한다.
+
+### 8.4 WAIaaSClient.get_assets(network?) 확장
+
+```python
+# python-sdk/waiaas/client.py -- get_assets 메서드 변경 후
+
+async def get_assets(self, network: Optional[str] = None) -> WalletAssets:
+    """GET /v1/wallet/assets -- Get all assets held by wallet.
+
+    Args:
+        network: Target network to check assets (e.g., 'devnet', 'ethereum-sepolia').
+                 If omitted, uses wallet's default network.
+    """
+    params = {}
+    if network is not None:
+        params["network"] = network
+    resp = await self._request("GET", "/v1/wallet/assets", params=params or None)
+    return WalletAssets.model_validate(resp.json())
+```
+
+### 8.5 응답 모델 확장
+
+```python
+# python-sdk/waiaas/models.py -- 응답 모델 변경 후
+
+class TransactionDetail(BaseModel):
+    """Response from GET /v1/transactions/:id."""
+
+    id: str
+    wallet_id: str = Field(alias="walletId")
+    type: str
+    status: str
+    tier: Optional[str] = None
+    chain: str
+    network: Optional[str] = None       # NEW: 실행된 네트워크 (nullable)
+    to_address: Optional[str] = Field(default=None, alias="toAddress")
+    amount: Optional[str] = None
+    tx_hash: Optional[str] = Field(default=None, alias="txHash")
+    error: Optional[str] = None
+    created_at: Optional[int] = Field(default=None, alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+```
+
+**WalletResponse 모델 추가 (신규):**
+
+```python
+# python-sdk/waiaas/models.py -- WalletResponse 신규
+
+class WalletResponse(BaseModel):
+    """Response from GET /v1/wallets/:id or POST /v1/wallets."""
+
+    id: str
+    name: str
+    chain: str
+    network: str                                    # 기존 유지 (하위호환)
+    environment: str                                # NEW: 'testnet' | 'mainnet'
+    default_network: Optional[str] = Field(default=None, alias="defaultNetwork")  # NEW
+    public_key: str = Field(alias="publicKey")
+    status: str
+    created_at: int = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+```
+
+### 8.6 하위호환 증명
+
+```python
+# 기존 호출 (변경 없이 동작):
+async with WAIaaSClient("http://localhost:3000", "wai_sess_xxx") as client:
+    balance = await client.get_balance()               # network 미지정 -> 기존 동작
+    assets = await client.get_assets()                 # network 미지정 -> 기존 동작
+    tx = await client.send_token(to="addr", amount="1000")  # network 미지정 -> 기존 동작
+
+# 신규 기능 (network 지정):
+async with WAIaaSClient("http://localhost:3000", "wai_sess_xxx") as client:
+    balance = await client.get_balance(network="polygon-amoy")
+    assets = await client.get_assets(network="ethereum-sepolia")
+    tx = await client.send_token(to="addr", amount="1000", network="polygon-amoy")
+```
+
+### 8.7 3개 인터페이스 network 전달 패턴 비교
+
+| 메서드 | MCP 도구 | TS SDK | Python SDK | REST API |
+|--------|----------|--------|------------|----------|
+| 토큰 전송 | `send_token({ network: "X" })` -> body.network | `sendToken({ network: "X" })` -> body.network | `send_token(network="X")` -> body.network | POST body.network |
+| 잔액 조회 | `get_balance({ network: "X" })` -> `?network=X` | `getBalance("X")` -> `?network=X` | `get_balance(network="X")` -> `?network=X` | GET `?network=X` |
+| 자산 조회 | `get_assets({ network: "X" })` -> `?network=X` | `getAssets("X")` -> `?network=X` | `get_assets(network="X")` -> `?network=X` | GET `?network=X` |
+
+**일관성:** POST 엔드포인트는 body, GET 엔드포인트는 query parameter. 3개 인터페이스 모두 동일한 REST API 전달 패턴을 따른다 (설계 결정 API-D04).
