@@ -80,6 +80,9 @@ function keyToLabel(key: string): string {
     rate_limit_tx_rpm: 'Transaction Rate Limit (RPM)',
     policy_defaults_delay_seconds: 'Policy Delay (seconds)',
     policy_defaults_approval_timeout: 'Approval Timeout (seconds)',
+    default_deny_tokens: 'Default Deny: Token Transfers',
+    default_deny_contracts: 'Default Deny: Contract Calls',
+    default_deny_spenders: 'Default Deny: Token Approvals',
     project_id: 'Project ID',
     log_level: 'Log Level',
   };
@@ -588,6 +591,38 @@ export default function SettingsPage() {
                 max={f.max}
               />
             ))}
+          </div>
+
+          {/* Default Deny Policy Toggles */}
+          <div class="settings-subgroup" style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Default Deny Policies</h4>
+            <p class="settings-description" style={{ marginBottom: '0.75rem' }}>
+              When enabled, transactions are denied if no matching whitelist policy exists.
+              Disable to allow all transactions of that type when no policy is configured.
+            </p>
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('default_deny_tokens')}
+                name="policy.default_deny_tokens"
+                type="checkbox"
+                value={getEffectiveBoolValue('security', 'default_deny_tokens')}
+                onChange={(v) => handleFieldChange('policy.default_deny_tokens', v)}
+              />
+              <FormField
+                label={keyToLabel('default_deny_contracts')}
+                name="policy.default_deny_contracts"
+                type="checkbox"
+                value={getEffectiveBoolValue('security', 'default_deny_contracts')}
+                onChange={(v) => handleFieldChange('policy.default_deny_contracts', v)}
+              />
+              <FormField
+                label={keyToLabel('default_deny_spenders')}
+                name="policy.default_deny_spenders"
+                type="checkbox"
+                value={getEffectiveBoolValue('security', 'default_deny_spenders')}
+                onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
+              />
+            </div>
           </div>
         </div>
       </div>

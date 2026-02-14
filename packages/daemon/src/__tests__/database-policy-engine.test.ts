@@ -13,6 +13,8 @@ import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import { wallets, policies } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
+import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1469,5 +1471,251 @@ describe('DatabasePolicyEngine - evaluateBatch', () => {
     // APPROVE present -> max(INSTANT, APPROVAL) = APPROVAL
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Default Deny Toggles tests (11 tests) - TOGGLE-01 ~ TOGGLE-05
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - Default Deny Toggles', () => {
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const UNISWAP_ROUTER = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
+
+  /** Engine with SettingsService for toggle tests. */
+  let toggleEngine: DatabasePolicyEngine;
+  let settingsService: SettingsService;
+
+  beforeEach(async () => {
+    // Create SettingsService with real DB and default config
+    const config = DaemonConfigSchema.parse({});
+    settingsService = new SettingsService({
+      db: conn.db,
+      config,
+      masterPassword: 'test-master-password',
+    });
+
+    // Engine with SettingsService -- default values mean default_deny=true
+    toggleEngine = new DatabasePolicyEngine(conn.db, undefined, settingsService);
+  });
+
+  /** Helper: set all 3 toggles to false (allow mode). */
+  function setAllTogglesOff(): void {
+    settingsService.set('policy.default_deny_tokens', 'false');
+    settingsService.set('policy.default_deny_contracts', 'false');
+    settingsService.set('policy.default_deny_spenders', 'false');
+  }
+
+  // --- TOGGLE-01: default_deny_tokens ---
+
+  it('TOGGLE-01: denies TOKEN_TRANSFER when default_deny_tokens=true (default) and no ALLOWED_TOKENS policy', async () => {
+    // Need at least one policy so we bypass the "no policies" passthrough
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    const result = await toggleEngine.evaluate(walletId, tokenTx('1000', USDC_MINT));
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no ALLOWED_TOKENS');
+  });
+
+  it('TOGGLE-01: allows TOKEN_TRANSFER when default_deny_tokens=false and no ALLOWED_TOKENS policy', async () => {
+    settingsService.set('policy.default_deny_tokens', 'false');
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    const result = await toggleEngine.evaluate(walletId, tokenTx('1000', USDC_MINT));
+    expect(result.allowed).toBe(true);
+  });
+
+  // --- TOGGLE-02: default_deny_contracts ---
+
+  it('TOGGLE-02: denies CONTRACT_CALL when default_deny_contracts=true (default) and no CONTRACT_WHITELIST policy', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    const result = await toggleEngine.evaluate(
+      walletId,
+      contractCallTx({ contractAddress: UNISWAP_ROUTER }),
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no CONTRACT_WHITELIST');
+  });
+
+  it('TOGGLE-02: allows CONTRACT_CALL when default_deny_contracts=false and no CONTRACT_WHITELIST policy', async () => {
+    settingsService.set('policy.default_deny_contracts', 'false');
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    const result = await toggleEngine.evaluate(
+      walletId,
+      contractCallTx({ contractAddress: UNISWAP_ROUTER }),
+    );
+    expect(result.allowed).toBe(true);
+  });
+
+  // --- TOGGLE-03: default_deny_spenders ---
+
+  it('TOGGLE-03: denies APPROVE when default_deny_spenders=true (default) and no APPROVED_SPENDERS policy', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    const result = await toggleEngine.evaluate(
+      walletId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER }),
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no APPROVED_SPENDERS');
+  });
+
+  it('TOGGLE-03: allows APPROVE when default_deny_spenders=false and no APPROVED_SPENDERS policy', async () => {
+    settingsService.set('policy.default_deny_spenders', 'false');
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    const result = await toggleEngine.evaluate(
+      walletId,
+      approveTx({ spenderAddress: UNISWAP_ROUTER }),
+    );
+    // With no APPROVED_SPENDERS policy, toggle OFF skips spenders check
+    // Then APPROVE_AMOUNT_LIMIT check (default blockUnlimited for large amounts, but 1000000 is below threshold)
+    // Then APPROVE_TIER_OVERRIDE (no policy -> default APPROVAL tier)
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+
+  // --- TOGGLE-04: whitelist policy exists -> toggle irrelevant ---
+
+  it('TOGGLE-04: evaluates ALLOWED_TOKENS whitelist normally when policy exists, regardless of toggle=false', async () => {
+    setAllTogglesOff();
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // Token NOT in whitelist -> deny by whitelist, not by toggle
+    const unknownToken = 'UnknownToken11111111111111111111111111111111';
+    const result = await toggleEngine.evaluate(walletId, tokenTx('1000', unknownToken));
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Token not in allowed list');
+  });
+
+  it('TOGGLE-04: evaluates CONTRACT_WHITELIST normally when policy exists, regardless of toggle=false', async () => {
+    setAllTogglesOff();
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: UNISWAP_ROUTER, name: 'Uniswap V2 Router' }],
+      }),
+      priority: 15,
+    });
+
+    const unknownContract = '0x1111111111111111111111111111111111111111';
+    const result = await toggleEngine.evaluate(
+      walletId,
+      contractCallTx({ contractAddress: unknownContract }),
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Contract not whitelisted');
+  });
+
+  it('TOGGLE-04: evaluates APPROVED_SPENDERS normally when policy exists, regardless of toggle=false', async () => {
+    setAllTogglesOff();
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: UNISWAP_ROUTER, name: 'Uniswap V2 Router' }],
+      }),
+      priority: 15,
+    });
+
+    const unknownSpender = '0x2222222222222222222222222222222222222222';
+    const result = await toggleEngine.evaluate(
+      walletId,
+      approveTx({ spenderAddress: unknownSpender }),
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Spender not in approved list');
+  });
+
+  // --- TOGGLE-05: hot-reload (dynamic toggle change) ---
+
+  it('TOGGLE-05: reflects toggle change on next evaluate() call (hot-reload for tokens)', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        approval_max: '999999999999',
+      }),
+      priority: 1,
+    });
+
+    // Initially: default_deny_tokens is 'true' (default) -> deny
+    const r1 = await toggleEngine.evaluate(walletId, tokenTx('1000', USDC_MINT));
+    expect(r1.allowed).toBe(false);
+    expect(r1.reason).toContain('no ALLOWED_TOKENS');
+
+    // Toggle OFF -> allow
+    settingsService.set('policy.default_deny_tokens', 'false');
+    const r2 = await toggleEngine.evaluate(walletId, tokenTx('1000', USDC_MINT));
+    expect(r2.allowed).toBe(true);
+
+    // Toggle back ON -> deny again
+    settingsService.set('policy.default_deny_tokens', 'true');
+    const r3 = await toggleEngine.evaluate(walletId, tokenTx('1000', USDC_MINT));
+    expect(r3.allowed).toBe(false);
+    expect(r3.reason).toContain('no ALLOWED_TOKENS');
   });
 });

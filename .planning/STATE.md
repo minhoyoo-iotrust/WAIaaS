@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 116 Default Deny Toggles
+**Current focus:** v1.4.7 Phase 117 Sign-Only Pipeline + REST API
 
 ## Current Position
 
-Phase: 116 of 119 (Default Deny Toggles)
+Phase: 117 of 119 (Sign-Only Pipeline + REST API)
 Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-02-15 -- Phase 115 완료 (Core Types + DB Migration + Parsers, 3/3 plans, verified)
+Last activity: 2026-02-15 -- Phase 116 완료 (Default Deny Toggles, 2/2 plans, verified)
 
-Progress: [##░░░░░░░░] 20%
+Progress: [####░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -27,6 +27,8 @@ Progress: [##░░░░░░░░] 20%
 | 115-01 | 1/3 | 8min | 8min |
 | 115-02 | 2/3 | 5min | 5min |
 | 115-03 | 3/3 | 6min | 6min |
+| 116-01 | 1/2 | 3min | 3min |
+| 116-02 | 2/2 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -46,6 +48,10 @@ Recent decisions affecting current work:
 - parseTransaction/signExternalTransaction은 offline 연산 (RPC 불필요)
 - viem parseTransaction을 viemParseTransaction으로 alias import (IChainAdapter 메서드명 충돌 해소)
 - value + calldata 동시 존재 시 CONTRACT_CALL로 분류 (calldata 우선 원칙)
+- settingsService를 DatabasePolicyEngine 선택적 3번째 파라미터로 DI (하위 호환)
+- 토글은 "no policy exists" 분기에서만 확인 -- 정책 존재 시 토글 무관 화이트리스트 평가
+- settingsService?.get() null-safe 패턴: 미전달 시 기본 거부 유지
+- 토글 테스트에서 SettingsService 실제 인스턴스 사용 (mock 대신) -- hot-reload DB 동작 검증
 
 ### Blockers/Concerns
 
@@ -55,5 +61,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 115 완료, Phase 116 대기
+Stopped at: Phase 116 완료, Phase 117 plan+execute 대기
 Resume file: None

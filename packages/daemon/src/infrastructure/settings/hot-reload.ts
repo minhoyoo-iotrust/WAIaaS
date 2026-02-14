@@ -49,6 +49,9 @@ const SECURITY_KEYS = new Set([
   'security.rate_limit_tx_rpm',
   'security.policy_defaults_delay_seconds',
   'security.policy_defaults_approval_timeout',
+  'policy.default_deny_tokens',
+  'policy.default_deny_contracts',
+  'policy.default_deny_spenders',
 ]);
 
 // ---------------------------------------------------------------------------

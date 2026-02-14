@@ -40,6 +40,7 @@ import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq, or, and, isNull, desc } from 'drizzle-orm';
 import { policies } from '../infrastructure/database/schema.js';
 import type * as schema from '../infrastructure/database/schema.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -136,12 +137,15 @@ interface TransactionParam {
  */
 export class DatabasePolicyEngine implements IPolicyEngine {
   private readonly sqlite: SQLiteDatabase | null;
+  private readonly settingsService: SettingsService | null;
 
   constructor(
     private readonly db: BetterSQLite3Database<typeof schema>,
     sqlite?: SQLiteDatabase,
+    settingsService?: SettingsService,
   ) {
     this.sqlite = sqlite ?? null;
+    this.settingsService = settingsService ?? null;
   }
 
   /**
@@ -770,8 +774,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     const allowedTokensPolicy = resolved.find((p) => p.type === 'ALLOWED_TOKENS');
 
-    // No ALLOWED_TOKENS policy -> deny token transfers (default deny)
+    // No ALLOWED_TOKENS policy -> check toggle, then deny (default deny)
     if (!allowedTokensPolicy) {
+      if (this.settingsService?.get('policy.default_deny_tokens') === 'false') {
+        return null; // default-allow mode: skip token whitelist check
+      }
       return {
         allowed: false,
         tier: 'INSTANT',
@@ -834,8 +841,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     const contractWhitelistPolicy = resolved.find((p) => p.type === 'CONTRACT_WHITELIST');
 
-    // No CONTRACT_WHITELIST policy -> deny contract calls (default deny)
+    // No CONTRACT_WHITELIST policy -> check toggle, then deny (default deny)
     if (!contractWhitelistPolicy) {
+      if (this.settingsService?.get('policy.default_deny_contracts') === 'false') {
+        return null; // default-allow mode: skip contract whitelist check
+      }
       return {
         allowed: false,
         tier: 'INSTANT',
@@ -957,8 +967,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     const approvedSpendersPolicy = resolved.find((p) => p.type === 'APPROVED_SPENDERS');
 
-    // No APPROVED_SPENDERS policy -> deny approvals (default deny)
+    // No APPROVED_SPENDERS policy -> check toggle, then deny (default deny)
     if (!approvedSpendersPolicy) {
+      if (this.settingsService?.get('policy.default_deny_spenders') === 'false') {
+        return null; // default-allow mode: skip approved spenders check
+      }
       return {
         allowed: false,
         tier: 'INSTANT',
