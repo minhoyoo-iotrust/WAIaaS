@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "1.4.4"
+version: "1.4.6"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -19,19 +19,19 @@ All wallet CRUD endpoints require **masterAuth** (`X-Master-Password` header), e
 
 ### POST /v1/wallets -- Create Wallet (masterAuth)
 
-Create a new wallet with an auto-generated key pair.
+Create a new wallet with an auto-generated key pair. Each wallet belongs to an **environment** (testnet or mainnet) which determines the available networks and default network.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "trading-bot", "chain": "solana", "network": "devnet"}'
+  -d '{"name": "trading-bot", "chain": "solana", "environment": "testnet"}'
 ```
 
 Parameters:
 - `name` (required): string, 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `network` (optional): see network table below. Defaults to `"devnet"` for Solana, config-defined default for EVM
+- `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks and default network
 
 Response (201):
 ```json
@@ -40,11 +40,14 @@ Response (201):
   "name": "trading-bot",
   "chain": "solana",
   "network": "devnet",
+  "environment": "testnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "createdAt": 1707000000
 }
 ```
+
+The `network` field shows the wallet's default network, automatically derived from `chain` + `environment`.
 
 ### GET /v1/wallets -- List Wallets (masterAuth)
 
@@ -62,6 +65,7 @@ Response (200):
       "name": "trading-bot",
       "chain": "solana",
       "network": "devnet",
+      "environment": "testnet",
       "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
       "status": "ACTIVE",
       "createdAt": 1707000000
@@ -72,7 +76,7 @@ Response (200):
 
 ### GET /v1/wallets/{id} -- Wallet Detail (masterAuth)
 
-Returns full wallet info including owner state.
+Returns full wallet info including owner state and default network.
 
 ```bash
 curl -s http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456 \
@@ -86,6 +90,8 @@ Response (200):
   "name": "trading-bot",
   "chain": "solana",
   "network": "devnet",
+  "environment": "testnet",
+  "defaultNetwork": "devnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": null,
@@ -150,6 +156,7 @@ Response (200):
   "name": "trading-bot",
   "chain": "solana",
   "network": "devnet",
+  "environment": "testnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -159,6 +166,54 @@ Response (200):
 ```
 
 Error: `OWNER_ALREADY_CONNECTED` (409) if wallet is in LOCKED state -- use ownerAuth to change owner.
+
+### PUT /v1/wallets/{id}/default-network -- Change Default Network (masterAuth)
+
+Change the wallet's default network. The new network must be valid for the wallet's environment.
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/default-network \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"network": "testnet"}'
+```
+
+Parameters:
+- `network` (required): new default network identifier. Must be valid for the wallet's chain + environment.
+
+Response (200):
+```json
+{
+  "id": "01958f3a-1234-7000-8000-abcdef123456",
+  "defaultNetwork": "testnet",
+  "previousNetwork": "devnet"
+}
+```
+
+Error: `ENVIRONMENT_NETWORK_MISMATCH` (400) if the specified network is not valid for the wallet's environment.
+
+### GET /v1/wallets/{id}/networks -- List Available Networks (masterAuth)
+
+Get all networks available for a wallet based on its chain and environment.
+
+```bash
+curl -s http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/networks \
+  -H 'X-Master-Password: your-master-password'
+```
+
+Response (200):
+```json
+{
+  "id": "01958f3a-1234-7000-8000-abcdef123456",
+  "chain": "solana",
+  "environment": "testnet",
+  "defaultNetwork": "devnet",
+  "availableNetworks": [
+    {"network": "devnet", "isDefault": true},
+    {"network": "testnet", "isDefault": false}
+  ]
+}
+```
 
 ## 2. Wallet Query (Session-Scoped)
 
@@ -190,6 +245,8 @@ curl -s http://localhost:3100/v1/wallet/balance \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
+Query a specific network by appending `?network=devnet`. Defaults to the wallet's default network.
+
 Response (200):
 ```json
 {
@@ -215,6 +272,8 @@ Returns all assets: native token + SPL tokens (Solana) or ERC-20 tokens (Ethereu
 curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
+
+Query a specific network by appending `?network=devnet`. Defaults to the wallet's default network.
 
 Response (200):
 ```json
@@ -487,26 +546,14 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 ## 7. Multi-Chain Notes
 
-### Network Reference
+### Environment-Network Reference
 
-| Chain | Network | Description |
-|-------|---------|-------------|
-| `solana` | `mainnet` | Solana mainnet-beta |
-| `solana` | `devnet` | Solana devnet (default) |
-| `solana` | `testnet` | Solana testnet |
-| `ethereum` | `ethereum-mainnet` | Ethereum mainnet |
-| `ethereum` | `ethereum-sepolia` | Ethereum Sepolia testnet |
-| `ethereum` | `polygon-mainnet` | Polygon PoS mainnet |
-| `ethereum` | `arbitrum-mainnet` | Arbitrum One mainnet |
-| `ethereum` | `optimism-mainnet` | Optimism mainnet |
-| `ethereum` | `base-mainnet` | Base mainnet |
-| `ethereum` | `bsc-mainnet` | BNB Smart Chain mainnet |
-| `ethereum` | `avalanche-mainnet` | Avalanche C-Chain mainnet |
-| `ethereum` | `linea-mainnet` | Linea mainnet |
-| `ethereum` | `scroll-mainnet` | Scroll mainnet |
-| `ethereum` | `zksync-mainnet` | zkSync Era mainnet |
-| `ethereum` | `blast-mainnet` | Blast mainnet |
-| `ethereum` | `mantle-mainnet` | Mantle mainnet |
+| Chain | Environment | Default Network | Available Networks |
+|-------|-------------|-----------------|-------------------|
+| `solana` | `testnet` | `devnet` | `devnet`, `testnet` |
+| `solana` | `mainnet` | `mainnet` | `mainnet` |
+| `ethereum` | `testnet` | `ethereum-sepolia` | `ethereum-sepolia`, `polygon-amoy`, `arbitrum-sepolia`, `optimism-sepolia`, `base-sepolia` |
+| `ethereum` | `mainnet` | `ethereum-mainnet` | `ethereum-mainnet`, `polygon-mainnet`, `arbitrum-mainnet`, `optimism-mainnet`, `base-mainnet` |
 
 ### Key Differences
 
@@ -535,6 +582,7 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 | `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` | 403 | 30-day absolute lifetime exceeded |
 | `SESSION_RENEWAL_MISMATCH` | 401 | Token hash mismatch (stale token) |
 | `OWNER_ALREADY_CONNECTED` | 409 | Owner is LOCKED, use ownerAuth |
+| `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Network not valid for wallet's environment |
 | `ACTION_VALIDATION_FAILED` | 400 | Request validation failed |
 | `CHAIN_ERROR` | 502 | Blockchain RPC error |
 | `UNAUTHORIZED` | 401 | Missing or invalid auth header |
