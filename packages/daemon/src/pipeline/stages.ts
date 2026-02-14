@@ -55,7 +55,8 @@ export interface PipelineContext {
   masterPassword: string;
   // Request data
   walletId: string;
-  wallet: { publicKey: string; chain: string; network: string };
+  wallet: { publicKey: string; chain: string; environment: string; defaultNetwork: string | null };
+  resolvedNetwork: string;
   request: SendTransactionRequest | TransactionRequest;
   // State accumulated through stages
   txId: string;
@@ -110,6 +111,7 @@ interface TransactionParam {
   amount: string;
   toAddress: string;
   chain: string;
+  network?: string;
   tokenAddress?: string;
   contractAddress?: string;
   selector?: string;
@@ -200,6 +202,7 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
     id: ctx.txId,
     walletId: ctx.walletId,
     chain: ctx.wallet.chain,
+    network: ctx.resolvedNetwork,
     type: txType,
     status: 'PENDING',
     amount: amount ?? null,
@@ -252,6 +255,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
         amount: 'amount' in instr ? (instr as { amount?: string }).amount ?? '0' : '0',
         toAddress: 'to' in instr ? (instr as { to?: string }).to ?? '' : '',
         chain: ctx.wallet.chain,
+        network: ctx.resolvedNetwork,
         tokenAddress: 'token' in instr ? (instr as { token?: { address: string } }).token?.address : undefined,
         contractAddress: instrType === 'CONTRACT_CALL' ? ('to' in instr ? (instr as { to?: string }).to : undefined) : undefined,
         selector: 'calldata' in instr ? (instr as { calldata?: string }).calldata?.slice(0, 10) : undefined,
@@ -264,6 +268,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   } else {
     // Build type-specific TransactionParam
     const txParam = buildTransactionParam(req, txType, ctx.wallet.chain);
+    txParam.network = ctx.resolvedNetwork;
 
     // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
     if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {

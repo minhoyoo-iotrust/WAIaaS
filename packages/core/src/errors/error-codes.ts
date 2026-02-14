@@ -19,7 +19,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 68 error codes from SS10.12 unified error code matrix.
+ * 69 error codes from SS10.12 unified error code matrix.
  * SSoT: 37-rest-api-complete-spec.md section 10.12
  */
 export const ERROR_CODES = {
@@ -288,6 +288,13 @@ export const ERROR_CODES = {
     httpStatus: 403,
     retryable: false,
     message: 'Policy violation in batch transaction',
+  },
+  ENVIRONMENT_NETWORK_MISMATCH: {
+    code: 'ENVIRONMENT_NETWORK_MISMATCH',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: "Network is not allowed in this wallet's environment",
   },
 
   // --- POLICY domain (5) ---
