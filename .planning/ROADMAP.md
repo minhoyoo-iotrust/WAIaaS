@@ -106,12 +106,12 @@ Plans:
   3. MCP resources/list에 waiaas://skills/{name} URI로 5개 스킬 파일이 포함되고 resources/read로 내용을 조회할 수 있다
   4. POLICY_VIOLATION 알림에 contractAddress, tokenAddress, policyType 필드와 Admin UI 딥링크가 포함된다
   5. transactions.skill.md가 sign-only API와 calldata encoding을 포함하도록 업데이트된다
-**Plans**: TBD
+**Plans:** 3 plans (Wave 1: 119-01 + 119-02 + 119-03 parallel)
 
 Plans:
-- [ ] 119-01: TS/Python SDK signTransaction + MCP sign_transaction 도구
-- [ ] 119-02: MCP 스킬 리소스 (waiaas://skills/{name}) + GET /v1/skills/:name 엔드포인트
-- [ ] 119-03: 알림 보강 (POLICY_VIOLATION 상세 필드) + 스킬 파일 업데이트
+- [ ] 119-01-PLAN.md -- TS/Python SDK signTransaction + MCP sign_transaction 도구 (13번째)
+- [ ] 119-02-PLAN.md -- SKILL_NOT_FOUND 에러 코드 + GET /v1/skills/:name 라우트 + MCP 스킬 리소스 (ResourceTemplate)
+- [ ] 119-03-PLAN.md -- POLICY_VIOLATION 알림 보강 (extractPolicyType + 상세 vars) + transactions.skill.md 업데이트
 
 ## Progress
 
