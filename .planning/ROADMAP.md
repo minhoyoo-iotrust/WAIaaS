@@ -68,11 +68,11 @@ Plans:
   2. MCP 도구(send_transaction 등)와 TS/Python SDK 메서드의 network 파라미터 추가가 기존 인터페이스와의 하위호환을 포함하여 설계되어 있다
   3. 기존 클라이언트 하위호환 전략(default_network fallback, network 미지정 시 기존 동작 유지)이 SDK/MCP/REST 3개 인터페이스에 대해 일관되게 정의되어 있다
   4. quickstart --mode testnet/mainnet 워크플로우(Solana+EVM 2월렛 일괄 생성, MCP 토큰 자동 생성, MCP 클라이언트 설정 스니펫 출력)의 단계별 흐름이 설계되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 108-01: REST API network 파라미터 + 월렛 생성 + 잔액 조회 설계
-- [ ] 108-02: MCP/SDK 확장 + 하위호환 전략 + Quickstart 워크플로우
+- [ ] 108-01-PLAN.md — REST API 7개 엔드포인트 network/environment 스키마 변경 + 멀티네트워크 잔액 집계 + 하위호환 전략 (docs/72 섹션 1~5)
+- [ ] 108-02-PLAN.md — MCP 6개 도구 + TS/Python SDK network 파라미터 확장 + Quickstart --mode 워크플로우 + 통합 설계 결정 (docs/72 섹션 6~10)
 
 ## Progress
 
