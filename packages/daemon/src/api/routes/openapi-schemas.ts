@@ -64,7 +64,7 @@ export const WalletCrudResponseSchema = z
     name: z.string(),
     chain: z.string(),
     network: z.string(),
-    environment: z.string().optional(),
+    environment: z.string(),
     publicKey: z.string(),
     status: z.string(),
     createdAt: z.number().int(),
@@ -77,7 +77,7 @@ export const WalletOwnerResponseSchema = z
     name: z.string(),
     chain: z.string(),
     network: z.string(),
-    environment: z.string().optional(),
+    environment: z.string(),
     publicKey: z.string(),
     status: z.string(),
     ownerAddress: z.string().nullable(),
@@ -174,6 +174,7 @@ export const TxDetailResponseSchema = z
     status: z.string(),
     tier: z.string().nullable(),
     chain: z.string(),
+    network: z.string().nullable(),
     toAddress: z.string().nullable(),
     amount: z.string().nullable(),
     txHash: z.string().nullable(),
@@ -396,7 +397,7 @@ export const WalletDetailResponseSchema = z
     name: z.string(),
     chain: z.string(),
     network: z.string(),
-    environment: z.string().optional(),
+    environment: z.string(),
     defaultNetwork: z.string().nullable().optional(),
     publicKey: z.string(),
     status: z.string(),
@@ -407,6 +408,42 @@ export const WalletDetailResponseSchema = z
     updatedAt: z.number().int().nullable(),
   })
   .openapi('WalletDetailResponse');
+
+// ---------------------------------------------------------------------------
+// Wallet Network Management Schemas (PUT /wallets/:id/default-network, GET /wallets/:id/networks)
+// ---------------------------------------------------------------------------
+
+// PUT /wallets/:id/default-network request
+export const UpdateDefaultNetworkRequestSchema = z
+  .object({
+    network: z.string().min(1),
+  })
+  .openapi('UpdateDefaultNetworkRequest');
+
+// PUT /wallets/:id/default-network response
+export const UpdateDefaultNetworkResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    defaultNetwork: z.string(),
+    previousNetwork: z.string().nullable(),
+  })
+  .openapi('UpdateDefaultNetworkResponse');
+
+// GET /wallets/:id/networks response
+export const WalletNetworksResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    chain: z.string(),
+    environment: z.string(),
+    defaultNetwork: z.string().nullable(),
+    availableNetworks: z.array(
+      z.object({
+        network: z.string(),
+        isDefault: z.boolean(),
+      }),
+    ),
+  })
+  .openapi('WalletNetworksResponse');
 
 // Owner address request body schema (for PUT /wallets/:id/owner)
 export const SetOwnerRequestSchema = z

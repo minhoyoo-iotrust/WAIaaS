@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 112 - REST API 네트워크 확장
+**Current focus:** Phase 113 - MCP + SDK + Admin UI
 
 ## Current Position
 
-Phase: 112 of 114 (REST API 네트워크 확장)
-Plan: 0 of 2 in current phase
+Phase: 113 of 114 (MCP + SDK + Admin UI)
+Plan: 0 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 111 완료 (verified: 4/4 must-haves)
+Last activity: 2026-02-14 -- Phase 112 완료 (verified: 11/11 must-haves)
 
-Progress: [█████░░░░░] 46% (6/13 plans)
+Progress: [██████░░░░] 62% (8/13 plans)
 
 ## Performance Metrics
 
@@ -28,6 +28,8 @@ Progress: [█████░░░░░] 46% (6/13 plans)
 | 110 | 02 | 7min | 2 | 2 |
 | 111 | 01 | 8min | 2 | 18 |
 | 111 | 02 | 5min | 2 | 4 |
+| 112 | 01 | 6min | 2 | 5 |
+| 112 | 02 | 4min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -59,6 +61,12 @@ Recent decisions affecting current work:
 - 111-01: daemon.ts executeFromStage5에서 tx.network 직접 사용 (PIPE-D04, 안전성)
 - 111-02: resolveNetwork 에러 분류: environment 포함 -> ENVIRONMENT_NETWORK_MISMATCH, 나머지 -> ACTION_VALIDATION_FAILED
 - 111-02: pipeline.ts에도 resolveNetwork 호출 추가 (approve/reject 워크플로우 경로 커버)
+- 112-01: 트랜잭션 응답 network 필드를 스키마와 함께 추가 (빌드 차단 Rule 3)
+- 112-01: WalletCrudResponseSchema environment 필드 required 전환
+- 112-01: api-agents 테스트 6개를 environment 기반으로 전환
+- 112-02: PUT default-network에서 WALLET_TERMINATED 사전 체크 (terminated 월렛 변경 차단)
+- 112-02: GET networks 응답에 isDefault 플래그 포함 (클라이언트 편의성)
+- 112-02: masterAuth sub-path skip 패턴 통합 (/owner, /default-network, /networks)
 
 ### Blockers/Concerns
 
@@ -69,5 +77,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 111 verified PASSED, ready to plan Phase 112
+Stopped at: Phase 112 verified PASSED, ready to plan Phase 113
 Resume file: None

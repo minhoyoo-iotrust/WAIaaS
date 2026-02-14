@@ -17,8 +17,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
-import type { ChainType, EnvironmentType } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment } from '@waiaas/core';
+import type { ChainType, EnvironmentType, NetworkType } from '@waiaas/core';
 import { wallets } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
@@ -31,6 +31,9 @@ import {
   CreateWalletRequestOpenAPI,
   SetOwnerRequestSchema,
   UpdateWalletRequestSchema,
+  UpdateDefaultNetworkRequestSchema,
+  UpdateDefaultNetworkResponseSchema,
+  WalletNetworksResponseSchema,
   WalletCrudResponseSchema,
   WalletOwnerResponseSchema,
   WalletListResponseSchema,
@@ -165,6 +168,45 @@ const deleteWalletRoute = createRoute({
   },
 });
 
+const updateDefaultNetworkRoute = createRoute({
+  method: 'put',
+  path: '/wallets/{id}/default-network',
+  tags: ['Wallets'],
+  summary: 'Update wallet default network',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: UpdateDefaultNetworkRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Default network updated',
+      content: { 'application/json': { schema: UpdateDefaultNetworkResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED', 'ENVIRONMENT_NETWORK_MISMATCH']),
+  },
+});
+
+const walletNetworksRoute = createRoute({
+  method: 'get',
+  path: '/wallets/{id}/networks',
+  tags: ['Wallets'],
+  summary: 'List available networks for wallet',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Available networks',
+      content: { 'application/json': { schema: WalletNetworksResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
@@ -195,6 +237,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           name: a.name,
           chain: a.chain,
           network: a.defaultNetwork!,
+          environment: a.environment!,
           publicKey: a.publicKey,
           status: a.status,
           createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
@@ -234,6 +277,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         name: wallet.name,
         chain: wallet.chain,
         network: wallet.defaultNetwork!,
+        environment: wallet.environment!,
         publicKey: wallet.publicKey,
         status: wallet.status,
         ownerAddress: wallet.ownerAddress,
@@ -292,6 +336,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         name: parsed.name,
         chain: parsed.chain,
         network: defaultNetwork,
+        environment,
         publicKey,
         status: 'ACTIVE',
         createdAt: Math.floor(now.getTime() / 1000),
@@ -333,6 +378,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         name: body.name,
         chain: wallet.chain,
         network: wallet.defaultNetwork!,
+        environment: wallet.environment!,
         publicKey: wallet.publicKey,
         status: wallet.status,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
@@ -456,11 +502,109 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         name: updated!.name,
         chain: updated!.chain,
         network: updated!.defaultNetwork!,
+        environment: updated!.environment!,
         publicKey: updated!.publicKey,
         status: updated!.status,
         ownerAddress: updated!.ownerAddress,
         ownerVerified: updated!.ownerVerified,
         updatedAt: updated!.updatedAt ? Math.floor(updated!.updatedAt.getTime() / 1000) : null,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /wallets/:id/default-network
+  // ---------------------------------------------------------------------------
+
+  router.openapi(updateDefaultNetworkRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED', {
+        message: `Wallet '${walletId}' is already terminated`,
+      });
+    }
+
+    // Validate that the requested network is allowed for wallet's chain+environment
+    try {
+      validateNetworkEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+        body.network as NetworkType,
+      );
+    } catch {
+      throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
+        message: `Network '${body.network}' is not allowed for chain '${wallet.chain}' in environment '${wallet.environment}'`,
+      });
+    }
+
+    const previousNetwork = wallet.defaultNetwork;
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    await deps.db
+      .update(wallets)
+      .set({ defaultNetwork: body.network, updatedAt: now })
+      .where(eq(wallets.id, walletId))
+      .run();
+
+    return c.json(
+      {
+        id: walletId,
+        defaultNetwork: body.network,
+        previousNetwork: previousNetwork ?? null,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /wallets/:id/networks
+  // ---------------------------------------------------------------------------
+
+  router.openapi(walletNetworksRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    const networks = getNetworksForEnvironment(
+      wallet.chain as ChainType,
+      wallet.environment as EnvironmentType,
+    );
+
+    return c.json(
+      {
+        id: wallet.id,
+        chain: wallet.chain,
+        environment: wallet.environment!,
+        defaultNetwork: wallet.defaultNetwork ?? null,
+        availableNetworks: networks.map((n) => ({
+          network: n,
+          isDefault: n === wallet.defaultNetwork,
+        })),
       },
       200,
     );

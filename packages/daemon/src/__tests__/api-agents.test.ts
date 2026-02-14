@@ -470,7 +470,7 @@ describe('chain-network validation', () => {
     expect(body.network).toBe('ethereum-sepolia');
   });
 
-  it('POST /wallets with chain=ethereum + network=polygon-mainnet -> success', async () => {
+  it('POST /wallets with chain=ethereum + environment=mainnet -> defaults to ethereum-mainnet', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -478,15 +478,16 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'poly-wallet', chain: 'ethereum', network: 'polygon-mainnet' }),
+      body: JSON.stringify({ name: 'eth-main-wallet', chain: 'ethereum', environment: 'mainnet' }),
     });
 
     expect(res.status).toBe(201);
     const body = await json(res);
-    expect(body.network).toBe('polygon-mainnet');
+    expect(body.network).toBe('ethereum-mainnet');
+    expect(body.environment).toBe('mainnet');
   });
 
-  it('POST /wallets with chain=ethereum + network=devnet -> 400 validation error', async () => {
+  it('POST /wallets with invalid environment -> 400 validation error', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -494,7 +495,7 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'bad-wallet', chain: 'ethereum', network: 'devnet' }),
+      body: JSON.stringify({ name: 'bad-wallet', chain: 'ethereum', environment: 'invalid-env' }),
     });
 
     expect(res.status).toBe(400);
@@ -502,7 +503,7 @@ describe('chain-network validation', () => {
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
   });
 
-  it('POST /wallets with chain=solana + network=ethereum-sepolia -> 400 validation error', async () => {
+  it('POST /wallets response includes environment field', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -510,15 +511,16 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'bad-wallet', chain: 'solana', network: 'ethereum-sepolia' }),
+      body: JSON.stringify({ name: 'env-wallet', chain: 'solana' }),
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
     const body = await json(res);
-    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+    expect(body.environment).toBe('testnet');
+    expect(body.network).toBe('devnet');
   });
 
-  it('POST /wallets with chain=solana + network=mainnet -> success', async () => {
+  it('POST /wallets with chain=solana + environment=mainnet -> success', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -526,12 +528,13 @@ describe('chain-network validation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'sol-main', chain: 'solana', network: 'mainnet' }),
+      body: JSON.stringify({ name: 'sol-main', chain: 'solana', environment: 'mainnet' }),
     });
 
     expect(res.status).toBe(201);
     const body = await json(res);
     expect(body.network).toBe('mainnet');
+    expect(body.environment).toBe('mainnet');
     expect(body.chain).toBe('solana');
   });
 });
@@ -577,7 +580,7 @@ describe('EVM wallet creation', () => {
     expect(body.publicKey).toBe(MOCK_EVM_PUBLIC_KEY);
   });
 
-  it('generateKeyPair receives network as 3rd parameter for EVM wallet', async () => {
+  it('generateKeyPair receives defaultNetwork derived from environment for EVM wallet', async () => {
     await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -585,19 +588,19 @@ describe('EVM wallet creation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'evm-param-check', chain: 'ethereum', network: 'polygon-mainnet' }),
+      body: JSON.stringify({ name: 'evm-param-check', chain: 'ethereum', environment: 'mainnet' }),
     });
 
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(walletId, chain, network, masterPassword)
+    // generateKeyPair(walletId, chain, defaultNetwork, masterPassword)
     expect(lastCall[1]).toBe('ethereum');
-    expect(lastCall[2]).toBe('polygon-mainnet');
+    expect(lastCall[2]).toBe('ethereum-mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
   });
 
-  it('generateKeyPair receives network as 3rd parameter for Solana wallet', async () => {
+  it('generateKeyPair receives defaultNetwork derived from environment for Solana wallet', async () => {
     await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -605,13 +608,13 @@ describe('EVM wallet creation', () => {
         'Content-Type': 'application/json',
         'X-Master-Password': TEST_MASTER_PASSWORD,
       },
-      body: JSON.stringify({ name: 'sol-param-check', chain: 'solana', network: 'mainnet' }),
+      body: JSON.stringify({ name: 'sol-param-check', chain: 'solana', environment: 'mainnet' }),
     });
 
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(walletId, chain, network, masterPassword)
+    // generateKeyPair(walletId, chain, defaultNetwork, masterPassword)
     expect(lastCall[1]).toBe('solana');
     expect(lastCall[2]).toBe('mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);

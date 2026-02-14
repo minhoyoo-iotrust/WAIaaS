@@ -131,12 +131,12 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     });
   }
 
-  // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip /owner sub-path
+  // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip sub-paths with own auth
   if (deps.masterPasswordHash !== undefined) {
     const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
     app.use('/v1/wallets/:id', async (c, next) => {
-      // Skip /v1/wallets/:id/owner (has its own masterAuth below)
-      if (c.req.path.includes('/owner')) {
+      // Skip sub-paths that have their own masterAuth registered below
+      if (c.req.path.includes('/owner') || c.req.path.includes('/default-network') || c.req.path.includes('/networks')) {
         await next();
         return;
       }
@@ -148,6 +148,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.masterPasswordHash !== undefined) {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
+    app.use('/v1/wallets/:id/default-network', masterAuthForOwner);
+    app.use('/v1/wallets/:id/networks', masterAuthForOwner);
   }
 
   if (deps.jwtSecretManager && deps.db) {

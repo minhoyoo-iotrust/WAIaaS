@@ -14,7 +14,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 - [x] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 데이터 레이어 전환 + EnvironmentType 파생 체인 ✅ 2026-02-14
 - [x] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가 ✅ 2026-02-14
 - [x] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름 ✅ 2026-02-14
-- [ ] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개
+- [x] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개 ✅ 2026-02-14
 - [ ] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환
 - [ ] **Phase 114: CLI Quickstart + DX 통합** - quickstart --mode + 스킬 파일 동기화 + 하위호환 검증
 
@@ -79,8 +79,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 112-01-PLAN.md -- GET balance/assets network 쿼리 파라미터 + 트랜잭션/월렛 응답 network/environment 보강 + api-agents 테스트 수정 (Wave 1)
-- [ ] 112-02-PLAN.md -- PUT /wallets/:id/default-network + GET /wallets/:id/networks 신규 엔드포인트 + ALLOWED_NETWORKS CRUD 검증 + 통합 테스트 (Wave 2, depends on 112-01)
+- [x] 112-01-PLAN.md -- GET balance/assets network 쿼리 파라미터 + 트랜잭션/월렛 응답 network/environment 보강 + api-agents 테스트 수정 (Wave 1)
+- [x] 112-02-PLAN.md -- PUT /wallets/:id/default-network + GET /wallets/:id/networks 신규 엔드포인트 + ALLOWED_NETWORKS CRUD 검증 + 통합 테스트 (Wave 2, depends on 112-01)
 
 ### Phase 113: MCP + SDK + Admin UI
 **Goal**: MCP 도구, TS/Python SDK, Admin UI가 멀티체인 환경 모델을 지원하여 모든 인터페이스에서 네트워크를 선택할 수 있는 상태
@@ -91,12 +91,12 @@ Plans:
   2. TS SDK의 sendTransaction({network: 'polygon-mainnet'})와 Python SDK의 send_transaction(network='polygon-mainnet')이 동작한다
   3. Admin UI 월렛 생성 시 environment 라디오버튼(testnet/mainnet)으로 선택하고, 월렛 상세에서 사용 가능 네트워크 목록과 기본 네트워크 변경 UI가 동작한다
   4. Admin UI 트랜잭션 목록에 network 컬럼이 표시되고, 정책 생성에서 ALLOWED_NETWORKS 타입과 네트워크 스코프를 선택할 수 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 113-01: MCP 6개 도구 network 파라미터 + get_wallet_info 네트워크 목록
-- [ ] 113-02: TS SDK + Python SDK network 파라미터 확장
-- [ ] 113-03: Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI
+- [ ] 113-01-PLAN.md -- MCP 6개 도구 network 파라미터 + get_wallet_info 신규 도구 + 테스트 (Wave 1)
+- [ ] 113-02-PLAN.md -- TS SDK + Python SDK network 파라미터 확장 + 테스트 (Wave 1)
+- [ ] 113-03-PLAN.md -- Admin UI 환경 모델 전환 + ALLOWED_NETWORKS 정책 UI + 테스트 (Wave 1)
 
 ### Phase 114: CLI Quickstart + DX 통합
 **Goal**: quickstart 명령으로 테스트넷/메인넷 월렛을 원스톱 생성할 수 있고, 모든 변경이 하위호환되며 스킬 파일이 최신 상태인 상태
@@ -123,6 +123,6 @@ Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
 | 109. DB 마이그레이션 + 환경 모델 SSoT | 2/2 | ✅ Complete | 2026-02-14 |
 | 110. 스키마 전환 + 정책 엔진 | 2/2 | ✅ Complete | 2026-02-14 |
 | 111. 파이프라인 네트워크 해결 | 2/2 | ✅ Complete | 2026-02-14 |
-| 112. REST API 네트워크 확장 | 0/2 | Not started | - |
+| 112. REST API 네트워크 확장 | 2/2 | ✅ Complete | 2026-02-14 |
 | 113. MCP + SDK + Admin UI | 0/3 | Not started | - |
 | 114. CLI Quickstart + DX 통합 | 0/2 | Not started | - |
