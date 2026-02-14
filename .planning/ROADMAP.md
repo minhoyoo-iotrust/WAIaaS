@@ -12,7 +12,7 @@ v1.4.5에서 설계한 멀티체인 월렛 모델(1 월렛 = 1 체인 + 1 환경
 ## Phases
 
 - [x] **Phase 109: DB 마이그레이션 + 환경 모델 SSoT** - 데이터 레이어 전환 + EnvironmentType 파생 체인 ✅ 2026-02-14
-- [ ] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가
+- [x] **Phase 110: 스키마 전환 + 정책 엔진** - Wallet/Transaction/Policy 스키마 environment 전환 + ALLOWED_NETWORKS 평가 ✅ 2026-02-14
 - [ ] **Phase 111: 파이프라인 네트워크 해결** - resolveNetwork() + PipelineContext 확장 + Stage 1/3/5 네트워크 흐름
 - [ ] **Phase 112: REST API 네트워크 확장** - 7개 엔드포인트 network/environment 파라미터 + 신규 2개
 - [ ] **Phase 113: MCP + SDK + Admin UI** - MCP 6개 도구 + TS/Python SDK + Admin UI 환경 모델 전환
@@ -48,8 +48,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 110-01-PLAN.md -- Zod 스키마 환경 모델 전환 + ALLOWED_NETWORKS PolicyType SSoT + Route 레이어 적용 (Wave 1)
-- [ ] 110-02-PLAN.md -- ALLOWED_NETWORKS 평가 로직 + 4단계 override resolveOverrides + evaluateAndReserve network SQL (TDD, Wave 2, depends on 110-01)
+- [x] 110-01-PLAN.md -- Zod 스키마 환경 모델 전환 + ALLOWED_NETWORKS PolicyType SSoT + Route 레이어 적용 (Wave 1)
+- [x] 110-02-PLAN.md -- ALLOWED_NETWORKS 평가 로직 + 4단계 override resolveOverrides + evaluateAndReserve network SQL (TDD, Wave 2, depends on 110-01)
 
 ### Phase 111: 파이프라인 네트워크 해결
 **Goal**: 트랜잭션 파이프라인이 네트워크를 자동 해결하고, 해결된 네트워크로 빌드/실행/확인하는 상태
@@ -121,7 +121,7 @@ Phases execute in numeric order: 109 -> 110 -> 111 -> 112 -> 113 -> 114
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 109. DB 마이그레이션 + 환경 모델 SSoT | 2/2 | ✅ Complete | 2026-02-14 |
-| 110. 스키마 전환 + 정책 엔진 | 0/2 | Not started | - |
+| 110. 스키마 전환 + 정책 엔진 | 2/2 | ✅ Complete | 2026-02-14 |
 | 111. 파이프라인 네트워크 해결 | 0/2 | Not started | - |
 | 112. REST API 네트워크 확장 | 0/2 | Not started | - |
 | 113. MCP + SDK + Admin UI | 0/3 | Not started | - |
