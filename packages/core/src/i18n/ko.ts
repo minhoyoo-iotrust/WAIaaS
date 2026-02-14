@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (73 error codes)
+  // Error messages (74 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -62,13 +62,14 @@ export const messages: Messages = {
     OWNER_NOT_FOUND: 'Owner를 찾을 수 없습니다',
     APPROVAL_TIMEOUT: '승인 요청이 시간 초과되었습니다',
     APPROVAL_NOT_FOUND: '승인 요청을 찾을 수 없습니다',
-    // SYSTEM domain (6)
+    // SYSTEM domain (7)
     KILL_SWITCH_ACTIVE: '킬 스위치가 이미 활성화되어 있습니다',
     KILL_SWITCH_NOT_ACTIVE: '킬 스위치가 활성화되지 않았습니다',
     KEYSTORE_LOCKED: '키스토어가 잠겨 있습니다',
     CHAIN_NOT_SUPPORTED: '지원하지 않는 체인입니다',
     SHUTTING_DOWN: '서버가 종료 중입니다',
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
+    SKILL_NOT_FOUND: '스킬을 찾을 수 없습니다',
     // WALLET domain (3)
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',
@@ -100,7 +101,7 @@ export const messages: Messages = {
     TX_DOWNGRADED_DELAY: { title: '거래 지연', body: '거래 {txId}가 지연 대기열로 이동되었습니다 ({seconds}초 대기)' },
     TX_APPROVAL_REQUIRED: { title: '승인 필요', body: '거래 {txId}에 Owner 승인이 필요합니다. 금액: {amount}, 수신: {to}' },
     TX_APPROVAL_EXPIRED: { title: '승인 만료', body: '거래 {txId}의 승인이 만료되었습니다' },
-    POLICY_VIOLATION: { title: '정책 위반', body: '지갑 {walletId} 정책 위반: {reason}' },
+    POLICY_VIOLATION: { title: '정책 위반', body: '지갑 {walletId} 정책 위반: {reason}. 정책: {policyType}. 관리: {adminLink}' },
     WALLET_SUSPENDED: { title: '지갑 정지', body: '지갑 {walletId}이 정지되었습니다: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch 발동', body: '{activatedBy}에 의해 Kill Switch가 발동되었습니다. 모든 작업이 중단됩니다' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch 해제', body: 'Kill Switch가 해제되었습니다. 정상 운영이 재개됩니다' },

@@ -19,7 +19,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 73 error codes from SS10.12 unified error code matrix.
+ * 74 error codes from SS10.12 unified error code matrix.
  * SSoT: 37-rest-api-complete-spec.md section 10.12
  */
 export const ERROR_CODES = {
@@ -406,7 +406,7 @@ export const ERROR_CODES = {
     message: 'Approval request not found',
   },
 
-  // --- SYSTEM domain (6) ---
+  // --- SYSTEM domain (7) ---
   KILL_SWITCH_ACTIVE: {
     code: 'KILL_SWITCH_ACTIVE',
     domain: 'SYSTEM',
@@ -448,6 +448,13 @@ export const ERROR_CODES = {
     httpStatus: 503,
     retryable: true,
     message: 'Chain adapter not available',
+  },
+  SKILL_NOT_FOUND: {
+    code: 'SKILL_NOT_FOUND',
+    domain: 'SYSTEM',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Skill not found',
   },
 
   // --- WALLET domain (3) ---
