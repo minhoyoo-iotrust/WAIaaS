@@ -17,7 +17,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, validateChainNetwork } from '@waiaas/core';
+import { WAIaaSError, validateChainNetwork, deriveEnvironment } from '@waiaas/core';
 import type { ChainType, NetworkType } from '@waiaas/core';
 import { wallets } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -194,7 +194,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           id: a.id,
           name: a.name,
           chain: a.chain,
-          network: a.network,
+          network: a.defaultNetwork!,
           publicKey: a.publicKey,
           status: a.status,
           createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
@@ -233,7 +233,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: wallet.id,
         name: wallet.name,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
         publicKey: wallet.publicKey,
         status: wallet.status,
         ownerAddress: wallet.ownerAddress,
@@ -293,7 +293,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       id,
       name: parsed.name,
       chain: parsed.chain,
-      network,
+      environment: deriveEnvironment(network),
+      defaultNetwork: network,
       publicKey,
       status: 'ACTIVE',
       createdAt: now,
@@ -347,7 +348,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: wallet.id,
         name: body.name,
         chain: wallet.chain,
-        network: wallet.network,
+        network: wallet.defaultNetwork!,
         publicKey: wallet.publicKey,
         status: wallet.status,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
@@ -470,7 +471,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: updated!.id,
         name: updated!.name,
         chain: updated!.chain,
-        network: updated!.network,
+        network: updated!.defaultNetwork!,
         publicKey: updated!.publicKey,
         status: updated!.status,
         ownerAddress: updated!.ownerAddress,

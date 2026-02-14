@@ -56,9 +56,9 @@ function createTestApp(jwtManager: JwtSecretManager, database: ReturnType<typeof
 function seedTestData(opts?: { revokedAt?: number }) {
   const ts = nowSeconds();
   sqlite.prepare(
-    `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', `pk-session-auth-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+    `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-session-auth-${Math.random()}`, 'ACTIVE', 0, ts, ts);
 
   sqlite.prepare(
     `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
@@ -189,9 +189,9 @@ describe('sessionAuth middleware', () => {
     // Seed agent but NOT the session
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', `pk-no-session-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-no-session-${Math.random()}`, 'ACTIVE', 0, ts, ts);
 
     const token = await signTestToken(manager);
 

@@ -126,12 +126,13 @@ function createTestApp(database: ReturnType<typeof createDatabase>['db']) {
 function seedWallet(opts?: { ownerAddress?: string | null }) {
   const ts = nowSeconds();
   sqlite.prepare(
-    `INSERT INTO wallets (id, name, chain, network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     TEST_WALLET_ID,
     'Owner Test Wallet',
     'solana',
+    'mainnet',
     'mainnet',
     `pk-owner-auth-test`,
     'ACTIVE',

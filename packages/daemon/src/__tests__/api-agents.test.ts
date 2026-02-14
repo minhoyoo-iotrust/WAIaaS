@@ -377,7 +377,8 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
     expect(row).toBeTruthy();
     expect(row.name).toBe('persisted-wallet');
     expect(row.chain).toBe('solana');
-    expect(row.network).toBe('devnet');
+    expect(row.default_network).toBe('devnet');
+    expect(row.environment).toBe('testnet');
     expect(row.status).toBe('ACTIVE');
     expect(row.public_key).toBe(MOCK_SOLANA_PUBLIC_KEY);
   });
@@ -637,7 +638,8 @@ describe('EVM wallet creation', () => {
     >;
     expect(row).toBeTruthy();
     expect(row.chain).toBe('ethereum');
-    expect(row.network).toBe('ethereum-sepolia');
+    expect(row.default_network).toBe('ethereum-sepolia');
+    expect(row.environment).toBe('testnet');
     expect(row.public_key).toBe(MOCK_EVM_PUBLIC_KEY);
     expect((row.public_key as string).startsWith('0x')).toBe(true);
   });

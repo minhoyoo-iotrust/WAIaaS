@@ -58,13 +58,13 @@ function getVersions(): number[] {
 
 describe('Migration Runner', () => {
   // Note: pushSchema() creates latest schema (wallets table) and records
-  // all migration versions [1, 2, 3, 4, 5], so getMaxVersion() returns 5.
+  // all migration versions [1, 2, 3, 4, 5, 6, 7, 8], so getMaxVersion() returns 8.
   // All test migration versions use 10+ to avoid conflicts with real migrations.
 
   it('should return { applied: 0, skipped: 0 } for empty migrations array', () => {
     const result = runMigrations(sqlite, []);
     expect(result).toEqual({ applied: 0, skipped: 0 });
-    expect(getMaxVersion()).toBe(5); // v1 (initial) + v2 (EVM CHECK) + v3 (agents->wallets) + v4 (token_registry) + v5 (settings)
+    expect(getMaxVersion()).toBe(8); // v1~v5 + v6 (tx network) + v7 (wallets env) + v8 (policies network)
   });
 
   it('should execute new migrations sequentially', () => {
@@ -148,8 +148,8 @@ describe('Migration Runner', () => {
       /Migration v10.*failed.*Intentional migration failure/,
     );
 
-    // version 10 should NOT be recorded (max stays at 5 from pushSchema)
-    expect(getMaxVersion()).toBe(5);
+    // version 10 should NOT be recorded (max stays at 8 from pushSchema)
+    expect(getMaxVersion()).toBe(8);
 
     // version 11 should NOT have been executed
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
@@ -195,7 +195,7 @@ describe('Migration Runner', () => {
     expect(getVersions()).toContain(12);
   });
 
-  it('should skip version 1, 2, 3, 4, and 5 migrations (already applied from pushSchema)', () => {
+  it('should skip version 1-8 migrations (already applied from pushSchema)', () => {
     const migrations: Migration[] = [
       {
         version: 1,
@@ -233,6 +233,27 @@ describe('Migration Runner', () => {
         },
       },
       {
+        version: 6,
+        description: 'Should be skipped (pushSchema records v6)',
+        up: () => {
+          throw new Error('Should not execute');
+        },
+      },
+      {
+        version: 7,
+        description: 'Should be skipped (pushSchema records v7)',
+        up: () => {
+          throw new Error('Should not execute');
+        },
+      },
+      {
+        version: 8,
+        description: 'Should be skipped (pushSchema records v8)',
+        up: () => {
+          throw new Error('Should not execute');
+        },
+      },
+      {
         version: 10,
         description: 'Should execute',
         up: (db) => {
@@ -242,7 +263,7 @@ describe('Migration Runner', () => {
     ];
 
     const result = runMigrations(sqlite, migrations);
-    expect(result).toEqual({ applied: 1, skipped: 5 });
+    expect(result).toEqual({ applied: 1, skipped: 8 });
     expect(getMaxVersion()).toBe(10);
   });
 
@@ -323,8 +344,8 @@ describe('managesOwnTransaction migrations', () => {
       /Migration v20.*failed.*Intentional self-managed failure/,
     );
 
-    // Version 20 should NOT be recorded (max stays at 5 from pushSchema)
-    expect(getMaxVersion()).toBe(5);
+    // Version 20 should NOT be recorded (max stays at 8 from pushSchema)
+    expect(getMaxVersion()).toBe(8);
 
     // foreign_keys should be restored to ON (1)
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;

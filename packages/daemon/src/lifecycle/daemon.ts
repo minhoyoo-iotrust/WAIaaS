@@ -625,11 +625,11 @@ export class DaemonLifecycle {
       const rpcUrl = resolveRpcUrl(
         this._config.rpc as unknown as Record<string, string>,
         wallet.chain,
-        wallet.network,
+        wallet.defaultNetwork!,
       );
       const adapter = await this.adapterPool.resolve(
         wallet.chain as ChainType,
-        wallet.network as NetworkType,
+        wallet.defaultNetwork as NetworkType,
         rpcUrl,
       );
 
@@ -644,7 +644,7 @@ export class DaemonLifecycle {
         wallet: {
           publicKey: wallet.publicKey,
           chain: wallet.chain,
-          network: wallet.network,
+          network: wallet.defaultNetwork!,
         },
         request: {
           to: tx.toAddress ?? '',

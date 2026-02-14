@@ -12,8 +12,15 @@
  * names (wallets, wallet_id). pushSchema records LATEST_SCHEMA_VERSION so
  * migrations are only needed for existing (pre-v3) databases.
  *
+ * v1.4.6: Environment model migration:
+ *   v6a (version 6): Add network column to transactions with backfill from wallets
+ *   v6b (version 7): Replace wallets.network with environment + default_network (12-step)
+ *   v8  (version 8): Add network column to policies (12-step)
+ *
  * @see docs/25-sqlite-schema.md
  * @see docs/65-migration-strategy.md
+ * @see docs/69-db-migration-v6-design.md
+ * @see docs/71-policy-engine-network-extension-design.md
  */
 
 import type { Database } from 'better-sqlite3';
@@ -21,6 +28,7 @@ import {
   WALLET_STATUSES,
   CHAIN_TYPES,
   NETWORK_TYPES,
+  ENVIRONMENT_TYPES,
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
   POLICY_TYPES,
@@ -43,16 +51,17 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 5;
+export const LATEST_SCHEMA_VERSION = 8;
 
 function getCreateTableStatements(): string[] {
   return [
-    // Table 1: wallets (renamed from agents in v3)
+    // Table 1: wallets (renamed from agents in v3, environment model in v6b)
     `CREATE TABLE IF NOT EXISTS wallets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
-  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
+  environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
+  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES)})),
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
@@ -103,10 +112,11 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL,
   reserved_amount TEXT,
   error TEXT,
-  metadata TEXT
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
 )`,
 
-    // Table 4: policies
+    // Table 4: policies (network column added in v8)
     `CREATE TABLE IF NOT EXISTS policies (
   id TEXT PRIMARY KEY,
   wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
@@ -114,6 +124,7 @@ function getCreateTableStatements(): string[] {
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
@@ -201,7 +212,7 @@ function getCreateIndexStatements(): string[] {
     // wallets indexes (renamed from agents in v3)
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_wallets_public_key ON wallets(public_key)',
     'CREATE INDEX IF NOT EXISTS idx_wallets_status ON wallets(status)',
-    'CREATE INDEX IF NOT EXISTS idx_wallets_chain_network ON wallets(chain, network)',
+    'CREATE INDEX IF NOT EXISTS idx_wallets_chain_environment ON wallets(chain, environment)',
     'CREATE INDEX IF NOT EXISTS idx_wallets_owner_address ON wallets(owner_address)',
 
     // sessions indexes
@@ -222,6 +233,7 @@ function getCreateIndexStatements(): string[] {
     // policies indexes
     'CREATE INDEX IF NOT EXISTS idx_policies_wallet_enabled ON policies(wallet_id, enabled)',
     'CREATE INDEX IF NOT EXISTS idx_policies_type ON policies(type)',
+    'CREATE INDEX IF NOT EXISTS idx_policies_network ON policies(network)',
 
     // pending_approvals indexes
     'CREATE INDEX IF NOT EXISTS idx_pending_approvals_tx_id ON pending_approvals(tx_id)',
@@ -580,6 +592,292 @@ MIGRATIONS.push({
   updated_at INTEGER NOT NULL
 )`);
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_settings_category ON settings(category)');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v6a: Add network column to transactions with backfill from wallets
+// ---------------------------------------------------------------------------
+// Standard migration (managesOwnTransaction: false). Adds nullable network
+// column to transactions and backfills from wallets.network via FK relationship.
+// Must run BEFORE v6b which removes wallets.network.
+
+MIGRATIONS.push({
+  version: 6,
+  description: 'Add network column to transactions with backfill from wallets',
+  managesOwnTransaction: false,
+  up: (sqlite) => {
+    // SQL 1: Add nullable network column
+    sqlite.exec('ALTER TABLE transactions ADD COLUMN network TEXT');
+
+    // SQL 2: Backfill from wallets.network via FK relationship
+    sqlite.exec(`UPDATE transactions SET network = (
+      SELECT w.network FROM wallets w WHERE w.id = transactions.wallet_id
+    )`);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v6b: Replace wallets.network with environment + default_network (12-step)
+// ---------------------------------------------------------------------------
+// 12-step table recreation. Converts wallets.network to environment + default_network.
+// Recreates FK dependent tables (sessions, transactions, policies, audit_log).
+// Requires PRAGMA foreign_keys=OFF (handled by managesOwnTransaction).
+// @see docs/69-db-migration-v6-design.md section 3
+
+MIGRATIONS.push({
+  version: 7,
+  description: 'Replace wallets.network with environment + default_network (12-step recreation)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    // Step 1: Begin transaction
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 2: Create wallets_new with environment + default_network
+      sqlite.exec(`CREATE TABLE wallets_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
+  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES)})),
+  public_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
+  owner_address TEXT,
+  owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  suspended_at INTEGER,
+  suspension_reason TEXT
+)`);
+
+      // Step 3: Data transformation INSERT with 13 CASE WHEN branches
+      // Maps network -> environment using deriveEnvironment() logic (docs/68 section 3.3)
+      // Preserves original network as default_network
+      sqlite.exec(`INSERT INTO wallets_new (
+  id, name, chain, environment, default_network,
+  public_key, status, owner_address, owner_verified,
+  created_at, updated_at, suspended_at, suspension_reason
+)
+SELECT
+  id, name, chain,
+  CASE
+    WHEN network = 'mainnet' THEN 'mainnet'
+    WHEN network = 'devnet' THEN 'testnet'
+    WHEN network = 'testnet' THEN 'testnet'
+    WHEN network = 'ethereum-mainnet' THEN 'mainnet'
+    WHEN network = 'polygon-mainnet' THEN 'mainnet'
+    WHEN network = 'arbitrum-mainnet' THEN 'mainnet'
+    WHEN network = 'optimism-mainnet' THEN 'mainnet'
+    WHEN network = 'base-mainnet' THEN 'mainnet'
+    WHEN network = 'ethereum-sepolia' THEN 'testnet'
+    WHEN network = 'polygon-amoy' THEN 'testnet'
+    WHEN network = 'arbitrum-sepolia' THEN 'testnet'
+    WHEN network = 'optimism-sepolia' THEN 'testnet'
+    WHEN network = 'base-sepolia' THEN 'testnet'
+    ELSE 'testnet'
+  END AS environment,
+  network AS default_network,
+  public_key, status, owner_address, owner_verified,
+  created_at, updated_at, suspended_at, suspension_reason
+FROM wallets`);
+
+      // Step 4: Drop old wallets table
+      sqlite.exec('DROP TABLE wallets');
+
+      // Step 5: Rename new table
+      sqlite.exec('ALTER TABLE wallets_new RENAME TO wallets');
+
+      // Step 6: Recreate wallets indexes
+      sqlite.exec('DROP INDEX IF EXISTS idx_wallets_chain_network');
+      sqlite.exec('CREATE UNIQUE INDEX idx_wallets_public_key ON wallets(public_key)');
+      sqlite.exec('CREATE INDEX idx_wallets_status ON wallets(status)');
+      sqlite.exec('CREATE INDEX idx_wallets_chain_environment ON wallets(chain, environment)');
+      sqlite.exec('CREATE INDEX idx_wallets_owner_address ON wallets(owner_address)');
+
+      // Step 7: Recreate sessions (FK reconnection, no schema change)
+      sqlite.exec(`CREATE TABLE sessions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  constraints TEXT,
+  usage_stats TEXT,
+  revoked_at INTEGER,
+  renewal_count INTEGER NOT NULL DEFAULT 0,
+  max_renewals INTEGER NOT NULL DEFAULT 30,
+  last_renewed_at INTEGER,
+  absolute_expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+)`);
+      sqlite.exec(`INSERT INTO sessions_new (id, wallet_id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at)
+  SELECT id, wallet_id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at FROM sessions`);
+      sqlite.exec('DROP TABLE sessions');
+      sqlite.exec('ALTER TABLE sessions_new RENAME TO sessions');
+      sqlite.exec('CREATE INDEX idx_sessions_wallet_id ON sessions(wallet_id)');
+      sqlite.exec('CREATE INDEX idx_sessions_expires_at ON sessions(expires_at)');
+      sqlite.exec('CREATE INDEX idx_sessions_token_hash ON sessions(token_hash)');
+
+      // Step 8: Recreate transactions (network column with CHECK, FK reconnection)
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions_new(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+)`);
+      sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network FROM transactions`);
+      sqlite.exec('DROP TABLE transactions');
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+      sqlite.exec('CREATE INDEX idx_transactions_wallet_status ON transactions(wallet_id, status)');
+      sqlite.exec('CREATE INDEX idx_transactions_session_id ON transactions(session_id)');
+      sqlite.exec('CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash)');
+      sqlite.exec('CREATE INDEX idx_transactions_queued_at ON transactions(queued_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_created_at ON transactions(created_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_type ON transactions(type)');
+      sqlite.exec('CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)');
+      sqlite.exec('CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)');
+
+      // Step 9: Recreate policies (FK reconnection, no schema change -- v8 adds network)
+      sqlite.exec(`CREATE TABLE policies_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN (${inList(POLICY_TYPES)})),
+  rules TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+      sqlite.exec(`INSERT INTO policies_new (id, wallet_id, type, rules, priority, enabled, created_at, updated_at)
+  SELECT id, wallet_id, type, rules, priority, enabled, created_at, updated_at FROM policies`);
+      sqlite.exec('DROP TABLE policies');
+      sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
+      sqlite.exec('CREATE INDEX idx_policies_wallet_enabled ON policies(wallet_id, enabled)');
+      sqlite.exec('CREATE INDEX idx_policies_type ON policies(type)');
+
+      // Step 10: Recreate audit_log (consistency with v3 pattern)
+      sqlite.exec(`CREATE TABLE audit_log_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  wallet_id TEXT,
+  session_id TEXT,
+  tx_id TEXT,
+  details TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'info' CHECK (severity IN ('info', 'warning', 'critical')),
+  ip_address TEXT
+)`);
+      sqlite.exec(`INSERT INTO audit_log_new (id, timestamp, event_type, actor, wallet_id, session_id, tx_id, details, severity, ip_address)
+  SELECT id, timestamp, event_type, actor, wallet_id, session_id, tx_id, details, severity, ip_address FROM audit_log`);
+      sqlite.exec('DROP TABLE audit_log');
+      sqlite.exec('ALTER TABLE audit_log_new RENAME TO audit_log');
+      sqlite.exec('CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp)');
+      sqlite.exec('CREATE INDEX idx_audit_log_event_type ON audit_log(event_type)');
+      sqlite.exec('CREATE INDEX idx_audit_log_wallet_id ON audit_log(wallet_id)');
+      sqlite.exec('CREATE INDEX idx_audit_log_severity ON audit_log(severity)');
+      sqlite.exec('CREATE INDEX idx_audit_log_wallet_timestamp ON audit_log(wallet_id, timestamp)');
+
+      // Step 11: Commit transaction
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 12: Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v6b: ${JSON.stringify(fkErrors)}`);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v8: Add network column to policies (12-step recreation)
+// ---------------------------------------------------------------------------
+// Adds nullable network column and updates type CHECK to include ALLOWED_NETWORKS.
+// Requires 12-step recreation because SQLite cannot ALTER CHECK constraints.
+// @see docs/71-policy-engine-network-extension-design.md section 6
+
+MIGRATIONS.push({
+  version: 8,
+  description: 'Add network column to policies and ALLOWED_NETWORKS type support',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    // Step 1: Begin transaction
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 2: Create policies_new with network column + updated CHECK
+      sqlite.exec(`CREATE TABLE policies_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN (${inList(POLICY_TYPES)})),
+  rules TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+      // Step 3: Copy existing policies with network=NULL
+      sqlite.exec(`INSERT INTO policies_new (
+  id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at
+)
+SELECT
+  id, wallet_id, type, rules, priority, enabled, NULL, created_at, updated_at
+FROM policies`);
+
+      // Step 4: Drop old table
+      sqlite.exec('DROP TABLE policies');
+
+      // Step 5: Rename new table
+      sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
+
+      // Step 6: Recreate existing indexes
+      sqlite.exec('CREATE INDEX idx_policies_wallet_enabled ON policies(wallet_id, enabled)');
+      sqlite.exec('CREATE INDEX idx_policies_type ON policies(type)');
+
+      // Step 7: Create new network index
+      sqlite.exec('CREATE INDEX idx_policies_network ON policies(network)');
+
+      // Step 8: Commit
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 9: Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v8: ${JSON.stringify(fkErrors)}`);
+    }
   },
 });
 

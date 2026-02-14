@@ -1,6 +1,6 @@
 // @waiaas/core - shared types, schemas, errors, interfaces
 
-// Enums (12 SSoT enums + EVM/Solana subsets + validateChainNetwork)
+// Enums (12 SSoT enums + EVM/Solana subsets + validateChainNetwork + environment model)
 export {
   CHAIN_TYPES,
   type ChainType,
@@ -14,6 +14,15 @@ export {
   SOLANA_NETWORK_TYPES,
   type SolanaNetworkType,
   validateChainNetwork,
+  ENVIRONMENT_TYPES,
+  type EnvironmentType,
+  EnvironmentTypeEnum,
+  ENVIRONMENT_NETWORK_MAP,
+  ENVIRONMENT_DEFAULT_NETWORK,
+  getNetworksForEnvironment,
+  getDefaultNetwork,
+  deriveEnvironment,
+  validateNetworkEnvironment,
   WALLET_STATUSES,
   type WalletStatus,
   WalletStatusEnum,
