@@ -237,9 +237,9 @@ describe('resolveHint()', () => {
     expect(hint).toBe('Register an owner via PUT /v1/wallets/{walletId}/owner.');
   });
 
-  it('should have 32 hint entries', () => {
+  it('should have 33 hint entries', () => {
     const count = Object.keys(errorHintMap).length;
-    expect(count).toBe(32);
+    expect(count).toBe(33);
   });
 });
 

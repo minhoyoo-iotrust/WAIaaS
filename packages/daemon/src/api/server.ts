@@ -56,6 +56,7 @@ import { walletRoutes } from './routes/wallet.js';
 import { transactionRoutes } from './routes/transactions.js';
 import { policyRoutes } from './routes/policies.js';
 import { nonceRoutes } from './routes/nonce.js';
+import { utilsRoutes } from './routes/utils.js';
 import { adminRoutes } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
@@ -160,6 +161,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // sessionAuth for GET /v1/transactions (exact path -- wildcard won't match base)
     app.use('/v1/transactions', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);
+    app.use('/v1/utils/*', sessionAuth);
   }
 
   // ownerAuth for approve and reject routes (requires DB for agent lookup)
@@ -195,6 +197,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // Register nonce route (public, no auth required)
   app.route('/v1', nonceRoutes());
+
+  // Register utils routes (sessionAuth required -- stateless utilities)
+  app.route('/v1', utilsRoutes());
 
   // Register wallet CRUD routes when deps are available
   if (deps.db && deps.sqlite && deps.keyStore && deps.masterPassword !== undefined && deps.config) {
