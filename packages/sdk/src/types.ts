@@ -210,3 +210,25 @@ export interface NonceResponse {
   nonce: string;
   expiresAt: number;
 }
+
+// ---------------------------------------------------------------------------
+// Utils Responses
+// ---------------------------------------------------------------------------
+
+export interface EncodeCalldataParams {
+  /** ABI fragment array (JSON objects) */
+  abi: Record<string, unknown>[];
+  /** Function name to encode */
+  functionName: string;
+  /** Function arguments (optional, defaults to []) */
+  args?: unknown[];
+}
+
+export interface EncodeCalldataResponse {
+  /** Hex-encoded calldata (0x-prefixed) */
+  calldata: string;
+  /** Function selector (first 4 bytes, 0x-prefixed) */
+  selector: string;
+  /** Encoded function name */
+  functionName: string;
+}

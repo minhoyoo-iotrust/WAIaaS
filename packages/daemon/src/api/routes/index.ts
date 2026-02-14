@@ -9,5 +9,6 @@ export { sessionRoutes, type SessionRouteDeps } from './sessions.js';
 export { transactionRoutes, type TransactionRouteDeps } from './transactions.js';
 export { policyRoutes, type PolicyRouteDeps } from './policies.js';
 export { nonceRoutes } from './nonce.js';
+export { utilsRoutes } from './utils.js';
 export { adminRoutes, type AdminRouteDeps, type KillSwitchState } from './admin.js';
 export { tokenRegistryRoutes, type TokenRegistryRouteDeps } from './tokens.js';

@@ -28,7 +28,8 @@ export const errorHintMap: Record<string, string> = {
   RENEWAL_TOO_EARLY: 'Wait until 50% of session TTL has elapsed before renewing.',
   // SESSION_RENEWAL_MISMATCH: no hint (security issue)
 
-  // TX domain (6 of 20 actionable)
+  // TX domain (7 of 21 actionable)
+  ABI_ENCODING_FAILED: 'Check that functionName exists in the provided ABI and args match the expected types. Use a JSON array of ABI fragments for the abi parameter.',
   INSUFFICIENT_BALANCE: 'Fund the wallet. Check balance via GET /v1/wallet/balance.',
   INVALID_ADDRESS: 'Verify the recipient address format for the target blockchain.',
   TX_NOT_FOUND: 'Verify the transaction ID. List transactions via GET /v1/transactions.',

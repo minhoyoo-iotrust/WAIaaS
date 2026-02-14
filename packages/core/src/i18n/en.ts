@@ -47,7 +47,7 @@ export const messages: Messages = {
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: 'Session absolute lifetime exceeded',
     RENEWAL_TOO_EARLY: 'Session renewal too early',
     SESSION_RENEWAL_MISMATCH: 'Session renewal token mismatch',
-    // TX domain (24)
+    // TX domain (25)
     INSUFFICIENT_BALANCE: 'Insufficient balance',
     INVALID_ADDRESS: 'Invalid address format',
     TX_NOT_FOUND: 'Transaction not found',
@@ -73,6 +73,7 @@ export const messages: Messages = {
     WALLET_NOT_SIGNER: 'Wallet is not a signer in this transaction',
     UNSUPPORTED_TX_TYPE: 'Unsupported transaction type',
     CHAIN_ID_MISMATCH: 'Transaction chain ID does not match requested network',
+    ABI_ENCODING_FAILED: 'ABI encoding failed',
     // POLICY domain (5)
     POLICY_NOT_FOUND: 'Policy not found',
     POLICY_DENIED: 'Policy denied',

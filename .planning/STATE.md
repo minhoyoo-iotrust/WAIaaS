@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.7 Phase 118 EVM Calldata Encoding
+**Current focus:** v1.4.7 Phase 119 SDK + MCP + Notifications + Skill Resources
 
 ## Current Position
 
-Phase: 118 of 119 (EVM Calldata Encoding)
-Plan: 0 of 2 in current phase
-Status: Ready to execute
-Last activity: 2026-02-15 -- Phase 117 완료 (Sign-Only Pipeline + REST API, 2/2 plans, verified)
+Phase: 119 of 119 (SDK + MCP + Notifications + Skill Resources)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 -- Phase 118 완료 (EVM Calldata Encoding, 2/2 plans, verified)
 
-Progress: [######░░░░] 60%
+Progress: [########░░] 80%
 
 ## Performance Metrics
 
@@ -31,6 +31,8 @@ Progress: [######░░░░] 60%
 | 116-02 | 2/2 | 3min | 3min |
 | 117-01 | 1/2 | 5min | 5min |
 | 117-02 | 2/2 | 7min | 7min |
+| 118-01 | 1/2 | 5min | 5min |
+| 118-02 | 2/2 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -59,6 +61,11 @@ Recent decisions affecting current work:
 - sign-only 파이프라인은 별도 모듈로 분리 (stages.ts 수정 없음)
 - reservation SUM 쿼리에 SIGNED 포함 (이중 지출 방지)
 - key release는 finally 블록에서만 수행 (catch에서 호출 금지)
+- viem encodeFunctionData 직접 import (adapter-evm 경유 안 함)
+- abi 타입을 as unknown as Abi 이중 캐스트 (Record<string, unknown>[] -> Abi 직접 변환 불가)
+- utils 라우트 등록을 deps-check 밖에 배치 (DB/adapter 의존성 없음)
+- MCP encode_calldata가 12번째 도구로 등록 (11->12)
+- Python SDK function_name 파라미터명 (PEP8), Pydantic alias로 functionName 직렬화
 
 ### Blockers/Concerns
 
@@ -69,5 +76,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 117 완료, Phase 118 execute 대기
+Stopped at: Completed 118-02-PLAN.md (Phase 118 complete)
 Resume file: None

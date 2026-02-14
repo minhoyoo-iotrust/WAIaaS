@@ -28,7 +28,7 @@ v1.4.7은 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS�
 - [x] **Phase 115: Core Types + DB Migration + Parsers** - SIGNED 상태/SIGN 타입 추가, IChainAdapter 파서 메서드, Solana/EVM unsigned tx 파싱 구현
 - [x] **Phase 116: Default Deny Toggles** - ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS 기본 거부 정책 ON/OFF 토글
 - [x] **Phase 117: Sign-Only Pipeline + REST API** - POST /v1/transactions/sign 엔드포인트, 정책 평가 후 동기 서명 반환
-- [ ] **Phase 118: EVM Calldata Encoding** - POST /v1/utils/encode-calldata 유틸리티 엔드포인트
+- [x] **Phase 118: EVM Calldata Encoding** - POST /v1/utils/encode-calldata 유틸리티 엔드포인트
 - [ ] **Phase 119: SDK + MCP + Notifications + Skill Resources** - TS/Python SDK, MCP 도구, 스킬 리소스 노출, 알림 보강
 
 ## Phase Details
@@ -93,8 +93,8 @@ Plans:
 **Plans:** 2 plans (Wave 1: 118-01, Wave 2: 118-02)
 
 Plans:
-- [ ] 118-01-PLAN.md -- ABI_ENCODING_FAILED 에러 코드 + OpenAPI 스키마 + POST /v1/utils/encode-calldata 라우트 + server.ts 등록
-- [ ] 118-02-PLAN.md -- TS SDK encodeCalldata + Python SDK encode_calldata + MCP encode_calldata 도구 + 스킬 파일 업데이트
+- [x] 118-01-PLAN.md -- ABI_ENCODING_FAILED 에러 코드 + OpenAPI 스키마 + POST /v1/utils/encode-calldata 라우트 + server.ts 등록
+- [x] 118-02-PLAN.md -- TS SDK encodeCalldata + Python SDK encode_calldata + MCP encode_calldata 도구 + 스킬 파일 업데이트
 
 ### Phase 119: SDK + MCP + Notifications + Skill Resources
 **Goal**: sign-only API가 TS/Python SDK, MCP에서 사용 가능하고, MCP 스킬 리소스로 API 문서가 노출되며, 정책 거부 알림이 보강된 상태
@@ -106,12 +106,12 @@ Plans:
   3. MCP resources/list에 waiaas://skills/{name} URI로 5개 스킬 파일이 포함되고 resources/read로 내용을 조회할 수 있다
   4. POLICY_VIOLATION 알림에 contractAddress, tokenAddress, policyType 필드와 Admin UI 딥링크가 포함된다
   5. transactions.skill.md가 sign-only API와 calldata encoding을 포함하도록 업데이트된다
-**Plans**: TBD
+**Plans:** 3 plans (Wave 1: 119-01 + 119-02 + 119-03 parallel)
 
 Plans:
-- [ ] 119-01: TS/Python SDK signTransaction + MCP sign_transaction 도구
-- [ ] 119-02: MCP 스킬 리소스 (waiaas://skills/{name}) + GET /v1/skills/:name 엔드포인트
-- [ ] 119-03: 알림 보강 (POLICY_VIOLATION 상세 필드) + 스킬 파일 업데이트
+- [ ] 119-01-PLAN.md -- TS/Python SDK signTransaction + MCP sign_transaction 도구 (13번째)
+- [ ] 119-02-PLAN.md -- SKILL_NOT_FOUND 에러 코드 + GET /v1/skills/:name 라우트 + MCP 스킬 리소스 (ResourceTemplate)
+- [ ] 119-03-PLAN.md -- POLICY_VIOLATION 알림 보강 (extractPolicyType + 상세 vars) + transactions.skill.md 업데이트
 
 ## Progress
 
@@ -124,5 +124,5 @@ Phases execute in numeric order: 115 -> 116 -> 117 -> 118 -> 119
 | 115. Core Types + DB Migration + Parsers | v1.4.7 | 3/3 | ✓ Complete | 2026-02-15 |
 | 116. Default Deny Toggles | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
 | 117. Sign-Only Pipeline + REST API | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
-| 118. EVM Calldata Encoding | v1.4.7 | 0/2 | Not started | - |
+| 118. EVM Calldata Encoding | v1.4.7 | 2/2 | ✓ Complete | 2026-02-15 |
 | 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 0/3 | Not started | - |

@@ -706,6 +706,26 @@ export const McpTokenCreateResponseSchema = z
   .openapi('McpTokenCreateResponse');
 
 // ---------------------------------------------------------------------------
+// Utils: Encode Calldata Schemas
+// ---------------------------------------------------------------------------
+
+export const EncodeCalldataRequestSchema = z
+  .object({
+    abi: z.array(z.record(z.unknown())).describe('ABI fragment array (JSON)'),
+    functionName: z.string().describe('Function name to encode'),
+    args: z.array(z.any()).optional().default([]).describe('Function arguments'),
+  })
+  .openapi('EncodeCalldataRequest');
+
+export const EncodeCalldataResponseSchema = z
+  .object({
+    calldata: z.string().describe('Hex-encoded calldata (0x-prefixed)'),
+    selector: z.string().describe('Function selector (first 4 bytes, 0x-prefixed)'),
+    functionName: z.string().describe('Encoded function name'),
+  })
+  .openapi('EncodeCalldataResponse');
+
+// ---------------------------------------------------------------------------
 // Sign-Only Transaction Schemas (POST /v1/transactions/sign)
 // ---------------------------------------------------------------------------
 
