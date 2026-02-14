@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 117 of 119 (Sign-Only Pipeline + REST API)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-15 -- Plan 117-01 완료 (sign-only pipeline + reservation query, 2 tasks, 17 tests)
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-15 -- Plan 117-02 완료 (sign REST API + OpenAPI schemas + 11 integration tests)
 
 Progress: [####░░░░░░] 40%
 
@@ -30,6 +30,7 @@ Progress: [####░░░░░░] 40%
 | 116-01 | 1/2 | 3min | 3min |
 | 116-02 | 2/2 | 3min | 3min |
 | 117-01 | 1/2 | 5min | 5min |
+| 117-02 | 2/2 | 7min | 7min |
 
 ## Accumulated Context
 
@@ -47,6 +48,8 @@ Recent decisions affecting current work:
 - v9 migration은 transactions 테이블만 재생성
 - getCompiledTransactionMessageDecoder 사용 (decompileTransactionMessage 대신 -- v0 lookup table 회피)
 - parseTransaction/signExternalTransaction은 offline 연산 (RPC 불필요)
+- txHash: SignOnlyResult undefined -> API 응답에서 null 변환 (OpenAPI nullable 스키마 호환)
+- signTransactionRoute를 getTransactionRoute 앞에 배치 (route ordering pitfall 방지)
 - viem parseTransaction을 viemParseTransaction으로 alias import (IChainAdapter 메서드명 충돌 해소)
 - value + calldata 동시 존재 시 CONTRACT_CALL로 분류 (calldata 우선 원칙)
 - settingsService를 DatabasePolicyEngine 선택적 3번째 파라미터로 DI (하위 호환)
@@ -66,5 +69,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 117-01-PLAN.md
+Stopped at: Completed 117-02-PLAN.md (Phase 117 complete)
 Resume file: None
