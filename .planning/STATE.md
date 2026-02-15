@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 126 of 129 (Oracle Implementations)
-Plan: 1 of 3 in current phase
-Status: Plan 126-01 complete
-Last activity: 2026-02-15 -- PythOracle (Hermes REST API) + feed ID 하드코딩 (10 tests)
+Plan: 2 of 3 in current phase
+Status: Plan 126-02 complete
+Last activity: 2026-02-15 -- CoinGeckoOracle (Demo API) + platformId 매핑 + oracle 설정 키 (12 tests)
 
-Progress: [##░░░░░░░░] 21%
+Progress: [###░░░░░░░] 29%
 
 ## Performance Metrics
 
@@ -43,6 +43,9 @@ Recent decisions affecting current work:
 - v1.5: MCP Tool 도구 수 상한 제거 (MCP 프로토콜에 제한 없음)
 - v1.5: PriceNotAvailableError를 oracle-errors.ts 공유 모듈에서 관리 (PythOracle/CoinGeckoOracle 공유)
 - v1.5: PythOracle은 캐시 미관리 -- OracleChain이 InMemoryPriceCache 전담
+- v1.5: CoinGeckoOracle은 캐시 미관리 -- OracleChain이 InMemoryPriceCache 전담
+- v1.5: oracle-errors.ts 공유 모듈에서 PriceNotAvailableError + CoinGeckoNotConfiguredError 관리
+- v1.5: Solana 주소는 CoinGecko API에서 원본 base58 보존, EVM만 lowercase 정규화
 
 ### Blockers/Concerns
 
@@ -53,5 +56,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 126-01-PLAN.md (PythOracle TDD: feed ID 하드코딩 + Hermes REST API 구현)
+Stopped at: Completed 126-02-PLAN.md (CoinGeckoOracle TDD: Demo API + platformId 매핑 + oracle 설정 키)
 Resume file: None
