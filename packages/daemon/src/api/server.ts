@@ -64,7 +64,7 @@ import { tokenRegistryRoutes } from './routes/tokens.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
-import type { IPolicyEngine } from '@waiaas/core';
+import type { IPolicyEngine, IPriceOracle } from '@waiaas/core';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -93,6 +93,7 @@ export interface CreateAppDeps {
   ownerLifecycle?: OwnerLifecycleService;
   notificationService?: NotificationService;
   settingsService?: SettingsService;
+  priceOracle?: IPriceOracle;
   onSettingsChanged?: (changedKeys: string[]) => void;
   dataDir?: string;
 }
@@ -280,6 +281,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         ownerLifecycle: deps.ownerLifecycle,
         sqlite: deps.sqlite,
         notificationService: deps.notificationService,
+        priceOracle: deps.priceOracle,
+        settingsService: deps.settingsService,
       }),
     );
   }
@@ -324,6 +327,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         onSettingsChanged: deps.onSettingsChanged,
         adapterPool: deps.adapterPool ?? null,
         daemonConfig: deps.config,
+        priceOracle: deps.priceOracle,
       }),
     );
   }

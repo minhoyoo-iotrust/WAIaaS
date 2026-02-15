@@ -40,6 +40,8 @@ import { downgradeIfNoOwner } from '../workflow/owner-state.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
+import type { IPriceOracle } from '@waiaas/core';
 import { sleep } from './sleep.js';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +80,10 @@ export interface PipelineContext {
   };
   // v1.3.4: notification service for pipeline event triggers
   notificationService?: NotificationService;
+  // v1.5: price oracle for USD policy evaluation
+  priceOracle?: IPriceOracle;
+  // v1.5: settings service for CoinGecko hint
+  settingsService?: SettingsService;
 }
 
 // ---------------------------------------------------------------------------

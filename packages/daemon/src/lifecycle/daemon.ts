@@ -41,6 +41,7 @@ import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import argon2 from 'argon2';
+import type { IPriceOracle } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -117,6 +118,8 @@ export class DaemonLifecycle {
   private masterPasswordHash = '';
   private notificationService: import('../notifications/notification-service.js').NotificationService | null = null;
   private _settingsService: import('../infrastructure/settings/settings-service.js').SettingsService | null = null;
+  private priceOracle: IPriceOracle | undefined;
+
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -352,6 +355,39 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4e: Price Oracle (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      const { InMemoryPriceCache, PythOracle, CoinGeckoOracle, OracleChain } =
+        await import('../infrastructure/oracle/index.js');
+
+      const priceCache = new InMemoryPriceCache();
+      const pythOracle = new PythOracle();
+
+      const coingeckoApiKey = this._settingsService?.get('oracle.coingecko_api_key');
+      const coingeckoOracle = coingeckoApiKey
+        ? new CoinGeckoOracle(coingeckoApiKey)
+        : undefined;
+
+      const thresholdStr = this._settingsService?.get('oracle.cross_validation_threshold');
+      const crossValidationThreshold = thresholdStr ? Number(thresholdStr) : 5;
+
+      this.priceOracle = new OracleChain({
+        primary: pythOracle,
+        fallback: coingeckoOracle,
+        cache: priceCache,
+        crossValidationThreshold,
+      });
+
+      console.log(
+        `Step 4e: PriceOracle initialized (Pyth primary${coingeckoOracle ? ' + CoinGecko fallback' : ''})`,
+      );
+    } catch (err) {
+      console.warn('Step 4e (fail-soft): PriceOracle init warning:', err);
+      this.priceOracle = undefined;
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -384,6 +420,7 @@ export class DaemonLifecycle {
           approvalWorkflow: this.approvalWorkflow ?? undefined,
           notificationService: this.notificationService ?? undefined,
           settingsService: this._settingsService ?? undefined,
+          priceOracle: this.priceOracle,
           onSettingsChanged: (changedKeys: string[]) => {
             void hotReloader.handleChangedKeys(changedKeys);
           },
