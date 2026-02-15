@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 128 of 129 (Action Provider + API Key)
-Plan: 3 of 4 in current phase
-Status: Plan 2 complete (2/2 tasks), starting Plan 3
-Last activity: 2026-02-15 -- api_keys DB v11 + ApiKeyStore HKDF/AES-256-GCM 암호화 저장소 (14 tests)
+Plan: 4 of 4 in current phase
+Status: Plan 3 complete (2/2 tasks), starting Plan 4
+Last activity: 2026-02-15 -- Actions REST API 2 라우트 + DaemonLifecycle Step 4f + 11 통합 테스트
 
-Progress: [#####░░░░░] 50%
+Progress: [#######░░░] 75%
 
 ## Performance Metrics
 
@@ -68,6 +68,9 @@ Recent decisions affecting current work:
 - v1.5: ApiKeyStore.set()에서 new Date(Math.floor(Date.now()/1000)*1000)으로 Unix epoch 초 정밀도 보장
 - v1.5: maskKey를 모듈 레벨 private 함수로 분리하여 getMasked/listAll 공유
 - v1.5: ApiKeyStore.has()에서 SELECT providerName만 조회 -- 불필요한 복호화 방지
+- v1.5: ContractCallRequest를 PipelineContext.request로 직접 주입 -- Stage 1이 type: CONTRACT_CALL 5-type 스키마로 검증
+- v1.5: resolve() 실패 시 WAIaaSError가 아닌 에러는 ACTION_RESOLVE_FAILED(502)로 래핑
+- v1.5: GET /actions/providers에서 apiKeyStore.has()로 각 프로바이더의 키 설정 여부 포함
 
 ### Blockers/Concerns
 
@@ -78,5 +81,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 128-02-PLAN.md (api_keys DB v11 + ApiKeyStore HKDF/AES-256-GCM 암호화 저장소 -- 14 tests)
+Stopped at: Completed 128-03-PLAN.md (Actions REST API 2 라우트 + DaemonLifecycle Step 4f + 11 통합 테스트)
 Resume file: None
