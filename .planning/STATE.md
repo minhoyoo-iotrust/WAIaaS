@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 121 — MCP 안정성
+**Current focus:** Phase 122 — MCP 도구 + 멀티체인 DX
 
 ## Current Position
 
-Phase: 121 (2 of 5 in v1.4.8) — MCP 안정성
-Plan: 1 of 1 in current phase
-Status: Phase 121 complete
+Phase: 122 (3 of 5 in v1.4.8) — MCP 도구 + 멀티체인 DX
+Plan: 0 of 2 in current phase
+Status: Ready to plan
 Last activity: 2026-02-15 — Phase 121 complete (MCP 안정성, 1/1 plans, 10 tests added)
 
 Progress: [██░░░░░░░░] 25% (2/8 plans)
@@ -45,5 +45,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 121 complete, ready to plan Phase 122
+Stopped at: Phase 121 complete, ready to plan Phase 122 (MCP 도구 + 멀티체인 DX)
 Resume file: None

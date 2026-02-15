@@ -15,9 +15,9 @@
 
 ### MCP 안정성
 
-- [ ] **MCPS-01**: MCP 서버가 stdin 종료를 감지하여 5초 내 자동 종료된다
-- [ ] **MCPS-02**: SIGTERM 수신 시 3초 타임아웃으로 graceful shutdown 후 강제 종료된다
-- [ ] **MCPS-03**: shutdown 중복 호출이 안전하게 처리된다
+- [x] **MCPS-01**: MCP 서버가 stdin 종료를 감지하여 5초 내 자동 종료된다 — Phase 121
+- [x] **MCPS-02**: SIGTERM 수신 시 3초 타임아웃으로 graceful shutdown 후 강제 종료된다 — Phase 121
+- [x] **MCPS-03**: shutdown 중복 호출이 안전하게 처리된다 — Phase 121
 
 ### MCP 도구 + 멀티체인 DX
 
@@ -72,9 +72,9 @@
 | MIGR-01 | Phase 120 | ✅ Done |
 | MIGR-02 | Phase 120 | ✅ Done |
 | MIGR-03 | Phase 120 | ✅ Done |
-| MCPS-01 | Phase 121 | Pending |
-| MCPS-02 | Phase 121 | Pending |
-| MCPS-03 | Phase 121 | Pending |
+| MCPS-01 | Phase 121 | ✅ Done |
+| MCPS-02 | Phase 121 | ✅ Done |
+| MCPS-03 | Phase 121 | ✅ Done |
 | MCDX-01 | Phase 122 | Pending |
 | MCDX-02 | Phase 122 | Pending |
 | MCDX-03 | Phase 122 | Pending |
