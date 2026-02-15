@@ -2,11 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { CreatePolicyRequestSchema } from '../schemas/policy.schema.js';
 
 /**
- * Tests for 6 v1.4 PolicyType superRefine rules validation.
+ * Tests for all 12 PolicyType superRefine rules validation.
  *
- * Each new PolicyType has a type-specific rules schema validated via
- * superRefine on CreatePolicyRequestSchema. Existing 4 types retain
- * free-form rules for backward compatibility.
+ * Each PolicyType has a type-specific rules schema validated via
+ * superRefine on CreatePolicyRequestSchema.
  */
 describe('CreatePolicyRequestSchema superRefine validation', () => {
   // -------------------------------------------------------------------------
@@ -214,38 +213,170 @@ describe('CreatePolicyRequestSchema superRefine validation', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Backward compatibility: existing 4 types retain free-form rules
+  // WHITELIST
   // -------------------------------------------------------------------------
 
-  describe('backward compatibility', () => {
-    it('SPENDING_LIMIT accepts free-form rules (no superRefine)', () => {
-      const result = CreatePolicyRequestSchema.safeParse({
-        type: 'SPENDING_LIMIT',
-        rules: { maxDailyUsd: 100, windowMs: 86400000 },
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('WHITELIST accepts free-form rules (no superRefine)', () => {
+  describe('WHITELIST', () => {
+    it('accepts valid rules with allowed_addresses array', () => {
       const result = CreatePolicyRequestSchema.safeParse({
         type: 'WHITELIST',
-        rules: { addresses: ['addr1', 'addr2'], mode: 'allow' },
+        rules: { allowed_addresses: ['addr1', 'addr2'] },
       });
       expect(result.success).toBe(true);
     });
 
-    it('TIME_RESTRICTION accepts free-form rules', () => {
+    it('rejects empty allowed_addresses array', () => {
       const result = CreatePolicyRequestSchema.safeParse({
-        type: 'TIME_RESTRICTION',
-        rules: { allowedHours: { start: 9, end: 17 }, timezone: 'UTC' },
+        type: 'WHITELIST',
+        rules: { allowed_addresses: [] },
       });
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const paths = result.error.issues.map((i) => i.path.join('.'));
+        expect(paths).toContain('rules.allowed_addresses');
+      }
     });
 
-    it('RATE_LIMIT accepts free-form rules', () => {
+    it('rejects missing allowed_addresses field', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'WHITELIST',
+        rules: {},
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // RATE_LIMIT
+  // -------------------------------------------------------------------------
+
+  describe('RATE_LIMIT', () => {
+    it('accepts valid rules with max_requests and window_seconds', () => {
       const result = CreatePolicyRequestSchema.safeParse({
         type: 'RATE_LIMIT',
-        rules: { maxPerHour: 10, maxPerDay: 50 },
+        rules: { max_requests: 100, window_seconds: 3600 },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects zero max_requests', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'RATE_LIMIT',
+        rules: { max_requests: 0, window_seconds: 3600 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects missing fields', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'RATE_LIMIT',
+        rules: {},
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // TIME_RESTRICTION
+  // -------------------------------------------------------------------------
+
+  describe('TIME_RESTRICTION', () => {
+    it('accepts valid rules with allowed_hours and allowed_days', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'TIME_RESTRICTION',
+        rules: {
+          allowed_hours: { start: 9, end: 17 },
+          allowed_days: [1, 2, 3, 4, 5],
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects empty allowed_days array', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'TIME_RESTRICTION',
+        rules: {
+          allowed_hours: { start: 0, end: 24 },
+          allowed_days: [],
+        },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const paths = result.error.issues.map((i) => i.path.join('.'));
+        expect(paths).toContain('rules.allowed_days');
+      }
+    });
+
+    it('rejects invalid hour range', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'TIME_RESTRICTION',
+        rules: {
+          allowed_hours: { start: 25, end: 17 },
+          allowed_days: [0],
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid day value', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'TIME_RESTRICTION',
+        rules: {
+          allowed_hours: { start: 0, end: 24 },
+          allowed_days: [7],
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // X402_ALLOWED_DOMAINS
+  // -------------------------------------------------------------------------
+
+  describe('X402_ALLOWED_DOMAINS', () => {
+    it('accepts valid rules with domains array', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'X402_ALLOWED_DOMAINS',
+        rules: { domains: ['api.example.com', '*.openai.com'] },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects empty domains array', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'X402_ALLOWED_DOMAINS',
+        rules: { domains: [] },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const paths = result.error.issues.map((i) => i.path.join('.'));
+        expect(paths).toContain('rules.domains');
+      }
+    });
+
+    it('rejects missing domains field', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'X402_ALLOWED_DOMAINS',
+        rules: {},
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // SPENDING_LIMIT (validates via SpendingLimitRulesSchema)
+  // -------------------------------------------------------------------------
+
+  describe('SPENDING_LIMIT', () => {
+    it('accepts valid spending limit rules', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'SPENDING_LIMIT',
+        rules: {
+          instant_max: '1000000',
+          notify_max: '5000000',
+          delay_max: '10000000',
+        },
       });
       expect(result.success).toBe(true);
     });

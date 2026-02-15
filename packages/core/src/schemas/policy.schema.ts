@@ -92,8 +92,38 @@ const AllowedNetworksRulesSchema = z.object({
   })).min(1, 'At least one network required'),
 });
 
+/** WHITELIST: rules.allowed_addresses array (permitted destination addresses). */
+export const WhitelistRulesSchema = z.object({
+  allowed_addresses: z.array(z.string().min(1)).min(1, 'At least one address required'),
+});
+export type WhitelistRules = z.infer<typeof WhitelistRulesSchema>;
+
+/** RATE_LIMIT: rules.max_requests + window_seconds. */
+export const RateLimitRulesSchema = z.object({
+  max_requests: z.number().int().min(1),
+  window_seconds: z.number().int().min(1),
+});
+export type RateLimitRules = z.infer<typeof RateLimitRulesSchema>;
+
+/** TIME_RESTRICTION: rules.allowed_hours + allowed_days. */
+export const TimeRestrictionRulesSchema = z.object({
+  allowed_hours: z.object({
+    start: z.number().int().min(0).max(23),
+    end: z.number().int().min(1).max(24),
+  }),
+  allowed_days: z.array(z.number().int().min(0).max(6)).min(1, 'At least one day required'),
+});
+export type TimeRestrictionRules = z.infer<typeof TimeRestrictionRulesSchema>;
+
+/** X402_ALLOWED_DOMAINS: rules.domains array (permitted x402 payment domains). */
+export const X402AllowedDomainsRulesSchema = z.object({
+  domains: z.array(z.string().min(1)).min(1, 'At least one domain required'),
+});
+export type X402AllowedDomainsRules = z.infer<typeof X402AllowedDomainsRulesSchema>;
+
 // Map of policy types to their rules schemas for superRefine lookup.
-const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
+// All 12 PolicyTypes are now covered.
+const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   ALLOWED_TOKENS: AllowedTokensRulesSchema,
   CONTRACT_WHITELIST: ContractWhitelistRulesSchema,
   METHOD_WHITELIST: MethodWhitelistRulesSchema,
@@ -102,15 +132,17 @@ const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
   APPROVE_TIER_OVERRIDE: ApproveTierOverrideRulesSchema,
   ALLOWED_NETWORKS: AllowedNetworksRulesSchema,
   SPENDING_LIMIT: SpendingLimitRulesSchema,
+  WHITELIST: WhitelistRulesSchema,
+  RATE_LIMIT: RateLimitRulesSchema,
+  TIME_RESTRICTION: TimeRestrictionRulesSchema,
+  X402_ALLOWED_DOMAINS: X402AllowedDomainsRulesSchema,
 };
 
 /**
  * CreatePolicyRequestSchema - body for POST /v1/policies.
  *
  * walletId is optional (null = global policy).
- * rules is validated per-type via superRefine for 8 PolicyTypes (v1.4 + SPENDING_LIMIT).
- * Existing 3 types (WHITELIST, TIME_RESTRICTION, RATE_LIMIT)
- * retain free-form rules for backward compatibility.
+ * rules is validated per-type via superRefine for all 12 PolicyTypes.
  */
 export const CreatePolicyRequestSchema = z.object({
   walletId: z.string().uuid().optional(),
@@ -121,7 +153,7 @@ export const CreatePolicyRequestSchema = z.object({
   network: NetworkTypeEnum.optional(),
 }).superRefine((data, ctx) => {
   const schema = POLICY_RULES_SCHEMAS[data.type];
-  if (!schema) return; // existing 4 types: no additional validation
+  if (!schema) return; // safety fallback (all 12 types are now registered)
   const result = schema.safeParse(data.rules);
   if (!result.success) {
     for (const issue of result.error.issues) {
