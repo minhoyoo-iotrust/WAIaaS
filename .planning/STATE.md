@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 131 of 133 (SSRF Guard + x402 Handler + Payment Signing)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-15 -- 131-01 SSRF 가드 TDD 완료 (54 테스트)
+Last activity: 2026-02-15 -- 131-03 Payment Signer TDD 완료 (23 테스트)
 
-Progress: [███░░░░░░░] 30% (3/10 plans)
+Progress: [█████░░░░░] 50% (5/10 plans)
 
 ## Performance Metrics
 
@@ -37,16 +37,18 @@ Recent:
 - 130-02: v12 마이그레이션에서 transactions + policies 단일 트랜잭션 내 순차 재생성
 - 131-01: RFC 5735/6890 전체 범위 차단 (CGNAT, 벤치마크, TEST-NET 3종, 멀티캐스트, 예약 포함)
 - 131-01: 리다이렉트 후 GET 메서드 변경 + body 제거 (RFC 7231 Section 6.4)
+- 131-03: IChainAdapter를 경유하지 않고 viem/solana-kit 직접 사용 (EIP-3009는 typed data 서명)
+- 131-03: daemon에 @solana/kit, @solana-program/token 직접 의존성 추가 (payment-signer용)
+- 131-03: validBefore = now+5분 (300초) -- EIP-3009 보안 창구 최소화
+- 131-03: USDC_DOMAINS 7개 EVM 체인 등록 (Base, Ethereum, Polygon, Arbitrum, Optimism + testnets)
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
-- EIP-3009 도메인 파라미터 체인별 차이 확인 필요 (MEDIUM confidence)
-- Solana 부분 서명 noopSigner feePayer 검증 필요 (MEDIUM confidence)
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 131-01-PLAN.md (SSRF 가드 TDD)
+Stopped at: Completed 131-03-PLAN.md (Payment Signer TDD)
 Resume file: None
