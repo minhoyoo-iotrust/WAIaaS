@@ -47,6 +47,23 @@ interface McpTokenResult {
   claudeDesktopConfig: Record<string, unknown>;
 }
 
+interface WalletBalance {
+  native: { balance: string; symbol: string; network: string } | null;
+  tokens: Array<{ symbol: string; balance: string; address: string }>;
+  error?: string;
+}
+
+interface WalletTransaction {
+  id: string;
+  type: string;
+  status: string;
+  toAddress: string | null;
+  amount: string | null;
+  network: string | null;
+  txHash: string | null;
+  createdAt: number | null;
+}
+
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
     return [
@@ -149,6 +166,10 @@ function WalletDetailView({ id }: { id: string }) {
   const networks = useSignal<NetworkInfo[]>([]);
   const networksLoading = useSignal(true);
   const defaultNetworkLoading = useSignal(false);
+  const balance = useSignal<WalletBalance | null>(null);
+  const balanceLoading = useSignal(true);
+  const txs = useSignal<WalletTransaction[]>([]);
+  const txsLoading = useSignal(true);
 
   const fetchWallet = async () => {
     try {
@@ -227,6 +248,31 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const fetchBalance = async () => {
+    balanceLoading.value = true;
+    try {
+      balance.value = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(id));
+    } catch {
+      balance.value = null;
+    } finally {
+      balanceLoading.value = false;
+    }
+  };
+
+  const fetchTransactions = async () => {
+    txsLoading.value = true;
+    try {
+      const r = await apiGet<{ items: WalletTransaction[]; total: number }>(
+        API.ADMIN_WALLET_TRANSACTIONS(id),
+      );
+      txs.value = r.items;
+    } catch {
+      txs.value = [];
+    } finally {
+      txsLoading.value = false;
+    }
+  };
+
   const handleChangeDefaultNetwork = async (network: string) => {
     defaultNetworkLoading.value = true;
     try {
@@ -245,6 +291,8 @@ function WalletDetailView({ id }: { id: string }) {
   useEffect(() => {
     fetchWallet();
     fetchNetworks();
+    fetchBalance();
+    fetchTransactions();
   }, [id]);
 
   return (
@@ -319,6 +367,33 @@ function WalletDetailView({ id }: { id: string }) {
             />
           </div>
 
+          <div class="balance-section" style={{ marginTop: 'var(--space-6)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>Balance</h3>
+            {balanceLoading.value ? (
+              <div class="stat-skeleton" style={{ height: '60px' }} />
+            ) : balance.value?.native ? (
+              <div>
+                <DetailRow
+                  label="Native"
+                  value={`${balance.value.native.balance} ${balance.value.native.symbol} (${balance.value.native.network})`}
+                />
+                {balance.value.tokens.length > 0 ? (
+                  balance.value.tokens.map((t) => (
+                    <DetailRow key={t.address} label={t.symbol} value={t.balance} />
+                  ))
+                ) : (
+                  <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--space-2)' }}>
+                    No tokens registered
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--color-text-secondary)' }}>
+                {balance.value?.error ?? 'Balance unavailable'}
+              </p>
+            )}
+          </div>
+
           <div class="networks-section" style={{ marginTop: 'var(--space-6)' }}>
             <h3 style={{ marginBottom: 'var(--space-3)' }}>Available Networks</h3>
             {networksLoading.value ? (
@@ -349,6 +424,47 @@ function WalletDetailView({ id }: { id: string }) {
                 ))}
               </div>
             )}
+          </div>
+
+          <div class="transactions-section" style={{ marginTop: 'var(--space-6)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>Recent Transactions</h3>
+            <Table<WalletTransaction>
+              columns={[
+                {
+                  key: 'createdAt',
+                  header: 'Time',
+                  render: (t) => (t.createdAt ? formatDate(t.createdAt) : '--'),
+                },
+                { key: 'type', header: 'Type', render: (t) => t.type },
+                {
+                  key: 'toAddress',
+                  header: 'To',
+                  render: (t) => (t.toAddress ? formatAddress(t.toAddress) : '--'),
+                },
+                { key: 'amount', header: 'Amount', render: (t) => t.amount ?? '--' },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  render: (t) => (
+                    <Badge
+                      variant={
+                        t.status === 'CONFIRMED'
+                          ? 'success'
+                          : t.status === 'FAILED'
+                            ? 'danger'
+                            : 'warning'
+                      }
+                    >
+                      {t.status}
+                    </Badge>
+                  ),
+                },
+                { key: 'network', header: 'Network', render: (t) => t.network ?? '--' },
+              ]}
+              data={txs.value}
+              loading={txsLoading.value}
+              emptyMessage="No transactions yet"
+            />
           </div>
 
           <div class="mcp-setup-section" style={{ marginTop: 'var(--space-6)' }}>
