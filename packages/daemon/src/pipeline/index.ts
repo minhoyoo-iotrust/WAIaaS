@@ -14,3 +14,10 @@ export {
   stage6Confirm,
   type PipelineContext,
 } from './stages.js';
+export {
+  resolveEffectiveAmountUsd,
+  type PriceResult,
+  type PriceResultSuccess,
+  type PriceResultOracleDown,
+  type PriceResultNotListed,
+} from './resolve-effective-amount-usd.js';
