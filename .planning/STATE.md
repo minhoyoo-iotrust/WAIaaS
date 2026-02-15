@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 138 of 139 (Forex 환산 서비스)
-Plan: 1 of 2 in current phase
-Status: 138-01 complete, 138-02 pending
-Last activity: 2026-02-16 -- 138-01 IForexRateService + CoinGeckoForexProvider + formatDisplayCurrency + 테스트 39개
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: 138-01 complete, 138-02 complete -- Phase 138 done
+Last activity: 2026-02-16 -- 138-02 SettingsService display + CurrencySelect + daemon ForexRateService 통합
 
-Progress: [██████░░░░] 63% (5/8 plans)
+Progress: [████████░░] 75% (6/8 plans)
 
 ## Performance Metrics
 
@@ -47,6 +47,10 @@ Recent:
 - 138-01: Intl.NumberFormat en-US locale 통일 -- 일관된 숫자 형식
 - 138-01: ZERO_DECIMAL_CURRENCIES Set -- getCurrencyMeta 의존 없이 core에서 독립 판단
 - 138-01: forexRateService optional dep -- 138-02에서 daemon bootstrap 통합
+- 138-02: display.currency는 DB 직접 읽기 -- hot-reload 시 subsystem 재시작 불필요
+- 138-02: CurrencySelect 43개 통화 인라인 -- CSP로 daemon import 불가
+- 138-02: GET/PUT /admin/settings 응답에 oracle+display 포함 (기존 누락 보완)
+- 138-02: /v1/admin/forex/* masterAuth 등록 (138-01 누락 보안 수정)
 
 ### Blockers/Concerns
 
@@ -57,5 +61,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 138-01-PLAN.md
+Stopped at: Completed 138-02-PLAN.md (Phase 138 done)
 Resume file: None
