@@ -96,11 +96,11 @@
   3. daily_limit_usd/monthly_limit_usd가 설정된 상태에서 24시간/30일 롤링 윈도우 누적이 한도를 초과하면 APPROVAL로 격상된다
   4. PENDING/QUEUED/SIGNED 상태 트랜잭션의 reserved_amount_usd가 누적 합산에 포함되어, 동시 요청에 의한 이중 지출이 방지된다
   5. 누적 지출이 한도의 80%에 도달하면 CUMULATIVE_LIMIT_WARNING 알림이 발송되고, 한도 초과 APPROVAL 시 TX_APPROVAL_REQUIRED에 reason 필드(per_tx/cumulative_daily/cumulative_monthly)가 포함된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 136-01: DB v13 마이그레이션 + SpendingLimitRuleSchema 확장 + amount_usd 기록
-- [ ] 136-02: evaluateAndReserve 누적 집계 + APPROVAL 격상 + 알림 이벤트
+- [ ] 136-01-PLAN.md -- DB v13 마이그레이션 + Drizzle/Zod 스키마 확장 + evaluateAndReserve USD 기록
+- [ ] 136-02-PLAN.md -- 누적 USD 집계 + APPROVAL 격상 + CUMULATIVE_LIMIT_WARNING 알림 + reason 필드
 
 ### Phase 137: 누적 한도 Admin UI + SDK/MCP
 **Goal**: Admin UI에서 누적 한도를 설정/확인하고, SDK/MCP로 누적 한도 포함 정책을 프로그래밍 방식으로 관리할 수 있는 상태
@@ -160,4 +160,4 @@ Phases execute in numeric order: 136 -> 137 -> 138 -> 139
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- v1.5.3 로드맵 생성 (4 phases, 8 plans, 19 requirements)*
+*Last updated: 2026-02-16 -- Phase 136 계획 완료 (2 plans, 7 requirements)*
