@@ -154,6 +154,10 @@ export type {
   PriceInfo,
   CacheStats,
   IPriceOracle,
+  // v1.5.3 forex rate types
+  ForexRate,
+  CurrencyCode,
+  IForexRateService,
   // v1.5 action provider types
   ActionProviderMetadata,
   ActionDefinition,
@@ -170,6 +174,9 @@ export type {
 
 // v1.5 Price Oracle Zod schemas (value exports)
 export { TokenRefSchema, PriceInfoSchema } from './interfaces/index.js';
+
+// v1.5.3 Forex Rate Zod schemas (value exports)
+export { ForexRateSchema, CurrencyCodeSchema } from './interfaces/index.js';
 
 // v1.5 Action Provider Zod schemas (value exports)
 export {
