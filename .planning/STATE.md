@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 136 - 누적 지출 한도 엔진
+**Current focus:** Phase 137 - 누적 한도 Admin UI + SDK/MCP
 
 ## Current Position
 
-Phase: 136 of 139 (누적 지출 한도 엔진)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 136 complete
-Last activity: 2026-02-16 -- 136-02 누적 USD 집계 + APPROVAL 격상 + 테스트 완료
+Phase: 137 of 139 (누적 한도 Admin UI + SDK/MCP)
+Plan: 1 of 2 in current phase (137-01 COMPLETE)
+Status: Executing Phase 137
+Last activity: 2026-02-16 -- 137-01 Admin SpendingLimitForm 누적 한도 입력 + PolicyRulesSummary 시각화
 
-Progress: [██░░░░░░░░] 25% (2/8 plans)
+Progress: [███░░░░░░░] 38% (3/8 plans)
 
 ## Performance Metrics
 
@@ -37,6 +37,8 @@ Recent:
 - 136-02: SIGNED 중복 방지 -- CONFIRMED/SIGNED는 amount_usd, PENDING/QUEUED는 reserved_amount_usd로 분리 집계
 - 136-02: daily 초과 감지 시 monthly 평가 스킵 (중복 알림 방지)
 - 136-02: APPROVAL 알림은 downgrade 전 tier 기준 -- downgraded=true면 미발송
+- 137-01: handleUsdChange 재사용 -- 기존 USD 티어와 동일 빈값/0/NaN 처리
+- 137-01: 사용량(current usage) 표시는 현 스코프 제외 -- PolicyRulesSummary는 설정값만 표시
 
 ### Blockers/Concerns
 
@@ -47,5 +49,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 136-02-PLAN.md (Phase 136 complete)
+Stopped at: Completed 137-01-PLAN.md
 Resume file: None
