@@ -31,7 +31,7 @@ import {
   type ContractCallRequest,
   type ApproveRequest,
 } from '@waiaas/core';
-import { wallets, transactions } from '../infrastructure/database/schema.js';
+import { wallets, transactions, auditLog } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
@@ -42,7 +42,14 @@ import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { IPriceOracle } from '@waiaas/core';
+import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
+
+// v1.5: CoinGecko 키 안내 힌트 최초 1회 추적 (데몬 재시작 시 리셋 OK)
+const hintedTokens = new Set<string>();
+
+// Exported for test cleanup
+export { hintedTokens };
 
 // ---------------------------------------------------------------------------
 // Pipeline context
@@ -267,6 +274,14 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   const txParam = buildTransactionParam(req, txType, ctx.wallet.chain);
   txParam.network = ctx.resolvedNetwork;
 
+  // [Phase 127] Oracle HTTP 호출 (evaluateAndReserve 진입 전 완료)
+  let priceResult: PriceResult | undefined;
+  if (ctx.priceOracle) {
+    priceResult = await resolveEffectiveAmountUsd(
+      req as unknown as Record<string, unknown>, txType, ctx.wallet.chain, ctx.priceOracle,
+    );
+  }
+
   // BATCH type uses evaluateBatch (2-stage policy evaluation)
   if (txType === 'BATCH' && ctx.policyEngine instanceof DatabasePolicyEngine) {
     const batchReq = req as BatchRequest;
@@ -291,14 +306,20 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       };
     });
 
-    evaluation = await ctx.policyEngine.evaluateBatch(ctx.walletId, params);
+    // evaluateBatch에 batchUsdAmount 전달 (Phase 127)
+    const batchUsdAmount = priceResult?.type === 'success' ? priceResult.usdAmount : undefined;
+    evaluation = await ctx.policyEngine.evaluateBatch(ctx.walletId, params, batchUsdAmount);
   } else {
+    // evaluateAndReserve에 usdAmount 전달 (Phase 127)
+    const usdAmount = priceResult?.type === 'success' ? priceResult.usdAmount : undefined;
+
     // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
     if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
       evaluation = ctx.policyEngine.evaluateAndReserve(
         ctx.walletId,
         txParam,
         ctx.txId,
+        usdAmount,
       );
     } else {
       evaluation = await ctx.policyEngine.evaluate(ctx.walletId, txParam);
@@ -330,6 +351,56 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 
   let tier = evaluation.tier;
   let downgraded = false;
+
+  // [Phase 127] PriceResult에 따른 후처리
+  if (priceResult?.type === 'notListed') {
+    // 감사 로그: UNLISTED_TOKEN_TRANSFER
+    await ctx.db.insert(auditLog).values({
+      timestamp: new Date(Math.floor(Date.now() / 1000) * 1000),
+      eventType: 'UNLISTED_TOKEN_TRANSFER',
+      actor: ctx.sessionId ?? 'system',
+      walletId: ctx.walletId,
+      txId: ctx.txId,
+      details: JSON.stringify({
+        tokenAddress: priceResult.tokenAddress,
+        chain: priceResult.chain,
+        failedCount: priceResult.failedCount,
+      }),
+      severity: 'warning',
+    });
+
+    // 최소 NOTIFY 격상 (evaluation tier와 NOTIFY 중 보수적)
+    const TIER_ORDER: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
+    const currentIdx = TIER_ORDER.indexOf(tier);
+    const notifyIdx = TIER_ORDER.indexOf('NOTIFY');
+    if (currentIdx < notifyIdx) {
+      tier = 'NOTIFY';
+    }
+
+    // CoinGecko 키 미설정 + 최초 1회 힌트
+    const cacheKey = `${priceResult.chain}:${priceResult.tokenAddress}`;
+    const coingeckoKey = ctx.settingsService?.get('oracle.coingecko_api_key');
+    const shouldShowHint = !coingeckoKey && !hintedTokens.has(cacheKey);
+    if (shouldShowHint) {
+      hintedTokens.add(cacheKey);
+    }
+
+    // 가격 불명 토큰 알림 발송 (allowed=true인 상태에서도 notListed는 발생)
+    const hint = shouldShowHint
+      ? 'CoinGecko API 키를 설정하면 이 토큰의 USD 가격을 조회할 수 있습니다. Admin Settings > Oracle에서 설정하세요.'
+      : undefined;
+
+    const notifyVars: Record<string, string> = {
+      amount: getRequestAmount(ctx.request),
+      to: getRequestTo(ctx.request),
+      reason: `가격 불명 토큰 (${priceResult.tokenAddress}) -- 최소 NOTIFY 격상`,
+      policyType: 'SPENDING_LIMIT',
+    };
+    if (hint) notifyVars.hint = hint;
+
+    void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.walletId, notifyVars, { txId: ctx.txId });
+  }
+  // oracleDown: 아무것도 하지 않음 -- 네이티브 금액 기준 tier가 이미 설정됨
 
   // Check for APPROVAL -> DELAY downgrade when no owner registered
   if (tier === 'APPROVAL') {

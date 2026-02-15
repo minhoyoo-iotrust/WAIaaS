@@ -644,3 +644,503 @@ describe('Stage 3: type-based policy filtering', () => {
     expect(param.selector).toBe('0xa9059cbb');
   });
 });
+
+// ===========================================================================
+// Stage 3: USD Policy Integration (Phase 127 -- 9 tests)
+// ===========================================================================
+
+import type { IPriceOracle, PriceInfo, CacheStats, TokenRef } from '@waiaas/core';
+import { auditLog } from '../infrastructure/database/schema.js';
+import { hintedTokens } from '../pipeline/stages.js';
+import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
+
+function createMockPriceOracle(overrides: Partial<IPriceOracle> = {}): IPriceOracle {
+  return {
+    getPrice: async (): Promise<PriceInfo> => ({
+      usdPrice: 1.0,
+      source: 'pyth',
+      timestamp: Date.now(),
+      confidence: 0.01,
+      isStale: false,
+    }),
+    getPrices: async () => new Map(),
+    getNativePrice: async (): Promise<PriceInfo> => ({
+      usdPrice: 150.0,
+      source: 'pyth',
+      timestamp: Date.now(),
+      confidence: 0.5,
+      isStale: false,
+    }),
+    getCacheStats: (): CacheStats => ({ hits: 0, misses: 0, staleHits: 0, size: 0, evictions: 0 }),
+    ...overrides,
+  };
+}
+
+describe('Stage 3: USD Policy Integration', () => {
+  beforeEach(() => {
+    // Reset hintedTokens between tests
+    hintedTokens.clear();
+  });
+
+  it('priceOracle 있음 + TRANSFER + success: usdAmount가 evaluateAndReserve에 전달됨', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request = {
+      type: 'TRANSFER' as const,
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '1000000000',
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getNativePrice: async () => ({
+        usdPrice: 150.0,
+        source: 'pyth',
+        timestamp: Date.now(),
+        confidence: 0.5,
+        isStale: false,
+      }),
+    });
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const evaluateSpy = vi.spyOn(policyEngine, 'evaluateAndReserve');
+
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // evaluateAndReserve should have been called with usdAmount (4th arg)
+    expect(evaluateSpy).toHaveBeenCalled();
+    const usdArg = evaluateSpy.mock.calls[0]![3];
+    expect(usdArg).toBeGreaterThan(0);
+    // 1 SOL (1e9 lamports) * $150 = $150
+    expect(usdArg).toBeCloseTo(150.0, 0);
+  });
+
+  it('priceOracle 있음 + TOKEN_TRANSFER + notListed: tier가 최소 NOTIFY로 격상 + audit_log 삽입', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
+      tokens: [{ address: 'UnknownMintXYZ' }],
+    });
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request: TokenTransferRequest = {
+      type: 'TOKEN_TRANSFER',
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '5000000',
+      token: { address: 'UnknownMintXYZ', decimals: 6, symbol: 'UNKNOWN' },
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getPrice: async (token: TokenRef) => {
+        throw new PriceNotAvailableError(token.address, 'solana');
+      },
+    });
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // tier should be upgraded to at least NOTIFY
+    expect(ctx.tier).toBe('NOTIFY');
+
+    // audit_log should have UNLISTED_TOKEN_TRANSFER entry
+    const logs = await conn.db.select().from(auditLog).all();
+    const unlistedLog = logs.find((l) => l.eventType === 'UNLISTED_TOKEN_TRANSFER');
+    expect(unlistedLog).toBeTruthy();
+    expect(unlistedLog!.walletId).toBe(walletId);
+    const details = JSON.parse(unlistedLog!.details);
+    expect(details.tokenAddress).toBe('UnknownMintXYZ');
+    expect(details.chain).toBe('solana');
+  });
+
+  it('priceOracle 있음 + oracleDown: 네이티브 금액만으로 평가 (usdAmount 미전달)', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request = {
+      type: 'TRANSFER' as const,
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '1000000000',
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getNativePrice: async () => {
+        throw new Error('Oracle down');
+      },
+    });
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const evaluateSpy = vi.spyOn(policyEngine, 'evaluateAndReserve');
+
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // evaluateAndReserve should be called without usdAmount (undefined)
+    expect(evaluateSpy).toHaveBeenCalled();
+    const usdArg = evaluateSpy.mock.calls[0]![3];
+    expect(usdArg).toBeUndefined();
+    // Tier should still be determined by native amount
+    expect(ctx.tier).toBe('INSTANT');
+  });
+
+  it('priceOracle 미설정 (undefined): 기존 네이티브 전용 평가 (하위 호환)', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request = {
+      type: 'TRANSFER' as const,
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '1000000000',
+    };
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const evaluateSpy = vi.spyOn(policyEngine, 'evaluateAndReserve');
+
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      // priceOracle is NOT set -- undefined
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // evaluateAndReserve should be called without usdAmount
+    expect(evaluateSpy).toHaveBeenCalled();
+    const usdArg = evaluateSpy.mock.calls[0]![3];
+    expect(usdArg).toBeUndefined();
+    expect(ctx.tier).toBe('INSTANT');
+  });
+
+  it('notListed + CoinGecko 키 미설정: 힌트 포함 알림 발송 + hintedTokens 등록', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
+      tokens: [{ address: 'UnknownMintABC' }],
+    });
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request: TokenTransferRequest = {
+      type: 'TOKEN_TRANSFER',
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '5000000',
+      token: { address: 'UnknownMintABC', decimals: 6, symbol: 'UNK' },
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getPrice: async (token: TokenRef) => {
+        throw new PriceNotAvailableError(token.address, 'solana');
+      },
+    });
+
+    const mockNotify = vi.fn();
+    const notificationService = { notify: mockNotify } as any;
+
+    // settingsService returns undefined for CoinGecko key (not configured)
+    const settingsService = {
+      get: vi.fn().mockReturnValue(undefined),
+    } as any;
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+      notificationService,
+      settingsService,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // Notification should have been called with hint
+    expect(mockNotify).toHaveBeenCalled();
+    const notifyCall = mockNotify.mock.calls.find(
+      (c: unknown[]) => c[0] === 'POLICY_VIOLATION' && (c[2] as Record<string, string>).hint,
+    );
+    expect(notifyCall).toBeTruthy();
+    expect(notifyCall[2].hint).toContain('CoinGecko API 키');
+
+    // hintedTokens should contain the cache key
+    expect(hintedTokens.has('solana:UnknownMintABC')).toBe(true);
+  });
+
+  it('notListed + 동일 토큰 재전송: 힌트가 두 번째에는 포함되지 않음 (최초 1회)', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
+      tokens: [{ address: 'RepeatMintXYZ' }],
+    });
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request: TokenTransferRequest = {
+      type: 'TOKEN_TRANSFER',
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '5000000',
+      token: { address: 'RepeatMintXYZ', decimals: 6, symbol: 'RPT' },
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getPrice: async (token: TokenRef) => {
+        throw new PriceNotAvailableError(token.address, 'solana');
+      },
+    });
+
+    const mockNotify = vi.fn();
+    const notificationService = { notify: mockNotify } as any;
+    const settingsService = { get: vi.fn().mockReturnValue(undefined) } as any;
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+
+    // First call: should include hint
+    const ctx1 = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+      notificationService,
+      settingsService,
+    });
+    await stage1Validate(ctx1);
+    await stage3Policy(ctx1);
+
+    // Second call: should NOT include hint
+    mockNotify.mockClear();
+    const ctx2 = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+      notificationService,
+      settingsService,
+    });
+    await stage1Validate(ctx2);
+    await stage3Policy(ctx2);
+
+    // Second call notification should NOT have hint
+    const secondNotify = mockNotify.mock.calls.find(
+      (c: unknown[]) => c[0] === 'POLICY_VIOLATION',
+    );
+    expect(secondNotify).toBeTruthy();
+    expect(secondNotify[2].hint).toBeUndefined();
+  });
+
+  it('BATCH + 일부 notListed: notListed 격상 + 감사 로그', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+    // ALLOWED_TOKENS policy to allow the token in batch
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
+      tokens: [{ address: 'UnlistedBatchToken' }],
+    });
+
+    const request: BatchRequest = {
+      type: 'BATCH',
+      instructions: [
+        { to: 'addr1', amount: '1000000' },
+        {
+          to: 'addr2',
+          amount: '5000000',
+          token: { address: 'UnlistedBatchToken', decimals: 6, symbol: 'UBT' },
+        },
+      ],
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getNativePrice: async () => ({
+        usdPrice: 150.0,
+        source: 'pyth',
+        timestamp: Date.now(),
+        confidence: 0.5,
+        isStale: false,
+      }),
+      getPrice: async (token: TokenRef) => {
+        throw new PriceNotAvailableError(token.address, 'solana');
+      },
+    });
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // tier should be at least NOTIFY (notListed upgrade)
+    expect(ctx.tier).toBe('NOTIFY');
+
+    // audit_log should have UNLISTED_TOKEN_TRANSFER entry
+    const logs = await conn.db.select().from(auditLog).all();
+    const unlistedLog = logs.find((l) => l.eventType === 'UNLISTED_TOKEN_TRANSFER');
+    expect(unlistedLog).toBeTruthy();
+    const details = JSON.parse(unlistedLog!.details);
+    expect(details.tokenAddress).toBe('UnlistedBatchToken');
+    expect(details.failedCount).toBe(1);
+  });
+
+  it('priceOracle 있음 + TRANSFER + success + INSTANT tier: 그대로 INSTANT 유지 (격상 불필요)', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request = {
+      type: 'TRANSFER' as const,
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '1000000',
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getNativePrice: async () => ({
+        usdPrice: 150.0,
+        source: 'pyth',
+        timestamp: Date.now(),
+        confidence: 0.5,
+        isStale: false,
+      }),
+    });
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // success priceResult -> no upgrade, INSTANT should remain
+    expect(ctx.tier).toBe('INSTANT');
+
+    // No audit_log entries for success case
+    const logs = await conn.db.select().from(auditLog).all();
+    expect(logs.filter((l) => l.eventType === 'UNLISTED_TOKEN_TRANSFER')).toHaveLength(0);
+  });
+
+  it('notListed + CoinGecko 키 설정됨: 힌트 포함되지 않음', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    await insertPolicy(conn, walletId, 'ALLOWED_TOKENS', {
+      tokens: [{ address: 'HintlessMint' }],
+    });
+    await insertPolicy(conn, walletId, 'SPENDING_LIMIT', {
+      instant_max: '999999999999',
+      notify_max: '999999999999',
+      delay_max: '999999999999',
+      delay_seconds: 60,
+    });
+
+    const request: TokenTransferRequest = {
+      type: 'TOKEN_TRANSFER',
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '5000000',
+      token: { address: 'HintlessMint', decimals: 6, symbol: 'HLS' },
+    };
+
+    const priceOracle = createMockPriceOracle({
+      getPrice: async (token: TokenRef) => {
+        throw new PriceNotAvailableError(token.address, 'solana');
+      },
+    });
+
+    const mockNotify = vi.fn();
+    const notificationService = { notify: mockNotify } as any;
+
+    // settingsService returns a CoinGecko key (configured)
+    const settingsService = {
+      get: vi.fn().mockReturnValue('CG-api-key-12345'),
+    } as any;
+
+    const policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+    const ctx = createPipelineContext(conn, walletId, {
+      request: request as unknown as SendTransactionRequest,
+      policyEngine,
+      sqlite: conn.sqlite,
+      priceOracle,
+      notificationService,
+      settingsService,
+    });
+
+    await stage1Validate(ctx);
+    await stage3Policy(ctx);
+
+    // Notification should be called but WITHOUT hint (CoinGecko key is set)
+    const policyNotify = mockNotify.mock.calls.find(
+      (c: unknown[]) => c[0] === 'POLICY_VIOLATION',
+    );
+    expect(policyNotify).toBeTruthy();
+    expect(policyNotify[2].hint).toBeUndefined();
+  });
+});
