@@ -31,6 +31,7 @@ v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 9-패키지 모노레�
 - ✅ v1.4.8 Admin DX + 알림 개선 — shipped 2026-02-15 (~1,618 tests, ~178,176 LOC)
 - ✅ v1.5 DeFi Price Oracle + Action Provider Framework — shipped 2026-02-15 (1,848 tests, ~185,000 LOC)
 - ✅ v1.5.1 x402 클라이언트 지원 — shipped 2026-02-15 (2,058 tests, ~187,000 LOC)
+- **◆ v1.5.2 Admin UI 정책 폼 UX 개선** — in progress
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
@@ -289,6 +290,18 @@ v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 9-패키지 모노레�
 
 ### 활성
 
+## Current Milestone: v1.5.2 Admin UI 정책 폼 UX 개선
+
+**Goal:** Admin UI에서 정책을 JSON 직접 입력 없이 12개 정책 타입별 구조화된 폼으로 생성/수정할 수 있는 상태를 달성하여 운영자 DX를 개선한다.
+
+**Target features:**
+- 12개 정책 타입별 전용 입력 폼 컴포넌트 (PolicyFormRouter)
+- DynamicRowList 재사용 동적 행 추가/삭제 컴포넌트
+- 목록 시각화 개선 (토큰 심볼 배지, 네트워크 배지 등)
+- JSON 폴백 토글 (고급 사용자용)
+- 4개 미등록 타입 Zod 스키마 추가 (WHITELIST, TIME_RESTRICTION, RATE_LIMIT, X402_ALLOWED_DOMAINS)
+- 실시간 유효성 검증 + 수정 시 현재값 프리필
+
 ## Next Milestone Goals
 
 - v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
@@ -519,4 +532,4 @@ v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 4 페이즈, 10 플랜,
 | parse402Response + selectPaymentRequirement + signPayment 직접 조합 | handleX402Fetch 단일 함수 대신 조합 가능한 빌딩 블록 | ✓ Good — v1.5.1 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.5.1 milestone shipped*
+*최종 업데이트: 2026-02-15 after v1.5.2 milestone started*
