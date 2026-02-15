@@ -1,8 +1,9 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 11 REST API methods with typed responses:
+ * Wraps 13 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
+ * - getWalletInfo(), setDefaultNetwork() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - renewSession() (session management)
  * - encodeCalldata(), signTransaction() (utils)
@@ -35,6 +36,8 @@ import type {
   EncodeCalldataResponse,
   SignTransactionParams,
   SignTransactionResponse,
+  WalletInfoResponse,
+  SetDefaultNetworkResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -191,6 +194,40 @@ export class WAIaaSClient {
       () => this.http.post<SignTransactionResponse>(
         '/v1/transactions/sign',
         params,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- Wallet info ---
+  async getWalletInfo(): Promise<WalletInfoResponse> {
+    const address = await withRetry(
+      () => this.http.get<AddressResponse>('/v1/wallet/address', this.authHeaders()),
+      this.retryOptions,
+    );
+    const networks = await withRetry(
+      () => this.http.get<{ networks: Array<{ network: string; isDefault: boolean }> }>(
+        `/v1/wallets/${address.walletId}/networks`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+    return {
+      walletId: address.walletId,
+      chain: address.chain,
+      network: address.network,
+      environment: address.environment ?? '',
+      address: address.address,
+      networks: networks.networks ?? [],
+    };
+  }
+
+  async setDefaultNetwork(network: string): Promise<SetDefaultNetworkResponse> {
+    return withRetry(
+      () => this.http.put<SetDefaultNetworkResponse>(
+        '/v1/wallet/default-network',
+        { network },
         this.authHeaders(),
       ),
       this.retryOptions,

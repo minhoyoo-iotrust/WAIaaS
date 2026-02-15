@@ -50,4 +50,7 @@ export type {
   SignTransactionParams,
   SignTransactionOperation,
   SignTransactionResponse,
+  WalletNetworkInfo,
+  WalletInfoResponse,
+  SetDefaultNetworkResponse,
 } from './types.js';

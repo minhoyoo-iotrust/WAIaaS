@@ -11,12 +11,14 @@ from waiaas.errors import WAIaaSError
 from waiaas.models import (
     PendingTransactionList,
     SessionRenewResponse,
+    SetDefaultNetworkResponse,
     TransactionDetail,
     TransactionList,
     TransactionResponse,
     WalletAddress,
     WalletAssets,
     WalletBalance,
+    WalletInfo,
 )
 from waiaas.retry import RetryPolicy
 
@@ -170,6 +172,101 @@ class TestGetAssets:
         result = await client.get_assets()
         assert isinstance(result, WalletAssets)
         assert len(result.assets) == 0
+
+
+# ---------------------------------------------------------------------------
+# Wallet management methods
+# ---------------------------------------------------------------------------
+
+
+class TestGetWalletInfo:
+    async def test_returns_combined_wallet_info(self):
+        handler = make_handler(
+            {
+                ("GET", "/v1/wallet/address"): (
+                    200,
+                    {
+                        "walletId": WALLET_ID,
+                        "chain": "ethereum",
+                        "network": "ethereum-sepolia",
+                        "environment": "testnet",
+                        "address": "0xabc123",
+                    },
+                ),
+                ("GET", f"/v1/wallets/{WALLET_ID}/networks"): (
+                    200,
+                    {
+                        "id": WALLET_ID,
+                        "chain": "ethereum",
+                        "environment": "testnet",
+                        "defaultNetwork": "ethereum-sepolia",
+                        "availableNetworks": [
+                            {"network": "ethereum-sepolia", "isDefault": True},
+                            {"network": "polygon-amoy", "isDefault": False},
+                        ],
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        result = await client.get_wallet_info()
+        assert isinstance(result, WalletInfo)
+        assert result.wallet_id == WALLET_ID
+        assert result.chain == "ethereum"
+        assert result.environment == "testnet"
+        assert result.address == "0xabc123"
+        assert len(result.networks) == 2
+        assert result.networks[0].is_default is True
+        assert result.networks[0].network == "ethereum-sepolia"
+        assert result.networks[1].is_default is False
+
+
+class TestSetDefaultNetwork:
+    async def test_calls_put_and_returns_response(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if (
+                request.method == "PUT"
+                and "/v1/wallet/default-network" in str(request.url)
+            ):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": WALLET_ID,
+                        "defaultNetwork": "polygon-amoy",
+                        "previousNetwork": "ethereum-sepolia",
+                    },
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.set_default_network("polygon-amoy")
+        assert isinstance(result, SetDefaultNetworkResponse)
+        assert result.id == WALLET_ID
+        assert result.default_network == "polygon-amoy"
+        assert result.previous_network == "ethereum-sepolia"
+        assert captured_body["network"] == "polygon-amoy"
+
+    async def test_error_on_environment_mismatch(self):
+        handler = make_handler(
+            {
+                ("PUT", "/v1/wallet/default-network"): (
+                    400,
+                    {
+                        "code": "ENVIRONMENT_NETWORK_MISMATCH",
+                        "message": "Network not allowed",
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        with pytest.raises(WAIaaSError) as exc_info:
+            await client.set_default_network("mainnet")
+        assert exc_info.value.code == "ENVIRONMENT_NETWORK_MISMATCH"
 
 
 # ---------------------------------------------------------------------------

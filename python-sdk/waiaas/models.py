@@ -55,6 +55,37 @@ class WalletAssets(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Wallet Info models
+# ---------------------------------------------------------------------------
+
+
+class WalletNetworkInfo(BaseModel):
+    network: str
+    is_default: bool = Field(alias="isDefault")
+
+    model_config = {"populate_by_name": True}
+
+
+class WalletInfo(BaseModel):
+    wallet_id: str = Field(alias="walletId")
+    chain: str
+    network: str
+    environment: str
+    address: str
+    networks: list[WalletNetworkInfo]
+
+    model_config = {"populate_by_name": True}
+
+
+class SetDefaultNetworkResponse(BaseModel):
+    id: str
+    default_network: str = Field(alias="defaultNetwork")
+    previous_network: Optional[str] = Field(default=None, alias="previousNetwork")
+
+    model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
 # Transaction models
 # ---------------------------------------------------------------------------
 
