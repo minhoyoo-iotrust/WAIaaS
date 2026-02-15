@@ -9,6 +9,7 @@ import { Modal } from '../components/modal';
 import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
+import { PolicyFormRouter } from '../components/policy-forms';
 
 interface Wallet {
   id: string;
@@ -44,9 +45,10 @@ const POLICY_TYPES = [
   { label: 'Approve Amount Limit', value: 'APPROVE_AMOUNT_LIMIT' },
   { label: 'Approve Tier Override', value: 'APPROVE_TIER_OVERRIDE' },
   { label: 'Allowed Networks', value: 'ALLOWED_NETWORKS' },
+  { label: 'x402 Allowed Domains', value: 'X402_ALLOWED_DOMAINS' },
 ];
 
-const DEFAULT_RULES: Record<string, unknown> = {
+const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   SPENDING_LIMIT: {
     instant_max: '1000000',
     notify_max: '5000000',
@@ -67,6 +69,7 @@ const DEFAULT_RULES: Record<string, unknown> = {
   APPROVE_AMOUNT_LIMIT: { max_amount: '1000000' },
   APPROVE_TIER_OVERRIDE: { overrides: {} },
   ALLOWED_NETWORKS: { networks: [] },
+  X402_ALLOWED_DOMAINS: { domains: [] },
 };
 
 function formatNumber(value: string | number): string {
@@ -151,6 +154,9 @@ export default function PoliciesPage() {
   const formType = useSignal('SPENDING_LIMIT');
   const formWalletId = useSignal('');
   const formRules = useSignal(JSON.stringify(DEFAULT_RULES.SPENDING_LIMIT, null, 2));
+  const formRulesObj = useSignal<Record<string, unknown>>(DEFAULT_RULES.SPENDING_LIMIT as Record<string, unknown>);
+  const formErrors = useSignal<Record<string, string>>({});
+  const jsonMode = useSignal(false);
   const formPriority = useSignal<number>(0);
   const formEnabled = useSignal(true);
   const formNetwork = useSignal('');
@@ -207,11 +213,15 @@ export default function PoliciesPage() {
   const handleCreate = async () => {
     formError.value = null;
     let parsedRules: Record<string, unknown>;
-    try {
-      parsedRules = JSON.parse(formRules.value);
-    } catch {
-      formError.value = 'Invalid JSON in rules field';
-      return;
+    if (jsonMode.value) {
+      try {
+        parsedRules = JSON.parse(formRules.value);
+      } catch {
+        formError.value = 'Invalid JSON in rules field';
+        return;
+      }
+    } else {
+      parsedRules = formRulesObj.value;
     }
 
     formLoading.value = true;
@@ -230,6 +240,9 @@ export default function PoliciesPage() {
       formWalletId.value = '';
       formNetwork.value = '';
       formRules.value = JSON.stringify(DEFAULT_RULES.SPENDING_LIMIT, null, 2);
+      formRulesObj.value = DEFAULT_RULES.SPENDING_LIMIT as Record<string, unknown>;
+      formErrors.value = {};
+      jsonMode.value = false;
       formPriority.value = 0;
       formEnabled.value = true;
       formError.value = null;
@@ -305,7 +318,27 @@ export default function PoliciesPage() {
     const defaultRule = DEFAULT_RULES[type];
     if (defaultRule) {
       formRules.value = JSON.stringify(defaultRule, null, 2);
+      formRulesObj.value = { ...defaultRule };
     }
+    formErrors.value = {};
+    jsonMode.value = false;
+  };
+
+  const handleJsonToggle = () => {
+    if (!jsonMode.value) {
+      // Structured form -> JSON: sync formRulesObj to formRules string
+      formRules.value = JSON.stringify(formRulesObj.value, null, 2);
+    } else {
+      // JSON -> Structured form: parse formRules string to formRulesObj
+      try {
+        formRulesObj.value = JSON.parse(formRules.value);
+        formError.value = null;
+      } catch {
+        formError.value = 'Invalid JSON — cannot switch to form mode';
+        return; // Abort toggle
+      }
+    }
+    jsonMode.value = !jsonMode.value;
   };
 
   useEffect(() => {
@@ -445,14 +478,31 @@ export default function PoliciesPage() {
             onChange={(v) => { formNetwork.value = v as string; }}
             placeholder="e.g. polygon-mainnet (leave empty for all networks)"
           />
-          <FormField
-            label="Rules (JSON)"
-            name="rules"
-            type="textarea"
-            value={formRules.value}
-            onChange={(v) => { formRules.value = v as string; }}
-            error={formError.value ?? undefined}
-          />
+          <div class="policy-form-section">
+            <div class="policy-form-header">
+              <label>Rules</label>
+              <button class="btn btn-ghost btn-sm json-toggle" onClick={handleJsonToggle}>
+                {jsonMode.value ? 'Switch to Form' : 'JSON Direct Edit'}
+              </button>
+            </div>
+            {jsonMode.value ? (
+              <FormField
+                label=""
+                name="rules"
+                type="textarea"
+                value={formRules.value}
+                onChange={(v) => { formRules.value = v as string; }}
+                error={formError.value ?? undefined}
+              />
+            ) : (
+              <PolicyFormRouter
+                type={formType.value}
+                rules={formRulesObj.value}
+                onChange={(r) => { formRulesObj.value = r; }}
+                errors={formErrors.value}
+              />
+            )}
+          </div>
           <FormField
             label="Priority"
             name="priority"
