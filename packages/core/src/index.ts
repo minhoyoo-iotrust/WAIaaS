@@ -199,5 +199,8 @@ export {
   PaymentRequirementsV2Schema,
 } from './interfaces/index.js';
 
+// v1.5.3 Currency formatting utilities
+export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';
+
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';

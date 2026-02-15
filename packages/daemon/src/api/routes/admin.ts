@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 16 daemon administration endpoints.
+ * Admin route handlers: 17 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -17,6 +17,7 @@
  * GET    /admin/api-keys            - List Action Provider API key status (masterAuth)
  * PUT    /admin/api-keys/:provider  - Set or update API key (masterAuth)
  * DELETE /admin/api-keys/:provider  - Delete API key (masterAuth)
+ * GET    /admin/forex/rates         - Forex exchange rates for display currency (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
@@ -26,7 +27,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
-import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType, IPriceOracle } from '@waiaas/core';
+import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
+import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -88,6 +90,7 @@ export interface AdminRouteDeps {
   oracleConfig?: { coingeckoApiKeyConfigured: boolean; crossValidationThreshold: number };
   apiKeyStore?: ApiKeyStore;
   actionProviderRegistry?: ActionProviderRegistry;
+  forexRateService?: IForexRateService;
 }
 
 // ---------------------------------------------------------------------------
@@ -385,6 +388,44 @@ const apiKeyDeleteRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Forex rates route definitions
+// ---------------------------------------------------------------------------
+
+const forexRatesQuerySchema = z.object({
+  currencies: z.string().optional().openapi({
+    description: 'Comma-separated currency codes (e.g. KRW,JPY,EUR). If omitted, returns empty.',
+  }),
+});
+
+const forexRatesRoute = createRoute({
+  method: 'get',
+  path: '/admin/forex/rates',
+  tags: ['Admin'],
+  summary: 'Get forex exchange rates for display currencies',
+  request: {
+    query: forexRatesQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Forex rates with preview strings',
+      content: {
+        'application/json': {
+          schema: z.object({
+            rates: z.record(
+              z.string(),
+              z.object({
+                rate: z.number(),
+                preview: z.string(),
+              }),
+            ),
+          }),
+        },
+      },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Admin wallet route definitions
 // ---------------------------------------------------------------------------
 
@@ -486,6 +527,7 @@ const adminWalletBalanceRoute = createRoute({
  * GET    /admin/api-keys            - List Action Provider API key status (masterAuth)
  * PUT    /admin/api-keys/:provider  - Set or update API key (masterAuth)
  * DELETE /admin/api-keys/:provider  - Delete API key (masterAuth)
+ * GET    /admin/forex/rates             - Forex exchange rates (masterAuth)
  * GET    /admin/wallets/:id/balance      - Wallet native+token balance (masterAuth)
  * GET    /admin/wallets/:id/transactions - Wallet transaction history (masterAuth)
  */
@@ -1108,6 +1150,39 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     return c.json({ success: true }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/forex/rates
+  // ---------------------------------------------------------------------------
+
+  router.openapi(forexRatesRoute, async (c) => {
+    const { currencies: currenciesParam } = c.req.valid('query');
+    const rates: Record<string, { rate: number; preview: string }> = {};
+
+    if (!currenciesParam || !deps.forexRateService) {
+      return c.json({ rates }, 200);
+    }
+
+    // Parse comma-separated currency codes, validate each
+    const codes = currenciesParam
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter((s) => CurrencyCodeSchema.safeParse(s).success) as CurrencyCode[];
+
+    if (codes.length === 0) {
+      return c.json({ rates }, 200);
+    }
+
+    const rateMap = await deps.forexRateService.getRates(codes);
+    for (const [code, forexRate] of rateMap) {
+      rates[code] = {
+        rate: forexRate.rate,
+        preview: formatRatePreview(forexRate.rate, code),
+      };
+    }
+
+    return c.json({ rates }, 200);
   });
 
   // ---------------------------------------------------------------------------
