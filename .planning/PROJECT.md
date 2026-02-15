@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~178,176 LOC, ~1,618 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송(네트워크 선택) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, **set_default_network, wallet info, network=all 잔액**) + Telegram/Discord/ntfy/**Slack** 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, **메시지 저장/조회**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(**채널별 테스트 + Slack**) + MCP 토큰 발급 + **대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회**) + 다중 지갑 MCP 설정(**14 도구** + 스킬 리소스) + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
+v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~185,000 LOC, 1,848 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(**USD 기준 포함**) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, **USD 환산 정책 평가**) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → **Action Provider 플러그인 실행(POST /v1/actions/:provider/:action)** → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, set_default_network, wallet info, network=all 잔액, **action_{provider}_{action} MCP 도구**) + Telegram/Discord/ntfy/Slack 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, 메시지 저장/조회, **가격 불명 토큰 NOTIFY 격상**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(채널별 테스트 + Slack) + MCP 토큰 발급 + 대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회 + **오라클 상태 조회 + API 키 관리**) + 다중 지갑 MCP 설정(**14+ 도구** + 스킬 리소스 + **Action Provider 동적 도구**) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ **6개**) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -29,7 +29,7 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 +
 - ✅ v1.4.6 멀티체인 월렛 구현 — shipped 2026-02-14 (1,580 tests, ~73,000 LOC)
 - ✅ v1.4.7 임의 트랜잭션 서명 API — shipped 2026-02-15 (1,636 tests, ~175,480 LOC)
 - ✅ v1.4.8 Admin DX + 알림 개선 — shipped 2026-02-15 (~1,618 tests, ~178,176 LOC)
-- v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
+- ✅ v1.5 DeFi Price Oracle + Action Provider Framework — shipped 2026-02-15 (1,848 tests, ~185,000 LOC)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
@@ -37,18 +37,21 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 +
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~178,176 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- ~1,618 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~185,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 1,848 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 46 엔드포인트 (44 + POST /transactions/sign + POST /utils/encode-calldata), GET /doc OpenAPI 3.0 자동 생성
-- 5개 API 스킬 파일 (skills/ 디렉토리) — AI 에이전트 즉시 사용 가능 + MCP 스킬 리소스(waiaas://skills/{name})
-- IChainAdapter 22 메서드 (parseTransaction/signExternalTransaction 추가), discriminatedUnion 5-type 파이프라인, 11 PolicyType
+- OpenAPIHono 49 엔드포인트 (46 + POST /actions/:provider/:action + GET /actions/providers + GET /admin/oracle-status), GET /doc OpenAPI 3.0 자동 생성
+- 6개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions + MCP 스킬 리소스(waiaas://skills/{name})
+- IChainAdapter 22 메서드, discriminatedUnion 5-type 파이프라인, 11 PolicyType
+- IPriceOracle — Pyth Hermes + CoinGecko OracleChain fallback, USD 기준 정책 평가
+- IActionProvider — ESM 플러그인 프레임워크, ActionProviderRegistry, MCP Tool 자동 변환
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- MCP 14개 도구 (+ set_default_network) + 5개 스킬 리소스
+- MCP 14개 내장 도구 + Action Provider 동적 도구 + 5개 스킬 리소스
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
-- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v10
+- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v11
+- API 키 관리 — DB 암호화 저장(HKDF+AES-256-GCM), Admin UI CRUD
 - pushSchema 3-step 순서 (tables→migrations→indexes) + 마이그레이션 체인 테스트
 - MCP graceful shutdown (stdin 감지 + force-exit 타임아웃)
 - 설계 문서 36개 (24-72), 8 objective 문서
@@ -250,24 +253,44 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 +
 - ✓ 알림 테스트 SYSTEM_LOCKED 수정 + 채널별 테스트 + 메시지 저장 + Slack Webhook — v1.4.8 (NOTF-01~06)
 - ✓ wallet.skill.md + admin.skill.md 인터페이스 동기화 — v1.4.8 (SKIL-01~02)
 
+- ✓ IPriceOracle 인터페이스 (getPrice/getPrices/getNativePrice/getCacheStats Zod SSoT) — v1.5 (ORACL-01)
+- ✓ PythOracle Pyth Hermes REST API Zero-config 가격 조회 — v1.5 (ORACL-02)
+- ✓ CoinGeckoOracle Demo API opt-in 롱테일 토큰 가격 조회 — v1.5 (ORACL-03)
+- ✓ OracleChain Pyth→CoinGecko 2단계 fallback 가격 제공 — v1.5 (ORACL-04)
+- ✓ InMemoryPriceCache 5분 TTL LRU 128항목 + stampede prevention — v1.5 (ORACL-05)
+- ✓ classifyPriceAge FRESH/AGING/STALE 3단계 판정 — v1.5 (ORACL-06)
+- ✓ OracleChain 교차 검증 편차>5% STALE 격하 — v1.5 (ORACL-07)
+- ✓ GET /v1/admin/oracle-status 오라클 캐시 통계 + 소스별 상태 — v1.5 (ORACL-08)
+- ✓ resolveEffectiveAmountUsd 5-type USD 환산 — v1.5 (USDPL-01)
+- ✓ SpendingLimitRuleSchema instant_max_usd/notify_max_usd/delay_max_usd Zod SSoT — v1.5 (USDPL-02)
+- ✓ PriceResult success/oracleDown/notListed 3-state discriminated union — v1.5 (USDPL-03)
+- ✓ 가격 불명 토큰 NOTIFY 격상 + UNLISTED_TOKEN_TRANSFER 감사 로그 — v1.5 (USDPL-04)
+- ✓ 오라클 장애 시 graceful fallback (네이티브 금액만 정책 평가) — v1.5 (USDPL-05)
+- ✓ 가격 불명 토큰 + CoinGecko 키 미설정 시 최초 1회 힌트 — v1.5 (USDPL-06)
+- ✓ IActionProvider metadata/actions/resolve 3메서드 인터페이스 — v1.5 (ACTNP-01)
+- ✓ ActionProviderRegistry ~/.waiaas/actions/ ESM 플러그인 발견/로드/검증 — v1.5 (ACTNP-02)
+- ✓ resolve() ContractCallRequestSchema Zod 재검증 정책 우회 차단 — v1.5 (ACTNP-03)
+- ✓ POST /v1/actions/:provider/:action Action Provider resolve → 파이프라인 실행 — v1.5 (ACTNP-04)
+- ✓ ActionDefinition→MCP Tool 자동 변환 mcpExpose=true — v1.5 (ACTNP-05)
+- ✓ 프로바이더 등록/해제 시 MCP 도구 동적 추가/제거 — v1.5 (ACTNP-06)
+- ✓ api_keys 테이블 DB v11 암호화 저장 — v1.5 (APIKY-01)
+- ✓ GET/PUT/DELETE /v1/admin/api-keys CRUD (마스킹) — v1.5 (APIKY-02)
+- ✓ requiresApiKey=true 프로바이더 키 미설정 시 비활성화 — v1.5 (APIKY-03)
+- ✓ Admin UI API Keys 섹션 설정/수정/삭제 — v1.5 (APIKY-04)
+- ✓ 설계 문서 61 Pyth Primary + CoinGecko Fallback + Chainlink 제거 — v1.5 (DSGN-01)
+- ✓ 설계 문서 62 MCP 16개 상한 제거 + 14개 도구 현행화 — v1.5 (DSGN-02)
+- ✓ 설계 문서 38 MCP 상한 제거 + 현행화 — v1.5 (DSGN-03)
+- ✓ admin.skill.md oracle-status + api-keys 엔드포인트 문서화 — v1.5 (SKIL-01)
+- ✓ actions.skill.md Action Provider REST API 문서화 신규 생성 — v1.5 (SKIL-02)
+
 ### 활성
 
-## Current Milestone: v1.5 가격 오라클 + Action Provider 프레임워크
-
-**Goal:** USD 기준 정책 평가가 동작하고, Action Provider 프레임워크가 구축되어 DeFi 프로토콜 플러그인을 추가할 수 있는 상태
-
-**Target features:**
-- IPriceOracle — Pyth Hermes(Zero-config Primary) + CoinGecko(Opt-in Fallback), OracleChain 2단계 fallback, 5분 TTL 인메모리 캐시, 가격 나이 3단계
-- USD 정책 평가 — resolveEffectiveAmountUsd(), SpendingLimitRuleSchema Zod SSoT, 5-type USD 기준 평가, 가격 불명 토큰 NOTIFY 격상
-- IActionProvider 프레임워크 — resolve-then-execute 패턴, ActionProviderRegistry(ESM 플러그인), MCP Tool 자동 변환
-- API 키 관리 — DB 암호화 저장(sodium-native secretbox), Admin UI API Keys 섹션
-- REST API 확장 — POST /v1/actions/:provider/:action, GET /v1/admin/oracle-status, API Keys CRUD
-- 설계 문서 선행 수정 — docs 61(Chainlink 제거, Pyth Primary), 62(MCP 상한 제거), 38(현행화)
+(다음 마일스톤에서 정의)
 
 ## Next Milestone Goals
 
-- v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성
 - v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
+- v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release
 
 ### 범위 외
 
@@ -284,7 +307,7 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 +
 
 ## 컨텍스트
 
-**누적:** 28 milestones (v0.1-v1.4.8), 124 phases, 265 plans, 739 requirements, 36 설계 문서(24-72), 8 objective 문서, ~178,176 LOC, ~1,618 테스트
+**누적:** 29 milestones (v0.1-v1.5), 129 phases, 279 plans, 768 requirements, 36 설계 문서(24-72), 8 objective 문서, ~185,000 LOC, 1,848 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -304,6 +327,7 @@ v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 4 페이즈, 6 �
 v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 35 요구사항, ~73,000 LOC, 1,580 테스트, 38 설계 결정.
 v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 5 페이즈, 12 플랜, 30 요구사항, ~175,480 LOC, 1,636 테스트, 33 설계 결정.
 v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 요구사항, ~178,176 LOC, ~1,618 테스트, 18 설계 결정.
+v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 5 페이즈, 14 플랜, 29 요구사항, ~185,000 LOC, 1,848 테스트, 84 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -318,7 +342,7 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
-- 미구현: Jupiter, Oracle, Tauri, Docker
+- 미구현: Jupiter Swap, Tauri, Docker
 
 **설계 문서:** 36개 (deliverables 24-72.md) + 대응표/테스트 전략/objective
 
@@ -472,6 +496,16 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 
 | Promise.allSettled 부분 실패 패턴 | 환경 내 네트워크별 병렬 RPC, 성공/실패 각각 표시 | ✓ Good — v1.4.8 구현 |
 | Slack Incoming Webhook attachments 형식 | Block Kit 대신 범용 호환성 우선 | ✓ Good — v1.4.8 구현 |
 | notification_logs.message nullable TEXT | pre-v10 로그 하위호환 보장 | ✓ Good — v1.4.8 구현 |
+| Pyth Primary + CoinGecko Fallback (Chainlink 제거) | Pyth 380+ 피드 체인 무관, EVM 전용 불필요 | ✓ Good — v1.5 구현 |
+| PriceResult 3-state discriminated union | success/oracleDown/notListed로 "가격 불명 ≠ 가격 0" 보안 원칙 | ✓ Good — v1.5 구현 |
+| evaluateAndReserve 진입 전 Oracle HTTP 호출 | better-sqlite3 동기 트랜잭션 내 비동기 호출 불가 | ✓ Good — v1.5 구현 |
+| 신규 외부 npm 의존성 0개 | Pyth/CoinGecko native fetch, LRU 직접 구현, 암호화 settings-crypto 재사용 | ✓ Good — v1.5 구현 |
+| IActionProvider resolve-then-execute ESM 플러그인 | ContractCallRequestSchema Zod 재검증으로 정책 우회 차단 | ✓ Good — v1.5 구현 |
+| ActionProviderRegistry infrastructure/action/ 배치 | 기존 컨벤션 준수 (설계 문서 services/ 대신) | ✓ Good — v1.5 구현 |
+| MCP 도구명 action_{provider}_{action} | 기존 14개 내장 도구와 네임스페이스 충돌 방지 | ✓ Good — v1.5 구현 |
+| fire-and-forget 패턴 registerActionProviderTools | 실패 시에도 MCP 서버 정상 동작, degraded mode | ✓ Good — v1.5 구현 |
+| OracleChain 캐시 전담 (Oracle 개별 캐시 미관리) | 단일 캐시 레이어로 일관된 TTL/LRU 관리 | ✓ Good — v1.5 구현 |
+| 교차 검증 CoinGecko DI 주입 시에만 활성화 | 키 미설정 → fallback 미주입 → 자동 스킵 | ✓ Good — v1.5 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.5 milestone started*
+*최종 업데이트: 2026-02-15 after v1.5 milestone shipped*

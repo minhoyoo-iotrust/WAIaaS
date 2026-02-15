@@ -764,3 +764,32 @@
 
 ---
 
+
+## v1.5 DeFi Price Oracle + Action Provider Framework (Shipped: 2026-02-15)
+
+**Delivered:** USD 기준 정책 평가가 동작하고, Action Provider 프레임워크가 구축되어 DeFi 프로토콜 플러그인을 추가할 수 있는 상태를 달성 — Pyth Hermes + CoinGecko OracleChain fallback, resolveEffectiveAmountUsd 5-type USD 환산, 가격 불명 토큰 NOTIFY 격상, IActionProvider ESM 플러그인 프레임워크, API 키 DB 암호화 저장, MCP Tool 자동 변환, 신규 외부 npm 의존성 0개
+
+**Phases completed:** 125-129 (14 plans total)
+
+**Key accomplishments:**
+
+- IPriceOracle 가격 오라클 — Pyth Hermes Zero-config Primary + CoinGecko Opt-in Fallback, OracleChain 2단계 fallback + 교차 검증(5% 편차 STALE 격하), InMemoryPriceCache LRU 128항목 + 5분 TTL + stampede prevention, classifyPriceAge 3단계(FRESH/AGING/STALE)
+- USD 정책 평가 통합 — resolveEffectiveAmountUsd() 5-type 트랜잭션 USD 환산, SpendingLimitRuleSchema instant_max_usd/notify_max_usd/delay_max_usd Zod SSoT, PriceResult 3-state discriminated union(success/oracleDown/notListed), 가격 불명 토큰 NOTIFY 격상 + UNLISTED_TOKEN_TRANSFER 감사 로그, 오라클 장애 시 graceful fallback
+- IActionProvider ESM 플러그인 프레임워크 — metadata/actions/resolve 3메서드 인터페이스, ActionProviderRegistry ~/.waiaas/actions/ ESM 플러그인 발견/로드/검증, resolve() → ContractCallRequestSchema Zod 재검증 → 기존 파이프라인 Stage 1~6 실행
+- API 키 관리 + Admin UI — api_keys 테이블 DB v11 암호화 저장(HKDF+AES-256-GCM), GET/PUT/DELETE /v1/admin/api-keys CRUD, requiresApiKey=true 비활성화, Admin UI API Keys 섹션 입력/수정/삭제 + 경고 배지
+- MCP Tool 자동 변환 + Skill 파일 — registerActionProviderTools action_{provider}_{action} MCP 도구 자동 생성(mcpExpose=true), fire-and-forget 패턴(14개 내장 도구 유지), admin.skill.md v1.5.0(oracle-status + api-keys 4개 엔드포인트), actions.skill.md 신규 생성
+
+**Stats:**
+
+- 68 commits, 149 files changed, +25,633 / -1,933 lines (+7,701 / -131 code)
+- 5 phases, 14 plans, 29 requirements, 84 설계 결정
+- 1,848 tests (~1,618 → 1,848, +230 new tests)
+- ~185,000 LOC total
+- 1 day (2026-02-15)
+
+**Git range:** `v1.4.8` → `bbc62c7` (Phase 129 complete)
+
+**What's next:** v1.5.1 x402 클라이언트 지원 또는 v1.6 Desktop + Telegram + Docker
+
+---
+
