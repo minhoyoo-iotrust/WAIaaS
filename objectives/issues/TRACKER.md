@@ -35,17 +35,17 @@
 | 018 | ENHANCEMENT | LOW | 테스트넷 빌트인 ERC-20 토큰이 빈 배열 — 토큰 전송 테스트 시 수동 등록 필요 | v1.4.3 | FIXED | 2026-02-14 |
 | 019 | BUG | HIGH | EVM simulateTransaction에서 from 주소 누락 — ERC-20 전송 시뮬레이션 실패 | v1.4.4 | FIXED | 2026-02-14 |
 | 020 | BUG | MEDIUM | MCP 서버 프로세스가 Claude Desktop 종료 후 고아로 잔류 — stdin 종료 미감지 | v1.4.8 | FIXED | 2026-02-15 |
-| 021 | ENHANCEMENT | LOW | 멀티체인 전체 네트워크 잔액 일괄 조회 미지원 — `network=all` 파라미터 필요 | v1.4.8 | OPEN | — |
-| 022 | MISSING | LOW | 기본 네트워크 변경 MCP 도구 및 CLI 명령어 미구현 | v1.4.8 | OPEN | — |
-| 023 | MISSING | MEDIUM | 월렛 상세 정보 조회 CLI 명령어 + SDK 메서드 미구현 (MCP 도구 구현 완료) | v1.4.8 | OPEN | — |
-| 024 | ENHANCEMENT | MEDIUM | Admin UI 월렛 상세 페이지에 잔액 및 트랜잭션 내역 미표시 | v1.4.8 | OPEN | — |
-| 025 | ENHANCEMENT | LOW | 알림 로그에 실제 발송 메시지 내용 미저장 — Admin UI에서 확인 불가 | v1.4.8 | OPEN | — |
-| 026 | ENHANCEMENT | LOW | Admin UI 세션 페이지에서 전체 세션 조회 불가 — 월렛 선택 필수 | v1.4.8 | OPEN | — |
-| 027 | ENHANCEMENT | MEDIUM | Admin UI 대시보드 핵심 정보 누락 + StatCard 상세 페이지 링크 없음 | v1.4.8 | OPEN | — |
-| 028 | BUG | MEDIUM | Admin UI 알림 테스트가 SYSTEM_LOCKED 에러로 실패 — 빈 body 파싱 오류 | v1.4.8 | OPEN | — |
-| 029 | ENHANCEMENT | LOW | Admin UI 알림 테스트 시 대상 채널 불명확 — 채널 선택 UI 없음 | v1.4.8 | OPEN | — |
-| 030 | ENHANCEMENT | LOW | Slack 알림 채널 미지원 — Incoming Webhook 방식 추가 | v1.4.8 | OPEN | — |
-| 031 | BUG | HIGH | pushSchema 인덱스 생성이 마이그레이션보다 먼저 실행 — 기존 DB 시작 실패 | v1.4.8 | OPEN | — |
+| 021 | ENHANCEMENT | LOW | 멀티체인 전체 네트워크 잔액 일괄 조회 미지원 — `network=all` 파라미터 필요 | v1.4.8 | FIXED | 2026-02-15 |
+| 022 | MISSING | LOW | 기본 네트워크 변경 MCP 도구 및 CLI 명령어 미구현 | v1.4.8 | FIXED | 2026-02-15 |
+| 023 | MISSING | MEDIUM | 월렛 상세 정보 조회 CLI 명령어 + SDK 메서드 미구현 (MCP 도구 구현 완료) | v1.4.8 | FIXED | 2026-02-15 |
+| 024 | ENHANCEMENT | MEDIUM | Admin UI 월렛 상세 페이지에 잔액 및 트랜잭션 내역 미표시 | v1.4.8 | FIXED | 2026-02-15 |
+| 025 | ENHANCEMENT | LOW | 알림 로그에 실제 발송 메시지 내용 미저장 — Admin UI에서 확인 불가 | v1.4.8 | FIXED | 2026-02-15 |
+| 026 | ENHANCEMENT | LOW | Admin UI 세션 페이지에서 전체 세션 조회 불가 — 월렛 선택 필수 | v1.4.8 | FIXED | 2026-02-15 |
+| 027 | ENHANCEMENT | MEDIUM | Admin UI 대시보드 핵심 정보 누락 + StatCard 상세 페이지 링크 없음 | v1.4.8 | FIXED | 2026-02-15 |
+| 028 | BUG | MEDIUM | Admin UI 알림 테스트가 SYSTEM_LOCKED 에러로 실패 — 빈 body 파싱 오류 | v1.4.8 | FIXED | 2026-02-15 |
+| 029 | ENHANCEMENT | LOW | Admin UI 알림 테스트 시 대상 채널 불명확 — 채널 선택 UI 없음 | v1.4.8 | FIXED | 2026-02-15 |
+| 030 | ENHANCEMENT | LOW | Slack 알림 채널 미지원 — Incoming Webhook 방식 추가 | v1.4.8 | FIXED | 2026-02-15 |
+| 031 | BUG | HIGH | pushSchema 인덱스 생성이 마이그레이션보다 먼저 실행 — 기존 DB 시작 실패 | v1.4.8 | FIXED | 2026-02-15 |
 
 ## Type Legend
 
@@ -57,8 +57,8 @@
 
 ## Summary
 
-- **OPEN:** 11
-- **FIXED:** 20
+- **OPEN:** 0
+- **FIXED:** 31
 - **VERIFIED:** 0
 - **WONTFIX:** 0
 - **Total:** 31
