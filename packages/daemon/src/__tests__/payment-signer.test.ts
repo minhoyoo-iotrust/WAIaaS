@@ -12,11 +12,11 @@
  * with real crypto -- they are pure functions that do not require network access.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { randomBytes } from 'node:crypto';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { privateKeyToAccount } from 'viem/accounts';
 import { recoverTypedDataAddress } from 'viem';
 import type { Hex } from 'viem';
+import { createKeyPairFromPrivateKeyBytes, getAddressFromPublicKey } from '@solana/kit';
 import {
   signPayment,
   signEip3009,
@@ -36,8 +36,21 @@ const EVM_PRIVATE_KEY_HEX = `0x${Buffer.from(EVM_PRIVATE_KEY).toString('hex')}` 
 const EVM_ACCOUNT = privateKeyToAccount(EVM_PRIVATE_KEY_HEX);
 const EVM_WALLET_ADDRESS = EVM_ACCOUNT.address;
 
-/** Fixed 64-byte Solana private key for deterministic tests. */
-const SOLANA_PRIVATE_KEY = randomBytes(64);
+/**
+ * Solana private key (32 bytes) for deterministic tests.
+ * We use createKeyPairFromPrivateKeyBytes to generate a valid Ed25519 keypair
+ * and store both the 32-byte seed and the wallet address.
+ */
+const SOLANA_SEED = new Uint8Array(32).fill(0xcd);
+let SOLANA_PRIVATE_KEY: Uint8Array;
+let SOLANA_WALLET_ADDRESS: string;
+
+beforeAll(async () => {
+  const keyPair = await createKeyPairFromPrivateKeyBytes(SOLANA_SEED);
+  // For signSolanaTransferChecked, pass 32-byte seed (createKeyPairFromPrivateKeyBytes branch)
+  SOLANA_PRIVATE_KEY = SOLANA_SEED;
+  SOLANA_WALLET_ADDRESS = await getAddressFromPublicKey(keyPair.publicKey);
+});
 
 /** Base Sepolia USDC PaymentRequirements fixture. */
 function makeEvmRequirements(overrides?: Partial<PaymentRequirements>): PaymentRequirements {
@@ -238,7 +251,7 @@ describe('signSolanaTransferChecked', () => {
     const result = await signSolanaTransferChecked(
       requirements,
       SOLANA_PRIVATE_KEY,
-      'dummy-wallet-address',
+      SOLANA_WALLET_ADDRESS,
       mockRpc,
     );
 
@@ -256,7 +269,7 @@ describe('signSolanaTransferChecked', () => {
     const result = await signSolanaTransferChecked(
       requirements,
       SOLANA_PRIVATE_KEY,
-      'dummy-wallet-address',
+      SOLANA_WALLET_ADDRESS,
       mockRpc,
     );
 
@@ -277,7 +290,7 @@ describe('signSolanaTransferChecked', () => {
     await signSolanaTransferChecked(
       requirements,
       SOLANA_PRIVATE_KEY,
-      'dummy-wallet-address',
+      SOLANA_WALLET_ADDRESS,
       mockRpc,
     );
 
@@ -372,7 +385,7 @@ describe('signPayment chain strategy selection', () => {
       requirements,
       mockKeyStore,
       'test-wallet-id',
-      'dummy-solana-address',
+      SOLANA_WALLET_ADDRESS,
       'test-password',
       mockRpc,
     );
