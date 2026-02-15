@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 132 of 133 (REST API + 정책 통합 + 감사 로그) -- IN PROGRESS
-Plan: 2 of 3 in current phase -- 132-02 complete
+Plan: 2 of 3 in current phase -- 132-01, 132-02 complete
 Status: In Progress
-Last activity: 2026-02-15 -- 132-02 x402 USD Resolver TDD 완료 (18 테스트)
+Last activity: 2026-02-15 -- 132-01 X402_ALLOWED_DOMAINS 도메인 정책 + config.toml [x402] 완료 (19 테스트)
 
-Progress: [███████░░░] 70% (7/10 plans)
+Progress: [████████░░] 80% (8/10 plans)
 
 ## Performance Metrics
 
@@ -46,6 +46,8 @@ Recent:
 - 132-02: SOLANA_USDC_ADDRESSES 별도 테이블 추가 (USDC_DOMAINS는 EVM EIP-712 전용)
 - 132-02: Oracle 에러/미제공 시 0 반환 안전 폴백 (SPENDING_LIMIT INSTANT 통과)
 - 132-02: 비-USDC 토큰 기본 decimals EVM=18, Solana=9 (PaymentRequirements에 decimals 없음)
+- 132-01: X402_ALLOWED_DOMAINS를 DatabasePolicyEngine 외부 독립 모듈로 구현
+- 132-01: 와일드카드 dot-boundary: *.example.com이 example.com 자체를 매칭하지 않음 (보안)
 
 ### Blockers/Concerns
 
@@ -55,5 +57,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 132-02-PLAN.md (x402 USD Resolver TDD -- 18 테스트, 2 파일)
+Stopped at: Completed 132-01-PLAN.md (X402_ALLOWED_DOMAINS 도메인 정책 + config.toml [x402] -- 19 테스트)
 Resume file: None
