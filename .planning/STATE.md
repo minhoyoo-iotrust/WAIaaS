@@ -37,6 +37,10 @@ Recent decisions affecting current work:
 - v1.5: PriceAge를 daemon 패키지에 배치 (core 승격은 후속 필요시)
 - v1.5: source enum 'pyth'|'coingecko'|'cache' 3가지 제한
 - v1.5: staleMax(30min)를 TTL(5min)과 독립 파라미터로 분리
+- v1.5: Chainlink 제거 -- Pyth가 체인 무관 380+ 피드 제공, EVM 전용 불필요
+- v1.5: PriceCache maxEntries 1000->128 (Self-hosted 보수적 상한)
+- v1.5: 교차 검증 편차 10%->5%, CoinGecko 키 설정 시에만 활성화
+- v1.5: MCP Tool 도구 수 상한 제거 (MCP 프로토콜에 제한 없음)
 
 ### Blockers/Concerns
 
@@ -47,5 +51,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 125-02-PLAN.md (IPriceOracle types + cache + price-age)
+Stopped at: Completed 125-01-PLAN.md + 125-02-PLAN.md (설계 문서 수정 + IPriceOracle types + cache + price-age)
 Resume file: None
