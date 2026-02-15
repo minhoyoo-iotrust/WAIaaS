@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.4.8 shipped, planning next milestone
+**Current focus:** v1.5 가격 오라클 + Action Provider 프레임워크
 
 ## Current Position
 
-Phase: None (between milestones)
-Plan: None
-Status: v1.4.8 shipped
-Last activity: 2026-02-15 — v1.4.8 Admin DX + 알림 개선 shipped
-
-Progress: [██████████] 100% — milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-15 — Milestone v1.5 started
 
 ## Performance Metrics
 
@@ -34,5 +32,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: v1.4.8 마일스톤 완료 및 아카이브
+Stopped at: v1.5 마일스톤 시작, 요구사항 정의 진행 중
 Resume file: None

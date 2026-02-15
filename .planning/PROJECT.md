@@ -252,9 +252,20 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 +
 
 ### 활성
 
+## Current Milestone: v1.5 가격 오라클 + Action Provider 프레임워크
+
+**Goal:** USD 기준 정책 평가가 동작하고, Action Provider 프레임워크가 구축되어 DeFi 프로토콜 플러그인을 추가할 수 있는 상태
+
+**Target features:**
+- IPriceOracle — Pyth Hermes(Zero-config Primary) + CoinGecko(Opt-in Fallback), OracleChain 2단계 fallback, 5분 TTL 인메모리 캐시, 가격 나이 3단계
+- USD 정책 평가 — resolveEffectiveAmountUsd(), SpendingLimitRuleSchema Zod SSoT, 5-type USD 기준 평가, 가격 불명 토큰 NOTIFY 격상
+- IActionProvider 프레임워크 — resolve-then-execute 패턴, ActionProviderRegistry(ESM 플러그인), MCP Tool 자동 변환
+- API 키 관리 — DB 암호화 저장(sodium-native secretbox), Admin UI API Keys 섹션
+- REST API 확장 — POST /v1/actions/:provider/:action, GET /v1/admin/oracle-status, API Keys CRUD
+- 설계 문서 선행 수정 — docs 61(Chainlink 제거, Pyth Primary), 62(MCP 상한 제거), 38(현행화)
+
 ## Next Milestone Goals
 
-- v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
 - v1.5.1 x402 클라이언트 지원 — x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성
 - v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
 
@@ -463,4 +474,4 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 
 | notification_logs.message nullable TEXT | pre-v10 로그 하위호환 보장 | ✓ Good — v1.4.8 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.4.8 milestone shipped*
+*최종 업데이트: 2026-02-15 after v1.5 milestone started*
