@@ -79,8 +79,9 @@ export const messages: Messages = {
     WITHDRAW_LOCKED_ONLY: '출금에는 LOCKED Owner 상태가 필요합니다',
     SWEEP_TOTAL_FAILURE: '모든 sweep 작업이 실패했습니다',
     INSUFFICIENT_FOR_FEE: '트랜잭션 수수료에 필요한 잔액이 부족합니다',
-    // ACTION domain (7)
+    // ACTION domain (8)
     ACTION_NOT_FOUND: '액션을 찾을 수 없습니다',
+    API_KEY_REQUIRED: '이 액션 프로바이더에 API 키가 필요합니다',
     ACTION_VALIDATION_FAILED: '액션 검증에 실패했습니다',
     ACTION_RESOLVE_FAILED: '액션 해석에 실패했습니다',
     ACTION_RETURN_INVALID: '액션 반환값이 유효하지 않습니다',

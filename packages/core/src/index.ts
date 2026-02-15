@@ -146,10 +146,22 @@ export type {
   PriceInfo,
   CacheStats,
   IPriceOracle,
+  // v1.5 action provider types
+  ActionProviderMetadata,
+  ActionDefinition,
+  ActionContext,
+  IActionProvider,
 } from './interfaces/index.js';
 
 // v1.5 Price Oracle Zod schemas (value exports)
 export { TokenRefSchema, PriceInfoSchema } from './interfaces/index.js';
+
+// v1.5 Action Provider Zod schemas (value exports)
+export {
+  ActionProviderMetadataSchema,
+  ActionDefinitionSchema,
+  ActionContextSchema,
+} from './interfaces/index.js';
 
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';

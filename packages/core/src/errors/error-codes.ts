@@ -510,13 +510,20 @@ export const ERROR_CODES = {
     message: 'Insufficient balance for transaction fee',
   },
 
-  // --- ACTION domain (7) ---
+  // --- ACTION domain (8) ---
   ACTION_NOT_FOUND: {
     code: 'ACTION_NOT_FOUND',
     domain: 'ACTION',
     httpStatus: 404,
     retryable: false,
     message: 'Action not found',
+  },
+  API_KEY_REQUIRED: {
+    code: 'API_KEY_REQUIRED',
+    domain: 'ACTION',
+    httpStatus: 403,
+    retryable: false,
+    message: 'API key required for this action provider',
   },
   ACTION_VALIDATION_FAILED: {
     code: 'ACTION_VALIDATION_FAILED',

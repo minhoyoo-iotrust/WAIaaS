@@ -32,3 +32,16 @@ export type { INotificationChannel, NotificationPayload } from './INotificationC
 // v1.5 Price Oracle types (Zod SSoT)
 export type { TokenRef, PriceInfo, CacheStats, IPriceOracle } from './price-oracle.types.js';
 export { TokenRefSchema, PriceInfoSchema } from './price-oracle.types.js';
+
+// v1.5 Action Provider types (Zod SSoT)
+export type {
+  ActionProviderMetadata,
+  ActionDefinition,
+  ActionContext,
+  IActionProvider,
+} from './action-provider.types.js';
+export {
+  ActionProviderMetadataSchema,
+  ActionDefinitionSchema,
+  ActionContextSchema,
+} from './action-provider.types.js';

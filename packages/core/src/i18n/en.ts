@@ -103,8 +103,9 @@ export const messages: Messages = {
     WITHDRAW_LOCKED_ONLY: 'Withdrawal requires LOCKED owner state',
     SWEEP_TOTAL_FAILURE: 'All sweep operations failed',
     INSUFFICIENT_FOR_FEE: 'Insufficient balance for transaction fee',
-    // ACTION domain (7)
+    // ACTION domain (8)
     ACTION_NOT_FOUND: 'Action not found',
+    API_KEY_REQUIRED: 'API key required for this action provider',
     ACTION_VALIDATION_FAILED: 'Action validation failed',
     ACTION_RESOLVE_FAILED: 'Action resolve failed',
     ACTION_RETURN_INVALID: 'Action return value is invalid',
