@@ -60,7 +60,7 @@
 **Milestone Goal:** AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태
 
 - [x] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** (2/2 plans) -- completed 2026-02-15
-- [ ] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** - 보안 HTTP 프록시, 402 파싱, 체인별 서명 생성
+- [x] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** (3/3 plans) -- completed 2026-02-15
 - [ ] **Phase 132: REST API + 정책 통합 + 감사 로그** - 엔드포인트 노출, 정책 평가, 트랜잭션 기록
 - [ ] **Phase 133: SDK + MCP + 스킬 파일** - TS/Python SDK, MCP 도구, 문서 통합
 
@@ -95,9 +95,9 @@ Plans:
 **Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 131-01-PLAN.md — SSRF 가드 TDD: DNS resolve + 사설 IP 차단 + 리다이렉트 재검증 + URL 정규화 (Wave 1)
-- [ ] 131-03-PLAN.md — 결제 서명 TDD: EVM EIP-3009 signTypedData + Solana TransferChecked 부분 서명 + 키 관리 (Wave 1)
-- [ ] 131-02-PLAN.md — x402 핸들러 TDD: 402 파싱 + scheme 선택 + 재요청 오케스트레이션 (Wave 2)
+- [x] 131-01-PLAN.md — SSRF 가드 TDD: DNS resolve + 사설 IP 차단 + 리다이렉트 재검증 + URL 정규화 (Wave 1)
+- [x] 131-03-PLAN.md — 결제 서명 TDD: EVM EIP-3009 signTypedData + Solana TransferChecked 부분 서명 + 키 관리 (Wave 1)
+- [x] 131-02-PLAN.md — x402 핸들러 TDD: 402 파싱 + scheme 선택 + 재요청 오케스트레이션 (Wave 2)
 
 ### Phase 132: REST API + 정책 통합 + 감사 로그
 **Goal**: x402 결제가 기존 정책 엔진으로 제어되고, REST API로 노출되며, 모든 결제가 감사 추적되는 상태
@@ -138,7 +138,7 @@ Phases execute in numeric order: 130 -> 131 -> 132 -> 133
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 130. Core 타입 + CAIP-2 + DB | v1.5.1 | 2/2 | ✓ Complete | 2026-02-15 |
-| 131. SSRF + 핸들러 + 서명 | v1.5.1 | 0/3 | Not started | - |
+| 131. SSRF + 핸들러 + 서명 | v1.5.1 | 3/3 | ✓ Complete | 2026-02-15 |
 | 132. API + 정책 + 감사 | v1.5.1 | 0/3 | Not started | - |
 | 133. SDK + MCP + 스킬 | v1.5.1 | 0/2 | Not started | - |
 
