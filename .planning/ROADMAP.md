@@ -70,7 +70,7 @@
 
 **Milestone Goal:** Admin UI에서 12개 정책 타입별 구조화된 폼으로 정책을 생성/수정하고, 목록에서 타입별 의미 있는 시각화를 확인할 수 있는 상태를 달성하여 운영자 DX를 개선한다.
 
-- [ ] **Phase 134: 폼 인프라 + 5-type 전용 폼** (2 plans) - DynamicRowList, PolicyFormRouter, JSON 토글, Zod 스키마 추가, 5개 타입 전용 폼 + 유효성 검증
+- [x] **Phase 134: 폼 인프라 + 5-type 전용 폼** (2/2 plans) - DynamicRowList, PolicyFormRouter, JSON 토글, Zod 스키마 추가, 5개 타입 전용 폼 + 유효성 검증 -- completed 2026-02-15
 - [ ] **Phase 135: 7-type 전용 폼 + 목록 시각화 + 수정 통합** - 나머지 7개 타입 전용 폼, 12개 타입 목록 시각화, 수정 프리필 + 저장 통합
 
 ## Phase Details
@@ -82,8 +82,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 134-01-PLAN.md -- DynamicRowList + PolicyFormRouter + JSON 토글 + Zod 스키마 추가
-- [ ] 134-02-PLAN.md -- 5-type 전용 폼 + 유효성 검증 + 테스트
+- [x] 134-01-PLAN.md -- DynamicRowList + PolicyFormRouter + JSON 토글 + Zod 스키마 추가
+- [x] 134-02-PLAN.md -- 5-type 전용 폼 + 유효성 검증 + 테스트
 
 ### Phase 135: 7-type 전용 폼 + 목록 시각화 + 수정 통합
 **Goal**: 나머지 7개 타입(ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, TIME_RESTRICTION, ALLOWED_NETWORKS, X402_ALLOWED_DOMAINS)의 전용 폼이 완성되고, 12개 타입 모두 목록에서 의미 있는 시각화로 표시되며, 기존 정책 수정 시 현재값이 프리필되어 수정/저장이 가능한 상태
@@ -101,9 +101,9 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 134. 폼 인프라 + 5-type 전용 폼 | v1.5.2 | 0/2 | Not started | - |
+| 134. 폼 인프라 + 5-type 전용 폼 | v1.5.2 | 2/2 | Complete | 2026-02-15 |
 | 135. 7-type 전용 폼 + 목록 시각화 + 수정 통합 | v1.5.2 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 -- Phase 134 계획 수립 (2 plans)*
+*Last updated: 2026-02-15 -- Phase 134 완료 (2/2 plans, 12/12 requirements)*
