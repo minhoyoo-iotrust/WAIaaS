@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 128 of 129 (Action Provider + API Key)
-Plan: 2 of 4 in current phase
-Status: Plan 1 complete (2/2 tasks), starting Plan 2
-Last activity: 2026-02-15 -- IActionProvider Zod SSoT + ActionProviderRegistry 구현 (20 tests)
+Plan: 3 of 4 in current phase
+Status: Plan 2 complete (2/2 tasks), starting Plan 3
+Last activity: 2026-02-15 -- api_keys DB v11 + ApiKeyStore HKDF/AES-256-GCM 암호화 저장소 (14 tests)
 
 Progress: [#####░░░░░] 50%
 
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - v1.5: ActionProviderRegistry를 infrastructure/action/ 디렉토리에 배치 (설계 문서 62의 services/ 대신 기존 컨벤션 준수)
 - v1.5: ContractCallRequest.from 검증 스킵 (현행 스키마에 from 필드 없음, Stage 5에서 자동 설정)
 - v1.5: ESM 플러그인 로드 시 fail-open 패턴 (개별 실패 시 warn 로그 + 건너뛰기)
+- v1.5: ApiKeyStore.set()에서 new Date(Math.floor(Date.now()/1000)*1000)으로 Unix epoch 초 정밀도 보장
+- v1.5: maskKey를 모듈 레벨 private 함수로 분리하여 getMasked/listAll 공유
+- v1.5: ApiKeyStore.has()에서 SELECT providerName만 조회 -- 불필요한 복호화 방지
 
 ### Blockers/Concerns
 
@@ -75,5 +78,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 128-01-PLAN.md (IActionProvider Zod SSoT + ActionProviderRegistry 구현 -- 20 tests)
+Stopped at: Completed 128-02-PLAN.md (api_keys DB v11 + ApiKeyStore HKDF/AES-256-GCM 암호화 저장소 -- 14 tests)
 Resume file: None
