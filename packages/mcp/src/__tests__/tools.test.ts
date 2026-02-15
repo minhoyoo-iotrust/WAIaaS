@@ -23,6 +23,7 @@ import { registerApproveToken } from '../tools/approve-token.js';
 import { registerSendBatch } from '../tools/send-batch.js';
 import { registerGetWalletInfo } from '../tools/get-wallet-info.js';
 import { registerSetDefaultNetwork } from '../tools/set-default-network.js';
+import { registerX402Fetch } from '../tools/x402-fetch.js';
 
 // --- Mock ApiClient factory ---
 function createMockApiClient(responses: Map<string, ApiResult<unknown>>): ApiClient {
@@ -818,6 +819,110 @@ describe('set_default_network tool', () => {
   });
 });
 
+describe('x402_fetch tool', () => {
+  it('calls POST /v1/x402/fetch with url only', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/x402/fetch', {
+        ok: true,
+        data: {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          body: '{"data": "premium"}',
+          payment: {
+            amount: '1000000',
+            asset: 'USDC',
+            network: 'eip155:8453',
+            payTo: '0xReceiver',
+            txId: 'tx-001',
+          },
+        },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerX402Fetch, apiClient);
+
+    const result = await handler({ url: 'https://api.example.com/premium' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/x402/fetch', {
+      url: 'https://api.example.com/premium',
+    });
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['status']).toBe(200);
+    expect(parsed['payment']).toBeDefined();
+  });
+
+  it('includes optional params when provided', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerX402Fetch, apiClient);
+
+    await handler({
+      url: 'https://api.example.com/data',
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: '{"query": "test"}',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/x402/fetch', {
+      url: 'https://api.example.com/data',
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: '{"query": "test"}',
+    });
+  });
+
+  it('excludes undefined optional params from body', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerX402Fetch, apiClient);
+
+    await handler({ url: 'https://api.example.com' });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/x402/fetch', {
+      url: 'https://api.example.com',
+    });
+  });
+
+  it('returns error with isError on domain not allowed', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/x402/fetch', {
+        ok: false,
+        error: { code: 'X402_DOMAIN_NOT_ALLOWED', message: 'Domain not allowed', retryable: false },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerX402Fetch, apiClient);
+
+    const result = await handler({ url: 'https://blocked.com' }) as {
+      content: Array<{ text: string }>;
+      isError?: boolean;
+    };
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['code']).toBe('X402_DOMAIN_NOT_ALLOWED');
+  });
+
+  it('returns session_expired without isError (H-04)', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['POST:/v1/x402/fetch', {
+        ok: false,
+        expired: true,
+        message: 'Token expired',
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerX402Fetch, apiClient);
+
+    const result = await handler({ url: 'https://api.example.com' }) as {
+      content: Array<{ text: string }>;
+      isError?: boolean;
+    };
+
+    expect(result.isError).toBeUndefined();
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['session_expired']).toBe(true);
+  });
+});
+
 describe('tool registration with McpServer', () => {
   let server: McpServer;
   let apiClient: ApiClient;
@@ -873,5 +978,9 @@ describe('tool registration with McpServer', () => {
 
   it('registers set_default_network tool without error', () => {
     expect(() => registerSetDefaultNetwork(server, apiClient)).not.toThrow();
+  });
+
+  it('registers x402_fetch tool without error', () => {
+    expect(() => registerX402Fetch(server, apiClient)).not.toThrow();
   });
 });
