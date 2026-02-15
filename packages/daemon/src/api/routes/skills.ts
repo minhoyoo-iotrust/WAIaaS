@@ -13,7 +13,7 @@ import { WAIaaSError } from '@waiaas/core';
 import { openApiValidationHook, buildErrorResponses } from './openapi-schemas.js';
 
 const SKILLS_DIR = resolve(process.cwd(), 'skills');
-const VALID_SKILLS = ['quickstart', 'wallet', 'transactions', 'policies', 'admin'] as const;
+const VALID_SKILLS = ['quickstart', 'wallet', 'transactions', 'policies', 'admin', 'actions', 'x402'] as const;
 
 const SkillResponseSchema = z
   .object({

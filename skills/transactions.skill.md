@@ -3,7 +3,7 @@ name: "WAIaaS Transactions"
 description: "All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
-version: "1.4.7"
+version: "1.5.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -24,6 +24,7 @@ WAIaaS uses a **discriminatedUnion 5-type** system for transactions. The `type` 
 | `CONTRACT_CALL` | Arbitrary contract invocation | CONTRACT_WHITELIST policy |
 | `APPROVE` | Token spending approval | APPROVED_SPENDERS policy |
 | `BATCH` | Multiple instructions (Solana only) | Depends on instruction types |
+| `X402_PAYMENT` | x402 auto-payment (USDC) | X402_ALLOWED_DOMAINS policy |
 
 All transaction types use `POST /v1/transactions/send` with the appropriate `type` field.
 
@@ -322,6 +323,18 @@ PENDING -> QUEUED -> CONFIRMED
 | `FAILED` | Execution or confirmation failed |
 | `CANCELLED` | Cancelled by wallet session or rejected by owner |
 
+### X402_PAYMENT Lifecycle
+
+x402 payments follow a simplified lifecycle:
+
+```
+PENDING -> CONFIRMED  (payment accepted by resource server)
+        -> FAILED     (payment rejected or server error)
+        -> CANCELLED  (policy denied before payment)
+```
+
+x402 payments are synchronous -- the API call blocks until the payment flow completes. There is no QUEUED state. DELAY tier waits within the HTTP request timeout; APPROVAL tier is immediately rejected.
+
 ### Tier Flow (Policy-Based)
 
 The policy engine assigns a tier to each transaction based on configured policies:
@@ -511,6 +524,14 @@ Policies can assign transaction tiers that determine the execution flow:
 | `SPENDER_NOT_APPROVED` | 403 | Spender not in approved list | Add spender to APPROVED_SPENDERS policy |
 | `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Specified network does not belong to wallet's environment | Use a network valid for the wallet's environment |
 | `ABI_ENCODING_FAILED` | 400 | Function not found in ABI, or argument type mismatch | Verify ABI fragment contains the function and arguments match expected types |
+| `X402_DISABLED` | 403 | x402 payments disabled | Enable in config.toml |
+| `X402_DOMAIN_NOT_ALLOWED` | 403 | Domain not in allowed list | Add to X402_ALLOWED_DOMAINS policy |
+| `X402_SSRF_BLOCKED` | 403 | URL targets private network | Use public HTTPS URL |
+| `X402_UNSUPPORTED_SCHEME` | 400 | No compatible payment scheme | Server must support EIP-3009 or SPL |
+| `X402_PAYMENT_REJECTED` | 402 | Payment rejected by server | Check amount and balance |
+| `X402_DELAY_TIMEOUT` | 408 | Delay exceeds request timeout | Adjust timeout or limits |
+| `X402_APPROVAL_REQUIRED` | 403 | Amount requires owner approval | Lower amount or adjust tiers |
+| `X402_SERVER_ERROR` | 502 | Server error after payment | Retry later |
 
 ## 10. Sign External Transaction (sign-only)
 

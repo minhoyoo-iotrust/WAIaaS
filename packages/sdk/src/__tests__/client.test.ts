@@ -1149,6 +1149,106 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // x402Fetch
+  // =========================================================================
+
+  describe('x402Fetch', () => {
+    it('should call POST /v1/x402/fetch with correct body and return X402FetchResponse', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: '{"data": "premium content"}',
+        payment: {
+          amount: '1000000',
+          asset: 'USDC',
+          network: 'eip155:8453',
+          payTo: '0xPaymentReceiver',
+          txId: 'tx-x402-001',
+        },
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.x402Fetch({ url: 'https://api.example.com/premium' });
+      expect(result).toEqual(expected);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/x402/fetch');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(opts.method).toBe('POST');
+      expect(JSON.parse(opts.body as string)).toEqual({ url: 'https://api.example.com/premium' });
+
+      const headers = opts.headers as Record<string, string>;
+      expect(headers['Authorization']).toBe(`Bearer ${mockToken}`);
+    });
+
+    it('should handle passthrough response without payment field', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+        body: '<html>Free content</html>',
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.x402Fetch({ url: 'https://free.example.com' });
+      expect(result.status).toBe(200);
+      expect(result.payment).toBeUndefined();
+    });
+
+    it('should include optional params (method, headers, body) when provided', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(mockResponse({ status: 200, headers: {}, body: '' }));
+
+      await client.x402Fetch({
+        url: 'https://api.example.com/data',
+        method: 'POST',
+        headers: { 'X-Custom': 'value' },
+        body: '{"query": "test"}',
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const sentBody = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(sentBody['url']).toBe('https://api.example.com/data');
+      expect(sentBody['method']).toBe('POST');
+      expect(sentBody['headers']).toEqual({ 'X-Custom': 'value' });
+      expect(sentBody['body']).toBe('{"query": "test"}');
+    });
+
+    it('should throw WAIaaSError on 403 (domain not allowed)', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 0 },
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockErrorResponse('X402_DOMAIN_NOT_ALLOWED', 'Domain not allowed', 403),
+      );
+
+      const err = await client.x402Fetch({ url: 'https://blocked.com' }).catch((e: unknown) => e) as WAIaaSError;
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect(err.code).toBe('X402_DOMAIN_NOT_ALLOWED');
+      expect(err.status).toBe(403);
+    });
+  });
+
+  // =========================================================================
   // HTTP Layer
   // =========================================================================
 

@@ -6,7 +6,7 @@
 - ✅ **v1.4.7 임의 트랜잭션 서명 API** -- Phases 115-119 (shipped 2026-02-15)
 - ✅ **v1.4.8 Admin DX + 알림 개선** -- Phases 120-124 (shipped 2026-02-15)
 - ✅ **v1.5 DeFi Price Oracle + Action Provider Framework** -- Phases 125-129 (shipped 2026-02-15)
-- [ ] **v1.5.1 x402 클라이언트 지원** -- Phases 130-133 (in progress)
+- [ ] **v1.5.1 x402 클라이언트 지원** -- Phases 130-133 (all phases complete)
 
 ## Phases
 
@@ -62,7 +62,7 @@
 - [x] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** (2/2 plans) -- completed 2026-02-15
 - [x] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** (3/3 plans) -- completed 2026-02-15
 - [x] **Phase 132: REST API + 정책 통합 + 감사 로그** (3/3 plans) -- completed 2026-02-15
-- [ ] **Phase 133: SDK + MCP + 스킬 파일** (2 plans) - TS/Python SDK, MCP 도구, 문서 통합
+- [x] **Phase 133: SDK + MCP + 스킬 파일** (2/2 plans) -- completed 2026-02-15
 
 ## Phase Details
 
@@ -127,8 +127,8 @@ Plans:
 **Plans**: 2 plans (1 wave)
 
 Plans:
-- [ ] 133-01-PLAN.md — TS SDK + Python SDK x402Fetch/x402_fetch 메서드 + 테스트 (Wave 1)
-- [ ] 133-02-PLAN.md — MCP x402_fetch 도구 + x402.skill.md + transactions.skill.md 갱신 + 스킬 등록 (Wave 1)
+- [x] 133-01-PLAN.md — TS SDK + Python SDK x402Fetch/x402_fetch 메서드 + 테스트 (Wave 1)
+- [x] 133-02-PLAN.md — MCP x402_fetch 도구 + x402.skill.md + transactions.skill.md 갱신 + 스킬 등록 (Wave 1)
 
 ## Progress
 
@@ -140,7 +140,7 @@ Phases execute in numeric order: 130 -> 131 -> 132 -> 133
 | 130. Core 타입 + CAIP-2 + DB | v1.5.1 | 2/2 | ✓ Complete | 2026-02-15 |
 | 131. SSRF + 핸들러 + 서명 | v1.5.1 | 3/3 | ✓ Complete | 2026-02-15 |
 | 132. API + 정책 + 감사 | v1.5.1 | 3/3 | ✓ Complete | 2026-02-15 |
-| 133. SDK + MCP + 스킬 | v1.5.1 | 0/2 | Not started | - |
+| 133. SDK + MCP + 스킬 | v1.5.1 | 2/2 | ✓ Complete | 2026-02-15 |
 
 ---
 *Roadmap created: 2026-02-15*

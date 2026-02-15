@@ -328,3 +328,42 @@ export interface MultiNetworkAssetsResponse {
   environment: string;
   networkAssets: MultiNetworkAssetsEntry[];
 }
+
+// ---------------------------------------------------------------------------
+// x402 Types
+// ---------------------------------------------------------------------------
+
+export interface X402FetchParams {
+  /** Target URL to fetch (HTTPS required) */
+  url: string;
+  /** HTTP method (default: GET) */
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  /** Additional HTTP headers */
+  headers?: Record<string, string>;
+  /** Request body string */
+  body?: string;
+}
+
+export interface X402PaymentInfo {
+  /** Payment amount in smallest unit */
+  amount: string;
+  /** Asset identifier (e.g., 'USDC') */
+  asset: string;
+  /** CAIP-2 network identifier (e.g., 'eip155:8453') */
+  network: string;
+  /** Payment recipient address */
+  payTo: string;
+  /** WAIaaS transaction record ID */
+  txId: string;
+}
+
+export interface X402FetchResponse {
+  /** HTTP status code from the external server */
+  status: number;
+  /** Response headers from the external server */
+  headers: Record<string, string>;
+  /** Response body string from the external server */
+  body: string;
+  /** Payment details (present only when x402 payment was made) */
+  payment?: X402PaymentInfo;
+}

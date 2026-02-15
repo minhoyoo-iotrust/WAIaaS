@@ -27,6 +27,8 @@ from waiaas.models import (
     WalletBalance,
     WalletInfo,
     WalletNetworkInfo,
+    X402FetchRequest,
+    X402FetchResponse,
 )
 from waiaas.retry import RetryPolicy, with_retry
 
@@ -353,3 +355,35 @@ class WAIaaSClient:
         body = request.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request("POST", "/v1/transactions/sign", json_body=body)
         return SignTransactionResponse.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # x402 API
+    # -----------------------------------------------------------------
+
+    async def x402_fetch(
+        self,
+        url: str,
+        *,
+        method: Optional[str] = None,
+        headers: Optional[dict[str, str]] = None,
+        body: Optional[str] = None,
+    ) -> X402FetchResponse:
+        """POST /v1/x402/fetch -- Fetch URL with x402 auto-payment.
+
+        If the target server responds with HTTP 402, the daemon automatically
+        signs a cryptocurrency payment and retries. Policy evaluation
+        (X402_ALLOWED_DOMAINS, SPENDING_LIMIT) is applied before payment.
+
+        Args:
+            url: Target URL to fetch (HTTPS required).
+            method: HTTP method (GET, POST, PUT, DELETE, PATCH). Defaults to GET.
+            headers: Additional HTTP headers to include.
+            body: Request body string.
+
+        Returns:
+            X402FetchResponse with status, headers, body, and optional payment info.
+        """
+        request = X402FetchRequest(url=url, method=method, headers=headers, body=body)
+        body_dict = request.model_dump(exclude_none=True, by_alias=True)
+        resp = await self._request("POST", "/v1/x402/fetch", json_body=body_dict)
+        return X402FetchResponse.model_validate(resp.json())

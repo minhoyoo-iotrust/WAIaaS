@@ -18,6 +18,9 @@ from waiaas.models import (
     SendTokenRequest,
     SignTransactionRequest,
     SignTransactionResponse,
+    X402FetchRequest,
+    X402FetchResponse,
+    X402PaymentInfo,
 )
 
 __version__ = "0.1.0"
@@ -40,4 +43,7 @@ __all__ = [
     "SendTokenRequest",
     "SignTransactionRequest",
     "SignTransactionResponse",
+    "X402FetchRequest",
+    "X402FetchResponse",
+    "X402PaymentInfo",
 ]

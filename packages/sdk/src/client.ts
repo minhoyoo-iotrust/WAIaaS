@@ -1,12 +1,13 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 13 REST API methods with typed responses:
+ * Wraps 14 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo(), setDefaultNetwork() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - renewSession() (session management)
  * - encodeCalldata(), signTransaction() (utils)
+ * - x402Fetch() (x402 auto-payment)
  *
  * All methods use exponential backoff retry for 429/5xx responses.
  * sendToken() performs inline pre-validation before making the HTTP request.
@@ -40,6 +41,8 @@ import type {
   SetDefaultNetworkResponse,
   MultiNetworkBalanceResponse,
   MultiNetworkAssetsResponse,
+  X402FetchParams,
+  X402FetchResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -250,6 +253,18 @@ export class WAIaaSClient {
       () => this.http.put<SetDefaultNetworkResponse>(
         '/v1/wallet/default-network',
         { network },
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- x402 ---
+  async x402Fetch(params: X402FetchParams): Promise<X402FetchResponse> {
+    return withRetry(
+      () => this.http.post<X402FetchResponse>(
+        '/v1/x402/fetch',
+        params,
         this.authHeaders(),
       ),
       this.retryOptions,

@@ -53,4 +53,7 @@ export type {
   WalletNetworkInfo,
   WalletInfoResponse,
   SetDefaultNetworkResponse,
+  X402FetchParams,
+  X402PaymentInfo,
+  X402FetchResponse,
 } from './types.js';
