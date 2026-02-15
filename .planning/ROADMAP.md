@@ -37,7 +37,7 @@
 
 - [x] **Phase 120: DB 마이그레이션 안정성** — pushSchema 순서 수정 + 마이그레이션 체인 테스트 (1/1 plans) — completed 2026-02-15
 - [x] **Phase 121: MCP 안정성** — graceful shutdown + stdin 종료 감지 (1/1 plans) — completed 2026-02-15
-- [ ] **Phase 122: MCP 도구 + 멀티체인 DX** — set_default_network, wallet info, network=all 잔액
+- [x] **Phase 122: MCP 도구 + 멀티체인 DX** — set_default_network, wallet info, network=all 잔액 (2/2 plans) — completed 2026-02-15
 - [ ] **Phase 123: Admin UI 개선** — 대시보드 확장, 월렛 상세, 세션 전체 조회
 - [ ] **Phase 124: 알림 시스템 개선** — 버그 수정, 메시지 저장, Slack 채널, 채널별 테스트
 
@@ -83,8 +83,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 122-01-PLAN.md — set_default_network MCP 도구 + CLI wallet 서브커맨드 + TS/Python SDK 메서드
-- [ ] 122-02-PLAN.md — network=all 잔액/자산 API + MCP/SDK 지원 + wallet.skill.md 업데이트
+- [x] 122-01-PLAN.md — set_default_network MCP 도구 + CLI wallet 서브커맨드 + TS/Python SDK 메서드
+- [x] 122-02-PLAN.md — network=all 잔액/자산 API + MCP/SDK 지원 + wallet.skill.md 업데이트
 
 ### Phase 123: Admin UI 개선
 **Goal**: Admin 대시보드가 운영 핵심 정보를 한눈에 보여주고, 월렛 상세/세션 페이지가 실용적으로 사용된다
@@ -95,11 +95,11 @@ Plans:
   2. 대시보드에 Policies, Recent Txns (24h), Failed Txns (24h) StatCard와 최근 활동 5건이 표시된다
   3. 월렛 상세 페이지에서 네이티브 + 토큰 잔액과 최근 트랜잭션 내역을 확인할 수 있다
   4. 세션 페이지 진입 시 walletId 선택 없이 전체 세션 목록이 즉시 표시되고 walletName 컬럼이 보인다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 123-01: 대시보드 StatCard 링크 + 추가 카드 + 최근 활동
-- [ ] 123-02: 월렛 상세 잔액/트랜잭션 + 세션 전체 조회
+- [ ] 123-01-PLAN.md — 대시보드 StatCard 링크 + 추가 카드 + 최근 활동
+- [ ] 123-02-PLAN.md — 월렛 상세 잔액/트랜잭션 + 세션 전체 조회
 
 ### Phase 124: 알림 시스템 개선
 **Goal**: 알림 테스트가 정상 동작하고, 발송 메시지가 저장/조회 가능하며, Slack 채널이 지원된다
@@ -137,6 +137,6 @@ Phases 120~124 are all independent. Recommended order: 120 (HIGH bug) -> 121 -> 
 | 119. SDK + MCP + Notifications + Skill Resources | v1.4.7 | 3/3 | Complete | 2026-02-15 |
 | 120. DB 마이그레이션 안정성 | v1.4.8 | 1/1 | Complete | 2026-02-15 |
 | 121. MCP 안정성 | v1.4.8 | 1/1 | Complete | 2026-02-15 |
-| 122. MCP 도구 + 멀티체인 DX | v1.4.8 | 0/2 | Not started | - |
+| 122. MCP 도구 + 멀티체인 DX | v1.4.8 | 2/2 | Complete | 2026-02-15 |
 | 123. Admin UI 개선 | v1.4.8 | 0/2 | Not started | - |
 | 124. 알림 시스템 개선 | v1.4.8 | 0/2 | Not started | - |
