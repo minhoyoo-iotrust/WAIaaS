@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 123 (4 of 5 in v1.4.8) — Admin UI 개선
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-15 — Plan 123-01 complete (대시보드 개선: StatCard 링크 + 추가 카드 + 최근 활동)
+Phase: 123 (4 of 5 in v1.4.8) — Admin UI 개선 -- COMPLETE
+Plan: 2 of 2 in current phase (DONE)
+Status: Phase Complete
+Last activity: 2026-02-15 — Plan 123-02 complete (월렛 잔액/트랜잭션 + 세션 전체 조회)
 
-Progress: [█████░░░░░] 62% (5/8 plans)
+Progress: [██████░░░░] 75% (6/8 plans)
 
 ## Performance Metrics
 
@@ -27,6 +27,7 @@ Progress: [█████░░░░░] 62% (5/8 plans)
 | 122 | 01 | 8min | 2 | 15 |
 | 122 | 02 | 8min | 2 | 12 |
 | 123 | 01 | 3min | 2 | 3 |
+| 123 | 02 | 6min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -45,6 +46,9 @@ Full log in PROJECT.md.
 - StatCard href는 hash 라우팅(#/wallets 등) 사용 -- SPA 라우팅과 일치
 - createdAt 필드를 epoch seconds로 변환하여 응답 -- 기존 API 패턴 유지
 - Failed Txns 뱃지: 0건=success, 1건+=danger -- 시각적 즉시 인지 가능
+- 세션 조회 leftJoin wallets로 walletName 포함 -- 프론트엔드 추가 요청 최소화
+- 잔액 API 실패 시 200 + error 필드 반환 -- 에러 격리로 UI 안정성 확보
+- Admin 월렛 하위 리소스 /admin/wallets/:id/* masterAuth 와일드카드 적용
 
 ### Blockers/Concerns
 
@@ -56,5 +60,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 123-01-PLAN.md
+Stopped at: Completed 123-02-PLAN.md (Phase 123 complete)
 Resume file: None
