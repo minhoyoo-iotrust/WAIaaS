@@ -34,6 +34,7 @@ const NOTIFICATION_KEYS = new Set([
   'notifications.discord_webhook_url',
   'notifications.ntfy_server',
   'notifications.ntfy_topic',
+  'notifications.slack_webhook_url',
   'notifications.locale',
   'notifications.rate_limit_rpm',
 ]);
@@ -120,7 +121,7 @@ export class HotReloadOrchestrator {
     }
 
     // Dynamically import channel constructors (same pattern as daemon.ts Step 4d)
-    const { TelegramChannel, DiscordChannel, NtfyChannel } = await import(
+    const { TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } = await import(
       '../../notifications/index.js'
     );
 
@@ -150,6 +151,14 @@ export class HotReloadOrchestrator {
       const ntfy = new NtfyChannel();
       await ntfy.initialize({ ntfy_server: ntfyServer, ntfy_topic: ntfyTopic });
       newChannels.push(ntfy);
+    }
+
+    // Slack
+    const slackUrl = ss.get('notifications.slack_webhook_url');
+    if (slackUrl) {
+      const slack = new SlackChannel();
+      await slack.initialize({ slack_webhook_url: slackUrl });
+      newChannels.push(slack);
     }
 
     svc.replaceChannels(newChannels);

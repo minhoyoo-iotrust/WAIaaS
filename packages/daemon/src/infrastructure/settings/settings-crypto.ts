@@ -81,5 +81,6 @@ export function decryptSettingValue(encrypted: string, masterPassword: string): 
 export const CREDENTIAL_KEYS = new Set([
   'notifications.telegram_bot_token',
   'notifications.discord_webhook_url',
+  'notifications.slack_webhook_url',
   'security.jwt_secret',
 ]);

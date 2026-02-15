@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 9;
+export const LATEST_SCHEMA_VERSION = 10;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -170,6 +170,7 @@ function getCreateTableStatements(): string[] {
   channel TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN (${inList(NOTIFICATION_LOG_STATUSES)})),
   error TEXT,
+  message TEXT,
   created_at INTEGER NOT NULL
 )`,
 
@@ -958,6 +959,19 @@ MIGRATIONS.push({
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v9: ${JSON.stringify(fkErrors)}`);
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v10: Add message column to notification_logs
+// ---------------------------------------------------------------------------
+// Simple ALTER TABLE ADD COLUMN -- no CHECK constraint changes, no table recreation needed.
+
+MIGRATIONS.push({
+  version: 10,
+  description: 'Add message column to notification_logs',
+  up: (sqlite) => {
+    sqlite.exec('ALTER TABLE notification_logs ADD COLUMN message TEXT');
   },
 });
 

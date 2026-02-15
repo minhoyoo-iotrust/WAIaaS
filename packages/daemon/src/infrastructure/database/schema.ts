@@ -282,6 +282,7 @@ export const notificationLogs = sqliteTable(
     channel: text('channel').notNull(), // telegram / discord / ntfy
     status: text('status').notNull(), // sent / failed
     error: text('error'), // failure error message (nullable)
+    message: text('message'), // nullable - null for pre-v10 logs
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
