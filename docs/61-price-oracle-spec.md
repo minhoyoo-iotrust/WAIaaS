@@ -29,8 +29,8 @@ Phase 24에서 해소하는 목표 상태:
 
 | 요구사항 | 커버리지 | 섹션 |
 |---------|---------|------|
-| ORACLE-01 | IPriceOracle 인터페이스 (4개 메서드) + CoinGecko/Pyth/Chainlink 3개 구현체 | 섹션 2, 3 |
-| ORACLE-02 | 5분 TTL 캐싱 전략 + stale 30분 허용 + 3단계 fallback | 섹션 4, 5 |
+| ORACLE-01 | IPriceOracle 인터페이스 (4개 메서드) + Pyth/CoinGecko 2개 구현체 + OracleChain 2단계 fallback | 섹션 2, 3 |
+| ORACLE-02 | 5분 TTL 캐싱 전략 + stale 30분 허용 + 2단계 fallback | 섹션 4, 5 |
 | ORACLE-03 | USD 기준 정책 평가 확장 (resolveEffectiveAmountUsd, SpendingLimitRuleSchema USD 필드) | 섹션 6 |
 | ORACLE-04 | 가격 변동 감지/보안 + 테스트 레벨/Mock/보안 시나리오 10+ | 섹션 7, 8 |
 
@@ -39,7 +39,7 @@ Phase 24에서 해소하는 목표 상태:
 | # | 원칙 | 설명 | 적용 |
 |---|------|------|------|
 | 1 | **캐시 없이 외부 API 직접 호출 금지** | 매 트랜잭션마다 CoinGecko를 호출하면 rate limit 즉시 도달. 5분 TTL 캐시 필수 | 섹션 4 |
-| 2 | **단일 소스 의존 금지** | CoinGecko 장애 시 Pyth/Chainlink fallback, 최종 stale 캐시 허용 | 섹션 5 |
+| 2 | **단일 소스 의존 금지** | Pyth 장애 시 CoinGecko fallback (키 설정 시), 최종 stale 캐시 허용 | 섹션 5 |
 | 3 | **USD 변환 실패 시 트랜잭션 거부 금지** | 오라클 장애로 USD 가격을 조회할 수 없을 때, Phase 22-23 과도기 전략으로 fallback | 섹션 5, 6 |
 | 4 | **IChainAdapter와 독립** | 오라클은 서비스 레이어에 위치. IChainAdapter 저수준 유지 원칙 유지 | 섹션 2 |
 | 5 | **보수적 판단 원칙** | stale 가격, 가격 급변동, 부분 실패 시 항상 높은(보수적) 티어 적용 | 섹션 5, 7 |
@@ -68,12 +68,13 @@ Phase 24에서 해소하는 목표 상태:
 │  │  getPrices(tokens) -> Map<string, PriceInfo>           │          │
 │  │  getNativePrice(chain) -> PriceInfo                    │          │
 │  │  getCacheStats() -> CacheStats                         │          │
-│  └──────┬────────────────┬──────────────┬────────────────┘          │
-│         │                │              │                           │
-│    ┌────┴────┐    ┌──────┴──────┐  ┌───┴──────────┐                │
-│    │CoinGecko│    │Pyth Hermes  │  │Chainlink RPC │                │
-│    │(기본)    │    │(Solana 대안)│  │(EVM 대안)     │                │
-│    └─────────┘    └─────────────┘  └──────────────┘                │
+│  └──────┬────────────────────────────┬──────────────────────────┘          │
+│         │                            │                                    │
+│    ┌────┴──────────────┐    ┌────────┴──────────────┐                     │
+│    │Pyth Hermes        │    │CoinGecko              │                     │
+│    │(Zero-config       │    │(Opt-in Fallback,      │                     │
+│    │ Primary)          │    │ Demo API 키 설정 시)   │                     │
+│    └───────────────────┘    └───────────────────────┘                     │
 └────────────────────────────────────────────────────────────────────┘
          │                                │
          ▼                                ▼
@@ -137,12 +138,12 @@ export const PriceInfoSchema = z.object({
    * - 0.8+: 신뢰 (Pyth 낮은 confidence interval)
    * - 0.5 미만: 주의 필요 (높은 변동성 또는 유동성 부족)
    *
-   * CoinGecko/Chainlink는 confidence를 제공하지 않으므로 undefined.
+   * CoinGecko는 confidence를 제공하지 않으므로 undefined.
    */
   confidence: z.number().min(0).max(1).optional(),
 
   /** 가격 소스 식별자 */
-  source: z.enum(['coingecko', 'pyth', 'chainlink', 'jupiter', 'cache']),
+  source: z.enum(['pyth', 'coingecko', 'cache']),
 
   /** 가격이 조회된 시점 (Unix timestamp milliseconds) */
   fetchedAt: z.number().int().positive(),
@@ -196,10 +197,9 @@ export interface CacheStats {
  * - GET /v1/admin/oracle-status 헬스체크 엔드포인트에서 getCacheStats() 호출
  *
  * 구현체:
- * - CoinGeckoOracle (기본): Demo API, Solana + EVM 범용
- * - PythOracle (Solana 대안): Hermes REST API, 서브초 갱신
- * - ChainlinkOracle (EVM 대안): AggregatorV3Interface 온체인 RPC 읽기
- * - OracleChain: 다중 소스 순차 시도 (Primary -> Fallback -> stale cache)
+ * - PythOracle (Zero-config Primary): Hermes REST API, 380+ 피드, 체인 무관(Solana/EVM 공통), API 키 불필요
+ * - CoinGeckoOracle (Opt-in Fallback): Demo API 키 설정 시에만 활성화, Pyth 미지원 롱테일 토큰 커버리지
+ * - OracleChain: Pyth -> CoinGecko 2단계 순차 시도 (Primary -> Fallback -> stale cache)
  */
 export interface IPriceOracle {
   /**
@@ -321,9 +321,9 @@ export class PriceSpikeWarning {
 
 ## 3. 구현체 설계 (ORACLE-01)
 
-### 3.1 CoinGeckoOracle (기본 구현체)
+### 3.1 CoinGeckoOracle (Opt-in Fallback)
 
-**역할:** CoinGecko Demo API를 사용하는 기본 가격 오라클. Solana와 EVM 모두 지원.
+**역할:** CoinGecko Demo API를 사용하는 Opt-in Fallback 가격 오라클. Demo API 키 설정 시에만 활성화된다. Pyth 미지원 롱테일 토큰 커버리지를 확보하며, Solana와 EVM 모두 지원한다.
 
 | 항목 | 값 |
 |------|------|
@@ -573,18 +573,18 @@ class CoinGeckoOracle implements IPriceOracle {
 }
 ```
 
-### 3.2 PythOracle (Solana 대안)
+### 3.2 PythOracle (Zero-config Primary)
 
-**역할:** Pyth Network Hermes REST API를 사용하는 Solana 전용 대안 오라클. 서브초 갱신 주기와 confidence interval을 제공한다.
+**역할:** Pyth Network Hermes REST API를 사용하는 Zero-config Primary 오라클. 380+ 가격 피드를 제공하며 체인 무관(Solana/EVM 공통)으로 동일 피드 ID를 사용한다. API 키 불필요로 설치 직후 바로 동작한다.
 
 | 항목 | 값 |
 |------|------|
 | **엔드포인트** | `https://hermes.pyth.network/v2/updates/price/latest` |
 | **Rate Limit** | 30 req/10s (공개 인스턴스) |
-| **인증** | 없음 (공개) |
+| **인증** | 없음 (공개, API 키 불필요) |
 | **응답 포맷** | `{ parsed: [{ id, price: { price, expo, conf }, ema_price }] }` |
-| **지원 체인** | Solana (EVM도 가능하나 Chainlink가 더 안정적) |
-| **특장점** | confidence interval (가격 신뢰 구간) 제공 |
+| **지원 체인** | Solana + EVM (체인 무관, 동일 피드 ID) |
+| **특장점** | 380+ 피드, confidence interval (가격 신뢰 구간) 제공, 서브초 갱신 |
 
 ```typescript
 // packages/daemon/src/services/price-oracle/pyth-oracle.ts (설계 참조)
@@ -704,165 +704,41 @@ class PythOracle implements IPriceOracle {
 }
 ```
 
-### 3.3 ChainlinkOracle (EVM 대안)
+### 3.3 [제거됨] ChainlinkOracle
 
-**역할:** Chainlink AggregatorV3Interface를 EVM RPC로 읽는 온체인 가격 오라클. 외부 HTTP API가 아닌 블록체인 RPC를 통해 가격을 조회한다.
-
-| 항목 | 값 |
-|------|------|
-| **인터페이스** | AggregatorV3Interface.latestRoundData() |
-| **접근 방식** | viem readContract (온체인 RPC 읽기) |
-| **비용** | RPC 호출 비용만 (오라클 자체 무료) |
-| **갱신 주기** | 블록당 (보통 12초 for Ethereum) |
-| **정밀도** | 8 decimals (대부분의 USD 피드) |
-| **지원 체인** | EVM (Ethereum Mainnet, 기타 EVM 체인은 피드 주소 별도 매핑) |
-
-```typescript
-// packages/daemon/src/services/price-oracle/chainlink-oracle.ts (설계 참조)
-
-import { parseAbi } from 'viem'
-
-/**
- * Chainlink AggregatorV3Interface ABI (필요한 함수만).
- */
-const AGGREGATOR_V3_ABI = parseAbi([
-  'function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
-  'function decimals() external view returns (uint8)',
-])
-
-/**
- * Chainlink 가격 피드 주소 매핑 (Ethereum Mainnet).
- * 체인별로 별도 매핑 테이블이 필요하다.
- *
- * 참고: https://docs.chain.link/data-feeds/price-feeds/addresses
- */
-const CHAINLINK_FEEDS: Record<string, string> = {
-  // Ethereum Mainnet
-  'ethereum:native':
-    '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',  // ETH/USD
-  'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48':
-    '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6',  // USDC/USD
-  'ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7':
-    '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D',  // USDT/USD
-  // 추가 피드는 config.toml에서 확장
-}
-
-class ChainlinkOracle implements IPriceOracle {
-  private cache: PriceCache
-  private readonly publicClient: PublicClient  // viem PublicClient
-
-  async getPrice(token: TokenRef): Promise<PriceInfo> {
-    if (token.chain !== 'ethereum') {
-      throw new PriceNotAvailableError(token)  // EVM 전용
-    }
-
-    const cacheKey = `${token.chain}:${token.address}`
-    const feedAddress = CHAINLINK_FEEDS[cacheKey]
-
-    if (!feedAddress) {
-      throw new PriceNotAvailableError(token)  // 피드 매핑 없음
-    }
-
-    const cached = this.cache.get(cacheKey)
-    if (cached && !cached.isExpired) {
-      return { ...cached.price, source: 'cache', isStale: false }
-    }
-
-    try {
-      // 1. decimals 조회 (대부분 8)
-      const feedDecimals = await this.publicClient.readContract({
-        address: feedAddress as `0x${string}`,
-        abi: AGGREGATOR_V3_ABI,
-        functionName: 'decimals',
-      })
-
-      // 2. 최신 가격 조회
-      const [, answer, , updatedAt] = await this.publicClient.readContract({
-        address: feedAddress as `0x${string}`,
-        abi: AGGREGATOR_V3_ABI,
-        functionName: 'latestRoundData',
-      })
-
-      // 3. 가격 변환: answer / 10^decimals
-      const usdPrice = Number(answer) / Math.pow(10, Number(feedDecimals))
-
-      // 4. updatedAt 신선도 검증 (1시간 이상 미갱신이면 stale)
-      const updatedAtMs = Number(updatedAt) * 1000
-      const isStale = Date.now() - updatedAtMs > 3600_000
-
-      const now = Date.now()
-      const priceInfo: PriceInfo = {
-        usdPrice,
-        source: 'chainlink',
-        fetchedAt: now,
-        expiresAt: now + this.cache.TTL_MS,
-        isStale,
-      }
-
-      this.cache.set(cacheKey, priceInfo)
-      return priceInfo
-
-    } catch (error) {
-      if (cached && cached.isWithinStaleAge) {
-        return { ...cached.price, source: 'cache' as const, isStale: true }
-      }
-      throw new PriceNotAvailableError(token, error as Error)
-    }
-  }
-
-  async getNativePrice(chain: 'solana' | 'ethereum'): Promise<PriceInfo> {
-    if (chain !== 'ethereum') {
-      throw new PriceNotAvailableError({ chain })
-    }
-    const token: TokenRef = { address: 'native', chain, decimals: 18 }
-    return this.getPrice(token)
-  }
-
-  // getPrices(), getCacheStats() -- 동일 패턴 (생략)
-  async getPrices(tokens: TokenRef[]): Promise<Map<string, PriceInfo>> {
-    const result = new Map<string, PriceInfo>()
-    for (const token of tokens) {
-      try {
-        const price = await this.getPrice(token)
-        result.set(`${token.chain}:${token.address}`, price)
-      } catch { /* 개별 실패 무시 */ }
-    }
-    return result
-  }
-
-  getCacheStats(): CacheStats {
-    return this.cache.getStats()
-  }
-}
-```
+> **NOTE (v1.5 제거):** v1.5에서 ChainlinkOracle을 제거했다.
+> - **제거 사유:** EVM 전용으로 커버리지 편향, Aggregator 주소 매핑 테이블 유지 부담, Pyth가 이미 체인 무관 380+ 피드를 제공
+> - **대체:** Pyth Hermes가 Solana/EVM 모두 동일 피드 ID로 지원하므로 Chainlink의 EVM 전용 역할이 불필요
+> - 기존 섹션 번호를 유지하여 다른 문서의 참조가 깨지지 않도록 한다
 
 ### 3.4 구현체 비교
 
-| 항목 | CoinGecko | Pyth Hermes | Chainlink |
-|------|-----------|-------------|-----------|
-| **접근 방식** | HTTP REST API | HTTP REST API | 온체인 RPC (viem) |
-| **비용** | 무료 (Demo 30 calls/min) | 무료 (30 req/10s) | RPC 호출 비용만 |
-| **지원 체인** | Solana + EVM | 주로 Solana | EVM 전용 |
-| **갱신 주기** | 1-5분 | 서브초 | 블록당 (~12초) |
-| **토큰 범위** | 수천 개 (CoinGecko 등록 기준) | Pyth 피드 등록 기준 (~수백) | Chainlink 피드 등록 기준 (~수십) |
-| **신뢰 구간** | 없음 | confidence interval 제공 | 없음 |
-| **오프라인 내성** | API 장애 시 불가 | API 장애 시 불가 | RPC 장애 시 불가 |
-| **설정 복잡도** | API 키 1개 | 없음 | RPC URL + 피드 주소 매핑 |
+| 항목 | Pyth Hermes (Primary) | CoinGecko (Fallback) |
+|------|----------------------|---------------------|
+| **역할** | Zero-config Primary | Opt-in Fallback (Demo API 키 설정 시) |
+| **접근 방식** | HTTP REST API | HTTP REST API |
+| **비용** | 무료 (30 req/10s) | 무료 (Demo 30 calls/min) |
+| **지원 체인** | Solana + EVM (체인 무관, 동일 피드 ID) | Solana + EVM |
+| **갱신 주기** | 서브초 | 1-5분 |
+| **토큰 범위** | Pyth 피드 등록 기준 (380+) | 수천 개 (CoinGecko 등록 기준, 롱테일 토큰 커버리지) |
+| **신뢰 구간** | confidence interval 제공 | 없음 |
+| **오프라인 내성** | API 장애 시 불가 | API 장애 시 불가 |
+| **설정 복잡도** | 없음 (API 키 불필요) | API 키 1개 (Demo 또는 Pro) |
 
 ### 3.5 기본 조합 권장
 
 ```
-기본 구성:
-  CoinGecko (Primary) -> Pyth Hermes (Solana Fallback) + Chainlink (EVM Fallback) -> Stale Cache
+기본 구성 (CoinGecko 키 미설정):
+  Pyth Hermes (Primary, Zero-config) -> Stale Cache
 
-Solana 토큰 조회 경로:
-  CoinGecko /simple/token_price/solana -> Pyth Hermes -> Stale Cache
+확장 구성 (CoinGecko 키 설정 시):
+  Pyth Hermes (Primary) -> CoinGecko (Fallback) -> Stale Cache
 
-EVM 토큰 조회 경로:
-  CoinGecko /simple/token_price/ethereum -> Chainlink RPC -> Stale Cache
+모든 토큰 조회 경로 (Solana/EVM 공통):
+  Pyth Hermes /v2/updates/price/latest -> CoinGecko(키 설정 시) -> Stale Cache
 
 네이티브 토큰 조회 경로:
-  CoinGecko /simple/price -> Pyth(SOL) 또는 Chainlink(ETH) -> Stale Cache
+  Pyth Hermes (SOL/ETH 피드 ID) -> CoinGecko /simple/price(키 설정 시) -> Stale Cache
 ```
 
 ### 3.6 OracleChain 패턴
@@ -889,15 +765,17 @@ class OracleChain implements IPriceOracle {
 
   /**
    * [v0.10] 교차 검증이 동기적으로 인라인된 getPrice().
+   * [v1.5] Pyth Primary + CoinGecko Fallback 2단계 구조로 변경.
+   *        교차 검증은 CoinGecko 키 설정 시에만 활성화.
    *
    * 기존: Primary 성공 시 즉시 반환, 교차 검증은 비동기 백그라운드
    * 변경: Primary 성공 후 Fallback으로 동기적 교차 검증 수행
    *
    * 교차 검증 플로우:
-   * 1. Primary(CoinGecko) 조회
-   * 2. Primary 성공 + Fallback 존재 → Fallback으로 교차 검증
-   * 3. 10% 초과 괴리 → 높은 가격 채택 (보수적) + 감사 로그 + 알림
-   * 4. 10% 이내 또는 Fallback 실패 → Primary 가격 채택
+   * 1. Primary(Pyth) 조회
+   * 2. Primary 성공 + CoinGecko 키 설정 → CoinGecko로 교차 검증
+   * 3. 5% 초과 괴리 → STALE 격하 + PRICE_DEVIATION_WARNING 감사 로그
+   * 4. 5% 이내 또는 CoinGecko 실패/미설정 → Primary(Pyth) 가격 채택
    */
   async getPrice(token: TokenRef): Promise<PriceInfo> {
     let lastError: Error | undefined
@@ -918,11 +796,13 @@ class OracleChain implements IPriceOracle {
                 (price.usdPrice - fallbackPrice.usdPrice) / price.usdPrice
               ) * 100
 
-              if (deviation > 10) {
-                // 10% 초과 괴리: 높은 가격 채택 (보수적)
-                // 높은 가격 = 정책 평가에서 더 높은 USD 금액 = 더 높은 보안 티어
-                const conservativePrice = price.usdPrice >= fallbackPrice.usdPrice
-                  ? price : fallbackPrice
+              if (deviation > 5) {
+                // 5% 초과 괴리: Primary 가격을 STALE로 격하
+                // isStale=true로 설정하여 보수적 티어 상향 트리거
+                const stalePrice: PriceInfo = {
+                  ...price,
+                  isStale: true,  // STALE 격하
+                }
 
                 // 감사 로그 기록
                 await this.auditLog.record({
@@ -934,8 +814,7 @@ class OracleChain implements IPriceOracle {
                     fallbackSource: fallbackPrice.source,
                     fallbackPrice: fallbackPrice.usdPrice,
                     deviationPercent: deviation.toFixed(2),
-                    adoptedSource: conservativePrice.source,
-                    adoptedPrice: conservativePrice.usdPrice,
+                    action: 'STALE_DOWNGRADE',
                   },
                 })
 
@@ -945,7 +824,7 @@ class OracleChain implements IPriceOracle {
                   message: `Price deviation ${deviation.toFixed(1)}% detected for ${token.chain}:${token.address}`,
                 })
 
-                return conservativePrice
+                return stalePrice
               }
             } catch {
               // 교차 검증 실패 (Fallback 소스 장애): Primary 신뢰
@@ -1022,21 +901,27 @@ function createDefaultOracleChain(config: OracleConfig): IPriceOracle {
   const cache = new PriceCache({
     ttlMs: 300_000,       // 5분
     staleMaxMs: 1_800_000, // 30분
-    maxEntries: 1000,
+    maxEntries: 128,
   })
 
-  const coingecko = new CoinGeckoOracle(config.coingeckoApiKey, cache)
   const pyth = new PythOracle(cache)
-  const chainlink = new ChainlinkOracle(cache, config.evmRpcUrl)
 
-  // Solana: CoinGecko -> Pyth -> stale
-  // EVM: CoinGecko -> Chainlink -> stale
-  // OracleChain은 getPrice() 내부에서 체인별 fallback이 자동 처리됨
-  return new OracleChain([coingecko, pyth, chainlink], cache)
+  // CoinGecko 키 설정 시에만 Fallback으로 추가
+  const oracles: IPriceOracle[] = [pyth]
+  if (config.coingeckoApiKey) {
+    const coingecko = new CoinGeckoOracle(config.coingeckoApiKey, cache)
+    oracles.push(coingecko)
+  }
+
+  // Pyth (Primary) -> CoinGecko (Fallback, 키 설정 시) -> stale cache
+  // 체인 무관: Solana/EVM 모두 동일 경로
+  return new OracleChain(oracles, cache)
 }
 ```
 
 > **[v0.10 변경] 교차 검증 동기 전환 근거:** 기존 §7.1.1의 비동기 백그라운드 교차 검증을 동기적 인라인으로 전환했다. 보수적 가격 채택을 getPrice() 반환값에 반영하려면, 교차 검증 결과가 반환 전에 확정되어야 한다. Fallback 호출 타임아웃(5초)은 각 오라클 구현체에 이미 설정되어 있어, 최악의 경우 추가 5초의 latency가 발생한다. 이는 트랜잭션 파이프라인의 전체 타임아웃(INSTANT/NOTIFY=30초)에 비해 허용 범위이다.
+>
+> **[v1.5 변경] 교차 검증 편차 임계값 10% -> 5%로 하향, CoinGecko 키 설정 시에만 교차 검증 활성화.** Pyth Primary + CoinGecko Fallback 2단계 구조로 전환하면서, CoinGecko 키가 설정된 환경에서만 교차 검증을 수행한다. 편차>5% 시 STALE 격하(기존: 높은 가격 채택)로 변경하여, resolveEffectiveAmountUsd()에서 보수적 티어 상향이 자동 적용된다.
 
 ---
 
@@ -1187,7 +1072,7 @@ class PriceCache {
 |---------|------|------|
 | **TTL** | 5분 (300,000ms) | CoinGecko 갱신 주기 1-5분과 일치. 5분 이내 동일 가격 보장 |
 | **staleMaxAge** | 30분 (1,800,000ms) | TTL 만료 후 추가 30분간 stale 데이터 허용. 오라클 장애 시 30분간 서비스 지속 |
-| **maxEntries** | 1,000 | 일반 운영에서 100-200 토큰, 대규모 사용 시 최대 1000 토큰. LRU eviction으로 메모리 관리 |
+| **maxEntries** | 128 | Self-hosted 환경에서 일반적으로 조회하는 토큰 수(수십 개)를 고려한 보수적 상한. LRU eviction으로 메모리 관리 |
 | **staleWhileRevalidate** | true | TTL 만료 시 stale 데이터를 즉시 반환하면서 백그라운드에서 갱신 시도 |
 
 ### 4.4 배치 조회 최적화
@@ -1217,23 +1102,24 @@ tokens: [USDC, USDT, BONK, RAY, JUP]
 
 ## 5. Fallback 전략 (ORACLE-02)
 
-### 5.1 3단계 Fallback 경로
+### 5.1 2단계 Fallback 경로
 
 ```
 가격 조회 요청
     │
     ▼
-[1단계] Primary 소스 (CoinGecko)
+[1단계] Primary 소스 (Pyth Hermes, Zero-config)
     │── 성공 → 가격 반환 (fresh)
     │── 실패 ↓
     │
     ▼
-[2단계] Fallback 소스 (Pyth/Chainlink)
-    │── 성공 → 가격 반환 (fresh)
-    │── 실패 ↓
+[2단계] Fallback 소스 (CoinGecko, 키 설정 시에만)
+    │── 키 미설정 → 스킵 ↓
+    │── 키 설정 + 성공 → 가격 반환 (fresh)
+    │── 키 설정 + 실패 ↓
     │
     ▼
-[3단계] Stale 캐시
+[Stale 캐시]
     │── staleMaxAge 이내 → stale 가격 반환 (isStale=true)
     │── staleMaxAge 초과 ↓
     │
@@ -1244,6 +1130,8 @@ tokens: [USDC, USDT, BONK, RAY, JUP]
     │── CONTRACT_CALL → value 기준 네이티브 SPENDING_LIMIT + APPROVAL 기본 유지
     │── BATCH → 개별 instruction 정책 (네이티브 금액만 합산)
     │── TRANSFER → 네이티브 기준 SPENDING_LIMIT (가격 불필요)
+
+NOTE: CoinGecko 키 미설정 시 Pyth 단독 사용. Pyth 실패 → 즉시 Stale 캐시 경로로 이동.
 ```
 
 ### 5.2 Stale 데이터 허용 조건
@@ -1819,8 +1707,8 @@ async function evaluate(input: PolicyEvaluationInput): Promise<PolicyDecision> {
 
 /**
  * [v0.10 폐기] 다중 소스 교차 검증.
- * Primary 소스(CoinGecko) 가격과 Fallback 소스(Pyth/Chainlink) 가격이
- * +-10% 이내에서 일치하는지 확인한다.
+ * [v1.5] Primary(Pyth) 가격과 Fallback(CoinGecko) 가격이
+ * +-5% 이내에서 일치하는지 확인한다. CoinGecko 키 설정 시에만 활성화.
  *
  * 불일치 시 보수적 판단: 더 높은 가격을 채택 (더 높은 USD 금액 -> 더 높은 티어).
  * [v0.10 폐기] 교차 검증은 비동기 백그라운드에서 수행하여 레이턴시에 영향 없음.
@@ -1838,8 +1726,8 @@ async function crossValidatePrice(
       (primaryPrice.usdPrice - fallbackPrice.usdPrice) / primaryPrice.usdPrice
     ) * 100
 
-    if (discrepancy > 10) {
-      // +-10% 초과 불일치
+    if (discrepancy > 5) {
+      // +-5% 초과 불일치 (v1.5: 10% -> 5%로 하향)
       logger.warn('Price cross-validation failed', {
         token: token.address,
         primarySource: primaryPrice.source,
@@ -1927,18 +1815,13 @@ function handleZeroPrice(price: PriceInfo, token: TokenRef): PriceInfo {
     staleHitRate: string,  // "2.1%"
   },
   sources: {
-    coingecko: {
-      status: 'up' | 'down' | 'rate_limited',
+    pyth: {
+      status: 'up' | 'down',
       lastSuccessAt: string | null,   // ISO 8601
       consecutiveFailures: number,
     },
-    pyth: {
-      status: 'up' | 'down' | 'not_configured',
-      lastSuccessAt: string | null,
-      consecutiveFailures: number,
-    },
-    chainlink: {
-      status: 'up' | 'down' | 'not_configured',
+    coingecko: {
+      status: 'up' | 'down' | 'rate_limited' | 'not_configured',
       lastSuccessAt: string | null,
       consecutiveFailures: number,
     },
@@ -1967,7 +1850,7 @@ function handleZeroPrice(price: PriceInfo, token: TokenRef): PriceInfo {
 
 ### 7.4 네이티브 토큰 가격 실패 처리
 
-네이티브 토큰(SOL/ETH)은 CoinGecko, Pyth, Chainlink 모두 안정적으로 지원하므로 가격 실패 확률이 매우 낮다. 그럼에도 실패하는 경우:
+네이티브 토큰(SOL/ETH)은 Pyth와 CoinGecko 모두 안정적으로 지원하므로 가격 실패 확률이 매우 낮다. 그럼에도 실패하는 경우:
 
 | 상황 | 동작 |
 |------|------|
@@ -2076,7 +1959,7 @@ class MockPriceOracle implements IPriceOracle {
 |---|---------|---------|----------|----------|
 | S1 | 가격 조작 | 급격한 가격 변동 감지 (+60% 스파이크) 후 보수적 티어 적용 | INSTANT -> NOTIFY 상향 | MockPriceOracle에 이전=100, 현재=160 설정, 티어 상향 확인 |
 | S2 | 가격 조작 | 다중 소스 교차 검증 실패 (CoinGecko=$100, Pyth=$80, 불일치 20%) | 보수적 가격 채택 + 감사 로그 기록 | 두 Mock 소스에 불일치 가격 설정, 경고 로그 확인 |
-| S3 | 오라클 장애 | 전체 오라클 장애 (CoinGecko + Pyth + Chainlink 모두 실패) | Phase 22-23 과도기 전략 적용 | 모든 Mock 소스 failMode, TOKEN_TRANSFER가 NOTIFY 반환 확인 |
+| S3 | 오라클 장애 | 전체 오라클 장애 (Pyth + CoinGecko 모두 실패) | Phase 22-23 과도기 전략 적용 | 모든 Mock 소스 failMode, TOKEN_TRANSFER가 NOTIFY 반환 확인 |
 | S4 | 캐시 오염 | stale 데이터로 장기 운영 (30분 stale 한계 도달) | stale 만료 후 PriceNotAvailableError -> fallback | TTL 만료 + staleMaxAge 초과 시뮬레이션, fallback 동작 확인 |
 | S5 | USD 변환 | USD 변환 실패 시 과도기 전략 동작 (TOKEN_TRANSFER) | NOTIFY 강제 반환 | getPrice() 실패 모킹, resolveEffectiveAmountUsd() fallback 확인 |
 | S6 | 네이티브 가격 | 네이티브 토큰 가격 실패 + TOKEN_TRANSFER | TOKEN_TRANSFER는 NOTIFY, TRANSFER는 네이티브 기준 | getNativePrice() 실패 모킹, type별 fallback 분기 확인 |
@@ -2084,7 +1967,7 @@ class MockPriceOracle implements IPriceOracle {
 | S8 | 0가격 토큰 | usdPrice=0 (스캠/죽은 토큰) 전송 | $0 평가 -> INSTANT 티어 | MockPriceOracle에 price=0 설정, INSTANT 반환 확인 |
 | S9 | 극단적 가격 | BTC $100,000+ 또는 밈코인 $0.000001 정밀도 | 정밀도 손실 없이 올바른 USD 금액 계산 | 극단적 가격으로 resolveEffectiveAmountUsd() 호출, 결과 비교 |
 | S10 | 배치 부분 실패 | 다중 토큰 배치에서 일부만 가격 조회 성공 (3/5 성공) | 성공분만 합산 + NOTIFY 이상 강제 | BATCH 5 instructions, 2개 가격 실패 모킹, 합산 USD + NOTIFY 강제 확인 |
-| S11 | Rate Limit | CoinGecko rate limit 도달 시 degradation | Pyth/Chainlink fallback 또는 stale 캐시 사용 | CoinGecko Mock에 429 응답, fallback 경로 동작 확인 |
+| S11 | Rate Limit | CoinGecko rate limit 도달 시 degradation | Pyth Primary 사용 또는 stale 캐시 사용 | CoinGecko Mock에 429 응답, Pyth Primary 경로 동작 확인 |
 | S12 | stale 상향 | stale 가격으로 INSTANT 판정 시 NOTIFY 상향 | adjustTierForStalePrice() 적용 | isStale=true + INSTANT 입력, NOTIFY 반환 확인 |
 
 ### 8.4 CoinGecko Rate Limit 시뮬레이션
@@ -2125,7 +2008,7 @@ describe('CoinGeckoOracle rate limit handling', () => {
 |---|------|---------|----------|---------|
 | 1 | 33-time-lock-approval-mechanism.md | LOCK-MECH | SpendingLimitRuleSchema USD 필드 추가, evaluate() 11단계 Stage 11 세분화(11a~11e), resolveEffectiveAmountUsd() 통합 | HIGH |
 | 2 | 32-transaction-pipeline-api.md | TX-PIPE | Stage 3 Policy Check에 IPriceOracle 주입 지점 추가, resolveEffectiveAmountUsd() 호출 흐름 반영 | HIGH |
-| 3 | 45-enum-unified-mapping.md | ENUM-MAP | PriceSource enum 추가 가능 (coingecko, pyth, chainlink, jupiter, cache) -- 별도 Enum이 아닌 Zod enum이므로 등록 선택적 |MEDIUM |
+| 3 | 45-enum-unified-mapping.md | ENUM-MAP | PriceSource enum 추가 가능 (pyth, coingecko, cache) -- 별도 Enum이 아닌 Zod enum이므로 등록 선택적 |MEDIUM |
 | 4 | 56-token-transfer-extension-spec.md | CHAIN-EXT-01 | TOKEN_TRANSFER 과도기 NOTIFY 고정 -> USD 기준 동적 4-tier 전환 주석 업데이트 | LOW |
 | 5 | 58-contract-call-spec.md | CHAIN-EXT-03 | resolveEffectiveAmount() 주석에 resolveEffectiveAmountUsd() 병행 참조 추가 | LOW |
 | 6 | 59-approve-management-spec.md | CHAIN-EXT-04 | APPROVE USD 참고값 감사 로그 기록 추가 | LOW |
@@ -2230,4 +2113,14 @@ describe('CoinGeckoOracle rate limit handling', () => {
 
 *문서 작성일: 2026-02-08*
 *Phase 24 Plan 01 산출물*
+
+---
+
+**v1.5 업데이트: 2026-02-15**
+- Oracle 아키텍처를 Pyth Primary + CoinGecko Opt-in Fallback 2단계 구조로 변경
+- ChainlinkOracle 전체 제거 (섹션 3.3 -> NOTE 처리)
+- PriceInfoSchema.source enum: `['pyth', 'coingecko', 'cache']` 3가지로 축소
+- PriceCache maxEntries: 1,000 -> 128으로 변경
+- 교차 검증 편차 임계값: 10% -> 5%로 하향, CoinGecko 키 설정 시에만 활성화
+- 편차 초과 시 동작: 높은 가격 채택 -> STALE 격하로 변경
 *다음 단계: Phase 25에서 기존 문서 8개에 v0.6 변경 반영*
