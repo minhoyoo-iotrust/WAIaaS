@@ -9,16 +9,16 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 
 ## Current Position
 
-Phase: 137 of 139 (누적 한도 Admin UI + SDK/MCP)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 137 complete
-Last activity: 2026-02-16 -- 137-02 policies.skill.md 누적 한도 문서화 + TS/Python SDK SpendingLimitRules 타입
+Phase: 138 of 139 (Forex 환산 서비스)
+Plan: 1 of 2 in current phase
+Status: 138-01 complete, 138-02 pending
+Last activity: 2026-02-16 -- 138-01 IForexRateService + CoinGeckoForexProvider + formatDisplayCurrency + 테스트 39개
 
-Progress: [█████░░░░░] 50% (4/8 plans)
+Progress: [██████░░░░] 63% (5/8 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 32 milestones, 135 phases, 293 plans, 831 reqs, 2,111 tests, ~188,000 LOC
+**Cumulative:** 32 milestones, 135 phases, 293 plans, 831 reqs, 2,150 tests, ~189,000 LOC
 
 **v1.5.3 Scope:** 4 phases, 8 plans, 19 requirements
 
@@ -42,15 +42,20 @@ Recent:
 - 137-02: SDK에 policy CRUD 메서드 미추가 -- 참조 타입만 제공 (스코프 외)
 - 137-02: X402_ALLOWED_DOMAINS 타입 섹션 추가 (12 Types 정합성 보완)
 - 137-02: approval_timeout phantom 필드 제거, delay_seconds 기본값 900 정정
+- 138-01: tether vs_currencies 방식으로 USD→법정통화 환율 조회 (BTC 비율 계산 대신 단일 API 호출)
+- 138-01: InMemoryPriceCache 별도 인스턴스(30분 TTL) -- crypto 캐시와 분리
+- 138-01: Intl.NumberFormat en-US locale 통일 -- 일관된 숫자 형식
+- 138-01: ZERO_DECIMAL_CURRENCIES Set -- getCurrencyMeta 의존 없이 core에서 독립 판단
+- 138-01: forexRateService optional dep -- 138-02에서 daemon bootstrap 통합
 
 ### Blockers/Concerns
 
-- Pyth forex 피드 가용성 미검증 -- Phase 138 research에서 확인 필요
+- Pyth forex 피드 -- CoinGecko tether 방식 채택으로 불필요 (138-01 해소)
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 137-02-PLAN.md (Phase 137 complete)
+Stopped at: Completed 138-01-PLAN.md
 Resume file: None
