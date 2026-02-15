@@ -1,7 +1,7 @@
 # Requirements: WAIaaS v1.5
 
 **Defined:** 2026-02-15
-**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 
 ## v1.5 Requirements
 
@@ -71,7 +71,7 @@ USD 기준 정책 평가가 동작하고, Action Provider 프레임워크가 구
 
 | Feature | Reason |
 |---------|--------|
-| Jupiter Swap 구현 | v1.5.5에서 별도 구현 — v1.5는 프레임워크만 |
+| Jupiter Swap 구현 | v1.5.5에서 별도 구현 -- v1.5는 프레임워크만 |
 | 0x EVM Swap 구현 | v1.5.6에서 별도 구현 |
 | Chainlink Oracle | EVM 전용으로 커버리지 편향, Pyth가 380+ 피드로 충분 |
 | VM 격리 (플러그인 샌드박스) | validate-then-trust로 v1.5 충분, 향후 검토 |
@@ -82,41 +82,41 @@ USD 기준 정책 평가가 동작하고, Action Provider 프레임워크가 구
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ORACL-01 | — | Pending |
-| ORACL-02 | — | Pending |
-| ORACL-03 | — | Pending |
-| ORACL-04 | — | Pending |
-| ORACL-05 | — | Pending |
-| ORACL-06 | — | Pending |
-| ORACL-07 | — | Pending |
-| ORACL-08 | — | Pending |
-| USDPL-01 | — | Pending |
-| USDPL-02 | — | Pending |
-| USDPL-03 | — | Pending |
-| USDPL-04 | — | Pending |
-| USDPL-05 | — | Pending |
-| USDPL-06 | — | Pending |
-| ACTNP-01 | — | Pending |
-| ACTNP-02 | — | Pending |
-| ACTNP-03 | — | Pending |
-| ACTNP-04 | — | Pending |
-| ACTNP-05 | — | Pending |
-| ACTNP-06 | — | Pending |
-| APIKY-01 | — | Pending |
-| APIKY-02 | — | Pending |
-| APIKY-03 | — | Pending |
-| APIKY-04 | — | Pending |
-| DSGN-01 | — | Pending |
-| DSGN-02 | — | Pending |
-| DSGN-03 | — | Pending |
-| SKIL-01 | — | Pending |
-| SKIL-02 | — | Pending |
+| ORACL-01 | Phase 125 | Pending |
+| ORACL-02 | Phase 126 | Pending |
+| ORACL-03 | Phase 126 | Pending |
+| ORACL-04 | Phase 126 | Pending |
+| ORACL-05 | Phase 125 | Pending |
+| ORACL-06 | Phase 125 | Pending |
+| ORACL-07 | Phase 126 | Pending |
+| ORACL-08 | Phase 126 | Pending |
+| USDPL-01 | Phase 127 | Pending |
+| USDPL-02 | Phase 127 | Pending |
+| USDPL-03 | Phase 127 | Pending |
+| USDPL-04 | Phase 127 | Pending |
+| USDPL-05 | Phase 127 | Pending |
+| USDPL-06 | Phase 127 | Pending |
+| ACTNP-01 | Phase 128 | Pending |
+| ACTNP-02 | Phase 128 | Pending |
+| ACTNP-03 | Phase 128 | Pending |
+| ACTNP-04 | Phase 128 | Pending |
+| ACTNP-05 | Phase 129 | Pending |
+| ACTNP-06 | Phase 129 | Pending |
+| APIKY-01 | Phase 128 | Pending |
+| APIKY-02 | Phase 128 | Pending |
+| APIKY-03 | Phase 128 | Pending |
+| APIKY-04 | Phase 128 | Pending |
+| DSGN-01 | Phase 125 | Pending |
+| DSGN-02 | Phase 125 | Pending |
+| DSGN-03 | Phase 125 | Pending |
+| SKIL-01 | Phase 129 | Pending |
+| SKIL-02 | Phase 129 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29
+- Mapped to phases: 29
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-15*
-*Last updated: 2026-02-15 after initial definition*
+*Last updated: 2026-02-15 after roadmap creation*
