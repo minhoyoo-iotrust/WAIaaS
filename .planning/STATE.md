@@ -9,22 +9,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 122 (3 of 5 in v1.4.8) — MCP 도구 + 멀티체인 DX
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-15 — 122-01 complete (set_default_network MCP/CLI/SDK, 10 tests added)
+Phase: 122 (3 of 5 in v1.4.8) — MCP 도구 + 멀티체인 DX -- COMPLETE
+Plan: 2 of 2 in current phase (all complete)
+Status: Phase Complete
+Last activity: 2026-02-15 — 122-02 complete (network=all balance/assets, MCP/SDK/Python/Skill update)
 
-Progress: [███░░░░░░░] 37% (3/8 plans)
+Progress: [████░░░░░░] 50% (4/8 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 27 milestones, 119 phases, 259 plans, 711 reqs, 1,669 tests, ~175,480 LOC
+**Cumulative:** 27 milestones, 119 phases, 260 plans, 711 reqs, 1,679 tests, ~176,000 LOC
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 120 | 01 | 6min | 1 (TDD) | 2 |
 | 121 | 01 | 2min | 1 (TDD) | 4 |
 | 122 | 01 | 8min | 2 | 15 |
+| 122 | 02 | 8min | 2 | 12 |
 
 ## Accumulated Context
 
@@ -37,6 +38,9 @@ Full log in PROJECT.md.
 - shutdown 핸들러를 server.connect() 이전에 등록 -- stdin 즉시 닫힘 대비
 - 세션 스코프 PUT /v1/wallet/default-network: MCP sessionAuth로 기본 네트워크 변경 가능하도록
 - Python SDK get_wallet_info()에서 availableNetworks를 networks로 매핑
+- wireEvmTokens() 헬퍼 추출: ERC-20 토큰 와이어링 코드 중복 제거
+- getAllBalances()/getAllAssets()를 별도 메서드로 분리: 타입 안전성 우선 (이슈 021 설계 결정)
+- network=all 분기 OpenAPI typed route는 `as never` cast로 런타임 분기 처리
 
 ### Blockers/Concerns
 
@@ -48,5 +52,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 122-01-PLAN.md (set_default_network MCP/CLI/SDK)
+Stopped at: Completed 122-02-PLAN.md (network=all balance/assets, MCP/SDK/Python/Skill)
 Resume file: None
