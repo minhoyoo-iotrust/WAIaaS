@@ -73,6 +73,27 @@ export function SpendingLimitForm({ rules, onChange, errors }: PolicyFormProps) 
           placeholder="Optional"
         />
       </div>
+      <h4>Cumulative USD Limits (Optional)</h4>
+      <div class="policy-form-grid">
+        <FormField
+          label="Daily Limit USD (24h rolling)"
+          name="daily_limit_usd"
+          type="number"
+          value={(rules.daily_limit_usd as number) ?? ''}
+          onChange={handleUsdChange('daily_limit_usd')}
+          placeholder="e.g. 500"
+          error={errors.daily_limit_usd}
+        />
+        <FormField
+          label="Monthly Limit USD (30d rolling)"
+          name="monthly_limit_usd"
+          type="number"
+          value={(rules.monthly_limit_usd as number) ?? ''}
+          onChange={handleUsdChange('monthly_limit_usd')}
+          placeholder="e.g. 5000"
+          error={errors.monthly_limit_usd}
+        />
+      </div>
       <FormField
         label="Delay Duration (seconds, min 60)"
         name="delay_seconds"

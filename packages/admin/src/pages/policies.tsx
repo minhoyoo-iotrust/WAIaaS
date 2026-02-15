@@ -87,6 +87,20 @@ function validateRules(type: string, rules: Record<string, unknown>): Record<str
     const ds = Number(rules.delay_seconds);
     if (rules.delay_seconds === undefined || rules.delay_seconds === '' || Number.isNaN(ds) || ds < 60)
       errors.delay_seconds = 'Minimum 60 seconds';
+    const dailyUsd = rules.daily_limit_usd;
+    if (dailyUsd !== undefined && dailyUsd !== '') {
+      const num = Number(dailyUsd);
+      if (Number.isNaN(num) || num <= 0) {
+        errors.daily_limit_usd = 'Must be a positive number';
+      }
+    }
+    const monthlyUsd = rules.monthly_limit_usd;
+    if (monthlyUsd !== undefined && monthlyUsd !== '') {
+      const num = Number(monthlyUsd);
+      if (Number.isNaN(num) || num <= 0) {
+        errors.monthly_limit_usd = 'Must be a positive number';
+      }
+    }
   } else if (type === 'WHITELIST') {
     const addrs = (rules.allowed_addresses as string[]) || [];
     if (addrs.length === 0) errors.allowed_addresses = 'At least one address required';
