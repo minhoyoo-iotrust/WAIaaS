@@ -425,6 +425,27 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     ctx.delaySeconds = evaluation.delaySeconds;
   }
 
+  // [Phase 136] Cumulative spending warning notification (80% threshold)
+  if (evaluation.cumulativeWarning) {
+    const w = evaluation.cumulativeWarning;
+    void ctx.notificationService?.notify('CUMULATIVE_LIMIT_WARNING', ctx.walletId, {
+      type: w.type,
+      spent: String(w.spent.toFixed(2)),
+      limit: String(w.limit.toFixed(2)),
+      ratio: String(Math.round(w.ratio * 100)),
+    }, { txId: ctx.txId });
+  }
+
+  // [Phase 136] APPROVAL tier notification with reason
+  if (tier === 'APPROVAL' && !downgraded) {
+    const reason = evaluation.approvalReason ?? 'per_tx';
+    void ctx.notificationService?.notify('TX_APPROVAL_REQUIRED', ctx.walletId, {
+      amount: getRequestAmount(ctx.request),
+      to: getRequestTo(ctx.request),
+      reason,
+    }, { txId: ctx.txId });
+  }
+
   // Update DB with tier
   await ctx.db
     .update(transactions)
