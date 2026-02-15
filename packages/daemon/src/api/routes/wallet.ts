@@ -12,7 +12,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, validateNetworkEnvironment } from '@waiaas/core';
+import { WAIaaSError, validateNetworkEnvironment, getNetworksForEnvironment } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -80,7 +80,9 @@ const walletBalanceRoute = createRoute({
   summary: 'Get wallet balance',
   request: {
     query: z.object({
-      network: z.string().optional(),
+      network: z.string().optional().describe(
+        "Network to query. Use 'all' to get balances for all networks in the wallet's environment.",
+      ),
     }),
   },
   responses: {
@@ -99,7 +101,9 @@ const walletAssetsRoute = createRoute({
   summary: 'Get wallet assets',
   request: {
     query: z.object({
-      network: z.string().optional(),
+      network: z.string().optional().describe(
+        "Network to query. Use 'all' to get assets for all networks in the wallet's environment.",
+      ),
     }),
   },
   responses: {
@@ -133,6 +137,65 @@ const walletDefaultNetworkRoute = createRoute({
     ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED', 'ENVIRONMENT_NETWORK_MISMATCH']),
   },
 });
+
+// ---------------------------------------------------------------------------
+// Helper: Wire ERC-20 token list on EVM adapters
+// ---------------------------------------------------------------------------
+
+type TokenListEntry = { address: string; symbol?: string; name?: string; decimals?: number };
+
+/**
+ * Wire ERC-20 token list into an EVM adapter so getAssets() can query balances.
+ * Merges tokens from the token registry and ALLOWED_TOKENS policy.
+ */
+async function wireEvmTokens(
+  adapter: unknown,
+  wallet: { id: string; chain: string },
+  network: string,
+  deps: WalletRouteDeps,
+): Promise<void> {
+  if (wallet.chain !== 'ethereum' || !('setAllowedTokens' in (adapter as Record<string, unknown>))) {
+    return;
+  }
+
+  const tokenList: TokenListEntry[] = [];
+  const seenAddresses = new Set<string>();
+
+  // Source 1: Token registry (builtin + custom for this network)
+  if (deps.tokenRegistryService) {
+    const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(network);
+    for (const t of registryTokens) {
+      const lower = t.address.toLowerCase();
+      if (!seenAddresses.has(lower)) {
+        seenAddresses.add(lower);
+        tokenList.push(t);
+      }
+    }
+  }
+
+  // Source 2: ALLOWED_TOKENS policy for this wallet
+  const allowedTokensPolicies = await deps.db.select().from(policies)
+    .where(
+      and(
+        eq(policies.walletId, wallet.id),
+        eq(policies.type, 'ALLOWED_TOKENS'),
+        eq(policies.enabled, true),
+      )
+    );
+  if (allowedTokensPolicies.length > 0) {
+    const rules = JSON.parse(allowedTokensPolicies[0]!.rules) as { tokens: Array<{ address: string }> };
+    for (const t of rules.tokens) {
+      const lower = t.address.toLowerCase();
+      if (!seenAddresses.has(lower)) {
+        seenAddresses.add(lower);
+        tokenList.push({ address: t.address });
+      }
+    }
+  }
+
+  // Set merged token list on adapter
+  (adapter as unknown as { setAllowedTokens: (t: TokenListEntry[]) => void }).setAllowedTokens(tokenList);
+}
 
 // ---------------------------------------------------------------------------
 // Route factory
@@ -178,6 +241,51 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     // network query parameter -> specific network, fallback to wallet.defaultNetwork
     const { network: queryNetwork } = c.req.valid('query');
+
+    // --- network=all: return balances for all environment networks ---
+    if (queryNetwork === 'all') {
+      const networks = getNetworksForEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+      );
+
+      const results = await Promise.allSettled(
+        networks.map(async (net) => {
+          const rpcUrl = resolveRpcUrl(
+            deps.config!.rpc as unknown as Record<string, string>,
+            wallet.chain,
+            net,
+          );
+          const adapter = await deps.adapterPool!.resolve(
+            wallet.chain as ChainType,
+            net as NetworkType,
+            rpcUrl,
+          );
+          const balanceInfo = await adapter.getBalance(wallet.publicKey);
+          return {
+            network: net,
+            balance: balanceInfo.balance.toString(),
+            decimals: balanceInfo.decimals,
+            symbol: balanceInfo.symbol,
+          };
+        }),
+      );
+
+      const balances = results.map((r, i) => {
+        if (r.status === 'fulfilled') {
+          return r.value;
+        }
+        return {
+          network: networks[i]!,
+          error: r.reason instanceof Error ? r.reason.message : 'Unknown error',
+        };
+      });
+
+      // network=all returns a different shape -- cast to satisfy typed route
+      return c.json({ walletId: wallet.id, chain: wallet.chain, environment: wallet.environment, balances } as never, 200);
+    }
+
+    // --- existing: specific network or wallet default ---
     const targetNetwork = queryNetwork ?? wallet.defaultNetwork!;
 
     // Validate network-environment compatibility when query param specified
@@ -238,6 +346,61 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     // network query parameter -> specific network, fallback to wallet.defaultNetwork
     const { network: queryNetwork } = c.req.valid('query');
+
+    // --- network=all: return assets for all environment networks ---
+    if (queryNetwork === 'all') {
+      const networks = getNetworksForEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+      );
+
+      const results = await Promise.allSettled(
+        networks.map(async (net) => {
+          const rpcUrl = resolveRpcUrl(
+            deps.config!.rpc as unknown as Record<string, string>,
+            wallet.chain,
+            net,
+          );
+          const adapter = await deps.adapterPool!.resolve(
+            wallet.chain as ChainType,
+            net as NetworkType,
+            rpcUrl,
+          );
+
+          // Wire ERC-20 tokens for EVM adapters
+          await wireEvmTokens(adapter, wallet, net, deps);
+
+          const assets = await adapter.getAssets(wallet.publicKey);
+          return {
+            network: net,
+            assets: assets.map((a) => ({
+              mint: a.mint,
+              symbol: a.symbol,
+              name: a.name,
+              balance: a.balance.toString(),
+              decimals: a.decimals,
+              isNative: a.isNative,
+              usdValue: a.usdValue,
+            })),
+          };
+        }),
+      );
+
+      const networkAssets = results.map((r, i) => {
+        if (r.status === 'fulfilled') {
+          return r.value;
+        }
+        return {
+          network: networks[i]!,
+          error: r.reason instanceof Error ? r.reason.message : 'Unknown error',
+        };
+      });
+
+      // network=all returns a different shape -- cast to satisfy typed route
+      return c.json({ walletId: wallet.id, chain: wallet.chain, environment: wallet.environment, networkAssets } as never, 200);
+    }
+
+    // --- existing: specific network or wallet default ---
     const targetNetwork = queryNetwork ?? wallet.defaultNetwork!;
 
     // Validate network-environment compatibility when query param specified
@@ -267,45 +430,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     );
 
     // Wire ERC-20 tokens for EVM adapters before getAssets
-    if (wallet.chain === 'ethereum' && 'setAllowedTokens' in adapter) {
-      const tokenList: Array<{ address: string; symbol?: string; name?: string; decimals?: number }> = [];
-      const seenAddresses = new Set<string>();
-
-      // Source 1: Token registry (builtin + custom for this network)
-      if (deps.tokenRegistryService) {
-        const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(targetNetwork);
-        for (const t of registryTokens) {
-          const lower = t.address.toLowerCase();
-          if (!seenAddresses.has(lower)) {
-            seenAddresses.add(lower);
-            tokenList.push(t);
-          }
-        }
-      }
-
-      // Source 2: ALLOWED_TOKENS policy for this wallet
-      const allowedTokensPolicies = await deps.db.select().from(policies)
-        .where(
-          and(
-            eq(policies.walletId, wallet.id),
-            eq(policies.type, 'ALLOWED_TOKENS'),
-            eq(policies.enabled, true),
-          )
-        );
-      if (allowedTokensPolicies.length > 0) {
-        const rules = JSON.parse(allowedTokensPolicies[0]!.rules) as { tokens: Array<{ address: string }> };
-        for (const t of rules.tokens) {
-          const lower = t.address.toLowerCase();
-          if (!seenAddresses.has(lower)) {
-            seenAddresses.add(lower);
-            tokenList.push({ address: t.address });
-          }
-        }
-      }
-
-      // Set merged token list on adapter
-      (adapter as unknown as { setAllowedTokens: (t: typeof tokenList) => void }).setAllowedTokens(tokenList);
-    }
+    await wireEvmTokens(adapter, wallet, targetNetwork, deps);
 
     const assets = await adapter.getAssets(wallet.publicKey);
 

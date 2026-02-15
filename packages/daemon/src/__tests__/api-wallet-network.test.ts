@@ -17,6 +17,8 @@ import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { IChainAdapter, BalanceInfo, HealthInfo, AssetInfo } from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -404,5 +406,348 @@ describe('ALLOWED_NETWORKS Policy CRUD', () => {
     const list = (await listRes.json()) as Array<Record<string, unknown>>;
     const found = list.find((p) => p.id === policyId);
     expect(found).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// network=all aggregate balance/assets tests (session-scoped routes)
+// ---------------------------------------------------------------------------
+
+describe('GET /v1/wallet/balance?network=all', () => {
+  function makeAdapterForNetwork(network: string): IChainAdapter {
+    const networkBalances: Record<string, bigint> = {
+      'ethereum-sepolia': 500_000_000_000_000_000n,
+      'polygon-amoy': 1_200_000_000_000_000_000n,
+      'arbitrum-sepolia': 300_000_000_000_000_000n,
+      'optimism-sepolia': 0n,
+      'base-sepolia': 100_000_000_000_000_000n,
+    };
+    const networkSymbols: Record<string, string> = {
+      'ethereum-sepolia': 'ETH',
+      'polygon-amoy': 'POL',
+      'arbitrum-sepolia': 'ETH',
+      'optimism-sepolia': 'ETH',
+      'base-sepolia': 'ETH',
+    };
+    return {
+      chain: 'ethereum' as const,
+      network: network as never,
+      connect: async () => {},
+      disconnect: async () => {},
+      isConnected: () => true,
+      getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
+      getBalance: async (_addr: string): Promise<BalanceInfo> => ({
+        address: _addr,
+        balance: networkBalances[network] ?? 0n,
+        decimals: 18,
+        symbol: networkSymbols[network] ?? 'ETH',
+      }),
+      getAssets: async (): Promise<AssetInfo[]> => [
+        { mint: '0x0', symbol: networkSymbols[network] ?? 'ETH', name: 'Native', balance: networkBalances[network] ?? 0n, decimals: 18, isNative: true },
+      ],
+      buildTransaction: async () => { throw new Error('not implemented'); },
+      simulateTransaction: async () => { throw new Error('not implemented'); },
+      signTransaction: async () => { throw new Error('not implemented'); },
+      submitTransaction: async () => { throw new Error('not implemented'); },
+      waitForConfirmation: async () => { throw new Error('not implemented'); },
+      estimateFee: async () => { throw new Error('not implemented'); },
+      buildTokenTransfer: async () => { throw new Error('not implemented'); },
+      getTokenInfo: async () => { throw new Error('not implemented'); },
+      buildContractCall: async () => { throw new Error('not implemented'); },
+      buildApprove: async () => { throw new Error('not implemented'); },
+      buildBatch: async () => { throw new Error('not implemented'); },
+      getTransactionFee: async () => { throw new Error('not implemented'); },
+      getCurrentNonce: async () => 0,
+      sweepAll: async () => { throw new Error('not implemented'); },
+    } as unknown as IChainAdapter;
+  }
+
+  function makeFailingAdapter(network: string, errorMsg: string): IChainAdapter {
+    return {
+      chain: 'ethereum' as const,
+      network: network as never,
+      connect: async () => {},
+      disconnect: async () => {},
+      isConnected: () => true,
+      getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
+      getBalance: async (): Promise<BalanceInfo> => { throw new Error(errorMsg); },
+      getAssets: async (): Promise<AssetInfo[]> => { throw new Error(errorMsg); },
+      buildTransaction: async () => { throw new Error('not implemented'); },
+      simulateTransaction: async () => { throw new Error('not implemented'); },
+      signTransaction: async () => { throw new Error('not implemented'); },
+      submitTransaction: async () => { throw new Error('not implemented'); },
+      waitForConfirmation: async () => { throw new Error('not implemented'); },
+      estimateFee: async () => { throw new Error('not implemented'); },
+      buildTokenTransfer: async () => { throw new Error('not implemented'); },
+      getTokenInfo: async () => { throw new Error('not implemented'); },
+      buildContractCall: async () => { throw new Error('not implemented'); },
+      buildApprove: async () => { throw new Error('not implemented'); },
+      buildBatch: async () => { throw new Error('not implemented'); },
+      getTransactionFee: async () => { throw new Error('not implemented'); },
+      getCurrentNonce: async () => 0,
+      sweepAll: async () => { throw new Error('not implemented'); },
+    } as unknown as IChainAdapter;
+  }
+
+  let conn2: DatabaseConnection;
+  let app2: OpenAPIHono;
+  let sessionToken: string;
+
+  async function setupWithAdapterPool(adapterPool: AdapterPool) {
+    conn2 = createDatabase(':memory:');
+    pushSchema(conn2.sqlite);
+
+    const hash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+
+    const jwtSecretManager = new JwtSecretManager(conn2.db);
+    await jwtSecretManager.initialize();
+
+    app2 = createApp({
+      db: conn2.db,
+      sqlite: conn2.sqlite,
+      keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD,
+      masterPasswordHash: hash,
+      config: mockConfig(),
+      adapterPool,
+      jwtSecretManager,
+    });
+
+    // Create wallet
+    const walletRes = await app2.request('/v1/wallets', {
+      method: 'POST',
+      headers: {
+        Host: HOST, 'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ name: 'test-eth', chain: 'ethereum', environment: 'testnet' }),
+    });
+    const wallet = await walletRes.json() as Record<string, unknown>;
+    const walletId = wallet.id as string;
+
+    // Create session
+    const sessRes = await app2.request('/v1/sessions', {
+      method: 'POST',
+      headers: {
+        Host: HOST, 'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ walletId }),
+    });
+    const sess = await sessRes.json() as Record<string, unknown>;
+    sessionToken = sess.token as string;
+  }
+
+  afterEach(() => {
+    if (conn2) conn2.sqlite.close();
+  });
+
+  it('returns balances array for all environment networks', async () => {
+    const adapterPool: AdapterPool = {
+      resolve: vi.fn().mockImplementation(
+        async (_chain: string, network: string) => makeAdapterForNetwork(network),
+      ),
+      disconnectAll: vi.fn().mockResolvedValue(undefined),
+      get size() { return 0; },
+    } as unknown as AdapterPool;
+
+    await setupWithAdapterPool(adapterPool);
+
+    const res = await app2.request('/v1/wallet/balance?network=all', {
+      headers: { Host: HOST, Authorization: `Bearer ${sessionToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.chain).toBe('ethereum');
+    expect(body.environment).toBe('testnet');
+    const balances = body.balances as Array<Record<string, unknown>>;
+    expect(balances).toHaveLength(5); // 5 EVM testnets
+    const networks = balances.map((b) => b.network).sort();
+    expect(networks).toEqual([
+      'arbitrum-sepolia', 'base-sepolia', 'ethereum-sepolia', 'optimism-sepolia', 'polygon-amoy',
+    ]);
+    // Check one entry
+    const ethSepolia = balances.find((b) => b.network === 'ethereum-sepolia');
+    expect(ethSepolia).toBeDefined();
+    expect(ethSepolia!.balance).toBe('500000000000000000');
+    expect(ethSepolia!.decimals).toBe(18);
+    expect(ethSepolia!.symbol).toBe('ETH');
+  });
+
+  it('returns error for networks with RPC failure', async () => {
+    const adapterPool: AdapterPool = {
+      resolve: vi.fn().mockImplementation(
+        async (_chain: string, network: string) => {
+          if (network === 'polygon-amoy') return makeFailingAdapter(network, 'RPC timeout');
+          return makeAdapterForNetwork(network);
+        },
+      ),
+      disconnectAll: vi.fn().mockResolvedValue(undefined),
+      get size() { return 0; },
+    } as unknown as AdapterPool;
+
+    await setupWithAdapterPool(adapterPool);
+
+    const res = await app2.request('/v1/wallet/balance?network=all', {
+      headers: { Host: HOST, Authorization: `Bearer ${sessionToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const balances = body.balances as Array<Record<string, unknown>>;
+    expect(balances).toHaveLength(5);
+
+    // polygon-amoy should have error
+    const failed = balances.find((b) => b.network === 'polygon-amoy');
+    expect(failed).toBeDefined();
+    expect(failed!.error).toBe('RPC timeout');
+    expect(failed!.balance).toBeUndefined();
+
+    // ethereum-sepolia should succeed
+    const success = balances.find((b) => b.network === 'ethereum-sepolia');
+    expect(success).toBeDefined();
+    expect(success!.balance).toBe('500000000000000000');
+    expect(success!.error).toBeUndefined();
+  });
+
+  it('maintains backward compatibility for specific network', async () => {
+    const adapterPool: AdapterPool = {
+      resolve: vi.fn().mockImplementation(
+        async (_chain: string, network: string) => makeAdapterForNetwork(network),
+      ),
+      disconnectAll: vi.fn().mockResolvedValue(undefined),
+      get size() { return 0; },
+    } as unknown as AdapterPool;
+
+    await setupWithAdapterPool(adapterPool);
+
+    const res = await app2.request('/v1/wallet/balance?network=ethereum-sepolia', {
+      headers: { Host: HOST, Authorization: `Bearer ${sessionToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    // Single network response should have the old shape (walletId, chain, network, address, balance, ...)
+    expect(body.walletId).toBeDefined();
+    expect(body.chain).toBe('ethereum');
+    expect(body.network).toBe('ethereum-sepolia');
+    expect(body.address).toBeDefined();
+    expect(body.balance).toBe('500000000000000000');
+    expect(body.decimals).toBe(18);
+    expect(body.symbol).toBe('ETH');
+    // Should NOT have balances array
+    expect(body.balances).toBeUndefined();
+  });
+});
+
+describe('GET /v1/wallet/assets?network=all', () => {
+  function makeAdapterForAssets(network: string): IChainAdapter {
+    return {
+      chain: 'ethereum' as const,
+      network: network as never,
+      connect: async () => {},
+      disconnect: async () => {},
+      isConnected: () => true,
+      getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
+      getBalance: async (_addr: string): Promise<BalanceInfo> => ({
+        address: _addr, balance: 0n, decimals: 18, symbol: 'ETH',
+      }),
+      getAssets: async (): Promise<AssetInfo[]> => [
+        { mint: '0x0', symbol: 'ETH', name: 'Ether', balance: 100n, decimals: 18, isNative: true },
+      ],
+      buildTransaction: async () => { throw new Error('not implemented'); },
+      simulateTransaction: async () => { throw new Error('not implemented'); },
+      signTransaction: async () => { throw new Error('not implemented'); },
+      submitTransaction: async () => { throw new Error('not implemented'); },
+      waitForConfirmation: async () => { throw new Error('not implemented'); },
+      estimateFee: async () => { throw new Error('not implemented'); },
+      buildTokenTransfer: async () => { throw new Error('not implemented'); },
+      getTokenInfo: async () => { throw new Error('not implemented'); },
+      buildContractCall: async () => { throw new Error('not implemented'); },
+      buildApprove: async () => { throw new Error('not implemented'); },
+      buildBatch: async () => { throw new Error('not implemented'); },
+      getTransactionFee: async () => { throw new Error('not implemented'); },
+      getCurrentNonce: async () => 0,
+      sweepAll: async () => { throw new Error('not implemented'); },
+    } as unknown as IChainAdapter;
+  }
+
+  let conn3: DatabaseConnection;
+  let app3: OpenAPIHono;
+  let sessionToken: string;
+
+  afterEach(() => {
+    if (conn3) conn3.sqlite.close();
+  });
+
+  it('returns assets array for all environment networks', async () => {
+    const adapterPool: AdapterPool = {
+      resolve: vi.fn().mockImplementation(
+        async (_chain: string, network: string) => makeAdapterForAssets(network),
+      ),
+      disconnectAll: vi.fn().mockResolvedValue(undefined),
+      get size() { return 0; },
+    } as unknown as AdapterPool;
+
+    conn3 = createDatabase(':memory:');
+    pushSchema(conn3.sqlite);
+
+    const hash = await argon2.hash(TEST_MASTER_PASSWORD, {
+      type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
+    });
+
+    const jwtSecretManager = new JwtSecretManager(conn3.db);
+    await jwtSecretManager.initialize();
+
+    app3 = createApp({
+      db: conn3.db, sqlite: conn3.sqlite, keyStore: mockKeyStore(),
+      masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash: hash,
+      config: mockConfig(), adapterPool, jwtSecretManager,
+    });
+
+    // Create wallet
+    const walletRes = await app3.request('/v1/wallets', {
+      method: 'POST',
+      headers: { Host: HOST, 'Content-Type': 'application/json', 'X-Master-Password': TEST_MASTER_PASSWORD },
+      body: JSON.stringify({ name: 'test-eth-assets', chain: 'ethereum', environment: 'testnet' }),
+    });
+    const wallet = await walletRes.json() as Record<string, unknown>;
+    const walletId = wallet.id as string;
+
+    // Create session
+    const sessRes = await app3.request('/v1/sessions', {
+      method: 'POST',
+      headers: { Host: HOST, 'Content-Type': 'application/json', 'X-Master-Password': TEST_MASTER_PASSWORD },
+      body: JSON.stringify({ walletId }),
+    });
+    const sess = await sessRes.json() as Record<string, unknown>;
+    sessionToken = sess.token as string;
+
+    const res = await app3.request('/v1/wallet/assets?network=all', {
+      headers: { Host: HOST, Authorization: `Bearer ${sessionToken}` },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.chain).toBe('ethereum');
+    expect(body.environment).toBe('testnet');
+    const networkAssets = body.networkAssets as Array<Record<string, unknown>>;
+    expect(networkAssets).toHaveLength(5);
+
+    const networks = networkAssets.map((n) => n.network).sort();
+    expect(networks).toEqual([
+      'arbitrum-sepolia', 'base-sepolia', 'ethereum-sepolia', 'optimism-sepolia', 'polygon-amoy',
+    ]);
+
+    // Each network should have assets array
+    for (const entry of networkAssets) {
+      const assets = entry.assets as Array<Record<string, unknown>>;
+      expect(assets).toBeDefined();
+      expect(assets).toHaveLength(1);
+      expect(assets[0]!.symbol).toBe('ETH');
+    }
   });
 });
