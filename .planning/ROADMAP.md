@@ -80,11 +80,11 @@ Plans:
   3. `GET /v1/wallet/balance?network=all`이 환경 내 모든 네트워크 잔액을 배열로 반환한다
   4. 일부 네트워크 RPC 실패 시 성공한 네트워크 잔액만 반환하고 실패 네트워크는 에러 표시한다
   5. wallet.skill.md에 network=all, set_default_network, wallet info가 반영된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 122-01: set_default_network MCP 도구 + CLI + SDK
-- [ ] 122-02: network=all 잔액 API + wallet info CLI/SDK + 스킬 파일
+- [ ] 122-01-PLAN.md — set_default_network MCP 도구 + CLI wallet 서브커맨드 + TS/Python SDK 메서드
+- [ ] 122-02-PLAN.md — network=all 잔액/자산 API + MCP/SDK 지원 + wallet.skill.md 업데이트
 
 ### Phase 123: Admin UI 개선
 **Goal**: Admin 대시보드가 운영 핵심 정보를 한눈에 보여주고, 월렛 상세/세션 페이지가 실용적으로 사용된다
