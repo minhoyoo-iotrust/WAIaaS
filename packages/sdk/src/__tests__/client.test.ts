@@ -324,6 +324,69 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // getAllBalances
+  // =========================================================================
+
+  describe('getAllBalances', () => {
+    it('should call GET /v1/wallet/balance?network=all', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        walletId: 'wallet-1',
+        chain: 'ethereum',
+        environment: 'testnet',
+        balances: [
+          { network: 'ethereum-sepolia', balance: '500', decimals: 18, symbol: 'ETH' },
+          { network: 'polygon-amoy', error: 'RPC timeout' },
+        ],
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.getAllBalances();
+      expect(result).toEqual(expected);
+      expect(result.balances).toHaveLength(2);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/balance?network=all');
+    });
+  });
+
+  // =========================================================================
+  // getAllAssets
+  // =========================================================================
+
+  describe('getAllAssets', () => {
+    it('should call GET /v1/wallet/assets?network=all', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        walletId: 'wallet-1',
+        chain: 'ethereum',
+        environment: 'testnet',
+        networkAssets: [
+          { network: 'ethereum-sepolia', assets: [{ mint: '0x0', symbol: 'ETH', name: 'Ether', balance: '100', decimals: 18, isNative: true }] },
+        ],
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.getAllAssets();
+      expect(result).toEqual(expected);
+      expect(result.networkAssets).toHaveLength(1);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/assets?network=all');
+    });
+  });
+
+  // =========================================================================
   // sendToken
   // =========================================================================
 

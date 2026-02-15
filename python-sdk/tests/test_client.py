@@ -9,6 +9,8 @@ from unittest.mock import AsyncMock, patch
 from waiaas.client import WAIaaSClient
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
+    MultiNetworkAssetsResponse,
+    MultiNetworkBalanceResponse,
     PendingTransactionList,
     SessionRenewResponse,
     SetDefaultNetworkResponse,
@@ -903,3 +905,82 @@ class TestContextManager:
         # Should not raise on multiple close calls
         await client.close()
         await client.close()
+
+
+# ---------------------------------------------------------------------------
+# Multi-network aggregate methods
+# ---------------------------------------------------------------------------
+
+
+class TestGetAllBalances:
+    async def test_returns_multi_network_balance(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert "network=all" in str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "ethereum",
+                    "environment": "testnet",
+                    "balances": [
+                        {"network": "ethereum-sepolia", "balance": "500", "decimals": 18, "symbol": "ETH"},
+                        {"network": "polygon-amoy", "error": "RPC timeout"},
+                    ],
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_all_balances()
+        assert isinstance(result, MultiNetworkBalanceResponse)
+        assert result.wallet_id == WALLET_ID
+        assert result.chain == "ethereum"
+        assert result.environment == "testnet"
+        assert len(result.balances) == 2
+        assert result.balances[0].network == "ethereum-sepolia"
+        assert result.balances[0].balance == "500"
+        assert result.balances[1].network == "polygon-amoy"
+        assert result.balances[1].error == "RPC timeout"
+        assert result.balances[1].balance is None
+
+
+class TestGetAllAssets:
+    async def test_returns_multi_network_assets(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert "network=all" in str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "ethereum",
+                    "environment": "testnet",
+                    "networkAssets": [
+                        {
+                            "network": "ethereum-sepolia",
+                            "assets": [
+                                {
+                                    "mint": "0x0",
+                                    "symbol": "ETH",
+                                    "name": "Ether",
+                                    "balance": "100",
+                                    "decimals": 18,
+                                    "isNative": True,
+                                }
+                            ],
+                        },
+                        {"network": "polygon-amoy", "error": "RPC failure"},
+                    ],
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_all_assets()
+        assert isinstance(result, MultiNetworkAssetsResponse)
+        assert result.wallet_id == WALLET_ID
+        assert len(result.network_assets) == 2
+        assert result.network_assets[0].network == "ethereum-sepolia"
+        assert result.network_assets[0].assets is not None
+        assert len(result.network_assets[0].assets) == 1
+        assert result.network_assets[0].assets[0].symbol == "ETH"
+        assert result.network_assets[1].network == "polygon-amoy"
+        assert result.network_assets[1].error == "RPC failure"
+        assert result.network_assets[1].assets is None

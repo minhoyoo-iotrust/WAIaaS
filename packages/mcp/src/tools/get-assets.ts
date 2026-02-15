@@ -12,7 +12,7 @@ export function registerGetAssets(server: McpServer, apiClient: ApiClient, walle
     'get_assets',
     withWalletPrefix('Get all assets (native + tokens) held by the wallet.', walletContext?.walletName),
     {
-      network: z.string().optional().describe('Query assets for specific network. Defaults to wallet default network.'),
+      network: z.string().optional().describe("Query assets for specific network. Use 'all' to get assets for all networks in the wallet's environment. Defaults to wallet default network."),
     },
     async (args) => {
       const qs = args.network ? '?network=' + encodeURIComponent(args.network) : '';

@@ -10,6 +10,8 @@ from waiaas.errors import WAIaaSError
 from waiaas.models import (
     EncodeCalldataRequest,
     EncodeCalldataResponse,
+    MultiNetworkAssetsResponse,
+    MultiNetworkBalanceResponse,
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
@@ -147,6 +149,24 @@ class WAIaaSClient:
             params["network"] = network
         resp = await self._request("GET", "/v1/wallet/assets", params=params or None)
         return WalletAssets.model_validate(resp.json())
+
+    async def get_all_balances(self) -> MultiNetworkBalanceResponse:
+        """GET /v1/wallet/balance?network=all -- Get balances for all networks.
+
+        Returns native balances for every network in the wallet's environment.
+        Networks that fail (e.g., RPC timeout) are included with an error field.
+        """
+        resp = await self._request("GET", "/v1/wallet/balance", params={"network": "all"})
+        return MultiNetworkBalanceResponse.model_validate(resp.json())
+
+    async def get_all_assets(self) -> MultiNetworkAssetsResponse:
+        """GET /v1/wallet/assets?network=all -- Get assets for all networks.
+
+        Returns token assets for every network in the wallet's environment.
+        Networks that fail are included with an error field.
+        """
+        resp = await self._request("GET", "/v1/wallet/assets", params={"network": "all"})
+        return MultiNetworkAssetsResponse.model_validate(resp.json())
 
     # -----------------------------------------------------------------
     # Wallet Management API

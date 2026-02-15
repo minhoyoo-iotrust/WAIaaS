@@ -38,6 +38,8 @@ import type {
   SignTransactionResponse,
   WalletInfoResponse,
   SetDefaultNetworkResponse,
+  MultiNetworkBalanceResponse,
+  MultiNetworkAssetsResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -105,6 +107,26 @@ export class WAIaaSClient {
     return withRetry(
       () => this.http.get<AssetsResponse>(
         `/v1/wallet/assets${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async getAllBalances(): Promise<MultiNetworkBalanceResponse> {
+    return withRetry(
+      () => this.http.get<MultiNetworkBalanceResponse>(
+        '/v1/wallet/balance?network=all',
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async getAllAssets(): Promise<MultiNetworkAssetsResponse> {
+    return withRetry(
+      () => this.http.get<MultiNetworkAssetsResponse>(
+        '/v1/wallet/assets?network=all',
         this.authHeaders(),
       ),
       this.retryOptions,

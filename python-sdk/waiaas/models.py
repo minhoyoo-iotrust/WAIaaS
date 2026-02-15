@@ -86,6 +86,51 @@ class SetDefaultNetworkResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Multi-network aggregate models (network=all)
+# ---------------------------------------------------------------------------
+
+
+class MultiNetworkBalance(BaseModel):
+    """Single network entry in multi-network balance response."""
+
+    network: str
+    balance: Optional[str] = None
+    decimals: Optional[int] = None
+    symbol: Optional[str] = None
+    error: Optional[str] = None
+
+
+class MultiNetworkBalanceResponse(BaseModel):
+    """Response from GET /v1/wallet/balance?network=all."""
+
+    wallet_id: str = Field(alias="walletId")
+    chain: str
+    environment: str
+    balances: list[MultiNetworkBalance]
+
+    model_config = {"populate_by_name": True}
+
+
+class MultiNetworkAssets(BaseModel):
+    """Single network entry in multi-network assets response."""
+
+    network: str
+    assets: Optional[list[AssetInfo]] = None
+    error: Optional[str] = None
+
+
+class MultiNetworkAssetsResponse(BaseModel):
+    """Response from GET /v1/wallet/assets?network=all."""
+
+    wallet_id: str = Field(alias="walletId")
+    chain: str
+    environment: str
+    network_assets: list[MultiNetworkAssets] = Field(alias="networkAssets")
+
+    model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
 # Transaction models
 # ---------------------------------------------------------------------------
 

@@ -257,6 +257,29 @@ describe('get_balance tool', () => {
 
     expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/balance');
   });
+
+  it('passes network=all query parameter for aggregate balance', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/balance?network=all', {
+        ok: true,
+        data: {
+          walletId: 'w1', chain: 'ethereum', environment: 'testnet',
+          balances: [
+            { network: 'ethereum-sepolia', balance: '500', decimals: 18, symbol: 'ETH' },
+            { network: 'polygon-amoy', balance: '100', decimals: 18, symbol: 'POL' },
+          ],
+        },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetBalance, apiClient);
+
+    const result = await handler({ network: 'all' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/balance?network=all');
+    const parsed = JSON.parse(result.content[0]!.text) as { balances: unknown[] };
+    expect(parsed.balances).toHaveLength(2);
+  });
 });
 
 describe('get_assets tool', () => {
@@ -304,6 +327,28 @@ describe('get_assets tool', () => {
     await handler({ network: 'polygon-mainnet' });
 
     expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/assets?network=polygon-mainnet');
+  });
+
+  it('passes network=all query parameter for aggregate assets', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/assets?network=all', {
+        ok: true,
+        data: {
+          walletId: 'w1', chain: 'ethereum', environment: 'testnet',
+          networkAssets: [
+            { network: 'ethereum-sepolia', assets: [{ mint: '0x0', symbol: 'ETH', name: 'Ether', balance: '100', decimals: 18, isNative: true }] },
+          ],
+        },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetAssets, apiClient);
+
+    const result = await handler({ network: 'all' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/assets?network=all');
+    const parsed = JSON.parse(result.content[0]!.text) as { networkAssets: unknown[] };
+    expect(parsed.networkAssets).toHaveLength(1);
   });
 });
 

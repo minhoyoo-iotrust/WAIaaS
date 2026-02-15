@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "1.4.6"
+version: "1.4.8"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -264,6 +264,31 @@ Note: `balance` is in the smallest unit. Divide by `10^decimals` for human-reada
 - SOL: divide by 10^9 (1 SOL = 1,000,000,000 lamports)
 - ETH: divide by 10^18 (1 ETH = 1,000,000,000,000,000,000 wei)
 
+### GET /v1/wallet/balance?network=all -- Get All Network Balances
+
+Returns native balances for all networks in the wallet's environment. Useful for getting a complete picture across all chains in one call. Uses `Promise.allSettled` so partial RPC failures return error entries for failed networks while successful networks still return data.
+
+```bash
+curl -s 'http://localhost:3100/v1/wallet/balance?network=all' \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response (200):
+```json
+{
+  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
+  "chain": "ethereum",
+  "environment": "testnet",
+  "balances": [
+    { "network": "ethereum-sepolia", "balance": "500000000000000000", "decimals": 18, "symbol": "ETH" },
+    { "network": "polygon-amoy", "balance": "1200000000000000000", "decimals": 18, "symbol": "POL" },
+    { "network": "arbitrum-sepolia", "error": "RPC timeout" }
+  ]
+}
+```
+
+Each entry either has `balance`/`decimals`/`symbol` (success) or `error` (failure).
+
 ### GET /v1/wallet/assets -- Get All Assets
 
 Returns all assets: native token + SPL tokens (Solana) or ERC-20 tokens (Ethereum).
@@ -304,6 +329,58 @@ Response (200):
 ```
 
 For EVM wallets, assets include ERC-20 tokens from the token registry and ALLOWED_TOKENS policy.
+
+### GET /v1/wallet/assets?network=all -- Get All Network Assets
+
+Returns token assets for all networks in the wallet's environment. Same partial failure handling as balance.
+
+```bash
+curl -s 'http://localhost:3100/v1/wallet/assets?network=all' \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response (200):
+```json
+{
+  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
+  "chain": "ethereum",
+  "environment": "testnet",
+  "networkAssets": [
+    {
+      "network": "ethereum-sepolia",
+      "assets": [
+        { "mint": "0x0", "symbol": "ETH", "name": "Ether", "balance": "500000000000000000", "decimals": 18, "isNative": true }
+      ]
+    },
+    { "network": "polygon-amoy", "error": "RPC timeout" }
+  ]
+}
+```
+
+### PUT /v1/wallet/default-network -- Change Default Network (sessionAuth)
+
+Session-scoped endpoint to change the wallet's default network. The network must be valid for the wallet's chain + environment.
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/wallet/default-network \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{"network": "polygon-amoy"}'
+```
+
+Parameters:
+- `network` (required): new default network identifier
+
+Response (200):
+```json
+{
+  "id": "01958f3a-1234-7000-8000-abcdef123456",
+  "defaultNetwork": "polygon-amoy",
+  "previousNetwork": "ethereum-sepolia"
+}
+```
+
+Error: `ENVIRONMENT_NETWORK_MISMATCH` (400) if the specified network is not valid for the wallet's environment.
 
 ## 3. Session Management
 
@@ -567,7 +644,99 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 | Batch transactions | Supported | Not supported (BATCH_NOT_SUPPORTED) |
 | Owner signature | SIWS (Sign-In With Solana) | SIWE (Sign-In With Ethereum) |
 
-## 8. Error Reference
+## 8. MCP Tools Reference
+
+The MCP server exposes 14 tools for AI agents. Key wallet management tools:
+
+### set_default_network
+
+Changes the wallet's default network for subsequent operations (session-scoped).
+
+Parameters:
+- `network` (required): New default network identifier (e.g., `polygon-amoy`, `ethereum-sepolia`)
+
+Calls `PUT /v1/wallet/default-network` internally. Returns the updated default network and previous network.
+
+### get_balance
+
+Get native token balance. Supports `network` parameter:
+- Omitted: uses wallet default network
+- Specific network name: queries that network
+- `"all"`: returns balances for all networks in the wallet's environment
+
+### get_assets
+
+Get all assets (native + tokens). Same `network` parameter support as `get_balance`:
+- Omitted: uses wallet default network
+- Specific network name: queries that network
+- `"all"`: returns assets for all networks in the wallet's environment
+
+### get_wallet_info
+
+Combined wallet information including address, chain, environment, and available networks with their default status.
+
+## 9. CLI Commands
+
+### waiaas wallet info
+
+Displays wallet information including chain, environment, address, default network, and all available networks.
+
+```bash
+waiaas wallet info
+```
+
+### waiaas wallet set-default-network
+
+Changes the wallet's default network.
+
+```bash
+waiaas wallet set-default-network polygon-amoy
+```
+
+## 10. SDK Methods
+
+### TypeScript SDK
+
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: 'wai_sess_...' });
+
+// Wallet info
+const info = await client.getWalletInfo();
+
+// Change default network
+await client.setDefaultNetwork('polygon-amoy');
+
+// Get all balances across networks
+const allBalances = await client.getAllBalances();
+// Returns: { walletId, chain, environment, balances: [{ network, balance, decimals, symbol } | { network, error }] }
+
+// Get all assets across networks
+const allAssets = await client.getAllAssets();
+// Returns: { walletId, chain, environment, networkAssets: [{ network, assets } | { network, error }] }
+```
+
+### Python SDK
+
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
+    # Wallet info
+    info = await client.get_wallet_info()
+
+    # Change default network
+    await client.set_default_network("polygon-amoy")
+
+    # Get all balances across networks
+    all_balances = await client.get_all_balances()
+
+    # Get all assets across networks
+    all_assets = await client.get_all_assets()
+```
+
+## 11. Error Reference
 
 | Code | HTTP | Description |
 |------|------|-------------|
