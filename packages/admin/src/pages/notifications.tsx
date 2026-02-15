@@ -32,6 +32,7 @@ interface NotificationLogEntry {
   channel: string;
   status: string;
   error: string | null;
+  message: string | null;
   createdAt: number;
 }
 
@@ -48,10 +49,12 @@ export default function NotificationsPage() {
   const status = useSignal<NotificationStatus | null>(null);
   const statusLoading = useSignal(true);
   const testLoading = useSignal(false);
+  const testChannelLoading = useSignal<string | null>(null);
   const testResults = useSignal<TestResult[] | null>(null);
   const logs = useSignal<NotificationLogResponse | null>(null);
   const logsLoading = useSignal(true);
   const currentPage = useSignal(1);
+  const selectedLog = useSignal<NotificationLogEntry | null>(null);
 
   const fetchStatus = async () => {
     try {
@@ -84,7 +87,7 @@ export default function NotificationsPage() {
     testLoading.value = true;
     testResults.value = null;
     try {
-      const body = await apiPost<{ results: TestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST);
+      const body = await apiPost<{ results: TestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST, {});
       const results = body.results;
       testResults.value = results;
       const allSuccess = results.every((r) => r.success);
@@ -101,6 +104,27 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleTestChannel = async (channelName: string) => {
+    testChannelLoading.value = channelName;
+    testResults.value = null;
+    try {
+      const body = await apiPost<{ results: TestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST, { channel: channelName });
+      const results = body.results;
+      testResults.value = results;
+      const allSuccess = results.every((r) => r.success);
+      if (allSuccess) {
+        showToast('success', `Test sent to ${channelName}`);
+      } else {
+        showToast('warning', `${channelName} test failed`);
+      }
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      testChannelLoading.value = null;
+    }
+  };
+
   const handlePrevPage = () => {
     if (currentPage.value > 1) {
       currentPage.value -= 1;
@@ -114,6 +138,10 @@ export default function NotificationsPage() {
       currentPage.value += 1;
       fetchLogs(currentPage.value);
     }
+  };
+
+  const handleRowClick = (log: NotificationLogEntry) => {
+    selectedLog.value = selectedLog.value?.id === log.id ? null : log;
   };
 
   useEffect(() => {
@@ -180,24 +208,35 @@ export default function NotificationsPage() {
             <div key={ch.name} class="channel-card">
               <div class="channel-card-header">
                 <span class="channel-card-name">{ch.name}</span>
-                <Badge variant={ch.enabled ? 'success' : 'neutral'}>
-                  {ch.enabled ? 'Connected' : 'Not Configured'}
-                </Badge>
+                <div class="channel-card-actions">
+                  <Badge variant={ch.enabled ? 'success' : 'neutral'}>
+                    {ch.enabled ? 'Connected' : 'Not Configured'}
+                  </Badge>
+                  {ch.enabled && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleTestChannel(ch.name)}
+                      loading={testChannelLoading.value === ch.name}
+                    >
+                      Test
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Section 2: Test Notification */}
-      <h2>Test Notification</h2>
-      <div style={{ marginBottom: 'var(--space-6)' }}>
+      {/* Test All + Results (below Channel Status) */}
+      <div style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
         <Button
           onClick={handleTestSend}
           loading={testLoading.value}
           disabled={!hasEnabledChannels}
         >
-          Send Test
+          Test All Channels
         </Button>
 
         {testResults.value && (
@@ -217,14 +256,34 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {/* Section 3: Delivery Log Table */}
+      {/* Section 2: Delivery Log Table */}
       <h2>Delivery Log</h2>
       <Table<NotificationLogEntry>
         columns={logColumns}
         data={logs.value?.logs ?? []}
         loading={logsLoading.value}
         emptyMessage="No notification logs"
+        onRowClick={handleRowClick}
       />
+
+      {/* Expanded log message detail */}
+      {selectedLog.value && (
+        <div class="log-message-detail">
+          <div class="log-message-detail-header">
+            <strong>{selectedLog.value.eventType}</strong> via <span style={{ textTransform: 'capitalize' }}>{selectedLog.value.channel}</span>
+            <Button variant="ghost" size="sm" onClick={() => { selectedLog.value = null; }}>
+              Close
+            </Button>
+          </div>
+          <div class="log-message-detail-body">
+            {selectedLog.value.message ? (
+              <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: 'var(--font-size-sm)' }}>{selectedLog.value.message}</pre>
+            ) : (
+              <span class="text-muted">(No message recorded)</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div class="pagination">
         <span class="pagination-info">
@@ -251,7 +310,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Section 4: Configuration Guidance */}
+      {/* Section 3: Configuration Guidance */}
       <div class="config-guidance">
         <p>Notification channels are configured via config.toml. To add or modify channels:</p>
         <pre>{`[notifications]
