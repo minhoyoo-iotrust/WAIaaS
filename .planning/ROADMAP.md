@@ -126,8 +126,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 129-01: ActionDefinition -> MCP Tool 자동 변환 + 동적 등록/해제
-- [ ] 129-02: admin.skill.md + actions.skill.md 작성/동기화
+- [x] 129-01: ActionDefinition -> MCP Tool 자동 변환 + 동적 등록/해제
+- [x] 129-02: admin.skill.md + actions.skill.md 작성/동기화
 
 ## Progress
 
@@ -141,7 +141,7 @@ Phases execute in numeric order: 125 -> 126 -> 127 -> 128 -> 129
 | 126. Oracle Implementations | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
 | 127. USD Policy Integration | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
 | 128. Action Provider + API Key | v1.5 | 4/4 | ✓ Complete | 2026-02-15 |
-| 129. MCP/Admin/Skill Integration | v1.5 | 0/2 | Not started | - |
+| 129. MCP/Admin/Skill Integration | v1.5 | 2/2 | ✓ Complete | 2026-02-15 |
 
 ---
 *Roadmap created: 2026-02-15*
