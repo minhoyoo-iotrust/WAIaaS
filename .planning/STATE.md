@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5.2 Phase 134 -- 폼 인프라 + 5-type 전용 폼
+**Current focus:** v1.5.2 Phase 134 완료 -- 폼 인프라 + 5-type 전용 폼
 
 ## Current Position
 
 Phase: 134 (1 of 2 in v1.5.2) -- 폼 인프라 + 5-type 전용 폼
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-15 -- 134-01 폼 인프라 완료
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-15 -- 134-02 5-type 전용 폼 완료
 
-Progress: [##░░░░░░░░] 25% (1/4 plans)
+Progress: [#####░░░░░] 50% (2/4 plans)
 
 ## Performance Metrics
 
@@ -32,6 +32,9 @@ Full log in PROJECT.md.
 - 134-01: POLICY_RULES_SCHEMAS Partial -> Record 변경 (12개 전체 등록)
 - 134-01: 기존 free-form 테스트를 구조화 검증으로 갱신
 - 134-01: DEFAULT_RULES 타입 강화 (Record<string, Record<string, unknown>>)
+- 134-02: DEFAULT_RULES 스키마 불일치 수정 (APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE)
+- 134-02: PolicyFormRouter .ts -> .tsx 변경 (JSX 필요)
+- 134-02: validateRules Create 시 검증 + onChange 에러 실시간 클리어
 
 ### Blockers/Concerns
 
@@ -41,5 +44,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 134-01-PLAN.md
+Stopped at: Completed 134-02-PLAN.md (Phase 134 complete)
 Resume file: None
