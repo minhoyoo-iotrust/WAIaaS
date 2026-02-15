@@ -125,11 +125,11 @@ Plans:
   2. Pyth Hermes forex 피드 또는 CoinGecko vs_currencies를 소스로 환율이 조회되며, 조회 실패 시 USD 그대로 표시된다 (graceful fallback)
   3. Admin Settings에서 검색 가능한 통화 드롭다운으로 표시 통화를 선택할 수 있고, 현재 환율 미리보기가 옆에 표시된다
   4. Intl.NumberFormat 기반으로 통화별 올바른 기호/소수점/포맷이 적용되고, USD 외 통화에는 "≈" 접두사가 붙는다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 138-01: IForexRateService + Pyth/CoinGecko forex 구현 + InMemoryPriceCache 통합
-- [ ] 138-02: SettingsService display 카테고리 + Admin Settings 통화 드롭다운 + 포매팅 유틸
+- [ ] 138-01-PLAN.md -- IForexRateService 인터페이스 + CoinGeckoForexProvider + ForexRateService + formatDisplayCurrency 유틸 + 테스트
+- [ ] 138-02-PLAN.md -- config.toml display 섹션 + SettingsService display 카테고리 + Admin CurrencySelect 드롭다운 + daemon 부트스트랩
 
 ### Phase 139: 표시 통화 통합
 **Goal**: Admin UI 전체, 알림 메시지, REST API, MCP 도구에서 선택한 통화로 환산된 금액이 표시되는 상태
@@ -155,9 +155,9 @@ Phases execute in numeric order: 136 -> 137 -> 138 -> 139
 |-------|-----------|----------------|--------|-----------|
 | 136. 누적 지출 한도 엔진 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 | 137. 누적 한도 Admin UI + SDK/MCP | v1.5.3 | 2/2 | Complete | 2026-02-16 |
-| 138. ForexRateService + 표시 통화 설정 | v1.5.3 | 0/2 | Not started | - |
+| 138. ForexRateService + 표시 통화 설정 | v1.5.3 | 0/2 | Planned | - |
 | 139. 표시 통화 통합 | v1.5.3 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 137 계획 완료 (2 plans, 3 requirements)*
+*Last updated: 2026-02-16 -- Phase 138 계획 완료 (2 plans, 5 requirements)*
