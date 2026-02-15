@@ -285,7 +285,17 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 9-패�
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+**Current Milestone: v1.5.1 x402 클라이언트 지원**
+
+**Goal:** AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태
+
+**Target features:**
+- x402 핸들러 (HTTP 402 → PaymentRequirements 파싱 → 결제 서명 → X-PAYMENT 재요청)
+- x402 정책 통합 (기존 SPENDING_LIMIT 4-tier + X402_ALLOWED_DOMAINS 신규)
+- 결제 서명 생성기 (Solana SPL TransferChecked / EVM EIP-3009)
+- POST /v1/x402/fetch 데몬 엔드포인트 + SSRF 방어
+- TS SDK x402Fetch() + Python SDK x402_fetch() + MCP x402_fetch 도구
+- 감사 로그 (X402_PAYMENT 트랜잭션 타입) + 알림 연동
 
 ## Next Milestone Goals
 
@@ -508,4 +518,4 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 5 페�
 | 교차 검증 CoinGecko DI 주입 시에만 활성화 | 키 미설정 → fallback 미주입 → 자동 스킵 | ✓ Good — v1.5 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.5 milestone shipped*
+*최종 업데이트: 2026-02-15 after v1.5.1 milestone started*
