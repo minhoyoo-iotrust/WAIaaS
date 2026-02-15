@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 127 of 129 (USD Policy Integration)
-Plan: 2 of 3 in current phase
-Status: Plan 127-01 complete, continuing Phase 127
-Last activity: 2026-02-15 -- PriceResult 3-state + resolveEffectiveAmountUsd 5-type USD 환산 (16 tests)
+Plan: 3 of 3 in current phase
+Status: Plan 127-02 complete, continuing Phase 127
+Last activity: 2026-02-15 -- SpendingLimitRulesSchema Zod SSoT + evaluateSpendingLimit USD 분기 (10 tests)
 
-Progress: [###░░░░░░░] 36%
+Progress: [####░░░░░░] 43%
 
 ## Performance Metrics
 
@@ -53,6 +53,10 @@ Recent decisions affecting current work:
 - v1.5: PriceResult를 plain TypeScript discriminated union으로 구현 (Zod discriminatedUnion 불필요)
 - v1.5: resolveEffectiveAmountUsd request 파라미터를 Record<string,unknown>으로 정의 (stages.ts as 캐스팅 패턴)
 - v1.5: BATCH instruction 분류를 classifyInstruction 헬퍼로 분리 (stage3Policy와 동일 로직)
+- v1.5: TIER_ORDER + maxTier를 클래스 외부 모듈 레벨에 배치 (evaluateBatch 기존 tierOrder와 동일 패턴이나 공유 가능)
+- v1.5: evaluateNativeTier를 별도 private 메서드로 추출하여 evaluateSpendingLimit 가독성 향상
+- v1.5: usdAmount=0일 때 USD 평가 스킵 (APPROVE 등 네이티브 금액 0인 케이스 안전 처리)
+- v1.5: SpendingLimitRulesSchema를 named export하여 daemon 테스트에서 직접 검증 가능
 
 ### Blockers/Concerns
 
@@ -63,5 +67,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 127-01-PLAN.md (PriceResult 3-state + resolveEffectiveAmountUsd 5-type USD 환산 -- 16 tests)
+Stopped at: Completed 127-02-PLAN.md (SpendingLimitRulesSchema Zod SSoT + evaluateSpendingLimit USD 분기 -- 10 tests)
 Resume file: None
