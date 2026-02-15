@@ -62,7 +62,7 @@
 - [x] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** (2/2 plans) -- completed 2026-02-15
 - [x] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** (3/3 plans) -- completed 2026-02-15
 - [x] **Phase 132: REST API + 정책 통합 + 감사 로그** (3/3 plans) -- completed 2026-02-15
-- [ ] **Phase 133: SDK + MCP + 스킬 파일** - TS/Python SDK, MCP 도구, 문서 통합
+- [ ] **Phase 133: SDK + MCP + 스킬 파일** (2 plans) - TS/Python SDK, MCP 도구, 문서 통합
 
 ## Phase Details
 
@@ -112,9 +112,9 @@ Plans:
 **Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 132-01-PLAN.md — X402_ALLOWED_DOMAINS 도메인 정책 TDD + config.toml [x402] 섹션 (Wave 1)
-- [ ] 132-02-PLAN.md — x402 결제 금액 USD 환산 TDD (USDC $1 직접 + IPriceOracle) (Wave 1)
-- [ ] 132-03-PLAN.md — POST /v1/x402/fetch 라우트 + server.ts 등록 + 통합 테스트 (Wave 2)
+- [x] 132-01-PLAN.md — X402_ALLOWED_DOMAINS 도메인 정책 TDD + config.toml [x402] 섹션 (Wave 1)
+- [x] 132-02-PLAN.md — x402 결제 금액 USD 환산 TDD (USDC $1 직접 + IPriceOracle) (Wave 1)
+- [x] 132-03-PLAN.md — POST /v1/x402/fetch 라우트 + server.ts 등록 + 통합 테스트 (Wave 2)
 
 ### Phase 133: SDK + MCP + 스킬 파일
 **Goal**: AI 에이전트가 TS SDK, Python SDK, MCP 도구를 통해 x402 유료 API를 자율적으로 호출하고, 스킬 파일로 사용법을 학습할 수 있는 상태
@@ -124,11 +124,11 @@ Plans:
   1. TS SDK의 client.x402Fetch(url, options)와 Python SDK의 client.x402_fetch(url, options)가 POST /v1/x402/fetch를 호출하여 유료 리소스를 가져온다
   2. MCP x402_fetch 도구로 AI 에이전트가 유료 API URL을 전달하면 자동 결제 후 응답을 받을 수 있다
   3. x402.skill.md 스킬 파일이 생성되어 MCP 스킬 리소스(waiaas://skills/x402)로 노출되고, transactions.skill.md에 x402 결제 내역 조회가 반영된다
-**Plans**: TBD
+**Plans**: 2 plans (1 wave)
 
 Plans:
-- [ ] 133-01: TS SDK + Python SDK x402Fetch 메서드
-- [ ] 133-02: MCP x402_fetch 도구 + 스킬 파일
+- [ ] 133-01-PLAN.md — TS SDK + Python SDK x402Fetch/x402_fetch 메서드 + 테스트 (Wave 1)
+- [ ] 133-02-PLAN.md — MCP x402_fetch 도구 + x402.skill.md + transactions.skill.md 갱신 + 스킬 등록 (Wave 1)
 
 ## Progress
 
