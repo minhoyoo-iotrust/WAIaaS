@@ -13,6 +13,10 @@ export interface PolicyEvaluation {
   reason?: string;
   /** Delay seconds for DELAY tier. */
   delaySeconds?: number;
+  /** Reason for APPROVAL escalation (per_tx / cumulative_daily / cumulative_monthly). */
+  approvalReason?: 'per_tx' | 'cumulative_daily' | 'cumulative_monthly';
+  /** Cumulative spending warning: ratio (0-1) of limit used, if >= 0.8. */
+  cumulativeWarning?: { type: 'daily' | 'monthly'; ratio: number; spent: number; limit: number };
 }
 
 /**

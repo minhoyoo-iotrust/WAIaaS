@@ -4,7 +4,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 /**
  * Messages type definition. Enforces key parity across all locales.
  * Keys in errors must match ERROR_CODES keys exactly (74 error codes).
- * Notification templates cover all 21 event types.
+ * Notification templates cover all 22 event types.
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
@@ -124,7 +124,7 @@ export const messages: Messages = {
     X402_APPROVAL_REQUIRED: 'x402 payment requires owner approval (amount too high)',
     X402_SERVER_ERROR: 'Resource server error after x402 payment',
   },
-  // Notification templates (21 event types)
+  // Notification templates (22 event types)
   notifications: {
     TX_REQUESTED: { title: 'Transaction Requested', body: 'Wallet {walletId} requested {amount} transfer to {to}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
@@ -147,6 +147,7 @@ export const messages: Messages = {
     OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from wallet {walletId}' },
     OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for wallet {walletId}' },
     DAILY_SUMMARY: { title: 'Daily Summary', body: 'Wallets: {walletCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
+    CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: 'Wallet {walletId} {type} spending at {ratio}% of limit (${spent} / ${limit})' },
   },
   // System messages
   system: {
