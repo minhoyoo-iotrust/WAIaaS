@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 128 of 129 (Action Provider + API Key)
-Plan: 4 of 4 in current phase
-Status: Plan 3 complete (2/2 tasks), starting Plan 4
-Last activity: 2026-02-15 -- Actions REST API 2 라우트 + DaemonLifecycle Step 4f + 11 통합 테스트
+Plan: 4 of 4 in current phase (COMPLETE)
+Status: Phase 128 complete (4/4 plans)
+Last activity: 2026-02-15 -- Admin UI API Keys CRUD + GET/PUT/DELETE /v1/admin/api-keys REST API (10 tests)
 
-Progress: [#######░░░] 75%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -71,6 +71,10 @@ Recent decisions affecting current work:
 - v1.5: ContractCallRequest를 PipelineContext.request로 직접 주입 -- Stage 1이 type: CONTRACT_CALL 5-type 스키마로 검증
 - v1.5: resolve() 실패 시 WAIaaSError가 아닌 에러는 ACTION_RESOLVE_FAILED(502)로 래핑
 - v1.5: GET /actions/providers에서 apiKeyStore.has()로 각 프로바이더의 키 설정 여부 포함
+- v1.5: AdminRouteDeps에 apiKeyStore/actionProviderRegistry optional로 추가 -- 하위 호환 유지
+- v1.5: GET /admin/api-keys에서 registry.listProviders()와 apiKeyStore.listAll() 조합
+- v1.5: DELETE 미존재 키 시 ACTION_NOT_FOUND(404) 반환 -- 기존 에러 코드 재사용
+- v1.5: ApiKeysSection을 DaemonSettings 아래 배치 -- 프로바이더 미등록 시 자동 숨김
 
 ### Blockers/Concerns
 
@@ -81,5 +85,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 128-03-PLAN.md (Actions REST API 2 라우트 + DaemonLifecycle Step 4f + 11 통합 테스트)
+Stopped at: Completed 128-04-PLAN.md (Admin UI API Keys CRUD + GET/PUT/DELETE /v1/admin/api-keys REST API -- 10 tests)
 Resume file: None
