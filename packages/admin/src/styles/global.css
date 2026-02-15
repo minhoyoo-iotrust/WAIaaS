@@ -791,6 +791,18 @@ table .table-loading {
 .tier-bar-fill--delay   { background: var(--color-tier-delay); }
 .tier-bar-fill--approval { background: var(--color-tier-blocked); }
 
+/* Policy rules visualization */
+.rules-vis-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.rules-vis-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* Policy rules summary */
 .rules-summary {
   font-size: var(--font-size-xs);

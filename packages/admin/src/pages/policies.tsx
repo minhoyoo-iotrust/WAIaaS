@@ -10,6 +10,7 @@ import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { PolicyFormRouter } from '../components/policy-forms';
+import { PolicyRulesSummary } from '../components/policy-rules-summary';
 
 interface Wallet {
   id: string;
@@ -102,69 +103,60 @@ function validateRules(type: string, rules: Record<string, unknown>): Record<str
   } else if (type === 'APPROVE_AMOUNT_LIMIT') {
     if (rules.maxAmount && !/^\d+$/.test(rules.maxAmount as string))
       errors.maxAmount = 'Must be a positive integer string';
+  } else if (type === 'ALLOWED_TOKENS') {
+    const tokens = (rules.tokens as Array<{ address: string }>) || [];
+    if (tokens.length === 0) errors.tokens = 'At least one token required';
+    tokens.forEach((t, i) => {
+      if (!t.address || t.address.trim() === '') errors[`tokens.${i}.address`] = 'Address required';
+    });
+  } else if (type === 'CONTRACT_WHITELIST') {
+    const contracts = (rules.contracts as Array<{ address: string }>) || [];
+    if (contracts.length === 0) errors.contracts = 'At least one contract required';
+    contracts.forEach((c, i) => {
+      if (!c.address || c.address.trim() === '') errors[`contracts.${i}.address`] = 'Address required';
+    });
+  } else if (type === 'METHOD_WHITELIST') {
+    const methods = (rules.methods as Array<{ contractAddress: string; selectors: string[] }>) || [];
+    if (methods.length === 0) errors.methods = 'At least one method entry required';
+    methods.forEach((m, i) => {
+      if (!m.contractAddress || m.contractAddress.trim() === '')
+        errors[`methods.${i}.contractAddress`] = 'Contract address required';
+      if (!m.selectors || m.selectors.length === 0)
+        errors[`methods.${i}.selectors`] = 'At least one selector required';
+      else
+        m.selectors.forEach((s, j) => {
+          if (!s || s.trim() === '') errors[`methods.${i}.selectors.${j}`] = 'Selector required';
+        });
+    });
+  } else if (type === 'APPROVED_SPENDERS') {
+    const spenders = (rules.spenders as Array<{ address: string; maxAmount?: string }>) || [];
+    if (spenders.length === 0) errors.spenders = 'At least one spender required';
+    spenders.forEach((sp, i) => {
+      if (!sp.address || sp.address.trim() === '') errors[`spenders.${i}.address`] = 'Address required';
+      if (sp.maxAmount && !/^\d+$/.test(sp.maxAmount))
+        errors[`spenders.${i}.maxAmount`] = 'Must be a positive integer';
+    });
+  } else if (type === 'TIME_RESTRICTION') {
+    const days = (rules.allowed_days as number[]) || [];
+    if (days.length === 0) errors.allowed_days = 'At least one day required';
+    const hours = rules.allowed_hours as { start: number; end: number } | undefined;
+    if (hours && hours.start >= hours.end) errors.allowed_hours = 'Start must be before end';
+  } else if (type === 'ALLOWED_NETWORKS') {
+    const networks = (rules.networks as Array<{ network: string }>) || [];
+    if (networks.length === 0) errors.networks = 'At least one network required';
+    networks.forEach((n, i) => {
+      if (!n.network || n.network.trim() === '') errors[`networks.${i}.network`] = 'Network required';
+    });
+  } else if (type === 'X402_ALLOWED_DOMAINS') {
+    const domains = (rules.domains as string[]) || [];
+    if (domains.length === 0) errors.domains = 'At least one domain required';
+    domains.forEach((d, i) => {
+      if (!d || d.trim() === '') errors[`domains.${i}`] = 'Domain required';
+    });
   }
   // APPROVE_TIER_OVERRIDE uses a select so it's always valid
 
   return errors;
-}
-
-function formatNumber(value: string | number): string {
-  const num = typeof value === 'string' ? Number(value) : value;
-  if (Number.isNaN(num)) return String(value);
-  return num.toLocaleString('en-US');
-}
-
-function TierVisualization({ rules }: { rules: Record<string, unknown> }) {
-  const instantMax = Number(rules.instant_max ?? 0);
-  const notifyMax = Number(rules.notify_max ?? 0);
-  const delayMax = Number(rules.delay_max ?? 0);
-  const maxValue = Math.max(instantMax, notifyMax, delayMax, 1);
-
-  const tiers = [
-    {
-      label: 'Instant',
-      value: rules.instant_max as string,
-      width: (instantMax / maxValue) * 100,
-      cls: 'instant',
-    },
-    {
-      label: 'Notify',
-      value: rules.notify_max as string,
-      width: (notifyMax / maxValue) * 100,
-      cls: 'notify',
-    },
-    {
-      label: 'Delay',
-      value: rules.delay_max as string,
-      width: (delayMax / maxValue) * 100,
-      cls: 'delay',
-    },
-    {
-      label: 'Approval',
-      value: '',
-      width: 100,
-      cls: 'approval',
-    },
-  ];
-
-  return (
-    <div class="tier-bars">
-      {tiers.map((tier) => (
-        <div class="tier-bar" key={tier.cls}>
-          <span class="tier-bar-label">{tier.label}</span>
-          <div class="tier-bar-track">
-            <div
-              class={`tier-bar-fill tier-bar-fill--${tier.cls}`}
-              style={{ width: `${tier.width}%` }}
-            />
-          </div>
-          <span class="tier-bar-value">
-            {tier.value ? formatNumber(tier.value) : ''}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function getWalletName(walletId: string | null, walletList: Wallet[]): string {
@@ -203,6 +195,9 @@ export default function PoliciesPage() {
   const editModal = useSignal(false);
   const editPolicy = useSignal<Policy | null>(null);
   const editRules = useSignal('');
+  const editRulesObj = useSignal<Record<string, unknown>>({});
+  const editJsonMode = useSignal(false);
+  const editFormErrors = useSignal<Record<string, string>>({});
   const editPriority = useSignal<number>(0);
   const editEnabled = useSignal(true);
   const editError = useSignal<string | null>(null);
@@ -300,6 +295,9 @@ export default function PoliciesPage() {
   const openEdit = (policy: Policy) => {
     editPolicy.value = policy;
     editRules.value = JSON.stringify(policy.rules, null, 2);
+    editRulesObj.value = { ...policy.rules };
+    editJsonMode.value = false;
+    editFormErrors.value = {};
     editPriority.value = policy.priority;
     editEnabled.value = policy.enabled;
     editError.value = null;
@@ -309,11 +307,21 @@ export default function PoliciesPage() {
   const handleEdit = async () => {
     editError.value = null;
     let parsedRules: Record<string, unknown>;
-    try {
-      parsedRules = JSON.parse(editRules.value);
-    } catch {
-      editError.value = 'Invalid JSON in rules field';
-      return;
+    if (editJsonMode.value) {
+      try {
+        parsedRules = JSON.parse(editRules.value);
+      } catch {
+        editError.value = 'Invalid JSON in rules field';
+        return;
+      }
+    } else {
+      const validationErrors = validateRules(editPolicy.value!.type, editRulesObj.value);
+      if (Object.keys(validationErrors).length > 0) {
+        editFormErrors.value = validationErrors;
+        return;
+      }
+      editFormErrors.value = {};
+      parsedRules = editRulesObj.value;
     }
 
     editLoading.value = true;
@@ -332,6 +340,23 @@ export default function PoliciesPage() {
     } finally {
       editLoading.value = false;
     }
+  };
+
+  const handleEditJsonToggle = () => {
+    if (!editJsonMode.value) {
+      // Structured form -> JSON
+      editRules.value = JSON.stringify(editRulesObj.value, null, 2);
+    } else {
+      // JSON -> Structured form
+      try {
+        editRulesObj.value = JSON.parse(editRules.value);
+        editError.value = null;
+      } catch {
+        editError.value = 'Invalid JSON — cannot switch to form mode';
+        return;
+      }
+    }
+    editJsonMode.value = !editJsonMode.value;
   };
 
   const openDelete = (policy: Policy) => {
@@ -414,17 +439,7 @@ export default function PoliciesPage() {
     {
       key: 'rules',
       header: 'Rules',
-      render: (p) => {
-        if (p.type === 'SPENDING_LIMIT') {
-          return <TierVisualization rules={p.rules} />;
-        }
-        const json = JSON.stringify(p.rules);
-        return (
-          <span class="rules-summary">
-            {json.length > 60 ? json.slice(0, 60) + '...' : json}
-          </span>
-        );
-      },
+      render: (p) => <PolicyRulesSummary type={p.type} rules={p.rules} />,
     },
     {
       key: 'priority',
@@ -600,15 +615,37 @@ export default function PoliciesPage() {
             <div class="policy-type-readonly">
               Type: {getPolicyTypeLabel(editPolicy.value.type)}
             </div>
-            <div class="edit-rules-textarea">
-              <FormField
-                label="Rules (JSON)"
-                name="edit-rules"
-                type="textarea"
-                value={editRules.value}
-                onChange={(v) => { editRules.value = v as string; }}
-                error={editError.value ?? undefined}
-              />
+            <div class="policy-form-section">
+              <div class="policy-form-header">
+                <label>Rules</label>
+                <button class="btn btn-ghost btn-sm json-toggle" onClick={handleEditJsonToggle}>
+                  {editJsonMode.value ? 'Switch to Form' : 'JSON Direct Edit'}
+                </button>
+              </div>
+              {editJsonMode.value ? (
+                <div class="edit-rules-textarea">
+                  <FormField
+                    label=""
+                    name="edit-rules"
+                    type="textarea"
+                    value={editRules.value}
+                    onChange={(v) => { editRules.value = v as string; }}
+                    error={editError.value ?? undefined}
+                  />
+                </div>
+              ) : (
+                <PolicyFormRouter
+                  type={editPolicy.value.type}
+                  rules={editRulesObj.value}
+                  onChange={(r) => {
+                    editRulesObj.value = r;
+                    if (Object.keys(editFormErrors.value).length > 0) {
+                      editFormErrors.value = validateRules(editPolicy.value!.type, r);
+                    }
+                  }}
+                  errors={editFormErrors.value}
+                />
+              )}
             </div>
             <FormField
               label="Priority"
