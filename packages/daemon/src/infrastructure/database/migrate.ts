@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 12;
+export const LATEST_SCHEMA_VERSION = 13;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -111,6 +111,8 @@ function getCreateTableStatements(): string[] {
   executed_at INTEGER,
   created_at INTEGER NOT NULL,
   reserved_amount TEXT,
+  amount_usd REAL,
+  reserved_amount_usd REAL,
   error TEXT,
   metadata TEXT,
   network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
@@ -1118,6 +1120,22 @@ MIGRATIONS.push({
         `FK integrity violation after v12: ${JSON.stringify(fkErrors)}`,
       );
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v13: Add amount_usd and reserved_amount_usd columns to transactions
+// ---------------------------------------------------------------------------
+// Simple ALTER TABLE ADD COLUMN -- no CHECK constraint changes, no table recreation needed.
+// These nullable REAL columns store USD-denominated amounts for cumulative spending limit evaluation.
+// amount_usd: confirmed USD amount (persists after CONFIRMED), reserved_amount_usd: cleared on release.
+
+MIGRATIONS.push({
+  version: 13,
+  description: 'Add amount_usd and reserved_amount_usd columns to transactions',
+  up: (sqlite) => {
+    sqlite.exec('ALTER TABLE transactions ADD COLUMN amount_usd REAL');
+    sqlite.exec('ALTER TABLE transactions ADD COLUMN reserved_amount_usd REAL');
   },
 });
 
