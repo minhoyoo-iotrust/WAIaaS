@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 13 daemon administration endpoints.
+ * Admin route handlers: 16 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -14,6 +14,9 @@
  * PUT    /admin/settings            - Update settings (masterAuth)
  * POST   /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
  * GET    /admin/oracle-status       - Oracle cache/source/cross-validation status (masterAuth)
+ * GET    /admin/api-keys            - List Action Provider API key status (masterAuth)
+ * PUT    /admin/api-keys/:provider  - Set or update API key (masterAuth)
+ * DELETE /admin/api-keys/:provider  - Delete API key (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
@@ -33,6 +36,8 @@ import type { SettingsService } from '../../infrastructure/settings/index.js';
 import { getSettingDefinition } from '../../infrastructure/settings/index.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
+import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import {
   AdminStatusResponseSchema,
   KillSwitchResponseSchema,
@@ -81,6 +86,8 @@ export interface AdminRouteDeps {
   daemonConfig?: DaemonConfig;
   priceOracle?: IPriceOracle;
   oracleConfig?: { coingeckoApiKeyConfigured: boolean; crossValidationThreshold: number };
+  apiKeyStore?: ApiKeyStore;
+  actionProviderRegistry?: ActionProviderRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +304,87 @@ const oracleStatusRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// API Keys route definitions
+// ---------------------------------------------------------------------------
+
+const apiKeysListResponseSchema = z.object({
+  keys: z.array(
+    z.object({
+      providerName: z.string(),
+      hasKey: z.boolean(),
+      maskedKey: z.string().nullable(),
+      requiresApiKey: z.boolean(),
+      updatedAt: z.string().nullable(),
+    }),
+  ),
+});
+
+const apiKeysListRoute = createRoute({
+  method: 'get',
+  path: '/admin/api-keys',
+  tags: ['Admin'],
+  summary: 'List Action Provider API key status',
+  responses: {
+    200: {
+      description: 'API key status per provider',
+      content: { 'application/json': { schema: apiKeysListResponseSchema } },
+    },
+  },
+});
+
+const apiKeyPutRoute = createRoute({
+  method: 'put',
+  path: '/admin/api-keys/{provider}',
+  tags: ['Admin'],
+  summary: 'Set or update Action Provider API key',
+  request: {
+    params: z.object({ provider: z.string() }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({ apiKey: z.string().min(1) }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'API key saved',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            providerName: z.string(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+const apiKeyDeleteRoute = createRoute({
+  method: 'delete',
+  path: '/admin/api-keys/{provider}',
+  tags: ['Admin'],
+  summary: 'Delete Action Provider API key',
+  request: {
+    params: z.object({ provider: z.string() }),
+  },
+  responses: {
+    200: {
+      description: 'API key deleted',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.boolean() }),
+        },
+      },
+    },
+    ...buildErrorResponses(['ACTION_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Admin wallet route definitions
 // ---------------------------------------------------------------------------
 
@@ -382,21 +470,24 @@ const adminWalletBalanceRoute = createRoute({
 /**
  * Create admin route sub-router.
  *
- * GET  /admin/status              - Daemon health info (masterAuth)
- * POST /admin/kill-switch         - Activate kill switch (masterAuth)
- * GET  /admin/kill-switch         - Get kill switch state (public)
- * POST /admin/recover             - Deactivate kill switch (masterAuth)
- * POST /admin/shutdown            - Graceful shutdown (masterAuth)
- * POST /admin/rotate-secret       - Rotate JWT secret (masterAuth)
- * GET  /admin/notifications/status - Notification channel status (masterAuth)
- * POST /admin/notifications/test   - Send test notification (masterAuth)
- * GET  /admin/notifications/log    - Query notification logs (masterAuth)
- * GET  /admin/settings            - Get all settings (masterAuth)
- * PUT  /admin/settings            - Update settings (masterAuth)
- * POST /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
- * GET  /admin/oracle-status            - Oracle cache/source/cross-validation status (masterAuth)
- * GET  /admin/wallets/:id/balance      - Wallet native+token balance (masterAuth)
- * GET  /admin/wallets/:id/transactions - Wallet transaction history (masterAuth)
+ * GET    /admin/status              - Daemon health info (masterAuth)
+ * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
+ * GET    /admin/kill-switch         - Get kill switch state (public)
+ * POST   /admin/recover             - Deactivate kill switch (masterAuth)
+ * POST   /admin/shutdown            - Graceful shutdown (masterAuth)
+ * POST   /admin/rotate-secret       - Rotate JWT secret (masterAuth)
+ * GET    /admin/notifications/status - Notification channel status (masterAuth)
+ * POST   /admin/notifications/test   - Send test notification (masterAuth)
+ * GET    /admin/notifications/log    - Query notification logs (masterAuth)
+ * GET    /admin/settings            - Get all settings (masterAuth)
+ * PUT    /admin/settings            - Update settings (masterAuth)
+ * POST   /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
+ * GET    /admin/oracle-status       - Oracle cache/source/cross-validation status (masterAuth)
+ * GET    /admin/api-keys            - List Action Provider API key status (masterAuth)
+ * PUT    /admin/api-keys/:provider  - Set or update API key (masterAuth)
+ * DELETE /admin/api-keys/:provider  - Delete API key (masterAuth)
+ * GET    /admin/wallets/:id/balance      - Wallet native+token balance (masterAuth)
+ * GET    /admin/wallets/:id/transactions - Wallet transaction history (masterAuth)
  */
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -943,6 +1034,80 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       },
       200,
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/api-keys
+  // ---------------------------------------------------------------------------
+
+  router.openapi(apiKeysListRoute, async (c) => {
+    const registry = deps.actionProviderRegistry;
+    const store = deps.apiKeyStore;
+
+    if (!registry) {
+      return c.json({ keys: [] }, 200);
+    }
+
+    const providers = registry.listProviders();
+    const storedKeys = store ? store.listAll() : [];
+    const storedMap = new Map(storedKeys.map((k) => [k.providerName, k]));
+
+    const keys = providers.map((p) => {
+      const stored = storedMap.get(p.name);
+      return {
+        providerName: p.name,
+        hasKey: stored?.hasKey ?? false,
+        maskedKey: stored?.maskedKey ?? null,
+        requiresApiKey: p.requiresApiKey ?? false,
+        updatedAt: stored?.updatedAt
+          ? stored.updatedAt.toISOString()
+          : null,
+      };
+    });
+
+    return c.json({ keys }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /admin/api-keys/:provider
+  // ---------------------------------------------------------------------------
+
+  router.openapi(apiKeyPutRoute, async (c) => {
+    const { provider } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    if (!deps.apiKeyStore) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'API key store not available',
+      });
+    }
+
+    deps.apiKeyStore.set(provider, body.apiKey);
+    return c.json({ success: true, providerName: provider }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /admin/api-keys/:provider
+  // ---------------------------------------------------------------------------
+
+  router.openapi(apiKeyDeleteRoute, async (c) => {
+    const { provider } = c.req.valid('param');
+
+    if (!deps.apiKeyStore) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'API key store not available',
+      });
+    }
+
+    const deleted = deps.apiKeyStore.delete(provider);
+    if (!deleted) {
+      throw new WAIaaSError('ACTION_NOT_FOUND', {
+        message: `No API key found for provider '${provider}'`,
+        details: { providerName: provider },
+      });
+    }
+
+    return c.json({ success: true }, 200);
   });
 
   // ---------------------------------------------------------------------------
