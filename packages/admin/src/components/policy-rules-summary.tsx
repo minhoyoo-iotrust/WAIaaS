@@ -74,6 +74,35 @@ function TierVisualization({ rules }: { rules: Record<string, unknown> }) {
   );
 }
 
+function formatUsd(value: number): string {
+  return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function CumulativeLimitSummary({ rules }: { rules: Record<string, unknown> }) {
+  const dailyLimit = rules.daily_limit_usd as number | undefined;
+  const monthlyLimit = rules.monthly_limit_usd as number | undefined;
+
+  if (!dailyLimit && !monthlyLimit) return null;
+
+  return (
+    <div class="cumulative-limits">
+      <div class="cumulative-limits-label">Cumulative Limits</div>
+      {dailyLimit && (
+        <div class="cumulative-limit-row">
+          <span class="cumulative-limit-type">Daily (24h)</span>
+          <span class="cumulative-limit-value">${formatUsd(dailyLimit)}</span>
+        </div>
+      )}
+      {monthlyLimit && (
+        <div class="cumulative-limit-row">
+          <span class="cumulative-limit-type">Monthly (30d)</span>
+          <span class="cumulative-limit-value">${formatUsd(monthlyLimit)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TIER_COLORS: Record<string, 'success' | 'info' | 'warning' | 'danger'> = {
   INSTANT: 'success',
   NOTIFY: 'info',
@@ -83,9 +112,14 @@ const TIER_COLORS: Record<string, 'success' | 'info' | 'warning' | 'danger'> = {
 
 export function PolicyRulesSummary({ type, rules }: { type: string; rules: Record<string, unknown> }) {
   switch (type) {
-    // 1. SPENDING_LIMIT: tier bars (moved from policies.tsx)
+    // 1. SPENDING_LIMIT: tier bars + cumulative limits
     case 'SPENDING_LIMIT':
-      return <TierVisualization rules={rules} />;
+      return (
+        <div class="spending-limit-summary">
+          <TierVisualization rules={rules} />
+          <CumulativeLimitSummary rules={rules} />
+        </div>
+      );
 
     // 2. ALLOWED_TOKENS: symbol badges (VIS-01)
     case 'ALLOWED_TOKENS': {

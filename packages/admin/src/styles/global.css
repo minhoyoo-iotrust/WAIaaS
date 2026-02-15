@@ -791,6 +791,44 @@ table .table-loading {
 .tier-bar-fill--delay   { background: var(--color-tier-delay); }
 .tier-bar-fill--approval { background: var(--color-tier-blocked); }
 
+/* Cumulative limits in SPENDING_LIMIT summary */
+.spending-limit-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cumulative-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.cumulative-limits-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.cumulative-limit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--font-size-xs);
+}
+
+.cumulative-limit-type {
+  color: var(--color-text-secondary);
+  min-width: 72px;
+}
+
+.cumulative-limit-value {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
 /* Policy rules visualization */
 .rules-vis-text {
   font-size: var(--font-size-xs);
