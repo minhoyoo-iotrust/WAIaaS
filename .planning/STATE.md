@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5 Phase 128 Spending Limit USD
+**Current focus:** v1.5 Phase 128 Action Provider + API Key
 
 ## Current Position
 
-Phase: 128 of 129 (Spending Limit USD)
-Plan: 1 of ? in current phase
-Status: Phase 127 complete (3/3 plans), starting Phase 128
-Last activity: 2026-02-15 -- Stage 3 USD 파이프라인 통합 + OracleChain DI + notListed 격상/감사로그/힌트 (9 tests)
+Phase: 128 of 129 (Action Provider + API Key)
+Plan: 2 of 4 in current phase
+Status: Plan 1 complete (2/2 tasks), starting Plan 2
+Last activity: 2026-02-15 -- IActionProvider Zod SSoT + ActionProviderRegistry 구현 (20 tests)
 
 Progress: [#####░░░░░] 50%
 
@@ -61,6 +61,10 @@ Recent decisions affecting current work:
 - v1.5: hintedTokens를 export하여 테스트에서 beforeEach clear 가능
 - v1.5: CoinGeckoOracle 생성자에 API 키 문자열 직접 전달 (SettingsService 아닌 string)
 - v1.5: priceOracle DI를 CreateAppDeps에 optional로 추가하여 하위 호환 유지
+- v1.5: inputSchema를 z.any()로 정의하고 register() 시 덕 타이핑 검증 (typeof parse/safeParse === 'function') -- 크로스 Zod 버전 호환
+- v1.5: ActionProviderRegistry를 infrastructure/action/ 디렉토리에 배치 (설계 문서 62의 services/ 대신 기존 컨벤션 준수)
+- v1.5: ContractCallRequest.from 검증 스킵 (현행 스키마에 from 필드 없음, Stage 5에서 자동 설정)
+- v1.5: ESM 플러그인 로드 시 fail-open 패턴 (개별 실패 시 warn 로그 + 건너뛰기)
 
 ### Blockers/Concerns
 
@@ -71,5 +75,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 127-03-PLAN.md (Stage 3 USD 파이프라인 통합 + OracleChain DI + notListed 격상/감사로그/힌트 -- 9 tests)
+Stopped at: Completed 128-01-PLAN.md (IActionProvider Zod SSoT + ActionProviderRegistry 구현 -- 20 tests)
 Resume file: None
