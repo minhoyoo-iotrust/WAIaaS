@@ -2,12 +2,14 @@
  * WAIaaS CLI entry point.
  *
  * Commands:
- *   init       -- Initialize WAIaaS data directory
- *   start      -- Start the WAIaaS daemon
- *   stop       -- Stop the WAIaaS daemon
- *   status     -- Check WAIaaS daemon status
- *   quickstart -- Create Solana + EVM wallets for quick setup
- *   mcp setup  -- Set up MCP integration for Claude Desktop
+ *   init                              -- Initialize WAIaaS data directory
+ *   start                             -- Start the WAIaaS daemon
+ *   stop                              -- Stop the WAIaaS daemon
+ *   status                            -- Check WAIaaS daemon status
+ *   quickstart                        -- Create Solana + EVM wallets for quick setup
+ *   wallet info                       -- Show wallet details
+ *   wallet set-default-network <net>  -- Change default network
+ *   mcp setup                         -- Set up MCP integration for Claude Desktop
  *
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
  */
@@ -19,6 +21,7 @@ import { stopCommand } from './commands/stop.js';
 import { statusCommand } from './commands/status.js';
 import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
+import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
 import { resolveDataDir } from './utils/data-dir.js';
 
 const program = new Command();
@@ -92,6 +95,38 @@ program
       expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
       masterPassword: opts.password,
     });
+  });
+
+// Wallet subcommand group
+const wallet = program.command('wallet').description('Wallet management commands');
+
+wallet
+  .command('info')
+  .description('Show wallet details')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--wallet <id>', 'Wallet ID or name (auto-detected if only one)')
+  .option('--password <password>', 'Master password')
+  .action(async (opts: { baseUrl?: string; wallet?: string; password?: string }) => {
+    await walletInfoCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      password: opts.password,
+      walletId: opts.wallet,
+    });
+  });
+
+wallet
+  .command('set-default-network')
+  .description('Change wallet default network')
+  .argument('<network>', 'Network to set as default (e.g., polygon-amoy)')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--wallet <id>', 'Wallet ID or name (auto-detected if only one)')
+  .option('--password <password>', 'Master password')
+  .action(async (network: string, opts: { baseUrl?: string; wallet?: string; password?: string }) => {
+    await walletSetDefaultNetworkCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      password: opts.password,
+      walletId: opts.wallet,
+    }, network);
   });
 
 // MCP subcommand group

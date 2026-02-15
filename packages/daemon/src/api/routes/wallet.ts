@@ -1,6 +1,6 @@
 /**
  * Wallet query routes: GET /v1/wallet/address, GET /v1/wallet/balance,
- * GET /v1/wallet/assets.
+ * GET /v1/wallet/assets, PUT /v1/wallet/default-network.
  *
  * v1.2: Protected by sessionAuth middleware (Authorization: Bearer wai_sess_<token>),
  *       applied at server level in createApp().
@@ -23,6 +23,8 @@ import {
   WalletAddressResponseSchema,
   WalletBalanceResponseSchema,
   WalletAssetsResponseSchema,
+  UpdateDefaultNetworkRequestSchema,
+  UpdateDefaultNetworkResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -109,6 +111,29 @@ const walletAssetsRoute = createRoute({
   },
 });
 
+const walletDefaultNetworkRoute = createRoute({
+  method: 'put',
+  path: '/wallet/default-network',
+  tags: ['Wallet'],
+  summary: 'Change wallet default network (session-scoped)',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: UpdateDefaultNetworkRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Default network updated',
+      content: {
+        'application/json': { schema: UpdateDefaultNetworkResponseSchema },
+      },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED', 'ENVIRONMENT_NETWORK_MISMATCH']),
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
@@ -116,9 +141,10 @@ const walletAssetsRoute = createRoute({
 /**
  * Create wallet route sub-router.
  *
- * GET /wallet/address -> returns wallet's public key
- * GET /wallet/balance -> calls adapter.getBalance() and returns lamports
- * GET /wallet/assets  -> calls adapter.getAssets() and returns all token balances
+ * GET /wallet/address          -> returns wallet's public key
+ * GET /wallet/balance          -> calls adapter.getBalance() and returns lamports
+ * GET /wallet/assets           -> calls adapter.getAssets() and returns all token balances
+ * PUT /wallet/default-network  -> changes wallet default network (session-scoped)
  */
 export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -297,6 +323,54 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
           isNative: a.isNative,
           usdValue: a.usdValue,
         })),
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /wallet/default-network (session-scoped)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(walletDefaultNetworkRoute, async (c) => {
+    const walletId = c.get('walletId' as never) as string;
+    const wallet = await resolveWalletById(deps.db, walletId);
+
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED', {
+        message: `Wallet '${walletId}' is already terminated`,
+      });
+    }
+
+    const body = c.req.valid('json');
+
+    // Validate that the requested network is allowed for wallet's chain+environment
+    try {
+      validateNetworkEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+        body.network as NetworkType,
+      );
+    } catch {
+      throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
+        message: `Network '${body.network}' is not allowed for chain '${wallet.chain}' in environment '${wallet.environment}'`,
+      });
+    }
+
+    const previousNetwork = wallet.defaultNetwork;
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    await deps.db
+      .update(wallets)
+      .set({ defaultNetwork: body.network, updatedAt: now })
+      .where(eq(wallets.id, walletId))
+      .run();
+
+    return c.json(
+      {
+        id: walletId,
+        defaultNetwork: body.network,
+        previousNetwork: previousNetwork ?? null,
       },
       200,
     );
