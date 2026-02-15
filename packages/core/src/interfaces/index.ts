@@ -28,3 +28,7 @@ export type { IChainAdapter } from './IChainAdapter.js';
 export type { ILocalKeyStore } from './ILocalKeyStore.js';
 export type { IPolicyEngine, PolicyEvaluation } from './IPolicyEngine.js';
 export type { INotificationChannel, NotificationPayload } from './INotificationChannel.js';
+
+// v1.5 Price Oracle types (Zod SSoT)
+export type { TokenRef, PriceInfo, CacheStats, IPriceOracle } from './price-oracle.types.js';
+export { TokenRefSchema, PriceInfoSchema } from './price-oracle.types.js';
