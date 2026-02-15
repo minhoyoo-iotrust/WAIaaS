@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5 Phase 125 Design Docs + Oracle Interfaces
+**Current focus:** v1.5 Phase 126 Oracle Implementations
 
 ## Current Position
 
-Phase: 125 of 129 (Design Docs + Oracle Interfaces)
-Plan: 2 of 2 in current phase
-Status: Plan 125-02 complete
-Last activity: 2026-02-15 -- IPriceOracle types + InMemoryPriceCache + classifyPriceAge (25 tests)
+Phase: 126 of 129 (Oracle Implementations)
+Plan: 1 of 3 in current phase
+Status: Plan 126-01 complete
+Last activity: 2026-02-15 -- PythOracle (Hermes REST API) + feed ID 하드코딩 (10 tests)
 
-Progress: [#░░░░░░░░░] 7%
+Progress: [##░░░░░░░░] 21%
 
 ## Performance Metrics
 
@@ -41,6 +41,8 @@ Recent decisions affecting current work:
 - v1.5: PriceCache maxEntries 1000->128 (Self-hosted 보수적 상한)
 - v1.5: 교차 검증 편차 10%->5%, CoinGecko 키 설정 시에만 활성화
 - v1.5: MCP Tool 도구 수 상한 제거 (MCP 프로토콜에 제한 없음)
+- v1.5: PriceNotAvailableError를 oracle-errors.ts 공유 모듈에서 관리 (PythOracle/CoinGeckoOracle 공유)
+- v1.5: PythOracle은 캐시 미관리 -- OracleChain이 InMemoryPriceCache 전담
 
 ### Blockers/Concerns
 
@@ -51,5 +53,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 125-01-PLAN.md + 125-02-PLAN.md (설계 문서 수정 + IPriceOracle types + cache + price-age)
+Stopped at: Completed 126-01-PLAN.md (PythOracle TDD: feed ID 하드코딩 + Hermes REST API 구현)
 Resume file: None
