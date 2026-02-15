@@ -76,6 +76,8 @@ import type { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 import { actionRoutes } from './routes/actions.js';
+import { x402Routes } from './routes/x402.js';
+import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 export interface CreateAppDeps {
   getKillSwitchState?: GetKillSwitchState;
@@ -170,6 +172,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/transactions/*', sessionAuth);
     app.use('/v1/utils/*', sessionAuth);
     app.use('/v1/actions/*', sessionAuth);
+    app.use('/v1/x402/*', sessionAuth);
   }
 
   // ownerAuth for approve and reject routes (requires DB for agent lookup)
@@ -326,6 +329,30 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         settingsService: deps.settingsService,
       }),
     );
+  }
+
+  // Register x402 routes when pipeline deps + config are available
+  if (
+    deps.db &&
+    deps.sqlite &&
+    deps.keyStore &&
+    deps.masterPassword !== undefined &&
+    deps.policyEngine &&
+    deps.policyEngine instanceof DatabasePolicyEngine &&
+    deps.config
+  ) {
+    app.route('/v1', x402Routes({
+      db: deps.db,
+      sqlite: deps.sqlite,
+      keyStore: deps.keyStore,
+      policyEngine: deps.policyEngine,
+      masterPassword: deps.masterPassword,
+      config: deps.config,
+      notificationService: deps.notificationService,
+      priceOracle: deps.priceOracle,
+      adapterPool: deps.adapterPool ?? null,
+      settingsService: deps.settingsService,
+    }));
   }
 
   // Register admin routes when DB is available
