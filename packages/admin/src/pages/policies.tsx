@@ -66,11 +66,47 @@ const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   CONTRACT_WHITELIST: { contracts: [] },
   METHOD_WHITELIST: { methods: [] },
   APPROVED_SPENDERS: { spenders: [] },
-  APPROVE_AMOUNT_LIMIT: { max_amount: '1000000' },
-  APPROVE_TIER_OVERRIDE: { overrides: {} },
+  APPROVE_AMOUNT_LIMIT: { maxAmount: '1000000', blockUnlimited: true },
+  APPROVE_TIER_OVERRIDE: { tier: 'DELAY' },
   ALLOWED_NETWORKS: { networks: [] },
   X402_ALLOWED_DOMAINS: { domains: [] },
 };
+
+// Validation for structured form rules per policy type
+function validateRules(type: string, rules: Record<string, unknown>): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (type === 'SPENDING_LIMIT') {
+    if (!rules.instant_max || !/^\d+$/.test(rules.instant_max as string))
+      errors.instant_max = 'Positive integer required';
+    if (!rules.notify_max || !/^\d+$/.test(rules.notify_max as string))
+      errors.notify_max = 'Positive integer required';
+    if (!rules.delay_max || !/^\d+$/.test(rules.delay_max as string))
+      errors.delay_max = 'Positive integer required';
+    const ds = Number(rules.delay_seconds);
+    if (rules.delay_seconds === undefined || rules.delay_seconds === '' || Number.isNaN(ds) || ds < 60)
+      errors.delay_seconds = 'Minimum 60 seconds';
+  } else if (type === 'WHITELIST') {
+    const addrs = (rules.allowed_addresses as string[]) || [];
+    if (addrs.length === 0) errors.allowed_addresses = 'At least one address required';
+    addrs.forEach((a, i) => {
+      if (!a || a.trim() === '') errors[`allowed_addresses.${i}`] = 'Address required';
+    });
+  } else if (type === 'RATE_LIMIT') {
+    const mr = Number(rules.max_requests);
+    if (!rules.max_requests || Number.isNaN(mr) || mr < 1 || !Number.isInteger(mr))
+      errors.max_requests = 'Positive integer required';
+    const ws = Number(rules.window_seconds);
+    if (!rules.window_seconds || Number.isNaN(ws) || ws < 1 || !Number.isInteger(ws))
+      errors.window_seconds = 'Positive integer required';
+  } else if (type === 'APPROVE_AMOUNT_LIMIT') {
+    if (rules.maxAmount && !/^\d+$/.test(rules.maxAmount as string))
+      errors.maxAmount = 'Must be a positive integer string';
+  }
+  // APPROVE_TIER_OVERRIDE uses a select so it's always valid
+
+  return errors;
+}
 
 function formatNumber(value: string | number): string {
   const num = typeof value === 'string' ? Number(value) : value;
@@ -221,6 +257,12 @@ export default function PoliciesPage() {
         return;
       }
     } else {
+      const validationErrors = validateRules(formType.value, formRulesObj.value);
+      if (Object.keys(validationErrors).length > 0) {
+        formErrors.value = validationErrors;
+        return;
+      }
+      formErrors.value = {};
       parsedRules = formRulesObj.value;
     }
 
@@ -498,7 +540,13 @@ export default function PoliciesPage() {
               <PolicyFormRouter
                 type={formType.value}
                 rules={formRulesObj.value}
-                onChange={(r) => { formRulesObj.value = r; }}
+                onChange={(r) => {
+                  formRulesObj.value = r;
+                  // Re-validate to clear resolved field errors
+                  if (Object.keys(formErrors.value).length > 0) {
+                    formErrors.value = validateRules(formType.value, r);
+                  }
+                }}
                 errors={formErrors.value}
               />
             )}
