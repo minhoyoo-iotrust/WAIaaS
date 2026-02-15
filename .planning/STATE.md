@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 135 (2 of 2 in v1.5.2) -- 7-type 전용 폼 + 목록 시각화 + 수정 통합
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Phase 134 완료 (12/12 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 -- 135-01 완료 (7개 폼 + 12-type 라우터 + validateRules)
 
-Progress: [#####░░░░░] 50% (2/4 plans)
+Progress: [######░░░░] 75% (3/4 plans)
 
 ## Performance Metrics
 
@@ -35,6 +35,8 @@ Full log in PROJECT.md.
 - 134-02: DEFAULT_RULES 스키마 불일치 수정 (APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE)
 - 134-02: PolicyFormRouter .ts -> .tsx 변경 (JSX 필요)
 - 134-02: validateRules Create 시 검증 + onChange 에러 실시간 클리어
+- 135-01: chain/network 옵션을 각 폼 내부에 로컬 상수로 정의 (core import 불가)
+- 135-01: METHOD_WHITELIST 2단계 중첩 DynamicRowList 패턴 적용
 
 ### Blockers/Concerns
 
@@ -44,5 +46,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 134 완료, Phase 135 계획 시작 예정
+Stopped at: Completed 135-01-PLAN.md
 Resume file: None
