@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { FormField, Button, Badge } from '../components/form';
+import { CurrencySelect } from '../components/currency-select';
 import { Modal } from '../components/modal';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
@@ -93,6 +94,7 @@ function keyToLabel(key: string): string {
     default_deny_spenders: 'Default Deny: Token Approvals',
     project_id: 'Project ID',
     log_level: 'Log Level',
+    currency: 'Display Currency',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -719,6 +721,37 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: Display
+  // ---------------------------------------------------------------------------
+
+  function DisplaySettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Display</h3>
+          <p class="settings-description">Configure display currency for USD amount conversion</p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <div class="settings-field-full">
+              <label>{keyToLabel('currency')}</label>
+              <CurrencySelect
+                value={getEffectiveValue('display', 'currency') || 'USD'}
+                onChange={(code) => handleFieldChange('display.currency', code)}
+              />
+            </div>
+          </div>
+          <div class="settings-info-box">
+            All USD amounts in the dashboard, notifications, and API responses will be
+            converted to the selected currency. Policy evaluation always uses USD.
+            The &ldquo;&asymp;&rdquo; prefix indicates an approximate conversion.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Section: API Keys
   // ---------------------------------------------------------------------------
 
@@ -859,12 +892,13 @@ export default function SettingsPage() {
         </div>
       ) : (
         <>
-          {/* 6 Category Sections */}
+          {/* 7 Category Sections */}
           <NotificationSettings />
           <RpcSettings />
           <SecuritySettings />
           <WalletConnectSettings />
           <DaemonSettings />
+          <DisplaySettings />
           <ApiKeysSection />
         </>
       )}
