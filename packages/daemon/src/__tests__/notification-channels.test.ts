@@ -9,6 +9,7 @@ import { NOTIFICATION_EVENT_TYPES } from '@waiaas/core';
 import { TelegramChannel } from '../notifications/channels/telegram.js';
 import { DiscordChannel } from '../notifications/channels/discord.js';
 import { NtfyChannel } from '../notifications/channels/ntfy.js';
+import { SlackChannel } from '../notifications/channels/slack.js';
 import { getNotificationMessage } from '../notifications/templates/message-templates.js';
 
 // ---------------------------------------------------------------------------
@@ -384,5 +385,96 @@ describe('NtfyChannel', () => {
 
     const options = mockFetch.mock.calls[0]![1]!;
     expect((options.headers as Record<string, string>)['Title']).toBe('[WAIaaS] TX CONFIRMED');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SlackChannel tests
+// ---------------------------------------------------------------------------
+
+describe('SlackChannel', () => {
+  let channel: SlackChannel;
+
+  beforeEach(() => {
+    channel = new SlackChannel();
+    mockFetch.mockResolvedValue(new Response('ok', { status: 200 }));
+  });
+
+  it('has name "slack"', () => {
+    expect(channel.name).toBe('slack');
+  });
+
+  it('initialize() with valid slack_webhook_url succeeds', async () => {
+    await expect(
+      channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('initialize() throws with missing URL', async () => {
+    await expect(channel.initialize({})).rejects.toThrow('slack_webhook_url required');
+  });
+
+  it('send() calls webhook URL with attachments payload', async () => {
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await channel.send(makePayload());
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, options] = mockFetch.mock.calls[0]!;
+    expect(url).toBe('https://hooks.slack.com/services/T/B/xxx');
+    const body = JSON.parse(options!.body as string);
+    expect(body.attachments).toHaveLength(1);
+    expect(body.attachments[0].text).toBe('Transaction abc123 confirmed. Amount: 1.5 SOL');
+  });
+
+  it('send() maps KILL_SWITCH to red color (#ff0000)', async () => {
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await channel.send(makePayload({ eventType: 'KILL_SWITCH_ACTIVATED' }));
+
+    const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
+    expect(body.attachments[0].color).toBe('#ff0000');
+  });
+
+  it('send() maps TX_FAILED to orange color (#ff8c00)', async () => {
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await channel.send(makePayload({ eventType: 'TX_FAILED' }));
+
+    const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
+    expect(body.attachments[0].color).toBe('#ff8c00');
+  });
+
+  it('send() maps TX_CONFIRMED to green color (#00ff00)', async () => {
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await channel.send(makePayload({ eventType: 'TX_CONFIRMED' }));
+
+    const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
+    expect(body.attachments[0].color).toBe('#00ff00');
+  });
+
+  it('send() maps informational events to blue color (#0099ff)', async () => {
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await channel.send(makePayload({ eventType: 'TX_REQUESTED' }));
+
+    const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
+    expect(body.attachments[0].color).toBe('#0099ff');
+  });
+
+  it('send() throws on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('invalid_payload', { status: 400 }));
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await expect(channel.send(makePayload())).rejects.toThrow('SlackChannel: 400');
+  });
+
+  it('send() includes details as attachment fields', async () => {
+    await channel.initialize({ slack_webhook_url: 'https://hooks.slack.com/services/T/B/xxx' });
+    await channel.send(makePayload({ details: { txHash: 'hash123', chain: 'solana' } }));
+
+    const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
+    const fields = body.attachments[0].fields;
+    // 2 default fields (Wallet, Event) + 2 detail fields
+    expect(fields).toHaveLength(4);
+    expect(fields[2].title).toBe('txHash');
+    expect(fields[2].value).toBe('hash123');
+    expect(fields[3].title).toBe('chain');
+    expect(fields[3].value).toBe('solana');
   });
 });

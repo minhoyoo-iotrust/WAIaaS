@@ -256,7 +256,7 @@ export default function SettingsPage() {
     notifTesting.value = true;
     notifTestResults.value = [];
     try {
-      const result = await apiPost<{ results: NotifTestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST);
+      const result = await apiPost<{ results: NotifTestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST, {});
       notifTestResults.value = result.results;
       if (result.results.length === 0) {
         showToast('info', 'No notification channels configured');

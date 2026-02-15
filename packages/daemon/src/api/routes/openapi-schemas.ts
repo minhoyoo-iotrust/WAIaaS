@@ -582,6 +582,7 @@ export const NotificationLogEntrySchema = z
     channel: z.string(),
     status: z.string(),
     error: z.string().nullable(),
+    message: z.string().nullable(),
     createdAt: z.number(),
   })
   .openapi('NotificationLogEntry');

@@ -3,7 +3,7 @@ name: "WAIaaS Admin"
 description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown"
 category: "api"
 tags: [wallet, blockchain, admin, security, waiass]
-version: "1.4.4"
+version: "1.4.8"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -181,7 +181,8 @@ curl -s http://localhost:3100/v1/admin/notifications/status \
   "channels": [
     {"name": "telegram", "enabled": true},
     {"name": "discord", "enabled": false},
-    {"name": "ntfy", "enabled": false}
+    {"name": "ntfy", "enabled": false},
+    {"name": "slack", "enabled": false}
   ]
 }
 ```
@@ -206,7 +207,7 @@ curl -s -X POST http://localhost:3100/v1/admin/notifications/test \
 
 | Parameter | Type   | Required | Description                                      |
 | --------- | ------ | -------- | ------------------------------------------------ |
-| `channel` | string | No       | "telegram", "discord", or "ntfy". Omit for all.  |
+| `channel` | string | No       | "telegram", "discord", "ntfy", or "slack". Omit for all.  |
 
 **Response (200):**
 ```json
@@ -247,6 +248,7 @@ curl -s 'http://localhost:3100/v1/admin/notifications/log?page=1&pageSize=20&cha
       "channel": "telegram",
       "status": "sent",
       "error": null,
+      "message": "[WAIaaS] Transaction confirmed\n0.01 ETH sent to 0x...",
       "createdAt": 1707000000
     }
   ],
@@ -281,6 +283,7 @@ curl -s http://localhost:3100/v1/admin/settings \
     "notifications.discord_webhook_url": false,
     "notifications.ntfy_server": "https://ntfy.sh",
     "notifications.ntfy_topic": "",
+    "notifications.slack_webhook_url": false,
     "notifications.locale": "en",
     "notifications.rate_limit_rpm": "20"
   },
@@ -323,7 +326,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 
 | Category        | Keys                                                    | Description                            |
 | --------------- | ------------------------------------------------------- | -------------------------------------- |
-| `notifications` | enabled, telegram_*, discord_*, ntfy_*, locale, rate_limit_rpm | Notification channel configuration.  |
+| `notifications` | enabled, telegram_*, discord_*, ntfy_*, slack_*, locale, rate_limit_rpm | Notification channel configuration.  |
 | `rpc`           | solana_*, evm_*, evm_default_network                    | Blockchain RPC endpoint URLs.          |
 | `security`      | session_ttl, max_sessions_*, rate_limit_*, policy_defaults_* | Security and rate limiting.         |
 | `daemon`        | log_level                                               | Daemon runtime settings.               |
@@ -380,6 +383,7 @@ Notifications:
 - `notifications.discord_webhook_url` -- Discord webhook URL (credential, encrypted at rest)
 - `notifications.ntfy_server` -- ntfy server URL (default: "https://ntfy.sh")
 - `notifications.ntfy_topic` -- ntfy topic name
+- `notifications.slack_webhook_url` -- Slack webhook URL (credential, encrypted at rest)
 - `notifications.locale` -- Notification locale ("en", "ko", etc.)
 - `notifications.rate_limit_rpm` -- Notification rate limit (per minute)
 
@@ -473,6 +477,24 @@ curl -s -X POST http://localhost:3100/v1/admin/notifications/test \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
   -d '{"channel":"telegram"}'
+```
+
+### Set up Slack notifications
+
+1. Update settings with Slack webhook URL:
+```bash
+curl -s -X PUT http://localhost:3100/v1/admin/settings \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"settings":[{"key":"notifications.slack_webhook_url","value":"https://hooks.slack.com/services/T.../B.../xxx"},{"key":"notifications.enabled","value":"true"}]}'
+```
+
+2. Send test notification:
+```bash
+curl -s -X POST http://localhost:3100/v1/admin/notifications/test \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"channel":"slack"}'
 ```
 
 ### Change RPC endpoint

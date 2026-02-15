@@ -64,8 +64,8 @@ const mockStatusDisabled = {
 
 const mockLogs = {
   logs: [
-    { id: '1', eventType: 'TX_CONFIRMED', walletId: 'wallet-001-abcd', channel: 'telegram', status: 'sent', error: null, createdAt: 1707609600 },
-    { id: '2', eventType: 'TX_FAILED', walletId: 'wallet-002-efgh', channel: 'discord', status: 'failed', error: 'Webhook error', createdAt: 1707609500 },
+    { id: '1', eventType: 'TX_CONFIRMED', walletId: 'wallet-001-abcd', channel: 'telegram', status: 'sent', error: null, message: 'Test message content', createdAt: 1707609600 },
+    { id: '2', eventType: 'TX_FAILED', walletId: 'wallet-002-efgh', channel: 'discord', status: 'failed', error: 'Webhook error', message: null, createdAt: 1707609500 },
   ],
   total: 2,
   page: 1,
@@ -80,6 +80,7 @@ const mockLogsPage1 = {
     channel: 'telegram',
     status: 'sent',
     error: null,
+    message: null,
     createdAt: 1707609600 - i * 100,
   })),
   total: 25,
@@ -144,7 +145,7 @@ describe('NotificationsPage', () => {
     expect(banner).toBeTruthy();
   });
 
-  it('should trigger POST on Send Test click and show results', async () => {
+  it('should trigger POST on Test All Channels click and show results', async () => {
     setupMocks();
 
     vi.mocked(apiPost).mockResolvedValueOnce({
@@ -157,13 +158,13 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Send Test')).toBeTruthy();
+      expect(screen.getByText('Test All Channels')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Send Test'));
+    fireEvent.click(screen.getByText('Test All Channels'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test');
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
     });
 
     await waitFor(() => {
@@ -213,7 +214,7 @@ describe('NotificationsPage', () => {
       if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
       if (url.includes('page=2')) {
         return Promise.resolve({
-          logs: [{ id: '21', eventType: 'TX_SUBMITTED', walletId: 'wallet-20', channel: 'ntfy', status: 'sent', error: null, createdAt: 1707607600 }],
+          logs: [{ id: '21', eventType: 'TX_SUBMITTED', walletId: 'wallet-20', channel: 'ntfy', status: 'sent', error: null, message: null, createdAt: 1707607600 }],
           total: 25,
           page: 2,
           pageSize: 20,
@@ -246,13 +247,13 @@ describe('NotificationsPage', () => {
     expect(screen.getByText(/discord_webhook_url/)).toBeTruthy();
   });
 
-  it('should disable Send Test when no channels are active', async () => {
+  it('should disable Test All Channels when no channels are active', async () => {
     setupMocks(mockStatusDisabled, emptyLogs);
 
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      const sendBtn = screen.getByText('Send Test');
+      const sendBtn = screen.getByText('Test All Channels');
       expect(sendBtn.closest('button')?.hasAttribute('disabled')).toBe(true);
     });
   });
@@ -270,15 +271,146 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Send Test')).toBeTruthy();
+      expect(screen.getByText('Test All Channels')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Send Test'));
+    fireEvent.click(screen.getByText('Test All Channels'));
 
     await waitFor(() => {
       expect(screen.getByText(/Connection timeout/)).toBeTruthy();
     });
 
     expect(vi.mocked(showToast)).toHaveBeenCalledWith('warning', 'Some channels failed');
+  });
+
+  // --- New tests for channel-specific Test buttons (T-1 to T-5) ---
+
+  it('T-1: should render Test button for enabled channels', async () => {
+    setupMocks();
+
+    const { container } = render(<NotificationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Channel Status')).toBeTruthy();
+    });
+
+    // Enabled channels (telegram, ntfy) should have Test buttons inside channel cards
+    const channelCards = container.querySelectorAll('.channel-card');
+    expect(channelCards.length).toBe(3);
+
+    // Count Test buttons inside cards (not the "Test All Channels" button)
+    const cardTestButtons: Element[] = [];
+    channelCards.forEach((card) => {
+      const btns = card.querySelectorAll('button');
+      btns.forEach((btn) => {
+        if (btn.textContent === 'Test') cardTestButtons.push(btn);
+      });
+    });
+
+    // telegram and ntfy are enabled -> 2 Test buttons
+    expect(cardTestButtons.length).toBe(2);
+  });
+
+  it('T-2: should NOT render Test button for disabled channels', async () => {
+    setupMocks();
+
+    const { container } = render(<NotificationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Channel Status')).toBeTruthy();
+    });
+
+    // Find the discord card (disabled channel)
+    const channelCards = container.querySelectorAll('.channel-card');
+    let discordCard: Element | null = null;
+    channelCards.forEach((card) => {
+      if (card.textContent?.includes('discord')) {
+        discordCard = card;
+      }
+    });
+
+    expect(discordCard).toBeTruthy();
+    // Discord card should NOT have a Test button
+    const btns = discordCard!.querySelectorAll('button');
+    let hasTestBtn = false;
+    btns.forEach((btn) => {
+      if (btn.textContent === 'Test') hasTestBtn = true;
+    });
+    expect(hasTestBtn).toBe(false);
+  });
+
+  it('T-3: should send correct body when channel Test button is clicked', async () => {
+    setupMocks();
+
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [{ channel: 'telegram', success: true }],
+    });
+
+    const { container } = render(<NotificationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Channel Status')).toBeTruthy();
+    });
+
+    // Find the telegram card's Test button
+    const channelCards = container.querySelectorAll('.channel-card');
+    let telegramTestBtn: HTMLButtonElement | null = null;
+    channelCards.forEach((card) => {
+      if (card.textContent?.includes('telegram')) {
+        const btns = card.querySelectorAll('button');
+        btns.forEach((btn) => {
+          if (btn.textContent === 'Test') telegramTestBtn = btn as HTMLButtonElement;
+        });
+      }
+    });
+
+    expect(telegramTestBtn).toBeTruthy();
+    fireEvent.click(telegramTestBtn!);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+        '/v1/admin/notifications/test',
+        { channel: 'telegram' },
+      );
+    });
+  });
+
+  it('T-4: should have "Test All Channels" button text', async () => {
+    setupMocks();
+
+    render(<NotificationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test All Channels')).toBeTruthy();
+    });
+
+    // "Send Test" should NOT exist
+    expect(screen.queryByText('Send Test')).toBeNull();
+  });
+
+  it('T-5: should send {} body when Test All Channels is clicked', async () => {
+    setupMocks();
+
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      results: [
+        { channel: 'telegram', success: true },
+        { channel: 'ntfy', success: true },
+      ],
+    });
+
+    render(<NotificationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test All Channels')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Test All Channels'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+        '/v1/admin/notifications/test',
+        {},
+      );
+    });
   });
 });

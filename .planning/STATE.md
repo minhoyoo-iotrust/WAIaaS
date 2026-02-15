@@ -10,15 +10,15 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 124 (5 of 5 in v1.4.8) — 알림 시스템 개선
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 — Phase 123 complete (Admin UI 개선, 2/2 plans)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-15 — Plan 124-02 complete (DB v10 + Slack + 메시지 저장, 2 tasks)
 
-Progress: [██████░░░░] 75% (6/8 plans)
+Progress: [██████████] 100% (8/8 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 27 milestones, 119 phases, 262 plans, 711 reqs, 1,679 tests, ~176,000 LOC
+**Cumulative:** 27 milestones, 119 phases, 263 plans, 711 reqs, 1,694 tests, ~176,500 LOC
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -28,6 +28,8 @@ Progress: [██████░░░░] 75% (6/8 plans)
 | 122 | 02 | 8min | 2 | 12 |
 | 123 | 01 | 3min | 2 | 3 |
 | 123 | 02 | 6min | 2 | 7 |
+| 124 | 01 | 2min | 2 | 3 |
+| 124 | 02 | 45min | 2 | 22 |
 
 ## Accumulated Context
 
@@ -49,16 +51,21 @@ Full log in PROJECT.md.
 - 세션 조회 leftJoin wallets로 walletName 포함 -- 프론트엔드 추가 요청 최소화
 - 잔액 API 실패 시 200 + error 필드 반환 -- 에러 격리로 UI 안정성 확보
 - Admin 월렛 하위 리소스 /admin/wallets/:id/* masterAuth 와일드카드 적용
+- Table onRowClick 활용하여 Delivery Log 행 확장 구현 (커스텀 테이블 불필요)
+- 테스트 결과 표시 영역을 Channel Status 섹션 하단으로 이동 (채널별 + 전체 테스트 결과 통합)
+- Slack Incoming Webhook attachments 포맷 사용 (Block Kit 대신 범용 호환성 우선)
+- notification_logs.message nullable TEXT: pre-v10 로그 하위 호환성 보장
+- SlackChannel 색상 4종: kill-switch(빨강), 실패(주황), 성공(초록), 기본(파랑)
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
-- Pre-existing settings-service.test.ts (SETTING_DEFINITIONS count 32 vs 35)
+- ~~Pre-existing settings-service.test.ts (SETTING_DEFINITIONS count)~~ RESOLVED in 124-02 (updated to 36)
 - ~~MIGR-01 (pushSchema 순서) is HIGH priority -- 기존 DB에서 데몬 시작 차단~~ RESOLVED in 120-01
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 123 verified and merged, ready to plan Phase 124
+Stopped at: Completed 124-02-PLAN.md (DB v10 + Slack + 메시지 저장) — Phase 124 전체 완료
 Resume file: None

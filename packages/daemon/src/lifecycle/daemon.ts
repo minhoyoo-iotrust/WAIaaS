@@ -291,7 +291,7 @@ export class DaemonLifecycle {
     // ------------------------------------------------------------------
     try {
       if (this._config!.notifications.enabled) {
-        const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel } =
+        const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } =
           await import('../notifications/index.js');
 
         this.notificationService = new NotificationService({
@@ -329,6 +329,14 @@ export class DaemonLifecycle {
             ntfy_topic: notifConfig.ntfy_topic,
           });
           this.notificationService.addChannel(ntfy);
+        }
+
+        if (notifConfig.slack_webhook_url) {
+          const slack = new SlackChannel();
+          await slack.initialize({
+            slack_webhook_url: notifConfig.slack_webhook_url,
+          });
+          this.notificationService.addChannel(slack);
         }
 
         const channelNames = this.notificationService.getChannelNames();

@@ -59,8 +59,8 @@ function fullConfig(overrides: Partial<DaemonConfig['notifications']> = {}): Dae
       enabled: true, min_channels: 2, health_check_interval: 300, log_retention_days: 30,
       dedup_ttl: 300, telegram_bot_token: '123:ABC', telegram_chat_id: '-100123',
       discord_webhook_url: 'https://discord.com/api/webhooks/123/abc',
-      ntfy_server: 'https://ntfy.sh', ntfy_topic: 'waiaas-test', locale: 'en' as const,
-      rate_limit_rpm: 20, ...overrides,
+      ntfy_server: 'https://ntfy.sh', ntfy_topic: 'waiaas-test', slack_webhook_url: '',
+      locale: 'en' as const, rate_limit_rpm: 20, ...overrides,
     },
     security: {
       session_ttl: 86400, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
@@ -162,7 +162,7 @@ describe('GET /admin/notifications/status', () => {
     expect(body.enabled).toBe(true);
 
     const channels = body.channels as Array<{ name: string; enabled: boolean }>;
-    expect(channels).toHaveLength(3);
+    expect(channels).toHaveLength(4);
 
     const tg = channels.find((c) => c.name === 'telegram');
     expect(tg?.enabled).toBe(true);
@@ -172,6 +172,9 @@ describe('GET /admin/notifications/status', () => {
 
     const ntfy = channels.find((c) => c.name === 'ntfy');
     expect(ntfy?.enabled).toBe(false); // ntfy channel not added to service
+
+    const slack = channels.find((c) => c.name === 'slack');
+    expect(slack?.enabled).toBe(false); // slack_webhook_url empty
   });
 
   it('should return all channels disabled when no service', async () => {
@@ -332,6 +335,7 @@ describe('GET /admin/notifications/log', () => {
       channel?: string;
       status?: string;
       error?: string | null;
+      message?: string | null;
       createdAt?: number;
     } = {},
   ): void {
@@ -339,8 +343,8 @@ describe('GET /admin/notifications/log', () => {
     const ts = opts.createdAt ?? Math.floor(Date.now() / 1000);
     sqlite
       .prepare(
-        `INSERT INTO notification_logs (id, event_type, wallet_id, channel, status, error, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO notification_logs (id, event_type, wallet_id, channel, status, error, message, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -349,6 +353,7 @@ describe('GET /admin/notifications/log', () => {
         opts.channel ?? 'telegram',
         opts.status ?? 'sent',
         opts.error ?? null,
+        opts.message ?? null,
         ts,
       );
   }
@@ -411,6 +416,35 @@ describe('GET /admin/notifications/log', () => {
     expect(body.total).toBe(2);
     const logs = body.logs as Array<{ channel: string }>;
     expect(logs.every((l) => l.channel === 'telegram')).toBe(true);
+  });
+
+  it('should include message field in log response', async () => {
+    insertLog({ message: '[WAIaaS] Transaction confirmed\n0.01 ETH sent to 0x...' });
+    insertLog({ message: null }); // pre-v10 record with no message
+
+    const config = fullConfig();
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+    });
+
+    const res = await app.request('/v1/admin/notifications/log', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const logs = body.logs as Array<{ message: string | null }>;
+    expect(logs).toHaveLength(2);
+
+    // One log has message, the other is null
+    const withMessage = logs.find((l) => l.message !== null);
+    const withoutMessage = logs.find((l) => l.message === null);
+    expect(withMessage).toBeDefined();
+    expect(withMessage!.message).toContain('Transaction confirmed');
+    expect(withoutMessage).toBeDefined();
+    expect(withoutMessage!.message).toBeNull();
   });
 
   it('should return empty when no logs', async () => {

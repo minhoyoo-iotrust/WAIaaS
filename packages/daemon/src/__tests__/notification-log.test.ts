@@ -135,6 +135,7 @@ describe('Migration: notification_logs + schema_version', () => {
       'channel',
       'status',
       'error',
+      'message',
       'created_at',
     ]);
   });

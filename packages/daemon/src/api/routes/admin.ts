@@ -624,6 +624,13 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           channelNames.includes('ntfy')
         ),
       },
+      {
+        name: 'slack',
+        enabled: !!(
+          notifConfig?.slack_webhook_url &&
+          channelNames.includes('slack')
+        ),
+      },
     ];
 
     return c.json(
@@ -722,6 +729,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       channel: row.channel,
       status: row.status,
       error: row.error ?? null,
+      message: row.message ?? null,
       createdAt: row.createdAt instanceof Date
         ? Math.floor(row.createdAt.getTime() / 1000)
         : (typeof row.createdAt === 'number' ? row.createdAt : 0),

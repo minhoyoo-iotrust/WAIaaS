@@ -202,6 +202,7 @@ export class NotificationService {
           channel: channelName,
           status,
           error: error ?? null,
+          message: payload.message ?? null,
           createdAt: new Date(payload.timestamp * 1000),
         })
         .run();
