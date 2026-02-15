@@ -367,3 +367,63 @@ export interface X402FetchResponse {
   /** Payment details (present only when x402 payment was made) */
   payment?: X402PaymentInfo;
 }
+
+// ---------------------------------------------------------------------------
+// Policy Types (reference for REST API /v1/policies users)
+// ---------------------------------------------------------------------------
+
+/**
+ * SPENDING_LIMIT policy rules schema.
+ *
+ * Per-transaction tiers: instant_max, notify_max, delay_max (native amount digit strings).
+ * USD tiers (optional): instant_max_usd, notify_max_usd, delay_max_usd.
+ * Cumulative limits (optional): daily_limit_usd (24h rolling), monthly_limit_usd (30d rolling).
+ *
+ * When cumulative USD spending exceeds the limit, the transaction tier is escalated to APPROVAL.
+ *
+ * @example
+ * ```typescript
+ * const rules: SpendingLimitRules = {
+ *   instant_max: '100000000',
+ *   notify_max: '500000000',
+ *   delay_max: '1000000000',
+ *   daily_limit_usd: 500,
+ *   monthly_limit_usd: 5000,
+ * };
+ * ```
+ */
+export interface SpendingLimitRules {
+  /** INSTANT tier max amount (lamports/wei digit string) */
+  instant_max: string;
+  /** NOTIFY tier max amount (digit string) */
+  notify_max: string;
+  /** DELAY tier max amount (digit string) */
+  delay_max: string;
+  /** Delay cooldown seconds (min 60, default 900) */
+  delay_seconds?: number;
+  /** INSTANT tier max USD amount (oracle-based, optional) */
+  instant_max_usd?: number;
+  /** NOTIFY tier max USD amount */
+  notify_max_usd?: number;
+  /** DELAY tier max USD amount */
+  delay_max_usd?: number;
+  /** 24h rolling window cumulative USD spending limit (optional, exceeding escalates to APPROVAL) */
+  daily_limit_usd?: number;
+  /** 30d rolling window cumulative USD spending limit (optional, exceeding escalates to APPROVAL) */
+  monthly_limit_usd?: number;
+}
+
+/** Policy type enum for REST API /v1/policies. */
+export type PolicyType =
+  | 'SPENDING_LIMIT'
+  | 'WHITELIST'
+  | 'TIME_RESTRICTION'
+  | 'RATE_LIMIT'
+  | 'ALLOWED_TOKENS'
+  | 'CONTRACT_WHITELIST'
+  | 'METHOD_WHITELIST'
+  | 'APPROVED_SPENDERS'
+  | 'APPROVE_AMOUNT_LIMIT'
+  | 'APPROVE_TIER_OVERRIDE'
+  | 'ALLOWED_NETWORKS'
+  | 'X402_ALLOWED_DOMAINS';
