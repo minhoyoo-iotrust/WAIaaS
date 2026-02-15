@@ -92,9 +92,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 127-01: PriceResult 3-state + resolveEffectiveAmountUsd 구현
-- [ ] 127-02: SpendingLimitRuleSchema USD 필드 + evaluateSpendingLimit USD 분기
-- [ ] 127-03: Stage 3 파이프라인 통합 + graceful fallback + notListed 격상
+- [x] 127-01: PriceResult 3-state + resolveEffectiveAmountUsd 구현
+- [x] 127-02: SpendingLimitRuleSchema USD 필드 + evaluateSpendingLimit USD 분기
+- [x] 127-03: Stage 3 파이프라인 통합 + graceful fallback + notListed 격상
 
 #### Phase 128: Action Provider + API Key
 **Goal**: IActionProvider 인터페이스 기반 ESM 플러그인 프레임워크가 구축되어 ~/.waiaas/actions/에서 플러그인을 로드하고, API 키가 DB 암호화 저장되며, POST /v1/actions/:provider/:action으로 액션을 실행할 수 있는 상태
@@ -139,7 +139,7 @@ Phases execute in numeric order: 125 -> 126 -> 127 -> 128 -> 129
 |-------|-----------|----------------|--------|-----------|
 | 125. Design Docs + Oracle Interfaces | v1.5 | 2/2 | ✓ Complete | 2026-02-15 |
 | 126. Oracle Implementations | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
-| 127. USD Policy Integration | v1.5 | 0/3 | Not started | - |
+| 127. USD Policy Integration | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
 | 128. Action Provider + API Key | v1.5 | 0/4 | Not started | - |
 | 129. MCP/Admin/Skill Integration | v1.5 | 0/2 | Not started | - |
 
