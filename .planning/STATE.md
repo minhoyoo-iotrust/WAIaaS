@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 136 of 139 (누적 지출 한도 엔진)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-16 -- 136-01 DB v13 + USD 기록 기반 구축 완료
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 136 complete
+Last activity: 2026-02-16 -- 136-02 누적 USD 집계 + APPROVAL 격상 + 테스트 완료
 
-Progress: [█░░░░░░░░░] 12% (1/8 plans)
+Progress: [██░░░░░░░░] 25% (2/8 plans)
 
 ## Performance Metrics
 
@@ -34,6 +34,9 @@ Recent:
 - v1.5.3: TX_APPROVAL_REQUIRED reason 필드 확장 (별도 이벤트 대신 중복 방지)
 - 136-01: amount_usd/reserved_amount_usd에 동일 값 기록 (확정용 vs 대기 집계용 분리)
 - 136-01: daily_limit_usd/monthly_limit_usd는 .positive()로 0 비허용 (비활성화는 필드 미설정)
+- 136-02: SIGNED 중복 방지 -- CONFIRMED/SIGNED는 amount_usd, PENDING/QUEUED는 reserved_amount_usd로 분리 집계
+- 136-02: daily 초과 감지 시 monthly 평가 스킵 (중복 알림 방지)
+- 136-02: APPROVAL 알림은 downgrade 전 tier 기준 -- downgraded=true면 미발송
 
 ### Blockers/Concerns
 
@@ -44,5 +47,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 136-01-PLAN.md
+Stopped at: Completed 136-02-PLAN.md (Phase 136 complete)
 Resume file: None
