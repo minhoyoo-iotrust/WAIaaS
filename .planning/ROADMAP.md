@@ -60,8 +60,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 125-01: 설계 문서 61/62/38 v1.5 수정
-- [ ] 125-02: IPriceOracle 인터페이스 + InMemoryPriceCache + classifyPriceAge 구현
+- [x] 125-01: 설계 문서 61/62/38 v1.5 수정
+- [x] 125-02: IPriceOracle 인터페이스 + InMemoryPriceCache + classifyPriceAge 구현
 
 #### Phase 126: Oracle Implementations
 **Goal**: Pyth Hermes Zero-config 가격 조회와 CoinGecko opt-in 롱테일 토큰 가격 조회가 OracleChain 2단계 fallback으로 동작하고, 교차 검증이 편차>5% 가격을 STALE로 격하하는 상태
@@ -75,9 +75,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 126-01: PythOracle 구현 (Hermes REST API + Feed ID 매핑)
-- [ ] 126-02: CoinGeckoOracle 구현 (Demo API + platformId 매핑)
-- [ ] 126-03: OracleChain fallback + 교차 검증 + GET /v1/admin/oracle-status
+- [x] 126-01: PythOracle 구현 (Hermes REST API + Feed ID 매핑)
+- [x] 126-02: CoinGeckoOracle 구현 (Demo API + platformId 매핑)
+- [x] 126-03: OracleChain fallback + 교차 검증 + GET /v1/admin/oracle-status
 
 #### Phase 127: USD Policy Integration
 **Goal**: 5-type 트랜잭션의 금액이 USD로 환산되어 정책 평가에 반영되고, 가격 불명 토큰이 안전하게 처리되며, 오라클 장애 시 graceful fallback이 동작하는 상태
@@ -137,8 +137,8 @@ Phases execute in numeric order: 125 -> 126 -> 127 -> 128 -> 129
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 125. Design Docs + Oracle Interfaces | v1.5 | 0/2 | Not started | - |
-| 126. Oracle Implementations | v1.5 | 0/3 | Not started | - |
+| 125. Design Docs + Oracle Interfaces | v1.5 | 2/2 | ✓ Complete | 2026-02-15 |
+| 126. Oracle Implementations | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
 | 127. USD Policy Integration | v1.5 | 0/3 | Not started | - |
 | 128. Action Provider + API Key | v1.5 | 0/4 | Not started | - |
 | 129. MCP/Admin/Skill Integration | v1.5 | 0/2 | Not started | - |
