@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5 Phase 126 Oracle Implementations
+**Current focus:** v1.5 Phase 127 USD Policy Integration
 
 ## Current Position
 
-Phase: 126 of 129 (Oracle Implementations)
-Plan: 2 of 3 in current phase
-Status: Plan 126-02 complete
-Last activity: 2026-02-15 -- CoinGeckoOracle (Demo API) + platformId 매핑 + oracle 설정 키 (12 tests)
+Phase: 127 of 129 (USD Policy Integration)
+Plan: 1 of 3 in current phase
+Status: Phase 126 complete, starting Phase 127
+Last activity: 2026-02-15 -- OracleChain 3단계 fallback + 교차 검증 + GET /admin/oracle-status (15 tests)
 
-Progress: [###░░░░░░░] 29%
+Progress: [###░░░░░░░] 36%
 
 ## Performance Metrics
 
@@ -46,6 +46,10 @@ Recent decisions affecting current work:
 - v1.5: CoinGeckoOracle은 캐시 미관리 -- OracleChain이 InMemoryPriceCache 전담
 - v1.5: oracle-errors.ts 공유 모듈에서 PriceNotAvailableError + CoinGeckoNotConfiguredError 관리
 - v1.5: Solana 주소는 CoinGecko API에서 원본 base58 보존, EVM만 lowercase 정규화
+- v1.5: OracleChain이 InMemoryPriceCache.getOrFetch() stampede prevention 통합 관리
+- v1.5: 교차 검증은 fallback oracle DI 주입 시에만 활성화 (CoinGecko 키 미설정 → fallback 미주입 → 자동 스킵)
+- v1.5: stale 캐시 fallback은 fetcher 내부에서 처리 (oracle 전체 장애 시 stale 데이터로 연명)
+- v1.5: AdminRouteDeps.priceOracle optional -- oracle 미설정 시 zeroed stats 반환
 
 ### Blockers/Concerns
 
@@ -56,5 +60,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 126-02-PLAN.md (CoinGeckoOracle TDD: Demo API + platformId 매핑 + oracle 설정 키)
+Stopped at: Completed 126-03-PLAN.md (OracleChain 3단계 fallback + 교차 검증 + GET /admin/oracle-status -- Phase 126 완료)
 Resume file: None
