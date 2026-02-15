@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 122 (3 of 5 in v1.4.8) — MCP 도구 + 멀티체인 DX
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 — Phase 121 complete (MCP 안정성, 1/1 plans, 10 tests added)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 — 122-01 complete (set_default_network MCP/CLI/SDK, 10 tests added)
 
-Progress: [██░░░░░░░░] 25% (2/8 plans)
+Progress: [███░░░░░░░] 37% (3/8 plans)
 
 ## Performance Metrics
 
@@ -24,6 +24,7 @@ Progress: [██░░░░░░░░] 25% (2/8 plans)
 |-------|------|----------|-------|-------|
 | 120 | 01 | 6min | 1 (TDD) | 2 |
 | 121 | 01 | 2min | 1 (TDD) | 4 |
+| 122 | 01 | 8min | 2 | 15 |
 
 ## Accumulated Context
 
@@ -34,6 +35,8 @@ Full log in PROJECT.md.
 - v1 DB agents 테이블 존재 시 wallets 생성 스킵 (v3 마이그레이션 충돌 방지, MIGR-01b)
 - shutdown 로직을 createShutdownHandler() 팩토리로 추출하여 DI 기반 테스트 가능하게 함
 - shutdown 핸들러를 server.connect() 이전에 등록 -- stdin 즉시 닫힘 대비
+- 세션 스코프 PUT /v1/wallet/default-network: MCP sessionAuth로 기본 네트워크 변경 가능하도록
+- Python SDK get_wallet_info()에서 availableNetworks를 networks로 매핑
 
 ### Blockers/Concerns
 
@@ -45,5 +48,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 121 complete, ready to plan Phase 122 (MCP 도구 + 멀티체인 DX)
+Stopped at: Completed 122-01-PLAN.md (set_default_network MCP/CLI/SDK)
 Resume file: None
