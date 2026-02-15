@@ -1,211 +1,213 @@
 # Project Research Summary
 
-**Project:** WAIaaS v1.5 — DeFi Price Oracle + Action Provider Framework
-**Domain:** Self-hosted AI agent wallet daemon — USD-based spending limits, multi-source price oracle, ESM plugin architecture
+**Project:** WAIaaS v1.5.1 -- x402 프로토콜 클라이언트 지원
+**Domain:** Self-hosted AI agent wallet daemon -- x402 HTTP payment protocol client, EIP-3009 authorization, Solana partial signing, SSRF-protected HTTP proxy
 **Researched:** 2026-02-15
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v1.5는 기존 네이티브 금액 기반 정책 엔진에 USD 환산 레이어를 추가하고, ESM 동적 임포트 기반 DeFi 액션 플러그인 프레임워크를 구축하는 마일스톤이다. 핵심 발견: **신규 외부 npm 의존성이 전혀 필요하지 않다.** Pyth Hermes와 CoinGecko는 단순 REST API로 Node.js 22 내장 `fetch()`만으로 호출 가능하며, LRU 캐시는 Map 기반 직접 구현(128항목)으로 충분하고, API 키 암호화는 기존 `settings-crypto.ts`의 HKDF+AES-256-GCM 패턴을 재사용하면 된다.
+x402는 HTTP 402 "Payment Required" 상태 코드를 활용한 오픈 결제 프로토콜로, AI 에이전트가 유료 API를 자동으로 결제하며 사용할 수 있게 한다. WAIaaS v1.5.1은 x402 **클라이언트(결제자)** 역할을 추가하여, 에이전트가 외부 유료 리소스에 접근할 때 데몬이 402 응답을 감지하고, 정책 평가 후 자동으로 결제 서명을 생성하여 리소스를 가져오는 투명한 프록시 기능을 제공한다.
 
-권장 접근법은 4단계 구축이다: (1) **Oracle Core** — IPriceOracle 인터페이스 + PythOracle(Zero-config Primary) + CoinGeckoOracle(opt-in Fallback) + OracleChain(2단계 fallback + 5% 편차 교차 검증), (2) **USD Policy Integration** — resolveEffectiveAmountUsd() 함수로 5-type 트랜잭션을 PriceResult discriminated union(success/oracleDown/notListed) 3가지 상태로 변환하여 기존 Stage 3 정책 평가에 주입, (3) **Action Provider Framework** — IActionProvider 인터페이스 + ActionProviderRegistry(~/.waiaas/actions/ ESM 플러그인 로드) + validate-then-trust 보안 경계, (4) **MCP/Admin Integration** — MCP Tool 자동 변환 + Admin UI Oracle Status/API Keys 섹션.
+핵심 기술적 발견: **신규 npm 의존성은 `@x402/core` 1개만 필요**하다. @x402/core v2.3.1은 Zod ^3.24.2 기반으로 PaymentRequired/PaymentPayload Zod 스키마를 공식 제공하며, WAIaaS의 "Zod SSoT" 원칙과 완벽 호환된다. EVM 결제 서명(EIP-3009)은 이미 설치된 viem 2.x의 `signTypedData` API로 구현 가능하고, Solana 부분 서명은 @solana/kit 6.x의 기존 패턴(noopSigner feePayer + signBytes)을 그대로 활용한다. SSRF 보호는 외부 라이브러리가 native fetch와 호환되지 않거나 CVE 이슈가 있어, Node.js 내장 `dns/promises` + `net` 모듈로 직접 구현한다.
 
-핵심 위험은 3가지이다: (1) **가격 불명 토큰의 $0 처리 우회** — PriceResult.notListed 상태로 최소 NOTIFY 격상 필수, (2) **교차 검증 편차 계산 오류** — 절대값 + 평균 기준 공식 엄수 필요, (3) **ESM 플러그인 임의 코드 실행** — validate-then-trust로 Zod 검증하되 Owner 신뢰 경계 명시 필요. 완화책: Oracle 장애 시 graceful fallback(네이티브 금액만으로 정책 평가), evaluateAndReserve() 진입 **전**에 Oracle HTTP 호출 완료(TOCTOU 보호), resolve()는 ContractCallRequest만 반환(정책 평가 필수 통과).
+아키텍처적으로, x402 결제 흐름은 **sign-only 패턴과 유사한 독립 파이프라인**으로 구현한다. 기존 6-stage 트랜잭션 파이프라인을 확장하지 않고, 별도 `x402-handler.ts` 모듈이 10단계 흐름(URL 검증 → 외부 preflight 요청 → 402 파싱 → 정책 평가 → 결제 서명 → 재요청 → 감사 로그)을 오케스트레이션한다. 기존 정책 엔진(`evaluateAndReserve`)을 재사용하여 SPENDING_LIMIT 평가와 TOCTOU 방지를 동일하게 적용한다. 가장 큰 보안 위험은 **SSRF**(WAIaaS 최초로 사용자 지정 URL로 outbound HTTP를 보냄)이며, 이는 DNS 리바인딩, IPv4-mapped IPv6, 옥탈 인코딩 등 다양한 우회 기법에 대한 포괄적 방어가 필수적이다.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**신규 외부 의존성 0개.** v1.5는 기존 스택(Node.js 22, Zod, drizzle-orm, Hono, settings-crypto)만으로 구현 가능하다. Pyth Hermes와 CoinGecko는 native `fetch()`로 호출하는 REST API이며, LRU 캐시는 Map + doubly-linked list로 60줄 내 직접 구현, API 키 암호화는 기존 SettingsService의 HKDF+AES-256-GCM 패턴을 재사용한다.
+**신규 의존성:** `@x402/core ^2.3.1` 1개만 추가. 이 패키지는 Zod ^3.24.2를 유일한 런타임 의존성으로 사용하며, x402 v2 프로토콜의 PaymentRequired, PaymentPayload, PaymentRequirements 타입에 대한 공식 Zod 스키마를 제공한다. WAIaaS의 Zod SSoT 원칙과 완벽 호환되므로, 자체 스키마 정의 대신 import하여 사용한다.
 
-**Core technologies:**
-- **Pyth Hermes REST API** (Primary Oracle): Zero-config, 380+ 크로스체인 피드, 30 req/10s rate limit. `/v2/updates/price/latest` 엔드포인트로 feed ID 기반 가격 조회. 하드코딩 매핑(주요 10-15개 토큰) + 동적 검색(/v2/price_feeds) 하이브리드 전략. 공개 엔드포인트로 별도 npm 패키지 불필요.
-- **CoinGecko Demo API** (Fallback Oracle): Pyth 미지원 롱테일 토큰 커버리지, opt-in(API 키 설정 시 활성화), 30 req/min + 10K req/month 제한. `/simple/token_price/{platform_id}` 엔드포인트로 컨트랙트 주소 기반 가격 조회. platformId 매핑(solana, ethereum, polygon-pos 등) 필요. Demo 키는 DB 암호화 저장.
-- **InMemoryPriceCache** (LRU 직접 구현): 128항목 상한, 5분 TTL, FRESH(<5분)/AGING(5-30분)/STALE(>30분) 3단계 가격 나이 분류. Map + doubly-linked list 패턴으로 lru-cache 라이브러리 의존성 제거. cache stampede 방지(in-flight 요청 추적).
-- **settings-crypto.ts** (기존 암호화 패턴 재사용): HKDF(SHA-256) + AES-256-GCM으로 API 키 암호화. 목표 문서에서 sodium-native secretbox를 명시했으나, 기존 코드 패턴 재사용이 보안 동등성(256-bit AEAD) + 일관성(마스터 패스워드 통합 관리) 측면에서 우수. CoinGecko 키는 `oracle.coingecko_api_key` 설정, Action Provider 키는 `api_keys` 테이블.
-- **ESM dynamic import** (Node.js 22 내장): `import(pathToFileURL(filePath).href)` 패턴으로 ~/.waiaas/actions/ 플러그인 로드. 별도 로더 라이브러리 불필요. 캐시 특성상 핫 리로드 미지원(데몬 재시작 필요).
+**기존 스택 활용:**
+- **viem 2.x**: EVM EIP-3009 서명에 `account.signTypedData()` API 사용. privateKeyToAccount 패턴은 EvmAdapter에서 이미 검증됨. 추가 설치 불필요.
+- **@solana/kit 6.x**: Solana SPL TransferChecked 부분 서명에 `createNoopSigner` + `signBytes` 패턴 활용. SolanaAdapter에서 동일 패턴 사용 중. 추가 설치 불필요.
+- **Node.js 내장 모듈**: SSRF 방어에 `node:dns/promises` + `node:net` 사용. 외부 SSRF 라이브러리(`private-ip`, `request-filtering-agent`)는 native fetch와 호환 불가하거나 CVE 존재로 직접 구현.
+- **native fetch**: HTTP 클라이언트로 Node.js 22 내장 fetch 사용. WAIaaS zero-dep 철학 일치. axios/got 불필요.
 
-**명시적으로 제외한 것들:**
-- Chainlink Oracle: EVM 전용(Solana 미지원), Aggregator 주소 유지 부담. Pyth가 체인 무관 380+ 피드 제공.
-- WebSocket/SSE 실시간 스트리밍: 5분 TTL 캐시로 충분. Hermes SSE 엔드포인트 존재하나 WAIaaS는 트랜잭션 시점 가격만 필요.
-- On-chain Oracle 조회: RPC 호출 비용 + 복잡도. Hermes REST가 동일 데이터를 무료 제공.
-- VM 샌드박스(vm2, isolated-vm): 구현 복잡도 HIGH + vm2는 최근 CVSS 9.8 취약점(CVE-2026-22709) 발견. v1.5는 validate-then-trust + Owner 책임 경계.
-- 구체적 DeFi 프로토콜(Jupiter, 0x, Lido): v1.5는 프레임워크만 구현, 프로토콜은 v1.5.5+.
+**명시적으로 추가하지 않는 것:**
+- `@x402/evm`, `@x402/svm`: x402 공식 SDK이나 WAIaaS는 viem/solana-kit을 직접 사용하여 더 정밀한 키 관리 및 정책 통합 가능. 추가하면 중복 의존성.
+- `@x402/fetch`: wrapFetchWithPayment() 함수는 정책 평가 삽입 지점이 없어 사용 불가. 타입만 @x402/core에서 import.
+- `caip` npm 패키지: CAIP-2 파싱은 `string.split(':')` 수준으로 단순. 상수 매핑 테이블로 충분.
 
 ### Expected Features
 
-**Must have (table stakes):**
-- **IPriceOracle 인터페이스**(4 메서드: getPrice/getPrices/getNativePrice/getCacheStats) — USD 정책 평가의 타입 기반 (TS-01)
-- **PythOracle + CoinGeckoOracle + OracleChain** — 2단계 fallback으로 단일 소스 장애 시 서비스 연속성 보장 (TS-02~04)
-- **InMemoryPriceCache + 3단계 가격 나이** — API rate limit 관리 + 가격 신선도 기반 정책 분기 (TS-05~06)
-- **resolveEffectiveAmountUsd()** — 5-type 트랜잭션 모두 USD 변환, PriceResult discriminated union(success/oracleDown/notListed) 반환 (TS-07)
-- **SpendingLimitRuleSchema Zod + USD 필드** — instant_max_usd/notify_max_usd/delay_max_usd optional 필드. 현재 `z.record(z.unknown())` -> Zod SSoT (TS-08)
-- **IActionProvider 인터페이스** — metadata/actions/resolve 3-part. resolve()는 ContractCallRequest만 반환(정책 평가 필수 통과) (TS-09)
-- **ActionProviderRegistry** — ~/.waiaas/actions/ 스캔 + ESM dynamic import + validate-then-trust (Zod 인터페이스 검증) (TS-10)
-- **REST API 3개** — POST /v1/actions/:provider/:action(Action 실행), GET /v1/admin/oracle-status(캐시 통계/소스 상태), CRUD /v1/admin/api-keys/:provider (TS-11~13)
-- **ActionProviderApiKeyStore** — DB api_keys 테이블 + 암호화 저장(기존 settings-crypto 패턴 재사용) (TS-12)
-- **MCP Tool 자동 변환** — ActionDefinition.inputSchema(Zod) -> zodToJsonSchema -> server.tool() 동적 등록. mcpExpose 플래그 필터링 (DF-04)
+**Table Stakes (필수):**
+- HTTP 402 응답 파싱 + PaymentRequirements 해석
+- EVM EIP-3009 결제 서명 생성 (USDC transferWithAuthorization)
+- Solana SPL TransferChecked 부분 서명 생성
+- PAYMENT-SIGNATURE 헤더 인코딩 + 재요청
+- X402_ALLOWED_DOMAINS 정책 (기본 거부, 허용 도메인만 결제)
+- SPENDING_LIMIT 통합 (기존 4-tier 평가)
+- SSRF 보호 (DNS 사전 해석 + 사설 IP 차단)
+- POST /v1/x402/fetch 엔드포인트
+- 감사 로그 (transactions 테이블에 type=X402_PAYMENT)
+- CAIP-2 → NetworkType 매핑
 
-**Should have (competitive):**
-- **교차 검증 편차 인라인(>5% STALE 격하)** — Pyth+CoinGecko 양쪽 성공 시 편차 계산. 5% 초과 시 PRICE_DEVIATION_WARNING + STALE 격하 (DF-01)
-- **PriceResult 3-state discriminated union** — success(USD 금액)/oracleDown(네이티브 fallback)/notListed(최소 NOTIFY 격상). "가치 불명 != 가치 0" 보안 원칙 (DF-02)
-- **Unlisted token CoinGecko 힌트** — notListed 첫 발생 시 "CoinGecko API 키 설정하면..." 안내(토큰별 1회, 스팸 방지) (DF-03)
-- **Admin Oracle 설정 오버라이드** — 교차 검증 편차 임계값, 캐시 TTL 등을 SettingsService hot-reload로 조정 가능 (DF-06)
+**Differentiators (차별화):**
+- **정책 기반 자동 결제 제어**: Coinbase x402 클라이언트는 정책 없이 무조건 결제. WAIaaS는 4-tier 정책 엔진(AUTO/NOTIFY/DELAY/APPROVAL)으로 금액별 제어. USD 환산 금액으로 tier 결정.
+- **멀티 월렛 결제 라우팅**: EVM/SVM 둘 다 accepts에 제시되면 잔고 충분한 지갑 자동 선택. 선택 기준: 체인 지원, 토큰 잔고, USD 최저 비용.
+- **결제 내역 Admin UI**: x402 결제 내역 조회, 도메인별 결제 통계. 기존 트랜잭션 목록 확장.
+- **MCP 도구 x402_fetch**: AI 에이전트가 MCP로 x402 결제 URL 접근. 에이전트는 "URL 가져와줘"만 하면 자동 결제.
+- **알림 연동**: 기존 4채널 알림에 X402_PAYMENT 이벤트 추가. 고액 결제 시 별도 경고.
+- **도메인 허용/차단 목록**: URL 패턴 매칭으로 에이전트가 임의 URL 결제 방지. 화이트리스트/블랙리스트 모드.
 
-**Defer (v2+):**
-- 토큰별 교차 검증 임계값 커스텀
-- Pyth `/v2/price_feeds` 전체 목록 시작 시 로드(동적 검색 대신)
-- 플러그인 핫 리로드(ESM 캐시 무효화 시 메모리 누수)
-- Action Provider VM 샌드박스(복잡도 vs 보안 효과)
-- 구체적 DeFi 프로토콜 플러그인(v1.5.5+)
+**Anti-Features (명시적으로 구현 안 함):**
+- Facilitator 서버 운영: WAIaaS는 클라이언트 역할만. facilitator는 Coinbase 등 외부 사용.
+- x402 서버(Resource Server): WAIaaS는 지갑이지 결제 받는 서비스가 아님.
+- Permit2 지원: EIP-3009가 x402 기본. Permit2는 복잡도 높고 현재 생태계에서 사용 사례 적음. v1에서 제외.
+- V1 프로토콜 우선 지원: v2만 지원. v1은 파싱 fallback만.
+- 자동 ATA 생성 (Solana): facilitator가 처리. ATA 미존재 시 에러 반환.
 
 ### Architecture Approach
 
-v1.5는 **기존 6-stage 파이프라인을 변경하지 않고** 새로운 컴포넌트를 주입점에 추가하는 방식이다. DaemonContext에 `priceOracle: OracleChain`, `actionRegistry: ActionProviderRegistry`, `apiKeyStore: ActionProviderApiKeyStore` 3개 필드 추가. PipelineContext에 `priceOracle?` 옵셔널 필드 추가하여 Stage 3에서 USD 변환 호출.
+**x402 요청 흐름 (10단계):**
+1. URL 검증 (X402_ALLOWED_DOMAINS)
+2. SSRF 가드 (DNS 해석 + IP 검증)
+3. 외부 HTTP 요청 (preflight)
+4. 비-402 응답 → 패스스루 종료 / 402 → PaymentRequired 파싱
+5. (scheme, network) 선택 + CAIP-2 → NetworkType 변환
+6. 금액 USD 환산 (USDC: $1 직접, 기타: IPriceOracle)
+7. 정책 평가 (SPENDING_LIMIT 4-tier + evaluateAndReserve)
+8. 결제 서명 생성 (EVM: EIP-3009 signTypedData / Solana: TransferChecked 부분 서명)
+9. X-PAYMENT 헤더 인코딩 + 재요청
+10. PAYMENT-RESPONSE 파싱 + DB 업데이트 (CONFIRMED) + 응답 반환
 
 **Major components:**
-1. **OracleChain**(daemon/oracle/) — Chain of Responsibility + Cross-Validation 패턴. Pyth->CoinGecko fallback, 5% 편차 인라인 검증, InMemoryPriceCache 공유. OracleChain이 3개 구현체(PythOracle, CoinGeckoOracle, Cache)를 조율.
-2. **resolveEffectiveAmountUsd**(daemon/pipeline/) — PipelineInput(5-type) -> PriceResult(3-state) 변환. **evaluateAndReserve() 진입 전**에 호출(better-sqlite3 동기 트랜잭션 내 비동기 HTTP 불가). Stage 3 정책 평가에서 USD 금액을 TransactionParam에 주입.
-3. **ActionProviderRegistry**(daemon/action/) — ESM `import()` 플러그인 발견/로드. validate-then-trust: Zod로 metadata/actions 검증 + resolve() 반환값 재검증. McpToolConverter에 프로바이더 목록 제공하여 MCP 도구 자동 등록/해제.
-4. **API Integration Layer** — POST /v1/actions/:provider/:action 라우트에서 resolve() 결과(ContractCallRequest) -> TransactionRequest 변환 어댑터 레이어. 기존 파이프라인 Stage 1 Zod 검증과 호환.
+1. **x402-handler.ts** — 전체 x402 흐름 오케스트레이션. 402 파싱, 정책 평가, 재요청, 에러 처리. payment-signer, ssrf-guard, PolicyEngine, TransactionService, PriceOracle와 통신.
+2. **payment-signer.ts** — 체인별 결제 서명 생성. EVM EIP-3009 / Solana TransferChecked. viem signTypedData, @solana/kit signBytes + compileTransaction, KeyStore와 통신.
+3. **ssrf-guard.ts** — URL 안전성 검증. DNS 해석 + 사설 IP 차단 + 리다이렉트 검증. node:dns, node:net만 사용 (외부 의존성 없음).
+4. **routes/x402.ts** — REST API 라우트. 요청 파싱, 인증, 응답 매핑. x402-handler, sessionAuth middleware와 통신.
+5. **x402.types.ts** — Zod 스키마, CAIP-2 매핑 테이블, x402 전용 타입. @x402/core types/schemas import.
 
-**Key data flows:**
-- **USD 정책 플로우**: Transaction Request -> Stage 3 -> resolveEffectiveAmountUsd() -> OracleChain.getPrice() -> (Cache hit FRESH) 즉시 반환 or (Cache miss) Pyth API -> (실패) CoinGecko API -> (양쪽 성공) 교차 검증 -> PriceResult -> evaluateSpendingLimit(USD 분기) -> max(nativeTier, usdTier) -> DELAY/APPROVAL/INSTANT
-- **Action Provider 플로우**: POST /v1/actions/:p/:a -> ActionProviderRegistry.getProvider() -> requiresApiKey 검증(ApiKeyStore) -> provider.resolve() (Zod inputSchema 검증) -> ContractCallRequest(Zod 재검증) -> 파이프라인 Stage 1~6(정책 평가 포함) -> TransactionResult
-- **MCP 동적 도구 플로우**: DaemonLifecycle.start() -> ActionProviderRegistry.loadPlugins() -> mcpExpose=true 필터 -> ActionDefinition -> zodToJsonSchema -> server.tool() 등록(14 기존 도구 유지 + N 동적 도구)
+**핵심 패턴:**
+- **독립 파이프라인 모듈** (sign-only 패턴): 기존 6-stage 파이프라인을 확장하지 않고 별도 모듈. evaluateAndReserve() 재사용.
+- **기본 거부 (default deny)**: X402_ALLOWED_DOMAINS 미설정 시 x402 결제 차단. CONTRACT_WHITELIST 패턴과 동일.
+- **TOCTOU 방지**: evaluateAndReserve() + BEGIN IMMEDIATE로 동시 요청 직렬화. reserved_amount로 이중 결제 방지.
+- **키 관리 패턴**: decrypt → use → release (finally). sign-only.ts, stage5Execute와 동일.
+- **DELAY/APPROVAL 티어 즉시 거부**: x402는 동기 HTTP 흐름. 분 단위 대기 불가. INSTANT/NOTIFY만 지원.
 
 ### Critical Pitfalls
 
-1. **가격 불명 토큰을 $0로 처리하여 USD 한도 우회(C-01)** — Pyth+CoinGecko 모두 미등록 토큰의 가격을 `usdAmount: 0` 반환 시 USD 기반 SPENDING_LIMIT 완전 무력화. **방지:** PriceResult discriminated union으로 `notListed` 상태 명시, 최소 NOTIFY 격상. `resolveEffectiveAmountUsd()`는 `number | null`이 아닌 tagged union 반환 필수.
+1. **SSRF -- DNS Rebinding으로 TOCTOU 공격하여 내부 네트워크 접근**
+   - 위험: 에이전트가 URL 검증 통과 후 DNS가 127.0.0.1로 변경 → 내부 서비스 접근 → 메타데이터 탈취
+   - 방어: DNS resolve + IP 검증 + 연결을 원자적으로 수행. IPv4-mapped IPv6(::ffff:127.0.0.1), 옥탈(0177.0.0.1), 16진수(0x7f000001) 모두 차단. 리다이렉트 매 hop 재검증.
 
-2. **교차 검증 편차 계산 오류로 조작 가격 채택(C-02)** — 편차 계산에서 절대값 누락 또는 분모 잘못(pythPrice 단독 vs 평균) 시 STALE 격하 미발동. 예: `(pythPrice - cgPrice) / pythPrice`가 음수일 때 -20% < 5% 조건 통과. **방지:** `Math.abs(p1 - p2) / ((p1 + p2) / 2)` 공식 엄수. 교차 검증 결과를 감사 로그에 항상 기록(성공/실패/스킵).
+2. **결제 서명 후 리소스 서버 실패 -- 자금 손실 위험 (Signed-But-Not-Delivered)**
+   - 위험: 서명 전달 후 facilitator 정산 완료했으나 네트워크 타임아웃으로 리소스 미수신. 서명은 재사용 불가(nonce 소진).
+   - 방어: validBefore 최소화(5분), 재시도 제한(1회), 감사 로그 즉시 기록, 미확인 결제 추적 UI.
 
-3. **ESM 플러그인 resolve()가 부수 효과 실행(C-03)** — `import()` 시점에 top-level 코드 실행(파일 접근, 네트워크 호출, 프로세스 종료). Node.js ESM은 샌드박스 없음. **방지:** validate-then-trust(Zod 검증) + resolve() 타임아웃(Promise.race 5초) + 감사 로그. Owner 신뢰 경계 문서화. 향후 VM 격리 검토(v1.5 범위 외).
+3. **동시 x402 요청의 Race Condition -- SPENDING_LIMIT reserved_amount 우회**
+   - 위험: 외부 HTTP 요청 중(수백 ms~수 초) 결제 금액 불명으로 reservation 불가. 이 구간에 다른 요청이 SPENDING_LIMIT 통과.
+   - 방어: x402 전용 pre-reservation (config 기본값 $10), 외부 요청 완료 후 실제 금액으로 갱신. wallet별 x402 동시 요청 제한(기본 1).
 
-4. **evaluateAndReserve() 내 비동기 Oracle 호출 시도(H-04)** — better-sqlite3의 `transaction(() => {}).immediate()` 패턴은 동기 콜백만 지원. 트랜잭션 내 `await oracle.getPrice()`는 TOCTOU 보호 파괴. **방지:** Oracle 호출은 Stage 3 진입 전에 완료, `TransactionParam.usdAmount` 필드로 전달. evaluateAndReserve()는 이미 계산된 USD 금액만 참조.
+4. **EIP-3009 Nonce 관리 실패 -- 이중 결제 또는 Frontrunning**
+   - 위험: transferWithAuthorization은 누구나 제출 가능. 리소스 서버가 악의적이면 서명을 facilitator에 전달하지 않고 직접 정산. 또는 validBefore 만료 직전 정산하여 reservation 해제된 상태에서 결제 실행.
+   - 방어: validBefore = now + 5분(최소), nonce DB 기록, reservation TTL을 validBefore와 동기화, nonce는 `crypto.randomBytes(32)` 랜덤 생성.
 
-5. **Action Provider resolve() 반환값이 파이프라인 비호환(H-05)** — ContractCallRequest와 TransactionRequest 스키마 불일치 시 Stage 1 Zod 검증 실패 또는 Stage 5 빌드 에러. **방지:** POST /v1/actions 라우트에 변환 어댑터 레이어 구현. ContractCallRequest -> TransactionRequest 매핑 후 기존 파이프라인 주입.
+5. **도메인 검증 우회 -- URL 파싱 공격으로 X402_ALLOWED_DOMAINS 정책 무효화**
+   - 위험: `https://api.example.com@evil.com`, `https://api.example.com.evil.com`, 백슬래시 혼동, URL encoding 등으로 정책 우회.
+   - 방어: `new URL()` 한 번만 파싱 후 `url.hostname` 사용. hostname 정규화(lowercase, trailing dot 제거, punycode). userinfo(@) 포함 URL 거부. 와일드카드 dot-boundary 엄격 검증. 포트 80/443만 허용.
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-### Phase 1: Oracle Core
-**Rationale:** USD 정책 평가의 기반 인프라. 의존성 없이 독립 구축 가능. Pyth Zero-config 원칙으로 설치 직후 동작 필수.
-**Delivers:** IPriceOracle 인터페이스, InMemoryPriceCache(LRU 128 + 5분 TTL), PythOracle(Hermes REST), CoinGeckoOracle(opt-in), OracleChain(fallback + 교차 검증)
-**Addresses:** TS-01~06 (인터페이스, 캐시, 두 오라클, fallback 체인, 가격 나이 3단계)
-**Avoids:** C-01(가격 불명 $0 우회) 방지 설계 포함, C-02(편차 계산 오류) 방지 공식 명시
-**Research flags:**
-- Pyth Feed ID 매핑 전략 확정 필요(하드코딩 vs 동적 검색 비율)
-- CoinGecko platformId 전체 체인 매핑 검증 필요
-- 캐시 stampede 방지(in-flight 추적) 패턴 구현 세부사항
+### Phase 1: Core 타입 + CAIP-2 매핑 + DB 마이그레이션
+**Rationale:** 타입/스키마가 모든 후속 phase의 기반. DB 마이그레이션 선행 필수.
+**Delivers:** X402FetchRequest/Response Zod 스키마, TransactionType.X402_PAYMENT, PolicyType.X402_ALLOWED_DOMAINS, CAIP-2 매핑 테이블, DB 마이그레이션 v12 (CHECK 제약 + policies 타입)
+**Addresses:** @x402/core 의존성 추가, 타입 불일치로 인한 후속 재작업 방지
+**Avoids:** 타입 시스템 불완전한 상태에서 구현 시작
+**Estimated:** ~10-12 requirements
 
-### Phase 2: USD Policy Integration
-**Rationale:** Phase 1의 Oracle을 기존 파이프라인에 주입. Stage 3 정책 평가 확장.
-**Delivers:** resolveEffectiveAmountUsd(), PriceResult discriminated union, SpendingLimitRuleSchema Zod 신규 생성(USD 필드 optional), DatabasePolicyEngine USD 분기 추가
-**Addresses:** TS-07~08 (USD 변환, Zod 스키마)
-**Uses:** OracleChain(Phase 1), 기존 Pipeline Stage 3
-**Implements:** evaluateSpendingLimit() 수정(USD 필드 존재 시 USD 비교, 미존재 시 네이티브 비교. max(nativeTier, usdTier) 규칙)
-**Avoids:** H-04(evaluateAndReserve 내 비동기 호출) — Oracle 호출을 Stage 3 진입 전에 완료
-**Research flags:**
-- TransactionType별 금액 추출 로직(TOKEN_TRANSFER의 amount, CONTRACT_CALL의 value, BATCH 합산 등) 세부 구현 확인
-- PriceResult 3-state 처리 분기(success/oracleDown/notListed) 각각의 정책 평가 로직 명확화
+### Phase 2: SSRF 가드 + x402 핸들러 + 결제 서명
+**Rationale:** 핵심 로직 구현. SSRF는 보안 전제조건이므로 핸들러와 함께 구현.
+**Delivers:** ssrf-guard.ts (DNS resolve + IP 검증), x402-handler.ts (10단계 흐름), payment-signer.ts (EVM EIP-3009 + Solana TransferChecked)
+**Uses:** viem signTypedData, @solana/kit signBytes + noopSigner, node:dns, node:net
+**Implements:** 독립 파이프라인 모듈 (sign-only 패턴)
+**Addresses:** SSRF 취약점을 나중에 패치하는 것보다 처음부터 방어 구현
+**Avoids:** Pitfall C-01 (DNS rebinding), C-02 (Signed-But-Not-Delivered), C-04 (nonce frontrunning), C-05 (URL 파싱 공격)
+**Estimated:** ~18-22 requirements
 
-### Phase 3: Action Provider Framework
-**Rationale:** Oracle과 독립적으로 구축 가능. 플러그인 프레임워크의 핵심.
-**Delivers:** IActionProvider 인터페이스, ActionProviderRegistry(ESM plugin load), ActionProviderApiKeyStore(DB v11 + 암호화), POST /v1/actions/:provider/:action API
-**Addresses:** TS-09~12 (인터페이스, 레지스트리, API 엔드포인트, 키 저장)
-**Uses:** settings-crypto.ts 기존 암호화 함수 재사용, DB 마이그레이션 v11
-**Implements:** validate-then-trust 패턴(Zod metadata/actions 검증 + resolve() 반환값 재검증), ContractCallRequest -> TransactionRequest 변환 어댑터
-**Avoids:** C-03(악성 플러그인) — 타임아웃 + Zod 검증 + Owner 책임 문서화. H-05(파이프라인 비호환) — 변환 어댑터 레이어
-**Research flags:**
-- ESM import() 경로 정규화(pathToFileURL) 실제 동작 검증 필요
-- 플러그인 디렉토리 미존재/권한 에러 핸들링 시나리오 확인
-- ContractCallRequest Zod 스키마가 Solana/EVM 양쪽 필드를 모두 포함하는지 확인
+### Phase 3: REST API + 정책 통합 + 감사 로그
+**Rationale:** 핸들러 로직 완성 후 정책 통합 및 API 노출. 정책 없이 결제 기능 노출하지 않음.
+**Delivers:** POST /v1/x402/fetch 엔드포인트, X402_ALLOWED_DOMAINS 정책 평가, SPENDING_LIMIT 통합 (evaluateAndReserve), transactions 테이블 기록, 알림 연동 (X402_PAYMENT 이벤트)
+**Addresses:** 정책 기반 자동 결제 제어 (differentiator), 기본 거부 보안 원칙
+**Avoids:** Pitfall C-03 (race condition reserved_amount), H-01 (타임아웃 캐스케이드)
+**Estimated:** ~12-15 requirements
 
-### Phase 4: MCP/Admin/API Integration
-**Rationale:** Phase 2~3 완료 후 외부 인터페이스 확장. MCP 도구는 ActionProviderRegistry에 의존.
-**Delivers:** McpToolConverter(ActionDefinition -> MCP Tool 자동 변환), Admin Oracle Status 페이지/섹션, Admin API Keys 섹션, skill 파일 동기화
-**Addresses:** DF-04(MCP 자동 변환), TS-13(oracle-status 엔드포인트), DF-05(Admin API Keys UI), DF-06(Oracle 설정 오버라이드)
-**Uses:** ActionProviderRegistry(Phase 3), OracleChain.getCacheStats()(Phase 1), SettingsService 확장
-**Implements:** zodToJsonSchema 변환 + server.tool() 동적 등록, 기존 14개 도구 유지 + N 동적 도구, HotReloadOrchestrator oracle 키 핸들러 추가
-**Avoids:** H-06(MCP 도구 등록/해제 시 내장 도구 손실) — 이름 공간 분리(`waiaas_{provider}_{action}` 접두사)
-**Research flags:**
-- MCP SDK의 동적 도구 등록/해제 공식 API 미존재 — 대안 패턴(disable/enable) 검증 필요
-- zodToJsonSchema 변환 시 정보 손실(transform/refine 등) 가능성 확인
-- Admin Settings > Oracle 섹션 UI 레이아웃 최종 결정(별도 페이지 vs 섹션)
+### Phase 4: SDK/MCP + E2E 테스트
+**Rationale:** API 안정화 후 SDK/MCP 래핑은 기계적. E2E 테스트로 전체 흐름 검증.
+**Delivers:** TS SDK x402Fetch(), Python SDK x402_fetch(), MCP x402_fetch 도구, skill files 업데이트, E2E 테스트 23개 시나리오
+**Addresses:** MCP 도구 differentiator, SDK 통합 differentiator
+**Avoids:** 인터페이스 불일치
+**Estimated:** ~10-12 requirements
 
 ### Phase Ordering Rationale
 
-- **Phase 1(Oracle Core) 우선**: USD 정책 평가의 전제 조건. 의존성 없이 독립 구축 가능. Pyth Zero-config 원칙으로 CoinGecko 키 미설정 상태에서도 동작 필수.
-- **Phase 2(USD Policy)는 Phase 1 의존**: resolveEffectiveAmountUsd()가 OracleChain을 호출. Stage 3 수정은 파이프라인 안정성에 영향. Oracle 자체가 먼저 검증되어야 안전.
-- **Phase 3(Action Provider)는 Phase 1~2와 독립**: 플러그인 프레임워크는 Oracle과 무관. 병렬 개발 가능하나, 순차 개발 시 Phase 2 완료 후 Oracle 안정화 확인하고 시작이 안전.
-- **Phase 4(MCP/Admin)는 Phase 2~3 의존**: MCP 도구 변환은 ActionProviderRegistry 필요, Oracle Status는 OracleChain 필요. 외부 인터페이스는 내부 구현 완료 후 노출이 순서상 자연스러움.
-- **아키텍처 기반 분리**: Oracle과 Action Provider는 서로 다른 서브시스템. 각각 독립적인 Phase로 분리하여 실패 격리 + 테스트 용이성 확보.
-- **함정 회피 기반 순서**: Oracle Core 먼저 구축하면 C-01(가격 불명 $0), C-02(편차 계산) 방지 설계를 초기에 확립. USD Policy Integration에서 H-04(비동기 호출) 함정을 Stage 3 수정 시점에 집중 회피. Action Provider에서 C-03(악성 플러그인), H-05(파이프라인 비호환)을 독립 Phase에서 검증.
+- **Phase 1 우선**: 타입/스키마가 모든 후속 phase의 컴파일 타임 안전성 제공. DB 마이그레이션 선행하지 않으면 transactions INSERT 실패.
+- **Phase 2에서 SSRF와 핸들러 함께**: 핸들러의 첫 번째 단계가 URL 검증. 분리하면 불완전한 핸들러 노출 위험.
+- **Phase 3에서 정책 분리**: 핸들러 로직과 정책 통합은 관심사가 다름. 핸들러가 먼저 단위 테스트 가능해야 정책 통합 테스트 가능.
+- **Phase 4 마지막**: REST API가 완성된 후 SDK/MCP 래핑은 직선적. 핸들러/정책 변경이 API 스펙에 영향.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1 (Oracle Core):** Pyth Feed ID 매핑 — 하드코딩할 토큰 목록 확정, /v2/price_feeds API 동적 검색 결과 구조 확인, 심볼 충돌 해결 전략.
-- **Phase 2 (USD Policy Integration):** 5-type별 금액 추출 — TOKEN_TRANSFER의 amount 필드 vs CONTRACT_CALL의 value 필드, BATCH의 개별 instruction 합산 로직. PriceResult 3-state 각각의 evaluateSpendingLimit() 분기 로직.
-- **Phase 3 (Action Provider Framework):** ESM import() 에러 핸들링 — 디렉토리 미존재, 잘못된 파일, 심볼릭 링크, 권한 에러 시나리오별 graceful degradation. ContractCallRequest Zod 스키마가 Solana/EVM 공통 필드를 어떻게 처리하는지 확인.
-- **Phase 4 (MCP/Admin Integration):** MCP 동적 도구 등록 — @modelcontextprotocol/sdk의 server.tool() 등록 후 해제 메커니즘 부재, notifications/tools/list_changed 알림 전송 타이밍, 클라이언트 갱신 동작.
+**Phases needing deeper research:**
+- **Phase 2 (핸들러/서명)**: EIP-3009 도메인 파라미터(USDC name/version)가 체인별로 다를 수 있음. Base/Ethereum/Polygon USDC 컨트랙트의 `DOMAIN_SEPARATOR()` view function 호출하여 확인 필요. Confidence: MEDIUM.
+- **Phase 2 (Solana 서명)**: Solana 부분 서명에서 noopSigner feePayer 슬롯이 빈 서명으로 올바르게 처리되는지 검증 필요. @solana/kit 6.x 문서 확인. Confidence: MEDIUM.
+- **Phase 3 (타임아웃)**: DELAY 티어의 x402 타임아웃 처리 세부 로직 (request_timeout vs 정책 대기시간 budget). 동시성 시나리오 테스트 필요. Confidence: MEDIUM.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2 (USD Policy Integration — 일부):** DatabasePolicyEngine 수정은 기존 evaluateSpendingLimit() 패턴 확장. Zod 스키마 생성은 기존 패턴 준수.
-- **Phase 4 (Admin UI 확장):** Admin Settings 섹션 추가, 엔드포인트 CRUD는 기존 Preact + Hono 패턴 재사용. HotReloadOrchestrator 확장은 기존 hot-reload.ts 패턴 준수.
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1 (타입/마이그레이션)**: Zod SSoT 패턴, DB 마이그레이션 v6b/v11 패턴 재사용. 표준 프로세스.
+- **Phase 4 (SDK/MCP)**: 기존 SDK/MCP 패턴 재사용. 신규 연구 불필요.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | Pyth/CoinGecko 공식 문서 직접 검증, Node.js 22 fetch() 내장 기능 확인, 기존 settings-crypto.ts 패턴 코드베이스 직접 분석. 신규 의존성 0개 결론은 각 기술의 공식 API 문서 교차 확인으로 뒷받침. |
-| Features | **HIGH** | 목표 문서 v1.5 객체 분석 + Pyth/CoinGecko API 기능 범위 확인 + 기존 코드베이스(SPENDING_LIMIT, Pipeline Stage 3) 직접 분석. Table stakes vs differentiators 구분은 DeFi 오라클 보안 best practice 문서 + Coinbase AgentKit architecture 비교 기반. |
-| Architecture | **HIGH** | 기존 6-stage 파이프라인 코드 직접 분석(stages.ts, pipeline.ts, database-policy-engine.ts), DaemonContext 패턴 확인, SettingsService/hot-reload 메커니즘 확인. OracleChain fallback 패턴은 Pyth/CoinGecko API 동작 + Chain of Responsibility 패턴. |
-| Pitfalls | **HIGH** | C-01~03은 DeFi 오라클 조작 공격 사례 연구 + ESM 보안 연구 교차 확인. H-04는 better-sqlite3 동기 트랜잭션 제약 코드 직접 확인. H-05는 기존 buildByType() 코드 직접 분석. |
+| Stack | HIGH | @x402/core npm 확인 (v2.3.1, zod ^3.24.2, Apache-2.0). viem/solana-kit 기존 사용 패턴 검증. SSRF 자체 구현 OWASP 가이드라인 기반. |
+| Features | HIGH | x402 v2 스펙 + WAIaaS 기존 기능(정책, 알림, Kill Switch) 재사용. Table stakes 10개, Differentiators 6개, Anti-features 5개 모두 근거 명확. |
+| Architecture | HIGH | x402-handler + payment-signer + ssrf-guard 분리. sign-only 패턴 재사용. evaluateAndReserve 통합 검증됨. 컴포넌트 경계 5개, 10단계 흐름 명확. |
+| Pitfalls | HIGH | OWASP SSRF Cheat Sheet, EIP-3009 스펙, DNS rebinding 연구, URL 파싱 공격 케이스 교차 검증. Critical 5개, High 5개, Moderate 5개 모두 근거 기반. |
 
-**Overall confidence:** **HIGH**
-
-모든 핵심 결정(신규 의존성 0개, Oracle 2단계 fallback, USD 정책 통합 시점, ESM 플러그인 보안 경계)이 공식 문서 또는 기존 코드베이스 직접 분석으로 뒷받침됨. Pyth Feed ID 매핑 전략, MCP 동적 도구 등록/해제 메커니즘은 phase planning에서 확정 필요하나 대안 경로 명확.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Pyth Feed ID 주요 토큰 목록 확정**: SOL/ETH/BTC는 HIGH confidence로 feedId 확인했으나, USDC/USDT/DAI 등 stablecoin, 주요 DeFi 토큰(UNI, AAVE, LINK)의 정확한 feedId는 phase planning에서 `/v2/price_feeds` API로 검증 필요. 하드코딩 맵에 포함할 토큰 목록(10-15개) 최종 결정.
-
-- **CoinGecko platformId 전체 체인 매핑**: solana, ethereum, polygon-pos는 공식 문서에서 확인했으나, 향후 지원 체인(arbitrum-one, base, avalanche 등)의 정확한 platformId는 `/asset_platforms` API로 검증 필요. ChainType -> platformId 매핑 테이블 완성.
-
-- **API 키 암호화 패턴 최종 결정**: 목표 문서에서 sodium-native secretbox를 명시했으나, 리서치에서 기존 HKDF+AES-256-GCM 재사용을 권장(보안 동등성 + 일관성). Phase planning에서 최종 결정 필요. CoinGecko 키는 SettingsService vs api_keys 테이블 저장소 선택.
-
-- **MCP 동적 도구 등록/해제 메커니즘**: @modelcontextprotocol/sdk 1.26.0에 server.tool() 등록 API는 있으나 공식 해제 API는 부재. 내부 도구 맵 조작 또는 disable/enable 패턴 중 선택 필요. notifications/tools/list_changed 알림 전송 타이밍 확인 필요.
-
-- **ContractCallRequest Zod 스키마 Solana/EVM 공존**: 기존 schemas/transaction.schema.ts의 ContractCallRequest가 Solana(programId/instructionData/accounts)와 EVM(to/calldata/abi/value) 필드를 어떻게 처리하는지 확인 필요. Action Provider의 resolve() 반환값이 체인별로 다른 필드를 가질 수 있으므로 스키마가 유연해야 함.
+- **EIP-3009 도메인 파라미터**: USDC 컨트랙트의 EIP-712 domain separator(name, version)가 체인별로 다를 가능성. 구현 시 Base/Ethereum/Polygon USDC의 `name()`, `version()` view function 또는 `DOMAIN_SEPARATOR()` 조회하여 상수 테이블 확인 필요. Coinbase 문서에서 확인 가능할 수도 있음.
+- **@x402/svm 버전 차이**: @x402/svm v2.3.0이 @solana/kit ^5.1.0 사용 (WAIaaS는 6.x). x402 SVM 참조 구현 확인 시 API 차이 주의. WAIaaS는 @x402/svm을 직접 사용하지 않으므로 블로커는 아니나, 참조 구현 참고 시 버전 차이 인지 필요.
+- **Permit2 지원**: v1.5.1에서는 EIP-3009만 지원. Permit2는 사전 approve 트랜잭션 필요, 복잡도 높음. 향후 마일스톤에서 Permit2 필요성 재평가 + 추가 연구 필요.
+- **x402 v1 호환**: v2만 우선 지원. v1 서버가 여전히 존재하면 파싱 fallback 추가 필요. v1과 v2의 헤더 차이(`X-PAYMENT` vs `PAYMENT-SIGNATURE`) 처리 전략.
+- **Facilitator 정산 실패 시 재시도 프로토콜**: x402 스펙에 facilitator 정산 실패 시 클라이언트 재시도 프로토콜 명시 없음. 구현 시 방어적 설계 필요 (재시도 금지, 서명 1회만 사용).
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **Pyth Hermes API Reference** — https://docs.pyth.network/price-feeds/core/api-reference — /v2/updates/price/latest 엔드포인트 사양, 응답 구조(parsed/binary), rate limits(30 req/10s)
-- **Pyth Fetch Price Updates Guide** — https://docs.pyth.network/price-feeds/core/fetch-price-updates — HermesResponse 인터페이스, price/conf/expo 필드 설명
-- **Pyth Rate Limits** — https://docs.pyth.network/price-feeds/core/rate-limits — 30 req/10s per IP, 60s cooldown on 429
-- **CoinGecko Simple Token Price API** — https://docs.coingecko.com/reference/simple-token-price — /simple/token_price/{platform_id} 엔드포인트, contract_addresses 배치 지원
-- **CoinGecko Rate Limits** — https://docs.coingecko.com/docs/common-errors-rate-limit — Demo 30/min + 10K/month, Pro 500-1000/min
-- **WAIaaS 기존 코드베이스** — pipeline/stages.ts, database-policy-engine.ts, settings-crypto.ts, hot-reload.ts 직접 분석
-- **WAIaaS 목표 문서** — objectives/v1.5-defi-price-oracle.md — 기술 결정 #1~6(Zero-config, LRU 직접 구현, Chainlink 제외 등)
-- **WAIaaS 설계 문서** — docs/61-price-oracle-spec.md, docs/62-action-provider-architecture.md — IPriceOracle 인터페이스, IActionProvider 인터페이스, resolve-then-execute 패턴
-- **Node.js ESM Documentation** — https://nodejs.org/api/esm.html — import() 동작, 모듈 캐시, pathToFileURL 사용
-- **MDN AbortSignal.timeout** — https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static — fetch() 타임아웃 패턴
+- [@x402/core npm v2.3.1](https://www.npmjs.com/package/@x402/core) -- package.json, 의존성, 라이선스 확인
+- [Coinbase x402 GitHub](https://github.com/coinbase/x402) -- 모노레포, 스펙, 스키마, 참조 구현
+- [x402 Protocol Specification v2](https://github.com/coinbase/x402/blob/main/specs/x402-specification-v2.md) -- 프로토콜 흐름, 헤더, PaymentRequired/Payload 구조
+- [x402 EVM Exact Scheme](https://github.com/coinbase/x402/blob/main/specs/schemes/exact/scheme_exact_evm.md) -- EIP-3009 TransferWithAuthorization 구조
+- [x402 SVM Exact Scheme](https://github.com/coinbase/x402/blob/main/specs/schemes/exact/scheme_exact_svm.md) -- SPL TransferChecked 부분 서명
+- [EIP-3009 Specification](https://eips.ethereum.org/EIPS/eip-3009) -- TransferWithAuthorization, nonce, validBefore 표준
+- [viem signTypedData (Local Account)](https://viem.sh/docs/accounts/local/signTypedData) -- EIP-712 서명 API
+- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) -- SSRF 방어 전략
+- [OWASP SSRF Prevention in Node.js](https://owasp.org/www-community/pages/controls/SSRF_Prevention_in_Nodejs) -- Node.js 전용 가이드
+- [CAIP-2 Specification](https://standards.chainagnostic.org/CAIPs/caip-2) -- 블록체인 식별자 표준
+- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) -- genesis hash 기반 식별자
+- WAIaaS 코드베이스 직접 분석: `stages.ts`, `database-policy-engine.ts`, `sign-only.ts`, `objectives/v1.5.1-x402-client.md` (v1.5)
 
 ### Secondary (MEDIUM confidence)
-- **DeFi Oracle Security Best Practices** — CertiK, Cyfrin, Halborn 오라클 조작 공격 사례 연구 — 교차 검증, 다중 소스, "가격 불명 != 가격 0" 원칙
-- **Coinbase AgentKit Architecture** — https://docs.cdp.coinbase.com/agent-kit/core-concepts/architecture-explained — Action Provider 패턴 참조, @CreateAction 데코레이터 vs 인터페이스 기반 비교
-- **Pyth Price Feed IDs** — https://docs.pyth.network/price-feeds/core/price-feeds — 380+ 피드 목록, SOL/ETH/BTC feedId 교차 확인
-- **sodium-native secretbox** — https://sodium-friends.github.io/docs/docs/secretkeyboxencryption — crypto_secretbox_easy API, KEYBYTES/NONCEBYTES 상수
+- [x402 Network Support](https://docs.cdp.coinbase.com/x402/network-support) -- CAIP-2 매핑 목록
+- [x402 v2 Launch](https://www.x402.org/writing/x402-v2-launch) -- v2 변경 사항, 헤더 표준화
+- [Base x402 Agents Guide](https://docs.base.org/base-app/agents/x402-agents) -- Base 생태계 x402 통합
+- [Solana x402 Guide](https://solana.com/developers/guides/getstarted/intro-to-x402) -- Solana x402 구현
+- [PortSwigger URL Validation Bypass Cheat Sheet](https://portswigger.net/research/introducing-the-url-validation-bypass-cheat-sheet) -- URL 파싱 모호성 연구
+- [Bypassing SSRF Protection in nossrf](https://www.nodejs-security.com/blog/bypassing-ssrf-protection-nossrf) -- Node.js SSRF 라이브러리 우회 사례
+- [private-ip multicast bypass](https://www.nodejs-security.com/blog/dont-be-fooled-multicast-ssrf-bypass-private-ip) -- private-ip CVE
 
 ### Tertiary (LOW confidence)
-- **Pyth Feed ID 동적 검색(/v2/price_feeds)** — 문서에서 엔드포인트 존재 확인했으나 실제 응답 구조는 미검증. phase planning에서 실제 호출 필요.
-- **CoinGecko platformId 전체 목록** — 주요 체인 8개는 확인했으나 전체 목록은 /asset_platforms API로 phase planning에서 확인 필요.
-- **MCP 동적 도구 등록/해제** — GitHub Issue #682에서 제약 사항 확인했으나 공식 해결 방법은 부재. 대안 패턴 phase planning에서 검증 필요.
+- [x402 InfoQ Major Upgrade (2026-01)](https://www.infoq.com/news/2026/01/x402-agentic-http-payments/) -- 생태계 동향 (검증 필요)
+- [EIP-3009 Forwarder for x402](https://github.com/TheGreatAxios/eip3009-forwarder) -- wrapper contracts (참조용, 미검증)
 
 ---
 *Research completed: 2026-02-15*
