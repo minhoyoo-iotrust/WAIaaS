@@ -1,5 +1,33 @@
 # Project Milestones: WAIaaS
 
+## v1.5.1 x402 클라이언트 지원 (Shipped: 2026-02-15)
+
+**Delivered:** AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태를 달성 — SSRF 가드 자체 구현, x402 핸들러(HTTP 402 파싱 → scheme 선택 → EVM EIP-3009/Solana TransferChecked 결제 서명), POST /v1/x402/fetch REST API, X402_ALLOWED_DOMAINS 기본 거부 정책 + SPENDING_LIMIT 4-tier USD 환산 통합, 감사 로그(X402_PAYMENT) + 알림 연동, TS/Python SDK + MCP x402_fetch 도구 + x402.skill.md 스킬 파일
+
+**Phases completed:** 130-133 (10 plans total)
+
+**Key accomplishments:**
+
+- SSRF 가드 자체 구현 — RFC 5735/6890 전체 범위 사설 IP 차단, IPv4-mapped IPv6/옥탈/16진수 우회 벡터 차단, 리다이렉트 매 hop IP 재검증, HTTPS 강제, URL 정규화, 54 단위 테스트
+- x402 자동 결제 파이프라인 — HTTP 402 PAYMENT-REQUIRED 헤더 파싱, (scheme, network) 쌍 자동 선택, EVM EIP-3009 transferWithAuthorization signTypedData + Solana SPL TransferChecked signBytes 결제 서명, 재요청 + 1회 재시도 제한
+- X402_ALLOWED_DOMAINS 기본 거부 정책 — 와일드카드 dot-boundary 매칭, SPENDING_LIMIT 4-tier evaluateAndReserve 통합, USDC $1 직접 환산 + IPriceOracle USD 환산, DELAY request_timeout 대기/APPROVAL 즉시 거부
+- POST /v1/x402/fetch REST API — sessionAuth 보호, 3-phase 오케스트레이션(validation → policy+402 → signing+retry), transactions X402_PAYMENT 기록 + TX_REQUESTED/TX_CONFIRMED/TX_FAILED 알림 연동, Kill Switch 전체 차단
+- TS/Python SDK + MCP x402_fetch 도구 — WAIaaSClient.x402Fetch()/x402_fetch() 메서드, MCP x402_fetch 15번째 도구, x402.skill.md 스킬 파일 + waiaas://skills/x402 리소스, transactions.skill.md X402_PAYMENT 반영
+
+**Stats:**
+
+- 95 files changed, +18,160 / -252 lines
+- 4 phases, 10 plans, 39 requirements, 59 설계 결정
+- 2,058 tests (1,848 → 2,058, +210 new tests)
+- ~187,000 LOC total
+- 53 commits, 1 day (2026-02-15)
+
+**Git range:** `v1.5.0` → `0033f0b` (Phase 133 complete)
+
+**What's next:** v1.6 Desktop + Telegram + Docker 또는 v1.6.4 Wallet Signing SDK
+
+---
+
 ## v1.3.3 MCP 다중 에이전트 지원 (Shipped: 2026-02-11)
 
 **Delivered:** 하나의 WAIaaS 데몬에 등록된 여러 에이전트를 Claude Desktop(MCP)에서 동시에 사용할 수 있도록, 에이전트별 토큰 경로 분리(mcp-tokens/<agentId>), MCP 서버 이름/description 에이전트 식별, CLI `mcp setup --all` 일괄 설정을 구현

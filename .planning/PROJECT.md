@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~185,000 LOC, 1,848 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(**USD 기준 포함**) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, **USD 환산 정책 평가**) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → **Action Provider 플러그인 실행(POST /v1/actions/:provider/:action)** → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, set_default_network, wallet info, network=all 잔액, **action_{provider}_{action} MCP 도구**) + Telegram/Discord/ntfy/Slack 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, 메시지 저장/조회, **가격 불명 토큰 NOTIFY 격상**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(채널별 테스트 + Slack) + MCP 토큰 발급 + 대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회 + **오라클 상태 조회 + API 키 관리**) + 다중 지갑 MCP 설정(**14+ 도구** + 스킬 리소스 + **Action Provider 동적 도구**) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ **6개**) 제공까지 동작.
+v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~187,000 LOC, 2,058 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(**USD 기준 포함**) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, **USD 환산 정책 평가**) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행(POST /v1/actions/:provider/:action) → **x402 유료 API 자동 결제(POST /v1/x402/fetch, SSRF 가드, EIP-3009/TransferChecked 결제 서명)** → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, set_default_network, wallet info, network=all 잔액, action_{provider}_{action} MCP 도구, **x402Fetch/x402_fetch SDK + x402_fetch MCP 도구**) + Telegram/Discord/ntfy/Slack 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, 메시지 저장/조회, 가격 불명 토큰 NOTIFY 격상) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + **X402_ALLOWED_DOMAINS 정책** + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(채널별 테스트 + Slack) + MCP 토큰 발급 + 대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회 + 오라클 상태 조회 + API 키 관리) + 다중 지갑 MCP 설정(**15+ 도구** + 스킬 리소스 + Action Provider 동적 도구) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ **7개**) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -30,27 +30,27 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 9-패�
 - ✅ v1.4.7 임의 트랜잭션 서명 API — shipped 2026-02-15 (1,636 tests, ~175,480 LOC)
 - ✅ v1.4.8 Admin DX + 알림 개선 — shipped 2026-02-15 (~1,618 tests, ~178,176 LOC)
 - ✅ v1.5 DeFi Price Oracle + Action Provider Framework — shipped 2026-02-15 (1,848 tests, ~185,000 LOC)
-- v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
+- ✅ v1.5.1 x402 클라이언트 지원 — shipped 2026-02-15 (2,058 tests, ~187,000 LOC)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~185,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,848 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~187,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- 2,058 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
-- OpenAPIHono 49 엔드포인트 (46 + POST /actions/:provider/:action + GET /actions/providers + GET /admin/oracle-status), GET /doc OpenAPI 3.0 자동 생성
-- 6개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions + MCP 스킬 리소스(waiaas://skills/{name})
-- IChainAdapter 22 메서드, discriminatedUnion 5-type 파이프라인, 11 PolicyType
+- OpenAPIHono 50 엔드포인트 (49 + POST /v1/x402/fetch), GET /doc OpenAPI 3.0 자동 생성
+- 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
+- IChainAdapter 22 메서드, discriminatedUnion 5-type 파이프라인, 12 PolicyType (X402_ALLOWED_DOMAINS 추가)
 - IPriceOracle — Pyth Hermes + CoinGecko OracleChain fallback, USD 기준 정책 평가
 - IActionProvider — ESM 플러그인 프레임워크, ActionProviderRegistry, MCP Tool 자동 변환
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- MCP 14개 내장 도구 + Action Provider 동적 도구 + 5개 스킬 리소스
+- MCP 15개 내장 도구 (x402_fetch 추가) + Action Provider 동적 도구 + 7개 스킬 리소스
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
-- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v11
+- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v12
 - API 키 관리 — DB 암호화 저장(HKDF+AES-256-GCM), Admin UI CRUD
 - pushSchema 3-step 순서 (tables→migrations→indexes) + 마이그레이션 체인 테스트
 - MCP graceful shutdown (stdin 감지 + force-exit 타임아웃)
@@ -283,19 +283,11 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 9-패�
 - ✓ admin.skill.md oracle-status + api-keys 엔드포인트 문서화 — v1.5 (SKIL-01)
 - ✓ actions.skill.md Action Provider REST API 문서화 신규 생성 — v1.5 (SKIL-02)
 
+- ✓ x402 자동 결제 파이프라인 — SSRF 가드, HTTP 402 파싱, EIP-3009/TransferChecked 결제 서명, POST /v1/x402/fetch REST API — v1.5.1
+- ✓ X402_ALLOWED_DOMAINS 기본 거부 정책 + SPENDING_LIMIT 4-tier USD 환산 통합 — v1.5.1
+- ✓ TS/Python SDK x402Fetch/x402_fetch + MCP x402_fetch 도구 + x402.skill.md — v1.5.1
+
 ### 활성
-
-**Current Milestone: v1.5.1 x402 클라이언트 지원**
-
-**Goal:** AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태
-
-**Target features:**
-- x402 핸들러 (HTTP 402 → PaymentRequirements 파싱 → 결제 서명 → X-PAYMENT 재요청)
-- x402 정책 통합 (기존 SPENDING_LIMIT 4-tier + X402_ALLOWED_DOMAINS 신규)
-- 결제 서명 생성기 (Solana SPL TransferChecked / EVM EIP-3009)
-- POST /v1/x402/fetch 데몬 엔드포인트 + SSRF 방어
-- TS SDK x402Fetch() + Python SDK x402_fetch() + MCP x402_fetch 도구
-- 감사 로그 (X402_PAYMENT 트랜잭션 타입) + 알림 연동
 
 ## Next Milestone Goals
 
@@ -317,7 +309,7 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 9-패�
 
 ## 컨텍스트
 
-**누적:** 29 milestones (v0.1-v1.5), 129 phases, 279 plans, 768 requirements, 36 설계 문서(24-72), 8 objective 문서, ~185,000 LOC, 1,848 테스트
+**누적:** 30 milestones (v0.1-v1.5.1), 133 phases, 289 plans, 807 requirements, 36 설계 문서(24-72), 8 objective 문서, ~187,000 LOC, 2,058 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -338,6 +330,7 @@ v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 
 v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 5 페이즈, 12 플랜, 30 요구사항, ~175,480 LOC, 1,636 테스트, 33 설계 결정.
 v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 요구사항, ~178,176 LOC, ~1,618 테스트, 18 설계 결정.
 v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 5 페이즈, 14 플랜, 29 요구사항, ~185,000 LOC, 1,848 테스트, 84 설계 결정.
+v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 4 페이즈, 10 플랜, 39 요구사항, ~187,000 LOC, 2,058 테스트, 59 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -516,6 +509,14 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 5 페�
 | fire-and-forget 패턴 registerActionProviderTools | 실패 시에도 MCP 서버 정상 동작, degraded mode | ✓ Good — v1.5 구현 |
 | OracleChain 캐시 전담 (Oracle 개별 캐시 미관리) | 단일 캐시 레이어로 일관된 TTL/LRU 관리 | ✓ Good — v1.5 구현 |
 | 교차 검증 CoinGecko DI 주입 시에만 활성화 | 키 미설정 → fallback 미주입 → 자동 스킵 | ✓ Good — v1.5 구현 |
+| @x402/core 단일 의존성 추가 | Zod SSoT 호환, PaymentRequirements/PaymentPayload 재정의 불필요 | ✓ Good — v1.5.1 구현 |
+| SSRF 가드 자체 구현 (node:dns + node:net) | 외부 라이브러리 CVE 회피, RFC 5735/6890 전체 범위 차단 | ✓ Good — v1.5.1 구현 |
+| x402-handler 독립 파이프라인 | 기존 6-stage 미확장, sign-only 패턴 참조한 별도 오케스트레이션 | ✓ Good — v1.5.1 구현 |
+| DELAY/APPROVAL 즉시 거부 (x402) | 동기 HTTP에서 Owner 승인 대기 불가 | ✓ Good — v1.5.1 구현 |
+| IChainAdapter 미경유 결제 서명 | EIP-3009 typed data 서명은 IChainAdapter 책임 외 | ✓ Good — v1.5.1 구현 |
+| X402_ALLOWED_DOMAINS DatabasePolicyEngine 외부 모듈 | 독립 평가 로직, 정책 엔진 수정 최소화 | ✓ Good — v1.5.1 구현 |
+| USDC $1 직접 환산 + 비-USDC IPriceOracle | USDC 안정성 활용, 오라클 호출 최소화 | ✓ Good — v1.5.1 구현 |
+| parse402Response + selectPaymentRequirement + signPayment 직접 조합 | handleX402Fetch 단일 함수 대신 조합 가능한 빌딩 블록 | ✓ Good — v1.5.1 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.5.1 milestone started*
+*최종 업데이트: 2026-02-15 after v1.5.1 milestone shipped*
