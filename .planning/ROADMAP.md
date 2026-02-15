@@ -61,7 +61,7 @@
 
 - [x] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** (2/2 plans) -- completed 2026-02-15
 - [x] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** (3/3 plans) -- completed 2026-02-15
-- [ ] **Phase 132: REST API + 정책 통합 + 감사 로그** (3 plans) - 엔드포인트 노출, 정책 평가, 트랜잭션 기록
+- [x] **Phase 132: REST API + 정책 통합 + 감사 로그** (3/3 plans) -- completed 2026-02-15
 - [ ] **Phase 133: SDK + MCP + 스킬 파일** - TS/Python SDK, MCP 도구, 문서 통합
 
 ## Phase Details
@@ -139,7 +139,7 @@ Phases execute in numeric order: 130 -> 131 -> 132 -> 133
 |-------|-----------|----------------|--------|-----------|
 | 130. Core 타입 + CAIP-2 + DB | v1.5.1 | 2/2 | ✓ Complete | 2026-02-15 |
 | 131. SSRF + 핸들러 + 서명 | v1.5.1 | 3/3 | ✓ Complete | 2026-02-15 |
-| 132. API + 정책 + 감사 | v1.5.1 | 0/3 | Not started | - |
+| 132. API + 정책 + 감사 | v1.5.1 | 3/3 | ✓ Complete | 2026-02-15 |
 | 133. SDK + MCP + 스킬 | v1.5.1 | 0/2 | Not started | - |
 
 ---
