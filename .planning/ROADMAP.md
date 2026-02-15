@@ -71,7 +71,7 @@
 **Milestone Goal:** Admin UI에서 12개 정책 타입별 구조화된 폼으로 정책을 생성/수정하고, 목록에서 타입별 의미 있는 시각화를 확인할 수 있는 상태를 달성하여 운영자 DX를 개선한다.
 
 - [x] **Phase 134: 폼 인프라 + 5-type 전용 폼** (2/2 plans) - DynamicRowList, PolicyFormRouter, JSON 토글, Zod 스키마 추가, 5개 타입 전용 폼 + 유효성 검증 -- completed 2026-02-15
-- [ ] **Phase 135: 7-type 전용 폼 + 목록 시각화 + 수정 통합** (2 plans) - 나머지 7개 타입 전용 폼, 12개 타입 목록 시각화, 수정 프리필 + 저장 통합
+- [x] **Phase 135: 7-type 전용 폼 + 목록 시각화 + 수정 통합** (2/2 plans) - 나머지 7개 타입 전용 폼, 12개 타입 목록 시각화, 수정 프리필 + 저장 통합 -- completed 2026-02-16
 
 ## Phase Details
 
@@ -92,8 +92,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 135-01-PLAN.md -- 7-type 전용 폼 컴포넌트 + PolicyFormRouter 12-type 통합 + validateRules 7-type 추가
-- [ ] 135-02-PLAN.md -- PolicyRulesSummary 12-type 목록 시각화 + 수정 프리필/저장 통합 + 테스트
+- [x] 135-01-PLAN.md -- 7-type 전용 폼 컴포넌트 + PolicyFormRouter 12-type 통합 + validateRules 7-type 추가
+- [x] 135-02-PLAN.md -- PolicyRulesSummary 12-type 목록 시각화 + 수정 프리필/저장 통합 + 테스트
 
 ## Progress
 
@@ -102,8 +102,8 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 134. 폼 인프라 + 5-type 전용 폼 | v1.5.2 | 2/2 | Complete | 2026-02-15 |
-| 135. 7-type 전용 폼 + 목록 시각화 + 수정 통합 | v1.5.2 | 0/2 | Not started | - |
+| 135. 7-type 전용 폼 + 목록 시각화 + 수정 통합 | v1.5.2 | 2/2 | Complete | 2026-02-16 |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 -- Phase 135 계획 완료 (2 plans)*
+*Last updated: 2026-02-16 -- Phase 135 완료 (4/4 plans, 24/24 requirements, v1.5.2 마일스톤 완료)*
