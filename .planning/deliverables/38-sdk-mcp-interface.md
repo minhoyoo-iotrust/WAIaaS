@@ -2553,21 +2553,19 @@ export function registerGetNonce(server: McpServer): void {
 | `inputSchema` (Zod) | `tool.inputSchema` (JSON Schema) | `zodToJsonSchema()` 자동 변환 |
 | `mcpExpose` | (등록 여부) | `mcpExpose: true`인 Action만 MCP Tool로 등록 |
 
-**MCP_TOOL_MAX = 16 상한:**
+**MCP Tool 노출 제어 (도구 수 상한 없음):**
 
 ```typescript
 /**
- * MCP Tool 최대 등록 수.
- * - 기존 6개 MCP Tool (send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce)
- * - + Action에서 변환된 Tool 최대 10개
- * - = 총 16개 상한
+ * 기존 14개 MCP 내장 도구.
+ * send_token, get_balance, get_address, get_assets, list_transactions,
+ * get_transaction, get_nonce, call_contract, approve_token, send_batch,
+ * get_wallet_info, encode_calldata, sign_transaction, set_default_network
  *
- * 근거: LLM 컨텍스트 오버플로 방지 (62-action-provider-architecture.md 섹션 7.3 결정)
- * 16개 초과 시 mcpExpose=true인 Action 중 우선순위 순 선택, 나머지 경고 로그.
+ * NOTE (v1.5): MCP 프로토콜에 도구 수 상한이 없으므로 MCP_TOOL_MAX 제거.
+ * mcpExpose 플래그로 노출 범위만 제어한다.
  */
-const MCP_TOOL_MAX = 16
-const BUILT_IN_TOOL_COUNT = 6
-const MAX_ACTION_TOOLS = MCP_TOOL_MAX - BUILT_IN_TOOL_COUNT  // = 10
+const BUILT_IN_TOOL_COUNT = 14
 ```
 
 **변환 프로세스:**
@@ -2591,17 +2589,8 @@ async function registerActionTools(server: McpServer, apiBaseUrl: string): Promi
     }
   }
 
-  // 3. MCP_TOOL_MAX 검사 (기존 6개 + Action Tool)
-  if (exposedActions.length > MAX_ACTION_TOOLS) {
-    console.warn(
-      `[waiaas-mcp] ${exposedActions.length} action tools exceed limit ${MAX_ACTION_TOOLS}. ` +
-      `Only first ${MAX_ACTION_TOOLS} will be registered.`
-    )
-  }
-  const toRegister = exposedActions.slice(0, MAX_ACTION_TOOLS)
-
-  // 4. 각 Action을 MCP Tool로 등록
-  for (const { provider, action } of toRegister) {
+  // 3. 각 Action을 MCP Tool로 등록 (도구 수 상한 없음, mcpExpose 필터링만 수행)
+  for (const { provider, action } of exposedActions) {
     const toolName = `${provider}_${action.name}`  // 예: jupiter-swap_swap
     const detailRes = await fetch(
       `${apiBaseUrl}/v1/actions/${provider}/${action.name}`,
@@ -2638,17 +2627,16 @@ async function registerActionTools(server: McpServer, apiBaseUrl: string): Promi
 ```
 
 **MCP Tool 등록 순서:**
-1. 기존 6개 내장 Tool 등록 (send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce)
-2. Action Provider API 조회 -> mcpExpose=true인 Action Tool 등록 (최대 10개)
-3. 총 Tool 수가 MCP_TOOL_MAX(16)을 초과하면 경고 로그 + 초과분 미등록
+1. 기존 14개 내장 Tool 등록 (send_token, get_balance, get_address, get_assets, list_transactions, get_transaction, get_nonce, call_contract, approve_token, send_batch, get_wallet_info, encode_calldata, sign_transaction, set_default_network)
+2. Action Provider API 조회 -> mcpExpose=true인 Action Tool 등록 (도구 수 상한 없음)
 
-**MCP Tool 총 현황 (v0.6):**
+**MCP Tool 총 현황 (v1.5):**
 
 | 구분 | 수 | 예시 |
 |------|---|------|
-| 기존 내장 Tool | 6 | send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce |
-| Action 변환 Tool | 0~10 | jupiter-swap_swap (등록된 Action Provider에 따라 동적) |
-| **최대** | **16** | MCP_TOOL_MAX 상한 |
+| 기존 14개 내장 Tool | 14 | send_token, get_balance, get_address, get_assets, list_transactions, get_transaction, get_nonce, call_contract, approve_token, send_batch, get_wallet_info, encode_calldata, sign_transaction, set_default_network |
+| Action 변환 Tool | mcpExpose=true 기준 | jupiter-swap_swap (등록된 Action Provider에 따라 동적) |
+| **총 도구 수** | **상한 없음** | mcpExpose 플래그로 노출 범위 제어 |
 
 ---
 
@@ -5426,12 +5414,12 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
 | 34 | GET /v1/actions | - | 간접 커버 | Action Tool 자동 등록으로 간접 노출 (5.3.8 참조) |
 | 35 | GET /v1/actions/:p/:a | - | 간접 커버 | MCP Tool description에 Action 정보 포함 |
 | 36 | POST /v1/actions/:p/:a/resolve | - | 의도적 미커버 | resolve만 사용하는 시나리오는 Agent 고급 사용, SDK 권장 |
-| 37 | POST /v1/actions/:p/:a/execute | 동적 도구: `{provider}_{action}` | 커버됨 | Action -> MCP Tool 자동 변환 (mcpExpose=true, MCP_TOOL_MAX=16) |
+| 37 | POST /v1/actions/:p/:a/execute | 동적 도구: `{provider}_{action}` | 커버됨 | Action -> MCP Tool 자동 변환 (mcpExpose=true, 도구 수 상한 없음) |
 
 **요약:**
-- 커버됨: 7개 내장 + 동적 Action Tool (도구 6 + 리소스 3, 일부 중복 + Action Tool 최대 10개)
+- 커버됨: 14개 내장 + 동적 Action Tool (도구 14 + 리소스 3, 일부 중복 + mcpExpose=true Action Tool)
 - 의도적 미커버: 27개 (Owner 17 + Admin 3 + Session Mgmt 3 + doc 1 + assets 1 + resolve 1 + actions list 1)
-- MCP_TOOL_MAX = 16 (내장 6 + Action 최대 10) -- 62-action-provider-architecture.md 결정
+- 도구 수 상한 없음 (mcpExpose 플래그로 노출 범위 제어) -- 62-action-provider-architecture.md v1.5 결정
 - v0.3+ 확장 후보: Streamable HTTP transport 도입 시 MCP 도구 확장 검토
 
 ### 11.2 SDK 에러 코드 타입 매핑 전략 (NOTE-04) (v0.6 변경)
@@ -5680,3 +5668,11 @@ v0.9 리서치에서 식별된 5건의 구현 pitfall과 설계 수준 대응 �
 - 38-RESEARCH.md -- Phase 38 ApiClient 래퍼 패턴, tool/resource handler 통합 패턴, 프로세스 생명주기 리서치 (Phase 38-01 참조)
 - v0.9-PITFALLS.md -- H-04 (반복 에러 연결 해제), H-05 (401 자동 재시도), M-03 (만료 환경변수) (Phase 38-02 참조)
 - MCP Protocol stdio 사양 -- stdout JSON-RPC 전용, stderr 로그 (Phase 38-02 SMGI-D04 근거)
+
+---
+
+**v1.5 업데이트: 2026-02-15 -- MCP Tool 16개 상한 제거, 기존 도구 14개 현행화**
+- MCP_TOOL_MAX = 16 상수 및 상한 검사 의사코드 제거
+- BUILT_IN_TOOL_COUNT: 6 -> 14로 변경
+- 기존 14개 내장 도구 목록으로 갱신
+- 도구 수 상한 없음, mcpExpose 플래그로 노출 범위만 제어

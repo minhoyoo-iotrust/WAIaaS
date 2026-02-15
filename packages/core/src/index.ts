@@ -110,7 +110,7 @@ export {
   CHAIN_ERROR_CATEGORIES,
 } from './errors/index.js';
 
-// Interfaces (4 contracts + chain adapter types)
+// Interfaces (5 contracts + chain adapter types + v1.5 price oracle types)
 export type {
   TokenAmount,
   TransferRequest,
@@ -139,7 +139,15 @@ export type {
   PolicyEvaluation,
   INotificationChannel,
   NotificationPayload,
+  // v1.5 price oracle types
+  TokenRef,
+  PriceInfo,
+  CacheStats,
+  IPriceOracle,
 } from './interfaces/index.js';
+
+// v1.5 Price Oracle Zod schemas (value exports)
+export { TokenRefSchema, PriceInfoSchema } from './interfaces/index.js';
 
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';

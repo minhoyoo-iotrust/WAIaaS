@@ -13,7 +13,7 @@
 
 ### 1.1 목적
 
-이 문서는 WAIaaS의 **Action Provider 레이어**를 설계한다. DeFi 프로토콜 지식(스왑, 스테이킹, 렌딩 등)을 IChainAdapter에서 분리하여 독립적인 프로바이더 계층으로 캡슐화하고, 모든 DeFi 작업이 기존 6단계 파이프라인의 정책 평가를 거치도록 보장한다.
+이 문서는 WAIaaS의 **Action Provider 레이어**를 설계한다. DeFi 프로토콜 지식(스왑, 스테이킹, 렌딩 등)을 IChainAdapter에서 분리하여 독립적인 프로바이더 계층으로 캡슐화하고, 모든 DeFi 작업이 기존 파이프라인의 정책 평가를 거치도록 보장한다.
 
 에이전트가 "Jupiter에서 USDC를 SOL로 스왑"같은 **고수준 의도(intent)**를 표현하면, Action Provider가 이를 `ContractCallRequest`로 변환(resolve)하여 기존 파이프라인에 주입한다. 이 패턴을 **resolve-then-execute**라 한다.
 
@@ -33,7 +33,7 @@
 | 1 | **IChainAdapter에 DeFi 지식 추가 금지** | IChainAdapter는 저수준 실행 엔진으로 유지. swap(), stake() 같은 고수준 메서드를 어댑터에 넣지 않는다 | CORE-04 원칙 계승, v0.6 핵심 결정 |
 | 2 | **resolve()는 반드시 ContractCallRequest 반환** | Action Provider가 정책 평가를 우회하는 것을 원천 차단. 서명된 트랜잭션이나 직렬화된 바이너리 반환 금지 | CHAIN-EXT-03 연계 |
 | 3 | **모든 Action은 기존 6단계 파이프라인을 거침** | Stage 3 정책 평가 (CONTRACT_WHITELIST, SPENDING_LIMIT 등)를 우회하는 경로가 존재하지 않음 | TX-PIPE 구조 보존 |
-| 4 | **MCP Tool 과다 등록 방지** | mcpExpose 플래그로 MCP 노출 범위 제어. 기존 6개 + Action 최대 10개 = 16개 상한 | SDK-MCP Pitfall 4 대응 |
+| 4 | **MCP Tool 노출 범위 제어** | mcpExpose 플래그로 MCP 노출 범위를 제어한다. 기존 14개 내장 도구는 항상 포함, Action 도구는 mcpExpose=true인 프로바이더만 노출. 도구 수 상한 없음 | SDK-MCP Pitfall 4 대응 |
 | 5 | **validate-then-trust 보안 경계** | 플러그인은 ESM dynamic import로 로드하되, IActionProvider 인터페이스 준수 + resolve() 반환값 Zod 검증으로 안전성 보장 | 24-RESEARCH.md Open Question 3 |
 
 ### 1.4 v0.6 핵심 결정 인용
@@ -299,7 +299,6 @@ export type ActionErrorCode =
   | 'ACTION_RETURN_INVALID'
   | 'ACTION_PLUGIN_LOAD_FAILED'
   | 'ACTION_NAME_CONFLICT'
-  | 'MCP_TOOL_LIMIT_EXCEEDED'
 
 /**
  * 존재하지 않는 액션 이름으로 resolve() 호출.
@@ -402,23 +401,9 @@ export class ActionNameConflictError extends WaiaasError {
   }
 }
 
-/**
- * MCP Tool 등록 상한 초과.
- * HTTP 500.
- */
-export class McpToolLimitExceededError extends WaiaasError {
-  constructor(currentCount: number, maxCount: number) {
-    super(
-      'MCP_TOOL_LIMIT_EXCEEDED',
-      `MCP Tool 등록 상한 초과: 현재 ${currentCount}개, 최대 ${maxCount}개. ` +
-      `일부 Action Provider의 mcpExpose를 false로 변경하세요.`,
-      500,
-      { currentCount, maxCount },
-      false,
-    )
-  }
-}
 ```
+
+> **NOTE (v1.5):** McpToolLimitExceededError / MCP_TOOL_LIMIT_EXCEEDED 에러가 제거되었다. MCP 프로토콜에 도구 수 상한이 없으므로 mcpExpose 플래그로 노출 범위만 제어한다.
 
 ### 2.6 resolve() 반환값 Zod 검증
 
@@ -708,10 +693,6 @@ export class ActionProviderRegistry {
   /** 액션 이름 -> 프로바이더 이름 역참조 맵 */
   private actionIndex: Map<string, string> = new Map()
 
-  /** MCP Tool 등록 상한 */
-  private readonly MCP_TOOL_MAX = 16  // 기존 6개 + Action 최대 10개
-  private readonly MCP_BUILTIN_TOOLS = 6  // SDK-MCP에서 정의한 기존 도구 수
-
   /**
    * 프로바이더 등록.
    *
@@ -719,11 +700,12 @@ export class ActionProviderRegistry {
    * 1. metadata가 ActionProviderMetadataSchema를 통과하는지
    * 2. actions가 각각 ActionDefinitionSchema를 통과하는지
    * 3. actions 이름이 기존 등록된 액션과 충돌하지 않는지
-   * 4. mcpExpose=true인 경우 MCP Tool 상한 초과하지 않는지
+   *
+   * NOTE: MCP Tool 수 상한 없음. mcpExpose 플래그로 노출 범위만 제어.
+   * 기존 14개 내장 도구는 항상 포함되며, Action 도구는 mcpExpose=true인 프로바이더만 노출.
    *
    * @param provider - 등록할 Action Provider
    * @throws ActionNameConflictError - 액션 이름 충돌
-   * @throws McpToolLimitExceededError - MCP Tool 상한 초과
    */
   register(provider: IActionProvider): void {
     // 1. 메타데이터 검증
@@ -752,18 +734,7 @@ export class ActionProviderRegistry {
       }
     }
 
-    // 4. MCP Tool 상한 검사
-    if (provider.metadata.mcpExpose) {
-      const currentMcpCount = this.getMcpExposedActionCount()
-      const newMcpCount = currentMcpCount + provider.actions.length
-      const totalWithBuiltin = this.MCP_BUILTIN_TOOLS + newMcpCount
-
-      if (totalWithBuiltin > this.MCP_TOOL_MAX) {
-        throw new McpToolLimitExceededError(totalWithBuiltin, this.MCP_TOOL_MAX)
-      }
-    }
-
-    // 5. 등록
+    // 4. 등록
     this.providers.set(provider.metadata.name, provider)
     for (const action of provider.actions) {
       this.actionIndex.set(action.name, provider.metadata.name)
@@ -996,25 +967,22 @@ import type { ActionProviderRegistry } from '@waiaas/daemon'
 import type { ActionDefinition } from '@waiaas/core'
 
 /**
- * 기존 MCP 도구 수 (SDK-MCP에서 정의).
- * send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce
- */
-const MCP_BUILTIN_TOOL_COUNT = 6
-
-/**
- * MCP Tool 등록 상한.
- * 기존 6개 + Action 최대 10개 = 16개.
+ * 기존 MCP 내장 도구 수: 14개.
+ * send_token, get_balance, get_address, get_assets, list_transactions,
+ * get_transaction, get_nonce, call_contract, approve_token, send_batch,
+ * get_wallet_info, encode_calldata, sign_transaction, set_default_network
  *
- * 근거: AI 에이전트의 컨텍스트 윈도우에서 Tool 설명이 차지하는 토큰 수를 제한.
- * 16개 Tool * ~200 tokens/tool = ~3,200 tokens (전체 컨텍스트의 ~3-5%)
+ * NOTE (v1.5): MCP 프로토콜에 도구 수 상한이 없으므로 MCP_TOOL_MAX 제거.
+ * mcpExpose 플래그로 노출 범위만 제어한다.
  */
-const MCP_TOOL_MAX = 16
+const MCP_BUILTIN_TOOL_COUNT = 14
 
 /**
  * Action Provider의 ActionDefinition을 MCP Tool로 자동 변환하여 등록한다.
  *
  * 변환 시점: 데몬 시작 시 (MCP Server 초기화 단계).
  * mcpExpose=true인 프로바이더의 액션만 변환된다.
+ * 도구 수 상한 없음 -- mcpExpose 필터링만 수행.
  *
  * @param server - MCP Server 인스턴스
  * @param registry - ActionProviderRegistry 인스턴스
@@ -1026,12 +994,6 @@ export function registerActionTools(
   transactionService: TransactionService,
 ): void {
   const mcpActions = registry.getMcpExposedActions()
-
-  // MCP Tool 상한 검증
-  const totalTools = MCP_BUILTIN_TOOL_COUNT + mcpActions.length
-  if (totalTools > MCP_TOOL_MAX) {
-    throw new McpToolLimitExceededError(totalTools, MCP_TOOL_MAX)
-  }
 
   for (const action of mcpActions) {
     registerSingleActionTool(server, registry, transactionService, action)
@@ -1185,19 +1147,19 @@ server.tool(
 )
 ```
 
-### 5.4 MCP Tool 상한 관리
+### 5.4 MCP Tool 노출 관리
 
 | 카테고리 | Tool 수 | 예시 |
 |---------|---------|------|
-| 기존 내장 도구 | 6개 | send_token, get_balance, get_address, list_transactions, get_transaction, get_nonce |
-| Action 최대 | 10개 | jupiter_swap, 0x_swap, marinade_stake, ... |
-| **총 상한** | **16개** | |
+| 기존 14개 내장 도구 | 14개 | send_token, get_balance, get_address, get_assets, list_transactions, get_transaction, get_nonce, call_contract, approve_token, send_batch, get_wallet_info, encode_calldata, sign_transaction, set_default_network |
+| Action 도구 | mcpExpose=true인 프로바이더만 | jupiter_swap, 0x_swap, marinade_stake, ... |
+| **총 도구 수** | **상한 없음** | mcpExpose 플래그로 노출 범위 제어 |
 
-**상한 초과 시 동작:**
-
-1. 데몬 시작 시 MCP Tool 등록 단계에서 `McpToolLimitExceededError` 발생
-2. 데몬은 시작되지만, 초과된 Action의 MCP Tool은 등록되지 않음 (REST API는 사용 가능)
-3. 경고 로그 출력: "MCP Tool 상한 초과. 일부 Action이 MCP에 노출되지 않습니다."
+**동작:**
+- 기존 14개 내장 도구는 항상 포함
+- Action 도구는 mcpExpose=true인 프로바이더만 MCP에 노출
+- mcpExpose=false인 프로바이더는 REST API로만 접근 가능
+- 도구 수 상한 없음 (MCP 프로토콜에 제한 없음)
 
 ### 5.5 변환 시점
 
@@ -1541,7 +1503,6 @@ Phase 23에서 정의한 에러 코드 체계(CHAIN-EXT-03 섹션 8)에 Action P
 | `ACTION_RETURN_INVALID` | 500 | resolve() 반환값 스키마 검증 실패 | X |
 | `ACTION_PLUGIN_LOAD_FAILED` | 500 | 플러그인 로드 실패 (startup 시) | X |
 | `ACTION_NAME_CONFLICT` | 409 | 동일 액션 이름 중복 등록 시도 | X |
-| `MCP_TOOL_LIMIT_EXCEEDED` | 500 | MCP Tool 등록 상한 (16개) 초과 | X |
 
 ### 7.2 기존 에러 코드와의 관계
 
@@ -1915,21 +1876,9 @@ test('ESM이 아닌 플러그인은 로드 실패', async () => {
 })
 ```
 
-#### 시나리오 6: MCP Tool 상한 초과
+#### 시나리오 6: [제거됨] MCP Tool 상한 초과
 
-```typescript
-test('MCP Tool이 16개를 초과하면 McpToolLimitExceededError', () => {
-  // 기존 6개 내장 + Action 10개 = 16개 상한
-  // 11번째 MCP 노출 액션 등록 시도
-
-  for (let i = 0; i < 10; i++) {
-    registry.register(createMockProvider(`action_${i}`, { mcpExpose: true }))
-  }
-
-  expect(() => registry.register(createMockProvider('action_10', { mcpExpose: true })))
-    .toThrow(McpToolLimitExceededError)
-})
-```
+> **NOTE (v1.5):** MCP 프로토콜에 도구 수 상한이 없으므로 McpToolLimitExceededError 테스트 시나리오를 제거했다. mcpExpose 플래그로 노출 범위만 제어한다.
 
 #### 시나리오 7: 액션 이름 충돌
 
@@ -2024,7 +1973,7 @@ test('플러그인 디렉토리가 없으면 조용히 건너뜀 (에러 없음)
 | 3 | 체인 형식 불일치 | Security | Zod refine() | ActionReturnInvalidError |
 | 4 | 내장 프로바이더 이름 충돌 | Security | validateProviderSecurity() | 로드 거부 |
 | 5 | CJS 모듈 플러그인 | Integration | loadSinglePlugin() | ActionPluginLoadError |
-| 6 | MCP Tool 상한 초과 | Unit | register() | McpToolLimitExceededError |
+| 6 | [제거됨] MCP Tool 상한 초과 | - | - | v1.5에서 제거 (MCP 프로토콜에 상한 없음) |
 | 7 | 액션 이름 충돌 | Unit | register() | ActionNameConflictError |
 | 8 | resolve() 타임아웃 | Integration | AbortSignal | 타임아웃 에러 |
 | 9 | 잘못된 입력 파라미터 | Unit | inputSchema.parse() | ActionValidationError |
@@ -2044,7 +1993,7 @@ Phase 25에서 기존 문서에 Action Provider 관련 변경을 반영해야 �
 |------|----------|---------|
 | 27-chain-adapter-interface.md (CORE-04) | "IChainAdapter에 DeFi 메서드 추가 금지" 원칙 명시. Action Provider 참조 추가 | HIGH |
 | 32-transaction-pipeline-api.md (TX-PIPE) | Stage 1 TransactionRequest에 actionSource 메타데이터 추가. 감사 로그 확장 | HIGH |
-| 38-sdk-mcp-interface.md (SDK-MCP) | MCP Tool 등록에 Action Tool 변환 섹션 추가. MCP_TOOL_MAX=16 명시 | HIGH |
+| 38-sdk-mcp-interface.md (SDK-MCP) | MCP Tool 등록에 Action Tool 변환 섹션 추가. 기존 14개 내장 도구 현행화 | HIGH |
 | 37-rest-api-complete-spec.md (API-SPEC) | /v1/actions/ 4개 엔드포인트 추가. 총 엔드포인트 수 갱신 | HIGH |
 | 24-monorepo-data-directory.md (CORE-01) | ~/.waiaas/actions/ 디렉토리 추가. packages/actions/ 패키지 추가 | MEDIUM |
 | 33-time-lock-approval-mechanism.md (LOCK-MECH) | ACTION_RESOLVE_FAILED 에러가 SPENDING_LIMIT에 영향 없음 명시 | LOW |
@@ -2324,16 +2273,21 @@ curl http://127.0.0.1:3100/v1/actions | jq
 - 단점: 플러그인이 파일시스템/네트워크를 악용할 수 있음
 - **채택 이유**: 핵심 위협(정책 우회, 자금 탈취)은 방어됨. 부가 위협은 v0.7+ 에서 추가 방어
 
-### C.3 MCP Tool 16개 상한 근거
+### C.3 [제거됨] MCP Tool 16개 상한 근거
 
-기존 SDK-MCP(38)에서 6개 도구를 정의했다. AI 에이전트의 컨텍스트 윈도우에서 Tool 설명이 차지하는 토큰 비율을 고려하면:
-
-- 16개 Tool * ~200 tokens/tool description = ~3,200 tokens
-- Claude의 컨텍스트 윈도우 (~200K tokens) 대비 ~1.6% -- 합리적
-- 20개 초과 시 에이전트의 도구 선택 정확도가 저하되는 경향 (일반적 관찰)
-
-따라서 기존 6개 + Action 최대 10개 = 16개를 상한으로 설정했다.
+> **NOTE (v1.5):** v1.5에서 MCP 프로토콜에 도구 수 상한이 없으므로 mcpExpose 플래그로 대체했다.
+> 기존 14개 내장 도구는 항상 포함되며, Action 도구는 mcpExpose=true인 프로바이더만 노출한다.
+> 도구 수 제한 대신, 도구 설명의 품질과 mcpExpose 플래그로 AI 에이전트의 도구 선택 효율을 관리한다.
 
 ---
 
 *문서 끝. 작성일: 2026-02-08. CHAIN-EXT-07 Action Provider 아키텍처.*
+
+---
+
+**v1.5 업데이트: 2026-02-15 -- MCP Tool 16개 상한 제거, 기존 도구 14개 현행화**
+- 핵심 원칙 #4: "기존 6개 + Action 최대 10개 = 16개 상한" -> "mcpExpose 플래그 제어, 도구 수 상한 없음"
+- McpToolLimitExceededError / MCP_TOOL_LIMIT_EXCEEDED 에러 코드 제거
+- MCP_TOOL_MAX, MCP_BUILTIN_TOOLS 상수 및 상한 검사 분기 제거
+- 기존 내장 MCP 도구: 6개 -> 14개로 현행화 (send_token, get_balance, get_address, get_assets, list_transactions, get_transaction, get_nonce, call_contract, approve_token, send_batch, get_wallet_info, encode_calldata, sign_transaction, set_default_network)
+- 부록 C.3 "MCP Tool 16개 상한 근거" 제거
