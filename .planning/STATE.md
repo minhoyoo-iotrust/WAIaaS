@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5 Phase 127 USD Policy Integration
+**Current focus:** v1.5 Phase 128 Spending Limit USD
 
 ## Current Position
 
-Phase: 127 of 129 (USD Policy Integration)
-Plan: 3 of 3 in current phase
-Status: Plan 127-02 complete, continuing Phase 127
-Last activity: 2026-02-15 -- SpendingLimitRulesSchema Zod SSoT + evaluateSpendingLimit USD 분기 (10 tests)
+Phase: 128 of 129 (Spending Limit USD)
+Plan: 1 of ? in current phase
+Status: Phase 127 complete (3/3 plans), starting Phase 128
+Last activity: 2026-02-15 -- Stage 3 USD 파이프라인 통합 + OracleChain DI + notListed 격상/감사로그/힌트 (9 tests)
 
-Progress: [####░░░░░░] 43%
+Progress: [#####░░░░░] 50%
 
 ## Performance Metrics
 
@@ -57,6 +57,10 @@ Recent decisions affecting current work:
 - v1.5: evaluateNativeTier를 별도 private 메서드로 추출하여 evaluateSpendingLimit 가독성 향상
 - v1.5: usdAmount=0일 때 USD 평가 스킵 (APPROVE 등 네이티브 금액 0인 케이스 안전 처리)
 - v1.5: SpendingLimitRulesSchema를 named export하여 daemon 테스트에서 직접 검증 가능
+- v1.5: POLICY_VIOLATION 이벤트 타입으로 notListed 알림 발송 (SPENDING_LIMIT은 유효한 NotificationEventType 아님)
+- v1.5: hintedTokens를 export하여 테스트에서 beforeEach clear 가능
+- v1.5: CoinGeckoOracle 생성자에 API 키 문자열 직접 전달 (SettingsService 아닌 string)
+- v1.5: priceOracle DI를 CreateAppDeps에 optional로 추가하여 하위 호환 유지
 
 ### Blockers/Concerns
 
@@ -67,5 +71,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 127-02-PLAN.md (SpendingLimitRulesSchema Zod SSoT + evaluateSpendingLimit USD 분기 -- 10 tests)
+Stopped at: Completed 127-03-PLAN.md (Stage 3 USD 파이프라인 통합 + OracleChain DI + notListed 격상/감사로그/힌트 -- 9 tests)
 Resume file: None
