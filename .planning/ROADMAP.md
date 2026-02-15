@@ -92,12 +92,12 @@ Plans:
   3. accepts 배열에서 WAIaaS가 지원하는 (scheme, network) 쌍이 자동 선택되고, 지원 불가 시 X402_UNSUPPORTED_SCHEME 에러가 반환된다
   4. EVM EIP-3009 transferWithAuthorization 서명(viem signTypedData)과 Solana SPL TransferChecked 부분 서명(@solana/kit signBytes)이 각각 생성되고, 키스토어 복호화/해제가 finally 블록으로 안전하게 처리된다
   5. 결제 서명 재요청 후 다시 402를 받으면 1회만 재시도하고 X402_PAYMENT_REJECTED 에러로 종료된다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 131-01: SSRF 가드 (DNS resolve + IP 검증 + 리다이렉트)
-- [ ] 131-02: x402 핸들러 (402 파싱 + scheme 선택 + 재요청)
-- [ ] 131-03: 결제 서명 생성 (EVM EIP-3009 + Solana TransferChecked)
+- [ ] 131-01-PLAN.md — SSRF 가드 TDD: DNS resolve + 사설 IP 차단 + 리다이렉트 재검증 + URL 정규화 (Wave 1)
+- [ ] 131-03-PLAN.md — 결제 서명 TDD: EVM EIP-3009 signTypedData + Solana TransferChecked 부분 서명 + 키 관리 (Wave 1)
+- [ ] 131-02-PLAN.md — x402 핸들러 TDD: 402 파싱 + scheme 선택 + 재요청 오케스트레이션 (Wave 2)
 
 ### Phase 132: REST API + 정책 통합 + 감사 로그
 **Goal**: x402 결제가 기존 정책 엔진으로 제어되고, REST API로 노출되며, 모든 결제가 감사 추적되는 상태
