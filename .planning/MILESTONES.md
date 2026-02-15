@@ -735,3 +735,32 @@
 
 ---
 
+
+## v1.4.8 Admin DX + 알림 개선 (Shipped: 2026-02-15)
+
+**Delivered:** OPEN 이슈 12건(020~031) 일괄 해소 — DB 마이그레이션 순서 버그 수정, MCP 고아 프로세스 방지, MCP/CLI/SDK 멀티체인 DX 도구 확장, Admin 대시보드/월렛 상세/세션 개선, 알림 테스트 버그 수정 + Slack 채널 + 메시지 저장
+
+**Phases completed:** 120-124 (8 plans total)
+
+**Key accomplishments:**
+
+- pushSchema 3-step 순서 수정 — 테이블 → 마이그레이션 → 인덱스 분리로 기존 DB 시작 차단 버그 해결, v1/v5 스냅샷 기반 23개 마이그레이션 체인 테스트 추가
+- MCP graceful shutdown — stdin end/close 감지 + 3초 force-exit 타임아웃으로 Claude Desktop 종료 시 고아 프로세스 방지, createShutdownHandler 팩토리 패턴
+- MCP/CLI/SDK 멀티체인 DX — set_default_network 14번째 MCP 도구 + CLI wallet 서브커맨드 + TS/Python SDK, network=all 잔액/자산 집계 + Promise.allSettled 부분 실패 처리
+- Admin 대시보드 확장 — StatCard 클릭 링크, Policies/Recent Txns/Failed Txns 카드, 최근 활동 5건 테이블, 월렛 상세 잔액/트랜잭션, 세션 전체 조회 + walletName JOIN
+- 알림 시스템 개선 — apiPost 빈 body SYSTEM_LOCKED 버그 수정, 채널별 개별 Test 버튼, Delivery Log 메시지 확장 패널, Slack Incoming Webhook 채널 구현, DB v10 message 컬럼
+- wallet.skill.md + admin.skill.md 동기화 — network=all, set_default_network, wallet info, Slack 채널 반영
+
+**Stats:**
+
+- 83 files changed, +9,312 / -468 lines
+- 5 phases, 8 plans, 14 tasks, 28 requirements, 18 설계 결정
+- ~1,618 tests (cumulative), ~178,176 LOC total
+- 42 commits, 1 day (2026-02-15)
+
+**Git range:** `0509c60` (milestone start) → `ec4aa93` (Phase 124 complete)
+
+**What's next:** v1.5 DeFi + 가격 오라클 또는 v1.4.8 후속 이슈 대응
+
+---
+

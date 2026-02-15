@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~175,480 LOC, 1,636 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송(네트워크 선택) → 컨트랙트 호출 → Approve → 배치 → **외부 dApp unsigned tx 서명(sign-only)** → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, **signTransaction/encodeCalldata**) + Telegram/Discord/ntfy 알림(실제 트리거 연결, **POLICY_VIOLATION enrichment**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + **기본 거부 토글 3개** + 설정 관리 + 알림 패널 + MCP 토큰 발급 포함) + 다중 지갑 MCP 설정(**13 도구 + 스킬 리소스**) + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
+v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 9-패키지 모노레포 + Python SDK, ~178,176 LOC, ~1,618 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정 → SOL/SPL/ETH/ERC-20 전송(네트워크 선택) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, **set_default_network, wallet info, network=all 잔액**) + Telegram/Discord/ntfy/**Slack** 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, **메시지 저장/조회**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(**채널별 테스트 + Slack**) + MCP 토큰 발급 + **대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회**) + 다중 지갑 MCP 설정(**14 도구** + 스킬 리소스) + 토큰 레지스트리 관리 + API 스킬 파일(skills/) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -28,6 +28,7 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노�
 - ✅ v1.4.5 멀티체인 월렛 모델 설계 — shipped 2026-02-14 (설계 문서 5개, 설계 결정 31개)
 - ✅ v1.4.6 멀티체인 월렛 구현 — shipped 2026-02-14 (1,580 tests, ~73,000 LOC)
 - ✅ v1.4.7 임의 트랜잭션 서명 API — shipped 2026-02-15 (1,636 tests, ~175,480 LOC)
+- ✅ v1.4.8 Admin DX + 알림 개선 — shipped 2026-02-15 (~1,618 tests, ~178,176 LOC)
 - v1.5 DeFi + 가격 오라클 (IPriceOracle, Action Provider, Jupiter Swap, USD 정책)
 - v1.5.1 x402 클라이언트 지원 (x402 자동 결제, X402_ALLOWED_DOMAINS 정책, 결제 서명 생성)
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
@@ -36,8 +37,8 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노�
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~175,480 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 1,636 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~178,176 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- ~1,618 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 46 엔드포인트 (44 + POST /transactions/sign + POST /utils/encode-calldata), GET /doc OpenAPI 3.0 자동 생성
 - 5개 API 스킬 파일 (skills/ 디렉토리) — AI 에이전트 즉시 사용 가능 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -45,8 +46,11 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노�
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- MCP 13개 도구 (+ sign_transaction, encode_calldata) + 5개 스킬 리소스
+- MCP 14개 도구 (+ set_default_network) + 5개 스킬 리소스
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
+- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v10
+- pushSchema 3-step 순서 (tables→migrations→indexes) + 마이그레이션 체인 테스트
+- MCP graceful shutdown (stdin 감지 + force-exit 타임아웃)
 - 설계 문서 36개 (24-72), 8 objective 문서
 
 ## 요구사항
@@ -238,18 +242,15 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노�
 - ✓ MCP 스킬 리소스 — waiaas://skills/{name} ResourceTemplate 5개, SKILL_NOT_FOUND 에러 — v1.4.7 (MCPRES-01~03)
 - ✓ POLICY_VIOLATION 알림 보강 — policyType/contractAddress/tokenAddress/adminLink vars enrichment — v1.4.7 (NOTIF-01~02)
 
+- ✓ pushSchema 3-step 순서 수정 (tables→migrations→indexes) + 마이그레이션 체인 테스트 23개 — v1.4.8 (MIGR-01~03)
+- ✓ MCP graceful shutdown + stdin 종료 감지 + 3초 force-exit — v1.4.8 (MCPS-01~03)
+- ✓ MCP set_default_network 도구 + CLI wallet 서브커맨드 + TS/Python SDK 메서드 — v1.4.8 (MCDX-01~03)
+- ✓ network=all 잔액/자산 집계 + Promise.allSettled 부분 실패 + MCP/SDK 지원 — v1.4.8 (MCDX-04~07)
+- ✓ Admin 대시보드 확장 (StatCard 링크, 추가 카드, 최근 활동) + 월렛 잔액/트랜잭션 + 세션 전체 조회 — v1.4.8 (ADUI-01~07)
+- ✓ 알림 테스트 SYSTEM_LOCKED 수정 + 채널별 테스트 + 메시지 저장 + Slack Webhook — v1.4.8 (NOTF-01~06)
+- ✓ wallet.skill.md + admin.skill.md 인터페이스 동기화 — v1.4.8 (SKIL-01~02)
+
 ### 활성
-
-## Current Milestone: v1.4.8 Admin DX + 알림 개선
-
-**Goal:** OPEN 이슈 12건(020~031)을 일괄 해소 — MCP 안정성, Admin UI UX, 알림 시스템, MCP 도구 확장, DB 마이그레이션 안정성 개선
-
-**Target features:**
-- DB 마이그레이션 pushSchema 실행 순서 수정 (기존 DB 시작 차단 버그)
-- MCP 서버 graceful shutdown (고아 프로세스 방지)
-- MCP 도구/CLI/SDK 확장 (set_default_network, wallet info, network=all 잔액)
-- Admin UI 대시보드/월렛 상세/세션 페이지 개선
-- 알림 시스템 개선 (메시지 저장, 채널 선택, Slack 채널, 테스트 버그 수정)
 
 ## Next Milestone Goals
 
@@ -272,7 +273,7 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 9-패키지 모노�
 
 ## 컨텍스트
 
-**누적:** 27 milestones (v0.1-v1.4.7), 119 phases, 257 plans, 711 requirements, 36 설계 문서(24-72), 8 objective 문서, ~175,480 LOC, 1,636 테스트
+**누적:** 28 milestones (v0.1-v1.4.8), 124 phases, 265 plans, 739 requirements, 36 설계 문서(24-72), 8 objective 문서, ~178,176 LOC, ~1,618 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -291,6 +292,7 @@ v1.4.4 Admin Settings + MCP 5-type + Skill Files shipped (2026-02-14). 5 페이�
 v1.4.5 멀티체인 월렛 모델 설계 shipped (2026-02-14). 4 페이즈, 6 플랜, 19 요구사항, 설계 문서 5개(68-72), 설계 결정 31개.
 v1.4.6 멀티체인 월렛 구현 shipped (2026-02-14). 6 페이즈, 13 플랜, 35 요구사항, ~73,000 LOC, 1,580 테스트, 38 설계 결정.
 v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 5 페이즈, 12 플랜, 30 요구사항, ~175,480 LOC, 1,636 테스트, 33 설계 결정.
+v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 요구사항, ~178,176 LOC, ~1,618 테스트, 18 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -452,6 +454,13 @@ v1.4.7 임의 트랜잭션 서명 API shipped (2026-02-15). 5 페이즈, 12 플�
 | skills 라우트 public (인증 불필요) | nonce/health와 동일 레벨 | ✓ Good — v1.4.7 구현 |
 | ResourceTemplate list callback 정적 나열 | VALID_SKILLS 배열 기반, 동적 조회 불필요 | ✓ Good — v1.4.7 구현 |
 | SKILL_NOT_FOUND SYSTEM 도메인 배치 | 스킬은 시스템 리소스 | ✓ Good — v1.4.7 구현 |
+| pushSchema 3-step 순서 (tables→migrations→indexes) | 인덱스가 최신 컬럼 참조, 마이그레이션 후 생성해야 안전 | ✓ Good — v1.4.8 구현 |
+| createShutdownHandler 팩토리 패턴 | DI exit 함수 주입으로 테스트 가능, idempotent once guard | ✓ Good — v1.4.8 구현 |
+| 세션 스코프 PUT /v1/wallet/default-network | MCP sessionAuth로 기본 네트워크 변경, masterAuth 미러링 | ✓ Good — v1.4.8 구현 |
+| getAllBalances()/getAllAssets() 별도 메서드 | 반환 타입 다름, 타입 안전성 우선 | ✓ Good — v1.4.8 구현 |
+| Promise.allSettled 부분 실패 패턴 | 환경 내 네트워크별 병렬 RPC, 성공/실패 각각 표시 | ✓ Good — v1.4.8 구현 |
+| Slack Incoming Webhook attachments 형식 | Block Kit 대신 범용 호환성 우선 | ✓ Good — v1.4.8 구현 |
+| notification_logs.message nullable TEXT | pre-v10 로그 하위호환 보장 | ✓ Good — v1.4.8 구현 |
 
 ---
-*최종 업데이트: 2026-02-15 after v1.4.8 milestone started*
+*최종 업데이트: 2026-02-15 after v1.4.8 milestone shipped*
