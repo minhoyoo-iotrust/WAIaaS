@@ -7,7 +7,6 @@ import type { Column } from '../components/table';
 import { Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
-import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
@@ -25,6 +24,7 @@ interface Wallet {
 interface Session {
   id: string;
   walletId: string;
+  walletName: string | null;
   status: string;
   renewalCount: number;
   maxRenewals: number;
@@ -76,12 +76,12 @@ export default function SessionsPage() {
   };
 
   const fetchSessions = async () => {
-    if (!selectedWalletId.value) return;
     loading.value = true;
     try {
-      const result = await apiGet<Session[]>(
-        `${API.SESSIONS}?walletId=${selectedWalletId.value}`,
-      );
+      const url = selectedWalletId.value
+        ? `${API.SESSIONS}?walletId=${selectedWalletId.value}`
+        : API.SESSIONS;
+      const result = await apiGet<Session[]>(url);
       sessions.value = result;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -125,17 +125,21 @@ export default function SessionsPage() {
 
   useEffect(() => {
     fetchWallets();
+    fetchSessions();
   }, []);
 
   useEffect(() => {
     sessions.value = [];
-    if (selectedWalletId.value) {
-      fetchSessions();
-    }
+    fetchSessions();
   }, [selectedWalletId.value]);
 
   const sessionColumns: Column<Session>[] = [
     { key: 'id', header: 'ID', render: (s) => s.id.slice(0, 8) + '...' },
+    {
+      key: 'walletName',
+      header: 'Wallet',
+      render: (s) => s.walletName ?? s.walletId.slice(0, 8) + '...',
+    },
     {
       key: 'status',
       header: 'Status',
@@ -185,7 +189,7 @@ export default function SessionsPage() {
             }}
             disabled={walletsLoading.value}
           >
-            <option value="">Select a wallet...</option>
+            <option value="">All Wallets</option>
             {wallets.value.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} ({a.chain}/{a.network})
@@ -202,19 +206,12 @@ export default function SessionsPage() {
         </Button>
       </div>
 
-      {!selectedWalletId.value ? (
-        <EmptyState
-          title="Select a wallet"
-          description="Choose a wallet from the dropdown above to view its sessions."
-        />
-      ) : (
-        <Table<Session>
-          columns={sessionColumns}
-          data={sessions.value}
-          loading={loading.value}
-          emptyMessage="No sessions for this wallet"
-        />
-      )}
+      <Table<Session>
+        columns={sessionColumns}
+        data={sessions.value}
+        loading={loading.value}
+        emptyMessage="No sessions"
+      />
 
       {/* Token Display Modal */}
       <Modal

@@ -239,21 +239,26 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
   router.openapi(listSessionsRoute, (c) => {
     const { walletId } = c.req.valid('query');
 
-    if (!walletId) {
-      throw new WAIaaSError('WALLET_NOT_FOUND', {
-        message: 'walletId query parameter required',
-      });
+    const conditions = [isNull(sessions.revokedAt)];
+    if (walletId) {
+      conditions.push(eq(sessions.walletId, walletId));
     }
 
     const rows = deps.db
-      .select()
+      .select({
+        id: sessions.id,
+        walletId: sessions.walletId,
+        expiresAt: sessions.expiresAt,
+        absoluteExpiresAt: sessions.absoluteExpiresAt,
+        createdAt: sessions.createdAt,
+        renewalCount: sessions.renewalCount,
+        maxRenewals: sessions.maxRenewals,
+        lastRenewedAt: sessions.lastRenewedAt,
+        walletName: wallets.name,
+      })
       .from(sessions)
-      .where(
-        and(
-          eq(sessions.walletId, walletId),
-          isNull(sessions.revokedAt),
-        ),
-      )
+      .leftJoin(wallets, eq(sessions.walletId, wallets.id))
+      .where(and(...conditions))
       .orderBy(sql`${sessions.createdAt} DESC`)
       .all();
 
@@ -266,6 +271,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       return {
         id: row.id,
         walletId: row.walletId,
+        walletName: row.walletName ?? null,
         status,
         renewalCount: row.renewalCount,
         maxRenewals: row.maxRenewals,

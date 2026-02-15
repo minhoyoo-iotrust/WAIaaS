@@ -128,6 +128,7 @@ export const SessionListItemSchema = z
   .object({
     id: z.string().uuid(),
     walletId: z.string().uuid(),
+    walletName: z.string().nullable(),
     status: z.string(),
     renewalCount: z.number().int(),
     maxRenewals: z.number().int(),
@@ -483,6 +484,22 @@ export const AdminStatusResponseSchema = z
     killSwitchState: z.string(),
     adminTimeout: z.number().int(),
     timestamp: z.number().int(),
+    policyCount: z.number().int(),
+    recentTxCount: z.number().int(),
+    failedTxCount: z.number().int(),
+    recentTransactions: z.array(
+      z.object({
+        id: z.string(),
+        walletId: z.string(),
+        walletName: z.string().nullable(),
+        type: z.string(),
+        status: z.string(),
+        toAddress: z.string().nullable(),
+        amount: z.string().nullable(),
+        network: z.string().nullable(),
+        createdAt: z.number().int().nullable(),
+      }),
+    ),
   })
   .openapi('AdminStatusResponse');
 

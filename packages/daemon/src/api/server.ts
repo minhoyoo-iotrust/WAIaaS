@@ -191,6 +191,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/settings/*', masterAuthForAdmin);
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
+    app.use('/v1/admin/wallets/*', masterAuthForAdmin);
   }
 
   // Register routes
@@ -321,6 +322,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         notificationConfig: deps.config?.notifications,
         settingsService: deps.settingsService,
         onSettingsChanged: deps.onSettingsChanged,
+        adapterPool: deps.adapterPool ?? null,
+        daemonConfig: deps.config,
       }),
     );
   }
