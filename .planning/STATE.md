@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5 Phase 129 MCP/Admin/Skill 통합
+**Current focus:** v1.5 Phase 129 MCP/Admin/Skill 통합 완료
 
 ## Current Position
 
 Phase: 129 of 129 (MCP/Admin/Skill Integration)
-Plan: 2 of 2 in current phase
-Status: 129-02 complete (admin.skill.md + actions.skill.md)
-Last activity: 2026-02-15 -- admin.skill.md v1.5.0 + actions.skill.md 신규 생성 (SKIL-01, SKIL-02)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 129 complete (2/2 plans)
+Last activity: 2026-02-15 -- registerActionProviderTools + Action Provider MCP 도구 자동 변환 (8 tests)
 
 Progress: [##########] 100%
 
@@ -77,6 +77,10 @@ Recent decisions affecting current work:
 - v1.5: ApiKeysSection을 DaemonSettings 아래 배치 -- 프로바이더 미등록 시 자동 숨김
 - v1.5: admin.skill.md 섹션 6-7로 oracle-status/api-keys 삽입, 기존 Error Reference/Related 섹션 8-9로 재번호
 - v1.5: actions.skill.md를 기존 transactions.skill.md 포맷과 동일한 구조로 생성 (YAML frontmatter + 섹션별 curl + 에러 테이블)
+- v1.5: createMcpServer() 동기 유지 -- action provider 도구는 index.ts에서 connect+start 후 비동기 등록
+- v1.5: fire-and-forget 패턴 -- registerActionProviderTools 실패 시에도 MCP 서버 정상 동작
+- v1.5: 도구명 action_{provider}_{action} -- 기존 14개 내장 도구와 네임스페이스 충돌 방지
+- v1.5: RegisteredTool 타입 직접 import -- SDK 1.26.0에서 export 확인
 
 ### Blockers/Concerns
 
@@ -87,5 +91,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 129-02-PLAN.md (admin.skill.md v1.5.0 + actions.skill.md 신규 생성 -- SKIL-01, SKIL-02)
+Stopped at: Completed 129-01-PLAN.md (registerActionProviderTools + Action Provider MCP 도구 자동 변환 -- ACTNP-05, ACTNP-06, 8 tests)
 Resume file: None
