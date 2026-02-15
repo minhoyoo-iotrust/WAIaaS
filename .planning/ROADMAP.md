@@ -111,10 +111,10 @@ Plans:
   3. 알림 Delivery Log에서 행을 클릭하면 실제 발송된 메시지 원문을 확인할 수 있다
   4. config.toml에 slack_webhook_url 설정 시 Channel Status에 Slack이 표시되고 알림이 발송된다
   5. admin.skill.md에 Slack 알림 채널 정보가 반영된다
-**Plans**: 2 plans
+**Plans**: 2 plans (Wave 1 parallel)
 
 Plans:
-- [ ] 124-01-PLAN.md — 알림 테스트 버그 수정 + 채널별 테스트 UI
+- [ ] 124-01-PLAN.md — 알림 테스트 버그 수정 + 채널별 테스트 UI + Delivery Log 메시지 표시
 - [ ] 124-02-PLAN.md — DB 마이그레이션 v10 + 메시지 저장 + Slack 채널 + 스킬 파일
 
 ## Progress
