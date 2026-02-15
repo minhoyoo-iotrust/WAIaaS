@@ -108,8 +108,8 @@ const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
  * CreatePolicyRequestSchema - body for POST /v1/policies.
  *
  * walletId is optional (null = global policy).
- * rules is validated per-type via superRefine for the 6 v1.4 PolicyTypes.
- * Existing 4 types (SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT)
+ * rules is validated per-type via superRefine for 8 PolicyTypes (v1.4 + SPENDING_LIMIT).
+ * Existing 3 types (WHITELIST, TIME_RESTRICTION, RATE_LIMIT)
  * retain free-form rules for backward compatibility.
  */
 export const CreatePolicyRequestSchema = z.object({

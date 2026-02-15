@@ -15,6 +15,7 @@ import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
+import { CreatePolicyRequestSchema, SpendingLimitRulesSchema } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1717,5 +1718,274 @@ describe('DatabasePolicyEngine - Default Deny Toggles', () => {
     const r3 = await toggleEngine.evaluate(walletId, tokenTx('1000', USDC_MINT));
     expect(r3.allowed).toBe(false);
     expect(r3.reason).toContain('no ALLOWED_TOKENS');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// USD SPENDING_LIMIT tests (Phase 127-02)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - USD SPENDING_LIMIT', () => {
+  /**
+   * Test policy: native thresholds = 1 SOL / 10 SOL / 50 SOL
+   * USD thresholds = $10 / $100 / $500
+   */
+  const USD_POLICY_RULES = JSON.stringify({
+    instant_max: '1000000000',     // 1 SOL
+    notify_max: '10000000000',     // 10 SOL
+    delay_max: '50000000000',      // 50 SOL
+    delay_seconds: 300,
+    instant_max_usd: 10,
+    notify_max_usd: 100,
+    delay_max_usd: 500,
+  });
+
+  it('1. USD only 설정: native INSTANT + usdAmount $150 -> USD APPROVAL > native INSTANT -> APPROVAL', async () => {
+    // native: instant_max = 10B lamports, usd: instant_max_usd = 10
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '10000000000',
+        notify_max: '50000000000',
+        delay_max: '100000000000',
+        delay_seconds: 300,
+        instant_max_usd: 10,
+        notify_max_usd: 50,
+        delay_max_usd: 100,
+      }),
+      priority: 10,
+    });
+
+    // 1 SOL = 1B lamports -> native INSTANT (1B <= 10B)
+    // usdAmount = 150 -> $150 > delay_max_usd($100) -> USD APPROVAL
+    // maxTier(INSTANT, APPROVAL) = APPROVAL
+    const result = await engine.evaluate(walletId, tx('1000000000'));
+    // evaluate() does not pass usdAmount, so it should be INSTANT (backward compat)
+    expect(result.tier).toBe('INSTANT');
+
+    // Now test via evaluateAndReserve with usdAmount
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '1000000000' });
+    const result2 = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('1000000000'),
+      txId,
+      150, // usdAmount = $150
+    );
+    expect(result2.allowed).toBe(true);
+    expect(result2.tier).toBe('APPROVAL');
+  });
+
+  it('2. native DELAY + USD INSTANT -> native(DELAY) 보수적 유지', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: USD_POLICY_RULES,
+      priority: 10,
+    });
+
+    // native: 30 SOL = 30B lamports -> DELAY (10B < 30B <= 50B)
+    // usdAmount = $5 -> INSTANT ($5 <= $10)
+    // maxTier(DELAY, INSTANT) = DELAY
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '30000000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('30000000000'),
+      txId,
+      5, // usdAmount = $5
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('DELAY');
+    expect(result.delaySeconds).toBe(300);
+  });
+
+  it('3. USD 필드 미설정 (하위 호환): 기존 결과와 동일', async () => {
+    // No USD fields, only native
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // 5 SOL = 5B lamports -> NOTIFY (1B < 5B <= 10B)
+    // usdAmount provided but no USD thresholds -> native only
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '5000000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('5000000000'),
+      txId,
+      1000, // usdAmount = $1000 -- but no USD thresholds configured
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY'); // native only
+  });
+
+  it('4. USD NOTIFY: usdAmount > instant_max_usd, <= notify_max_usd -> maxTier 반영', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: USD_POLICY_RULES,
+      priority: 10,
+    });
+
+    // native: 0.5 SOL = 500M lamports -> INSTANT (500M <= 1B)
+    // usdAmount = $50 -> NOTIFY ($10 < $50 <= $100)
+    // maxTier(INSTANT, NOTIFY) = NOTIFY
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '500000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('500000000'),
+      txId,
+      50,
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('5. USD DELAY + delay_seconds: usdAmount > notify_max_usd, <= delay_max_usd -> DELAY + delaySeconds', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: USD_POLICY_RULES,
+      priority: 10,
+    });
+
+    // native: 0.5 SOL = 500M lamports -> INSTANT (500M <= 1B)
+    // usdAmount = $200 -> DELAY ($100 < $200 <= $500)
+    // maxTier(INSTANT, DELAY) = DELAY
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '500000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('500000000'),
+      txId,
+      200,
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('DELAY');
+    expect(result.delaySeconds).toBe(300);
+  });
+
+  it('6. evaluateAndReserve에서 USD 티어 적용 + reserved_amount 설정', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: USD_POLICY_RULES,
+      priority: 10,
+    });
+
+    // native: 0.5 SOL = 500M -> INSTANT, usdAmount = $500 -> DELAY
+    // maxTier(INSTANT, DELAY) = DELAY
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '500000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('500000000'),
+      txId,
+      500,
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('DELAY');
+    expect(result.delaySeconds).toBe(300);
+
+    // Verify reserved_amount was set
+    const row = conn.sqlite
+      .prepare('SELECT reserved_amount FROM transactions WHERE id = ?')
+      .get(txId) as { reserved_amount: string | null };
+    expect(row.reserved_amount).toBe('500000000');
+  });
+
+  it('7. evaluateBatch Phase B에서 batchUsdAmount 적용 -> maxTier 반영', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: USD_POLICY_RULES,
+      priority: 10,
+    });
+
+    // Phase B: totalNativeAmount = 100 + 200 = 300 -> INSTANT (300 <= 1B)
+    // batchUsdAmount = $150 -> DELAY ($100 < $150 <= $500)
+    // maxTier(INSTANT, DELAY) = DELAY
+    const result = await engine.evaluateBatch(
+      walletId,
+      [
+        { type: 'TRANSFER', amount: '100', toAddress: 'Addr1', chain: 'solana' },
+        { type: 'TRANSFER', amount: '200', toAddress: 'Addr2', chain: 'solana' },
+      ],
+      150, // batchUsdAmount = $150
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('DELAY');
+  });
+
+  it('8. SpendingLimitRulesSchema 검증: instant_max_usd=-1 -> Zod validation error', () => {
+    // Direct schema validation
+    const bad = SpendingLimitRulesSchema.safeParse({
+      instant_max: '1000',
+      notify_max: '5000',
+      delay_max: '10000',
+      delay_seconds: 300,
+      instant_max_usd: -1, // negative -> error
+    });
+    expect(bad.success).toBe(false);
+    expect(bad.error?.issues[0]?.path).toContain('instant_max_usd');
+
+    // Good schema
+    const good = SpendingLimitRulesSchema.safeParse({
+      instant_max: '1000',
+      notify_max: '5000',
+      delay_max: '10000',
+      delay_seconds: 300,
+      instant_max_usd: 10,
+      notify_max_usd: 50,
+    });
+    expect(good.success).toBe(true);
+  });
+
+  it('9. CreatePolicyRequestSchema superRefine: SPENDING_LIMIT rules 검증', () => {
+    // Invalid rules for SPENDING_LIMIT
+    const invalid = CreatePolicyRequestSchema.safeParse({
+      type: 'SPENDING_LIMIT',
+      rules: {
+        instant_max: 'not-a-number', // invalid: not digits
+        notify_max: '5000',
+        delay_max: '10000',
+        delay_seconds: 300,
+      },
+    });
+    expect(invalid.success).toBe(false);
+    // Error should be on rules.instant_max
+    const pathStr = JSON.stringify(invalid.error?.issues.map((i) => i.path));
+    expect(pathStr).toContain('instant_max');
+
+    // Valid rules for SPENDING_LIMIT
+    const valid = CreatePolicyRequestSchema.safeParse({
+      type: 'SPENDING_LIMIT',
+      rules: {
+        instant_max: '1000',
+        notify_max: '5000',
+        delay_max: '10000',
+        delay_seconds: 300,
+        instant_max_usd: 10,
+      },
+    });
+    expect(valid.success).toBe(true);
+  });
+
+  it('10. usdAmount=0 -> USD 평가 스킵 (네이티브만 사용)', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: USD_POLICY_RULES,
+      priority: 10,
+    });
+
+    // native: 0.5 SOL = 500M -> INSTANT
+    // usdAmount = 0 -> skip USD evaluation (usdAmount > 0 조건 미충족)
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '500000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('500000000'),
+      txId,
+      0, // usdAmount = $0
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT'); // native only
   });
 });
