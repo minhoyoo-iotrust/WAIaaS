@@ -566,12 +566,20 @@ export class DatabasePolicyEngine implements IPolicyEngine {
           usdAmount,
         );
 
-        // Set reserved_amount on the transaction row
-        sqlite
-          .prepare(
-            `UPDATE transactions SET reserved_amount = ? WHERE id = ?`,
-          )
-          .run(transaction.amount, txId);
+        // Set reserved_amount on the transaction row + USD amounts if available
+        if (usdAmount !== undefined) {
+          sqlite
+            .prepare(
+              `UPDATE transactions SET reserved_amount = ?, amount_usd = ?, reserved_amount_usd = ? WHERE id = ?`,
+            )
+            .run(transaction.amount, usdAmount, usdAmount, txId);
+        } else {
+          sqlite
+            .prepare(
+              `UPDATE transactions SET reserved_amount = ? WHERE id = ?`,
+            )
+            .run(transaction.amount, txId);
+        }
 
         return spendingResult ?? { allowed: true, tier: 'INSTANT' as PolicyTier };
       }
@@ -600,7 +608,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     this.sqlite
-      .prepare('UPDATE transactions SET reserved_amount = NULL WHERE id = ?')
+      .prepare('UPDATE transactions SET reserved_amount = NULL, reserved_amount_usd = NULL WHERE id = ?')
       .run(txId);
   }
 
