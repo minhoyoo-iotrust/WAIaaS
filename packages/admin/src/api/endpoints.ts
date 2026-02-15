@@ -22,4 +22,5 @@ export const API = {
   ADMIN_WALLET_TRANSACTIONS: (id: string) => `/v1/admin/wallets/${id}/transactions`,
   ADMIN_API_KEYS: '/v1/admin/api-keys',
   ADMIN_API_KEY: (provider: string) => `/v1/admin/api-keys/${provider}`,
+  ADMIN_FOREX_RATES: '/v1/admin/forex/rates',
 } as const;

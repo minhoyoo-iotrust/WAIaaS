@@ -15,7 +15,7 @@ export {
 
 export { InMemoryPriceCache, buildCacheKey } from './price-cache.js';
 
-export { PriceNotAvailableError, CoinGeckoNotConfiguredError } from './oracle-errors.js';
+export { PriceNotAvailableError, CoinGeckoNotConfiguredError, ForexNotAvailableError } from './oracle-errors.js';
 
 export { PythOracle } from './pyth-oracle.js';
 
@@ -34,3 +34,8 @@ export {
 } from './coingecko-platform-ids.js';
 
 export { OracleChain, type OracleChainDeps } from './oracle-chain.js';
+
+// v1.5.3 Forex rate service
+export { CoinGeckoForexProvider } from './coingecko-forex.js';
+export { ForexRateService, type ForexRateServiceDeps } from './forex-rate-service.js';
+export { CURRENCY_META, getCurrencyMeta, type CurrencyMeta } from './forex-currencies.js';

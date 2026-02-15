@@ -64,7 +64,7 @@ import { tokenRegistryRoutes } from './routes/tokens.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
-import type { IPolicyEngine, IPriceOracle } from '@waiaas/core';
+import type { IPolicyEngine, IPriceOracle, IForexRateService } from '@waiaas/core';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -103,6 +103,7 @@ export interface CreateAppDeps {
   apiKeyStore?: ApiKeyStore;
   onSettingsChanged?: (changedKeys: string[]) => void;
   dataDir?: string;
+  forexRateService?: IForexRateService;
 }
 
 /**
@@ -201,6 +202,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/settings/*', masterAuthForAdmin);
     app.use('/v1/admin/api-keys', masterAuthForAdmin);
     app.use('/v1/admin/api-keys/*', masterAuthForAdmin);
+    app.use('/v1/admin/forex/*', masterAuthForAdmin);
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
     app.use('/v1/admin/wallets/*', masterAuthForAdmin);
@@ -398,6 +400,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         priceOracle: deps.priceOracle,
         apiKeyStore: deps.apiKeyStore,
         actionProviderRegistry: deps.actionProviderRegistry,
+        forexRateService: deps.forexRateService,
       }),
     );
   }

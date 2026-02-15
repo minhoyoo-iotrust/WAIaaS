@@ -41,6 +41,8 @@ const NOTIFICATION_KEYS = new Set([
 
 const RPC_KEYS_PREFIX = 'rpc.';
 
+const DISPLAY_KEYS = new Set(['display.currency']);
+
 const SECURITY_KEYS = new Set([
   'security.session_ttl',
   'security.max_sessions_per_wallet',
@@ -76,6 +78,7 @@ export class HotReloadOrchestrator {
     const hasNotificationChanges = changedKeys.some((k) => NOTIFICATION_KEYS.has(k));
     const hasRpcChanges = changedKeys.some((k) => k.startsWith(RPC_KEYS_PREFIX));
     const hasSecurityChanges = changedKeys.some((k) => SECURITY_KEYS.has(k));
+    const hasDisplayChanges = changedKeys.some((k) => DISPLAY_KEYS.has(k));
 
     const reloads: Promise<void>[] = [];
 
@@ -99,6 +102,12 @@ export class HotReloadOrchestrator {
       // Security reload is synchronous (just read new values on next request)
       // No action needed -- SettingsService.get() already reads from DB first
       console.log('Hot-reload: Security parameters updated (effective on next request)');
+    }
+
+    if (hasDisplayChanges) {
+      // Display currency reload is synchronous -- SettingsService.get() reads from DB directly
+      // No subsystem restart needed; next read picks up the new value immediately
+      console.log('Hot-reload: Display currency updated (effective immediately)');
     }
 
     await Promise.all(reloads);

@@ -22,6 +22,22 @@ export class PriceNotAvailableError extends Error {
 }
 
 /**
+ * Thrown when forex rate is not available for a currency.
+ *
+ * ForexRateService catches this internally and returns null (graceful fallback).
+ * This class exists for internal logging/debugging purposes.
+ */
+export class ForexNotAvailableError extends Error {
+  /**
+   * @param currency - Currency code that was requested.
+   */
+  constructor(public readonly currency: string) {
+    super(`Forex rate not available for USD/${currency}`);
+    this.name = 'ForexNotAvailableError';
+  }
+}
+
+/**
  * Thrown when CoinGecko API key is not configured.
  *
  * CoinGecko Demo API requires an API key. This error is thrown at query time

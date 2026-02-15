@@ -46,6 +46,10 @@ export {
   ActionContextSchema,
 } from './action-provider.types.js';
 
+// v1.5.3 Forex Rate types (Zod SSoT)
+export type { ForexRate, CurrencyCode, IForexRateService } from './forex-rate.types.js';
+export { ForexRateSchema, CurrencyCodeSchema } from './forex-rate.types.js';
+
 // v1.5.1 x402 types (Zod SSoT)
 export type { X402FetchRequest, X402FetchResponse, X402PaymentInfo } from './x402.types.js';
 export type { PaymentRequired, PaymentPayload, PaymentRequirements } from './x402.types.js';

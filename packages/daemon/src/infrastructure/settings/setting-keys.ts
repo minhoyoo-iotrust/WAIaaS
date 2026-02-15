@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -37,6 +37,7 @@ export const SETTING_CATEGORIES = [
   'daemon',
   'walletconnect',
   'oracle',
+  'display',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -97,6 +98,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   // --- oracle category ---
   { key: 'oracle.coingecko_api_key', category: 'oracle', configPath: 'oracle.coingecko_api_key', defaultValue: '', isCredential: true },
   { key: 'oracle.cross_validation_threshold', category: 'oracle', configPath: 'oracle.cross_validation_threshold', defaultValue: '5', isCredential: false },
+
+  // --- display category ---
+  { key: 'display.currency', category: 'display', configPath: 'display.currency', defaultValue: 'USD', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
