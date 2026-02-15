@@ -49,7 +49,7 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost } from '../api/client';
+import { apiGet, apiPost, apiPut } from '../api/client';
 import PoliciesPage from '../pages/policies';
 
 const mockWallets = {
@@ -80,6 +80,38 @@ const mockPolicies = [
       delay_seconds: 300,
       approval_timeout: 3600,
     },
+    priority: 0,
+    enabled: true,
+    createdAt: 1707609600,
+    updatedAt: 1707609600,
+  },
+];
+
+/** Extended mock policies for visualization tests */
+const mockPoliciesWithVis = [
+  ...mockPolicies,
+  {
+    id: 'policy-tokens',
+    walletId: null,
+    type: 'ALLOWED_TOKENS',
+    network: null,
+    rules: {
+      tokens: [
+        { address: '0xLINKaddr1234567890', symbol: 'LINK' },
+        { address: '0xUSDCaddr1234567890', symbol: 'USDC' },
+      ],
+    },
+    priority: 0,
+    enabled: true,
+    createdAt: 1707609600,
+    updatedAt: 1707609600,
+  },
+  {
+    id: 'policy-rate',
+    walletId: null,
+    type: 'RATE_LIMIT',
+    network: null,
+    rules: { max_requests: 100, window_seconds: 3600 },
     priority: 0,
     enabled: true,
     createdAt: 1707609600,
@@ -379,6 +411,287 @@ describe('PolicyFormRouter - type-specific forms', () => {
           type: 'APPROVE_TIER_OVERRIDE',
           rules: expect.objectContaining({
             tier: 'DELAY',
+          }),
+        }),
+      );
+    });
+  });
+});
+
+describe('7-type form rendering', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('ALLOWED_TOKENS: renders form with + Add Token button and adds rows', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'ALLOWED_TOKENS' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Token')).toBeTruthy();
+    });
+
+    // Click to add a token row
+    fireEvent.click(screen.getByText('+ Add Token'));
+
+    // After add, a token row with address/symbol placeholders should appear
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Token mint/contract address')).toBeTruthy();
+      expect(screen.getByPlaceholderText('e.g. USDC')).toBeTruthy();
+    });
+  });
+
+  it('CONTRACT_WHITELIST: renders form with + Add Contract button', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'CONTRACT_WHITELIST' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Contract')).toBeTruthy();
+    });
+  });
+
+  it('METHOD_WHITELIST: renders 2-level nested form with + Add Method Entry', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'METHOD_WHITELIST' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Method Entry')).toBeTruthy();
+    });
+
+    // Add a method entry
+    fireEvent.click(screen.getByText('+ Add Method Entry'));
+
+    // After add, contract address field and selector add button should appear
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Contract address')).toBeTruthy();
+      expect(screen.getByText('+ Add Selector')).toBeTruthy();
+    });
+  });
+
+  it('TIME_RESTRICTION: renders day checkboxes and hour selects', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'TIME_RESTRICTION' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Sun')).toBeTruthy();
+    });
+
+    // All 7 day checkboxes
+    expect(screen.getByText('Mon')).toBeTruthy();
+    expect(screen.getByText('Tue')).toBeTruthy();
+    expect(screen.getByText('Wed')).toBeTruthy();
+    expect(screen.getByText('Thu')).toBeTruthy();
+    expect(screen.getByText('Fri')).toBeTruthy();
+    expect(screen.getByText('Sat')).toBeTruthy();
+
+    // Start/End hour selects
+    expect(screen.getByLabelText('Start Hour')).toBeTruthy();
+    expect(screen.getByLabelText('End Hour')).toBeTruthy();
+  });
+
+  it('ALLOWED_NETWORKS: renders form with + Add Network button', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'ALLOWED_NETWORKS' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Network')).toBeTruthy();
+    });
+  });
+
+  it('X402_ALLOWED_DOMAINS: renders form with + Add Domain button', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'X402_ALLOWED_DOMAINS' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Domain')).toBeTruthy();
+    });
+  });
+});
+
+describe('7-type validation', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('ALLOWED_TOKENS: shows error for empty token list', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'ALLOWED_TOKENS' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Add Token')).toBeTruthy();
+    });
+
+    // Don't add any tokens, click Create
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(screen.getByText('At least one token required')).toBeTruthy();
+    });
+
+    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
+  });
+
+  it('TIME_RESTRICTION: shows error when no days selected', async () => {
+    await renderAndOpenForm();
+
+    const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
+    fireEvent.change(typeSelect, { target: { value: 'TIME_RESTRICTION' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Sun')).toBeTruthy();
+    });
+
+    // Default has all 7 days checked. Uncheck all by clicking each checkbox.
+    const checkboxes = screen.getAllByRole('checkbox').filter(
+      (el) => (el as HTMLInputElement).type === 'checkbox' && (el as HTMLInputElement).checked
+    );
+    // The first checkbox is "Enabled" (from the form), rest are day checkboxes
+    // Filter only day checkboxes by finding ones near day labels
+    for (const cb of checkboxes) {
+      const parent = cb.closest('label');
+      if (parent && parent.textContent && ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].some(d => parent.textContent!.includes(d))) {
+        fireEvent.click(cb);
+      }
+    }
+
+    // Click Create
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(screen.getByText('At least one day required')).toBeTruthy();
+    });
+
+    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
+  });
+});
+
+describe('PolicyRulesSummary visualization', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('ALLOWED_TOKENS: displays symbol badges in policy list', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPoliciesWithVis);
+
+    render(<PoliciesPage />);
+
+    // Wait for policy list to render with token badges
+    await waitFor(() => {
+      expect(screen.getByText('LINK')).toBeTruthy();
+    });
+    expect(screen.getByText('USDC')).toBeTruthy();
+  });
+
+  it('RATE_LIMIT: displays "100 req / 1h" format in policy list', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPoliciesWithVis);
+
+    render(<PoliciesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('100 req / 1h')).toBeTruthy();
+    });
+  });
+});
+
+describe('Edit modal - form prefill', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('prefills SPENDING_LIMIT form with existing values on edit (EDIT-01)', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPolicies);
+
+    render(<PoliciesPage />);
+
+    // Wait for policy to appear in the list
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeTruthy();
+    });
+
+    // Click Edit button
+    fireEvent.click(screen.getByText('Edit'));
+
+    // Edit modal should open with form (not JSON mode by default)
+    await waitFor(() => {
+      expect(screen.getByText('Edit Policy')).toBeTruthy();
+    });
+
+    // The form should be prefilled with existing values
+    await waitFor(() => {
+      const instantInput = screen.getByLabelText(/Instant Max \(lamports\/wei\)/i) as HTMLInputElement;
+      expect(instantInput.value).toBe('1000000');
+    });
+
+    const notifyInput = screen.getByLabelText(/Notify Max \(lamports\/wei\)/i) as HTMLInputElement;
+    expect(notifyInput.value).toBe('5000000');
+
+    const delayInput = screen.getByLabelText(/Delay Max \(lamports\/wei\)/i) as HTMLInputElement;
+    expect(delayInput.value).toBe('10000000');
+  });
+
+  it('saves edited policy via PUT API (EDIT-02)', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPolicies)
+      .mockResolvedValueOnce(mockPolicies); // refresh after edit
+
+    vi.mocked(apiPut).mockResolvedValueOnce({ ok: true });
+
+    render(<PoliciesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeTruthy();
+    });
+
+    // Click Edit
+    fireEvent.click(screen.getByText('Edit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Policy')).toBeTruthy();
+    });
+
+    // Wait for form to be rendered
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Instant Max \(lamports\/wei\)/i)).toBeTruthy();
+    });
+
+    // Modify a value
+    const instantInput = screen.getByLabelText(/Instant Max \(lamports\/wei\)/i) as HTMLInputElement;
+    fireEvent.input(instantInput, { target: { value: '2000000' } });
+
+    // Click Save
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
+        '/v1/policies/policy-1',
+        expect.objectContaining({
+          rules: expect.objectContaining({
+            instant_max: '2000000',
           }),
         }),
       );
