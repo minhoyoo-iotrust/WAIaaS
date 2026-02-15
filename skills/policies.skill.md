@@ -1,9 +1,9 @@
 ---
 name: "WAIaaS Policies"
-description: "Policy engine CRUD: 11 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions"
+description: "Policy engine CRUD: 12 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
-version: "1.4.6"
+version: "1.5.3"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -49,7 +49,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
 | Parameter  | Type    | Required | Description                                              |
 | ---------- | ------- | -------- | -------------------------------------------------------- |
 | `walletId` | UUID    | No       | Target wallet. Omit for global policy (applies to all).  |
-| `type`     | string  | Yes      | One of 11 policy types (see below).                      |
+| `type`     | string  | Yes      | One of 12 policy types (see below).                      |
 | `rules`    | object  | Yes      | Type-specific rules object (see type sections).          |
 | `priority` | integer | No       | Higher = more important. Default: 0.                     |
 | `enabled`  | boolean | No       | Whether policy is active. Default: true.                 |
@@ -122,7 +122,7 @@ curl -s -X DELETE http://localhost:3100/v1/policies/<policy-uuid> \
 
 ---
 
-## 2. Policy Types (11 Types)
+## 2. Policy Types (12 Types)
 
 Each policy type has a specific `rules` schema. The `type` field determines which rules structure is required.
 
@@ -137,25 +137,35 @@ Maximum spend per tier. Amounts are digit strings in the chain's smallest unit (
   "notify_max": "500000000",
   "delay_max": "1000000000",
   "delay_seconds": 300,
-  "approval_timeout": 3600
+  "instant_max_usd": 10,
+  "notify_max_usd": 100,
+  "delay_max_usd": 1000,
+  "daily_limit_usd": 500,
+  "monthly_limit_usd": 5000
 }
 ```
 
-| Field              | Type   | Required | Description                                          |
-| ------------------ | ------ | -------- | ---------------------------------------------------- |
-| `instant_max`      | string | Yes      | Max amount for INSTANT tier (digit string).          |
-| `notify_max`       | string | Yes      | Max amount for NOTIFY tier (digit string).           |
-| `delay_max`        | string | Yes      | Max amount for DELAY tier (digit string).            |
-| `delay_seconds`    | number | No       | Cooldown for DELAY tier (seconds). Default: 300.     |
-| `approval_timeout` | number | No       | Timeout for APPROVAL tier (seconds). Default: 3600.  |
+| Field               | Type   | Required | Description                                          |
+| ------------------- | ------ | -------- | ---------------------------------------------------- |
+| `instant_max`       | string | Yes      | Max amount for INSTANT tier (digit string).          |
+| `notify_max`        | string | Yes      | Max amount for NOTIFY tier (digit string).           |
+| `delay_max`         | string | Yes      | Max amount for DELAY tier (digit string).            |
+| `delay_seconds`     | number | No       | Cooldown for DELAY tier (seconds). Min 60, default: 900. |
+| `instant_max_usd`   | number | No       | Max USD amount for INSTANT tier (oracle-based).      |
+| `notify_max_usd`    | number | No       | Max USD amount for NOTIFY tier.                      |
+| `delay_max_usd`     | number | No       | Max USD amount for DELAY tier.                       |
+| `daily_limit_usd`   | number | No       | Cumulative USD spending limit in 24h rolling window. Exceeding escalates to APPROVAL. |
+| `monthly_limit_usd` | number | No       | Cumulative USD spending limit in 30d rolling window. Exceeding escalates to APPROVAL. |
 
-**Tier assignment:** Amount <= instant_max -> INSTANT. Amount <= notify_max -> NOTIFY. Amount <= delay_max -> DELAY. Amount > delay_max -> APPROVAL (requires owner approval).
+**Tier assignment:** Amount <= instant_max -> INSTANT. Amount <= notify_max -> NOTIFY. Amount <= delay_max -> DELAY. Amount > delay_max -> APPROVAL (requires owner approval). USD tiers (if set) are evaluated via price oracle and take precedence over native amount tiers.
+
+**Cumulative limit evaluation:** After per-transaction tier assignment, if `daily_limit_usd` or `monthly_limit_usd` is set, the engine checks rolling-window cumulative USD spending (confirmed + pending reserved amounts). If cumulative + current transaction exceeds the limit, the tier is escalated to APPROVAL regardless of the per-transaction tier. The `TX_APPROVAL_REQUIRED` notification includes a `reason` field (`per_tx`, `cumulative_daily`, or `cumulative_monthly`).
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <token>' \
-  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000"}}'
+  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000","daily_limit_usd":500,"monthly_limit_usd":5000}}'
 ```
 
 ### b. WHITELIST
@@ -417,6 +427,30 @@ curl -s -X POST http://localhost:3100/v1/policies \
 
 Note: ALLOWED_NETWORKS is permissive by default (all networks allowed until the first ALLOWED_NETWORKS policy is created for a wallet).
 
+### l. X402_ALLOWED_DOMAINS (v1.5.1)
+
+Allowed domains for x402 automatic payments. **Default deny**: if any X402_ALLOWED_DOMAINS policy exists, x402 payments to unlisted domains are blocked.
+
+**Rules schema:**
+```json
+{
+  "domains": ["api.example.com", "*.openai.com"]
+}
+```
+
+| Field     | Type     | Required | Description                                  |
+| --------- | -------- | -------- | -------------------------------------------- |
+| `domains` | string[] | Yes      | At least 1 domain. Glob patterns supported.  |
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d '{"walletId":"<uuid>","type":"X402_ALLOWED_DOMAINS","rules":{"domains":["api.example.com","*.openai.com"]}}'
+```
+
+Note: X402_ALLOWED_DOMAINS is default deny: once any policy of this type exists for a wallet, only listed domains can receive x402 payments.
+
 ---
 
 ## 3. Policy Evaluation Flow
@@ -512,6 +546,18 @@ curl -s -X POST http://localhost:3100/v1/policies \
 ```
 
 Transactions to unlisted networks will be blocked with POLICY_VIOLATION.
+
+### Set daily/monthly cumulative spending limits
+
+Prevent split-transaction bypass by limiting total USD spending per rolling window:
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <token>' \
+  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000","daily_limit_usd":500,"monthly_limit_usd":5000}}'
+```
+
+When cumulative spending exceeds the limit, the transaction is escalated to APPROVAL. Owner can then approve, reject, or increase the limit.
 
 ---
 
