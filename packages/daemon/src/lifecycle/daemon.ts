@@ -41,7 +41,7 @@ import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import argon2 from 'argon2';
-import type { IPriceOracle } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -121,6 +121,7 @@ export class DaemonLifecycle {
   private priceOracle: IPriceOracle | undefined;
   private actionProviderRegistry: import('../infrastructure/action/action-provider-registry.js').ActionProviderRegistry | null = null;
   private apiKeyStore: import('../infrastructure/action/api-key-store.js').ApiKeyStore | null = null;
+  private forexRateService: IForexRateService | null = null;
 
 
   /** Whether shutdown has been initiated. */
@@ -390,6 +391,28 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4e-2: ForexRateService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      const { CoinGeckoForexProvider, ForexRateService, InMemoryPriceCache } =
+        await import('../infrastructure/oracle/index.js');
+
+      const forexCache = new InMemoryPriceCache(
+        30 * 60 * 1000,      // TTL: 30 minutes
+        2 * 60 * 60 * 1000,  // staleMax: 2 hours
+        64,                   // maxEntries: 64 (43 currencies + headroom)
+      );
+      const coingeckoApiKey = this._settingsService?.get('oracle.coingecko_api_key') ?? '';
+      const forexProvider = new CoinGeckoForexProvider(coingeckoApiKey);
+      this.forexRateService = new ForexRateService({ forexProvider, cache: forexCache });
+
+      console.log('Step 4e-2: ForexRateService initialized (30min cache)');
+    } catch (err) {
+      console.warn('Step 4e-2 (fail-soft): ForexRateService init warning:', err);
+      this.forexRateService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4f: ActionProviderRegistry + ApiKeyStore (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -453,6 +476,7 @@ export class DaemonLifecycle {
             void hotReloader.handleChangedKeys(changedKeys);
           },
           dataDir,
+          forexRateService: this.forexRateService ?? undefined,
         });
 
         this.httpServer = serve({

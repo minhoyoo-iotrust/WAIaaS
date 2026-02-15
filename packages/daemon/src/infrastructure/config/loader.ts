@@ -127,6 +127,11 @@ export const DaemonConfigSchema = z.object({
       request_timeout: z.number().int().min(5).max(120).default(30),
     })
     .default({}),
+  display: z
+    .object({
+      currency: z.string().default('USD'),
+    })
+    .default({}),
 });
 
 export type DaemonConfig = z.infer<typeof DaemonConfigSchema>;
@@ -144,6 +149,7 @@ const KNOWN_SECTIONS = [
   'security',
   'walletconnect',
   'x402',
+  'display',
 ] as const;
 
 // ---------------------------------------------------------------------------

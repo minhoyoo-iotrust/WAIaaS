@@ -906,6 +906,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           security: {} as Record<string, string | boolean>,
           daemon: {} as Record<string, string | boolean>,
           walletconnect: {} as Record<string, string | boolean>,
+          oracle: {} as Record<string, string | boolean>,
+          display: {} as Record<string, string | boolean>,
         },
         200,
       );
@@ -919,6 +921,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         security: masked.security ?? {},
         daemon: masked.daemon ?? {},
         walletconnect: masked.walletconnect ?? {},
+        oracle: masked.oracle ?? {},
+        display: masked.display ?? {},
       },
       200,
     );
@@ -966,6 +970,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           security: masked.security ?? {},
           daemon: masked.daemon ?? {},
           walletconnect: masked.walletconnect ?? {},
+          oracle: masked.oracle ?? {},
+          display: masked.display ?? {},
         },
       },
       200,
