@@ -61,7 +61,7 @@
 
 - [x] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** (2/2 plans) -- completed 2026-02-15
 - [x] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** (3/3 plans) -- completed 2026-02-15
-- [ ] **Phase 132: REST API + 정책 통합 + 감사 로그** - 엔드포인트 노출, 정책 평가, 트랜잭션 기록
+- [ ] **Phase 132: REST API + 정책 통합 + 감사 로그** (3 plans) - 엔드포인트 노출, 정책 평가, 트랜잭션 기록
 - [ ] **Phase 133: SDK + MCP + 스킬 파일** - TS/Python SDK, MCP 도구, 문서 통합
 
 ## Phase Details
@@ -109,12 +109,12 @@ Plans:
   3. POST /v1/x402/fetch 엔드포인트가 sessionAuth로 보호되어 AI 에이전트가 URL을 전달하면 자동 결제 후 응답을 받을 수 있다
   4. x402 결제가 transactions 테이블에 type=X402_PAYMENT으로 기록되고, 기존 알림 트리거(TX_REQUESTED/TX_CONFIRMED/TX_FAILED)가 연동된다
   5. Kill Switch 활성 시 x402 결제를 포함한 모든 거래가 차단된다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 132-01: X402_ALLOWED_DOMAINS 정책 엔진 + 와일드카드 매칭
-- [ ] 132-02: SPENDING_LIMIT 통합 + DELAY/APPROVAL 처리
-- [ ] 132-03: POST /v1/x402/fetch + config + 감사 로그 + 알림
+- [ ] 132-01-PLAN.md — X402_ALLOWED_DOMAINS 도메인 정책 TDD + config.toml [x402] 섹션 (Wave 1)
+- [ ] 132-02-PLAN.md — x402 결제 금액 USD 환산 TDD (USDC $1 직접 + IPriceOracle) (Wave 1)
+- [ ] 132-03-PLAN.md — POST /v1/x402/fetch 라우트 + server.ts 등록 + 통합 테스트 (Wave 2)
 
 ### Phase 133: SDK + MCP + 스킬 파일
 **Goal**: AI 에이전트가 TS SDK, Python SDK, MCP 도구를 통해 x402 유료 API를 자율적으로 호출하고, 스킬 파일로 사용법을 학습할 수 있는 상태
