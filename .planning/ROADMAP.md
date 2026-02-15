@@ -7,6 +7,7 @@
 - ✅ **v1.4.8 Admin DX + 알림 개선** -- Phases 120-124 (shipped 2026-02-15)
 - ✅ **v1.5 DeFi Price Oracle + Action Provider Framework** -- Phases 125-129 (shipped 2026-02-15)
 - ✅ **v1.5.1 x402 클라이언트 지원** -- Phases 130-133 (shipped 2026-02-15)
+- 🚧 **v1.5.2 Admin UI 정책 폼 UX 개선** -- Phases 134-135 (in progress)
 
 ## Phases
 
@@ -65,6 +66,54 @@
 
 </details>
 
+### 🚧 v1.5.2 Admin UI 정책 폼 UX 개선 (In Progress)
+
+**Milestone Goal:** Admin UI에서 12개 정책 타입별 구조화된 폼으로 정책을 생성/수정하고, 목록에서 타입별 의미 있는 시각화를 확인할 수 있는 상태를 달성하여 운영자 DX를 개선한다.
+
+- [ ] **Phase 134: 폼 인프라 + 5-type 전용 폼** - DynamicRowList, PolicyFormRouter, JSON 토글, Zod 스키마 추가, 5개 타입 전용 폼 + 유효성 검증
+- [ ] **Phase 135: 7-type 전용 폼 + 목록 시각화 + 수정 통합** - 나머지 7개 타입 전용 폼, 12개 타입 목록 시각화, 수정 프리필 + 저장 통합
+
+## Phase Details
+
+### Phase 134: 폼 인프라 + 5-type 전용 폼
+**Goal**: 운영자가 정책 타입을 선택하면 전용 폼이 렌더링되고, 5개 핵심 타입(SPENDING_LIMIT, WHITELIST, RATE_LIMIT, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE)의 구조화된 폼으로 정책을 생성할 수 있는 상태
+**Depends on**: Phase 133 (v1.5.1 완료)
+**Requirements**: FORM-01, FORM-02, FORM-03, FORM-04, PFORM-01, PFORM-02, PFORM-04, PFORM-09, PFORM-10, VALID-01, VALID-02, VALID-03
+**Success Criteria** (what must be TRUE):
+  1. 운영자가 정책 생성 시 타입 셀렉트를 변경하면 해당 타입 전용 폼이 즉시 렌더링되고, [JSON 직접 편집] 토글로 JSON textarea와 구조화 폼 간 전환이 가능하다
+  2. 운영자가 DynamicRowList 컴포넌트를 사용하여 [+ 추가] 버튼으로 동적 행을 추가하고 [x] 버튼으로 개별 행을 삭제할 수 있다
+  3. 운영자가 SPENDING_LIMIT 폼에서 3개 네이티브 금액 + 3개 USD 금액(선택) + 지연 시간을 입력하고, WHITELIST 폼에서 주소 동적 행을 추가/삭제하며, RATE_LIMIT/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE 폼에서 해당 필드를 입력하여 정책을 생성할 수 있다
+  4. 필수 필드 미입력, 숫자 형식 오류, 빈 목록(행 0개) 생성 시도 시 필드 하단에 실시간 에러 메시지가 표시되고, 4개 미등록 타입(WHITELIST, TIME_RESTRICTION, RATE_LIMIT, X402_ALLOWED_DOMAINS)의 Zod rules 스키마가 @waiaas/core에 추가된다
+**Plans**: TBD
+
+Plans:
+- [ ] 134-01: DynamicRowList + PolicyFormRouter + JSON 토글 + Zod 스키마 추가
+- [ ] 134-02: 5-type 전용 폼 + 유효성 검증 + 테스트
+
+### Phase 135: 7-type 전용 폼 + 목록 시각화 + 수정 통합
+**Goal**: 나머지 7개 타입(ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, TIME_RESTRICTION, ALLOWED_NETWORKS, X402_ALLOWED_DOMAINS)의 전용 폼이 완성되고, 12개 타입 모두 목록에서 의미 있는 시각화로 표시되며, 기존 정책 수정 시 현재값이 프리필되어 수정/저장이 가능한 상태
+**Depends on**: Phase 134
+**Requirements**: PFORM-03, PFORM-05, PFORM-06, PFORM-07, PFORM-08, PFORM-11, PFORM-12, VIS-01, VIS-02, VIS-03, EDIT-01, EDIT-02
+**Success Criteria** (what must be TRUE):
+  1. 운영자가 ALLOWED_TOKENS/CONTRACT_WHITELIST 폼에서 chain 셀렉트를 포함한 동적 행을 추가/삭제하고, METHOD_WHITELIST 폼에서 2단계 중첩 동적 행(컨트랙트 -> 셀렉터 목록)으로 정책을 생성할 수 있다
+  2. 운영자가 APPROVED_SPENDERS/TIME_RESTRICTION/ALLOWED_NETWORKS/X402_ALLOWED_DOMAINS 폼에서 각 타입에 맞는 필드(Spender 정보, 시간 범위+요일, 네트워크 셀렉트, 도메인 패턴)를 입력하여 정책을 생성할 수 있다
+  3. 정책 목록에서 ALLOWED_TOKENS는 토큰 심볼 배지, RATE_LIMIT는 "100 req / 1h" 형식, 나머지 10개 타입도 각각 의미 있는 시각화(주소 수, 컨트랙트명 축약, 티어 색상 배지, 네트워크명 배지, 도메인 패턴 배지 등)로 표시된다
+  4. 기존 정책 수정 클릭 시 전용 폼에 현재 rules 값이 프리필되고, 수정 후 저장 시 올바른 PUT /v1/policies/{id} API 호출이 발생한다
+**Plans**: TBD
+
+Plans:
+- [ ] 135-01: 7-type 전용 폼 (ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, TIME_RESTRICTION, ALLOWED_NETWORKS, X402_ALLOWED_DOMAINS)
+- [ ] 135-02: PolicyRulesSummary 12-type 목록 시각화 + 수정 프리필/저장 통합 + 테스트
+
+## Progress
+
+**Execution Order:** 134 -> 135
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 134. 폼 인프라 + 5-type 전용 폼 | v1.5.2 | 0/2 | Not started | - |
+| 135. 7-type 전용 폼 + 목록 시각화 + 수정 통합 | v1.5.2 | 0/2 | Not started | - |
+
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 -- v1.5.1 shipped*
+*Last updated: 2026-02-15 -- v1.5.2 roadmap created*

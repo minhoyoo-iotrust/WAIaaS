@@ -5,14 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5.2 Admin UI 정책 폼 UX 개선
+**Current focus:** v1.5.2 Phase 134 -- 폼 인프라 + 5-type 전용 폼
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-15 — Milestone v1.5.2 started
+Phase: 134 (1 of 2 in v1.5.2) -- 폼 인프라 + 5-type 전용 폼
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 -- v1.5.2 로드맵 생성
+
+Progress: [░░░░░░░░░░] 0% (0/4 plans)
 
 ## Performance Metrics
 
@@ -24,6 +26,10 @@ Last activity: 2026-02-15 — Milestone v1.5.2 started
 
 Full log in PROJECT.md.
 
+- v1.5.2: 2-phase 구조 -- 인프라+5-type 폼 / 7-type 폼+시각화+수정
+- v1.5.2: 프론트엔드 전용 마일스톤, DB 마이그레이션 없음
+- v1.5.2: 4개 미등록 타입(WHITELIST, TIME_RESTRICTION, RATE_LIMIT, X402_ALLOWED_DOMAINS) Zod 스키마 core에 추가
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -32,5 +38,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: v1.5.2 마일스톤 시작
+Stopped at: v1.5.2 로드맵 생성 완료
 Resume file: None

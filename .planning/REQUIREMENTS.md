@@ -64,36 +64,36 @@ Admin UI에서 정책을 JSON 직접 입력 없이 12개 정책 타입별 구조
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FORM-01 | — | Pending |
-| FORM-02 | — | Pending |
-| FORM-03 | — | Pending |
-| FORM-04 | — | Pending |
-| PFORM-01 | — | Pending |
-| PFORM-02 | — | Pending |
-| PFORM-03 | — | Pending |
-| PFORM-04 | — | Pending |
-| PFORM-05 | — | Pending |
-| PFORM-06 | — | Pending |
-| PFORM-07 | — | Pending |
-| PFORM-08 | — | Pending |
-| PFORM-09 | — | Pending |
-| PFORM-10 | — | Pending |
-| PFORM-11 | — | Pending |
-| PFORM-12 | — | Pending |
-| VALID-01 | — | Pending |
-| VALID-02 | — | Pending |
-| VALID-03 | — | Pending |
-| VIS-01 | — | Pending |
-| VIS-02 | — | Pending |
-| VIS-03 | — | Pending |
-| EDIT-01 | — | Pending |
-| EDIT-02 | — | Pending |
+| FORM-01 | Phase 134 | Pending |
+| FORM-02 | Phase 134 | Pending |
+| FORM-03 | Phase 134 | Pending |
+| FORM-04 | Phase 134 | Pending |
+| PFORM-01 | Phase 134 | Pending |
+| PFORM-02 | Phase 134 | Pending |
+| PFORM-03 | Phase 135 | Pending |
+| PFORM-04 | Phase 134 | Pending |
+| PFORM-05 | Phase 135 | Pending |
+| PFORM-06 | Phase 135 | Pending |
+| PFORM-07 | Phase 135 | Pending |
+| PFORM-08 | Phase 135 | Pending |
+| PFORM-09 | Phase 134 | Pending |
+| PFORM-10 | Phase 134 | Pending |
+| PFORM-11 | Phase 135 | Pending |
+| PFORM-12 | Phase 135 | Pending |
+| VALID-01 | Phase 134 | Pending |
+| VALID-02 | Phase 134 | Pending |
+| VALID-03 | Phase 134 | Pending |
+| VIS-01 | Phase 135 | Pending |
+| VIS-02 | Phase 135 | Pending |
+| VIS-03 | Phase 135 | Pending |
+| EDIT-01 | Phase 135 | Pending |
+| EDIT-02 | Phase 135 | Pending |
 
 **Coverage:**
 - v1.5.2 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-15*
-*Last updated: 2026-02-15 after initial definition*
+*Last updated: 2026-02-15 after roadmap creation (traceability updated)*
