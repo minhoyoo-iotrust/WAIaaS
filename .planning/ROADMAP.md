@@ -109,10 +109,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 128-01: IActionProvider 인터페이스 + ActionProviderRegistry (ESM 플러그인 로드)
-- [ ] 128-02: api_keys DB v11 마이그레이션 + ActionProviderApiKeyStore
-- [ ] 128-03: POST /v1/actions/:provider/:action REST API + 파이프라인 연동
-- [ ] 128-04: Admin UI API Keys CRUD + GET/PUT/DELETE /v1/admin/api-keys
+- [x] 128-01: IActionProvider 인터페이스 + ActionProviderRegistry (ESM 플러그인 로드)
+- [x] 128-02: api_keys DB v11 마이그레이션 + ActionProviderApiKeyStore
+- [x] 128-03: POST /v1/actions/:provider/:action REST API + 파이프라인 연동
+- [x] 128-04: Admin UI API Keys CRUD + GET/PUT/DELETE /v1/admin/api-keys
 
 #### Phase 129: MCP/Admin/Skill Integration
 **Goal**: Action Provider의 MCP Tool 자동 변환이 동작하고, Skill 파일이 새로운 엔드포인트를 문서화하는 상태
@@ -140,7 +140,7 @@ Phases execute in numeric order: 125 -> 126 -> 127 -> 128 -> 129
 | 125. Design Docs + Oracle Interfaces | v1.5 | 2/2 | ✓ Complete | 2026-02-15 |
 | 126. Oracle Implementations | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
 | 127. USD Policy Integration | v1.5 | 3/3 | ✓ Complete | 2026-02-15 |
-| 128. Action Provider + API Key | v1.5 | 0/4 | Not started | - |
+| 128. Action Provider + API Key | v1.5 | 4/4 | ✓ Complete | 2026-02-15 |
 | 129. MCP/Admin/Skill Integration | v1.5 | 0/2 | Not started | - |
 
 ---
