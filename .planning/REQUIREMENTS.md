@@ -98,21 +98,21 @@ Requirements for x402 클라이언트 지원. Each maps to roadmap phases.
 | X4CORE-05 | Phase 130 | ✓ Done |
 | X4CORE-06 | Phase 130 | ✓ Done |
 | X4CORE-07 | Phase 130 | ✓ Done |
-| X4SEC-01 | Phase 131 | Pending |
-| X4SEC-02 | Phase 131 | Pending |
-| X4SEC-03 | Phase 131 | Pending |
-| X4SEC-04 | Phase 131 | Pending |
-| X4SEC-05 | Phase 131 | Pending |
-| X4HAND-01 | Phase 131 | Pending |
-| X4HAND-02 | Phase 131 | Pending |
-| X4HAND-03 | Phase 131 | Pending |
-| X4HAND-04 | Phase 131 | Pending |
-| X4HAND-05 | Phase 131 | Pending |
-| X4HAND-06 | Phase 131 | Pending |
-| X4SIGN-01 | Phase 131 | Pending |
-| X4SIGN-02 | Phase 131 | Pending |
-| X4SIGN-03 | Phase 131 | Pending |
-| X4SIGN-04 | Phase 131 | Pending |
+| X4SEC-01 | Phase 131 | ✓ Done |
+| X4SEC-02 | Phase 131 | ✓ Done |
+| X4SEC-03 | Phase 131 | ✓ Done |
+| X4SEC-04 | Phase 131 | ✓ Done |
+| X4SEC-05 | Phase 131 | ✓ Done |
+| X4HAND-01 | Phase 131 | ✓ Done |
+| X4HAND-02 | Phase 131 | ✓ Done |
+| X4HAND-03 | Phase 131 | ✓ Done |
+| X4HAND-04 | Phase 131 | ✓ Done |
+| X4HAND-05 | Phase 131 | ✓ Done |
+| X4HAND-06 | Phase 131 | ✓ Done |
+| X4SIGN-01 | Phase 131 | ✓ Done |
+| X4SIGN-02 | Phase 131 | ✓ Done |
+| X4SIGN-03 | Phase 131 | ✓ Done |
+| X4SIGN-04 | Phase 131 | ✓ Done |
 | X4POL-01 | Phase 132 | Pending |
 | X4POL-02 | Phase 132 | Pending |
 | X4POL-03 | Phase 132 | Pending |

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 130 -- Core 타입 + CAIP-2 매핑 + DB 마이그레이션
+**Current focus:** Phase 131 -- SSRF Guard + x402 Handler + Payment Signing
 
 ## Current Position
 
-Phase: 130 of 133 (Core 타입 + CAIP-2 매핑 + DB 마이그레이션) -- COMPLETE
-Plan: 2 of 2 in current phase -- PHASE DONE
-Status: Executing
-Last activity: 2026-02-15 -- 130-02 DB 마이그레이션 v12 완료
+Phase: 131 of 133 (SSRF Guard + x402 Handler + Payment Signing) -- COMPLETE
+Plan: 3 of 3 in current phase -- ALL COMPLETE
+Status: Phase Complete
+Last activity: 2026-02-15 -- 131-02 x402 Handler TDD 완료 (25 테스트, Phase 131 3/3 플랜 완료)
 
-Progress: [██░░░░░░░░] 20% (2/10 plans)
+Progress: [██████░░░░] 60% (6/10 plans)
 
 ## Performance Metrics
 
@@ -35,16 +35,22 @@ Recent:
 - 130-01: @x402/core subpath imports 사용 (@x402/core/schemas, @x402/core/types)
 - 130-01: X402_PAYMENT_REJECTED HTTP 상태 코드 402 사용
 - 130-02: v12 마이그레이션에서 transactions + policies 단일 트랜잭션 내 순차 재생성
+- 131-01: RFC 5735/6890 전체 범위 차단 (CGNAT, 벤치마크, TEST-NET 3종, 멀티캐스트, 예약 포함)
+- 131-01: 리다이렉트 후 GET 메서드 변경 + body 제거 (RFC 7231 Section 6.4)
+- 131-03: IChainAdapter를 경유하지 않고 viem/solana-kit 직접 사용 (EIP-3009는 typed data 서명)
+- 131-03: daemon에 @solana/kit, @solana-program/token 직접 의존성 추가 (payment-signer용)
+- 131-03: validBefore = now+5분 (300초) -- EIP-3009 보안 창구 최소화
+- 131-03: USDC_DOMAINS 7개 EVM 체인 등록 (Base, Ethereum, Polygon, Arbitrum, Optimism + testnets)
+- 131-02: base64 encode/decode 자체 구현 (@x402/core/http가 daemon에서 직접 접근 불가)
+- 131-02: Response.headers.forEach 패턴 (Object.fromEntries 대신 명시적 변환)
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
-- EIP-3009 도메인 파라미터 체인별 차이 확인 필요 (MEDIUM confidence)
-- Solana 부분 서명 noopSigner feePayer 검증 필요 (MEDIUM confidence)
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 130-02-PLAN.md (Phase 130 complete)
+Stopped at: Completed 131-02-PLAN.md (x402 Handler TDD -- Phase 131 완료)
 Resume file: None
