@@ -22,6 +22,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createMcpServer } from './server.js';
 import { SessionManager } from './session-manager.js';
 import { ApiClient } from './api-client.js';
+import { registerActionProviderTools } from './tools/action-provider.js';
 
 const BASE_URL = process.env['WAIAAS_BASE_URL'] ?? 'http://127.0.0.1:3100';
 const DATA_DIR = process.env['WAIAAS_DATA_DIR'];
@@ -118,6 +119,14 @@ async function main(): Promise<void> {
   console.error('[waiaas-mcp] Server started on stdio transport');
 
   await sessionManager.start();
+
+  // Register action provider tools (async, failure = degraded mode).
+  // Must be after sessionManager.start() so API calls have valid token.
+  // server.tool() after connect() automatically fires sendToolListChanged().
+  registerActionProviderTools(server, apiClient, { walletName: WALLET_NAME })
+    .catch((err: unknown) => {
+      console.error('[waiaas-mcp] Action provider tool registration failed:', err instanceof Error ? err.message : String(err));
+    });
 }
 
 main().catch((err: unknown) => {
