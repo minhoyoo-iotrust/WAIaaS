@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 127 of 129 (USD Policy Integration)
-Plan: 1 of 3 in current phase
-Status: Phase 126 complete, starting Phase 127
-Last activity: 2026-02-15 -- OracleChain 3단계 fallback + 교차 검증 + GET /admin/oracle-status (15 tests)
+Plan: 2 of 3 in current phase
+Status: Plan 127-01 complete, continuing Phase 127
+Last activity: 2026-02-15 -- PriceResult 3-state + resolveEffectiveAmountUsd 5-type USD 환산 (16 tests)
 
 Progress: [###░░░░░░░] 36%
 
@@ -50,6 +50,9 @@ Recent decisions affecting current work:
 - v1.5: 교차 검증은 fallback oracle DI 주입 시에만 활성화 (CoinGecko 키 미설정 → fallback 미주입 → 자동 스킵)
 - v1.5: stale 캐시 fallback은 fetcher 내부에서 처리 (oracle 전체 장애 시 stale 데이터로 연명)
 - v1.5: AdminRouteDeps.priceOracle optional -- oracle 미설정 시 zeroed stats 반환
+- v1.5: PriceResult를 plain TypeScript discriminated union으로 구현 (Zod discriminatedUnion 불필요)
+- v1.5: resolveEffectiveAmountUsd request 파라미터를 Record<string,unknown>으로 정의 (stages.ts as 캐스팅 패턴)
+- v1.5: BATCH instruction 분류를 classifyInstruction 헬퍼로 분리 (stage3Policy와 동일 로직)
 
 ### Blockers/Concerns
 
@@ -60,5 +63,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 126-03-PLAN.md (OracleChain 3단계 fallback + 교차 검증 + GET /admin/oracle-status -- Phase 126 완료)
+Stopped at: Completed 127-01-PLAN.md (PriceResult 3-state + resolveEffectiveAmountUsd 5-type USD 환산 -- 16 tests)
 Resume file: None
