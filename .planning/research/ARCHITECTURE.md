@@ -1,882 +1,804 @@
-# Architecture Patterns: Sign-Only Pipeline, Unsigned TX Parsing, Calldata Encoding, Default Deny Toggles, MCP Skill Resources
+# Architecture Patterns: v1.5 Price Oracle + Action Provider Framework
 
-**Domain:** Self-hosted AI agent wallet daemon -- feature extension to existing 6-stage pipeline
-**Researched:** 2026-02-14
-**Confidence:** HIGH (based on direct codebase analysis, not external sources)
+**Domain:** Price Oracle, Action Provider 프레임워크, USD 정책 평가를 기존 6-stage 파이프라인에 통합
+**Researched:** 2026-02-15
+**Confidence:** HIGH (기존 코드베이스 직접 분석 + Pyth/MCP 공식 문서 기반)
 
 ---
 
-## 1. Current Architecture Baseline
+## 1. Recommended Architecture
 
-### 1.1 Pipeline (6 Stages)
+### 1.1 Integration Overview
+
+v1.5에서 3개의 새로운 서브시스템을 기존 아키텍처에 통합한다. 핵심 원칙은 **기존 6-stage 파이프라인과 DaemonContext 패턴을 변경하지 않고, 새로운 컴포넌트를 주입점에 추가**하는 것이다.
 
 ```
-Stage 1: Validate + DB INSERT (PENDING)
+기존 아키텍처 (변경 없음)                  v1.5 추가 (주입)
+=====================                    ================
+
+DaemonContext                            + priceOracle: OracleChain
+  +-- db                                + actionRegistry: ActionProviderRegistry
+  +-- config                            + apiKeyStore: ActionProviderApiKeyStore
+  +-- adapterPool
+  +-- notificationService
+  +-- settingsService
+  +-- ...
+
+Pipeline (6-stage)                       Stage 3 전에 USD 변환 삽입
+  Stage 1: Validate + INSERT             (변경 없음)
+  Stage 2: Auth                          (변경 없음)
+  Stage 3: Policy evaluation             resolveEffectiveAmountUsd() 호출 추가
+  Stage 4: Wait                          (변경 없음)
+  Stage 5: Execute                       (변경 없음)
+  Stage 6: Confirm                       (변경 없음)
+
+MCP Server                              Action Provider 도구 동적 등록
+  14 static tools                        (유지)
+  + N action tools                       (동적 추가/제거)
+
+Admin UI                                 + Oracle Status 페이지/섹션
+  6 pages                                + API Keys 관리 섹션
+```
+
+### 1.2 System Architecture Diagram
+
+```
++---------------------------------------------------------------------------+
+|  Admin UI (Preact + Vite)                                                 |
+|  +----------+ +----------+ +----------+ +------------+ +------------+     |
+|  | Settings | | Policies | |   ...    | |Oracle Stat | | API Keys   |     |
+|  |(existing)| |(existing)| |          | |  (NEW)     | |  (NEW)     |     |
+|  +----+-----+ +----+-----+ +----------+ +-----+------+ +-----+------+     |
++-------+------------+----------------------+------------+------+-----------+
+        |            |                       |              |
+   +----v------------v-----------------------v--------------v--------------+
+   |  REST API (OpenAPIHono)                                               |
+   |  +----------------------+  +--------------------------------------+   |
+   |  | Existing Routes      |  | New Routes                           |   |
+   |  | /v1/transactions/*   |  | POST /v1/actions/:prov/:action       |   |
+   |  | /v1/wallets/*        |  | GET  /v1/admin/oracle-status         |   |
+   |  | /v1/admin/*          |  | CRUD /v1/admin/api-keys/*            |   |
+   |  +-----------+-----------+  +-------------+------------------------+   |
+   +--------------+----------------------------+---------------------------+
+                  |                            |
+   +--------------v----------------------------v---------------------------+
+   |  DaemonContext (주입 컨테이너)                                         |
+   |                                                                       |
+   |  기존:  db, config, adapterPool, settingsService, ...                 |
+   |  추가:  priceOracle: OracleChain                                      |
+   |         actionRegistry: ActionProviderRegistry                        |
+   |         apiKeyStore: ActionProviderApiKeyStore                        |
+   +------+------------------+-----------------------+---------------------+
+          |                  |                       |
+   +------v--------+  +-----v--------------+  +-----v--------------------+
+   |  Pipeline      |  |  OracleChain       |  |  ActionProviderRegistry  |
+   |  (6-stage)     |  |                    |  |                          |
+   |  +----------+  |  |  PythOracle        |  |  ~/.waiaas/actions/      |
+   |  | Stage 3  |<-+--+  (Primary)         |  |  ESM dynamic import     |
+   |  | resolveUsd  |  |       |            |  |                          |
+   |  | + Policy |  |  |  CoinGeckoOracle   |  |  resolve() -> CCR        |
+   |  +----------+  |  |  (Fallback)        |  |       |                  |
+   |                |  |       |            |  |       v                  |
+   |  Stage 1-2,   |  |  InMemoryCache     |  |  Pipeline Stage 1        |
+   |  4-6 unchanged|  |  (LRU 128)         |  |  (ContractCallRequest)   |
+   +----------------+  +--------------------+  +--------------------------+
+```
+
+---
+
+## 2. Component Boundaries
+
+### 2.1 New Components
+
+| Component | Package | Directory | Responsibility | Communicates With |
+|-----------|---------|-----------|---------------|-------------------|
+| `IPriceOracle` | `@waiaas/core` | `interfaces/` | 가격 조회 인터페이스 (4 메서드) | OracleChain에서 구현 |
+| `PythOracle` | `@waiaas/daemon` | `oracle/` | Pyth Hermes REST API 구현체 (Primary, Zero-config) | Hermes API (HTTPS) |
+| `CoinGeckoOracle` | `@waiaas/daemon` | `oracle/` | CoinGecko Demo API 구현체 (Opt-in Fallback) | CoinGecko API (HTTPS) |
+| `OracleChain` | `@waiaas/daemon` | `oracle/` | Pyth->CoinGecko fallback + 교차 검증 | PythOracle, CoinGeckoOracle, InMemoryPriceCache |
+| `InMemoryPriceCache` | `@waiaas/daemon` | `oracle/` | LRU 128항목, 5분 TTL | OracleChain에서 사용 |
+| `resolveEffectiveAmountUsd` | `@waiaas/daemon` | `pipeline/` | 트랜잭션 금액 USD 변환 | IPriceOracle, Stage 3 |
+| `IActionProvider` | `@waiaas/core` | `interfaces/` | Action Provider 인터페이스 | ActionProviderRegistry에서 사용 |
+| `ActionProviderRegistry` | `@waiaas/daemon` | `action/` | 플러그인 발견/로드/검증 | IActionProvider, MCP Tool Converter |
+| `McpToolConverter` | `@waiaas/daemon` | `action/` | ActionDefinition -> MCP Tool 변환 | McpServer, ActionProviderRegistry |
+| `ActionProviderApiKeyStore` | `@waiaas/daemon` | `action/` | API 키 DB 암호화 저장/CRUD | DB, masterPassword |
+
+### 2.2 Modified Components
+
+| Component | Modification | Impact |
+|-----------|-------------|--------|
+| `DaemonLifecycle` (lifecycle/daemon.ts) | priceOracle, actionRegistry, apiKeyStore 필드 추가 | 시작/종료 시 초기화/정리 추가 |
+| `PipelineContext` (pipeline/stages.ts) | priceOracle 옵셔널 필드 추가 | Stage 3에서 USD 변환 호출 |
+| `stage3Policy()` (pipeline/stages.ts) | resolveEffectiveAmountUsd() 호출 삽입 | evaluateAndReserve() 전에 USD 금액 계산 |
+| `DatabasePolicyEngine` (pipeline/database-policy-engine.ts) | SpendingLimitRules에 USD 필드 인식 추가 | USD 임계값 존재 시 USD 기준 평가 |
+| `SpendingLimitRules` (database-policy-engine.ts) | `instant_max_usd?`, `notify_max_usd?`, `delay_max_usd?` 필드 추가 | 기존 네이티브 필드와 공존 (후방 호환) |
+| `SETTING_DEFINITIONS` (setting-keys.ts) | oracle 카테고리 추가 | SettingsService 통합 |
+| `SETTING_CATEGORIES` (setting-keys.ts) | `'oracle'` 카테고리 추가 | Admin UI Oracle 섹션 표시 |
+| `HotReloadOrchestrator` (hot-reload.ts) | oracle 키 변경 시 OracleChain 재구성 | CoinGecko 키 변경 시 fallback 활성화/비활성화 |
+| Admin Layout (layout.tsx) | Oracle Status 페이지 라우팅 추가 고려 | 사이드바에 새 메뉴 항목 |
+| Admin Settings (settings.tsx) | Oracle 섹션 + API Keys 섹션 추가 | CoinGecko 키/교차검증 임계값 설정 UI |
+| DB Schema (schema.ts) | `api_keys` 테이블 추가 (v11 마이그레이션) | ActionProviderApiKeyStore 저장소 |
+| API Endpoints (endpoints.ts) | oracle-status, api-keys, actions 엔드포인트 추가 | Admin UI + REST API |
+
+### 2.3 Unchanged Components
+
+| Component | Why Unchanged |
+|-----------|--------------|
+| `TransactionPipeline` (pipeline.ts) | executeSend() 진입점 변경 없음 -- Stage 3 내부만 수정 |
+| `IChainAdapter` (core) | 가격 정보와 무관 (저수준 실행 엔진 유지 원칙) |
+| `AdapterPool` | Oracle과 독립 |
+| `LocalKeyStore` | 변경 없음 -- API 키 암호화는 별도 secretbox 사용 |
+| MCP 기존 14 tools | 항상 유지, Action 도구만 동적 추가 |
+| 알림 시스템 (channels) | 채널 변경 없음 -- 이벤트 타입만 추가 (UNLISTED_TOKEN_TRANSFER) |
+
+---
+
+## 3. Data Flow
+
+### 3.1 USD Policy Evaluation Flow (Stage 3 확장)
+
+현재 `stage3Policy()` (stages.ts L253)에서 `evaluateAndReserve()` 호출 **직전**에 USD 변환 로직을 삽입한다.
+
+```
+현재 흐름:
+  buildTransactionParam() --> txParam 생성
+  evaluateAndReserve(walletId, txParam, txId) --> 정책 평가
+
+수정 흐름:
+  buildTransactionParam() --> txParam 생성
+  [NEW] resolveEffectiveAmountUsd() --> usdAmount 계산
+  [NEW] txParam.usdAmount = usdAmount (있으면)
+  evaluateAndReserve(walletId, txParam, txId) --> 정책 평가 (USD 인식)
+```
+
+Stage 3 상세:
+
+```
+Client Request
     |
+    v
+Stage 1: Validate + INSERT PENDING
+    |
+    v
 Stage 2: Auth (sessionId passthrough)
     |
-Stage 3: Policy evaluate (4-tier classification + TOCTOU reserve)
+    v
+Stage 3: Policy Evaluation (확장 부분)
     |
-Stage 4: Wait (INSTANT/NOTIFY passthrough, DELAY/APPROVAL halt)
+    +-- [NEW] resolveEffectiveAmountUsd(request, priceOracle)
+    |       |
+    |       +-- TransactionType 판별
+    |       |   +-- TRANSFER:      getNativePrice(chain) * amount
+    |       |   +-- TOKEN_TRANSFER: getPrice(tokenRef) * amount
+    |       |   +-- CONTRACT_CALL:  getNativePrice(chain) * value
+    |       |   +-- APPROVE:        getPrice(tokenRef) * amount
+    |       |   +-- BATCH:          개별 합산
+    |       |
+    |       +-- PriceResult 분기
+    |       |   +-- success(usdAmount)  -> USD 금액 반환
+    |       |   +-- oracleDown()       -> null (네이티브 fallback)
+    |       |   +-- notListed()        -> null + minTier=NOTIFY 플래그
+    |       |
+    |       +-- 가격 나이 판정
+    |           +-- FRESH (<5분)  -> 정상 사용
+    |           +-- AGING (5~30분) -> 경고 로그 + 정상 사용
+    |           +-- STALE (>30분)  -> USD 스킵 -> 네이티브 fallback
     |
-Stage 5: Execute (build -> simulate -> sign -> submit + CONC-01 retry)
+    +-- [EXISTING] buildTransactionParam(request, txType, chain)
+    |       +-- [NEW] txParam.usdAmount = resolveResult.usdAmount (있으면)
     |
-Stage 6: Confirm (waitForConfirmation + DB CONFIRMED)
+    +-- [EXISTING] evaluateAndReserve(walletId, txParam, txId)
+    |       +-- evaluateSpendingLimit() 내부:
+    |           +-- USD 필드 존재 + usdAmount 존재 -> USD 기준 비교
+    |           +-- 그 외 -> 기존 네이티브 기준 비교 (후방 호환)
+    |
+    +-- [NEW] notListed 플래그 시: max(결정된 tier, NOTIFY)
+    |
+    v
+Stage 4-6: (기존과 동일)
 ```
 
-**Key design decisions in current pipeline:**
-- POST /v1/transactions/send returns 201 after Stage 1 only (async stages 2-6)
-- PipelineContext accumulates state across stages (txId, tier, unsignedTx, signedTx, submitResult)
-- PIPELINE_HALTED error is intentional (DELAY/APPROVAL flow)
-- Fire-and-forget notifications at each stage transition
-- `buildByType()` dispatches to correct IChainAdapter method based on discriminatedUnion type
+**핵심 설계 결정:**
+- `resolveEffectiveAmountUsd()`는 `evaluateAndReserve()` **이전에** 호출된다
+- USD 변환 결과는 TransactionParam에 옵셔널 필드(`usdAmount?: string`)로 전달된다
+- SpendingLimitRules에 `instant_max_usd` 필드가 없으면 기존 네이티브 비교 (100% 후방 호환)
+- USD 변환 실패 시 트랜잭션을 거부하지 않는다 (graceful fallback)
 
-### 1.2 IChainAdapter Interface (20 methods)
+### 3.2 Action Provider Resolve-then-Execute Flow
 
-Connection (4) + Balance (1) + Pipeline (4: build/simulate/sign/submit) + Confirm (1) + Assets (1) + Fee (1) + Token (2) + Contract (2) + Batch (1) + Utility (3)
+```
+AI Agent / REST Client
+    |
+    +-- (A) REST: POST /v1/actions/:provider/:action
+    |   또는
+    +-- (B) MCP: waiaas_{provider}_{action} tool call
+    |
+    v
+Action Route Handler / MCP Tool Handler
+    |
+    +-- ActionProviderRegistry.getProvider(providerName)
+    |       +-- 미등록 -> 404 PROVIDER_NOT_FOUND
+    |
+    +-- requiresApiKey 확인
+    |       +-- 키 미설정 -> 403 API_KEY_REQUIRED + Admin 안내 메시지
+    |
+    +-- ActionDefinition.inputSchema.parse(params)
+    |       +-- 검증 실패 -> 400 ACTION_VALIDATION_FAILED
+    |
+    +-- provider.resolve(actionName, validatedParams, actionContext)
+    |       +-- ContractCallRequest 반환 (Zod 검증)
+    |       +-- 실패 -> 500 ACTION_RESOLVE_FAILED
+    |
+    v
+ContractCallRequest --> 기존 Pipeline Stage 1 주입
+    |
+    +-- Stage 1: Validate (type='CONTRACT_CALL')
+    +-- Stage 2: Auth
+    +-- Stage 3: Policy (CONTRACT_WHITELIST + SPENDING_LIMIT + USD)
+    +-- Stage 4: Wait
+    +-- Stage 5: Execute (buildContractCall -> simulate -> sign -> submit)
+    +-- Stage 6: Confirm
+```
 
-**Critical for sign-only:** The 4-stage pipeline (build -> simulate -> sign -> submit) is already decomposed. `signTransaction()` returns `Uint8Array`. We can invoke build -> sign and stop before submit.
+**핵심:** Action Provider의 `resolve()`는 `ContractCallRequest`만 반환할 수 있다. 이 요청은 기존 파이프라인의 **Stage 1부터** 진입하므로 **모든 정책 평가를 거친다**. CONTRACT_WHITELIST 정책에 해당 컨트랙트가 등록되어 있어야 실행된다.
 
-### 1.3 Policy Engine (11 PolicyTypes)
+### 3.3 OracleChain Fallback Flow
 
-SPENDING_LIMIT, WHITELIST, ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE, ALLOWED_NETWORKS, TIME_RESTRICTION, RATE_LIMIT
+```
+OracleChain.getPrice(tokenRef)
+    |
+    +-- 1. InMemoryPriceCache 조회
+    |   +-- cache hit + FRESH -> 즉시 반환
+    |   +-- cache hit + AGING -> 반환 + PRICE_STALE 경고 로그
+    |   +-- cache miss / STALE -> 외부 조회
+    |
+    +-- 2. PythOracle.getPrice(tokenRef)
+    |   +-- 성공 -> primary 가격 확보
+    |   +-- 실패 (네트워크/피드 미지원) -> fallback
+    |
+    +-- 3. [CoinGecko 키 설정 시] CoinGeckoOracle.getPrice(tokenRef)
+    |   +-- 성공 -> fallback 가격 확보
+    |   +-- 실패 -> ORACLE_UNAVAILABLE
+    |
+    +-- 4. 교차 검증 (CoinGecko 키 설정 + 양쪽 성공 시에만)
+    |   +-- |Pyth - CoinGecko| / avg <= 5% -> Pyth 가격 채택
+    |   +-- |Pyth - CoinGecko| / avg > 5%  -> STALE 격하 + PRICE_DEVIATION_WARNING
+    |
+    +-- 5. 캐시 저장 (TTL 5분)
+    |
+    +-- 6. PriceInfo 반환
+```
 
-**Current behavior:** Missing default-deny policies (ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS) causes **automatic denial** for TOKEN_TRANSFER, CONTRACT_CALL, and APPROVE transaction types. This is undiscoverable -- AI agents get denied without understanding why.
+### 3.4 MCP Dynamic Tool Registration Flow
 
-### 1.4 MCP Layer (11 tools + 3 resources)
+```
+DaemonLifecycle.start()
+    |
+    +-- ActionProviderRegistry 초기화
+    |   +-- ~/.waiaas/actions/ 스캔
+    |       +-- ESM import() -> validate-then-trust
+    |
+    +-- McpServer 생성 (기존 14 tools 등록)
+    |
+    +-- ActionProviderRegistry.listProviders()
+    |   +-- mcpExpose=true인 프로바이더 필터
+    |       +-- 각 ActionDefinition에 대해:
+    |           +-- McpToolConverter.registerTool(server, definition)
+    |               +-- zodToJsonSchema(inputSchema)
+    |               +-- server.tool(`waiaas_${provider}_${action}`, ...)
+    |               +-- handler: resolve() -> POST /v1/actions/:p/:a
+    |
+    +-- server.connect(transport)
+```
 
-Resources are read-only contextual data URIs. Currently:
-- `waiaas://wallet/balance` -- Current balance
-- `waiaas://wallet/address` -- Public address + chain info
-- `waiaas://system/status` -- Daemon status
+**MCP SDK 동적 도구 등록 제약사항:**
+- MCP TypeScript SDK는 `server.tool()`로 런타임에 도구를 추가할 수 있다
+- 도구 제거 공식 API 부재: 내부 도구 맵 관리 또는 disable/enable 패턴 필요
+- `notifications/tools/list_changed`를 클라이언트에 보내면 클라이언트가 도구 목록 갱신
+- **제약:** 동일 메시지 사이클 내에서 등록된 도구는 즉시 사용 불가 (다음 사이클부터 유효) -- GitHub Issue #682
+- **대응:** Action Provider 등록은 대부분 시작 시점(startup)이므로 실질적 영향 없음
 
 ---
 
-## 2. Recommended Architecture: Sign-Only Pipeline
+## 4. DaemonContext Integration
 
-### 2.1 Core Insight: Fork, Don't Duplicate
+### 4.1 DaemonLifecycle 초기화 순서
 
-The sign-only pipeline needs to reuse **Stage 1 (validate)** and **Stage 3 (policy)** but skip **Stage 4 (wait), Stage 5 (submit), Stage 6 (confirm)**. The key question: do we create a parallel pipeline class or add a mode flag?
-
-**Recommendation: New `executeSignOnly()` method on TransactionPipeline + new `stage5SignOnly` function.**
-
-Rationale:
-- A separate `SignOnlyPipeline` class would duplicate wallet lookup, network resolution, adapter resolution, context building
-- A `mode` flag in PipelineContext is cleaner -- Stage 5 checks `ctx.signOnly` and branches
-- But the **response shape is fundamentally different** (returns signed bytes, not txId+status), so a separate entry point is clearer
-
-### 2.2 Sign-Only Pipeline Flow
+기존 DaemonLifecycle.start() 단계에 Oracle과 ActionProvider 초기화를 삽입한다.
 
 ```
-POST /v1/transactions/sign
+DaemonLifecycle.start(dataDir, masterPassword)
     |
-    v
-[Route Handler]
-    |-- Resolve wallet, network, adapter (SAME as /send)
-    |-- Build PipelineContext with signOnly: true
+    +-- Step 1: loadConfig()                          (기존)
+    +-- Step 2: createDatabase() + pushSchema()        (기존)
+    +-- Step 3: LocalKeyStore 초기화                   (기존)
+    +-- Step 4: SettingsService 초기화                 (기존)
     |
-    v
-Stage 1: Validate + DB INSERT (PENDING, type preserves original 5-type)
+    +-- Step 4a: [NEW] OracleChain 초기화
+    |   +-- InMemoryPriceCache 생성 (maxSize=128, ttl=5min)
+    |   +-- PythOracle 생성 (Zero-config, no API key)
+    |   +-- CoinGecko 키 확인 (SettingsService.get('oracle.coingecko_api_key'))
+    |   |   +-- 키 존재 -> CoinGeckoOracle 생성 + fallback 활성화
+    |   |   +-- 키 없음 -> CoinGecko 비활성 (Pyth 단독 운영)
+    |   +-- OracleChain 생성 (oracles=[pyth, coingecko?], cache, settingsService)
     |
-    v
-Stage 2: Auth (passthrough, SAME)
+    +-- Step 4b: [NEW] ActionProviderApiKeyStore 초기화
+    |   +-- DB api_keys 테이블, masterPassword로 암호화 키 파생
     |
-    v
-Stage 3: Policy (SAME -- all 11 PolicyTypes apply)
-    |       SIGN_ONLY transactions SHOULD go through policy
-    |       because signing IS authorization
+    +-- Step 4c: [NEW] ActionProviderRegistry 초기화
+    |   +-- ~/.waiaas/actions/ 디렉토리 스캔
+    |   +-- ESM dynamic import + validate-then-trust
+    |   +-- apiKeyStore 연결 (requiresApiKey 확인용)
     |
-    v
-Stage 5-Sign: Build -> Simulate -> Sign (NO submit)
-    |       Returns { signedTx: hex, unsignedTx: hex, estimatedFee, metadata }
-    |       DB status: SIGNED (new terminal status)
+    +-- Step 5: AdapterPool 초기화                    (기존)
+    +-- Step 6: NotificationService 초기화            (기존)
     |
-    v
-[Response: 200 with signed transaction bytes]
+    +-- Step 6a: [NEW] HotReloadOrchestrator에 oracle 키 핸들러 추가
+    |
+    +-- Step 7: Pipeline 초기화                       (기존, priceOracle 주입 추가)
+    +-- Step 8: REST API 서버 시작                    (기존, 새 라우트 추가)
+    +-- Step 9: BackgroundWorkers 시작                (기존)
 ```
 
-### 2.3 New Transaction Status: SIGNED
-
-Add `'SIGNED'` to `TRANSACTION_STATUSES` enum in `@waiaas/core`:
+### 4.2 PipelineDeps 확장
 
 ```typescript
-// packages/core/src/enums/transaction.ts
-export const TRANSACTION_STATUSES = [
-  'PENDING',
-  'QUEUED',
-  'EXECUTING',
-  'SUBMITTED',
-  'CONFIRMED',
-  'FAILED',
-  'CANCELLED',
-  'EXPIRED',
-  'PARTIAL_FAILURE',
-  'SIGNED',  // NEW: sign-only pipeline terminal state
-] as const;
+// 기존 PipelineDeps에 옵셔널 필드 추가 (후방 호환)
+export interface PipelineDeps {
+  db: BetterSQLite3Database<typeof schema>;
+  adapter: IChainAdapter;
+  keyStore: LocalKeyStore;
+  policyEngine: IPolicyEngine;
+  masterPassword: string;
+  sqlite?: SQLiteDatabase;
+  notificationService?: NotificationService;
+  priceOracle?: IPriceOracle;  // NEW: USD 정책 평가용
+}
 ```
 
-**DB migration required:** ALTER TABLE transactions CHECK constraint must include 'SIGNED'. This is migration v9 (current is v8 from v1.4.6).
-
-### 2.4 PipelineContext Extension
+### 4.3 PipelineContext 확장
 
 ```typescript
-// New fields on PipelineContext
 export interface PipelineContext {
-  // ... existing fields ...
-
-  /** Sign-only mode: skip submit/confirm stages */
-  signOnly?: boolean;
-
-  /** Sign-only result: hex-encoded signed transaction */
-  signedTxHex?: string;
-
-  /** Sign-only result: hex-encoded unsigned transaction (for inspection) */
-  unsignedTxHex?: string;
+  // ... 기존 필드 모두 유지 ...
+  priceOracle?: IPriceOracle;  // NEW
+  usdAmount?: string;          // NEW: resolveEffectiveAmountUsd() 결과
+  priceAgeWarning?: boolean;   // NEW: AGING 경고 플래그
+  notListedMinTier?: boolean;  // NEW: 가격 불명 토큰 NOTIFY 격상 플래그
 }
-```
-
-### 2.5 Sign-Only Stage 5 (New Function)
-
-```typescript
-/**
- * Stage 5 variant for sign-only: Build -> Simulate -> Sign (no submit).
- * Returns signed bytes in ctx without submitting to chain.
- */
-export async function stage5SignOnly(ctx: PipelineContext): Promise<void> {
-  // Stage 5a: Build unsigned tx (reuse buildByType)
-  ctx.unsignedTx = await buildByType(ctx.adapter, ctx.request, ctx.wallet.publicKey);
-
-  // Stage 5b: Simulate (SAME -- still validate tx will succeed)
-  const simResult = await ctx.adapter.simulateTransaction(ctx.unsignedTx);
-  if (!simResult.success) {
-    // Update DB, throw SIMULATION_FAILED (same as regular pipeline)
-  }
-
-  // Stage 5c: Sign (SAME key management)
-  let privateKey: Uint8Array | null = null;
-  try {
-    privateKey = await ctx.keyStore.decryptPrivateKey(ctx.walletId, ctx.masterPassword);
-    ctx.signedTx = await ctx.adapter.signTransaction(ctx.unsignedTx, privateKey);
-  } finally {
-    if (privateKey) ctx.keyStore.releaseKey(privateKey);
-  }
-
-  // Convert to hex for API response
-  ctx.signedTxHex = Buffer.from(ctx.signedTx).toString('hex');
-  ctx.unsignedTxHex = Buffer.from(ctx.unsignedTx.serialized).toString('hex');
-
-  // Stage 5d: SKIP submit
-  // Stage 6: SKIP confirm
-
-  // Update DB status to SIGNED
-  await ctx.db.update(transactions)
-    .set({ status: 'SIGNED', metadata: JSON.stringify({
-      signedTxHex: ctx.signedTxHex,
-      estimatedFee: ctx.unsignedTx.estimatedFee.toString(),
-    })})
-    .where(eq(transactions.id, ctx.txId));
-
-  // Fire-and-forget notification
-  void ctx.notificationService?.notify('TX_SIGNED', ctx.walletId, {
-    amount: getRequestAmount(ctx.request),
-  }, { txId: ctx.txId });
-}
-```
-
-### 2.6 API Endpoint Design
-
-```
-POST /v1/transactions/sign
-  Auth: sessionAuth (Bearer wai_sess_*)
-  Body: SAME as POST /v1/transactions/send (discriminatedUnion 5-type)
-
-  Response 200:
-  {
-    id: string,           // Transaction record ID (for audit)
-    status: "SIGNED",
-    signedTx: string,     // Hex-encoded signed transaction bytes
-    unsignedTx: string,   // Hex-encoded unsigned transaction bytes
-    chain: string,
-    network: string,
-    estimatedFee: string,  // In smallest unit
-    metadata: {            // Chain-specific metadata
-      nonce?: number,      // EVM nonce
-      chainId?: number,    // EVM chain ID
-      // ... other chain-specific fields
-    }
-  }
-```
-
-**Synchronous execution:** Unlike `/send` (which returns 201 after Stage 1 and runs stages 2-6 async), `/sign` MUST be synchronous because the caller needs the signed bytes in the response. This means stages 1-5 run sequentially before returning.
-
-### 2.7 Policy Consideration for Sign-Only
-
-Sign-only transactions MUST go through the full policy engine because:
-1. **Signing IS authorization** -- a signed transaction can be submitted externally
-2. **SPENDING_LIMIT still applies** -- the signed tx has a specific amount
-3. **CONTRACT_WHITELIST still applies** -- we should not sign calls to non-whitelisted contracts
-4. **APPROVED_SPENDERS still applies** -- we should not sign approvals to unknown spenders
-
-**However:** Stage 4 (DELAY/APPROVAL) behavior needs a decision:
-
-**Recommendation: Skip Stage 4 for sign-only.** If policy evaluates to DELAY or APPROVAL tier, **deny** the sign-only request with a clear error: "Sign-only requests require INSTANT or NOTIFY tier. Current tier: DELAY."
-
-Rationale:
-- Sign-only is a power-user feature. If policy says DELAY, the user can wait and retry via `/send`.
-- APPROVAL tier for sign-only doesn't make sense (you'd need owner approval to get signed bytes, but the owner could just sign themselves).
-- Implementation is simpler: no polling for signed bytes after delay/approval.
-
-### 2.8 Component Boundary Changes
-
-```
-packages/core/
-  enums/transaction.ts     -- ADD 'SIGNED' status
-
-packages/daemon/
-  pipeline/stages.ts       -- ADD stage5SignOnly()
-  pipeline/pipeline.ts     -- ADD executeSignOnly() method
-  api/routes/transactions.ts  -- ADD POST /transactions/sign route
-  api/routes/openapi-schemas.ts -- ADD SignResponse schema
-
-packages/mcp/
-  tools/sign-transaction.ts -- NEW tool: sign_transaction
-
-packages/sdk/
-  -- ADD signTransaction() method
 ```
 
 ---
 
-## 3. Recommended Architecture: Unsigned Transaction Parsing
+## 5. Patterns to Follow
 
-### 3.1 Purpose
+### Pattern 1: Graceful Fallback (USD 변환 실패 시 네이티브 fallback)
 
-Allow AI agents to **inspect** a built but unsigned transaction before deciding to sign and submit. This is a read-only operation that decodes chain-specific serialized bytes into human-readable fields.
+**What:** Oracle 장애 또는 토큰 미등록 시 트랜잭션을 거부하지 않고, 네이티브 금액 기준으로 정책 평가를 수행한다.
 
-### 3.2 Architecture Decision: Adapter Method vs Utility
+**When:** resolveEffectiveAmountUsd()가 null을 반환하거나 에러를 throw할 때.
 
-**Recommendation: Add `parseUnsignedTransaction()` to IChainAdapter (method #21).** The adapter already has the chain context, and this maintains the principle that all chain-specific logic lives in adapters. Going from 20 to 21 methods is acceptable.
+**Why:** "USD 변환 실패 시 트랜잭션 거부 금지" 원칙 (설계 문서 61, 원칙 3). Oracle 장애로 인해 정상 트랜잭션이 차단되면 안 된다.
 
-### 3.3 New IChainAdapter Method
-
+**Example:**
 ```typescript
-// IChainAdapter interface extension
-/** Parse an unsigned transaction into human-readable fields. */
-parseUnsignedTransaction(tx: UnsignedTransaction): ParsedTransaction;
+// pipeline/stages.ts Stage 3 내부
+const priceResult = ctx.priceOracle
+  ? await resolveEffectiveAmountUsd(ctx.request, ctx.priceOracle, ctx.wallet.chain)
+  : null;
 
-// New type in chain-adapter.types.ts
-export interface ParsedTransaction {
-  chain: ChainType;
-  type: 'native_transfer' | 'token_transfer' | 'contract_call' | 'approve';
-  from: string;
-  to: string;
-  value: string;           // Native value in smallest unit
-  data?: string;           // Hex calldata (EVM) or instruction data (Solana)
-  nonce?: number;          // EVM nonce
-  gasLimit?: string;
-  maxFeePerGas?: string;
-  maxPriorityFeePerGas?: string;
-  chainId?: number;
-  // Decoded ABI info (if available)
-  functionName?: string;   // e.g., 'transfer', 'approve'
-  functionArgs?: unknown[];
-  // Token info (if recognized)
-  tokenAddress?: string;
-  tokenSymbol?: string;
-  tokenAmount?: string;
+if (priceResult?.type === 'success') {
+  txParam.usdAmount = priceResult.usdAmount;
+} else if (priceResult?.type === 'notListed') {
+  ctx.notListedMinTier = true; // 최종 tier에서 max(tier, NOTIFY) 적용
+  // 감사 로그: UNLISTED_TOKEN_TRANSFER
+} else {
+  // oracleDown 또는 priceOracle 미설정 -> 네이티브 금액만으로 평가
+  // 감사 로그: PRICE_UNAVAILABLE (oracleDown인 경우만)
 }
 ```
 
-### 3.4 EVM Implementation
+### Pattern 2: SettingsService 통합 (Oracle 설정)
 
-viem already provides `parseTransaction()` which deserializes EIP-1559 transactions. Combined with `decodeFunctionData()`, we can decode calldata into function name + args when ABI is available (or at minimum extract the 4-byte selector).
+**What:** CoinGecko API 키, 교차 검증 임계값 등을 SettingsService를 통해 관리한다. Admin UI에서 런타임 변경 가능.
 
+**When:** 재시작 없이 변경해야 하는 Oracle 설정.
+
+**Why:** CLAUDE.md 규칙: "런타임 변경이 유용한 설정은 Admin Settings에 노출한다."
+
+**Example:**
 ```typescript
-// EvmAdapter.parseUnsignedTransaction()
-parseUnsignedTransaction(tx: UnsignedTransaction): ParsedTransaction {
-  const hex = toHex(tx.serialized);
-  const parsed = parseTransaction(hex as TransactionSerializedEIP1559);
+// setting-keys.ts에 oracle 카테고리 추가
+{ key: 'oracle.coingecko_api_key', category: 'oracle',
+  configPath: 'oracle.coingecko_api_key', defaultValue: '', isCredential: true },
+{ key: 'oracle.cross_validation_threshold', category: 'oracle',
+  configPath: 'oracle.cross_validation_threshold', defaultValue: '0.05', isCredential: false },
+{ key: 'oracle.price_cache_ttl_seconds', category: 'oracle',
+  configPath: 'oracle.price_cache_ttl_seconds', defaultValue: '300', isCredential: false },
+```
 
-  const result: ParsedTransaction = {
-    chain: 'ethereum',
-    type: 'native_transfer',  // default, override below
-    from: tx.metadata.from as string,
-    to: parsed.to ?? '',
-    value: (parsed.value ?? 0n).toString(),
-    data: parsed.data,
-    nonce: parsed.nonce,
-    gasLimit: tx.metadata.gasLimit?.toString(),
-    maxFeePerGas: tx.metadata.maxFeePerGas?.toString(),
-    maxPriorityFeePerGas: tx.metadata.maxPriorityFeePerGas?.toString(),
-    chainId: parsed.chainId,
-  };
+### Pattern 3: Validate-then-Trust (Action Provider 보안 경계)
 
-  // Detect type from calldata
-  if (parsed.data && parsed.data !== '0x') {
-    const selector = parsed.data.slice(0, 10);
-    if (selector === '0xa9059cbb') {       // transfer(address,uint256)
-      result.type = 'token_transfer';
-      result.functionName = 'transfer';
-    } else if (selector === '0x095ea7b3') { // approve(address,uint256)
-      result.type = 'approve';
-      result.functionName = 'approve';
-    } else {
-      result.type = 'contract_call';
-    }
-    result.tokenAddress = tx.metadata.tokenAddress as string | undefined;
-  }
+**What:** ESM dynamic import로 로드한 플러그인의 인터페이스 준수를 검증한 후, resolve() 반환값을 Zod로 재검증한다.
 
-  return result;
+**When:** ~/.waiaas/actions/에서 플러그인을 로드할 때, 그리고 매 resolve() 호출 시.
+
+**Example:**
+```typescript
+// action/action-provider-registry.ts
+async loadPlugin(modulePath: string): Promise<void> {
+  const module = await import(modulePath);
+  const provider = module.default as unknown;
+
+  // 1. 인터페이스 준수 검증 (duck typing)
+  if (!provider || typeof provider !== 'object') throw new Error('Invalid plugin');
+  if (typeof (provider as any).metadata !== 'object') throw new Error('Missing metadata');
+  if (!Array.isArray((provider as any).actions)) throw new Error('Missing actions');
+  if (typeof (provider as any).resolve !== 'function') throw new Error('Missing resolve');
+
+  // 2. Zod 스키마로 metadata/actions 검증
+  ActionProviderMetadataSchema.parse((provider as IActionProvider).metadata);
+  (provider as IActionProvider).actions.forEach(a => ActionDefinitionSchema.parse(a));
+
+  // 3. 등록 (이름 중복 거부)
+  this.register(provider as IActionProvider);
+}
+
+// resolve() 호출 시 반환값 재검증
+async callResolve(
+  provider: IActionProvider, actionName: string, params: unknown, ctx: ActionContext,
+): Promise<ContractCallRequest> {
+  const result = await provider.resolve(actionName, params, ctx);
+  return ContractCallRequestSchema.parse(result);
 }
 ```
 
-### 3.5 API Endpoint
+### Pattern 4: DaemonContext 주입 패턴 (기존 패턴 준수)
 
-```
-POST /v1/transactions/parse
-  Auth: sessionAuth
-  Body: { signedTx?: string, unsignedTx?: string }  // hex-encoded
+**What:** 새로운 서비스를 DaemonContext에 추가하고, 라우트 핸들러에서 `c.get('context')`로 접근한다.
 
-  Response 200: ParsedTransaction
-```
+**When:** Oracle, ActionRegistry, ApiKeyStore를 API 라우트에서 사용할 때.
 
-A separate endpoint allows parsing externally-constructed transactions too, not just those built by the daemon.
-
-### 3.6 Integration Points
-
-| Component | Change | Type |
-|-----------|--------|------|
-| `IChainAdapter` | +1 method: `parseUnsignedTransaction()` | Interface change |
-| `EvmAdapter` | Implement parsing with viem `parseTransaction()` | New implementation |
-| `SolanaAdapter` | Implement parsing with `@solana/kit` deserializer | New implementation |
-| `chain-adapter.types.ts` | New `ParsedTransaction` type | New type |
-| Transaction routes | New POST `/transactions/parse` | New route |
-| MCP tools | New `parse_transaction` tool (optional) | New tool |
-
----
-
-## 4. Recommended Architecture: EVM Calldata Encoding
-
-### 4.1 Problem
-
-AI agents calling `call_contract` currently must provide **pre-encoded hex calldata**. This is unusable for most AI agents because:
-1. Agents would need to know the exact ABI
-2. Agents would need to correctly encode parameters into hex calldata
-3. No existing MCP tool provides encoding functionality
-
-### 4.2 Architecture: Encoding Service as Daemon Utility Endpoint
-
-**Recommendation: New REST endpoint + MCP tool that encodes function calls from human-readable params.**
-
-```
-POST /v1/utils/encode-calldata
-  Auth: sessionAuth
-  Body: {
-    abi: AbiItem[],       // Function ABI fragment (JSON)
-    functionName: string,  // e.g., 'transfer'
-    args: unknown[],       // Function arguments
-  }
-
-  Response 200:
-  {
-    calldata: string,     // Hex-encoded calldata (0x...)
-    selector: string,     // 4-byte function selector (0x...)
-  }
-```
-
-### 4.3 Implementation: Leverage viem
-
-viem's `encodeFunctionData()` is already imported in EvmAdapter. We expose it as a stateless utility.
-
+**Example:**
 ```typescript
-import { encodeFunctionData, type Abi } from 'viem';
-
-export function encodeCalldata(
-  abi: Abi,
-  functionName: string,
-  args: unknown[],
-): { calldata: string; selector: string } {
-  const calldata = encodeFunctionData({ abi, functionName, args });
-  const selector = calldata.slice(0, 10);
-  return { calldata, selector };
-}
-```
-
-### 4.4 Complementary: Decode Calldata
-
-```
-POST /v1/utils/decode-calldata
-  Auth: sessionAuth
-  Body: {
-    abi: AbiItem[],
-    calldata: string,  // Hex-encoded
-  }
-
-  Response 200:
-  {
-    functionName: string,
-    args: unknown[],
-    selector: string,
-  }
-```
-
-### 4.5 MCP Tool
-
-```typescript
-// New MCP tool: encode_calldata
-server.tool('encode_calldata', 'Encode EVM function call into calldata hex', {
-  abi: z.array(z.record(z.unknown())).describe('ABI fragment'),
-  functionName: z.string().describe('Function name'),
-  args: z.array(z.unknown()).describe('Function arguments'),
-}, async (params) => {
-  const result = await apiClient.post('/v1/utils/encode-calldata', params);
-  return toToolResult(result);
+// api/routes/actions.ts
+actionRoutes.post('/actions/:provider/:action', sessionAuth, async (c) => {
+  const { actionRegistry, apiKeyStore } = c.get('context');
+  const provider = actionRegistry.getProvider(c.req.param('provider'));
+  if (!provider) throw new WAIaaSError('PROVIDER_NOT_FOUND', { ... });
+  // ...resolve -> pipeline inject...
 });
 ```
 
-### 4.6 AI Agent Workflow
+### Pattern 5: DB 마이그레이션 증분 패턴 (CLAUDE.md 규칙)
 
-The AI agent workflow becomes:
-1. `encode_calldata` tool: encode function call into hex calldata
-2. `call_contract` tool: submit with the encoded calldata
-3. Optional: `parse_transaction` to verify before submission
+**What:** api_keys 테이블을 ALTER TABLE 증분 마이그레이션으로 추가한다. DB 삭제 후 재생성 금지.
 
-This keeps call_contract simple (just takes hex calldata) while providing a helper for agents that need encoding.
+**When:** v10 -> v11 스키마 업그레이드.
 
-### 4.7 Component Boundary Changes
-
-```
-packages/daemon/
-  api/routes/utils.ts          -- NEW: encode/decode calldata routes
-  api/routes/index.ts          -- ADD utils export
-
-packages/mcp/
-  tools/encode-calldata.ts     -- NEW: encode_calldata tool
-  tools/decode-calldata.ts     -- NEW: decode_calldata tool (optional)
+**Example:**
+```sql
+-- v11 마이그레이션
+CREATE TABLE IF NOT EXISTS api_keys (
+  provider_name TEXT PRIMARY KEY,
+  encrypted_key TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+UPDATE schema_version SET version = 11;
 ```
 
 ---
 
-## 5. Recommended Architecture: Default Deny Policy Toggles
+## 6. Anti-Patterns to Avoid
 
-### 5.1 Problem
+### Anti-Pattern 1: Oracle을 IChainAdapter에 결합
 
-Three policy types use **default deny** when no policy is configured:
-- `ALLOWED_TOKENS` -- TOKEN_TRANSFER denied if no policy exists
-- `CONTRACT_WHITELIST` -- CONTRACT_CALL denied if no policy exists
-- `APPROVED_SPENDERS` -- APPROVE denied if no policy exists
+**What:** getPrice()를 IChainAdapter에 추가하는 것.
+**Why bad:** IChainAdapter는 저수준 실행 엔진이다 (22 메서드). 가격 정보는 서비스 레이어의 관심사이며, 체인별 어댑터에 넣으면 SolanaAdapter와 EvmAdapter 모두에 중복 구현해야 한다. Oracle은 체인에 무관한 데이터(Pyth는 Solana/EVM 모두 동일 피드 제공)이므로 어댑터 경계에 맞지 않는다.
+**Instead:** IPriceOracle을 독립 서비스로 구현하고 DaemonContext에 주입한다. PipelineContext에 옵셔널로 전달.
 
-This is the correct security posture, but it's **invisible and confusing** for AI agents. An agent tries to send a token and gets "Token transfer not allowed: no ALLOWED_TOKENS policy configured" with no way to know what to configure.
+### Anti-Pattern 2: Action Provider resolve()에서 서명/제출
 
-### 5.2 Architecture: Settings-Based Toggle
+**What:** resolve()가 서명된 트랜잭션이나 txHash를 반환하는 것.
+**Why bad:** 파이프라인의 정책 평가(Stage 3), 시뮬레이션(Stage 5b), 서명(Stage 5c)을 모두 우회한다. CONTRACT_WHITELIST, SPENDING_LIMIT 등 모든 보안 정책이 무력화된다.
+**Instead:** resolve()는 반드시 ContractCallRequest만 반환한다. Zod 검증으로 반환 타입을 강제한다. 서명과 제출은 기존 파이프라인 Stage 5에서만 수행.
 
-**Recommendation: Add 3 boolean settings to the Settings DB that toggle default-deny behavior.**
+### Anti-Pattern 3: USD 변환 실패 시 트랜잭션 거부
 
-```
-security.token_transfer_default_allow  = false (default deny -- current behavior)
-security.contract_call_default_allow   = false (default deny -- current behavior)
-security.approve_default_allow         = false (default deny -- current behavior)
-```
+**What:** Oracle이 가격을 반환하지 못할 때 POLICY_DENIED로 거부하는 것.
+**Why bad:** Pyth/CoinGecko 장애 시 모든 트랜잭션이 차단되어 서비스 중단. Oracle 가용성에 대한 단일 실패점 생성.
+**Instead:** PriceResult discriminated union으로 oracleDown/notListed를 구분하고, 네이티브 금액 기준 fallback으로 정상 처리. notListed는 최소 NOTIFY 격상.
 
-### 5.3 Implementation: Policy Engine Integration
+### Anti-Pattern 4: config.toml에 API 키 평문 저장
 
+**What:** CoinGecko API 키나 Action Provider API 키를 config.toml에 평문으로 저장.
+**Why bad:** config.toml은 파일시스템에 평문으로 존재. Git에 실수로 커밋될 위험. Admin UI에서 런타임 변경 불가.
+**Instead:** SettingsService의 isCredential=true (AES-256-GCM 암호화) 또는 ActionProviderApiKeyStore (sodium-native secretbox)로 DB에 암호화 저장.
+
+### Anti-Pattern 5: MCP 도구 맵 직접 조작
+
+**What:** McpServer 내부의 `_registeredTools`를 직접 수정하여 도구를 제거하는 것.
+**Why bad:** SDK 내부 구현에 의존하면 SDK 업데이트 시 깨진다. `notifications/tools/list_changed`를 누락하면 클라이언트가 갱신되지 않는다.
+**Instead:** 자체 도구 레지스트리(McpToolConverter 내부 Map)를 유지하고, `server.tool()`로 등록. 해제 시에는 핸들러를 no-op으로 교체 + list_changed 알림 전송.
+
+---
+
+## 7. Key Integration Points Detail
+
+### 7.1 Stage 3 Policy Evaluation 수정
+
+현재 `stage3Policy()` 함수(stages.ts L253)에서 `evaluateAndReserve()` 호출 **직전**에 USD 변환 로직을 삽입한다.
+
+**TransactionParam 확장:**
 ```typescript
-// DatabasePolicyEngine modifications
+interface TransactionParam {
+  type: string;
+  amount: string;
+  toAddress: string;
+  chain: string;
+  network?: string;
+  tokenAddress?: string;
+  contractAddress?: string;
+  selector?: string;
+  spenderAddress?: string;
+  approveAmount?: string;
+  usdAmount?: string;  // NEW: USD 환산 금액
+}
+```
 
-// Inject settings service (or a simple getter callback)
-constructor(
-  private readonly db: BetterSQLite3Database<typeof schema>,
-  sqlite?: SQLiteDatabase,
-  private readonly getDefaultAllowSetting?: (key: string) => boolean,  // NEW
-) { ... }
-
-// In evaluateAllowedTokens():
-private evaluateAllowedTokens(
-  resolved: PolicyRow[],
-  transaction: TransactionParam,
+**evaluateSpendingLimit() 수정:**
+```typescript
+private evaluateSpendingLimit(
+  resolved: PolicyRow[], amount: string, usdAmount?: string,
 ): PolicyEvaluation | null {
-  if (transaction.type !== 'TOKEN_TRANSFER') return null;
+  const spending = resolved.find(p => p.type === 'SPENDING_LIMIT');
+  if (!spending) return null;
 
-  const allowedTokensPolicy = resolved.find(p => p.type === 'ALLOWED_TOKENS');
+  const rules: SpendingLimitRules = JSON.parse(spending.rules);
 
-  if (!allowedTokensPolicy) {
-    // Check toggle: if default_allow=true, skip deny
-    if (this.getDefaultAllowSetting?.('security.token_transfer_default_allow')) {
-      return null; // Allow through
-    }
-    return {
-      allowed: false,
-      tier: 'INSTANT',
-      reason: 'Token transfer not allowed: no ALLOWED_TOKENS policy configured',
-    };
+  // USD 필드가 정책에 존재하고 usdAmount가 제공된 경우 -> USD 기준 비교
+  if (rules.instant_max_usd && usdAmount) {
+    return this.evaluateSpendingLimitUsd(rules, usdAmount);
   }
-  // ... rest of evaluation unchanged
-}
 
-// Same pattern for evaluateContractWhitelist() and evaluateApprovedSpenders()
+  // 그 외 -> 기존 네이티브 기준 비교 (100% 후방 호환)
+  return this.evaluateSpendingLimitNative(rules, amount);
+}
 ```
 
-### 5.4 Setting Definitions Extension
+### 7.2 OracleChain의 SettingsService 연동
 
 ```typescript
-// packages/daemon/src/infrastructure/settings/setting-keys.ts
-// Add to SETTING_DEFINITIONS array, security category
+// HotReloadOrchestrator 확장
+const ORACLE_KEYS = new Set([
+  'oracle.coingecko_api_key',
+  'oracle.cross_validation_threshold',
+  'oracle.price_cache_ttl_seconds',
+]);
 
-{ key: 'security.token_transfer_default_allow', category: 'security',
-  configPath: 'security.token_transfer_default_allow', defaultValue: 'false', isCredential: false },
-{ key: 'security.contract_call_default_allow', category: 'security',
-  configPath: 'security.contract_call_default_allow', defaultValue: 'false', isCredential: false },
-{ key: 'security.approve_default_allow', category: 'security',
-  configPath: 'security.approve_default_allow', defaultValue: 'false', isCredential: false },
-```
-
-### 5.5 Admin UI Integration
-
-The Admin Settings panel already supports editing settings by category. The new security settings will appear automatically in the "security" category group. **No Admin UI code changes needed.**
-
-### 5.6 API Exposure
-
-Existing endpoint `PUT /v1/admin/settings/:key` handles setting updates. **No new endpoints needed.**
-
-### 5.7 Migration Consideration
-
-**No DB migration needed.** Settings use INSERT OR REPLACE semantics. New settings are initialized from `defaultValue` on first daemon boot after update (handled by existing settings initialization flow).
-
-### 5.8 Component Boundary Changes
-
-```
-packages/daemon/
-  infrastructure/settings/setting-keys.ts  -- ADD 3 new SettingDefinition entries
-  pipeline/database-policy-engine.ts       -- MODIFY constructor + 3 evaluate*() methods
-```
-
----
-
-## 6. Recommended Architecture: MCP Skill Resources
-
-### 6.1 Purpose
-
-MCP Resources provide **contextual data** that AI agents can read without invoking tools. Currently 3 resources exist. Skill resources would expose the daemon's capabilities, policy configuration, and supported operations as structured data.
-
-### 6.2 Architecture: Static + Dynamic Resources
-
-| Resource URI | Type | Description | Data Source |
-|-------------|------|-------------|-------------|
-| `waiaas://skills/transactions` | Static | Transaction types, required fields, examples | Hardcoded from skill files |
-| `waiaas://skills/policies` | Dynamic | Active policies for current wallet | `/v1/policies` |
-| `waiaas://skills/supported-chains` | Static | Supported chains and networks | Core enums |
-| `waiaas://skills/supported-tokens` | Dynamic | Token registry for current network | `/v1/tokens` |
-| `waiaas://wallet/policies` | Dynamic | Current wallet's active policy summary | `/v1/policies` |
-
-### 6.3 Key Design Decision: Skills as Resources, Not Prompts
-
-MCP has three context mechanisms:
-1. **Resources** -- data the application can inject (read-only, application-controlled)
-2. **Prompts** -- pre-built templates for common interactions
-3. **Tools** -- actions the model can invoke
-
-Skill data is best as **Resources** because:
-- It's contextual data, not an action
-- The AI agent reads it to understand capabilities before acting
-- It doesn't change per-request (or changes infrequently)
-- Resources are cheaper than tool calls
-
-### 6.4 Implementation Pattern
-
-```typescript
-// packages/mcp/src/resources/skill-transactions.ts
-const RESOURCE_URI = 'waiaas://skills/transactions';
-
-export function registerSkillTransactions(server: McpServer, walletContext?: WalletContext): void {
-  server.resource(
-    'Transaction Skills',
-    RESOURCE_URI,
-    {
-      description: withWalletPrefix(
-        'Transaction types and their required fields. Read this to understand what transactions you can send.',
-        walletContext?.walletName,
-      ),
-      mimeType: 'application/json',
-    },
-    async () => ({
-      contents: [{
-        uri: RESOURCE_URI,
-        text: JSON.stringify(TRANSACTION_SKILLS),
-        mimeType: 'application/json',
-      }],
-    }),
-  );
+// handleChangedKeys() 내부:
+if (hasOracleChanges) {
+  await this.reloadOracle().catch(err => {
+    console.warn('Hot-reload oracle failed:', err);
+  });
 }
 
-// Static skill data (derived from skill files + Zod schemas)
-const TRANSACTION_SKILLS = {
-  types: [
-    {
-      type: 'TRANSFER',
-      description: 'Native token transfer (SOL/ETH)',
-      requiredFields: ['type', 'to', 'amount'],
-      optionalFields: ['memo', 'network'],
-      example: { type: 'TRANSFER', to: '0x...', amount: '1000000000000000000' },
-    },
-    {
-      type: 'TOKEN_TRANSFER',
-      description: 'SPL/ERC-20 token transfer',
-      requiredFields: ['type', 'to', 'amount', 'token'],
-      optionalFields: ['memo', 'network'],
-      notes: 'Requires ALLOWED_TOKENS policy or security.token_transfer_default_allow=true',
-    },
-    // ... CONTRACT_CALL, APPROVE, BATCH
+private async reloadOracle(): Promise<void> {
+  const oracleChain = this.deps.oracleChain;
+  if (!oracleChain) return;
+  const apiKey = this.deps.settingsService.get('oracle.coingecko_api_key');
+  oracleChain.setCoinGeckoEnabled(!!apiKey);
+}
+```
+
+### 7.3 ActionProviderApiKeyStore vs SettingsService
+
+두 가지 API 키 저장 패턴이 존재하는 것은 의도적이다:
+
+| 구분 | SettingsService | ActionProviderApiKeyStore |
+|------|----------------|--------------------------|
+| 대상 | CoinGecko API 키 (oracle 카테고리) | Action Provider별 API 키 |
+| 저장소 | settings 테이블 | api_keys 테이블 (NEW) |
+| 암호화 | HKDF + AES-256-GCM | sodium-native secretbox |
+| Admin UI | Settings > Oracle 섹션 | Settings > API Keys 섹션 |
+| 이유 | 단일 키, 기존 HotReload 패턴 재사용 | 프로바이더별 동적 CRUD |
+
+### 7.4 Admin UI 확장
+
+**권장: Settings 페이지 내 섹션 추가 + Oracle Status 위젯**
+
+```
+Settings 페이지 (settings.tsx) 확장:
+  +-- NotificationSettings    (기존)
+  +-- RpcSettings             (기존)
+  +-- SecuritySettings        (기존)
+  +-- OracleSettings          (NEW - CoinGecko 키, 교차 검증 임계값, TTL)
+  +-- ApiKeySettings          (NEW - 프로바이더별 API 키 CRUD)
+  +-- WalletConnectSettings   (기존)
+  +-- DaemonSettings          (기존)
+```
+
+Oracle 모니터링은 별도 경량 페이지 또는 Dashboard 위젯:
+```
+GET /v1/admin/oracle-status 응답:
+{
+  cacheStats: { hits, misses, staleHits, size, evictions },
+  sources: [
+    { name: "pyth", status: "active", lastSuccess: timestamp },
+    { name: "coingecko", status: "inactive" | "active", lastSuccess: timestamp }
   ],
-  signOnly: {
-    endpoint: '/v1/transactions/sign',
-    description: 'Sign a transaction without submitting. Returns signed bytes.',
-    notes: 'Only available for INSTANT/NOTIFY tier. DELAY/APPROVAL denied.',
-  },
-};
-```
-
-### 6.5 Dynamic Policy Resource
-
-```typescript
-// packages/mcp/src/resources/wallet-policies.ts
-const RESOURCE_URI = 'waiaas://wallet/policies';
-
-export function registerWalletPolicies(
-  server: McpServer, apiClient: ApiClient, walletContext?: WalletContext,
-): void {
-  server.resource(
-    'Wallet Policies',
-    RESOURCE_URI,
-    {
-      description: withWalletPrefix(
-        'Active policies for this wallet. Shows spending limits, whitelists, and default deny status.',
-        walletContext?.walletName,
-      ),
-      mimeType: 'application/json',
-    },
-    async () => {
-      const result = await apiClient.get('/v1/policies');
-      return toResourceResult(RESOURCE_URI, result);
-    },
-  );
+  crossValidation: { enabled: boolean, threshold: 0.05 }
 }
 ```
 
-### 6.6 Component Boundary Changes
+---
 
-```
-packages/mcp/
-  resources/skill-transactions.ts  -- NEW: static transaction type info
-  resources/skill-policies.ts      -- NEW: dynamic policy summary
-  resources/skill-chains.ts        -- NEW: static chain/network support
-  resources/skill-tokens.ts        -- NEW: dynamic token registry
-  resources/wallet-policies.ts     -- NEW: wallet's active policies
-  server.ts                        -- MODIFY: register new resources
+## 8. SpendingLimitRules Zod Schema Migration
+
+현재 SpendingLimitRules는 TypeScript interface만 존재하며 (database-policy-engine.ts L49), 정책 생성 시 `rules: z.record(z.unknown())`으로 비검증 상태이다.
+
+```typescript
+// packages/core/src/schemas/spending-limit.ts (NEW)
+export const SpendingLimitRuleSchema = z.object({
+  // 기존 네이티브 금액 필드 (후방 호환, 필수)
+  instant_max: z.string().regex(/^\d+$/),
+  notify_max: z.string().regex(/^\d+$/),
+  delay_max: z.string().regex(/^\d+$/),
+  delay_seconds: z.number().int().positive(),
+
+  // NEW: USD 금액 필드 (옵셔널 -- 미설정 시 네이티브만 사용)
+  instant_max_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  notify_max_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  delay_max_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+});
+
+export type SpendingLimitRules = z.infer<typeof SpendingLimitRuleSchema>;
 ```
 
-**Total MCP changes:** 3 existing resources -> 8 resources (5 new).
+**후방 호환 보장:**
+- 기존 네이티브 필드는 required 유지 -> 기존 정책 JSON 100% 호환
+- USD 필드는 optional -> 설정하지 않으면 기존 네이티브 비교
+- DB의 기존 정책 JSON 수정 불필요 (새 필드가 옵셔널이므로)
 
 ---
 
-## 7. Data Flow: Sign-Only vs Send Pipeline
+## 9. Pyth Feed ID Resolution Strategy
 
-### 7.1 Send Pipeline (existing)
+Pyth Hermes API는 feed ID(bytes32 hex)로 가격을 조회한다. TokenRef.address에서 Pyth feed ID로의 매핑이 필요하다.
 
-```
-Client -> POST /v1/transactions/send
-  |
-  [Stage 1: sync] -> 201 { id, status: PENDING }
-  |
-  [Stages 2-6: async, fire-and-forget]
-     Stage 2: Auth
-     Stage 3: Policy -> tier classification
-     Stage 4: Wait -> DELAY/APPROVAL halts pipeline
-     Stage 5: build -> simulate -> sign -> submit
-     Stage 6: waitForConfirmation
-  |
-  Client polls GET /v1/transactions/:id for status
-```
+**권장: 주요 토큰 하드코딩 맵 (Primary) + CoinGecko fallback (롱테일)**
 
-### 7.2 Sign-Only Pipeline (new)
+```typescript
+// oracle/pyth-feed-map.ts
+const PYTH_FEED_IDS: Record<string, string> = {
+  // Native tokens
+  'SOL':  '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
+  'ETH':  '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
+  // Major stablecoins
+  'USDC': '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a',
+  'USDT': '0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b',
+  // ... 30-50개 주요 토큰
+};
 
-```
-Client -> POST /v1/transactions/sign
-  |
-  [ALL stages sync: must return signed bytes]
-  |
-  Stage 1: Validate + DB INSERT
-  Stage 2: Auth
-  Stage 3: Policy -> tier classification
-    |-- INSTANT/NOTIFY: proceed
-    |-- DELAY/APPROVAL: DENY (sign-only incompatible)
-  Stage 5-Sign: build -> simulate -> sign (NO submit)
-  |
-  <- 200 { id, status: SIGNED, signedTx, unsignedTx, estimatedFee, metadata }
-  |
-  Client can submit externally or discard
+function resolveFeedId(tokenRef: TokenRef): string | null {
+  if (tokenRef.symbol && PYTH_FEED_IDS[tokenRef.symbol]) {
+    return PYTH_FEED_IDS[tokenRef.symbol];
+  }
+  return null; // CoinGecko fallback으로 위임
+}
 ```
 
-### 7.3 Key Difference: Synchronous Response
+**대안 비교:**
+| 전략 | 장점 | 단점 |
+|------|------|------|
+| 하드코딩 맵 (권장) | API 호출 없음, 빠르고 안정적 | 수동 유지보수, 롱테일 미지원 |
+| /v2/price_feeds API 조회 | 동적, 전체 피드 | 시작 시 대규모 API 호출 |
+| 심볼 기반 검색 | 주소 매핑 불필요 | 심볼 충돌 위험 |
 
-The `/send` endpoint returns 201 immediately after Stage 1 and runs stages 2-6 async. The `/sign` endpoint MUST be synchronous because the response includes signed bytes. This has implications:
-
-1. **Latency:** `/sign` blocks on RPC calls (build, simulate, sign). Expected 2-5 seconds.
-2. **Timeout:** Must handle adapter timeouts gracefully (not hang the HTTP request).
-3. **Error handling:** All errors surface as HTTP errors (not background DB updates).
+하드코딩 맵에 포함할 토큰 (초기 30-50개): Native (SOL, ETH), Stablecoins (USDC, USDT, DAI, FRAX), DeFi (WBTC, WETH, stETH, wstETH), Solana (JTO, BONK, WIF, PYTH, JUP, RAY, ORCA), EVM (UNI, AAVE, LINK, MKR, COMP, CRV, LDO)
 
 ---
 
-## 8. Integration Matrix
+## 10. Suggested Build Order
 
-### 8.1 New vs Modified Components
-
-| Component | Status | What Changes |
-|-----------|--------|-------------|
-| `@waiaas/core` enums/transaction.ts | MODIFY | Add 'SIGNED' to TRANSACTION_STATUSES |
-| `@waiaas/core` interfaces/IChainAdapter.ts | MODIFY | Add parseUnsignedTransaction() method |
-| `@waiaas/core` interfaces/chain-adapter.types.ts | MODIFY | Add ParsedTransaction type |
-| `packages/daemon` pipeline/stages.ts | MODIFY | Add stage5SignOnly() function |
-| `packages/daemon` pipeline/pipeline.ts | MODIFY | Add executeSignOnly() method |
-| `packages/daemon` api/routes/transactions.ts | MODIFY | Add POST /transactions/sign route |
-| `packages/daemon` api/routes/utils.ts | NEW | Encode/decode calldata routes |
-| `packages/daemon` infrastructure/settings/setting-keys.ts | MODIFY | Add 3 default-deny toggle settings |
-| `packages/daemon` pipeline/database-policy-engine.ts | MODIFY | Inject settings for default-deny toggles |
-| `packages/daemon` infrastructure/database/migrate.ts | MODIFY | Migration v9 (SIGNED status CHECK) |
-| `packages/adapters/evm` adapter.ts | MODIFY | Add parseUnsignedTransaction() impl |
-| `packages/adapters/solana` adapter.ts | MODIFY | Add parseUnsignedTransaction() impl |
-| `packages/mcp` tools/sign-transaction.ts | NEW | sign_transaction MCP tool |
-| `packages/mcp` tools/encode-calldata.ts | NEW | encode_calldata MCP tool |
-| `packages/mcp` resources/skill-*.ts | NEW | 5 skill resource files |
-| `packages/mcp` server.ts | MODIFY | Register new tools + resources |
-| `packages/sdk` | MODIFY | Add signTransaction(), encodeCalldata() |
-| `skills/transactions.skill.md` | MODIFY | Document /sign endpoint + calldata tools |
-
-### 8.2 Dependency Graph
+의존성 그래프 기반 구현 순서:
 
 ```
-[1] @waiaas/core: Add SIGNED status + ParsedTransaction type + IChainAdapter method
-      |
-      |-- needed by all downstream packages
-      |
-[2] DB Migration v9: Add 'SIGNED' to CHECK constraint
-      |
-[3] Adapter implementations: parseUnsignedTransaction() in EvmAdapter + SolanaAdapter
-      |
-      |-- depends on [1]
-      |
-[4] Default deny toggles: setting-keys.ts + DatabasePolicyEngine modification
-      |
-      |-- no dependency on [1-3], independent
-      |
-[5] Sign-only pipeline: stage5SignOnly + executeSignOnly + route
-      |
-      |-- depends on [1] (SIGNED status), [2] (migration), [3] (parseUnsignedTx optional)
-      |
-[6] Calldata encoding: routes/utils.ts + encode_calldata tool
-      |
-      |-- independent, can be built in parallel with [5]
-      |
-[7] MCP skill resources: 5 new resource files
-      |
-      |-- depends on [5] sign-only being defined (transaction skills reference it)
-      |-- depends on [4] default deny toggles (policy skills reference them)
-      |
-[8] SDK methods + skill file updates
-      |
-      |-- depends on [5], [6] routes being finalized
+Phase 1: Core Types + Oracle Foundation
+  +-- IPriceOracle 인터페이스 (@waiaas/core)
+  +-- TokenRef, PriceInfo, CacheStats Zod 스키마 (@waiaas/core)
+  +-- PriceAge enum + classifyPriceAge() 함수
+  +-- InMemoryPriceCache (LRU 128, 5분 TTL)
+  +-- SpendingLimitRuleSchema Zod 신규 생성 + USD 필드
+
+Phase 2: Oracle Implementations
+  +-- PythOracle (Hermes REST API + feed ID 맵)
+  +-- CoinGeckoOracle (Demo API + platformId 매핑)
+  +-- OracleChain (fallback + 교차 검증 인라인)
+  +-- resolveEffectiveAmountUsd() 함수
+  +-- PriceResult discriminated union
+
+Phase 3: Pipeline Integration
+  +-- PipelineContext 확장 (priceOracle 필드)
+  +-- TransactionParam 확장 (usdAmount 필드)
+  +-- stage3Policy() 수정 (resolveEffectiveAmountUsd 호출)
+  +-- evaluateSpendingLimit() USD 분기 추가
+  +-- DaemonLifecycle 초기화 통합
+
+Phase 4: SettingsService + Admin Oracle
+  +-- SETTING_DEFINITIONS oracle 카테고리 추가
+  +-- HotReloadOrchestrator oracle 핸들러
+  +-- GET /v1/admin/oracle-status API
+  +-- Admin Settings > Oracle 섹션 UI
+  +-- DB v11 마이그레이션 (api_keys 테이블)
+
+Phase 5: Action Provider Framework
+  +-- IActionProvider, ActionDefinition 인터페이스 (@waiaas/core)
+  +-- ActionProviderRegistry (ESM plugin load + validate-then-trust)
+  +-- ActionProviderApiKeyStore (DB 암호화 저장)
+  +-- POST /v1/actions/:provider/:action API
+  +-- API 키 CRUD 엔드포인트
+
+Phase 6: MCP + Admin Action Integration
+  +-- McpToolConverter (ActionDefinition -> MCP Tool 자동 변환)
+  +-- 동적 도구 등록/해제 + notifications/tools/list_changed
+  +-- Admin Settings > API Keys 섹션 UI
+  +-- Skill 파일 동기화
+
+Phase 7: E2E Tests + Polish
+  +-- USD 정책 평가 E2E (시나리오 1-5, 5-1~5-6)
+  +-- Oracle fallback E2E (시나리오 6-13)
+  +-- Action Provider E2E (시나리오 14-17)
+  +-- MCP 통합 E2E (시나리오 18-21)
+  +-- API 키 E2E (시나리오 22-26)
 ```
 
----
-
-## 9. Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Duplicating the Pipeline
-**What:** Creating a separate `SignOnlyPipeline` class that copies wallet lookup, network resolution, adapter resolution
-**Why bad:** Code duplication, divergent behavior over time, double maintenance
-**Instead:** Add `executeSignOnly()` to existing `TransactionPipeline` class, reusing `getWallet()` and all shared logic. Only the stage orchestration differs.
-
-### Anti-Pattern 2: Making Sign-Only Async
-**What:** Using the same async fire-and-forget pattern as `/send` for `/sign`
-**Why bad:** The caller needs signed bytes in the response. Polling for bytes adds latency and complexity.
-**Instead:** Run the entire sign-only pipeline synchronously within the HTTP request handler.
-
-### Anti-Pattern 3: Skipping Policy for Sign-Only
-**What:** Bypassing Stage 3 policy evaluation because "the transaction won't be submitted"
-**Why bad:** Signing IS authorization. A signed transaction can be submitted by anyone. If we sign a tx that violates CONTRACT_WHITELIST, we've created a security hole.
-**Instead:** Full policy evaluation. Only Stage 4 (DELAY/APPROVAL) is skipped/denied.
-
-### Anti-Pattern 4: Hardcoding Skill Data in MCP
-**What:** Embedding all skill documentation as string literals in MCP tool files
-**Why bad:** Skill data drifts from actual API behavior, not testable, hard to maintain
-**Instead:** Derive skill resource data from core schemas where possible. Static skill data in dedicated resource files that can be tested against actual API schemas.
-
-### Anti-Pattern 5: Exposing Private Key in Sign-Only Response
-**What:** Including any key material in the `/sign` response metadata
-**Why bad:** Security violation. The signed bytes are the output; the key is never exposed.
-**Instead:** Only return signedTx hex, unsignedTx hex, fee, and chain-specific metadata (nonce, chainId).
-
-### Anti-Pattern 6: Toggle Default-Deny Per Wallet
-**What:** Making the default-deny toggles per-wallet settings instead of global daemon settings
-**Why bad:** Explodes the settings surface, complex interaction with per-wallet policies
-**Instead:** Global daemon settings in the security category. Per-wallet granularity is achieved through actual ALLOWED_TOKENS/CONTRACT_WHITELIST/APPROVED_SPENDERS policies.
+**순서 근거:**
+1. Phase 1-2를 먼저 구현해야 Phase 3에서 파이프라인에 통합할 수 있다
+2. Phase 3이 완료되어야 USD 기준 정책 평가가 동작한다
+3. Phase 4는 Phase 3 이후 (oracle-status는 OracleChain이 먼저 필요)
+4. Phase 5는 Phase 4의 DB 마이그레이션에 의존 (api_keys 테이블)
+5. Phase 6은 Phase 5의 ActionProviderRegistry가 필요
+6. Phase 7은 모든 구현이 완료된 후 수행
 
 ---
 
-## 10. Scalability Considerations
+## 11. Scalability Considerations
 
-| Concern | Current (1K wallets) | Future (10K wallets) |
-|---------|---------------------|---------------------|
-| Sign-only latency | ~2-5s (RPC bound) | Same (per-request) |
-| Policy toggle cache | In-memory SettingsService | Same (hot-reload already exists) |
-| Skill resources | Static JSON, negligible | Same (no scaling concern) |
-| Calldata encoding | Pure CPU, instant | Same (no I/O) |
-| DB migration (v9) | ALTER CHECK constraint, ~100ms | Same |
-
----
-
-## 11. Suggested Build Order
-
-Based on dependency analysis in Section 8.2:
-
-1. **Phase A: Core Types + Migration** (foundation, all else depends on it)
-   - `@waiaas/core`: SIGNED status, ParsedTransaction type, IChainAdapter method
-   - DB migration v9
-   - Adapter parseUnsignedTransaction() implementations
-
-2. **Phase B: Default Deny Toggles** (independent, quick win, improves DX immediately)
-   - Setting definitions + DatabasePolicyEngine modification
-   - Admin UI gets toggles automatically via existing settings panel
-
-3. **Phase C: Sign-Only Pipeline** (depends on Phase A)
-   - stage5SignOnly + executeSignOnly + POST /transactions/sign route
-   - MCP sign_transaction tool
-   - POST /transactions/parse route (uses parseUnsignedTransaction from Phase A)
-
-4. **Phase D: Calldata Encoding** (independent, can parallelize with C)
-   - Encode/decode routes in routes/utils.ts
-   - MCP encode_calldata tool
-
-5. **Phase E: MCP Skill Resources + SDK + Skill Files** (depends on C and B being complete)
-   - 5 new resource files (transactions, policies, chains, tokens, wallet-policies)
-   - SDK methods: signTransaction(), encodeCalldata()
-   - Update skills/transactions.skill.md
-
-**Phase ordering rationale:**
-- Phase A must come first because SIGNED status is needed by the sign-only pipeline and migration must precede any DB writes with SIGNED status
-- Phase B is independent and a quick DX win
-- Phases C and D can run in parallel since they share no dependencies except Phase A
-- Phase E is last because it documents features from C and D, and references toggles from B
+| Concern | 100 users | 10K users | 1M users |
+|---------|-----------|-----------|----------|
+| Oracle 캐시 | InMemory LRU 128 충분 | LRU 128 여전히 충분 (인기 토큰 30개가 99% 조회) | Redis 또는 LRU 확장 검토 |
+| Pyth API | Rate limit 없음 (공개 API) | 문제 없음 | 자체 Hermes 인스턴스 호스팅 |
+| CoinGecko API | Demo 10-30 rpm 충분 | 캐시 히트율 높으면 OK | Pro 키 또는 자체 인프라 |
+| Action Provider 수 | 1-5개 | 10-20개 | 도구 카탈로그 분리 검토 |
+| MCP 도구 수 | 14 + 5-10 충분 | 14 + 20-50 관리 가능 | 도구 그룹핑/네임스페이스 |
+| DB api_keys 테이블 | 5-10 rows | 50 rows | 충분 (UNIQUE provider_name) |
 
 ---
 
 ## Sources
 
 ### Codebase Analysis (HIGH confidence)
-- Direct code reading of all referenced files in packages/core, packages/daemon, packages/mcp, packages/adapters
+- `packages/daemon/src/pipeline/pipeline.ts` -- TransactionPipeline, PipelineDeps
+- `packages/daemon/src/pipeline/stages.ts` -- 6-stage implementation, PipelineContext, stage3Policy()
+- `packages/daemon/src/pipeline/database-policy-engine.ts` -- DatabasePolicyEngine, SpendingLimitRules, evaluateAndReserve()
+- `packages/daemon/src/infrastructure/settings/settings-service.ts` -- SettingsService, get/set/getAll
+- `packages/daemon/src/infrastructure/settings/setting-keys.ts` -- SETTING_DEFINITIONS, SETTING_CATEGORIES
+- `packages/daemon/src/infrastructure/settings/hot-reload.ts` -- HotReloadOrchestrator
+- `packages/daemon/src/infrastructure/adapter-pool.ts` -- AdapterPool
+- `packages/core/src/interfaces/IPolicyEngine.ts` -- IPolicyEngine, PolicyEvaluation
+- `packages/mcp/src/server.ts` -- createMcpServer, 14 tool registrations
+- `packages/mcp/src/index.ts` -- MCP entrypoint, SessionManager
+- `packages/admin/src/components/layout.tsx` -- NAV_ITEMS, PageRouter
+- `packages/admin/src/pages/settings.tsx` -- SettingsPage, category sections
+- `packages/admin/src/api/endpoints.ts` -- API endpoint constants
+- `docs/61-price-oracle-spec.md` -- IPriceOracle 인터페이스, OracleChain 설계
+- `docs/62-action-provider-architecture.md` -- IActionProvider 인터페이스, resolve-then-execute
+- `objectives/v1.5-defi-price-oracle.md` -- 마일스톤 목표, 산출물, 기술 결정
 
-### Official Documentation
-- [viem encodeFunctionData](https://viem.sh/docs/contract/encodeFunctionData.html) -- ABI encoding API
-- [viem decodeFunctionData](https://viem.sh/docs/contract/decodeFunctionData.html) -- ABI decoding API
-- [MCP Resources specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) -- Resources vs Tools distinction
-- [MCP Resources explained](https://medium.com/@laurentkubaski/mcp-resources-explained-and-how-they-differ-from-mcp-tools-096f9d15f767) -- Resources design patterns
-- [MCP Features Guide (WorkOS)](https://workos.com/blog/mcp-features-guide) -- Tools vs Resources vs Prompts
+### Official Documentation (MEDIUM confidence)
+- [Pyth Hermes API Reference](https://docs.pyth.network/price-feeds/core/api-reference) -- /v2/updates/price/latest, feed ID 형식
+- [Pyth Price Feeds](https://docs.pyth.network/price-feeds/core/price-feeds) -- 380+ 피드 목록
+- [MCP TypeScript SDK - Dynamic Tool Registration](https://github.com/modelcontextprotocol/typescript-sdk/issues/682) -- 동적 도구 등록 제약사항
+- [MCP Dynamic Tool Discovery](https://www.speakeasy.com/mcp/tool-design/dynamic-tool-discovery) -- disable/enable 패턴
