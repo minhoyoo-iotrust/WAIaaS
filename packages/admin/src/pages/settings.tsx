@@ -1,6 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
+import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
@@ -31,6 +31,14 @@ interface NotifTestResult {
   channel: string;
   success: boolean;
   error?: string;
+}
+
+interface ApiKeyEntry {
+  providerName: string;
+  hasKey: boolean;
+  maskedKey: string | null;
+  requiresApiKey: boolean;
+  updatedAt: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +112,13 @@ export default function SettingsPage() {
   const notifTestResults = useSignal<NotifTestResult[]>([]);
   const notifTesting = useSignal(false);
 
+  // --- API Keys state ---
+  const apiKeys = useSignal<ApiKeyEntry[]>([]);
+  const apiKeysLoading = useSignal(true);
+  const apiKeyEditing = useSignal<string | null>(null);
+  const apiKeyInput = useSignal('');
+  const apiKeySaving = useSignal(false);
+
   // --- Existing kill switch / rotate / shutdown state ---
   const killSwitchState = useSignal<KillSwitchState | null>(null);
   const ksLoading = useSignal(true);
@@ -143,9 +158,48 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchApiKeys = async () => {
+    try {
+      const result = await apiGet<{ keys: ApiKeyEntry[] }>(API.ADMIN_API_KEYS);
+      apiKeys.value = result.keys;
+    } catch {
+      // Feature not available or no providers registered -- keep empty
+    } finally {
+      apiKeysLoading.value = false;
+    }
+  };
+
+  const handleSaveApiKey = async (providerName: string) => {
+    apiKeySaving.value = true;
+    try {
+      await apiPut(API.ADMIN_API_KEY(providerName), { apiKey: apiKeyInput.value });
+      showToast('success', `API key saved for ${providerName}`);
+      apiKeyEditing.value = null;
+      apiKeyInput.value = '';
+      await fetchApiKeys();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      apiKeySaving.value = false;
+    }
+  };
+
+  const handleDeleteApiKey = async (providerName: string) => {
+    try {
+      await apiDelete(API.ADMIN_API_KEY(providerName));
+      showToast('success', `API key deleted for ${providerName}`);
+      await fetchApiKeys();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
     fetchKillSwitchState();
+    fetchApiKeys();
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -665,6 +719,80 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: API Keys
+  // ---------------------------------------------------------------------------
+
+  function ApiKeysSection() {
+    if (apiKeysLoading.value) {
+      return <div class="settings-loading">Loading API keys...</div>;
+    }
+    if (apiKeys.value.length === 0) {
+      return null;
+    }
+
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>API Keys</h3>
+          <p class="settings-description">Manage API keys for Action Providers</p>
+        </div>
+        <div class="settings-category-body">
+          {apiKeys.value.map((entry) => (
+            <div class="settings-field-row" key={entry.providerName}>
+              <div class="settings-field-label">
+                <span>{entry.providerName}</span>
+                {entry.requiresApiKey && !entry.hasKey && (
+                  <Badge variant="warning">Required</Badge>
+                )}
+              </div>
+              <div class="settings-field-value">
+                {apiKeyEditing.value === entry.providerName ? (
+                  <div class="api-key-edit-row">
+                    <FormField
+                      label="API Key"
+                      type="password"
+                      name={`apikey-${entry.providerName}`}
+                      value={apiKeyInput.value}
+                      onChange={(v) => { apiKeyInput.value = String(v); }}
+                      placeholder="Enter API key"
+                    />
+                    <Button
+                      onClick={() => handleSaveApiKey(entry.providerName)}
+                      loading={apiKeySaving.value}
+                      size="sm"
+                    >Save</Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => { apiKeyEditing.value = null; apiKeyInput.value = ''; }}
+                      size="sm"
+                    >Cancel</Button>
+                  </div>
+                ) : (
+                  <div class="api-key-display-row">
+                    <span class="api-key-masked">{entry.hasKey ? entry.maskedKey : 'Not set'}</span>
+                    <Button
+                      variant="ghost"
+                      onClick={() => { apiKeyEditing.value = entry.providerName; apiKeyInput.value = ''; }}
+                      size="sm"
+                    >{entry.hasKey ? 'Change' : 'Set'}</Button>
+                    {entry.hasKey && (
+                      <Button
+                        variant="danger"
+                        onClick={() => handleDeleteApiKey(entry.providerName)}
+                        size="sm"
+                      >Delete</Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Section: Daemon
   // ---------------------------------------------------------------------------
 
@@ -731,12 +859,13 @@ export default function SettingsPage() {
         </div>
       ) : (
         <>
-          {/* 5 Category Sections */}
+          {/* 6 Category Sections */}
           <NotificationSettings />
           <RpcSettings />
           <SecuritySettings />
           <WalletConnectSettings />
           <DaemonSettings />
+          <ApiKeysSection />
         </>
       )}
 

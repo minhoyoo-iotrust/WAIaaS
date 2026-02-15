@@ -20,4 +20,6 @@ export const API = {
   WALLET_DEFAULT_NETWORK: (id: string) => `/v1/wallets/${id}/default-network`,
   ADMIN_WALLET_BALANCE: (id: string) => `/v1/admin/wallets/${id}/balance`,
   ADMIN_WALLET_TRANSACTIONS: (id: string) => `/v1/admin/wallets/${id}/transactions`,
+  ADMIN_API_KEYS: '/v1/admin/api-keys',
+  ADMIN_API_KEY: (provider: string) => `/v1/admin/api-keys/${provider}`,
 } as const;
