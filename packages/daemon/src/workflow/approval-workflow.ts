@@ -167,10 +167,10 @@ export class ApprovalWorkflow {
         )
         .run(now, ownerSignature, approval.id);
 
-      // Transition transaction to EXECUTING and clear reserved_amount
+      // Transition transaction to EXECUTING and clear reserved_amount + reserved_amount_usd
       this.sqlite
         .prepare(
-          'UPDATE transactions SET status = ?, reserved_amount = NULL WHERE id = ?',
+          'UPDATE transactions SET status = ?, reserved_amount = NULL, reserved_amount_usd = NULL WHERE id = ?',
         )
         .run('EXECUTING', txId);
 
@@ -216,10 +216,10 @@ export class ApprovalWorkflow {
         .prepare('UPDATE pending_approvals SET rejected_at = ? WHERE id = ?')
         .run(now, approval.id);
 
-      // Transition transaction to CANCELLED and clear reserved_amount
+      // Transition transaction to CANCELLED and clear reserved_amount + reserved_amount_usd
       this.sqlite
         .prepare(
-          'UPDATE transactions SET status = ?, reserved_amount = NULL WHERE id = ?',
+          'UPDATE transactions SET status = ?, reserved_amount = NULL, reserved_amount_usd = NULL WHERE id = ?',
         )
         .run('CANCELLED', txId);
 
@@ -257,9 +257,9 @@ export class ApprovalWorkflow {
         return 0;
       }
 
-      // Batch update: set transaction EXPIRED + clear reserved_amount
+      // Batch update: set transaction EXPIRED + clear reserved_amount + reserved_amount_usd
       const updateTx = this.sqlite.prepare(
-        'UPDATE transactions SET status = ?, reserved_amount = NULL WHERE id = ?',
+        'UPDATE transactions SET status = ?, reserved_amount = NULL, reserved_amount_usd = NULL WHERE id = ?',
       );
 
       for (const row of expired) {

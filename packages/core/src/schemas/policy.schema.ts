@@ -81,6 +81,10 @@ export const SpendingLimitRulesSchema = z.object({
   delay_max_usd: z.number().nonnegative().optional(),
   /** DELAY 티어 쿨다운 시간 (초) */
   delay_seconds: z.number().int().min(60).default(900),
+  /** 24시간 롤링 윈도우 내 누적 USD 지출 상한 (optional, 미설정 시 누적 한도 없음) */
+  daily_limit_usd: z.number().positive().optional(),
+  /** 30일 롤링 윈도우 내 누적 USD 지출 상한 */
+  monthly_limit_usd: z.number().positive().optional(),
 });
 export type SpendingLimitRules = z.infer<typeof SpendingLimitRulesSchema>;
 

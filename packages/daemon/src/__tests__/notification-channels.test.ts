@@ -40,8 +40,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('NotificationEventType', () => {
-  it('has exactly 21 event types', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(21);
+  it('has exactly 22 event types', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(22);
   });
 
   it('contains the 5 new event types added in v1.3', () => {
@@ -55,6 +55,10 @@ describe('NotificationEventType', () => {
     for (const t of newTypes) {
       expect(NOTIFICATION_EVENT_TYPES).toContain(t);
     }
+  });
+
+  it('contains CUMULATIVE_LIMIT_WARNING event type', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toContain('CUMULATIVE_LIMIT_WARNING');
   });
 
   it('contains all 16 original event types', () => {

@@ -100,7 +100,7 @@ export const messages: Messages = {
     X402_APPROVAL_REQUIRED: 'x402 결제에 Owner 승인이 필요합니다 (금액 초과)',
     X402_SERVER_ERROR: 'x402 결제 후 리소스 서버 오류가 발생했습니다',
   },
-  // Notification templates (21 event types)
+  // Notification templates (22 event types)
   notifications: {
     TX_REQUESTED: { title: '거래 요청', body: '지갑 {walletId}이 {to}로 {amount} 전송을 요청했습니다' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
@@ -123,6 +123,7 @@ export const messages: Messages = {
     OWNER_REMOVED: { title: 'Owner 제거', body: '지갑 {walletId}에서 Owner가 제거되었습니다' },
     OWNER_VERIFIED: { title: 'Owner 인증', body: '지갑 {walletId}의 Owner가 인증되었습니다' },
     DAILY_SUMMARY: { title: '일일 요약', body: '지갑: {walletCount}개, 거래: {txCount}건, 세션: {sessionCount}개' },
+    CUMULATIVE_LIMIT_WARNING: { title: '누적 지출 경고', body: '지갑 {walletId}의 {type} 누적 지출이 한도의 {ratio}%에 도달했습니다 (${spent} / ${limit})' },
   },
   // System messages
   system: {

@@ -993,8 +993,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 12
-    expect(LATEST_SCHEMA_VERSION).toBe(12);
+    // Verify LATEST_SCHEMA_VERSION is 13
+    expect(LATEST_SCHEMA_VERSION).toBe(13);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1320,10 +1320,10 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Run full pushSchema (v2 -> v12 chain)
     pushSchema(db);
 
-    // Verify final version is 12
+    // Verify final version is 13
     const versions = getVersions(db);
-    expect(versions).toContain(12);
-    expect(Math.max(...versions)).toBe(12);
+    expect(versions).toContain(13);
+    expect(Math.max(...versions)).toBe(13);
 
     // Verify data survived the entire chain
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
@@ -1353,5 +1353,164 @@ describe('v12 migration: x402 CHECK constraints', () => {
          VALUES (?, ?, ?, ?, ?, ?)`,
       ).run('pol-x402-chain', 'a-chain-12', 'X402_ALLOWED_DOMAINS', '{"domains":["example.com"]}', ts, ts);
     }).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T-15: v13 migration: amount_usd + reserved_amount_usd columns
+// ---------------------------------------------------------------------------
+
+describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
+  let db: DatabaseType;
+
+  afterEach(() => {
+    try { db.close(); } catch { /* already closed */ }
+  });
+
+  /**
+   * Create a v12 state DB: v5 + apply v6-v12 migrations manually.
+   */
+  function createV12Database(): DatabaseType {
+    const v5Db = createV5SchemaDatabase();
+    const v6to12 = MIGRATIONS.filter((m) => m.version >= 6 && m.version <= 12);
+    runMigrations(v5Db, v6to12);
+    return v5Db;
+  }
+
+  it('T-15a: v12 -> v13 migration adds amount_usd and reserved_amount_usd columns', () => {
+    db = createV12Database();
+
+    // Run v13 migration
+    const v13 = MIGRATIONS.filter((m) => m.version === 13);
+    runMigrations(db, v13);
+
+    // Verify columns exist
+    const columns = getTableColumns(db, 'transactions');
+    expect(columns).toContain('amount_usd');
+    expect(columns).toContain('reserved_amount_usd');
+  });
+
+  it('T-15b: v12 -> v13 migration preserves existing transaction data', () => {
+    db = createV12Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v13-tx', 'V13 TX Test', 'solana', 'testnet', 'devnet', 'pk-v13-tx', 'ACTIVE', 0, ts, ts);
+
+    // Insert transaction
+    db.prepare(
+      `INSERT INTO transactions (id, wallet_id, chain, type, amount, status, created_at, network, reserved_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tx-v13-1', 'w-v13-tx', 'solana', 'TRANSFER', '1000000', 'PENDING', ts, 'devnet', '1000000');
+
+    // Run v13 migration
+    const v13 = MIGRATIONS.filter((m) => m.version === 13);
+    runMigrations(db, v13);
+
+    // Verify existing data preserved, new columns are NULL
+    const tx = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-v13-1') as {
+      wallet_id: string; type: string; amount: string; status: string; network: string;
+      reserved_amount: string; amount_usd: number | null; reserved_amount_usd: number | null;
+    };
+    expect(tx.wallet_id).toBe('w-v13-tx');
+    expect(tx.type).toBe('TRANSFER');
+    expect(tx.amount).toBe('1000000');
+    expect(tx.status).toBe('PENDING');
+    expect(tx.network).toBe('devnet');
+    expect(tx.reserved_amount).toBe('1000000');
+    expect(tx.amount_usd).toBeNull();
+    expect(tx.reserved_amount_usd).toBeNull();
+  });
+
+  it('T-15c: amount_usd/reserved_amount_usd accept REAL values', () => {
+    db = createV12Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v13-real', 'V13 REAL Test', 'ethereum', 'testnet', 'ethereum-sepolia', 'pk-v13-real', 'ACTIVE', 0, ts, ts);
+
+    // Run v13 migration
+    const v13 = MIGRATIONS.filter((m) => m.version === 13);
+    runMigrations(db, v13);
+
+    // Insert transaction with REAL USD values
+    db.prepare(
+      `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at, network, amount_usd, reserved_amount_usd)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tx-v13-real', 'w-v13-real', 'ethereum', 'TRANSFER', 'PENDING', ts, 'ethereum-sepolia', 42.57, 42.57);
+
+    // Read back and verify
+    const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-v13-real') as {
+      amount_usd: number; reserved_amount_usd: number;
+    };
+    expect(tx.amount_usd).toBeCloseTo(42.57, 2);
+    expect(tx.reserved_amount_usd).toBeCloseTo(42.57, 2);
+  });
+
+  it('T-15d: fresh DB has amount_usd and reserved_amount_usd columns', () => {
+    const conn = createDatabase(':memory:');
+    db = conn.sqlite;
+    pushSchema(db);
+
+    // Verify columns exist in fresh DB
+    const columns = getTableColumns(db, 'transactions');
+    expect(columns).toContain('amount_usd');
+    expect(columns).toContain('reserved_amount_usd');
+  });
+
+  it('T-15e: v12 -> v13 migrated schema matches fresh DB schema', () => {
+    // Fresh DB
+    const connA = createDatabase(':memory:');
+    const freshDb = connA.sqlite;
+    pushSchema(freshDb);
+
+    // v12 migrated DB
+    db = createV12Database();
+    const v13 = MIGRATIONS.filter((m) => m.version === 13);
+    runMigrations(db, v13);
+
+    // Compare transactions columns
+    const freshCols = getTableColumns(freshDb, 'transactions');
+    const migratedCols = getTableColumns(db, 'transactions');
+    expect(migratedCols).toEqual(freshCols);
+
+    freshDb.close();
+  });
+
+  it('T-15f: v1 -> v13 full chain migration succeeds', () => {
+    db = createV1SchemaDatabase();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert agent data
+    db.prepare(
+      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('a-chain-13', 'Chain V13', 'solana', 'devnet', 'pk-chain-13', 'ACTIVE', 0, ts, ts);
+
+    db.prepare(
+      `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('tx-chain-13', 'a-chain-13', 'solana', 'TRANSFER', 'PENDING', ts);
+
+    // Run full pushSchema (v2 -> v13 chain)
+    pushSchema(db);
+
+    // Verify final version is 13
+    const versions = getVersions(db);
+    expect(versions).toContain(13);
+    expect(Math.max(...versions)).toBe(13);
+
+    // Verify amount_usd columns exist and are NULL for migrated data
+    const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
+      amount_usd: number | null; reserved_amount_usd: number | null;
+    };
+    expect(tx.amount_usd).toBeNull();
+    expect(tx.reserved_amount_usd).toBeNull();
   });
 });

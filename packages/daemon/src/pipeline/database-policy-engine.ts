@@ -55,6 +55,9 @@ interface SpendingLimitRules {
   instant_max_usd?: number;
   notify_max_usd?: number;
   delay_max_usd?: number;
+  // Phase 136: 누적 USD 한도 (optional)
+  daily_limit_usd?: number;
+  monthly_limit_usd?: number;
 }
 
 interface WhitelistRules {
@@ -566,12 +569,95 @@ export class DatabasePolicyEngine implements IPolicyEngine {
           usdAmount,
         );
 
-        // Set reserved_amount on the transaction row
-        sqlite
-          .prepare(
-            `UPDATE transactions SET reserved_amount = ? WHERE id = ?`,
-          )
-          .run(transaction.amount, txId);
+        // Step 6: Cumulative USD limit evaluation (daily/monthly rolling window)
+        if (usdAmount !== undefined && usdAmount > 0) {
+          const rules: SpendingLimitRules = JSON.parse(spendingPolicy.rules);
+          const hasCumulativeLimits = rules.daily_limit_usd !== undefined || rules.monthly_limit_usd !== undefined;
+
+          if (hasCumulativeLimits) {
+            const now = Math.floor(Date.now() / 1000);
+            let cumulativeTier: PolicyTier = 'INSTANT';
+            let cumulativeReason: 'cumulative_daily' | 'cumulative_monthly' | undefined;
+            let cumulativeWarning: { type: 'daily' | 'monthly'; ratio: number; spent: number; limit: number } | undefined;
+
+            // 6a: Daily (24h rolling window)
+            if (rules.daily_limit_usd !== undefined) {
+              const windowStart = now - 86400; // 24 * 60 * 60
+              const spent = this.getCumulativeUsdSpent(sqlite, walletId, windowStart);
+              const totalWithCurrent = spent + usdAmount;
+
+              if (totalWithCurrent > rules.daily_limit_usd) {
+                cumulativeTier = 'APPROVAL';
+                cumulativeReason = 'cumulative_daily';
+              } else {
+                // 80% warning check
+                const ratio = totalWithCurrent / rules.daily_limit_usd;
+                if (ratio >= 0.8) {
+                  cumulativeWarning = { type: 'daily', ratio, spent: totalWithCurrent, limit: rules.daily_limit_usd };
+                }
+              }
+            }
+
+            // 6b: Monthly (30-day rolling window) -- only if daily didn't already escalate
+            if (rules.monthly_limit_usd !== undefined && cumulativeReason === undefined) {
+              const windowStart = now - 2592000; // 30 * 24 * 60 * 60
+              const spent = this.getCumulativeUsdSpent(sqlite, walletId, windowStart);
+              const totalWithCurrent = spent + usdAmount;
+
+              if (totalWithCurrent > rules.monthly_limit_usd) {
+                cumulativeTier = 'APPROVAL';
+                cumulativeReason = 'cumulative_monthly';
+              } else if (!cumulativeWarning) {
+                // 80% warning check (only if daily warning not already set)
+                const ratio = totalWithCurrent / rules.monthly_limit_usd;
+                if (ratio >= 0.8) {
+                  cumulativeWarning = { type: 'monthly', ratio, spent: totalWithCurrent, limit: rules.monthly_limit_usd };
+                }
+              }
+            }
+
+            // Step 7: Final tier = max(per-tx tier, cumulative tier)
+            const perTxTier = spendingResult?.tier ?? ('INSTANT' as PolicyTier);
+            const finalTier = maxTier(perTxTier, cumulativeTier);
+
+            // Determine approvalReason
+            let approvalReason: 'per_tx' | 'cumulative_daily' | 'cumulative_monthly' | undefined;
+            if (finalTier === 'APPROVAL') {
+              approvalReason = cumulativeReason ?? 'per_tx';
+            }
+
+            // Record USD amounts + reserved_amount
+            sqlite
+              .prepare(
+                `UPDATE transactions SET reserved_amount = ?, amount_usd = ?, reserved_amount_usd = ? WHERE id = ?`,
+              )
+              .run(transaction.amount, usdAmount, usdAmount, txId);
+
+            return {
+              allowed: true,
+              tier: finalTier,
+              ...(spendingResult?.delaySeconds !== undefined && finalTier === 'DELAY' ? { delaySeconds: spendingResult.delaySeconds } : {}),
+              ...(approvalReason ? { approvalReason } : {}),
+              ...(cumulativeWarning ? { cumulativeWarning } : {}),
+            };
+          }
+        }
+
+        // No cumulative limits or usdAmount not available -- use per-tx result
+        // Set reserved_amount on the transaction row + USD amounts if available
+        if (usdAmount !== undefined) {
+          sqlite
+            .prepare(
+              `UPDATE transactions SET reserved_amount = ?, amount_usd = ?, reserved_amount_usd = ? WHERE id = ?`,
+            )
+            .run(transaction.amount, usdAmount, usdAmount, txId);
+        } else {
+          sqlite
+            .prepare(
+              `UPDATE transactions SET reserved_amount = ? WHERE id = ?`,
+            )
+            .run(transaction.amount, txId);
+        }
 
         return spendingResult ?? { allowed: true, tier: 'INSTANT' as PolicyTier };
       }
@@ -600,8 +686,44 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     this.sqlite
-      .prepare('UPDATE transactions SET reserved_amount = NULL WHERE id = ?')
+      .prepare('UPDATE transactions SET reserved_amount = NULL, reserved_amount_usd = NULL WHERE id = ?')
       .run(txId);
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: Cumulative USD spending aggregation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get cumulative USD spent by wallet within a time window.
+   * Includes both confirmed amounts (amount_usd) and pending reservations (reserved_amount_usd).
+   *
+   * CONFIRMED/SIGNED: counted via amount_usd (confirmed or about to be broadcasted).
+   * PENDING/QUEUED: counted via reserved_amount_usd (awaiting processing, not yet confirmed).
+   * Deduplication: SIGNED is in the first query only (amount_usd). PENDING/QUEUED in second only.
+   */
+  private getCumulativeUsdSpent(sqlite: SQLiteDatabase, walletId: string, windowStart: number): number {
+    // 1. Confirmed transactions (CONFIRMED/SIGNED) amount_usd within window
+    const confirmedRow = sqlite
+      .prepare(
+        `SELECT COALESCE(SUM(amount_usd), 0) AS total
+         FROM transactions
+         WHERE wallet_id = ? AND status IN ('CONFIRMED', 'SIGNED')
+         AND created_at >= ? AND amount_usd IS NOT NULL`,
+      )
+      .get(walletId, windowStart) as { total: number };
+
+    // 2. Pending transactions (PENDING/QUEUED) reserved_amount_usd (no window filter -- all pending count)
+    const pendingRow = sqlite
+      .prepare(
+        `SELECT COALESCE(SUM(reserved_amount_usd), 0) AS total
+         FROM transactions
+         WHERE wallet_id = ? AND status IN ('PENDING', 'QUEUED')
+         AND reserved_amount_usd IS NOT NULL`,
+      )
+      .get(walletId) as { total: number };
+
+    return confirmedRow.total + pendingRow.total;
   }
 
   // -------------------------------------------------------------------------
@@ -1146,6 +1268,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       allowed: true,
       tier: finalTier,
       ...(delaySeconds !== undefined ? { delaySeconds } : {}),
+      ...(finalTier === 'APPROVAL' ? { approvalReason: 'per_tx' as const } : {}),
     };
   }
 
