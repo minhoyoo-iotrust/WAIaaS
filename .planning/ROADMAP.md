@@ -76,11 +76,11 @@
   3. CAIP-2 식별자(eip155:1, solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp)를 WAIaaS NetworkType으로 변환하는 매핑이 동작한다
   4. DB 마이그레이션 v12가 적용되어 transactions/policies 테이블이 새 타입을 수용하고, 기존 데이터가 보존된다
   5. x402 전용 에러 코드 8개가 정의되어 에러 핸들러와 i18n 템플릿에서 사용 가능하다
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
 
 Plans:
-- [ ] 130-01: @x402/core 의존성 + Zod 스키마 + CAIP-2 매핑
-- [ ] 130-02: Enum 확장 + 에러 코드 + DB 마이그레이션 v12
+- [ ] 130-01-PLAN.md — @x402/core 의존성 + Enum 확장 + x402.types.ts + 에러 코드 + i18n + 테스트 (Wave 1)
+- [ ] 130-02-PLAN.md — DB 마이그레이션 v12 (transactions + policies CHECK 재생성) + 마이그레이션 테스트 (Wave 2)
 
 ### Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명
 **Goal**: 외부 URL에 대한 안전한 HTTP 요청, 402 응답 파싱, 체인별 결제 서명 생성이 단위 테스트 수준에서 동작하는 상태
