@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5 Phase 128 Action Provider + API Key
+**Current focus:** v1.5 Phase 129 MCP/Admin/Skill 통합
 
 ## Current Position
 
-Phase: 128 of 129 (Action Provider + API Key)
-Plan: 4 of 4 in current phase (COMPLETE)
-Status: Phase 128 complete (4/4 plans)
-Last activity: 2026-02-15 -- Admin UI API Keys CRUD + GET/PUT/DELETE /v1/admin/api-keys REST API (10 tests)
+Phase: 129 of 129 (MCP/Admin/Skill Integration)
+Plan: 2 of 2 in current phase
+Status: 129-02 complete (admin.skill.md + actions.skill.md)
+Last activity: 2026-02-15 -- admin.skill.md v1.5.0 + actions.skill.md 신규 생성 (SKIL-01, SKIL-02)
 
 Progress: [##########] 100%
 
@@ -75,6 +75,8 @@ Recent decisions affecting current work:
 - v1.5: GET /admin/api-keys에서 registry.listProviders()와 apiKeyStore.listAll() 조합
 - v1.5: DELETE 미존재 키 시 ACTION_NOT_FOUND(404) 반환 -- 기존 에러 코드 재사용
 - v1.5: ApiKeysSection을 DaemonSettings 아래 배치 -- 프로바이더 미등록 시 자동 숨김
+- v1.5: admin.skill.md 섹션 6-7로 oracle-status/api-keys 삽입, 기존 Error Reference/Related 섹션 8-9로 재번호
+- v1.5: actions.skill.md를 기존 transactions.skill.md 포맷과 동일한 구조로 생성 (YAML frontmatter + 섹션별 curl + 에러 테이블)
 
 ### Blockers/Concerns
 
@@ -85,5 +87,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 128-04-PLAN.md (Admin UI API Keys CRUD + GET/PUT/DELETE /v1/admin/api-keys REST API -- 10 tests)
+Stopped at: Completed 129-02-PLAN.md (admin.skill.md v1.5.0 + actions.skill.md 신규 생성 -- SKIL-01, SKIL-02)
 Resume file: None
