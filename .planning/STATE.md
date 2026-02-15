@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 124 (5 of 5 in v1.4.8) — 알림 시스템 개선
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 — Phase 123 complete (Admin UI 개선, 2/2 plans)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 — Plan 124-01 complete (알림 테스트 UI 개선, 2 tasks)
 
-Progress: [██████░░░░] 75% (6/8 plans)
+Progress: [███████░░░] 87% (7/8 plans)
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [██████░░░░] 75% (6/8 plans)
 | 122 | 02 | 8min | 2 | 12 |
 | 123 | 01 | 3min | 2 | 3 |
 | 123 | 02 | 6min | 2 | 7 |
+| 124 | 01 | 2min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -49,6 +50,8 @@ Full log in PROJECT.md.
 - 세션 조회 leftJoin wallets로 walletName 포함 -- 프론트엔드 추가 요청 최소화
 - 잔액 API 실패 시 200 + error 필드 반환 -- 에러 격리로 UI 안정성 확보
 - Admin 월렛 하위 리소스 /admin/wallets/:id/* masterAuth 와일드카드 적용
+- Table onRowClick 활용하여 Delivery Log 행 확장 구현 (커스텀 테이블 불필요)
+- 테스트 결과 표시 영역을 Channel Status 섹션 하단으로 이동 (채널별 + 전체 테스트 결과 통합)
 
 ### Blockers/Concerns
 
@@ -60,5 +63,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 123 verified and merged, ready to plan Phase 124
+Stopped at: Completed 124-01-PLAN.md (알림 테스트 UI 개선)
 Resume file: None
