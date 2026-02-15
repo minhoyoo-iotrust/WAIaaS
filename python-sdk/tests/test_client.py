@@ -9,14 +9,18 @@ from unittest.mock import AsyncMock, patch
 from waiaas.client import WAIaaSClient
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
+    MultiNetworkAssetsResponse,
+    MultiNetworkBalanceResponse,
     PendingTransactionList,
     SessionRenewResponse,
+    SetDefaultNetworkResponse,
     TransactionDetail,
     TransactionList,
     TransactionResponse,
     WalletAddress,
     WalletAssets,
     WalletBalance,
+    WalletInfo,
 )
 from waiaas.retry import RetryPolicy
 
@@ -170,6 +174,101 @@ class TestGetAssets:
         result = await client.get_assets()
         assert isinstance(result, WalletAssets)
         assert len(result.assets) == 0
+
+
+# ---------------------------------------------------------------------------
+# Wallet management methods
+# ---------------------------------------------------------------------------
+
+
+class TestGetWalletInfo:
+    async def test_returns_combined_wallet_info(self):
+        handler = make_handler(
+            {
+                ("GET", "/v1/wallet/address"): (
+                    200,
+                    {
+                        "walletId": WALLET_ID,
+                        "chain": "ethereum",
+                        "network": "ethereum-sepolia",
+                        "environment": "testnet",
+                        "address": "0xabc123",
+                    },
+                ),
+                ("GET", f"/v1/wallets/{WALLET_ID}/networks"): (
+                    200,
+                    {
+                        "id": WALLET_ID,
+                        "chain": "ethereum",
+                        "environment": "testnet",
+                        "defaultNetwork": "ethereum-sepolia",
+                        "availableNetworks": [
+                            {"network": "ethereum-sepolia", "isDefault": True},
+                            {"network": "polygon-amoy", "isDefault": False},
+                        ],
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        result = await client.get_wallet_info()
+        assert isinstance(result, WalletInfo)
+        assert result.wallet_id == WALLET_ID
+        assert result.chain == "ethereum"
+        assert result.environment == "testnet"
+        assert result.address == "0xabc123"
+        assert len(result.networks) == 2
+        assert result.networks[0].is_default is True
+        assert result.networks[0].network == "ethereum-sepolia"
+        assert result.networks[1].is_default is False
+
+
+class TestSetDefaultNetwork:
+    async def test_calls_put_and_returns_response(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if (
+                request.method == "PUT"
+                and "/v1/wallet/default-network" in str(request.url)
+            ):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": WALLET_ID,
+                        "defaultNetwork": "polygon-amoy",
+                        "previousNetwork": "ethereum-sepolia",
+                    },
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.set_default_network("polygon-amoy")
+        assert isinstance(result, SetDefaultNetworkResponse)
+        assert result.id == WALLET_ID
+        assert result.default_network == "polygon-amoy"
+        assert result.previous_network == "ethereum-sepolia"
+        assert captured_body["network"] == "polygon-amoy"
+
+    async def test_error_on_environment_mismatch(self):
+        handler = make_handler(
+            {
+                ("PUT", "/v1/wallet/default-network"): (
+                    400,
+                    {
+                        "code": "ENVIRONMENT_NETWORK_MISMATCH",
+                        "message": "Network not allowed",
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        with pytest.raises(WAIaaSError) as exc_info:
+            await client.set_default_network("mainnet")
+        assert exc_info.value.code == "ENVIRONMENT_NETWORK_MISMATCH"
 
 
 # ---------------------------------------------------------------------------
@@ -806,3 +905,82 @@ class TestContextManager:
         # Should not raise on multiple close calls
         await client.close()
         await client.close()
+
+
+# ---------------------------------------------------------------------------
+# Multi-network aggregate methods
+# ---------------------------------------------------------------------------
+
+
+class TestGetAllBalances:
+    async def test_returns_multi_network_balance(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert "network=all" in str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "ethereum",
+                    "environment": "testnet",
+                    "balances": [
+                        {"network": "ethereum-sepolia", "balance": "500", "decimals": 18, "symbol": "ETH"},
+                        {"network": "polygon-amoy", "error": "RPC timeout"},
+                    ],
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_all_balances()
+        assert isinstance(result, MultiNetworkBalanceResponse)
+        assert result.wallet_id == WALLET_ID
+        assert result.chain == "ethereum"
+        assert result.environment == "testnet"
+        assert len(result.balances) == 2
+        assert result.balances[0].network == "ethereum-sepolia"
+        assert result.balances[0].balance == "500"
+        assert result.balances[1].network == "polygon-amoy"
+        assert result.balances[1].error == "RPC timeout"
+        assert result.balances[1].balance is None
+
+
+class TestGetAllAssets:
+    async def test_returns_multi_network_assets(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert "network=all" in str(request.url)
+            return httpx.Response(
+                200,
+                json={
+                    "walletId": WALLET_ID,
+                    "chain": "ethereum",
+                    "environment": "testnet",
+                    "networkAssets": [
+                        {
+                            "network": "ethereum-sepolia",
+                            "assets": [
+                                {
+                                    "mint": "0x0",
+                                    "symbol": "ETH",
+                                    "name": "Ether",
+                                    "balance": "100",
+                                    "decimals": 18,
+                                    "isNative": True,
+                                }
+                            ],
+                        },
+                        {"network": "polygon-amoy", "error": "RPC failure"},
+                    ],
+                },
+            )
+
+        client = make_client(handler)
+        result = await client.get_all_assets()
+        assert isinstance(result, MultiNetworkAssetsResponse)
+        assert result.wallet_id == WALLET_ID
+        assert len(result.network_assets) == 2
+        assert result.network_assets[0].network == "ethereum-sepolia"
+        assert result.network_assets[0].assets is not None
+        assert len(result.network_assets[0].assets) == 1
+        assert result.network_assets[0].assets[0].symbol == "ETH"
+        assert result.network_assets[1].network == "polygon-amoy"
+        assert result.network_assets[1].error == "RPC failure"
+        assert result.network_assets[1].assets is None

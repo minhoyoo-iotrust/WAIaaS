@@ -10,9 +10,12 @@ from waiaas.errors import WAIaaSError
 from waiaas.models import (
     EncodeCalldataRequest,
     EncodeCalldataResponse,
+    MultiNetworkAssetsResponse,
+    MultiNetworkBalanceResponse,
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
+    SetDefaultNetworkResponse,
     SignTransactionRequest,
     SignTransactionResponse,
     TokenInfo,
@@ -22,6 +25,8 @@ from waiaas.models import (
     WalletAddress,
     WalletAssets,
     WalletBalance,
+    WalletInfo,
+    WalletNetworkInfo,
 )
 from waiaas.retry import RetryPolicy, with_retry
 
@@ -144,6 +149,63 @@ class WAIaaSClient:
             params["network"] = network
         resp = await self._request("GET", "/v1/wallet/assets", params=params or None)
         return WalletAssets.model_validate(resp.json())
+
+    async def get_all_balances(self) -> MultiNetworkBalanceResponse:
+        """GET /v1/wallet/balance?network=all -- Get balances for all networks.
+
+        Returns native balances for every network in the wallet's environment.
+        Networks that fail (e.g., RPC timeout) are included with an error field.
+        """
+        resp = await self._request("GET", "/v1/wallet/balance", params={"network": "all"})
+        return MultiNetworkBalanceResponse.model_validate(resp.json())
+
+    async def get_all_assets(self) -> MultiNetworkAssetsResponse:
+        """GET /v1/wallet/assets?network=all -- Get assets for all networks.
+
+        Returns token assets for every network in the wallet's environment.
+        Networks that fail are included with an error field.
+        """
+        resp = await self._request("GET", "/v1/wallet/assets", params={"network": "all"})
+        return MultiNetworkAssetsResponse.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # Wallet Management API
+    # -----------------------------------------------------------------
+
+    async def get_wallet_info(self) -> WalletInfo:
+        """GET /v1/wallet/address + GET /v1/wallets/:id/networks combined.
+
+        Returns combined wallet info including address, chain, environment,
+        and available networks.
+        """
+        addr_resp = await self._request("GET", "/v1/wallet/address")
+        addr = WalletAddress.model_validate(addr_resp.json())
+        net_resp = await self._request(
+            "GET", f"/v1/wallets/{addr.wallet_id}/networks"
+        )
+        net_data = net_resp.json()
+        return WalletInfo(
+            walletId=addr.wallet_id,
+            chain=addr.chain,
+            network=addr.network,
+            environment=net_data.get("environment", ""),
+            address=addr.address,
+            networks=net_data.get("availableNetworks", []),
+        )
+
+    async def set_default_network(self, network: str) -> SetDefaultNetworkResponse:
+        """PUT /v1/wallet/default-network -- Change default network.
+
+        Args:
+            network: New default network (e.g., 'polygon-amoy', 'ethereum-sepolia').
+
+        Returns:
+            SetDefaultNetworkResponse with id, defaultNetwork, previousNetwork.
+        """
+        resp = await self._request(
+            "PUT", "/v1/wallet/default-network", json_body={"network": network}
+        )
+        return SetDefaultNetworkResponse.model_validate(resp.json())
 
     # -----------------------------------------------------------------
     # Transaction API

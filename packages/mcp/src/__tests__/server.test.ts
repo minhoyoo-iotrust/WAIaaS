@@ -83,8 +83,8 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 13 tools should be registered
-    expect(mockTool).toHaveBeenCalledTimes(13);
+    // 14 tools should be registered
+    expect(mockTool).toHaveBeenCalledTimes(14);
 
     // Every tool call's second argument (description) should have the prefix
     for (const call of mockTool.mock.calls) {

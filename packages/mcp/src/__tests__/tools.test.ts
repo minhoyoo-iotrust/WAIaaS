@@ -22,6 +22,7 @@ import { registerCallContract } from '../tools/call-contract.js';
 import { registerApproveToken } from '../tools/approve-token.js';
 import { registerSendBatch } from '../tools/send-batch.js';
 import { registerGetWalletInfo } from '../tools/get-wallet-info.js';
+import { registerSetDefaultNetwork } from '../tools/set-default-network.js';
 
 // --- Mock ApiClient factory ---
 function createMockApiClient(responses: Map<string, ApiResult<unknown>>): ApiClient {
@@ -256,6 +257,29 @@ describe('get_balance tool', () => {
 
     expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/balance');
   });
+
+  it('passes network=all query parameter for aggregate balance', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/balance?network=all', {
+        ok: true,
+        data: {
+          walletId: 'w1', chain: 'ethereum', environment: 'testnet',
+          balances: [
+            { network: 'ethereum-sepolia', balance: '500', decimals: 18, symbol: 'ETH' },
+            { network: 'polygon-amoy', balance: '100', decimals: 18, symbol: 'POL' },
+          ],
+        },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetBalance, apiClient);
+
+    const result = await handler({ network: 'all' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/balance?network=all');
+    const parsed = JSON.parse(result.content[0]!.text) as { balances: unknown[] };
+    expect(parsed.balances).toHaveLength(2);
+  });
 });
 
 describe('get_assets tool', () => {
@@ -303,6 +327,28 @@ describe('get_assets tool', () => {
     await handler({ network: 'polygon-mainnet' });
 
     expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/assets?network=polygon-mainnet');
+  });
+
+  it('passes network=all query parameter for aggregate assets', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/assets?network=all', {
+        ok: true,
+        data: {
+          walletId: 'w1', chain: 'ethereum', environment: 'testnet',
+          networkAssets: [
+            { network: 'ethereum-sepolia', assets: [{ mint: '0x0', symbol: 'ETH', name: 'Ether', balance: '100', decimals: 18, isNative: true }] },
+          ],
+        },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetAssets, apiClient);
+
+    const result = await handler({ network: 'all' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.get).toHaveBeenCalledWith('/v1/wallet/assets?network=all');
+    const parsed = JSON.parse(result.content[0]!.text) as { networkAssets: unknown[] };
+    expect(parsed.networkAssets).toHaveLength(1);
   });
 });
 
@@ -735,6 +781,43 @@ describe('get_wallet_info tool', () => {
   });
 });
 
+describe('set_default_network tool', () => {
+  it('calls PUT /v1/wallet/default-network with correct params', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['PUT:/v1/wallet/default-network', { ok: true, data: { id: 'w-1', defaultNetwork: 'polygon-amoy', previousNetwork: 'ethereum-sepolia' } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerSetDefaultNetwork, apiClient);
+
+    const result = await handler({ network: 'polygon-amoy' }) as { content: Array<{ text: string }> };
+
+    expect(apiClient.put).toHaveBeenCalledWith('/v1/wallet/default-network', { network: 'polygon-amoy' });
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['defaultNetwork']).toBe('polygon-amoy');
+    expect(parsed['previousNetwork']).toBe('ethereum-sepolia');
+  });
+
+  it('returns error on environment mismatch', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['PUT:/v1/wallet/default-network', {
+        ok: false,
+        error: { code: 'ENVIRONMENT_NETWORK_MISMATCH', message: 'Network not allowed', retryable: false },
+      }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerSetDefaultNetwork, apiClient);
+
+    const result = await handler({ network: 'mainnet' }) as {
+      content: Array<{ text: string }>;
+      isError?: boolean;
+    };
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
+    expect(parsed['code']).toBe('ENVIRONMENT_NETWORK_MISMATCH');
+  });
+});
+
 describe('tool registration with McpServer', () => {
   let server: McpServer;
   let apiClient: ApiClient;
@@ -786,5 +869,9 @@ describe('tool registration with McpServer', () => {
 
   it('registers get_wallet_info tool without error', () => {
     expect(() => registerGetWalletInfo(server, apiClient)).not.toThrow();
+  });
+
+  it('registers set_default_network tool without error', () => {
+    expect(() => registerSetDefaultNetwork(server, apiClient)).not.toThrow();
   });
 });

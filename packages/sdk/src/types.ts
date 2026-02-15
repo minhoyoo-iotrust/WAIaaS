@@ -49,6 +49,7 @@ export interface AddressResponse {
   walletId: string;
   chain: string;
   network: string;
+  environment?: string;
   address: string;
 }
 
@@ -270,4 +271,60 @@ export interface SignTransactionResponse {
   operations: SignTransactionOperation[];
   /** Policy evaluation result */
   policyResult: { tier: string };
+}
+
+// ---------------------------------------------------------------------------
+// Wallet Info Types
+// ---------------------------------------------------------------------------
+
+export interface WalletNetworkInfo {
+  network: string;
+  isDefault: boolean;
+}
+
+export interface WalletInfoResponse {
+  walletId: string;
+  chain: string;
+  network: string;
+  environment: string;
+  address: string;
+  networks: WalletNetworkInfo[];
+}
+
+export interface SetDefaultNetworkResponse {
+  id: string;
+  defaultNetwork: string;
+  previousNetwork: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Network Aggregate Types (network=all)
+// ---------------------------------------------------------------------------
+
+export interface MultiNetworkBalanceEntry {
+  network: string;
+  balance?: string;
+  decimals?: number;
+  symbol?: string;
+  error?: string;
+}
+
+export interface MultiNetworkBalanceResponse {
+  walletId: string;
+  chain: string;
+  environment: string;
+  balances: MultiNetworkBalanceEntry[];
+}
+
+export interface MultiNetworkAssetsEntry {
+  network: string;
+  assets?: AssetInfo[];
+  error?: string;
+}
+
+export interface MultiNetworkAssetsResponse {
+  walletId: string;
+  chain: string;
+  environment: string;
+  networkAssets: MultiNetworkAssetsEntry[];
 }

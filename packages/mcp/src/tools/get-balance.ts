@@ -12,7 +12,7 @@ export function registerGetBalance(server: McpServer, apiClient: ApiClient, wall
     'get_balance',
     withWalletPrefix('Get the current balance of the wallet.', walletContext?.walletName),
     {
-      network: z.string().optional().describe('Query balance for specific network. Defaults to wallet default network.'),
+      network: z.string().optional().describe("Query balance for specific network. Use 'all' to get balances for all networks in the wallet's environment. Defaults to wallet default network."),
     },
     async (args) => {
       const qs = args.network ? '?network=' + encodeURIComponent(args.network) : '';

@@ -324,6 +324,69 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // getAllBalances
+  // =========================================================================
+
+  describe('getAllBalances', () => {
+    it('should call GET /v1/wallet/balance?network=all', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        walletId: 'wallet-1',
+        chain: 'ethereum',
+        environment: 'testnet',
+        balances: [
+          { network: 'ethereum-sepolia', balance: '500', decimals: 18, symbol: 'ETH' },
+          { network: 'polygon-amoy', error: 'RPC timeout' },
+        ],
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.getAllBalances();
+      expect(result).toEqual(expected);
+      expect(result.balances).toHaveLength(2);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/balance?network=all');
+    });
+  });
+
+  // =========================================================================
+  // getAllAssets
+  // =========================================================================
+
+  describe('getAllAssets', () => {
+    it('should call GET /v1/wallet/assets?network=all', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        walletId: 'wallet-1',
+        chain: 'ethereum',
+        environment: 'testnet',
+        networkAssets: [
+          { network: 'ethereum-sepolia', assets: [{ mint: '0x0', symbol: 'ETH', name: 'Ether', balance: '100', decimals: 18, isNative: true }] },
+        ],
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.getAllAssets();
+      expect(result).toEqual(expected);
+      expect(result.networkAssets).toHaveLength(1);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/assets?network=all');
+    });
+  });
+
+  // =========================================================================
   // sendToken
   // =========================================================================
 
@@ -960,6 +1023,128 @@ describe('WAIaaSClient', () => {
       expect(err).toBeInstanceOf(WAIaaSError);
       expect(err.code).toBe('POLICY_DENIED');
       expect(err.status).toBe(403);
+    });
+  });
+
+  // =========================================================================
+  // getWalletInfo
+  // =========================================================================
+
+  describe('getWalletInfo', () => {
+    it('should combine address and networks APIs', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      // First call: GET /v1/wallet/address
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          walletId: 'wallet-1',
+          chain: 'ethereum',
+          network: 'ethereum-sepolia',
+          environment: 'testnet',
+          address: '0xabc123',
+        }),
+      );
+
+      // Second call: GET /v1/wallets/wallet-1/networks
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          networks: [
+            { network: 'ethereum-sepolia', isDefault: true },
+            { network: 'polygon-amoy', isDefault: false },
+          ],
+        }),
+      );
+
+      const result = await client.getWalletInfo();
+
+      expect(result.walletId).toBe('wallet-1');
+      expect(result.chain).toBe('ethereum');
+      expect(result.environment).toBe('testnet');
+      expect(result.address).toBe('0xabc123');
+      expect(result.networks).toHaveLength(2);
+      expect(result.networks[0]!.isDefault).toBe(true);
+
+      const url1 = fetchSpy.mock.calls[0]![0] as string;
+      expect(url1).toBe('http://localhost:3000/v1/wallet/address');
+      const url2 = fetchSpy.mock.calls[1]![0] as string;
+      expect(url2).toBe('http://localhost:3000/v1/wallets/wallet-1/networks');
+    });
+
+    it('should return empty networks on networks API error', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 0 },
+      });
+
+      fetchSpy.mockResolvedValueOnce(
+        mockResponse({
+          walletId: 'wallet-1',
+          chain: 'solana',
+          network: 'devnet',
+          environment: 'testnet',
+          address: 'SolAddr123',
+        }),
+      );
+
+      // Networks API returns error
+      fetchSpy.mockResolvedValueOnce(
+        mockErrorResponse('NOT_FOUND', 'Not found', 404),
+      );
+
+      // getWalletInfo should throw because networks call fails
+      await expect(client.getWalletInfo()).rejects.toThrow(WAIaaSError);
+    });
+  });
+
+  // =========================================================================
+  // setDefaultNetwork
+  // =========================================================================
+
+  describe('setDefaultNetwork', () => {
+    it('should call PUT /v1/wallet/default-network with correct body', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        id: 'wallet-1',
+        defaultNetwork: 'polygon-amoy',
+        previousNetwork: 'ethereum-sepolia',
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.setDefaultNetwork('polygon-amoy');
+
+      expect(result).toEqual(expected);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/default-network');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(opts.method).toBe('PUT');
+      expect(JSON.parse(opts.body as string)).toEqual({ network: 'polygon-amoy' });
+    });
+
+    it('should throw on environment mismatch error', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+        retryOptions: { maxRetries: 0 },
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockErrorResponse('ENVIRONMENT_NETWORK_MISMATCH', 'Network not allowed', 400),
+      );
+
+      const err = await client.setDefaultNetwork('mainnet').catch((e: unknown) => e) as WAIaaSError;
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect(err.code).toBe('ENVIRONMENT_NETWORK_MISMATCH');
     });
   });
 
