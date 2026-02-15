@@ -32,3 +32,5 @@ export {
   getCoinGeckoPlatform,
   type CoinGeckoPlatform,
 } from './coingecko-platform-ids.js';
+
+export { OracleChain, type OracleChainDeps } from './oracle-chain.js';

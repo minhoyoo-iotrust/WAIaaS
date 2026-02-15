@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 12 daemon administration endpoints.
+ * Admin route handlers: 13 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -13,6 +13,7 @@
  * GET    /admin/settings            - Get all settings (masterAuth)
  * PUT    /admin/settings            - Update settings (masterAuth)
  * POST   /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
+ * GET    /admin/oracle-status       - Oracle cache/source/cross-validation status (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
@@ -22,7 +23,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
-import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType } from '@waiaas/core';
+import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType, IPriceOracle } from '@waiaas/core';
 import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -48,6 +49,7 @@ import {
   SettingsUpdateResponseSchema,
   TestRpcRequestSchema,
   TestRpcResponseSchema,
+  OracleStatusResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -77,6 +79,8 @@ export interface AdminRouteDeps {
   onSettingsChanged?: (changedKeys: string[]) => void;
   adapterPool?: AdapterPool | null;
   daemonConfig?: DaemonConfig;
+  priceOracle?: IPriceOracle;
+  oracleConfig?: { coingeckoApiKeyConfigured: boolean; crossValidationThreshold: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,6 +280,23 @@ const testRpcRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Oracle status route definition
+// ---------------------------------------------------------------------------
+
+const oracleStatusRoute = createRoute({
+  method: 'get',
+  path: '/admin/oracle-status',
+  tags: ['Admin'],
+  summary: 'Get oracle cache statistics and source status',
+  responses: {
+    200: {
+      description: 'Oracle status',
+      content: { 'application/json': { schema: OracleStatusResponseSchema } },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Admin wallet route definitions
 // ---------------------------------------------------------------------------
 
@@ -373,6 +394,7 @@ const adminWalletBalanceRoute = createRoute({
  * GET  /admin/settings            - Get all settings (masterAuth)
  * PUT  /admin/settings            - Update settings (masterAuth)
  * POST /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
+ * GET  /admin/oracle-status            - Oracle cache/source/cross-validation status (masterAuth)
  * GET  /admin/wallets/:id/balance      - Wallet native+token balance (masterAuth)
  * GET  /admin/wallets/:id/transactions - Wallet transaction history (masterAuth)
  */
@@ -893,6 +915,34 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         200,
       );
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/oracle-status
+  // ---------------------------------------------------------------------------
+
+  router.openapi(oracleStatusRoute, async (c) => {
+    const stats = deps.priceOracle?.getCacheStats() ?? { hits: 0, misses: 0, staleHits: 0, size: 0, evictions: 0 };
+    return c.json(
+      {
+        cache: stats,
+        sources: {
+          pyth: {
+            available: !!deps.priceOracle,
+            baseUrl: 'https://hermes.pyth.network',
+          },
+          coingecko: {
+            available: deps.oracleConfig?.coingeckoApiKeyConfigured ?? false,
+            apiKeyConfigured: deps.oracleConfig?.coingeckoApiKeyConfigured ?? false,
+          },
+        },
+        crossValidation: {
+          enabled: deps.oracleConfig?.coingeckoApiKeyConfigured ?? false,
+          threshold: deps.oracleConfig?.crossValidationThreshold ?? 5,
+        },
+      },
+      200,
+    );
   });
 
   // ---------------------------------------------------------------------------

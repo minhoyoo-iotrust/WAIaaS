@@ -781,3 +781,33 @@ export const TxSignResponseSchema = z
     }),
   })
   .openapi('TxSignResponse');
+
+// ---------------------------------------------------------------------------
+// Oracle Status Schema (GET /v1/admin/oracle-status)
+// ---------------------------------------------------------------------------
+
+export const OracleStatusResponseSchema = z
+  .object({
+    cache: z.object({
+      hits: z.number(),
+      misses: z.number(),
+      staleHits: z.number(),
+      size: z.number(),
+      evictions: z.number(),
+    }),
+    sources: z.object({
+      pyth: z.object({
+        available: z.boolean(),
+        baseUrl: z.string(),
+      }),
+      coingecko: z.object({
+        available: z.boolean(),
+        apiKeyConfigured: z.boolean(),
+      }),
+    }),
+    crossValidation: z.object({
+      enabled: z.boolean(),
+      threshold: z.number(),
+    }),
+  })
+  .openapi('OracleStatusResponse');
