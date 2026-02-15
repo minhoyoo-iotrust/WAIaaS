@@ -28,6 +28,14 @@ export {
   type UpdatePolicyRequest,
   SpendingLimitRulesSchema,
   type SpendingLimitRules,
+  WhitelistRulesSchema,
+  type WhitelistRules,
+  RateLimitRulesSchema,
+  type RateLimitRules,
+  TimeRestrictionRulesSchema,
+  type TimeRestrictionRules,
+  X402AllowedDomainsRulesSchema,
+  type X402AllowedDomainsRules,
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
 export { AssetInfoSchema, type AssetInfoDto } from './asset.schema.js';
