@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 132 -- REST API + 정책 통합 + 감사 로그
+**Current focus:** Phase 133 -- SDK + MCP + 스킬 파일
 
 ## Current Position
 
-Phase: 132 of 133 (REST API + 정책 통합 + 감사 로그) -- COMPLETE
-Plan: 3 of 3 in current phase -- 132-01, 132-02, 132-03 complete
-Status: Phase 132 Complete
-Last activity: 2026-02-15 -- 132-03 POST /v1/x402/fetch REST API + 오케스트레이션 + 21개 통합 테스트
+Phase: 133 of 133 (SDK + MCP + 스킬 파일) -- IN PROGRESS
+Plan: 1 of 2 in current phase -- 133-01 complete
+Status: Executing Phase 133
+Last activity: 2026-02-15 -- 133-01 TS SDK x402Fetch + Python SDK x402_fetch (9개 테스트)
 
-Progress: [█████████░] 90% (9/10 plans)
+Progress: [█████████░] 95% (10/10 plans -- 133-01 done, 133-02 pending)
 
 ## Performance Metrics
 
@@ -52,6 +52,9 @@ Recent:
 - 132-03: Option A 채택: handleX402Fetch 대신 parse402Response + selectPaymentRequirement + signPayment 직접 조합
 - 132-03: DatabasePolicyEngine instanceof 확인으로 x402Routes 등록 조건 보장
 - 132-03: CAIP2_TO_NETWORK 정적 import (동적 import 대신 빌드 타임 상수)
+- 133-01: TS SDK x402Fetch는 signTransaction 패턴과 동일: withRetry + authHeaders + http.post<T>
+- 133-01: Python SDK x402_fetch는 sign_transaction 패턴과 동일: model_dump(exclude_none=True, by_alias=True)
+- 133-01: camelCase JSON(payTo, txId) -> snake_case Python(pay_to, tx_id) via Field(alias) + populate_by_name
 
 ### Blockers/Concerns
 
@@ -61,5 +64,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 132-03-PLAN.md (POST /v1/x402/fetch REST API + 오케스트레이션 -- 21 테스트, Phase 132 완료)
+Stopped at: Completed 133-01-PLAN.md (TS SDK x402Fetch + Python SDK x402_fetch -- 9 테스트)
 Resume file: None
