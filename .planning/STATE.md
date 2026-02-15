@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 130 of 133 (Core 타입 + CAIP-2 매핑 + DB 마이그레이션)
-Plan: 1 of 2 in current phase
+Phase: 130 of 133 (Core 타입 + CAIP-2 매핑 + DB 마이그레이션) -- COMPLETE
+Plan: 2 of 2 in current phase -- PHASE DONE
 Status: Executing
-Last activity: 2026-02-15 -- 130-01 Core 타입 + CAIP-2 매핑 + 에러 코드 완료
+Last activity: 2026-02-15 -- 130-02 DB 마이그레이션 v12 완료
 
-Progress: [█░░░░░░░░░] 10% (1/10 plans)
+Progress: [██░░░░░░░░] 20% (2/10 plans)
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Recent:
 - v1.5.1: DELAY/APPROVAL 즉시 거부 (동기 HTTP에서 대기 불가)
 - 130-01: @x402/core subpath imports 사용 (@x402/core/schemas, @x402/core/types)
 - 130-01: X402_PAYMENT_REJECTED HTTP 상태 코드 402 사용
+- 130-02: v12 마이그레이션에서 transactions + policies 단일 트랜잭션 내 순차 재생성
 
 ### Blockers/Concerns
 
@@ -45,5 +46,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 130-01-PLAN.md
+Stopped at: Completed 130-02-PLAN.md (Phase 130 complete)
 Resume file: None
