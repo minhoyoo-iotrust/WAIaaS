@@ -317,11 +317,10 @@ describe('safeFetchWithRedirects', () => {
       mockResponse(301, { Location: 'https://internal.example.com/secret' }),
     );
 
-    // First call to validateUrlSafety (for initial URL) resolves to public
-    mockLookup
-      .mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }] as never)
-      // Second call (for redirect target) resolves to private
-      .mockResolvedValueOnce([{ address: '10.0.0.1', family: 4 }] as never);
+    // safeFetchWithRedirects does NOT validate the initial URL (caller already did).
+    // It only calls validateUrlSafety for redirect targets.
+    // Redirect target DNS resolves to private IP -> blocked.
+    mockLookup.mockResolvedValueOnce([{ address: '10.0.0.1', family: 4 }] as never);
 
     await expect(
       safeFetchWithRedirects(new URL('https://start.example.com/'), 'GET'),
@@ -342,21 +341,28 @@ describe('safeFetchWithRedirects', () => {
   });
 
   it('should block after max 3 redirects', async () => {
-    // 4 consecutive redirects (1 initial + 3 redirects allowed, 4th should fail)
+    // Loop: i=0 fetch -> 301 (hop1), validateUrlSafety(hop1) consumes 1 DNS
+    //        i=1 fetch -> 301 (hop2), validateUrlSafety(hop2) consumes 1 DNS
+    //        i=2 fetch -> 301 (hop3), validateUrlSafety(hop3) consumes 1 DNS
+    //        i=3 fetch -> 301 (hop4), but loop ends -> throw "too many redirects"
+    // Need 4 fetch mocks (all 301) and 3 DNS mocks (for hop1..hop3 validation)
     for (let i = 0; i < 4; i++) {
       mockFetch.mockResolvedValueOnce(
         mockResponse(301, { Location: `https://hop${i + 1}.example.com/` }),
       );
     }
-    mockDnsIPv4('93.184.216.34');
+    // 3 redirect target validations (hops 1-3 all public, hop 4 causes overflow)
+    for (let i = 0; i < 3; i++) {
+      mockLookup.mockResolvedValueOnce([{ address: '93.184.216.34', family: 4 }] as never);
+    }
 
-    await expect(
-      safeFetchWithRedirects(new URL('https://start.example.com/'), 'GET'),
-    ).rejects.toThrow(WAIaaSError);
-
-    await expect(
-      safeFetchWithRedirects(new URL('https://start.example.com/'), 'GET'),
-    ).rejects.toMatchObject({ code: 'X402_SSRF_BLOCKED' });
+    try {
+      await safeFetchWithRedirects(new URL('https://start.example.com/'), 'GET');
+      expect.unreachable('Should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect(err).toMatchObject({ code: 'X402_SSRF_BLOCKED' });
+    }
   });
 
   it('should return non-redirect response directly (200)', async () => {
