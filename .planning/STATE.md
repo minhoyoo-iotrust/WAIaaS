@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 131 -- SSRF Guard + x402 Handler + Payment Signing
+**Current focus:** Phase 132 -- REST API + 정책 통합 + 감사 로그
 
 ## Current Position
 
-Phase: 131 of 133 (SSRF Guard + x402 Handler + Payment Signing) -- COMPLETE
-Plan: 3 of 3 in current phase -- ALL COMPLETE
-Status: Phase Complete
-Last activity: 2026-02-15 -- 131-02 x402 Handler TDD 완료 (25 테스트, Phase 131 3/3 플랜 완료)
+Phase: 132 of 133 (REST API + 정책 통합 + 감사 로그) -- IN PROGRESS
+Plan: 2 of 3 in current phase -- 132-02 complete
+Status: In Progress
+Last activity: 2026-02-15 -- 132-02 x402 USD Resolver TDD 완료 (18 테스트)
 
-Progress: [██████░░░░] 60% (6/10 plans)
+Progress: [███████░░░] 70% (7/10 plans)
 
 ## Performance Metrics
 
@@ -43,6 +43,9 @@ Recent:
 - 131-03: USDC_DOMAINS 7개 EVM 체인 등록 (Base, Ethereum, Polygon, Arbitrum, Optimism + testnets)
 - 131-02: base64 encode/decode 자체 구현 (@x402/core/http가 daemon에서 직접 접근 불가)
 - 131-02: Response.headers.forEach 패턴 (Object.fromEntries 대신 명시적 변환)
+- 132-02: SOLANA_USDC_ADDRESSES 별도 테이블 추가 (USDC_DOMAINS는 EVM EIP-712 전용)
+- 132-02: Oracle 에러/미제공 시 0 반환 안전 폴백 (SPENDING_LIMIT INSTANT 통과)
+- 132-02: 비-USDC 토큰 기본 decimals EVM=18, Solana=9 (PaymentRequirements에 decimals 없음)
 
 ### Blockers/Concerns
 
@@ -52,5 +55,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 131-02-PLAN.md (x402 Handler TDD -- Phase 131 완료)
+Stopped at: Completed 132-02-PLAN.md (x402 USD Resolver TDD -- 18 테스트, 2 파일)
 Resume file: None
