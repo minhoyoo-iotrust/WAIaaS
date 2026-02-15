@@ -81,7 +81,7 @@
 
 - [x] **Phase 136: 누적 지출 한도 엔진** - DB v13 마이그레이션 + 정책 스키마 확장 + 누적 집계 + 알림
 - [x] **Phase 137: 누적 한도 Admin UI + SDK/MCP** - 누적 한도 폼/시각화 + SDK/MCP 필드 확장
-- [ ] **Phase 138: ForexRateService + 표시 통화 설정** - 환율 서비스 + Settings + 통화 포매팅
+- [x] **Phase 138: ForexRateService + 표시 통화 설정** - 환율 서비스 + Settings + 통화 포매팅
 - [ ] **Phase 139: 표시 통화 통합** - Admin UI/알림/REST API/MCP 환산 표시
 
 ## Phase Details
@@ -155,9 +155,9 @@ Phases execute in numeric order: 136 -> 137 -> 138 -> 139
 |-------|-----------|----------------|--------|-----------|
 | 136. 누적 지출 한도 엔진 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 | 137. 누적 한도 Admin UI + SDK/MCP | v1.5.3 | 2/2 | Complete | 2026-02-16 |
-| 138. ForexRateService + 표시 통화 설정 | v1.5.3 | 0/2 | Planned | - |
+| 138. ForexRateService + 표시 통화 설정 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 | 139. 표시 통화 통합 | v1.5.3 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 138 계획 완료 (2 plans, 5 requirements)*
+*Last updated: 2026-02-16 -- Phase 138 완료 (2 plans, 5 requirements, 39 tests)*
