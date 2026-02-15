@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 130 -- Core 타입 + CAIP-2 매핑 + DB 마이그레이션
+**Current focus:** Phase 131 -- SSRF Guard + x402 Handler + Payment Signing
 
 ## Current Position
 
-Phase: 130 of 133 (Core 타입 + CAIP-2 매핑 + DB 마이그레이션) -- COMPLETE
-Plan: 2 of 2 in current phase -- PHASE DONE
+Phase: 131 of 133 (SSRF Guard + x402 Handler + Payment Signing)
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-15 -- 130-02 DB 마이그레이션 v12 완료
+Last activity: 2026-02-15 -- 131-01 SSRF 가드 TDD 완료 (54 테스트)
 
-Progress: [██░░░░░░░░] 20% (2/10 plans)
+Progress: [███░░░░░░░] 30% (3/10 plans)
 
 ## Performance Metrics
 
@@ -35,6 +35,8 @@ Recent:
 - 130-01: @x402/core subpath imports 사용 (@x402/core/schemas, @x402/core/types)
 - 130-01: X402_PAYMENT_REJECTED HTTP 상태 코드 402 사용
 - 130-02: v12 마이그레이션에서 transactions + policies 단일 트랜잭션 내 순차 재생성
+- 131-01: RFC 5735/6890 전체 범위 차단 (CGNAT, 벤치마크, TEST-NET 3종, 멀티캐스트, 예약 포함)
+- 131-01: 리다이렉트 후 GET 메서드 변경 + body 제거 (RFC 7231 Section 6.4)
 
 ### Blockers/Concerns
 
@@ -46,5 +48,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 130-02-PLAN.md (Phase 130 complete)
+Stopped at: Completed 131-01-PLAN.md (SSRF 가드 TDD)
 Resume file: None
