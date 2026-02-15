@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5.2 Phase 135 -- 7-type 전용 폼 + 목록 시각화 + 수정 통합
+**Current focus:** v1.5.2 Phase 135 완료 -- 7-type 전용 폼 + 목록 시각화 + 수정 통합
 
 ## Current Position
 
 Phase: 135 (2 of 2 in v1.5.2) -- 7-type 전용 폼 + 목록 시각화 + 수정 통합
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-15 -- 135-01 완료 (7개 폼 + 12-type 라우터 + validateRules)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-15 -- 135-02 완료 (PolicyRulesSummary 12-type 시각화 + 수정 모달 프리필/저장 + 22개 테스트)
 
-Progress: [######░░░░] 75% (3/4 plans)
+Progress: [##########] 100% (4/4 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 30 milestones, 134 phases, 291 plans, 807 reqs, 2,068+ tests, ~187,000 LOC
+**Cumulative:** 30 milestones, 135 phases, 293 plans, 807 reqs, 2,068+ tests, ~187,000 LOC
 
 ## Accumulated Context
 
@@ -37,6 +37,9 @@ Full log in PROJECT.md.
 - 134-02: validateRules Create 시 검증 + onChange 에러 실시간 클리어
 - 135-01: chain/network 옵션을 각 폼 내부에 로컬 상수로 정의 (core import 불가)
 - 135-01: METHOD_WHITELIST 2단계 중첩 DynamicRowList 패턴 적용
+- 135-02: TierVisualization/formatNumber를 PolicyRulesSummary로 이동 (단일 책임 원칙)
+- 135-02: 수정 모달에서 생성 폼과 동일한 PolicyFormRouter + validateRules 재사용
+- 135-02: 3개 초과 항목은 +N more로 축약 (목록 테이블 셀 크기 제한)
 
 ### Blockers/Concerns
 
@@ -46,5 +49,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 135-01-PLAN.md
+Stopped at: Completed 135-02-PLAN.md (Phase 135 complete)
 Resume file: None
