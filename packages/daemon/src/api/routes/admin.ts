@@ -24,7 +24,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
-import { wallets, sessions, notificationLogs } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -320,6 +320,65 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .get();
     const activeSessionCount = activeSessionResult?.count ?? 0;
 
+    // Count policies
+    const policyCountResult = deps.db
+      .select({ count: sql<number>`count(*)` })
+      .from(policies)
+      .get();
+    const policyCount = policyCountResult?.count ?? 0;
+
+    // Count recent transactions (24h) -- created_at stored as epoch seconds in integer column
+    const cutoffSec = nowSec - 86400;
+    const recentTxCountResult = deps.db
+      .select({ count: sql<number>`count(*)` })
+      .from(transactions)
+      .where(sql`${transactions.createdAt} > ${cutoffSec}`)
+      .get();
+    const recentTxCount = recentTxCountResult?.count ?? 0;
+
+    // Count failed transactions (24h)
+    const failedTxCountResult = deps.db
+      .select({ count: sql<number>`count(*)` })
+      .from(transactions)
+      .where(
+        sql`${transactions.status} = 'FAILED' AND ${transactions.createdAt} > ${cutoffSec}`,
+      )
+      .get();
+    const failedTxCount = failedTxCountResult?.count ?? 0;
+
+    // Recent 5 transactions with wallet name
+    const recentTxRows = deps.db
+      .select({
+        id: transactions.id,
+        walletId: transactions.walletId,
+        walletName: wallets.name,
+        type: transactions.type,
+        status: transactions.status,
+        toAddress: transactions.toAddress,
+        amount: transactions.amount,
+        network: transactions.network,
+        createdAt: transactions.createdAt,
+      })
+      .from(transactions)
+      .leftJoin(wallets, eq(transactions.walletId, wallets.id))
+      .orderBy(desc(transactions.createdAt))
+      .limit(5)
+      .all();
+
+    const recentTransactions = recentTxRows.map((tx) => ({
+      id: tx.id,
+      walletId: tx.walletId,
+      walletName: tx.walletName ?? null,
+      type: tx.type,
+      status: tx.status,
+      toAddress: tx.toAddress ?? null,
+      amount: tx.amount ?? null,
+      network: tx.network ?? null,
+      createdAt: tx.createdAt instanceof Date
+        ? Math.floor(tx.createdAt.getTime() / 1000)
+        : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
+    }));
+
     const ksState = deps.getKillSwitchState();
 
     return c.json(
@@ -332,6 +391,10 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         killSwitchState: ksState.state,
         adminTimeout: deps.adminTimeout,
         timestamp: nowSec,
+        policyCount,
+        recentTxCount,
+        failedTxCount,
+        recentTransactions,
       },
       200,
     );
