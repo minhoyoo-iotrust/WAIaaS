@@ -71,8 +71,11 @@ import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../workflow/owner-state.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/index.js';
+import type { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
+import type { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
+import { actionRoutes } from './routes/actions.js';
 
 export interface CreateAppDeps {
   getKillSwitchState?: GetKillSwitchState;
@@ -94,6 +97,8 @@ export interface CreateAppDeps {
   notificationService?: NotificationService;
   settingsService?: SettingsService;
   priceOracle?: IPriceOracle;
+  actionProviderRegistry?: ActionProviderRegistry;
+  apiKeyStore?: ApiKeyStore;
   onSettingsChanged?: (changedKeys: string[]) => void;
   dataDir?: string;
 }
@@ -164,6 +169,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/transactions', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);
     app.use('/v1/utils/*', sessionAuth);
+    app.use('/v1/actions/*', sessionAuth);
   }
 
   // ownerAuth for approve and reject routes (requires DB for agent lookup)
@@ -190,6 +196,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/notifications/*', masterAuthForAdmin);
     app.use('/v1/admin/settings', masterAuthForAdmin);
     app.use('/v1/admin/settings/*', masterAuthForAdmin);
+    app.use('/v1/admin/api-keys', masterAuthForAdmin);
+    app.use('/v1/admin/api-keys/*', masterAuthForAdmin);
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
     app.use('/v1/admin/wallets/*', masterAuthForAdmin);
@@ -287,6 +295,39 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     );
   }
 
+  // Register action routes when registry + pipeline deps are available
+  if (
+    deps.actionProviderRegistry &&
+    deps.apiKeyStore &&
+    deps.db &&
+    deps.keyStore &&
+    deps.masterPassword !== undefined &&
+    deps.adapterPool &&
+    deps.policyEngine &&
+    deps.config
+  ) {
+    app.route(
+      '/v1',
+      actionRoutes({
+        registry: deps.actionProviderRegistry,
+        apiKeyStore: deps.apiKeyStore,
+        db: deps.db,
+        adapterPool: deps.adapterPool,
+        config: deps.config,
+        keyStore: deps.keyStore,
+        policyEngine: deps.policyEngine,
+        masterPassword: deps.masterPassword,
+        approvalWorkflow: deps.approvalWorkflow,
+        delayQueue: deps.delayQueue,
+        ownerLifecycle: deps.ownerLifecycle,
+        sqlite: deps.sqlite,
+        notificationService: deps.notificationService,
+        priceOracle: deps.priceOracle,
+        settingsService: deps.settingsService,
+      }),
+    );
+  }
+
   // Register admin routes when DB is available
   if (deps.db) {
     // Kill switch state holder: wraps getKillSwitchState callback with enriched state
@@ -328,6 +369,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         adapterPool: deps.adapterPool ?? null,
         daemonConfig: deps.config,
         priceOracle: deps.priceOracle,
+        apiKeyStore: deps.apiKeyStore,
+        actionProviderRegistry: deps.actionProviderRegistry,
       }),
     );
   }

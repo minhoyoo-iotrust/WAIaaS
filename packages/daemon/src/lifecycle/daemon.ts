@@ -119,6 +119,8 @@ export class DaemonLifecycle {
   private notificationService: import('../notifications/notification-service.js').NotificationService | null = null;
   private _settingsService: import('../infrastructure/settings/settings-service.js').SettingsService | null = null;
   private priceOracle: IPriceOracle | undefined;
+  private actionProviderRegistry: import('../infrastructure/action/action-provider-registry.js').ActionProviderRegistry | null = null;
+  private apiKeyStore: import('../infrastructure/action/api-key-store.js').ApiKeyStore | null = null;
 
 
   /** Whether shutdown has been initiated. */
@@ -388,6 +390,30 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4f: ActionProviderRegistry + ApiKeyStore (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      const { ActionProviderRegistry, ApiKeyStore } =
+        await import('../infrastructure/action/index.js');
+
+      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword);
+      this.actionProviderRegistry = new ActionProviderRegistry();
+
+      // Load plugins from ~/.waiaas/actions/ (if exists)
+      const actionsDir = join(dataDir, 'actions');
+      if (existsSync(actionsDir)) {
+        const result = await this.actionProviderRegistry.loadPlugins(actionsDir);
+        console.log(
+          `Step 4f: ActionProviderRegistry initialized (${result.loaded.length} plugins loaded, ${result.failed.length} failed)`,
+        );
+      } else {
+        console.log('Step 4f: ActionProviderRegistry initialized (no plugins directory)');
+      }
+    } catch (err) {
+      console.warn('Step 4f (fail-soft): ActionProviderRegistry init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -421,6 +447,8 @@ export class DaemonLifecycle {
           notificationService: this.notificationService ?? undefined,
           settingsService: this._settingsService ?? undefined,
           priceOracle: this.priceOracle,
+          actionProviderRegistry: this.actionProviderRegistry ?? undefined,
+          apiKeyStore: this.apiKeyStore ?? undefined,
           onSettingsChanged: (changedKeys: string[]) => {
             void hotReloader.handleChangedKeys(changedKeys);
           },
