@@ -51,6 +51,10 @@ interface SpendingLimitRules {
   notify_max: string;
   delay_max: string;
   delay_seconds: number;
+  // Phase 127: USD 기준 (optional)
+  instant_max_usd?: number;
+  notify_max_usd?: number;
+  delay_max_usd?: number;
 }
 
 interface WhitelistRules {
@@ -118,6 +122,18 @@ interface TransactionParam {
   spenderAddress?: string;
   /** Approve amount in raw units for APPROVE_AMOUNT_LIMIT evaluation (APPROVE only). */
   approveAmount?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Tier order + maxTier helper (Phase 127)
+// ---------------------------------------------------------------------------
+
+const TIER_ORDER: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
+
+function maxTier(a: PolicyTier, b: PolicyTier): PolicyTier {
+  const aIdx = TIER_ORDER.indexOf(a);
+  const bIdx = TIER_ORDER.indexOf(b);
+  return TIER_ORDER[Math.max(aIdx, bIdx)]!;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +277,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   async evaluateBatch(
     walletId: string,
     instructions: TransactionParam[],
+    batchUsdAmount?: number,
   ): Promise<PolicyEvaluation> {
     // Step 1: Load policies with network filter
     // All instructions in a BATCH share the same network
@@ -332,8 +349,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // CONTRACT_CALL: Solana has no native value attachment in CPI, so 0
     }
 
-    // Evaluate aggregate against SPENDING_LIMIT
-    const amountTier = this.evaluateSpendingLimit(resolved, totalNativeAmount.toString());
+    // Evaluate aggregate against SPENDING_LIMIT (Phase 127: pass batchUsdAmount for USD evaluation)
+    const amountTier = this.evaluateSpendingLimit(resolved, totalNativeAmount.toString(), batchUsdAmount);
     let finalTier = amountTier ? (amountTier.tier as PolicyTier) : ('INSTANT' as PolicyTier);
 
     // If batch contains APPROVE, apply APPROVE_TIER_OVERRIDE
@@ -443,6 +460,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     walletId: string,
     transaction: TransactionParam,
     txId: string,
+    usdAmount?: number,
   ): PolicyEvaluation {
     if (!this.sqlite) {
       throw new Error('evaluateAndReserve requires raw sqlite instance in constructor');
@@ -541,25 +559,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         const requestAmount = BigInt(transaction.amount);
         const effectiveAmount = reservedTotal + requestAmount;
 
-        // Evaluate with effective amount (reserved + current)
-        const rules: SpendingLimitRules = JSON.parse(spendingPolicy.rules);
-        const instantMax = BigInt(rules.instant_max);
-        const notifyMax = BigInt(rules.notify_max);
-        const delayMax = BigInt(rules.delay_max);
-
-        let tier: PolicyTier;
-        let delaySeconds: number | undefined;
-
-        if (effectiveAmount <= instantMax) {
-          tier = 'INSTANT';
-        } else if (effectiveAmount <= notifyMax) {
-          tier = 'NOTIFY';
-        } else if (effectiveAmount <= delayMax) {
-          tier = 'DELAY';
-          delaySeconds = rules.delay_seconds;
-        } else {
-          tier = 'APPROVAL';
-        }
+        // Evaluate with effective amount (reserved + current) via unified evaluateSpendingLimit
+        const spendingResult = this.evaluateSpendingLimit(
+          resolved,
+          effectiveAmount.toString(),
+          usdAmount,
+        );
 
         // Set reserved_amount on the transaction row
         sqlite
@@ -568,11 +573,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
           )
           .run(transaction.amount, txId);
 
-        return {
-          allowed: true,
-          tier,
-          ...(delaySeconds !== undefined ? { delaySeconds } : {}),
-        };
+        return spendingResult ?? { allowed: true, tier: 'INSTANT' as PolicyTier };
       }
 
       // No SPENDING_LIMIT -> INSTANT passthrough (whitelist already passed)
@@ -1114,38 +1115,81 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   /**
    * Evaluate SPENDING_LIMIT policy.
    * Returns PolicyEvaluation with tier classification, or null if no spending limit.
+   *
+   * Phase 127: usdAmount가 전달되고 rules에 USD 임계값이 설정되어 있으면,
+   * 네이티브 티어와 USD 티어 중 더 보수적인(높은) 티어를 채택한다.
    */
   private evaluateSpendingLimit(
     resolved: PolicyRow[],
     amount: string,
+    usdAmount?: number,
   ): PolicyEvaluation | null {
     const spending = resolved.find((p) => p.type === 'SPENDING_LIMIT');
     if (!spending) return null;
 
     const rules: SpendingLimitRules = JSON.parse(spending.rules);
-    const amountBig = BigInt(amount);
+
+    // 1. 네이티브 기준 티어 (기존 로직)
+    const nativeTier = this.evaluateNativeTier(BigInt(amount), rules);
+
+    // 2. USD 기준 티어 (Phase 127)
+    let finalTier = nativeTier;
+    if (usdAmount !== undefined && usdAmount > 0 && this.hasUsdThresholds(rules)) {
+      const usdTier = this.evaluateUsdTier(usdAmount, rules);
+      finalTier = maxTier(nativeTier, usdTier);
+    }
+
+    // delaySeconds는 최종 tier가 DELAY일 때만 포함
+    const delaySeconds = finalTier === 'DELAY' ? rules.delay_seconds : undefined;
+
+    return {
+      allowed: true,
+      tier: finalTier,
+      ...(delaySeconds !== undefined ? { delaySeconds } : {}),
+    };
+  }
+
+  /**
+   * Evaluate native amount tier (extracted from evaluateSpendingLimit).
+   */
+  private evaluateNativeTier(amountBig: bigint, rules: SpendingLimitRules): PolicyTier {
     const instantMax = BigInt(rules.instant_max);
     const notifyMax = BigInt(rules.notify_max);
     const delayMax = BigInt(rules.delay_max);
 
-    let tier: PolicyTier;
-    let delaySeconds: number | undefined;
-
     if (amountBig <= instantMax) {
-      tier = 'INSTANT';
+      return 'INSTANT';
     } else if (amountBig <= notifyMax) {
-      tier = 'NOTIFY';
+      return 'NOTIFY';
     } else if (amountBig <= delayMax) {
-      tier = 'DELAY';
-      delaySeconds = rules.delay_seconds;
+      return 'DELAY';
     } else {
-      tier = 'APPROVAL';
+      return 'APPROVAL';
     }
+  }
 
-    return {
-      allowed: true,
-      tier,
-      ...(delaySeconds !== undefined ? { delaySeconds } : {}),
-    };
+  /**
+   * Check if rules have any USD thresholds configured.
+   */
+  private hasUsdThresholds(rules: SpendingLimitRules): boolean {
+    return rules.instant_max_usd !== undefined
+      || rules.notify_max_usd !== undefined
+      || rules.delay_max_usd !== undefined;
+  }
+
+  /**
+   * Evaluate USD amount tier.
+   */
+  private evaluateUsdTier(usdAmount: number, rules: SpendingLimitRules): PolicyTier {
+    if (rules.instant_max_usd !== undefined && usdAmount <= rules.instant_max_usd) {
+      return 'INSTANT';
+    }
+    if (rules.notify_max_usd !== undefined && usdAmount <= rules.notify_max_usd) {
+      return 'NOTIFY';
+    }
+    if (rules.delay_max_usd !== undefined && usdAmount <= rules.delay_max_usd) {
+      return 'DELAY';
+    }
+    return 'APPROVAL';
   }
 }

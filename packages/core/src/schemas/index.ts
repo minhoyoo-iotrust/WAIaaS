@@ -26,6 +26,8 @@ export {
   type CreatePolicyRequest,
   UpdatePolicyRequestSchema,
   type UpdatePolicyRequest,
+  SpendingLimitRulesSchema,
+  type SpendingLimitRules,
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
 export { AssetInfoSchema, type AssetInfoDto } from './asset.schema.js';

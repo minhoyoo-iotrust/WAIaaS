@@ -65,6 +65,25 @@ const ApproveTierOverrideRulesSchema = z.object({
   tier: PolicyTierEnum,
 });
 
+/** SPENDING_LIMIT: 금액 기반 4-티어 보안 분류. */
+export const SpendingLimitRulesSchema = z.object({
+  /** INSTANT 티어 최대 금액 (lamports/wei 문자열) */
+  instant_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+  /** NOTIFY 티어 최대 금액 */
+  notify_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+  /** DELAY 티어 최대 금액 */
+  delay_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+  /** INSTANT 티어 최대 USD 금액 (optional, 미설정 시 네이티브만 사용) */
+  instant_max_usd: z.number().nonnegative().optional(),
+  /** NOTIFY 티어 최대 USD 금액 */
+  notify_max_usd: z.number().nonnegative().optional(),
+  /** DELAY 티어 최대 USD 금액 */
+  delay_max_usd: z.number().nonnegative().optional(),
+  /** DELAY 티어 쿨다운 시간 (초) */
+  delay_seconds: z.number().int().min(60).default(900),
+});
+export type SpendingLimitRules = z.infer<typeof SpendingLimitRulesSchema>;
+
 /** ALLOWED_NETWORKS: rules.networks array (permitted networks for wallet). */
 const AllowedNetworksRulesSchema = z.object({
   networks: z.array(z.object({
@@ -82,6 +101,7 @@ const POLICY_RULES_SCHEMAS: Partial<Record<string, z.ZodTypeAny>> = {
   APPROVE_AMOUNT_LIMIT: ApproveAmountLimitRulesSchema,
   APPROVE_TIER_OVERRIDE: ApproveTierOverrideRulesSchema,
   ALLOWED_NETWORKS: AllowedNetworksRulesSchema,
+  SPENDING_LIMIT: SpendingLimitRulesSchema,
 };
 
 /**

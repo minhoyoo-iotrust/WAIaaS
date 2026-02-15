@@ -91,6 +91,8 @@ export {
   type CreatePolicyRequest,
   UpdatePolicyRequestSchema,
   type UpdatePolicyRequest,
+  SpendingLimitRulesSchema,
+  type SpendingLimitRules,
   ConfigSchema,
   type Config,
   AssetInfoSchema,
