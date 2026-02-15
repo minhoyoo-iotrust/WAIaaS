@@ -21,6 +21,7 @@ from waiaas.models import (
     WalletAssets,
     WalletBalance,
     WalletInfo,
+    X402FetchResponse,
 )
 from waiaas.retry import RetryPolicy
 
@@ -984,3 +985,133 @@ class TestGetAllAssets:
         assert result.network_assets[1].network == "polygon-amoy"
         assert result.network_assets[1].error == "RPC failure"
         assert result.network_assets[1].assets is None
+
+
+# ---------------------------------------------------------------------------
+# x402 methods
+# ---------------------------------------------------------------------------
+
+
+class TestX402Fetch:
+    async def test_fetch_with_payment(self):
+        handler = make_handler(
+            {
+                ("POST", "/v1/x402/fetch"): (
+                    200,
+                    {
+                        "status": 200,
+                        "headers": {"content-type": "application/json"},
+                        "body": '{"data": "premium content"}',
+                        "payment": {
+                            "amount": "1000000",
+                            "asset": "USDC",
+                            "network": "eip155:8453",
+                            "payTo": "0xPaymentReceiver",
+                            "txId": "tx-x402-001",
+                        },
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        result = await client.x402_fetch("https://api.example.com/premium")
+        assert isinstance(result, X402FetchResponse)
+        assert result.status == 200
+        assert result.body == '{"data": "premium content"}'
+        assert result.payment is not None
+        assert result.payment.amount == "1000000"
+        assert result.payment.asset == "USDC"
+        assert result.payment.network == "eip155:8453"
+        assert result.payment.pay_to == "0xPaymentReceiver"
+        assert result.payment.tx_id == "tx-x402-001"
+
+    async def test_fetch_passthrough_without_payment(self):
+        handler = make_handler(
+            {
+                ("POST", "/v1/x402/fetch"): (
+                    200,
+                    {
+                        "status": 200,
+                        "headers": {"content-type": "text/html"},
+                        "body": "<html>Free content</html>",
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        result = await client.x402_fetch("https://free.example.com")
+        assert isinstance(result, X402FetchResponse)
+        assert result.status == 200
+        assert result.payment is None
+
+    async def test_fetch_with_optional_params(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/x402/fetch" in str(request.url):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={
+                        "status": 200,
+                        "headers": {},
+                        "body": "",
+                    },
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        await client.x402_fetch(
+            "https://api.example.com/data",
+            method="POST",
+            headers={"X-Custom": "value"},
+            body='{"query": "test"}',
+        )
+        assert captured_body["url"] == "https://api.example.com/data"
+        assert captured_body["method"] == "POST"
+        assert captured_body["headers"] == {"X-Custom": "value"}
+        assert captured_body["body"] == '{"query": "test"}'
+
+    async def test_fetch_excludes_none_optional_params(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/x402/fetch" in str(request.url):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={
+                        "status": 200,
+                        "headers": {},
+                        "body": "",
+                    },
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        await client.x402_fetch("https://api.example.com/data")
+        assert captured_body == {"url": "https://api.example.com/data"}
+        assert "method" not in captured_body
+        assert "headers" not in captured_body
+        assert "body" not in captured_body
+
+    async def test_fetch_error_domain_not_allowed(self):
+        handler = make_handler(
+            {
+                ("POST", "/v1/x402/fetch"): (
+                    403,
+                    {
+                        "code": "X402_DOMAIN_NOT_ALLOWED",
+                        "message": "Domain not allowed",
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        with pytest.raises(WAIaaSError) as exc_info:
+            await client.x402_fetch("https://blocked.com")
+        assert exc_info.value.code == "X402_DOMAIN_NOT_ALLOWED"

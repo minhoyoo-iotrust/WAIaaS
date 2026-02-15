@@ -290,3 +290,42 @@ class SignTransactionResponse(BaseModel):
     policy_result: PolicyResult = Field(alias="policyResult")
 
     model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
+# x402 models
+# ---------------------------------------------------------------------------
+
+
+class X402FetchRequest(BaseModel):
+    """Request body for POST /v1/x402/fetch."""
+
+    url: str
+    method: Optional[str] = None
+    headers: Optional[dict[str, str]] = None
+    body: Optional[str] = None
+
+    model_config = {"populate_by_name": True}
+
+
+class X402PaymentInfo(BaseModel):
+    """Payment details from an x402 auto-payment."""
+
+    amount: str
+    asset: str
+    network: str
+    pay_to: str = Field(alias="payTo")
+    tx_id: str = Field(alias="txId")
+
+    model_config = {"populate_by_name": True}
+
+
+class X402FetchResponse(BaseModel):
+    """Response from POST /v1/x402/fetch."""
+
+    status: int
+    headers: dict[str, str]
+    body: str
+    payment: Optional[X402PaymentInfo] = None
+
+    model_config = {"populate_by_name": True}
