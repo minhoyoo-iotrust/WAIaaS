@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 125 of 129 (Design Docs + Oracle Interfaces)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Roadmap created (5 phases, 14 plans, 29 requirements)
+Plan: 2 of 2 in current phase
+Status: Plan 125-02 complete
+Last activity: 2026-02-15 -- IPriceOracle types + InMemoryPriceCache + classifyPriceAge (25 tests)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#░░░░░░░░░] 7%
 
 ## Performance Metrics
 
@@ -34,6 +34,9 @@ Recent decisions affecting current work:
 - v1.5: 신규 외부 npm 의존성 0개 -- Pyth/CoinGecko는 native fetch(), LRU는 직접 구현, 암호화는 settings-crypto 재사용
 - v1.5: evaluateAndReserve() 진입 전에 Oracle HTTP 호출 완료 -- better-sqlite3 동기 트랜잭션 내 비동기 호출 불가
 - v1.5: PriceResult 3-state discriminated union -- success/oracleDown/notListed로 "가격 불명 != 가격 0" 보안 원칙
+- v1.5: PriceAge를 daemon 패키지에 배치 (core 승격은 후속 필요시)
+- v1.5: source enum 'pyth'|'coingecko'|'cache' 3가지 제한
+- v1.5: staleMax(30min)를 TTL(5min)과 독립 파라미터로 분리
 
 ### Blockers/Concerns
 
@@ -44,5 +47,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: v1.5 로드맵 생성 완료 (5 phases, 14 plans)
+Stopped at: Completed 125-02-PLAN.md (IPriceOracle types + cache + price-age)
 Resume file: None
