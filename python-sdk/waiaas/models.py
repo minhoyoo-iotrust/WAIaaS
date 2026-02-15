@@ -329,3 +329,32 @@ class X402FetchResponse(BaseModel):
     payment: Optional[X402PaymentInfo] = None
 
     model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
+# Policy models (reference for REST API /v1/policies users)
+# ---------------------------------------------------------------------------
+
+
+class SpendingLimitRules(BaseModel):
+    """SPENDING_LIMIT policy rules schema.
+
+    Per-transaction tiers use native amount digit strings.
+    USD tiers and cumulative limits are optional.
+    When cumulative USD spending exceeds the limit, the transaction
+    tier is escalated to APPROVAL.
+    """
+
+    instant_max: str = Field(description="INSTANT tier max (lamports/wei digit string)")
+    notify_max: str = Field(description="NOTIFY tier max (digit string)")
+    delay_max: str = Field(description="DELAY tier max (digit string)")
+    delay_seconds: Optional[int] = Field(default=None, description="Delay cooldown seconds (min 60)")
+    instant_max_usd: Optional[float] = Field(default=None, description="INSTANT tier max USD")
+    notify_max_usd: Optional[float] = Field(default=None, description="NOTIFY tier max USD")
+    delay_max_usd: Optional[float] = Field(default=None, description="DELAY tier max USD")
+    daily_limit_usd: Optional[float] = Field(
+        default=None, description="24h rolling window cumulative USD limit"
+    )
+    monthly_limit_usd: Optional[float] = Field(
+        default=None, description="30d rolling window cumulative USD limit"
+    )
