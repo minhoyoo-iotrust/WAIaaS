@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 130 of 133 (Core 타입 + CAIP-2 매핑 + DB 마이그레이션)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-15 -- Roadmap created for v1.5.1 x402 클라이언트 지원
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 -- 130-01 Core 타입 + CAIP-2 매핑 + 에러 코드 완료
 
-Progress: [░░░░░░░░░░] 0% (0/10 plans)
+Progress: [█░░░░░░░░░] 10% (1/10 plans)
 
 ## Performance Metrics
 
@@ -32,6 +32,8 @@ Recent:
 - v1.5.1: SSRF 가드 자체 구현 (node:dns + node:net, 외부 라이브러리 CVE)
 - v1.5.1: x402-handler 독립 파이프라인 (기존 6-stage 미확장, sign-only 패턴)
 - v1.5.1: DELAY/APPROVAL 즉시 거부 (동기 HTTP에서 대기 불가)
+- 130-01: @x402/core subpath imports 사용 (@x402/core/schemas, @x402/core/types)
+- 130-01: X402_PAYMENT_REJECTED HTTP 상태 코드 402 사용
 
 ### Blockers/Concerns
 
@@ -43,5 +45,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Roadmap created, ready to plan Phase 130
+Stopped at: Completed 130-01-PLAN.md
 Resume file: None
