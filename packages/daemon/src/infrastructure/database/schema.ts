@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 10 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings
+ * 11 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -334,3 +334,14 @@ export const settings = sqliteTable(
     index('idx_settings_category').on(table.category),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Table 11: api_keys -- Action Provider API key encrypted storage (v1.5)
+// ---------------------------------------------------------------------------
+
+export const apiKeys = sqliteTable('api_keys', {
+  providerName: text('provider_name').primaryKey(),
+  encryptedKey: text('encrypted_key').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

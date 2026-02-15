@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 11 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 12 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -43,7 +43,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 11 tables (latest schema: wallets + wallet_id + token_registry + settings)
+// DDL statements for all 12 tables (latest schema: wallets + wallet_id + token_registry + settings + api_keys)
 // ---------------------------------------------------------------------------
 
 /**
@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 10;
+export const LATEST_SCHEMA_VERSION = 11;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -195,7 +195,15 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 11: schema_version
+    // Table 11: api_keys (Action Provider API key encrypted storage, v1.5)
+    `CREATE TABLE IF NOT EXISTS api_keys (
+  provider_name TEXT PRIMARY KEY,
+  encrypted_key TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`,
+
+    // Table 12: schema_version
     `CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL,
@@ -975,6 +983,23 @@ MIGRATIONS.push({
   },
 });
 
+// ---------------------------------------------------------------------------
+// v11: Create api_keys table for Action Provider API key storage
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 11,
+  description: 'Add api_keys table for Action Provider API key storage',
+  up: (sqlite) => {
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS api_keys (
+  provider_name TEXT PRIMARY KEY,
+  encrypted_key TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+  },
+});
+
 /**
  * Run incremental migrations against the database.
  *
@@ -1124,7 +1149,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, ts, 'Initial schema (11 tables)');
+        .run(1, ts, 'Initial schema (12 tables)');
 
       // Record all migration versions as already applied (DDL is up-to-date)
       for (const migration of MIGRATIONS) {

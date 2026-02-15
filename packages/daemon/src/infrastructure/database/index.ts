@@ -19,5 +19,6 @@ export {
   notificationLogs,
   tokenRegistry,
   settings,
+  apiKeys,
 } from './schema.js';
 export { generateId } from './id.js';

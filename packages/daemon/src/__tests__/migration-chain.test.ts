@@ -4,7 +4,7 @@
  * Tests cover:
  * T-1: v5 DB -> pushSchema success (MIGR-01 regression)
  * T-2/T-6: Schema equivalence (migrated vs fresh DB)
- * T-3: v1 DB -> pushSchema success (full chain v2-v9)
+ * T-3: v1 DB -> pushSchema success (full chain v2-v11)
  * T-4: Fresh DB -> pushSchema success (existing behavior)
  * T-5: Index completeness after migration
  * T-7: v7 network -> environment data transformation
@@ -465,7 +465,7 @@ const EXPECTED_INDEXES = [
 const ALL_TABLES = [
   'wallets', 'sessions', 'transactions', 'policies', 'pending_approvals',
   'audit_log', 'key_value_store', 'notification_logs', 'token_registry',
-  'settings', 'schema_version',
+  'settings', 'api_keys', 'schema_version',
 ];
 
 // ---------------------------------------------------------------------------
@@ -525,7 +525,7 @@ describe('pushSchema on existing databases', () => {
 
     expect(() => pushSchema(db)).not.toThrow();
 
-    // All 11 tables should exist
+    // All 12 tables should exist
     for (const table of ALL_TABLES) {
       const result = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -991,8 +991,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 10
-    expect(LATEST_SCHEMA_VERSION).toBe(10);
+    // Verify LATEST_SCHEMA_VERSION is 11
+    expect(LATEST_SCHEMA_VERSION).toBe(11);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
