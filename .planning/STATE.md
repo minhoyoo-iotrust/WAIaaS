@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 122 — MCP 도구 + 멀티체인 DX
+**Current focus:** Phase 123 — Admin UI 개선
 
 ## Current Position
 
-Phase: 122 (3 of 5 in v1.4.8) — MCP 도구 + 멀티체인 DX -- COMPLETE
-Plan: 2 of 2 in current phase (all complete)
-Status: Phase Complete
-Last activity: 2026-02-15 — 122-02 complete (network=all balance/assets, MCP/SDK/Python/Skill update)
+Phase: 123 (4 of 5 in v1.4.8) — Admin UI 개선
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-15 — Plan 123-01 complete (대시보드 개선: StatCard 링크 + 추가 카드 + 최근 활동)
 
-Progress: [████░░░░░░] 50% (4/8 plans)
+Progress: [█████░░░░░] 62% (5/8 plans)
 
 ## Performance Metrics
 
@@ -26,6 +26,7 @@ Progress: [████░░░░░░] 50% (4/8 plans)
 | 121 | 01 | 2min | 1 (TDD) | 4 |
 | 122 | 01 | 8min | 2 | 15 |
 | 122 | 02 | 8min | 2 | 12 |
+| 123 | 01 | 3min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -41,6 +42,9 @@ Full log in PROJECT.md.
 - wireEvmTokens() 헬퍼 추출: ERC-20 토큰 와이어링 코드 중복 제거
 - getAllBalances()/getAllAssets()를 별도 메서드로 분리: 타입 안전성 우선 (이슈 021 설계 결정)
 - network=all 분기 OpenAPI typed route는 `as never` cast로 런타임 분기 처리
+- StatCard href는 hash 라우팅(#/wallets 등) 사용 -- SPA 라우팅과 일치
+- createdAt 필드를 epoch seconds로 변환하여 응답 -- 기존 API 패턴 유지
+- Failed Txns 뱃지: 0건=success, 1건+=danger -- 시각적 즉시 인지 가능
 
 ### Blockers/Concerns
 
@@ -52,5 +56,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 122-02-PLAN.md (network=all balance/assets, MCP/SDK/Python/Skill)
+Stopped at: Completed 123-01-PLAN.md
 Resume file: None
