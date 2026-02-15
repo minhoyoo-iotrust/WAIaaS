@@ -1,5 +1,32 @@
 # Project Milestones: WAIaaS
 
+## v1.5.2 Admin UI 정책 폼 UX 개선 (Shipped: 2026-02-16)
+
+**Delivered:** Admin UI에서 12개 정책 타입별 구조화된 전용 폼으로 정책을 생성/수정할 수 있고, 목록에서 타입별 의미 있는 시각화(심볼 배지, req/time 포맷, tier bars)를 확인할 수 있으며, 기존 정책 수정 시 현재값이 프리필되어 수정/저장이 가능한 상태 달성
+
+**Phases completed:** 134-135 (4 plans total)
+
+**Key accomplishments:**
+
+- 12개 PolicyType 전체 Zod rules 스키마 등록 — 4개 미등록 타입(WHITELIST, RATE_LIMIT, TIME_RESTRICTION, X402_ALLOWED_DOMAINS) 추가, POLICY_RULES_SCHEMAS Partial→Record 전환
+- DynamicRowList + PolicyFormRouter 폼 인프라 — 재사용 가능한 동적 행 컴포넌트(generic T, renderRow 콜백), 12-type switch/case 분기 라우터
+- 12개 PolicyType 전용 폼 컴포넌트 — SpendingLimitForm(3-tier 네이티브+USD), WhitelistForm, RateLimitForm, ApproveAmountLimitForm, ApproveTierOverrideForm, AllowedTokensForm, ContractWhitelistForm, MethodWhitelistForm(2단계 중첩 DynamicRowList), ApprovedSpendersForm, TimeRestrictionForm, AllowedNetworksForm, X402AllowedDomainsForm
+- PolicyRulesSummary 12-type 목록 시각화 — ALLOWED_TOKENS 심볼 배지, RATE_LIMIT "100 req / 1h", SPENDING_LIMIT tier bars, APPROVE_TIER_OVERRIDE 색상 배지, 나머지 타입 개수/패턴 배지
+- 수정 모달 전용 폼 프리필/저장 통합 — editRulesObj 프리필, PolicyFormRouter + validateRules 재사용, PUT API 호출
+
+**Stats:**
+
+- 2 phases, 4 plans, 24 requirements, 7 설계 결정
+- 2,111 tests (2,058 → 2,111, +53 new tests)
+- ~188,000 LOC total
+- 15 commits, 1 day (2026-02-15 ~ 2026-02-16)
+
+**Git range:** `v1.5.1` → `7d19887` (Phase 135 complete)
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
+
+---
+
 ## v1.5.1 x402 클라이언트 지원 (Shipped: 2026-02-15)
 
 **Delivered:** AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태를 달성 — SSRF 가드 자체 구현, x402 핸들러(HTTP 402 파싱 → scheme 선택 → EVM EIP-3009/Solana TransferChecked 결제 서명), POST /v1/x402/fetch REST API, X402_ALLOWED_DOMAINS 기본 거부 정책 + SPENDING_LIMIT 4-tier USD 환산 통합, 감사 로그(X402_PAYMENT) + 알림 연동, TS/Python SDK + MCP x402_fetch 도구 + x402.skill.md 스킬 파일
@@ -818,6 +845,16 @@
 **Git range:** `v1.4.8` → `bbc62c7` (Phase 129 complete)
 
 **What's next:** v1.5.1 x402 클라이언트 지원 또는 v1.6 Desktop + Telegram + Docker
+
+---
+
+
+## v1.5.2 Admin UI 정책 폼 UX 개선 (Shipped: 2026-02-15)
+
+**Phases completed:** 136 phases, 293 plans, 40 tasks
+
+**Key accomplishments:**
+- (none recorded)
 
 ---
 
