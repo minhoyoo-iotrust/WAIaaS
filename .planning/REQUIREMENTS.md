@@ -21,23 +21,23 @@
 
 ### MCP 도구 + 멀티체인 DX
 
-- [ ] **MCDX-01**: set_default_network MCP 도구 + CLI 명령어 + SDK 메서드로 기본 네트워크를 변경할 수 있다
-- [ ] **MCDX-02**: waiaas wallet info CLI 명령어가 체인, 환경, 주소, 기본 네트워크, 사용 가능 네트워크를 표시한다
-- [ ] **MCDX-03**: SDK getWalletInfo() 메서드가 TS/Python에서 월렛 상세 정보를 반환한다
-- [ ] **MCDX-04**: GET /v1/wallet/balance?network=all이 환경 내 모든 네트워크 잔액을 배열로 반환한다
-- [ ] **MCDX-05**: GET /v1/wallet/assets?network=all이 환경 내 모든 네트워크 토큰 자산을 배열로 반환한다
-- [ ] **MCDX-06**: MCP get_balance/get_assets 도구가 network=all 옵션을 지원한다
-- [ ] **MCDX-07**: 부분 실패 시 성공한 네트워크 잔액만 반환하고 실패 네트워크는 에러 표시한다
+- [x] **MCDX-01**: set_default_network MCP 도구 + CLI 명령어 + SDK 메서드로 기본 네트워크를 변경할 수 있다
+- [x] **MCDX-02**: waiaas wallet info CLI 명령어가 체인, 환경, 주소, 기본 네트워크, 사용 가능 네트워크를 표시한다
+- [x] **MCDX-03**: SDK getWalletInfo() 메서드가 TS/Python에서 월렛 상세 정보를 반환한다
+- [x] **MCDX-04**: GET /v1/wallet/balance?network=all이 환경 내 모든 네트워크 잔액을 배열로 반환한다
+- [x] **MCDX-05**: GET /v1/wallet/assets?network=all이 환경 내 모든 네트워크 토큰 자산을 배열로 반환한다
+- [x] **MCDX-06**: MCP get_balance/get_assets 도구가 network=all 옵션을 지원한다
+- [x] **MCDX-07**: 부분 실패 시 성공한 네트워크 잔액만 반환하고 실패 네트워크는 에러 표시한다
 
 ### Admin UI 개선
 
-- [ ] **ADUI-01**: 대시보드 StatCard에서 해당 페이지로 링크 이동이 가능하다
-- [ ] **ADUI-02**: 대시보드에 Policies, Recent Txns (24h), Failed Txns (24h) 추가 StatCard가 표시된다
-- [ ] **ADUI-03**: 대시보드에 최근 트랜잭션 5건의 활동 섹션이 표시된다
-- [ ] **ADUI-04**: 월렛 상세 페이지에 네이티브 + 토큰 잔액 섹션이 표시된다
-- [ ] **ADUI-05**: 월렛 상세 페이지에 최근 트랜잭션 내역 테이블이 표시된다
-- [ ] **ADUI-06**: 세션 페이지 진입 시 전체 세션 목록이 즉시 표시된다 (walletId 선택 불필요)
-- [ ] **ADUI-07**: 세션 목록에 walletName 컬럼이 표시된다
+- [x] **ADUI-01**: 대시보드 StatCard에서 해당 페이지로 링크 이동이 가능하다 — Phase 123
+- [x] **ADUI-02**: 대시보드에 Policies, Recent Txns (24h), Failed Txns (24h) 추가 StatCard가 표시된다 — Phase 123
+- [x] **ADUI-03**: 대시보드에 최근 트랜잭션 5건의 활동 섹션이 표시된다 — Phase 123
+- [x] **ADUI-04**: 월렛 상세 페이지에 네이티브 + 토큰 잔액 섹션이 표시된다 — Phase 123
+- [x] **ADUI-05**: 월렛 상세 페이지에 최근 트랜잭션 내역 테이블이 표시된다 — Phase 123
+- [x] **ADUI-06**: 세션 페이지 진입 시 전체 세션 목록이 즉시 표시된다 (walletId 선택 불필요) — Phase 123
+- [x] **ADUI-07**: 세션 목록에 walletName 컬럼이 표시된다 — Phase 123
 
 ### 알림 시스템
 
@@ -50,7 +50,7 @@
 
 ### Skill 파일 동기화
 
-- [ ] **SKIL-01**: wallet.skill.md에 network=all 잔액, set_default_network, wallet info가 반영된다
+- [x] **SKIL-01**: wallet.skill.md에 network=all 잔액, set_default_network, wallet info가 반영된다
 - [ ] **SKIL-02**: admin.skill.md에 Slack 알림 채널 정보가 반영된다
 
 ## v2 Requirements
@@ -75,27 +75,27 @@
 | MCPS-01 | Phase 121 | ✅ Done |
 | MCPS-02 | Phase 121 | ✅ Done |
 | MCPS-03 | Phase 121 | ✅ Done |
-| MCDX-01 | Phase 122 | Pending |
-| MCDX-02 | Phase 122 | Pending |
-| MCDX-03 | Phase 122 | Pending |
-| MCDX-04 | Phase 122 | Pending |
-| MCDX-05 | Phase 122 | Pending |
-| MCDX-06 | Phase 122 | Pending |
-| MCDX-07 | Phase 122 | Pending |
-| ADUI-01 | Phase 123 | Pending |
-| ADUI-02 | Phase 123 | Pending |
-| ADUI-03 | Phase 123 | Pending |
-| ADUI-04 | Phase 123 | Pending |
-| ADUI-05 | Phase 123 | Pending |
-| ADUI-06 | Phase 123 | Pending |
-| ADUI-07 | Phase 123 | Pending |
+| MCDX-01 | Phase 122 | ✅ Done |
+| MCDX-02 | Phase 122 | ✅ Done |
+| MCDX-03 | Phase 122 | ✅ Done |
+| MCDX-04 | Phase 122 | ✅ Done |
+| MCDX-05 | Phase 122 | ✅ Done |
+| MCDX-06 | Phase 122 | ✅ Done |
+| MCDX-07 | Phase 122 | ✅ Done |
+| ADUI-01 | Phase 123 | ✅ Done |
+| ADUI-02 | Phase 123 | ✅ Done |
+| ADUI-03 | Phase 123 | ✅ Done |
+| ADUI-04 | Phase 123 | ✅ Done |
+| ADUI-05 | Phase 123 | ✅ Done |
+| ADUI-06 | Phase 123 | ✅ Done |
+| ADUI-07 | Phase 123 | ✅ Done |
 | NOTF-01 | Phase 124 | Pending |
 | NOTF-02 | Phase 124 | Pending |
 | NOTF-03 | Phase 124 | Pending |
 | NOTF-04 | Phase 124 | Pending |
 | NOTF-05 | Phase 124 | Pending |
 | NOTF-06 | Phase 124 | Pending |
-| SKIL-01 | Phase 122 | Pending |
+| SKIL-01 | Phase 122 | ✅ Done |
 | SKIL-02 | Phase 124 | Pending |
 
 **Coverage:**

@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 123 — Admin UI 개선
+**Current focus:** Phase 124 — 알림 시스템 개선
 
 ## Current Position
 
-Phase: 123 (4 of 5 in v1.4.8) — Admin UI 개선 -- COMPLETE
-Plan: 2 of 2 in current phase (DONE)
-Status: Phase Complete
-Last activity: 2026-02-15 — Plan 123-02 complete (월렛 잔액/트랜잭션 + 세션 전체 조회)
+Phase: 124 (5 of 5 in v1.4.8) — 알림 시스템 개선
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-15 — Phase 123 complete (Admin UI 개선, 2/2 plans)
 
 Progress: [██████░░░░] 75% (6/8 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 27 milestones, 119 phases, 260 plans, 711 reqs, 1,679 tests, ~176,000 LOC
+**Cumulative:** 27 milestones, 119 phases, 262 plans, 711 reqs, 1,679 tests, ~176,000 LOC
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -60,5 +60,5 @@ Full log in PROJECT.md.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 123-02-PLAN.md (Phase 123 complete)
+Stopped at: Phase 123 verified and merged, ready to plan Phase 124
 Resume file: None
