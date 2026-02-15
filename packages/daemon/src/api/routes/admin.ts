@@ -21,8 +21,8 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
-import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
+import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType } from '@waiaas/core';
 import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -30,6 +30,8 @@ import type { NotificationService } from '../../notifications/notification-servi
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
 import { getSettingDefinition } from '../../infrastructure/settings/index.js';
+import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
+import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import {
   AdminStatusResponseSchema,
   KillSwitchResponseSchema,
@@ -73,6 +75,8 @@ export interface AdminRouteDeps {
   notificationConfig?: DaemonConfig['notifications'];
   settingsService?: SettingsService;
   onSettingsChanged?: (changedKeys: string[]) => void;
+  adapterPool?: AdapterPool | null;
+  daemonConfig?: DaemonConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -272,6 +276,85 @@ const testRpcRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Admin wallet route definitions
+// ---------------------------------------------------------------------------
+
+const adminWalletTransactionsRoute = createRoute({
+  method: 'get',
+  path: '/admin/wallets/{id}/transactions',
+  tags: ['Admin'],
+  summary: 'Get wallet transactions',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Wallet transaction list',
+      content: {
+        'application/json': {
+          schema: z.object({
+            items: z.array(
+              z.object({
+                id: z.string(),
+                type: z.string(),
+                status: z.string(),
+                toAddress: z.string().nullable(),
+                amount: z.string().nullable(),
+                network: z.string().nullable(),
+                txHash: z.string().nullable(),
+                createdAt: z.number().nullable(),
+              }),
+            ),
+            total: z.number().int(),
+          }),
+        },
+      },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+const adminWalletBalanceRoute = createRoute({
+  method: 'get',
+  path: '/admin/wallets/{id}/balance',
+  tags: ['Admin'],
+  summary: 'Get wallet balance (native + tokens)',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Wallet balance',
+      content: {
+        'application/json': {
+          schema: z.object({
+            native: z
+              .object({
+                balance: z.string(),
+                symbol: z.string(),
+                network: z.string(),
+              })
+              .nullable(),
+            tokens: z.array(
+              z.object({
+                symbol: z.string(),
+                balance: z.string(),
+                address: z.string(),
+              }),
+            ),
+            error: z.string().optional(),
+          }),
+        },
+      },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
@@ -290,6 +373,8 @@ const testRpcRoute = createRoute({
  * GET  /admin/settings            - Get all settings (masterAuth)
  * PUT  /admin/settings            - Update settings (masterAuth)
  * POST /admin/settings/test-rpc   - Test RPC connectivity (masterAuth)
+ * GET  /admin/wallets/:id/balance      - Wallet native+token balance (masterAuth)
+ * GET  /admin/wallets/:id/transactions - Wallet transaction history (masterAuth)
  */
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -797,6 +882,108 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           latencyMs,
           error: errorMessage,
         },
+        200,
+      );
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/wallets/:id/transactions
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminWalletTransactionsRoute, async (c) => {
+    const { id } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const limit = query.limit ?? 20;
+
+    // Verify wallet exists
+    const wallet = deps.db.select().from(wallets).where(eq(wallets.id, id)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
+    }
+
+    // Query transactions for this wallet
+    const rows = deps.db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.walletId, id))
+      .orderBy(desc(transactions.createdAt))
+      .limit(limit)
+      .all();
+
+    // Total count
+    const totalResult = deps.db
+      .select({ count: sql<number>`count(*)` })
+      .from(transactions)
+      .where(eq(transactions.walletId, id))
+      .get();
+    const total = totalResult?.count ?? 0;
+
+    const items = rows.map((tx) => ({
+      id: tx.id,
+      type: tx.type,
+      status: tx.status,
+      toAddress: tx.toAddress ?? null,
+      amount: tx.amount ?? null,
+      network: tx.network ?? null,
+      txHash: tx.txHash ?? null,
+      createdAt: tx.createdAt instanceof Date
+        ? Math.floor(tx.createdAt.getTime() / 1000)
+        : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
+    }));
+
+    return c.json({ items, total }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/wallets/:id/balance
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminWalletBalanceRoute, async (c) => {
+    const { id } = c.req.valid('param');
+
+    // Verify wallet exists
+    const wallet = deps.db.select().from(wallets).where(eq(wallets.id, id)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
+    }
+
+    // If no adapter pool, return null balance
+    if (!deps.adapterPool) {
+      return c.json({ native: null, tokens: [] }, 200);
+    }
+
+    try {
+      const network = (wallet.defaultNetwork
+        ?? getDefaultNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType)) as NetworkType;
+      const rpcUrl = resolveRpcUrl(deps.daemonConfig!.rpc, wallet.chain, network);
+      const adapter = await deps.adapterPool.resolve(wallet.chain as ChainType, network, rpcUrl);
+
+      // Get native balance
+      const balanceInfo = await adapter.getBalance(wallet.publicKey);
+      const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
+
+      // Get token assets
+      const assets = await adapter.getAssets(wallet.publicKey);
+      const tokens = assets
+        .filter((a) => !a.isNative)
+        .map((a) => ({
+          symbol: a.symbol,
+          balance: (Number(a.balance) / 10 ** a.decimals).toString(),
+          address: a.mint,
+        }));
+
+      return c.json(
+        {
+          native: { balance: nativeBalance, symbol: balanceInfo.symbol, network },
+          tokens,
+        },
+        200,
+      );
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      return c.json(
+        { native: null, tokens: [], error: errorMessage },
         200,
       );
     }

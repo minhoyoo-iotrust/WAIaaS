@@ -128,6 +128,7 @@ export const SessionListItemSchema = z
   .object({
     id: z.string().uuid(),
     walletId: z.string().uuid(),
+    walletName: z.string().nullable(),
     status: z.string(),
     renewalCount: z.number().int(),
     maxRenewals: z.number().int(),
