@@ -55,31 +55,31 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CUMUL-01 | — | Pending |
-| CUMUL-02 | — | Pending |
-| CUMUL-03 | — | Pending |
-| CUMUL-04 | — | Pending |
-| CUMUL-05 | — | Pending |
-| CUMUL-06 | — | Pending |
-| CUMUL-07 | — | Pending |
-| CUMUL-08 | — | Pending |
-| CUMUL-09 | — | Pending |
-| CUMUL-10 | — | Pending |
-| DISP-01 | — | Pending |
-| DISP-02 | — | Pending |
-| DISP-03 | — | Pending |
-| DISP-04 | — | Pending |
-| DISP-05 | — | Pending |
-| DISP-06 | — | Pending |
-| DISP-07 | — | Pending |
-| DISP-08 | — | Pending |
-| DISP-09 | — | Pending |
+| CUMUL-01 | Phase 136 | Pending |
+| CUMUL-02 | Phase 136 | Pending |
+| CUMUL-03 | Phase 136 | Pending |
+| CUMUL-04 | Phase 136 | Pending |
+| CUMUL-05 | Phase 136 | Pending |
+| CUMUL-06 | Phase 136 | Pending |
+| CUMUL-07 | Phase 136 | Pending |
+| CUMUL-08 | Phase 137 | Pending |
+| CUMUL-09 | Phase 137 | Pending |
+| CUMUL-10 | Phase 137 | Pending |
+| DISP-01 | Phase 138 | Pending |
+| DISP-02 | Phase 138 | Pending |
+| DISP-03 | Phase 138 | Pending |
+| DISP-04 | Phase 138 | Pending |
+| DISP-05 | Phase 139 | Pending |
+| DISP-06 | Phase 139 | Pending |
+| DISP-07 | Phase 139 | Pending |
+| DISP-08 | Phase 139 | Pending |
+| DISP-09 | Phase 138 | Pending |
 
 **Coverage:**
 - v1.5.3 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after initial definition*
+*Last updated: 2026-02-16 after roadmap creation -- all 19 requirements mapped to phases 136-139*
