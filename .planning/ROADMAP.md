@@ -98,8 +98,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 123-01-PLAN.md — 대시보드 StatCard 링크 + 추가 카드 + 최근 활동
-- [ ] 123-02-PLAN.md — 월렛 상세 잔액/트랜잭션 + 세션 전체 조회
+- [x] 123-01-PLAN.md — 대시보드 StatCard 링크 + 추가 카드 + 최근 활동
+- [x] 123-02-PLAN.md — 월렛 상세 잔액/트랜잭션 + 세션 전체 조회
 
 ### Phase 124: 알림 시스템 개선
 **Goal**: 알림 테스트가 정상 동작하고, 발송 메시지가 저장/조회 가능하며, Slack 채널이 지원된다
@@ -111,11 +111,11 @@ Plans:
   3. 알림 Delivery Log에서 행을 클릭하면 실제 발송된 메시지 원문을 확인할 수 있다
   4. config.toml에 slack_webhook_url 설정 시 Channel Status에 Slack이 표시되고 알림이 발송된다
   5. admin.skill.md에 Slack 알림 채널 정보가 반영된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 124-01: 알림 테스트 버그 수정 + 채널별 테스트 UI
-- [ ] 124-02: DB 마이그레이션 v10 + 메시지 저장 + Slack 채널 + 스킬 파일
+- [ ] 124-01-PLAN.md — 알림 테스트 버그 수정 + 채널별 테스트 UI
+- [ ] 124-02-PLAN.md — DB 마이그레이션 v10 + 메시지 저장 + Slack 채널 + 스킬 파일
 
 ## Progress
 
