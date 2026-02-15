@@ -43,21 +43,21 @@ Requirements for x402 클라이언트 지원. Each maps to roadmap phases.
 
 ### Policy Integration (X4POL)
 
-- [ ] **X4POL-01**: X402_ALLOWED_DOMAINS 정책 평가 — 기본 거부, 도메인 화이트리스트 매칭
-- [ ] **X4POL-02**: 와일드카드 도메인 매칭 — *.example.com → sub.example.com 허용, dot-boundary 엄격 검증
-- [ ] **X4POL-03**: 기존 SPENDING_LIMIT 4-tier 평가 통합 — evaluateAndReserve() 재사용
-- [ ] **X4POL-04**: USDC $1 직접 환산 + 기타 토큰 IPriceOracle USD 환산
-- [ ] **X4POL-05**: DELAY 티어 — request_timeout(기본 30초) 내 대기, 초과 시 X402_DELAY_TIMEOUT 거부
-- [ ] **X4POL-06**: APPROVAL 티어 — 즉시 X402_APPROVAL_REQUIRED 거부 (동기 HTTP에서 Owner 승인 대기 불가)
-- [ ] **X4POL-07**: reserved_amount 누적에 x402 결제 포함 — 세션 지출 한도 TOCTOU 방지
-- [ ] **X4POL-08**: Kill Switch 활성 시 x402 결제 포함 모든 거래 차단
+- [x] **X4POL-01**: X402_ALLOWED_DOMAINS 정책 평가 — 기본 거부, 도메인 화이트리스트 매칭
+- [x] **X4POL-02**: 와일드카드 도메인 매칭 — *.example.com → sub.example.com 허용, dot-boundary 엄격 검증
+- [x] **X4POL-03**: 기존 SPENDING_LIMIT 4-tier 평가 통합 — evaluateAndReserve() 재사용
+- [x] **X4POL-04**: USDC $1 직접 환산 + 기타 토큰 IPriceOracle USD 환산
+- [x] **X4POL-05**: DELAY 티어 — request_timeout(기본 30초) 내 대기, 초과 시 X402_DELAY_TIMEOUT 거부
+- [x] **X4POL-06**: APPROVAL 티어 — 즉시 X402_APPROVAL_REQUIRED 거부 (동기 HTTP에서 Owner 승인 대기 불가)
+- [x] **X4POL-07**: reserved_amount 누적에 x402 결제 포함 — 세션 지출 한도 TOCTOU 방지
+- [x] **X4POL-08**: Kill Switch 활성 시 x402 결제 포함 모든 거래 차단
 
 ### API + Config (X4API)
 
-- [ ] **X4API-01**: POST /v1/x402/fetch 엔드포인트 — sessionAuth 보호, OpenAPIHono createRoute
-- [ ] **X4API-02**: x402 결제 내역 transactions 테이블 기록 — type=X402_PAYMENT, metadata에 target_url/payment_amount/network 저장
-- [ ] **X4API-03**: config.toml [x402] 섹션 — enabled(기본 true), request_timeout(기본 30초)
-- [ ] **X4API-04**: 기존 알림 트리거 연동 — x402 결제 시 TX_REQUESTED/TX_CONFIRMED/TX_FAILED 이벤트
+- [x] **X4API-01**: POST /v1/x402/fetch 엔드포인트 — sessionAuth 보호, OpenAPIHono createRoute
+- [x] **X4API-02**: x402 결제 내역 transactions 테이블 기록 — type=X402_PAYMENT, metadata에 target_url/payment_amount/network 저장
+- [x] **X4API-03**: config.toml [x402] 섹션 — enabled(기본 true), request_timeout(기본 30초)
+- [x] **X4API-04**: 기존 알림 트리거 연동 — x402 결제 시 TX_REQUESTED/TX_CONFIRMED/TX_FAILED 이벤트
 
 ### DX Integration (X4DX)
 
@@ -113,18 +113,18 @@ Requirements for x402 클라이언트 지원. Each maps to roadmap phases.
 | X4SIGN-02 | Phase 131 | ✓ Done |
 | X4SIGN-03 | Phase 131 | ✓ Done |
 | X4SIGN-04 | Phase 131 | ✓ Done |
-| X4POL-01 | Phase 132 | Pending |
-| X4POL-02 | Phase 132 | Pending |
-| X4POL-03 | Phase 132 | Pending |
-| X4POL-04 | Phase 132 | Pending |
-| X4POL-05 | Phase 132 | Pending |
-| X4POL-06 | Phase 132 | Pending |
-| X4POL-07 | Phase 132 | Pending |
-| X4POL-08 | Phase 132 | Pending |
-| X4API-01 | Phase 132 | Pending |
-| X4API-02 | Phase 132 | Pending |
-| X4API-03 | Phase 132 | Pending |
-| X4API-04 | Phase 132 | Pending |
+| X4POL-01 | Phase 132 | ✓ Done |
+| X4POL-02 | Phase 132 | ✓ Done |
+| X4POL-03 | Phase 132 | ✓ Done |
+| X4POL-04 | Phase 132 | ✓ Done |
+| X4POL-05 | Phase 132 | ✓ Done |
+| X4POL-06 | Phase 132 | ✓ Done |
+| X4POL-07 | Phase 132 | ✓ Done |
+| X4POL-08 | Phase 132 | ✓ Done |
+| X4API-01 | Phase 132 | ✓ Done |
+| X4API-02 | Phase 132 | ✓ Done |
+| X4API-03 | Phase 132 | ✓ Done |
+| X4API-04 | Phase 132 | ✓ Done |
 | X4DX-01 | Phase 133 | Pending |
 | X4DX-02 | Phase 133 | Pending |
 | X4DX-03 | Phase 133 | Pending |
