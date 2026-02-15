@@ -80,7 +80,7 @@
 **Milestone Goal:** 월렛 단위 기간별 누적 USD 지출 한도로 분할 전송 우회를 방지하고, USD 외 사용자 선호 법정 통화로 금액을 환산 표시하여 다국어 DX를 개선한다.
 
 - [x] **Phase 136: 누적 지출 한도 엔진** - DB v13 마이그레이션 + 정책 스키마 확장 + 누적 집계 + 알림
-- [ ] **Phase 137: 누적 한도 Admin UI + SDK/MCP** - 누적 한도 폼/시각화 + SDK/MCP 필드 확장
+- [x] **Phase 137: 누적 한도 Admin UI + SDK/MCP** - 누적 한도 폼/시각화 + SDK/MCP 필드 확장
 - [ ] **Phase 138: ForexRateService + 표시 통화 설정** - 환율 서비스 + Settings + 통화 포매팅
 - [ ] **Phase 139: 표시 통화 통합** - Admin UI/알림/REST API/MCP 환산 표시
 
@@ -113,8 +113,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 137-01-PLAN.md -- SpendingLimitForm 누적 필드 + PolicyRulesSummary 누적 시각화
-- [ ] 137-02-PLAN.md -- SDK/MCP 누적 한도 필드 확장 + 스킬 파일 동기화
+- [x] 137-01-PLAN.md -- SpendingLimitForm 누적 필드 + PolicyRulesSummary 누적 시각화
+- [x] 137-02-PLAN.md -- SDK/MCP 누적 한도 필드 확장 + 스킬 파일 동기화
 
 ### Phase 138: ForexRateService + 표시 통화 설정
 **Goal**: USD에서 43개 법정 통화로의 환율 조회가 동작하고, Admin Settings에서 표시 통화를 선택하면 즉시 반영되며, Intl.NumberFormat 기반 통화 포매팅이 적용되는 상태
@@ -154,7 +154,7 @@ Phases execute in numeric order: 136 -> 137 -> 138 -> 139
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 136. 누적 지출 한도 엔진 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
-| 137. 누적 한도 Admin UI + SDK/MCP | v1.5.3 | 0/2 | Not started | - |
+| 137. 누적 한도 Admin UI + SDK/MCP | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 | 138. ForexRateService + 표시 통화 설정 | v1.5.3 | 0/2 | Not started | - |
 | 139. 표시 통화 통합 | v1.5.3 | 0/2 | Not started | - |
 
