@@ -1,9 +1,9 @@
 ---
 name: "WAIaaS Admin"
-description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown"
+description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management"
 category: "api"
-tags: [wallet, blockchain, admin, security, waiass]
-version: "1.4.8"
+tags: [wallet, blockchain, admin, security, oracle, defi, waiass]
+version: "1.5.0"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -535,7 +535,145 @@ curl -s -X POST http://localhost:3100/v1/admin/recover \
 
 ---
 
-## 6. Error Reference
+## 6. Oracle Status (v1.5)
+
+Price oracle cache statistics, source availability, and cross-validation configuration.
+
+### GET /v1/admin/oracle-status -- Oracle Status
+
+Returns cache hit/miss stats, Pyth and CoinGecko source availability, and cross-validation settings.
+
+```bash
+curl -s http://localhost:3100/v1/admin/oracle-status \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "cache": {
+    "hits": 142,
+    "misses": 23,
+    "staleHits": 5,
+    "size": 38,
+    "evictions": 0
+  },
+  "sources": {
+    "pyth": {
+      "available": true,
+      "baseUrl": "https://hermes.pyth.network"
+    },
+    "coingecko": {
+      "available": true,
+      "apiKeyConfigured": true
+    }
+  },
+  "crossValidation": {
+    "enabled": true,
+    "threshold": 5
+  }
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `cache.hits` | integer | Cache hit count. |
+| `cache.misses` | integer | Cache miss count. |
+| `cache.staleHits` | integer | Stale cache fallback count. |
+| `cache.size` | integer | Current cache entry count. |
+| `cache.evictions` | integer | LRU eviction count. |
+| `sources.pyth.available` | boolean | Pyth Hermes oracle available. |
+| `sources.pyth.baseUrl` | string | Pyth Hermes API base URL. |
+| `sources.coingecko.available` | boolean | CoinGecko oracle available. |
+| `sources.coingecko.apiKeyConfigured` | boolean | CoinGecko API key configured. |
+| `crossValidation.enabled` | boolean | Cross-validation enabled (requires CoinGecko). |
+| `crossValidation.threshold` | number | Max price deviation percentage before STALE. |
+
+---
+
+## 7. API Key Management (v1.5)
+
+Manage API keys for Action Providers. Keys are encrypted at rest in the database.
+
+### GET /v1/admin/api-keys -- List API Key Status
+
+Returns per-provider API key status. Key values are masked.
+
+```bash
+curl -s http://localhost:3100/v1/admin/api-keys \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "keys": [
+    {
+      "providerName": "jupiter",
+      "hasKey": true,
+      "maskedKey": "ju...er",
+      "requiresApiKey": true,
+      "updatedAt": "2026-02-15T10:30:00.000Z"
+    },
+    {
+      "providerName": "raydium",
+      "hasKey": false,
+      "maskedKey": null,
+      "requiresApiKey": false,
+      "updatedAt": null
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `providerName` | string | Action provider name. |
+| `hasKey` | boolean | Whether an API key is set. |
+| `maskedKey` | string\|null | Masked key (first 2 + last 2 chars), or null. |
+| `requiresApiKey` | boolean | Provider requires API key to function. |
+| `updatedAt` | string\|null | ISO 8601 timestamp of last update, or null. |
+
+### PUT /v1/admin/api-keys/:provider -- Set/Update API Key
+
+Set or update the API key for a specific provider.
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/admin/api-keys/jupiter \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"apiKey": "your-api-key-here"}'
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "providerName": "jupiter"
+}
+```
+
+### DELETE /v1/admin/api-keys/:provider -- Delete API Key
+
+Delete the API key for a specific provider.
+
+```bash
+curl -s -X DELETE http://localhost:3100/v1/admin/api-keys/jupiter \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+If no key exists for the provider, returns 404 `ACTION_NOT_FOUND`.
+
+---
+
+## 8. Error Reference
 
 | Error Code               | HTTP | Description                                    |
 | ------------------------ | ---- | ---------------------------------------------- |
@@ -545,6 +683,8 @@ curl -s -X POST http://localhost:3100/v1/admin/recover \
 | `ROTATION_TOO_RECENT`    | 429  | JWT secret rotation attempted too soon.         |
 | `ADAPTER_NOT_AVAILABLE`  | 500  | Required service not initialized.               |
 | `ACTION_VALIDATION_FAILED`| 400 | Invalid setting key or request body.            |
+| `API_KEY_REQUIRED`       | 403  | Action provider requires API key not yet configured. |
+| `ACTION_NOT_FOUND`       | 404  | Action provider or API key not found.           |
 
 **Error response format:**
 ```json
@@ -560,8 +700,9 @@ curl -s -X POST http://localhost:3100/v1/admin/recover \
 
 ---
 
-## 7. Related Skill Files
+## 9. Related Skill Files
 
+- **actions.skill.md** -- Action Provider REST API (DeFi actions)
 - **policies.skill.md** -- Policy management (10 policy types for transaction controls)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets, tokens, MCP
 - **transactions.skill.md** -- 5-type transaction reference
