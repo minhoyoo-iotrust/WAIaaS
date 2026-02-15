@@ -32,6 +32,7 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 9-패키지 모노레
 - ✅ v1.5 DeFi Price Oracle + Action Provider Framework — shipped 2026-02-15 (1,848 tests, ~185,000 LOC)
 - ✅ v1.5.1 x402 클라이언트 지원 — shipped 2026-02-15 (2,058 tests, ~187,000 LOC)
 - ✅ v1.5.2 Admin UI 정책 폼 UX 개선 — shipped 2026-02-16 (2,111 tests, ~188,000 LOC)
+- **► v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화)** — in progress
 - v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
