@@ -46,6 +46,7 @@
 | 029 | ENHANCEMENT | LOW | Admin UI 알림 테스트 시 대상 채널 불명확 — 채널 선택 UI 없음 | v1.4.8 | FIXED | 2026-02-15 |
 | 030 | ENHANCEMENT | LOW | Slack 알림 채널 미지원 — Incoming Webhook 방식 추가 | v1.4.8 | FIXED | 2026-02-15 |
 | 031 | BUG | HIGH | pushSchema 인덱스 생성이 마이그레이션보다 먼저 실행 — 기존 DB 시작 실패 | v1.4.8 | FIXED | 2026-02-15 |
+| 032 | BUG | HIGH | ActionProviderRegistry.listActions() 빌드 실패 — noUncheckedIndexedAccess 위반 | v1.5 | FIXED | 2026-02-15 |
 
 ## Type Legend
 
@@ -58,7 +59,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 31
+- **FIXED:** 32
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 31
+- **Total:** 32

@@ -359,6 +359,17 @@ describe('ActionProviderRegistry', () => {
     expect(registry.listActions('multi_action')).toHaveLength(2);
   });
 
+  // listActions returns providerName as non-empty string
+  it('listActions returns providerName as non-empty string', () => {
+    const registry = new ActionProviderRegistry();
+    registry.register(createMockProvider());
+    const actions = registry.listActions();
+    for (const entry of actions) {
+      expect(typeof entry.providerName).toBe('string');
+      expect(entry.providerName.length).toBeGreaterThan(0);
+    }
+  });
+
   // Additional: requiresApiKey flag preserved
   it('preserves requiresApiKey metadata flag', () => {
     const registry = new ActionProviderRegistry();

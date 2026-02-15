@@ -125,7 +125,7 @@ export class ActionProviderRegistry {
   ): { providerName: string; action: ActionDefinition }[] {
     const result: { providerName: string; action: ActionDefinition }[] = [];
     for (const [key, entry] of this.actions) {
-      const pName = key.split('/')[0];
+      const pName = key.split('/')[0] ?? key;
       if (providerName && pName !== providerName) continue;
       result.push({ providerName: pName, action: entry.action });
     }
