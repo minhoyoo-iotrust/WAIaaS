@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import { NotificationService } from '../notifications/notification-service.js';
-import { createDatabase, pushSchema, auditLog } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, auditLog, notificationLogs } from '../infrastructure/database/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 
 // ---------------------------------------------------------------------------
@@ -485,7 +485,62 @@ describe('Message template integration', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. Config integration tests (DaemonConfigSchema new fields)
+// 7. Message storage tests (notification_logs.message column)
+// ---------------------------------------------------------------------------
+
+describe('Message storage in notification_logs', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('successful delivery stores message in notification_logs', async () => {
+    const { db } = createTestDb();
+    const service = new NotificationService({ db });
+    const ch = createMockChannel('telegram');
+    service.addChannel(ch);
+
+    await service.notify('TX_CONFIRMED', 'wallet-1', { txId: 'tx-msg-1', amount: '1 SOL' });
+
+    const logs = db.select().from(notificationLogs).all();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]!.message).toBeTruthy();
+    expect(logs[0]!.message).toContain('Transaction Confirmed');
+    expect(logs[0]!.message).toContain('tx-msg-1');
+    expect(logs[0]!.status).toBe('sent');
+  });
+
+  it('failed delivery also stores message in notification_logs', async () => {
+    const { db } = createTestDb();
+    const service = new NotificationService({ db });
+    service.addChannel(createMockChannel('telegram', true));
+
+    await service.notify('TX_FAILED', 'wallet-2', { txId: 'tx-fail-msg' });
+
+    const logs = db.select().from(notificationLogs).all();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]!.message).toBeTruthy();
+    expect(logs[0]!.message).toContain('Transaction Failed');
+    expect(logs[0]!.status).toBe('failed');
+    expect(logs[0]!.error).toBeTruthy();
+  });
+
+  it('message field contains title and body from template', async () => {
+    const { db } = createTestDb();
+    const service = new NotificationService({ db, config: { locale: 'en' } });
+    const ch = createMockChannel('telegram');
+    service.addChannel(ch);
+
+    await service.notify('KILL_SWITCH_ACTIVATED', 'wallet-1', { activatedBy: 'admin' });
+
+    const logs = db.select().from(notificationLogs).all();
+    expect(logs).toHaveLength(1);
+    // message = title + \n + body
+    expect(logs[0]!.message).toContain('Kill Switch');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. Config integration tests (DaemonConfigSchema new fields)
 // ---------------------------------------------------------------------------
 
 describe('Config integration', () => {

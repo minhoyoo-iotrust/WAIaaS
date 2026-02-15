@@ -412,14 +412,14 @@ describe('SettingsService', () => {
 
       for (const def of credentialDefs) {
         expect(
-          ['notifications.telegram_bot_token', 'notifications.discord_webhook_url'].includes(def.key),
+          ['notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url'].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 8 notifications + 14 rpc + 8 security + 1 daemon + 1 walletconnect = 32
-      expect(SETTING_DEFINITIONS.length).toBe(32);
+      // 9 notifications + 14 rpc + 11 security + 1 daemon + 1 walletconnect = 36
+      expect(SETTING_DEFINITIONS.length).toBe(36);
     });
   });
 });

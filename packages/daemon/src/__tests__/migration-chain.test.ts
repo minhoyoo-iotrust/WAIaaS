@@ -970,6 +970,70 @@ describe('edge cases', () => {
     expect(versions).toContain(LATEST_SCHEMA_VERSION);
   });
 
+  it('T-12: v9 DB -> v10 migration adds message column to notification_logs', () => {
+    // Create a v5 DB (which migrates to v9 via pushSchema)
+    db = createV5SchemaDatabase();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert notification log record (pre-v10, no message column)
+    db.prepare(
+      `INSERT INTO notification_logs (id, event_type, wallet_id, channel, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('notif-pre-v10', 'TX_CONFIRMED', 'w-1', 'telegram', 'sent', ts);
+
+    pushSchema(db);
+
+    // Verify message column exists
+    const columns = getTableColumns(db, 'notification_logs');
+    expect(columns).toContain('message');
+
+    // Verify existing record has message = NULL
+    const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
+    expect(row.message).toBeNull();
+
+    // Verify LATEST_SCHEMA_VERSION is 10
+    expect(LATEST_SCHEMA_VERSION).toBe(10);
+  });
+
+  it('T-13: existing notification_logs data preserved after v10 migration', () => {
+    db = createV5SchemaDatabase();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert multiple notification log records with different statuses
+    db.prepare(
+      `INSERT INTO notification_logs (id, event_type, wallet_id, channel, status, error, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run('notif-sent-1', 'TX_CONFIRMED', 'w-1', 'telegram', 'sent', null, ts);
+
+    db.prepare(
+      `INSERT INTO notification_logs (id, event_type, wallet_id, channel, status, error, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run('notif-fail-1', 'TX_FAILED', 'w-2', 'discord', 'failed', 'timeout', ts);
+
+    pushSchema(db);
+
+    // Verify records are preserved with original data
+    const sent = db.prepare('SELECT * FROM notification_logs WHERE id = ?').get('notif-sent-1') as {
+      event_type: string; wallet_id: string; channel: string; status: string; error: string | null; message: string | null;
+    };
+    expect(sent.event_type).toBe('TX_CONFIRMED');
+    expect(sent.wallet_id).toBe('w-1');
+    expect(sent.channel).toBe('telegram');
+    expect(sent.status).toBe('sent');
+    expect(sent.error).toBeNull();
+    expect(sent.message).toBeNull();
+
+    const failed = db.prepare('SELECT * FROM notification_logs WHERE id = ?').get('notif-fail-1') as {
+      event_type: string; wallet_id: string; channel: string; status: string; error: string | null; message: string | null;
+    };
+    expect(failed.event_type).toBe('TX_FAILED');
+    expect(failed.wallet_id).toBe('w-2');
+    expect(failed.channel).toBe('discord');
+    expect(failed.status).toBe('failed');
+    expect(failed.error).toBe('timeout');
+    expect(failed.message).toBeNull();
+  });
+
   it('T-11c: suspended wallet data preserved', () => {
     db = createV5SchemaDatabase();
     const ts = Math.floor(Date.now() / 1000);
