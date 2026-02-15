@@ -90,6 +90,15 @@ export const messages: Messages = {
     ACTION_CHAIN_MISMATCH: '액션의 체인이 일치하지 않습니다',
     // ADMIN domain (1)
     ROTATION_TOO_RECENT: '시크릿 로테이션이 너무 최근에 수행되었습니다',
+    // X402 domain (8)
+    X402_DISABLED: 'x402 결제가 비활성화되어 있습니다',
+    X402_DOMAIN_NOT_ALLOWED: 'x402 결제에 허용되지 않은 도메인입니다',
+    X402_SSRF_BLOCKED: '요청 차단: 대상이 사설/예약 IP로 해석됩니다',
+    X402_UNSUPPORTED_SCHEME: '지원하지 않는 x402 결제 스킴 또는 네트워크입니다',
+    X402_PAYMENT_REJECTED: 'x402 결제가 리소스 서버에 의해 거부되었습니다',
+    X402_DELAY_TIMEOUT: 'x402 결제가 요청 타임아웃을 초과했습니다 (DELAY 계층)',
+    X402_APPROVAL_REQUIRED: 'x402 결제에 Owner 승인이 필요합니다 (금액 초과)',
+    X402_SERVER_ERROR: 'x402 결제 후 리소스 서버 오류가 발생했습니다',
   },
   // Notification templates (21 event types)
   notifications: {

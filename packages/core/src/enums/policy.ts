@@ -12,6 +12,7 @@ export const POLICY_TYPES = [
   'APPROVE_AMOUNT_LIMIT',
   'APPROVE_TIER_OVERRIDE',
   'ALLOWED_NETWORKS',
+  'X402_ALLOWED_DOMAINS',
 ] as const;
 export type PolicyType = (typeof POLICY_TYPES)[number];
 export const PolicyTypeEnum = z.enum(POLICY_TYPES);

@@ -8,7 +8,8 @@ export type ErrorDomain =
   | 'WALLET'
   | 'WITHDRAW'
   | 'ACTION'
-  | 'ADMIN';
+  | 'ADMIN'
+  | 'X402';
 
 export interface ErrorCodeEntry {
   code: string;
@@ -575,6 +576,64 @@ export const ERROR_CODES = {
     httpStatus: 429,
     retryable: false,
     message: 'Key rotation attempted too recently',
+  },
+
+  // --- X402 domain (8) ---
+  X402_DISABLED: {
+    code: 'X402_DISABLED',
+    domain: 'X402',
+    httpStatus: 403,
+    retryable: false,
+    message: 'x402 payments are disabled',
+  },
+  X402_DOMAIN_NOT_ALLOWED: {
+    code: 'X402_DOMAIN_NOT_ALLOWED',
+    domain: 'X402',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Domain not allowed for x402 payments',
+  },
+  X402_SSRF_BLOCKED: {
+    code: 'X402_SSRF_BLOCKED',
+    domain: 'X402',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Request blocked: target resolves to private/reserved IP',
+  },
+  X402_UNSUPPORTED_SCHEME: {
+    code: 'X402_UNSUPPORTED_SCHEME',
+    domain: 'X402',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Unsupported x402 payment scheme or network',
+  },
+  X402_PAYMENT_REJECTED: {
+    code: 'X402_PAYMENT_REJECTED',
+    domain: 'X402',
+    httpStatus: 402,
+    retryable: false,
+    message: 'x402 payment was rejected by the resource server',
+  },
+  X402_DELAY_TIMEOUT: {
+    code: 'X402_DELAY_TIMEOUT',
+    domain: 'X402',
+    httpStatus: 408,
+    retryable: true,
+    message: 'x402 payment exceeds request timeout (DELAY tier)',
+  },
+  X402_APPROVAL_REQUIRED: {
+    code: 'X402_APPROVAL_REQUIRED',
+    domain: 'X402',
+    httpStatus: 403,
+    retryable: false,
+    message: 'x402 payment requires owner approval (amount too high)',
+  },
+  X402_SERVER_ERROR: {
+    code: 'X402_SERVER_ERROR',
+    domain: 'X402',
+    httpStatus: 502,
+    retryable: true,
+    message: 'Resource server error after x402 payment',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

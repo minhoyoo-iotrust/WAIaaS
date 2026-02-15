@@ -99,7 +99,7 @@ export {
   type AssetInfoDto,
 } from './schemas/index.js';
 
-// Errors (73 error codes + WAIaaSError + ChainError)
+// Errors (84 error codes + WAIaaSError + ChainError)
 export {
   ERROR_CODES,
   type ErrorCode,
@@ -112,7 +112,7 @@ export {
   CHAIN_ERROR_CATEGORIES,
 } from './errors/index.js';
 
-// Interfaces (5 contracts + chain adapter types + v1.5 price oracle types)
+// Interfaces (5 contracts + chain adapter types + v1.5 price oracle types + v1.5.1 x402 types)
 export type {
   TokenAmount,
   TransferRequest,
@@ -151,6 +151,13 @@ export type {
   ActionDefinition,
   ActionContext,
   IActionProvider,
+  // v1.5.1 x402 types
+  X402FetchRequest,
+  X402FetchResponse,
+  X402PaymentInfo,
+  PaymentRequired,
+  PaymentPayload,
+  PaymentRequirements,
 } from './interfaces/index.js';
 
 // v1.5 Price Oracle Zod schemas (value exports)
@@ -161,6 +168,20 @@ export {
   ActionProviderMetadataSchema,
   ActionDefinitionSchema,
   ActionContextSchema,
+} from './interfaces/index.js';
+
+// v1.5.1 x402 Zod schemas + CAIP-2 mapping (value exports)
+export {
+  X402FetchRequestSchema,
+  X402FetchResponseSchema,
+  X402PaymentInfoSchema,
+  CAIP2_TO_NETWORK,
+  NETWORK_TO_CAIP2,
+  parseCaip2,
+  resolveX402Network,
+  PaymentRequiredV2Schema,
+  PaymentPayloadV2Schema,
+  PaymentRequirementsV2Schema,
 } from './interfaces/index.js';
 
 // i18n (multilingual messages)
