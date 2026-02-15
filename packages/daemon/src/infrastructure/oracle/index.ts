@@ -11,3 +11,5 @@ export {
   PRICE_AGES,
   type PriceAge,
 } from './price-age.js';
+
+export { InMemoryPriceCache, buildCacheKey } from './price-cache.js';
