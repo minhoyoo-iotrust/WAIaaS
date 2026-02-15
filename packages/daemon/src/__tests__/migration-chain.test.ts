@@ -4,7 +4,7 @@
  * Tests cover:
  * T-1: v5 DB -> pushSchema success (MIGR-01 regression)
  * T-2/T-6: Schema equivalence (migrated vs fresh DB)
- * T-3: v1 DB -> pushSchema success (full chain v2-v11)
+ * T-3: v1 DB -> pushSchema success (full chain v2-v12)
  * T-4: Fresh DB -> pushSchema success (existing behavior)
  * T-5: Index completeness after migration
  * T-7: v7 network -> environment data transformation
@@ -21,6 +21,8 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import {
   createDatabase,
   pushSchema,
+  runMigrations,
+  MIGRATIONS,
   LATEST_SCHEMA_VERSION,
 } from '../infrastructure/database/index.js';
 
@@ -991,8 +993,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 11
-    expect(LATEST_SCHEMA_VERSION).toBe(11);
+    // Verify LATEST_SCHEMA_VERSION is 12
+    expect(LATEST_SCHEMA_VERSION).toBe(12);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1059,5 +1061,297 @@ describe('edge cases', () => {
     expect(wallet.owner_verified).toBe(1);
     expect(wallet.suspended_at).toBe(suspendedAt);
     expect(wallet.suspension_reason).toBe(reason);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T-14: v12 migration: X402_PAYMENT + X402_ALLOWED_DOMAINS CHECK constraints
+// ---------------------------------------------------------------------------
+
+describe('v12 migration: x402 CHECK constraints', () => {
+  let db: DatabaseType;
+
+  afterEach(() => {
+    try { db.close(); } catch { /* already closed */ }
+  });
+
+  /**
+   * Create a v11 state DB: v5 + pushSchema (which applies v6-v11).
+   * We need to test v11 -> v12 migration specifically.
+   */
+  function createV11Database(): DatabaseType {
+    // Start from v5 and let pushSchema apply v6-v11 migrations.
+    // But wait -- pushSchema now records v12 too (LATEST_SCHEMA_VERSION=12).
+    // So we create a v5 DB, apply v6-v11 manually, and stop before v12.
+    const v5Db = createV5SchemaDatabase();
+
+    // Get v6-v11 migrations
+    const v6to11 = MIGRATIONS.filter((m) => m.version >= 6 && m.version <= 11);
+    runMigrations(v5Db, v6to11);
+
+    return v5Db;
+  }
+
+  it('T-14a: v11 -> v12 migration preserves existing transactions data', () => {
+    db = createV11Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v12-tx', 'V12 TX Test', 'solana', 'testnet', 'devnet', 'pk-v12-tx', 'ACTIVE', 0, ts, ts);
+
+    // Insert session
+    db.prepare(
+      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('sess-v12', 'w-v12-tx', 'hash-v12', ts + 3600, ts + 86400, ts);
+
+    // Insert existing transactions with various types
+    db.prepare(
+      `INSERT INTO transactions (id, wallet_id, session_id, chain, type, amount, to_address, status, created_at, network)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tx-transfer', 'w-v12-tx', 'sess-v12', 'solana', 'TRANSFER', '1000000', 'addr1', 'CONFIRMED', ts, 'devnet');
+
+    db.prepare(
+      `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at, network)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tx-token', 'w-v12-tx', 'solana', 'TOKEN_TRANSFER', 'PENDING', ts, 'devnet');
+
+    // Run v12 migration
+    const v12 = MIGRATIONS.filter((m) => m.version === 12);
+    runMigrations(db, v12);
+
+    // Verify all data preserved
+    const transfer = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-transfer') as {
+      wallet_id: string; session_id: string; type: string; amount: string; to_address: string; status: string; network: string;
+    };
+    expect(transfer.wallet_id).toBe('w-v12-tx');
+    expect(transfer.session_id).toBe('sess-v12');
+    expect(transfer.type).toBe('TRANSFER');
+    expect(transfer.amount).toBe('1000000');
+    expect(transfer.to_address).toBe('addr1');
+    expect(transfer.status).toBe('CONFIRMED');
+    expect(transfer.network).toBe('devnet');
+
+    const token = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-token') as {
+      type: string; status: string; network: string;
+    };
+    expect(token.type).toBe('TOKEN_TRANSFER');
+    expect(token.status).toBe('PENDING');
+    expect(token.network).toBe('devnet');
+  });
+
+  it('T-14b: v11 -> v12 migration preserves existing policies data', () => {
+    db = createV11Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v12-pol', 'V12 Policy Test', 'ethereum', 'testnet', 'ethereum-sepolia', 'pk-v12-pol', 'ACTIVE', 0, ts, ts);
+
+    // Insert existing policies
+    db.prepare(
+      `INSERT INTO policies (id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('pol-spend', 'w-v12-pol', 'SPENDING_LIMIT', '{"max":"1000"}', 10, 1, 'ethereum-sepolia', ts, ts);
+
+    db.prepare(
+      `INSERT INTO policies (id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('pol-wl', 'w-v12-pol', 'WHITELIST', '{"addrs":["0x1"]}', 5, 1, null, ts, ts);
+
+    // Run v12 migration
+    const v12 = MIGRATIONS.filter((m) => m.version === 12);
+    runMigrations(db, v12);
+
+    // Verify policies preserved
+    const spend = db.prepare('SELECT * FROM policies WHERE id = ?').get('pol-spend') as {
+      wallet_id: string; type: string; rules: string; priority: number; enabled: number; network: string;
+    };
+    expect(spend.wallet_id).toBe('w-v12-pol');
+    expect(spend.type).toBe('SPENDING_LIMIT');
+    expect(spend.rules).toBe('{"max":"1000"}');
+    expect(spend.priority).toBe(10);
+    expect(spend.enabled).toBe(1);
+    expect(spend.network).toBe('ethereum-sepolia');
+
+    const wl = db.prepare('SELECT * FROM policies WHERE id = ?').get('pol-wl') as {
+      type: string; network: string | null;
+    };
+    expect(wl.type).toBe('WHITELIST');
+    expect(wl.network).toBeNull();
+  });
+
+  it('T-14c: v12 CHECK allows X402_PAYMENT transaction type', () => {
+    db = createV11Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-x402', 'X402 Test', 'ethereum', 'mainnet', 'ethereum-mainnet', 'pk-x402', 'ACTIVE', 0, ts, ts);
+
+    // Run v12 migration
+    const v12 = MIGRATIONS.filter((m) => m.version === 12);
+    runMigrations(db, v12);
+
+    // X402_PAYMENT should be accepted
+    expect(() => {
+      db.prepare(
+        `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at, network)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run('tx-x402', 'w-x402', 'ethereum', 'X402_PAYMENT', 'PENDING', ts, 'ethereum-mainnet');
+    }).not.toThrow();
+
+    const tx = db.prepare('SELECT type FROM transactions WHERE id = ?').get('tx-x402') as { type: string };
+    expect(tx.type).toBe('X402_PAYMENT');
+  });
+
+  it('T-14d: v12 CHECK allows X402_ALLOWED_DOMAINS policy type', () => {
+    db = createV11Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-x402-pol', 'X402 Policy Test', 'ethereum', 'mainnet', 'ethereum-mainnet', 'pk-x402-pol', 'ACTIVE', 0, ts, ts);
+
+    // Run v12 migration
+    const v12 = MIGRATIONS.filter((m) => m.version === 12);
+    runMigrations(db, v12);
+
+    // X402_ALLOWED_DOMAINS should be accepted
+    expect(() => {
+      db.prepare(
+        `INSERT INTO policies (id, wallet_id, type, rules, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('pol-x402', 'w-x402-pol', 'X402_ALLOWED_DOMAINS', '{"domains":["example.com"]}', ts, ts);
+    }).not.toThrow();
+
+    const pol = db.prepare('SELECT type FROM policies WHERE id = ?').get('pol-x402') as { type: string };
+    expect(pol.type).toBe('X402_ALLOWED_DOMAINS');
+  });
+
+  it('T-14e: v12 CHECK rejects invalid transaction type', () => {
+    db = createV11Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-invalid', 'Invalid Test', 'solana', 'testnet', 'devnet', 'pk-invalid', 'ACTIVE', 0, ts, ts);
+
+    // Run v12 migration
+    const v12 = MIGRATIONS.filter((m) => m.version === 12);
+    runMigrations(db, v12);
+
+    // INVALID_TYPE should be rejected by CHECK constraint
+    expect(() => {
+      db.prepare(
+        `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('tx-invalid', 'w-invalid', 'solana', 'INVALID_TYPE', 'PENDING', ts);
+    }).toThrow(/CHECK/i);
+  });
+
+  it('T-14f: v12 FK integrity check passes', () => {
+    db = createV11Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet + session + transaction + policy FK chain
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-fk-v12', 'FK V12', 'solana', 'testnet', 'devnet', 'pk-fk-v12', 'ACTIVE', 0, ts, ts);
+
+    db.prepare(
+      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('sess-fk-v12', 'w-fk-v12', 'hash-fk-v12', ts + 3600, ts + 86400, ts);
+
+    db.prepare(
+      `INSERT INTO transactions (id, wallet_id, session_id, chain, type, status, created_at, network)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tx-fk-v12', 'w-fk-v12', 'sess-fk-v12', 'solana', 'TRANSFER', 'PENDING', ts, 'devnet');
+
+    db.prepare(
+      `INSERT INTO policies (id, wallet_id, type, rules, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('pol-fk-v12', 'w-fk-v12', 'SPENDING_LIMIT', '{}', ts, ts);
+
+    // Run v12 migration
+    const v12 = MIGRATIONS.filter((m) => m.version === 12);
+    runMigrations(db, v12);
+
+    // FK check should pass
+    const fkErrors = db.pragma('foreign_key_check') as unknown[];
+    expect(fkErrors).toEqual([]);
+  });
+
+  it('T-14g: v1 -> v12 full chain migration succeeds', () => {
+    // The existing T-3 test already covers v1->LATEST via pushSchema.
+    // Here we verify the final version explicitly.
+    db = createV1SchemaDatabase();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert agent data for full chain test
+    db.prepare(
+      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('a-chain-12', 'Chain V12', 'solana', 'devnet', 'pk-chain-12', 'ACTIVE', 0, ts, ts);
+
+    db.prepare(
+      `INSERT INTO transactions (id, agent_id, chain, type, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('tx-chain-12', 'a-chain-12', 'solana', 'TRANSFER', 'PENDING', ts);
+
+    db.prepare(
+      `INSERT INTO policies (id, agent_id, type, rules, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('pol-chain-12', 'a-chain-12', 'SPENDING_LIMIT', '{}', ts, ts);
+
+    // Run full pushSchema (v2 -> v12 chain)
+    pushSchema(db);
+
+    // Verify final version is 12
+    const versions = getVersions(db);
+    expect(versions).toContain(12);
+    expect(Math.max(...versions)).toBe(12);
+
+    // Verify data survived the entire chain
+    const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
+    expect(wallet.environment).toBe('testnet');
+    expect(wallet.default_network).toBe('devnet');
+
+    const tx = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-chain-12') as { wallet_id: string; network: string };
+    expect(tx.wallet_id).toBe('a-chain-12');
+    expect(tx.network).toBe('devnet');
+
+    const pol = db.prepare('SELECT * FROM policies WHERE id = ?').get('pol-chain-12') as { wallet_id: string; type: string };
+    expect(pol.wallet_id).toBe('a-chain-12');
+    expect(pol.type).toBe('SPENDING_LIMIT');
+
+    // Verify X402_PAYMENT can be inserted after full chain migration
+    expect(() => {
+      db.prepare(
+        `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at, network)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run('tx-x402-chain', 'a-chain-12', 'solana', 'X402_PAYMENT', 'PENDING', ts, 'devnet');
+    }).not.toThrow();
+
+    // Verify X402_ALLOWED_DOMAINS can be inserted
+    expect(() => {
+      db.prepare(
+        `INSERT INTO policies (id, wallet_id, type, rules, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('pol-x402-chain', 'a-chain-12', 'X402_ALLOWED_DOMAINS', '{"domains":["example.com"]}', ts, ts);
+    }).not.toThrow();
   });
 });

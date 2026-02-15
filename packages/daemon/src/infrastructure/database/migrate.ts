@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 11;
+export const LATEST_SCHEMA_VERSION = 12;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -997,6 +997,127 @@ MIGRATIONS.push({
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v12: Add X402_PAYMENT to transactions and X402_ALLOWED_DOMAINS to policies CHECK constraints
+// ---------------------------------------------------------------------------
+// x402 결제 지원을 위해 transactions.type에 X402_PAYMENT,
+// policies.type에 X402_ALLOWED_DOMAINS가 CHECK 제약에 포함되어야 한다.
+// SQLite는 ALTER CHECK 불가 -> transactions와 policies 모두 12-step 재생성.
+
+MIGRATIONS.push({
+  version: 12,
+  description:
+    'Add X402_PAYMENT to transactions and X402_ALLOWED_DOMAINS to policies CHECK constraints',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+
+    try {
+      // ── Part 1: transactions 테이블 재생성 ──
+      // v9과 동일 DDL. TRANSACTION_TYPES SSoT에 X402_PAYMENT이 이미 포함됨.
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions_new(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+)`);
+
+      sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network FROM transactions`);
+
+      sqlite.exec('DROP TABLE transactions');
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+
+      // Recreate all 8 indexes (same as v9)
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_wallet_status ON transactions(wallet_id, status)',
+      );
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_session_id ON transactions(session_id)',
+      );
+      sqlite.exec(
+        'CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash)',
+      );
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_queued_at ON transactions(queued_at)',
+      );
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_created_at ON transactions(created_at)',
+      );
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_type ON transactions(type)',
+      );
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)',
+      );
+      sqlite.exec(
+        'CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)',
+      );
+
+      // ── Part 2: policies 테이블 재생성 ──
+      // v8과 동일 DDL. POLICY_TYPES SSoT에 X402_ALLOWED_DOMAINS가 이미 포함됨.
+      sqlite.exec(`CREATE TABLE policies_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN (${inList(POLICY_TYPES)})),
+  rules TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+      sqlite.exec(`INSERT INTO policies_new (id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at)
+  SELECT id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at FROM policies`);
+
+      sqlite.exec('DROP TABLE policies');
+      sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
+
+      // Recreate 3 indexes (same as v8)
+      sqlite.exec(
+        'CREATE INDEX idx_policies_wallet_enabled ON policies(wallet_id, enabled)',
+      );
+      sqlite.exec('CREATE INDEX idx_policies_type ON policies(type)');
+      sqlite.exec('CREATE INDEX idx_policies_network ON policies(network)');
+
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(
+        `FK integrity violation after v12: ${JSON.stringify(fkErrors)}`,
+      );
+    }
   },
 });
 

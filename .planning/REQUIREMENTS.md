@@ -91,13 +91,13 @@ Requirements for x402 클라이언트 지원. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| X4CORE-01 | Phase 130 | Pending |
-| X4CORE-02 | Phase 130 | Pending |
-| X4CORE-03 | Phase 130 | Pending |
-| X4CORE-04 | Phase 130 | Pending |
-| X4CORE-05 | Phase 130 | Pending |
-| X4CORE-06 | Phase 130 | Pending |
-| X4CORE-07 | Phase 130 | Pending |
+| X4CORE-01 | Phase 130 | ✓ Done |
+| X4CORE-02 | Phase 130 | ✓ Done |
+| X4CORE-03 | Phase 130 | ✓ Done |
+| X4CORE-04 | Phase 130 | ✓ Done |
+| X4CORE-05 | Phase 130 | ✓ Done |
+| X4CORE-06 | Phase 130 | ✓ Done |
+| X4CORE-07 | Phase 130 | ✓ Done |
 | X4SEC-01 | Phase 131 | Pending |
 | X4SEC-02 | Phase 131 | Pending |
 | X4SEC-03 | Phase 131 | Pending |

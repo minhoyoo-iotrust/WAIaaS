@@ -45,3 +45,19 @@ export {
   ActionDefinitionSchema,
   ActionContextSchema,
 } from './action-provider.types.js';
+
+// v1.5.1 x402 types (Zod SSoT)
+export type { X402FetchRequest, X402FetchResponse, X402PaymentInfo } from './x402.types.js';
+export type { PaymentRequired, PaymentPayload, PaymentRequirements } from './x402.types.js';
+export {
+  X402FetchRequestSchema,
+  X402FetchResponseSchema,
+  X402PaymentInfoSchema,
+  CAIP2_TO_NETWORK,
+  NETWORK_TO_CAIP2,
+  parseCaip2,
+  resolveX402Network,
+  PaymentRequiredV2Schema,
+  PaymentPayloadV2Schema,
+  PaymentRequirementsV2Schema,
+} from './x402.types.js';

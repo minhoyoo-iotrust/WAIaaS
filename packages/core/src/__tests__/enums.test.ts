@@ -66,16 +66,20 @@ describe('Enum SSoT', () => {
     expect(WALLET_STATUSES).toContain('TERMINATED');
   });
 
-  it('TransactionStatus has 9 values', () => {
-    expect(TRANSACTION_STATUSES).toHaveLength(9);
+  it('TransactionStatus has 10 values', () => {
+    expect(TRANSACTION_STATUSES).toHaveLength(10);
+    expect(TRANSACTION_STATUSES).toContain('SIGNED');
   });
 
-  it('TransactionType has 5 values', () => {
-    expect(TRANSACTION_TYPES).toHaveLength(5);
+  it('TransactionType has 7 values', () => {
+    expect(TRANSACTION_TYPES).toHaveLength(7);
+    expect(TRANSACTION_TYPES).toContain('SIGN');
+    expect(TRANSACTION_TYPES).toContain('X402_PAYMENT');
   });
 
-  it('PolicyType has 11 values', () => {
-    expect(POLICY_TYPES).toHaveLength(11);
+  it('PolicyType has 12 values', () => {
+    expect(POLICY_TYPES).toHaveLength(12);
+    expect(POLICY_TYPES).toContain('X402_ALLOWED_DOMAINS');
   });
 
   it('PolicyTier has 4 values', () => {

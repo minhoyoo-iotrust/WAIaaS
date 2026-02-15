@@ -22,6 +22,7 @@ export const TRANSACTION_TYPES = [
   'APPROVE',
   'BATCH',
   'SIGN',
+  'X402_PAYMENT',
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export const TransactionTypeEnum = z.enum(TRANSACTION_TYPES);

@@ -114,6 +114,15 @@ export const messages: Messages = {
     ACTION_CHAIN_MISMATCH: 'Action chain mismatch',
     // ADMIN domain (1)
     ROTATION_TOO_RECENT: 'Secret rotation too recent',
+    // X402 domain (8)
+    X402_DISABLED: 'x402 payments are disabled',
+    X402_DOMAIN_NOT_ALLOWED: 'Domain not allowed for x402 payments',
+    X402_SSRF_BLOCKED: 'Request blocked: target resolves to private/reserved IP',
+    X402_UNSUPPORTED_SCHEME: 'Unsupported x402 payment scheme or network',
+    X402_PAYMENT_REJECTED: 'x402 payment was rejected by the resource server',
+    X402_DELAY_TIMEOUT: 'x402 payment exceeds request timeout (DELAY tier)',
+    X402_APPROVAL_REQUIRED: 'x402 payment requires owner approval (amount too high)',
+    X402_SERVER_ERROR: 'Resource server error after x402 payment',
   },
   // Notification templates (21 event types)
   notifications: {

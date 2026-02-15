@@ -59,7 +59,7 @@
 
 **Milestone Goal:** AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태
 
-- [ ] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** - x402 타입 시스템, 에러 코드, DB 확장
+- [x] **Phase 130: Core 타입 + CAIP-2 매핑 + DB 마이그레이션** (2/2 plans) -- completed 2026-02-15
 - [ ] **Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명** - 보안 HTTP 프록시, 402 파싱, 체인별 서명 생성
 - [ ] **Phase 132: REST API + 정책 통합 + 감사 로그** - 엔드포인트 노출, 정책 평가, 트랜잭션 기록
 - [ ] **Phase 133: SDK + MCP + 스킬 파일** - TS/Python SDK, MCP 도구, 문서 통합
@@ -79,8 +79,8 @@
 **Plans**: 2 plans (2 waves)
 
 Plans:
-- [ ] 130-01-PLAN.md — @x402/core 의존성 + Enum 확장 + x402.types.ts + 에러 코드 + i18n + 테스트 (Wave 1)
-- [ ] 130-02-PLAN.md — DB 마이그레이션 v12 (transactions + policies CHECK 재생성) + 마이그레이션 테스트 (Wave 2)
+- [x] 130-01-PLAN.md — @x402/core 의존성 + Enum 확장 + x402.types.ts + 에러 코드 + i18n + 테스트 (Wave 1)
+- [x] 130-02-PLAN.md — DB 마이그레이션 v12 (transactions + policies CHECK 재생성) + 마이그레이션 테스트 (Wave 2)
 
 ### Phase 131: SSRF 가드 + x402 핸들러 + 결제 서명
 **Goal**: 외부 URL에 대한 안전한 HTTP 요청, 402 응답 파싱, 체인별 결제 서명 생성이 단위 테스트 수준에서 동작하는 상태
@@ -137,7 +137,7 @@ Phases execute in numeric order: 130 -> 131 -> 132 -> 133
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 130. Core 타입 + CAIP-2 + DB | v1.5.1 | 0/2 | Not started | - |
+| 130. Core 타입 + CAIP-2 + DB | v1.5.1 | 2/2 | ✓ Complete | 2026-02-15 |
 | 131. SSRF + 핸들러 + 서명 | v1.5.1 | 0/3 | Not started | - |
 | 132. API + 정책 + 감사 | v1.5.1 | 0/3 | Not started | - |
 | 133. SDK + MCP + 스킬 | v1.5.1 | 0/2 | Not started | - |
