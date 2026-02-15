@@ -75,7 +75,7 @@
 
 </details>
 
-### 🚧 v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) (In Progress)
+### v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) (In Progress)
 
 **Milestone Goal:** 월렛 단위 기간별 누적 USD 지출 한도로 분할 전송 우회를 방지하고, USD 외 사용자 선호 법정 통화로 금액을 환산 표시하여 다국어 DX를 개선한다.
 
@@ -110,11 +110,11 @@ Plans:
   1. Admin SpendingLimitForm에서 daily_limit_usd/monthly_limit_usd 값을 입력하고 저장할 수 있으며, 기존 정책 수정 시 현재값이 프리필된다
   2. PolicyRulesSummary에서 누적 한도 설정값과 현재 기간 내 사용량이 시각적으로 표시된다
   3. TS/Python SDK와 MCP에서 daily_limit_usd/monthly_limit_usd 필드를 포함한 SPENDING_LIMIT 정책을 생성/조회할 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 137-01: SpendingLimitForm 누적 필드 + PolicyRulesSummary 누적 시각화
-- [ ] 137-02: SDK/MCP 누적 한도 필드 확장 + 스킬 파일 동기화
+- [ ] 137-01-PLAN.md -- SpendingLimitForm 누적 필드 + PolicyRulesSummary 누적 시각화
+- [ ] 137-02-PLAN.md -- SDK/MCP 누적 한도 필드 확장 + 스킬 파일 동기화
 
 ### Phase 138: ForexRateService + 표시 통화 설정
 **Goal**: USD에서 43개 법정 통화로의 환율 조회가 동작하고, Admin Settings에서 표시 통화를 선택하면 즉시 반영되며, Intl.NumberFormat 기반 통화 포매팅이 적용되는 상태
@@ -160,4 +160,4 @@ Phases execute in numeric order: 136 -> 137 -> 138 -> 139
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 136 계획 완료 (2 plans, 7 requirements)*
+*Last updated: 2026-02-16 -- Phase 137 계획 완료 (2 plans, 3 requirements)*
