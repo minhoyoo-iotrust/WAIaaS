@@ -91,51 +91,51 @@ Requirements for x402 클라이언트 지원. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| X4CORE-01 | — | Pending |
-| X4CORE-02 | — | Pending |
-| X4CORE-03 | — | Pending |
-| X4CORE-04 | — | Pending |
-| X4CORE-05 | — | Pending |
-| X4CORE-06 | — | Pending |
-| X4CORE-07 | — | Pending |
-| X4SEC-01 | — | Pending |
-| X4SEC-02 | — | Pending |
-| X4SEC-03 | — | Pending |
-| X4SEC-04 | — | Pending |
-| X4SEC-05 | — | Pending |
-| X4HAND-01 | — | Pending |
-| X4HAND-02 | — | Pending |
-| X4HAND-03 | — | Pending |
-| X4HAND-04 | — | Pending |
-| X4HAND-05 | — | Pending |
-| X4HAND-06 | — | Pending |
-| X4SIGN-01 | — | Pending |
-| X4SIGN-02 | — | Pending |
-| X4SIGN-03 | — | Pending |
-| X4SIGN-04 | — | Pending |
-| X4POL-01 | — | Pending |
-| X4POL-02 | — | Pending |
-| X4POL-03 | — | Pending |
-| X4POL-04 | — | Pending |
-| X4POL-05 | — | Pending |
-| X4POL-06 | — | Pending |
-| X4POL-07 | — | Pending |
-| X4POL-08 | — | Pending |
-| X4API-01 | — | Pending |
-| X4API-02 | — | Pending |
-| X4API-03 | — | Pending |
-| X4API-04 | — | Pending |
-| X4DX-01 | — | Pending |
-| X4DX-02 | — | Pending |
-| X4DX-03 | — | Pending |
-| X4DX-04 | — | Pending |
-| X4DX-05 | — | Pending |
+| X4CORE-01 | Phase 130 | Pending |
+| X4CORE-02 | Phase 130 | Pending |
+| X4CORE-03 | Phase 130 | Pending |
+| X4CORE-04 | Phase 130 | Pending |
+| X4CORE-05 | Phase 130 | Pending |
+| X4CORE-06 | Phase 130 | Pending |
+| X4CORE-07 | Phase 130 | Pending |
+| X4SEC-01 | Phase 131 | Pending |
+| X4SEC-02 | Phase 131 | Pending |
+| X4SEC-03 | Phase 131 | Pending |
+| X4SEC-04 | Phase 131 | Pending |
+| X4SEC-05 | Phase 131 | Pending |
+| X4HAND-01 | Phase 131 | Pending |
+| X4HAND-02 | Phase 131 | Pending |
+| X4HAND-03 | Phase 131 | Pending |
+| X4HAND-04 | Phase 131 | Pending |
+| X4HAND-05 | Phase 131 | Pending |
+| X4HAND-06 | Phase 131 | Pending |
+| X4SIGN-01 | Phase 131 | Pending |
+| X4SIGN-02 | Phase 131 | Pending |
+| X4SIGN-03 | Phase 131 | Pending |
+| X4SIGN-04 | Phase 131 | Pending |
+| X4POL-01 | Phase 132 | Pending |
+| X4POL-02 | Phase 132 | Pending |
+| X4POL-03 | Phase 132 | Pending |
+| X4POL-04 | Phase 132 | Pending |
+| X4POL-05 | Phase 132 | Pending |
+| X4POL-06 | Phase 132 | Pending |
+| X4POL-07 | Phase 132 | Pending |
+| X4POL-08 | Phase 132 | Pending |
+| X4API-01 | Phase 132 | Pending |
+| X4API-02 | Phase 132 | Pending |
+| X4API-03 | Phase 132 | Pending |
+| X4API-04 | Phase 132 | Pending |
+| X4DX-01 | Phase 133 | Pending |
+| X4DX-02 | Phase 133 | Pending |
+| X4DX-03 | Phase 133 | Pending |
+| X4DX-04 | Phase 133 | Pending |
+| X4DX-05 | Phase 133 | Pending |
 
 **Coverage:**
 - v1 requirements: 39 total
-- Mapped to phases: 0
-- Unmapped: 39 ⚠️
+- Mapped to phases: 39
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-15*
-*Last updated: 2026-02-15 after initial definition*
+*Last updated: 2026-02-15 after roadmap creation*
