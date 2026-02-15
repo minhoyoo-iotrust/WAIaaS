@@ -39,7 +39,7 @@
 - [x] **Phase 121: MCP 안정성** — graceful shutdown + stdin 종료 감지 (1/1 plans) — completed 2026-02-15
 - [x] **Phase 122: MCP 도구 + 멀티체인 DX** — set_default_network, wallet info, network=all 잔액 (2/2 plans) — completed 2026-02-15
 - [x] **Phase 123: Admin UI 개선** — 대시보드 확장, 월렛 상세, 세션 전체 조회 (2/2 plans) — completed 2026-02-15
-- [ ] **Phase 124: 알림 시스템 개선** — 버그 수정, 메시지 저장, Slack 채널, 채널별 테스트
+- [x] **Phase 124: 알림 시스템 개선** — 버그 수정, 메시지 저장, Slack 채널, 채널별 테스트 (2/2 plans) — completed 2026-02-15
 
 ## Phase Details
 
@@ -139,4 +139,4 @@ Phases 120~124 are all independent. Recommended order: 120 (HIGH bug) -> 121 -> 
 | 121. MCP 안정성 | v1.4.8 | 1/1 | Complete | 2026-02-15 |
 | 122. MCP 도구 + 멀티체인 DX | v1.4.8 | 2/2 | Complete | 2026-02-15 |
 | 123. Admin UI 개선 | v1.4.8 | 2/2 | Complete | 2026-02-15 |
-| 124. 알림 시스템 개선 | v1.4.8 | 0/2 | Not started | - |
+| 124. 알림 시스템 개선 | v1.4.8 | 2/2 | Complete | 2026-02-15 |

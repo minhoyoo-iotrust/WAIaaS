@@ -41,17 +41,17 @@
 
 ### 알림 시스템
 
-- [ ] **NOTF-01**: 알림 테스트 발송이 SYSTEM_LOCKED 에러 없이 정상 동작한다
-- [ ] **NOTF-02**: 알림 패널에서 채널별 개별 [Test] 버튼으로 특정 채널만 테스트할 수 있다
-- [ ] **NOTF-03**: 알림 로그에 실제 발송된 메시지 내용이 저장되고 Admin UI에서 조회할 수 있다
-- [ ] **NOTF-04**: DB 마이그레이션 v10으로 notification_logs에 message 컬럼이 추가된다
-- [ ] **NOTF-05**: Slack Incoming Webhook 알림 채널이 지원된다
-- [ ] **NOTF-06**: config.toml slack_webhook_url 설정 시 Channel Status에 Slack이 표시된다
+- [x] **NOTF-01**: 알림 테스트 발송이 SYSTEM_LOCKED 에러 없이 정상 동작한다 — Phase 124
+- [x] **NOTF-02**: 알림 패널에서 채널별 개별 [Test] 버튼으로 특정 채널만 테스트할 수 있다 — Phase 124
+- [x] **NOTF-03**: 알림 로그에 실제 발송된 메시지 내용이 저장되고 Admin UI에서 조회할 수 있다 — Phase 124
+- [x] **NOTF-04**: DB 마이그레이션 v10으로 notification_logs에 message 컬럼이 추가된다 — Phase 124
+- [x] **NOTF-05**: Slack Incoming Webhook 알림 채널이 지원된다 — Phase 124
+- [x] **NOTF-06**: config.toml slack_webhook_url 설정 시 Channel Status에 Slack이 표시된다 — Phase 124
 
 ### Skill 파일 동기화
 
 - [x] **SKIL-01**: wallet.skill.md에 network=all 잔액, set_default_network, wallet info가 반영된다
-- [ ] **SKIL-02**: admin.skill.md에 Slack 알림 채널 정보가 반영된다
+- [x] **SKIL-02**: admin.skill.md에 Slack 알림 채널 정보가 반영된다 — Phase 124
 
 ## v2 Requirements
 
@@ -89,14 +89,14 @@
 | ADUI-05 | Phase 123 | ✅ Done |
 | ADUI-06 | Phase 123 | ✅ Done |
 | ADUI-07 | Phase 123 | ✅ Done |
-| NOTF-01 | Phase 124 | Pending |
-| NOTF-02 | Phase 124 | Pending |
-| NOTF-03 | Phase 124 | Pending |
-| NOTF-04 | Phase 124 | Pending |
-| NOTF-05 | Phase 124 | Pending |
-| NOTF-06 | Phase 124 | Pending |
+| NOTF-01 | Phase 124 | ✅ Done |
+| NOTF-02 | Phase 124 | ✅ Done |
+| NOTF-03 | Phase 124 | ✅ Done |
+| NOTF-04 | Phase 124 | ✅ Done |
+| NOTF-05 | Phase 124 | ✅ Done |
+| NOTF-06 | Phase 124 | ✅ Done |
 | SKIL-01 | Phase 122 | ✅ Done |
-| SKIL-02 | Phase 124 | Pending |
+| SKIL-02 | Phase 124 | ✅ Done |
 
 **Coverage:**
 - v1 requirements: 28 total

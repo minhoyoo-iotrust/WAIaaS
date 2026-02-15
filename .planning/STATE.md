@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 124 — 알림 시스템 개선
+**Current focus:** v1.4.8 마일스톤 완료
 
 ## Current Position
 
-Phase: 124 (5 of 5 in v1.4.8) — 알림 시스템 개선
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-02-15 — Plan 124-02 complete (DB v10 + Slack + 메시지 저장, 2 tasks)
+Phase: 124 (5 of 5 in v1.4.8) — 알림 시스템 개선 — COMPLETE
+Plan: 2 of 2 in current phase (DONE)
+Status: Milestone Complete
+Last activity: 2026-02-15 — Phase 124 complete (알림 시스템 개선, 2/2 plans)
 
 Progress: [██████████] 100% (8/8 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 27 milestones, 119 phases, 263 plans, 711 reqs, 1,694 tests, ~176,500 LOC
+**Cumulative:** 28 milestones, 124 phases, 264 plans, 711 reqs, ~1,700 tests, ~177,000 LOC
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -29,7 +29,7 @@ Progress: [██████████] 100% (8/8 plans)
 | 123 | 01 | 3min | 2 | 3 |
 | 123 | 02 | 6min | 2 | 7 |
 | 124 | 01 | 2min | 2 | 3 |
-| 124 | 02 | 45min | 2 | 22 |
+| 124 | 02 | 15min | 2 | 17 |
 
 ## Accumulated Context
 
@@ -51,21 +51,20 @@ Full log in PROJECT.md.
 - 세션 조회 leftJoin wallets로 walletName 포함 -- 프론트엔드 추가 요청 최소화
 - 잔액 API 실패 시 200 + error 필드 반환 -- 에러 격리로 UI 안정성 확보
 - Admin 월렛 하위 리소스 /admin/wallets/:id/* masterAuth 와일드카드 적용
-- Table onRowClick 활용하여 Delivery Log 행 확장 구현 (커스텀 테이블 불필요)
-- 테스트 결과 표시 영역을 Channel Status 섹션 하단으로 이동 (채널별 + 전체 테스트 결과 통합)
-- Slack Incoming Webhook attachments 포맷 사용 (Block Kit 대신 범용 호환성 우선)
-- notification_logs.message nullable TEXT: pre-v10 로그 하위 호환성 보장
-- SlackChannel 색상 4종: kill-switch(빨강), 실패(주황), 성공(초록), 기본(파랑)
+- apiPost 빈 body 버그: `apiPost(url)` -> `apiPost(url, {})` 수정 (SYSTEM_LOCKED 방지)
+- Delivery Log 메시지 표시: 행 클릭 → 확장 패널로 구현 (모달 대신 인라인)
+- SlackChannel Incoming Webhook: attachments 형식 + 4-color 매핑
+- notification_logs.message: nullable TEXT, pre-v10 로그는 NULL
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
-- ~~Pre-existing settings-service.test.ts (SETTING_DEFINITIONS count)~~ RESOLVED in 124-02 (updated to 36)
-- ~~MIGR-01 (pushSchema 순서) is HIGH priority -- 기존 DB에서 데몬 시작 차단~~ RESOLVED in 120-01
+- ~~Pre-existing settings-service.test.ts (SETTING_DEFINITIONS count 32 vs 35)~~ RESOLVED in 124-02
+- ~~MIGR-01 (pushSchema 순서) is HIGH priority~~ RESOLVED in 120-01
 
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 124-02-PLAN.md (DB v10 + Slack + 메시지 저장) — Phase 124 전체 완료
+Stopped at: v1.4.8 마일스톤 완료 (5/5 phases, 8/8 plans)
 Resume file: None
