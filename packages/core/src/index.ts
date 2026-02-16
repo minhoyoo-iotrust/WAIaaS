@@ -204,3 +204,12 @@ export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';
 
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
+
+// v1.6 Events (EventBus + typed event definitions)
+export { EventBus } from './events/index.js';
+export type {
+  WaiaasEventMap,
+  TransactionCompletedEvent,
+  TransactionFailedEvent,
+  WalletActivityEvent,
+} from './events/index.js';
