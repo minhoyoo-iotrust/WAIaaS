@@ -43,6 +43,7 @@ import type { NotificationService } from '../notifications/notification-service.
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { formatDisplayCurrency, type EventBus } from '@waiaas/core';
+import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
 
@@ -98,6 +99,8 @@ export interface PipelineContext {
   amountUsd?: number;
   // v1.6: event bus for AutoStop/BalanceMonitor subscribers
   eventBus?: EventBus;
+  // v1.6.1: WC signing bridge for APPROVAL fire-and-forget
+  wcSigningBridge?: WcSigningBridge;
 }
 
 // ---------------------------------------------------------------------------
@@ -542,6 +545,15 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
       return;
     }
     ctx.approvalWorkflow.requestApproval(ctx.txId);
+
+    // v1.6.1: fire-and-forget WC signing request (non-blocking)
+    if (ctx.wcSigningBridge) {
+      void ctx.wcSigningBridge.requestSignature(
+        ctx.walletId,
+        ctx.txId,
+        ctx.wallet.chain,
+      );
+    }
 
     // Halt pipeline -- transaction will be picked up by approve/reject/expire
     throw new WAIaaSError('PIPELINE_HALTED', {

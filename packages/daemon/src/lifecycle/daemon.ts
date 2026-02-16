@@ -135,6 +135,7 @@ export class DaemonLifecycle {
   private balanceMonitorService: BalanceMonitorService | null = null;
   private telegramBotService: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null = null;
   private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
+  private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -514,6 +515,24 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-7: WcSigningBridge (fail-soft, requires WcSessionService + ApprovalWorkflow)
+    // ------------------------------------------------------------------
+    try {
+      if (this.wcSessionService && this.approvalWorkflow && this.sqlite) {
+        const { WcSigningBridge } = await import('../services/wc-signing-bridge.js');
+        this.wcSigningBridge = new WcSigningBridge({
+          wcSessionService: this.wcSessionService,
+          approvalWorkflow: this.approvalWorkflow,
+          sqlite: this.sqlite,
+        });
+        console.log('Step 4c-7: WcSigningBridge initialized');
+      }
+    } catch (err) {
+      console.warn('Step 4c-7 (fail-soft): WcSigningBridge init warning:', err);
+      this.wcSigningBridge = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -638,6 +657,7 @@ export class DaemonLifecycle {
           eventBus: this.eventBus,
           killSwitchService: this.killSwitchService ?? undefined,
           wcSessionService: this.wcSessionService ?? undefined,
+          wcSigningBridge: this.wcSigningBridge ?? undefined,
         });
 
         this.httpServer = serve({

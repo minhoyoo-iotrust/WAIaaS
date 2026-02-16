@@ -68,6 +68,7 @@ import { WAIaaSError } from '@waiaas/core';
 import type { IPolicyEngine, IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
 import type { KillSwitchService } from '../services/kill-switch-service.js';
 import type { WcSessionService } from '../services/wc-session-service.js';
+import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -111,6 +112,7 @@ export interface CreateAppDeps {
   eventBus?: EventBus;
   killSwitchService?: KillSwitchService;
   wcSessionService?: WcSessionService;
+  wcSigningBridge?: WcSigningBridge;
 }
 
 /**
@@ -328,6 +330,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         settingsService: deps.settingsService,
         forexRateService: deps.forexRateService,
         eventBus: deps.eventBus,
+        wcSigningBridge: deps.wcSigningBridge,
       }),
     );
   }
