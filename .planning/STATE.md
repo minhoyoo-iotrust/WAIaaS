@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6 Phase 145 -- Docker
+**Current focus:** v1.6 Phase 145 -- Docker (완료)
 
 ## Current Position
 
 Phase: 145 of 145 (Docker)
-Plan: 2 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-16 -- 145-01 Dockerfile + docker-compose.yml + entrypoint.sh 완료
+Plan: 2 of 2 in current phase (complete)
+Status: Phase Complete
+Last activity: 2026-02-16 -- 145-02 Docker Secrets 오버라이드 + 검증 가이드 완료
 
-Progress: [#############░] 93% (13/14 plans)
+Progress: [##############] 100% (14/14 plans)
 
 ## Performance Metrics
 
@@ -29,7 +29,7 @@ Progress: [#############░] 93% (13/14 plans)
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
 | 143. Telegram Bot | 3/3 | 34m | 11m |
 | 144. Admin UI Integration | 2/2 | 8m | 4m |
-| 145. Docker | 1/2 | 2m | 2m |
+| 145. Docker | 2/2 | 3m | 2m |
 
 ## Accumulated Context
 
@@ -78,6 +78,8 @@ Full log in PROJECT.md and milestones/.
 - v1.6: node:22-slim 기반 Docker 이미지 (glibc 호환, native addon prebuildify)
 - v1.6: 127.0.0.1:3100 포트 매핑 (외부 노출 방지)
 - v1.6: #!/bin/sh entrypoint (slim 이미지 bash 미보장)
+- v1.6: secrets/ 디렉토리 .gitignore + .dockerignore 이중 제외 (커밋 방지 + 빌드 컨텍스트 보안)
+- v1.6: docker-compose.secrets.yml 오버라이드 패턴 (master_password + telegram_bot_token)
 
 ### Blockers/Concerns
 
@@ -88,5 +90,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 145-01-PLAN.md (Dockerfile + docker-compose.yml + entrypoint.sh)
+Stopped at: Completed 145-02-PLAN.md (Docker Secrets 오버라이드 + 검증 가이드) -- Phase 145 전체 완료
 Resume file: None
