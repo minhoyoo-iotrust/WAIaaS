@@ -58,8 +58,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 153-01-PLAN.md — IChainAdapter Contract Test (Mock vs Solana vs EVM, 22 메서드 형태 동일성)
-- [ ] 153-02-PLAN.md — IPolicyEngine + INotificationChannel + IClock + IPriceOracle + IActionProvider Contract Test
+- [x] 153-01-PLAN.md — IChainAdapter Contract Test (Mock vs Solana vs EVM, 22 메서드 형태 동일성)
+- [x] 153-02-PLAN.md — IPolicyEngine + INotificationChannel + IClock + IPriceOracle + IActionProvider Contract Test
 
 ### Phase 154: 블록체인 3단계 테스트
 **Goal**: 블록체인 테스트가 Mock RPC -> Local Validator -> Devnet 3단계로 계층화되어 실행되는 상태
@@ -70,11 +70,11 @@ Plans:
   2. Level 2 Local Validator로 solana-test-validator E2E 5개 흐름(SOL/SPL 전송/배치/에러 복구/성능)이 통과한다
   3. Level 2 Local Validator로 Anvil EVM E2E(ETH/ERC-20 전송/gas 추정)가 통과한다
   4. Level 3 Devnet 3건(SOL 전송/잔액 조회/헬스 체크)이 continue-on-error로 실행되며, 실패해도 전체 빌드를 중단하지 않는다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 154-01: Level 1 Mock RPC + Level 2 Solana Local Validator
-- [ ] 154-02: Level 2 EVM Anvil + Level 3 Devnet
+- [ ] 154-01-PLAN.md — Level 1 Mock RPC 13개 시나리오 + Level 2 Solana Local Validator E2E 5개 흐름
+- [ ] 154-02-PLAN.md — Level 2 EVM Anvil E2E (ETH/ERC-20/gas) + Level 3 Solana Devnet 3건
 
 ### Phase 155: 보안 테스트 Part 1 (3계층 보안)
 **Goal**: 3계층 보안 모델(세션 인증 -> 정책 엔진 -> Kill Switch)의 71건 공격 시나리오가 모두 방어됨이 테스트로 증명된 상태
@@ -163,7 +163,7 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 |-------|----------------|--------|-----------|
 | 151. 커버리지 + Mock 인프라 | 2/2 | Complete | 2026-02-16 |
 | 152. Enum 검증 + Config 테스트 | 1/1 | Complete | 2026-02-16 |
-| 153. Contract Test | 0/2 | Not started | - |
+| 153. Contract Test | 2/2 | Complete | 2026-02-16 |
 | 154. 블록체인 3단계 테스트 | 0/2 | Not started | - |
 | 155. 보안 테스트 Part 1 | 0/2 | Not started | - |
 | 156. 보안 테스트 Part 2 | 0/3 | Not started | - |
