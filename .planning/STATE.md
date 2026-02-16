@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6 Phase 142 -- Balance Monitoring
+**Current focus:** v1.6 Phase 143 -- Telegram Bot
 
 ## Current Position
 
 Phase: 143 of 145 (Telegram Bot)
-Plan: 2 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 143-01 TelegramBotService 코어 인프라 완료
+Last activity: 2026-02-16 -- 143-02 Telegram Bot 2-Tier Auth + Commands + Admin API 완료
 
-Progress: [#######░░░░░░░] 57% (8/14 plans)
+Progress: [########░░░░░░] 64% (9/14 plans)
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [#######░░░░░░░] 57% (8/14 plans)
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
-| 143. Telegram Bot | 1/3 | 16m | 16m |
+| 143. Telegram Bot | 2/3 | 27m | 14m |
 | 144. Admin UI Integration | 0/2 | - | - |
 | 145. Docker | 0/2 | - | - |
 
@@ -65,6 +65,10 @@ Full log in PROJECT.md and milestones/.
 - v1.6: KillSwitchService.getState().state 문자열로 상태 표시 (KillSwitchStateInfo 구조체 접근)
 - v1.6: MarkdownV2 이스케이프 유틸 TelegramChannel 패턴 재사용 (telegram-bot-service.ts에 독립 정의)
 - v1.6: DaemonLifecycle Step 4c-5에서 TelegramBotService fail-soft 초기화
+- v1.6: i18n bot_pending/bot_approve/bot_reject 텍스트를 거래 승인 의미로 변경
+- v1.6: AdminRouteDeps에 sqlite 옵션 추가 (telegram_users 직접 SQL 접근)
+- v1.6: callback_query에서도 2-Tier auth 적용 (인라인 키보드 권한 검증)
+- v1.6: WALLET_NOT_FOUND 에러 코드를 telegram user not found에 재사용
 
 ### Blockers/Concerns
 
@@ -74,5 +78,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 143-01-PLAN.md (TelegramBotService 코어 인프라 + DB v15 + /start, /help, /status)
+Stopped at: Completed 143-02-PLAN.md (2-Tier Auth + /wallets, /pending, /approve, /reject + Admin API)
 Resume file: None
