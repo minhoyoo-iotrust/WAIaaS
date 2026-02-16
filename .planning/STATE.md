@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6 Phase 140 -- Event Bus + Kill Switch
+**Current focus:** v1.6 Phase 141 -- AutoStop Engine
 
 ## Current Position
 
-Phase: 140 of 145 (Event Bus + Kill Switch)
-Plan: 3 of 3 in current phase (COMPLETE)
+Phase: 141 of 145 (AutoStop Engine)
+Plan: 1 of 2 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 140-03 Kill Switch 6-step cascade + REST API + 미들웨어 완료
+Last activity: 2026-02-16 -- 141-01 AutoStopService 4 규칙 구현 + EventBus 이벤트 구독 완료
 
-Progress: [##░░░░░░░░░░░░] 21% (3/14 plans)
+Progress: [###░░░░░░░░░░░] 29% (4/14 plans)
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [##░░░░░░░░░░░░] 21% (3/14 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
-| 141. AutoStop Engine | 0/2 | - | - |
+| 141. AutoStop Engine | 1/2 | 5m | 5m |
 | 142. Balance Monitoring | 0/2 | - | - |
 | 143. Telegram Bot | 0/3 | - | - |
 | 144. Admin UI Integration | 0/2 | - | - |
@@ -47,6 +47,10 @@ Full log in PROJECT.md and milestones/.
 - v1.6: LOCKED 복구 대기 시간 5초, Owner 미등록 시 Master-only 복구 허용
 - v1.6: kill-switch:state-changed EventBus 이벤트 추가 (AutoStop/BalanceMonitor 구독용)
 - v1.6: 기존 ACTIVATED 상태명을 SUSPENDED로, NORMAL을 ACTIVE로 전환
+- v1.6: AutoStop better-sqlite3 직접 SQL (KillSwitchService 패턴 동일)
+- v1.6: AutoStop 규칙 트리거 후 카운터 리셋 (재축적 필요)
+- v1.6: AutoStop 알림 fire-and-forget (규칙 엔진 안전성)
+- v1.6: MANUAL_TRIGGER -> Kill Switch 전체 발동, 나머지 3규칙 -> 개별 월렛 정지
 
 ### Blockers/Concerns
 
@@ -56,5 +60,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 140-03-PLAN.md (Kill Switch 6-step cascade + REST API + 미들웨어)
+Stopped at: Completed 141-01-PLAN.md (AutoStopService 4 규칙 구현 + EventBus 이벤트 구독)
 Resume file: None
