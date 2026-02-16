@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "1.4.8"
+version: "1.5.3"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -356,6 +356,46 @@ Response (200):
   ]
 }
 ```
+
+### Display Currency Support
+
+Balance and assets endpoints accept an optional `?display_currency=KRW` query parameter to include converted amounts in the preferred fiat currency.
+
+| Endpoint | Response Fields |
+|----------|-----------------|
+| `GET /v1/wallet/balance` | `displayBalance`, `displayCurrency` |
+| `GET /v1/wallet/assets` | `assets[].displayValue`, `displayCurrency` |
+
+If `display_currency` is omitted, the server's configured display currency (Admin Settings > Display Currency) is used.
+
+Example:
+```bash
+curl -s 'http://localhost:3100/v1/wallet/balance?display_currency=JPY' \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response:
+```json
+{
+  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
+  "chain": "solana",
+  "network": "devnet",
+  "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "balance": "2500000000",
+  "decimals": 9,
+  "symbol": "SOL",
+  "displayBalance": null,
+  "displayCurrency": "JPY"
+}
+```
+
+Note: `displayBalance` requires price oracle data and may be `null` when unavailable. For assets, `displayValue` converts the `usdValue` field when available.
+
+#### MCP Tools
+
+The following MCP tools support an optional `display_currency` parameter:
+- `get_balance` -- includes `displayBalance`/`displayCurrency` in response
+- `get_assets` -- includes `assets[].displayValue`/`displayCurrency` in response
 
 ### PUT /v1/wallet/default-network -- Change Default Network (sessionAuth)
 
