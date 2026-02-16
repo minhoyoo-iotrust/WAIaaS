@@ -55,6 +55,16 @@
 | 038 | BUG | LOW | v1.6 추가 enum/error code에 대한 테스트 count 미갱신 (7건) | v1.6 | FIXED | 2026-02-16 |
 | 039 | ENHANCEMENT | MEDIUM | 마일스톤 감사 전 빌드+테스트 자동 실행 훅 추가 | v1.6 | FIXED | 2026-02-16 |
 | 040 | ENHANCEMENT | LOW | EVM Testnet Level 3 블록체인 검증 추가 — Solana Devnet과 대칭 | v1.7 | OPEN | 2026-02-16 |
+| 041 | MISSING | LOW | Admin UI Owner 주소 설정 폼 미구현 | v1.6 | OPEN | 2026-02-17 |
+| 042 | BUG | HIGH | tsconfig.json이 __tests__/ 포함하여 빌드 실패 반복 | v1.6 | OPEN | 2026-02-17 |
+| 043 | BUG | MEDIUM | WalletConnect 미설정 시 404 + "알 수 없는 에러" 표시 | v1.6 | OPEN | 2026-02-17 |
+| 044 | ENHANCEMENT | LOW | 알림 자격증명이 config.toml과 Admin Settings에 중복 존재 | v1.6 | OPEN | 2026-02-17 |
+| 045 | ENHANCEMENT | MEDIUM | WalletConnect 설정 변경 시 hot-reload 미지원 | v1.6 | OPEN | 2026-02-17 |
+| 046 | ENHANCEMENT | LOW | Admin UI Settings 재구조화 — 관련 메뉴로 설정 재배치 + Telegram 통합 | v1.6 | OPEN | 2026-02-17 |
+| 047 | BUG | HIGH | Terminate 시 리소스 정리 누락 + TERMINATED 가드 미적용 | v1.6 | OPEN | 2026-02-17 |
+| 048 | MISSING | HIGH | Owner 자산 회수(Withdraw) API 미구현 | v1.6 | OPEN | 2026-02-17 |
+| 049 | BUG | HIGH | WalletConnect SignClient ESM/CJS 호환성 오류로 초기화 실패 | v1.6 | OPEN | 2026-02-17 |
+| 050 | ENHANCEMENT | MEDIUM | Telegram Bot 활성화를 Admin Settings에서 관리 | v1.6 | OPEN | 2026-02-17 |
 
 ## Type Legend
 
@@ -66,8 +76,8 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 11
 - **FIXED:** 39
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 40
+- **Total:** 50

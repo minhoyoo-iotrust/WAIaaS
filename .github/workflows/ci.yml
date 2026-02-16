@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Stage 1: push + PR common - affected packages only
+  stage1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Fetch base branch
+        shell: bash
+        run: git fetch origin main
+
+      - name: Lint (affected)
+        run: pnpm turbo run lint --affected
+        env:
+          TURBO_SCM_BASE: origin/main
+
+      - name: Typecheck (affected)
+        run: pnpm turbo run typecheck --affected
+        env:
+          TURBO_SCM_BASE: origin/main
+
+      - name: Unit Tests (affected)
+        run: pnpm turbo run test:unit --affected -- --coverage
+        env:
+          TURBO_SCM_BASE: origin/main
+
+  # Stage 2: PR only - full suite + coverage gate + coverage reports
+  stage2:
+    if: github.event_name == 'pull_request'
+    needs: stage1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Unit Tests - Full
+        run: pnpm turbo run test:unit -- --coverage
+
+      - name: Integration Tests
+        run: pnpm turbo run test:integration
+
+      - name: Security Tests
+        run: pnpm turbo run test:security
+
+      - name: Verify Enum SSoT
+        run: pnpm run verify:enums
+
+      - name: Coverage Gate
+        run: bash scripts/coverage-gate.sh
+        env:
+          COVERAGE_GATE_MODE: soft
+
+      - name: 'Coverage Report - @waiaas/core'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/core'
+          json-summary-path: packages/core/coverage/coverage-summary.json
+          json-final-path: packages/core/coverage/coverage-final.json
+          working-directory: packages/core
+
+      - name: 'Coverage Report - @waiaas/daemon'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/daemon'
+          json-summary-path: packages/daemon/coverage/coverage-summary.json
+          json-final-path: packages/daemon/coverage/coverage-final.json
+          working-directory: packages/daemon
+
+      - name: 'Coverage Report - @waiaas/adapter-solana'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/adapter-solana'
+          json-summary-path: packages/adapters/solana/coverage/coverage-summary.json
+          json-final-path: packages/adapters/solana/coverage/coverage-final.json
+          working-directory: packages/adapters/solana
+
+      - name: 'Coverage Report - @waiaas/sdk'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/sdk'
+          json-summary-path: packages/sdk/coverage/coverage-summary.json
+          json-final-path: packages/sdk/coverage/coverage-final.json
+          working-directory: packages/sdk

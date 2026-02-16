@@ -1,0 +1,100 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '30 2 * * *'  # UTC 02:30 daily
+  workflow_dispatch:       # Manual trigger (also prevents 60-day inactivity disable)
+
+permissions:
+  contents: read
+
+jobs:
+  # Full test suite: lint + typecheck + unit + integration + security + coverage gate (hard)
+  full-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Lint
+        run: pnpm turbo run lint
+
+      - name: Typecheck
+        run: pnpm turbo run typecheck
+
+      - name: Unit Tests
+        run: pnpm turbo run test:unit -- --coverage
+
+      - name: Integration Tests
+        run: pnpm turbo run test:integration
+
+      - name: Security Tests
+        run: pnpm turbo run test:security
+
+      - name: Verify Enum SSoT
+        run: pnpm run verify:enums
+
+      - name: Coverage Gate
+        run: bash scripts/coverage-gate.sh
+        env:
+          COVERAGE_GATE_MODE: hard
+
+  # Local blockchain validator tests: Solana test-validator + Anvil
+  local-validator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup Solana
+        uses: metadaoproject/setup-solana@v1.2
+        with:
+          solana-cli-version: stable
+
+      - name: Start solana-test-validator
+        run: |
+          solana-test-validator --reset --quiet &
+          sleep 10
+          solana cluster-version
+
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Start Anvil
+        run: |
+          anvil --silent &
+          sleep 3
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Chain Tests
+        run: pnpm turbo run test:chain
+
+  # Devnet integration tests (non-blocking)
+  devnet:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Chain Tests (Devnet)
+        run: pnpm turbo run test:chain
+        env:
+          DEVNET_TEST: 'true'

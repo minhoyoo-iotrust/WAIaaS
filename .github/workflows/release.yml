@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Full test suite with hard coverage gate
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Unit Tests
+        run: pnpm turbo run test:unit -- --coverage
+
+      - name: Integration Tests
+        run: pnpm turbo run test:integration
+
+      - name: Security Tests
+        run: pnpm turbo run test:security
+
+      - name: Verify Enum SSoT
+        run: pnpm run verify:enums
+
+      - name: Coverage Gate (Hard)
+        run: bash scripts/coverage-gate.sh
+        env:
+          COVERAGE_GATE_MODE: hard
+
+  # Local blockchain validator chain tests
+  chain-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup Solana
+        uses: metadaoproject/setup-solana@v1.2
+        with:
+          solana-cli-version: stable
+
+      - name: Start solana-test-validator
+        run: |
+          solana-test-validator --reset --quiet &
+          sleep 10
+          solana cluster-version
+
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Start Anvil
+        run: |
+          anvil --silent &
+          sleep 3
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Chain Tests
+        run: pnpm turbo run test:chain
+
+  # Platform tests + Docker build + health check
+  platform:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Platform Tests
+        run: pnpm turbo run test:platform
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: waiaas-daemon:release-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker Image
+        run: |
+          docker run -d --name waiaas-release-test -p 3100:3100 \
+            -e WAIAAS_MASTER_PASSWORD=ci-test-password waiaas-daemon:release-test
+          sleep 10
+          curl -f http://localhost:3100/health
+          docker stop waiaas-release-test
+
+  # npm publish dry-run for 4 core packages
+  publish-check:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: npm publish dry-run
+        run: |
+          for pkg in core sdk cli mcp; do
+            echo "--- Checking packages/$pkg ---"
+            cd packages/$pkg
+            npm publish --dry-run 2>&1 || exit 1
+            cd ../..
+          done
