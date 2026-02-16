@@ -6,6 +6,7 @@
  * - transaction:failed -- fired on pipeline failure (Stage 5/6 errors)
  * - wallet:activity -- fired on wallet-related activities (TX_REQUESTED, TX_SUBMITTED, SESSION_CREATED, OWNER_SET)
  * - kill-switch:state-changed -- fired on kill switch state transitions (ACTIVE/SUSPENDED/LOCKED)
+ * - approval:channel-switched -- fired when approval channel falls back (e.g. WC -> Telegram)
  *
  * These events are consumed by AutoStopService (Phase 141) and BalanceMonitorService (Phase 142).
  *
@@ -49,6 +50,15 @@ export interface KillSwitchStateChangedEvent {
   timestamp: number;
 }
 
+export interface ApprovalChannelSwitchedEvent {
+  walletId: string;
+  txId: string;
+  fromChannel: string;
+  toChannel: string;
+  reason: string;
+  timestamp: number;
+}
+
 // ---------------------------------------------------------------------------
 // Event map (typed EventEmitter key -> payload mapping)
 // ---------------------------------------------------------------------------
@@ -58,4 +68,5 @@ export interface WaiaasEventMap {
   'transaction:failed': TransactionFailedEvent;
   'wallet:activity': WalletActivityEvent;
   'kill-switch:state-changed': KillSwitchStateChangedEvent;
+  'approval:channel-switched': ApprovalChannelSwitchedEvent;
 }

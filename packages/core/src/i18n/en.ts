@@ -185,6 +185,7 @@ export const messages: Messages = {
     DAILY_SUMMARY: { title: 'Daily Summary', body: 'Wallets: {walletCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
     CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: 'Wallet {walletId} {type} spending at {ratio}% of limit (${spent} / ${limit}) {display_amount}' },
     LOW_BALANCE: { title: 'Low Balance Alert', body: 'Wallet {walletId} balance low: {balance} {currency}. Threshold: {threshold} {currency}. Please top up.' },
+    APPROVAL_CHANNEL_SWITCHED: { title: 'Approval Channel Switched', body: 'Approval for transaction {txId} switched from {from_channel} to {to_channel}. Reason: {reason}' },
   },
   // System messages
   system: {

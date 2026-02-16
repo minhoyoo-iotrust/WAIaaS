@@ -26,6 +26,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   'DAILY_SUMMARY',
   'CUMULATIVE_LIMIT_WARNING',
   'LOW_BALANCE',
+  'APPROVAL_CHANNEL_SWITCHED',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);
