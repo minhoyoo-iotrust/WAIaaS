@@ -86,9 +86,11 @@ export const messages: Messages = {
     OWNER_NOT_FOUND: 'Owner not found',
     APPROVAL_TIMEOUT: 'Approval request has timed out',
     APPROVAL_NOT_FOUND: 'Approval request not found',
-    // SYSTEM domain (7)
+    // SYSTEM domain (9)
     KILL_SWITCH_ACTIVE: 'Kill switch is already active',
     KILL_SWITCH_NOT_ACTIVE: 'Kill switch is not active',
+    KILL_SWITCH_ALREADY_ACTIVE: 'Kill switch transition conflict',
+    INVALID_STATE_TRANSITION: 'Invalid kill switch state transition',
     KEYSTORE_LOCKED: 'Keystore is locked',
     CHAIN_NOT_SUPPORTED: 'Chain not supported',
     SHUTTING_DOWN: 'Server is shutting down',
@@ -139,6 +141,7 @@ export const messages: Messages = {
     WALLET_SUSPENDED: { title: 'Wallet Suspended', body: 'Wallet {walletId} has been suspended: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },
+    KILL_SWITCH_ESCALATED: { title: 'Kill Switch Escalated', body: 'Kill switch escalated to LOCKED state. Immediate action required' },
     AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Daemon auto-stopped after {failures} consecutive failures' },
     SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for wallet {walletId} expires in {minutes} minutes' },
     SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for wallet {walletId} has expired' },

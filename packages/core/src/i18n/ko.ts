@@ -62,9 +62,11 @@ export const messages: Messages = {
     OWNER_NOT_FOUND: 'Owner를 찾을 수 없습니다',
     APPROVAL_TIMEOUT: '승인 요청이 시간 초과되었습니다',
     APPROVAL_NOT_FOUND: '승인 요청을 찾을 수 없습니다',
-    // SYSTEM domain (7)
+    // SYSTEM domain (9)
     KILL_SWITCH_ACTIVE: '킬 스위치가 이미 활성화되어 있습니다',
     KILL_SWITCH_NOT_ACTIVE: '킬 스위치가 활성화되지 않았습니다',
+    KILL_SWITCH_ALREADY_ACTIVE: '킬 스위치 상태 전이 충돌이 발생했습니다',
+    INVALID_STATE_TRANSITION: '유효하지 않은 킬 스위치 상태 전이입니다',
     KEYSTORE_LOCKED: '키스토어가 잠겨 있습니다',
     CHAIN_NOT_SUPPORTED: '지원하지 않는 체인입니다',
     SHUTTING_DOWN: '서버가 종료 중입니다',
@@ -115,6 +117,7 @@ export const messages: Messages = {
     WALLET_SUSPENDED: { title: '지갑 정지', body: '지갑 {walletId}이 정지되었습니다: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch 발동', body: '{activatedBy}에 의해 Kill Switch가 발동되었습니다. 모든 작업이 중단됩니다' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch 해제', body: 'Kill Switch가 해제되었습니다. 정상 운영이 재개됩니다' },
+    KILL_SWITCH_ESCALATED: { title: 'Kill Switch 격상', body: 'Kill Switch가 LOCKED 상태로 격상되었습니다. 즉시 조치가 필요합니다' },
     AUTO_STOP_TRIGGERED: { title: '자동 정지 발동', body: '연속 {failures}회 실패로 데몬이 자동 정지되었습니다' },
     SESSION_EXPIRING_SOON: { title: '세션 만료 임박', body: '지갑 {walletId}의 세션 {sessionId}이 {minutes}분 후 만료됩니다' },
     SESSION_EXPIRED: { title: '세션 만료', body: '지갑 {walletId}의 세션 {sessionId}이 만료되었습니다' },

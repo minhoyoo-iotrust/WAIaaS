@@ -407,7 +407,7 @@ export const ERROR_CODES = {
     message: 'Approval request not found',
   },
 
-  // --- SYSTEM domain (7) ---
+  // --- SYSTEM domain (9) ---
   KILL_SWITCH_ACTIVE: {
     code: 'KILL_SWITCH_ACTIVE',
     domain: 'SYSTEM',
@@ -421,6 +421,20 @@ export const ERROR_CODES = {
     httpStatus: 409,
     retryable: false,
     message: 'Kill switch is not active',
+  },
+  KILL_SWITCH_ALREADY_ACTIVE: {
+    code: 'KILL_SWITCH_ALREADY_ACTIVE',
+    domain: 'SYSTEM',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Kill switch transition conflict',
+  },
+  INVALID_STATE_TRANSITION: {
+    code: 'INVALID_STATE_TRANSITION',
+    domain: 'SYSTEM',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Invalid kill switch state transition',
   },
   KEYSTORE_LOCKED: {
     code: 'KEYSTORE_LOCKED',
