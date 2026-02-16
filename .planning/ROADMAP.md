@@ -50,11 +50,11 @@ Plans:
   3. REST API로 WC 세션 상태 조회 및 세션 해제가 가능하다
   4. Admin UI에서 QR 코드를 모달로 표시하고 세션 상태를 실시간 확인할 수 있다
   5. CLI `waiaas owner connect` 명령으로 터미널에 QR 코드가 출력된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 147-01: REST API 엔드포인트 (pairing URI 생성, QR base64, 세션 조회/해제) + WC 세션 이벤트 처리
-- [ ] 147-02: Admin UI QR 모달 + CLI owner connect 명령
+- [ ] 147-01-PLAN.md -- WcSessionService 페어링/세션 메서드 + REST API 4개 엔드포인트 + 테스트
+- [ ] 147-02-PLAN.md -- Admin UI QR 모달 + CLI owner connect/disconnect/status 명령
 
 ### Phase 148: WC 서명 요청
 **Goal**: APPROVAL 거래 발생 시 WC 세션을 통해 Owner에게 서명을 요청하고, 승인/거절 결과가 ApprovalWorkflow에 반영된다
@@ -107,7 +107,7 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 146. WC 인프라 세팅 | v1.6.1 | 0/2 | Not started | - |
+| 146. WC 인프라 세팅 | v1.6.1 | 2/2 | Complete | 2026-02-16 |
 | 147. QR 페어링 + REST API | v1.6.1 | 0/2 | Not started | - |
 | 148. WC 서명 요청 | v1.6.1 | 0/2 | Not started | - |
 | 149. Telegram Fallback | v1.6.1 | 0/1 | Not started | - |
@@ -115,4 +115,4 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 
 ---
 *Roadmap created: 2026-02-16*
-*Last updated: 2026-02-16 -- Phase 146 계획 수립*
+*Last updated: 2026-02-16 -- Phase 147 계획 수립*
