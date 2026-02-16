@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~188,000 LOC, 2,111 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(**USD 기준 포함**, **12개 타입별 전용 폼**) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, **USD 환산 정책 평가**) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행(POST /v1/actions/:provider/:action) → x402 유료 API 자동 결제(POST /v1/x402/fetch, SSRF 가드, EIP-3009/TransferChecked 결제 서명) → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, set_default_network, wallet info, network=all 잔액, action_{provider}_{action} MCP 도구, x402Fetch/x402_fetch SDK + x402_fetch MCP 도구) + Telegram/Discord/ntfy/Slack 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, 메시지 저장/조회, 가격 불명 토큰 NOTIFY 격상) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + X402_ALLOWED_DOMAINS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(채널별 테스트 + Slack) + MCP 토큰 발급 + 대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회 + 오라클 상태 조회 + API 키 관리 + **12개 정책 타입별 전용 폼 + PolicyRulesSummary 시각화 + 수정 모달 프리필**) + 다중 지갑 MCP 설정(**15+ 도구** + 스킬 리소스 + Action Provider 동적 도구) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ **7개**) 제공까지 동작.
+v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~191,000 LOC, ~2,150 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(**USD 기준 포함**, **12개 타입별 전용 폼**, **누적 지출 한도 daily/monthly**, **표시 통화 43개**) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, **USD 환산 정책 평가**) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행(POST /v1/actions/:provider/:action) → x402 유료 API 자동 결제(POST /v1/x402/fetch, SSRF 가드, EIP-3009/TransferChecked 결제 서명) → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, set_default_network, wallet info, network=all 잔액, action_{provider}_{action} MCP 도구, x402Fetch/x402_fetch SDK + x402_fetch MCP 도구) + Telegram/Discord/ntfy/Slack 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, 메시지 저장/조회, 가격 불명 토큰 NOTIFY 격상, **누적 한도 80% 경고**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + X402_ALLOWED_DOMAINS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(채널별 테스트 + Slack) + MCP 토큰 발급 + 대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회 + 오라클 상태 조회 + API 키 관리 + **12개 정책 타입별 전용 폼 + PolicyRulesSummary 시각화 + 수정 모달 프리필**) + 다중 지갑 MCP 설정(**15+ 도구** + 스킬 리소스 + Action Provider 동적 도구) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ **7개**) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -32,15 +32,17 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 9-패키지 모노레
 - ✅ v1.5 DeFi Price Oracle + Action Provider Framework — shipped 2026-02-15 (1,848 tests, ~185,000 LOC)
 - ✅ v1.5.1 x402 클라이언트 지원 — shipped 2026-02-15 (2,058 tests, ~187,000 LOC)
 - ✅ v1.5.2 Admin UI 정책 폼 UX 개선 — shipped 2026-02-16 (2,111 tests, ~188,000 LOC)
-- **► v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화)** — in progress
-- v1.6 Desktop + Telegram + Docker (Tauri 8화면, Bot, Kill Switch, Docker)
+- ✅ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) — shipped 2026-02-16 (~2,150 tests, ~191,000 LOC)
+- **► v1.6 운영 인프라 + 잔액 모니터링 (Telegram Bot, Kill Switch, AutoStop, Docker, Balance Monitor)**
+- v1.6.1 WalletConnect Owner 승인 (QR 페어링, 서명 요청, Telegram fallback)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
-- v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release)
+- v1.8 업그레이드 + 배포 (npm 배포, Docker Hub, 자동 업데이트)
+- v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, GitHub Release)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~188,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- 2,111 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~191,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- ~2,150 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -52,7 +54,9 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 9-패키지 모노레
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
 - MCP 15개 내장 도구 (x402_fetch 추가) + Action Provider 동적 도구 + 7개 스킬 리소스
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
-- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v12
+- IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
+- 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
+- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v13
 - API 키 관리 — DB 암호화 저장(HKDF+AES-256-GCM), Admin UI CRUD
 - pushSchema 3-step 순서 (tables→migrations→indexes) + 마이그레이션 체인 테스트
 - MCP graceful shutdown (stdin 감지 + force-exit 타임아웃)
@@ -296,12 +300,33 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 9-패키지 모노레
 - ✓ PolicyRulesSummary 12-type 목록 시각화 (심볼 배지, req/time, tier bars) — v1.5.2 (VIS-01~03)
 - ✓ 수정 모달 전용 폼 프리필/저장 통합 — v1.5.2 (EDIT-01~02)
 
+- ✓ CUMULATIVE_SPENDING_DAILY/MONTHLY 12번째 PolicyType 추가 — v1.5.3 (CUMUL-01~04)
+- ✓ 롤링 윈도우 USD 누적 지출 계산 + APPROVAL 격상 + 80% 경고 알림 — v1.5.3 (CUMUL-05~08)
+- ✓ IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 — v1.5.3 (FOREX-01~04)
+- ✓ display_currency 월렛별 표시 통화 + Admin UI 설정 — v1.5.3 (FOREX-05~07)
+- ✓ DB 마이그레이션 v13 (amount_usd, reserved_amount_usd 컬럼) — v1.5.3 (DB-01)
+
 ### 활성
+
+<!-- v1.6에서 정의 예정 — REQUIREMENTS.md 참조 -->
+
+## Current Milestone: v1.6 운영 인프라 + 잔액 모니터링
+
+**Goal:** Kill Switch/AutoStop으로 긴급 제어, Telegram Bot으로 원격 관리, Docker로 원클릭 배포, 잔액 모니터링으로 가스비 부족 사전 알림이 동작하는 상태
+
+**Target features:**
+- Telegram Bot (Long Polling, 9 명령어, 인라인 키보드, 2-Tier 인증)
+- Kill Switch (3-state 상태 머신, 6-step cascade, dual-auth 복구)
+- AutoStop Engine (4 규칙 기반 자동 정지)
+- 잔액 모니터링 (주기적 체크, LOW_BALANCE 알림)
+- Docker 배포 (Multi-stage, docker-compose, Secrets)
+- 이벤트 버스 (EventEmitter 기반 트랜잭션/월렛 이벤트)
 
 ## Next Milestone Goals
 
-- v1.6 Desktop + Telegram + Docker — Tauri 8화면, Bot, Kill Switch, Docker
-- v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, Desktop 5플랫폼, GitHub Release
+- v1.6.1 WalletConnect Owner 승인 — QR 페어링, WC 서명 요청, Telegram fallback
+- v1.7 품질 강화 + CI/CD — 300+ 테스트, 보안 237건, 4-stage 파이프라인
+- v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, GitHub Release
 
 ### 범위 외
 
@@ -318,7 +343,7 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 9-패키지 모노레
 
 ## 컨텍스트
 
-**누적:** 32 milestones (v0.1-v1.5.2), 135 phases, 293 plans, 831 requirements, 36 설계 문서(24-72), 8 objective 문서, ~188,000 LOC, 2,111 테스트
+**누적:** 33 milestones (v0.1-v1.5.3), 139 phases, 301 plans, 850 requirements, 36 설계 문서(24-72), 8 objective 문서, ~191,000 LOC, ~2,150 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -341,6 +366,7 @@ v1.4.8 Admin DX + 알림 개선 shipped (2026-02-15). 5 페이즈, 8 플랜, 28 
 v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 5 페이즈, 14 플랜, 29 요구사항, ~185,000 LOC, 1,848 테스트, 84 설계 결정.
 v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 4 페이즈, 10 플랜, 39 요구사항, ~187,000 LOC, 2,058 테스트, 59 설계 결정.
 v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 2 페이즈, 4 플랜, 24 요구사항, ~188,000 LOC, 2,111 테스트, 7 설계 결정.
+v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02-16). 4 페이즈, 8 플랜, 19 요구사항, ~191,000 LOC, ~2,150 테스트.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -355,7 +381,7 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 2 페이즈, 4 플랜
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
-- 미구현: Jupiter Swap, Tauri, Docker
+- 미구현: Jupiter Swap, Tauri (v2.6), Docker (v1.6), Telegram Bot (v1.6), Kill Switch (v1.6)
 
 **설계 문서:** 36개 (deliverables 24-72.md) + 대응표/테스트 전략/objective
 
@@ -534,6 +560,10 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 2 페이즈, 4 플랜
 | METHOD_WHITELIST 2단계 중첩 DynamicRowList | contractAddress + selectors[] Zod 구조 반영 | ✓ Good — v1.5.2 구현 |
 | TierVisualization → PolicyRulesSummary 이동 | 단일 책임 원칙, 시각화 전담 컴포넌트 분리 | ✓ Good — v1.5.2 구현 |
 | PolicyFormRouter + validateRules 수정 모달 재사용 | 생성/수정 동일 폼, 코드 중복 방지, 일관된 UX | ✓ Good — v1.5.2 구현 |
+| CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우 | 고정 달력 기간 대신 24h/30d 슬라이딩 윈도우 | ✓ Good — v1.5.3 구현 |
+| 누적 한도 80% 경고 CUMULATIVE_LIMIT_WARNING | 한도 소진 전 사전 경고, 22번째 NotificationEventType | ✓ Good — v1.5.3 구현 |
+| IForexRateService CoinGecko tether 기반 | USD→법정통화 환산, stablecoin 가격으로 간접 환율 | ✓ Good — v1.5.3 구현 |
+| display_currency 월렛별 표시 통화 | 정책 평가는 항상 USD, 표시만 로컬 통화 | ✓ Good — v1.5.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-16 after v1.5.2 milestone*
+*최종 업데이트: 2026-02-16 after v1.5.3 milestone — v1.6 Desktop 이연(v2.6), 로드맵 갱신*

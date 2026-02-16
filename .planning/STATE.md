@@ -5,22 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.5.3 shipped. Planning next milestone.
+**Current focus:** v1.6 운영 인프라 + 잔액 모니터링
 
 ## Current Position
 
-Phase: v1.5.3 complete (Phases 136-139)
-Plan: All complete
-Status: Milestone v1.5.3 shipped
-Last activity: 2026-02-16 -- v1.5.3 마일스톤 아카이브
-
-Progress: [██████████] 100% (8/8 plans)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-16 — Milestone v1.6 started
 
 ## Performance Metrics
 
 **Cumulative:** 33 milestones, 139 phases, 301 plans, 850 reqs, ~2,150 tests, ~191,000 LOC
-
-**v1.5.3 Delivered:** 4 phases, 8 plans, 19 requirements, 98 files, +8,762 LOC
 
 ## Accumulated Context
 
@@ -36,5 +32,5 @@ Full log in PROJECT.md and milestones/v1.5.3-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: v1.5.3 milestone archived
+Stopped at: Milestone v1.6 started
 Resume file: None
