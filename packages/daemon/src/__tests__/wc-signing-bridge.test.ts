@@ -196,12 +196,16 @@ describe('WcSigningBridge', () => {
     signClient?: any;
     sessionTopic?: string | null;
     sessionInfo?: any;
+    notificationService?: any;
+    eventBus?: any;
   } = {}): WcSigningBridge {
     mockWcSessionService = createMockWcSessionService(overrides);
     const deps: WcSigningBridgeDeps = {
       wcSessionService: mockWcSessionService as any,
       approvalWorkflow: mockApprovalWorkflow as any,
       sqlite,
+      notificationService: overrides.notificationService,
+      eventBus: overrides.eventBus,
     };
     return new WcSigningBridge(deps);
   }
@@ -694,6 +698,309 @@ describe('WcSigningBridge', () => {
 
       // Should approve because the bridge handles both raw string and object format
       expect(mockApprovalWorkflow.approve).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Telegram fallback (Phase 149)
+  // -------------------------------------------------------------------------
+
+  describe('Telegram fallback (Phase 149)', () => {
+    let mockEventBus: { emit: ReturnType<typeof vi.fn> };
+    let mockNotificationService: { notify: ReturnType<typeof vi.fn> };
+
+    beforeEach(() => {
+      mockEventBus = { emit: vi.fn() };
+      mockNotificationService = { notify: vi.fn().mockResolvedValue(undefined) };
+    });
+
+    it('signClient null -> fallback to telegram + approval_channel update', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: null,
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      // approval_channel should be updated to 'telegram'
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+
+      // EventBus should emit 'approval:channel-switched'
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'approval:channel-switched',
+        expect.objectContaining({
+          walletId: WALLET_ID,
+          txId: TX_ID,
+          fromChannel: 'walletconnect',
+          toChannel: 'telegram',
+          reason: 'wc_not_initialized',
+        }),
+      );
+
+      // NotificationService should notify
+      expect(mockNotificationService.notify).toHaveBeenCalledWith(
+        'APPROVAL_CHANNEL_SWITCHED',
+        WALLET_ID,
+        { from_channel: 'walletconnect', to_channel: 'telegram', reason: 'wc_not_initialized' },
+        { txId: TX_ID },
+      );
+    });
+
+    it('session topic null -> fallback to telegram', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: mockSignClient,
+        sessionTopic: null,
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'approval:channel-switched',
+        expect.objectContaining({
+          reason: 'no_wc_session',
+        }),
+      );
+    });
+
+    it('session info null -> fallback to telegram', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: mockSignClient,
+        sessionTopic: TOPIC,
+        sessionInfo: null,
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'approval:channel-switched',
+        expect.objectContaining({
+          reason: 'no_session_info',
+        }),
+      );
+    });
+
+    it('WC timeout (8000) -> fallback to telegram', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: mockSignClient,
+        sessionTopic: TOPIC,
+        sessionInfo: {
+          walletId: WALLET_ID,
+          topic: TOPIC,
+          chainId: EVM_CHAIN_ID,
+          ownerAddress: EVM_OWNER,
+          peerName: 'TestWallet',
+          peerUrl: 'https://test.example.com',
+          expiry: nowEpoch() + 86400,
+          createdAt: nowEpoch(),
+        },
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      const wcError = Object.assign(new Error('Request expired'), { code: 8000 });
+      mockSignClient.request.mockRejectedValue(wcError);
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      // approval_channel should be updated to 'telegram' (fallback overwrites 'walletconnect')
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'approval:channel-switched',
+        expect.objectContaining({
+          reason: 'wc_timeout',
+        }),
+      );
+      // Should NOT reject (timeout is fallback, not rejection)
+      expect(mockApprovalWorkflow.reject).not.toHaveBeenCalled();
+    });
+
+    it('WC network error -> fallback to telegram', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: mockSignClient,
+        sessionTopic: TOPIC,
+        sessionInfo: {
+          walletId: WALLET_ID,
+          topic: TOPIC,
+          chainId: EVM_CHAIN_ID,
+          ownerAddress: EVM_OWNER,
+          peerName: 'TestWallet',
+          peerUrl: 'https://test.example.com',
+          expiry: nowEpoch() + 86400,
+          createdAt: nowEpoch(),
+        },
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      mockSignClient.request.mockRejectedValue(new Error('network failure'));
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'approval:channel-switched',
+        expect.objectContaining({
+          reason: 'wc_error',
+        }),
+      );
+      expect(mockApprovalWorkflow.reject).not.toHaveBeenCalled();
+    });
+
+    it('user rejected (4001) -> reject, no fallback', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: mockSignClient,
+        sessionTopic: TOPIC,
+        sessionInfo: {
+          walletId: WALLET_ID,
+          topic: TOPIC,
+          chainId: EVM_CHAIN_ID,
+          ownerAddress: EVM_OWNER,
+          peerName: 'TestWallet',
+          peerUrl: 'https://test.example.com',
+          expiry: nowEpoch() + 86400,
+          createdAt: nowEpoch(),
+        },
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      const wcError = Object.assign(new Error('User rejected'), { code: 4001 });
+      mockSignClient.request.mockRejectedValue(wcError);
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      expect(mockApprovalWorkflow.reject).toHaveBeenCalledWith(TX_ID);
+      // No fallback events
+      expect(mockEventBus.emit).not.toHaveBeenCalled();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    });
+
+    it('user rejected (5000) -> reject, no fallback', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: mockSignClient,
+        sessionTopic: TOPIC,
+        sessionInfo: {
+          walletId: WALLET_ID,
+          topic: TOPIC,
+          chainId: EVM_CHAIN_ID,
+          ownerAddress: EVM_OWNER,
+          peerName: 'TestWallet',
+          peerUrl: 'https://test.example.com',
+          expiry: nowEpoch() + 86400,
+          createdAt: nowEpoch(),
+        },
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      const wcError = Object.assign(new Error('User rejected (legacy)'), { code: 5000 });
+      mockSignClient.request.mockRejectedValue(wcError);
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      expect(mockApprovalWorkflow.reject).toHaveBeenCalledWith(TX_ID);
+      expect(mockEventBus.emit).not.toHaveBeenCalled();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    });
+
+    it('already processed approval -> no fallback', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+
+      // Insert approval that is already approved
+      const ts = nowEpoch();
+      sqlite.prepare(
+        `INSERT INTO pending_approvals (id, tx_id, expires_at, approval_channel, required_by, created_at, approved_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(`appr-${TX_ID}`, TX_ID, ts + 300, 'rest_api', ts + 300, ts, ts);
+
+      bridge = createBridge({
+        signClient: null,
+        notificationService: mockNotificationService,
+        eventBus: mockEventBus,
+      });
+
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      // approval_channel should remain 'rest_api' (not changed to 'telegram')
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('rest_api');
+      expect(mockEventBus.emit).not.toHaveBeenCalled();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    });
+
+    it('eventBus undefined -> no throw', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: null,
+        notificationService: mockNotificationService,
+        eventBus: undefined,
+      });
+
+      // Should not throw
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      // approval_channel should still be updated
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+      // notificationService should still be called
+      expect(mockNotificationService.notify).toHaveBeenCalled();
+    });
+
+    it('notificationService undefined -> no throw', async () => {
+      insertTestWallet(sqlite, WALLET_ID, 'ethereum');
+      insertTestTransaction(sqlite, WALLET_ID, TX_ID);
+      insertTestApproval(sqlite, TX_ID);
+
+      bridge = createBridge({
+        signClient: null,
+        notificationService: undefined,
+        eventBus: mockEventBus,
+      });
+
+      // Should not throw
+      await bridge.requestSignature(WALLET_ID, TX_ID, 'ethereum');
+
+      // approval_channel should still be updated
+      expect(getApprovalChannel(sqlite, TX_ID)).toBe('telegram');
+      // eventBus should still emit
+      expect(mockEventBus.emit).toHaveBeenCalled();
     });
   });
 });
