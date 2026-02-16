@@ -80,6 +80,7 @@ import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 import { actionRoutes } from './routes/actions.js';
 import { x402Routes } from './routes/x402.js';
+import { wcRoutes } from './routes/wc.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 export interface CreateAppDeps {
@@ -157,7 +158,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own masterAuth registered below
-      if (c.req.path.includes('/owner') || c.req.path.includes('/default-network') || c.req.path.includes('/networks')) {
+      if (c.req.path.includes('/owner') || c.req.path.includes('/default-network') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
         await next();
         return;
       }
@@ -171,6 +172,12 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
     app.use('/v1/wallets/:id/default-network', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
+  }
+
+  // masterAuth for WalletConnect routes
+  if (deps.masterPasswordHash !== undefined) {
+    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+    app.use('/v1/wallets/:id/wc/*', masterAuthForWc);
   }
 
   if (deps.jwtSecretManager && deps.db) {
@@ -482,6 +489,14 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         notificationService: deps.notificationService,
       }),
     );
+  }
+
+  // Register WalletConnect routes when DB + wcSessionService are available
+  if (deps.db && deps.wcSessionService) {
+    app.route('/v1', wcRoutes({
+      db: deps.db,
+      wcSessionService: deps.wcSessionService,
+    }));
   }
 
   // Register OpenAPI spec endpoint (GET /doc)

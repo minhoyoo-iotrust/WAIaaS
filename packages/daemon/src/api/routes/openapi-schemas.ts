@@ -840,3 +840,33 @@ export const OracleStatusResponseSchema = z
     }),
   })
   .openapi('OracleStatusResponse');
+
+// ---------------------------------------------------------------------------
+// WalletConnect Pairing & Session Schemas
+// ---------------------------------------------------------------------------
+
+export const WcPairingResponseSchema = z.object({
+  uri: z.string(),
+  qrCode: z.string(), // data:image/png;base64,...
+  expiresAt: z.number().int(),
+}).openapi('WcPairingResponse');
+
+export const WcSessionResponseSchema = z.object({
+  walletId: z.string(),
+  topic: z.string(),
+  peerName: z.string().nullable(),
+  peerUrl: z.string().nullable(),
+  chainId: z.string(),
+  ownerAddress: z.string(),
+  expiry: z.number().int(),
+  createdAt: z.number().int(),
+}).openapi('WcSessionResponse');
+
+export const WcPairingStatusResponseSchema = z.object({
+  status: z.enum(['pending', 'connected', 'expired', 'none']),
+  session: WcSessionResponseSchema.nullable().optional(),
+}).openapi('WcPairingStatusResponse');
+
+export const WcDisconnectResponseSchema = z.object({
+  disconnected: z.boolean(),
+}).openapi('WcDisconnectResponse');
