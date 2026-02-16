@@ -1,35 +1,40 @@
 /**
- * TelegramBotService: Long Polling bot with 2-Tier auth + 7 commands.
+ * TelegramBotService: Long Polling bot with 2-Tier auth + 9 commands.
  *
  * Uses better-sqlite3 directly for DB access (same pattern as KillSwitchService).
  * Long Polling with exponential backoff (1s -> 2s -> 4s -> ... -> 30s max).
  * MarkdownV2 escape for all user-facing text.
  *
  * Commands:
- *   /start   - Register chat_id as PENDING user             (public)
- *   /help    - Show available commands                        (public)
- *   /status  - Show daemon status, wallet count, session count (readonly+)
- *   /wallets - List all wallets                               (readonly+)
- *   /pending - List pending approval transactions             (admin)
- *   /approve - Approve a pending transaction                  (admin)
- *   /reject  - Reject a pending transaction                   (admin)
+ *   /start      - Register chat_id as PENDING user             (public)
+ *   /help       - Show available commands                        (public)
+ *   /status     - Show daemon status, wallet count, session count (readonly+)
+ *   /wallets    - List all wallets                               (readonly+)
+ *   /pending    - List pending approval transactions             (admin)
+ *   /approve    - Approve a pending transaction                  (admin)
+ *   /reject     - Reject a pending transaction                   (admin)
+ *   /killswitch - Activate kill switch with confirmation          (admin)
+ *   /newsession - Create a new session for a wallet              (admin)
  *
  * Auth: TelegramAuth 2-Tier (PUBLIC / READONLY / ADMIN)
- * Callback queries: inline keyboard buttons for approve/reject
+ * Callback queries: inline keyboard buttons for approve/reject/killswitch/newsession
  *
  * @see packages/daemon/src/services/kill-switch-service.ts (SQLite direct pattern)
  * @see packages/daemon/src/services/autostop-service.ts (service start/stop pattern)
  */
 
+import { createHash } from 'node:crypto';
 import type { Database } from 'better-sqlite3';
 import type { SupportedLocale } from '@waiaas/core';
 import { getMessages } from '@waiaas/core';
 import type { TelegramApi } from './telegram-api.js';
-import type { TelegramUpdate, TelegramMessage, TelegramInlineKeyboardMarkup } from './telegram-types.js';
+import type { TelegramUpdate, TelegramMessage } from './telegram-types.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { SettingsService } from '../settings/settings-service.js';
+import type { JwtSecretManager, JwtPayload } from '../jwt/index.js';
 import { TelegramAuth } from './telegram-auth.js';
+import { buildConfirmKeyboard, buildWalletSelectKeyboard, buildApprovalKeyboard } from './telegram-keyboard.js';
 
 // ---------------------------------------------------------------------------
 // MarkdownV2 escape utility
@@ -53,6 +58,8 @@ export interface TelegramBotServiceOptions {
   killSwitchService?: KillSwitchService;
   notificationService?: NotificationService;
   settingsService?: SettingsService;
+  jwtSecretManager?: JwtSecretManager;
+  sessionTtl?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,10 +71,13 @@ export class TelegramBotService {
   private api: TelegramApi;
   private locale: SupportedLocale;
   private killSwitchService?: KillSwitchService;
+  private jwtSecretManager?: JwtSecretManager;
+  private sessionTtl: number;
   private auth: TelegramAuth;
   private running = false;
   private offset = 0;
   private backoffMs = 1000;
+  private retryCount = 0;
   private static readonly MAX_BACKOFF_MS = 30_000;
   private static readonly POLL_TIMEOUT_SEC = 30;
 
@@ -76,6 +86,8 @@ export class TelegramBotService {
     this.api = opts.api;
     this.locale = opts.locale ?? 'en';
     this.killSwitchService = opts.killSwitchService;
+    this.jwtSecretManager = opts.jwtSecretManager;
+    this.sessionTtl = opts.sessionTtl ?? 3600; // default 1 hour
     this.auth = new TelegramAuth(opts.sqlite);
   }
 
@@ -87,6 +99,7 @@ export class TelegramBotService {
     if (this.running) return;
     this.running = true;
     this.backoffMs = 1000;
+    this.retryCount = 0;
     void this.pollLoop();
   }
 
@@ -107,6 +120,11 @@ export class TelegramBotService {
     return this.backoffMs;
   }
 
+  /** Current consecutive failure count (for testing). */
+  get consecutiveFailures(): number {
+    return this.retryCount;
+  }
+
   // -----------------------------------------------------------------------
   // Long Polling loop
   // -----------------------------------------------------------------------
@@ -118,16 +136,31 @@ export class TelegramBotService {
           this.offset,
           TelegramBotService.POLL_TIMEOUT_SEC,
         );
-        // Success -- reset backoff
+        // Success -- reset backoff and retry counter
         this.backoffMs = 1000;
+        this.retryCount = 0;
 
         for (const update of updates) {
           this.offset = update.update_id + 1;
           await this.handleUpdate(update);
         }
-      } catch {
-        // Exponential backoff on error
+      } catch (err) {
+        // Check if Telegram API returned 401/409 -- do not retry, stop
+        if (err instanceof Error && /Telegram API error: (401|409)/.test(err.message)) {
+          console.error(`Telegram Bot: fatal API error, stopping polling: ${err.message}`);
+          this.running = false;
+          return;
+        }
+
+        // Exponential backoff on network errors
         if (this.running) {
+          this.retryCount++;
+          // Log warning every 3 consecutive failures
+          if (this.retryCount % 3 === 0) {
+            console.warn(
+              `Telegram Bot: ${this.retryCount} consecutive failures, retrying in ${this.backoffMs}ms`,
+            );
+          }
           await this.sleep(this.backoffMs);
           this.backoffMs = Math.min(
             this.backoffMs * 2,
@@ -202,6 +235,12 @@ export class TelegramBotService {
         case '/reject':
           await this.handleReject(chatId, parts[1]);
           break;
+        case '/killswitch':
+          await this.handleKillswitch(chatId);
+          break;
+        case '/newsession':
+          await this.handleNewSession(chatId);
+          break;
         default:
           // Unknown command -- ignore silently
           break;
@@ -222,10 +261,16 @@ export class TelegramBotService {
 
     if (!data) return;
 
-    // Auth check for callback queries -- approve/reject are admin commands
-    const command = data.startsWith('approve:') ? '/approve' : data.startsWith('reject:') ? '/reject' : null;
+    // Determine which command the callback maps to for auth check
+    let command: string | null = null;
+    if (data.startsWith('approve:')) command = '/approve';
+    else if (data.startsWith('reject:')) command = '/reject';
+    else if (data.startsWith('killswitch:')) command = '/killswitch';
+    else if (data.startsWith('newsession:')) command = '/newsession';
+
     if (!command) return;
 
+    // Auth check for callback queries
     const perm = this.auth.checkPermission(chatId, command);
     if (!perm.allowed) {
       const msgs = getMessages(this.locale);
@@ -238,25 +283,45 @@ export class TelegramBotService {
       return;
     }
 
-    const txId = data.split(':')[1];
-    if (!txId) return;
+    const msgs = getMessages(this.locale);
 
     try {
+      if (data === 'killswitch:confirm') {
+        await this.executeKillswitchConfirm(chatId);
+        await this.api.answerCallbackQuery(cbq.id, msgs.telegram.keyboard_yes);
+        return;
+      }
+
+      if (data === 'killswitch:cancel') {
+        await this.api.sendMessage(chatId, msgs.telegram.bot_killswitch_cancelled);
+        await this.api.answerCallbackQuery(cbq.id, msgs.telegram.keyboard_no);
+        return;
+      }
+
+      if (data.startsWith('newsession:')) {
+        const walletId = data.slice('newsession:'.length);
+        await this.executeNewSession(chatId, walletId);
+        await this.api.answerCallbackQuery(cbq.id);
+        return;
+      }
+
       if (data.startsWith('approve:')) {
-        await this.handleApprove(chatId, txId);
-      } else if (data.startsWith('reject:')) {
-        await this.handleReject(chatId, txId);
+        const txId = data.split(':')[1];
+        if (txId) await this.handleApprove(chatId, txId);
+        await this.api.answerCallbackQuery(cbq.id, msgs.telegram.keyboard_approve);
+        return;
+      }
+
+      if (data.startsWith('reject:')) {
+        const txId = data.split(':')[1];
+        if (txId) await this.handleReject(chatId, txId);
+        await this.api.answerCallbackQuery(cbq.id, msgs.telegram.keyboard_reject);
+        return;
       }
     } catch {
-      // Swallow errors
+      // Swallow errors, acknowledge callback
+      await this.api.answerCallbackQuery(cbq.id);
     }
-
-    // Acknowledge callback query
-    const msgs = getMessages(this.locale);
-    const ackText = data.startsWith('approve:')
-      ? msgs.telegram.keyboard_approve
-      : msgs.telegram.keyboard_reject;
-    await this.api.answerCallbackQuery(cbq.id, ackText);
   }
 
   // -----------------------------------------------------------------------
@@ -408,14 +473,7 @@ export class TelegramBotService {
       const line = `${escapeMarkdownV2(tx.type)} | ${amountStr} | ${toStr} | ${escapeMarkdownV2(tx.chain)}`;
       const txIdDisplay = escapeMarkdownV2(tx.id.slice(0, 8) + '...');
 
-      const keyboard: TelegramInlineKeyboardMarkup = {
-        inline_keyboard: [
-          [
-            { text: `${messages.telegram.keyboard_approve} ${tx.id.slice(0, 8)}`, callback_data: `approve:${tx.id}` },
-            { text: `${messages.telegram.keyboard_reject} ${tx.id.slice(0, 8)}`, callback_data: `reject:${tx.id}` },
-          ],
-        ],
-      };
+      const keyboard = buildApprovalKeyboard(tx.id, messages.telegram);
 
       await this.api.sendMessage(
         chatId,
@@ -525,6 +583,145 @@ export class TelegramBotService {
       .run(now, 'TX_REJECTED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'reject' }), 'info');
 
     await this.api.sendMessage(chatId, messages.telegram.bot_reject_success);
+  }
+
+  // -----------------------------------------------------------------------
+  // /killswitch -- confirm dialog then activate
+  // -----------------------------------------------------------------------
+
+  private async handleKillswitch(chatId: number): Promise<void> {
+    const msgs = getMessages(this.locale);
+
+    // Check current kill switch state
+    if (this.killSwitchService) {
+      const state = this.killSwitchService.getState();
+      if (state.state !== 'ACTIVE') {
+        const msg = msgs.telegram.bot_killswitch_already_active.replace(
+          '{state}',
+          escapeMarkdownV2(state.state),
+        );
+        await this.api.sendMessage(chatId, msg);
+        return;
+      }
+    }
+
+    // Send confirmation dialog with Yes/No inline keyboard
+    await this.api.sendMessage(
+      chatId,
+      msgs.telegram.bot_killswitch_confirm,
+      buildConfirmKeyboard(msgs.telegram),
+    );
+  }
+
+  private async executeKillswitchConfirm(chatId: number): Promise<void> {
+    const msgs = getMessages(this.locale);
+
+    if (!this.killSwitchService) {
+      await this.api.sendMessage(chatId, msgs.telegram.bot_killswitch_cancelled);
+      return;
+    }
+
+    const result = this.killSwitchService.activateWithCascade(`telegram:${chatId}`);
+    if (result.success) {
+      await this.api.sendMessage(chatId, msgs.telegram.bot_killswitch_success);
+    } else {
+      // Already activated between confirm dialog and button press
+      const state = this.killSwitchService.getState();
+      const msg = msgs.telegram.bot_killswitch_already_active.replace(
+        '{state}',
+        escapeMarkdownV2(state.state),
+      );
+      await this.api.sendMessage(chatId, msg);
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // /newsession -- wallet select then issue JWT
+  // -----------------------------------------------------------------------
+
+  private async handleNewSession(chatId: number): Promise<void> {
+    const msgs = getMessages(this.locale);
+
+    // Query ACTIVE wallets
+    const wallets = this.sqlite
+      .prepare("SELECT id, name FROM wallets WHERE status = 'ACTIVE' ORDER BY created_at DESC")
+      .all() as Array<{ id: string; name: string }>;
+
+    if (wallets.length === 0) {
+      await this.api.sendMessage(chatId, msgs.telegram.bot_wallets_empty);
+      return;
+    }
+
+    // Send wallet selection keyboard
+    await this.api.sendMessage(
+      chatId,
+      msgs.telegram.bot_newsession_select,
+      buildWalletSelectKeyboard(wallets),
+    );
+  }
+
+  private async executeNewSession(chatId: number, walletId: string): Promise<void> {
+    const msgs = getMessages(this.locale);
+
+    // Verify wallet exists and is ACTIVE
+    const wallet = this.sqlite
+      .prepare("SELECT id, name FROM wallets WHERE id = ? AND status = 'ACTIVE'")
+      .get(walletId) as { id: string; name: string } | undefined;
+
+    if (!wallet) {
+      await this.api.sendMessage(chatId, msgs.telegram.bot_newsession_wallet_not_found);
+      return;
+    }
+
+    if (!this.jwtSecretManager) {
+      await this.api.sendMessage(chatId, msgs.telegram.bot_newsession_wallet_not_found);
+      return;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiresAt = nowSec + this.sessionTtl;
+    const absoluteExpiresAt = nowSec + 30 * 86400; // 30 days
+
+    // Generate session ID (UUID v7 via uuidv7 package)
+    const { uuidv7 } = await import('uuidv7');
+    const sessionId = uuidv7();
+
+    // Create JWT payload and sign token
+    const jwtPayload: JwtPayload = {
+      sub: sessionId,
+      wlt: walletId,
+      iat: nowSec,
+      exp: expiresAt,
+    };
+    const token = await this.jwtSecretManager.signToken(jwtPayload);
+
+    // Compute token hash for storage
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    // Insert session into DB (direct SQL, same pattern as KillSwitchService)
+    this.sqlite
+      .prepare(
+        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at)
+         VALUES (?, ?, ?, ?, NULL, NULL, NULL, 0, 30, NULL, ?, ?)`,
+      )
+      .run(sessionId, walletId, tokenHash, expiresAt, absoluteExpiresAt, nowSec);
+
+    // Audit log
+    this.sqlite
+      .prepare(
+        'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
+      )
+      .run(
+        nowSec,
+        'SESSION_ISSUED_VIA_TELEGRAM',
+        `telegram:${chatId}`,
+        JSON.stringify({ chatId, walletId, sessionId }),
+        'info',
+      );
+
+    // Send token to user (monospace in MarkdownV2)
+    const msg = msgs.telegram.bot_newsession_created.replace('{token}', token);
+    await this.api.sendMessage(chatId, msg);
   }
 
   // -----------------------------------------------------------------------
