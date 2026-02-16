@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 139 of 139 (표시 통화 통합)
-Plan: 1 of 2 in current phase
-Status: 139-01 complete -- Admin UI 환산 표시 + 알림 display_amount
-Last activity: 2026-02-16 -- 139-01 Admin 대시보드 amountUsd + 알림 환산 금액
+Plan: 2 of 2 in current phase
+Status: 139-02 complete -- REST API + MCP display_currency 통합
+Last activity: 2026-02-16 -- 139-02 REST API/MCP display_currency + 스킬 파일
 
-Progress: [█████████░] 88% (7/8 plans)
+Progress: [██████████] 100% (8/8 plans)
 
 ## Performance Metrics
 
@@ -55,6 +55,9 @@ Recent:
 - 139-01: display_amount는 optional variable -- 미치환 시 자동 제거 + trim
 - 139-01: Stage 1 TX_REQUESTED는 display_amount='' (amountUsd 미산출 시점)
 - 139-01: PipelineContext.amountUsd에 Stage 3 결과 캐시 (DB 재조회 방지)
+- 139-02: display-currency-helper.ts 별도 파일 -- transactions.ts/wallet.ts 공통 사용
+- 139-02: balance displayBalance는 null 반환 -- 네이티브 토큰 USD 변환은 향후 확장
+- 139-02: fetchDisplayRate 한 번 호출 후 items에 재사용 -- N+1 API 호출 방지
 
 ### Blockers/Concerns
 
@@ -65,5 +68,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 139-01-PLAN.md
+Stopped at: Completed 139-02-PLAN.md (v1.5.3 Phase 139 complete)
 Resume file: None
