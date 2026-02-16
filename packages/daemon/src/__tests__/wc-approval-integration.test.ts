@@ -249,3 +249,120 @@ describe('stage4Wait WC integration', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Telegram fallback integration (Phase 149)
+// ---------------------------------------------------------------------------
+
+describe('Telegram fallback integration (Phase 149)', () => {
+  it('APPROVAL tier + no WC session -> requestSignature triggers fallback', async () => {
+    const mockApproval = createMockApprovalWorkflow();
+    const mockEventBus = { emit: vi.fn() };
+
+    // Simulate: requestSignature internally triggers fallback (emits to eventBus)
+    const mockBridge = {
+      requestSignature: vi.fn().mockImplementation(async () => {
+        // Simulate what real WcSigningBridge does on fallback (WC session missing)
+        mockEventBus.emit('approval:channel-switched', {
+          walletId: 'test-wallet-001',
+          txId: 'test-tx-001',
+          fromChannel: 'walletconnect',
+          toChannel: 'telegram',
+          reason: 'wc_not_initialized',
+        });
+      }),
+    };
+
+    const ctx = buildCtx({
+      tier: 'APPROVAL',
+      approvalWorkflow: mockApproval as any,
+      wcSigningBridge: mockBridge as any,
+    });
+
+    try {
+      await stage4Wait(ctx);
+      expect.unreachable('Should throw PIPELINE_HALTED');
+    } catch (err) {
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect((err as WAIaaSError).code).toBe('PIPELINE_HALTED');
+    }
+
+    // Wait for fire-and-forget promise to settle
+    await new Promise(r => setTimeout(r, 50));
+
+    // requestSignature was called (fire-and-forget)
+    expect(mockBridge.requestSignature).toHaveBeenCalledWith(
+      'test-wallet-001',
+      'test-tx-001',
+      'ethereum',
+    );
+
+    // Fallback event was emitted
+    expect(mockEventBus.emit).toHaveBeenCalledWith(
+      'approval:channel-switched',
+      expect.objectContaining({
+        fromChannel: 'walletconnect',
+        toChannel: 'telegram',
+        reason: 'wc_not_initialized',
+      }),
+    );
+  });
+
+  it('APPROVAL tier + WC session exists -> no fallback triggered', async () => {
+    const mockApproval = createMockApprovalWorkflow();
+    const mockEventBus = { emit: vi.fn() };
+
+    // Simulate: requestSignature succeeds (WC session exists, no fallback)
+    const mockBridge = {
+      requestSignature: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const ctx = buildCtx({
+      tier: 'APPROVAL',
+      approvalWorkflow: mockApproval as any,
+      wcSigningBridge: mockBridge as any,
+    });
+
+    try {
+      await stage4Wait(ctx);
+      expect.unreachable('Should throw PIPELINE_HALTED');
+    } catch (err) {
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect((err as WAIaaSError).code).toBe('PIPELINE_HALTED');
+    }
+
+    // Wait for fire-and-forget promise to settle
+    await new Promise(r => setTimeout(r, 50));
+
+    // requestSignature was called but no fallback event emitted
+    expect(mockBridge.requestSignature).toHaveBeenCalled();
+    expect(mockEventBus.emit).not.toHaveBeenCalled();
+  });
+
+  it('WcSigningBridge null -> no crash, no fallback events', async () => {
+    const mockApproval = createMockApprovalWorkflow();
+    const mockEventBus = { emit: vi.fn() };
+
+    const ctx = buildCtx({
+      tier: 'APPROVAL',
+      approvalWorkflow: mockApproval as any,
+      // wcSigningBridge is undefined (not provided)
+    });
+
+    try {
+      await stage4Wait(ctx);
+      expect.unreachable('Should throw PIPELINE_HALTED');
+    } catch (err) {
+      expect(err).toBeInstanceOf(WAIaaSError);
+      expect((err as WAIaaSError).code).toBe('PIPELINE_HALTED');
+    }
+
+    // Wait for fire-and-forget promise to settle (even though there is none)
+    await new Promise(r => setTimeout(r, 50));
+
+    // requestApproval still called
+    expect(mockApproval.requestApproval).toHaveBeenCalledWith('test-tx-001');
+    // No eventBus events (bridge was undefined)
+    expect(mockEventBus.emit).not.toHaveBeenCalled();
+  });
+});
