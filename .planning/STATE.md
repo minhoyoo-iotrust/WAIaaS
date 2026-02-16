@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6 Phase 141 -- AutoStop Engine
+**Current focus:** v1.6 Phase 142 -- Balance Monitoring
 
 ## Current Position
 
 Phase: 142 of 145 (Balance Monitoring)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 141-02 AutoStop 설정 관리 + DaemonLifecycle 통합 + 알림 통합 완료
+Last activity: 2026-02-16 -- 142-01 BalanceMonitorService 코어 + LOW_BALANCE 알림 인프라 완료
 
-Progress: [####░░░░░░░░░░] 36% (5/14 plans)
+Progress: [#####░░░░░░░░░] 43% (6/14 plans)
 
 ## Performance Metrics
 
@@ -26,7 +26,7 @@ Progress: [####░░░░░░░░░░] 36% (5/14 plans)
 |-------|-------|-------|----------|
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
-| 142. Balance Monitoring | 0/2 | - | - |
+| 142. Balance Monitoring | 1/2 | 4m | 4m |
 | 143. Telegram Bot | 0/3 | - | - |
 | 144. Admin UI Integration | 0/2 | - | - |
 | 145. Docker | 0/2 | - | - |
@@ -55,6 +55,9 @@ Full log in PROJECT.md and milestones/.
 - v1.6: autostop 키는 security TOML 섹션 flat key, Admin Settings는 별도 autostop 카테고리
 - v1.6: AUTO_STOP_TRIGGERED i18n 범용 {walletId}/{reason}/{rule} 템플릿
 - v1.6: HotReloadOrchestrator autostop 동기 처리 (updateConfig만)
+- v1.6: BalanceMonitorService setInterval 폴링 (EventBus 구독 대신 5분 주기)
+- v1.6: 잔액 비교 Number(balance)/10**decimals decimal 변환 후 임계값 비교
+- v1.6: 중복 알림 방지 wasLow 플래그 + 24시간 쿨다운, 회복 후 재하락 시 새 알림 허용
 
 ### Blockers/Concerns
 
@@ -64,5 +67,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 141-02-PLAN.md (AutoStop 설정 관리 + DaemonLifecycle 통합 + 알림 통합)
+Stopped at: Completed 142-01-PLAN.md (BalanceMonitorService 코어 + LOW_BALANCE 알림 인프라)
 Resume file: None
