@@ -73,8 +73,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 154-01-PLAN.md — Level 1 Mock RPC 13개 시나리오 + Level 2 Solana Local Validator E2E 5개 흐름
-- [ ] 154-02-PLAN.md — Level 2 EVM Anvil E2E (ETH/ERC-20/gas) + Level 3 Solana Devnet 3건
+- [x] 154-01-PLAN.md — Level 1 Mock RPC 13개 시나리오 + Level 2 Solana Local Validator E2E 5개 흐름
+- [x] 154-02-PLAN.md — Level 2 EVM Anvil E2E (ETH/ERC-20/gas) + Level 3 Solana Devnet 3건
 
 ### Phase 155: 보안 테스트 Part 1 (3계층 보안)
 **Goal**: 3계층 보안 모델(세션 인증 -> 정책 엔진 -> Kill Switch)의 71건 공격 시나리오가 모두 방어됨이 테스트로 증명된 상태
@@ -86,11 +86,11 @@ Plans:
   3. Kill Switch 복구 공격 8건(상태 전이 위조/dual-auth 우회 등)이 모두 차단된다
   4. 키스토어+외부 보안 10건(키스토어 공격 6건 + 외부 위협 4건)이 모두 방어된다
   5. 경계값+연쇄 공격 24건(금액/시간/TOCTOU 경계값 19건 + E2E 연쇄 5건)이 모두 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 155-01: 세션 인증 + 정책 우회 공격 테스트 (SEC-01, SEC-02)
-- [ ] 155-02: Kill Switch + 키스토어 + 경계값/연쇄 공격 테스트 (SEC-03, SEC-04, SEC-05)
+- [ ] 155-01-PLAN.md — 세션 인증 20건(SEC-01) + 정책 우회 9건(SEC-02) 공격 테스트
+- [ ] 155-02-PLAN.md — Kill Switch 8건(SEC-03) + 키스토어/외부 10건(SEC-04) + 경계값/연쇄 24건(SEC-05)
 
 ### Phase 156: 보안 테스트 Part 2 (확장 보안)
 **Goal**: 확장 기능(토큰/컨트랙트/Approve/배치/Oracle/Action/Swap/ChainError/x402) ~178건 보안 시나리오가 모두 방어됨이 테스트로 증명된 상태
@@ -164,7 +164,7 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 | 151. 커버리지 + Mock 인프라 | 2/2 | Complete | 2026-02-16 |
 | 152. Enum 검증 + Config 테스트 | 1/1 | Complete | 2026-02-16 |
 | 153. Contract Test | 2/2 | Complete | 2026-02-16 |
-| 154. 블록체인 3단계 테스트 | 0/2 | Not started | - |
+| 154. 블록체인 3단계 테스트 | 2/2 | Complete | 2026-02-16 |
 | 155. 보안 테스트 Part 1 | 0/2 | Not started | - |
 | 156. 보안 테스트 Part 2 | 0/3 | Not started | - |
 | 157. 확장 기능 테스트 | 0/3 | Not started | - |
