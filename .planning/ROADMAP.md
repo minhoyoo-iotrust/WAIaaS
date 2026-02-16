@@ -95,11 +95,11 @@ Plans:
   2. MCP 도구로 WC 페어링 시작, 상태 조회, 해제가 가능하다
   3. TypeScript/Python SDK 메서드로 WC 페어링 시작, 상태 조회, 해제가 가능하다
   4. Skill 파일이 WC 관련 API/도구를 반영하여 업데이트되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 150-01: Admin UI WC 세션 관리 페이지
-- [ ] 150-02: MCP 도구 + SDK 메서드 + Skill 파일 업데이트
+- [ ] 150-01-PLAN.md -- Session-scoped WC REST 엔드포인트 + Admin UI WC 전용 관리 페이지
+- [ ] 150-02-PLAN.md -- MCP WC 도구 3개 + TS/Python SDK WC 메서드 + Skill 파일 업데이트
 
 ## Progress
 
@@ -116,4 +116,4 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 
 ---
 *Roadmap created: 2026-02-16*
-*Last updated: 2026-02-16 -- Phase 149 계획 수립*
+*Last updated: 2026-02-16 -- Phase 150 계획 수립*
