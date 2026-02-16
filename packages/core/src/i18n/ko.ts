@@ -72,10 +72,14 @@ export const messages: Messages = {
     SHUTTING_DOWN: '서버가 종료 중입니다',
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
     SKILL_NOT_FOUND: '스킬을 찾을 수 없습니다',
-    // WALLET domain (3)
+    // WALLET domain (6)
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',
     WALLET_TERMINATED: '지갑이 종료되었습니다',
+    WC_SESSION_EXISTS: '이 지갑에 이미 활성 WC 세션이 있습니다',
+    WC_SESSION_NOT_FOUND: '이 지갑에 활성 WC 세션이 없습니다',
+    // SYSTEM domain (WC)
+    WC_NOT_CONFIGURED: 'WalletConnect가 설정되지 않았습니다',
     // WITHDRAW domain (4)
     NO_OWNER: '이 지갑에 등록된 Owner가 없습니다',
     WITHDRAW_LOCKED_ONLY: '출금에는 LOCKED Owner 상태가 필요합니다',

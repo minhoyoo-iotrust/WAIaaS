@@ -472,7 +472,7 @@ export const ERROR_CODES = {
     message: 'Skill not found',
   },
 
-  // --- WALLET domain (3) ---
+  // --- WALLET domain (6) ---
   WALLET_NOT_FOUND: {
     code: 'WALLET_NOT_FOUND',
     domain: 'WALLET',
@@ -493,6 +493,29 @@ export const ERROR_CODES = {
     httpStatus: 410,
     retryable: false,
     message: 'Wallet has been terminated',
+  },
+  WC_SESSION_EXISTS: {
+    code: 'WC_SESSION_EXISTS',
+    domain: 'WALLET',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Wallet already has an active WC session',
+  },
+  WC_SESSION_NOT_FOUND: {
+    code: 'WC_SESSION_NOT_FOUND',
+    domain: 'WALLET',
+    httpStatus: 404,
+    retryable: false,
+    message: 'No active WC session for this wallet',
+  },
+
+  // --- SYSTEM domain (WC) ---
+  WC_NOT_CONFIGURED: {
+    code: 'WC_NOT_CONFIGURED',
+    domain: 'SYSTEM',
+    httpStatus: 503,
+    retryable: false,
+    message: 'WalletConnect is not configured',
   },
 
   // --- WITHDRAW domain (4) ---

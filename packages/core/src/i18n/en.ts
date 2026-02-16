@@ -124,10 +124,14 @@ export const messages: Messages = {
     SHUTTING_DOWN: 'Server is shutting down',
     ADAPTER_NOT_AVAILABLE: 'Chain adapter not available',
     SKILL_NOT_FOUND: 'Skill not found',
-    // WALLET domain (3)
+    // WALLET domain (6)
     WALLET_NOT_FOUND: 'Wallet not found',
     WALLET_SUSPENDED: 'Wallet is suspended',
     WALLET_TERMINATED: 'Wallet has been terminated',
+    WC_SESSION_EXISTS: 'Wallet already has an active WC session',
+    WC_SESSION_NOT_FOUND: 'No active WC session for this wallet',
+    // SYSTEM domain (WC)
+    WC_NOT_CONFIGURED: 'WalletConnect is not configured',
     // WITHDRAW domain (4)
     NO_OWNER: 'No owner registered for this wallet',
     WITHDRAW_LOCKED_ONLY: 'Withdrawal requires LOCKED owner state',
