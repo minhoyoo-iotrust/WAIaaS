@@ -85,6 +85,15 @@ export interface WcSessionInfo {
 export type PairingStatus = 'pending' | 'connected' | 'expired' | 'none';
 
 // ---------------------------------------------------------------------------
+// Mutable reference holder for hot-reload support
+// ---------------------------------------------------------------------------
+
+/** Mutable ref object shared between routes, bridge, and hot-reloader. */
+export interface WcServiceRef {
+  current: WcSessionService | null;
+}
+
+// ---------------------------------------------------------------------------
 // WcSessionService
 // ---------------------------------------------------------------------------
 

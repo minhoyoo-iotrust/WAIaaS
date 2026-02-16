@@ -798,7 +798,7 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
 
 ## 12. WalletConnect Session Management
 
-WalletConnect allows the wallet owner to connect an external wallet (MetaMask, Phantom, etc.) to approve high-tier transactions. The daemon manages WC pairing, sessions, and signing bridges.
+WalletConnect allows the wallet owner to connect an external wallet (D'CENT, MetaMask, Phantom, etc.) to approve high-tier transactions. The daemon manages WC pairing, sessions, and signing bridges.
 
 ### REST API Endpoints (sessionAuth)
 

@@ -50,6 +50,8 @@ interface ApiKeyEntry {
 const CREDENTIAL_KEYS = new Set([
   'notifications.telegram_bot_token',
   'notifications.discord_webhook_url',
+  'notifications.slack_webhook_url',
+  'telegram.bot_token',
 ]);
 
 function isCredentialField(fullKey: string): boolean {
@@ -106,6 +108,8 @@ function keyToLabel(key: string): string {
     low_balance_threshold_sol: 'Low Balance Threshold (SOL)',
     low_balance_threshold_eth: 'Low Balance Threshold (ETH)',
     cooldown_hours: 'Alert Cooldown (hours)',
+    // telegram bot keys
+    bot_token: 'Bot Token',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -494,6 +498,15 @@ export default function SettingsPage() {
             />
 
             <FormField
+              label="Slack Webhook URL"
+              name="notifications.slack_webhook_url"
+              type="password"
+              value={getEffectiveValue('notifications', 'slack_webhook_url')}
+              onChange={(v) => handleFieldChange('notifications.slack_webhook_url', v)}
+              placeholder={isCredentialConfigured('notifications', 'slack_webhook_url') ? '(configured)' : ''}
+            />
+
+            <FormField
               label={keyToLabel('locale')}
               name="notifications.locale"
               type="select"
@@ -752,6 +765,62 @@ export default function SettingsPage() {
               https://cloud.walletconnect.com
             </a>
             {' '}&mdash; Create a free account and project to obtain your project ID.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section: Telegram Bot
+  // ---------------------------------------------------------------------------
+
+  function TelegramBotSettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Telegram Bot</h3>
+          <p class="settings-description">
+            Enable the Telegram Bot for interactive commands (/status, /wallets, /approve, etc.)
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="Bot Enabled"
+              name="telegram.enabled"
+              type="select"
+              value={getEffectiveValue('telegram', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('telegram.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+            />
+            <FormField
+              label="Bot Token"
+              name="telegram.bot_token"
+              type="password"
+              value={getEffectiveValue('telegram', 'bot_token')}
+              onChange={(v) => handleFieldChange('telegram.bot_token', v)}
+              placeholder={isCredentialConfigured('telegram', 'bot_token') ? '(configured)' : 'Leave empty to use notification token'}
+            />
+            <FormField
+              label="Locale"
+              name="telegram.locale"
+              type="select"
+              value={getEffectiveValue('telegram', 'locale') || 'en'}
+              onChange={(v) => handleFieldChange('telegram.locale', v)}
+              options={[
+                { label: 'English', value: 'en' },
+                { label: '한국어', value: 'ko' },
+              ]}
+            />
+          </div>
+          <div class="settings-info-box">
+            The Telegram Bot uses Long Polling for interactive commands. If Bot Token is left empty,
+            it falls back to the Notifications Telegram Bot Token. Enable the bot and configure a token
+            to allow wallet management via Telegram.
           </div>
         </div>
       </div>
@@ -1054,6 +1123,7 @@ export default function SettingsPage() {
           <RpcSettings />
           <SecuritySettings />
           <WalletConnectSettings />
+          <TelegramBotSettings />
           <DaemonSettings />
           <DisplaySettings />
           <ApiKeysSection />

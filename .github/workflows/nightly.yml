@@ -98,3 +98,22 @@ jobs:
         run: pnpm turbo run test:chain
         env:
           DEVNET_TEST: 'true'
+
+  # EVM Sepolia testnet integration tests (non-blocking)
+  evm-testnet:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: Chain Tests (EVM Testnet)
+        run: pnpm turbo run test:chain
+        env:
+          WAIAAS_TEST_EVM_TESTNET: 'true'

@@ -8,12 +8,16 @@
  * never propagated to the API response (settings are already saved to DB).
  */
 
+import type { Database } from 'better-sqlite3';
 import type { INotificationChannel } from '@waiaas/core';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { AdapterPool } from '../adapter-pool.js';
 import type { SettingsService } from './settings-service.js';
 import type { AutoStopService, AutoStopConfig } from '../../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../../services/monitoring/balance-monitor-service.js';
+import type { WcServiceRef } from '../../services/wc-session-service.js';
+import type { TelegramBotService } from '../telegram/telegram-bot-service.js';
+import type { KillSwitchService } from '../../services/kill-switch-service.js';
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -25,6 +29,11 @@ export interface HotReloadDeps {
   adapterPool?: AdapterPool | null;
   autoStopService?: AutoStopService | null;
   balanceMonitorService?: BalanceMonitorService | null;
+  wcServiceRef?: WcServiceRef | null;
+  sqlite?: Database | null;
+  /** Mutable ref for Telegram Bot hot-reload */
+  telegramBotRef?: { current: TelegramBotService | null };
+  killSwitchService?: KillSwitchService | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +76,13 @@ const MONITORING_KEYS_PREFIX = 'monitoring.';
 
 const WALLETCONNECT_KEYS_PREFIX = 'walletconnect.';
 
+const TELEGRAM_BOT_KEYS = new Set([
+  'telegram.enabled',
+  'telegram.bot_token',
+  'telegram.locale',
+  'notifications.telegram_bot_token', // shared token triggers bot reload too
+]);
+
 // ---------------------------------------------------------------------------
 // HotReloadOrchestrator
 // ---------------------------------------------------------------------------
@@ -92,6 +108,7 @@ export class HotReloadOrchestrator {
     const hasAutostopChanges = changedKeys.some((k) => k.startsWith(AUTOSTOP_KEYS_PREFIX));
     const hasMonitoringChanges = changedKeys.some((k) => k.startsWith(MONITORING_KEYS_PREFIX));
     const hasWalletConnectChanges = changedKeys.some((k) => k.startsWith(WALLETCONNECT_KEYS_PREFIX));
+    const hasTelegramBotChanges = changedKeys.some((k) => TELEGRAM_BOT_KEYS.has(k));
 
     const reloads: Promise<void>[] = [];
 
@@ -140,9 +157,19 @@ export class HotReloadOrchestrator {
     }
 
     if (hasWalletConnectChanges) {
-      // WalletConnect settings require daemon restart for full effect (SignClient re-init).
-      // project_id change requires SignClient recreation which is complex -- log guidance.
-      console.log('Hot-reload: WalletConnect settings updated. Note: project_id changes require daemon restart for full effect.');
+      reloads.push(
+        this.reloadWalletConnect().catch((err) => {
+          console.warn('Hot-reload WalletConnect failed:', err);
+        }),
+      );
+    }
+
+    if (hasTelegramBotChanges) {
+      reloads.push(
+        this.reloadTelegramBot().catch((err) => {
+          console.warn('Hot-reload Telegram Bot failed:', err);
+        }),
+      );
     }
 
     await Promise.all(reloads);
@@ -258,6 +285,91 @@ export class HotReloadOrchestrator {
 
     svc.updateConfig(newConfig);
     console.log('Hot-reload: Balance monitor config updated (effective immediately)');
+  }
+
+  /**
+   * Reload WalletConnect by shutting down old SignClient and re-initializing.
+   * Uses the mutable WcServiceRef so route handlers pick up the new instance.
+   */
+  private async reloadWalletConnect(): Promise<void> {
+    const ref = this.deps.wcServiceRef;
+    if (!ref) return;
+
+    const sqlite = this.deps.sqlite;
+    if (!sqlite) return;
+
+    // 1. Shutdown existing service
+    if (ref.current) {
+      try {
+        await ref.current.shutdown();
+      } catch {
+        // Best-effort shutdown
+      }
+      ref.current = null;
+    }
+
+    // 2. Check if new project_id exists
+    const ss = this.deps.settingsService;
+    const projectId = ss.get('walletconnect.project_id');
+
+    if (!projectId) {
+      console.log('Hot-reload: WalletConnect disabled (project_id cleared)');
+      return;
+    }
+
+    // 3. Create and initialize new WcSessionService
+    const { WcSessionService } = await import('../../services/wc-session-service.js');
+    const newService = new WcSessionService({ sqlite, settingsService: ss });
+    await newService.initialize();
+    ref.current = newService;
+
+    console.log('Hot-reload: WalletConnect service re-initialized with new settings');
+  }
+
+  /**
+   * Reload Telegram Bot by stopping the old instance and creating a new one.
+   * Uses the mutable telegramBotRef so daemon keeps a live reference.
+   */
+  private async reloadTelegramBot(): Promise<void> {
+    const ref = this.deps.telegramBotRef;
+    if (!ref) return;
+
+    const sqlite = this.deps.sqlite;
+    if (!sqlite) return;
+
+    // 1. Stop existing bot
+    if (ref.current) {
+      ref.current.stop();
+      ref.current = null;
+    }
+
+    // 2. Check if bot should be enabled
+    const ss = this.deps.settingsService;
+    const enabled = ss.get('telegram.enabled') === 'true';
+    // Token priority: telegram.bot_token > notifications.telegram_bot_token
+    const botToken = ss.get('telegram.bot_token') || ss.get('notifications.telegram_bot_token');
+
+    if (!enabled || !botToken) {
+      console.log(`Hot-reload: Telegram Bot ${!enabled ? 'disabled' : 'stopped (no token)'}`);
+      return;
+    }
+
+    // 3. Create and start new bot
+    const { TelegramBotService, TelegramApi } = await import('../telegram/index.js');
+    const locale = (ss.get('telegram.locale') || ss.get('notifications.locale') || 'en') as 'en' | 'ko';
+    const api = new TelegramApi(botToken);
+
+    ref.current = new TelegramBotService({
+      sqlite,
+      api,
+      locale,
+      killSwitchService: this.deps.killSwitchService ?? undefined,
+      notificationService: this.deps.notificationService ?? undefined,
+      settingsService: ss,
+    });
+    ref.current.start();
+
+    console.log('Hot-reload: Telegram Bot re-started with new settings');
   }
 
   /**

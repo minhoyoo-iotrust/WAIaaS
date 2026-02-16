@@ -37,7 +37,6 @@ const NAV_ITEMS = [
   { path: '/sessions', label: 'Sessions' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
-  { path: '/telegram-users', label: 'Telegram' },
   { path: '/walletconnect', label: 'WalletConnect' },
   { path: '/settings', label: 'Settings' },
 ];
@@ -47,7 +46,11 @@ function PageRouter() {
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
-  if (path === '/telegram-users') return <TelegramUsersPage />;
+  if (path === '/telegram-users') {
+    // Redirect legacy route to Notifications > Telegram Users tab
+    window.location.hash = '#/notifications';
+    return <NotificationsPage />;
+  }
   if (path === '/walletconnect') return <WalletConnectPage />;
   if (path === '/settings') return <SettingsPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;

@@ -26,7 +26,16 @@ interface TelegramUser {
 // Component
 // ---------------------------------------------------------------------------
 
+/** Embeddable content (no page wrapper) for Notifications tabs */
+export function TelegramUsersContent() {
+  return <TelegramUsersInner />;
+}
+
 export default function TelegramUsersPage() {
+  return <TelegramUsersInner />;
+}
+
+function TelegramUsersInner() {
   const users = useSignal<TelegramUser[]>([]);
   const loading = useSignal(true);
 

@@ -143,7 +143,7 @@ export async function ownerConnectCommand(opts: OwnerCommandOptions): Promise<vo
   const terminalQr = await QRCode.toString(result.uri, { type: 'terminal', small: true });
   console.log('\n' + terminalQr);
   console.log(`URI: ${result.uri}`);
-  console.log('\nScan with MetaMask, Phantom, or any WalletConnect-compatible wallet.\n');
+  console.log("\nScan with D'CENT, MetaMask, Phantom, or any WalletConnect-compatible wallet.\n");
 
   if (!opts.poll) return;
 

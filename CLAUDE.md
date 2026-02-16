@@ -43,8 +43,8 @@
 
 ## Milestone Completion
 
-- 마일스톤 완료 시 `./scripts/tag-release.sh v{version}`을 실행하여 모든 패키지 버전을 범프하고 태그를 생성한다.
-- 태그가 이미 존재하는 경우 버전 범프만 수동으로 수행한다.
+- **v1.8.1 이전**: 마일스톤 완료 시 `./scripts/tag-release.sh v{version}`을 실행하여 모든 패키지 버전을 범프하고 태그를 생성한다. 태그가 이미 존재하는 경우 버전 범프만 수동으로 수행한다.
+- **v1.8.1 이후 (2-게이트 모델)**: release-please가 버전 범프 + 태그 + CHANGELOG를 자동 관리한다. `tag-release.sh`는 폐기. 릴리스 흐름: PR 머지 → release-please Release PR 자동 생성 → Release PR 머지(게이트 1: 릴리스 의사 결정) → release.yml 품질 게이트 → deploy job 수동 승인(게이트 2: 배포 실행).
 
 ## Issue Tracking
 

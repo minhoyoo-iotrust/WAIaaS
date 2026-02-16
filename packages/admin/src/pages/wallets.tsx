@@ -199,6 +199,9 @@ function WalletDetailView({ id }: { id: string }) {
   const wcSessionLoading = useSignal(true);
   const wcDisconnectLoading = useSignal(false);
   const pollRef = useSignal<ReturnType<typeof setInterval> | null>(null);
+  const ownerEditing = useSignal(false);
+  const editOwnerAddress = useSignal('');
+  const ownerEditLoading = useSignal(false);
 
   const fetchWallet = async () => {
     try {
@@ -368,6 +371,36 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const startEditOwner = () => {
+    editOwnerAddress.value = wallet.value?.ownerAddress ?? '';
+    ownerEditing.value = true;
+  };
+
+  const cancelEditOwner = () => {
+    ownerEditing.value = false;
+  };
+
+  const handleSaveOwner = async () => {
+    if (!editOwnerAddress.value.trim()) {
+      showToast('error', 'Owner address is required');
+      return;
+    }
+    ownerEditLoading.value = true;
+    try {
+      const result = await apiPut<WalletDetail>(API.WALLET_OWNER(id), {
+        owner_address: editOwnerAddress.value.trim(),
+      });
+      wallet.value = result;
+      ownerEditing.value = false;
+      showToast('success', 'Owner address updated');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ownerEditLoading.value = false;
+    }
+  };
+
   const handleChangeDefaultNetwork = async (network: string) => {
     defaultNetworkLoading.value = true;
     try {
@@ -452,11 +485,42 @@ function WalletDetailView({ id }: { id: string }) {
                 {wallet.value.status}
               </Badge>
             </DetailRow>
-            <DetailRow
-              label="Owner Address"
-              value={wallet.value.ownerAddress ?? 'None'}
-              copy={!!wallet.value.ownerAddress}
-            />
+            <DetailRow label="Owner Address">
+              {ownerEditing.value ? (
+                <div class="inline-edit">
+                  <input
+                    value={editOwnerAddress.value}
+                    onInput={(e) => {
+                      editOwnerAddress.value = (e.target as HTMLInputElement).value;
+                    }}
+                    class="inline-edit-input"
+                    placeholder="Enter owner wallet address"
+                  />
+                  <Button size="sm" onClick={handleSaveOwner} loading={ownerEditLoading.value}>
+                    Save
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={cancelEditOwner}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <span>
+                  {wallet.value.ownerAddress ? (
+                    <>
+                      {formatAddress(wallet.value.ownerAddress)}
+                      <CopyButton value={wallet.value.ownerAddress} />
+                    </>
+                  ) : (
+                    'None'
+                  )}
+                  {wallet.value.ownerState !== 'LOCKED' && wallet.value.status === 'ACTIVE' && (
+                    <button class="btn btn-ghost btn-sm" onClick={startEditOwner} title="Set owner address">
+                      &#9998;
+                    </button>
+                  )}
+                </span>
+              )}
+            </DetailRow>
             <DetailRow label="Owner State">
               <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
                 {wallet.value.ownerState}
@@ -591,7 +655,7 @@ function WalletDetailView({ id }: { id: string }) {
             ) : (
               <div>
                 <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)' }}>
-                  Connect an external wallet (MetaMask, Phantom) via WalletConnect for transaction approval.
+                  Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
                 </p>
                 <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
                   Connect Wallet
@@ -682,7 +746,7 @@ function WalletDetailView({ id }: { id: string }) {
                   style={{ width: '280px', height: '280px', margin: '0 auto' }}
                 />
                 <p style={{ marginTop: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                  Scan with MetaMask, Phantom, or any WalletConnect-compatible wallet
+                  Scan with D'CENT, MetaMask, Phantom, or any WalletConnect-compatible wallet
                 </p>
                 <p style={{ marginTop: 'var(--space-2)', color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
                   Waiting for connection...

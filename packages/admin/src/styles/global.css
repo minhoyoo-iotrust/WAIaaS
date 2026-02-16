@@ -978,6 +978,12 @@ table .table-loading {
 .config-guidance pre { margin-top: var(--space-2); padding: var(--space-3); background: var(--color-bg-tertiary); border-radius: var(--radius-sm); font-family: monospace; font-size: var(--font-size-xs); overflow-x: auto; white-space: pre; }
 .config-guidance p { color: var(--color-text-secondary); margin-bottom: var(--space-2); }
 
+/* Tab Navigation */
+.tab-nav { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--color-border); }
+.tab-btn { padding: var(--space-2) var(--space-4); background: none; border: none; border-bottom: 2px solid transparent; font-size: var(--font-size-sm); font-weight: 500; color: var(--color-text-secondary); cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.tab-btn:hover { color: var(--color-text); }
+.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+
 .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-4); }
 .pagination-info { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .pagination-buttons { display: flex; gap: var(--space-2); }

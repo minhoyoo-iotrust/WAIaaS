@@ -27,7 +27,7 @@ import { createSiweMessage } from 'viem/siwe';
 import type { EventBus } from '@waiaas/core';
 import { verifySIWE } from '../api/middleware/siwe-verify.js';
 import { decodeBase58 } from '../api/middleware/address-validation.js';
-import type { WcSessionService } from './wc-session-service.js';
+import type { WcServiceRef } from './wc-session-service.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 
@@ -93,7 +93,7 @@ function encodeBase58(buf: Buffer): string {
 // ---------------------------------------------------------------------------
 
 export interface WcSigningBridgeDeps {
-  wcSessionService: WcSessionService;
+  wcServiceRef: WcServiceRef;
   approvalWorkflow: ApprovalWorkflow;
   sqlite: Database;
   notificationService?: NotificationService;
@@ -111,14 +111,14 @@ interface SignRequest {
 // ---------------------------------------------------------------------------
 
 export class WcSigningBridge {
-  private readonly wcSessionService: WcSessionService;
+  private readonly wcServiceRef: WcServiceRef;
   private readonly approvalWorkflow: ApprovalWorkflow;
   private readonly sqlite: Database;
   private readonly notificationService?: NotificationService;
   private readonly eventBus?: EventBus;
 
   constructor(deps: WcSigningBridgeDeps) {
-    this.wcSessionService = deps.wcSessionService;
+    this.wcServiceRef = deps.wcServiceRef;
     this.approvalWorkflow = deps.approvalWorkflow;
     this.sqlite = deps.sqlite;
     this.notificationService = deps.notificationService;
@@ -135,21 +135,26 @@ export class WcSigningBridge {
   async requestSignature(walletId: string, txId: string, chain: string): Promise<void> {
     try {
       // Guard: WC not initialized
-      const signClient = this.wcSessionService.getSignClient();
+      const wcService = this.wcServiceRef.current;
+      if (!wcService) {
+        this.fallbackToTelegram(walletId, txId, 'wc_not_initialized');
+        return;
+      }
+      const signClient = wcService.getSignClient();
       if (!signClient) {
         this.fallbackToTelegram(walletId, txId, 'wc_not_initialized');
         return;
       }
 
       // Guard: no session for this wallet
-      const topic = this.wcSessionService.getSessionTopic(walletId);
+      const topic = wcService.getSessionTopic(walletId);
       if (!topic) {
         this.fallbackToTelegram(walletId, txId, 'no_wc_session');
         return;
       }
 
       // Guard: no session info (should not happen if topic exists, but defensive)
-      const sessionInfo = this.wcSessionService.getSessionInfo(walletId);
+      const sessionInfo = wcService.getSessionInfo(walletId);
       if (!sessionInfo) {
         this.fallbackToTelegram(walletId, txId, 'no_session_info');
         return;

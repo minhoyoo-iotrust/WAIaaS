@@ -8,6 +8,7 @@ import { Button, Badge } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
+import { TelegramUsersContent } from './telegram-users';
 
 interface ChannelStatus {
   name: string;
@@ -45,7 +46,10 @@ interface NotificationLogResponse {
 
 const PAGE_SIZE = 20;
 
+type NotifTab = 'channels' | 'telegram';
+
 export default function NotificationsPage() {
+  const activeTab = useSignal<NotifTab>('channels');
   const status = useSignal<NotificationStatus | null>(null);
   const statusLoading = useSignal(true);
   const testLoading = useSignal(false);
@@ -185,6 +189,26 @@ export default function NotificationsPage() {
 
   return (
     <div class="page">
+      {/* Tab Navigation */}
+      <div class="tab-nav" style={{ marginBottom: 'var(--space-4)' }}>
+        <button
+          class={`tab-btn ${activeTab.value === 'channels' ? 'active' : ''}`}
+          onClick={() => { activeTab.value = 'channels'; }}
+        >
+          Channels & Logs
+        </button>
+        <button
+          class={`tab-btn ${activeTab.value === 'telegram' ? 'active' : ''}`}
+          onClick={() => { activeTab.value = 'telegram'; }}
+        >
+          Telegram Users
+        </button>
+      </div>
+
+      {activeTab.value === 'telegram' ? (
+        <TelegramUsersContent />
+      ) : (
+      <>
       {/* Section 1: Channel Status Cards */}
       <h2>Channel Status</h2>
 
@@ -312,15 +336,10 @@ export default function NotificationsPage() {
 
       {/* Section 3: Configuration Guidance */}
       <div class="config-guidance">
-        <p>Notification channels are configured via config.toml. To add or modify channels:</p>
-        <pre>{`[notifications]
-enabled = true
-telegram_bot_token = "your-bot-token"
-telegram_chat_id = "your-chat-id"
-discord_webhook_url = "https://discord.com/api/webhooks/..."
-ntfy_topic = "your-topic"`}</pre>
-        <p style={{ marginTop: 'var(--space-2)' }}>Restart the daemon after changing notification settings.</p>
+        <p>Configure notification channels in Settings &rarr; Notifications section. Changes are applied immediately via hot-reload.</p>
       </div>
+      </>
+      )}
     </div>
   );
 }

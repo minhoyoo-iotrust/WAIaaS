@@ -17,7 +17,7 @@ export function registerWcConnect(
   server.tool(
     'wc_connect',
     withWalletPrefix(
-      'Start WalletConnect pairing. Returns a WC URI that the wallet owner can use to connect their external wallet (MetaMask, Phantom, etc). Share the URI with the user -- they can paste it into their wallet app.',
+      "Start WalletConnect pairing. Returns a WC URI that the wallet owner can use to connect their external wallet (D'CENT, MetaMask, Phantom, etc). Share the URI with the user -- they can paste it into their wallet app.",
       walletContext?.walletName,
     ),
     {},

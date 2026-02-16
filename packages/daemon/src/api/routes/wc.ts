@@ -21,7 +21,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { WcSessionService } from '../../services/wc-session-service.js';
+import type { WcSessionService, WcServiceRef } from '../../services/wc-session-service.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
   WcPairingResponseSchema,
@@ -38,13 +38,13 @@ import {
 
 export interface WcRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
-  wcSessionService: WcSessionService | null;
+  wcServiceRef: WcServiceRef;
 }
 
 /** Guard: throw WC_NOT_CONFIGURED if service is null, return non-null service. */
-function requireWcService(svc: WcSessionService | null): WcSessionService {
-  if (!svc) throw new WAIaaSError('WC_NOT_CONFIGURED');
-  return svc;
+function requireWcService(ref: WcServiceRef): WcSessionService {
+  if (!ref.current) throw new WAIaaSError('WC_NOT_CONFIGURED');
+  return ref.current;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ const sessionPairingStatusRoute = createRoute({
  */
 export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
-  const { db, wcSessionService } = deps;
+  const { db, wcServiceRef } = deps;
 
   // -------------------------------------------------------------------------
   // POST /wallets/:id/wc/pair
@@ -215,7 +215,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_TERMINATED');
     }
 
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
     const network = wallet.default_network ?? wallet.environment;
     const result = await svc.createPairing(id, network, wallet.chain);
 
@@ -235,7 +235,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(getSessionRoute, async (c) => {
     const { id } = c.req.valid('param');
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
 
     // Verify wallet exists
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
@@ -261,7 +261,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(deleteSessionRoute, async (c) => {
     const { id } = c.req.valid('param');
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
 
     // Verify wallet exists
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
@@ -284,7 +284,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(pairingStatusRoute, async (c) => {
     const { id } = c.req.valid('param');
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
 
     // Verify wallet exists
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
@@ -319,7 +319,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
  */
 export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
-  const { db, wcSessionService } = deps;
+  const { db, wcServiceRef } = deps;
 
   // Helper: get walletId from sessionAuth JWT context
   const getWalletId = (c: any): string => {
@@ -346,7 +346,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
     if (wallet.status === 'TERMINATED') throw new WAIaaSError('WALLET_TERMINATED');
 
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
     const network = wallet.default_network ?? wallet.environment;
     const result = await svc.createPairing(walletId, network, wallet.chain);
 
@@ -366,7 +366,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(sessionGetSessionRoute, async (c) => {
     const walletId = getWalletId(c);
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
 
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
@@ -386,7 +386,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(sessionDeleteSessionRoute, async (c) => {
     const walletId = getWalletId(c);
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
 
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
@@ -405,7 +405,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(sessionPairingStatusRoute, async (c) => {
     const walletId = getWalletId(c);
-    const svc = requireWcService(wcSessionService);
+    const svc = requireWcService(wcServiceRef);
 
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite

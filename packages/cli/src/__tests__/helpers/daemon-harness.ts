@@ -249,8 +249,15 @@ export async function startTestDaemonWithAdapter(
   const keystoreDir = join(dataDir, 'keystore');
   const keyStore = new LocalKeyStore(keystoreDir);
 
-  // Step 4: Mock adapter
+  // Step 4: Mock adapter wrapped in AdapterPool interface
   const adapter = new MockChainAdapter();
+  const mockAdapterPool = {
+    resolve: async () => adapter as unknown as IChainAdapter,
+    disconnectAll: async () => {},
+    evict: async () => {},
+    evictAll: async () => {},
+    get size() { return 1; },
+  };
 
   // Step 5: JWT secret manager init
   const jwtSecretManager = new JwtSecretManager(db);
@@ -273,7 +280,7 @@ export async function startTestDaemonWithAdapter(
     masterPassword,
     masterPasswordHash,
     config,
-    adapter: adapter as unknown as IChainAdapter,
+    adapterPool: mockAdapterPool as any,
     policyEngine,
     jwtSecretManager,
   });

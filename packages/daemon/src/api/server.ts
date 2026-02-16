@@ -67,7 +67,7 @@ import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import { WAIaaSError } from '@waiaas/core';
 import type { IPolicyEngine, IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
 import type { KillSwitchService } from '../services/kill-switch-service.js';
-import type { WcSessionService } from '../services/wc-session-service.js';
+import type { WcServiceRef } from '../services/wc-session-service.js';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
@@ -111,7 +111,7 @@ export interface CreateAppDeps {
   forexRateService?: IForexRateService;
   eventBus?: EventBus;
   killSwitchService?: KillSwitchService;
-  wcSessionService?: WcSessionService;
+  wcServiceRef?: WcServiceRef;
   wcSigningBridge?: WcSigningBridge;
 }
 
@@ -495,17 +495,13 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     );
   }
 
-  // Register WalletConnect routes (always, with nullable wcSessionService).
+  // Register WalletConnect routes (always, with mutable WcServiceRef).
   // Handlers throw WC_NOT_CONFIGURED (503) when service is unavailable.
+  // The ref pattern allows hot-reload to swap the underlying WcSessionService.
   if (deps.db) {
-    app.route('/v1', wcRoutes({
-      db: deps.db,
-      wcSessionService: deps.wcSessionService ?? null,
-    }));
-    app.route('/v1', wcSessionRoutes({
-      db: deps.db,
-      wcSessionService: deps.wcSessionService ?? null,
-    }));
+    const wcServiceRef = deps.wcServiceRef ?? { current: null };
+    app.route('/v1', wcRoutes({ db: deps.db, wcServiceRef }));
+    app.route('/v1', wcSessionRoutes({ db: deps.db, wcServiceRef }));
   }
 
   // Register OpenAPI spec endpoint (GET /doc)

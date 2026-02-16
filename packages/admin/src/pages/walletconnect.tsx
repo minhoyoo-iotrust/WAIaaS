@@ -251,7 +251,7 @@ export default function WalletConnectPage() {
       <div class="card" style={{ marginBottom: 'var(--space-4)' }}>
         <p style={{ color: 'var(--color-text-secondary)', margin: 0 }}>
           Manage WalletConnect sessions across all wallets. Connect an external wallet
-          (MetaMask, Phantom) for transaction approval via WalletConnect.
+          (D'CENT, MetaMask, Phantom) for transaction approval via WalletConnect.
         </p>
       </div>
 
@@ -275,7 +275,7 @@ export default function WalletConnectPage() {
               style={{ width: '280px', height: '280px', margin: '0 auto' }}
             />
             <p style={{ marginTop: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-              Scan with MetaMask, Phantom, or any WalletConnect-compatible wallet
+              Scan with D'CENT, MetaMask, Phantom, or any WalletConnect-compatible wallet
             </p>
             <p style={{ marginTop: 'var(--space-2)', color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
               Waiting for connection...

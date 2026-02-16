@@ -201,7 +201,7 @@ describe('WcSigningBridge', () => {
   } = {}): WcSigningBridge {
     mockWcSessionService = createMockWcSessionService(overrides);
     const deps: WcSigningBridgeDeps = {
-      wcSessionService: mockWcSessionService as any,
+      wcServiceRef: { current: mockWcSessionService as any },
       approvalWorkflow: mockApprovalWorkflow as any,
       sqlite,
       notificationService: overrides.notificationService,

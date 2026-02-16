@@ -233,18 +233,16 @@ describe('NotificationsPage', () => {
     });
   });
 
-  it('should show config.toml guidance section', async () => {
+  it('should show configuration guidance section', async () => {
     setupMocks();
 
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Notification channels are configured via config\.toml/)).toBeTruthy();
+      expect(screen.getByText(/Configure notification channels in Settings/)).toBeTruthy();
     });
 
-    expect(screen.getByText(/Restart the daemon after changing notification settings/)).toBeTruthy();
-    expect(screen.getByText(/telegram_bot_token/)).toBeTruthy();
-    expect(screen.getByText(/discord_webhook_url/)).toBeTruthy();
+    expect(screen.getByText(/hot-reload/)).toBeTruthy();
   });
 
   it('should disable Test All Channels when no channels are active', async () => {

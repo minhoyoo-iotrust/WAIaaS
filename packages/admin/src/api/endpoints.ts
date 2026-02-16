@@ -26,6 +26,8 @@ export const API = {
   ADMIN_FOREX_RATES: '/v1/admin/forex/rates',
   ADMIN_TELEGRAM_USERS: '/v1/admin/telegram-users',
   ADMIN_TELEGRAM_USER: (chatId: number) => `/v1/admin/telegram-users/${chatId}`,
+  WALLET_OWNER: (id: string) => `/v1/wallets/${id}/owner`,
+  WALLET_WITHDRAW: (id: string) => `/v1/wallets/${id}/withdraw`,
   WALLET_WC_PAIR: (id: string) => `/v1/wallets/${id}/wc/pair`,
   WALLET_WC_SESSION: (id: string) => `/v1/wallets/${id}/wc/session`,
   WALLET_WC_PAIR_STATUS: (id: string) => `/v1/wallets/${id}/wc/pair/status`,

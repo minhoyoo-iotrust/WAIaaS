@@ -134,7 +134,9 @@ export class DaemonLifecycle {
   private autoStopService: AutoStopService | null = null;
   private balanceMonitorService: BalanceMonitorService | null = null;
   private telegramBotService: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null = null;
+  private telegramBotRef: { current: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null } = { current: null };
   private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
+  private wcServiceRef: import('../services/wc-session-service.js').WcServiceRef = { current: null };
   private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
 
   /** Whether shutdown has been initiated. */
@@ -469,12 +471,21 @@ export class DaemonLifecycle {
     // Step 4c-5: TelegramBotService initialization (fail-soft)
     // ------------------------------------------------------------------
     try {
-      if (this._config!.telegram.enabled && this._config!.telegram.bot_token) {
+      // Read telegram settings from SettingsService (falls back to config.toml)
+      const ss = this._settingsService;
+      const botEnabled = ss ? ss.get('telegram.enabled') === 'true' : this._config!.telegram.enabled;
+      // Token priority: telegram.bot_token > notifications.telegram_bot_token > config.toml
+      const botToken = (ss ? (ss.get('telegram.bot_token') || ss.get('notifications.telegram_bot_token')) : null)
+        || this._config!.telegram.bot_token;
+      if (botEnabled && botToken) {
         const { TelegramBotService, TelegramApi } = await import(
           '../infrastructure/telegram/index.js'
         );
-        const telegramApi = new TelegramApi(this._config!.telegram.bot_token);
-        const telegramLocale = (this._config!.telegram.locale ?? this._config!.notifications.locale ?? 'en') as 'en' | 'ko';
+        const telegramApi = new TelegramApi(botToken);
+        const telegramLocale = ((ss ? ss.get('telegram.locale') : null)
+          || this._config!.telegram.locale
+          || this._config!.notifications.locale
+          || 'en') as 'en' | 'ko';
         this.telegramBotService = new TelegramBotService({
           sqlite: this.sqlite!,
           api: telegramApi,
@@ -484,6 +495,7 @@ export class DaemonLifecycle {
           settingsService: this._settingsService ?? undefined,
         });
         this.telegramBotService.start();
+        this.telegramBotRef.current = this.telegramBotService;
         console.log('Step 4c-5: Telegram Bot started');
       } else {
         console.log('Step 4c-5: Telegram Bot disabled');
@@ -491,6 +503,7 @@ export class DaemonLifecycle {
     } catch (err) {
       console.warn('Step 4c-5 (fail-soft): Telegram Bot init warning:', err);
       this.telegramBotService = null;
+      this.telegramBotRef.current = null;
     }
 
     // ------------------------------------------------------------------
@@ -505,6 +518,7 @@ export class DaemonLifecycle {
           settingsService: this._settingsService!,
         });
         await this.wcSessionService.initialize();
+        this.wcServiceRef.current = this.wcSessionService;
         console.log('Step 4c-6: WalletConnect service initialized');
       } else {
         console.log('Step 4c-6: WalletConnect disabled (no project_id)');
@@ -512,6 +526,7 @@ export class DaemonLifecycle {
     } catch (err) {
       console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
       this.wcSessionService = null;
+      this.wcServiceRef.current = null;
     }
 
     // ------------------------------------------------------------------
@@ -521,7 +536,7 @@ export class DaemonLifecycle {
       if (this.wcSessionService && this.approvalWorkflow && this.sqlite) {
         const { WcSigningBridge } = await import('../services/wc-signing-bridge.js');
         this.wcSigningBridge = new WcSigningBridge({
-          wcSessionService: this.wcSessionService,
+          wcServiceRef: this.wcServiceRef,
           approvalWorkflow: this.approvalWorkflow,
           sqlite: this.sqlite,
           notificationService: this.notificationService ?? undefined,
@@ -628,6 +643,10 @@ export class DaemonLifecycle {
           adapterPool: this.adapterPool,
           autoStopService: this.autoStopService,
           balanceMonitorService: this.balanceMonitorService,
+          wcServiceRef: this.wcServiceRef,
+          sqlite: this.sqlite,
+          telegramBotRef: this.telegramBotRef,
+          killSwitchService: this.killSwitchService,
         });
 
         const app = createApp({
@@ -658,7 +677,7 @@ export class DaemonLifecycle {
           forexRateService: this.forexRateService ?? undefined,
           eventBus: this.eventBus,
           killSwitchService: this.killSwitchService ?? undefined,
-          wcSessionService: this.wcSessionService ?? undefined,
+          wcServiceRef: this.wcServiceRef,
           wcSigningBridge: this.wcSigningBridge ?? undefined,
         });
 
@@ -817,6 +836,7 @@ export class DaemonLifecycle {
       if (this.telegramBotService) {
         this.telegramBotService.stop();
         this.telegramBotService = null;
+        this.telegramBotRef.current = null;
       }
 
       // Stop WcSessionService (before EventBus cleanup)
@@ -827,6 +847,7 @@ export class DaemonLifecycle {
           console.warn('WcSessionService shutdown warning:', err);
         }
         this.wcSessionService = null;
+        this.wcServiceRef.current = null;
       }
 
       // Step 6b: Remove all EventBus listeners
