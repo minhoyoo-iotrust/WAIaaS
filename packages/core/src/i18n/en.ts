@@ -142,7 +142,7 @@ export const messages: Messages = {
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },
     KILL_SWITCH_ESCALATED: { title: 'Kill Switch Escalated', body: 'Kill switch escalated to LOCKED state. Immediate action required' },
-    AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Daemon auto-stopped after {failures} consecutive failures' },
+    AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Wallet {walletId} auto-stopped: {reason}. Rule: {rule}' },
     SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for wallet {walletId} expires in {minutes} minutes' },
     SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for wallet {walletId} has expired' },
     SESSION_CREATED: { title: 'Session Created', body: 'New session created for wallet {walletId}' },

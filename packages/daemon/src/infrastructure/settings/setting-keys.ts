@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -38,6 +38,7 @@ export const SETTING_CATEGORIES = [
   'walletconnect',
   'oracle',
   'display',
+  'autostop',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -101,6 +102,14 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
 
   // --- display category ---
   { key: 'display.currency', category: 'display', configPath: 'display.currency', defaultValue: 'USD', isCredential: false },
+
+  // --- autostop category (AUTO-05 runtime-overridable) ---
+  { key: 'autostop.consecutive_failures_threshold', category: 'autostop', configPath: 'security.autostop_consecutive_failures_threshold', defaultValue: '5', isCredential: false },
+  { key: 'autostop.unusual_activity_threshold', category: 'autostop', configPath: 'security.autostop_unusual_activity_threshold', defaultValue: '20', isCredential: false },
+  { key: 'autostop.unusual_activity_window_sec', category: 'autostop', configPath: 'security.autostop_unusual_activity_window_sec', defaultValue: '300', isCredential: false },
+  { key: 'autostop.idle_timeout_sec', category: 'autostop', configPath: 'security.autostop_idle_timeout_sec', defaultValue: '3600', isCredential: false },
+  { key: 'autostop.idle_check_interval_sec', category: 'autostop', configPath: 'security.autostop_idle_check_interval_sec', defaultValue: '60', isCredential: false },
+  { key: 'autostop.enabled', category: 'autostop', configPath: 'security.autostop_enabled', defaultValue: 'true', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

@@ -107,7 +107,7 @@ function mockConfig(): DaemonConfig {
       rate_limit_session_rpm: 300,
       rate_limit_tx_rpm: 10,
       cors_origins: ['http://localhost:3100'],
-      auto_stop_consecutive_failures_threshold: 3,
+      autostop_consecutive_failures_threshold: 5,
       policy_defaults_delay_seconds: 300,
       policy_defaults_approval_timeout: 3600,
       kill_switch_recovery_cooldown: 1800,

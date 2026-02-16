@@ -109,7 +109,13 @@ export const DaemonConfigSchema = z.object({
       cors_origins: z
         .array(z.string())
         .default(['http://localhost:3100', 'http://127.0.0.1:3100']),
-      auto_stop_consecutive_failures_threshold: z.number().int().min(1).max(20).default(3),
+      // AutoStop engine thresholds (AUTO-05 runtime-overridable via Admin Settings)
+      autostop_consecutive_failures_threshold: z.number().int().min(1).max(50).default(5),
+      autostop_unusual_activity_threshold: z.number().int().min(5).max(200).default(20),
+      autostop_unusual_activity_window_sec: z.number().int().min(60).max(3600).default(300),
+      autostop_idle_timeout_sec: z.number().int().min(300).max(86400).default(3600),
+      autostop_idle_check_interval_sec: z.number().int().min(10).max(600).default(60),
+      autostop_enabled: z.boolean().default(true),
       policy_defaults_delay_seconds: z.number().int().min(60).max(3600).default(300),
       policy_defaults_approval_timeout: z.number().int().min(300).max(86400).default(3600),
       kill_switch_recovery_cooldown: z.number().int().min(600).max(86400).default(1800),

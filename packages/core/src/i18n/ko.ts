@@ -118,7 +118,7 @@ export const messages: Messages = {
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch 발동', body: '{activatedBy}에 의해 Kill Switch가 발동되었습니다. 모든 작업이 중단됩니다' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch 해제', body: 'Kill Switch가 해제되었습니다. 정상 운영이 재개됩니다' },
     KILL_SWITCH_ESCALATED: { title: 'Kill Switch 격상', body: 'Kill Switch가 LOCKED 상태로 격상되었습니다. 즉시 조치가 필요합니다' },
-    AUTO_STOP_TRIGGERED: { title: '자동 정지 발동', body: '연속 {failures}회 실패로 데몬이 자동 정지되었습니다' },
+    AUTO_STOP_TRIGGERED: { title: '자동 정지 발동', body: '월렛 {walletId} 자동 정지: {reason}. 규칙: {rule}' },
     SESSION_EXPIRING_SOON: { title: '세션 만료 임박', body: '지갑 {walletId}의 세션 {sessionId}이 {minutes}분 후 만료됩니다' },
     SESSION_EXPIRED: { title: '세션 만료', body: '지갑 {walletId}의 세션 {sessionId}이 만료되었습니다' },
     SESSION_CREATED: { title: '세션 생성', body: '지갑 {walletId}의 새 세션이 생성되었습니다' },

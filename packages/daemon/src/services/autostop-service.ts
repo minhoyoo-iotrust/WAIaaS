@@ -166,11 +166,11 @@ export class AutoStopService {
   manualTrigger(triggeredBy: string): void {
     this.killSwitchService.activateWithCascade(triggeredBy);
 
-    // Fire-and-forget notification
+    // Fire-and-forget notification (AUTO-06)
     void this.notificationService?.notify(
       'AUTO_STOP_TRIGGERED' as Parameters<NotificationService['notify']>[0],
       'system',
-      { reason: 'MANUAL_TRIGGER', triggeredBy },
+      { walletId: 'system', reason: 'Manual trigger by ' + triggeredBy, rule: 'MANUAL_TRIGGER' },
     );
   }
 
@@ -219,7 +219,7 @@ export class AutoStopService {
     void this.notificationService?.notify(
       'AUTO_STOP_TRIGGERED' as Parameters<NotificationService['notify']>[0],
       walletId,
-      { reason, walletId },
+      { walletId, reason, rule: reason },
     );
   }
 
@@ -252,11 +252,11 @@ export class AutoStopService {
 
     if (result.changes === 0) return; // Already revoked or not found
 
-    // Fire-and-forget notification
+    // Fire-and-forget notification (AUTO-06)
     void this.notificationService?.notify(
       'AUTO_STOP_TRIGGERED' as Parameters<NotificationService['notify']>[0],
       walletId,
-      { reason: 'IDLE_TIMEOUT', walletId, sessionId },
+      { walletId, reason: 'Idle session revoked: ' + sessionId, rule: 'IDLE_TIMEOUT' },
     );
   }
 
