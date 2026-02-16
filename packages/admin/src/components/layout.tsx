@@ -6,6 +6,7 @@ import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
 import TelegramUsersPage from '../pages/telegram-users';
+import WalletConnectPage from '../pages/walletconnect';
 import SettingsPage from '../pages/settings';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
@@ -21,6 +22,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/telegram-users': 'Telegram Users',
+  '/walletconnect': 'WalletConnect',
   '/settings': 'Settings',
 };
 
@@ -36,6 +38,7 @@ const NAV_ITEMS = [
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/telegram-users', label: 'Telegram' },
+  { path: '/walletconnect', label: 'WalletConnect' },
   { path: '/settings', label: 'Settings' },
 ];
 
@@ -45,6 +48,7 @@ function PageRouter() {
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
   if (path === '/telegram-users') return <TelegramUsersPage />;
+  if (path === '/walletconnect') return <WalletConnectPage />;
   if (path === '/settings') return <SettingsPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;
