@@ -424,7 +424,7 @@ describe('AutoStopService', () => {
       expect(mockNotify).toHaveBeenCalledWith(
         'AUTO_STOP_TRIGGERED',
         walletId,
-        expect.objectContaining({ reason: 'UNUSUAL_ACTIVITY', walletId }),
+        expect.objectContaining({ walletId, reason: 'UNUSUAL_ACTIVITY', rule: 'UNUSUAL_ACTIVITY' }),
       );
     });
   });
@@ -555,7 +555,7 @@ describe('AutoStopService', () => {
       expect(mockNotify).toHaveBeenCalledWith(
         'AUTO_STOP_TRIGGERED',
         'system',
-        expect.objectContaining({ reason: 'MANUAL_TRIGGER', triggeredBy: 'admin' }),
+        expect.objectContaining({ walletId: 'system', rule: 'MANUAL_TRIGGER' }),
       );
     });
   });

@@ -12,6 +12,7 @@ import type { INotificationChannel } from '@waiaas/core';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { AdapterPool } from '../adapter-pool.js';
 import type { SettingsService } from './settings-service.js';
+import type { AutoStopService, AutoStopConfig } from '../../services/autostop-service.js';
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -21,6 +22,7 @@ export interface HotReloadDeps {
   settingsService: SettingsService;
   notificationService?: NotificationService | null;
   adapterPool?: AdapterPool | null;
+  autoStopService?: AutoStopService | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,6 +59,8 @@ const SECURITY_KEYS = new Set([
   'policy.default_deny_spenders',
 ]);
 
+const AUTOSTOP_KEYS_PREFIX = 'autostop.';
+
 // ---------------------------------------------------------------------------
 // HotReloadOrchestrator
 // ---------------------------------------------------------------------------
@@ -79,6 +83,7 @@ export class HotReloadOrchestrator {
     const hasRpcChanges = changedKeys.some((k) => k.startsWith(RPC_KEYS_PREFIX));
     const hasSecurityChanges = changedKeys.some((k) => SECURITY_KEYS.has(k));
     const hasDisplayChanges = changedKeys.some((k) => DISPLAY_KEYS.has(k));
+    const hasAutostopChanges = changedKeys.some((k) => k.startsWith(AUTOSTOP_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -108,6 +113,14 @@ export class HotReloadOrchestrator {
       // Display currency reload is synchronous -- SettingsService.get() reads from DB directly
       // No subsystem restart needed; next read picks up the new value immediately
       console.log('Hot-reload: Display currency updated (effective immediately)');
+    }
+
+    if (hasAutostopChanges) {
+      try {
+        this.reloadAutoStop();
+      } catch (err) {
+        console.warn('Hot-reload autostop failed:', err);
+      }
     }
 
     await Promise.all(reloads);
@@ -180,6 +193,28 @@ export class HotReloadOrchestrator {
     console.log(
       `Hot-reload: Notifications reloaded (${newChannels.length} channels: ${newChannels.map((c) => c.name).join(', ') || 'none'})`,
     );
+  }
+
+  /**
+   * Reload AutoStop engine with current settings from SettingsService.
+   * Synchronous: reads new values and calls autoStopService.updateConfig().
+   */
+  private reloadAutoStop(): void {
+    const svc = this.deps.autoStopService;
+    if (!svc) return;
+
+    const ss = this.deps.settingsService;
+    const newConfig: Partial<AutoStopConfig> = {
+      consecutiveFailuresThreshold: parseInt(ss.get('autostop.consecutive_failures_threshold'), 10),
+      unusualActivityThreshold: parseInt(ss.get('autostop.unusual_activity_threshold'), 10),
+      unusualActivityWindowSec: parseInt(ss.get('autostop.unusual_activity_window_sec'), 10),
+      idleTimeoutSec: parseInt(ss.get('autostop.idle_timeout_sec'), 10),
+      idleCheckIntervalSec: parseInt(ss.get('autostop.idle_check_interval_sec'), 10),
+      enabled: ss.get('autostop.enabled') === 'true',
+    };
+
+    svc.updateConfig(newConfig);
+    console.log('Hot-reload: AutoStop engine config updated (effective immediately)');
   }
 
   /**

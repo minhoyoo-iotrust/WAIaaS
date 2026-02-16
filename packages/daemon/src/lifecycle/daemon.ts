@@ -28,6 +28,8 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, getDefaultNetwork, EventBus } from '@waiaas/core';
 import { KillSwitchService } from '../services/kill-switch-service.js';
+import { AutoStopService } from '../services/autostop-service.js';
+import type { AutoStopConfig } from '../services/autostop-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
@@ -125,6 +127,7 @@ export class DaemonLifecycle {
   private forexRateService: IForexRateService | null = null;
   private eventBus: EventBus = new EventBus();
   private killSwitchService: KillSwitchService | null = null;
+  private autoStopService: AutoStopService | null = null;
 
 
   /** Whether shutdown has been initiated. */
@@ -385,6 +388,40 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-3: AutoStop Engine (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this.killSwitchService && this._settingsService) {
+        const autoStopConfig: AutoStopConfig = {
+          consecutiveFailuresThreshold: parseInt(this._settingsService.get('autostop.consecutive_failures_threshold'), 10),
+          unusualActivityThreshold: parseInt(this._settingsService.get('autostop.unusual_activity_threshold'), 10),
+          unusualActivityWindowSec: parseInt(this._settingsService.get('autostop.unusual_activity_window_sec'), 10),
+          idleTimeoutSec: parseInt(this._settingsService.get('autostop.idle_timeout_sec'), 10),
+          idleCheckIntervalSec: parseInt(this._settingsService.get('autostop.idle_check_interval_sec'), 10),
+          enabled: this._settingsService.get('autostop.enabled') === 'true',
+        };
+
+        this.autoStopService = new AutoStopService({
+          sqlite: this.sqlite,
+          eventBus: this.eventBus,
+          killSwitchService: this.killSwitchService,
+          notificationService: this.notificationService ?? undefined,
+          config: autoStopConfig,
+        });
+
+        if (autoStopConfig.enabled) {
+          this.autoStopService.start();
+          console.log('Step 4c-3: AutoStop engine started');
+        } else {
+          console.log('Step 4c-3: AutoStop engine disabled');
+        }
+      }
+    } catch (err) {
+      console.warn('Step 4c-3 (fail-soft): AutoStop engine init warning:', err);
+      this.autoStopService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -476,6 +513,7 @@ export class DaemonLifecycle {
           settingsService: this._settingsService!,
           notificationService: this.notificationService,
           adapterPool: this.adapterPool,
+          autoStopService: this.autoStopService,
         });
 
         const app = createApp({
@@ -645,6 +683,12 @@ export class DaemonLifecycle {
           console.warn('Adapter pool disconnect warning:', err);
         }
         this.adapterPool = null;
+      }
+
+      // Stop AutoStop engine (before EventBus cleanup)
+      if (this.autoStopService) {
+        this.autoStopService.stop();
+        this.autoStopService = null;
       }
 
       // Step 6b: Remove all EventBus listeners
