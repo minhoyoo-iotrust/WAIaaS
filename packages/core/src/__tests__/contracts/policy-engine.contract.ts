@@ -8,7 +8,7 @@
  * Both MockPolicyEngine and DatabasePolicyEngine (in daemon tests)
  * must pass these tests to guarantee behavioral equivalence.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { IPolicyEngine, PolicyEvaluation } from '../../interfaces/IPolicyEngine.js';
 import { POLICY_TIERS } from '../../enums/policy.js';
 

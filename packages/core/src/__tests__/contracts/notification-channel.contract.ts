@@ -7,7 +7,7 @@
  * Both MockNotificationChannel and TelegramChannel (with msw mocking)
  * must pass these tests to guarantee behavioral equivalence.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { INotificationChannel, NotificationPayload } from '../../interfaces/INotificationChannel.js';
 
 // ---------------------------------------------------------------------------

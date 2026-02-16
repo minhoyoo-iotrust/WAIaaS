@@ -12,7 +12,7 @@
  * CTST-02: MockChainAdapter vs EvmAdapter (buildBatch -> BATCH_NOT_SUPPORTED)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import type {
   IChainAdapter,
   ChainType,

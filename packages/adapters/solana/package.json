@@ -14,7 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:integration": "[ -d src/__tests__/integration ] && vitest run --dir src/__tests__/integration || true",

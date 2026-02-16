@@ -8,7 +8,7 @@
  * IClock, FakeClock, and SystemClock are defined inline (not yet in core).
  * Based on design document 42-mock-boundaries-interfaces-contracts.md section 4.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // IClock interface (test-local, not yet in @waiaas/core)

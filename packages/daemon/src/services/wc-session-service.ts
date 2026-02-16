@@ -17,8 +17,15 @@
  */
 
 import { createRequire } from 'node:module';
-import SignClient from '@walletconnect/sign-client';
+import SignClientModule from '@walletconnect/sign-client';
 import type { Database } from 'better-sqlite3';
+
+// ESM/CJS interop: @walletconnect/sign-client has no "import" condition in its
+// exports map, so Node.js ESM loads the CJS bundle where the actual SignClient
+// class lives at .default.
+const SignClient: typeof SignClientModule =
+  (SignClientModule as any).default ?? SignClientModule;
+type SignClientInstance = InstanceType<typeof SignClient>;
 import { WAIaaSError } from '@waiaas/core';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { SqliteKeyValueStorage } from './wc-storage.js';
@@ -82,7 +89,7 @@ export type PairingStatus = 'pending' | 'connected' | 'expired' | 'none';
 // ---------------------------------------------------------------------------
 
 export class WcSessionService {
-  private signClient: SignClient | null = null;
+  private signClient: SignClientInstance | null = null;
   private readonly sqlite: Database;
   private readonly settingsService: SettingsService;
   /** walletId -> session topic mapping (in-memory cache) */
@@ -156,7 +163,7 @@ export class WcSessionService {
    * Get the underlying SignClient instance (for route handlers / pairing).
    * Returns null if WC is not initialized.
    */
-  getSignClient(): SignClient | null {
+  getSignClient(): SignClientInstance | null {
     return this.signClient;
   }
 

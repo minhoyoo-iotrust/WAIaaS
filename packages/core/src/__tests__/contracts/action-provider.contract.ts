@@ -7,8 +7,8 @@
  * Both MockActionProvider and TestESMPlugin must pass these tests
  * to guarantee behavioral equivalence.
  */
-import { describe, it, expect } from 'vitest';
-import type { IActionProvider, ActionProviderMetadata, ActionDefinition, ActionContext } from '../../interfaces/action-provider.types.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import type { IActionProvider, ActionProviderMetadata, ActionContext } from '../../interfaces/action-provider.types.js';
 
 // ---------------------------------------------------------------------------
 // Standard test context
