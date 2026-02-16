@@ -9,31 +9,31 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 147: QR 페어링 + REST API)
-Plan: 1 of 2 in current phase
-Status: 147-01 Complete
-Last activity: 2026-02-16 -- 147-01 QR 페어링 REST API 완료
+Phase: 2 of 5 (Phase 147: QR 페어링 + REST API) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: 147-02 Complete (Phase 147 Done)
+Last activity: 2026-02-16 -- 147-02 Admin UI QR 모달 + CLI Owner 명령어 완료
 
-Progress: [========............] 40%
+Progress: [==========..........] 50%
 
 ## Performance Metrics
 
-**Cumulative:** 34 milestones, 145 phases, 318 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
+**Cumulative:** 34 milestones, 145 phases, 319 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 9min
-- Total execution time: 0.4 hours
+- Total plans completed: 4
+- Average duration: 8min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 146 | 2/2 | 18min | 9min |
-| 147 | 1/2 | 8min | 8min |
+| 147 | 2/2 | 13min | 6.5min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 6min, 8min
+- Last 5 plans: 12min, 6min, 8min, 5min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 - [147-01]: requiredNamespaces를 Record<string, ...> 별도 변수로 추출 (TS computed property 에러 해결)
 - [147-01]: wc.ts 라우트에서 raw SQL 사용 (Drizzle query builder 대신, 기존 패턴과 일치)
 - [147-01]: pendingPairing 중복 시 기존 URI 재사용 (signClient.connect() 재호출 방지)
+- [147-02]: owner.ts에 daemonRequest/selectWallet 자체 구현 (wallet.ts export 없이 독립성 유지)
+- [147-02]: QR 모달 onConfirm 미전달 -- Modal 컴포넌트 Confirm 버튼 자동 숨김
+- [147-02]: pollRef를 useSignal로 관리 (cleanup useEffect에서 clearInterval)
 
 ### Blockers/Concerns
 
@@ -72,5 +75,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 147-01-PLAN.md
+Stopped at: Completed 147-02-PLAN.md
 Resume file: None
