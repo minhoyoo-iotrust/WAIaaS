@@ -104,9 +104,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 156-01-PLAN.md — 토큰 + 컨트랙트 + Approve 보안 테스트 (SEC-06, SEC-07, SEC-08)
-- [ ] 156-02-PLAN.md — 배치 + Oracle + Action + Swap 보안 테스트 (SEC-09, SEC-10, SEC-11, SEC-12)
-- [ ] 156-03-PLAN.md — ChainError + x402 보안 테스트 (SEC-13, SEC-14)
+- [x] 156-01-PLAN.md — 토큰 + 컨트랙트 + Approve 보안 테스트 (SEC-06, SEC-07, SEC-08)
+- [x] 156-02-PLAN.md — 배치 + Oracle + Action + Swap 보안 테스트 (SEC-09, SEC-10, SEC-11, SEC-12)
+- [x] 156-03-PLAN.md — ChainError + x402 보안 테스트 (SEC-13, SEC-14)
 
 ### Phase 157: 확장 기능 테스트
 **Goal**: 확장 기능(토큰/컨트랙트/Approve/배치/Oracle/Action/ChainError) ~148건 기능 테스트로 정상 동작이 검증된 상태
@@ -117,12 +117,12 @@ Plans:
   2. 컨트랙트 호출 28건 + Approve 관리 24건 + 배치 트랜잭션 22건이 모두 통과한다
   3. Oracle 20건(OracleChain fallback, TTL, 가격 나이, 교차 검증) + Action Provider 16건(resolve-then-execute, Registry, MCP Tool 변환)이 모두 통과한다
   4. ChainError 12건(3-카테고리 PERMANENT/TRANSIENT/STALE, retryable 자동 파생)이 모두 통과한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 157-01: 토큰 전송 + 컨트랙트 호출 테스트 (EXT-01, EXT-02)
-- [ ] 157-02: Approve + 배치 + Oracle 테스트 (EXT-03, EXT-04, EXT-05)
-- [ ] 157-03: Action Provider + ChainError 테스트 (EXT-06, EXT-07)
+- [ ] 157-01-PLAN.md — 토큰 전송 32건 + 컨트랙트 호출 28건 (EXT-01, EXT-02)
+- [ ] 157-02-PLAN.md — Approve 24건 + 배치 22건 + Oracle 20건 (EXT-03, EXT-04, EXT-05)
+- [ ] 157-03-PLAN.md — Action Provider 16건 + ChainError 12건 (EXT-06, EXT-07)
 
 ### Phase 158: 플랫폼 테스트
 **Goal**: CLI Daemon, Docker, Telegram Bot 3개 배포 타겟에서 84건 플랫폼 테스트로 배포 품질이 검증된 상태
@@ -166,7 +166,7 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 | 153. Contract Test | 2/2 | Complete | 2026-02-16 |
 | 154. 블록체인 3단계 테스트 | 2/2 | Complete | 2026-02-16 |
 | 155. 보안 테스트 Part 1 | 2/2 | Complete | 2026-02-17 |
-| 156. 보안 테스트 Part 2 | 0/3 | Not started | - |
+| 156. 보안 테스트 Part 2 | 3/3 | Complete | 2026-02-17 |
 | 157. 확장 기능 테스트 | 0/3 | Not started | - |
 | 158. 플랫폼 테스트 | 0/2 | Not started | - |
 | 159. CI/CD 파이프라인 | 0/2 | Not started | - |
