@@ -18,3 +18,5 @@ how-to-test
 objectives
 docs
 packages/daemon/public
+secrets
+docker-compose.secrets.yml

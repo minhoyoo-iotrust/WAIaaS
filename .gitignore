@@ -36,3 +36,6 @@ packages/daemon/public/
 
 # How to test temporal docs.
 how-to-test/
+
+# Docker secrets (never commit)
+secrets/
