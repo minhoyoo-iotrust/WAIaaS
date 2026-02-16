@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 152 complete, next Phase 153
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 153 in progress, 153-02 complete
 
 ## Current Position
 
-Phase: 152 of 159 (Enum 검증 + Config 테스트)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-16 — Phase 152 complete (1/1 plans)
+Phase: 153 of 159 (Contract Test)
+Plan: 2 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-16 — 153-02 complete (5-Interface Contract Test)
 
-Progress: [##░░░░░░░░] 15% (3/19 plans)
+Progress: [###░░░░░░░] 26% (5/19 plans)
 
 ## Performance Metrics
 
@@ -30,6 +30,7 @@ Progress: [##░░░░░░░░] 15% (3/19 plans)
 | 151 | 01 | 4min | 2 | 18 |
 | 151 | 02 | 5min | 2 | 10 |
 | 152 | 01 | 12min | 2 | 14 |
+| 153 | 02 | 6min | 2 | 14 |
 
 *Updated after each plan completion*
 
@@ -50,6 +51,10 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 152-01: NOTE-11 페이지네이션 테스트를 Drizzle 직접 쿼리로 구현 (Hono E2E 복잡한 의존성 회피)
 - 152-01: NOTE-02 PolicyEngine amount는 lamport-scale 정수 문자열 사용
 - 152-01: better-sqlite3 CJS 모듈 createRequire 패턴
+- 153-02: daemon에서 core 테스트 파일 import 시 상대 경로 사용 (@waiaas/core exports 미포함)
+- 153-02: INotificationChannel contract test에 initConfig 옵션 추가 (TelegramChannel 재초기화 호환)
+- 153-02: IClock/FakeClock/SystemClock은 clock.contract.ts 내 인라인 정의 (core에 미존재)
+- 153-02: IPriceOracle/IActionProvider core 테스트에 vi.fn 없는 인라인 Mock 사용
 
 ### Blockers/Concerns
 
@@ -61,5 +66,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 152-01-PLAN.md (Phase 152 complete)
+Stopped at: Completed 153-02-PLAN.md
 Resume file: None
