@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 140 of 145 (Event Bus + Kill Switch)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-16 -- v1.6 로드맵 생성 완료
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-16 -- 140-01 EventBus 인프라 + 파이프라인 이벤트 발행 완료
 
-Progress: [░░░░░░░░░░░░░░] 0% (0/14 plans)
+Progress: [#░░░░░░░░░░░░░] 7% (1/14 plans)
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [░░░░░░░░░░░░░░] 0% (0/14 plans)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 140. Event Bus + Kill Switch | 0/3 | - | - |
+| 140. Event Bus + Kill Switch | 1/3 | 12m | 12m |
 | 141. AutoStop Engine | 0/2 | - | - |
 | 142. Balance Monitoring | 0/2 | - | - |
 | 143. Telegram Bot | 0/3 | - | - |
@@ -39,6 +39,8 @@ Full log in PROJECT.md and milestones/.
 - v1.6: Kill Switch 상태명 변경 (NORMAL->ACTIVE, ACTIVATED->SUSPENDED, LOCKED 신규)
 - v1.6: AutoStop DAILY_SPENDING_LIMIT 제거 (v1.5.3 CUMULATIVE_SPENDING_DAILY 중복)
 - v1.6: EventEmitter 이벤트 버스 신규 도입 (AutoStop/BalanceMonitor 구독용)
+- v1.6: EventBus emit()에서 리스너별 try/catch 에러 격리 선택 (파이프라인 안전성)
+- v1.6: eventBus optional chaining(?.) 패턴 -- 기존 코드 무중단 호환
 
 ### Blockers/Concerns
 
@@ -48,5 +50,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: v1.6 로드맵 생성 완료 (ROADMAP.md + STATE.md + REQUIREMENTS.md 트레이서빌리티)
+Stopped at: Completed 140-01-PLAN.md (EventBus 인프라 + 파이프라인 이벤트 발행)
 Resume file: None
