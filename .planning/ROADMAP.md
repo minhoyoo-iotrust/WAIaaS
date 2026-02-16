@@ -44,7 +44,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 152-01-PLAN.md — Enum SSoT 빌드타임 검증 + config 12건 + NOTE 매핑 22건
+- [x] 152-01-PLAN.md — Enum SSoT 빌드타임 검증 + config 12건 + NOTE 매핑 22건
 
 ### Phase 153: Contract Test
 **Goal**: 7개 핵심 인터페이스의 Mock 구현체와 실제 구현체가 동일한 Contract Test를 통과하여 동작 동일성이 보장되는 상태
@@ -55,11 +55,11 @@ Plans:
   2. IChainAdapter Contract Test로 MockChainAdapter와 EvmAdapter가 22 메서드에서 동일한 동작을 보인다 (buildBatch -> BATCH_NOT_SUPPORTED 포함)
   3. IPolicyEngine, INotificationChannel, IClock, IPriceOracle, IActionProvider 5개 인터페이스의 Contract Test가 모두 통과한다
   4. Contract Test 실패 시 어떤 메서드가 어떻게 다른지 명확한 에러 메시지가 출력된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 153-01: IChainAdapter Contract Test (Mock vs Solana vs EVM)
-- [ ] 153-02: IPolicyEngine + INotificationChannel + IClock + IPriceOracle + IActionProvider Contract Test
+- [ ] 153-01-PLAN.md — IChainAdapter Contract Test (Mock vs Solana vs EVM, 22 메서드 형태 동일성)
+- [ ] 153-02-PLAN.md — IPolicyEngine + INotificationChannel + IClock + IPriceOracle + IActionProvider Contract Test
 
 ### Phase 154: 블록체인 3단계 테스트
 **Goal**: 블록체인 테스트가 Mock RPC -> Local Validator -> Devnet 3단계로 계층화되어 실행되는 상태
@@ -162,7 +162,7 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 151. 커버리지 + Mock 인프라 | 2/2 | Complete | 2026-02-16 |
-| 152. Enum 검증 + Config 테스트 | 0/1 | Not started | - |
+| 152. Enum 검증 + Config 테스트 | 1/1 | Complete | 2026-02-16 |
 | 153. Contract Test | 0/2 | Not started | - |
 | 154. 블록체인 3단계 테스트 | 0/2 | Not started | - |
 | 155. 보안 테스트 Part 1 | 0/2 | Not started | - |
