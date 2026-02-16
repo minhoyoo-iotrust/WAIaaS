@@ -75,14 +75,14 @@
 
 </details>
 
-### v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) (In Progress)
+### v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) (Complete)
 
 **Milestone Goal:** 월렛 단위 기간별 누적 USD 지출 한도로 분할 전송 우회를 방지하고, USD 외 사용자 선호 법정 통화로 금액을 환산 표시하여 다국어 DX를 개선한다.
 
 - [x] **Phase 136: 누적 지출 한도 엔진** - DB v13 마이그레이션 + 정책 스키마 확장 + 누적 집계 + 알림
 - [x] **Phase 137: 누적 한도 Admin UI + SDK/MCP** - 누적 한도 폼/시각화 + SDK/MCP 필드 확장
 - [x] **Phase 138: ForexRateService + 표시 통화 설정** - 환율 서비스 + Settings + 통화 포매팅
-- [ ] **Phase 139: 표시 통화 통합** - Admin UI/알림/REST API/MCP 환산 표시
+- [x] **Phase 139: 표시 통화 통합** - Admin UI/알림/REST API/MCP 환산 표시
 
 ## Phase Details
 
@@ -128,8 +128,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 138-01-PLAN.md -- IForexRateService 인터페이스 + CoinGeckoForexProvider + ForexRateService + formatDisplayCurrency 유틸 + 테스트
-- [ ] 138-02-PLAN.md -- config.toml display 섹션 + SettingsService display 카테고리 + Admin CurrencySelect 드롭다운 + daemon 부트스트랩
+- [x] 138-01-PLAN.md -- IForexRateService 인터페이스 + CoinGeckoForexProvider + ForexRateService + formatDisplayCurrency 유틸 + 테스트
+- [x] 138-02-PLAN.md -- config.toml display 섹션 + SettingsService display 카테고리 + Admin CurrencySelect 드롭다운 + daemon 부트스트랩
 
 ### Phase 139: 표시 통화 통합
 **Goal**: Admin UI 전체, 알림 메시지, REST API, MCP 도구에서 선택한 통화로 환산된 금액이 표시되는 상태
@@ -140,11 +140,11 @@ Plans:
   2. 알림 메시지(Telegram/Discord/ntfy/Slack)에 선택한 통화로 환산한 금액이 포함된다
   3. REST API 4개 엔드포인트(transactions/balance/assets/POST transactions)에서 ?display_currency 쿼리 파라미터로 환산 필드(display_amount/display_balance/display_value)를 받을 수 있다
   4. MCP 도구 응답에 서버 설정 표시 통화로 환산한 금액이 포함된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 139-01: Admin UI 환산 표시 + 알림 메시지 환산
-- [ ] 139-02: REST API display_currency 쿼리 + MCP 환산 응답 + 스킬 파일 동기화
+- [x] 139-01-PLAN.md -- Admin UI 환산 표시 + 알림 메시지 환산
+- [x] 139-02-PLAN.md -- REST API display_currency 쿼리 + MCP 환산 응답 + 스킬 파일 동기화
 
 ## Progress
 
@@ -156,8 +156,8 @@ Phases execute in numeric order: 136 -> 137 -> 138 -> 139
 | 136. 누적 지출 한도 엔진 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 | 137. 누적 한도 Admin UI + SDK/MCP | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 | 138. ForexRateService + 표시 통화 설정 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
-| 139. 표시 통화 통합 | v1.5.3 | 0/2 | Not started | - |
+| 139. 표시 통화 통합 | v1.5.3 | 2/2 | Complete | 2026-02-16 |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 138 완료 (2 plans, 5 requirements, 39 tests)*
+*Last updated: 2026-02-16 -- Phase 139 완료, v1.5.3 마일스톤 완료 (8/8 plans, 19 requirements)*
