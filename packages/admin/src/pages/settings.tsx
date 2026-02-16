@@ -332,17 +332,42 @@ export default function SettingsPage() {
   // Kill Switch / Rotate / Shutdown handlers (unchanged)
   // ---------------------------------------------------------------------------
 
-  const handleKillSwitchToggle = async () => {
+  // Kill Switch: activate (ACTIVE -> SUSPENDED)
+  const handleKillSwitchActivate = async () => {
     ksActionLoading.value = true;
-    const isActivated = killSwitchState.value?.state === 'ACTIVATED';
     try {
-      if (isActivated) {
-        await apiPost(API.ADMIN_RECOVER);
-        showToast('success', 'Kill switch recovered');
-      } else {
-        await apiPost(API.ADMIN_KILL_SWITCH);
-        showToast('success', 'Kill switch activated');
-      }
+      await apiPost(API.ADMIN_KILL_SWITCH);
+      showToast('success', 'Kill switch activated - all operations suspended');
+      await fetchKillSwitchState();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ksActionLoading.value = false;
+    }
+  };
+
+  // Kill Switch: escalate (SUSPENDED -> LOCKED)
+  const handleKillSwitchEscalate = async () => {
+    ksActionLoading.value = true;
+    try {
+      await apiPost(API.ADMIN_KILL_SWITCH_ESCALATE);
+      showToast('success', 'Kill switch escalated to LOCKED');
+      await fetchKillSwitchState();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ksActionLoading.value = false;
+    }
+  };
+
+  // Kill Switch: recover (SUSPENDED/LOCKED -> ACTIVE)
+  const handleKillSwitchRecover = async () => {
+    ksActionLoading.value = true;
+    try {
+      await apiPost(API.ADMIN_RECOVER);
+      showToast('success', 'Kill switch recovered - operations resumed');
       await fetchKillSwitchState();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -388,7 +413,9 @@ export default function SettingsPage() {
 
   const dirtyCount = Object.keys(dirty.value).length;
   const ksState = killSwitchState.value;
-  const isActivated = ksState?.state === 'ACTIVATED';
+  const isActive = ksState?.state === 'ACTIVE';
+  const isSuspended = ksState?.state === 'SUSPENDED';
+  const isLocked = ksState?.state === 'LOCKED';
 
   // ---------------------------------------------------------------------------
   // Section: Notifications
@@ -903,36 +930,90 @@ export default function SettingsPage() {
         </>
       )}
 
-      {/* Existing Admin Sections */}
-      <div class="settings-section">
-        <div class="settings-section-header">
+      {/* Kill Switch 3-state Section */}
+      <div class="settings-category">
+        <div class="settings-category-header">
           <h3>Kill Switch</h3>
-          <p class="settings-description">Emergency stop -- suspends all wallet operations immediately.</p>
+          <p class="settings-description">
+            Emergency stop - suspends all wallet operations immediately.
+            3-state: ACTIVE (normal) → SUSPENDED (paused) → LOCKED (permanent).
+          </p>
         </div>
-        <div class="settings-section-body">
+        <div class="settings-category-body">
           {ksLoading.value ? (
             <span>Loading...</span>
           ) : ksState ? (
-            <div class="ks-state-card">
-              <Badge variant={isActivated ? 'danger' : 'success'}>
-                {ksState.state}
-              </Badge>
-              {isActivated && ksState.activatedAt && (
-                <span class="ks-state-info">
-                  Activated {formatDate(ksState.activatedAt)}
-                  {ksState.activatedBy ? ` by ${ksState.activatedBy}` : ''}
-                </span>
+            <>
+              {/* State indicator card */}
+              <div class="ks-state-card" style={{ marginBottom: 'var(--space-4)' }}>
+                <Badge variant={isActive ? 'success' : isLocked ? 'danger' : 'warning'}>
+                  {ksState.state}
+                </Badge>
+                {!isActive && ksState.activatedAt && (
+                  <span class="ks-state-info">
+                    Since {formatDate(ksState.activatedAt)}
+                    {ksState.activatedBy ? ` by ${ksState.activatedBy}` : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Action buttons based on current state */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {isActive && (
+                  <Button
+                    variant="danger"
+                    onClick={handleKillSwitchActivate}
+                    loading={ksActionLoading.value}
+                  >
+                    Activate Kill Switch
+                  </Button>
+                )}
+
+                {isSuspended && (
+                  <>
+                    <Button
+                      variant="primary"
+                      onClick={handleKillSwitchRecover}
+                      loading={ksActionLoading.value}
+                    >
+                      Recover
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={handleKillSwitchEscalate}
+                      loading={ksActionLoading.value}
+                    >
+                      Escalate to LOCKED
+                    </Button>
+                  </>
+                )}
+
+                {isLocked && (
+                  <Button
+                    variant="primary"
+                    onClick={handleKillSwitchRecover}
+                    loading={ksActionLoading.value}
+                  >
+                    Recover from LOCKED (5s wait)
+                  </Button>
+                )}
+              </div>
+
+              {/* State description */}
+              {isSuspended && (
+                <div class="settings-info-box" style={{ marginTop: 'var(--space-3)' }}>
+                  All wallet operations are suspended. Sessions revoked, transactions cancelled.
+                  You can Recover to resume operations, or Escalate to LOCKED for permanent lockdown.
+                </div>
               )}
-            </div>
+              {isLocked && (
+                <div class="settings-info-box" style={{ marginTop: 'var(--space-3)', borderColor: 'var(--color-danger)' }}>
+                  System is permanently locked. Recovery requires dual-auth (Owner signature + Master password)
+                  and has a mandatory 5-second wait period.
+                </div>
+              )}
+            </>
           ) : null}
-          <Button
-            variant={isActivated ? 'primary' : 'danger'}
-            onClick={handleKillSwitchToggle}
-            loading={ksActionLoading.value}
-            disabled={ksLoading.value}
-          >
-            {isActivated ? 'Recover' : 'Activate Kill Switch'}
-          </Button>
         </div>
       </div>
 

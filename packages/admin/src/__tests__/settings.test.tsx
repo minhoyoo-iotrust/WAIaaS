@@ -48,14 +48,20 @@ import SettingsPage from '../pages/settings';
 // Mock data
 // ---------------------------------------------------------------------------
 
-const mockKillSwitchNormal = {
-  state: 'NORMAL',
+const mockKillSwitchActive = {
+  state: 'ACTIVE',
   activatedAt: null,
   activatedBy: null,
 };
 
-const mockKillSwitchActivated = {
-  state: 'ACTIVATED',
+const mockKillSwitchSuspended = {
+  state: 'SUSPENDED',
+  activatedAt: 1707609600,
+  activatedBy: 'admin',
+};
+
+const mockKillSwitchLocked = {
+  state: 'LOCKED',
   activatedAt: 1707609600,
   activatedBy: 'admin',
 };
@@ -109,10 +115,11 @@ const mockSettingsResponse = {
 // Helper: mount with both API mocks satisfied
 // ---------------------------------------------------------------------------
 
-function mockApiCalls() {
+function mockApiCalls(ksState = mockKillSwitchActive) {
   vi.mocked(apiGet).mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/kill-switch') return mockKillSwitchNormal;
+    if (path === '/v1/admin/kill-switch') return ksState;
     if (path === '/v1/admin/settings') return mockSettingsResponse;
+    if (path === '/v1/admin/api-keys') return { keys: [] };
     return {};
   });
 }
@@ -349,7 +356,7 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('Test Notification'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test');
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
     });
 
     // Results displayed
@@ -384,21 +391,25 @@ describe('SettingsPage', () => {
     });
   });
 
-  // ---- Test 13: Keeps existing kill switch controls ----
-  it('keeps existing kill switch controls', async () => {
-    mockApiCalls();
+  // ---- Test 13: ACTIVE state renders Activate Kill Switch button ----
+  it('renders Activate Kill Switch button in ACTIVE state', async () => {
+    mockApiCalls(mockKillSwitchActive);
     await renderAndWaitForLoad();
 
     // Kill switch section heading
     expect(screen.getByText('Kill Switch')).toBeTruthy();
 
-    // State badge shows NORMAL
+    // State badge shows ACTIVE with success variant
     await waitFor(() => {
-      expect(screen.getByText('NORMAL')).toBeTruthy();
+      expect(screen.getByText('ACTIVE')).toBeTruthy();
     });
 
-    // Toggle button present
+    // Activate button present
     expect(screen.getByText('Activate Kill Switch')).toBeTruthy();
+
+    // No Recover or Escalate buttons
+    expect(screen.queryByText('Recover')).toBeNull();
+    expect(screen.queryByText('Escalate to LOCKED')).toBeNull();
   });
 
   // ---- Test 14: Keeps existing shutdown controls ----
@@ -408,5 +419,102 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText('Shutdown Daemon')).toBeTruthy();
     expect(screen.getByText('Danger Zone')).toBeTruthy();
+  });
+
+  // ---- Test 15: SUSPENDED state renders Recover and Escalate buttons ----
+  it('renders Recover and Escalate buttons in SUSPENDED state', async () => {
+    mockApiCalls(mockKillSwitchSuspended);
+    await renderAndWaitForLoad();
+
+    await waitFor(() => {
+      expect(screen.getByText('SUSPENDED')).toBeTruthy();
+    });
+
+    // Recover and Escalate buttons present
+    expect(screen.getByText('Recover')).toBeTruthy();
+    expect(screen.getByText('Escalate to LOCKED')).toBeTruthy();
+
+    // No Activate button
+    expect(screen.queryByText('Activate Kill Switch')).toBeNull();
+  });
+
+  // ---- Test 16: LOCKED state renders Recover from LOCKED button ----
+  it('renders Recover from LOCKED button in LOCKED state', async () => {
+    mockApiCalls(mockKillSwitchLocked);
+    await renderAndWaitForLoad();
+
+    await waitFor(() => {
+      expect(screen.getByText('LOCKED')).toBeTruthy();
+    });
+
+    // Recover from LOCKED button present
+    expect(screen.getByText('Recover from LOCKED (5s wait)')).toBeTruthy();
+
+    // No Activate or Escalate buttons
+    expect(screen.queryByText('Activate Kill Switch')).toBeNull();
+    expect(screen.queryByText('Escalate to LOCKED')).toBeNull();
+  });
+
+  // ---- Test 17: Activate calls POST /v1/admin/kill-switch ----
+  it('calls POST /v1/admin/kill-switch on activate', async () => {
+    mockApiCalls(mockKillSwitchActive);
+    vi.mocked(apiPost).mockResolvedValueOnce({ state: 'SUSPENDED' });
+    await renderAndWaitForLoad();
+
+    await waitFor(() => {
+      expect(screen.getByText('Activate Kill Switch')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activate Kill Switch'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/kill-switch');
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Kill switch activated - all operations suspended');
+    });
+  });
+
+  // ---- Test 18: Escalate calls POST /v1/admin/kill-switch/escalate ----
+  it('calls POST /v1/admin/kill-switch/escalate on escalate', async () => {
+    mockApiCalls(mockKillSwitchSuspended);
+    vi.mocked(apiPost).mockResolvedValueOnce({ state: 'LOCKED' });
+    await renderAndWaitForLoad();
+
+    await waitFor(() => {
+      expect(screen.getByText('Escalate to LOCKED')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Escalate to LOCKED'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/kill-switch/escalate');
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Kill switch escalated to LOCKED');
+    });
+  });
+
+  // ---- Test 19: Recover calls POST /v1/admin/recover ----
+  it('calls POST /v1/admin/recover on recover', async () => {
+    mockApiCalls(mockKillSwitchSuspended);
+    vi.mocked(apiPost).mockResolvedValueOnce({ state: 'ACTIVE' });
+    await renderAndWaitForLoad();
+
+    await waitFor(() => {
+      expect(screen.getByText('Recover')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Recover'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/recover');
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Kill switch recovered - operations resumed');
+    });
   });
 });

@@ -1,6 +1,7 @@
 export const API = {
   ADMIN_STATUS: '/v1/admin/status',
   ADMIN_KILL_SWITCH: '/v1/admin/kill-switch',
+  ADMIN_KILL_SWITCH_ESCALATE: '/v1/admin/kill-switch/escalate',
   ADMIN_RECOVER: '/v1/admin/recover',
   ADMIN_SHUTDOWN: '/v1/admin/shutdown',
   ADMIN_ROTATE_SECRET: '/v1/admin/rotate-secret',
@@ -23,4 +24,6 @@ export const API = {
   ADMIN_API_KEYS: '/v1/admin/api-keys',
   ADMIN_API_KEY: (provider: string) => `/v1/admin/api-keys/${provider}`,
   ADMIN_FOREX_RATES: '/v1/admin/forex/rates',
+  ADMIN_TELEGRAM_USERS: '/v1/admin/telegram-users',
+  ADMIN_TELEGRAM_USER: (chatId: number) => `/v1/admin/telegram-users/${chatId}`,
 } as const;
