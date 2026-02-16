@@ -321,11 +321,19 @@ v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 9-패키지 �
 
 ### 활성
 
-<!-- 다음 마일스톤에서 정의 예정 -->
+<!-- v1.6.1에서 정의 — REQUIREMENTS.md 참조 -->
+
+## Current Milestone: v1.6.1 WalletConnect Owner 승인
+
+**Goal:** WalletConnect v2를 통한 Owner 승인 워크플로우 구현 — QR 페어링, WC 서명 요청, Telegram fallback
+
+**Target features:**
+- WalletConnect v2 QR 페어링 (project_id 설정, 세션 관리)
+- WC 서명 요청을 통한 Owner 승인/거절
+- Telegram Bot fallback (WC 미연결 시 Telegram 경유 승인)
 
 ## Next Milestone Goals
 
-- v1.6.1 WalletConnect Owner 승인 — QR 페어링, WC 서명 요청, Telegram fallback
 - v1.7 품질 강화 + CI/CD — 300+ 테스트, 보안 237건, 4-stage 파이프라인
 - v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, GitHub Release
 
