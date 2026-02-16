@@ -871,12 +871,54 @@
 ---
 
 
-## v1.5.2 Admin UI 정책 폼 UX 개선 (Shipped: 2026-02-15)
+## v1.5.2 Admin UI 정책 폼 UX 개선 (Shipped: 2026-02-16)
 
-**Phases completed:** 136 phases, 293 plans, 40 tasks
+**Delivered:** Admin UI에서 12개 정책 타입별 구조화된 전용 폼으로 정책을 생성/수정할 수 있고, 목록에서 타입별 의미 있는 시각화를 확인할 수 있으며, 기존 정책 수정 시 현재값이 프리필되어 수정/저장이 가능한 상태 달성
+
+**Phases completed:** 134-135 (4 plans total)
 
 **Key accomplishments:**
-- (none recorded)
+
+- 12개 PolicyType Zod rules 스키마 전체 등록 + DynamicRowList + PolicyFormRouter 폼 인프라
+- 12개 PolicyType 전용 폼 컴포넌트 (SpendingLimitForm~X402AllowedDomainsForm)
+- PolicyRulesSummary 12-type 목록 시각화 (심볼 배지, req/time, tier bars)
+- 수정 모달 전용 폼 프리필/저장 통합
+
+**Stats:**
+
+- 2 phases, 4 plans, 24 requirements, 7 설계 결정
+- 2,111 tests, ~188,000 LOC total
+
+**Git range:** `v1.5.1` → `7d19887` (Phase 135 complete)
+
+---
+
+
+## v1.6 운영 인프라 + 잔액 모니터링 (Shipped: 2026-02-16)
+
+**Delivered:** Kill Switch 3-state 상태 머신(CAS ACID + 6-step cascade + dual-auth 복구), AutoStop 4-규칙 자동 정지 엔진, BalanceMonitorService 잔액 체크 + LOW_BALANCE 알림, Telegram Bot Long Polling(10개 명령어 + 2-Tier 인증 + i18n), Admin UI 통합(Kill Switch 3-state + Telegram Users + AutoStop/Monitoring Settings), Docker 원클릭 배포(Multi-stage + Secrets + non-root)가 동작하는 상태 달성
+
+**Phases completed:** 140-145 (14 plans total)
+
+**Key accomplishments:**
+
+- EventBus 인프라 + Kill Switch 3-state 상태 머신 — EventEmitter 이벤트 버스, CAS ACID 패턴(BEGIN IMMEDIATE + UPDATE WHERE), 6-step cascade(세션 무효화→거래 중단→월렛 정지→API 503→알림→감사 로그), dual-auth 복구(Owner+Master), DB v14 마이그레이션(NORMAL→ACTIVE, ACTIVATED→SUSPENDED, LOCKED 신규)
+- AutoStop 4-규칙 자동 정지 엔진 — CONSECUTIVE_FAILURES(5회)/UNUSUAL_ACTIVITY/IDLE_TIMEOUT/MANUAL_TRIGGER, EventBus 구독, config.toml + Admin Settings hot-reload, AUTOSTOP_TRIGGERED i18n 알림
+- BalanceMonitorService 잔액 체크 + LOW_BALANCE 알림 — 5분 주기 폴링, SOL 0.01/ETH 0.005 임계값, 24시간 중복 방지 + 회복 감지, monitoring Admin Settings 카테고리
+- Telegram Bot Long Polling + 10개 명령어 + 2-Tier 인증 + i18n — /start, /help, /status, /wallets, /pending, /approve, /reject, /killswitch, /newsession, 인라인 키보드, ADMIN/READONLY/PENDING 권한, en/ko, DB v15 마이그레이션
+- Admin UI Kill Switch 3-state 관리 + Telegram Users 관리 + AutoStop/Monitoring Settings — 3-state UI 리팩토링, Approve/Delete 액션, fields map 배열 패턴
+- Docker 원클릭 배포 — Multi-stage Dockerfile(node:22-slim, non-root UID 1001), docker-compose.yml(named volume, HEALTHCHECK, 127.0.0.1:3100), Docker Secrets _FILE 패턴
+
+**Stats:**
+
+- 6 phases, 14 plans, 49 requirements, 45 설계 결정
+- 115 files changed, +16,313 / -260 lines
+- ~2,294 tests, ~207,902 LOC total
+- 23 commits, 1 day (2026-02-16)
+
+**Git range:** `d666c46` (feat(140-01)) → `23b2b31` (feat(145-02))
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
 

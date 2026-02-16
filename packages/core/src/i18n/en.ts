@@ -39,10 +39,12 @@ export interface Messages {
     bot_killswitch_confirm: string;
     bot_killswitch_success: string;
     bot_killswitch_cancelled: string;
+    bot_killswitch_already_active: string;
     bot_wallets_header: string;
     bot_wallets_empty: string;
     bot_newsession_select: string;
     bot_newsession_created: string;
+    bot_newsession_wallet_not_found: string;
     keyboard_approve: string;
     keyboard_reject: string;
     keyboard_yes: string;
@@ -222,10 +224,12 @@ export const messages: Messages = {
     bot_killswitch_confirm: 'Are you sure you want to activate the kill switch\\?',
     bot_killswitch_success: 'Kill switch activated\\. All operations halted\\.',
     bot_killswitch_cancelled: 'Kill switch activation cancelled\\.',
+    bot_killswitch_already_active: 'Kill switch is already active \\(state: {state}\\)\\.',
     bot_wallets_header: 'Wallets',
     bot_wallets_empty: 'No wallets found\\.',
     bot_newsession_select: 'Select a wallet to create a session for:',
     bot_newsession_created: 'Session created\\. Token: `{token}`',
+    bot_newsession_wallet_not_found: 'Wallet not found or inactive\\.',
     keyboard_approve: 'Approve',
     keyboard_reject: 'Reject',
     keyboard_yes: 'Yes',

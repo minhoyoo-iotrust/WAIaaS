@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연 → 모니터링)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Desktop App / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합을 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합, Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다.
 
 ## 핵심 가치
 
@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~191,000 LOC, ~2,150 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(**USD 기준 포함**, **12개 타입별 전용 폼**, **누적 지출 한도 daily/monthly**, **표시 통화 43개**) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, **USD 환산 정책 평가**) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행(POST /v1/actions/:provider/:action) → x402 유료 API 자동 결제(POST /v1/x402/fetch, SSRF 가드, EIP-3009/TransferChecked 결제 서명) → Owner 승인/거절(SIWS/SIWE) + SDK/MCP로 프로그래밍 접근(network 파라미터, signTransaction/encodeCalldata, set_default_network, wallet info, network=all 잔액, action_{provider}_{action} MCP 도구, x402Fetch/x402_fetch SDK + x402_fetch MCP 도구) + Telegram/Discord/ntfy/Slack 알림(실제 트리거 연결, POLICY_VIOLATION enrichment, 메시지 저장/조회, 가격 불명 토큰 NOTIFY 격상, **누적 한도 80% 경고**) + Admin Web UI(`/admin`) 관리(환경 모델 + ALLOWED_NETWORKS 정책 + X402_ALLOWED_DOMAINS 정책 + 기본 거부 토글 3개 + 설정 관리 + 알림 패널(채널별 테스트 + Slack) + MCP 토큰 발급 + 대시보드 확장 + 월렛 잔액/트랜잭션 + 세션 전체 조회 + 오라클 상태 조회 + API 키 관리 + **12개 정책 타입별 전용 폼 + PolicyRulesSummary 시각화 + 수정 모달 프리필**) + 다중 지갑 MCP 설정(**15+ 도구** + 스킬 리소스 + Action Provider 동적 도구) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ **7개**) 제공까지 동작.
+v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~207,902 LOC, ~2,294 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE) + **Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구)** + **AutoStop 4-규칙 자동 정지 엔진** + **잔액 모니터링(LOW_BALANCE 사전 알림)** + **Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n)** + SDK/MCP로 프로그래밍 접근(15+ 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(AUTOSTOP_TRIGGERED + LOW_BALANCE 추가) + Admin Web UI(`/admin`) 관리(**Kill Switch 3-state UI** + **Telegram Users 관리** + **AutoStop/Monitoring Settings** + 12개 정책 폼 + PolicyRulesSummary 시각화) + **Docker 원클릭 배포(Multi-stage + Secrets + non-root)** + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -33,7 +33,7 @@ v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python
 - ✅ v1.5.1 x402 클라이언트 지원 — shipped 2026-02-15 (2,058 tests, ~187,000 LOC)
 - ✅ v1.5.2 Admin UI 정책 폼 UX 개선 — shipped 2026-02-16 (2,111 tests, ~188,000 LOC)
 - ✅ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) — shipped 2026-02-16 (~2,150 tests, ~191,000 LOC)
-- **► v1.6 운영 인프라 + 잔액 모니터링 (Telegram Bot, Kill Switch, AutoStop, Docker, Balance Monitor)**
+- ✅ v1.6 운영 인프라 + 잔액 모니터링 — shipped 2026-02-16 (~2,294 tests, ~207,902 LOC)
 - v1.6.1 WalletConnect Owner 승인 (QR 페어링, 서명 요청, Telegram fallback)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v1.8 업그레이드 + 배포 (npm 배포, Docker Hub, 자동 업데이트)
@@ -41,8 +41,8 @@ v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~191,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- ~2,150 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~207,902 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- ~2,294 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -60,6 +60,11 @@ v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python
 - API 키 관리 — DB 암호화 저장(HKDF+AES-256-GCM), Admin UI CRUD
 - pushSchema 3-step 순서 (tables→migrations→indexes) + 마이그레이션 체인 테스트
 - MCP graceful shutdown (stdin 감지 + force-exit 타임아웃)
+- EventBus(EventEmitter) + Kill Switch 3-state(ACTIVE/SUSPENDED/LOCKED, CAS ACID, 6-step cascade)
+- AutoStopService 4-규칙 자동 정지 (CONSECUTIVE_FAILURES/UNUSUAL_ACTIVITY/IDLE_TIMEOUT/MANUAL_TRIGGER)
+- BalanceMonitorService 5분 주기 잔액 체크 + LOW_BALANCE 알림 (24h 중복 방지)
+- TelegramBotService Long Polling + 10개 명령어 + 2-Tier 인증(ADMIN/READONLY/PENDING) + i18n(en/ko)
+- Docker 배포 (Multi-stage Dockerfile, docker-compose.yml, Docker Secrets _FILE 패턴, non-root UID 1001)
 - 설계 문서 36개 (24-72), 8 objective 문서
 
 ## 요구사항
@@ -306,21 +311,17 @@ v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python
 - ✓ display_currency 월렛별 표시 통화 + Admin UI 설정 — v1.5.3 (FOREX-05~07)
 - ✓ DB 마이그레이션 v13 (amount_usd, reserved_amount_usd 컬럼) — v1.5.3 (DB-01)
 
+- ✓ EventBus 이벤트 인프라 + 파이프라인/라우트 이벤트 발행 (EVNT-01~03) — v1.6
+- ✓ Kill Switch 3-state 상태 머신 + CAS ACID + 6-step cascade + dual-auth 복구 + REST API + 미들웨어 (KILL-01~10) — v1.6
+- ✓ AutoStop 4-규칙 자동 정지 엔진 + config/Admin Settings hot-reload + 알림 통합 (AUTO-01~06) — v1.6
+- ✓ BalanceMonitorService 잔액 체크 + LOW_BALANCE 알림 + 중복 방지 + config/Admin Settings (BMON-01~06) — v1.6
+- ✓ Telegram Bot Long Polling + 10개 명령어 + 2-Tier 인증 + i18n + DB v15 마이그레이션 (TGBOT-01~14) — v1.6
+- ✓ Admin UI Kill Switch 3-state + Telegram Users 관리 + AutoStop/Monitoring Settings (ADUI-01~04) — v1.6
+- ✓ Docker Multi-stage + docker-compose + Secrets + HEALTHCHECK + non-root (DOCK-01~06) — v1.6
+
 ### 활성
 
-<!-- v1.6에서 정의 예정 — REQUIREMENTS.md 참조 -->
-
-## Current Milestone: v1.6 운영 인프라 + 잔액 모니터링
-
-**Goal:** Kill Switch/AutoStop으로 긴급 제어, Telegram Bot으로 원격 관리, Docker로 원클릭 배포, 잔액 모니터링으로 가스비 부족 사전 알림이 동작하는 상태
-
-**Target features:**
-- Telegram Bot (Long Polling, 9 명령어, 인라인 키보드, 2-Tier 인증)
-- Kill Switch (3-state 상태 머신, 6-step cascade, dual-auth 복구)
-- AutoStop Engine (4 규칙 기반 자동 정지)
-- 잔액 모니터링 (주기적 체크, LOW_BALANCE 알림)
-- Docker 배포 (Multi-stage, docker-compose, Secrets)
-- 이벤트 버스 (EventEmitter 기반 트랜잭션/월렛 이벤트)
+<!-- 다음 마일스톤에서 정의 예정 -->
 
 ## Next Milestone Goals
 
@@ -343,7 +344,7 @@ v1.5.3 USD 정책 확장 shipped (2026-02-16). 9-패키지 모노레포 + Python
 
 ## 컨텍스트
 
-**누적:** 33 milestones (v0.1-v1.5.3), 139 phases, 301 plans, 850 requirements, 36 설계 문서(24-72), 8 objective 문서, ~191,000 LOC, ~2,150 테스트
+**누적:** 34 milestones (v0.1-v1.6), 145 phases, 315 plans, 899 requirements, 36 설계 문서(24-72), 8 objective 문서, ~207,902 LOC, ~2,294 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -367,6 +368,7 @@ v1.5 DeFi Price Oracle + Action Provider Framework shipped (2026-02-15). 5 페�
 v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 4 페이즈, 10 플랜, 39 요구사항, ~187,000 LOC, 2,058 테스트, 59 설계 결정.
 v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 2 페이즈, 4 플랜, 24 요구사항, ~188,000 LOC, 2,111 테스트, 7 설계 결정.
 v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02-16). 4 페이즈, 8 플랜, 19 요구사항, ~191,000 LOC, ~2,150 테스트.
+v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 6 페이즈, 14 플랜, 49 요구사항, ~207,902 LOC, ~2,294 테스트, 45 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -381,7 +383,7 @@ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02
 - Test: Vitest (forks pool for sodium mprotect)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
-- 미구현: Jupiter Swap, Tauri (v2.6), Docker (v1.6), Telegram Bot (v1.6), Kill Switch (v1.6)
+- 미구현: Jupiter Swap, Tauri (v2.6)
 
 **설계 문서:** 36개 (deliverables 24-72.md) + 대응표/테스트 전략/objective
 
@@ -392,7 +394,7 @@ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02
 - Pre-existing flaky lifecycle.test.ts (timer-sensitive BackgroundWorkers test) — not blocking
 - Pre-existing e2e-errors.test.ts failure (expects 404, gets 401) — OpenAPIHono 전환 side effect
 - Pre-existing 3 CLI E2E failures (E-07, E-08, E-09) — daemon-harness uses old adapter: param, not adapterPool:
-- Kill switch state in-memory 관리 (v1.3에서는 DB 미저장)
+- Kill Switch 3-state DB 저장 (v1.6에서 DB v14 마이그레이션 완료, CAS ACID 패턴)
 - BUG-013~016 RESOLVED in v1.4.3 (Admin MCP 토큰, EVM getAssets, EVM confirmation timeout, 패키지 버전)
 
 ## 제약사항
@@ -564,6 +566,18 @@ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02
 | 누적 한도 80% 경고 CUMULATIVE_LIMIT_WARNING | 한도 소진 전 사전 경고, 22번째 NotificationEventType | ✓ Good — v1.5.3 구현 |
 | IForexRateService CoinGecko tether 기반 | USD→법정통화 환산, stablecoin 가격으로 간접 환율 | ✓ Good — v1.5.3 구현 |
 | display_currency 월렛별 표시 통화 | 정책 평가는 항상 USD, 표시만 로컬 통화 | ✓ Good — v1.5.3 구현 |
+| Kill Switch 3-state (ACTIVE/SUSPENDED/LOCKED) | RECOVERING 제거, 단순화, CAS ACID | ✓ Good — v1.6 구현 |
+| EventBus emit() 리스너별 try/catch 격리 | 파이프라인 안전성, 하나의 리스너 오류가 전체 차단 방지 | ✓ Good — v1.6 구현 |
+| eventBus optional chaining(?.) 패턴 | 기존 코드 무중단 호환, 이벤트 버스 미초기화 시 안전 | ✓ Good — v1.6 구현 |
+| AutoStop 규칙 트리거 후 카운터 리셋 | 재축적 필요, 연속 실패 5회 리셋 후 재카운트 | ✓ Good — v1.6 구현 |
+| MANUAL_TRIGGER → Kill Switch 전체, 나머지 → 개별 월렛 | 수동은 전역, 자동은 격리 정지 | ✓ Good — v1.6 구현 |
+| BalanceMonitorService setInterval 폴링 (5분) | EventBus 구독 대신 주기적 체크, 단순하고 예측 가능 | ✓ Good — v1.6 구현 |
+| Telegram Bot native fetch (외부 프레임워크 미사용) | telegraf/grammy 의존 제거, 최소 의존성 | ✓ Good — v1.6 구현 |
+| telegram.bot_token 별도 TOML 섹션 | Bot 수신 vs 알림 발송 독립 제어 | ✓ Good — v1.6 구현 |
+| 2-Tier 인증 (ADMIN/READONLY/PENDING) | 관리 명령은 ADMIN만, 조회는 READONLY 허용 | ✓ Good — v1.6 구현 |
+| node:22-slim Docker 베이스 이미지 | glibc 호환, native addon prebuildify 지원 | ✓ Good — v1.6 구현 |
+| Docker Secrets _FILE 패턴 | 환경변수 대신 파일 기반 시크릿 주입, compose 오버라이드 | ✓ Good — v1.6 구현 |
+| 127.0.0.1:3100 포트 매핑 | 외부 네트워크 노출 방지, localhost 전용 | ✓ Good — v1.6 구현 |
 
 ---
-*최종 업데이트: 2026-02-16 after v1.5.3 milestone — v1.6 Desktop 이연(v2.6), 로드맵 갱신*
+*최종 업데이트: 2026-02-16 after v1.6 milestone — Kill Switch/AutoStop/Telegram Bot/Balance Monitor/Docker 완성*
