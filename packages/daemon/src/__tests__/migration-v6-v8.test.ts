@@ -453,9 +453,10 @@ describe('pushSchema vs migration schema equivalence', () => {
     dbA = connA.sqlite;
     pushSchema(dbA);
 
-    // DB B: v5 DDL -> v6a -> v6b -> v8 migrations
+    // DB B: v5 DDL -> run all remaining migrations (v6+) for full equivalence
     dbB = createV5Database();
-    runMigrations(dbB, getV6Migrations());
+    const allRemaining = MIGRATIONS.filter((m) => m.version >= 6);
+    runMigrations(dbB, allRemaining);
 
     // Compare wallets table columns
     const walletsColsA = (dbA.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string; type: string; notnull: number }>)
@@ -518,7 +519,7 @@ describe('pushSchema vs migration schema equivalence', () => {
     }
   });
 
-  it('should have LATEST_SCHEMA_VERSION = 12', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(12);
+  it('should have LATEST_SCHEMA_VERSION = 14', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(14);
   });
 });

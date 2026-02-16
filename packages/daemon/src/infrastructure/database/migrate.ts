@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 13;
+export const LATEST_SCHEMA_VERSION = 14;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -1136,6 +1136,44 @@ MIGRATIONS.push({
   up: (sqlite) => {
     sqlite.exec('ALTER TABLE transactions ADD COLUMN amount_usd REAL');
     sqlite.exec('ALTER TABLE transactions ADD COLUMN reserved_amount_usd REAL');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v14: Migrate kill_switch_state values: NORMAL->ACTIVE, ACTIVATED->SUSPENDED
+// ---------------------------------------------------------------------------
+// Kill Switch 3-state machine migration.
+// Old 2-state values (NORMAL, ACTIVATED, RECOVERING) are converted to
+// new 3-state values (ACTIVE, SUSPENDED, LOCKED).
+// Simple UPDATE on key_value_store -- no schema changes, no table recreation.
+
+MIGRATIONS.push({
+  version: 14,
+  description:
+    'Migrate kill_switch_state values: NORMAL->ACTIVE, ACTIVATED->SUSPENDED',
+  up: (sqlite) => {
+    const now = Math.floor(Date.now() / 1000);
+
+    // NORMAL -> ACTIVE
+    sqlite
+      .prepare(
+        "UPDATE key_value_store SET value = 'ACTIVE', updated_at = ? WHERE key = 'kill_switch_state' AND value = 'NORMAL'",
+      )
+      .run(now);
+
+    // ACTIVATED -> SUSPENDED
+    sqlite
+      .prepare(
+        "UPDATE key_value_store SET value = 'SUSPENDED', updated_at = ? WHERE key = 'kill_switch_state' AND value = 'ACTIVATED'",
+      )
+      .run(now);
+
+    // RECOVERING -> ACTIVE (v0.10 design removed RECOVERING state)
+    sqlite
+      .prepare(
+        "UPDATE key_value_store SET value = 'ACTIVE', updated_at = ? WHERE key = 'kill_switch_state' AND value = 'RECOVERING'",
+      )
+      .run(now);
   },
 });
 

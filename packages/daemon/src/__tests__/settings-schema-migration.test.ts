@@ -296,15 +296,15 @@ describe('Fresh DB: settings table via pushSchema', () => {
     expect(tables).toHaveLength(1);
   });
 
-  it('should record schema_version 12 in fresh DB', () => {
+  it('should record schema_version 14 in fresh DB', () => {
     const row = freshSqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(12);
+    expect(row.max_version).toBe(14);
   });
 
-  it('LATEST_SCHEMA_VERSION should be 12', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(12);
+  it('LATEST_SCHEMA_VERSION should be 14', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(14);
   });
 });
 
