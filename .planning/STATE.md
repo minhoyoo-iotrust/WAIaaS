@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 143 of 145 (Telegram Bot)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 142-02 잔액 모니터링 설정 관리 + DaemonLifecycle 통합 완료
+Last activity: 2026-02-16 -- 143-01 TelegramBotService 코어 인프라 완료
 
-Progress: [######░░░░░░░░] 50% (7/14 plans)
+Progress: [#######░░░░░░░] 57% (8/14 plans)
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [######░░░░░░░░] 50% (7/14 plans)
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
-| 143. Telegram Bot | 0/3 | - | - |
+| 143. Telegram Bot | 1/3 | 16m | 16m |
 | 144. Admin UI Integration | 0/2 | - | - |
 | 145. Docker | 0/2 | - | - |
 
@@ -61,6 +61,10 @@ Full log in PROJECT.md and milestones/.
 - v1.6: monitoring_* flat key를 security TOML 섹션에 배치 (autostop 패턴 동일)
 - v1.6: monitoring Admin Settings 별도 카테고리 (autostop 패턴 동일)
 - v1.6: DaemonLifecycle Step 4c-4에서 BalanceMonitorService fail-soft 초기화
+- v1.6: telegram.bot_token을 notifications.telegram_bot_token과 별도 섹션으로 분리 (Bot 수신 vs 알림 발송 독립 제어)
+- v1.6: KillSwitchService.getState().state 문자열로 상태 표시 (KillSwitchStateInfo 구조체 접근)
+- v1.6: MarkdownV2 이스케이프 유틸 TelegramChannel 패턴 재사용 (telegram-bot-service.ts에 독립 정의)
+- v1.6: DaemonLifecycle Step 4c-5에서 TelegramBotService fail-soft 초기화
 
 ### Blockers/Concerns
 
@@ -70,5 +74,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 142-02-PLAN.md (잔액 모니터링 설정 관리 + DaemonLifecycle 통합)
+Stopped at: Completed 143-01-PLAN.md (TelegramBotService 코어 인프라 + DB v15 + /start, /help, /status)
 Resume file: None
