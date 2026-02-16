@@ -65,6 +65,8 @@ const AUTOSTOP_KEYS_PREFIX = 'autostop.';
 
 const MONITORING_KEYS_PREFIX = 'monitoring.';
 
+const WALLETCONNECT_KEYS_PREFIX = 'walletconnect.';
+
 // ---------------------------------------------------------------------------
 // HotReloadOrchestrator
 // ---------------------------------------------------------------------------
@@ -89,6 +91,7 @@ export class HotReloadOrchestrator {
     const hasDisplayChanges = changedKeys.some((k) => DISPLAY_KEYS.has(k));
     const hasAutostopChanges = changedKeys.some((k) => k.startsWith(AUTOSTOP_KEYS_PREFIX));
     const hasMonitoringChanges = changedKeys.some((k) => k.startsWith(MONITORING_KEYS_PREFIX));
+    const hasWalletConnectChanges = changedKeys.some((k) => k.startsWith(WALLETCONNECT_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -134,6 +137,12 @@ export class HotReloadOrchestrator {
       } catch (err) {
         console.warn('Hot-reload balance monitor failed:', err);
       }
+    }
+
+    if (hasWalletConnectChanges) {
+      // WalletConnect settings require daemon restart for full effect (SignClient re-init).
+      // project_id change requires SignClient recreation which is complex -- log guidance.
+      console.log('Hot-reload: WalletConnect settings updated. Note: project_id changes require daemon restart for full effect.');
     }
 
     await Promise.all(reloads);
