@@ -68,10 +68,14 @@ const ERROR_MESSAGES: Record<string, string> = {
   SHUTTING_DOWN: 'The daemon is shutting down.',
   ADAPTER_NOT_AVAILABLE: 'Chain adapter is not available. Please try again.',
 
-  // WALLET domain (3)
+  // WALLET domain (3 + 4 WC)
   WALLET_NOT_FOUND: 'Wallet not found.',
   WALLET_SUSPENDED: 'This wallet is currently suspended.',
   WALLET_TERMINATED: 'This wallet has been terminated.',
+  WC_NOT_CONFIGURED: 'WalletConnect is not configured. Set the Project ID in Settings first.',
+  WC_SESSION_NOT_FOUND: 'No active WalletConnect session.',
+  WC_SESSION_EXISTS: 'A WalletConnect session already exists. Disconnect first.',
+  WC_SIGNING_FAILED: 'WalletConnect signing request failed.',
 
   // WITHDRAW domain (4)
   NO_OWNER: 'No owner connected. Withdrawal requires an owner wallet.',

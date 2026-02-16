@@ -494,15 +494,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     );
   }
 
-  // Register WalletConnect routes when DB + wcSessionService are available
-  if (deps.db && deps.wcSessionService) {
+  // Register WalletConnect routes (always, with nullable wcSessionService).
+  // Handlers throw WC_NOT_CONFIGURED (503) when service is unavailable.
+  if (deps.db) {
     app.route('/v1', wcRoutes({
       db: deps.db,
-      wcSessionService: deps.wcSessionService,
+      wcSessionService: deps.wcSessionService ?? null,
     }));
     app.route('/v1', wcSessionRoutes({
       db: deps.db,
-      wcSessionService: deps.wcSessionService,
+      wcSessionService: deps.wcSessionService ?? null,
     }));
   }
 

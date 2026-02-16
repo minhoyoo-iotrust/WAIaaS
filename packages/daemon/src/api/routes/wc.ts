@@ -38,7 +38,13 @@ import {
 
 export interface WcRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
-  wcSessionService: WcSessionService;
+  wcSessionService: WcSessionService | null;
+}
+
+/** Guard: throw WC_NOT_CONFIGURED if service is null, return non-null service. */
+function requireWcService(svc: WcSessionService | null): WcSessionService {
+  if (!svc) throw new WAIaaSError('WC_NOT_CONFIGURED');
+  return svc;
 }
 
 // ---------------------------------------------------------------------------
@@ -206,8 +212,9 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
 
+    const svc = requireWcService(wcSessionService);
     const network = wallet.default_network ?? wallet.environment;
-    const result = await wcSessionService.createPairing(id, network, wallet.chain);
+    const result = await svc.createPairing(id, network, wallet.chain);
 
     return c.json(
       {
@@ -225,6 +232,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(getSessionRoute, async (c) => {
     const { id } = c.req.valid('param');
+    const svc = requireWcService(wcSessionService);
 
     // Verify wallet exists
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
@@ -236,7 +244,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
 
-    const session = wcSessionService.getSessionInfo(id);
+    const session = svc.getSessionInfo(id);
     if (!session) {
       throw new WAIaaSError('WC_SESSION_NOT_FOUND');
     }
@@ -250,6 +258,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(deleteSessionRoute, async (c) => {
     const { id } = c.req.valid('param');
+    const svc = requireWcService(wcSessionService);
 
     // Verify wallet exists
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
@@ -261,7 +270,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
 
-    await wcSessionService.disconnectSession(id);
+    await svc.disconnectSession(id);
 
     return c.json({ disconnected: true }, 200);
   });
@@ -272,6 +281,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(pairingStatusRoute, async (c) => {
     const { id } = c.req.valid('param');
+    const svc = requireWcService(wcSessionService);
 
     // Verify wallet exists
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
@@ -283,8 +293,8 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
 
-    const status = wcSessionService.getPairingStatus(id);
-    const session = status === 'connected' ? wcSessionService.getSessionInfo(id) : null;
+    const status = svc.getPairingStatus(id);
+    const session = status === 'connected' ? svc.getSessionInfo(id) : null;
 
     return c.json({ status, session: session ?? null }, 200);
   });
@@ -332,8 +342,9 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     const wallet = lookupWallet(walletId);
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
 
+    const svc = requireWcService(wcSessionService);
     const network = wallet.default_network ?? wallet.environment;
-    const result = await wcSessionService.createPairing(walletId, network, wallet.chain);
+    const result = await svc.createPairing(walletId, network, wallet.chain);
 
     return c.json(
       {
@@ -351,6 +362,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(sessionGetSessionRoute, async (c) => {
     const walletId = getWalletId(c);
+    const svc = requireWcService(wcSessionService);
 
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
@@ -358,7 +370,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
       .get(walletId) as { id: string } | undefined;
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
 
-    const session = wcSessionService.getSessionInfo(walletId);
+    const session = svc.getSessionInfo(walletId);
     if (!session) throw new WAIaaSError('WC_SESSION_NOT_FOUND');
 
     return c.json(session, 200);
@@ -370,6 +382,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(sessionDeleteSessionRoute, async (c) => {
     const walletId = getWalletId(c);
+    const svc = requireWcService(wcSessionService);
 
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
@@ -377,7 +390,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
       .get(walletId) as { id: string } | undefined;
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
 
-    await wcSessionService.disconnectSession(walletId);
+    await svc.disconnectSession(walletId);
 
     return c.json({ disconnected: true }, 200);
   });
@@ -388,6 +401,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
 
   router.openapi(sessionPairingStatusRoute, async (c) => {
     const walletId = getWalletId(c);
+    const svc = requireWcService(wcSessionService);
 
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
@@ -395,8 +409,8 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
       .get(walletId) as { id: string } | undefined;
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
 
-    const status = wcSessionService.getPairingStatus(walletId);
-    const session = status === 'connected' ? wcSessionService.getSessionInfo(walletId) : null;
+    const status = svc.getPairingStatus(walletId);
+    const session = status === 'connected' ? svc.getSessionInfo(walletId) : null;
 
     return c.json({ status, session: session ?? null }, 200);
   });
