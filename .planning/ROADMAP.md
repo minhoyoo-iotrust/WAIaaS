@@ -30,8 +30,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 151-01-PLAN.md — Vitest workspace + 커버리지 임계값 + Turborepo 태스크 분리
-- [ ] 151-02-PLAN.md — Mock 5개 신규 경계 인프라 구축
+- [x] 151-01-PLAN.md — Vitest workspace + 커버리지 임계값 + Turborepo 태스크 분리
+- [x] 151-02-PLAN.md — Mock 5개 신규 경계 인프라 구축
 
 ### Phase 152: Enum 검증 + Config 테스트
 **Goal**: 16개 Enum SSoT가 빌드타임에 4단계 방어로 검증되고, config.toml 로딩이 12건 시나리오에서 정확하게 동작하는 상태
@@ -41,10 +41,10 @@ Plans:
   1. 빌드타임 검증 스크립트가 16개 Enum의 as const -> TS -> Zod -> Drizzle -> DB CHECK 4단계 일관성을 자동 검증하고, 불일치 시 빌드가 실패한다
   2. config.toml 로딩 테스트 12건(기본값, TOML 오버라이드, 환경변수, 잘못된 값 등)이 통과한다
   3. NOTE-01~11 매핑 중 테스트 필요 4건(22 테스트 케이스)이 모두 통과한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 152-01: Enum SSoT 빌드타임 검증 스크립트 + config 테스트 + NOTE 매핑 테스트
+- [ ] 152-01-PLAN.md — Enum SSoT 빌드타임 검증 + config 12건 + NOTE 매핑 22건
 
 ### Phase 153: Contract Test
 **Goal**: 7개 핵심 인터페이스의 Mock 구현체와 실제 구현체가 동일한 Contract Test를 통과하여 동작 동일성이 보장되는 상태
@@ -161,7 +161,7 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 151. 커버리지 + Mock 인프라 | 0/2 | Not started | - |
+| 151. 커버리지 + Mock 인프라 | 2/2 | Complete | 2026-02-16 |
 | 152. Enum 검증 + Config 테스트 | 0/1 | Not started | - |
 | 153. Contract Test | 0/2 | Not started | - |
 | 154. 블록체인 3단계 테스트 | 0/2 | Not started | - |
