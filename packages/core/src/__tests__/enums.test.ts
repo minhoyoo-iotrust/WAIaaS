@@ -7,6 +7,8 @@ import {
   EVM_NETWORK_TYPES,
   EvmNetworkTypeEnum,
   SOLANA_NETWORK_TYPES,
+  ENVIRONMENT_TYPES,
+  EnvironmentTypeEnum,
   validateChainNetwork,
   WALLET_STATUSES,
   WalletStatusEnum,
@@ -22,6 +24,8 @@ import {
   SessionStatusEnum,
   NOTIFICATION_EVENT_TYPES,
   NotificationEventTypeEnum,
+  NOTIFICATION_LOG_STATUSES,
+  NotificationLogStatusEnum,
   AUDIT_ACTIONS,
   AuditActionEnum,
   KILL_SWITCH_STATES,
@@ -31,7 +35,7 @@ import {
 } from '../index.js';
 
 describe('Enum SSoT', () => {
-  // 12 Enum value count verification
+  // 16 Enum value count verification
   it('ChainType has 2 values', () => {
     expect(CHAIN_TYPES).toHaveLength(2);
     expect(CHAIN_TYPES).toContain('solana');
@@ -55,6 +59,12 @@ describe('Enum SSoT', () => {
     expect(NETWORK_TYPES).toContain('optimism-sepolia');
     expect(NETWORK_TYPES).toContain('base-mainnet');
     expect(NETWORK_TYPES).toContain('base-sepolia');
+  });
+
+  it('EnvironmentType has 2 values', () => {
+    expect(ENVIRONMENT_TYPES).toHaveLength(2);
+    expect(ENVIRONMENT_TYPES).toContain('testnet');
+    expect(ENVIRONMENT_TYPES).toContain('mainnet');
   });
 
   it('WalletStatus has 5 values', () => {
@@ -92,6 +102,12 @@ describe('Enum SSoT', () => {
 
   it('NotificationEventType has 25 values', () => {
     expect(NOTIFICATION_EVENT_TYPES).toHaveLength(25);
+  });
+
+  it('NotificationLogStatus has 2 values', () => {
+    expect(NOTIFICATION_LOG_STATUSES).toHaveLength(2);
+    expect(NOTIFICATION_LOG_STATUSES).toContain('sent');
+    expect(NOTIFICATION_LOG_STATUSES).toContain('failed');
   });
 
   it('AuditAction has 25 values', () => {
@@ -178,10 +194,11 @@ describe('Enum SSoT', () => {
     });
   });
 
-  // Zod enum options match as const arrays
+  // Zod enum options match as const arrays (all 16 enums)
   it('Zod enum options match as const arrays', () => {
     expect(ChainTypeEnum.options).toEqual([...CHAIN_TYPES]);
     expect(NetworkTypeEnum.options).toEqual([...NETWORK_TYPES]);
+    expect(EnvironmentTypeEnum.options).toEqual([...ENVIRONMENT_TYPES]);
     expect(WalletStatusEnum.options).toEqual([...WALLET_STATUSES]);
     expect(TransactionStatusEnum.options).toEqual([...TRANSACTION_STATUSES]);
     expect(TransactionTypeEnum.options).toEqual([...TRANSACTION_TYPES]);
@@ -189,6 +206,7 @@ describe('Enum SSoT', () => {
     expect(PolicyTierEnum.options).toEqual([...POLICY_TIERS]);
     expect(SessionStatusEnum.options).toEqual([...SESSION_STATUSES]);
     expect(NotificationEventTypeEnum.options).toEqual([...NOTIFICATION_EVENT_TYPES]);
+    expect(NotificationLogStatusEnum.options).toEqual([...NOTIFICATION_LOG_STATUSES]);
     expect(AuditActionEnum.options).toEqual([...AUDIT_ACTIONS]);
     expect(KillSwitchStateEnum.options).toEqual([...KILL_SWITCH_STATES]);
     expect(OwnerStateEnum.options).toEqual([...OWNER_STATES]);
@@ -205,14 +223,22 @@ describe('Enum SSoT', () => {
     expect(() => ChainTypeEnum.parse('bitcoin')).toThrow();
   });
 
-  // All enum arrays contain only string values (no duplicates)
+  // NotificationLogStatus Zod parse
+  it('Zod parses valid NotificationLogStatus values', () => {
+    expect(NotificationLogStatusEnum.parse('sent')).toBe('sent');
+    expect(NotificationLogStatusEnum.parse('failed')).toBe('failed');
+    expect(() => NotificationLogStatusEnum.parse('pending')).toThrow();
+  });
+
+  // All enum arrays contain only string values (no duplicates) -- all 16
   it('enum arrays have no duplicate values', () => {
     const allArrays = [
-      CHAIN_TYPES, NETWORK_TYPES, WALLET_STATUSES,
+      CHAIN_TYPES, NETWORK_TYPES, SOLANA_NETWORK_TYPES, EVM_NETWORK_TYPES,
+      ENVIRONMENT_TYPES, WALLET_STATUSES,
       TRANSACTION_STATUSES, TRANSACTION_TYPES,
       POLICY_TYPES, POLICY_TIERS, SESSION_STATUSES,
-      NOTIFICATION_EVENT_TYPES, AUDIT_ACTIONS,
-      KILL_SWITCH_STATES, OWNER_STATES,
+      NOTIFICATION_EVENT_TYPES, NOTIFICATION_LOG_STATUSES,
+      AUDIT_ACTIONS, KILL_SWITCH_STATES, OWNER_STATES,
     ];
     for (const arr of allArrays) {
       const unique = new Set(arr);
