@@ -95,6 +95,17 @@ function keyToLabel(key: string): string {
     project_id: 'Project ID',
     log_level: 'Log Level',
     currency: 'Display Currency',
+    // autostop keys
+    consecutive_failures_threshold: 'Consecutive Failures Threshold',
+    unusual_activity_threshold: 'Unusual Activity Threshold',
+    unusual_activity_window_sec: 'Unusual Activity Window (seconds)',
+    idle_timeout_sec: 'Idle Timeout (seconds)',
+    idle_check_interval_sec: 'Idle Check Interval (seconds)',
+    // monitoring keys
+    check_interval_sec: 'Check Interval (seconds)',
+    low_balance_threshold_sol: 'Low Balance Threshold (SOL)',
+    low_balance_threshold_eth: 'Low Balance Threshold (ETH)',
+    cooldown_hours: 'Alert Cooldown (hours)',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -885,6 +896,125 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: AutoStop Rules
+  // ---------------------------------------------------------------------------
+
+  function AutoStopSettings() {
+    const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
+      { key: 'enabled', type: 'checkbox' },
+      { key: 'consecutive_failures_threshold', type: 'number', min: 1, max: 100 },
+      { key: 'unusual_activity_threshold', type: 'number', min: 5, max: 1000 },
+      { key: 'unusual_activity_window_sec', type: 'number', min: 60, max: 86400 },
+      { key: 'idle_timeout_sec', type: 'number', min: 60, max: 604800 },
+      { key: 'idle_check_interval_sec', type: 'number', min: 10, max: 3600 },
+    ];
+
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>AutoStop Rules</h3>
+          <p class="settings-description">
+            Automatic protection rules that suspend wallets or trigger Kill Switch on anomalies.
+            Changes apply immediately without daemon restart.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            {fields.map((f) =>
+              f.type === 'checkbox' ? (
+                <div class="settings-field-full" key={f.key}>
+                  <FormField
+                    label={keyToLabel(f.key)}
+                    name={`autostop.${f.key}`}
+                    type="checkbox"
+                    value={getEffectiveBoolValue('autostop', f.key)}
+                    onChange={(v) => handleFieldChange(`autostop.${f.key}`, v)}
+                  />
+                </div>
+              ) : (
+                <FormField
+                  key={f.key}
+                  label={keyToLabel(f.key)}
+                  name={`autostop.${f.key}`}
+                  type="number"
+                  value={Number(getEffectiveValue('autostop', f.key)) || 0}
+                  onChange={(v) => handleFieldChange(`autostop.${f.key}`, v)}
+                  min={f.min}
+                  max={f.max}
+                />
+              ),
+            )}
+          </div>
+          <div class="settings-info-box">
+            <strong>Consecutive Failures:</strong> Suspends wallet after N consecutive failed transactions.<br />
+            <strong>Unusual Activity:</strong> Suspends wallet if transaction count exceeds threshold within the time window.<br />
+            <strong>Idle Timeout:</strong> Revokes sessions with no activity for the configured duration.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section: Balance Monitoring
+  // ---------------------------------------------------------------------------
+
+  function MonitoringSettings() {
+    const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
+      { key: 'enabled', type: 'checkbox' },
+      { key: 'check_interval_sec', type: 'number', min: 60, max: 86400 },
+      { key: 'low_balance_threshold_sol', type: 'number', min: 0 },
+      { key: 'low_balance_threshold_eth', type: 'number', min: 0 },
+      { key: 'cooldown_hours', type: 'number', min: 1, max: 168 },
+    ];
+
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Balance Monitoring</h3>
+          <p class="settings-description">
+            Periodic balance checks for all active wallets. Sends LOW_BALANCE alerts when
+            native token balance drops below thresholds. Changes apply immediately.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            {fields.map((f) =>
+              f.type === 'checkbox' ? (
+                <div class="settings-field-full" key={f.key}>
+                  <FormField
+                    label={keyToLabel(f.key)}
+                    name={`monitoring.${f.key}`}
+                    type="checkbox"
+                    value={getEffectiveBoolValue('monitoring', f.key)}
+                    onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                  />
+                </div>
+              ) : (
+                <FormField
+                  key={f.key}
+                  label={keyToLabel(f.key)}
+                  name={`monitoring.${f.key}`}
+                  type="number"
+                  value={Number(getEffectiveValue('monitoring', f.key)) || 0}
+                  onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                  min={f.min}
+                  max={f.max}
+                />
+              ),
+            )}
+          </div>
+          <div class="settings-info-box">
+            Monitors all active wallet native token balances (SOL, ETH) at the configured interval.
+            When balance drops below threshold, a LOW_BALANCE notification is sent.
+            Duplicate alerts are suppressed for the cooldown period (per wallet).
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
 
@@ -919,7 +1049,7 @@ export default function SettingsPage() {
         </div>
       ) : (
         <>
-          {/* 7 Category Sections */}
+          {/* Category Sections */}
           <NotificationSettings />
           <RpcSettings />
           <SecuritySettings />
@@ -927,6 +1057,8 @@ export default function SettingsPage() {
           <DaemonSettings />
           <DisplaySettings />
           <ApiKeysSection />
+          <AutoStopSettings />
+          <MonitoringSettings />
         </>
       )}
 
