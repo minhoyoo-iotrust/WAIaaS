@@ -922,3 +922,27 @@
 
 ---
 
+
+## v1.6.1 WalletConnect Owner 승인 (Shipped: 2026-02-16)
+
+**Delivered:** WalletConnect v2 경유 Owner 승인 워크플로우가 동작하는 상태 달성 — QR 페어링으로 외부 지갑(MetaMask/Phantom) 연결, APPROVAL 거래 시 WC 서명 요청 자동 전송, WC 실패 시 Telegram Bot 자동 전환, Admin UI/MCP/SDK/CLI 전체 인터페이스 통합
+
+**Phases completed:** 146-150 (10 plans total)
+
+**Key accomplishments:**
+
+- WalletConnect SignClient 인프라 — DB v16 마이그레이션(wc_sessions/wc_store/approval_channel), SqliteKeyValueStorage IKeyValueStorage 영속 세션, DaemonLifecycle Step 4c-6 fail-soft 초기화, Admin Settings hot-reload
+- QR 페어링 + REST API 4개 엔드포인트 — createPairing URI→QR base64 dataURL, CAIP-2 13개 네트워크 매핑, Admin UI QR 모달 3초 폴링, CLI owner connect/disconnect/status 명령
+- WcSigningBridge 서명 요청 통합 — stage4Wait fire-and-forget WC 연동, EVM personal_sign + Solana solana_signMessage 서명 검증, approve/reject 자동 반영, WC expiry 동기화
+- Telegram Fallback 자동 전환 — WC 세션 없음/타임아웃/에러 시 Telegram Bot 자동 전환, 단일 승인 소스 원칙(isApprovalStillPending), APPROVAL_CHANNEL_SWITCHED 알림 이벤트
+- DX 전체 인터페이스 통합 — Admin WC 전용 관리 페이지, MCP 3개 도구(wc_connect/wc_status/wc_disconnect), TS/Python SDK WC 메서드, wallet.skill.md WalletConnect 섹션
+
+**Stats:**
+
+- 5 phases, 10 plans, 24 requirements, 105 files changed, +12,099 LOC (net)
+- ~2,510 tests (~2,294 → ~2,510, +87 WC tests)
+- Git range: feat(146-01) → 623d9dc
+- Timeline: 2026-02-16 (~3 hours)
+
+---
+

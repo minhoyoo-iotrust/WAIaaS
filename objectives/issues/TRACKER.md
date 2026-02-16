@@ -54,6 +54,7 @@
 | 037 | BUG | MEDIUM | Admin Table 컴포넌트 undefined data 크래시 — sessions 페이지 테스트 실패 | v1.6 | FIXED | 2026-02-16 |
 | 038 | BUG | LOW | v1.6 추가 enum/error code에 대한 테스트 count 미갱신 (7건) | v1.6 | FIXED | 2026-02-16 |
 | 039 | ENHANCEMENT | MEDIUM | 마일스톤 감사 전 빌드+테스트 자동 실행 훅 추가 | v1.6 | FIXED | 2026-02-16 |
+| 040 | ENHANCEMENT | LOW | EVM Testnet Level 3 블록체인 검증 추가 — Solana Devnet과 대칭 | v1.7 | OPEN | 2026-02-16 |
 
 ## Type Legend
 
@@ -65,8 +66,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 39
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 39
+- **Total:** 40

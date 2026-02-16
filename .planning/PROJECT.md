@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합, Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합, Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다.
 
 ## 핵심 가치
 
@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~207,902 LOC, ~2,294 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE) + **Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구)** + **AutoStop 4-규칙 자동 정지 엔진** + **잔액 모니터링(LOW_BALANCE 사전 알림)** + **Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n)** + SDK/MCP로 프로그래밍 접근(15+ 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(AUTOSTOP_TRIGGERED + LOW_BALANCE 추가) + Admin Web UI(`/admin`) 관리(**Kill Switch 3-state UI** + **Telegram Users 관리** + **AutoStop/Monitoring Settings** + 12개 정책 폼 + PolicyRulesSummary 시각화) + **Docker 원클릭 배포(Multi-stage + Secrets + non-root)** + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작.
+v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~220,000 LOC, ~2,510 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + **WalletConnect v2 QR 페어링 + 서명 요청** + **Telegram Fallback 자동 전환**) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + **WalletConnect 세션 관리 페이지** + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -34,25 +34,25 @@ v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 9-패키지 �
 - ✅ v1.5.2 Admin UI 정책 폼 UX 개선 — shipped 2026-02-16 (2,111 tests, ~188,000 LOC)
 - ✅ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) — shipped 2026-02-16 (~2,150 tests, ~191,000 LOC)
 - ✅ v1.6 운영 인프라 + 잔액 모니터링 — shipped 2026-02-16 (~2,294 tests, ~207,902 LOC)
-- v1.6.1 WalletConnect Owner 승인 (QR 페어링, 서명 요청, Telegram fallback)
+- ✅ v1.6.1 WalletConnect Owner 승인 — shipped 2026-02-16 (~2,510 tests, ~220,000 LOC)
 - v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
 - v1.8 업그레이드 + 배포 (npm 배포, Docker Hub, 자동 업데이트)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, GitHub Release)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~207,902 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- ~2,294 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~220,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- ~2,510 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
-- IChainAdapter 22 메서드, discriminatedUnion 5-type 파이프라인, 12 PolicyType (X402_ALLOWED_DOMAINS 추가)
+- IChainAdapter 22 메서드, discriminatedUnion 5-type 파이프라인, 12 PolicyType, WalletConnect v2 서명 요청
 - IPriceOracle — Pyth Hermes + CoinGecko OracleChain fallback, USD 기준 정책 평가
 - IActionProvider — ESM 플러그인 프레임워크, ActionProviderRegistry, MCP Tool 자동 변환
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- MCP 15개 내장 도구 (x402_fetch 추가) + Action Provider 동적 도구 + 7개 스킬 리소스
+- MCP 18개 내장 도구 (wc_connect/wc_status/wc_disconnect 추가) + Action Provider 동적 도구 + 7개 스킬 리소스
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
@@ -319,22 +319,20 @@ v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 9-패키지 �
 - ✓ Admin UI Kill Switch 3-state + Telegram Users 관리 + AutoStop/Monitoring Settings (ADUI-01~04) — v1.6
 - ✓ Docker Multi-stage + docker-compose + Secrets + HEALTHCHECK + non-root (DOCK-01~06) — v1.6
 
+- ✓ WalletConnect SignClient 인프라 — DB v16, SqliteKeyValueStorage, DaemonLifecycle fail-soft, Admin Settings hot-reload (INFRA-01~05) — v1.6.1
+- ✓ QR 페어링 + REST API 4개 엔드포인트 — pairing URI→QR base64, CAIP-2 13 네트워크, Admin QR 모달, CLI owner connect (PAIR-01~06) — v1.6.1
+- ✓ WcSigningBridge 서명 요청 — stage4Wait fire-and-forget WC 연동, SIWE/Ed25519 검증, approve/reject (SIGN-01~06) — v1.6.1
+- ✓ Telegram Fallback 자동 전환 — WC→Telegram 자동 전환, 단일 승인 소스, APPROVAL_CHANNEL_SWITCHED 알림 (FALL-01~03) — v1.6.1
+- ✓ WC DX 전체 인터페이스 — Admin WC 관리 페이지, MCP 3 도구, TS/Python SDK WC 메서드, Skill 파일 업데이트 (DX-01~04) — v1.6.1
+
 ### 활성
 
-<!-- v1.6.1에서 정의 — REQUIREMENTS.md 참조 -->
-
-## Current Milestone: v1.6.1 WalletConnect Owner 승인
-
-**Goal:** WalletConnect v2를 통한 Owner 승인 워크플로우 구현 — QR 페어링, WC 서명 요청, Telegram fallback
-
-**Target features:**
-- WalletConnect v2 QR 페어링 (project_id 설정, 세션 관리)
-- WC 서명 요청을 통한 Owner 승인/거절
-- Telegram Bot fallback (WC 미연결 시 Telegram 경유 승인)
+<!-- 다음 마일스톤에서 정의 — /gsd:new-milestone -->
 
 ## Next Milestone Goals
 
 - v1.7 품질 강화 + CI/CD — 300+ 테스트, 보안 237건, 4-stage 파이프라인
+- v1.8 업그레이드 + 배포 — npm 배포, Docker Hub, 자동 업데이트
 - v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, GitHub Release
 
 ### 범위 외
@@ -352,7 +350,7 @@ v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 9-패키지 �
 
 ## 컨텍스트
 
-**누적:** 34 milestones (v0.1-v1.6), 145 phases, 315 plans, 899 requirements, 36 설계 문서(24-72), 8 objective 문서, ~207,902 LOC, ~2,294 테스트
+**누적:** 35 milestones (v0.1-v1.6.1), 150 phases, 325 plans, 923 requirements, 36 설계 문서(24-72), 8 objective 문서, ~220,000 LOC, ~2,510 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -377,6 +375,7 @@ v1.5.1 x402 클라이언트 지원 shipped (2026-02-15). 4 페이즈, 10 플랜,
 v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 2 페이즈, 4 플랜, 24 요구사항, ~188,000 LOC, 2,111 테스트, 7 설계 결정.
 v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02-16). 4 페이즈, 8 플랜, 19 요구사항, ~191,000 LOC, ~2,150 테스트.
 v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 6 페이즈, 14 플랜, 49 요구사항, ~207,902 LOC, ~2,294 테스트, 45 설계 결정.
+v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 24 요구사항, ~220,000 LOC, ~2,510 테스트, 28 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -586,6 +585,15 @@ v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 6 페이즈, 1
 | node:22-slim Docker 베이스 이미지 | glibc 호환, native addon prebuildify 지원 | ✓ Good — v1.6 구현 |
 | Docker Secrets _FILE 패턴 | 환경변수 대신 파일 기반 시크릿 주입, compose 오버라이드 | ✓ Good — v1.6 구현 |
 | 127.0.0.1:3100 포트 매핑 | 외부 네트워크 노출 방지, localhost 전용 | ✓ Good — v1.6 구현 |
+| WC "선호 채널" 위치 (REST API 절대 유지) | self-hosted 철학, 외부 relay 의존 최소화 | ✓ Good — v1.6.1 설계 |
+| 3중 승인 채널 (WC > Telegram > REST) | 편의성 순서, fallback 자동 전환 | ✓ Good — v1.6.1 구현 |
+| SqliteKeyValueStorage (WC SDK 세션 영속화) | WC keyvaluestorage 의존성 대신 직접 구현, pnpm strict 호환 | ✓ Good — v1.6.1 구현 |
+| 서버사이드 QR 생성 (CSP 변경 불필요) | qrcode.toDataURL → base64 data URL | ✓ Good — v1.6.1 구현 |
+| fire-and-forget WC 서명 요청 | stage4Wait 비차단, void prefix 패턴 | ✓ Good — v1.6.1 구현 |
+| 서명 검증 실패 시 reject 안 함 | Owner REST API 재시도 가능 | ✓ Good — v1.6.1 구현 |
+| WC fallback에 isApprovalStillPending guard | 이미 처리된 approval 보호, 단일 승인 소스 | ✓ Good — v1.6.1 구현 |
+| 사용자 명시적 거부(4001/5000)는 fallback 없음 | 의도적 거부는 존중 | ✓ Good — v1.6.1 구현 |
+| notificationService/eventBus optional DI | WC 없이도 데몬 정상 동작 | ✓ Good — v1.6.1 구현 |
 
 ---
-*최종 업데이트: 2026-02-16 after v1.6 milestone — Kill Switch/AutoStop/Telegram Bot/Balance Monitor/Docker 완성*
+*최종 업데이트: 2026-02-16 after v1.6.1 milestone — WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback + Admin/MCP/SDK DX*
