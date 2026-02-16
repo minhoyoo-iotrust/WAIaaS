@@ -69,6 +69,7 @@ import {
   openApiValidationHook,
 } from './openapi-schemas.js';
 import { executeSignOnly } from '../../pipeline/sign-only.js';
+import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -147,6 +148,9 @@ const getTransactionRoute = createRoute({
   summary: 'Get transaction details',
   request: {
     params: z.object({ id: z.string().uuid() }),
+    query: z.object({
+      display_currency: z.string().optional().describe('Display currency code (e.g. KRW, EUR). Defaults to server setting.'),
+    }),
   },
   responses: {
     200: {
@@ -217,6 +221,7 @@ const listTransactionsRoute = createRoute({
     query: z.object({
       limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
       cursor: z.string().uuid().optional(),
+      display_currency: z.string().optional().describe('Display currency code (e.g. KRW, EUR). Defaults to server setting.'),
     }),
   },
   responses: {
@@ -476,8 +481,12 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
   router.openapi(listTransactionsRoute, async (c) => {
     const walletId = c.get('walletId' as never) as string;
-    const { limit: rawLimit, cursor } = c.req.valid('query');
+    const { limit: rawLimit, cursor, display_currency: queryCurrency } = c.req.valid('query');
     const limit = rawLimit ?? 20;
+
+    // Resolve display currency from query param or server setting
+    const currencyCode = resolveDisplayCurrencyCode(queryCurrency, deps.settingsService);
+    const displayRate = await fetchDisplayRate(currencyCode, deps.forexRateService);
 
     // Build conditions
     const conditions = [eq(transactions.walletId, walletId)];
@@ -512,6 +521,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
           txHash: tx.txHash,
           error: tx.error,
           createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+          displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
+          displayCurrency: currencyCode ?? null,
         })),
         cursor: hasMore ? nextCursor : null,
         hasMore,
@@ -565,6 +576,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
   router.openapi(getTransactionRoute, async (c) => {
     const { id: txId } = c.req.valid('param');
+    const { display_currency: queryCurrency } = c.req.valid('query');
 
     if (!txId) {
       throw new WAIaaSError('TX_NOT_FOUND', {
@@ -584,6 +596,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
+    // Resolve display currency from query param or server setting
+    const currencyCode = resolveDisplayCurrencyCode(queryCurrency, deps.settingsService);
+    const displayRate = await fetchDisplayRate(currencyCode, deps.forexRateService);
+
     return c.json(
       {
         id: tx.id,
@@ -598,6 +614,8 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         txHash: tx.txHash,
         error: tx.error,
         createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+        displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
+        displayCurrency: currencyCode ?? null,
       },
       200,
     );
