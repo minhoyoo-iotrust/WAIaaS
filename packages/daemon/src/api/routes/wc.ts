@@ -205,11 +205,14 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     // Look up wallet via raw SQL (simpler, avoids Drizzle query builder complexity)
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
-      .prepare('SELECT id, chain, default_network, environment FROM wallets WHERE id = ?')
-      .get(id) as { id: string; chain: string; default_network: string | null; environment: string } | undefined;
+      .prepare('SELECT id, chain, default_network, environment, status FROM wallets WHERE id = ?')
+      .get(id) as { id: string; chain: string; default_network: string | null; environment: string; status: string } | undefined;
 
     if (!wallet) {
       throw new WAIaaSError('WALLET_NOT_FOUND');
+    }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
     }
 
     const svc = requireWcService(wcSessionService);
@@ -329,8 +332,8 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
   const lookupWallet = (walletId: string) => {
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     return sqlite
-      .prepare('SELECT id, chain, default_network, environment FROM wallets WHERE id = ?')
-      .get(walletId) as { id: string; chain: string; default_network: string | null; environment: string } | undefined;
+      .prepare('SELECT id, chain, default_network, environment, status FROM wallets WHERE id = ?')
+      .get(walletId) as { id: string; chain: string; default_network: string | null; environment: string; status: string } | undefined;
   };
 
   // -------------------------------------------------------------------------
@@ -341,6 +344,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     const walletId = getWalletId(c);
     const wallet = lookupWallet(walletId);
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
+    if (wallet.status === 'TERMINATED') throw new WAIaaSError('WALLET_TERMINATED');
 
     const svc = requireWcService(wcSessionService);
     const network = wallet.default_network ?? wallet.environment;

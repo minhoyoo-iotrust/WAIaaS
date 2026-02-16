@@ -209,7 +209,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
     // Validate rules based on type (custom validation beyond Zod)
     validateRules(parsed.type, parsed.rules as Record<string, unknown>);
 
-    // If walletId provided, verify wallet exists
+    // If walletId provided, verify wallet exists and is not terminated
     if (parsed.walletId) {
       const wallet = deps.db
         .select()
@@ -219,6 +219,9 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
 
       if (!wallet) {
         throw new WAIaaSError('WALLET_NOT_FOUND');
+      }
+      if (wallet.status === 'TERMINATED') {
+        throw new WAIaaSError('WALLET_TERMINATED');
       }
     }
 

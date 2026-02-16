@@ -241,6 +241,9 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         message: `Wallet '${walletId}' not found`,
       });
     }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
+    }
 
     // 5. Build ActionContext
     const actionContext = {

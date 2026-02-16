@@ -14,12 +14,12 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment } from '@waiaas/core';
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
-import { wallets } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -414,10 +414,30 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     }
 
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    // 1. Set status to TERMINATED
     await deps.db
       .update(wallets)
       .set({ status: 'TERMINATED', updatedAt: now })
       .where(eq(wallets.id, walletId))
+      .run();
+
+    // 2. Cancel pending transactions
+    await deps.db
+      .update(transactions)
+      .set({ status: 'CANCELLED' })
+      .where(
+        and(
+          eq(transactions.walletId, walletId),
+          inArray(transactions.status, ['PENDING', 'PENDING_APPROVAL']),
+        ),
+      )
+      .run();
+
+    // 3. Delete active JWT sessions
+    await deps.db
+      .delete(sessions)
+      .where(eq(sessions.walletId, walletId))
       .run();
 
     return c.json(

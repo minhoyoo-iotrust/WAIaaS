@@ -293,6 +293,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         message: `Wallet '${walletId}' not found`,
       });
     }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
+    }
 
     // Raw JSON body -- bypass Hono Zod validation (z.any() passthrough).
     // Actual Zod validation is delegated to stage1Validate (5-type or legacy).
@@ -432,6 +435,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
     if (!wallet) {
       throw new WAIaaSError('WALLET_NOT_FOUND', { message: `Wallet '${walletId}' not found` });
+    }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
     }
 
     // Resolve network (same pattern as POST /transactions/send)

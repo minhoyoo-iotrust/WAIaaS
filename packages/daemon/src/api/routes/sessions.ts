@@ -159,6 +159,9 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     if (!wallet) {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
+    }
 
     // Check active session count for this wallet
     const nowSec = Math.floor(Date.now() / 1000);
