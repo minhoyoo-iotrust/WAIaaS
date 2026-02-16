@@ -14,7 +14,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, and, isNull, gt, sql } from 'drizzle-orm';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, type EventBus } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { wallets, sessions } from '../../infrastructure/database/schema.js';
@@ -40,6 +40,7 @@ export interface SessionRouteDeps {
   jwtSecretManager: JwtSecretManager;
   config: DaemonConfig;
   notificationService?: NotificationService;
+  eventBus?: EventBus;
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +221,14 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Fire-and-forget: notify session creation
     void deps.notificationService?.notify('SESSION_CREATED', parsed.walletId, {
       sessionId,
+    });
+
+    // v1.6: emit wallet:activity SESSION_CREATED event
+    deps.eventBus?.emit('wallet:activity', {
+      walletId: parsed.walletId,
+      activity: 'SESSION_CREATED',
+      details: { sessionId },
+      timestamp: Math.floor(Date.now() / 1000),
     });
 
     return c.json(

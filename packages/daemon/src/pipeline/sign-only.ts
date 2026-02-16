@@ -30,6 +30,7 @@ import {
   type ParsedTransaction,
   type ParsedOperation,
   type SignedTransaction,
+  type EventBus,
 } from '@waiaas/core';
 import { transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -50,6 +51,7 @@ export interface SignOnlyDeps {
   policyEngine: IPolicyEngine;
   masterPassword: string;
   notificationService?: NotificationService;
+  eventBus?: EventBus;
 }
 
 export interface SignOnlyRequest {
@@ -213,6 +215,14 @@ export async function executeSignOnly(
     display_amount: '', // sign-only: no USD conversion
   }, { txId: 'pending', signOnly: true });
 
+  // v1.6: emit wallet:activity TX_REQUESTED event
+  deps.eventBus?.emit('wallet:activity', {
+    walletId,
+    activity: 'TX_REQUESTED',
+    details: { signOnly: true },
+    timestamp: Math.floor(Date.now() / 1000),
+  });
+
   // Step 2: Convert ParsedOperation[] to TransactionParam[] for policy evaluation
   const txParams = parsed.operations.map((op) =>
     mapOperationToParam(op, request.chain, request.network),
@@ -324,6 +334,14 @@ export async function executeSignOnly(
     to: firstOp?.to ?? '',
     display_amount: '', // sign-only: no USD conversion
   }, { txId, signOnly: true });
+
+  // v1.6: emit wallet:activity TX_SUBMITTED event (sign-only complete)
+  deps.eventBus?.emit('wallet:activity', {
+    walletId,
+    activity: 'TX_SUBMITTED',
+    details: { txId, signOnly: true, txHash: signed.txHash },
+    timestamp: Math.floor(Date.now() / 1000),
+  });
 
   // Return result
   return {

@@ -18,7 +18,7 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment } from '@waiaas/core';
-import type { ChainType, EnvironmentType, NetworkType } from '@waiaas/core';
+import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
 import { wallets } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
@@ -50,6 +50,7 @@ export interface WalletCrudRouteDeps {
   masterPassword: string;
   config: DaemonConfig;
   notificationService?: NotificationService;
+  eventBus?: EventBus;
 }
 
 // ---------------------------------------------------------------------------
@@ -487,6 +488,14 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // Fire-and-forget: notify owner set
     void deps.notificationService?.notify('OWNER_SET', walletId, {
       ownerAddress: normalizedAddress,
+    });
+
+    // v1.6: emit wallet:activity OWNER_SET event
+    deps.eventBus?.emit('wallet:activity', {
+      walletId,
+      activity: 'OWNER_SET',
+      details: { ownerAddress: normalizedAddress },
+      timestamp: Math.floor(Date.now() / 1000),
     });
 
     // Fetch updated wallet

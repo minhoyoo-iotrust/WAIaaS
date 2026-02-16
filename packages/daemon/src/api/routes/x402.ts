@@ -23,7 +23,7 @@ import { eq, or, and, isNull, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, resolveX402Network, CAIP2_TO_NETWORK } from '@waiaas/core';
-import type { IPriceOracle, PolicyEvaluation } from '@waiaas/core';
+import type { IPriceOracle, PolicyEvaluation, EventBus } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import { wallets, transactions, policies } from '../../infrastructure/database/schema.js';
@@ -71,6 +71,7 @@ export interface X402RouteDeps {
   priceOracle?: IPriceOracle;
   adapterPool: AdapterPool | null;
   settingsService?: SettingsService;
+  eventBus?: EventBus;
 }
 
 // ---------------------------------------------------------------------------
@@ -302,6 +303,14 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
       display_amount: '', // x402: USD-based payments, no forex conversion needed
     }, { txId });
 
+    // v1.6: emit wallet:activity TX_REQUESTED event
+    deps.eventBus?.emit('wallet:activity', {
+      walletId,
+      activity: 'TX_REQUESTED',
+      details: { txId, type: 'X402_PAYMENT' },
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
     // B7. USD resolution for SPENDING_LIMIT evaluation
     const usdAmount = await resolveX402UsdAmount(
       selected.amount,
@@ -336,6 +345,17 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         amount: selected.amount,
         display_amount: '',
       }, { txId });
+
+      // v1.6: emit transaction:failed event (policy denial)
+      deps.eventBus?.emit('transaction:failed', {
+        walletId,
+        txId,
+        error: evaluation.reason ?? 'Policy denied',
+        network: resolvedNetwork,
+        type: 'X402_PAYMENT',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
       throw new WAIaaSError('POLICY_DENIED', {
         message: evaluation.reason ?? 'Transaction denied by spending limit policy',
       });
@@ -353,6 +373,17 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         amount: selected.amount,
         display_amount: '',
       }, { txId });
+
+      // v1.6: emit transaction:failed event (approval required)
+      deps.eventBus?.emit('transaction:failed', {
+        walletId,
+        txId,
+        error: 'x402 payment requires owner approval (amount too high)',
+        network: resolvedNetwork,
+        type: 'X402_PAYMENT',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
       throw new WAIaaSError('X402_APPROVAL_REQUIRED', {
         message: 'x402 payment requires owner approval (amount too high)',
       });
@@ -374,6 +405,17 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
           amount: selected.amount,
           display_amount: '',
         }, { txId });
+
+        // v1.6: emit transaction:failed event (delay timeout)
+        deps.eventBus?.emit('transaction:failed', {
+          walletId,
+          txId,
+          error: `Delay ${delaySeconds}s exceeds request timeout ${requestTimeout}s`,
+          network: resolvedNetwork,
+          type: 'X402_PAYMENT',
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+
         throw new WAIaaSError('X402_DELAY_TIMEOUT', {
           message: `Delay of ${delaySeconds}s exceeds x402 request timeout of ${requestTimeout}s`,
         });
@@ -434,6 +476,17 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
           amount: selected.amount,
           display_amount: '',
         }, { txId });
+
+        // v1.6: emit transaction:failed event (payment rejected)
+        deps.eventBus?.emit('transaction:failed', {
+          walletId,
+          txId,
+          error: 'Payment was rejected by the resource server after retry',
+          network: resolvedNetwork,
+          type: 'X402_PAYMENT',
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+
         throw new WAIaaSError('X402_PAYMENT_REJECTED', {
           message: 'Payment was rejected by the resource server after retry',
         });
@@ -451,6 +504,17 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
           amount: selected.amount,
           display_amount: '',
         }, { txId });
+
+        // v1.6: emit transaction:failed event (server error)
+        deps.eventBus?.emit('transaction:failed', {
+          walletId,
+          txId,
+          error: `Resource server returned ${retryResponse.status} after payment`,
+          network: resolvedNetwork,
+          type: 'X402_PAYMENT',
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+
         throw new WAIaaSError('X402_SERVER_ERROR', {
           message: `Resource server returned ${retryResponse.status} after payment`,
         });
@@ -469,6 +533,17 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         to: selected.payTo,
         display_amount: '',
       }, { txId });
+
+      // v1.6: emit transaction:completed event (x402 payment confirmed)
+      deps.eventBus?.emit('transaction:completed', {
+        walletId,
+        txId,
+        txHash: '',
+        amount: selected.amount,
+        network: resolvedNetwork,
+        type: 'X402_PAYMENT',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
 
       // C6. Build response
       const responseBody = await buildPassthroughResponse(retryResponse);
@@ -505,6 +580,16 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         amount: selected.amount,
         display_amount: '',
       }, { txId });
+
+      // v1.6: emit transaction:failed event (unexpected error)
+      deps.eventBus?.emit('transaction:failed', {
+        walletId,
+        txId,
+        error: error instanceof Error ? error.message : 'Unknown payment error',
+        network: resolvedNetwork,
+        type: 'X402_PAYMENT',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
 
       throw new WAIaaSError('X402_SERVER_ERROR', {
         message: error instanceof Error ? error.message : 'Unknown payment error',

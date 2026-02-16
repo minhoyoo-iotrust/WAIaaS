@@ -26,7 +26,7 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, EventBus } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
@@ -122,6 +122,7 @@ export class DaemonLifecycle {
   private actionProviderRegistry: import('../infrastructure/action/action-provider-registry.js').ActionProviderRegistry | null = null;
   private apiKeyStore: import('../infrastructure/action/api-key-store.js').ApiKeyStore | null = null;
   private forexRateService: IForexRateService | null = null;
+  private eventBus: EventBus = new EventBus();
 
 
   /** Whether shutdown has been initiated. */
@@ -477,6 +478,7 @@ export class DaemonLifecycle {
           },
           dataDir,
           forexRateService: this.forexRateService ?? undefined,
+          eventBus: this.eventBus,
         });
 
         this.httpServer = serve({
@@ -617,6 +619,9 @@ export class DaemonLifecycle {
         }
         this.adapterPool = null;
       }
+
+      // Step 6b: Remove all EventBus listeners
+      this.eventBus.removeAllListeners();
 
       // Step 7: Stop background workers
       if (this.workers) {
@@ -760,6 +765,7 @@ export class DaemonLifecycle {
           memo: undefined,
         },
         txId,
+        eventBus: this.eventBus,
       };
 
       await stage5Execute(ctx);

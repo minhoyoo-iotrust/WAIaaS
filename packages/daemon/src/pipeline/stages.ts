@@ -42,7 +42,7 @@ import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
-import { formatDisplayCurrency } from '@waiaas/core';
+import { formatDisplayCurrency, type EventBus } from '@waiaas/core';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
 
@@ -96,6 +96,8 @@ export interface PipelineContext {
   forexRateService?: IForexRateService;
   // v1.5.3: cached amountUsd from Stage 3 for Stage 5/6 display_amount
   amountUsd?: number;
+  // v1.6: event bus for AutoStop/BalanceMonitor subscribers
+  eventBus?: EventBus;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +281,14 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
     type: txType,
     display_amount: '',
   }, { txId: ctx.txId });
+
+  // v1.6: emit wallet:activity TX_REQUESTED event
+  ctx.eventBus?.emit('wallet:activity', {
+    walletId: ctx.walletId,
+    activity: 'TX_REQUESTED',
+    details: { txId: ctx.txId },
+    timestamp: Math.floor(Date.now() / 1000),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -715,6 +725,16 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
           display_amount: displayAmount,
         }, { txId: ctx.txId });
 
+        // v1.6: emit transaction:failed event (simulation failure)
+        ctx.eventBus?.emit('transaction:failed', {
+          walletId: ctx.walletId,
+          txId: ctx.txId,
+          error: simResult.error ?? 'Simulation failed',
+          network: ctx.resolvedNetwork,
+          type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+
         throw new WAIaaSError('SIMULATION_FAILED', {
           message: simResult.error ?? 'Transaction simulation failed',
         });
@@ -749,6 +769,14 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         display_amount: displayAmount,
       }, { txId: ctx.txId });
 
+      // v1.6: emit wallet:activity TX_SUBMITTED event
+      ctx.eventBus?.emit('wallet:activity', {
+        walletId: ctx.walletId,
+        activity: 'TX_SUBMITTED',
+        details: { txId: ctx.txId, txHash: ctx.submitResult.txHash },
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
       return; // Success -- exit the loop
 
     } catch (err) {
@@ -773,6 +801,16 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
             display_amount: displayAmount,
           }, { txId: ctx.txId });
 
+          // v1.6: emit transaction:failed event (permanent chain error)
+          ctx.eventBus?.emit('transaction:failed', {
+            walletId: ctx.walletId,
+            txId: ctx.txId,
+            error: err.message,
+            network: ctx.resolvedNetwork,
+            type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+            timestamp: Math.floor(Date.now() / 1000),
+          });
+
           throw new WAIaaSError('CHAIN_ERROR', {
             message: err.message,
             cause: err,
@@ -793,6 +831,16 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
               amount: reqAmount,
               display_amount: displayAmount,
             }, { txId: ctx.txId });
+
+            // v1.6: emit transaction:failed event (transient max retries)
+            ctx.eventBus?.emit('transaction:failed', {
+              walletId: ctx.walletId,
+              txId: ctx.txId,
+              error: `${err.code} (max retries exceeded)`,
+              network: ctx.resolvedNetwork,
+              type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+              timestamp: Math.floor(Date.now() / 1000),
+            });
 
             throw new WAIaaSError('CHAIN_ERROR', {
               message: `${err.message} (max retries exceeded)`,
@@ -820,6 +868,16 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
               amount: reqAmount,
               display_amount: displayAmount,
             }, { txId: ctx.txId });
+
+            // v1.6: emit transaction:failed event (stale retry exhausted)
+            ctx.eventBus?.emit('transaction:failed', {
+              walletId: ctx.walletId,
+              txId: ctx.txId,
+              error: `${err.code} (stale retry exhausted)`,
+              network: ctx.resolvedNetwork,
+              type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+              timestamp: Math.floor(Date.now() / 1000),
+            });
 
             throw new WAIaaSError('CHAIN_ERROR', {
               message: `${err.message} (stale retry exhausted)`,
@@ -880,6 +938,17 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       display_amount: displayAmount,
     }, { txId: ctx.txId });
 
+    // v1.6: emit transaction:completed event
+    ctx.eventBus?.emit('transaction:completed', {
+      walletId: ctx.walletId,
+      txId: ctx.txId,
+      txHash: ctx.submitResult!.txHash,
+      amount: getRequestAmount(ctx.request),
+      network: ctx.resolvedNetwork,
+      type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
   } else if (result.status === 'failed') {
     // On-chain revert
     await ctx.db
@@ -893,6 +962,16 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       amount: reqAmount,
       display_amount: displayAmount,
     }, { txId: ctx.txId });
+
+    // v1.6: emit transaction:failed event (on-chain revert)
+    ctx.eventBus?.emit('transaction:failed', {
+      walletId: ctx.walletId,
+      txId: ctx.txId,
+      error: 'Transaction reverted on-chain',
+      network: ctx.resolvedNetwork,
+      type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+      timestamp: Math.floor(Date.now() / 1000),
+    });
 
     throw new WAIaaSError('CHAIN_ERROR', {
       message: 'Transaction reverted on-chain',

@@ -64,7 +64,7 @@ import { tokenRegistryRoutes } from './routes/tokens.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
-import type { IPolicyEngine, IPriceOracle, IForexRateService } from '@waiaas/core';
+import type { IPolicyEngine, IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -104,6 +104,7 @@ export interface CreateAppDeps {
   onSettingsChanged?: (changedKeys: string[]) => void;
   dataDir?: string;
   forexRateService?: IForexRateService;
+  eventBus?: EventBus;
 }
 
 /**
@@ -231,6 +232,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         masterPassword: deps.masterPassword,
         config: deps.config,
         notificationService: deps.notificationService,
+        eventBus: deps.eventBus,
       }),
     );
   }
@@ -244,6 +246,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         jwtSecretManager: deps.jwtSecretManager,
         config: deps.config,
         notificationService: deps.notificationService,
+        eventBus: deps.eventBus,
       }),
     );
   }
@@ -299,6 +302,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         priceOracle: deps.priceOracle,
         settingsService: deps.settingsService,
         forexRateService: deps.forexRateService,
+        eventBus: deps.eventBus,
       }),
     );
   }
@@ -357,6 +361,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       priceOracle: deps.priceOracle,
       adapterPool: deps.adapterPool ?? null,
       settingsService: deps.settingsService,
+      eventBus: deps.eventBus,
     }));
   }
 
