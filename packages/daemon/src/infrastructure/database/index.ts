@@ -20,5 +20,6 @@ export {
   tokenRegistry,
   settings,
   apiKeys,
+  telegramUsers,
 } from './schema.js';
 export { generateId } from './id.js';

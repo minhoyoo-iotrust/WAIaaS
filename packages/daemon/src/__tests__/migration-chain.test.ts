@@ -4,7 +4,7 @@
  * Tests cover:
  * T-1: v5 DB -> pushSchema success (MIGR-01 regression)
  * T-2/T-6: Schema equivalence (migrated vs fresh DB)
- * T-3: v1 DB -> pushSchema success (full chain v2-v12)
+ * T-3: v1 DB -> pushSchema success (full chain v2-v15)
  * T-4: Fresh DB -> pushSchema success (existing behavior)
  * T-5: Index completeness after migration
  * T-7: v7 network -> environment data transformation
@@ -462,12 +462,13 @@ const EXPECTED_INDEXES = [
   'idx_wallets_owner_address',
   'idx_wallets_public_key',
   'idx_wallets_status',
+  'idx_telegram_users_role',
 ].sort();
 
 const ALL_TABLES = [
   'wallets', 'sessions', 'transactions', 'policies', 'pending_approvals',
   'audit_log', 'key_value_store', 'notification_logs', 'token_registry',
-  'settings', 'api_keys', 'schema_version',
+  'settings', 'api_keys', 'schema_version', 'telegram_users',
 ];
 
 // ---------------------------------------------------------------------------
@@ -527,7 +528,7 @@ describe('pushSchema on existing databases', () => {
 
     expect(() => pushSchema(db)).not.toThrow();
 
-    // All 12 tables should exist
+    // All 13 tables should exist
     for (const table of ALL_TABLES) {
       const result = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -993,8 +994,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 14
-    expect(LATEST_SCHEMA_VERSION).toBe(14);
+    // Verify LATEST_SCHEMA_VERSION is 15
+    expect(LATEST_SCHEMA_VERSION).toBe(15);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1320,10 +1321,10 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Run full pushSchema (v2 -> v12 chain)
     pushSchema(db);
 
-    // Verify final version is 14
+    // Verify final version is 15
     const versions = getVersions(db);
-    expect(versions).toContain(14);
-    expect(Math.max(...versions)).toBe(14);
+    expect(versions).toContain(15);
+    expect(Math.max(...versions)).toBe(15);
 
     // Verify data survived the entire chain
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
@@ -1501,10 +1502,10 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Run full pushSchema (v2 -> v13 chain)
     pushSchema(db);
 
-    // Verify final version is 14
+    // Verify final version is 15
     const versions = getVersions(db);
-    expect(versions).toContain(14);
-    expect(Math.max(...versions)).toBe(14);
+    expect(versions).toContain(15);
+    expect(Math.max(...versions)).toBe(15);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {

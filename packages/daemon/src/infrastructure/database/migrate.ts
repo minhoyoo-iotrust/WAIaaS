@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 12 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 13 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -43,7 +43,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 12 tables (latest schema: wallets + wallet_id + token_registry + settings + api_keys)
+// DDL statements for all 13 tables (latest schema: wallets + wallet_id + token_registry + settings + api_keys + telegram_users)
 // ---------------------------------------------------------------------------
 
 /**
@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 14;
+export const LATEST_SCHEMA_VERSION = 15;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -211,6 +211,15 @@ function getCreateTableStatements(): string[] {
   applied_at INTEGER NOT NULL,
   description TEXT NOT NULL
 )`,
+
+    // Table 13: telegram_users (Telegram Bot user management, v1.6)
+    `CREATE TABLE IF NOT EXISTS telegram_users (
+  chat_id INTEGER PRIMARY KEY,
+  username TEXT,
+  role TEXT NOT NULL DEFAULT 'PENDING' CHECK (role IN ('PENDING', 'ADMIN', 'READONLY')),
+  registered_at INTEGER NOT NULL,
+  approved_at INTEGER
+)`,
   ];
 }
 
@@ -269,6 +278,9 @@ function getCreateIndexStatements(): string[] {
 
     // settings indexes
     'CREATE INDEX IF NOT EXISTS idx_settings_category ON settings(category)',
+
+    // telegram_users indexes
+    'CREATE INDEX IF NOT EXISTS idx_telegram_users_role ON telegram_users(role)',
   ];
 }
 
@@ -1177,6 +1189,25 @@ MIGRATIONS.push({
   },
 });
 
+// ---------------------------------------------------------------------------
+// v15: Create telegram_users table for Telegram Bot user management
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 15,
+  description: 'Create telegram_users table for Telegram Bot user management',
+  up: (sqlite) => {
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS telegram_users (
+  chat_id INTEGER PRIMARY KEY,
+  username TEXT,
+  role TEXT NOT NULL DEFAULT 'PENDING' CHECK (role IN ('PENDING', 'ADMIN', 'READONLY')),
+  registered_at INTEGER NOT NULL,
+  approved_at INTEGER
+)`);
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_telegram_users_role ON telegram_users(role)');
+  },
+});
+
 /**
  * Run incremental migrations against the database.
  *
@@ -1326,7 +1357,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, ts, 'Initial schema (12 tables)');
+        .run(1, ts, 'Initial schema (13 tables)');
 
       // Record all migration versions as already applied (DDL is up-to-date)
       for (const migration of MIGRATIONS) {

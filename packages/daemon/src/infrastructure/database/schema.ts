@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 11 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys
+ * 12 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -348,3 +348,22 @@ export const apiKeys = sqliteTable('api_keys', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Table 12: telegram_users -- Telegram Bot user management (v1.6)
+// ---------------------------------------------------------------------------
+
+export const telegramUsers = sqliteTable(
+  'telegram_users',
+  {
+    chatId: integer('chat_id').primaryKey(),
+    username: text('username'),
+    role: text('role').notNull().default('PENDING'),
+    registeredAt: integer('registered_at', { mode: 'timestamp' }).notNull(),
+    approvedAt: integer('approved_at', { mode: 'timestamp' }),
+  },
+  (table) => [
+    index('idx_telegram_users_role').on(table.role),
+    check('check_telegram_role', sql`role IN ('PENDING', 'ADMIN', 'READONLY')`),
+  ],
+);

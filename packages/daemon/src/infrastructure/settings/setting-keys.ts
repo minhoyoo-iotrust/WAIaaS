@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -40,6 +40,7 @@ export const SETTING_CATEGORIES = [
   'display',
   'autostop',
   'monitoring',
+  'telegram',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -118,6 +119,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'monitoring.low_balance_threshold_eth', category: 'monitoring', configPath: 'security.monitoring_low_balance_threshold_eth', defaultValue: '0.005', isCredential: false },
   { key: 'monitoring.cooldown_hours', category: 'monitoring', configPath: 'security.monitoring_cooldown_hours', defaultValue: '24', isCredential: false },
   { key: 'monitoring.enabled', category: 'monitoring', configPath: 'security.monitoring_enabled', defaultValue: 'true', isCredential: false },
+
+  // --- telegram category (Bot service settings) ---
+  { key: 'telegram.enabled', category: 'telegram', configPath: 'telegram.enabled', defaultValue: 'false', isCredential: false },
+  { key: 'telegram.bot_token', category: 'telegram', configPath: 'telegram.bot_token', defaultValue: '', isCredential: true },
+  { key: 'telegram.locale', category: 'telegram', configPath: 'telegram.locale', defaultValue: 'en', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
