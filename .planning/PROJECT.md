@@ -36,7 +36,7 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Pyth
 - ✅ v1.6 운영 인프라 + 잔액 모니터링 — shipped 2026-02-16 (~2,294 tests, ~207,902 LOC)
 - ✅ v1.6.1 WalletConnect Owner 승인 — shipped 2026-02-16 (~2,510 tests, ~220,000 LOC)
 - ✅ v1.7 품질 강화 + CI/CD — shipped 2026-02-17 (3,509 tests, ~237,000 LOC)
-- v1.8 업그레이드 + 배포 (npm 배포, Docker Hub, 자동 업데이트)
+- **▶ v1.8 업그레이드 + 배포 인프라** (진행 중)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, GitHub Release)
 
 **코드베이스 현황:**
@@ -337,11 +337,22 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Pyth
 
 ### 활성
 
-(v1.7 완료, 다음 마일스톤 대기 중)
+## Current Milestone: v1.8 업그레이드 + 배포 인프라
+
+**Goal:** 설치된 WAIaaS가 새 버전 출시를 감지하여 사용자에게 알리고, `waiaas upgrade`로 안전하게 업그레이드할 수 있는 상태. npm/Docker 2개 채널 업그레이드 경로가 동작하며, DB 마이그레이션과 호환성 검증이 자동으로 실행된다. release-please 기반 2-게이트 릴리스 모델로 CHANGELOG 자동 생성과 배포 안전성을 확보한다.
+
+**Target features:**
+- VersionCheckService — npm registry 24시간 주기 버전 체크 + key_value_store 저장 + fail-soft
+- CLI 업그레이드 알림 — stderr 박스 출력 + 24시간 중복 방지 + 억제 옵션
+- `waiaas upgrade` 명령 — 7단계 시퀀스 (확인→중지→백업→업데이트→마이그레이션→검증→재시작)
+- 호환성 매트릭스 — LATEST/MIN_COMPATIBLE_SCHEMA_VERSION 코드 상수 + 시작 시 검증
+- Health 엔드포인트 확장 — latestVersion, updateAvailable, schemaVersion 필드 추가
+- Docker 업그레이드 경로 — 3-tier 태깅 + Watchtower 라벨
+- release-please 2-게이트 릴리스 모델 — Conventional Commits → 자동 CHANGELOG/버전 범프 → 수동 배포 승인
+- BackupService — DB + config.toml 백업, 최근 5개 보존, rollback 지원
 
 ## Next Milestone Goals
 
-- v1.8 업그레이드 + 배포 — npm 배포, Docker Hub, 자동 업데이트
 - v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, GitHub Release
 
 ### 범위 외
