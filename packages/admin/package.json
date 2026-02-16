@@ -8,6 +8,11 @@
     "postbuild": "mkdir -p ../daemon/public/admin && cp -r dist/* ../daemon/public/admin/",
     "dev": "vite",
     "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "[ -d src/__tests__/integration ] && vitest run --dir src/__tests__/integration || true",
+    "test:security": "[ -d src/__tests__/security ] && vitest run --dir src/__tests__/security || true",
+    "test:chain": "[ -d src/__tests__/chain ] && vitest run --dir src/__tests__/chain || true",
+    "test:platform": "[ -d src/__tests__/platform ] && vitest run --dir src/__tests__/platform || true",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

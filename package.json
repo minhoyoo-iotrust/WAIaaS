@@ -9,6 +9,11 @@
   "scripts": {
     "build": "turbo build",
     "test": "turbo test",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:security": "turbo run test:security",
+    "test:chain": "turbo run test:chain",
+    "test:platform": "turbo run test:platform",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean",
