@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 
 ## Current Position
 
-Phase: 142 of 145 (Balance Monitoring)
-Plan: 2 of 2 in current phase
+Phase: 143 of 145 (Telegram Bot)
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 142-01 BalanceMonitorService 코어 + LOW_BALANCE 알림 인프라 완료
+Last activity: 2026-02-16 -- 142-02 잔액 모니터링 설정 관리 + DaemonLifecycle 통합 완료
 
-Progress: [#####░░░░░░░░░] 43% (6/14 plans)
+Progress: [######░░░░░░░░] 50% (7/14 plans)
 
 ## Performance Metrics
 
@@ -26,7 +26,7 @@ Progress: [#####░░░░░░░░░] 43% (6/14 plans)
 |-------|-------|-------|----------|
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
-| 142. Balance Monitoring | 1/2 | 4m | 4m |
+| 142. Balance Monitoring | 2/2 | 7m | 4m |
 | 143. Telegram Bot | 0/3 | - | - |
 | 144. Admin UI Integration | 0/2 | - | - |
 | 145. Docker | 0/2 | - | - |
@@ -58,6 +58,9 @@ Full log in PROJECT.md and milestones/.
 - v1.6: BalanceMonitorService setInterval 폴링 (EventBus 구독 대신 5분 주기)
 - v1.6: 잔액 비교 Number(balance)/10**decimals decimal 변환 후 임계값 비교
 - v1.6: 중복 알림 방지 wasLow 플래그 + 24시간 쿨다운, 회복 후 재하락 시 새 알림 허용
+- v1.6: monitoring_* flat key를 security TOML 섹션에 배치 (autostop 패턴 동일)
+- v1.6: monitoring Admin Settings 별도 카테고리 (autostop 패턴 동일)
+- v1.6: DaemonLifecycle Step 4c-4에서 BalanceMonitorService fail-soft 초기화
 
 ### Blockers/Concerns
 
@@ -67,5 +70,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 142-01-PLAN.md (BalanceMonitorService 코어 + LOW_BALANCE 알림 인프라)
+Stopped at: Completed 142-02-PLAN.md (잔액 모니터링 설정 관리 + DaemonLifecycle 통합)
 Resume file: None
