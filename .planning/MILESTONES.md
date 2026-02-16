@@ -1,5 +1,27 @@
 # Project Milestones: WAIaaS
 
+## v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) (Shipped: 2026-02-16)
+
+**Delivered:** 월렛 단위 24시간/30일 롤링 윈도우 누적 USD 지출 한도로 분할 전송 우회를 방지하고, 43개 법정 통화로 환산 표시하여 Admin UI/알림/REST API/MCP 전체 인터페이스에서 다국어 DX를 개선하는 상태 달성
+
+**Phases completed:** 136-139 (8 plans total)
+
+**Key accomplishments:**
+
+- DB v13 마이그레이션 + 누적 USD 지출 한도 엔진 — amount_usd/reserved_amount_usd 컬럼, 24h/30d 롤링 윈도우, APPROVAL 격상, 이중 지출 방지, 80% 경고 알림
+- IForexRateService + CoinGeckoForexProvider — tether vs_currencies 기반 43개 법정 통화 환율, InMemoryPriceCache 30분 TTL, graceful null fallback
+- Admin CurrencySelect 드롭다운 — 43개 통화 검색 가능, 환율 미리보기, SettingsService display.currency hot-reload
+- REST API display_currency 쿼리 파라미터 — transactions/balance/assets 4개 엔드포인트에 displayAmount/displayBalance/displayValue 환산 필드
+- MCP 도구 + 알림 환산 통합 — 4개 MCP 조회 도구에 display_currency 파라미터, 6개 알림 템플릿에 {display_amount} 변수
+
+**Stats:**
+
+- 4 phases, 8 plans, 19 requirements, 98 files changed, +8,762 LOC (net)
+- ~2,150 tests (~2,111 → ~2,150, +39 forex/format tests)
+- Git range: feat(136-01) → feat(139-02)
+
+---
+
 ## v1.5.2 Admin UI 정책 폼 UX 개선 (Shipped: 2026-02-16)
 
 **Delivered:** Admin UI에서 12개 정책 타입별 구조화된 전용 폼으로 정책을 생성/수정할 수 있고, 목록에서 타입별 의미 있는 시각화(심볼 배지, req/time 포맷, tier bars)를 확인할 수 있으며, 기존 정책 수정 시 현재값이 프리필되어 수정/저장이 가능한 상태 달성
