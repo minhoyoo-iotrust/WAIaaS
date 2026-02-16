@@ -81,13 +81,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| VCHK-01 | Phase 160 | Pending |
+| VCHK-02 | Phase 160 | Pending |
+| VCHK-03 | Phase 160 | Pending |
+| VCHK-04 | Phase 160 | Pending |
+| VCHK-05 | Phase 161 | Pending |
+| VCHK-06 | Phase 161 | Pending |
+| VCHK-07 | Phase 161 | Pending |
+| UPGR-01 | Phase 161 | Pending |
+| UPGR-02 | Phase 161 | Pending |
+| UPGR-03 | Phase 161 | Pending |
+| UPGR-04 | Phase 161 | Pending |
+| UPGR-05 | Phase 161 | Pending |
+| UPGR-06 | Phase 161 | Pending |
+| UPGR-07 | Phase 161 | Pending |
+| HLTH-01 | Phase 160 | Pending |
+| HLTH-02 | Phase 160 | Pending |
+| CMPT-01 | Phase 162 | Pending |
+| CMPT-02 | Phase 162 | Pending |
+| CMPT-03 | Phase 162 | Pending |
+| DOCK-01 | Phase 162 | Pending |
+| DOCK-02 | Phase 162 | Pending |
+| RLSE-01 | Phase 163 | Pending |
+| RLSE-02 | Phase 163 | Pending |
+| RLSE-03 | Phase 163 | Pending |
+| RLSE-04 | Phase 163 | Pending |
+| RLSE-05 | Phase 163 | Pending |
+| RLSE-06 | Phase 163 | Pending |
+| RLSE-07 | Phase 163 | Pending |
+| RLSE-08 | Phase 163 | Pending |
+| SYNC-01 | Phase 164 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30
+- Mapped to phases: 30
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-17*
-*Last updated: 2026-02-17 after initial definition*
+*Last updated: 2026-02-17 after roadmap creation*
