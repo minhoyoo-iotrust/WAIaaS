@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 153 in progress, 153-02 complete
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 153 complete, next Phase 154
 
 ## Current Position
 
 Phase: 153 of 159 (Contract Test)
-Plan: 2 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-16 — 153-02 complete (5-Interface Contract Test)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase complete
+Last activity: 2026-02-16 — Phase 153 complete (2/2 plans)
 
-Progress: [###░░░░░░░] 26% (5/19 plans)
+Progress: [####░░░░░░] 32% (6/19 plans)
 
 ## Performance Metrics
 
@@ -31,6 +31,7 @@ Progress: [###░░░░░░░] 26% (5/19 plans)
 | 151 | 02 | 5min | 2 | 10 |
 | 152 | 01 | 12min | 2 | 14 |
 | 153 | 02 | 6min | 2 | 14 |
+| 153 | 01 | 7min | 2 | 4 |
 
 *Updated after each plan completion*
 
@@ -55,6 +56,9 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 153-02: INotificationChannel contract test에 initConfig 옵션 추가 (TelegramChannel 재초기화 호환)
 - 153-02: IClock/FakeClock/SystemClock은 clock.contract.ts 내 인라인 정의 (core에 미존재)
 - 153-02: IPriceOracle/IActionProvider core 테스트에 vi.fn 없는 인라인 Mock 사용
+- 153-01: Contract test factory uses skipMethods for complex RPC-dependent methods
+- 153-01: BATCH_NOT_SUPPORTED 검증은 WAIaaSError.code 체크 (message regex 아닌)
+- 153-01: adapter -> core __tests__ 상대 경로 import (package exports 미포함)
 
 ### Blockers/Concerns
 
@@ -66,5 +70,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 153-02-PLAN.md
+Stopped at: Completed 153-01-PLAN.md (Phase 153 complete)
 Resume file: None
