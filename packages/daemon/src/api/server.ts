@@ -81,7 +81,7 @@ import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 import { actionRoutes } from './routes/actions.js';
 import { x402Routes } from './routes/x402.js';
-import { wcRoutes } from './routes/wc.js';
+import { wcRoutes, wcSessionRoutes } from './routes/wc.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 export interface CreateAppDeps {
@@ -497,6 +497,10 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // Register WalletConnect routes when DB + wcSessionService are available
   if (deps.db && deps.wcSessionService) {
     app.route('/v1', wcRoutes({
+      db: deps.db,
+      wcSessionService: deps.wcSessionService,
+    }));
+    app.route('/v1', wcSessionRoutes({
       db: deps.db,
       wcSessionService: deps.wcSessionService,
     }));
