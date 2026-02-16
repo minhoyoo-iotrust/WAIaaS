@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 140 of 145 (Event Bus + Kill Switch)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 140-01 EventBus 인프라 + 파이프라인 이벤트 발행 완료
+Last activity: 2026-02-16 -- 140-02 KillSwitchService 3-state + CAS ACID + DB v14 완료
 
-Progress: [#░░░░░░░░░░░░░] 7% (1/14 plans)
+Progress: [##░░░░░░░░░░░░] 14% (2/14 plans)
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [#░░░░░░░░░░░░░] 7% (1/14 plans)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 140. Event Bus + Kill Switch | 1/3 | 12m | 12m |
+| 140. Event Bus + Kill Switch | 2/3 | 22m | 11m |
 | 141. AutoStop Engine | 0/2 | - | - |
 | 142. Balance Monitoring | 0/2 | - | - |
 | 143. Telegram Bot | 0/3 | - | - |
@@ -41,6 +41,8 @@ Full log in PROJECT.md and milestones/.
 - v1.6: EventEmitter 이벤트 버스 신규 도입 (AutoStop/BalanceMonitor 구독용)
 - v1.6: EventBus emit()에서 리스너별 try/catch 에러 격리 선택 (파이프라인 안전성)
 - v1.6: eventBus optional chaining(?.) 패턴 -- 기존 코드 무중단 호환
+- v1.6: CAS ACID 패턴 (BEGIN IMMEDIATE + UPDATE WHERE value = expected) KillSwitchService에 적용
+- v1.6: RECOVERING 상태 제거, ACTIVE로 통합 (3-state: ACTIVE/SUSPENDED/LOCKED)
 
 ### Blockers/Concerns
 
@@ -50,5 +52,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 140-01-PLAN.md (EventBus 인프라 + 파이프라인 이벤트 발행)
+Stopped at: Completed 140-02-PLAN.md (KillSwitchService 3-state + CAS ACID + DB v14)
 Resume file: None
