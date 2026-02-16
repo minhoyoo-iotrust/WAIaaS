@@ -5,35 +5,35 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 146 - WC 인프라 세팅
+**Current focus:** Phase 146 - WC 인프라 세팅 완료
 
 ## Current Position
 
 Phase: 1 of 5 (Phase 146: WC 인프라 세팅)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-16 -- 146-01 WC 인프라 완료
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 146 Complete
+Last activity: 2026-02-16 -- 146-02 Admin Settings + WC 테스트 완료
 
-Progress: [==========] 10%
+Progress: [====================] 20%
 
 ## Performance Metrics
 
-**Cumulative:** 34 milestones, 145 phases, 316 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
+**Cumulative:** 34 milestones, 145 phases, 317 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 12min
-- Total execution time: 0.2 hours
+- Total plans completed: 2
+- Average duration: 9min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 146 | 1/2 | 12min | 12min |
+| 146 | 2/2 | 18min | 9min |
 
 **Recent Trend:**
-- Last 5 plans: 12min
-- Trend: -
+- Last 5 plans: 12min, 6min
+- Trend: improving
 
 *Updated after each plan completion*
 
@@ -53,6 +53,8 @@ Recent decisions affecting current work:
 - [146-01]: IKeyValueStorage 로컬 정의 (pnpm strict 모드 transitive dep 불가)
 - [146-01]: walletconnect.relay_url 설정 키 추가 (Admin Settings 런타임 오버라이드)
 - [146-01]: SignClient storage 옵션에 as any 캐스팅 (abstract class vs interface)
+- [146-02]: walletconnect hot-reload는 로그만 출력 (SignClient 재초기화 불필요, 데몬 재시작 권장)
+- [146-02]: WcSessionService private 메서드는 (service as any) 캐스팅으로 테스트
 
 ### Blockers/Concerns
 
@@ -66,5 +68,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 146-01-PLAN.md
+Stopped at: Completed 146-02-PLAN.md (Phase 146 complete)
 Resume file: None
