@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 156 plan 03 complete
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 157 plan 03 complete
 
 ## Current Position
 
-Phase: 156 of 159 (Security Test P2)
+Phase: 157 of 159 (Extension Test)
 Plan: 3 of 3 in current phase
-Status: Phase 156 complete
-Last activity: 2026-02-17 — Phase 156 plan 03 complete
+Status: 157-03 complete
+Last activity: 2026-02-17 — Phase 157 plan 03 complete
 
-Progress: [#######░░░] 68% (13/19 plans)
+Progress: [########░░] 74% (14/19 plans)
 
 ## Performance Metrics
 
@@ -39,6 +39,7 @@ Progress: [#######░░░] 68% (13/19 plans)
 | 156 | 01 | 8min | 2 | 3 |
 | 156 | 02 | 7min | 2 | 4 |
 | 156 | 03 | 6min | 2 | 2 |
+| 157 | 03 | 4min | 2 | 2 |
 
 *Updated after each plan completion*
 
@@ -95,6 +96,9 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 156-02: ActionProviderRegistry는 resolve() 시 체인 매칭 미강제 (pipeline 레벨 검증)
 - 156-03: IPv6-in-brackets URL은 URL parser가 hex로 정규화하여 isIP() 0 반환, DNS ENOTFOUND로 차단
 - 156-03: @waiaas/core 패키지 export로 ChainError/CHAIN_ERROR_CATEGORIES import (상대 경로 불필요)
+- 157-03: ACT-U01: Registry에 MCP Tool 상한 하드캡 미존재 (17개 이상 등록 가능, 문서화)
+- 157-03: ACT-U04: 156-02 결정 재확인 -- Registry는 chain 매칭 미강제, pipeline 레벨 검증
+- 157-03: CE-12: STALE !== TRANSIENT -- STALE는 retryable이지만 TX rebuild 필요
 
 ### Blockers/Concerns
 
@@ -106,5 +110,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 156-02-PLAN.md (all Phase 156 plans complete)
+Stopped at: Completed 157-03-PLAN.md
 Resume file: None
