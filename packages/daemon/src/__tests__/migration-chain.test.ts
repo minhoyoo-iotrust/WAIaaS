@@ -428,7 +428,7 @@ function getVersions(db: DatabaseType): number[] {
   return rows.map((r) => r.version);
 }
 
-/** All 32 expected indexes in the latest schema. */
+/** All 33 expected indexes in the latest schema. */
 const EXPECTED_INDEXES = [
   'idx_audit_log_event_type',
   'idx_audit_log_severity',
@@ -463,12 +463,14 @@ const EXPECTED_INDEXES = [
   'idx_wallets_public_key',
   'idx_wallets_status',
   'idx_telegram_users_role',
+  'idx_wc_sessions_topic',
 ].sort();
 
 const ALL_TABLES = [
   'wallets', 'sessions', 'transactions', 'policies', 'pending_approvals',
   'audit_log', 'key_value_store', 'notification_logs', 'token_registry',
   'settings', 'api_keys', 'schema_version', 'telegram_users',
+  'wc_sessions', 'wc_store',
 ];
 
 // ---------------------------------------------------------------------------
@@ -528,7 +530,7 @@ describe('pushSchema on existing databases', () => {
 
     expect(() => pushSchema(db)).not.toThrow();
 
-    // All 13 tables should exist
+    // All 15 tables should exist
     for (const table of ALL_TABLES) {
       const result = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -580,7 +582,7 @@ describe('migration chain schema equivalence', () => {
     migratedDb = createV5SchemaDatabase();
     pushSchema(migratedDb);
 
-    // Compare all 11 tables column names
+    // Compare all 15 tables column names
     for (const table of ALL_TABLES) {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
@@ -605,7 +607,7 @@ describe('migration chain schema equivalence', () => {
     migratedDb = createV1SchemaDatabase();
     pushSchema(migratedDb);
 
-    // Compare all 11 tables column names
+    // Compare all 15 tables column names
     for (const table of ALL_TABLES) {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
@@ -1513,5 +1515,242 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     };
     expect(tx.amount_usd).toBeNull();
     expect(tx.reserved_amount_usd).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T-16: v16 migration: wc_sessions, wc_store tables + approval_channel
+// ---------------------------------------------------------------------------
+
+describe('v16 migration: WC infra tables + approval_channel', () => {
+  let db: DatabaseType;
+
+  afterEach(() => {
+    try { db.close(); } catch { /* already closed */ }
+  });
+
+  /**
+   * Create a v15 state DB: v5 + apply v6-v15 migrations manually.
+   */
+  function createV15Database(): DatabaseType {
+    const v5Db = createV5SchemaDatabase();
+    const v6to15 = MIGRATIONS.filter((m) => m.version >= 6 && m.version <= 15);
+    runMigrations(v5Db, v6to15);
+    return v5Db;
+  }
+
+  it('T-16a: v15 -> v16 migration creates wc_sessions and wc_store tables', () => {
+    db = createV15Database();
+
+    // Run v16 migration
+    const v16 = MIGRATIONS.filter((m) => m.version === 16);
+    runMigrations(db, v16);
+
+    // Verify wc_sessions table exists
+    const wcSessions = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='wc_sessions'",
+    ).get() as { name: string } | undefined;
+    expect(wcSessions).toBeDefined();
+    expect(wcSessions!.name).toBe('wc_sessions');
+
+    // Verify wc_store table exists
+    const wcStore = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='wc_store'",
+    ).get() as { name: string } | undefined;
+    expect(wcStore).toBeDefined();
+    expect(wcStore!.name).toBe('wc_store');
+  });
+
+  it('T-16b: v15 -> v16 migration adds approval_channel to pending_approvals', () => {
+    db = createV15Database();
+
+    // Run v16 migration
+    const v16 = MIGRATIONS.filter((m) => m.version === 16);
+    runMigrations(db, v16);
+
+    // Verify approval_channel column exists
+    const columns = getTableColumns(db, 'pending_approvals');
+    expect(columns).toContain('approval_channel');
+  });
+
+  it('T-16c: wc_sessions INSERT/SELECT works after v16 migration', () => {
+    db = createV15Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet (needed for FK)
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-wc-16', 'WC V16', 'ethereum', 'testnet', 'ethereum-sepolia', 'pk-wc-16', 'ACTIVE', 0, ts, ts);
+
+    // Run v16 migration
+    const v16 = MIGRATIONS.filter((m) => m.version === 16);
+    runMigrations(db, v16);
+
+    // INSERT into wc_sessions
+    db.prepare(
+      `INSERT INTO wc_sessions (wallet_id, topic, chain_id, owner_address, expiry, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('w-wc-16', 'topic-v16-test', 'eip155:11155111', '0xOwnerV16', ts + 86400, ts);
+
+    // SELECT and verify
+    const row = db.prepare('SELECT * FROM wc_sessions WHERE wallet_id = ?').get('w-wc-16') as {
+      wallet_id: string; topic: string; chain_id: string; owner_address: string; expiry: number;
+    };
+    expect(row.wallet_id).toBe('w-wc-16');
+    expect(row.topic).toBe('topic-v16-test');
+    expect(row.chain_id).toBe('eip155:11155111');
+    expect(row.owner_address).toBe('0xOwnerV16');
+    expect(row.expiry).toBe(ts + 86400);
+  });
+
+  it('T-16d: wc_store INSERT/SELECT works after v16 migration', () => {
+    db = createV15Database();
+
+    // Run v16 migration
+    const v16 = MIGRATIONS.filter((m) => m.version === 16);
+    runMigrations(db, v16);
+
+    // INSERT into wc_store
+    db.prepare(
+      `INSERT INTO wc_store (key, value) VALUES (?, ?)`,
+    ).run('wc:test:key', '{"data":"hello"}');
+
+    // SELECT and verify
+    const row = db.prepare('SELECT * FROM wc_store WHERE key = ?').get('wc:test:key') as {
+      key: string; value: string;
+    };
+    expect(row.key).toBe('wc:test:key');
+    expect(row.value).toBe('{"data":"hello"}');
+  });
+
+  it('T-16e: approval_channel defaults to rest_api for existing pending_approvals', () => {
+    db = createV15Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet + transaction + pending_approval before v16 migration
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-pa-16', 'PA V16', 'solana', 'testnet', 'devnet', 'pk-pa-16', 'ACTIVE', 0, ts, ts);
+
+    db.prepare(
+      `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at, network)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run('tx-pa-16', 'w-pa-16', 'solana', 'TRANSFER', 'PENDING', ts, 'devnet');
+
+    db.prepare(
+      `INSERT INTO pending_approvals (id, tx_id, required_by, expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run('pa-v16', 'tx-pa-16', ts + 300, ts + 3600, ts);
+
+    // Run v16 migration
+    const v16 = MIGRATIONS.filter((m) => m.version === 16);
+    runMigrations(db, v16);
+
+    // Verify approval_channel defaults to 'rest_api'
+    const row = db.prepare('SELECT approval_channel FROM pending_approvals WHERE id = ?').get('pa-v16') as {
+      approval_channel: string;
+    };
+    expect(row.approval_channel).toBe('rest_api');
+  });
+
+  it('T-16f: fresh DB has wc_sessions, wc_store tables and approval_channel', () => {
+    const conn = createDatabase(':memory:');
+    db = conn.sqlite;
+    pushSchema(db);
+
+    // Verify wc_sessions table exists
+    const wcSessions = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='wc_sessions'",
+    ).get() as { name: string } | undefined;
+    expect(wcSessions).toBeDefined();
+
+    // Verify wc_store table exists
+    const wcStore = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='wc_store'",
+    ).get() as { name: string } | undefined;
+    expect(wcStore).toBeDefined();
+
+    // Verify approval_channel column exists
+    const columns = getTableColumns(db, 'pending_approvals');
+    expect(columns).toContain('approval_channel');
+  });
+
+  it('T-16g: v16 migrated schema matches fresh DB schema for new tables', () => {
+    // Fresh DB
+    const connA = createDatabase(':memory:');
+    const freshDb = connA.sqlite;
+    pushSchema(freshDb);
+
+    // v15 migrated DB
+    db = createV15Database();
+    const v16 = MIGRATIONS.filter((m) => m.version === 16);
+    runMigrations(db, v16);
+
+    // Compare wc_sessions columns
+    const freshWcSessionsCols = getTableColumns(freshDb, 'wc_sessions');
+    const migratedWcSessionsCols = getTableColumns(db, 'wc_sessions');
+    expect(migratedWcSessionsCols).toEqual(freshWcSessionsCols);
+
+    // Compare wc_store columns
+    const freshWcStoreCols = getTableColumns(freshDb, 'wc_store');
+    const migratedWcStoreCols = getTableColumns(db, 'wc_store');
+    expect(migratedWcStoreCols).toEqual(freshWcStoreCols);
+
+    // Compare pending_approvals columns (includes approval_channel)
+    const freshPaCols = getTableColumns(freshDb, 'pending_approvals');
+    const migratedPaCols = getTableColumns(db, 'pending_approvals');
+    expect(migratedPaCols).toEqual(freshPaCols);
+
+    freshDb.close();
+  });
+
+  it('T-16h: v1 -> v16 full chain includes wc_sessions + wc_store + approval_channel', () => {
+    db = createV1SchemaDatabase();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert agent data for full chain test
+    db.prepare(
+      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('a-chain-16', 'Chain V16', 'solana', 'devnet', 'pk-chain-16', 'ACTIVE', 0, ts, ts);
+
+    // Run full pushSchema (v2 -> v16 chain)
+    pushSchema(db);
+
+    // Verify final version is 16
+    const versions = getVersions(db);
+    expect(versions).toContain(16);
+    expect(Math.max(...versions)).toBe(16);
+
+    // Verify wc_sessions and wc_store tables exist
+    const wcSessions = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='wc_sessions'",
+    ).get() as { name: string } | undefined;
+    expect(wcSessions).toBeDefined();
+
+    const wcStore = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='wc_store'",
+    ).get() as { name: string } | undefined;
+    expect(wcStore).toBeDefined();
+
+    // Verify approval_channel column exists
+    const columns = getTableColumns(db, 'pending_approvals');
+    expect(columns).toContain('approval_channel');
+
+    // Verify wc_sessions INSERT works (need wallet for FK)
+    db.prepare(
+      `INSERT INTO wc_sessions (wallet_id, topic, chain_id, owner_address, expiry, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run('a-chain-16', 'topic-chain-16', 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1', 'ownerChain16', ts + 86400, ts);
+
+    const wcRow = db.prepare('SELECT topic FROM wc_sessions WHERE wallet_id = ?').get('a-chain-16') as { topic: string };
+    expect(wcRow.topic).toBe('topic-chain-16');
+
+    // Verify wc_store INSERT works
+    db.prepare('INSERT INTO wc_store (key, value) VALUES (?, ?)').run('test-key', '"test-value"');
+    const storeRow = db.prepare('SELECT value FROM wc_store WHERE key = ?').get('test-key') as { value: string };
+    expect(storeRow.value).toBe('"test-value"');
   });
 });
