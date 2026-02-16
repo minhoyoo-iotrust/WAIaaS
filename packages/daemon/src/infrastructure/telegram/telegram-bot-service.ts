@@ -513,7 +513,7 @@ export class TelegramBotService {
     // Approve: update pending_approvals and transactions
     this.sqlite
       .prepare(
-        'UPDATE pending_approvals SET approved_at = unixepoch() WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL',
+        "UPDATE pending_approvals SET approved_at = unixepoch(), approval_channel = 'telegram' WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL",
       )
       .run(txId);
 
@@ -564,7 +564,7 @@ export class TelegramBotService {
     // Reject: update pending_approvals and transactions
     this.sqlite
       .prepare(
-        'UPDATE pending_approvals SET rejected_at = unixepoch() WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL',
+        "UPDATE pending_approvals SET rejected_at = unixepoch(), approval_channel = 'telegram' WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL",
       )
       .run(txId);
 

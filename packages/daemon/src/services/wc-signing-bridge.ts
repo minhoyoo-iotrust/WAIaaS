@@ -24,10 +24,12 @@ import { randomBytes } from 'node:crypto';
 import { createRequire } from 'node:module';
 import type { Database } from 'better-sqlite3';
 import { createSiweMessage } from 'viem/siwe';
+import type { EventBus } from '@waiaas/core';
 import { verifySIWE } from '../api/middleware/siwe-verify.js';
 import { decodeBase58 } from '../api/middleware/address-validation.js';
 import type { WcSessionService } from './wc-session-service.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
+import type { NotificationService } from '../notifications/notification-service.js';
 
 type SodiumNative = typeof import('sodium-native');
 
@@ -94,6 +96,8 @@ export interface WcSigningBridgeDeps {
   wcSessionService: WcSessionService;
   approvalWorkflow: ApprovalWorkflow;
   sqlite: Database;
+  notificationService?: NotificationService;
+  eventBus?: EventBus;
 }
 
 interface SignRequest {
@@ -110,11 +114,15 @@ export class WcSigningBridge {
   private readonly wcSessionService: WcSessionService;
   private readonly approvalWorkflow: ApprovalWorkflow;
   private readonly sqlite: Database;
+  private readonly notificationService?: NotificationService;
+  private readonly eventBus?: EventBus;
 
   constructor(deps: WcSigningBridgeDeps) {
     this.wcSessionService = deps.wcSessionService;
     this.approvalWorkflow = deps.approvalWorkflow;
     this.sqlite = deps.sqlite;
+    this.notificationService = deps.notificationService;
+    this.eventBus = deps.eventBus;
   }
 
   /**
@@ -128,15 +136,24 @@ export class WcSigningBridge {
     try {
       // Guard: WC not initialized
       const signClient = this.wcSessionService.getSignClient();
-      if (!signClient) return;
+      if (!signClient) {
+        this.fallbackToTelegram(walletId, txId, 'wc_not_initialized');
+        return;
+      }
 
       // Guard: no session for this wallet
       const topic = this.wcSessionService.getSessionTopic(walletId);
-      if (!topic) return;
+      if (!topic) {
+        this.fallbackToTelegram(walletId, txId, 'no_wc_session');
+        return;
+      }
 
       // Guard: no session info (should not happen if topic exists, but defensive)
       const sessionInfo = this.wcSessionService.getSessionInfo(walletId);
-      if (!sessionInfo) return;
+      if (!sessionInfo) {
+        this.fallbackToTelegram(walletId, txId, 'no_session_info');
+        return;
+      }
 
       const { ownerAddress, chainId } = sessionInfo;
 
@@ -171,7 +188,7 @@ export class WcSigningBridge {
       );
     } catch (error: any) {
       // Handle WC errors (rejection, timeout, etc.)
-      this.handleSignatureError(txId, error);
+      this.handleSignatureError(walletId, txId, error);
     }
   }
 
@@ -352,7 +369,7 @@ export class WcSigningBridge {
   // Private: handle WC errors
   // -------------------------------------------------------------------------
 
-  private handleSignatureError(txId: string, error: any): void {
+  private handleSignatureError(walletId: string, txId: string, error: any): void {
     const errorCode = error?.code;
 
     if (typeof errorCode === 'number' && WC_USER_REJECTED.includes(errorCode)) {
@@ -373,12 +390,64 @@ export class WcSigningBridge {
     }
 
     if (errorCode === WC_REQUEST_EXPIRED) {
-      // Request expired -- approval-expired worker will handle it
+      // Request expired -- fallback to Telegram if approval still pending
       console.warn(`[WcSigningBridge] WC request expired for ${txId}`);
+      this.fallbackToTelegram(walletId, txId, 'wc_timeout');
       return;
     }
 
-    // Other errors -- log and let existing approval-expired worker handle timeout
+    // Other errors -- fallback to Telegram if approval still pending
     console.warn(`[WcSigningBridge] WC signing error for ${txId}:`, error?.message ?? error);
+    this.fallbackToTelegram(walletId, txId, 'wc_error');
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: check if approval is still pending
+  // -------------------------------------------------------------------------
+
+  private isApprovalStillPending(txId: string): boolean {
+    const row = this.sqlite
+      .prepare(
+        'SELECT 1 FROM pending_approvals WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL',
+      )
+      .get(txId);
+    return !!row;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: fallback to Telegram channel
+  // -------------------------------------------------------------------------
+
+  private fallbackToTelegram(walletId: string, txId: string, reason: string): void {
+    // Only act if approval is still pending
+    if (!this.isApprovalStillPending(txId)) return;
+
+    // Update approval_channel to 'telegram'
+    this.sqlite
+      .prepare(
+        `UPDATE pending_approvals SET approval_channel = 'telegram'
+         WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL`,
+      )
+      .run(txId);
+
+    // Emit EventBus event
+    this.eventBus?.emit('approval:channel-switched', {
+      walletId,
+      txId,
+      fromChannel: 'walletconnect',
+      toChannel: 'telegram',
+      reason,
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
+    // Send channel-switched notification
+    void this.notificationService?.notify(
+      'APPROVAL_CHANNEL_SWITCHED',
+      walletId,
+      { from_channel: 'walletconnect', to_channel: 'telegram', reason },
+      { txId },
+    );
+
+    console.log(`[WcSigningBridge] Fallback to Telegram for ${txId}: ${reason}`);
   }
 }

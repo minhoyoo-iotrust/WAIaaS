@@ -524,6 +524,8 @@ export class DaemonLifecycle {
           wcSessionService: this.wcSessionService,
           approvalWorkflow: this.approvalWorkflow,
           sqlite: this.sqlite,
+          notificationService: this.notificationService ?? undefined,
+          eventBus: this.eventBus,
         });
         console.log('Step 4c-7: WcSigningBridge initialized');
       }
