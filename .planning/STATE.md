@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 147 - QR 페어링 + REST API
+**Current focus:** Phase 148 - WC 서명 요청
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 147: QR 페어링 + REST API) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: 147-02 Complete (Phase 147 Done)
-Last activity: 2026-02-16 -- 147-02 Admin UI QR 모달 + CLI Owner 명령어 완료
+Phase: 3 of 5 (Phase 148: WC 서명 요청)
+Plan: 1 of 2 in current phase
+Status: 148-01 Complete
+Last activity: 2026-02-16 -- 148-01 WcSigningBridge + stage4Wait WC 연동 완료
 
-Progress: [==========..........] 50%
+Progress: [============........] 60%
 
 ## Performance Metrics
 
 **Cumulative:** 34 milestones, 145 phases, 319 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 8min
-- Total execution time: 0.5 hours
+- Total plans completed: 5
+- Average duration: 7min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [==========..........] 50%
 |-------|-------|-------|----------|
 | 146 | 2/2 | 18min | 9min |
 | 147 | 2/2 | 13min | 6.5min |
+| 148 | 1/2 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 6min, 8min, 5min
-- Trend: stable
+- Last 5 plans: 12min, 6min, 8min, 5min, 5min
+- Trend: stable/improving
 
 *Updated after each plan completion*
 
@@ -62,6 +63,10 @@ Recent decisions affecting current work:
 - [147-02]: owner.ts에 daemonRequest/selectWallet 자체 구현 (wallet.ts export 없이 독립성 유지)
 - [147-02]: QR 모달 onConfirm 미전달 -- Modal 컴포넌트 Confirm 버튼 자동 숨김
 - [147-02]: pollRef를 useSignal로 관리 (cleanup useEffect에서 clearInterval)
+- [148-01]: encodeBase58 인라인 구현 (keystore.ts의 unexported 함수 재사용 불가)
+- [148-01]: WC expiry를 pending_approvals.expires_at에서 동적 계산 (최소 60초)
+- [148-01]: 서명 검증 실패 시 reject 하지 않음 (Owner REST API 재시도 가능)
+- [148-01]: WcSigningBridge를 daemon.ts Step 4c-7로 배치
 
 ### Blockers/Concerns
 
@@ -69,11 +74,11 @@ Recent decisions affecting current work:
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
 - Pre-existing 3 sessions.test.tsx failures -- not blocking
 - [Resolved]: WC keyvaluestorage Node.js -- SqliteKeyValueStorage로 대체 (146-01에서 해결)
-- [Research]: WC session_request expiry 파라미터 API 존재 여부 (Phase 148에서 검증)
-- [Research]: Solana WC 지갑(Phantom/Backpack) solana_signMessage 실제 지원 범위 (Phase 148에서 검증)
+- [Resolved]: WC session_request expiry 파라미터 -- signClient.request({ expiry }) 사용 (148-01에서 구현)
+- [Research]: Solana WC 지갑(Phantom/Backpack) solana_signMessage 실제 지원 범위 (통합 테스트 시 검증)
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 147-02-PLAN.md
+Stopped at: Completed 148-01-PLAN.md
 Resume file: None
