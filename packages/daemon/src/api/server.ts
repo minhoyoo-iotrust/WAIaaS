@@ -258,6 +258,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         keyStore: deps.keyStore,
         masterPassword: deps.masterPassword,
         config: deps.config,
+        adapterPool: deps.adapterPool ?? undefined,
         notificationService: deps.notificationService,
         eventBus: deps.eventBus,
       }),

@@ -27,6 +27,8 @@ import type { NotificationService } from '../../notifications/notification-servi
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
 import { validateOwnerAddress } from '../middleware/address-validation.js';
+import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
+import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import {
   CreateWalletRequestOpenAPI,
   SetOwnerRequestSchema,
@@ -39,6 +41,7 @@ import {
   WalletListResponseSchema,
   WalletDetailResponseSchema,
   WalletDeleteResponseSchema,
+  WithdrawResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -49,6 +52,7 @@ export interface WalletCrudRouteDeps {
   keyStore: LocalKeyStore;
   masterPassword: string;
   config: DaemonConfig;
+  adapterPool?: AdapterPool;
   notificationService?: NotificationService;
   eventBus?: EventBus;
 }
@@ -633,6 +637,100 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         availableNetworks: networks.map((n) => ({
           network: n,
           isDefault: n === wallet.defaultNetwork,
+        })),
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /wallets/:id/withdraw
+  // ---------------------------------------------------------------------------
+
+  const withdrawRoute = createRoute({
+    method: 'post',
+    path: '/wallets/{id}/withdraw',
+    tags: ['Wallets'],
+    summary: 'Withdraw all assets to owner address',
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: 'Sweep results per asset',
+        content: { 'application/json': { schema: WithdrawResponseSchema } },
+      },
+      ...buildErrorResponses(['WALLET_NOT_FOUND', 'NO_OWNER', 'WITHDRAW_LOCKED_ONLY', 'SWEEP_TOTAL_FAILURE']),
+    },
+  });
+
+  router.openapi(withdrawRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
+    }
+
+    // Validate owner state: must be LOCKED
+    const ownerState = resolveOwnerState(wallet);
+    if (ownerState === 'NONE') {
+      throw new WAIaaSError('NO_OWNER');
+    }
+    if (ownerState !== 'LOCKED') {
+      throw new WAIaaSError('WITHDRAW_LOCKED_ONLY');
+    }
+
+    if (!deps.adapterPool) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE');
+    }
+
+    // Resolve adapter
+    const network = (wallet.defaultNetwork ?? wallet.environment) as string;
+    const rpcUrl = resolveRpcUrl(
+      deps.config.rpc as unknown as Record<string, string>,
+      wallet.chain,
+      network,
+    );
+    const adapter = await deps.adapterPool.resolve(
+      wallet.chain as ChainType,
+      network as NetworkType,
+      rpcUrl,
+    );
+
+    // Decrypt private key
+    const privateKey = await deps.keyStore.decryptPrivateKey(
+      walletId,
+      deps.masterPassword,
+    );
+
+    // Sweep all assets to owner address
+    const sweepResult = await adapter.sweepAll(
+      wallet.publicKey,
+      wallet.ownerAddress!,
+      privateKey,
+    );
+
+    if (sweepResult.succeeded === 0 && sweepResult.total > 0) {
+      throw new WAIaaSError('SWEEP_TOTAL_FAILURE');
+    }
+
+    return c.json(
+      {
+        total: sweepResult.total,
+        succeeded: sweepResult.succeeded,
+        failed: sweepResult.failed,
+        results: sweepResult.results.map((r) => ({
+          asset: r.mint,
+          amount: r.amount.toString(),
+          txHash: r.txHash,
+          error: r.error,
+          status: r.txHash ? ('success' as const) : ('failed' as const),
         })),
       },
       200,

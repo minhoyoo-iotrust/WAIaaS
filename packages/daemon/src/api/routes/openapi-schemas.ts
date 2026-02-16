@@ -870,3 +870,20 @@ export const WcPairingStatusResponseSchema = z.object({
 export const WcDisconnectResponseSchema = z.object({
   disconnected: z.boolean(),
 }).openapi('WcDisconnectResponse');
+
+// ---------------------------------------------------------------------------
+// Withdraw (sweep) response
+// ---------------------------------------------------------------------------
+
+export const WithdrawResponseSchema = z.object({
+  total: z.number().int(),
+  succeeded: z.number().int(),
+  failed: z.number().int(),
+  results: z.array(z.object({
+    asset: z.string(),
+    amount: z.string(),
+    txHash: z.string().optional(),
+    error: z.string().optional(),
+    status: z.enum(['success', 'failed']),
+  })),
+}).openapi('WithdrawResponse');
