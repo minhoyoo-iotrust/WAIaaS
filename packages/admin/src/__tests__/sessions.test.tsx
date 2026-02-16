@@ -102,7 +102,8 @@ describe('SessionsPage', () => {
   it('should load and display sessions for selected agent', async () => {
     vi.mocked(apiGet)
       .mockResolvedValueOnce(mockWallets) // wallets load
-      .mockResolvedValueOnce(mockSessions); // sessions for wallet
+      .mockResolvedValueOnce([]) // initial sessions (all wallets)
+      .mockResolvedValueOnce(mockSessions); // sessions for selected wallet
 
     render(<SessionsPage />);
 
@@ -127,6 +128,7 @@ describe('SessionsPage', () => {
   it('should create session and show token modal', async () => {
     vi.mocked(apiGet)
       .mockResolvedValueOnce(mockWallets) // initial wallets load
+      .mockResolvedValueOnce([]) // initial sessions (all wallets)
       .mockResolvedValueOnce(mockSessions) // sessions after wallet select
       .mockResolvedValueOnce(mockSessions); // refresh after create
 
@@ -165,7 +167,8 @@ describe('SessionsPage', () => {
   it('should revoke session with confirmation modal', async () => {
     vi.mocked(apiGet)
       .mockResolvedValueOnce(mockWallets) // wallets load
-      .mockResolvedValueOnce(mockSessions) // sessions for wallet
+      .mockResolvedValueOnce([]) // initial sessions (all wallets)
+      .mockResolvedValueOnce(mockSessions) // sessions for selected wallet
       .mockResolvedValueOnce([]); // refresh after revoke
 
     vi.mocked(apiDelete).mockResolvedValueOnce(undefined);

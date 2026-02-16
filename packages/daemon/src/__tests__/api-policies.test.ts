@@ -245,7 +245,7 @@ describe('POST /v1/policies', () => {
       body: JSON.stringify({
         walletId: '00000000-0000-7000-8000-000000000000',
         type: 'WHITELIST',
-        rules: { allowed_addresses: [] },
+        rules: { allowed_addresses: ['So11111111111111111111111111111111'] },
       }),
     });
 

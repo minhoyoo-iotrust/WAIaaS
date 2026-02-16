@@ -90,12 +90,12 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 21 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(21);
+  it('NotificationEventType has 24 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(24);
   });
 
-  it('AuditAction has 23 values', () => {
-    expect(AUDIT_ACTIONS).toHaveLength(23);
+  it('AuditAction has 25 values', () => {
+    expect(AUDIT_ACTIONS).toHaveLength(25);
   });
 
   it('KillSwitchState has 3 values', () => {

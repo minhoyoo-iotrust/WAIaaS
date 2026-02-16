@@ -125,7 +125,6 @@ export default function SessionsPage() {
 
   useEffect(() => {
     fetchWallets();
-    fetchSessions();
   }, []);
 
   useEffect(() => {

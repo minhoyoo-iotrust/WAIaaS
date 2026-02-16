@@ -51,6 +51,9 @@
 | 034 | ENHANCEMENT | MEDIUM | OpenAPI → 클라이언트 타입 자동 생성 도입 — API 필드 불일치 구조적 방지 | v1.5.1 | FIXED | 2026-02-16 |
 | 035 | ENHANCEMENT | MEDIUM | USDC_DOMAINS 하드코딩 테이블과 실제 온체인 도메인 불일치 | v1.5.1 | FIXED | 2026-02-16 |
 | 036 | BUG | HIGH | x402 EIP-712 도메인 name 불일치로 결제 서명 검증 실패 | v1.5.1 | FIXED | 2026-02-16 |
+| 037 | BUG | MEDIUM | Admin Table 컴포넌트 undefined data 크래시 — sessions 페이지 테스트 실패 | v1.6 | FIXED | 2026-02-16 |
+| 038 | BUG | LOW | v1.6 추가 enum/error code에 대한 테스트 count 미갱신 (7건) | v1.6 | FIXED | 2026-02-16 |
+| 039 | ENHANCEMENT | MEDIUM | 마일스톤 감사 전 빌드+테스트 자동 실행 훅 추가 | v1.6 | OPEN | 2026-02-16 |
 
 ## Type Legend
 
@@ -62,8 +65,8 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 36
+- **OPEN:** 1
+- **FIXED:** 38
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 36
+- **Total:** 39

@@ -41,7 +41,7 @@ export function Table<T>({
                 Loading...
               </td>
             </tr>
-          ) : data.length === 0 ? (
+          ) : !data || data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} class="table-empty">
                 {emptyMessage}
