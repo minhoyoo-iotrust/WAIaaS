@@ -92,8 +92,8 @@
 
 - [x] **Phase 140: Event Bus + Kill Switch** (3 plans) - 이벤트 인프라와 3-state 긴급 정지 시스템
 - [x] **Phase 141: AutoStop Engine** (2 plans) - 이벤트 기반 자동 정지 규칙 엔진
-- [ ] **Phase 142: Balance Monitoring** (2 plans) - 주기적 잔액 체크 + LOW_BALANCE 알림
-- [ ] **Phase 143: Telegram Bot** - Long Polling 기반 원격 관리 봇
+- [x] **Phase 142: Balance Monitoring** (2 plans) - 주기적 잔액 체크 + LOW_BALANCE 알림
+- [ ] **Phase 143: Telegram Bot** (3 plans) - Long Polling 기반 원격 관리 봇
 - [ ] **Phase 144: Admin UI Integration** - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
 - [ ] **Phase 145: Docker** - Multi-stage 빌드 + docker-compose 원클릭 배포
 
@@ -149,12 +149,12 @@ Plans:
   3. /killswitch로 확인 대화(Yes/No 인라인 키보드) 후 Kill Switch를 발동할 수 있고, /wallets로 월렛 목록, /newsession으로 세션 발급이 가능하다 (관리자만)
   4. 2-Tier 인증이 적용되어 ADMIN은 모든 명령을, READONLY는 조회 명령만 사용할 수 있고, 네트워크 단절 시 지수 백오프로 재연결된다
   5. 모든 Bot 메시지가 config.toml locale 설정에 따라 en/ko로 출력되고, telegram_users DB 테이블이 마이그레이션으로 생성된다
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 143-01: TelegramBotService Long Polling + DB 마이그레이션 + /start, /help, /status
-- [ ] 143-02: 2-Tier 인증 + /wallets, /pending, /approve, /reject
-- [ ] 143-03: /killswitch, /newsession + 인라인 키보드 + i18n + 재연결
+- [ ] 143-01-PLAN.md -- TelegramBotService Long Polling + DB 마이그레이션 v15 + /start, /help, /status + config/settings + i18n + DaemonLifecycle
+- [ ] 143-02-PLAN.md -- 2-Tier 인증 (ADMIN/READONLY/PENDING) + /wallets, /pending, /approve, /reject + Admin REST API (telegram_users CRUD)
+- [ ] 143-03-PLAN.md -- /killswitch 확인 대화 + /newsession 월렛 선택 + 인라인 키보드 빌더 + 지수 백오프 재연결
 
 ### Phase 144: Admin UI Integration
 **Goal**: 사용자가 Admin 웹 UI에서 Kill Switch 3-state 관리, Telegram 사용자 승인, AutoStop/Balance Monitor 임계값 조정을 수행할 수 있다
@@ -193,11 +193,11 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 |-------|----------------|--------|-----------|
 | 140. Event Bus + Kill Switch | 3/3 | Complete | 2026-02-16 |
 | 141. AutoStop Engine | 2/2 | Complete | 2026-02-16 |
-| 142. Balance Monitoring | 0/2 | Not started | - |
-| 143. Telegram Bot | 0/3 | Not started | - |
+| 142. Balance Monitoring | 2/2 | Complete | 2026-02-16 |
+| 143. Telegram Bot | 0/3 | Planning complete | - |
 | 144. Admin UI Integration | 0/2 | Not started | - |
 | 145. Docker | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 142 계획 완료 (2 plans)*
+*Last updated: 2026-02-16 -- Phase 143 계획 완료 (3 plans)*
