@@ -62,7 +62,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | Feature | Reason |
 |---------|--------|
 | WC 트랜잭션 서명 (eth_sendTransaction) | WAIaaS가 키 보관자이므로 WC로는 메시지 서명만 요청, 트랜잭션은 데몬이 직접 서명 |
-| @reown/appkit 사용 | 브라우저 전용 UI 모달 — 서버 데몬에 불필요, @walletconnect/sign-client가 적합 |
+| @reown/appkit 사용 | 브라우저 전용 UI 모달 -- 서버 데몬에 불필요, @walletconnect/sign-client가 적합 |
 | WC를 유일한 승인 채널로 사용 | self-hosted 철학상 외부 relay 의존성 최소화, REST API 항상 유지 |
 | 멀티 Owner 지갑 | v1.6.1은 단일 세션 정책, 멀티 Owner는 v2로 연기 |
 
@@ -72,36 +72,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| PAIR-01 | — | Pending |
-| PAIR-02 | — | Pending |
-| PAIR-03 | — | Pending |
-| PAIR-04 | — | Pending |
-| PAIR-05 | — | Pending |
-| PAIR-06 | — | Pending |
-| SIGN-01 | — | Pending |
-| SIGN-02 | — | Pending |
-| SIGN-03 | — | Pending |
-| SIGN-04 | — | Pending |
-| SIGN-05 | — | Pending |
-| SIGN-06 | — | Pending |
-| FALL-01 | — | Pending |
-| FALL-02 | — | Pending |
-| FALL-03 | — | Pending |
-| DX-01 | — | Pending |
-| DX-02 | — | Pending |
-| DX-03 | — | Pending |
-| DX-04 | — | Pending |
+| INFRA-01 | Phase 146 | Pending |
+| INFRA-02 | Phase 146 | Pending |
+| INFRA-03 | Phase 146 | Pending |
+| INFRA-04 | Phase 146 | Pending |
+| INFRA-05 | Phase 146 | Pending |
+| PAIR-01 | Phase 147 | Pending |
+| PAIR-02 | Phase 147 | Pending |
+| PAIR-03 | Phase 147 | Pending |
+| PAIR-04 | Phase 147 | Pending |
+| PAIR-05 | Phase 147 | Pending |
+| PAIR-06 | Phase 147 | Pending |
+| SIGN-01 | Phase 148 | Pending |
+| SIGN-02 | Phase 148 | Pending |
+| SIGN-03 | Phase 148 | Pending |
+| SIGN-04 | Phase 148 | Pending |
+| SIGN-05 | Phase 148 | Pending |
+| SIGN-06 | Phase 148 | Pending |
+| FALL-01 | Phase 149 | Pending |
+| FALL-02 | Phase 149 | Pending |
+| FALL-03 | Phase 149 | Pending |
+| DX-01 | Phase 150 | Pending |
+| DX-02 | Phase 150 | Pending |
+| DX-03 | Phase 150 | Pending |
+| DX-04 | Phase 150 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 (to be filled during roadmap creation)
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after initial definition*
+*Last updated: 2026-02-16 after roadmap creation (traceability updated)*
