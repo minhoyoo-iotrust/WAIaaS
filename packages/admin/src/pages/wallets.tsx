@@ -64,6 +64,28 @@ interface WalletTransaction {
   createdAt: number | null;
 }
 
+interface WcSession {
+  walletId: string;
+  topic: string;
+  peerName: string | null;
+  peerUrl: string | null;
+  chainId: string;
+  ownerAddress: string;
+  expiry: number;
+  createdAt: number;
+}
+
+interface WcPairingResult {
+  uri: string;
+  qrCode: string;
+  expiresAt: number;
+}
+
+interface WcPairingStatus {
+  status: 'pending' | 'connected' | 'expired' | 'none';
+  session?: WcSession | null;
+}
+
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
     return [
@@ -170,6 +192,13 @@ function WalletDetailView({ id }: { id: string }) {
   const balanceLoading = useSignal(true);
   const txs = useSignal<WalletTransaction[]>([]);
   const txsLoading = useSignal(true);
+  const wcQrModal = useSignal(false);
+  const wcQrData = useSignal<WcPairingResult | null>(null);
+  const wcPairingLoading = useSignal(false);
+  const wcSession = useSignal<WcSession | null>(null);
+  const wcSessionLoading = useSignal(true);
+  const wcDisconnectLoading = useSignal(false);
+  const pollRef = useSignal<ReturnType<typeof setInterval> | null>(null);
 
   const fetchWallet = async () => {
     try {
@@ -274,6 +303,71 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const fetchWcSession = async () => {
+    wcSessionLoading.value = true;
+    try {
+      wcSession.value = await apiGet<WcSession>(API.WALLET_WC_SESSION(id));
+    } catch {
+      wcSession.value = null;
+    } finally {
+      wcSessionLoading.value = false;
+    }
+  };
+
+  const startPairingPoll = () => {
+    if (pollRef.value) clearInterval(pollRef.value);
+    pollRef.value = setInterval(async () => {
+      try {
+        const status = await apiGet<WcPairingStatus>(API.WALLET_WC_PAIR_STATUS(id));
+        if (status.status === 'connected') {
+          if (pollRef.value) clearInterval(pollRef.value);
+          pollRef.value = null;
+          wcQrModal.value = false;
+          wcQrData.value = null;
+          wcSession.value = status.session ?? null;
+          showToast('success', 'Wallet connected via WalletConnect');
+        } else if (status.status === 'expired' || status.status === 'none') {
+          if (pollRef.value) clearInterval(pollRef.value);
+          pollRef.value = null;
+          wcQrModal.value = false;
+          wcQrData.value = null;
+          showToast('error', 'Pairing expired. Try again.');
+        }
+      } catch {
+        // Network error -- keep polling
+      }
+    }, 3000);
+  };
+
+  const handleWcConnect = async () => {
+    wcPairingLoading.value = true;
+    try {
+      const result = await apiPost<WcPairingResult>(API.WALLET_WC_PAIR(id));
+      wcQrData.value = result;
+      wcQrModal.value = true;
+      startPairingPoll();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      wcPairingLoading.value = false;
+    }
+  };
+
+  const handleWcDisconnect = async () => {
+    wcDisconnectLoading.value = true;
+    try {
+      await apiDelete(API.WALLET_WC_SESSION(id));
+      wcSession.value = null;
+      showToast('success', 'WalletConnect session disconnected');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      wcDisconnectLoading.value = false;
+    }
+  };
+
   const handleChangeDefaultNetwork = async (network: string) => {
     defaultNetworkLoading.value = true;
     try {
@@ -294,7 +388,14 @@ function WalletDetailView({ id }: { id: string }) {
     fetchNetworks();
     fetchBalance();
     fetchTransactions();
+    fetchWcSession();
   }, [id]);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.value) clearInterval(pollRef.value);
+    };
+  }, []);
 
   return (
     <div class="page">
@@ -468,6 +569,37 @@ function WalletDetailView({ id }: { id: string }) {
             />
           </div>
 
+          <div class="wc-section" style={{ marginTop: 'var(--space-6)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>WalletConnect</h3>
+            {wcSessionLoading.value ? (
+              <div class="stat-skeleton" style={{ height: '60px' }} />
+            ) : wcSession.value ? (
+              <div>
+                <DetailRow label="Status">
+                  <Badge variant="success">Connected</Badge>
+                </DetailRow>
+                <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
+                <DetailRow label="Owner Address" value={wcSession.value.ownerAddress} copy />
+                <DetailRow label="Chain ID" value={wcSession.value.chainId} />
+                <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
+                    Disconnect
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)' }}>
+                  Connect an external wallet (MetaMask, Phantom) via WalletConnect for transaction approval.
+                </p>
+                <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
+                  Connect Wallet
+                </Button>
+              </div>
+            )}
+          </div>
+
           <div class="mcp-setup-section" style={{ marginTop: 'var(--space-6)' }}>
             <h3 style={{ marginBottom: 'var(--space-3)' }}>MCP Setup</h3>
             {mcpResult.value ? (
@@ -531,6 +663,32 @@ function WalletDetailView({ id }: { id: string }) {
               Are you sure you want to terminate wallet <strong>{wallet.value.name}</strong>? This
               action cannot be undone.
             </p>
+          </Modal>
+
+          <Modal
+            open={wcQrModal.value}
+            title="Scan QR Code"
+            onCancel={() => {
+              wcQrModal.value = false;
+              if (pollRef.value) clearInterval(pollRef.value);
+              pollRef.value = null;
+            }}
+          >
+            {wcQrData.value && (
+              <div style={{ textAlign: 'center' }}>
+                <img
+                  src={wcQrData.value.qrCode}
+                  alt="WalletConnect QR Code"
+                  style={{ width: '280px', height: '280px', margin: '0 auto' }}
+                />
+                <p style={{ marginTop: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                  Scan with MetaMask, Phantom, or any WalletConnect-compatible wallet
+                </p>
+                <p style={{ marginTop: 'var(--space-2)', color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
+                  Waiting for connection...
+                </p>
+              </div>
+            )}
           </Modal>
         </div>
       ) : (
