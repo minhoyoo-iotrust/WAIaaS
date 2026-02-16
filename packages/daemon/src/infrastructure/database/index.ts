@@ -23,3 +23,4 @@ export {
   telegramUsers,
 } from './schema.js';
 export { generateId } from './id.js';
+export { generateCheckConstraint } from './checks.js';

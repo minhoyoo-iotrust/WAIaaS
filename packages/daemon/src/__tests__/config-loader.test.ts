@@ -423,3 +423,129 @@ describe('EVM RPC config', () => {
     expect(rpcKeys).toHaveLength(16);
   });
 });
+
+// ---------------------------------------------------------------------------
+// CF-01~12 verification (doc 49)
+// ---------------------------------------------------------------------------
+
+describe('config.toml CF-01~12 verification (doc 49)', () => {
+  // CF-01: Default values (already covered by 'has correct default values' + session_ttl)
+  it('CF-01: defaults include session_ttl=86400 and nonce_cache_max=1000', () => {
+    const dir = saveTempDir(createTempDir());
+    const config = loadConfig(dir);
+    expect(config.security.session_ttl).toBe(86400);
+    expect(config.security.nonce_cache_max).toBe(1000);
+    expect(config.security.policy_defaults_delay_seconds).toBe(300);
+  });
+
+  // CF-04: Docker hostname 0.0.0.0
+  it('CF-04: WAIAAS_DAEMON_HOSTNAME=0.0.0.0 allows Docker binding', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_DAEMON_HOSTNAME', '0.0.0.0');
+    const config = loadConfig(dir);
+    expect(config.daemon.hostname).toBe('0.0.0.0');
+  });
+
+  // CF-05: Nested section env var (policy_defaults_delay_seconds)
+  it('CF-05: WAIAAS_SECURITY_POLICY_DEFAULTS_DELAY_SECONDS=600 overrides', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_SECURITY_POLICY_DEFAULTS_DELAY_SECONDS', '600');
+    const config = loadConfig(dir);
+    expect(config.security.policy_defaults_delay_seconds).toBe(600);
+  });
+
+  // CF-06: port = -1 rejected
+  it('CF-06: port = -1 rejected (min 1024)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nport = -1\n');
+    expect(() => loadConfig(dir)).toThrow();
+  });
+
+  // CF-07: shutdown_timeout 999 (above max 300)
+  it('CF-07: shutdown_timeout = 999 rejected (max 300)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nshutdown_timeout = 999\n');
+    expect(() => loadConfig(dir)).toThrow();
+  });
+
+  // CF-08: empty string env var
+  it('CF-08: WAIAAS_DAEMON_PORT="" uses default (empty string not a valid port)', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_DAEMON_PORT', '');
+    // Empty string is not a number, so parseEnvValue returns '' (string).
+    // applyEnvOverrides sets config.daemon.port = '' which Zod rejects.
+    // However, applyEnvOverrides checks envValue !== undefined, and '' is not undefined.
+    // The actual behavior: '' -> parseEnvValue('') -> '' (string) -> daemon.port = '' -> Zod rejects.
+    // But the env key prefix parsing: stripped='daemon_port', section='daemon', field='port'.
+    // So config.daemon.port = '' (string). Then DaemonConfigSchema rejects.
+    expect(() => loadConfig(dir)).toThrow();
+  });
+
+  // CF-09: missing [database] section uses all defaults
+  it('CF-09: missing [database] section uses all defaults', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nport = 5000\n');
+    const config = loadConfig(dir);
+    expect(config.database.path).toBe('data/waiaas.db');
+    expect(config.database.wal_checkpoint_interval).toBe(300);
+    expect(config.database.busy_timeout).toBe(5000);
+    expect(config.database.cache_size).toBe(64000);
+  });
+
+  // CF-10: multiple env vars override simultaneously
+  it('CF-10: multiple env vars override simultaneously', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nport = 4000\n');
+    setEnv('WAIAAS_DAEMON_PORT', '5000');
+    setEnv('WAIAAS_DAEMON_LOG_LEVEL', 'debug');
+    const config = loadConfig(dir);
+    expect(config.daemon.port).toBe(5000); // env wins over toml
+    expect(config.daemon.log_level).toBe('debug'); // env override
+  });
+
+  // CF-12: Zod defaults applied for present but empty section
+  it('CF-12: [security] section present but empty, Zod defaults applied', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[security]\n');
+    const config = loadConfig(dir);
+    expect(config.security.session_ttl).toBe(86400);
+    expect(config.security.nonce_cache_max).toBe(1000);
+    expect(config.security.policy_defaults_delay_seconds).toBe(300);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// NOTE-08: Docker shutdown timeline (shutdown_timeout) -- 4 cases
+// ---------------------------------------------------------------------------
+
+describe('NOTE-08: Docker shutdown timeline (shutdown_timeout)', () => {
+  // N08-01: default value 30 (cross-ref CF-01)
+  it('N08-01: shutdown_timeout defaults to 30', () => {
+    const dir = saveTempDir(createTempDir());
+    const config = loadConfig(dir);
+    expect(config.daemon.shutdown_timeout).toBe(30);
+  });
+
+  // N08-02: minimum value 5 accepted
+  it('N08-02: shutdown_timeout=5 accepted (minimum)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nshutdown_timeout = 5\n');
+    const config = loadConfig(dir);
+    expect(config.daemon.shutdown_timeout).toBe(5);
+  });
+
+  // N08-03: maximum value 300 accepted
+  it('N08-03: shutdown_timeout=300 accepted (maximum)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nshutdown_timeout = 300\n');
+    const config = loadConfig(dir);
+    expect(config.daemon.shutdown_timeout).toBe(300);
+  });
+
+  // N08-04: below minimum 4 -> ZodError
+  it('N08-04: shutdown_timeout=4 rejected (below min 5)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[daemon]\nshutdown_timeout = 4\n');
+    expect(() => loadConfig(dir)).toThrow();
+  });
+});
