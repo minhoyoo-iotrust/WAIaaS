@@ -27,11 +27,11 @@
   2. 각 패키지의 커버리지 리포트가 v8 프로바이더로 생성되며, 패키지별 Hard 임계값(core 90%+, daemon 85%+, cli 70%+ 등)이 설정되어 미달 시 실패한다
   3. `test:unit`, `test:integration`, `test:security`, `test:chain`, `test:platform` 5개 Turborepo 태스크가 분리 실행된다
   4. Mock 10개 경계(M1~M10) 중 신규 5개(Jupiter msw, 가격 API msw, 온체인 오라클, MockPriceOracle, MockActionProvider)가 구축되어 테스트에서 import 가능하다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 151-01: Vitest workspace + 커버리지 임계값 + Turborepo 태스크 분리
-- [ ] 151-02: Mock 5개 신규 경계 인프라 구축
+- [ ] 151-01-PLAN.md — Vitest workspace + 커버리지 임계값 + Turborepo 태스크 분리
+- [ ] 151-02-PLAN.md — Mock 5개 신규 경계 인프라 구축
 
 ### Phase 152: Enum 검증 + Config 테스트
 **Goal**: 16개 Enum SSoT가 빌드타임에 4단계 방어로 검증되고, config.toml 로딩이 12건 시나리오에서 정확하게 동작하는 상태
