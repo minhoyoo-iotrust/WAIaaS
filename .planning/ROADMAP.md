@@ -89,8 +89,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 155-01-PLAN.md — 세션 인증 20건(SEC-01) + 정책 우회 9건(SEC-02) 공격 테스트
-- [ ] 155-02-PLAN.md — Kill Switch 8건(SEC-03) + 키스토어/외부 10건(SEC-04) + 경계값/연쇄 24건(SEC-05)
+- [x] 155-01-PLAN.md — 세션 인증 20건(SEC-01) + 정책 우회 9건(SEC-02) 공격 테스트
+- [x] 155-02-PLAN.md — Kill Switch 8건(SEC-03) + 키스토어/외부 10건(SEC-04) + 경계값/연쇄 24건(SEC-05)
 
 ### Phase 156: 보안 테스트 Part 2 (확장 보안)
 **Goal**: 확장 기능(토큰/컨트랙트/Approve/배치/Oracle/Action/Swap/ChainError/x402) ~178건 보안 시나리오가 모두 방어됨이 테스트로 증명된 상태
@@ -101,12 +101,12 @@ Plans:
   2. 배치 분할 우회(22건) + Oracle 가격 조작(20건) 보안 시나리오가 모두 방어된다
   3. Action Provider(16건) + Swap 슬리피지/MEV(12건) + ChainError(12건) 보안 시나리오가 모두 방어된다
   4. x402 결제 보안(~12건, SSRF 우회/도메인 정책 우회/금액 조작)이 모두 방어된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 156-01: 토큰 + 컨트랙트 + Approve 보안 테스트 (SEC-06, SEC-07, SEC-08)
-- [ ] 156-02: 배치 + Oracle + Action + Swap 보안 테스트 (SEC-09, SEC-10, SEC-11, SEC-12)
-- [ ] 156-03: ChainError + x402 보안 테스트 (SEC-13, SEC-14)
+- [ ] 156-01-PLAN.md — 토큰 + 컨트랙트 + Approve 보안 테스트 (SEC-06, SEC-07, SEC-08)
+- [ ] 156-02-PLAN.md — 배치 + Oracle + Action + Swap 보안 테스트 (SEC-09, SEC-10, SEC-11, SEC-12)
+- [ ] 156-03-PLAN.md — ChainError + x402 보안 테스트 (SEC-13, SEC-14)
 
 ### Phase 157: 확장 기능 테스트
 **Goal**: 확장 기능(토큰/컨트랙트/Approve/배치/Oracle/Action/ChainError) ~148건 기능 테스트로 정상 동작이 검증된 상태
@@ -165,7 +165,7 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 | 152. Enum 검증 + Config 테스트 | 1/1 | Complete | 2026-02-16 |
 | 153. Contract Test | 2/2 | Complete | 2026-02-16 |
 | 154. 블록체인 3단계 테스트 | 2/2 | Complete | 2026-02-16 |
-| 155. 보안 테스트 Part 1 | 0/2 | Not started | - |
+| 155. 보안 테스트 Part 1 | 2/2 | Complete | 2026-02-17 |
 | 156. 보안 테스트 Part 2 | 0/3 | Not started | - |
 | 157. 확장 기능 테스트 | 0/3 | Not started | - |
 | 158. 플랫폼 테스트 | 0/2 | Not started | - |
@@ -173,4 +173,4 @@ Phases execute in numeric order: 151 -> 152 -> 153 -> 154 -> 155 -> 156 -> 157 -
 
 ---
 *Roadmap created: 2026-02-16*
-*Last updated: 2026-02-16*
+*Last updated: 2026-02-17*
