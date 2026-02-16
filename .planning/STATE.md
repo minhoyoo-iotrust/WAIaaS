@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 153 complete, next Phase 154
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 154 in progress, plan 01 complete
 
 ## Current Position
 
-Phase: 153 of 159 (Contract Test)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-16 — Phase 153 complete (2/2 plans)
+Phase: 154 of 159 (Blockchain 3-Level)
+Plan: 1 of 2 in current phase
+Status: Plan 154-01 complete
+Last activity: 2026-02-16 — Phase 154 plan 01 complete
 
-Progress: [####░░░░░░] 32% (6/19 plans)
+Progress: [####░░░░░░] 37% (7/19 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 35 milestones, 150 phases, 325 plans, 923 reqs, ~2,539 tests, ~220,000 LOC
+**Cumulative:** 35 milestones, 150 phases, 326 plans, 923 reqs, ~2,563 tests, ~220,000 LOC
 
 **v1.6.1 Velocity:**
 - Total plans completed: 10
@@ -32,6 +32,7 @@ Progress: [####░░░░░░] 32% (6/19 plans)
 | 152 | 01 | 12min | 2 | 14 |
 | 153 | 02 | 6min | 2 | 14 |
 | 153 | 01 | 7min | 2 | 4 |
+| 154 | 01 | 5min | 2 | 4 |
 
 *Updated after each plan completion*
 
@@ -59,6 +60,10 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 153-01: Contract test factory uses skipMethods for complex RPC-dependent methods
 - 153-01: BATCH_NOT_SUPPORTED 검증은 WAIaaSError.code 체크 (message regex 아닌)
 - 153-01: adapter -> core __tests__ 상대 경로 import (package exports 미포함)
+- 154-01: isValidAddress 미존재 -> address() 함수 직접 사용 및 adapter 메서드 통한 간접 검증
+- 154-01: SolanaAdapter가 WAIaaSError로 래핑 (ChainError가 아닌) -> assertion 타입 맞춤
+- 154-01: estimateFee는 priority fee RPC 조회 없이 DEFAULT_SOL_TRANSFER_FEE 반환
+- 154-01: describe.skipIf(!validatorRunning) + it('...', { timeout }) vitest 4 호환 문법
 
 ### Blockers/Concerns
 
@@ -70,5 +75,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 153-01-PLAN.md (Phase 153 complete)
+Stopped at: Completed 154-01-PLAN.md
 Resume file: None
