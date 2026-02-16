@@ -332,6 +332,36 @@ class X402FetchResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# WalletConnect models
+# ---------------------------------------------------------------------------
+
+
+class WcPairingResponse(BaseModel):
+    uri: str
+    qr_code: str = Field(alias="qrCode")
+    expires_at: int = Field(alias="expiresAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class WcSessionInfo(BaseModel):
+    wallet_id: str = Field(alias="walletId")
+    topic: str
+    peer_name: Optional[str] = Field(None, alias="peerName")
+    peer_url: Optional[str] = Field(None, alias="peerUrl")
+    chain_id: str = Field(alias="chainId")
+    owner_address: str = Field(alias="ownerAddress")
+    expiry: int
+    created_at: int = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class WcDisconnectResponse(BaseModel):
+    disconnected: bool
+
+
+# ---------------------------------------------------------------------------
 # Policy models (reference for REST API /v1/policies users)
 # ---------------------------------------------------------------------------
 

@@ -369,6 +369,31 @@ export interface X402FetchResponse {
 }
 
 // ---------------------------------------------------------------------------
+// WalletConnect Responses
+// ---------------------------------------------------------------------------
+
+export interface WcPairingResponse {
+  uri: string;
+  qrCode: string;
+  expiresAt: number;
+}
+
+export interface WcSessionResponse {
+  walletId: string;
+  topic: string;
+  peerName: string | null;
+  peerUrl: string | null;
+  chainId: string;
+  ownerAddress: string;
+  expiry: number;
+  createdAt: number;
+}
+
+export interface WcDisconnectResponse {
+  disconnected: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Policy Types (reference for REST API /v1/policies users)
 // ---------------------------------------------------------------------------
 

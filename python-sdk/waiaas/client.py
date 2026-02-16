@@ -27,6 +27,9 @@ from waiaas.models import (
     WalletBalance,
     WalletInfo,
     WalletNetworkInfo,
+    WcDisconnectResponse,
+    WcPairingResponse,
+    WcSessionInfo,
     X402FetchRequest,
     X402FetchResponse,
 )
@@ -387,3 +390,42 @@ class WAIaaSClient:
         body_dict = request.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request("POST", "/v1/x402/fetch", json_body=body_dict)
         return X402FetchResponse.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # WalletConnect API
+    # -----------------------------------------------------------------
+
+    async def wc_connect(self) -> WcPairingResponse:
+        """POST /v1/wallet/wc/pair -- Start WalletConnect pairing.
+
+        Returns a WC URI and QR code that the wallet owner can use
+        to connect their external wallet (MetaMask, Phantom, etc).
+
+        Returns:
+            WcPairingResponse with uri, qr_code, and expires_at.
+        """
+        resp = await self._request("POST", "/v1/wallet/wc/pair")
+        return WcPairingResponse.model_validate(resp.json())
+
+    async def wc_status(self) -> WcSessionInfo:
+        """GET /v1/wallet/wc/session -- Get WalletConnect session status.
+
+        Returns session info (peer wallet, chain, expiry) or raises
+        an error if no active session exists.
+
+        Returns:
+            WcSessionInfo with wallet_id, topic, peer info, chain_id, expiry.
+        """
+        resp = await self._request("GET", "/v1/wallet/wc/session")
+        return WcSessionInfo.model_validate(resp.json())
+
+    async def wc_disconnect(self) -> WcDisconnectResponse:
+        """DELETE /v1/wallet/wc/session -- Disconnect WalletConnect session.
+
+        After disconnecting, a new pairing must be initiated to reconnect.
+
+        Returns:
+            WcDisconnectResponse with disconnected=True on success.
+        """
+        resp = await self._request("DELETE", "/v1/wallet/wc/session")
+        return WcDisconnectResponse.model_validate(resp.json())

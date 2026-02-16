@@ -56,4 +56,7 @@ export type {
   X402FetchParams,
   X402PaymentInfo,
   X402FetchResponse,
+  WcPairingResponse,
+  WcSessionResponse,
+  WcDisconnectResponse,
 } from './types.js';

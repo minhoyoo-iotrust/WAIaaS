@@ -1,13 +1,14 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 14 REST API methods with typed responses:
+ * Wraps 17 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo(), setDefaultNetwork() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - renewSession() (session management)
  * - encodeCalldata(), signTransaction() (utils)
  * - x402Fetch() (x402 auto-payment)
+ * - wcConnect(), wcStatus(), wcDisconnect() (WalletConnect)
  *
  * All methods use exponential backoff retry for 429/5xx responses.
  * sendToken() performs inline pre-validation before making the HTTP request.
@@ -43,6 +44,9 @@ import type {
   MultiNetworkAssetsResponse,
   X402FetchParams,
   X402FetchResponse,
+  WcPairingResponse,
+  WcSessionResponse,
+  WcDisconnectResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -267,6 +271,28 @@ export class WAIaaSClient {
         params,
         this.authHeaders(),
       ),
+      this.retryOptions,
+    );
+  }
+
+  // --- WalletConnect ---
+  async wcConnect(): Promise<WcPairingResponse> {
+    return withRetry(
+      () => this.http.post<WcPairingResponse>('/v1/wallet/wc/pair', {}, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  async wcStatus(): Promise<WcSessionResponse> {
+    return withRetry(
+      () => this.http.get<WcSessionResponse>('/v1/wallet/wc/session', this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  async wcDisconnect(): Promise<WcDisconnectResponse> {
+    return withRetry(
+      () => this.http.delete<WcDisconnectResponse>('/v1/wallet/wc/session', this.authHeaders()),
       this.retryOptions,
     );
   }

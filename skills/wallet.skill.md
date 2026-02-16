@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "1.5.3"
+version: "1.6.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -686,7 +686,7 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 ## 8. MCP Tools Reference
 
-The MCP server exposes 14 tools for AI agents. Key wallet management tools:
+The MCP server exposes 18 tools for AI agents. Key wallet management tools:
 
 ### set_default_network
 
@@ -795,3 +795,147 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
 | `ACTION_VALIDATION_FAILED` | 400 | Request validation failed |
 | `CHAIN_ERROR` | 502 | Blockchain RPC error |
 | `UNAUTHORIZED` | 401 | Missing or invalid auth header |
+
+## 12. WalletConnect Session Management
+
+WalletConnect allows the wallet owner to connect an external wallet (MetaMask, Phantom, etc.) to approve high-tier transactions. The daemon manages WC pairing, sessions, and signing bridges.
+
+### REST API Endpoints (sessionAuth)
+
+Session-scoped endpoints operate on the wallet bound to the session token.
+
+#### POST /v1/wallet/wc/pair -- Start WC Pairing
+
+```bash
+curl -s -X POST http://localhost:3100/v1/wallet/wc/pair \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response (200):
+```json
+{
+  "uri": "wc:abc123@2?relay-protocol=irn&symKey=xyz...",
+  "qrCode": "data:image/png;base64,iVBOR...",
+  "expiresAt": 1707000300
+}
+```
+
+Share the `uri` with the wallet owner -- they paste it into their wallet app. The `qrCode` is a base64-encoded PNG for HTML rendering contexts.
+
+#### GET /v1/wallet/wc/session -- Get WC Session Info
+
+```bash
+curl -s http://localhost:3100/v1/wallet/wc/session \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response (200):
+```json
+{
+  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
+  "topic": "abc123...",
+  "peerName": "MetaMask",
+  "peerUrl": "https://metamask.io",
+  "chainId": "eip155:1",
+  "ownerAddress": "0x1234...abcd",
+  "expiry": 1707086400,
+  "createdAt": 1707000000
+}
+```
+
+Error: `WC_NO_SESSION` (404) if no active WalletConnect session.
+
+#### DELETE /v1/wallet/wc/session -- Disconnect WC Session
+
+```bash
+curl -s -X DELETE http://localhost:3100/v1/wallet/wc/session \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response (200):
+```json
+{
+  "disconnected": true
+}
+```
+
+#### GET /v1/wallet/wc/pair/status -- Poll Pairing Status
+
+```bash
+curl -s http://localhost:3100/v1/wallet/wc/pair/status \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response (200):
+```json
+{
+  "status": "paired",
+  "peerName": "MetaMask"
+}
+```
+
+Status values: `pending` (waiting for owner to scan), `paired` (connected), `expired` (URI expired).
+
+### Admin REST API Endpoints (masterAuth)
+
+Admin endpoints operate on any wallet by ID.
+
+- `POST /v1/wallets/{id}/wc/pair` -- Start WC pairing for a specific wallet
+- `GET /v1/wallets/{id}/wc/session` -- Get WC session info for a specific wallet
+- `DELETE /v1/wallets/{id}/wc/session` -- Disconnect WC session for a specific wallet
+- `GET /v1/wallets/{id}/wc/pair/status` -- Poll pairing status for a specific wallet
+
+All admin WC endpoints use the same request/response schemas as the session-scoped versions.
+
+### MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `wc_connect` | Start WalletConnect pairing. Returns URI + QR code for the owner to connect. |
+| `wc_status` | Get WalletConnect session status (peer wallet, chain, expiry). |
+| `wc_disconnect` | Disconnect the active WalletConnect session. |
+
+### SDK Methods
+
+#### TypeScript SDK
+
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: 'wai_sess_...' });
+
+// Start WC pairing
+const pairing = await client.wcConnect();
+console.log(pairing.uri);      // Share with wallet owner
+console.log(pairing.qrCode);   // Base64 PNG for display
+console.log(pairing.expiresAt); // Expiry timestamp
+
+// Check session status
+const session = await client.wcStatus();
+console.log(session.peerName, session.chainId, session.ownerAddress);
+
+// Disconnect
+const result = await client.wcDisconnect();
+console.log(result.disconnected); // true
+```
+
+#### Python SDK
+
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
+    # Start WC pairing
+    pairing = await client.wc_connect()
+    print(pairing.uri)         # Share with wallet owner
+    print(pairing.qr_code)     # Base64 PNG for display
+    print(pairing.expires_at)  # Expiry timestamp
+
+    # Check session status
+    session = await client.wc_status()
+    print(session.peer_name, session.chain_id, session.owner_address)
+
+    # Disconnect
+    result = await client.wc_disconnect()
+    print(result.disconnected)  # True
+```
