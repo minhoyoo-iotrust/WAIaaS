@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 144 of 145 (Admin UI Integration)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase
 Status: Ready
-Last activity: 2026-02-16 -- 143-03 Kill Switch 확인 대화 + 세션 발급 + 재연결 테스트 완료 (Phase 143 완료)
+Last activity: 2026-02-16 -- 144-01 Kill Switch 3-state UI + Telegram Users 페이지 완료
 
-Progress: [#########░░░░░] 71% (10/14 plans)
+Progress: [##########░░░░] 79% (11/14 plans)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [#########░░░░░] 71% (10/14 plans)
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
 | 143. Telegram Bot | 3/3 | 34m | 11m |
-| 144. Admin UI Integration | 0/2 | - | - |
+| 144. Admin UI Integration | 1/2 | 6m | 6m |
 | 145. Docker | 0/2 | - | - |
 
 ## Accumulated Context
@@ -72,14 +72,17 @@ Full log in PROJECT.md and milestones/.
 - v1.6: 인라인 키보드 빌더를 telegram-keyboard.ts로 분리 (buildConfirmKeyboard/buildWalletSelectKeyboard/buildApprovalKeyboard)
 - v1.6: /newsession에서 JWT 직접 발급 (jwtSecretManager.signToken + sessions INSERT + 감사 로그)
 - v1.6: vi.useFakeTimers로 backoff 테스트 제어 (vi.waitFor flaky 방지)
+- v1.6: Kill Switch 3-state UI (settings-section -> settings-category 패턴, ACTIVE/SUSPENDED/LOCKED 상태별 버튼)
+- v1.6: Telegram Users 관리 페이지 (Table + Badge + Modal 패턴, Approve/Delete 액션)
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param
+- Pre-existing 3 sessions.test.tsx failures -- not blocking
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 143-03-PLAN.md (Kill Switch 확인 대화 + 세션 발급 + 재연결 테스트 -- Phase 143 완료)
+Stopped at: Completed 144-01-PLAN.md (Kill Switch 3-state UI + Telegram Users 페이지 -- Phase 144 Plan 1 완료)
 Resume file: None
