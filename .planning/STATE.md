@@ -5,35 +5,36 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 146 - WC 인프라 세팅 완료
+**Current focus:** Phase 147 - QR 페어링 + REST API
 
 ## Current Position
 
-Phase: 1 of 5 (Phase 146: WC 인프라 세팅)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 146 Complete
-Last activity: 2026-02-16 -- 146-02 Admin Settings + WC 테스트 완료
+Phase: 2 of 5 (Phase 147: QR 페어링 + REST API)
+Plan: 1 of 2 in current phase
+Status: 147-01 Complete
+Last activity: 2026-02-16 -- 147-01 QR 페어링 REST API 완료
 
-Progress: [====================] 20%
+Progress: [========............] 40%
 
 ## Performance Metrics
 
-**Cumulative:** 34 milestones, 145 phases, 317 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
+**Cumulative:** 34 milestones, 145 phases, 318 plans, 899 reqs, ~2,294 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 9min
-- Total execution time: 0.3 hours
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 146 | 2/2 | 18min | 9min |
+| 147 | 1/2 | 8min | 8min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 6min
-- Trend: improving
+- Last 5 plans: 12min, 6min, 8min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -55,6 +56,9 @@ Recent decisions affecting current work:
 - [146-01]: SignClient storage 옵션에 as any 캐스팅 (abstract class vs interface)
 - [146-02]: walletconnect hot-reload는 로그만 출력 (SignClient 재초기화 불필요, 데몬 재시작 권장)
 - [146-02]: WcSessionService private 메서드는 (service as any) 캐스팅으로 테스트
+- [147-01]: requiredNamespaces를 Record<string, ...> 별도 변수로 추출 (TS computed property 에러 해결)
+- [147-01]: wc.ts 라우트에서 raw SQL 사용 (Drizzle query builder 대신, 기존 패턴과 일치)
+- [147-01]: pendingPairing 중복 시 기존 URI 재사용 (signClient.connect() 재호출 방지)
 
 ### Blockers/Concerns
 
@@ -68,5 +72,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 146-02-PLAN.md (Phase 146 complete)
+Stopped at: Completed 147-01-PLAN.md
 Resume file: None
