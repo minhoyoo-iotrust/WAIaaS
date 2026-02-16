@@ -34,11 +34,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. DB v16 마이그레이션으로 wc_sessions 테이블과 pending_approvals.approval_channel 컬럼이 존재한다
   3. WC SDK의 세션 데이터가 SQLite에 영속화되어 데몬 재시작 후에도 기존 세션이 복구된다
   4. Admin Settings에서 walletconnect.project_id와 relay URL을 변경할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 146-01: WcSessionService + SignClient 초기화/종료 + DB v16 마이그레이션
-- [ ] 146-02: SqliteKeyValueStorage + 세션 복구 + Admin Settings 확장
+- [ ] 146-01-PLAN.md -- WcSessionService + SignClient 초기화/종료 + DB v16 마이그레이션
+- [ ] 146-02-PLAN.md -- Admin Settings 확장 + 세션 복구 테스트 + migration-chain 업데이트
 
 ### Phase 147: QR 페어링 + REST API
 **Goal**: Owner가 외부 지갑으로 QR 코드를 스캔하여 WC 세션을 성립시키고, 세션 상태를 관리할 수 있다
@@ -115,4 +115,4 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 
 ---
 *Roadmap created: 2026-02-16*
-*Last updated: 2026-02-16 -- v1.6.1 로드맵 생성*
+*Last updated: 2026-02-16 -- Phase 146 계획 수립*
