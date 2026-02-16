@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 4 of 5 (Phase 149: Telegram Fallback)
-Plan: 1 of 2 in current phase
-Status: 149-01 Complete
-Last activity: 2026-02-16 -- 149-01 WcSigningBridge Telegram fallback + EventBus + 알림
+Plan: 2 of 2 in current phase
+Status: 149-02 Complete (Phase 149 complete)
+Last activity: 2026-02-16 -- 149-02 WcSigningBridge fallback 테스트 13개
 
-Progress: [==============......] 70%
+Progress: [================....] 80%
 
 ## Performance Metrics
 
-**Cumulative:** 34 milestones, 145 phases, 321 plans, 899 reqs, ~2,323 tests, ~207,902 LOC
+**Cumulative:** 34 milestones, 145 phases, 322 plans, 899 reqs, ~2,336 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 7min
-- Total execution time: 0.8 hours
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [==============......] 70%
 | 146 | 2/2 | 18min | 9min |
 | 147 | 2/2 | 13min | 6.5min |
 | 148 | 2/2 | 12min | 6min |
-| 149 | 1/2 | 6min | 6min |
+| 149 | 2/2 | 10min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 8min, 5min, 5min, 7min, 6min
+- Last 5 plans: 5min, 5min, 7min, 6min, 4min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -72,6 +72,8 @@ Recent decisions affecting current work:
 - [149-01]: fallbackToTelegram은 isApprovalStillPending 체크로 이미 처리된 approval 보호
 - [149-01]: 사용자 명시적 거부(4001/5000)는 fallback 없이 기존 reject 유지
 - [149-01]: notificationService/eventBus는 optional DI (WC 없이도 데몬 정상 동작)
+- [149-02]: createBridge 헬퍼에 notificationService/eventBus 옵셔널 파라미터 추가 (기존 테스트 호환)
+- [149-02]: 통합 테스트에서 mock requestSignature 내부 eventBus.emit으로 fire-and-forget 비동기 검증
 
 ### Blockers/Concerns
 
@@ -85,5 +87,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 149-01-PLAN.md
+Stopped at: Completed 149-02-PLAN.md (Phase 149 complete)
 Resume file: None
