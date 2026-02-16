@@ -132,11 +132,11 @@ Plans:
   1. CLI Daemon 32건(init/start/stop/status/signal/exit codes/E2E)이 모두 통과한다
   2. Docker 18건(build/compose/volume/env/grace/secrets/healthcheck/non-root)이 모두 통과한다
   3. Telegram Bot 34건(polling/commands/callbacks/auth/format/shutdown)이 모두 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 158-01: CLI Daemon 플랫폼 테스트
-- [ ] 158-02: Docker + Telegram Bot 플랫폼 테스트
+- [ ] 158-01-PLAN.md — CLI Daemon 플랫폼 테스트 32건 (init/start/stop/status/signal/exit codes/E2E)
+- [ ] 158-02-PLAN.md — Docker 18건 + Telegram Bot 34건 플랫폼 테스트
 
 ### Phase 159: CI/CD 파이프라인
 **Goal**: GitHub Actions 4-stage CI/CD 파이프라인이 동작하여 push/PR/nightly/release 각 시점에 적절한 테스트가 자동 실행되는 상태
