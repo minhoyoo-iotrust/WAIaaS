@@ -80,10 +80,11 @@ Plans:
   1. WC 세션이 없거나 서명 요청 타임아웃 시 Telegram Bot으로 승인 요청이 자동 전환된다
   2. 동일 거래에 대해 WC와 Telegram에서 동시 승인이 불가능하다 (단일 승인 소스 원칙)
   3. 승인 채널 전환 시 EventBus 이벤트가 발생하고 알림이 전송된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 149-01: 채널 우선순위 전략 + Telegram fallback + 단일 승인 소스 + 채널 전환 알림
+- [ ] 149-01-PLAN.md -- WcSigningBridge fallback 로직 + EventBus/알림 인프라 + Telegram approval_channel + DI 배선
+- [ ] 149-02-PLAN.md -- fallback 단위 테스트 + 채널 전환 통합 테스트
 
 ### Phase 150: Admin UI + DX
 **Goal**: WC 세션 관리가 Admin UI, MCP, SDK, Skill 파일 전체 인터페이스에서 가능하다
@@ -109,10 +110,10 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 |-------|-----------|----------------|--------|-----------|
 | 146. WC 인프라 세팅 | v1.6.1 | 2/2 | Complete | 2026-02-16 |
 | 147. QR 페어링 + REST API | v1.6.1 | 2/2 | Complete | 2026-02-16 |
-| 148. WC 서명 요청 | v1.6.1 | 0/2 | Not started | - |
-| 149. Telegram Fallback | v1.6.1 | 0/1 | Not started | - |
+| 148. WC 서명 요청 | v1.6.1 | 2/2 | Complete | 2026-02-16 |
+| 149. Telegram Fallback | v1.6.1 | 0/2 | Not started | - |
 | 150. Admin UI + DX | v1.6.1 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-16*
-*Last updated: 2026-02-16 -- Phase 148 계획 수립*
+*Last updated: 2026-02-16 -- Phase 149 계획 수립*
