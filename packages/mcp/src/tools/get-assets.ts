@@ -13,10 +13,14 @@ export function registerGetAssets(server: McpServer, apiClient: ApiClient, walle
     withWalletPrefix('Get all assets (native + tokens) held by the wallet.', walletContext?.walletName),
     {
       network: z.string().optional().describe("Query assets for specific network. Use 'all' to get assets for all networks in the wallet's environment. Defaults to wallet default network."),
+      display_currency: z.string().optional().describe('Display currency for asset value conversion (e.g. KRW, EUR). Defaults to server setting.'),
     },
     async (args) => {
-      const qs = args.network ? '?network=' + encodeURIComponent(args.network) : '';
-      const result = await apiClient.get('/v1/wallet/assets' + qs);
+      const params = new URLSearchParams();
+      if (args.network) params.set('network', args.network);
+      if (args.display_currency) params.set('display_currency', args.display_currency);
+      const qs = params.toString();
+      const result = await apiClient.get('/v1/wallet/assets' + (qs ? '?' + qs : ''));
       return toToolResult(result);
     },
   );

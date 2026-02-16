@@ -13,7 +13,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, validateNetworkEnvironment, getNetworksForEnvironment } from '@waiaas/core';
-import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IForexRateService } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -29,12 +29,16 @@ import {
   openApiValidationHook,
 } from './openapi-schemas.js';
 import type { TokenRegistryService } from '../../infrastructure/token-registry/index.js';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
+import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
 
 export interface WalletRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   adapterPool: AdapterPool | null;
   config: DaemonConfig | null;
   tokenRegistryService: TokenRegistryService | null;
+  forexRateService?: IForexRateService;
+  settingsService?: SettingsService;
 }
 
 /**
@@ -83,6 +87,7 @@ const walletBalanceRoute = createRoute({
       network: z.string().optional().describe(
         "Network to query. Use 'all' to get balances for all networks in the wallet's environment.",
       ),
+      display_currency: z.string().optional().describe('Display currency code for balance conversion (e.g. KRW, EUR). Defaults to server setting.'),
     }),
   },
   responses: {
@@ -104,6 +109,7 @@ const walletAssetsRoute = createRoute({
       network: z.string().optional().describe(
         "Network to query. Use 'all' to get assets for all networks in the wallet's environment.",
       ),
+      display_currency: z.string().optional().describe('Display currency code for asset value conversion (e.g. KRW, EUR). Defaults to server setting.'),
     }),
   },
   responses: {
@@ -240,7 +246,10 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     }
 
     // network query parameter -> specific network, fallback to wallet.defaultNetwork
-    const { network: queryNetwork } = c.req.valid('query');
+    const { network: queryNetwork, display_currency: queryCurrency } = c.req.valid('query');
+
+    // Resolve display currency from query param or server setting
+    const currencyCode = resolveDisplayCurrencyCode(queryCurrency, deps.settingsService);
 
     // --- network=all: return balances for all environment networks ---
     if (queryNetwork === 'all') {
@@ -316,6 +325,10 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     const balanceInfo = await adapter.getBalance(wallet.publicKey);
 
+    // Balance displayBalance: requires price oracle (USD price of native token) + forex rate
+    // Currently null -- balance USD conversion is not available without price data in this context
+    const displayBalance: string | null = null;
+
     return c.json(
       {
         walletId: wallet.id,
@@ -325,6 +338,8 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
         balance: balanceInfo.balance.toString(),
         decimals: balanceInfo.decimals,
         symbol: balanceInfo.symbol,
+        displayBalance,
+        displayCurrency: currencyCode ?? null,
       },
       200,
     );
@@ -345,7 +360,11 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     }
 
     // network query parameter -> specific network, fallback to wallet.defaultNetwork
-    const { network: queryNetwork } = c.req.valid('query');
+    const { network: queryNetwork, display_currency: queryCurrency } = c.req.valid('query');
+
+    // Resolve display currency from query param or server setting
+    const currencyCode = resolveDisplayCurrencyCode(queryCurrency, deps.settingsService);
+    const displayRate = await fetchDisplayRate(currencyCode, deps.forexRateService);
 
     // --- network=all: return assets for all environment networks ---
     if (queryNetwork === 'all') {
@@ -447,7 +466,9 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
           decimals: a.decimals,
           isNative: a.isNative,
           usdValue: a.usdValue,
+          displayValue: toDisplayAmount(a.usdValue ?? null, currencyCode, displayRate),
         })),
+        displayCurrency: currencyCode ?? null,
       },
       200,
     );

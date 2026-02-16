@@ -41,7 +41,8 @@ import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
-import type { IPriceOracle } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
+import { formatDisplayCurrency } from '@waiaas/core';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
 
@@ -91,6 +92,10 @@ export interface PipelineContext {
   priceOracle?: IPriceOracle;
   // v1.5: settings service for CoinGecko hint
   settingsService?: SettingsService;
+  // v1.5.3: forex rate service for display currency conversion
+  forexRateService?: IForexRateService;
+  // v1.5.3: cached amountUsd from Stage 3 for Stage 5/6 display_amount
+  amountUsd?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +118,31 @@ function getRequestTo(req: SendTransactionRequest | TransactionRequest): string 
 function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
   if ('memo' in req && typeof req.memo === 'string') return req.memo;
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: resolve display amount for notification messages
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert amountUsd to display currency string for notification variables.
+ * Returns empty string on failure (graceful fallback -- no display_amount in message).
+ */
+async function resolveDisplayAmount(
+  amountUsd: number | null | undefined,
+  settingsService?: SettingsService,
+  forexRateService?: IForexRateService,
+): Promise<string> {
+  if (!amountUsd || !settingsService || !forexRateService) return '';
+  try {
+    const currency = settingsService.get('display.currency') ?? 'USD';
+    if (currency === 'USD') return `($${amountUsd.toFixed(2)})`;
+    const rate = await forexRateService.getRate(currency as CurrencyCode);
+    if (!rate) return `($${amountUsd.toFixed(2)})`;
+    return `(${formatDisplayCurrency(amountUsd, currency, rate.rate)})`;
+  } catch {
+    return '';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -242,10 +272,12 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   });
 
   // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
+  // display_amount is empty at Stage 1 -- amountUsd not yet computed
   void ctx.notificationService?.notify('TX_REQUESTED', ctx.walletId, {
     amount: amount ?? '0',
     to: toAddress ?? '',
     type: txType,
+    display_amount: '',
   }, { txId: ctx.txId });
 }
 
@@ -425,6 +457,15 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     ctx.delaySeconds = evaluation.delaySeconds;
   }
 
+  // [Phase 139] Cache amountUsd on context for Stage 5/6 display_amount
+  const stageAmountUsd = priceResult?.type === 'success' ? priceResult.usdAmount : undefined;
+  ctx.amountUsd = stageAmountUsd;
+
+  // [Phase 139] Resolve display amount for notifications
+  const displayAmount = await resolveDisplayAmount(
+    stageAmountUsd ?? null, ctx.settingsService, ctx.forexRateService,
+  );
+
   // [Phase 136] Cumulative spending warning notification (80% threshold)
   if (evaluation.cumulativeWarning) {
     const w = evaluation.cumulativeWarning;
@@ -433,6 +474,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       spent: String(w.spent.toFixed(2)),
       limit: String(w.limit.toFixed(2)),
       ratio: String(Math.round(w.ratio * 100)),
+      display_amount: displayAmount,
     }, { txId: ctx.txId });
   }
 
@@ -443,6 +485,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       amount: getRequestAmount(ctx.request),
       to: getRequestTo(ctx.request),
       reason,
+      display_amount: displayAmount,
     }, { txId: ctx.txId });
   }
 
@@ -643,6 +686,11 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
   const reqAmount = getRequestAmount(ctx.request);
   const reqTo = getRequestTo(ctx.request);
 
+  // [Phase 139] Resolve display amount once for all Stage 5 notifications
+  const displayAmount = await resolveDisplayAmount(
+    ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
+  );
+
   let retryCount = 0;
 
   // Outer buildLoop: STALE errors return here to rebuild from Stage 5a
@@ -664,6 +712,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
           reason: simResult.error ?? 'Simulation failed',
           amount: reqAmount,
+          display_amount: displayAmount,
         }, { txId: ctx.txId });
 
         throw new WAIaaSError('SIMULATION_FAILED', {
@@ -697,6 +746,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         txHash: ctx.submitResult.txHash,
         amount: reqAmount,
         to: reqTo,
+        display_amount: displayAmount,
       }, { txId: ctx.txId });
 
       return; // Success -- exit the loop
@@ -720,6 +770,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
           void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
             reason: err.message,
             amount: reqAmount,
+            display_amount: displayAmount,
           }, { txId: ctx.txId });
 
           throw new WAIaaSError('CHAIN_ERROR', {
@@ -740,6 +791,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
             void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
               reason: `${err.code} (max retries exceeded)`,
               amount: reqAmount,
+              display_amount: displayAmount,
             }, { txId: ctx.txId });
 
             throw new WAIaaSError('CHAIN_ERROR', {
@@ -766,6 +818,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
             void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
               reason: `${err.code} (stale retry exhausted)`,
               amount: reqAmount,
+              display_amount: displayAmount,
             }, { txId: ctx.txId });
 
             throw new WAIaaSError('CHAIN_ERROR', {
@@ -804,6 +857,11 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
   const reqAmount = getRequestAmount(ctx.request);
   const reqTo = getRequestTo(ctx.request);
 
+  // [Phase 139] Resolve display amount for Stage 6 notifications
+  const displayAmount = await resolveDisplayAmount(
+    ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
+  );
+
   const result = await ctx.adapter.waitForConfirmation(ctx.submitResult!.txHash, 30_000);
 
   if (result.status === 'confirmed' || result.status === 'finalized') {
@@ -819,6 +877,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       txHash: ctx.submitResult!.txHash,
       amount: reqAmount,
       to: reqTo,
+      display_amount: displayAmount,
     }, { txId: ctx.txId });
 
   } else if (result.status === 'failed') {
@@ -832,6 +891,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
     void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
       reason: 'Transaction reverted on-chain',
       amount: reqAmount,
+      display_amount: displayAmount,
     }, { txId: ctx.txId });
 
     throw new WAIaaSError('CHAIN_ERROR', {

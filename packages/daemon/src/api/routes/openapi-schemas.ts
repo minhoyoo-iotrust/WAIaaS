@@ -108,6 +108,8 @@ export const WalletBalanceResponseSchema = z
     balance: z.string(),
     decimals: z.number().int(),
     symbol: z.string(),
+    displayBalance: z.string().nullable().optional(),
+    displayCurrency: z.string().nullable().optional(),
   })
   .openapi('WalletBalanceResponse');
 
@@ -181,6 +183,8 @@ export const TxDetailResponseSchema = z
     txHash: z.string().nullable(),
     error: z.string().nullable(),
     createdAt: z.number().int().nullable(),
+    displayAmount: z.string().nullable().optional(),
+    displayCurrency: z.string().nullable().optional(),
   })
   .openapi('TxDetailResponse');
 
@@ -348,8 +352,10 @@ export const WalletAssetsResponseSchema = z
         decimals: z.number().int(),
         isNative: z.boolean(),
         usdValue: z.number().optional(),
+        displayValue: z.string().nullable().optional(),
       }),
     ),
+    displayCurrency: z.string().nullable().optional(),
   })
   .openapi('WalletAssetsResponse');
 

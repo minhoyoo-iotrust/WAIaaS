@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks';
 import { apiGet, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { formatUptime, formatDate } from '../utils/format';
+import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
 import { Badge, Button } from '../components/form';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
@@ -16,6 +17,7 @@ interface RecentTransaction {
   status: string;
   toAddress: string | null;
   amount: string | null;
+  amountUsd: number | null;
   network: string | null;
   createdAt: number | null;
 }
@@ -69,45 +71,56 @@ function StatCard({ label, value, loading, badge, href }: {
   return <div class="stat-card">{content}</div>;
 }
 
-const txColumns: Column<RecentTransaction>[] = [
-  {
-    key: 'createdAt',
-    header: 'Time',
-    render: (tx) => tx.createdAt ? formatDate(tx.createdAt) : '\u2014',
-  },
-  {
-    key: 'walletName',
-    header: 'Wallet',
-    render: (tx) => tx.walletName ?? tx.walletId.slice(0, 8),
-  },
-  {
-    key: 'type',
-    header: 'Type',
-  },
-  {
-    key: 'amount',
-    header: 'Amount',
-    render: (tx) => tx.amount ?? '\u2014',
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    render: (tx) => {
-      const variant: 'success' | 'danger' | 'warning' =
-        tx.status === 'CONFIRMED'
-          ? 'success'
-          : tx.status === 'FAILED'
-            ? 'danger'
-            : 'warning';
-      return <Badge variant={variant}>{tx.status}</Badge>;
+function buildTxColumns(
+  displayCurrency: string,
+  displayRate: number | null,
+): Column<RecentTransaction>[] {
+  return [
+    {
+      key: 'createdAt',
+      header: 'Time',
+      render: (tx) => tx.createdAt ? formatDate(tx.createdAt) : '\u2014',
     },
-  },
-];
+    {
+      key: 'walletName',
+      header: 'Wallet',
+      render: (tx) => tx.walletName ?? tx.walletId.slice(0, 8),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      render: (tx) => {
+        if (!tx.amount) return '\u2014';
+        const display = formatWithDisplay(tx.amountUsd, displayCurrency, displayRate);
+        return display ? `${tx.amount} (${display})` : tx.amount;
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (tx) => {
+        const variant: 'success' | 'danger' | 'warning' =
+          tx.status === 'CONFIRMED'
+            ? 'success'
+            : tx.status === 'FAILED'
+              ? 'danger'
+              : 'warning';
+        return <Badge variant={variant}>{tx.status}</Badge>;
+      },
+    },
+  ];
+}
 
 export default function DashboardPage() {
   const data = useSignal<AdminStatus | null>(null);
   const loading = useSignal(true);
   const error = useSignal<string | null>(null);
+  const displayCurrency = useSignal<string>('USD');
+  const displayRate = useSignal<number | null>(1);
 
   const fetchStatus = async () => {
     loading.value = true;
@@ -128,6 +141,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchStatus();
+    // Load display currency settings (fire-and-forget, graceful fallback)
+    fetchDisplayCurrency()
+      .then(({ currency, rate }) => {
+        displayCurrency.value = currency;
+        displayRate.value = rate;
+      })
+      .catch(() => { /* fallback to USD */ });
     const interval = setInterval(fetchStatus, 30_000);
     return () => clearInterval(interval);
   }, []);
@@ -180,7 +200,7 @@ export default function DashboardPage() {
       <div style={{ marginTop: 'var(--space-6)' }}>
         <h3 style={{ marginBottom: 'var(--space-3)' }}>Recent Activity</h3>
         <Table
-          columns={txColumns}
+          columns={buildTxColumns(displayCurrency.value, displayRate.value)}
           data={data.value?.recentTransactions ?? []}
           loading={isInitialLoad}
           emptyMessage="No recent transactions"

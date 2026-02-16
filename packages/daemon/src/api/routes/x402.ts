@@ -299,6 +299,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
       amount: selected.amount,
       to: selected.payTo,
       type: 'X402_PAYMENT',
+      display_amount: '', // x402: USD-based payments, no forex conversion needed
     }, { txId });
 
     // B7. USD resolution for SPENDING_LIMIT evaluation
@@ -333,6 +334,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
       void deps.notificationService?.notify('TX_FAILED', walletId, {
         reason: evaluation.reason ?? 'Policy denied',
         amount: selected.amount,
+        display_amount: '',
       }, { txId });
       throw new WAIaaSError('POLICY_DENIED', {
         message: evaluation.reason ?? 'Transaction denied by spending limit policy',
@@ -349,6 +351,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
       void deps.notificationService?.notify('TX_FAILED', walletId, {
         reason: 'x402 payment requires owner approval (amount too high)',
         amount: selected.amount,
+        display_amount: '',
       }, { txId });
       throw new WAIaaSError('X402_APPROVAL_REQUIRED', {
         message: 'x402 payment requires owner approval (amount too high)',
@@ -369,6 +372,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         void deps.notificationService?.notify('TX_FAILED', walletId, {
           reason: `Delay ${delaySeconds}s exceeds request timeout ${requestTimeout}s`,
           amount: selected.amount,
+          display_amount: '',
         }, { txId });
         throw new WAIaaSError('X402_DELAY_TIMEOUT', {
           message: `Delay of ${delaySeconds}s exceeds x402 request timeout of ${requestTimeout}s`,
@@ -428,6 +432,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         void deps.notificationService?.notify('TX_FAILED', walletId, {
           reason: 'Payment was rejected by the resource server after retry',
           amount: selected.amount,
+          display_amount: '',
         }, { txId });
         throw new WAIaaSError('X402_PAYMENT_REJECTED', {
           message: 'Payment was rejected by the resource server after retry',
@@ -444,6 +449,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         void deps.notificationService?.notify('TX_FAILED', walletId, {
           reason: `Resource server returned ${retryResponse.status} after payment`,
           amount: selected.amount,
+          display_amount: '',
         }, { txId });
         throw new WAIaaSError('X402_SERVER_ERROR', {
           message: `Resource server returned ${retryResponse.status} after payment`,
@@ -461,6 +467,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         txHash: '',
         amount: selected.amount,
         to: selected.payTo,
+        display_amount: '',
       }, { txId });
 
       // C6. Build response
@@ -496,6 +503,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
       void deps.notificationService?.notify('TX_FAILED', walletId, {
         reason: error instanceof Error ? error.message : 'Unknown payment error',
         amount: selected.amount,
+        display_amount: '',
       }, { txId });
 
       throw new WAIaaSError('X402_SERVER_ERROR', {

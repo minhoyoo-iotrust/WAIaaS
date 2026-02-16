@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 138 - Forex 환산 서비스
+**Current focus:** Phase 139 - 표시 통화 통합
 
 ## Current Position
 
-Phase: 138 of 139 (Forex 환산 서비스)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: 138-01 complete, 138-02 complete -- Phase 138 done
-Last activity: 2026-02-16 -- 138-02 SettingsService display + CurrencySelect + daemon ForexRateService 통합
+Phase: 139 of 139 (표시 통화 통합)
+Plan: 2 of 2 in current phase
+Status: 139-02 complete -- REST API + MCP display_currency 통합
+Last activity: 2026-02-16 -- 139-02 REST API/MCP display_currency + 스킬 파일
 
-Progress: [████████░░] 75% (6/8 plans)
+Progress: [██████████] 100% (8/8 plans)
 
 ## Performance Metrics
 
@@ -51,6 +51,13 @@ Recent:
 - 138-02: CurrencySelect 43개 통화 인라인 -- CSP로 daemon import 불가
 - 138-02: GET/PUT /admin/settings 응답에 oracle+display 포함 (기존 누락 보완)
 - 138-02: /v1/admin/forex/* masterAuth 등록 (138-01 누락 보안 수정)
+- 139-01: Admin display-currency.ts에 core 로직 인라인 (CSP 제약)
+- 139-01: display_amount는 optional variable -- 미치환 시 자동 제거 + trim
+- 139-01: Stage 1 TX_REQUESTED는 display_amount='' (amountUsd 미산출 시점)
+- 139-01: PipelineContext.amountUsd에 Stage 3 결과 캐시 (DB 재조회 방지)
+- 139-02: display-currency-helper.ts 별도 파일 -- transactions.ts/wallet.ts 공통 사용
+- 139-02: balance displayBalance는 null 반환 -- 네이티브 토큰 USD 변환은 향후 확장
+- 139-02: fetchDisplayRate 한 번 호출 후 items에 재사용 -- N+1 API 호출 방지
 
 ### Blockers/Concerns
 
@@ -61,5 +68,5 @@ Recent:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 138-02-PLAN.md (Phase 138 done)
+Stopped at: Completed 139-02-PLAN.md (v1.5.3 Phase 139 complete)
 Resume file: None

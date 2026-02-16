@@ -13,10 +13,14 @@ export function registerGetBalance(server: McpServer, apiClient: ApiClient, wall
     withWalletPrefix('Get the current balance of the wallet.', walletContext?.walletName),
     {
       network: z.string().optional().describe("Query balance for specific network. Use 'all' to get balances for all networks in the wallet's environment. Defaults to wallet default network."),
+      display_currency: z.string().optional().describe('Display currency for balance conversion (e.g. KRW, EUR). Defaults to server setting.'),
     },
     async (args) => {
-      const qs = args.network ? '?network=' + encodeURIComponent(args.network) : '';
-      const result = await apiClient.get('/v1/wallet/balance' + qs);
+      const params = new URLSearchParams();
+      if (args.network) params.set('network', args.network);
+      if (args.display_currency) params.set('display_currency', args.display_currency);
+      const qs = params.toString();
+      const result = await apiClient.get('/v1/wallet/balance' + (qs ? '?' + qs : ''));
       return toToolResult(result);
     },
   );

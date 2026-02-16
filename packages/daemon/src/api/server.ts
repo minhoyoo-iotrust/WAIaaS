@@ -267,6 +267,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         adapterPool: deps.adapterPool ?? null,
         config: deps.config ?? null,
         tokenRegistryService,
+        forexRateService: deps.forexRateService,
+        settingsService: deps.settingsService,
       }),
     );
   }
@@ -296,6 +298,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         notificationService: deps.notificationService,
         priceOracle: deps.priceOracle,
         settingsService: deps.settingsService,
+        forexRateService: deps.forexRateService,
       }),
     );
   }

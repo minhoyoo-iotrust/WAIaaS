@@ -126,14 +126,14 @@ export const messages: Messages = {
   },
   // Notification templates (22 event types)
   notifications: {
-    TX_REQUESTED: { title: 'Transaction Requested', body: 'Wallet {walletId} requested {amount} transfer to {to}' },
+    TX_REQUESTED: { title: 'Transaction Requested', body: 'Wallet {walletId} requested {amount} transfer to {to} {display_amount}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
-    TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain' },
-    TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount}' },
-    TX_FAILED: { title: 'Transaction Failed', body: 'Transaction {txId} failed: {error}' },
+    TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain {display_amount}' },
+    TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount} {display_amount}' },
+    TX_FAILED: { title: 'Transaction Failed', body: 'Transaction {txId} failed: {error} {display_amount}' },
     TX_CANCELLED: { title: 'Transaction Cancelled', body: 'Transaction {txId} cancelled' },
     TX_DOWNGRADED_DELAY: { title: 'Transaction Delayed', body: 'Transaction {txId} downgraded to delay queue ({seconds}s cooldown)' },
-    TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to}' },
+    TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to} {display_amount}' },
     TX_APPROVAL_EXPIRED: { title: 'Approval Expired', body: 'Approval for transaction {txId} has expired' },
     POLICY_VIOLATION: { title: 'Policy Violation', body: 'Wallet {walletId} policy violation: {reason}. Policy: {policyType}. Manage: {adminLink}' },
     WALLET_SUSPENDED: { title: 'Wallet Suspended', body: 'Wallet {walletId} has been suspended: {reason}' },
@@ -147,7 +147,7 @@ export const messages: Messages = {
     OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from wallet {walletId}' },
     OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for wallet {walletId}' },
     DAILY_SUMMARY: { title: 'Daily Summary', body: 'Wallets: {walletCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
-    CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: 'Wallet {walletId} {type} spending at {ratio}% of limit (${spent} / ${limit})' },
+    CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: 'Wallet {walletId} {type} spending at {ratio}% of limit (${spent} / ${limit}) {display_amount}' },
   },
   // System messages
   system: {

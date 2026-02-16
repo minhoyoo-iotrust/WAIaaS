@@ -210,6 +210,7 @@ export async function executeSignOnly(
     amount: firstOp?.amount?.toString() ?? '0',
     to: firstOp?.to ?? '',
     type: 'SIGN',
+    display_amount: '', // sign-only: no USD conversion
   }, { txId: 'pending', signOnly: true });
 
   // Step 2: Convert ParsedOperation[] to TransactionParam[] for policy evaluation
@@ -321,6 +322,7 @@ export async function executeSignOnly(
     txHash: signed.txHash ?? '',
     amount: firstOp?.amount?.toString() ?? '0',
     to: firstOp?.to ?? '',
+    display_amount: '', // sign-only: no USD conversion
   }, { txId, signOnly: true });
 
   // Return result

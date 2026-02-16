@@ -3,7 +3,7 @@ name: "WAIaaS Transactions"
 description: "All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
-version: "1.5.1"
+version: "1.5.3"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -533,7 +533,48 @@ Policies can assign transaction tiers that determine the execution flow:
 | `X402_APPROVAL_REQUIRED` | 403 | Amount requires owner approval | Lower amount or adjust tiers |
 | `X402_SERVER_ERROR` | 502 | Server error after payment | Retry later |
 
-## 10. Sign External Transaction (sign-only)
+## 10. Display Currency
+
+All transaction query endpoints accept an optional `display_currency` query parameter to convert USD amounts to a preferred fiat currency.
+
+### Supported Endpoints
+
+| Endpoint | Parameter | Response Fields |
+|----------|-----------|-----------------|
+| `GET /v1/transactions` | `?display_currency=KRW` | `items[].displayAmount`, `items[].displayCurrency` |
+| `GET /v1/transactions/{id}` | `?display_currency=KRW` | `displayAmount`, `displayCurrency` |
+
+If `display_currency` is omitted, the server's configured display currency (Admin Settings > Display Currency) is used. If the server setting is USD, no conversion is applied.
+
+### Example
+
+```bash
+curl -s 'http://localhost:3100/v1/transactions?display_currency=KRW&limit=5' \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Response includes converted amounts:
+```json
+{
+  "items": [
+    {
+      "id": "01958f3c-9999-7000-8000-abcdef999999",
+      "amount": "1000000000",
+      "displayAmount": "\u2248\u20A9725,000",
+      "displayCurrency": "KRW",
+      "..."
+    }
+  ]
+}
+```
+
+### MCP Tools
+
+The following MCP tools support an optional `display_currency` parameter:
+- `get_transaction` -- includes `displayAmount` in response
+- `list_transactions` -- includes `displayAmount` per transaction item
+
+## 11. Sign External Transaction (sign-only)
 
 Sign an externally built unsigned transaction after policy evaluation. The signed transaction is returned without being submitted to the blockchain.
 
@@ -610,7 +651,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/sign \
 - Signed results are recorded in the transactions table with type='SIGN', status='SIGNED'
 - Amounts are accumulated in reserved_amount to prevent double-spending against SPENDING_LIMIT
 
-## 11. Encode Calldata (EVM Utility)
+## 12. Encode Calldata (EVM Utility)
 
 Encode an EVM function call into hex calldata. This utility helps construct the `calldata` parameter for `CONTRACT_CALL` transactions without needing an ABI encoding library.
 

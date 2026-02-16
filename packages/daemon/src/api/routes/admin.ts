@@ -596,6 +596,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         status: transactions.status,
         toAddress: transactions.toAddress,
         amount: transactions.amount,
+        amountUsd: transactions.amountUsd,
         network: transactions.network,
         createdAt: transactions.createdAt,
       })
@@ -613,6 +614,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       status: tx.status,
       toAddress: tx.toAddress ?? null,
       amount: tx.amount ?? null,
+      amountUsd: tx.amountUsd ?? null,
       network: tx.network ?? null,
       createdAt: tx.createdAt instanceof Date
         ? Math.floor(tx.createdAt.getTime() / 1000)
@@ -1229,6 +1231,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       status: tx.status,
       toAddress: tx.toAddress ?? null,
       amount: tx.amount ?? null,
+      amountUsd: tx.amountUsd ?? null,
       network: tx.network ?? null,
       txHash: tx.txHash ?? null,
       createdAt: tx.createdAt instanceof Date

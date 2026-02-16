@@ -13,9 +13,11 @@ export function registerGetTransaction(server: McpServer, apiClient: ApiClient, 
     withWalletPrefix('Get details of a specific transaction by ID.', walletContext?.walletName),
     {
       transaction_id: z.string().describe('Transaction ID to retrieve'),
+      display_currency: z.string().optional().describe('Display currency for amount conversion (e.g. KRW, EUR). Defaults to server setting.'),
     },
     async (args) => {
-      const result = await apiClient.get(`/v1/transactions/${args.transaction_id}`);
+      const qs = args.display_currency ? '?display_currency=' + encodeURIComponent(args.display_currency) : '';
+      const result = await apiClient.get(`/v1/transactions/${args.transaction_id}${qs}`);
       return toToolResult(result);
     },
   );
