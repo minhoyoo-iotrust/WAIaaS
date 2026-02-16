@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 148 - WC 서명 요청
+**Current focus:** Phase 149 - Telegram Fallback
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 148: WC 서명 요청)
-Plan: 2 of 2 in current phase
-Status: 148-02 Complete (Phase 148 Complete)
-Last activity: 2026-02-16 -- 148-02 WcSigningBridge 테스트 + stage4Wait 통합 테스트 완료
+Phase: 4 of 5 (Phase 149: Telegram Fallback)
+Plan: 1 of 2 in current phase
+Status: 149-01 Complete
+Last activity: 2026-02-16 -- 149-01 WcSigningBridge Telegram fallback + EventBus + 알림
 
-Progress: [============........] 60%
+Progress: [==============......] 70%
 
 ## Performance Metrics
 
-**Cumulative:** 34 milestones, 145 phases, 320 plans, 899 reqs, ~2,323 tests, ~207,902 LOC
+**Cumulative:** 34 milestones, 145 phases, 321 plans, 899 reqs, ~2,323 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 7min
-- Total execution time: 0.7 hours
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [============........] 60%
 | 146 | 2/2 | 18min | 9min |
 | 147 | 2/2 | 13min | 6.5min |
 | 148 | 2/2 | 12min | 6min |
+| 149 | 1/2 | 6min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 8min, 5min, 5min, 7min
+- Last 5 plans: 8min, 5min, 5min, 7min, 6min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - [148-01]: 서명 검증 실패 시 reject 하지 않음 (Owner REST API 재시도 가능)
 - [148-01]: WcSigningBridge를 daemon.ts Step 4c-7로 배치
 - [148-02]: sodium-native는 createRequire CJS 로딩이라 vi.mock 불가 -> 실제 Ed25519 키페어 사용
+- [149-01]: fallbackToTelegram은 isApprovalStillPending 체크로 이미 처리된 approval 보호
+- [149-01]: 사용자 명시적 거부(4001/5000)는 fallback 없이 기존 reject 유지
+- [149-01]: notificationService/eventBus는 optional DI (WC 없이도 데몬 정상 동작)
 
 ### Blockers/Concerns
 
@@ -81,5 +85,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 148-02-PLAN.md
+Stopped at: Completed 149-01-PLAN.md
 Resume file: None
