@@ -91,7 +91,7 @@
 **Milestone Goal:** Kill Switch/AutoStop으로 긴급 제어, Telegram Bot으로 원격 관리, Docker로 원클릭 배포, 잔액 모니터링으로 가스비 부족 사전 알림이 동작하는 상태
 
 - [ ] **Phase 140: Event Bus + Kill Switch** (3 plans) - 이벤트 인프라와 3-state 긴급 정지 시스템
-- [ ] **Phase 141: AutoStop Engine** - 이벤트 기반 자동 정지 규칙 엔진
+- [ ] **Phase 141: AutoStop Engine** (2 plans) - 이벤트 기반 자동 정지 규칙 엔진
 - [ ] **Phase 142: Balance Monitoring** - 주기적 잔액 체크 + LOW_BALANCE 알림
 - [ ] **Phase 143: Telegram Bot** - Long Polling 기반 원격 관리 봇
 - [ ] **Phase 144: Admin UI Integration** - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
@@ -119,11 +119,11 @@ Plans:
   2. 정상 패턴 대비 이상 빈도 거래가 감지되면 월렛이 정지되고 AUTOSTOP_TRIGGERED 알림이 발송된다
   3. 설정된 유휴 시간을 초과하면 해당 세션이 자동 해지되고, 수동 트리거 시 Kill Switch가 자동 발동된다
   4. AutoStop 규칙 임계값이 config.toml flat key와 Admin Settings 런타임 오버라이드로 관리되어 데몬 재시작 없이 조정할 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 141-01: AutoStopService 4 규칙 구현 + 이벤트 구독
-- [ ] 141-02: AutoStop 설정 관리 + 알림 통합
+- [ ] 141-01-PLAN.md -- AutoStopService 4 규칙 구현 + 이벤트 구독
+- [ ] 141-02-PLAN.md -- AutoStop 설정 관리 + 알림 통합
 
 ### Phase 142: Balance Monitoring
 **Goal**: 월렛 가스비가 부족해지기 전에 사용자가 사전 알림을 받아 자금을 충전할 수 있다
@@ -191,8 +191,8 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 140. Event Bus + Kill Switch | 0/3 | Planning complete | - |
-| 141. AutoStop Engine | 0/2 | Not started | - |
+| 140. Event Bus + Kill Switch | 3/3 | Complete | 2026-02-16 |
+| 141. AutoStop Engine | 0/2 | Planning complete | - |
 | 142. Balance Monitoring | 0/2 | Not started | - |
 | 143. Telegram Bot | 0/3 | Not started | - |
 | 144. Admin UI Integration | 0/2 | Not started | - |
@@ -200,4 +200,4 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 140 계획 완료 (3 plans, 2 waves)*
+*Last updated: 2026-02-16 -- Phase 141 계획 완료 (2 plans, 2 waves)*
