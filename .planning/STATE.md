@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6 Phase 143 -- Telegram Bot
+**Current focus:** v1.6 Phase 144 -- Admin UI Integration
 
 ## Current Position
 
-Phase: 143 of 145 (Telegram Bot)
-Plan: 3 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-16 -- 143-02 Telegram Bot 2-Tier Auth + Commands + Admin API 완료
+Phase: 144 of 145 (Admin UI Integration)
+Plan: 1 of 2 in current phase
+Status: Ready
+Last activity: 2026-02-16 -- 143-03 Kill Switch 확인 대화 + 세션 발급 + 재연결 테스트 완료 (Phase 143 완료)
 
-Progress: [########░░░░░░] 64% (9/14 plans)
+Progress: [#########░░░░░] 71% (10/14 plans)
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [########░░░░░░] 64% (9/14 plans)
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
-| 143. Telegram Bot | 2/3 | 27m | 14m |
+| 143. Telegram Bot | 3/3 | 34m | 11m |
 | 144. Admin UI Integration | 0/2 | - | - |
 | 145. Docker | 0/2 | - | - |
 
@@ -69,6 +69,9 @@ Full log in PROJECT.md and milestones/.
 - v1.6: AdminRouteDeps에 sqlite 옵션 추가 (telegram_users 직접 SQL 접근)
 - v1.6: callback_query에서도 2-Tier auth 적용 (인라인 키보드 권한 검증)
 - v1.6: WALLET_NOT_FOUND 에러 코드를 telegram user not found에 재사용
+- v1.6: 인라인 키보드 빌더를 telegram-keyboard.ts로 분리 (buildConfirmKeyboard/buildWalletSelectKeyboard/buildApprovalKeyboard)
+- v1.6: /newsession에서 JWT 직접 발급 (jwtSecretManager.signToken + sessions INSERT + 감사 로그)
+- v1.6: vi.useFakeTimers로 backoff 테스트 제어 (vi.waitFor flaky 방지)
 
 ### Blockers/Concerns
 
@@ -78,5 +81,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 143-02-PLAN.md (2-Tier Auth + /wallets, /pending, /approve, /reject + Admin API)
+Stopped at: Completed 143-03-PLAN.md (Kill Switch 확인 대화 + 세션 발급 + 재연결 테스트 -- Phase 143 완료)
 Resume file: None
