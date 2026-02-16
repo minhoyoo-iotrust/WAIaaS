@@ -39,6 +39,7 @@ export const SETTING_CATEGORIES = [
   'oracle',
   'display',
   'autostop',
+  'monitoring',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -110,6 +111,13 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'autostop.idle_timeout_sec', category: 'autostop', configPath: 'security.autostop_idle_timeout_sec', defaultValue: '3600', isCredential: false },
   { key: 'autostop.idle_check_interval_sec', category: 'autostop', configPath: 'security.autostop_idle_check_interval_sec', defaultValue: '60', isCredential: false },
   { key: 'autostop.enabled', category: 'autostop', configPath: 'security.autostop_enabled', defaultValue: 'true', isCredential: false },
+
+  // --- monitoring category (BMON-05 runtime-overridable) ---
+  { key: 'monitoring.check_interval_sec', category: 'monitoring', configPath: 'security.monitoring_check_interval_sec', defaultValue: '300', isCredential: false },
+  { key: 'monitoring.low_balance_threshold_sol', category: 'monitoring', configPath: 'security.monitoring_low_balance_threshold_sol', defaultValue: '0.01', isCredential: false },
+  { key: 'monitoring.low_balance_threshold_eth', category: 'monitoring', configPath: 'security.monitoring_low_balance_threshold_eth', defaultValue: '0.005', isCredential: false },
+  { key: 'monitoring.cooldown_hours', category: 'monitoring', configPath: 'security.monitoring_cooldown_hours', defaultValue: '24', isCredential: false },
+  { key: 'monitoring.enabled', category: 'monitoring', configPath: 'security.monitoring_enabled', defaultValue: 'true', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

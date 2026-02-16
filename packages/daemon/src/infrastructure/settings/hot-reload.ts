@@ -13,6 +13,7 @@ import type { NotificationService } from '../../notifications/notification-servi
 import type { AdapterPool } from '../adapter-pool.js';
 import type { SettingsService } from './settings-service.js';
 import type { AutoStopService, AutoStopConfig } from '../../services/autostop-service.js';
+import type { BalanceMonitorService, BalanceMonitorConfig } from '../../services/monitoring/balance-monitor-service.js';
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -23,6 +24,7 @@ export interface HotReloadDeps {
   notificationService?: NotificationService | null;
   adapterPool?: AdapterPool | null;
   autoStopService?: AutoStopService | null;
+  balanceMonitorService?: BalanceMonitorService | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +63,8 @@ const SECURITY_KEYS = new Set([
 
 const AUTOSTOP_KEYS_PREFIX = 'autostop.';
 
+const MONITORING_KEYS_PREFIX = 'monitoring.';
+
 // ---------------------------------------------------------------------------
 // HotReloadOrchestrator
 // ---------------------------------------------------------------------------
@@ -84,6 +88,7 @@ export class HotReloadOrchestrator {
     const hasSecurityChanges = changedKeys.some((k) => SECURITY_KEYS.has(k));
     const hasDisplayChanges = changedKeys.some((k) => DISPLAY_KEYS.has(k));
     const hasAutostopChanges = changedKeys.some((k) => k.startsWith(AUTOSTOP_KEYS_PREFIX));
+    const hasMonitoringChanges = changedKeys.some((k) => k.startsWith(MONITORING_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -120,6 +125,14 @@ export class HotReloadOrchestrator {
         this.reloadAutoStop();
       } catch (err) {
         console.warn('Hot-reload autostop failed:', err);
+      }
+    }
+
+    if (hasMonitoringChanges) {
+      try {
+        this.reloadBalanceMonitor();
+      } catch (err) {
+        console.warn('Hot-reload balance monitor failed:', err);
       }
     }
 
@@ -215,6 +228,27 @@ export class HotReloadOrchestrator {
 
     svc.updateConfig(newConfig);
     console.log('Hot-reload: AutoStop engine config updated (effective immediately)');
+  }
+
+  /**
+   * Reload Balance Monitor with current settings from SettingsService.
+   * Synchronous: reads new values and calls balanceMonitorService.updateConfig().
+   */
+  private reloadBalanceMonitor(): void {
+    const svc = this.deps.balanceMonitorService;
+    if (!svc) return;
+
+    const ss = this.deps.settingsService;
+    const newConfig: Partial<BalanceMonitorConfig> = {
+      checkIntervalSec: parseInt(ss.get('monitoring.check_interval_sec'), 10),
+      lowBalanceThresholdSol: parseFloat(ss.get('monitoring.low_balance_threshold_sol')),
+      lowBalanceThresholdEth: parseFloat(ss.get('monitoring.low_balance_threshold_eth')),
+      cooldownHours: parseInt(ss.get('monitoring.cooldown_hours'), 10),
+      enabled: ss.get('monitoring.enabled') === 'true',
+    };
+
+    svc.updateConfig(newConfig);
+    console.log('Hot-reload: Balance monitor config updated (effective immediately)');
   }
 
   /**

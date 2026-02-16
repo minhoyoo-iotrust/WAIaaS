@@ -116,6 +116,12 @@ export const DaemonConfigSchema = z.object({
       autostop_idle_timeout_sec: z.number().int().min(300).max(86400).default(3600),
       autostop_idle_check_interval_sec: z.number().int().min(10).max(600).default(60),
       autostop_enabled: z.boolean().default(true),
+      // Balance monitoring thresholds (BMON-05 runtime-overridable via Admin Settings)
+      monitoring_check_interval_sec: z.number().int().min(60).max(3600).default(300),
+      monitoring_low_balance_threshold_sol: z.number().min(0.001).max(100).default(0.01),
+      monitoring_low_balance_threshold_eth: z.number().min(0.0001).max(10).default(0.005),
+      monitoring_cooldown_hours: z.number().int().min(1).max(168).default(24),
+      monitoring_enabled: z.boolean().default(true),
       policy_defaults_delay_seconds: z.number().int().min(60).max(3600).default(300),
       policy_defaults_approval_timeout: z.number().int().min(300).max(86400).default(3600),
       kill_switch_recovery_cooldown: z.number().int().min(600).max(86400).default(1800),
