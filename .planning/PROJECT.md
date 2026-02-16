@@ -35,7 +35,7 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포
 - ✅ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) — shipped 2026-02-16 (~2,150 tests, ~191,000 LOC)
 - ✅ v1.6 운영 인프라 + 잔액 모니터링 — shipped 2026-02-16 (~2,294 tests, ~207,902 LOC)
 - ✅ v1.6.1 WalletConnect Owner 승인 — shipped 2026-02-16 (~2,510 tests, ~220,000 LOC)
-- v1.7 품질 강화 + CI/CD (300+ 테스트, 보안 237건, 4-stage 파이프라인)
+- ◆ v1.7 품질 강화 + CI/CD — 300+ 테스트, 보안 ~249건, 4-stage 파이프라인 ← CURRENT
 - v1.8 업그레이드 + 배포 (npm 배포, Docker Hub, 자동 업데이트)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, GitHub Release)
 
@@ -327,11 +327,22 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포
 
 ### 활성
 
-<!-- 다음 마일스톤에서 정의 — /gsd:new-milestone -->
+## Current Milestone: v1.7 품질 강화 + CI/CD
+
+**Goal:** 설계 단계에서 정의한 300+ 테스트 시나리오를 구현하고, CI/CD 파이프라인으로 지속적 품질을 보장하는 상태 달성
+
+**Target features:**
+- 보안 테스트 ~249건 전수 구현 (3계층 71건 + 확장 166건 + x402 12건)
+- 확장 기능 테스트 ~148건 (토큰/컨트랙트/Approve/배치/Oracle/ActionProvider/ChainError)
+- 플랫폼 테스트 84건 (CLI 32 + Docker 18 + Telegram 34)
+- Contract Test 7개 완성 (IChainAdapter/IPolicyEngine/INotificationChannel/IClock/IPriceOracle/IActionProvider)
+- 블록체인 3단계 테스트 (Mock RPC 13건 + Local Validator + Devnet 3건)
+- Enum SSoT 빌드타임 검증 (16개 Enum + config.toml 12건)
+- GitHub Actions 4-stage CI/CD (ci/nightly/release/coverage-report)
+- 패키지별 커버리지 게이트 Hard 80%+
 
 ## Next Milestone Goals
 
-- v1.7 품질 강화 + CI/CD — 300+ 테스트, 보안 237건, 4-stage 파이프라인
 - v1.8 업그레이드 + 배포 — npm 배포, Docker Hub, 자동 업데이트
 - v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, GitHub Release
 

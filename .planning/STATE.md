@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6.1 shipped — 다음 마일스톤 계획 대기
+**Current focus:** v1.7 품질 강화 + CI/CD
 
 ## Current Position
 
-Milestone: v1.6.1 WalletConnect Owner 승인 — SHIPPED 2026-02-16
-Status: Milestone complete, planning next milestone
-Last activity: 2026-02-16 -- v1.6.1 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-16 — Milestone v1.7 started
 
 ## Performance Metrics
 
