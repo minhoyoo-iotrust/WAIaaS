@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 17 daemon administration endpoints.
+ * Admin route handlers: 22 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -18,6 +18,9 @@
  * PUT    /admin/api-keys/:provider  - Set or update API key (masterAuth)
  * DELETE /admin/api-keys/:provider  - Delete API key (masterAuth)
  * GET    /admin/forex/rates         - Forex exchange rates for display currency (masterAuth)
+ * GET    /admin/telegram-users          - List Telegram bot users (masterAuth)
+ * PUT    /admin/telegram-users/:chatId  - Update Telegram user role (masterAuth)
+ * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
@@ -26,6 +29,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
@@ -95,6 +99,7 @@ export interface AdminRouteDeps {
   apiKeyStore?: ApiKeyStore;
   actionProviderRegistry?: ActionProviderRegistry;
   forexRateService?: IForexRateService;
+  sqlite?: SQLiteDatabase;
 }
 
 // ---------------------------------------------------------------------------
@@ -529,6 +534,94 @@ const adminWalletBalanceRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Telegram Users route definitions
+// ---------------------------------------------------------------------------
+
+const TelegramUserSchema = z.object({
+  chat_id: z.number(),
+  username: z.string().nullable(),
+  role: z.enum(['PENDING', 'ADMIN', 'READONLY']),
+  registered_at: z.number(),
+  approved_at: z.number().nullable(),
+});
+
+const telegramUsersListRoute = createRoute({
+  method: 'get',
+  path: '/admin/telegram-users',
+  tags: ['Admin'],
+  summary: 'List Telegram bot users',
+  responses: {
+    200: {
+      description: 'Telegram users list',
+      content: {
+        'application/json': {
+          schema: z.object({
+            users: z.array(TelegramUserSchema),
+            total: z.number(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+const telegramUserUpdateRoute = createRoute({
+  method: 'put',
+  path: '/admin/telegram-users/{chatId}',
+  tags: ['Admin'],
+  summary: 'Update Telegram user role',
+  request: {
+    params: z.object({ chatId: z.coerce.number() }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            role: z.enum(['ADMIN', 'READONLY']),
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: 'User role updated',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            chat_id: z.number(),
+            role: z.enum(['ADMIN', 'READONLY']),
+          }),
+        },
+      },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+const telegramUserDeleteRoute = createRoute({
+  method: 'delete',
+  path: '/admin/telegram-users/{chatId}',
+  tags: ['Admin'],
+  summary: 'Delete Telegram user',
+  request: {
+    params: z.object({ chatId: z.coerce.number() }),
+  },
+  responses: {
+    200: {
+      description: 'User deleted',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.boolean() }),
+        },
+      },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
@@ -554,6 +647,9 @@ const adminWalletBalanceRoute = createRoute({
  * GET    /admin/forex/rates             - Forex exchange rates (masterAuth)
  * GET    /admin/wallets/:id/balance      - Wallet native+token balance (masterAuth)
  * GET    /admin/wallets/:id/transactions - Wallet transaction history (masterAuth)
+ * GET    /admin/telegram-users          - List Telegram bot users (masterAuth)
+ * PUT    /admin/telegram-users/:chatId  - Update Telegram user role (masterAuth)
+ * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
  */
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -1457,6 +1553,89 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         200,
       );
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/telegram-users
+  // ---------------------------------------------------------------------------
+
+  router.openapi(telegramUsersListRoute, async (c) => {
+    if (!deps.sqlite) {
+      return c.json({ users: [] as Array<{ chat_id: number; username: string | null; role: 'PENDING' | 'ADMIN' | 'READONLY'; registered_at: number; approved_at: number | null }>, total: 0 }, 200);
+    }
+
+    const rows = deps.sqlite
+      .prepare(
+        'SELECT chat_id, username, role, registered_at, approved_at FROM telegram_users ORDER BY registered_at DESC',
+      )
+      .all() as Array<{
+      chat_id: number;
+      username: string | null;
+      role: 'PENDING' | 'ADMIN' | 'READONLY';
+      registered_at: number;
+      approved_at: number | null;
+    }>;
+
+    return c.json({ users: rows, total: rows.length }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /admin/telegram-users/:chatId
+  // ---------------------------------------------------------------------------
+
+  router.openapi(telegramUserUpdateRoute, async (c) => {
+    if (!deps.sqlite) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'SQLite not available',
+      });
+    }
+
+    const { chatId } = c.req.valid('param');
+    const body = c.req.valid('json');
+    const now = Math.floor(Date.now() / 1000);
+
+    const result = deps.sqlite
+      .prepare(
+        'UPDATE telegram_users SET role = ?, approved_at = ? WHERE chat_id = ?',
+      )
+      .run(body.role, now, chatId);
+
+    if (result.changes === 0) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Telegram user not found: ${chatId}`,
+      });
+    }
+
+    return c.json(
+      { success: true, chat_id: chatId, role: body.role },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /admin/telegram-users/:chatId
+  // ---------------------------------------------------------------------------
+
+  router.openapi(telegramUserDeleteRoute, async (c) => {
+    if (!deps.sqlite) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'SQLite not available',
+      });
+    }
+
+    const { chatId } = c.req.valid('param');
+
+    const result = deps.sqlite
+      .prepare('DELETE FROM telegram_users WHERE chat_id = ?')
+      .run(chatId);
+
+    if (result.changes === 0) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Telegram user not found: ${chatId}`,
+      });
+    }
+
+    return c.json({ success: true }, 200);
   });
 
   return router;

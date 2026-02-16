@@ -215,6 +215,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
     app.use('/v1/admin/wallets/*', masterAuthForAdmin);
+    app.use('/v1/admin/telegram-users', masterAuthForAdmin);
+    app.use('/v1/admin/telegram-users/*', masterAuthForAdmin);
   }
 
   // ownerAuth for POST /v1/owner/kill-switch
@@ -429,6 +431,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         apiKeyStore: deps.apiKeyStore,
         actionProviderRegistry: deps.actionProviderRegistry,
         forexRateService: deps.forexRateService,
+        sqlite: deps.sqlite,
       }),
     );
 
