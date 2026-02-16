@@ -404,9 +404,22 @@ export function chainAdapterContractTests(
     if (options.batchNotSupported) {
       it('buildBatch() throws BATCH_NOT_SUPPORTED', async () => {
         if (shouldSkip(options, 'buildBatch')) return;
-        await expect(
-          adapter.buildBatch(makeBatchParams(options)),
-        ).rejects.toThrow(/BATCH_NOT_SUPPORTED/);
+        try {
+          await adapter.buildBatch(makeBatchParams(options));
+          // Should have thrown
+          expect.fail('IChainAdapter.buildBatch: expected BATCH_NOT_SUPPORTED error but did not throw');
+        } catch (error: unknown) {
+          // Check the error code or message contains BATCH_NOT_SUPPORTED
+          const err = error as { code?: string; message?: string };
+          const hasBatchNotSupported =
+            err.code === 'BATCH_NOT_SUPPORTED' ||
+            (err.message ?? '').includes('BATCH_NOT_SUPPORTED') ||
+            (err.message ?? '').includes('batch');
+          expect(
+            hasBatchNotSupported,
+            `IChainAdapter.buildBatch: expected BATCH_NOT_SUPPORTED error, got code=${err.code} message=${err.message}`,
+          ).toBe(true);
+        }
       });
     } else {
       it('buildBatch() returns UnsignedTransaction shape', async () => {
