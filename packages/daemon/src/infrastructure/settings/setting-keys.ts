@@ -97,6 +97,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
 
   // --- walletconnect category ---
   { key: 'walletconnect.project_id', category: 'walletconnect', configPath: 'walletconnect.project_id', defaultValue: '', isCredential: false },
+  { key: 'walletconnect.relay_url', category: 'walletconnect', configPath: 'walletconnect.relay_url', defaultValue: 'wss://relay.walletconnect.com', isCredential: false },
 
   // --- oracle category ---
   { key: 'oracle.coingecko_api_key', category: 'oracle', configPath: 'oracle.coingecko_api_key', defaultValue: '', isCredential: true },

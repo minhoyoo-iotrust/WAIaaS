@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 13 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 15 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -43,7 +43,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 13 tables (latest schema: wallets + wallet_id + token_registry + settings + api_keys + telegram_users)
+// DDL statements for all 15 tables (latest schema: wallets + wallet_id + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store)
 // ---------------------------------------------------------------------------
 
 /**
@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 15;
+export const LATEST_SCHEMA_VERSION = 16;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -131,7 +131,7 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 5: pending_approvals
+    // Table 5: pending_approvals (approval_channel added in v16)
     `CREATE TABLE IF NOT EXISTS pending_approvals (
   id TEXT PRIMARY KEY,
   tx_id TEXT NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
@@ -140,6 +140,7 @@ function getCreateTableStatements(): string[] {
   approved_at INTEGER,
   rejected_at INTEGER,
   owner_signature TEXT,
+  approval_channel TEXT DEFAULT 'rest_api',
   created_at INTEGER NOT NULL
 )`,
 
@@ -220,6 +221,24 @@ function getCreateTableStatements(): string[] {
   registered_at INTEGER NOT NULL,
   approved_at INTEGER
 )`,
+
+    // Table 14: wc_sessions (WalletConnect session metadata, v1.6.1)
+    `CREATE TABLE IF NOT EXISTS wc_sessions (
+  wallet_id TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
+  topic TEXT NOT NULL UNIQUE,
+  peer_meta TEXT,
+  chain_id TEXT NOT NULL,
+  owner_address TEXT NOT NULL,
+  namespaces TEXT,
+  expiry INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+)`,
+
+    // Table 15: wc_store (WalletConnect IKeyValueStorage, v1.6.1)
+    `CREATE TABLE IF NOT EXISTS wc_store (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)`,
   ];
 }
 
@@ -281,6 +300,9 @@ function getCreateIndexStatements(): string[] {
 
     // telegram_users indexes
     'CREATE INDEX IF NOT EXISTS idx_telegram_users_role ON telegram_users(role)',
+
+    // wc_sessions indexes
+    'CREATE INDEX IF NOT EXISTS idx_wc_sessions_topic ON wc_sessions(topic)',
   ];
 }
 
@@ -1208,6 +1230,43 @@ MIGRATIONS.push({
   },
 });
 
+// ---------------------------------------------------------------------------
+// v16: Add WC infra: wc_sessions table, wc_store table, pending_approvals.approval_channel
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 16,
+  description:
+    'Add WC infra: wc_sessions table, wc_store table, pending_approvals.approval_channel',
+  up: (sqlite) => {
+    // 1. pending_approvals.approval_channel 추가
+    sqlite.exec(
+      "ALTER TABLE pending_approvals ADD COLUMN approval_channel TEXT DEFAULT 'rest_api'",
+    );
+
+    // 2. wc_sessions 테이블 생성
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS wc_sessions (
+  wallet_id TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
+  topic TEXT NOT NULL UNIQUE,
+  peer_meta TEXT,
+  chain_id TEXT NOT NULL,
+  owner_address TEXT NOT NULL,
+  namespaces TEXT,
+  expiry INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+)`);
+    sqlite.exec(
+      'CREATE INDEX IF NOT EXISTS idx_wc_sessions_topic ON wc_sessions(topic)',
+    );
+
+    // 3. wc_store 테이블 생성 (IKeyValueStorage용)
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS wc_store (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)`);
+  },
+});
+
 /**
  * Run incremental migrations against the database.
  *
@@ -1357,7 +1416,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, ts, 'Initial schema (13 tables)');
+        .run(1, ts, 'Initial schema (15 tables)');
 
       // Record all migration versions as already applied (DDL is up-to-date)
       for (const migration of MIGRATIONS) {

@@ -994,8 +994,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 15
-    expect(LATEST_SCHEMA_VERSION).toBe(15);
+    // Verify LATEST_SCHEMA_VERSION is 16
+    expect(LATEST_SCHEMA_VERSION).toBe(16);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1321,10 +1321,10 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Run full pushSchema (v2 -> v12 chain)
     pushSchema(db);
 
-    // Verify final version is 15
+    // Verify final version is 16
     const versions = getVersions(db);
-    expect(versions).toContain(15);
-    expect(Math.max(...versions)).toBe(15);
+    expect(versions).toContain(16);
+    expect(Math.max(...versions)).toBe(16);
 
     // Verify data survived the entire chain
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
@@ -1502,10 +1502,10 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Run full pushSchema (v2 -> v13 chain)
     pushSchema(db);
 
-    // Verify final version is 15
+    // Verify final version is 16
     const versions = getVersions(db);
-    expect(versions).toContain(15);
-    expect(Math.max(...versions)).toBe(15);
+    expect(versions).toContain(16);
+    expect(Math.max(...versions)).toBe(16);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {

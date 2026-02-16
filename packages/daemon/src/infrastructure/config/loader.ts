@@ -131,6 +131,7 @@ export const DaemonConfigSchema = z.object({
   walletconnect: z
     .object({
       project_id: z.string().default(''),
+      relay_url: z.string().default('wss://relay.walletconnect.com'),
     })
     .default({}),
   x402: z

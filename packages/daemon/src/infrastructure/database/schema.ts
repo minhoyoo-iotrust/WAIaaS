@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 12 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users
+ * 14 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users, wc_sessions, wc_store
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -226,6 +226,7 @@ export const pendingApprovals = sqliteTable(
     approvedAt: integer('approved_at', { mode: 'timestamp' }),
     rejectedAt: integer('rejected_at', { mode: 'timestamp' }),
     ownerSignature: text('owner_signature'),
+    approvalChannel: text('approval_channel').default('rest_api'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
@@ -367,3 +368,35 @@ export const telegramUsers = sqliteTable(
     check('check_telegram_role', sql`role IN ('PENDING', 'ADMIN', 'READONLY')`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Table 13: wc_sessions -- WalletConnect session metadata (v1.6.1)
+// ---------------------------------------------------------------------------
+
+export const wcSessions = sqliteTable(
+  'wc_sessions',
+  {
+    walletId: text('wallet_id')
+      .primaryKey()
+      .references(() => wallets.id, { onDelete: 'cascade' }),
+    topic: text('topic').notNull().unique(),
+    peerMeta: text('peer_meta'),
+    chainId: text('chain_id').notNull(),
+    ownerAddress: text('owner_address').notNull(),
+    namespaces: text('namespaces'),
+    expiry: integer('expiry').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_wc_sessions_topic').on(table.topic),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 14: wc_store -- WalletConnect IKeyValueStorage (v1.6.1)
+// ---------------------------------------------------------------------------
+
+export const wcStore = sqliteTable('wc_store', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
