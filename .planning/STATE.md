@@ -36,6 +36,7 @@ Progress: [#######░░░] 68% (13/19 plans)
 | 154 | 02 | 7min | 2 | 3 |
 | 155 | 01 | 7min | 2 | 4 |
 | 155 | 02 | 8min | 2 | 4 |
+| 156 | 01 | 8min | 2 | 3 |
 | 156 | 03 | 6min | 2 | 2 |
 
 *Updated after each plan completion*
@@ -83,6 +84,10 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 155-02: seedSecurityTestData는 wallet+session 동시 생성 -- 중복 삽입 주의
 - 155-02: Chain 5 JWT 만료 테스트에 실제 1.5s sleep 사용 (실제 토큰 만료 검증)
 - 155-02: SEC-04-EX-04 Rate Limit은 describe.skip (미구현 기능)
+- 156-01: APPROVE_DISABLED PolicyType 미존재 -> no APPROVED_SPENDERS policy = 전면 거부로 동일 효과 검증
+- 156-01: Solana u64.max < UNLIMITED_THRESHOLD -> Solana에서는 blockUnlimited 미트리거 (EVM 전용)
+- 156-01: contract-whitelist 테스트 defaultNetwork 'sepolia' -> 'ethereum-sepolia' (DB CHECK 제약 준수)
+- 156-01: SEC-06-32 대량 토큰 리스트 주소 동적 생성 (하드코딩 길이 오류 방지)
 - 156-03: IPv6-in-brackets URL은 URL parser가 hex로 정규화하여 isIP() 0 반환, DNS ENOTFOUND로 차단
 - 156-03: @waiaas/core 패키지 export로 ChainError/CHAIN_ERROR_CATEGORIES import (상대 경로 불필요)
 
@@ -96,5 +101,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 156-03-PLAN.md
+Stopped at: Completed 156-01-PLAN.md (executed after 156-03)
 Resume file: None
