@@ -1,12 +1,16 @@
 /**
- * Kill switch guard middleware: blocks requests when kill switch is activated.
+ * Kill switch guard middleware: blocks requests when kill switch is
+ * SUSPENDED or LOCKED (3-state model).
  *
  * Accepts a factory function `getKillSwitchState` that returns the current
- * kill switch state. If 'ACTIVATED', rejects with 409 KILL_SWITCH_ACTIVE.
+ * kill switch state string. If SUSPENDED or LOCKED, rejects with 503
+ * SYSTEM_LOCKED.
  *
- * The /health endpoint always bypasses the guard.
- *
- * v1.1: Factory default returns 'NORMAL' (no kill switch state management yet).
+ * Bypass paths:
+ *   - /health (always public)
+ *   - /v1/admin/* (admin API for management/recovery)
+ *   - /admin/* (Admin SPA for UI)
+ *   - /v1/owner/* (owner kill-switch activation + recovery)
  *
  * @see docs/36-killswitch-evm-freeze.md
  */
@@ -16,7 +20,7 @@ import { WAIaaSError } from '@waiaas/core';
 
 export type GetKillSwitchState = () => string;
 
-const DEFAULT_GET_STATE: GetKillSwitchState = () => 'NORMAL';
+const DEFAULT_GET_STATE: GetKillSwitchState = () => 'ACTIVE';
 
 export function createKillSwitchGuard(getState: GetKillSwitchState = DEFAULT_GET_STATE) {
   return createMiddleware(async (c, next) => {
@@ -38,9 +42,15 @@ export function createKillSwitchGuard(getState: GetKillSwitchState = DEFAULT_GET
       return;
     }
 
+    // Owner API paths bypass kill switch (owner kill-switch activation + recovery)
+    if (c.req.path.startsWith('/v1/owner/')) {
+      await next();
+      return;
+    }
+
     const state = getState();
-    if (state === 'ACTIVATED') {
-      throw new WAIaaSError('KILL_SWITCH_ACTIVE');
+    if (state === 'SUSPENDED' || state === 'LOCKED') {
+      throw new WAIaaSError('SYSTEM_LOCKED');
     }
 
     await next();

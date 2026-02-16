@@ -5,4 +5,5 @@ export type {
   TransactionCompletedEvent,
   TransactionFailedEvent,
   WalletActivityEvent,
+  KillSwitchStateChangedEvent,
 } from './event-types.js';

@@ -42,7 +42,7 @@ describe('KillSwitchService', () => {
       'INSERT INTO key_value_store (key, value, updated_at) VALUES (?, ?, ?)',
     ).run('kill_switch_state', 'ACTIVE', now);
 
-    service = new KillSwitchService(db);
+    service = new KillSwitchService({ sqlite: db });
   });
 
   afterEach(() => {

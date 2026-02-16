@@ -1,6 +1,7 @@
 /**
  * KillSwitchService: 3-state machine (ACTIVE / SUSPENDED / LOCKED)
- * with CAS (Compare-And-Swap) ACID pattern for atomic state transitions.
+ * with CAS (Compare-And-Swap) ACID pattern for atomic state transitions
+ * and 6-step cascade execution.
  *
  * State machine:
  *   ACTIVE <---> SUSPENDED ---> LOCKED
@@ -16,6 +17,14 @@
  *   ACTIVE -> LOCKED      (must escalate through SUSPENDED)
  *   LOCKED -> SUSPENDED   (must recover to ACTIVE first)
  *
+ * 6-step cascade (on activation):
+ *   1. Revoke all active sessions
+ *   2. Cancel in-flight transactions (PENDING/QUEUED/EXECUTING -> CANCELLED)
+ *   3. Suspend all ACTIVE wallets
+ *   4. API 503 (handled by kill-switch-guard middleware)
+ *   5. Send notification (KILL_SWITCH_ACTIVATED)
+ *   6. Insert audit log entry (severity: critical)
+ *
  * CAS ACID pattern:
  *   1. BEGIN IMMEDIATE (acquire exclusive lock)
  *   2. UPDATE ... WHERE value = expectedState (CAS check)
@@ -27,6 +36,8 @@
  */
 
 import type { Database } from 'better-sqlite3';
+import type { NotificationService } from '../notifications/notification-service.js';
+import type { EventBus } from '@waiaas/core';
 
 const KV_KEY_STATE = 'kill_switch_state';
 const KV_KEY_ACTIVATED_AT = 'kill_switch_activated_at';
@@ -38,11 +49,24 @@ export interface KillSwitchStateInfo {
   activatedBy: string | null;
 }
 
+export interface CascadeResult {
+  success: boolean;
+  error?: string;
+}
+
 export class KillSwitchService {
   private sqlite: Database;
+  private notificationService?: NotificationService;
+  private eventBus?: EventBus;
 
-  constructor(sqlite: Database) {
-    this.sqlite = sqlite;
+  constructor(opts: {
+    sqlite: Database;
+    notificationService?: NotificationService;
+    eventBus?: EventBus;
+  }) {
+    this.sqlite = opts.sqlite;
+    this.notificationService = opts.notificationService;
+    this.eventBus = opts.eventBus;
   }
 
   /** Get current kill switch state from key_value_store. */
@@ -110,6 +134,167 @@ export class KillSwitchService {
       )
       .run(KV_KEY_STATE, 'ACTIVE', now);
   }
+
+  // -----------------------------------------------------------------------
+  // Cascade methods
+  // -----------------------------------------------------------------------
+
+  /**
+   * Activate kill switch with 6-step cascade.
+   * CAS activate() + executeCascade() on success.
+   */
+  activateWithCascade(activatedBy: string): CascadeResult {
+    const success = this.activate(activatedBy);
+    if (!success) {
+      const current = this.getState();
+      return {
+        success: false,
+        error: `Kill switch is already ${current.state}`,
+      };
+    }
+
+    // Execute cascade (fire-and-forget for async parts like notifications)
+    void this.executeCascade(activatedBy);
+
+    return { success: true };
+  }
+
+  /**
+   * Escalate kill switch with notification + audit log.
+   * CAS escalate() + notification/audit on success.
+   */
+  escalateWithCascade(escalatedBy: string): CascadeResult {
+    const success = this.escalate(escalatedBy);
+    if (!success) {
+      const current = this.getState();
+      return {
+        success: false,
+        error: `Cannot escalate from ${current.state} (must be SUSPENDED)`,
+      };
+    }
+
+    // Step: Send escalation notification
+    void this.notificationService?.notify(
+      'KILL_SWITCH_ESCALATED',
+      'system',
+      { escalatedBy },
+    );
+
+    // Step: Audit log
+    const now = Math.floor(Date.now() / 1000);
+    try {
+      this.sqlite
+        .prepare(
+          'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
+        )
+        .run(
+          now,
+          'KILL_SWITCH_ESCALATED',
+          escalatedBy,
+          JSON.stringify({ action: 'kill_switch_escalated', escalatedBy }),
+          'critical',
+        );
+    } catch {
+      // Best-effort audit logging
+    }
+
+    // EventBus emit
+    this.eventBus?.emit('kill-switch:state-changed', {
+      state: 'LOCKED',
+      previousState: 'SUSPENDED',
+      activatedBy: escalatedBy,
+      timestamp: now,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Execute the 6-step cascade after kill switch activation.
+   *
+   * Steps:
+   *   1. Revoke all active sessions (SET revoked_at)
+   *   2. Cancel in-flight transactions (PENDING/QUEUED/EXECUTING -> CANCELLED)
+   *   3. Suspend all ACTIVE wallets
+   *   4. API 503 -- handled by middleware (no action needed here)
+   *   5. Send notification (KILL_SWITCH_ACTIVATED)
+   *   6. Insert audit log entry
+   */
+  async executeCascade(activatedBy: string): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Step 1: Revoke all active sessions
+    try {
+      this.sqlite
+        .prepare(
+          'UPDATE sessions SET revoked_at = ? WHERE revoked_at IS NULL',
+        )
+        .run(now);
+    } catch {
+      // Best-effort: continue cascade even if step fails
+    }
+
+    // Step 2: Cancel in-flight transactions
+    try {
+      this.sqlite
+        .prepare(
+          "UPDATE transactions SET status = 'CANCELLED', error = 'Kill switch activated' WHERE status IN ('PENDING', 'QUEUED', 'EXECUTING')",
+        )
+        .run();
+    } catch {
+      // Best-effort
+    }
+
+    // Step 3: Suspend all ACTIVE wallets
+    try {
+      this.sqlite
+        .prepare(
+          "UPDATE wallets SET status = 'SUSPENDED', suspended_at = ?, suspension_reason = 'Kill switch activated' WHERE status = 'ACTIVE'",
+        )
+        .run(now);
+    } catch {
+      // Best-effort
+    }
+
+    // Step 4: API 503 is handled by killSwitchGuard middleware
+    // (KillSwitchService state is SUSPENDED/LOCKED -> middleware blocks)
+
+    // Step 5: Send notification
+    void this.notificationService?.notify(
+      'KILL_SWITCH_ACTIVATED',
+      'system',
+      { activatedBy },
+    );
+
+    // Step 6: Audit log
+    try {
+      this.sqlite
+        .prepare(
+          'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
+        )
+        .run(
+          now,
+          'KILL_SWITCH_ACTIVATED',
+          activatedBy,
+          JSON.stringify({ action: 'kill_switch_activated', activatedBy }),
+          'critical',
+        );
+    } catch {
+      // Best-effort audit logging
+    }
+
+    // EventBus emit
+    this.eventBus?.emit('kill-switch:state-changed', {
+      state: 'SUSPENDED',
+      previousState: 'ACTIVE',
+      activatedBy,
+      timestamp: now,
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // CAS transition internals
+  // -----------------------------------------------------------------------
 
   /**
    * CAS transition with metadata set (for activate/escalate).
