@@ -202,6 +202,9 @@ export {
 // v1.5.3 Currency formatting utilities
 export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';
 
+// v1.7 Blockchain amount formatting utilities (NOTE-01)
+export { formatAmount, parseAmount } from './utils/index.js';
+
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
 
