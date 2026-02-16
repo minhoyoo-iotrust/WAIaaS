@@ -90,9 +90,9 @@
 
 **Milestone Goal:** Kill Switch/AutoStop으로 긴급 제어, Telegram Bot으로 원격 관리, Docker로 원클릭 배포, 잔액 모니터링으로 가스비 부족 사전 알림이 동작하는 상태
 
-- [ ] **Phase 140: Event Bus + Kill Switch** (3 plans) - 이벤트 인프라와 3-state 긴급 정지 시스템
-- [ ] **Phase 141: AutoStop Engine** (2 plans) - 이벤트 기반 자동 정지 규칙 엔진
-- [ ] **Phase 142: Balance Monitoring** - 주기적 잔액 체크 + LOW_BALANCE 알림
+- [x] **Phase 140: Event Bus + Kill Switch** (3 plans) - 이벤트 인프라와 3-state 긴급 정지 시스템
+- [x] **Phase 141: AutoStop Engine** (2 plans) - 이벤트 기반 자동 정지 규칙 엔진
+- [ ] **Phase 142: Balance Monitoring** (2 plans) - 주기적 잔액 체크 + LOW_BALANCE 알림
 - [ ] **Phase 143: Telegram Bot** - Long Polling 기반 원격 관리 봇
 - [ ] **Phase 144: Admin UI Integration** - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
 - [ ] **Phase 145: Docker** - Multi-stage 빌드 + docker-compose 원클릭 배포
@@ -133,11 +133,11 @@ Plans:
   1. BalanceMonitorService가 주기적(기본 5분)으로 모든 활성 월렛의 네이티브 토큰 잔액을 체크하고, 임계값 이하이면 LOW_BALANCE 알림이 발송된다
   2. 동일 월렛에 대해 24시간 내 중복 LOW_BALANCE 알림이 방지되고, 잔액 회복 후 다시 하락하면 새 알림이 발송된다
   3. 잔액 모니터링 임계값(SOL 0.01, ETH 0.005)이 config.toml flat key + Admin Settings 런타임 오버라이드로 관리된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 142-01: BalanceMonitorService + LOW_BALANCE 이벤트/알림
-- [ ] 142-02: 중복 알림 방지 + 설정 관리
+- [ ] 142-01-PLAN.md -- BalanceMonitorService + LOW_BALANCE 이벤트/알림
+- [ ] 142-02-PLAN.md -- 설정 관리 + DaemonLifecycle 통합
 
 ### Phase 143: Telegram Bot
 **Goal**: 사용자가 Telegram 앱에서 월렛 상태 조회, 거래 승인/거부, Kill Switch 발동 등 핵심 관리 작업을 원격으로 수행할 수 있다
@@ -192,7 +192,7 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 140. Event Bus + Kill Switch | 3/3 | Complete | 2026-02-16 |
-| 141. AutoStop Engine | 0/2 | Planning complete | - |
+| 141. AutoStop Engine | 2/2 | Complete | 2026-02-16 |
 | 142. Balance Monitoring | 0/2 | Not started | - |
 | 143. Telegram Bot | 0/3 | Not started | - |
 | 144. Admin UI Integration | 0/2 | Not started | - |
@@ -200,4 +200,4 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 141 계획 완료 (2 plans, 2 waves)*
+*Last updated: 2026-02-16 -- Phase 142 계획 완료 (2 plans)*
