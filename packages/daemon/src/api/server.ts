@@ -296,6 +296,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         notificationService: deps.notificationService,
         priceOracle: deps.priceOracle,
         settingsService: deps.settingsService,
+        forexRateService: deps.forexRateService,
       }),
     );
   }

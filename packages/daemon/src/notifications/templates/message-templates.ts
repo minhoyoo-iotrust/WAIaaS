@@ -27,5 +27,9 @@ export function getNotificationMessage(
     }
   }
 
-  return { title, body };
+  // Remove un-substituted {display_amount} placeholder (optional variable)
+  title = title.replaceAll('{display_amount}', '');
+  body = body.replaceAll('{display_amount}', '');
+
+  return { title: title.trim(), body: body.trim() };
 }

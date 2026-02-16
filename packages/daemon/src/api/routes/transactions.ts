@@ -46,7 +46,7 @@ import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
-import type { IPriceOracle } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import {
   TransactionRequestOpenAPI,
@@ -84,6 +84,7 @@ export interface TransactionRouteDeps {
   notificationService?: NotificationService;
   priceOracle?: IPriceOracle;
   settingsService?: SettingsService;
+  forexRateService?: IForexRateService;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,6 +355,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       notificationService: deps.notificationService,
       priceOracle: deps.priceOracle,
       settingsService: deps.settingsService,
+      forexRateService: deps.forexRateService,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)

@@ -102,14 +102,14 @@ export const messages: Messages = {
   },
   // Notification templates (22 event types)
   notifications: {
-    TX_REQUESTED: { title: '거래 요청', body: '지갑 {walletId}이 {to}로 {amount} 전송을 요청했습니다' },
+    TX_REQUESTED: { title: '거래 요청', body: '지갑 {walletId}이 {to}로 {amount} 전송을 요청했습니다 {display_amount}' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
-    TX_SUBMITTED: { title: '거래 제출', body: '거래 {txId}가 블록체인에 제출되었습니다' },
-    TX_CONFIRMED: { title: '거래 확인', body: '거래 {txId}가 확인되었습니다. 금액: {amount}' },
-    TX_FAILED: { title: '거래 실패', body: '거래 {txId} 실패: {error}' },
+    TX_SUBMITTED: { title: '거래 제출', body: '거래 {txId}가 블록체인에 제출되었습니다 {display_amount}' },
+    TX_CONFIRMED: { title: '거래 확인', body: '거래 {txId}가 확인되었습니다. 금액: {amount} {display_amount}' },
+    TX_FAILED: { title: '거래 실패', body: '거래 {txId} 실패: {error} {display_amount}' },
     TX_CANCELLED: { title: '거래 취소', body: '거래 {txId}가 취소되었습니다' },
     TX_DOWNGRADED_DELAY: { title: '거래 지연', body: '거래 {txId}가 지연 대기열로 이동되었습니다 ({seconds}초 대기)' },
-    TX_APPROVAL_REQUIRED: { title: '승인 필요', body: '거래 {txId}에 Owner 승인이 필요합니다. 금액: {amount}, 수신: {to}' },
+    TX_APPROVAL_REQUIRED: { title: '승인 필요', body: '거래 {txId}에 Owner 승인이 필요합니다. 금액: {amount}, 수신: {to} {display_amount}' },
     TX_APPROVAL_EXPIRED: { title: '승인 만료', body: '거래 {txId}의 승인이 만료되었습니다' },
     POLICY_VIOLATION: { title: '정책 위반', body: '지갑 {walletId} 정책 위반: {reason}. 정책: {policyType}. 관리: {adminLink}' },
     WALLET_SUSPENDED: { title: '지갑 정지', body: '지갑 {walletId}이 정지되었습니다: {reason}' },
@@ -123,7 +123,7 @@ export const messages: Messages = {
     OWNER_REMOVED: { title: 'Owner 제거', body: '지갑 {walletId}에서 Owner가 제거되었습니다' },
     OWNER_VERIFIED: { title: 'Owner 인증', body: '지갑 {walletId}의 Owner가 인증되었습니다' },
     DAILY_SUMMARY: { title: '일일 요약', body: '지갑: {walletCount}개, 거래: {txCount}건, 세션: {sessionCount}개' },
-    CUMULATIVE_LIMIT_WARNING: { title: '누적 지출 경고', body: '지갑 {walletId}의 {type} 누적 지출이 한도의 {ratio}%에 도달했습니다 (${spent} / ${limit})' },
+    CUMULATIVE_LIMIT_WARNING: { title: '누적 지출 경고', body: '지갑 {walletId}의 {type} 누적 지출이 한도의 {ratio}%에 도달했습니다 (${spent} / ${limit}) {display_amount}' },
   },
   // System messages
   system: {
