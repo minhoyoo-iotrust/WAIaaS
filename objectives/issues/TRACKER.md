@@ -47,6 +47,10 @@
 | 030 | ENHANCEMENT | LOW | Slack 알림 채널 미지원 — Incoming Webhook 방식 추가 | v1.4.8 | FIXED | 2026-02-15 |
 | 031 | BUG | HIGH | pushSchema 인덱스 생성이 마이그레이션보다 먼저 실행 — 기존 DB 시작 실패 | v1.4.8 | FIXED | 2026-02-15 |
 | 032 | BUG | HIGH | ActionProviderRegistry.listActions() 빌드 실패 — noUncheckedIndexedAccess 위반 | v1.5 | FIXED | 2026-02-15 |
+| 033 | BUG | HIGH | Admin UI 월렛 상세 네트워크 필드 불일치 — Terminate 무응답 + 삭제 지갑 크래시 | v1.5.1 | FIXED | 2026-02-16 |
+| 034 | ENHANCEMENT | MEDIUM | OpenAPI → 클라이언트 타입 자동 생성 도입 — API 필드 불일치 구조적 방지 | v1.5.1 | FIXED | 2026-02-16 |
+| 035 | ENHANCEMENT | MEDIUM | USDC_DOMAINS 하드코딩 테이블과 실제 온체인 도메인 불일치 | v1.5.1 | FIXED | 2026-02-16 |
+| 036 | BUG | HIGH | x402 EIP-712 도메인 name 불일치로 결제 서명 검증 실패 | v1.5.1 | FIXED | 2026-02-16 |
 
 ## Type Legend
 
@@ -59,7 +63,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 32
+- **FIXED:** 36
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 32
+- **Total:** 36

@@ -201,9 +201,10 @@ describe('signEip3009', () => {
     const signature = payload.signature as Hex;
 
     // Recover signer address from typed data signature
+    // Base Sepolia on-chain eip712Domain() returns 'USDC' (not 'USD Coin')
     const recoveredAddress = await recoverTypedDataAddress({
       domain: {
-        name: 'USD Coin',
+        name: 'USDC',
         version: '2',
         chainId: BigInt(84532),
         verifyingContract: requirements.asset as Hex,
@@ -428,7 +429,7 @@ describe('USDC_DOMAINS constant table', () => {
   it('Base Sepolia (eip155:84532) domain이 올바르다', () => {
     const domain = USDC_DOMAINS['eip155:84532'];
     expect(domain).toBeDefined();
-    expect(domain!.name).toBe('USD Coin');
+    expect(domain!.name).toBe('USDC'); // on-chain eip712Domain() returns 'USDC'
     expect(domain!.version).toBe('2');
     expect(domain!.chainId).toBe(84532);
     expect(domain!.verifyingContract).toMatch(/^0x/);

@@ -238,11 +238,12 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchNetworks = async () => {
     networksLoading.value = true;
     try {
-      const result = await apiGet<{ networks: NetworkInfo[] }>(API.WALLET_NETWORKS(id));
-      networks.value = result.networks;
+      const result = await apiGet<{ availableNetworks: NetworkInfo[] }>(API.WALLET_NETWORKS(id));
+      networks.value = result.availableNetworks ?? [];
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
+      networks.value = [];
     } finally {
       networksLoading.value = false;
     }
@@ -400,7 +401,7 @@ function WalletDetailView({ id }: { id: string }) {
               <div class="stat-skeleton" style={{ height: '80px' }} />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {networks.value.map((n) => (
+                {(networks.value ?? []).map((n) => (
                   <div key={n.network} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: 'var(--space-2) var(--space-3)',

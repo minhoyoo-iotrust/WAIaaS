@@ -79,9 +79,9 @@ export const USDC_DOMAINS: Record<string, Eip712Domain> = {
     chainId: 8453,
     verifyingContract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   },
-  // Base Sepolia (testnet)
+  // Base Sepolia (testnet) — on-chain eip712Domain() returns 'USDC' (not 'USD Coin')
   'eip155:84532': {
-    name: 'USD Coin',
+    name: 'USDC',
     version: '2',
     chainId: 84532,
     verifyingContract: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
@@ -217,11 +217,14 @@ export async function signEip3009(
   const { reference: chainIdStr } = parseCaip2(requirements.network);
   const chainId = parseInt(chainIdStr, 10);
 
-  // Look up USDC EIP-712 domain for this network
-  const domain = USDC_DOMAINS[requirements.network];
-  if (!domain) {
+  // Resolve EIP-712 domain: prefer server-provided extra.name/version (x402 v2 spec),
+  // fall back to USDC_DOMAINS table for backward compatibility.
+  const extra = requirements.extra as Record<string, unknown> | undefined;
+  const domainName = (extra?.name as string) ?? USDC_DOMAINS[requirements.network]?.name;
+  const domainVersion = (extra?.version as string) ?? USDC_DOMAINS[requirements.network]?.version;
+  if (!domainName || !domainVersion) {
     throw new WAIaaSError('X402_UNSUPPORTED_SCHEME', {
-      message: `No USDC domain configured for network: ${requirements.network}`,
+      message: `No EIP-712 domain (name/version) for network: ${requirements.network}`,
     });
   }
 
@@ -237,12 +240,13 @@ export async function signEip3009(
   const account = privateKeyToAccount(privateKeyHex);
 
   // Sign EIP-712 TransferWithAuthorization
+  // verifyingContract = asset address (USDC contract) from requirements
   const signature = await account.signTypedData({
     domain: {
-      name: domain.name,
-      version: domain.version,
+      name: domainName,
+      version: domainVersion,
       chainId: BigInt(chainId),
-      verifyingContract: domain.verifyingContract as Hex,
+      verifyingContract: requirements.asset as Hex,
     },
     types: TRANSFER_WITH_AUTHORIZATION_TYPES,
     primaryType: 'TransferWithAuthorization',
