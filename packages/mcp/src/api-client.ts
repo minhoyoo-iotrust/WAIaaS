@@ -174,6 +174,10 @@ export class ApiClient {
     return this.request<T>('PUT', path, body);
   }
 
+  async delete<T>(path: string): Promise<ApiResult<T>> {
+    return this.request<T>('DELETE', path);
+  }
+
   /**
    * 7-step request flow (SMGI-01):
    * 1. Get token from sessionManager

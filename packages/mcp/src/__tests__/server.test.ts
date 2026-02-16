@@ -33,6 +33,7 @@ function createMockApiClient(): ApiClient {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    delete: vi.fn(),
   } as unknown as ApiClient;
 }
 
@@ -83,8 +84,8 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 15 tools should be registered
-    expect(mockTool).toHaveBeenCalledTimes(15);
+    // 18 tools should be registered
+    expect(mockTool).toHaveBeenCalledTimes(18);
 
     // Every tool call's second argument (description) should have the prefix
     for (const call of mockTool.mock.calls) {
