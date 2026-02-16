@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.6 Phase 144 -- Admin UI Integration
+**Current focus:** v1.6 Phase 145 -- Docker
 
 ## Current Position
 
-Phase: 144 of 145 (Admin UI Integration)
-Plan: 2 of 2 in current phase
+Phase: 145 of 145 (Docker)
+Plan: 1 of 2 in current phase
 Status: Ready
-Last activity: 2026-02-16 -- 144-01 Kill Switch 3-state UI + Telegram Users 페이지 완료
+Last activity: 2026-02-16 -- 144-02 AutoStop + Monitoring Settings UI 완료 (Phase 144 완료)
 
-Progress: [##########░░░░] 79% (11/14 plans)
+Progress: [############░░] 86% (12/14 plans)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [##########░░░░] 79% (11/14 plans)
 | 141. AutoStop Engine | 2/2 | 13m | 7m |
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
 | 143. Telegram Bot | 3/3 | 34m | 11m |
-| 144. Admin UI Integration | 1/2 | 6m | 6m |
+| 144. Admin UI Integration | 2/2 | 8m | 4m |
 | 145. Docker | 0/2 | - | - |
 
 ## Accumulated Context
@@ -74,6 +74,7 @@ Full log in PROJECT.md and milestones/.
 - v1.6: vi.useFakeTimers로 backoff 테스트 제어 (vi.waitFor flaky 방지)
 - v1.6: Kill Switch 3-state UI (settings-section -> settings-category 패턴, ACTIVE/SUSPENDED/LOCKED 상태별 버튼)
 - v1.6: Telegram Users 관리 페이지 (Table + Badge + Modal 패턴, Approve/Delete 액션)
+- v1.6: AutoStop/Monitoring Settings UI fields map 배열 + checkbox/number 분기 패턴 (SecuritySettings 확장)
 
 ### Blockers/Concerns
 
@@ -84,5 +85,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 144-01-PLAN.md (Kill Switch 3-state UI + Telegram Users 페이지 -- Phase 144 Plan 1 완료)
+Stopped at: Completed 144-02-PLAN.md (AutoStop + Monitoring Settings UI -- Phase 144 완료)
 Resume file: None
