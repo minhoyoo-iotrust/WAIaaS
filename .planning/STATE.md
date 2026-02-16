@@ -5,14 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 151 커버리지 + Mock 인프라
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-16 — Milestone v1.7 started
+Phase: 151 of 159 (커버리지 + Mock 인프라)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-16 — Roadmap created (9 phases, 19 plans, 48 requirements)
+
+Progress: [░░░░░░░░░░] 0% (0/19 plans)
 
 ## Performance Metrics
 
@@ -30,7 +32,6 @@ Last activity: 2026-02-16 — Milestone v1.7 started
 ### Decisions
 
 Full log in PROJECT.md and milestones/.
-v1.6 decisions archived to milestones/v1.6-ROADMAP.md (45 decisions).
 v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 
 ### Blockers/Concerns
@@ -43,5 +44,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: v1.6.1 milestone completed
+Stopped at: v1.7 roadmap created (9 phases, 151-159)
 Resume file: None

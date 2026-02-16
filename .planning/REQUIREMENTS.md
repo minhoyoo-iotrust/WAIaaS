@@ -105,13 +105,60 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (roadmap 생성 시 채워짐) | | |
+| COV-01 | Phase 151 | Pending |
+| COV-02 | Phase 151 | Pending |
+| COV-03 | Phase 151 | Pending |
+| MOCK-01 | Phase 151 | Pending |
+| ENUM-01 | Phase 152 | Pending |
+| ENUM-02 | Phase 152 | Pending |
+| ENUM-03 | Phase 152 | Pending |
+| CTST-01 | Phase 153 | Pending |
+| CTST-02 | Phase 153 | Pending |
+| CTST-03 | Phase 153 | Pending |
+| CTST-04 | Phase 153 | Pending |
+| CTST-05 | Phase 153 | Pending |
+| CTST-06 | Phase 153 | Pending |
+| CTST-07 | Phase 153 | Pending |
+| CHAIN-01 | Phase 154 | Pending |
+| CHAIN-02 | Phase 154 | Pending |
+| CHAIN-03 | Phase 154 | Pending |
+| CHAIN-04 | Phase 154 | Pending |
+| SEC-01 | Phase 155 | Pending |
+| SEC-02 | Phase 155 | Pending |
+| SEC-03 | Phase 155 | Pending |
+| SEC-04 | Phase 155 | Pending |
+| SEC-05 | Phase 155 | Pending |
+| SEC-06 | Phase 156 | Pending |
+| SEC-07 | Phase 156 | Pending |
+| SEC-08 | Phase 156 | Pending |
+| SEC-09 | Phase 156 | Pending |
+| SEC-10 | Phase 156 | Pending |
+| SEC-11 | Phase 156 | Pending |
+| SEC-12 | Phase 156 | Pending |
+| SEC-13 | Phase 156 | Pending |
+| SEC-14 | Phase 156 | Pending |
+| EXT-01 | Phase 157 | Pending |
+| EXT-02 | Phase 157 | Pending |
+| EXT-03 | Phase 157 | Pending |
+| EXT-04 | Phase 157 | Pending |
+| EXT-05 | Phase 157 | Pending |
+| EXT-06 | Phase 157 | Pending |
+| EXT-07 | Phase 157 | Pending |
+| PLAT-01 | Phase 158 | Pending |
+| PLAT-02 | Phase 158 | Pending |
+| PLAT-03 | Phase 158 | Pending |
+| CICD-01 | Phase 159 | Pending |
+| CICD-02 | Phase 159 | Pending |
+| CICD-03 | Phase 159 | Pending |
+| CICD-04 | Phase 159 | Pending |
+| CICD-05 | Phase 159 | Pending |
+| CICD-06 | Phase 159 | Pending |
 
 **Coverage:**
-- v1.7 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46 ⚠️
+- v1.7 requirements: 48 total
+- Mapped to phases: 48/48
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after initial definition*
+*Last updated: 2026-02-16 after roadmap creation*
