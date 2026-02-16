@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 140 of 145 (Event Bus + Kill Switch)
-Plan: 2 of 3 in current phase
+Plan: 3 of 3 in current phase (COMPLETE)
 Status: Executing
-Last activity: 2026-02-16 -- 140-02 KillSwitchService 3-state + CAS ACID + DB v14 완료
+Last activity: 2026-02-16 -- 140-03 Kill Switch 6-step cascade + REST API + 미들웨어 완료
 
-Progress: [##░░░░░░░░░░░░] 14% (2/14 plans)
+Progress: [##░░░░░░░░░░░░] 21% (3/14 plans)
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [##░░░░░░░░░░░░] 14% (2/14 plans)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 140. Event Bus + Kill Switch | 2/3 | 22m | 11m |
+| 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
 | 141. AutoStop Engine | 0/2 | - | - |
 | 142. Balance Monitoring | 0/2 | - | - |
 | 143. Telegram Bot | 0/3 | - | - |
@@ -43,6 +43,10 @@ Full log in PROJECT.md and milestones/.
 - v1.6: eventBus optional chaining(?.) 패턴 -- 기존 코드 무중단 호환
 - v1.6: CAS ACID 패턴 (BEGIN IMMEDIATE + UPDATE WHERE value = expected) KillSwitchService에 적용
 - v1.6: RECOVERING 상태 제거, ACTIVE로 통합 (3-state: ACTIVE/SUSPENDED/LOCKED)
+- v1.6: 6-step cascade (세션 무효화->거래 중단->월렛 정지->API 503->알림->감사 로그) 순차 실행
+- v1.6: LOCKED 복구 대기 시간 5초, Owner 미등록 시 Master-only 복구 허용
+- v1.6: kill-switch:state-changed EventBus 이벤트 추가 (AutoStop/BalanceMonitor 구독용)
+- v1.6: 기존 ACTIVATED 상태명을 SUSPENDED로, NORMAL을 ACTIVE로 전환
 
 ### Blockers/Concerns
 
@@ -52,5 +56,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 140-02-PLAN.md (KillSwitchService 3-state + CAS ACID + DB v14)
+Stopped at: Completed 140-03-PLAN.md (Kill Switch 6-step cascade + REST API + 미들웨어)
 Resume file: None
