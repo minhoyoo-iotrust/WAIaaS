@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 
 ## Current Position
 
-Phase: 141 of 145 (AutoStop Engine)
+Phase: 142 of 145 (Balance Monitoring)
 Plan: 1 of 2 in current phase
 Status: Executing
-Last activity: 2026-02-16 -- 141-01 AutoStopService 4 규칙 구현 + EventBus 이벤트 구독 완료
+Last activity: 2026-02-16 -- 141-02 AutoStop 설정 관리 + DaemonLifecycle 통합 + 알림 통합 완료
 
-Progress: [###░░░░░░░░░░░] 29% (4/14 plans)
+Progress: [####░░░░░░░░░░] 36% (5/14 plans)
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [###░░░░░░░░░░░] 29% (4/14 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 140. Event Bus + Kill Switch | 3/3 | 38m | 13m |
-| 141. AutoStop Engine | 1/2 | 5m | 5m |
+| 141. AutoStop Engine | 2/2 | 13m | 7m |
 | 142. Balance Monitoring | 0/2 | - | - |
 | 143. Telegram Bot | 0/3 | - | - |
 | 144. Admin UI Integration | 0/2 | - | - |
@@ -51,6 +51,10 @@ Full log in PROJECT.md and milestones/.
 - v1.6: AutoStop 규칙 트리거 후 카운터 리셋 (재축적 필요)
 - v1.6: AutoStop 알림 fire-and-forget (규칙 엔진 안전성)
 - v1.6: MANUAL_TRIGGER -> Kill Switch 전체 발동, 나머지 3규칙 -> 개별 월렛 정지
+- v1.6: auto_stop_consecutive_failures_threshold(기본값 3) -> autostop_consecutive_failures_threshold(기본값 5) 교체
+- v1.6: autostop 키는 security TOML 섹션 flat key, Admin Settings는 별도 autostop 카테고리
+- v1.6: AUTO_STOP_TRIGGERED i18n 범용 {walletId}/{reason}/{rule} 템플릿
+- v1.6: HotReloadOrchestrator autostop 동기 처리 (updateConfig만)
 
 ### Blockers/Concerns
 
@@ -60,5 +64,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 141-01-PLAN.md (AutoStopService 4 규칙 구현 + EventBus 이벤트 구독)
+Stopped at: Completed 141-02-PLAN.md (AutoStop 설정 관리 + DaemonLifecycle 통합 + 알림 통합)
 Resume file: None
