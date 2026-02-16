@@ -127,6 +127,7 @@ export const messages: Messages = {
     OWNER_VERIFIED: { title: 'Owner 인증', body: '지갑 {walletId}의 Owner가 인증되었습니다' },
     DAILY_SUMMARY: { title: '일일 요약', body: '지갑: {walletCount}개, 거래: {txCount}건, 세션: {sessionCount}개' },
     CUMULATIVE_LIMIT_WARNING: { title: '누적 지출 경고', body: '지갑 {walletId}의 {type} 누적 지출이 한도의 {ratio}%에 도달했습니다 (${spent} / ${limit}) {display_amount}' },
+    LOW_BALANCE: { title: '잔액 부족 알림', body: '월렛 {walletId} 잔액 부족: {balance} {currency}. 임계값: {threshold} {currency}. 자금을 충전해주세요.' },
   },
   // System messages
   system: {
