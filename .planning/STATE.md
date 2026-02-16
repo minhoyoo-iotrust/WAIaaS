@@ -14,7 +14,7 @@ Plan: 3 of 3 in current phase
 Status: 157-03 complete
 Last activity: 2026-02-17 — Phase 157 plan 03 complete
 
-Progress: [########░░] 74% (14/19 plans)
+Progress: [########░░] 79% (15/19 plans)
 
 ## Performance Metrics
 
@@ -39,6 +39,7 @@ Progress: [########░░] 74% (14/19 plans)
 | 156 | 01 | 8min | 2 | 3 |
 | 156 | 02 | 7min | 2 | 4 |
 | 156 | 03 | 6min | 2 | 2 |
+| 157 | 01 | 6min | 2 | 2 |
 | 157 | 03 | 4min | 2 | 2 |
 
 *Updated after each plan completion*
@@ -96,6 +97,9 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 156-02: ActionProviderRegistry는 resolve() 시 체인 매칭 미강제 (pipeline 레벨 검증)
 - 156-03: IPv6-in-brackets URL은 URL parser가 hex로 정규화하여 isIP() 0 반환, DNS ENOTFOUND로 차단
 - 156-03: @waiaas/core 패키지 export로 ChainError/CHAIN_ERROR_CATEGORIES import (상대 경로 불필요)
+- 157-01: CTR-X07 wildcard '*' selector는 METHOD_WHITELIST exact match only -- 전체 허용은 METHOD_WHITELIST 미설정으로 달성
+- 157-01: CTR-U07 세션 constraints는 middleware 레벨 강제 (DatabasePolicyEngine 외부)
+- 157-01: CTR-U08~U10 ContractCallRequest calldata/accounts 모두 Zod optional
 - 157-03: ACT-U01: Registry에 MCP Tool 상한 하드캡 미존재 (17개 이상 등록 가능, 문서화)
 - 157-03: ACT-U04: 156-02 결정 재확인 -- Registry는 chain 매칭 미강제, pipeline 레벨 검증
 - 157-03: CE-12: STALE !== TRANSIENT -- STALE는 retryable이지만 TX rebuild 필요
@@ -110,5 +114,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 157-03-PLAN.md
+Stopped at: Completed 157-01-PLAN.md (EXT-01/02 token+contract tests)
 Resume file: None
