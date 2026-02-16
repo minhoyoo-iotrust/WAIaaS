@@ -94,8 +94,8 @@
 - [x] **Phase 141: AutoStop Engine** (2 plans) - 이벤트 기반 자동 정지 규칙 엔진
 - [x] **Phase 142: Balance Monitoring** (2 plans) - 주기적 잔액 체크 + LOW_BALANCE 알림
 - [x] **Phase 143: Telegram Bot** (3 plans) - Long Polling 기반 원격 관리 봇
-- [ ] **Phase 144: Admin UI Integration** (2 plans) - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
-- [ ] **Phase 145: Docker** - Multi-stage 빌드 + docker-compose 원클릭 배포
+- [x] **Phase 144: Admin UI Integration** (2 plans) - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
+- [ ] **Phase 145: Docker** (2 plans) - Multi-stage 빌드 + docker-compose 원클릭 배포
 
 ## Phase Details
 
@@ -178,11 +178,11 @@ Plans:
   1. Multi-stage Dockerfile로 빌드된 이미지에서 데몬이 non-root(UID 1001, waiaas) 프로세스로 실행된다
   2. docker compose up 후 HEALTHCHECK가 통과하고 SDK로 거래가 가능하다
   3. Docker Secrets + _FILE 패턴으로 MASTER_PASSWORD_FILE 등 시크릿이 안전하게 주입되고, named volume 덕분에 docker compose down 후 up해도 데이터가 유지된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 145-01: Dockerfile + docker-compose.yml + entrypoint.sh
-- [ ] 145-02: Docker Secrets + HEALTHCHECK + 영속성 검증
+- [ ] 145-01-PLAN.md -- Dockerfile + docker-compose.yml + entrypoint.sh + .dockerignore
+- [ ] 145-02-PLAN.md -- Docker Secrets 오버라이드 + HEALTHCHECK/영속성 검증
 
 ## Progress
 
@@ -195,9 +195,9 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 | 141. AutoStop Engine | 2/2 | Complete | 2026-02-16 |
 | 142. Balance Monitoring | 2/2 | Complete | 2026-02-16 |
 | 143. Telegram Bot | 3/3 | Complete | 2026-02-18 |
-| 144. Admin UI Integration | 0/2 | Not started | - |
+| 144. Admin UI Integration | 2/2 | Complete | 2026-02-18 |
 | 145. Docker | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-18 -- Phase 144 계획 완료 (2 plans)*
+*Last updated: 2026-02-18 -- Phase 145 계획 완료 (2 plans)*
