@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포 + Python SDK, ~220,000 LOC, ~2,510 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + **WalletConnect v2 QR 페어링 + 서명 요청** + **Telegram Fallback 자동 전환**) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + **WalletConnect 세션 관리 페이지** + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작.
+v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Python SDK, ~237,000 LOC, ~3,509 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.7에서 추가:** Vitest v8 패키지별 커버리지 임계값 + Turborepo 5개 테스트 태스크 + Mock 10개 경계 + 16개 Enum SSoT 빌드타임 검증 + 7개 인터페이스 Contract Test + 블록체인 3단계 테스트(Mock RPC→Local Validator→Devnet) + 보안 ~460 시나리오 + 확장 기능 154건 + 플랫폼 84건 + GitHub Actions 4-stage CI/CD(push→PR→nightly→release).
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -35,14 +35,14 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포
 - ✅ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) — shipped 2026-02-16 (~2,150 tests, ~191,000 LOC)
 - ✅ v1.6 운영 인프라 + 잔액 모니터링 — shipped 2026-02-16 (~2,294 tests, ~207,902 LOC)
 - ✅ v1.6.1 WalletConnect Owner 승인 — shipped 2026-02-16 (~2,510 tests, ~220,000 LOC)
-- ◆ v1.7 품질 강화 + CI/CD — 300+ 테스트, 보안 ~249건, 4-stage 파이프라인 ← CURRENT
+- ✅ v1.7 품질 강화 + CI/CD — shipped 2026-02-17 (3,509 tests, ~237,000 LOC)
 - v1.8 업그레이드 + 배포 (npm 배포, Docker Hub, 자동 업데이트)
 - v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, GitHub Release)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~220,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- ~2,510 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~237,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
+- ~3,509 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -325,21 +325,19 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포
 - ✓ Telegram Fallback 자동 전환 — WC→Telegram 자동 전환, 단일 승인 소스, APPROVAL_CHANNEL_SWITCHED 알림 (FALL-01~03) — v1.6.1
 - ✓ WC DX 전체 인터페이스 — Admin WC 관리 페이지, MCP 3 도구, TS/Python SDK WC 메서드, Skill 파일 업데이트 (DX-01~04) — v1.6.1
 
+- ✓ Vitest v8 커버리지 인프라 + Turborepo 5개 태스크 분리 + Mock 10개 경계(M1-M10) 완성 — v1.7 (COV-01~03, MOCK-01)
+- ✓ 16개 Enum SSoT 4단계 빌드타임 검증 + config.toml 12건 + NOTE 매핑 22건 — v1.7 (ENUM-01~03)
+- ✓ 7개 인터페이스 Contract Test (IChainAdapter/IPolicyEngine/INotificationChannel/IClock/IPriceOracle/IActionProvider) — v1.7 (CTST-01~07)
+- ✓ 블록체인 3단계 테스트 (Mock RPC 13건 + Solana Local Validator 5건 + EVM Anvil 3건 + Devnet 3건) — v1.7 (CHAIN-01~04)
+- ✓ 3계층 보안 테스트 71건 (세션20/정책9/Kill Switch8/키스토어10/경계값24) — v1.7 (SEC-01~05)
+- ✓ 확장 보안 테스트 ~178건 (토큰32/컨트랙트28/Approve24/배치22/Oracle20/Action16/Swap12/ChainError12/x402 12) — v1.7 (SEC-06~14)
+- ✓ 확장 기능 테스트 154건 (토큰32/컨트랙트28/Approve24/배치22/Oracle20/Action16/ChainError12) — v1.7 (EXT-01~07)
+- ✓ 플랫폼 테스트 84건 (CLI Daemon32/Docker18/Telegram34) — v1.7 (PLAT-01~03)
+- ✓ GitHub Actions 4-stage CI/CD (push→PR→nightly→release) + Composite Action + coverage-gate.sh — v1.7 (CICD-01~06)
+
 ### 활성
 
-## Current Milestone: v1.7 품질 강화 + CI/CD
-
-**Goal:** 설계 단계에서 정의한 300+ 테스트 시나리오를 구현하고, CI/CD 파이프라인으로 지속적 품질을 보장하는 상태 달성
-
-**Target features:**
-- 보안 테스트 ~249건 전수 구현 (3계층 71건 + 확장 166건 + x402 12건)
-- 확장 기능 테스트 ~148건 (토큰/컨트랙트/Approve/배치/Oracle/ActionProvider/ChainError)
-- 플랫폼 테스트 84건 (CLI 32 + Docker 18 + Telegram 34)
-- Contract Test 7개 완성 (IChainAdapter/IPolicyEngine/INotificationChannel/IClock/IPriceOracle/IActionProvider)
-- 블록체인 3단계 테스트 (Mock RPC 13건 + Local Validator + Devnet 3건)
-- Enum SSoT 빌드타임 검증 (16개 Enum + config.toml 12건)
-- GitHub Actions 4-stage CI/CD (ci/nightly/release/coverage-report)
-- 패키지별 커버리지 게이트 Hard 80%+
+(v1.7 완료, 다음 마일스톤 대기 중)
 
 ## Next Milestone Goals
 
@@ -361,7 +359,7 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 9-패키지 모노레포
 
 ## 컨텍스트
 
-**누적:** 35 milestones (v0.1-v1.6.1), 150 phases, 325 plans, 923 requirements, 36 설계 문서(24-72), 8 objective 문서, ~220,000 LOC, ~2,510 테스트
+**누적:** 36 milestones (v0.1-v1.7), 159 phases, 344 plans, 971 requirements, 36 설계 문서(24-72), 8 objective 문서, ~237,000 LOC, ~3,509 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -387,6 +385,7 @@ v1.5.2 Admin UI 정책 폼 UX 개선 shipped (2026-02-16). 2 페이즈, 4 플랜
 v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02-16). 4 페이즈, 8 플랜, 19 요구사항, ~191,000 LOC, ~2,150 테스트.
 v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 6 페이즈, 14 플랜, 49 요구사항, ~207,902 LOC, ~2,294 테스트, 45 설계 결정.
 v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 24 요구사항, ~220,000 LOC, ~2,510 테스트, 28 설계 결정.
+v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9 페이즈, 19 플랜, 48 요구사항, ~237,000 LOC, 3,509 테스트, 66 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -398,7 +397,7 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 
 - SDK: @waiaas/sdk (TS, 0 의존성), waiaas (Python, httpx + Pydantic v2)
 - MCP: @waiaas/mcp (@modelcontextprotocol/sdk, stdio transport)
 - Build: pnpm workspace + Turborepo, tsc only
-- Test: Vitest (forks pool for sodium mprotect)
+- Test: Vitest (forks pool for sodium mprotect) + v8 coverage + msw 2.x (mock HTTP)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
 - 미구현: Jupiter Swap, Tauri (v2.6)
@@ -605,6 +604,14 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 
 | WC fallback에 isApprovalStillPending guard | 이미 처리된 approval 보호, 단일 승인 소스 | ✓ Good — v1.6.1 구현 |
 | 사용자 명시적 거부(4001/5000)는 fallback 없음 | 의도적 거부는 존중 | ✓ Good — v1.6.1 구현 |
 | notificationService/eventBus optional DI | WC 없이도 데몬 정상 동작 | ✓ Good — v1.6.1 구현 |
+| v8 coverage thresholds --coverage 플래그 실행 시에만 활성화 | vitest run 기본 실행 성능 유지 | ✓ Good — v1.7 구현 |
+| msw 핸들러 factory 패턴 (overrides 커스터마이징) | 테스트별 응답 분기 가능, 재사용 극대화 | ✓ Good — v1.7 구현 |
+| Contract Test factory skipMethods 패턴 | RPC 의존 복잡 메서드 격리, shape 검증 집중 | ✓ Good — v1.7 구현 |
+| describe.skipIf(!validatorRunning) 패턴 | Local Validator 미실행 시 graceful skip | ✓ Good — v1.7 구현 |
+| coverage-gate.sh Soft/Hard 모드 | v1.7 초기 soft, 안정화 후 hard 전환 | ✓ Good — v1.7 구현 |
+| ci.yml Stage 1 --affected / Stage 2 full suite | push 시 빠른 피드백, PR 시 전체 검증 | ✓ Good — v1.7 구현 |
+| nightly devnet job continue-on-error: true | devnet 불안정성 격리, 빌드 중단 방지 | ✓ Good — v1.7 구현 |
+| release Docker 빌드 GHA cache (type=gha, mode=max) | 레이어 캐시 재활용, 빌드 시간 최소화 | ✓ Good — v1.7 구현 |
 
 ---
-*최종 업데이트: 2026-02-16 after v1.6.1 milestone — WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback + Admin/MCP/SDK DX*
+*최종 업데이트: 2026-02-17 after v1.7 milestone — 품질 강화 + CI/CD (보안 ~460 시나리오, 확장 154건, 플랫폼 84건, 4-stage CI/CD)*

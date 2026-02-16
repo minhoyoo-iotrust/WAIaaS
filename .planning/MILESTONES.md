@@ -946,3 +946,33 @@
 
 ---
 
+
+## v1.7 품질 강화 + CI/CD (Shipped: 2026-02-17)
+
+**Delivered:** 설계 문서(46-51, 64) 기반 ~999건 신규 테스트와 GitHub Actions 4-stage CI/CD 파이프라인으로 보안 ~249건 시나리오, 확장 기능 154건, 플랫폼 84건, Contract Test 7개 인터페이스, 블록체인 3단계, Enum SSoT 빌드타임 검증을 달성하고 push→PR→nightly→release 지속적 품질 게이트를 확보한 상태
+
+**Phases completed:** 151-159 (19 plans total)
+
+**Key accomplishments:**
+
+- 테스트 인프라 구축 — Vitest v8 커버리지(패키지별 Hard 임계값) + Turborepo 5개 태스크 분리(unit/integration/security/chain/platform) + Mock 10개 경계(M1-M10, msw 2.x/MockPriceOracle/MockActionProvider)
+- Enum SSoT 빌드타임 검증 — 16개 Enum 4단계 방어(as const→TS→Zod→Drizzle→DB CHECK) + config.toml 12건 + NOTE 매핑 22건
+- Contract Test 7개 인터페이스 — IChainAdapter(Mock vs Solana vs EVM 22 메서드)/IPolicyEngine/INotificationChannel/IClock/IPriceOracle/IActionProvider Mock-실제 동일성 검증
+- 보안 테스트 ~460+ it-blocks — 3계층 보안 71건(세션20/정책9/Kill Switch8/키스토어10/경계값24) + 확장 보안 ~178건(토큰32/컨트랙트28/Approve24/배치22/Oracle20/Action16/Swap12/ChainError12/x402 12)
+- 확장 기능 154건 + 플랫폼 84건 — 토큰32/컨트랙트28/Approve24/배치22/Oracle20/Action16/ChainError12 기능 검증 + CLI Daemon32/Docker18/Telegram34 배포 품질 검증
+- 4-stage CI/CD 파이프라인 — Composite Action(Node.js 22+pnpm+Turborepo cache) + ci.yml(Stage1 --affected/Stage2 full suite+coverage) + nightly.yml(local-validator+devnet) + release.yml(4-job 품질 게이트+Docker+npm dry-run) + coverage-gate.sh(Soft/Hard)
+
+**Stats:**
+
+- 9 phases, 19 plans, 48 requirements, 66 설계 결정
+- 92 files changed, +24,004 LOC
+- 3,509 tests (~2,510 → 3,509, +~999 new tests)
+- ~237,013 LOC total
+- 49 commits, 1 day (2026-02-16 → 2026-02-17)
+
+**Git range:** `46a01da` (Phase 151 start) → `5b7cf57` (Phase 159 complete)
+
+**What's next:** v1.8 업그레이드 + 배포 (/gsd:new-milestone)
+
+---
+
