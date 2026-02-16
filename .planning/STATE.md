@@ -10,20 +10,25 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 151 of 159 (커버리지 + Mock 인프라)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-16 — Roadmap created (9 phases, 19 plans, 48 requirements)
+Plan: 2 of 2 in current phase
+Status: Phase 151 complete
+Last activity: 2026-02-16 — Completed 151-02 (Mock 경계 인프라 M6~M10)
 
-Progress: [░░░░░░░░░░] 0% (0/19 plans)
+Progress: [##░░░░░░░░] 10% (2/19 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 35 milestones, 150 phases, 325 plans, 923 reqs, ~2,510 tests, ~220,000 LOC
+**Cumulative:** 35 milestones, 150 phases, 325 plans, 923 reqs, ~2,539 tests, ~220,000 LOC
 
 **v1.6.1 Velocity:**
 - Total plans completed: 10
 - Average duration: 6min
 - Total execution time: 1.1 hours
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 151 | 01 | 4min | 2 | 18 |
+| 151 | 02 | 5min | 2 | 10 |
 
 *Updated after each plan completion*
 
@@ -33,6 +38,12 @@ Progress: [░░░░░░░░░░] 0% (0/19 plans)
 
 Full log in PROJECT.md and milestones/.
 v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
+
+- 151-01: v8 coverage thresholds는 --coverage 플래그 실행 시에만 활성화
+- 151-01: 미존재 디렉토리는 [ -d dir ] && vitest run --dir || true 패턴으로 graceful 처리
+- 151-01: admin 패키지 coverage include에 .tsx 확장자 추가
+- 151-02: PriceInfo source 'mock' -> 'cache' (Zod enum 준수)
+- 151-02: msw 핸들러 factory 패턴 (overrides로 테스트별 응답 커스터마이징)
 
 ### Blockers/Concerns
 
@@ -44,5 +55,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: v1.7 roadmap created (9 phases, 151-159)
+Stopped at: Completed 151-02-PLAN.md (Phase 151 complete)
 Resume file: None

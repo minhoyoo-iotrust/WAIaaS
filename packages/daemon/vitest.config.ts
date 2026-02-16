@@ -12,5 +12,18 @@ export default defineConfig({
         maxForks: 2, // Limit workers to reduce orphan processes on abnormal exit
       },
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'json'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/__tests__/**', 'src/**/*.test.ts', 'src/**/index.ts'],
+      thresholds: {
+        branches: 80,
+        functions: 85,
+        lines: 85,
+        statements: 85,
+      },
+    },
   },
 });

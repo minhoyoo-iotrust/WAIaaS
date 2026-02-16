@@ -17,6 +17,26 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "test:unit": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:integration": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test:security": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test:chain": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test:platform": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
     "lint": {
       "outputs": []
     },
