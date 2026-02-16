@@ -93,8 +93,8 @@
 - [x] **Phase 140: Event Bus + Kill Switch** (3 plans) - 이벤트 인프라와 3-state 긴급 정지 시스템
 - [x] **Phase 141: AutoStop Engine** (2 plans) - 이벤트 기반 자동 정지 규칙 엔진
 - [x] **Phase 142: Balance Monitoring** (2 plans) - 주기적 잔액 체크 + LOW_BALANCE 알림
-- [ ] **Phase 143: Telegram Bot** (3 plans) - Long Polling 기반 원격 관리 봇
-- [ ] **Phase 144: Admin UI Integration** - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
+- [x] **Phase 143: Telegram Bot** (3 plans) - Long Polling 기반 원격 관리 봇
+- [ ] **Phase 144: Admin UI Integration** (2 plans) - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
 - [ ] **Phase 145: Docker** - Multi-stage 빌드 + docker-compose 원클릭 배포
 
 ## Phase Details
@@ -164,11 +164,11 @@ Plans:
   1. Admin UI에서 Kill Switch 상태를 조회하고 발동/복구할 수 있으며, 기존 2-state 토글이 3-state(ACTIVE/SUSPENDED/LOCKED) UI로 리팩토링되어 있다
   2. Admin UI에서 telegram_users 목록을 조회하고 PENDING 사용자의 role을 ADMIN 또는 READONLY로 승인할 수 있다
   3. Admin UI Settings에서 AutoStop 규칙 임계값과 잔액 모니터링 임계값을 조회/수정할 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 144-01: Kill Switch 3-state UI + Telegram Users 관리
-- [ ] 144-02: AutoStop + Balance Monitor Settings 카테고리
+- [ ] 144-01-PLAN.md -- Kill Switch 3-state UI 리팩토링 + Telegram Users 관리 페이지
+- [ ] 144-02-PLAN.md -- AutoStop + Balance Monitor Settings 카테고리
 
 ### Phase 145: Docker
 **Goal**: docker compose up 한 줄로 WAIaaS 데몬이 실행되고, 데이터가 영속되며, 시크릿이 안전하게 주입된다
@@ -194,10 +194,10 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 | 140. Event Bus + Kill Switch | 3/3 | Complete | 2026-02-16 |
 | 141. AutoStop Engine | 2/2 | Complete | 2026-02-16 |
 | 142. Balance Monitoring | 2/2 | Complete | 2026-02-16 |
-| 143. Telegram Bot | 0/3 | Planning complete | - |
+| 143. Telegram Bot | 3/3 | Complete | 2026-02-18 |
 | 144. Admin UI Integration | 0/2 | Not started | - |
 | 145. Docker | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- Phase 143 계획 완료 (3 plans)*
+*Last updated: 2026-02-18 -- Phase 144 계획 완료 (2 plans)*
