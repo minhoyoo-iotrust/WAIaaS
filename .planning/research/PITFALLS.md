@@ -1,630 +1,615 @@
-# Domain Pitfalls: Sign-Only 트랜잭션 서명 + Unsigned TX 파싱 + 정책 매핑 + Default Deny 토글 + MCP 리소스 확장
+# Domain Pitfalls: WalletConnect v2 Owner 승인 통합
 
-**Domain:** Self-hosted AI agent wallet daemon -- sign-only pipeline, unsigned transaction parsing, policy mapping, default deny toggles, MCP skill resources
-**Project:** WAIaaS v1.7 (추정 마일스톤)
-**Researched:** 2026-02-14
-**Overall Confidence:** MEDIUM-HIGH (기존 코드베이스 직접 분석, viem/Solana 공식 문서 검증, MCP SDK 문서 교차 확인)
+**Domain:** Self-hosted AI agent wallet daemon -- WalletConnect v2 QR 페어링, 원격 서명 요청, Telegram fallback
+**Project:** WAIaaS (추후 마일스톤)
+**Researched:** 2026-02-16
+**Overall Confidence:** MEDIUM (WalletConnect 공식 스펙 + GitHub Issues + 기존 코드베이스 직접 분석. 일부 Node.js 서버 사이드 패턴은 커뮤니티 보고 기반)
 
 ---
 
 ## Overview
 
-이 문서는 **기존 6-stage 송금 파이프라인(build->simulate->sign->submit->confirm)에 sign-only 파이프라인(parse->policy->sign->return)을 추가할 때** 발생하는 함정을 다룬다. 기존 PITFALLS.md(v0.8)가 Owner 상태 전이와 정책 다운그레이드에 집중했다면, 이 문서는 **외부 dApp이 만든 unsigned transaction을 파싱하여 정책 평가 후 서명만 반환하는 흐름** 특유의 위험에 집중한다.
+이 문서는 **기존 ApprovalWorkflow(동기적 ownerAuth 서명 검증)에 WalletConnect v2 기반 원격 Owner 승인 채널을 추가할 때** 발생하는 함정을 다룬다.
 
-핵심 차이점: 기존 파이프라인은 WAIaaS가 트랜잭션을 직접 빌드하므로 내용을 완전히 통제한다. Sign-only 파이프라인은 **외부에서 구성한 트랜잭션을 신뢰해야 하는** 근본적 신뢰 경계 변화가 발생한다.
+핵심 패러다임 전환: 현재 ApprovalWorkflow는 **Owner가 직접 WAIaaS REST API에 서명을 제출**(SIWE/SIWS 헤더)하는 Pull 모델이다. WalletConnect 통합은 **WAIaaS가 Owner 지갑에 서명 요청을 Push**하는 모델로 전환한다. 이 Push 모델은 외부 relay 서버 의존, 비동기 응답 대기, 세션 상태 관리 등 근본적으로 다른 실패 모드를 도입한다.
 
-각 함정은 **Critical(보안 구멍 또는 자금 손실)**, **High(정책 우회 또는 주요 재작업)**, **Moderate(기술 부채 또는 UX 혼란)** 3단계로 분류한다.
+추가적으로 **Telegram Bot이 이미 /approve, /reject 명령을 지원**하므로, WalletConnect 채널이 Telegram fallback과 어떻게 공존하는지의 전환 조건이 핵심 설계 결정이다.
+
+각 함정은 **Critical(보안 구멍 또는 자금 손실)**, **High(기능 파괴 또는 주요 재작업)**, **Moderate(기술 부채 또는 UX 혼란)** 3단계로 분류한다.
 
 ---
 
 ## Critical Pitfalls
 
-보안 구멍, 정책 우회, 또는 자금 손실을 야기하는 실수.
+보안 구멍, 정책 우회, 또는 승인 흐름 무결성을 위협하는 실수.
 
 ---
 
-### C-01: Unsigned TX 파싱 불완전 -- 정책 우회 경로 (Parser Bypass)
+### C-01: WC 세션 미복구 시 데몬 재시작 = Owner 승인 경로 완전 단절
 
 **Severity:** CRITICAL
-**Confidence:** HIGH (EVM calldata 4-byte selector collision 연구, Solana instruction 구조 직접 분석)
+**Confidence:** MEDIUM (WalletConnect GitHub Issue #687, #2574 + WC 스펙 Storage API 분석. Node.js 서버 사이드 세션 복구는 공식 가이드 부재)
 
 **What goes wrong:**
-외부 dApp이 보내온 unsigned transaction에서 type/amount/to/contract 등을 정확하게 추출하지 못하면, 정책 엔진이 잘못된 TransactionParam으로 평가하게 된다. 구체적 시나리오:
+WalletConnect v2 `@walletconnect/sign-client`는 내부적으로 세션, 페어링, proposal 등의 상태를 key-value 스토어에 저장한다. Node.js 환경에서는 기본적으로 `FileSystemStorage` 모듈을 사용하며 파일 시스템에 상태를 기록한다. 데몬이 재시작되면:
 
-**EVM 공격 벡터:**
-1. 외부 dApp이 ERC-20 `transfer(address,uint256)` 호출이 포함된 unsigned tx를 보냄
-2. 파서가 calldata에서 4-byte selector `0xa9059cbb`를 추출
-3. 그러나 `multicall` 안에 감싸진 경우, 외부 calldata는 `multicall(bytes[])` 셀렉터만 보임
-4. 파서가 이를 단순 CONTRACT_CALL로 분류 → ALLOWED_TOKENS 정책 우회
-5. 실제로는 허용되지 않은 토큰을 전송하는 트랜잭션에 서명 완료
+1. SignClient가 재초기화 → 기존 세션을 FileSystemStorage에서 읽으려 시도
+2. FileSystemStorage의 기본 경로가 프로세스 CWD 상대 경로 → Docker 볼륨 마운트 미설정 시 데이터 소실
+3. 세션이 복구되더라도 WebSocket 연결이 끊어진 상태 → relay 재연결 시 세션이 "stale" 상태
+4. Owner의 MetaMask/Phantom은 여전히 페어링된 것으로 표시하지만, 데몬 측에서는 세션을 인식 못함
+5. **Owner에게 승인 요청이 도달하지 않음** → APPROVAL 티어 트랜잭션이 모두 타임아웃 만료
 
-**Solana 공격 벡터:**
-1. Solana VersionedTransaction에 Address Lookup Table (ALT)이 포함됨
-2. 파서가 ALT를 resolve하지 않으면 instruction의 실제 program ID를 알 수 없음
-3. System Program transfer처럼 보이지만 실제로는 다른 프로그램의 CPI
-4. 금액/수신자 정보를 잘못 추출하여 SPENDING_LIMIT 우회
-
-**핵심 문제:** 파서가 지원하지 않는 instruction 패턴을 만나면 **안전한 기본값(deny)이 아닌 통과(INSTANT)로 처리**하는 실수. 현재 DatabasePolicyEngine은 정책이 0개일 때 `{ allowed: true, tier: 'INSTANT' }` 반환하므로, 파싱 실패 시 TransactionParam이 빈 값이면 정책을 우회할 수 있다.
-
-**Why it happens:**
-- EVM calldata는 ABI 없이 정확한 디코딩이 불가능 (4-byte selector만으로는 함수 시그니처 모호)
-- Solana VersionedTransaction의 ALT는 온체인 조회 없이 resolve 불가
-- 파서 개발 시 "알려진 패턴만 처리하고 나머지는 통과" 접근
-- 현재 `buildTransactionParam()` 함수가 `default: TRANSFER`로 fallback하는 패턴과 동일 실수
-
-**Warning signs:**
-- 파서에 `default` 또는 `else` 분기가 `type: 'TRANSFER', amount: '0'`을 반환
-- ALT가 포함된 Solana tx에 대한 테스트 케이스 부재
-- multicall/batch 패턴이 감싸진 EVM tx에 대한 테스트 케이스 부재
-- `CONTRACT_CALL`로 분류된 tx에 selector가 없는 경우의 처리 미정의
-
-**Prevention:**
-1. **파싱 실패 = DENY:** 파서가 분류할 수 없는 트랜잭션은 반드시 `{ allowed: false, reason: 'Unable to classify transaction for policy evaluation' }` 반환. 절대로 INSTANT 통과 금지.
-2. **ALT resolve 필수:** Solana tx에 ALT가 포함되어 있으면 `getAddressLookupTable` RPC를 호출하여 실제 주소를 resolve한 뒤 instruction을 분석. RPC 실패 시 deny.
-3. **EVM calldata 깊이 제한:** multicall, batch 등 중첩된 calldata는 1단계까지만 파싱하고, 2단계 이상 중첩은 deny. ABI 없이 디코딩할 때의 모호성을 명시적으로 인정.
-4. **알려진 프로토콜 화이트리스트:** Jupiter, Raydium 등 알려진 프로그램의 instruction 레이아웃을 사전 등록하고, 등록되지 않은 프로그램의 instruction은 `UNKNOWN_PROGRAM`으로 분류하여 CONTRACT_WHITELIST 정책으로 제어.
-5. **파싱 결과 감사 로그:** 모든 sign-only 요청에 대해 파싱 결과(분류된 type, 추출된 amount/to/contract)를 audit_log에 기록하여 사후 검증 가능.
-
-**Phase:** Unsigned TX 파서 구현 시 (가장 첫 번째 phase에서 완료해야 함)
-
----
-
-### C-02: SPENDING_LIMIT reserved_amount 영원히 해제되지 않는 문제 -- 서명 후 미제출 트랜잭션
-
-**Severity:** CRITICAL
-**Confidence:** HIGH (현재 코드 직접 분석 -- `evaluateAndReserve`와 `releaseReservation` 흐름 확인)
-
-**What goes wrong:**
-현재 `evaluateAndReserve()`는 트랜잭션 행에 `reserved_amount`를 기록하고, `releaseReservation()`은 FAILED/CANCELLED/EXPIRED 상태 전이 시 호출된다. 그런데 sign-only 파이프라인에서는:
-
-1. 외부 dApp이 unsigned tx 제출 → 정책 평가 → `evaluateAndReserve()`로 금액 예약
-2. WAIaaS가 서명을 반환 → 서명된 tx를 dApp에게 돌려줌
-3. **dApp이 서명된 tx를 제출하지 않음** (사용자 취소, 네트워크 전환, 앱 종료 등)
-4. WAIaaS 입장에서는 트랜잭션이 SIGNED 상태로 영원히 남음
-5. `reserved_amount`가 해제되지 않아 SPENDING_LIMIT이 점점 소진됨
-6. 결국 정상 트랜잭션도 "한도 초과"로 거부됨
-
-**현재 코드의 문제:**
-```typescript
-// database-policy-engine.ts L526-528
-// reserved_amount는 PENDING/QUEUED 상태의 tx만 합산
-// 하지만 sign-only tx는 SIGNED 상태이고 PENDING/QUEUED가 아님
-// → SIGNED 상태를 합산에 포함하면 기존 파이프라인과 충돌
-// → 포함하지 않으면 reservation이 무의미
+**현재 코드와의 충돌:**
+```
+// WAIaaS의 기존 서비스들은 SQLite(better-sqlite3) 기반 상태 관리
+// KillSwitchService, TelegramBotService 등 모두 SQLite에 상태 저장
+// WalletConnect sign-client는 독자적 FileSystemStorage 사용
+// → 두 개의 상태 소스가 공존하는 split-brain 위험
 ```
 
-**Solana 특유의 문제:**
-- Solana tx는 blockhash lifetime(~60초)이 있어 만료 후에는 제출 불가
-- 만료 시점을 WAIaaS가 추적할 수 있지만, dApp이 새 blockhash로 재구성할 수 있음
-- 같은 금액의 새 tx에 또 서명 요청이 올 수 있어 이중 예약 위험
-
-**EVM 특유의 문제:**
-- EVM tx에는 blockhash 만료 개념 없음 → nonce가 사용되기 전까지 무기한 유효
-- 서명된 tx를 언제든 제출할 수 있어 reservation 해제 시점을 결정할 수 없음
-- nonce가 다른 tx에 의해 사용되면 해당 서명은 무효화되지만, WAIaaS가 이를 감지하려면 주기적 폴링 필요
+WAIaaS의 기존 데이터베이스는 `data/waiaas.db` 경로에 SQLite로 저장되며, Docker 배포 시 이 경로만 볼륨 마운트한다. WalletConnect의 FileSystemStorage가 다른 경로에 저장되면 컨테이너 재생성 시 세션이 소실된다.
 
 **Why it happens:**
-- 기존 파이프라인은 build->sign->submit이 동기적이므로 submit 성공/실패 시 즉시 reservation 해제
-- Sign-only는 submit이 WAIaaS 밖에서 일어나므로 lifecycle 추적 불가
-- "서명 = 자금 이동 확정"이 아닌 환경을 기존 reservation 모델이 처리 못함
+- WalletConnect SDK는 브라우저/모바일 앱 대상으로 설계되어 "앱 종료 후 재시작"이 일반적 시나리오가 아님
+- Node.js 백엔드에서의 세션 직렬화/역직렬화 패턴에 대한 공식 가이드 부재 ([GitHub Issue #687](https://github.com/WalletConnect/walletconnect-monorepo/issues/687))
+- FileSystemStorage의 기본 경로와 WAIaaS의 데이터 디렉토리가 별도
+- 세션 복구 시 relay 재연결이 자동으로 되는지 여부가 SDK 버전에 따라 다름
 
 **Warning signs:**
-- `reserved_amount` SUM이 시간이 지나면서 단조 증가
-- wallet의 실제 잔액은 변하지 않았는데 SPENDING_LIMIT에 걸리는 현상
-- sign-only tx에 대한 `releaseReservation` 호출 경로가 없음
+- 개발 중에는 "데몬 재시작 없이" 테스트하므로 세션 유실 시나리오를 놓침
+- Docker compose up/down 시 WC 세션이 매번 끊어지는 증상
+- 테스트에서 SignClient.init()을 매번 새로 호출하면서 기존 세션 존재 테스트 누락
+- "QR 코드를 다시 스캔해주세요" 에러가 프로덕션에서 반복
 
 **Prevention:**
-1. **TTL 기반 자동 해제:** sign-only 트랜잭션의 `reserved_amount`에 TTL(Time-To-Live)을 설정. Solana: blockhash 만료 시간(~60초 + 여유 30초 = 90초). EVM: 설정 가능한 TTL(기본 10분).
-2. **SIGNED 상태 전용 reservation 테이블:** 기존 transactions 테이블의 `reserved_amount`와 분리하여 `sign_only_reservations` 테이블에 `{txId, amount, walletId, expiresAt}` 저장. `evaluateAndReserve`에서 이 테이블도 합산.
-3. **주기적 만료 처리:** `processExpired()` 패턴(DelayQueue에서 이미 사용)을 재활용하여 만료된 sign-only reservation을 주기적으로 해제.
-4. **온체인 확인 옵션:** 서명 반환 시 `txHash`를 예측하여 기록하고, 주기적으로 온체인에서 확인 여부를 폴링. 확인되면 reservation을 정상 완료 처리, 미확인이면 TTL 후 해제.
-5. **예약 없이 현재 잔액 기반 평가 옵션:** sign-only 모드에서는 `evaluateAndReserve` 대신 `evaluate`만 사용하고, TOCTOU 대신 on-chain balance 확인으로 대체하는 접근도 고려. 단, 동시 서명 요청 시 이중 지출 가능성.
+1. **커스텀 Storage 어댑터로 SQLite 통합:** `@walletconnect/sign-client`의 storage 옵션에 SQLite 기반 커스텀 key-value 스토어를 주입. 기존 `key_value_store` 테이블을 재활용하거나 `wc_sessions` 전용 테이블 생성. WAIaaS DB와 동일 파일에 저장되므로 백업/복구/Docker 볼륨 마운트가 일원화됨.
+2. **데몬 시작 시 세션 헬스체크:** `signClient.session.getAll()`로 활성 세션 목록 조회 → 각 세션에 ping 전송 → 응답 없으면 세션 정리 + 운영자 알림 "WalletConnect 세션이 만료되었습니다. 재페어링이 필요합니다."
+3. **graceful shutdown 시 명시적 세션 보존:** 데몬 종료 시 `SIGTERM` 핸들러에서 SignClient 상태를 Storage에 flush. 갑작스런 종료(SIGKILL)에 대비하여 write-ahead 패턴 적용.
+4. **세션 만료 주기적 체크 (like TelegramBotService.pollLoop):** 5분 간격으로 WC 세션 만료 확인. 만료 7일 전에 세션 extend 시도.
 
-**Phase:** Sign-only 파이프라인 정책 통합 시 (reserved_amount 전략 결정이 선행되어야 함)
+**Phase:** WC 기반 인프라 세팅 (가장 첫 번째 phase에서 해결)
 
 ---
 
-### C-03: DELAY/APPROVAL 티어와 동기적 Sign-Only 흐름의 근본적 비호환
+### C-02: WalletConnect Relay 서버 의존 -- Self-Hosted 데몬의 외부 단일 실패점(SPOF)
 
 **Severity:** CRITICAL
-**Confidence:** HIGH (현재 stage4Wait 코드 직접 분석 -- `throw WAIaaSError('PIPELINE_HALTED')` 패턴)
+**Confidence:** HIGH (WalletConnect 공식 스펙: relay self-hosting 미지원 명시, [FAQ](https://docs.walletconnect.com/2.0/advanced/faq))
 
 **What goes wrong:**
-현재 파이프라인에서 DELAY/APPROVAL 티어는 `stage4Wait`에서 `PIPELINE_HALTED` 에러를 throw하여 파이프라인을 중단하고, 별도 워커(DelayQueue.processExpired / ApprovalWorkflow.approve)가 나중에 Stages 5-6을 실행한다. Sign-only 파이프라인에서 이 패턴은:
+WAIaaS는 "self-hosted" 데몬이 핵심 가치이다. 모든 키와 정책이 로컬에서 관리되며 외부 서비스에 의존하지 않는다(Telegram Bot은 알림 전용이므로 데몬 코어 기능에 영향 없음). WalletConnect를 도입하면:
 
-**DELAY 문제:**
-1. 10 SOL 서명 요청 → 정책 평가 → DELAY(15분)
-2. 15분 대기? → HTTP 요청이 15분간 열려 있어야 함 (비현실적)
-3. PIPELINE_HALTED throw? → 클라이언트가 서명을 받지 못함
-4. 15분 후 서명 반환? → 원래 unsigned tx의 blockhash가 이미 만료 (Solana)
+1. **Owner 승인 경로가 `wss://relay.walletconnect.com`에 의존** → relay 장애 시 승인 불가
+2. relay는 WalletConnect 재단이 운영하는 중앙화 서비스 → self-hosted 데몬의 철학과 충돌
+3. relay self-hosting은 **공식적으로 미지원** (WalletConnect FAQ: "Self-hosting is currently not supported")
+4. WalletConnect Cloud에서 projectId를 발급받아야 하며, projectId가 비활성화되면 전체 승인 흐름 중단
+5. relay 서비스 가용성은 WAIaaS 운영자가 제어할 수 없음
 
-**APPROVAL 문제:**
-1. 20 SOL 서명 요청 → 정책 평가 → APPROVAL
-2. Owner 승인 대기? → 무기한 대기 불가
-3. Owner가 승인하면? → 이미 blockhash 만료, 원래 unsigned tx 무효
-4. dApp이 새 unsigned tx를 만들어 재요청? → 정책 재평가 필요 → 무한 루프 가능
+**Self-hosted 환경에서의 추가 위험:**
+- 기업 방화벽이 `wss://relay.walletconnect.com` outbound WebSocket을 차단할 수 있음
+- 프록시 환경에서 WebSocket upgrade가 실패하는 경우 다수 보고 ([Issue #1744](https://github.com/WalletConnect/walletconnect-monorepo/issues/1744))
+- relay 서버 인증 시 JWT Authorization 헤더가 필요하며, WebSocket에서는 URL query param `?auth=`로 전달해야 하는 경우 프록시가 해당 파라미터를 strip할 수 있음
 
-**핵심 딜레마:** sign-only는 본질적으로 **동기적 요청-응답 패턴**인데, DELAY/APPROVAL은 **비동기 워크플로우**다. 이 두 패턴을 호환시키려면 근본적 설계 결정이 필요하다.
+**현재 코드의 맥락:**
+```
+// TelegramBotService는 Telegram API 장애 시에도 데몬 코어에 영향 없음
+// → 알림이 안 갈 뿐, 트랜잭션 처리는 정상 진행
+// WalletConnect는 APPROVAL 승인 경로 자체이므로 장애 = 승인 불가
+```
 
 **Why it happens:**
-- 기존 파이프라인은 WAIaaS가 tx lifecycle 전체를 소유하므로 비동기 워크플로우가 자연스러움
-- Sign-only에서는 tx lifecycle 소유권이 dApp에 있어 비동기 대기가 불가능
-- "정책 엔진 재사용"이라는 목표와 "동기적 서명 반환"이라는 요구가 충돌
+- WalletConnect v2는 P2P 메시징을 위해 relay 서버를 중개자로 사용하는 것이 프로토콜 설계의 핵심
+- 향후 탈중앙화 네트워크(WCT 토큰 기반)로 전환 예정이나, 현재는 중앙화 relay에 의존
+- relay 없이 직접 P2P 통신하는 것은 프로토콜 수준에서 지원하지 않음
 
 **Warning signs:**
-- sign-only 엔드포인트에 DELAY/APPROVAL 처리가 "TODO"로 남아 있음
-- sign-only에서 DELAY 시 "즉시 서명하되 NOTIFY로 다운그레이드"하는 편의적 결정
-- stage4Wait를 sign-only에서 스킵하는 코드 (정책 우회와 동의어)
+- relay 연결 실패 시 데몬이 에러 로그만 남기고 승인 요청을 무한 대기
+- 네트워크 단절 환경(에어갭)에서 WC 승인이 완전히 불가능한데 이에 대한 대책 없음
+- KillSwitch 복구(dual-auth)가 WC 경로만 의존하면 relay 장애 시 복구 불가
 
 **Prevention:**
-1. **방안 A: Sign-only는 INSTANT/NOTIFY만 허용.** DELAY/APPROVAL 티어 결과가 나오면 서명 거부 + 에러 응답에 tier 정보 포함. 클라이언트에게 "이 금액은 sign-only로 처리할 수 없습니다. WAIaaS 내장 파이프라인(POST /v1/wallets/:id/send)을 사용하세요." 안내. **가장 안전하고 권장되는 접근.**
-2. **방안 B: 2-phase sign-only.** Phase 1: 서명 요청 → 정책 평가 → DELAY/APPROVAL이면 `signRequestId` 반환. Phase 2: DELAY 만료 또는 Owner 승인 후 → 클라이언트가 `signRequestId`로 서명 수령. 단, Phase 2에서 원래 unsigned tx가 만료되었을 수 있으므로 재제출 필요.
-3. **방안 C: 별도 sign-only 정책.** sign-only 전용 SPENDING_LIMIT을 추가하여 sign-only에서는 INSTANT만 적용되는 한도를 별도 설정. 기존 정책과 분리되어 관리 복잡성 증가.
-4. **어떤 방안이든, DELAY/APPROVAL 결과에 대한 처리를 명시적으로 정의해야 함.** "스킵" 또는 "미구현"은 절대 금지.
+1. **WalletConnect는 "선호 채널"이지 "유일 채널"이 아니어야 함:** 기존 ownerAuth(SIWE/SIWS 서명 + REST API 직접 제출)를 제거하지 않고 유지. WC는 UX 편의 채널로 추가하되, REST API 직접 승인도 항상 가능하게 유지.
+2. **relay 헬스체크 + 자동 fallback:** relay 연결 상태를 모니터링하고, 연결 끊김이 N초(예: 30초) 이상 지속되면 자동으로 Telegram 채널로 승인 요청 전환.
+3. **projectId를 config.toml에서 관리:** `[walletconnect]` 섹션에 `project_id` 설정. 미설정 시 WC 기능 비활성화(graceful degradation). 런타임에 Admin Settings에서 변경 가능하게.
+4. **네트워크 요구사항 문서화:** "WalletConnect 사용 시 `wss://relay.walletconnect.com`으로의 outbound WebSocket 연결이 필요합니다. 방화벽에서 이 도메인을 허용해주세요."
+5. **KillSwitch 복구 경로에서 WC 단독 의존 금지:** dual-auth 복구는 반드시 REST API(SIWE/SIWS) 경로도 지원.
 
-**Phase:** Sign-only 파이프라인 설계 시 (첫 phase에서 아키텍처 결정 필수)
+**Phase:** 아키텍처 설계 (첫 번째 phase에서 fallback 전략 결정 필수)
+
+---
+
+### C-03: WC 서명 요청과 ApprovalWorkflow의 타이밍 불일치 -- 이중 승인 또는 만료 경쟁
+
+**Severity:** CRITICAL
+**Confidence:** HIGH (기존 ApprovalWorkflow.approve() 코드 직접 분석 + WC 세션 요청 기본 5분 타임아웃 확인)
+
+**What goes wrong:**
+현재 ApprovalWorkflow의 타임아웃 시스템과 WalletConnect의 요청 타임아웃이 독립적으로 동작한다:
+
+**타임아웃 충돌 시나리오:**
+1. APPROVAL 티어 트랜잭션 발생 → `approvalWorkflow.requestApproval(txId)` 호출 → 3-레벨 타임아웃으로 1시간 만료 설정
+2. WC를 통해 Owner 지갑에 서명 요청 전송 → WC 기본 타임아웃 5분
+3. Owner가 6분 후에 MetaMask에서 서명 승인 → WC 측에서는 이미 요청 만료(error code 8000: sessionRequestExpired)
+4. 하지만 WAIaaS의 pending_approvals 테이블에서는 아직 유효 (expires_at = 1시간 후)
+5. WC 응답이 타임아웃으로 실패했지만, Owner는 서명을 제출했다고 생각 → 혼란
+
+**이중 승인 시나리오:**
+1. WC로 서명 요청 → Owner가 MetaMask에서 서명 (하지만 네트워크 지연으로 응답이 데몬에 도달 안 함)
+2. Telegram fallback 전환 → Owner가 Telegram에서 /approve 실행
+3. Telegram /approve가 먼저 처리됨 → `approvalWorkflow.approve()` 호출 → tx EXECUTING으로 전이
+4. 뒤늦게 WC 서명 응답 도달 → 이미 EXECUTING인 tx에 대해 또 approve 시도
+5. `APPROVAL_NOT_FOUND` 에러 (approved_at이 이미 설정됨) → 에러 로그만 남음 → 무해하지만, Owner 서명이 버려지는 것은 보안 감사 관점에서 문제
+
+**ownerSignature 충돌:**
+현재 `approve(txId, ownerSignature)`에서 ownerSignature는 SIWE/SIWS 헤더 서명이다. WC를 통해 받는 서명은 `personal_sign` 또는 `eth_signTypedData_v4`의 결과이다. 이 두 서명의 포맷과 의미가 다르다:
+- 기존: SIWE message + EIP-191 서명 (owner 인증 목적)
+- WC: 트랜잭션 승인 메시지(예: "Approve TX {txId}: 10 SOL to 9bKr...") + EIP-191 서명 (승인 의사 확인 목적)
+
+**Why it happens:**
+- ApprovalWorkflow는 "Owner가 직접 API를 호출하는" 동기적 모델로 설계됨 → 타임아웃이 관대 (기본 1시간)
+- WC 서명 요청은 "원격 지갑에 Push" 비동기 모델 → 기본 5분 타임아웃
+- 두 타임아웃 시스템이 독립적이어서 불일치 필연
+- Telegram /approve와 WC 승인이 병렬 경로로 존재하는데 atomic하지 않음
+
+**Warning signs:**
+- WC 요청 타임아웃과 ApprovalWorkflow 타임아웃을 독립적으로 설정
+- Telegram /approve 핸들러가 WC 세션 상태를 확인하지 않음
+- "이중 승인" 시나리오에 대한 테스트 케이스 부재
+- `approve()` 호출 시 `owner_signature` 포맷 검증 없음
+
+**Prevention:**
+1. **단일 승인 소스 원칙:** 트랜잭션별로 "현재 승인 채널"을 기록. `pending_approvals` 테이블에 `channel` 컬럼 추가 (`'REST' | 'WALLETCONNECT' | 'TELEGRAM'`). 다른 채널에서의 승인 시도는 "이미 다른 채널에서 대기 중" 경고 반환.
+2. **WC 타임아웃을 ApprovalWorkflow에 동기화:** WC 요청 전송 시 `expiry` 파라미터를 `pending_approvals.expires_at`과 일치시킴. WC의 기본 5분 대신, 정책 타임아웃(또는 config 값)을 사용. WC Extended Sessions를 활용하면 최대 7일까지 설정 가능.
+3. **CAS(Compare-And-Swap) 기반 승인:** `approve()` 호출 시 `BEGIN IMMEDIATE` 트랜잭션 안에서 `approved_at IS NULL AND rejected_at IS NULL` 조건으로 update. 이미 처리되었으면 no-op (현재 코드에서 이미 이 패턴 사용 중이므로 이중 승인 자체는 방지됨, 하지만 "뒤늦은 WC 응답 처리" 로직이 필요).
+4. **WC 응답 도착 후 상태 확인:** WC 서명 응답 수신 시 먼저 `pending_approvals`에서 해당 txId의 상태를 확인. 이미 처리(approved/rejected/expired)되었으면 응답을 무시하고 감사 로그에 기록.
+5. **서명 포맷 통일:** WC를 통한 승인에도 SIWE/SIWS 포맷의 메시지 서명을 요청. `personal_sign`에 SIWE 메시지를 전달하면 Owner 지갑은 읽을 수 있는 메시지를 확인하고 서명. 서명 검증은 기존 `verifySIWE`/`sodium.crypto_sign_verify_detached` 로직 재활용.
+
+**Phase:** ApprovalWorkflow + WC 통합 설계 시 (아키텍처 핵심 결정)
 
 ---
 
 ## High Pitfalls
 
-정책 의미 변경, 기존 기능 파괴, 또는 주요 재작업을 야기하는 실수.
+기능 파괴, 주요 재작업, 또는 운영 장애를 야기하는 실수.
 
 ---
 
-### H-01: Default Deny 토글의 기존 정책 의미 역전 -- "아무 정책 없음 = 전부 허용" 깨짐
+### H-01: QR 페어링 상태 전이의 불완전 관리 -- 좀비 페어링, 세션 누수
 
 **Severity:** HIGH
-**Confidence:** HIGH (DatabasePolicyEngine.evaluate() L171-174 직접 분석)
+**Confidence:** HIGH (WalletConnect 공식 스펙: [Pairing API](https://specs.walletconnect.com/2.0/specs/clients/core/pairing) 분석)
 
 **What goes wrong:**
-현재 DatabasePolicyEngine의 동작:
-```typescript
-// Step 2: No policies -> INSTANT passthrough
-if (rows.length === 0) {
-  return { allowed: true, tier: 'INSTANT' };
-}
-```
+WalletConnect v2에서 페어링(pairing)과 세션(session)은 독립적 lifecycle을 가진다:
 
-정책이 0개이면 모든 트랜잭션이 INSTANT으로 통과한다. 이것은 v1.1부터의 의도적 설계("정책 없음 = 사용 편의")다. Default Deny 토글을 도입하면:
+- **Inactive 페어링:** 생성 후 5분 내에 상대방이 페어링하지 않으면 만료
+- **Active 페어링:** 성공적 페어링 후 30일 유효 (활동 시 갱신)
+- **세션:** 페어링 위에서 생성, 기본 7일 TTL
 
-**시나리오 1: 전역 Default Deny 활성화**
-1. 운영자가 admin에서 "Default Deny" 토글 ON
-2. 기존에 정책 없이 운영하던 모든 wallet의 트랜잭션이 즉시 거부
-3. 에이전트가 갑자기 모든 작업 실패 → 운영 중단
+**좀비 페어링 시나리오:**
+1. Admin UI에서 "WalletConnect 연결" 버튼 → QR 코드 생성 (inactive 페어링 생성)
+2. Owner가 5분 내에 스캔하지 않음 → inactive 페어링 만료
+3. 하지만 데몬 내부의 pairing 객체가 정리되지 않음
+4. Admin UI에서 다시 "연결" 클릭 → 새 페어링 생성, 이전 페어링은 좀비로 잔존
+5. 반복하면 수십 개의 좀비 페어링이 Storage에 쌓임 → 메모리/디스크 누수
 
-**시나리오 2: 부분적 Default Deny**
-1. ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS는 이미 개별적으로 default deny
-2. TRANSFER(native token)만 "정책 없으면 허용"
-3. TRANSFER에도 default deny를 적용하면 → WHITELIST 정책이 없는 wallet에서 모든 전송 거부
-4. WHITELIST는 현재 "정책이 없으면 제한 없음" (L718-722: `if (!whitelist) return null;`)
+**세션 누수 시나리오:**
+1. Owner가 MetaMask에서 WAIaaS 세션 연결 해제 (session_delete 이벤트)
+2. 데몬이 `session_delete` 이벤트를 수신하지 못함 (WebSocket 재연결 중이었거나 데몬 다운 상태)
+3. 데몬 내부에서는 세션이 여전히 활성으로 표시
+4. 다음 승인 요청 시 해당 세션으로 요청 전송 → 응답 없음 → 타임아웃
+5. Owner는 이미 연결 해제한 상태이므로 승인이 영원히 불가능
 
-**핵심 문제:** "default deny"가 적용되는 범위(어떤 정책 타입? 어떤 트랜잭션 타입?)를 명확히 정의하지 않으면, 기존 동작과 새 동작의 경계에서 예상 못한 거부가 발생한다.
+**다중 세션 시나리오:**
+1. Owner가 모바일 MetaMask로 한번, 데스크톱 MetaMask로 한번 페어링
+2. 2개의 활성 세션이 존재
+3. 승인 요청을 어느 세션으로 보낼지 결정 로직 필요
+4. 두 세션 모두에 보내면 → 이중 서명 응답 가능성
+5. 하나만 보내면 → 그 디바이스를 사용하지 않는 시점에 승인 불가
 
 **Why it happens:**
-- "Default Deny"가 단일 boolean 토글이 아닌, 정책 타입별로 다른 의미를 가짐
-- 기존 정책 엔진이 "정책 없음 = 허용"을 여러 곳에서 하드코딩
-- ALLOWED_TOKENS/CONTRACT_WHITELIST는 이미 default deny인데 WHITELIST/SPENDING_LIMIT은 아닌 불균형
+- WalletConnect v2는 pairing과 session을 decouple했지만, 이 decouple된 lifecycle 각각을 별도로 관리해야 함
+- `session_delete`, `pairing_expire` 이벤트가 데몬 다운 시 유실될 수 있음
+- SDK가 내부적으로 일부 정리를 하지만, `getActiveSessions()`가 실제로는 disconnected된 세션도 반환하는 버그 보고 ([Issue #4484](https://github.com/WalletConnect/walletconnect-monorepo/issues/4484))
 
 **Warning signs:**
-- Default Deny 토글이 단일 설정 값 하나로 구현됨
-- 토글 전환 시 기존 wallet의 정책을 점검하는 마이그레이션 로직 없음
-- "정책 없음 = 허용" 패턴이 evaluate(), evaluateAndReserve(), evaluateBatch() 3곳에 산재
+- `session_delete` 이벤트 핸들러가 구현되지 않음
+- `pairing_expire` 이벤트 핸들러가 구현되지 않음
+- Admin UI에 현재 WC 세션 상태를 보여주는 패널이 없음
+- 세션 수를 제한하는 로직 없음
 
 **Prevention:**
-1. **정책 타입별 default deny 제어:** 단일 토글 대신, 정책 타입별로 default deny 여부를 설정. 예: `{ WHITELIST: false, SPENDING_LIMIT: false, ALLOWED_TOKENS: true(이미), CONTRACT_WHITELIST: true(이미) }`. 기존 default deny인 타입은 변경 불가(역호환).
-2. **토글 전환 시 영향도 미리보기:** admin UI에서 "Default Deny를 활성화하면 N개 wallet에서 M개 트랜잭션 타입이 차단됩니다"를 시뮬레이션 결과로 보여줌.
-3. **단계적 적용:** 전역 토글 대신 wallet별로 적용. 새 wallet에는 default deny 적용, 기존 wallet은 opt-in.
-4. **"정책 없음 = 허용" 코드 모두 추출:** evaluate()의 L171-174를 `defaultBehavior(walletId)` 함수로 추출하여 단일 제어 지점에서 관리.
+1. **WC 이벤트 전체 등록:** `session_delete`, `session_expire`, `session_update`, `pairing_expire`, `pairing_delete` 이벤트 모두 핸들링. 각 이벤트 시 DB에 상태 반영 + 감사 로그.
+2. **주기적 세션 정리 (Janitor):** AutoStopService/BalanceMonitor 패턴처럼 5분 주기로 `signClient.session.getAll()` 순회 → 만료된 세션 정리, 활성 세션에 ping 전송하여 liveness 확인.
+3. **단일 활성 세션 정책:** wallet당 WC 세션은 1개만 허용. 새 세션 생성 시 기존 세션 자동 disconnect. 다중 디바이스 지원은 추후 확장.
+4. **Admin UI 세션 패널:** 현재 WC 세션 목록, 상태(active/expired/disconnected), 마지막 활동 시각, 수동 disconnect 버튼 제공.
+5. **세션 활성화 시 DB 기록:** `wc_sessions` 테이블에 `{sessionTopic, walletId, peerMetadata, createdAt, expiresAt, lastActiveAt, status}` 저장. 데몬 재시작 시 이 테이블과 SignClient 내부 상태를 동기화.
 
-**Phase:** Default Deny 토글 구현 시
+**Phase:** WC 세션 관리 구현 시
 
 ---
 
-### H-02: Solana VersionedTransaction 파싱 시 Legacy vs V0 분기 누락
+### H-02: EventEmitter 메모리 누수 -- SignClient 초기화 + 이벤트 리스너 누적
 
 **Severity:** HIGH
-**Confidence:** HIGH (Solana VersionedTransaction 공식 문서, SolanaAdapter의 `txDecoder` 사용 패턴 확인)
+**Confidence:** MEDIUM (WalletConnect [Issue #1177](https://github.com/WalletConnect/walletconnect-monorepo/issues/1177) 직접 확인 -- MaxListenersExceededWarning 보고)
 
 **What goes wrong:**
-Solana에는 Legacy Transaction과 Versioned Transaction(V0)이 공존한다:
+WalletConnect `@walletconnect/sign-client`는 내부적으로 Node.js EventEmitter를 사용한다. 초기화 시 다수의 이벤트 리스너를 등록하는데:
 
-1. **Legacy Transaction:** `Transaction` 클래스, 모든 주소가 message.accountKeys에 직접 포함
-2. **Versioned Transaction (V0):** `VersionedTransaction` 클래스, Address Lookup Table(ALT)로 주소 압축
+1. `SignClient.init()` 호출 시 내부적으로 10개 이상의 이벤트 리스너 등록
+2. Node.js의 기본 MaxListeners 임계값(10)을 초과 → `MaxListenersExceededWarning` 경고
+3. 경고 자체는 무해하지만, 실제 문제는 **SignClient를 여러 번 초기화하거나 이벤트 핸들러를 중복 등록할 때**
+4. WAIaaS에서 `signClient.on('session_request', handler)`를 여러 곳에서 등록하면 리스너 누적
+5. 장기 운영 시 메모리 사용량 증가 → 데몬 성능 저하 또는 OOM
 
-파서가 Legacy만 지원하고 V0을 무시하면:
-- ALT를 사용하는 Jupiter, Raydium 등 모든 DeFi 트랜잭션 파싱 실패
-- ALT에 포함된 프로그램 ID를 식별 못해 policy 분류 불가
+**WAIaaS 특유의 리스크:**
+```
+// 기존 TelegramBotService는 단순 HTTP Long Polling → 이벤트 리스너 미사용
+// WalletConnect는 WebSocket + EventEmitter 패턴 → 리스너 lifecycle 관리 필수
+// 데몬이 24/7 장기 운영되므로 리스너 누수가 누적됨
+```
 
-파서가 V0만 지원하고 Legacy를 무시하면:
-- 간단한 SOL 전송(많은 dApp이 아직 Legacy 사용)이 파싱 실패
+Admin Settings hot-reload 시 WC 설정 변경 → SignClient 재초기화 → 이전 리스너가 정리되지 않으면 누적.
+
+**Why it happens:**
+- WalletConnect SDK가 `init()` 시 MaxListeners를 증가시키지 않음
+- Node.js 기본 제한(10)이 WC의 내부 리스너 수보다 낮음
+- SignClient 재초기화 시 이전 인스턴스의 리스너를 명시적으로 `removeAllListeners()`하지 않으면 GC 안 됨
+- `.on()` vs `.once()` 사용의 혼동
+
+**Warning signs:**
+- 데몬 로그에 `MaxListenersExceededWarning` 경고 출현
+- 데몬 장시간 운영 시 RSS 메모리가 단조 증가
+- Admin Settings에서 WC 관련 설정 변경 후 리스너 수가 2배로 증가
+
+**Prevention:**
+1. **SignClient는 싱글턴:** 데몬 lifecycle 전체에서 SignClient 인스턴스를 1개만 유지. hot-reload 시에도 인스턴스를 재생성하지 않고 설정만 업데이트.
+2. **MaxListeners 명시적 설정:** `signClient.core.events.setMaxListeners(20)` 또는 적절한 값으로 설정. 하지만 이것은 경고 억제일 뿐, 근본 해결은 리스너 관리.
+3. **리스너 등록 중앙화:** WalletConnect 이벤트 핸들러를 `WalletConnectService` 클래스에서만 등록. 외부에서 직접 `.on()` 호출 금지. `WalletConnectService.stop()` 시 `removeAllListeners()` 호출.
+4. **리스너 수 모니터링:** 주기적으로 `events.listenerCount('session_request')` 등을 체크하여 비정상 증가 감지 → 감사 로그에 경고.
+
+**Phase:** WC 서비스 구현 시
+
+---
+
+### H-03: Telegram Fallback 전환 조건의 모호성 -- "언제 WC를 포기하고 Telegram으로 가나?"
+
+**Severity:** HIGH
+**Confidence:** HIGH (기존 TelegramBotService + NotificationService 코드 직접 분석)
+
+**What goes wrong:**
+WalletConnect와 Telegram Bot 모두 Owner 승인을 지원하면, 전환 로직이 핵심이 된다:
+
+**시나리오 1: 너무 빠른 fallback**
+1. WC로 승인 요청 전송 → Owner가 MetaMask를 여는 중 (10초 소요)
+2. 5초 후 "WC 응답 없음" → Telegram으로 fallback → Telegram에서 승인 알림
+3. Owner가 MetaMask에서 승인 → WC 응답 도달
+4. 동시에 Telegram에서도 /approve 가능 → 이중 알림 + 혼란
+
+**시나리오 2: 너무 느린 fallback**
+1. WC로 승인 요청 전송 → Owner의 MetaMask가 오프라인 (폰 꺼짐)
+2. WC 기본 타임아웃 5분 대기
+3. 5분 후 Telegram으로 fallback → Telegram에서 승인
+4. 5분간 APPROVAL 티어 트랜잭션이 블로킹됨 → 에이전트가 5분간 정지
+
+**시나리오 3: 채널 선택 없음**
+1. Owner가 WC 연결도 하고 Telegram 등록도 함
+2. 승인 요청 시 어떤 채널을 먼저 시도하나?
+3. 기본 설정이 없으면 구현자가 임의로 결정 → 일관성 없는 UX
 
 **현재 코드의 맥락:**
-```typescript
-// adapter.ts L79: txDecoder = getTransactionDecoder()
-// txDecoder는 @solana/kit의 decoder로 Legacy와 V0 모두 디코딩 가능
-// 하지만 디코딩 후 instruction 분석은 수동으로 해야 함
+```
+// TelegramBotService.handleApprove()는 직접 DB에서 pending_approvals를 update
+// ownerAuth 미들웨어의 서명 검증을 거치지 않음 (Telegram 2-Tier auth만 확인)
+// WC 승인은 암호학적 서명을 포함하므로 보안 수준이 다름
+// → 두 채널의 보안 수준 차이를 어떻게 처리?
 ```
 
-**ALT resolve의 추가 복잡성:**
-- ALT 조회는 RPC 호출 필요 (`getAddressLookupTable`)
-- RPC 호출은 비동기 + 네트워크 지연
-- ALT가 존재하지 않거나 비활성화된 경우 처리 필요
-- ALT 데이터가 파싱 시점과 서명 시점 사이에 변경될 수 있음 (rare but possible)
-
 **Why it happens:**
-- Solana ecosystem이 Legacy에서 V0으로 전환 중이라 양쪽 모두 지원 필요
-- ALT resolve가 I/O를 동반하여 "순수 파싱" 범주를 벗어남
-- @solana/kit의 decoder가 format 분기를 자동 처리하지만 의미론적 분석은 별도 구현 필요
+- "WC가 실패하면 Telegram으로"라는 개념은 단순하지만, "실패"의 정의가 모호
+- WC 요청은 비동기이므로 "타임아웃 전"과 "실패" 사이의 경계가 불분명
+- Telegram /approve는 ownerAuth 서명 없이 승인하므로 보안 모델이 다름
+- NotificationService의 priority fallback 패턴(channels 순서대로 시도)은 알림 전송용이지, 승인 워크플로우용이 아님
 
 **Warning signs:**
-- 파서 테스트에 `VersionedMessage.V0`이 포함된 테스트 케이스 없음
-- ALT가 포함된 serialized tx에 대한 RPC mock 테스트 없음
-- "Solana tx = Legacy" 가정이 코드에 존재
+- fallback 타임아웃이 하드코딩되어 있음 (운영자 설정 불가)
+- WC 채널과 Telegram 채널 모두에서 동시에 승인 대기 중인 상태
+- fallback 전환 시 WC 요청을 명시적으로 취소하지 않음
+- Telegram /approve 후에도 WC 세션에서 승인 프롬프트가 남아 있음
 
 **Prevention:**
-1. **양쪽 format 모두 지원:** `txDecoder.decode(bytes)`의 결과에서 `compiledMessage.version`을 확인하여 Legacy(undefined/legacy)와 V0(0)을 분기.
-2. **ALT resolve를 파서의 필수 단계로 포함:** V0 tx이면 ALT resolve 없이 instruction 분석 금지. resolve 실패 시 deny.
-3. **resolve된 전체 주소 목록을 캐시:** 같은 ALT에 대한 중복 RPC 호출 방지 (ALT 주소는 자주 바뀌지 않음).
-4. **파싱 결과에 format 메타데이터 포함:** `{ format: 'legacy' | 'v0', hasALT: boolean, resolvedAccounts: number }` 등을 감사 로그에 기록.
+1. **채널 우선순위 설정:** Admin Settings에 `approval_channel_priority: ['walletconnect', 'telegram', 'rest']` 설정. 첫 번째 채널 실패 시 다음 채널로 순차 fallback.
+2. **단계적 fallback 타임아웃:** WC 요청 후 `wc_fallback_timeout` (기본 60초) 동안 응답 대기. 타임아웃 시 다음 채널로 전환. 운영자가 Admin Settings에서 조정 가능.
+3. **fallback 전환 시 이전 채널 취소:** Telegram으로 fallback 시, WC 세션에 cancel 시그널 전송 (혹은 WC 응답이 늦게 도달해도 무시하도록 상태 전이).
+4. **채널별 보안 수준 차별화:** WC 승인 = 암호학적 서명 포함 (ownerAuth 수준). Telegram /approve = 2-Tier auth (admin 레벨). 보안 수준이 다르므로, 고액 트랜잭션은 WC/REST만 허용하고 Telegram은 소액만 허용하는 옵션 제공.
+5. **상태 전이 다이어그램 명시:** `PENDING_WC → (timeout) → PENDING_TELEGRAM → (timeout) → EXPIRED` 또는 `PENDING_WC → (wc_approved) → APPROVED`. 모든 전이를 감사 로그에 기록.
 
-**Phase:** Solana TX 파서 구현 시
+**Phase:** Approval 채널 전략 설계 시
 
 ---
 
-### H-03: EVM Calldata에서 금액/수신자 추출 실패 -- ABI 없는 디코딩의 한계
+### H-04: WC 서명 요청의 메시지 포맷 -- Owner가 "무엇을 승인하는지" 알 수 없는 문제
 
 **Severity:** HIGH
-**Confidence:** HIGH (viem `parseTransaction` 문서 확인, calldata 디코딩 연구 교차 검증)
+**Confidence:** MEDIUM (WC `personal_sign` 스펙 + MetaMask 서명 UI 분석)
 
 **What goes wrong:**
-EVM unsigned tx를 `viem.parseTransaction()`으로 디코딩하면 to, value, data(calldata)가 추출된다. 그러나:
+WalletConnect를 통해 Owner에게 서명을 요청할 때, Owner의 지갑(MetaMask/Phantom 등)에 표시되는 메시지가 핵심이다:
 
-**Case 1: ERC-20 transfer**
-- `to` = ERC-20 컨트랙트 주소 (실제 수신자 아님)
-- `value` = 0 (네이티브 ETH 전송 없음)
-- `data` = `0xa9059cbb` + ABI-encoded(recipient, amount)
-- 정책 평가에 필요한 실제 수신자와 금액은 calldata 안에 있음
-- ABI-encoding 규격을 알면 디코딩 가능하지만, 정확한 함수 시그니처를 확인해야 함
+**Case 1: 불투명한 메시지**
+1. WAIaaS가 `personal_sign`으로 트랜잭션 해시만 전송: `"0xa1b2c3..."`
+2. Owner의 MetaMask에 의미 불명의 hex 문자열이 표시됨
+3. Owner가 "이게 뭔데?" → 맹목적으로 승인하거나 거부
+4. **Owner가 실제로 10 SOL 전송을 승인하는 것인지, 100 SOL을 승인하는 것인지 알 수 없음**
+5. 보안 관점에서 blind signing과 동일 → 중간자가 금액을 조작해도 Owner가 감지 불가
 
-**Case 2: multicall/aggregate**
-- `to` = Multicall3 컨트랙트 (0xcA11...)
-- `data` = `aggregate3(Call3[])` -- 내부에 여러 호출이 중첩
-- 각 내부 호출의 target/calldata를 재귀적으로 파싱해야 실제 의도 파악
-- SPENDING_LIMIT을 개별 호출별로? 합산?
+**Case 2: 너무 상세한 메시지**
+1. WAIaaS가 전체 트랜잭션 상세를 plain text로 전송
+2. MetaMask가 긴 메시지를 스크롤 가능하게 표시하지만, 모바일에서 읽기 어려움
+3. Owner가 상세 내용을 읽지 않고 습관적으로 승인
 
-**Case 3: 알 수 없는 함수**
-- `selector`가 4bytes.directory에 없는 커스텀 함수
-- calldata에서 금액/수신자를 추출 불가
-- 정책 평가를 위한 `amount`를 `value` (네이티브 전송분)으로만 제한? → 토큰 전송 금액 누락
-
-**현재 코드와의 차이:**
-현재 EVM 파이프라인은 WAIaaS가 직접 `encodeFunctionData`로 calldata를 만들므로 내용을 완전히 알고 있다. Sign-only에서는 외부가 만든 calldata를 역해석해야 한다.
+**Case 3: EIP-712 typed data**
+1. `eth_signTypedData_v4`를 사용하면 구조화된 데이터를 보여줄 수 있음
+2. 하지만 Solana 체인에서는 `signMessage`만 가능 (typed data 미지원)
+3. 체인별로 다른 서명 방식 필요 → 코드 복잡성 증가
 
 **Why it happens:**
-- EVM은 calldata가 자기 기술적(self-describing)이 아님 -- ABI가 있어야 정확한 디코딩 가능
-- 4-byte selector collision이 존재 (같은 selector, 다른 함수 시그니처)
-- proxy 패턴, delegatecall, multicall 등이 실제 호출 대상을 숨김
-
-**Prevention:**
-1. **알려진 패턴만 정확히 파싱, 나머지는 CONTRACT_CALL로 분류:** ERC-20 transfer/approve, ERC-721 transferFrom, native ETH transfer는 정확히 파싱. 그 외는 `{ type: 'CONTRACT_CALL', contractAddress: tx.to, selector: data.slice(0,10), amount: tx.value }` 로 분류하여 CONTRACT_WHITELIST + METHOD_WHITELIST 정책으로 제어.
-2. **ABI 제출 옵션:** sign-only API에 `abi` 파라미터를 선택적으로 받아, ABI가 있으면 정확한 디코딩 수행. ABI 없으면 selector 기반 분류.
-3. **토큰 레지스트리 활용:** `to` 주소가 token_registry 테이블의 ERC-20 컨트랙트 주소와 일치하면 → TOKEN_TRANSFER로 분류하고 calldata에서 recipient/amount를 ABI-decode.
-4. **value + 추정 토큰 금액 합산:** 네이티브 value는 확정, 토큰 금액은 ABI decode 성공 시에만 합산. 실패 시 토큰 금액 0으로 처리하되 경고 로그.
-
-**Phase:** EVM TX 파서 구현 시
-
----
-
-### H-04: 11개 PolicyType에 대한 불완전 매핑 -- Sign-Only 특유의 정책 갭
-
-**Severity:** HIGH
-**Confidence:** HIGH (현재 11개 PolicyType와 sign-only 파싱 가능 정보의 교차 분석)
-
-**What goes wrong:**
-현재 11개 PolicyType 중 sign-only 파서가 제공할 수 있는 정보:
-
-| PolicyType | 기존 파이프라인 | Sign-Only 파서 | 갭 |
-|------------|:-------------:|:-------------:|-----|
-| SPENDING_LIMIT | amount 확정 | amount 추정(ABI decode 의존) | 금액 정확도 |
-| WHITELIST | to 확정 | to = 컨트랙트일 수 있음 (실제 수신자는 calldata 안) | 수신자 정확도 |
-| ALLOWED_TOKENS | token.address 확정 | ERC-20 컨트랙트 주소 = to (추론) | 토큰 식별 |
-| CONTRACT_WHITELIST | contractAddress 확정 | to (정확) | OK |
-| METHOD_WHITELIST | selector 확정 | selector 4bytes (정확) | OK |
-| APPROVED_SPENDERS | spender 확정 | calldata decode 의존 | 스펜더 정확도 |
-| APPROVE_AMOUNT_LIMIT | amount 확정 | calldata decode 의존 | 금액 정확도 |
-| APPROVE_TIER_OVERRIDE | type 확정 | selector 기반 추론 | 타입 정확도 |
-| ALLOWED_NETWORKS | network 확정 | chainId에서 파생 (EVM) / 요청 파라미터 (Solana) | OK |
-| TIME_RESTRICTION | 요청 시점 | 요청 시점 | OK |
-| RATE_LIMIT | 요청 시점 | 요청 시점 | OK |
-
-**갭이 있는 6개 정책에서 오평가 발생 시:**
-- WHITELIST가 ERC-20 컨트랙트 주소로 평가되어 실제 수신자 통과
-- SPENDING_LIMIT이 `value=0`으로 평가되어 고액 토큰 전송이 INSTANT 통과
-- APPROVE가 일반 CONTRACT_CALL로 분류되어 APPROVE_AMOUNT_LIMIT 우회
-
-**Why it happens:**
-- 기존 정책 엔진이 "WAIaaS가 빌드한 트랜잭션" 전제로 TransactionParam을 정의
-- 외부 tx에서 같은 수준의 정보를 추출하는 것이 구조적으로 불가능한 경우 존재
-- 정책 갭을 인지하지 못하고 "파싱 성공 = 정책 평가 완전" 으로 간주
-
-**Prevention:**
-1. **PolicyParam에 confidence 필드 추가:**
-```typescript
-interface SignOnlyTransactionParam extends TransactionParam {
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-  // HIGH: 확정적 추출 (native transfer, to 주소)
-  // MEDIUM: ABI decode 성공 (ERC-20 transfer/approve)
-  // LOW: 추론 (unknown selector, multicall 내부)
-}
-```
-2. **confidence LOW이면 DELAY/APPROVAL로 강제 승격:** 파싱 정확도가 낮은 tx는 더 엄격한 tier로 평가.
-3. **정책 매핑 불가능 시 명시적 fallback:** "이 정책 타입은 sign-only에서 평가 불가능합니다" 경고와 함께 deny 또는 운영자 설정 가능한 fallback.
-4. **sign-only 전용 제한 정책 타입 도입 검토:** sign-only에서 확정적으로 평가 가능한 정책만 적용하는 모드.
-
-**Phase:** 정책 매핑 레이어 설계/구현 시
-
----
-
-### H-05: 기존 파이프라인 Transaction 상태 모델과의 충돌
-
-**Severity:** HIGH
-**Confidence:** HIGH (TRANSACTION_STATUSES enum 직접 분석)
-
-**What goes wrong:**
-현재 트랜잭션 상태:
-```typescript
-TRANSACTION_STATUSES = ['PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'PARTIAL_FAILURE']
-```
-
-Sign-only 트랜잭션의 lifecycle:
-```
-요청 → 파싱 → 정책 평가 → 서명 → 반환 → (외부에서 제출) → (온체인 확인?)
-```
-
-이 lifecycle에 맞는 상태가 현재 enum에 없다:
-- `SIGNED`: 서명 완료, 아직 제출 안 됨 (없음)
-- `EXTERNALLY_SUBMITTED`: 외부에서 제출됨 (없음)
-- `SIGN_REJECTED`: 정책 거부로 서명 거절 (CANCELLED과 다른 의미)
-
-**기존 상태를 재사용하면:**
-- `PENDING`으로 시작? → 기존 DELAY 큐 처리기가 이 tx를 잡아갈 수 있음
-- `SUBMITTED`으로 마킹? → WAIaaS가 제출한 게 아닌데 SUBMITTED
-- `CONFIRMED`를 온체인 확인 후 설정? → sign-only tx의 txHash를 어떻게 알지?
-
-**DB CHECK 제약:**
-```sql
-CHECK (status IN ('PENDING', 'QUEUED', 'EXECUTING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'CANCELLED', 'EXPIRED', 'PARTIAL_FAILURE'))
-```
-새 상태를 추가하면 DB 마이그레이션 필요 (ALTER TABLE로 CHECK 제약 변경 → SQLite에서는 테이블 재생성).
-
-**Why it happens:**
-- 기존 상태 모델이 "WAIaaS가 tx lifecycle 전체를 소유" 전제로 설계됨
-- Sign-only는 lifecycle 소유권이 분할되는 새로운 패턴
-- 기존 enum에 새 상태를 추가하면 모든 기존 코드(query, index, UI)에 영향
+- WC `personal_sign`/`solana_signMessage`의 UX가 지갑 앱마다 다름
+- SIWE(EIP-4361) 포맷은 인증 목적이지, 트랜잭션 승인 목적이 아님
+- 트랜잭션 상세 정보를 가독성 있게 표현하는 표준이 없음
 
 **Warning signs:**
-- sign-only tx에 `status: 'PENDING'`을 사용하고 `type`으로만 구분하는 편의적 접근
-- 기존 트랜잭션 목록 API에 sign-only tx가 섞여 혼란
-- admin UI 대시보드 통계가 sign-only tx를 잘못 집계
+- 서명 요청 메시지에 트랜잭션 금액, 수신자, 체인 정보가 없음
+- Owner가 "항상 승인"을 요청하거나 "뭘 승인하는지 모르겠다"고 피드백
+- 테스트에서 메시지 내용 검증 없이 서명 성공/실패만 확인
 
 **Prevention:**
-1. **새 상태 추가: `SIGNED`:** transactions 테이블 CHECK 제약에 `SIGNED` 추가. DB 마이그레이션(MIG-01~06 패턴) 실행. `SIGNED` = "서명 완료, 외부 제출 대기". TTL 후 `EXPIRED`로 전이.
-2. **`signOnly` 플래그 컬럼 추가:** `sign_only INTEGER DEFAULT 0`으로 기존 tx와 명확 분리. 기존 쿼리에 `WHERE sign_only = 0` 조건 추가 불필요 (기본값 0이므로 기존 데이터 영향 없음).
-3. **기존 쿼리 보호:** `processExpired()`와 `evaluateAndReserve()`의 `WHERE status IN ('PENDING', 'QUEUED')` 쿼리에 sign-only tx가 간섭하지 않도록 필터 추가.
-4. **Admin UI 분리 표시:** sign-only tx를 별도 탭 또는 아이콘으로 구분 표시.
+1. **구조화된 승인 메시지 포맷 정의:**
+```
+WAIaaS Transaction Approval
 
-**Phase:** DB 스키마 확장 + 상태 머신 설계 시 (파이프라인 구현 전)
+Action: Transfer 10 SOL
+To: 9bKrTD...4xF2
+Wallet: my-trading-bot
+Chain: solana-devnet
+TX ID: 01JKQP...
+
+Approve by signing this message.
+Timestamp: 2026-02-16T10:30:00Z
+```
+사람이 읽을 수 있는 plain text를 `personal_sign`/`solana_signMessage`로 전송.
+2. **EVM에서 EIP-712 활용:** 가능한 경우 `eth_signTypedData_v4`로 구조화된 데이터 전송. 타입 정의에 `{action, amount, to, chain, txId}` 포함. MetaMask가 필드를 보기 좋게 표시.
+3. **메시지에 보안 필수 필드 포함:** 금액, 수신자, 체인, 타임스탬프는 필수. 이 필드들을 서명 검증 시 다시 추출하여 실제 트랜잭션과 대조. 불일치 시 deny.
+4. **Nonce/타임스탬프로 재사용 방지:** 각 승인 메시지에 고유 nonce(예: approvalId)를 포함. 동일 메시지를 다른 트랜잭션에 재사용하는 replay 공격 방지.
+
+**Phase:** WC 서명 요청 프로토콜 설계 시
 
 ---
 
 ## Moderate Pitfalls
 
-기술 부채, UX 혼란, 또는 통합 문제를 야기하는 실수.
+기술 부채, UX 혼란, 또는 운영 복잡성을 야기하는 실수.
 
 ---
 
-### M-01: MCP Skill Resource 핸들러의 Content Negotiation 누락
+### M-01: Admin UI에서 QR 코드 표시 시 CSP(Content Security Policy) 충돌
 
 **Severity:** MEDIUM
-**Confidence:** MEDIUM (MCP SDK 공식 문서 + 현재 리소스 구현 분석)
+**Confidence:** MEDIUM (현재 Admin UI CSP 설정 분석: `default-src 'none'`)
 
 **What goes wrong:**
-현재 3개 MCP 리소스(`wallet-balance`, `wallet-address`, `system-status`)는 `application/json` MIME으로 API 응답을 그대로 반환한다. Skill 파일(`.skill.md`)을 MCP 리소스로 제공할 때:
-
-1. Skill 파일은 Markdown (`text/markdown`)
-2. 하지만 MCP 리소스의 `mimeType`을 `text/markdown`으로 설정하면 JSON 응답을 기대하는 기존 클라이언트와 불일치
-3. 반대로 `application/json`으로 설정하면 Markdown 컨텐츠가 JSON 파싱 실패
-
-**MCP SDK spec 준수 문제:**
+현재 Admin UI는 엄격한 CSP를 적용한다:
 ```
-// MCP spec: resources should return structured content
-// If an output schema is defined, servers must conform to it
-// Tools that provide structured content should also return the same data
-// as a text block for backward compatibility
+Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; ...
 ```
 
-4. Skill 파일 내용이 변경되면 리소스 응답도 변경되어야 하는데, 파일 변경 감지 메커니즘이 없음
-5. 여러 skill 파일이 있으면 각각 별도 리소스 URI가 필요 (`waiaas://skills/wallet`, `waiaas://skills/transactions` 등)
+QR 코드를 Admin UI에 표시하려면:
+1. **Canvas API 사용:** `qrcode` 라이브러리가 Canvas에 그리는 방식 → CSP 위반 없음 (Canvas는 same-origin)
+2. **SVG inline:** QR 코드를 SVG로 생성하여 인라인 삽입 → `img-src` 정책과 무관, 하지만 inline SVG에 script가 포함되면 XSS 벡터
+3. **Data URL img:** `<img src="data:image/png;base64,...">` → `img-src data:` 허용 필요 → CSP 완화
+4. **외부 QR 생성 서비스:** CSP에서 외부 도메인 허용 필요 → self-hosted 원칙 위반
+
+**추가 문제:** QR 코드에 WalletConnect URI가 포함되며, 이 URI에는 relay URL과 key 정보가 들어있다. QR 코드가 스크린샷이나 로그에 노출되면 제3자가 같은 페어링에 연결할 수 있다.
 
 **Why it happens:**
-- 기존 리소스가 모두 API 프록시 패턴이므로 파일 기반 리소스 경험 없음
-- MCP spec의 리소스 타입 다양성(JSON, text, markdown)을 단일 패턴으로 처리
-- Skill 파일이 빌드 시점에 번들링되는지 런타임에 읽히는지 미결정
+- Admin UI의 CSP가 엄격하게 설정되어 있어 새로운 렌더링 방식 추가 시 충돌
+- QR 코드 라이브러리마다 렌더링 방식이 다름
 
 **Prevention:**
-1. **MIME 타입 정확히 설정:** Skill 리소스는 `text/markdown`, API 프록시 리소스는 `application/json`. MCP SDK는 `mimeType` 필드를 존중.
-2. **파일 기반 리소스 로더:** Skill 파일을 `skills/` 디렉토리에서 읽어 리소스로 등록. 파일 시스템 기반이므로 `fs.readFileSync` 사용 (MCP server는 동기적 초기화 가능).
-3. **리소스 목록 자동 생성:** `skills/` 디렉토리의 `*.skill.md` 파일을 스캔하여 리소스 URI 자동 등록. 파일이 추가/삭제되면 MCP 서버 재시작 시 반영.
-4. **리소스 URI 네이밍 컨벤션:** `waiaas://skills/{domain}` (예: `waiaas://skills/wallet`, `waiaas://skills/transactions`).
+1. **SVG 기반 QR 라이브러리 사용:** `qrcode` 패키지의 `toDataURL()` 대신 `toString({ type: 'svg' })` 사용하여 SVG 문자열을 Preact 컴포넌트에 `dangerouslySetInnerHTML`로 삽입. SVG에 script 태그가 포함되지 않도록 sanitize.
+2. **QR 코드 자동 만료 + 갱신:** 5분 타이머를 표시하고, 만료 시 QR 코드를 비활성화 + "새로고침" 버튼 제공. 만료된 QR 코드가 스크린샷으로 유출되어도 무해.
+3. **CSP 최소 완화:** 필요하다면 `img-src 'self' data:` 추가. `default-src 'none'` 유지하되 `img-src`만 완화.
 
-**Phase:** MCP 리소스 확장 구현 시
+**Phase:** Admin UI WC 연동 페이지 구현 시
 
 ---
 
-### M-02: Sign-Only API 응답에 서명된 트랜잭션 포맷 불일치
+### M-02: WalletConnect 네임스페이스 / 체인 설정과 WAIaaS 멀티체인 모델의 불일치
 
 **Severity:** MEDIUM
-**Confidence:** MEDIUM (Solana/EVM 서명 포맷 차이 분석)
+**Confidence:** MEDIUM (WC namespaces 스펙 분석 + WAIaaS ChainType/EnvironmentType 모델 분석)
 
 **What goes wrong:**
-Sign-only API가 서명된 트랜잭션을 반환할 때 포맷 결정:
-
-**Solana:**
-- 서명은 signature bytes (64 bytes)
-- 서명된 전체 tx = signature + compiledMessage bytes
-- dApp은 전체 서명된 tx bytes를 `sendRawTransaction`에 전달
-- 반환 포맷: base64 또는 base58 인코딩된 전체 tx?
-
-**EVM:**
-- 서명은 (r, s, v) 3개 값
-- 서명된 전체 tx = RLP(nonce, gasPrice, ..., r, s, v)
-- dApp은 `eth_sendRawTransaction`에 hex string 전달
-- 반환 포맷: `0x`-prefixed hex string?
-
-**불일치 문제:**
-- 같은 API에서 chain에 따라 다른 포맷 반환 → 클라이언트 코드 복잡
-- base64 vs base58 vs hex 인코딩 혼란
-- partial signature(Solana multi-sig 시나리오) vs full signature 구분 필요
-
-**Why it happens:**
-- 기존 파이프라인은 서명 결과를 내부적으로만 사용(submitTransaction으로 전달)하므로 포맷이 중요하지 않았음
-- Sign-only는 서명 결과를 외부 클라이언트에 반환해야 하므로 인터페이스 설계 필요
-- 두 체인의 서명 구조가 근본적으로 다름
-
-**Prevention:**
-1. **체인별 표준 포맷 준수:** Solana: base64-encoded full signed transaction (web3.js 표준). EVM: `0x`-prefixed hex-encoded full signed transaction (eth_sendRawTransaction 표준).
-2. **API 응답 스키마 명확 정의:**
-```typescript
+WalletConnect v2는 세션에서 지원할 체인을 namespace로 정의한다:
+```json
 {
-  signedTransaction: string;  // 체인 표준 포맷
-  encoding: 'base64' | 'hex'; // 인코딩 명시
-  chain: ChainType;
-  expiresAt?: number;         // Solana only: blockhash 만료 시점
+  "requiredNamespaces": {
+    "eip155": { "chains": ["eip155:1", "eip155:11155111"], "methods": ["personal_sign"] },
+    "solana": { "chains": ["solana:EtWTRABZ..."], "methods": ["solana_signMessage"] }
+  }
 }
 ```
-3. **SDK에 디코딩 헬퍼 제공:** `WAIaaSClient.decodeSignedTransaction(response)` 메서드로 체인별 포맷을 투명하게 처리.
 
-**Phase:** Sign-only API 인터페이스 설계 시
+WAIaaS의 체인 모델:
+- `ChainType`: `'solana' | 'ethereum'`
+- `EnvironmentType`: `'testnet' | 'mainnet'`
+- `NetworkType`: `'solana-mainnet' | 'solana-devnet' | 'ethereum-mainnet' | 'ethereum-sepolia' | ...`
 
----
+**불일치 시나리오:**
+1. WAIaaS가 `eip155:11155111` (Sepolia)에 대한 서명을 요청하려 하지만, Owner의 MetaMask가 Sepolia를 세션 승인 시 포함하지 않았음
+2. WC 세션은 "사전 승인된 체인 목록"에 없는 체인에 대한 요청을 거부함
+3. Owner가 세션을 다시 연결해야 하는데, 어떤 체인을 포함해야 하는지 WAIaaS가 안내하지 않음
 
-### M-03: EVM Calldata Encoding 도구와 Sign-Only 파이프라인의 역할 혼동
-
-**Severity:** MEDIUM
-**Confidence:** MEDIUM (마일스톤 컨텍스트 분석)
-
-**What goes wrong:**
-마일스톤에 "EVM calldata encoding" 기능이 포함되어 있다. 이것이 두 가지 다른 목적으로 해석될 수 있다:
-
-1. **도구로서의 calldata encoding:** AI 에이전트가 함수 시그니처 + 파라미터로 calldata를 생성할 수 있는 유틸리티 (MCP 도구 / REST API)
-2. **파이프라인의 일부:** sign-only 파이프라인에서 파싱된 calldata를 재검증하기 위한 내부 기능
-
-**혼동 시나리오:**
-- calldata encoding 도구가 sign-only 파이프라인과 결합되어, "에이전트가 calldata를 만들고 → WAIaaS가 tx 빌드하고 → sign-only로 서명" 하는 이중 경로 발생
-- 이 경우 기존 CONTRACT_CALL 파이프라인(POST /v1/wallets/:id/send + type: CONTRACT_CALL)과 기능 중복
-- 에이전트가 어떤 경로를 사용해야 하는지 혼란
+**Solana 체인 ID 문제:**
+- WC의 Solana 체인 ID 포맷: `solana:{genesisHash}` (예: `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1`)
+- WAIaaS의 NetworkType과 직접 매핑되지 않음
+- genesis hash를 RPC에서 조회하거나 하드코딩해야 함
 
 **Why it happens:**
-- calldata encoding과 sign-only가 같은 마일스톤에 있어 통합 유혹
-- 실제로는 독립적 기능인데 의존 관계가 있는 것처럼 구현
+- WC의 체인 식별 체계(CAIP-2)와 WAIaaS의 체인 모델이 다른 컨벤션을 사용
+- WC가 "사전 승인"을 요구하는데, WAIaaS wallet은 동적으로 체인/네트워크가 변경될 수 있음
 
 **Prevention:**
-1. **명확한 역할 분리:** calldata encoding = 순수 유틸리티 (입력: ABI + 함수명 + 파라미터, 출력: hex calldata). sign-only = 외부 tx 서명 서비스 (입력: unsigned tx bytes, 출력: signed tx). 두 기능은 독립.
-2. **사용 시나리오 문서화:** "dApp이 만든 tx에 서명하려면 sign-only 사용", "WAIaaS 내에서 컨트랙트 호출하려면 기존 CONTRACT_CALL 사용", "calldata만 만들고 싶으면 encoding 도구 사용".
-3. **API 엔드포인트 분리:** `POST /v1/wallets/:id/sign` (sign-only), `POST /v1/utils/encode-calldata` (encoding 도구), `POST /v1/wallets/:id/send` (기존 파이프라인).
+1. **CAIP-2 <-> WAIaaS NetworkType 매핑 함수:** `caip2ToNetwork('eip155:1') → 'ethereum-mainnet'`, `networkToCaip2('solana-devnet') → 'solana:EtWTR...'` 매핑 유틸리티.
+2. **세션 생성 시 wallet의 현재 체인 기반으로 requiredNamespaces 구성:** wallet.chain + wallet.environment에서 CAIP-2 체인 ID를 도출하여 세션 proposal에 포함.
+3. **세션이 지원하지 않는 체인 요청 시 재연결 안내:** "현재 WalletConnect 세션이 {chain}을 지원하지 않습니다. 재연결이 필요합니다." 에러 메시지와 함께 Admin UI에서 재페어링 유도.
 
-**Phase:** 기능 스코프 정의 시 (첫 phase에서 명확히)
+**Phase:** WC 세션 proposal 구성 시
 
 ---
 
-### M-04: sign-only + NOTIFY 티어에서 알림 누락 또는 이중 알림
+### M-03: WalletConnect WebSocket 재연결과 TelegramBotService Long Polling의 충돌
 
 **Severity:** MEDIUM
-**Confidence:** MEDIUM (NotificationService 연동 패턴 분석)
+**Confidence:** LOW (아키텍처적 추론 -- 두 서비스의 동시 운영 패턴 분석)
 
 **What goes wrong:**
-현재 파이프라인에서 NOTIFY 티어는:
-1. stage3Policy에서 NOTIFY tier 결정
-2. stage4Wait에서 passthrough (INSTANT과 동일)
-3. stage5Execute에서 TX_SUBMITTED 알림
-4. stage6Confirm에서 TX_CONFIRMED 알림
+현재 TelegramBotService는 Long Polling으로 Telegram API를 주기적으로 호출한다. WalletConnect SignClient는 WebSocket으로 relay와 영구 연결을 유지한다. 두 서비스가 동시에 네트워크 I/O를 수행하면:
 
-Sign-only에서 NOTIFY 티어 시:
-1. 정책 평가 → NOTIFY → 서명 반환 (WAIaaS 제어 종료)
-2. WAIaaS가 "TX_SUBMITTED" 알림을 보내야 하나? → 아직 제출 안 됨
-3. dApp이 제출 후 WAIaaS에 "제출했다"고 알려줘야 하나? → 콜백 메커니즘 없음
-4. 결과: NOTIFY 알림이 누락되거나, "서명됨" 시점에 잘못된 알림 발송
+1. **네트워크 단절 시 재연결 경쟁:** 양 서비스 모두 exponential backoff로 재시도. 동시에 재시도하면 네트워크 리소스 경합.
+2. **graceful shutdown 순서:** 데몬 종료 시 TelegramBotService.stop()과 WalletConnectService.stop()의 순서. WC 세션 상태를 먼저 저장해야 하는데, Telegram Bot이 먼저 종료되면 "승인 채널 없음" 상태가 잠깐 발생.
+3. **이벤트 루프 블로킹:** SQLite 동기 쿼리(better-sqlite3)와 WC WebSocket 비동기 이벤트가 혼재. 긴 SQLite 쿼리가 WC 이벤트 수신을 지연시킬 수 있음.
 
 **Why it happens:**
-- NOTIFY의 원래 의미: "실행은 하되 운영자에게 알림" → sign-only에서는 "실행" 주체가 WAIaaS가 아님
-- 알림 트리거(TX_REQUESTED, TX_SUBMITTED, TX_CONFIRMED)가 파이프라인 stage에 묶여 있음
+- 기존 서비스들(Telegram, BalanceMonitor, AutoStop)은 모두 주기적 폴링 패턴이어서 이벤트 루프 점유가 짧음
+- WC는 WebSocket 기반 실시간 이벤트 → 이벤트 루프 점유 패턴이 다름
+- better-sqlite3의 동기 쿼리가 이벤트 루프를 블로킹하는 기존 특성이 WC와 충돌 가능
 
 **Prevention:**
-1. **TX_SIGN_REQUESTED / TX_SIGNED 이벤트 타입 추가:** sign-only 전용 알림 이벤트. NOTIFY 티어일 때 TX_SIGNED 시점에 알림 발송.
-2. **알림 메시지 차별화:** "서명 요청됨: 10 SOL → 9bKrTD... (서명 완료, 외부 제출 대기)" -- "완료됨"이 아닌 "서명됨" 상태를 명확히 표시.
-3. **콜백 URL 옵션:** sign-only 요청 시 `callbackUrl`을 선택적으로 받아, dApp이 tx 제출 결과를 알려주면 WAIaaS가 TX_CONFIRMED 알림 발송.
+1. **서비스 시작/종료 순서 명시:** start: WC → Telegram → 기타. stop: 기타 → Telegram → WC (WC 세션 저장이 마지막).
+2. **WC 이벤트 핸들러에서 긴 동기 작업 금지:** `session_request` 핸들러에서 DB 쓰기는 `setImmediate()` 또는 microtask로 분리.
+3. **독립적 재연결 타이머:** TelegramBotService와 WalletConnectService의 backoff 타이머를 jitter(랜덤 지연)로 분산.
 
-**Phase:** Sign-only 알림 통합 시
+**Phase:** 서비스 lifecycle 관리 구현 시
 
 ---
 
-### M-05: Skill 파일 변경 시 MCP 리소스 캐시 정합성
+### M-04: WalletConnect projectId 노출 및 회전(rotation) 부재
 
 **Severity:** MEDIUM
-**Confidence:** LOW (MCP SDK 리소스 캐싱 동작 미확인 -- 훈련 데이터 기반)
+**Confidence:** MEDIUM (WalletConnect Cloud 문서 분석)
 
 **What goes wrong:**
-Skill 파일이 MCP 리소스로 제공될 때, 파일 내용이 업데이트되면:
+WalletConnect Cloud에서 발급받는 projectId는 relay 서버 인증에 사용된다:
 
-1. MCP 서버가 시작 시점에 파일을 읽어 캐시 → 이후 파일 변경이 반영 안 됨
-2. AI 에이전트가 오래된 skill 정보로 API 호출 → 스키마 불일치 에러
-3. 데몬 재시작 없이 skill 파일 반영 불가 → 운영 불편
+1. projectId가 config.toml에 평문으로 저장됨 → Git에 실수로 커밋 가능
+2. projectId가 QR URI에 포함됨 (`wc:...?projectId=xxx`) → QR 코드 스크린샷으로 유출 가능
+3. 유출된 projectId로 제3자가 같은 프로젝트의 relay 자원을 소비 → rate limit 도달 → 데몬의 WC 기능 중단
+4. projectId를 변경하려면 WalletConnect Cloud에서 새로 발급 + config.toml 수정 + 데몬 재시작 → 모든 기존 세션 무효화
 
-**CLAUDE.md 규칙과의 충돌:**
+**현재 보안 모델과의 비교:**
 ```
-## Interface Sync
-- REST API, SDK, MCP 인터페이스가 변경되면 `skills/` 파일도 반드시 함께 업데이트한다.
+// 기존 보안 자격증명:
+// - master_password_hash: Argon2id 해시로 저장 (평문 불가)
+// - JWT 시크릿: 최초 실행 시 랜덤 생성 + DB 저장
+// - Telegram bot_token: config.toml에 평문 (비슷한 리스크)
+// projectId는 Telegram bot_token과 유사한 리스크 수준
 ```
-Skill 파일은 인터페이스 변경 시 업데이트되는데, MCP 리소스 캐시는 서버 재시작 전까지 반영 안 됨.
+
+**Why it happens:**
+- WalletConnect projectId가 API 키이지만, OAuth client secret과 달리 relay 연결 시에만 사용되므로 보안 인식이 낮음
+- projectId 없이는 WC 기능을 사용할 수 없으므로 필수 설정인데, 관리 전략이 없으면 평문 노출
 
 **Prevention:**
-1. **매 요청마다 파일 읽기:** Skill 파일은 크기가 작으므로(수 KB) 매 리소스 요청마다 `fs.readFileSync` 호출. 캐싱 불필요.
-2. **대안: 파일 감시 (fs.watch):** 파일 변경 시 캐시 무효화. 그러나 fs.watch의 플랫폼 차이(macOS FSEvents vs Linux inotify)로 복잡성 증가. 비권장.
-3. **리소스 URI에 버전 포함 검토:** `waiaas://skills/wallet?v=1.4.6` -- MCP spec이 query parameter를 허용하는지 확인 필요.
+1. **환경변수 우선 로딩:** `WAIAAS_WALLETCONNECT_PROJECT_ID` 환경변수를 config.toml보다 우선. Docker Secrets/env file로 주입 가능.
+2. **config.toml에 주석 경고:** "# WARNING: projectId를 Git에 커밋하지 마세요. 환경변수 사용을 권장합니다."
+3. **.gitignore 점검:** config.toml이 .gitignore에 포함되어 있는지 확인 (기존 WAIaaS는 config.example.toml만 커밋하는 패턴).
+4. **Admin Settings에서 마스킹 표시:** projectId를 Admin UI에서 `abc***xyz` 형태로 마스킹 표시. 변경은 config.toml/환경변수로만 가능 (hot-reload 대상 아님 -- 변경 시 WC 재초기화 필요).
 
-**Phase:** MCP 리소스 확장 구현 시
+**Phase:** config 스키마 확장 시
 
 ---
 
-### M-06: ALLOWED_NETWORKS 정책이 sign-only에서 chainId 기반으로만 작동
+### M-05: WC 서명 요청과 KillSwitch의 상호작용 미정의
 
 **Severity:** MEDIUM
-**Confidence:** HIGH (현재 ALLOWED_NETWORKS 정책 코드 분석)
+**Confidence:** HIGH (기존 KillSwitchService 코드 + kill-switch-guard.ts 직접 분석)
 
 **What goes wrong:**
-현재 ALLOWED_NETWORKS 정책은 `transaction.network` 필드(WAIaaS NetworkType enum 값)와 비교한다. Sign-only에서:
+현재 KillSwitch가 SUSPENDED/LOCKED 상태이면 `killSwitchGuard` 미들웨어가 모든 REST API 요청을 차단한다. 그러나 WC를 통한 승인 흐름은 REST API를 거치지 않으므로:
 
-**EVM:**
-- unsigned tx의 RLP에 `chainId` 포함 (EIP-155)
-- `chainId` → NetworkType 매핑 필요 (1 → 'ethereum-mainnet', 11155111 → 'ethereum-sepolia' 등)
-- 매핑 테이블에 없는 chainId → network 분류 불가 → ALLOWED_NETWORKS 평가 불가
+1. KillSwitch SUSPENDED → REST API 모두 차단
+2. 하지만 WC session_request 이벤트는 WebSocket으로 수신됨 → killSwitchGuard 미적용
+3. WC 이벤트 핸들러가 KillSwitch 상태를 확인하지 않으면 → SUSPENDED 상태에서도 Owner가 승인 시도 가능?
+4. 반대로, SUSPENDED 상태에서 Owner가 WC로 KillSwitch 복구를 시도해야 하는 경우 → WC 자체가 차단되면 복구 불가
 
-**Solana:**
-- unsigned tx에 network 정보가 없음 (Solana tx에는 chainId 개념 없음)
-- network는 RPC 엔드포인트로만 결정됨
-- sign-only 요청 시 `network` 파라미터를 별도로 받아야 함
+**KillSwitch 복구(dual-auth) 시나리오:**
+- 현재: masterAuth + ownerAuth(REST API) 필요
+- WC 추가 후: masterAuth + WC 서명으로 복구 가능해야 하나?
+- WC 세션이 KillSwitch 이전에 이미 연결되어 있어야 함 → KillSwitch 후 새 WC 세션은 맺을 수 없음
 
 **Why it happens:**
-- 기존 파이프라인에서는 `resolveNetwork()`가 wallet.environment와 wallet.defaultNetwork에서 network를 결정
-- Sign-only에서는 unsigned tx 자체에서 network를 추출해야 하지만, 체인마다 방법이 다름
+- killSwitchGuard는 Hono 미들웨어로 REST API 라우트에만 적용
+- WC 이벤트는 REST API 바깥의 별도 이벤트 루프에서 처리
+- KillSwitch 상태 확인이 미들웨어에 묶여 있어 서비스 레이어에서 접근하려면 별도 호출 필요
 
 **Prevention:**
-1. **EVM chainId → NetworkType 매핑 함수:** `evm-chain-map.ts`에 이미 chain 정보가 있으므로 확장하여 chainId → NetworkType 매핑 제공. 매핑 실패 시 deny.
-2. **Solana sign-only API에 `network` 필수 파라미터:** Solana tx에서 network를 추출할 수 없으므로 API 요청 시 명시적으로 받음.
-3. **cross-chain 검증:** EVM tx의 chainId와 wallet의 environment/defaultNetwork가 일치하는지 추가 검증. 불일치 시 deny ("Wallet is configured for ethereum-sepolia but transaction targets chainId 1").
+1. **WC 이벤트 핸들러에서 KillSwitch 상태 확인:** `session_request` 수신 시 `killSwitchService.getState()` 호출. SUSPENDED/LOCKED이면 WC 응답에 에러 반환 (error code 4100: "System suspended").
+2. **KillSwitch 활성화 시 WC 세션 일시 정지:** SUSPENDED 전이 시 WC를 통한 신규 요청 수신을 차단하되 세션 자체는 유지 (복구 후 재사용 가능).
+3. **KillSwitch 복구에 WC 경로 추가 여부는 설계 결정:** 보안상 KillSwitch 복구는 REST API(직접 접근)로만 허용하고, WC는 일반 트랜잭션 승인에만 사용하는 것이 더 안전. WC relay 장애 시 복구 불가 위험 배제.
 
-**Phase:** Sign-only API 인터페이스 설계 시
+**Phase:** KillSwitch + WC 통합 시
+
+---
+
+### M-06: WC `session_request`에서 받은 서명을 기존 ownerAuth 검증 로직에 피딩하는 어댑팅 복잡도
+
+**Severity:** MEDIUM
+**Confidence:** MEDIUM (기존 owner-auth.ts, verifySIWE 코드 분석)
+
+**What goes wrong:**
+현재 ownerAuth 미들웨어는 HTTP 헤더에서 서명을 받는다:
+```
+X-Owner-Signature: {signature}
+X-Owner-Message: {message}
+X-Owner-Address: {ownerAddress}
+```
+
+WalletConnect를 통한 서명은 다른 경로로 도달한다:
+```
+signClient.on('session_request') → handler에서 서명 수신
+→ 서명을 ApprovalWorkflow.approve()에 전달
+→ 하지만 approve()는 ownerSignature string만 받음
+→ 서명 검증 로직(SIWE verify / Ed25519 verify)을 별도로 호출해야 함
+```
+
+**문제점:**
+1. `approve(txId, ownerSignature)` 함수가 서명 검증을 하지 않음 → 검증은 ownerAuth 미들웨어에서 수행
+2. WC 경로에서는 ownerAuth 미들웨어를 거치지 않으므로 → 서명 검증이 누락될 수 있음
+3. WC `personal_sign` 결과와 SIWE 서명의 포맷이 다름 → 기존 `verifySIWE()` 함수 직접 재사용 불가
+4. Solana `solana_signMessage` 결과와 Ed25519 detached signature의 포맷이 다름 → 디코딩 레이어 필요
+
+**Why it happens:**
+- 현재 아키텍처에서 "서명 검증"이 미들웨어(HTTP 레이어)에 묶여 있음
+- 서비스 레이어에서 독립적으로 호출 가능한 서명 검증 함수가 없음 (verifySIWE는 있지만 메시지 파싱 + 서명 검증이 결합됨)
+
+**Prevention:**
+1. **서명 검증 로직을 서비스 레이어로 추출:**
+```typescript
+// owner-verification.ts (새 파일)
+export function verifyOwnerSignature(params: {
+  chain: ChainType;
+  message: string;
+  signature: string;
+  expectedAddress: string;
+}): { valid: boolean; error?: string }
+```
+ownerAuth 미들웨어와 WC 이벤트 핸들러 모두 이 함수를 호출.
+2. **WC 서명 결과를 표준 포맷으로 변환:** WC `personal_sign` 응답 → `{ message, signature, address }` 표준 구조로 변환하는 어댑터.
+3. **ApprovalWorkflow.approve()에 검증 옵션 추가:** `approve(txId, { signature, message, address, channel: 'walletconnect' })` 형태로 확장하여, 내부에서 서명 검증까지 수행.
+
+**Phase:** WC 서명 검증 어댑터 구현 시
 
 ---
 
@@ -632,59 +617,63 @@ Skill 파일은 인터페이스 변경 시 업데이트되는데, MCP 리소스 
 
 | Phase Topic | Likely Pitfall | Severity | Mitigation Key |
 |-------------|---------------|----------|---------------|
-| **아키텍처 설계 (첫 phase)** | C-03: DELAY/APPROVAL과 동기적 sign-only 비호환 | CRITICAL | 방안 A(INSTANT/NOTIFY만 허용) 권장 |
-| **Unsigned TX 파서** | C-01: 파싱 불완전 → 정책 우회 | CRITICAL | 파싱 실패 = DENY, ALT resolve 필수 |
-| **Unsigned TX 파서** | H-02: Legacy vs V0 분기 누락 | HIGH | 양쪽 format 모두 지원 |
-| **Unsigned TX 파서** | H-03: ABI 없는 calldata 디코딩 한계 | HIGH | 알려진 패턴만 파싱, 나머지 CONTRACT_CALL |
-| **정책 매핑 레이어** | H-04: 11개 PolicyType 불완전 매핑 | HIGH | confidence 필드 + fallback 정책 |
-| **정책 통합** | C-02: reserved_amount 영원히 해제 안 됨 | CRITICAL | TTL 기반 자동 해제 |
-| **DB 스키마 확장** | H-05: Transaction 상태 모델 충돌 | HIGH | SIGNED 상태 추가 + signOnly 플래그 |
-| **Default Deny 토글** | H-01: 기존 정책 의미 역전 | HIGH | 정책 타입별 제어 + 영향도 미리보기 |
-| **Sign-only API 설계** | M-02: 서명 포맷 불일치 | MEDIUM | 체인별 표준 포맷 + encoding 명시 |
-| **Sign-only API 설계** | M-06: ALLOWED_NETWORKS chainId 매핑 | MEDIUM | chainId→NetworkType 매핑 + cross-chain 검증 |
-| **기능 스코프** | M-03: calldata encoding 역할 혼동 | MEDIUM | 명확한 역할 분리 + API 분리 |
-| **알림 통합** | M-04: NOTIFY 알림 누락/이중 발송 | MEDIUM | TX_SIGN_REQUESTED/TX_SIGNED 이벤트 추가 |
-| **MCP 리소스** | M-01: Skill 리소스 Content Negotiation | MEDIUM | MIME 타입 정확 설정 + 파일 기반 로더 |
-| **MCP 리소스** | M-05: Skill 파일 캐시 정합성 | MEDIUM | 매 요청마다 파일 읽기 |
+| **아키텍처 설계 (첫 phase)** | C-02: relay SPOF + self-hosted 철학 충돌 | CRITICAL | WC는 선호 채널, REST API 유지, 자동 fallback |
+| **아키텍처 설계 (첫 phase)** | H-03: Telegram fallback 전환 조건 모호 | HIGH | 채널 우선순위 + 단계적 타임아웃 |
+| **WC 인프라 세팅** | C-01: 데몬 재시작 시 세션 유실 | CRITICAL | SQLite 커스텀 Storage + 시작 시 헬스체크 |
+| **ApprovalWorkflow 통합** | C-03: 타이밍 불일치 + 이중 승인 경쟁 | CRITICAL | 단일 승인 소스 + WC 타임아웃 동기화 |
+| **WC 세션 관리** | H-01: 좀비 페어링, 세션 누수 | HIGH | 이벤트 전체 등록 + 주기적 정리 + 단일 세션 |
+| **WC 서비스 구현** | H-02: EventEmitter 메모리 누수 | HIGH | SignClient 싱글턴 + 리스너 중앙화 |
+| **서명 요청 프로토콜** | H-04: Owner가 승인 내용 확인 불가 | HIGH | 구조화된 승인 메시지 + 보안 필수 필드 |
+| **Admin UI** | M-01: CSP 충돌 (QR 코드 렌더링) | MEDIUM | SVG 기반 QR + 자동 만료 |
+| **세션 proposal** | M-02: 네임스페이스/체인 모델 불일치 | MEDIUM | CAIP-2 매핑 유틸리티 |
+| **서비스 lifecycle** | M-03: WebSocket + Long Polling 충돌 | MEDIUM | 시작/종료 순서 + jitter backoff |
+| **config 확장** | M-04: projectId 노출 | MEDIUM | 환경변수 우선 + 마스킹 |
+| **KillSwitch 통합** | M-05: KillSwitch-WC 상호작용 미정의 | MEDIUM | 이벤트 핸들러에서 상태 확인 |
+| **서명 검증 어댑팅** | M-06: ownerAuth 로직 서비스 추출 | MEDIUM | verifyOwnerSignature 공통 함수 |
 
 ---
 
 ## Integration Risk Matrix
 
-기존 코드 컴포넌트별 sign-only 추가 시 영향도:
+기존 코드 컴포넌트별 WalletConnect 추가 시 영향도:
 
 | 컴포넌트 | 변경 필요 | 위험도 | 주의사항 |
 |----------|:--------:|:------:|---------|
-| `pipeline.ts` | 신규 `executeSign()` 메서드 추가 | HIGH | 기존 `executeSend()`에 영향 주지 않아야 함 |
-| `stages.ts` | stage1~3 재사용, stage4~6 분기 | HIGH | PipelineContext에 `signOnly` 플래그 추가 |
-| `database-policy-engine.ts` | `evaluateAndReserve` TTL 로직 추가 | HIGH | 기존 reservation 쿼리 변경 시 TOCTOU 재검증 |
-| `schema.ts` | transactions CHECK 제약 변경 | MEDIUM | DB 마이그레이션 필수 (MIG 패턴) |
-| `@waiaas/core` enums | TRANSACTION_STATUSES에 SIGNED 추가 | MEDIUM | 모든 패키지 재빌드 |
-| `mcp/server.ts` | Skill 리소스 등록 추가 | LOW | 기존 리소스에 영향 없음 |
-| `admin UI` | sign-only tx 표시 | LOW | 새 탭/필터 추가 |
-| `notification-service.ts` | 새 이벤트 타입 추가 | LOW | 기존 이벤트에 영향 없음 |
+| `approval-workflow.ts` | `approve()`에 channel/메타데이터 확장, 동시 승인 방어 | HIGH | BEGIN IMMEDIATE 패턴 유지, CAS 검증 |
+| `owner-auth.ts` | 서명 검증 로직을 서비스 레이어로 추출 | HIGH | 기존 REST API 경로에 영향 없어야 함 |
+| `owner-state.ts` | WC 세션 존재 여부가 Owner 상태에 영향? (GRACE→LOCKED 자동 전이?) | MEDIUM | resolveOwnerState 순수성 유지 |
+| `telegram-bot-service.ts` | fallback 채널로서의 역할 변경 + /approve 동시성 처리 | MEDIUM | 기존 기능 파괴 금지 |
+| `notification-service.ts` | WC_SESSION_EXPIRED, WC_APPROVAL_TIMEOUT 등 새 이벤트 | LOW | 기존 이벤트에 영향 없음 |
+| `kill-switch-service.ts` | WC 이벤트 핸들러에서 상태 체크 호출 추가 | MEDIUM | cascade에 WC 세션 정지 추가 검토 |
+| `schema.ts` | `wc_sessions` 테이블 추가, `pending_approvals`에 channel 컬럼 | MEDIUM | DB 마이그레이션 필수 |
+| `config.toml` | `[walletconnect]` 섹션 추가 | LOW | 기존 설정에 영향 없음 |
+| `admin UI` | WC 연결 페이지, 세션 관리, QR 코드 | LOW | CSP 조정 필요 |
+| `pipeline/stages.ts` | stage4Wait에서 WC 채널 라우팅 | MEDIUM | 기존 APPROVAL 흐름 파괴 금지 |
 
 ---
 
 ## Sources
 
 ### HIGH Confidence
-- WAIaaS 코드베이스 직접 분석: `pipeline.ts`, `stages.ts`, `database-policy-engine.ts`, `schema.ts` (v1.4.6)
-- [viem parseTransaction 문서](https://v1.viem.sh/docs/utilities/parseTransaction.html) -- EVM unsigned tx 파싱 지원 확인
-- [Solana Versioned Transactions 가이드](https://solana.com/developers/guides/advanced/versions) -- Legacy vs V0, ALT 구조
-- [EVM Calldata 디코딩 연구 (Jonathan Becker)](https://www.jbecker.dev/research/decoding-raw-calldata) -- ABI 없는 calldata 파싱 한계와 모호성
-- [QuickNode: Transaction Calldata Demystified](https://www.quicknode.com/guides/ethereum-development/transactions/ethereum-transaction-calldata) -- 4-byte selector, ABI encoding 구조
-- [Solana Token Program 문서](https://spl.solana.com/token) -- SPL Token instruction 분류 (Transfer, TransferChecked, Approve)
-- [Solana VersionedTransaction Deserialization Issue #34608](https://github.com/solana-labs/solana/issues/34608) -- JSON 직렬화/역직렬화 문제
+- WAIaaS 코드베이스 직접 분석: `approval-workflow.ts`, `owner-auth.ts`, `owner-state.ts`, `telegram-bot-service.ts`, `notification-service.ts`, `kill-switch-guard.ts` (v1.6)
+- [WalletConnect Pairing API Spec](https://specs.walletconnect.com/2.0/specs/clients/core/pairing) -- pairing TTL (5분 inactive, 30일 active), lifecycle 이벤트
+- [WalletConnect Sign API Error Codes](https://specs.walletconnect.com/2.0/specs/clients/sign) -- error code 8000 (sessionRequestExpired), 4100, 5000
+- [WalletConnect FAQ: Self-hosting not supported](https://docs.walletconnect.com/2.0/advanced/faq) -- relay self-hosting 미지원 명시
+- [WC Issue #1177: MaxListenersExceededWarning](https://github.com/WalletConnect/walletconnect-monorepo/issues/1177) -- EventEmitter 메모리 누수 보고
+- [WC Issue #4484: getActiveSessions returns disconnected sessions](https://github.com/WalletConnect/walletconnect-monorepo/issues/4484) -- 세션 정리 버그
+- [WC Extended Sessions](https://docs.walletconnect.network/custodians/extended-sessions) -- 최대 7일 요청 타임아웃 확장
 
 ### MEDIUM Confidence
-- [MCP Best Practices: Architecture & Implementation Guide](https://modelcontextprotocol.info/docs/best-practices/) -- MCP 리소스 구현 패턴
-- [Implementing MCP: Tips, Tricks and Pitfalls (Nearform)](https://nearform.com/digital-community/implementing-model-context-protocol-mcp-tips-tricks-and-pitfalls/) -- MCP 구현 시 common mistakes
-- [MCP Specification (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25) -- 리소스 핸들러, MIME 타입, 출력 스키마 규격
-- [Circle Signing APIs](https://developers.circle.com/wallets/signing-apis) -- 지갑 서명 API 보안 고려사항
-- [Turnkey EVM Transaction Parsing](https://docs.turnkey.com/networks/ethereum) -- EVM unsigned tx 파싱 + policy engine 연동 사례
+- [WC Issue #687: Session serialize/restore in backend](https://github.com/WalletConnect/walletconnect-monorepo/issues/687) -- Node.js 세션 복구 요청
+- [WC Issue #2574: Restoring sessions for Web3Wallet](https://github.com/orgs/WalletConnect/discussions/2574) -- 세션 복구 논의
+- [WC Issue #3607: Missing await in session_request respond](https://github.com/WalletConnect/walletconnect-monorepo/issues/3607) -- 비동기 응답 처리 버그
+- [WC Issue #1744: WebSocket fails when not on localhost](https://github.com/WalletConnect/walletconnect-monorepo/issues/1744) -- 도메인 기반 연결 실패
+- [WC Issue #1739: Add timeout option for signClient.request](https://github.com/WalletConnect/walletconnect-monorepo/issues/1739) -- 요청 타임아웃 커스터마이징
+- [WC Issue #1268: Incorrect order of transaction requests](https://github.com/WalletConnect/WalletConnectKotlinV2/issues/1268) -- 다중 세션 요청 순서 문제
+- [WalletConnect Storage API Spec](https://specs.walletconnect.com/2.0/specs/clients/core/storage) -- key-value storage 요구사항
+- [WC Relay Client Auth Spec](https://specs.walletconnect.com/2.0/specs/clients/core/relay/relay-client-auth) -- JWT 인증, WebSocket Authorization 헤더
 
 ### LOW Confidence (아키텍처적 추론 기반)
-- SPENDING_LIMIT reservation TTL 전략 -- 기존 사례 미발견, 논리적 추론
-- DELAY/APPROVAL과 sign-only 비호환 해결 패턴 -- 기존 wallet-as-a-service 사례에서 sign-only를 INSTANT 전용으로 제한하는 패턴은 확인했으나, 대안 패턴(2-phase sign)은 추론
-- MCP Skill 리소스 캐싱 동작 -- MCP SDK의 리소스 캐싱 메커니즘에 대한 공식 문서 부족
+- WC SignClient의 FileSystemStorage 기본 경로가 CWD 상대 경로인지 여부 -- npm 패키지 소스 미확인, 커뮤니티 보고 기반
+- WC WebSocket 재연결과 TelegramBotService Long Polling의 이벤트 루프 경합 -- 아키텍처적 추론
+- SQLite 동기 쿼리(better-sqlite3)와 WC 비동기 이벤트의 상호작용 -- 이론적 분석, 실제 부하 테스트 미수행

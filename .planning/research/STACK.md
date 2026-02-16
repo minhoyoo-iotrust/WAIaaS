@@ -1,637 +1,453 @@
-# Technology Stack: v1.4.7 Sign-Only Transaction Signing API
+# Technology Stack: WalletConnect Owner 승인
 
-**Project:** WAIaaS v1.4.7 -- 임의 트랜잭션 서명 API
-**Researched:** 2026-02-14
-**Mode:** Subsequent Milestone (stack additions only)
+**Project:** WAIaaS v1.6.1 WalletConnect Owner 승인
+**Researched:** 2026-02-16
+**Mode:** Subsequent Milestone (기존 스택에 WalletConnect v2 추가)
 
 ---
 
 ## Executive Summary
 
-v1.4.7의 핵심 발견: **새로운 의존성 추가가 필요하지 않다.** 기존 스택(viem 2.45.3, @solana/kit 6.0.1, @modelcontextprotocol/sdk 1.26.0)이 unsigned tx 파싱, EVM calldata 인코딩, MCP 리소스 템플릿 기능을 모두 내장하고 있다. 이 마일스톤은 기존 라이브러리의 미사용 API를 활용하여 새 기능을 구현하는 것이 핵심이다.
+WAIaaS 데몬이 **dApp 역할(Proposer)**로 WalletConnect v2 Sign Protocol을 사용하여 Owner의 외부 지갑에 서명을 요청한다. Owner가 모바일/데스크톱 지갑(MetaMask, Phantom 등)에서 QR 코드를 스캔하여 세션을 열고, APPROVAL 거래 발생 시 WC 경유로 `personal_sign` 요청을 받아 승인/거절한다. WC 세션이 없거나 타임아웃 시 기존 Telegram Bot fallback으로 전환한다.
+
+**핵심 결론:** 새 npm 패키지 2개(`@walletconnect/sign-client`, `qrcode`) + dev 1개(`@types/qrcode`). 나머지는 기존 인프라(ApprovalWorkflow, TelegramBotService, EventBus, SettingsService, ownerAuth 서명 검증) 활용.
 
 ---
 
 ## Recommended Stack Additions
 
-### 신규 의존성: 없음
+### Core: WalletConnect Sign Client (dApp SDK)
 
-v1.4.7에서 **새로운 npm 패키지를 추가하지 않는다.** 모든 필요 기능이 기존 의존성에 내장되어 있다.
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@walletconnect/sign-client` | `^2.23.5` | WC v2 Sign Protocol dApp 측 클라이언트 | WalletConnect 공식 dApp SDK. Node.js 호환 명시. `@walletconnect/core` 2.23.5 자동 포함. Relay 서버 연결, pairing, 세션 관리, 서명 요청 전송 담당 |
+
+**Confidence:** HIGH -- npm registry 직접 확인 (`npm view @walletconnect/sign-client version` = 2.23.5, 2026-02-11 릴리스).
+
+**왜 `@walletconnect/sign-client`인가 (`@reown` 패키지 대신):**
+
+1. **Reown은 WalletConnect의 리브랜딩 (2024-09)**. `@reown/appkit`은 프론트엔드 UI 통합 중심 (모달, 소셜 로그인, 내장 지갑).
+2. **서버사이드 Sign API는 `@walletconnect/sign-client` 패키지 사용** -- [Reown 공식 문서](https://docs.reown.com/advanced/api/sign/dapp-usage)가 dApp Sign API용으로 이 패키지를 계속 문서화하고 `import SignClient from "@walletconnect/sign-client"` 사용.
+3. `@reown/appkit`은 브라우저 전용 UI 모달 + 소셜 로그인 등 번들. 서버 데몬에 불필요.
+4. `@walletconnect/sign-client`는 활발히 유지보수 중 (2026-02-11 최신 릴리스, Node.js heartbeat 버그 수정 포함).
+
+**자동 포함 의존성 (직접 설치 불필요):**
+
+| Transitive Dependency | Version | Role |
+|----------------------|---------|------|
+| `@walletconnect/core` | 2.23.5 | Relay WebSocket 연결, Pairing 관리, Heartbeat |
+| `@walletconnect/types` | 2.23.5 | TypeScript 타입 정의 (SessionTypes, SignClientTypes 등) |
+| `@walletconnect/utils` | 2.23.5 | 유틸리티 함수 (URI 파싱, 네임스페이스 검증) |
+| `@walletconnect/keyvaluestorage` | 1.1.1 | 세션 영속화 (Node.js: `unstorage` 기반 파일시스템 기본) |
+| `@walletconnect/jsonrpc-ws-connection` | 1.0.16 | Relay 서버 WebSocket 연결 |
+| `@walletconnect/heartbeat` | 1.2.2 | 세션 유지 heartbeat (2.23.5에서 Node.js 크래시 수정됨) |
+| `events` | 3.3.0 | EventEmitter polyfill |
+| `es-toolkit` | 1.44.0 | lodash 대체 유틸리티 (core 의존) |
+| `uint8arrays` | 3.1.1 | Uint8Array 변환 유틸리티 (core 의존) |
+
+### QR Code Generation (Server-Side)
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `qrcode` | `^1.5.4` | WC pairing URI를 QR 코드로 변환 | Node.js 서버사이드 QR 생성 표준 라이브러리. `toDataURL()` -> base64 PNG, `toString('svg')` -> SVG 문자열. Admin UI에서 `<img src="data:image/png;base64,...">` 렌더. Telegram Bot에서 동일 이미지 전송 가능 |
+
+**Confidence:** HIGH -- npm registry 확인 (`npm view qrcode version` = 1.5.4). 의존성 최소 (pngjs, dijkstrajs, yargs).
+
+### TypeScript Types (Dev)
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@types/qrcode` | `^1.5.6` | qrcode 패키지 TypeScript 타입 | `qrcode`는 순수 JS 패키지로 자체 타입 미포함. DefinitelyTyped 공식 타입 |
+
+**Confidence:** HIGH -- npm registry 확인 (`npm view @types/qrcode version` = 1.5.6).
 
 ---
 
-## 기존 라이브러리의 미사용 API 활성화
+## 기존 스택 활용 (신규 설치 불필요)
 
-### 1. EVM Unsigned Transaction 파싱 (viem 2.45.3)
+### 변경 없이 그대로 사용
 
-| 함수 | 임포트 경로 | 용도 | 현재 사용 여부 |
-|------|------------|------|--------------|
-| `parseTransaction` | `viem` | unsigned hex -> to, value, data, chainId, nonce 추출 | O (simulateTransaction, signTransaction에서 사용 중) |
-| `decodeFunctionData` | `viem` | calldata -> functionName, args 디코딩 | X (신규 활용) |
-| `decodeAbiParameters` | `viem` | ABI 파라미터 디코딩 (개별 파라미터 수준) | X (신규 활용) |
-| `encodeFunctionData` | `viem` | ABI + functionName + args -> calldata hex 인코딩 | O (buildTokenTransfer, buildApprove에서 사용 중) |
+| Existing Component | WalletConnect에서의 역할 | Integration Point |
+|---|---|---|
+| **ApprovalWorkflow** | APPROVAL 거래 -> WC 서명 요청 트리거 | `requestApproval()` 호출 후 WC `session_request` 발송. 서명 응답 수신 시 `approve(txId, signature)` / `reject(txId)` 호출 |
+| **SettingsService** | `walletconnect.project_id` 이미 정의됨 | `setting-keys.ts` line 99: `{ key: 'walletconnect.project_id', category: 'walletconnect', defaultValue: '', isCredential: false }` |
+| **TelegramBotService** | WC fallback 채널 | 기존 `/approve`, `/reject` 명령 + `buildApprovalKeyboard()` inline keyboard 그대로 사용. WC 실패 시 Telegram으로 승인 요청 전환 |
+| **EventBus** | APPROVAL 이벤트 발행/구독 | WC 서비스가 EventBus 구독하여 `TX_APPROVAL_REQUESTED` 이벤트 수신 -> WC `session_request` 발송 |
+| **NotificationService** | 승인 요청/결과 알림 | 기존 4채널 알림 (Telegram/Discord/ntfy/Slack)으로 "승인 대기 중" 알림 발송 |
+| **ownerAuth middleware** | WC 서명 검증에 재사용 가능 | `verifySIWE()` (EVM EIP-4361), Ed25519 verify (Solana) -- 기존 검증 로직 그대로 |
+| **CSP middleware** | Admin UI QR 표시 호환 | `img-src 'self' data:` 이미 설정됨 -- base64 QR 이미지 표시에 CSP 변경 불필요 |
+| **viem 2.x** | EVM personal_sign 서명 검증 | `verifyMessage()` 또는 기존 `verifySIWE()` 재사용 |
+| **sodium-native 4.x** | Solana `solana_signMessage` 서명 검증 | `crypto_sign_verify_detached()` 기존 코드 재사용 |
 
-**신규 활용 상세:**
+### 확장 필요 (코드 변경만, 패키지 추가 없음)
 
-```typescript
-// 1. EVM unsigned tx 파싱: parseTransaction은 이미 사용 중
-import { parseTransaction } from 'viem';
-const parsed = parseTransaction(unsignedHex);
-// parsed.to, parsed.value, parsed.data, parsed.chainId, parsed.nonce 모두 접근 가능
+| Component | Change Needed | Rationale |
+|---|---|---|
+| **DB schema v16** | `wc_sessions` 테이블 추가 (topic, wallet_id, chain, peer_metadata, namespace_accounts, expiry_at, paired_at, disconnected_at) | WC 세션과 WAIaaS wallet 매핑. 세션 복원, 만료 관리 |
+| **setting-keys.ts** | `walletconnect.relay_url` 추가 (기본값: `wss://relay.walletconnect.com`) | 커스텀 relay 서버 지원. 자체 호스팅 relay 가능 |
+| **setting-keys.ts** | `walletconnect.metadata_name`, `walletconnect.metadata_description` 추가 | QR 스캔 시 지갑에 표시되는 dApp 메타데이터 |
+| **config.toml schema** | `[walletconnect]` 섹션에 `relay_url`, `metadata_name`, `metadata_description` 필드 추가 | config.toml 초기값 |
+| **Admin UI** | QR 코드 표시 모달, WC 세션 상태 표시, 페어링 버튼 | 기존 Preact 컴포넌트 + Modal 패턴 활용 |
+| **Notification templates** | `WC_APPROVAL_REQUESTED`, `WC_SESSION_PAIRED`, `WC_SESSION_DISCONNECTED` 메시지 | 기존 i18n 템플릿 시스템 (en/ko) 확장 |
+| **audit_log event_type** | `WC_SESSION_PAIRED`, `WC_SESSION_DISCONNECTED`, `TX_APPROVED_VIA_WC`, `TX_REJECTED_VIA_WC` | 기존 audit_log 테이블 + 이벤트 타입 추가 |
 
-// 2. EVM calldata 디코딩: decodeFunctionData 신규 활용
-import { decodeFunctionData } from 'viem';
-const { functionName, args } = decodeFunctionData({ abi: ERC20_ABI, data: parsed.data });
-// -> functionName: 'transfer', args: [to, amount]
+---
 
-// 3. EVM calldata 인코딩 API: encodeFunctionData는 이미 사용 중
-// POST /v1/utils/encode-calldata 엔드포인트에서 래핑만 하면 됨
-import { encodeFunctionData } from 'viem';
-const calldata = encodeFunctionData({ abi, functionName, args });
+## WalletConnect v2 Architecture Fit
+
+### WAIaaS = dApp (Proposer), Owner Wallet = Wallet (Responder)
+
+WAIaaS 데몬은 **dApp 역할**. Owner의 외부 지갑(MetaMask Mobile, Phantom, Backpack, Rainbow 등)이 **Wallet 역할**.
+
+```
+WAIaaS Daemon (dApp)              WC Relay Server            Owner Wallet
+       |                              |                          |
+  [1. 세션 생성]                       |                          |
+       |--- signClient.connect() ---->|                          |
+       |<-- { uri, approval } --------|                          |
+       |                              |                          |
+  [2. QR 표시]                        |                          |
+       |   [Admin UI: QR 모달]         |                          |
+       |   [Telegram: QR 이미지]       |                          |
+       |                              |<-- wallet scans QR ------|
+       |                              |--- session proposal ---->|
+       |<-- session approved ---------|<-- wallet approves ------|
+       |                              |                          |
+  [3. APPROVAL 거래 발생]              |                          |
+       |                              |                          |
+       |--- session_request --------->|--- personal_sign ------->|
+       |    (approval message)        |    (message to sign)     |
+       |                              |                          |
+       |<-- signature result ---------|<-- user signs/rejects ---|
+       |                              |                          |
+  [4. 서명 검증 + 승인/거절]           |                          |
+       |   approve(txId, signature)   |                          |
+       |   or reject(txId)            |                          |
 ```
 
-**EVM tx 파싱 전략 (4byte selector 기반):**
+### SignClient API 사용 패턴
 
 ```typescript
-// tx-parser.ts에서 ERC-20 메서드를 하드코딩으로 식별
-// decodeFunctionData는 ABI가 필요하므로 알려진 ABI(ERC-20)에만 사용
-// 알려지지 않은 컨트랙트는 4byte selector 추출만으로 CONTRACT_WHITELIST + METHOD_WHITELIST 평가 가능
-function parseEvmCalldata(data: Hex): ParsedOperation {
-  if (!data || data === '0x') {
-    return { type: 'NATIVE_TRANSFER' };  // data 없음 = ETH 전송
-  }
-  const selector = data.slice(0, 10);  // 0x + 8 hex chars = 4 bytes
+import SignClient from '@walletconnect/sign-client';
 
-  // 알려진 ERC-20 selectors
-  if (selector === '0xa9059cbb') {  // transfer(address,uint256)
-    const { args } = decodeFunctionData({ abi: ERC20_ABI, data });
-    return { type: 'TOKEN_TRANSFER', to: args[0], amount: args[1] };
-  }
-  if (selector === '0x095ea7b3') {  // approve(address,uint256)
-    const { args } = decodeFunctionData({ abi: ERC20_ABI, data });
-    return { type: 'APPROVE', to: args[0], amount: args[1] };
-  }
+// 1. 초기화
+const signClient = await SignClient.init({
+  projectId: settingsService.get('walletconnect.project_id'),
+  relayUrl: settingsService.get('walletconnect.relay_url') || 'wss://relay.walletconnect.com',
+  metadata: {
+    name: settingsService.get('walletconnect.metadata_name') || 'WAIaaS Daemon',
+    description: settingsService.get('walletconnect.metadata_description') || 'AI Agent Wallet Service',
+    url: 'https://github.com/user/waiaas',
+    icons: [],
+  },
+});
 
-  // 미지의 컨트랙트 호출
-  return { type: 'CONTRACT_CALL', method: selector };
-}
+// 2. 페어링 URI 생성 (QR 코드용)
+const { uri, approval } = await signClient.connect({
+  requiredNamespaces: buildNamespaces(wallet),  // wallet.chain 기반 동적 구성
+});
+// uri -> QR 코드 생성 -> Admin UI / Telegram 전송
+
+// 3. 세션 승인 대기
+const session = await approval();  // wallet에서 승인 시 resolve
+// session.topic, session.namespaces, session.peer.metadata 저장
+
+// 4. 서명 요청 (APPROVAL 거래 발생 시)
+const result = await signClient.request({
+  topic: session.topic,
+  chainId: resolveWcChainId(wallet),  // e.g., 'eip155:1' or 'solana:5eykt4...'
+  request: {
+    method: wallet.chain === 'ethereum' ? 'personal_sign' : 'solana_signMessage',
+    params: buildApprovalSignParams(wallet, txId, txDetails),
+  },
+});
+// result -> 서명 검증 -> approve(txId, signature) or reject(txId)
+
+// 5. 세션 이벤트 핸들링
+signClient.on('session_delete', ({ topic }) => { /* 세션 종료 처리 */ });
+signClient.on('session_expire', ({ topic }) => { /* 세션 만료 처리 */ });
 ```
 
-**신뢰도: HIGH** -- viem 2.45.3의 `_types/index.d.ts`에서 `decodeFunctionData`, `decodeAbiParameters`, `encodeFunctionData` 모두 export 확인 완료. 기존 EvmAdapter에서 `parseTransaction`, `encodeFunctionData` 이미 실사용 중.
+### Namespace Configuration
 
-### 2. Solana Unsigned Transaction 파싱 (@solana/kit 6.0.1)
+WAIaaS가 지원하는 체인별 WC 네임스페이스 구성.
 
-| 함수 | 임포트 경로 | 용도 | 현재 사용 여부 |
-|------|------------|------|--------------|
-| `getTransactionDecoder` | `@solana/kit` (via @solana/transactions) | wire bytes -> Transaction (signatures + messageBytes) | O (SolanaAdapter에서 사용 중) |
-| `getCompiledTransactionMessageDecoder` | `@solana/kit` (via @solana/transaction-messages) | messageBytes -> CompiledTransactionMessage | X (신규 활용) |
-| `decompileTransactionMessageFetchingLookupTables` | `@solana/kit` | CompiledTransactionMessage -> TransactionMessage (lookup table 해석 포함) | X (신규 활용) |
-
-**신규 활용 상세:**
-
-```typescript
-import {
-  getTransactionDecoder,
-  getCompiledTransactionMessageDecoder,
-} from '@solana/kit';
-
-// 1단계: wire bytes -> Transaction 객체 (이미 SolanaAdapter에서 사용 중)
-const txDecoder = getTransactionDecoder();
-const transaction = txDecoder.decode(rawBytes);
-// transaction.messageBytes, transaction.signatures
-
-// 2단계: messageBytes -> CompiledTransactionMessage (신규 활용)
-const msgDecoder = getCompiledTransactionMessageDecoder();
-const compiledMsg = msgDecoder.decode(transaction.messageBytes);
-// compiledMsg.header, compiledMsg.staticAccounts[], compiledMsg.instructions[]
-
-// 3단계: instruction에서 programId, accounts, data 추출
-for (const ix of compiledMsg.instructions) {
-  const programAddress = compiledMsg.staticAccounts[ix.programAddressIndex];
-  const accountAddresses = ix.accountIndices?.map(i => compiledMsg.staticAccounts[i]);
-  const instructionData = ix.data;  // Uint8Array
-}
-```
-
-**CompiledTransactionMessage 구조 (d.ts에서 확인):**
-
+**EVM (eip155) -- wallet.chain === 'ethereum':**
 ```typescript
 {
-  header: { numSignerAccounts, numReadonlySignerAccounts, numReadonlyNonSignerAccounts },
-  staticAccounts: Address[],  // 모든 계정 주소 배열
-  instructions: Array<{
-    programAddressIndex: number,        // staticAccounts 인덱스
-    accountIndices?: number[],          // staticAccounts 인덱스 배열
-    data?: ReadonlyUint8Array,          // instruction data
-  }>,
-  lifetimeToken: string,  // blockhash
-  version: 'legacy' | 0,
-  addressTableLookups?: Array<{...}>,  // v0 only
-}
-```
-
-**Solana instruction 파싱 전략:**
-
-```typescript
-// tx-parser.ts에서 알려진 프로그램을 하드코딩으로 식별
-function classifySolanaInstruction(
-  programAddress: string,
-  data: Uint8Array | undefined,
-  accounts: string[],
-): ParsedOperation {
-  switch (programAddress) {
-    case '11111111111111111111111111111111': {
-      // System Program: instruction type은 data[0..3] LE uint32
-      if (data && data.length >= 4) {
-        const instructionType = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-        if (instructionType === 2) {  // Transfer
-          // amount는 data[4..11] LE uint64
-          const amount = readU64LE(data, 4);
-          return { type: 'NATIVE_TRANSFER', to: accounts[1], amount };
-        }
-      }
-      return { type: 'CONTRACT_CALL', programId: programAddress };
-    }
-    case 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA':
-    case 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb': {
-      // SPL Token / Token-2022: instruction type은 data[0] uint8
-      if (data && data.length >= 1) {
-        if (data[0] === 12) return { type: 'TOKEN_TRANSFER', token: accounts[1] };  // TransferChecked
-        if (data[0] === 13) return { type: 'APPROVE', token: accounts[1] };  // ApproveChecked
-      }
-      return { type: 'CONTRACT_CALL', programId: programAddress };
-    }
-    default:
-      // Anchor discriminator: 처음 8바이트
-      const discriminator = data ? toHex(data.slice(0, 8)) : undefined;
-      return { type: 'CONTRACT_CALL', programId: programAddress, method: discriminator };
-  }
-}
-```
-
-**Address Lookup Table 처리:**
-
-v0 트랜잭션에서 `addressTableLookups`가 있으면 `decompileTransactionMessageFetchingLookupTables`로 실제 주소를 해석해야 한다. 이 함수는 RPC 호출이 필요하므로, sign-only 파이프라인에서 RPC 연결이 활성화되어 있어야 한다.
-
-```typescript
-import { decompileTransactionMessageFetchingLookupTables } from '@solana/kit';
-
-// Address Lookup Table이 있는 v0 tx 처리
-if (compiledMsg.addressTableLookups && compiledMsg.addressTableLookups.length > 0) {
-  const fullMessage = await decompileTransactionMessageFetchingLookupTables(
-    compiledMsg,
-    rpc,
-  );
-  // fullMessage.instructions에서 실제 주소로 해석된 계정 목록 접근 가능
-}
-```
-
-**신뢰도: HIGH** -- `@solana/kit` 6.0.1의 index.d.ts에서 `@solana/transaction-messages` re-export 확인. `getCompiledTransactionMessageDecoder`는 `@solana/transaction-messages/dist/types/codecs/message.d.ts`에서 선언 확인. `decompileTransactionMessageFetchingLookupTables`는 `@solana/kit` 자체 export 확인.
-
-### 3. MCP 리소스 템플릿 (@modelcontextprotocol/sdk 1.26.0)
-
-| 클래스/함수 | 임포트 경로 | 용도 | 현재 사용 여부 |
-|------------|------------|------|--------------|
-| `ResourceTemplate` | `@modelcontextprotocol/sdk/server/mcp.js` | URI 템플릿 기반 동적 리소스 등록 | X (신규 활용) |
-| `server.resource()` (template overload) | `@modelcontextprotocol/sdk/server/mcp.js` | 템플릿 리소스 핸들러 등록 | X (신규 활용) |
-
-**현재 MCP 리소스 패턴 (정적 URI):**
-
-```typescript
-// 기존: 정적 URI 리소스 (3개)
-server.resource('Wallet Balance', 'waiaas://wallet/balance', { ... }, async () => { ... });
-server.resource('Wallet Address', 'waiaas://wallet/address', { ... }, async () => { ... });
-server.resource('System Status', 'waiaas://system/status', { ... }, async () => { ... });
-```
-
-**신규: 스킬 리소스 템플릿 패턴:**
-
-```typescript
-import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-// 스킬 파일 목록 (skills/ 디렉토리)
-const SKILL_FILES = ['quickstart', 'wallet', 'transactions', 'policies', 'admin'];
-
-// waiaas://skills/{name} 리소스 템플릿
-const skillTemplate = new ResourceTemplate(
-  'waiaas://skills/{name}',
-  {
-    list: async () => ({
-      resources: SKILL_FILES.map(name => ({
-        uri: `waiaas://skills/${name}`,
-        name: `${name} skill`,
-        description: `API reference for ${name}`,
-        mimeType: 'text/markdown',
-      })),
-    }),
+  eip155: {
+    methods: ['personal_sign'],
+    chains: resolveEvmChains(wallet),
+    // e.g., ['eip155:1', 'eip155:11155111', 'eip155:137', ...]
+    events: ['chainChanged', 'accountsChanged'],
   },
-);
-
-server.resource(
-  'API Skills',
-  skillTemplate,
-  {
-    description: 'WAIaaS API skill files for agent reference',
-    mimeType: 'text/markdown',
-  },
-  async (uri, { name }) => ({
-    contents: [{
-      uri: uri.href,
-      text: await readSkillFile(name as string),
-      mimeType: 'text/markdown',
-    }],
-  }),
-);
-```
-
-**ResourceTemplate API (v1.26.0 mcp.d.ts 확인):**
-
-```typescript
-class ResourceTemplate {
-  constructor(
-    uriTemplate: string | UriTemplate,
-    callbacks: {
-      list: ListResourcesCallback | undefined;  // 필수 (undefined 허용)
-      complete?: { [variable: string]: CompleteResourceTemplateCallback };
-    },
-  );
-  get uriTemplate(): UriTemplate;
-  get listCallback(): ListResourcesCallback | undefined;
-  completeCallback(variable: string): CompleteResourceTemplateCallback | undefined;
 }
-
-// server.resource() template overload 시그니처
-resource(
-  name: string,
-  template: ResourceTemplate,
-  metadata: ResourceMetadata,
-  readCallback: ReadResourceTemplateCallback,
-): RegisteredResourceTemplate;
-
-// ReadResourceTemplateCallback 시그니처
-type ReadResourceTemplateCallback = (
-  uri: URL,
-  variables: Variables,
-  extra: RequestHandlerExtra,
-) => ReadResourceResult | Promise<ReadResourceResult>;
 ```
 
-`list` 콜백이 `undefined`가 아닌 함수이면 `resources/list` 요청 시 해당 콜백이 호출되어 동적 리소스 목록을 반환한다.
+**EVM Chain ID 매핑 (기존 adapter-pool.test.ts에서 확인):**
 
-**스킬 파일 읽기 전략:**
+| WAIaaS Network | EVM Chain ID | WC Chain ID |
+|---|---|---|
+| `ethereum-mainnet` | 1 | `eip155:1` |
+| `ethereum-sepolia` | 11155111 | `eip155:11155111` |
+| `polygon-mainnet` | 137 | `eip155:137` |
+| `polygon-amoy` | 80002 | `eip155:80002` |
+| `arbitrum-mainnet` | 42161 | `eip155:42161` |
+| `arbitrum-sepolia` | 421614 | `eip155:421614` |
+| `optimism-mainnet` | 10 | `eip155:10` |
+| `optimism-sepolia` | 11155420 | `eip155:11155420` |
+| `base-mainnet` | 8453 | `eip155:8453` |
+| `base-sepolia` | 84532 | `eip155:84532` |
 
-MCP 서버는 daemon과 별도 프로세스이므로 skills/ 파일 접근 방식을 결정해야 한다:
-- **옵션 A: 파일 시스템에서 직접 읽기** -- MCP 서버가 프로젝트 루트를 알아야 함
-- **옵션 B: daemon REST API 경유** -- `GET /v1/skills/{name}` 엔드포인트 추가
-- **권장: 옵션 B** -- 기존 ApiClient 패턴과 일관성 유지. daemon이 skills/ 파일을 서빙
-
-**신뢰도: HIGH** -- `@modelcontextprotocol/sdk` 1.26.0의 `dist/esm/server/mcp.d.ts`에서 `ResourceTemplate` 클래스 선언 확인. `server.resource()` 메서드의 template overload 시그니처 확인.
-
-### 4. Solana Transaction 서명 (@solana/kit 6.0.1)
-
-기존 SolanaAdapter.signTransaction()과 동일 패턴. 외부 unsigned tx를 서명하는 `signExternalTransaction`은 기존 코드 재사용.
-
+**Solana (solana) -- wallet.chain === 'solana':**
 ```typescript
-import {
-  getTransactionDecoder,
-  getTransactionEncoder,
-  signBytes,
-  createKeyPairFromBytes,
-  createKeyPairFromPrivateKeyBytes,
-  getAddressFromPublicKey,
-} from '@solana/kit';
-
-// 외부 unsigned tx를 base64에서 디코딩
-const rawBytes = new Uint8Array(Buffer.from(base64Tx, 'base64'));
-const txDecoder = getTransactionDecoder();
-const txEncoder = getTransactionEncoder();
-const transaction = txDecoder.decode(rawBytes);
-
-// 월렛 키로 서명 (SolanaAdapter.signTransaction 기존 로직과 동일)
-const keyPair = privateKey.length === 64
-  ? await createKeyPairFromBytes(privateKey)
-  : await createKeyPairFromPrivateKeyBytes(privateKey.slice(0, 32));
-const signerAddress = await getAddressFromPublicKey(keyPair.publicKey);
-const signature = await signBytes(keyPair.privateKey, transaction.messageBytes);
-
-// 서명을 트랜잭션에 삽입
-const signedTx = {
-  ...transaction,
-  signatures: {
-    ...transaction.signatures,
-    [signerAddress]: signature,
+{
+  solana: {
+    methods: ['solana_signMessage'],
+    chains: resolveSolanaChains(wallet),
+    // e.g., ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp']
+    events: [],
   },
+}
+```
+
+**Solana CAIP-2 Chain ID 매핑 ([chainagnostic.org](https://namespaces.chainagnostic.org/solana/caip2) 확인):**
+
+| WAIaaS Network | Solana Genesis Hash (truncated) | WC Chain ID |
+|---|---|---|
+| Mainnet | `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` |
+| Devnet | `EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` |
+| Testnet | `4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z` | `solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z` |
+
+**설계 결정:** 네임스페이스를 wallet.chain 기반으로 **동적 구성**한다. EVM wallet이면 eip155만, Solana wallet이면 solana만 requiredNamespaces에 포함. 두 체인 모두 지원하는 Owner 지갑은 드물고, Owner 주소는 이미 특정 체인에 귀속되어 있으므로.
+
+### 서명 요청 메시지 형식
+
+**EVM (`personal_sign`):**
+```typescript
+// APPROVAL 거래 승인 메시지 (EIP-4361 SIWE 형식 재사용 가능)
+const message = [
+  `WAIaaS Approval Request`,
+  ``,
+  `Transaction: ${txId}`,
+  `Wallet: ${walletName}`,
+  `Type: ${txType}`,
+  `To: ${to}`,
+  `Amount: ${amount} ${symbol}`,
+  `Network: ${network}`,
+  ``,
+  `Approve this transaction by signing this message.`,
+  `Timestamp: ${new Date().toISOString()}`,
+].join('\n');
+
+// personal_sign params: [hex-encoded message, signer address]
+const params = [
+  `0x${Buffer.from(message, 'utf8').toString('hex')}`,
+  ownerAddress,
+];
+```
+
+**Solana (`solana_signMessage`):**
+```typescript
+// solana_signMessage params: { message: base58-encoded, pubkey: base58 }
+const params = {
+  message: bs58.encode(Buffer.from(message, 'utf8')),
+  pubkey: ownerAddress,
 };
-
-// 서명된 트랜잭션을 base64로 인코딩하여 반환
-const signedBytes = new Uint8Array(txEncoder.encode(signedTx));
-return Buffer.from(signedBytes).toString('base64');
 ```
 
-**이미 사용 중인 함수들이므로 추가 의존성 없음.** SolanaAdapter.signTransaction()의 기존 로직과 동일 패턴.
+### Storage Strategy
 
-### 5. EVM Transaction 서명 (viem 2.45.3)
+`@walletconnect/keyvaluestorage` 1.1.1은 Node.js에서 `unstorage` 기반 파일시스템 저장을 기본 사용.
 
-기존 EvmAdapter.signTransaction()과 동일 패턴. 외부에서 받은 unsigned hex를 파싱하고 서명.
+**접근 방식:** WC 기본 파일시스템 저장 + DB에 세션 비즈니스 메타데이터만 별도 저장
 
-```typescript
-import { parseTransaction, toHex, hexToBytes } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import type { TransactionSerializedEIP1559, Hex } from 'viem';
+| 저장소 | 데이터 | 이유 |
+|--------|--------|------|
+| WC keyvaluestorage (파일시스템) | pairing 암호키, 세션 crypto state, relay 메시지 큐 | WC SDK 내부 암호화 핸드셰이크/세션 복원 로직이 이 저장소에 의존. 커스텀 교체 시 충돌 위험 |
+| SQLite `wc_sessions` 테이블 | wallet_id <-> session topic 매핑, peer metadata, 만료 시간 | 비즈니스 로직: "어떤 wallet에 어떤 WC session이 연결되어 있는가" 조회 필요 |
 
-// 외부 unsigned tx를 파싱
-const parsed = parseTransaction(unsignedHex as TransactionSerializedEIP1559);
-
-// 월렛 키로 서명
-const privateKeyHex = `0x${Buffer.from(privateKey).toString('hex')}` as Hex;
-const account = privateKeyToAccount(privateKeyHex);
-const signedHex = await account.signTransaction({
-  ...parsed,
-  type: 'eip1559',
-} as Parameters<typeof account.signTransaction>[0]);
-
-// 서명된 tx를 hex로 반환
-return signedHex;
-```
-
-**이미 사용 중인 함수들이므로 추가 의존성 없음.**
+**이유:** WC SDK 내부 스토리지를 커스텀 SQLite 어댑터로 교체하는 것은 기술적으로 가능하나, WC 내부 암호화 핸드셰이크/세션 복원 로직과 충돌 위험이 있다. 기본 저장소 사용이 안정성 최우선. 별도 `wc_sessions` 테이블로 비즈니스 메타데이터만 관리하면 WAIaaS 쿼리 요구사항 충족.
 
 ---
 
-## 패키지별 변경 사항
-
-### @waiaas/core
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| chain-adapter.types.ts | `ParsedTransaction`, `ParsedOperation`, `SignedTransaction` 타입 추가 | 없음 (Zod + TS만) |
-| IChainAdapter.ts | `parseTransaction()`, `signExternalTransaction()` 2개 메서드 추가 (20 -> 22) | 없음 |
-| enums/transaction.ts | `SIGNED` 상태, `SIGN` 타입 추가 | 없음 |
-| schemas/transaction.schema.ts | `SignTransactionRequestSchema` 추가 | 없음 (Zod만) |
-
-### @waiaas/daemon
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| pipeline/sign-only.ts (신규) | sign-only 파이프라인 | 없음 |
-| api/routes/transactions.ts | `POST /v1/transactions/sign` 추가 | 없음 |
-| api/routes/utils.ts (신규) | `POST /v1/utils/encode-calldata` 추가 | 없음 (viem은 daemon에 이미 의존) |
-| api/routes/skills.ts (신규) | `GET /v1/skills/:name` 추가 (MCP 스킬 리소스용) | 없음 |
-| pipeline/database-policy-engine.ts | 기본 거부 토글 분기 추가 | 없음 |
-| DB 마이그레이션 | CHECK 제약 업데이트 (SIGNED 상태, SIGN 타입) | 없음 |
-
-**daemon의 viem 의존성:** daemon은 이미 `viem ^2.21.0`에 직접 의존하고 있으므로 (`packages/daemon/package.json` 확인) `encodeFunctionData`를 import하여 `POST /v1/utils/encode-calldata`에서 직접 사용 가능. adapter-evm을 경유할 필요 없음.
-
-### @waiaas/adapter-solana
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| adapter.ts | `parseTransaction()`, `signExternalTransaction()` 구현 | 없음 |
-| tx-parser.ts (신규) | Solana tx 파싱 유틸리티 | 없음 |
-
-**@solana/kit에서 추가 import:**
-- `getCompiledTransactionMessageDecoder` (기존 미사용, @solana/transaction-messages에서 re-export)
-- `decompileTransactionMessageFetchingLookupTables` (기존 미사용, @solana/kit 자체 export)
-
-### @waiaas/adapter-evm
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| adapter.ts | `parseTransaction()`, `signExternalTransaction()` 구현 | 없음 |
-| tx-parser.ts (신규) | EVM tx 파싱 유틸리티 | 없음 |
-
-**viem에서 추가 import:**
-- `decodeFunctionData` (기존 미사용)
-
-### @waiaas/sdk
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| client.ts | `signTransaction()`, `encodeCalldata()` 메서드 추가 | 없음 (0-dep SDK) |
-
-### @waiaas/mcp
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| tools/sign-transaction.ts (신규) | sign_transaction 도구 | 없음 |
-| tools/encode-calldata.ts (신규) | encode_calldata 도구 | 없음 |
-| resources/skills.ts (신규) | waiaas://skills/{name} 리소스 템플릿 | 없음 |
-| server.ts | 신규 도구 2개 + 리소스 1개 등록 (11 -> 13 도구, 3 -> 4 리소스) | 없음 |
-
-**@modelcontextprotocol/sdk에서 추가 import:**
-- `ResourceTemplate` (기존 미사용, `@modelcontextprotocol/sdk/server/mcp.js`에서 export)
-
-### python-sdk (waiaas)
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| client.py | `sign_transaction()`, `encode_calldata()` 메서드 추가 | 없음 (httpx + Pydantic) |
-
-### @waiaas/admin
-
-| 변경 | 내용 | 의존성 변경 |
-|------|------|-----------|
-| Settings 페이지 | 기본 거부 토글 3개 추가 (보안 섹션) | 없음 |
-
----
-
-## 설치 변경: 없음
+## Installation
 
 ```bash
-# 신규 설치 명령 없음. 기존 의존성으로 모든 기능 구현 가능.
-# pnpm install 변경 불필요.
+# Core (daemon package)
+cd packages/daemon
+pnpm add @walletconnect/sign-client@^2.23.5 qrcode@^1.5.4
+
+# Dev dependencies (daemon package)
+pnpm add -D @types/qrcode@^1.5.6
 ```
 
----
-
-## 명시적으로 추가하지 않는 것 (Anti-Dependencies)
-
-| 라이브러리 | 왜 추가하지 않는가 |
-|-----------|-----------------|
-| `@solana/web3.js` (legacy) | `@solana/kit` 6.x가 이미 모든 기능을 제공. legacy 라이브러리 혼용은 번들 크기 증가 + 타입 충돌 유발 |
-| `ethers.js` | viem 2.x가 이미 모든 ABI 인코딩/디코딩, tx 파싱 기능을 제공. 중복 의존성 불필요 |
-| `@project-serum/borsh` | Anchor discriminator 파싱에 사용 가능하나, 8바이트 discriminator는 단순 슬라이싱으로 충분. 별도 borsh 디코더 불필요 |
-| `abitype` | viem 2.x가 내부적으로 abitype에 의존하며 타입을 re-export. 직접 의존 불필요 |
-| `@4byte/directory` / 4byte API | 4byte selector -> 함수명 매핑은 외부 API 호출. sign-only에서는 selector 추출만으로 CONTRACT_WHITELIST + METHOD_WHITELIST 평가 가능. 함수명 해석은 불필요 |
-| `@coral-xyz/anchor` | Anchor IDL 기반 instruction 디코딩용이나, sign-only 정책 평가에는 programId + discriminator로 충분. 전체 Anchor 프레임워크 의존 불필요 |
-
----
-
-## 알려진 프로그램/컨트랙트 식별을 위한 상수
-
-### Solana (tx-parser.ts에 정의)
-
-```typescript
-// 알려진 프로그램 주소 -> 파싱 전략 매핑
-const KNOWN_PROGRAMS: Record<string, string> = {
-  '11111111111111111111111111111111': 'SYSTEM',
-  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA': 'SPL_TOKEN',
-  'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb': 'TOKEN_2022',
-  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL': 'ASSOCIATED_TOKEN',
-  'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr': 'MEMO',
-};
-
-// SystemProgram instruction discriminator (4 bytes LE)
-const SYSTEM_TRANSFER_DISCRIMINATOR = 2;  // Transfer = instruction type 2
-// SPL Token instruction type (1 byte)
-const TOKEN_TRANSFER_CHECKED = 12;
-const TOKEN_APPROVE_CHECKED = 13;
-```
-
-### EVM (tx-parser.ts에 정의)
-
-```typescript
-// ERC-20 4byte selectors
-const ERC20_SELECTORS: Record<string, { type: string; name: string }> = {
-  '0xa9059cbb': { type: 'TOKEN_TRANSFER', name: 'transfer(address,uint256)' },
-  '0x23b872dd': { type: 'TOKEN_TRANSFER', name: 'transferFrom(address,address,uint256)' },
-  '0x095ea7b3': { type: 'APPROVE', name: 'approve(address,uint256)' },
-};
-```
-
----
-
-## 버전 핀 현황 (변경 없음)
-
-| 패키지 | package.json 범위 | 실제 설치 버전 | v1.4.7 활용 |
-|--------|------------------|-------------|-----------|
-| viem | ^2.21.0 | 2.45.3 | parseTransaction, decodeFunctionData, encodeFunctionData |
-| @solana/kit | ^6.0.1 | 6.0.1 | getTransactionDecoder, getCompiledTransactionMessageDecoder, decompileTransactionMessageFetchingLookupTables, signBytes |
-| @modelcontextprotocol/sdk | ^1.12.0 | 1.26.0 | McpServer, ResourceTemplate |
-| zod | ^3.24.0 | 3.25.76 | SignTransactionRequestSchema, EncodeCalldataRequestSchema |
-| hono | ^4.11.9 | 4.x | 신규 라우트 추가 |
-| drizzle-orm | ^0.45.0 | 0.45.x | DB 마이그레이션, CHECK 제약 |
-| sodium-native | ^4.3.1 | 4.x | 키 복호화 (기존 keyStore 경유) |
-| jose | ^6.1.3 | 6.x | sessionAuth (변경 없음) |
+**Admin UI (`packages/admin`):** 추가 패키지 불필요. QR 코드는 서버(daemon)에서 base64 PNG로 생성하여 REST API(`GET /v1/admin/walletconnect/:walletId/qr`)로 전달. Admin UI는 `<img src="data:image/png;base64,...">` 으로 렌더링. 기존 CSP `img-src 'self' data:` 호환.
 
 ---
 
 ## Alternatives Considered
 
-| 카테고리 | 권장 | 대안 | 왜 대안이 아닌가 |
-|---------|------|------|-----------------|
-| EVM tx 파싱 | viem `parseTransaction` + `decodeFunctionData` | ethers `utils.parseTransaction` + `Interface.decodeFunctionData` | 이미 viem 2.x 의존 중. ethers 추가는 번들 +2MB, API 스타일 충돌 |
-| Solana tx 파싱 | @solana/kit `getTransactionDecoder` + `getCompiledTransactionMessageDecoder` | @solana/web3.js `Transaction.from()` + `VersionedTransaction.deserialize()` | 이미 @solana/kit 6.x 의존 중. web3.js 1.x 혼용은 타입 불일치 유발 |
-| MCP 리소스 | `ResourceTemplate` (SDK 내장) | 커스텀 request handler에서 URI 파싱 | SDK 내장 API가 URI 파싱, list, complete를 모두 처리. 커스텀은 불필요한 복잡도 |
-| EVM calldata 인코딩 | viem `encodeFunctionData` (이미 사용 중) | ethers `Interface.encodeFunctionData` | viem 이미 사용 중이므로 일관성 유지 |
-| Anchor instruction 파싱 | 8바이트 discriminator 슬라이싱 | `@coral-xyz/anchor` IDL 기반 디코딩 | programId + discriminator로 CONTRACT_WHITELIST 평가에 충분. IDL 파싱은 과잉 |
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| WC SDK | `@walletconnect/sign-client` | `@reown/appkit` | 브라우저 전용 UI 번들 (모달, 소셜 로그인, 내장 지갑). 서버 데몬에 부적합. 과도한 의존성 |
+| WC SDK | `@walletconnect/sign-client` | `@walletconnect/web3wallet` | **Web3Wallet은 지갑 측(Responder) SDK**. WAIaaS는 dApp(Proposer) 역할이므로 sign-client 필요 |
+| WC SDK | `@walletconnect/sign-client` | `@walletconnect/ethereum-provider` | EIP-1193 Provider 래퍼. EVM 전용이라 Solana 미지원. 직접 sign-client API가 더 낮은 수준 제어 가능 |
+| QR 생성 위치 | 서버사이드 (`qrcode` in daemon) | 프론트엔드 QR 라이브러리 (Admin UI Preact) | 서버에서 생성하면 (1) CSP 추가 변경 불필요, (2) Telegram Bot에서도 동일 QR 이미지 전송 가능, (3) REST API로 일관된 인터페이스 |
+| QR 패키지 | `qrcode` | `@walletconnect/qrcode-modal` | Deprecated 패키지. `@reown/appkit`으로 대체됨. 브라우저 모달 전용 |
+| WC Storage | 기본 파일시스템 | SQLite 커스텀 IKeyValueStorage 어댑터 | WC 내부 암호화 상태 관리와 충돌 위험. keyvaluestorage의 Node.js 파일시스템 기본값 안정 |
+| WC Storage | 기본 파일시스템 | In-memory 저장 | 데몬 재시작 시 모든 WC 세션 소실. Owner가 매번 QR 재스캔 필요. UX 열화 |
+| 서명 메서드 | `personal_sign` | `eth_signTypedData_v4` | personal_sign이 더 단순하고 모든 지갑이 지원. 구조화된 데이터 서명이 불필요한 승인 메시지에 typedData는 과잉 |
+| Fallback | Telegram Bot (기존) | 이메일 / SMS | 이미 구현된 Telegram Bot + 4채널 알림 인프라 활용이 최소 비용. 이메일/SMS는 추가 인프라 필요 |
 
 ---
 
-## Integration Points
+## NOT Adding (명시적 제외)
 
-### sign-only 파이프라인과 기존 파이프라인의 관계
+| Library | Reason |
+|---------|--------|
+| `@reown/appkit` | 브라우저 전용 UI 프레임워크. 소셜 로그인, 내장 지갑 등 서버 데몬에 불필요한 기능 번들 |
+| `@walletconnect/web3wallet` | 지갑 측(Responder) SDK. WAIaaS는 dApp(Proposer) 역할 |
+| `@walletconnect/ethereum-provider` | EIP-1193 Provider 래퍼. EVM 전용이고 Solana 미지원. 불필요한 추상화 계층 |
+| `@walletconnect/modal` | Deprecated (2024). 브라우저 모달 UI 전용 |
+| `ws` | `@walletconnect/core`가 `@walletconnect/jsonrpc-ws-connection` 1.0.16으로 내부 관리. 직접 설치 불필요 |
+| Admin UI용 QR 라이브러리 | 서버에서 base64 PNG 생성으로 충분. 프론트엔드 QR 라이브러리 추가 불필요 |
+| `@walletconnect/universal-provider` | 범용 provider 래퍼. sign-client 직접 사용이 더 가벼움 |
 
-```
-기존 executeSend():
-  Stage 1 (Validate + DB INSERT)
-  Stage 2 (Auth -- sessionId passthrough)
-  Stage 3 (Policy evaluation)
-  Stage 4 (Wait -- DELAY/APPROVAL)
-  Stage 5 (Build -> Simulate -> Sign -> Submit)
-  Stage 6 (Confirm)
+---
 
-sign-only executeSign():
-  Step 1: Parse unsigned tx -> ParsedTransaction { operations[] }
-  Step 2: DB INSERT (type=SIGN, status=PENDING)
-  Step 3: Policy evaluation (operations[] -> 기존 evaluate/evaluateBatch)
-  Step 4: DELAY/APPROVAL 판정 -> 즉시 거부 (sign-only는 동기 API)
-  Step 5: Sign (키 복호화 -> signExternalTransaction)
-  Step 6: DB UPDATE (status=SIGNED) + Return signed tx
+## 패키지별 변경 사항
 
-차이점:
-  - Stage 4 (Wait): DELAY/APPROVAL 티어는 즉시 거부 (blockhash/nonce 만료 위험)
-  - Stage 5 (Build/Simulate): 건너뜀 (외부에서 빌드 완료)
-  - Stage 6 (Confirm): 건너뜀 (제출은 호출자 책임)
-  - SPENDING_LIMIT: 서명 시점에 reserved_amount에 포함 (evaluateAndReserve 활용)
-```
+### @waiaas/daemon (변경 대상)
 
-### 기본 거부 토글과 DatabasePolicyEngine 통합
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| `package.json` | `@walletconnect/sign-client`, `qrcode`, `@types/qrcode` 추가 | **신규 2 + dev 1** |
+| `services/wc-session-service.ts` (신규) | WC SignClient 래퍼. 초기화, connect, request, 세션 관리 | sign-client 사용 |
+| `services/wc-approval-bridge.ts` (신규) | ApprovalWorkflow <-> WC 브릿지. APPROVAL 이벤트 -> WC 서명 요청 -> approve/reject | 기존 ApprovalWorkflow 활용 |
+| `api/routes/walletconnect.ts` (신규) | REST endpoints: QR 생성, 세션 상태, 페어링 해제 | qrcode 사용 |
+| `infrastructure/database/migrate.ts` | v16 마이그레이션: `wc_sessions` 테이블 | 없음 |
+| `infrastructure/settings/setting-keys.ts` | `walletconnect.relay_url` 등 설정 키 추가 | 없음 |
+| `infrastructure/config/loader.ts` | `[walletconnect]` 섹션 확장 | 없음 |
+| `infrastructure/telegram/telegram-bot-service.ts` | WC fallback 로직 통합 (WC 실패 시 Telegram 전환) | 없음 |
+| `lifecycle/daemon.ts` | WcSessionService 초기화/시작/종료 | 없음 |
 
-```typescript
-// DatabasePolicyEngine에서 SettingsService를 통해 설정 읽기
-// v1.4.4에서 구현된 SettingsService + DB settings 테이블 + hot-reload 활용
+### @waiaas/core (변경 최소)
 
-private evaluateContractPolicy(walletId: string, param: TransactionParam) {
-  const policies = this.getContractWhitelistPolicies(walletId);
-  if (policies.length === 0) {
-    // 기본 거부 토글 확인 (DB settings 테이블에서 hot-reload)
-    const defaultDeny = this.settingsService.get('default_deny_contracts');
-    if (defaultDeny === 'false') {
-      return null;  // 허용 -> 다음 정책 평가로 (SPENDING_LIMIT 등)
-    }
-    return { allowed: false, reason: 'Contract calls disabled: no CONTRACT_WHITELIST...' };
-  }
-  // ... 기존 화이트리스트 평가 로직 그대로
-}
-```
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| `enums/notification.ts` | WC 관련 NotificationEventType 추가 | 없음 |
+| `interfaces/types.ts` | WC 세션 관련 타입 정의 (WcSessionInfo 등) | 없음 |
+| `i18n/messages.ts` | WC 관련 알림/텔레그램 메시지 템플릿 (en/ko) | 없음 |
 
-### encode-calldata 엔드포인트
+### @waiaas/admin (UI 변경)
 
-daemon은 이미 `viem ^2.21.0`에 직접 의존하고 있으므로 (packages/daemon/package.json 확인) `encodeFunctionData`를 직접 import하여 사용 가능. adapter-evm을 경유할 필요 없음.
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| `pages/wallets.tsx` | 월렛 상세 뷰에 "WC 페어링" 버튼 + QR 모달 | 없음 (기존 Modal 컴포넌트 활용) |
+| `pages/settings.tsx` | WalletConnect 설정 섹션 확장 (relay_url, metadata) | 없음 |
 
-```typescript
-// packages/daemon/src/api/routes/utils.ts
-import { encodeFunctionData } from 'viem';
+### @waiaas/mcp (선택적)
 
-// POST /v1/utils/encode-calldata
-app.post('/v1/utils/encode-calldata', async (c) => {
-  const { abi, functionName, args } = c.req.valid('json');
-  try {
-    const calldata = encodeFunctionData({ abi, functionName, args });
-    const selector = calldata.slice(0, 10);
-    return c.json({ calldata, selector, functionName });
-  } catch (err) {
-    return c.json({ error: 'ENCODE_ERROR', code: 'ABI_ENCODING_FAILED', message: ... }, 400);
-  }
-});
-```
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| `tools/wc-pair.ts` (선택) | MCP 도구: WC 페어링 URI 생성 | 없음 (daemon REST API 경유) |
+
+### @waiaas/sdk (선택적)
+
+| 변경 | 내용 | 의존성 변경 |
+|------|------|-----------|
+| `client.ts` | WC 관련 메서드 추가 (getWcPairingUri, getWcSessionStatus) | 없음 (0-dep SDK) |
+
+---
+
+## Version Compatibility Matrix
+
+| Package | Min Version | Tested With | WAIaaS Constraint |
+|---------|-------------|-------------|-------------------|
+| `@walletconnect/sign-client` | 2.20+ (Node.js heartbeat fix) | 2.23.5 | Node.js 22 ESM 호환. `type: "module"` 지원 |
+| `qrcode` | 1.5.0+ | 1.5.4 | Node.js 22 호환. CommonJS (require) 사용 -> daemon ESM에서 `createRequire` 필요 가능 |
+| Node.js | 18+ (WC SDK) | 22 | WAIaaS 기존 요구사항 충족 |
+| `viem` | 2.x | 기존 설치 (^2.21.0) | WC 서명 검증에 기존 `verifySIWE()` / `verifyMessage()` 재사용 |
+| `sodium-native` | 4.x | 기존 설치 (^4.3.1) | Solana WC 서명 검증에 기존 `crypto_sign_verify_detached()` 재사용 |
+| SQLite (better-sqlite3) | 12.x | 기존 설치 (^12.6.0) | DB v16 마이그레이션 (wc_sessions 테이블) |
+
+---
+
+## Known Issues and Mitigations
+
+### 1. Node.js Heartbeat Crash (Resolved in 2.23.x)
+
+**이슈:** `@walletconnect/sign-client` 2.17.x에서 Node.js ~2분 후 `TypeError: i.terminate is not a function` 크래시 ([GitHub #5588](https://github.com/WalletConnect/walletconnect-monorepo/issues/5588))
+**상태:** PR #5691에서 수정. 2.23.5에 포함.
+**대응:** 2.23.5+ 사용으로 해결. 추가 예방: `signClient.core.relayer.on('relayer_error')` 에러 핸들러 등록.
+
+### 2. KeyValueStorage Message Accumulation
+
+**이슈:** WC 내부 `wc@2:core:0.3//messages` 키에 메시지 누적으로 스토리지 비대화 ([GitHub #4125](https://github.com/WalletConnect/walletconnect-monorepo/issues/4125))
+**대응:** WcSessionService에서 주기적 정리 로직 구현 -- 만료된 세션의 메시지 pruning. 기존 `processExpiredApprovals()` 패턴 참조하여 cron-like 정리.
+
+### 3. Relay Server External Dependency
+
+**이슈:** WalletConnect Relay 서버 (`relay.walletconnect.com`)에 대한 외부 의존성. 서버 다운 시 WC 경유 승인 불가.
+**대응:** (1) Telegram Bot fallback 자동 전환. (2) `walletconnect.relay_url` 설정으로 자체 호스팅 relay 가능. (3) Relay 연결 상태를 Health check에 노출.
+
+### 4. qrcode 패키지 ESM 호환성
+
+**이슈:** `qrcode` 패키지는 CommonJS. daemon은 ESM (`type: "module"`).
+**대응:** `createRequire(import.meta.url)` 패턴 사용 (daemon에서 이미 `sodium-native`, `better-sqlite3`에 동일 패턴 적용 중).
+
+### 5. WalletConnect Cloud Project ID 필요
+
+**이슈:** WC v2는 `project_id`가 필수. [WalletConnect Cloud](https://cloud.walletconnect.com)에서 무료 발급.
+**대응:** `walletconnect.project_id`가 비어있으면 WC 서비스 비활성화 (graceful). Telegram fallback만 동작. Admin UI Settings에서 project_id 입력 안내 표시.
 
 ---
 
 ## Confidence Assessment
 
-| 영역 | 신뢰도 | 근거 |
-|------|--------|------|
-| EVM tx 파싱 (viem) | HIGH | parseTransaction, encodeFunctionData 이미 기존 코드에서 실사용 중. decodeFunctionData는 viem 2.45.3 d.ts에서 export 확인 |
-| Solana tx 파싱 (@solana/kit) | HIGH | getTransactionDecoder 이미 사용 중. getCompiledTransactionMessageDecoder는 @solana/transaction-messages d.ts에서 확인. @solana/kit가 re-export |
-| MCP ResourceTemplate | HIGH | @modelcontextprotocol/sdk 1.26.0 mcp.d.ts에서 ResourceTemplate 클래스, server.resource() template overload 확인 |
-| EVM calldata 인코딩 | HIGH | encodeFunctionData는 EvmAdapter에서 이미 실사용 중. daemon도 viem 직접 의존 |
-| 기본 거부 토글 | HIGH | SettingsService는 v1.4.4에서 구현 완료. DB settings 테이블 + hot-reload 가능 |
-| Address Lookup Table 처리 | MEDIUM | decompileTransactionMessageFetchingLookupTables의 d.ts 확인했으나 실제 RPC 호출 동작은 미검증. 테스트에서 확인 필요 |
-| Solana instruction 데이터 파싱 (SystemProgram, SPL Token) | MEDIUM | instruction layout은 Solana 공식 스펙 기반이나 코드베이스에서 직접 검증 필요. 오프셋 계산 실수 가능성 |
+| Item | Confidence | Source | Notes |
+|------|------------|--------|-------|
+| `@walletconnect/sign-client` 2.23.5 | HIGH | npm registry 직접 `npm view` 확인 | 2026-02-11 릴리스, Node.js 호환 명시 |
+| dApp vs Wallet SDK 역할 구분 | HIGH | [Reown Docs](https://docs.reown.com/advanced/api/sign/dapp-usage) + [WC Specs](https://specs.walletconnect.com/2.0/specs/clients/sign/namespaces) | sign-client = dApp, web3wallet = Wallet |
+| `qrcode` 1.5.4 | HIGH | npm registry 직접 확인 | 안정 라이브러리, 최소 의존성 |
+| EVM Chain ID 매핑 | HIGH | 기존 코드베이스 `adapter-pool.test.ts` + WC Specs | 10개 네트워크 모두 확인 |
+| Solana CAIP-2 Chain ID | HIGH | [chainagnostic.org](https://namespaces.chainagnostic.org/solana/caip2) | mainnet/devnet/testnet genesis hash 확인 |
+| SignClient API (connect, request, events) | HIGH | [Reown Docs dApp Usage](https://docs.reown.com/advanced/api/sign/dapp-usage) | 코드 예제 + 타입 검증 |
+| Node.js heartbeat 버그 수정 | MEDIUM | GitHub issue #5588 (COMPLETED + PR merged) | 정확한 수정 포함 버전 미확인, 2.23.5에 포함으로 추정 |
+| 파일시스템 스토리지 안정성 | MEDIUM | WC 문서 + 커뮤니티 사례 | 장기 운영 시 스토리지 정리 필요 가능 |
+| Solana WC 지원 범위 | MEDIUM | [WC Docs Solana](https://docs.walletconnect.network/wallet-sdk/chain-support/solana) | `solana_signMessage` 지원 확인, 지갑별 호환성 차이 가능 |
 
 ---
 
 ## Sources
 
-### 코드베이스 직접 검증 (HIGH)
+### npm Registry (HIGH)
+- [@walletconnect/sign-client npm](https://www.npmjs.com/package/@walletconnect/sign-client) -- v2.23.5 확인
+- [@walletconnect/core npm](https://www.npmjs.com/package/@walletconnect/core) -- v2.23.5 transitive dep
+- [qrcode npm](https://www.npmjs.com/package/qrcode) -- v1.5.4 확인
+- [@types/qrcode npm](https://www.npmjs.com/package/@types/qrcode) -- v1.5.6 확인
 
-- `packages/adapters/evm/src/adapter.ts` -- viem `parseTransaction`, `encodeFunctionData`, `serializeTransaction`, `hexToBytes` 실사용 패턴
-- `packages/adapters/solana/src/adapter.ts` -- @solana/kit `getTransactionDecoder`, `getTransactionEncoder`, `signBytes`, `createKeyPairFromBytes` 실사용 패턴
-- `packages/mcp/src/resources/wallet-address.ts` -- 정적 리소스 등록 패턴 (`server.resource()` 사용 중)
-- `packages/mcp/src/server.ts` -- McpServer 생성 + 11 도구 + 3 리소스 등록 구조
-- `packages/daemon/package.json` -- `viem: "^2.21.0"` 직접 의존 확인
+### Official Documentation (HIGH)
+- [Reown Docs - Dapp Usage](https://docs.reown.com/advanced/api/sign/dapp-usage) -- SignClient 초기화, connect(), request() API
+- [WalletConnect Specs - Pairing URI](https://specs.walletconnect.com/2.0/specs/clients/core/pairing/pairing-uri) -- URI 포맷 `wc:{topic}@2?symKey=...&relay-protocol=irn`
+- [WalletConnect Specs - Namespaces](https://specs.walletconnect.com/2.0/specs/clients/sign/namespaces) -- eip155/solana 네임스페이스 구조
+- [CAIP-2 Solana Chains](https://namespaces.chainagnostic.org/solana/caip2) -- Solana chain ID 매핑
+- [WC Docs - Solana Support](https://docs.walletconnect.network/wallet-sdk/chain-support/solana) -- solana_signMessage, solana_signTransaction
 
-### 타입 선언 파일 검증 (HIGH)
+### GitHub Issues (MEDIUM)
+- [GitHub #5588 - Node.js heartbeat crash](https://github.com/WalletConnect/walletconnect-monorepo/issues/5588) -- 수정됨
+- [GitHub #4125 - Storage accumulation](https://github.com/WalletConnect/walletconnect-monorepo/issues/4125) -- 메시지 누적 이슈
+- [WalletConnect Releases](https://github.com/WalletConnect/walletconnect-monorepo/releases) -- v2.23.5 릴리스 노트
 
-- viem 2.45.3 `_types/index.d.ts` -- `decodeFunctionData`, `decodeAbiParameters`, `encodeFunctionData`, `parseTransaction` export
-- @solana/transaction-messages 6.0.1 `dist/types/codecs/message.d.ts` -- `getCompiledTransactionMessageDecoder` 선언
-- @solana/transactions 6.0.1 `dist/types/codecs/transaction-codec.d.ts` -- `getTransactionDecoder`, `getTransactionEncoder` 선언
-- @solana/kit 6.0.1 `dist/types/index.d.ts` -- `@solana/transaction-messages`, `@solana/transactions` re-export, `decompileTransactionMessageFetchingLookupTables` export
-- @modelcontextprotocol/sdk 1.26.0 `dist/esm/server/mcp.d.ts` -- `ResourceTemplate` 클래스, `server.resource()` template overload
+### Reown Rebrand (MEDIUM)
+- [Reown Blog - WalletConnect is now Reown](https://reown.com/blog/walletconnect-is-now-reown) -- @walletconnect vs @reown 관계 설명
 
-### 공식 문서 (MEDIUM-HIGH)
-
-- [viem encodeFunctionData](https://viem.sh/docs/contract/encodeFunctionData)
-- [viem decodeFunctionData](https://viem.sh/docs/contract/decodeFunctionData)
-- [MCP Resources Specification](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)
-- [@modelcontextprotocol/sdk npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
-
-### 프로젝트 내부 (HIGH)
-
-- `objectives/v1.4.7-arbitrary-transaction-signing.md` -- 마일스톤 목표, 컴포넌트 정의, E2E 시나리오 50개
-- `packages/core/src/interfaces/IChainAdapter.ts` -- 현재 20 메서드 인터페이스
-- `packages/core/src/schemas/transaction.schema.ts` -- discriminatedUnion 5-type 스키마
-- `packages/core/src/enums/policy.ts` -- 11 PolicyType 정의
-- `packages/daemon/src/pipeline/stages.ts` -- 6-stage 파이프라인 구조, buildByType 라우팅
+### Codebase (HIGH)
+- `packages/daemon/package.json` -- 기존 의존성 확인
+- `packages/daemon/src/infrastructure/settings/setting-keys.ts` -- `walletconnect.project_id` 이미 정의
+- `packages/daemon/src/workflow/approval-workflow.ts` -- ApprovalWorkflow API (requestApproval, approve, reject)
+- `packages/daemon/src/infrastructure/telegram/telegram-bot-service.ts` -- Telegram approve/reject 명령
+- `packages/daemon/src/api/middleware/owner-auth.ts` -- SIWS/SIWE 서명 검증 (재사용)
+- `packages/daemon/src/api/middleware/csp.ts` -- `img-src 'self' data:` 확인
+- `packages/daemon/src/__tests__/adapter-pool.test.ts` -- EVM chainId 매핑 확인

@@ -1,804 +1,805 @@
-# Architecture Patterns: v1.5 Price Oracle + Action Provider Framework
+# Architecture Patterns: WalletConnect Owner 승인
 
-**Domain:** Price Oracle, Action Provider 프레임워크, USD 정책 평가를 기존 6-stage 파이프라인에 통합
-**Researched:** 2026-02-15
-**Confidence:** HIGH (기존 코드베이스 직접 분석 + Pyth/MCP 공식 문서 기반)
-
----
-
-## 1. Recommended Architecture
-
-### 1.1 Integration Overview
-
-v1.5에서 3개의 새로운 서브시스템을 기존 아키텍처에 통합한다. 핵심 원칙은 **기존 6-stage 파이프라인과 DaemonContext 패턴을 변경하지 않고, 새로운 컴포넌트를 주입점에 추가**하는 것이다.
-
-```
-기존 아키텍처 (변경 없음)                  v1.5 추가 (주입)
-=====================                    ================
-
-DaemonContext                            + priceOracle: OracleChain
-  +-- db                                + actionRegistry: ActionProviderRegistry
-  +-- config                            + apiKeyStore: ActionProviderApiKeyStore
-  +-- adapterPool
-  +-- notificationService
-  +-- settingsService
-  +-- ...
-
-Pipeline (6-stage)                       Stage 3 전에 USD 변환 삽입
-  Stage 1: Validate + INSERT             (변경 없음)
-  Stage 2: Auth                          (변경 없음)
-  Stage 3: Policy evaluation             resolveEffectiveAmountUsd() 호출 추가
-  Stage 4: Wait                          (변경 없음)
-  Stage 5: Execute                       (변경 없음)
-  Stage 6: Confirm                       (변경 없음)
-
-MCP Server                              Action Provider 도구 동적 등록
-  14 static tools                        (유지)
-  + N action tools                       (동적 추가/제거)
-
-Admin UI                                 + Oracle Status 페이지/섹션
-  6 pages                                + API Keys 관리 섹션
-```
-
-### 1.2 System Architecture Diagram
-
-```
-+---------------------------------------------------------------------------+
-|  Admin UI (Preact + Vite)                                                 |
-|  +----------+ +----------+ +----------+ +------------+ +------------+     |
-|  | Settings | | Policies | |   ...    | |Oracle Stat | | API Keys   |     |
-|  |(existing)| |(existing)| |          | |  (NEW)     | |  (NEW)     |     |
-|  +----+-----+ +----+-----+ +----------+ +-----+------+ +-----+------+     |
-+-------+------------+----------------------+------------+------+-----------+
-        |            |                       |              |
-   +----v------------v-----------------------v--------------v--------------+
-   |  REST API (OpenAPIHono)                                               |
-   |  +----------------------+  +--------------------------------------+   |
-   |  | Existing Routes      |  | New Routes                           |   |
-   |  | /v1/transactions/*   |  | POST /v1/actions/:prov/:action       |   |
-   |  | /v1/wallets/*        |  | GET  /v1/admin/oracle-status         |   |
-   |  | /v1/admin/*          |  | CRUD /v1/admin/api-keys/*            |   |
-   |  +-----------+-----------+  +-------------+------------------------+   |
-   +--------------+----------------------------+---------------------------+
-                  |                            |
-   +--------------v----------------------------v---------------------------+
-   |  DaemonContext (주입 컨테이너)                                         |
-   |                                                                       |
-   |  기존:  db, config, adapterPool, settingsService, ...                 |
-   |  추가:  priceOracle: OracleChain                                      |
-   |         actionRegistry: ActionProviderRegistry                        |
-   |         apiKeyStore: ActionProviderApiKeyStore                        |
-   +------+------------------+-----------------------+---------------------+
-          |                  |                       |
-   +------v--------+  +-----v--------------+  +-----v--------------------+
-   |  Pipeline      |  |  OracleChain       |  |  ActionProviderRegistry  |
-   |  (6-stage)     |  |                    |  |                          |
-   |  +----------+  |  |  PythOracle        |  |  ~/.waiaas/actions/      |
-   |  | Stage 3  |<-+--+  (Primary)         |  |  ESM dynamic import     |
-   |  | resolveUsd  |  |       |            |  |                          |
-   |  | + Policy |  |  |  CoinGeckoOracle   |  |  resolve() -> CCR        |
-   |  +----------+  |  |  (Fallback)        |  |       |                  |
-   |                |  |       |            |  |       v                  |
-   |  Stage 1-2,   |  |  InMemoryCache     |  |  Pipeline Stage 1        |
-   |  4-6 unchanged|  |  (LRU 128)         |  |  (ContractCallRequest)   |
-   +----------------+  +--------------------+  +--------------------------+
-```
+**Domain:** WalletConnect v2 SignClient 통합 -- 외부 지갑을 통한 APPROVAL 트랜잭션 서명
+**Researched:** 2026-02-16
+**Confidence:** MEDIUM (WC SDK 공식 문서 + 코드베이스 정밀 분석 기반, Node.js 서버 장기 실행 이슈 LOW)
 
 ---
 
-## 2. Component Boundaries
+## Recommended Architecture
 
-### 2.1 New Components
+WAIaaS 데몬이 WalletConnect v2 **SignClient를 dApp 역할**로 호스팅한다. Owner의 외부 지갑(MetaMask, Phantom 등)이 wallet 역할이 된다. APPROVAL 상태 트랜잭션이 발생하면, 데몬이 SignClient를 통해 Owner 지갑에 서명 요청을 보내고, Owner가 외부 지갑에서 승인/거절한다.
 
-| Component | Package | Directory | Responsibility | Communicates With |
-|-----------|---------|-----------|---------------|-------------------|
-| `IPriceOracle` | `@waiaas/core` | `interfaces/` | 가격 조회 인터페이스 (4 메서드) | OracleChain에서 구현 |
-| `PythOracle` | `@waiaas/daemon` | `oracle/` | Pyth Hermes REST API 구현체 (Primary, Zero-config) | Hermes API (HTTPS) |
-| `CoinGeckoOracle` | `@waiaas/daemon` | `oracle/` | CoinGecko Demo API 구현체 (Opt-in Fallback) | CoinGecko API (HTTPS) |
-| `OracleChain` | `@waiaas/daemon` | `oracle/` | Pyth->CoinGecko fallback + 교차 검증 | PythOracle, CoinGeckoOracle, InMemoryPriceCache |
-| `InMemoryPriceCache` | `@waiaas/daemon` | `oracle/` | LRU 128항목, 5분 TTL | OracleChain에서 사용 |
-| `resolveEffectiveAmountUsd` | `@waiaas/daemon` | `pipeline/` | 트랜잭션 금액 USD 변환 | IPriceOracle, Stage 3 |
-| `IActionProvider` | `@waiaas/core` | `interfaces/` | Action Provider 인터페이스 | ActionProviderRegistry에서 사용 |
-| `ActionProviderRegistry` | `@waiaas/daemon` | `action/` | 플러그인 발견/로드/검증 | IActionProvider, MCP Tool Converter |
-| `McpToolConverter` | `@waiaas/daemon` | `action/` | ActionDefinition -> MCP Tool 변환 | McpServer, ActionProviderRegistry |
-| `ActionProviderApiKeyStore` | `@waiaas/daemon` | `action/` | API 키 DB 암호화 저장/CRUD | DB, masterPassword |
+### 핵심 설계 원칙
 
-### 2.2 Modified Components
-
-| Component | Modification | Impact |
-|-----------|-------------|--------|
-| `DaemonLifecycle` (lifecycle/daemon.ts) | priceOracle, actionRegistry, apiKeyStore 필드 추가 | 시작/종료 시 초기화/정리 추가 |
-| `PipelineContext` (pipeline/stages.ts) | priceOracle 옵셔널 필드 추가 | Stage 3에서 USD 변환 호출 |
-| `stage3Policy()` (pipeline/stages.ts) | resolveEffectiveAmountUsd() 호출 삽입 | evaluateAndReserve() 전에 USD 금액 계산 |
-| `DatabasePolicyEngine` (pipeline/database-policy-engine.ts) | SpendingLimitRules에 USD 필드 인식 추가 | USD 임계값 존재 시 USD 기준 평가 |
-| `SpendingLimitRules` (database-policy-engine.ts) | `instant_max_usd?`, `notify_max_usd?`, `delay_max_usd?` 필드 추가 | 기존 네이티브 필드와 공존 (후방 호환) |
-| `SETTING_DEFINITIONS` (setting-keys.ts) | oracle 카테고리 추가 | SettingsService 통합 |
-| `SETTING_CATEGORIES` (setting-keys.ts) | `'oracle'` 카테고리 추가 | Admin UI Oracle 섹션 표시 |
-| `HotReloadOrchestrator` (hot-reload.ts) | oracle 키 변경 시 OracleChain 재구성 | CoinGecko 키 변경 시 fallback 활성화/비활성화 |
-| Admin Layout (layout.tsx) | Oracle Status 페이지 라우팅 추가 고려 | 사이드바에 새 메뉴 항목 |
-| Admin Settings (settings.tsx) | Oracle 섹션 + API Keys 섹션 추가 | CoinGecko 키/교차검증 임계값 설정 UI |
-| DB Schema (schema.ts) | `api_keys` 테이블 추가 (v11 마이그레이션) | ActionProviderApiKeyStore 저장소 |
-| API Endpoints (endpoints.ts) | oracle-status, api-keys, actions 엔드포인트 추가 | Admin UI + REST API |
-
-### 2.3 Unchanged Components
-
-| Component | Why Unchanged |
-|-----------|--------------|
-| `TransactionPipeline` (pipeline.ts) | executeSend() 진입점 변경 없음 -- Stage 3 내부만 수정 |
-| `IChainAdapter` (core) | 가격 정보와 무관 (저수준 실행 엔진 유지 원칙) |
-| `AdapterPool` | Oracle과 독립 |
-| `LocalKeyStore` | 변경 없음 -- API 키 암호화는 별도 secretbox 사용 |
-| MCP 기존 14 tools | 항상 유지, Action 도구만 동적 추가 |
-| 알림 시스템 (channels) | 채널 변경 없음 -- 이벤트 타입만 추가 (UNLISTED_TOKEN_TRANSFER) |
+1. **데몬 = dApp**: SignClient.connect()로 URI 생성, SignClient.request()로 서명 요청 전송
+2. **Owner 지갑 = Wallet**: QR 스캔으로 페어링, 서명 요청 수신 후 승인/거절
+3. **Telegram = Fallback**: WC 세션 없거나 서명 실패 시 기존 /approve /reject 명령어로 대체
+4. **Admin UI = QR 표시**: 페어링 URI를 QR 코드로 렌더링, 세션 상태 표시
+5. **WC = 보너스 채널**: WC 없이도 기존 ownerAuth REST API + Telegram이 100% 동작. WC 실패는 로깅만.
 
 ---
 
-## 3. Data Flow
-
-### 3.1 USD Policy Evaluation Flow (Stage 3 확장)
-
-현재 `stage3Policy()` (stages.ts L253)에서 `evaluateAndReserve()` 호출 **직전**에 USD 변환 로직을 삽입한다.
+## Component Boundaries
 
 ```
-현재 흐름:
-  buildTransactionParam() --> txParam 생성
-  evaluateAndReserve(walletId, txParam, txId) --> 정책 평가
-
-수정 흐름:
-  buildTransactionParam() --> txParam 생성
-  [NEW] resolveEffectiveAmountUsd() --> usdAmount 계산
-  [NEW] txParam.usdAmount = usdAmount (있으면)
-  evaluateAndReserve(walletId, txParam, txId) --> 정책 평가 (USD 인식)
+                                  WalletConnect Relay (wss://relay.walletconnect.com)
+                                        |
+                                        v
+  +------------------------------------+     +-------------------+
+  |         WAIaaS Daemon              |     |  Owner's Wallet   |
+  |                                    |     |  (MetaMask etc.)  |
+  |  +-----------------------------+   |     |                   |
+  |  | WalletConnectService        |<--+---->|  session_request  |
+  |  | - signClient: SignClient    |   |     |  approve/reject   |
+  |  | - sessions: Map<walletId>   |   |     +-------------------+
+  |  | - connect() -> URI          |   |
+  |  | - requestApproval(txId)     |   |     +-------------------+
+  |  +------------|----------------+   |     |  Admin UI         |
+  |               |                    |     |  /admin/wc        |
+  |               v                    |     |  - QR 렌더링      |
+  |  +-----------------------------+   |     |  - 세션 상태 표시  |
+  |  | ApprovalWorkflow            |   |     +-------------------+
+  |  | - requestApproval(txId)     |   |
+  |  | - approve(txId, sig)        |   |     +-------------------+
+  |  | - reject(txId)              |   |     |  Telegram Bot     |
+  |  +-----------------------------+   |     |  /approve /reject |
+  |               |                    |     |  (fallback)       |
+  |               v                    |     +-------------------+
+  |  +-----------------------------+   |
+  |  | NotificationService        |   |
+  |  | - APPROVAL_REQUESTED 이벤트 |   |
+  |  +-----------------------------+   |
+  +------------------------------------+
 ```
 
-Stage 3 상세:
-
-```
-Client Request
-    |
-    v
-Stage 1: Validate + INSERT PENDING
-    |
-    v
-Stage 2: Auth (sessionId passthrough)
-    |
-    v
-Stage 3: Policy Evaluation (확장 부분)
-    |
-    +-- [NEW] resolveEffectiveAmountUsd(request, priceOracle)
-    |       |
-    |       +-- TransactionType 판별
-    |       |   +-- TRANSFER:      getNativePrice(chain) * amount
-    |       |   +-- TOKEN_TRANSFER: getPrice(tokenRef) * amount
-    |       |   +-- CONTRACT_CALL:  getNativePrice(chain) * value
-    |       |   +-- APPROVE:        getPrice(tokenRef) * amount
-    |       |   +-- BATCH:          개별 합산
-    |       |
-    |       +-- PriceResult 분기
-    |       |   +-- success(usdAmount)  -> USD 금액 반환
-    |       |   +-- oracleDown()       -> null (네이티브 fallback)
-    |       |   +-- notListed()        -> null + minTier=NOTIFY 플래그
-    |       |
-    |       +-- 가격 나이 판정
-    |           +-- FRESH (<5분)  -> 정상 사용
-    |           +-- AGING (5~30분) -> 경고 로그 + 정상 사용
-    |           +-- STALE (>30분)  -> USD 스킵 -> 네이티브 fallback
-    |
-    +-- [EXISTING] buildTransactionParam(request, txType, chain)
-    |       +-- [NEW] txParam.usdAmount = resolveResult.usdAmount (있으면)
-    |
-    +-- [EXISTING] evaluateAndReserve(walletId, txParam, txId)
-    |       +-- evaluateSpendingLimit() 내부:
-    |           +-- USD 필드 존재 + usdAmount 존재 -> USD 기준 비교
-    |           +-- 그 외 -> 기존 네이티브 기준 비교 (후방 호환)
-    |
-    +-- [NEW] notListed 플래그 시: max(결정된 tier, NOTIFY)
-    |
-    v
-Stage 4-6: (기존과 동일)
-```
-
-**핵심 설계 결정:**
-- `resolveEffectiveAmountUsd()`는 `evaluateAndReserve()` **이전에** 호출된다
-- USD 변환 결과는 TransactionParam에 옵셔널 필드(`usdAmount?: string`)로 전달된다
-- SpendingLimitRules에 `instant_max_usd` 필드가 없으면 기존 네이티브 비교 (100% 후방 호환)
-- USD 변환 실패 시 트랜잭션을 거부하지 않는다 (graceful fallback)
-
-### 3.2 Action Provider Resolve-then-Execute Flow
-
-```
-AI Agent / REST Client
-    |
-    +-- (A) REST: POST /v1/actions/:provider/:action
-    |   또는
-    +-- (B) MCP: waiaas_{provider}_{action} tool call
-    |
-    v
-Action Route Handler / MCP Tool Handler
-    |
-    +-- ActionProviderRegistry.getProvider(providerName)
-    |       +-- 미등록 -> 404 PROVIDER_NOT_FOUND
-    |
-    +-- requiresApiKey 확인
-    |       +-- 키 미설정 -> 403 API_KEY_REQUIRED + Admin 안내 메시지
-    |
-    +-- ActionDefinition.inputSchema.parse(params)
-    |       +-- 검증 실패 -> 400 ACTION_VALIDATION_FAILED
-    |
-    +-- provider.resolve(actionName, validatedParams, actionContext)
-    |       +-- ContractCallRequest 반환 (Zod 검증)
-    |       +-- 실패 -> 500 ACTION_RESOLVE_FAILED
-    |
-    v
-ContractCallRequest --> 기존 Pipeline Stage 1 주입
-    |
-    +-- Stage 1: Validate (type='CONTRACT_CALL')
-    +-- Stage 2: Auth
-    +-- Stage 3: Policy (CONTRACT_WHITELIST + SPENDING_LIMIT + USD)
-    +-- Stage 4: Wait
-    +-- Stage 5: Execute (buildContractCall -> simulate -> sign -> submit)
-    +-- Stage 6: Confirm
-```
-
-**핵심:** Action Provider의 `resolve()`는 `ContractCallRequest`만 반환할 수 있다. 이 요청은 기존 파이프라인의 **Stage 1부터** 진입하므로 **모든 정책 평가를 거친다**. CONTRACT_WHITELIST 정책에 해당 컨트랙트가 등록되어 있어야 실행된다.
-
-### 3.3 OracleChain Fallback Flow
-
-```
-OracleChain.getPrice(tokenRef)
-    |
-    +-- 1. InMemoryPriceCache 조회
-    |   +-- cache hit + FRESH -> 즉시 반환
-    |   +-- cache hit + AGING -> 반환 + PRICE_STALE 경고 로그
-    |   +-- cache miss / STALE -> 외부 조회
-    |
-    +-- 2. PythOracle.getPrice(tokenRef)
-    |   +-- 성공 -> primary 가격 확보
-    |   +-- 실패 (네트워크/피드 미지원) -> fallback
-    |
-    +-- 3. [CoinGecko 키 설정 시] CoinGeckoOracle.getPrice(tokenRef)
-    |   +-- 성공 -> fallback 가격 확보
-    |   +-- 실패 -> ORACLE_UNAVAILABLE
-    |
-    +-- 4. 교차 검증 (CoinGecko 키 설정 + 양쪽 성공 시에만)
-    |   +-- |Pyth - CoinGecko| / avg <= 5% -> Pyth 가격 채택
-    |   +-- |Pyth - CoinGecko| / avg > 5%  -> STALE 격하 + PRICE_DEVIATION_WARNING
-    |
-    +-- 5. 캐시 저장 (TTL 5분)
-    |
-    +-- 6. PriceInfo 반환
-```
-
-### 3.4 MCP Dynamic Tool Registration Flow
-
-```
-DaemonLifecycle.start()
-    |
-    +-- ActionProviderRegistry 초기화
-    |   +-- ~/.waiaas/actions/ 스캔
-    |       +-- ESM import() -> validate-then-trust
-    |
-    +-- McpServer 생성 (기존 14 tools 등록)
-    |
-    +-- ActionProviderRegistry.listProviders()
-    |   +-- mcpExpose=true인 프로바이더 필터
-    |       +-- 각 ActionDefinition에 대해:
-    |           +-- McpToolConverter.registerTool(server, definition)
-    |               +-- zodToJsonSchema(inputSchema)
-    |               +-- server.tool(`waiaas_${provider}_${action}`, ...)
-    |               +-- handler: resolve() -> POST /v1/actions/:p/:a
-    |
-    +-- server.connect(transport)
-```
-
-**MCP SDK 동적 도구 등록 제약사항:**
-- MCP TypeScript SDK는 `server.tool()`로 런타임에 도구를 추가할 수 있다
-- 도구 제거 공식 API 부재: 내부 도구 맵 관리 또는 disable/enable 패턴 필요
-- `notifications/tools/list_changed`를 클라이언트에 보내면 클라이언트가 도구 목록 갱신
-- **제약:** 동일 메시지 사이클 내에서 등록된 도구는 즉시 사용 불가 (다음 사이클부터 유효) -- GitHub Issue #682
-- **대응:** Action Provider 등록은 대부분 시작 시점(startup)이므로 실질적 영향 없음
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| WalletConnectService | WC SignClient 생명주기, 세션 관리, 서명 요청 전송 | WC Relay, ApprovalWorkflow, SettingsService, SQLite |
+| WC Admin API routes | QR 페어링 URI 생성, 세션 조회/해제 API | WalletConnectService, masterAuth |
+| Admin UI WC page | QR 코드 렌더링, 세션 상태 표시, 연결/해제 UI | WC Admin API (fetch) |
+| SqliteKeyValueStorage | WC SDK 내부 스토리지를 SQLite에 영속화 | wc_store 테이블, better-sqlite3 |
+| CAIP-2 매핑 유틸리티 | WAIaaS chain+network -> WC namespace 변환 | 정적 매핑 테이블 |
 
 ---
 
-## 4. DaemonContext Integration
+## New Components (5개)
 
-### 4.1 DaemonLifecycle 초기화 순서
+### 1. WalletConnectService (신규)
 
-기존 DaemonLifecycle.start() 단계에 Oracle과 ActionProvider 초기화를 삽입한다.
-
-```
-DaemonLifecycle.start(dataDir, masterPassword)
-    |
-    +-- Step 1: loadConfig()                          (기존)
-    +-- Step 2: createDatabase() + pushSchema()        (기존)
-    +-- Step 3: LocalKeyStore 초기화                   (기존)
-    +-- Step 4: SettingsService 초기화                 (기존)
-    |
-    +-- Step 4a: [NEW] OracleChain 초기화
-    |   +-- InMemoryPriceCache 생성 (maxSize=128, ttl=5min)
-    |   +-- PythOracle 생성 (Zero-config, no API key)
-    |   +-- CoinGecko 키 확인 (SettingsService.get('oracle.coingecko_api_key'))
-    |   |   +-- 키 존재 -> CoinGeckoOracle 생성 + fallback 활성화
-    |   |   +-- 키 없음 -> CoinGecko 비활성 (Pyth 단독 운영)
-    |   +-- OracleChain 생성 (oracles=[pyth, coingecko?], cache, settingsService)
-    |
-    +-- Step 4b: [NEW] ActionProviderApiKeyStore 초기화
-    |   +-- DB api_keys 테이블, masterPassword로 암호화 키 파생
-    |
-    +-- Step 4c: [NEW] ActionProviderRegistry 초기화
-    |   +-- ~/.waiaas/actions/ 디렉토리 스캔
-    |   +-- ESM dynamic import + validate-then-trust
-    |   +-- apiKeyStore 연결 (requiresApiKey 확인용)
-    |
-    +-- Step 5: AdapterPool 초기화                    (기존)
-    +-- Step 6: NotificationService 초기화            (기존)
-    |
-    +-- Step 6a: [NEW] HotReloadOrchestrator에 oracle 키 핸들러 추가
-    |
-    +-- Step 7: Pipeline 초기화                       (기존, priceOracle 주입 추가)
-    +-- Step 8: REST API 서버 시작                    (기존, 새 라우트 추가)
-    +-- Step 9: BackgroundWorkers 시작                (기존)
-```
-
-### 4.2 PipelineDeps 확장
+**위치:** `packages/daemon/src/services/walletconnect-service.ts`
+**책임:** WC SignClient 생명주기, 세션 관리, 서명 요청 전송
+**의존:** SettingsService (project_id), ApprovalWorkflow, NotificationService, SQLite (세션 영속화)
 
 ```typescript
-// 기존 PipelineDeps에 옵셔널 필드 추가 (후방 호환)
-export interface PipelineDeps {
-  db: BetterSQLite3Database<typeof schema>;
-  adapter: IChainAdapter;
-  keyStore: LocalKeyStore;
-  policyEngine: IPolicyEngine;
-  masterPassword: string;
-  sqlite?: SQLiteDatabase;
-  notificationService?: NotificationService;
-  priceOracle?: IPriceOracle;  // NEW: USD 정책 평가용
+// 핵심 인터페이스
+interface WalletConnectService {
+  // 초기화 (데몬 시작 시)
+  initialize(projectId: string): Promise<void>;
+
+  // 페어링: QR URI 생성 (walletId 단위)
+  connect(walletId: string, chain: ChainType, network: string): Promise<{ uri: string; topic: string }>;
+
+  // 서명 요청 전송 (APPROVAL 트랜잭션)
+  requestSignature(txId: string, walletId: string, params: SignRequestParams): Promise<SignResult>;
+
+  // 세션 상태 조회
+  getSession(walletId: string): WCSessionInfo | null;
+
+  // 활성 세션 존재 여부
+  hasActiveSession(walletId: string): boolean;
+
+  // 세션 해제
+  disconnect(walletId: string): Promise<void>;
+
+  // 셧다운 (데몬 종료 시)
+  shutdown(): Promise<void>;
+}
+
+interface SignRequestParams {
+  chain: ChainType;          // 'solana' | 'ethereum'
+  network: string;           // 'ethereum-mainnet' | 'devnet' 등
+  ownerAddress: string;      // Owner 지갑 주소
+  // EVM: personal_sign 메시지 (트랜잭션 요약)
+  // Solana: 직렬화된 트랜잭션 바이트
+  messageOrTx: string;
+}
+
+type SignResult =
+  | { status: 'approved'; signature: string }
+  | { status: 'rejected'; reason?: string }
+  | { status: 'timeout' }
+  | { status: 'no_session'; fallback: 'telegram' };
+
+interface WCSessionInfo {
+  walletId: string;
+  topic: string;
+  peerMeta: { name: string; url?: string; icons?: string[] } | null;
+  chainId: string;          // CAIP-2 형식: 'eip155:1' 또는 'solana:5eykt...'
+  ownerAddress: string;
+  expiry: number;           // Unix epoch seconds
+  connected: boolean;
 }
 ```
 
-### 4.3 PipelineContext 확장
+**생명주기:**
+- 데몬 Step 4c-6에서 초기화 (fail-soft)
+- walletconnect.project_id 설정 시만 활성화
+- 셧다운 시 SignClient.disconnect() + 리소스 해제
+- 기존 wc_sessions에서 세션 복원 (데몬 재시작 시 자동 복구)
+
+**SignClient 초기화 상세:**
+
+```typescript
+async initialize(projectId: string): Promise<void> {
+  // SQLite 기반 커스텀 스토리지 (데몬 재시작 시 세션 복원)
+  const storage = new SqliteKeyValueStorage(this.sqlite, 'wc_store');
+
+  const core = new Core({
+    projectId,
+    storage,
+    relayUrl: 'wss://relay.walletconnect.com',
+  });
+
+  this.signClient = await SignClient.init({
+    core,
+    metadata: {
+      name: 'WAIaaS Daemon',
+      description: 'AI Agent Wallet-as-a-Service',
+      url: 'http://localhost',
+      icons: [],
+    },
+  });
+
+  // 기존 세션 복원: wc_sessions 테이블에서 walletId -> topic 매핑 로드
+  this.restoreSessions();
+
+  // 세션 삭제 이벤트 리스너
+  this.signClient.on('session_delete', ({ topic }) => {
+    this.handleSessionDelete(topic);
+  });
+}
+```
+
+### 2. SqliteKeyValueStorage (신규)
+
+**위치:** `packages/daemon/src/services/walletconnect-storage.ts`
+**책임:** WC SDK의 IKeyValueStorage 인터페이스를 SQLite로 구현
+
+```typescript
+// WC SDK의 IKeyValueStorage 인터페이스 구현
+class SqliteKeyValueStorage implements IKeyValueStorage {
+  constructor(private sqlite: Database, private tableName: string = 'wc_store') {}
+
+  async getKeys(): Promise<string[]> {
+    return this.sqlite
+      .prepare(`SELECT key FROM ${this.tableName}`)
+      .all()
+      .map((row: any) => row.key);
+  }
+
+  async getEntries<T>(): Promise<[string, T][]> {
+    return this.sqlite
+      .prepare(`SELECT key, value FROM ${this.tableName}`)
+      .all()
+      .map((row: any) => [row.key, JSON.parse(row.value)]);
+  }
+
+  async getItem<T>(key: string): Promise<T | undefined> {
+    const row = this.sqlite
+      .prepare(`SELECT value FROM ${this.tableName} WHERE key = ?`)
+      .get(key) as { value: string } | undefined;
+    return row ? JSON.parse(row.value) : undefined;
+  }
+
+  async setItem<T>(key: string, value: T): Promise<void> {
+    this.sqlite
+      .prepare(
+        `INSERT OR REPLACE INTO ${this.tableName} (key, value) VALUES (?, ?)`
+      )
+      .run(key, JSON.stringify(value));
+  }
+
+  async removeItem(key: string): Promise<void> {
+    this.sqlite
+      .prepare(`DELETE FROM ${this.tableName} WHERE key = ?`)
+      .run(key);
+  }
+}
+```
+
+### 3. CAIP-2 매핑 유틸리티 (신규)
+
+**위치:** `packages/daemon/src/services/walletconnect-caip.ts`
+**책임:** WAIaaS chain+network -> WC CAIP-2 namespace 변환
+
+```typescript
+// EVM chainId 매핑 (viem에서 chainId 참조 가능하지만 명시적 매핑이 안전)
+const EVM_CHAIN_IDS: Record<string, number> = {
+  'ethereum-mainnet': 1,
+  'ethereum-sepolia': 11155111,
+  'polygon-mainnet': 137,
+  'polygon-amoy': 80002,
+  'arbitrum-mainnet': 42161,
+  'arbitrum-sepolia': 421614,
+  'optimism-mainnet': 10,
+  'optimism-sepolia': 11155420,
+  'base-mainnet': 8453,
+  'base-sepolia': 84532,
+};
+
+// Solana genesis hash prefix 매핑 (CAIP-2 spec)
+const SOLANA_GENESIS_HASHES: Record<string, string> = {
+  'mainnet': '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+  'devnet': 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+  'testnet': '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z',
+};
+
+export function toCAIP2(chain: ChainType, network: string): string {
+  if (chain === 'ethereum') {
+    const chainId = EVM_CHAIN_IDS[network];
+    if (!chainId) throw new Error(`Unknown EVM network: ${network}`);
+    return `eip155:${chainId}`;
+  }
+  if (chain === 'solana') {
+    const hash = SOLANA_GENESIS_HASHES[network];
+    if (!hash) throw new Error(`Unknown Solana network: ${network}`);
+    return `solana:${hash}`;
+  }
+  throw new Error(`Unsupported chain: ${chain}`);
+}
+
+export function getWCNamespace(chain: ChainType): string {
+  return chain === 'ethereum' ? 'eip155' : 'solana';
+}
+
+export function getWCMethods(chain: ChainType): string[] {
+  if (chain === 'ethereum') {
+    return ['personal_sign', 'eth_signTypedData_v4'];
+  }
+  if (chain === 'solana') {
+    return ['solana_signTransaction', 'solana_signMessage'];
+  }
+  return [];
+}
+```
+
+### 4. WC Admin API 라우트 (신규)
+
+**위치:** `packages/daemon/src/api/routes/walletconnect.ts`
+**책임:** QR 페어링 URI 생성, 세션 관리 API
+**인증:** masterAuth (Admin 전용)
+
+```
+POST /v1/admin/wc/connect/:walletId  -> { uri, topic, expiresAt }
+GET  /v1/admin/wc/session/:walletId  -> { connected, peerMeta, chainId, ownerAddress, expiry }
+GET  /v1/admin/wc/sessions           -> [{ walletId, connected, peerMeta, ... }]
+POST /v1/admin/wc/disconnect/:walletId -> { disconnected: true }
+```
+
+### 5. Admin UI WC 페이지 (신규)
+
+**위치:** `packages/admin/src/pages/walletconnect.tsx`
+**책임:** QR 코드 렌더링, 세션 상태 표시, 연결/해제 UI
+
+QR 렌더링 방식: `qrcode` npm 패키지로 data URL 생성 (canvas 불필요, img src로 직접 사용).
+세션 상태 폴링: 2초 간격 GET /wc/session/:walletId (SSE 대비 단순하고 Admin 전용이므로 충분).
+
+---
+
+## Modified Components (8개)
+
+### 1. Pipeline Stage 3/4 -- WC 서명 요청 트리거
+
+**변경 위치:** `packages/daemon/src/pipeline/stages.ts` (stage3Policy 또는 stage4Wait)
+**변경 내용:** APPROVAL 티어 진입 시 WC 서명 요청을 fire-and-forget으로 트리거
+
+현재 흐름:
+1. Stage 3에서 `TX_APPROVAL_REQUIRED` 알림 발송
+2. Stage 4에서 `approvalWorkflow.requestApproval(txId)` + PIPELINE_HALTED throw
+
+수정 흐름:
+1. Stage 3에서 `TX_APPROVAL_REQUIRED` 알림 발송 (기존 유지)
+2. Stage 4에서 `approvalWorkflow.requestApproval(txId)` (기존 유지)
+3. **Stage 4에서 WC 서명 요청 fire-and-forget 추가:**
+
+```typescript
+// stage4Wait() 내 APPROVAL 분기 (stages.ts L539-551 부근)
+if (tier === 'APPROVAL') {
+  if (!ctx.approvalWorkflow) return;
+  ctx.approvalWorkflow.requestApproval(ctx.txId);
+
+  // [NEW] WC 서명 요청 (fire-and-forget)
+  if (ctx.wcService?.hasActiveSession(ctx.walletId)) {
+    void ctx.wcService.requestSignature(ctx.txId, ctx.walletId, {
+      chain: ctx.wallet.chain as ChainType,
+      network: ctx.resolvedNetwork,
+      ownerAddress: /* wallets 테이블에서 조회 */,
+      messageOrTx: buildApprovalMessage(ctx),
+    }).then((result) => {
+      if (result.status === 'approved') {
+        ctx.approvalWorkflow!.approve(ctx.txId, result.signature);
+        // executeFromStage5 트리거 (DaemonLifecycle에서)
+      }
+      // rejected/timeout: Telegram fallback이 이미 활성화되어 있음
+      // no_session: 기존 경로 유지
+    }).catch(() => {
+      // WC 실패 시 로깅만 -- 기존 경로 영향 없음
+    });
+  }
+
+  throw new WAIaaSError('PIPELINE_HALTED', { ... });
+}
+```
+
+**핵심:** WC 서명 요청은 PIPELINE_HALTED **이전에** fire-and-forget으로 시작된다. PIPELINE_HALTED가 throw되어도 WC Promise는 백그라운드에서 계속 실행된다.
+
+### 2. PipelineContext (수정)
+
+**변경:** wcService 옵셔널 필드 추가
 
 ```typescript
 export interface PipelineContext {
   // ... 기존 필드 모두 유지 ...
-  priceOracle?: IPriceOracle;  // NEW
-  usdAmount?: string;          // NEW: resolveEffectiveAmountUsd() 결과
-  priceAgeWarning?: boolean;   // NEW: AGING 경고 플래그
-  notListedMinTier?: boolean;  // NEW: 가격 불명 토큰 NOTIFY 격상 플래그
+  // v1.7: WalletConnect service for APPROVAL tier WC signing
+  wcService?: WalletConnectService;
 }
 ```
 
----
+### 3. ApprovalWorkflow (수정)
 
-## 5. Patterns to Follow
+**변경 내용:** approval_channel 기록
 
-### Pattern 1: Graceful Fallback (USD 변환 실패 시 네이티브 fallback)
+현재 `approve(txId, ownerSignature)` 시그니처는 동일하게 유지.
+pending_approvals 테이블의 신규 `approval_channel` 컬럼에 승인 경로를 기록.
 
-**What:** Oracle 장애 또는 토큰 미등록 시 트랜잭션을 거부하지 않고, 네이티브 금액 기준으로 정책 평가를 수행한다.
-
-**When:** resolveEffectiveAmountUsd()가 null을 반환하거나 에러를 throw할 때.
-
-**Why:** "USD 변환 실패 시 트랜잭션 거부 금지" 원칙 (설계 문서 61, 원칙 3). Oracle 장애로 인해 정상 트랜잭션이 차단되면 안 된다.
-
-**Example:**
 ```typescript
-// pipeline/stages.ts Stage 3 내부
-const priceResult = ctx.priceOracle
-  ? await resolveEffectiveAmountUsd(ctx.request, ctx.priceOracle, ctx.wallet.chain)
-  : null;
+// approve() 내부 -- ownerSignature 형태로 channel 판별
+approve(txId: string, ownerSignature: string, channel?: 'rest_api' | 'telegram' | 'walletconnect'): ApproveResult {
+  // ... 기존 로직 동일 ...
 
-if (priceResult?.type === 'success') {
-  txParam.usdAmount = priceResult.usdAmount;
-} else if (priceResult?.type === 'notListed') {
-  ctx.notListedMinTier = true; // 최종 tier에서 max(tier, NOTIFY) 적용
-  // 감사 로그: UNLISTED_TOKEN_TRANSFER
-} else {
-  // oracleDown 또는 priceOracle 미설정 -> 네이티브 금액만으로 평가
-  // 감사 로그: PRICE_UNAVAILABLE (oracleDown인 경우만)
+  // [NEW] approval_channel 기록
+  const resolvedChannel = channel ?? 'rest_api';
+  this.sqlite
+    .prepare('UPDATE pending_approvals SET approved_at = ?, owner_signature = ?, approval_channel = ? WHERE id = ?')
+    .run(now, ownerSignature, resolvedChannel, approval.id);
+  // ...
 }
 ```
 
-### Pattern 2: SettingsService 통합 (Oracle 설정)
+기존 호출자 (REST API ownerAuth, Telegram Bot)는 channel 파라미터 없이 호출 -> 기본값 'rest_api'. Telegram은 'telegram', WC는 'walletconnect'.
 
-**What:** CoinGecko API 키, 교차 검증 임계값 등을 SettingsService를 통해 관리한다. Admin UI에서 런타임 변경 가능.
+### 4. DaemonLifecycle (수정)
 
-**When:** 재시작 없이 변경해야 하는 Oracle 설정.
+**변경:** Step 4c-6에서 WalletConnectService 초기화 (fail-soft), 셧다운 시 정리
 
-**Why:** CLAUDE.md 규칙: "런타임 변경이 유용한 설정은 Admin Settings에 노출한다."
-
-**Example:**
 ```typescript
-// setting-keys.ts에 oracle 카테고리 추가
-{ key: 'oracle.coingecko_api_key', category: 'oracle',
-  configPath: 'oracle.coingecko_api_key', defaultValue: '', isCredential: true },
-{ key: 'oracle.cross_validation_threshold', category: 'oracle',
-  configPath: 'oracle.cross_validation_threshold', defaultValue: '0.05', isCredential: false },
-{ key: 'oracle.price_cache_ttl_seconds', category: 'oracle',
-  configPath: 'oracle.price_cache_ttl_seconds', defaultValue: '300', isCredential: false },
-```
-
-### Pattern 3: Validate-then-Trust (Action Provider 보안 경계)
-
-**What:** ESM dynamic import로 로드한 플러그인의 인터페이스 준수를 검증한 후, resolve() 반환값을 Zod로 재검증한다.
-
-**When:** ~/.waiaas/actions/에서 플러그인을 로드할 때, 그리고 매 resolve() 호출 시.
-
-**Example:**
-```typescript
-// action/action-provider-registry.ts
-async loadPlugin(modulePath: string): Promise<void> {
-  const module = await import(modulePath);
-  const provider = module.default as unknown;
-
-  // 1. 인터페이스 준수 검증 (duck typing)
-  if (!provider || typeof provider !== 'object') throw new Error('Invalid plugin');
-  if (typeof (provider as any).metadata !== 'object') throw new Error('Missing metadata');
-  if (!Array.isArray((provider as any).actions)) throw new Error('Missing actions');
-  if (typeof (provider as any).resolve !== 'function') throw new Error('Missing resolve');
-
-  // 2. Zod 스키마로 metadata/actions 검증
-  ActionProviderMetadataSchema.parse((provider as IActionProvider).metadata);
-  (provider as IActionProvider).actions.forEach(a => ActionDefinitionSchema.parse(a));
-
-  // 3. 등록 (이름 중복 거부)
-  this.register(provider as IActionProvider);
-}
-
-// resolve() 호출 시 반환값 재검증
-async callResolve(
-  provider: IActionProvider, actionName: string, params: unknown, ctx: ActionContext,
-): Promise<ContractCallRequest> {
-  const result = await provider.resolve(actionName, params, ctx);
-  return ContractCallRequestSchema.parse(result);
-}
-```
-
-### Pattern 4: DaemonContext 주입 패턴 (기존 패턴 준수)
-
-**What:** 새로운 서비스를 DaemonContext에 추가하고, 라우트 핸들러에서 `c.get('context')`로 접근한다.
-
-**When:** Oracle, ActionRegistry, ApiKeyStore를 API 라우트에서 사용할 때.
-
-**Example:**
-```typescript
-// api/routes/actions.ts
-actionRoutes.post('/actions/:provider/:action', sessionAuth, async (c) => {
-  const { actionRegistry, apiKeyStore } = c.get('context');
-  const provider = actionRegistry.getProvider(c.req.param('provider'));
-  if (!provider) throw new WAIaaSError('PROVIDER_NOT_FOUND', { ... });
-  // ...resolve -> pipeline inject...
-});
-```
-
-### Pattern 5: DB 마이그레이션 증분 패턴 (CLAUDE.md 규칙)
-
-**What:** api_keys 테이블을 ALTER TABLE 증분 마이그레이션으로 추가한다. DB 삭제 후 재생성 금지.
-
-**When:** v10 -> v11 스키마 업그레이드.
-
-**Example:**
-```sql
--- v11 마이그레이션
-CREATE TABLE IF NOT EXISTS api_keys (
-  provider_name TEXT PRIMARY KEY,
-  encrypted_key TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-UPDATE schema_version SET version = 11;
-```
-
----
-
-## 6. Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Oracle을 IChainAdapter에 결합
-
-**What:** getPrice()를 IChainAdapter에 추가하는 것.
-**Why bad:** IChainAdapter는 저수준 실행 엔진이다 (22 메서드). 가격 정보는 서비스 레이어의 관심사이며, 체인별 어댑터에 넣으면 SolanaAdapter와 EvmAdapter 모두에 중복 구현해야 한다. Oracle은 체인에 무관한 데이터(Pyth는 Solana/EVM 모두 동일 피드 제공)이므로 어댑터 경계에 맞지 않는다.
-**Instead:** IPriceOracle을 독립 서비스로 구현하고 DaemonContext에 주입한다. PipelineContext에 옵셔널로 전달.
-
-### Anti-Pattern 2: Action Provider resolve()에서 서명/제출
-
-**What:** resolve()가 서명된 트랜잭션이나 txHash를 반환하는 것.
-**Why bad:** 파이프라인의 정책 평가(Stage 3), 시뮬레이션(Stage 5b), 서명(Stage 5c)을 모두 우회한다. CONTRACT_WHITELIST, SPENDING_LIMIT 등 모든 보안 정책이 무력화된다.
-**Instead:** resolve()는 반드시 ContractCallRequest만 반환한다. Zod 검증으로 반환 타입을 강제한다. 서명과 제출은 기존 파이프라인 Stage 5에서만 수행.
-
-### Anti-Pattern 3: USD 변환 실패 시 트랜잭션 거부
-
-**What:** Oracle이 가격을 반환하지 못할 때 POLICY_DENIED로 거부하는 것.
-**Why bad:** Pyth/CoinGecko 장애 시 모든 트랜잭션이 차단되어 서비스 중단. Oracle 가용성에 대한 단일 실패점 생성.
-**Instead:** PriceResult discriminated union으로 oracleDown/notListed를 구분하고, 네이티브 금액 기준 fallback으로 정상 처리. notListed는 최소 NOTIFY 격상.
-
-### Anti-Pattern 4: config.toml에 API 키 평문 저장
-
-**What:** CoinGecko API 키나 Action Provider API 키를 config.toml에 평문으로 저장.
-**Why bad:** config.toml은 파일시스템에 평문으로 존재. Git에 실수로 커밋될 위험. Admin UI에서 런타임 변경 불가.
-**Instead:** SettingsService의 isCredential=true (AES-256-GCM 암호화) 또는 ActionProviderApiKeyStore (sodium-native secretbox)로 DB에 암호화 저장.
-
-### Anti-Pattern 5: MCP 도구 맵 직접 조작
-
-**What:** McpServer 내부의 `_registeredTools`를 직접 수정하여 도구를 제거하는 것.
-**Why bad:** SDK 내부 구현에 의존하면 SDK 업데이트 시 깨진다. `notifications/tools/list_changed`를 누락하면 클라이언트가 갱신되지 않는다.
-**Instead:** 자체 도구 레지스트리(McpToolConverter 내부 Map)를 유지하고, `server.tool()`로 등록. 해제 시에는 핸들러를 no-op으로 교체 + list_changed 알림 전송.
-
----
-
-## 7. Key Integration Points Detail
-
-### 7.1 Stage 3 Policy Evaluation 수정
-
-현재 `stage3Policy()` 함수(stages.ts L253)에서 `evaluateAndReserve()` 호출 **직전**에 USD 변환 로직을 삽입한다.
-
-**TransactionParam 확장:**
-```typescript
-interface TransactionParam {
-  type: string;
-  amount: string;
-  toAddress: string;
-  chain: string;
-  network?: string;
-  tokenAddress?: string;
-  contractAddress?: string;
-  selector?: string;
-  spenderAddress?: string;
-  approveAmount?: string;
-  usdAmount?: string;  // NEW: USD 환산 금액
-}
-```
-
-**evaluateSpendingLimit() 수정:**
-```typescript
-private evaluateSpendingLimit(
-  resolved: PolicyRow[], amount: string, usdAmount?: string,
-): PolicyEvaluation | null {
-  const spending = resolved.find(p => p.type === 'SPENDING_LIMIT');
-  if (!spending) return null;
-
-  const rules: SpendingLimitRules = JSON.parse(spending.rules);
-
-  // USD 필드가 정책에 존재하고 usdAmount가 제공된 경우 -> USD 기준 비교
-  if (rules.instant_max_usd && usdAmount) {
-    return this.evaluateSpendingLimitUsd(rules, usdAmount);
+// Step 4c-6: WalletConnectService initialization (fail-soft)
+try {
+  const wcProjectId = this._settingsService?.get('walletconnect.project_id');
+  if (wcProjectId) {
+    const { WalletConnectService: WCServiceCls } = await import(
+      '../services/walletconnect-service.js'
+    );
+    this.wcService = new WCServiceCls({
+      sqlite: this.sqlite!,
+      approvalWorkflow: this.approvalWorkflow!,
+      notificationService: this.notificationService,
+      settingsService: this._settingsService!,
+    });
+    await this.wcService.initialize(wcProjectId);
+    console.log('Step 4c-6: WalletConnect service initialized');
+  } else {
+    console.log('Step 4c-6: WalletConnect disabled (no project_id)');
   }
-
-  // 그 외 -> 기존 네이티브 기준 비교 (100% 후방 호환)
-  return this.evaluateSpendingLimitNative(rules, amount);
+} catch (err) {
+  console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
+  this.wcService = null;
 }
 ```
 
-### 7.2 OracleChain의 SettingsService 연동
+셧다운 시 (TelegramBotService.stop() 직후):
+```typescript
+if (this.wcService) {
+  await this.wcService.shutdown();
+  this.wcService = null;
+}
+```
+
+### 5. createApp() / CreateAppDeps (수정)
+
+**변경:** wcService를 deps로 전달, WC Admin 라우트 등록
 
 ```typescript
-// HotReloadOrchestrator 확장
-const ORACLE_KEYS = new Set([
-  'oracle.coingecko_api_key',
-  'oracle.cross_validation_threshold',
-  'oracle.price_cache_ttl_seconds',
-]);
+export interface CreateAppDeps {
+  // ... 기존 필드 ...
+  wcService?: WalletConnectService;
+}
+
+// createApp() 내부:
+// WC Admin routes (masterAuth)
+if (deps.wcService) {
+  const wcRoutes = walletconnectRoutes({ wcService: deps.wcService, db: deps.db! });
+  app.route('/v1/admin/wc', wcRoutes);
+}
+```
+
+### 6. HotReloadOrchestrator (수정)
+
+**변경:** walletconnect 키 변경 시 WC 서비스 재초기화
+
+```typescript
+const WALLETCONNECT_KEYS = new Set(['walletconnect.project_id']);
 
 // handleChangedKeys() 내부:
-if (hasOracleChanges) {
-  await this.reloadOracle().catch(err => {
-    console.warn('Hot-reload oracle failed:', err);
+if (changedKeys.some(k => WALLETCONNECT_KEYS.has(k))) {
+  void this.reloadWalletConnect().catch(err => {
+    console.warn('Hot-reload WalletConnect failed:', err);
   });
 }
-
-private async reloadOracle(): Promise<void> {
-  const oracleChain = this.deps.oracleChain;
-  if (!oracleChain) return;
-  const apiKey = this.deps.settingsService.get('oracle.coingecko_api_key');
-  oracleChain.setCoinGeckoEnabled(!!apiKey);
-}
 ```
 
-### 7.3 ActionProviderApiKeyStore vs SettingsService
+### 7. SettingDefinitions (수정)
 
-두 가지 API 키 저장 패턴이 존재하는 것은 의도적이다:
+**변경:** walletconnect 카테고리에 추가 설정 키
 
-| 구분 | SettingsService | ActionProviderApiKeyStore |
-|------|----------------|--------------------------|
-| 대상 | CoinGecko API 키 (oracle 카테고리) | Action Provider별 API 키 |
-| 저장소 | settings 테이블 | api_keys 테이블 (NEW) |
-| 암호화 | HKDF + AES-256-GCM | sodium-native secretbox |
-| Admin UI | Settings > Oracle 섹션 | Settings > API Keys 섹션 |
-| 이유 | 단일 키, 기존 HotReload 패턴 재사용 | 프로바이더별 동적 CRUD |
+```typescript
+// 기존
+{ key: 'walletconnect.project_id', category: 'walletconnect', ... },
 
-### 7.4 Admin UI 확장
-
-**권장: Settings 페이지 내 섹션 추가 + Oracle Status 위젯**
-
-```
-Settings 페이지 (settings.tsx) 확장:
-  +-- NotificationSettings    (기존)
-  +-- RpcSettings             (기존)
-  +-- SecuritySettings        (기존)
-  +-- OracleSettings          (NEW - CoinGecko 키, 교차 검증 임계값, TTL)
-  +-- ApiKeySettings          (NEW - 프로바이더별 API 키 CRUD)
-  +-- WalletConnectSettings   (기존)
-  +-- DaemonSettings          (기존)
+// 추가
+{ key: 'walletconnect.relay_url', category: 'walletconnect',
+  configPath: 'walletconnect.relay_url',
+  defaultValue: 'wss://relay.walletconnect.com', isCredential: false },
+{ key: 'walletconnect.request_timeout', category: 'walletconnect',
+  configPath: 'walletconnect.request_timeout',
+  defaultValue: '300', isCredential: false },  // 서명 요청 타임아웃 (초)
 ```
 
-Oracle 모니터링은 별도 경량 페이지 또는 Dashboard 위젯:
-```
-GET /v1/admin/oracle-status 응답:
-{
-  cacheStats: { hits, misses, staleHits, size, evictions },
-  sources: [
-    { name: "pyth", status: "active", lastSuccess: timestamp },
-    { name: "coingecko", status: "inactive" | "active", lastSuccess: timestamp }
-  ],
-  crossValidation: { enabled: boolean, threshold: 0.05 }
-}
+### 8. TelegramBotService (수정)
+
+**변경 범위:** 최소 -- /approve /reject 핸들러에 `approval_channel: 'telegram'` 전달
+
+```typescript
+// handleApprove() 내부 -- 기존 직접 SQL UPDATE에 approval_channel 추가
+this.sqlite
+  .prepare(
+    'UPDATE pending_approvals SET approved_at = unixepoch(), approval_channel = ? WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL',
+  )
+  .run('telegram', txId);
 ```
 
 ---
 
-## 8. SpendingLimitRules Zod Schema Migration
+## Data Flow
 
-현재 SpendingLimitRules는 TypeScript interface만 존재하며 (database-policy-engine.ts L49), 정책 생성 시 `rules: z.record(z.unknown())`으로 비검증 상태이다.
+### Flow 1: QR 페어링 (최초 1회)
 
-```typescript
-// packages/core/src/schemas/spending-limit.ts (NEW)
-export const SpendingLimitRuleSchema = z.object({
-  // 기존 네이티브 금액 필드 (후방 호환, 필수)
-  instant_max: z.string().regex(/^\d+$/),
-  notify_max: z.string().regex(/^\d+$/),
-  delay_max: z.string().regex(/^\d+$/),
-  delay_seconds: z.number().int().positive(),
-
-  // NEW: USD 금액 필드 (옵셔널 -- 미설정 시 네이티브만 사용)
-  instant_max_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
-  notify_max_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
-  delay_max_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
-});
-
-export type SpendingLimitRules = z.infer<typeof SpendingLimitRuleSchema>;
+```
+Admin UI                 Daemon API              WalletConnectService        WC Relay           Owner Wallet
+   |                        |                           |                       |                    |
+   |-- POST /wc/connect --->|                           |                       |                    |
+   |                        |-- connect(walletId) ----->|                       |                    |
+   |                        |                           |-- SignClient.connect() -->|                |
+   |                        |                           |   requiredNamespaces:  |                    |
+   |                        |                           |   eip155: {            |                    |
+   |                        |                           |     methods: [         |                    |
+   |                        |                           |       personal_sign,   |                    |
+   |                        |                           |       eth_signTypedData|                    |
+   |                        |                           |     ],                 |                    |
+   |                        |                           |     chains: [eip155:1] |                    |
+   |                        |                           |   }                    |                    |
+   |                        |                           |<-- { uri, approval } --|                    |
+   |                        |<-- { uri, topic } --------|                       |                    |
+   |<-- 200 { uri } --------|                           |                       |                    |
+   |                        |                           |                       |                    |
+   | [QR 렌더링 + Owner 스캔]                            |                       |                    |
+   |                        |                           |                       |<--- pair(uri) ------|
+   |                        |                           |<-- session approved ---|                    |
+   |                        |                           | [wc_sessions DB 저장]  |                    |
+   |                        |                           | [wallets.ownerAddress  |                    |
+   |                        |                           |  자동 등록 (미설정 시)] |                    |
+   | [폴링: GET /session]    |                           |                       |                    |
+   |<-- 200 { connected } --|                           |                       |                    |
 ```
 
-**후방 호환 보장:**
-- 기존 네이티브 필드는 required 유지 -> 기존 정책 JSON 100% 호환
-- USD 필드는 optional -> 설정하지 않으면 기존 네이티브 비교
-- DB의 기존 정책 JSON 수정 불필요 (새 필드가 옵셔널이므로)
+**ownerAddress 자동 등록:** WC 세션 승인 시, 페어링된 지갑의 account 주소를 wallets 테이블의 ownerAddress로 자동 등록한다 (ownerAddress가 NULL인 경우에만). 이미 등록된 경우 일치 여부만 검증.
+
+### Flow 2: APPROVAL 서명 요청
+
+```
+Pipeline Stage 3-4       ApprovalWorkflow       WalletConnectService        WC Relay           Owner Wallet
+   |                        |                           |                       |                    |
+   |-- tier = APPROVAL      |                           |                       |                    |
+   |-- TX_APPROVAL_REQUIRED |                           |                       |                    |
+   |   알림 발송 (기존)      |                           |                       |                    |
+   |                        |                           |                       |                    |
+   |-- requestApproval() -->|                           |                       |                    |
+   |                        |-- [DB: QUEUED] ---------> |                       |                    |
+   |                        |                           |                       |                    |
+   |-- fire-and-forget:     |                           |                       |                    |
+   |   requestSignature() --|-------------------------->|                       |                    |
+   |                        |                           |-- SignClient.request() -->|                |
+   |                        |                           |   topic: session.topic |                    |
+   |                        |                           |   method: personal_sign|                    |
+   |                        |                           |   params: [message, addr]                  |
+   |                        |                           |                       |-- session_request-->|
+   |                        |                           |                       |                    |
+   |-- PIPELINE_HALTED ---->|                           |                       |     [Owner 승인]   |
+   |                        |                           |                       |<-- response -------|
+   |                        |                           |<-- signature ---------|                    |
+   |                        |<-- approve(txId, sig,     |                       |                    |
+   |                        |    'walletconnect') ------|                       |                    |
+   |                        |-- [DB: EXECUTING] ------->|                       |                    |
+   |                        |                           |                       |                    |
+   | [DaemonLifecycle.      |                           |                       |                    |
+   |  executeFromStage5()] <|                           |                       |                    |
+```
+
+**핵심 타이밍:** fire-and-forget requestSignature()는 PIPELINE_HALTED throw **이전에** 시작된다. Promise는 백그라운드에서 WC relay 응답을 기다린다. Owner가 승인하면 approve() -> EXECUTING -> executeFromStage5() 체인이 자동 실행된다.
+
+### Flow 3: Telegram Fallback (WC 세션 없을 때)
+
+```
+Pipeline Stage 4         WalletConnectService    NotificationService        Telegram Bot
+   |                        |                         |                         |
+   |-- hasActiveSession() ->|                         |                         |
+   |<-- false --------------|                         |                         |
+   |                        |                         |                         |
+   | [WC 서명 요청 스킵]     |                         |                         |
+   |                        |                         |                         |
+   | [기존 동작 유지]         |                         |                         |
+   |                        |                  TX_APPROVAL_REQUIRED              |
+   |                        |                  알림 발송 (기존) ------------------>|
+   |                        |                         |                         |
+   |                        |                         |     /pending 표시        |
+   |                        |                         |     /approve {txId}      |
+   |                        |                         |     [DB 직접 approve]    |
+```
+
+### Flow 4: WC 서명 거절/타임아웃 시
+
+```
+WalletConnectService         ApprovalWorkflow        NotificationService
+   |                              |                         |
+   | [Owner 거절 또는 타임아웃]    |                         |
+   |-- result: 'rejected'        |                         |
+   |   또는 'timeout'            |                         |
+   |                              |                         |
+   | [아무것도 하지 않음]          |                         |
+   | (Telegram /approve /reject   |                         |
+   |  여전히 활성화 상태)          |                         |
+   |                              |                         |
+   | [approval_timeout 만료 시:]   |                         |
+   |                              |-- processExpiredApprovals()                 |
+   |                              |-- [DB: EXPIRED]        |                    |
+```
+
+**핵심:** WC 거절/타임아웃은 ApprovalWorkflow의 상태를 변경하지 않는다. Owner는 여전히 Telegram이나 REST API로 승인/거절할 수 있다. WC 타임아웃과 approval_timeout은 독립적이다 (WC 타임아웃 < approval_timeout).
 
 ---
 
-## 9. Pyth Feed ID Resolution Strategy
+## Patterns to Follow
 
-Pyth Hermes API는 feed ID(bytes32 hex)로 가격을 조회한다. TokenRef.address에서 Pyth feed ID로의 매핑이 필요하다.
+### Pattern 1: fail-soft 서비스 초기화
 
-**권장: 주요 토큰 하드코딩 맵 (Primary) + CoinGecko fallback (롱테일)**
+**기존 패턴:** TelegramBotService, BalanceMonitorService, AutoStopService 모두 fail-soft (try/catch + null fallback)
+**WC 적용:** WalletConnectService도 동일 패턴. project_id 미설정이면 비활성화, 초기화 실패해도 데몬 계속 동작.
 
 ```typescript
-// oracle/pyth-feed-map.ts
-const PYTH_FEED_IDS: Record<string, string> = {
-  // Native tokens
-  'SOL':  '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
-  'ETH':  '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
-  // Major stablecoins
-  'USDC': '0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a',
-  'USDT': '0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b',
-  // ... 30-50개 주요 토큰
-};
-
-function resolveFeedId(tokenRef: TokenRef): string | null {
-  if (tokenRef.symbol && PYTH_FEED_IDS[tokenRef.symbol]) {
-    return PYTH_FEED_IDS[tokenRef.symbol];
+// daemon.ts: TelegramBotService와 동일 패턴
+try {
+  if (wcProjectId) {
+    this.wcService = new WalletConnectService({ ... });
+    await this.wcService.initialize(wcProjectId);
+    console.log('Step 4c-6: WalletConnect service initialized');
+  } else {
+    console.log('Step 4c-6: WalletConnect disabled (no project_id)');
   }
-  return null; // CoinGecko fallback으로 위임
+} catch (err) {
+  console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
+  this.wcService = null;
 }
 ```
 
-**대안 비교:**
-| 전략 | 장점 | 단점 |
-|------|------|------|
-| 하드코딩 맵 (권장) | API 호출 없음, 빠르고 안정적 | 수동 유지보수, 롱테일 미지원 |
-| /v2/price_feeds API 조회 | 동적, 전체 피드 | 시작 시 대규모 API 호출 |
-| 심볼 기반 검색 | 주소 매핑 불필요 | 심볼 충돌 위험 |
+### Pattern 2: fire-and-forget 서명 요청
 
-하드코딩 맵에 포함할 토큰 (초기 30-50개): Native (SOL, ETH), Stablecoins (USDC, USDT, DAI, FRAX), DeFi (WBTC, WETH, stETH, wstETH), Solana (JTO, BONK, WIF, PYTH, JUP, RAY, ORCA), EVM (UNI, AAVE, LINK, MKR, COMP, CRV, LDO)
+**기존 패턴:** NotificationService.notify()는 void 반환, pipeline 차단 없음
+**WC 적용:** WC 서명 요청도 fire-and-forget. 성공 시 ApprovalWorkflow.approve() 호출, 실패 시 기존 Telegram/REST 경로 그대로.
+
+```typescript
+// GOOD: fire-and-forget, pipeline 차단 없음
+if (ctx.wcService?.hasActiveSession(ctx.walletId)) {
+  void ctx.wcService.requestSignature(txId, walletId, params).then(result => {
+    if (result.status === 'approved') {
+      approvalWorkflow.approve(txId, result.signature, 'walletconnect');
+    }
+    // rejected/timeout: 기존 경로(Telegram, REST)가 여전히 활성화
+  }).catch(() => { /* 로깅만 */ });
+}
+```
+
+### Pattern 3: walletId 단위 세션 관리
+
+**기존 패턴:** Owner 3-State (NONE/GRACE/LOCKED)는 walletId 단위
+**WC 적용:** WC 세션도 walletId 단위. 하나의 wallet에 하나의 WC 세션만 유지.
+
+```typescript
+// 1 wallet = 1 WC session 보장
+async connect(walletId: string, chain: ChainType, network: string): Promise<ConnectResult> {
+  // 기존 세션이 있으면 먼저 해제
+  if (this.sessions.has(walletId)) {
+    await this.disconnect(walletId);
+  }
+  // 새 세션 생성
+  const { uri, approval } = await this.signClient.connect({ ... });
+  // approval promise를 백그라운드에서 대기 (세션 확립 시 DB 저장)
+  void approval.then(session => this.onSessionApproved(walletId, session));
+  return { uri, topic: /* from pairing */ };
+}
+```
+
+### Pattern 4: SQLite 직접 접근 (better-sqlite3)
+
+**기존 패턴:** KillSwitchService, TelegramBotService는 better-sqlite3 직접 사용 (Drizzle 우회)
+**WC 적용:** WC 세션 영속화 + WC SDK 스토리지 모두 better-sqlite3 직접 사용.
+
+### Pattern 5: 감사 로그 기록
+
+**기존 패턴:** Telegram 승인/거절 시 `TX_APPROVED_VIA_TELEGRAM` / `TX_REJECTED_VIA_TELEGRAM` 감사 로그
+**WC 적용:** WC 승인 시 `TX_APPROVED_VIA_WALLETCONNECT` 감사 로그, 세션 연결/해제 시 `WC_SESSION_CONNECTED` / `WC_SESSION_DISCONNECTED` 감사 로그
 
 ---
 
-## 10. Suggested Build Order
+## Anti-Patterns to Avoid
 
-의존성 그래프 기반 구현 순서:
+### Anti-Pattern 1: WC SDK 기본 스토리지 사용
 
+**위험:** @walletconnect/keyvaluestorage는 브라우저 localStorage 또는 파일 시스템 기반. Node.js 서버에서 불안정하며, 데몬 재시작 시 파일 시스템 경로 불일치 위험.
+**대신:** custom IKeyValueStorage 구현체로 SQLite 기반 스토리지 주입. WAIaaS DB에 `wc_store` 테이블 추가.
+
+### Anti-Pattern 2: WC 세션에 의존하는 파이프라인
+
+**위험:** WC 세션 불안정 시 (relay 다운, 네트워크 문제) 전체 APPROVAL 플로우 차단.
+**대신:** WC는 "보너스 채널". 없어도 기존 ownerAuth REST API + Telegram이 100% 동작. WC 실패는 로깅만.
+
+### Anti-Pattern 3: 다중 WC 세션 per wallet
+
+**위험:** 하나의 walletId에 여러 WC 세션이 공존하면 어떤 세션에 요청을 보낼지 모호.
+**대신:** 1 wallet = 1 WC session. 새 세션 연결 시 기존 세션 자동 해제.
+
+### Anti-Pattern 4: WC SignClient 다중 인스턴스
+
+**위험:** walletId마다 SignClient를 생성하면 WebSocket 연결 폭증.
+**대신:** 단일 SignClient 인스턴스로 모든 walletId의 세션을 관리. 세션별 topic으로 구분.
+
+### Anti-Pattern 5: WC 타임아웃과 approval_timeout 혼동
+
+**위험:** WC 서명 요청 타임아웃(walletconnect.request_timeout = 300s)이 approval_timeout(3600s)보다 짧다. WC 타임아웃 시 트랜잭션을 EXPIRED로 만들면 Telegram 경로가 차단됨.
+**대신:** WC 타임아웃은 WC 서명 요청만 종료. ApprovalWorkflow의 approval_timeout은 별도로 관리. WC 타임아웃 후에도 Telegram/REST로 승인 가능.
+
+---
+
+## DB Schema 변경
+
+### 신규 테이블 1: `wc_sessions`
+
+```sql
+CREATE TABLE wc_sessions (
+  wallet_id    TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
+  topic        TEXT NOT NULL UNIQUE,
+  peer_meta    TEXT,               -- JSON: { name, url, icons }
+  chain_id     TEXT NOT NULL,      -- CAIP-2: 'eip155:1' or 'solana:5eykt...'
+  owner_address TEXT NOT NULL,     -- 페어링된 Owner 지갑 주소
+  namespaces   TEXT,               -- JSON: approved namespaces
+  expiry       INTEGER NOT NULL,   -- Unix epoch seconds
+  created_at   INTEGER NOT NULL
+);
+CREATE INDEX idx_wc_sessions_topic ON wc_sessions(topic);
 ```
-Phase 1: Core Types + Oracle Foundation
-  +-- IPriceOracle 인터페이스 (@waiaas/core)
-  +-- TokenRef, PriceInfo, CacheStats Zod 스키마 (@waiaas/core)
-  +-- PriceAge enum + classifyPriceAge() 함수
-  +-- InMemoryPriceCache (LRU 128, 5분 TTL)
-  +-- SpendingLimitRuleSchema Zod 신규 생성 + USD 필드
 
-Phase 2: Oracle Implementations
-  +-- PythOracle (Hermes REST API + feed ID 맵)
-  +-- CoinGeckoOracle (Demo API + platformId 매핑)
-  +-- OracleChain (fallback + 교차 검증 인라인)
-  +-- resolveEffectiveAmountUsd() 함수
-  +-- PriceResult discriminated union
+### 신규 테이블 2: `wc_store`
 
-Phase 3: Pipeline Integration
-  +-- PipelineContext 확장 (priceOracle 필드)
-  +-- TransactionParam 확장 (usdAmount 필드)
-  +-- stage3Policy() 수정 (resolveEffectiveAmountUsd 호출)
-  +-- evaluateSpendingLimit() USD 분기 추가
-  +-- DaemonLifecycle 초기화 통합
-
-Phase 4: SettingsService + Admin Oracle
-  +-- SETTING_DEFINITIONS oracle 카테고리 추가
-  +-- HotReloadOrchestrator oracle 핸들러
-  +-- GET /v1/admin/oracle-status API
-  +-- Admin Settings > Oracle 섹션 UI
-  +-- DB v11 마이그레이션 (api_keys 테이블)
-
-Phase 5: Action Provider Framework
-  +-- IActionProvider, ActionDefinition 인터페이스 (@waiaas/core)
-  +-- ActionProviderRegistry (ESM plugin load + validate-then-trust)
-  +-- ActionProviderApiKeyStore (DB 암호화 저장)
-  +-- POST /v1/actions/:provider/:action API
-  +-- API 키 CRUD 엔드포인트
-
-Phase 6: MCP + Admin Action Integration
-  +-- McpToolConverter (ActionDefinition -> MCP Tool 자동 변환)
-  +-- 동적 도구 등록/해제 + notifications/tools/list_changed
-  +-- Admin Settings > API Keys 섹션 UI
-  +-- Skill 파일 동기화
-
-Phase 7: E2E Tests + Polish
-  +-- USD 정책 평가 E2E (시나리오 1-5, 5-1~5-6)
-  +-- Oracle fallback E2E (시나리오 6-13)
-  +-- Action Provider E2E (시나리오 14-17)
-  +-- MCP 통합 E2E (시나리오 18-21)
-  +-- API 키 E2E (시나리오 22-26)
+```sql
+CREATE TABLE wc_store (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 ```
+
+### 기존 테이블 변경: `pending_approvals`
+
+```sql
+ALTER TABLE pending_approvals ADD COLUMN approval_channel TEXT DEFAULT 'rest_api';
+-- CHECK 제약은 pushSchema() 시 Drizzle에서 설정
+-- 유효 값: 'rest_api', 'telegram', 'walletconnect'
+```
+
+**총 스키마 변경:** 2개 신규 테이블 + 1개 ALTER TABLE = DB v16 마이그레이션
+
+---
+
+## Scalability Considerations
+
+| Concern | 1 지갑 | 10 지갑 | 100+ 지갑 |
+|---------|--------|---------|-----------|
+| WC 세션 수 | 1 SignClient, 1 세션 | 1 SignClient, 10 세션 (동일 클라이언트) | 1 SignClient, N 세션 (WC SDK 다중 세션 지원) |
+| Relay WebSocket | 1 연결 | 1 연결 (세션은 topic으로 구분) | 1 연결 (relay는 topic 기반 라우팅) |
+| QR 페어링 빈도 | 설정 시 1회 | 10회 (초기만) | 100회 (초기만) |
+| 서명 요청 빈도 | APPROVAL 빈도와 동일 | 10x | 100x (relay 부하 주의, rate limit 확인 필요) |
+| 메모리 오버헤드 | ~5MB (SignClient) | ~8MB | ~15MB (세션 메타데이터 누적) |
+| wc_store 테이블 | ~50 rows | ~200 rows | ~1000 rows (WC SDK 내부 상태) |
+
+---
+
+## Integration Points Summary
+
+| Integration Point | Existing Component | Change Type | Complexity |
+|-------------------|-------------------|-------------|------------|
+| WalletConnectService | 없음 (신규) | **NEW** | High |
+| SqliteKeyValueStorage | 없음 (신규) | **NEW** | Medium |
+| CAIP-2 매핑 유틸리티 | 없음 (신규) | **NEW** | Low |
+| WC Admin API routes | 없음 (신규) | **NEW** | Medium |
+| Admin UI WC page | 없음 (신규) | **NEW** | Medium |
+| Pipeline Stage 3/4 | stages.ts L539-551 | **MODIFY** | Medium |
+| PipelineContext | stages.ts L59-101 | **MODIFY** | Low |
+| ApprovalWorkflow | approval-workflow.ts | **MODIFY** | Low |
+| DaemonLifecycle | daemon.ts start/shutdown | **MODIFY** | Low |
+| createApp() deps | server.ts CreateAppDeps | **MODIFY** | Low |
+| HotReloadOrchestrator | hot-reload.ts | **MODIFY** | Low |
+| SettingDefinitions | setting-keys.ts | **MODIFY** | Low |
+| TelegramBotService | telegram-bot-service.ts | **MODIFY** | Low |
+| DB Schema v16 | 2 테이블 + 1 ALTER | **MIGRATE** | Medium |
+
+---
+
+## Suggested Build Order
+
+의존 관계 기반 최적 빌드 순서:
+
+### Phase A: 인프라 기반 (WC SDK 통합 + DB)
+
+1. **DB v16 마이그레이션** -- wc_sessions, wc_store 테이블 추가, pending_approvals ALTER
+2. **SqliteKeyValueStorage** -- WC SDK 커스텀 스토리지 (wc_store 테이블 기반)
+3. **CAIP-2 매핑 유틸리티** -- toCAIP2(), getWCNamespace(), getWCMethods()
+4. **WalletConnectService 코어** -- SignClient 초기화, connect(), disconnect(), shutdown()
+
+### Phase B: 서명 요청 + 파이프라인 통합
+
+5. **WalletConnectService.requestSignature()** -- 서명 요청 전송 + 결과 처리
+6. **Pipeline 통합** -- PipelineContext 확장, Stage 4에서 WC fire-and-forget 트리거
+7. **ApprovalWorkflow 확장** -- approval_channel 기록, WC 승인 -> executeFromStage5
+8. **TelegramBotService 수정** -- approval_channel = 'telegram' 기록
+
+### Phase C: Admin API + UI
+
+9. **WC Admin API routes** -- POST /connect, GET /session, GET /sessions, POST /disconnect
+10. **Admin UI WC 페이지** -- QR 코드 렌더링 (qrcode npm), 세션 상태 폴링, 연결/해제
+
+### Phase D: 운영 통합
+
+11. **DaemonLifecycle 통합** -- Step 4c-6 초기화, 셧다운 추가
+12. **HotReload 통합** -- walletconnect.project_id 변경 시 WC 재초기화
+13. **Settings 확장** -- walletconnect.relay_url, walletconnect.request_timeout 추가
+14. **감사 로그 + 알림** -- WC_SESSION_CONNECTED, TX_APPROVED_VIA_WALLETCONNECT 이벤트
 
 **순서 근거:**
-1. Phase 1-2를 먼저 구현해야 Phase 3에서 파이프라인에 통합할 수 있다
-2. Phase 3이 완료되어야 USD 기준 정책 평가가 동작한다
-3. Phase 4는 Phase 3 이후 (oracle-status는 OracleChain이 먼저 필요)
-4. Phase 5는 Phase 4의 DB 마이그레이션에 의존 (api_keys 테이블)
-5. Phase 6은 Phase 5의 ActionProviderRegistry가 필요
-6. Phase 7은 모든 구현이 완료된 후 수행
-
----
-
-## 11. Scalability Considerations
-
-| Concern | 100 users | 10K users | 1M users |
-|---------|-----------|-----------|----------|
-| Oracle 캐시 | InMemory LRU 128 충분 | LRU 128 여전히 충분 (인기 토큰 30개가 99% 조회) | Redis 또는 LRU 확장 검토 |
-| Pyth API | Rate limit 없음 (공개 API) | 문제 없음 | 자체 Hermes 인스턴스 호스팅 |
-| CoinGecko API | Demo 10-30 rpm 충분 | 캐시 히트율 높으면 OK | Pro 키 또는 자체 인프라 |
-| Action Provider 수 | 1-5개 | 10-20개 | 도구 카탈로그 분리 검토 |
-| MCP 도구 수 | 14 + 5-10 충분 | 14 + 20-50 관리 가능 | 도구 그룹핑/네임스페이스 |
-| DB api_keys 테이블 | 5-10 rows | 50 rows | 충분 (UNIQUE provider_name) |
+- Phase A가 먼저: DB 마이그레이션과 스토리지가 WC 초기화의 전제 조건
+- Phase B가 Phase A 이후: SignClient가 있어야 서명 요청 가능
+- Phase C는 Phase B와 독립 가능하지만, 서명 요청 테스트를 위해 B 이후 권장
+- Phase D는 마지막: 모든 컴포넌트가 동작한 후 DaemonLifecycle에 통합
 
 ---
 
 ## Sources
 
-### Codebase Analysis (HIGH confidence)
-- `packages/daemon/src/pipeline/pipeline.ts` -- TransactionPipeline, PipelineDeps
-- `packages/daemon/src/pipeline/stages.ts` -- 6-stage implementation, PipelineContext, stage3Policy()
-- `packages/daemon/src/pipeline/database-policy-engine.ts` -- DatabasePolicyEngine, SpendingLimitRules, evaluateAndReserve()
-- `packages/daemon/src/infrastructure/settings/settings-service.ts` -- SettingsService, get/set/getAll
-- `packages/daemon/src/infrastructure/settings/setting-keys.ts` -- SETTING_DEFINITIONS, SETTING_CATEGORIES
-- `packages/daemon/src/infrastructure/settings/hot-reload.ts` -- HotReloadOrchestrator
-- `packages/daemon/src/infrastructure/adapter-pool.ts` -- AdapterPool
-- `packages/core/src/interfaces/IPolicyEngine.ts` -- IPolicyEngine, PolicyEvaluation
-- `packages/mcp/src/server.ts` -- createMcpServer, 14 tool registrations
-- `packages/mcp/src/index.ts` -- MCP entrypoint, SessionManager
-- `packages/admin/src/components/layout.tsx` -- NAV_ITEMS, PageRouter
-- `packages/admin/src/pages/settings.tsx` -- SettingsPage, category sections
-- `packages/admin/src/api/endpoints.ts` -- API endpoint constants
-- `docs/61-price-oracle-spec.md` -- IPriceOracle 인터페이스, OracleChain 설계
-- `docs/62-action-provider-architecture.md` -- IActionProvider 인터페이스, resolve-then-execute
-- `objectives/v1.5-defi-price-oracle.md` -- 마일스톤 목표, 산출물, 기술 결정
-
-### Official Documentation (MEDIUM confidence)
-- [Pyth Hermes API Reference](https://docs.pyth.network/price-feeds/core/api-reference) -- /v2/updates/price/latest, feed ID 형식
-- [Pyth Price Feeds](https://docs.pyth.network/price-feeds/core/price-feeds) -- 380+ 피드 목록
-- [MCP TypeScript SDK - Dynamic Tool Registration](https://github.com/modelcontextprotocol/typescript-sdk/issues/682) -- 동적 도구 등록 제약사항
-- [MCP Dynamic Tool Discovery](https://www.speakeasy.com/mcp/tool-design/dynamic-tool-discovery) -- disable/enable 패턴
+- [WalletConnect Dapp Usage (Reown Docs)](https://docs.reown.com/advanced/api/sign/dapp-usage) -- HIGH confidence
+- [WalletConnect Wallet Usage](https://docs.walletconnect.com/api/sign/wallet-usage) -- MEDIUM confidence
+- [@walletconnect/sign-client npm](https://www.npmjs.com/package/@walletconnect/sign-client) -- MEDIUM confidence
+- [WalletConnect Session Events Spec](https://specs.walletconnect.com/2.0/specs/clients/sign/session-events) -- HIGH confidence
+- [WalletConnect Storage API Spec](https://specs.walletconnect.com/2.0/specs/clients/core/storage) -- MEDIUM confidence
+- [@walletconnect/keyvaluestorage npm](https://www.npmjs.com/package/@walletconnect/keyvaluestorage) -- MEDIUM confidence
+- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) -- HIGH confidence
+- [WalletConnect Sign API Overview Spec](https://specs.walletconnect.com/2.0/specs/clients/sign) -- HIGH confidence
+- [WC Node.js 크래시 이슈 #5588](https://github.com/WalletConnect/walletconnect-monorepo/issues/5588) -- LOW confidence (특정 버전 이슈)
+- WAIaaS 코드베이스 분석 (approval-workflow.ts, stages.ts, daemon.ts, setting-keys.ts, telegram-bot-service.ts, notification-service.ts, event-types.ts 등) -- HIGH confidence
