@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 157 complete (all 3 plans)
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 158 plan 02 complete
 
 ## Current Position
 
-Phase: 157 of 159 (Extension Test)
-Plan: 3 of 3 in current phase
-Status: 157-03 complete
-Last activity: 2026-02-17 — Phase 157 plan 03 complete
+Phase: 158 of 159 (Platform Test)
+Plan: 2 of 2 in current phase
+Status: 158-02 complete
+Last activity: 2026-02-17 — Phase 158 plan 02 complete
 
-Progress: [########░░] 84% (16/19 plans)
+Progress: [#########░] 95% (18/19 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 35 milestones, 150 phases, 327 plans, 923 reqs, ~2,569 tests, ~220,000 LOC
+**Cumulative:** 35 milestones, 150 phases, 329 plans, 923 reqs, ~2,621 tests, ~221,300 LOC
 
 **v1.6.1 Velocity:**
 - Total plans completed: 13
@@ -42,6 +42,7 @@ Progress: [########░░] 84% (16/19 plans)
 | 157 | 01 | 6min | 2 | 2 |
 | 157 | 02 | 6min | 2 | 3 |
 | 157 | 03 | 4min | 2 | 2 |
+| 158 | 02 | 5min | 2 | 2 |
 
 *Updated after each plan completion*
 
@@ -108,6 +109,7 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 157-02: BAT-U09/U10 instruction 수 제한은 Zod API 레벨 -> evaluateBatch는 빈/단일 배치 정상 처리
 - 157-02: ORC-U05/U06 USD tier 경계값은 native 기준 검증 (USD amount는 evaluateAndReserve 전달)
 - 157-03: CE-12: STALE !== TRANSIENT -- STALE는 retryable이지만 TX rebuild 필요
+- 158-02: COMPOSE-02 healthcheck regex를 CMD 배열 포맷 호환하도록 완화 (curl.*-f.*)
 
 ### Blockers/Concerns
 
@@ -119,5 +121,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 157-02-PLAN.md (EXT-03/04/05 approve+batch+oracle tests)
+Stopped at: Completed 158-02-PLAN.md (Docker 18 + Telegram Bot 34 platform tests)
 Resume file: None
