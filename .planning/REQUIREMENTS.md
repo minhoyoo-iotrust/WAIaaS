@@ -1,22 +1,22 @@
 # Requirements: WAIaaS v1.6
 
 **Defined:** 2026-02-16
-**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 
 ## v1 Requirements
 
 ### Kill Switch
 
-- [ ] **KILL-01**: Kill Switch 발동 시 ACTIVE→SUSPENDED 상태 전이가 CAS ACID 패턴으로 원자적으로 수행된다
-- [ ] **KILL-02**: SUSPENDED→LOCKED 전이가 CAS ACID 패턴으로 수행되어 심각도가 격상된다
-- [ ] **KILL-03**: Kill Switch 발동 시 6-step cascade가 순차 실행된다 (세션 무효화→진행 중 거래 중단→월렛 정지→API 503→알림→감사 로그)
+- [ ] **KILL-01**: Kill Switch 발동 시 ACTIVE->SUSPENDED 상태 전이가 CAS ACID 패턴으로 원자적으로 수행된다
+- [ ] **KILL-02**: SUSPENDED->LOCKED 전이가 CAS ACID 패턴으로 수행되어 심각도가 격상된다
+- [ ] **KILL-03**: Kill Switch 발동 시 6-step cascade가 순차 실행된다 (세션 무효화->진행 중 거래 중단->월렛 정지->API 503->알림->감사 로그)
 - [ ] **KILL-04**: SUSPENDED 상태에서 dual-auth(Owner 서명 + Master 패스워드)로 ACTIVE 복구가 가능하다
 - [ ] **KILL-05**: LOCKED 상태에서 dual-auth + 추가 대기 시간으로 ACTIVE 복구가 가능하다
 - [ ] **KILL-06**: 동시에 두 Kill Switch 요청이 도착하면 하나만 성공하고 나머지는 409를 반환한다
-- [ ] **KILL-07**: 잘못된 상태 전이 시도(ACTIVE→LOCKED 직접, LOCKED→SUSPENDED 등)는 409로 거부된다
+- [ ] **KILL-07**: 잘못된 상태 전이 시도(ACTIVE->LOCKED 직접, LOCKED->SUSPENDED 등)는 409로 거부된다
 - [ ] **KILL-08**: POST /v1/admin/kill-switch(masterAuth)와 POST /v1/owner/kill-switch(ownerAuth) API가 제공된다
 - [ ] **KILL-09**: Kill Switch 상태가 SUSPENDED/LOCKED일 때 killSwitch 미들웨어가 503 SYSTEM_LOCKED를 반환한다
-- [ ] **KILL-10**: 기존 kill_switch_state DB 값 NORMAL→ACTIVE, ACTIVATED→SUSPENDED로 마이그레이션된다
+- [ ] **KILL-10**: 기존 kill_switch_state DB 값 NORMAL->ACTIVE, ACTIVATED->SUSPENDED로 마이그레이션된다
 
 ### AutoStop Engine
 
@@ -63,15 +63,15 @@
 
 - [ ] **DOCK-01**: Multi-stage Dockerfile이 builder(node:22-slim + pnpm + turbo build)와 runner(node:22-slim + non-root UID 1001)로 구성된다
 - [ ] **DOCK-02**: docker-compose.yml이 daemon 서비스, named volume(~/.waiaas 영속), 포트 매핑(127.0.0.1:3100:3100), HEALTHCHECK를 정의한다
-- [ ] **DOCK-03**: Docker Secrets + _FILE 패턴으로 MASTER_PASSWORD_FILE→WAIAAS_SECURITY_MASTER_PASSWORD 등 시크릿이 주입된다
+- [ ] **DOCK-03**: Docker Secrets + _FILE 패턴으로 MASTER_PASSWORD_FILE->WAIAAS_SECURITY_MASTER_PASSWORD 등 시크릿이 주입된다
 - [ ] **DOCK-04**: docker compose up 후 HEALTHCHECK가 통과하고 SDK로 거래가 가능하다
-- [ ] **DOCK-05**: named volume 덕분에 docker compose down → up 후에도 데이터가 유지된다
+- [ ] **DOCK-05**: named volume 덕분에 docker compose down -> up 후에도 데이터가 유지된다
 - [ ] **DOCK-06**: 컨테이너 프로세스가 non-root(UID 1001, waiaas)로 실행된다
 
 ### Admin UI Integration
 
-- [ ] **ADUI-01**: Admin UI에서 Kill Switch 상태를 조회하고 발동/복구할 수 있다 (기존 토글 → 3-state 리팩토링)
-- [ ] **ADUI-02**: Admin UI에서 telegram_users 목록을 조회하고 role을 PENDING→ADMIN/READONLY로 승인할 수 있다
+- [ ] **ADUI-01**: Admin UI에서 Kill Switch 상태를 조회하고 발동/복구할 수 있다 (기존 토글 -> 3-state 리팩토링)
+- [ ] **ADUI-02**: Admin UI에서 telegram_users 목록을 조회하고 role을 PENDING->ADMIN/READONLY로 승인할 수 있다
 - [ ] **ADUI-03**: Admin UI에서 AutoStop 규칙 임계값을 조회/수정할 수 있다 (Admin Settings 카테고리)
 - [ ] **ADUI-04**: Admin UI에서 잔액 모니터링 임계값을 조회/수정할 수 있다 (Admin Settings 카테고리)
 
@@ -98,13 +98,61 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Roadmap 생성 시 채워짐) | | |
+| EVNT-01 | Phase 140 | Pending |
+| EVNT-02 | Phase 140 | Pending |
+| EVNT-03 | Phase 140 | Pending |
+| KILL-01 | Phase 140 | Pending |
+| KILL-02 | Phase 140 | Pending |
+| KILL-03 | Phase 140 | Pending |
+| KILL-04 | Phase 140 | Pending |
+| KILL-05 | Phase 140 | Pending |
+| KILL-06 | Phase 140 | Pending |
+| KILL-07 | Phase 140 | Pending |
+| KILL-08 | Phase 140 | Pending |
+| KILL-09 | Phase 140 | Pending |
+| KILL-10 | Phase 140 | Pending |
+| AUTO-01 | Phase 141 | Pending |
+| AUTO-02 | Phase 141 | Pending |
+| AUTO-03 | Phase 141 | Pending |
+| AUTO-04 | Phase 141 | Pending |
+| AUTO-05 | Phase 141 | Pending |
+| AUTO-06 | Phase 141 | Pending |
+| BMON-01 | Phase 142 | Pending |
+| BMON-02 | Phase 142 | Pending |
+| BMON-03 | Phase 142 | Pending |
+| BMON-04 | Phase 142 | Pending |
+| BMON-05 | Phase 142 | Pending |
+| BMON-06 | Phase 142 | Pending |
+| TGBOT-01 | Phase 143 | Pending |
+| TGBOT-02 | Phase 143 | Pending |
+| TGBOT-03 | Phase 143 | Pending |
+| TGBOT-04 | Phase 143 | Pending |
+| TGBOT-05 | Phase 143 | Pending |
+| TGBOT-06 | Phase 143 | Pending |
+| TGBOT-07 | Phase 143 | Pending |
+| TGBOT-08 | Phase 143 | Pending |
+| TGBOT-09 | Phase 143 | Pending |
+| TGBOT-10 | Phase 143 | Pending |
+| TGBOT-11 | Phase 143 | Pending |
+| TGBOT-12 | Phase 143 | Pending |
+| TGBOT-13 | Phase 143 | Pending |
+| TGBOT-14 | Phase 143 | Pending |
+| ADUI-01 | Phase 144 | Pending |
+| ADUI-02 | Phase 144 | Pending |
+| ADUI-03 | Phase 144 | Pending |
+| ADUI-04 | Phase 144 | Pending |
+| DOCK-01 | Phase 145 | Pending |
+| DOCK-02 | Phase 145 | Pending |
+| DOCK-03 | Phase 145 | Pending |
+| DOCK-04 | Phase 145 | Pending |
+| DOCK-05 | Phase 145 | Pending |
+| DOCK-06 | Phase 145 | Pending |
 
 **Coverage:**
-- v1 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46
+- v1 requirements: 49 total
+- Mapped to phases: 49
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after initial definition*
+*Last updated: 2026-02-16 after roadmap creation (traceability section populated)*

@@ -9,6 +9,7 @@
 - ✅ **v1.5.1 x402 클라이언트 지원** -- Phases 130-133 (shipped 2026-02-15)
 - ✅ **v1.5.2 Admin UI 정책 폼 UX 개선** -- Phases 134-135 (shipped 2026-02-16)
 - ✅ **v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화)** -- Phases 136-139 (shipped 2026-02-16)
+- 🚧 **v1.6 운영 인프라 + 잔액 모니터링** -- Phases 140-145 (in progress)
 
 ## Phases
 
@@ -85,6 +86,124 @@
 
 </details>
 
+### 🚧 v1.6 운영 인프라 + 잔액 모니터링 (In Progress)
+
+**Milestone Goal:** Kill Switch/AutoStop으로 긴급 제어, Telegram Bot으로 원격 관리, Docker로 원클릭 배포, 잔액 모니터링으로 가스비 부족 사전 알림이 동작하는 상태
+
+- [ ] **Phase 140: Event Bus + Kill Switch** - 이벤트 인프라와 3-state 긴급 정지 시스템
+- [ ] **Phase 141: AutoStop Engine** - 이벤트 기반 자동 정지 규칙 엔진
+- [ ] **Phase 142: Balance Monitoring** - 주기적 잔액 체크 + LOW_BALANCE 알림
+- [ ] **Phase 143: Telegram Bot** - Long Polling 기반 원격 관리 봇
+- [ ] **Phase 144: Admin UI Integration** - Kill Switch/Telegram/AutoStop/Balance Monitor 관리 패널
+- [ ] **Phase 145: Docker** - Multi-stage 빌드 + docker-compose 원클릭 배포
+
+## Phase Details
+
+### Phase 140: Event Bus + Kill Switch
+**Goal**: 긴급 상황 시 사용자가 모든 월렛 활동을 즉시 정지하고 안전하게 복구할 수 있다
+**Depends on**: Nothing (first phase of v1.6)
+**Requirements**: EVNT-01, EVNT-02, EVNT-03, KILL-01, KILL-02, KILL-03, KILL-04, KILL-05, KILL-06, KILL-07, KILL-08, KILL-09, KILL-10
+**Success Criteria** (what must be TRUE):
+  1. EventEmitter 이벤트 버스가 TransactionCompleted/TransactionFailed/WalletActivity 이벤트를 발행하고, 파이프라인 기존 notify() 호출 지점에서 이벤트가 동시 발행된다
+  2. POST /v1/admin/kill-switch(masterAuth) 또는 POST /v1/owner/kill-switch(ownerAuth)를 호출하면 ACTIVE에서 SUSPENDED로 원자적 전이가 수행되고, 세션 무효화/거래 중단/월렛 정지/API 503/알림/감사 로그 6-step cascade가 실행된다
+  3. SUSPENDED 상태에서 dual-auth(Owner 서명 + Master 패스워드)로 ACTIVE 복구가 가능하고, LOCKED 상태에서는 동일 dual-auth + 추가 대기 시간으로 복구가 가능하다
+  4. 동시에 두 Kill Switch 요청이 도착하면 CAS ACID 패턴에 의해 하나만 성공하고 나머지는 409를 반환하며, 잘못된 상태 전이(ACTIVE에서 LOCKED 직접 등)는 409로 거부된다
+  5. 기존 DB kill_switch_state 값 NORMAL이 ACTIVE로, ACTIVATED가 SUSPENDED로 마이그레이션된다
+**Plans**: TBD
+
+Plans:
+- [ ] 140-01: Event Bus 인프라 + 파이프라인 이벤트 발행
+- [ ] 140-02: KillSwitchService 3-state 상태 머신 + CAS ACID + DB 마이그레이션
+- [ ] 140-03: Kill Switch 6-step Cascade + REST API + 미들웨어
+
+### Phase 141: AutoStop Engine
+**Goal**: 이상 상황이 감지되면 시스템이 자동으로 월렛을 정지하거나 Kill Switch를 발동하여 피해를 최소화한다
+**Depends on**: Phase 140 (Event Bus + Kill Switch)
+**Requirements**: AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05, AUTO-06
+**Success Criteria** (what must be TRUE):
+  1. 5회 연속 트랜잭션 실패가 발생하면 해당 월렛이 자동으로 SUSPENDED 상태가 된다
+  2. 정상 패턴 대비 이상 빈도 거래가 감지되면 월렛이 정지되고 AUTOSTOP_TRIGGERED 알림이 발송된다
+  3. 설정된 유휴 시간을 초과하면 해당 세션이 자동 해지되고, 수동 트리거 시 Kill Switch가 자동 발동된다
+  4. AutoStop 규칙 임계값이 config.toml flat key와 Admin Settings 런타임 오버라이드로 관리되어 데몬 재시작 없이 조정할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 141-01: AutoStopService 4 규칙 구현 + 이벤트 구독
+- [ ] 141-02: AutoStop 설정 관리 + 알림 통합
+
+### Phase 142: Balance Monitoring
+**Goal**: 월렛 가스비가 부족해지기 전에 사용자가 사전 알림을 받아 자금을 충전할 수 있다
+**Depends on**: Phase 140 (Event Bus)
+**Requirements**: BMON-01, BMON-02, BMON-03, BMON-04, BMON-05, BMON-06
+**Success Criteria** (what must be TRUE):
+  1. BalanceMonitorService가 주기적(기본 5분)으로 모든 활성 월렛의 네이티브 토큰 잔액을 체크하고, 임계값 이하이면 LOW_BALANCE 알림이 발송된다
+  2. 동일 월렛에 대해 24시간 내 중복 LOW_BALANCE 알림이 방지되고, 잔액 회복 후 다시 하락하면 새 알림이 발송된다
+  3. 잔액 모니터링 임계값(SOL 0.01, ETH 0.005)이 config.toml flat key + Admin Settings 런타임 오버라이드로 관리된다
+**Plans**: TBD
+
+Plans:
+- [ ] 142-01: BalanceMonitorService + LOW_BALANCE 이벤트/알림
+- [ ] 142-02: 중복 알림 방지 + 설정 관리
+
+### Phase 143: Telegram Bot
+**Goal**: 사용자가 Telegram 앱에서 월렛 상태 조회, 거래 승인/거부, Kill Switch 발동 등 핵심 관리 작업을 원격으로 수행할 수 있다
+**Depends on**: Phase 140 (Kill Switch)
+**Requirements**: TGBOT-01, TGBOT-02, TGBOT-03, TGBOT-04, TGBOT-05, TGBOT-06, TGBOT-07, TGBOT-08, TGBOT-09, TGBOT-10, TGBOT-11, TGBOT-12, TGBOT-13, TGBOT-14
+**Success Criteria** (what must be TRUE):
+  1. TelegramBotService가 Long Polling으로 명령을 수신하고, /start로 chat_id가 등록되며, /status로 데몬 상태와 월렛 요약을 조회할 수 있다
+  2. /pending로 APPROVAL 대기 거래 목록을 인라인 키보드와 함께 조회하고, /approve {txId}와 /reject {txId}로 거래를 승인/거부할 수 있다 (관리자만)
+  3. /killswitch로 확인 대화(Yes/No 인라인 키보드) 후 Kill Switch를 발동할 수 있고, /wallets로 월렛 목록, /newsession으로 세션 발급이 가능하다 (관리자만)
+  4. 2-Tier 인증이 적용되어 ADMIN은 모든 명령을, READONLY는 조회 명령만 사용할 수 있고, 네트워크 단절 시 지수 백오프로 재연결된다
+  5. 모든 Bot 메시지가 config.toml locale 설정에 따라 en/ko로 출력되고, telegram_users DB 테이블이 마이그레이션으로 생성된다
+**Plans**: TBD
+
+Plans:
+- [ ] 143-01: TelegramBotService Long Polling + DB 마이그레이션 + /start, /help, /status
+- [ ] 143-02: 2-Tier 인증 + /wallets, /pending, /approve, /reject
+- [ ] 143-03: /killswitch, /newsession + 인라인 키보드 + i18n + 재연결
+
+### Phase 144: Admin UI Integration
+**Goal**: 사용자가 Admin 웹 UI에서 Kill Switch 3-state 관리, Telegram 사용자 승인, AutoStop/Balance Monitor 임계값 조정을 수행할 수 있다
+**Depends on**: Phase 140 (Kill Switch), Phase 141 (AutoStop), Phase 142 (Balance Monitor), Phase 143 (Telegram Bot)
+**Requirements**: ADUI-01, ADUI-02, ADUI-03, ADUI-04
+**Success Criteria** (what must be TRUE):
+  1. Admin UI에서 Kill Switch 상태를 조회하고 발동/복구할 수 있으며, 기존 2-state 토글이 3-state(ACTIVE/SUSPENDED/LOCKED) UI로 리팩토링되어 있다
+  2. Admin UI에서 telegram_users 목록을 조회하고 PENDING 사용자의 role을 ADMIN 또는 READONLY로 승인할 수 있다
+  3. Admin UI Settings에서 AutoStop 규칙 임계값과 잔액 모니터링 임계값을 조회/수정할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 144-01: Kill Switch 3-state UI + Telegram Users 관리
+- [ ] 144-02: AutoStop + Balance Monitor Settings 카테고리
+
+### Phase 145: Docker
+**Goal**: docker compose up 한 줄로 WAIaaS 데몬이 실행되고, 데이터가 영속되며, 시크릿이 안전하게 주입된다
+**Depends on**: Phase 140-144 (all features)
+**Requirements**: DOCK-01, DOCK-02, DOCK-03, DOCK-04, DOCK-05, DOCK-06
+**Success Criteria** (what must be TRUE):
+  1. Multi-stage Dockerfile로 빌드된 이미지에서 데몬이 non-root(UID 1001, waiaas) 프로세스로 실행된다
+  2. docker compose up 후 HEALTHCHECK가 통과하고 SDK로 거래가 가능하다
+  3. Docker Secrets + _FILE 패턴으로 MASTER_PASSWORD_FILE 등 시크릿이 안전하게 주입되고, named volume 덕분에 docker compose down 후 up해도 데이터가 유지된다
+**Plans**: TBD
+
+Plans:
+- [ ] 145-01: Dockerfile + docker-compose.yml + entrypoint.sh
+- [ ] 145-02: Docker Secrets + HEALTHCHECK + 영속성 검증
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 140. Event Bus + Kill Switch | 0/3 | Not started | - |
+| 141. AutoStop Engine | 0/2 | Not started | - |
+| 142. Balance Monitoring | 0/2 | Not started | - |
+| 143. Telegram Bot | 0/3 | Not started | - |
+| 144. Admin UI Integration | 0/2 | Not started | - |
+| 145. Docker | 0/2 | Not started | - |
+
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- v1.5.3 마일스톤 아카이브*
+*Last updated: 2026-02-16 -- v1.6 로드맵 생성 (Phases 140-145, 49 requirements)*
