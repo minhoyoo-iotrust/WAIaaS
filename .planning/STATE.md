@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 151 커버리지 + Mock 인프라
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 152 complete, next Phase 153
 
 ## Current Position
 
-Phase: 151 of 159 (커버리지 + Mock 인프라)
-Plan: 2 of 2 in current phase
-Status: Phase 151 complete
-Last activity: 2026-02-16 — Completed 151-02 (Mock 경계 인프라 M6~M10)
+Phase: 152 of 159 (Enum 검증 + Config 테스트)
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Phase complete
+Last activity: 2026-02-16 — Phase 152 complete (1/1 plans)
 
-Progress: [##░░░░░░░░] 10% (2/19 plans)
+Progress: [##░░░░░░░░] 15% (3/19 plans)
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ Progress: [##░░░░░░░░] 10% (2/19 plans)
 |-------|------|----------|-------|-------|
 | 151 | 01 | 4min | 2 | 18 |
 | 151 | 02 | 5min | 2 | 10 |
+| 152 | 01 | 12min | 2 | 14 |
 
 *Updated after each plan completion*
 
@@ -44,6 +45,11 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 151-01: admin 패키지 coverage include에 .tsx 확장자 추가
 - 151-02: PriceInfo source 'mock' -> 'cache' (Zod enum 준수)
 - 151-02: msw 핸들러 factory 패턴 (overrides로 테스트별 응답 커스터마이징)
+- 152-01: verify-enum-ssot.ts에서 @waiaas/core 대신 상대 경로 import (루트 레벨 workspace 해석 불가)
+- 152-01: IT-04 CHECK 개수 12 (SSoT 11 + owner_verified boolean 1)
+- 152-01: NOTE-11 페이지네이션 테스트를 Drizzle 직접 쿼리로 구현 (Hono E2E 복잡한 의존성 회피)
+- 152-01: NOTE-02 PolicyEngine amount는 lamport-scale 정수 문자열 사용
+- 152-01: better-sqlite3 CJS 모듈 createRequire 패턴
 
 ### Blockers/Concerns
 
@@ -55,5 +61,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 151-02-PLAN.md (Phase 151 complete)
+Stopped at: Completed 152-01-PLAN.md (Phase 152 complete)
 Resume file: None
