@@ -111,8 +111,8 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 | 146. WC 인프라 세팅 | v1.6.1 | 2/2 | Complete | 2026-02-16 |
 | 147. QR 페어링 + REST API | v1.6.1 | 2/2 | Complete | 2026-02-16 |
 | 148. WC 서명 요청 | v1.6.1 | 2/2 | Complete | 2026-02-16 |
-| 149. Telegram Fallback | v1.6.1 | 0/2 | Not started | - |
-| 150. Admin UI + DX | v1.6.1 | 0/2 | Not started | - |
+| 149. Telegram Fallback | v1.6.1 | 2/2 | Complete | 2026-02-16 |
+| 150. Admin UI + DX | v1.6.1 | 2/2 | Complete | 2026-02-16 |
 
 ---
 *Roadmap created: 2026-02-16*

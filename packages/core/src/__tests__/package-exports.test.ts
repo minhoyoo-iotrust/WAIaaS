@@ -45,7 +45,7 @@ describe('@waiaas/core package export verification', () => {
   it('error codes and WAIaaSError are exported', () => {
     expect(core.ERROR_CODES).toBeDefined();
     expect(core.WAIaaSError).toBeDefined();
-    expect(Object.keys(core.ERROR_CODES)).toHaveLength(86);
+    expect(Object.keys(core.ERROR_CODES)).toHaveLength(90);
   });
 
   it('getMessages function is exported', () => {
