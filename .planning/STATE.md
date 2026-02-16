@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 149 - Telegram Fallback
+**Current focus:** Phase 150 - Admin DX
 
 ## Current Position
 
-Phase: 4 of 5 (Phase 149: Telegram Fallback)
-Plan: 2 of 2 in current phase
-Status: 149-02 Complete (Phase 149 complete)
-Last activity: 2026-02-16 -- 149-02 WcSigningBridge fallback 테스트 13개
+Phase: 5 of 5 (Phase 150: Admin DX)
+Plan: 1 of 2 in current phase
+Status: 150-01 Complete
+Last activity: 2026-02-16 -- 150-01 Session-scoped WC REST + Admin WC 페이지
 
-Progress: [================....] 80%
+Progress: [==================..] 90%
 
 ## Performance Metrics
 
-**Cumulative:** 34 milestones, 145 phases, 322 plans, 899 reqs, ~2,336 tests, ~207,902 LOC
+**Cumulative:** 34 milestones, 145 phases, 323 plans, 899 reqs, ~2,336 tests, ~207,902 LOC
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 7min
-- Total execution time: 0.9 hours
+- Total plans completed: 9
+- Average duration: 6min
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -33,9 +33,10 @@ Progress: [================....] 80%
 | 147 | 2/2 | 13min | 6.5min |
 | 148 | 2/2 | 12min | 6min |
 | 149 | 2/2 | 10min | 5min |
+| 150 | 1/2 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 5min, 7min, 6min, 4min
+- Last 5 plans: 5min, 7min, 6min, 4min, 5min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -74,6 +75,10 @@ Recent decisions affecting current work:
 - [149-01]: notificationService/eventBus는 optional DI (WC 없이도 데몬 정상 동작)
 - [149-02]: createBridge 헬퍼에 notificationService/eventBus 옵셔널 파라미터 추가 (기존 테스트 호환)
 - [149-02]: 통합 테스트에서 mock requestSignature 내부 eventBus.emit으로 fire-and-forget 비동기 검증
+- [150-01]: wcSessionRoutes 별도 factory 함수로 분리 (wcRoutes masterAuth 함수 수정 안 함)
+- [150-01]: getWalletId 헬퍼 + lookupWallet 헬퍼로 session-scoped 핸들러 코드 중복 최소화
+- [150-01]: endpoints.ts 변경 불필요 -- 기존 WALLET_WC_PAIR/SESSION/PAIR_STATUS 상수 재사용
+- [150-01]: WalletConnect 네비게이션은 Telegram과 Settings 사이에 배치
 
 ### Blockers/Concerns
 
@@ -87,5 +92,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 149-02-PLAN.md (Phase 149 complete)
+Stopped at: Completed 150-01-PLAN.md
 Resume file: None
