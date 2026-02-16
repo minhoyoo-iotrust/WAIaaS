@@ -80,6 +80,7 @@ export const messages: Messages = {
     WC_SESSION_NOT_FOUND: '이 지갑에 활성 WC 세션이 없습니다',
     // SYSTEM domain (WC)
     WC_NOT_CONFIGURED: 'WalletConnect가 설정되지 않았습니다',
+    WC_SIGNING_FAILED: 'WalletConnect 서명 요청이 실패했습니다',
     // WITHDRAW domain (4)
     NO_OWNER: '이 지갑에 등록된 Owner가 없습니다',
     WITHDRAW_LOCKED_ONLY: '출금에는 LOCKED Owner 상태가 필요합니다',

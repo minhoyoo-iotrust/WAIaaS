@@ -517,6 +517,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'WalletConnect is not configured',
   },
+  WC_SIGNING_FAILED: {
+    code: 'WC_SIGNING_FAILED',
+    domain: 'SYSTEM',
+    httpStatus: 502,
+    retryable: true,
+    message: 'WalletConnect signing request failed',
+  },
 
   // --- WITHDRAW domain (4) ---
   NO_OWNER: {

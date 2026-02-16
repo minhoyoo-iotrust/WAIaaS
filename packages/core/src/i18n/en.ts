@@ -132,6 +132,7 @@ export const messages: Messages = {
     WC_SESSION_NOT_FOUND: 'No active WC session for this wallet',
     // SYSTEM domain (WC)
     WC_NOT_CONFIGURED: 'WalletConnect is not configured',
+    WC_SIGNING_FAILED: 'WalletConnect signing request failed',
     // WITHDRAW domain (4)
     NO_OWNER: 'No owner registered for this wallet',
     WITHDRAW_LOCKED_ONLY: 'Withdrawal requires LOCKED owner state',
