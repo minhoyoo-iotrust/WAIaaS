@@ -383,7 +383,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -412,14 +412,14 @@ describe('SettingsService', () => {
 
       for (const def of credentialDefs) {
         expect(
-          ['notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url', 'oracle.coingecko_api_key'].includes(def.key),
+          ['notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url', 'oracle.coingecko_api_key', 'telegram.bot_token'].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 9 notifications + 14 rpc + 11 security + 1 daemon + 1 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring = 50
-      expect(SETTING_DEFINITIONS.length).toBe(50);
+      // 9 notifications + 14 rpc + 11 security + 1 daemon + 1 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 3 telegram = 53
+      expect(SETTING_DEFINITIONS.length).toBe(53);
     });
   });
 });

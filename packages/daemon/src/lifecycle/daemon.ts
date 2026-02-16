@@ -130,7 +130,7 @@ export class DaemonLifecycle {
   private killSwitchService: KillSwitchService | null = null;
   private autoStopService: AutoStopService | null = null;
   private balanceMonitorService: BalanceMonitorService | null = null;
-
+  private telegramBotService: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -461,6 +461,34 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-5: TelegramBotService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this._config!.telegram.enabled && this._config!.telegram.bot_token) {
+        const { TelegramBotService, TelegramApi } = await import(
+          '../infrastructure/telegram/index.js'
+        );
+        const telegramApi = new TelegramApi(this._config!.telegram.bot_token);
+        const telegramLocale = (this._config!.telegram.locale ?? this._config!.notifications.locale ?? 'en') as 'en' | 'ko';
+        this.telegramBotService = new TelegramBotService({
+          sqlite: this.sqlite!,
+          api: telegramApi,
+          locale: telegramLocale,
+          killSwitchService: this.killSwitchService ?? undefined,
+          notificationService: this.notificationService ?? undefined,
+          settingsService: this._settingsService ?? undefined,
+        });
+        this.telegramBotService.start();
+        console.log('Step 4c-5: Telegram Bot started');
+      } else {
+        console.log('Step 4c-5: Telegram Bot disabled');
+      }
+    } catch (err) {
+      console.warn('Step 4c-5 (fail-soft): Telegram Bot init warning:', err);
+      this.telegramBotService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -735,6 +763,12 @@ export class DaemonLifecycle {
       if (this.balanceMonitorService) {
         this.balanceMonitorService.stop();
         this.balanceMonitorService = null;
+      }
+
+      // Stop TelegramBotService (before EventBus cleanup)
+      if (this.telegramBotService) {
+        this.telegramBotService.stop();
+        this.telegramBotService = null;
       }
 
       // Step 6b: Remove all EventBus listeners

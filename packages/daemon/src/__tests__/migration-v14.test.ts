@@ -242,8 +242,8 @@ describe('v14 migration: kill_switch_state value conversion', () => {
     }
   });
 
-  it('LATEST_SCHEMA_VERSION is 14', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(14);
+  it('LATEST_SCHEMA_VERSION is 15', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(15);
   });
 
   it('NORMAL -> ACTIVE conversion', () => {
@@ -355,8 +355,8 @@ describe('v14 migration: kill_switch_state value conversion', () => {
     pushSchema(db);
 
     const versions = getVersions(db);
-    expect(versions).toContain(14);
-    expect(Math.max(...versions)).toBe(14);
+    expect(versions).toContain(15);
+    expect(Math.max(...versions)).toBe(15);
   });
 
   it('updated_at is refreshed on conversion', () => {

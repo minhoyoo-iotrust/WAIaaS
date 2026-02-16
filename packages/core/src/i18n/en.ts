@@ -22,6 +22,32 @@ export interface Messages {
     status_running: string;
     status_stopped: string;
   };
+  telegram: {
+    bot_welcome: string;
+    bot_pending_approval: string;
+    bot_already_registered: string;
+    bot_help: string;
+    bot_status_header: string;
+    bot_status_body: string;
+    bot_unauthorized: string;
+    bot_admin_only: string;
+    bot_pending_list_header: string;
+    bot_pending_empty: string;
+    bot_approve_success: string;
+    bot_reject_success: string;
+    bot_tx_not_found: string;
+    bot_killswitch_confirm: string;
+    bot_killswitch_success: string;
+    bot_killswitch_cancelled: string;
+    bot_wallets_header: string;
+    bot_wallets_empty: string;
+    bot_newsession_select: string;
+    bot_newsession_created: string;
+    keyboard_approve: string;
+    keyboard_reject: string;
+    keyboard_yes: string;
+    keyboard_no: string;
+  };
 }
 
 export const messages: Messages = {
@@ -167,5 +193,42 @@ export const messages: Messages = {
     password_mismatch: 'Passwords do not match',
     status_running: 'Status: running',
     status_stopped: 'Status: stopped',
+  },
+  // Telegram Bot messages (MarkdownV2 pre-escaped where needed)
+  telegram: {
+    bot_welcome: 'Welcome to WAIaaS Bot\\! Your chat has been registered\\.',
+    bot_pending_approval: 'Your registration is pending admin approval\\.',
+    bot_already_registered: 'You are already registered\\.',
+    bot_help: [
+      '*Available Commands*',
+      '',
+      '/start \\- Register this chat',
+      '/help \\- Show this help message',
+      '/status \\- Show daemon status',
+      '/wallets \\- List wallets',
+      '/newsession \\- Create a new session',
+      '/killswitch \\- Activate kill switch',
+      '/pending \\- List pending registrations \\(admin\\)',
+    ].join('\n'),
+    bot_status_header: 'Daemon Status',
+    bot_status_body: 'Uptime: {uptime}\nKill Switch: {killSwitch}\nWallets: {walletCount} \\({activeCount} active\\)\nSessions: {sessionCount} active',
+    bot_unauthorized: 'You are not authorized\\. Please contact admin\\.',
+    bot_admin_only: 'This command requires admin privileges\\.',
+    bot_pending_list_header: 'Pending Registrations',
+    bot_pending_empty: 'No pending registrations\\.',
+    bot_approve_success: 'User approved successfully\\.',
+    bot_reject_success: 'User rejected successfully\\.',
+    bot_tx_not_found: 'Transaction not found\\.',
+    bot_killswitch_confirm: 'Are you sure you want to activate the kill switch\\?',
+    bot_killswitch_success: 'Kill switch activated\\. All operations halted\\.',
+    bot_killswitch_cancelled: 'Kill switch activation cancelled\\.',
+    bot_wallets_header: 'Wallets',
+    bot_wallets_empty: 'No wallets found\\.',
+    bot_newsession_select: 'Select a wallet to create a session for:',
+    bot_newsession_created: 'Session created\\. Token: `{token}`',
+    keyboard_approve: 'Approve',
+    keyboard_reject: 'Reject',
+    keyboard_yes: 'Yes',
+    keyboard_no: 'No',
   },
 };
