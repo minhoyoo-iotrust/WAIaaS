@@ -9,6 +9,9 @@
  *   quickstart                        -- Create Solana + EVM wallets for quick setup
  *   wallet info                       -- Show wallet details
  *   wallet set-default-network <net>  -- Change default network
+ *   owner connect                     -- Connect external wallet via WalletConnect QR
+ *   owner disconnect                  -- Disconnect WalletConnect session
+ *   owner status                      -- Show WalletConnect session status
  *   mcp setup                         -- Set up MCP integration for Claude Desktop
  *
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
@@ -22,6 +25,7 @@ import { statusCommand } from './commands/status.js';
 import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
 import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
+import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
 import { resolveDataDir } from './utils/data-dir.js';
 
 const program = new Command();
@@ -127,6 +131,53 @@ wallet
       password: opts.password,
       walletId: opts.wallet,
     }, network);
+  });
+
+// Owner subcommand group
+const owner = program.command('owner').description('Owner wallet connection commands');
+
+owner
+  .command('connect')
+  .description('Connect external wallet via WalletConnect QR code')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--wallet <id>', 'Wallet ID or name (auto-detected if only one)')
+  .option('--password <password>', 'Master password')
+  .option('--poll', 'Wait for wallet to connect')
+  .action(async (opts: { baseUrl?: string; wallet?: string; password?: string; poll?: boolean }) => {
+    await ownerConnectCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      password: opts.password,
+      walletId: opts.wallet,
+      poll: opts.poll ?? false,
+    });
+  });
+
+owner
+  .command('disconnect')
+  .description('Disconnect WalletConnect session')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--wallet <id>', 'Wallet ID or name (auto-detected if only one)')
+  .option('--password <password>', 'Master password')
+  .action(async (opts: { baseUrl?: string; wallet?: string; password?: string }) => {
+    await ownerDisconnectCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      password: opts.password,
+      walletId: opts.wallet,
+    });
+  });
+
+owner
+  .command('status')
+  .description('Show WalletConnect session status')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--wallet <id>', 'Wallet ID or name (auto-detected if only one)')
+  .option('--password <password>', 'Master password')
+  .action(async (opts: { baseUrl?: string; wallet?: string; password?: string }) => {
+    await ownerStatusCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      password: opts.password,
+      walletId: opts.wallet,
+    });
   });
 
 // MCP subcommand group

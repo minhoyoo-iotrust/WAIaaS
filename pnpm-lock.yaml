@@ -104,10 +104,16 @@ importers:
       commander:
         specifier: ^13.0.0
         version: 13.1.0
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.9
         version: 1.19.9(hono@4.11.9)
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       argon2:
         specifier: ^0.44.0
         version: 0.44.0
