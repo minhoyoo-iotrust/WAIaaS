@@ -175,6 +175,10 @@ describe('TelegramBotService', () => {
 
   describe('/status command', () => {
     it('sends status message with uptime, wallets, sessions', async () => {
+      // Register user as READONLY so /status is allowed (2-Tier auth)
+      const now = Math.floor(Date.now() / 1000);
+      db.prepare('INSERT INTO telegram_users (chat_id, username, role, registered_at) VALUES (?, ?, ?, ?)').run(12345, null, 'READONLY', now);
+
       const updates = [makeUpdate(12345, '/status', 1)];
       (api.getUpdates as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(updates)
@@ -196,6 +200,10 @@ describe('TelegramBotService', () => {
     });
 
     it('shows kill switch state from killSwitchService', async () => {
+      // Register user as READONLY so /status is allowed (2-Tier auth)
+      const now = Math.floor(Date.now() / 1000);
+      db.prepare('INSERT INTO telegram_users (chat_id, username, role, registered_at) VALUES (?, ?, ?, ?)').run(12345, null, 'READONLY', now);
+
       const mockKillSwitch = {
         getState: vi.fn().mockReturnValue({ state: 'SUSPENDED', activatedAt: null, activatedBy: null }),
       };
@@ -349,6 +357,10 @@ describe('TelegramBotService', () => {
     });
 
     it('sends Korean status message', async () => {
+      // Register user as READONLY so /status is allowed (2-Tier auth)
+      const now = Math.floor(Date.now() / 1000);
+      db.prepare('INSERT INTO telegram_users (chat_id, username, role, registered_at) VALUES (?, ?, ?, ?)').run(12345, null, 'READONLY', now);
+
       const koService = new TelegramBotService({ sqlite: db, api, locale: 'ko' });
 
       const updates = [makeUpdate(12345, '/status', 1)];
@@ -398,7 +410,11 @@ describe('TelegramBotService', () => {
       expect(api.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('ignores unknown commands', async () => {
+    it('ignores unknown commands for registered ADMIN user', async () => {
+      // Register user as ADMIN so auth passes, then unknown command is silently ignored
+      const now = Math.floor(Date.now() / 1000);
+      db.prepare('INSERT INTO telegram_users (chat_id, username, role, registered_at) VALUES (?, ?, ?, ?)').run(12345, null, 'ADMIN', now);
+
       const updates = [makeUpdate(12345, '/unknown', 1)];
       (api.getUpdates as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(updates)
@@ -408,6 +424,9 @@ describe('TelegramBotService', () => {
       await new Promise((r) => setTimeout(r, 200));
       service.stop();
 
+      // Unknown commands are not in PUBLIC/READONLY/ADMIN lists, so auth denies for non-public.
+      // For ADMIN, unknown commands pass auth but the switch-case falls through silently.
+      // Since /unknown is not in PUBLIC_COMMANDS, it requires auth. For ADMIN, auth passes but handler does nothing.
       expect(api.sendMessage).not.toHaveBeenCalled();
     });
 
