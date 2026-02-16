@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 155 complete, Phase 156 next
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 156 plan 03 complete
 
 ## Current Position
 
 Phase: 156 of 159 (Security Test P2)
-Plan: 0 of ? in current phase
-Status: Phase 155 complete, Phase 156 not started
-Last activity: 2026-02-17 — Phase 155 plan 02 complete
+Plan: 3 of 3 in current phase
+Status: Phase 156 complete
+Last activity: 2026-02-17 — Phase 156 plan 03 complete
 
-Progress: [######░░░░] 53% (10/19 plans)
+Progress: [#######░░░] 68% (13/19 plans)
 
 ## Performance Metrics
 
 **Cumulative:** 35 milestones, 150 phases, 327 plans, 923 reqs, ~2,569 tests, ~220,000 LOC
 
 **v1.6.1 Velocity:**
-- Total plans completed: 10
+- Total plans completed: 13
 - Average duration: 6min
-- Total execution time: 1.1 hours
+- Total execution time: 1.5 hours
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -36,6 +36,9 @@ Progress: [######░░░░] 53% (10/19 plans)
 | 154 | 02 | 7min | 2 | 3 |
 | 155 | 01 | 7min | 2 | 4 |
 | 155 | 02 | 8min | 2 | 4 |
+| 156 | 01 | 8min | 2 | 3 |
+| 156 | 02 | 7min | 2 | 4 |
+| 156 | 03 | 6min | 2 | 2 |
 
 *Updated after each plan completion*
 
@@ -82,6 +85,16 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 155-02: seedSecurityTestData는 wallet+session 동시 생성 -- 중복 삽입 주의
 - 155-02: Chain 5 JWT 만료 테스트에 실제 1.5s sleep 사용 (실제 토큰 만료 검증)
 - 155-02: SEC-04-EX-04 Rate Limit은 describe.skip (미구현 기능)
+- 156-01: APPROVE_DISABLED PolicyType 미존재 -> no APPROVED_SPENDERS policy = 전면 거부로 동일 효과 검증
+- 156-01: Solana u64.max < UNLIMITED_THRESHOLD -> Solana에서는 blockUnlimited 미트리거 (EVM 전용)
+- 156-01: contract-whitelist 테스트 defaultNetwork 'sepolia' -> 'ethereum-sepolia' (DB CHECK 제약 준수)
+- 156-01: SEC-06-32 대량 토큰 리스트 주소 동적 생성 (하드코딩 길이 오류 방지)
+- 156-02: evaluateBatch 무정책 -> INSTANT passthrough이므로 default-deny 트리거에 최소 1개 정책 필요
+- 156-02: InMemoryPriceCache 내부 expiresAt 직접 조작으로 TTL 만료 시뮬레이션
+- 156-02: JupiterSwapProvider 미존재 -> JupiterSwapInputSchema 선제적 Zod 정의로 보안 계약 검증
+- 156-02: ActionProviderRegistry는 resolve() 시 체인 매칭 미강제 (pipeline 레벨 검증)
+- 156-03: IPv6-in-brackets URL은 URL parser가 hex로 정규화하여 isIP() 0 반환, DNS ENOTFOUND로 차단
+- 156-03: @waiaas/core 패키지 export로 ChainError/CHAIN_ERROR_CATEGORIES import (상대 경로 불필요)
 
 ### Blockers/Concerns
 
@@ -93,5 +106,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 155-02-PLAN.md
+Stopped at: Completed 156-02-PLAN.md (all Phase 156 plans complete)
 Resume file: None
