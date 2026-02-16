@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 145 of 145 (Docker)
-Plan: 1 of 2 in current phase
-Status: Ready
-Last activity: 2026-02-16 -- 144-02 AutoStop + Monitoring Settings UI 완료 (Phase 144 완료)
+Plan: 2 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-16 -- 145-01 Dockerfile + docker-compose.yml + entrypoint.sh 완료
 
-Progress: [############░░] 86% (12/14 plans)
+Progress: [#############░] 93% (13/14 plans)
 
 ## Performance Metrics
 
@@ -29,7 +29,7 @@ Progress: [############░░] 86% (12/14 plans)
 | 142. Balance Monitoring | 2/2 | 7m | 4m |
 | 143. Telegram Bot | 3/3 | 34m | 11m |
 | 144. Admin UI Integration | 2/2 | 8m | 4m |
-| 145. Docker | 0/2 | - | - |
+| 145. Docker | 1/2 | 2m | 2m |
 
 ## Accumulated Context
 
@@ -75,6 +75,9 @@ Full log in PROJECT.md and milestones/.
 - v1.6: Kill Switch 3-state UI (settings-section -> settings-category 패턴, ACTIVE/SUSPENDED/LOCKED 상태별 버튼)
 - v1.6: Telegram Users 관리 페이지 (Table + Badge + Modal 패턴, Approve/Delete 액션)
 - v1.6: AutoStop/Monitoring Settings UI fields map 배열 + checkbox/number 분기 패턴 (SecuritySettings 확장)
+- v1.6: node:22-slim 기반 Docker 이미지 (glibc 호환, native addon prebuildify)
+- v1.6: 127.0.0.1:3100 포트 매핑 (외부 노출 방지)
+- v1.6: #!/bin/sh entrypoint (slim 이미지 bash 미보장)
 
 ### Blockers/Concerns
 
@@ -85,5 +88,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 144-02-PLAN.md (AutoStop + Monitoring Settings UI -- Phase 144 완료)
+Stopped at: Completed 145-01-PLAN.md (Dockerfile + docker-compose.yml + entrypoint.sh)
 Resume file: None
