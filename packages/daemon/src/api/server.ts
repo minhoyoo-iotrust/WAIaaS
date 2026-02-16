@@ -67,6 +67,7 @@ import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import { WAIaaSError } from '@waiaas/core';
 import type { IPolicyEngine, IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
 import type { KillSwitchService } from '../services/kill-switch-service.js';
+import type { WcSessionService } from '../services/wc-session-service.js';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -108,6 +109,7 @@ export interface CreateAppDeps {
   forexRateService?: IForexRateService;
   eventBus?: EventBus;
   killSwitchService?: KillSwitchService;
+  wcSessionService?: WcSessionService;
 }
 
 /**

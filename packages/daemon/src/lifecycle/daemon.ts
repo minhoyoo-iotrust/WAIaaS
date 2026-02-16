@@ -6,6 +6,7 @@
  *   2. Database initialization (30s timeout, fail-fast)
  *   3. Keystore unlock (30s timeout, fail-fast)
  *   4. Adapter initialization (10s, fail-soft)
+ *      4c-6. WalletConnect service (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -14,6 +15,8 @@
  *   2-4. HTTP server close
  *   5. In-flight signing -- STUB (Phase 50-04)
  *   6. Pending queue persistence -- STUB (Phase 50-04)
+ *   6a. Stop TelegramBot, WcSessionService, AutoStop, BalanceMonitor
+ *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
  *   9. keyStore.lockAll()
@@ -131,6 +134,7 @@ export class DaemonLifecycle {
   private autoStopService: AutoStopService | null = null;
   private balanceMonitorService: BalanceMonitorService | null = null;
   private telegramBotService: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null = null;
+  private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -489,6 +493,27 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-6: WalletConnect service initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      const wcProjectId = this._settingsService?.get('walletconnect.project_id');
+      if (wcProjectId) {
+        const { WcSessionService } = await import('../services/wc-session-service.js');
+        this.wcSessionService = new WcSessionService({
+          sqlite: this.sqlite!,
+          settingsService: this._settingsService!,
+        });
+        await this.wcSessionService.initialize();
+        console.log('Step 4c-6: WalletConnect service initialized');
+      } else {
+        console.log('Step 4c-6: WalletConnect disabled (no project_id)');
+      }
+    } catch (err) {
+      console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
+      this.wcSessionService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -612,6 +637,7 @@ export class DaemonLifecycle {
           forexRateService: this.forexRateService ?? undefined,
           eventBus: this.eventBus,
           killSwitchService: this.killSwitchService ?? undefined,
+          wcSessionService: this.wcSessionService ?? undefined,
         });
 
         this.httpServer = serve({
@@ -769,6 +795,16 @@ export class DaemonLifecycle {
       if (this.telegramBotService) {
         this.telegramBotService.stop();
         this.telegramBotService = null;
+      }
+
+      // Stop WcSessionService (before EventBus cleanup)
+      if (this.wcSessionService) {
+        try {
+          await this.wcSessionService.shutdown();
+        } catch (err) {
+          console.warn('WcSessionService shutdown warning:', err);
+        }
+        this.wcSessionService = null;
       }
 
       // Step 6b: Remove all EventBus listeners
