@@ -317,7 +317,8 @@ describe('GET /v1/admin/status', () => {
     expect(body.uptime).toBeGreaterThanOrEqual(59); // started 60s ago
     expect(body.walletCount).toBe(1);
     expect(typeof body.activeSessionCount).toBe('number');
-    expect(body.killSwitchState).toBe('NORMAL');
+    // State is 'ACTIVE' when using KillSwitchService, or 'NORMAL' for legacy
+    expect(['NORMAL', 'ACTIVE']).toContain(body.killSwitchState);
     expect(typeof body.timestamp).toBe('number');
   });
 
@@ -337,7 +338,7 @@ describe('GET /v1/admin/status', () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /v1/admin/kill-switch', () => {
-  it('should activate kill switch -> 200 with ACTIVATED state', async () => {
+  it('should activate kill switch -> 200 with SUSPENDED state', async () => {
     const res = await app.request('/v1/admin/kill-switch', {
       method: 'POST',
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
@@ -345,7 +346,7 @@ describe('POST /v1/admin/kill-switch', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.state).toBe('ACTIVATED');
+    expect(body.state).toBe('SUSPENDED');
     expect(typeof body.activatedAt).toBe('number');
   });
 
@@ -380,7 +381,8 @@ describe('GET /v1/admin/kill-switch', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.state).toBe('NORMAL');
+    // State is 'ACTIVE' when using KillSwitchService, or 'NORMAL' for legacy
+    expect(['NORMAL', 'ACTIVE']).toContain(body.state);
     expect(body.activatedAt).toBeNull();
     expect(body.activatedBy).toBeNull();
   });
@@ -391,7 +393,7 @@ describe('GET /v1/admin/kill-switch', () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /v1/admin/recover', () => {
-  it('should recover from ACTIVATED state -> 200 with NORMAL', async () => {
+  it('should recover from SUSPENDED state -> 200 with ACTIVE', async () => {
     // Activate kill switch
     await app.request('/v1/admin/kill-switch', {
       method: 'POST',
@@ -406,7 +408,7 @@ describe('POST /v1/admin/recover', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.state).toBe('NORMAL');
+    expect(body.state).toBe('ACTIVE');
     expect(typeof body.recoveredAt).toBe('number');
   });
 
@@ -509,24 +511,24 @@ describe('Kill switch integration', () => {
     // Regular route still returns 200 because global killSwitchGuard isn't synced
     expect(res.status).toBe(200);
 
-    // Verify admin GET kill-switch shows activated state
+    // Verify admin GET kill-switch shows suspended state
     const ksRes = await app.request('/v1/admin/kill-switch', {
       headers: { Host: HOST },
     });
     expect(ksRes.status).toBe(200);
     const ksBody = await json(ksRes);
-    expect(ksBody.state).toBe('ACTIVATED');
+    expect(ksBody.state).toBe('SUSPENDED');
   });
 
   it('should allow admin routes even when kill switch is activated via global callback', async () => {
-    // Create app with kill switch already activated globally
+    // Create app with kill switch already SUSPENDED globally
     const ksApp = createApp({
       db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
       masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
       config: mockConfig(), adapterPool: mockAdapterPool(),
       jwtSecretManager,
       policyEngine: new DefaultPolicyEngine(),
-      getKillSwitchState: () => 'ACTIVATED',
+      getKillSwitchState: () => 'SUSPENDED',
     });
 
     // Admin status should still be accessible
@@ -537,12 +539,12 @@ describe('Kill switch integration', () => {
     const body = await json(res);
     expect(body.status).toBe('running');
 
-    // But regular routes should be blocked
+    // But regular routes should be blocked with 503 SYSTEM_LOCKED
     const walletRes = await ksApp.request('/v1/wallets', {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
-    expect(walletRes.status).toBe(409);
+    expect(walletRes.status).toBe(503);
     const walletBody = await json(walletRes);
-    expect(walletBody.code).toBe('KILL_SWITCH_ACTIVE');
+    expect(walletBody.code).toBe('SYSTEM_LOCKED');
   });
 });

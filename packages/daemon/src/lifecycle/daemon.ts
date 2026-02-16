@@ -27,6 +27,7 @@ import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, getDefaultNetwork, EventBus } from '@waiaas/core';
+import { KillSwitchService } from '../services/kill-switch-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
@@ -123,6 +124,7 @@ export class DaemonLifecycle {
   private apiKeyStore: import('../infrastructure/action/api-key-store.js').ApiKeyStore | null = null;
   private forexRateService: IForexRateService | null = null;
   private eventBus: EventBus = new EventBus();
+  private killSwitchService: KillSwitchService | null = null;
 
 
   /** Whether shutdown has been initiated. */
@@ -294,6 +296,19 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-2: KillSwitchService initialization
+    // ------------------------------------------------------------------
+    if (this.sqlite) {
+      this.killSwitchService = new KillSwitchService({
+        sqlite: this.sqlite,
+        // notificationService will be set after Step 4d
+        eventBus: this.eventBus,
+      });
+      this.killSwitchService.ensureInitialized();
+      console.log('Step 4c-2: KillSwitchService initialized');
+    }
+
+    // ------------------------------------------------------------------
     // Step 4d: Notification Service initialization (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -356,6 +371,17 @@ export class DaemonLifecycle {
     } catch (err) {
       console.warn('Step 4d (fail-soft): NotificationService init warning:', err);
       this.notificationService = null;
+    }
+
+    // Wire NotificationService to KillSwitchService (created before Step 4d)
+    if (this.killSwitchService && this.notificationService) {
+      // Re-create with notification service attached
+      this.killSwitchService = new KillSwitchService({
+        sqlite: this.sqlite!,
+        notificationService: this.notificationService,
+        eventBus: this.eventBus,
+      });
+      this.killSwitchService.ensureInitialized();
     }
 
     // ------------------------------------------------------------------
@@ -479,6 +505,7 @@ export class DaemonLifecycle {
           dataDir,
           forexRateService: this.forexRateService ?? undefined,
           eventBus: this.eventBus,
+          killSwitchService: this.killSwitchService ?? undefined,
         });
 
         this.httpServer = serve({

@@ -64,7 +64,9 @@ import { tokenRegistryRoutes } from './routes/tokens.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
+import { WAIaaSError } from '@waiaas/core';
 import type { IPolicyEngine, IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
+import type { KillSwitchService } from '../services/kill-switch-service.js';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -105,6 +107,7 @@ export interface CreateAppDeps {
   dataDir?: string;
   forexRateService?: IForexRateService;
   eventBus?: EventBus;
+  killSwitchService?: KillSwitchService;
 }
 
 /**
@@ -119,7 +122,11 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // Register global middleware in order
   app.use('*', requestId);
   app.use('*', hostGuard);
-  app.use('*', createKillSwitchGuard(deps.getKillSwitchState));
+  // killSwitchGuard: prefer KillSwitchService if available, else use callback
+  const killSwitchStateGetter: GetKillSwitchState = deps.killSwitchService
+    ? () => deps.killSwitchService!.getState().state
+    : (deps.getKillSwitchState ?? (() => 'ACTIVE'));
+  app.use('*', createKillSwitchGuard(killSwitchStateGetter));
   app.use('*', requestLogger);
 
   // Register error handler
@@ -204,9 +211,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/api-keys', masterAuthForAdmin);
     app.use('/v1/admin/api-keys/*', masterAuthForAdmin);
     app.use('/v1/admin/forex/*', masterAuthForAdmin);
+    app.use('/v1/admin/kill-switch/escalate', masterAuthForAdmin);
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
     app.use('/v1/admin/wallets/*', masterAuthForAdmin);
+  }
+
+  // ownerAuth for POST /v1/owner/kill-switch
+  if (deps.db) {
+    const ownerAuthForKillSwitch = createOwnerAuth({ db: deps.db });
+    app.use('/v1/owner/kill-switch', ownerAuthForKillSwitch);
   }
 
   // Register routes
@@ -369,13 +383,18 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.db) {
     // Kill switch state holder: wraps getKillSwitchState callback with enriched state
     const killSwitchHolder: KillSwitchState = {
-      state: 'NORMAL',
+      state: 'ACTIVE',
       activatedAt: null,
       activatedBy: null,
     };
 
-    // Sync initial state from callback if provided
-    if (deps.getKillSwitchState) {
+    // Sync initial state from KillSwitchService or callback
+    if (deps.killSwitchService) {
+      const ksInfo = deps.killSwitchService.getState();
+      killSwitchHolder.state = ksInfo.state;
+      killSwitchHolder.activatedAt = ksInfo.activatedAt;
+      killSwitchHolder.activatedBy = ksInfo.activatedBy;
+    } else if (deps.getKillSwitchState) {
       killSwitchHolder.state = deps.getKillSwitchState();
     }
 
@@ -387,7 +406,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         getKillSwitchState: () => killSwitchHolder,
         setKillSwitchState: (state: string, activatedBy?: string) => {
           killSwitchHolder.state = state;
-          if (state === 'ACTIVATED') {
+          if (state === 'SUSPENDED' || state === 'LOCKED') {
             killSwitchHolder.activatedAt = Math.floor(Date.now() / 1000);
             killSwitchHolder.activatedBy = activatedBy ?? null;
           } else {
@@ -395,6 +414,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
             killSwitchHolder.activatedBy = null;
           }
         },
+        killSwitchService: deps.killSwitchService,
         requestShutdown: deps.requestShutdown,
         startTime: deps.startTime ?? Math.floor(Date.now() / 1000),
         version: DAEMON_VERSION,
@@ -411,6 +431,30 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         forexRateService: deps.forexRateService,
       }),
     );
+
+    // Register owner kill-switch route (ownerAuth protected)
+    if (deps.killSwitchService) {
+      const ownerKsRouter = new OpenAPIHono();
+      const ownerKillSwitchService = deps.killSwitchService;
+      ownerKsRouter.post('/owner/kill-switch', async (c) => {
+        const ownerAddress = c.get('ownerAddress' as never) as string | undefined;
+        const result = ownerKillSwitchService.activateWithCascade(ownerAddress ?? 'owner');
+        if (!result.success) {
+          throw new WAIaaSError('KILL_SWITCH_ACTIVE', {
+            message: result.error ?? 'Kill switch is already active',
+          });
+        }
+        const state = ownerKillSwitchService.getState();
+        return c.json(
+          {
+            state: 'SUSPENDED' as const,
+            activatedAt: state.activatedAt ?? Math.floor(Date.now() / 1000),
+          },
+          200,
+        );
+      });
+      app.route('/v1', ownerKsRouter);
+    }
   }
 
   // Register token registry routes when DB is available

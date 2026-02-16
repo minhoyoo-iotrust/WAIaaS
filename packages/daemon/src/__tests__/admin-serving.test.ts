@@ -137,20 +137,20 @@ describe('Kill switch bypass', () => {
       db: conn.db,
       sqlite: conn.sqlite,
       config: mockConfig(),
-      getKillSwitchState: () => 'ACTIVATED',
+      getKillSwitchState: () => 'SUSPENDED',
     });
 
     // /admin/ should NOT be blocked by kill switch (CSP header proves /admin/* middleware runs)
     const adminRes = await app.request('/admin/test.js', { headers: { Host: HOST } });
-    // Should not be 409 (kill switch error)
-    expect(adminRes.status).not.toBe(409);
+    // Should not be 503 (kill switch error)
+    expect(adminRes.status).not.toBe(503);
 
     // /health should bypass kill switch too
     const healthRes = await app.request('/health', { headers: { Host: HOST } });
     expect(healthRes.status).toBe(200);
 
-    // But regular API routes SHOULD be blocked
+    // But regular API routes SHOULD be blocked with 503 SYSTEM_LOCKED
     const walletRes = await app.request('/v1/wallets', { headers: { Host: HOST } });
-    expect(walletRes.status).toBe(409);
+    expect(walletRes.status).toBe(503);
   });
 });

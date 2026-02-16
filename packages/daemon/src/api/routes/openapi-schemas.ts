@@ -519,17 +519,40 @@ export const KillSwitchResponseSchema = z
 
 export const KillSwitchActivateResponseSchema = z
   .object({
-    state: z.literal('ACTIVATED'),
+    state: z.literal('SUSPENDED'),
     activatedAt: z.number().int(),
   })
   .openapi('KillSwitchActivateResponse');
 
+export const KillSwitchEscalateResponseSchema = z
+  .object({
+    state: z.literal('LOCKED'),
+    escalatedAt: z.number().int(),
+  })
+  .openapi('KillSwitchEscalateResponse');
+
 export const RecoverResponseSchema = z
   .object({
-    state: z.literal('NORMAL'),
+    state: z.literal('ACTIVE'),
     recoveredAt: z.number().int(),
   })
   .openapi('RecoverResponse');
+
+export const KillSwitchRecoverRequestSchema = z
+  .object({
+    ownerSignature: z.string().optional(),
+    ownerAddress: z.string().optional(),
+    chain: z.enum(['solana', 'ethereum']).optional(),
+    message: z.string().optional(),
+  })
+  .openapi('KillSwitchRecoverRequest');
+
+export const OwnerKillSwitchResponseSchema = z
+  .object({
+    state: z.literal('SUSPENDED'),
+    activatedAt: z.number().int(),
+  })
+  .openapi('OwnerKillSwitchResponse');
 
 export const ShutdownResponseSchema = z
   .object({

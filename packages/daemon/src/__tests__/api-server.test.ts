@@ -119,8 +119,8 @@ describe('killSwitchGuard middleware', () => {
     expect(res.status).toBe(200);
   });
 
-  it('should reject non-health routes when state is ACTIVATED with 409', async () => {
-    const app = createApp({ getKillSwitchState: () => 'ACTIVATED' });
+  it('should reject non-health routes when state is SUSPENDED with 503', async () => {
+    const app = createApp({ getKillSwitchState: () => 'SUSPENDED' });
 
     // Add a test route beyond /health
     app.get('/test', (c) => c.json({ ok: true }));
@@ -129,13 +129,13 @@ describe('killSwitchGuard middleware', () => {
       headers: { Host: '127.0.0.1:3100' },
     });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(503);
     const body = await json(res);
-    expect(body.code).toBe('KILL_SWITCH_ACTIVE');
+    expect(body.code).toBe('SYSTEM_LOCKED');
   });
 
-  it('should bypass kill switch for /health even when ACTIVATED', async () => {
-    const app = createApp({ getKillSwitchState: () => 'ACTIVATED' });
+  it('should bypass kill switch for /health even when SUSPENDED', async () => {
+    const app = createApp({ getKillSwitchState: () => 'SUSPENDED' });
     const res = await app.request('/health', {
       headers: { Host: '127.0.0.1:3100' },
     });

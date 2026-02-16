@@ -190,24 +190,24 @@ describe('hint field in error responses', () => {
     expect(body.hint).toBe('Check the X-Master-Password header value.');
   });
 
-  it('should NOT include hint for non-actionable error codes (KILL_SWITCH_ACTIVE)', async () => {
-    // Create app with kill switch activated
+  it('should NOT include hint for non-actionable error codes (SYSTEM_LOCKED)', async () => {
+    // Create app with kill switch in SUSPENDED state
     const ksApp = createApp({
       db: conn.db, sqlite: conn.sqlite, keyStore: mockKeyStore(),
       masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
       config: mockConfig(), adapterPool: mockAdapterPool(),
       jwtSecretManager: new JwtSecretManager(conn.db),
       policyEngine: new DefaultPolicyEngine(),
-      getKillSwitchState: () => 'ACTIVATED',
+      getKillSwitchState: () => 'SUSPENDED',
     });
 
     const res = await ksApp.request('/v1/wallets', {
       headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
     });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(503);
     const body = await json(res);
-    expect(body.code).toBe('KILL_SWITCH_ACTIVE');
+    expect(body.code).toBe('SYSTEM_LOCKED');
     expect(body.hint).toBeUndefined();
   });
 });
