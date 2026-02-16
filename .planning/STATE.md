@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 157 plan 03 complete
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 157 complete (all 3 plans)
 
 ## Current Position
 
@@ -14,7 +14,7 @@ Plan: 3 of 3 in current phase
 Status: 157-03 complete
 Last activity: 2026-02-17 — Phase 157 plan 03 complete
 
-Progress: [########░░] 79% (15/19 plans)
+Progress: [########░░] 84% (16/19 plans)
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [########░░] 79% (15/19 plans)
 | 156 | 02 | 7min | 2 | 4 |
 | 156 | 03 | 6min | 2 | 2 |
 | 157 | 01 | 6min | 2 | 2 |
+| 157 | 02 | 6min | 2 | 3 |
 | 157 | 03 | 4min | 2 | 2 |
 
 *Updated after each plan completion*
@@ -102,6 +103,10 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 157-01: CTR-U08~U10 ContractCallRequest calldata/accounts 모두 Zod optional
 - 157-03: ACT-U01: Registry에 MCP Tool 상한 하드캡 미존재 (17개 이상 등록 가능, 문서화)
 - 157-03: ACT-U04: 156-02 결정 재확인 -- Registry는 chain 매칭 미강제, pipeline 레벨 검증
+- 157-02: APPROVE_TIER_OVERRIDE amount_tiers 미구현 -> flat tier 필드만 테스트
+- 157-02: BAT-U08 BATCH_NOT_SUPPORTED는 adapter 레벨 에러 -> policy 레벨 evaluateBatch 정상 동작 확인
+- 157-02: BAT-U09/U10 instruction 수 제한은 Zod API 레벨 -> evaluateBatch는 빈/단일 배치 정상 처리
+- 157-02: ORC-U05/U06 USD tier 경계값은 native 기준 검증 (USD amount는 evaluateAndReserve 전달)
 - 157-03: CE-12: STALE !== TRANSIENT -- STALE는 retryable이지만 TX rebuild 필요
 
 ### Blockers/Concerns
@@ -114,5 +119,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 157-01-PLAN.md (EXT-01/02 token+contract tests)
+Stopped at: Completed 157-02-PLAN.md (EXT-03/04/05 approve+batch+oracle tests)
 Resume file: None
