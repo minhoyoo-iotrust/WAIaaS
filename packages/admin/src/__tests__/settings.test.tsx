@@ -109,6 +109,21 @@ const mockSettingsResponse = {
   walletconnect: {
     project_id: '',
   },
+  autostop: {
+    enabled: 'true',
+    consecutive_failures_threshold: '5',
+    unusual_activity_threshold: '20',
+    unusual_activity_window_sec: '300',
+    idle_timeout_sec: '3600',
+    idle_check_interval_sec: '60',
+  },
+  monitoring: {
+    enabled: 'true',
+    check_interval_sec: '300',
+    low_balance_threshold_sol: '0.01',
+    low_balance_threshold_eth: '0.005',
+    cooldown_hours: '24',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -515,6 +530,112 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Kill switch recovered - operations resumed');
+    });
+  });
+
+  // ---- Test 20: AutoStop section renders heading ----
+  it('renders AutoStop Rules section heading', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    expect(screen.getByText('AutoStop Rules')).toBeTruthy();
+  });
+
+  // ---- Test 21: AutoStop fields display ----
+  it('renders AutoStop fields with correct values', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Consecutive Failures Threshold label should be rendered
+    expect(screen.getByText('Consecutive Failures Threshold')).toBeTruthy();
+
+    // Check the threshold value
+    const thresholdInput = document.querySelector('input[name="autostop.consecutive_failures_threshold"]') as HTMLInputElement;
+    expect(thresholdInput).toBeTruthy();
+    expect(thresholdInput.value).toBe('5');
+
+    // Check idle timeout
+    const idleInput = document.querySelector('input[name="autostop.idle_timeout_sec"]') as HTMLInputElement;
+    expect(idleInput).toBeTruthy();
+    expect(idleInput.value).toBe('3600');
+  });
+
+  // ---- Test 22: Balance Monitoring section renders heading ----
+  it('renders Balance Monitoring section heading', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    expect(screen.getByText('Balance Monitoring')).toBeTruthy();
+  });
+
+  // ---- Test 23: Monitoring fields display ----
+  it('renders Monitoring fields with correct values', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Low Balance Threshold (SOL) label should be rendered
+    expect(screen.getByText('Low Balance Threshold (SOL)')).toBeTruthy();
+
+    // Check the SOL threshold value
+    const solInput = document.querySelector('input[name="monitoring.low_balance_threshold_sol"]') as HTMLInputElement;
+    expect(solInput).toBeTruthy();
+    expect(solInput.value).toBe('0.01');
+
+    // Check cooldown hours
+    const cooldownInput = document.querySelector('input[name="monitoring.cooldown_hours"]') as HTMLInputElement;
+    expect(cooldownInput).toBeTruthy();
+    expect(cooldownInput.value).toBe('24');
+  });
+
+  // ---- Test 24: AutoStop field change shows save bar ----
+  it('shows save bar when AutoStop field is modified', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Save bar should not be visible initially
+    expect(screen.queryByText(/unsaved/i)).toBeNull();
+
+    // Modify autostop threshold
+    const thresholdInput = document.querySelector('input[name="autostop.consecutive_failures_threshold"]') as HTMLInputElement;
+    fireEvent.input(thresholdInput, { target: { value: '10' } });
+
+    // Save bar should now appear
+    await waitFor(() => {
+      expect(screen.getByText('1 unsaved change')).toBeTruthy();
+    });
+  });
+
+  // ---- Test 25: Save includes autostop/monitoring keys ----
+  it('saves autostop/monitoring changes via PUT', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // Modify autostop field
+    const thresholdInput = document.querySelector('input[name="autostop.consecutive_failures_threshold"]') as HTMLInputElement;
+    fireEvent.input(thresholdInput, { target: { value: '10' } });
+
+    // Modify monitoring field
+    const cooldownInput = document.querySelector('input[name="monitoring.cooldown_hours"]') as HTMLInputElement;
+    fireEvent.input(cooldownInput, { target: { value: '48' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/unsaved/i)).toBeTruthy();
+    });
+
+    // Mock PUT success
+    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+
+    // Click Save
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      const putCall = vi.mocked(apiPut).mock.calls[0];
+      expect(putCall).toBeTruthy();
+      expect(putCall![0]).toBe('/v1/admin/settings');
+      const body = putCall![1] as { settings: { key: string; value: string }[] };
+      const keys = body.settings.map((s) => s.key);
+      expect(keys).toContain('autostop.consecutive_failures_threshold');
+      expect(keys).toContain('monitoring.cooldown_hours');
     });
   });
 });
