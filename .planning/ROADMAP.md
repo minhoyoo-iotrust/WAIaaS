@@ -66,11 +66,11 @@ Plans:
   3. EVM(personal_sign)과 Solana(solana_signMessage) 양쪽 체인의 서명 요청이 동작한다
   4. pending_approvals에 approval_channel(wc/telegram/rest)이 기록되어 감사 추적이 가능하다
   5. WC 서명 요청 타임아웃이 ApprovalWorkflow 타임아웃과 동기화된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 148-01: ApprovalWorkflow-WC 브릿지 (session_request 전송, EVM/Solana 분기, 타임아웃 동기화)
-- [ ] 148-02: WC 서명 응답 처리 (ownerAuth 검증, approve/reject, approval_channel 기록)
+- [ ] 148-01-PLAN.md -- WcSigningBridge 서비스 + stage4Wait WC 연동 + DI 배선
+- [ ] 148-02-PLAN.md -- WcSigningBridge 단위 테스트 + stage4Wait 통합 테스트
 
 ### Phase 149: Telegram Fallback
 **Goal**: WC 채널이 불가능할 때 Telegram Bot으로 자동 전환되며, 어떤 경우에도 단일 채널에서만 승인이 처리된다
@@ -108,11 +108,11 @@ Phases execute in numeric order: 146 → 147 → 148 → 149 → 150
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 146. WC 인프라 세팅 | v1.6.1 | 2/2 | Complete | 2026-02-16 |
-| 147. QR 페어링 + REST API | v1.6.1 | 0/2 | Not started | - |
+| 147. QR 페어링 + REST API | v1.6.1 | 2/2 | Complete | 2026-02-16 |
 | 148. WC 서명 요청 | v1.6.1 | 0/2 | Not started | - |
 | 149. Telegram Fallback | v1.6.1 | 0/1 | Not started | - |
 | 150. Admin UI + DX | v1.6.1 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-16*
-*Last updated: 2026-02-16 -- Phase 147 계획 수립*
+*Last updated: 2026-02-16 -- Phase 148 계획 수립*
