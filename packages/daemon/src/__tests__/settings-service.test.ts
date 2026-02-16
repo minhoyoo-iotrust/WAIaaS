@@ -383,7 +383,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -418,8 +418,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 9 notifications + 14 rpc + 11 security + 1 daemon + 1 walletconnect + 2 oracle + 1 display + 6 autostop = 45
-      expect(SETTING_DEFINITIONS.length).toBe(45);
+      // 9 notifications + 14 rpc + 11 security + 1 daemon + 1 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring = 50
+      expect(SETTING_DEFINITIONS.length).toBe(50);
     });
   });
 });

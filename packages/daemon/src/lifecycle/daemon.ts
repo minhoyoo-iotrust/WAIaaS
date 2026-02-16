@@ -30,6 +30,7 @@ import { WAIaaSError, getDefaultNetwork, EventBus } from '@waiaas/core';
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
 import type { AutoStopConfig } from '../services/autostop-service.js';
+import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
@@ -128,6 +129,7 @@ export class DaemonLifecycle {
   private eventBus: EventBus = new EventBus();
   private killSwitchService: KillSwitchService | null = null;
   private autoStopService: AutoStopService | null = null;
+  private balanceMonitorService: BalanceMonitorService | null = null;
 
 
   /** Whether shutdown has been initiated. */
@@ -422,6 +424,43 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-4: BalanceMonitorService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this.adapterPool && this._config && this._settingsService) {
+        const { BalanceMonitorService: BalanceMonitorCls } = await import(
+          '../services/monitoring/balance-monitor-service.js'
+        );
+
+        const monitorConfig: BalanceMonitorConfig = {
+          checkIntervalSec: parseInt(this._settingsService.get('monitoring.check_interval_sec'), 10),
+          lowBalanceThresholdSol: parseFloat(this._settingsService.get('monitoring.low_balance_threshold_sol')),
+          lowBalanceThresholdEth: parseFloat(this._settingsService.get('monitoring.low_balance_threshold_eth')),
+          cooldownHours: parseInt(this._settingsService.get('monitoring.cooldown_hours'), 10),
+          enabled: this._settingsService.get('monitoring.enabled') === 'true',
+        };
+
+        this.balanceMonitorService = new BalanceMonitorCls({
+          sqlite: this.sqlite,
+          adapterPool: this.adapterPool,
+          config: this._config,
+          notificationService: this.notificationService ?? undefined,
+          monitorConfig,
+        });
+
+        if (monitorConfig.enabled) {
+          this.balanceMonitorService.start();
+          console.log('Step 4c-4: Balance monitor started');
+        } else {
+          console.log('Step 4c-4: Balance monitor disabled');
+        }
+      }
+    } catch (err) {
+      console.warn('Step 4c-4 (fail-soft): Balance monitor init warning:', err);
+      this.balanceMonitorService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -514,6 +553,7 @@ export class DaemonLifecycle {
           notificationService: this.notificationService,
           adapterPool: this.adapterPool,
           autoStopService: this.autoStopService,
+          balanceMonitorService: this.balanceMonitorService,
         });
 
         const app = createApp({
@@ -689,6 +729,12 @@ export class DaemonLifecycle {
       if (this.autoStopService) {
         this.autoStopService.stop();
         this.autoStopService = null;
+      }
+
+      // Stop BalanceMonitorService (before EventBus cleanup)
+      if (this.balanceMonitorService) {
+        this.balanceMonitorService.stop();
+        this.balanceMonitorService = null;
       }
 
       // Step 6b: Remove all EventBus listeners
