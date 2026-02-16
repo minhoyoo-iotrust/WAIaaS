@@ -37,6 +37,7 @@ Progress: [#######░░░] 68% (13/19 plans)
 | 155 | 01 | 7min | 2 | 4 |
 | 155 | 02 | 8min | 2 | 4 |
 | 156 | 01 | 8min | 2 | 3 |
+| 156 | 02 | 7min | 2 | 4 |
 | 156 | 03 | 6min | 2 | 2 |
 
 *Updated after each plan completion*
@@ -88,6 +89,10 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 156-01: Solana u64.max < UNLIMITED_THRESHOLD -> Solana에서는 blockUnlimited 미트리거 (EVM 전용)
 - 156-01: contract-whitelist 테스트 defaultNetwork 'sepolia' -> 'ethereum-sepolia' (DB CHECK 제약 준수)
 - 156-01: SEC-06-32 대량 토큰 리스트 주소 동적 생성 (하드코딩 길이 오류 방지)
+- 156-02: evaluateBatch 무정책 -> INSTANT passthrough이므로 default-deny 트리거에 최소 1개 정책 필요
+- 156-02: InMemoryPriceCache 내부 expiresAt 직접 조작으로 TTL 만료 시뮬레이션
+- 156-02: JupiterSwapProvider 미존재 -> JupiterSwapInputSchema 선제적 Zod 정의로 보안 계약 검증
+- 156-02: ActionProviderRegistry는 resolve() 시 체인 매칭 미강제 (pipeline 레벨 검증)
 - 156-03: IPv6-in-brackets URL은 URL parser가 hex로 정규화하여 isIP() 0 반환, DNS ENOTFOUND로 차단
 - 156-03: @waiaas/core 패키지 export로 ChainError/CHAIN_ERROR_CATEGORIES import (상대 경로 불필요)
 
@@ -101,5 +106,5 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 156-01-PLAN.md (executed after 156-03)
+Stopped at: Completed 156-02-PLAN.md (all Phase 156 plans complete)
 Resume file: None
