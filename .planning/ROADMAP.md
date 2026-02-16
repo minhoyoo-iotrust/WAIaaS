@@ -86,11 +86,11 @@
 
 </details>
 
-### 🚧 v1.6 운영 인프라 + 잔액 모니터링 (In Progress)
+### v1.6 운영 인프라 + 잔액 모니터링 (In Progress)
 
 **Milestone Goal:** Kill Switch/AutoStop으로 긴급 제어, Telegram Bot으로 원격 관리, Docker로 원클릭 배포, 잔액 모니터링으로 가스비 부족 사전 알림이 동작하는 상태
 
-- [ ] **Phase 140: Event Bus + Kill Switch** - 이벤트 인프라와 3-state 긴급 정지 시스템
+- [ ] **Phase 140: Event Bus + Kill Switch** (3 plans) - 이벤트 인프라와 3-state 긴급 정지 시스템
 - [ ] **Phase 141: AutoStop Engine** - 이벤트 기반 자동 정지 규칙 엔진
 - [ ] **Phase 142: Balance Monitoring** - 주기적 잔액 체크 + LOW_BALANCE 알림
 - [ ] **Phase 143: Telegram Bot** - Long Polling 기반 원격 관리 봇
@@ -103,18 +103,12 @@
 **Goal**: 긴급 상황 시 사용자가 모든 월렛 활동을 즉시 정지하고 안전하게 복구할 수 있다
 **Depends on**: Nothing (first phase of v1.6)
 **Requirements**: EVNT-01, EVNT-02, EVNT-03, KILL-01, KILL-02, KILL-03, KILL-04, KILL-05, KILL-06, KILL-07, KILL-08, KILL-09, KILL-10
-**Success Criteria** (what must be TRUE):
-  1. EventEmitter 이벤트 버스가 TransactionCompleted/TransactionFailed/WalletActivity 이벤트를 발행하고, 파이프라인 기존 notify() 호출 지점에서 이벤트가 동시 발행된다
-  2. POST /v1/admin/kill-switch(masterAuth) 또는 POST /v1/owner/kill-switch(ownerAuth)를 호출하면 ACTIVE에서 SUSPENDED로 원자적 전이가 수행되고, 세션 무효화/거래 중단/월렛 정지/API 503/알림/감사 로그 6-step cascade가 실행된다
-  3. SUSPENDED 상태에서 dual-auth(Owner 서명 + Master 패스워드)로 ACTIVE 복구가 가능하고, LOCKED 상태에서는 동일 dual-auth + 추가 대기 시간으로 복구가 가능하다
-  4. 동시에 두 Kill Switch 요청이 도착하면 CAS ACID 패턴에 의해 하나만 성공하고 나머지는 409를 반환하며, 잘못된 상태 전이(ACTIVE에서 LOCKED 직접 등)는 409로 거부된다
-  5. 기존 DB kill_switch_state 값 NORMAL이 ACTIVE로, ACTIVATED가 SUSPENDED로 마이그레이션된다
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 140-01: Event Bus 인프라 + 파이프라인 이벤트 발행
-- [ ] 140-02: KillSwitchService 3-state 상태 머신 + CAS ACID + DB 마이그레이션
-- [ ] 140-03: Kill Switch 6-step Cascade + REST API + 미들웨어
+- [ ] 140-01-PLAN.md -- Event Bus 인프라 + 파이프라인 이벤트 발행
+- [ ] 140-02-PLAN.md -- KillSwitchService 3-state 상태 머신 + CAS ACID + DB 마이그레이션
+- [ ] 140-03-PLAN.md -- Kill Switch 6-step Cascade + REST API + 미들웨어
 
 ### Phase 141: AutoStop Engine
 **Goal**: 이상 상황이 감지되면 시스템이 자동으로 월렛을 정지하거나 Kill Switch를 발동하여 피해를 최소화한다
@@ -197,7 +191,7 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 140. Event Bus + Kill Switch | 0/3 | Not started | - |
+| 140. Event Bus + Kill Switch | 0/3 | Planning complete | - |
 | 141. AutoStop Engine | 0/2 | Not started | - |
 | 142. Balance Monitoring | 0/2 | Not started | - |
 | 143. Telegram Bot | 0/3 | Not started | - |
@@ -206,4 +200,4 @@ Phases execute in numeric order: 140 -> 141 -> 142 -> 143 -> 144 -> 145
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-16 -- v1.6 로드맵 생성 (Phases 140-145, 49 requirements)*
+*Last updated: 2026-02-16 -- Phase 140 계획 완료 (3 plans, 2 waves)*
