@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.7 품질 강화 + CI/CD — Phase 154 complete, next Phase 155
+**Current focus:** v1.7 품질 강화 + CI/CD — Phase 155 in progress, 155-01 complete
 
 ## Current Position
 
-Phase: 154 of 159 (Blockchain 3-Level)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-16 — Phase 154 complete (2/2 plans)
+Phase: 155 of 159 (Security Test P1)
+Plan: 1 of 2 in current phase
+Status: Plan 1 complete
+Last activity: 2026-02-17 — Phase 155 plan 01 complete
 
-Progress: [####░░░░░░] 42% (8/19 plans)
+Progress: [#####░░░░░] 47% (9/19 plans)
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [####░░░░░░] 42% (8/19 plans)
 | 153 | 01 | 7min | 2 | 4 |
 | 154 | 01 | 5min | 2 | 4 |
 | 154 | 02 | 7min | 2 | 3 |
+| 155 | 01 | 7min | 2 | 4 |
 
 *Updated after each plan completion*
 
@@ -69,6 +70,12 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 - 154-02: SimpleERC20 bytecode hardcoded in helpers (solc 0.8.20, 1M tokens minted)
 - 154-02: Devnet isDevnetError broad match (simulation-failed/insufficient 포함)
 - 154-02: airdropWithRetry returns boolean -- fund-dependent 테스트는 airdropSucceeded 체크
+- 155-01: OWNER_NOT_CONNECTED httpStatus는 404 (error-codes.ts SSoT)
+- 155-01: seedSecurityTestData public_key에 walletId 전체 사용 (UNIQUE 제약 충돌 방지)
+- 155-01: SEC-01-05~09 세션 constraints는 DB 데이터 레벨 검증 (미들웨어 미구현)
+- 155-01: SEC-02-04~07 TIME_RESTRICTION/RATE_LIMIT 미구현 PolicyType은 개념 검증으로 대체
+- 155-01: WHITELIST은 EVM/Solana 모두 case-insensitive (현행 구현 문서화)
+- 155-01: reserved_amount는 개별 거래 금액 저장 -- SUM 쿼리로 TOCTOU 방어
 
 ### Blockers/Concerns
 
@@ -79,6 +86,6 @@ v1.6.1 decisions archived to milestones/v1.6.1-ROADMAP.md (28 decisions).
 
 ## Session Continuity
 
-Last session: 2026-02-16
-Stopped at: Completed 154-02-PLAN.md (Phase 154 complete)
+Last session: 2026-02-17
+Stopped at: Completed 155-01-PLAN.md
 Resume file: None
