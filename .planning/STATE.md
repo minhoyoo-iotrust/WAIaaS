@@ -2,28 +2,28 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-17)
+See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 170 진행 중
+**Current focus:** v2.0 마일스톤 완료 -- 전 Phase 완료, 마일스톤 감사/아카이브 대기
 
 ## Current Position
 
-Phase: 6 of 6 (Phase 170: 배포 사전 검증) -- IN PROGRESS
-Plan: 2 of 3 in current phase (170-02 COMPLETE)
-Status: 170-02 (Docker Hub + release.yml 배포 활성화) 완료, 170-03 대기
-Last activity: 2026-02-17 -- Completed 170-02 (Docker Hub + release.yml 배포 활성화)
+Phase: 6 of 6 (Phase 170: 배포 활성화 + pre-release) -- COMPLETE
+Plan: 3 of 3 in current phase (170-03 COMPLETE)
+Status: v2.0 전 Phase 완료. 마일스톤 감사(/gsd:audit-milestone) + 완료(/gsd:complete-milestone) 대기.
+Last activity: 2026-02-18 -- v2.0.0-rc.1 npm 8패키지 + Docker 발행 성공
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
+**Cumulative:** 37 milestones, 170 phases, 370 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 11 (v2.0)
-- Average duration: 5min
-- Total execution time: 50min
+- Total plans completed: 14 (v2.0)
+- Average duration: 8min (CI 디버깅 제외 시 5min)
+- Total execution time: ~4h (170-03 CI 디버깅 3h 포함)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -40,6 +40,7 @@ Progress: [█████████░] 93%
 | 169   | 02   | 4min     | 2     | 5     |
 | 170   | 01   | 9min     | 2     | 10    |
 | 170   | 02   | 3min     | 2     | 1     |
+| 170   | 03   | ~3h      | 2     | 4     |
 
 ## Accumulated Context
 
@@ -79,16 +80,22 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 170-02: Docker Hub 이미지명 waiaas/daemon으로 확정
 - 170-02: RC 태그에서 latest/major/major.minor 태그 생성하지 않음 -- contains('-') 조건
 - 170-02: 8패키지 publish-check/deploy 양쪽에 동일한 PACKAGES 배열 패턴 적용
+- 170-03: release-as와 prerelease-type은 결합 불가 -- release-as: "2.0.0-rc.1" 명시적 설정 필요
+- 170-03: GITHUB_TOKEN → RELEASE_PAT 전환 -- GITHUB_TOKEN은 다른 워크플로를 트리거할 수 없음
+- 170-03: googleapis/release-please-action@v4 사용 -- google-github-actions 버전은 deprecated
+- 170-03: metadaoproject/setup-solana@v1.2 → Anza 공식 인스톨러 (액션 버그)
+- 170-03: Docker builder에서 daemon+cli+mcp+sdk만 빌드 (skills 제외)
+- 170-03: npm Classic Automation Token 사용, Trusted Publishing은 v2.0.4에서 전환
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
-- ~~Pre-existing 3 CLI E2E failures (E-07~09) -- daemon-harness adapter: param~~ -- 167-03에서 이미 해결됨 확인
 - Pre-existing 3 sessions.test.tsx failures -- not blocking
-- ~~npm @waiaas scope 확보 필요 (RELEASE-02)~~ -- Phase 165-01에서 해결 완료
+- Fine-grained PAT + release-please GraphQL 호환성 불안정 -- 수동 릴리스 생성으로 우회 중
+- GitHub Free plan에서 environment protection rules 사용 불가 -- repo public 전환 시 해결
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed 170-02-PLAN.md (Docker Hub + release.yml 배포 활성화). Phase 170 진행 중. 170-03 대기.
+Last session: 2026-02-18
+Stopped at: v2.0 전 Phase 완료 (165-170). v2.0.0-rc.1 npm + Docker 발행 성공. 마일스톤 감사/아카이브 대기.
 Resume file: None
