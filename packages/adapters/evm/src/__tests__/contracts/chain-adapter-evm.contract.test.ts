@@ -85,7 +85,7 @@ vi.mock('viem/accounts', () => ({
 }));
 
 import { EvmAdapter } from '../../adapter.js';
-import { chainAdapterContractTests } from '../../../../../core/src/__tests__/contracts/chain-adapter.contract.js';
+import { chainAdapterContractTests } from '@waiaas/core/testing';
 
 // ---- Test Constants ----
 
@@ -98,7 +98,7 @@ const VALID_EVM_ADDRESS_2 = '0x1234567890abcdef1234567890abcdef12345678';
 describe('CT-2: EvmAdapter Contract Tests', () => {
   chainAdapterContractTests(
     async () => {
-      const adapter = new EvmAdapter('sepolia');
+      const adapter = new EvmAdapter('ethereum-sepolia');
       await adapter.connect(MOCK_RPC_URL);
       return adapter;
     },

@@ -233,7 +233,8 @@ export function createOwnerKeyPair(seed?: Buffer): OwnerKeyPair {
   const secretKey = Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 
   if (seed) {
-    sodium.crypto_sign_seed_keypair(publicKey, secretKey, seed);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (sodium as any).crypto_sign_seed_keypair(publicKey, secretKey, seed);
   } else {
     sodium.crypto_sign_keypair(publicKey, secretKey);
   }
