@@ -37,8 +37,8 @@ RUN pnpm install --frozen-lockfile
 # 4) Copy full source
 COPY . .
 
-# 5) Build daemon + cli + mcp and all their dependencies
-RUN pnpm turbo build --filter=@waiaas/daemon... --filter=@waiaas/cli... --filter=@waiaas/mcp...
+# 5) Build all packages included in Docker image
+RUN pnpm turbo build --filter=@waiaas/daemon... --filter=@waiaas/cli... --filter=@waiaas/mcp... --filter=@waiaas/sdk...
 
 
 # ---------------------------------------------------------------------------
