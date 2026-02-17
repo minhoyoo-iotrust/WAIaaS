@@ -471,6 +471,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Skill not found',
   },
+  SCHEMA_INCOMPATIBLE: {
+    code: 'SCHEMA_INCOMPATIBLE',
+    domain: 'SYSTEM',
+    httpStatus: 503,
+    retryable: false,
+    message: 'Database schema version is incompatible with this code version',
+  },
 
   // --- WALLET domain (6) ---
   WALLET_NOT_FOUND: {

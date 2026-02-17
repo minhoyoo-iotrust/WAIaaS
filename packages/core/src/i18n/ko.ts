@@ -72,6 +72,7 @@ export const messages: Messages = {
     SHUTTING_DOWN: '서버가 종료 중입니다',
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
     SKILL_NOT_FOUND: '스킬을 찾을 수 없습니다',
+    SCHEMA_INCOMPATIBLE: 'DB 스키마 버전이 현재 코드 버전과 호환되지 않습니다',
     // WALLET domain (6)
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',

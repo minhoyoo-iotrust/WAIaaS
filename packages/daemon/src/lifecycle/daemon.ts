@@ -37,7 +37,7 @@ import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/mo
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
-import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
@@ -216,7 +216,19 @@ export class DaemonLifecycle {
         this.sqlite = sqlite;
         this._db = db;
 
-        // Create all tables (idempotent)
+        // Check schema compatibility before migration
+        const compatibility = checkSchemaCompatibility(sqlite);
+        if (compatibility.action === 'reject') {
+          console.error(`Step 2: Schema incompatible -- ${compatibility.message}`);
+          throw new WAIaaSError('SCHEMA_INCOMPATIBLE', {
+            message: compatibility.message,
+          });
+        }
+        if (compatibility.action === 'migrate') {
+          console.log('Step 2: Schema migration needed, applying...');
+        }
+
+        // Create all tables + run migrations (idempotent)
         pushSchema(sqlite);
 
         // Auto-import config.toml operational settings into DB (first boot only)

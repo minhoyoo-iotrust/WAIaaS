@@ -124,6 +124,7 @@ export const messages: Messages = {
     SHUTTING_DOWN: 'Server is shutting down',
     ADAPTER_NOT_AVAILABLE: 'Chain adapter not available',
     SKILL_NOT_FOUND: 'Skill not found',
+    SCHEMA_INCOMPATIBLE: 'Database schema version is incompatible with this code version',
     // WALLET domain (6)
     WALLET_NOT_FOUND: 'Wallet not found',
     WALLET_SUSPENDED: 'Wallet is suspended',
