@@ -37,7 +37,7 @@ import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/mo
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
-import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
@@ -138,6 +138,7 @@ export class DaemonLifecycle {
   private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
   private wcServiceRef: import('../services/wc-session-service.js').WcServiceRef = { current: null };
   private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
+  private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -157,6 +158,11 @@ export class DaemonLifecycle {
   /** SettingsService instance (available after Step 2, used by route handlers). */
   get settingsService(): import('../infrastructure/settings/settings-service.js').SettingsService | null {
     return this._settingsService;
+  }
+
+  /** VersionCheckService instance (available after Step 6, used by Health endpoint). */
+  get versionCheckService(): import('../infrastructure/version/version-check-service.js').VersionCheckService | null {
+    return this._versionCheckService;
   }
 
   /**
@@ -210,7 +216,19 @@ export class DaemonLifecycle {
         this.sqlite = sqlite;
         this._db = db;
 
-        // Create all tables (idempotent)
+        // Check schema compatibility before migration
+        const compatibility = checkSchemaCompatibility(sqlite);
+        if (compatibility.action === 'reject') {
+          console.error(`Step 2: Schema incompatible -- ${compatibility.message}`);
+          throw new WAIaaSError('SCHEMA_INCOMPATIBLE', {
+            message: compatibility.message,
+          });
+        }
+        if (compatibility.action === 'migrate') {
+          console.log('Step 2: Schema migration needed, applying...');
+        }
+
+        // Create all tables + run migrations (idempotent)
         pushSchema(sqlite);
 
         // Auto-import config.toml operational settings into DB (first boot only)
@@ -629,6 +647,15 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4g: VersionCheckService (create before Step 5 for Health endpoint)
+    // ------------------------------------------------------------------
+    if (this.sqlite && this._config!.daemon.update_check) {
+      const { VersionCheckService } = await import('../infrastructure/version/index.js');
+      this._versionCheckService = new VersionCheckService(this.sqlite);
+      console.log('Step 4g: VersionCheckService created');
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -679,6 +706,7 @@ export class DaemonLifecycle {
           killSwitchService: this.killSwitchService ?? undefined,
           wcServiceRef: this.wcServiceRef,
           wcSigningBridge: this.wcSigningBridge ?? undefined,
+          versionCheckService: this._versionCheckService,
         });
 
         this.httpServer = serve({
@@ -764,6 +792,19 @@ export class DaemonLifecycle {
             this.approvalWorkflow!.processExpiredApprovals(now);
           },
         });
+      }
+
+      // Register version-check worker (uses instance created in Step 4g)
+      if (this._versionCheckService) {
+        const versionCheckInterval = this._config!.daemon.update_check_interval * 1000;
+        this.workers.register('version-check', {
+          interval: versionCheckInterval,
+          runImmediately: true,
+          handler: async () => { await this._versionCheckService!.check(); },
+        });
+        console.log('Step 6: Version check worker registered');
+      } else {
+        console.log('Step 6: Version check disabled');
       }
 
       this.workers.startAll();

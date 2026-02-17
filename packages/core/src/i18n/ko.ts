@@ -62,6 +62,8 @@ export const messages: Messages = {
     OWNER_NOT_FOUND: 'Owner를 찾을 수 없습니다',
     APPROVAL_TIMEOUT: '승인 요청이 시간 초과되었습니다',
     APPROVAL_NOT_FOUND: '승인 요청을 찾을 수 없습니다',
+    OWNER_NOT_SET: 'Owner 주소가 설정되어야 이 작업을 수행할 수 있습니다',
+    OWNER_ADDRESS_MISMATCH: '연결된 지갑 주소가 등록된 Owner와 일치하지 않습니다',
     // SYSTEM domain (9)
     KILL_SWITCH_ACTIVE: '킬 스위치가 이미 활성화되어 있습니다',
     KILL_SWITCH_NOT_ACTIVE: '킬 스위치가 활성화되지 않았습니다',
@@ -72,6 +74,7 @@ export const messages: Messages = {
     SHUTTING_DOWN: '서버가 종료 중입니다',
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
     SKILL_NOT_FOUND: '스킬을 찾을 수 없습니다',
+    SCHEMA_INCOMPATIBLE: 'DB 스키마 버전이 현재 코드 버전과 호환되지 않습니다',
     // WALLET domain (6)
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',

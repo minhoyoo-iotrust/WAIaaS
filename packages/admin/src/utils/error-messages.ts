@@ -59,6 +59,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   OWNER_NOT_FOUND: 'Owner not found.',
   APPROVAL_TIMEOUT: 'The approval request has timed out.',
   APPROVAL_NOT_FOUND: 'Approval request not found.',
+  OWNER_NOT_SET: 'Owner address must be set before connecting WalletConnect.',
+  OWNER_ADDRESS_MISMATCH: 'Connected wallet address does not match registered owner.',
 
   // SYSTEM domain (6)
   KILL_SWITCH_ACTIVE: 'Kill switch is active. All operations are suspended.',

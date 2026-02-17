@@ -67,6 +67,11 @@
 | 050 | ENHANCEMENT | MEDIUM | Telegram Bot 활성화를 Admin Settings에서 관리 | v1.6 | FIXED | 2026-02-17 |
 | 051 | ENHANCEMENT | LOW | 외부 지갑 예시에 D'CENT 추가 및 우선 표기 | v1.7 | FIXED | 2026-02-17 |
 | 052 | BUG | HIGH | E2E 하네스가 AdapterPool 대신 단일 adapter 전달 — 3건 실패 | v1.7 | FIXED | 2026-02-17 |
+| 053 | ENHANCEMENT | LOW | CI workflow에 workflow_dispatch 미지원 — 수동 전체 테스트 실행 불가 | v1.7 | FIXED | 2026-02-17 |
+| 054 | BUG | LOW | Owner 주소 저장 후 Created 시각이 NaN으로 표시 | v1.7 | FIXED | 2026-02-17 |
+| 055 | ENHANCEMENT | MEDIUM | Admin UI Owner 지갑 UX 개선 — 가시성 및 안내 강화 | v1.7 | FIXED | 2026-02-17 |
+| 056 | BUG | HIGH | WalletConnect 페어링 시 Owner 주소 검증 누락 | v1.7 | FIXED | 2026-02-17 |
+| 057 | MISSING | MEDIUM | Owner 수동 검증 API + Admin UI Verify 버튼 | v1.7 | FIXED | 2026-02-17 |
 
 ## Type Legend
 
@@ -79,7 +84,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 52
+- **FIXED:** 57
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 52
+- **Total:** 57

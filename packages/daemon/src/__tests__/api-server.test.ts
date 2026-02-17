@@ -241,7 +241,7 @@ describe('health route', () => {
     expect(res.status).toBe(200);
   });
 
-  it('should return body with status, version, uptime, timestamp', async () => {
+  it('should return body with status, version, uptime, timestamp, and version check fields', async () => {
     const app = createTestApp();
     const res = await app.request('/health', {
       headers: { Host: '127.0.0.1:3100' },
@@ -252,6 +252,9 @@ describe('health route', () => {
     expect(body.version).toMatch(/^\d+\.\d+\.\d+/);
     expect(typeof body.uptime).toBe('number');
     expect(typeof body.timestamp).toBe('number');
+    expect(body.latestVersion).toBeNull();
+    expect(body.updateAvailable).toBe(false);
+    expect(typeof body.schemaVersion).toBe('number');
   });
 
   it('should return timestamp in Unix seconds (not milliseconds)', async () => {
@@ -266,6 +269,48 @@ describe('health route', () => {
     // Milliseconds would be ~1.7e12, seconds should be ~1.7e9
     expect(timestamp).toBeLessThan(1e11); // Less than 100 billion = seconds
     expect(timestamp).toBeGreaterThan(1e9); // Greater than 1 billion = after year 2001
+  });
+
+  it('should include latestVersion, updateAvailable, schemaVersion in health response', async () => {
+    const app = createTestApp();
+    const res = await app.request('/health', { headers: { Host: '127.0.0.1:3100' } });
+    const body = await json(res);
+
+    // Default (no versionCheckService): latestVersion = null, updateAvailable = false
+    expect(body.latestVersion).toBeNull();
+    expect(body.updateAvailable).toBe(false);
+    expect(typeof body.schemaVersion).toBe('number');
+    expect(body.schemaVersion).toBeGreaterThan(0);
+  });
+
+  it('should return updateAvailable=true when latest > current', async () => {
+    // Create a mock VersionCheckService that returns a higher version
+    const mockService = { getLatest: () => '99.0.0', getCheckedAt: () => 1000 };
+    const app = createApp({ versionCheckService: mockService as any });
+    const res = await app.request('/health', { headers: { Host: '127.0.0.1:3100' } });
+    const body = await json(res);
+
+    expect(body.latestVersion).toBe('99.0.0');
+    expect(body.updateAvailable).toBe(true);
+  });
+
+  it('should return updateAvailable=false when latest <= current', async () => {
+    const mockService = { getLatest: () => '0.0.1', getCheckedAt: () => 1000 };
+    const app = createApp({ versionCheckService: mockService as any });
+    const res = await app.request('/health', { headers: { Host: '127.0.0.1:3100' } });
+    const body = await json(res);
+
+    expect(body.latestVersion).toBe('0.0.1');
+    expect(body.updateAvailable).toBe(false);
+  });
+
+  it('should return latestVersion=null when version check service is null', async () => {
+    const app = createApp({ versionCheckService: null });
+    const res = await app.request('/health', { headers: { Host: '127.0.0.1:3100' } });
+    const body = await json(res);
+
+    expect(body.latestVersion).toBeNull();
+    expect(body.updateAvailable).toBe(false);
   });
 });
 

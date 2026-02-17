@@ -13,6 +13,10 @@
  *   owner disconnect                  -- Disconnect WalletConnect session
  *   owner status                      -- Show WalletConnect session status
  *   mcp setup                         -- Set up MCP integration for Claude Desktop
+ *   upgrade                           -- Upgrade WAIaaS to the latest version
+ *   upgrade --check                   -- Check for available updates
+ *   upgrade --to <version>            -- Upgrade to a specific version
+ *   upgrade --rollback                -- Restore from the latest backup
  *
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
  */
@@ -26,7 +30,9 @@ import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
 import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
+import { upgradeCommand } from './commands/upgrade.js';
 import { resolveDataDir } from './utils/data-dir.js';
+import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
 const program = new Command();
 
@@ -210,6 +216,40 @@ mcp
       masterPassword: opts.password,
     });
   });
+
+program
+  .command('upgrade')
+  .description('Upgrade WAIaaS to the latest version')
+  .option('--data-dir <path>', 'Data directory path')
+  .option('--check', 'Check for updates without upgrading')
+  .option('--to <version>', 'Upgrade to a specific version')
+  .option('--rollback', 'Restore from the latest backup')
+  .option('--no-start', 'Skip daemon restart after upgrade')
+  .action(async (opts: {
+    dataDir?: string;
+    check?: boolean;
+    to?: string;
+    rollback?: boolean;
+    start?: boolean; // commander inverts --no-start to start=false
+  }) => {
+    const dataDir = resolveDataDir(opts);
+    await upgradeCommand({
+      dataDir,
+      check: opts.check,
+      to: opts.to,
+      rollback: opts.rollback,
+      noStart: opts.start === false, // commander: --no-start → start=false
+    });
+  });
+
+// Pre-parse --quiet and --data-dir from argv (program.opts() is empty before parseAsync)
+const hasQuiet = process.argv.includes('--quiet');
+const dataDirIdx = process.argv.indexOf('--data-dir');
+const dataDirArg = dataDirIdx >= 0 ? process.argv[dataDirIdx + 1] : undefined;
+const effectiveDataDir = resolveDataDir({ dataDir: dataDirArg });
+
+// Fire-and-forget: do not await, do not block CLI startup
+checkAndNotifyUpdate({ dataDir: effectiveDataDir, quiet: hasQuiet }).catch(() => {});
 
 program.parseAsync(process.argv).catch((err: Error) => {
   console.error(err.message);

@@ -5,30 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 160 버전 체크 인프라
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 160 of 164 (버전 체크 인프라)
-Plan: 0 of 12 total (0 of 2 in current phase)
-Status: Ready to plan
-Last activity: 2026-02-17 — Roadmap 생성 완료, Phase 160 계획 대기
+Phase: None (between milestones)
+Plan: None
+Status: v1.8 milestone shipped
+Last activity: 2026-02-17 — v1.8 업그레이드 + 배포 인프라 마일스톤 완료
 
-Progress: [░░░░░░░░░░] 0% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: v1.8 SHIPPED — 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests
 
 ## Performance Metrics
 
-**Cumulative:** 36 milestones, 159 phases, 344 plans, 971 reqs, ~3,509 tests, ~237,000 LOC
-
-**v1.8 Milestone:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 160. 버전 체크 인프라 | 0/2 | - | - |
-| 161. CLI 알림 + upgrade | 0/3 | - | - |
-| 162. 호환성 + Docker | 0/2 | - | - |
-| 163. release-please | 0/3 | - | - |
-| 164. 동기화 + 통합 | 0/2 | - | - |
+**Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 ## Accumulated Context
 
@@ -36,7 +26,7 @@ Progress: [░░░░░░░░░░] 0% — Milestone v1.8 (5 phases, 12 p
 
 Full log in PROJECT.md and milestones/.
 v1.7 decisions archived to milestones/v1.7-ROADMAP.md (66 decisions).
-v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
+v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 
 ### Blockers/Concerns
 
@@ -47,5 +37,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: v1.8 로드맵 생성 완료 — Phase 160 계획 대기
+Stopped at: v1.8 milestone complete. Ready for /gsd:new-milestone.
 Resume file: None

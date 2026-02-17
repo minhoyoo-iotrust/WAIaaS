@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "bump-minor-pre-major": false,
+  "bump-patch-for-minor-pre-major": false,
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Code Refactoring" },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true },
+    { "type": "ci", "section": "CI/CD", "hidden": true }
+  ],
+  "packages": {
+    ".": {
+      "component": "waiaas",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "packages/core/package.json",
+        "packages/daemon/package.json",
+        "packages/cli/package.json",
+        "packages/sdk/package.json",
+        "packages/mcp/package.json",
+        "packages/admin/package.json",
+        "packages/adapters/solana/package.json",
+        "packages/adapters/evm/package.json",
+        "python-sdk/pyproject.toml"
+      ]
+    }
+  }
+}

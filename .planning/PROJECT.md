@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합, Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합, Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다.
 
 ## 핵심 가치
 
@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Python SDK, ~237,000 LOC, ~3,509 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.7에서 추가:** Vitest v8 패키지별 커버리지 임계값 + Turborepo 5개 테스트 태스크 + Mock 10개 경계 + 16개 Enum SSoT 빌드타임 검증 + 7개 인터페이스 Contract Test + 블록체인 3단계 테스트(Mock RPC→Local Validator→Devnet) + 보안 ~460 시나리오 + 확장 기능 154건 + 플랫폼 84건 + GitHub Actions 4-stage CI/CD(push→PR→nightly→release).
+v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노레포 + Python SDK, ~124,712 LOC TypeScript, 3,599 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -36,13 +36,13 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Pyth
 - ✅ v1.6 운영 인프라 + 잔액 모니터링 — shipped 2026-02-16 (~2,294 tests, ~207,902 LOC)
 - ✅ v1.6.1 WalletConnect Owner 승인 — shipped 2026-02-16 (~2,510 tests, ~220,000 LOC)
 - ✅ v1.7 품질 강화 + CI/CD — shipped 2026-02-17 (3,509 tests, ~237,000 LOC)
-- **▶ v1.8 업그레이드 + 배포 인프라** (진행 중)
-- v2.0 전 기능 완성 릴리스 (npm 8패키지, Docker, GitHub Release)
+- ✅ v1.8 업그레이드 + 배포 인프라 — shipped 2026-02-17 (3,599 tests, ~124,712 LOC TS)
+- **▶ v2.0 전 기능 완성 릴리스** (계획 중)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~237,000 LOC (TypeScript/TSX + Python + CSS, ESM-only, Node.js 22)
-- ~3,509 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~124,712 LOC TypeScript (ESM-only, Node.js 22)
+- 3,599 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -335,21 +335,17 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Pyth
 - ✓ 플랫폼 테스트 84건 (CLI Daemon32/Docker18/Telegram34) — v1.7 (PLAT-01~03)
 - ✓ GitHub Actions 4-stage CI/CD (push→PR→nightly→release) + Composite Action + coverage-gate.sh — v1.7 (CICD-01~06)
 
+- ✓ VersionCheckService npm registry 24h 주기 버전 체크 + fail-soft + key_value_store 저장 — v1.8 (VCHK-01~04)
+- ✓ Health API 확장 — latestVersion, updateAvailable, schemaVersion 3필드 + createHealthRoute DI — v1.8 (HLTH-01~02)
+- ✓ CLI 업그레이드 알림 — stderr 박스, 24h 파일 mtime dedup, --quiet/WAIAAS_NO_UPDATE_NOTIFY 억제 — v1.8 (VCHK-05~07)
+- ✓ BackupService DB+WAL/SHM+config.toml 백업/복원, 5개 보존 정책 — v1.8 (UPGR-03~04,06)
+- ✓ waiaas upgrade 7단계 시퀀스 (--check/--to/--rollback/--no-start) — v1.8 (UPGR-01~02,05,07)
+- ✓ 호환성 매트릭스 — checkSchemaCompatibility 3-시나리오(migrate/reject-code_too_old/reject-schema_too_old) + daemon Step 2 통합 — v1.8 (CMPT-01~03)
+- ✓ Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅(latest/semver/major) — v1.8 (DOCK-01~02)
+- ✓ release-please 2-게이트 릴리스 모델 — manifest+config+워크플로우, deploy environment: production, BREAKING CHANGE major 범프 — v1.8 (RLSE-01~08)
+- ✓ SDK HealthResponse 타입 + 스킬 파일 동기화 + 19건 E2E 통합 테스트 — v1.8 (SYNC-01)
+
 ### 활성
-
-## Current Milestone: v1.8 업그레이드 + 배포 인프라
-
-**Goal:** 설치된 WAIaaS가 새 버전 출시를 감지하여 사용자에게 알리고, `waiaas upgrade`로 안전하게 업그레이드할 수 있는 상태. npm/Docker 2개 채널 업그레이드 경로가 동작하며, DB 마이그레이션과 호환성 검증이 자동으로 실행된다. release-please 기반 2-게이트 릴리스 모델로 CHANGELOG 자동 생성과 배포 안전성을 확보한다.
-
-**Target features:**
-- VersionCheckService — npm registry 24시간 주기 버전 체크 + key_value_store 저장 + fail-soft
-- CLI 업그레이드 알림 — stderr 박스 출력 + 24시간 중복 방지 + 억제 옵션
-- `waiaas upgrade` 명령 — 7단계 시퀀스 (확인→중지→백업→업데이트→마이그레이션→검증→재시작)
-- 호환성 매트릭스 — LATEST/MIN_COMPATIBLE_SCHEMA_VERSION 코드 상수 + 시작 시 검증
-- Health 엔드포인트 확장 — latestVersion, updateAvailable, schemaVersion 필드 추가
-- Docker 업그레이드 경로 — 3-tier 태깅 + Watchtower 라벨
-- release-please 2-게이트 릴리스 모델 — Conventional Commits → 자동 CHANGELOG/버전 범프 → 수동 배포 승인
-- BackupService — DB + config.toml 백업, 최근 5개 보존, rollback 지원
 
 ## Next Milestone Goals
 
@@ -370,7 +366,7 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9-패키지 모노레포 + Pyth
 
 ## 컨텍스트
 
-**누적:** 36 milestones (v0.1-v1.7), 159 phases, 344 plans, 971 requirements, 36 설계 문서(24-72), 8 objective 문서, ~237,000 LOC, ~3,509 테스트
+**누적:** 37 milestones (v0.1-v1.8), 164 phases, 356 plans, 1,001 requirements, 36 설계 문서(24-72), 8 objective 문서, ~124,712 LOC TS, 3,599 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -397,6 +393,7 @@ v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) shipped (2026-02
 v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 6 페이즈, 14 플랜, 49 요구사항, ~207,902 LOC, ~2,294 테스트, 45 설계 결정.
 v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 24 요구사항, ~220,000 LOC, ~2,510 테스트, 28 설계 결정.
 v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9 페이즈, 19 플랜, 48 요구사항, ~237,000 LOC, 3,509 테스트, 66 설계 결정.
+v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 플랜, 30 요구사항, ~124,712 LOC TS, 3,599 테스트, 16 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -623,6 +620,21 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9 페이즈, 19 플랜, 48 요�
 | ci.yml Stage 1 --affected / Stage 2 full suite | push 시 빠른 피드백, PR 시 전체 검증 | ✓ Good — v1.7 구현 |
 | nightly devnet job continue-on-error: true | devnet 불안정성 격리, 빌드 중단 방지 | ✓ Good — v1.7 구현 |
 | release Docker 빌드 GHA cache (type=gha, mode=max) | 레이어 캐시 재활용, 빌드 시간 최소화 | ✓ Good — v1.7 구현 |
+| BackgroundWorkers runImmediately 옵션 | fire-and-forget 즉시 1회 실행 후 interval 반복 | ✓ Good — v1.8 구현 |
+| semver 패키지 npm registry 버전 비교 | AbortSignal.timeout(5000) fetch 타임아웃, fail-soft | ✓ Good — v1.8 구현 |
+| createHealthRoute 팩토리 DI 패턴 | VersionCheckService 선택적 주입, backward compatibility 유지 | ✓ Good — v1.8 구현 |
+| 파일 기반 mtime dedup (.last-update-notify) | 데몬 비실행 시에도 CLI 독립적 24h 중복 방지 | ✓ Good — v1.8 구현 |
+| process.stderr.write CLI 알림 | stdout 파이프 안전성 확보, 2초 타임아웃 | ✓ Good — v1.8 구현 |
+| BackupService copyFileSync 개별 파일 복사 | 명시적 파일 단위, DB+WAL/SHM+config.toml, 5개 보존 | ✓ Good — v1.8 구현 |
+| execSync('npm install -g') upgrade 실행 | npm CLI 직접 호출, Step 5 마이그레이션 데몬 위임 | ✓ Good — v1.8 구현 |
+| checkSchemaCompatibility 3-시나리오 판별 | ok/migrate/reject, MIN_COMPATIBLE_SCHEMA_VERSION=1 | ✓ Good — v1.8 구현 |
+| SCHEMA_INCOMPATIBLE 에러 코드 (503) | SYSTEM 도메인, non-retryable, upgrade 안내 | ✓ Good — v1.8 구현 |
+| docker/metadata-action@v5 3-tier 태깅 | GHCR latest/semver/major 자동 생성 | ✓ Good — v1.8 구현 |
+| Watchtower 라벨 이미지 기본 포함 | 사용자 opt-in 간소화 | ✓ Good — v1.8 구현 |
+| 모노레포 단일 버전 전략 (release-please) | 루트 패키지가 9개 서브패키지 대표, Self-Hosted 특성 | ✓ Good — v1.8 구현 |
+| bump-minor-pre-major: false | 1.x에서도 BREAKING CHANGE → major 범프 | ✓ Good — v1.8 구현 |
+| 2-gate release model | Release PR 머지(게이트 1) → 품질 게이트 → deploy 수동 승인(게이트 2) | ✓ Good — v1.8 구현 |
+| contract test 패턴 (cross-package 의존성 검증) | health 응답 스키마 계약으로 패키지 경계 존중 | ✓ Good — v1.8 구현 |
 
 ---
-*최종 업데이트: 2026-02-17 after v1.7 milestone — 품질 강화 + CI/CD (보안 ~460 시나리오, 확장 154건, 플랫폼 84건, 4-stage CI/CD)*
+*최종 업데이트: 2026-02-17 after v1.8 milestone — 업그레이드 + 배포 인프라 (VersionCheck, CLI upgrade, BackupService, 호환성 매트릭스, release-please 2-게이트, Docker 3-tier 태깅)*

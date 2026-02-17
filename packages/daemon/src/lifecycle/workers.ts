@@ -8,12 +8,14 @@
  * Built-in workers (registered by DaemonLifecycle):
  * - wal-checkpoint: PASSIVE WAL checkpoint every 5 minutes
  * - session-cleanup: expired session cleanup every 1 minute
+ * - version-check: npm registry latest version check every 24 hours (runImmediately)
  */
 
 interface WorkerRegistration {
   name: string;
   interval: number; // ms
   handler: () => void | Promise<void>;
+  runImmediately?: boolean;
 }
 
 export class BackgroundWorkers {
@@ -24,19 +26,45 @@ export class BackgroundWorkers {
   /**
    * Register a named worker with an interval and handler.
    * Must be called before startAll().
+   *
+   * @param opts.runImmediately - If true, handler is executed once immediately
+   *   when startAll() is called, before starting the interval timer.
    */
-  register(name: string, opts: { interval: number; handler: () => void | Promise<void> }): void {
-    this.registrations.set(name, { name, interval: opts.interval, handler: opts.handler });
+  register(
+    name: string,
+    opts: { interval: number; handler: () => void | Promise<void>; runImmediately?: boolean },
+  ): void {
+    this.registrations.set(name, {
+      name,
+      interval: opts.interval,
+      handler: opts.handler,
+      runImmediately: opts.runImmediately ?? false,
+    });
   }
 
   /**
    * Start all registered workers. Each worker runs at its registered interval.
+   * Workers with runImmediately=true execute their handler once before starting the interval.
    * If a previous invocation is still running, the next interval is skipped.
    * Timers are unref'd so they don't prevent process exit.
    */
   startAll(): void {
     for (const [name, registration] of this.registrations) {
       this.running.set(name, false);
+
+      // Run immediately if requested (fire-and-forget, error absorbed)
+      if (registration.runImmediately) {
+        this.running.set(name, true);
+        void (async () => {
+          try {
+            await registration.handler();
+          } catch (err) {
+            console.error(`Worker ${name} immediate run error:`, err);
+          } finally {
+            this.running.set(name, false);
+          }
+        })();
+      }
 
       const timer = setInterval(() => {
         // Skip if previous run still active

@@ -58,6 +58,9 @@ export type { TransactionRouteDeps } from './api/routes/transactions.js';
 export { JwtSecretManager } from './infrastructure/jwt/index.js';
 export type { JwtPayload } from './infrastructure/jwt/index.js';
 
+// Backup module
+export { BackupService } from './infrastructure/backup/index.js';
+
 // Pipeline module
 export { TransactionPipeline, DefaultPolicyEngine } from './pipeline/index.js';
 export { DatabasePolicyEngine } from './pipeline/database-policy-engine.js';

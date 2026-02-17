@@ -3,7 +3,7 @@ name: "WAIaaS Admin"
 description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management"
 category: "api"
 tags: [wallet, blockchain, admin, security, oracle, defi, waiass]
-version: "1.5.0"
+version: "1.8.0"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -32,6 +32,8 @@ The master password is set in `config.toml` under `[security]` or via environmen
 ---
 
 ## 1. Daemon Status & Control
+
+> **See also:** `GET /health` (no auth required, includes version check info: `latestVersion`, `updateAvailable`, `schemaVersion`). Documented in **quickstart.skill.md** Step 1.
 
 ### GET /v1/admin/status -- Daemon Health
 

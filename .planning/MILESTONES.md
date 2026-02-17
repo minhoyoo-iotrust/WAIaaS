@@ -976,3 +976,30 @@
 
 ---
 
+
+## v1.8 업그레이드 + 배포 인프라 (Shipped: 2026-02-17)
+
+**Delivered:** 설치된 WAIaaS가 새 버전 출시를 자동 감지하여 사용자에게 알리고, `waiaas upgrade`로 7단계 시퀀스(확인-중지-백업-업데이트-마이그레이션-검증-재시작)로 안전하게 업그레이드할 수 있는 상태 달성. npm/Docker 2개 채널 업그레이드 경로 동작, DB 호환성 매트릭스가 자동 마이그레이션/시작 거부를 판별. release-please 기반 2-게이트 릴리스 모델 구축 완료.
+
+**Phases completed:** 160-164 (12 plans total)
+
+**Key accomplishments:**
+
+- VersionCheckService + Health API 확장 — npm registry 최신 버전 자동 조회(24h 주기, fail-soft), GET /health에 latestVersion/updateAvailable/schemaVersion 필드 추가
+- CLI 업그레이드 알림 + upgrade 명령 — stderr 알림 박스(24h dedup, --quiet 억제), waiaas upgrade 7단계 시퀀스(--check/--to/--rollback/--no-start)
+- BackupService — DB+WAL/SHM+config.toml 자동 백업/복원, 5개 보존 정책, --rollback으로 직전 백업 복원
+- 호환성 매트릭스 + Docker — checkSchemaCompatibility 3-시나리오(migrate/reject-code_too_old/reject-schema_too_old), Dockerfile OCI+Watchtower 라벨, GHCR 3-tier 태깅(latest/semver/major)
+- release-please 2-게이트 릴리스 모델 — Conventional Commits → Release PR 자동 생성(게이트 1) → 품질 게이트 → deploy environment: production 수동 승인(게이트 2), CHANGELOG 자동 생성
+- SDK/MCP/스킬 파일 동기화 + 19건 E2E 통합 테스트 — HealthResponse 타입 export, 4개 영역 업그레이드 파이프라인 검증
+
+**Stats:**
+
+- 5 phases, 12 plans, 30 requirements, ~87 신규 테스트
+- 3,599 tests total, ~124,712 LOC TypeScript
+- Git range: feat(160-01) → fix(#053-#057)
+- Timeline: 2026-02-17 (1일)
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
+
+---
+

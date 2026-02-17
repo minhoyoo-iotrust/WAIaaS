@@ -24,3 +24,5 @@ export {
 } from './schema.js';
 export { generateId } from './id.js';
 export { generateCheckConstraint } from './checks.js';
+export { checkSchemaCompatibility, MIN_COMPATIBLE_SCHEMA_VERSION } from './compatibility.js';
+export type { CompatibilityResult } from './compatibility.js';

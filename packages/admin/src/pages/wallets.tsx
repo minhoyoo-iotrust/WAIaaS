@@ -22,6 +22,8 @@ interface Wallet {
   environment: string;
   publicKey: string;
   status: string;
+  ownerAddress: string | null;
+  ownerState: 'NONE' | 'GRACE' | 'LOCKED';
   createdAt: number;
 }
 
@@ -135,6 +137,13 @@ const walletColumns: Column<Wallet>[] = [
     header: 'Status',
     render: (a) => (
       <Badge variant={a.status === 'ACTIVE' ? 'success' : 'danger'}>{a.status}</Badge>
+    ),
+  },
+  {
+    key: 'ownerState',
+    header: 'Owner',
+    render: (a) => (
+      <Badge variant={ownerStateBadge(a.ownerState)}>{a.ownerState}</Badge>
     ),
   },
   { key: 'createdAt', header: 'Created', render: (a) => formatDate(a.createdAt) },
@@ -387,10 +396,10 @@ function WalletDetailView({ id }: { id: string }) {
     }
     ownerEditLoading.value = true;
     try {
-      const result = await apiPut<WalletDetail>(API.WALLET_OWNER(id), {
+      const result = await apiPut<Partial<WalletDetail>>(API.WALLET_OWNER(id), {
         owner_address: editOwnerAddress.value.trim(),
       });
-      wallet.value = result;
+      wallet.value = { ...wallet.value!, ...result };
       ownerEditing.value = false;
       showToast('success', 'Owner address updated');
     } catch (err) {
@@ -483,47 +492,6 @@ function WalletDetailView({ id }: { id: string }) {
             <DetailRow label="Status">
               <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : 'danger'}>
                 {wallet.value.status}
-              </Badge>
-            </DetailRow>
-            <DetailRow label="Owner Address">
-              {ownerEditing.value ? (
-                <div class="inline-edit">
-                  <input
-                    value={editOwnerAddress.value}
-                    onInput={(e) => {
-                      editOwnerAddress.value = (e.target as HTMLInputElement).value;
-                    }}
-                    class="inline-edit-input"
-                    placeholder="Enter owner wallet address"
-                  />
-                  <Button size="sm" onClick={handleSaveOwner} loading={ownerEditLoading.value}>
-                    Save
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={cancelEditOwner}>
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <span>
-                  {wallet.value.ownerAddress ? (
-                    <>
-                      {formatAddress(wallet.value.ownerAddress)}
-                      <CopyButton value={wallet.value.ownerAddress} />
-                    </>
-                  ) : (
-                    'None'
-                  )}
-                  {wallet.value.ownerState !== 'LOCKED' && wallet.value.status === 'ACTIVE' && (
-                    <button class="btn btn-ghost btn-sm" onClick={startEditOwner} title="Set owner address">
-                      &#9998;
-                    </button>
-                  )}
-                </span>
-              )}
-            </DetailRow>
-            <DetailRow label="Owner State">
-              <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
-                {wallet.value.ownerState}
               </Badge>
             </DetailRow>
             <DetailRow label="Created" value={formatDate(wallet.value.createdAt)} />
@@ -633,35 +601,124 @@ function WalletDetailView({ id }: { id: string }) {
             />
           </div>
 
-          <div class="wc-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>WalletConnect</h3>
-            {wcSessionLoading.value ? (
-              <div class="stat-skeleton" style={{ height: '60px' }} />
-            ) : wcSession.value ? (
-              <div>
-                <DetailRow label="Status">
-                  <Badge variant="success">Connected</Badge>
-                </DetailRow>
-                <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
-                <DetailRow label="Owner Address" value={wcSession.value.ownerAddress} copy />
-                <DetailRow label="Chain ID" value={wcSession.value.chainId} />
-                <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
-                <div style={{ marginTop: 'var(--space-3)' }}>
-                  <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
-                    Disconnect
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)' }}>
-                  Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
+          <div class="owner-section" style={{ marginTop: 'var(--space-6)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>Owner Wallet</h3>
+
+            {wallet.value.ownerState === 'NONE' && wallet.value.status !== 'TERMINATED' && (
+              <div style={{
+                background: 'var(--color-bg-secondary)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-3) var(--space-4)',
+                marginBottom: 'var(--space-4)',
+              }}>
+                <p style={{ marginBottom: 'var(--space-2)', fontWeight: 500 }}>
+                  What is an Owner Wallet?
                 </p>
-                <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
-                  Connect Wallet
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>
+                  Register an Owner wallet to enable transaction approval (APPROVAL policy) for high-value transfers.
+                  Connect D'CENT, MetaMask, or other WalletConnect-compatible wallets to approve transactions directly.
+                </p>
+                <Button size="sm" onClick={startEditOwner}>
+                  Set Owner Address
                 </Button>
               </div>
             )}
+
+            <DetailRow label="Address">
+              {ownerEditing.value ? (
+                <div class="inline-edit">
+                  <input
+                    value={editOwnerAddress.value}
+                    onInput={(e) => {
+                      editOwnerAddress.value = (e.target as HTMLInputElement).value;
+                    }}
+                    class="inline-edit-input"
+                    placeholder="Enter owner wallet address"
+                  />
+                  <Button size="sm" onClick={handleSaveOwner} loading={ownerEditLoading.value}>
+                    Save
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={cancelEditOwner}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <span>
+                  {wallet.value.ownerAddress ? (
+                    <>
+                      {formatAddress(wallet.value.ownerAddress)}
+                      <CopyButton value={wallet.value.ownerAddress} />
+                    </>
+                  ) : (
+                    'Not set'
+                  )}
+                  {wallet.value.ownerState !== 'LOCKED' && wallet.value.status === 'ACTIVE' && (
+                    <button class="btn btn-ghost btn-sm" onClick={startEditOwner} title="Set owner address">
+                      &#9998;
+                    </button>
+                  )}
+                </span>
+              )}
+            </DetailRow>
+            <DetailRow label="State">
+              <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
+                {wallet.value.ownerState}
+              </Badge>
+            </DetailRow>
+            {wallet.value.ownerState === 'GRACE' && (
+              <div style={{
+                background: 'var(--color-bg-secondary)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-3) var(--space-4)',
+                marginTop: 'var(--space-3)',
+              }}>
+                <p style={{ marginBottom: 'var(--space-2)', fontWeight: 500, fontSize: '0.85rem' }}>
+                  Verify Owner
+                </p>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                  Sign a verification message with the Owner wallet to transition from GRACE to LOCKED.
+                  Connect via WalletConnect first, then trigger an APPROVAL-tier transaction or use the CLI/SDK to call the verify endpoint.
+                </p>
+              </div>
+            )}
+
+            <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+              <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>WalletConnect</h4>
+              {wcSessionLoading.value ? (
+                <div class="stat-skeleton" style={{ height: '60px' }} />
+              ) : wcSession.value ? (
+                <div>
+                  <DetailRow label="Status">
+                    <Badge variant="success">Connected</Badge>
+                  </DetailRow>
+                  <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
+                  <DetailRow label="Chain ID" value={wcSession.value.chainId} />
+                  <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
+                  <div style={{ marginTop: 'var(--space-3)' }}>
+                    <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                    Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
+                  </p>
+                  {wallet.value?.ownerAddress ? (
+                    <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
+                      Connect Wallet
+                    </Button>
+                  ) : (
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                      Set an Owner address first to enable WalletConnect.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div class="mcp-setup-section" style={{ marginTop: 'var(--space-6)' }}>

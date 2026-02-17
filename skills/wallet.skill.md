@@ -167,6 +167,33 @@ Response (200):
 
 Error: `OWNER_ALREADY_CONNECTED` (409) if wallet is in LOCKED state -- use ownerAuth to change owner.
 
+### POST /v1/wallets/{id}/owner/verify -- Verify Owner Signature (masterAuth + ownerAuth)
+
+Verify the owner wallet by providing a cryptographic signature. Transitions owner state from GRACE to LOCKED.
+Requires both masterAuth (X-Master-Password) and ownerAuth (X-Owner-Signature, X-Owner-Message, X-Owner-Address) headers.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/owner/verify \
+  -H 'X-Master-Password: your-master-password' \
+  -H 'X-Owner-Signature: <base64-ed25519-or-0x-hex>' \
+  -H 'X-Owner-Message: <signed-message>' \
+  -H 'X-Owner-Address: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'
+```
+
+Response (200):
+```json
+{
+  "ownerState": "LOCKED",
+  "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "ownerVerified": true
+}
+```
+
+Errors:
+- `OWNER_NOT_CONNECTED` (404): No owner address registered
+- `INVALID_SIGNATURE` (401): Signature verification failed
+- LOCKED state returns 200 (no-op, already verified)
+
 ### PUT /v1/wallets/{id}/default-network -- Change Default Network (masterAuth)
 
 Change the wallet's default network. The new network must be valid for the wallet's environment.

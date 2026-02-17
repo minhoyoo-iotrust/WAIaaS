@@ -406,6 +406,20 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Approval request not found',
   },
+  OWNER_NOT_SET: {
+    code: 'OWNER_NOT_SET',
+    domain: 'OWNER',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Owner address must be set before this operation',
+  },
+  OWNER_ADDRESS_MISMATCH: {
+    code: 'OWNER_ADDRESS_MISMATCH',
+    domain: 'OWNER',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Connected wallet address does not match registered owner',
+  },
 
   // --- SYSTEM domain (9) ---
   KILL_SWITCH_ACTIVE: {
@@ -470,6 +484,13 @@ export const ERROR_CODES = {
     httpStatus: 404,
     retryable: false,
     message: 'Skill not found',
+  },
+  SCHEMA_INCOMPATIBLE: {
+    code: 'SCHEMA_INCOMPATIBLE',
+    domain: 'SYSTEM',
+    httpStatus: 503,
+    retryable: false,
+    message: 'Database schema version is incompatible with this code version',
   },
 
   // --- WALLET domain (6) ---
