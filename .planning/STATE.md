@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 164 of 164 (동기화 + 통합)
-Plan: 10 of 12 total (0 of 2 in current phase)
-Status: Ready
-Last activity: 2026-02-17 — 163-03 완료 (tag-release.sh 폐기 + CLAUDE.md 릴리스 규칙 갱신, Phase 163 완료)
+Plan: 11 of 12 total (1 of 2 in current phase)
+Status: In Progress
+Last activity: 2026-02-17 — 164-01 완료 (SDK HealthResponse 타입 추가 + 스킬 파일 /health 응답 동기화)
 
-Progress: [########░░] 83% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [#########░] 92% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [########░░] 83% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 | 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
 | 162. 호환성 + Docker | 2/2 | 5min | 2.5min |
 | 163. release-please | 3/3 | 3min | 1min |
-| 164. 동기화 + 통합 | 0/2 | - | - |
+| 164. 동기화 + 통합 | 1/2 | 1min | 1min |
 
 ## Accumulated Context
 
@@ -88,6 +88,10 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - 원본 스크립트를 ARCHIVED 주석으로 보존하여 히스토리 참조 가능
 - CLAUDE.md에서 v1.8.1 이전 규칙을 완전히 제거하고 2-게이트 모델만 기술
 
+**164-01 결정:**
+- SDK HealthResponse는 타입만 export, getHealth() 메서드 미추가 (unauthenticated endpoint이므로 SDK 클라이언트 패턴 부적합)
+- 스킬 파일 프론트매터 version을 1.8.0으로 갱신
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -97,5 +101,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 163-03-PLAN.md (tag-release.sh 폐기 + CLAUDE.md 릴리스 규칙 갱신, Phase 163 완료)
+Stopped at: Completed 164-01-PLAN.md (SDK HealthResponse 타입 추가 + 스킬 파일 /health 응답 동기화)
 Resume file: None
