@@ -80,6 +80,7 @@
 | 063 | BUG | HIGH | killswitch 보안 테스트 `now` 변수명 오류 — lint 수정 시 사용처 누락 (23건) | v2.0 | FIXED | 2026-02-17 |
 | 064 | BUG | HIGH | session-auth 보안 테스트 `walletA` 변수명 오류 — lint 수정 시 사용처 누락 (1건) | v2.0 | FIXED | 2026-02-17 |
 | 065 | BUG | HIGH | CI coverage report 경로 이중화 — working-directory + 절대 경로 충돌 | v2.0 | FIXED | 2026-02-17 |
+| 066 | ENHANCEMENT | MEDIUM | CLAUDE.md 영문 번역 — 오픈소스 기여자용 | v2.0.1 | OPEN | 2026-02-18 |
 
 ## Type Legend
 
@@ -91,8 +92,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 65
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 65
+- **Total:** 66
