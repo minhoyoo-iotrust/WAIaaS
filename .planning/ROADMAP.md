@@ -52,12 +52,12 @@ Plans:
   3. Enum SSoT 16개가 빌드타임 4단계 검증(Zod -> TS -> OpenAPI -> Drizzle CHECK)을 통과한다
   4. 플랫폼 테스트 84건(CLI 32 + Docker 18 + Telegram 34)이 전수 통과한다
   5. 블록체인 통합 테스트가 Solana Local Validator + EVM Anvil 환경에서 통과한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 167-01: 보안 시나리오 전수 실행 + 실패 건 수정
-- [ ] 167-02: 커버리지 80% 게이트 확보 + Enum SSoT 검증
-- [ ] 167-03: 플랫폼 테스트 84건 + 블록체인 통합 테스트 전수 통과
+- [ ] 167-01-PLAN.md — 보안 시나리오 ~347건 전수 실행 + 실패 건 수정 (Wave 1)
+- [ ] 167-02-PLAN.md — 커버리지 Hard 80% 게이트 확보 + Enum SSoT 16개 4단계 검증 (Wave 1)
+- [ ] 167-03-PLAN.md — 플랫폼 테스트 84건 + 블록체인 통합 테스트 전수 통과 (Wave 2)
 
 ### Phase 168: 사용자 문서 완비
 **Goal**: 외부 사용자가 프로젝트를 이해하고, 설치하고, 사용하고, 기여할 수 있는 문서가 완비된 상태
