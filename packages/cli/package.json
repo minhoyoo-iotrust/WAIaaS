@@ -1,8 +1,9 @@
 {
   "name": "@waiaas/cli",
-  "version": "2.0.0",
+"version": "1.8.0",
   "description": "WAIaaS CLI - command-line interface for managing the wallet daemon",
   "license": "MIT",
+
   "type": "module",
   "repository": {
     "type": "git",
