@@ -121,7 +121,7 @@ Enabled by default (`admin_ui = true` in config.toml).
 ```bash
 npx @waiaas/skills list          # List available skills
 npx @waiaas/skills add wallet    # Add a specific skill
-npx @waiaas/skills add --all     # Add all skills
+npx @waiaas/skills add all       # Add all skills
 ```
 
 Available: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.

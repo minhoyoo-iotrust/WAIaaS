@@ -386,7 +386,7 @@ npx @waiaas/skills list
 npx @waiaas/skills add wallet
 
 # Add all skills
-npx @waiaas/skills add --all
+npx @waiaas/skills add all
 ```
 
 This copies `.skill.md` files to your current directory. Include them in your AI agent's prompt or context window for API-aware conversations.

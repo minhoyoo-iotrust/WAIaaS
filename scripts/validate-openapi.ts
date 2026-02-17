@@ -8,7 +8,7 @@
  * Usage: pnpm run validate:openapi (or: tsx scripts/validate-openapi.ts)
  * Exit code 1 on any validation error. CI runs this in PR checks.
  *
- * @see docs-internal/29-api-framework-design.md
+ * @see .planning/deliverables/29-api-framework-design.md
  */
 
 import { createApp } from '../packages/daemon/src/api/server.js';

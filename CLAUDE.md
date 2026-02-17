@@ -3,7 +3,7 @@
 ## Language
 
 - All planning/design documents and issue reports are written in Korean.
-- Commit messages and PR titles/bodies are written in English.
+- Commit messages, PR titles/bodies, Git tag messages, and GitHub Release titles/bodies are written in English.
 - Code comments, variable names, and API responses use English.
 
 ## Communication
@@ -44,7 +44,6 @@
 ## Milestone Completion
 
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).
-- `tag-release.sh` was deprecated in v1.8.1. Do not run it directly.
 - **Release flow**: Merge PR (Conventional Commits) → release-please auto-creates Release PR → Merge Release PR (Gate 1: release decision) → release.yml quality gate → deploy job manual approval (Gate 2: deployment execution).
 - **Commit conventions**: `feat:` (minor), `fix:` (patch), `BREAKING CHANGE:` (major). `docs:`, `test:`, `chore:`, `ci:`, etc. are excluded from CHANGELOG.
 
