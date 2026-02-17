@@ -184,3 +184,40 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Gate 2: Manual approval deploy (dry-run until v2.0)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test, chain-integration, platform, publish-check, docker-publish]
+    if: github.event_name == 'release'
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: pnpm turbo run build
+
+      - name: npm publish (dry-run)
+        run: |
+          for pkg in core sdk cli mcp; do
+            echo "--- Publishing packages/$pkg (dry-run) ---"
+            cd packages/$pkg
+            npm publish --dry-run 2>&1
+            cd ../..
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Deploy summary
+        run: |
+          echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm:** dry-run (activate in v2.0)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker:** pushed by docker-publish job" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> To enable real npm publish, remove \`--dry-run\` flag from npm publish step." >> $GITHUB_STEP_SUMMARY
