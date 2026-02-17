@@ -77,37 +77,37 @@ v2.0.1 오픈소스 거버넌스 + 신뢰 강화 마일스톤으로 이연.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VERIFY-01 | — | Pending |
-| VERIFY-02 | — | Pending |
-| VERIFY-03 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
-| DOC-04 | — | Pending |
-| DOC-05 | — | Pending |
-| DOC-06 | — | Pending |
-| DOC-07 | — | Pending |
-| DOC-08 | — | Pending |
-| PKG-01 | — | Pending |
-| PKG-02 | — | Pending |
-| DEPLOY-01 | — | Pending |
-| DEPLOY-02 | — | Pending |
-| DEPLOY-03 | — | Pending |
-| DEPLOY-04 | — | Pending |
-| RELEASE-01 | — | Pending |
-| RELEASE-02 | — | Pending |
-| RELEASE-03 | — | Pending |
+| VERIFY-01 | Phase 166 | Pending |
+| VERIFY-02 | Phase 166 | Pending |
+| VERIFY-03 | Phase 166 | Pending |
+| TEST-01 | Phase 167 | Pending |
+| TEST-02 | Phase 167 | Pending |
+| TEST-03 | Phase 167 | Pending |
+| TEST-04 | Phase 167 | Pending |
+| TEST-05 | Phase 167 | Pending |
+| DOC-01 | Phase 168 | Pending |
+| DOC-02 | Phase 168 | Pending |
+| DOC-03 | Phase 168 | Pending |
+| DOC-04 | Phase 168 | Pending |
+| DOC-05 | Phase 168 | Pending |
+| DOC-06 | Phase 168 | Pending |
+| DOC-07 | Phase 168 | Pending |
+| DOC-08 | Phase 168 | Pending |
+| PKG-01 | Phase 169 | Pending |
+| PKG-02 | Phase 169 | Pending |
+| DEPLOY-01 | Phase 170 | Pending |
+| DEPLOY-02 | Phase 170 | Pending |
+| DEPLOY-03 | Phase 170 | Pending |
+| DEPLOY-04 | Phase 170 | Pending |
+| RELEASE-01 | Phase 165 | Pending |
+| RELEASE-02 | Phase 165 | Pending |
+| RELEASE-03 | Phase 170 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-17*
-*Last updated: 2026-02-17 after initial definition*
+*Last updated: 2026-02-17 after roadmap creation*
