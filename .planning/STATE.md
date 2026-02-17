@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 162 호환성 + Docker
+**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 163 release-please
 
 ## Current Position
 
-Phase: 162 of 164 (호환성 + Docker)
-Plan: 7 of 12 total (1 of 2 in current phase)
-Status: In Progress
-Last activity: 2026-02-17 — 162-02 완료 (Docker Watchtower 라벨 + GHCR 3-tier 태깅)
+Phase: 163 of 164 (release-please)
+Plan: 8 of 12 total (0 of 3 in current phase)
+Status: Ready
+Last activity: 2026-02-17 — 162-01 완료 (checkSchemaCompatibility 3-시나리오 판별 + daemon Step 2 통합)
 
 Progress: [######░░░░] 58% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
@@ -26,7 +26,7 @@ Progress: [######░░░░] 58% — Milestone v1.8 (5 phases, 12 plans, 30 re
 |-------|-------|-------|----------|
 | 160. 버전 체크 인프라 | 2/2 | 5min | 2.5min |
 | 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
-| 162. 호환성 + Docker | 1/2 | 1min | 1min |
+| 162. 호환성 + Docker | 2/2 | 5min | 2.5min |
 | 163. release-please | 0/3 | - | - |
 | 164. 동기화 + 통합 | 0/2 | - | - |
 
@@ -63,6 +63,11 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - Step 5 마이그레이션은 데몬 시작 시 자동 실행에 위임 -- 구버전 코드에서 마이그레이션 직접 실행 위험
 - BackupService를 @waiaas/daemon barrel export에 추가 -- CLI에서 직접 import 가능
 
+**162-01 결정:**
+- dbVersion null vs 0 구분: MAX(version) null이면 빈 테이블(fresh DB), 0은 유효한 구버전으로 취급
+- SCHEMA_INCOMPATIBLE 에러 코드를 @waiaas/core SYSTEM 도메인에 추가 (503, non-retryable)
+- MIN_COMPATIBLE_SCHEMA_VERSION = 1 -- 모든 마이그레이션 경로가 v1부터 지원
+
 **162-02 결정:**
 - docker/metadata-action@v5로 GitHub Release 태그에서 3-tier 태그 자동 생성
 - GHCR(GitHub Container Registry) 사용 -- github.repository 기반 이미지 이름
@@ -78,5 +83,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 162-02-PLAN.md (Docker Watchtower 라벨 + GHCR 3-tier 태깅)
+Stopped at: Completed 162-01-PLAN.md (checkSchemaCompatibility 3-시나리오 판별 + daemon Step 2 통합, Phase 162 완료)
 Resume file: None
