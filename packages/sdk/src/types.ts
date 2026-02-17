@@ -32,6 +32,27 @@ export interface RetryOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Health Response
+// ---------------------------------------------------------------------------
+
+export interface HealthResponse {
+  /** Daemon status (always "ok" when running) */
+  status: string;
+  /** Current daemon version (semver) */
+  version: string;
+  /** Latest available version from npm registry, null if check not performed */
+  latestVersion: string | null;
+  /** True when a newer version is available */
+  updateAvailable: boolean;
+  /** Current database schema version number */
+  schemaVersion: number;
+  /** Seconds since daemon start */
+  uptime: number;
+  /** Current epoch timestamp (seconds) */
+  timestamp: number;
+}
+
+// ---------------------------------------------------------------------------
 // Wallet Responses
 // ---------------------------------------------------------------------------
 

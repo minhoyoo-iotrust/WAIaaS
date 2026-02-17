@@ -3,7 +3,7 @@ name: "WAIaaS Quickstart"
 description: "End-to-end quickstart: create wallet, session, check balance, send first transfer"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, quickstart, waiass]
-version: "1.4.6"
+version: "1.8.0"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -47,7 +47,10 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "1.4.6",
+  "version": "1.8.0",
+  "latestVersion": null,
+  "updateAvailable": false,
+  "schemaVersion": 16,
   "uptime": 42,
   "timestamp": 1707000000
 }

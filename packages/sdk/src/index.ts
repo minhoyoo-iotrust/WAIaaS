@@ -26,6 +26,7 @@ export type {
   WAIaaSClientOptions,
   WAIaaSOwnerClientOptions,
   RetryOptions,
+  HealthResponse,
   BalanceOptions,
   AssetsOptions,
   BalanceResponse,
