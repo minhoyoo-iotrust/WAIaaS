@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 163 release-please
+**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 164 동기화 + 통합
 
 ## Current Position
 
-Phase: 163 of 164 (release-please)
-Plan: 9 of 12 total (1 of 3 in current phase)
-Status: In Progress
-Last activity: 2026-02-17 — 163-01 완료 (release-please 설정 파일 3종 생성)
+Phase: 164 of 164 (동기화 + 통합)
+Plan: 10 of 12 total (0 of 2 in current phase)
+Status: Ready
+Last activity: 2026-02-17 — 163-03 완료 (tag-release.sh 폐기 + CLAUDE.md 릴리스 규칙 갱신, Phase 163 완료)
 
-Progress: [########░░] 75% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [########░░] 83% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [########░░] 75% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 | 160. 버전 체크 인프라 | 2/2 | 5min | 2.5min |
 | 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
 | 162. 호환성 + Docker | 2/2 | 5min | 2.5min |
-| 163. release-please | 1/3 | 1min | 1min |
+| 163. release-please | 3/3 | 3min | 1min |
 | 164. 동기화 + 통합 | 0/2 | - | - |
 
 ## Accumulated Context
@@ -84,6 +84,10 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - npm publish는 v2.0 전까지 --dry-run으로 실행 (RLSE-06)
 - Docker push는 docker-publish job에서 이미 처리되므로 deploy job에서 중복 안 함
 
+**163-03 결정:**
+- 원본 스크립트를 ARCHIVED 주석으로 보존하여 히스토리 참조 가능
+- CLAUDE.md에서 v1.8.1 이전 규칙을 완전히 제거하고 2-게이트 모델만 기술
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -93,5 +97,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 163-01-PLAN.md (release-please 설정 파일 3종 생성)
+Stopped at: Completed 163-03-PLAN.md (tag-release.sh 폐기 + CLAUDE.md 릴리스 규칙 갱신, Phase 163 완료)
 Resume file: None
