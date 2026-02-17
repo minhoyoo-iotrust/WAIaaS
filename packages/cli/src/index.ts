@@ -27,6 +27,7 @@ import { quickstartCommand } from './commands/quickstart.js';
 import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
 import { resolveDataDir } from './utils/data-dir.js';
+import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
 const program = new Command();
 
@@ -210,6 +211,15 @@ mcp
       masterPassword: opts.password,
     });
   });
+
+// Pre-parse --quiet and --data-dir from argv (program.opts() is empty before parseAsync)
+const hasQuiet = process.argv.includes('--quiet');
+const dataDirIdx = process.argv.indexOf('--data-dir');
+const dataDirArg = dataDirIdx >= 0 ? process.argv[dataDirIdx + 1] : undefined;
+const effectiveDataDir = resolveDataDir({ dataDir: dataDirArg });
+
+// Fire-and-forget: do not await, do not block CLI startup
+checkAndNotifyUpdate({ dataDir: effectiveDataDir, quiet: hasQuiet }).catch(() => {});
 
 program.parseAsync(process.argv).catch((err: Error) => {
   console.error(err.message);
