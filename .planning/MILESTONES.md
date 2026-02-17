@@ -1,5 +1,38 @@
 # Project Milestones: WAIaaS
 
+## v2.0 전 기능 완성 릴리스 (Shipped: 2026-02-18)
+
+**Delivered:** v0.1~v1.8까지 37개 마일스톤으로 축적된 설계와 구현의 최종 검증, 문서화, 공개 릴리스를 달성. 설계 부채 0건 확인, 테스트 게이트 전수 통과, 영문 사용자 문서 완비, npm 8개 패키지 + Docker 이미지 배포 활성화, v2.0.0-rc.1 pre-release 발행.
+
+**Phases completed:** 165-173 (9 phases, 17 plans, 25 requirements)
+
+**Key accomplishments:**
+
+- MIT License + npm @waiaas scope 확보 + 10개 패키지 배포 메타데이터 완비 (publishConfig, repository, homepage)
+- 설계 문서 44개 구현 교차 검증 PASS + 설계 부채 0건 + OpenAPI 3.0 CI 자동 검증 (swagger-parser)
+- 보안 460건 + 단위 2,482건 + 플랫폼 84건 테스트 전수 통과, 커버리지 Hard 80% 게이트 달성 (core 97.73%, daemon 86.23%)
+- 이중 언어 README(en) + CONTRIBUTING + 배포 가이드(CLI/Docker) + API 레퍼런스(60+ 엔드포인트) + CHANGELOG(v1.1~v1.8) 완비
+- @waiaas/skills npx 배포 패키지(7 스킬 파일) + examples/simple-agent SDK 예제 에이전트
+- npm 8개 패키지 v2.0.0-rc.1 publish + Docker Hub/GHCR dual push + release.yml 6-job 파이프라인 E2E 검증
+
+**Stats:**
+
+- 9 phases, 17 plans, 25 requirements, 237 files changed, +13,575 LOC (net)
+- ~124,830 LOC TypeScript, ~3,599 tests
+- 101 commits, 2 days (2026-02-17 → 2026-02-18)
+- Git range: v1.8.0 → HEAD
+
+### Known Gaps
+
+- INT-01: README.md/deployment.md `add --all` vs `add all` CLI 문법 불일치 (cosmetic, v2.0.5 이연)
+- INT-02: examples/simple-agent/README.md 깨진 링크 + placeholder URL + 구버전 (v2.0.5 이연)
+- FLOW-01/FLOW-02: Skills CLI `add --all` 흐름 + example agent setup 흐름 (cosmetic, v2.0.5 이연)
+- validate-openapi.ts @see 주석 경로 불일치 (internal, v2.0.5 이연)
+
+**What's next:** v2.0.1 거버넌스 + 신뢰 강화 or v2.0.5 DX 폴리싱
+
+---
+
 ## v1.5.3 USD 정책 확장 (누적 지출 한도 + 표시 통화) (Shipped: 2026-02-16)
 
 **Delivered:** 월렛 단위 24시간/30일 롤링 윈도우 누적 USD 지출 한도로 분할 전송 우회를 방지하고, 43개 법정 통화로 환산 표시하여 Admin UI/알림/REST API/MCP 전체 인터페이스에서 다국어 DX를 개선하는 상태 달성

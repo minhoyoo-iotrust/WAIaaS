@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. CLI Daemon / Docker로 배포하며, REST API, TypeScript/Python SDK, MCP 통합, Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 8개 패키지) / Docker(`waiaas/daemon`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
 
 ## 핵심 가치
 
@@ -10,7 +10,7 @@
 
 ## Current State
 
-v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노레포 + Python SDK, ~124,712 LOC TypeScript, 3,599 테스트 통과. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 + Python SDK, ~124,830 LOC TypeScript, ~3,599 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.0.0-rc.1 publish, Docker Hub/GHCR dual push, 설계 문서 44개 교차 검증 PASS, 설계 부채 0건, 보안 460건+단위 2,482건+플랫폼 84건 테스트 전수 통과, 커버리지 Hard 80%+ 달성, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -37,7 +37,7 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노
 - ✅ v1.6.1 WalletConnect Owner 승인 — shipped 2026-02-16 (~2,510 tests, ~220,000 LOC)
 - ✅ v1.7 품질 강화 + CI/CD — shipped 2026-02-17 (3,509 tests, ~237,000 LOC)
 - ✅ v1.8 업그레이드 + 배포 인프라 — shipped 2026-02-17 (3,599 tests, ~124,712 LOC TS)
-- **▶ v2.0 전 기능 완성 릴리스** (계획 중)
+- ✅ v2.0 전 기능 완성 릴리스 — shipped 2026-02-18 (~3,599 tests, ~124,830 LOC TS)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
@@ -140,6 +140,8 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노
 - ✓ v1.1~v2.0 마일스톤별 objective 문서 8개 생성 — v1.0
 - ✓ 설계 부채 추적 체계 초기화 (objectives/design-debt.md) — v1.0
 - ✓ 설계 문서 37개 → 구현 마일스톤 매핑 확정 + 양방향 교차 검증 — v1.0
+
+(v1.1~v1.8 구현 검증됨 — 상세 생략, milestones/ 아카이브 참조)
 
 - ✓ 모노레포 인프라 구축 (pnpm workspace + Turborepo, 4 패키지, ESM-only) — v1.1 (MONO-01~03)
 - ✓ @waiaas/core 패키지 (12 Enum SSoT, 5 Zod 스키마, 66 에러 코드, 4 인터페이스, i18n en/ko) — v1.1 (CORE-01~05)
@@ -345,20 +347,15 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노
 - ✓ release-please 2-게이트 릴리스 모델 — manifest+config+워크플로우, deploy environment: production, BREAKING CHANGE major 범프 — v1.8 (RLSE-01~08)
 - ✓ SDK HealthResponse 타입 + 스킬 파일 동기화 + 19건 E2E 통합 테스트 — v1.8 (SYNC-01)
 
+- ✓ 설계 문서 44개 구현 교차 검증 PASS + 설계 부채 0건 확인 — v2.0 (VERIFY-01~03)
+- ✓ 보안 460건 + 커버리지 80%+ + Enum SSoT 16개 + 플랫폼 84건 + 블록체인 통합 테스트 전수 통과 — v2.0 (TEST-01~05)
+- ✓ 문서 재편성(docs/사용자, docs-internal/설계) + README(en) + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비 — v2.0 (DOC-01~08)
+- ✓ @waiaas/skills npx 배포 패키지 + examples/simple-agent SDK 예제 — v2.0 (PKG-01~02)
+- ✓ npm 8개 패키지 publish + Docker Hub push + release.yml 활성화 + v2.0.0-rc.1 pre-release — v2.0 (DEPLOY-01~04, RELEASE-01~03)
+
 ### 활성
 
-## Current Milestone: v2.0 전 기능 완성 릴리스
-
-**Goal:** v0.1~v0.10에서 설계한 모든 기능이 구현, 테스트, 문서화되어 공개 릴리스 가능한 상태.
-
-**Target features:**
-- 설계 문서 38개 최종 검증 (구현 범위 일치, E2E 검증, 설계 부채 0건)
-- 문서 재편성 (docs/ 사용자 문서, docs-internal/ 내부 설계 문서) + README(EN) + CONTRIBUTING.md + 배포 가이드
-- npm 9패키지 공개 발행 (@waiaas/core~skills) + Docker Hub push
-- @waiaas/skills 패키지 (npx @waiaas/skills add <name>)
-- 예제 에이전트 (examples/simple-agent/)
-- GitHub Release v2.0.0 (release-please 2-게이트)
-- CHANGELOG.md v1.1~v2.0 전체 변경 이력
+(v2.0 shipped — 다음 마일스톤 요구사항은 `/gsd:new-milestone`에서 정의)
 
 ### 범위 외
 
@@ -375,7 +372,7 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노
 
 ## 컨텍스트
 
-**누적:** 37 milestones (v0.1-v1.8), 164 phases, 356 plans, 1,001 requirements, 36 설계 문서(24-72), 8 objective 문서, ~124,712 LOC TS, 3,599 테스트
+**누적:** 38 milestones (v0.1-v2.0), 173 phases, 373 plans, 1,026 requirements, 36 설계 문서(24-72), 8 objective 문서, ~124,830 LOC TS, ~3,599 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -403,6 +400,7 @@ v1.6 운영 인프라 + 잔액 모니터링 shipped (2026-02-16). 6 페이즈, 1
 v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 24 요구사항, ~220,000 LOC, ~2,510 테스트, 28 설계 결정.
 v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9 페이즈, 19 플랜, 48 요구사항, ~237,000 LOC, 3,509 테스트, 66 설계 결정.
 v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 플랜, 30 요구사항, ~124,712 LOC TS, 3,599 테스트, 16 설계 결정.
+v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 25 요구사항, ~124,830 LOC TS, ~3,599 테스트, 39 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -644,6 +642,16 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 �
 | bump-minor-pre-major: false | 1.x에서도 BREAKING CHANGE → major 범프 | ✓ Good — v1.8 구현 |
 | 2-gate release model | Release PR 머지(게이트 1) → 품질 게이트 → deploy 수동 승인(게이트 2) | ✓ Good — v1.8 구현 |
 | contract test 패턴 (cross-package 의존성 검증) | health 응답 스키마 계약으로 패키지 경계 존중 | ✓ Good — v1.8 구현 |
+| MIT 라이선스 채택 | 오픈소스 표준, 상업 사용 허용, 기여 장벽 최소화 | ✓ Good — v2.0 구현 |
+| npm @waiaas Organization scope | 패키지 네임스페이스 확보, 일관된 브랜딩 | ✓ Good — v2.0 구현 |
+| OpenAPI swagger-parser CI 자동 검증 | 스펙 유효성 빌드타임 보장, 수동 검증 불필요 | ✓ Good — v2.0 구현 |
+| docs/ vs docs-internal/ 분리 | 사용자 문서와 내부 설계 문서 독립 관리 | ✓ Good — v2.0 구현 |
+| zero-dependency skills CLI | process.argv 직접 파싱, 외부 라이브러리 미사용 | ✓ Good — v2.0 구현 |
+| publishConfig.access: public | scoped 패키지 npm publish 필수 설정 | ✓ Good — v2.0 구현 |
+| admin 패키지 private:true | daemon에 번들, 별도 publish 불필요 | ✓ Good — v2.0 구현 |
+| release-as "2.0.0-rc.1" 명시적 | release-as와 prerelease-type 결합 불가 | ✓ Good — v2.0 구현 |
+| GITHUB_TOKEN → RELEASE_PAT | GITHUB_TOKEN은 다른 워크플로 트리거 불가 | ✓ Good — v2.0 구현 |
+| npm Classic Automation Token | Trusted Publishing은 v2.0.4에서 전환 | ✓ Good — v2.0 구현 |
 
 ---
-*최종 업데이트: 2026-02-17 after v2.0 milestone start — 전 기능 완성 릴리스 (설계 검증 + 문서 + npm/Docker 배포 + 예제)*
+*최종 업데이트: 2026-02-18 after v2.0 milestone — 전 기능 완성 릴리스 shipped (설계 검증 + 문서 + npm/Docker 배포 + 예제)*
