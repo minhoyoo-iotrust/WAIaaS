@@ -22,10 +22,10 @@ v2.0.1은 퍼블릭 리포 전환을 위한 거버넌스 파일 생성, 내부 �
   2. CODE_OF_CONDUCT.md가 루트에 존재하며 Contributor Covenant v2.1 기반으로 작성되어 있다
   3. .github/ISSUE_TEMPLATE/에 Bug Report와 Feature Request 두 개의 YAML 템플릿이 존재하고, GitHub New Issue 화면에서 선택 가능하다
   4. .github/PULL_REQUEST_TEMPLATE.md가 존재하며 변경 요약, 테스트 방법, 관련 이슈 링크 체크리스트를 포함한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 174-01: 거버넌스 파일 일괄 생성 (SECURITY.md, CODE_OF_CONDUCT.md, Issue/PR 템플릿)
+- [ ] 174-01-PLAN.md -- 거버넌스 파일 일괄 생성 (SECURITY.md, CODE_OF_CONDUCT.md, Issue/PR 템플릿)
 
 ### Phase 175: 정리 및 수정
 **Goal**: 더 이상 사용하지 않는 스크립트 제거, CLAUDE.md 규칙 보완, 문서/코드의 잔존 오류가 수정된다
