@@ -55,11 +55,11 @@ Plans:
   2. 코드 버전 < DB 스키마 버전이면 시작을 거부하고 `waiaas upgrade` 안내 메시지를 출력한다
   3. DB 스키마 버전이 MIN_COMPATIBLE_SCHEMA_VERSION 미만이면 시작을 거부하고 단계별 업그레이드를 안내한다
   4. Docker 이미지에 Watchtower 호환 라벨이 포함되고, latest/semver/major 3-tier 태깅이 적용된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 162-01: 호환성 매트릭스 구현 (LATEST_SCHEMA_VERSION, MIN_COMPATIBLE_SCHEMA_VERSION, 3-시나리오 판별)
-- [ ] 162-02: Docker 라벨 + 3-tier 태깅 (Watchtower 라벨, CI 태깅 스크립트)
+- [ ] 162-01-PLAN.md — 호환성 매트릭스 구현 (checkSchemaCompatibility 3-시나리오 판별 + daemon Step 2 통합)
+- [ ] 162-02-PLAN.md — Docker Watchtower 라벨 + release.yml 3-tier 태깅 (GHCR push)
 
 ### Phase 163: release-please 2-게이트 모델
 **Goal**: Conventional Commits 기반으로 CHANGELOG/버전/태그가 자동 관리되고, 2-게이트(Release PR 머지 + 배포 승인)로 안전하게 릴리스되는 상태
