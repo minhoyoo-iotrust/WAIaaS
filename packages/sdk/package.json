@@ -1,9 +1,8 @@
 {
   "name": "@waiaas/sdk",
-"version": "1.8.0",
+  "version": "2.0.0-rc.1",
   "description": "WAIaaS TypeScript SDK - client library for the wallet daemon API",
   "license": "MIT",
-
   "type": "module",
   "repository": {
     "type": "git",
