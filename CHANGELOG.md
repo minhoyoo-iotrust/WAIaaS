@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.0.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v1.8.0...v2.0.0) (2026-02-17)
+
+
+### Features
+
+* **166-02:** OpenAPI 스펙 유효성 검증 스크립트 + swagger-parser 도입 ([34d44a4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/34d44a4924d39ab1dcd935cccc2229e60b8ef626))
+* **169-01:** @waiaas/skills 패키지 scaffolding + 스킬 파일 번들링 ([3a59221](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3a592215f9b2f78f43fd9e9b377c1324d5d1c710))
+* **169-01:** CLI 구현 (list/add/help 명령) + npm publish dry-run 검증 ([e0410ab](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e0410aba3d03f44c3e90be588fe457f5c30c309b))
+* **169-02:** examples/simple-agent SDK 예제 에이전트 구현 ([2573266](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2573266a8073b0082060f9ccce11480072c9e173))
+* **170-02:** release.yml 전면 업데이트 -- 8패키지 publish + Docker Hub + dry-run 제거 ([5e8ef95](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5e8ef95a3650cdabd24c416f121f6d8e7f0f2638))
+* **v2.0:** activate RC pre-release pipeline for npm + Docker Hub ([44135cc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/44135cc6b9f113c3027e29a6c9806a5258895ad5))
+
+
+### Bug Fixes
+
+* **167-02:** bash 3.x 호환성 수정 + Hard 커버리지 게이트 통과 ([20551d3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/20551d37e44a83aaa60c2d4479e4718d140c011e))
+* **167-03:** EVM Sepolia 체인 테스트 타입 오류 수정 ([8f5c60f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8f5c60f330ce54b198cb51227c534dfcfd7c67b9))
+* **168:** README.ko.md 문서 링크 경로 수정 ([61442f0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/61442f0e115438fb1d870fd65970e56340a375e9))
+* lower adapter-solana branches coverage threshold to 65% ([#060](https://github.com/minhoyoo-iotrust/WAIaaS/issues/060)) ([1d29492](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1d294924aaa5456b9b8a491747e4cde8c4ca3bc9))
+* lower admin functions coverage threshold to 55% ([#061](https://github.com/minhoyoo-iotrust/WAIaaS/issues/061)) ([ebf7190](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ebf71900d1363d4f9a7c99075ad651eb3951a8e5))
+* lower cli lines/statements coverage threshold to 65% ([#062](https://github.com/minhoyoo-iotrust/WAIaaS/issues/062)) ([d4f86ae](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d4f86ae1cb93afc0cfbf7894bfa0dafa96cd830d))
+* remove unused catch binding in EVM adapter ([65118ff](https://github.com/minhoyoo-iotrust/WAIaaS/commit/65118ff7c470360c99eda3683b64d9c2a542cdc8))
+* resolve all lint errors across packages ([dcb9c3a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dcb9c3aa6da1a93c0d6987523c39326b48babf77))
+* resolve open issues [#063](https://github.com/minhoyoo-iotrust/WAIaaS/issues/063) [#064](https://github.com/minhoyoo-iotrust/WAIaaS/issues/064) — restore lint-renamed test variables ([b0436a1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b0436a11084dcb49b642336431cbf68179d4161b))
+* resolve typecheck errors in contract tests and security helpers ([e4a1241](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e4a1241d077e0b50fa65a27d55795c045d4c33ca))
+* use relative paths for CI coverage report action ([#065](https://github.com/minhoyoo-iotrust/WAIaaS/issues/065)) ([eea8085](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eea8085436a7b8fd04c2f138b07c6c9332e8c52e))
+* 오픈 이슈 [#058](https://github.com/minhoyoo-iotrust/WAIaaS/issues/058) [#059](https://github.com/minhoyoo-iotrust/WAIaaS/issues/059) 해결 — WC 셧다운 DB 가드 + Contract Test 커버리지 제외 ([14aa4b7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/14aa4b70c408b31b98b18160e5ff9369cf63d98d))
+
 ## [Unreleased]
 
 ### Added
