@@ -9,7 +9,7 @@ v0.1~v1.8까지 37개 마일스톤으로 축적된 설계와 구현의 최종 �
 - [x] **Phase 165: 릴리스 기반 준비** - MIT 라이선스 + npm scope 확보 (공개 릴리스 전제조건) (completed 2026-02-17)
 - [x] **Phase 166: 설계 검증 + 설계 부채 해소** - 설계 문서 37개 구현 범위 검증 + 설계 부채 0건 확인 + OpenAPI 유효성 검증 (completed 2026-02-17)
 - [x] **Phase 167: 테스트 게이트 통과** - 보안 시나리오 ~460건 + 커버리지 80% + Enum SSoT + 플랫폼 84건 + 블록체인 통합 전수 통과 (completed 2026-02-17)
-- [ ] **Phase 168: 사용자 문서 완비** - docs/ 재편성 + README en/ko + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG + Why WAIaaS
+- [x] **Phase 168: 사용자 문서 완비** - docs/ 재편성 + README en/ko + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG + Why WAIaaS
 - [ ] **Phase 169: 패키지 생성** - @waiaas/skills npx 배포 패키지 + examples/simple-agent 예제 에이전트
 - [ ] **Phase 170: 배포 활성화 + pre-release** - npm 9개 패키지 publish + Docker Hub push + release.yml 활성화 + v2.0.0-rc.1 pre-release 발행
 
@@ -117,6 +117,6 @@ Plans:
 | 165. 릴리스 기반 준비 | 0/1 | Complete    | 2026-02-17 |
 | 166. 설계 검증 + 설계 부채 해소 | 0/2 | Complete    | 2026-02-17 |
 | 167. 테스트 게이트 통과 | 0/3 | Complete    | 2026-02-17 |
-| 168. 사용자 문서 완비 | 0/3 | Not started | - |
+| 168. 사용자 문서 완비 | 3/3 | Complete    | 2026-02-17 |
 | 169. 패키지 생성 | 0/2 | Not started | - |
 | 170. 배포 활성화 + pre-release | 0/3 | Not started | - |
