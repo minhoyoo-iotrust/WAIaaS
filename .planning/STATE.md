@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 마일스톤 완료 -- 전 Phase 완료, 마일스톤 감사/아카이브 대기
+**Current focus:** v2.0 마일스톤 완료 -- Phase 171 검증 갭 해소 완료, 마일스톤 감사/아카이브 대기
 
 ## Current Position
 
-Phase: 6 of 6 (Phase 170: 배포 활성화 + pre-release) -- COMPLETE
-Plan: 3 of 3 in current phase (170-03 COMPLETE)
-Status: v2.0 전 Phase 완료. 마일스톤 감사(/gsd:audit-milestone) + 완료(/gsd:complete-milestone) 대기.
-Last activity: 2026-02-18 -- v2.0.0-rc.1 npm 8패키지 + Docker 발행 성공
+Phase: 7 of 7 (Phase 171: 검증 갭 해소) -- COMPLETE
+Plan: 1 of 1 in current phase (171-01 COMPLETE)
+Status: v2.0 전 Phase 완료 (165-171). 마일스톤 감사(/gsd:audit-milestone) + 완료(/gsd:complete-milestone) 대기.
+Last activity: 2026-02-18 -- Phase 171 검증 갭 해소 (170-VERIFICATION, 168-DOC-03 해소, REQUIREMENTS 25개 완료)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 37 milestones, 170 phases, 370 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
+**Cumulative:** 37 milestones, 171 phases, 371 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 14 (v2.0)
+- Total plans completed: 15 (v2.0)
 - Average duration: 8min (CI 디버깅 제외 시 5min)
 - Total execution time: ~4h (170-03 CI 디버깅 3h 포함)
 
@@ -41,6 +41,7 @@ Progress: [██████████] 100%
 | 170   | 01   | 9min     | 2     | 10    |
 | 170   | 02   | 3min     | 2     | 1     |
 | 170   | 03   | ~3h      | 2     | 4     |
+| 171   | 01   | 3min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 170-03: metadaoproject/setup-solana@v1.2 → Anza 공식 인스톨러 (액션 버그)
 - 170-03: Docker builder에서 daemon+cli+mcp+sdk만 빌드 (skills 제외)
 - 170-03: npm Classic Automation Token 사용, Trusted Publishing은 v2.0.4에서 전환
+- 171-01: README.ko.md 링크가 이미 올바른 상태 확인 -- 수정 불필요
 
 ### Blockers/Concerns
 
@@ -97,5 +99,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: v2.0 전 Phase 완료 (165-170). v2.0.0-rc.1 npm + Docker 발행 성공. 마일스톤 감사/아카이브 대기.
+Stopped at: Completed 171-01-PLAN.md -- Phase 171 검증 갭 해소 완료. 마일스톤 감사/아카이브 대기.
 Resume file: None
