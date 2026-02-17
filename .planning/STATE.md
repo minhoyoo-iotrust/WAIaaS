@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 4 of 6 (Phase 168: 사용자 문서 완비)
-Plan: 2 of 3 in current phase
-Status: 168-02 complete, ready for 168-03
-Last activity: 2026-02-17 -- Completed 168-02 (README + CONTRIBUTING)
+Plan: 3 of 3 in current phase (COMPLETE)
+Status: Phase 168 complete, ready for Phase 169
+Last activity: 2026-02-17 -- Completed 168-03 (배포 가이드 + API 레퍼런스 + CHANGELOG)
 
-Progress: [██████░░░░] 53%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: [██████░░░░] 53%
 | 167   | 03   | 4min     | 2     | 1     |
 | 168   | 01   | 5min     | 2     | 29    |
 | 168   | 02   | 4min     | 2     | 3     |
+| 168   | 03   | 5min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 168-01: .planning/ 내부 참조는 계획 지시대로 업데이트하지 않음
 - 168-02: 기존 한글 README.md를 영문으로 완전 재작성, 한글은 README.ko.md로 분리
 - 168-02: ASCII 아키텍처 다이어그램에 +/- 문자 사용 (GitHub 마크다운 호환성)
+- 168-03: API 레퍼런스는 OpenAPI 스펙(GET /doc)을 SSoT로 두고 문서는 인증/카테고리 요약/에러 코드만 제공
+- 168-03: CHANGELOG은 Keep a Changelog 포맷으로 release-please 자동 생성과 병합 가능하게 유지
+- 168-03: README 문서 링크를 실제 파일 경로(deployment.md, api-reference.md)로 수정
 
 ### Blockers/Concerns
 
@@ -70,5 +74,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 168-02-PLAN.md (README + CONTRIBUTING). Ready for 168-03.
+Stopped at: Completed 168-03-PLAN.md (배포 가이드 + API 레퍼런스 + CHANGELOG). Phase 168 complete. Ready for Phase 169.
 Resume file: None

@@ -260,8 +260,8 @@ Runtime-adjustable settings (rate limits, policy defaults, etc.) are also config
 
 | Document | Description |
 |----------|-------------|
-| [Deployment Guide](docs/deployment/) | Docker, npm, configuration reference |
-| [API Reference](docs/api/) | REST API OpenAPI spec |
+| [Deployment Guide](docs/deployment.md) | Docker, npm, configuration reference |
+| [API Reference](docs/api-reference.md) | REST API, authentication, endpoint summary |
 | [Why WAIaaS?](docs/why-waiaas/) | Background on AI agent wallet security |
 
 ## Contributing
