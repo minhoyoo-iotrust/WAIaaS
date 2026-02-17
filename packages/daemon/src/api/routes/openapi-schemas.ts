@@ -49,6 +49,9 @@ export const HealthResponseSchema = z
   .object({
     status: z.string(),
     version: z.string(),
+    latestVersion: z.string().nullable(),
+    updateAvailable: z.boolean(),
+    schemaVersion: z.number().int(),
     uptime: z.number().int(),
     timestamp: z.number().int(),
   })

@@ -49,7 +49,8 @@ import {
   cspMiddleware,
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
-import { health } from './routes/health.js';
+import { createHealthRoute } from './routes/health.js';
+import type { VersionCheckService } from '../infrastructure/version/index.js';
 import { walletCrudRoutes } from './routes/wallets.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { walletRoutes } from './routes/wallet.js';
@@ -113,6 +114,7 @@ export interface CreateAppDeps {
   killSwitchService?: KillSwitchService;
   wcServiceRef?: WcServiceRef;
   wcSigningBridge?: WcSigningBridge;
+  versionCheckService?: VersionCheckService | null;
 }
 
 /**
@@ -237,7 +239,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   }
 
   // Register routes
-  app.route('/health', health);
+  app.route('/health', createHealthRoute({ versionCheckService: deps.versionCheckService ?? null }));
 
   // Register nonce route (public, no auth required)
   app.route('/v1', nonceRoutes());

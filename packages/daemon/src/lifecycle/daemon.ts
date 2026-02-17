@@ -635,6 +635,15 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4g: VersionCheckService (create before Step 5 for Health endpoint)
+    // ------------------------------------------------------------------
+    if (this.sqlite && this._config!.daemon.update_check) {
+      const { VersionCheckService } = await import('../infrastructure/version/index.js');
+      this._versionCheckService = new VersionCheckService(this.sqlite);
+      console.log('Step 4g: VersionCheckService created');
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -685,6 +694,7 @@ export class DaemonLifecycle {
           killSwitchService: this.killSwitchService ?? undefined,
           wcServiceRef: this.wcServiceRef,
           wcSigningBridge: this.wcSigningBridge ?? undefined,
+          versionCheckService: this._versionCheckService,
         });
 
         this.httpServer = serve({
@@ -772,10 +782,8 @@ export class DaemonLifecycle {
         });
       }
 
-      // Register version-check worker (conditional on config)
-      if (this._config!.daemon.update_check) {
-        const { VersionCheckService } = await import('../infrastructure/version/index.js');
-        this._versionCheckService = new VersionCheckService(this.sqlite!);
+      // Register version-check worker (uses instance created in Step 4g)
+      if (this._versionCheckService) {
         const versionCheckInterval = this._config!.daemon.update_check_interval * 1000;
         this.workers.register('version-check', {
           interval: versionCheckInterval,
