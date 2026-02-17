@@ -95,13 +95,13 @@ v2.0.1 오픈소스 거버넌스 + 신뢰 강화 마일스톤으로 이연.
 | DOC-08 | Phase 168 | Pending |
 | PKG-01 | Phase 169 | Pending |
 | PKG-02 | Phase 169 | Pending |
-| DEPLOY-01 | Phase 170 | Pending |
-| DEPLOY-02 | Phase 170 | Pending |
-| DEPLOY-03 | Phase 170 | Pending |
-| DEPLOY-04 | Phase 170 | Pending |
+| DEPLOY-01 | Phase 170, 171 | Pending |
+| DEPLOY-02 | Phase 170, 171 | Pending |
+| DEPLOY-03 | Phase 170, 171 | Pending |
+| DEPLOY-04 | Phase 170, 171 | Pending |
 | RELEASE-01 | Phase 165 | Pending |
 | RELEASE-02 | Phase 165 | Pending |
-| RELEASE-03 | Phase 170 | Pending |
+| RELEASE-03 | Phase 170, 171 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 25 total
