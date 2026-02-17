@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 마일스톤 완료 -- Phase 172 통합 갭 해소 완료, 마일스톤 감사/아카이브 대기
+**Current focus:** v2.0 마일스톤 완료 -- Phase 173 문서 정확성 + Tech Debt 해소 완료, 마일스톤 감사/아카이브 대기
 
 ## Current Position
 
-Phase: 8 of 8 (Phase 172: 통합 갭 해소) -- COMPLETE
-Plan: 1 of 1 in current phase (172-01 COMPLETE)
-Status: v2.0 전 Phase 완료 (165-172). 마일스톤 감사(/gsd:audit-milestone) + 완료(/gsd:complete-milestone) 대기.
-Last activity: 2026-02-18 -- Phase 172 통합 갭 해소 (release.yml OpenAPI 검증 추가, Skills CLI 문서화)
+Phase: 9 of 9 (Phase 173: 문서 정확성 + Tech Debt 해소) -- COMPLETE
+Plan: 1 of 1 in current phase (173-01 COMPLETE)
+Status: v2.0 전 Phase 완료 (165-173). 마일스톤 감사(/gsd:audit-milestone) + 완료(/gsd:complete-milestone) 대기.
+Last activity: 2026-02-18 -- Phase 173 문서 정확성 + Tech Debt 해소 (스킬 이름, 깨진 링크, VERSION 동적화)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 37 milestones, 172 phases, 372 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
+**Cumulative:** 37 milestones, 173 phases, 373 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 16 (v2.0)
+- Total plans completed: 17 (v2.0)
 - Average duration: 8min (CI 디버깅 제외 시 5min)
 - Total execution time: ~4h (170-03 CI 디버깅 3h 포함)
 
@@ -43,6 +43,7 @@ Progress: [██████████] 100%
 | 170   | 03   | ~3h      | 2     | 4     |
 | 171   | 01   | 3min     | 2     | 3     |
 | 172   | 01   | 2min     | 2     | 4     |
+| 173   | 01   | 3min     | 6     | 7     |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 170-03: npm Classic Automation Token 사용, Trusted Publishing은 v2.0.4에서 전환
 - 171-01: README.ko.md 링크가 이미 올바른 상태 확인 -- 수정 불필요
 - 172-01: OpenAPI validation step을 Enum SSoT 다음, Coverage Gate 앞에 배치 -- ci.yml 순서와 일치
+- 173-01: README.ko.md 삭제 + Monorepo Structure 섹션 제거로 감사 항목 8건 중 2건 N/A 확인
+- 173-01: api-reference.md 깨진 README 링크 → npm 패키지 페이지로 대체
+- 173-01: skills CLI VERSION을 package.json 동적 로드로 전환 (release-please 자동 버전 반영)
 
 ### Blockers/Concerns
 
@@ -101,5 +105,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 172-01-PLAN.md -- Phase 172 통합 갭 해소 완료. 마일스톤 감사/아카이브 대기.
+Stopped at: Completed 173-01-PLAN.md -- Phase 173 문서 정확성 + Tech Debt 해소 완료. 마일스톤 감사/아카이브 대기.
 Resume file: None

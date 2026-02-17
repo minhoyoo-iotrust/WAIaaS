@@ -167,4 +167,4 @@ Plans:
 | 170. 배포 활성화 + pre-release | 3/3 | Complete    | 2026-02-18 |
 | 171. 검증 갭 해소 | 0/1 | Complete    | 2026-02-17 |
 | 172. 통합 갭 해소 | 0/1 | Complete    | 2026-02-17 |
-| 173. 문서 정확성 + Tech Debt 해소 | 0/1 | Pending     | — |
+| 173. 문서 정확성 + Tech Debt 해소 | 1/1 | Complete    | 2026-02-18 |
