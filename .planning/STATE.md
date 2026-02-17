@@ -21,13 +21,14 @@ Progress: [██░░░░░░░░] 20%
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 2 (v2.0)
-- Average duration: 4min
-- Total execution time: 7min
+- Total plans completed: 3 (v2.0)
+- Average duration: 5min
+- Total execution time: 15min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 165   | 01   | 5min     | 2     | 10    |
+| 166   | 01   | 8min     | 2     | 2     |
 | 166   | 02   | 2min     | 2     | 4     |
 
 ## Accumulated Context
@@ -40,6 +41,9 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 
 - 165-01: MIT 라이선스 채택, 저작권자 '2026 WAIaaS Contributors'
 - 165-01: npm @waiaas scope를 Organization으로 확보
+- 166-01: v2.0-release.md 매핑 테이블 44개 설계 문서 전수 PASS 검증 완료
+- 166-01: design-debt.md DD-01~DD-04 전 항목 처리 완료, 미해결 0건 확인
+- 166-01: doc 65/66은 독립 파일 없이 objective 내 설계로 정의됨 -- PASS 판정
 - 166-02: createApp() 무의존성 호출로 OpenAPI 스펙 추출 후 swagger-parser 검증
 - 166-02: CI stage2 전용 배치 -- full build 후 전체 라우트 등록 상태에서 검증
 
@@ -53,5 +57,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 166-02-PLAN.md. Phase 166 complete.
+Stopped at: Completed 166-01-PLAN.md + 166-02-PLAN.md. Phase 166 complete.
 Resume file: None
