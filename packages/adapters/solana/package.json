@@ -1,8 +1,18 @@
 {
   "name": "@waiaas/adapter-solana",
   "version": "1.7.0",
+  "description": "WAIaaS Solana chain adapter - SPL/Token-2022 support",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minho-yoo/waiaas.git",
+    "directory": "packages/adapters/solana"
+  },
+  "homepage": "https://github.com/minho-yoo/waiaas#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

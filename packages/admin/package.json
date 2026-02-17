@@ -1,9 +1,16 @@
 {
   "name": "@waiaas/admin",
   "version": "1.7.0",
+  "description": "WAIaaS Admin Web UI - built and bundled into daemon",
   "license": "MIT",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minho-yoo/waiaas.git",
+    "directory": "packages/admin"
+  },
+  "homepage": "https://github.com/minho-yoo/waiaas#readme",
   "scripts": {
     "build": "vite build",
     "postbuild": "mkdir -p ../daemon/public/admin && cp -r dist/* ../daemon/public/admin/",
