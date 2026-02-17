@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { PriceInfo, TokenRef } from '@waiaas/core';
+import type { TokenRef } from '@waiaas/core';
 import { CoinGeckoOracle, CoinGeckoNotConfiguredError, PriceNotAvailableError } from '../infrastructure/oracle/coingecko-oracle.js';
 
 /** USDC SPL token on Solana. */
@@ -19,7 +19,7 @@ const ETH_USDC: TokenRef = {
 };
 
 /** USDT ERC-20 token on Ethereum. */
-const ETH_USDT: TokenRef = {
+const _ETH_USDT: TokenRef = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
   symbol: 'USDT',
   decimals: 6,

@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import type { INotificationChannel } from '@waiaas/core';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';

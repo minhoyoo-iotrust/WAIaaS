@@ -10,7 +10,7 @@
  * Tests use mock IPriceOracle instances for primary and fallback.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IPriceOracle, TokenRef, PriceInfo, CacheStats } from '@waiaas/core';
+import type { IPriceOracle, TokenRef, PriceInfo } from '@waiaas/core';
 import { InMemoryPriceCache } from '../infrastructure/oracle/price-cache.js';
 import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
 import { OracleChain } from '../infrastructure/oracle/oracle-chain.js';
@@ -52,7 +52,7 @@ const ETH_TOKEN: TokenRef = {
   chain: 'ethereum',
 };
 
-const USDC_TOKEN: TokenRef = {
+const _USDC_TOKEN: TokenRef = {
   address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
   symbol: 'USDC',
   decimals: 6,

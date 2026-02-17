@@ -85,7 +85,6 @@ const EVM_NETWORKS = {
 
 /** Create a full success fetch mock for quickstart flow. */
 function createQuickstartFetchMock(mode = 'testnet') {
-  let walletCallCount = 0;
   let sessionCallCount = 0;
 
   return vi.fn((url: string | URL, init?: RequestInit) => {
@@ -97,7 +96,6 @@ function createQuickstartFetchMock(mode = 'testnet') {
 
     // POST /v1/wallets
     if (urlStr.endsWith('/v1/wallets') && init?.method === 'POST') {
-      walletCallCount++;
       const body = JSON.parse(init.body as string) as { chain: string; name: string; environment: string };
       if (body.chain === 'solana') {
         const wallet = { ...SOLANA_WALLET, environment: mode, name: `solana-${mode}` };

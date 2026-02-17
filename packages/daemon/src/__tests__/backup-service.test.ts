@@ -143,7 +143,7 @@ describe('BackupService', () => {
       const dir1 = service.createBackup('1.5.0');
 
       // Wait briefly to ensure different timestamps
-      const dir2 = service.createBackup('1.6.0');
+      const _dir2 = service.createBackup('1.6.0');
       const dir3 = service.createBackup('1.7.0');
 
       const backups = service.listBackups();

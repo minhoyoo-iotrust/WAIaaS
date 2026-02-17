@@ -12,7 +12,7 @@
  * The core value: the SAME shared suite runs against all adapters.
  */
 
-import { describe, vi, beforeAll, afterAll } from 'vitest';
+import { describe, vi, beforeAll } from 'vitest';
 import type { UnsignedTransaction } from '@waiaas/core';
 
 // ---- Hoisted mock setup ----
@@ -79,7 +79,8 @@ const TEST_RPC_URL = 'https://api.devnet.solana.com';
 let testFromAddress: string;
 let testToAddress: string;
 let testPrivateKey64: Uint8Array;
-let testUnsignedTx: UnsignedTransaction;
+// testUnsignedTx will be used when pipeline contract tests are enabled
+let _testUnsignedTx: UnsignedTransaction; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 async function generateTestFixtures() {
   const {
@@ -153,7 +154,7 @@ async function generateTestFixtures() {
   const encoder = getTransactionEncoder();
   const serialized = new Uint8Array(encoder.encode(compiled));
 
-  testUnsignedTx = {
+  _testUnsignedTx = {
     chain: 'solana',
     serialized,
     estimatedFee: 5000n,

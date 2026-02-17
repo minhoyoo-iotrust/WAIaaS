@@ -16,9 +16,7 @@ import type { IPriceOracle, PriceInfo, CacheStats } from '@waiaas/core';
 import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
 import {
   resolveEffectiveAmountUsd,
-  type PriceResult,
   type PriceResultSuccess,
-  type PriceResultOracleDown,
   type PriceResultNotListed,
 } from '../pipeline/resolve-effective-amount-usd.js';
 

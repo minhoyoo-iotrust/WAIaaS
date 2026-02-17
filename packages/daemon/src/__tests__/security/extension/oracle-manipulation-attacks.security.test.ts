@@ -406,7 +406,7 @@ describe('SEC-10-14: Cache TTL expiry triggers re-fetch', () => {
     }
 
     // Update primary oracle price
-    (primary as ReturnType<typeof createSimpleOracle> & { prices: Record<string, PriceInfo> });
+    // Cast removed: was a no-op expression (no actual price update needed)
 
     // Re-fetch should get fresh data from oracle
     const second = await oracle.getPrice(SOL_TOKEN);

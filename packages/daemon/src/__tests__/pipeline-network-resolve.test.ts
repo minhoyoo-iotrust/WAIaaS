@@ -259,7 +259,7 @@ describe('Pipeline network resolution integration', () => {
     expect(resolvedB).toBe('devnet'); // solana+testnet default = devnet
 
     // Case C: ethereum mainnet fallback
-    const resolvedC: string = null ?? getDefaultNetwork('ethereum', 'mainnet');
+    const resolvedC: string = getDefaultNetwork('ethereum', 'mainnet');
     expect(resolvedC).toBe('ethereum-mainnet');
   });
 });

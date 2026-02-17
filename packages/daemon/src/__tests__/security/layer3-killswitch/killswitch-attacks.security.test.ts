@@ -59,7 +59,7 @@ beforeEach(async () => {
   killSwitchState = 'ACTIVE';
 
   // Initialize kill switch state in key_value_store
-  const now = Math.floor(Date.now() / 1000);
+  const _now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
       'INSERT OR IGNORE INTO key_value_store (key, value, updated_at) VALUES (?, ?, ?)',
@@ -350,7 +350,7 @@ describe('SEC-03-05: Kill Switch double activation', () => {
 
 describe('SEC-03-06: Sessions revoked after kill switch, not restored on recovery', () => {
   it('cascade revokes all sessions, recovery does not restore them', async () => {
-    const now = Math.floor(Date.now() / 1000);
+    const _now = Math.floor(Date.now() / 1000);
 
     // Create sessions
     const { sessionId: sess1 } = seedSecurityTestData(conn.sqlite, {

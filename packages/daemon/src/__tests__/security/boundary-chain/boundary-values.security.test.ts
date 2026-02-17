@@ -15,10 +15,9 @@ import {
   createInMemoryDb,
   insertPolicy,
   insertTransaction,
-  seedSecurityTestData,
 } from '../helpers/security-test-helpers.js';
 import type { DatabaseConnection } from '../../../infrastructure/database/index.js';
-import { createDatabase, pushSchema, generateId } from '../../../infrastructure/database/index.js';
+import { generateId } from '../../../infrastructure/database/index.js';
 import { wallets } from '../../../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from '../../../pipeline/database-policy-engine.js';
 
@@ -284,7 +283,7 @@ describe('SEC-05-T08: ownerAuth timestamp boundary', () => {
   it('signedAt + 4:59 passes, 5:00/5:01 rejected', () => {
     const maxAge = 300; // 5 minutes
     const signedAt = 1700000000;
-    const deadline = signedAt + maxAge;
+    const _deadline = signedAt + maxAge;
 
     // 4:59 before deadline -- valid
     const now299 = signedAt + 299;
@@ -319,7 +318,7 @@ describe('SEC-05-C01: reserved_amount concurrency boundary', () => {
     });
 
     // Insert tx1 with 1.5 SOL reserved
-    const txId1 = insertTransaction(conn.sqlite, {
+    const _txId1 = insertTransaction(conn.sqlite, {
       walletId,
       status: 'PENDING',
       amount: '1500000000',

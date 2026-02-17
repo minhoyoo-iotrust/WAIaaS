@@ -173,7 +173,7 @@ function createMockApprovalWorkflow() {
 
 describe('WcSigningBridge', () => {
   let sqlite: DatabaseType;
-  let db: BetterSQLite3Database<typeof schema>;
+  let _db: BetterSQLite3Database<typeof schema>;
   let bridge: WcSigningBridge;
   let mockSignClient: ReturnType<typeof createMockSignClient>;
   let mockWcSessionService: ReturnType<typeof createMockWcSessionService>;
@@ -183,7 +183,7 @@ describe('WcSigningBridge', () => {
     vi.clearAllMocks();
     const conn = createTestDb();
     sqlite = conn.sqlite;
-    db = conn.db;
+    _db = conn.db;
     mockSignClient = createMockSignClient();
     mockApprovalWorkflow = createMockApprovalWorkflow();
   });

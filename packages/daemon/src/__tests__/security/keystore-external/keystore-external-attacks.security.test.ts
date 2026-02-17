@@ -9,9 +9,8 @@
  * @see docs/v0.4/46-keystore-external-security-scenarios.md
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync, writeFileSync, statSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
@@ -29,11 +28,11 @@ const TEST_PASSWORD = 'security-test-master-pw-2024';
 const WRONG_PASSWORD = 'wrong-password-attacker';
 
 let tempDir: string;
-let sodium: SodiumNative;
+let _sodium: SodiumNative;
 
 beforeAll(() => {
   tempDir = mkdtempSync(join(tmpdir(), 'waiaas-sec04-test-'));
-  sodium = require('sodium-native') as SodiumNative;
+  _sodium = require('sodium-native') as SodiumNative;
 });
 
 afterAll(() => {
@@ -49,7 +48,7 @@ describe('SEC-04-01: Signing with locked keystore is impossible', () => {
     const ksDir = mkdtempSync(join(tempDir, 'sec04-01-'));
     const keystore = new LocalKeyStore(ksDir);
 
-    const { publicKey } = await keystore.generateKeyPair(
+    const { publicKey: _publicKey } = await keystore.generateKeyPair(
       'wallet-locked-sign',
       'solana',
       'devnet',

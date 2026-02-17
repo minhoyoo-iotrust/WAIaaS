@@ -612,7 +612,7 @@ describe('mcpSetupCommand', () => {
 
   it('CLIP-06: --all + slug collision appends walletId prefix', async () => {
     let sessionCallCount = 0;
-    const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn((url: string | URL, _init?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes('/health')) {
         return Promise.resolve(mockResponse(200, { status: 'ok' }));
@@ -627,7 +627,6 @@ describe('mcpSetupCommand', () => {
       }
       if (urlStr.includes('/v1/sessions')) {
         sessionCallCount++;
-        const body = JSON.parse(init?.body as string) as { walletId: string };
         return Promise.resolve(mockResponse(200, {
           id: `session-${sessionCallCount}`,
           token: `token-${sessionCallCount}`,

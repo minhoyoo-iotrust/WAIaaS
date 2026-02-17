@@ -22,7 +22,6 @@ import {
 } from '@waiaas/core';
 import type {
   ChainErrorCode,
-  ChainErrorCategory,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------

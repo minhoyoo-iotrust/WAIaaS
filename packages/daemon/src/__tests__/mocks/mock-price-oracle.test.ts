@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PriceInfoSchema } from '@waiaas/core';
-import type { IPriceOracle, TokenRef, ChainType } from '@waiaas/core';
+import type { IPriceOracle, TokenRef } from '@waiaas/core';
 import { MockPriceOracle, createMockPriceOracle } from './mock-price-oracle.js';
 
 describe('MockPriceOracle (M9)', () => {

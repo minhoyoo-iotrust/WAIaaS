@@ -35,7 +35,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 
 const TEST_PASSWORD = 'test-master-password-evm-e2e';
 const HOST = '127.0.0.1:3100';
-const SESSION_TTL = 3600;
+const _SESSION_TTL = 3600;
 let passwordHash: string;
 
 // EVM test address (EIP-55 checksum)

@@ -716,7 +716,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
   let retryCount = 0;
 
   // Outer buildLoop: STALE errors return here to rebuild from Stage 5a
-  // eslint-disable-next-line no-constant-condition
+   
   buildLoop: while (true) {
     try {
       // Stage 5a: Build unsigned transaction (type-routed)

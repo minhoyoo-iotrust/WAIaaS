@@ -78,7 +78,7 @@ function approveTx(
 }
 
 /** Build a native TRANSFER transaction. */
-function transferTx(amount = '1000000000') {
+function _transferTx(amount = '1000000000') {
   return {
     type: 'TRANSFER',
     amount,

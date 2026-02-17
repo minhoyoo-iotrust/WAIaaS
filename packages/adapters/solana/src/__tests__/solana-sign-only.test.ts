@@ -140,7 +140,7 @@ beforeAll(async () => {
     const txMessage = pipe(
       createTransactionMessage({ version: 0 }),
       (tx) => setTransactionMessageFeePayer(from, tx),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (tx) => appendTransactionMessageInstruction(transferCheckedIx as any, tx),
       (tx) =>
         setTransactionMessageLifetimeUsingBlockhash(
@@ -172,7 +172,7 @@ beforeAll(async () => {
     const txMessage = pipe(
       createTransactionMessage({ version: 0 }),
       (tx) => setTransactionMessageFeePayer(from, tx),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (tx) => appendTransactionMessageInstruction(approveCheckedIx as any, tx),
       (tx) =>
         setTransactionMessageLifetimeUsingBlockhash(
@@ -201,7 +201,7 @@ beforeAll(async () => {
     const txMessage = pipe(
       createTransactionMessage({ version: 0 }),
       (tx) => setTransactionMessageFeePayer(from, tx),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (tx) => appendTransactionMessageInstruction(instruction as any, tx),
       (tx) =>
         setTransactionMessageLifetimeUsingBlockhash(
@@ -241,7 +241,7 @@ beforeAll(async () => {
           tx,
         ),
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     txMessage = appendTransactionMessageInstruction(customIx as any, txMessage) as unknown as typeof txMessage;
 
     multiInstructionBase64 = toBase64(compileTransaction(txMessage));
