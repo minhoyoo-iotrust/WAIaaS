@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 Phase: 163 of 164 (release-please)
 Plan: 9 of 12 total (1 of 3 in current phase)
 Status: In Progress
-Last activity: 2026-02-17 — 163-02 완료 (release.yml deploy job 추가, 2-게이트 모델 게이트 2)
+Last activity: 2026-02-17 — 163-01 완료 (release-please 설정 파일 3종 생성)
 
 Progress: [########░░] 75% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
@@ -74,6 +74,11 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - docker-publish는 release 이벤트에서만 push (workflow_dispatch 제외)
 - Watchtower 라벨을 이미지에 기본 포함하여 사용자 opt-in 간소화
 
+**163-01 결정:**
+- 모노레포 단일 버전 전략: 루트 패키지(.)가 9개 서브패키지 버전을 대표
+- bump-minor-pre-major: false로 1.x에서도 BREAKING CHANGE가 major 범프
+- changelog-sections: feat/fix/perf/refactor만 표시, docs/test/chore/ci는 숨김
+
 **163-02 결정:**
 - deploy job이 5개 품질 게이트 job 모두에 의존하여 전체 통과 후에만 실행
 - npm publish는 v2.0 전까지 --dry-run으로 실행 (RLSE-06)
@@ -88,5 +93,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 163-02-PLAN.md (release.yml deploy job 추가, 2-게이트 모델 게이트 2 구현)
+Stopped at: Completed 163-01-PLAN.md (release-please 설정 파일 3종 생성)
 Resume file: None
