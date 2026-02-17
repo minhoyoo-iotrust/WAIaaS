@@ -23,11 +23,11 @@
   2. npm registry 조회가 실패해도 데몬이 정상 시작되고 기능에 영향이 없다 (fail-soft)
   3. `update_check = false` 설정 시 버전 조회가 전혀 수행되지 않는다
   4. `GET /health` 응답에 latestVersion, updateAvailable, schemaVersion 필드가 포함되며, 버전 체크 미실행 시 latestVersion = null을 반환한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 160-01: BackgroundWorkers runImmediately 확장 + VersionCheckService 구현
-- [ ] 160-02: Health 엔드포인트 확장 (latestVersion, updateAvailable, schemaVersion)
+- [ ] 160-01-PLAN.md — BackgroundWorkers runImmediately 확장 + VersionCheckService 구현
+- [ ] 160-02-PLAN.md — Health 엔드포인트 확장 (latestVersion, updateAvailable, schemaVersion)
 
 ### Phase 161: CLI 알림 + upgrade 명령
 **Goal**: 사용자가 CLI 실행 시 새 버전 알림을 받고, `waiaas upgrade`로 안전하게 업그레이드/롤백할 수 있는 상태
