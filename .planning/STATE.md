@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 6 of 6 (Phase 170: 배포 사전 검증) -- IN PROGRESS
-Plan: 1 of 3 in current phase (170-01 COMPLETE)
-Status: 170-01 (npm publish --dry-run) 완료, 170-02 대기
-Last activity: 2026-02-17 -- Completed 170-01 (npm publish --dry-run 전수 검증)
+Plan: 2 of 3 in current phase (170-02 COMPLETE)
+Status: 170-02 (Docker Hub + release.yml 배포 활성화) 완료, 170-03 대기
+Last activity: 2026-02-17 -- Completed 170-02 (Docker Hub + release.yml 배포 활성화)
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 10 (v2.0)
+- Total plans completed: 11 (v2.0)
 - Average duration: 5min
-- Total execution time: 47min
+- Total execution time: 50min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -39,6 +39,7 @@ Progress: [█████████░] 90%
 | 169   | 01   | 3min     | 2     | 13    |
 | 169   | 02   | 4min     | 2     | 5     |
 | 170   | 01   | 9min     | 2     | 10    |
+| 170   | 02   | 3min     | 2     | 1     |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 170-01: publishConfig.access: public 추가 -- scoped 패키지(@waiaas/*) publish 시 필수
 - 170-01: admin 패키지는 private:true 유지 -- daemon에 번들되므로 별도 publish 불필요
 - 170-01: stale .tsbuildinfo + turbo 캐시 조합으로 dist/__tests__ 포함 문제 발견 -- clean build로 해결
+- 170-02: Docker Hub 이미지명 waiaas/daemon으로 확정
+- 170-02: RC 태그에서 latest/major/major.minor 태그 생성하지 않음 -- contains('-') 조건
+- 170-02: 8패키지 publish-check/deploy 양쪽에 동일한 PACKAGES 배열 패턴 적용
 
 ### Blockers/Concerns
 
@@ -86,5 +90,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 170-01-PLAN.md (npm publish --dry-run 전수 검증). Phase 170 진행 중. 170-02 대기.
+Stopped at: Completed 170-02-PLAN.md (Docker Hub + release.yml 배포 활성화). Phase 170 진행 중. 170-03 대기.
 Resume file: None
