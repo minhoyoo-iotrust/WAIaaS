@@ -63,24 +63,24 @@ v2.0에서 이월된 후순위 거버넌스 항목. 별도 마일스톤에서 �
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GOV-01 | Phase 174 | Pending |
-| GOV-02 | Phase 174 | Pending |
-| GOV-03 | Phase 174 | Pending |
-| GOV-04 | Phase 174 | Pending |
-| DOCS-01 | Phase 176 | Pending |
-| DOCS-02 | Phase 176 | Pending |
-| DOCS-03 | Phase 176 | Pending |
-| DOCS-04 | Phase 176 | Pending |
-| DOCS-05 | Phase 176 | Pending |
-| CLEAN-01 | Phase 175 | Pending |
-| CLEAN-02 | Phase 175 | Pending |
-| CLEAN-03 | Phase 175 | Pending |
-| CLEAN-04 | Phase 175 | Pending |
-| CLEAN-05 | Phase 175 | Pending |
-| DEPLOY-01 | Phase 177 | Pending |
-| DEPLOY-02 | Phase 177 | Pending |
-| DEPLOY-03 | Phase 177 | Pending |
-| DEPLOY-04 | Phase 177 | Pending |
+| GOV-01 | Phase 174 | Complete |
+| GOV-02 | Phase 174 | Deferred (content filter) |
+| GOV-03 | Phase 174 | Complete |
+| GOV-04 | Phase 174 | Complete |
+| DOCS-01 | Phase 176 | Complete |
+| DOCS-02 | Phase 176 | Complete |
+| DOCS-03 | Phase 176 | Complete |
+| DOCS-04 | Phase 176 | Complete |
+| DOCS-05 | Phase 176 | Complete |
+| CLEAN-01 | Phase 175 | Complete |
+| CLEAN-02 | Phase 175 | Complete |
+| CLEAN-03 | Phase 175 | Complete |
+| CLEAN-04 | Phase 175 | Complete |
+| CLEAN-05 | Phase 175 | Complete |
+| DEPLOY-01 | Phase 177 | Complete |
+| DEPLOY-02 | Phase 177 | Complete |
+| DEPLOY-03 | Phase 177 | Complete |
+| DEPLOY-04 | Phase 177 | Complete |
 
 **Coverage:**
 - v2.0.1 requirements: 18 total
@@ -89,4 +89,4 @@ v2.0에서 이월된 후순위 거버넌스 항목. 별도 마일스톤에서 �
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after roadmap creation*
+*Last updated: 2026-02-18 after all phases complete*
