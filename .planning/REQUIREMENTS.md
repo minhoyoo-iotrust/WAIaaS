@@ -86,14 +86,14 @@ v2.0.1 오픈소스 거버넌스 + 신뢰 강화 마일스톤으로 이연.
 | TEST-04 | Phase 167 | Completed |
 | TEST-05 | Phase 167 | Completed |
 | DOC-01 | Phase 168 | Completed |
-| DOC-02 | Phase 168 | Completed |
-| DOC-03 | Phase 168 | Completed |
+| DOC-02 | Phase 168, 173 | Completed |
+| DOC-03 | Phase 168, 173 | Completed |
 | DOC-04 | Phase 168 | Completed |
-| DOC-05 | Phase 168 | Completed |
-| DOC-06 | Phase 168 | Completed |
+| DOC-05 | Phase 168, 173 | Completed |
+| DOC-06 | Phase 168, 173 | Completed |
 | DOC-07 | Phase 168 | Completed |
 | DOC-08 | Phase 168 | Completed |
-| PKG-01 | Phase 169 | Completed |
+| PKG-01 | Phase 169, 173 | Completed |
 | PKG-02 | Phase 169 | Completed |
 | DEPLOY-01 | Phase 170, 171 | Completed |
 | DEPLOY-02 | Phase 170, 171 | Completed |
@@ -110,4 +110,4 @@ v2.0.1 오픈소스 거버넌스 + 신뢰 강화 마일스톤으로 이연.
 
 ---
 *Requirements defined: 2026-02-17*
-*Last updated: 2026-02-18 after Phase 171 verification gap closure*
+*Last updated: 2026-02-18 after Phase 173 gap closure phase creation*

@@ -136,9 +136,25 @@ Plans:
 Plans:
 - [ ] 172-01-PLAN.md — release.yml OpenAPI 검증 추가 + README/deployment.md Skills CLI 문서화
 
+### Phase 173: 문서 정확성 + Tech Debt 해소
+**Goal:** 감사에서 식별된 문서 정확성 tech debt 8건이 전수 해소되어, 사용자 대면 문서의 스킬 이름/링크/구조도가 실제 코드와 일치하는 상태
+**Depends on**: Phase 172 (통합 갭 해소 완료 후)
+**Requirements:** PKG-01, DOC-02, DOC-03, DOC-05, DOC-06 (강화)
+**Gap Closure:** Closes tech_debt from audit (3 user-facing + 5 cosmetic)
+**Success Criteria** (what must be TRUE):
+  1. README.md/README.ko.md의 스킬 목록이 실제 레지스트리(actions, x402 등)와 일치한다
+  2. docs/api-reference.md의 SDK/MCP 링크가 존재하는 파일을 가리킨다
+  3. docs/deployment.md의 알림 설정 앵커가 유효하다
+  4. packages/skills/src/cli.ts의 VERSION이 package.json과 동기화된다
+  5. README.md의 Docker Quick Start URL과 Monorepo 구조도가 정확하다
+**Plans**: 1 plan
+
+Plans:
+- [ ] 173-01-PLAN.md — 문서 정확성 8건 전수 수정 (README 스킬/URL/구조도 + api-reference 링크 + deployment 앵커 + skills VERSION + validate-openapi 주석 + VERIFICATION stale 텍스트)
+
 ## Progress
 
-**Execution Order:** 165 -> 166 -> 167 -> 168 -> 169 -> 170 -> 171 -> 172
+**Execution Order:** 165 -> 166 -> 167 -> 168 -> 169 -> 170 -> 171 -> 172 -> 173
 (Phase 165와 166은 병렬 가능)
 
 | Phase | Plans Complete | Status | Completed |
@@ -151,3 +167,4 @@ Plans:
 | 170. 배포 활성화 + pre-release | 3/3 | Complete    | 2026-02-18 |
 | 171. 검증 갭 해소 | 0/1 | Complete    | 2026-02-17 |
 | 172. 통합 갭 해소 | 0/1 | Complete    | 2026-02-17 |
+| 173. 문서 정확성 + Tech Debt 해소 | 0/1 | Pending     | — |
