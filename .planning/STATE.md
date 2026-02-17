@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 161 of 164 (CLI 알림 + upgrade)
-Plan: 4 of 12 total (2 of 3 in current phase)
+Plan: 5 of 12 total (3 of 3 in current phase)
 Status: Executing
-Last activity: 2026-02-17 — 161-01 완료 (CLI update-notify 모듈 + 테스트)
+Last activity: 2026-02-17 — 161-02 완료 (BackupService 백업/복원 + 15 테스트)
 
-Progress: [###░░░░░░░] 25% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [####░░░░░░] 33% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [###░░░░░░░] 25% — Milestone v1.8 (5 phases, 12 plans,
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 160. 버전 체크 인프라 | 2/2 | 5min | 2.5min |
-| 161. CLI 알림 + upgrade | 1/3 | 2min | 2min |
+| 161. CLI 알림 + upgrade | 2/3 | 4min | 2min |
 | 162. 호환성 + Docker | 0/2 | - | - |
 | 163. release-please | 0/3 | - | - |
 | 164. 동기화 + 통합 | 0/2 | - | - |
@@ -53,6 +53,11 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - AbortSignal.timeout(2000) 페치 타임아웃 -- CLI 응답성 2초 이내 보장
 - process.stderr.write 출력 -- stdout 파이프 안전성 확보
 
+**161-02 결정:**
+- copyFileSync로 개별 파일 복사 (cpSync 디렉토리 복사 대신 명시적 파일 단위)
+- DB 파일 없으면 에러 throw + 빈 백업 디렉토리 정리 (불완전한 백업 방지)
+- timestamp 포맷을 로컬 시간 기반 YYYYMMDDHHmmss로 사전순=시간순 보장
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -62,5 +67,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 161-01-PLAN.md (CLI update-notify 모듈 + 11 테스트)
+Stopped at: Completed 161-02-PLAN.md (BackupService 백업/복원 + 15 테스트)
 Resume file: None
