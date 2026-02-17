@@ -260,8 +260,8 @@ WAIAAS_RPC_SOLANA_MAINNET="https://my-rpc.example.com"
 
 | 문서 | 설명 |
 |------|------|
-| [배포 가이드](docs/deployment/) | Docker, npm, 설정 레퍼런스 |
-| [API 레퍼런스](docs/api/) | REST API OpenAPI 스펙 |
+| [배포 가이드](docs/deployment.md) | Docker, npm, 설정 레퍼런스 |
+| [API 레퍼런스](docs/api-reference.md) | REST API OpenAPI 스펙 |
 | [Why WAIaaS?](docs/why-waiaas/) | AI 에이전트 지갑 보안 배경 |
 
 ## 기여하기
