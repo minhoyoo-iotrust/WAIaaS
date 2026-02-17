@@ -59,7 +59,7 @@ beforeEach(async () => {
   killSwitchState = 'ACTIVE';
 
   // Initialize kill switch state in key_value_store
-  const _now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
       'INSERT OR IGNORE INTO key_value_store (key, value, updated_at) VALUES (?, ?, ?)',

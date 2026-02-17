@@ -157,7 +157,7 @@ describe('SEC-01 Session Authentication Attacks', () => {
   describe('SEC-01-04: cross-wallet session hijacking', () => {
     it('prevents wallet-A token from accessing wallet-B data via session isolation', async () => {
       // Seed two separate wallets with their own sessions
-      const { walletId: _walletA, sessionId: sessionA } = seedSecurityTestData(conn.sqlite, {
+      const { walletId: walletA, sessionId: sessionA } = seedSecurityTestData(conn.sqlite, {
         walletName: 'Wallet A',
       });
       const { walletId: walletB } = seedSecurityTestData(conn.sqlite, {

@@ -77,6 +77,8 @@
 | 060 | BUG | MEDIUM | adapter-solana 커버리지 임계값과 실제 수치 불일치 (branches 75% vs 68.29%) | v2.0 | FIXED | 2026-02-17 |
 | 061 | BUG | MEDIUM | admin 커버리지 임계값과 실제 수치 불일치 (functions 70% vs 58.48%) | v2.0 | FIXED | 2026-02-17 |
 | 062 | BUG | MEDIUM | cli 커버리지 임계값과 실제 수치 불일치 (lines/statements 70% vs 68.49%) | v2.0 | FIXED | 2026-02-17 |
+| 063 | BUG | HIGH | killswitch 보안 테스트 `now` 변수명 오류 — lint 수정 시 사용처 누락 (23건) | v2.0 | FIXED | 2026-02-17 |
+| 064 | BUG | HIGH | session-auth 보안 테스트 `walletA` 변수명 오류 — lint 수정 시 사용처 누락 (1건) | v2.0 | FIXED | 2026-02-17 |
 
 ## Type Legend
 
@@ -89,7 +91,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 62
+- **FIXED:** 64
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 62
+- **Total:** 64
