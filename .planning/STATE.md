@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 168 사용자 문서 진행 중
+**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 169 스킬 패키지 진행 중
 
 ## Current Position
 
-Phase: 4 of 6 (Phase 168: 사용자 문서 완비)
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 168 complete, ready for Phase 169
-Last activity: 2026-02-17 -- Completed 168-03 (배포 가이드 + API 레퍼런스 + CHANGELOG)
+Phase: 5 of 6 (Phase 169: 스킬 패키지)
+Plan: 1 of 2 in current phase
+Status: 169-01 complete, ready for 169-02
+Last activity: 2026-02-17 -- Completed 169-01 (@waiaas/skills 패키지 생성)
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 8 (v2.0)
+- Total plans completed: 9 (v2.0)
 - Average duration: 5min
-- Total execution time: 40min
+- Total execution time: 43min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -36,6 +36,7 @@ Progress: [██████░░░░] 60%
 | 168   | 01   | 5min     | 2     | 29    |
 | 168   | 02   | 4min     | 2     | 3     |
 | 168   | 03   | 5min     | 2     | 4     |
+| 169   | 01   | 3min     | 2     | 13    |
 
 ## Accumulated Context
 
@@ -63,6 +64,9 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 168-03: API 레퍼런스는 OpenAPI 스펙(GET /doc)을 SSoT로 두고 문서는 인증/카테고리 요약/에러 코드만 제공
 - 168-03: CHANGELOG은 Keep a Changelog 포맷으로 release-please 자동 생성과 병합 가능하게 유지
 - 168-03: README 문서 링크를 실제 파일 경로(deployment.md, api-reference.md)로 수정
+- 169-01: zero-dependency CLI: process.argv 직접 파싱, 외부 라이브러리 없이 구현
+- 169-01: @types/node devDependency 추가 (node:path, import.meta.dirname 타입 지원)
+- 169-01: bin 필드 waiaas-skills 키로 npx @waiaas/skills 실행 지원
 
 ### Blockers/Concerns
 
@@ -74,5 +78,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 168-03-PLAN.md (배포 가이드 + API 레퍼런스 + CHANGELOG). Phase 168 complete. Ready for Phase 169.
+Stopped at: Completed 169-01-PLAN.md (@waiaas/skills 패키지 생성). Ready for 169-02.
 Resume file: None
