@@ -152,6 +152,9 @@ jobs:
             cd "$GITHUB_WORKSPACE"
           done
 
+      - name: Smoke Test (npm pack + import verification)
+        run: bash scripts/smoke-test-published.sh
+
   # Docker image build + push to GHCR with 3-tier tagging
   docker-publish:
     runs-on: ubuntu-latest

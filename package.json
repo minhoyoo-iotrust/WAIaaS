@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify:enums": "tsx scripts/verify-enum-ssot.ts",
-    "validate:openapi": "tsx scripts/validate-openapi.ts"
+    "validate:openapi": "tsx scripts/validate-openapi.ts",
+    "test:smoke": "bash scripts/smoke-test-published.sh"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
