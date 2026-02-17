@@ -82,6 +82,7 @@ Parameters:
 - `name` (required): 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
 - `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks
+- `createSession` (optional): boolean, default `true` -- auto-creates a session and includes it in the response
 
 Response (201):
 ```json
@@ -93,40 +94,43 @@ Response (201):
   "environment": "testnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
-  "createdAt": 1707000000
+  "createdAt": 1707000000,
+  "session": {
+    "id": "01958f3b-5678-7000-8000-abcdef654321",
+    "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresAt": 1709592000
+  }
 }
 ```
 
 The `network` field shows the wallet's default network, automatically assigned based on the chain and environment. For Solana testnet, the default is `devnet`. For Ethereum testnet, the default is `ethereum-sepolia`.
 
-Save the `id` value -- you need it to create a session.
+The `session` field contains the auto-created session token. Save the `token` value -- use it as `Authorization: Bearer <token>` for all wallet operations below. To skip auto-session creation, set `createSession: false`.
 
-### Step 3: Create a Session
+### Step 3: Create Additional Sessions (Optional)
 
-Create a session to get a JWT token for wallet operations. Requires **masterAuth**.
+A session is already created in Step 2. Use this only if you need additional sessions. Requires **masterAuth**.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/sessions \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456", "ttl": 86400}'
+  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456", "ttl": 2592000}'
 ```
 
 Parameters:
 - `walletId` (required): UUID of the wallet from Step 2
-- `ttl` (optional): session lifetime in seconds, 300-604800 (default: 86400 = 24 hours)
+- `ttl` (optional): session lifetime in seconds, 300-31536000 (default: 2592000 = 30 days)
 
 Response (201):
 ```json
 {
   "id": "01958f3b-5678-7000-8000-abcdef654321",
   "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAt": 1707086400,
+  "expiresAt": 1709592000,
   "walletId": "01958f3a-1234-7000-8000-abcdef123456"
 }
 ```
-
-Save the `token` value -- use it as `Authorization: Bearer <token>` for all wallet operations below.
 
 ### Step 4: Check Balance
 

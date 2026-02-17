@@ -98,7 +98,9 @@ export const DaemonConfigSchema = z.object({
     .default({}),
   security: z
     .object({
-      session_ttl: z.number().int().min(300).max(604800).default(86400),
+      session_ttl: z.number().int().min(300).max(31536000).default(2592000),
+      session_absolute_lifetime: z.number().int().min(3600).max(315360000).default(31536000),
+      session_max_renewals: z.number().int().min(0).max(1000).default(12),
       jwt_secret: z.string().default(''),
       max_sessions_per_wallet: z.number().int().min(1).max(50).default(5),
       max_pending_tx: z.number().int().min(1).max(100).default(10),

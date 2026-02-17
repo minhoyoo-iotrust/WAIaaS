@@ -828,6 +828,7 @@ function WalletListView() {
   const formEnvironment = useSignal('testnet');
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
+  const createdSessionToken = useSignal<string | null>(null);
 
   const fetchWallets = async () => {
     try {
@@ -849,12 +850,17 @@ function WalletListView() {
     formError.value = null;
     formLoading.value = true;
     try {
-      await apiPost<Wallet>(API.WALLETS, {
+      const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, {
         name: formName.value.trim(),
         chain: formChain.value,
         environment: formEnvironment.value,
       });
-      showToast('success', 'Wallet created');
+      if (result.session?.token) {
+        createdSessionToken.value = result.session.token;
+        showToast('success', 'Wallet created with session');
+      } else {
+        showToast('success', 'Wallet created');
+      }
       formName.value = '';
       formChain.value = 'solana';
       formEnvironment.value = 'testnet';
@@ -929,6 +935,36 @@ function WalletListView() {
               onClick={() => { showForm.value = false; formError.value = null; }}
             >
               Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {createdSessionToken.value && (
+        <div class="inline-form" style={{ marginBottom: '1rem' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Session Token (copy now — shown only once)</div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              readOnly
+              value={createdSessionToken.value}
+              style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.85rem', padding: '0.5rem' }}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void navigator.clipboard.writeText(createdSessionToken.value!);
+                showToast('success', 'Token copied');
+              }}
+            >
+              Copy
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => { createdSessionToken.value = null; }}
+            >
+              Dismiss
             </Button>
           </div>
         </div>

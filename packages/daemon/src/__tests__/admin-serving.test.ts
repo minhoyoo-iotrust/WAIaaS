@@ -42,7 +42,7 @@ function mockConfig(overrides: Partial<DaemonConfig['daemon']> = {}): DaemonConf
       ntfy_server: 'https://ntfy.sh', ntfy_topic: '', locale: 'en' as const, rate_limit_rpm: 20,
     },
     security: {
-      session_ttl: 86400, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
+      session_ttl: 86400, session_absolute_lifetime: 31536000, session_max_renewals: 12, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
       nonce_storage: 'memory' as const, nonce_cache_max: 1000, nonce_cache_ttl: 300,
       rate_limit_global_ip_rpm: 1000, rate_limit_session_rpm: 300, rate_limit_tx_rpm: 10,
       cors_origins: ['http://localhost:3100'], autostop_consecutive_failures_threshold: 5,

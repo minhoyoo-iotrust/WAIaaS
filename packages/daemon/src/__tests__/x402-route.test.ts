@@ -144,7 +144,7 @@ function mockConfig(overrides?: Partial<DaemonConfig>): DaemonConfig {
       rate_limit_rpm: 20,
     },
     security: {
-      session_ttl: 86400,
+      session_ttl: 86400, session_absolute_lifetime: 31536000, session_max_renewals: 12,
       jwt_secret: '',
       max_sessions_per_wallet: 5,
       max_pending_tx: 10,

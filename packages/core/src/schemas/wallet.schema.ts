@@ -25,5 +25,6 @@ export const CreateWalletRequestSchema = z.object({
   name: z.string().min(1).max(100),
   chain: ChainTypeEnum.default('solana'),
   environment: EnvironmentTypeEnum.default('testnet'),
+  createSession: z.boolean().default(true),
 });
 export type CreateWalletRequest = z.infer<typeof CreateWalletRequestSchema>;

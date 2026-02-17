@@ -78,7 +78,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc.evm_default_network', category: 'rpc', configPath: 'rpc.evm_default_network', defaultValue: 'ethereum-sepolia', isCredential: false },
 
   // --- security category ---
-  { key: 'security.session_ttl', category: 'security', configPath: 'security.session_ttl', defaultValue: '86400', isCredential: false },
+  { key: 'security.session_ttl', category: 'security', configPath: 'security.session_ttl', defaultValue: '2592000', isCredential: false },
+  { key: 'security.session_absolute_lifetime', category: 'security', configPath: 'security.session_absolute_lifetime', defaultValue: '31536000', isCredential: false },
+  { key: 'security.session_max_renewals', category: 'security', configPath: 'security.session_max_renewals', defaultValue: '12', isCredential: false },
   { key: 'security.max_sessions_per_wallet', category: 'security', configPath: 'security.max_sessions_per_wallet', defaultValue: '5', isCredential: false },
   { key: 'security.max_pending_tx', category: 'security', configPath: 'security.max_pending_tx', defaultValue: '10', isCredential: false },
   { key: 'security.rate_limit_global_ip_rpm', category: 'security', configPath: 'security.rate_limit_global_ip_rpm', defaultValue: '1000', isCredential: false },

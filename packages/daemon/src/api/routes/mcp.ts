@@ -134,7 +134,7 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
     const sessionId = generateId();
     const ttl = parsed.expiresIn ?? deps.config.security.session_ttl;
     const expiresAt = nowSec + ttl;
-    const absoluteExpiresAt = nowSec + 30 * 86400; // 30 days
+    const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
 
     // 4. Sign JWT
     const jwtPayload: JwtPayload = {
@@ -156,7 +156,7 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
       absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
       createdAt: new Date(nowSec * 1000),
       renewalCount: 0,
-      maxRenewals: 30,
+      maxRenewals: deps.config.security.session_max_renewals,
       constraints: null,
     }).run();
 

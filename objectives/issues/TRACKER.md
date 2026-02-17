@@ -80,7 +80,12 @@
 | 063 | BUG | HIGH | killswitch 보안 테스트 `now` 변수명 오류 — lint 수정 시 사용처 누락 (23건) | v2.0 | FIXED | 2026-02-17 |
 | 064 | BUG | HIGH | session-auth 보안 테스트 `walletA` 변수명 오류 — lint 수정 시 사용처 누락 (1건) | v2.0 | FIXED | 2026-02-17 |
 | 065 | BUG | HIGH | CI coverage report 경로 이중화 — working-directory + 절대 경로 충돌 | v2.0 | FIXED | 2026-02-17 |
-| 066 | ENHANCEMENT | MEDIUM | CLAUDE.md 영문 번역 — 오픈소스 기여자용 | v2.0.1 | OPEN | 2026-02-18 |
+| 066 | ENHANCEMENT | MEDIUM | CLAUDE.md 영문 번역 — 오픈소스 기여자용 | v2.0.1 | FIXED | 2026-02-18 |
+| 067 | ENHANCEMENT | HIGH | README 재작성 — 퍼블릭 리포 전환 대비 | v2.0.1 | FIXED | 2026-02-18 |
+| 068 | ENHANCEMENT | MEDIUM | 지갑 생성 시 기본 세션 자동 생성 | v2.0.1 | FIXED | 2026-02-18 |
+| 069 | ENHANCEMENT | MEDIUM | 세션 기본 TTL 대폭 연장 + 하드코딩 Admin Settings 이관 | v2.0.1 | FIXED | 2026-02-18 |
+| 070 | ENHANCEMENT | LOW | 폐기된 tag-release.sh 스크립트 제거 | v2.0.1 | OPEN | 2026-02-18 |
+| 071 | ENHANCEMENT | MEDIUM | 배포 패키지 스모크 테스트 자동화 (npm pack) | v2.0.1 | OPEN | 2026-02-18 |
 
 ## Type Legend
 
@@ -92,8 +97,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 65
+- **OPEN:** 2
+- **FIXED:** 69
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 66
+- **Total:** 71

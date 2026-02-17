@@ -448,7 +448,7 @@ describe('TelegramBotService /newsession', () => {
     expect(session.token_hash).toBeDefined();
     expect(session.token_hash.length).toBe(64); // SHA-256 hex
     expect(session.renewal_count).toBe(0);
-    expect(session.max_renewals).toBe(30);
+    expect(session.max_renewals).toBe(12);
     expect(session.revoked_at).toBeNull();
 
     // Verify audit log

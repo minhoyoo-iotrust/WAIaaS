@@ -31,6 +31,7 @@ interface CreatedWallet {
   publicKey: string;
   defaultNetwork: string | null;
   availableNetworks: string[];
+  sessionToken: string | null;
 }
 
 interface NetworkInfo {
@@ -173,6 +174,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       environment: string;
       publicKey: string;
       defaultNetwork: string | null;
+      session: { id: string; token: string; expiresAt: number } | null;
     };
 
     // Fetch available networks (graceful degradation on failure)
@@ -200,20 +202,31 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       publicKey: walletData.publicKey,
       defaultNetwork: walletData.defaultNetwork,
       availableNetworks,
+      sessionToken: walletData.session?.token ?? null,
     });
   }
 
-  // Step 4: Create MCP sessions for each wallet
+  // Step 4: Write MCP token files + build config (sessions auto-created in Step 3)
   const mcpServers: Record<string, Record<string, unknown>> = {};
 
   for (const wallet of createdWallets) {
-    await createSessionAndWriteToken({
-      baseUrl,
-      dataDir: opts.dataDir,
-      password,
-      walletId: wallet.id,
-      expiresIn,
-    });
+    if (wallet.sessionToken) {
+      // Write token to mcp-tokens/<walletId> (atomic: write tmp then rename)
+      const tokenPath = join(opts.dataDir, 'mcp-tokens', wallet.id);
+      const tmpPath = `${tokenPath}.tmp`;
+      await mkdir(dirname(tokenPath), { recursive: true });
+      await writeFile(tmpPath, wallet.sessionToken, 'utf-8');
+      await rename(tmpPath, tokenPath);
+    } else {
+      // Fallback: create session separately (for older daemons without auto-session)
+      await createSessionAndWriteToken({
+        baseUrl,
+        dataDir: opts.dataDir,
+        password,
+        walletId: wallet.id,
+        expiresIn,
+      });
+    }
 
     const slug = toSlug(wallet.name);
     mcpServers[`waiaas-${slug}`] = buildConfigEntry({
