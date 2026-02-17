@@ -49,6 +49,6 @@
 
 ## Issue Tracking
 
-- Issues are filed in the `objectives/issues/` directory as `v{milestone}-{NNN}-{slug}.md`.
-- Register in `objectives/issues/TRACKER.md` and update the status.
+- Issues are filed in the `internal/objectives/issues/` directory as `v{milestone}-{NNN}-{slug}.md`.
+- Register in `internal/objectives/issues/TRACKER.md` and update the status.
 - Types: BUG (defect) / ENHANCEMENT (improvement) / MISSING (missing feature).
