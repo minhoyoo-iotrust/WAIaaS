@@ -69,12 +69,12 @@ Plans:
   3. CONTRIBUTING.md가 개발 환경 설정, 코드 스타일, PR 프로세스, 테스트 실행 방법을 안내한다
   4. 배포 가이드(docs/deployment.md)가 npm global 설치와 Docker compose 설치 두 경로를 안내하고, API 레퍼런스(docs/api-reference.md)가 OpenAPI 3.0 스펙 기반으로 제공된다
   5. CHANGELOG.md가 v1.1~v2.0 전체 주요 변경 이력을 포함하고, docs/why-waiaas.md가 AI 에이전트 지갑 보안 위기와 프로젝트 가치를 영문으로 설명한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 168-01: docs/ 디렉토리 재편성 (사용자 문서 vs 내부 설계 문서 분리)
-- [ ] 168-02: README.md(영문) + README.ko.md(한글) + CONTRIBUTING.md
-- [ ] 168-03: 배포 가이드 + API 레퍼런스 + CHANGELOG + Why WAIaaS
+- [ ] 168-01-PLAN.md — docs/ 디렉토리 재편성 + why-waiaas 이동 (DOC-01, DOC-08)
+- [ ] 168-02-PLAN.md — README.md(영문) + README.ko.md(한글) + CONTRIBUTING.md (DOC-02, DOC-03, DOC-04)
+- [ ] 168-03-PLAN.md — 배포 가이드 + API 레퍼런스 + CHANGELOG (DOC-05, DOC-06, DOC-07)
 
 ### Phase 169: 패키지 생성
 **Goal**: @waiaas/skills npx 패키지와 예제 에이전트가 사용자에게 제공되는 상태
