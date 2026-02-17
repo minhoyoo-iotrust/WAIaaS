@@ -1,6 +1,7 @@
 {
   "name": "@waiaas/daemon",
   "version": "1.7.0",
+  "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

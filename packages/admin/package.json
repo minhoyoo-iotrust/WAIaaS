@@ -1,6 +1,7 @@
 {
   "name": "@waiaas/admin",
   "version": "1.7.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {

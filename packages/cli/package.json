@@ -1,6 +1,7 @@
 {
   "name": "@waiaas/cli",
   "version": "1.7.0",
+  "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

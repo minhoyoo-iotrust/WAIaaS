@@ -1,6 +1,7 @@
 {
   "name": "@waiaas/mcp",
   "version": "1.7.0",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "waiaas-mcp": "./dist/index.js"
