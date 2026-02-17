@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 167 테스트 게이트
+**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 167 테스트 게이트 (plan 02 완료)
 
 ## Current Position
 
 Phase: 3 of 6 (Phase 167: 테스트 게이트)
-Plan: 1 of 3 in current phase
-Status: 167-01 complete, continuing 167-02
-Last activity: 2026-02-17 -- Completed 167-01 (보안 테스트 전수 통과)
+Plan: 2 of 3 in current phase (COMPLETE)
+Status: 167-02 complete, ready for 167-03
+Last activity: 2026-02-17 -- Completed 167-02 (커버리지 게이트 + Enum SSoT 검증)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 4 (v2.0)
+- Total plans completed: 5 (v2.0)
 - Average duration: 5min
-- Total execution time: 20min
+- Total execution time: 27min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -31,6 +31,7 @@ Progress: [██░░░░░░░░] 25%
 | 166   | 01   | 8min     | 2     | 2     |
 | 166   | 02   | 2min     | 2     | 4     |
 | 167   | 01   | 5min     | 2     | 0     |
+| 167   | 02   | 7min     | 2     | 1     |
 
 ## Accumulated Context
 
@@ -48,6 +49,7 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 166-02: createApp() 무의존성 호출로 OpenAPI 스펙 추출 후 swagger-parser 검증
 - 166-02: CI stage2 전용 배치 -- full build 후 전체 라우트 등록 상태에서 검증
 - 167-01: 보안 테스트 460건 전수 PASS -- 수정 불필요, plan 추정 ~347건 대비 실제 460건 확인
+- 167-02: bash 3.x 호환성을 위해 coverage-gate.sh에서 associative array 대신 parallel arrays 패턴 적용
 
 ### Blockers/Concerns
 
@@ -59,5 +61,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 167-01-PLAN.md (보안 테스트 전수 통과). Continuing 167-02.
+Stopped at: Completed 167-02-PLAN.md (커버리지 게이트 + Enum SSoT 검증). Ready for 167-03.
 Resume file: None
