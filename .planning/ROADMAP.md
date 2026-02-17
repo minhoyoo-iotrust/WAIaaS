@@ -84,11 +84,11 @@ Plans:
   1. `npx @waiaas/skills add <name>` 명령으로 현재 디렉토리에 스킬 파일(.skill.md)이 복사되고, `npx @waiaas/skills list`로 사용 가능한 스킬 목록이 출력된다
   2. examples/simple-agent/ 디렉토리에 @waiaas/sdk 기반 예제 에이전트가 있고, README를 따라 설치/실행하면 잔액 조회 -> 조건부 전송 -> 완료 대기 흐름이 동작한다
   3. @waiaas/skills 패키지가 `npm publish --dry-run` 성공한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 169-01: @waiaas/skills 패키지 생성 (npx CLI + 스킬 파일 번들링)
-- [ ] 169-02: examples/simple-agent/ 예제 에이전트 (SDK 기반 잔액 조회 -> 전송 -> 완료 대기)
+- [ ] 169-01-PLAN.md — @waiaas/skills 패키지 생성 (npx CLI + 스킬 파일 번들링)
+- [ ] 169-02-PLAN.md — examples/simple-agent/ 예제 에이전트 (SDK 기반 잔액 조회 -> 전송 -> 완료 대기)
 
 ### Phase 170: 배포 활성화 + pre-release
 **Goal**: npm 9개 패키지 + Docker 이미지가 실제 배포 채널에 게시되고, pre-release RC를 거쳐 정식 릴리스가 가능한 상태
