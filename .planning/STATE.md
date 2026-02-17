@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 169 스킬 패키지 진행 중
+**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 169 완료, Phase 170 준비
 
 ## Current Position
 
-Phase: 5 of 6 (Phase 169: 스킬 패키지)
-Plan: 1 of 2 in current phase
-Status: 169-01 complete, ready for 169-02
-Last activity: 2026-02-17 -- Completed 169-01 (@waiaas/skills 패키지 생성)
+Phase: 5 of 6 (Phase 169: 스킬 패키지) -- COMPLETE
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 169 complete, ready for Phase 170
+Last activity: 2026-02-17 -- Completed 169-02 (examples/simple-agent 예제 에이전트)
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 9 (v2.0)
+- Total plans completed: 10 (v2.0)
 - Average duration: 5min
-- Total execution time: 43min
+- Total execution time: 47min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -37,6 +37,7 @@ Progress: [███████░░░] 70%
 | 168   | 02   | 4min     | 2     | 3     |
 | 168   | 03   | 5min     | 2     | 4     |
 | 169   | 01   | 3min     | 2     | 13    |
+| 169   | 02   | 4min     | 2     | 5     |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 169-01: zero-dependency CLI: process.argv 직접 파싱, 외부 라이브러리 없이 구현
 - 169-01: @types/node devDependency 추가 (node:path, import.meta.dirname 타입 지원)
 - 169-01: bin 필드 waiaas-skills 키로 npx @waiaas/skills 실행 지원
+- 169-02: examples/는 pnpm-workspace.yaml에 포함하지 않음 -- 독립 프로젝트로 유지
+- 169-02: workspace:* 참조로 모노레포 내 로컬 SDK 사용, 외부 사용자는 npm 버전으로 교체
+- 169-02: toBaseUnits() 헬퍼로 잔액 문자열을 base unit BigInt로 변환
 
 ### Blockers/Concerns
 
@@ -78,5 +82,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 169-01-PLAN.md (@waiaas/skills 패키지 생성). Ready for 169-02.
+Stopped at: Completed 169-02-PLAN.md (examples/simple-agent 예제 에이전트). Phase 169 complete. Ready for Phase 170.
 Resume file: None
