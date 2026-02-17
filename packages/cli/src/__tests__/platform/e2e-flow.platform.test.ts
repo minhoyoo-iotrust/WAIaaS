@@ -4,7 +4,7 @@
  * PLAT-01-E2E-01
  */
 
-import { describe, it, expect, vi, afterAll } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';

@@ -9,29 +9,43 @@
 #
 # Package thresholds (lines) are synced with each package's vitest.config.ts.
 # This script reads coverage/coverage-summary.json per package.
+# Compatible with bash 3.x (macOS default) - no associative arrays.
 
 set -euo pipefail
 
 MODE="${COVERAGE_GATE_MODE:-soft}"
 
-# Core 4 packages
+# Core 4 packages and their thresholds (parallel arrays for bash 3.x compat)
 PACKAGES=(
   "packages/core"
   "packages/daemon"
   "packages/adapters/solana"
   "packages/sdk"
 )
+THRESHOLDS=(
+  90
+  85
+  80
+  80
+)
 
-# Per-package hard thresholds (lines metric, synced with vitest.config.ts)
-declare -A THRESHOLDS
-THRESHOLDS[packages/core]=90
-THRESHOLDS[packages/daemon]=85
-THRESHOLDS[packages/adapters/solana]=80
-THRESHOLDS[packages/sdk]=80
+get_threshold() {
+  local pkg="$1"
+  local i=0
+  for p in "${PACKAGES[@]}"; do
+    if [ "$p" = "$pkg" ]; then
+      echo "${THRESHOLDS[$i]}"
+      return
+    fi
+    i=$((i + 1))
+  done
+  echo "80" # fallback
+}
 
 check_package() {
   local pkg="$1"
-  local threshold="${THRESHOLDS[$pkg]}"
+  local threshold
+  threshold=$(get_threshold "$pkg")
   local summary="$pkg/coverage/coverage-summary.json"
 
   if [ ! -f "$summary" ]; then

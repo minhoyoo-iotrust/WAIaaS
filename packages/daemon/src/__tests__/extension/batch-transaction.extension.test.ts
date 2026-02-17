@@ -22,7 +22,6 @@ import type { DatabaseConnection } from '../../infrastructure/database/index.js'
 import { generateId } from '../../infrastructure/database/index.js';
 import { wallets } from '../../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from '../../pipeline/database-policy-engine.js';
-import { MockPriceOracle, createMockPriceOracle } from '../mocks/mock-price-oracle.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -466,13 +466,12 @@ export class SolanaAdapter implements IChainAdapter {
           .getAccountInfo(mintAddr, { encoding: 'base64' })
           .send();
 
-        let tokenProgramId: string;
         if (!mintAccountInfo.value) {
           throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
             message: `Token mint not found: ${tokenRequest.token.address}`,
           });
         }
-        tokenProgramId = String(mintAccountInfo.value.owner);
+        const tokenProgramId = String(mintAccountInfo.value.owner);
 
         // Compute destination ATA address
         const [destinationAta] = await findAssociatedTokenPda({
@@ -612,7 +611,6 @@ export class SolanaAdapter implements IChainAdapter {
       );
 
       for (const ix of instructions) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         txMessage = appendTransactionMessageInstruction(ix, txMessage) as unknown as typeof txMessage;
       }
 
@@ -769,7 +767,7 @@ export class SolanaAdapter implements IChainAdapter {
           ),
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
 
       // Compile and encode
@@ -862,7 +860,7 @@ export class SolanaAdapter implements IChainAdapter {
           ),
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
 
       // Step 6: Compile and encode
@@ -943,7 +941,7 @@ export class SolanaAdapter implements IChainAdapter {
         }
         instructionTypes.push(this.classifyInstruction(instr));
         for (const ix of solanaInstructions) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           txMessage = appendTransactionMessageInstruction(ix as any, txMessage) as unknown as typeof txMessage;
         }
       }
@@ -1005,7 +1003,6 @@ export class SolanaAdapter implements IChainAdapter {
    * Convert a single batch instruction into one or more Solana instructions.
    * Returns an array because TOKEN_TRANSFER may prepend an ATA create instruction.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async convertBatchInstruction(
     instr: import('@waiaas/core').TransferRequest
       | import('@waiaas/core').TokenTransferParams

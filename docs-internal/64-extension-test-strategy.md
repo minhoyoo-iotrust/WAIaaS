@@ -1543,28 +1543,28 @@ v0.4에서 71건의 보안 시나리오(43~47 문서)와 v0.6의 ~42건을 교�
 ### 8.3 참조 문서 목록
 
 **v0.4 테스트 프레임워크:**
-- `docs/v0.4/41-test-levels-matrix-coverage.md` -- 6개 테스트 레벨, 9개 모듈 매트릭스, 커버리지 목표
-- `docs/v0.4/42-mock-boundaries-interfaces-contracts.md` -- 5개 Mock 경계, 5개 Contract Test
-- `docs/v0.4/43-layer1-session-auth-attacks.md` -- Layer 1 세션 인증 보안 시나리오
-- `docs/v0.4/44-layer2-policy-bypass-attacks.md` -- Layer 2 정책 우회 보안 시나리오
-- `docs/v0.4/45-layer3-killswitch-recovery-attacks.md` -- Layer 3 Kill Switch 복구 보안 시나리오
-- `docs/v0.4/46-keystore-external-security-scenarios.md` -- 키스토어 외부 보안 시나리오
-- `docs/v0.4/47-boundary-value-chain-scenarios.md` -- 경계값/체인 보안 시나리오
-- `docs/v0.4/48-blockchain-test-environment-strategy.md` -- Solana 3단계 + EVM Stub 테스트 환경
+- `docs-internal/v0.4/41-test-levels-matrix-coverage.md` -- 6개 테스트 레벨, 9개 모듈 매트릭스, 커버리지 목표
+- `docs-internal/v0.4/42-mock-boundaries-interfaces-contracts.md` -- 5개 Mock 경계, 5개 Contract Test
+- `docs-internal/v0.4/43-layer1-session-auth-attacks.md` -- Layer 1 세션 인증 보안 시나리오
+- `docs-internal/v0.4/44-layer2-policy-bypass-attacks.md` -- Layer 2 정책 우회 보안 시나리오
+- `docs-internal/v0.4/45-layer3-killswitch-recovery-attacks.md` -- Layer 3 Kill Switch 복구 보안 시나리오
+- `docs-internal/v0.4/46-keystore-external-security-scenarios.md` -- 키스토어 외부 보안 시나리오
+- `docs-internal/v0.4/47-boundary-value-chain-scenarios.md` -- 경계값/체인 보안 시나리오
+- `docs-internal/v0.4/48-blockchain-test-environment-strategy.md` -- Solana 3단계 + EVM Stub 테스트 환경
 
 **Phase 22 소스 (토큰 확장):**
-- `docs/56-token-transfer-extension-spec.md` -- CHAIN-EXT-01: 토큰 전송 확장
-- `docs/57-asset-query-fee-estimation-spec.md` -- CHAIN-EXT-02: 자산 조회/수수료/테스트 시나리오
+- `docs-internal/56-token-transfer-extension-spec.md` -- CHAIN-EXT-01: 토큰 전송 확장
+- `docs-internal/57-asset-query-fee-estimation-spec.md` -- CHAIN-EXT-02: 자산 조회/수수료/테스트 시나리오
 
 **Phase 23 소스 (트랜잭션 타입 확장):**
-- `docs/58-contract-call-spec.md` -- CHAIN-EXT-03: 컨트랙트 호출
-- `docs/59-approve-management-spec.md` -- CHAIN-EXT-04: Approve 관리
-- `docs/60-batch-transaction-spec.md` -- CHAIN-EXT-05: 배치 트랜잭션
+- `docs-internal/58-contract-call-spec.md` -- CHAIN-EXT-03: 컨트랙트 호출
+- `docs-internal/59-approve-management-spec.md` -- CHAIN-EXT-04: Approve 관리
+- `docs-internal/60-batch-transaction-spec.md` -- CHAIN-EXT-05: 배치 트랜잭션
 
 **Phase 24 소스 (상위 추상화):**
-- `docs/61-price-oracle-spec.md` -- CHAIN-EXT-06: 가격 오라클
-- `docs/62-action-provider-architecture.md` -- CHAIN-EXT-07: Action Provider
-- `docs/63-swap-action-spec.md` -- CHAIN-EXT-08: Jupiter Swap
+- `docs-internal/61-price-oracle-spec.md` -- CHAIN-EXT-06: 가격 오라클
+- `docs-internal/62-action-provider-architecture.md` -- CHAIN-EXT-07: Action Provider
+- `docs-internal/63-swap-action-spec.md` -- CHAIN-EXT-08: Jupiter Swap
 
 ### 8.4 요구사항 충족 매트릭스
 

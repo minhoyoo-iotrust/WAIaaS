@@ -347,9 +347,18 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 9-패키지 모노
 
 ### 활성
 
-## Next Milestone Goals
+## Current Milestone: v2.0 전 기능 완성 릴리스
 
-- v2.0 전 기능 완성 릴리스 — npm 8패키지, Docker, GitHub Release
+**Goal:** v0.1~v0.10에서 설계한 모든 기능이 구현, 테스트, 문서화되어 공개 릴리스 가능한 상태.
+
+**Target features:**
+- 설계 문서 38개 최종 검증 (구현 범위 일치, E2E 검증, 설계 부채 0건)
+- 문서 재편성 (docs/ 사용자 문서, docs-internal/ 내부 설계 문서) + README(EN) + CONTRIBUTING.md + 배포 가이드
+- npm 9패키지 공개 발행 (@waiaas/core~skills) + Docker Hub push
+- @waiaas/skills 패키지 (npx @waiaas/skills add <name>)
+- 예제 에이전트 (examples/simple-agent/)
+- GitHub Release v2.0.0 (release-please 2-게이트)
+- CHANGELOG.md v1.1~v2.0 전체 변경 이력
 
 ### 범위 외
 
@@ -637,4 +646,4 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 �
 | contract test 패턴 (cross-package 의존성 검증) | health 응답 스키마 계약으로 패키지 경계 존중 | ✓ Good — v1.8 구현 |
 
 ---
-*최종 업데이트: 2026-02-17 after v1.8 milestone — 업그레이드 + 배포 인프라 (VersionCheck, CLI upgrade, BackupService, 호환성 매트릭스, release-please 2-게이트, Docker 3-tier 태깅)*
+*최종 업데이트: 2026-02-17 after v2.0 milestone start — 전 기능 완성 릴리스 (설계 검증 + 문서 + npm/Docker 배포 + 예제)*

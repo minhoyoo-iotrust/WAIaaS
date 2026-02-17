@@ -23,7 +23,6 @@ import type {
   IActionProvider,
   IChainAdapter,
   ActionDefinition,
-  ActionProviderMetadata,
   BalanceInfo,
   HealthInfo,
   UnsignedTransaction,
@@ -446,7 +445,7 @@ describe('POST /v1/actions/:provider/:action', () => {
     expect(body.status).toBe('PENDING');
 
     // Verify resolve was called
-    const testProvider = createTestProvider();
+    const _testProvider = createTestProvider();
     expect((registry.getAction('test_provider/test_action')!.provider.resolve as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
   });
 

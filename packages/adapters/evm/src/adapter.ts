@@ -417,7 +417,7 @@ export class EvmAdapter implements IChainAdapter {
         blockNumber: receipt.blockNumber,
         fee: receipt.gasUsed * receipt.effectiveGasPrice,
       };
-    } catch (error) {
+    } catch {
       // Timeout or RPC error: fallback to direct receipt query
       try {
         const receipt = await client.getTransactionReceipt({

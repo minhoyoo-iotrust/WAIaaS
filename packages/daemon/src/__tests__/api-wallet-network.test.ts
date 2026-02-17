@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
-import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';

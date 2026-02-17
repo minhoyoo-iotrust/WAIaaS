@@ -115,7 +115,7 @@ jobs:
           curl -f http://localhost:3100/health
           docker stop waiaas-release-test
 
-  # npm publish dry-run for 4 core packages
+  # npm publish dry-run for all 8 publishable packages
   publish-check:
     runs-on: ubuntu-latest
     needs: test
@@ -131,11 +131,21 @@ jobs:
 
       - name: npm publish dry-run
         run: |
-          for pkg in core sdk cli mcp; do
-            echo "--- Checking packages/$pkg ---"
-            cd packages/$pkg
+          PACKAGES=(
+            packages/core
+            packages/daemon
+            packages/cli
+            packages/sdk
+            packages/mcp
+            packages/skills
+            packages/adapters/solana
+            packages/adapters/evm
+          )
+          for pkg_path in "${PACKAGES[@]}"; do
+            echo "--- Checking $pkg_path ---"
+            cd "$pkg_path"
             npm publish --dry-run 2>&1 || exit 1
-            cd ../..
+            cd "$GITHUB_WORKSPACE"
           done
 
   # Docker image build + push to GHCR with 3-tier tagging
@@ -160,20 +170,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            waiaas/daemon
           tags: |
-            # latest tag for default branch releases
-            type=raw,value=latest,enable={{is_default_branch}}
-            # Full semver: v1.8.0
+            # latest tag only for stable releases (no pre-release suffix)
+            type=raw,value=latest,enable=${{ !contains(github.event.release.tag_name, '-') }}
+            # Full semver: v2.0.0 or v2.0.0-rc.1
             type=semver,pattern=v{{version}}
-            # Major version: v1
-            type=semver,pattern=v{{major}}
-            # Major.Minor: v1.8
-            type=semver,pattern=v{{major}}.{{minor}}
+            # Major version: v2 (stable only)
+            type=semver,pattern=v{{major}},enable=${{ !contains(github.event.release.tag_name, '-') }}
+            # Major.Minor: v2.0 (stable only)
+            type=semver,pattern=v{{major}}.{{minor}},enable=${{ !contains(github.event.release.tag_name, '-') }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -185,7 +203,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Gate 2: Manual approval deploy (dry-run until v2.0)
+  # Gate 2: Manual approval deploy — npm publish + summary
   deploy:
     runs-on: ubuntu-latest
     needs: [test, chain-integration, platform, publish-check, docker-publish]
@@ -201,13 +219,28 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
-      - name: npm publish (dry-run)
+      - name: Setup npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: npm publish
         run: |
-          for pkg in core sdk cli mcp; do
-            echo "--- Publishing packages/$pkg (dry-run) ---"
-            cd packages/$pkg
-            npm publish --dry-run 2>&1
-            cd ../..
+          PACKAGES=(
+            packages/core
+            packages/daemon
+            packages/cli
+            packages/sdk
+            packages/mcp
+            packages/skills
+            packages/adapters/solana
+            packages/adapters/evm
+          )
+          for pkg_path in "${PACKAGES[@]}"; do
+            echo "--- Publishing $pkg_path ---"
+            cd "$pkg_path"
+            npm publish --access public 2>&1
+            cd "$GITHUB_WORKSPACE"
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -217,7 +250,6 @@ jobs:
           echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **npm:** dry-run (activate in v2.0)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker:** pushed by docker-publish job" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> To enable real npm publish, remove \`--dry-run\` flag from npm publish step." >> $GITHUB_STEP_SUMMARY
+          echo "- **npm:** 8 packages published to npmjs.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker (GHCR):** ghcr.io/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker (Hub):** waiaas/daemon" >> $GITHUB_STEP_SUMMARY

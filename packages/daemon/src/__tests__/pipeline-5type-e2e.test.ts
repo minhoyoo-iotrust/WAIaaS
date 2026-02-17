@@ -16,7 +16,6 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import argon2 from 'argon2';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import { JwtSecretManager, type JwtPayload } from '../infrastructure/jwt/index.js';
-import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import { createApp } from '../api/server.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import type {

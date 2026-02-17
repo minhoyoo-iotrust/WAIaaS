@@ -17,7 +17,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
 import {
   WAIaaSError,
-  ContractCallRequestSchema,
   type IActionProvider,
   type ActionDefinition,
   type ActionProviderMetadata,

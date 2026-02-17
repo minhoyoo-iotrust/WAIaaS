@@ -150,3 +150,60 @@ describe('getItem non-existent key', () => {
     expect(result).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// close() guard — shutdown-safe behavior
+// ---------------------------------------------------------------------------
+
+describe('close() guard', () => {
+  it('setItem() is no-op after close()', async () => {
+    await storage.setItem('before-close', 'value');
+    storage.close();
+    await expect(storage.setItem('after-close', 'value')).resolves.not.toThrow();
+    // DB is still open, verify no new row was written
+    const row = sqlite.prepare('SELECT * FROM wc_store WHERE key = ?').get('after-close');
+    expect(row).toBeUndefined();
+  });
+
+  it('getItem() returns undefined after close()', async () => {
+    await storage.setItem('k', 'v');
+    storage.close();
+    const result = await storage.getItem('k');
+    expect(result).toBeUndefined();
+  });
+
+  it('getKeys() returns empty array after close()', async () => {
+    await storage.setItem('k', 'v');
+    storage.close();
+    const keys = await storage.getKeys();
+    expect(keys).toEqual([]);
+  });
+
+  it('getEntries() returns empty array after close()', async () => {
+    await storage.setItem('k', 'v');
+    storage.close();
+    const entries = await storage.getEntries();
+    expect(entries).toEqual([]);
+  });
+
+  it('removeItem() is no-op after close()', async () => {
+    await storage.setItem('k', 'v');
+    storage.close();
+    await expect(storage.removeItem('k')).resolves.not.toThrow();
+    // Data should still be in DB (removeItem was a no-op)
+    const row = sqlite.prepare('SELECT * FROM wc_store WHERE key = ?').get('k');
+    expect(row).toBeDefined();
+  });
+
+  it('does not throw even if DB is closed after storage.close()', async () => {
+    await storage.setItem('k', 'v');
+    storage.close();
+    sqlite.close();
+    // All methods should silently no-op without DB errors
+    await expect(storage.setItem('x', 'y')).resolves.not.toThrow();
+    await expect(storage.getItem('k')).resolves.toBeUndefined();
+    await expect(storage.getKeys()).resolves.toEqual([]);
+    await expect(storage.getEntries()).resolves.toEqual([]);
+    await expect(storage.removeItem('k')).resolves.not.toThrow();
+  });
+});

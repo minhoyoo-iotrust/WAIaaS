@@ -20,7 +20,6 @@ import {
 } from '../helpers/security-test-helpers.js';
 import { JwtSecretManager } from '../../../infrastructure/jwt/index.js';
 import type { DatabaseConnection } from '../../../infrastructure/database/index.js';
-import { generateId } from '../../../infrastructure/database/index.js';
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -182,7 +181,7 @@ describe('SEC-01 Session Authentication Attacks', () => {
     });
 
     it('token with forged walletId pointing to another wallet still uses session walletId', async () => {
-      const { walletId: walletA, sessionId: sessionA } = seedSecurityTestData(conn.sqlite, {
+      const { walletId: _walletA, sessionId: sessionA } = seedSecurityTestData(conn.sqlite, {
         walletName: 'Wallet A',
       });
       const { walletId: walletB } = seedSecurityTestData(conn.sqlite, {

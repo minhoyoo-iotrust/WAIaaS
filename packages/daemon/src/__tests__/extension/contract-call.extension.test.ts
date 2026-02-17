@@ -26,7 +26,6 @@ import { wallets } from '../../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from '../../pipeline/database-policy-engine.js';
 import {
   ContractCallRequestSchema,
-  TransactionRequestSchema,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------

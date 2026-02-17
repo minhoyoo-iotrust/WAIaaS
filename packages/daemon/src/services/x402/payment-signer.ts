@@ -359,7 +359,7 @@ export async function signSolanaTransferChecked(
   }, { programAddress: address(TOKEN_PROGRAM_ADDRESS) });
 
   // Build transaction message using pipe pattern
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const txMessage = pipe(
     createTransactionMessage({ version: 0 }),
     (msg) => setTransactionMessageFeePayer(feePayerAddress, msg),
@@ -368,7 +368,7 @@ export async function signSolanaTransferChecked(
       blockhashInfo as any, // eslint-disable-line @typescript-eslint/no-explicit-any
       msg,
     ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (msg) => appendTransactionMessageInstruction(transferIx as any, msg),
   );
 

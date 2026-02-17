@@ -18,7 +18,7 @@ import {
   insertTransaction,
 } from '../helpers/security-test-helpers.js';
 import type { DatabaseConnection } from '../../../infrastructure/database/index.js';
-import { createDatabase, pushSchema, generateId } from '../../../infrastructure/database/index.js';
+import { generateId } from '../../../infrastructure/database/index.js';
 import { wallets } from '../../../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from '../../../pipeline/database-policy-engine.js';
 
@@ -609,7 +609,7 @@ describe('SEC-02 Additional: policy evaluation order (DENY priority)', () => {
 
   it('WHITELIST is evaluated before SPENDING_LIMIT (deny-first order)', async () => {
     // Both WHITELIST and SPENDING_LIMIT deny - verify WHITELIST reason is returned
-    const whitelistPolicyId = insertPolicy(conn.sqlite, {
+    const _whitelistPolicyId = insertPolicy(conn.sqlite, {
       type: 'WHITELIST',
       rules: JSON.stringify({
         allowed_addresses: ['AllowedAddr1'],

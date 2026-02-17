@@ -1,13 +1,29 @@
 {
   "name": "@waiaas/core",
-  "version": "1.8.0",
+"version": "1.8.0",
+  "description": "WAIaaS core types, schemas, and shared utilities",
+  "license": "MIT",
+
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minho-yoo/waiaas.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/minho-yoo/waiaas#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./testing": {
+      "import": "./dist/testing/index.js",
+      "types": "./dist/testing/index.d.ts"
     }
   },
   "files": [

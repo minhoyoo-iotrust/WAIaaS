@@ -21,7 +21,6 @@ import { createHealthRoute } from '../api/routes/health.js';
 import { createDatabase, pushSchema, LATEST_SCHEMA_VERSION } from '../infrastructure/database/index.js';
 import {
   checkSchemaCompatibility,
-  MIN_COMPATIBLE_SCHEMA_VERSION,
 } from '../infrastructure/database/compatibility.js';
 import { BackupService } from '../infrastructure/backup/backup-service.js';
 
@@ -330,8 +329,8 @@ describe('upgrade flow E2E', () => {
       const service = new BackupService(dataDir);
 
       // Create multiple backups with different version labels
-      const dir1 = service.createBackup('1.5.0');
-      const dir2 = service.createBackup('1.6.0');
+      const _dir1 = service.createBackup('1.5.0');
+      const _dir2 = service.createBackup('1.6.0');
       const dir3 = service.createBackup('1.7.0');
 
       const backups = service.listBackups();

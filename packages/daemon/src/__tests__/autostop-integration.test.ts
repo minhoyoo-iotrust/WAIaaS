@@ -53,7 +53,7 @@ function insertWallet(sqlite: DatabaseType, id: string, status = 'ACTIVE'): void
 // Helper: get wallet status
 // ---------------------------------------------------------------------------
 
-function getWalletStatus(sqlite: DatabaseType, id: string): string | undefined {
+function _getWalletStatus(sqlite: DatabaseType, id: string): string | undefined {
   const row = sqlite.prepare('SELECT status FROM wallets WHERE id = ?').get(id) as
     | { status: string }
     | undefined;

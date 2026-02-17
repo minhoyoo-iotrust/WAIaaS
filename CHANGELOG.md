@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- User-facing documentation: README, CONTRIBUTING, deployment guide, API reference
+- OpenAPI spec validation in CI (swagger-parser)
+- Security test suite verification (460 tests)
+- Coverage gate for CI pipeline
+- Platform compatibility tests (macOS + Linux)
+
 ## [1.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v1.7.0...v1.8.0) (2026-02-17)
 
 

@@ -24,7 +24,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 const TEST_MASTER_PASSWORD = 'test-master-password';
 const WALLET_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01';
-const WALLET_ID_2 = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee02';
+const _WALLET_ID_2 = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee02';
 
 function createTestDb(): { sqlite: DatabaseType; db: BetterSQLite3Database<typeof schema> } {
   const conn = createDatabase(':memory:');

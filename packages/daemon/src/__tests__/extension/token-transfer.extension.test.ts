@@ -25,7 +25,6 @@ import { wallets } from '../../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from '../../pipeline/database-policy-engine.js';
 import {
   TokenTransferRequestSchema,
-  ContractCallRequestSchema,
   TransactionRequestSchema,
 } from '@waiaas/core';
 import { AssetInfoSchema } from '@waiaas/core';

@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { wallets, policies } from '../infrastructure/database/schema.js';
+import { wallets } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 

@@ -1,7 +1,19 @@
 {
   "name": "@waiaas/daemon",
-  "version": "1.8.0",
+"version": "1.8.0",
+  "description": "WAIaaS daemon - self-hosted wallet service for AI agents",
+  "license": "MIT",
+
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minho-yoo/waiaas.git",
+    "directory": "packages/daemon"
+  },
+  "homepage": "https://github.com/minho-yoo/waiaas#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

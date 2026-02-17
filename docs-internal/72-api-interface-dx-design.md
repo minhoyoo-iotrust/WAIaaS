@@ -2,7 +2,7 @@
 
 > **Phase:** 108 (v1.4.5 -- 멀티체인 월렛 설계)
 > **산출물:** REST API network/environment 파라미터 확장 + 멀티네트워크 잔액 집계 + 하위호환 전략 + OpenAPI 변경 요약
-> **참조 기반:** docs/68-environment-model-design.md, docs/70-pipeline-network-resolve-design.md, docs/71-policy-engine-network-extension-design.md, 108-RESEARCH.md
+> **참조 기반:** docs-internal/68-environment-model-design.md, docs-internal/70-pipeline-network-resolve-design.md, docs-internal/71-policy-engine-network-extension-design.md, 108-RESEARCH.md
 > **작성일:** 2026-02-14
 
 ---

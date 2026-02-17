@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   existsSync,
   mkdirSync,
+  readFileSync,
   writeFileSync,
   rmSync,
 } from 'node:fs';
@@ -173,7 +174,6 @@ describe('PLAT-01 Windows platform tests', () => {
 
     // Reading back should work regardless of separator style
     expect(existsSync(pidPath)).toBe(true);
-    const { readFileSync } = require('node:fs');
     const content = readFileSync(pidPath, 'utf-8').trim();
     expect(content).toBe('12345');
 

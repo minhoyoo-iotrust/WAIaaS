@@ -2,7 +2,7 @@
 
 > **Phase:** 105 (v1.4.5 -- 멀티체인 월렛 설계)
 > **산출물:** v6a(transactions.network ADD COLUMN) + v6b(wallets 12-step 재생성) 마이그레이션 전략
-> **참조 기반:** docs/68-environment-model-design.md, docs/65-migration-strategy.md, migrate.ts(v2/v3 선례)
+> **참조 기반:** docs-internal/68-environment-model-design.md, docs-internal/65-migration-strategy.md, migrate.ts(v2/v3 선례)
 > **작성일:** 2026-02-14
 
 ---

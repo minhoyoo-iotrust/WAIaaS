@@ -30,9 +30,17 @@ export interface IKeyValueStorage {
 // ---------------------------------------------------------------------------
 
 export class SqliteKeyValueStorage implements IKeyValueStorage {
+  private closed = false;
+
   constructor(private readonly sqlite: Database) {}
 
+  /** Mark storage as closed so subsequent WC SDK callbacks are silently ignored. */
+  close(): void {
+    this.closed = true;
+  }
+
   async getKeys(): Promise<string[]> {
+    if (this.closed) return [];
     const rows = this.sqlite
       .prepare('SELECT key FROM wc_store')
       .all() as Array<{ key: string }>;
@@ -40,6 +48,7 @@ export class SqliteKeyValueStorage implements IKeyValueStorage {
   }
 
   async getEntries<T = any>(): Promise<[string, T][]> {
+    if (this.closed) return [];
     const rows = this.sqlite
       .prepare('SELECT key, value FROM wc_store')
       .all() as Array<{ key: string; value: string }>;
@@ -47,6 +56,7 @@ export class SqliteKeyValueStorage implements IKeyValueStorage {
   }
 
   async getItem<T = any>(key: string): Promise<T | undefined> {
+    if (this.closed) return undefined;
     const row = this.sqlite
       .prepare('SELECT value FROM wc_store WHERE key = ?')
       .get(key) as { value: string } | undefined;
@@ -54,12 +64,14 @@ export class SqliteKeyValueStorage implements IKeyValueStorage {
   }
 
   async setItem<T = any>(key: string, value: T): Promise<void> {
+    if (this.closed) return;
     this.sqlite
       .prepare('INSERT OR REPLACE INTO wc_store (key, value) VALUES (?, ?)')
       .run(key, JSON.stringify(value));
   }
 
   async removeItem(key: string): Promise<void> {
+    if (this.closed) return;
     this.sqlite
       .prepare('DELETE FROM wc_store WHERE key = ?')
       .run(key);

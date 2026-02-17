@@ -1,0 +1,33 @@
+{
+  "name": "@waiaas/skills",
+  "version": "1.7.0",
+  "description": "WAIaaS skill files for AI agents - install via npx @waiaas/skills add <name>",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minho-yoo/waiaas.git",
+    "directory": "packages/skills"
+  },
+  "homepage": "https://github.com/minho-yoo/waiaas#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "waiaas-skills": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

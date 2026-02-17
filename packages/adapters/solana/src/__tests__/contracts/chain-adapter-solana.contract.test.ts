@@ -12,8 +12,8 @@
  * The core value: the SAME shared suite runs against all adapters.
  */
 
-import { describe, vi, beforeAll, afterAll } from 'vitest';
-import type { UnsignedTransaction } from '@waiaas/core';
+import { describe, vi, beforeAll } from 'vitest';
+import type { UnsignedTransaction } from '@waiaas/core'; // used in generateTestFixtures
 
 // ---- Hoisted mock setup ----
 
@@ -64,7 +64,7 @@ vi.mock('@solana-program/token', () => ({
 }));
 
 import { SolanaAdapter } from '../../adapter.js';
-import { chainAdapterContractTests } from '../../../../../core/src/__tests__/contracts/chain-adapter.contract.js';
+import { chainAdapterContractTests } from '@waiaas/core/testing';
 
 // ---- Helpers ----
 
@@ -79,7 +79,6 @@ const TEST_RPC_URL = 'https://api.devnet.solana.com';
 let testFromAddress: string;
 let testToAddress: string;
 let testPrivateKey64: Uint8Array;
-let testUnsignedTx: UnsignedTransaction;
 
 async function generateTestFixtures() {
   const {
@@ -153,7 +152,8 @@ async function generateTestFixtures() {
   const encoder = getTransactionEncoder();
   const serialized = new Uint8Array(encoder.encode(compiled));
 
-  testUnsignedTx = {
+  // Build unsigned tx fixture (will be used when pipeline contract tests are enabled)
+  void ({
     chain: 'solana',
     serialized,
     estimatedFee: 5000n,
@@ -163,7 +163,7 @@ async function generateTestFixtures() {
       lastValidBlockHeight: 200,
       version: 0,
     },
-  };
+  } satisfies UnsignedTransaction);
 }
 
 // ---- Setup mock RPC responses for all contract-tested methods ----

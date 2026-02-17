@@ -13,7 +13,7 @@
  * @see docs/64-extension-test-strategy.md section 6.6
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { IPriceOracle, PriceInfo, TokenRef, ChainType, CacheStats } from '@waiaas/core';
 import { OracleChain } from '../../infrastructure/oracle/oracle-chain.js';
 import { InMemoryPriceCache } from '../../infrastructure/oracle/price-cache.js';
@@ -21,7 +21,6 @@ import { PriceNotAvailableError } from '../../infrastructure/oracle/oracle-error
 import { classifyPriceAge, PRICE_AGE_THRESHOLDS } from '../../infrastructure/oracle/price-age.js';
 import {
   resolveEffectiveAmountUsd,
-  type PriceResult,
 } from '../../pipeline/resolve-effective-amount-usd.js';
 import { createMockPriceOracle } from '../mocks/mock-price-oracle.js';
 import {
@@ -94,7 +93,7 @@ function createSimpleOracle(
 
 /** Standard token refs. */
 const SOL_TOKEN: TokenRef = { address: 'native', decimals: 9, chain: 'solana' };
-const ETH_TOKEN: TokenRef = { address: 'native', decimals: 18, chain: 'ethereum' };
+const _ETH_TOKEN: TokenRef = { address: 'native', decimals: 18, chain: 'ethereum' };
 const USDC_TOKEN: TokenRef = {
   address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
   decimals: 6,
@@ -342,8 +341,8 @@ describe('ORC-I01~I06: integration -- OracleChain', () => {
 
   it('ORC-I04: DatabasePolicyEngine + MockPriceOracle -> USD end-to-end policy eval', async () => {
     const conn = createInMemoryDb();
-    const walletId = await insertTestWallet(conn);
-    const engine = new DatabasePolicyEngine(conn.db);
+    const _walletId = await insertTestWallet(conn);
+    const _engine = new DatabasePolicyEngine(conn.db);
 
     insertPolicy(conn.sqlite, {
       type: 'SPENDING_LIMIT',

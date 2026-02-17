@@ -72,6 +72,14 @@
 | 055 | ENHANCEMENT | MEDIUM | Admin UI Owner 지갑 UX 개선 — 가시성 및 안내 강화 | v1.7 | FIXED | 2026-02-17 |
 | 056 | BUG | HIGH | WalletConnect 페어링 시 Owner 주소 검증 누락 | v1.7 | FIXED | 2026-02-17 |
 | 057 | MISSING | MEDIUM | Owner 수동 검증 API + Admin UI Verify 버튼 | v1.7 | FIXED | 2026-02-17 |
+| 058 | BUG | MEDIUM | WalletConnect 셧다운 시 DB 연결 종료 후 스토리지 쓰기 시도 | v1.8 | FIXED | 2026-02-17 |
+| 059 | ENHANCEMENT | MEDIUM | Contract Test Suite 크로스 패키지 Import 구조 개선 | v2.0 | FIXED | 2026-02-17 |
+| 060 | BUG | MEDIUM | adapter-solana 커버리지 임계값과 실제 수치 불일치 (branches 75% vs 68.29%) | v2.0 | FIXED | 2026-02-17 |
+| 061 | BUG | MEDIUM | admin 커버리지 임계값과 실제 수치 불일치 (functions 70% vs 58.48%) | v2.0 | FIXED | 2026-02-17 |
+| 062 | BUG | MEDIUM | cli 커버리지 임계값과 실제 수치 불일치 (lines/statements 70% vs 68.49%) | v2.0 | FIXED | 2026-02-17 |
+| 063 | BUG | HIGH | killswitch 보안 테스트 `now` 변수명 오류 — lint 수정 시 사용처 누락 (23건) | v2.0 | FIXED | 2026-02-17 |
+| 064 | BUG | HIGH | session-auth 보안 테스트 `walletA` 변수명 오류 — lint 수정 시 사용처 누락 (1건) | v2.0 | FIXED | 2026-02-17 |
+| 065 | BUG | HIGH | CI coverage report 경로 이중화 — working-directory + 절대 경로 충돌 | v2.0 | FIXED | 2026-02-17 |
 
 ## Type Legend
 
@@ -84,7 +92,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 57
+- **FIXED:** 65
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 57
+- **Total:** 65

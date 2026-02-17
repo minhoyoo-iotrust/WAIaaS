@@ -16,7 +16,6 @@ import {
   writeFileSync,
   mkdirSync,
   rmSync,
-  unlinkSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -259,7 +258,6 @@ describe('PLAT-01 stop platform tests', { timeout: 30_000 }, () => {
 
       // Capture console.log to verify shutdown steps
       const logs: string[] = [];
-      const origLog = console.log;
       mockStdout.mockRestore();
       mockStdout = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
         logs.push(args.map(String).join(' '));

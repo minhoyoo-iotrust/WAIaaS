@@ -9,7 +9,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { z, ZodError } from 'zod';
 import {
   ActionProviderMetadataSchema,
-  ActionDefinitionSchema,
 } from '@waiaas/core';
 import type { IActionProvider, ActionContext, ContractCallRequest } from '@waiaas/core';
 import { MockActionProvider, createMockActionProvider } from './mock-action-provider.js';

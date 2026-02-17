@@ -21,7 +21,7 @@ import { SETTING_DEFINITIONS, SETTING_CATEGORIES } from '../infrastructure/setti
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { HotReloadOrchestrator } from '../infrastructure/settings/hot-reload.js';
-import { NOTIFICATION_EVENT_TYPES, getMessages } from '@waiaas/core';
+import { NOTIFICATION_EVENT_TYPES } from '@waiaas/core';
 import { getNotificationMessage } from '../notifications/templates/message-templates.js';
 import type { BalanceMonitorService } from '../services/monitoring/balance-monitor-service.js';
 import type { Database as DatabaseType } from 'better-sqlite3';

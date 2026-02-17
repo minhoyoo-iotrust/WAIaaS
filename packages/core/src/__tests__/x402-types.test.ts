@@ -24,13 +24,13 @@ describe('CAIP-2 Mapping', () => {
   });
 
   it('every CAIP-2 entry maps to a valid NetworkType', () => {
-    for (const [_caip2, { network }] of Object.entries(CAIP2_TO_NETWORK)) {
+    for (const [, { network }] of Object.entries(CAIP2_TO_NETWORK)) {
       expect((NETWORK_TYPES as readonly string[]).includes(network)).toBe(true);
     }
   });
 
   it('every CAIP-2 entry maps to a valid ChainType', () => {
-    for (const [_caip2, { chain }] of Object.entries(CAIP2_TO_NETWORK)) {
+    for (const [, { chain }] of Object.entries(CAIP2_TO_NETWORK)) {
       expect((CHAIN_TYPES as readonly string[]).includes(chain)).toBe(true);
     }
   });

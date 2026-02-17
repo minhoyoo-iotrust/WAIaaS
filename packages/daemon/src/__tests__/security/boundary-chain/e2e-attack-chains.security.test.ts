@@ -368,7 +368,7 @@ describe('Chain 5: Time-based expiry + tier escalation + AutoStop', { timeout: 3
       exp: nowSec + 1, // Expires in 1 second
     });
 
-    let killState = 'ACTIVE';
+    const killState = 'ACTIVE';
     const app = createSecurityTestApp({
       jwtManager,
       db: conn.db,
