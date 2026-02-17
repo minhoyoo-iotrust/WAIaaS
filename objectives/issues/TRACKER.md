@@ -86,6 +86,8 @@
 | 069 | ENHANCEMENT | MEDIUM | 세션 기본 TTL 대폭 연장 + 하드코딩 Admin Settings 이관 | v2.0.1 | FIXED | 2026-02-18 |
 | 070 | ENHANCEMENT | LOW | 폐기된 tag-release.sh 스크립트 제거 | v2.0.1 | OPEN | 2026-02-18 |
 | 071 | ENHANCEMENT | MEDIUM | 배포 패키지 스모크 테스트 자동화 (npm pack) | v2.0.1 | OPEN | 2026-02-18 |
+| 072 | ENHANCEMENT | LOW | CLAUDE.md 언어 컨벤션에 태그/릴리스 영문 규칙 추가 | v2.0 | OPEN | 2026-02-18 |
+| 073 | ENHANCEMENT | MEDIUM | 정식 릴리스 승격 스크립트 자동화 (promote-release.sh) | v2.0 | OPEN | 2026-02-18 |
 
 ## Type Legend
 
@@ -97,8 +99,8 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 4
 - **FIXED:** 69
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 71
+- **Total:** 73
