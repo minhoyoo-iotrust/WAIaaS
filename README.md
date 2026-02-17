@@ -256,6 +256,23 @@ WAIAAS_RPC_SOLANA_MAINNET="https://my-rpc.example.com"
 
 Runtime-adjustable settings (rate limits, policy defaults, etc.) are also configurable through the Admin Web UI without restarting the daemon.
 
+## Skill Files for AI Agents
+
+WAIaaS provides pre-built skill files that teach AI agents how to use the API. Install them with npx:
+
+```bash
+# List available skills
+npx @waiaas/skills list
+
+# Add a specific skill
+npx @waiaas/skills add wallet
+
+# Add all skills
+npx @waiaas/skills add --all
+```
+
+Available skills: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `mcp`, `notifications`.
+
 ## Documentation
 
 | Document | Description |

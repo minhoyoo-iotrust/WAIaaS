@@ -256,6 +256,23 @@ WAIAAS_RPC_SOLANA_MAINNET="https://my-rpc.example.com"
 
 런타임 변경이 유용한 설정(속도 제한, 정책 기본값 등)은 Admin Web UI에서 데몬 재시작 없이 조정할 수 있다.
 
+## AI 에이전트용 스킬 파일
+
+WAIaaS는 AI 에이전트가 API를 사용하는 방법을 학습하는 사전 제작된 스킬 파일을 제공한다. npx로 설치할 수 있다:
+
+```bash
+# 사용 가능한 스킬 목록
+npx @waiaas/skills list
+
+# 특정 스킬 추가
+npx @waiaas/skills add wallet
+
+# 모든 스킬 추가
+npx @waiaas/skills add --all
+```
+
+사용 가능한 스킬: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `mcp`, `notifications`.
+
 ## 문서
 
 | 문서 | 설명 |
