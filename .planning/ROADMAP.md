@@ -23,10 +23,10 @@ v0.1~v1.8까지 37개 마일스톤으로 축적된 설계와 구현의 최종 �
   1. 프로젝트 루트에 MIT 라이선스 파일이 존재하고, 모든 패키지의 package.json에 "license": "MIT"가 설정되어 있다
   2. npm 레지스트리에서 @waiaas scope가 확보되어 `npm access ls-packages` 또는 `npm org ls`로 확인할 수 있다
   3. `npm publish --dry-run`이 scope 관련 에러 없이 통과한다 (패키지 내용 검증은 Phase 170)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 165-01: MIT LICENSE 파일 생성 + package.json license 필드 통일 + npm scope 확보
+- [ ] 165-01-PLAN.md — MIT LICENSE 파일 생성 + package.json license 필드 통일 + npm scope 확보
 
 ### Phase 166: 설계 검증 + 설계 부채 해소
 **Goal**: v0.1~v0.10 설계 문서 37개의 구현 완전성이 검증되고, 설계 부채가 0건이거나 v2.1 이연이 명시된 상태
