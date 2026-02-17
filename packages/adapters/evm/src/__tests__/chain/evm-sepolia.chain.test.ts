@@ -135,15 +135,19 @@ describe.skipIf(!EVM_TESTNET_ENABLED)('Level 3: EVM Sepolia Testnet', () => {
 
   it('Sepolia-3: ERC-20 balance query returns token info', async () => {
     try {
-      const assets = await adapter.getAssets(KNOWN_ADDRESS, [SEPOLIA_USDC]);
+      const assets = await adapter.getAssets(KNOWN_ADDRESS);
 
       expect(assets).toBeDefined();
       expect(Array.isArray(assets)).toBe(true);
 
+      // Find the USDC token in the returned assets
+      const token = assets.find(
+        (a) => a.mint.toLowerCase() === SEPOLIA_USDC.toLowerCase(),
+      );
+
       // The query should succeed even if balance is 0
-      if (assets.length > 0) {
-        const token = assets[0]!;
-        expect(token.address.toLowerCase()).toBe(SEPOLIA_USDC.toLowerCase());
+      if (token) {
+        expect(token.mint.toLowerCase()).toBe(SEPOLIA_USDC.toLowerCase());
         expect(typeof token.balance).toBe('bigint');
         expect(token.symbol).toBeTruthy();
 
