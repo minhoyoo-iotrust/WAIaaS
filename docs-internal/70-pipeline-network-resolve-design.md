@@ -2,7 +2,7 @@
 
 > **Phase:** 106 (v1.4.5 -- 멀티체인 월렛 설계)
 > **산출물:** NetworkResolver 순수 함수 + PipelineContext 확장 + 환경-네트워크 교차 검증 + AdapterPool 호출 변경
-> **참조 기반:** docs/68-environment-model-design.md, docs/69-db-migration-v6-design.md, 106-RESEARCH.md
+> **참조 기반:** docs-internal/68-environment-model-design.md, docs-internal/69-db-migration-v6-design.md, 106-RESEARCH.md
 > **작성일:** 2026-02-14
 
 ---

@@ -2,7 +2,7 @@
 
 > **Phase:** 107 (v1.4.5 -- 멀티체인 월렛 설계)
 > **산출물:** ALLOWED_NETWORKS 11번째 PolicyType + 네트워크 스코프 정책 + policies 테이블 v8 마이그레이션
-> **참조 기반:** docs/68-environment-model-design.md, docs/69-db-migration-v6-design.md, docs/70-pipeline-network-resolve-design.md, 107-RESEARCH.md
+> **참조 기반:** docs-internal/68-environment-model-design.md, docs-internal/69-db-migration-v6-design.md, docs-internal/70-pipeline-network-resolve-design.md, 107-RESEARCH.md
 > **작성일:** 2026-02-14
 
 ---
