@@ -355,7 +355,15 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 
 ### 활성
 
-(v2.0 shipped — 다음 마일스톤 요구사항은 `/gsd:new-milestone`에서 정의)
+**Current Milestone: v2.0.1 오픈소스 기본 체계 + 내부 문서 정리**
+
+**Goal:** 퍼블릭 리포 필수 거버넌스 파일을 갖추고, 내부 설계 문서를 공개 문서와 분리하여 리포지토리 구조를 정리하는 상태.
+
+**Target features:**
+- 오픈소스 필수 파일 (SECURITY.md, CODE_OF_CONDUCT.md, Issue/PR Templates)
+- 내부 문서 구조 정리 (설계 문서 통합 → internal/design/, objectives → internal/objectives/, 아카이브)
+- OPEN Issues 해소 (#070 tag-release.sh 제거, #071 npm pack 스모크 테스트, #072 CLAUDE.md 규칙)
+- v2.0 Known Gaps 수정 (INT-01/02 문서 불일치, FLOW-01/02 cosmetic)
 
 ### 범위 외
 
@@ -654,4 +662,4 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 2
 | npm Classic Automation Token | Trusted Publishing은 v2.0.4에서 전환 | ✓ Good — v2.0 구현 |
 
 ---
-*최종 업데이트: 2026-02-18 after v2.0 milestone — 전 기능 완성 릴리스 shipped (설계 검증 + 문서 + npm/Docker 배포 + 예제)*
+*최종 업데이트: 2026-02-18 after v2.0.1 milestone start — 오픈소스 기본 체계 + 내부 문서 정리*
