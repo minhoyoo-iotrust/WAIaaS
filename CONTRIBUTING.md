@@ -1,6 +1,6 @@
 # Contributing to WAIaaS
 
-Thank you for your interest in contributing to WAIaaS! This is a streamlined open-source project without a formal Code of Conduct -- just be respectful and constructive.
+Thank you for your interest in contributing to WAIaaS! This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold this code.
 
 ## Development Setup
 
