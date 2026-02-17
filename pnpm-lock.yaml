@@ -114,6 +114,9 @@ importers:
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
+      semver:
+        specifier: ^7.7.4
+        version: 7.7.4
     devDependencies:
       '@hono/node-server':
         specifier: ^1.19.9
@@ -121,6 +124,9 @@ importers:
       '@types/qrcode':
         specifier: ^1.5.6
         version: 1.5.6
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.7.1
       argon2:
         specifier: ^0.44.0
         version: 0.44.0

@@ -13,6 +13,10 @@
  *   owner disconnect                  -- Disconnect WalletConnect session
  *   owner status                      -- Show WalletConnect session status
  *   mcp setup                         -- Set up MCP integration for Claude Desktop
+ *   upgrade                           -- Upgrade WAIaaS to the latest version
+ *   upgrade --check                   -- Check for available updates
+ *   upgrade --to <version>            -- Upgrade to a specific version
+ *   upgrade --rollback                -- Restore from the latest backup
  *
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
  */
@@ -26,6 +30,7 @@ import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
 import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
+import { upgradeCommand } from './commands/upgrade.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
@@ -209,6 +214,31 @@ mcp
       all: opts.all ?? false,
       expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
       masterPassword: opts.password,
+    });
+  });
+
+program
+  .command('upgrade')
+  .description('Upgrade WAIaaS to the latest version')
+  .option('--data-dir <path>', 'Data directory path')
+  .option('--check', 'Check for updates without upgrading')
+  .option('--to <version>', 'Upgrade to a specific version')
+  .option('--rollback', 'Restore from the latest backup')
+  .option('--no-start', 'Skip daemon restart after upgrade')
+  .action(async (opts: {
+    dataDir?: string;
+    check?: boolean;
+    to?: string;
+    rollback?: boolean;
+    start?: boolean; // commander inverts --no-start to start=false
+  }) => {
+    const dataDir = resolveDataDir(opts);
+    await upgradeCommand({
+      dataDir,
+      check: opts.check,
+      to: opts.to,
+      rollback: opts.rollback,
+      noStart: opts.start === false, // commander: --no-start → start=false
     });
   });
 
