@@ -37,8 +37,8 @@ RUN pnpm install --frozen-lockfile
 # 4) Copy full source
 COPY . .
 
-# 5) Build all packages (daemon + cli + mcp + sdk + adapters + core)
-RUN pnpm turbo build
+# 5) Build daemon + cli + mcp and all their dependencies
+RUN pnpm turbo build --filter=@waiaas/daemon... --filter=@waiaas/cli... --filter=@waiaas/mcp...
 
 
 # ---------------------------------------------------------------------------
