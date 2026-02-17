@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 162 of 164 (호환성 + Docker)
-Plan: 6 of 12 total (0 of 2 in current phase)
-Status: Ready
-Last activity: 2026-02-17 — 161-03 완료 (upgrade 명령 7단계 시퀀스 + 15 테스트)
+Plan: 7 of 12 total (1 of 2 in current phase)
+Status: In Progress
+Last activity: 2026-02-17 — 162-02 완료 (Docker Watchtower 라벨 + GHCR 3-tier 태깅)
 
-Progress: [#####░░░░░] 50% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [######░░░░] 58% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -26,7 +26,7 @@ Progress: [#####░░░░░] 50% — Milestone v1.8 (5 phases, 12 plans, 30 
 |-------|-------|-------|----------|
 | 160. 버전 체크 인프라 | 2/2 | 5min | 2.5min |
 | 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
-| 162. 호환성 + Docker | 0/2 | - | - |
+| 162. 호환성 + Docker | 1/2 | 1min | 1min |
 | 163. release-please | 0/3 | - | - |
 | 164. 동기화 + 통합 | 0/2 | - | - |
 
@@ -63,6 +63,12 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - Step 5 마이그레이션은 데몬 시작 시 자동 실행에 위임 -- 구버전 코드에서 마이그레이션 직접 실행 위험
 - BackupService를 @waiaas/daemon barrel export에 추가 -- CLI에서 직접 import 가능
 
+**162-02 결정:**
+- docker/metadata-action@v5로 GitHub Release 태그에서 3-tier 태그 자동 생성
+- GHCR(GitHub Container Registry) 사용 -- github.repository 기반 이미지 이름
+- docker-publish는 release 이벤트에서만 push (workflow_dispatch 제외)
+- Watchtower 라벨을 이미지에 기본 포함하여 사용자 opt-in 간소화
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -72,5 +78,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 161-03-PLAN.md (upgrade 명령 7단계 시퀀스 + 15 테스트, Phase 161 완료)
+Stopped at: Completed 162-02-PLAN.md (Docker Watchtower 라벨 + GHCR 3-tier 태깅)
 Resume file: None
