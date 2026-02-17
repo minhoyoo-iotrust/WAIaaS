@@ -1,9 +1,8 @@
 {
   "name": "@waiaas/core",
-"version": "1.8.0",
+  "version": "2.0.0",
   "description": "WAIaaS core types, schemas, and shared utilities",
   "license": "MIT",
-
   "type": "module",
   "repository": {
     "type": "git",
