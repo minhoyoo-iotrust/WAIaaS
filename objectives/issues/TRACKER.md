@@ -79,6 +79,7 @@
 | 062 | BUG | MEDIUM | cli 커버리지 임계값과 실제 수치 불일치 (lines/statements 70% vs 68.49%) | v2.0 | FIXED | 2026-02-17 |
 | 063 | BUG | HIGH | killswitch 보안 테스트 `now` 변수명 오류 — lint 수정 시 사용처 누락 (23건) | v2.0 | FIXED | 2026-02-17 |
 | 064 | BUG | HIGH | session-auth 보안 테스트 `walletA` 변수명 오류 — lint 수정 시 사용처 누락 (1건) | v2.0 | FIXED | 2026-02-17 |
+| 065 | BUG | HIGH | CI coverage report 경로 이중화 — working-directory + 절대 경로 충돌 | v2.0 | FIXED | 2026-02-17 |
 
 ## Type Legend
 
@@ -91,7 +92,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 64
+- **FIXED:** 65
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 64
+- **Total:** 65

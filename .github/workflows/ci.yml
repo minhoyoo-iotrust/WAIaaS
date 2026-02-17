@@ -89,8 +89,8 @@ jobs:
         if: always()
         with:
           name: '@waiaas/core'
-          json-summary-path: packages/core/coverage/coverage-summary.json
-          json-final-path: packages/core/coverage/coverage-final.json
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
           working-directory: packages/core
 
       - name: 'Coverage Report - @waiaas/daemon'
@@ -98,8 +98,8 @@ jobs:
         if: always()
         with:
           name: '@waiaas/daemon'
-          json-summary-path: packages/daemon/coverage/coverage-summary.json
-          json-final-path: packages/daemon/coverage/coverage-final.json
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
           working-directory: packages/daemon
 
       - name: 'Coverage Report - @waiaas/adapter-solana'
@@ -107,8 +107,8 @@ jobs:
         if: always()
         with:
           name: '@waiaas/adapter-solana'
-          json-summary-path: packages/adapters/solana/coverage/coverage-summary.json
-          json-final-path: packages/adapters/solana/coverage/coverage-final.json
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
           working-directory: packages/adapters/solana
 
       - name: 'Coverage Report - @waiaas/sdk'
@@ -116,6 +116,6 @@ jobs:
         if: always()
         with:
           name: '@waiaas/sdk'
-          json-summary-path: packages/sdk/coverage/coverage-summary.json
-          json-final-path: packages/sdk/coverage/coverage-final.json
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
           working-directory: packages/sdk
