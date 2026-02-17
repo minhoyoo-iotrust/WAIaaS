@@ -12,7 +12,7 @@ v0.1~v1.8까지 37개 마일스톤으로 축적된 설계와 구현의 최종 �
 - [x] **Phase 168: 사용자 문서 완비** - docs/ 재편성 + README en/ko + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG + Why WAIaaS
 - [x] **Phase 169: 패키지 생성** - @waiaas/skills npx 배포 패키지 + examples/simple-agent 예제 에이전트 (completed 2026-02-17)
 - [x] **Phase 170: 배포 활성화 + pre-release** - npm 8개 패키지 publish + Docker Hub push + release.yml 활성화 + v2.0.0-rc.1 pre-release 발행 (completed 2026-02-18)
-- [ ] **Phase 171: 검증 갭 해소** - Phase 170 VERIFICATION.md 생성 + Phase 168 VERIFICATION 갱신 + REQUIREMENTS.md 25개 체크박스 일괄 갱신
+- [x] **Phase 171: 검증 갭 해소** - Phase 170 VERIFICATION.md 생성 + Phase 168 VERIFICATION 갱신 + REQUIREMENTS.md 25개 체크박스 일괄 갱신 (completed 2026-02-17)
 - [ ] **Phase 172: 통합 갭 해소** - release.yml OpenAPI 검증 추가 + @waiaas/skills CLI 사용법 문서화
 
 ## Phase Details
@@ -149,5 +149,5 @@ Plans:
 | 168. 사용자 문서 완비 | 3/3 | Complete    | 2026-02-17 |
 | 169. 패키지 생성 | 2/2 | Complete    | 2026-02-17 |
 | 170. 배포 활성화 + pre-release | 3/3 | Complete    | 2026-02-18 |
-| 171. 검증 갭 해소 | 0/1 | Pending    | - |
+| 171. 검증 갭 해소 | 0/1 | Complete    | 2026-02-17 |
 | 172. 통합 갭 해소 | 0/1 | Pending    | - |
