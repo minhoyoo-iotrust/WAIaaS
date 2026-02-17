@@ -76,6 +76,7 @@
 | 059 | ENHANCEMENT | MEDIUM | Contract Test Suite 크로스 패키지 Import 구조 개선 | v2.0 | FIXED | 2026-02-17 |
 | 060 | BUG | MEDIUM | adapter-solana 커버리지 임계값과 실제 수치 불일치 (branches 75% vs 68.29%) | v2.0 | FIXED | 2026-02-17 |
 | 061 | BUG | MEDIUM | admin 커버리지 임계값과 실제 수치 불일치 (functions 70% vs 58.48%) | v2.0 | FIXED | 2026-02-17 |
+| 062 | BUG | MEDIUM | cli 커버리지 임계값과 실제 수치 불일치 (lines/statements 70% vs 68.49%) | v2.0 | FIXED | 2026-02-17 |
 
 ## Type Legend
 
@@ -88,7 +89,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 61
+- **FIXED:** 62
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 61
+- **Total:** 62
