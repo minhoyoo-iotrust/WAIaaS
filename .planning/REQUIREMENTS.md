@@ -64,7 +64,7 @@ v2.0에서 이월된 후순위 거버넌스 항목. 별도 마일스톤에서 �
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | GOV-01 | Phase 174 | Complete |
-| GOV-02 | Phase 174 | Deferred (content filter) |
+| GOV-02 | Phase 174 | Complete |
 | GOV-03 | Phase 174 | Complete |
 | GOV-04 | Phase 174 | Complete |
 | DOCS-01 | Phase 176 | Complete |
