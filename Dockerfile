@@ -46,6 +46,19 @@ RUN pnpm turbo build --filter=@waiaas/daemon...
 # ---------------------------------------------------------------------------
 FROM node:22-slim AS runner
 
+# OCI standard labels (populated by docker/build-push-action --build-arg)
+LABEL org.opencontainers.image.title="WAIaaS" \
+      org.opencontainers.image.description="AI Agent Wallet-as-a-Service daemon" \
+      org.opencontainers.image.url="https://github.com/minho-yoo/waiaas" \
+      org.opencontainers.image.source="https://github.com/minho-yoo/waiaas" \
+      org.opencontainers.image.vendor="WAIaaS" \
+      org.opencontainers.image.licenses="MIT"
+
+# Watchtower auto-update support
+# Watchtower monitors containers with this label and auto-pulls new images.
+# Users opt-in per container: docker run --label com.centurylinklabs.watchtower.enable=true
+LABEL com.centurylinklabs.watchtower.enable="true"
+
 # Runtime dependencies: curl for HEALTHCHECK
 RUN apt-get update \
     && apt-get install -y curl --no-install-recommends \
