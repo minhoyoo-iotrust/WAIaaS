@@ -11,7 +11,7 @@ v0.1~v1.8까지 37개 마일스톤으로 축적된 설계와 구현의 최종 �
 - [x] **Phase 167: 테스트 게이트 통과** - 보안 시나리오 ~460건 + 커버리지 80% + Enum SSoT + 플랫폼 84건 + 블록체인 통합 전수 통과 (completed 2026-02-17)
 - [x] **Phase 168: 사용자 문서 완비** - docs/ 재편성 + README en/ko + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG + Why WAIaaS
 - [x] **Phase 169: 패키지 생성** - @waiaas/skills npx 배포 패키지 + examples/simple-agent 예제 에이전트 (completed 2026-02-17)
-- [ ] **Phase 170: 배포 활성화 + pre-release** - npm 9개 패키지 publish + Docker Hub push + release.yml 활성화 + v2.0.0-rc.1 pre-release 발행
+- [ ] **Phase 170: 배포 활성화 + pre-release** - npm 8개 패키지 publish + Docker Hub push + release.yml 활성화 + v2.0.0-rc.1 pre-release 발행
 
 ## Phase Details
 
@@ -91,7 +91,7 @@ Plans:
 - [ ] 169-02-PLAN.md — examples/simple-agent/ 예제 에이전트 (SDK 기반 잔액 조회 -> 전송 -> 완료 대기)
 
 ### Phase 170: 배포 활성화 + pre-release
-**Goal**: npm 9개 패키지 + Docker 이미지가 실제 배포 채널에 게시되고, pre-release RC를 거쳐 정식 릴리스가 가능한 상태
+**Goal**: npm 8개 publishable 패키지 + Docker 이미지가 실제 배포 채널에 게시되고, pre-release RC를 거쳐 정식 릴리스가 가능한 상태
 **Depends on**: Phase 165, Phase 167, Phase 168, Phase 169 (모든 전제조건 완료 후)
 **Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, RELEASE-03
 **Success Criteria** (what must be TRUE):
@@ -100,12 +100,12 @@ Plans:
   3. release.yml deploy job에서 dry-run 플래그가 제거되어 실제 npm publish + Docker push가 활성화된다
   4. release-please 2-게이트 모델로 v2.0.0-rc.1 pre-release가 발행되어 npm + Docker Hub에 게시된다
   5. GitHub Release v2.0.0-rc.1이 생성되고, 3일 관찰 후 v2.0.0 정식 릴리스 발행 준비가 완료된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 170-01: npm 9개 패키지 publish 검증 (files 필드, 의존성, 버전 정합성)
-- [ ] 170-02: Docker Hub push + release.yml dry-run 제거 + 배포 활성화
-- [ ] 170-03: v2.0.0-rc.1 pre-release 발행 (release-please RC + 3일 관찰 계획)
+- [ ] 170-01-PLAN.md — npm 8개 publishable 패키지 publish 검증 (files, 의존성, 버전 정합성, release-please 설정 보완)
+- [ ] 170-02-PLAN.md — Docker Hub push + release.yml dry-run 제거 + 배포 활성화 + Docker Hub 자격증명 설정
+- [ ] 170-03-PLAN.md — v2.0.0-rc.1 pre-release 발행 (release-please RC 설정 + Release PR 머지 + 3일 관찰 계획)
 
 ## Progress
 
