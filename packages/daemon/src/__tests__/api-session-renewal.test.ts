@@ -223,9 +223,9 @@ describe('Session Renewal API', () => {
   it('renewal rejected when maxRenewals exceeded', async () => {
     const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
-    // Directly set renewalCount to maxRenewals (30) in DB
+    // Directly set renewalCount to maxRenewals (12) in DB
     sqlite
-      .prepare('UPDATE sessions SET renewal_count = 30 WHERE id = ?')
+      .prepare('UPDATE sessions SET renewal_count = 12 WHERE id = ?')
       .run(session.id);
 
     // Advance past 50% TTL

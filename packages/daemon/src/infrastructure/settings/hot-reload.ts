@@ -58,6 +58,8 @@ const DISPLAY_KEYS = new Set(['display.currency']);
 
 const SECURITY_KEYS = new Set([
   'security.session_ttl',
+  'security.session_absolute_lifetime',
+  'security.session_max_renewals',
   'security.max_sessions_per_wallet',
   'security.max_pending_tx',
   'security.rate_limit_global_ip_rpm',

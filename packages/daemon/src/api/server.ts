@@ -264,6 +264,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         adapterPool: deps.adapterPool ?? undefined,
         notificationService: deps.notificationService,
         eventBus: deps.eventBus,
+        jwtSecretManager: deps.jwtSecretManager ?? undefined,
       }),
     );
   }

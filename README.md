@@ -8,87 +8,53 @@
 
 A self-hosted wallet daemon that lets AI agents perform on-chain transactions securely -- while the owner keeps full control of funds.
 
-[한국어](README.ko.md)
+## The Problem
 
-## Why WAIaaS?
+AI agents that need to transact on-chain face an impossible choice: hold private keys (and risk total loss if compromised) or depend on a centralized custodian (single point of failure, trust dependency).
 
-Existing Wallet-as-a-Service products assume a **human** user. When an AI agent needs to autonomously execute transactions, a fundamentally different approach is required.
+WAIaaS bridges the gap -- agents handle small transactions instantly, large amounts require owner approval, and everything runs on your machine with no third-party dependency.
 
-The current agent-wallet landscape falls into two extremes:
+## How It Works
 
-| Approach | Problem |
-|----------|---------|
-| **Fully autonomous** (agent holds private keys) | If the agent is compromised, all funds are lost |
-| **Fully custodial** (centralized service) | Trust dependency on a third party, single point of failure |
+WAIaaS is a local daemon that sits between your AI agent and the blockchain:
 
-WAIaaS bridges the gap:
+- **3-tier authentication** -- Separate roles for the daemon operator (masterAuth), fund owner (ownerAuth), and AI agent (sessionAuth)
+- **4-tier policy engine** -- Transactions are auto-classified by USD value into INSTANT / NOTIFY / DELAY / APPROVAL tiers
+- **12 policy types** -- Cumulative spend limits, token allowlists, contract whitelists, approved spenders, and more
+- **Defense in depth** -- Kill Switch, AutoStop engine, audit logging, 4-channel notifications
 
-- **Balance between autonomy and control** -- Agents handle small transactions instantly; large amounts require owner approval
-- **No service provider dependency** -- Everything runs on your local machine
-- **Defense in depth** -- Even if one security layer is breached, other layers protect your funds
-
-Learn more in [docs/why-waiaas/](docs/why-waiaas/).
-
-## Key Features
-
-- **Self-hosted local daemon** -- No central server. Key generation, transaction signing, and policy evaluation all run on your machine.
-- **Chain-agnostic 3-tier security** -- The same security model applies across Solana, EVM, and any future chain adapter.
-- **Multi-chain support** -- Solana (SPL / Token-2022) and EVM (Ethereum, Base, etc. / ERC-20) via the `IChainAdapter` interface.
-- **Token, contract, and DeFi** -- Native transfers, token transfers, arbitrary contract calls, approve management, and batch transactions. Action Provider plugins abstract DeFi protocols like Jupiter Swap.
-- **USD-denominated policy evaluation** -- Price oracles (CoinGecko / Pyth / Chainlink) evaluate all transactions against dollar-based policy tiers, regardless of token type.
-- **Multiple interfaces** -- REST API, TypeScript SDK, Python SDK, MCP server, CLI, Admin Web UI, Desktop App (Tauri), and Telegram Bot.
+See [Security Model](docs/security-model.md) for full details.
 
 ## Quick Start
 
-### Option A: npm (global install)
-
 ```bash
+# Install and start
 npm install -g @waiaas/cli
-
-# Initialize data directory + keystore
 waiaas init
-
-# Start daemon (prompts for master password)
 waiaas start
+
+# Testnet mode (development / testing)
+waiaas quickstart --mode testnet
+
+# Mainnet mode (production)
+waiaas quickstart --mode mainnet
 ```
 
-### Option B: Docker
+The `quickstart` command creates wallets and issues MCP session tokens in one step:
+
+- **testnet**: Solana Devnet + EVM Sepolia wallets with MCP session
+- **mainnet**: Solana Mainnet + EVM Ethereum Mainnet wallets with MCP session
+
+After quickstart, copy the MCP config snippet into your AI agent's configuration.
+
+### Docker
 
 ```bash
-# Clone the repository
-git clone https://github.com/anthropics/waiaas.git
-cd waiaas
-
-# Start with Docker Compose
+git clone https://github.com/minho-yoo/waiaas.git && cd waiaas
 docker compose up -d
-
-# Follow logs
-docker compose logs -f
 ```
 
 The daemon listens on `http://127.0.0.1:3100`.
-
-### Create a Wallet and Session
-
-```bash
-# Create a wallet (requires masterAuth)
-curl -X POST http://127.0.0.1:3100/v1/wallets \
-  -H "Content-Type: application/json" \
-  -H "X-Master-Password: <your-master-password>" \
-  -d '{"name": "my-wallet", "chain": "solana", "network": "devnet"}'
-
-# Issue a session token (requires masterAuth)
-curl -X POST http://127.0.0.1:3100/v1/sessions \
-  -H "Content-Type: application/json" \
-  -H "X-Master-Password: <your-master-password>" \
-  -d '{"walletId": "<wallet-id>"}'
-```
-
-Set the returned `token` in your agent's environment:
-
-```bash
-export WAIAAS_SESSION_TOKEN=wai_sess_eyJhbGciOiJIUzI1NiJ9...
-```
 
 ### First Transaction with the SDK
 
@@ -100,11 +66,9 @@ const client = new WAIaaSClient({
   sessionToken: process.env.WAIAAS_SESSION_TOKEN,
 });
 
-// Check balance
 const balance = await client.getBalance();
 console.log(`Balance: ${balance.amount} SOL`);
 
-// Send SOL
 const tx = await client.sendToken({
   to: 'recipient-address...',
   amount: '0.1',
@@ -112,161 +76,65 @@ const tx = await client.sendToken({
 console.log(`Transaction: ${tx.signature}`);
 ```
 
-## Architecture
+## Admin UI
+
+After starting the daemon, access the admin panel at:
 
 ```
-+---------------------------------------------------------+
-|  AI Agent                                               |
-|  (Claude, GPT, LangChain, CrewAI, ...)                  |
-+------------+-----------------+--------------------------+
-             |                 |
-     +-------v-------+  +-----v--------+
-     | TS/Python SDK  |  |  MCP Server  |
-     +-------+-------+  +------+-------+
-             |                 |
-             +--------+--------+
-                      | HTTP (127.0.0.1:3100)
-              +-------v--------+
-              |  WAIaaS Daemon  |
-              |                |
-              |  +----------+  |     +-------------+
-              |  | REST API |  |     | Desktop App |
-              |  |  (Hono)  |  |     |  (Tauri 2)  |
-              |  +----+-----+  |     +------+------+
-              |       |        |            |
-              |  +----v-----+  |     +------v------+
-              |  | Pipeline |  |     | Telegram Bot|
-              |  | (6-stage)|  |     +-------------+
-              |  +----+-----+  |
-              |       |        |
-              |  +----v-----+  |
-              |  | Policy   |  |
-              |  | Engine   |  |
-              |  +----+-----+  |
-              |       |        |
-              |  +----v-----+  |
-              |  | Chain    |  |
-              |  | Adapters |  |
-              |  +----+-----+  |
-              +-------+--------+
-                      |
-          +-----------+-----------+
-          |           |           |
-   +------v--+ +-----v----+ +---v---+
-   | Solana  | |   EVM    | |  ...  |
-   |(Mainnet)| |(Ethereum)| |       |
-   +---------+ +----------+ +-------+
+http://127.0.0.1:3100/admin
 ```
 
-## Monorepo Structure
+Requires masterAuth (master password) to log in. The Admin UI provides:
 
-```
-waiaas/
-├── packages/
-│   ├── core/               # Domain models, interfaces, Zod schemas, error codes
-│   ├── daemon/             # Self-hosted daemon (Hono HTTP, SQLite, Keystore)
-│   ├── adapters/
-│   │   ├── solana/         # Solana adapter (@solana/kit 6.x)
-│   │   └── evm/            # EVM adapter (viem 2.x)
-│   ├── cli/                # CLI tool (waiaas command)
-│   ├── sdk/                # TypeScript SDK (zero external dependencies)
-│   ├── mcp/                # MCP Server (stdio transport)
-│   └── admin/              # Admin Web UI (Preact + Signals)
-├── python-sdk/             # Python SDK (httpx + Pydantic v2)
-├── docs/                   # User-facing documentation
-│   └── why-waiaas/         # Background articles
-├── skills/                 # API skill files (MCP resource)
-└── objectives/             # Milestone objectives
-```
+- **Dashboard** -- System overview, wallet balances, recent transactions
+- **Wallets** -- Create, manage, and monitor wallets across chains
+- **Sessions** -- Issue and revoke agent session tokens
+- **Policies** -- Configure 12 policy types with visual form editors
+- **Notifications** -- Set up Telegram, Discord, ntfy, and Slack alerts
+- **Settings** -- Runtime configuration without daemon restart
 
-**By the numbers:** ~124,700 lines of TypeScript across 9 packages + a Python SDK, 3,599 tests, 50+ REST endpoints, 18+ MCP tools.
+Enabled by default (`admin_ui = true` in config.toml).
 
-## Interfaces
+## Supported Networks
 
-| Interface | Target | Description |
-|-----------|--------|-------------|
-| **REST API** | All clients | 50+ endpoints, OpenAPI 3.0 |
-| **TypeScript SDK** | Node.js agents | Zero external dependencies, fully typed |
-| **Python SDK** | Python agents | httpx + Pydantic v2 |
-| **MCP** | AI agents (Claude, etc.) | 18+ tools, stdio transport |
-| **CLI** | Developers / Operators | init, start, stop, status, mcp setup, upgrade |
-| **Admin Web UI** | Administrators | Dashboard, wallets, sessions, policies, notifications, settings |
-| **Desktop App** | Owner | Tauri 2, system tray, approval UI |
-| **Telegram Bot** | Owner | Inline keyboard for transaction approval / rejection |
+| Chain | Environment | Networks |
+|-------|-------------|----------|
+| Solana | mainnet | mainnet |
+| Solana | testnet | devnet, testnet |
+| EVM | mainnet | ethereum-mainnet, polygon-mainnet, arbitrum-mainnet, optimism-mainnet, base-mainnet |
+| EVM | testnet | ethereum-sepolia, polygon-amoy, arbitrum-sepolia, optimism-sepolia, base-sepolia |
 
-## Security Model
+13 networks total (Solana 3 + EVM 10).
 
-### 3-Tier Authentication
+## Features
 
-WAIaaS separates three levels of authentication, granting each actor only the minimum required privileges.
+- **Self-hosted local daemon** -- No central server; keys never leave your machine
+- **Multi-chain** -- Solana (SPL / Token-2022) and EVM (ERC-20) via `IChainAdapter`
+- **Token, contract, and DeFi** -- Native transfers, token transfers, contract calls, approve, batch transactions, Action Provider plugins (Jupiter Swap, etc.)
+- **USD policy evaluation** -- Price oracles (CoinGecko / Pyth / Chainlink) evaluate all transactions in USD
+- **x402 payments** -- Automatic HTTP 402 payment handling with EIP-3009 signatures
+- **Multiple interfaces** -- REST API, TypeScript SDK, Python SDK, MCP server, CLI, Admin Web UI, Tauri Desktop, Telegram Bot
+- **Skill files** -- Pre-built instruction files that teach AI agents how to use the API
 
-| Auth Level | Actor | Method | Purpose |
-|-----------|-------|--------|---------|
-| **masterAuth** | Daemon operator | Master password (Argon2id) | System admin (wallet creation, policies, sessions) |
-| **ownerAuth** | Fund owner | SIWS/SIWE signature (per-request) | Transaction approval, Kill Switch recovery |
-| **sessionAuth** | AI agent | JWT Bearer (HS256) | Wallet queries, transaction requests |
-
-### 4-Tier Policy
-
-Transaction amounts (in USD) automatically determine the security level.
-
-| Tier | Default Threshold | Behavior |
-|------|------------------|----------|
-| **INSTANT** | <= $10 | Execute immediately |
-| **NOTIFY** | <= $100 | Execute + notify owner |
-| **DELAY** | <= $500 | Wait 5 min, auto-execute (owner can cancel) |
-| **APPROVAL** | > $500 | Owner must sign to execute |
-
-Thresholds are fully customizable via config or the Admin UI. Additional policy types include cumulative USD spend limits (daily/monthly rolling windows), token allowlists, contract whitelists, approved spenders, and more (12 policy types total).
-
-### Additional Security
-
-- **Kill Switch** -- 3-state emergency halt (ACTIVE / SUSPENDED / LOCKED) with dual-auth recovery
-- **AutoStop Engine** -- 4 rules for automatic suspension (consecutive failures, unusual hours, threshold proximity, etc.)
-- **Notifications** -- 4-channel alerts (Telegram, Discord, ntfy, Slack)
-- **Audit Log** -- Every transaction and admin action recorded in SQLite
-
-## Configuration
-
-Configuration lives at `~/.waiaas/config.toml`. All sections are **flat** (no nesting).
-
-```toml
-[daemon]
-port = 3100
-hostname = "127.0.0.1"
-log_level = "info"
-admin_ui = true
-
-[rpc]
-solana_mainnet = "https://api.mainnet-beta.solana.com"
-solana_devnet = "https://api.devnet.solana.com"
-
-[security]
-session_ttl = 86400
-max_sessions_per_wallet = 5
-```
-
-Every setting can be overridden with environment variables using the `WAIAAS_{SECTION}_{KEY}` pattern:
+### Skill Files for AI Agents
 
 ```bash
-WAIAAS_DAEMON_PORT=4000
-WAIAAS_DAEMON_LOG_LEVEL=debug
-WAIAAS_RPC_SOLANA_MAINNET="https://my-rpc.example.com"
+npx @waiaas/skills list          # List available skills
+npx @waiaas/skills add wallet    # Add a specific skill
+npx @waiaas/skills add --all     # Add all skills
 ```
 
-Runtime-adjustable settings (rate limits, policy defaults, etc.) are also configurable through the Admin Web UI without restarting the daemon.
+Available: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
+| [Security Model](docs/security-model.md) | Authentication, policy engine, Kill Switch, AutoStop |
 | [Deployment Guide](docs/deployment.md) | Docker, npm, configuration reference |
-| [API Reference](docs/api-reference.md) | REST API, authentication, endpoint summary |
+| [API Reference](docs/api-reference.md) | REST API endpoints and authentication |
 | [Why WAIaaS?](docs/why-waiaas/) | Background on AI agent wallet security |
-
-## Contributing
-
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, testing, and PR guidelines.
+| [Contributing](CONTRIBUTING.md) | Development setup, code style, testing, PR guidelines |
 
 ## License
 

@@ -4,7 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { getSkillsDir, SKILL_REGISTRY } from "./registry.js";
 
-const VERSION = "1.7.0";
+const VERSION = JSON.parse(
+  fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+).version as string;
 
 function printHelp(): void {
   console.log(`

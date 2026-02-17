@@ -194,7 +194,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Compute TTL and expiry timestamps
     const ttl = parsed.ttl ?? deps.config.security.session_ttl;
     const expiresAt = nowSec + ttl;
-    const absoluteExpiresAt = nowSec + 30 * 86400; // 30 days absolute lifetime
+    const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
 
     // Create JWT payload and sign token
     const jwtPayload: JwtPayload = {
@@ -217,7 +217,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
       createdAt: new Date(nowSec * 1000),
       renewalCount: 0,
-      maxRenewals: 30,
+      maxRenewals: deps.config.security.session_max_renewals,
       constraints: parsed.constraints ? JSON.stringify(parsed.constraints) : null,
     }).run();
 

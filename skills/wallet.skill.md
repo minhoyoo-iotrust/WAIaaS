@@ -32,6 +32,7 @@ Parameters:
 - `name` (required): string, 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
 - `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks and default network
+- `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
 
 Response (201):
 ```json
@@ -43,11 +44,16 @@ Response (201):
   "environment": "testnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
-  "createdAt": 1707000000
+  "createdAt": 1707000000,
+  "session": {
+    "id": "01958f3a-5678-7000-8000-abcdef789012",
+    "token": "wai_sess_eyJhbGciOiJIUzI1NiJ9...",
+    "expiresAt": 1709592000
+  }
 }
 ```
 
-The `network` field shows the wallet's default network, automatically derived from `chain` + `environment`.
+The `network` field shows the wallet's default network, automatically derived from `chain` + `environment`. The `session` field is included when `createSession` is `true` (default); set to `false` to create the wallet without a session.
 
 ### GET /v1/wallets -- List Wallets (masterAuth)
 

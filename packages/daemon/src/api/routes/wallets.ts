@@ -17,6 +17,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
+import { createHash } from 'node:crypto';
 import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment } from '@waiaas/core';
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
 import { wallets, sessions, transactions } from '../../infrastructure/database/schema.js';
@@ -24,6 +25,7 @@ import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
+import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
 import { validateOwnerAddress } from '../middleware/address-validation.js';
@@ -31,6 +33,7 @@ import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import {
   CreateWalletRequestOpenAPI,
+  WalletCreateResponseSchema,
   SetOwnerRequestSchema,
   UpdateWalletRequestSchema,
   UpdateDefaultNetworkRequestSchema,
@@ -56,6 +59,7 @@ export interface WalletCrudRouteDeps {
   adapterPool?: AdapterPool;
   notificationService?: NotificationService;
   eventBus?: EventBus;
+  jwtSecretManager?: JwtSecretManager;
 }
 
 // ---------------------------------------------------------------------------
@@ -76,8 +80,8 @@ const createWalletRoute = createRoute({
   },
   responses: {
     201: {
-      description: 'Wallet created',
-      content: { 'application/json': { schema: WalletCrudResponseSchema } },
+      description: 'Wallet created (with optional auto-created session)',
+      content: { 'application/json': { schema: WalletCreateResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND', 'ACTION_VALIDATION_FAILED']),
   },
@@ -357,6 +361,48 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       updatedAt: now,
     });
 
+    // Auto-create session if requested (default: true)
+    let session: { id: string; token: string; expiresAt: number } | null = null;
+
+    if (parsed.createSession && deps.jwtSecretManager) {
+      const nowSec = Math.floor(now.getTime() / 1000);
+      const ttl = deps.config.security.session_ttl;
+      const expiresAt = nowSec + ttl;
+      const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
+
+      const sessionId = generateId();
+      const jwtPayload: JwtPayload = {
+        sub: sessionId,
+        wlt: id,
+        iat: nowSec,
+        exp: expiresAt,
+      };
+      const token = await deps.jwtSecretManager.signToken(jwtPayload);
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+
+      deps.db.insert(sessions).values({
+        id: sessionId,
+        walletId: id,
+        tokenHash,
+        expiresAt: new Date(expiresAt * 1000),
+        absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+        createdAt: now,
+        renewalCount: 0,
+        maxRenewals: deps.config.security.session_max_renewals,
+        constraints: null,
+      }).run();
+
+      session = { id: sessionId, token, expiresAt };
+
+      void deps.notificationService?.notify('SESSION_CREATED', id, { sessionId });
+      deps.eventBus?.emit('wallet:activity', {
+        walletId: id,
+        activity: 'SESSION_CREATED',
+        details: { sessionId },
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    }
+
     // Return 201 with wallet JSON (network field for backward compatibility)
     return c.json(
       {
@@ -370,6 +416,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerAddress: null,
         ownerState: 'NONE' as const,
         createdAt: Math.floor(now.getTime() / 1000),
+        session,
       },
       201,
     );

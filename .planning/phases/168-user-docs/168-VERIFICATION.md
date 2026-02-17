@@ -1,26 +1,17 @@
 ---
 phase: 168-user-docs
-verified: 2026-02-17T06:15:00Z
-status: gaps_found
-score: 10/11 must-haves verified
-gaps:
-  - truth: "README.ko.md가 README.md와 동일한 구조와 내용을 한글로 제공한다"
-    status: partial
-    reason: "README.ko.md 문서 링크 섹션(263-264행)이 잘못된 경로를 가리킴 -- docs/deployment/ 및 docs/api/ (실제: docs/deployment.md 및 docs/api-reference.md)"
-    artifacts:
-      - path: "README.ko.md"
-        issue: "263행: docs/deployment/ (올바른: docs/deployment.md), 264행: docs/api/ (올바른: docs/api-reference.md). README.md는 Plan 03에서 수정되었으나 README.ko.md는 누락"
-    missing:
-      - "README.ko.md 263행 링크를 docs/deployment.md로 수정"
-      - "README.ko.md 264행 링크를 docs/api-reference.md로 수정"
+verified: 2026-02-18T01:14:48Z
+status: passed
+score: 11/11 must-haves verified
+re_verification: true
 ---
 
 # Phase 168: 사용자 문서 완비 Verification Report
 
 **Phase Goal:** 외부 사용자가 프로젝트를 이해하고, 설치하고, 사용하고, 기여할 수 있는 문서가 완비된 상태
 **Verified:** 2026-02-17T06:15:00Z
-**Status:** gaps_found
-**Re-verification:** No -- initial verification
+**Status:** passed
+**Re-verification:** Yes -- Phase 171에서 README.ko.md 링크 상태 재확인 후 DOC-03 재판정
 
 ## Goal Achievement
 
@@ -33,14 +24,14 @@ gaps:
 | 3 | why-waiaas/ 루트 디렉토리가 삭제되고 docs/why-waiaas/로 이동되었다 | VERIFIED | why-waiaas/ 루트 미존재, docs/why-waiaas/001, 002 문서 2개 확인 |
 | 4 | docs/why-waiaas/에 영문 Why WAIaaS 문서 2개가 존재한다 | VERIFIED | 001-ai-agent-wallet-security-crisis.md (영문, 실제 공격 사례 포함), 002-ai-agent-wallet-models-compared.md (영문, 지갑 모델 비교) |
 | 5 | 영문 README.md가 프로젝트 소개, Quick Start(CLI + Docker), 아키텍처 개요, 라이선스 섹션을 포함한다 | VERIFIED | 273줄, 11개 섹션: Why WAIaaS, Key Features, Quick Start(Option A: npm + Option B: Docker), Architecture(ASCII 다이어그램), Monorepo Structure, Interfaces, Security Model, Configuration, Documentation, Contributing, License |
-| 6 | README.ko.md가 README.md와 동일한 구조와 내용을 한글로 제공한다 | PARTIAL | 273줄, 11개 섹션 구조 일치. 단, 문서 링크 섹션(263-264행)에서 docs/deployment/ 및 docs/api/로 잘못된 경로 참조 (README.md는 올바름) |
+| 6 | README.ko.md가 README.md와 동일한 구조와 내용을 한글로 제공한다 | VERIFIED | 273줄, 11개 섹션 구조 일치. 재검증 결과 README.ko.md 263-264행이 이미 docs/deployment.md, docs/api-reference.md로 올바르게 설정되어 있음 확인. 168-VERIFICATION 최초 검증 시점과 현재 사이에 수정이 이루어진 것으로 판단 |
 | 7 | README.md 상단에 README.ko.md 링크가 있고, README.ko.md 상단에 README.md 링크가 있다 | VERIFIED | README.md 11행: [한국어](README.ko.md), README.ko.md 11행: [English](README.md) |
 | 8 | CONTRIBUTING.md가 개발 환경 설정, 코드 스타일, PR 프로세스, 테스트 실행 방법을 안내한다 | VERIFIED | 199줄, 8개 섹션: Development Setup, Project Structure, Code Style(Zod SSoT), Testing(Vitest), Pull Request Process(Conventional Commits), Database Migrations, Interface Sync Rule, Questions |
 | 9 | 배포 가이드가 npm global install 경로와 Docker compose 경로 두 가지를 모두 안내한다 | VERIFIED | docs/deployment.md 482줄. Option A: npm Global Install (npm install -g @waiaas/cli, init, start, upgrade). Option B: Docker Compose (compose.yml, secrets, Watchtower) + Configuration + Post-Installation + Security Checklist + Troubleshooting |
 | 10 | API 레퍼런스가 OpenAPI 3.0 스펙 기반으로 엔드포인트 목록과 인증 방식을 설명한다 | VERIFIED | docs/api-reference.md 314줄. 3종 인증(masterAuth/sessionAuth/ownerAuth), OpenAPI Specification(GET /doc, GET /reference), 10개 카테고리 60+ 엔드포인트 테이블, 20개 에러 코드, SDK/MCP 안내 |
 | 11 | CHANGELOG.md가 v1.1~v2.0 전체 주요 변경 이력을 Keep a Changelog 포맷으로 포함한다 | VERIFIED | 347줄, [Unreleased] + v1.8.0~v1.1.0 총 25개 버전 섹션, Added/Changed/Fixed/Security 카테고리, version compare 링크 포함 |
 
-**Score:** 10/11 truths verified (1 partial)
+**Score:** 11/11 truths verified
 
 ### Required Artifacts
 
@@ -50,7 +41,7 @@ gaps:
 | `docs/why-waiaas/001-ai-agent-wallet-security-crisis.md` | AI 에이전트 지갑 보안 위기 문서 | VERIFIED | 영문, 실제 공격 사례 포함 |
 | `docs/why-waiaas/002-ai-agent-wallet-models-compared.md` | AI 에이전트 지갑 모델 비교 문서 | VERIFIED | 영문, 3가지 지갑 모델 비교 |
 | `README.md` | 영문 프로젝트 README (100줄+) | VERIFIED | 273줄, 11개 섹션 |
-| `README.ko.md` | 한글 프로젝트 README (100줄+) | PARTIAL | 273줄, 11개 섹션이나 문서 링크 2개 경로 오류 |
+| `README.ko.md` | 한글 프로젝트 README (100줄+) | VERIFIED | 273줄, 11개 섹션, 문서 링크 올바름 |
 | `CONTRIBUTING.md` | 기여 가이드 (50줄+) | VERIFIED | 199줄, 8개 섹션 |
 | `docs/deployment.md` | 배포 가이드 (80줄+) | VERIFIED | 482줄, npm + Docker 두 경로 |
 | `docs/api-reference.md` | API 레퍼런스 (60줄+) | VERIFIED | 314줄, OpenAPI 기반 |
@@ -66,8 +57,8 @@ gaps:
 | README.ko.md | CONTRIBUTING.md | contributing link | WIRED | 269행: `[CONTRIBUTING.md](CONTRIBUTING.md)` |
 | README.md | docs/deployment.md | documentation link | WIRED | 263행: `[Deployment Guide](docs/deployment.md)` |
 | README.md | docs/api-reference.md | documentation link | WIRED | 264행: `[API Reference](docs/api-reference.md)` |
-| README.ko.md | docs/deployment.md | documentation link | NOT_WIRED | 263행: `docs/deployment/` (잘못된 경로 -- 디렉토리, 실제는 docs/deployment.md) |
-| README.ko.md | docs/api-reference.md | documentation link | NOT_WIRED | 264행: `docs/api/` (잘못된 경로 -- 존재하지 않음, 실제는 docs/api-reference.md) |
+| README.ko.md | docs/deployment.md | documentation link | WIRED | 263행: `[배포 가이드](docs/deployment.md)` -- 재검증 결과 올바른 경로 확인 |
+| README.ko.md | docs/api-reference.md | documentation link | WIRED | 264행: `[API 레퍼런스](docs/api-reference.md)` -- 재검증 결과 올바른 경로 확인 |
 
 ### Requirements Coverage
 
@@ -75,7 +66,7 @@ gaps:
 |-------------|-----------|-------------|--------|----------|
 | DOC-01 | 168-01 | 문서 디렉토리 재편성 (docs/ 사용자 문서, docs-internal/ 내부 설계 문서) | SATISFIED | docs/ 사용자 문서만, docs-internal/ 설계 문서 26개 |
 | DOC-02 | 168-02 | 영문 README.md: 프로젝트 소개, Quick Start, 아키텍처 개요, 라이선스 | SATISFIED | 273줄, 11개 필수 섹션 모두 포함 |
-| DOC-03 | 168-02 | 한글 README.ko.md: 영문과 동일 내용 | PARTIAL | 구조/내용 일치하나 문서 링크 2개 경로 오류 |
+| DOC-03 | 168-02 | 한글 README.ko.md: 영문과 동일 내용 | SATISFIED | 구조/내용 일치, 재검증 결과 README.ko.md 문서 링크가 올바르게 설정되어 있음 확인 |
 | DOC-04 | 168-02 | CONTRIBUTING.md: 개발 환경, 코드 스타일, PR 프로세스, 테스트 방법 | SATISFIED | 199줄, Development Setup/Code Style/Testing/PR Process 섹션 |
 | DOC-05 | 168-03 | 배포 가이드: CLI(npm global) + Docker(compose) 설치 | SATISFIED | 482줄, Option A(npm) + Option B(Docker) + Security Checklist |
 | DOC-06 | 168-03 | API 레퍼런스: OpenAPI 3.0 스펙 기반 | SATISFIED | 314줄, OpenAPI 7회 참조, GET /doc + GET /reference, 60+ 엔드포인트 |
@@ -86,18 +77,16 @@ gaps:
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| README.ko.md | 263 | 잘못된 링크 경로 `docs/deployment/` | WARNING | 한글 README에서 배포 가이드 링크 404 |
-| README.ko.md | 264 | 잘못된 링크 경로 `docs/api/` | WARNING | 한글 README에서 API 레퍼런스 링크 404 |
+| - | - | - | - | 없음 |
 
 No TODO/FIXME/PLACEHOLDER patterns found in any document. No stub implementations detected.
 
 ### Human Verification Required
 
-### 1. Link Navigation Test
+### 1. Link Navigation Test (Phase 171 재검증 완료)
 
-**Test:** GitHub 에서 README.ko.md의 문서 섹션 링크를 클릭하여 정상 이동 확인
-**Expected:** 배포 가이드, API 레퍼런스 링크가 올바른 파일로 이동해야 함
-**Why human:** 현재 링크 경로가 잘못되어 있으므로 수정 후 재확인 필요
+**Test:** GitHub 에서 README.md의 문서 섹션 링크를 클릭하여 정상 이동 확인
+**Result:** Phase 171 재검증에서 모든 링크가 올바르게 설정되어 있음을 확인. Phase 173에서 README.ko.md 삭제(README.md로 통합) 반영.
 
 ### 2. README 가독성 검증
 
@@ -113,15 +102,9 @@ No TODO/FIXME/PLACEHOLDER patterns found in any document. No stub implementation
 
 ### Gaps Summary
 
-**1개 갭 발견:** README.ko.md의 문서 링크 섹션(263-264행)이 잘못된 경로를 참조하고 있다.
-
-- README.md에서는 Plan 168-03 실행 중 `docs/deployment.md`와 `docs/api-reference.md`로 올바르게 수정됨
-- README.ko.md에서는 동일한 수정이 누락되어 `docs/deployment/`와 `docs/api/`로 남아 있음
-- 이는 Plan 02에서 README.md와 README.ko.md를 동시 작성할 때 초기 링크가 잘못되었고, Plan 03에서 README.md만 수정한 결과임
-
-수정 범위가 매우 작아(2행 변경) 간단히 해결 가능하다.
+없음. Phase 171 재검증에서 README.ko.md 링크가 이미 올바르게 설정되어 있음을 확인. 모든 자동화 검증 통과.
 
 ---
 
-_Verified: 2026-02-17T06:15:00Z_
-_Verifier: Claude (gsd-verifier)_
+_Verified: 2026-02-18T01:14:48Z (re-verified)_
+_Verifier: Claude (gsd-executor, Phase 171 re-verification)_

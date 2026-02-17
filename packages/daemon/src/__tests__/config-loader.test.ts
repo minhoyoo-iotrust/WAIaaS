@@ -134,7 +134,7 @@ port = 5000
     expect(config.keystore.argon2_memory).toBe(65536);
     expect(config.database.path).toBe('data/waiaas.db');
     expect(config.rpc.solana_devnet).toBe('https://api.devnet.solana.com');
-    expect(config.security.session_ttl).toBe(86400);
+    expect(config.security.session_ttl).toBe(2592000);
     expect(config.notifications.enabled).toBe(false);
     expect(config.notifications.locale).toBe('en');
     expect(config.notifications.rate_limit_rpm).toBe(20);
@@ -149,7 +149,7 @@ port = 5000
     expect(config.daemon.log_level).toBe('info');
     expect(config.daemon.shutdown_timeout).toBe(30);
     expect(config.daemon.dev_mode).toBe(false);
-    expect(config.security.session_ttl).toBe(86400);
+    expect(config.security.session_ttl).toBe(2592000);
     expect(config.database.wal_checkpoint_interval).toBe(300);
     expect(config.database.busy_timeout).toBe(5000);
   });
@@ -430,10 +430,10 @@ describe('EVM RPC config', () => {
 
 describe('config.toml CF-01~12 verification (doc 49)', () => {
   // CF-01: Default values (already covered by 'has correct default values' + session_ttl)
-  it('CF-01: defaults include session_ttl=86400 and nonce_cache_max=1000', () => {
+  it('CF-01: defaults include session_ttl=2592000 and nonce_cache_max=1000', () => {
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
-    expect(config.security.session_ttl).toBe(86400);
+    expect(config.security.session_ttl).toBe(2592000);
     expect(config.security.nonce_cache_max).toBe(1000);
     expect(config.security.policy_defaults_delay_seconds).toBe(300);
   });
@@ -508,7 +508,7 @@ describe('config.toml CF-01~12 verification (doc 49)', () => {
     const dir = saveTempDir(createTempDir());
     writeFileSync(join(dir, 'config.toml'), '[security]\n');
     const config = loadConfig(dir);
-    expect(config.security.session_ttl).toBe(86400);
+    expect(config.security.session_ttl).toBe(2592000);
     expect(config.security.nonce_cache_max).toBe(1000);
     expect(config.security.policy_defaults_delay_seconds).toBe(300);
   });

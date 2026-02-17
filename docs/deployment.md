@@ -374,6 +374,23 @@ waiaas mcp setup --all
 
 This automatically creates session tokens and configures Claude Desktop's MCP server settings.
 
+### 5. Install Skill Files (Optional)
+
+Skill files teach AI agents how to interact with the WAIaaS API. They are plain Markdown files that can be included in the AI agent's context.
+
+```bash
+# List available skills
+npx @waiaas/skills list
+
+# Add a specific skill to your project
+npx @waiaas/skills add wallet
+
+# Add all skills
+npx @waiaas/skills add --all
+```
+
+This copies `.skill.md` files to your current directory. Include them in your AI agent's prompt or context window for API-aware conversations.
+
 ---
 
 ## Notifications Setup
@@ -387,7 +404,7 @@ WAIaaS supports four notification channels: **Telegram**, **Discord**, **ntfy**,
 | ntfy | `ntfy_topic` + `ntfy_server` | Choose topic, subscribe via app |
 | Slack | `slack_webhook_url` | Create incoming webhook |
 
-For detailed setup instructions, see the [Notifications section in README.md](../README.md#notifications-setup).
+For detailed setup instructions, see the Admin UI **Notifications** panel at `http://127.0.0.1:3100/admin`.
 
 Test your notification channels:
 

@@ -72,6 +72,7 @@ export class TelegramBotService {
   private locale: SupportedLocale;
   private killSwitchService?: KillSwitchService;
   private jwtSecretManager?: JwtSecretManager;
+  private settingsService?: SettingsService;
   private sessionTtl: number;
   private auth: TelegramAuth;
   private running = false;
@@ -87,6 +88,7 @@ export class TelegramBotService {
     this.locale = opts.locale ?? 'en';
     this.killSwitchService = opts.killSwitchService;
     this.jwtSecretManager = opts.jwtSecretManager;
+    this.settingsService = opts.settingsService;
     this.sessionTtl = opts.sessionTtl ?? 3600; // default 1 hour
     this.auth = new TelegramAuth(opts.sqlite);
   }
@@ -680,7 +682,10 @@ export class TelegramBotService {
 
     const nowSec = Math.floor(Date.now() / 1000);
     const expiresAt = nowSec + this.sessionTtl;
-    const absoluteExpiresAt = nowSec + 30 * 86400; // 30 days
+    const absoluteLifetime = this.settingsService
+      ? parseInt(this.settingsService.get('security.session_absolute_lifetime'), 10) || 31536000
+      : 31536000;
+    const absoluteExpiresAt = nowSec + absoluteLifetime;
 
     // Generate session ID (UUID v7 via uuidv7 package)
     const { uuidv7 } = await import('uuidv7');
@@ -702,9 +707,15 @@ export class TelegramBotService {
     this.sqlite
       .prepare(
         `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at)
-         VALUES (?, ?, ?, ?, NULL, NULL, NULL, 0, 30, NULL, ?, ?)`,
+         VALUES (?, ?, ?, ?, NULL, NULL, NULL, 0, ?, NULL, ?, ?)`,
       )
-      .run(sessionId, walletId, tokenHash, expiresAt, absoluteExpiresAt, nowSec);
+      .run(
+        sessionId, walletId, tokenHash, expiresAt,
+        this.settingsService
+          ? parseInt(this.settingsService.get('security.session_max_renewals'), 10) || 12
+          : 12,
+        absoluteExpiresAt, nowSec,
+      );
 
     // Audit log
     this.sqlite

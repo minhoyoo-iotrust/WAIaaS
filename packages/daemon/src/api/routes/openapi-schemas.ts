@@ -76,6 +76,16 @@ export const WalletCrudResponseSchema = z
   })
   .openapi('WalletCrudResponse');
 
+export const WalletCreateResponseSchema = WalletCrudResponseSchema.extend({
+  session: z
+    .object({
+      id: z.string().uuid(),
+      token: z.string(),
+      expiresAt: z.number().int(),
+    })
+    .nullable(),
+}).openapi('WalletCreateResponse');
+
 export const WalletOwnerResponseSchema = z
   .object({
     id: z.string().uuid(),
