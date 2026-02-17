@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 4 of 6 (Phase 168: 사용자 문서 완비)
-Plan: 1 of 3 in current phase
-Status: 168-01 complete, ready for 168-02
-Last activity: 2026-02-17 -- Completed 168-01 (문서 디렉토리 재편성)
+Plan: 2 of 3 in current phase
+Status: 168-02 complete, ready for 168-03
+Last activity: 2026-02-17 -- Completed 168-02 (README + CONTRIBUTING)
 
-Progress: [█████░░░░░] 47%
+Progress: [██████░░░░] 53%
 
 ## Performance Metrics
 
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 7 (v2.0)
+- Total plans completed: 8 (v2.0)
 - Average duration: 5min
-- Total execution time: 36min
+- Total execution time: 40min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -34,6 +34,7 @@ Progress: [█████░░░░░] 47%
 | 167   | 02   | 7min     | 2     | 1     |
 | 167   | 03   | 4min     | 2     | 1     |
 | 168   | 01   | 5min     | 2     | 29    |
+| 168   | 02   | 4min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -56,6 +57,8 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 167-03: EVM Sepolia 테스트 getAssets() 시그니처 + AssetInfo.mint 필드명 수정
 - 168-01: docs-internal/ 내부 설계 문서 간 상호 참조도 함께 업데이트
 - 168-01: .planning/ 내부 참조는 계획 지시대로 업데이트하지 않음
+- 168-02: 기존 한글 README.md를 영문으로 완전 재작성, 한글은 README.ko.md로 분리
+- 168-02: ASCII 아키텍처 다이어그램에 +/- 문자 사용 (GitHub 마크다운 호환성)
 
 ### Blockers/Concerns
 
@@ -67,5 +70,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 168-01-PLAN.md (문서 디렉토리 재편성). Ready for 168-02.
+Stopped at: Completed 168-02-PLAN.md (README + CONTRIBUTING). Ready for 168-03.
 Resume file: None
