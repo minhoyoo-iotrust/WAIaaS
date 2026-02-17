@@ -76,6 +76,9 @@ jobs:
       - name: Verify Enum SSoT
         run: pnpm run verify:enums
 
+      - name: Validate OpenAPI Spec
+        run: pnpm run validate:openapi
+
       - name: Coverage Gate
         run: bash scripts/coverage-gate.sh
         env:
