@@ -36,11 +36,11 @@ Plans:
   1. 설계 문서 37개의 구현 범위가 해당 마일스톤 objective 범위와 일치하는 교차 검증 보고서가 존재한다 (doc 39 Tauri 이연 제외)
   2. objectives/design-debt.md의 미해결 항목이 0건이거나, 각 항목에 "v2.1 이연" 사유가 명시되어 있다
   3. `GET /doc` OpenAPI 3.0 스펙이 유효성 검증 도구(swagger-cli validate 또는 동등)로 0 errors를 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 166-01: 설계 문서 37개 vs objective 교차 검증 + design-debt.md 잔여 항목 해소/이연
-- [ ] 166-02: OpenAPI 3.0 스펙 유효성 검증 (swagger-cli 도입 + CI 통합)
+- [ ] 166-01-PLAN.md — 설계 문서 37개 vs objective 교차 검증 보고서 생성 + design-debt.md 최종 검증 (0건 확인)
+- [ ] 166-02-PLAN.md — OpenAPI 3.0 스펙 유효성 검증 스크립트 도입 (@apidevtools/swagger-parser) + CI 통합
 
 ### Phase 167: 테스트 게이트 통과
 **Goal**: v2.0 릴리스 품질 기준을 만족하는 테스트 전수 통과 상태
