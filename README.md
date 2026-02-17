@@ -50,7 +50,7 @@ After quickstart, copy the MCP config snippet into your AI agent's configuration
 ### Docker
 
 ```bash
-git clone https://github.com/anthropics/waiaas.git && cd waiaas
+git clone https://github.com/minho-yoo/waiaas.git && cd waiaas
 docker compose up -d
 ```
 
@@ -124,7 +124,7 @@ npx @waiaas/skills add wallet    # Add a specific skill
 npx @waiaas/skills add --all     # Add all skills
 ```
 
-Available: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `mcp`, `notifications`.
+Available: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
 
 ## Documentation
 

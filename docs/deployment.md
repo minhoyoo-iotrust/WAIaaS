@@ -404,7 +404,7 @@ WAIaaS supports four notification channels: **Telegram**, **Discord**, **ntfy**,
 | ntfy | `ntfy_topic` + `ntfy_server` | Choose topic, subscribe via app |
 | Slack | `slack_webhook_url` | Create incoming webhook |
 
-For detailed setup instructions, see the [Notifications section in README.md](../README.md#notifications-setup).
+For detailed setup instructions, see the Admin UI **Notifications** panel at `http://127.0.0.1:3100/admin`.
 
 Test your notification channels:
 

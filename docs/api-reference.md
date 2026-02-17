@@ -279,7 +279,7 @@ const balance = await client.getBalance();
 const tx = await client.sendToken({ to: '...', amount: '0.5' });
 ```
 
-See: [packages/sdk/README.md](../packages/sdk/README.md)
+See: [@waiaas/sdk on npm](https://www.npmjs.com/package/@waiaas/sdk)
 
 ### Python SDK
 
@@ -311,4 +311,4 @@ waiaas mcp setup  # Automatic Claude Desktop configuration
 
 **Resources:** `waiaas://wallet/balance`, `waiaas://wallet/address`, `waiaas://system/status`.
 
-See: [packages/mcp/README.md](../packages/mcp/README.md)
+See: [@waiaas/mcp on npm](https://www.npmjs.com/package/@waiaas/mcp)
