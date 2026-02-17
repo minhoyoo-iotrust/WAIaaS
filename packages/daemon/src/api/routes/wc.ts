@@ -205,14 +205,19 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     // Look up wallet via raw SQL (simpler, avoids Drizzle query builder complexity)
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
-      .prepare('SELECT id, chain, default_network, environment, status FROM wallets WHERE id = ?')
-      .get(id) as { id: string; chain: string; default_network: string | null; environment: string; status: string } | undefined;
+      .prepare('SELECT id, chain, default_network, environment, status, owner_address FROM wallets WHERE id = ?')
+      .get(id) as { id: string; chain: string; default_network: string | null; environment: string; status: string; owner_address: string | null } | undefined;
 
     if (!wallet) {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
     if (wallet.status === 'TERMINATED') {
       throw new WAIaaSError('WALLET_TERMINATED');
+    }
+    if (!wallet.owner_address) {
+      throw new WAIaaSError('OWNER_NOT_SET', {
+        message: 'Owner address must be set before connecting WalletConnect',
+      });
     }
 
     const svc = requireWcService(wcServiceRef);
@@ -332,8 +337,8 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
   const lookupWallet = (walletId: string) => {
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     return sqlite
-      .prepare('SELECT id, chain, default_network, environment, status FROM wallets WHERE id = ?')
-      .get(walletId) as { id: string; chain: string; default_network: string | null; environment: string; status: string } | undefined;
+      .prepare('SELECT id, chain, default_network, environment, status, owner_address FROM wallets WHERE id = ?')
+      .get(walletId) as { id: string; chain: string; default_network: string | null; environment: string; status: string; owner_address: string | null } | undefined;
   };
 
   // -------------------------------------------------------------------------
@@ -345,6 +350,11 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     const wallet = lookupWallet(walletId);
     if (!wallet) throw new WAIaaSError('WALLET_NOT_FOUND');
     if (wallet.status === 'TERMINATED') throw new WAIaaSError('WALLET_TERMINATED');
+    if (!wallet.owner_address) {
+      throw new WAIaaSError('OWNER_NOT_SET', {
+        message: 'Owner address must be set before connecting WalletConnect',
+      });
+    }
 
     const svc = requireWcService(wcServiceRef);
     const network = wallet.default_network ?? wallet.environment;

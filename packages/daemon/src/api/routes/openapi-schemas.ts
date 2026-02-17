@@ -70,6 +70,8 @@ export const WalletCrudResponseSchema = z
     environment: z.string(),
     publicKey: z.string(),
     status: z.string(),
+    ownerAddress: z.string().nullable(),
+    ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     createdAt: z.number().int(),
   })
   .openapi('WalletCrudResponse');
@@ -88,6 +90,14 @@ export const WalletOwnerResponseSchema = z
     updatedAt: z.number().int().nullable(),
   })
   .openapi('WalletOwnerResponse');
+
+export const OwnerVerifyResponseSchema = z
+  .object({
+    ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
+    ownerAddress: z.string().nullable(),
+    ownerVerified: z.boolean(),
+  })
+  .openapi('OwnerVerifyResponse');
 
 // ---------------------------------------------------------------------------
 // Wallet Query Response Schemas

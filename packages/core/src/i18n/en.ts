@@ -114,6 +114,8 @@ export const messages: Messages = {
     OWNER_NOT_FOUND: 'Owner not found',
     APPROVAL_TIMEOUT: 'Approval request has timed out',
     APPROVAL_NOT_FOUND: 'Approval request not found',
+    OWNER_NOT_SET: 'Owner address must be set before this operation',
+    OWNER_ADDRESS_MISMATCH: 'Connected wallet address does not match registered owner',
     // SYSTEM domain (9)
     KILL_SWITCH_ACTIVE: 'Kill switch is already active',
     KILL_SWITCH_NOT_ACTIVE: 'Kill switch is not active',

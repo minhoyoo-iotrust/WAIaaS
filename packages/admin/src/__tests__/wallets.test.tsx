@@ -192,7 +192,7 @@ describe('WalletsPage', () => {
     expect(screen.getByText('Chain')).toBeTruthy();
     expect(screen.getByText('Environment')).toBeTruthy();
     expect(screen.getByText('Default Network')).toBeTruthy();
-    expect(screen.getByText('Owner State')).toBeTruthy();
+    expect(screen.getByText('Owner Wallet')).toBeTruthy();
     expect(screen.getByText('NONE')).toBeTruthy();
   });
 

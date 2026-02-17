@@ -31,4 +31,5 @@ export const API = {
   WALLET_WC_PAIR: (id: string) => `/v1/wallets/${id}/wc/pair`,
   WALLET_WC_SESSION: (id: string) => `/v1/wallets/${id}/wc/session`,
   WALLET_WC_PAIR_STATUS: (id: string) => `/v1/wallets/${id}/wc/pair/status`,
+  WALLET_OWNER_VERIFY: (id: string) => `/v1/wallets/${id}/owner/verify`,
 } as const;

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { WAIaaSError, ERROR_CODES } from '../index.js';
 
 describe('Error code matrix', () => {
-  it('has exactly 90 error codes', () => {
-    expect(Object.keys(ERROR_CODES)).toHaveLength(90);
+  it('has exactly 93 error codes', () => {
+    expect(Object.keys(ERROR_CODES)).toHaveLength(93);
   });
 
   it('every error code entry has required fields', () => {

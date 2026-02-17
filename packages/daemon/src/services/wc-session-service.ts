@@ -276,13 +276,44 @@ export class WcSessionService {
     );
 
     Promise.race([approval(), timeout])
-      .then((session: any) => {
+      .then(async (session: any) => {
         // Extract owner address from CAIP-10 accounts
         const firstNamespace = Object.values(session.namespaces)[0] as any;
         const firstAccount: string = firstNamespace?.accounts?.[0] ?? '';
         // CAIP-10 format: "namespace:chainId:address" -> extract address part
         const parts = firstAccount.split(':');
-        const ownerAddress = parts.length >= 3 ? parts.slice(2).join(':') : firstAccount;
+        const connectedAddress = parts.length >= 3 ? parts.slice(2).join(':') : firstAccount;
+
+        // Verify connected address matches registered owner
+        const wallet = this.sqlite
+          .prepare('SELECT owner_address, chain FROM wallets WHERE id = ?')
+          .get(walletId) as { owner_address: string | null; chain: string } | undefined;
+
+        if (wallet?.owner_address && connectedAddress) {
+          const isEvm = wallet.chain === 'ethereum';
+          const matches = isEvm
+            ? wallet.owner_address.toLowerCase() === connectedAddress.toLowerCase()
+            : wallet.owner_address === connectedAddress;
+
+          if (!matches) {
+            // Reject session: connected wallet doesn't match registered owner
+            const signClient = this.getSignClient();
+            if (signClient) {
+              try {
+                await signClient.disconnect({
+                  topic: session.topic,
+                  reason: { code: 4001, message: 'Connected wallet address does not match registered owner' },
+                });
+              } catch {
+                // best effort disconnect
+              }
+            }
+            this.pendingPairing.delete(walletId);
+            return;
+          }
+        }
+
+        const ownerAddress = connectedAddress;
 
         // Save session to DB
         this.sqlite

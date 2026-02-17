@@ -38,6 +38,7 @@ import {
   WalletNetworksResponseSchema,
   WalletCrudResponseSchema,
   WalletOwnerResponseSchema,
+  OwnerVerifyResponseSchema,
   WalletListResponseSchema,
   WalletDetailResponseSchema,
   WalletDeleteResponseSchema,
@@ -101,6 +102,23 @@ const setOwnerRoute = createRoute({
       content: { 'application/json': { schema: WalletOwnerResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND', 'OWNER_ALREADY_CONNECTED']),
+  },
+});
+
+const verifyOwnerRoute = createRoute({
+  method: 'post',
+  path: '/wallets/{id}/owner/verify',
+  tags: ['Wallets'],
+  summary: 'Verify owner via signature (GRACE -> LOCKED)',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Owner verified',
+      content: { 'application/json': { schema: OwnerVerifyResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'OWNER_NOT_CONNECTED', 'INVALID_SIGNATURE']),
   },
 });
 
@@ -245,6 +263,11 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           environment: a.environment!,
           publicKey: a.publicKey,
           status: a.status,
+          ownerAddress: a.ownerAddress ?? null,
+          ownerState: resolveOwnerState({
+            ownerAddress: a.ownerAddress,
+            ownerVerified: a.ownerVerified,
+          }),
           createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
         })),
       },
@@ -344,6 +367,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         environment,
         publicKey,
         status: 'ACTIVE',
+        ownerAddress: null,
+        ownerState: 'NONE' as const,
         createdAt: Math.floor(now.getTime() / 1000),
       },
       201,
@@ -386,6 +411,11 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         environment: wallet.environment!,
         publicKey: wallet.publicKey,
         status: wallet.status,
+        ownerAddress: wallet.ownerAddress ?? null,
+        ownerState: resolveOwnerState({
+          ownerAddress: wallet.ownerAddress,
+          ownerVerified: wallet.ownerVerified,
+        }),
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
       },
       200,
@@ -541,6 +571,61 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerAddress: updated!.ownerAddress,
         ownerVerified: updated!.ownerVerified,
         updatedAt: updated!.updatedAt ? Math.floor(updated!.updatedAt.getTime() / 1000) : null,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /wallets/:id/owner/verify
+  // ---------------------------------------------------------------------------
+
+  router.openapi(verifyOwnerRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    const state = resolveOwnerState({
+      ownerAddress: wallet.ownerAddress,
+      ownerVerified: wallet.ownerVerified,
+    });
+
+    if (state === 'NONE') {
+      throw new WAIaaSError('OWNER_NOT_CONNECTED', {
+        message: 'No owner address registered for this wallet',
+      });
+    }
+
+    if (state === 'LOCKED') {
+      // Already verified, no-op
+      return c.json(
+        {
+          ownerState: 'LOCKED' as const,
+          ownerAddress: wallet.ownerAddress,
+          ownerVerified: true,
+        },
+        200,
+      );
+    }
+
+    // GRACE -> LOCKED: ownerAuth middleware already verified the signature
+    ownerLifecycle.markOwnerVerified(walletId);
+
+    return c.json(
+      {
+        ownerState: 'LOCKED' as const,
+        ownerAddress: wallet.ownerAddress,
+        ownerVerified: true,
       },
       200,
     );

@@ -202,6 +202,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const ownerAuth = createOwnerAuth({ db: deps.db });
     app.use('/v1/transactions/:id/approve', ownerAuth);
     app.use('/v1/transactions/:id/reject', ownerAuth);
+    app.use('/v1/wallets/:id/owner/verify', ownerAuth);
   }
 
   // masterAuth for admin routes (except GET /admin/kill-switch which is public)
