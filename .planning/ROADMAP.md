@@ -70,12 +70,12 @@ Plans:
   2. Release PR 머지(게이트 1) 시 CHANGELOG.md가 갱신되고 GitHub Release + 태그가 자동 생성된다
   3. GitHub Release published 시 release.yml 품질 게이트가 자동 트리거되고, 통과 후 deploy job이 environment: production으로 대기한다(게이트 2)
   4. BREAKING CHANGE 커밋 시 major 버전이 범프되고, tag-release.sh가 폐기되어 CLAUDE.md 규칙이 갱신된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 163-01: release-please 설정 (manifest + config + release-please.yml 워크플로우)
-- [ ] 163-02: release.yml 확장 (품질 게이트 + deploy job + environment: production)
-- [ ] 163-03: tag-release.sh 폐기 + CLAUDE.md 규칙 갱신
+- [ ] 163-01-PLAN.md — release-please 설정 파일 3종 (manifest + config + release-please.yml 워크플로우)
+- [ ] 163-02-PLAN.md — release.yml deploy job 추가 (게이트 2: environment: production)
+- [ ] 163-03-PLAN.md — tag-release.sh 폐기 + CLAUDE.md 규칙 갱신
 
 ### Phase 164: 인터페이스 동기화 + 통합 검증
 **Goal**: Health 스키마 변경이 SDK/MCP/스킬 파일에 반영되고, 전체 업그레이드 흐름이 E2E로 검증된 상태
