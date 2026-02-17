@@ -75,6 +75,7 @@
 | 058 | BUG | MEDIUM | WalletConnect 셧다운 시 DB 연결 종료 후 스토리지 쓰기 시도 | v1.8 | FIXED | 2026-02-17 |
 | 059 | ENHANCEMENT | MEDIUM | Contract Test Suite 크로스 패키지 Import 구조 개선 | v2.0 | FIXED | 2026-02-17 |
 | 060 | BUG | MEDIUM | adapter-solana 커버리지 임계값과 실제 수치 불일치 (branches 75% vs 68.29%) | v2.0 | FIXED | 2026-02-17 |
+| 061 | BUG | MEDIUM | admin 커버리지 임계값과 실제 수치 불일치 (functions 70% vs 58.48%) | v2.0 | FIXED | 2026-02-17 |
 
 ## Type Legend
 
@@ -87,7 +88,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 60
+- **FIXED:** 61
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 60
+- **Total:** 61
