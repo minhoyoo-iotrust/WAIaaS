@@ -212,4 +212,28 @@ describe('WcSessionService', () => {
       expect(service.getSignClient()).toBeNull();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // shutdown - storage closed guard
+  // -------------------------------------------------------------------------
+
+  describe('shutdown (storage closed guard)', () => {
+    it('marks storage as closed after shutdown()', async () => {
+      // Manually assign a storage instance to simulate initialized state
+      const { SqliteKeyValueStorage } = await import('../services/wc-storage.js');
+      const storage = new SqliteKeyValueStorage(sqlite);
+      (service as any).storage = storage;
+
+      await service.shutdown();
+
+      // Storage should be closed — setItem is no-op, no DB errors
+      await expect(storage.setItem('after-shutdown', 'value')).resolves.not.toThrow();
+      const row = sqlite.prepare('SELECT * FROM wc_store WHERE key = ?').get('after-shutdown');
+      expect(row).toBeUndefined();
+    });
+
+    it('does not throw when storage is null (WC not initialized)', async () => {
+      await expect(service.shutdown()).resolves.not.toThrow();
+    });
+  });
 });

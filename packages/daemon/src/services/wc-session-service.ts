@@ -99,6 +99,7 @@ export interface WcServiceRef {
 
 export class WcSessionService {
   private signClient: SignClientInstance | null = null;
+  private storage: SqliteKeyValueStorage | null = null;
   private readonly sqlite: Database;
   private readonly settingsService: SettingsService;
   /** walletId -> session topic mapping (in-memory cache) */
@@ -123,12 +124,12 @@ export class WcSessionService {
       this.settingsService.get('walletconnect.relay_url') ||
       'wss://relay.walletconnect.com';
 
-    const storage = new SqliteKeyValueStorage(this.sqlite);
+    this.storage = new SqliteKeyValueStorage(this.sqlite);
 
     this.signClient = await SignClient.init({
       projectId,
       relayUrl,
-      storage: storage as any, // IKeyValueStorage compatible
+      storage: this.storage as any, // IKeyValueStorage compatible
       metadata: {
         name: 'WAIaaS Daemon',
         description: 'AI Agent Wallet-as-a-Service',
@@ -454,6 +455,8 @@ export class WcSessionService {
       this.sessionMap.clear();
       this.pendingPairing.clear();
     }
+    // Deactivate storage before DB close to prevent WC async callback errors
+    this.storage?.close();
   }
 
   /**
