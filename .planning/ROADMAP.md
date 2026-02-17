@@ -84,11 +84,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. HealthResponseSchema 변경에 따라 SDK 타입, MCP 응답, 스킬 파일이 동기화되어 있다
   2. 버전 체크 -> CLI 알림 -> upgrade 명령 -> 호환성 검증 전체 흐름이 E2E 테스트로 검증된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 164-01: SDK/MCP/스킬 파일 동기화 (HealthResponseSchema 변경 반영)
-- [ ] 164-02: E2E 통합 검증 (24건 E2E 시나리오 구현)
+- [ ] 164-01-PLAN.md — SDK HealthResponse 타입 추가 + 스킬 파일 /health 응답 동기화
+- [ ] 164-02-PLAN.md — 업그레이드 흐름 E2E 통합 테스트 (16건+)
 
 ## Progress
 
