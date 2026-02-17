@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 164 of 164 (동기화 + 통합)
-Plan: 11 of 12 total (1 of 2 in current phase)
-Status: In Progress
-Last activity: 2026-02-17 — 164-01 완료 (SDK HealthResponse 타입 추가 + 스킬 파일 /health 응답 동기화)
+Plan: 12 of 12 total (2 of 2 in current phase)
+Status: Phase 164 Complete
+Last activity: 2026-02-17 — 164-02 완료 (업그레이드 흐름 E2E 통합 테스트 19건)
 
-Progress: [#########░] 92% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [##########] 100% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [#########░] 92% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 | 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
 | 162. 호환성 + Docker | 2/2 | 5min | 2.5min |
 | 163. release-please | 3/3 | 3min | 1min |
-| 164. 동기화 + 통합 | 1/2 | 1min | 1min |
+| 164. 동기화 + 통합 | 2/2 | 3min | 1.5min |
 
 ## Accumulated Context
 
@@ -92,6 +92,10 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - SDK HealthResponse는 타입만 export, getHealth() 메서드 미추가 (unauthenticated endpoint이므로 SDK 클라이언트 패턴 부적합)
 - 스킬 파일 프론트매터 version을 1.8.0으로 갱신
 
+**164-02 결정:**
+- CLI notification 검증을 contract test 패턴으로 구현 -- cross-package import 대신 health 응답 스키마 계약 검증
+- 19건 통합 테스트로 4개 영역 커버 -- 플랜의 16-20건 가이드라인 범위 내
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -101,5 +105,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 164-01-PLAN.md (SDK HealthResponse 타입 추가 + 스킬 파일 /health 응답 동기화)
+Stopped at: Completed 164-02-PLAN.md (업그레이드 흐름 E2E 통합 테스트 19건, Phase 164 완료, v1.8 마일스톤 100%)
 Resume file: None
