@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.0.0-rc.1...v2.0.0-rc.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* Solana setup 액션을 Anza 공식 인스톨러로 교체 ([aad10f0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/aad10f0ac6a94eb2039361adaead21364ae0ff50))
+
 ## [2.0.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v1.8.0...v2.0.0-rc.1) (2026-02-17)
 
 
