@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 163 of 164 (release-please)
-Plan: 8 of 12 total (0 of 3 in current phase)
-Status: Ready
-Last activity: 2026-02-17 — 162-01 완료 (checkSchemaCompatibility 3-시나리오 판별 + daemon Step 2 통합)
+Plan: 9 of 12 total (1 of 3 in current phase)
+Status: In Progress
+Last activity: 2026-02-17 — 163-02 완료 (release.yml deploy job 추가, 2-게이트 모델 게이트 2)
 
-Progress: [######░░░░] 58% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [########░░] 75% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [######░░░░] 58% — Milestone v1.8 (5 phases, 12 plans, 30 re
 | 160. 버전 체크 인프라 | 2/2 | 5min | 2.5min |
 | 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
 | 162. 호환성 + Docker | 2/2 | 5min | 2.5min |
-| 163. release-please | 0/3 | - | - |
+| 163. release-please | 1/3 | 1min | 1min |
 | 164. 동기화 + 통합 | 0/2 | - | - |
 
 ## Accumulated Context
@@ -74,6 +74,11 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - docker-publish는 release 이벤트에서만 push (workflow_dispatch 제외)
 - Watchtower 라벨을 이미지에 기본 포함하여 사용자 opt-in 간소화
 
+**163-02 결정:**
+- deploy job이 5개 품질 게이트 job 모두에 의존하여 전체 통과 후에만 실행
+- npm publish는 v2.0 전까지 --dry-run으로 실행 (RLSE-06)
+- Docker push는 docker-publish job에서 이미 처리되므로 deploy job에서 중복 안 함
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -83,5 +88,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 162-01-PLAN.md (checkSchemaCompatibility 3-시나리오 판별 + daemon Step 2 통합, Phase 162 완료)
+Stopped at: Completed 163-02-PLAN.md (release.yml deploy job 추가, 2-게이트 모델 게이트 2 구현)
 Resume file: None
