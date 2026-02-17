@@ -39,12 +39,12 @@ Plans:
   3. `waiaas upgrade`로 7단계 시퀀스(확인-중지-백업-업데이트-마이그레이션-검증-재시작)가 순서대로 실행된다
   4. 업그레이드 전 DB + config.toml이 자동 백업되고, `--rollback`으로 직전 백업에서 복원할 수 있다
   5. 백업 디렉토리가 최근 5개까지만 보존되고 초과분이 자동 삭제된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 161-01: CLI 업그레이드 알림 모듈 (stderr 출력, 24h 중복 방지, --quiet 억제)
-- [ ] 161-02: BackupService 구현 (DB + config.toml 백업/복원, 5개 보존 정책)
-- [ ] 161-03: upgrade 명령 구현 (7단계 시퀀스, --check, --to, --rollback, --no-start)
+- [ ] 161-01-PLAN.md — CLI 업그레이드 알림 모듈 (stderr 출력, 24h 중복 방지, --quiet 억제)
+- [ ] 161-02-PLAN.md — BackupService 구현 (DB + config.toml 백업/복원, 5개 보존 정책)
+- [ ] 161-03-PLAN.md — upgrade 명령 구현 (7단계 시퀀스, --check, --to, --rollback, --no-start)
 
 ### Phase 162: 호환성 매트릭스 + Docker
 **Goal**: 코드-DB 스키마 버전 불일치를 자동 감지하여 안전하게 처리하고, Docker 이미지가 자동 업데이트 인프라를 지원하는 상태
