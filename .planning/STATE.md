@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 161 CLI 알림 + upgrade
+**Current focus:** v1.8 업그레이드 + 배포 인프라 — Phase 162 호환성 + Docker
 
 ## Current Position
 
-Phase: 161 of 164 (CLI 알림 + upgrade)
-Plan: 5 of 12 total (3 of 3 in current phase)
-Status: Executing
-Last activity: 2026-02-17 — 161-02 완료 (BackupService 백업/복원 + 15 테스트)
+Phase: 162 of 164 (호환성 + Docker)
+Plan: 6 of 12 total (0 of 2 in current phase)
+Status: Ready
+Last activity: 2026-02-17 — 161-03 완료 (upgrade 명령 7단계 시퀀스 + 15 테스트)
 
-Progress: [####░░░░░░] 33% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
+Progress: [#####░░░░░] 50% — Milestone v1.8 (5 phases, 12 plans, 30 reqs)
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [####░░░░░░] 33% — Milestone v1.8 (5 phases, 12 plans, 3
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 160. 버전 체크 인프라 | 2/2 | 5min | 2.5min |
-| 161. CLI 알림 + upgrade | 2/3 | 4min | 2min |
+| 161. CLI 알림 + upgrade | 3/3 | 9min | 3min |
 | 162. 호환성 + Docker | 0/2 | - | - |
 | 163. release-please | 0/3 | - | - |
 | 164. 동기화 + 통합 | 0/2 | - | - |
@@ -58,6 +58,11 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 - DB 파일 없으면 에러 throw + 빈 백업 디렉토리 정리 (불완전한 백업 방지)
 - timestamp 포맷을 로컬 시간 기반 YYYYMMDDHHmmss로 사전순=시간순 보장
 
+**161-03 결정:**
+- execSync('npm install -g') 사용 -- 기술 결정 #15에 따라 npm CLI 직접 호출
+- Step 5 마이그레이션은 데몬 시작 시 자동 실행에 위임 -- 구버전 코드에서 마이그레이션 직접 실행 위험
+- BackupService를 @waiaas/daemon barrel export에 추가 -- CLI에서 직접 import 가능
+
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
@@ -67,5 +72,5 @@ v1.8 기술 결정 16건: objectives/v1.8-upgrade-distribution.md 참조.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 161-02-PLAN.md (BackupService 백업/복원 + 15 테스트)
+Stopped at: Completed 161-03-PLAN.md (upgrade 명령 7단계 시퀀스 + 15 테스트, Phase 161 완료)
 Resume file: None
