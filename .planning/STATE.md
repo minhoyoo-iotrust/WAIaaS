@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 167 테스트 게이트 완료, Phase 168 준비
+**Current focus:** v2.0 전 기능 완성 릴리스 -- Phase 168 사용자 문서 진행 중
 
 ## Current Position
 
-Phase: 3 of 6 (Phase 167: 테스트 게이트) COMPLETE
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 167 complete, ready for Phase 168
-Last activity: 2026-02-17 -- Completed 167-03 (플랫폼 + 체인 테스트)
+Phase: 4 of 6 (Phase 168: 사용자 문서 완비)
+Plan: 1 of 3 in current phase
+Status: 168-01 complete, ready for 168-02
+Last activity: 2026-02-17 -- Completed 168-01 (문서 디렉토리 재편성)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 47%
 
 ## Performance Metrics
 
 **Cumulative:** 37 milestones, 164 phases, 356 plans, 1,001 reqs, 3,599 tests, ~124,712 LOC TS
 
 **Velocity:**
-- Total plans completed: 6 (v2.0)
+- Total plans completed: 7 (v2.0)
 - Average duration: 5min
-- Total execution time: 31min
+- Total execution time: 36min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -33,6 +33,7 @@ Progress: [████░░░░░░] 40%
 | 167   | 01   | 5min     | 2     | 0     |
 | 167   | 02   | 7min     | 2     | 1     |
 | 167   | 03   | 4min     | 2     | 1     |
+| 168   | 01   | 5min     | 2     | 29    |
 
 ## Accumulated Context
 
@@ -53,6 +54,8 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 - 167-02: bash 3.x 호환성을 위해 coverage-gate.sh에서 associative array 대신 parallel arrays 패턴 적용
 - 167-03: 플랫폼 테스트 84건 코드 수정 없이 전수 통과 -- pre-existing E-07~09 이미 해결 확인
 - 167-03: EVM Sepolia 테스트 getAssets() 시그니처 + AssetInfo.mint 필드명 수정
+- 168-01: docs-internal/ 내부 설계 문서 간 상호 참조도 함께 업데이트
+- 168-01: .planning/ 내부 참조는 계획 지시대로 업데이트하지 않음
 
 ### Blockers/Concerns
 
@@ -64,5 +67,5 @@ v1.8 decisions archived to milestones/v1.8-ROADMAP.md (16 decisions).
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 167-03-PLAN.md (플랫폼 + 체인 테스트). Phase 167 complete. Ready for Phase 168.
+Stopped at: Completed 168-01-PLAN.md (문서 디렉토리 재편성). Ready for 168-02.
 Resume file: None
