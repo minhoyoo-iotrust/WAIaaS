@@ -33,6 +33,8 @@ export const DaemonConfigSchema = z.object({
       dev_mode: z.boolean().default(false),
       admin_ui: z.boolean().default(true),
       admin_timeout: z.number().int().min(60).max(7200).default(900),
+      update_check: z.boolean().default(true),
+      update_check_interval: z.number().int().min(3600).max(604800).default(86400),
     })
     .default({}),
   keystore: z

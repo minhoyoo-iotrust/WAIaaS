@@ -190,6 +190,64 @@ describe('BackgroundWorkers', () => {
     workers.register('w2', { interval: 2000, handler: () => {} });
     expect(workers.size).toBe(2);
   });
+
+  it('runImmediately: true executes handler once on startAll()', async () => {
+    const workers = new BackgroundWorkers();
+    const handler = vi.fn();
+    workers.register('immediate-worker', {
+      interval: 60_000, // long interval so only immediate run fires
+      handler,
+      runImmediately: true,
+    });
+    workers.startAll();
+
+    // Give the async immediate execution a tick to complete
+    await new Promise((r) => setTimeout(r, 20));
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    await workers.stopAll();
+  });
+
+  it('runImmediately: false (default) does not execute handler on startAll()', async () => {
+    const workers = new BackgroundWorkers();
+    const handler = vi.fn();
+    workers.register('deferred-worker', {
+      interval: 60_000,
+      handler,
+    });
+    workers.startAll();
+
+    // Wait a tick - handler should NOT have been called
+    await new Promise((r) => setTimeout(r, 20));
+    expect(handler).not.toHaveBeenCalled();
+
+    await workers.stopAll();
+  });
+
+  it('runImmediately: true handler error does not affect other workers', async () => {
+    const workers = new BackgroundWorkers();
+    const failingHandler = vi.fn(() => { throw new Error('immediate boom'); });
+    const normalHandler = vi.fn();
+
+    workers.register('failing-immediate', {
+      interval: 60_000,
+      handler: failingHandler,
+      runImmediately: true,
+    });
+    workers.register('normal-immediate', {
+      interval: 60_000,
+      handler: normalHandler,
+      runImmediately: true,
+    });
+    workers.startAll();
+
+    // Both should have been attempted
+    await new Promise((r) => setTimeout(r, 20));
+    expect(failingHandler).toHaveBeenCalledTimes(1);
+    expect(normalHandler).toHaveBeenCalledTimes(1);
+
+    await workers.stopAll();
+  });
 });
 
 // ---------------------------------------------------------------------------

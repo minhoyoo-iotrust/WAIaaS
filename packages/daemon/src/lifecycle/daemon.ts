@@ -138,6 +138,7 @@ export class DaemonLifecycle {
   private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
   private wcServiceRef: import('../services/wc-session-service.js').WcServiceRef = { current: null };
   private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
+  private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -157,6 +158,11 @@ export class DaemonLifecycle {
   /** SettingsService instance (available after Step 2, used by route handlers). */
   get settingsService(): import('../infrastructure/settings/settings-service.js').SettingsService | null {
     return this._settingsService;
+  }
+
+  /** VersionCheckService instance (available after Step 6, used by Health endpoint). */
+  get versionCheckService(): import('../infrastructure/version/version-check-service.js').VersionCheckService | null {
+    return this._versionCheckService;
   }
 
   /**
@@ -764,6 +770,21 @@ export class DaemonLifecycle {
             this.approvalWorkflow!.processExpiredApprovals(now);
           },
         });
+      }
+
+      // Register version-check worker (conditional on config)
+      if (this._config!.daemon.update_check) {
+        const { VersionCheckService } = await import('../infrastructure/version/index.js');
+        this._versionCheckService = new VersionCheckService(this.sqlite!);
+        const versionCheckInterval = this._config!.daemon.update_check_interval * 1000;
+        this.workers.register('version-check', {
+          interval: versionCheckInterval,
+          runImmediately: true,
+          handler: async () => { await this._versionCheckService!.check(); },
+        });
+        console.log('Step 6: Version check worker registered');
+      } else {
+        console.log('Step 6: Version check disabled');
       }
 
       this.workers.startAll();
