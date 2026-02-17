@@ -9,7 +9,7 @@
 - [x] **Phase 160: 버전 체크 인프라** - VersionCheckService + BackgroundWorkers 확장 + Health 엔드포인트 확장 (completed 2026-02-17)
 - [x] **Phase 161: CLI 알림 + upgrade 명령** - 업그레이드 알림 출력 + 7단계 upgrade 시퀀스 + backup/rollback (completed 2026-02-17)
 - [x] **Phase 162: 호환성 매트릭스 + Docker** - 코드-DB 스키마 호환성 검증 + Watchtower 라벨 + 3-tier 태깅 (completed 2026-02-17)
-- [ ] **Phase 163: release-please 2-게이트 모델** - release-please 설정 + CI/CD release.yml 확장 + tag-release.sh 폐기
+- [x] **Phase 163: release-please 2-게이트 모델** - release-please 설정 + CI/CD release.yml 확장 + tag-release.sh 폐기 (completed 2026-02-17)
 - [ ] **Phase 164: 인터페이스 동기화 + 통합 검증** - SDK/MCP/Skill 파일 동기화 + E2E 통합 검증
 
 ## Phase Details
@@ -100,5 +100,5 @@ Plans:
 | 160. 버전 체크 인프라 | 0/2 | Complete    | 2026-02-17 |
 | 161. CLI 알림 + upgrade 명령 | 0/3 | Complete    | 2026-02-17 |
 | 162. 호환성 매트릭스 + Docker | 0/2 | Complete    | 2026-02-17 |
-| 163. release-please 2-게이트 모델 | 0/3 | Not started | - |
+| 163. release-please 2-게이트 모델 | 0/3 | Complete    | 2026-02-17 |
 | 164. 인터페이스 동기화 + 통합 검증 | 0/2 | Not started | - |
