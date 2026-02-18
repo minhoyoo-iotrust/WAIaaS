@@ -1,92 +1,67 @@
-# Requirements: WAIaaS v2.0.1
+# Requirements: WAIaaS v2.2 테스트 커버리지 강화
 
 **Defined:** 2026-02-18
-**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+**Core Value:** 임시 하향한 커버리지 임계값을 원래 수준으로 복원하고, 전체 패키지의 커버리지 품질을 균일하게 유지한다.
 
-## v2.0.1 Requirements
+## v2.2 Requirements
 
-퍼블릭 리포 필수 거버넌스 + 내부 문서 구조 정리 + OPEN 이슈 해소 + Known Gaps 수정.
+### adapter-solana 브랜치 커버리지 (이슈 #060)
 
-### 거버넌스 (GOV)
+- [ ] **SOL-01**: convertBatchInstruction() 4가지 instruction 타입 분기 테스트 추가 (~12 브랜치)
+- [ ] **SOL-02**: signExternalTransaction() Base64 디코딩 실패, 키 길이 판별, 서명자 검증 분기 테스트 추가 (~8 브랜치)
+- [ ] **SOL-03**: tx-parser.ts 파싱 실패, unknown 명령어, null coalescing fallback 분기 테스트 추가 (~15 브랜치)
+- [ ] **SOL-04**: Error instanceof 분기 + 기타(getAssets 정렬, estimateFee 토큰/네이티브) 테스트 추가 (~43 브랜치)
 
-- [ ] **GOV-01**: SECURITY.md가 루트에 존재하며 Responsible Disclosure 정책, 신고 채널, 대응 SLA를 포함한다
-- [ ] **GOV-02**: CODE_OF_CONDUCT.md가 루트에 존재하며 Contributor Covenant 기반으로 작성된다
-- [ ] **GOV-03**: .github/ISSUE_TEMPLATE/에 Bug Report, Feature Request 템플릿이 존재한다
-- [ ] **GOV-04**: .github/PULL_REQUEST_TEMPLATE.md에 변경 요약, 테스트 방법, 관련 이슈 체크리스트가 포함된다
+### admin functions 커버리지 (이슈 #061)
 
-### 문서 구조 (DOCS)
+- [ ] **ADM-01**: settings.tsx 미커버 함수 테스트 추가 (RPC 테스트, 네트워크 RPC URL, API 키, 모니터링 간격 등 ~15 함수)
+- [ ] **ADM-02**: wallets.tsx + dashboard.tsx 미커버 함수 테스트 추가 (네트워크 추가/제거, WC 페어링, Owner, 리프레시, 킬스위치 등 ~12 함수)
+- [ ] **ADM-03**: policies.tsx + notifications.tsx 미커버 함수 테스트 추가 (정책 재정렬, 삭제 확인, 필터링, 채널별 테스트 발송 등 ~18 함수)
+- [ ] **ADM-04**: 0% 그룹(client.ts, layout.tsx, toast.tsx, copy-button.tsx, walletconnect.tsx) + 폼 컴포넌트 미커버 함수 테스트 추가 (~20 함수)
 
-- [ ] **DOCS-01**: .planning/deliverables/ 및 docs-internal/의 설계 문서가 internal/design/으로 통합된다
-- [ ] **DOCS-02**: objectives/ 디렉토리가 internal/objectives/로 이동된다
-- [ ] **DOCS-03**: v0.1~v2.0 shipped 목표 문서 + FIXED 이슈가 internal/objectives/archive/로 분리된다
-- [ ] **DOCS-04**: docs/ 디렉토리 내 모든 .md 파일이 영문 전용으로 유지됨을 검증할 수 있다
-- [ ] **DOCS-05**: CLAUDE.md Issue Tracking 섹션의 경로가 internal/objectives/issues/로 갱신된다
+### cli lines/statements 커버리지 (이슈 #062)
 
-### 정리 (CLEAN)
+- [ ] **CLI-01**: commands/owner.ts 단위 테스트 추가 (WalletConnect 연결/해제/상태, ~227 라인)
+- [ ] **CLI-02**: commands/wallet.ts + utils/password.ts 단위 테스트 추가 (월렛 상세 조회, 기본 네트워크 변경, stdin/파일 프롬프트, ~217 라인)
 
-- [ ] **CLEAN-01**: scripts/tag-release.sh가 삭제되고 CLAUDE.md에서 관련 문구가 제거된다
-- [ ] **CLEAN-02**: CLAUDE.md Language 섹션에 Git 태그/GitHub Release 영문 규칙이 추가된다
-- [ ] **CLEAN-03**: README.md/deployment.md의 `add --all` vs `add all` CLI 문법이 일관되게 수정된다 (INT-01)
-- [ ] **CLEAN-04**: examples/simple-agent/README.md의 깨진 링크와 placeholder URL이 수정된다 (INT-02)
-- [ ] **CLEAN-05**: validate-openapi.ts의 @see 주석 경로가 수정된다
+### 검증 및 복원
 
-### 배포 품질 (DEPLOY)
+- [ ] **GATE-01**: 전체 패키지 vitest.config.ts 임계값 검증 + 임시 하향 임계값 원래 수준으로 복원 (adapter-solana branches 65→75, admin functions 55→70, cli lines 65→70, cli statements 65→70)
 
-- [ ] **DEPLOY-01**: scripts/smoke-test-published.sh 스모크 테스트 스크립트가 작성된다
-- [ ] **DEPLOY-02**: 8개 패키지에 대해 npm pack → tarball 설치 → import 검증이 통과한다
-- [ ] **DEPLOY-03**: release.yml에 스모크 테스트 단계가 통합된다
-- [ ] **DEPLOY-04**: pnpm test:smoke로 로컬 스모크 테스트 실행이 가능하다
+## Future Requirements
 
-## Deferred Requirements
-
-v2.0에서 이월된 후순위 거버넌스 항목. 별도 마일스톤에서 검토.
-
-- **GOV-05**: Signed Releases (cosign/sigstore)
-- **GOV-06**: OpenSSF Scorecard + Best Practices Badge
-- **GOV-07**: DCO 강제 (Developer Certificate of Origin)
-- **GOV-08**: API Versioning Policy
-- **GOV-09**: Migration Guide 템플릿
-- **GOV-10**: Public Roadmap
-- **GOV-11**: GitHub Discussions 활성화
+없음 — 이 마일스톤은 기존 이슈 #060~#062의 해소로 범위가 한정된다.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Signed Releases (cosign/sigstore) | 후순위 이연 — 초기 공개에 필수적이지 않음 |
-| OpenSSF Scorecard | 후순위 이연 — 배지 취득은 별도 마일스톤 |
-| DCO 강제 | 후순위 이연 — 초기 기여자 유입 장벽 최소화 |
-| Tauri Desktop App | v2.6.1로 이연 |
-| SaaS 클라우드 호스팅 | Self-Hosted 전용 아키텍처 |
+| 3개 대상 패키지 외 커버리지 개선 | 추가 불일치 발견 시 별도 이슈로 분리 |
+| 새로운 기능 추가 | 테스트 전용 마일스톤 |
+| 테스트 프레임워크 변경 | 기존 Vitest 유지 |
+| E2E 테스트 추가 | 단위 테스트 커버리지 개선에 집중 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GOV-01 | Phase 174 | Complete |
-| GOV-02 | Phase 174 | Complete |
-| GOV-03 | Phase 174 | Complete |
-| GOV-04 | Phase 174 | Complete |
-| DOCS-01 | Phase 176 | Complete |
-| DOCS-02 | Phase 176 | Complete |
-| DOCS-03 | Phase 176 | Complete |
-| DOCS-04 | Phase 176 | Complete |
-| DOCS-05 | Phase 176 | Complete |
-| CLEAN-01 | Phase 175 | Complete |
-| CLEAN-02 | Phase 175 | Complete |
-| CLEAN-03 | Phase 175 | Complete |
-| CLEAN-04 | Phase 175 | Complete |
-| CLEAN-05 | Phase 175 | Complete |
-| DEPLOY-01 | Phase 177 | Complete |
-| DEPLOY-02 | Phase 177 | Complete |
-| DEPLOY-03 | Phase 177 | Complete |
-| DEPLOY-04 | Phase 177 | Complete |
+| SOL-01 | — | Pending |
+| SOL-02 | — | Pending |
+| SOL-03 | — | Pending |
+| SOL-04 | — | Pending |
+| ADM-01 | — | Pending |
+| ADM-02 | — | Pending |
+| ADM-03 | — | Pending |
+| ADM-04 | — | Pending |
+| CLI-01 | — | Pending |
+| CLI-02 | — | Pending |
+| GATE-01 | — | Pending |
 
 **Coverage:**
-- v2.0.1 requirements: 18 total
-- Mapped to phases: 18
-- Unmapped: 0
+- v2.2 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after all phases complete*
+*Last updated: 2026-02-18 after initial definition*
