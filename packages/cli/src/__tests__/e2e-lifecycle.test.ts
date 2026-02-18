@@ -5,7 +5,7 @@
  * Uses a real daemon process (in-process) with real SQLite DB but no chain adapter.
  */
 
-import { describe, test, expect, afterEach } from 'vitest';
+import { describe, test, expect, afterEach, vi } from 'vitest';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -69,10 +69,13 @@ describe('E2E Lifecycle', () => {
     // Verify PID file exists before stop
     expect(existsSync(join(dataDir, 'daemon.pid'))).toBe(true);
 
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     await harness.daemon.shutdown('TEST');
 
     // Verify PID file removed after shutdown
     expect(existsSync(join(dataDir, 'daemon.pid'))).toBe(false);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
 
     // Clean up (already shut down, prevent double shutdown in afterEach)
     rmSync(dataDir, { recursive: true, force: true });

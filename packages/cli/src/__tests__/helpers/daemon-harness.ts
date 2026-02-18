@@ -355,7 +355,14 @@ export async function waitForHealth(
 export async function stopTestDaemon(harness: TestDaemonHarness): Promise<void> {
   try {
     if (!harness.daemon.isShuttingDown) {
-      await harness.daemon.shutdown('TEST');
+      // Mock process.exit to prevent vitest from intercepting the shutdown exit call
+      const origExit = process.exit;
+      process.exit = (() => {}) as never;
+      try {
+        await harness.daemon.shutdown('TEST');
+      } finally {
+        process.exit = origExit;
+      }
     }
   } catch {
     // Ignore shutdown errors in tests

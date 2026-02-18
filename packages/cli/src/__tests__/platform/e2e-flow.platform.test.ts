@@ -4,7 +4,7 @@
  * PLAT-01-E2E-01
  */
 
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { rmSync } from 'node:fs';
@@ -73,8 +73,11 @@ describe('PLAT-01 E2E full flow', { timeout: 60_000 }, () => {
     expect(pid).toBe(process.pid);
 
     // Step 5: Shutdown
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     await harness.daemon.shutdown('TEST');
     expect(harness.daemon.isShuttingDown).toBe(true);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
 
     // Step 6: Verify stopped (PID file removed)
     expect(existsSync(pidPath)).toBe(false);

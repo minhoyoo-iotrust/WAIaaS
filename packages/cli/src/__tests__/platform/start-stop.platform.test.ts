@@ -236,11 +236,16 @@ describe('PLAT-01 stop platform tests', { timeout: 30_000 }, () => {
       // PID file should exist before shutdown
       expect(existsSync(join(dataDir, 'daemon.pid'))).toBe(true);
 
+      // Mock process.exit to prevent vitest from intercepting the call
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
       // Shutdown via DaemonLifecycle (simulates stopCommand's SIGTERM effect)
       await harness.daemon.shutdown('TEST');
 
       // PID file should be removed after shutdown
       expect(existsSync(join(dataDir, 'daemon.pid'))).toBe(false);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+      exitSpy.mockRestore();
       harness = null;
     } finally {
       if (harness) await stopTestDaemon(harness);
@@ -262,6 +267,7 @@ describe('PLAT-01 stop platform tests', { timeout: 30_000 }, () => {
       mockStdout = vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
         logs.push(args.map(String).join(' '));
       });
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
       await harness.daemon.shutdown('TEST');
 
@@ -273,6 +279,8 @@ describe('PLAT-01 stop platform tests', { timeout: 30_000 }, () => {
 
       // isShuttingDown should be true
       expect(harness.daemon.isShuttingDown).toBe(true);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+      exitSpy.mockRestore();
       harness = null;
     } finally {
       if (harness) await stopTestDaemon(harness);
@@ -290,6 +298,7 @@ describe('PLAT-01 stop platform tests', { timeout: 30_000 }, () => {
     // Mock console to suppress output
     const mockConsole = vi.spyOn(console, 'log').mockImplementation(() => {});
     const mockConsoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
     // Shutdown without starting (no resources to clean up, but force timer will be set)
     // Use a short config to test the timer path
@@ -298,12 +307,12 @@ describe('PLAT-01 stop platform tests', { timeout: 30_000 }, () => {
     // After shutdown completes, isShuttingDown should be true
     expect(daemon.isShuttingDown).toBe(true);
 
-    // The forceTimer should have been cleared (successful shutdown)
-    // Verify by checking the shutdown completed cleanly (no process.exit called)
-    expect(process.exitCode).toBeUndefined();
+    // Successful shutdown calls process.exit(0)
+    expect(exitSpy).toHaveBeenCalledWith(0);
 
     mockConsole.mockRestore();
     mockConsoleErr.mockRestore();
+    exitSpy.mockRestore();
   });
 });
 
@@ -329,11 +338,8 @@ describe('PLAT-01 exit code platform tests', { timeout: 30_000 }, () => {
 
       await harness.daemon.shutdown('SIGTERM');
 
-      // Graceful shutdown does NOT call process.exit -- it returns cleanly
-      // (process.exit(0) is called by signal handler in production, but
-      // shutdown() itself just completes)
-      // The force timer is cleared, so exit(1) was not called.
-      expect(exitSpy).not.toHaveBeenCalledWith(1);
+      // Graceful shutdown calls process.exit(0) after cleanup
+      expect(exitSpy).toHaveBeenCalledWith(0);
 
       exitSpy.mockRestore();
       harness = null;
