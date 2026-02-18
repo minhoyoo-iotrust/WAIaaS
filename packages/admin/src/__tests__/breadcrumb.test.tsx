@@ -60,8 +60,8 @@ describe('PageHeader subtitle', () => {
       '/sessions',
       '/policies',
       '/notifications',
-      '/walletconnect',
-      '/settings',
+      '/security',
+      '/system',
     ];
 
     for (const path of paths) {

@@ -5,9 +5,6 @@ import WalletsPage from '../pages/wallets';
 import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
-import TelegramUsersPage from '../pages/telegram-users';
-import WalletConnectPage from '../pages/walletconnect';
-import SettingsPage from '../pages/settings';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
 
@@ -21,9 +18,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/sessions': 'Sessions',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
-  '/telegram-users': 'Telegram Users',
-  '/walletconnect': 'WalletConnect',
-  '/settings': 'Settings',
+  '/security': 'Security',
+  '/system': 'System',
 };
 
 const PAGE_SUBTITLES: Record<string, string> = {
@@ -32,8 +28,8 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/sessions': 'View and manage active sessions',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
-  '/walletconnect': 'WalletConnect session management',
-  '/settings': 'System configuration and preferences',
+  '/security': 'Emergency controls and automatic protection rules',
+  '/system': 'API keys, display preferences, and daemon configuration',
 };
 
 function getPageTitle(path: string): string {
@@ -51,9 +47,19 @@ const NAV_ITEMS = [
   { path: '/sessions', label: 'Sessions' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
-  { path: '/walletconnect', label: 'WalletConnect' },
-  { path: '/settings', label: 'Settings' },
+  { path: '/security', label: 'Security' },
+  { path: '/system', label: 'System' },
 ];
+
+// Placeholder until security.tsx is created by plan 183-02
+function SecurityPagePlaceholder() {
+  return <div class="page"><p>Loading Security...</p></div>;
+}
+
+// Placeholder until system.tsx is created by plan 183-03
+function SystemPagePlaceholder() {
+  return <div class="page"><p>Loading System...</p></div>;
+}
 
 function PageRouter() {
   const path = currentPath.value;
@@ -65,8 +71,16 @@ function PageRouter() {
     window.location.hash = '#/notifications';
     return <NotificationsPage />;
   }
-  if (path === '/walletconnect') return <WalletConnectPage />;
-  if (path === '/settings') return <SettingsPage />;
+  if (path === '/settings') {
+    window.location.hash = '#/dashboard';
+    return <DashboardPage />;
+  }
+  if (path === '/walletconnect') {
+    window.location.hash = '#/wallets';
+    return <WalletsPage />;
+  }
+  if (path === '/security') return <SecurityPagePlaceholder />;
+  if (path === '/system') return <SystemPagePlaceholder />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;
 }
