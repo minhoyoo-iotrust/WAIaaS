@@ -299,6 +299,7 @@ function AutoStopTab() {
               type="checkbox"
               value={getEffectiveBoolValue(settings.value, dirty.value, 'autostop', 'enabled')}
               onChange={(v) => handleFieldChange('autostop.enabled', v)}
+              description="Enable or disable AutoStop protection rules"
             />
           </div>
 
@@ -312,6 +313,7 @@ function AutoStopTab() {
                 onChange={(v) => handleFieldChange('autostop.consecutive_failures_threshold', v)}
                 min={1}
                 max={100}
+                description="Suspend wallet after this many consecutive failed transactions"
               />
               <FormField
                 label={keyToLabel('unusual_activity_threshold')}
@@ -321,6 +323,7 @@ function AutoStopTab() {
                 onChange={(v) => handleFieldChange('autostop.unusual_activity_threshold', v)}
                 min={5}
                 max={1000}
+                description="Max transactions within window before triggering unusual activity alert"
               />
               <FormField
                 label={keyToLabel('unusual_activity_window_sec')}
@@ -330,6 +333,7 @@ function AutoStopTab() {
                 onChange={(v) => handleFieldChange('autostop.unusual_activity_window_sec', v)}
                 min={60}
                 max={86400}
+                description="Time window for unusual activity detection"
               />
             </div>
           </FieldGroup>
@@ -344,6 +348,7 @@ function AutoStopTab() {
                 onChange={(v) => handleFieldChange('autostop.idle_timeout_sec', v)}
                 min={60}
                 max={604800}
+                description="Revoke sessions with no activity for this duration"
               />
               <FormField
                 label={keyToLabel('idle_check_interval_sec')}
@@ -353,6 +358,7 @@ function AutoStopTab() {
                 onChange={(v) => handleFieldChange('autostop.idle_check_interval_sec', v)}
                 min={10}
                 max={3600}
+                description="How often to check for idle sessions"
               />
             </div>
           </FieldGroup>

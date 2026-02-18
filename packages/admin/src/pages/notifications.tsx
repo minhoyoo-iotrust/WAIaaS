@@ -199,6 +199,7 @@ function NotificationSettingsTab() {
                   type="checkbox"
                   value={getEffectiveBoolValue(settings.value, dirty.value, 'notifications', 'enabled')}
                   onChange={(v) => handleFieldChange('notifications.enabled', v)}
+                  description="Enable or disable notifications globally"
                 />
               </div>
 
@@ -209,6 +210,7 @@ function NotificationSettingsTab() {
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'telegram_bot_token')}
                 onChange={(v) => handleFieldChange('notifications.telegram_bot_token', v)}
                 placeholder={isCredentialConfigured(settings.value, dirty.value, 'notifications', 'telegram_bot_token') ? '(configured)' : ''}
+                description="Bot token for Telegram notifications"
               />
 
               <FormField
@@ -217,6 +219,7 @@ function NotificationSettingsTab() {
                 type="text"
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'telegram_chat_id')}
                 onChange={(v) => handleFieldChange('notifications.telegram_chat_id', v)}
+                description="Chat ID for Telegram notification delivery"
               />
 
               <FormField
@@ -229,6 +232,7 @@ function NotificationSettingsTab() {
                   { label: 'English', value: 'en' },
                   { label: 'Korean', value: 'ko' },
                 ]}
+                description="Language for notification messages"
               />
             </div>
 
@@ -246,6 +250,7 @@ function NotificationSettingsTab() {
                     { label: 'Yes', value: 'true' },
                     { label: 'No', value: 'false' },
                   ]}
+                  description="Enable or disable the Telegram bot"
                 />
                 <FormField
                   label={keyToLabel('bot_token')}
@@ -254,6 +259,7 @@ function NotificationSettingsTab() {
                   value={getEffectiveValue(settings.value, dirty.value, 'telegram', 'bot_token')}
                   onChange={(v) => handleFieldChange('telegram.bot_token', v)}
                   placeholder={isCredentialConfigured(settings.value, dirty.value, 'telegram', 'bot_token') ? '(configured)' : 'Leave empty to use notification token'}
+                  description="Dedicated bot token for Telegram bot (optional, uses notification token if empty)"
                 />
                 <FormField
                   label="Locale"
@@ -265,6 +271,7 @@ function NotificationSettingsTab() {
                     { label: 'English', value: 'en' },
                     { label: '한국어', value: 'ko' },
                   ]}
+                  description="Language for Telegram bot messages"
                 />
               </div>
             </div>
@@ -279,6 +286,7 @@ function NotificationSettingsTab() {
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'discord_webhook_url')}
                 onChange={(v) => handleFieldChange('notifications.discord_webhook_url', v)}
                 placeholder={isCredentialConfigured(settings.value, dirty.value, 'notifications', 'discord_webhook_url') ? '(configured)' : ''}
+                description="Webhook URL for Discord notifications"
               />
 
               <FormField
@@ -287,6 +295,7 @@ function NotificationSettingsTab() {
                 type="text"
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_server')}
                 onChange={(v) => handleFieldChange('notifications.ntfy_server', v)}
+                description="Server URL for ntfy notifications"
               />
 
               <FormField
@@ -295,6 +304,7 @@ function NotificationSettingsTab() {
                 type="text"
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_topic')}
                 onChange={(v) => handleFieldChange('notifications.ntfy_topic', v)}
+                description="Topic name for ntfy notifications"
               />
 
               <FormField
@@ -304,6 +314,7 @@ function NotificationSettingsTab() {
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'slack_webhook_url')}
                 onChange={(v) => handleFieldChange('notifications.slack_webhook_url', v)}
                 placeholder={isCredentialConfigured(settings.value, dirty.value, 'notifications', 'slack_webhook_url') ? '(configured)' : ''}
+                description="Webhook URL for Slack notifications"
               />
 
               <FormField
@@ -314,6 +325,7 @@ function NotificationSettingsTab() {
                 onChange={(v) => handleFieldChange('notifications.rate_limit_rpm', v)}
                 min={1}
                 max={1000}
+                description="Max notifications per minute"
               />
             </div>
           </FieldGroup>

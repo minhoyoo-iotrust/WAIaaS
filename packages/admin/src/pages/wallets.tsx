@@ -843,6 +843,30 @@ const evmRpcKeys = [
   'evm_base_mainnet', 'evm_base_sepolia',
 ];
 
+const RPC_DESCRIPTIONS: Record<string, string> = {
+  solana_mainnet: 'RPC endpoint URL for Solana mainnet',
+  solana_devnet: 'RPC endpoint URL for Solana devnet',
+  solana_testnet: 'RPC endpoint URL for Solana testnet',
+  evm_ethereum_mainnet: 'RPC endpoint URL for Ethereum mainnet',
+  evm_ethereum_sepolia: 'RPC endpoint URL for Ethereum Sepolia testnet',
+  evm_polygon_mainnet: 'RPC endpoint URL for Polygon mainnet',
+  evm_polygon_amoy: 'RPC endpoint URL for Polygon Amoy testnet',
+  evm_arbitrum_mainnet: 'RPC endpoint URL for Arbitrum mainnet',
+  evm_arbitrum_sepolia: 'RPC endpoint URL for Arbitrum Sepolia testnet',
+  evm_optimism_mainnet: 'RPC endpoint URL for Optimism mainnet',
+  evm_optimism_sepolia: 'RPC endpoint URL for Optimism Sepolia testnet',
+  evm_base_mainnet: 'RPC endpoint URL for Base mainnet',
+  evm_base_sepolia: 'RPC endpoint URL for Base Sepolia testnet',
+};
+
+const MONITORING_DESCRIPTIONS: Record<string, string> = {
+  enabled: 'Enable or disable balance monitoring',
+  check_interval_sec: 'How often to check wallet balances',
+  low_balance_threshold_sol: 'Alert when SOL balance drops below this amount',
+  low_balance_threshold_eth: 'Alert when ETH balance drops below this amount',
+  cooldown_hours: 'Suppress duplicate alerts for this many hours',
+};
+
 const evmNetworkOptions = [
   { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
   { label: 'Ethereum Sepolia', value: 'ethereum-sepolia' },
@@ -956,6 +980,7 @@ function RpcEndpointsTab() {
             value={getEffectiveValue(settings.value, dirty.value, 'rpc', shortKey)}
             onChange={(v) => handleFieldChange(fullKey, v)}
             placeholder="https://..."
+            description={RPC_DESCRIPTIONS[shortKey]}
           />
           <Button
             variant="ghost"
@@ -1036,6 +1061,7 @@ function RpcEndpointsTab() {
                   value={getEffectiveValue(settings.value, dirty.value, 'rpc', 'evm_default_network') || 'ethereum-sepolia'}
                   onChange={(v) => handleFieldChange('rpc.evm_default_network', v)}
                   options={evmNetworkOptions}
+                  description="Default EVM network for new wallets"
                 />
               </div>
             </div>
@@ -1163,6 +1189,7 @@ function BalanceMonitoringTab() {
                     type="checkbox"
                     value={getEffectiveBoolValue(settings.value, dirty.value, 'monitoring', f.key)}
                     onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                    description={MONITORING_DESCRIPTIONS[f.key]}
                   />
                 </div>
               ) : (
@@ -1175,6 +1202,7 @@ function BalanceMonitoringTab() {
                   onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
                   min={f.min}
                   max={f.max}
+                  description={MONITORING_DESCRIPTIONS[f.key]}
                 />
               ),
             )}
@@ -1294,6 +1322,7 @@ function WalletConnectTab() {
                 type="text"
                 value={getEffectiveValue(settings.value, dirty.value, 'walletconnect', 'project_id')}
                 onChange={(v) => handleFieldChange('walletconnect.project_id', v)}
+                description="WalletConnect Cloud project identifier"
               />
             </div>
             <div class="settings-field-full">
@@ -1304,6 +1333,7 @@ function WalletConnectTab() {
                 value={getEffectiveValue(settings.value, dirty.value, 'walletconnect', 'relay_url')}
                 onChange={(v) => handleFieldChange('walletconnect.relay_url', v)}
                 placeholder="wss://relay.walletconnect.com"
+                description="WalletConnect relay server URL"
               />
             </div>
           </div>

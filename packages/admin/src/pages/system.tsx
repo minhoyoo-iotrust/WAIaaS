@@ -306,6 +306,7 @@ export default function SystemPage() {
               onChange={(v) => handleFieldChange('oracle.cross_validation_threshold', v)}
               min={0}
               max={100}
+              description="Maximum allowed deviation between price oracle sources"
             />
           </div>
           <div class="settings-info-box">
@@ -367,6 +368,7 @@ export default function SystemPage() {
               value={Number(ev('security', 'rate_limit_global_ip_rpm')) || 0}
               onChange={(v) => handleFieldChange('security.rate_limit_global_ip_rpm', v)}
               min={10}
+              description="Maximum API requests per minute from a single IP address"
             />
           </div>
         </div>
@@ -399,6 +401,7 @@ export default function SystemPage() {
                 { label: 'warn', value: 'warn' },
                 { label: 'error', value: 'error' },
               ]}
+              description="Daemon logging verbosity level"
             />
           </div>
         </div>

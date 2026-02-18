@@ -308,6 +308,7 @@ function PolicyDefaultsTab() {
               value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'policy_defaults_delay_seconds')) || 0}
               onChange={(v) => handleFieldChange('security.policy_defaults_delay_seconds', v)}
               min={0}
+              description="Default delay before executing delayed-tier transactions"
             />
             <FormField
               label={keyToLabel('policy_defaults_approval_timeout')}
@@ -316,6 +317,7 @@ function PolicyDefaultsTab() {
               value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'policy_defaults_approval_timeout')) || 0}
               onChange={(v) => handleFieldChange('security.policy_defaults_approval_timeout', v)}
               min={60}
+              description="How long to wait for owner approval before timeout"
             />
           </div>
 
@@ -329,6 +331,7 @@ function PolicyDefaultsTab() {
                 type="checkbox"
                 value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_tokens')}
                 onChange={(v) => handleFieldChange('policy.default_deny_tokens', v)}
+                description="Deny token transfers unless a matching whitelist policy exists"
               />
               <FormField
                 label={keyToLabel('default_deny_contracts')}
@@ -336,6 +339,7 @@ function PolicyDefaultsTab() {
                 type="checkbox"
                 value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_contracts')}
                 onChange={(v) => handleFieldChange('policy.default_deny_contracts', v)}
+                description="Deny contract calls unless a matching whitelist policy exists"
               />
               <FormField
                 label={keyToLabel('default_deny_spenders')}
@@ -343,6 +347,7 @@ function PolicyDefaultsTab() {
                 type="checkbox"
                 value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_spenders')}
                 onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
+                description="Deny token approvals unless a matching whitelist policy exists"
               />
             </div>
           </div>

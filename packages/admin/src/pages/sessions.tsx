@@ -179,6 +179,7 @@ function SessionSettingsTab() {
                 value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_ttl')) || 0}
                 onChange={(v) => handleFieldChange('security.session_ttl', v)}
                 min={300}
+                description="How long a session token is valid before renewal"
               />
               <FormField
                 label={keyToLabel('session_absolute_lifetime')}
@@ -187,6 +188,7 @@ function SessionSettingsTab() {
                 value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_absolute_lifetime')) || 0}
                 onChange={(v) => handleFieldChange('security.session_absolute_lifetime', v)}
                 min={0}
+                description="Maximum total session duration regardless of renewals"
               />
               <FormField
                 label={keyToLabel('session_max_renewals')}
@@ -195,6 +197,7 @@ function SessionSettingsTab() {
                 value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_max_renewals')) || 0}
                 onChange={(v) => handleFieldChange('security.session_max_renewals', v)}
                 min={0}
+                description="Maximum number of times a session can be renewed"
               />
               <FormField
                 label={keyToLabel('max_sessions_per_wallet')}
@@ -204,6 +207,7 @@ function SessionSettingsTab() {
                 onChange={(v) => handleFieldChange('security.max_sessions_per_wallet', v)}
                 min={1}
                 max={100}
+                description="Maximum concurrent sessions for a single wallet"
               />
             </div>
           </FieldGroup>
@@ -218,6 +222,7 @@ function SessionSettingsTab() {
                 onChange={(v) => handleFieldChange('security.max_pending_tx', v)}
                 min={1}
                 max={100}
+                description="Maximum in-flight transactions per session"
               />
               <FormField
                 label={keyToLabel('rate_limit_session_rpm')}
@@ -226,6 +231,7 @@ function SessionSettingsTab() {
                 value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'rate_limit_session_rpm')) || 0}
                 onChange={(v) => handleFieldChange('security.rate_limit_session_rpm', v)}
                 min={10}
+                description="Max requests per minute per session"
               />
               <FormField
                 label={keyToLabel('rate_limit_tx_rpm')}
@@ -234,6 +240,7 @@ function SessionSettingsTab() {
                 value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'rate_limit_tx_rpm')) || 0}
                 onChange={(v) => handleFieldChange('security.rate_limit_tx_rpm', v)}
                 min={1}
+                description="Max transaction requests per minute per session"
               />
             </div>
           </FieldGroup>
