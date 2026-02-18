@@ -9,6 +9,8 @@ import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
 import { TelegramUsersContent } from './telegram-users';
+import { TabNav } from '../components/tab-nav';
+import { Breadcrumb } from '../components/breadcrumb';
 
 interface ChannelStatus {
   name: string;
@@ -46,7 +48,13 @@ interface NotificationLogResponse {
 
 const PAGE_SIZE = 20;
 
-type NotifTab = 'channels' | 'telegram';
+type NotifTab = 'channels' | 'telegram' | 'settings';
+
+const NOTIFICATIONS_TABS = [
+  { key: 'channels', label: 'Channels & Logs' },
+  { key: 'telegram', label: 'Telegram Users' },
+  { key: 'settings', label: 'Settings' },
+];
 
 export default function NotificationsPage() {
   const activeTab = useSignal<NotifTab>('channels');
@@ -189,24 +197,21 @@ export default function NotificationsPage() {
 
   return (
     <div class="page">
-      {/* Tab Navigation */}
-      <div class="tab-nav" style={{ marginBottom: 'var(--space-4)' }}>
-        <button
-          class={`tab-btn ${activeTab.value === 'channels' ? 'active' : ''}`}
-          onClick={() => { activeTab.value = 'channels'; }}
-        >
-          Channels & Logs
-        </button>
-        <button
-          class={`tab-btn ${activeTab.value === 'telegram' ? 'active' : ''}`}
-          onClick={() => { activeTab.value = 'telegram'; }}
-        >
-          Telegram Users
-        </button>
-      </div>
+      <Breadcrumb
+        pageName="Notifications"
+        tabName={NOTIFICATIONS_TABS.find(t => t.key === activeTab.value)?.label ?? ''}
+        onPageClick={() => { activeTab.value = 'channels'; }}
+      />
+      <TabNav
+        tabs={NOTIFICATIONS_TABS}
+        activeTab={activeTab.value}
+        onTabChange={(key) => { activeTab.value = key as NotifTab; }}
+      />
 
       {activeTab.value === 'telegram' ? (
         <TelegramUsersContent />
+      ) : activeTab.value === 'settings' ? (
+        <div class="empty-state"><p>Notification settings will be available here.</p></div>
       ) : (
       <>
       {/* Section 1: Channel Status Cards */}

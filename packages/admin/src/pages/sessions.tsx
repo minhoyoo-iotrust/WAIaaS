@@ -10,6 +10,8 @@ import { CopyButton } from '../components/copy-button';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
+import { TabNav } from '../components/tab-nav';
+import { Breadcrumb } from '../components/breadcrumb';
 
 interface Wallet {
   id: string;
@@ -50,7 +52,13 @@ function openRevoke(
   revokeModal.value = true;
 }
 
+const SESSIONS_TABS = [
+  { key: 'sessions', label: 'Sessions' },
+  { key: 'settings', label: 'Settings' },
+];
+
 export default function SessionsPage() {
+  const activeTab = useSignal('sessions');
   const wallets = useSignal<Wallet[]>([]);
   const selectedWalletId = useSignal('');
   const sessions = useSignal<Session[]>([]);
@@ -177,70 +185,85 @@ export default function SessionsPage() {
 
   return (
     <div class="page">
-      <div class="session-controls">
-        <div class="session-wallet-select">
-          <label for="wallet-select">Wallet</label>
-          <select
-            id="wallet-select"
-            value={selectedWalletId.value}
-            onChange={(e) => {
-              selectedWalletId.value = (e.target as HTMLSelectElement).value;
-            }}
-            disabled={walletsLoading.value}
-          >
-            <option value="">All Wallets</option>
-            {wallets.value.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.chain}/{a.network})
-              </option>
-            ))}
-          </select>
-        </div>
-        <Button
-          onClick={handleCreate}
-          disabled={!selectedWalletId.value}
-          loading={createLoading.value}
-        >
-          Create Session
-        </Button>
-      </div>
-
-      <Table<Session>
-        columns={sessionColumns}
-        data={sessions.value}
-        loading={loading.value}
-        emptyMessage="No sessions"
+      <Breadcrumb
+        pageName="Sessions"
+        tabName={SESSIONS_TABS.find(t => t.key === activeTab.value)?.label ?? ''}
+        onPageClick={() => { activeTab.value = 'sessions'; }}
       />
+      <TabNav tabs={SESSIONS_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
 
-      {/* Token Display Modal */}
-      <Modal
-        open={tokenModal.value}
-        title="Session Created"
-        onCancel={() => { tokenModal.value = false; }}
-        cancelText="Close"
-      >
-        <p class="token-warning">Copy this token now. It will not be shown again.</p>
-        <div class="token-display">
-          <code class="token-value">{createdToken.value}</code>
-          <CopyButton value={createdToken.value} label="Copy Token" />
-        </div>
-      </Modal>
+      {activeTab.value === 'sessions' && (
+        <>
+          <div class="session-controls">
+            <div class="session-wallet-select">
+              <label for="wallet-select">Wallet</label>
+              <select
+                id="wallet-select"
+                value={selectedWalletId.value}
+                onChange={(e) => {
+                  selectedWalletId.value = (e.target as HTMLSelectElement).value;
+                }}
+                disabled={walletsLoading.value}
+              >
+                <option value="">All Wallets</option>
+                {wallets.value.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.chain}/{a.network})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              onClick={handleCreate}
+              disabled={!selectedWalletId.value}
+              loading={createLoading.value}
+            >
+              Create Session
+            </Button>
+          </div>
 
-      {/* Revoke Confirmation Modal */}
-      <Modal
-        open={revokeModal.value}
-        title="Revoke Session"
-        onCancel={() => { revokeModal.value = false; }}
-        onConfirm={handleRevoke}
-        confirmText="Revoke"
-        confirmVariant="danger"
-        loading={revokeLoading.value}
-      >
-        <p>
-          Are you sure you want to revoke this session? The associated token will be immediately
-          invalidated.
-        </p>
-      </Modal>
+          <Table<Session>
+            columns={sessionColumns}
+            data={sessions.value}
+            loading={loading.value}
+            emptyMessage="No sessions"
+          />
+
+          {/* Token Display Modal */}
+          <Modal
+            open={tokenModal.value}
+            title="Session Created"
+            onCancel={() => { tokenModal.value = false; }}
+            cancelText="Close"
+          >
+            <p class="token-warning">Copy this token now. It will not be shown again.</p>
+            <div class="token-display">
+              <code class="token-value">{createdToken.value}</code>
+              <CopyButton value={createdToken.value} label="Copy Token" />
+            </div>
+          </Modal>
+
+          {/* Revoke Confirmation Modal */}
+          <Modal
+            open={revokeModal.value}
+            title="Revoke Session"
+            onCancel={() => { revokeModal.value = false; }}
+            onConfirm={handleRevoke}
+            confirmText="Revoke"
+            confirmVariant="danger"
+            loading={revokeLoading.value}
+          >
+            <p>
+              Are you sure you want to revoke this session? The associated token will be immediately
+              invalidated.
+            </p>
+          </Modal>
+        </>
+      )}
+
+      {activeTab.value === 'settings' && (
+        <div class="empty-state"><p>Session settings will be available here.</p></div>
+      )}
     </div>
   );
 }

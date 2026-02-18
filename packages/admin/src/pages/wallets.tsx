@@ -13,6 +13,8 @@ import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate, formatAddress } from '../utils/format';
+import { TabNav } from '../components/tab-nav';
+import { Breadcrumb } from '../components/breadcrumb';
 
 interface Wallet {
   id: string;
@@ -819,7 +821,7 @@ function WalletDetailView({ id }: { id: string }) {
   );
 }
 
-function WalletListView() {
+function WalletListContent() {
   const wallets = useSignal<Wallet[]>([]);
   const loading = useSignal(true);
   const showForm = useSignal(false);
@@ -888,7 +890,7 @@ function WalletListView() {
   }, []);
 
   return (
-    <div class="page">
+    <>
       <div class="page-actions">
         {!showForm.value && (
           <Button onClick={() => { showForm.value = true; }}>Create Wallet</Button>
@@ -977,6 +979,32 @@ function WalletListView() {
         onRowClick={navigateToDetail}
         emptyMessage="No wallets yet"
       />
+    </>
+  );
+}
+
+const WALLETS_TABS = [
+  { key: 'wallets', label: 'Wallets' },
+  { key: 'rpc', label: 'RPC Endpoints' },
+  { key: 'monitoring', label: 'Balance Monitoring' },
+  { key: 'walletconnect', label: 'WalletConnect' },
+];
+
+function WalletListWithTabs() {
+  const activeTab = useSignal('wallets');
+
+  return (
+    <div class="page">
+      <Breadcrumb
+        pageName="Wallets"
+        tabName={WALLETS_TABS.find(t => t.key === activeTab.value)?.label ?? ''}
+        onPageClick={() => { activeTab.value = 'wallets'; }}
+      />
+      <TabNav tabs={WALLETS_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
+      {activeTab.value === 'wallets' && <WalletListContent />}
+      {activeTab.value === 'rpc' && <div class="empty-state"><p>RPC Endpoints settings will be available here.</p></div>}
+      {activeTab.value === 'monitoring' && <div class="empty-state"><p>Balance Monitoring settings will be available here.</p></div>}
+      {activeTab.value === 'walletconnect' && <div class="empty-state"><p>WalletConnect settings will be available here.</p></div>}
     </div>
   );
 }
@@ -988,5 +1016,5 @@ export default function WalletsPage() {
   if (walletId) {
     return <WalletDetailView id={walletId} />;
   }
-  return <WalletListView />;
+  return <WalletListWithTabs />;
 }

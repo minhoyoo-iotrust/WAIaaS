@@ -11,6 +11,8 @@ import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { PolicyFormRouter } from '../components/policy-forms';
 import { PolicyRulesSummary } from '../components/policy-rules-summary';
+import { TabNav } from '../components/tab-nav';
+import { Breadcrumb } from '../components/breadcrumb';
 
 interface Wallet {
   id: string;
@@ -184,7 +186,13 @@ function getPolicyTypeLabel(type: string): string {
   return found ? found.label : type;
 }
 
+const POLICIES_TABS = [
+  { key: 'policies', label: 'Policies' },
+  { key: 'defaults', label: 'Defaults' },
+];
+
 export default function PoliciesPage() {
+  const activeTab = useSignal('policies');
   const wallets = useSignal<Wallet[]>([]);
   const policies = useSignal<Policy[]>([]);
   const filterWalletId = useSignal('__all__');
@@ -493,212 +501,227 @@ export default function PoliciesPage() {
 
   return (
     <div class="page">
-      <div class="policy-controls">
-        <div class="policy-filter-select">
-          <label for="policy-wallet-filter">Filter by Wallet</label>
-          <select
-            id="policy-wallet-filter"
-            value={filterWalletId.value}
-            onChange={(e) => {
-              filterWalletId.value = (e.target as HTMLSelectElement).value;
-            }}
-            disabled={walletsLoading.value}
-          >
-            <option value="__all__">All Policies</option>
-            <option value="__global__">Global Only</option>
-            {wallets.value.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.chain}/{a.network})
-              </option>
-            ))}
-          </select>
-        </div>
-        {!showForm.value && (
-          <Button onClick={() => { showForm.value = true; }}>Create Policy</Button>
-        )}
-      </div>
+      <Breadcrumb
+        pageName="Policies"
+        tabName={POLICIES_TABS.find(t => t.key === activeTab.value)?.label ?? ''}
+        onPageClick={() => { activeTab.value = 'policies'; }}
+      />
+      <TabNav tabs={POLICIES_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
 
-      {showForm.value && (
-        <div class="inline-form">
-          <FormField
-            label="Type"
-            name="type"
-            type="select"
-            value={formType.value}
-            onChange={handleTypeChange}
-            options={POLICY_TYPES}
-          />
-          <FormField
-            label="Wallet"
-            name="walletId"
-            type="select"
-            value={formWalletId.value}
-            onChange={(v) => { formWalletId.value = v as string; }}
-            options={[
-              { label: 'Global (no wallet)', value: '' },
-              ...wallets.value.map((a) => ({
-                label: `${a.name} (${a.chain}/${a.network})`,
-                value: a.id,
-              })),
-            ]}
-          />
-          <FormField
-            label="Network Scope"
-            name="network"
-            value={formNetwork.value}
-            onChange={(v) => { formNetwork.value = v as string; }}
-            placeholder="e.g. polygon-mainnet (leave empty for all networks)"
-          />
-          <div class="policy-form-section">
-            <div class="policy-form-header">
-              <label>Rules</label>
-              <button class="btn btn-ghost btn-sm json-toggle" onClick={handleJsonToggle}>
-                {jsonMode.value ? 'Switch to Form' : 'JSON Direct Edit'}
-              </button>
-            </div>
-            {jsonMode.value ? (
-              <FormField
-                label=""
-                name="rules"
-                type="textarea"
-                value={formRules.value}
-                onChange={(v) => { formRules.value = v as string; }}
-                error={formError.value ?? undefined}
-              />
-            ) : (
-              <PolicyFormRouter
-                type={formType.value}
-                rules={formRulesObj.value}
-                onChange={(r) => {
-                  formRulesObj.value = r;
-                  // Re-validate to clear resolved field errors
-                  if (Object.keys(formErrors.value).length > 0) {
-                    formErrors.value = validateRules(formType.value, r);
-                  }
+      {activeTab.value === 'policies' && (
+        <>
+          <div class="policy-controls">
+            <div class="policy-filter-select">
+              <label for="policy-wallet-filter">Filter by Wallet</label>
+              <select
+                id="policy-wallet-filter"
+                value={filterWalletId.value}
+                onChange={(e) => {
+                  filterWalletId.value = (e.target as HTMLSelectElement).value;
                 }}
-                errors={formErrors.value}
-              />
+                disabled={walletsLoading.value}
+              >
+                <option value="__all__">All Policies</option>
+                <option value="__global__">Global Only</option>
+                {wallets.value.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.chain}/{a.network})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {!showForm.value && (
+              <Button onClick={() => { showForm.value = true; }}>Create Policy</Button>
             )}
           </div>
-          <FormField
-            label="Priority"
-            name="priority"
-            type="number"
-            value={formPriority.value}
-            onChange={(v) => { formPriority.value = v as number; }}
-            min={0}
-            max={999}
-          />
-          <FormField
-            label="Enabled"
-            name="enabled"
-            type="checkbox"
-            value={formEnabled.value}
-            onChange={(v) => { formEnabled.value = v as boolean; }}
-          />
-          <div class="inline-form-actions">
-            <Button onClick={handleCreate} loading={formLoading.value}>Create</Button>
-            <Button
-              variant="secondary"
-              onClick={() => { showForm.value = false; formError.value = null; }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
 
-      <Table<Policy>
-        columns={policyColumns}
-        data={policies.value}
-        loading={loading.value}
-        emptyMessage="No policies found"
-      />
-
-      {/* Edit Modal */}
-      <Modal
-        open={editModal.value}
-        title="Edit Policy"
-        onCancel={() => { editModal.value = false; }}
-        onConfirm={handleEdit}
-        confirmText="Save"
-        loading={editLoading.value}
-      >
-        {editPolicy.value && (
-          <div>
-            <div class="policy-type-readonly">
-              Type: {getPolicyTypeLabel(editPolicy.value.type)}
-            </div>
-            <div class="policy-form-section">
-              <div class="policy-form-header">
-                <label>Rules</label>
-                <button class="btn btn-ghost btn-sm json-toggle" onClick={handleEditJsonToggle}>
-                  {editJsonMode.value ? 'Switch to Form' : 'JSON Direct Edit'}
-                </button>
-              </div>
-              {editJsonMode.value ? (
-                <div class="edit-rules-textarea">
+          {showForm.value && (
+            <div class="inline-form">
+              <FormField
+                label="Type"
+                name="type"
+                type="select"
+                value={formType.value}
+                onChange={handleTypeChange}
+                options={POLICY_TYPES}
+              />
+              <FormField
+                label="Wallet"
+                name="walletId"
+                type="select"
+                value={formWalletId.value}
+                onChange={(v) => { formWalletId.value = v as string; }}
+                options={[
+                  { label: 'Global (no wallet)', value: '' },
+                  ...wallets.value.map((a) => ({
+                    label: `${a.name} (${a.chain}/${a.network})`,
+                    value: a.id,
+                  })),
+                ]}
+              />
+              <FormField
+                label="Network Scope"
+                name="network"
+                value={formNetwork.value}
+                onChange={(v) => { formNetwork.value = v as string; }}
+                placeholder="e.g. polygon-mainnet (leave empty for all networks)"
+              />
+              <div class="policy-form-section">
+                <div class="policy-form-header">
+                  <label>Rules</label>
+                  <button class="btn btn-ghost btn-sm json-toggle" onClick={handleJsonToggle}>
+                    {jsonMode.value ? 'Switch to Form' : 'JSON Direct Edit'}
+                  </button>
+                </div>
+                {jsonMode.value ? (
                   <FormField
                     label=""
-                    name="edit-rules"
+                    name="rules"
                     type="textarea"
-                    value={editRules.value}
-                    onChange={(v) => { editRules.value = v as string; }}
-                    error={editError.value ?? undefined}
+                    value={formRules.value}
+                    onChange={(v) => { formRules.value = v as string; }}
+                    error={formError.value ?? undefined}
                   />
-                </div>
-              ) : (
-                <PolicyFormRouter
-                  type={editPolicy.value.type}
-                  rules={editRulesObj.value}
-                  onChange={(r) => {
-                    editRulesObj.value = r;
-                    if (Object.keys(editFormErrors.value).length > 0) {
-                      editFormErrors.value = validateRules(editPolicy.value!.type, r);
-                    }
-                  }}
-                  errors={editFormErrors.value}
-                />
-              )}
+                ) : (
+                  <PolicyFormRouter
+                    type={formType.value}
+                    rules={formRulesObj.value}
+                    onChange={(r) => {
+                      formRulesObj.value = r;
+                      // Re-validate to clear resolved field errors
+                      if (Object.keys(formErrors.value).length > 0) {
+                        formErrors.value = validateRules(formType.value, r);
+                      }
+                    }}
+                    errors={formErrors.value}
+                  />
+                )}
+              </div>
+              <FormField
+                label="Priority"
+                name="priority"
+                type="number"
+                value={formPriority.value}
+                onChange={(v) => { formPriority.value = v as number; }}
+                min={0}
+                max={999}
+              />
+              <FormField
+                label="Enabled"
+                name="enabled"
+                type="checkbox"
+                value={formEnabled.value}
+                onChange={(v) => { formEnabled.value = v as boolean; }}
+              />
+              <div class="inline-form-actions">
+                <Button onClick={handleCreate} loading={formLoading.value}>Create</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => { showForm.value = false; formError.value = null; }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-            <FormField
-              label="Priority"
-              name="edit-priority"
-              type="number"
-              value={editPriority.value}
-              onChange={(v) => { editPriority.value = v as number; }}
-              min={0}
-              max={999}
-            />
-            <FormField
-              label="Enabled"
-              name="edit-enabled"
-              type="checkbox"
-              value={editEnabled.value}
-              onChange={(v) => { editEnabled.value = v as boolean; }}
-            />
-          </div>
-        )}
-      </Modal>
+          )}
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={deleteModal.value}
-        title="Delete Policy"
-        onCancel={() => { deleteModal.value = false; }}
-        onConfirm={handleDelete}
-        confirmText="Delete"
-        confirmVariant="danger"
-        loading={deleteLoading.value}
-      >
-        {deletePolicy.value && (
-          <p>
-            Are you sure you want to delete this{' '}
-            <strong>{getPolicyTypeLabel(deletePolicy.value.type)}</strong> policy?
-            This action cannot be undone.
-          </p>
-        )}
-      </Modal>
+          <Table<Policy>
+            columns={policyColumns}
+            data={policies.value}
+            loading={loading.value}
+            emptyMessage="No policies found"
+          />
+
+          {/* Edit Modal */}
+          <Modal
+            open={editModal.value}
+            title="Edit Policy"
+            onCancel={() => { editModal.value = false; }}
+            onConfirm={handleEdit}
+            confirmText="Save"
+            loading={editLoading.value}
+          >
+            {editPolicy.value && (
+              <div>
+                <div class="policy-type-readonly">
+                  Type: {getPolicyTypeLabel(editPolicy.value.type)}
+                </div>
+                <div class="policy-form-section">
+                  <div class="policy-form-header">
+                    <label>Rules</label>
+                    <button class="btn btn-ghost btn-sm json-toggle" onClick={handleEditJsonToggle}>
+                      {editJsonMode.value ? 'Switch to Form' : 'JSON Direct Edit'}
+                    </button>
+                  </div>
+                  {editJsonMode.value ? (
+                    <div class="edit-rules-textarea">
+                      <FormField
+                        label=""
+                        name="edit-rules"
+                        type="textarea"
+                        value={editRules.value}
+                        onChange={(v) => { editRules.value = v as string; }}
+                        error={editError.value ?? undefined}
+                      />
+                    </div>
+                  ) : (
+                    <PolicyFormRouter
+                      type={editPolicy.value.type}
+                      rules={editRulesObj.value}
+                      onChange={(r) => {
+                        editRulesObj.value = r;
+                        if (Object.keys(editFormErrors.value).length > 0) {
+                          editFormErrors.value = validateRules(editPolicy.value!.type, r);
+                        }
+                      }}
+                      errors={editFormErrors.value}
+                    />
+                  )}
+                </div>
+                <FormField
+                  label="Priority"
+                  name="edit-priority"
+                  type="number"
+                  value={editPriority.value}
+                  onChange={(v) => { editPriority.value = v as number; }}
+                  min={0}
+                  max={999}
+                />
+                <FormField
+                  label="Enabled"
+                  name="edit-enabled"
+                  type="checkbox"
+                  value={editEnabled.value}
+                  onChange={(v) => { editEnabled.value = v as boolean; }}
+                />
+              </div>
+            )}
+          </Modal>
+
+          {/* Delete Confirmation Modal */}
+          <Modal
+            open={deleteModal.value}
+            title="Delete Policy"
+            onCancel={() => { deleteModal.value = false; }}
+            onConfirm={handleDelete}
+            confirmText="Delete"
+            confirmVariant="danger"
+            loading={deleteLoading.value}
+          >
+            {deletePolicy.value && (
+              <p>
+                Are you sure you want to delete this{' '}
+                <strong>{getPolicyTypeLabel(deletePolicy.value.type)}</strong> policy?
+                This action cannot be undone.
+              </p>
+            )}
+          </Modal>
+        </>
+      )}
+
+      {activeTab.value === 'defaults' && (
+        <div class="empty-state"><p>Policy defaults settings will be available here.</p></div>
+      )}
     </div>
   );
 }
