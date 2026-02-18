@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.0.0-rc.1...v2.1.0-rc.1) (2026-02-18)
+
+
+### Features
+
+* **172-01:** add OpenAPI validation step to release.yml test job ([2511294](https://github.com/minhoyoo-iotrust/WAIaaS/commit/251129443a9303c11a0dd7daa5e624aa1b1ba6b2))
+* add npm package smoke test — pack + install + import verification ([899ee8f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/899ee8f66313ec8328d8d5a975d926457ca36d81))
+* wallet auto-session, session TTL extension, README rewrite, CLAUDE.md translation ([b1c8f02](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b1c8f02ede516bafdfd67d455af501012023c59c))
+
+
+### Bug Fixes
+
+* **171:** revise plans based on checker feedback ([5a4260c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5a4260c68f0be338b6e1f01cd2483dca327c34c3))
+* **docs:** correct skill names, broken links, and hardcoded version ([0c831ae](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0c831ae56bffe7ff4bb15db8e5dd44cdf1b41470))
+* remove hardcoded release-as from release-please config ([0b08ddc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0b08ddc3882d4b83c6764df062ce81c18e72c54b))
+* update validate-openapi.ts [@see](https://github.com/see) path after doc reorganization ([2780c7f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2780c7f60e542561f2a50140020086eaa2244d9a))
+
 ## [2.0.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.0.0-rc.1...v2.0.0-rc.1) (2026-02-17)
 
 
