@@ -1,0 +1,75 @@
+# 마일스톤 m21: 오픈소스 기본 체계 + 내부 문서 정리
+
+## 목표
+
+퍼블릭 리포로서 필수적인 거버넌스 파일(SECURITY.md, CODE_OF_CONDUCT.md, Issue/PR Templates)을 갖추고, 내부 설계 문서를 공개 문서와 분리하여 리포지토리 구조를 정리하는 상태.
+
+> **m20 = 공개 릴리스, m21 = 필수 거버넌스 + 문서 정리**
+
+---
+
+## 산출물
+
+### 1. 오픈소스 필수 파일 (m20에서 이월)
+
+| 항목 | 내용 | 위치 |
+|------|------|------|
+| **SECURITY.md** | 보안 취약점 신고 정책 (Responsible Disclosure). 신고 채널, 대응 SLA, 범위 명시 | `SECURITY.md` (루트) |
+| **CODE_OF_CONDUCT.md** | 행동 강령. Contributor Covenant 기반 | `CODE_OF_CONDUCT.md` (루트) |
+| **Issue Templates** | Bug Report, Feature Request, Security Vulnerability 템플릿 | `.github/ISSUE_TEMPLATE/` |
+
+### 2. 기여 프로세스
+
+| 항목 | 내용 | 위치 |
+|------|------|------|
+| **PR Template** | 체크리스트 포함: 변경 요약, 테스트 방법, 관련 이슈 | `.github/PULL_REQUEST_TEMPLATE.md` |
+
+### 3. 내부 문서 구조 정리
+
+| 항목 | 내용 | 위치 |
+|------|------|------|
+| **설계 문서 통합** | `.planning/deliverables/` (49개) + `docs-internal/` (12개 + v0.4/ 11개)를 `internal/design/`으로 통합. 번호순 정리 및 중복 해소 | `internal/design/` |
+| **objectives 이동** | `objectives/` (마일스톤 목표 + 이슈 트래커)를 `internal/objectives/`로 이동 | `internal/objectives/` |
+| **완료 문서 아카이브** | v0.1~m20 shipped 목표 문서 + m20까지의 FIXED 이슈를 `archive/`로 분리. 활성 문서(m21~)만 최상위에 유지 | `internal/objectives/archive/milestones/`, `internal/objectives/archive/issues/` |
+| **docs/ 영문 전용** | `docs/`는 영문 공개 문서 전용으로 유지. 한글 내부 문서와 명확히 분리 | `docs/` |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100%**
+
+### 자동 검증 (9건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | SECURITY.md 존재 + 필수 섹션 포함 | `SECURITY.md` 존재 + "Reporting", "Response" 섹션 포함 assert | [L0] |
+| 2 | CODE_OF_CONDUCT.md 존재 | `CODE_OF_CONDUCT.md` 존재 + Contributor Covenant 기반 assert | [L0] |
+| 3 | Issue Templates 존재 | `.github/ISSUE_TEMPLATE/` 디렉토리에 bug_report.md, feature_request.md 최소 2개 존재 assert | [L0] |
+| 4 | PR Template 존재 + 필수 섹션 포함 | `.github/PULL_REQUEST_TEMPLATE.md` 존재 + "Checklist" 섹션 포함 assert | [L0] |
+| 5 | 설계 문서 통합 완료 | `internal/design/` 디렉토리에 60+개 파일 존재 + `.planning/deliverables/` 및 `docs-internal/` 미존재 assert | [L0] |
+| 6 | objectives 이동 완료 | `internal/objectives/` 디렉토리에 TRACKER.md 존재 + 루트 `objectives/` 미존재 assert | [L0] |
+| 7 | 완료 문서 아카이브 | `internal/objectives/archive/milestones/`에 v0.1~m20 문서 존재 + `internal/objectives/`에 m21~ 활성 문서만 존재 assert | [L0] |
+| 8 | docs/ 영문 전용 검증 | `docs/` 내 모든 .md 파일이 한글 제목/헤더 미포함 assert | [L0] |
+| 9 | 기존 테스트 전체 통과 | `pnpm test` 성공 assert | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| m20 (전 기능 릴리스) | m20에서 npm 패키지 발행, Docker 이미지 배포, CI/CD 파이프라인이 구축됨. SECURITY.md, CODE_OF_CONDUCT.md, Issue Templates는 m20에서 미구현되어 m21로 이월 |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | 내부 문서 이동 시 기존 상호 참조 링크 파손 | 설계 문서 간 상대 경로 참조가 깨질 수 있음 | 이동 후 링크 일괄 검증 스크립트 실행 |
+| 2 | objectives 경로 변경으로 CLAUDE.md 규칙 갱신 필요 | 이슈 트래커 경로가 `objectives/issues/` → `internal/objectives/issues/`로 변경 | CLAUDE.md의 Issue Tracking 섹션 동시 갱신 |
+
+---
+
+*최종 업데이트: 2026-02-18 — 후순위 항목 제거 (cosign, OpenSSF, DCO, API Versioning, Migration Guide, Public Roadmap, GitHub Discussions), 필수+유용 항목만 유지, 산출물 3개 섹션으로 경량화, E2E 검증 17→9건*

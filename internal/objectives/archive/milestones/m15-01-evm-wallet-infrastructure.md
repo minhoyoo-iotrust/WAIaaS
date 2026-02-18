@@ -1,0 +1,1180 @@
+# 마일스톤 m15-01: EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE
+
+## 목표
+
+EVM 체인용 에이전트 생성(secp256k1 키 생성 + 0x 주소 파생)이 동작하고, 데몬이 에이전트의 chain 필드에 따라 적절한 체인 어댑터를 선택하여 EVM 네이티브 전송(ETH, MATIC 등)이 가능한 상태. REST API가 5가지 트랜잭션 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)을 모두 수용하여 Solana/EVM 양쪽에서 토큰 전송·컨트랙트 호출·Approve·배치가 MCP/SDK를 통해 가능하다. 또한 EVM 에이전트의 Owner 인증(SIWE)을 지원하여 트랜잭션 승인 등 Owner 전용 액션이 Solana/EVM 양쪽에서 동작한다. v1.4에서 구현한 `@waiaas/adapter-evm`과 결합하여 EVM 지갑의 풀 라이프사이클을 완성한다.
+
+---
+
+## 배경
+
+v1.4에서 `@waiaas/adapter-evm` 패키지(viem 2.x 기반 체인 어댑터)를 구현하지만, 실제 EVM 지갑을 운용하려면 어댑터 외에 4개 인프라 계층의 변경이 필요하다:
+
+| 계층 | 현재 상태 | 문제 |
+|------|----------|------|
+| Keystore | Ed25519만 생성, `chain !== 'solana'` 하드코딩 거부 | secp256k1 키 생성 불가 → EVM 에이전트 생성 자체가 불가 |
+| Daemon | `new SolanaAdapter('devnet')` 하드코딩 | agent.chain 기반 어댑터 분기 없음 → EVM 트랜잭션 실행 불가 |
+| Config | `rpc_solana_*` 3개 + `ethereum_mainnet`/`ethereum_sepolia` 2개(빈 기본값) 존재 | EVM RPC 기본값 미제공 + Tier 1 5체인 네이밍 규칙(`rpc_evm_{chain}_{net}`) 미반영 |
+| Owner Auth | Ed25519(Solana) 서명만 검증, SIWE 미구현 | EVM 에이전트의 Owner 인증 불가 → 트랜잭션 승인/Kill Switch 복구 불가 |
+
+이 4건은 설계 단계(v0.2~v0.8)에서 멀티체인을 전제로 설계했으나 구현 계획에서 누락된 항목이다.
+
+---
+
+## 지원 EVM 체인
+
+### 설계 원칙
+
+모든 EVM 호환 체인은 동일한 암호학적 기반(secp256k1 + keccak256 주소 파생)을 공유한다. 따라서:
+
+- **하나의 secp256k1 키 = 모든 EVM 체인에서 동일한 0x 주소**
+- `chain: 'ethereum'`은 "EVM 호환 체인"을 의미 (Ethereum에 한정하지 않음)
+- 구체적인 EVM 체인은 `network` 필드 + RPC 엔드포인트 + chainId로 구분
+- `@waiaas/adapter-evm`는 viem의 `Chain` 정의를 사용하여 모든 EVM 체인을 단일 어댑터로 지원
+
+### EVM 체인 목록
+
+#### Tier 1: 기본 지원 (config.toml에 기본 RPC 포함)
+
+| 체인 | chainId | 네이티브 토큰 | viem chain | network 값 | 테스트넷 |
+|------|---------|-------------|------------|-----------|---------|
+| Ethereum | 1 | ETH | `mainnet` | `ethereum-mainnet` | Sepolia (11155111) |
+| Polygon | 137 | POL | `polygon` | `polygon-mainnet` | Amoy (80002) |
+| Arbitrum One | 42161 | ETH | `arbitrum` | `arbitrum-mainnet` | Sepolia (421614) |
+| Optimism | 10 | ETH | `optimism` | `optimism-mainnet` | Sepolia (11155420) |
+| Base | 8453 | ETH | `base` | `base-mainnet` | Sepolia (84532) |
+
+#### Tier 2: 확장 지원 (사용자가 config.toml에 RPC 직접 설정)
+
+| 체인 | chainId | 네이티브 토큰 | viem chain | 비고 |
+|------|---------|-------------|------------|------|
+| BNB Smart Chain | 56 | BNB | `bsc` | 높은 TVL, DeFi 활성 |
+| Avalanche C-Chain | 43114 | AVAX | `avalanche` | 서브넷 생태계 |
+| zkSync Era | 324 | ETH | `zkSync` | ZK Rollup, EIP-4337 네이티브 |
+| Linea | 59144 | ETH | `linea` | Consensys ZK Rollup |
+| Scroll | 534352 | ETH | `scroll` | ZK Rollup |
+| Blast | 81457 | ETH | `blast` | 네이티브 수익률 |
+
+#### 커스텀 체인 지원
+
+Tier 1/2에 없는 EVM 체인도 `config.toml`에 RPC URL + chainId를 직접 설정하여 사용 가능:
+
+```toml
+# 커스텀 EVM 체인 예시
+rpc_evm_custom_42170 = "https://nova.arbitrum.io/rpc"  # Arbitrum Nova (chainId 42170)
+```
+
+---
+
+## 구현 대상
+
+이 마일스톤에서 변경하는 컴포넌트:
+
+| 컴포넌트 | 패키지 | 변경 유형 | 내용 |
+|----------|--------|----------|------|
+| LocalKeyStore | `@waiaas/daemon` | 확장 | secp256k1 키 생성 + keccak256 주소 파생 분기 추가 |
+| KeystoreFileV1 | `@waiaas/daemon` | 확장 | `curve` 필드 추가 (`ed25519` \| `secp256k1`) |
+| Daemon lifecycle | `@waiaas/daemon` | 수정 | 어댑터 팩토리 패턴으로 전환 (agent.chain 기반 동적 선택) |
+| DaemonConfigSchema.rpc | `@waiaas/daemon` | 확장 | 기존 `ethereum_*` 2키 → `evm_*` 11키 교체, `evm_default_network` 추가 |
+| NetworkType enum | `@waiaas/core` | 확장 | EVM 네트워크 값 추가 |
+| AppDeps / 라우트 adapter 주입 | `@waiaas/daemon` | 수정 | 단일 adapter → AdapterPool 기반 에이전트별 어댑터 resolve |
+| CreateAgentRequestSchema | `@waiaas/core` | 수정 | chain별 network 기본값 분기 (solana→devnet, ethereum→evm_default_network) |
+| DB migration v2 | `@waiaas/daemon` | 신규 | schema_version 2: 기존 데이터 호환 (변경 없는 증분) |
+| owner-auth middleware | `@waiaas/daemon` | 확장 | agent.chain 기반 SIWS/SIWE 분기 + `viem/siwe` EVM 서명 검증 |
+| SetOwner 라우트 | `@waiaas/daemon` | 확장 | chain별 owner_address 형식 검증 (0x EVM / base58 Solana) |
+| daemon package.json | `@waiaas/daemon` | 수정 | `@waiaas/adapter-evm`, `viem` 의존성 추가 |
+| EvmAdapter 네이티브 심볼 | `@waiaas/adapter-evm` | 수정 | 생성자에 `nativeSymbol`/`nativeName` 파라미터 추가, `getBalance`/`getAssets` 하드코딩 제거 |
+| Migration 인터페이스 | `@waiaas/daemon` | 확장 | `managesOwnTransaction` 플래그 추가 (PRAGMA 호환) |
+| EVM_CHAIN_MAP | `@waiaas/adapter-evm` | 신규 | network → viem Chain + chainId + nativeSymbol 매핑 테이블 |
+| EvmNetworkTypeEnum | `@waiaas/core` | 신규 | EVM 전용 네트워크 enum (evm_default_network 검증용) |
+| POST /v1/transactions/send | `@waiaas/daemon` | 수정 | 라우트 스키마를 loose passthrough로 전환 + 인라인 Stage 1 → `stage1Validate()` 호출로 변경 (실제 Zod 검증은 stage1Validate 내부) |
+| MCP send_token 도구 | `@waiaas/mcp` | 확장 | `type`, `token` (address/decimals/symbol) 파라미터 추가. 기존 SOL 전송 하위호환 유지 |
+| TS SDK send 메서드 | `@waiaas/sdk` | 확장 | `type`, `token` 파라미터 옵션 추가 |
+| Python SDK send 메서드 | `waiaas` | 확장 | `type`, `token` 파라미터 옵션 추가 |
+| OpenAPI 스키마 | `@waiaas/daemon` | 수정 | 수동 `oneOf` 6-variant 스키마 (5-type + legacy) 구성. `GET /doc` 반영. 실제 검증과 분리 |
+
+### 변경하지 않는 것
+
+| 컴포넌트 | 이유 |
+|----------|------|
+| ChainType enum | `['solana', 'ethereum']` 유지. 'ethereum'이 전체 EVM 체인을 포괄 |
+| agents 테이블 스키마 | `chain`, `network` 컬럼 이미 존재, CHECK 제약에 'ethereum' 포함 |
+| IChainAdapter 인터페이스 | 체인 무관 설계, 변경 불필요 |
+| 파이프라인 6-stage | 체인 무관 설계, 어댑터만 교체하면 동작. `stage1Validate` + `buildByType` 이미 5-type 지원 (v1.4 구현 완료) |
+| PolicyEngine | 체인 무관 설계, 변경 불필요 |
+| `@waiaas/core` ConfigSchema | 17 flat keys는 현재 미사용 (daemon은 DaemonConfigSchema 사용). 별도 정리 대상 |
+
+---
+
+## 산출물
+
+### 1. Keystore 멀티커브 지원
+
+현재 `LocalKeyStore.generateKeyPair()`는 Ed25519만 지원하고 `chain !== 'solana'`이면 하드코딩 거부한다. EVM 분기를 추가한다.
+
+#### 키 생성 분기
+
+| chain | 암호 커브 | 키 크기 | 주소 파생 | 라이브러리 |
+|-------|----------|---------|----------|-----------|
+| `solana` | Ed25519 | 공개 32B, 비밀 64B | Base58(publicKey) | sodium-native (기존) |
+| `ethereum` | secp256k1 | 공개 65B (비압축), 비밀 32B | `0x` + keccak256(publicKey[1:])[12:] + EIP-55 체크섬 | viem (`privateKeyToAccount`) |
+
+#### 구현 방식
+
+**시그니처 변경:** 현재 `generateKeyPair(agentId, chain, masterPassword)`에 `network` 파라미터를 추가한다. 현재 keystore 파일의 `network: 'devnet'` 하드코딩을 제거하고 실제 network 값을 기록한다.
+
+```
+generateKeyPair(agentId, chain, network, masterPassword):
+  if chain === 'solana':
+    // 기존 Ed25519 로직 (변경 없음)
+    sodium.crypto_sign_keypair() → base58 주소
+
+  if chain === 'ethereum':
+    // 1. 32바이트 랜덤 비밀키 생성
+    privateKey = crypto.getRandomValues(32)
+
+    // 2. viem으로 주소 파생
+    account = privateKeyToAccount(privateKey)
+    address = account.address  // 0x + EIP-55 체크섬
+
+    // 3. 비밀키 암호화 (기존 AES-256-GCM + Argon2id 동일)
+    encrypted = encrypt(privateKey, masterPassword)
+
+    // 4. 평문 즉시 제로화
+    privateKey.fill(0)
+
+    return { publicKey: address, encryptedPrivateKey }
+
+  // keystore 파일에 network 기록 (기존 'devnet' 하드코딩 제거)
+  keystoreFile.network = network
+```
+
+#### KeystoreFileV1 확장
+
+```typescript
+interface KeystoreFileV1 {
+  version: 1;
+  id: string;
+  chain: string;
+  network: string;
+  curve: 'ed25519' | 'secp256k1';  // ← 신규 필드
+  publicKey: string;                // Solana: base58, EVM: 0x-checksummed
+  crypto: { /* 기존 동일 */ };
+  metadata: { /* 기존 동일 */ };
+}
+```
+
+**하위 호환:** 기존 Solana 키스토어 파일에 `curve` 필드가 없으면 `'ed25519'`로 간주. `readKeystoreFile()` 시 기본값 적용.
+
+#### 보안 고려사항
+
+| 항목 | 대응 |
+|------|------|
+| secp256k1 비밀키 노출 | 32바이트 비밀키만 암호화 저장 (Ed25519과 동일 패턴). 복호화 후 sodium guarded memory 사용 |
+| 주소 파생 정확성 | viem `privateKeyToAccount` 사용으로 EIP-55 체크섬 보장. 자체 구현 금지 |
+| 엔트로피 품질 | `crypto.getRandomValues()` (Node.js CSPRNG) 사용. sodium의 `randombytes_buf`도 허용 |
+
+### 2. 어댑터 팩토리
+
+현재 데몬 시작 시 `new SolanaAdapter('devnet')` 하드코딩을 어댑터 팩토리 패턴으로 전환한다.
+
+#### 설계
+
+**RPC config key 변환 규칙:** network 값은 hyphen 구분자(`ethereum-sepolia`), config key는 underscore(`evm_ethereum_sepolia`)를 사용한다. 조회 시 `network.replace(/-/g, '_')` 변환이 필요하다.
+
+```
+// daemon.ts Step 4 변경
+
+createChainAdapter(chain, network, config):
+  if chain === 'solana':
+    adapter = new SolanaAdapter(network)
+    rpcUrl = config.rpc[`solana_${network}`]
+
+  if chain === 'ethereum':
+    // EVM_CHAIN_MAP에서 viem Chain 객체 resolve
+    entry = EVM_CHAIN_MAP[network]  // { chain: mainnet, chainId: 1 }
+    adapter = new EvmAdapter(network, entry?.chain)  // Chain 객체 전달
+
+    // network → config key 변환: 'ethereum-sepolia' → 'evm_ethereum_sepolia'
+    configKey = `evm_${network.replace(/-/g, '_')}`
+    rpcUrl = config.rpc[configKey]
+
+  adapter.connect(rpcUrl)
+  return adapter
+```
+
+#### 멀티 어댑터 관리
+
+하나의 데몬이 여러 체인의 에이전트를 동시에 관리할 수 있어야 한다:
+
+| 전략 | 설명 |
+|------|------|
+| **어댑터 풀** | `Map<string, IChainAdapter>` — `${chain}:${network}` 키로 어댑터 인스턴스 캐싱 |
+| **지연 초기화** | 데몬 시작 시 전체 초기화 대신, 에이전트 요청 시 해당 체인 어댑터 lazy init |
+| **정리** | `daemon.shutdown()` 시 모든 어댑터 `disconnect()` 호출 |
+
+```
+// AdapterPool
+class AdapterPool {
+  private adapters: Map<string, IChainAdapter> = new Map();
+
+  async getAdapter(chain, network, config): Promise<IChainAdapter>
+    key = `${chain}:${network}`
+    if adapters.has(key): return adapters.get(key)
+
+    adapter = createChainAdapter(chain, network, config)
+    adapters.set(key, adapter)
+    return adapter
+
+  async disconnectAll(): void
+    for adapter of adapters.values():
+      await adapter.disconnect()
+    adapters.clear()
+}
+```
+
+#### 기존 adapter 주입 패턴 변경
+
+현재 데몬은 단일 `this.adapter: IChainAdapter | null`를 초기화하여 모든 라우트에 동일 인스턴스를 전달한다. AdapterPool 전환 시 다음 파일들의 adapter 접근 패턴이 변경된다:
+
+| 파일 | 현재 패턴 | 변경 후 |
+|------|----------|---------|
+| `daemon.ts` (Step 4) | `this.adapter = new SolanaAdapter('devnet')` | `this.adapterPool = new AdapterPool(config)` — 어댑터 인스턴스 생성 없이 풀만 초기화 |
+| `server.ts` AppDeps | `adapter?: IChainAdapter \| null` | `adapterPool?: AdapterPool \| null` — 단일 어댑터 대신 풀 전달 |
+| `wallet.ts` getBalance | `deps.adapter.getBalance(agent.publicKey)` | `deps.adapterPool.getAdapter(agent.chain, agent.network)` → `adapter.getBalance(agent.publicKey)` |
+| `wallet.ts` getAssets | `deps.adapter.getAssets(agent.publicKey)` | 동일 패턴 — 에이전트 조회 후 chain/network로 어댑터 resolve |
+| `transactions.ts` | `PipelineContext.adapter = deps.adapter` | `PipelineContext.adapter = await deps.adapterPool.getAdapter(agent.chain, agent.network)` |
+| `daemon.ts` executeFromStage5 | `this.adapter` 직접 참조 | `this.adapterPool.getAdapter(agent.chain, agent.network)` — 이미 agent 조회 후이므로 chain/network 접근 가능 |
+| `daemon.ts` shutdown | `this.adapter.disconnect()` | `this.adapterPool.disconnectAll()` |
+
+**핵심 원칙:** 파이프라인(`PipelineContext`)과 어댑터 인터페이스(`IChainAdapter`) 자체는 변경 불필요. 변경은 어댑터를 **선택하는 지점**(라우트/데몬)에 집중된다. 모든 라우트는 이미 `resolveAgentById()`로 에이전트를 조회하므로 `agent.chain`과 `agent.network`에 접근 가능하다.
+
+#### 트랜잭션 파이프라인 연동
+
+```
+// 트랜잭션 처리 시 (라우트 레벨에서 어댑터 선택)
+agent = db.getAgent(agentId)
+adapter = await adapterPool.getAdapter(agent.chain, agent.network)
+pipeline.execute(tx, adapter)  // 파이프라인 코드 변경 없음
+```
+
+파이프라인 자체는 `IChainAdapter` 인터페이스에만 의존하므로 코드 변경 불필요.
+
+### 3. Config 확장
+
+> **주의:** 데몬이 실제 사용하는 설정은 `@waiaas/daemon`의 `DaemonConfigSchema` (7개 중첩 섹션: daemon, keystore, database, **rpc**, notifications, security, walletconnect). `@waiaas/core`의 `ConfigSchema` (17 flat keys)는 현재 어떤 패키지에서도 import하지 않으며 이 마일스톤에서 변경하지 않는다.
+
+#### 기존 rpc 섹션 현황
+
+```typescript
+// packages/daemon/src/infrastructure/config/loader.ts (현재)
+rpc: z.object({
+  solana_mainnet:    z.string().default('https://api.mainnet-beta.solana.com'),
+  solana_devnet:     z.string().default('https://api.devnet.solana.com'),
+  solana_testnet:    z.string().default('https://api.testnet.solana.com'),
+  solana_ws_mainnet: z.string().default('wss://api.mainnet-beta.solana.com'),
+  solana_ws_devnet:  z.string().default('wss://api.devnet.solana.com'),
+  ethereum_mainnet:  z.string().default(''),  // ← 빈 문자열, 미사용
+  ethereum_sepolia:  z.string().default(''),  // ← 빈 문자열, 미사용
+}).default({}),
+```
+
+기존 `ethereum_mainnet`/`ethereum_sepolia` 2개 키는 v0.2 설계 시 placeholder로 추가되었으나, 네이밍이 `evm_{chain}_{net}` 규칙과 불일치한다. **이 2개 키를 제거하고 새 네이밍으로 교체한다.**
+
+#### 변경 후 rpc 섹션
+
+```typescript
+// packages/daemon/src/infrastructure/config/loader.ts (변경 후)
+rpc: z.object({
+  // Solana (기존 유지)
+  solana_mainnet:    z.string().default('https://api.mainnet-beta.solana.com'),
+  solana_devnet:     z.string().default('https://api.devnet.solana.com'),
+  solana_testnet:    z.string().default('https://api.testnet.solana.com'),
+  solana_ws_mainnet: z.string().default('wss://api.mainnet-beta.solana.com'),
+  solana_ws_devnet:  z.string().default('wss://api.devnet.solana.com'),
+
+  // EVM Tier 1 (신규 — 기존 ethereum_mainnet/ethereum_sepolia 교체)
+  evm_ethereum_mainnet:  z.string().default('https://eth.drpc.org'),
+  evm_ethereum_sepolia:  z.string().default('https://sepolia.drpc.org'),
+  evm_polygon_mainnet:   z.string().default('https://polygon.drpc.org'),
+  evm_polygon_amoy:      z.string().default('https://polygon-amoy.drpc.org'),
+  evm_arbitrum_mainnet:  z.string().default('https://arbitrum.drpc.org'),
+  evm_arbitrum_sepolia:  z.string().default('https://arbitrum-sepolia.drpc.org'),
+  evm_optimism_mainnet:  z.string().default('https://optimism.drpc.org'),
+  evm_optimism_sepolia:  z.string().default('https://optimism-sepolia.drpc.org'),
+  evm_base_mainnet:      z.string().default('https://base.drpc.org'),
+  evm_base_sepolia:      z.string().default('https://base-sepolia.drpc.org'),
+
+  // EVM 기본 네트워크 (에이전트 생성 시 network 미지정 + chain='ethereum' 시 사용)
+  // EvmNetworkTypeEnum으로 검증하여 EVM 네트워크만 허용 (Solana 값 'devnet' 등 차단)
+  evm_default_network:   EvmNetworkTypeEnum.default('ethereum-sepolia'),
+}).default({}),
+// rpc 섹션: 기존 7키(Solana 5 + EVM placeholder 2) → 16키(Solana 5 + EVM 11)
+```
+
+#### config.toml 예시
+
+```toml
+[rpc]
+# Solana (기존 유지)
+solana_mainnet    = "https://api.mainnet-beta.solana.com"
+solana_devnet     = "https://api.devnet.solana.com"
+solana_testnet    = "https://api.testnet.solana.com"
+
+# EVM Tier 1 (기본값이 있으므로 오버라이드 시에만 설정)
+evm_ethereum_mainnet  = "https://eth.llamarpc.com"
+evm_polygon_mainnet   = "https://polygon-rpc.com"
+
+# EVM 기본 네트워크
+evm_default_network   = "ethereum-sepolia"
+```
+
+#### 환경변수 매핑
+
+`applyEnvOverrides` 규칙: `WAIAAS_{SECTION}_{KEY}` → `config[section][key]`
+
+```
+WAIAAS_RPC_EVM_ETHEREUM_MAINNET=https://eth.llamarpc.com
+  → section: rpc, field: evm_ethereum_mainnet
+  → config.rpc.evm_ethereum_mainnet = "https://eth.llamarpc.com"
+
+WAIAAS_RPC_EVM_DEFAULT_NETWORK=ethereum-mainnet
+  → section: rpc, field: evm_default_network
+  → config.rpc.evm_default_network = "ethereum-mainnet"
+```
+
+**참고:** `evm_default_network`는 `rpc` 섹션 하위이므로 환경변수 prefix는 `WAIAAS_RPC_EVM_DEFAULT_NETWORK`이다.
+
+#### RPC config key ↔ network 값 변환 규칙
+
+network 값과 config key는 구분자가 다르다. AdapterPool에서 RPC URL을 조회할 때 변환이 필요하다:
+
+| 항목 | 구분자 | 예시 |
+|------|--------|------|
+| NetworkType 값 | hyphen (`-`) | `ethereum-sepolia` |
+| config.rpc key | underscore (`_`) | `evm_ethereum_sepolia` |
+| 환경변수 | underscore (대문자) | `WAIAAS_RPC_EVM_ETHEREUM_SEPOLIA` |
+
+**변환 함수:**
+```typescript
+function networkToRpcKey(network: string): string {
+  return `evm_${network.replace(/-/g, '_')}`;
+}
+// 'ethereum-sepolia' → 'evm_ethereum_sepolia'
+// 'polygon-mainnet'  → 'evm_polygon_mainnet'
+```
+
+### 4. NetworkType 확장
+
+#### 현재
+
+```typescript
+export const NETWORK_TYPES = ['mainnet', 'devnet', 'testnet'] as const;
+```
+
+#### 변경
+
+```typescript
+export const NETWORK_TYPES = [
+  // Solana
+  'mainnet', 'devnet', 'testnet',
+  // EVM Tier 1
+  'ethereum-mainnet', 'ethereum-sepolia',
+  'polygon-mainnet', 'polygon-amoy',
+  'arbitrum-mainnet', 'arbitrum-sepolia',
+  'optimism-mainnet', 'optimism-sepolia',
+  'base-mainnet', 'base-sepolia',
+] as const;
+
+// EVM 전용 서브셋 — config.rpc.evm_default_network 검증에 사용
+// Solana 값('devnet', 'mainnet', 'testnet')이 EVM 기본 네트워크로 설정되는 것을 방지
+export const EVM_NETWORK_TYPES = [
+  'ethereum-mainnet', 'ethereum-sepolia',
+  'polygon-mainnet', 'polygon-amoy',
+  'arbitrum-mainnet', 'arbitrum-sepolia',
+  'optimism-mainnet', 'optimism-sepolia',
+  'base-mainnet', 'base-sepolia',
+] as const;
+export type EvmNetworkType = (typeof EVM_NETWORK_TYPES)[number];
+export const EvmNetworkTypeEnum = z.enum(EVM_NETWORK_TYPES);
+```
+
+#### DB CHECK 제약 마이그레이션
+
+agents 테이블의 `CHECK (network IN (...))` 제약 갱신 필요. SQLite는 ALTER TABLE로 CHECK 변경 불가하므로 테이블 재생성 전략을 사용한다.
+
+**FK 의존 관계:** agents 테이블을 참조하는 FK가 있는 테이블들:
+
+| 테이블 | FK 컬럼 | ON DELETE |
+|--------|---------|-----------|
+| sessions | `agent_id → agents.id` | CASCADE |
+| transactions | `agent_id → agents.id` | RESTRICT |
+| policies | `agent_id → agents.id` | CASCADE |
+
+**참고:** `audit_log`과 `notification_logs` 테이블도 `agent_id` 컬럼을 사용하지만 FK 제약이 없다 (인덱스만 존재). 따라서 `PRAGMA foreign_key_check` 검증 범위에 포함되지 않으며 마이그레이션에 영향 없다.
+
+**마이그레이션 러너 트랜잭션 문제:**
+
+현재 `runMigrations()` (migrate.ts)는 각 migration.up()을 `BEGIN`/`COMMIT`으로 감싸서 실행한다. 그러나 SQLite 공식 문서에 따르면 **`PRAGMA foreign_keys`는 트랜잭션 내에서 no-op**이다:
+
+> *"This pragma is a no-op within a transaction; foreign key constraint enforcement may only be enabled or disabled when there is no pending BEGIN or SAVEPOINT."*
+
+따라서 v2 마이그레이션은 자체 트랜잭션을 관리해야 한다. Migration 인터페이스에 `managesOwnTransaction` 플래그를 추가한다:
+
+```typescript
+// migrate.ts — Migration 인터페이스 확장
+interface Migration {
+  version: number;
+  description: string;
+  up: (sqlite: Database) => void;
+  /** true이면 러너가 BEGIN/COMMIT을 생략하고 up()이 자체 관리 */
+  managesOwnTransaction?: boolean;
+}
+
+// runMigrations() 변경 — managesOwnTransaction 분기
+for (const migration of sorted) {
+  if (migration.version <= currentVersion) { skipped++; continue; }
+
+  if (migration.managesOwnTransaction) {
+    // up()이 자체 트랜잭션 + PRAGMA 관리
+    migration.up(sqlite);
+    // version 기록 (별도 트랜잭션)
+    sqlite.exec('BEGIN');
+    sqlite.prepare('INSERT INTO schema_version ...').run(migration.version, ...);
+    sqlite.exec('COMMIT');
+  } else {
+    // 기존 패턴 (러너가 BEGIN/COMMIT 래핑)
+    sqlite.exec('BEGIN');
+    migration.up(sqlite);
+    sqlite.prepare('INSERT INTO schema_version ...').run(migration.version, ...);
+    sqlite.exec('COMMIT');
+  }
+  applied++;
+}
+```
+
+**재생성 절차 (schema_version 2 마이그레이션):**
+
+```typescript
+// v2 마이그레이션 — managesOwnTransaction: true
+{
+  version: 2,
+  description: 'Expand agents network CHECK for EVM networks',
+  managesOwnTransaction: true,
+  up(sqlite) {
+    // 1. PRAGMA는 트랜잭션 밖에서만 유효
+    sqlite.exec('PRAGMA foreign_keys = OFF');
+
+    // 2. 테이블 재생성은 트랜잭션 내에서 원자적으로 실행
+    sqlite.exec('BEGIN');
+
+    sqlite.exec(`
+      CREATE TABLE agents_new (
+        ... 기존 컬럼 동일 ...
+        CHECK (chain IN ('solana', 'ethereum'))
+        CHECK (network IN ('mainnet', 'devnet', 'testnet',
+          'ethereum-mainnet', 'ethereum-sepolia',
+          'polygon-mainnet', 'polygon-amoy',
+          'arbitrum-mainnet', 'arbitrum-sepolia',
+          'optimism-mainnet', 'optimism-sepolia',
+          'base-mainnet', 'base-sepolia'))
+        ... 기존 CHECK 동일 ...
+      )
+    `);
+
+    // 3. 데이터 복사
+    sqlite.exec('INSERT INTO agents_new SELECT * FROM agents');
+
+    // 4. 기존 테이블 제거 + 이름 변경
+    sqlite.exec('DROP TABLE agents');
+    sqlite.exec('ALTER TABLE agents_new RENAME TO agents');
+
+    // 5. 인덱스 재생성 (DROP TABLE 시 삭제됨)
+    sqlite.exec('CREATE UNIQUE INDEX idx_agents_public_key ON agents(public_key)');
+    sqlite.exec('CREATE INDEX idx_agents_status ON agents(status)');
+    sqlite.exec('CREATE INDEX idx_agents_chain_network ON agents(chain, network)');
+    sqlite.exec('CREATE INDEX idx_agents_owner_address ON agents(owner_address)');
+
+    sqlite.exec('COMMIT');
+
+    // 6. FK 무결성 검증 후 재활성화 (트랜잭션 밖에서 실행)
+    // PRAGMA foreign_key_check는 위반 행을 결과 집합으로 반환하며 에러를 throw하지 않음
+    // sqlite.exec()는 결과를 무시하므로 반드시 pragma() 메서드로 결과를 확인해야 함
+    const violations = sqlite.pragma('foreign_key_check');
+    if (violations.length > 0) {
+      sqlite.exec('PRAGMA foreign_keys = ON');
+      throw new Error(`FK integrity check failed after migration: ${JSON.stringify(violations)}`);
+    }
+    sqlite.exec('PRAGMA foreign_keys = ON');
+  },
+}
+```
+
+**핵심 포인트:**
+- `PRAGMA foreign_keys = OFF/ON`은 반드시 **트랜잭션 밖**에서 실행 (트랜잭션 내 no-op)
+- `PRAGMA foreign_key_check`는 트랜잭션 밖에서 `sqlite.pragma()` 메서드로 실행하여 결과 집합 확인 필수 (`sqlite.exec()`는 결과를 무시하므로 위반 사일런트 패스)
+- 테이블 재생성(CREATE→INSERT→DROP→RENAME→인덱스)은 단일 트랜잭션 내 원자적 실행
+- FK 참조는 테이블 이름 기반이므로 RENAME 후에도 기존 FK 관계 유지됨
+- 기존 Solana 에이전트의 network ('mainnet'/'devnet'/'testnet')는 새 enum에도 포함되어 데이터 호환 100%
+- `managesOwnTransaction` 플래그로 러너의 기존 동작에 영향 없음 (v2 마이그레이션만 자체 관리)
+
+### 5. EVM chainId 매핑 테이블
+
+어댑터가 network 값으로부터 viem Chain + chainId + 네이티브 토큰 메타데이터를 결정하는 매핑:
+
+```typescript
+// packages/adapters/evm/src/chains.ts
+import { mainnet, sepolia, polygon, polygonAmoy, arbitrum,
+         arbitrumSepolia, optimism, optimismSepolia, base,
+         baseSepolia } from 'viem/chains';
+
+export interface EvmChainEntry {
+  chain: Chain;
+  chainId: number;
+  nativeSymbol: string;  // 네이티브 토큰 심볼 (getBalance/getAssets에서 사용)
+  nativeName: string;    // 네이티브 토큰 이름
+}
+
+export const EVM_CHAIN_MAP: Record<string, EvmChainEntry> = {
+  'ethereum-mainnet':  { chain: mainnet,          chainId: 1,         nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'ethereum-sepolia':  { chain: sepolia,          chainId: 11155111,  nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'polygon-mainnet':   { chain: polygon,          chainId: 137,       nativeSymbol: 'POL',  nativeName: 'Polygon' },
+  'polygon-amoy':      { chain: polygonAmoy,      chainId: 80002,     nativeSymbol: 'POL',  nativeName: 'Polygon' },
+  'arbitrum-mainnet':  { chain: arbitrum,          chainId: 42161,     nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'arbitrum-sepolia':  { chain: arbitrumSepolia,   chainId: 421614,    nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'optimism-mainnet':  { chain: optimism,          chainId: 10,        nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'optimism-sepolia':  { chain: optimismSepolia,   chainId: 11155420,  nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'base-mainnet':      { chain: base,              chainId: 8453,      nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+  'base-sepolia':      { chain: baseSepolia,       chainId: 84532,     nativeSymbol: 'ETH',  nativeName: 'Ethereum' },
+};
+
+export type EvmNetwork = keyof typeof EVM_CHAIN_MAP;
+```
+
+**네이티브 토큰 심볼 문제:** 현재 `EvmAdapter.getBalance()`와 `getAssets()`에서 `symbol: 'ETH'`, `name: 'Ethereum'`이 하드코딩되어 있다. Polygon(`POL`), BNB Smart Chain(`BNB`) 등 비-Ethereum EVM 체인에서는 잘못된 심볼이 반환된다. AdapterPool이 EvmAdapter를 생성할 때 `EVM_CHAIN_MAP`의 `nativeSymbol`/`nativeName`을 전달하고, EvmAdapter가 이를 사용하도록 수정한다.
+
+```typescript
+// EvmAdapter 변경 — 생성자에 nativeSymbol/nativeName 추가
+constructor(network: NetworkType, chain?: Chain, nativeSymbol = 'ETH', nativeName = 'Ethereum') {
+  this.network = network;
+  this._chain = chain;
+  this._nativeSymbol = nativeSymbol;
+  this._nativeName = nativeName;
+}
+
+// getBalance에서 하드코딩 대신 인스턴스 필드 사용
+async getBalance(addr: string): Promise<BalanceInfo> {
+  // ...
+  return { address: addr, balance, decimals: 18, symbol: this._nativeSymbol };
+}
+
+// getAssets에서도 동일
+const assets: AssetInfo[] = [{
+  mint: 'native', symbol: this._nativeSymbol, name: this._nativeName,
+  balance: ethBalance, decimals: 18, isNative: true,
+}];
+```
+
+### 6. chain별 network 기본값 분기
+
+#### 문제
+
+현재 `CreateAgentRequestSchema`에서:
+
+```typescript
+chain: ChainTypeEnum.default('solana'),
+network: NetworkTypeEnum.default('devnet'),  // ← Solana 전용 기본값
+```
+
+`chain: 'ethereum'`으로 에이전트를 생성하면서 `network`를 미지정하면 Zod 기본값 `'devnet'`(Solana 네트워크)이 할당된다. 이는 EVM 에이전트에 무효한 network 값이다.
+
+#### 해결: Zod discriminated default + 서비스 레이어 보정
+
+**방안:** Zod 스키마에서는 `network`를 optional로 변경하고, 에이전트 생성 서비스 레이어에서 chain에 따라 기본값을 할당한다.
+
+```typescript
+// 1. 스키마 변경 — network를 optional로
+export const CreateAgentRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  chain: ChainTypeEnum.default('solana'),
+  network: NetworkTypeEnum.optional(),  // ← default 제거, optional로 전환
+});
+
+// 2. 서비스 레이어 (agents 라우트) — chain별 기본값 적용
+function resolveDefaultNetwork(chain: ChainType, config: DaemonConfig): NetworkType {
+  if (chain === 'solana') return 'devnet';
+  if (chain === 'ethereum') return config.rpc.evm_default_network as NetworkType;
+  throw new WAIaaSError('CHAIN_NOT_SUPPORTED', { message: `Unknown chain: ${chain}` });
+}
+
+// POST /v1/agents 핸들러 내부
+const { name, chain, network: requestedNetwork } = body;
+const network = requestedNetwork ?? resolveDefaultNetwork(chain, config);
+```
+
+**장점:**
+- Zod 레벨에서 chain-network 교차 검증 불필요 (discriminated union 복잡도 회피)
+- config에서 기본 network를 동적으로 변경 가능
+- 기존 Solana 에이전트 생성 요청 (network 미지정 시)은 `'devnet'`으로 동일하게 동작
+
+#### Chain-Network 교차 검증
+
+Zod 스키마의 `NetworkTypeEnum`은 Solana와 EVM 네트워크를 모두 포함하므로 `{ chain: 'ethereum', network: 'devnet' }` 같은 무효 조합이 Zod 레벨을 통과한다. DB CHECK 제약도 network 값만 개별 검증하므로 동일하게 통과한다. 이를 서비스 레이어에서 명시적으로 차단한다:
+
+```typescript
+// Solana 전용 네트워크 서브셋
+const SOLANA_NETWORK_TYPES = ['mainnet', 'devnet', 'testnet'] as const;
+
+function validateChainNetwork(chain: ChainType, network: NetworkType): void {
+  if (chain === 'solana' && !SOLANA_NETWORK_TYPES.includes(network as any)) {
+    throw new WAIaaSError('VALIDATION_ERROR', {
+      message: `Invalid network '${network}' for chain 'solana'. Valid: ${SOLANA_NETWORK_TYPES.join(', ')}`,
+    });
+  }
+  if (chain === 'ethereum' && !EVM_NETWORK_TYPES.includes(network as any)) {
+    throw new WAIaaSError('VALIDATION_ERROR', {
+      message: `Invalid network '${network}' for chain 'ethereum'. Valid: ${EVM_NETWORK_TYPES.join(', ')}`,
+    });
+  }
+}
+
+// POST /v1/agents 핸들러 내부 — 기본값 할당 후 교차 검증
+const network = requestedNetwork ?? resolveDefaultNetwork(chain, config);
+validateChainNetwork(chain, network);  // ← 무효 chain-network 조합 400 차단
+```
+
+**교차 검증 시점:** `resolveDefaultNetwork` 후, DB INSERT 전. 기본값 할당과 명시적 지정 모두 동일하게 검증한다.
+
+### 7. Owner Auth SIWE 지원
+
+현재 `owner-auth.ts`는 Ed25519(Solana) 서명만 검증한다. EVM 에이전트의 Owner 인증을 위해 SIWE(Sign-In with Ethereum, EIP-4361) 검증을 추가한다.
+
+#### 현재 상태
+
+```typescript
+// owner-auth.ts (v1.2)
+// 3개 헤더 기반: X-Owner-Signature, X-Owner-Message, X-Owner-Address
+// Ed25519 서명만 검증 (sodium.crypto_sign_verify_detached)
+// 주석: "v1.2: Solana Ed25519 only. EVM (SIWE) deferred to v1.4+."
+```
+
+#### 변경 방식: agent.chain 기반 분기
+
+기존 3-header 패턴을 유지하면서 `agent.chain`에 따라 검증 방식을 분기한다. 미들웨어는 이미 `resolveAgentById()`로 에이전트를 조회하므로 `agent.chain` 접근이 가능하다.
+
+```
+// owner-auth.ts 변경 (chain 분기 추가)
+
+createOwnerAuth(deps):
+  middleware(c, next):
+    // 1. 헤더 추출 (기존 동일)
+    signature = header('X-Owner-Signature')
+    message   = header('X-Owner-Message')
+    ownerAddr = header('X-Owner-Address')
+
+    // 2. 에이전트 조회 + ownerAddress 매칭 (기존 동일)
+    agent = db.getAgent(agentId)
+    assert agent.ownerAddress === ownerAddr
+
+    // 3. chain 분기 → 서명 검증
+    if agent.chain === 'solana':
+      // 기존 Ed25519 로직 (변경 없음)
+      sodium.crypto_sign_verify_detached(sig, msg, publicKey)
+
+    else if agent.chain === 'ethereum':
+      // SIWE 검증 (신규)
+      verifySIWE({ message, signature, ownerAddress: ownerAddr })
+
+    // 4. 컨텍스트 설정
+    c.set('ownerAddress', ownerAddr)
+    await next()
+```
+
+#### SIWE 검증 함수
+
+설계 문서 30(섹션 3.3.3)과 34(섹션 5.1)에서 정의한 `verifySIWE` 구현. `viem/siwe` 내장 함수만 사용하며 별도 `siwe`/`ethers` 패키지 불필요.
+
+```typescript
+// packages/daemon/src/api/middleware/siwe-verify.ts
+import { verifyMessage, type Hex } from 'viem';
+import { parseSiweMessage, validateSiweMessage } from 'viem/siwe';
+
+interface SIWEVerifyInput {
+  message: string;       // EIP-4361 형식 메시지
+  signature: string;     // Hex-encoded EIP-191 서명
+  ownerAddress: string;  // 0x 체크섬 주소
+}
+
+interface SIWEVerifyResult {
+  valid: boolean;
+  address?: string;
+  nonce?: string;
+}
+
+async function verifySIWE(input: SIWEVerifyInput): Promise<SIWEVerifyResult> {
+  // 1. SIWE 메시지 파싱 (EIP-4361 → 구조체)
+  const parsed = parseSiweMessage(input.message);
+  if (!parsed.address) return { valid: false };
+
+  // 2. 메시지 필드 검증 (domain, expiration 등)
+  const isValid = validateSiweMessage({ message: parsed });
+  if (!isValid) return { valid: false };
+
+  // 3. EIP-191 서명 검증 (ecRecover, RPC 불필요, EOA 전용)
+  const verified = await verifyMessage({
+    address: parsed.address,
+    message: input.message,
+    signature: input.signature as Hex,
+  });
+  if (!verified) return { valid: false };
+
+  // 4. 복원된 주소 == ownerAddress 일치 확인 (대소문자 무시)
+  if (parsed.address.toLowerCase() !== input.ownerAddress.toLowerCase()) {
+    return { valid: false };
+  }
+
+  return { valid: true, address: parsed.address, nonce: parsed.nonce };
+}
+```
+
+**핵심 설계 결정:**
+- **EOA 전용:** `verifyMessage` 사용 (ecRecover). EIP-1271 스마트 계정(`verifySiweMessage`)은 PublicClient 필요 → 지원하지 않음
+- **RPC 불필요:** 서명 검증이 순수 암호학 연산이므로 네트워크 호출 없음
+- **viem/siwe 전용:** v0.7(Phase 28)에서 `siwe`+`ethers` 제거, `viem/siwe` 전환 확정
+- **Nonce 미검증 (의도적 설계):** 서버가 nonce를 사전 발급·저장·검증하지 않는다. 현재 Solana owner-auth도 nonce/replay 보호가 없으므로 양쪽 일관성 유지. SIWE 메시지의 `expirationTime` 필드로 유효 기간을 제한하며, 만료된 메시지는 `validateSiweMessage`에서 거부된다. Self-hosted 로컬 데몬 환경에서 리플레이 리스크는 극히 낮다. 향후 챌린지-응답 nonce가 필요해지면 `GET /v1/agents/:id/owner/nonce` 엔드포인트를 추가하여 서버 발급 nonce를 도입할 수 있다 (하위 호환 가능).
+
+#### SIWE 메시지 형식
+
+EVM Owner가 서명해야 하는 메시지 (EIP-4361 표준):
+
+```
+localhost:3100 wants you to sign in with your Ethereum account:
+0x1234...abcd
+
+WAIaaS Owner Action
+
+URI: http://localhost:3100
+Version: 1
+Chain ID: 1
+Nonce: <random>
+Issued At: 2026-02-12T10:00:00Z
+```
+
+#### EVM 서명 인코딩
+
+| 항목 | Solana (기존) | EVM (신규) |
+|------|-------------|-----------|
+| 헤더 `X-Owner-Signature` | base64(Ed25519 detached sig) | hex(EIP-191 personal_sign) |
+| 헤더 `X-Owner-Message` | UTF-8 평문 | EIP-4361 SIWE 메시지 |
+| 헤더 `X-Owner-Address` | base58 공개키 | 0x EIP-55 체크섬 주소 |
+
+### 8. Owner 주소 형식 검증
+
+현재 `PUT /agents/:id/owner`의 `SetOwnerRequestSchema`는 `owner_address: z.string().min(1)`로 임의 문자열을 허용한다. chain별 주소 형식 검증을 추가한다.
+
+```typescript
+// agents 라우트 — setOwner 핸들러 내부
+function validateOwnerAddress(chain: ChainType, address: string): void {
+  if (chain === 'solana') {
+    // base58 디코딩 성공 + 32바이트 공개키
+    const decoded = decodeBase58(address);
+    if (decoded.length !== 32) throw new WAIaaSError('VALIDATION_ERROR', {
+      message: 'Invalid Solana owner address: must be 32-byte base58 public key',
+    });
+  } else if (chain === 'ethereum') {
+    // 0x prefix + 40 hex chars + EIP-55 체크섬
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new WAIaaSError('VALIDATION_ERROR', {
+      message: 'Invalid EVM owner address: must be 0x-prefixed 40-char hex',
+    });
+    // EIP-55 체크섬 검증 (viem getAddress)
+    if (getAddress(address) !== address) throw new WAIaaSError('VALIDATION_ERROR', {
+      message: 'Invalid EVM owner address: EIP-55 checksum mismatch',
+    });
+  }
+}
+```
+
+### 9. Daemon 패키지 의존성 추가
+
+현재 `@waiaas/daemon`은 `@waiaas/adapter-solana`만 의존한다. EVM 지원을 위해 다음 의존성을 추가한다:
+
+| 패키지 | 용도 |
+|--------|------|
+| `@waiaas/adapter-evm` | EvmAdapter + EVM_CHAIN_MAP import |
+| `viem` | keystore의 `privateKeyToAccount` + owner-auth의 `viem/siwe` |
+
+```json
+// packages/daemon/package.json — dependencies 추가
+{
+  "@waiaas/adapter-evm": "workspace:*",
+  "viem": "^2.21.0"
+}
+```
+
+**`viem` 직접 의존 이유:** `@waiaas/adapter-evm` 경유 간접 의존(transitive)은 패키지 매니저 hoisting에 의존하여 불안정하다. daemon이 `viem/accounts`(`privateKeyToAccount`), `viem/siwe`(`parseSiweMessage` 등), `viem`(`getAddress`)를 직접 import하므로 명시적 의존성으로 선언한다.
+
+### 10. REST API 5-type 트랜잭션 통합
+
+v1.4에서 파이프라인(`stage1Validate`, `buildByType`, `stage3Policy`)은 5가지 트랜잭션 타입을 완전히 지원하지만, REST API 엔드포인트(`POST /v1/transactions/send`)는 레거시 `SendTransactionRequestSchema`(to/amount/memo)만 수용하고 `type: 'TRANSFER'`를 하드코딩한다. 이를 `TransactionRequestSchema`(5-type discriminatedUnion)으로 전환한다.
+
+#### 현재 문제
+
+```typescript
+// transactions.ts (현재) — 인라인 Stage 1, type 하드코딩
+const request = c.req.valid('json');  // SendTransactionRequestOpenAPI → {to, amount, memo}만
+
+await deps.db.insert(transactions).values({
+  type: 'TRANSFER',  // ← 하드코딩. TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH 수용 불가
+  // ...
+});
+```
+
+#### 변경 후: 라우트 스키마 분리 전략
+
+**문제:** Hono `createRoute`의 OpenAPI 스키마는 핸들러 실행 **전에** `c.req.valid('json')`으로 Zod 검증을 수행한다. `TransactionRequestSchema`(discriminatedUnion)는 `type` 필드가 필수이므로 레거시 요청(`{to, amount, memo}`, type 없음)이 Zod 레벨에서 400 거부된다. Phase 81 검증에서도 이 문제를 인지하고 유보한 바 있다 (`81-01-SUMMARY.md:43`).
+
+**해결: OpenAPI doc과 실제 검증을 분리한다 (방안 C).**
+
+1. **라우트 스키마 (Hono validation):** loose passthrough 스키마로 body를 그대로 수용
+2. **실제 Zod 검증:** `stage1Validate()`가 내부에서 legacy/5-type 분기 검증 (이미 구현됨: `stages.ts:180-184`)
+3. **OpenAPI doc 스키마:** `oneOf` 6-variant를 수동 구성하여 `GET /doc` 정확성 보장
+
+```typescript
+// 1. OpenAPI doc용 수동 oneOf 스키마 (openapi-schemas.ts)
+export const TransactionRequestOpenAPI = z.any().openapi({
+  type: 'object',
+  oneOf: [
+    { $ref: '#/components/schemas/TransferRequest' },
+    { $ref: '#/components/schemas/TokenTransferRequest' },
+    { $ref: '#/components/schemas/ContractCallRequest' },
+    { $ref: '#/components/schemas/ApproveRequest' },
+    { $ref: '#/components/schemas/BatchRequest' },
+    { $ref: '#/components/schemas/SendTransactionRequest' },  // legacy (type 없음)
+  ],
+  description: 'Transaction request. Legacy format (to/amount/memo without type) is treated as TRANSFER.',
+});
+
+// 2. 각 타입별 OpenAPI 컴포넌트 등록 (openapi-schemas.ts)
+export const TransferRequestOpenAPI = TransferRequestSchema.openapi('TransferRequest');
+export const TokenTransferRequestOpenAPI = TokenTransferRequestSchema.openapi('TokenTransferRequest');
+export const ContractCallRequestOpenAPI = ContractCallRequestSchema.openapi('ContractCallRequest');
+export const ApproveRequestOpenAPI = ApproveRequestSchema.openapi('ApproveRequest');
+export const BatchRequestOpenAPI = BatchRequestSchema.openapi('BatchRequest');
+// SendTransactionRequestOpenAPI 기존 유지 (legacy)
+
+// 3. 라우트 정의 (transactions.ts)
+const sendTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/send',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: TransactionRequestOpenAPI },
+      },
+    },
+  },
+  // ...
+});
+
+// 4. 핸들러 — stage1Validate가 실제 검증 담당
+router.openapi(sendTransactionRoute, async (c) => {
+  const request = await c.req.json();  // c.req.valid('json') 대신 raw JSON
+  // ... PipelineContext 생성 ...
+  ctx.request = request;
+  await stage1Validate(ctx);  // 내부에서 legacy/5-type Zod 분기 검증 + DB INSERT
+
+  // 201 즉시 반환, Stages 2-6 비동기 실행 (기존 동일)
+});
+```
+
+**핵심:**
+- `c.req.valid('json')` → `c.req.json()` 전환: Hono의 Zod 사전 검증을 건너뛰고 stage1Validate에 위임
+- OpenAPI doc는 `oneOf` 6-variant로 정확한 스키마 노출
+- `stage1Validate`의 기존 분기 로직(`'type' in req ? TransactionRequestSchema : SendTransactionRequestSchema`)이 실제 검증 SSoT
+- 잘못된 요청은 stage1Validate에서 Zod `ZodError` → 글로벌 에러 핸들러가 400 VALIDATION_ERROR 반환
+
+#### 하위 호환
+
+`type` 필드가 없는 기존 요청(`{to, amount, memo}`)은 `stage1Validate`에서 `SendTransactionRequestSchema`로 검증 후 `type: 'TRANSFER'`로 폴백한다. 기존 SDK/MCP 클라이언트가 업데이트 전에도 정상 동작한다.
+
+#### MCP send_token 도구 확장
+
+```typescript
+// send-token.ts (변경) — type, token 파라미터 추가
+server.tool(
+  'send_token',
+  'Send SOL/ETH or tokens from the wallet. For token transfers, specify type and token info.',
+  {
+    to: z.string().describe('Destination wallet address'),
+    amount: z.string().describe('Amount in smallest unit (lamports/wei)'),
+    memo: z.string().optional().describe('Optional transaction memo'),
+    // 신규 파라미터 (optional — 미지정 시 기존 TRANSFER)
+    type: z.enum(['TRANSFER', 'TOKEN_TRANSFER']).optional()
+      .describe('Transaction type. Default: TRANSFER (native). TOKEN_TRANSFER for SPL/ERC-20'),
+    token: z.object({
+      address: z.string().describe('Token mint (SPL) or contract address (ERC-20)'),
+      decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
+      symbol: z.string().describe('Token symbol (e.g., USDC)'),
+    }).optional().describe('Required for TOKEN_TRANSFER'),
+  },
+  async (args) => {
+    const body: Record<string, unknown> = { to: args.to, amount: args.amount };
+    if (args.memo) body.memo = args.memo;
+    if (args.type) body.type = args.type;
+    if (args.token) body.token = args.token;
+    const result = await apiClient.post('/v1/transactions/send', body);
+    return toToolResult(result);
+  },
+);
+```
+
+**MCP에서 CONTRACT_CALL/APPROVE/BATCH는 노출하지 않는다.** AI 에이전트가 자율적으로 컨트랙트 호출이나 Approve를 실행하는 것은 보안 위험이 높으므로, MCP 도구로는 TRANSFER/TOKEN_TRANSFER만 지원하고, 고급 타입은 SDK/REST API를 통해서만 접근 가능하다.
+
+#### SDK 확장
+
+**TypeScript SDK:**
+```typescript
+// client.ts — send 메서드 오버로드
+async send(params: {
+  to: string;
+  amount: string;
+  memo?: string;
+  type?: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH';
+  token?: { address: string; decimals: number; symbol: string };
+  // CONTRACT_CALL/APPROVE/BATCH 전용 필드...
+}): Promise<TransactionResponse>
+```
+
+**Python SDK:**
+```python
+# client.py — send 메서드 확장
+def send(self, to: str, amount: str, *,
+         memo: str | None = None,
+         type: str = "TRANSFER",
+         token: dict | None = None,
+         **kwargs) -> TransactionResponse:
+```
+
+---
+
+## 기술 결정 사항
+
+| # | 결정 항목 | 선택지 | 결정 근거 |
+|---|----------|--------|----------|
+| 1 | secp256k1 키 생성 라이브러리 | viem (`privateKeyToAccount`) | 이미 v1.4에서 `@waiaas/adapter-evm` 의존성으로 설치. 별도 crypto 라이브러리(@noble/secp256k1 등) 추가 불필요. viem 내부에서 @noble/curves 사용 |
+| 2 | EVM 주소 파생 | viem `privateKeyToAccount().address` | EIP-55 체크섬 자동 적용. 자체 keccak256 구현 금지 |
+| 3 | 'ethereum' ChainType의 의미 | EVM 호환 체인 전체를 포괄 | ChainType을 체인마다 추가('polygon', 'arbitrum' 등)하면 enum 폭발. 암호 커브 기준으로 'solana'(Ed25519) vs 'ethereum'(secp256k1) 2종 유지 |
+| 4 | 어댑터 인스턴스 관리 | AdapterPool (lazy init + 캐싱) | 데몬 시작 시 모든 체인 연결은 비효율. 에이전트 요청 시 해당 체인만 초기화 |
+| 5 | EVM 기본 RPC | drpc.org 공용 엔드포인트 | 무료, 멀티체인 지원, rate limit 관대. 프로덕션에서는 Alchemy/Infura/QuickNode 권장 (config.toml 오버라이드) |
+| 6 | Solana network 값 유지 | 'mainnet'/'devnet'/'testnet' 그대로 | 기존 에이전트 데이터 호환. EVM만 `{chain}-{net}` 형식 사용 |
+| 7 | KeystoreFileV1 curve 필드 | 하위 호환 (없으면 ed25519 기본) | 기존 키스토어 파일 무변경. 신규 생성 시에만 curve 필드 추가 |
+| 8 | DB 마이그레이션 | schema_version 2, 테이블 재생성 + `managesOwnTransaction` | SQLite CHECK 제약 변경은 ALTER TABLE 불가. 테이블 재생성으로 NetworkType 확장 반영. `PRAGMA foreign_keys`는 트랜잭션 내 no-op이므로 Migration 인터페이스에 `managesOwnTransaction` 플래그 추가하여 v2 마이그레이션이 자체 트랜잭션 관리 |
+| 9 | network 기본값 해결 | chain별 기본값 분기 (서비스 레이어) | `CreateAgentRequestSchema`의 Zod `.default('devnet')`는 chain='solana'에만 유효. chain='ethereum' 시 서비스 레이어에서 `config.rpc.evm_default_network`로 오버라이드 |
+| 10 | 기존 ethereum_mainnet/sepolia 키 | 제거 후 evm_* 네이밍으로 교체 | 빈 문자열 placeholder 2개는 실제 사용된 적 없음. 기존 config.toml에 해당 키를 설정한 사용자가 없으므로 breaking change 아님 |
+| 11 | SIWE 검증 방식 | `viem/siwe` (`parseSiweMessage` + `validateSiweMessage` + `verifyMessage`) | v0.7(Phase 28)에서 `siwe`+`ethers` 패키지 제거, `viem/siwe` 전환 확정. RPC 불필요 (EOA ecRecover) |
+| 12 | Owner auth 헤더 형식 | 기존 3-header 패턴 유지 (`X-Owner-Signature/Message/Address`) | 설계 문서(doc 34)의 Authorization Bearer JSON 패턴은 Solana 기존 동작과 호환 불가. 현재 패턴에 chain 분기 추가가 최소 변경 |
+| 13 | Owner auth chain 판별 | `agent.chain` 필드 사용 (별도 헤더/DB 컬럼 불필요) | 미들웨어가 이미 agent를 조회하므로 chain 접근 가능. `owner_chain` 별도 컬럼은 불필요한 중복 |
+| 14 | Owner 주소 형식 검증 | setOwner 라우트에서 chain별 검증 | Solana: base58 + 32바이트, EVM: 0x + 40hex + EIP-55 체크섬. 잘못된 형식 사전 차단 |
+| 15 | generateKeyPair 시그니처 | `network` 파라미터 추가 | keystore 파일의 `network: 'devnet'` 하드코딩 제거. 실제 network 값 기록 |
+| 16 | RPC config key 변환 | `network.replace(/-/g, '_')` | NetworkType은 hyphen(`ethereum-sepolia`), config key는 underscore(`evm_ethereum_sepolia`). 명시적 변환 함수 제공 |
+| 17 | daemon viem 의존성 | 직접 의존 (transitive 아님) | keystore(`viem/accounts`), owner-auth(`viem/siwe`), address 검증(`viem`)이 daemon에서 직접 import. 간접 의존은 hoisting 불안정 |
+| 18 | `evm_default_network` 검증 | `EvmNetworkTypeEnum` 타입 사용 (NetworkTypeEnum 아님) | `NetworkTypeEnum`은 Solana 값('devnet' 등)도 포함하여 EVM 기본 네트워크에 부적합. `EVM_NETWORK_TYPES` 서브셋 enum으로 EVM 네트워크만 허용 |
+| 19 | EvmAdapter 네이티브 토큰 심볼 | 생성자 파라미터 + EVM_CHAIN_MAP | 현재 `symbol: 'ETH'` 하드코딩은 Polygon(`POL`) 등에서 부정확. EVM_CHAIN_MAP의 `nativeSymbol`/`nativeName`을 AdapterPool→EvmAdapter 생성자로 전달 |
+| 20 | 패키지 물리 경로 | `packages/adapters/evm/` (not `packages/adapter-evm/`) | npm 패키지명은 `@waiaas/adapter-evm`이지만 파일 시스템 경로는 모노레포 `packages/adapters/evm/` 하위. import는 패키지명 기반이므로 동작에 무관 |
+| 21 | Chain-Network 교차 검증 | 서비스 레이어에서 명시적 검증 | Zod와 DB CHECK는 chain/network를 개별 검증하므로 `{ chain: 'ethereum', network: 'devnet' }` 같은 무효 조합이 통과한다. `validateChainNetwork()` 함수로 chain별 허용 network 서브셋을 검증하여 400 VALIDATION_ERROR로 차단. 런타임 에러(AdapterPool lookup 실패) 방지 |
+| 22 | SIWE nonce 관리 | 미검증 (expirationTime 의존) | Solana owner-auth도 nonce/replay 보호가 없으므로 양쪽 일관성 유지. Self-hosted 데몬 환경에서 리플레이 리스크 극히 낮음. SIWE `expirationTime`으로 유효 기간 제한. 향후 필요 시 `GET /v1/agents/:id/owner/nonce` 챌린지 엔드포인트로 하위 호환 확장 가능 |
+| 23 | 기존 `ethereum_mainnet`/`ethereum_sepolia` config key 제거 | 무중단 제거 (Zod strip) | v0.2 placeholder로 빈 문자열 기본값, 실사용 내역 없음. Zod `z.object()`는 unknown key를 기본 strip하므로 기존 config.toml에 해당 키가 있어도 에러 없이 무시됨. 릴리스 노트에 deprecated key 제거 명시 |
+| 24 | REST API 스키마 전환 | 라우트 스키마 분리 (방안 C): OpenAPI doc과 실제 검증 분리 | Hono `createRoute` 스키마는 핸들러 실행 전 Zod 검증 수행 → discriminatedUnion(`type` 필수)이면 레거시 요청(`type` 없음) 400 거부. `c.req.json()`으로 raw body 수용, `stage1Validate()`가 실제 Zod 검증 SSoT. OpenAPI doc는 수동 `oneOf` 6-variant (5-type + legacy)로 정확성 보장. Phase 81에서 유보된 과제 해결 |
+| 25 | MCP 도구 토큰 전송 범위 | TRANSFER + TOKEN_TRANSFER만 MCP에 노출 | CONTRACT_CALL/APPROVE/BATCH는 보안 위험이 높아 AI 에이전트 자율 실행에 부적합. 고급 타입은 SDK/REST API를 통해서만 접근 가능. 향후 MCP 확장 시 별도 도구로 분리 |
+| 26 | 레거시 요청 하위 호환 | `type` 필드 없는 요청은 `TRANSFER`로 폴백 | `stage1Validate()`에 이미 구현된 분기: `'type' in req ? req.type : 'TRANSFER'`. `c.req.json()`으로 Hono 사전 검증 건너뛰고 stage1Validate에서 legacy/5-type 분기 검증. 기존 SDK/MCP 클라이언트 업데이트 전에도 정상 동작 보장 |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100% -- `[HUMAN]` 0건**
+
+### Keystore 멀티커브
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | EVM 에이전트 생성 → secp256k1 키 생성 + 0x 주소 반환 | `POST /v1/agents { chain: 'ethereum', network: 'ethereum-sepolia' }` → 201 + address 0x 형식 assert | [L0] |
+| 2 | EVM 키스토어 파일 → curve: 'secp256k1' 포함 | 키스토어 JSON 파일 읽기 → curve 필드 assert | [L0] |
+| 3 | EVM 키 복호화 → 유효한 32바이트 비밀키 | `decryptPrivateKey()` → 32바이트 Uint8Array + viem `privateKeyToAccount` 검증 → 동일 주소 파생 assert | [L0] |
+| 4 | 기존 Solana 키스토어 파일 (curve 필드 없음) → ed25519 기본값 | curve 미포함 v1 파일 로드 → chain 'solana' + 정상 복호화 assert | [L0] |
+| 5 | chain='ethereum' 에이전트의 주소가 EIP-55 체크섬 준수 | 생성된 주소 → `getAddress(address) === address` (viem) assert | [L0] |
+| 6 | secp256k1 비밀키 제로화 확인 | 키 생성 후 평문 버퍼 → all zeros assert | [L0] |
+
+### 어댑터 팩토리
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 7 | Solana 에이전트 트랜잭션 → SolanaAdapter 선택 | agent.chain='solana' → AdapterPool이 SolanaAdapter 반환 assert | [L0] |
+| 8 | EVM 에이전트 트랜잭션 → EvmAdapter 선택 | agent.chain='ethereum' → AdapterPool이 EvmAdapter 반환 assert | [L0] |
+| 9 | 동일 네트워크 어댑터 재사용 (캐싱) | 2개 ethereum-sepolia 에이전트 → 동일 어댑터 인스턴스 assert | [L0] |
+| 10 | 다른 네트워크 어댑터 독립 | ethereum-mainnet + polygon-mainnet → 별도 어댑터 인스턴스 assert | [L0] |
+| 11 | 데몬 shutdown → 모든 어댑터 disconnect | `disconnectAll()` → 풀 내 모든 어댑터 `isConnected() === false` assert | [L0] |
+
+### Config EVM RPC
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 12 | config.toml에 EVM RPC 미설정 → 기본값 사용 | ConfigSchema parse({}) → `rpc_evm_ethereum_sepolia` 기본 URL 존재 assert | [L0] |
+| 13 | 환경변수 오버라이드 → config 반영 | `WAIAAS_RPC_EVM_ETHEREUM_MAINNET=custom` → config 파싱 후 custom URL assert | [L0] |
+| 14 | evm_default_network → 에이전트 생성 시 적용 | `POST /v1/agents { chain: 'ethereum' }` (network 미지정) → `config.rpc.evm_default_network` 값('ethereum-sepolia') 사용 assert | [L0] |
+| 14b | Solana 에이전트 network 미지정 → 기존 devnet 유지 | `POST /v1/agents { chain: 'solana' }` (network 미지정) → 'devnet' 기본값 유지 assert | [L0] |
+| 14c | evm_default_network에 Solana 값 설정 → 거부 | `evm_default_network: 'devnet'` → DaemonConfigSchema 파싱 실패 (EvmNetworkTypeEnum 검증) assert | [L0] |
+
+### 네이티브 토큰 심볼
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 15a | Ethereum 어댑터 → ETH 심볼 | ethereum-sepolia EvmAdapter → `getBalance()` 결과 `symbol === 'ETH'` assert | [L0] |
+| 15b | Polygon 어댑터 → POL 심볼 | polygon-mainnet EvmAdapter → `getBalance()` 결과 `symbol === 'POL'` assert | [L0] |
+| 15c | EVM_CHAIN_MAP 매핑 무결성 | 모든 10개 네트워크 → nativeSymbol/nativeName 존재 + chainId viem Chain.id 일치 assert | [L0] |
+
+### EVM 네이티브 전송 (v1.4 어댑터와 통합)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 15 | EVM 에이전트 생성 → 잔액 조회 → ETH 전송 → CONFIRMED | Anvil에서 에이전트 생성 → 펀딩 → 전송 → 파이프라인 전체 통과 assert | [L1] |
+| 16 | EVM + Solana 에이전트 동시 운용 | 2개 에이전트(chain 각각 다름) → 각각 전송 → 모두 CONFIRMED assert | [L1] |
+| 17 | 미지원 network → 에러 | `POST /v1/agents { chain: 'ethereum', network: 'invalid' }` → 400 VALIDATION_ERROR assert | [L0] |
+| 17b | Solana network를 EVM 에이전트에 지정 → 거부 | `POST /v1/agents { chain: 'ethereum', network: 'devnet' }` → 400 VALIDATION_ERROR (chain-network 교차 검증) assert | [L0] |
+| 17c | EVM network를 Solana 에이전트에 지정 → 거부 | `POST /v1/agents { chain: 'solana', network: 'ethereum-sepolia' }` → 400 VALIDATION_ERROR (chain-network 교차 검증) assert | [L0] |
+
+### Owner Auth SIWE
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 18 | EVM 에이전트 Owner 등록 → 0x 주소 검증 | `PUT /v1/agents/:id/owner { owner_address: '0x...' }` → EIP-55 체크섬 검증 통과 assert | [L0] |
+| 19 | EVM 에이전트 Owner 등록 → 잘못된 주소 거부 | `PUT /v1/agents/:id/owner { owner_address: 'not-0x' }` → 400 VALIDATION_ERROR assert | [L0] |
+| 20 | EVM Owner SIWE 서명 → 검증 성공 | viem `privateKeyToAccount`로 EIP-4361 메시지 서명 → owner-auth 미들웨어 통과 assert | [L0] |
+| 21 | EVM Owner 서명 불일치 → 401 | 다른 키로 서명된 SIWE 메시지 → INVALID_SIGNATURE assert | [L0] |
+| 22 | Solana Owner auth → 기존 동작 무변경 | Ed25519 서명 → owner-auth 미들웨어 통과 assert (회귀 없음) | [L0] |
+| 23 | Solana Owner 등록 → base58 주소 검증 | `PUT /v1/agents/:id/owner { owner_address: 'base58...' }` → 32바이트 검증 통과 assert | [L0] |
+
+### DB 마이그레이션
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 24 | schema_version 1 → 2 자동 마이그레이션 | v1 DB로 데몬 시작 → schema_version 2 기록 + 기존 에이전트 데이터 유지 assert | [L0] |
+| 25 | 이미 v2인 DB → 마이그레이션 스킵 | v2 DB로 데몬 시작 → schema_version 변경 없음 assert | [L0] |
+
+### REST API 5-type 통합
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 26 | 레거시 요청 (type 미지정) → TRANSFER로 동작 | `POST /v1/transactions/send { to, amount }` (type 없음) → 201 + DB type='TRANSFER' assert | [L0] |
+| 27 | TOKEN_TRANSFER 요청 → SPL 토큰 전송 파이프라인 실행 | `POST /v1/transactions/send { type: 'TOKEN_TRANSFER', to, amount, token: { address, decimals, symbol } }` → 201 + 파이프라인 buildTokenTransfer 호출 assert | [L0] |
+| 28 | TOKEN_TRANSFER + ALLOWED_TOKENS 미설정 → 정책 거부 | TOKEN_TRANSFER 요청 + ALLOWED_TOKENS 정책 없음 → POLICY_DENIED assert | [L0] |
+| 29 | TOKEN_TRANSFER + ALLOWED_TOKENS 설정 → 정상 결제 | TOKEN_TRANSFER + 토큰 화이트리스트 포함 → 파이프라인 정상 통과 assert | [L0] |
+| 30 | CONTRACT_CALL 요청 → 컨트랙트 호출 파이프라인 실행 | `POST /v1/transactions/send { type: 'CONTRACT_CALL', ... }` → 201 + buildContractCall 호출 assert | [L0] |
+| 31 | BATCH 요청 → 배치 파이프라인 실행 | `POST /v1/transactions/send { type: 'BATCH', instructions: [...] }` → 201 + buildBatch 호출 assert | [L0] |
+| 32 | 잘못된 type → 400 검증 에러 | `POST /v1/transactions/send { type: 'INVALID' }` → 400 VALIDATION_ERROR assert | [L0] |
+| 33 | OpenAPI 스펙 → oneOf 6-variant 반영 | `GET /doc` → sendTransaction 스키마에 oneOf 6개(5-type + legacy) 포함 + 각 타입별 components/schemas 존재 assert | [L0] |
+
+### MCP/SDK 토큰 전송
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 34 | MCP send_token (type 미지정) → 기존 SOL 전송 동작 | `callTool('send_token', { to, amount })` → TRANSFER 실행 assert (하위 호환) | [L0] |
+| 35 | MCP send_token (type: TOKEN_TRANSFER) → SPL 토큰 전송 | `callTool('send_token', { to, amount, type: 'TOKEN_TRANSFER', token: { address, decimals, symbol } })` → TOKEN_TRANSFER 실행 assert | [L0] |
+| 36 | TS SDK send (type: TOKEN_TRANSFER) → 토큰 전송 | `client.send({ type: 'TOKEN_TRANSFER', to, amount, token })` → 201 + type='TOKEN_TRANSFER' assert | [L0] |
+| 37 | Python SDK send (type: TOKEN_TRANSFER) → 토큰 전송 | `client.send(type='TOKEN_TRANSFER', to=..., token=...)` → 201 assert | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.4 (토큰 + 컨트랙트 확장) | `@waiaas/adapter-evm` 패키지가 v1.4에서 구현됨. v1.4.1은 이 어댑터를 데몬에 연결하는 인프라 |
+| v1.4 P-2 (DB 마이그레이션 러너) | v1.4 선행 과제로 마이그레이션 러너 구현. v1.4.1은 schema_version 2 마이그레이션 추가 |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | secp256k1 키 생성 보안 | 비밀키 노출 시 전 체인 자산 탈취 | viem 검증된 구현 사용. 자체 crypto 코드 금지. 기존 AES-256-GCM + Argon2id + guarded memory 보안 스택 그대로 적용 |
+| 2 | 공용 RPC 기본값 신뢰성 | drpc.org 장애 시 EVM 트랜잭션 실패 | fail-soft: 어댑터 연결 실패 시 데몬은 계속 동작 (Solana 에이전트 정상 운영). 프로덕션 전용 RPC 설정 권장 문서화 |
+| 3 | NetworkType enum 확장에 따른 DB CHECK 변경 | SQLite CHECK 제약 변경은 테이블 재생성 필요 | 마이그레이션에서 안전한 테이블 재생성 (트랜잭션 내 CREATE→INSERT→DROP→RENAME). 기존 데이터 100% 보존 |
+| 4 | 어댑터 풀 메모리 | 다수 EVM 체인 동시 사용 시 메모리 증가 | viem PublicClient는 경량 (HTTP 전용, WebSocket 미사용). 실측 후 최대 풀 크기 제한 검토 |
+| 5 | 기존 Solana 전용 코드 잔존 | daemon.ts 외에도 Solana 하드코딩이 있을 수 있음 | 구현 전 `grep -r 'solana' packages/daemon/src/` 전수 점검. 하드코딩 발견 시 chain-agnostic으로 수정 |
+| 6 | SIWE 서명 위조 | Owner 인증 우회 시 무단 트랜잭션 승인 | viem/siwe 검증된 구현 사용. EIP-191 ecRecover는 암호학적으로 안전. EOA 전용 (EIP-1271 스마트 계정 미지원) |
+| 7 | owner-auth 회귀 | SIWE 추가 시 기존 Solana Ed25519 검증 깨짐 | 기존 Solana owner-auth 테스트 6건 전수 통과 확인. chain 분기는 기존 코드 경로를 수정하지 않고 새 분기만 추가 |
+
+---
+
+## 구현 순서
+
+```
+v1.4 완료 (@waiaas/adapter-evm + DB 마이그레이션 러너)
+  │
+  ▼
+v1.4.1-Phase A: Config 확장 + NetworkType enum + 의존성
+  │  - daemon package.json에 @waiaas/adapter-evm, viem 의존성 추가
+  │  - DaemonConfigSchema.rpc에 EVM 11키 추가 (기존 ethereum_* 2키 교체)
+  │  - evm_default_network를 EvmNetworkTypeEnum 타입으로 검증
+  │  - NetworkType에 EVM 네트워크 10개 추가 + EVM_NETWORK_TYPES 서브셋 + EvmNetworkTypeEnum
+  │  - EVM chainId 매핑 테이블 (adapters/evm/src/chains.ts) + nativeSymbol/nativeName
+  │  - EvmAdapter 생성자에 nativeSymbol/nativeName 파라미터 추가 + getBalance/getAssets 하드코딩 제거
+  │  - RPC config key ↔ network 값 변환 함수 (networkToRpcKey)
+  │  - CreateAgentRequestSchema network optional 전환 + chain별 기본값 분기
+  │  - validateChainNetwork() 교차 검증 함수 (chain별 허용 network 서브셋 검증)
+  │
+  ▼
+v1.4.1-Phase B: Keystore 멀티커브
+  │  - generateKeyPair() 시그니처에 network 파라미터 추가
+  │  - generateKeyPair() secp256k1 분기 (viem privateKeyToAccount)
+  │  - KeystoreFileV1 curve 필드 (하위 호환)
+  │  - keystore 파일 network 하드코딩('devnet') 제거 → 실제 값 기록
+  │  - 기존 Ed25519 경로 무변경 확인
+  │
+  ▼
+v1.4.1-Phase C: 어댑터 팩토리 + adapter 주입 패턴 전환
+  │  - AdapterPool 구현 (EVM_CHAIN_MAP에서 viem Chain 객체 resolve)
+  │  - daemon.ts Step 4 교체 (단일 adapter → adapterPool)
+  │  - server.ts AppDeps 타입 변경 (adapter → adapterPool)
+  │  - wallet/transactions 라우트 adapter 주입 패턴 전환 (adapterPool.getAdapter(agent.chain, agent.network))
+  │  - daemon.ts shutdown: adapter.disconnect() → adapterPool.disconnectAll()
+  │  - 기존 테스트 파일의 mock AppDeps 패턴 일괄 수정 (adapter → adapterPool)
+  │
+  ▼
+v1.4.1-Phase D: DB 마이그레이션
+  │  - Migration 인터페이스에 managesOwnTransaction 플래그 추가
+  │  - runMigrations() 분기: managesOwnTransaction=true이면 러너가 BEGIN/COMMIT 생략
+  │  - schema_version 2 마이그레이션 (managesOwnTransaction: PRAGMA foreign_keys OFF → agents 재생성 → CHECK 확장 → FK 검증)
+  │  - FK 검증: sqlite.pragma('foreign_key_check') 결과 집합 확인 (exec 아닌 pragma 메서드 필수)
+  │
+  ▼
+v1.4.1-Phase E: REST API 5-type 통합 + MCP/SDK 확장
+  │  - POST /v1/transactions/send 라우트 스키마 분리 (방안 C): loose passthrough + 수동 oneOf 6-variant OpenAPI doc
+  │  - transactions.ts 핸들러: c.req.valid('json') → c.req.json() 전환, 인라인 Stage 1 → stage1Validate() 호출로 교체
+  │  - openapi-schemas.ts: 5-type 각각 .openapi() 컴포넌트 등록 + TransactionRequestOpenAPI oneOf 수동 구성
+  │  - MCP send_token 도구에 type, token 파라미터 추가 (TRANSFER/TOKEN_TRANSFER만)
+  │  - TS SDK send 메서드 type/token 파라미터 확장
+  │  - Python SDK send 메서드 type/token 파라미터 확장
+  │
+  ▼
+v1.4.1-Phase F: Owner Auth SIWE + 주소 검증
+  │  - verifySIWE 함수 구현 (viem/siwe: parseSiweMessage + validateSiweMessage + verifyMessage)
+  │  - owner-auth 미들웨어 chain 분기 (solana→Ed25519, ethereum→SIWE)
+  │  - setOwner 라우트에 chain별 owner_address 형식 검증 추가
+  │  - 기존 Solana owner-auth 테스트 회귀 확인
+  │
+  ▼
+v1.4.1-Phase G: 통합 검증
+     - EVM 에이전트 생성 → 잔액 조회 → 전송 E2E
+     - EVM Owner 등록 → SIWE 서명 → 트랜잭션 승인 E2E
+     - Solana + EVM 동시 운용
+     - 5-type 트랜잭션 E2E (TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH + 레거시 하위호환)
+     - MCP send_token TOKEN_TRANSFER E2E + SDK 토큰 전송 E2E
+     - 기존 테스트 전수 통과 확인 (회귀 없음)
+```
+
+---
+
+*최종 업데이트: 2026-02-12 (v7) 사전 리뷰 2건 반영 — (1) PRAGMA foreign_key_check 사일런트 패스 수정: `sqlite.exec('PRAGMA foreign_key_check')`는 위반 행을 결과 집합으로 반환하며 에러를 throw하지 않으므로 `sqlite.pragma('foreign_key_check')` 메서드로 결과를 명시적으로 확인하도록 변경. 위반 발견 시 즉시 throw (산출물 4 pseudocode + 핵심 포인트) (2) Phase C 분할: 기존 Phase C(7가지 독립 작업)를 3개로 분할하여 회귀 추적성 향상 — Phase C(어댑터 팩토리 + adapter 주입 전환 + 테스트 mock), Phase D(DB 마이그레이션 managesOwnTransaction + schema_version 2), Phase E(REST API 5-type 스키마 분리 + MCP/SDK 확장). 기존 Phase D→F, Phase E→G로 리네이밍. 전체 5 Phase → 7 Phase. 2026-02-12 (v6) OpenAPI discriminatedUnion + 레거시 하위호환 충돌 해결 — 방안 C(라우트 스키마 분리) 적용. Hono createRoute 스키마는 loose passthrough(`c.req.json()`)로 전환, 실제 Zod 검증은 stage1Validate SSoT, OpenAPI doc는 수동 oneOf 6-variant(5-type + legacy). 산출물 10 변경 후 pseudocode 전면 재작성, 구현 대상 테이블 2행 수정(POST /v1/transactions/send + OpenAPI 스키마), 기술 결정 #24/#26 보완, E2E #33 oneOf 6-variant 반영, Phase C 3행 교체. Phase 81에서 유보된 과제(81-01-SUMMARY.md:43) 해결. 2026-02-12 (v5) REST API 5-type 트랜잭션 통합 추가 — v1.4 파이프라인이 5-type을 지원하지만 REST API/MCP/SDK가 레거시 TRANSFER만 수용하는 문제 해결. 산출물 10(REST API 스키마 전환 + MCP/SDK 확장), 기술 결정 #24-26, E2E #26-37, Phase C 범위 확장. MCP는 TRANSFER/TOKEN_TRANSFER만 노출(보안), 고급 타입은 SDK/REST API 전용. 2026-02-12 (v4) 마일스톤 시작 전 사전 점검 6건 반영 — (1) FK ON DELETE 정정: transactions.agent_id는 CASCADE가 아닌 RESTRICT (schema.ts:112 대조) (2) Chain-Network 교차 검증 추가: validateChainNetwork() 서비스 레이어 검증으로 chain='ethereum'+network='devnet' 같은 무효 조합 400 차단 (산출물 6, 기술 결정 #21, E2E #17b-c, Phase A) (3) SIWE nonce 미검증 의도 명시: Solana owner-auth와 일관성 유지, expirationTime 의존, 향후 챌린지 엔드포인트로 확장 가능 (산출물 7, 기술 결정 #22) (4) 테스트 임팩트 명시: Phase C에 기존 mock AppDeps 패턴 일괄 수정 항목 추가 (5) audit_log/notification_logs agent_id 보충 설명: FK 없음, 마이그레이션 영향 없음 (산출물 4 FK 테이블) (6) 기존 config key 마이그레이션 명시: Zod strip으로 무중단 제거, 릴리스 노트 언급 필요 (기술 결정 #23). 2026-02-12 (v3) 코드베이스 대조 검증 4건 반영 — (1) PRAGMA foreign_keys 트랜잭션 충돌: SQLite PRAGMA는 트랜잭션 내 no-op이므로 Migration 인터페이스에 `managesOwnTransaction` 플래그 추가, v2 마이그레이션이 자체 PRAGMA/트랜잭션 관리 (기술 결정 #8, Phase C) (2) 파일 경로 수정: `packages/adapter-evm/` → `packages/adapters/evm/` (실제 모노레포 경로, 기술 결정 #20) (3) evm_default_network 검증 범위: `NetworkTypeEnum` → `EvmNetworkTypeEnum`으로 변경, Solana 값('devnet' 등) 차단. EVM_NETWORK_TYPES 서브셋 + EvmNetworkTypeEnum 신규 추가 (산출물 4, 기술 결정 #18, E2E #14c) (4) EvmAdapter 네이티브 토큰 심볼: getBalance/getAssets의 'ETH' 하드코딩 제거, EVM_CHAIN_MAP에 nativeSymbol/nativeName 추가, 생성자 파라미터 전달 (산출물 5, 기술 결정 #19, E2E #15a-c, Phase A). 2026-02-12 (v2) 사전 점검 6건 반영 — (1) Owner Auth SIWE (2) generateKeyPair 시그니처 (3) RPC config key 변환 (4) EvmAdapter Chain 객체 (5) daemon 의존성 (6) evm_default_network. 2026-02-12 (v1) 신규 작성. v1.4 코드베이스 대조 분석에서 식별된 EVM 인프라 갭 4건(Keystore/Daemon/Config/OwnerAuth)을 독립 마일스톤으로 분리*

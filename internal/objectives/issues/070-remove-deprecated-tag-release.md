@@ -1,0 +1,24 @@
+# Issue #070: 폐기된 tag-release.sh 스크립트 제거
+
+- **유형**: ENHANCEMENT
+- **심각도**: LOW
+- **마일스톤**: m21
+
+## 현황
+
+`scripts/tag-release.sh`는 v1.8.1에서 release-please로 대체되어 폐기됨. 현재 스크립트는 DEPRECATED 메시지 출력 후 `exit 1`로 종료하는 상태. 퍼블릭 리포에 불필요한 폐기 코드가 남아있으면 혼란을 줄 수 있음.
+
+## 작업 범위
+
+1. `scripts/tag-release.sh` 파일 삭제
+2. `CLAUDE.md`에서 `tag-release.sh` 관련 언급 제거 ("v1.8.1에서 폐기됨. 직접 실행하지 않는다" 항목)
+
+## 참고
+
+- `scripts/` 디렉토리는 유지 (coverage-gate.sh, validate-openapi.ts, verify-enum-ssot.ts 존재)
+- `.planning/` 내 과거 문서의 참조는 아카이브 대상이므로 수정 불필요
+
+## 완료 기준
+
+- [ ] `scripts/tag-release.sh` 삭제됨
+- [ ] `CLAUDE.md`에서 tag-release 관련 문구 제거됨

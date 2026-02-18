@@ -1,0 +1,262 @@
+# 마일스톤 m14-02: Admin Web UI 구현
+
+## 목표
+
+v1.3.1에서 설계한 Admin Web UI가 구현되어, 브라우저에서 `http://127.0.0.1:{port}/admin`으로 에이전트 등록, 세션 관리, 정책 설정 등 핵심 관리 기능을 수행할 수 있는 상태. 데몬이 SPA 정적 파일을 직접 서빙하며, 마스터 비밀번호 인증(masterAuth)으로 보호된다.
+
+> **v1.3.1 = 설계, v1.3.2 = 구현**
+
+---
+
+## 구현 대상 설계 문서
+
+| 문서 | 이름 | 구현 범위 | 전체/부분 |
+|------|------|----------|----------|
+| 67 | admin-web-ui-spec | 5 페이지 SPA, Hono 정적 서빙, masterAuth 인증, API 연동, 보안 설정 | 전체 |
+| 29 | api-framework-design | Hono에 `serveStatic()` 미들웨어 + `/admin` SPA fallback 추가 | 부분 (정적 서빙 추가만) |
+
+### v1.2~v1.3에서 이미 구현된 부분 (v1.3.2에서 활용)
+
+- REST API 33 엔드포인트 (v1.1~v1.3에서 구현)
+- masterAuth 미들웨어 (v1.2에서 구현)
+- 68 에러 코드 체계 (v1.1에서 구현)
+- Health 엔드포인트 (v1.1에서 구현)
+- Owner 3-State API (v1.2에서 구현)
+
+---
+
+## 산출물
+
+### 패키지 구조
+
+```
+packages/admin/                    # 별도 패키지 (빌드 산출물만 daemon에 복사)
+  package.json                     # devDependencies만 — 런타임 의존성 0
+  vite.config.ts                   # Vite 6.x + @preact/preset-vite
+  index.html                       # SPA 엔트리
+  src/
+    main.tsx                       # Preact 앱 초기화 + 해시 라우터 설정
+    app.tsx                        # 루트 컴포넌트 — 라우터 + auth guard
+    api/
+      client.ts                    # fetch 래퍼 — X-Master-Password 자동 주입, 에러 매핑, 타임아웃
+      endpoints.ts                 # API 엔드포인트 상수 + 타입
+    auth/
+      login.tsx                    # 로그인 화면 — 마스터 비밀번호 입력 → 검증 → Dashboard 이동
+      store.ts                     # @preact/signals 기반 auth signal. 비활성 타임아웃 관리
+    pages/
+      dashboard.tsx                # Dashboard — 데몬 상태 요약 (30초 폴링)
+      agents.tsx                   # Agents — 목록/생성/이름수정/상세/삭제(terminate)
+      sessions.tsx                 # Sessions — 에이전트 드롭다운/생성/목록/필터/폐기/토큰 복사
+      policies.tsx                 # Policies — 목록/생성/수정/삭제/티어 시각화
+      settings.tsx                 # Settings — 상태 읽기 전용/Kill Switch 토글/JWT 회전/종료
+    components/
+      layout.tsx                   # 공통 레이아웃 — 사이드바 + 헤더 + 콘텐츠
+      table.tsx                    # 재사용 테이블 컴포넌트
+      form.tsx                     # 재사용 폼 컴포넌트 (입력, 셀렉트, 버튼)
+      modal.tsx                    # 확인 다이얼로그, 알림 모달
+      toast.tsx                    # 성공/에러 토스트 알림
+      copy-button.tsx              # 클립보드 복사 버튼 (토큰, 주소용)
+      empty-state.tsx              # 데이터 0건 시 빈 상태 + 생성 안내
+    styles/
+      global.css                   # 글로벌 스타일 + CSS 변수 (색상/간격 토큰)
+    utils/
+      error-messages.ts            # 68 에러 코드 → 영문 사용자 친화적 메시지 매핑
+      format.ts                    # 날짜, 주소 포맷팅 유틸
+```
+
+### 데몬 수정 사항
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `packages/daemon/src/api/server.ts` | `/admin` 정적 파일 서빙 + SPA fallback 라우트 추가. `admin_ui` 설정에 따른 조건부 등록. `serveStatic`은 `@hono/node-server/serve-static`에서 import (Node.js 전용) |
+| `packages/daemon/src/api/middleware/csp.ts` | Content-Security-Policy 헤더 미들웨어 (신규). `/admin/*` 경로에만 적용 |
+| `packages/daemon/src/api/middleware/kill-switch-guard.ts` | `/admin` 및 `/admin/*` 경로 bypass 추가 (현재 `/v1/admin/*`만 bypass — Kill Switch 활성 시에도 SPA 로딩 + 복구 UI 접근 필수) |
+| `packages/daemon/src/api/routes/admin.ts` | `AdminRouteDeps`에 `adminTimeout: number` 추가. `GET /v1/admin/status` 응답에 `adminTimeout` 필드 포함 |
+| `packages/daemon/src/api/routes/openapi-schemas.ts` | `AdminStatusResponseSchema`에 `adminTimeout: z.number().int()` 필드 추가 |
+| `packages/daemon/src/infrastructure/config/loader.ts` | `[daemon]` 섹션에 `admin_ui` (boolean, 기본 true), `admin_timeout` (초, 기본 900, 범위 60-7200) 키 추가. 기존 9개 키에 2개 추가 → 11개 |
+| `packages/daemon/src/api/server.ts` (추가) | `CreateAppDeps.version`을 `package.json`에서 읽은 실제 버전으로 전달 (현재 `'0.0.0'` 하드코딩 → Dashboard에 무의미한 값 표시) |
+| `packages/daemon/package.json` | `files` 배열에 `"public"` 추가 (현재 `["dist"]`만 포함) |
+
+### config.toml 확장
+
+```toml
+[daemon]
+admin_ui = true        # Admin Web UI 활성화 (기본: true)
+admin_timeout = 900    # 비활성 타임아웃 초 (기본: 900 = 15분)
+```
+
+### 컴포넌트 상세
+
+| 컴포넌트 | 위치 | 내용 |
+|----------|------|------|
+| API Client | `src/api/client.ts` | fetch 래퍼. `X-Master-Password` 헤더 자동 주입, AbortSignal 타임아웃 10초, WAIaaS 에러 코드 파싱. **401 처리 분기**: 인증 완료 상태(`isAuthenticated`)에서만 auth signal 클리어 + 로그인 리다이렉트. 로그인 검증 시에는 401을 호출자에게 반환 (자동 로그아웃 미수행) |
+| Auth Store | `src/auth/store.ts` | @preact/signals 기반. `masterPassword` signal (메모리 전용), 비활성 타임아웃 (기본 15분) → signal 클리어 + 로그인 리다이렉트. mousemove/keydown 이벤트로 타이머 리셋 |
+| Login Page | `src/auth/login.tsx` | 마스터 비밀번호 입력 폼 → `GET /v1/admin/status` 호출로 검증 → 성공 시 Dashboard 리다이렉트. 401 시 "Invalid master password" 에러 표시 (API Client의 자동 로그아웃 미적용 — 아직 로그인 전) |
+| Dashboard | `src/pages/dashboard.tsx` | `GET /v1/admin/status` 호출 → 상태/버전/uptime/에이전트 수/활성 세션 수/킬스위치 카드 표시. 30초 폴링 자동 갱신 (useEffect + setInterval). 응답의 `killSwitchState` (flat string, `"NORMAL"` 또는 `"ACTIVATED"`) 사용 |
+| Agents Page | `src/pages/agents.tsx` | CRUD 테이블. 생성 폼(name, chain, network). 이름 수정(인라인 편집 또는 모달). 상세 클릭 → 주소/네트워크/Owner 상태(읽기 전용) 표시. `ownerAddress`와 `ownerVerified`가 `null`일 수 있으므로 "Not registered" 등 빈 상태 처리 필요. 삭제(terminate) 시 확인 모달 |
+| Sessions Page | `src/pages/sessions.tsx` | 에이전트 드롭다운 선택(필수) → 세션 생성. 토큰 복사 버튼. `GET /v1/sessions?agentId={id}`로 조회 (**agentId 필수** — 전체 조회 불가). 에이전트 드롭다운 변경 시 해당 에이전트 세션만 재조회. 만료시간 표시. 폐기 버튼 |
+| Policies Page | `src/pages/policies.tsx` | 에이전트별 정책 목록 (agentId 필터, `agentId: null`인 글로벌 정책은 "Global" 표시). **10 정책 유형** 드롭다운: SPENDING_LIMIT, WHITELIST, TIME_RESTRICTION, RATE_LIMIT, ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE. 생성/수정 폼: `type` 셀렉트 + `rules` JSON 편집기(textarea) + `priority` 숫자 입력 + `enabled` 체크박스. **4 티어 시각화**: INSTANT=초록, NOTIFY=파랑, DELAY=노랑, APPROVAL=빨강 색상 구분. SPENDING_LIMIT rules의 tier 한도(instant_max, delay_max 등) 표시 |
+| Settings Page | `src/pages/settings.tsx` | 데몬 상태 정보 읽기 전용 표시. Kill Switch 토글 (활성화/복구) — 이미 활성 상태에서 재활성화 시 `KILL_SWITCH_ACTIVE` 에러 토스트, 비활성 상태에서 복구 시 `KILL_SWITCH_NOT_ACTIVE` 에러 토스트 표시. JWT 시크릿 회전 버튼 + 확인 모달. 데몬 종료 버튼 + 이중 확인 모달 |
+| CSP Middleware | `daemon/middleware/csp.ts` | `script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:`. **주의**: Vite 기본 설정의 `build.modulePreload.polyfill: true`가 inline script를 생성하여 `script-src 'self'`에 차단됨 → `vite.config.ts`에 `build: { modulePreload: { polyfill: false } }` 명시 필수 |
+| Static Serving | `daemon/server.ts` | `@hono/node-server/serve-static`의 `serveStatic()` 사용. `GET /admin/*` SPA fallback → `index.html`. `admin_ui = false` 시 미등록 (404). 정적 파일 서빙은 masterAuth 미적용 (SPA 로딩은 공개, API 호출 시에만 인증) |
+| Error Messages | `src/utils/error-messages.ts` | 68 에러 코드 → 영문 메시지 매핑. 알 수 없는 코드는 원본 메시지 표시 |
+| Empty State | `src/components/empty-state.tsx` | 데이터 0건 시 "No agents yet" + "Create Agent" 버튼 등 빈 상태 안내 |
+
+### API 응답 형태 정합
+
+> SPA 구현 시 실제 API 응답 형태를 정확히 따른다. 설계 문서 67의 예시와 실제 API가 다른 부분을 아래에 명시한다.
+
+| API | 응답 형태 | 주의 사항 |
+|-----|----------|----------|
+| `GET /v1/admin/status` | `{ status, version, uptime, agentCount, activeSessionCount, killSwitchState, adminTimeout, timestamp }` | `killSwitchState`는 flat string (`"NORMAL"` / `"ACTIVATED"`). 설계 문서 67 섹션 5.5의 `killSwitch: { state }` 중첩 객체와 다름. `adminTimeout`은 v1.3.2에서 신규 추가 |
+| `POST /v1/admin/kill-switch` | `{ state: "ACTIVATED", activatedAt }` | HTTP **200**. 이미 ACTIVATED 상태면 `KILL_SWITCH_ACTIVE` 에러 (409) |
+| `POST /v1/admin/recover` | `{ state: "NORMAL", recoveredAt }` | HTTP **200**. ACTIVATED 아닌 상태면 `KILL_SWITCH_NOT_ACTIVE` 에러 (409) |
+| `POST /v1/admin/rotate-secret` | `{ rotatedAt, message }` | HTTP **200**. `message: "JWT secret rotated. Old tokens valid for 5 minutes."` |
+| `POST /v1/admin/shutdown` | `{ message: "Shutdown initiated" }` | HTTP **200**. 응답 후 데몬 프로세스 종료 |
+| `GET /v1/agents` | `{ items: [ { id, name, chain, network, publicKey, status, createdAt } ] }` | **`items` 래핑** — bare array 아님 |
+| `POST /v1/agents` | `{ id, name, chain, network, publicKey, status, createdAt }` | HTTP **201**. 요청: `{ name, chain (default: "solana"), network (default: "devnet") }` |
+| `GET /v1/agents/{id}` | `{ id, name, chain, network, publicKey, status, ownerAddress, ownerVerified, ownerState, createdAt, updatedAt }` | `ownerAddress: string | null`, `ownerVerified: boolean | null`, `ownerState: "NONE" | "GRACE" | "LOCKED"` |
+| `PUT /v1/agents/{id}` | `{ id, name, chain, network, publicKey, status, createdAt }` | HTTP **200**. 요청: `{ name }` (이름만 수정 가능) |
+| `DELETE /v1/agents/{id}` | `{ id, status: "TERMINATED" }` | HTTP **200**. 이미 TERMINATED면 `AGENT_TERMINATED` 에러 (410 Gone) |
+| `GET /v1/sessions?agentId={id}` | `[ { id, agentId, status, renewalCount, maxRenewals, expiresAt, absoluteExpiresAt, createdAt, lastRenewedAt } ]` | **bare array** (래핑 없음). `agentId` query 필수 (미전달 시 에러) |
+| `POST /v1/sessions` | `{ id, token, expiresAt, agentId }` | HTTP **201**. 요청: `{ agentId, ttl? (기본 86400초, 범위 300-604800), constraints? }`. `token`이 JWT 문자열 — 복사 버튼 대상. Admin UI에서는 `agentId`만 전송 (ttl/constraints 생략 → 기본값 사용) |
+| `DELETE /v1/sessions/{id}` | `{ id, status: "REVOKED" }` | HTTP **200** (204가 아님). `response.ok`로 성공 판별. 이미 revoked인 세션은 `{ id, status: "REVOKED", message: "Session already revoked" }` 반환 (추가 `message` 필드 — 무시 가능) |
+| `GET /v1/policies` / `GET /v1/policies?agentId={id}` | `[ { id, agentId, type, rules, priority, enabled, createdAt, updatedAt } ]` | **bare array** (래핑 없음). `agentId` 필터는 선택적. **`agentId: null`은 글로벌 정책** |
+| `POST /v1/policies` | `{ id, agentId, type, rules, priority, enabled, createdAt, updatedAt }` | HTTP **201**. 요청: `{ agentId? (null=글로벌), type, rules, priority (default: 0), enabled (default: true) }` |
+| `PUT /v1/policies/{id}` | `{ id, agentId, type, rules, priority, enabled, createdAt, updatedAt }` | HTTP **200**. 요청: `{ rules?, priority?, enabled? }` (부분 수정) |
+| `DELETE /v1/policies/{id}` | `{ id, deleted: true }` | HTTP **200**. `response.ok`로 성공 판별 |
+
+### 빌드 파이프라인
+
+```
+pnpm --filter @waiaas/admin build
+  → Vite 빌드 → dist/
+  → postbuild 스크립트: cp -r dist/* ../daemon/public/admin/
+  → daemon npm 패키지에 포함
+```
+
+| 항목 | 목표 |
+|------|------|
+| 빌드 산출물 크기 | gzip **100KB 이하** (Preact ~5KB + 앱 코드 + CSS) |
+| 빌드 시간 | 10초 이하 |
+| 런타임 의존성 | 0 (빌드 산출물은 정적 HTML/JS/CSS) |
+
+#### 빌드 순서 보장
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `turbo.json` | `"@waiaas/daemon#build": { "dependsOn": ["@waiaas/admin#build"] }` 추가. `^build`만으로는 admin→daemon 순서 미보장 (workspace 의존성 없으므로) |
+| `.gitignore` | `packages/daemon/public/admin/` 추가 (빌드 산출물 — VCS 제외) |
+
+---
+
+## 기술 결정 사항
+
+> v1.3.1에서 확정된 기술 결정 #1~#9를 적용한다. 구현 시 추가 결정만 기록.
+
+| # | 결정 항목 | 결정 | 근거 |
+|---|----------|------|------|
+| 10 | 테스트 프레임워크 | Vitest + @testing-library/preact | 모노레포 기존 테스트 환경(Vitest)과 통일. Preact Testing Library 공식 지원 |
+| 11 | 빌드 산출물 포함 방식 | pnpm workspace `build` 스크립트 + turbo.json 명시적 의존 | `pnpm build` 시 admin 빌드 → daemon/public/ 복사 자동화. turbo.json에 `@waiaas/daemon#build` → `@waiaas/admin#build` 명시 |
+| 12 | JSX 런타임 | Preact JSX (`jsxImportSource: 'preact'`) | `@preact/preset-vite`가 자동 설정. `.tsx` 확장자 사용 |
+| 13 | Node.js serveStatic | `@hono/node-server/serve-static` | Hono의 `serveStatic`은 런타임별 import 경로가 다름. `hono/serve-static`은 Cloudflare/Deno용으로 Node.js에서 미동작 |
+| 14 | SPA 라우터 | `preact-router` + hash history | 공식 Preact 라우터, 5페이지 규모에 적합. 해시 라우팅으로 SPA fallback 의존도 최소화 |
+| 15 | Vite modulePreload | `build.modulePreload.polyfill: false` | CSP `script-src 'self'` 정책과 충돌하는 inline polyfill script 방지 |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100% -- `[HUMAN]` 0건**
+
+> v1.3.1에서 정의한 24건 시나리오를 구체화하고 검증 방법을 명시한다.
+
+### 인증 (4건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | 마스터 비밀번호 입력 → 로그인 성공 → Dashboard 표시 | Vitest + Testing Library: 비밀번호 입력 → submit → `GET /v1/admin/status` fetch mock 200 → Dashboard 컴포넌트 렌더 assert | [L0] |
+| 2 | 잘못된 비밀번호 → 로그인 실패 + 에러 메시지 | fetch mock 401 → 에러 메시지 "Invalid master password" 표시 assert. 자동 로그아웃 미발동 확인 (로그인 전 상태) | [L0] |
+| 3 | 비활성 타임아웃 → 메모리 클리어 → 로그인 리다이렉트 | 타임아웃 타이머 mock (vi.advanceTimersByTime) → auth signal 클리어 → Login 컴포넌트 렌더 assert | [L0] |
+| 4 | 로그아웃 버튼 → 메모리 클리어 → 로그인 화면 | 로그아웃 클릭 → auth signal 클리어 assert → Login 렌더 assert | [L0] |
+
+### Dashboard (3건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 5 | Dashboard에 데몬 상태 + 버전 + 에이전트 수 + 활성 세션 수 + Kill Switch 상태 표시 | `GET /v1/admin/status` mock (`killSwitchState: "NORMAL"` flat string 형태) → 카드에 version, uptime, agentCount, activeSessionCount, killSwitchState 텍스트 포함 assert | [L0] |
+| 6 | 30초 자동 폴링으로 데이터 갱신 | setInterval mock → 30초 후 재 fetch 호출 assert | [L0] |
+| 7 | 데몬 미시작 시 연결 실패 메시지 | fetch reject (network error) → "Cannot connect to daemon" 메시지 표시 assert | [L0] |
+
+### Agents (5건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 8 | 에이전트 목록 조회 + 테이블 표시 | `GET /v1/agents` mock `{ items: [...] }` 래핑 형태 3건 → 테이블 행 3개 렌더 assert | [L0] |
+| 9 | 에이전트 생성 폼 → 제출 → 목록에 추가 | 폼 입력(name, chain, network) → submit → `POST /v1/agents` mock 201 → 목록 재조회 → 행 추가 assert | [L0] |
+| 10 | 에이전트 상세 → 주소 + 네트워크 + Owner 상태(읽기 전용) 표시 | 행 클릭 → `GET /v1/agents/{id}` mock → 상세 패널에 publicKey, network, ownerState 텍스트 포함 assert. `ownerAddress: null` 시 "Not registered" 표시 assert | [L0] |
+| 11 | 에이전트 이름 수정 → 반영 확인 | 수정 버튼 → 이름 입력 → `PUT /v1/agents/{id}` mock 200 → 목록 재조회 → 변경된 이름 assert | [L0] |
+| 12 | 에이전트 삭제(terminate) → 확인 다이얼로그 → 목록에서 제거 | 삭제 버튼 클릭 → 모달 "Are you sure?" 표시 → 확인 → `DELETE /v1/agents/{id}` mock 200 → 목록 재조회 → 행 제거 assert | [L0] |
+
+### Sessions (3건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 13 | 에이전트 드롭다운 선택 → 세션 생성 → JWT 토큰 표시 + 복사 버튼 | 에이전트 드롭다운 선택 → 생성 → `POST /v1/sessions` mock → 토큰 텍스트 표시 + 복사 버튼 존재 assert | [L0] |
+| 14 | 세션 목록 → 에이전트별 세션 표시 | 에이전트 드롭다운 선택(필수) → `GET /v1/sessions?agentId={id}` mock bare array 2건 → 테이블 행 2개 + 만료시간 표시 assert. 에이전트 변경 → 재조회 assert | [L0] |
+| 15 | 세션 폐기 → 목록에서 제거 | 폐기 버튼 → `DELETE /v1/sessions/{id}` mock **200** (`{ id, status: "REVOKED" }`) → 목록 재조회 → 행 제거 assert | [L0] |
+
+### Policies (3건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 16 | 정책 목록 조회 + 티어별 한도 표시 | `GET /v1/policies` mock bare array → 테이블에 rules 내 instant_max, delay_max 표시 assert | [L0] |
+| 17 | 정책 생성/수정 폼 → 제출 → 반영 확인 | 폼 입력 → submit → `POST /v1/policies` mock 201 → 목록 재조회 → 새 행 assert | [L0] |
+| 18 | 정책 삭제 → 확인 다이얼로그 → 목록에서 제거 | 삭제 → 모달 확인 → `DELETE /v1/policies/{id}` mock 200 → 행 제거 assert | [L0] |
+
+### Settings (3건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 19 | Kill Switch 활성화 토글 → 상태 반영 | 토글 클릭 → `POST /v1/admin/kill-switch` mock 200 → 상태 "ACTIVATED" 표시 assert | [L0] |
+| 20 | Kill Switch 복구 → 상태 반영 | 복구 클릭 → `POST /v1/admin/recover` mock 200 → 상태 "NORMAL" 표시 assert | [L0] |
+| 21 | JWT 시크릿 회전 → 성공 메시지 | 회전 버튼 → 확인 모달 → `POST /v1/admin/rotate-secret` mock 200 → 토스트 "JWT secret rotated" assert | [L0] |
+
+### 보안 + 서빙 (4건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 22 | `/admin` 접근 → SPA 로드 + index.html 반환 | createApp + request('/admin') → 200 + Content-Type: text/html assert | [L0] |
+| 23 | `admin_ui = false` → `/admin` 404 반환 | config admin_ui=false → request('/admin') → 404 assert | [L0] |
+| 24 | CSP 헤더 포함 확인 | request('/admin') → `Content-Security-Policy` 헤더 존재 + `script-src 'self'` 포함 assert | [L0] |
+| 25 | Kill Switch 활성 시에도 `/admin` SPA 로딩 가능 | Kill Switch ACTIVATED → request('/admin') → 200 (SPA 로드 성공). request('/v1/agents') → 409 (API는 차단) | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.3.1 (Admin UI 설계) | 설계 문서 67이 v1.3.1에서 작성됨. v1.3.2는 이 설계를 구현 |
+| v1.2 (인증 + 정책 엔진) | masterAuth, PolicyEngine API가 Admin UI 인증 및 정책 관리의 기반 |
+| v1.3 (SDK + MCP + 알림) | REST API 33개 엔드포인트가 완료되어 Admin UI가 호출할 API 확보 |
+
+---
+
+## 리스크
+
+> v1.3.1에서 정의한 5개 리스크를 그대로 적용. 구현 시 추가 리스크만 기록.
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | SPA 번들 크기 과다 | 데몬 npm 패키지 크기 증가 → 설치 시간 증가 | Preact 선정으로 프레임워크 ~5KB. 목표 100KB 이하(gzip). tree-shaking + code splitting |
+| 2 | 프론트엔드 프레임워크 의존성 | 데몬의 의존성 트리 복잡화 | 빌드 산출물만 daemon/public/에 포함. Preact/Vite는 devDependencies |
+| 3 | Tauri Desktop과 기능 중복 | 유지보수 부담 증가 | Admin UI는 관리 핵심 5 페이지만. Tauri는 풀 UX 8 화면으로 역할 구분 |
+| 4 | Docker 환경 포트 노출 시 보안 | 외부에서 Admin UI 접근 가능 | masterAuth 인증 필수 유지 + CSP 헤더 + `admin_ui = false` 비활성화 옵션 |
+| 5 | 정적 파일 서빙 성능 | Hono serveStatic 부하 | localhost 단일 사용자 환경이므로 문제 없음. ETag/Cache-Control 설정 |
+| 6 | 빌드 파이프라인 복잡도 | admin 빌드 → daemon/public 복사 과정에서 CI 실패 가능 | monorepo pnpm workspace 스크립트로 빌드 순서 보장. turbo.json 명시적 의존 설정. CI에서 admin 빌드 후 daemon 패키징 |
+| 7 | 브라우저 호환성 | 구형 브라우저에서 동작 안 할 수 있음 | ES2022 타겟. 관리자 도구이므로 최신 Chrome/Firefox/Safari만 지원 명시 |
+
+---
+
+*최종 업데이트: 2026-02-11 — 구현 전 코드 대조 검증 반영: AGENT_TERMINATED HTTP 410 정정, POST /v1/sessions 요청 body 문서화, DELETE /v1/sessions idempotent 케이스 보완, CSP+Vite polyfill 충돌 방지(기술 결정 #15), version 하드코딩 수정 항목 추가, SPA 라우터 결정(기술 결정 #14)*

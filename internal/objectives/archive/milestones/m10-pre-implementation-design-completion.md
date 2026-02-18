@@ -1,0 +1,547 @@
+# 마일스톤 m10: 구현 전 설계 완결성 확보
+
+## 목표
+
+v0.2~v0.9에서 작성한 30개 설계 문서의 **구현 착수 차단 미비점 4건 + 조기 해결 필요 미비점 8건**을 모두 해소하여, v1.0(구현 계획) 수립 시 설계 문서만으로 코드를 작성할 수 있는 상태를 만든다.
+
+## 배경
+
+### 설계 완결성 감사 결과
+
+v0.9 완료 후 전체 설계 문서(30개)를 대상으로 구현 준비도 감사를 수행한 결과, 개별 문서의 완성도는 75~100%이나 **문서 간 교차 지점**에서 구현자가 추측해야 하는 미비점이 발견되었다.
+
+| 등급 | 건수 | 정의 | 예시 |
+|------|:----:|------|------|
+| **BLOCKING** | 4 | 해당 모듈 코드 작성이 불가능 | Stage 5 완전 의사코드 없음 |
+| **HIGH** | 8 | 해당 모듈 구현 착수 전 확정 필요 | 데몬 시작 타임아웃 미정의 |
+| **MEDIUM** | 6 | 구현 병행하며 점진적 보완 가능 | 커서 페이지네이션 형식 |
+
+BLOCKING 4건 + HIGH 8건 = 12건을 해소하지 않으면 v1.1~v1.2 구현 시 설계 문서와 코드 사이의 괴리가 누적되어 Tier 2~3 설계 변경이 빈발할 위험이 있다.
+
+### MEDIUM 항목 처리 방침
+
+MEDIUM 6건은 본 마일스톤 범위 외이며, 해당 모듈 구현 Phase에서 Tier 1 인라인 수정으로 처리한다 (v1.0 §운영전략 참조).
+
+| # | 항목 | 처리 시점 |
+|---|------|----------|
+| M1 | SqliteNonceStore 구현 완성 (정리 전략) | v1.2 (인증 구현) |
+| M2 | Action Provider 플러그인 샌드박스 격리 | v1.5 (DeFi 구현) |
+| M3 | 커서 페이지네이션 형식 확정 | v1.3 (REST API 전체) |
+| M4 | Tauri WebView CORS origin 연동 시점 | v1.6 (Desktop 구현) |
+| M5 | WAL 체크포인트 실패 복구 로직 | v1.1 (코어 인프라) |
+| M6 | 매핑 문서(41-45) v0.6/v0.8/v0.9 반영 | v1.1 (Enum SSoT 구현 시) |
+
+---
+
+## 핵심 원칙
+
+### 1. 구현자가 추측할 여지를 제거한다
+- 모든 인터페이스의 메서드 시그니처, 에러 코드, 반환 타입이 명시적으로 정의되어야 한다
+- "Phase X에서 확정" 같은 이연 표기를 코어 설계 문서에서 완전히 제거한다
+
+### 2. 기존 설계를 수정하되 구조를 변경하지 않는다
+- 새로운 인터페이스나 테이블을 추가하지 않는다
+- 기존 설계 문서의 누락/모호 구간을 채우는 것에 집중한다
+- 아키텍처 수준의 변경은 본 마일스톤 범위 외이다
+
+### 3. 문서 간 교차 참조를 단방향으로 정리한다
+- 순환 참조가 있는 경우 SSoT를 지정하고 나머지는 참조로 전환한다
+- 에러 코드, 타임아웃, 상태 전이 등 교차 관심사는 단일 테이블로 통합한다
+
+---
+
+## 설계 변경 사항
+
+### Phase A: 정책 엔진 완결 (BLOCKING 1건 + HIGH 2건)
+
+#### A-1. [H8] PolicyRuleSchema ↔ 25-sqlite 교차 참조 정리 + 이연 표기 제거
+
+**현황:** 33-time-lock §2.2에 `PolicyRuleSchema` (10개 타입 Zod discriminatedUnion)가 이미 정의되어 있고, evaluate() 11단계 알고리즘과 필드명이 일치한다(`instant_max`, `notify_max`, `delay_max` 등). 그러나 25-sqlite-schema.md §4.4의 `rules` 컬럼 설명에 **"LOCK-MECH (Phase 8)에서 각 type별 JSON 구조 확정"**이라는 이연 표기가 남아 있어, 구현자가 33-time-lock §2.2를 SSoT로 인식하지 못할 수 있다. 또한 25-sqlite §4.4의 JSON 예시와 33-time-lock §2.2의 Zod 스키마 간 교차 참조가 없다.
+
+**변경 대상:** 25-sqlite-schema.md §4.4
+
+**설계 내용:**
+
+1. 25-sqlite §4.4 `rules` 컬럼 설명에서 "LOCK-MECH (Phase 8)에서 확정" 이연 표기를 제거하고, "SSoT: 33-time-lock §2.2 PolicyRuleSchema" 참조로 교체한다
+2. 25-sqlite §4.4의 "rules JSON 구조 예시" 블록에서 "Phase 8 LOCK-MECH에서 확정" 표기를 "33-time-lock §2.2 PolicyRuleSchema가 SSoT"로 교체한다
+3. 33-time-lock §2.2의 기존 스키마를 그대로 유지한다 (필드 변경 없음)
+
+> 33-time-lock §2.2의 PolicyRuleSchema는 v0.6에서 10개 타입으로 확장 완료되었고, evaluate() 11단계의 필드 접근(`config.instant_max`, `config.notify_max` 등)과 1:1 대응이 확인되었다. 스키마 자체의 수정은 불필요하며, 25-sqlite의 교차 참조 정리만 수행한다.
+
+#### A-2. [B3] Owner 상태 전이 타이밍 + 다운그레이드 우선순위 확정
+
+**현황:**
+- GRACE 기간 지속 시간이 미정의 (고정? 설정 가능?)
+- GRACE→LOCKED 전이 트리거가 "ownerAuth 첫 사용" 외 추가 조건 유무 불명
+- 33-time-lock §9.5 다운그레이드와 34-owner §10 GRACE 권한 간 해석 충돌 여지
+
+**변경 대상:** 34-owner-wallet-connection.md §10 + 33-time-lock-approval-mechanism.md §11.6
+
+**확정 내용:**
+
+| 항목 | 확정 값 | 근거 |
+|------|---------|------|
+| GRACE 기간 | **무기한** (시간 제한 없음) | 타이머 기반은 불확실성 유발. Owner가 스스로 ownerAuth를 사용할 때 전이하는 것이 명확 |
+| GRACE→LOCKED 트리거 | **ownerAuth 미들웨어 Step 8.5 markOwnerVerified()** 단일 트리거 | approve 또는 recover 엔드포인트에서 ownerAuth 서명 검증 성공 시 자동 전이 |
+| GRACE에서 APPROVAL 거래 | **DELAY로 다운그레이드** (NONE과 동일) | `resolveOwnerState() !== 'LOCKED'` 조건이 SSoT. GRACE에서 ownerAuth 미검증 상태이므로 서명 수신 불가 |
+| 다운그레이드 우선순위 | **33-time-lock §11.6 Step 9.5가 SSoT** | 34-owner §10은 상태 전이만 정의, 정책 평가 로직은 33-time-lock이 SSoT |
+| APPROVAL 타임아웃 | **정책별 `approvalTimeout` 우선, 미설정 시 글로벌 config 적용** | 정책이 더 구체적이므로 우선. 글로벌은 fallback |
+
+> 34-owner-wallet-connection.md §10에 "GRACE 기간은 시간 제한이 없으며, Owner가 ownerAuth를 처음 사용하는 시점(approve/recover)에 LOCKED로 자동 전이된다" 문구를 추가한다.
+
+#### A-3. [H5] APPROVAL 타임아웃 우선순위 체계
+
+**현황:** 33-time-lock §2.2에 정책별 `approval_timeout`이 정의되어 있고, 52-auth-redesign에 글로벌 config 참조가 있으나, 두 값의 우선순위가 미정의.
+
+**변경 대상:** 33-time-lock-approval-mechanism.md §4 (evaluate 11단계 내)
+
+**확정 내용:**
+
+```
+타임아웃 결정 순서:
+1. 해당 거래에 매칭된 SPENDING_LIMIT 정책의 approvalTimeout (정책별)
+2. config.toml [policy].approval_timeout_default (글로벌 기본값)
+3. 하드코딩 기본값: 3600초 (1시간)
+
+우선순위: 정책별 > 글로벌 config > 하드코딩
+```
+
+> evaluate() §10 (Approval 큐 삽입) 시점에서 위 순서로 타임아웃을 결정하고, `pending_approvals.expires_at = now() + resolvedTimeout`으로 저장한다.
+
+---
+
+### Phase B: 에러 처리 체계 완결 (BLOCKING 1건 + HIGH 2건)
+
+#### B-1. [B2] 에러 코드 → HTTP 상태 코드 통합 매트릭스
+
+**현황:** 7개 도메인에 걸쳐 64개 에러 코드가 정의되어 있으나, 에러 코드 → HTTP status → retryable 여부 → 응답 포맷의 통합 매트릭스가 없다.
+
+**변경 대상:** 37-rest-api-complete-spec.md §3.3 확장
+
+**설계 내용:**
+
+37-rest-api §3.3에 전체 에러 코드 매트릭스를 추가한다. 이 매트릭스가 에러 처리의 SSoT이며, 다른 문서는 이를 참조한다.
+
+매트릭스 구조:
+
+```
+| 에러 코드 | 도메인 | HTTP | retryable | backoff | 응답 본문 예시 |
+```
+
+도메인별 주요 매핑 원칙:
+
+| 도메인 | HTTP 범위 | retryable 원칙 |
+|--------|----------|---------------|
+| AUTH | 401, 403, 429 | 429만 retryable (Retry-After 헤더) |
+| SESSION | 401, 404, 409 | 모두 non-retryable |
+| TX | 400, 404, 409, 422 | INSUFFICIENT_BALANCE(422): non-retryable, RPC_TIMEOUT(502): retryable |
+| POLICY | 403, 422 | 모두 non-retryable |
+| OWNER | 400, 403, 404, 409 | 모두 non-retryable |
+| SYSTEM | 500, 503 | 503 SYSTEM_LOCKED: non-retryable, 500: retryable (일시적 장애) |
+| AGENT | 400, 404, 409 | 모두 non-retryable |
+
+429 응답 포맷 확정:
+
+```json
+{
+  "error": {
+    "code": "AUTH_RATE_LIMITED",
+    "message": "Too many requests",
+    "retryAfter": 30
+  }
+}
+```
+
+> HTTP 429 응답에는 반드시 `Retry-After` 헤더(초 단위)와 본문의 `retryAfter` 필드를 모두 포함한다.
+
+#### B-2. [H1] IChainAdapter 에러 복구 전략 매트릭스
+
+**현황:** 27-chain-adapter-interface.md에 ChainError/SolanaError/EVMError 코드가 정의되어 있으나, 에러별 재시도 가능 여부와 백오프 전략이 없다.
+
+**변경 대상:** 27-chain-adapter-interface.md §5 (에러 처리 섹션 확장)
+
+**설계 내용:**
+
+어댑터 에러를 3개 카테고리로 분류하고, 카테고리별 복구 전략을 정의한다:
+
+| 카테고리 | retryable | 백오프 | 예시 |
+|----------|:---------:|--------|------|
+| **PERMANENT** | No | - | INSUFFICIENT_BALANCE, INVALID_ADDRESS, ACCOUNT_NOT_FOUND |
+| **TRANSIENT** | Yes | 지수 백오프 (1s, 2s, 4s, max 3회) | RPC_TIMEOUT, RPC_CONNECTION_ERROR, RATE_LIMITED |
+| **STALE** | Yes (1회) | 즉시 재시도 (fresh 데이터로) | BLOCKHASH_EXPIRED, NONCE_TOO_LOW |
+
+```typescript
+// 27-chain-adapter-interface.md §5에 추가
+interface ChainError {
+  code: string
+  message: string
+  category: 'PERMANENT' | 'TRANSIENT' | 'STALE'  // [v0.10] 추가
+  chain: ChainType
+  // ...기존 필드
+}
+```
+
+> 파이프라인 Stage 5에서 이 카테고리를 참조하여 재시도/폐기를 결정한다 (Phase C의 B4와 연동).
+
+#### B-3. [H3] REST API PolicyType enum v0.6 동기화
+
+**현황:** 37-rest-api §8.9 `POST /v1/owner/policies` 요청 스키마가 4개 PolicyType만 허용하며, v0.6에서 10개로 확장된 타입이 미반영.
+
+**변경 대상:** 37-rest-api-complete-spec.md §8.9
+
+**변경 내용:**
+
+```typescript
+// 현재 (v0.5)
+type: z.enum(['SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT'])
+
+// 변경 (v0.10)
+type: z.enum([
+  'SPENDING_LIMIT', 'WHITELIST', 'TIME_RESTRICTION', 'RATE_LIMIT',
+  'ALLOWED_TOKENS', 'CONTRACT_WHITELIST', 'METHOD_WHITELIST',
+  'APPROVED_SPENDERS', 'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE'
+])
+```
+
+> 추가 6개 타입의 `rules` 검증은 Phase A의 A-1 PolicyRulesSchema를 참조한다. `rules` 필드 검증을 `type`에 따라 분기하는 Zod `.superRefine()` 로직도 §8.9에 명시한다.
+
+---
+
+### Phase C: 동시성 + 실행 로직 완결 (BLOCKING 2건 + HIGH 1건)
+
+#### C-1. [B4] 트랜잭션 파이프라인 Stage 5 완전 의사코드
+
+**현황:** Stage 5 (EXECUTE)의 4단계(build→simulate→sign→submit) 간 에러 복구 분기가 단편적으로만 기술되어 있다. 티어별 타임아웃 차이도 INSTANT=30초만 명시.
+
+**변경 대상:** 32-transaction-pipeline-api.md §5
+
+**설계 내용:**
+
+Stage 5 완전 의사코드:
+
+```
+executeStage5(tx, adapter):
+  retryCount = 0
+  MAX_RETRIES = 2    // STALE 에러에 한해 재시도
+
+  loop:
+    // 5a. Build
+    try:
+      rawTx = adapter.buildTransaction(tx.request)
+    catch (err):
+      if err.category === 'PERMANENT': return FAILED(err)
+      if err.category === 'TRANSIENT' && retryCount < MAX_RETRIES:
+        retryCount++; await backoff(retryCount); continue
+      return FAILED(err)
+
+    // 5b. Simulate
+    try:
+      simResult = adapter.simulateTransaction(rawTx)
+      if !simResult.success: return FAILED(simResult.error)
+    catch (err):
+      if err.category === 'TRANSIENT' && retryCount < MAX_RETRIES:
+        retryCount++; await backoff(retryCount); continue
+      return FAILED(err)
+
+    // 5c. Sign
+    try:
+      signedTx = adapter.signTransaction(rawTx)
+    catch (err):
+      return FAILED(err)    // 서명 실패는 재시도 불가 (키스토어 문제)
+
+    // 5d. Submit
+    try:
+      txHash = adapter.submitTransaction(signedTx)
+      return SUBMITTED(txHash)
+    catch (err):
+      if err.code === 'DUPLICATE_TRANSACTION': return SUBMITTED(err.txHash)
+      if err.category === 'STALE' && retryCount < MAX_RETRIES:
+        retryCount++; continue    // blockhash 만료 → 5a부터 재시도
+      if err.category === 'TRANSIENT' && retryCount < MAX_RETRIES:
+        retryCount++; await backoff(retryCount)
+        // submit만 재시도 (sign까지 완료된 상태)
+        continue from 5d
+      return FAILED(err)
+```
+
+티어별 Stage 5 타임아웃:
+
+| 티어 | Stage 5 진입 시점 | Stage 5 타임아웃 | 비고 |
+|------|------------------|-----------------|------|
+| INSTANT | Stage 3 직후 즉시 | **30초** | 현행 유지 |
+| NOTIFY | Stage 3 직후 즉시 | **30초** | INSTANT과 동일 (알림은 비동기) |
+| DELAY | 쿨다운 경과 후 | **60초** | 쿨다운 중 blockhash 만료 가능 → 재취득 시간 확보 |
+| APPROVAL | Owner 승인 후 | **60초** | 승인 시점에 fresh blockhash 재취득 |
+
+> DELAY/APPROVAL 티어는 대기 후 Stage 5에 진입하므로, Stage 5 시작 시점에 **blockhash를 반드시 재취득**한다. Stage 5a buildTransaction()이 fresh blockhash를 사용하도록 어댑터에 `{ freshBlockhash: true }` 옵션을 전달한다.
+
+#### C-2. [B5] 세션 갱신 동시성 제어
+
+**현황:** 두 갱신 요청이 동시에 도착하면 `sessions.token_hash` 교체에 race condition이 발생하여 유효한 토큰 2개가 발급될 수 있다.
+
+**변경 대상:** 53-session-renewal-protocol.md §5
+
+**설계 내용:**
+
+SQLite의 `BEGIN IMMEDIATE` + 조건부 UPDATE로 동시성을 제어한다:
+
+```sql
+-- 갱신 트랜잭션 (원자적)
+BEGIN IMMEDIATE;
+
+-- 1. 현재 토큰 해시와 일치하는 경우에만 갱신 허용
+UPDATE sessions
+SET token_hash = :newTokenHash,
+    expires_at = :newExpiresAt,
+    renewal_count = renewal_count + 1,
+    last_renewed_at = :now
+WHERE id = :sessionId
+  AND token_hash = :currentTokenHash    -- 낙관적 잠금
+  AND revoked_at IS NULL;
+
+-- 2. affected rows = 0이면 이미 다른 요청이 갱신 완료
+--    → RENEWAL_CONFLICT 에러 반환 (409 Conflict)
+
+COMMIT;
+```
+
+> `token_hash = :currentTokenHash` 조건이 낙관적 잠금 역할을 한다. 두 요청이 동시에 도착해도 하나만 성공하고, 나머지는 `RENEWAL_CONFLICT (409)` 를 반환한다. 클라이언트(SessionManager 포함)는 409 수신 시 현재 토큰으로 API를 호출하여 유효성을 확인하고, 유효하면 갱신 완료된 것으로 간주한다.
+
+#### C-3. [H4] Kill Switch 상태 전이 ACID 보장
+
+**현황:** 두 Kill Switch 요청이 동시에 도착하면 race condition으로 상태 불일치 가능.
+
+**변경 대상:** 36-killswitch-autostop-evm.md §3.1
+
+**설계 내용:**
+
+```sql
+-- Kill Switch 발동 (원자적 상태 전이)
+BEGIN IMMEDIATE;
+
+UPDATE system_state
+SET value = 'ACTIVATED'
+WHERE key = 'kill_switch_status'
+  AND value = 'NORMAL';    -- 현재 NORMAL인 경우에만 전이
+
+-- affected rows = 0이면 이미 ACTIVATED 또는 RECOVERING
+-- → KILL_SWITCH_ALREADY_ACTIVE (409) 반환
+
+COMMIT;
+```
+
+> 동일 패턴을 복구 전이(ACTIVATED→RECOVERING, RECOVERING→NORMAL)에도 적용한다. 모든 Kill Switch 상태 전이는 `WHERE value = :expectedCurrentState` 조건을 포함해야 한다.
+
+---
+
+### Phase D: 운영 로직 완결 (HIGH 3건)
+
+#### D-1. [H2] 데몬 시작 단계별 타임아웃
+
+**현황:** 28-daemon-lifecycle-cli.md의 6단계 시작 절차에 타임아웃이 정의되어 있지 않다. 어느 단계에서든 hang 시 데몬이 무한 대기한다.
+
+**변경 대상:** 28-daemon-lifecycle-cli.md §2 (시작 절차)
+
+**설계 내용:**
+
+| 단계 | 작업 | 타임아웃 | 실패 시 |
+|------|------|---------|---------|
+| Step 1 | daemon.lock (flock) | **5초** | DAEMON_ALREADY_RUNNING 에러 + 종료 |
+| Step 2 | config.toml 로드 + env override | **5초** | CONFIG_LOAD_ERROR + 종료 |
+| Step 3 | SQLite 연결 + 마이그레이션 | **30초** | DB_MIGRATION_TIMEOUT + 종료 |
+| Step 4 | Keystore 해제 (Argon2id) | **30초** | KEYSTORE_UNLOCK_TIMEOUT + 종료 |
+| Step 5 | Adapter Registry + RPC 헬스체크 | **10초** (체인당) | 경고 로그 + 해당 체인 비활성화 (fail-soft) |
+| Step 6 | Hono HTTP 서버 바인드 | **5초** | PORT_BIND_ERROR + 종료 |
+
+전체 시작 시간 상한: **90초** (전 단계 합계). 90초 초과 시 강제 종료.
+
+> Step 5만 fail-soft(경고 후 계속)이고, 나머지는 모두 fail-fast(에러 + 종료)이다. RPC가 일시적으로 불안정해도 데몬은 시작하고, 이후 어댑터가 자체적으로 재연결을 시도한다.
+
+#### D-2. [H6] Batch 트랜잭션 DB 저장 전략
+
+**현황:** Batch 5개 명령을 1건으로 저장할지 5건으로 저장할지 미확정. 부분 실패 시 롤백 전략도 없다.
+
+**변경 대상:** 60-batch-transaction-spec.md §4 + 25-sqlite-schema.md
+
+**설계 내용:**
+
+**저장 전략: 부모-자식 2계층**
+
+```
+transactions 테이블:
+  [부모] id=BATCH-001, type=BATCH, status=EXECUTING
+  [자식] id=TX-001, type=TRANSFER,       parent_id=BATCH-001, batch_index=0
+  [자식] id=TX-002, type=TOKEN_TRANSFER,  parent_id=BATCH-001, batch_index=1
+  [자식] id=TX-003, type=TOKEN_TRANSFER,  parent_id=BATCH-001, batch_index=2
+```
+
+- 부모 레코드: 배치 전체를 대표하는 1건. `type='BATCH'`
+- 자식 레코드: 개별 명령별 N건. `parent_id`로 부모 참조, `batch_index`로 순서 보장
+- Solana 원자적 배치: 자식 전체가 하나의 트랜잭션 해시를 공유
+- EVM 순차 배치: 자식별 독립 트랜잭션 해시
+
+**상태 전이:**
+
+| 시나리오 | 부모 상태 | 자식 상태 |
+|----------|----------|----------|
+| 전체 성공 | CONFIRMED | 전체 CONFIRMED |
+| Solana 원자적 실패 | FAILED | 전체 FAILED (원자적) |
+| EVM 부분 실패 | PARTIAL_FAILURE | 성공분 CONFIRMED + 실패분 FAILED |
+
+> `transactions` 테이블에 `parent_id TEXT REFERENCES transactions(id)` 및 `batch_index INTEGER` 컬럼을 추가한다 (nullable, 배치가 아닌 거래는 NULL).
+
+#### D-3. [H7] Price Oracle 다중 소스 충돌 해결
+
+**현황:** CoinGecko와 Pyth가 ±10% 이상 괴리할 때의 처리 로직이 "백그라운드 검증"으로만 언급되어 있다. stale 가격의 정책 평가 영향도 미정의.
+
+**변경 대상:** 61-price-oracle-spec.md §3.6 + §5
+
+**설계 내용:**
+
+**다중 소스 충돌 처리:**
+
+```
+OracleChain 가격 조회:
+  1. Primary(CoinGecko) 조회
+  2. Primary 성공 + TTL 내 → Primary 가격 반환
+  3. Primary 실패 또는 stale → Fallback(Pyth) 조회
+  4. 양쪽 모두 성공 시 교차 검증:
+     deviation = |primary - fallback| / primary
+     if deviation > 0.10 (10%):
+       → 보수적 선택: 높은 가격 채택 (정책 평가에서 더 높은 티어 적용)
+       → PRICE_DEVIATION_WARNING 감사 로그 기록
+       → 알림: SYSTEM_WARNING 이벤트 발송
+     else:
+       → Primary 가격 채택
+```
+
+**stale 가격의 정책 평가 영향:**
+
+| 가격 상태 | 나이 | 정책 평가 동작 |
+|-----------|------|---------------|
+| FRESH | < 5분 | 정상 평가 |
+| AGING | 5분~30분 | 정상 평가 + PRICE_STALE 경고 로그 |
+| STALE | > 30분 | USD 평가 스킵 → **네이티브 금액만으로 티어 결정** + PRICE_UNAVAILABLE 감사 로그 |
+| UNAVAILABLE | 오라클 전체 실패 | USD 평가 스킵 → 네이티브 금액만으로 티어 결정 + 알림 |
+
+> stale 가격으로 잘못된 INSTANT 판정을 내리는 것보다, USD 평가를 스킵하고 네이티브 금액 기준으로만 평가하는 것이 더 안전하다. 네이티브 금액 기준 한도는 항상 유효하므로 최소한의 보호를 보장한다.
+
+---
+
+## 영향받는 설계 문서
+
+| 문서 | 변경 Phase | 변경 규모 | 변경 내용 |
+|------|:----------:|:--------:|----------|
+| **33-time-lock** | A-2, A-3 | 중 | APPROVAL 타임아웃 우선순위 확정, GRACE 다운그레이드 SSoT 재확인 |
+| **34-owner-wallet** | A-2 | 소 | GRACE 무기한 + 전이 트리거 명시 문구 추가 |
+| **37-rest-api** | B-1, B-3 | 중 | 에러 코드 통합 매트릭스 + 429 포맷, PolicyType enum 10개 확장 |
+| **27-chain-adapter** | B-2 | 중 | ChainError에 category 필드 추가, 에러 복구 전략 매트릭스 |
+| **32-pipeline** | C-1 | 중 | Stage 5 완전 의사코드 + 티어별 타임아웃 |
+| **53-session-renewal** | C-2 | 소 | 낙관적 잠금 + RENEWAL_CONFLICT 에러 추가 |
+| **36-killswitch** | C-3 | 소 | 상태 전이 WHERE 조건 패턴 추가 |
+| **28-daemon-lifecycle** | D-1 | 중 | 6단계 타임아웃 테이블 + fail-fast/soft 정책 |
+| **60-batch-tx** | D-2 | 중 | 부모-자식 2계층 저장 + PARTIAL_FAILURE 상태 |
+| **25-sqlite-schema** | A-1, D-2 | 중 | PolicyRuleSchema SSoT 교차 참조 정리 + 이연 표기 제거, transactions.parent_id + batch_index 컬럼 |
+| **61-price-oracle** | D-3 | 중 | 다중 소스 충돌 로직 + stale 가격 정책 동작 |
+
+총 11개 설계 문서 수정.
+
+---
+
+## 산출물
+
+| ID | 산출물 | 설명 |
+|----|--------|------|
+| COMPL-01 | PolicyRuleSchema 교차 참조 정리 | 25-sqlite §4.4 이연 표기 제거, 33-time-lock §2.2를 SSoT로 참조 |
+| COMPL-02 | Owner 상태 전이 타이밍 확정 | 34-owner §10 보완 (GRACE 무기한, 전이 트리거 단일화) |
+| COMPL-03 | APPROVAL 타임아웃 우선순위 | 33-time-lock §4 보완 (정책별 > 글로벌 > 하드코딩) |
+| COMPL-04 | 에러 코드 통합 매트릭스 | 37-rest-api §3.3 확장 (64 코드 × HTTP/retryable/backoff) |
+| COMPL-05 | 어댑터 에러 복구 매트릭스 | 27-chain-adapter §5 확장 (3-카테고리 분류) |
+| COMPL-06 | REST API PolicyType 동기화 | 37-rest-api §8.9 enum 10개 확장 |
+| COMPL-07 | Stage 5 완전 의사코드 | 32-pipeline §5 (에러 분기 + 티어별 타임아웃) |
+| COMPL-08 | 세션 갱신 동시성 제어 | 53-session-renewal §5 (낙관적 잠금) |
+| COMPL-09 | Kill Switch ACID 전이 | 36-killswitch §3.1 (WHERE 조건 패턴) |
+| COMPL-10 | 데몬 시작 타임아웃 | 28-daemon §2 (6단계 타임아웃 테이블) |
+| COMPL-11 | Batch DB 저장 전략 | 60-batch-tx §4 (부모-자식 + PARTIAL_FAILURE) |
+| COMPL-12 | Oracle 충돌 해결 | 61-price-oracle §3.6 (보수적 선택 + stale 스킵) |
+
+---
+
+## 성공 기준
+
+### 완결성
+
+1. 25-sqlite §4.4의 `rules` 컬럼 설명에서 "LOCK-MECH Phase에서 확정" 이연 표기가 제거되고, 33-time-lock §2.2 PolicyRuleSchema를 SSoT로 참조한다
+2. 34-owner §10에 GRACE 기간 정책(무기한)과 LOCKED 전이 트리거(ownerAuth Step 8.5 단일)가 명시적으로 기술된다
+3. APPROVAL 타임아웃 결정 순서(정책별→글로벌→하드코딩)가 33-time-lock §4에 명시된다
+4. 37-rest-api §3.3에 64개 에러 코드 전수에 대한 HTTP status + retryable + backoff 매핑이 존재한다
+5. 429 응답 포맷(Retry-After 헤더 + 본문 retryAfter)이 확정된다
+6. 27-chain-adapter의 모든 ChainError에 category(PERMANENT/TRANSIENT/STALE)가 부여된다
+7. 37-rest-api §8.9의 PolicyType enum이 10개로 확장되고, rules 검증 분기가 명시된다
+8. 32-pipeline §5에 Stage 5 완전 의사코드(build→simulate→sign→submit + 에러 분기)가 존재한다
+9. 티어별 Stage 5 타임아웃(INSTANT/NOTIFY=30초, DELAY/APPROVAL=60초)이 명시된다
+10. 53-session-renewal §5에 낙관적 잠금(token_hash WHERE 조건)이 정의되고, RENEWAL_CONFLICT(409) 에러가 추가된다
+11. 36-killswitch §3.1의 모든 상태 전이에 `WHERE value = :expectedState` 조건이 포함된다
+12. 28-daemon §2에 6단계 타임아웃과 fail-fast/soft 정책이 테이블로 정의된다
+13. 60-batch-tx §4에 부모-자식 2계층 저장 전략과 PARTIAL_FAILURE 상태가 정의된다
+14. transactions 테이블에 parent_id, batch_index 컬럼이 추가된다
+15. 61-price-oracle §3.6에 10% 괴리 시 보수적 선택 로직이 명시된다
+16. stale(>30분) 가격 시 USD 평가 스킵 → 네이티브 전용 평가 정책이 명시된다
+
+### 일관성
+
+17. 본 마일스톤에서 수정하는 11개 문서 간 상호 참조에 모순이 없다
+18. v0.8 SSoT 매트릭스(18행 × 3열)와 본 마일스톤 변경 사항 간 충돌이 없다
+19. "Phase X에서 확정" 등의 이연 표기가 코어 설계 문서(24-37)에서 완전히 제거된다
+
+---
+
+## 선행 마일스톤과의 관계
+
+```
+v0.2 (설계)                    v0.10 (설계 완결)
+──────────                    ─────────────────
+25-sqlite               →    PolicyRuleSchema SSoT 교차 참조 정리
+27-chain-adapter          →    에러 category 추가
+32-pipeline               →    Stage 5 의사코드 완성
+
+v0.5 (인증 재설계)             v0.10 (설계 완결)
+──────────────                ─────────────────
+53-session-renewal        →    갱신 동시성 제어 (낙관적 잠금)
+
+v0.6 (블록체인 확장)           v0.10 (설계 완결)
+──────────────                ─────────────────
+60-batch-tx               →    DB 저장 전략 확정
+61-price-oracle           →    다중 소스 충돌 해결
+
+v0.7 (장애 요소 해소)          v0.10 (설계 완결)
+──────────────                ─────────────────
+36-killswitch ACID        →    상태 전이 WHERE 패턴
+
+v0.8 (Owner 선택적)            v0.10 (설계 완결)
+──────────────                ─────────────────
+34-owner §10              →    GRACE 무기한 + 전이 트리거 확정
+
+v0.9 (MCP 세션)                v0.10 (설계 완결)
+──────────                    ─────────────────
+(직접 의존 없음)               Phase 40 통합 완료 후 착수
+```
+
+---
+
+## 마일스톤 범위 외 (Out of Scope)
+
+- 실제 코드 구현 (설계 보완 마일스톤)
+- 새로운 인터페이스 또는 테이블 추가 (parent_id/batch_index 2개 컬럼 제외)
+- 아키텍처 수준 변경
+- MEDIUM 6건 (M1~M6) — 구현 Phase에서 인라인 수정
+- v0.9 Phase 40 통합 작업 (별도 마일스톤 범위)
+- 설계 문서 41~51 (대응표/테스트 전략) 갱신 — v1.1 Enum SSoT 구현 시 동기화
+
+---
+
+*작성: 2026-02-09*
+*갱신: 2026-02-09 — A-1 등급 조정(B1→H8), PolicyRuleSchema 이미 존재 확인 반영*
+*기반: v0.2~v0.9 전체 설계 문서(30개) 구현 준비도 감사 결과*
+*전제: v0.9 Phase 40 완료 후 착수*
+*범위: 설계 보완 마일스톤 — 코드 구현은 범위 외*

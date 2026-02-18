@@ -1,0 +1,744 @@
+# 마일스톤 m09: MCP 세션 관리 자동화 설계
+
+## 목표
+
+MCP 환경에서 세션 토큰의 갱신·만료·재발급을 자동화하는 메커니즘을 **설계 수준에서** 정의한다. SessionManager를 MCP Server에 내장하는 구조, 절대 수명 만료 시 Telegram 봇을 통한 원클릭 세션 재생성 플로우, CLI 토큰 관리 커맨드를 설계하여, 구현 단계에서 "무엇을 어떻게 구현할 것인가"가 명확한 상태를 만든다.
+
+## 배경
+
+### 현재 설계의 문제
+
+v0.5에서 세션 갱신 프로토콜(53-session-renewal-protocol.md)을 설계했으나, MCP 환경에서의 자동화는 "v0.3 확장 계획"으로 명시적 이연되어 있다:
+
+```
+38-sdk-mcp-interface.md, line 2323:
+  "v0.3 확장 계획: MCP Server 내장 토큰 갱신 메커니즘"
+
+38-sdk-mcp-interface.md, line 2290:
+  "갱신: 수동 갱신 (환경변수 재설정)"
+```
+
+현재 MCP 세션 수명 관리 흐름:
+
+```
+1. Owner가 CLI로 세션 발급: waiaas session create ...
+2. config.json에 토큰 수동 복사
+3. Claude Desktop 재시작
+4. 세션 만료 시 → LLM이 "토큰 만료" 안내 → 1번부터 반복
+```
+
+이 흐름의 문제점:
+
+| 문제 | 영향 | 빈도 |
+|------|------|------|
+| 토큰 만료 시 수동 재발급 필요 | 에이전트 중단, Owner 개입 | 최대 7일마다 |
+| config.json 수동 편집 | 실수 가능, 번거로움 | 갱신/재발급마다 |
+| Claude Desktop 재시작 필요 | 대화 맥락 소실 | 토큰 교체마다 |
+| 절대 수명(30일) 만료 시 SSH + CLI 필요 | 원격 접근 부담 | 30일마다 |
+| 토큰 로테이션과 MCP 프로세스 모델 충돌 | 새 토큰 적용 불가 | 갱신마다 |
+
+### 근본적 충돌: 토큰 로테이션 vs MCP 프로세스 모델
+
+MCP Server는 Claude Desktop의 자식 프로세스로 실행된다. 세션 토큰은 환경변수(`WAIAAS_SESSION_TOKEN`)로 프로세스 시작 시 1회 전달된다.
+
+세션 갱신 프로토콜(53)은 **토큰 로테이션**을 수행한다 — 갱신 시 새 JWT를 발급하고 이전 토큰을 즉시 무효화한다. 그러나:
+
+```
+Claude Desktop config.json → env var → MCP 프로세스 시작
+                                        ↓
+                         WAIAAS_SESSION_TOKEN = 고정값
+                                        ↓
+                         갱신 → 새 토큰 발급, 이전 토큰 무효
+                                        ↓
+                         env var의 원래 토큰 = 이미 무효
+                                        ↓
+                         MCP 프로세스 재시작 시 → 무효 토큰으로 기동 → 실패
+```
+
+환경변수는 프로세스 시작 후 변경할 수 없으므로, MCP 프로세스 내부에서 토큰을 관리하는 별도 메커니즘이 필요하다.
+
+### SDK vs MCP 자동화 격차
+
+| 항목 | SDK (직접 통합) | MCP (현재) |
+|------|---------------|------------|
+| 세션 갱신 | `client.renewSession()` 자동 호출 | 수동 (env var 재설정) |
+| 토큰 교체 | 메모리 내 즉시 교체 | 불가 (프로세스 재시작 필요) |
+| 만료 감지 | SDK 내 타이머 | 401 에러 수신 후 LLM 안내 |
+| 재발급 | 프로그래밍적 호출 | CLI 수동 실행 |
+
+MCP는 SDK 대비 자동화 수준이 현저히 낮다. AI 에이전트 생태계에서 MCP가 표준 통합 프로토콜로 자리잡고 있는 상황에서, MCP 경로의 DX가 SDK보다 열악한 것은 심각한 문제이다.
+
+---
+
+## 핵심 원칙
+
+### 1. 에이전트 사이드에 세션 관리 부담을 주지 않는다
+- 세션 갱신·토큰 교체·파일 영속화는 MCP Server 내부에서 투명하게 처리
+- AI 에이전트(LLM)는 세션 수명을 인지할 필요 없음
+- 에이전트 개발자가 구현할 것: 없음
+
+### 2. 파일 기반 토큰 영속화로 환경변수 한계를 우회한다
+- 토큰을 `~/.waiaas/mcp-token` 파일에 저장하여 프로세스 재시작에 대응
+- 토큰 로드 우선순위: 파일 > 환경변수
+- config.json의 초기 토큰은 최초 1회 부트스트랩 용도
+
+### 3. 절대 수명 만료는 메신저에서 해결한다
+- 30일 절대 수명 만료 시 SSH + CLI 없이 Telegram에서 원클릭 재생성
+- Owner의 물리적 위치에 무관하게 세션 재생성 가능
+- 기본 constraints 적용으로 보안 수준 유지
+
+### 4. Self-Hosted 전제 안에서 최적화한다
+- 모든 설계는 단일 머신(데몬 + MCP + Telegram Bot 동일 호스트) 전제
+- 클라우드 확장 시 인증 모델·인프라 전환과 함께 재설계 (본 마일스톤 범위 외)
+
+---
+
+## 설계 대상
+
+### 1. SessionManager (MCP Server 내장)
+
+MCP Server 프로세스 내부에 SessionManager를 추가하여 세션 토큰의 로드·갱신·교체·영속화를 자동 처리하는 구조를 설계한다.
+
+#### 1.1 아키텍처
+
+```
+┌──────────────────────────────────────────────────────┐
+│ Claude Desktop                                        │
+│                                                       │
+│  ┌──────────────────┐     ┌───────────────────────┐  │
+│  │ Claude LLM        │     │ MCP Client (내장)      │  │
+│  └──────────────────┘     └──────────┬────────────┘  │
+│                                       │ stdio         │
+│                          ┌────────────┴────────────┐  │
+│                          │ @waiaas/mcp              │  │
+│                          │                          │  │
+│                          │  ┌────────────────────┐  │  │
+│                          │  │ SessionManager     │  │  │
+│                          │  │ ├ loadToken()      │  │  │
+│                          │  │ ├ scheduleRenewal()│  │  │
+│                          │  │ ├ renew()          │  │  │
+│                          │  │ └ persistToken()   │  │  │
+│                          │  └────────────────────┘  │  │
+│                          │           │               │  │
+│                          │  ┌────────┴────────────┐  │  │
+│                          │  │ 6 Tools + 3 Resources│  │  │
+│                          │  │ getToken() 참조      │  │  │
+│                          │  └─────────────────────┘  │  │
+│                          └────────────┬────────────┘  │
+│                                       │ HTTP localhost │
+│                          ┌────────────┴────────────┐  │
+│                          │ WAIaaS Daemon             │  │
+│                          │ http://127.0.0.1:3100     │  │
+│                          └───────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
+```
+
+#### 1.2 SessionManager 인터페이스 [설계 확정 -- Phase 37-01, 상세: 38-sdk-mcp-interface.md 섹션 6.4.1]
+
+```typescript
+// packages/mcp/src/session-manager.ts
+
+class SessionManager {
+  private token: string
+  private sessionId: string
+  private expiresAt: number       // epoch ms
+  private expiresIn: number       // original TTL (ms)
+  private renewalCount: number
+  private maxRenewals: number
+  private timer: NodeJS.Timeout | null = null
+
+  /** 현재 유효한 토큰 반환. 모든 tool handler가 이 메서드를 사용 */
+  getToken(): string
+
+  /** 갱신 스케줄러 시작 */
+  start(): void
+
+  /** 정리 (타이머 해제) */
+  dispose(): void
+}
+```
+
+#### 1.3 토큰 로드 전략 [설계 확정 -- Phase 37-01, 상세: 38-sdk-mcp-interface.md 섹션 6.4.2]
+
+```
+프로세스 시작
+  ↓
+  1. ~/.waiaas/mcp-token 파일 존재?
+     ├─ Yes → 파일에서 토큰 로드
+     └─ No  → WAIAAS_SESSION_TOKEN 환경변수에서 로드
+  ↓
+  2. JWT payload 디코딩 (서명 검증 없이, base64url만)
+     → sessionId, exp, iat 추출
+  ↓
+  3. 만료 여부 확인
+     ├─ 만료됨 → 에러 로그 + LLM에 안내 메시지 준비
+     └─ 유효   → 갱신 스케줄링
+```
+
+**토큰 파일 사양:** [설계 확정 -- Phase 36-01, 상세: 24-monorepo-data-directory.md 섹션 4]
+
+| 항목 | 값 |
+|------|-----|
+| 경로 | `~/.waiaas/mcp-token` |
+| 내용 | JWT 문자열만 (개행 없음, `wai_sess_` 접두어 포함) |
+| 권한 | `0o600` (Owner read/write only) |
+| 인코딩 | UTF-8 |
+
+#### 1.4 자동 갱신 스케줄 [설계 확정 -- Phase 37-02, 상세: 38-sdk-mcp-interface.md 섹션 6.4.3~6.4.4]
+
+```
+expiresIn의 60% 경과 시점에 갱신 시도
+
+예: expiresIn = 7일 (604,800초)
+  → 갱신 시점 = 4.2일(362,880초) 경과 후
+  → 잔여 시간 2.8일 시점에서 갱신
+
+갱신 타이머 = expiresIn × 0.6
+```
+
+**50% 규칙과의 관계:** 서버 측 safety guard는 잔여 50% 이하에서만 갱신을 허용한다(53-session-renewal-protocol.md). SessionManager는 60% 경과(= 잔여 40%)에 시도하므로 safety guard 범위 내에서 동작한다.
+
+#### 1.5 갱신 실패 처리 [설계 확정 -- Phase 37-02, 상세: 38-sdk-mcp-interface.md 섹션 6.4.6]
+
+| 에러 | 대응 | 재시도 |
+|------|------|--------|
+| `RENEWAL_TOO_EARLY` | 30초 후 재시도 (서버 시간 차이 보정) | 1회 |
+| `RENEWAL_LIMIT_REACHED` | 갱신 포기, SESSION_EXPIRING_SOON 알림 트리거 | 없음 |
+| `SESSION_LIFETIME_EXCEEDED` | 갱신 포기, SESSION_EXPIRING_SOON 알림 트리거 | 없음 |
+| 네트워크 에러 (데몬 미응답) | 60초 후 재시도 | 최대 3회 |
+| `AUTH_TOKEN_EXPIRED` | 이미 만료, 파일 삭제 후 에러 상태 진입 | 없음 |
+
+#### 1.6 갱신 성공 시 처리 [설계 확정 -- Phase 37-02, 상세: 38-sdk-mcp-interface.md 섹션 6.4.5]
+
+```
+PUT /v1/sessions/:id/renew → 200 OK
+  ↓
+  1. 응답에서 새 토큰(token), 만료시각(expiresAt), 갱신횟수(renewalCount) 추출
+  2. 메모리 내 token, expiresAt, renewalCount 교체
+  3. ~/.waiaas/mcp-token에 새 토큰 저장 (mode 0o600)
+  4. 다음 갱신 타이머 재스케줄
+```
+
+**MCP Tool에 대한 영향:** 모든 tool handler는 `sessionManager.getToken()`을 호출하여 최신 토큰을 획득한다. 갱신은 tool 호출과 비동기로 처리되며, 갱신 중 tool 호출이 발생하면 현재(이전) 토큰이 사용된다. 갱신 완료 후 다음 tool 호출부터 새 토큰이 사용된다.
+
+### 2. MCP 토큰 등록 간소화
+
+#### 2.1 `waiaas mcp setup` CLI 커맨드
+
+세션 발급 + 토큰 파일 생성을 한 번에 수행하는 CLI 커맨드를 설계한다:
+
+```bash
+waiaas mcp setup --agent-id <agent-id> [--expires-in 604800] [--constraints '...']
+
+# 동작:
+# 1. masterAuth(implicit)로 세션 생성
+# 2. ~/.waiaas/mcp-token에 토큰 저장 (mode 0o600)
+# 3. Claude Desktop config.json 경로 안내 (자동 수정은 하지 않음)
+
+# 출력:
+# ✓ MCP session created for agent "trading-bot"
+# ✓ Token saved to ~/.waiaas/mcp-token
+# ✓ Expires: 2026-02-15T14:00:00Z (7 days)
+# ✓ Max renewals: 30 (auto-renewal enabled)
+#
+# Claude Desktop 설정에 다음을 추가하세요 (최초 1회):
+# ~/Library/Application Support/Claude/claude_desktop_config.json
+#
+# {
+#   "mcpServers": {
+#     "waiaas-wallet": {
+#       "command": "npx",
+#       "args": ["@waiaas/mcp"],
+#       "env": {
+#         "WAIAAS_SESSION_TOKEN": "wai_sess_eyJ...",
+#         "WAIAAS_BASE_URL": "http://127.0.0.1:3100"
+#       }
+#     }
+#   }
+# }
+```
+
+#### 2.2 `waiaas mcp refresh-token` CLI 커맨드
+
+절대 수명 만료 후 새 세션을 발급하고 토큰 파일을 교체하는 CLI 커맨드를 설계한다:
+
+```bash
+waiaas mcp refresh-token --agent-id <agent-id>
+
+# 동작:
+# 1. 기존 ~/.waiaas/mcp-token의 세션을 폐기 (만료됐으면 건너뜀)
+# 2. 새 세션 생성 (이전 세션과 동일한 constraints 계승)
+# 3. ~/.waiaas/mcp-token 교체
+# 4. config.json 수정 불필요 안내
+
+# 출력:
+# ✓ Previous session expired (or revoked)
+# ✓ New MCP session created for agent "trading-bot"
+# ✓ Token saved to ~/.waiaas/mcp-token
+# ✓ No config.json change needed — SessionManager loads from file
+```
+
+### 3. Telegram 세션 재생성 (`/newsession`)
+
+#### 3.1 NotificationEventType 추가
+
+```typescript
+// 기존 16개 이벤트에 1개 추가 (v0.8에서 TX_DOWNGRADED_DELAY 추가로 16개)
+SESSION_EXPIRING_SOON: 'SESSION_EXPIRING_SOON'
+```
+
+| 항목 | 값 |
+|------|-----|
+| 발생 조건 | 절대 수명 만료 24시간 전 OR 마지막 갱신 가능 횟수 3회 이하 |
+| 심각도 | WARNING |
+| 트리거 | SessionManager 갱신 시도 시 남은 횟수 체크, 또는 갱신 실패 시 |
+| 알림 내용 | 세션 ID, 에이전트 이름, 만료 시각, 남은 갱신 횟수 |
+
+#### 3.2 Telegram 알림 메시지
+
+```
+⚠️ *Session Expiring Soon*
+
+Agent: `trading-bot`
+Session: `019502c0...`
+Expires: 2026-03-07 14:00:00 UTC
+Remaining Renewals: 2
+
+[🔄 Create New Session]  [📋 Details]
+```
+
+#### 3.3 `/newsession` 명령어
+
+| 항목 | 값 |
+|------|-----|
+| 명령어 | `/newsession` |
+| 인증 | chatId (Tier 1) |
+| 동작 | 에이전트 목록 표시 → 인라인 키보드로 선택 → 세션 생성 + 토큰 파일 갱신 |
+| BotFather 등록 | `newsession - Create new MCP session` |
+
+**Tier 분류 근거:**
+
+세션 생성은 masterAuth(implicit) 기반이며, 봇은 데몬 내부에서 sessionService를 직접 호출한다. 세션 생성 자체는 자금 이동이 아니며, 세션의 constraints가 자금 이동 범위를 제한한다. 따라서 chatId 인증(Tier 1)으로 충분하다.
+
+#### 3.4 처리 흐름
+
+```
+Owner: /newsession
+  ↓
+TelegramBotService:
+  1. isAuthorizedOwner(chatId) 검증
+  2. agentService.listActive() → 에이전트 목록 조회
+  3. 인라인 키보드로 에이전트 목록 표시
+
+Owner: [에이전트 선택 버튼 클릭]
+  ↓
+TelegramBotService:
+  4. 선택된 에이전트의 기본 constraints 로드
+  5. sessionService.create() 호출 (masterAuth implicit)
+  6. 새 토큰을 ~/.waiaas/mcp-token에 저장 (mode 0o600)
+  7. 완료 메시지 전송
+
+MCP Server:
+  8. 다음 tool 호출 시 SessionManager가 파일 변경 감지
+     또는 현재 토큰 만료 시 파일 재로드
+  9. 새 토큰으로 API 호출 — 서비스 연속성 보장
+```
+
+#### 3.5 에이전트별 기본 constraints
+
+`/newsession`으로 생성되는 세션은 에이전트의 기본 constraints를 적용한다. 커스텀 constraints가 필요한 경우 Desktop/CLI를 사용한다.
+
+기본 constraints 결정 규칙:
+
+| 우선순위 | 소스 | 설명 |
+|---------|------|------|
+| 1 | `agents.default_constraints` (DB) | 에이전트별 사전 설정 |
+| 2 | `config.toml [session].default_constraints` | 시스템 전역 기본값 |
+| 3 | 하드코딩 기본값 | expiresIn=604800, maxRenewals=30, 보수적 제한 |
+
+#### 3.6 완료 메시지
+
+```
+✅ *New Session Created*
+
+Agent: `trading-bot`
+Expires: 2026-02-15 14:00:00 UTC
+Renewals: 0/30
+
+_MCP token file updated automatically._
+_Active MCP sessions will use the new token on next API call._
+```
+
+### 4. SessionManager 토큰 전환 메커니즘 [설계 확정 -- Phase 38, 상세: 38-sdk-mcp-interface.md 섹션 6.5.5~6.5.7]
+
+SessionManager가 외부에서 갱신된 토큰(Telegram `/newsession` 또는 CLI `mcp refresh-token`으로 생성)을 감지하는 방법을 설계한다.
+
+#### 4.1 전략: 만료 감지 + 파일 재로드
+
+```
+기존 토큰으로 API 호출
+  ↓
+  401 AUTH_TOKEN_EXPIRED 수신
+  ↓
+  ~/.waiaas/mcp-token 파일 재로드 시도
+  ├─ 파일의 토큰 ≠ 현재 토큰 → 새 토큰으로 교체, API 재시도
+  ├─ 파일의 토큰 = 현재 토큰 → 진짜 만료, 에러 상태 진입
+  └─ 파일 없음 → 에러 상태 진입
+```
+
+**fs.watch 사용하지 않는 근거:**
+- Node.js `fs.watch`는 OS별 동작이 불안정 (macOS FSEvents race condition)
+- MCP Server의 API 호출 빈도가 높지 않아 폴링 불필요
+- 401 수신 시 1회 파일 확인으로 충분 (lazy reload)
+
+---
+
+## 영향받는 설계 문서
+
+| 문서 | 변경 규모 | 변경 내용 |
+|------|:--------:|----------|
+| **SDK-MCP** (38-sdk-mcp-interface) | **대** | SessionManager 클래스 추가, tool handler의 토큰 참조 방식 변경, MCP 세션 관리 섹션 전면 재작성 -- **[설계 완료: Phase 37-01 + 37-02 + 38-01 + 38-02]** (SMGR-01 인터페이스 + SMGR-03 토큰 로드 + SMGR-04 자동 갱신 + SMGR-05 실패 처리 + SMGR-06 lazy reload + SMGI-01 ApiClient 통합 + SMGI-02 동시성 + SMGI-03 생명주기 + SMGI-04 에러 처리) |
+| **NOTI-ARCH** (35-notification-architecture) | 소 | SESSION_EXPIRING_SOON 이벤트 1건 추가 -- **[설계 완료: Phase 36-02]** |
+| **TGBOT-DOCK** (40-telegram-bot-docker) | 중 | `/newsession` 명령어 추가, 인라인 키보드 콜백 핸들러 추가, BotFather 명령어 목록 갱신 -- **[설계 완료: Phase 39-02]** (TGSN-01 /newsession 플로우 + TGSN-02 기본 constraints 규칙, 섹션 4.12~4.13 추가) |
+| **CLI-REDESIGN** (54-cli-flow-redesign) | 중 | `waiaas mcp setup`, `waiaas mcp refresh-token` 커맨드 2개 추가 -- **[설계 완료: Phase 39-01]** (CLIP-01 mcp setup 7단계 + CLIP-02 refresh-token 8단계, 섹션 10 추가) |
+| **SESS-RENEW** (53-session-renewal-protocol) | 소 | MCP SessionManager와의 연동 시나리오 추가, SESSION_EXPIRING_SOON 트리거 조건 명시 -- **[설계 완료: Phase 36-02]** |
+| **CORE-01** (24-monorepo-data-directory) | 소 | `~/.waiaas/mcp-token` 파일 사양 추가 -- **[설계 완료: Phase 36-01]** |
+| **CORE-02** (25-sqlite-schema) | 소 | agents.default_constraints 컬럼 추가 검토 |
+
+---
+
+## 신규 산출물
+
+| ID | 산출물 | 설명 |
+|----|--------|------|
+| SESS-AUTO-01 | MCP SessionManager 설계 스펙 | SessionManager 클래스 인터페이스, 토큰 로드·갱신·영속화·전환 메커니즘, 에러 처리, tool handler 통합 설계 |
+| SESS-AUTO-02 | Telegram 세션 재생성 설계 스펙 | `/newsession` 명령어, SESSION_EXPIRING_SOON 알림, 인라인 키보드 플로우, 기본 constraints 결정 규칙 설계 |
+| SESS-AUTO-03 | CLI MCP 커맨드 설계 스펙 | `waiaas mcp setup`, `waiaas mcp refresh-token` 커맨드 인터페이스, 토큰 파일 관리, config.json 안내 설계 |
+
+---
+
+## 테스트 전략 (설계 검증)
+
+### 핵심 검증 시나리오
+
+본 마일스톤은 설계 마일스톤이므로, 아래 시나리오는 설계 문서에 명시하여 구현 단계에서 테스트 계획의 기반이 된다.
+
+| # | 시나리오 | 검증 내용 | 테스트 레벨 |
+|---|----------|----------|------------|
+| T-01 | 최초 기동 (env var만) | env var에서 토큰 로드, 갱신 스케줄링 | Unit |
+| T-02 | 최초 기동 (파일 존재) | 파일 우선 로드, env var 무시 | Unit |
+| T-03 | 자동 갱신 성공 | 60% 경과 시점 갱신 → 새 토큰 메모리 교체 + 파일 저장 | Integration |
+| T-04 | 자동 갱신 실패 (TOO_EARLY) | 30초 후 1회 재시도 | Unit |
+| T-05 | 갱신 한도 도달 (LIMIT_REACHED) | 갱신 포기, 알림 트리거 | Unit |
+| T-06 | 절대 수명 만료 | 갱신 불가, 에러 상태 진입 | Unit |
+| T-07 | 외부 토큰 교체 감지 | 401 수신 → 파일 재로드 → 새 토큰 사용 → 재시도 성공 | Integration |
+| T-08 | Telegram /newsession | 에이전트 선택 → 세션 생성 → 파일 저장 → 완료 메시지 | Integration |
+| T-09 | CLI mcp setup | 세션 생성 + 파일 저장 + 안내 출력 | Integration |
+| T-10 | CLI mcp refresh-token | 기존 세션 폐기 + 새 세션 생성 + 파일 교체 | Integration |
+| T-11 | 토큰 파일 권한 | 파일 생성 시 0o600, 타 사용자 읽기 불가 | Unit |
+| T-12 | 동시 갱신 방지 | 갱신 진행 중 tool 호출 → 현재 토큰 사용, 중복 갱신 없음 | Unit |
+| T-13 | 데몬 미기동 상태 | 네트워크 에러 → 60초 후 재시도 × 3회 → 에러 상태 | Unit |
+| T-14 | SESSION_EXPIRING_SOON 알림 | 만료 24h 전 또는 잔여 3회 시 알림 발송 | Integration |
+
+### 보안 시나리오
+
+| # | 시나리오 | 검증 내용 |
+|---|----------|----------|
+| S-01 | mcp-token 파일 권한 | 0o600 외 권한 시 로드 거부 (또는 경고) |
+| S-02 | 토큰 파일에 악성 내용 | JWT 형식 검증 실패 → 로드 거부 |
+| S-03 | /newsession 미인증 사용자 | chatId 불일치 → 거부 메시지 |
+| S-04 | 토큰 파일 심볼릭 링크 | symlink 감지 → 로드 거부 |
+
+---
+
+## Self-Hosted 전제와 클라우드 제약
+
+본 마일스톤의 설계는 **Self-Hosted 단일 머신** 전제에 최적화되어 있다. 클라우드 확장 시 다음 요소가 재설계 대상이다:
+
+| 요소 | Self-Hosted 동작 | 클라우드 제약 |
+|------|-----------------|-------------|
+| `~/.waiaas/mcp-token` | 같은 머신에서 데몬·MCP·Bot 공유 | MCP 클라이언트와 데몬이 다른 머신 |
+| masterAuth(implicit) | localhost 신뢰 | 네트워크 분리 시 인증 필요 |
+| Telegram Bot → sessionService | 같은 프로세스, DI 주입 | 별도 서비스, API 호출 필요 |
+| 토큰 파일 직접 쓰기 | Bot이 로컬 파일시스템 접근 | Bot이 사용자 PC 파일시스템 접근 불가 |
+
+이 제약은 본 마일스톤에서 해결하지 않는다. 클라우드 전환 시 인증 모델(masterAuth implicit → API Key/mTLS), 인프라(SQLite → PostgreSQL), 서비스 통신(in-process DI → HTTP/gRPC) 전체가 동시에 변경되므로, 세션 전달 메커니즘도 그 맥락에서 함께 재설계하는 것이 자연스럽다.
+
+---
+
+## 설계 완료 추적 (Phase 36)
+
+### [Phase 36-02] NOTI-01, NOTI-02 알림 이벤트 설계 완료
+
+**완료일:** 2026-02-09
+**설계 문서:** 35-notification-architecture.md + 53-session-renewal-protocol.md
+
+**핵심 설계 결정:**
+
+| # | 결정 | 근거 |
+|---|------|------|
+| 1 | 데몬 측 자동 판단 | MCP SessionManager가 별도 알림 발송하지 않음. 데몬이 갱신 API 처리 시 자동으로 만료 임박 판단 |
+| 2 | notification_log 기반 중복 방지 | 기존 알림 인프라 활용, DB 스키마 변경 최소화, 데몬 재시작에도 상태 유지 |
+| 3 | 갱신 성공 + 실패 양쪽 경로 트리거 | 실패 경로에서 보완 알림으로 Owner에게 최소 1회 알림 보장 |
+| 4 | shouldNotifyExpiringSession 순수 함수 | 부수 효과 없는 판단 함수로 테스트 용이, 호출부에서 중복 확인 + 발송 담당 |
+| 5 | OR 논리 (잔여 3회 이하 OR 24시간 전) | 두 조건 중 하나만 충족해도 알림 발송. 갱신 한도와 시간 한도 모두 커버 |
+
+**산출물 상세:**
+
+- **35-notification-architecture.md:** NotificationEventType 17개로 확장, SESSION_EXPIRING_SOON 심각도 WARNING, SessionExpiringSoonDataSchema Zod 스키마, 채널별 메시지 템플릿, notification_log 중복 방지 메커니즘
+- **53-session-renewal-protocol.md:** 섹션 5.6 추가 (shouldNotifyExpiringSession 순수 함수, 갱신 성공/실패 경로 알림 판단, 시퀀스 다이어그램)
+
+---
+
+## 선행 마일스톤과의 관계
+
+```
+v0.5 (인증 재설계)              v0.9 (세션 관리 자동화 설계)
+──────────────                 ─────────────────────────────
+masterAuth implicit 정의   →   /newsession Tier 1 근거
+sessionAuth 갱신 프로토콜  →   SessionManager 자동 갱신 로직 설계
+MCP 세션 토큰 전달 메커니즘 →   SessionManager + 파일 영속화 설계
+
+v0.5 DX 개선                   v0.9 (세션 관리 자동화 설계)
+──────────────                 ─────────────────────────────
+mcp setup 커맨드 검토 중   →   waiaas mcp setup 인터페이스 설계
+MCP 내장 옵션 검토         →   SessionManager로 DX 문제 해소 설계
+
+NOTI-ARCH (35)                 v0.9 (세션 관리 자동화 설계)
+──────────                     ─────────────────────────────
+16개 이벤트 타입           →   +1개 (SESSION_EXPIRING_SOON) = 17개 설계
+NotificationService        →   만료 임박 알림 전송 설계
+
+TGBOT-DOCK (40)                v0.9 (세션 관리 자동화 설계)
+───────────                    ─────────────────────────────
+8개 봇 명령어              →   +1개 (/newsession) 설계
+Tier 1 chatId 인증         →   /newsession Tier 1 적용
+인라인 키보드 패턴         →   에이전트 선택 키보드 설계
+```
+
+---
+
+## 마일스톤 범위 외 (Out of Scope)
+
+- 실제 코드 구현 (설계 마일스톤)
+- 클라우드 환경 세션 전달 메커니즘 (별도 클라우드 전환 마일스톤)
+- MCP Streamable HTTP transport 세션 관리 (v0.3 확장 계획 유지)
+- 다중 MCP 클라이언트 동시 접속 시나리오 (단일 토큰 파일 전제)
+- OAuth2 / OIDC 기반 토큰 교환 (클라우드 전환 시 검토)
+
+---
+
+## Phase 36-01 설계 결과: 토큰 파일 인프라
+
+> **[설계 완료: 2026-02-09]** SMGR-02(토큰 파일 영속화 사양), SMGR-07(원자적 토큰 파일 쓰기)
+
+### 핵심 설계 결정
+
+| 항목 | 결정 | 상세 |
+|------|------|------|
+| 공유 유틸리티 | `@waiaas/core` `utils/token-file.ts` | `getMcpTokenPath()`, `writeMcpToken()`, `readMcpToken()` 3개 함수 |
+| 원자적 쓰기 | write-then-rename 패턴 | 외부 라이브러리(`write-file-atomic`) 없이 Node.js 내장 API로 구현. POSIX rename 원자성 활용 |
+| `readMcpToken` API | 동기 함수 (`readFileSync`) | ~500byte 파일, MCP tool handler에서 동기 확인. 비동기 버전은 Phase 37에서 필요 시 추가 |
+| Windows EPERM | 10-50ms 랜덤 대기, 최대 3회 재시도 | NTFS에서 동시 rename 충돌 시 EPERM 발생 가능. retry-on-EPERM 패턴 적용 |
+| Windows 파일 권한 | `0o600` 미적용, 경고 로그 출력 | NTFS ACL은 POSIX 모델과 다름. 사용자 프로필 격리에 의존 |
+| symlink 거부 | `lstatSync` / `lstat` 검사 | 보안 시나리오 S-04 대응. `stat()` 대신 반드시 `lstat()` 사용 |
+| 소유권 모델 | Last-Writer-Wins | MCP/CLI/Telegram 3개 쓰기 주체, 마지막 쓰기 승리. 401 lazy reload로 자동 복구 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `24-monorepo-data-directory.md` 섹션 4 (토큰 파일 사양 v0.9)
+  - 섹션 4.1: 파일 사양 테이블 (9개 항목)
+  - 섹션 4.2: 공유 유틸리티 API 설계 (3개 함수 시그니처 + 동작 + 에러 처리)
+  - 섹션 4.3: 원자적 쓰기 패턴 상세 (6단계, 4개 플랫폼)
+  - 섹션 4.4: 쓰기 주체와 Last-Writer-Wins 정책
+
+---
+
+## Phase 37-01 설계 결과: SessionManager 인터페이스 + 토큰 로드
+
+> **[설계 완료: 2026-02-09]** SMGR-01(SessionManager 인터페이스), SMGR-03(토큰 로드 전략)
+
+### 핵심 설계 결정
+
+| # | ID | 결정 | 근거 |
+|---|-----|------|------|
+| 1 | SM-01 | SessionManager 단일 클래스, MCP SDK 독립 (Composition 패턴) | MCP SDK v1.x에 세션/인증 lifecycle hook 없음. 독립 클래스로 설계하여 SDK 버전 변경 영향 최소화 |
+| 2 | SM-02 | getToken/start/dispose 3개 public 메서드 | getToken은 tool handler 참조, start는 프로세스 시작 1회, dispose는 SIGTERM 정리. 최소 인터페이스 |
+| 3 | SM-03 | 내부 상태 9개 (token, sessionId, expiresAt, expiresIn, renewalCount, maxRenewals, timer, isRenewing, state) | 갱신 스케줄, 중복 방지, 상태 관리에 필요한 최소 상태. renewPromise/tokenFilePath/baseUrl은 보조 필드 |
+| 4 | SM-04 | 토큰 로드 우선순위 파일 > env var | 파일 기반 영속화로 토큰 로테이션 대응. env var는 최초 부트스트랩 및 fallback 용도 |
+| 5 | SM-05 | jose decodeJwt 기반 무검증 디코딩 + 방어적 범위 검증 (C-03 대응) | MCP Server에 JWT 비밀키 없어 서명 검증 불가. exp 범위 검증(과거 10년~미래 1년)으로 조작 토큰 방어 |
+| 6 | SM-06 | renewalCount/maxRenewals 초기값 0/Infinity, 첫 갱신 응답에서 업데이트 | JWT payload에 갱신 정보 미포함. 서버 응답에서 획득하는 lazy 초기화 전략 |
+| 7 | SM-07 | 데몬 미기동 시 graceful degradation (로컬 JWT exp 기준 동작) | MCP 프로세스가 데몬보다 먼저 시작될 수 있음. 첫 tool 호출 시 데몬 검증으로 대체 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `38-sdk-mcp-interface.md` 섹션 6.4 (SessionManager 핵심 설계 v0.9)
+  - 섹션 6.4.1: SessionManager 클래스 인터페이스 (SessionManagerOptions, SessionState, 내부 상태 9개, Public 메서드 3개, 내부 메서드 5개, 상수 3개, TypeScript 의사 코드)
+  - 섹션 6.4.2: 토큰 로드 전략 (8-Step 절차, 토큰 로드 우선순위, TypeScript 의사 코드, 에러 케이스 3종, 로그 출력)
+
+---
+
+## Phase 37-02 설계 결과: 자동 갱신 + 실패 처리 + Lazy Reload
+
+> **[설계 완료: 2026-02-09]** SMGR-04(자동 갱신 스케줄), SMGR-05(5종 갱신 실패 대응), SMGR-06(lazy 401 reload)
+
+### 핵심 설계 결정
+
+| # | ID | 결정 | 근거 |
+|---|-----|------|------|
+| 1 | SM-08 | safeSetTimeout 래퍼로 32-bit overflow 방어 (C-01) | setTimeout 32-bit 정수 상한(24.85일) 초과 시 즉시 실행 방지. 10줄 래퍼로 외부 라이브러리 불필요 |
+| 2 | SM-09 | 서버 응답 expiresAt 기준 절대 시간 갱신 스케줄 (self-correcting timer, H-01 대응) | 로컬 상대 시간 대신 서버-클라이언트 간 절대 시간 동기화로 누적 드리프트 제거 |
+| 3 | SM-10 | 파일-우선 쓰기 순서 (writeMcpToken -> 메모리 교체, H-02 대응) | SIGTERM race condition에서 토큰 유실 방지. 역순 시 영구 인증 실패 |
+| 4 | SM-11 | 5종 에러 분기 (TOO_EARLY 30초x1, LIMIT 포기, LIFETIME 포기, NETWORK 60초x3, EXPIRED lazy reload) | 각 에러의 재시도 횟수, 상태 전이, 알림 관계 명확 정의 |
+| 5 | SM-12 | handleUnauthorized 4-step (파일 재로드 -> 비교 -> 교체/에러) | fs.watch 미사용. lazy reload로 플랫폼별 불안정성 회피. 외부 갱신(CLI/Telegram) 자동 감지 |
+| 6 | SM-13 | MCP SessionManager는 알림 직접 발송하지 않음 (데몬 자동, NOTI-01) | 데몬이 갱신 API 처리 시 SESSION_EXPIRING_SOON 자동 발송 판단. 관심사 분리 |
+| 7 | SM-14 | 갱신 중 getToken()은 구 토큰 반환 (동시성 안전) | 갱신 API와 inflight tool 호출이 동일 토큰 사용. 토큰 로테이션 inflight 실패 방지 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `38-sdk-mcp-interface.md` 섹션 6.4 (SessionManager 핵심 설계 v0.9)
+  - 섹션 6.4.3: safeSetTimeout 래퍼 (C-01 Pitfall 대응)
+  - 섹션 6.4.4: 자동 갱신 스케줄 (scheduleRenewal + 드리프트 보정)
+  - 섹션 6.4.5: 갱신 실행 (renew + 파일-우선 쓰기)
+  - 섹션 6.4.6: 5종 갱신 실패 대응 (handleRenewalError + retryRenewal)
+  - 섹션 6.4.7: Lazy 401 Reload (handleUnauthorized)
+
+### Pitfall 대응 요약
+
+| Pitfall | ID | 대응 | 설계 문서 섹션 |
+|---------|-----|------|--------------|
+| setTimeout 32-bit overflow | C-01 | safeSetTimeout 래퍼 (MAX_TIMEOUT_MS 체이닝) | 6.4.3 |
+| 타이머 드리프트 누적 | H-01 | 서버 expiresAt 기준 절대 시간 재계산 (self-correcting) | 6.4.4 |
+| 갱신 inflight 프로세스 kill | H-02 | 파일-우선 쓰기 순서 (writeMcpToken -> 메모리 교체) | 6.4.5 |
+| JWT 무검증 디코딩 | C-03 | 방어적 범위 검증 (Plan 37-01에서 대응) | 6.4.2 |
+| 갱신 중 tool 호출 동시성 | Pitfall 5 | getToken() 구 토큰 반환, 갱신 완료 후 교체 | 6.4.5 |
+
+---
+
+## Phase 39-01 설계 결과: CLI MCP 서브커맨드
+
+> **[설계 완료: 2026-02-09]** SESS-AUTO-03 (CLI MCP 커맨드 설계 스펙)
+
+### 핵심 설계 결정
+
+| # | ID | 결정 | 근거 |
+|---|-----|------|------|
+| 1 | CLI-01 | mcp 서브커맨드 그룹 (setup + refresh-token) 진입점 패턴 | 기존 switch 구조에 `case 'mcp': return runMcp(subAction, args)` 추가. runMcp 내부에서 action 분기 |
+| 2 | CLI-02 | mcp setup 7단계 동작 플로우 (데몬확인 -> 에이전트결정 -> constraints -> 세션생성 -> 파일저장 -> 출력 -> config안내) | 각 단계가 독립적으로 검증 가능. 에이전트 자동 선택(1개면 자동)으로 DX 최적화 |
+| 3 | CLI-03 | mcp refresh-token 8단계 동작 플로우 (생성 -> 파일 -> 폐기 순서, Pitfall 5 대응) | 폐기를 마지막에 실행하여 파일 쓰기 실패 시 구 세션 유지 = 서비스 연속성 보장 |
+| 4 | CLI-04 | 에이전트 자동 선택 (1개면 자동, 0개 에러, 2개+ 필수) | MCP 환경에서 대부분 에이전트 1개. 불필요한 --agent 옵션 제거로 DX 간소화 |
+| 5 | CLI-05 | Claude Desktop config.json 플랫폼별 경로 안내 (macOS/Windows/Linux) | 3개 OS 경로를 텍스트 출력에 포함. JSON 출력에는 현재 플랫폼 경로만 |
+| 6 | CLI-06 | constraints 계승 규칙 (기존 세션 constraints 그대로 전달, renewalCount 리셋) | refresh-token 시 권한 수준 유지. 새 세션이므로 renewalCount는 서버가 0으로 자동 설정 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `54-cli-flow-redesign.md` 섹션 10 (MCP 서브커맨드 그룹 v0.9)
+  - 섹션 10.1: 설계 원칙, Phase 36/37 유틸리티 의존 관계
+  - 섹션 10.2: mcp setup 커맨드 (인터페이스, 7단계 플로우, 수도코드, Claude Desktop 안내, 에러 케이스)
+  - 섹션 10.3: mcp refresh-token 커맨드 (인터페이스, 8단계 플로우, 수도코드, constraints 계승, 에러 케이스)
+
+---
+
+## Phase 39-02 설계 결과: Telegram /newsession + 기본 Constraints
+
+> **[설계 완료: 2026-02-09]** SESS-AUTO-02 (Telegram 세션 재생성 설계 스펙), TGSN-01 (/newsession 명령어), TGSN-02 (기본 constraints 결정 규칙)
+
+### 핵심 설계 결정
+
+| # | ID | 결정 | 근거 |
+|---|-----|------|------|
+| 1 | TG-01 | /newsession 9번째 명령어 등록 (Tier 1 chatId 인증) | 세션 생성은 자금 이동 아님. masterAuth implicit. constraints가 자금 이동 범위 제한 |
+| 2 | TG-02 | 에이전트 인라인 키보드 (1개 자동, 2개+ 선택, callback_data 47바이트) | UX 최적화: 1개면 불필요한 선택 과정 제거. callback_data = "newsession:" (11) + UUID v7 (36) = 47 < 64 |
+| 3 | TG-03 | createNewSession private 메서드 (세션 생성 + writeMcpToken + 완료 메시지) | 에러 분기 3종 (생성 실패 / 파일 실패 / 성공). Phase 36 토큰 파일 유틸리티 재사용 |
+| 4 | TG-04 | 기본 constraints 2-level (config.toml > 하드코딩), EXT-03 3-level 확장 예약 | 최소 보안 보장 + 설정 유연성. agents.default_constraints DB 컬럼은 v1.x 이연 |
+| 5 | TG-05 | resolveDefaultConstraints 공용 함수 (CLI + Telegram 공유) | 동일 규칙 CLI/Telegram 적용, 중복 제거. CLI는 cliOverrides 추가 우선순위 |
+| 6 | TG-06 | 최소 보안 보장 (expiresIn/maxRenewals 항상 값 존재, Pitfall 4 대응) | 빈 constraints 객체로 무제한 세션 생성 방지. DEFAULT_EXPIRES_IN=604800, DEFAULT_MAX_RENEWALS=30 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `40-telegram-bot-docker.md` 섹션 4.12~4.13 (v0.9 /newsession + 기본 Constraints)
+  - 섹션 4.12: /newsession 명령어 (handleNewSession 5단계, handleNewSessionCallback 4단계, createNewSession 4단계, 에러 처리 분기)
+  - 섹션 4.13: 기본 Constraints 결정 규칙 (2-level 우선순위, 3-level 확장 예약, resolveDefaultConstraints 함수 시그니처)
+
+---
+
+## Phase 38-01 설계 결과: ApiClient + Tool/Resource Handler 통합
+
+> **[설계 완료: 2026-02-09]** SMGI-01 (ApiClient 래퍼 + tool/resource handler 통합)
+
+### 핵심 설계 결정
+
+| # | ID | 결정 | 근거 |
+|---|-----|------|------|
+| 1 | SMGI-D01 | getState()를 4번째 public 메서드로 추가 (3-public -> 4-public) | ApiClient.request()에서 API 호출 전 세션 상태 사전 확인 필요 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `38-sdk-mcp-interface.md` 섹션 6.5 (SessionManager MCP 통합 설계)
+  - 섹션 6.5.1: getState() 추가 (SMGI-D01)
+  - 섹션 6.5.2: ApiClient 래퍼 클래스 (7개 메서드, request 7-step, handle401 3-step)
+  - 섹션 6.5.3: Tool Handler 통합 패턴 (toToolResult, 6개 tool 리팩토링)
+  - 섹션 6.5.4: Resource Handler 통합 패턴 (toResourceResult, 3개 resource 리팩토링)
+
+---
+
+## Phase 38-02 설계 결과: 동시성 + 프로세스 생명주기 + 에러 처리
+
+> **[설계 완료: 2026-02-09]** SMGI-02 (토큰 로테이션 동시성), SMGI-03 (MCP 프로세스 생명주기), SMGI-04 (Claude Desktop 에러 처리)
+
+### 핵심 설계 결정
+
+| # | ID | 결정 | 근거 |
+|---|-----|------|------|
+| 1 | SMGI-D01 | getState()를 4번째 public 메서드로 추가 | ApiClient의 세션 상태 사전 확인 필요 (Phase 38-01) |
+| 2 | SMGI-D02 | Mutex/Lock 미사용, 50ms 대기 + 401 재시도 | Node.js 단일 스레드, 차단 지연 방지 |
+| 3 | SMGI-D03 | 에러 복구 루프 SessionManager 소속, 60초 polling | fs.watch 대신 안정적 polling, SM-12 일관 |
+| 4 | SMGI-D04 | console.log 금지, console.error 통일 | stdio stdout 오염 시 JSON-RPC 파싱 실패 → 연결 해제 방지 |
+
+### 설계 문서 위치
+
+- **상세 사양:** `38-sdk-mcp-interface.md` 섹션 6.5.5~6.5.7 (Phase 38-02)
+  - 섹션 6.5.5: 토큰 로테이션 동시성 처리 (시퀀스 다이어그램, 50ms 대기 근거, 동시성 보장 테이블)
+  - 섹션 6.5.6: MCP 프로세스 생명주기 (5단계, degraded mode, 에러 복구 루프, 재시작/kill 시나리오)
+  - 섹션 6.5.7: Claude Desktop 에러 처리 전략 (isError 원칙, 안내 메시지 형식, stdout 오염 방지)
+
+---
+
+## 성공 기준
+
+### 설계 완성도
+1. SessionManager의 인터페이스, 토큰 로드 전략, 갱신 스케줄, 실패 처리, 토큰 전환 메커니즘이 구현 가능한 수준으로 정의됨 -- **[설계 확정 -- Phase 37 + 38]** (인터페이스/토큰로드/갱신/실패 = Phase 37, ApiClient 통합/동시성/생명주기/에러 처리 = Phase 38)
+2. 토큰 파일 사양(경로, 포맷, 권한)이 명확히 정의됨
+3. `waiaas mcp setup`과 `waiaas mcp refresh-token`의 인터페이스, 동작, 출력이 정의됨 -- **[설계 확정 -- Phase 39-01]**
+4. Telegram `/newsession`의 플로우, 인라인 키보드, 콜백 처리, 기본 constraints 결정 규칙이 정의됨 -- **[설계 확정 -- Phase 39-02]**
+5. SESSION_EXPIRING_SOON 이벤트의 발생 조건, 심각도, 알림 내용이 정의됨 -- **[설계 완료: Phase 36-02]**
+
+### 일관성
+6. v0.5 세션 갱신 프로토콜(53)과 SessionManager 자동 갱신 로직이 충돌 없이 정합함
+7. NOTI-ARCH(35)의 이벤트 체계에 SESSION_EXPIRING_SOON이 일관되게 통합됨 -- **[설계 완료: Phase 36-02]**
+8. TGBOT-DOCK(40)의 명령어 체계/Tier 분류에 `/newsession`이 일관되게 통합됨 -- **[설계 확정 -- Phase 39-02]**
+9. CLI-REDESIGN(54)의 커맨드 구조에 `mcp setup`/`mcp refresh-token`이 일관되게 통합됨 -- **[설계 확정 -- Phase 39-01]**
+
+### 테스트 설계
+10. 14개 핵심 검증 시나리오와 4개 보안 시나리오가 설계 문서에 명시됨 -- **[설계 확정 -- Phase 40-01]** (38-sdk-mcp-interface.md 섹션 12에 검증 방법 + 관련 설계 결정 ID 포함)
+11. 각 시나리오의 테스트 레벨(Unit/Integration)이 정의됨 -- **[설계 확정 -- Phase 40-01]** (T-01~T-14 Unit/Integration 분류 + S-01~S-04 보안 검증 방법 명시)
+
+### 클라우드 대비
+12. Self-Hosted 전제와 클라우드 제약이 명시적으로 문서화되어, 클라우드 전환 마일스톤의 입력이 됨
+
+---
+
+*작성: 2026-02-08*
+*Phase 36-01 업데이트: 2026-02-09 -- 토큰 파일 인프라 설계 결과 반영 (SMGR-02, SMGR-07 설계 완료)*
+*Phase 36-02 업데이트: 2026-02-09 -- SESSION_EXPIRING_SOON 알림 이벤트 설계 결과 반영 (NOTI-01, NOTI-02 설계 완료)*
+*Phase 37-01 업데이트: 2026-02-09 -- SessionManager 인터페이스 + 토큰 로드 전략 설계 결과 반영 (SMGR-01, SMGR-03 설계 완료)*
+*Phase 37-02 업데이트: 2026-02-09 -- 자동 갱신 + 실패 처리 + lazy reload 설계 결과 반영 (SMGR-04, SMGR-05, SMGR-06 설계 완료)*
+*Phase 39-01 업데이트: 2026-02-09 -- CLI MCP 서브커맨드 설계 결과 반영 (SESS-AUTO-03 설계 완료, CLI-01~CLI-06 결정 6건)*
+*Phase 39-02 업데이트: 2026-02-09 -- Telegram /newsession + 기본 Constraints 설계 결과 반영 (SESS-AUTO-02 설계 완료, TG-01~TG-06 결정 6건)*
+*Phase 38-01 업데이트: 2026-02-09 -- ApiClient + tool/resource handler 통합 설계 결과 반영 (SMGI-01 설계 완료, SMGI-D01 결정 1건)*
+*Phase 38-02 업데이트: 2026-02-09 -- 동시성 + 프로세스 생명주기 + 에러 처리 설계 결과 반영 (SMGI-02/03/04 설계 완료, SMGI-D02~D04 결정 3건)*
+*Phase 40-01 업데이트: 2026-02-09 -- 18개 테스트 시나리오 설계 문서 명시 (TEST-01, TEST-02 설계 완료)*
+*Phase 40-02 업데이트: 2026-02-09 -- 7개 설계 문서 v0.9 통합 검증 + pitfall 매트릭스 반영 (INTEG-01, INTEG-02 설계 완료)*
+*기반 분석: v0.5 세션 갱신 프로토콜(53), MCP 인터페이스(38), Telegram Bot(40), 알림 아키텍처(35), CLI 플로우(54)*
+*전제: Self-Hosted 단일 머신 아키텍처*
+*범위: 설계 마일스톤 — 코드 구현은 범위 외*

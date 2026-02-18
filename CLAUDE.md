@@ -47,8 +47,9 @@
 - **Release flow**: Merge PR (Conventional Commits) → release-please auto-creates Release PR → Merge Release PR (Gate 1: release decision) → release.yml quality gate → deploy job manual approval (Gate 2: deployment execution).
 - **Commit conventions**: `feat:` (minor), `fix:` (patch), `BREAKING CHANGE:` (major). `docs:`, `test:`, `chore:`, `ci:`, etc. are excluded from CHANGELOG.
 
-## Issue Tracking
+## Milestone & Issue Naming
 
-- Issues are filed in the `internal/objectives/issues/` directory as `v{milestone}-{NNN}-{slug}.md`.
-- Register in `internal/objectives/issues/TRACKER.md` and update the status.
+- Milestone objective documents are filed in `internal/objectives/` as `m{순번}-{slug}.md`. Sub-milestones use `m{순번}-{서브순번}-{slug}.md`.
+- Issues are filed in `internal/objectives/issues/` as `{NNN}-{slug}.md`.
+- Register issues in `internal/objectives/issues/TRACKER.md` and update the status.
 - Types: BUG (defect) / ENHANCEMENT (improvement) / MISSING (missing feature).

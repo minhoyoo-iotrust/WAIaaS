@@ -1,0 +1,240 @@
+# 마일스톤 m16-01: x402 클라이언트 지원
+
+## 목표
+
+AI 에이전트가 x402 프로토콜로 보호된 외부 유료 API를 자동 결제하며 사용할 수 있는 상태. 데몬이 402 응답을 수신하면 결제 서명을 생성하고, 기존 4-tier 정책 평가를 거쳐 결제를 실행한 뒤, 리소스를 반환한다.
+
+---
+
+## 배경
+
+### x402 프로토콜이란
+
+x402는 HTTP 402 (Payment Required) 상태 코드를 활용한 인터넷 네이티브 결제 오픈 표준이다. Coinbase가 주도하며 Apache-2.0 라이선스로 공개되어 있다.
+
+```
+1. 클라이언트(WAIaaS) → 서버(리소스 서버)에 리소스 요청
+2. 서버 → HTTP 402 + PaymentRequirements JSON 응답 (scheme, network, amount, payTo 등)
+3. 클라이언트 → PaymentRequirements 파싱 → 결제 서명 생성 → X-PAYMENT 헤더와 함께 재요청
+4. 서버 → (서버 측에서) facilitator를 통해 결제 검증/정산 → 리소스 제공
+
+* 클라이언트는 facilitator와 직접 통신하지 않음. facilitator 선택은 리소스 서버의 책임.
+```
+
+API 키, 구독, 사전 가입 없이 요청마다 온체인 마이크로페이먼트로 결제하는 구조다.
+
+### WAIaaS에서 x402 클라이언트 지원의 의미
+
+에이전트에게 "인터넷 어디서든 쓸 수 있는 자동 결제 수단"을 제공하는 것이다. 에이전트가 유료 API를 호출하면 WAIaaS 데몬이 자동으로 결제를 처리하되, 기존 정책 엔진(4-tier SPENDING_LIMIT)이 금액별 보안을 보장한다.
+
+### 전략적 가치
+
+- Coinbase Agentic Wallet은 x402를 지원하지만 Coinbase 클라우드에 종속된다
+- WAIaaS는 Self-Hosted + 4-tier 정책 + Owner 승인을 갖춘 유일한 오픈소스 x402 클라이언트가 된다
+- 고액 x402 결제 시 DELAY/APPROVAL 정책이 적용되는 것은 WAIaaS 고유 기능이다
+
+---
+
+## 구현 대상
+
+기존 설계 문서 없음. 이 마일스톤에서 x402 클라이언트를 신규 설계 + 구현한다.
+
+### x402 프로토콜 참조
+
+| 참조 | 설명 |
+|------|------|
+| [x402 Specification v2](https://github.com/coinbase/x402/blob/main/specs/x402-specification-v2.md) | 프로토콜 스펙 (PaymentRequired, PaymentPayload, SettlementResponse) |
+| [Exact Scheme SVM](https://github.com/coinbase/x402/blob/main/specs/schemes/exact/scheme_exact_svm.md) | Solana SPL TransferChecked 기반 결제 |
+| [Exact Scheme EVM](https://github.com/coinbase/x402/blob/main/specs/schemes/exact/scheme_exact_evm.md) | EIP-3009 transferWithAuthorization 기반 결제 |
+| [@x402/hono](https://github.com/coinbase/x402/tree/main/typescript/packages/http/hono) | Hono 미들웨어 (서버 측 참고) |
+| [@x402/mcp](https://github.com/coinbase/x402/tree/main/typescript/packages/mcp) | MCP 통합 참고 |
+
+---
+
+## 산출물
+
+### 컴포넌트
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| x402 핸들러 | HTTP 402 응답 파싱 → PaymentRequirements 해석 → 지원 가능한 (scheme, network) 쌍 선택 → 결제 서명 생성 → X-PAYMENT 헤더 포함 재요청. facilitator와의 통신은 리소스 서버 측에서 수행하므로 클라이언트는 관여하지 않음. exact 스킴 지원: Solana(SPL TransferChecked 부분 서명) + EVM(EIP-3009 서명) |
+| x402 정책 통합 | x402 결제를 **기존 파이프라인에 그대로 주입**. 결제 금액 → USD 환산(v1.5 IPriceOracle, USDC는 $1 직접 환산) → 기존 SPENDING_LIMIT 4-tier 평가. 별도 x402 전용 지출 한도 없이 기존 정책 체계를 공유한다 |
+| X402_ALLOWED_DOMAINS 정책 | 에이전트별 x402 결제 허용 도메인 화이트리스트. policies 테이블에 type='X402_ALLOWED_DOMAINS'로 저장. **기본 거부** — 정책 미설정 시 x402 결제 불가. Admin UI/API로 동적 관리 (데몬 재시작 불필요). 기존 ALLOWED_TOKENS, CONTRACT_WHITELIST와 동일한 기본-거부 opt-in 패턴 |
+| 데몬 엔드포인트 | `POST /v1/x402/fetch` — sessionAuth 보호. 에이전트가 URL + HTTP 메서드 + 헤더 + 바디를 전달하면, 데몬이 외부 요청 → 402 핸들링 → 결과 반환. 비-402 응답은 그대로 프록시 |
+| 결제 서명 생성기 | PaymentRequirements의 (scheme, network) 정보에 따라 온체인 결제 서명 생성. Solana: SPL TransferChecked 부분 서명 트랜잭션, EVM: EIP-3009 transferWithAuthorization 서명. facilitator와의 통신은 리소스 서버가 수행하므로 클라이언트는 관여하지 않음 |
+| SDK 래퍼 (TS) | `WAIaaSClient.x402Fetch(url, options?)` 메서드 1개. options: method, headers, body |
+| SDK 래퍼 (Python) | `WAIaaSClient.x402_fetch(url, options?)` 메서드 1개. 동일 인터페이스 |
+| MCP 도구 | `x402_fetch` 도구 1개. AI 에이전트가 유료 API를 자율적으로 호출 |
+| 감사 로그 | x402 결제 이력을 transactions 테이블에 기록. type='X402_PAYMENT', metadata에 target_url/payment_amount/facilitator 저장 |
+| 알림 연동 | x402 결제 시 기존 알림 트리거 활용 (TX_REQUESTED, TX_CONFIRMED 등) |
+
+### 정책 통합 상세
+
+x402 결제는 기존 정책 체계를 그대로 활용하고, 도메인 제어만 신규 정책 타입으로 추가한다:
+
+| 정책 | x402에서의 역할 | 신규/기존 |
+|------|----------------|----------|
+| **X402_ALLOWED_DOMAINS** | 에이전트별 결제 허용 도메인 화이트리스트. 미설정 시 x402 결제 전체 차단 | **신규** |
+| SPENDING_LIMIT (4-tier) | 결제 금액(USD 환산) 기준 INSTANT/NOTIFY/DELAY/APPROVAL 분류 | 기존 |
+| ALLOWED_TOKENS | x402 결제에 사용되는 토큰(USDC 등)이 허용 목록에 있는지 검증 | 기존 |
+| 세션 reserved_amount | x402 결제 금액도 세션 누적 지출에 포함 (TOCTOU 방지) | 기존 |
+| Rate Limiter (tx_rpm) | x402 결제도 트랜잭션이므로 기존 RPM 제한 적용 | 기존 |
+| Kill Switch | 활성 시 x402 결제 포함 모든 거래 차단 | 기존 |
+
+### DELAY/APPROVAL 티어 처리
+
+x402는 동기 HTTP 요청이므로 장시간 대기에 제약이 있다:
+
+| 티어 | 처리 방식 |
+|------|----------|
+| INSTANT | 즉시 결제 → 리소스 반환 |
+| NOTIFY | 즉시 결제 + Owner 알림 → 리소스 반환 |
+| DELAY | request_timeout(기본 30초) 내에서 대기. 대기 시간이 timeout보다 짧으면 정상 결제, 초과하면 X402_DELAY_TIMEOUT 에러 반환 |
+| APPROVAL | 즉시 거부 + X402_APPROVAL_REQUIRED 에러 반환. 동기 HTTP에서 Owner 승인을 기다릴 수 없음 |
+
+### 파일/모듈 구조
+
+```
+packages/core/src/
+  interfaces/
+    x402.types.ts                  # PaymentRequirements, PaymentPayload, X402FetchRequest/Response Zod 스키마
+  enums.ts                         # TransactionType에 X402_PAYMENT 추가, PolicyType에 X402_ALLOWED_DOMAINS 추가
+
+packages/daemon/src/services/
+  x402/
+    x402-handler.ts                # 402 응답 파싱 + (scheme, network) 선택 + 결제 서명 생성 + 재요청
+    payment-signer.ts              # 체인별 결제 서명 생성 (Solana TransferChecked / EVM EIP-3009)
+    ssrf-guard.ts                  # 사설 IP/localhost 차단
+
+packages/daemon/src/routes/
+  x402.ts                          # POST /v1/x402/fetch 엔드포인트
+
+packages/sdk/src/
+  client.ts                        # x402Fetch() 메서드 추가
+
+packages/mcp/src/
+  tools.ts                         # x402_fetch 도구 추가
+
+python-sdk/src/waiaas/
+  client.py                        # x402_fetch() 메서드 추가
+```
+
+### REST API
+
+| 메서드 | 경로 | 인증 | 설명 |
+|--------|------|------|------|
+| POST | /v1/x402/fetch | sessionAuth | 외부 URL 요청 + x402 자동 결제 + 결과 반환 |
+
+기존 정책 CRUD API(`POST /v1/owner/policies` 등)를 통해 X402_ALLOWED_DOMAINS 정책도 관리한다. 별도 엔드포인트 불필요.
+
+### config.toml 확장
+
+```toml
+[x402]
+enabled = true                                      # x402 클라이언트 활성화
+request_timeout = 30                                # 외부 API 요청 타임아웃 (초)
+```
+
+facilitator URL은 config에 포함하지 않는다. x402에서 facilitator는 **리소스 서버(돈 받는 쪽)**가 선택하며, 클라이언트는 PaymentRequirements에 명시된 정보대로 결제 서명만 생성한다. 도메인 제어는 DB 정책(X402_ALLOWED_DOMAINS)으로, 결제 한도는 기존 SPENDING_LIMIT 정책을 그대로 사용한다.
+
+---
+
+## 기술 결정 사항
+
+| # | 결정 항목 | 선택지 | 결정 근거 |
+|---|----------|--------|----------|
+| 1 | x402 결제의 정책 평가 방식 | 기존 SPENDING_LIMIT 4-tier 그대로 사용, 별도 x402 전용 한도 없음 | x402 결제도 본질적으로 토큰 전송이므로 기존 정책 체계에 통합하는 것이 일관성 있음. 별도 한도를 두면 정책이 이중화되어 혼란 발생 |
+| 2 | 도메인 제어 방식 | DB 정책(X402_ALLOWED_DOMAINS) — config.toml이 아닌 policies 테이블 | 동적 관리(데몬 재시작 불필요), 에이전트별 차별화 가능, Admin UI/API로 관리, 기존 ALLOWED_TOKENS/CONTRACT_WHITELIST와 동일 패턴 |
+| 3 | DELAY/APPROVAL 티어 시 x402 처리 | DELAY: request_timeout 내에서만 대기, 초과 시 거부. APPROVAL: 즉시 거부 | x402는 동기 HTTP 요청이므로 장시간 대기 불가. APPROVAL 금액은 에이전트가 자율적으로 결제할 수 없는 것이 보안상 올바름 |
+| 4 | facilitator 역할 분리 | 클라이언트는 facilitator와 직접 통신하지 않음 | x402에서 facilitator는 리소스 서버가 선택·운영한다. 클라이언트는 402 응답의 PaymentRequirements를 파싱하여 결제 서명만 생성하고, facilitator 검증/정산은 리소스 서버 측에서 처리 |
+| 5 | 외부 HTTP 요청 프록시 | 데몬이 직접 외부 API 호출 (에이전트는 데몬에만 요청) | 에이전트가 직접 외부 요청하면 결제 서명에 개인키 접근 필요 → 보안 모델 붕괴. 데몬이 프록시하면 기존 보안 경계 유지 |
+| 6 | USDC 가격 환산 | USDC/USDT 스테이블코인은 $1 직접 환산, 기타 토큰은 IPriceOracle(v1.5) 활용 | x402 결제는 대부분 USDC. Oracle 장애 시에도 스테이블코인 결제는 정상 동작해야 함 |
+| 7 | x402 버전 | v2 (CAIP-2 네트워크 식별자) | 최신 스펙. v1은 legacy 호환이므로 지원 불필요 |
+| 8 | TransactionType | X402_PAYMENT를 기존 discriminatedUnion에 6번째 타입으로 추가 | 기존 5-type(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH) + X402_PAYMENT. 파이프라인 Stage 1-6 모두 호환 |
+| 9 | X402_ALLOWED_DOMAINS 기본 정책 | 기본 거부 (정책 미설정 시 x402 결제 불가) | ALLOWED_TOKENS, CONTRACT_WHITELIST와 동일한 보안 철학. 운영자가 명시적으로 허용한 도메인에만 결제 |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100% — mock facilitator + mock 외부 API**
+
+### 기본 흐름
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | 외부 API 402 응답 → x402 자동 결제 → 리소스 획득 | mock 외부 서버(첫 요청 402 → 결제 헤더 재요청 200) + mock facilitator → POST /v1/x402/fetch → 200 + 리소스 바디 assert | [L0] |
+| 2 | 외부 API 200 응답 (결제 불필요) → 그대로 프록시 | mock 외부 서버(200 즉시) → POST /v1/x402/fetch → 200 + 원본 바디 그대로 assert | [L0] |
+| 3 | 외부 API 402 → 결제 성공 → transactions 테이블에 X402_PAYMENT 기록 | 시나리오 1 수행 후 → DB transactions 조회 → type='X402_PAYMENT' + metadata.target_url assert | [L0] |
+
+### 정책 통합
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 4 | $0.01 결제 → INSTANT → 즉시 결제 + 리소스 반환 | mock 402(amount=10000 USDC 6-decimal=$0.01) → 정책 평가 INSTANT → 즉시 실행 assert | [L0] |
+| 5 | $50 결제 → NOTIFY → 결제 + Owner 알림 | mock 402(amount=$50) → NOTIFY 티어 → 결제 실행 + 알림 트리거 assert | [L0] |
+| 6 | $200 결제 → DELAY → request_timeout 내 대기 후 결제 | mock 402(amount=$200) + DELAY 대기 시간 < request_timeout → 대기 후 결제 실행 assert | [L0] |
+| 7 | $200 결제 → DELAY → request_timeout 초과 → 거부 | mock 402(amount=$200) + DELAY 대기 시간 > request_timeout → X402_DELAY_TIMEOUT assert | [L0] |
+| 8 | $1000 결제 → APPROVAL → 즉시 거부 | mock 402(amount=$1000) → APPROVAL 티어 → X402_APPROVAL_REQUIRED 에러 assert | [L0] |
+| 9 | 세션 누적 지출 한도 초과 → 거부 | 기존 SPENDING_LIMIT reserved_amount 누적 → 한도 초과 시 SPENDING_LIMIT_EXCEEDED assert | [L0] |
+
+### 도메인 정책
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 10 | X402_ALLOWED_DOMAINS 미설정 → x402 결제 전체 차단 | 정책 없는 에이전트 → POST /v1/x402/fetch → X402_DOMAIN_NOT_ALLOWED assert | [L0] |
+| 11 | X402_ALLOWED_DOMAINS 설정 + 허용 도메인 → 결제 허용 | 정책 rules.domains=["api.example.com"] + url=api.example.com → 정상 결제 assert | [L0] |
+| 12 | X402_ALLOWED_DOMAINS 설정 + 미허용 도메인 → 거부 | 정책 rules.domains=["api.example.com"] + url=other.com → X402_DOMAIN_NOT_ALLOWED assert | [L0] |
+| 13 | X402_ALLOWED_DOMAINS 와일드카드 → 서브도메인 허용 | 정책 rules.domains=["*.example.com"] + url=api.example.com → 허용 assert | [L0] |
+| 14 | Admin API로 도메인 정책 동적 추가/삭제 | POST /v1/owner/policies X402_ALLOWED_DOMAINS → 즉시 반영 → 결제 허용 확인 assert | [L0] |
+
+### 보안
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 15 | 사설 IP/localhost 요청 → SSRF 차단 | url=http://127.0.0.1/internal → X402_SSRF_BLOCKED assert | [L0] |
+| 16 | Kill Switch 활성 시 x402 결제 거부 | killSwitch.activate() → POST /v1/x402/fetch → 503 KILL_SWITCH_ACTIVE assert | [L0] |
+| 17 | 세션 없이 x402 요청 → 401 | sessionAuth 없이 POST /v1/x402/fetch → 401 assert | [L0] |
+| 18 | x402 비활성화(enabled=false) → 기능 전체 비활성 | config x402.enabled=false → POST /v1/x402/fetch → X402_DISABLED assert | [L0] |
+
+### SDK/MCP
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 19 | TS SDK x402Fetch() → 데몬 엔드포인트 호출 + 결과 반환 | WAIaaSClient.x402Fetch('https://...') → POST /v1/x402/fetch 호출 + 응답 매핑 assert | [L0] |
+| 20 | MCP x402_fetch 도구 → 도구 목록에 포함 + 호출 성공 | MCP tools/list → x402_fetch 포함 assert + callTool('x402_fetch', {url: '...'}) 성공 assert | [L0] |
+
+### 결제 재요청 실패
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 21 | 결제 서명 재요청 후 리소스 서버가 402 재반환 (결제 거부) | mock 외부 서버(첫 요청 402 → 결제 헤더 재요청 402) → X402_PAYMENT_REJECTED 에러 assert. 무한 재시도 방지(1회만 재시도) | [L0] |
+| 22 | 결제 서명 재요청 후 리소스 서버 5xx 에러 | mock 외부 서버(첫 요청 402 → 결제 헤더 재요청 500) → X402_SERVER_ERROR 에러 + 결제 서명 정보 감사 로그 기록 assert | [L0] |
+| 23 | 지원하지 않는 (scheme, network) 조합 → 결제 불가 | mock 402(scheme=unknown, network=eip155:999) → X402_UNSUPPORTED_SCHEME 에러 assert. 재요청하지 않고 즉시 거부 | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.4 (토큰 + 컨트랙트 확장) | SPL/ERC-20 토큰 전송이 구현되어야 x402 결제 서명(Solana TransferChecked, EVM EIP-3009)을 생성할 수 있다 |
+| v1.5 (DeFi + 가격 오라클) | IPriceOracle이 있어야 비-USDC 토큰 결제 시 USD 환산이 가능하다. 단, USDC 결제는 Oracle 없이도 $1 직접 환산으로 동작 |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | DELAY/APPROVAL 티어의 x402 결제 처리 | DELAY(5분 대기)는 외부 API 타임아웃을 초과할 수 있고, APPROVAL은 동기 HTTP에서 Owner 승인을 기다릴 수 없음 | DELAY: request_timeout 내에서만 대기, 초과 시 거부. APPROVAL: 즉시 거부 + 에이전트에 금액 조정 hint 제공 |
+| 2 | 리소스 서버 신뢰 | 결제 서명을 보내면 리소스 서버가 facilitator를 통해 정산하므로, 리소스 서버의 신뢰성에 의존 | X402_ALLOWED_DOMAINS 정책으로 허용 도메인만 결제. SPENDING_LIMIT로 금액 제한. 결제 서명은 특정 수신자/금액/시간에만 유효하므로 재사용 불가 |
+| 3 | 에이전트의 무한 결제 루프 | 악의적/버그 에이전트가 x402 결제를 반복 호출하여 자금 소진 | 기존 SPENDING_LIMIT + reserved_amount 누적 + rate limiter(tx_rpm=10)로 방어. Kill Switch로 긴급 차단 |
+| 4 | SSRF(Server-Side Request Forgery) | 에이전트가 내부 네트워크 URL을 요청하여 내부 서비스 접근 시도 | 요청 URL 검증: 사설 IP(10.x, 172.16-31.x, 192.168.x, 127.x, ::1) 차단, localhost 차단 |
+| 5 | x402 스펙 변경 | v2 → v3 등 스펙 업데이트 시 호환성 깨짐 | x402Version 필드로 버전 감지, 미지원 버전 거부. x402 타입을 Zod 스키마로 정의하여 런타임 검증 |
+| 6 | 결제 실패 후 리소스 미반환 | facilitator settle 성공했지만 외부 서버가 리소스를 반환하지 않는 경우 | settle 트랜잭션 해시를 감사 로그에 기록하여 추적 가능. 환불은 x402 스펙 범위 외(별도 분쟁 해결 필요) |
+
+---
+
+*최초 생성: 2026-02-12, x402 프로토콜 스펙 v2 기반, coinbase/x402 리포지토리 참조*
+*수정: 2026-02-12, facilitator 역할 분리 반영 — 클라이언트는 facilitator와 직접 통신하지 않음*

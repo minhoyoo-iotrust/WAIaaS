@@ -1,0 +1,267 @@
+# 마일스톤 m20: 전 기능 완성 릴리스
+
+## 목표
+
+v0.1~v0.10에서 설계한 모든 기능이 구현, 테스트, 문서화되어 공개 릴리스 가능한 상태.
+
+---
+
+## 구현 대상 설계 문서
+
+v2.0은 새로운 설계 문서를 구현하는 것이 아니라, **v1.1~v1.8에서 구현한 설계 문서(37개)의 최종 검증과 릴리스 준비**를 수행한다. 설계 문서 39(Tauri Desktop)는 v2.6.1로 이연.
+
+### 설계 문서 구현 완료 확인 매핑
+
+| 문서 | 이름 | 구현 마일스톤 | v2.0 최종 검증 범위 |
+|------|------|-------------|-------------------|
+| 24 | monorepo-data-directory | v1.1 | 9-pkg 모노레포 구조 + ~/.waiaas/ 디렉토리 + config.toml 평탄화 최종 확인 |
+| 25 | sqlite-schema | v1.1 → v1.8 (DB v16) | 테이블 + Drizzle ORM + UUID v7 + CHECK 제약 + batch_items + wc_sessions/wc_store 최종 확인 |
+| 26 | keystore-spec | v1.1 | AES-256-GCM + Argon2id + sodium guarded memory + 파일 권한 0600 최종 확인 |
+| 27 | chain-adapter-interface | v1.1 → v1.4 | IChainAdapter 22 메서드 전수 구현 + SolanaAdapter + EvmAdapter 최종 확인 |
+| 28 | daemon-lifecycle-cli | v1.1 → v1.8 | 6단계 시작 + 10-step 종료 + VersionCheckService + BackupService + upgrade 명령 최종 확인 |
+| 29 | api-framework-design | v1.1 → v1.2 | OpenAPIHono + 미들웨어 + localhost 보안 + 83 에러 코드 매핑 최종 확인 |
+| 30 | session-token-protocol | v1.2 | JWT HS256 + SIWS/SIWE + SessionConstraints + 낙관적 갱신 + token_hash CAS 최종 확인 |
+| 31 | solana-adapter-detail | v1.1 → v1.4 | SolanaAdapter 전체 구현 + @solana/kit 6.x + 파이프 빌드 최종 확인 |
+| 32 | transaction-pipeline-api | v1.1 → v1.2 | 6-stage 파이프라인 + sign-only + 8-state 머신 + Stage 5 CONC-01 최종 확인 |
+| 33 | time-lock-approval-mechanism | v1.2 → v1.5.3 | DatabasePolicyEngine + 4-tier + TOCTOU + 12 PolicyType + 누적 지출 한도 + USD 평가 최종 확인 |
+| 34 | owner-wallet-connection | v1.2 → v1.6.1 | ownerAuth + Owner 3-State + WalletConnect v2 페어링 + WcSigningBridge 최종 확인 |
+| 35 | notification-architecture | v1.3 → v1.3.4 | INotificationChannel + 4채널(Telegram/Discord/ntfy/Slack) + 이벤트 트리거 최종 확인 |
+| 36 | killswitch-autostop-evm | v1.4 → v1.6 | Kill Switch 3-state + 6-step cascade + AutoStop 4규칙 + BalanceMonitor + CAS ACID 최종 확인 |
+| 37 | rest-api-complete-spec | v1.1 → v1.8 | 71 엔드포인트 전수 + 83 에러 코드 + OpenAPI 3.0 유효성 최종 확인 |
+| 38 | sdk-mcp-interface | v1.3 → v1.4.4 | TS SDK + Python SDK + MCP 19 도구 + 리소스 + SessionManager 최종 확인 |
+| 39 | tauri-desktop-architecture | v2.6.1 (이연) | v2.6.1로 이연 — Desktop App은 v2.0 이후 구현 |
+| 40 | telegram-bot-docker | v1.6 | Telegram Bot Long Polling + 2-Tier auth + i18n en/ko + Docker compose 최종 확인 |
+| 45 | enum-unified-mapping | v1.1 → v1.7 | 16 Enum SSoT + PolicyType 12개 + 빌드타임 4단계 방어 최종 확인 |
+| 46 | keystore-external-security-scenarios | v1.7 | 보안 시나리오 ~460건 전수 통과 최종 확인 |
+| 47 | boundary-value-chain-scenarios | v1.7 | 경계값 + 연쇄 공격 체인 전수 통과 최종 확인 |
+| 48 | blockchain-test-environment-strategy | v1.7 | 3단계 환경 + Mock RPC + Local Validator E2E + Devnet 최종 확인 |
+| 49 | enum-config-consistency-verification | v1.7 | Enum SSoT 빌드타임 검증 + config.toml + NOTE 매핑 최종 확인 |
+| 50 | cicd-pipeline-coverage-gate | v1.7 → v1.8 | 4-stage CI/CD + release-please 2-게이트 + Soft/Hard 게이트 최종 확인 |
+| 51 | platform-test-scope | v1.7 | CLI 32 + Docker 18 + Telegram 34 = 84건 전수 통과 최종 확인. Tauri 34건은 v2.6.1로 이연 |
+| 52 | auth-model-redesign | v1.2 | 3-tier 인증(master/owner/session) + owner_address 월렛별 최종 확인 |
+| 53 | session-renewal-protocol | v1.2 | 낙관적 갱신 + 5종 안전 장치 + RENEWAL_CONFLICT 409 최종 확인 |
+| 54 | cli-flow-redesign | v1.1 → v1.8 | CLI SSoT + --quickstart + --dev + upgrade/check/rollback 최종 확인 |
+| 55 | dx-improvement-spec | v1.3 → v1.4.4 | hint + MCP DX + 원격 접근 가이드 + 7 스킬 파일 최종 확인 |
+| 56 | token-transfer-extension | v1.4 | SPL/ERC-20 토큰 전송 + ALLOWED_TOKENS 정책 최종 확인 |
+| 57 | asset-query-fee-estimation | v1.4 | getAssets() + 수수료 추정 + INSUFFICIENT_FOR_FEE 에러 코드 최종 확인 |
+| 58 | contract-call-spec | v1.4 | ContractCallRequest + CONTRACT_WHITELIST + METHOD_WHITELIST 최종 확인 |
+| 59 | approve-management-spec | v1.4 | ApproveRequest + 3 approve 정책 최종 확인 |
+| 60 | batch-transaction-spec | v1.4 | BatchRequest + Solana 원자적 배치 + batch_items 정규화 최종 확인 |
+| 61 | price-oracle-spec | v1.5 | IPriceOracle + OracleChain + 5분 TTL + IForexRateService + 43 법정 통화 최종 확인 |
+| 62 | action-provider-architecture | v1.5 | IActionProvider + ActionProviderRegistry + ESM 플러그인 + MCP Tool 변환 최종 확인 |
+| 63 | swap-action-spec | v1.5 | Jupiter Swap + 슬리피지/MEV 보호 최종 확인 |
+| 64 | extension-test-strategy | v1.7 | 확장 154건 + Mock 10경계 + Contract Test 7 전수 통과 최종 확인 |
+| 65 | db-migration-strategy | v1.4 → v1.8 | ALTER TABLE 증분 마이그레이션 + schema_version + 호환성 매트릭스 + 백업 서비스 최종 확인 |
+| 66 | upgrade-distribution-spec | v1.8 | VersionCheckService + CLI upgrade + 호환성 검증 + release-please 2-게이트 최종 확인 |
+| 67 | admin-ui-design | v1.3.2 → v1.5.2 | Preact + @preact/signals + CSP + 12 PolicyType 폼 + PolicyRulesSummary 최종 확인 |
+| 68 | environment-model | v1.4.5 → v1.4.6 | EnvironmentType SSoT (testnet/mainnet) + resolveNetwork() 3단계 우선순위 최종 확인 |
+| 69 | multichain-wallet-model | v1.4.5 → v1.4.6 | 멀티체인 월렛 + 네트워크 관리 + AdapterPool 최종 확인 |
+| 70 | network-resolution | v1.4.5 → v1.4.6 | 3단계 네트워크 우선순위 + default_network 관리 최종 확인 |
+| 71 | policy-engine-extension | v1.4.5 → v1.5.3 | 12 PolicyType + USD 평가 + display_currency + x402 정책 최종 확인 |
+| 72 | api-interface-dx | v1.4.5 → v1.4.8 | REST 5-type + MCP 5-type + Admin Settings + 스킬 파일 최종 확인 |
+
+### 최종 검증 기준
+
+v2.0 최종 검증은 다음 기준으로 수행한다:
+
+1. **각 설계 문서의 구현 범위가 해당 마일스톤 objective에 명시된 범위와 일치하는가**
+2. **해당 마일스톤의 E2E 검증 시나리오가 모두 통과하는가**
+3. **설계 문서에 `> [vX.Y 구현 중 변경]` 주석이 있는 경우, 변경 내용이 반영되었는가**
+4. **설계 부채(design-debt.md)에 미해결 항목이 0건인가 (또는 v2.1 이연 명시)**
+
+---
+
+## 산출물
+
+### 1. 코드
+
+9 패키지 + Python SDK 전체 구현 완료 확인:
+
+| 패키지 | 기능 | 구현 마일스톤 |
+|--------|------|-------------|
+| `@waiaas/core` | Zod 스키마, 타입, 16 Enum SSoT, 83 에러 코드, 인터페이스 | v1.1~v1.8 |
+| `@waiaas/daemon` | OpenAPIHono 서버, SQLite+Drizzle (DB v16), Keystore, Pipeline, PolicyEngine, Kill Switch, WalletConnect, BalanceMonitor | v1.1~v1.8 |
+| `@waiaas/adapter-solana` | SolanaAdapter 22 메서드, @solana/kit 6.x, SPL/Token-2022 | v1.1~v1.4 |
+| `@waiaas/adapter-evm` | EvmAdapter 22 메서드, viem 2.x, EIP-1559, ERC-20 | v1.4~v1.4.6 |
+| `@waiaas/sdk` | TypeScript SDK, 0 외부 의존성, WAIaaSClient 클래스 | v1.3 |
+| `@waiaas/mcp` | MCP Server, 19 도구 + Action Provider 동적 도구, SessionManager | v1.3~v1.4.4 |
+| `@waiaas/cli` | waiaas init/start/stop/status/upgrade, --quickstart, --dev | v1.1~v1.8 |
+| `@waiaas/admin` | Preact Admin Web UI, CSP, 12 PolicyType 전용 폼, WalletConnect 관리 | v1.3.2~v1.5.2 |
+| `@waiaas/skills` | API 스킬 파일 배포 CLI (`npx @waiaas/skills add <name>`) | v2.0 |
+
+추가 컴포넌트:
+- Telegram Bot: Long Polling, 10개 명령어, 2-Tier auth, i18n en/ko, 인라인 키보드 (v1.6)
+- Python SDK: httpx + Pydantic v2, pip 패키지 (v1.3)
+- WalletConnect v2: QR 페어링 + 서명 요청 + Telegram Fallback, 3중 승인 채널 (v1.6.1)
+- IPriceOracle: Pyth/CoinGecko, IForexRateService: 43개 법정 통화 환산 (v1.5~v1.5.3)
+- IActionProvider: ESM 플러그인 시스템, Jupiter Swap (v1.5)
+- x402 자동 결제: SSRF 가드, EIP-3009/TransferChecked 서명 (v1.5.1)
+
+> Tauri Desktop App (v2.6.1로 이연): v2.0은 npm/Docker/CLI 중심 릴리스. Desktop은 v2.0 이후 구현.
+
+### 2. 테스트
+
+| 항목 | 기준 | 검증 방법 |
+|------|------|----------|
+| 커버리지 | Hard 80% 게이트 통과 | CI coverage-gate.sh hard 모드 자동 판정 |
+| 보안 시나리오 | ~460건 전수 통과 | Vitest test:security 자동 실행 |
+| 플랫폼 테스트 | 84건 전수 통과 | release.yml platform-cli(32건) + platform-docker(18건) + Telegram(34건). Tauri 34건은 v2.6.1로 이연 |
+| 확장 기능 테스트 | 154건 시나리오 통과 | Vitest test:unit + test:integration |
+| Contract Test | 7개 인터페이스 동일성 검증 | Mock <-> 실제 구현체 비교 assert |
+| Enum SSoT | 16개 Enum 빌드타임 검증 통과 | tsc --noEmit + Enum 테스트 |
+| 블록체인 통합 | Local Validator E2E + Anvil 통합 통과 | nightly.yml chain-tests |
+
+### 3. 문서
+
+#### 3.1 문서 디렉토리 재편성
+
+오픈소스 공개 전 문서 구조를 사용자 중심으로 재편성한다:
+
+| 변경 | 내용 |
+|------|------|
+| `docs/` → `docs-internal/` | 기존 설계 문서(24~72)를 내부 문서 디렉토리로 이동 |
+| `why-waiaas/` → `docs/why-waiaas/` | 프로젝트 가치 설명 문서를 사용자 문서로 이동 |
+| `docs/` (신규) | 사용자용 문서만 포함: API 레퍼런스, 배포 가이드, 기여 가이드, why-waiaas 등 |
+
+재편성 후 `docs/` 구조:
+
+```
+docs/
+  api-reference/          # OpenAPI 3.0 스펙
+  guides/                 # 배포 가이드, 마이그레이션 가이드
+  why-waiaas/             # 프로젝트 가치 설명 (영문, 오픈소스 사용자 대상)
+  api-versioning.md       # API 버저닝 정책
+```
+
+#### 3.2 산출물
+
+| 문서 | 내용 | 생성 방식 |
+|------|------|----------|
+| API 레퍼런스 | OpenAPI 3.0 스펙 (71 엔드포인트, 83 에러 코드) | Hono 라우트에서 자동 생성 + 수동 보완 |
+| 배포 가이드 | CLI 설치 (npm global), Docker 설치 (compose) | 수동 작성 |
+| 기여 가이드 | CONTRIBUTING.md -- 개발 환경 설정, 코드 스타일, PR 프로세스, 테스트 실행 방법 | 수동 작성 |
+| README | 프로젝트 소개, 빠른 시작(Quick Start), 아키텍처 개요, 라이선스 | 수동 작성 (영문 기본) |
+| CHANGELOG | v1.1~v2.0 전체 변경 이력 | release-please 자동 생성 (v1.8에서 구현) + 수동 보완 |
+| Why WAIaaS | AI 에이전트 지갑 보안 위기, 지갑 모델 비교 등 프로젝트 가치 설명 (영문) | 수동 작성 (docs/why-waiaas/ 폴더에 축적) |
+
+### 4. 배포
+
+**npm 패키지:**
+
+| 패키지 | 공개/비공개 | 비고 |
+|--------|-----------|------|
+| `@waiaas/core` | 공개 | AI 에이전트 통합에 필요한 타입/스키마 |
+| `@waiaas/sdk` | 공개 | AI 에이전트가 직접 사용하는 SDK |
+| `@waiaas/mcp` | 공개 | MCP 서버 패키지 |
+| `@waiaas/daemon` | 공개 | 데몬 서버 (self-hosted 설치) |
+| `@waiaas/cli` | 공개 | CLI 도구 (npm global install) |
+| `@waiaas/adapter-solana` | 공개 | Solana 어댑터 |
+| `@waiaas/adapter-evm` | 공개 | EVM 어댑터 |
+| `@waiaas/admin` | 공개 | Admin Web UI (daemon에 번들, 독립 사용도 가능) |
+| `@waiaas/skills` | 공개 | API 스킬 파일 배포 (`npx @waiaas/skills add <name>`) |
+
+**Docker 이미지:**
+- `waiaas/daemon:latest` + `waiaas/daemon:2.0.0` (semver 태그)
+- Multi-stage Dockerfile, non-root UID 1001, named volume
+- Docker Hub push
+
+> Desktop 바이너리 (5 플랫폼)는 v2.6.1로 이연. v2.0은 npm + Docker 배포만 포함.
+
+### 5. 예제 에이전트
+
+SDK 사용법을 보여주는 레퍼런스 코드. 외부 개발자가 참고할 수 있는 최소 동작 예제.
+
+```
+examples/
+  simple-agent/
+    index.ts              # @waiaas/sdk 기반 간단한 에이전트 (잔액 조회 → 조건부 전송 → 완료 대기)
+    README.md             # 실행 방법, 사전 조건, 예상 출력
+    package.json          # @waiaas/sdk 의존성만
+```
+
+| 항목 | 내용 |
+|------|------|
+| 언어 | TypeScript (tsx/ts-node 실행) |
+| 의존성 | `@waiaas/sdk`만 (0 외부 의존성 SDK의 장점 부각) |
+| 시나리오 | 잔액 조회 → 임계값 비교 → 조건부 SOL 전송 → 트랜잭션 완료 대기 → 결과 출력 |
+| 용도 | README Quick Start 참조, npm 패키지 페이지 예제, 홍보 데모 소재 |
+| LLM 불필요 | 확정적 코드 흐름 — AI API 키 없이 `node` 또는 `tsx`로 즉시 실행 가능 |
+
+### 6. 릴리스
+
+| 항목 | 내용 |
+|------|------|
+| GitHub Release | v2.0.0 태그, 릴리스 노트, npm + Docker 배포 (Desktop 바이너리는 v2.6.1로 이연) |
+| CHANGELOG.md | v1.1~v2.0 전체 변경 이력 (Keep a Changelog 포맷) |
+| 마이그레이션 가이드 | 해당 없음 -- 첫 공개 릴리스이므로 이전 버전에서의 마이그레이션 불필요 |
+
+---
+
+## 기술 결정 사항
+
+| # | 결정 항목 | 선택지 | 결정 근거 |
+|---|----------|--------|----------|
+| 1 | npm publish 범위 | 전체 9 패키지 공개 | Self-hosted 아키텍처이므로 모든 패키지가 npm에서 직접 설치 가능해야 함. @waiaas/admin은 daemon에 번들되지만 독립 배포도 지원. 비공개 패키지는 관리 복잡도만 증가 |
+| 2 | Docker 이미지 태깅 전략 | latest + semver (2.0.0) + git SHA | latest는 편의성, semver는 고정 버전 배포, SHA는 디버깅용 정확한 빌드 추적 |
+| 3 | GitHub Release 자동화 | release-please (v1.8에서 구현, 2-게이트 모델) | 게이트 1: Release PR 머지(릴리스 의사 결정) → 게이트 2: deploy job 수동 승인(배포 실행). v2.0에서 deploy job의 dry-run 제거로 실제 배포 활성화 |
+| 4 | README 언어 | 영문 기본 + README.ko.md 한글 버전 | 오픈소스 공개를 위해 영문 기본. 한국어 사용자를 위한 별도 한글 버전 제공 |
+| 5 | 라이선스 | MIT | 가장 관대한 라이선스. AI 에이전트 생태계 통합에 제약 최소화. Apache 2.0은 특허 조항이 과도 |
+| 6 | 문서 호스팅 | GitHub Pages | 초기 릴리스에서 별도 문서 사이트 부담 회피. OpenAPI 스펙은 Swagger UI로 자동 렌더링 |
+| 7 | CHANGELOG 포맷 | Keep a Changelog + release-please 자동 생성 | Keep a Changelog의 가독성 + Conventional Commits의 자동화를 결합 |
+
+---
+
+## E2E 검증 시나리오
+
+**릴리스 체크리스트 통합 -- `[HUMAN]` 3건**
+
+### 자동 검증 (CI/스크립트)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | CI/CD nightly 3일 연속 통과 확인 | nightly.yml 실행 이력 3일 연속 success 확인 (GitHub API 또는 수동 확인) | [L0] |
+| 2 | 보안 시나리오 ~460건 전수 통과 | Vitest test:security 전수 실행 -> 0 failures assert | [L0] |
+| 3 | 커버리지 Hard 80% 게이트 통과 | coverage-gate.sh hard 모드 -> exit 0 | [L0] |
+| 4 | Enum SSoT 빌드타임 검증 통과 | tsc --noEmit + Enum round-trip 테스트 전수 통과 | [L0] |
+| 5 | 플랫폼 테스트 84건 전수 통과 | release.yml platform-cli(32건) + platform-docker(18건) + Telegram(34건) = 84건 자동 통과. Tauri 34건은 v2.6.1로 이연 | [L0] |
+| 6 | npm publish --dry-run 성공 (공개 9 패키지) | 각 패키지 `npm publish --dry-run` exit 0 | [L1] |
+| 7 | Docker Hub push 성공 | `docker push waiaas/daemon:2.0.0` + `docker push waiaas/daemon:latest` 성공 | [L1] |
+| 8 | GitHub Release 생성 + 배포 | Release PR 머지(게이트 1) → 품질 게이트 통과 → deploy job 수동 승인(게이트 2) → npm publish + Docker push 확인. Desktop 바이너리는 v2.6.1로 이연 | [L1] |
+| 9 | 설계 부채 0건 확인 (또는 v2.1 이연 명시) | `objectives/design-debt.md` 파일 파싱 -> 미해결 항목 0건 assert (또는 v2.1 이연 항목만 존재) | [L0] |
+| 10 | 설계 문서 38개 구현 매핑 전수 확인 | 본 문서의 매핑 테이블 38개 행 x v2.0 최종 검증 범위 항목이 모두 "확인됨" 상태 (doc 39 이연 제외) | [L0] |
+| 11 | OpenAPI 3.0 스펙 유효성 검증 | Swagger CLI validate 또는 OpenAPI 유효성 검증 도구 실행 -> 0 errors | [L0] |
+| 12 | 예제 에이전트 실행 성공 | `tsx examples/simple-agent/index.ts` 실행 -> 잔액 조회 + 전송 + 완료 대기 정상 동작 (devnet/localnet) | [L1] |
+| 13 | @waiaas/skills npx 설치 성공 | `npx @waiaas/skills add wallet transactions` 실행 -> 스킬 파일 복사 확인 | [L1] |
+
+### 수동 검증 [HUMAN]
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 14 | README 영문 버전 내용 검토 + 품질 확인 | README.md 영문 버전 읽기 -> 프로젝트 소개/Quick Start/아키텍처 개요가 정확하고 이해하기 쉬운지 판단 | [HUMAN] |
+| 15 | CHANGELOG.md 최종 검토 + 누락 확인 | CHANGELOG.md에 v1.1~v2.0 모든 주요 변경 사항이 누락 없이 기재되었는지 확인 | [HUMAN] |
+| 16 | 설계 부채 이연 판단 (0건이 아닌 경우) | design-debt.md에 미해결 항목이 있을 경우, v2.1 이연이 적절한지 판단. 보안 관련 부채는 이연 불가 | [HUMAN] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.8 (업그레이드 + 배포 인프라) | v1.8에서 구축한 release-please 2-게이트 모델, VersionCheckService, upgrade CLI가 v2.0 릴리스 인프라의 기반. CI/CD 파이프라인, 커버리지 게이트, 보안 테스트가 모두 동작해야 릴리스 판정 가능 |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | 설계 부채 잔존 | v2.0 전 0건 달성 목표이나, 구현 중 발견된 Tier 1~2 부채가 누적 시 릴리스 지연 | 매 마일스톤 시작 시 설계 부채 리뷰 의무화. Tier 3은 즉시 처리, Tier 1~2는 다음 마일스톤 전 해소. 불가피한 경우 v2.1 이연 명시 |
+| 2 | npm 패키지 네이밍 충돌 | @waiaas 스코프가 npm에서 이미 사용 중이면 패키지 발행 불가 | npm scope 사전 확보 (`npm init --scope=@waiaas`). 충돌 시 대안 스코프 검토 (@waiaas-dev 등) |
+| 3 | Docker Hub 이미지 크기 | native addon(sodium-native, better-sqlite3) 포함 시 500MB+ 가능성 | Multi-stage Dockerfile로 빌드 레이어와 런타임 레이어 분리. Alpine 기반 이미지 + prebuildify 바이너리만 포함. 목표 200MB 이하 |
+| 4 | 5 플랫폼 바이너리 호환성 | v2.6.1로 이연 — Desktop App 자체가 v2.0 이후 구현 | — |
+| 5 | 문서 품질 | 자동 생성 OpenAPI 외 수동 문서(README, CHANGELOG, 가이드)는 [HUMAN] 검토 필수. 검토 시간 부족 시 문서 품질 저하 | [HUMAN] 항목을 3건으로 제한하여 검토 부담 최소화. 자동 생성 가능한 부분(OpenAPI, API 레퍼런스)은 최대한 자동화 |
+| 6 | 릴리스 롤백 | npm unpublish는 24시간 이내에만 가능. Docker Hub는 태그 덮어쓰기 가능하나 latest 사용자에게 영향 | 2-게이트 모델로 배포 전 수동 승인 필수. pre-release(rc)로 v2.0.0-rc.1 먼저 발행. 3일 관찰 후 v2.0.0 정식 발행. Docker는 semver 태그 사용 권장 |
+
+---
+
+*최종 업데이트: 2026-02-17 v1.8 완료 반영 — 설계 문서 매핑 37→38개 (doc 65-72 추가), 패키지 8→9개 (@waiaas/admin 추가), 에러 코드 66→83개, 엔드포인트 38→71개, MCP 도구 6→19개, 보안 시나리오 237→~460건, Enum 9→16개, 플랫폼 테스트 84건 확정, @solana/kit 3.x→6.x, DD-04 처리 완료 확인, 의존 v1.7→v1.8 갱신*

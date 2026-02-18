@@ -1,0 +1,56 @@
+# Issue #073: 정식 릴리스 승격 스크립트 자동화
+
+- **유형**: ENHANCEMENT
+- **심각도**: MEDIUM
+- **마일스톤**: m20
+- **상태**: OPEN
+
+## 현황
+
+release-please의 `prerelease: true`를 기본으로 운영하여 모든 릴리스가 rc로 시작되도록 설정. rc가 안정화되면 정식 버전으로 승격하는 흐름을 사용한다.
+
+현재 승격 절차가 수동:
+
+1. `release-please-config.json`에서 `prerelease: true` 제거
+2. 커밋 + push
+3. release-please PR이 정식 버전으로 갱신됨 → merge → 배포
+4. `prerelease: true` 복원
+5. 커밋 + push
+
+실수 여지: prerelease 복원 누락, 잘못된 커밋 메시지 등.
+
+## 설계
+
+### `scripts/promote-release.sh`
+
+```bash
+# 사용법
+./scripts/promote-release.sh          # prerelease 제거 → 커밋 → push
+./scripts/promote-release.sh --restore  # 배포 후 prerelease 복원 → 커밋 → push
+```
+
+**Phase 1: 승격 (`promote-release.sh`)**
+1. `release-please-config.json`에서 `"prerelease": true` 행 제거
+2. `chore: promote release to stable` 커밋
+3. push → release-please가 PR을 정식 버전으로 갱신
+
+**Phase 2: 복원 (`promote-release.sh --restore`)**
+1. `release-please-config.json`에 `"prerelease": true` 행 복원
+2. `chore: restore prerelease mode` 커밋
+3. push → 다음 커밋부터 다시 rc 모드
+
+### 안전장치
+
+- 실행 전 git 워킹 트리가 clean인지 확인
+- 현재 브랜치가 main인지 확인
+- `--dry-run` 옵션으로 변경 내용 미리보기
+- 이미 prerelease가 없는 상태에서 promote 시 에러
+- 이미 prerelease가 있는 상태에서 restore 시 에러
+
+## 완료 기준
+
+- [ ] `scripts/promote-release.sh` 작성됨
+- [ ] promote (prerelease 제거 → 커밋 → push) 동작 확인
+- [ ] `--restore` (prerelease 복원 → 커밋 → push) 동작 확인
+- [ ] `--dry-run` 옵션 지원
+- [ ] 안전장치 (clean tree, main 브랜치, 중복 실행 방지)

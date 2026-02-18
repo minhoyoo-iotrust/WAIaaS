@@ -1,0 +1,63 @@
+# 마일스톤 m22: 테스트 커버리지 강화
+
+## 목표
+
+v1.7에서 설정한 커버리지 임계값을 모든 패키지에서 실제로 달성하는 상태. 임시 하향한 임계값을 원래 수준으로 복원하고, 전체 패키지의 커버리지 품질을 균일하게 유지한다.
+
+---
+
+## 배경
+
+v1.7 Phase 151에서 8개 패키지에 커버리지 임계값을 일괄 설정했으나, 일부 패키지에서 실제 커버리지가 목표에 미달. `--affected` CI 모드에서 미변경 패키지는 테스트가 미실행되어 발견되지 않았음.
+
+| 이슈 | 패키지 | 항목 | 목표 | 실제 | 임시 조정 |
+|------|--------|------|------|------|----------|
+| #060 | adapter-solana | branches | 75% | 68.29% | → 65% |
+| #061 | admin | functions | 70% | 58.48% | → 55% |
+| #062 | cli | lines | 70% | 68.49% | → 65% |
+| #062 | cli | statements | 70% | 68.49% | → 65% |
+
+---
+
+## 산출물
+
+### 1. adapter-solana 브랜치 커버리지 75% 이상 달성
+
+현재 미커버 78개 브랜치(246개 중 168개 커버) 중 최소 17개 이상 추가 커버 필요.
+
+| 우선순위 | 영역 | 미커버 | 설명 |
+|---------|------|--------|------|
+| P1 | `convertBatchInstruction()` | ~12 | 4가지 instruction 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE) 분기 |
+| P2 | `signExternalTransaction()` | ~8 | Base64 디코딩 실패, 키 길이 판별(32 vs 64), 서명자 검증 |
+| P3 | `tx-parser.ts` | ~15 | 파싱 실패, unknown 명령어, null coalescing fallback |
+| P4 | Error instanceof 분기 | ~30 | 모든 메서드의 `instanceof WAIaaSError`/`instanceof Error` false 분기 |
+| P5 | 기타 | ~13 | getAssets 정렬, estimateFee 토큰/네이티브 분기 등 |
+
+### 2. admin functions 커버리지 70% 이상 달성
+
+현재 58.48%에서 70%로 올리기 위해 미커버 함수에 대한 테스트 추가 필요.
+
+### 3. cli lines/statements 커버리지 70% 이상 달성
+
+현재 68.49%에서 70%로 올리기 위해 미커버 라인에 대한 테스트 추가 필요.
+
+### 4. 전체 패키지 커버리지 임계값 검증
+
+모든 패키지의 vitest.config.ts 임계값이 실제 커버리지와 일치하는지 점검하고, 불일치 항목 식별.
+
+### 5. 임계값 복원
+
+- adapter-solana `branches`: 65 → 75
+- admin `functions`: 55 → 70
+- cli `lines`: 65 → 70
+- cli `statements`: 65 → 70
+
+---
+
+## 성공 기준
+
+- [ ] adapter-solana 브랜치 커버리지 ≥ 75%
+- [ ] admin functions 커버리지 ≥ 70%
+- [ ] cli lines/statements 커버리지 ≥ 70%
+- [ ] 모든 패키지 CI 커버리지 체크 통과
+- [ ] 임시 하향한 임계값이 원래 수준으로 복원됨

@@ -1,0 +1,265 @@
+# 마일스톤 m16: 가격 오라클 + Action Provider 프레임워크
+
+## 목표
+
+USD 기준 정책 평가가 동작하고, Action Provider 프레임워크가 구축되어 DeFi 프로토콜 플러그인을 추가할 수 있는 상태. 프레임워크만 구현하며, 구체적인 프로토콜 연동(Jupiter Swap 등)은 v2.3.x 이후에서 다룬다.
+
+---
+
+## 구현 대상 설계 문서
+
+이 마일스톤에서 구현하는 설계 문서 목록과 각 문서에서 구현할 범위를 명시한다.
+
+| 문서 | 이름 | 구현 범위 | 전체/부분 |
+|------|------|----------|----------|
+| 61 | price-oracle-spec | IPriceOracle 인터페이스(4개 메서드: getPrice, getPrices, getNativePrice, getCacheStats), PythOracle 구현체(Hermes REST API, 서브초 갱신, Zero-config Primary), CoinGeckoOracle 구현체(Demo API key opt-in Fallback, platformId 매핑), OracleChain fallback 체인(Pyth->CoinGecko), 5분 TTL InMemoryPriceCache(LRU 128항목), 가격 나이 3단계(FRESH<5분/AGING 5~30분/STALE>30분), 교차 검증 인라인(편차>5%->STALE 격하, CoinGecko 키 설정 시에만 활성화), resolveEffectiveAmountUsd() 함수, SpendingLimitRuleSchema USD 필드 확장, GET /v1/admin/oracle-status 헬스체크 엔드포인트 | 전체 |
+| 62 | action-provider-architecture | IActionProvider 인터페이스(metadata/actions/resolve), ActionProviderMetadata Zod 스키마, ActionDefinition Zod 스키마(name/description/inputSchema/chain/riskLevel/defaultTier), ActionContext 타입, resolve-then-execute 패턴 전체 흐름, ActionProviderRegistry(플러그인 발견/로드/검증, ~/.waiaas/actions/ 디렉토리 스캔, ESM dynamic import), validate-then-trust 보안 경계(IActionProvider 인터페이스 준수 + resolve() 반환값 Zod 검증), ActionDefinition->MCP Tool 자동 매핑(zodToJsonSchema 변환, server.tool() 등록, mcpExpose 제어), REST API POST /v1/actions/:provider/:action 엔드포인트 | 전체 |
+
+### v0.10 설계 결정 반영
+
+v0.10에서 확정된 설계 결정을 v1.5 구현에 반영한다:
+
+| 결정 ID | 내용 | 적용 범위 |
+|---------|------|----------|
+| OPER-03 | Oracle 교차 검증 인라인 + 가격 나이 3단계 FRESH/AGING/STALE: 교차 검증은 백그라운드가 아닌 인라인에서 수행하며, 편차>5%이면 STALE로 격하. 가격 나이는 FRESH(<5분, 정상 평가), AGING(5~30분, 경고 로그 + 정상 평가), STALE(>30분, USD 평가 스킵 -> 네이티브 금액만으로 티어 결정) | IPriceOracle 캐시 로직, OracleChain 교차 검증, resolveEffectiveAmountUsd() 가격 나이 분기 |
+
+### 구현 범위 상세
+
+#### v1.4에서 이미 구현된 부분 (v1.5에서 활용)
+
+- ContractCallRequest 인터페이스 (Solana: programId/instructionData/accounts, EVM: calldata/abi/value)
+- CONTRACT_WHITELIST 정책 (기본 전면 거부, opt-in 화이트리스트)
+- 파이프라인 Stage 5 완전 의사코드 (build->simulate->sign->submit + 에러 분기)
+- discriminatedUnion 5-type (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH)
+- DatabasePolicyEngine Stage 3 11단계 평가
+- ChainError 3-카테고리 (PERMANENT/TRANSIENT/STALE)
+- MCP Server 14개 도구 + 4개 리소스 그룹 (v1.3~v1.4.7에서 구현)
+
+#### v1.5에서 새로 추가하는 부분
+
+- IPriceOracle 서비스 레이어 전체 (인터페이스 + 2개 구현체 + OracleChain)
+- InMemoryPriceCache (5분 TTL, LRU 128항목)
+- 가격 나이 3단계 판정 로직 (FRESH/AGING/STALE)
+- 교차 검증 인라인 (편차>5% -> STALE 격하)
+- resolveEffectiveAmountUsd() 함수 (5개 TransactionType 모두 USD 기준 평가)
+- SpendingLimitRuleSchema Zod 스키마 신규 생성 + USD 필드 확장 (instant_max_usd, notify_max_usd, delay_max_usd). 현재 SpendingLimitRules는 TypeScript interface만 존재하며 정책 생성 시 `rules: z.record(z.unknown())`으로 비검증 상태이므로, Zod SSoT 원칙에 따라 Zod 스키마를 새로 정의해야 한다
+- IActionProvider 인터페이스 + ActionProviderRegistry 전체
+- ActionDefinition -> MCP Tool 자동 변환 레이어
+- REST API: POST /v1/actions/:provider/:action, GET /v1/admin/oracle-status
+
+---
+
+## 산출물
+
+### 컴포넌트
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| IPriceOracle | 인터페이스 4개 메서드: `getPrice(token: TokenRef): Promise<PriceInfo>`, `getPrices(tokens: TokenRef[]): Promise<Map<string, PriceInfo>>`, `getNativePrice(chain: ChainType): Promise<PriceInfo>`, `getCacheStats(): CacheStats`. TokenRef Zod 스키마(address/symbol?/decimals/chain), PriceInfo Zod 스키마(usdPrice/confidence?/source/fetchedAt/expiresAt/isStale) |
+| PythOracle | Pyth Hermes REST API 구현체. **Zero-config Primary** (API 키 불필요). 380+ 가격 피드, 체인 무관(Solana/EVM 모두 동일 피드 ID), 서브초 갱신, confidence interval 활용(PriceInfo.confidence 매핑). https://hermes.pyth.network/v2/updates/price/latest. **피드 ID 매핑**: TokenRef.address → Pyth feedId(bytes32) 변환 전략은 phase research에서 결정 (Pyth `/v2/price_feeds` API 조회, 주요 토큰 하드코딩 맵, 또는 심볼 기반 검색 중 택일) |
+| CoinGeckoOracle | CoinGecko Demo API 구현체. **Opt-in Fallback** (Demo API 키 설정 시에만 활성화). platformId 매핑(solana/ethereum), /simple/token_price 엔드포인트, rate limit 대응(10-30 req/min). 배치 조회 최적화(getPrices에서 단일 HTTP 요청으로 다수 토큰 조회). Pyth 미지원 롱테일 토큰 커버리지 확보 |
+| OracleChain | Pyth -> CoinGecko 2단계 fallback 체인. Primary(Pyth) 실패/stale 시 CoinGecko로 fallback (키 미설정 시 스킵), 모든 소스 실패 시 ORACLE_UNAVAILABLE 에러 반환 -> 정책 평가 거부가 아닌 네이티브 금액만으로 티어 결정. 교차 검증 인라인: CoinGecko 키 설정 시 양쪽 성공하면 편차 계산, 편차>5% -> STALE 격하 + PRICE_DEVIATION_WARNING 감사 로그 |
+| InMemoryPriceCache | 5분 TTL 인메모리 캐시, LRU 128항목 상한. 캐시 키: `${chain}:${address}`. stale 30분까지 허용(AGING/STALE 구분). CacheStats 모니터링(hits/misses/staleHits/size/evictions) |
+| 가격 나이 판정 | classifyPriceAge(fetchedAt): PriceAge 함수. FRESH(<5분) -> 정상 평가, AGING(5~30분) -> 정상 평가 + PRICE_STALE 경고 로그, STALE(>30분) -> USD 평가 스킵 + PRICE_UNAVAILABLE 감사 로그 |
+| USD 정책 | resolveEffectiveAmountUsd(input: PipelineInput, priceOracle: IPriceOracle): Promise<PriceResult>. 5개 TransactionType(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH) 모두 USD 기준 평가. TOKEN_TRANSFER: token.amount * usdPrice, CONTRACT_CALL: value(네이티브) * usdPrice, APPROVE: amount * usdPrice, BATCH: 개별 합산. SpendingLimitRuleSchema Zod 스키마 신규 생성(현재 TypeScript interface만 존재) + instant_max_usd/notify_max_usd/delay_max_usd 필드 추가. PriceResult discriminated union으로 3가지 결과를 구분한다: `PriceResult.success(usdAmount)` — 정상 USD 평가, `PriceResult.oracleDown()` — 오라클 일시 장애 → 네이티브 금액만으로 평가(graceful fallback), `PriceResult.notListed()` — 해당 토큰 가격 정보 없음 → 최소 NOTIFY로 격상 + UNLISTED_TOKEN_TRANSFER 감사 로그. 네이티브 토큰(SOL/ETH) 전송은 항상 가격 조회 가능하므로 notListed 대상 아님 |
+| IActionProvider | 인터페이스: metadata(ActionProviderMetadata), actions(ActionDefinition[]), resolve(actionName, params, context): Promise<ContractCallRequest>. resolve-then-execute 패턴: resolve()는 반드시 ContractCallRequest만 반환, 서명/제출 수행 금지. ActionContext 타입: agentId/chain/walletAddress 포함 |
+| ActionProviderRegistry | 플러그인 발견/로드/검증 서비스. ~/.waiaas/actions/ 디렉토리 스캔, ESM dynamic import로 로드, validate-then-trust(IActionProvider 인터페이스 준수 검증 + resolve() 반환값 Zod 검증). 등록/해제 API: register(provider), unregister(name), getProvider(name), listProviders(). 이름 중복 거부 |
+| MCP Tool 변환 | ActionDefinition -> MCP Tool 자동 매핑. zodToJsonSchema로 inputSchema 변환, server.tool() 등록. 도구 이름: `waiaas_{providerName}_{actionName}` 형식. 기존 14개 도구는 항상 유지, Action 도구는 mcpExpose=true인 프로바이더만 MCP 노출. 동적 도구 등록/해제: 프로바이더 등록 시 MCP 도구 자동 추가, 해제 시 자동 제거 |
+| ActionProviderApiKeyStore | Action Provider별 API 키 관리. DB 암호화 저장(sodium-native secretbox), CRUD API. api_keys 테이블(provider_name UNIQUE, encrypted_key, created_at, updated_at). 키 미설정 시 해당 프로바이더의 액션 비활성화 + "Admin > Settings에서 API 키를 설정하면 사용할 수 있습니다" 안내 반환. IActionProvider.metadata에 requiresApiKey: boolean 필드 추가 |
+| Admin API Keys UI | Admin > Settings > API Keys 섹션. 프로바이더별 API 키 입력/수정/삭제 폼. 키 저장 시 마스킹 표시(앞 4자만 노출). 키 필요 프로바이더 중 미설정 항목에 경고 배지 표시 |
+
+### 파일/모듈 구조
+
+> **NOTE**: 현재 daemon은 `api/`, `infrastructure/`, `pipeline/`, `notifications/` 구조이며 `services/` 디렉토리가 없다. 아래는 논리적 구조이며, 기존 컨벤션에 맞춘 최종 배치는 phase planning에서 결정한다.
+
+```
+packages/core/src/interfaces/
+  price-oracle.types.ts          # TokenRef, PriceInfo, CacheStats, IPriceOracle
+  action-provider.types.ts       # ActionProviderMetadata, ActionDefinition, ActionContext, IActionProvider
+
+packages/daemon/src/
+  oracle/                        # 또는 infrastructure/oracle/
+    price-cache.ts               # InMemoryPriceCache (LRU 128, 5분 TTL)
+    price-age.ts                 # classifyPriceAge(), PriceAge enum
+    pyth-oracle.ts               # PythOracle implements IPriceOracle (Primary, Zero-config)
+    coingecko-oracle.ts          # CoinGeckoOracle implements IPriceOracle (Opt-in Fallback)
+    oracle-chain.ts              # OracleChain (Pyth->CoinGecko fallback + 교차 검증 인라인)
+  pipeline/
+    resolve-effective-amount-usd.ts  # resolveEffectiveAmountUsd()
+  action/                        # 또는 infrastructure/action/
+    action-provider-registry.ts  # ActionProviderRegistry
+    mcp-tool-converter.ts        # ActionDefinition -> MCP Tool 변환
+    api-key-store.ts             # ActionProviderApiKeyStore (DB 암호화 저장)
+
+packages/daemon/src/api/routes/
+  actions.ts                     # POST /v1/actions/:provider/:action
+  admin.ts                       # GET /v1/admin/oracle-status (확장)
+```
+
+### DB 마이그레이션
+
+| 버전 | 변경 내용 |
+|------|----------|
+| v11 | `api_keys` 테이블 추가 (provider_name UNIQUE, encrypted_key, created_at, updated_at). 현재 스키마 v10에서 증분 마이그레이션 |
+
+### REST API
+
+| 메서드 | 경로 | 인증 | 설명 |
+|--------|------|------|------|
+| POST | /v1/actions/:provider/:action | sessionAuth | Action Provider resolve -> 파이프라인 실행 |
+| GET | /v1/admin/oracle-status | masterAuth | 오라클 캐시 통계 + 소스별 상태 |
+| GET | /v1/admin/api-keys | masterAuth | 프로바이더별 API 키 설정 상태 조회 (키 마스킹) |
+| PUT | /v1/admin/api-keys/:provider | masterAuth | API 키 설정/수정 (암호화 저장) |
+| DELETE | /v1/admin/api-keys/:provider | masterAuth | API 키 삭제 |
+
+### Skill 파일 동기화
+
+CLAUDE.md 규칙에 따라 REST API/MCP 변경 시 skill 파일을 함께 업데이트한다.
+
+| 파일 | 변경 내용 |
+|------|----------|
+| admin.skill.md | oracle-status, api-keys 3개 엔드포인트 추가 |
+| transactions.skill.md 또는 신규 actions.skill.md | POST /v1/actions/:provider/:action 엔드포인트 추가 |
+| quickstart.skill.md | Oracle/Action Provider 기능 소개 추가 |
+
+---
+
+## 기술 결정 사항
+
+| # | 결정 항목 | 선택지 | 결정 근거 |
+|---|----------|--------|----------|
+| 1 | Primary Oracle | Pyth Hermes HTTP API (https://hermes.pyth.network) | **Zero-config DX**: API 키 불필요, 380+ 피드(Solana/EVM 공통), 서브초 갱신. 설치 직후 USD 정책 평가가 바로 동작. 온체인 호출 대비 구현 단순성과 비용 절감 |
+| 2 | Fallback Oracle | CoinGecko Demo API (opt-in) | Demo API 키 설정 시에만 활성화. Pyth 미지원 롱테일 토큰(수만 개) 커버리지 확보. CoinGecko API 키는 ActionProviderApiKeyStore와 동일한 DB 암호화 저장 패턴으로 Admin Settings > Oracle에서 설정. Pro 키도 동일 필드로 지원 |
+| 3 | Chainlink 제외 | 미구현 (제거) | EVM 전용(Solana 미지원)으로 커버리지 편향. Aggregator 주소 매핑 테이블 유지 부담. Pyth가 이미 체인 무관 380+ 피드를 제공하므로 실용적 가치 대비 구현 복잡도가 높음 |
+| 4 | Action Provider 플러그인 포맷 | ESM dynamic import | Node.js 22 ESM 네이티브 지원. CommonJS require는 ESM 모듈 로드 불가. ~/.waiaas/actions/ 디렉토리에서 .mjs 또는 package.json type=module 파일을 import() |
+| 5 | MCP Action Tool 노출 우선순위 | Admin Settings (SettingsService) | 기존 14개 도구는 항상 포함. Action 도구는 설정된 우선순위 순서대로 등록. 미지정 시 등록 순서 기준. MCP 프로토콜에 도구 개수 상한은 없으므로 기술적 제한은 아님. 런타임 변경이 유용하므로 config.toml이 아닌 Admin Settings에서 관리 |
+| 6 | 가격 캐시 구현 | 인메모리 Map 기반 LRU 캐시 | 외부 LRU 라이브러리 의존성 제거. Map + doubly-linked list로 직접 구현(128항목 상한). SQLite 캐시는 불필요(가격 데이터는 휘발성, 데몬 재시작 시 새로 조회) |
+| 7 | 가격 불명 토큰 정책 | 최소 NOTIFY 격상 + CoinGecko 키 안내 | $0 처리 시 USD 한도를 완전히 우회할 수 있어 보안 위험. "가치를 모른다 ≠ 가치가 없다" 원칙. PriceResult를 discriminated union(success/oracleDown/notListed)으로 구분하여 오라클 장애(일시적)와 토큰 미등록(지속적)을 다르게 처리. 네이티브 토큰(SOL/ETH)은 항상 가격 조회 가능하므로 notListed 대상 제외. CoinGecko 키 미설정 상태에서 notListed 발생 시, **해당 토큰 최초 1회만** 알림에 "CoinGecko API 키를 설정하면 더 많은 토큰 가격을 조회할 수 있습니다 (Admin Settings > Oracle)" 힌트를 포함한다. 동일 토큰 재발생 시 힌트 생략 (스팸 방지). CoinGecko 키가 이미 설정된 상태에서 notListed이면 힌트 없이 격상만 수행 |
+| 8 | API 키 저장 방식 | DB 암호화 저장 (sodium-native secretbox) | config.toml 평문 저장은 보안 취약. Admin UI에서 설정하려면 DB 저장 필수. sodium-native의 secretbox으로 암호화하여 api_keys 테이블에 저장. 복호화 키는 기존 마스터 키 파생. 키 조회 API는 마스킹 반환(앞 4자만 노출) |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100%**
+
+### USD 정책 평가
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | 5 USDC 전송 -> mock oracle USD $5 평가 -> INSTANT 티어 -> 즉시 실행 | mock IPriceOracle(USDC=$1.0 고정) + 5 USDC TOKEN_TRANSFER -> resolveEffectiveAmountUsd()=$5 -> SPENDING_LIMIT INSTANT 임계값 이내 -> CONFIRMED assert | [L0] |
+| 2 | 500 USDC 전송 -> mock oracle USD $500 평가 -> APPROVAL 티어 | mock IPriceOracle(USDC=$1.0 고정) + 500 USDC TOKEN_TRANSFER -> resolveEffectiveAmountUsd()=$500 -> SPENDING_LIMIT APPROVAL 임계값 초과 -> APPROVAL 상태 assert | [L0] |
+| 3 | SOL 전송 -> USD 환산 -> 금액별 정책 티어 분류 검증 | mock IPriceOracle(SOL=$150) + 0.01 SOL($1.5) -> INSTANT, 5 SOL($750) -> APPROVAL 등 4-tier 경계값 검증 | [L0] |
+| 4 | TOKEN_TRANSFER USD 변환 성공 -> USD 기준 SPENDING_LIMIT 평가 | instant_max_usd=10 설정 + 5 USDC($5) -> INSTANT, 15 USDC($15) -> NOTIFY 전이 assert | [L0] |
+| 5 | USD 변환 실패(오라클 장애) -> 네이티브 금액만으로 티어 결정 (graceful fallback) | mock IPriceOracle 전체 실패 + SOL 전송 -> PriceResult.oracleDown() -> 네이티브 금액 기준 SPENDING_LIMIT 평가 -> fallback 정상 동작 assert | [L0] |
+| 5-1 | 가격 불명 토큰 전송 -> 최소 NOTIFY 격상 | mock IPriceOracle에서 해당 토큰 NOT_LISTED 반환 + TOKEN_TRANSFER -> PriceResult.notListed() -> 건별 결과와 NOTIFY 중 높은 티어 적용 + UNLISTED_TOKEN_TRANSFER 감사 로그 assert | [L0] |
+| 5-2 | 가격 불명 토큰 + 건별 결과가 DELAY -> DELAY 유지 (NOTIFY보다 높으므로) | mock NOT_LISTED + 고액 네이티브 수량 -> 건별 DELAY > NOTIFY -> 최종 DELAY assert | [L0] |
+| 5-3 | 네이티브 토큰(SOL/ETH) 전송 -> notListed 대상 아님 -> 정상 USD 평가 | SOL TRANSFER -> Pyth에서 SOL/USD 조회 성공 -> PriceResult.success() assert | [L0] |
+| 5-4 | 가격 불명 토큰 + CoinGecko 키 미설정 → 최초 1회 키 안내 힌트 포함 | mock NOT_LISTED + CoinGecko 미설정 + BONK 최초 전송 → 알림에 "CoinGecko API 키를 설정하면..." 힌트 포함 assert | [L0] |
+| 5-5 | 같은 가격 불명 토큰 2회차 → 힌트 없이 격상만 수행 | BONK 2회차 전송 → 알림에 힌트 미포함 + NOTIFY 격상만 assert | [L0] |
+| 5-6 | 가격 불명 토큰 + CoinGecko 키 설정 완료 → 힌트 없음 | mock NOT_LISTED + CoinGecko 키 설정 → 알림에 힌트 미포함 assert | [L0] |
+
+### Oracle fallback + 가격 나이
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 6 | Pyth 장애 + CoinGecko 키 설정 -> CoinGecko fallback -> 정상 가격 반환 | mock PythOracle 에러 throw + mock CoinGeckoOracle 정상 반환 -> OracleChain.getPrice() 성공 + source='coingecko' assert | [L0] |
+| 7 | Pyth 장애 + CoinGecko 키 미설정 -> ORACLE_UNAVAILABLE -> 네이티브 fallback | mock PythOracle 에러 throw + CoinGecko 비활성 -> resolveEffectiveAmountUsd()=null -> 네이티브 금액만으로 티어 결정 assert | [L0] |
+| 8 | Pyth + CoinGecko 모두 장애 -> ORACLE_UNAVAILABLE -> 네이티브 금액만으로 티어 결정 | 2개 소스 모두 실패 -> resolveEffectiveAmountUsd()=null -> 네이티브 fallback assert | [L0] |
+| 9 | 가격 나이 FRESH(<5분) -> 정상 평가 | fetchedAt = now() - 3분 -> classifyPriceAge()='FRESH' -> 정상 USD 평가 통과 assert | [L0] |
+| 10 | 가격 나이 AGING(5~30분) -> 경고 로그 + 정상 평가 | fetchedAt = now() - 15분 -> classifyPriceAge()='AGING' -> PRICE_STALE 경고 로그 기록 + 정상 USD 평가 assert | [L0] |
+| 11 | 가격 나이 STALE(>30분) -> USD 평가 스킵 -> 네이티브 금액만으로 티어 결정 | fetchedAt = now() - 45분 -> classifyPriceAge()='STALE' -> resolveEffectiveAmountUsd()=null -> PRICE_UNAVAILABLE 감사 로그 + 네이티브 fallback assert | [L0] |
+| 12 | 교차 검증: 두 소스 편차 <=5% -> Primary 가격 채택 (CoinGecko 키 설정 시) | Pyth=$150, CoinGecko=$148 (편차 1.3%) -> Primary(Pyth) 가격 채택 + isStale=false assert | [L0] |
+| 13 | 교차 검증: 두 소스 편차 >5% -> STALE 격하 + PRICE_DEVIATION_WARNING 감사 로그 | Pyth=$150, CoinGecko=$120 (편차 20%) -> isStale=true 강제 + PRICE_DEVIATION_WARNING 로그 기록 assert | [L0] |
+| 13-1 | 교차 검증: CoinGecko 키 미설정 -> 교차 검증 스킵 -> Pyth 단독 가격 채택 | CoinGecko 비활성 상태 -> Pyth 가격 단독 사용 + 교차 검증 미수행 assert | [L0] |
+
+### Action Provider
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 14 | ActionProviderRegistry: 커스텀 플러그인 로드 -> 도구 목록 추가 | 테스트 IActionProvider 플러그인(.mjs) 작성 -> ~/.waiaas/actions/ 배치 -> registry.loadPlugins() -> listProviders()에 포함 assert | [L0] |
+| 15 | ActionProviderRegistry: 유효하지 않은 플러그인 -> 로드 거부 + 에러 로그 | metadata 누락된 잘못된 모듈 -> registry.loadPlugins() -> 로드 거부 + 에러 로그 기록 assert | [L0] |
+| 16 | ActionProviderRegistry: 이름 중복 플러그인 -> 등록 거부 | 동일 name의 두 프로바이더 -> 두 번째 register() 실패 assert | [L0] |
+| 17 | POST /v1/actions/:provider/:action -> 테스트 프로바이더 resolve -> 파이프라인 실행 | 테스트 IActionProvider 등록 + POST 호출 -> resolve() -> ContractCallRequest -> 파이프라인 실행 -> 상태 전이 assert | [L0] |
+
+### MCP 통합
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 18 | MCP: ActionDefinition -> 테스트 프로바이더 도구 자동 노출 | 테스트 프로바이더(mcpExpose=true) 등록 -> MCP tool 목록에 waiaas_test_action 포함 assert | [L0] |
+| 19 | MCP: mcpExpose=false 프로바이더 -> MCP 도구 미등록 | mcpExpose=false 테스트 프로바이더 등록 -> MCP tool 목록에 미포함 assert | [L0] |
+| 20 | MCP: Action 도구 우선순위 적용 확인 | tool_priority 설정 + 다수 Action 프로바이더 등록 -> 우선순위 순서대로 MCP 도구 등록 확인 assert | [L0] |
+| 21 | MCP: 동적 도구 등록/해제 -> 프로바이더 해제 시 MCP 도구 자동 제거 | 프로바이더 register -> MCP 도구 포함 확인 -> unregister -> MCP 도구 제거 확인 assert | [L0] |
+
+### API 키 관리
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 22 | PUT /v1/admin/api-keys/:provider -> 키 암호화 저장 | PUT api-keys/zero_ex {apiKey: "xxx"} -> DB 저장 -> 복호화 값 일치 assert | [L0] |
+| 23 | GET /v1/admin/api-keys -> 키 마스킹 반환 | 키 저장 후 GET -> maskedKey="xxx...x" (앞 4자만 노출) assert | [L0] |
+| 24 | DELETE /v1/admin/api-keys/:provider -> 키 삭제 + 프로바이더 비활성화 | DELETE -> GET 시 해당 프로바이더 키 없음 + 액션 호출 시 API_KEY_REQUIRED 에러 assert | [L0] |
+| 25 | requiresApiKey=true 프로바이더 + 키 미설정 -> 액션 비활성화 | 키 없이 POST /v1/actions/zero_ex/swap -> 403 + "Admin > Settings에서 API 키를 설정하세요" 메시지 assert | [L0] |
+| 26 | requiresApiKey=false 프로바이더 -> 키 없이 정상 동작 | 키 불필요 프로바이더 POST /v1/actions/lido/stake -> 정상 실행 assert | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.4 (토큰 + 컨트랙트 확장) | ContractCallRequest 인터페이스, CONTRACT_WHITELIST 정책, 파이프라인 Stage 5 의사코드, discriminatedUnion 5-type, DatabasePolicyEngine 11단계 평가가 v1.4에서 구현됨. Action Provider의 resolve()가 ContractCallRequest를 반환하여 기존 파이프라인에 주입하므로, v1.4 파이프라인이 완성되어야 v1.5 Action이 동작한다 |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | Pyth Hermes API 가용성 | Pyth Hermes 서비스 장애 시 Zero-config 환경에서 USD 평가 불가 | graceful fallback(네이티브 금액만으로 티어 결정)으로 서비스 중단 없음. CoinGecko 키 설정 시 자동 fallback 활성화. Pyth는 공식 퍼블릭 인스턴스 외에 자체 호스팅도 가능 |
+| 2 | CoinGecko API rate limit (opt-in 시 10-30 req/min) | CoinGecko 활성화 상태에서 다수 토큰 가격 동시 조회 시 rate limit 도달 가능 | 5분 TTL 캐시로 완화. getPrices() 배치 조회로 요청 최소화. Pro 키로 업그레이드 가능(동일 config 필드) |
+| 3 | Action Provider 플러그인 보안 (임의 코드 실행) | 악의적 플러그인이 시스템 리소스 접근 가능 | 샌드박스 없이 validate-then-trust: IActionProvider 인터페이스 준수 검증 + resolve() 반환값 Zod 검증. 플러그인은 Owner가 직접 설치하므로 신뢰 경계는 Owner 책임. v1.5 범위 외: 향후 VM 격리 검토(MEDIUM M2) |
+| 4 | 다수 Action Provider 등록 시 도구 관리 | 다수 Action Provider 등록 시 어떤 도구가 MCP에 노출되는지 예측 어려움 | Admin Settings에서 tool_priority 배열로 명시적 우선순위. 미지정 시 등록 순서. 기존 14개 도구는 항상 보장. mcpExpose=true/false로 노출 제어 |
+| 5 | 교차 검증 인라인 편차 임계값 튜닝 | 5% 임계값이 특정 토큰(저유동성)에서 오탐 발생 가능 | 5% 기본값, Admin Settings > Oracle에서 오버라이드 가능. CoinGecko 키 미설정 시 교차 검증 비활성화되므로 영향 없음. 토큰별 임계값은 v1.5 범위 외 |
+
+---
+
+## 선행 작업: 설계 문서 수정
+
+v1.5 구현 전에 아래 설계 문서들을 본 목표 문서의 변경 사항에 맞게 수정해야 한다.
+
+### 설계 문서 61 (price-oracle-spec) — Oracle 아키텍처 변경
+
+| 수정 대상 | 변경 내용 |
+|----------|----------|
+| OracleChain 순서 | CoinGecko→Pyth→Chainlink 3단계 → **Pyth→CoinGecko 2단계**로 변경 |
+| ChainlinkOracle | 구현체 전체 제거 (인터페이스, 파일, Aggregator 매핑 테이블 포함) |
+| PythOracle | Zero-config Primary로 역할 승격. 380+ 피드, 체인 무관 명시 |
+| CoinGeckoOracle | Opt-in Fallback으로 역할 변경. Demo API 키 설정 시에만 활성화 |
+| 교차 검증 조건 | CoinGecko 키 설정 시에만 활성화되도록 조건 추가 |
+| 가격 불명 토큰 정책 | PriceResult discriminated union(success/oracleDown/notListed) 추가. notListed 시 최소 NOTIFY 격상 명시 |
+
+### 설계 문서 62 (action-provider-architecture) — MCP Tool 상한 제거
+
+MCP 프로토콜에 도구 개수 상한이 없고, mcpExpose 플래그로 노출 범위를 충분히 제어할 수 있으므로 16개 상한을 제거한다.
+
+| 수정 대상 | 변경 내용 |
+|----------|----------|
+| 핵심 결정 #4 | "기존 6개 + Action 최대 10개 = 16개 상한" → mcpExpose 플래그로 노출 제어, 상한 없음 |
+| `MCP_TOOL_LIMIT_EXCEEDED` 에러 코드 | 에러 코드 정의 제거 (ActionProviderErrorCode, 에러 코드 표) |
+| `McpToolLimitExceededError` 클래스 | 의사코드 전체 제거 |
+| 부록 C.3 "MCP Tool 16개 상한 근거" | 섹션 전체 제거 |
+| 테스트 의사코드 | "MCP Tool이 16개를 초과하면 McpToolLimitExceededError" 테스트 제거 |
+| 기존 도구 수 | "기존 6개" → **"기존 14개"**로 현행화 (v1.3~v1.4.7에서 추가된 도구 반영) |
+
+### 설계 문서 38 (sdk-mcp-interface) — MCP Tool 상한 제거 + 현행화
+
+| 수정 대상 | 변경 내용 |
+|----------|----------|
+| `MCP_TOOL_MAX = 16` 상수 | 상한 상수 및 관련 의사코드 제거 |
+| `BUILT_IN_TOOL_COUNT = 6` | **14**로 현행화, 도구 목록 갱신 |
+| MCP Tool 현황 표 | "최대 16" 행 제거, 기존 내장 Tool 14개로 갱신 |
+| 변환 프로세스 의사코드 | MCP_TOOL_MAX 검사 분기 제거, mcpExpose 필터링만 유지 |
+
+---
+
+*최종 업데이트: 2026-02-15 (1) Oracle 아키텍처 변경 — Chainlink 제거, Pyth Primary, CoinGecko Opt-in Fallback (DX 단순화). (2) 가격 불명 토큰 정책 추가 — PriceResult discriminated union, notListed 시 최소 NOTIFY 격상. (3) CoinGecko 키 안내 힌트 — notListed 토큰 최초 1회, 키 미설정 시에만 표시. (4) Jupiter Swap을 v2.3.1로 분리 — v1.5는 프레임워크만 구현. (5) MCP Tool 16개 상한 제거 — mcpExpose 플래그로 충분히 제어 가능, 설계 문서 62/38 선행 수정 필요. (6) 코드베이스 현행화 — MCP 도구 14개, 리소스 4개, ContractCallRequest EVM 필드, SpendingLimitRuleSchema 신규 생성, DB v11 마이그레이션 명시. (7) 구현 준비 점검 — Pyth 피드 ID 매핑 전략 phase research 위임, config.toml→Admin Settings 전환(CoinGecko 키/교차검증 임계값/tool_priority), Skill 파일 동기화 산출물 추가, 파일 구조 phase planning 위임. 원본: 2026-02-09 v1.0 구현 계획 기반 생성, v0.10 설계 결정(OPER-03) 반영, 설계 문서 61/62 참조*

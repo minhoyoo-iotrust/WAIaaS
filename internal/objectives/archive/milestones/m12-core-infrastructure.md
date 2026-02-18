@@ -1,0 +1,199 @@
+# 마일스톤 m12: 코어 인프라 + 기본 전송
+
+## 목표
+
+CLI로 init -> start -> SOL 전송 -> 확인까지 동작하는 최소 데몬
+
+---
+
+## 구현 대상 설계 문서
+
+이 마일스톤에서 구현하는 설계 문서 목록과 각 문서에서 구현할 범위를 명시한다.
+
+| # | 문서 | 이름 | 구현 범위 | 전체/부분 |
+|---|------|------|----------|----------|
+| 24 | CORE-01 | monorepo-data-directory | 7-pkg 모노레포 구조, `~/.waiaas/` 데이터 디렉토리, config.toml 파서/검증, pnpm workspace, Turborepo | 전체 |
+| 25 | CORE-02 | sqlite-schema | 7 테이블(agents, sessions, transactions, policies, pending_approvals, audit_log, key_value_store), Drizzle ORM, UUID v7, PRAGMA 7개, WAL 모드 | 전체 |
+| 26 | CORE-03 | keystore-spec | AES-256-GCM 암호화/복호화, Argon2id KDF(m=64MiB, t=3, p=4), sodium guarded memory, 키스토어 파일 포맷 v1, 파일 권한 0600 | 전체 |
+| 27 | CORE-04 | chain-adapter-interface | `getBalance`, `buildTransaction`, `simulateTransaction`, `signTransaction`, `submitTransaction`, `waitForConfirmation` 6개 메서드 + `connect`, `disconnect`, `isConnected`, `getHealth` 연결 관리 4개 | 부분 |
+| 28 | CORE-05 | daemon-lifecycle-cli | 6단계 시작(타임아웃 fail-fast/soft, 5~30초 개별/90초 상한 — OPER-01), 10-step 종료, PID 파일, flock 잠금 | 전체 |
+| 29 | CORE-06 | api-framework-design | Hono OpenAPIHono 인스턴스, 미들웨어 1~6(requestId, hostGuard, killSwitchGuard, requestLogger, errorHandler, zodValidator), localhost 127.0.0.1 강제 바인딩 | 부분 |
+| 31 | CHAIN-SOL | solana-adapter-detail | SolanaAdapter 네이티브 SOL 전송 — `getBalance`(SOL), `buildTransaction`(SystemProgram.transfer), `simulateTransaction`, `signTransaction`, `submitTransaction`, `waitForConfirmation` 6개 메서드 | 부분 |
+| 45 | ENUM-MAP | enum-unified-mapping | 12 Enum SSoT(ChainType, NetworkType, AgentStatus, TransactionStatus, TransactionType, PolicyType, PolicyTier, SessionStatus, NotificationEventType, AuditAction, KillSwitchState, OwnerState), as const -> Zod -> Drizzle CHECK 파이프라인 | 전체 |
+| 54 | CLI-REDESIGN | cli-flow-redesign | `waiaas init`, `waiaas start`, `waiaas stop`, `waiaas status` 4개 명령어 | 부분 |
+
+### 구현하지 않는 범위
+
+| 문서 | 제외 항목 | 처리 마일스톤 |
+|------|----------|-------------|
+| 27 (chain-adapter) | `getAssets`, `estimateFee`, `buildContractCall`, `buildApprove`, `buildBatch`, `sweepAll`, `getCurrentNonce`, `resetNonceTracker` 등 나머지 14개 메서드 | v1.4 |
+| 29 (api-framework) | 미들웨어 7(rateLimiter), 미들웨어 8(authRouter — masterAuth/ownerAuth/sessionAuth 분기) | v1.2 |
+| 31 (solana-adapter) | SPL 토큰 전송, 컨트랙트 호출, 배치 트랜잭션, Approve | v1.4 |
+| 54 (cli) | `waiaas agent create`, `waiaas agent list`, `waiaas session create`, `waiaas config`, `--quickstart`, `--dev` 등 확장 명령어 | v1.2~v1.3 |
+| 32 (transaction-pipeline) | Stage 2(인증 검증), Stage 3(정책 평가 4-tier), Stage 4(DELAY/APPROVAL 대기) 완성 | v1.2 |
+
+---
+
+## 산출물
+
+### 패키지별 산출물
+
+| 패키지 | npm name | 내용 |
+|--------|----------|------|
+| `packages/core` | `@waiaas/core` | Zod 스키마(agent, session, transaction, policy, config), 타입, 12 Enum SSoT(as const -> Zod -> Drizzle), 66 에러 코드 통합 매트릭스, 인터페이스(IChainAdapter, ILocalKeyStore, IPolicyEngine, INotificationChannel), WAIaaSError 베이스 클래스, **i18n 메시지 템플릿 구조(en/ko)** |
+| `packages/adapters/solana` | `@waiaas/adapter-solana` | SolanaAdapter 6개 메서드(getBalance, buildTransaction, simulateTransaction, signTransaction, submitTransaction, waitForConfirmation), @solana/kit 3.x 기반, pipe 빌드 패턴 |
+| `packages/daemon` | `@waiaas/daemon` | Hono HTTP 서버(OpenAPIHono), SQLite + Drizzle ORM 7 테이블 마이그레이션, Keystore(AES-256-GCM + Argon2id + sodium guarded memory), 라이프사이클(6단계 시작 + 10-step 종료), config.toml 로더(smol-toml + Zod 검증 + 환경변수 오버라이드), BackgroundWorkers(WAL 체크포인트, 세션 만료 정리) |
+| `packages/cli` | `@waiaas/cli` | `waiaas init`(데이터 디렉토리 생성 + config.toml 기본값 + 키스토어 디렉토리), `waiaas start`(데몬 시작 + 마스터 패스워드 입력 + health check 대기), `waiaas stop`(graceful 종료 + PID 파일 정리), `waiaas status`(데몬 상태 조회) |
+| 모노레포 루트 | - | pnpm workspace(`pnpm-workspace.yaml`), Turborepo(`turbo.json`), 공유 tsconfig(`tsconfig.base.json`), ESLint + Prettier, Vitest 설정, `.nvmrc`(Node.js 22 LTS) |
+
+### 주요 파일/모듈 구조
+
+```
+packages/core/src/
+├── domain/           # Agent, Session, Transaction, Policy 엔티티 + 타입
+├── interfaces/       # IChainAdapter, ILocalKeyStore, IPolicyEngine, INotificationChannel
+├── schemas/          # Zod SSoT 스키마 (agent, session, transaction, policy, config)
+├── enums/            # 12 Enum SSoT (as const → Zod literal union)
+├── errors/           # error-codes.ts (66 에러 코드), base-error.ts (WAIaaSError)
+├── i18n/             # 다국어 메시지 템플릿
+│   ├── index.ts      # getMessages(locale), SupportedLocale 타입
+│   ├── en.ts         # 영문 메시지 (기본값)
+│   └── ko.ts         # 한글 메시지
+└── index.ts          # 패키지 진입점
+
+packages/daemon/src/
+├── infrastructure/
+│   ├── database/     # schema.ts (7 테이블 Drizzle), connection.ts (PRAGMA), migrate.ts
+│   ├── keystore/     # keystore.ts, crypto.ts (AES-256-GCM + Argon2id), memory.ts (sodium)
+│   ├── config/       # loader.ts (smol-toml + Zod + env override)
+│   └── cache/        # session-cache.ts (LRU)
+├── server/
+│   ├── app.ts        # OpenAPIHono 인스턴스
+│   ├── middleware/    # requestId, hostGuard, killSwitchGuard, requestLogger, errorHandler, zodValidator
+│   └── routes/       # agents.ts, transactions.ts, wallet.ts, health.ts
+├── services/         # agent-service.ts, transaction-service.ts
+├── pipeline/         # 6-stage 파이프라인 골격 (Stage 3 INSTANT 고정 패스스루)
+├── lifecycle/        # daemon.ts (DaemonLifecycle), signal-handler.ts, workers.ts
+└── index.ts          # 데몬 진입점
+
+packages/adapters/solana/src/
+├── adapter.ts        # SolanaAdapter (implements IChainAdapter)
+├── transaction-builder.ts  # pipe 기반 SOL 전송 트랜잭션 빌드
+├── rpc.ts            # RPC 클라이언트 설정
+└── index.ts
+
+packages/cli/src/
+├── commands/         # init.ts, start.ts, stop.ts, status.ts
+├── utils/            # data-dir.ts, password-prompt.ts
+└── index.ts          # CLI 진입점
+```
+
+### REST API 최소 엔드포인트 (6개)
+
+| # | 메서드 | 경로 | 설명 | 인증 | 응답 |
+|---|--------|------|------|------|------|
+| 1 | POST | `/v1/agents` | 에이전트 생성 | masterAuth (implicit) | 201 Created + Agent JSON |
+| 2 | GET | `/v1/wallet/balance` | 에이전트 SOL 잔액 조회 | masterAuth (implicit) | 200 OK + Balance JSON |
+| 3 | GET | `/v1/wallet/address` | 에이전트 Solana 주소 반환 | masterAuth (implicit) | 200 OK + Address JSON |
+| 4 | POST | `/v1/transactions/send` | SOL 전송 요청 | masterAuth (implicit) | 201 Created + Transaction JSON (status: QUEUED) |
+| 5 | GET | `/v1/transactions/:id` | 트랜잭션 상태 조회 | masterAuth (implicit) | 200 OK + Transaction JSON |
+| 6 | GET | `/health` | 헬스 체크 | 없음 | 200 OK + Health JSON |
+
+> **v1.1에서는 sessionAuth 미구현이므로 masterAuth implicit(데몬 구동 = 인증 완료)로 모든 API를 호출한다.** v1.2에서 sessionAuth/ownerAuth가 추가되면 인증 체계가 전환된다.
+>
+> **doc 37 스펙 보완 필요:** `POST /v1/agents`와 `GET /v1/transactions/:id`는 doc 37 (37-rest-api-complete-spec.md)에 정식 스펙이 없다. `POST /v1/agents`는 doc 54 (CLI redesign) §3에서 `waiaas agent create`가 호출하는 엔드포인트로 설계되어 있으나 doc 37에는 "미래 확장"으로만 언급. `GET /v1/transactions/:id`는 doc 37:860, doc 32:576에서 폴링 엔드포인트로 참조되나 38개 엔드포인트 목록에 미포함. v1.1 구현 시 doc 37에 정식 스펙을 추가한다 (설계 부채 DD-01, DD-02).
+
+### 파이프라인: 6-stage 골격
+
+| Stage | 이름 | v1.1 구현 범위 |
+|-------|------|---------------|
+| Stage 1 | 요청 수신 + Zod 검증 | Hono 라우트 수신, Zod 스키마 검증, DB INSERT (status: PENDING) |
+| Stage 2 | 인증 검증 | **패스스루** (v1.2에서 sessionAuth 검증 구현) |
+| Stage 3 | 정책 평가 | **INSTANT 고정** (DefaultPolicyEngine — 모든 거래 `{ allowed: true, tier: 'INSTANT' }`) |
+| Stage 4 | 대기 처리 | **패스스루** (INSTANT 직행이므로 DELAY/APPROVAL 대기 불필요) |
+| Stage 5 | 온체인 실행 | IChainAdapter 4단계 (build -> simulate -> sign -> submit) |
+| Stage 6 | 확정 대기 | waitForConfirmation + DB UPDATE (status: CONFIRMED/FAILED) |
+
+---
+
+## 기술 결정 사항
+
+구현 과정에서 확정해야 할 기술적 선택지를 미리 식별한다.
+
+| # | 결정 항목 | 현재 상태 | 선택지 | 비고 |
+|---|----------|----------|--------|------|
+| TD-01 | 모노레포 도구 | **확정** | pnpm workspace + Turborepo | v0.2 CORE-01에서 확정 |
+| TD-02 | ESLint 룰셋 | 미확정 | `@typescript-eslint/recommended` + custom rules | Prettier 통합 (`eslint-config-prettier`) |
+| TD-03 | Prettier 설정 | 미확정 | singleQuote, semi, tabWidth=2, trailingComma='all' | 프로젝트 표준 코드 스타일 |
+| TD-04 | Vitest 설정 | 미확정 | 루트 Vitest workspace vs 패키지별 독립 설정 | Turborepo `test` 파이프라인과 연동 방식 |
+| TD-05 | TypeScript tsconfig | 미확정 | 프로젝트 레퍼런스(project references) vs 단일 tsconfig | 모노레포에서 빌드 캐시 + 증분 빌드 성능 |
+| TD-06 | SQLite WAL 모드 활성화 | **확정** | 데몬 시작 시 `PRAGMA journal_mode = WAL` 실행 | CORE-02에서 확정. 단일 프로세스 사용 |
+| TD-07 | config.toml 파서 | **확정** | `smol-toml` | v0.7 CORE-01에서 확정. 경량 TOML 파서 |
+| TD-08 | 프로세스 관리 | **확정** | flock 잠금 + PID 파일 | v0.7에서 flock 확정. 다중 인스턴스 방지 |
+| TD-09 | UUID v7 생성 라이브러리 | 미확정 | `uuidv7` npm 패키지 vs Node.js crypto.randomUUID() + 수동 v7 구현 | ms 단위 시간 정렬 보장 필요 |
+| TD-10 | CLI 프레임워크 | 미확정 | `commander` vs `yargs` vs `citty` | 4개 명령어 규모에 적합한 경량 라이브러리 |
+| TD-11 | 빌드 도구 | 미확정 | `tsup` vs `unbuild` vs `tsc` only | 각 패키지 빌드 + ESM 출력 |
+| TD-12 | 다국어(i18n) 구조 | **확정** | `@waiaas/core/i18n` 메시지 템플릿 분리 (en/ko) | config.toml `locale` 키로 언어 선택. 사람이 읽는 메시지(알림, CLI 대화형, Desktop UI, Telegram Bot)만 다국어 적용. API 에러 응답/MCP/SDK/로그는 영문 고정 |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 수준 요약: L0 12건, L1 0건, [HUMAN] 0건**
+
+모든 시나리오는 완전 자동화(L0)로 검증한다. 사람이 수동 확인해야 하는 항목은 없다.
+
+### 초기화 + 라이프사이클
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| E-01 | `waiaas init` -> 데이터 디렉토리 생성 | `~/.waiaas/` 디렉토리 존재, config.toml 파일 존재, keystore/ 디렉토리 존재, 프로세스 종료 코드 0 | [L0] |
+| E-02 | `waiaas start` -> 데몬 시작, health check 200 | `curl http://127.0.0.1:{port}/health` -> 200 OK + JSON 스키마 검증 | [L0] |
+| E-03 | `waiaas stop` -> 정상 종료 | 프로세스 정상 종료, PID 파일 삭제, SQLite WAL 체크포인트 완료(`-wal` 파일 0바이트 또는 삭제) | [L0] |
+| E-04 | `waiaas status` -> 데몬 상태 조회 | 데몬 실행 중이면 `running` + 포트 표시, 미실행이면 `stopped` | [L0] |
+
+### 에이전트 관리
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| E-05 | `POST /v1/agents` -> 에이전트 생성 | 201 Created + JSON 스키마 검증(id, name, chain, network, publicKey, status), agents 테이블 행 삽입 확인, 키스토어 파일 생성 확인 | [L0] |
+| E-06 | `GET /v1/wallet/address` -> Solana 주소 반환 | 200 OK + base58 인코딩 공개키 반환, agents 테이블 public_key와 일치 | [L0] |
+| E-07 | `GET /v1/wallet/balance` -> SOL 잔액 반환 | 200 OK + balance JSON (amount, decimals, symbol='SOL'), devnet RPC 조회 결과 반환 | [L0] |
+
+### 트랜잭션 전송
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| E-08 | `POST /v1/transactions/send` -> SOL 전송 요청 | 201 Created + transaction JSON (status: QUEUED), 파이프라인 Stage 1~6 순차 실행 | [L0] |
+| E-09 | `GET /v1/transactions/:id` -> 폴링 후 CONFIRMED | 폴링 반복하여 status가 QUEUED -> EXECUTING -> SUBMITTED -> CONFIRMED 전이 확인 | [L0] |
+
+### 에러 처리
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| E-10 | 잘못된 config.toml -> 데몬 시작 실패 | Zod 검증 에러 메시지 출력, 프로세스 비정상 종료(exit code != 0) | [L0] |
+| E-11 | 존재하지 않는 에이전트 ID로 API 호출 -> 404 | `GET /v1/wallet/balance?agentId=non-existent` -> 404 Not Found + 에러 JSON | [L0] |
+| E-12 | 이미 실행 중인 데몬에 `waiaas start` 재실행 -> 에러 | flock 잠금 실패 또는 PID 파일 확인 -> 에러 메시지 출력, 종료 코드 != 0 | [L0] |
+
+---
+
+## 의존
+
+없음 — 첫 번째 구현 마일스톤이다.
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| R-01 | sodium-native + better-sqlite3 네이티브 addon 빌드 호환성 | macOS ARM64, Linux x64 등 플랫폼별 빌드 실패 가능 | v0.7 prebuildify 전략 설계 완료. v1.1 초기에 스파이크 작업으로 검증. 실패 시 `@noble/ed25519` + `sql.js` 순수 JS 폴백 검토 |
+| R-02 | Solana RPC 로컬 validator 테스트 환경 안정성 | `solana-test-validator` 프로세스 불안정, 테스트 격리 어려움 | CI에서 validator 시작/종료 스크립트화, 타임아웃 설정, 테스트 간 상태 초기화 |
+| R-03 | SQLite WAL 모드 동시 접근 제한 | 단일 프로세스 사용이므로 낮은 리스크이나, BackgroundWorkers와 API 요청 간 경합 가능 | busy_timeout=5000ms 설정으로 충분. WAL 체크포인트는 idle 시 수행 |
+| R-04 | @solana/kit 3.x API 안정성 | @solana/kit 3.x가 비교적 신규 API이며 문서/예제 부족 가능 | @solana/kit GitHub 리포지토리 + 공식 예제 참고. 필요 시 저수준 @solana/web3.js 2.x 직접 사용 |
+| R-05 | config.toml 평탄 키 17개 검증 복잡도 | v0.7에서 확정한 평탄화 config.toml 17개 키의 Zod 스키마 작성 + 환경변수 오버라이드(WAIAAS_{SECTION}_{KEY}) 패턴 구현 | Zod 스키마를 CORE-01 사양에 맞게 1:1 대응. 환경변수 우선순위: env > toml > default |
+
+---
+
+*최종 업데이트: 2026-02-10 REST API 경로 정합성 수정 (transactions/send, /health, POST /v1/agents·GET /v1/transactions/:id doc 37 스펙 보완 주석, DD-01~03)*
+*이전: 2026-02-09 i18n 메시지 템플릿 구조 추가 (TD-12, @waiaas/core/i18n en/ko)*

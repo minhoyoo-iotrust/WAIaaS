@@ -1,0 +1,130 @@
+# 마일스톤 m29-07: MEV-free Swap (CoW Protocol)
+
+## 목표
+
+v1.5 Action Provider 프레임워크 위에 CoW Protocol을 ActionProvider로 구현하여, AI 에이전트가 EVM 체인에서 MEV 공격 없는 gasless 스왑을 실행할 수 있는 상태.
+
+---
+
+## 배경
+
+m28-02(0x)은 일반적인 DEX 스왑을 제공하지만, 대량 주문 시 **MEV 공격**(프론트러닝, 샌드위치)에 노출된다. CoW Protocol은 **Intent 기반 배치 옥션**으로 MEV를 근본적으로 방지한다.
+
+### 0x vs CoW Protocol
+
+| 비교 | 0x Swap API | CoW Protocol |
+|------|-------------|-------------|
+| 실행 방식 | 즉시 온체인 실행 | Intent → 배치 옥션 → 솔버 실행 |
+| MEV 보호 | 없음 (프론트러닝 노출) | 배치 옥션으로 근본 방지 |
+| 가스비 | 사용자 부담 | **Gasless** (솔버가 가스비 부담) |
+| 실행 시간 | 즉시 (~15초) | 배치 주기 (~30초~수 분) |
+| 적합 사용 | 소액/즉시 실행 | 대액/MEV 보호 필요 |
+
+### 새로운 통합 패턴: Intent/서명 방식
+
+기존 ActionProvider는 모두 **ContractCallRequest → 서명 → 전송** 패턴이었다. CoW Protocol은 **EIP-712 서명 → 릴레이어 제출 → 솔버 실행**이라는 새로운 패턴을 도입한다.
+
+```
+기존 (0x/Jupiter):  resolve() → calldata → 지갑 서명 → 온체인 전송
+CoW Protocol:       resolve() → EIP-712 order → 지갑 서명 → CoW API 제출 → 솔버 실행
+```
+
+---
+
+## 구현 대상
+
+### 컴포넌트
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| CowSwapActionProvider | IActionProvider 구현체. CoW Protocol orderbook API 호출. 2개 액션: swap(EIP-712 서명 기반 gasless 스왑), quote(견적 조회). 지원 체인: Ethereum, Gnosis, Arbitrum, Base |
+| CowApiClient | CoW Protocol REST API 래퍼. `/api/v1/quote`(견적), `/api/v1/orders`(주문 제출), `/api/v1/orders/:uid`(상태 조회). API 키 불필요 |
+| IntentSigningHelper | EIP-712 TypedData 서명 헬퍼. CoW Protocol의 GPv2Order 구조체를 viem의 signTypedData()로 서명. **트랜잭션이 아닌 서명만 생성** |
+| OrderStatusTracker | 주문 상태 폴링. CoW Protocol은 배치 옥션이므로 주문 제출 후 체결까지 비동기. OPEN → FULFILLED / EXPIRED 상태 추적 |
+| MCP 도구 | waiaas_cow_swap, waiaas_cow_quote |
+| SDK 지원 | TS/Python SDK: executeAction('cow_swap', params) 등 |
+
+### 입력 스키마
+
+```typescript
+const CowSwapInputSchema = z.object({
+  sellToken: z.string(),        // 판매 토큰 주소
+  buyToken: z.string(),         // 구매 토큰 주소
+  sellAmount: z.string(),       // 판매 수량
+  validTo: z.number().optional(), // 주문 유효 기간 (초, 기본 1800 = 30분)
+});
+```
+
+### config.toml
+
+```toml
+[actions.cow_swap]
+enabled = true
+api_base_url = "https://api.cow.fi"     # 기본값
+default_valid_to_sec = 1800              # 주문 유효 기간 (30분)
+order_poll_interval_sec = 10             # 주문 상태 폴링 간격
+```
+
+---
+
+## 기술 결정 사항
+
+| # | 결정 항목 | 선택지 | 결정 근거 |
+|---|----------|--------|----------|
+| 1 | 통합 방식 | REST API + EIP-712 서명 | @cowprotocol/cow-sdk 대신 직접 API 호출. EIP-712 서명은 viem의 signTypedData()로 구현. SDK 의존성 최소화 |
+| 2 | Intent 패턴 지원 | IActionProvider 확장 | 기존 resolve() → ContractCallRequest 대신 resolve() → SignableOrder 반환. ActionProviderRegistry에 intent 타입 지원 추가 |
+| 3 | Gasless 장점 활용 | AI 에이전트에 특히 유리 | 에이전트가 가스비 없이 스왑 가능. ETH 잔고 없는 월렛에서도 ERC-20 스왑 실행 가능 |
+| 4 | 주문 만료 기본값 | 30분 | CoW Protocol 배치 주기 고려. 너무 짧으면 체결 실패, 너무 길면 가격 변동 위험 |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100%**
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | cow_swap resolve -> SignableOrder 반환 | mock CoW /quote -> CowSwapActionProvider.resolve() -> EIP-712 order 반환 assert | [L0] |
+| 2 | EIP-712 서명 -> CoW API 주문 제출 | mock signTypedData + mock CoW /orders -> 주문 UID 반환 assert | [L0] |
+| 3 | 주문 상태 폴링 -> FULFILLED | mock /orders/:uid(FULFILLED) -> 체결 완료 + 알림 assert | [L0] |
+| 4 | 주문 만료 -> EXPIRED 상태 + 알림 | mock /orders/:uid(EXPIRED) -> 만료 알림 assert | [L0] |
+| 5 | Gasless 확인 -> 가스비 0 | CoW 스왑 실행 -> 트랜잭션 가스비 사용자 부담 없음 assert | [L0] |
+| 6 | 견적 조회 | quote 액션 -> 예상 buyAmount + 수수료 반환 assert | [L0] |
+| 7 | 정책 평가 -> sellAmount USD 환산 | mock oracle + 1000 USDC sell -> SPENDING_LIMIT 평가 assert | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.5 (Action Provider 프레임워크) | IActionProvider, ActionProviderRegistry (intent 타입 확장) |
+| v1.4 (EVM 인프라) | EvmAdapter, viem signTypedData() |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | 배치 옥션 실행 지연 | 즉시 실행 대비 30초~수 분 소요 | 사용자에게 "MEV 보호를 위해 배치 옥션으로 실행됩니다 (30초~수 분)" 안내 |
+| 2 | 주문 미체결 | 유동성 부족 시 솔버가 주문을 체결하지 않을 수 있음 | 만료 시 사용자에게 알림. 재시도 또는 0x로 대체 실행 안내 |
+| 3 | Intent 패턴 프레임워크 확장 | 기존 ContractCallRequest 패턴과 다른 흐름 | ActionProviderRegistry에 'intent' 타입 추가. 서명 → API 제출 → 상태 추적 파이프라인 구현 |
+| 4 | 체인 제한 | Ethereum, Gnosis, Arbitrum, Base만 지원 | 지원 체인 명시. 미지원 체인 요청 시 에러 + 0x 사용 안내 |
+
+---
+
+## 예상 규모
+
+| 항목 | 예상 |
+|------|------|
+| 페이즈 | 2개 (CowSwapProvider + Intent 패턴 확장 1 / MCP+SDK+주문 추적 1) |
+| 신규/수정 파일 | 10-14개 |
+| 테스트 | 7-12개 |
+| DB 마이그레이션 | 없음 (주문 상태는 CoW API로 조회) |
+
+---
+
+*생성일: 2026-02-15*
+*선행: v1.5 (Action Provider 프레임워크)*
+*관련: CoW Protocol (https://docs.cow.fi/), EIP-712 TypedData 서명*

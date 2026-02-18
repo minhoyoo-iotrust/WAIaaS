@@ -1,0 +1,42 @@
+# Issue #072: CLAUDE.md 언어 컨벤션에 태그/릴리스 제목·본문 영문 규칙 추가
+
+- **유형**: ENHANCEMENT
+- **심각도**: LOW
+- **마일스톤**: m20
+
+## 현황
+
+현재 CLAUDE.md Language 섹션:
+
+```
+- Commit messages and PR titles/bodies are written in English.
+```
+
+커밋 메시지와 PR은 영문으로 명시되어 있으나, **Git 태그 제목/본문** 및 **GitHub Release 제목/본문**에 대한 규칙이 없음.
+
+실제로 v2.0 태그가 한글로 작성됨:
+
+```
+v2.0 전 기능 완성 릴리스
+```
+
+퍼블릭 리포에서 릴리스 페이지는 외부 사용자가 가장 먼저 보는 곳이므로 영문이 필요.
+
+## 변경 사항
+
+### CLAUDE.md Language 섹션 수정
+
+현재:
+```
+- Commit messages and PR titles/bodies are written in English.
+```
+
+변경:
+```
+- Commit messages, PR titles/bodies, Git tag messages, and GitHub Release titles/bodies are written in English.
+```
+
+## 완료 기준
+
+- [ ] CLAUDE.md Language 섹션에 태그/릴리스 영문 규칙 추가됨
+- [ ] 기존 v2.0 태그 메시지는 이미 배포되었으므로 수정하지 않음 (향후 태그부터 적용)

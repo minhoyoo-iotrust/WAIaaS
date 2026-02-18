@@ -1,0 +1,285 @@
+# 마일스톤 m14-03: MCP 다중 에이전트 지원
+
+## 목표
+
+하나의 WAIaaS 데몬에 등록된 여러 에이전트를 Claude Desktop(MCP)에서 동시에 사용할 수 있는 상태. 에이전트별 토큰 파일 분리, CLI mcp setup 개선, MCP 서버 에이전트 식별이 완료되어, `waiaas mcp setup`을 에이전트별로 실행하면 Claude Desktop에서 각 에이전트의 지갑을 구분하여 조작할 수 있다.
+
+> **설계 + 구현 동시 진행** (별도 설계 마일스톤 없음)
+
+---
+
+## 배경
+
+### 현재 제약
+
+| 제약 | 원인 |
+|------|------|
+| mcp-token 파일 1개 | `DATA_DIR/mcp-token` 고정 경로. 두 번째 에이전트 setup 시 기존 토큰 덮어쓰기 |
+| MCP 프로세스당 1 에이전트 | `index.ts`에서 SessionManager → ApiClient → McpServer가 1:1:1 체인 |
+| 도구 이름 동일 | 2개 MCP 서버 인스턴스를 등록해도 `send_token`, `get_balance` 이름이 동일하여 Claude가 에이전트 구분 불가 |
+| Claude Desktop config 스니펫 고정 | `waiaas-wallet` 단일 키 이름으로 출력 |
+
+### SDK와의 차이
+
+SDK(`@waiaas/sdk`)는 `WAIaaSClient` 인스턴스를 여러 개 생성하면 다중 에이전트를 제한 없이 사용 가능하다. MCP만 구조적 제약이 존재.
+
+### 왜 v1.4 이전에 필요한가
+
+v1.4(토큰+컨트랙트 확장)부터 에이전트별 역할 분리(trading/payment 등)가 의미 있어지므로, MCP 다중 에이전트 인프라를 먼저 갖추는 것이 자연스럽다. v1.6(Telegram Bot)에서도 다중 에이전트 토큰 관리가 필요하므로 여기서 패턴을 확립한다.
+
+---
+
+## 설계 결정
+
+### 접근 방식: 프로세스 분리 (MCP 서버 인스턴스 N개)
+
+두 가지 접근 방식을 비교한 결과 **프로세스 분리 방식**을 채택한다:
+
+| 비교 | 프로세스 분리 (채택) | 단일 프로세스 + agentId 파라미터 |
+|------|---------------------|-------------------------------|
+| 구조 | 에이전트당 MCP 서버 프로세스 1개 | 1개 MCP 서버에서 도구 호출 시 agentId 지정 |
+| 장점 | 기존 코드 최소 변경, 세션 격리, 장애 격리 | 프로세스 수 적음 |
+| 단점 | 에이전트 수만큼 프로세스 | 도구 스키마 변경 필요, 세션 관리 복잡, MCP 프로토콜 표준과 맞지 않음 |
+| Claude UX | 서버 이름으로 에이전트 구분 (자연스러움) | 매 호출마다 agentId 파라미터 필수 (번거로움) |
+
+**근거:** MCP 프로토콜은 서버 단위로 capability를 노출하는 설계이므로, 에이전트별 서버 인스턴스가 프로토콜 의도에 부합한다. Self-Hosted 환경에서 에이전트 수는 2~5개 수준이므로 프로세스 오버헤드는 무시 가능하다.
+
+### 세부 설계 결정
+
+| # | 결정 항목 | 결정 | 근거 |
+|---|----------|------|------|
+| 1 | 토큰 파일 경로 | `DATA_DIR/mcp-tokens/<agentId>` | 에이전트별 격리. 기존 `mcp-token` 단일 파일에서 `mcp-tokens/` 디렉토리로 전환. `writeMcpToken`에서 `mkdir(dirname(filePath), { recursive: true })`로 `mcp-tokens/` 디렉토리 자동 생성 |
+| 2 | 하위 호환성 | 기존 `DATA_DIR/mcp-token` 파일도 fallback으로 읽기 | 기존 사용자가 v1.3.3 업그레이드 후에도 즉시 동작. `WAIAAS_AGENT_ID` 미설정 시 기존 경로 사용 |
+| 3 | 에이전트 식별 환경변수 | `WAIAAS_AGENT_ID` | MCP 프로세스가 어떤 에이전트인지 알아야 토큰 파일 경로를 결정. Claude Desktop config.json의 `env`에 설정 |
+| 4 | MCP 서버 이름 | `waiaas-{agentName}` 패턴 | Claude Desktop에서 서버 이름으로 에이전트 구분. `waiaas-trading`, `waiaas-payment` 등 |
+| 5 | 도구 description 확장 | 도구 description에 에이전트 이름/ID 포함 | Claude가 어느 에이전트 지갑인지 이해. 예: "Get the current balance of the 'trading' agent wallet." |
+| 6 | CLI mcp setup 출력 | 에이전트별 config 스니펫 출력 | `--agent` 지정 시 해당 에이전트 이름 기반 키 이름 생성 |
+| 7 | CLI mcp setup --all | 전체 에이전트 한 번에 설정 | 에이전트마다 개별 setup 실행 대신 `--all` 플래그로 일괄 설정 + 통합 config 스니펫 출력 |
+| 8 | 토큰 파일 마이그레이션 | 자동 마이그레이션 없음 | 기존 `mcp-token`은 fallback으로 동작하므로 별도 마이그레이션 불필요. `mcp setup` 재실행 시 새 경로에 저장 |
+| 9 | `--agent` 미지정 시 토큰 경로 | 에이전트 1개 자동 선택 시에도 `mcp-tokens/<agentId>` 사용 | v1.3.3부터 `mcp setup`은 항상 새 경로에 저장. 기존 `mcp-token` 경로 쓰기는 더 이상 하지 않음. 읽기 fallback만 유지 |
+| 10 | 에이전트 이름 slug 충돌 | slug 충돌 시 `{slug}-{agentId 앞 8자}` 접미사 추가 | 예: 두 에이전트가 모두 `my-bot` slug → `waiaas-my-bot`, `waiaas-my-bot-0193ab12`. `--all` 실행 시에만 감지 가능하며, 개별 `--agent` 실행 시에는 충돌 검사 없이 slug 사용 |
+
+---
+
+## 수정 대상
+
+### @waiaas/mcp
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `src/index.ts` | `WAIAAS_AGENT_ID` 환경변수 읽기. SessionManager 생성 시 `agentId` 전달. McpServer `name`에 에이전트 이름 반영 |
+| `src/session-manager.ts` | `SessionManagerOptions`에 `agentId?: string` 추가. 토큰 파일 경로: `agentId` 있으면 `DATA_DIR/mcp-tokens/<agentId>`, 없으면 기존 `DATA_DIR/mcp-token` (하위 호환) |
+| `src/server.ts` | `createMcpServer(apiClient, agentContext?)` — agentContext 전달 시 도구 description에 에이전트 정보 포함 |
+| `src/tools/*.ts` | 도구 description에 에이전트 이름 삽입 (선택적, agentContext 존재 시에만) |
+| `src/resources/*.ts` | 리소스 description에 에이전트 이름 삽입 (선택적) |
+
+### @waiaas/cli
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `src/commands/mcp-setup.ts` | `--all` 플래그 추가. 에이전트별 토큰 파일 저장 경로 변경 (`mcp-tokens/<agentId>`). config 스니펫에 에이전트 이름 기반 키 생성. 다중 에이전트 시 통합 스니펫 출력 |
+| `src/commands/mcp-setup.ts` | 에이전트 이름 조회를 위해 `GET /v1/agents/{id}` 호출 추가 (config 키 이름에 에이전트 이름 사용) |
+
+### @waiaas/mcp 테스트
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `src/__tests__/session-manager.test.ts` | agentId별 토큰 파일 경로 테스트 추가. 하위 호환 fallback 테스트 |
+| (신규) `src/__tests__/multi-agent.test.ts` | 다중 에이전트 시나리오 통합 테스트 |
+
+### @waiaas/cli 테스트
+
+| 파일 | 수정 내용 |
+|------|----------|
+| `src/__tests__/mcp-setup.test.ts` | `--all` 플래그 테스트, 에이전트별 토큰 파일 경로 테스트, 통합 config 스니펫 테스트 |
+
+---
+
+## 산출물
+
+### 토큰 파일 구조 변경
+
+```
+# 기존 (v1.3)
+~/.waiaas/data/mcp-token                    # 단일 파일
+
+# 변경 후 (v1.3.3)
+~/.waiaas/data/mcp-tokens/<agentId>          # 에이전트별 토큰 파일
+~/.waiaas/data/mcp-token                     # (하위 호환 fallback)
+```
+
+### CLI 출력 변경
+
+```bash
+# 단일 에이전트
+$ waiaas mcp setup --agent <trading-agent-id> --password test1234
+
+MCP session created successfully!
+  Token file: ~/.waiaas/data/mcp-tokens/<trading-agent-id>
+  Expires at: 2026-02-12T14:00:00.000Z
+  Agent: trading (trading-agent-id)
+
+Add to your Claude Desktop config.json:
+{
+  "mcpServers": {
+    "waiaas-trading": {
+      "command": "npx",
+      "args": ["@waiaas/mcp"],
+      "env": {
+        "WAIAAS_DATA_DIR": "~/.waiaas/data",
+        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
+        "WAIAAS_AGENT_ID": "<trading-agent-id>",
+        "WAIAAS_AGENT_NAME": "trading"
+      }
+    }
+  }
+}
+```
+
+```bash
+# 전체 에이전트 일괄 설정
+$ waiaas mcp setup --all --password test1234
+
+MCP sessions created for 2 agents:
+  [1] trading (trading-agent-id) -> ~/.waiaas/data/mcp-tokens/<trading-agent-id>
+  [2] payment (payment-agent-id) -> ~/.waiaas/data/mcp-tokens/<payment-agent-id>
+
+Add to your Claude Desktop config.json:
+{
+  "mcpServers": {
+    "waiaas-trading": {
+      "command": "npx",
+      "args": ["@waiaas/mcp"],
+      "env": {
+        "WAIAAS_DATA_DIR": "~/.waiaas/data",
+        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
+        "WAIAAS_AGENT_ID": "<trading-agent-id>",
+        "WAIAAS_AGENT_NAME": "trading"
+      }
+    },
+    "waiaas-payment": {
+      "command": "npx",
+      "args": ["@waiaas/mcp"],
+      "env": {
+        "WAIAAS_DATA_DIR": "~/.waiaas/data",
+        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
+        "WAIAAS_AGENT_ID": "<payment-agent-id>",
+        "WAIAAS_AGENT_NAME": "payment"
+      }
+    }
+  }
+}
+```
+
+### MCP 서버 동작 변경
+
+| 항목 | 기존 (v1.3) | 변경 (v1.3.3) |
+|------|------------|--------------|
+| 서버 이름 | `waiaas-wallet` (고정) | `waiaas-{agentName}` (동적). `WAIAAS_AGENT_ID` 미설정 시 `waiaas-wallet` 유지 |
+| 도구 description | "Get the current balance of the agent wallet." | "Get the current balance of the 'trading' agent wallet." (`WAIAAS_AGENT_ID` 설정 시) |
+| 토큰 파일 | `DATA_DIR/mcp-token` | `DATA_DIR/mcp-tokens/<agentId>` → `DATA_DIR/mcp-token` fallback |
+| 리소스 URI | `waiaas://wallet/balance` | 변경 없음 (서버 인스턴스별로 격리되므로 충돌 없음) |
+
+### 에이전트 이름 조회
+
+MCP 서버 시작 시 `WAIAAS_AGENT_ID`가 설정되어 있으면, 토큰의 JWT `agt` 클레임에서 에이전트 ID를 확인할 수 있다. 에이전트 **이름**은 토큰에 포함되어 있지 않으므로, 서버 이름과 도구 description에 이름을 전달하는 방법이 필요하다.
+
+**채택: `WAIAAS_AGENT_NAME` 환경변수 방식** — CLI `mcp setup`이 에이전트 이름을 `GET /v1/agents/{id}` API로 조회한 뒤, config 스니펫의 `env`에 `WAIAAS_AGENT_NAME`을 자동 포함시킨다. MCP 서버는 시작 시 이 환경변수를 읽어 서버 이름(`waiaas-{agentName}`)과 도구 description에 반영한다. API 호출 시점이 MCP 서버 런타임이 아닌 CLI setup 단계이므로, MCP 서버 시작 시 데몬 미실행 상태에서도 정상 동작한다.
+
+| 비교 | API 호출 (MCP 런타임) | 환경변수 (채택) |
+|------|---------------------|---------------|
+| API 호출 시점 | MCP 서버 시작 시 | CLI setup 시 (1회) |
+| 데몬 의존 | 매 시작마다 데몬 필요 | setup 시에만 필요 |
+| 이름 최신성 | 항상 최신 | 이름 변경 시 `mcp setup` 재실행 필요 |
+| 구현 복잡도 | 시작 실패 처리 필요 | 단순 |
+
+최종 환경변수:
+
+| 환경변수 | 설정 주체 | 용도 |
+|----------|----------|------|
+| `WAIAAS_DATA_DIR` | 사용자 | 데이터 디렉토리 (기존) |
+| `WAIAAS_BASE_URL` | 사용자 | 데몬 URL (기존) |
+| `WAIAAS_SESSION_TOKEN` | 사용자 | 직접 토큰 전달 (기존, 하위 호환) |
+| `WAIAAS_AGENT_ID` | CLI mcp setup | 에이전트별 토큰 파일 경로 결정 (신규) |
+| `WAIAAS_AGENT_NAME` | CLI mcp setup | MCP 서버 이름 + 도구 description에 사용 (신규) |
+
+---
+
+## E2E 검증 시나리오
+
+**자동화 비율: 100%**
+
+### 토큰 파일 분리 (4건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 1 | agentId 설정 시 토큰 파일이 `mcp-tokens/<agentId>` 경로에 저장 | SessionManager에 agentId 전달 → writeMcpToken → 경로 assert | [L0] |
+| 2 | agentId 미설정 시 기존 `mcp-token` 경로 사용 (하위 호환) | SessionManager agentId=undefined → 기존 경로 assert | [L0] |
+| 3 | agentId 설정 + 기존 `mcp-token` 파일 존재 시 새 경로 우선 | 두 파일 모두 존재 → `mcp-tokens/<agentId>` 토큰 로드 assert | [L0] |
+| 4 | agentId 설정 + 새 경로 없음 + 기존 `mcp-token` 존재 시 fallback | `mcp-tokens/<agentId>` 없음 → `mcp-token` fallback 로드 assert | [L0] |
+
+### CLI mcp setup 개선 (7건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 5 | `--agent` 지정 시 에이전트별 토큰 파일 경로에 저장 | mcp-setup 실행 → `mcp-tokens/<agentId>` 파일 존재 assert | [L0] |
+| 6 | `--agent` 지정 시 config 스니펫에 `WAIAAS_AGENT_ID` + `WAIAAS_AGENT_NAME` 포함 | 출력 JSON에 env 필드 포함 assert | [L0] |
+| 7 | `--agent` 지정 시 config 키 이름이 `waiaas-{agentName}` 형태 | 출력 JSON 키 이름 assert | [L0] |
+| 8 | `--all` 플래그 시 전체 에이전트 토큰 일괄 생성 + 통합 config 출력 | N개 에이전트 mock → N개 토큰 파일 + 통합 스니펫 assert | [L0] |
+| 9 | `--all` + 에이전트 0개 → 에러 | 빈 agents → "No agents found" assert | [L0] |
+| 10 | `--all` + slug 충돌 시 agentId 접미사 추가 | 동일 slug 2개 에이전트 → `waiaas-{slug}-{id8}` 키 assert | [L0] |
+| 11 | `--agent` 미지정 + 에이전트 1개 → 새 경로 사용 | 자동 선택 → `mcp-tokens/<agentId>` 경로 저장 assert | [L0] |
+
+### MCP 서버 에이전트 식별 (3건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 12 | `WAIAAS_AGENT_NAME` 설정 시 MCP 서버 이름이 `waiaas-{name}` | createMcpServer → server.name assert | [L0] |
+| 13 | `WAIAAS_AGENT_NAME` 미설정 시 서버 이름 `waiaas-wallet` (하위 호환) | createMcpServer → server.name === 'waiaas-wallet' assert | [L0] |
+| 14 | 도구 description에 에이전트 이름 포함 | `WAIAAS_AGENT_NAME=trading` → send_token description에 "trading" 포함 assert | [L0] |
+
+### 갱신 (renewal) 연동 (2건)
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 15 | agentId 설정 시 갱신된 토큰이 `mcp-tokens/<agentId>` 경로에 저장 | renewal mock → 새 파일 경로 assert | [L0] |
+| 16 | recovery loop에서 agentId별 토큰 파일 감지 | 파일 교체 → recoveryPoll → 새 토큰 로드 assert | [L0] |
+
+---
+
+## 의존
+
+| 의존 대상 | 이유 |
+|----------|------|
+| v1.3 (SDK + MCP + 알림) | MCP 서버, SessionManager, CLI mcp setup이 v1.3에서 구현됨 |
+| v1.3.2 (Admin Web UI 구현) | v1.3.2 완료 (shipped 2026-02-11), v1.3.3 시작 가능 |
+
+---
+
+## 리스크
+
+| # | 리스크 | 영향 | 대응 방안 |
+|---|--------|------|----------|
+| 1 | 기존 `mcp-token` 사용자 호환성 깨짐 | v1.3.3 업그레이드 후 MCP 연결 실패 | fallback 경로 유지: `WAIAAS_AGENT_ID` 미설정 시 기존 경로 그대로 사용 |
+| 2 | Claude Desktop config.json 수동 편집 부담 | 에이전트 추가/삭제마다 config 수정 필요 | `--all` 플래그로 전체 config 스니펫 일괄 생성. 복사-붙여넣기만 하면 완료 |
+| 3 | MCP 서버 프로세스 증가 | 에이전트 N개 → 프로세스 N개 | Self-Hosted 환경에서 2~5개 에이전트 수준이므로 무시 가능. 각 MCP 프로세스는 경량 (메모리 ~20MB) |
+| 4 | 에이전트 이름 변경 시 config 키 불일치 | Admin UI에서 이름 수정 후 MCP config가 옛 이름 | `mcp setup --all` 재실행으로 갱신. 이름은 config 키의 편의 식별자일 뿐, 실제 동작은 `WAIAAS_AGENT_ID`로 결정 |
+| 5 | 에이전트 이름에 특수문자 | config 키 이름이 유효하지 않을 수 있음 | slug화: `/[^a-z0-9-]/g` → 하이픈 치환, 연속 하이픈 제거, 앞뒤 하이픈 제거. 빈 문자열이면 agentId 앞 8자 사용 |
+| 6 | `--all` 시 slug 충돌 | 두 에이전트가 동일 slug 생성 | 충돌 감지 시 `{slug}-{agentId 앞 8자}` 접미사 추가. 개별 `--agent` 실행 시에는 충돌 검사 없음 |
+
+---
+
+## 구현 규모 추정
+
+| 항목 | 추정 |
+|------|------|
+| 수정 파일 | ~8개 |
+| 신규 파일 | ~1개 (multi-agent 테스트) |
+| 신규 LOC | ~200 |
+| 수정 LOC | ~150 |
+| 신규 테스트 | ~16건 |
+| 페이즈 수 | 2 — Phase 1: @waiaas/mcp (SessionManager 토큰 경로 분리 + createMcpServer agentContext + 도구/리소스 description + index.ts 환경변수) → Phase 2: @waiaas/cli (mcp setup 경로 변경 + slug 유틸 + `--all` 플래그 + config 스니펫 + 통합 테스트) |
+
+---
+
+*최종 업데이트: 2026-02-11 — 코드베이스 대조 검증 후 5건 보완 (slug 충돌, --agent 미지정 분기, 이름 조회 전략, 페이즈 경계, 디렉토리 생성)*

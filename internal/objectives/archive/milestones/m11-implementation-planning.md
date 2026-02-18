@@ -1,0 +1,833 @@
+# 마일스톤 m11: 구현 계획 및 전략 수립
+
+## 목표
+
+v0.1~v0.10 설계 산출물(30개 설계 문서, 276 요구사항, 110 플랜)을 실제 동작하는 소프트웨어로 전환하기 위한 **구현 로드맵, 마일스톤별 산출물, 운영 전략**을 확정한다. v1.1에서 코드 작성을 시작하여 v2.0에서 전 기능 완성 릴리스를 목표로 한다.
+
+## 배경
+
+### 설계 → 구현 전환
+
+| 구간 | 마일스톤 | 성격 | 산출물 |
+|------|---------|------|--------|
+| 리서치 | v0.1 | 기획 | 컨셉, 기술 스택, 아키텍처 조사 |
+| 설계 | v0.2 ~ v0.6 | 설계 문서 | 30개 설계 문서 (24~64번) |
+| 설계 보완 | v0.7 ~ v0.10 | 설계 수정 | 블로커 해소, Owner 선택적, MCP 세션, 설계 완결성 |
+| **계획** | **v1.0** | **이 문서** | **구현 로드맵 + 운영 전략** |
+| 구현 | v1.1 ~ v1.7 | 코드 | 동작하는 패키지 + 테스트 |
+| 릴리스 | v2.0 | 출시 | 전 기능 완성, 문서, 배포 |
+
+### 전제 조건
+
+v1.1 구현 시작 전 다음이 완료되어야 한다:
+
+- [x] v0.6 블록체인 기능 확장 설계 완료
+- [x] v0.7 구현 장애 요소 25건 해소 (설계 문서 수정) — 2026-02-08 완료
+- [x] v0.8 Owner 선택적 등록 설계 완료 — 2026-02-09 완료
+- [x] v0.9 MCP 세션 관리 자동화 설계 완료 — 2026-02-09 완료
+- [x] v0.10 구현 전 설계 완결성 확보 완료 (12건 BLOCKING/HIGH 미비점 전수 해소) — 2026-02-09 완료
+
+### 설계 문서 목록 (구현 대상)
+
+총 30개 설계 문서 + 5개 대응표 + 11개 테스트 전략 문서.
+
+**코어 아키텍처 (v0.2, 문서 24~29):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 24 | monorepo-data-directory | 7-pkg 모노레포, ~/.waiaas/, config.toml |
+| 25 | sqlite-schema | 7 테이블, Drizzle ORM, UUID v7 |
+| 26 | keystore-spec | AES-256-GCM, Argon2id, sodium guarded memory |
+| 27 | chain-adapter-interface | IChainAdapter 20 메서드, AdapterRegistry |
+| 28 | daemon-lifecycle-cli | 6단계 시작(타임아웃 fail-fast/soft), 10-step 종료, CLI |
+| 29 | api-framework-design | Hono, 8 미들웨어, localhost 보안 |
+
+**세션 + 트랜잭션 (v0.2, 문서 30~32):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 30 | session-token-protocol | JWT HS256, SIWS/SIWE, SessionConstraints |
+| 31 | solana-adapter-detail | SolanaAdapter, @solana/kit, 파이프 빌드 |
+| 32 | transaction-pipeline-api | 6-stage 파이프라인, 8-state 머신, Stage 5 완전 의사코드 |
+
+**보안 계층 (v0.2, 문서 33~36):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 33 | time-lock-approval-mechanism | DatabasePolicyEngine, 4-tier, TOCTOU, APPROVAL 타임아웃 3단계 우선순위 |
+| 34 | owner-wallet-connection | WalletConnect v2, ownerAuth, Owner API |
+| 35 | notification-architecture | INotificationChannel, 3채널, 17 이벤트 |
+| 36 | killswitch-autostop-evm | Kill Switch, AutoStop, EvmAdapter |
+
+**클라이언트 인터페이스 (v0.2, 문서 37~40):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 37 | rest-api-complete-spec | 38 엔드포인트, 66 에러 코드, OpenAPI |
+| 38 | sdk-mcp-interface | TS/Python SDK, MCP 6+3 |
+| 39 | tauri-desktop-architecture | Tauri 2, Sidecar, 8 화면 |
+| 40 | telegram-bot-docker | Bot, 2-Tier auth, Docker compose |
+
+**일관성 + 테스트 (v0.3~v0.4, 문서 41~51):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 45 | enum-unified-mapping | 12 Enum SSoT, PolicyType 10개 |
+| 46~47 | 보안 시나리오 | 키스토어 71건 + 경계값 |
+| 48~49 | 블록체인/Enum 검증 | 3-stage 테스트, 빌드타임 검증 |
+| 50 | cicd-pipeline-coverage-gate | 4-stage CI/CD, Soft/Hard 게이트 |
+| 51 | platform-test-scope | 118건 플랫폼 시나리오 |
+
+**인증 + DX (v0.5, 문서 52~55):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 52 | auth-model-redesign | 3-tier 인증, owner_address 에이전트별 |
+| 53 | session-renewal-protocol | 낙관적 갱신, 5종 안전 장치 |
+| 54 | cli-flow-redesign | CLI SSoT, --quickstart, --dev |
+| 55 | dx-improvement-spec | hint 31/40, MCP, 원격 접근 |
+
+**블록체인 확장 (v0.6, 문서 56~64):**
+
+| 번호 | 문서 | 핵심 내용 |
+|------|------|----------|
+| 56 | token-transfer-extension | SPL/ERC-20, ALLOWED_TOKENS |
+| 57 | asset-query-fee-estimation | getAssets(), 수수료 추정 |
+| 58 | contract-call-spec | ContractCallRequest, 화이트리스트 |
+| 59 | approve-management-spec | ApproveRequest, 3 approve 정책 |
+| 60 | batch-transaction-spec | BatchRequest, Solana 원자적 배치, 부모-자식 2계층 DB |
+| 61 | price-oracle-spec | IPriceOracle, 캐싱, fallback, 교차 검증 인라인, 가격 나이 3단계 |
+| 62 | action-provider-architecture | IActionProvider, 플러그인, MCP 변환 |
+| 63 | swap-action-spec | Jupiter Swap, 슬리피지/MEV 보호 |
+| 64 | extension-test-strategy | 166 시나리오, Mock 10, Contract Test 7 |
+
+---
+
+## 구현 로드맵
+
+### 전체 흐름
+
+```
+v1.0 계획  →  v1.1  →  v1.2  →  v1.3  →  v1.4  →  v1.5  →  v1.6  →  v1.7  →  v2.0
+ (이 문서)     코어     인증     API      토큰     DeFi    클라이언트  품질     릴리스
+              인프라    정책    SDK/MCP   컨트랙트   오라클   Desktop   테스트
+```
+
+### 원칙
+
+1. **각 마일스톤은 E2E 검증 가능한 동작 단위** — 배포 가능한 증분을 생산한다
+2. **테스트는 구현과 동시** — 별도 "테스트 마일스톤"으로 미루지 않는다
+3. **의존 순서 준수** — 하위 계층부터 구축, 상위 계층은 하위에 의존
+4. **설계 문서가 구현 스펙** — 코드는 설계 문서를 구현, 변경 시 문서 먼저 수정
+5. **사람 개입 최소화 + 테스트 자동화 최대화** — 모든 검증은 자동화를 기본으로 하며, 사람이 수동으로 확인해야 하는 조건을 최소화한다. 구현 중 사람의 판단이 필요한 지점을 명시적으로 식별하고, 나머지는 CI/스크립트가 자동 수행한다
+
+---
+
+## 마일스톤 상세
+
+### v1.1 — 코어 인프라 + 기본 전송
+
+**목표:** CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬
+
+**구현 대상 설계 문서:**
+- 24 (모노레포), 25 (SQLite), 26 (키스토어), 27 (체인 어댑터 — 기본 메서드만)
+- 28 (데몬 라이프사이클), 29 (API 프레임워크 — 미들웨어 1~6만)
+- 31 (SolanaAdapter — 네이티브 SOL만), 45 (Enum SSoT)
+- 54 (CLI — init/start/stop/status)
+- v0.10 설계: 데몬 6단계 시작 타임아웃(5~30초/90초 상한, fail-fast/soft — OPER-01)
+
+**산출물:**
+
+| 패키지 | 내용 |
+|--------|------|
+| `@waiaas/core` | Zod 스키마, 타입, Enum SSoT (as const → Zod → Drizzle), 66 에러 코드 통합 매트릭스, 인터페이스 |
+| `@waiaas/adapter-solana` | SolanaAdapter — getBalance, buildTransaction(SOL 전송), simulateTransaction, signTransaction, submitTransaction, waitForConfirmation |
+| `@waiaas/daemon` | Hono 서버, SQLite + Drizzle 마이그레이션 7 테이블, Keystore (AES-256-GCM + Argon2id), 라이프사이클 (시작/종료), config.toml 로드 |
+| `@waiaas/cli` | waiaas init / start / stop / status |
+| 모노레포 | pnpm workspace, Turborepo, tsconfig, ESLint, Vitest |
+
+**REST API (최소):**
+- `POST /v1/agents` — 에이전트 생성
+- `GET /v1/wallet/balance` — 잔액 조회
+- `GET /v1/wallet/address` — 주소 조회
+- `POST /v1/transactions` — 전송 요청
+- `GET /v1/transactions/:id` — 트랜잭션 상태
+- `GET /v1/health` — 헬스 체크
+
+**파이프라인:** 6-stage 골격, Stage 3 정책 평가는 패스스루(INSTANT 고정)
+
+**E2E 검증 (전체 L0 자동화 — `[HUMAN]` 0건):**
+```
+waiaas init                                    # [L0] 프로세스 종료 코드 0
+waiaas start                                   # [L0] health check 200
+curl POST /v1/agents → agent 생성              # [L0] 201 + JSON 스키마 검증
+curl POST /v1/transactions → SOL 전송 요청      # [L0] 상태 전이 검증
+curl GET /v1/transactions/:id → CONFIRMED 확인  # [L0] 폴링 + 최종 상태 assert
+waiaas stop                                    # [L0] 프로세스 정상 종료
+```
+
+**의존:** 없음 (첫 번째 구현 마일스톤)
+
+---
+
+### v1.2 — 인증 + 정책 엔진
+
+**목표:** 세션 인증으로 에이전트 접근을 제어하고, 금액별 4-tier 정책이 동작하며, Owner가 고액 거래를 승인/거부할 수 있는 상태
+
+**구현 대상 설계 문서:**
+- 30 (세션 토큰 프로토콜), 32 (트랜잭션 파이프라인 — Stage 2,3,4 완성)
+- 33 (시간 지연 + 승인 메커니즘), 34 (Owner 지갑 연결)
+- 52 (3-tier 인증 재설계), 53 (세션 갱신 프로토콜)
+- 29 (미들웨어 7~8: rateLimiter, authRouter 완성)
+- v0.8 설계: Owner 선택적 등록 (owner_address nullable)
+- v0.10 설계: APPROVAL 타임아웃 3단계 우선순위(PLCY-01/03), GRACE→LOCKED 전이(PLCY-02), 세션 갱신 token_hash CAS(CONC-02)
+
+**산출물:**
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| sessionAuth | JWT HS256 발급/검증 (jose), wai_sess_ 접두사, SessionConstraints DB 조회 |
+| masterAuth | Argon2id 검증, X-Master-Password 헤더 (localhost only) |
+| ownerAuth | SIWS/SIWE per-request 서명 검증, replay nonce |
+| DatabasePolicyEngine | 4-tier (INSTANT/NOTIFY/DELAY/APPROVAL), policies 테이블 Zod 규칙 |
+| DELAY Worker | 15분 쿨다운, 10초 폴링, Owner 취소 가능 |
+| APPROVAL Worker | 3단계 타임아웃(정책별>config>3600초), 30초 폴링, Owner SIWS/SIWE 서명 |
+| TOCTOU 방지 | BEGIN IMMEDIATE + reserved_amount |
+| Owner API | approve/reject, sessions list/revoke, status (8 엔드포인트) |
+| 세션 관리 | 생성/조회/해지/갱신, 낙관적 갱신 프로토콜, token_hash CAS(RENEWAL_CONFLICT 409) |
+
+**E2E 검증 (전체 L0 자동화 — `[HUMAN]` 0건):**
+```
+세션 토큰 발급 → 세션으로 API 호출           # [L0] JWT 발급 + 인증 성공
+소액(0.01 SOL) 전송 → INSTANT → 즉시 실행    # [L0] 상태 CONFIRMED assert
+중액(5 SOL) 전송 → DELAY → 대기 → 자동 실행  # [L0] 타이머 단축 + 상태 전이
+고액(100 SOL) 전송 → APPROVAL → 서명 승인     # [L0] 테스트용 키로 SIWS 자동 서명
+만료된 세션으로 호출 → 401 거부               # [L0] HTTP 401 assert
+Owner 미등록 에이전트 → APPROVAL 티어 비활성   # [L0] owner_address null 동작
+```
+> **자동화 핵심:** DELAY/APPROVAL 테스트는 타임아웃을 테스트용 값(수 초)으로 단축하고, Owner 서명은 테스트 전용 키페어로 SIWS 메시지를 프로그래밍 방식으로 서명한다.
+
+**의존:** v1.1
+
+---
+
+### v1.3 — SDK + MCP + 알림
+
+**목표:** AI 에이전트가 TS/Python SDK 또는 MCP로 지갑을 사용하고, Owner가 Telegram/Discord로 알림을 받는 상태
+
+**구현 대상 설계 문서:**
+- 37 (REST API — 전체 38 엔드포인트 완성)
+- 38 (TS SDK, Python SDK, MCP Server)
+- 35 (알림 아키텍처), 55 (DX 개선)
+- v0.9 설계: MCP SessionManager 자동 갱신
+
+**산출물:**
+
+| 패키지 | 내용 |
+|--------|------|
+| `@waiaas/sdk` | TypeScript SDK — 0 외부 의존성, WAIaaSClient 클래스 |
+| `@waiaas/mcp` | MCP Server — 6 도구 + 3 리소스, stdio, SessionManager |
+| Python SDK | httpx + Pydantic v2, pip 패키지 |
+| 알림 시스템 | INotificationChannel, Telegram(MarkdownV2), Discord(Webhook), ntfy.sh |
+| REST API | 38 엔드포인트 전체, OpenAPI 3.0 자동 생성 |
+
+**E2E 검증 (L0 95%+ — `[HUMAN]` 1~2건):**
+```
+TypeScript: new WAIaaSClient() → getBalance() → sendToken()  # [L0] SDK 통합 테스트
+Python: WAIaaSClient() → get_balance() → send_token()        # [L0] pytest 자동 실행
+MCP: stdio transport → tool 호출 → 응답 검증                  # [L0] MCP 클라이언트 자동 테스트
+알림: SOL 전송 → 알림 채널 mock 수신 검증                      # [L0] INotificationChannel mock
+MCP 세션 만료 → 자동 갱신 → 중단 없이 계속 동작               # [L0] TTL 단축 + 갱신 assert
+[HUMAN] Claude Desktop에서 MCP 도구 실제 호출 확인             # UI 통합은 수동 확인
+```
+
+**의존:** v1.2
+
+---
+
+### v1.4 — 토큰 + 컨트랙트 확장
+
+**목표:** SPL/ERC-20 토큰 전송, 자산 조회, 스마트 컨트랙트 호출, Approve 관리, 배치 트랜잭션이 동작하며, EVM 어댑터가 본격 가동되는 상태
+
+**구현 대상 설계 문서:**
+- 56 (토큰 전송 확장), 57 (자산 조회 + 수수료 추정)
+- 58 (컨트랙트 호출), 59 (Approve 관리), 60 (배치 트랜잭션)
+- 36 (EVM 어댑터 — 스텁 → 본격 구현 전환)
+- 27 (IChainAdapter 20 메서드 전체 구현)
+- v0.10 설계: Stage 5 완전 의사코드(CONC-01), ChainError 3-카테고리(ERRH-02), Batch 부모-자식 2계층 DB(OPER-02), PolicyType 10개+superRefine(ERRH-03)
+
+**산출물:**
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| 토큰 전송 | TransferRequest.token, SPL(getTransferCheckedInstruction), ERC-20(transfer) |
+| 자산 조회 | getAssets() — Solana getTokenAccountsByOwner, EVM 멀티콜 |
+| ALLOWED_TOKENS | 에이전트별 토큰 화이트리스트 정책 |
+| ContractCallRequest | EVM calldata, Solana programId+instructionData+accounts |
+| CONTRACT_WHITELIST | 기본 전면 거부, opt-in 화이트리스트 |
+| ApproveRequest | 독립 타입, APPROVED_SPENDERS/AMOUNT_LIMIT/TIER_OVERRIDE |
+| BatchRequest | Solana 원자적 배치 (min2/max20), 2단계 정책 합산, 부모-자식 2계층 DB+PARTIAL_FAILURE |
+| `@waiaas/adapter-evm` | EVM 어댑터 — viem, EIP-1559, ERC-20, gas 추정 |
+| 파이프라인 확장 | Stage 1 discriminatedUnion 5-type, Stage 3 11단계 평가, Stage 5 완전 의사코드(build→simulate→sign→submit+에러분기+재시도) |
+| ChainError | 3-카테고리(PERMANENT 17/TRANSIENT 4/STALE 4), category→retryable 자동 파생 |
+
+**E2E 검증 (전체 L0~L1 자동화 — `[HUMAN]` 0건):**
+```
+USDC 전송 (SPL) → CONFIRMED                     # [L1] solana-test-validator
+getAssets() → SOL + USDC + BONK 잔액 반환        # [L0] mock RPC 또는 validator
+미허용 토큰 전송 → ALLOWED_TOKENS 거부            # [L0] 정책 엔진 unit test
+컨트랙트 호출 (허용된 주소) → 실행                 # [L1] Hardhat/validator
+미허용 컨트랙트 호출 → CONTRACT_WHITELIST 거부     # [L0] 정책 엔진 unit test
+Approve 요청 → 독립 정책 평가 → 알림 mock 검증    # [L0] 정책 + 알림 mock
+Solana 3-instruction 배치 → 원자적 실행            # [L1] validator 원자적 확인
+EVM ETH 전송 + ERC-20 전송 → CONFIRMED            # [L1] Hardhat
+```
+
+**의존:** v1.3
+
+---
+
+### v1.5 — DeFi + 가격 오라클
+
+**목표:** USD 기준 정책 평가가 동작하고, Action Provider로 Jupiter Swap 등 DeFi 프로토콜을 에이전트가 사용할 수 있는 상태
+
+**구현 대상 설계 문서:**
+- 61 (가격 오라클), 62 (Action Provider 아키텍처), 63 (Swap Action)
+- v0.10 설계: Oracle 교차 검증 인라인 + 가격 나이 3단계 FRESH/AGING/STALE(OPER-03)
+
+**산출물:**
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| IPriceOracle | CoinGecko 구현체, 5분 TTL 캐시, 가격 나이 3단계(FRESH/AGING/STALE>30분), 교차 검증 인라인 |
+| OracleChain | CoinGecko → Pyth → Chainlink fallback 체인 |
+| USD 정책 | resolveEffectiveAmountUsd(), 5개 TransactionType 모두 USD 기준 |
+| IActionProvider | resolve-then-execute, ActionDefinition Zod 스키마 |
+| ActionProviderRegistry | 플러그인 발견/로드/검증, ~/.waiaas/actions/ |
+| MCP Tool 변환 | ActionDefinition → MCP Tool 자동 매핑 (16개 상한) |
+| Jupiter Swap | Quote API → /swap-instructions → ContractCallRequest 변환 |
+| 슬리피지/MEV | 50/500bps 기본값, Jito MEV 보호 |
+
+**E2E 검증 (L0 95%+ — `[HUMAN]` 1건):**
+```
+5 USDC 전송 → USD 기준 INSTANT ($5) → 즉시 실행      # [L0] mock oracle + 정책
+500 USDC 전송 → USD 기준 APPROVAL ($500)              # [L0] mock oracle + 자동 서명
+Action: jupiter-swap → Quote → 슬리피지 → 실행         # [L0] Jupiter API mock
+오라클 장애 → fallback → stale 가격 사용 or 거부       # [L0] OracleChain mock 체인
+MCP: waiaas_jupiter_swap 도구 자동 노출                # [L0] MCP tool 목록 assert
+커스텀 Action Provider 플러그인 로드 → MCP 도구 추가    # [L0] 테스트 플러그인 로드
+[HUMAN] Jupiter API 실 호출 Devnet 검증 (CI nightly)   # 외부 API 실 동작 확인
+```
+
+**의존:** v1.4
+
+---
+
+### v1.6 — Desktop + Telegram Bot + Docker
+
+**목표:** Owner가 데스크톱 앱이나 Telegram으로 거래를 관리하고, Docker로 원클릭 배포가 가능한 상태
+
+**구현 대상 설계 문서:**
+- 39 (Tauri 데스크톱), 40 (Telegram Bot + Docker)
+- 36 (Kill Switch + AutoStop)
+- v0.10 설계: Kill Switch 4전이 CAS ACID 패턴(CONC-03)
+
+**산출물:**
+
+| 컴포넌트 | 내용 |
+|----------|------|
+| Desktop App | Tauri 2 + React 18 + TailwindCSS 4, 8 화면 |
+| Sidecar | Node.js SEA, crash detection (max 3x), 35초 종료 |
+| 시스템 트레이 | 3색 상태 (정상/대기/긴급), Setup Wizard 5단계 |
+| WalletConnect | @reown/appkit (Tauri), QR 페어링 |
+| Telegram Bot | Long Polling, 2-Tier auth, 인라인 키보드 |
+| Kill Switch | 3-state 6-step cascade, dual-auth 복구, 4전이 CAS ACID 패턴 |
+| AutoStop Engine | 5 규칙 기반 자동 정지 |
+| Docker | Multi-stage Dockerfile, compose, named volume, non-root 1001 |
+
+**E2E 검증 (L0~L1 70%+ — `[HUMAN]` 5~8건):**
+```
+Docker: docker compose up → health check → SDK 거래       # [L1] CI 자동 실행
+Kill Switch cascade → 세션/거래/에이전트 일괄 정지          # [L0] API 호출 + DB 상태
+Kill Switch 복구 → dual-auth 검증                         # [L0] 테스트 키 + 테스트 패스워드
+Sidecar crash → 자동 재시작 (max 3x)                      # [L1] 프로세스 kill + 복구 확인
+AutoStop 규칙 트리거 → 에이전트 정지                       # [L0] 이벤트 시뮬레이션
+[HUMAN] Desktop: Setup Wizard 5단계 UX 적합성
+[HUMAN] Desktop: APPROVAL 거래 알림 → Owner 서명 → 승인 UI 흐름
+[HUMAN] Desktop: 대시보드 레이아웃 + 인터랙션
+[HUMAN] Desktop: 시스템 트레이 3색 상태 표시
+[HUMAN] Telegram: /pending → 인라인 키보드 → Approve 대화 흐름
+[HUMAN] Telegram: /killswitch 대화 흐름 자연스러움
+```
+> **v1.6은 유일하게 `[HUMAN]` 항목이 집중되는 마일스톤.** UI/UX 적합성은 자동화 불가능한 영역이므로 수용한다. 기능 정합성(API 호출, 상태 전이)은 자동화한다.
+
+**의존:** v1.5
+
+---
+
+### v1.7 — 품질 강화 + CI/CD
+
+**목표:** 설계 단계에서 정의한 300+ 테스트 시나리오를 구현하고, CI/CD 파이프라인으로 지속적 품질을 보장하는 상태
+
+**구현 대상 설계 문서:**
+- 46~47 (보안 시나리오 71건), 48 (블록체인 테스트 환경)
+- 49 (Enum 빌드타임 검증), 50 (CI/CD 파이프라인), 51 (플랫폼 테스트 118건)
+- 64 (확장 기능 테스트 166 시나리오)
+
+**산출물:**
+
+| 영역 | 내용 |
+|------|------|
+| 단위 테스트 | 모듈별 Vitest, 커버리지 게이트 (Soft 60% / Hard 40%) |
+| Contract Test | Mock 10개 경계, 7 Contract Test 시나리오 |
+| 블록체인 테스트 | Solana Validator (로컬), Hardhat/Anvil (EVM) |
+| 보안 테스트 | 71건 공격 시나리오 (세션 탈취, TOCTOU, 키스토어 등) |
+| 플랫폼 테스트 | CLI 32 + Docker 18 + Tauri 34 + Telegram 34건 |
+| Enum 검증 | 빌드타임 SSoT 검증 (as const → DB CHECK 일치) |
+| CI/CD | GitHub Actions 4 YAML (push/PR/nightly/release) |
+| 크로스 빌드 | macOS(ARM64/x64), Windows(x64), Linux(x64/ARM64) — 5 타겟 |
+
+**E2E 검증 (전체 L0~L1 자동화 — `[HUMAN]` 0건):**
+```
+git push → CI 전체 통과 (2분 이내)                     # [L0] GitHub Actions
+PR 머지 → 커버리지 게이트 통과                          # [L0] Vitest coverage threshold
+Nightly → Solana Validator + Hardhat 통합 테스트        # [L1] cron schedule
+Release 태그 → 5 플랫폼 바이너리 빌드 + Docker 푸시     # [L1] matrix build
+보안 시나리오 237건 전수 통과                            # [L0] Vitest test suite
+Enum SSoT 빌드타임 검증 통과                            # [L0] 커스텀 assert
+```
+
+**의존:** v1.6
+
+---
+
+### v2.0 — 전 기능 완성 릴리스
+
+**목표:** v0.1~v0.10에서 설계한 모든 기능이 구현·테스트·문서화되어 공개 릴리스 가능한 상태
+
+**산출물:**
+
+| 영역 | 내용 |
+|------|------|
+| 코드 | 7 패키지 전체 구현 완료 |
+| 테스트 | 커버리지 Hard 게이트 통과, 보안 시나리오 전수 통과 |
+| 문서 | API 레퍼런스, 배포 가이드, 기여 가이드, README 최종판 |
+| 배포 | npm 패키지, Docker 이미지, Desktop 바이너리 (5 플랫폼) |
+| 릴리스 | GitHub Release + 체인지로그 + 마이그레이션 가이드 |
+
+**릴리스 체크리스트:**
+- [ ] v1.1~v1.7 마일스톤 전체 완료 — [L0] CI 게이트 전체 통과
+- [ ] CI/CD nightly 3일 연속 통과 — [L0] 자동 판정
+- [ ] 보안 시나리오 237건 전수 통과 — [L0] Vitest 자동 실행
+- [ ] `[HUMAN]` 항목 전수 확인 완료 — [HUMAN] VERIFICATION.md 기록
+- [ ] README 영문 버전 완성 — [HUMAN] 내용 검토
+- [ ] CHANGELOG.md 작성 — [HUMAN] 최종 검토
+- [ ] npm publish / Docker Hub push / GitHub Release 생성 — [L1] 스크립트 실행
+- [ ] 설계 부채 0건 (또는 v2.1 이연 명시) — [HUMAN] 이연 판단
+
+**의존:** v1.7
+
+---
+
+## 설계 문서 → 구현 마일스톤 매핑
+
+각 설계 문서가 어느 구현 마일스톤에서 구현되는지 추적한다.
+
+| 문서 | 이름 | 구현 마일스톤 |
+|------|------|-------------|
+| 24 | monorepo-data-directory | v1.1 |
+| 25 | sqlite-schema | v1.1 |
+| 26 | keystore-spec | v1.1 |
+| 27 | chain-adapter-interface | v1.1 (기본) → v1.4 (전체) |
+| 28 | daemon-lifecycle-cli | v1.1 |
+| 29 | api-framework-design | v1.1 (골격) → v1.2 (미들웨어 전체) |
+| 30 | session-token-protocol | v1.2 |
+| 31 | solana-adapter-detail | v1.1 (SOL) → v1.4 (SPL/컨트랙트) |
+| 32 | transaction-pipeline-api | v1.1 (골격) → v1.2 (전체) |
+| 33 | time-lock-approval-mechanism | v1.2 |
+| 34 | owner-wallet-connection | v1.2 |
+| 35 | notification-architecture | v1.3 |
+| 36 | killswitch-autostop-evm | v1.4 (EVM) + v1.6 (KillSwitch) |
+| 37 | rest-api-complete-spec | v1.1 (기본) → v1.3 (전체) |
+| 38 | sdk-mcp-interface | v1.3 |
+| 39 | tauri-desktop-architecture | v1.6 |
+| 40 | telegram-bot-docker | v1.6 |
+| 41~44 | 대응표 | (참조만, 구현 대상 아님) |
+| 45 | enum-unified-mapping | v1.1 |
+| 46~47 | 보안 시나리오 | v1.7 |
+| 48 | blockchain-test-environment | v1.7 |
+| 49 | enum-config-verification | v1.7 |
+| 50 | cicd-pipeline-coverage-gate | v1.7 |
+| 51 | platform-test-scope | v1.7 |
+| 52 | auth-model-redesign | v1.2 |
+| 53 | session-renewal-protocol | v1.2 |
+| 54 | cli-flow-redesign | v1.1 |
+| 55 | dx-improvement-spec | v1.3 |
+| 56 | token-transfer-extension | v1.4 |
+| 57 | asset-query-fee-estimation | v1.4 |
+| 58 | contract-call-spec | v1.4 |
+| 59 | approve-management-spec | v1.4 |
+| 60 | batch-transaction-spec | v1.4 |
+| 61 | price-oracle-spec | v1.5 |
+| 62 | action-provider-architecture | v1.5 |
+| 63 | swap-action-spec | v1.5 |
+| 64 | extension-test-strategy | v1.7 |
+
+---
+
+## 마일스톤 운영 전략
+
+### 1. 구현 중 설계 변경 대응 (3-Tier)
+
+구현 중 설계와 현실이 다른 경우, 변경 규모에 따라 3단계로 대응한다.
+
+#### Tier 1: 인라인 수정 (영향 문서 1개, 30분 이내)
+
+설계 문서를 직접 수정하고 구현을 계속한다.
+
+- 메서드 시그니처 미세 조정, 에러 코드 추가, config 키 변경 등
+- 설계 문서에 `> [v1.X 구현 중 변경]` 주석 추가
+- 구현 커밋에 설계 문서 수정 포함
+
+#### Tier 2: 소수 페이즈 삽입 (영향 문서 2~5개, 1~3일)
+
+현재 마일스톤 내부에 소수 페이즈를 삽입하여 설계를 보완한 후 재개한다.
+
+- API 엔드포인트 그룹 재설계, 테이블 구조 변경, 정책 규칙 추가 등
+- Phase X.1 형태로 삽입, 설계 문서 수정 후 구현 재개
+- ROADMAP 변경 이력에 기록
+
+#### Tier 3: 설계 마일스톤 삽입 (영향 문서 5개+, 3일+)
+
+구현을 중단하고 독립 설계 마일스톤을 삽입한다.
+
+- 아키텍처 수준 변경, 보안 모델 전환, 외부 API 단종 대응 등
+- `vX.Yd` (design) 형태로 삽입 (예: v1.3d)
+- objective 문서 생성, 완료 후 구현 재개 또는 재계획
+
+### 2. 새 요구사항 삽입 (4-Slot)
+
+계획에 없던 새 요구사항이 발견되면, 4가지 슬롯 중 하나에 배치한다.
+
+```
+발견 → 긴급도 + 적합성 판단 → 슬롯 배치
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Slot A: 현재 마일스톤 확장                                        │
+│   조건: 현재 마일스톤과 직접 관련 + 미처리 시 재작업 발생              │
+│   방법: 소수 페이즈 삽입 (Phase X.1)                               │
+│   제약: 요구사항 2~3개 이내, 마일스톤 목표 변경 금지                  │
+├─────────────────────────────────────────────────────────────────┤
+│ Slot B: 기존 미래 마일스톤에 추가                                   │
+│   조건: 기존 마일스톤의 범위에 자연스럽게 속함                        │
+│   방법: 해당 마일스톤 objective + REQUIREMENTS에 요구사항 추가         │
+│   제약: 추가 사유 명시                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ Slot C: 새 마일스톤 삽입                                           │
+│   조건: 기존 마일스톤에 안 맞음 + 특정 시점까지 필요                   │
+│   방법: vX.Yd (설계) 또는 vX.Y.Z (구현) 삽입                       │
+│   제약: objective 문서 필수, ROADMAP 의존 관계 갱신                  │
+├─────────────────────────────────────────────────────────────────┤
+│ Slot D: 백로그 추가 (v2.0 이후)                                    │
+│   조건: 긴급하지 않음 + 현재 범위와 의존 관계 없음                    │
+│   방법: objectives/ 문서 생성, ROADMAP "계획됨"으로 추가              │
+│   제약: 없음                                                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3. 번호 체계
+
+| 유형 | 형식 | 예시 | 용도 |
+|------|------|------|------|
+| 정규 마일스톤 | `vX.Y` | v1.3 | 계획된 구현 |
+| 설계 삽입 | `vX.Yd` | v1.3d | 구현 중 설계 변경 (Tier 3) |
+| 구현 삽입 | `vX.Y.Z` | v1.3.1 | 새 기능 삽입 (Slot C) |
+| 긴급 패치 | `vX.Yh` | v1.3h | 긴급 수정 |
+| 소수 페이즈 | `Phase N.M` | Phase 35.1 | 마일스톤 내부 삽입 (Tier 2, Slot A) |
+
+### 4. 설계 부채 관리
+
+구현 중 발견되지만 즉시 처리하지 않는 항목은 **설계 부채**로 추적한다.
+
+**파일:** `objectives/design-debt.md`
+
+```markdown
+| ID | 발견 시점 | 내용 | 영향 문서 | Tier | 처리 예정 |
+|----|----------|------|----------|------|----------|
+| DD-01 | v1.1 | EVM batch AA 미지원 | 60 | 2 | v1.4 전 |
+| DD-02 | v1.2 | 알림 재시도 큐 미설계 | 35 | 1 | v1.3 |
+```
+
+**규칙:**
+- Tier 1~2: 다음 마일스톤 시작 전까지 누적 허용
+- Tier 3: 즉시 처리 (구현 중단)
+- 매 마일스톤 시작 시 **설계 부채 리뷰** → 처리 또는 이연 결정
+- v2.0 릴리스 전 부채 0건 달성 (또는 v2.1 이연 명시)
+
+### 5. 변경 이력
+
+모든 계획 변경은 ROADMAP.md 하단에 기록한다.
+
+```markdown
+## 변경 이력
+
+| 일자 | 변경 | 사유 | 영향 |
+|------|------|------|------|
+| 2026-03-15 | v1.4에 FEE-01 추가 | v1.1 구현 중 동적 fee 필요성 발견 | v1.4 범위 확장 |
+| 2026-03-20 | v1.2d 삽입 | WebSocket 알림 아키텍처 재설계 | v1.3 이후 일정 밀림 |
+```
+
+---
+
+## 품질 게이트
+
+각 마일스톤 완료 시 충족해야 하는 최소 품질 기준.
+
+| 항목 | v1.1~v1.3 | v1.4~v1.6 | v1.7 | v2.0 |
+|------|-----------|-----------|------|------|
+| 단위 테스트 커버리지 | 40% (Soft) | 60% (Soft) | 80% (Hard) | 80% (Hard) |
+| E2E 검증 시나리오 | 전수 통과 | 전수 통과 | 전수 통과 | 전수 통과 |
+| 보안 시나리오 | 해당 없음 | 해당분 통과 | 237건 전수 | 237건 전수 |
+| 설계 부채 Tier 3 | 0건 | 0건 | 0건 | 0건 |
+| Lint + Type Check | 통과 | 통과 | 통과 | 통과 |
+| CI 파이프라인 | 로컬 | 로컬 + PR | 4-stage 전체 | 4-stage 전체 |
+
+---
+
+## 구현 자동화 전략
+
+### 1. 기본 원칙: "사람은 설계를 판단하고, 기계는 정합성을 검증한다"
+
+구현 과정에서 사람의 개입이 필요한 지점을 최소화하고, 모든 검증 가능한 조건은 자동화된 테스트·스크립트·CI 게이트로 대체한다. 사람이 수동으로 확인해야 하는 항목은 명시적으로 `[HUMAN]` 태그를 부여하여 관리한다.
+
+### 2. 자동화 계층
+
+| 계층 | 자동화 수준 | 사람 개입 | 예시 |
+|------|-----------|----------|------|
+| **L0: 완전 자동** | CI가 자동 실행 + 자동 판정 | 없음 | 단위 테스트, 타입 체크, 린트, Enum SSoT 검증, 커버리지 게이트 |
+| **L1: 자동 실행 + 결과 확인** | CI가 실행하되 결과는 로그로 확인 | 실패 시에만 | 블록체인 통합 테스트(Validator/Hardhat), Docker 빌드, 크로스 플랫폼 빌드 |
+| **L2: 트리거 자동 + 판단 수동** | 스크립트가 준비하되 최종 판단은 사람 | 최소 | 보안 시나리오 리뷰, 설계 부채 이연 결정, 릴리스 체크리스트 |
+| **L3: 사람 필수** | 자동화 불가능, 사람만 가능 | 필수 | UX 적합성 판단, 설계 변경 Tier 3 결정, v2.0 릴리스 승인 |
+
+### 3. E2E 검증 자동화 기준
+
+각 마일스톤의 E2E 검증 시나리오는 다음 기준으로 자동화한다:
+
+**자동화 필수 (L0):**
+- API 엔드포인트 호출 + 응답 검증 (HTTP 상태 코드 + JSON 스키마)
+- 트랜잭션 상태 전이 검증 (QUEUED → EXECUTING → CONFIRMED)
+- 인증 실패 시나리오 (401/403 반환 확인)
+- 정책 엔진 평가 결과 (INSTANT/DELAY/APPROVAL 티어 분류)
+- Enum SSoT 일치 (as const → Zod → DB CHECK)
+- 에러 코드 매핑 (설계 문서 정의 ↔ 실제 반환)
+
+**자동 실행 + 실패 시 확인 (L1):**
+- Solana Validator 로컬 네트워크 전송 + 확인
+- Hardhat/Anvil EVM 로컬 네트워크 전송 + 확인
+- Docker compose up → health check → API 호출
+- 5 플랫폼 SEA 바이너리 빌드 성공
+
+**자동화 예외 — 사람 확인 필수 `[HUMAN]` (L3):**
+- Desktop UI 레이아웃 + 인터랙션 적합성 (v1.6)
+- Telegram Bot 대화 흐름 자연스러움 (v1.6)
+- Setup Wizard 5단계 UX (v1.6)
+- 릴리스 체인지로그 최종 검토 (v2.0)
+
+### 4. 마일스톤별 사람 개입 목표
+
+| 마일스톤 | 자동화 검증 비율 | 사람 확인 `[HUMAN]` 항목 수 | 비고 |
+|---------|----------------|--------------------------|------|
+| v1.1 | 100% | 0 | 순수 백엔드 — 전체 자동화 가능 |
+| v1.2 | 100% | 0 | 인증/정책 — 전체 자동화 가능 |
+| v1.3 | 95%+ | 1~2 | MCP Claude Desktop 통합 확인 |
+| v1.4 | 100% | 0 | 토큰/컨트랙트 — 전체 자동화 가능 |
+| v1.5 | 95%+ | 1 | 외부 API(Jupiter) 실 호출 확인 |
+| v1.6 | 70%+ | 5~8 | Desktop/Telegram **UI는 사람 확인 필수** |
+| v1.7 | 100% | 0 | CI/CD + 테스트 — 전체 자동화 |
+| v2.0 | 95%+ | 2~3 | 릴리스 체크리스트, README, 체인지로그 |
+
+### 5. 자동화 도구 체인
+
+| 영역 | 도구 | 자동화 대상 |
+|------|------|-----------|
+| 단위/통합 테스트 | Vitest | 모듈별 함수, 미들웨어, 서비스 |
+| API E2E | Vitest + supertest (또는 Hono test client) | 엔드포인트 호출 + 응답 검증 |
+| 블록체인 통합 | solana-test-validator, Hardhat | 체인 어댑터 실 네트워크 검증 |
+| 스키마 검증 | Zod parse + custom assertion | Enum SSoT, config, API 스키마 |
+| 타입 체크 | tsc --noEmit | 컴파일 오류 0건 |
+| 린트 | ESLint + Prettier | 코드 스타일 일관성 |
+| 커버리지 게이트 | Vitest coverage + CI threshold | Soft/Hard 게이트 자동 판정 |
+| 보안 시나리오 | Vitest 테스트 케이스 | 237건 공격 시나리오 자동 실행 |
+| 크로스 빌드 | GitHub Actions matrix | 5 플랫폼 빌드 성공 확인 |
+| Docker | docker compose + health check script | 컨테이너 기동 + API 응답 확인 |
+
+### 6. `[HUMAN]` 태그 관리 규칙
+
+- 모든 E2E 검증 시나리오는 기본적으로 **자동화 대상**이다
+- 자동화가 불가능한 항목만 `[HUMAN]` 태그를 부여한다
+- `[HUMAN]` 항목은 각 마일스톤 objective 문서의 E2E 검증 섹션에 명시한다
+- `[HUMAN]` 항목이 10개를 초과하면 자동화 방법을 재검토한다 (스크린샷 비교, 접근성 테스트 등)
+- 마일스톤 완료 시 `[HUMAN]` 항목의 확인 결과를 VERIFICATION.md에 기록한다
+- **전체 HUMAN 항목의 진행/검증 상태는 `objectives/verification-checklist.md`에서 통합 추적한다**
+- 검증 건너뛸 시 반드시 DEFERRED 상태 + 사유 + 재검증 예정 시점을 체크리스트에 기록한다
+- v2.0 릴리스 판정 시 체크리스트의 릴리스 게이트 조건을 충족해야 한다
+
+---
+
+## v1.0 산출물
+
+이 마일스톤(v1.0) 자체의 산출물:
+
+**계획 문서 (이 문서):**
+- [x] 구현 로드맵 (v1.1 ~ v2.0)
+- [x] 마일스톤별 산출물 + E2E 검증 기준
+- [x] 설계 문서 → 구현 마일스톤 매핑
+- [x] 마일스톤 운영 전략 (3-Tier + 4-Slot)
+- [x] 품질 게이트 정의
+
+**마일스톤별 objective 문서 (8개):**
+- [ ] `objectives/v1.1-core-infrastructure.md` — 코어 인프라 + 기본 전송
+- [ ] `objectives/v1.2-auth-policy-engine.md` — 인증 + 정책 엔진
+- [ ] `objectives/v1.3-sdk-mcp-notifications.md` — SDK + MCP + 알림
+- [ ] `objectives/v1.4-token-contract-extension.md` — 토큰 + 컨트랙트 확장
+- [ ] `objectives/v1.5-defi-price-oracle.md` — DeFi + 가격 오라클
+- [ ] `objectives/v1.6-desktop-telegram-docker.md` — Desktop + Telegram + Docker
+- [ ] `objectives/v1.7-quality-cicd.md` — 품질 강화 + CI/CD
+- [ ] `objectives/v2.0-release.md` — 전 기능 완성 릴리스
+
+**운영 도구:**
+- [ ] `objectives/design-debt.md` — 설계 부채 추적 파일 초기화
+- [ ] README.md 구현 마일스톤 반영 — 프로젝트 상태 섹션 갱신
+
+---
+
+## 부록: 구현 마일스톤 objective 문서 구조
+
+각 마일스톤 objective 문서(v1.1~v2.0)는 아래 구조를 따른다. 이 문서의 마일스톤 상세 섹션을 기반으로, 실행에 필요한 구체적 정보를 추가한다.
+
+```markdown
+# 마일스톤 vX.Y: [마일스톤 이름]
+
+## 목표
+한 문장으로 E2E 검증 가능한 목표를 정의한다.
+
+## 구현 대상 설계 문서
+이 마일스톤에서 구현하는 설계 문서 목록과 각 문서에서 구현할 범위를 명시한다.
+
+| 문서 | 구현 범위 | 전체/부분 |
+|------|----------|----------|
+| 24-monorepo | 전체 | 전체 |
+| 27-chain-adapter | getBalance, buildTransaction만 | 부분 (나머지 v1.4) |
+
+## 산출물
+구현 결과로 생성되는 패키지, 컴포넌트, API 엔드포인트를 나열한다.
+
+## 기술 결정 사항
+구현 과정에서 확정해야 할 기술적 선택지를 미리 식별한다.
+(예: 패키지 매니저, 테스트 프레임워크, 린트 룰 등)
+
+## E2E 검증 시나리오
+마일스톤 완료 시 실행하는 검증 시나리오를 명령어 수준으로 기술한다.
+각 시나리오에 자동화 수준 태그([L0]~[L3])를 부여한다.
+자동화 불가능한 항목은 [HUMAN] 태그를 명시하고, 총 개수를 상단에 표기한다.
+
+## 의존
+선행 마일스톤과 외부 의존성을 명시한다.
+
+## 리스크
+구현 중 발생할 수 있는 알려진 리스크와 대응 방안을 기술한다.
+(예: 네이티브 addon 호환성, RPC 속도 제한 등)
+```
+
+### 설계 문서와의 관계
+
+```
+objectives/vX.Y-*.md          설계 문서 (24~64번)           코드
+  (무엇을, 왜)         →        (어떻게)            →     (구현)
+  ┌──────────────┐      ┌──────────────────┐      ┌────────────┐
+  │ 마일스톤 목표   │      │ 인터페이스, 스키마,  │      │ 패키지 코드  │
+  │ 구현 범위      │  참조  │ 프로토콜, 시퀀스    │  구현  │ 테스트      │
+  │ 검증 시나리오   │ ───→ │ 에러 코드, 보안 규칙 │ ───→ │ 설정 파일    │
+  │ 리스크        │      │                  │      │            │
+  └──────────────┘      └──────────────────┘      └────────────┘
+```
+
+- **objective 문서**는 "이 마일스톤에서 무엇을 만들고, 어떻게 검증하는가"를 정의
+- **설계 문서**는 "각 컴포넌트를 어떻게 구현하는가"의 상세 스펙 (이미 존재)
+- objective 문서는 설계 문서를 **참조**하지, 내용을 **복제**하지 않는다
+
+---
+
+## 매핑 검증 결과
+
+### 검증 개요
+
+- **검증 일자:** 2026-02-09
+- **대상:** 37개 설계 문서 번호 (24~40, 45~64, 대응표 41~44 제외)
+- **검증 방법:** (1) 매핑 테이블 완전성 검증, (2) 8개 objective 문서 양방향 교차 검증
+
+### 문서 수 카운트 설명
+
+프로젝트에서 "총 30개 설계 문서"로 통칭하는 것은 코어 설계 문서(24~40, 45, 52~63)만의 카운트이다. 매핑 테이블은 이에 더하여 테스트 전략 문서(46~51, 64)까지 포함하여 **총 37개 문서 번호**를 추적한다. 구체적인 범위:
+
+| 범위 | 문서 수 | 내용 |
+|------|--------|------|
+| 24~40 | 17개 | 코어 아키텍처 + 세션/트랜잭션 + 보안 + 클라이언트 |
+| 45 | 1개 | Enum 통합 매핑 |
+| 46~51 | 6개 | 테스트 전략 (보안 시나리오, 블록체인 테스트, Enum 검증, CI/CD, 플랫폼 테스트) |
+| 52~55 | 4개 | 인증 + DX |
+| 56~64 | 9개 | 블록체인 확장 |
+| **합계** | **37개** | 매핑 테이블 추적 대상 전수 |
+
+### 검증 1: 매핑 테이블 완전성
+
+매핑 테이블("설계 문서 -> 구현 마일스톤 매핑" 섹션)에서 37개 문서 번호 전수 확인:
+
+- **개별 행 35개:** 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 45, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 -- 모두 존재
+- **결합 행 1개:** 46~47 (보안 시나리오) -- 문서 46과 47을 커버
+- **제외 행 1개:** 41~44 (대응표, 참조만) -- 매핑 대상 아님으로 정상 제외
+- **매핑 누락: 0건**
+- 모든 행에 하나 이상의 구현 마일스톤이 할당됨
+
+### 검증 2: Objective 문서 양방향 일치
+
+8개 objective 문서(v1.1~v2.0)의 "구현 대상 설계 문서" 섹션에서 참조하는 문서 번호 합집합:
+
+| Objective | 참조 문서 번호 |
+|-----------|---------------|
+| v1.1 | 24, 25, 26, 27, 28, 29, 31, 45, 54 |
+| v1.2 | 29, 30, 32, 33, 34, 52, 53 |
+| v1.3 | 35, 37, 38, 55 |
+| v1.4 | 27, 36, 56, 57, 58, 59, 60 |
+| v1.5 | 61, 62, 63 |
+| v1.6 | 36, 39, 40 |
+| v1.7 | 46, 47, 48, 49, 50, 51, 64 |
+| v2.0 | 전체 (24~40, 45~64) -- 최종 검증 |
+
+**합집합 (v1.1~v1.7, v2.0 제외):** 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64 = **37개**
+
+- **매핑 테이블에 있지만 objective에서 미참조:** 0건
+- **objective에서 참조하지만 매핑 테이블에 미존재:** 0건
+- **양방향 일치: 확인**
+
+### 부분 구현 문서 추적
+
+일부 설계 문서는 여러 마일스톤에 걸쳐 부분적으로 구현되며, 후속 마일스톤에서 나머지를 완성한다:
+
+| 문서 | 부분 구현 | 완성 |
+|------|----------|------|
+| 27 (chain-adapter) | v1.1 (기본 6메서드) | v1.4 (전체 20메서드) |
+| 29 (api-framework) | v1.1 (미들웨어 1~6) | v1.2 (미들웨어 7~8) |
+| 31 (solana-adapter) | v1.1 (SOL 전송) | v1.4 (SPL/컨트랙트) |
+| 32 (transaction-pipeline) | v1.1 (골격) | v1.2 (Stage 2/3/4 완성) |
+| 36 (killswitch-evm) | v1.4 (EVM 어댑터) | v1.6 (Kill Switch + AutoStop) |
+| 37 (rest-api) | v1.1 (6 EP) | v1.3 (38 EP 전체) |
+| 54 (cli) | v1.1 (init/start/stop/status) | 추후 확장 명령어 |
+
+### 결론
+
+**매핑 누락 0건, 양방향 일치 확인 완료.** 37개 설계 문서 번호가 구현 로드맵(v1.1~v2.0)에 빠짐없이 매핑되었으며, 8개 objective 문서와 매핑 테이블이 양방향으로 일치한다.
+
+---
+
+*최종 업데이트: 2026-02-09 Phase 47 매핑 검증 결과 추가 — 37개 문서 번호 전수 매핑 확인, 양방향 일치 검증 완료*
