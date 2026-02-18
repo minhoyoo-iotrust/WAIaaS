@@ -108,7 +108,7 @@ verify_import "@waiaas/adapter-evm" "import { EvmAdapter } from '@waiaas/adapter
 # Step 5: Verify Admin UI in daemon package
 echo ""
 echo "--- Verifying Admin UI in daemon package ---"
-DAEMON_DIR=$(node -e "const p=require.resolve('@waiaas/daemon/package.json');console.log(require('path').dirname(p))")
+DAEMON_DIR="./node_modules/@waiaas/daemon"
 if [ -f "$DAEMON_DIR/public/admin/index.html" ]; then
   echo "  ✓ Admin UI (public/admin/index.html)"
   PASSED=$((PASSED + 1))
