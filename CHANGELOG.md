@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.0-rc.1...v2.2.1) (2026-02-18)
+
+Stable release — promoted from v2.2.1-rc.1. Includes CI affected detection fix and smoke test daemon path resolution.
+
 ## [2.2.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.0-rc.1...v2.2.1-rc.1) (2026-02-18)
 
 
