@@ -9,7 +9,7 @@ v2.2는 v1.7에서 설정한 커버리지 Hard 게이트 중 임시 하향된 3�
 - [x] **Phase 178: adapter-solana 브랜치 커버리지** - Solana 어댑터의 미커버 ~78 브랜치에 대한 단위 테스트 추가 (completed 2026-02-18)
 - [x] **Phase 179: admin 함수 커버리지** - Admin UI의 미커버 ~37+ 함수에 대한 단위 테스트 추가 (completed 2026-02-18)
 - [x] **Phase 180: CLI 라인/구문 커버리지** - CLI 패키지의 미커버 ~444 라인에 대한 단위 테스트 추가 (completed 2026-02-18)
-- [ ] **Phase 181: 임계값 검증 및 복원** - 3개 패키지 vitest.config.ts 임계값을 원래 수준으로 복원하고 전체 검증
+- [x] **Phase 181: 임계값 검증 및 복원** - 3개 패키지 vitest.config.ts 임계값을 원래 수준으로 복원하고 전체 검증 (completed 2026-02-18)
 
 ## Phase Details
 
@@ -80,4 +80,4 @@ Phases 178, 179, 180은 독립적이므로 순서 무관 (병렬 가능). Phase 
 | 178. adapter-solana 브랜치 커버리지 | v2.2 | Complete    | 2026-02-18 | - |
 | 179. admin 함수 커버리지 | v2.2 | Complete    | 2026-02-18 | - |
 | 180. CLI 라인/구문 커버리지 | 1/1 | Complete    | 2026-02-18 | - |
-| 181. 임계값 검증 및 복원 | v2.2 | 0/1 | Not started | - |
+| 181. 임계값 검증 및 복원 | 1/1 | Complete   | 2026-02-18 | - |

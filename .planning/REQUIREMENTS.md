@@ -26,7 +26,7 @@
 
 ### 검증 및 복원
 
-- [ ] **GATE-01**: 전체 패키지 vitest.config.ts 임계값 검증 + 임시 하향 임계값 원래 수준으로 복원 (adapter-solana branches 65→75, admin functions 55→70, cli lines 65→70, cli statements 65→70)
+- [x] **GATE-01**: 전체 패키지 vitest.config.ts 임계값 검증 + 임시 하향 임계값 원래 수준으로 복원 (adapter-solana branches 65→75, admin functions 55→70, cli lines 65→70, cli statements 65→70)
 
 ## Future Requirements
 
@@ -55,7 +55,7 @@
 | ADM-04 | Phase 179 | Pending |
 | CLI-01 | Phase 180 | Complete |
 | CLI-02 | Phase 180 | Complete |
-| GATE-01 | Phase 181 | Pending |
+| GATE-01 | Phase 181 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 11 total
