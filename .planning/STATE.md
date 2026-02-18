@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.3 complete — Planning next milestone
+**Current focus:** v2.4 npm Trusted Publishing 전환
 
 ## Current Position
 
-Phase: 187 of 187
-Plan: Complete
-Status: v2.3 milestone shipped
-Last activity: 2026-02-18 — Milestone v2.3 archived
-
-Progress: [##########] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-18 — Milestone v2.4 started
 
 ## Performance Metrics
 
@@ -36,5 +34,5 @@ v2.3 decisions archived to milestones/v2.3-ROADMAP.md.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: v2.3 milestone complete, ready for next milestone
+Stopped at: Starting milestone v2.4
 Resume file: None
