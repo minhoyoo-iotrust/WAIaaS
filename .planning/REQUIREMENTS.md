@@ -9,9 +9,9 @@ npm Trusted Publishing (OIDC) 전환으로 supply chain 보안 강화.
 
 ### 사전 준비 (PREP)
 
-- [ ] **PREP-01**: 9개 package.json의 repository.url을 실제 GitHub 레포 URL로 수정 (minhoyoo-iotrust/WAIaaS)
-- [ ] **PREP-02**: deploy 잡에서 npm CLI >= 11.5.1 확보 (npm upgrade 스텝 추가 또는 Node.js 번들 버전 확인)
-- [ ] **PREP-03**: 8개 패키지의 package.json repository.directory 필드 정확성 확인
+- [x] **PREP-01**: 9개 package.json의 repository.url을 실제 GitHub 레포 URL로 수정 (minhoyoo-iotrust/WAIaaS)
+- [x] **PREP-02**: deploy 잡에서 npm CLI >= 11.5.1 확보 (npm upgrade 스텝 추가 또는 Node.js 번들 버전 확인)
+- [x] **PREP-03**: 8개 패키지의 package.json repository.directory 필드 정확성 확인
 
 ### OIDC 설정 (OIDC)
 
@@ -45,9 +45,9 @@ npm Trusted Publishing (OIDC) 전환으로 supply chain 보안 강화.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PREP-01 | Phase 188 | Pending |
-| PREP-02 | Phase 188 | Pending |
-| PREP-03 | Phase 188 | Pending |
+| PREP-01 | Phase 188 | Complete |
+| PREP-02 | Phase 188 | Complete |
+| PREP-03 | Phase 188 | Complete |
 | OIDC-01 | Phase 189 | Pending |
 | OIDC-02 | Phase 189 | Pending |
 | OIDC-03 | Phase 189 | Pending |

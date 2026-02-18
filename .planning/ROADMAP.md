@@ -46,7 +46,7 @@ See `.planning/milestones/v2.3-ROADMAP.md` for full details.
 
 **Milestone Goal:** npm 패키지 발행 방식을 Classic Automation Token(NPM_TOKEN)에서 OIDC Trusted Publishing으로 전환하여, 장기 시크릿 없이 GitHub Actions가 직접 npm에 인증하고 provenance 배지를 확보하는 supply chain 보안 강화 상태.
 
-- [ ] **Phase 188: 사전 준비** - repository.url 수정 + npm CLI 버전 확보
+- [x] **Phase 188: 사전 준비** - repository.url 수정 + npm CLI 버전 확보
 - [ ] **Phase 189: OIDC 전환** - npmjs.com Trusted Publisher 등록 + release.yml 수정
 - [ ] **Phase 190: 검증 및 정리** - E2E 릴리스 검증 + NPM_TOKEN 제거
 
@@ -63,7 +63,7 @@ See `.planning/milestones/v2.3-ROADMAP.md` for full details.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 188-01-PLAN.md -- package.json repository 필드 수정 + release.yml npm CLI 버전 보장
+- [x] 188-01-PLAN.md -- package.json repository 필드 수정 + release.yml npm CLI 버전 보장
 
 ### Phase 189: OIDC 전환
 **Goal**: npmjs.com에 Trusted Publisher가 등록되고, release.yml deploy 잡이 OIDC 인증 + provenance 서명으로 패키지를 발행하는 상태
@@ -106,6 +106,6 @@ Phases execute in numeric order: 188 → 189 → 190
 | 1-173 | v0.1-v2.0 | — | Complete | 2026-02-18 |
 | 178-181 | v2.2 | 6/6 | Complete | 2026-02-18 |
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
-| 188. 사전 준비 | v2.4 | 0/1 | Not started | - |
+| 188. 사전 준비 | v2.4 | 1/1 | Complete | 2026-02-19 |
 | 189. OIDC 전환 | v2.4 | 0/2 | Not started | - |
 | 190. 검증 및 정리 | v2.4 | 0/1 | Not started | - |
