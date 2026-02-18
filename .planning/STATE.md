@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 184 of 186 (Settings 분산 배치)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — Phase 183 complete (3 plans, 13 reqs, security.tsx + system.tsx + 4 pages TabNav)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-18 — Plan 184-01 complete (Wallets settings tabs: RPC/Monitoring/WalletConnect)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#####░░░░░] 50%
 
 ## Performance Metrics
 
@@ -40,6 +40,10 @@ Full log in PROJECT.md and milestones/.
 - 183-03: System page filters dirty settings to system-relevant categories only
 - 183-03: WalletListContent extracted as fragment; WalletListWithTabs wrapper owns page div
 - 183-03: Notifications inline tab-nav replaced with TabNav component
+- 184-01: Each Wallets settings tab has fully independent signal state
+- 184-01: Save filters dirty entries by category prefix (rpc.*, monitoring.*, walletconnect.*)
+- 184-01: Pure function helpers used directly (not closure wrappers)
+- 184-01: WalletConnect tab exposes relay_url as NEW-02
 
 ### Blockers/Concerns
 
@@ -49,5 +53,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 183 complete, advancing to Phase 184 planning
+Stopped at: Completed 184-01-PLAN.md (Wallets settings tabs)
 Resume file: None
