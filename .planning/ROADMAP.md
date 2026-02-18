@@ -65,10 +65,10 @@ Plans:
   2. admin의 vitest.config.ts functions 임계값이 55에서 70으로 복원되어 있고 pnpm test가 통과한다
   3. cli의 vitest.config.ts lines 임계값이 65에서 70, statements 임계값이 65에서 70으로 복원되어 있고 pnpm test가 통과한다
   4. pnpm test 전체 실행 시 모든 패키지가 커버리지 임계값을 만족하며 0건의 실패가 발생한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 181-01: 임계값 복원 + 전체 검증 (GATE-01)
+- [ ] 181-01-PLAN.md — 3개 패키지 vitest.config.ts 임계값 복원 + 전체 테스트 검증 (GATE-01)
 
 ## Progress
 
