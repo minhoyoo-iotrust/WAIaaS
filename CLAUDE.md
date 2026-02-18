@@ -49,6 +49,7 @@
 
 ## Milestone Completion
 
+- **Run `pnpm turbo run lint` and `pnpm turbo run typecheck` before merging milestone branch to main.** Lint/type errors in merged code block release-please PRs.
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).
 - **Release flow**: Merge PR (Conventional Commits) → release-please auto-creates Release PR → Merge Release PR (Gate 1: release decision) → release.yml quality gate → deploy job manual approval (Gate 2: deployment execution).
 - **Commit conventions**: `feat:` (minor), `fix:` (patch), `BREAKING CHANGE:` (major). `docs:`, `test:`, `chore:`, `ci:`, etc. are excluded from CHANGELOG.

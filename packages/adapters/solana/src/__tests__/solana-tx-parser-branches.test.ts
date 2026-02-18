@@ -15,7 +15,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
   address,
-  createNoopSigner,
   createTransactionMessage,
   setTransactionMessageFeePayer,
   appendTransactionMessageInstruction,
@@ -48,7 +47,6 @@ let fromAddress: string;
 let toAddress: string;
 let from: ReturnType<typeof address>;
 let to: ReturnType<typeof address>;
-let fromSigner: ReturnType<typeof createNoopSigner>;
 let adapter: SolanaAdapter;
 
 /** Build a test keypair from crypto and return address + 64-byte key */
@@ -102,7 +100,6 @@ beforeAll(async () => {
   toAddress = kp2.address;
   from = address(fromAddress);
   to = address(toAddress);
-  fromSigner = createNoopSigner(from);
 });
 
 // ---- parseSystemInstruction branches ----
