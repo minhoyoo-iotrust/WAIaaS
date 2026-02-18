@@ -60,10 +60,10 @@ See `.planning/milestones/v2.3-ROADMAP.md` for full details.
   1. 9개 package.json의 repository.url이 실제 GitHub 원격(`minhoyoo-iotrust/WAIaaS`)과 일치한다
   2. 8개 패키지의 repository.directory 필드가 실제 패키지 경로와 일치한다
   3. release.yml deploy 잡에서 npm CLI >= 11.5.1이 사용 가능하다 (업그레이드 스텝 추가 또는 번들 버전 확인)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 188-01: package.json 메타데이터 수정 + npm CLI 확보
+- [ ] 188-01-PLAN.md -- package.json repository 필드 수정 + release.yml npm CLI 버전 보장
 
 ### Phase 189: OIDC 전환
 **Goal**: npmjs.com에 Trusted Publisher가 등록되고, release.yml deploy 잡이 OIDC 인증 + provenance 서명으로 패키지를 발행하는 상태
