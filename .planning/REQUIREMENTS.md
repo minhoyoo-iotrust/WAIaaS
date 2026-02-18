@@ -101,13 +101,51 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (to be filled by roadmap) | | |
+| MENU-01 | Phase 183 | Pending |
+| MENU-02 | Phase 183 | Pending |
+| MENU-03 | Phase 183 | Pending |
+| TAB-01 | Phase 182 | Pending |
+| TAB-02 | Phase 183 | Pending |
+| TAB-03 | Phase 183 | Pending |
+| TAB-04 | Phase 183 | Pending |
+| TAB-05 | Phase 183 | Pending |
+| TAB-06 | Phase 184 | Pending |
+| SEC-01 | Phase 183 | Pending |
+| SEC-02 | Phase 183 | Pending |
+| SEC-03 | Phase 183 | Pending |
+| SEC-04 | Phase 183 | Pending |
+| SYS-01 | Phase 183 | Pending |
+| SYS-02 | Phase 183 | Pending |
+| DIST-01 | Phase 184 | Pending |
+| DIST-02 | Phase 184 | Pending |
+| DIST-03 | Phase 184 | Pending |
+| DIST-04 | Phase 184 | Pending |
+| DIST-05 | Phase 184 | Pending |
+| DIST-06 | Phase 184 | Pending |
+| NEW-01 | Phase 184 | Pending |
+| NEW-02 | Phase 184 | Pending |
+| NEW-03 | Phase 184 | Pending |
+| SRCH-01 | Phase 185 | Pending |
+| SRCH-02 | Phase 185 | Pending |
+| SRCH-03 | Phase 185 | Pending |
+| BCMB-01 | Phase 182 | Pending |
+| BCMB-02 | Phase 182 | Pending |
+| BCMB-03 | Phase 182 | Pending |
+| FGRP-01 | Phase 182 | Pending |
+| FGRP-02 | Phase 184 | Pending |
+| FGRP-03 | Phase 184 | Pending |
+| FGRP-04 | Phase 184 | Pending |
+| DESC-01 | Phase 182 | Pending |
+| DESC-02 | Phase 182 | Pending |
+| DIRTY-01 | Phase 185 | Pending |
+| DIRTY-02 | Phase 185 | Pending |
+| DOC-01 | Phase 186 | Pending |
 
 **Coverage:**
 - v2.3 requirements: 39 total
-- Mapped to phases: 0
-- Unmapped: 39
+- Mapped to phases: 39
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 after roadmap creation*
