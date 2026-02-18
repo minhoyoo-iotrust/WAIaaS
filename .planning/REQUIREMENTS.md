@@ -16,10 +16,10 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 ### 탭 네비게이션
 
 - [x] **TAB-01**: 재사용 가능한 TabNav 공용 컴포넌트가 생성되고 5개 페이지에서 사용된다
-- [ ] **TAB-02**: Wallets 페이지가 4개 탭(Wallets/RPC Endpoints/Balance Monitoring/WalletConnect)을 표시한다
-- [ ] **TAB-03**: Sessions 페이지가 2개 탭(Sessions/Settings)을 표시한다
-- [ ] **TAB-04**: Policies 페이지가 2개 탭(Policies/Defaults)을 표시한다
-- [ ] **TAB-05**: Notifications 페이지가 3개 탭(Channels & Logs/Telegram Users/Settings)으로 확장된다
+- [x] **TAB-02**: Wallets 페이지가 4개 탭(Wallets/RPC Endpoints/Balance Monitoring/WalletConnect)을 표시한다
+- [x] **TAB-03**: Sessions 페이지가 2개 탭(Sessions/Settings)을 표시한다
+- [x] **TAB-04**: Policies 페이지가 2개 탭(Policies/Defaults)을 표시한다
+- [x] **TAB-05**: Notifications 페이지가 3개 탭(Channels & Logs/Telegram Users/Settings)으로 확장된다
 - [ ] **TAB-06**: 각 Settings 탭이 독립적인 dirty signal과 save bar를 보유한다
 
 ### Security 페이지
@@ -31,8 +31,8 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### System 페이지
 
-- [ ] **SYS-01**: System 페이지가 #/system 라우트에서 API Keys, Oracle, Display Currency, Global IP Rate Limit, Log Level, Danger Zone을 렌더링한다
-- [ ] **SYS-02**: 기존 Settings의 API Keys/Display Currency/Log Level/Danger Zone이 System 페이지에서 동일하게 동작한다
+- [x] **SYS-01**: System 페이지가 #/system 라우트에서 API Keys, Oracle, Display Currency, Global IP Rate Limit, Log Level, Danger Zone을 렌더링한다
+- [x] **SYS-02**: 기존 Settings의 API Keys/Display Currency/Log Level/Danger Zone이 System 페이지에서 동일하게 동작한다
 
 ### Settings 분산
 
@@ -105,17 +105,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MENU-02 | Phase 183 | Complete |
 | MENU-03 | Phase 183 | Complete |
 | TAB-01 | Phase 182 | Complete |
-| TAB-02 | Phase 183 | Pending |
-| TAB-03 | Phase 183 | Pending |
-| TAB-04 | Phase 183 | Pending |
-| TAB-05 | Phase 183 | Pending |
+| TAB-02 | Phase 183 | Complete |
+| TAB-03 | Phase 183 | Complete |
+| TAB-04 | Phase 183 | Complete |
+| TAB-05 | Phase 183 | Complete |
 | TAB-06 | Phase 184 | Pending |
 | SEC-01 | Phase 183 | Complete |
 | SEC-02 | Phase 183 | Complete |
 | SEC-03 | Phase 183 | Complete |
 | SEC-04 | Phase 183 | Complete |
-| SYS-01 | Phase 183 | Pending |
-| SYS-02 | Phase 183 | Pending |
+| SYS-01 | Phase 183 | Complete |
+| SYS-02 | Phase 183 | Complete |
 | DIST-01 | Phase 184 | Pending |
 | DIST-02 | Phase 184 | Pending |
 | DIST-03 | Phase 184 | Pending |

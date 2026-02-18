@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 183 of 186 (메뉴 재구성 + 신규 페이지)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-18 — Plan 183-02 complete (2 tasks, 4 reqs, security.tsx 410 LOC)
+Plan: 3 of 3 in current phase
+Status: Phase Complete
+Last activity: 2026-02-18 — Plan 183-03 complete (2 tasks, 6 reqs, system.tsx + 4 pages TabNav)
 
-Progress: [██████░░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -37,6 +37,9 @@ Full log in PROJECT.md and milestones/.
 - 183-02: Independent tab state per component (own signals for settings/dirty/loading)
 - 183-02: AutoStop save bar scoped to autostop.* dirty entries only
 - 183-02: Reused exact CSS classes from settings.tsx for visual consistency
+- 183-03: System page filters dirty settings to system-relevant categories only
+- 183-03: WalletListContent extracted as fragment; WalletListWithTabs wrapper owns page div
+- 183-03: Notifications inline tab-nav replaced with TabNav component
 
 ### Blockers/Concerns
 
@@ -46,5 +49,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 183-02-PLAN.md (Security page with 3 tabs)
+Stopped at: Completed 183-03-PLAN.md (System page + TabNav on 4 pages)
 Resume file: None
