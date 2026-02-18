@@ -317,7 +317,8 @@ describe('SolanaAdapter - buildBatch branch coverage', () => {
     it('throws INVALID_INSTRUCTION when programId is missing', async () => {
       setupBlockhashMock();
 
-      const request = batchWith({
+      // Intentionally unused — testing request2 below with explicit programId
+      batchWith({
         from: TEST_FROM,
         to: TEST_PROGRAM_ID,
         // no programId
