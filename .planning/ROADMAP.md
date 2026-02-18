@@ -74,13 +74,11 @@ Plans:
   2. release.yml deploy 잡이 `id-token: write` + `contents: read` 퍼미션을 갖는다
   3. deploy 잡에서 npm publish --provenance --access public 으로 발행한다 (pnpm publish + NODE_AUTH_TOKEN 제거됨)
   4. publish-check 잡은 기존 pnpm publish --dry-run을 그대로 유지한다 (--provenance 없음)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 189-01: npmjs.com Trusted Publisher 수동 등록 (OIDC-01, 수동 작업 -- 코드 변경 아님)
-- [ ] 189-02: release.yml OIDC 전환
-
-NOTE: OIDC-01은 npmjs.com 웹 UI에서 8개 패키지 각각 수동 등록하는 작업이다. 코드 변경이 아니며, 등록 절차 체크리스트와 검증 기준을 plan에 명시한다.
+- [ ] 189-01-PLAN.md -- npmjs.com Trusted Publisher 수동 등록 (8개 패키지, checkpoint:human-action)
+- [ ] 189-02-PLAN.md -- release.yml deploy 잡 OIDC 전환 (permissions + npmrc 제거 + npm publish --provenance)
 
 ### Phase 190: 검증 및 정리
 **Goal**: OIDC 전환이 실제 릴리스로 E2E 검증되고, 장기 시크릿(NPM_TOKEN)이 완전 제거된 supply chain 보안 강화 완료 상태
