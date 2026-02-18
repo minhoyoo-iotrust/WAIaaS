@@ -76,7 +76,7 @@ if [ "$MODE" = "promote" ]; then
   "
 
   git add "$CONFIG"
-  git commit -m "chore: promote release to stable"
+  git commit -m "fix: promote release to stable"
   git push
 
   echo ""
