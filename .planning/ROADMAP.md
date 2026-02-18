@@ -110,10 +110,10 @@ Plans:
   1. 7개 페이지 모두에 PageHeader subtitle 설명 텍스트가 표시된다
   2. Settings 탭의 각 필드에 description help text가 채워져 있다
   3. README.md Admin UI 섹션이 새 7-메뉴 구조를 반영하여 갱신되어 있다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 186-01: 페이지/필드 설명 텍스트 작성 + README 갱신
+- [ ] 186-01-PLAN.md — Settings 필드 description 추가 + README Admin UI 섹션 7-메뉴 갱신
 
 ## Progress
 
