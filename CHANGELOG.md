@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.0-rc.1...v2.1.1-rc.1) (2026-02-18)
+
+
+### Bug Fixes
+
+* use pnpm pack instead of npm pack in smoke test ([#076](https://github.com/minhoyoo-iotrust/WAIaaS/issues/076)) ([09ba1c1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/09ba1c106c9cd825d7826291e41f84e4463a0b29))
+
 ## [2.1.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.0.0-rc.1...v2.1.0-rc.1) (2026-02-18)
 
 
