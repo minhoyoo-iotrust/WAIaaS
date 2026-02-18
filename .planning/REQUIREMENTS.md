@@ -9,9 +9,9 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### 메뉴 구조
 
-- [ ] **MENU-01**: 사이드바 네비게이션이 7개 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)를 표시한다
-- [ ] **MENU-02**: Settings 메뉴가 사이드바에서 제거되고 #/settings 접근 시 #/dashboard로 리다이렉트된다
-- [ ] **MENU-03**: WalletConnect 메뉴가 사이드바에서 제거되고 #/walletconnect 접근 시 #/wallets로 리다이렉트된다
+- [x] **MENU-01**: 사이드바 네비게이션이 7개 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)를 표시한다
+- [x] **MENU-02**: Settings 메뉴가 사이드바에서 제거되고 #/settings 접근 시 #/dashboard로 리다이렉트된다
+- [x] **MENU-03**: WalletConnect 메뉴가 사이드바에서 제거되고 #/walletconnect 접근 시 #/wallets로 리다이렉트된다
 
 ### 탭 네비게이션
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MENU-01 | Phase 183 | Pending |
-| MENU-02 | Phase 183 | Pending |
-| MENU-03 | Phase 183 | Pending |
+| MENU-01 | Phase 183 | Complete |
+| MENU-02 | Phase 183 | Complete |
+| MENU-03 | Phase 183 | Complete |
 | TAB-01 | Phase 182 | Complete |
 | TAB-02 | Phase 183 | Pending |
 | TAB-03 | Phase 183 | Pending |

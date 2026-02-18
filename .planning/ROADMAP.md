@@ -65,7 +65,7 @@ Plans:
   3. Security 페이지(#/security)에 Kill Switch/AutoStop Rules/JWT Rotation 3개 탭이 렌더링되고, 각 탭이 기존 Settings의 해당 기능을 동일하게 제공한다
   4. System 페이지(#/system)에 API Keys/Oracle/Display Currency/Global IP Rate Limit/Log Level/Danger Zone이 렌더링되고 기존과 동일하게 동작한다
   5. Wallets(4탭)/Sessions(2탭)/Policies(2탭)/Notifications(3탭) 페이지에 TabNav가 적용되어 탭 전환이 가능하다
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 183-01-PLAN.md — 사이드바 7-메뉴 구성 + 라우트 리다이렉트 + 설정 유틸리티 추출
@@ -127,7 +127,7 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 180. CLI 라인/구문 커버리지 | v2.2 | 1/1 | Complete | 2026-02-18 |
 | 181. 임계값 검증 및 복원 | v2.2 | 1/1 | Complete | 2026-02-18 |
 | 182. UI 공용 컴포넌트 | v2.3 | 2/2 | Complete | 2026-02-18 |
-| 183. 메뉴 재구성 + 신규 페이지 | v2.3 | 0/3 | Not started | - |
+| 183. 메뉴 재구성 + 신규 페이지 | 1/3 | In Progress|  | - |
 | 184. Settings 분산 배치 | v2.3 | 0/2 | Not started | - |
 | 185. UX 강화 | v2.3 | 0/2 | Not started | - |
 | 186. 마무리 | v2.3 | 0/1 | Not started | - |
