@@ -1036,3 +1036,30 @@
 
 ---
 
+
+## v2.2 테스트 커버리지 강화 (Shipped: 2026-02-18)
+
+**Delivered:** v1.7에서 설정한 커버리지 Hard 게이트 중 임시 하향된 3개 패키지(adapter-solana branches, admin functions, cli lines/statements)의 임계값을 원래 수준으로 복원하여 전체 패키지의 커버리지 품질을 균일하게 유지하는 상태 달성.
+
+**Phases completed:** 178-181 (4 phases, 6 plans, 12 tasks, 11 requirements)
+
+**Key accomplishments:**
+
+- adapter-solana 브랜치 커버리지 65% → 84.87% 향상 — convertBatchInstruction 4-type dispatch, signExternalTransaction edge case, tx-parser 엣지 케이스, Error instanceof 분기 등 49 신규 테스트
+- admin 함수 커버리지 57.95% → 77.87% 향상 — settings/wallets/dashboard/policies/notifications + 0% 그룹(client.ts, toast.tsx, copy-button.tsx, layout.tsx, display-currency.ts, 5 정책 폼) 195 신규 테스트
+- CLI 라인/구문 커버리지 68.09% → 91.88% 향상 — owner.ts/wallet.ts/password.ts 37 신규 테스트
+- 3개 패키지 vitest 커버리지 임계값 원래 수준 복원 (branches 65→75, functions 55→70, lines/statements 65→70)
+- 전체 모노레포 테스트 스위트 ~2,490 테스트 0건 실패 검증 + 이슈 #060~#062 해소
+
+**Stats:**
+
+- 4 phases, 6 plans, 12 tasks, 11 requirements
+- 53 files changed, +10,714 lines
+- 281 신규 테스트 (49 + 195 + 37), ~142,639 LOC TypeScript
+- 30 commits, 1 day (2026-02-18)
+- Git range: 330dc92..a8374e9
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
+
+---
+

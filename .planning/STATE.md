@@ -5,28 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.2 테스트 커버리지 강화 — Phase 181 complete
+**Current focus:** v2.2 shipped — Planning next milestone
 
 ## Current Position
 
-Phase: 181 of 181 (threshold-restore)
-Plan: 1 of 1 (phase complete)
-Status: Phase 181 complete
-Last activity: 2026-02-18 — Completed 181-01 coverage threshold restoration
+Phase: 181 of 181 (all complete)
+Plan: All complete
+Status: v2.2 milestone shipped
+Last activity: 2026-02-18 — v2.2 테스트 커버리지 강화 milestone complete
 
 Progress: [##########] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 39 milestones, 181 phases, 385 plans, 1,047 reqs, ~3,636 tests, ~124,830 LOC TS
+**Cumulative:** 40 milestones, 181 phases, 387 plans, 1,055 reqs, ~3,880 tests, ~142,639 LOC TS
 
 ## Accumulated Context
 
 ### Decisions
 
 Full log in PROJECT.md and milestones/.
-v2.0.1 decisions: 2 (CODE_OF_CONDUCT.md content filter 이연, validate-openapi @see 2회 갱신)
-v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive), Buffer.from base64 never throws (Step 1 catch unreachable), staticAccounts/instructions null coalescing are untestable defensive fallbacks, client.ts tested with real fetch (no mock) for accurate coverage, vi.mock hoisting limits walletconnect.tsx coverage in same file as layout tests, separate coverage test files for admin pages to avoid mock conflicts, non-throwing process.exit mock for catch-block coverage in polling loops, PassThrough stream for stdin mock instead of readline mock in forks pool, No threshold adjustments needed -- all 3 packages exceed restored thresholds comfortably
 
 ### Blockers/Concerns
 
@@ -36,5 +34,5 @@ v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive)
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 181-01-PLAN.md (coverage threshold restoration, Phase 181 complete)
+Stopped at: v2.2 milestone completed and archived
 Resume file: None

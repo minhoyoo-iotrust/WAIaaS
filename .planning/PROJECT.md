@@ -38,6 +38,7 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 - ✅ v1.7 품질 강화 + CI/CD — shipped 2026-02-17 (3,509 tests, ~237,000 LOC)
 - ✅ v1.8 업그레이드 + 배포 인프라 — shipped 2026-02-17 (3,599 tests, ~124,712 LOC TS)
 - ✅ v2.0 전 기능 완성 릴리스 — shipped 2026-02-18 (~3,599 tests, ~124,830 LOC TS)
+- ✅ v2.2 테스트 커버리지 강화 — shipped 2026-02-18 (281 신규 tests, ~142,639 LOC TS)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
@@ -352,19 +353,14 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 - ✓ 문서 재편성(docs/사용자, docs-internal/설계) + README(en) + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비 — v2.0 (DOC-01~08)
 - ✓ @waiaas/skills npx 배포 패키지 + examples/simple-agent SDK 예제 — v2.0 (PKG-01~02)
 - ✓ npm 8개 패키지 publish + Docker Hub push + release.yml 활성화 + v2.0.0-rc.1 pre-release — v2.0 (DEPLOY-01~04, RELEASE-01~03)
+- ✓ adapter-solana 브랜치 커버리지 65% → 84.87% (49 신규 테스트) — v2.2 (SOL-01~04)
+- ✓ admin 함수 커버리지 57.95% → 77.87% (195 신규 테스트) — v2.2 (ADM-01~04)
+- ✓ CLI 라인/구문 커버리지 68.09% → 91.88% (37 신규 테스트) — v2.2 (CLI-01~02)
+- ✓ 3개 패키지 커버리지 임계값 원래 수준 복원 (branches 65→75, functions 55→70, lines/statements 65→70) — v2.2 (GATE-01)
 
 ### 활성
 
-**Current Milestone: v2.2 테스트 커버리지 강화**
-
-**Goal:** v1.7에서 설정한 커버리지 임계값을 모든 패키지에서 실제로 달성하는 상태. 임시 하향한 임계값을 원래 수준으로 복원하고, 전체 패키지의 커버리지 품질을 균일하게 유지한다.
-
-**Target features:**
-- adapter-solana 브랜치 커버리지 65% → 75% 복원 (이슈 #060)
-- admin functions 커버리지 55% → 70% 복원 (이슈 #061)
-- cli lines/statements 커버리지 65% → 70% 복원 (이슈 #062)
-- 전체 패키지 커버리지 임계값 검증 및 불일치 식별
-- 임시 하향 임계값 원래 수준으로 복원
+(없음 — 다음 마일스톤 계획 필요)
 
 ### 범위 외
 
@@ -381,7 +377,7 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 
 ## 컨텍스트
 
-**누적:** 39 milestones (v0.1-v2.0.1), 177 phases, 381 plans, 1,044 requirements, 36 설계 문서(24-72), 8 objective 문서, ~124,830 LOC TS, ~3,599 테스트
+**누적:** 40 milestones (v0.1-v2.2), 181 phases, 387 plans, 1,055 requirements, 36 설계 문서(24-72), 8 objective 문서, ~142,639 LOC TS, ~3,880 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -410,6 +406,7 @@ v1.6.1 WalletConnect Owner 승인 shipped (2026-02-16). 5 페이즈, 10 플랜, 
 v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9 페이즈, 19 플랜, 48 요구사항, ~237,000 LOC, 3,509 테스트, 66 설계 결정.
 v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 플랜, 30 요구사항, ~124,712 LOC TS, 3,599 테스트, 16 설계 결정.
 v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 25 요구사항, ~124,830 LOC TS, ~3,599 테스트, 39 설계 결정.
+v2.2 테스트 커버리지 강화 shipped (2026-02-18). 4 페이즈, 6 플랜, 11 요구사항, ~142,639 LOC TS, ~3,880 테스트, 9 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -661,6 +658,12 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 2
 | release-as "2.0.0-rc.1" 명시적 | release-as와 prerelease-type 결합 불가 | ✓ Good — v2.0 구현 |
 | GITHUB_TOKEN → RELEASE_PAT | GITHUB_TOKEN은 다른 워크플로 트리거 불가 | ✓ Good — v2.0 구현 |
 | npm Classic Automation Token | Trusted Publishing은 v2.0.4에서 전환 | ✓ Good — v2.0 구현 |
+| Dead code it.skip 문서화 패턴 | 도달 불가 코드는 강제 실행 대신 skip+설명 주석 | ✓ Good — v2.2 테스트 |
+| Branch-focused 별도 테스트 파일 | 기존 happy-path 테스트와 중복 없이 분기 집중 | ✓ Good — v2.2 테스트 |
+| Coverage 별도 테스트 파일 (mock 충돌 회피) | 기존 test와 mock 설정 충돌 방지 | ✓ Good — v2.2 테스트 |
+| client.ts real fetch 테스트 (no mock) | 실제 코드 경로 정확한 커버리지 측정 | ✓ Good — v2.2 테스트 |
+| Non-throwing process.exit mock | try/catch 내 exit 호출 catch 블록 커버리지 | ✓ Good — v2.2 테스트 |
+| PassThrough stream stdin mock | forks pool에서 readline mock 불안정 대체 | ✓ Good — v2.2 테스트 |
 
 ---
-*최종 업데이트: 2026-02-18 after v2.2 milestone start — 테스트 커버리지 강화*
+*최종 업데이트: 2026-02-18 after v2.2 milestone complete — 테스트 커버리지 강화*
