@@ -97,6 +97,8 @@
 | 080 | BUG | MEDIUM | Graceful Shutdown 후 process.exit(0) 미호출로 프로세스 미종료 | v2.2 | FIXED | 2026-02-18 |
 | 081 | BUG | HIGH | npm publish에서 RC 버전이 latest 태그로 배포됨 | v2.3 | FIXED | 2026-02-18 |
 | 082 | BUG | CRITICAL | release.yml이 npm publish 사용하여 workspace:* 미치환 상태로 배포됨 | v2.3 | FIXED | 2026-02-18 |
+| 083 | ENHANCEMENT | MEDIUM | README를 npm quickstart 중심으로 재구성 | v2.3 | FIXED | 2026-02-18 |
+| 084 | BUG | HIGH | @waiaas/daemon npm 패키지에 Admin UI 정적 파일 누락 — turbo 캐시 히트 시 postbuild 건너뜀 | v2.3 | FIXED | 2026-02-18 |
 
 ## Type Legend
 
@@ -109,7 +111,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 82
+- **FIXED:** 84
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 82
+- **Total:** 84
