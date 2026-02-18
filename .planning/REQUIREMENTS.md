@@ -24,10 +24,10 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### Security 페이지
 
-- [ ] **SEC-01**: Security 페이지가 #/security 라우트에서 3개 탭(Kill Switch/AutoStop Rules/JWT Rotation)을 렌더링한다
-- [ ] **SEC-02**: Kill Switch 탭이 기존 Settings의 Kill Switch 기능을 그대로 제공한다 (상태 표시/활성화/복구/에스컬레이션)
-- [ ] **SEC-03**: AutoStop Rules 탭이 기존 Settings의 AutoStop 설정을 그대로 제공한다 (활성화/실패횟수/비정상활동/유휴타임아웃)
-- [ ] **SEC-04**: JWT Rotation 탭이 기존 Settings의 JWT Rotation 기능을 그대로 제공한다
+- [x] **SEC-01**: Security 페이지가 #/security 라우트에서 3개 탭(Kill Switch/AutoStop Rules/JWT Rotation)을 렌더링한다
+- [x] **SEC-02**: Kill Switch 탭이 기존 Settings의 Kill Switch 기능을 그대로 제공한다 (상태 표시/활성화/복구/에스컬레이션)
+- [x] **SEC-03**: AutoStop Rules 탭이 기존 Settings의 AutoStop 설정을 그대로 제공한다 (활성화/실패횟수/비정상활동/유휴타임아웃)
+- [x] **SEC-04**: JWT Rotation 탭이 기존 Settings의 JWT Rotation 기능을 그대로 제공한다
 
 ### System 페이지
 
@@ -110,10 +110,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TAB-04 | Phase 183 | Pending |
 | TAB-05 | Phase 183 | Pending |
 | TAB-06 | Phase 184 | Pending |
-| SEC-01 | Phase 183 | Pending |
-| SEC-02 | Phase 183 | Pending |
-| SEC-03 | Phase 183 | Pending |
-| SEC-04 | Phase 183 | Pending |
+| SEC-01 | Phase 183 | Complete |
+| SEC-02 | Phase 183 | Complete |
+| SEC-03 | Phase 183 | Complete |
+| SEC-04 | Phase 183 | Complete |
 | SYS-01 | Phase 183 | Pending |
 | SYS-02 | Phase 183 | Pending |
 | DIST-01 | Phase 184 | Pending |
