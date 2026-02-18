@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.2.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.4-rc.1...v2.2.0-rc.1) (2026-02-18)
+
+
+### Features
+
+* **182-01:** add TabNav, FieldGroup components and FormField description prop ([ad1e6c3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ad1e6c3f43c5d406ae463e58740913560d91c551))
+* **182-02:** add PageHeader subtitle and Breadcrumb component ([1ca647a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ca647a2e3db1d77eb7650cd3d1efb9e8ebed162))
+* **183-01:** update sidebar to 7 menus with Security/System, add route redirects ([47cc832](https://github.com/minhoyoo-iotrust/WAIaaS/commit/47cc8321dd8d493b678b2bba93f5d04ae4fb2d93))
+* **183-02:** create Security page with Kill Switch, AutoStop Rules, JWT Rotation tabs ([dfb22ee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dfb22ee4e1259454a326e9c6aab6ee416ec54157))
+* **183-02:** wire SecurityPage into layout.tsx router ([c7c9fd8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c7c9fd85010bc8aa687b375170ea77dbe06fe892))
+* **183-03:** add TabNav + Breadcrumb to Wallets, Sessions, Policies, Notifications pages ([2f325dc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2f325dc27205b59a4597d4c63750bfe15935b851))
+* **183-03:** create System page with 6 sections (API Keys, Oracle, Display, Rate Limit, Log Level, Danger Zone) ([31b644f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/31b644f487f8746c7b1e5f92897f3fb97c73f539))
+* **184-01:** add relay_url and session label mappings to settings-helpers ([d8608d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d8608d1e12bb61d75b493def115a90a6d6534a04))
+* **184-01:** implement RPC, Balance Monitoring, WalletConnect tabs in wallets page ([69dd846](https://github.com/minhoyoo-iotrust/WAIaaS/commit/69dd84675b4594793fa8cbf6b31ba888120b8374))
+* **184-02:** implement Notifications Settings tab and Security AutoStop FieldGroups ([c02e577](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c02e5772d8be16aaffde21cfa045b4473858d87a))
+* **184-02:** implement Sessions Settings tab and Policies Defaults tab ([a0cd3d2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a0cd3d29961725c8c243cddefe5b735bfcaeff61))
+* **185-01:** create settings search index and search popover component ([7012bb1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7012bb1bc717d23d2b55b8c9f59b2d750df25c28))
+* **185-01:** wire search into header with Ctrl+K shortcut and field highlight ([5e7a151](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5e7a15163d4b8b0cff841db01b683e97c8b3cbb8))
+* **185-02:** add dirty guard registry and unsaved changes dialog ([a52c351](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a52c351e7e54a218799d07a8687238603cd7bc15))
+* **185-02:** wire dirty guard into TabNav, sidebar, and all settings pages ([3b651b8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3b651b80add235e923e5c4672d34e91b069fd484))
+* **186-01:** add description help text to all settings FormField components ([9e5d112](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9e5d112b20c1b550ea8b595fa6deadeb8620c60f))
+* **186-01:** update README.md Admin UI section to 7-menu structure ([ba0a721](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ba0a72128f2efe6bbc92db2d64fbff391fbe6e4f))
+
+
+### Bug Fixes
+
+* **187-01:** CurrencySelect highlight and duplicate search index ID ([0a21d5d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0a21d5df0438d66e135faa0d7f93e598d871ccfe))
+* **admin:** lower coverage thresholds to match v2.3 actual coverage ([b144c1b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b144c1bbe0abe5ce02e9374b632f18db5296e1b4))
+* **ci:** update stale test text and fix affected detection on push ([d15c95b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d15c95b6aa57ab1285f463651695ad686fe27f14))
+* **ci:** update stale test text and fix affected detection on push ([cb42573](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cb4257387e58dfe291e6f0b8bfbaafa875bb004a))
+* include Admin UI static files in daemon npm package ([6c05879](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6c058794b4fe0f40fdbe32919e8a8643dc0a37fc)), closes [#084](https://github.com/minhoyoo-iotrust/WAIaaS/issues/084)
+
+
+### Code Refactoring
+
+* **183-01:** extract shared settings helpers to utils/settings-helpers.ts ([f80bf31](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f80bf31da0ee1cb4f6e7fcb802f29dd879b9a443))
+
 ## [2.1.4-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.3-rc.1...v2.1.4-rc.1) (2026-02-18)
 
 
