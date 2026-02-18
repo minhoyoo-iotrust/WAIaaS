@@ -1,5 +1,7 @@
 import { signal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
 import { logout } from '../auth/store';
+import { SettingsSearch } from './settings-search';
 import DashboardPage from '../pages/dashboard';
 import WalletsPage from '../pages/wallets';
 import SessionsPage from '../pages/sessions';
@@ -9,6 +11,7 @@ import SecurityPage from '../pages/security';
 import SystemPage from '../pages/system';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
+const searchOpen = signal(false);
 
 window.addEventListener('hashchange', () => {
   currentPath.value = window.location.hash.slice(1) || '/dashboard';
@@ -77,7 +80,20 @@ function PageRouter() {
   return <DashboardPage />;
 }
 
+export { highlightField, pendingNavigation } from './settings-search';
+
 export function Layout() {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchOpen.value = !searchOpen.value;
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div class="layout">
       <aside class="sidebar">
@@ -108,14 +124,24 @@ export function Layout() {
               <p class="header-subtitle">{getPageSubtitle(currentPath.value)}</p>
             )}
           </div>
-          <button class="btn-logout" onClick={() => logout()}>
-            Logout
-          </button>
+          <div class="header-actions">
+            <button
+              class="btn-search"
+              onClick={() => { searchOpen.value = true; }}
+              title="Search settings (Ctrl+K)"
+            >
+              &#x1F50D;
+            </button>
+            <button class="btn-logout" onClick={() => logout()}>
+              Logout
+            </button>
+          </div>
         </header>
         <div class="content">
           <PageRouter />
         </div>
       </main>
+      <SettingsSearch open={searchOpen} />
     </div>
   );
 }

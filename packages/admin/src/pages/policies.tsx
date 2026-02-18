@@ -13,6 +13,7 @@ import { PolicyRulesSummary } from '../components/policy-rules-summary';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
 import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue } from '../utils/settings-helpers';
+import { pendingNavigation, highlightField } from '../components/settings-search';
 
 interface Wallet {
   id: string;
@@ -347,6 +348,18 @@ function PolicyDefaultsTab() {
 
 export default function PoliciesPage() {
   const activeTab = useSignal('policies');
+
+  useEffect(() => {
+    const nav = pendingNavigation.value;
+    if (nav && nav.tab) {
+      activeTab.value = nav.tab;
+      setTimeout(() => {
+        highlightField.value = nav.fieldName;
+      }, 100);
+      pendingNavigation.value = null;
+    }
+  }, [pendingNavigation.value]);
+
   const wallets = useSignal<Wallet[]>([]);
   const policies = useSignal<Policy[]>([]);
   const filterWalletId = useSignal('__all__');

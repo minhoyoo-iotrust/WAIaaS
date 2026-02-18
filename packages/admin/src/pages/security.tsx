@@ -17,6 +17,7 @@ import {
   getEffectiveBoolValue,
 } from '../utils/settings-helpers';
 import { FieldGroup } from '../components/field-group';
+import { pendingNavigation, highlightField } from '../components/settings-search';
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -418,6 +419,17 @@ function JwtRotationTab() {
 
 export default function SecurityPage() {
   const activeTab = useSignal('killswitch');
+
+  useEffect(() => {
+    const nav = pendingNavigation.value;
+    if (nav && nav.tab) {
+      activeTab.value = nav.tab;
+      setTimeout(() => {
+        highlightField.value = nav.fieldName;
+      }, 100);
+      pendingNavigation.value = null;
+    }
+  }, [pendingNavigation.value]);
 
   // Tab label lookup for Breadcrumb
   const activeTabLabel = SECURITY_TABS.find((t) => t.key === activeTab.value)?.label ?? '';

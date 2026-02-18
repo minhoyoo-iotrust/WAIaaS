@@ -15,6 +15,7 @@ import {
   getEffectiveBoolValue as getEffectiveBoolValuePure,
   isCredentialConfigured as isCredentialConfiguredPure,
 } from '../utils/settings-helpers';
+import { pendingNavigation, highlightField } from '../components/settings-search';
 
 // ---------------------------------------------------------------------------
 // System-relevant setting categories (used for save filtering)
@@ -82,6 +83,16 @@ export default function SystemPage() {
     fetchSettings();
     fetchApiKeys();
   }, []);
+
+  useEffect(() => {
+    const nav = pendingNavigation.value;
+    if (nav) {
+      setTimeout(() => {
+        highlightField.value = nav.fieldName;
+      }, 100);
+      pendingNavigation.value = null;
+    }
+  }, [pendingNavigation.value]);
 
   // ---------------------------------------------------------------------------
   // Settings helpers (local wrappers around pure functions)

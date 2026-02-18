@@ -20,6 +20,7 @@ import {
   isCredentialConfigured,
 } from '../utils/settings-helpers';
 import { FieldGroup } from '../components/field-group';
+import { pendingNavigation, highlightField } from '../components/settings-search';
 
 interface ChannelStatus {
   name: string;
@@ -338,6 +339,18 @@ function NotificationSettingsTab() {
 
 export default function NotificationsPage() {
   const activeTab = useSignal<NotifTab>('channels');
+
+  useEffect(() => {
+    const nav = pendingNavigation.value;
+    if (nav && nav.tab) {
+      activeTab.value = nav.tab as NotifTab;
+      setTimeout(() => {
+        highlightField.value = nav.fieldName;
+      }, 100);
+      pendingNavigation.value = null;
+    }
+  }, [pendingNavigation.value]);
+
   const status = useSignal<NotificationStatus | null>(null);
   const statusLoading = useSignal(true);
   const testLoading = useSignal(false);

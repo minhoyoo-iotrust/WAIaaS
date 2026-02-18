@@ -14,6 +14,7 @@ import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
 import { type SettingsData, keyToLabel, getEffectiveValue } from '../utils/settings-helpers';
 import { FieldGroup } from '../components/field-group';
+import { pendingNavigation, highlightField } from '../components/settings-search';
 
 interface Wallet {
   id: string;
@@ -233,6 +234,18 @@ function SessionSettingsTab() {
 
 export default function SessionsPage() {
   const activeTab = useSignal('sessions');
+
+  useEffect(() => {
+    const nav = pendingNavigation.value;
+    if (nav && nav.tab) {
+      activeTab.value = nav.tab;
+      setTimeout(() => {
+        highlightField.value = nav.fieldName;
+      }, 100);
+      pendingNavigation.value = null;
+    }
+  }, [pendingNavigation.value]);
+
   const wallets = useSignal<Wallet[]>([]);
   const selectedWalletId = useSignal('');
   const sessions = useSignal<Session[]>([]);

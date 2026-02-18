@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { currentPath } from '../components/layout';
+import { pendingNavigation, highlightField } from '../components/settings-search';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { Table } from '../components/table';
@@ -1466,6 +1467,17 @@ const WALLETS_TABS = [
 
 function WalletListWithTabs() {
   const activeTab = useSignal('wallets');
+
+  useEffect(() => {
+    const nav = pendingNavigation.value;
+    if (nav && nav.tab) {
+      activeTab.value = nav.tab;
+      setTimeout(() => {
+        highlightField.value = nav.fieldName;
+      }, 100);
+      pendingNavigation.value = null;
+    }
+  }, [pendingNavigation.value]);
 
   return (
     <div class="page">
