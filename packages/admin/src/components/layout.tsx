@@ -5,6 +5,8 @@ import WalletsPage from '../pages/wallets';
 import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
+import SecurityPage from '../pages/security';
+import SystemPage from '../pages/system';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
 
@@ -51,16 +53,6 @@ const NAV_ITEMS = [
   { path: '/system', label: 'System' },
 ];
 
-// Placeholder until security.tsx is created by plan 183-02
-function SecurityPagePlaceholder() {
-  return <div class="page"><p>Loading Security...</p></div>;
-}
-
-// Placeholder until system.tsx is created by plan 183-03
-function SystemPagePlaceholder() {
-  return <div class="page"><p>Loading System...</p></div>;
-}
-
 function PageRouter() {
   const path = currentPath.value;
   if (path === '/sessions') return <SessionsPage />;
@@ -79,8 +71,8 @@ function PageRouter() {
     window.location.hash = '#/wallets';
     return <WalletsPage />;
   }
-  if (path === '/security') return <SecurityPagePlaceholder />;
-  if (path === '/system') return <SystemPagePlaceholder />;
+  if (path === '/security') return <SecurityPage />;
+  if (path === '/system') return <SystemPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;
 }
