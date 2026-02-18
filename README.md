@@ -87,11 +87,14 @@ http://127.0.0.1:3100/admin
 Requires masterAuth (master password) to log in. The Admin UI provides:
 
 - **Dashboard** -- System overview, wallet balances, recent transactions
-- **Wallets** -- Create, manage, and monitor wallets across chains
-- **Sessions** -- Issue and revoke agent session tokens
-- **Policies** -- Configure 12 policy types with visual form editors
-- **Notifications** -- Set up Telegram, Discord, ntfy, and Slack alerts
-- **Settings** -- Runtime configuration without daemon restart
+- **Wallets** -- Create, manage, and monitor wallets across chains; RPC endpoints, balance monitoring, and WalletConnect settings
+- **Sessions** -- Issue and revoke agent session tokens; session lifetime and rate limit settings
+- **Policies** -- Configure 12 policy types with visual form editors; default deny and tier settings
+- **Notifications** -- Channel status and delivery logs; Telegram, Discord, ntfy, and Slack settings
+- **Security** -- Kill Switch emergency controls, AutoStop protection rules, JWT rotation
+- **System** -- API keys, display currency, price oracle, rate limits, log level, and daemon shutdown
+
+Features include settings search (Ctrl+K / Cmd+K) and unsaved changes protection.
 
 Enabled by default (`admin_ui = true` in config.toml).
 
