@@ -294,7 +294,7 @@ describe('SolanaAdapter misc branch coverage', () => {
         from: TEST_FROM,
         to: TEST_TO,
         amount: 100_000n,
-        token: { address: TEST_MINT, decimals: 6, symbol: 'USDC', name: 'USD Coin' },
+        token: { address: TEST_MINT, decimals: 6, symbol: 'USDC' },
       };
 
       try {
@@ -321,7 +321,7 @@ describe('SolanaAdapter misc branch coverage', () => {
         from: TEST_FROM,
         to: TEST_TO,
         amount: 100_000n,
-        token: { address: TEST_MINT, decimals: 6, symbol: 'USDC', name: 'USD Coin' },
+        token: { address: TEST_MINT, decimals: 6, symbol: 'USDC' },
       };
 
       try {
@@ -350,7 +350,7 @@ describe('SolanaAdapter misc branch coverage', () => {
         from: TEST_FROM,
         to: TEST_TO,
         amount: 100_000n,
-        token: { address: TEST_MINT, decimals: 6, symbol: 'USDC', name: 'USD Coin' },
+        token: { address: TEST_MINT, decimals: 6, symbol: 'USDC' },
       };
 
       try {
