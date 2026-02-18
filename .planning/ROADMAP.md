@@ -22,11 +22,11 @@ v2.2는 v1.7에서 설정한 커버리지 Hard 게이트 중 임시 하향된 3�
   2. signExternalTransaction()의 Base64 디코딩 실패, 키 길이(Ed25519/secp256k1) 판별, 서명자 불일치 분기가 테스트되어 에러 메시지가 정확히 반환된다
   3. tx-parser.ts의 파싱 실패, unknown 명령어, null coalescing fallback 등 엣지 케이스가 테스트되어 예외 없이 처리된다
   4. Error instanceof 분기(ChainError vs generic Error), getAssets 정렬 로직, estimateFee 토큰/네이티브 분기가 테스트되어 브랜치 커버리지가 75%를 넘는다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 178-01: convertBatchInstruction + signExternalTransaction 브랜치 테스트 (SOL-01, SOL-02)
-- [ ] 178-02: tx-parser + Error instanceof + 기타 브랜치 테스트 (SOL-03, SOL-04)
+- [ ] 178-01-PLAN.md — convertBatchInstruction 4-type dispatch + signExternalTransaction edge case 브랜치 테스트 (SOL-01, SOL-02)
+- [ ] 178-02-PLAN.md — tx-parser 엣지 케이스 + Error instanceof + getAssets sort + estimateFee 에러 브랜치 테스트 (SOL-03, SOL-04)
 
 ### Phase 179: admin 함수 커버리지
 **Goal**: @waiaas/admin의 함수 커버리지가 70% 이상으로 충분히 도달하여 임계값 복원이 가능한 상태가 된다
