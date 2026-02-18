@@ -239,7 +239,7 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Configure notification channels in Settings/)).toBeTruthy();
+      expect(screen.getByText(/Configure notification channels in the Settings tab above/)).toBeTruthy();
     });
 
     expect(screen.getByText(/hot-reload/)).toBeTruthy();
