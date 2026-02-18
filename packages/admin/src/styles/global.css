@@ -1409,6 +1409,12 @@ table .table-loading {
   100% { background: transparent; box-shadow: none; }
 }
 
+/* Unsaved Dialog 3-button footer */
+.unsaved-dialog-footer {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 @media (max-width: 768px) {
   .channel-grid { grid-template-columns: 1fr; }
   .settings-fields-grid {
