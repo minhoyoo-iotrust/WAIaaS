@@ -32,20 +32,32 @@ jobs:
         shell: bash
         run: git fetch origin main
 
+      - name: Determine affected base
+        id: affected-base
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Push to main: compare with previous commit so --affected detects changes
+            # (origin/main == HEAD after push, making --affected find no diff)
+            echo "base=HEAD~1" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=origin/main" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Lint (affected)
         run: pnpm turbo run lint --affected
         env:
-          TURBO_SCM_BASE: origin/main
+          TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
       - name: Typecheck (affected)
         run: pnpm turbo run typecheck --affected
         env:
-          TURBO_SCM_BASE: origin/main
+          TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
       - name: Unit Tests (affected)
         run: pnpm turbo run test:unit --affected -- --coverage
         env:
-          TURBO_SCM_BASE: origin/main
+          TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
   # Stage 2: PR only - full suite + coverage gate + coverage reports
   stage2:

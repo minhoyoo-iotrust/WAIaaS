@@ -100,6 +100,8 @@
 | 083 | ENHANCEMENT | MEDIUM | README를 npm quickstart 중심으로 재구성 | v2.3 | FIXED | 2026-02-18 |
 | 084 | BUG | HIGH | @waiaas/daemon npm 패키지에 Admin UI 정적 파일 누락 — turbo 캐시 히트 시 postbuild 건너뜀 | v2.3 | FIXED | 2026-02-18 |
 | 085 | ENHANCEMENT | MEDIUM | 스킬 파일 버전 자동 동기화 + 연결 디스커버리 가이드 추가 | v2.3 | OPEN | 2026-02-18 |
+| 086 | BUG | HIGH | CI --affected가 push to main에서 변경 감지 실패 + 알림 테스트 텍스트 불일치 | v2.3 | FIXED | 2026-02-18 |
+| 087 | ENHANCEMENT | MEDIUM | AI 에이전트용 연결 프롬프트(매직워드) 복사 기능 | v2.3 | OPEN | 2026-02-18 |
 
 ## Type Legend
 
@@ -111,8 +113,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 84
+- **OPEN:** 2
+- **FIXED:** 85
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 85
+- **Total:** 87
