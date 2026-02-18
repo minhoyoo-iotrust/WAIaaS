@@ -89,6 +89,7 @@
 | 072 | ENHANCEMENT | LOW | CLAUDE.md 언어 컨벤션에 태그/릴리스 영문 규칙 추가 | m20 | FIXED | 2026-02-18 |
 | 073 | ENHANCEMENT | MEDIUM | 정식 릴리스 승격 스크립트 자동화 (promote-release.sh) | m20 | FIXED | 2026-02-18 |
 | 074 | ENHANCEMENT | MEDIUM | 마일스톤 목표 문서 명명 규칙 변경 — 버전 제거, 순번 기반 | m20 | FIXED | 2026-02-18 |
+| 075 | ENHANCEMENT | LOW | 마일스톤 파일명에 -00 서브순번 통일 + CLAUDE.md 영문 규칙 | m20 | FIXED | 2026-02-18 |
 
 ## Type Legend
 
@@ -101,7 +102,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 74
+- **FIXED:** 75
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 74
+- **Total:** 75

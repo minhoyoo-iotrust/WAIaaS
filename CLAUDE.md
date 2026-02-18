@@ -49,7 +49,10 @@
 
 ## Milestone & Issue Naming
 
-- Milestone objective documents are filed in `internal/objectives/` as `m{순번}-{slug}.md`. Sub-milestones use `m{순번}-{서브순번}-{slug}.md`.
-- Issues are filed in `internal/objectives/issues/` as `{NNN}-{slug}.md`.
+- Milestone objective files are placed in `internal/objectives/` with the format `m{seq}-{sub}-{slug}.md`.
+  - `{seq}`: two-digit sequence number (01-99)
+  - `{sub}`: two-digit sub-sequence (00 for main, 01-99 for sub-milestones)
+  - `{slug}`: kebab-case topic name
+- Issue files are placed in `internal/objectives/issues/` with the format `{NNN}-{slug}.md`.
 - Register issues in `internal/objectives/issues/TRACKER.md` and update the status.
 - Types: BUG (defect) / ENHANCEMENT (improvement) / MISSING (missing feature).
