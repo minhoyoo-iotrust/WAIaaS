@@ -95,6 +95,8 @@
 | 078 | BUG | HIGH | Smoke Test 워크스페이스 상호 의존 패키지 설치 순서 오류 + CLI ESM import 부적절 | v2.2 | FIXED | 2026-02-18 |
 | 079 | ENHANCEMENT | MEDIUM | vitest 고아 프로세스 재발 방지 — 전 패키지 forceExit + forks pool 통일 | v2.2 | FIXED | 2026-02-18 |
 | 080 | BUG | MEDIUM | Graceful Shutdown 후 process.exit(0) 미호출로 프로세스 미종료 | v2.2 | FIXED | 2026-02-18 |
+| 081 | BUG | HIGH | npm publish에서 RC 버전이 latest 태그로 배포됨 | v2.3 | FIXED | 2026-02-18 |
+| 082 | BUG | CRITICAL | release.yml이 npm publish 사용하여 workspace:* 미치환 상태로 배포됨 | v2.3 | FIXED | 2026-02-18 |
 
 ## Type Legend
 
@@ -107,7 +109,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 80
+- **FIXED:** 82
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 80
+- **Total:** 82
