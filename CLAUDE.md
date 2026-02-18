@@ -41,6 +41,12 @@
   - Sync the corresponding skill files when endpoints are added/removed/changed, request/response schemas change, auth methods change, or error codes are added.
   - Create a new skill file when a new domain is added.
 
+## Git Branching
+
+- **Create a milestone branch before any work.** When starting a new milestone, create `milestone/v{X.Y}` branch from `main` before making any commits (including planning docs).
+- All milestone work (planning, implementation, tests) happens on the milestone branch.
+- Merge to `main` via PR when the milestone is complete.
+
 ## Milestone Completion
 
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).
