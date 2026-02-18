@@ -1,10 +1,10 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
+import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
-import { Button, Badge } from '../components/form';
+import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
 import { showToast } from '../components/toast';
@@ -12,6 +12,8 @@ import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
+import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue } from '../utils/settings-helpers';
+import { FieldGroup } from '../components/field-group';
 
 interface Wallet {
   id: string;
@@ -56,6 +58,178 @@ const SESSIONS_TABS = [
   { key: 'sessions', label: 'Sessions' },
   { key: 'settings', label: 'Settings' },
 ];
+
+// ---------------------------------------------------------------------------
+// Session Settings Tab
+// ---------------------------------------------------------------------------
+
+const SESSION_KEYS = [
+  'security.session_ttl',
+  'security.session_absolute_lifetime',
+  'security.session_max_renewals',
+  'security.max_sessions_per_wallet',
+  'security.max_pending_tx',
+  'security.rate_limit_session_rpm',
+  'security.rate_limit_tx_rpm',
+];
+
+function SessionSettingsTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => SESSION_KEYS.includes(key))
+        .map(([key, value]) => ({ key, value }));
+      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      dirty.value = {};
+      await fetchSettings();
+      showToast('success', 'Session settings saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => SESSION_KEYS.includes(k)).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Save bar -- sticky when dirty */}
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Session Configuration</h3>
+          <p class="settings-description">
+            Configure session lifetime, renewal limits, and request rate limiting.
+            Changes apply immediately without daemon restart.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <FieldGroup legend="Lifetime" description="Session duration and renewal limits">
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('session_ttl')}
+                name="security.session_ttl"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_ttl')) || 0}
+                onChange={(v) => handleFieldChange('security.session_ttl', v)}
+                min={300}
+              />
+              <FormField
+                label={keyToLabel('session_absolute_lifetime')}
+                name="security.session_absolute_lifetime"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_absolute_lifetime')) || 0}
+                onChange={(v) => handleFieldChange('security.session_absolute_lifetime', v)}
+                min={0}
+              />
+              <FormField
+                label={keyToLabel('session_max_renewals')}
+                name="security.session_max_renewals"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_max_renewals')) || 0}
+                onChange={(v) => handleFieldChange('security.session_max_renewals', v)}
+                min={0}
+              />
+              <FormField
+                label={keyToLabel('max_sessions_per_wallet')}
+                name="security.max_sessions_per_wallet"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'max_sessions_per_wallet')) || 0}
+                onChange={(v) => handleFieldChange('security.max_sessions_per_wallet', v)}
+                min={1}
+                max={100}
+              />
+            </div>
+          </FieldGroup>
+
+          <FieldGroup legend="Rate Limits" description="Request throttling per session and transaction">
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('max_pending_tx')}
+                name="security.max_pending_tx"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'max_pending_tx')) || 0}
+                onChange={(v) => handleFieldChange('security.max_pending_tx', v)}
+                min={1}
+                max={100}
+              />
+              <FormField
+                label={keyToLabel('rate_limit_session_rpm')}
+                name="security.rate_limit_session_rpm"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'rate_limit_session_rpm')) || 0}
+                onChange={(v) => handleFieldChange('security.rate_limit_session_rpm', v)}
+                min={10}
+              />
+              <FormField
+                label={keyToLabel('rate_limit_tx_rpm')}
+                name="security.rate_limit_tx_rpm"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'rate_limit_tx_rpm')) || 0}
+                onChange={(v) => handleFieldChange('security.rate_limit_tx_rpm', v)}
+                min={1}
+              />
+            </div>
+          </FieldGroup>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function SessionsPage() {
   const activeTab = useSignal('sessions');
@@ -261,9 +435,7 @@ export default function SessionsPage() {
         </>
       )}
 
-      {activeTab.value === 'settings' && (
-        <div class="empty-state"><p>Session settings will be available here.</p></div>
-      )}
+      {activeTab.value === 'settings' && <SessionSettingsTab />}
     </div>
   );
 }

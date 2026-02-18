@@ -13,6 +13,7 @@ import { PolicyFormRouter } from '../components/policy-forms';
 import { PolicyRulesSummary } from '../components/policy-rules-summary';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
+import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue } from '../utils/settings-helpers';
 
 interface Wallet {
   id: string;
@@ -190,6 +191,160 @@ const POLICIES_TABS = [
   { key: 'policies', label: 'Policies' },
   { key: 'defaults', label: 'Defaults' },
 ];
+
+// ---------------------------------------------------------------------------
+// Policy Defaults Tab
+// ---------------------------------------------------------------------------
+
+const POLICY_DEFAULTS_KEYS = [
+  'security.policy_defaults_delay_seconds',
+  'security.policy_defaults_approval_timeout',
+  'policy.default_deny_tokens',
+  'policy.default_deny_contracts',
+  'policy.default_deny_spenders',
+];
+
+function PolicyDefaultsTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => POLICY_DEFAULTS_KEYS.includes(key))
+        .map(([key, value]) => ({ key, value }));
+      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      dirty.value = {};
+      await fetchSettings();
+      showToast('success', 'Policy defaults saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => POLICY_DEFAULTS_KEYS.includes(k)).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Save bar -- sticky when dirty */}
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Policy Defaults</h3>
+          <p class="settings-description">
+            Configure default delay, approval timeout, and default-deny policies.
+            Changes apply immediately without daemon restart.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label={keyToLabel('policy_defaults_delay_seconds')}
+              name="security.policy_defaults_delay_seconds"
+              type="number"
+              value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'policy_defaults_delay_seconds')) || 0}
+              onChange={(v) => handleFieldChange('security.policy_defaults_delay_seconds', v)}
+              min={0}
+            />
+            <FormField
+              label={keyToLabel('policy_defaults_approval_timeout')}
+              name="security.policy_defaults_approval_timeout"
+              type="number"
+              value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'policy_defaults_approval_timeout')) || 0}
+              onChange={(v) => handleFieldChange('security.policy_defaults_approval_timeout', v)}
+              min={60}
+            />
+          </div>
+
+          {/* Default Deny Policy Toggles */}
+          <div class="settings-subgroup" style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Default Deny Policies</h4>
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('default_deny_tokens')}
+                name="policy.default_deny_tokens"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_tokens')}
+                onChange={(v) => handleFieldChange('policy.default_deny_tokens', v)}
+              />
+              <FormField
+                label={keyToLabel('default_deny_contracts')}
+                name="policy.default_deny_contracts"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_contracts')}
+                onChange={(v) => handleFieldChange('policy.default_deny_contracts', v)}
+              />
+              <FormField
+                label={keyToLabel('default_deny_spenders')}
+                name="policy.default_deny_spenders"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_spenders')}
+                onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
+              />
+            </div>
+          </div>
+
+          <div class="settings-info-box">
+            When enabled, transactions are denied if no matching whitelist policy exists.
+            Disable to allow all transactions of that type when no policy is configured.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function PoliciesPage() {
   const activeTab = useSignal('policies');
@@ -719,9 +874,7 @@ export default function PoliciesPage() {
         </>
       )}
 
-      {activeTab.value === 'defaults' && (
-        <div class="empty-state"><p>Policy defaults settings will be available here.</p></div>
-      )}
+      {activeTab.value === 'defaults' && <PolicyDefaultsTab />}
     </div>
   );
 }
