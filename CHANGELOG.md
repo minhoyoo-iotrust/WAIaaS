@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.3-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.2-rc.1...v2.1.3-rc.1) (2026-02-18)
+
+
+### Bug Fixes
+
+* **178:** revise plans based on checker feedback ([f493fcc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f493fcc240101a9ac6c3c97967cbaf7eb562c0a0))
+* **181-01:** restore coverage thresholds to original levels ([ed2db15](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ed2db1525c311c838be95e861bdac7cf233eb921))
+* resolve 3 open issues ([#078](https://github.com/minhoyoo-iotrust/WAIaaS/issues/078) [#079](https://github.com/minhoyoo-iotrust/WAIaaS/issues/079) [#080](https://github.com/minhoyoo-iotrust/WAIaaS/issues/080)) ([1b493ed](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1b493edeb15fb56d3856d63978b98d70a73f6197))
+* resolve lint errors in adapter-solana test files ([18dd767](https://github.com/minhoyoo-iotrust/WAIaaS/commit/18dd767f977f309055ff9c02f383c25d37de8b9b))
+* resolve lint errors in adapter-solana test files ([f141cf6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f141cf6306b56a4988264c7b55353634d96280f5))
+* resolve typecheck errors in adapter-solana tests ([4ff6218](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4ff6218afcf18c4a9ad23a2cb2d1edcb55ff4d2a))
+
 ## [2.1.2-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.1-rc.1...v2.1.2-rc.1) (2026-02-18)
 
 
