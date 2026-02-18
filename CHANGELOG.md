@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.0-rc.1...v2.2.1-rc.1) (2026-02-18)
+
+
+### Bug Fixes
+
+* **ci:** resolve daemon path without exports subpath in smoke test ([9c1d708](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9c1d7086e6ccf7ba7fc489148a9e10d2e0f93ccf))
+* **ci:** resolve daemon path without exports subpath in smoke test ([5686665](https://github.com/minhoyoo-iotrust/WAIaaS/commit/568666537466dcad770ec69d6a521513062b57cb))
+
 ## [2.2.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.4-rc.1...v2.2.0-rc.1) (2026-02-18)
 
 
