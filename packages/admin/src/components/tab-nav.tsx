@@ -1,3 +1,6 @@
+import { hasDirty } from '../utils/dirty-guard';
+import { showUnsavedDialog } from './unsaved-dialog';
+
 export interface TabItem {
   key: string;
   label: string;
@@ -16,7 +19,17 @@ export function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
         <button
           key={tab.key}
           class={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
-          onClick={() => onTabChange(tab.key)}
+          onClick={() => {
+            if (tab.key === activeTab) return;
+            if (hasDirty.value) {
+              showUnsavedDialog({
+                type: 'tab',
+                execute: () => onTabChange(tab.key),
+              });
+            } else {
+              onTabChange(tab.key);
+            }
+          }}
         >
           {tab.label}
         </button>

@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { currentPath } from '../components/layout';
 import { pendingNavigation, highlightField } from '../components/settings-search';
+import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { Table } from '../components/table';
@@ -906,6 +907,16 @@ function RpcEndpointsTab() {
     dirty.value = {};
   };
 
+  useEffect(() => {
+    registerDirty({
+      id: 'wallets-rpc',
+      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('rpc.')).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('wallets-rpc');
+  }, []);
+
   const handleRpcTest = async (settingKey: string) => {
     const shortKey = settingKey.split('.')[1] ?? '';
     const effectiveUrl = getEffectiveValue(settings.value, dirty.value, 'rpc', shortKey);
@@ -1088,6 +1099,16 @@ function BalanceMonitoringTab() {
     dirty.value = {};
   };
 
+  useEffect(() => {
+    registerDirty({
+      id: 'wallets-monitoring',
+      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('monitoring.')).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('wallets-monitoring');
+  }, []);
+
   const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
     { key: 'enabled', type: 'checkbox' },
     { key: 'check_interval_sec', type: 'number', min: 60, max: 86400 },
@@ -1221,6 +1242,16 @@ function WalletConnectTab() {
   const handleDiscard = () => {
     dirty.value = {};
   };
+
+  useEffect(() => {
+    registerDirty({
+      id: 'wallets-walletconnect',
+      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('walletconnect.')).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('wallets-walletconnect');
+  }, []);
 
   const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('walletconnect.')).length;
 

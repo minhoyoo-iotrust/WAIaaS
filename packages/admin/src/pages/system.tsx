@@ -16,6 +16,7 @@ import {
   isCredentialConfigured as isCredentialConfiguredPure,
 } from '../utils/settings-helpers';
 import { pendingNavigation, highlightField } from '../components/settings-search';
+import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 
 // ---------------------------------------------------------------------------
 // System-relevant setting categories (used for save filtering)
@@ -142,6 +143,16 @@ export default function SystemPage() {
   const handleDiscard = () => {
     dirty.value = {};
   };
+
+  useEffect(() => {
+    registerDirty({
+      id: 'system-settings',
+      isDirty: () => Object.keys(dirty.value).filter(k => isSystemSetting(k)).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('system-settings');
+  }, []);
 
   // ---------------------------------------------------------------------------
   // API Key handlers

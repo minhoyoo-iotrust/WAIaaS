@@ -15,6 +15,7 @@ import { Breadcrumb } from '../components/breadcrumb';
 import { type SettingsData, keyToLabel, getEffectiveValue } from '../utils/settings-helpers';
 import { FieldGroup } from '../components/field-group';
 import { pendingNavigation, highlightField } from '../components/settings-search';
+import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 
 interface Wallet {
   id: string;
@@ -122,6 +123,16 @@ function SessionSettingsTab() {
   const handleDiscard = () => {
     dirty.value = {};
   };
+
+  useEffect(() => {
+    registerDirty({
+      id: 'sessions-settings',
+      isDirty: () => Object.keys(dirty.value).filter(k => SESSION_KEYS.includes(k)).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('sessions-settings');
+  }, []);
 
   const dirtyCount = Object.keys(dirty.value).filter((k) => SESSION_KEYS.includes(k)).length;
 

@@ -14,6 +14,7 @@ import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
 import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue } from '../utils/settings-helpers';
 import { pendingNavigation, highlightField } from '../components/settings-search';
+import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 
 interface Wallet {
   id: string;
@@ -252,6 +253,16 @@ function PolicyDefaultsTab() {
   const handleDiscard = () => {
     dirty.value = {};
   };
+
+  useEffect(() => {
+    registerDirty({
+      id: 'policies-defaults',
+      isDirty: () => Object.keys(dirty.value).filter(k => POLICY_DEFAULTS_KEYS.includes(k)).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('policies-defaults');
+  }, []);
 
   const dirtyCount = Object.keys(dirty.value).filter((k) => POLICY_DEFAULTS_KEYS.includes(k)).length;
 

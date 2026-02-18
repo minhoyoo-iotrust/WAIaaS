@@ -18,6 +18,7 @@ import {
 } from '../utils/settings-helpers';
 import { FieldGroup } from '../components/field-group';
 import { pendingNavigation, highlightField } from '../components/settings-search';
+import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -243,6 +244,16 @@ function AutoStopTab() {
   const handleDiscard = () => {
     dirty.value = {};
   };
+
+  useEffect(() => {
+    registerDirty({
+      id: 'security-autostop',
+      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('autostop.')).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('security-autostop');
+  }, []);
 
   const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('autostop.')).length;
 

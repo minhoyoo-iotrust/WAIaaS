@@ -2,6 +2,8 @@ import { signal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { logout } from '../auth/store';
 import { SettingsSearch } from './settings-search';
+import { hasDirty } from '../utils/dirty-guard';
+import { showUnsavedDialog, UnsavedDialog } from './unsaved-dialog';
 import DashboardPage from '../pages/dashboard';
 import WalletsPage from '../pages/wallets';
 import SessionsPage from '../pages/sessions';
@@ -107,6 +109,17 @@ export function Layout() {
               <a
                 href={`#${item.path}`}
                 class={`sidebar-link ${isActive ? 'active' : ''}`}
+                onClick={(e) => {
+                  if (hasDirty.value) {
+                    e.preventDefault();
+                    showUnsavedDialog({
+                      type: 'nav',
+                      execute: () => {
+                        window.location.hash = `#${item.path}`;
+                      },
+                    });
+                  }
+                }}
               >
                 {item.label}
               </a>
@@ -142,6 +155,7 @@ export function Layout() {
         </div>
       </main>
       <SettingsSearch open={searchOpen} />
+      <UnsavedDialog />
     </div>
   );
 }
