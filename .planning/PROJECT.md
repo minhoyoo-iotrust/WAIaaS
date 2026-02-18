@@ -2,7 +2,7 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 8개 패키지) / Docker(`waiaas/daemon`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 8개 패키지) / Docker(`waiaas/daemon`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. Admin Web UI(`/admin`)는 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 구성되며, Ctrl+K 설정 검색/미저장 경고/필드 description help text 등 DX를 제공한다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
 
 ## 핵심 가치
 
@@ -10,7 +10,7 @@
 
 ## Current State
 
-v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 + Python SDK, ~124,830 LOC TypeScript, ~3,599 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.0.0-rc.1 publish, Docker Hub/GHCR dual push, 설계 문서 44개 교차 검증 PASS, 설계 부채 0건, 보안 460건+단위 2,482건+플랫폼 84건 테스트 전수 통과, 커버리지 Hard 80%+ 달성, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 9-패키지 모노레포 + Python SDK, ~145,784 LOC TypeScript (Admin UI 19,152 LOC), ~3,880 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.0.0-rc.1 publish, Docker Hub/GHCR dual push, 설계 문서 44개 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -39,11 +39,12 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 - ✅ v1.8 업그레이드 + 배포 인프라 — shipped 2026-02-17 (3,599 tests, ~124,712 LOC TS)
 - ✅ v2.0 전 기능 완성 릴리스 — shipped 2026-02-18 (~3,599 tests, ~124,830 LOC TS)
 - ✅ v2.2 테스트 커버리지 강화 — shipped 2026-02-18 (281 신규 tests, ~142,639 LOC TS)
+- ✅ v2.3 Admin UI 기능별 메뉴 재구성 — shipped 2026-02-18 (11 plans, 39 requirements, ~145,784 LOC TS)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~124,712 LOC TypeScript (ESM-only, Node.js 22)
-- 3,599 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
+- ~145,784 LOC TypeScript (ESM-only, Node.js 22, Admin UI 19,152 LOC)
+- ~3,880 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -358,23 +359,20 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 - ✓ CLI 라인/구문 커버리지 68.09% → 91.88% (37 신규 테스트) — v2.2 (CLI-01~02)
 - ✓ 3개 패키지 커버리지 임계값 원래 수준 복원 (branches 65→75, functions 55→70, lines/statements 65→70) — v2.2 (GATE-01)
 
+- ✓ Admin UI 7-메뉴 재구성 (Dashboard/Wallets/Sessions/Policies/Notifications/Security/System) — v2.3 (MENU-01~03)
+- ✓ TabNav 공용 컴포넌트 + 5개 페이지 탭 적용 (Wallets 4탭/Sessions 2탭/Policies 2탭/Notifications 3탭/Security 3탭) — v2.3 (TAB-01~06)
+- ✓ Security 페이지 (Kill Switch/AutoStop Rules/JWT Rotation 3탭) + System 페이지 — v2.3 (SEC-01~04, SYS-01~02)
+- ✓ Settings 분산 배치 — 13개 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + 독립 dirty/save — v2.3 (DIST-01~06, NEW-01~03)
+- ✓ Ctrl+K 설정 검색 — 54개 필드 정적 인덱스, 페이지+탭 네비게이션, 필드 하이라이트 — v2.3 (SRCH-01~03)
+- ✓ FieldGroup fieldset+legend 시맨틱 래퍼 + Sessions/Notifications/Security 그룹화 — v2.3 (FGRP-01~04)
+- ✓ Breadcrumb 네비게이션 (5개 탭 페이지에 페이지명 > 탭명 표시) — v2.3 (BCMB-01~03)
+- ✓ PageHeader subtitle + FormField description help text 전 필드 적용 — v2.3 (DESC-01~02)
+- ✓ 미저장 경고 3버튼 다이얼로그 (탭 전환 + 사이드바 메뉴 전환 인터셉트) — v2.3 (DIRTY-01~02)
+- ✓ README Admin UI 섹션 7-메뉴 구조 갱신 — v2.3 (DOC-01)
+
 ### 활성
 
-## Current Milestone: v2.3 Admin UI 기능별 메뉴 재구성
-
-**Goal:** Admin UI의 메뉴 구조를 기능별로 재구성하고, Settings 페이지를 해체하여 각 기능 페이지에 탭으로 분산하며, 설정 검색/breadcrumb/필드 그룹화/미저장 경고를 추가하여 탐색성·사용성을 개선한다.
-
-**Target features:**
-- 메뉴 구조 변경 (7 메뉴: Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)
-- Settings 13개 항목을 5개 페이지로 기능별 분산 (TabNav 컴포넌트)
-- Security 신규 페이지 (Kill Switch + AutoStop Rules + JWT Rotation)
-- System 신규 페이지 (API Keys + Oracle + Display + IP Rate Limit + Daemon + Danger Zone)
-- 설정 검색 (Ctrl+K 글로벌 검색, fuzzy match, 해당 탭 이동 + 필드 하이라이트)
-- Breadcrumb 네비게이션 (페이지명 > 탭명)
-- FormField 그룹화 (FieldGroup fieldset+legend 래퍼)
-- 탭 전환 미저장 경고 (dirty signal + 3버튼 다이얼로그)
-- 페이지/항목 설명 텍스트 (subtitle + FormField description prop)
-- README Admin UI 섹션 업데이트
+(없음 — 다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -388,10 +386,12 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 - NFT 민팅/마켓플레이스 통합 — Action Provider로 향후 추가 가능
 - Account Abstraction / Smart Wallet — EVM 배치 문제 해결, 별도 마일스톤
 - Liquid Staking 상세 설계 — Swap Action 패턴 검증 후
+- 다크 모드 Admin UI — 현재 CSS Variables 기반 향후 확장 가능
+- Admin UI 다국어 i18n — 현재 영어 전용
 
 ## 컨텍스트
 
-**누적:** 40 milestones (v0.1-v2.2), 181 phases, 387 plans, 1,055 requirements, 36 설계 문서(24-72), 8 objective 문서, ~142,639 LOC TS, ~3,880 테스트
+**누적:** 41 milestones (v0.1-v2.3), 187 phases, 398 plans, 1,094 requirements, 36 설계 문서(24-72), 8 objective 문서, ~145,784 LOC TS, ~3,880 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -421,6 +421,7 @@ v1.7 품질 강화 + CI/CD shipped (2026-02-17). 9 페이즈, 19 플랜, 48 요�
 v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 플랜, 30 요구사항, ~124,712 LOC TS, 3,599 테스트, 16 설계 결정.
 v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 25 요구사항, ~124,830 LOC TS, ~3,599 테스트, 39 설계 결정.
 v2.2 테스트 커버리지 강화 shipped (2026-02-18). 4 페이즈, 6 플랜, 11 요구사항, ~142,639 LOC TS, ~3,880 테스트, 9 설계 결정.
+v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 6 페이즈, 11 플랜, 39 요구사항, ~145,784 LOC TS, 31 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -678,6 +679,16 @@ v2.2 테스트 커버리지 강화 shipped (2026-02-18). 4 페이즈, 6 플랜, 
 | client.ts real fetch 테스트 (no mock) | 실제 코드 경로 정확한 커버리지 측정 | ✓ Good — v2.2 테스트 |
 | Non-throwing process.exit mock | try/catch 내 exit 호출 catch 블록 커버리지 | ✓ Good — v2.2 테스트 |
 | PassThrough stream stdin mock | forks pool에서 readline mock 불안정 대체 | ✓ Good — v2.2 테스트 |
+| Settings 분산 전략 — 재배치(이동), 재작성 아님 | 기존 컴포넌트를 탭 단위로 이동, 로직 변경 최소화 | ✓ Good — v2.3 구현 |
+| 5-phase 구조 (공용→메뉴→설정→UX→마무리) | 점진적 빌드업, 각 단계 독립 검증 가능 | ✓ Good — v2.3 구현 |
+| HTML fieldset+legend 시맨틱 FieldGroup | div 래퍼 대신 접근성 표준 요소 사용 | ✓ Good — v2.3 구현 |
+| 정적 SearchIndexEntry 배열 (서버 API 아님) | 수십 개 설정 항목에 클라이언트 사이드 검색 충분 | ✓ Good — v2.3 구현 |
+| Module-level signal (highlightField/pendingNavigation) | prop drilling 없이 cross-component 통신 | ✓ Good — v2.3 구현 |
+| Module-level signal registry (dirty guard) | 각 탭이 isDirty/save/discard 클로저 등록 | ✓ Good — v2.3 구현 |
+| 3-button unsaved dialog (저장 후 이동/저장 없이 이동/취소) | 모든 UX 시나리오 커버 | ✓ Good — v2.3 구현 |
+| Record<string, string> 맵 기반 field description | 동적 렌더링, settings-search-index.ts와 일관성 유지 | ✓ Good — v2.3 구현 |
+| Hidden input 패턴 (CurrencySelect name discovery) | FormField 외부 커스텀 컴포넌트의 querySelector 발견 지원 | ✓ Good — v2.3 구현 |
+| 각 Settings 탭 독립적 signal 상태 | 탭 간 상태 간섭 방지, 독립 dirty/save/load | ✓ Good — v2.3 구현 |
 
 ---
-*최종 업데이트: 2026-02-18 after v2.2 milestone complete — 테스트 커버리지 강화*
+*최종 업데이트: 2026-02-18 after v2.3 milestone complete — Admin UI 기능별 메뉴 재구성*
