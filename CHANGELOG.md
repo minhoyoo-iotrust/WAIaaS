@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.4-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.3-rc.1...v2.1.4-rc.1) (2026-02-18)
+
+
+### Bug Fixes
+
+* use pnpm publish with prerelease tag detection in release workflow ([b06f03b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b06f03b84aac7816d8e447332a9fecff740cd469))
+* use pnpm publish with prerelease tag detection in release workflow ([3fd683e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3fd683e19b2f54454af75d19d27ebdd020640d28))
+
 ## [2.1.3-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.2-rc.1...v2.1.3-rc.1) (2026-02-18)
 
 
