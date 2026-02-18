@@ -106,6 +106,6 @@ Phases execute in numeric order: 188 → 189 → 190
 | 1-173 | v0.1-v2.0 | — | Complete | 2026-02-18 |
 | 178-181 | v2.2 | 6/6 | Complete | 2026-02-18 |
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
-| 188. 사전 준비 | v2.4 | 1/1 | Complete | 2026-02-19 |
+| 188. 사전 준비 | v2.4 | Complete    | 2026-02-18 | 2026-02-19 |
 | 189. OIDC 전환 | v2.4 | 0/2 | Not started | - |
 | 190. 검증 및 정리 | v2.4 | 0/1 | Not started | - |
