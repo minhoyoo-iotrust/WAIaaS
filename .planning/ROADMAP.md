@@ -49,11 +49,11 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
   3. FormField에 description prop을 전달하면 필드 아래에 help text가 렌더링된다
   4. PageHeader에 subtitle 영역이 추가되어 설명 텍스트를 표시한다
   5. Breadcrumb 컴포넌트가 탭 페이지에서 "페이지명 > 탭명"을 표시하고, Dashboard/System에서는 미표시되며, 페이지명 클릭 시 첫 번째 탭으로 이동한다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 182-01: TabNav + FieldGroup + FormField description 컴포넌트 구현
-- [ ] 182-02: PageHeader subtitle + Breadcrumb 컴포넌트 구현
+- [ ] 182-01-PLAN.md — TabNav + FieldGroup + FormField description 컴포넌트 구현
+- [ ] 182-02-PLAN.md — PageHeader subtitle + Breadcrumb 컴포넌트 구현
 
 ### Phase 183: 메뉴 재구성 + 신규 페이지
 **Goal**: 사이드바가 7개 메뉴를 표시하고, Security/System 신규 페이지가 기존 Settings 기능을 그대로 제공한다
