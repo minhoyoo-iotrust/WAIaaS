@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 183 메뉴 재구성 + 신규 페이지
+**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 184 Settings 분산 배치
 
 ## Current Position
 
-Phase: 183 of 186 (메뉴 재구성 + 신규 페이지)
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-02-18 — Plan 183-03 complete (2 tasks, 6 reqs, system.tsx + 4 pages TabNav)
+Phase: 184 of 186 (Settings 분산 배치)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-18 — Phase 183 complete (3 plans, 13 reqs, security.tsx + system.tsx + 4 pages TabNav)
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -49,5 +49,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 183-03-PLAN.md (System page + TabNav on 4 pages)
+Stopped at: Phase 183 complete, advancing to Phase 184 planning
 Resume file: None
