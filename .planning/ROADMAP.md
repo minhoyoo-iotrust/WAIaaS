@@ -4,7 +4,7 @@
 
 - ✅ **v0.1-v2.0** — Phases 1-173 (shipped 2026-02-05 ~ 2026-02-18) — See milestones/ archive
 - ✅ **v2.2 테스트 커버리지 강화** — Phases 178-181 (shipped 2026-02-18)
-- 🚧 **v2.3 Admin UI 기능별 메뉴 재구성** — Phases 182-186 (in progress)
+- 🚧 **v2.3 Admin UI 기능별 메뉴 재구성** — Phases 182-187 (in progress)
 
 ## Phases
 
@@ -36,6 +36,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 - [x] **Phase 184: Settings 분산 배치** - 기존 Settings 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + FieldGroup 적용 + 신규 설정 노출 (completed 2026-02-18)
 - [x] **Phase 185: UX 강화** - 설정 검색(Ctrl+K), 미저장 경고 다이얼로그 (completed 2026-02-18)
 - [x] **Phase 186: 마무리** - 페이지/필드 설명 텍스트 채우기, README 갱신 (completed 2026-02-18)
+- [ ] **Phase 187: 감사 갭 수정** - 검색 하이라이트 수정, 중복 인덱스 ID 수정, Phase 182 VERIFICATION.md 생성 (gap closure)
 
 ## Phase Details
 
@@ -115,10 +116,24 @@ Plans:
 Plans:
 - [x] 186-01-PLAN.md — Settings 필드 description 추가 + README Admin UI 섹션 7-메뉴 갱신
 
+### Phase 187: 감사 갭 수정
+**Goal**: 감사에서 발견된 2개 integration finding이 수정되고, Phase 182의 형식적 검증 문서가 생성되어 감사 갭이 모두 해소된다
+**Depends on**: Phase 186
+**Requirements**: SRCH-02, SRCH-03 (integration fix)
+**Gap Closure**: Closes gaps from audit (FINDING-01, FINDING-02, Phase 182 VERIFICATION)
+**Success Criteria** (what must be TRUE):
+  1. display.currency CurrencySelect에 name 속성이 추가되어 검색 결과 클릭 시 필드 하이라이트가 동작한다
+  2. settings-search-index.ts에 중복 ID가 없고 모든 엔트리가 고유한 ID를 보유한다
+  3. Phase 182의 VERIFICATION.md가 생성되어 7개 요구사항(TAB-01, FGRP-01, DESC-01, DESC-02, BCMB-01, BCMB-02, BCMB-03)의 형식적 검증이 문서화된다
+**Plans:** 0/1 plans
+
+Plans:
+- [ ] 187-01-PLAN.md — 검색 하이라이트 수정 + 중복 인덱스 ID 수정 + Phase 182 VERIFICATION.md 생성
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
+Phases execute in numeric order: 182 → 183 → 184 → 185 → 186 → 187
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -131,3 +146,4 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 184. Settings 분산 배치 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 185. UX 강화 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 186. 마무리 | v2.3 | 1/1 | Complete | 2026-02-18 |
+| 187. 감사 갭 수정 | v2.3 | 0/1 | Pending | - |
