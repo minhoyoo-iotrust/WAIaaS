@@ -2,6 +2,10 @@
   "name": "waiaas",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git"
+  },
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "engines": {
