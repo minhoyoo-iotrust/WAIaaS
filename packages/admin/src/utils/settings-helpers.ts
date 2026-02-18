@@ -106,6 +106,11 @@ export function keyToLabel(key: string): string {
     low_balance_threshold_sol: 'Low Balance Threshold (SOL)',
     low_balance_threshold_eth: 'Low Balance Threshold (ETH)',
     cooldown_hours: 'Alert Cooldown (hours)',
+    // walletconnect keys
+    relay_url: 'Relay URL',
+    // session keys
+    session_absolute_lifetime: 'Absolute Lifetime (seconds)',
+    session_max_renewals: 'Max Renewals',
     // telegram bot keys
     bot_token: 'Bot Token',
   };
