@@ -85,8 +85,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 184-01-PLAN.md — Wallets 탭 설정 분산 (RPC Endpoints/Balance Monitoring/WalletConnect) + NEW-02/NEW-03
-- [ ] 184-02-PLAN.md — Sessions/Policies/Notifications 탭 설정 분산 + FieldGroup 적용 + 신규 설정 노출
+- [x] 184-01-PLAN.md — Wallets 탭 설정 분산 (RPC Endpoints/Balance Monitoring/WalletConnect) + NEW-02/NEW-03
+- [x] 184-02-PLAN.md — Sessions/Policies/Notifications 탭 설정 분산 + FieldGroup 적용 + 신규 설정 노출
 
 ### Phase 185: UX 강화
 **Goal**: 사용자가 설정을 빠르게 찾고, 미저장 변경을 실수로 잃지 않는다
@@ -99,8 +99,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 185-01-PLAN.md — 설정 검색 기능 (Ctrl+K 팝오버 + 정적 인덱스 + 결과 클릭 네비게이션 + 필드 하이라이트)
-- [ ] 185-02-PLAN.md — 미저장 경고 다이얼로그 (dirty guard 레지스트리 + 3버튼 다이얼로그 + 탭/사이드바 인터셉트)
+- [x] 185-01-PLAN.md — 설정 검색 기능 (Ctrl+K 팝오버 + 정적 인덱스 + 결과 클릭 네비게이션 + 필드 하이라이트)
+- [x] 185-02-PLAN.md — 미저장 경고 다이얼로그 (dirty guard 레지스트리 + 3버튼 다이얼로그 + 탭/사이드바 인터셉트)
 
 ### Phase 186: 마무리
 **Goal**: 모든 페이지에 설명 텍스트가 채워지고 문서가 갱신되어 릴리스 준비가 완료된다
@@ -113,7 +113,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 186-01-PLAN.md — Settings 필드 description 추가 + README Admin UI 섹션 7-메뉴 갱신
+- [x] 186-01-PLAN.md — Settings 필드 description 추가 + README Admin UI 섹션 7-메뉴 갱신
 
 ## Progress
 
@@ -128,6 +128,6 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 181. 임계값 검증 및 복원 | v2.2 | 1/1 | Complete | 2026-02-18 |
 | 182. UI 공용 컴포넌트 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 183. 메뉴 재구성 + 신규 페이지 | v2.3 | 3/3 | Complete | 2026-02-18 |
-| 184. Settings 분산 배치 | 2/2 | Complete    | 2026-02-18 | - |
-| 185. UX 강화 | 2/2 | Complete    | 2026-02-18 | - |
-| 186. 마무리 | 1/1 | Complete   | 2026-02-18 | - |
+| 184. Settings 분산 배치 | v2.3 | 2/2 | Complete | 2026-02-18 |
+| 185. UX 강화 | v2.3 | 2/2 | Complete | 2026-02-18 |
+| 186. 마무리 | v2.3 | 1/1 | Complete | 2026-02-18 |
