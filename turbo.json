@@ -11,7 +11,7 @@
     },
     "@waiaas/daemon#build": {
       "dependsOn": ["@waiaas/admin#build", "^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "public/**"]
     },
     "test": {
       "dependsOn": ["build"],
