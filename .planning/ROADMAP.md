@@ -1,95 +1,83 @@
-# Roadmap: WAIaaS v2.0.1
+# Roadmap: WAIaaS v2.2 테스트 커버리지 강화
 
 ## Overview
 
-v2.0.1은 퍼블릭 리포 전환을 위한 거버넌스 파일 생성, 내부 문서 구조 통합, 기존 Known Gaps/OPEN 이슈 해소, 그리고 npm 배포 스모크 테스트 자동화를 수행하는 docs/cleanup 마일스톤이다. 코드 기능 변경 없이 파일 생성/이동/수정과 CI 통합만으로 구성된다.
+v2.2는 v1.7에서 설정한 커버리지 Hard 게이트 중 임시 하향된 3개 패키지(adapter-solana branches, admin functions, cli lines/statements)의 임계값을 원래 수준으로 복원하기 위해, 미커버 브랜치/함수/라인에 대한 단위 테스트를 추가하는 테스트 전용 마일스톤이다. 3개 패키지는 완전히 독립적이므로 병렬 작업이 가능하며, 최종 페이즈에서 임계값을 복원하고 전체 테스트 스위트를 검증한다.
 
 ## Phases
 
-- [x] **Phase 174: 거버넌스 파일** - 퍼블릭 리포 필수 거버넌스 문서 생성
-- [x] **Phase 175: 정리 및 수정** - 잔존 이슈 해소 및 규칙 보완
-- [x] **Phase 176: 문서 구조 통합** - 설계 문서/objectives 디렉토리 재배치 및 경로 갱신
-- [x] **Phase 177: 배포 스모크 테스트** - npm 패키지 스모크 테스트 스크립트 작성 및 CI 통합
+- [ ] **Phase 178: adapter-solana 브랜치 커버리지** - Solana 어댑터의 미커버 ~78 브랜치에 대한 단위 테스트 추가
+- [ ] **Phase 179: admin 함수 커버리지** - Admin UI의 미커버 ~37+ 함수에 대한 단위 테스트 추가
+- [ ] **Phase 180: CLI 라인/구문 커버리지** - CLI 패키지의 미커버 ~444 라인에 대한 단위 테스트 추가
+- [ ] **Phase 181: 임계값 검증 및 복원** - 3개 패키지 vitest.config.ts 임계값을 원래 수준으로 복원하고 전체 검증
 
 ## Phase Details
 
-### Phase 174: 거버넌스 파일
-**Goal**: 퍼블릭 리포지토리에 필수적인 보안 정책, 행동 강령, 이슈/PR 템플릿이 모두 갖춰진다
-**Depends on**: Nothing (first phase)
-**Requirements**: GOV-01, GOV-02, GOV-03, GOV-04
-**Success Criteria** (what must be TRUE):
-  1. SECURITY.md가 루트에 존재하며 Responsible Disclosure 정책, 신고 채널(이메일), 대응 SLA가 명시되어 있다
-  2. CODE_OF_CONDUCT.md가 루트에 존재하며 Contributor Covenant v2.1 기반으로 작성되어 있다
-  3. .github/ISSUE_TEMPLATE/에 Bug Report와 Feature Request 두 개의 YAML 템플릿이 존재하고, GitHub New Issue 화면에서 선택 가능하다
-  4. .github/PULL_REQUEST_TEMPLATE.md가 존재하며 변경 요약, 테스트 방법, 관련 이슈 링크 체크리스트를 포함한다
-**Plans:** 1 plan
-
-Plans:
-- [ ] 174-01-PLAN.md -- 거버넌스 파일 일괄 생성 (SECURITY.md, CODE_OF_CONDUCT.md, Issue/PR 템플릿)
-
-### Phase 175: 정리 및 수정
-**Goal**: 더 이상 사용하지 않는 스크립트 제거, CLAUDE.md 규칙 보완, 문서/코드의 잔존 오류가 수정된다
+### Phase 178: adapter-solana 브랜치 커버리지
+**Goal**: @waiaas/adapter-solana의 브랜치 커버리지가 75% 이상으로 충분히 도달하여 임계값 복원이 가능한 상태가 된다
 **Depends on**: Nothing (independent)
-**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04, CLEAN-05
+**Requirements**: SOL-01, SOL-02, SOL-03, SOL-04
 **Success Criteria** (what must be TRUE):
-  1. scripts/tag-release.sh 파일이 존재하지 않으며 CLAUDE.md에서 관련 문구가 제거되어 있다
-  2. CLAUDE.md Language 섹션에 Git 태그와 GitHub Release 제목/본문을 영문으로 작성한다는 규칙이 명시되어 있다
-  3. README.md와 deployment.md에서 CLI `add --all` / `add all` 문법이 실제 CLI 스펙과 일관되게 통일되어 있다
-  4. examples/simple-agent/README.md의 모든 링크가 유효하고 placeholder URL이 실제 URL로 대체되어 있다
-  5. validate-openapi.ts의 @see 주석이 실제 파일 경로를 가리킨다
+  1. convertBatchInstruction()의 4가지 instruction 타입(TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE) 분기가 각각 테스트되어 정상 경로와 에러 경로가 검증된다
+  2. signExternalTransaction()의 Base64 디코딩 실패, 키 길이(Ed25519/secp256k1) 판별, 서명자 불일치 분기가 테스트되어 에러 메시지가 정확히 반환된다
+  3. tx-parser.ts의 파싱 실패, unknown 명령어, null coalescing fallback 등 엣지 케이스가 테스트되어 예외 없이 처리된다
+  4. Error instanceof 분기(ChainError vs generic Error), getAssets 정렬 로직, estimateFee 토큰/네이티브 분기가 테스트되어 브랜치 커버리지가 75%를 넘는다
 **Plans**: TBD
 
 Plans:
-- [ ] 175-01: 폐기 스크립트 제거 + CLAUDE.md 규칙 보완 (CLEAN-01, CLEAN-02)
-- [ ] 175-02: 문서/코드 잔존 오류 수정 (CLEAN-03, CLEAN-04, CLEAN-05)
+- [ ] 178-01: convertBatchInstruction + signExternalTransaction 브랜치 테스트 (SOL-01, SOL-02)
+- [ ] 178-02: tx-parser + Error instanceof + 기타 브랜치 테스트 (SOL-03, SOL-04)
 
-### Phase 176: 문서 구조 통합
-**Goal**: 분산된 설계 문서와 objectives가 internal/ 하위로 통합되고 모든 참조 경로가 갱신된다
-**Depends on**: Phase 175 (CLAUDE.md 수정이 선행되어야 경로 충돌 없음)
-**Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04, DOCS-05
-**Success Criteria** (what must be TRUE):
-  1. .planning/deliverables/와 docs-internal/의 설계 문서가 모두 internal/design/에 존재하고 원본 위치에는 없다
-  2. objectives/ 디렉토리가 internal/objectives/로 이동되어 있고 원본 위치에는 없다
-  3. v0.1~v2.0 shipped 목표 문서와 FIXED 이슈가 internal/objectives/archive/에 분리되어 있다
-  4. docs/ 디렉토리의 모든 .md 파일이 영문 전용임을 검증하는 수단이 존재한다 (스크립트 또는 CI 체크)
-  5. CLAUDE.md Issue Tracking 섹션의 경로가 internal/objectives/issues/로 갱신되어 있다
-**Plans**: TBD
-
-Plans:
-- [ ] 176-01: 설계 문서 통합 이동 (DOCS-01)
-- [ ] 176-02: objectives 이동 + 아카이브 분리 + 경로 갱신 (DOCS-02, DOCS-03, DOCS-05)
-- [ ] 176-03: docs/ 영문 전용 검증 (DOCS-04)
-
-### Phase 177: 배포 스모크 테스트
-**Goal**: npm 발행된 8개 패키지의 import 정상성을 로컬과 CI 양쪽에서 자동 검증할 수 있다
+### Phase 179: admin 함수 커버리지
+**Goal**: @waiaas/admin의 함수 커버리지가 70% 이상으로 충분히 도달하여 임계값 복원이 가능한 상태가 된다
 **Depends on**: Nothing (independent)
-**Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04
+**Requirements**: ADM-01, ADM-02, ADM-03, ADM-04
 **Success Criteria** (what must be TRUE):
-  1. scripts/smoke-test-published.sh가 존재하며 실행 시 8개 패키지를 npm pack -> tarball 설치 -> import 검증한다
-  2. 8개 @waiaas/* 패키지 각각에 대해 npm pack -> 임시 디렉토리 설치 -> ESM import 성공이 확인된다
-  3. release.yml 워크플로우에 스모크 테스트 job이 추가되어 릴리스 시 자동 실행된다
-  4. pnpm test:smoke 명령으로 로컬에서 스모크 테스트를 실행할 수 있다
+  1. settings.tsx의 RPC 테스트, 네트워크 RPC URL 변경, API 키 관리, 모니터링 간격 설정 등 ~15개 함수가 테스트되어 사용자 인터랙션 시나리오가 검증된다
+  2. wallets.tsx와 dashboard.tsx의 네트워크 추가/제거, WC 페어링, Owner 설정, 킬스위치 토글 등 ~12개 함수가 테스트된다
+  3. policies.tsx와 notifications.tsx의 정책 재정렬, 삭제 확인 다이얼로그, 필터링, 채널별 테스트 발송 등 ~18개 함수가 테스트된다
+  4. 0% 커버리지 그룹(client.ts, layout.tsx, toast.tsx, copy-button.tsx, walletconnect.tsx)과 폼 컴포넌트의 미커버 함수가 테스트되어 함수 커버리지가 70%를 넘는다
 **Plans**: TBD
 
 Plans:
-- [ ] 177-01: 스모크 테스트 스크립트 작성 + 로컬 실행 검증 (DEPLOY-01, DEPLOY-02, DEPLOY-04)
-- [ ] 177-02: release.yml CI 통합 (DEPLOY-03)
+- [ ] 179-01: settings.tsx + wallets.tsx + dashboard.tsx 함수 테스트 (ADM-01, ADM-02)
+- [ ] 179-02: policies.tsx + notifications.tsx + 0% 그룹 함수 테스트 (ADM-03, ADM-04)
+
+### Phase 180: CLI 라인/구문 커버리지
+**Goal**: @waiaas/cli의 라인/구문 커버리지가 70% 이상으로 충분히 도달하여 임계값 복원이 가능한 상태가 된다
+**Depends on**: Nothing (independent)
+**Requirements**: CLI-01, CLI-02
+**Success Criteria** (what must be TRUE):
+  1. commands/owner.ts의 WalletConnect 연결/해제/상태 조회 로직이 테스트되어 정상 흐름과 에러 처리가 검증된다
+  2. commands/wallet.ts의 월렛 상세 조회, 기본 네트워크 변경 로직이 테스트된다
+  3. utils/password.ts의 stdin/파일 기반 비밀번호 프롬프트 분기가 테스트되어 라인 커버리지가 70%를 넘는다
+**Plans**: TBD
+
+Plans:
+- [ ] 180-01: owner.ts + wallet.ts + password.ts 단위 테스트 (CLI-01, CLI-02)
+
+### Phase 181: 임계값 검증 및 복원
+**Goal**: 3개 패키지의 vitest.config.ts 임계값이 원래 수준으로 복원되고 전체 테스트 스위트가 통과한다
+**Depends on**: Phase 178, Phase 179, Phase 180
+**Requirements**: GATE-01
+**Success Criteria** (what must be TRUE):
+  1. adapter-solana의 vitest.config.ts branches 임계값이 65에서 75로 복원되어 있고 pnpm test가 통과한다
+  2. admin의 vitest.config.ts functions 임계값이 55에서 70으로 복원되어 있고 pnpm test가 통과한다
+  3. cli의 vitest.config.ts lines 임계값이 65에서 70, statements 임계값이 65에서 70으로 복원되어 있고 pnpm test가 통과한다
+  4. pnpm test 전체 실행 시 모든 패키지가 커버리지 임계값을 만족하며 0건의 실패가 발생한다
+**Plans**: TBD
+
+Plans:
+- [ ] 181-01: 임계값 복원 + 전체 검증 (GATE-01)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 174 -> 175 -> 176 -> 177
+Phases 178, 179, 180은 독립적이므로 순서 무관 (병렬 가능). Phase 181은 178+179+180 완료 후 실행.
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 174. 거버넌스 파일 | 1/1 | Complete | 2026-02-18 |
-| 175. 정리 및 수정 | 2/2 | Complete | 2026-02-18 |
-| 176. 문서 구조 통합 | 3/3 | Complete | 2026-02-18 |
-| 177. 배포 스모크 테스트 | 2/2 | Complete | 2026-02-18 |
-
-## Decisions
-
-| # | Decision | Phase | Rationale |
-|---|----------|-------|-----------|
-| 1 | CODE_OF_CONDUCT.md 수동 생성 이연 | 174 | 콘텐츠 필터에 의해 자동 생성 차단, 사용자 수동 작성 필요 |
-| 2 | validate-openapi.ts @see 경로 2회 갱신 | 175, 177 | Phase 175에서 deliverables/ 경로로 수정 후 Phase 176 이동으로 재수정 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 178. adapter-solana 브랜치 커버리지 | v2.2 | 0/2 | Not started | - |
+| 179. admin 함수 커버리지 | v2.2 | 0/2 | Not started | - |
+| 180. CLI 라인/구문 커버리지 | v2.2 | 0/1 | Not started | - |
+| 181. 임계값 검증 및 복원 | v2.2 | 0/1 | Not started | - |

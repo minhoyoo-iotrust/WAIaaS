@@ -45,23 +45,23 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SOL-01 | — | Pending |
-| SOL-02 | — | Pending |
-| SOL-03 | — | Pending |
-| SOL-04 | — | Pending |
-| ADM-01 | — | Pending |
-| ADM-02 | — | Pending |
-| ADM-03 | — | Pending |
-| ADM-04 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| GATE-01 | — | Pending |
+| SOL-01 | Phase 178 | Pending |
+| SOL-02 | Phase 178 | Pending |
+| SOL-03 | Phase 178 | Pending |
+| SOL-04 | Phase 178 | Pending |
+| ADM-01 | Phase 179 | Pending |
+| ADM-02 | Phase 179 | Pending |
+| ADM-03 | Phase 179 | Pending |
+| ADM-04 | Phase 179 | Pending |
+| CLI-01 | Phase 180 | Pending |
+| CLI-02 | Phase 180 | Pending |
+| GATE-01 | Phase 181 | Pending |
 
 **Coverage:**
 - v2.2 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 after roadmap creation*
