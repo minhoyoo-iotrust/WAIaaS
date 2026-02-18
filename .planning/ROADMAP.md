@@ -37,11 +37,11 @@ Plans:
   2. wallets.tsx와 dashboard.tsx의 네트워크 추가/제거, WC 페어링, Owner 설정, 킬스위치 토글 등 ~12개 함수가 테스트된다
   3. policies.tsx와 notifications.tsx의 정책 재정렬, 삭제 확인 다이얼로그, 필터링, 채널별 테스트 발송 등 ~18개 함수가 테스트된다
   4. 0% 커버리지 그룹(client.ts, layout.tsx, toast.tsx, copy-button.tsx, walletconnect.tsx)과 폼 컴포넌트의 미커버 함수가 테스트되어 함수 커버리지가 70%를 넘는다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 179-01: settings.tsx + wallets.tsx + dashboard.tsx 함수 테스트 (ADM-01, ADM-02)
-- [ ] 179-02: policies.tsx + notifications.tsx + 0% 그룹 함수 테스트 (ADM-03, ADM-04)
+- [ ] 179-01-PLAN.md — settings.tsx + wallets.tsx WalletDetailView + dashboard.tsx 함수 커버리지 테스트 (ADM-01, ADM-02)
+- [ ] 179-02-PLAN.md — policies.tsx + notifications.tsx + 0% 그룹(client.ts, layout.tsx, toast.tsx, copy-button.tsx, walletconnect.tsx, display-currency.ts) + 0% 폼 컴포넌트 함수 테스트 (ADM-03, ADM-04)
 
 ### Phase 180: CLI 라인/구문 커버리지
 **Goal**: @waiaas/cli의 라인/구문 커버리지가 70% 이상으로 충분히 도달하여 임계값 복원이 가능한 상태가 된다
