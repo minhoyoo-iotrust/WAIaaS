@@ -15,6 +15,13 @@ import { getErrorMessage } from '../utils/error-messages';
 import { formatDate, formatAddress } from '../utils/format';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
+import {
+  type SettingsData,
+  type RpcTestResult,
+  keyToLabel,
+  getEffectiveValue,
+  getEffectiveBoolValue,
+} from '../utils/settings-helpers';
 
 interface Wallet {
   id: string;
@@ -821,6 +828,473 @@ function WalletDetailView({ id }: { id: string }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// RPC Endpoints Tab
+// ---------------------------------------------------------------------------
+
+const solanaRpcKeys = ['solana_mainnet', 'solana_devnet', 'solana_testnet'];
+const evmRpcKeys = [
+  'evm_ethereum_mainnet', 'evm_ethereum_sepolia',
+  'evm_polygon_mainnet', 'evm_polygon_amoy',
+  'evm_arbitrum_mainnet', 'evm_arbitrum_sepolia',
+  'evm_optimism_mainnet', 'evm_optimism_sepolia',
+  'evm_base_mainnet', 'evm_base_sepolia',
+];
+
+const evmNetworkOptions = [
+  { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
+  { label: 'Ethereum Sepolia', value: 'ethereum-sepolia' },
+  { label: 'Polygon Mainnet', value: 'polygon-mainnet' },
+  { label: 'Polygon Amoy', value: 'polygon-amoy' },
+  { label: 'Arbitrum Mainnet', value: 'arbitrum-mainnet' },
+  { label: 'Arbitrum Sepolia', value: 'arbitrum-sepolia' },
+  { label: 'Optimism Mainnet', value: 'optimism-mainnet' },
+  { label: 'Optimism Sepolia', value: 'optimism-sepolia' },
+  { label: 'Base Mainnet', value: 'base-mainnet' },
+  { label: 'Base Sepolia', value: 'base-sepolia' },
+];
+
+function RpcEndpointsTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+  const rpcTestResults = useSignal<Record<string, RpcTestResult>>({});
+  const rpcTesting = useSignal<Record<string, boolean>>({});
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => key.startsWith('rpc.'))
+        .map(([key, value]) => ({ key, value }));
+      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      dirty.value = {};
+      await fetchSettings();
+      showToast('success', 'Settings saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  const handleRpcTest = async (settingKey: string) => {
+    const shortKey = settingKey.split('.')[1] ?? '';
+    const effectiveUrl = getEffectiveValue(settings.value, dirty.value, 'rpc', shortKey);
+    if (!effectiveUrl) {
+      showToast('warning', 'Enter a URL before testing');
+      return;
+    }
+
+    const chain = shortKey.startsWith('solana') ? 'solana' : 'evm';
+
+    rpcTesting.value = { ...rpcTesting.value, [settingKey]: true };
+    try {
+      const result = await apiPost<RpcTestResult>(API.ADMIN_SETTINGS_TEST_RPC, { url: effectiveUrl, chain });
+      rpcTestResults.value = { ...rpcTestResults.value, [settingKey]: result };
+    } catch {
+      rpcTestResults.value = {
+        ...rpcTestResults.value,
+        [settingKey]: { success: false, latencyMs: 0, error: 'Request failed' },
+      };
+    } finally {
+      rpcTesting.value = { ...rpcTesting.value, [settingKey]: false };
+    }
+  };
+
+  function RpcField({ shortKey }: { shortKey: string }) {
+    const fullKey = `rpc.${shortKey}`;
+    const testResult = rpcTestResults.value[fullKey];
+    const isTesting = rpcTesting.value[fullKey];
+
+    return (
+      <div class="settings-field-full">
+        <div class="rpc-field-row">
+          <FormField
+            label={keyToLabel(shortKey)}
+            name={fullKey}
+            type="text"
+            value={getEffectiveValue(settings.value, dirty.value, 'rpc', shortKey)}
+            onChange={(v) => handleFieldChange(fullKey, v)}
+            placeholder="https://..."
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleRpcTest(fullKey)}
+            loading={!!isTesting}
+          >
+            Test
+          </Button>
+        </div>
+        {testResult && (
+          <div class={`rpc-test-result ${testResult.success ? 'rpc-test-result--success' : 'rpc-test-result--failure'}`}>
+            <Badge variant={testResult.success ? 'success' : 'danger'}>
+              {testResult.success ? 'OK' : 'FAIL'}
+            </Badge>
+            <span>{testResult.latencyMs}ms</span>
+            {testResult.blockNumber !== undefined && <span> (block #{testResult.blockNumber.toLocaleString()})</span>}
+            {testResult.error && <span> - {testResult.error}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('rpc.')).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Save bar -- sticky when dirty */}
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>RPC Endpoints</h3>
+          <p class="settings-description">Configure blockchain RPC URLs for Solana and EVM networks</p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-subgroup">
+            <div class="settings-subgroup-title">Solana</div>
+            <div class="settings-fields-grid">
+              {solanaRpcKeys.map((k) => (
+                <RpcField key={k} shortKey={k} />
+              ))}
+            </div>
+          </div>
+
+          <div class="settings-subgroup">
+            <div class="settings-subgroup-title">EVM</div>
+            <div class="settings-fields-grid">
+              {evmRpcKeys.map((k) => (
+                <RpcField key={k} shortKey={k} />
+              ))}
+              <div class="settings-field-full">
+                <FormField
+                  label={keyToLabel('evm_default_network')}
+                  name="rpc.evm_default_network"
+                  type="select"
+                  value={getEffectiveValue(settings.value, dirty.value, 'rpc', 'evm_default_network') || 'ethereum-sepolia'}
+                  onChange={(v) => handleFieldChange('rpc.evm_default_network', v)}
+                  options={evmNetworkOptions}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Balance Monitoring Tab
+// ---------------------------------------------------------------------------
+
+function BalanceMonitoringTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => key.startsWith('monitoring.'))
+        .map(([key, value]) => ({ key, value }));
+      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      dirty.value = {};
+      await fetchSettings();
+      showToast('success', 'Settings saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
+    { key: 'enabled', type: 'checkbox' },
+    { key: 'check_interval_sec', type: 'number', min: 60, max: 86400 },
+    { key: 'low_balance_threshold_sol', type: 'number', min: 0 },
+    { key: 'low_balance_threshold_eth', type: 'number', min: 0 },
+    { key: 'cooldown_hours', type: 'number', min: 1, max: 168 },
+  ];
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('monitoring.')).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Save bar -- sticky when dirty */}
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Balance Monitoring</h3>
+          <p class="settings-description">
+            Periodic balance checks for all active wallets. Sends LOW_BALANCE alerts when
+            native token balance drops below thresholds. Changes apply immediately.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            {fields.map((f) =>
+              f.type === 'checkbox' ? (
+                <div class="settings-field-full" key={f.key}>
+                  <FormField
+                    label={keyToLabel(f.key)}
+                    name={`monitoring.${f.key}`}
+                    type="checkbox"
+                    value={getEffectiveBoolValue(settings.value, dirty.value, 'monitoring', f.key)}
+                    onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                  />
+                </div>
+              ) : (
+                <FormField
+                  key={f.key}
+                  label={keyToLabel(f.key)}
+                  name={`monitoring.${f.key}`}
+                  type="number"
+                  value={Number(getEffectiveValue(settings.value, dirty.value, 'monitoring', f.key)) || 0}
+                  onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                  min={f.min}
+                  max={f.max}
+                />
+              ),
+            )}
+          </div>
+          <div class="settings-info-box">
+            Monitors all active wallet native token balances (SOL, ETH) at the configured interval.
+            When balance drops below threshold, a LOW_BALANCE notification is sent.
+            Duplicate alerts are suppressed for the cooldown period (per wallet).
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WalletConnect Tab
+// ---------------------------------------------------------------------------
+
+function WalletConnectTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => key.startsWith('walletconnect.'))
+        .map(([key, value]) => ({ key, value }));
+      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      dirty.value = {};
+      await fetchSettings();
+      showToast('success', 'Settings saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('walletconnect.')).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Save bar -- sticky when dirty */}
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>WalletConnect</h3>
+          <p class="settings-description">WalletConnect integration for dApp connections</p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <div class="settings-field-full">
+              <FormField
+                label={keyToLabel('project_id')}
+                name="walletconnect.project_id"
+                type="text"
+                value={getEffectiveValue(settings.value, dirty.value, 'walletconnect', 'project_id')}
+                onChange={(v) => handleFieldChange('walletconnect.project_id', v)}
+              />
+            </div>
+            <div class="settings-field-full">
+              <FormField
+                label={keyToLabel('relay_url')}
+                name="walletconnect.relay_url"
+                type="text"
+                value={getEffectiveValue(settings.value, dirty.value, 'walletconnect', 'relay_url')}
+                onChange={(v) => handleFieldChange('walletconnect.relay_url', v)}
+                placeholder="wss://relay.walletconnect.com"
+              />
+            </div>
+          </div>
+          <div class="settings-info-box">
+            Get your project ID from{' '}
+            <a href="https://cloud.walletconnect.com" target="_blank" rel="noopener noreferrer">
+              https://cloud.walletconnect.com
+            </a>
+            {' '}&mdash; Create a free account and project to obtain your project ID.
+          </div>
+          <div class="settings-info-box">
+            Relay URL defaults to wss://relay.walletconnect.com if not set.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Wallet List Content
+// ---------------------------------------------------------------------------
+
 function WalletListContent() {
   const wallets = useSignal<Wallet[]>([]);
   const loading = useSignal(true);
@@ -1002,9 +1476,9 @@ function WalletListWithTabs() {
       />
       <TabNav tabs={WALLETS_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
       {activeTab.value === 'wallets' && <WalletListContent />}
-      {activeTab.value === 'rpc' && <div class="empty-state"><p>RPC Endpoints settings will be available here.</p></div>}
-      {activeTab.value === 'monitoring' && <div class="empty-state"><p>Balance Monitoring settings will be available here.</p></div>}
-      {activeTab.value === 'walletconnect' && <div class="empty-state"><p>WalletConnect settings will be available here.</p></div>}
+      {activeTab.value === 'rpc' && <RpcEndpointsTab />}
+      {activeTab.value === 'monitoring' && <BalanceMonitoringTab />}
+      {activeTab.value === 'walletconnect' && <WalletConnectTab />}
     </div>
   );
 }
