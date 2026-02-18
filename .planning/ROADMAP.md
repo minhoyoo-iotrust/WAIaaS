@@ -51,10 +51,10 @@ Plans:
   1. commands/owner.ts의 WalletConnect 연결/해제/상태 조회 로직이 테스트되어 정상 흐름과 에러 처리가 검증된다
   2. commands/wallet.ts의 월렛 상세 조회, 기본 네트워크 변경 로직이 테스트된다
   3. utils/password.ts의 stdin/파일 기반 비밀번호 프롬프트 분기가 테스트되어 라인 커버리지가 70%를 넘는다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 180-01: owner.ts + wallet.ts + password.ts 단위 테스트 (CLI-01, CLI-02)
+- [ ] 180-01-PLAN.md — owner.ts + wallet.ts + password.ts 라인/구문 커버리지 단위 테스트 (CLI-01, CLI-02)
 
 ### Phase 181: 임계값 검증 및 복원
 **Goal**: 3개 패키지의 vitest.config.ts 임계값이 원래 수준으로 복원되고 전체 테스트 스위트가 통과한다
