@@ -82,11 +82,11 @@ Plans:
   3. Policies > Defaults 탭에서 정책 기본값(Delay/Approval Timeout/Default Deny 3개 토글)을 변경/저장할 수 있다
   4. Notifications > Settings 탭에서 알림 설정을 Telegram/Other Channels 그룹으로 분리하여 변경/저장할 수 있고, 기존 중복 렌더링이 제거된다
   5. 각 Settings 탭이 독립적인 dirty signal과 save bar를 보유하고, Security > AutoStop Rules 탭에 Activity Detection/Idle Detection FieldGroup이 적용된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 184-01: Wallets 탭 설정 분산 (RPC Endpoints/Balance Monitoring/WalletConnect)
-- [ ] 184-02: Sessions/Policies/Notifications 탭 설정 분산 + FieldGroup 적용 + 신규 설정 노출
+- [ ] 184-01-PLAN.md — Wallets 탭 설정 분산 (RPC Endpoints/Balance Monitoring/WalletConnect) + NEW-02/NEW-03
+- [ ] 184-02-PLAN.md — Sessions/Policies/Notifications 탭 설정 분산 + FieldGroup 적용 + 신규 설정 노출
 
 ### Phase 185: UX 강화
 **Goal**: 사용자가 설정을 빠르게 찾고, 미저장 변경을 실수로 잃지 않는다
