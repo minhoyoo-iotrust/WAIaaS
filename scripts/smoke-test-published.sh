@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Smoke test for published npm packages.
-# Runs: npm pack → install tarballs in temp dir → verify ESM imports.
+# Runs: pnpm pack → install tarballs in temp dir → verify ESM imports.
 #
 # Usage:
 #   bash scripts/smoke-test-published.sh
@@ -44,7 +44,7 @@ echo "--- Packing packages ---"
 for pkg_path in "${PACKAGES[@]}"; do
   cd "$ROOT_DIR/$pkg_path"
   pkg_name=$(node -p "require('./package.json').name")
-  tarball=$(npm pack --pack-destination "$SMOKE_DIR" 2>/dev/null | tail -1)
+  tarball=$(pnpm pack --pack-destination "$SMOKE_DIR" 2>/dev/null | tail -1)
   TARBALLS["$pkg_name"]="$SMOKE_DIR/$tarball"
   echo "  Packed: $pkg_name → $tarball"
 done
