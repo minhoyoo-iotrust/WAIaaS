@@ -36,7 +36,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 - [x] **Phase 184: Settings 분산 배치** - 기존 Settings 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + FieldGroup 적용 + 신규 설정 노출 (completed 2026-02-18)
 - [x] **Phase 185: UX 강화** - 설정 검색(Ctrl+K), 미저장 경고 다이얼로그 (completed 2026-02-18)
 - [x] **Phase 186: 마무리** - 페이지/필드 설명 텍스트 채우기, README 갱신 (completed 2026-02-18)
-- [ ] **Phase 187: 감사 갭 수정** - 검색 하이라이트 수정, 중복 인덱스 ID 수정, Phase 182 VERIFICATION.md 생성 (gap closure)
+- [x] **Phase 187: 감사 갭 수정** - 검색 하이라이트 수정, 중복 인덱스 ID 수정, Phase 182 VERIFICATION.md 생성 (gap closure) (completed 2026-02-18)
 
 ## Phase Details
 
@@ -125,7 +125,7 @@ Plans:
   1. display.currency CurrencySelect에 name 속성이 추가되어 검색 결과 클릭 시 필드 하이라이트가 동작한다
   2. settings-search-index.ts에 중복 ID가 없고 모든 엔트리가 고유한 ID를 보유한다
   3. Phase 182의 VERIFICATION.md가 생성되어 7개 요구사항(TAB-01, FGRP-01, DESC-01, DESC-02, BCMB-01, BCMB-02, BCMB-03)의 형식적 검증이 문서화된다
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 187-01-PLAN.md — FINDING-01/02 수정 (CurrencySelect highlight + 중복 인덱스 ID) + Phase 182 VERIFICATION.md 생성
@@ -146,4 +146,4 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186 → 187
 | 184. Settings 분산 배치 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 185. UX 강화 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 186. 마무리 | v2.3 | 1/1 | Complete | 2026-02-18 |
-| 187. 감사 갭 수정 | v2.3 | 0/1 | Pending | - |
+| 187. 감사 갭 수정 | 1/1 | Complete   | 2026-02-18 | - |

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 187 of 187 (감사 갭 수정)
-Plan: 0 of 1 in current phase
-Status: Phase 187 pending (gap closure)
-Last activity: 2026-02-18 — Gap closure phase created from audit
+Plan: 1 of 1 in current phase
+Status: Phase 187 complete (gap closure)
+Last activity: 2026-02-18 — All audit gaps resolved
 
-Progress: [#########-] 95%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -56,6 +56,9 @@ Full log in PROJECT.md and milestones/.
 - 185-02: 3-button dialog reuses existing modal CSS classes with minimal CSS addition
 - 186-01: Use Record<string, string> maps for dynamically-rendered field descriptions
 - 186-01: Description text matches settings-search-index.ts entries exactly for consistency
+- 187-01: Hidden input for CurrencySelect name discovery rather than adding name to outer div
+- 187-01: Manual highlight useEffect in DisplaySettings since CurrencySelect not in FormField
+- 187-01: Renamed duplicate search index ID to telegram_dedicated_bot_token
 
 ### Blockers/Concerns
 
@@ -65,5 +68,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 186-01-PLAN.md (Description help text + README update)
+Stopped at: Completed 187-01-PLAN.md (Audit gap closure - all findings resolved)
 Resume file: None
