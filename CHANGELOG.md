@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.1-rc.1...v2.2.2-rc.1) (2026-02-18)
+
+
+### Bug Fixes
+
+* use fix: prefix in promote-release for release-please trigger ([289b7b6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/289b7b68608c44703222bfb5605e1c6fa8cd5238))
+
 ## [2.2.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.0-rc.1...v2.2.1-rc.1) (2026-02-18)
 
 
