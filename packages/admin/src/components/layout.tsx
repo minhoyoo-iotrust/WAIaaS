@@ -26,9 +26,23 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings': 'Settings',
 };
 
+const PAGE_SUBTITLES: Record<string, string> = {
+  '/dashboard': 'System overview and key metrics',
+  '/wallets': 'Manage wallets, balances, and connections',
+  '/sessions': 'View and manage active sessions',
+  '/policies': 'Configure transaction policies and rules',
+  '/notifications': 'Channel status, delivery logs, and settings',
+  '/walletconnect': 'WalletConnect session management',
+  '/settings': 'System configuration and preferences',
+};
+
 function getPageTitle(path: string): string {
   if (path.startsWith('/wallets/')) return 'Wallet Detail';
   return PAGE_TITLES[path] ?? 'Dashboard';
+}
+
+export function getPageSubtitle(path: string): string | undefined {
+  return PAGE_SUBTITLES[path];
 }
 
 const NAV_ITEMS = [
@@ -80,9 +94,14 @@ export function Layout() {
       </aside>
       <main class="main">
         <header class="header">
-          <h1 class="header-title">
-            {getPageTitle(currentPath.value)}
-          </h1>
+          <div class="header-left">
+            <h1 class="header-title">
+              {getPageTitle(currentPath.value)}
+            </h1>
+            {getPageSubtitle(currentPath.value) && (
+              <p class="header-subtitle">{getPageSubtitle(currentPath.value)}</p>
+            )}
+          </div>
           <button class="btn-logout" onClick={() => logout()}>
             Logout
           </button>
