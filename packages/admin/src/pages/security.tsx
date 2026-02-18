@@ -1,0 +1,410 @@
+import { useSignal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
+import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
+import { API } from '../api/endpoints';
+import { FormField, Button, Badge } from '../components/form';
+import { Modal } from '../components/modal';
+import { TabNav } from '../components/tab-nav';
+import { Breadcrumb } from '../components/breadcrumb';
+import { showToast } from '../components/toast';
+import { getErrorMessage } from '../utils/error-messages';
+import { formatDate } from '../utils/format';
+import {
+  type SettingsData,
+  type KillSwitchState,
+  keyToLabel,
+  getEffectiveValue,
+  getEffectiveBoolValue,
+} from '../utils/settings-helpers';
+
+// ---------------------------------------------------------------------------
+// Tab definitions
+// ---------------------------------------------------------------------------
+
+const SECURITY_TABS = [
+  { key: 'killswitch', label: 'Kill Switch' },
+  { key: 'autostop', label: 'AutoStop Rules' },
+  { key: 'jwt', label: 'JWT Rotation' },
+];
+
+// ---------------------------------------------------------------------------
+// Kill Switch Tab
+// ---------------------------------------------------------------------------
+
+function KillSwitchTab() {
+  const killSwitchState = useSignal<KillSwitchState | null>(null);
+  const ksLoading = useSignal(true);
+  const ksActionLoading = useSignal(false);
+
+  const fetchKillSwitchState = async () => {
+    try {
+      const result = await apiGet<KillSwitchState>(API.ADMIN_KILL_SWITCH);
+      killSwitchState.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ksLoading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchKillSwitchState();
+  }, []);
+
+  const handleKillSwitchActivate = async () => {
+    ksActionLoading.value = true;
+    try {
+      await apiPost(API.ADMIN_KILL_SWITCH);
+      showToast('success', 'Kill switch activated - all operations suspended');
+      await fetchKillSwitchState();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ksActionLoading.value = false;
+    }
+  };
+
+  const handleKillSwitchEscalate = async () => {
+    ksActionLoading.value = true;
+    try {
+      await apiPost(API.ADMIN_KILL_SWITCH_ESCALATE);
+      showToast('success', 'Kill switch escalated to LOCKED');
+      await fetchKillSwitchState();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ksActionLoading.value = false;
+    }
+  };
+
+  const handleKillSwitchRecover = async () => {
+    ksActionLoading.value = true;
+    try {
+      await apiPost(API.ADMIN_RECOVER);
+      showToast('success', 'Kill switch recovered - operations resumed');
+      await fetchKillSwitchState();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      ksActionLoading.value = false;
+    }
+  };
+
+  const ksState = killSwitchState.value;
+  const isActive = ksState?.state === 'ACTIVE';
+  const isSuspended = ksState?.state === 'SUSPENDED';
+  const isLocked = ksState?.state === 'LOCKED';
+
+  return (
+    <div class="settings-category">
+      <div class="settings-category-header">
+        <h3>Kill Switch</h3>
+        <p class="settings-description">
+          Emergency stop - suspends all wallet operations immediately.
+          3-state: ACTIVE (normal) → SUSPENDED (paused) → LOCKED (permanent).
+        </p>
+      </div>
+      <div class="settings-category-body">
+        {ksLoading.value ? (
+          <span>Loading...</span>
+        ) : ksState ? (
+          <>
+            {/* State indicator card */}
+            <div class="ks-state-card" style={{ marginBottom: 'var(--space-4)' }}>
+              <Badge variant={isActive ? 'success' : isLocked ? 'danger' : 'warning'}>
+                {ksState.state}
+              </Badge>
+              {!isActive && ksState.activatedAt && (
+                <span class="ks-state-info">
+                  Since {formatDate(ksState.activatedAt)}
+                  {ksState.activatedBy ? ` by ${ksState.activatedBy}` : ''}
+                </span>
+              )}
+            </div>
+
+            {/* Action buttons based on current state */}
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              {isActive && (
+                <Button
+                  variant="danger"
+                  onClick={handleKillSwitchActivate}
+                  loading={ksActionLoading.value}
+                >
+                  Activate Kill Switch
+                </Button>
+              )}
+
+              {isSuspended && (
+                <>
+                  <Button
+                    variant="primary"
+                    onClick={handleKillSwitchRecover}
+                    loading={ksActionLoading.value}
+                  >
+                    Recover
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={handleKillSwitchEscalate}
+                    loading={ksActionLoading.value}
+                  >
+                    Escalate to LOCKED
+                  </Button>
+                </>
+              )}
+
+              {isLocked && (
+                <Button
+                  variant="primary"
+                  onClick={handleKillSwitchRecover}
+                  loading={ksActionLoading.value}
+                >
+                  Recover from LOCKED (5s wait)
+                </Button>
+              )}
+            </div>
+
+            {/* State description */}
+            {isSuspended && (
+              <div class="settings-info-box" style={{ marginTop: 'var(--space-3)' }}>
+                All wallet operations are suspended. Sessions revoked, transactions cancelled.
+                You can Recover to resume operations, or Escalate to LOCKED for permanent lockdown.
+              </div>
+            )}
+            {isLocked && (
+              <div class="settings-info-box" style={{ marginTop: 'var(--space-3)', borderColor: 'var(--color-danger)' }}>
+                System is permanently locked. Recovery requires dual-auth (Owner signature + Master password)
+                and has a mandatory 5-second wait period.
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AutoStop Rules Tab
+// ---------------------------------------------------------------------------
+
+function AutoStopTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      // Only send autostop-related dirty entries
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => key.startsWith('autostop.'))
+        .map(([key, value]) => ({ key, value }));
+      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      dirty.value = {};
+      await fetchSettings();
+      showToast('success', 'AutoStop settings saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
+    { key: 'enabled', type: 'checkbox' },
+    { key: 'consecutive_failures_threshold', type: 'number', min: 1, max: 100 },
+    { key: 'unusual_activity_threshold', type: 'number', min: 5, max: 1000 },
+    { key: 'unusual_activity_window_sec', type: 'number', min: 60, max: 86400 },
+    { key: 'idle_timeout_sec', type: 'number', min: 60, max: 604800 },
+    { key: 'idle_check_interval_sec', type: 'number', min: 10, max: 3600 },
+  ];
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('autostop.')).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Save bar -- sticky when dirty */}
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>AutoStop Rules</h3>
+          <p class="settings-description">
+            Automatic protection rules that suspend wallets or trigger Kill Switch on anomalies.
+            Changes apply immediately without daemon restart.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            {fields.map((f) =>
+              f.type === 'checkbox' ? (
+                <div class="settings-field-full" key={f.key}>
+                  <FormField
+                    label={keyToLabel(f.key)}
+                    name={`autostop.${f.key}`}
+                    type="checkbox"
+                    value={getEffectiveBoolValue(settings.value, dirty.value, 'autostop', f.key)}
+                    onChange={(v) => handleFieldChange(`autostop.${f.key}`, v)}
+                  />
+                </div>
+              ) : (
+                <FormField
+                  key={f.key}
+                  label={keyToLabel(f.key)}
+                  name={`autostop.${f.key}`}
+                  type="number"
+                  value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', f.key)) || 0}
+                  onChange={(v) => handleFieldChange(`autostop.${f.key}`, v)}
+                  min={f.min}
+                  max={f.max}
+                />
+              ),
+            )}
+          </div>
+          <div class="settings-info-box">
+            <strong>Consecutive Failures:</strong> Suspends wallet after N consecutive failed transactions.<br />
+            <strong>Unusual Activity:</strong> Suspends wallet if transaction count exceeds threshold within the time window.<br />
+            <strong>Idle Timeout:</strong> Revokes sessions with no activity for the configured duration.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// JWT Rotation Tab
+// ---------------------------------------------------------------------------
+
+function JwtRotationTab() {
+  const rotateModal = useSignal(false);
+  const rotateLoading = useSignal(false);
+
+  const handleRotate = async () => {
+    rotateLoading.value = true;
+    try {
+      await apiPost<{ rotatedAt: number; message: string }>(API.ADMIN_ROTATE_SECRET);
+      rotateModal.value = false;
+      showToast('success', 'JWT secret rotated. Old tokens valid for 5 minutes.');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      rotateLoading.value = false;
+    }
+  };
+
+  return (
+    <>
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <h3>JWT Secret Rotation</h3>
+          <p class="settings-description">Invalidate all existing JWT tokens. Old tokens remain valid for 5 minutes.</p>
+        </div>
+        <div class="settings-section-body">
+          <Button variant="secondary" onClick={() => { rotateModal.value = true; }}>
+            Rotate JWT Secret
+          </Button>
+        </div>
+      </div>
+
+      {/* JWT Rotation Confirmation Modal */}
+      <Modal
+        open={rotateModal.value}
+        title="Rotate JWT Secret"
+        onCancel={() => { rotateModal.value = false; }}
+        onConfirm={handleRotate}
+        confirmText="Rotate"
+        confirmVariant="primary"
+        loading={rotateLoading.value}
+      >
+        <p>
+          Are you sure you want to rotate the JWT secret? All existing session
+          tokens will remain valid for 5 more minutes, then expire. Wallets will
+          need new sessions.
+        </p>
+      </Modal>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Security Page Component
+// ---------------------------------------------------------------------------
+
+export default function SecurityPage() {
+  const activeTab = useSignal('killswitch');
+
+  // Tab label lookup for Breadcrumb
+  const activeTabLabel = SECURITY_TABS.find((t) => t.key === activeTab.value)?.label ?? '';
+
+  return (
+    <div class="page">
+      <Breadcrumb
+        pageName="Security"
+        tabName={activeTabLabel}
+        onPageClick={() => { activeTab.value = 'killswitch'; }}
+      />
+      <TabNav
+        tabs={SECURITY_TABS}
+        activeTab={activeTab.value}
+        onTabChange={(key) => { activeTab.value = key; }}
+      />
+      {activeTab.value === 'killswitch' && <KillSwitchTab />}
+      {activeTab.value === 'autostop' && <AutoStopTab />}
+      {activeTab.value === 'jwt' && <JwtRotationTab />}
+    </div>
+  );
+}
