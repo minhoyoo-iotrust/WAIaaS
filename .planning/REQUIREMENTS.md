@@ -45,24 +45,24 @@ npm Trusted Publishing (OIDC) 전환으로 supply chain 보안 강화.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PREP-01 | — | Pending |
-| PREP-02 | — | Pending |
-| PREP-03 | — | Pending |
-| OIDC-01 | — | Pending |
-| OIDC-02 | — | Pending |
-| OIDC-03 | — | Pending |
-| OIDC-04 | — | Pending |
-| OIDC-05 | — | Pending |
-| VERIFY-01 | — | Pending |
-| VERIFY-02 | — | Pending |
-| VERIFY-03 | — | Pending |
-| VERIFY-04 | — | Pending |
+| PREP-01 | Phase 188 | Pending |
+| PREP-02 | Phase 188 | Pending |
+| PREP-03 | Phase 188 | Pending |
+| OIDC-01 | Phase 189 | Pending |
+| OIDC-02 | Phase 189 | Pending |
+| OIDC-03 | Phase 189 | Pending |
+| OIDC-04 | Phase 189 | Pending |
+| OIDC-05 | Phase 189 | Pending |
+| VERIFY-01 | Phase 190 | Pending |
+| VERIFY-02 | Phase 190 | Pending |
+| VERIFY-03 | Phase 190 | Pending |
+| VERIFY-04 | Phase 190 | Pending |
 
 **Coverage:**
 - v2.4 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 (pending roadmap creation)
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
