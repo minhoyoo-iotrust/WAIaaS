@@ -21,8 +21,8 @@
 
 ### cli lines/statements 커버리지 (이슈 #062)
 
-- [ ] **CLI-01**: commands/owner.ts 단위 테스트 추가 (WalletConnect 연결/해제/상태, ~227 라인)
-- [ ] **CLI-02**: commands/wallet.ts + utils/password.ts 단위 테스트 추가 (월렛 상세 조회, 기본 네트워크 변경, stdin/파일 프롬프트, ~217 라인)
+- [x] **CLI-01**: commands/owner.ts 단위 테스트 추가 (WalletConnect 연결/해제/상태, ~227 라인)
+- [x] **CLI-02**: commands/wallet.ts + utils/password.ts 단위 테스트 추가 (월렛 상세 조회, 기본 네트워크 변경, stdin/파일 프롬프트, ~217 라인)
 
 ### 검증 및 복원
 
@@ -53,8 +53,8 @@
 | ADM-02 | Phase 179 | Pending |
 | ADM-03 | Phase 179 | Pending |
 | ADM-04 | Phase 179 | Pending |
-| CLI-01 | Phase 180 | Pending |
-| CLI-02 | Phase 180 | Pending |
+| CLI-01 | Phase 180 | Complete |
+| CLI-02 | Phase 180 | Complete |
 | GATE-01 | Phase 181 | Pending |
 
 **Coverage:**
