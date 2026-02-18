@@ -31,7 +31,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 
 **Milestone Goal:** 모놀리식 Settings 페이지를 해체하여 7개 기능별 메뉴로 재배치하고, TabNav/FieldGroup/breadcrumb 등 공용 컴포넌트와 설정 검색/미저장 경고 등 UX 기능을 추가한다.
 
-- [ ] **Phase 182: UI 공용 컴포넌트** - TabNav, FieldGroup, FormField description, PageHeader subtitle, breadcrumb 컴포넌트 구축
+- [x] **Phase 182: UI 공용 컴포넌트** - TabNav, FieldGroup, FormField description, PageHeader subtitle, breadcrumb 컴포넌트 구축 (completed 2026-02-18)
 - [ ] **Phase 183: 메뉴 재구성 + 신규 페이지** - 7-메뉴 사이드바, 라우트 리다이렉트, Security/System 페이지 생성, 기존 페이지 탭 구조 적용
 - [ ] **Phase 184: Settings 분산 배치** - 기존 Settings 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + FieldGroup 적용 + 신규 설정 노출
 - [ ] **Phase 185: UX 강화** - 설정 검색(Ctrl+K), 미저장 경고 다이얼로그
@@ -49,7 +49,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
   3. FormField에 description prop을 전달하면 필드 아래에 help text가 렌더링된다
   4. PageHeader에 subtitle 영역이 추가되어 설명 텍스트를 표시한다
   5. Breadcrumb 컴포넌트가 탭 페이지에서 "페이지명 > 탭명"을 표시하고, Dashboard/System에서는 미표시되며, 페이지명 클릭 시 첫 번째 탭으로 이동한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 182-01-PLAN.md — TabNav + FieldGroup + FormField description 컴포넌트 구현
@@ -126,7 +126,7 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 179. admin 함수 커버리지 | v2.2 | 2/2 | Complete | 2026-02-18 |
 | 180. CLI 라인/구문 커버리지 | v2.2 | 1/1 | Complete | 2026-02-18 |
 | 181. 임계값 검증 및 복원 | v2.2 | 1/1 | Complete | 2026-02-18 |
-| 182. UI 공용 컴포넌트 | v2.3 | 0/2 | Not started | - |
+| 182. UI 공용 컴포넌트 | 2/2 | Complete   | 2026-02-18 | - |
 | 183. 메뉴 재구성 + 신규 페이지 | v2.3 | 0/3 | Not started | - |
 | 184. Settings 분산 배치 | v2.3 | 0/2 | Not started | - |
 | 185. UX 강화 | v2.3 | 0/2 | Not started | - |

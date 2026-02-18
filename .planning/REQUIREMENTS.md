@@ -57,9 +57,9 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### Breadcrumb
 
-- [ ] **BCMB-01**: 탭이 있는 5개 페이지에서 PageHeader 상단에 breadcrumb(페이지명 > 탭명)이 표시된다
-- [ ] **BCMB-02**: Dashboard와 System 페이지에서는 breadcrumb이 표시되지 않는다
-- [ ] **BCMB-03**: breadcrumb의 페이지명 클릭 시 첫 번째 탭으로 이동한다
+- [x] **BCMB-01**: 탭이 있는 5개 페이지에서 PageHeader 상단에 breadcrumb(페이지명 > 탭명)이 표시된다
+- [x] **BCMB-02**: Dashboard와 System 페이지에서는 breadcrumb이 표시되지 않는다
+- [x] **BCMB-03**: breadcrumb의 페이지명 클릭 시 첫 번째 탭으로 이동한다
 
 ### FieldGroup
 
@@ -70,7 +70,7 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### 페이지/항목 설명
 
-- [ ] **DESC-01**: PageHeader에 subtitle 영역이 추가되고 모든 7개 페이지에 설명 텍스트가 표시된다
+- [x] **DESC-01**: PageHeader에 subtitle 영역이 추가되고 모든 7개 페이지에 설명 텍스트가 표시된다
 - [ ] **DESC-02**: FormField 컴포넌트에 description prop이 추가되고 Settings 탭의 각 필드 아래에 help text가 렌더링된다
 
 ### 미저장 경고
@@ -128,14 +128,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRCH-01 | Phase 185 | Pending |
 | SRCH-02 | Phase 185 | Pending |
 | SRCH-03 | Phase 185 | Pending |
-| BCMB-01 | Phase 182 | Pending |
-| BCMB-02 | Phase 182 | Pending |
-| BCMB-03 | Phase 182 | Pending |
+| BCMB-01 | Phase 182 | Complete |
+| BCMB-02 | Phase 182 | Complete |
+| BCMB-03 | Phase 182 | Complete |
 | FGRP-01 | Phase 182 | Pending |
 | FGRP-02 | Phase 184 | Pending |
 | FGRP-03 | Phase 184 | Pending |
 | FGRP-04 | Phase 184 | Pending |
-| DESC-01 | Phase 182 | Pending |
+| DESC-01 | Phase 182 | Complete |
 | DESC-02 | Phase 182 | Pending |
 | DIRTY-01 | Phase 185 | Pending |
 | DIRTY-02 | Phase 185 | Pending |
