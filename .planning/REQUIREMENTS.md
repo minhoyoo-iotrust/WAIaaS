@@ -20,7 +20,7 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 - [x] **TAB-03**: Sessions 페이지가 2개 탭(Sessions/Settings)을 표시한다
 - [x] **TAB-04**: Policies 페이지가 2개 탭(Policies/Defaults)을 표시한다
 - [x] **TAB-05**: Notifications 페이지가 3개 탭(Channels & Logs/Telegram Users/Settings)으로 확장된다
-- [ ] **TAB-06**: 각 Settings 탭이 독립적인 dirty signal과 save bar를 보유한다
+- [x] **TAB-06**: 각 Settings 탭이 독립적인 dirty signal과 save bar를 보유한다
 
 ### Security 페이지
 
@@ -39,13 +39,13 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 - [x] **DIST-01**: RPC Endpoints 설정이 Wallets > RPC Endpoints 탭에서 변경/저장 가능하다
 - [x] **DIST-02**: Balance Monitoring 설정이 Wallets > Balance Monitoring 탭에서 변경/저장 가능하다
 - [x] **DIST-03**: WalletConnect 설정(Project ID/Relay URL)이 Wallets > WalletConnect 탭에서 변경/저장 가능하다
-- [ ] **DIST-04**: 세션 관련 설정(TTL/Max Sessions/Rate Limits/Max Pending/Absolute Lifetime/Max Renewals)이 Sessions > Settings 탭에서 변경/저장 가능하다
-- [ ] **DIST-05**: 정책 기본값(Delay/Approval Timeout/Default Deny 3개 토글)이 Policies > Defaults 탭에서 변경/저장 가능하다
-- [ ] **DIST-06**: 알림 설정(Enabled/Rate Limit/Telegram/Discord/ntfy/Slack)이 Notifications > Settings 탭에서 변경/저장 가능하고 기존 중복 렌더링이 제거된다
+- [x] **DIST-04**: 세션 관련 설정(TTL/Max Sessions/Rate Limits/Max Pending/Absolute Lifetime/Max Renewals)이 Sessions > Settings 탭에서 변경/저장 가능하다
+- [x] **DIST-05**: 정책 기본값(Delay/Approval Timeout/Default Deny 3개 토글)이 Policies > Defaults 탭에서 변경/저장 가능하다
+- [x] **DIST-06**: 알림 설정(Enabled/Rate Limit/Telegram/Discord/ntfy/Slack)이 Notifications > Settings 탭에서 변경/저장 가능하고 기존 중복 렌더링이 제거된다
 
 ### 신규 설정 노출
 
-- [ ] **NEW-01**: session_absolute_lifetime과 session_max_renewals가 Sessions > Settings 탭에 신규 노출된다
+- [x] **NEW-01**: session_absolute_lifetime과 session_max_renewals가 Sessions > Settings 탭에 신규 노출된다
 - [x] **NEW-02**: WalletConnect Relay URL이 Wallets > WalletConnect 탭에 신규 노출된다
 - [x] **NEW-03**: Oracle cross_validation_threshold가 System 페이지에 신규 노출된다
 
@@ -64,9 +64,9 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 ### FieldGroup
 
 - [x] **FGRP-01**: FieldGroup 컴포넌트가 fieldset+legend 시맨틱 래퍼로 생성된다
-- [ ] **FGRP-02**: Sessions > Settings 탭에서 Lifetime/Rate Limits 2개 그룹으로 필드가 그룹화된다
-- [ ] **FGRP-03**: Notifications > Settings 탭에서 Telegram/Other Channels 그룹으로 필드가 그룹화된다
-- [ ] **FGRP-04**: Security > AutoStop Rules 탭에서 Activity Detection/Idle Detection 그룹으로 필드가 그룹화된다
+- [x] **FGRP-02**: Sessions > Settings 탭에서 Lifetime/Rate Limits 2개 그룹으로 필드가 그룹화된다
+- [x] **FGRP-03**: Notifications > Settings 탭에서 Telegram/Other Channels 그룹으로 필드가 그룹화된다
+- [x] **FGRP-04**: Security > AutoStop Rules 탭에서 Activity Detection/Idle Detection 그룹으로 필드가 그룹화된다
 
 ### 페이지/항목 설명
 
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TAB-03 | Phase 183 | Complete |
 | TAB-04 | Phase 183 | Complete |
 | TAB-05 | Phase 183 | Complete |
-| TAB-06 | Phase 184 | Pending |
+| TAB-06 | Phase 184 | Complete |
 | SEC-01 | Phase 183 | Complete |
 | SEC-02 | Phase 183 | Complete |
 | SEC-03 | Phase 183 | Complete |
@@ -119,10 +119,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DIST-01 | Phase 184 | Complete |
 | DIST-02 | Phase 184 | Complete |
 | DIST-03 | Phase 184 | Complete |
-| DIST-04 | Phase 184 | Pending |
-| DIST-05 | Phase 184 | Pending |
-| DIST-06 | Phase 184 | Pending |
-| NEW-01 | Phase 184 | Pending |
+| DIST-04 | Phase 184 | Complete |
+| DIST-05 | Phase 184 | Complete |
+| DIST-06 | Phase 184 | Complete |
+| NEW-01 | Phase 184 | Complete |
 | NEW-02 | Phase 184 | Complete |
 | NEW-03 | Phase 184 | Complete |
 | SRCH-01 | Phase 185 | Pending |
@@ -132,9 +132,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BCMB-02 | Phase 182 | Complete |
 | BCMB-03 | Phase 182 | Complete |
 | FGRP-01 | Phase 182 | Complete |
-| FGRP-02 | Phase 184 | Pending |
-| FGRP-03 | Phase 184 | Pending |
-| FGRP-04 | Phase 184 | Pending |
+| FGRP-02 | Phase 184 | Complete |
+| FGRP-03 | Phase 184 | Complete |
+| FGRP-04 | Phase 184 | Complete |
 | DESC-01 | Phase 182 | Complete |
 | DESC-02 | Phase 182 | Complete |
 | DIRTY-01 | Phase 185 | Pending |

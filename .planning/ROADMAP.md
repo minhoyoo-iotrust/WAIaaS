@@ -33,7 +33,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 
 - [x] **Phase 182: UI 공용 컴포넌트** - TabNav, FieldGroup, FormField description, PageHeader subtitle, breadcrumb 컴포넌트 구축 (completed 2026-02-18)
 - [x] **Phase 183: 메뉴 재구성 + 신규 페이지** - 7-메뉴 사이드바, 라우트 리다이렉트, Security/System 페이지 생성, 기존 페이지 탭 구조 적용 (completed 2026-02-18)
-- [ ] **Phase 184: Settings 분산 배치** - 기존 Settings 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + FieldGroup 적용 + 신규 설정 노출
+- [x] **Phase 184: Settings 분산 배치** - 기존 Settings 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + FieldGroup 적용 + 신규 설정 노출 (completed 2026-02-18)
 - [ ] **Phase 185: UX 강화** - 설정 검색(Ctrl+K), 미저장 경고 다이얼로그
 - [ ] **Phase 186: 마무리** - 페이지/필드 설명 텍스트 채우기, README 갱신
 
@@ -82,7 +82,7 @@ Plans:
   3. Policies > Defaults 탭에서 정책 기본값(Delay/Approval Timeout/Default Deny 3개 토글)을 변경/저장할 수 있다
   4. Notifications > Settings 탭에서 알림 설정을 Telegram/Other Channels 그룹으로 분리하여 변경/저장할 수 있고, 기존 중복 렌더링이 제거된다
   5. 각 Settings 탭이 독립적인 dirty signal과 save bar를 보유하고, Security > AutoStop Rules 탭에 Activity Detection/Idle Detection FieldGroup이 적용된다
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 184-01-PLAN.md — Wallets 탭 설정 분산 (RPC Endpoints/Balance Monitoring/WalletConnect) + NEW-02/NEW-03
@@ -128,6 +128,6 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 181. 임계값 검증 및 복원 | v2.2 | 1/1 | Complete | 2026-02-18 |
 | 182. UI 공용 컴포넌트 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 183. 메뉴 재구성 + 신규 페이지 | v2.3 | 3/3 | Complete | 2026-02-18 |
-| 184. Settings 분산 배치 | 1/2 | In Progress|  | - |
+| 184. Settings 분산 배치 | 2/2 | Complete   | 2026-02-18 | - |
 | 185. UX 강화 | v2.3 | 0/2 | Not started | - |
 | 186. 마무리 | v2.3 | 0/1 | Not started | - |

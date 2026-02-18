@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 184 Settings 분산 배치
+**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 184 complete, ready for Phase 185
 
 ## Current Position
 
 Phase: 184 of 186 (Settings 분산 배치)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-18 — Plan 184-01 complete (Wallets settings tabs: RPC/Monitoring/WalletConnect)
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-18 — Plan 184-02 complete (Sessions/Policies/Notifications settings tabs + FieldGroups)
 
-Progress: [#####░░░░░] 50%
+Progress: [######░░░░] 66%
 
 ## Performance Metrics
 
@@ -44,6 +44,10 @@ Full log in PROJECT.md and milestones/.
 - 184-01: Save filters dirty entries by category prefix (rpc.*, monitoring.*, walletconnect.*)
 - 184-01: Pure function helpers used directly (not closure wrappers)
 - 184-01: WalletConnect tab exposes relay_url as NEW-02
+- 184-02: SessionSettingsTab filters dirty entries by SESSION_KEYS whitelist (not prefix)
+- 184-02: PolicyDefaultsTab uses security category for reading, policy.* prefix for saving
+- 184-02: NotificationSettingsTab combines notifications.* and telegram.* categories
+- 184-02: AutoStop enabled checkbox outside FieldGroups for visibility
 
 ### Blockers/Concerns
 
@@ -53,5 +57,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 184-01-PLAN.md (Wallets settings tabs)
+Stopped at: Completed 184-02-PLAN.md (Sessions/Policies/Notifications/Security settings tabs)
 Resume file: None
