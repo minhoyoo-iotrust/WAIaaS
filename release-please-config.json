@@ -6,20 +6,47 @@
   "include-component-in-tag": false,
   "include-v-in-tag": true,
   "changelog-sections": [
-    { "type": "feat", "section": "Features" },
-    { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "refactor", "section": "Code Refactoring" },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "chore", "section": "Miscellaneous", "hidden": true },
-    { "type": "ci", "section": "CI/CD", "hidden": true }
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "refactor",
+      "section": "Code Refactoring"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": true
+    },
+    {
+      "type": "test",
+      "section": "Tests",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "Miscellaneous",
+      "hidden": true
+    },
+    {
+      "type": "ci",
+      "section": "CI/CD",
+      "hidden": true
+    }
   ],
   "packages": {
     ".": {
       "component": "waiaas",
       "changelog-path": "CHANGELOG.md",
-      "prerelease": true,
       "extra-files": [
         "packages/core/package.json",
         "packages/daemon/package.json",
