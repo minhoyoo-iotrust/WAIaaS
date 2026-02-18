@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.2 테스트 커버리지 강화 — Phase 178 Plan 01 complete
+**Current focus:** v2.2 테스트 커버리지 강화 — Phase 178 complete
 
 ## Current Position
 
 Phase: 178 of 181 (adapter-solana 브랜치 커버리지)
-Plan: 1 of 6 total plans (2+2+1+1)
-Status: Executing
-Last activity: 2026-02-18 — Completed 178-01 batch+signExternal branch coverage
+Plan: 2 of 6 total plans (2+2+1+1)
+Status: Phase 178 complete
+Last activity: 2026-02-18 — Completed 178-02 tx-parser + adapter misc branch coverage
 
-Progress: [#░░░░░░░░░] 16%
+Progress: [###░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -26,7 +26,7 @@ Progress: [#░░░░░░░░░] 16%
 
 Full log in PROJECT.md and milestones/.
 v2.0.1 decisions: 2 (CODE_OF_CONDUCT.md content filter 이연, validate-openapi @see 2회 갱신)
-v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive), Buffer.from base64 never throws (Step 1 catch unreachable)
+v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive), Buffer.from base64 never throws (Step 1 catch unreachable), staticAccounts/instructions null coalescing are untestable defensive fallbacks
 
 ### Blockers/Concerns
 
@@ -36,5 +36,5 @@ v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive)
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 178-01-PLAN.md (batch+signExternal branch coverage)
+Stopped at: Completed 178-02-PLAN.md (tx-parser + adapter misc branch coverage, Phase 178 done)
 Resume file: None
