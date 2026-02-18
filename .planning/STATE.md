@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.2 테스트 커버리지 강화 — Phase 178 complete
+**Current focus:** v2.2 테스트 커버리지 강화 — Phase 179 Plan 02 complete
 
 ## Current Position
 
-Phase: 178 of 181 (adapter-solana 브랜치 커버리지)
+Phase: 179 of 181 (admin-functions-coverage)
 Plan: 2 of 6 total plans (2+2+1+1)
-Status: Phase 178 complete
-Last activity: 2026-02-18 — Completed 178-02 tx-parser + adapter misc branch coverage
+Status: Phase 179 Plan 02 complete
+Last activity: 2026-02-18 — Completed 179-02 policies/notifications/zero-coverage tests
 
-Progress: [###░░░░░░░] 33%
+Progress: [####░░░░░░] 40%
 
 ## Performance Metrics
 
-**Cumulative:** 39 milestones, 177 phases, 381 plans, 1,044 reqs, ~3,599 tests, ~124,830 LOC TS
+**Cumulative:** 39 milestones, 179 phases, 383 plans, 1,044 reqs, ~3,599 tests, ~124,830 LOC TS
 
 ## Accumulated Context
 
@@ -26,7 +26,7 @@ Progress: [###░░░░░░░] 33%
 
 Full log in PROJECT.md and milestones/.
 v2.0.1 decisions: 2 (CODE_OF_CONDUCT.md content filter 이연, validate-openapi @see 2회 갱신)
-v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive), Buffer.from base64 never throws (Step 1 catch unreachable), staticAccounts/instructions null coalescing are untestable defensive fallbacks
+v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive), Buffer.from base64 never throws (Step 1 catch unreachable), staticAccounts/instructions null coalescing are untestable defensive fallbacks, client.ts tested with real fetch (no mock) for accurate coverage, vi.mock hoisting limits walletconnect.tsx coverage in same file as layout tests
 
 ### Blockers/Concerns
 
@@ -36,5 +36,5 @@ v2.2 decisions: Unknown type throw is dead code (classifyInstruction exhaustive)
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 178-02-PLAN.md (tx-parser + adapter misc branch coverage, Phase 178 done)
+Stopped at: Completed 179-02-PLAN.md (policies/notifications/zero-coverage admin function tests)
 Resume file: None
