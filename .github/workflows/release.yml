@@ -119,7 +119,7 @@ jobs:
           curl -f http://localhost:3100/health
           docker stop waiaas-release-test
 
-  # npm publish dry-run for all 8 publishable packages
+  # pnpm publish dry-run for all 8 publishable packages
   publish-check:
     runs-on: ubuntu-latest
     needs: test
@@ -133,7 +133,7 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
-      - name: npm publish dry-run
+      - name: pnpm publish dry-run
         run: |
           PACKAGES=(
             packages/core
@@ -148,7 +148,7 @@ jobs:
           for pkg_path in "${PACKAGES[@]}"; do
             echo "--- Checking $pkg_path ---"
             cd "$pkg_path"
-            npm publish --dry-run 2>&1 || exit 1
+            pnpm publish --dry-run --no-git-checks 2>&1 || exit 1
             cd "$GITHUB_WORKSPACE"
           done
 
@@ -210,7 +210,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Gate 2: Manual approval deploy — npm publish + summary
+  # Gate 2: Manual approval deploy — pnpm publish + summary
   deploy:
     runs-on: ubuntu-latest
     needs: [test, chain-integration, platform, publish-check, docker-publish]
@@ -231,7 +231,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: npm publish
+      - name: pnpm publish
         run: |
           PACKAGES=(
             packages/core
@@ -246,7 +246,12 @@ jobs:
           for pkg_path in "${PACKAGES[@]}"; do
             echo "--- Publishing $pkg_path ---"
             cd "$pkg_path"
-            npm publish --access public 2>&1
+            PKG_VERSION=$(node -p "require('./package.json').version")
+            if [[ "$PKG_VERSION" == *-* ]]; then
+              pnpm publish --access public --no-git-checks --tag rc 2>&1
+            else
+              pnpm publish --access public --no-git-checks 2>&1
+            fi
             cd "$GITHUB_WORKSPACE"
           done
         env:
