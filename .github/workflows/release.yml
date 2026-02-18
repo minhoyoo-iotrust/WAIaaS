@@ -233,6 +233,19 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
+      - name: Ensure npm >= 11.5.1
+        run: |
+          CURRENT=$(npm --version)
+          REQUIRED="11.5.1"
+          echo "Current npm: $CURRENT, Required: >= $REQUIRED"
+          if [ "$(printf '%s\n' "$REQUIRED" "$CURRENT" | sort -V | head -n1)" != "$REQUIRED" ]; then
+            echo "Upgrading npm to latest..."
+            npm install -g npm@latest
+            echo "Upgraded to: $(npm --version)"
+          else
+            echo "npm version sufficient"
+          fi
+
       - name: Setup npmrc
         run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
         env:
