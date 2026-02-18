@@ -51,9 +51,9 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### 설정 검색
 
-- [ ] **SRCH-01**: 헤더에 설정 검색 아이콘이 표시되고 Ctrl+K/Cmd+K 단축키로 검색 팝오버가 열린다
-- [ ] **SRCH-02**: 모든 설정 항목의 label+description을 정적 인덱스로 검색하여 결과를 표시한다
-- [ ] **SRCH-03**: 검색 결과 클릭 시 해당 페이지+탭으로 이동하고 해당 필드가 하이라이트된다
+- [x] **SRCH-01**: 헤더에 설정 검색 아이콘이 표시되고 Ctrl+K/Cmd+K 단축키로 검색 팝오버가 열린다
+- [x] **SRCH-02**: 모든 설정 항목의 label+description을 정적 인덱스로 검색하여 결과를 표시한다
+- [x] **SRCH-03**: 검색 결과 클릭 시 해당 페이지+탭으로 이동하고 해당 필드가 하이라이트된다
 
 ### Breadcrumb
 
@@ -125,9 +125,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NEW-01 | Phase 184 | Complete |
 | NEW-02 | Phase 184 | Complete |
 | NEW-03 | Phase 184 | Complete |
-| SRCH-01 | Phase 185 | Pending |
-| SRCH-02 | Phase 185 | Pending |
-| SRCH-03 | Phase 185 | Pending |
+| SRCH-01 | Phase 185 | Complete |
+| SRCH-02 | Phase 185 | Complete |
+| SRCH-03 | Phase 185 | Complete |
 | BCMB-01 | Phase 182 | Complete |
 | BCMB-02 | Phase 182 | Complete |
 | BCMB-03 | Phase 182 | Complete |

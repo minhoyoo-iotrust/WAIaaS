@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 185 of 186 (UX 강화)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — Phase 184 complete (2 plans, 13 reqs, 6 settings tabs + 3 FieldGroups)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-18 — Plan 185-01 complete (settings search with Ctrl+K)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#####░░░░░] 50%
 
 ## Performance Metrics
 
@@ -48,6 +48,9 @@ Full log in PROJECT.md and milestones/.
 - 184-02: PolicyDefaultsTab uses security category for reading, policy.* prefix for saving
 - 184-02: NotificationSettingsTab combines notifications.* and telegram.* categories
 - 184-02: AutoStop enabled checkbox outside FieldGroups for visibility
+- 185-01: Module-level signals (highlightField, pendingNavigation) for cross-component communication
+- 185-01: Static SearchIndexEntry array with keywords for fuzzy search
+- 185-01: 10 result limit in search popover for UX clarity
 
 ### Blockers/Concerns
 
@@ -57,5 +60,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 184-02-PLAN.md (Sessions/Policies/Notifications/Security settings tabs)
+Stopped at: Completed 185-01-PLAN.md (Settings search with Ctrl+K popover)
 Resume file: None
