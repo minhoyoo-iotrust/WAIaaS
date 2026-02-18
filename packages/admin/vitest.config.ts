@@ -8,6 +8,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/__tests__/setup.ts'],
     passWithNoTests: true,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 2,
+      },
+    },
+    forceExit: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'json'],

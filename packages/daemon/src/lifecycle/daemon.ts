@@ -958,8 +958,10 @@ export class DaemonLifecycle {
       }
 
       console.log('Shutdown complete');
+      process.exit(0);
     } catch (err) {
       console.error('Shutdown error:', err);
+      process.exit(1);
     }
   }
 

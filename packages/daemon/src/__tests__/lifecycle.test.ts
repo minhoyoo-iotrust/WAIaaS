@@ -319,7 +319,7 @@ describe('shutdown sequence', () => {
     expect(daemon.isShuttingDown).toBe(false);
   });
 
-  it('shutdown sets isShuttingDown to true', async () => {
+  it('shutdown sets isShuttingDown to true and calls process.exit(0)', async () => {
     const { DaemonLifecycle } = await import('../lifecycle/daemon.js');
     const daemon = new DaemonLifecycle();
 
@@ -328,6 +328,7 @@ describe('shutdown sequence', () => {
 
     await daemon.shutdown('SIGTERM');
     expect(daemon.isShuttingDown).toBe(true);
+    expect(exitSpy).toHaveBeenCalledWith(0);
 
     exitSpy.mockRestore();
   });
@@ -347,6 +348,27 @@ describe('shutdown sequence', () => {
 
     exitSpy.mockRestore();
     logSpy.mockRestore();
+  });
+
+  it('shutdown calls process.exit(1) on error', async () => {
+    const { DaemonLifecycle } = await import('../lifecycle/daemon.js');
+    const daemon = new DaemonLifecycle();
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // Force an error by setting eventBus to a throwing proxy
+    (daemon as any).eventBus = {
+      removeAllListeners: () => {
+        throw new Error('forced shutdown error');
+      },
+    };
+
+    await daemon.shutdown('SIGTERM');
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 });
 

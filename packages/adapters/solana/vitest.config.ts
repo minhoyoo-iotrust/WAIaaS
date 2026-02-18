@@ -4,6 +4,13 @@ export default defineConfig({
   test: {
     globals: true,
     passWithNoTests: true,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 2,
+      },
+    },
+    forceExit: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'json'],

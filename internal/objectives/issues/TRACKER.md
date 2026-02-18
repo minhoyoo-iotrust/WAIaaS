@@ -91,7 +91,10 @@
 | 074 | ENHANCEMENT | MEDIUM | 마일스톤 목표 문서 명명 규칙 변경 — 버전 제거, 순번 기반 | m20 | FIXED | 2026-02-18 |
 | 075 | ENHANCEMENT | LOW | 마일스톤 파일명에 -00 서브순번 통일 + CLAUDE.md 영문 규칙 | m20 | FIXED | 2026-02-18 |
 | 076 | BUG | HIGH | Smoke Test가 npm pack으로 workspace:* 미해석 — ESM import 실패 | m21 | FIXED | 2026-02-18 |
-| 077 | BUG | HIGH | Smoke Test pnpm pack 출력 경로 이중화로 install 실패 (exit 254) | m21 | OPEN | 2026-02-18 |
+| 077 | BUG | HIGH | Smoke Test pnpm pack 출력 경로 이중화로 install 실패 (exit 254) | m21 | FIXED | 2026-02-18 |
+| 078 | BUG | HIGH | Smoke Test 워크스페이스 상호 의존 패키지 설치 순서 오류 + CLI ESM import 부적절 | v2.2 | FIXED | 2026-02-18 |
+| 079 | ENHANCEMENT | MEDIUM | vitest 고아 프로세스 재발 방지 — 전 패키지 forceExit + forks pool 통일 | v2.2 | FIXED | 2026-02-18 |
+| 080 | BUG | MEDIUM | Graceful Shutdown 후 process.exit(0) 미호출로 프로세스 미종료 | v2.2 | FIXED | 2026-02-18 |
 
 ## Type Legend
 
@@ -103,8 +106,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 76
+- **OPEN:** 0
+- **FIXED:** 80
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 77
+- **Total:** 80

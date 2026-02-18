@@ -6,12 +6,13 @@ export default defineConfig({
     passWithNoTests: true,
     testTimeout: 30_000, // E2E tests need longer timeout
     hookTimeout: 30_000,
-    pool: 'forks', // Isolate tests using forks (sodium-native mprotect compatibility)
+    pool: 'forks',
     poolOptions: {
       forks: {
-        maxForks: 2, // Limit workers to reduce orphan processes on abnormal exit
+        maxForks: 2,
       },
     },
+    forceExit: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'json'],

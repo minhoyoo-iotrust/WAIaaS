@@ -62,19 +62,18 @@ pkg.type = 'module';
 require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
 "
 
-# Install core first (dependency for others)
-echo "  Installing @waiaas/core..."
-npm install "${TARBALLS[@waiaas/core]}" --save --silent 2>/dev/null
-
-# Install sdk (0 deps, independent)
-echo "  Installing @waiaas/sdk..."
-npm install "${TARBALLS[@waiaas/sdk]}" --save --silent 2>/dev/null
-
-# Install remaining packages
-for pkg_name in "@waiaas/cli" "@waiaas/mcp" "@waiaas/daemon" "@waiaas/skills" "@waiaas/adapter-solana" "@waiaas/adapter-evm"; do
-  echo "  Installing $pkg_name..."
-  npm install "${TARBALLS[$pkg_name]}" --save --silent 2>/dev/null || true
-done
+# Install all tarballs in a single call so npm resolves interdependencies
+echo "  Installing all packages..."
+npm install \
+  "${TARBALLS[@waiaas/core]}" \
+  "${TARBALLS[@waiaas/sdk]}" \
+  "${TARBALLS[@waiaas/cli]}" \
+  "${TARBALLS[@waiaas/mcp]}" \
+  "${TARBALLS[@waiaas/daemon]}" \
+  "${TARBALLS[@waiaas/skills]}" \
+  "${TARBALLS[@waiaas/adapter-solana]}" \
+  "${TARBALLS[@waiaas/adapter-evm]}" \
+  --save
 
 # Step 4: Verify ESM imports
 echo ""
@@ -86,19 +85,21 @@ FAILED=0
 verify_import() {
   local pkg_name="$1"
   local import_expr="$2"
+  local err
 
-  if node --input-type=module -e "$import_expr" 2>/dev/null; then
+  if err=$(node --input-type=module -e "$import_expr" 2>&1); then
     echo "  ✓ $pkg_name"
     PASSED=$((PASSED + 1))
   else
     echo "  ✗ $pkg_name FAILED"
+    echo "    $(echo "$err" | head -3)"
     FAILED=$((FAILED + 1))
   fi
 }
 
 verify_import "@waiaas/core" "import { WAIaaSError } from '@waiaas/core';"
 verify_import "@waiaas/sdk" "import { WAIaaSClient } from '@waiaas/sdk';"
-verify_import "@waiaas/cli" "import '@waiaas/cli';" || true
+# CLI package has top-level side effects (program.parseAsync) — verify via binary test below
 verify_import "@waiaas/mcp" "import '@waiaas/mcp';" || true
 verify_import "@waiaas/daemon" "import '@waiaas/daemon';" || true
 verify_import "@waiaas/adapter-solana" "import { SolanaAdapter } from '@waiaas/adapter-solana';"
