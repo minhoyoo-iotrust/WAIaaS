@@ -13,6 +13,7 @@ export interface FormFieldProps {
   placeholder?: string;
   min?: number;
   max?: number;
+  description?: string;
 }
 
 export function FormField({
@@ -28,6 +29,7 @@ export function FormField({
   placeholder,
   min,
   max,
+  description,
 }: FormFieldProps) {
   if (type === 'checkbox') {
     return (
@@ -43,6 +45,7 @@ export function FormField({
           {label}
           {required && <span> *</span>}
         </label>
+        {description && <span class="form-description">{description}</span>}
         {error && <span class="form-error">{error}</span>}
       </div>
     );
@@ -96,6 +99,7 @@ export function FormField({
           required={required}
         />
       )}
+      {description && <span class="form-description">{description}</span>}
       {error && <span class="form-error">{error}</span>}
     </div>
   );
