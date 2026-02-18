@@ -129,5 +129,5 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 182. UI 공용 컴포넌트 | v2.3 | 2/2 | Complete | 2026-02-18 |
 | 183. 메뉴 재구성 + 신규 페이지 | v2.3 | 3/3 | Complete | 2026-02-18 |
 | 184. Settings 분산 배치 | 2/2 | Complete    | 2026-02-18 | - |
-| 185. UX 강화 | 2/2 | Complete   | 2026-02-18 | - |
+| 185. UX 강화 | 2/2 | Complete    | 2026-02-18 | - |
 | 186. 마무리 | v2.3 | 0/1 | Not started | - |
