@@ -28,26 +28,52 @@ See [Security Model](docs/security-model.md) for full details.
 ## Quick Start
 
 ```bash
-# Install and start
 npm install -g @waiaas/cli
-waiaas init
-waiaas start
-
-# Testnet mode (development / testing)
-waiaas quickstart --mode testnet
-
-# Mainnet mode (production)
-waiaas quickstart --mode mainnet
+waiaas init                        # Create data directory + config.toml
+waiaas start                       # Start daemon (sets master password on first run)
+waiaas quickstart --mode testnet   # Create wallets + MCP sessions in one step
 ```
 
-The `quickstart` command creates wallets and issues MCP session tokens in one step:
+The `quickstart` command does everything you need to get started:
 
-- **testnet**: Solana Devnet + EVM Sepolia wallets with MCP session
-- **mainnet**: Solana Mainnet + EVM Ethereum Mainnet wallets with MCP session
+1. Creates **Solana Devnet + EVM Sepolia** wallets automatically
+2. Issues **MCP session tokens** for each wallet
+3. Outputs a **Claude Desktop MCP config** snippet -- just copy and paste
 
-After quickstart, copy the MCP config snippet into your AI agent's configuration.
+> Starting with mainnet? Use `waiaas quickstart --mode mainnet` to create Solana Mainnet + EVM Ethereum Mainnet wallets instead. Mainnet mode recommends configuring spending limits and registering an owner wallet for high-value transaction approval.
 
-### Docker
+### Admin UI
+
+After starting the daemon, manage everything from the admin panel at `http://127.0.0.1:3100/admin` (masterAuth required).
+
+## Connect Your AI Agent
+
+After quickstart, choose one of two integration paths:
+
+### Path A: MCP (Claude Desktop / Claude Code)
+
+For AI agents that support the [Model Context Protocol](https://modelcontextprotocol.io):
+
+```bash
+# quickstart already printed the MCP config JSON -- paste it into
+# ~/Library/Application Support/Claude/claude_desktop_config.json
+# Or auto-register with all wallets:
+waiaas mcp setup --all
+```
+
+The daemon runs as an MCP server. Your agent calls wallet tools directly -- send tokens, check balances, manage policies -- all through the MCP protocol.
+
+### Path B: Skill Files (Any AI Agent)
+
+For agents that don't support MCP, or when you prefer REST API integration:
+
+```bash
+npx @waiaas/skills add all
+```
+
+This adds `.skill.md` instruction files to your project. Include them in your agent's context and it learns the WAIaaS API automatically. Available skills: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
+
+## Alternative: Docker
 
 ```bash
 git clone https://github.com/minho-yoo/waiaas.git && cd waiaas
@@ -56,7 +82,7 @@ docker compose up -d
 
 The daemon listens on `http://127.0.0.1:3100`.
 
-### First Transaction with the SDK
+## Using the SDK
 
 ```typescript
 import { WAIaaSClient } from '@waiaas/sdk';
@@ -78,20 +104,17 @@ console.log(`Transaction: ${tx.signature}`);
 
 ## Admin UI
 
-After starting the daemon, access the admin panel at:
-
-```
-http://127.0.0.1:3100/admin
-```
-
-Requires masterAuth (master password) to log in. The Admin UI provides:
+Access the admin panel at `http://127.0.0.1:3100/admin` with your master password:
 
 - **Dashboard** -- System overview, wallet balances, recent transactions
-- **Wallets** -- Create, manage, and monitor wallets across chains
-- **Sessions** -- Issue and revoke agent session tokens
-- **Policies** -- Configure 12 policy types with visual form editors
-- **Notifications** -- Set up Telegram, Discord, ntfy, and Slack alerts
-- **Settings** -- Runtime configuration without daemon restart
+- **Wallets** -- Create, manage, and monitor wallets across chains; RPC endpoints, balance monitoring, and WalletConnect settings
+- **Sessions** -- Issue and revoke agent session tokens; session lifetime and rate limit settings
+- **Policies** -- Configure 12 policy types with visual form editors; default deny and tier settings
+- **Notifications** -- Channel status and delivery logs; Telegram, Discord, ntfy, and Slack settings
+- **Security** -- Kill Switch emergency controls, AutoStop protection rules, JWT rotation
+- **System** -- API keys, display currency, price oracle, rate limits, log level, and daemon shutdown
+
+Features include settings search (Ctrl+K / Cmd+K) and unsaved changes protection.
 
 Enabled by default (`admin_ui = true` in config.toml).
 
@@ -115,16 +138,6 @@ Enabled by default (`admin_ui = true` in config.toml).
 - **x402 payments** -- Automatic HTTP 402 payment handling with EIP-3009 signatures
 - **Multiple interfaces** -- REST API, TypeScript SDK, Python SDK, MCP server, CLI, Admin Web UI, Tauri Desktop, Telegram Bot
 - **Skill files** -- Pre-built instruction files that teach AI agents how to use the API
-
-### Skill Files for AI Agents
-
-```bash
-npx @waiaas/skills list          # List available skills
-npx @waiaas/skills add wallet    # Add a specific skill
-npx @waiaas/skills add all       # Add all skills
-```
-
-Available: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
 
 ## Documentation
 

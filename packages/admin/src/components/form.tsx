@@ -1,4 +1,6 @@
 import type { ComponentChildren } from 'preact';
+import { useEffect } from 'preact/hooks';
+import { highlightField } from './settings-search';
 
 export interface FormFieldProps {
   label: string;
@@ -13,6 +15,7 @@ export interface FormFieldProps {
   placeholder?: string;
   min?: number;
   max?: number;
+  description?: string;
 }
 
 export function FormField({
@@ -28,10 +31,26 @@ export function FormField({
   placeholder,
   min,
   max,
+  description,
 }: FormFieldProps) {
+  const isHighlighted = highlightField.value === name;
+
+  useEffect(() => {
+    if (isHighlighted) {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el) {
+        el.closest('.form-field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      const timer = setTimeout(() => {
+        highlightField.value = '';
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isHighlighted, name]);
+
   if (type === 'checkbox') {
     return (
-      <div class="form-field">
+      <div class={`form-field${isHighlighted ? ' form-field--highlight' : ''}`}>
         <label>
           <input
             type="checkbox"
@@ -43,6 +62,7 @@ export function FormField({
           {label}
           {required && <span> *</span>}
         </label>
+        {description && <span class="form-description">{description}</span>}
         {error && <span class="form-error">{error}</span>}
       </div>
     );
@@ -51,7 +71,7 @@ export function FormField({
   const inputId = `field-${name}`;
 
   return (
-    <div class="form-field">
+    <div class={`form-field${isHighlighted ? ' form-field--highlight' : ''}`}>
       <label for={inputId}>
         {label}
         {required && <span> *</span>}
@@ -96,6 +116,7 @@ export function FormField({
           required={required}
         />
       )}
+      {description && <span class="form-description">{description}</span>}
       {error && <span class="form-error">{error}</span>}
     </div>
   );

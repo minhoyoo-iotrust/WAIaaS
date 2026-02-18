@@ -13,7 +13,6 @@
   "homepage": "https://github.com/minho-yoo/waiaas#readme",
   "scripts": {
     "build": "vite build",
-    "postbuild": "mkdir -p ../daemon/public/admin && cp -r dist/* ../daemon/public/admin/",
     "dev": "vite",
     "test": "vitest run",
     "test:unit": "vitest run",

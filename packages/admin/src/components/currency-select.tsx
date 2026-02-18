@@ -81,9 +81,11 @@ interface CurrencySelectProps {
   value: string;
   /** Called when user selects a different currency */
   onChange: (code: string) => void;
+  /** Optional name attribute for hidden input (enables querySelector/highlight) */
+  name?: string;
 }
 
-export function CurrencySelect({ value, onChange }: CurrencySelectProps) {
+export function CurrencySelect({ value, onChange, name }: CurrencySelectProps) {
   const search = useSignal('');
   const isOpen = useSignal(false);
   const ratePreview = useSignal<string | null>(null);
@@ -141,6 +143,7 @@ export function CurrencySelect({ value, onChange }: CurrencySelectProps) {
 
   return (
     <div class="currency-select" ref={containerRef}>
+      {name && <input type="hidden" name={name} value={value} />}
       {/* Trigger button */}
       <button
         type="button"

@@ -133,6 +133,13 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
+      - name: Verify Admin UI in daemon
+        run: |
+          if [ ! -f packages/daemon/public/admin/index.html ]; then
+            echo "ERROR: Admin UI files missing from daemon/public/admin/"
+            exit 1
+          fi
+
       - name: pnpm publish dry-run
         run: |
           PACKAGES=(

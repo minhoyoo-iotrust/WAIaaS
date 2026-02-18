@@ -465,11 +465,13 @@ describe('NotificationsPage - Additional Coverage', () => {
       render(<NotificationsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Channels & Logs')).toBeTruthy();
+        // "Channels & Logs" now appears in both Breadcrumb and TabNav
+        expect(screen.getAllByText('Channels & Logs').length).toBeGreaterThan(0);
       });
 
-      // Click Telegram Users tab
-      fireEvent.click(screen.getByText('Telegram Users'));
+      // Click Telegram Users tab button (use getAllByText since it appears in breadcrumb too)
+      const telegramBtns = screen.getAllByText('Telegram Users');
+      fireEvent.click(telegramBtns[0]);
 
       await waitFor(() => {
         expect(screen.getByTestId('telegram-users-content')).toBeTruthy();
@@ -483,17 +485,19 @@ describe('NotificationsPage - Additional Coverage', () => {
       render(<NotificationsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Channels & Logs')).toBeTruthy();
+        expect(screen.getAllByText('Channels & Logs').length).toBeGreaterThan(0);
       });
 
       // Switch to Telegram Users
-      fireEvent.click(screen.getByText('Telegram Users'));
+      const telegramBtns = screen.getAllByText('Telegram Users');
+      fireEvent.click(telegramBtns[0]);
       await waitFor(() => {
         expect(screen.getByTestId('telegram-users-content')).toBeTruthy();
       });
 
-      // Switch back
-      fireEvent.click(screen.getByText('Channels & Logs'));
+      // Switch back via TabNav button (find the tab-btn specifically)
+      const channelBtns = screen.getAllByText('Channels & Logs');
+      fireEvent.click(channelBtns[0]);
       await waitFor(() => {
         expect(screen.getByText('Channel Status')).toBeTruthy();
       });

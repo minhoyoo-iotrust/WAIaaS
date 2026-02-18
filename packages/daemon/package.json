@@ -26,6 +26,7 @@
     "public"
   ],
   "scripts": {
+    "prebuild": "mkdir -p public/admin && cp -r ../admin/dist/* public/admin/ 2>/dev/null || true",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:unit": "vitest run",

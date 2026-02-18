@@ -1,15 +1,19 @@
 import { signal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
 import { logout } from '../auth/store';
+import { SettingsSearch } from './settings-search';
+import { hasDirty } from '../utils/dirty-guard';
+import { showUnsavedDialog, UnsavedDialog } from './unsaved-dialog';
 import DashboardPage from '../pages/dashboard';
 import WalletsPage from '../pages/wallets';
 import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
-import TelegramUsersPage from '../pages/telegram-users';
-import WalletConnectPage from '../pages/walletconnect';
-import SettingsPage from '../pages/settings';
+import SecurityPage from '../pages/security';
+import SystemPage from '../pages/system';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
+const searchOpen = signal(false);
 
 window.addEventListener('hashchange', () => {
   currentPath.value = window.location.hash.slice(1) || '/dashboard';
@@ -21,14 +25,27 @@ const PAGE_TITLES: Record<string, string> = {
   '/sessions': 'Sessions',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
-  '/telegram-users': 'Telegram Users',
-  '/walletconnect': 'WalletConnect',
-  '/settings': 'Settings',
+  '/security': 'Security',
+  '/system': 'System',
+};
+
+const PAGE_SUBTITLES: Record<string, string> = {
+  '/dashboard': 'System overview and key metrics',
+  '/wallets': 'Manage wallets, balances, and connections',
+  '/sessions': 'View and manage active sessions',
+  '/policies': 'Configure transaction policies and rules',
+  '/notifications': 'Channel status, delivery logs, and settings',
+  '/security': 'Emergency controls and automatic protection rules',
+  '/system': 'API keys, display preferences, and daemon configuration',
 };
 
 function getPageTitle(path: string): string {
   if (path.startsWith('/wallets/')) return 'Wallet Detail';
   return PAGE_TITLES[path] ?? 'Dashboard';
+}
+
+export function getPageSubtitle(path: string): string | undefined {
+  return PAGE_SUBTITLES[path];
 }
 
 const NAV_ITEMS = [
@@ -37,8 +54,8 @@ const NAV_ITEMS = [
   { path: '/sessions', label: 'Sessions' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
-  { path: '/walletconnect', label: 'WalletConnect' },
-  { path: '/settings', label: 'Settings' },
+  { path: '/security', label: 'Security' },
+  { path: '/system', label: 'System' },
 ];
 
 function PageRouter() {
@@ -51,13 +68,34 @@ function PageRouter() {
     window.location.hash = '#/notifications';
     return <NotificationsPage />;
   }
-  if (path === '/walletconnect') return <WalletConnectPage />;
-  if (path === '/settings') return <SettingsPage />;
+  if (path === '/settings') {
+    window.location.hash = '#/dashboard';
+    return <DashboardPage />;
+  }
+  if (path === '/walletconnect') {
+    window.location.hash = '#/wallets';
+    return <WalletsPage />;
+  }
+  if (path === '/security') return <SecurityPage />;
+  if (path === '/system') return <SystemPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;
 }
 
+export { highlightField, pendingNavigation } from './settings-search';
+
 export function Layout() {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchOpen.value = !searchOpen.value;
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div class="layout">
       <aside class="sidebar">
@@ -71,6 +109,17 @@ export function Layout() {
               <a
                 href={`#${item.path}`}
                 class={`sidebar-link ${isActive ? 'active' : ''}`}
+                onClick={(e) => {
+                  if (hasDirty.value) {
+                    e.preventDefault();
+                    showUnsavedDialog({
+                      type: 'nav',
+                      execute: () => {
+                        window.location.hash = `#${item.path}`;
+                      },
+                    });
+                  }
+                }}
               >
                 {item.label}
               </a>
@@ -80,17 +129,33 @@ export function Layout() {
       </aside>
       <main class="main">
         <header class="header">
-          <h1 class="header-title">
-            {getPageTitle(currentPath.value)}
-          </h1>
-          <button class="btn-logout" onClick={() => logout()}>
-            Logout
-          </button>
+          <div class="header-left">
+            <h1 class="header-title">
+              {getPageTitle(currentPath.value)}
+            </h1>
+            {getPageSubtitle(currentPath.value) && (
+              <p class="header-subtitle">{getPageSubtitle(currentPath.value)}</p>
+            )}
+          </div>
+          <div class="header-actions">
+            <button
+              class="btn-search"
+              onClick={() => { searchOpen.value = true; }}
+              title="Search settings (Ctrl+K)"
+            >
+              &#x1F50D;
+            </button>
+            <button class="btn-logout" onClick={() => logout()}>
+              Logout
+            </button>
+          </div>
         </header>
         <div class="content">
           <PageRouter />
         </div>
       </main>
+      <SettingsSearch open={searchOpen} />
+      <UnsavedDialog />
     </div>
   );
 }

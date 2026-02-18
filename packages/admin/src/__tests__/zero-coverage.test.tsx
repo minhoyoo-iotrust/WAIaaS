@@ -458,12 +458,6 @@ vi.mock('../pages/telegram-users', () => ({
   default: () => <div data-testid="page-telegram-users">TelegramUsers</div>,
   TelegramUsersContent: () => <div>TelegramUsersContent</div>,
 }));
-vi.mock('../pages/walletconnect', () => ({
-  default: () => <div data-testid="page-walletconnect">WalletConnect</div>,
-}));
-vi.mock('../pages/settings', () => ({
-  default: () => <div data-testid="page-settings">Settings</div>,
-}));
 
 describe('Section 4: layout.tsx', () => {
   let Layout: typeof import('../components/layout').Layout;
@@ -487,7 +481,7 @@ describe('Section 4: layout.tsx', () => {
   it('renders sidebar with all 7 nav items', () => {
     render(<Layout />);
 
-    const navLabels = ['Dashboard', 'Wallets', 'Sessions', 'Policies', 'Notifications', 'WalletConnect', 'Settings'];
+    const navLabels = ['Dashboard', 'Wallets', 'Sessions', 'Policies', 'Notifications', 'Security', 'System'];
     navLabels.forEach((label) => {
       const links = screen.getAllByText(label);
       expect(links.length).toBeGreaterThanOrEqual(1);
@@ -512,16 +506,16 @@ describe('Section 4: layout.tsx', () => {
     expect(screen.getByTestId('page-notifications')).toBeTruthy();
   });
 
-  it('PageRouter renders correct page for /walletconnect', () => {
+  it('PageRouter redirects /walletconnect to /wallets', () => {
     currentPath.value = '/walletconnect';
     render(<Layout />);
-    expect(screen.getByTestId('page-walletconnect')).toBeTruthy();
+    expect(screen.getByTestId('page-wallets')).toBeTruthy();
   });
 
-  it('PageRouter renders correct page for /settings', () => {
+  it('PageRouter redirects /settings to /dashboard', () => {
     currentPath.value = '/settings';
     render(<Layout />);
-    expect(screen.getByTestId('page-settings')).toBeTruthy();
+    expect(screen.getByTestId('page-dashboard')).toBeTruthy();
   });
 
   it('PageRouter renders wallets for /wallets/abc', () => {
@@ -542,12 +536,12 @@ describe('Section 4: layout.tsx', () => {
     expect(screen.getByText('Wallet Detail')).toBeTruthy();
   });
 
-  it('getPageTitle: shows "Settings" for settings path', () => {
-    currentPath.value = '/settings';
+  it('getPageTitle: shows "Security" for security path', () => {
+    currentPath.value = '/security';
     render(<Layout />);
     // Title in header
     const header = document.querySelector('.header-title');
-    expect(header?.textContent).toBe('Settings');
+    expect(header?.textContent).toBe('Security');
   });
 
   it('active link highlighting: wallets link active for /wallets/abc', () => {
@@ -636,12 +630,13 @@ describe('Section 5: walletconnect.tsx', () => {
   // real module. We'll skip the page-level integration and test the
   // component behavior via the mocked page (which confirms the import works).
 
-  it('WalletConnect page mock renders', async () => {
+  it('WalletConnect route redirects to wallets', async () => {
     const { currentPath } = await import('../components/layout');
     const { Layout } = await import('../components/layout');
     currentPath.value = '/walletconnect';
     render(<Layout />);
-    expect(screen.getByTestId('page-walletconnect')).toBeTruthy();
+    // /walletconnect now redirects to /wallets
+    expect(screen.getByTestId('page-wallets')).toBeTruthy();
     cleanup();
   });
 });

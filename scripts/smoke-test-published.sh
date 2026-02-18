@@ -105,7 +105,19 @@ verify_import "@waiaas/daemon" "import '@waiaas/daemon';" || true
 verify_import "@waiaas/adapter-solana" "import { SolanaAdapter } from '@waiaas/adapter-solana';"
 verify_import "@waiaas/adapter-evm" "import { EvmAdapter } from '@waiaas/adapter-evm';"
 
-# Step 5: Verify CLI binary
+# Step 5: Verify Admin UI in daemon package
+echo ""
+echo "--- Verifying Admin UI in daemon package ---"
+DAEMON_DIR=$(node -e "const p=require.resolve('@waiaas/daemon/package.json');console.log(require('path').dirname(p))")
+if [ -f "$DAEMON_DIR/public/admin/index.html" ]; then
+  echo "  ✓ Admin UI (public/admin/index.html)"
+  PASSED=$((PASSED + 1))
+else
+  echo "  ✗ Admin UI MISSING from @waiaas/daemon package"
+  FAILED=$((FAILED + 1))
+fi
+
+# Step 6: Verify CLI binary
 echo ""
 echo "--- Verifying CLI binary ---"
 if npx waiaas --version 2>/dev/null; then
@@ -116,7 +128,7 @@ else
   FAILED=$((FAILED + 1))
 fi
 
-# Step 6: Verify skills CLI
+# Step 7: Verify skills CLI
 echo ""
 echo "--- Verifying skills CLI ---"
 if npx @waiaas/skills list 2>/dev/null; then

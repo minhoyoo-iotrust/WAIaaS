@@ -1063,3 +1063,28 @@
 
 ---
 
+
+## v2.3 Admin UI 기능별 메뉴 재구성 (Shipped: 2026-02-18)
+
+**Delivered:** 모놀리식 Settings 페이지를 해체하여 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 재배치하고, Ctrl+K 설정 검색 + 미저장 경고 다이얼로그 + 전 필드 description help text로 Admin UI DX를 개선한 상태 달성.
+
+**Phases completed:** 182-187 (6 phases, 11 plans, 39 requirements)
+
+**Key accomplishments:**
+
+- TabNav/FieldGroup/Breadcrumb/FormField description 공용 UI 컴포넌트 구축 (5개 페이지에서 재사용)
+- 사이드바 7-메뉴 재구성 — Settings/WalletConnect 제거, Security(3탭)/System 신규 페이지 생성, 기존 4개 페이지 탭 구조 적용
+- 기존 Settings 항목을 Wallets(3탭)/Sessions(1탭)/Policies(1탭)/Notifications(1탭) Settings 탭으로 분산 배치 + 독립적 dirty/save 상태
+- Ctrl+K 설정 검색 — 54개 필드 정적 인덱스, 클릭 시 페이지+탭 네비게이션 + 2s 필드 하이라이트 애니메이션
+- 미저장 경고 다이얼로그 — 글로벌 dirty guard 레지스트리, 3버튼(저장 후 이동/저장 없이 이동/취소) 탭+사이드바 인터셉트
+- 전 필드 description help text 47개 + README 7-메뉴 구조 갱신
+
+**Stats:**
+
+- 6 phases, 11 plans, 39 requirements, 64 files changed, +9,339 LOC (net)
+- ~145,784 LOC TypeScript (Admin UI: 19,152 LOC)
+- 50 commits, 1 day (2026-02-18)
+- Git range: feat(182-01) → docs(187-01)
+
+---
+
