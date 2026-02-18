@@ -360,7 +360,21 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 
 ### 활성
 
-(없음 — 다음 마일스톤 계획 필요)
+## Current Milestone: v2.3 Admin UI 기능별 메뉴 재구성
+
+**Goal:** Admin UI의 메뉴 구조를 기능별로 재구성하고, Settings 페이지를 해체하여 각 기능 페이지에 탭으로 분산하며, 설정 검색/breadcrumb/필드 그룹화/미저장 경고를 추가하여 탐색성·사용성을 개선한다.
+
+**Target features:**
+- 메뉴 구조 변경 (7 메뉴: Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)
+- Settings 13개 항목을 5개 페이지로 기능별 분산 (TabNav 컴포넌트)
+- Security 신규 페이지 (Kill Switch + AutoStop Rules + JWT Rotation)
+- System 신규 페이지 (API Keys + Oracle + Display + IP Rate Limit + Daemon + Danger Zone)
+- 설정 검색 (Ctrl+K 글로벌 검색, fuzzy match, 해당 탭 이동 + 필드 하이라이트)
+- Breadcrumb 네비게이션 (페이지명 > 탭명)
+- FormField 그룹화 (FieldGroup fieldset+legend 래퍼)
+- 탭 전환 미저장 경고 (dirty signal + 3버튼 다이얼로그)
+- 페이지/항목 설명 텍스트 (subtitle + FormField description prop)
+- README Admin UI 섹션 업데이트
 
 ### 범위 외
 
