@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.1-rc.1...v2.1.2-rc.1) (2026-02-18)
+
+
+### Bug Fixes
+
+* remove duplicate path prefix in smoke test pnpm pack output ([#077](https://github.com/minhoyoo-iotrust/WAIaaS/issues/077)) ([d400ed0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d400ed06e36bd1721763ab72f563a462c3b76eaa))
+
 ## [2.1.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.1.0-rc.1...v2.1.1-rc.1) (2026-02-18)
 
 
