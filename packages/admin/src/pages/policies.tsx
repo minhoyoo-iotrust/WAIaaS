@@ -6,7 +6,6 @@ import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
-import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { PolicyFormRouter } from '../components/policy-forms';

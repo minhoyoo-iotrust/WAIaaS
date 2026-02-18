@@ -16,6 +16,7 @@ import {
   getEffectiveValue,
   getEffectiveBoolValue,
 } from '../utils/settings-helpers';
+import { FieldGroup } from '../components/field-group';
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -242,15 +243,6 @@ function AutoStopTab() {
     dirty.value = {};
   };
 
-  const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
-    { key: 'enabled', type: 'checkbox' },
-    { key: 'consecutive_failures_threshold', type: 'number', min: 1, max: 100 },
-    { key: 'unusual_activity_threshold', type: 'number', min: 5, max: 1000 },
-    { key: 'unusual_activity_window_sec', type: 'number', min: 60, max: 86400 },
-    { key: 'idle_timeout_sec', type: 'number', min: 60, max: 604800 },
-    { key: 'idle_check_interval_sec', type: 'number', min: 10, max: 3600 },
-  ];
-
   const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('autostop.')).length;
 
   if (loading.value) {
@@ -287,32 +279,72 @@ function AutoStopTab() {
           </p>
         </div>
         <div class="settings-category-body">
-          <div class="settings-fields-grid">
-            {fields.map((f) =>
-              f.type === 'checkbox' ? (
-                <div class="settings-field-full" key={f.key}>
-                  <FormField
-                    label={keyToLabel(f.key)}
-                    name={`autostop.${f.key}`}
-                    type="checkbox"
-                    value={getEffectiveBoolValue(settings.value, dirty.value, 'autostop', f.key)}
-                    onChange={(v) => handleFieldChange(`autostop.${f.key}`, v)}
-                  />
-                </div>
-              ) : (
-                <FormField
-                  key={f.key}
-                  label={keyToLabel(f.key)}
-                  name={`autostop.${f.key}`}
-                  type="number"
-                  value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', f.key)) || 0}
-                  onChange={(v) => handleFieldChange(`autostop.${f.key}`, v)}
-                  min={f.min}
-                  max={f.max}
-                />
-              ),
-            )}
+          {/* Enabled toggle at top, outside FieldGroups */}
+          <div class="settings-field-full" style={{ marginBottom: 'var(--space-4)' }}>
+            <FormField
+              label={keyToLabel('enabled')}
+              name="autostop.enabled"
+              type="checkbox"
+              value={getEffectiveBoolValue(settings.value, dirty.value, 'autostop', 'enabled')}
+              onChange={(v) => handleFieldChange('autostop.enabled', v)}
+            />
           </div>
+
+          <FieldGroup legend="Activity Detection" description="Detects failures and unusual transaction patterns">
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('consecutive_failures_threshold')}
+                name="autostop.consecutive_failures_threshold"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', 'consecutive_failures_threshold')) || 0}
+                onChange={(v) => handleFieldChange('autostop.consecutive_failures_threshold', v)}
+                min={1}
+                max={100}
+              />
+              <FormField
+                label={keyToLabel('unusual_activity_threshold')}
+                name="autostop.unusual_activity_threshold"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', 'unusual_activity_threshold')) || 0}
+                onChange={(v) => handleFieldChange('autostop.unusual_activity_threshold', v)}
+                min={5}
+                max={1000}
+              />
+              <FormField
+                label={keyToLabel('unusual_activity_window_sec')}
+                name="autostop.unusual_activity_window_sec"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', 'unusual_activity_window_sec')) || 0}
+                onChange={(v) => handleFieldChange('autostop.unusual_activity_window_sec', v)}
+                min={60}
+                max={86400}
+              />
+            </div>
+          </FieldGroup>
+
+          <FieldGroup legend="Idle Detection" description="Monitors inactivity and revokes idle sessions">
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('idle_timeout_sec')}
+                name="autostop.idle_timeout_sec"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', 'idle_timeout_sec')) || 0}
+                onChange={(v) => handleFieldChange('autostop.idle_timeout_sec', v)}
+                min={60}
+                max={604800}
+              />
+              <FormField
+                label={keyToLabel('idle_check_interval_sec')}
+                name="autostop.idle_check_interval_sec"
+                type="number"
+                value={Number(getEffectiveValue(settings.value, dirty.value, 'autostop', 'idle_check_interval_sec')) || 0}
+                onChange={(v) => handleFieldChange('autostop.idle_check_interval_sec', v)}
+                min={10}
+                max={3600}
+              />
+            </div>
+          </FieldGroup>
+
           <div class="settings-info-box">
             <strong>Consecutive Failures:</strong> Suspends wallet after N consecutive failed transactions.<br />
             <strong>Unusual Activity:</strong> Suspends wallet if transaction count exceeds threshold within the time window.<br />

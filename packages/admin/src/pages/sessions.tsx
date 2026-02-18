@@ -12,7 +12,7 @@ import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
-import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue } from '../utils/settings-helpers';
+import { type SettingsData, keyToLabel, getEffectiveValue } from '../utils/settings-helpers';
 import { FieldGroup } from '../components/field-group';
 
 interface Wallet {
