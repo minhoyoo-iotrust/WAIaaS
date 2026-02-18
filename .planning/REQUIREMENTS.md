@@ -80,7 +80,7 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### 문서
 
-- [ ] **DOC-01**: README.md Admin UI 섹션이 새 7-메뉴 구조로 갱신된다
+- [x] **DOC-01**: README.md Admin UI 섹션이 새 7-메뉴 구조로 갱신된다
 
 ## Future Requirements
 
@@ -139,7 +139,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DESC-02 | Phase 182 | Complete |
 | DIRTY-01 | Phase 185 | Complete |
 | DIRTY-02 | Phase 185 | Complete |
-| DOC-01 | Phase 186 | Pending |
+| DOC-01 | Phase 186 | Complete |
 
 **Coverage:**
 - v2.3 requirements: 39 total

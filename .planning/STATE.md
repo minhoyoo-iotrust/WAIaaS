@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 186 마무리
+**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 186 완료
 
 ## Current Position
 
 Phase: 186 of 186 (마무리)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — Phase 185 complete (2 plans, 5 reqs, search + dirty guard)
+Plan: 1 of 1 in current phase
+Status: Phase 186 complete
+Last activity: 2026-02-18 — Phase 186 complete (1 plan, 1 req, descriptions + README)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Full log in PROJECT.md and milestones/.
 - 185-02: Module-level signal registry for dirty state -- avoids prop drilling
 - 185-02: Each tab registers isDirty/save/discard closures reading signal values at call time
 - 185-02: 3-button dialog reuses existing modal CSS classes with minimal CSS addition
+- 186-01: Use Record<string, string> maps for dynamically-rendered field descriptions
+- 186-01: Description text matches settings-search-index.ts entries exactly for consistency
 
 ### Blockers/Concerns
 
@@ -63,5 +65,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 185-02-PLAN.md (Unsaved changes guard with 3-button dialog)
+Stopped at: Completed 186-01-PLAN.md (Description help text + README update)
 Resume file: None

@@ -35,7 +35,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 - [x] **Phase 183: 메뉴 재구성 + 신규 페이지** - 7-메뉴 사이드바, 라우트 리다이렉트, Security/System 페이지 생성, 기존 페이지 탭 구조 적용 (completed 2026-02-18)
 - [x] **Phase 184: Settings 분산 배치** - 기존 Settings 항목을 Wallets/Sessions/Policies/Notifications 탭으로 이동 + FieldGroup 적용 + 신규 설정 노출 (completed 2026-02-18)
 - [x] **Phase 185: UX 강화** - 설정 검색(Ctrl+K), 미저장 경고 다이얼로그 (completed 2026-02-18)
-- [ ] **Phase 186: 마무리** - 페이지/필드 설명 텍스트 채우기, README 갱신
+- [x] **Phase 186: 마무리** - 페이지/필드 설명 텍스트 채우기, README 갱신 (completed 2026-02-18)
 
 ## Phase Details
 
@@ -110,7 +110,7 @@ Plans:
   1. 7개 페이지 모두에 PageHeader subtitle 설명 텍스트가 표시된다
   2. Settings 탭의 각 필드에 description help text가 채워져 있다
   3. README.md Admin UI 섹션이 새 7-메뉴 구조를 반영하여 갱신되어 있다
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 186-01-PLAN.md — Settings 필드 description 추가 + README Admin UI 섹션 7-메뉴 갱신
@@ -130,4 +130,4 @@ Phases execute in numeric order: 182 → 183 → 184 → 185 → 186
 | 183. 메뉴 재구성 + 신규 페이지 | v2.3 | 3/3 | Complete | 2026-02-18 |
 | 184. Settings 분산 배치 | 2/2 | Complete    | 2026-02-18 | - |
 | 185. UX 강화 | 2/2 | Complete    | 2026-02-18 | - |
-| 186. 마무리 | v2.3 | 0/1 | Not started | - |
+| 186. 마무리 | 1/1 | Complete   | 2026-02-18 | - |
