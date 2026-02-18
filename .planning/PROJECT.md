@@ -355,15 +355,16 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 
 ### 활성
 
-**Current Milestone: v2.0.1 오픈소스 기본 체계 + 내부 문서 정리**
+**Current Milestone: v2.2 테스트 커버리지 강화**
 
-**Goal:** 퍼블릭 리포 필수 거버넌스 파일을 갖추고, 내부 설계 문서를 공개 문서와 분리하여 리포지토리 구조를 정리하는 상태.
+**Goal:** v1.7에서 설정한 커버리지 임계값을 모든 패키지에서 실제로 달성하는 상태. 임시 하향한 임계값을 원래 수준으로 복원하고, 전체 패키지의 커버리지 품질을 균일하게 유지한다.
 
 **Target features:**
-- 오픈소스 필수 파일 (SECURITY.md, CODE_OF_CONDUCT.md, Issue/PR Templates)
-- 내부 문서 구조 정리 (설계 문서 통합 → internal/design/, objectives → internal/objectives/, 아카이브)
-- OPEN Issues 해소 (#070 tag-release.sh 제거, #071 npm pack 스모크 테스트, #072 CLAUDE.md 규칙)
-- v2.0 Known Gaps 수정 (INT-01/02 문서 불일치, FLOW-01/02 cosmetic)
+- adapter-solana 브랜치 커버리지 65% → 75% 복원 (이슈 #060)
+- admin functions 커버리지 55% → 70% 복원 (이슈 #061)
+- cli lines/statements 커버리지 65% → 70% 복원 (이슈 #062)
+- 전체 패키지 커버리지 임계값 검증 및 불일치 식별
+- 임시 하향 임계값 원래 수준으로 복원
 
 ### 범위 외
 
@@ -380,7 +381,7 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9-패키지 모노레포 
 
 ## 컨텍스트
 
-**누적:** 38 milestones (v0.1-v2.0), 173 phases, 373 plans, 1,026 requirements, 36 설계 문서(24-72), 8 objective 문서, ~124,830 LOC TS, ~3,599 테스트
+**누적:** 39 milestones (v0.1-v2.0.1), 177 phases, 381 plans, 1,044 requirements, 36 설계 문서(24-72), 8 objective 문서, ~124,830 LOC TS, ~3,599 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -662,4 +663,4 @@ v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 2
 | npm Classic Automation Token | Trusted Publishing은 v2.0.4에서 전환 | ✓ Good — v2.0 구현 |
 
 ---
-*최종 업데이트: 2026-02-18 after v2.0.1 milestone start — 오픈소스 기본 체계 + 내부 문서 정리*
+*최종 업데이트: 2026-02-18 after v2.2 milestone start — 테스트 커버리지 강화*
