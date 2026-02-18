@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 185 UX 강화
+**Current focus:** v2.3 Admin UI 기능별 메뉴 재구성 - Phase 185 완료, Phase 186 대기
 
 ## Current Position
 
 Phase: 185 of 186 (UX 강화)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-18 — Plan 185-01 complete (settings search with Ctrl+K)
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-18 — Plan 185-02 complete (unsaved changes guard)
 
-Progress: [#####░░░░░] 50%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -51,6 +51,9 @@ Full log in PROJECT.md and milestones/.
 - 185-01: Module-level signals (highlightField, pendingNavigation) for cross-component communication
 - 185-01: Static SearchIndexEntry array with keywords for fuzzy search
 - 185-01: 10 result limit in search popover for UX clarity
+- 185-02: Module-level signal registry for dirty state -- avoids prop drilling
+- 185-02: Each tab registers isDirty/save/discard closures reading signal values at call time
+- 185-02: 3-button dialog reuses existing modal CSS classes with minimal CSS addition
 
 ### Blockers/Concerns
 
@@ -60,5 +63,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 185-01-PLAN.md (Settings search with Ctrl+K popover)
+Stopped at: Completed 185-02-PLAN.md (Unsaved changes guard with 3-button dialog)
 Resume file: None

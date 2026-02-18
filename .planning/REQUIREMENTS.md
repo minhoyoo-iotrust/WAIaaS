@@ -75,8 +75,8 @@ Requirements for v2.3 Admin UI 기능별 메뉴 재구성. Each maps to roadmap 
 
 ### 미저장 경고
 
-- [ ] **DIRTY-01**: dirty 상태에서 탭 전환 시 3버튼 확인 다이얼로그(저장 후 이동/저장 없이 이동/취소)가 표시된다
-- [ ] **DIRTY-02**: dirty 상태에서 사이드바 메뉴 전환 시에도 동일한 경고 다이얼로그가 표시된다
+- [x] **DIRTY-01**: dirty 상태에서 탭 전환 시 3버튼 확인 다이얼로그(저장 후 이동/저장 없이 이동/취소)가 표시된다
+- [x] **DIRTY-02**: dirty 상태에서 사이드바 메뉴 전환 시에도 동일한 경고 다이얼로그가 표시된다
 
 ### 문서
 
@@ -137,8 +137,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FGRP-04 | Phase 184 | Complete |
 | DESC-01 | Phase 182 | Complete |
 | DESC-02 | Phase 182 | Complete |
-| DIRTY-01 | Phase 185 | Pending |
-| DIRTY-02 | Phase 185 | Pending |
+| DIRTY-01 | Phase 185 | Complete |
+| DIRTY-02 | Phase 185 | Complete |
 | DOC-01 | Phase 186 | Pending |
 
 **Coverage:**
