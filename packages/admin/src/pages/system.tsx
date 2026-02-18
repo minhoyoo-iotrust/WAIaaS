@@ -322,6 +322,21 @@ export default function SystemPage() {
   // ---------------------------------------------------------------------------
 
   function DisplaySettings() {
+    const isCurrencyHighlighted = highlightField.value === 'display.currency';
+
+    useEffect(() => {
+      if (isCurrencyHighlighted) {
+        const el = document.querySelector('[name="display.currency"]');
+        if (el) {
+          el.closest('.form-field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        const timer = setTimeout(() => {
+          highlightField.value = '';
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    }, [isCurrencyHighlighted]);
+
     return (
       <div class="settings-category">
         <div class="settings-category-header">
@@ -330,9 +345,10 @@ export default function SystemPage() {
         </div>
         <div class="settings-category-body">
           <div class="settings-fields-grid">
-            <div class="settings-field-full">
+            <div class={`form-field${isCurrencyHighlighted ? ' form-field--highlight' : ''}`}>
               <label>{keyToLabel('currency')}</label>
               <CurrencySelect
+                name="display.currency"
                 value={ev('display', 'currency') || 'USD'}
                 onChange={(code) => handleFieldChange('display.currency', code)}
               />
