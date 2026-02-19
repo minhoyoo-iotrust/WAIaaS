@@ -266,6 +266,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         renewalCount: sessions.renewalCount,
         maxRenewals: sessions.maxRenewals,
         lastRenewedAt: sessions.lastRenewedAt,
+        source: sessions.source,
         walletName: wallets.name,
       })
       .from(sessions)
@@ -293,6 +294,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         lastRenewedAt: row.lastRenewedAt
           ? Math.floor(row.lastRenewedAt.getTime() / 1000)
           : null,
+        source: (row.source ?? 'api') as 'api' | 'mcp',
       };
     });
 

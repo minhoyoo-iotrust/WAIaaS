@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 16;
+export const LATEST_SCHEMA_VERSION = 17;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -1264,6 +1264,17 @@ MIGRATIONS.push({
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 )`);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v17: Add source column to sessions table
+// ---------------------------------------------------------------------------
+MIGRATIONS.push({
+  version: 17,
+  description: 'Add source column to sessions table (api/mcp)',
+  up: (sqlite) => {
+    sqlite.exec("ALTER TABLE sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'api'");
   },
 });
 

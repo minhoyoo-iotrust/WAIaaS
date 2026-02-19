@@ -38,6 +38,7 @@ interface Session {
   absoluteExpiresAt: number;
   createdAt: number;
   lastRenewedAt: number | null;
+  source: 'api' | 'mcp';
 }
 
 interface CreatedSession {
@@ -266,6 +267,7 @@ export default function SessionsPage() {
 
   const wallets = useSignal<Wallet[]>([]);
   const selectedWalletId = useSignal('');
+  const sourceFilter = useSignal<'' | 'api' | 'mcp'>('');
   const sessions = useSignal<Session[]>([]);
   const loading = useSignal(false);
   const walletsLoading = useSignal(true);
@@ -353,6 +355,15 @@ export default function SessionsPage() {
       render: (s) => s.walletName ?? s.walletId.slice(0, 8) + '...',
     },
     {
+      key: 'source',
+      header: 'Source',
+      render: (s) => (
+        <Badge variant={s.source === 'mcp' ? 'info' : 'default'}>
+          {s.source === 'mcp' ? 'MCP' : 'API'}
+        </Badge>
+      ),
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (s) => (
@@ -418,6 +429,20 @@ export default function SessionsPage() {
                 ))}
               </select>
             </div>
+            <div class="session-wallet-select">
+              <label for="source-select">Source</label>
+              <select
+                id="source-select"
+                value={sourceFilter.value}
+                onChange={(e) => {
+                  sourceFilter.value = (e.target as HTMLSelectElement).value as '' | 'api' | 'mcp';
+                }}
+              >
+                <option value="">All</option>
+                <option value="api">API</option>
+                <option value="mcp">MCP</option>
+              </select>
+            </div>
             <Button
               onClick={handleCreate}
               disabled={!selectedWalletId.value}
@@ -429,7 +454,9 @@ export default function SessionsPage() {
 
           <Table<Session>
             columns={sessionColumns}
-            data={sessions.value}
+            data={sourceFilter.value
+              ? sessions.value.filter((s) => s.source === sourceFilter.value)
+              : sessions.value}
             loading={loading.value}
             emptyMessage="No sessions"
           />

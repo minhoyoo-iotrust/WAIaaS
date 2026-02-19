@@ -107,6 +107,7 @@ export const sessions = sqliteTable(
     lastRenewedAt: integer('last_renewed_at', { mode: 'timestamp' }),
     absoluteExpiresAt: integer('absolute_expires_at', { mode: 'timestamp' }).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    source: text('source').notNull().default('api'),
   },
   (table) => [
     index('idx_sessions_wallet_id').on(table.walletId),
