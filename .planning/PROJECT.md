@@ -704,5 +704,15 @@ v2.4 npm Trusted Publishing 전환 shipped (2026-02-19). 3 페이즈, 4 플랜, 
 | homepage 필드는 provenance 범위 밖 유지 | repository.url만 Sigstore에 사용 | ✓ Good — v2.4 구현 |
 | NotificationService always-init (0 channels) | Admin UI hot-reload 런타임 활성화 지원 | ✓ Good — v2.4 quick-4 |
 
+## Current Milestone: v2.4.1 Admin UI 테스트 커버리지 복원
+
+**Goal:** v2.3 Admin UI 메뉴 재구성으로 하락한 커버리지 임계값을 70%로 복원하여 CI 품질 기준을 일관되게 유지
+
+**Target features:**
+- 신규 3개 페이지 테스트 (security.tsx, system.tsx, walletconnect.tsx)
+- 공용 컴포넌트 + 유틸리티 테스트 보강 (empty-state, unsaved-dialog, settings-search, policy-rules-summary, dirty-guard)
+- 기존 페이지 테스트 개선 (notifications, sessions, wallets)
+- vitest.config.ts 임계값 복원 (lines/statements/functions 70%)
+
 ---
-*최종 업데이트: 2026-02-19 after v2.4 milestone complete — npm Trusted Publishing 전환*
+*최종 업데이트: 2026-02-19 after v2.4.1 milestone start — Admin UI 테스트 커버리지 복원*
