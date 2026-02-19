@@ -147,7 +147,7 @@ Phases 194-195 are sequential (CLI/daemon before quickstart). Phases 196-197 are
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
 | 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
 | 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
-| 194. CLI + 데몬 시작 DX | v2.5 | 0/2 | Not started | - |
+| 194. CLI + 데몬 시작 DX | 1/2 | In Progress|  | - |
 | 195. Quickstart + MCP DX | v2.5 | 0/2 | Not started | - |
 | 196. README + SDK 문서 정합성 | v2.5 | 0/2 | Not started | - |
 | 197. Docker + Python SDK DX | v2.5 | 0/2 | Not started | - |

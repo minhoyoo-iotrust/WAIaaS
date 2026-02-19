@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 194 (1 of 4 in v2.5) — CLI + 데몬 시작 DX
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-19 — Roadmap created for v2.5
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-19 — Completed 194-01 (CLI first run DX)
 
-Progress: [░░░░░░░░░░] 0% (0/8 plans)
+Progress: [█░░░░░░░░░] 12% (1/8 plans)
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [░░░░░░░░░░] 0% (0/8 plans)
 ### Decisions
 
 Full log in PROJECT.md and milestones/.
-Recent: DAEMON-04 grouped with MCP phase (both touch mcp-setup.ts).
+Recent: Used createRequire for ESM package.json version reading (avoids dist/ copy issue).
 
 ### Blockers/Concerns
 
@@ -34,5 +34,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Roadmap v2.5 created (4 phases, 8 plans, 23 requirements)
+Stopped at: Completed 194-01-PLAN.md
 Resume file: None

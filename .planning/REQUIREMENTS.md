@@ -14,11 +14,11 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### CLI 첫 실행
 
-- [ ] **CLI-01**: `waiaas --version`이 package.json의 실제 버전을 표시한다 (0.0.0 아님)
-- [ ] **CLI-02**: CLI package.json에 `engines.node >= 22.0.0` 필드가 존재한다
-- [ ] **CLI-03**: `waiaas init` 완료 메시지에 마스터 패스워드 설정 방법이 안내된다
-- [ ] **CLI-04**: init 생성 config.toml에 주석 처리된 섹션 예시(`[security]`, `[rpc]`, `[notifications]`)가 포함된다
-- [ ] **CLI-05**: init 시 권한 오류가 발생하면 친절한 에러 메시지가 출력된다
+- [x] **CLI-01**: `waiaas --version`이 package.json의 실제 버전을 표시한다 (0.0.0 아님)
+- [x] **CLI-02**: CLI package.json에 `engines.node >= 22.0.0` 필드가 존재한다
+- [x] **CLI-03**: `waiaas init` 완료 메시지에 마스터 패스워드 설정 방법이 안내된다
+- [x] **CLI-04**: init 생성 config.toml에 주석 처리된 섹션 예시(`[security]`, `[rpc]`, `[notifications]`)가 포함된다
+- [x] **CLI-05**: init 시 권한 오류가 발생하면 친절한 에러 메시지가 출력된다
 
 ### 데몬 시작
 
@@ -74,11 +74,11 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 |-------------|-------|--------|
 | README-01 | 196 | Pending |
 | README-02 | 196 | Pending |
-| CLI-01 | 194 | Pending |
-| CLI-02 | 194 | Pending |
-| CLI-03 | 194 | Pending |
-| CLI-04 | 194 | Pending |
-| CLI-05 | 194 | Pending |
+| CLI-01 | 194 | Complete |
+| CLI-02 | 194 | Complete |
+| CLI-03 | 194 | Complete |
+| CLI-04 | 194 | Complete |
+| CLI-05 | 194 | Complete |
 | DAEMON-01 | 194 | Pending |
 | DAEMON-02 | 194 | Pending |
 | DAEMON-03 | 194 | Pending |
