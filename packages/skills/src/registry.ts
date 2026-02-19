@@ -11,7 +11,7 @@ export const SKILL_REGISTRY: readonly SkillEntry[] = [
     name: "quickstart",
     filename: "quickstart.skill.md",
     description:
-      "End-to-end quickstart: create wallet, session, check balance, send first transfer",
+      "End-to-end quickset: create wallet, session, check balance, send first transfer",
   },
   {
     name: "wallet",

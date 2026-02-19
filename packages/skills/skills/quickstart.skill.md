@@ -1,15 +1,15 @@
 ---
-name: "WAIaaS Quickstart"
-description: "End-to-end quickstart: create wallet, session, check balance, send first transfer"
+name: "WAIaaS Quickset"
+description: "End-to-end quickset: create wallet, session, check balance, send first transfer"
 category: "api"
-tags: [wallet, blockchain, solana, ethereum, quickstart, waiass]
+tags: [wallet, blockchain, solana, ethereum, quickset, quickstart, waiass]
 version: "2.3.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
 ---
 
-# WAIaaS Quickstart
+# WAIaaS Quickset
 
 WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana and Ethereum with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
 
@@ -43,7 +43,7 @@ On `401 Unauthorized` response:
 ### No Connection Info?
 
 Ask the user:
-"WAIaaS connection info is needed. Copy the agent prompt from the Admin UI dashboard or from the `waiaas quickstart` completion screen using 'Copy Agent Prompt' and paste it here."
+"WAIaaS connection info is needed. Copy the agent prompt from the Admin UI dashboard or from the `waiaas quickset` completion screen using 'Copy Agent Prompt' and paste it here."
 
 ### Manual Discovery
 
@@ -318,12 +318,12 @@ Transaction status values:
 - `FAILED` -- execution or confirmation failed
 - `CANCELLED` -- cancelled by wallet or owner
 
-## CLI Quickstart (Alternative)
+## CLI Quickset (Alternative)
 
 If you have the CLI installed, create wallets in one step:
 
 ```bash
-waiaas quickstart --mode testnet
+waiaas quickset --mode testnet
 ```
 
 This creates Solana + EVM wallets and prints MCP configuration.
