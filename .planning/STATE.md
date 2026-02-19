@@ -14,7 +14,7 @@ Plan: 2 of 2 in current phase (COMPLETE)
 Status: Phase Complete
 Last activity: 2026-02-19 — Completed 197-01 (Docker compose GHCR image + .env.example)
 
-Progress: [███████░░░] 70% (7/10 plans)
+Progress: [████████░░] 80% (8/10 plans)
 
 ## Performance Metrics
 
@@ -30,6 +30,8 @@ Recent: Step logs downgraded to console.debug; EADDRINUSE detected via server er
 - [Phase 197]: Version synced to pyproject.toml 1.7.0 as single source of truth
 - [Phase 196]: README content kept minimal for npm pages -- install + quickstart + key commands/methods only
 - [Phase 196-01]: Root skills/ path resolved via relative navigation from packages/skills/; sync-version.mjs refactored to shared function
+- [Phase 197-01]: GHCR image as docker-compose default (lowercase per GHCR policy); build override in separate file
+- [Phase 197]: GHCR image as docker-compose default; build override in separate file; .env.example excludes docker-hardcoded vars
 
 ### Blockers/Concerns
 
@@ -38,5 +40,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Re-executed 196-01-PLAN.md (README SDK code fix + skill version sync)
+Stopped at: Completed 196-02-PLAN.md (CLI/SDK npm README)
 Resume file: None

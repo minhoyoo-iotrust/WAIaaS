@@ -36,8 +36,8 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### Docker DX
 
-- [ ] **DOCK-01**: docker-compose.yml이 `build:` 대신 `image: ghcr.io/...` 기본값을 사용한다
-- [ ] **DOCK-02**: `.env.example` 파일이 존재하며 필수 환경변수(MASTER_PASSWORD, RPC URLs 등)를 포함한다
+- [x] **DOCK-01**: docker-compose.yml이 `build:` 대신 `image: ghcr.io/...` 기본값을 사용한다
+- [x] **DOCK-02**: `.env.example` 파일이 존재하며 필수 환경변수(MASTER_PASSWORD, RPC URLs 등)를 포함한다
 
 ### Python SDK
 
@@ -87,8 +87,8 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 | QS-02 | 195 | Complete |
 | QS-03 | 195 | Complete |
 | QS-04 | 195 | Complete |
-| DOCK-01 | 197 | Pending |
-| DOCK-02 | 197 | Pending |
+| DOCK-01 | 197 | Complete |
+| DOCK-02 | 197 | Complete |
 | PY-01 | 197 | Complete |
 | PY-02 | 197 | Complete |
 | PY-03 | 197 | Complete |
