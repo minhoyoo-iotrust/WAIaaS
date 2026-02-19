@@ -30,11 +30,15 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
+import { createHash } from 'node:crypto';
+import { writeFile, rename, mkdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
-import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
+import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
+import { generateId } from '../../infrastructure/database/id.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -100,6 +104,7 @@ export interface AdminRouteDeps {
   actionProviderRegistry?: ActionProviderRegistry;
   forexRateService?: IForexRateService;
   sqlite?: SQLiteDatabase;
+  dataDir?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -535,6 +540,86 @@ const adminWalletBalanceRoute = createRoute({
       },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Bulk session/MCP token route definitions
+// ---------------------------------------------------------------------------
+
+const BulkResultItemSchema = z.object({
+  walletId: z.string().uuid(),
+  walletName: z.string().nullable(),
+  sessionId: z.string().uuid().optional(),
+  token: z.string().optional(),
+  tokenPath: z.string().optional(),
+  error: z.string().optional(),
+});
+
+const adminBulkSessionsRoute = createRoute({
+  method: 'post',
+  path: '/admin/sessions/bulk',
+  tags: ['Admin'],
+  summary: 'Create sessions for multiple wallets at once',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            walletIds: z.array(z.string().uuid()).min(1).max(50),
+            ttl: z.number().int().min(300).optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Bulk session creation results',
+      content: {
+        'application/json': {
+          schema: z.object({
+            results: z.array(BulkResultItemSchema),
+            created: z.number().int(),
+            failed: z.number().int(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+const adminBulkMcpTokensRoute = createRoute({
+  method: 'post',
+  path: '/admin/mcp/tokens/bulk',
+  tags: ['Admin'],
+  summary: 'Create MCP tokens for multiple wallets at once',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            walletIds: z.array(z.string().uuid()).min(1).max(50),
+            ttl: z.number().int().min(300).optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Bulk MCP token creation results',
+      content: {
+        'application/json': {
+          schema: z.object({
+            results: z.array(BulkResultItemSchema),
+            created: z.number().int(),
+            failed: z.number().int(),
+            claudeDesktopConfig: z.record(z.unknown()),
+          }),
+        },
+      },
+    },
   },
 });
 
@@ -1652,6 +1737,131 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     return c.json({ success: true }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/sessions/bulk — Bulk create sessions
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminBulkSessionsRoute, async (c) => {
+    if (!deps.jwtSecretManager || !deps.daemonConfig) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', { message: 'JWT signing not available' });
+    }
+    const { walletIds, ttl: reqTtl } = c.req.valid('json');
+    const config = deps.daemonConfig;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ttl = reqTtl ?? config.security.session_ttl;
+    const expiresAt = nowSec + ttl;
+    const absoluteExpiresAt = nowSec + config.security.session_absolute_lifetime;
+
+    const results: Array<{ walletId: string; walletName: string | null; sessionId?: string; token?: string; error?: string }> = [];
+
+    for (const walletId of walletIds) {
+      try {
+        const wallet = deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+        if (!wallet) { results.push({ walletId, walletName: null, error: 'Wallet not found' }); continue; }
+        if (wallet.status === 'TERMINATED') { results.push({ walletId, walletName: wallet.name, error: 'Wallet terminated' }); continue; }
+
+        const sessionId = generateId();
+        const jwtPayload: JwtPayload = { sub: sessionId, wlt: walletId, iat: nowSec, exp: expiresAt };
+        const token = await deps.jwtSecretManager.signToken(jwtPayload);
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+
+        deps.db.insert(sessions).values({
+          id: sessionId, walletId, tokenHash,
+          expiresAt: new Date(expiresAt * 1000),
+          absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+          createdAt: new Date(nowSec * 1000),
+          renewalCount: 0, maxRenewals: config.security.session_max_renewals,
+          constraints: null, source: 'api',
+        }).run();
+
+        void deps.notificationService?.notify('SESSION_CREATED', walletId, { sessionId });
+        results.push({ walletId, walletName: wallet.name, sessionId, token });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push({ walletId, walletName: null, error: msg });
+      }
+    }
+
+    const created = results.filter((r) => !r.error).length;
+    return c.json({ results, created, failed: results.length - created }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/mcp/tokens/bulk — Bulk create MCP tokens
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminBulkMcpTokensRoute, async (c) => {
+    if (!deps.jwtSecretManager || !deps.daemonConfig || !deps.dataDir) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', { message: 'JWT signing not available' });
+    }
+    const { walletIds, ttl: reqTtl } = c.req.valid('json');
+    const config = deps.daemonConfig;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ttl = reqTtl ?? config.security.session_ttl;
+    const expiresAt = nowSec + ttl;
+    const absoluteExpiresAt = nowSec + config.security.session_absolute_lifetime;
+    const baseUrl = `http://127.0.0.1:${config.daemon.port}`;
+
+    const results: Array<{ walletId: string; walletName: string | null; sessionId?: string; tokenPath?: string; error?: string }> = [];
+    const claudeDesktopConfig: Record<string, unknown> = {};
+
+    const toSlug = (name: string): string => {
+      const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '');
+      return slug || 'wallet';
+    };
+
+    for (const walletId of walletIds) {
+      try {
+        const wallet = deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+        if (!wallet) { results.push({ walletId, walletName: null, error: 'Wallet not found' }); continue; }
+        if (wallet.status === 'TERMINATED') { results.push({ walletId, walletName: wallet.name, error: 'Wallet terminated' }); continue; }
+
+        const sessionId = generateId();
+        const jwtPayload: JwtPayload = { sub: sessionId, wlt: walletId, iat: nowSec, exp: expiresAt };
+        const token = await deps.jwtSecretManager.signToken(jwtPayload);
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+
+        deps.db.insert(sessions).values({
+          id: sessionId, walletId, tokenHash,
+          expiresAt: new Date(expiresAt * 1000),
+          absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+          createdAt: new Date(nowSec * 1000),
+          renewalCount: 0, maxRenewals: config.security.session_max_renewals,
+          constraints: null, source: 'mcp',
+        }).run();
+
+        // Write token file
+        const tokenPath = join(deps.dataDir, 'mcp-tokens', walletId);
+        const tmpPath = `${tokenPath}.tmp`;
+        await mkdir(dirname(tokenPath), { recursive: true });
+        await writeFile(tmpPath, token, 'utf-8');
+        await rename(tmpPath, tokenPath);
+
+        // Claude Desktop config snippet
+        const slug = toSlug(wallet.name);
+        claudeDesktopConfig[`waiaas-${slug}`] = {
+          command: 'npx',
+          args: ['@waiaas/mcp'],
+          env: {
+            WAIAAS_DATA_DIR: deps.dataDir,
+            WAIAAS_BASE_URL: baseUrl,
+            WAIAAS_WALLET_ID: walletId,
+            WAIAAS_WALLET_NAME: wallet.name,
+          },
+        };
+
+        void deps.notificationService?.notify('SESSION_CREATED', walletId, { sessionId });
+        results.push({ walletId, walletName: wallet.name, sessionId, tokenPath });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push({ walletId, walletName: null, error: msg });
+      }
+    }
+
+    const created = results.filter((r) => !r.error).length;
+    return c.json({ results, created, failed: results.length - created, claudeDesktopConfig }, 200);
   });
 
   return router;

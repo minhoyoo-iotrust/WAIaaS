@@ -278,6 +278,15 @@ export default function SessionsPage() {
   const revokeSessionId = useSignal('');
   const revokeLoading = useSignal(false);
 
+  // Bulk creation state
+  const bulkModal = useSignal(false);
+  const bulkType = useSignal<'api' | 'mcp'>('api');
+  const bulkSelectedIds = useSignal<Set<string>>(new Set());
+  const bulkLoading = useSignal(false);
+  const bulkResultModal = useSignal(false);
+  const bulkResults = useSignal<Array<{ walletId: string; walletName: string | null; sessionId?: string; token?: string; tokenPath?: string; error?: string }>>([]);
+  const bulkClaudeConfig = useSignal<Record<string, unknown> | null>(null);
+
   const fetchWallets = async () => {
     try {
       const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
@@ -320,6 +329,54 @@ export default function SessionsPage() {
       showToast('error', getErrorMessage(e.code));
     } finally {
       createLoading.value = false;
+    }
+  };
+
+  const toggleBulkSelect = (id: string) => {
+    const next = new Set(bulkSelectedIds.value);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    bulkSelectedIds.value = next;
+  };
+
+  const toggleBulkSelectAll = () => {
+    if (bulkSelectedIds.value.size === wallets.value.length) {
+      bulkSelectedIds.value = new Set();
+    } else {
+      bulkSelectedIds.value = new Set(wallets.value.map((w) => w.id));
+    }
+  };
+
+  const handleBulkCreate = async () => {
+    if (bulkSelectedIds.value.size === 0) return;
+    bulkLoading.value = true;
+    try {
+      const walletIds = Array.from(bulkSelectedIds.value);
+      if (bulkType.value === 'mcp') {
+        const result = await apiPost<{
+          results: typeof bulkResults.value;
+          created: number;
+          failed: number;
+          claudeDesktopConfig: Record<string, unknown>;
+        }>(API.ADMIN_BULK_MCP_TOKENS, { walletIds });
+        bulkResults.value = result.results;
+        bulkClaudeConfig.value = result.claudeDesktopConfig;
+      } else {
+        const result = await apiPost<{
+          results: typeof bulkResults.value;
+          created: number;
+          failed: number;
+        }>(API.ADMIN_BULK_SESSIONS, { walletIds });
+        bulkResults.value = result.results;
+        bulkClaudeConfig.value = null;
+      }
+      bulkModal.value = false;
+      bulkResultModal.value = true;
+      await fetchSessions();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      bulkLoading.value = false;
     }
   };
 
@@ -450,6 +507,17 @@ export default function SessionsPage() {
             >
               Create Session
             </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                bulkSelectedIds.value = new Set();
+                bulkType.value = 'api';
+                bulkModal.value = true;
+              }}
+              disabled={wallets.value.length === 0}
+            >
+              Bulk Create
+            </Button>
           </div>
 
           <Table<Session>
@@ -489,6 +557,87 @@ export default function SessionsPage() {
               Are you sure you want to revoke this session? The associated token will be immediately
               invalidated.
             </p>
+          </Modal>
+
+          {/* Bulk Create Modal — wallet selection */}
+          <Modal
+            open={bulkModal.value}
+            title="Bulk Create Sessions"
+            onCancel={() => { bulkModal.value = false; }}
+            onConfirm={handleBulkCreate}
+            confirmText={`Create ${bulkSelectedIds.value.size} ${bulkType.value === 'mcp' ? 'MCP Tokens' : 'Sessions'}`}
+            confirmDisabled={bulkSelectedIds.value.size === 0}
+            loading={bulkLoading.value}
+          >
+            <div style={{ marginBottom: 'var(--space-3)' }}>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 'var(--space-2)' }}>Type</label>
+              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+                <label style={{ cursor: 'pointer' }}>
+                  <input type="radio" name="bulkType" checked={bulkType.value === 'api'}
+                    onChange={() => { bulkType.value = 'api'; }} /> API Session
+                </label>
+                <label style={{ cursor: 'pointer' }}>
+                  <input type="radio" name="bulkType" checked={bulkType.value === 'mcp'}
+                    onChange={() => { bulkType.value = 'mcp'; }} /> MCP Token
+                </label>
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+                <label style={{ fontWeight: 600 }}>Select Wallets</label>
+                <button type="button" class="btn btn-sm" onClick={toggleBulkSelectAll}>
+                  {bulkSelectedIds.value.size === wallets.value.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+              <div style={{ maxHeight: '250px', overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2)' }}>
+                {wallets.value.map((w) => (
+                  <label key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-1) 0', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={bulkSelectedIds.value.has(w.id)}
+                      onChange={() => toggleBulkSelect(w.id)} />
+                    <span>{w.name}</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>({w.chain}/{w.network})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </Modal>
+
+          {/* Bulk Results Modal */}
+          <Modal
+            open={bulkResultModal.value}
+            title="Bulk Creation Results"
+            onCancel={() => { bulkResultModal.value = false; }}
+            cancelText="Close"
+          >
+            <div style={{ marginBottom: 'var(--space-3)' }}>
+              <p>
+                Created: <strong>{bulkResults.value.filter((r) => !r.error).length}</strong> /
+                Failed: <strong>{bulkResults.value.filter((r) => r.error).length}</strong>
+              </p>
+            </div>
+            <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2)' }}>
+              {bulkResults.value.map((r) => (
+                <div key={r.walletId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--space-1) 0', borderBottom: '1px solid var(--color-border)' }}>
+                  <span>{r.walletName ?? r.walletId.slice(0, 8)}</span>
+                  {r.error ? (
+                    <Badge variant="danger">{r.error}</Badge>
+                  ) : (
+                    <Badge variant="success">Created</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+            {bulkClaudeConfig.value && Object.keys(bulkClaudeConfig.value).length > 0 && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+                  <label style={{ fontWeight: 600 }}>Claude Desktop Config</label>
+                  <CopyButton value={JSON.stringify({ mcpServers: bulkClaudeConfig.value }, null, 2)} label="Copy Config" />
+                </div>
+                <pre style={{ fontSize: '0.75rem', maxHeight: '150px', overflow: 'auto', background: 'var(--color-bg-secondary)', padding: 'var(--space-2)', borderRadius: 'var(--radius-md)' }}>
+                  {JSON.stringify({ mcpServers: bulkClaudeConfig.value }, null, 2)}
+                </pre>
+              </div>
+            )}
           </Modal>
         </>
       )}
