@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.4.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.3.0...v2.4.0-rc) (2026-02-19)
+
+
+### Features
+
+* **191-02:** add walletconnect page tests ([e805787](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e805787378581032873bd8cbf34cae1355df2293))
+* **192-01:** add system page tests ([c169d86](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c169d86afbacdc442e6c91d54c4f72aa6ccac03d))
+* **193-02:** restore coverage thresholds to 70% ([bbd8c06](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bbd8c06f934384958470ef774ee2f8df3195235e))
+
+
+### Bug Fixes
+
+* **admin:** move global notification toggle outside Telegram FieldGroup ([#101](https://github.com/minhoyoo-iotrust/WAIaaS/issues/101)) ([10b7cd5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/10b7cd594a2387b80b1887e868b9d86046c98fb0))
+
 ## [2.3.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.3.0-rc.2...v2.3.0) (2026-02-19)
 
 
