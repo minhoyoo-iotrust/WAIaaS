@@ -176,6 +176,37 @@ jobs:
             cd "$GITHUB_WORKSPACE"
           done
 
+      - name: Verify no workspace:* in packed tarballs
+        run: |
+          PACKAGES=(
+            packages/core
+            packages/daemon
+            packages/cli
+            packages/sdk
+            packages/mcp
+            packages/skills
+            packages/adapters/solana
+            packages/adapters/evm
+          )
+          PACK_DIR=$(mktemp -d)
+          FAILED=0
+          for pkg_path in "${PACKAGES[@]}"; do
+            cd "$pkg_path"
+            TARBALL=$(pnpm pack --pack-destination "$PACK_DIR" 2>/dev/null | tail -1)
+            tar -xzf "$TARBALL" -C "$PACK_DIR"
+            if grep -q '"workspace:' "$PACK_DIR/package/package.json" 2>/dev/null; then
+              echo "ERROR: $pkg_path contains unresolved workspace:* in package.json"
+              grep '"workspace:' "$PACK_DIR/package/package.json"
+              FAILED=1
+            else
+              echo "OK: $pkg_path - no workspace:* found"
+            fi
+            rm -rf "$PACK_DIR/package"
+            cd "$GITHUB_WORKSPACE"
+          done
+          rm -rf "$PACK_DIR"
+          if [ "$FAILED" -eq 1 ]; then exit 1; fi
+
       - name: Smoke Test (npm pack + import verification)
         run: bash scripts/smoke-test-published.sh
 
@@ -295,17 +326,22 @@ jobs:
             packages/adapters/solana
             packages/adapters/evm
           )
+          PACK_DIR=$(mktemp -d)
           for pkg_path in "${PACKAGES[@]}"; do
             echo "--- Publishing $pkg_path ---"
             cd "$pkg_path"
             PKG_VERSION=$(node -p "require('./package.json').version")
+            # pnpm pack resolves workspace:* → actual versions in tarball
+            TARBALL=$(pnpm pack --pack-destination "$PACK_DIR" 2>/dev/null | tail -1)
+            echo "  Packed: $TARBALL"
             if [[ "$PKG_VERSION" == *-* ]]; then
-              npm publish --provenance --access public --tag rc 2>&1
+              npm publish "$TARBALL" --provenance --access public --tag rc 2>&1
             else
-              npm publish --provenance --access public 2>&1
+              npm publish "$TARBALL" --provenance --access public 2>&1
             fi
             cd "$GITHUB_WORKSPACE"
           done
+          rm -rf "$PACK_DIR"
 
       - name: Deploy summary
         run: |

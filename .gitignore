@@ -33,6 +33,7 @@ Thumbs.db
 
 # pnpm pack artifacts
 package/
+*.tgz
 
 # Admin UI build artifacts (copied by @waiaas/admin postbuild)
 packages/daemon/public/

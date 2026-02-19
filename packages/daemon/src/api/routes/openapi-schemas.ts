@@ -161,6 +161,7 @@ export const SessionListItemSchema = z
     absoluteExpiresAt: z.number().int(),
     createdAt: z.number().int(),
     lastRenewedAt: z.number().int().nullable(),
+    source: z.enum(['api', 'mcp']),
   })
   .openapi('SessionListItem');
 

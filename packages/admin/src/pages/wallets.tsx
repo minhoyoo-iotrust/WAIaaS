@@ -61,10 +61,16 @@ interface McpTokenResult {
   claudeDesktopConfig: Record<string, unknown>;
 }
 
-interface WalletBalance {
-  native: { balance: string; symbol: string; network: string } | null;
+interface NetworkBalance {
+  network: string;
+  isDefault: boolean;
+  native: { balance: string; symbol: string } | null;
   tokens: Array<{ symbol: string; balance: string; address: string }>;
   error?: string;
+}
+
+interface WalletBalance {
+  balances: NetworkBalance[];
 }
 
 interface WalletTransaction {
@@ -373,7 +379,13 @@ function WalletDetailView({ id }: { id: string }) {
       startPairingPoll();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
+      if (e.code === 'WC_NOT_CONFIGURED') {
+        showToast('error', 'WalletConnect is not configured. Redirecting to settings...');
+        pendingNavigation.value = { tab: 'walletconnect', fieldName: 'walletconnect.project_id' };
+        window.location.hash = '#/wallets';
+      } else {
+        showToast('error', getErrorMessage(e.code));
+      }
     } finally {
       wcPairingLoading.value = false;
     }
@@ -409,15 +421,15 @@ function WalletDetailView({ id }: { id: string }) {
     }
     ownerEditLoading.value = true;
     try {
-      const result = await apiPut<Partial<WalletDetail>>(API.WALLET_OWNER(id), {
+      await apiPut(API.WALLET_OWNER(id), {
         owner_address: editOwnerAddress.value.trim(),
       });
-      wallet.value = { ...wallet.value!, ...result };
+      await fetchWallet();
       ownerEditing.value = false;
       showToast('success', 'Owner address updated');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
+      showToast('error', getErrorMessage(e.code, e.serverMessage));
     } finally {
       ownerEditLoading.value = false;
     }
@@ -565,29 +577,46 @@ function WalletDetailView({ id }: { id: string }) {
           </div>
 
           <div class="balance-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>Balance</h3>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>Balances</h3>
             {balanceLoading.value ? (
               <div class="stat-skeleton" style={{ height: '60px' }} />
-            ) : balance.value?.native ? (
-              <div>
-                <DetailRow
-                  label="Native"
-                  value={`${balance.value.native.balance} ${balance.value.native.symbol} (${balance.value.native.network})`}
-                />
-                {balance.value.tokens.length > 0 ? (
-                  balance.value.tokens.map((t) => (
-                    <DetailRow key={t.address} label={t.symbol} value={t.balance} />
-                  ))
-                ) : (
-                  <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--space-2)' }}>
-                    No tokens registered
-                  </p>
-                )}
+            ) : balance.value?.balances?.length ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                {balance.value.balances.map((nb) => (
+                  <div
+                    key={nb.network}
+                    style={{
+                      padding: 'var(--space-3)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      background: nb.isDefault ? 'var(--color-bg-secondary)' : 'transparent',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <strong>{nb.network}</strong>
+                      {nb.isDefault && (
+                        <span class="badge badge-info" style={{ fontSize: '0.7rem' }}>Default</span>
+                      )}
+                    </div>
+                    {nb.error ? (
+                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{nb.error}</p>
+                    ) : nb.native ? (
+                      <div>
+                        <DetailRow label="Native" value={`${nb.native.balance} ${nb.native.symbol}`} />
+                        {nb.tokens.length > 0 ? (
+                          nb.tokens.map((t) => (
+                            <DetailRow key={t.address} label={t.symbol} value={t.balance} />
+                          ))
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>Balance unavailable</p>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
-              <p style={{ color: 'var(--color-text-secondary)' }}>
-                {balance.value?.error ?? 'Balance unavailable'}
-              </p>
+              <p style={{ color: 'var(--color-text-secondary)' }}>No balance data available</p>
             )}
           </div>
 

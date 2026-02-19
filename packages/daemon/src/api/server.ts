@@ -449,6 +449,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         actionProviderRegistry: deps.actionProviderRegistry,
         forexRateService: deps.forexRateService,
         sqlite: deps.sqlite,
+        dataDir: deps.dataDir,
       }),
     );
 

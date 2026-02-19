@@ -109,9 +109,15 @@ const mockNetworks = {
 };
 
 const mockBalance = {
-  native: { balance: '2.5', symbol: 'SOL', network: 'devnet' },
-  tokens: [
-    { symbol: 'USDC', balance: '100.00', address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+  balances: [
+    {
+      network: 'devnet',
+      isDefault: true,
+      native: { balance: '2.5', symbol: 'SOL' },
+      tokens: [
+        { symbol: 'USDC', balance: '100.00', address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+      ],
+    },
   ],
 };
 
@@ -210,7 +216,7 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getByText('Default Network')).toBeTruthy();
     // 'devnet' appears multiple times (detail row + networks list), use getAllByText
     expect(screen.getAllByText('devnet').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Balance')).toBeTruthy();
+    expect(screen.getByText('Balances')).toBeTruthy();
     expect(screen.getByText('Available Networks')).toBeTruthy();
     expect(screen.getByText('Recent Transactions')).toBeTruthy();
     expect(screen.getByText('Owner Wallet')).toBeTruthy();
@@ -222,7 +228,7 @@ describe('WalletDetailView rendering', () => {
     await renderAndWaitForDetail();
 
     await waitFor(() => {
-      expect(screen.getByText('2.5 SOL (devnet)')).toBeTruthy();
+      expect(screen.getByText('2.5 SOL')).toBeTruthy();
     });
     expect(screen.getByText('100.00')).toBeTruthy();
     expect(screen.getByText('USDC')).toBeTruthy();
@@ -235,7 +241,7 @@ describe('WalletDetailView rendering', () => {
     await waitFor(() => {
       expect(screen.getByText('Devnet')).toBeTruthy();
     });
-    expect(screen.getByText('Default')).toBeTruthy();
+    expect(screen.getAllByText('Default').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Testnet')).toBeTruthy();
   });
 
@@ -759,7 +765,7 @@ describe('WalletDetailView: fetch errors', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Balance unavailable')).toBeTruthy();
+      expect(screen.getByText('No balance data available')).toBeTruthy();
     });
   });
 
@@ -785,11 +791,11 @@ describe('WalletDetailView: balance with no tokens', () => {
   beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-  it('shows "No tokens registered" when balance has no tokens', async () => {
+  it('shows native balance when no tokens exist', async () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
       if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { native: { balance: '1.0', symbol: 'SOL', network: 'devnet' }, tokens: [] };
+      if (path.includes('/balance')) return { balances: [{ network: 'devnet', isDefault: true, native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] };
       if (path.includes('/transactions')) return mockTransactions;
       if (path.includes('/wc/session')) throw new Error('No session');
       return {};
@@ -798,7 +804,7 @@ describe('WalletDetailView: balance with no tokens', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No tokens registered')).toBeTruthy();
+      expect(screen.getByText('1.0 SOL')).toBeTruthy();
     });
   });
 });
@@ -811,7 +817,7 @@ describe('WalletDetailView: wallet with balance error', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
       if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { native: null, tokens: [], error: 'RPC unavailable' };
+      if (path.includes('/balance')) return { balances: [{ network: 'devnet', isDefault: true, native: null, tokens: [], error: 'RPC unavailable' }] };
       if (path.includes('/transactions')) return mockTransactions;
       if (path.includes('/wc/session')) throw new Error('No session');
       return {};

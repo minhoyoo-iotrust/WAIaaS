@@ -158,6 +158,7 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
       renewalCount: 0,
       maxRenewals: deps.config.security.session_max_renewals,
       constraints: null,
+      source: 'mcp',
     }).run();
 
     // 6. Write JWT to dataDir/mcp-tokens/<walletId> atomically
