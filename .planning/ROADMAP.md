@@ -89,8 +89,8 @@ See `.planning/milestones/v2.4.1-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 194-01-PLAN.md — CLI 첫 실행 개선 (--version, engines, init 패스워드/템플릿/에러)
-- [ ] 194-02-PLAN.md — 데몬 시작 경험 개선 (포트 충돌, Step 로그 억제, Admin UI URL)
+- [x] 194-01-PLAN.md — CLI 첫 실행 개선 (--version, engines, init 패스워드/템플릿/에러)
+- [x] 194-02-PLAN.md — 데몬 시작 경험 개선 (포트 충돌, Step 로그 억제, Admin UI URL)
 
 ### Phase 195: Quickstart + MCP DX
 **Goal**: quickstart 재실행이 에러 없이 동작하고 MCP 설정 안내가 명확하다
@@ -101,11 +101,11 @@ Plans:
   2. quickstart를 두 번 연속 실행해도 에러 없이 기존 지갑을 재사용하고 세션만 재발급한다
   3. quickstart가 API 응답의 `availableNetworks` 필드를 정확히 읽는다
   4. mcp setup 에러 시 "Run waiaas quickstart first"로 안내하고, 성공 시 기본 만료(24h) 경고와 `--expires-in` 옵션이 안내된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 195-01: quickstart 영문화 + 멱등성 + 필드 수정
-- [ ] 195-02: MCP setup 에러 메시지 + 만료 안내
+- [ ] 195-01-PLAN.md — quickstart 영문화 + 멱등성 + availableNetworks 필드 수정
+- [ ] 195-02-PLAN.md — MCP setup 에러 메시지 + 만료 안내
 
 ### Phase 196: README + SDK 문서 정합성
 **Goal**: README 코드 예시를 복붙하면 에러 없이 동작하고 npm 패키지 페이지에 사용법이 표시된다
