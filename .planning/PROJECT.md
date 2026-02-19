@@ -71,6 +71,20 @@ v2.4.1 Admin UI 테스트 커버리지 복원 shipped (2026-02-19). 9-패키지 
 - Docker 배포 (Multi-stage Dockerfile, docker-compose.yml, Docker Secrets _FILE 패턴, non-root UID 1001)
 - 설계 문서 36개 (24-72), 8 objective 문서
 
+## Current Milestone: v2.5 DX 품질 개선
+
+**Goal:** README/예시 코드를 복붙하면 바로 동작하는 상태를 달성하고, 첫 5분 경험에서 발견된 28건의 마찰을 제거한다.
+
+**Target features:**
+- README + 예시 코드 정합성 (SDK 필드 수정, skill 파일 버전 자동 치환)
+- CLI 첫 실행 경험 개선 (--version, engines, init 패스워드 안내, config 템플릿, 에러 핸들링)
+- 데몬 시작 경험 개선 (포트 충돌 명확화, Step 로그 억제, Admin UI URL, mcp setup 에러)
+- quickstart 개선 (영문 전환, 만료 표시, 멱등성, 네트워크 필드 수정)
+- Docker DX (docker-compose 이미지 참조, .env.example)
+- Python SDK 정합성 (버전 통일, README 포트, .venv gitignore)
+- TypeScript SDK 개선 (CLI/SDK 패키지 README)
+- MCP 세션 안내 강화 (mcp setup 만료 안내)
+
 ## 요구사항
 
 ### 검증됨
