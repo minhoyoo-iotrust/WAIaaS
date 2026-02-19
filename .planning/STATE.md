@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.6 Wallet SDK 설계 - Phase 200 complete (알림 채널 + Push Relay Server 설계)
+**Current focus:** v2.6 Wallet SDK 설계 - Phase 201 complete (기존 설계 문서 갱신 + 교차 검증)
 
 ## Current Position
 
-Phase: 200 of 201 (알림 채널 + Push Relay Server 설계)
-Plan: 2 of 2 in current phase (complete)
-Status: In Progress
-Last activity: 2026-02-20 — Plan 200-02 completed (Push Relay Server IPushProvider + Pushwoosh/FCM + Docker 배포 설계)
+Phase: 201 of 201 (기존 설계 문서 갱신 + 교차 검증)
+Plan: 1 of 1 in current phase (complete)
+Status: Complete
+Last activity: 2026-02-20 — Plan 201-01 completed (기존 설계 문서 4개 갱신 + 교차 검증 PASS)
 
-Progress: [########░░] 86% (6/7 plans)
+Progress: [##########] 100% (7/7 plans)
 
 ## Performance Metrics
 
@@ -73,6 +73,11 @@ v2.6 design decisions: See internal/objectives/m26-00 through m26-03.
 - Push Relay config.toml: 별도 패키지이므로 중첩 섹션 허용, superRefine 조건부 검증
 - Docker 멀티스테이지(node:22-alpine) + 환경변수 오버라이드 10개
 
+**201-01 decisions:**
+- INotificationChannel type에 'WALLET_NTFY' 추가하여 4번째 채널 타입 확장
+- REST API 요청 필드 approval_method / DB+응답 필드 owner_approval_method 명명 일관성
+- SQLite 마이그레이션은 ALTER TABLE ADD COLUMN만으로 충분 (NULL 허용)
+
 ### Blockers/Concerns
 
 None.
@@ -80,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 200-02-PLAN.md (Push Relay Server IPushProvider + Pushwoosh/FCM + Docker 배포 설계)
+Stopped at: Completed 201-01-PLAN.md (기존 설계 문서 4개 갱신 + 교차 검증 PASS)
 Resume file: None

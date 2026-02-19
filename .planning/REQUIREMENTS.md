@@ -43,10 +43,10 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ### 설계 문서 갱신
 
-- [ ] **DOCS-01**: doc 35 알림 아키텍처 — 지갑 앱 채널 + 토픽 구조 추가
-- [ ] **DOCS-02**: doc 37 REST API — PUT /wallets/:id/owner approval_method 필드 확장
-- [ ] **DOCS-03**: doc 25 SQLite — wallets.owner_approval_method 컬럼 + 마이그레이션 추가
-- [ ] **DOCS-04**: doc 67 Admin UI — Owner Settings > Approval Method UI 설계 추가
+- [x] **DOCS-01**: doc 35 알림 아키텍처 — 지갑 앱 채널 + 토픽 구조 추가
+- [x] **DOCS-02**: doc 37 REST API — PUT /wallets/:id/owner approval_method 필드 확장
+- [x] **DOCS-03**: doc 25 SQLite — wallets.owner_approval_method 컬럼 + 마이그레이션 추가
+- [x] **DOCS-04**: doc 67 Admin UI — Owner Settings > Approval Method UI 설계 추가
 
 ## Future Requirements
 
@@ -88,10 +88,10 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 | RELAY-02 | Phase 200 | Complete |
 | RELAY-03 | Phase 200 | Complete |
 | RELAY-04 | Phase 200 | Complete |
-| DOCS-01 | Phase 201 | Pending |
-| DOCS-02 | Phase 201 | Pending |
-| DOCS-03 | Phase 201 | Pending |
-| DOCS-04 | Phase 201 | Pending |
+| DOCS-01 | Phase 201 | Complete |
+| DOCS-02 | Phase 201 | Complete |
+| DOCS-03 | Phase 201 | Complete |
+| DOCS-04 | Phase 201 | Complete |
 
 **Coverage:**
 - v2.6 requirements: 23 total
