@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.1...v2.3.0) (2026-02-19)
+
+
+### Features
+
+* npm Trusted Publishing with OIDC provenance (v2.4) ([80a8148](https://github.com/minhoyoo-iotrust/WAIaaS/commit/80a81487bc7090edc8c1750e5f295d26dd678904))
+* npm Trusted Publishing with OIDC provenance (v2.4) ([80a8148](https://github.com/minhoyoo-iotrust/WAIaaS/commit/80a81487bc7090edc8c1750e5f295d26dd678904))
+
 ## [2.2.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.0-rc.1...v2.2.1) (2026-02-18)
 
 Stable release — promoted from v2.2.1-rc.1. Includes CI affected detection fix and smoke test daemon path resolution.
