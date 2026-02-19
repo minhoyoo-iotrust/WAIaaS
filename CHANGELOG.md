@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.4.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc...v2.4.0-rc.1) (2026-02-19)
+
+
+### Features
+
+* **194-01:** dynamic CLI version from package.json + engines.node ([7466309](https://github.com/minhoyoo-iotrust/WAIaaS/commit/746630965f7b3a9a94ec2fcf8efae7ecb70f6109))
+* **194-01:** init password guidance, config template, permission errors ([2abdf87](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2abdf874ae37794df98dd47bdad1d3c77183764f))
+* **194-02:** downgrade Step logs to debug + EADDRINUSE error wrapping ([5152bc7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5152bc720bd92916742946b1144b344909e58a5d))
+* **194-02:** start command error formatting + port conflict tests ([1b883f4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1b883f46deb8c662099f5e761aab8b12592c7316))
+* **195-01:** quickstart English output, expiry display, idempotency, availableNetworks ([745f0f4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/745f0f49e06b9b6d9c5f3aeca82cf5adbc395bb4))
+* **195-02:** mcp-setup quickstart guidance and expiry warning ([27b7495](https://github.com/minhoyoo-iotrust/WAIaaS/commit/27b7495d51b398e3759add5bbd964424178c36ad))
+* **196-01:** extend skill file version sync to cover root skills/ directory ([f08b6f3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f08b6f30bcc35174f6d50c7c216fe2f28cdc914e))
+* **197-01:** add .env.example template for Docker users ([a53486a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a53486a1cdc5877cd476ff7ed1acd3d999e3f20d))
+* **197-01:** switch docker-compose.yml to GHCR image reference ([f9c3f5d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f9c3f5dc4ac09b4bdef4fb50ee99452d37badde0))
+
+
+### Bug Fixes
+
+* **196-01:** correct SDK code example field names in README ([bfa2862](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bfa28626ef2415973cd49cea3d491ed41925cfd0))
+* **197-02:** sync Python SDK version to 1.7.0 and fix default port to 3100 ([506dac9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/506dac9dac0eac77f8fc5a71f1679313f4e0b485))
+
 ## [2.4.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.3.0...v2.4.0-rc) (2026-02-19)
 
 
