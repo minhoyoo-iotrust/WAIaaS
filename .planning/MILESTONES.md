@@ -1119,10 +1119,52 @@
 
 ## v2.4.1 Admin UI 테스트 커버리지 복원 (Shipped: 2026-02-19)
 
-**Phases completed:** 144 phases, 307 plans, 50 tasks
+**Delivered:** Admin UI v2.3 메뉴 재구성 후 신규/이동 페이지의 테스트 커버리지를 70% 임계값 이상으로 복원. Security/WalletConnect/System 페이지 + 공용 컴포넌트 5개에 대해 186건의 신규 테스트 추가. vitest 커버리지: 92% lines, 84% branches, 77% functions.
+
+**Phases completed:** 191-193 (3 phases, 5 plans, 22 requirements)
 
 **Key accomplishments:**
-- (none recorded)
+
+- Security 페이지 3-tab (Kill Switch/AutoStop/JWT Rotation) 27 테스트 + WalletConnect 페이지 16 테스트
+- System 페이지 6-섹션 34 테스트 (API Keys CRUD/Daemon 설정/Danger Zone)
+- 공용 컴포넌트 5개 65 테스트 (EmptyState/dirty-guard/UnsavedDialog/SettingsSearch/PolicyRulesSummary)
+- 기존 페이지(sessions/notifications/wallets) 44 추가 테스트 커버리지 개선
+- vitest 커버리지 임계값 70% 복원 (실제: 92% lines, 84% branches, 77% functions)
+
+**Stats:**
+
+- 3 phases, 5 plans, 22 requirements, ~186 신규 테스트
+- ~151,015 LOC TypeScript
+
+**What's next:** v2.5 DX 품질 개선
+
+---
+
+## v2.5 DX 품질 개선 (Shipped: 2026-02-19)
+
+**Delivered:** README/예시 코드를 복붙하면 바로 동작하는 상태 달성. CLI 첫 실행(버전/엔진/init), 데몬 시작(포트 충돌/로그/URL), quickstart(영문/멱등성/필드), Docker(GHCR 이미지/환경변수), Python SDK(버전/포트), npm 패키지 README 등 첫 5분 경험에서 발견된 28건의 마찰 제거.
+
+**Phases completed:** 194-197 (4 phases, 8 plans, 23 requirements)
+
+**Key accomplishments:**
+
+- CLI --version 동적 버전 (createRequire ESM 패턴) + engines.node >= 22 + init 패스워드 안내/config 템플릿/권한 에러
+- 데몬 시작 EADDRINUSE 포트 충돌 감지 + Step 로그 console.debug 하향 + Admin UI URL 한 줄 요약
+- quickstart 영문 전환 + 409 멱등성 (기존 지갑 재사용 + 세션 재발급) + 만료 시점 표시 + availableNetworks 필드 수정
+- MCP setup 에러 시 "Run waiaas quickstart first" 안내 + 기본 만료(24h) 경고 + --expires-in 옵션 가이드
+- README SDK 코드 예시 필드 수정 (balance.balance, tx.id) + skill 파일 14개 버전 자동 치환
+- CLI/SDK npm 패키지 README 작성 + docker-compose GHCR 이미지 기본값 + .env.example
+- Python SDK 버전 pyproject.toml 동기화 + README/client 포트 3100 수정 + .venv gitignore
+- 179건 CLI 테스트 통과 (13건 신규)
+
+**Stats:**
+
+- 4 phases, 8 plans, 23 requirements
+- 58 files changed, +3,333 / -192 lines
+- 34 commits, 1 day (2026-02-19)
+- Git range: 839b22a..c2da7a2
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
 
