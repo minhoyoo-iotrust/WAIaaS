@@ -41,9 +41,9 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### Python SDK
 
-- [ ] **PY-01**: Python SDK `__version__`이 pyproject.toml의 version과 동일하다
-- [ ] **PY-02**: Python SDK README의 기본 포트가 3100이다
-- [ ] **PY-03**: `.venv/` 디렉토리가 git에서 추적되지 않는다
+- [x] **PY-01**: Python SDK `__version__`이 pyproject.toml의 version과 동일하다
+- [x] **PY-02**: Python SDK README의 기본 포트가 3100이다
+- [x] **PY-03**: `.venv/` 디렉토리가 git에서 추적되지 않는다
 
 ### SDK 패키지
 
@@ -89,9 +89,9 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 | QS-04 | 195 | Complete |
 | DOCK-01 | 197 | Pending |
 | DOCK-02 | 197 | Pending |
-| PY-01 | 197 | Pending |
-| PY-02 | 197 | Pending |
-| PY-03 | 197 | Pending |
+| PY-01 | 197 | Complete |
+| PY-02 | 197 | Complete |
+| PY-03 | 197 | Complete |
 | SDK-01 | 196 | Pending |
 | SDK-02 | 196 | Pending |
 | MCP-01 | 195 | Complete |
