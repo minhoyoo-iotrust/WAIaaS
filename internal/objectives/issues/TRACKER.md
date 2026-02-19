@@ -111,6 +111,8 @@
 | 094 | ENHANCEMENT | MEDIUM | Admin 지갑 상세에서 모든 네트워크 잔액 미표시 — defaultNetwork 하나만 조회 | v2.4 | OPEN | 2026-02-19 |
 | 095 | ENHANCEMENT | MEDIUM | Admin 세션 페이지에서 MCP 세션 식별 불가 — source 컬럼 없음 | v2.4 | OPEN | 2026-02-19 |
 | 096 | ENHANCEMENT | MEDIUM | Admin 다중 지갑 일괄 세션/MCP 토큰 생성 기능 미지원 | v2.5 | OPEN | 2026-02-19 |
+| 097 | BUG | MEDIUM | Admin Owner 주소 등록 실패 시 구체적 에러 사유 미표시 — serverMessage 무시 | v2.5 | OPEN | 2026-02-19 |
+| 098 | BUG | MEDIUM | Admin Owner 주소 등록 후 ownerState 즉시 미반영 — PUT 응답에 ownerState 누락 | v2.5 | OPEN | 2026-02-19 |
 
 ## Type Legend
 
@@ -122,9 +124,9 @@
 
 ## Summary
 
-- **OPEN:** 3
+- **OPEN:** 5
 - **FIXED:** 93
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 96
+- **Total:** 98
