@@ -105,9 +105,10 @@
 | 088 | BUG | MEDIUM | NotificationService가 config.toml enabled=false일 때 미생성되어 Admin UI에서 알림 활성화 불가 | v2.3 | FIXED | 2026-02-19 |
 | 089 | ENHANCEMENT | LOW | Admin UI JWT Rotation 명칭/설명이 내부 구현 용어 사용 — 사용자 이해 어려움 | v2.3 | FIXED | 2026-02-19 |
 | 090 | BUG | HIGH | 데몬 시작 시 마스터 패스워드 검증 없음 — 잘못된 패스워드로 시작 후 서명 시점에야 실패 | v2.3 | OPEN | 2026-02-19 |
-| 091 | ENHANCEMENT | LOW | quickset 명령어 추가 — quickstart와 start 이름 혼동 해소 | v2.3 | OPEN | 2026-02-19 |
+| 091 | ENHANCEMENT | LOW | quickset 명령어 추가 — quickstart와 start 이름 혼동 해소 | v2.3 | FIXED | 2026-02-19 |
 | 092 | BUG | MEDIUM | npm 패키지 homepage + repository URL 잘못 설정 — 패키지 페이지에서 리포지토리 접근 불가 | v2.3 | RESOLVED | 2026-02-19 |
 | 093 | BUG | HIGH | npm 패키지 페이지에 README 미표시 — 개별 패키지 디렉토리에 README.md 없음 | v2.3 | RESOLVED | 2026-02-19 |
+| 094 | ENHANCEMENT | MEDIUM | Admin 지갑 상세에서 모든 네트워크 잔액 미표시 — defaultNetwork 하나만 조회 | v2.4 | OPEN | 2026-02-19 |
 
 ## Type Legend
 
@@ -120,8 +121,8 @@
 ## Summary
 
 - **OPEN:** 4
-- **FIXED:** 87
+- **FIXED:** 88
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 93
+- **Total:** 94
