@@ -110,6 +110,7 @@
 | 093 | BUG | HIGH | npm 패키지 페이지에 README 미표시 — 개별 패키지 디렉토리에 README.md 없음 | v2.4 | FIXED | 2026-02-19 |
 | 094 | ENHANCEMENT | MEDIUM | Admin 지갑 상세에서 모든 네트워크 잔액 미표시 — defaultNetwork 하나만 조회 | v2.4 | OPEN | 2026-02-19 |
 | 095 | ENHANCEMENT | MEDIUM | Admin 세션 페이지에서 MCP 세션 식별 불가 — source 컬럼 없음 | v2.4 | OPEN | 2026-02-19 |
+| 096 | ENHANCEMENT | MEDIUM | Admin 다중 지갑 일괄 세션/MCP 토큰 생성 기능 미지원 | v2.5 | OPEN | 2026-02-19 |
 
 ## Type Legend
 
@@ -121,9 +122,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 3
 - **FIXED:** 93
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 95
+- **Total:** 96
