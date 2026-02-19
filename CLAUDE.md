@@ -53,6 +53,7 @@
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).
 - **Release flow**: Merge PR (Conventional Commits) → release-please auto-creates Release PR → Merge Release PR (Gate 1: release decision) → release.yml quality gate → deploy job manual approval (Gate 2: deployment execution).
 - **Commit conventions**: `feat:` (minor), `fix:` (patch), `BREAKING CHANGE:` (major). `docs:`, `test:`, `chore:`, `ci:`, etc. are excluded from CHANGELOG.
+- **Prerelease mode restore after stable release**: The default release mode is prerelease (`versioning: "prerelease"`, `prerelease: true`, `prerelease-type: "rc"` in `release-please-config.json`). When promoting RC to stable, these settings are temporarily removed and `release-as` is added. After the stable release is published, remove `release-as` and restore the three prerelease settings immediately.
 
 ## Milestone & Issue Naming
 
