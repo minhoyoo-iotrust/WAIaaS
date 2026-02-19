@@ -530,21 +530,21 @@ describe('Settings coverage: handleRotate', () => {
     vi.mocked(apiPost).mockResolvedValueOnce({ rotatedAt: 1707609600, message: 'rotated' });
 
     // Open rotate modal
-    fireEvent.click(screen.getByText('Rotate JWT Secret'));
+    fireEvent.click(screen.getByText('Invalidate All Tokens'));
 
     await waitFor(() => {
-      expect(screen.getByText('Are you sure you want to rotate the JWT secret? All existing session tokens will remain valid for 5 more minutes, then expire. Wallets will need new sessions.')).toBeTruthy();
+      expect(screen.getByText(/rotate the signing key and invalidate all active session tokens/)).toBeTruthy();
     });
 
-    // Click the Rotate confirm button
-    fireEvent.click(screen.getByText('Rotate'));
+    // Click the Invalidate confirm button
+    fireEvent.click(screen.getByText('Invalidate'));
 
     await waitFor(() => {
       expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/rotate-secret');
     });
 
     await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'JWT secret rotated. Old tokens valid for 5 minutes.');
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'All session tokens invalidated. Old tokens remain valid for 5 minutes.');
     });
   });
 
@@ -555,13 +555,13 @@ describe('Settings coverage: handleRotate', () => {
     const MockApiError = (await import('../api/client')).ApiError;
     vi.mocked(apiPost).mockRejectedValueOnce(new MockApiError(500, 'ROTATE_ERROR', 'Failed'));
 
-    fireEvent.click(screen.getByText('Rotate JWT Secret'));
+    fireEvent.click(screen.getByText('Invalidate All Tokens'));
 
     await waitFor(() => {
-      expect(screen.getByText('Rotate')).toBeTruthy();
+      expect(screen.getByText('Invalidate')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Rotate'));
+    fireEvent.click(screen.getByText('Invalidate'));
 
     await waitFor(() => {
       expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: ROTATE_ERROR');
@@ -572,10 +572,10 @@ describe('Settings coverage: handleRotate', () => {
     mockApiCalls();
     await renderAndWait();
 
-    fireEvent.click(screen.getByText('Rotate JWT Secret'));
+    fireEvent.click(screen.getByText('Invalidate All Tokens'));
 
     await waitFor(() => {
-      expect(screen.getByText('Rotate')).toBeTruthy();
+      expect(screen.getByText('Invalidate')).toBeTruthy();
     });
 
     // Click Cancel in modal
@@ -585,7 +585,7 @@ describe('Settings coverage: handleRotate', () => {
 
     // Modal should be gone
     await waitFor(() => {
-      expect(screen.queryByText('Are you sure you want to rotate the JWT secret?')).toBeNull();
+      expect(screen.queryByText(/rotate the signing key and invalidate all active session tokens/)).toBeNull();
     });
   });
 });
