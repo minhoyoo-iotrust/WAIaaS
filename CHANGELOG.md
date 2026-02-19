@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.3.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.3.0-rc...v2.3.0-rc.1) (2026-02-19)
+
+
+### Features
+
+* **quick-5:** add build-time version sync for skill files ([ede3a3e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ede3a3e90d7a3bcf80a4b92ffd4be0360e3e5d30))
+* **quick-5:** add Connection Discovery section to quickstart skill ([49075cb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/49075cb4e6f7426532d1df17480562cfc6e30a95))
+* **quick-6:** add agent connection prompt utility and Admin UI copy buttons ([fb5c78d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fb5c78d9fe7057b739b70bbf7db05dca24f6b75b))
+* **quick-6:** add magic word output to CLI quickstart and skill file guide ([b52f5e8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b52f5e8e144eebe31e52f3755d26ca73bbfbf17a))
+* **quick-8:** add quickset as primary command with quickstart as alias ([befbd25](https://github.com/minhoyoo-iotrust/WAIaaS/commit/befbd25ae26b136b464464b0eff66bafe3a1b45f))
+
+
+### Bug Fixes
+
+* **ci:** lower admin coverage threshold and fix nightly Solana setup ([def9acf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/def9acfa833b4cf2e8d8ef54bfe1c7394f87810e))
+* **ci:** lower admin coverage threshold and fix nightly Solana setup ([7976307](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7976307e0eb09056db218fae959e9468a1926ffc))
+* **quick-1:** add master password validation at daemon startup (Step 2b) ([b91d2b3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b91d2b30b43deb090c82d88557cebfaa5e2dbff6))
+* **quick-3:** correct homepage URLs and add bugs field in all package.json ([68a99d7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/68a99d7d6c44d80b3e5753e00e177eb73919cf3d))
+* **quick-4:** always initialize NotificationService regardless of config.toml enabled ([3a54be4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3a54be47a2565a3c652a96966634cac1fd675436))
+* **quick-7:** update JWT rotation UI text to user-facing language ([cd1215b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cd1215bd9678c0e45a8b06c5d87ae36ff1bbaffb))
+
 ## [2.3.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.2.1...v2.3.0-rc) (2026-02-19)
 
 
