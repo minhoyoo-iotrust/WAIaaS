@@ -72,9 +72,17 @@ v2.5 DX 품질 개선 shipped (2026-02-19). 9-패키지 모노레포 + Python SD
 - Docker 배포 (Multi-stage Dockerfile, docker-compose.yml, Docker Secrets _FILE 패턴, non-root UID 1001)
 - 설계 문서 36개 (24-72), 8 objective 문서
 
-## Current Milestone
+## Current Milestone: v2.6 Wallet SDK 설계
 
-None — 다음 마일스톤은 `/gsd:new-milestone`으로 시작.
+**Goal:** 지갑 개발사(D'CENT 등)가 WAIaaS와 통합하기 위한 Wallet Signing SDK, 개방형 서명 프로토콜, 지갑 앱 알림 채널, Push Relay Server의 공통 설계를 확정한다.
+
+**Target features:**
+- WAIaaS Signing Protocol v1 (SignRequest/SignResponse JSON 스키마, 유니버셜 링크)
+- @waiaas/wallet-sdk 패키지 공개 API 설계 (parseSignRequest, buildSignResponse, sendViaNtfy 등)
+- 데몬 측 서명 컴포넌트 설계 (SignRequestBuilder, SignResponseHandler, ApprovalChannelRouter)
+- 지갑 앱 알림 채널 설계 (ntfy 토픽 분리, NotificationMessage 스키마)
+- Push Relay Server 설계 (IPushProvider, PushwooshProvider, FcmProvider)
+- 영향받는 설계 문서 갱신 (35, 37, 25, 67)
 
 ## 요구사항
 
@@ -398,7 +406,7 @@ None — 다음 마일스톤은 `/gsd:new-milestone`으로 시작.
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+(v2.6 REQUIREMENTS.md에서 정의 — Wallet SDK 설계)
 
 ### 범위 외
 
