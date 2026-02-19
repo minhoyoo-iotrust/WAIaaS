@@ -22,11 +22,11 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ### 데몬 컴포넌트
 
-- [ ] **DMON-01**: SignRequestBuilder + SignResponseHandler 인터페이스 + 책임 정의 확정
-- [ ] **DMON-02**: NtfySigningChannel + TelegramSigningChannel 인터페이스 확정
-- [ ] **DMON-03**: WalletLinkRegistry + ApprovalChannelRouter 라우팅 로직 확정
-- [ ] **DMON-04**: SettingsService signing_sdk 6개 키 + WalletLinkRegistry 저장 구조 확정
-- [ ] **DMON-05**: wallets.owner_approval_method 컬럼 + REST API approval_method 필드 설계 확정
+- [x] **DMON-01**: SignRequestBuilder + SignResponseHandler 인터페이스 + 책임 정의 확정
+- [x] **DMON-02**: NtfySigningChannel + TelegramSigningChannel 인터페이스 확정
+- [x] **DMON-03**: WalletLinkRegistry + ApprovalChannelRouter 라우팅 로직 확정
+- [x] **DMON-04**: SettingsService signing_sdk 6개 키 + WalletLinkRegistry 저장 구조 확정
+- [x] **DMON-05**: wallets.owner_approval_method 컬럼 + REST API approval_method 필드 설계 확정
 
 ### 알림 채널
 
@@ -76,11 +76,11 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 | WSDK-01 | Phase 199 | Complete |
 | WSDK-02 | Phase 199 | Complete |
 | WSDK-03 | Phase 199 | Complete |
-| DMON-01 | Phase 199 | Pending |
-| DMON-02 | Phase 199 | Pending |
-| DMON-03 | Phase 199 | Pending |
-| DMON-04 | Phase 199 | Pending |
-| DMON-05 | Phase 199 | Pending |
+| DMON-01 | Phase 199 | Complete |
+| DMON-02 | Phase 199 | Complete |
+| DMON-03 | Phase 199 | Complete |
+| DMON-04 | Phase 199 | Complete |
+| DMON-05 | Phase 199 | Complete |
 | NOTIF-01 | Phase 200 | Pending |
 | NOTIF-02 | Phase 200 | Pending |
 | NOTIF-03 | Phase 200 | Pending |

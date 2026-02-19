@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.6 Wallet SDK 설계 - Phase 199 Plan 01 complete, ready for Plan 02
+**Current focus:** v2.6 Wallet SDK 설계 - Phase 199 complete, ready for Phase 200
 
 ## Current Position
 
-Phase: 199 of 201 (Wallet SDK + 데몬 컴포넌트 설계)
-Plan: 1 of 2 in current phase
+Phase: 200 of 201 (알림 채널 설계)
+Plan: 0 of ? in current phase
 Status: In Progress
-Last activity: 2026-02-20 — Plan 199-01 completed (SDK 공개 API + WalletLinkConfig + 패키지 구조 설계)
+Last activity: 2026-02-20 — Plan 199-02 completed (데몬 컴포넌트 인터페이스 + 채널 라우팅 + DB 스키마 설계)
 
-Progress: [####░░░░░░] 43% (3/7 plans)
+Progress: [######░░░░] 57% (4/7 plans)
 
 ## Performance Metrics
 
@@ -47,6 +47,15 @@ v2.6 design decisions: See internal/objectives/m26-00 through m26-03.
 - tsup ESM+CJS dual output, ES2022 타겟으로 React Native/Electron/Node.js 지원
 - sendViaTelegram은 void 반환 (URL 스킴 호출은 비동기 결과 확인 불가)
 
+**199-02 decisions:**
+- ISigningChannel 공통 인터페이스: sendRequest+waitForResponse 2메서드로 ntfy/telegram 채널 교체 가능
+- WalletLinkRegistry 저장소를 SettingsService signing_sdk.wallets JSON 배열로 결정 (별도 테이블 불필요)
+- ApprovalChannelRouter 5단계 fallback: ownerApprovalMethod > SDK > WC > Telegram Bot > REST
+- owner_approval_method CHECK 제약 + NULL 허용 (NULL=글로벌 fallback)
+- SignRequest 임시 저장소: 메모리 Map 기본 사용
+- ntfy 서버 URL: 기존 notifications.ntfy_server 재사용
+- Telegram /sign_response 핸들러: 기존 Long Polling handleUpdate()에 명령어 추가
+
 ### Blockers/Concerns
 
 None.
@@ -54,5 +63,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 199-01-PLAN.md (SDK 공개 API + WalletLinkConfig + 패키지 구조 설계)
+Stopped at: Completed 199-02-PLAN.md (데몬 컴포넌트 인터페이스 + 채널 라우팅 + DB 스키마 설계)
 Resume file: None
