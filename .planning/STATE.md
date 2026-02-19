@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 190 of 190 (검증 및 정리 -- 완료)
 Plan: 1 of 1 in current phase (complete)
 Status: v2.4 milestone complete
-Last activity: 2026-02-19 - Completed quick task 1: Issue 090 데몬 시작 시 마스터 패스워드 검증 추가
+Last activity: 2026-02-19 - Completed quick task 2: Issue 093 npm 패키지 README 복사 스텝 추가
 
 Progress: [██████████] 100%
 
@@ -36,6 +36,7 @@ Full log in PROJECT.md and milestones/.
 - v2.4: release-please prerelease versioning (rc type) 설정으로 RC 릴리스 검증 수행
 - v2.4: NPM_TOKEN은 OIDC E2E 검증 성공 후 제거 -- 순서대로 안전하게 완료
 - [Phase quick-1]: Step 2b placement after DB init, before keystore unlock for fail-fast password validation
+- [Phase quick-2]: CI-only README copy (not local) to avoid git noise; independent step before publish
 
 ### Blockers/Concerns
 
@@ -48,9 +49,10 @@ Full log in PROJECT.md and milestones/.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Issue 090: 데몬 시작 시 마스터 패스워드 검증 추가 | 2026-02-19 | b8e6a6a | [1-issue-090](./quick/1-issue-090/) |
+| 2 | Issue 093: npm 패키지 README 복사 스텝 추가 | 2026-02-19 | aa01f82 | [2-issue-093-npm-readme](./quick/2-issue-093-npm-readme/) |
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 190-01-PLAN.md (v2.4 milestone complete)
+Stopped at: Completed quick task 2: Issue 093 npm README
 Resume file: .planning/phases/190-verify-cleanup/190-01-SUMMARY.md
