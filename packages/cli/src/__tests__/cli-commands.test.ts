@@ -130,6 +130,61 @@ describe('initCommand', () => {
     expect(content).toContain('hostname = "127.0.0.1"');
     expect(content).toContain('path = "data/waiaas.db"');
   });
+
+  it('generated config.toml contains commented [security], [rpc], [notifications] sections', async () => {
+    const { initCommand } = await import('../commands/init.js');
+    await initCommand(testDir);
+
+    const content = readFileSync(join(testDir, 'config.toml'), 'utf-8');
+    expect(content).toContain('# [security]');
+    expect(content).toContain('# [rpc]');
+    expect(content).toContain('# [notifications]');
+    expect(content).toContain('# Full reference:');
+  });
+
+  it('completion output includes WAIAAS_MASTER_PASSWORD guidance', async () => {
+    const mockStdout = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const { initCommand } = await import('../commands/init.js');
+    await initCommand(testDir);
+
+    const allOutput = mockStdout.mock.calls.map((c) => c[0]).join('\n');
+    expect(allOutput).toContain('WAIAAS_MASTER_PASSWORD');
+    expect(allOutput).toContain('WAIAAS_MASTER_PASSWORD_FILE');
+    expect(allOutput).toContain('Next: waiaas start');
+
+    mockStdout.mockRestore();
+  });
+
+  it('prints permission denied message on EACCES error', async () => {
+    const mockStderr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('process.exit');
+    }) as never);
+
+    const { initCommand } = await import('../commands/init.js');
+
+    // Create a read-only directory to trigger EACCES on nested mkdir
+    const readonlyDir = join(tmpdir(), `waiaas-readonly-${randomUUID()}`);
+    mkdirSync(readonlyDir, { recursive: true, mode: 0o755 });
+    const { chmodSync } = await import('node:fs');
+    chmodSync(readonlyDir, 0o444);
+
+    const targetDir = join(readonlyDir, 'nested', 'waiaas');
+
+    try {
+      await expect(initCommand(targetDir)).rejects.toThrow('process.exit');
+
+      const allStderr = mockStderr.mock.calls.map((c) => c[0]).join('\n');
+      expect(allStderr).toContain('Permission denied');
+    } finally {
+      // Restore permissions for cleanup
+      chmodSync(readonlyDir, 0o755);
+      rmrf(readonlyDir);
+      mockStderr.mockRestore();
+      mockExit.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
