@@ -35,6 +35,7 @@ Full log in PROJECT.md and milestones/.
 - v2.4: publish-check 잡에 npm 업그레이드 스텝 미추가 -- dry-run에 provenance 불필요
 - v2.4: release-please prerelease versioning (rc type) 설정으로 RC 릴리스 검증 수행
 - v2.4: NPM_TOKEN은 OIDC E2E 검증 성공 후 제거 -- 순서대로 안전하게 완료
+- [Phase quick-1]: Step 2b placement after DB init, before keystore unlock for fail-fast password validation
 
 ### Blockers/Concerns
 
