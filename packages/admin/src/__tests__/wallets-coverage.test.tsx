@@ -69,6 +69,25 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
+vi.mock('../utils/dirty-guard', () => ({
+  registerDirty: vi.fn(),
+  unregisterDirty: vi.fn(),
+  hasDirty: { value: false },
+}));
+
+vi.mock('../components/settings-search', () => {
+  const { signal } = require('@preact/signals');
+  return {
+    pendingNavigation: signal(null),
+    highlightField: signal(''),
+    SettingsSearch: () => null,
+  };
+});
+
+vi.mock('../utils/agent-prompt', () => ({
+  buildSingleWalletPrompt: vi.fn().mockReturnValue('mock agent prompt text'),
+}));
+
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { showToast } from '../components/toast';
 import { currentPath } from '../components/layout';
@@ -827,6 +846,483 @@ describe('WalletDetailView: wallet with balance error', () => {
 
     await waitFor(() => {
       expect(screen.getByText('RPC unavailable')).toBeTruthy();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WalletListContent (wallet list view)
+// ---------------------------------------------------------------------------
+
+const mockWalletList = {
+  items: [
+    {
+      id: 'w-1',
+      name: 'trading-bot',
+      chain: 'solana',
+      network: 'devnet',
+      environment: 'testnet',
+      publicKey: 'ABC123DEF456GHI789',
+      status: 'ACTIVE',
+      ownerAddress: null,
+      ownerState: 'NONE',
+      createdAt: 1707609600,
+    },
+    {
+      id: 'w-2',
+      name: 'arb-bot',
+      chain: 'ethereum',
+      network: 'sepolia',
+      environment: 'testnet',
+      publicKey: '0xDEF789ABC012GHI345',
+      status: 'ACTIVE',
+      ownerAddress: '0xABC',
+      ownerState: 'LOCKED',
+      createdAt: 1707696000,
+    },
+  ],
+};
+
+const mockSettingsData = {
+  rpc: {
+    solana_mainnet: 'https://api.mainnet-beta.solana.com',
+    solana_devnet: 'https://api.devnet.solana.com',
+    solana_testnet: '',
+    evm_ethereum_mainnet: '',
+    evm_ethereum_sepolia: 'https://rpc.sepolia.org',
+    evm_default_network: 'ethereum-sepolia',
+  },
+  monitoring: {
+    enabled: 'true',
+    check_interval_sec: '300',
+    low_balance_threshold_sol: '0.5',
+    low_balance_threshold_eth: '0.01',
+    cooldown_hours: '6',
+  },
+  walletconnect: {
+    project_id: 'test-project-id',
+    relay_url: 'wss://relay.walletconnect.com',
+  },
+};
+
+describe('WalletListContent', () => {
+  beforeEach(() => { currentPath.value = '/wallets'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  it('renders wallet list with all columns', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    expect(screen.getByText('arb-bot')).toBeTruthy();
+    expect(screen.getByText('solana')).toBeTruthy();
+    expect(screen.getByText('ethereum')).toBeTruthy();
+  });
+
+  it('shows create wallet form and creates wallet', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      id: 'w-3',
+      name: 'new-bot',
+      chain: 'solana',
+      network: 'devnet',
+      environment: 'testnet',
+      publicKey: 'XYZ',
+      status: 'ACTIVE',
+      session: { id: 's-1', token: 'test-token-xyz', expiresAt: 1708000000 },
+    });
+
+    const { container } = render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    // Wait for inline form to appear
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeTruthy();
+    });
+
+    // Fill name using the input inside inline-form
+    const nameInput = container.querySelector('.inline-form input[id="field-name"]') as HTMLInputElement;
+    expect(nameInput).toBeTruthy();
+    fireEvent.input(nameInput, { target: { value: 'new-bot' } });
+
+    // Submit
+    const createBtn = container.querySelector('.inline-form-actions .btn') as HTMLButtonElement;
+    fireEvent.click(createBtn);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/wallets', {
+        name: 'new-bot',
+        chain: 'solana',
+        environment: 'testnet',
+      });
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Wallet created with session');
+    });
+  });
+
+  it('shows error when create wallet fails', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+
+    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(400, 'NAME_TAKEN', 'Name taken'));
+
+    const { container } = render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeTruthy();
+    });
+
+    const nameInput = container.querySelector('.inline-form input[id="field-name"]') as HTMLInputElement;
+    fireEvent.input(nameInput, { target: { value: 'dup-bot' } });
+
+    const createBtn = container.querySelector('.inline-form-actions .btn') as HTMLButtonElement;
+    fireEvent.click(createBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Error: NAME_TAKEN')).toBeTruthy();
+    });
+  });
+
+  it('validates name required', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+
+    const { container } = render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeTruthy();
+    });
+
+    // Don't fill name, just submit
+    const createBtn = container.querySelector('.inline-form-actions .btn') as HTMLButtonElement;
+    fireEvent.click(createBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Name is required')).toBeTruthy();
+    });
+  });
+
+  it('cancels create wallet form', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+
+    const { container } = render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeTruthy();
+    });
+
+    // Click Cancel button
+    fireEvent.click(screen.getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeNull();
+    });
+  });
+
+  it('shows error toast when wallet list fetch fails', async () => {
+    vi.mocked(apiGet).mockRejectedValue(new ApiError(500, 'FETCH_FAIL', 'Failed'));
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: FETCH_FAIL');
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Wallet Tabs (RPC, Monitoring, WalletConnect)
+// ---------------------------------------------------------------------------
+
+describe('WalletListWithTabs - Tab switching', () => {
+  beforeEach(() => { currentPath.value = '/wallets'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  function setupTabMocks() {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      if (path === '/v1/admin/settings') return mockSettingsData;
+      return {};
+    });
+  }
+
+  it('switches to RPC Endpoints tab', async () => {
+    setupTabMocks();
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('RPC Endpoints')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('RPC Endpoints'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Solana')).toBeTruthy();
+      expect(screen.getByText('EVM')).toBeTruthy();
+    });
+  });
+
+  it('switches to Balance Monitoring tab', async () => {
+    setupTabMocks();
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Balance Monitoring')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Balance Monitoring'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Periodic balance checks/)).toBeTruthy();
+    });
+  });
+
+  it('switches to WalletConnect tab', async () => {
+    setupTabMocks();
+
+    render(<WalletsPage />);
+
+    // WalletConnect tab - note it appears in both the detail view and the tab
+    const tabs = screen.getAllByText('WalletConnect');
+    fireEvent.click(tabs[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/WalletConnect Cloud/)).toBeTruthy();
+    });
+  });
+});
+
+describe('RpcEndpointsTab', () => {
+  beforeEach(() => { currentPath.value = '/wallets'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  it('saves RPC settings', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      if (path === '/v1/admin/settings') return mockSettingsData;
+      return {};
+    });
+    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+
+    render(<WalletsPage />);
+
+    fireEvent.click(screen.getByText('RPC Endpoints'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Solana')).toBeTruthy();
+    });
+
+    // Change a field
+    const devnetInput = screen.getByLabelText('Solana Devnet') as HTMLInputElement;
+    fireEvent.input(devnetInput, { target: { value: 'https://new-devnet.com' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        settings: expect.arrayContaining([
+          expect.objectContaining({ key: 'rpc.solana_devnet', value: 'https://new-devnet.com' }),
+        ]),
+      });
+    });
+  });
+
+  it('tests RPC endpoint', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      if (path === '/v1/admin/settings') return mockSettingsData;
+      return {};
+    });
+    vi.mocked(apiPost).mockResolvedValueOnce({ success: true, latencyMs: 150, blockNumber: 12345 });
+
+    render(<WalletsPage />);
+
+    fireEvent.click(screen.getByText('RPC Endpoints'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Solana')).toBeTruthy();
+    });
+
+    // Click Test button next to a field
+    const testBtns = screen.getAllByText('Test');
+    fireEvent.click(testBtns[0]);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', expect.objectContaining({
+        chain: 'solana',
+      }));
+    });
+  });
+});
+
+describe('BalanceMonitoringTab', () => {
+  beforeEach(() => { currentPath.value = '/wallets'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  it('saves monitoring settings', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      if (path === '/v1/admin/settings') return mockSettingsData;
+      return {};
+    });
+    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+
+    render(<WalletsPage />);
+
+    fireEvent.click(screen.getByText('Balance Monitoring'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Periodic balance checks/)).toBeTruthy();
+    });
+
+    // Change cooldown hours
+    const cooldownInput = screen.getByLabelText('Alert Cooldown (hours)') as HTMLInputElement;
+    fireEvent.input(cooldownInput, { target: { value: '12' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        settings: expect.arrayContaining([
+          expect.objectContaining({ key: 'monitoring.cooldown_hours', value: '12' }),
+        ]),
+      });
+    });
+  });
+});
+
+describe('WalletConnectTab', () => {
+  beforeEach(() => { currentPath.value = '/wallets'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  it('saves WalletConnect settings', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      if (path === '/v1/admin/settings') return mockSettingsData;
+      return {};
+    });
+    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+
+    render(<WalletsPage />);
+
+    const tabs = screen.getAllByText('WalletConnect');
+    fireEvent.click(tabs[0]);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Project ID')).toBeTruthy();
+    });
+
+    const projectInput = screen.getByLabelText('Project ID') as HTMLInputElement;
+    fireEvent.input(projectInput, { target: { value: 'new-project-id' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        settings: expect.arrayContaining([
+          expect.objectContaining({ key: 'walletconnect.project_id', value: 'new-project-id' }),
+        ]),
+      });
+    });
+  });
+});
+
+describe('WalletDetailView: Copy Agent Prompt', () => {
+  beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  it('copies agent prompt on button click', async () => {
+    mockDetailApiCalls();
+
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      id: 's-1',
+      token: 'test-session-token',
+      expiresAt: 1708000000,
+      walletId: 'test-wallet-1',
+    });
+
+    // Mock clipboard
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+
+    await renderAndWaitForDetail();
+
+    fireEvent.click(screen.getByText('Copy Agent Prompt'));
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Agent prompt copied!');
+    });
+  });
+
+  it('shows error when agent prompt creation fails', async () => {
+    mockDetailApiCalls();
+
+    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(500, 'PROMPT_ERROR', 'Failed'));
+
+    await renderAndWaitForDetail();
+
+    fireEvent.click(screen.getByText('Copy Agent Prompt'));
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: PROMPT_ERROR');
     });
   });
 });

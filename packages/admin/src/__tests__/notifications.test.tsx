@@ -140,9 +140,11 @@ describe('NotificationsPage', () => {
       expect(screen.getByText(/Notifications are disabled/)).toBeTruthy();
     });
 
-    // The banner contains config.toml reference
+    // The banner should reference Settings tab, not config.toml
     const banner = screen.getByText(/Notifications are disabled/).closest('.notif-disabled-banner');
     expect(banner).toBeTruthy();
+    expect(banner!.textContent).not.toContain('config.toml');
+    expect(banner!.textContent).toContain('Settings tab');
   });
 
   it('should trigger POST on Test All Channels click and show results', async () => {
