@@ -1,0 +1,8 @@
+# Local build override for development.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: waiaas-daemon:local
