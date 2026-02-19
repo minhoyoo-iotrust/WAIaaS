@@ -7,11 +7,14 @@
 3. [NotificationMessage 스키마](#3-notificationmessage-스키마)
 4. [SDK 알림 API](#4-sdk-알림-api)
 5. [WalletNotificationChannel + NotificationService 통합](#5-walletnotificationchannel--notificationservice-통합)
-6. Push Relay Server 개요 (placeholder -- Plan 200-02)
-7. IPushProvider + PushPayload/PushResult (placeholder -- Plan 200-02)
-8. PushwooshProvider + FcmProvider (placeholder -- Plan 200-02)
-9. ntfy SSE Subscriber + 메시지 변환 (placeholder -- Plan 200-02)
-10. Device Token Registry + config + Docker 배포 (placeholder -- Plan 200-02)
+6. [Push Relay Server 개요](#6-push-relay-server-개요)
+7. [IPushProvider + PushPayload/PushResult](#7-ipushprovider--pushpayloadpushresult)
+8. [PushwooshProvider + FcmProvider](#8-pushwooshprovider--fcmprovider)
+9. [ntfy SSE Subscriber + 메시지 변환](#9-ntfy-sse-subscriber--메시지-변환)
+10. [디바이스 토큰 등록 API](#10-디바이스-토큰-등록-api)
+11. [config.toml 스키마](#11-configtoml-스키마)
+12. [Docker 배포 설계](#12-docker-배포-설계)
+13. [기술 결정 요약](#13-기술-결정-요약)
 
 ---
 
@@ -51,12 +54,15 @@
 - Section 4: SDK 알림 API (NOTIF-02 SDK 부분)
 - Section 5: WalletNotificationChannel + NotificationService 통합 (NOTIF-03)
 
-**Sections 6-10** (Plan 200-02): Push Relay Server 설계 (m26-03 입력 사양)
+**Sections 6-13** (Plan 200-02): Push Relay Server 설계 (m26-03 입력 사양)
 - Section 6: Push Relay Server 개요
-- Section 7: IPushProvider + PushPayload/PushResult
-- Section 8: PushwooshProvider + FcmProvider
-- Section 9: ntfy SSE Subscriber + 메시지 변환
-- Section 10: Device Token Registry + config + Docker 배포
+- Section 7: IPushProvider + PushPayload/PushResult (RELAY-01)
+- Section 8: PushwooshProvider + FcmProvider (RELAY-02)
+- Section 9: ntfy SSE Subscriber + 메시지 변환 (RELAY-03)
+- Section 10: 디바이스 토큰 등록 API (RELAY-04)
+- Section 11: config.toml 스키마 (RELAY-04)
+- Section 12: Docker 배포 설계 (RELAY-04)
+- Section 13: 기술 결정 요약
 
 ---
 
@@ -842,9 +848,974 @@ m26-02 구현 시 생성/수정되는 파일:
 
 ---
 
-*문서 번호: 75*
-*생성일: 2026-02-20*
-*최종 수정: 2026-02-20*
-*선행 문서: 73(Signing Protocol v1), 74(Wallet SDK + Daemon Components)*
-*관련 마일스톤: m26-02(알림 채널), m26-03(Push Relay Server)*
-*범위: 알림 채널 설계 (Sections 1-5) + Push Relay Server 설계 (Sections 6-10, placeholder)*
+## 6. Push Relay Server 개요
+
+### 6.1 아키텍처 다이어그램
+
+Push Relay Server는 ntfy 토픽을 SSE로 구독하여 수신한 서명 요청/알림을 지갑 개발사의 기존 푸시 인프라(Pushwoosh, FCM 등)로 변환하여 전달하는 경량 중계 서버다.
+
+```
+WAIaaS 데몬
+  │
+  ├── ntfy publish (서명 요청)
+  │     토픽: waiaas-sign-{walletId}
+  │     priority: 5 (urgent)
+  │
+  └── ntfy publish (알림)
+        토픽: waiaas-notify-{walletId}
+        priority: 3-5 (카테고리별)
+            │
+            ▼
+  ┌──────────────────────────────────────────────┐
+  │         Push Relay Server                     │
+  │         (@waiaas/push-relay)                  │
+  │                                               │
+  │   ┌───────────────┐                          │
+  │   │ NtfySubscriber │ ← SSE 다중 토픽 구독    │
+  │   │ (EventSource)  │                          │
+  │   └───────┬───────┘                          │
+  │           │ NtfyMessage                      │
+  │           ▼                                  │
+  │   ┌───────────────┐                          │
+  │   │ MessageParser  │ ntfy → PushPayload 변환  │
+  │   │                │ (토픽 기반 분기)          │
+  │   └───────┬───────┘                          │
+  │           │ PushPayload                      │
+  │           ▼                                  │
+  │   ┌───────────────┐    ┌──────────────────┐ │
+  │   │ IPushProvider  │◄───│ DeviceRegistry   │ │
+  │   │  ├─ Pushwoosh  │    │ (SQLite relay.db)│ │
+  │   │  └─ FCM        │    │ POST/DELETE      │ │
+  │   └───────┬───────┘    │ /devices         │ │
+  │           │             └──────────────────┘ │
+  │   ┌───────────────┐                          │
+  │   │  HTTP Server   │ ← Hono (포트 3100)      │
+  │   │  /devices API  │                          │
+  │   └───────────────┘                          │
+  └──────────────────────────────────────────────┘
+            │
+            ▼
+  Pushwoosh API / FCM API
+            │
+            ▼
+  APNs / Google Push
+            │
+            ▼
+      지갑 앱 (네이티브 푸시 수신)
+```
+
+### 6.2 컴포넌트 목록
+
+| # | 컴포넌트 | 역할 | 주요 의존 |
+|---|---------|------|----------|
+| 1 | **NtfySubscriber** | ntfy 토픽 SSE 구독 + 재연결 관리 | EventSource (Node.js 22 내장) |
+| 2 | **MessageParser** | ntfy JSON → PushPayload 변환 (토픽 패턴 기반 분기) | PushPayloadSchema (Zod) |
+| 3 | **IPushProvider** | 푸시 전송 추상화 인터페이스 + 구현체(Pushwoosh/FCM) | 프로바이더별 HTTP API |
+| 4 | **DeviceRegistry** | 디바이스 푸시 토큰 CRUD + invalidTokens 자동 정리 | SQLite (relay.db) |
+| 5 | **HTTP Server** | 디바이스 토큰 등록 API (POST/DELETE /devices) | Hono (OpenAPIHono) |
+
+### 6.3 패키지 위치 및 운영 모델
+
+| 항목 | 내용 |
+|------|------|
+| 패키지 경로 | `packages/push-relay/` (모노레포 내 @waiaas/push-relay) |
+| WAIaaS 데몬과의 관계 | **독립 프로세스**. ntfy 토픽으로만 연결 (직접 API 호출 없음) |
+| 운영 주체 | **지갑 개발사**. 자사 푸시 인증 정보(Pushwoosh API Token, FCM Service Account Key) 사용 |
+| 통신 프로토콜 | WAIaaS → ntfy (publish) → Push Relay (SSE subscribe) → Pushwoosh/FCM (HTTP API) |
+| 배포 형태 | Docker 컨테이너 (docker-compose) 또는 Node.js 직접 실행 |
+
+### 6.4 데이터 흐름 시퀀스
+
+```
+1. WAIaaS 데몬이 ntfy 토픽에 메시지 publish (서명 요청 또는 알림)
+2. NtfySubscriber가 SSE로 메시지 수신
+3. MessageParser가 토픽 패턴 분석:
+   - waiaas-sign-{walletId} → category: 'sign_request', priority: 'high'
+   - waiaas-notify-{walletId} → category: 'notification', priority: metadata 기반
+4. DeviceRegistry에서 walletId에 등록된 디바이스 토큰 조회
+5. IPushProvider.send()로 디바이스 토큰 배열 + PushPayload 전송
+6. PushResult에서 invalidTokens가 있으면 DeviceRegistry에서 자동 삭제
+7. 지갑 앱이 네이티브 푸시로 메시지 수신
+```
+
+---
+
+## 7. IPushProvider + PushPayload/PushResult
+
+### 7.1 IPushProvider 인터페이스
+
+Push Relay Server의 핵심 추상화. 신규 푸시 서비스 지원은 IPushProvider 구현 클래스 추가만으로 가능하다.
+
+```typescript
+// packages/push-relay/src/providers/push-provider.ts
+
+/**
+ * 푸시 알림 전송 프로바이더 인터페이스.
+ *
+ * 프로바이더 확장 패턴:
+ * 1. IPushProvider 구현 클래스 생성 (예: ApnsProvider)
+ * 2. config.toml에 프로바이더 설정 섹션 추가
+ * 3. createProvider() 팩토리에 분기 추가
+ */
+interface IPushProvider {
+  /** 프로바이더 식별자 (로그, 에러 메시지에 사용) */
+  readonly name: string;
+
+  /**
+   * 디바이스 토큰 배열에 푸시 메시지를 전송한다.
+   *
+   * @param tokens - 대상 디바이스 푸시 토큰 배열
+   * @param payload - 전송할 푸시 페이로드
+   * @returns 전송 결과 (성공/실패 수 + 무효 토큰 목록)
+   */
+  send(tokens: string[], payload: PushPayload): Promise<PushResult>;
+
+  /**
+   * 프로바이더 설정이 유효한지 검증한다.
+   * 서버 시작 시 호출하여 인증 정보 유효성을 사전 확인한다.
+   *
+   * @returns true면 정상, false면 설정 오류
+   */
+  validateConfig(): Promise<boolean>;
+}
+```
+
+### 7.2 PushPayload 스키마
+
+```typescript
+// packages/push-relay/src/schemas.ts
+
+import { z } from 'zod';
+
+/**
+ * IPushProvider.send()에 전달되는 푸시 페이로드.
+ * ntfy 메시지를 파싱하여 생성한다 (MessageParser 담당).
+ */
+const PushPayloadSchema = z.object({
+  /** 푸시 알림 제목 (네이티브 알림 헤더) */
+  title: z.string(),
+
+  /** 푸시 알림 본문 (네이티브 알림 내용) */
+  body: z.string(),
+
+  /**
+   * 커스텀 데이터 (string key-value).
+   * - sign_request: 전체 SignRequest JSON (지갑 앱이 서명 UI 직접 표시)
+   * - notification: 전체 NotificationMessage JSON
+   */
+  data: z.record(z.string()),
+
+  /** 메시지 종류: 서명 요청 또는 일반 알림 */
+  category: z.enum(['sign_request', 'notification']),
+
+  /**
+   * 푸시 우선순위.
+   * - high: 서명 요청, 보안 알림 (즉시 표시, 배터리 최적화 무시)
+   * - normal: 일반 알림 (배터리 최적화 적용 가능)
+   */
+  priority: z.enum(['high', 'normal']),
+});
+
+type PushPayload = z.infer<typeof PushPayloadSchema>;
+```
+
+### 7.3 PushResult 스키마
+
+```typescript
+/**
+ * IPushProvider.send()의 반환 결과.
+ * invalidTokens는 DeviceRegistry에서 자동 정리에 사용된다.
+ */
+const PushResultSchema = z.object({
+  /** 성공적으로 전송된 메시지 수 */
+  sent: z.number(),
+
+  /** 전송 실패한 메시지 수 */
+  failed: z.number(),
+
+  /**
+   * 무효한 디바이스 토큰 목록.
+   * 앱 삭제, 토큰 갱신 등으로 더 이상 유효하지 않은 토큰.
+   * DeviceRegistry에서 자동 삭제 대상.
+   */
+  invalidTokens: z.array(z.string()),
+});
+
+type PushResult = z.infer<typeof PushResultSchema>;
+```
+
+### 7.4 프로바이더 확장 패턴
+
+```typescript
+// packages/push-relay/src/providers/create-provider.ts
+
+import type { IPushProvider } from './push-provider.js';
+import { PushwooshProvider } from './pushwoosh-provider.js';
+import { FcmProvider } from './fcm-provider.js';
+import type { RelayConfig } from '../config.js';
+
+/**
+ * config.toml의 relay_push.provider 값에 따라 IPushProvider 구현체를 생성한다.
+ * 신규 프로바이더 추가 시 이 팩토리에 분기를 추가한다.
+ */
+function createProvider(config: RelayConfig): IPushProvider {
+  switch (config.relay_push.provider) {
+    case 'pushwoosh':
+      if (!config.relay_push_pushwoosh) {
+        throw new Error('[push-relay] relay_push_pushwoosh section required when provider is "pushwoosh"');
+      }
+      return new PushwooshProvider(config.relay_push_pushwoosh);
+
+    case 'fcm':
+      if (!config.relay_push_fcm) {
+        throw new Error('[push-relay] relay_push_fcm section required when provider is "fcm"');
+      }
+      return new FcmProvider(config.relay_push_fcm);
+
+    default:
+      throw new Error(`[push-relay] Unknown provider: ${config.relay_push.provider}`);
+  }
+}
+```
+
+---
+
+## 8. PushwooshProvider + FcmProvider
+
+### 8.1 PushwooshProvider
+
+#### API 사양
+
+| 항목 | 내용 |
+|------|------|
+| 엔드포인트 | `POST https://cp.pushwoosh.com/json/1.3/createMessage` |
+| 인증 | API Token + Application Code (config.toml `relay_push_pushwoosh` 섹션) |
+| API 버전 | 1.3 (고정, Pushwoosh Remote API) |
+| 문서 | https://docs.pushwoosh.com/platform-docs/api-reference/messages/create-message |
+
+#### 구현
+
+```typescript
+// packages/push-relay/src/providers/pushwoosh-provider.ts
+
+import type { IPushProvider } from './push-provider.js';
+import type { PushPayload, PushResult } from '../schemas.js';
+
+interface PushwooshConfig {
+  api_token: string;
+  application_code: string;
+}
+
+class PushwooshProvider implements IPushProvider {
+  readonly name = 'pushwoosh';
+
+  constructor(private readonly config: PushwooshConfig) {}
+
+  async send(tokens: string[], payload: PushPayload): Promise<PushResult> {
+    const body = this.buildRequestBody(tokens, payload);
+
+    const response = await fetch('https://cp.pushwoosh.com/json/1.3/createMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return this.parseResponse(response, tokens);
+  }
+
+  async validateConfig(): Promise<boolean> {
+    // Pushwoosh는 사전 검증 API가 없으므로 설정 존재 여부만 확인
+    return !!(this.config.api_token && this.config.application_code);
+  }
+
+  private buildRequestBody(tokens: string[], payload: PushPayload) {
+    return {
+      request: {
+        auth: this.config.api_token,
+        application: this.config.application_code,
+        notifications: [
+          {
+            // 전송 대상: 디바이스 토큰 배열
+            devices: tokens,
+
+            // 다국어 콘텐츠 객체 (영문 고정, 지갑 앱이 로컬라이즈)
+            content: { en: `${payload.title}\n${payload.body}` },
+
+            // 커스텀 데이터 (SignRequest/NotificationMessage JSON 포함)
+            data: payload.data,
+
+            // iOS 설정
+            ios_root_params: {
+              aps: {
+                // 카테고리 (iOS Notification Category → 액션 버튼 연결)
+                category: payload.category,
+                // content-available: high priority 시 1 (사일런트 푸시 + 포그라운드 깨움)
+                'content-available': payload.priority === 'high' ? 1 : 0,
+                // 사운드 설정
+                sound: payload.priority === 'high' ? 'default' : undefined,
+              },
+            },
+
+            // Android 설정
+            android_root_params: {
+              // FCM priority 매핑 (Pushwoosh → FCM 내부 변환)
+              priority: payload.priority === 'high' ? 'high' : 'normal',
+            },
+          },
+        ],
+      },
+    };
+  }
+
+  private async parseResponse(response: Response, tokens: string[]): Promise<PushResult> {
+    if (!response.ok) {
+      console.error(`[PushwooshProvider] HTTP ${response.status}: ${response.statusText}`);
+      return { sent: 0, failed: tokens.length, invalidTokens: [] };
+    }
+
+    const json = await response.json() as {
+      status_code: number;
+      status_message: string;
+      response?: { Messages?: string[] };
+    };
+
+    if (json.status_code !== 200) {
+      console.error(`[PushwooshProvider] API error ${json.status_code}: ${json.status_message}`);
+      return { sent: 0, failed: tokens.length, invalidTokens: [] };
+    }
+
+    // Pushwoosh 200 응답은 메시지 큐잉 성공을 의미 (개별 디바이스 전송 결과는 비동기)
+    return { sent: tokens.length, failed: 0, invalidTokens: [] };
+  }
+}
+```
+
+#### PushPayload -> Pushwoosh 페이로드 매핑 표
+
+| PushPayload 필드 | Pushwoosh 필드 | 변환 규칙 |
+|------------------|---------------|----------|
+| `title` + `body` | `content` | `{ en: "${title}\n${body}" }` (다국어 객체) |
+| `data` | `data` | 그대로 전달 (커스텀 JSON) |
+| `category` | `ios_root_params.aps.category` | `'sign_request'` 또는 `'notification'` |
+| `priority` (`high`) | `ios_root_params.aps.content-available` | `1` (사일런트 푸시 활성) |
+| `priority` (`high`) | `android_root_params.priority` | `"high"` |
+| `priority` (`normal`) | `ios_root_params.aps.content-available` | `0` |
+| `priority` (`normal`) | `android_root_params.priority` | `"normal"` |
+| `tokens[]` | `devices` | 그대로 전달 (디바이스 토큰 배열) |
+
+#### 에러 처리
+
+| 상황 | HTTP 상태 | 동작 |
+|------|----------|------|
+| 네트워크 오류 | - | `PushResult { sent: 0, failed: tokens.length, invalidTokens: [] }` |
+| HTTP 4xx/5xx | 4xx/5xx | 에러 로그 + `PushResult { failed: tokens.length }` |
+| HTTP 200 + status_code !== 200 | 200 | Pushwoosh API 에러. 에러 로그 + `PushResult { failed: tokens.length }` |
+| HTTP 200 + status_code === 200 | 200 | 성공. `PushResult { sent: tokens.length }` |
+
+> **참고**: Pushwoosh createMessage API는 메시지 큐잉 결과만 동기 반환하며, 개별 디바이스 전송 성공/실패는 비동기 처리된다. 따라서 invalidTokens는 Pushwoosh의 Device API를 통한 별도 정리가 필요하며, 초기 구현에서는 비워둔다.
+
+### 8.2 FcmProvider
+
+#### API 사양
+
+| 항목 | 내용 |
+|------|------|
+| 엔드포인트 | `POST https://fcm.googleapis.com/v1/projects/{project_id}/messages:send` |
+| 인증 | Google Service Account Key JSON → OAuth2 access_token |
+| API 버전 | FCM HTTP v1 API (Legacy API 미사용) |
+| 문서 | https://firebase.google.com/docs/cloud-messaging/send-message |
+
+#### 인증 흐름
+
+```
+Service Account Key JSON (파일)
+      │
+      ▼
+  JWT 서명 (RS256)
+  iss: client_email
+  scope: https://www.googleapis.com/auth/firebase.messaging
+  aud: https://oauth2.googleapis.com/token
+      │
+      ▼
+  POST https://oauth2.googleapis.com/token
+  grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer
+  assertion={signed_jwt}
+      │
+      ▼
+  access_token (1시간 유효)
+  → 만료 5분 전 자동 갱신
+```
+
+#### 구현
+
+```typescript
+// packages/push-relay/src/providers/fcm-provider.ts
+
+import type { IPushProvider } from './push-provider.js';
+import type { PushPayload, PushResult } from '../schemas.js';
+import { readFileSync } from 'node:fs';
+import { SignJWT, importPKCS8 } from 'jose';
+
+interface FcmConfig {
+  project_id: string;
+  service_account_key_path: string;
+}
+
+interface ServiceAccountKey {
+  client_email: string;
+  private_key: string;
+  project_id: string;
+}
+
+class FcmProvider implements IPushProvider {
+  readonly name = 'fcm';
+
+  private serviceAccount: ServiceAccountKey | null = null;
+  private accessToken: string | null = null;
+  private tokenExpiresAt: number = 0;
+
+  constructor(private readonly config: FcmConfig) {}
+
+  async send(tokens: string[], payload: PushPayload): Promise<PushResult> {
+    const accessToken = await this.getAccessToken();
+    const result: PushResult = { sent: 0, failed: 0, invalidTokens: [] };
+
+    // FCM HTTP v1 API는 단건 전송 (sendAll/sendMulticast deprecated 대비)
+    // 병렬 전송으로 성능 확보
+    const promises = tokens.map(async (token) => {
+      try {
+        await this.sendSingle(accessToken, token, payload, result);
+      } catch (error) {
+        result.failed++;
+        console.error(`[FcmProvider] Failed to send to ${token.substring(0, 10)}...:`, error);
+      }
+    });
+
+    await Promise.allSettled(promises);
+    return result;
+  }
+
+  async validateConfig(): Promise<boolean> {
+    try {
+      this.loadServiceAccount();
+      // access_token 획득까지 검증
+      await this.getAccessToken();
+      return true;
+    } catch (error) {
+      console.error('[FcmProvider] Config validation failed:', error);
+      return false;
+    }
+  }
+
+  private async sendSingle(
+    accessToken: string,
+    token: string,
+    payload: PushPayload,
+    result: PushResult,
+  ): Promise<void> {
+    const fcmBody = this.buildFcmMessage(token, payload);
+    const url = `https://fcm.googleapis.com/v1/projects/${this.config.project_id}/messages:send`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(fcmBody),
+    });
+
+    if (response.ok) {
+      result.sent++;
+      return;
+    }
+
+    const errorBody = await response.json().catch(() => ({})) as { error?: { code?: number; status?: string } };
+    const errorStatus = errorBody?.error?.status;
+
+    switch (response.status) {
+      case 404:  // NOT_FOUND: 토큰 무효
+      case 410:  // UNREGISTERED: 앱 삭제됨
+        result.invalidTokens.push(token);
+        result.failed++;
+        break;
+
+      case 429:  // QUOTA_EXCEEDED: 재시도 1회 (백오프)
+        await this.delay(1000);
+        const retryResponse = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(fcmBody),
+        });
+        if (retryResponse.ok) {
+          result.sent++;
+        } else {
+          result.failed++;
+          console.warn(`[FcmProvider] Retry failed for ${token.substring(0, 10)}...: ${retryResponse.status}`);
+        }
+        break;
+
+      default:  // 5xx 등: 재시도 1회
+        if (response.status >= 500) {
+          await this.delay(500);
+          const retryResponse2 = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(fcmBody),
+          });
+          if (retryResponse2.ok) {
+            result.sent++;
+          } else {
+            result.failed++;
+          }
+        } else {
+          result.failed++;
+          console.error(`[FcmProvider] HTTP ${response.status} ${errorStatus}: ${token.substring(0, 10)}...`);
+        }
+        break;
+    }
+  }
+
+  private buildFcmMessage(token: string, payload: PushPayload) {
+    return {
+      message: {
+        token,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        data: payload.data,
+        android: {
+          priority: payload.priority === 'high' ? 'HIGH' : 'NORMAL',
+          notification: {
+            click_action: payload.category === 'sign_request'
+              ? 'WAIAAS_SIGN_REQUEST'
+              : 'WAIAAS_NOTIFICATION',
+          },
+        },
+        apns: {
+          headers: {
+            'apns-priority': payload.priority === 'high' ? '10' : '5',
+          },
+          payload: {
+            aps: {
+              category: payload.category,
+              'content-available': payload.priority === 'high' ? 1 : 0,
+              sound: payload.priority === 'high' ? 'default' : undefined,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  private loadServiceAccount(): void {
+    if (this.serviceAccount) return;
+    const raw = readFileSync(this.config.service_account_key_path, 'utf-8');
+    this.serviceAccount = JSON.parse(raw) as ServiceAccountKey;
+  }
+
+  /**
+   * OAuth2 access_token을 획득/캐시한다.
+   * 만료 5분 전에 자동 갱신한다.
+   */
+  private async getAccessToken(): Promise<string> {
+    const now = Date.now();
+    if (this.accessToken && this.tokenExpiresAt > now + 5 * 60 * 1000) {
+      return this.accessToken;
+    }
+
+    this.loadServiceAccount();
+    const sa = this.serviceAccount!;
+
+    // JWT 생성 (RS256)
+    const privateKey = await importPKCS8(sa.private_key, 'RS256');
+    const jwt = await new SignJWT({
+      scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    })
+      .setProtectedHeader({ alg: 'RS256' })
+      .setIssuer(sa.client_email)
+      .setAudience('https://oauth2.googleapis.com/token')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(privateKey);
+
+    // OAuth2 토큰 교환
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error(`[FcmProvider] Token exchange failed: ${tokenResponse.status}`);
+    }
+
+    const tokenData = await tokenResponse.json() as { access_token: string; expires_in: number };
+    this.accessToken = tokenData.access_token;
+    this.tokenExpiresAt = now + tokenData.expires_in * 1000;
+
+    return this.accessToken;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+
+#### PushPayload -> FCM 페이로드 매핑 표
+
+| PushPayload 필드 | FCM 필드 | 변환 규칙 |
+|------------------|---------|----------|
+| `title` | `message.notification.title` | 그대로 전달 |
+| `body` | `message.notification.body` | 그대로 전달 |
+| `data` | `message.data` | 그대로 전달 (string key-value) |
+| `category` (`sign_request`) | `message.android.notification.click_action` | `"WAIAAS_SIGN_REQUEST"` |
+| `category` (`notification`) | `message.android.notification.click_action` | `"WAIAAS_NOTIFICATION"` |
+| `category` | `message.apns.payload.aps.category` | 그대로 전달 |
+| `priority` (`high`) | `message.android.priority` | `"HIGH"` |
+| `priority` (`normal`) | `message.android.priority` | `"NORMAL"` |
+| `priority` (`high`) | `message.apns.headers.apns-priority` | `"10"` |
+| `priority` (`normal`) | `message.apns.headers.apns-priority` | `"5"` |
+| `tokens[i]` | `message.token` | 1건씩 전송 (FCM HTTP v1 단건 API) |
+
+#### 에러 처리
+
+| HTTP 상태 | FCM 에러 | 동작 |
+|----------|---------|------|
+| 200 | - | 성공. `result.sent++` |
+| 404 | `NOT_FOUND` | 토큰 무효. `invalidTokens.push(token)` + `result.failed++` |
+| 410 | `UNREGISTERED` | 앱 삭제됨. `invalidTokens.push(token)` + `result.failed++` |
+| 429 | `QUOTA_EXCEEDED` | 1초 대기 후 재시도 1회. 실패 시 `result.failed++` |
+| 500/503 | `INTERNAL`/`UNAVAILABLE` | 0.5초 대기 후 재시도 1회. 실패 시 `result.failed++` |
+| 기타 4xx | 다양 | `result.failed++` + 에러 로그 |
+
+#### access_token 캐시 정책
+
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| 유효 시간 | 1시간 | Google OAuth2 기본 |
+| 갱신 시점 | 만료 5분 전 | `tokenExpiresAt > now + 5 * 60 * 1000` |
+| 갱신 방식 | JWT 재서명 → 토큰 교환 | 매번 새 JWT 생성 |
+| 저장 위치 | 메모리 (프로세스 내) | 재시작 시 재발급 |
+
+---
+
+## 9. ntfy SSE Subscriber + 메시지 변환
+
+### 9.1 NtfySubscriber 클래스
+
+```typescript
+// packages/push-relay/src/subscriber/ntfy-subscriber.ts
+
+/**
+ * ntfy 토픽을 SSE로 구독하여 메시지를 수신한다.
+ *
+ * ntfy의 다중 토픽 구독 기능을 활용하여 단일 SSE 연결로
+ * 여러 walletId의 서명 + 알림 토픽을 동시에 구독한다.
+ *
+ * 구독 URL: GET {ntfy_server}/{topic1},{topic2},.../sse
+ */
+class NtfySubscriber {
+  private eventSource: EventSource | null = null;
+  private reconnectAttempts: number = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastHeartbeat: number = Date.now();
+  private heartbeatChecker: ReturnType<typeof setInterval> | null = null;
+
+  constructor(
+    private readonly ntfyServer: string,
+    private readonly topics: string[],
+  ) {}
+
+  /**
+   * SSE 구독을 시작한다.
+   *
+   * @param onMessage - ntfy 메시지 수신 콜백 (토픽 + 파싱된 메시지)
+   */
+  subscribe(onMessage: (topic: string, message: NtfyMessage) => void): void {
+    const topicList = this.topics.join(',');
+    const sseUrl = `${this.ntfyServer}/${topicList}/sse`;
+
+    console.log(`[NtfySubscriber] Subscribing to ${this.topics.length} topics: ${sseUrl}`);
+
+    this.eventSource = new EventSource(sseUrl);
+
+    this.eventSource.onmessage = (event: MessageEvent) => {
+      this.lastHeartbeat = Date.now();
+      this.reconnectAttempts = 0;  // 성공 시 재연결 카운터 리셋
+
+      try {
+        const message = JSON.parse(event.data) as NtfyMessage;
+        // ntfy keepalive 메시지 무시 (event: "keepalive")
+        if (message.event === 'keepalive') return;
+        if (message.event !== 'message') return;
+
+        onMessage(message.topic, message);
+      } catch (error) {
+        console.warn('[NtfySubscriber] Failed to parse message:', error);
+      }
+    };
+
+    this.eventSource.onerror = () => {
+      console.warn('[NtfySubscriber] SSE connection error, scheduling reconnect...');
+      this.scheduleReconnect(onMessage);
+    };
+
+    // heartbeat 감시: 60초 동안 메시지 없으면 재연결
+    this.heartbeatChecker = setInterval(() => {
+      if (Date.now() - this.lastHeartbeat > 60_000) {
+        console.warn('[NtfySubscriber] Heartbeat timeout (60s), reconnecting...');
+        this.close();
+        this.subscribe(onMessage);
+      }
+    }, 15_000);
+  }
+
+  /**
+   * SSE 연결을 종료한다.
+   */
+  close(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.heartbeatChecker) {
+      clearInterval(this.heartbeatChecker);
+      this.heartbeatChecker = null;
+    }
+  }
+
+  /**
+   * 지수 백오프 재연결.
+   * 1s → 2s → 4s → 8s → 16s → 32s → 60s (최대)
+   */
+  private scheduleReconnect(onMessage: (topic: string, message: NtfyMessage) => void): void {
+    this.close();
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 60_000);
+    this.reconnectAttempts++;
+
+    console.log(`[NtfySubscriber] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.subscribe(onMessage);
+    }, delay);
+  }
+}
+
+/**
+ * ntfy SSE 메시지 구조 (ntfy JSON 이벤트).
+ */
+interface NtfyMessage {
+  id: string;
+  time: number;
+  event: 'message' | 'keepalive' | 'open';
+  topic: string;
+  message?: string;
+  title?: string;
+  priority?: number;
+  tags?: string[];
+}
+```
+
+### 9.2 구독 대상 토픽 계산
+
+NtfySubscriber가 구독하는 토픽은 config.toml의 `relay.wallet_ids` 배열과 `relay.topic_prefix`로 결정된다:
+
+```typescript
+// packages/push-relay/src/subscriber/build-topics.ts
+
+/**
+ * 구독 대상 ntfy 토픽 목록을 생성한다.
+ *
+ * 각 walletId에 대해 서명 + 알림 토픽 2개를 생성하므로,
+ * N개 walletId → 2N개 토픽을 구독한다.
+ *
+ * @param topicPrefix - 토픽 접두어 (기본: "waiaas")
+ * @param walletIds - 구독 대상 지갑 ID 배열
+ * @returns ntfy 토픽 문자열 배열
+ */
+function buildTopics(topicPrefix: string, walletIds: string[]): string[] {
+  const topics: string[] = [];
+  for (const walletId of walletIds) {
+    topics.push(`${topicPrefix}-sign-${walletId}`);      // 서명 요청 토픽
+    topics.push(`${topicPrefix}-notify-${walletId}`);     // 일반 알림 토픽
+  }
+  return topics;
+}
+```
+
+예시:
+
+| wallet_ids | topic_prefix | 생성 토픽 |
+|------------|-------------|----------|
+| `["wallet-A"]` | `"waiaas"` | `waiaas-sign-wallet-A`, `waiaas-notify-wallet-A` (2개) |
+| `["wallet-A", "wallet-B", "wallet-C"]` | `"waiaas"` | 6개 토픽 (3 x 2) |
+
+### 9.3 MessageParser
+
+```typescript
+// packages/push-relay/src/subscriber/message-parser.ts
+
+import type { PushPayload } from '../schemas.js';
+import type { NtfyMessage } from './ntfy-subscriber.js';
+
+/**
+ * ntfy 메시지를 PushPayload로 변환한다.
+ * 토픽 패턴으로 서명 요청과 일반 알림을 분기한다.
+ */
+class MessageParser {
+  constructor(private readonly topicPrefix: string) {}
+
+  /**
+   * ntfy 메시지를 PushPayload로 변환한다.
+   *
+   * @param topic - ntfy 토픽 이름
+   * @param message - ntfy 메시지 객체
+   * @returns PushPayload 또는 null (파싱 불가 시)
+   */
+  parse(topic: string, message: NtfyMessage): PushPayload | null {
+    // 토픽 패턴 분기
+    if (topic.startsWith(`${this.topicPrefix}-sign-`)) {
+      return this.parseSignRequest(message);
+    }
+    if (topic.startsWith(`${this.topicPrefix}-notify-`)) {
+      return this.parseNotification(message);
+    }
+
+    console.warn(`[MessageParser] Unknown topic pattern: ${topic}`);
+    return null;
+  }
+
+  /**
+   * 서명 요청 메시지 변환.
+   *
+   * ntfy 서명 토픽의 message 필드에는 SignRequest JSON이 포함된다 (doc 73 Section 7.2).
+   * 지갑 앱이 Push data에서 SignRequest를 추출하여 서명 UI를 직접 표시할 수 있도록
+   * 전체 SignRequest JSON을 data.signRequest 필드에 포함한다.
+   */
+  private parseSignRequest(message: NtfyMessage): PushPayload {
+    // ntfy message 필드에서 SignRequest JSON 추출
+    const signRequestJson = message.message ?? '';
+
+    let displayBody = 'New transaction requires your approval';
+    try {
+      const signRequest = JSON.parse(signRequestJson) as {
+        displayMessage?: string;
+        type?: string;
+        amount?: string;
+        to?: string;
+      };
+      // displayMessage가 있으면 사용 (doc 73 Section 5.2)
+      if (signRequest.displayMessage) {
+        displayBody = signRequest.displayMessage;
+      }
+    } catch {
+      // JSON 파싱 실패 시 기본 메시지 사용
+    }
+
+    return {
+      title: 'Transaction Approval',
+      body: displayBody,
+      data: {
+        signRequest: signRequestJson,   // 전체 SignRequest JSON
+        type: 'sign_request',
+      },
+      category: 'sign_request',
+      priority: 'high',                 // 서명 요청은 항상 high priority
+    };
+  }
+
+  /**
+   * 일반 알림 메시지 변환.
+   *
+   * ntfy 알림 토픽의 message 필드에는 NotificationMessage JSON이 포함된다 (doc 75 Section 3).
+   * priority는 NotificationMessage의 category에 따라 결정한다.
+   */
+  private parseNotification(message: NtfyMessage): PushPayload {
+    const notificationJson = message.message ?? '';
+
+    let title = message.title ?? 'WAIaaS Notification';
+    let body = 'You have a new notification';
+    let priority: 'high' | 'normal' = 'normal';
+
+    try {
+      const notification = JSON.parse(notificationJson) as {
+        title?: string;
+        body?: string;
+        category?: string;
+      };
+      if (notification.title) title = notification.title;
+      if (notification.body) body = notification.body;
+
+      // category별 priority 매핑 (Section 2.3 기준)
+      if (notification.category === 'security_alert') {
+        priority = 'high';
+      } else if (notification.category === 'policy_violation') {
+        priority = 'high';
+      }
+    } catch {
+      // JSON 파싱 실패 시 기본값 사용
+    }
+
+    return {
+      title,
+      body,
+      data: {
+        notification: notificationJson,   // 전체 NotificationMessage JSON
+        type: 'notification',
+      },
+      category: 'notification',
+      priority,
+    };
+  }
+}
+```
+
+### 9.4 SSE 구독 상세
+
+| 항목 | 내용 |
+|------|------|
+| 구독 URL | `GET {ntfy_server}/{topic1},{topic2},.../sse` |
+| 프로토콜 | Server-Sent Events (text/event-stream) |
+| 다중 토픽 | ntfy 네이티브 지원 (콤마 구분, 단일 연결) |
+| keepalive | ntfy가 30초마다 전송 (`event: keepalive`) |
+| 인코딩 | UTF-8 JSON |
+
+### 9.5 재연결 정책
+
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| 초기 대기 | 1초 | 첫 번째 재연결 시도 |
+| 증가 방식 | 지수 백오프 (x2) | 1s → 2s → 4s → 8s → 16s → 32s → 60s |
+| 최대 대기 | 60초 | 60초 이상 대기하지 않음 |
+| 카운터 리셋 | 메시지 수신 시 | 정상 수신되면 attempts=0으로 리셋 |
+| heartbeat 타임아웃 | 60초 | ntfy keepalive(30s) 2회 미수신 시 재연결 |
+| heartbeat 체크 주기 | 15초 | setInterval로 주기적 확인 |
+
+### 9.6 변환 매핑 표
+
+ntfy 메시지 유형별 PushPayload 필드 매핑:
+
+| ntfy 토픽 패턴 | PushPayload.category | PushPayload.priority | PushPayload.title | PushPayload.body | PushPayload.data |
+|---------------|---------------------|---------------------|-------------------|-----------------|-----------------|
+| `{prefix}-sign-{walletId}` | `'sign_request'` | `'high'` (항상) | `"Transaction Approval"` | SignRequest.displayMessage 또는 기본 문구 | `{ signRequest: "{전체 JSON}", type: "sign_request" }` |
+| `{prefix}-notify-{walletId}` (security_alert) | `'notification'` | `'high'` | NotificationMessage.title | NotificationMessage.body | `{ notification: "{전체 JSON}", type: "notification" }` |
+| `{prefix}-notify-{walletId}` (policy_violation) | `'notification'` | `'high'` | NotificationMessage.title | NotificationMessage.body | `{ notification: "{전체 JSON}", type: "notification" }` |
+| `{prefix}-notify-{walletId}` (기타) | `'notification'` | `'normal'` | NotificationMessage.title | NotificationMessage.body | `{ notification: "{전체 JSON}", type: "notification" }` |
+
+---
