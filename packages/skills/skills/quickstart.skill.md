@@ -13,6 +13,33 @@ dispatch:
 
 WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana and Ethereum with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
 
+## 0. Connection Discovery
+
+Check if the daemon is running and discover existing wallets before starting.
+
+### Health Check
+
+```bash
+curl -s http://localhost:3100/health
+```
+
+If successful, you get `{"status":"ok", ...}`. If the daemon is not running, start it with `waiaas start`.
+
+### List Existing Wallets (requires masterAuth)
+
+```bash
+curl -s http://localhost:3100/v1/wallets \
+  -H 'X-Master-Password: <master-password>'
+```
+
+This returns all wallets. If wallets already exist, you can skip to Step 3 (Create a Session) using an existing wallet ID.
+
+> **Note**: The master password is the value set during `waiaas init`.
+>
+> Skill files are API references. For interactive use with an AI agent,
+> set up the MCP server (`waiaas mcp setup`) or provide the daemon URL
+> and authentication credentials directly.
+
 ## Base URL
 
 ```
@@ -304,3 +331,5 @@ Common error codes:
 - **transactions.skill.md** -- All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with full parameters
 - **policies.skill.md** -- Policy management (spending limits, whitelists, rate limits, approval tiers)
 - **admin.skill.md** -- Admin operations (kill switch, status, settings, notifications)
+- **actions.skill.md** -- DeFi action providers: list and execute DeFi actions through the transaction pipeline
+- **x402.skill.md** -- x402 auto-payment protocol for fetching paid URLs with cryptocurrency
