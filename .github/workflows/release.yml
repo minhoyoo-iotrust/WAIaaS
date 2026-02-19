@@ -133,6 +133,23 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
+      - name: Copy root README to packages
+        run: |
+          PACKAGES=(
+            packages/core
+            packages/daemon
+            packages/cli
+            packages/sdk
+            packages/mcp
+            packages/skills
+            packages/adapters/solana
+            packages/adapters/evm
+          )
+          for pkg_path in "${PACKAGES[@]}"; do
+            cp README.md "$pkg_path/README.md"
+            echo "Copied README.md -> $pkg_path/README.md"
+          done
+
       - name: Verify Admin UI in daemon
         run: |
           if [ ! -f packages/daemon/public/admin/index.html ]; then
@@ -235,6 +252,23 @@ jobs:
 
       - name: Build
         run: pnpm turbo run build
+
+      - name: Copy root README to packages
+        run: |
+          PACKAGES=(
+            packages/core
+            packages/daemon
+            packages/cli
+            packages/sdk
+            packages/mcp
+            packages/skills
+            packages/adapters/solana
+            packages/adapters/evm
+          )
+          for pkg_path in "${PACKAGES[@]}"; do
+            cp README.md "$pkg_path/README.md"
+            echo "Copied README.md -> $pkg_path/README.md"
+          done
 
       - name: Ensure npm >= 11.5.1
         run: |
