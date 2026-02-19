@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 190 of 190 (검증 및 정리 -- 완료)
 Plan: 1 of 1 in current phase (complete)
 Status: v2.4 milestone complete
-Last activity: 2026-02-19 - Completed quick task 2: Issue 093 npm 패키지 README 복사 스텝 추가
+Last activity: 2026-02-19 - Completed quick task 3: Issue 092 npm 패키지 homepage/bugs URL 수정
 
 Progress: [██████████] 100%
 
@@ -50,9 +50,10 @@ Full log in PROJECT.md and milestones/.
 |---|-------------|------|--------|-----------|
 | 1 | Issue 090: 데몬 시작 시 마스터 패스워드 검증 추가 | 2026-02-19 | b8e6a6a | [1-issue-090](./quick/1-issue-090/) |
 | 2 | Issue 093: npm 패키지 README 복사 스텝 추가 | 2026-02-19 | aa01f82 | [2-issue-093-npm-readme](./quick/2-issue-093-npm-readme/) |
+| 3 | Issue 092: npm 패키지 homepage/bugs URL 수정 | 2026-02-19 | 68a99d7 | [3-issue-092-npm-homepage-repository-url](./quick/3-issue-092-npm-homepage-repository-url/) |
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed quick task 2: Issue 093 npm README
+Stopped at: Completed quick task 3: Issue 092 npm homepage/bugs URL
 Resume file: .planning/phases/190-verify-cleanup/190-01-SUMMARY.md
