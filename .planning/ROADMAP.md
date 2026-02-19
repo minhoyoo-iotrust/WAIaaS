@@ -115,11 +115,11 @@ Plans:
   3. SignRequestBuilder/SignResponseHandler/NtfySigningChannel/TelegramSigningChannel의 인터페이스와 책임 경계가 확정되어 있다
   4. WalletLinkRegistry + ApprovalChannelRouter의 라우팅 로직(지갑별 설정 > 글로벌 fallback, 5단계 우선순위)이 확정되어 있다
   5. wallets.owner_approval_method 컬럼 설계와 SettingsService signing_sdk 6개 키가 확정되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 199-01: TBD
-- [ ] 199-02: TBD
+- [ ] 199-01-PLAN.md — SDK 공개 API 6개 함수 시그니처 + WalletLinkConfig 스키마 + 패키지 구조
+- [ ] 199-02-PLAN.md — 데몬 컴포넌트 인터페이스 + 채널 라우팅 + SettingsService 키 + DB 스키마
 
 ### Phase 200: 알림 채널 + Push Relay Server 설계
 **Goal**: 지갑 앱 알림 채널과 Push Relay Server의 인터페이스가 확정되어, m26-02/m26-03에서 바로 구현을 시작할 수 있는 상태
