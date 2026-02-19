@@ -113,6 +113,7 @@
 | 096 | ENHANCEMENT | MEDIUM | Admin 다중 지갑 일괄 세션/MCP 토큰 생성 기능 미지원 | v2.5 | OPEN | 2026-02-19 |
 | 097 | BUG | MEDIUM | Admin Owner 주소 등록 실패 시 구체적 에러 사유 미표시 — serverMessage 무시 | v2.5 | OPEN | 2026-02-19 |
 | 098 | BUG | MEDIUM | Admin Owner 주소 등록 후 ownerState 즉시 미반영 — PUT 응답에 ownerState 누락 | v2.5 | OPEN | 2026-02-19 |
+| 099 | ENHANCEMENT | LOW | WalletConnect 미설정 에러 시 설정 위치(Wallets > WalletConnect 탭) 이동 안내 없음 | v2.5 | OPEN | 2026-02-19 |
 
 ## Type Legend
 
@@ -124,9 +125,9 @@
 
 ## Summary
 
-- **OPEN:** 5
+- **OPEN:** 6
 - **FIXED:** 93
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 98
+- **Total:** 99
