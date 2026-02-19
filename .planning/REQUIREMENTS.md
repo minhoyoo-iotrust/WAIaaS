@@ -18,9 +18,9 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 - [ ] **NEWPG-07**: system.tsx AutoStop 설정 토글 + 저장 테스트
 - [ ] **NEWPG-08**: system.tsx Monitoring 설정 폼 테스트
 - [ ] **NEWPG-09**: system.tsx API Keys CRUD 테스트
-- [ ] **NEWPG-10**: walletconnect.tsx 설정 폼 테스트
-- [ ] **NEWPG-11**: walletconnect.tsx 페어링/세션 목록 렌더링 테스트
-- [ ] **NEWPG-12**: walletconnect.tsx 미설정 상태 안내 UI 테스트
+- [x] **NEWPG-10**: walletconnect.tsx 설정 폼 테스트
+- [x] **NEWPG-11**: walletconnect.tsx 페어링/세션 목록 렌더링 테스트
+- [x] **NEWPG-12**: walletconnect.tsx 미설정 상태 안내 UI 테스트
 
 ### 공용 컴포넌트 테스트 (COMP)
 
@@ -66,9 +66,9 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 | NEWPG-07 | Phase 192 | Pending |
 | NEWPG-08 | Phase 192 | Pending |
 | NEWPG-09 | Phase 192 | Pending |
-| NEWPG-10 | Phase 191 | Pending |
-| NEWPG-11 | Phase 191 | Pending |
-| NEWPG-12 | Phase 191 | Pending |
+| NEWPG-10 | Phase 191 | Complete |
+| NEWPG-11 | Phase 191 | Complete |
+| NEWPG-12 | Phase 191 | Complete |
 | COMP-01 | Phase 193 | Pending |
 | COMP-02 | Phase 193 | Pending |
 | COMP-03 | Phase 193 | Pending |
