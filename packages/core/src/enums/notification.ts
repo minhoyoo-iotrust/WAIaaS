@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// NotificationEventType: event types from 35-notification-architecture (22 total)
+// NotificationEventType: event types from 35-notification-architecture (25 total)
 export const NOTIFICATION_EVENT_TYPES = [
   'TX_REQUESTED',
   'TX_QUEUED',

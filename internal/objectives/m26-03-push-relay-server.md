@@ -158,7 +158,9 @@ const DeviceRegistrationSchema = z.object({
 
 서명 요청의 경우, Push 페이로드의 `data` 필드에 전체 SignRequest JSON을 포함하여 지갑 앱이 서명 UI를 바로 표시할 수 있게 한다.
 
-### config.toml
+### config.toml (push-relay 전용)
+
+> **참고**: Push Relay Server는 WAIaaS 데몬과 별도 패키지(@waiaas/push-relay)로, WAIaaS의 flat-key config 정책(`detectNestedSections`)이 적용되지 않는다. 자체 config.toml에서 중첩 섹션을 사용한다.
 
 ```toml
 [relay]

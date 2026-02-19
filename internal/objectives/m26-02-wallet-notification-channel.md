@@ -84,7 +84,7 @@ waiaas-notify-{walletId}      → 일반 알림 (m26-02, 신규)
 ```
 알림 이벤트 발생
   → NotificationService.notify()
-    → 기존 채널 (Telegram/Slack/ntfy/Discord/Webhook)  ← 변경 없음
+    → 기존 채널 (Telegram/Slack/ntfy/Discord)  ← 변경 없음
     → WalletNotificationChannel (신규)
       → 해당 walletId의 owner_approval_method가 sdk_ntfy인 경우
       → waiaas-notify-{walletId} 토픽에 NotificationMessage publish
@@ -104,18 +104,17 @@ subscribeToNotifications(
 parseNotification(data: string): NotificationMessage;
 ```
 
-### config.toml
+### Admin Settings (SettingsService)
 
-```toml
-[signing_sdk]
-# 기존 설정 유지 (m26-01)
+m26-01에서 등록한 signing_sdk SettingsService 키에 알림 관련 키를 추가한다:
 
-[signing_sdk.notifications]
-enabled = true                              # 지갑 앱 알림 채널 활성화
-topic_prefix = "waiaas-notify"              # 알림 토픽 접두어
-categories = ["transaction_completed", "policy_violation", "security_alert"]
-                                            # 지갑에 전송할 알림 카테고리 (기본: 전체)
-```
+| 키 | 타입 | 기본값 | 설명 |
+|----|------|--------|------|
+| `signing_sdk.notifications_enabled` | boolean | `true` | 지갑 앱 알림 채널 활성화 |
+| `signing_sdk.notify_topic_prefix` | string | `"waiaas-notify"` | 알림 토픽 접두어 |
+| `signing_sdk.notify_categories` | JSON array | `[]` (전체) | 지갑에 전송할 알림 카테고리 필터 (빈 배열 = 전체) |
+
+> **설계 근거**: config.toml 중첩 금지 정책 준수. 알림 카테고리 필터는 운영 중 변경 가능해야 하므로 SettingsService(Admin UI)가 적합.
 
 ### 파일/모듈 구조
 
@@ -188,11 +187,12 @@ packages/wallet-sdk/src/
 |------|------|
 | 페이즈 | 1개 |
 | 신규 파일 | 2-3개 (데몬 채널 1 + SDK 함수 1-2) |
-| 수정 파일 | 3-4개 (NotificationService, SDK index/schemas, config loader) |
+| 수정 파일 | 3-4개 (NotificationService, SDK index/schemas, SettingsService 키 등록) |
 | 테스트 | 10개 |
 | DB 마이그레이션 | 없음 |
 
 ---
 
 *생성일: 2026-02-15*
+*최종 수정: 2026-02-19 — 코드베이스 실측 반영 (config.toml → Admin Settings)*
 *선행: m26-01 (WAIaaS Wallet Signing SDK)*
