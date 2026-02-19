@@ -47,6 +47,7 @@
     ".": {
       "component": "waiaas",
       "changelog-path": "CHANGELOG.md",
+      "release-as": "2.3.0",
       "extra-files": [
         "packages/core/package.json",
         "packages/daemon/package.json",
