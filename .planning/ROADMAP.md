@@ -115,11 +115,11 @@ Plans:
   1. README의 SDK 코드 예시가 실제 API 응답 필드와 일치한다 (`balance.balance`, `tx.id` 등)
   2. skill 파일(7개)의 version 헤더가 빌드 타임에 패키지 버전으로 자동 치환된다
   3. CLI와 SDK npm 패키지 페이지에 설치 + quickstart 코드를 포함한 README가 표시된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 196-01: README SDK 코드 수정 + skill 파일 버전 자동 치환
-- [ ] 196-02: CLI/SDK 패키지 npm README 작성
+- [ ] 196-01-PLAN.md — README SDK 코드 수정 + skill 파일 버전 자동 치환
+- [ ] 196-02-PLAN.md — CLI/SDK 패키지 npm README 작성
 
 ### Phase 197: Docker + Python SDK DX
 **Goal**: Docker 사용자와 Python SDK 사용자가 문서만 보고 첫 실행을 완료할 수 있다
