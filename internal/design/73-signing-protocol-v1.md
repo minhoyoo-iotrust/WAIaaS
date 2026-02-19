@@ -1185,29 +1185,281 @@ function sendViaTelegram(
 
 ## 9. 요청 만료 + 재시도 정책
 
-<!-- Plan 02에서 작성 -->
+### 9.1 만료 시간 설정
+
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| 기본 만료 시간 | **30분** | SettingsService `signing_sdk.request_expiry_min` |
+| 최소값 | 1분 | 너무 짧으면 Owner가 확인할 시간 부족 |
+| 최대값 | 1440분 (24시간) | 보안상 장기간 열린 요청은 위험 |
+| 계산 방식 | `new Date(Date.now() + expiryMin * 60 * 1000).toISOString()` | ISO 8601 UTC 기준 |
+
+### 9.2 만료 확인 시점
+
+| 시점 | 주체 | 동작 |
+|------|------|------|
+| SignResponse 수신 시 | 데몬 | `new Date(signResponse.signedAt) > new Date(signRequest.expiresAt)` → `SIGN_REQUEST_EXPIRED` |
+| ntfy SSE 구독 타임아웃 | 데몬 | expiresAt 도달 시 SSE 연결 종료 → 트랜잭션 상태 유지 (PENDING_APPROVAL) |
+| 유니버셜 링크 열기 시 | 지갑 앱 | SignRequest.expiresAt 확인 → 만료 시 서명 UI 비활성화 + "요청이 만료되었습니다" 안내 |
+| `/sign_response` 수신 시 | 데몬 | requestId로 원본 SignRequest 조회 → expiresAt 확인 |
+
+### 9.3 만료 후 처리
+
+**데몬 측:**
+
+```typescript
+// SignResponseHandler
+async handle(signResponse: SignResponse): Promise<void> {
+  const signRequest = await this.findRequest(signResponse.requestId);
+  if (!signRequest) throw new WAIaaSError('SIGN_REQUEST_NOT_FOUND', 404);
+
+  // 만료 확인
+  if (new Date() > new Date(signRequest.expiresAt)) {
+    throw new WAIaaSError('SIGN_REQUEST_EXPIRED', 408);
+  }
+
+  // ... 이하 서명 검증 + 실행
+}
+```
+
+- 만료된 SignResponse를 수신해도 **트랜잭션 상태는 변경하지 않음** (PENDING_APPROVAL 유지)
+- 데몬은 만료 에러를 로그에 기록하고, ntfy 채널인 경우 SSE 구독을 이미 종료한 상태
+
+**지갑 앱 측:**
+
+```typescript
+// @waiaas/wallet-sdk — parseSignRequest 내부
+function parseSignRequest(url: string): SignRequest {
+  const request = /* ... 파싱 로직 ... */;
+
+  // 만료 확인 (경고용, 최종 검증은 데몬 측)
+  if (new Date() > new Date(request.expiresAt)) {
+    throw new SignRequestExpiredError(
+      '이 서명 요청은 만료되었습니다. 새로운 요청을 기다려주세요.'
+    );
+  }
+
+  return request;
+}
+```
+
+### 9.4 재시도 정책
+
+**원칙: 자동 재시도 없음 (1회성 요청)**
+
+| 상황 | 처리 |
+|------|------|
+| 요청 만료 (Owner 미응답) | 트랜잭션 PENDING_APPROVAL 상태 유지. 새 승인 필요 시 **새 SignRequest 생성** (새 requestId) |
+| Owner 거부 (action='reject') | 트랜잭션 CANCELLED. 동일 트랜잭션 재시도 불가. AI Agent가 새 트랜잭션을 생성해야 함 |
+| 네트워크 오류 (ntfy 전달 실패) | 데몬이 ntfy publish 실패 감지 → 트랜잭션 PENDING_APPROVAL 유지 |
+| 서명 검증 실패 | INVALID_SIGNATURE 에러. 트랜잭션 상태 변경 없음. Owner가 올바른 키로 재서명 필요 |
+
+**Admin 수동 재승인:**
+
+Admin이 PENDING_APPROVAL 상태의 트랜잭션에 대해 기존 approve API(`POST /v1/transactions/:id/approve`)를 사용하여 수동 재승인 요청을 생성할 수 있다. 이때 새로운 SignRequest가 생성되며 새 requestId가 부여된다.
 
 ---
 
 ## 10. 보안 모델
 
-<!-- Plan 02에서 작성 -->
+### 10.1 위협 분석
+
+#### 위협 1: 토픽 스니핑 (요청 엿보기)
+
+| 항목 | 내용 |
+|------|------|
+| **공격 시나리오** | 공격자가 요청 토픽(`waiaas-sign-{walletId}`)을 구독하여 서명 요청을 엿본다 |
+| **위험도** | 낮음 |
+| **대응** | walletId는 UUID v7 (122비트 엔트로피, 추측 어려움). 요청 자체는 공개 데이터이며, 서명 능력 없이는 무해하다. 서명 요청을 엿보더라도 Owner의 개인키 없이는 유효한 응답을 생성할 수 없다 |
+| **추가 대응** | self-hosted ntfy 사용 시 토픽 인증(Authorization 헤더) 추가 가능 |
+
+#### 위협 2: 위조 응답 (가짜 SignResponse)
+
+| 항목 | 내용 |
+|------|------|
+| **공격 시나리오** | 공격자가 응답 토픽(`waiaas-response-{requestId}`)에 가짜 SignResponse를 publish |
+| **위험도** | 차단됨 |
+| **대응** | signerAddress 서명 검증 (ownerAuth: EIP-191/SIWE 또는 Ed25519/SIWS). Owner 개인키 없이는 유효한 서명을 생성할 수 없다. 서명 검증 실패 시 `INVALID_SIGNATURE` 에러로 즉시 거부 |
+
+#### 위협 3: 리플레이 공격 (응답 재전송)
+
+| 항목 | 내용 |
+|------|------|
+| **공격 시나리오** | 과거의 유효한 SignResponse를 캡처하여 새 요청에 재전송 |
+| **위험도** | 차단됨 |
+| **대응** | (1) requestId 매칭 — 응답의 requestId가 현재 활성 요청과 일치해야 함. (2) 이미 처리된 requestId는 거부 (`SIGN_REQUEST_ALREADY_PROCESSED`). (3) expiresAt 확인 — 만료된 요청의 응답은 거부 |
+
+#### 위협 4: 중간자 공격 (통신 가로채기)
+
+| 항목 | 내용 |
+|------|------|
+| **공격 시나리오** | ntfy 서버와의 통신을 가로채어 요청을 변조하거나 응답을 탈취 |
+| **위험도** | 낮음 (HTTPS 강제) |
+| **대응** | (1) ntfy 서버와의 모든 통신은 HTTPS 강제. (2) self-hosted ntfy 사용 시 TLS 인증서 필수. (3) Telegram Bot API도 HTTPS 전용 |
+
+#### 위협 5: 응답 토픽 추측
+
+| 항목 | 내용 |
+|------|------|
+| **공격 시나리오** | 공격자가 응답 토픽 이름(`waiaas-response-{requestId}`)을 추측하여 구독 |
+| **위험도** | 무시 가능 |
+| **대응** | requestId는 UUID v7 (122비트 엔트로피). 무작위 대입으로 추측할 확률은 `1/2^122` ≈ `1/5.3 x 10^36`. 또한 추측에 성공하더라도 위협 2의 서명 검증에 의해 차단됨 |
+
+### 10.2 ntfy 토픽 보안
+
+| 토픽 | 보안 수준 | 설명 |
+|------|----------|------|
+| 요청 토픽 `waiaas-sign-{walletId}` | 중간 | walletId는 UUID v7이지만 장기 사용. 지갑 소유자만 알 수 있으나, 노출 시 요청 내용 열람 가능 (서명 불가) |
+| 응답 토픽 `waiaas-response-{requestId}` | 높음 | requestId는 요청별 UUID v7. 1회용이며 추측 불가. 토픽 자체가 인증 역할 |
+
+**공개 ntfy.sh vs self-hosted:**
+
+| 구분 | 공개 ntfy.sh | self-hosted ntfy |
+|------|-------------|-----------------|
+| 토픽 접근 | 토픽 이름을 아는 누구나 구독/publish 가능 | Authorization 헤더 기반 접근 제어 가능 |
+| 서버 신뢰 | ntfy.sh 운영자가 메시지 열람 가능 (평문) | 자체 서버에서만 처리, 외부 노출 없음 |
+| 권장 | 개발/테스트 환경, 민감하지 않은 데이터 | 프로덕션, 민감 데이터, 규정 준수 필요 시 |
+
+### 10.3 서명 검증 플로우
+
+기존 ownerAuth 인프라(v1.2 구현 완료)를 재사용한다.
+
+**EVM 체인:**
+
+```typescript
+import { verifyMessage } from 'viem';
+
+async function verifyEvmSignature(
+  message: string,
+  signature: string,
+  expectedAddress: string
+): Promise<boolean> {
+  const isValid = await verifyMessage({
+    address: expectedAddress as `0x${string}`,
+    message,
+    signature: signature as `0x${string}`,
+  });
+  return isValid;
+}
+```
+
+**Solana 체인:**
+
+```typescript
+import nacl from 'tweetnacl';
+import bs58 from 'bs58';
+
+function verifySolanaSignature(
+  message: string,
+  signature: string,
+  expectedAddress: string
+): boolean {
+  const messageBytes = new TextEncoder().encode(message);
+  const signatureBytes = Buffer.from(signature, 'base64');
+  const publicKeyBytes = bs58.decode(expectedAddress);
+
+  return nacl.sign.detached.verify(
+    messageBytes,
+    signatureBytes,
+    publicKeyBytes,
+  );
+}
+```
+
+**검증 실패 처리:**
+
+| 실패 원인 | 에러 코드 | 트랜잭션 상태 |
+|----------|----------|-------------|
+| 서명 값 검증 실패 | `INVALID_SIGNATURE` (401) | 변경 없음 (PENDING_APPROVAL 유지) |
+| signerAddress와 Owner 주소 불일치 | `SIGNER_ADDRESS_MISMATCH` (403) | 변경 없음 |
+| signature 필드 누락 (approve 시) | `INVALID_SIGN_RESPONSE` (400) | 변경 없음 |
+
+### 10.4 향후 보안 강화 옵션 (범위 외)
+
+아래 옵션은 Signing Protocol v1 범위에 포함하지 않으며, 보안 요구사항 증가 시 후속 마일스톤에서 추가한다.
+
+| 옵션 | 설명 | 효과 |
+|------|------|------|
+| ntfy 토픽 인증 | Authorization 헤더 기반 토픽 접근 제어. self-hosted ntfy에서 사용자/비밀번호 또는 토큰 인증 | 토픽 스니핑 + 위조 응답을 네트워크 레벨에서 차단 |
+| E2E 암호화 | SignRequest/SignResponse를 Owner 공개키로 암호화. ntfy 서버에서도 내용 열람 불가 | 서버 신뢰 불필요. 완전한 기밀성 확보 |
+| 응답 토픽 TTL | ntfy 서버 설정으로 만료된 토픽의 메시지 자동 삭제 | 만료된 응답 데이터 잔존 방지 |
+| SignRequest HMAC | 데몬이 SignRequest에 HMAC을 추가하여 무결성 검증 | 전달 과정에서 요청 변조 감지 |
 
 ---
 
 ## 11. 에러 코드
 
-<!-- Plan 02에서 작성 -->
+기존 WAIaaS 에러 코드 체계(ChainError extends Error → Stage 5에서 WAIaaSError 변환)에 서명 프로토콜 전용 에러를 추가한다.
+
+### 11.1 서명 프로토콜 에러 코드
+
+| 에러 코드 | HTTP | 설명 | 발생 시점 |
+|-----------|------|------|----------|
+| `SIGN_REQUEST_EXPIRED` | 408 | 서명 요청 만료 (expiresAt 초과) | SignResponse 수신 시 expiresAt 검증 |
+| `SIGN_REQUEST_NOT_FOUND` | 404 | requestId에 해당하는 요청 없음 | SignResponse의 requestId 매칭 실패 |
+| `SIGN_REQUEST_ALREADY_PROCESSED` | 409 | 이미 처리된 서명 요청 (approve/reject 완료) | 동일 requestId로 중복 응답 수신 |
+| `INVALID_SIGN_RESPONSE` | 400 | SignResponse Zod 검증 실패 (필수 필드 누락, 형식 오류) | SignResponse 파싱/검증 단계 |
+| `INVALID_SIGNATURE` | 401 | 서명 검증 실패 (ownerAuth EIP-191/Ed25519) | 서명 값 검증 단계 |
+| `SIGNER_ADDRESS_MISMATCH` | 403 | signerAddress와 Owner 등록 주소 불일치 | signerAddress 검증 단계 |
+| `SIGNING_SDK_DISABLED` | 403 | signing_sdk.enabled = false 상태에서 SDK 채널 요청 | SignRequest 생성 시 |
+| `WALLET_NOT_REGISTERED` | 404 | WalletLinkRegistry에 등록되지 않은 지갑 | 유니버셜 링크 URL 생성 시 |
+
+### 11.2 에러 응답 형식
+
+기존 WAIaaS 에러 응답 형식을 따른다:
+
+```json
+{
+  "error": {
+    "code": "SIGN_REQUEST_EXPIRED",
+    "message": "서명 요청이 만료되었습니다. 새로운 요청을 생성해주세요.",
+    "details": {
+      "requestId": "01935a3b-7c8d-7e00-b123-456789abcdef",
+      "expiresAt": "2026-02-19T15:00:00Z",
+      "expiredAt": "2026-02-19T15:35:00Z"
+    }
+  }
+}
+```
+
+### 11.3 에러 처리 매트릭스
+
+| 에러 코드 | 트랜잭션 상태 변경 | 재시도 가능 | 로그 레벨 |
+|-----------|-------------------|------------|----------|
+| `SIGN_REQUEST_EXPIRED` | 없음 (PENDING_APPROVAL 유지) | 새 요청 생성 필요 | WARN |
+| `SIGN_REQUEST_NOT_FOUND` | 없음 | 올바른 requestId로 재시도 | WARN |
+| `SIGN_REQUEST_ALREADY_PROCESSED` | 없음 (이미 완료) | 불가 | INFO |
+| `INVALID_SIGN_RESPONSE` | 없음 | 올바른 형식으로 재시도 | WARN |
+| `INVALID_SIGNATURE` | 없음 | 올바른 키로 재서명 | ERROR |
+| `SIGNER_ADDRESS_MISMATCH` | 없음 | 올바른 Owner 키 사용 필요 | ERROR |
+| `SIGNING_SDK_DISABLED` | 없음 | Admin이 SDK 활성화 후 | WARN |
+| `WALLET_NOT_REGISTERED` | 없음 | Admin이 지갑 등록 후 | WARN |
 
 ---
 
 ## 12. 기술 결정 요약
 
-<!-- Plan 02에서 작성 -->
+m26-01(Wallet Signing SDK)의 기술 결정 사항 11개를 정리한다. 각 결정은 설계 문서 전체에 반영되어 있다.
+
+| # | 결정 항목 | 선택지 | 결정 근거 |
+|---|----------|--------|----------|
+| 1 | 링크 방식 | 지갑 도메인 유니버셜 링크 | WAIaaS 도메인 불필요. 지갑 개발사가 AASA/assetlinks.json 자체 관리. PC 클릭 시 웹페이지 fallback(QR 표시). self-hosted 철학 유지 |
+| 2 | 직접 푸시 채널 | ntfy publish/subscribe | 메신저 없이 지갑 앱만으로 동작. self-hostable. 양방향 pub/sub 지원. WAIaaS가 이미 ntfy를 알림 채널로 지원(v1.3). 요청/응답 토픽 분리로 단순한 구조 유지 |
+| 3 | 메신저 채널 | Telegram만 (초기) | v1.6에서 이미 양방향(Bot API + Long Polling) 구현 완료. Slack(Socket Mode)/Discord(Gateway Bot)는 양방향 미구현이므로 후속 확장으로 분리 |
+| 4 | 프로토콜 형식 | JSON + base64url 인코딩 | Zod 스키마 검증, URL-safe 인코딩, 유니버셜 링크 쿼리 파라미터에 포함 가능 |
+| 5 | SDK 패키지 | @waiaas/wallet-sdk (npm, TypeScript) | React Native(D'CENT 브릿지 앱), Electron, Node.js 환경 모두 사용 가능 |
+| 6 | 서명 검증 | 기존 ownerAuth 로직 재사용 | Ed25519(Solana) / EIP-191(EVM) 검증 로직이 v1.2에서 구현 완료 |
+| 7 | 승인 채널 우선순위 | config 기반 5단계 | SDK(ntfy) > SDK(Telegram) > WalletConnect > Telegram Bot `/approve` > REST API. config에서 `preferred_channel` 설정 가능 |
+| 8 | ntfy 토픽 보안 | requestId 기반 1회용 토픽 | 응답 토픽에 UUID v7 requestId 포함하여 추측 불가. 만료 후 자동 폐기. self-hosted ntfy로 추가 보안 확보 |
+| 9 | 딥링크 fallback | 유니버셜 링크 실패 시 커스텀 딥링크 | 유니버셜 링크가 동작하지 않는 환경 대비. `deepLink.scheme` + `deepLink.signPath` 설정 시 fallback |
+| 10 | 승인 방법 범위 | 지갑별 `owner_approval_method` | 다중 지갑 환경에서 각각 다른 승인 채널 설정 가능. Solana 지갑은 SDK+ntfy, EVM 지갑은 WalletConnect처럼 지갑마다 최적 채널 선택. 미설정 시 글로벌 fallback |
+| 11 | Admin UI 승인 방법 | 지갑 상세 > Owner Settings 섹션 | REST API만으로도 설정 가능하나, Owner 등록과 승인 방법 설정을 한 화면에서 제공하여 DX 향상. 미구성 인프라 선택 시 경고로 사전 오류 방지 |
 
 ---
 
+*문서 번호: 73*
 *생성일: 2026-02-19*
-*최종 수정: 2026-02-19*
-*관련 objective: m26-00 (Wallet SDK 설계), m26-01 (Wallet Signing SDK)*
-*관련 설계: doc 35 (알림), doc 37 (REST API), doc 25 (SQLite), doc 67 (Admin UI)*
+*최종 수정: 2026-02-20*
+*선행 문서: 35(알림 아키텍처), 34(Owner 지갑 연결), 37(REST API)*
+*관련 마일스톤: m26-00(설계), m26-01(구현)*
+*범위: WAIaaS Signing Protocol v1 스키마 + 전송 채널 + 보안 모델*
