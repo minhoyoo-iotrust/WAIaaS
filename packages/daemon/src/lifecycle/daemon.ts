@@ -417,19 +417,22 @@ export class DaemonLifecycle {
     // Step 4d: Notification Service initialization (fail-soft)
     // ------------------------------------------------------------------
     try {
+      // Always create NotificationService regardless of config.toml enabled value.
+      // When enabled=false, service starts with 0 channels (no notifications sent).
+      // Admin UI can dynamically enable via hot-reload at runtime.
+      const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } =
+        await import('../notifications/index.js');
+
+      this.notificationService = new NotificationService({
+        db: this._db ?? undefined,
+        config: {
+          locale: (this._config!.notifications.locale ?? 'en') as 'en' | 'ko',
+          rateLimitRpm: this._config!.notifications.rate_limit_rpm ?? 20,
+        },
+      });
+
+      // Initialize configured channels only when enabled
       if (this._config!.notifications.enabled) {
-        const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } =
-          await import('../notifications/index.js');
-
-        this.notificationService = new NotificationService({
-          db: this._db ?? undefined,
-          config: {
-            locale: (this._config!.notifications.locale ?? 'en') as 'en' | 'ko',
-            rateLimitRpm: this._config!.notifications.rate_limit_rpm ?? 20,
-          },
-        });
-
-        // Initialize configured channels from config
         const notifConfig = this._config!.notifications;
 
         if (notifConfig.telegram_bot_token && notifConfig.telegram_chat_id) {
@@ -465,14 +468,12 @@ export class DaemonLifecycle {
           });
           this.notificationService.addChannel(slack);
         }
-
-        const channelNames = this.notificationService.getChannelNames();
-        console.log(
-          `Step 4d: NotificationService initialized (${channelNames.length} channels: ${channelNames.join(', ') || 'none'})`,
-        );
-      } else {
-        console.log('Step 4d: Notifications disabled');
       }
+
+      const channelNames = this.notificationService.getChannelNames();
+      console.log(
+        `Step 4d: NotificationService initialized (${channelNames.length} channels: ${channelNames.join(', ') || 'none'})`,
+      );
     } catch (err) {
       console.warn('Step 4d (fail-soft): NotificationService init warning:', err);
       this.notificationService = null;
