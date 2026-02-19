@@ -114,6 +114,7 @@
 | 097 | BUG | MEDIUM | Admin Owner 주소 등록 실패 시 구체적 에러 사유 미표시 — serverMessage 무시 | v2.5 | OPEN | 2026-02-19 |
 | 098 | BUG | MEDIUM | Admin Owner 주소 등록 후 ownerState 즉시 미반영 — PUT 응답에 ownerState 누락 | v2.5 | OPEN | 2026-02-19 |
 | 099 | ENHANCEMENT | LOW | WalletConnect 미설정 에러 시 설정 위치(Wallets > WalletConnect 탭) 이동 안내 없음 | v2.5 | OPEN | 2026-02-19 |
+| 100 | BUG | CRITICAL | npm publish가 workspace:* 미치환 상태로 배포 — RC 버전 글로벌 설치 불가 | v2.5 | OPEN | 2026-02-19 |
 
 ## Type Legend
 
@@ -125,9 +126,9 @@
 
 ## Summary
 
-- **OPEN:** 6
+- **OPEN:** 7
 - **FIXED:** 93
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 99
+- **Total:** 100
