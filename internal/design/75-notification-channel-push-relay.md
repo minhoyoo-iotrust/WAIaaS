@@ -1819,3 +1819,661 @@ ntfy 메시지 유형별 PushPayload 필드 매핑:
 | `{prefix}-notify-{walletId}` (기타) | `'notification'` | `'normal'` | NotificationMessage.title | NotificationMessage.body | `{ notification: "{전체 JSON}", type: "notification" }` |
 
 ---
+
+## 10. 디바이스 토큰 등록 API
+
+### 10.1 DeviceRegistration 스키마
+
+```typescript
+// packages/push-relay/src/registry/device-registry.ts
+
+import { z } from 'zod';
+
+/**
+ * 디바이스 토큰 등록 요청 스키마.
+ * 지갑 앱이 자신의 푸시 토큰을 Push Relay Server에 등록할 때 사용한다.
+ */
+const DeviceRegistrationSchema = z.object({
+  /** 대상 지갑 ID (UUID v7). config.toml wallet_ids에 포함된 지갑만 유효 */
+  walletId: z.string(),
+
+  /** 디바이스 푸시 토큰 (APNs Device Token 또는 FCM Registration Token) */
+  pushToken: z.string(),
+
+  /** 디바이스 플랫폼 */
+  platform: z.enum(['ios', 'android']),
+});
+
+type DeviceRegistration = z.infer<typeof DeviceRegistrationSchema>;
+```
+
+### 10.2 API 엔드포인트
+
+#### POST /devices -- 디바이스 토큰 등록
+
+| 항목 | 내용 |
+|------|------|
+| 메서드 | `POST` |
+| 경로 | `/devices` |
+| Content-Type | `application/json` |
+| 인증 | 없음 (Push Relay Server는 내부 네트워크에서 운영) |
+
+**요청 Body:**
+
+```json
+{
+  "walletId": "01935a3b-7c8d-7e00-b123-456789abcdef",
+  "pushToken": "dGhpcyBpcyBhIHB1c2ggdG9rZW4=",
+  "platform": "ios"
+}
+```
+
+**응답:**
+
+| 상태 코드 | 조건 | Body |
+|-----------|------|------|
+| `201 Created` | 신규 토큰 등록 | `{ "status": "created" }` |
+| `200 OK` | 기존 토큰 upsert (walletId/platform 업데이트) | `{ "status": "updated" }` |
+| `400 Bad Request` | Zod 검증 실패 | `{ "error": "Invalid request", "details": [...] }` |
+
+**Upsert 동작**: 동일한 `pushToken`이 이미 존재하면 `walletId`와 `platform`을 업데이트한다 (INSERT OR REPLACE). 에러를 발생시키지 않는다.
+
+#### DELETE /devices/:token -- 디바이스 토큰 해제
+
+| 항목 | 내용 |
+|------|------|
+| 메서드 | `DELETE` |
+| 경로 | `/devices/:token` |
+| URL 파라미터 | `token` -- pushToken (URL 인코딩) |
+| 인증 | 없음 |
+
+**응답:**
+
+| 상태 코드 | 조건 | Body |
+|-----------|------|------|
+| `204 No Content` | 삭제 성공 | (없음) |
+| `204 No Content` | 존재하지 않는 토큰 (멱등) | (없음) |
+
+### 10.3 SQLite 스키마 (relay.db)
+
+Push Relay Server는 WAIaaS 데몬과 별도의 SQLite 데이터베이스(`relay.db`)를 사용한다.
+
+```sql
+-- relay.db 초기 스키마
+
+CREATE TABLE devices (
+  push_token TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK(platform IN ('ios', 'android')),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+-- walletId로 디바이스 조회 (Push 전송 시 사용)
+CREATE INDEX idx_devices_wallet_id ON devices(wallet_id);
+```
+
+**스키마 설계 결정:**
+
+| 결정 | 근거 |
+|------|------|
+| `push_token`을 PK로 사용 | 하나의 디바이스는 하나의 토큰만 가짐. 자연 키 사용으로 추가 ID 불필요 |
+| `wallet_id` 인덱스 | Push 전송 시 walletId로 토큰 조회가 주요 쿼리 |
+| ISO 8601 타임스탬프 | 로그/디버깅 가독성. WAIaaS 데몬과 달리 Unix seconds 미사용 (relay.db 독립) |
+| CHECK 제약 | `platform` 값 범위 제한 |
+
+### 10.4 DeviceRegistry 클래스
+
+```typescript
+// packages/push-relay/src/registry/device-registry.ts
+
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+
+class DeviceRegistry {
+  constructor(private readonly db: BetterSQLite3Database) {}
+
+  /**
+   * 디바이스 토큰을 등록(또는 업데이트)한다.
+   * @returns 'created' (신규) 또는 'updated' (기존 토큰 upsert)
+   */
+  upsert(registration: DeviceRegistration): 'created' | 'updated' {
+    const existing = this.db
+      .select()
+      .from(devices)
+      .where(eq(devices.pushToken, registration.pushToken))
+      .get();
+
+    if (existing) {
+      this.db
+        .update(devices)
+        .set({
+          walletId: registration.walletId,
+          platform: registration.platform,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(devices.pushToken, registration.pushToken))
+        .run();
+      return 'updated';
+    }
+
+    this.db.insert(devices).values({
+      pushToken: registration.pushToken,
+      walletId: registration.walletId,
+      platform: registration.platform,
+    }).run();
+    return 'created';
+  }
+
+  /**
+   * 디바이스 토큰을 해제한다. 존재하지 않아도 에러 없음 (멱등).
+   */
+  remove(pushToken: string): void {
+    this.db.delete(devices).where(eq(devices.pushToken, pushToken)).run();
+  }
+
+  /**
+   * walletId에 등록된 모든 디바이스 토큰을 조회한다.
+   * Push 전송 시 사용한다.
+   */
+  getTokensByWalletId(walletId: string): string[] {
+    const rows = this.db
+      .select({ pushToken: devices.pushToken })
+      .from(devices)
+      .where(eq(devices.walletId, walletId))
+      .all();
+    return rows.map(r => r.pushToken);
+  }
+
+  /**
+   * 무효한 토큰을 일괄 삭제한다.
+   * IPushProvider.send() 결과의 invalidTokens를 받아 DB에서 자동 정리한다.
+   */
+  removeInvalidTokens(tokens: string[]): number {
+    if (tokens.length === 0) return 0;
+
+    let removed = 0;
+    for (const token of tokens) {
+      const result = this.db.delete(devices).where(eq(devices.pushToken, token)).run();
+      if (result.changes > 0) removed++;
+    }
+
+    if (removed > 0) {
+      console.log(`[DeviceRegistry] Removed ${removed} invalid tokens`);
+    }
+    return removed;
+  }
+}
+```
+
+### 10.5 invalidTokens 자동 정리 흐름
+
+```
+1. NtfySubscriber가 메시지 수신
+2. MessageParser가 PushPayload로 변환
+3. DeviceRegistry.getTokensByWalletId()로 토큰 조회
+4. IPushProvider.send(tokens, payload) 호출
+5. PushResult.invalidTokens에 무효 토큰 포함 (FCM 404/410)
+6. DeviceRegistry.removeInvalidTokens(result.invalidTokens) 자동 호출
+7. 다음 Push 전송 시 무효 토큰이 제외됨
+```
+
+### 10.6 Hono HTTP 서버
+
+```typescript
+// packages/push-relay/src/registry/device-routes.ts
+
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { DeviceRegistrationSchema } from '../schemas.js';
+import type { DeviceRegistry } from './device-registry.js';
+
+function createDeviceRoutes(registry: DeviceRegistry): OpenAPIHono {
+  const app = new OpenAPIHono();
+
+  // POST /devices -- 디바이스 토큰 등록
+  app.post('/devices', async (c) => {
+    const body = await c.req.json();
+    const parsed = DeviceRegistrationSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json({ error: 'Invalid request', details: parsed.error.errors }, 400);
+    }
+
+    const result = registry.upsert(parsed.data);
+    return c.json(
+      { status: result },
+      result === 'created' ? 201 : 200,
+    );
+  });
+
+  // DELETE /devices/:token -- 디바이스 토큰 해제
+  app.delete('/devices/:token', (c) => {
+    const token = decodeURIComponent(c.req.param('token'));
+    registry.remove(token);
+    return c.body(null, 204);
+  });
+
+  return app;
+}
+```
+
+---
+
+## 11. config.toml 스키마
+
+### 11.1 설계 원칙
+
+Push Relay Server는 WAIaaS 데몬과 **별도 패키지**(@waiaas/push-relay)로, WAIaaS의 flat-key config 정책(`CLAUDE.md`의 "No nesting in config.toml")이 **적용되지 않는다**. 별도 config.toml에서 중첩 섹션을 사용한다.
+
+단, TOML 최상위 키 네이밍은 일관성을 위해 `relay_` 접두어를 사용하여 WAIaaS 데몬 config와 혼동을 방지한다.
+
+### 11.2 RelayConfigSchema Zod 정의
+
+```typescript
+// packages/push-relay/src/config.ts
+
+import { z } from 'zod';
+
+/**
+ * Push Relay Server config.toml 스키마.
+ * Zod SSoT 패턴 (WAIaaS 본체와 동일).
+ */
+const RelayConfigSchema = z.object({
+  /** ntfy 구독 설정 */
+  relay: z.object({
+    /** ntfy 서버 URL (self-hosted 지원) */
+    ntfy_server: z.string().url().default('https://ntfy.sh'),
+
+    /** ntfy 토픽 접두어 (WAIaaS 데몬의 topic_prefix와 일치해야 함) */
+    topic_prefix: z.string().default('waiaas'),
+
+    /** 구독할 지갑 ID 목록. 각 ID에 대해 sign + notify 토픽 2개 구독 */
+    wallet_ids: z.array(z.string()).min(1, 'At least one wallet_id required'),
+  }),
+
+  /** 푸시 프로바이더 선택 */
+  relay_push: z.object({
+    /** 사용할 푸시 프로바이더 */
+    provider: z.enum(['pushwoosh', 'fcm']),
+  }),
+
+  /** Pushwoosh 프로바이더 설정 (provider가 "pushwoosh"일 때 필수) */
+  relay_push_pushwoosh: z.object({
+    /** Pushwoosh API Token */
+    api_token: z.string(),
+
+    /** Pushwoosh Application Code */
+    application_code: z.string(),
+  }).optional(),
+
+  /** FCM 프로바이더 설정 (provider가 "fcm"일 때 필수) */
+  relay_push_fcm: z.object({
+    /** Google Cloud 프로젝트 ID */
+    project_id: z.string(),
+
+    /** Service Account Key JSON 파일 경로 */
+    service_account_key_path: z.string(),
+  }).optional(),
+
+  /** HTTP 서버 설정 (Device Registry API) */
+  relay_server: z.object({
+    /** 서버 포트 */
+    port: z.number().default(3100),
+
+    /** 바인딩 호스트 */
+    host: z.string().default('0.0.0.0'),
+  }),
+});
+
+type RelayConfig = z.infer<typeof RelayConfigSchema>;
+```
+
+### 11.3 조건부 검증 규칙
+
+`relay_push.provider` 값에 따라 해당 프로바이더 설정 섹션이 필수다:
+
+| provider | 필수 섹션 | 검증 |
+|----------|---------|------|
+| `"pushwoosh"` | `relay_push_pushwoosh` | `api_token` + `application_code` 필수 |
+| `"fcm"` | `relay_push_fcm` | `project_id` + `service_account_key_path` 필수 |
+
+```typescript
+/**
+ * config 조건부 검증.
+ * Zod superRefine으로 provider에 따른 섹션 존재 여부를 검증한다.
+ */
+const RelayConfigValidated = RelayConfigSchema.superRefine((config, ctx) => {
+  if (config.relay_push.provider === 'pushwoosh' && !config.relay_push_pushwoosh) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'relay_push_pushwoosh section is required when provider is "pushwoosh"',
+      path: ['relay_push_pushwoosh'],
+    });
+  }
+  if (config.relay_push.provider === 'fcm' && !config.relay_push_fcm) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'relay_push_fcm section is required when provider is "fcm"',
+      path: ['relay_push_fcm'],
+    });
+  }
+});
+```
+
+### 11.4 TOML 구조 예시 (Pushwoosh)
+
+```toml
+# Push Relay Server config.toml -- Pushwoosh 프로바이더 사용
+
+[relay]
+ntfy_server = "https://ntfy.example.com"    # self-hosted ntfy
+topic_prefix = "waiaas"                       # WAIaaS 데몬과 동일
+wallet_ids = [
+  "01935a3b-7c8d-7e00-b123-456789abcdef",
+  "01935a3b-8d9e-7f00-c234-567890abcdef",
+]
+
+[relay_push]
+provider = "pushwoosh"
+
+[relay_push_pushwoosh]
+api_token = "XXXXXX-XXXXXX"
+application_code = "ABCDE-12345"
+
+[relay_server]
+port = 3100
+host = "0.0.0.0"
+```
+
+### 11.5 TOML 구조 예시 (FCM)
+
+```toml
+# Push Relay Server config.toml -- FCM 프로바이더 사용
+
+[relay]
+ntfy_server = "https://ntfy.sh"
+topic_prefix = "waiaas"
+wallet_ids = ["01935a3b-7c8d-7e00-b123-456789abcdef"]
+
+[relay_push]
+provider = "fcm"
+
+[relay_push_fcm]
+project_id = "my-wallet-app"
+service_account_key_path = "/etc/push-relay/service-account.json"
+
+[relay_server]
+port = 3100
+host = "0.0.0.0"
+```
+
+### 11.6 환경변수 오버라이드
+
+Docker 배포 시 config.toml 대신 환경변수로 설정을 주입할 수 있다:
+
+| 환경변수 | config.toml 키 | 설명 |
+|---------|---------------|------|
+| `RELAY_NTFY_SERVER` | `relay.ntfy_server` | ntfy 서버 URL |
+| `RELAY_TOPIC_PREFIX` | `relay.topic_prefix` | 토픽 접두어 |
+| `RELAY_WALLET_IDS` | `relay.wallet_ids` | 콤마 구분 지갑 ID |
+| `RELAY_PUSH_PROVIDER` | `relay_push.provider` | 프로바이더 (`pushwoosh`/`fcm`) |
+| `RELAY_PUSHWOOSH_API_TOKEN` | `relay_push_pushwoosh.api_token` | Pushwoosh API Token |
+| `RELAY_PUSHWOOSH_APP_CODE` | `relay_push_pushwoosh.application_code` | Pushwoosh App Code |
+| `RELAY_FCM_PROJECT_ID` | `relay_push_fcm.project_id` | GCP 프로젝트 ID |
+| `RELAY_FCM_KEY_PATH` | `relay_push_fcm.service_account_key_path` | SA Key 파일 경로 |
+| `RELAY_SERVER_PORT` | `relay_server.port` | 서버 포트 |
+| `RELAY_SERVER_HOST` | `relay_server.host` | 바인딩 호스트 |
+
+우선순위: 환경변수 > config.toml > 기본값
+
+### 11.7 config.example.toml
+
+```toml
+# Push Relay Server Configuration
+# Copy to config.toml and edit values
+
+# --- ntfy Subscription ---
+[relay]
+# ntfy server URL (use self-hosted for production)
+ntfy_server = "https://ntfy.sh"
+
+# Topic prefix (must match WAIaaS daemon's signing_sdk.ntfy_request_topic_prefix base)
+topic_prefix = "waiaas"
+
+# Wallet IDs to subscribe (sign + notify topics per wallet)
+wallet_ids = ["your-wallet-uuid-here"]
+
+# --- Push Provider ---
+[relay_push]
+# Push provider: "pushwoosh" or "fcm"
+provider = "pushwoosh"
+
+# --- Pushwoosh Settings (when provider = "pushwoosh") ---
+[relay_push_pushwoosh]
+api_token = "YOUR_PUSHWOOSH_API_TOKEN"
+application_code = "YOUR_APP_CODE"
+
+# --- FCM Settings (when provider = "fcm") ---
+# [relay_push_fcm]
+# project_id = "your-gcp-project-id"
+# service_account_key_path = "/path/to/service-account.json"
+
+# --- HTTP Server (Device Registry API) ---
+[relay_server]
+port = 3100
+host = "0.0.0.0"
+```
+
+---
+
+## 12. Docker 배포 설계
+
+### 12.1 Dockerfile
+
+```dockerfile
+# packages/push-relay/Dockerfile
+# Push Relay Server -- 멀티스테이지 빌드
+
+# ---- Build Stage ----
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+# 의존성 설치 (lockfile 캐시 활용)
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+
+# 소스 복사 + 빌드
+COPY tsconfig.json ./
+COPY src/ ./src/
+RUN pnpm build
+
+# ---- Production Stage ----
+FROM node:22-alpine AS production
+
+WORKDIR /app
+
+# 프로덕션 의존성만 설치
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
+
+# 빌드 결과 복사
+COPY --from=build /app/dist ./dist
+
+# config.example.toml 포함 (참조용)
+COPY config.example.toml ./
+
+# 비루트 사용자
+RUN addgroup -g 1001 -S relay && adduser -S relay -u 1001
+USER relay
+
+# 볼륨 마운트 포인트
+VOLUME ["/data", "/config"]
+
+# Device Registry API 포트
+EXPOSE 3100
+
+# 환경변수 기본값
+ENV NODE_ENV=production
+
+# 시작 명령
+CMD ["node", "dist/index.js", "--config", "/config/config.toml", "--db", "/data/relay.db"]
+```
+
+### 12.2 docker-compose.yml
+
+```yaml
+# packages/push-relay/docker-compose.yml
+# Push Relay Server 배포
+
+services:
+  push-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: waiaas-push-relay
+    restart: unless-stopped
+    ports:
+      - "3100:3100"           # Device Registry API
+    volumes:
+      - relay-data:/data       # relay.db (디바이스 토큰 DB)
+      - ./config:/config       # config.toml
+    environment:
+      - NODE_ENV=production
+    # 환경변수로 config 오버라이드 가능
+    # environment:
+    #   - RELAY_NTFY_SERVER=https://ntfy.example.com
+    #   - RELAY_PUSH_PROVIDER=pushwoosh
+    #   - RELAY_PUSHWOOSH_API_TOKEN=XXXXXX
+    #   - RELAY_PUSHWOOSH_APP_CODE=ABCDE
+
+  # (선택) self-hosted ntfy 서버 동시 배포
+  # ntfy:
+  #   image: binwiederhier/ntfy:latest
+  #   container_name: waiaas-ntfy
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ntfy-cache:/var/cache/ntfy
+  #     - ntfy-data:/var/lib/ntfy
+  #   command: serve
+  #   environment:
+  #     - NTFY_BASE_URL=https://ntfy.example.com
+
+volumes:
+  relay-data:
+    driver: local
+  # ntfy-cache:
+  #   driver: local
+  # ntfy-data:
+  #   driver: local
+```
+
+### 12.3 볼륨 구조
+
+| 볼륨 | 컨테이너 경로 | 내용 | 백업 필요 |
+|------|-------------|------|----------|
+| `relay-data` | `/data` | `relay.db` (디바이스 토큰 SQLite) | O (토큰 유실 시 재등록 필요) |
+| `./config` | `/config` | `config.toml` (바인드 마운트) | O (설정 파일) |
+
+### 12.4 배포 가이드 개요
+
+```
+1. config.toml 작성
+   $ cp config.example.toml config/config.toml
+   $ vi config/config.toml
+   → wallet_ids, provider, 인증 정보 설정
+
+2. 컨테이너 시작
+   $ docker-compose up -d
+
+3. 로그 확인
+   $ docker-compose logs -f push-relay
+   → "[NtfySubscriber] Subscribing to 2 topics: ..."
+   → "[push-relay] Server started on 0.0.0.0:3100"
+
+4. 디바이스 토큰 등록 (지갑 앱에서 호출)
+   $ curl -X POST http://localhost:3100/devices \
+     -H "Content-Type: application/json" \
+     -d '{"walletId":"wallet-uuid","pushToken":"device-token","platform":"ios"}'
+
+5. 동작 확인
+   → WAIaaS 데몬에서 서명 요청 또는 알림 발생
+   → Push Relay가 ntfy 메시지 수신
+   → Pushwoosh/FCM으로 푸시 전달
+   → 지갑 앱에서 네이티브 푸시 수신
+```
+
+### 12.5 파일/모듈 구조 (최종)
+
+```
+packages/push-relay/                        # @waiaas/push-relay 패키지
+  src/
+    index.ts                                # 진입점 (config 로딩 → 서버 시작 → 구독 시작)
+    config.ts                               # TOML config 로딩 + Zod 검증 + 환경변수 오버라이드
+    schemas.ts                              # PushPayloadSchema, PushResultSchema, DeviceRegistrationSchema
+    server.ts                               # Hono HTTP 서버 (Device Registry API)
+    subscriber/
+      ntfy-subscriber.ts                    # ntfy SSE 구독 + 재연결 관리
+      message-parser.ts                     # ntfy 메시지 → PushPayload 변환 (토픽 패턴 분기)
+      build-topics.ts                       # walletId → 토픽 목록 생성
+    providers/
+      push-provider.ts                      # IPushProvider 인터페이스
+      pushwoosh-provider.ts                 # Pushwoosh createMessage API 연동
+      fcm-provider.ts                       # FCM HTTP v1 API 연동 + OAuth2 인증
+      create-provider.ts                    # 프로바이더 팩토리
+    registry/
+      device-registry.ts                    # SQLite 디바이스 토큰 CRUD + invalidTokens 정리
+      device-routes.ts                      # POST/DELETE /devices Hono 라우트
+  Dockerfile                                # 멀티스테이지 빌드 (node:22-alpine)
+  docker-compose.yml                        # push-relay + (선택적) ntfy 서비스
+  config.example.toml                       # 설정 예시 (전체 옵션 주석 포함)
+  package.json                              # @waiaas/push-relay
+  tsconfig.json                             # TypeScript 설정
+```
+
+---
+
+## 13. 기술 결정 요약
+
+### 13.1 알림 채널 설계 결정 (m26-02)
+
+| # | 결정 항목 | 결정 | 근거 |
+|---|----------|------|------|
+| 1 | 토픽 분리 (sign vs notify) | `waiaas-sign-*` / `waiaas-notify-*` 접두어로 분리 | 서명 요청(긴급)과 일반 알림(정보성)의 priority 차등 적용. 지갑 앱이 토픽 수준에서 자연스럽게 구분 |
+| 2 | 알림 대상 (sdk_ntfy 지갑만) | `owner_approval_method === 'sdk_ntfy'`인 지갑만 알림 전송 | SDK 미사용 지갑에 불필요한 ntfy 메시지 방지. 기존 채널(Telegram/Discord)과 병행 |
+| 3 | 카테고리 필터링 (config 기반) | SettingsService `signing_sdk.notify_categories`로 필터 | Admin이 관심 없는 카테고리를 제외 가능. 빈 배열=전체 통과 (기본값) |
+| 4 | 기존 알림 병행 (추가 채널) | WalletNotificationChannel을 NotificationService에 추가 (기존 채널 유지) | 기존 Telegram/Discord/Slack/ntfy 채널과 동시 동작. broadcast 이벤트도 지갑 앱에 전달 |
+
+### 13.2 Push Relay Server 설계 결정 (m26-03)
+
+| # | 결정 항목 | 결정 | 근거 |
+|---|----------|------|------|
+| 1 | 프레임워크 | Hono (OpenAPIHono) | WAIaaS 본체와 동일한 코드 패턴. 경량, Node.js/Bun/Deno 지원 |
+| 2 | 디바이스 저장소 | SQLite 단일 파일 (relay.db) | 외부 DB 불필요, 배포 단순화, WAIaaS와 동일 패턴 (Drizzle ORM) |
+| 3 | 기본 프로바이더 | Pushwoosh + FCM 2종 | D'CENT가 Pushwoosh 사용, FCM은 가장 범용적. IPushProvider 인터페이스로 추가 프로바이더 확장 가능 |
+| 4 | ntfy 구독 방식 | SSE (EventSource) | WebSocket보다 단순, HTTP/2 호환, 재연결 로직 간단. ntfy의 다중 토픽 SSE 구독 네이티브 지원 |
+| 5 | 배포 방식 | Docker + docker-compose | 지갑 개발사가 자체 인프라에 원클릭 배포 가능. Volume으로 DB + config 분리 |
+| 6 | 운영 주체 | 지갑 개발사 | WAIaaS self-hosted 원칙 유지. Pushwoosh/FCM 인증 정보는 지갑사 소유이므로 지갑사가 운영 |
+
+### 13.3 문서 메타데이터
+
+| 항목 | 내용 |
+|------|------|
+| 문서 번호 | 75 |
+| 생성일 | 2026-02-20 (Plan 200-01) |
+| 최종 수정일 | 2026-02-20 (Plan 200-02) |
+| 선행 문서 | doc 73 (Signing Protocol v1), doc 74 (Wallet SDK + Daemon Components), doc 35 (알림 시스템 설계) |
+| 관련 마일스톤 | m26-02 (알림 채널), m26-03 (Push Relay Server) |
+| Sections 1-5 범위 | 알림 채널 설계 (NOTIF-01/02/03) |
+| Sections 6-13 범위 | Push Relay Server 설계 (RELAY-01/02/03/04) |
+| 총 섹션 | 13개 |
+
+---
+
+*문서 번호: 75*
+*생성일: 2026-02-20*
+*최종 수정: 2026-02-20*
+*선행 문서: 73(Signing Protocol v1), 74(Wallet SDK + Daemon Components), 35(알림 시스템 설계)*
+*관련 마일스톤: m26-02(알림 채널), m26-03(Push Relay Server)*
+*범위: 알림 채널 설계 (Sections 1-5) + Push Relay Server 설계 (Sections 6-13)*
