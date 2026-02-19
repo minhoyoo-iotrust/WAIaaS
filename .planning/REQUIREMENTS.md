@@ -24,11 +24,11 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 
 ### 공용 컴포넌트 테스트 (COMP)
 
-- [ ] **COMP-01**: empty-state.tsx 렌더링 + CTA 버튼 클릭 테스트
-- [ ] **COMP-02**: unsaved-dialog.tsx 열기/닫기 + 확인/취소 핸들러 테스트
-- [ ] **COMP-03**: settings-search.tsx 검색어 입력 + 필터링 + 결과 하이라이트 테스트
-- [ ] **COMP-04**: policy-rules-summary.tsx 다양한 정책 타입별 요약 렌더링 테스트
-- [ ] **COMP-05**: dirty-guard.ts 변경 감지 + 이탈 경고 테스트
+- [x] **COMP-01**: empty-state.tsx 렌더링 + CTA 버튼 클릭 테스트
+- [x] **COMP-02**: unsaved-dialog.tsx 열기/닫기 + 확인/취소 핸들러 테스트
+- [x] **COMP-03**: settings-search.tsx 검색어 입력 + 필터링 + 결과 하이라이트 테스트
+- [x] **COMP-04**: policy-rules-summary.tsx 다양한 정책 타입별 요약 렌더링 테스트
+- [x] **COMP-05**: dirty-guard.ts 변경 감지 + 이탈 경고 테스트
 
 ### 기존 페이지 테스트 개선 (EXIST)
 
@@ -69,11 +69,11 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 | NEWPG-10 | Phase 191 | Complete |
 | NEWPG-11 | Phase 191 | Complete |
 | NEWPG-12 | Phase 191 | Complete |
-| COMP-01 | Phase 193 | Pending |
-| COMP-02 | Phase 193 | Pending |
-| COMP-03 | Phase 193 | Pending |
-| COMP-04 | Phase 193 | Pending |
-| COMP-05 | Phase 193 | Pending |
+| COMP-01 | Phase 193 | Complete |
+| COMP-02 | Phase 193 | Complete |
+| COMP-03 | Phase 193 | Complete |
+| COMP-04 | Phase 193 | Complete |
+| COMP-05 | Phase 193 | Complete |
 | EXIST-01 | Phase 193 | Pending |
 | EXIST-02 | Phase 193 | Pending |
 | EXIST-03 | Phase 193 | Pending |

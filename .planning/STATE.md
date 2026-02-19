@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 192 - System 페이지 테스트
+**Current focus:** Phase 193 - Shared Component Tests
 
 ## Current Position
 
-Phase: 192 of 193 (System 페이지 테스트)
-Plan: 4 of 5 total (1 of 1 in current phase)
+Phase: 193 of 193 (components-existing-threshold)
+Plan: 5 of 5 total (1 of 2 in current phase)
 Status: Executing
-Last activity: 2026-02-19 -- Completed 192-01-PLAN.md
+Last activity: 2026-02-19 -- Completed 193-01-PLAN.md
 
-Progress: [########..] 80%
+Progress: [#########.] 90%
 
 ## Performance Metrics
 
@@ -26,7 +26,7 @@ Progress: [########..] 80%
 |-------|-------|-------|----------|
 | 191 | 1/2 | 3min | 3min |
 | 192 | 1/1 | 4min | 4min |
-| 193 | 0/2 | - | - |
+| 193 | 1/2 | 4min | 4min |
 
 *Updated after each plan completion*
 
@@ -42,6 +42,9 @@ Full log in PROJECT.md and milestones/.
 - 191-02: vi.useFakeTimers({ shouldAdvanceTime: true }) for polling tests
 - 192-01: Modal confirm button via CSS selector (.modal-footer button.btn-danger) for ambiguous text
 - 192-01: getAllByText for headings that also appear as form labels (Display Currency, Log Level)
+- 193-01: Mock dirty-guard module in unsaved-dialog tests to isolate signal state
+- 193-01: vi.useFakeTimers globally in settings-search tests for setTimeout handling
+- 193-01: Mock settings-search-index with 3 entries covering tab/no-tab scenarios
 
 ### Blockers/Concerns
 
@@ -51,5 +54,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 192-01-PLAN.md (system page tests)
+Stopped at: Completed 193-01-PLAN.md (shared component tests)
 Resume file: None
