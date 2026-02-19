@@ -16,9 +16,9 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ### Wallet SDK 패키지
 
-- [ ] **WSDK-01**: 공개 API 인터페이스 6개 함수 시그니처 확정
-- [ ] **WSDK-02**: WalletLinkConfig 스키마 + registerWallet() 확정
-- [ ] **WSDK-03**: 패키지 구조 (packages/wallet-sdk/) + 빌드/배포 설정 확정
+- [x] **WSDK-01**: 공개 API 인터페이스 6개 함수 시그니처 확정
+- [x] **WSDK-02**: WalletLinkConfig 스키마 + registerWallet() 확정
+- [x] **WSDK-03**: 패키지 구조 (packages/wallet-sdk/) + 빌드/배포 설정 확정
 
 ### 데몬 컴포넌트
 
@@ -73,9 +73,9 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 | PROTO-02 | Phase 198 | Complete |
 | PROTO-03 | Phase 198 | Complete |
 | PROTO-04 | Phase 198 | Complete |
-| WSDK-01 | Phase 199 | Pending |
-| WSDK-02 | Phase 199 | Pending |
-| WSDK-03 | Phase 199 | Pending |
+| WSDK-01 | Phase 199 | Complete |
+| WSDK-02 | Phase 199 | Complete |
+| WSDK-03 | Phase 199 | Complete |
 | DMON-01 | Phase 199 | Pending |
 | DMON-02 | Phase 199 | Pending |
 | DMON-03 | Phase 199 | Pending |

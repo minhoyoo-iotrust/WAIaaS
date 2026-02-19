@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.6 Wallet SDK 설계 - Phase 198 complete, ready for Phase 199
+**Current focus:** v2.6 Wallet SDK 설계 - Phase 199 Plan 01 complete, ready for Plan 02
 
 ## Current Position
 
-Phase: 198 of 201 (Signing Protocol v1 설계) -- COMPLETE
-Plan: 2 of 2 in current phase (all done)
-Status: Phase Complete
-Last activity: 2026-02-19 — Plan 198-02 completed (ntfy/Telegram 채널 프로토콜 + 보안 모델 + 에러 코드)
+Phase: 199 of 201 (Wallet SDK + 데몬 컴포넌트 설계)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-20 — Plan 199-01 completed (SDK 공개 API + WalletLinkConfig + 패키지 구조 설계)
 
-Progress: [###░░░░░░░] 28% (2/7 plans)
+Progress: [####░░░░░░] 43% (3/7 plans)
 
 ## Performance Metrics
 
@@ -41,12 +41,18 @@ v2.6 design decisions: See internal/objectives/m26-00 through m26-03.
 - 자동 재시도 없음 원칙: 만료 후 새 SignRequest 생성 필요
 - 프로덕션에서 self-hosted ntfy 권장
 
+**199-01 decisions:**
+- parseSignRequest 반환 타입 SignRequest | Promise<SignRequest>로 인라인/ntfy 조회 2모드 지원
+- zod만 peerDependency, fetch/EventSource/URL은 내장 API로 의존성 최소화
+- tsup ESM+CJS dual output, ES2022 타겟으로 React Native/Electron/Node.js 지원
+- sendViaTelegram은 void 반환 (URL 스킴 호출은 비동기 결과 확인 불가)
+
 ### Blockers/Concerns
 
 None.
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Completed 198-02-PLAN.md (ntfy/Telegram 채널 프로토콜 + 보안 모델 + 에러 코드)
+Last session: 2026-02-20
+Stopped at: Completed 199-01-PLAN.md (SDK 공개 API + WalletLinkConfig + 패키지 구조 설계)
 Resume file: None
