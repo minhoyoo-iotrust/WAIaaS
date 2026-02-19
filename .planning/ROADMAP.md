@@ -86,11 +86,11 @@ See `.planning/milestones/v2.4.1-ROADMAP.md` for full details.
   2. `waiaas init` 완료 후 마스터 패스워드 설정 방법이 안내되고, 생성된 config.toml에 주석 처리된 섹션 예시가 포함된다
   3. init 시 권한 오류가 발생하면 원인과 해결 방법을 알려주는 메시지가 출력된다
   4. 데몬 시작 시 포트 충돌이면 "Port N is already in use" 메시지가 출력되고, 정상 시작이면 내부 Step 로그 없이 Admin UI URL이 포함된 한 줄 요약만 출력된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 194-01: CLI 첫 실행 개선 (--version, engines, init 패스워드/템플릿/에러)
-- [ ] 194-02: 데몬 시작 경험 개선 (포트 충돌, Step 로그 억제, Admin UI URL)
+- [ ] 194-01-PLAN.md — CLI 첫 실행 개선 (--version, engines, init 패스워드/템플릿/에러)
+- [ ] 194-02-PLAN.md — 데몬 시작 경험 개선 (포트 충돌, Step 로그 억제, Admin UI URL)
 
 ### Phase 195: Quickstart + MCP DX
 **Goal**: quickstart 재실행이 에러 없이 동작하고 MCP 설정 안내가 명확하다
