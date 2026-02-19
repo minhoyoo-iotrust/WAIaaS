@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 191 of 193 (Security + WalletConnect 페이지 테스트)
-Plan: 1 of 5 total (1 of 2 in current phase)
+Plan: 2 of 5 total (2 of 2 in current phase)
 Status: Executing
-Last activity: 2026-02-19 -- Completed 191-02-PLAN.md
+Last activity: 2026-02-19 -- Completed 191-01-PLAN.md
 
-Progress: [##........] 20%
+Progress: [####......] 40%
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Full log in PROJECT.md and milestones/.
 
 - v2.4.1: 커버리지 목표 70% (75% 이상은 과도, branches는 65% 유지)
 - v2.4.1: 기능 변경 없이 순수 테스트 작성만 수행
+- 191-01: Mock dirty-guard + unsaved-dialog for tab switching in security page tests
 - 191-02: vi.useFakeTimers({ shouldAdvanceTime: true }) for polling tests
 
 ### Blockers/Concerns
@@ -48,5 +49,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 191-02-PLAN.md (walletconnect page tests)
+Stopped at: Completed 191-01-PLAN.md (security page tests)
 Resume file: None

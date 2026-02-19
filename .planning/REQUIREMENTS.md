@@ -9,10 +9,10 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 
 ### 신규 페이지 테스트 (NEWPG)
 
-- [ ] **NEWPG-01**: security.tsx 렌더링 + 탭 네비게이션 테스트
-- [ ] **NEWPG-02**: security.tsx Kill Switch 활성화/비활성화 테스트
-- [ ] **NEWPG-03**: security.tsx JWT Rotation 설정 테스트
-- [ ] **NEWPG-04**: security.tsx Danger Zone 동작 테스트
+- [x] **NEWPG-01**: security.tsx 렌더링 + 탭 네비게이션 테스트
+- [x] **NEWPG-02**: security.tsx Kill Switch 활성화/비활성화 테스트
+- [x] **NEWPG-03**: security.tsx JWT Rotation 설정 테스트
+- [x] **NEWPG-04**: security.tsx Danger Zone 동작 테스트
 - [ ] **NEWPG-05**: system.tsx 렌더링 + 탭 네비게이션 테스트
 - [ ] **NEWPG-06**: system.tsx Daemon 설정 폼 제출 테스트
 - [ ] **NEWPG-07**: system.tsx AutoStop 설정 토글 + 저장 테스트
@@ -57,10 +57,10 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NEWPG-01 | Phase 191 | Pending |
-| NEWPG-02 | Phase 191 | Pending |
-| NEWPG-03 | Phase 191 | Pending |
-| NEWPG-04 | Phase 191 | Pending |
+| NEWPG-01 | Phase 191 | Complete |
+| NEWPG-02 | Phase 191 | Complete |
+| NEWPG-03 | Phase 191 | Complete |
+| NEWPG-04 | Phase 191 | Complete |
 | NEWPG-05 | Phase 192 | Pending |
 | NEWPG-06 | Phase 192 | Pending |
 | NEWPG-07 | Phase 192 | Pending |
