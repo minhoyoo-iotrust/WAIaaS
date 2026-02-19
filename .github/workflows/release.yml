@@ -217,12 +217,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Gate 2: Manual approval deploy — pnpm publish + summary
+  # Gate 2: Manual approval deploy -- npm publish with OIDC + provenance
   deploy:
     runs-on: ubuntu-latest
     needs: [test, chain-integration, platform, publish-check, docker-publish]
     if: github.event_name == 'release'
     environment: production
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -246,12 +249,7 @@ jobs:
             echo "npm version sufficient"
           fi
 
-      - name: Setup npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: pnpm publish
+      - name: Publish packages
         run: |
           PACKAGES=(
             packages/core
@@ -268,20 +266,18 @@ jobs:
             cd "$pkg_path"
             PKG_VERSION=$(node -p "require('./package.json').version")
             if [[ "$PKG_VERSION" == *-* ]]; then
-              pnpm publish --access public --no-git-checks --tag rc 2>&1
+              npm publish --provenance --access public --tag rc 2>&1
             else
-              pnpm publish --access public --no-git-checks 2>&1
+              npm publish --provenance --access public 2>&1
             fi
             cd "$GITHUB_WORKSPACE"
           done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Deploy summary
         run: |
           echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **npm:** 8 packages published to npmjs.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm:** 8 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (GHCR):** ghcr.io/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (Hub):** waiaas/daemon" >> $GITHUB_STEP_SUMMARY
