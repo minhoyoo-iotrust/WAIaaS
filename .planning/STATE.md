@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 190 of 190 (검증 및 정리 -- 완료)
 Plan: 1 of 1 in current phase (complete)
 Status: v2.4 milestone complete
-Last activity: 2026-02-19 - Completed quick task 5: Issue 085 skill version sync + discovery
+Last activity: 2026-02-19 - Completed quick task 6: Issue 087 AI agent connection prompt magic word
 
 Progress: [██████████] 100%
 
@@ -39,6 +39,7 @@ Full log in PROJECT.md and milestones/.
 - [Phase quick-2]: CI-only README copy (not local) to avoid git noise; independent step before publish
 - [Phase quick-4]: NotificationService always-init with 0 channels when disabled -- enables Admin UI runtime activation via hot-reload
 - [Phase quick-5]: ESM sync-version.mjs using node:fs/path/url -- consistent with project ESM convention
+- [Phase quick-6]: Use existing session creation API (ttl) instead of adding new admin endpoints -- simpler, no daemon changes needed
 
 ### Blockers/Concerns
 
@@ -55,9 +56,10 @@ Full log in PROJECT.md and milestones/.
 | 3 | Issue 092: npm 패키지 homepage/bugs URL 수정 | 2026-02-19 | 68a99d7 | [3-issue-092-npm-homepage-repository-url](./quick/3-issue-092-npm-homepage-repository-url/) |
 | 4 | Issue 088: NotificationService always-init fix | 2026-02-19 | 3a54be4 | [4-issue-088-notificationservice-enabled-fa](./quick/4-issue-088-notificationservice-enabled-fa/) |
 | 5 | Issue 085: skill file version sync + discovery | 2026-02-19 | 49075cb | [5-issue-085](./quick/5-issue-085/) |
+| 6 | Issue 087: AI agent connection prompt magic word | 2026-02-19 | b52f5e8 | [6-issue-087-ai](./quick/6-issue-087-ai/) |
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed quick task 5: Issue 085 skill version sync + discovery
-Resume file: .planning/quick/5-issue-085/5-SUMMARY.md
+Stopped at: Completed quick task 6: Issue 087 AI agent connection prompt magic word
+Resume file: .planning/quick/6-issue-087-ai/6-SUMMARY.md
