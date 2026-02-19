@@ -25,7 +25,7 @@
  * @see docs/28-daemon-lifecycle-cli.md
  */
 
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFileSync, unlinkSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -42,7 +42,10 @@ import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
 import { BackgroundWorkers } from './workers.js';
+import { keyValueStore } from '../infrastructure/database/schema.js';
 import type * as schema from '../infrastructure/database/schema.js';
+import { eq } from 'drizzle-orm';
+import { decrypt } from '../infrastructure/keystore/crypto.js';
 import { DelayQueue } from '../workflow/delay-queue.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
@@ -247,6 +250,78 @@ export class DaemonLifecycle {
       })(),
       30_000,
       'STEP2_DATABASE',
+    );
+
+    // ------------------------------------------------------------------
+    // Step 2b: Master password validation (fail-fast)
+    // ------------------------------------------------------------------
+    await withTimeout(
+      (async () => {
+        const existingHash = this._db!
+          .select()
+          .from(keyValueStore)
+          .where(eq(keyValueStore.key, 'master_password_hash'))
+          .get();
+
+        if (existingHash) {
+          // Path A: DB hash exists -> verify against stored hash
+          const isValid = await argon2.verify(existingHash.value, masterPassword);
+          if (!isValid) {
+            console.error('Invalid master password.');
+            process.exit(1);
+          }
+          console.log('Step 2b: Master password verified (DB hash)');
+        } else {
+          // Path B: No DB hash -> check for existing keystore files
+          const keystoreDir = join(dataDir, 'keystore');
+          const keystoreFiles = existsSync(keystoreDir)
+            ? readdirSync(keystoreDir).filter(f => f.endsWith('.json'))
+            : [];
+
+          if (keystoreFiles.length > 0) {
+            // Existing user migration: validate by decrypting first keystore
+            const keystorePath = join(keystoreDir, keystoreFiles[0]!);
+            const content = readFileSync(keystorePath, 'utf-8');
+            const parsed = JSON.parse(content);
+            const encrypted = {
+              iv: Buffer.from(parsed.crypto.cipherparams.iv, 'hex'),
+              ciphertext: Buffer.from(parsed.crypto.ciphertext, 'hex'),
+              authTag: Buffer.from(parsed.crypto.authTag, 'hex'),
+              salt: Buffer.from(parsed.crypto.kdfparams.salt, 'hex'),
+              kdfparams: parsed.crypto.kdfparams,
+            };
+            try {
+              const plain = await decrypt(encrypted, masterPassword);
+              plain.fill(0); // zero immediately
+            } catch {
+              console.error('Invalid master password. Cannot decrypt existing wallets.');
+              process.exit(1);
+            }
+            console.log('Step 2b: Master password verified (keystore migration)');
+          } else {
+            console.log('Step 2b: First install, no password validation needed');
+          }
+
+          // Store hash in DB for future startups
+          const hash = await argon2.hash(masterPassword, {
+            type: argon2.argon2id,
+            memoryCost: 19456,
+            timeCost: 2,
+            parallelism: 1,
+          });
+          this._db!
+            .insert(keyValueStore)
+            .values({
+              key: 'master_password_hash',
+              value: hash,
+              updatedAt: new Date(),
+            })
+            .onConflictDoNothing()
+            .run();
+        }
+      })(),
+      30_000,
+      'STEP2B_PASSWORD_VALIDATION',
     );
 
     // ------------------------------------------------------------------
