@@ -3,7 +3,7 @@ name: "WAIaaS Quickstart"
 description: "End-to-end quickstart: create wallet, session, check balance, send first transfer"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, quickstart, waiass]
-version: "1.8.0"
+version: "2.3.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

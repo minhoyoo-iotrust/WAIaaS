@@ -3,7 +3,7 @@ name: "WAIaaS Transactions"
 description: "All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
-version: "1.5.3"
+version: "2.3.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

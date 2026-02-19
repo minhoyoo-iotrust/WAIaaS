@@ -5,6 +5,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "@waiaas/skills#build": {
+      "dependsOn": [],
+      "outputs": ["dist/**", "skills/**"]
+    },
     "@waiaas/admin#build": {
       "dependsOn": [],
       "outputs": ["dist/**"]
