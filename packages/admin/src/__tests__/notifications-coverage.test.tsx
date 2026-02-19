@@ -51,7 +51,22 @@ vi.mock('../pages/telegram-users', () => ({
   default: () => <div>TelegramUsersPage</div>,
 }));
 
-import { apiGet, apiPost } from '../api/client';
+vi.mock('../utils/dirty-guard', () => ({
+  registerDirty: vi.fn(),
+  unregisterDirty: vi.fn(),
+  hasDirty: { value: false },
+}));
+
+vi.mock('../components/settings-search', () => {
+  const { signal } = require('@preact/signals');
+  return {
+    pendingNavigation: signal(null),
+    highlightField: signal(''),
+    SettingsSearch: () => null,
+  };
+});
+
+import { apiGet, apiPost, apiPut } from '../api/client';
 import { showToast } from '../components/toast';
 import NotificationsPage from '../pages/notifications';
 
@@ -501,6 +516,361 @@ describe('NotificationsPage - Additional Coverage', () => {
       await waitFor(() => {
         expect(screen.getByText('Channel Status')).toBeTruthy();
       });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // handleTestSend (Test All Channels)
+  // -----------------------------------------------------------------------
+
+  describe('handleTestSend', () => {
+    it('sends test to all channels and shows success toast when all pass', async () => {
+      vi.useRealTimers();
+      setupMocks();
+
+      vi.mocked(apiPost).mockResolvedValueOnce({
+        results: [
+          { channel: 'telegram', success: true },
+          { channel: 'ntfy', success: true },
+        ],
+      });
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test All Channels')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Test All Channels'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
+      });
+
+      await waitFor(() => {
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Test sent successfully');
+      });
+    });
+
+    it('shows warning toast when some channels fail', async () => {
+      vi.useRealTimers();
+      setupMocks();
+
+      vi.mocked(apiPost).mockResolvedValueOnce({
+        results: [
+          { channel: 'telegram', success: true },
+          { channel: 'discord', success: false, error: 'Webhook error' },
+        ],
+      });
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test All Channels')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Test All Channels'));
+
+      await waitFor(() => {
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('warning', 'Some channels failed');
+      });
+    });
+
+    it('shows error toast when test API call fails', async () => {
+      vi.useRealTimers();
+      setupMocks();
+
+      vi.mocked(apiPost).mockRejectedValueOnce(new Error('Network failure'));
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test All Channels')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Test All Channels'));
+
+      await waitFor(() => {
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', expect.any(String));
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Disabled notifications banner
+  // -----------------------------------------------------------------------
+
+  describe('notifications disabled banner', () => {
+    it('shows disabled banner when notifications are disabled', async () => {
+      vi.useRealTimers();
+
+      const disabledStatus = {
+        enabled: false,
+        channels: [
+          { name: 'telegram', enabled: true },
+        ],
+      };
+
+      setupMocks(disabledStatus, mockLogs);
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Notifications are disabled/)).toBeTruthy();
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Fetch error paths
+  // -----------------------------------------------------------------------
+
+  describe('fetch errors', () => {
+    it('shows error when fetchStatus fails', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status'))
+          return Promise.reject(new Error('Network error'));
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
+      });
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', expect.any(String));
+      });
+    });
+
+    it('shows error when fetchLogs fails', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log'))
+          return Promise.reject(new Error('Network error'));
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
+      });
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', expect.any(String));
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Settings tab
+  // -----------------------------------------------------------------------
+
+  describe('Settings tab', () => {
+    it('shows Settings tab with notification configuration', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve({
+          notifications: {
+            enabled: 'true',
+            telegram_bot_token: true, // credential configured
+            telegram_chat_id: '12345',
+            locale: 'en',
+            discord_webhook_url: false,
+            ntfy_server: '',
+            ntfy_topic: '',
+            slack_webhook_url: false,
+            rate_limit_rpm: '20',
+          },
+          telegram: {
+            enabled: 'false',
+            bot_token: false,
+            locale: 'en',
+          },
+        });
+        return Promise.resolve({});
+      });
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Settings').length).toBeGreaterThan(0);
+      });
+
+      // Click Settings tab
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
+      });
+
+      expect(screen.getByText('Telegram')).toBeTruthy();
+      expect(screen.getByText('Other Channels')).toBeTruthy();
+    });
+
+    it('saves notification settings', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve({
+          notifications: {
+            enabled: 'true',
+            telegram_chat_id: '12345',
+            locale: 'en',
+            rate_limit_rpm: '20',
+          },
+          telegram: {
+            enabled: 'false',
+            locale: 'en',
+          },
+        });
+        return Promise.resolve({});
+      });
+      vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+
+      render(<NotificationsPage />);
+
+      // Switch to Settings tab
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
+      });
+
+      // Change chat ID
+      const chatIdInput = screen.getByLabelText('Telegram Chat ID') as HTMLInputElement;
+      fireEvent.input(chatIdInput, { target: { value: '99999' } });
+
+      // Save
+      await waitFor(() => {
+        expect(screen.getByText('Save')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: expect.arrayContaining([
+            expect.objectContaining({ key: 'notifications.telegram_chat_id', value: '99999' }),
+          ]),
+        });
+      });
+    });
+
+    it('runs test notification from settings tab', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve({
+          notifications: { enabled: 'true' },
+          telegram: { enabled: 'false' },
+        });
+        return Promise.resolve({});
+      });
+
+      vi.mocked(apiPost).mockResolvedValueOnce({
+        results: [{ channel: 'telegram', success: true }],
+      });
+
+      render(<NotificationsPage />);
+
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Notification')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Test Notification'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
+      });
+    });
+
+    it('shows error when settings fetch fails', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings')
+          return Promise.reject(new Error('Settings fetch failed'));
+        return Promise.resolve({});
+      });
+
+      render(<NotificationsPage />);
+
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', expect.any(String));
+      });
+    });
+
+    it('discards notification settings changes', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve({
+          notifications: { enabled: 'true', telegram_chat_id: '12345' },
+          telegram: { enabled: 'false' },
+        });
+        return Promise.resolve({});
+      });
+
+      render(<NotificationsPage />);
+
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
+      });
+
+      const chatIdInput = screen.getByLabelText('Telegram Chat ID') as HTMLInputElement;
+      fireEvent.input(chatIdInput, { target: { value: '99999' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Discard')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Discard'));
+
+      // Save bar should disappear
+      await waitFor(() => {
+        expect(screen.queryByText('Discard')).toBeNull();
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Initial loading state
+  // -----------------------------------------------------------------------
+
+  describe('loading skeleton', () => {
+    it('shows skeleton cards during initial load', async () => {
+      vi.useRealTimers();
+
+      // Never resolve so we stay in loading state
+      vi.mocked(apiGet).mockImplementation(() => new Promise(() => {}));
+
+      const { container } = render(<NotificationsPage />);
+
+      // Skeleton cards should be visible
+      const skeletons = container.querySelectorAll('.stat-skeleton');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 });
