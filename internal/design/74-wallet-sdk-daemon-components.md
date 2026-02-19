@@ -1907,25 +1907,525 @@ private handleUpdate(update: TelegramUpdate): void {
 
 ## 8. WalletLinkRegistry + ApprovalChannelRouter
 
-> Plan 02에서 작성
+### 8.1 IWalletLinkRegistry 인터페이스
+
+통합 지갑별 유니버셜 링크/딥링크 설정을 관리한다. 저장소는 SettingsService의 `signing_sdk.wallets` 키에 JSON 배열로 저장한다 (별도 DB 테이블 없이 settings 테이블 활용).
+
+```typescript
+interface IWalletLinkRegistry {
+  /**
+   * 등록된 지갑의 링크 설정을 조회한다.
+   * @throws WALLET_NOT_REGISTERED - 미등록 지갑
+   */
+  getWalletLink(walletName: string): WalletLinkConfig;
+
+  /** 등록된 모든 지갑 설정 목록을 반환한다. */
+  getAllWallets(): WalletLinkConfig[];
+
+  /**
+   * 유니버셜 링크 URL을 생성한다.
+   * @returns {universalLink.base}{universalLink.signPath}?data={base64url(SignRequest)} 형태의 URL
+   */
+  buildUniversalLinkUrl(walletName: string, signRequest: SignRequest): string;
+
+  /**
+   * 딥링크 URL을 생성한다 (deepLink 설정이 있는 경우).
+   * @returns {deepLink.scheme}://{deepLink.signPath}?data={base64url(SignRequest)} 또는 null
+   */
+  buildDeepLinkUrl(walletName: string, signRequest: SignRequest): string | null;
+}
+```
+
+#### 저장 구조
+
+SettingsService의 `signing_sdk.wallets` 키에 JSON 배열로 저장한다:
+
+```typescript
+// settings 테이블
+// key: "signing_sdk.wallets"
+// value: JSON string
+[
+  {
+    "name": "dcent",
+    "displayName": "D'CENT Wallet",
+    "universalLink": {
+      "base": "https://link.dcentwallet.com",
+      "signPath": "/waiaas/sign"
+    },
+    "deepLink": {
+      "scheme": "dcent",
+      "signPath": "/waiaas-sign"
+    },
+    "ntfy": {
+      "requestTopicPattern": "{prefix}-{walletId}"
+    },
+    "supportedChains": ["solana", "evm"]
+  }
+]
+```
+
+**설계 근거**: 지갑 등록 수는 소수(일반적으로 1-3개)이므로 별도 테이블 없이 JSON 배열로 충분하다. SettingsService의 기존 캐시/무효화 패턴을 그대로 활용한다.
+
+#### CRUD 관리
+
+| 작업 | 경로 | 설명 |
+|------|------|------|
+| 조회 | `SettingsService.get('signing_sdk.wallets')` | JSON 파싱 → WalletLinkConfig[] |
+| 추가/수정 | Admin UI > System > Settings > Signing SDK | JSON 배열에 항목 추가/수정 → SettingsService.set() |
+| 삭제 | Admin UI에서 항목 제거 | JSON 배열에서 해당 name 항목 제거 → SettingsService.set() |
+
+#### 캐시
+
+SettingsService 값 변경 시 캐시가 자동 무효화된다 (기존 SettingsService 패턴):
+
+```typescript
+class WalletLinkRegistry implements IWalletLinkRegistry {
+  private cache: WalletLinkConfig[] | null = null;
+
+  constructor(private readonly settingsService: SettingsService) {
+    // SettingsService의 onChange 이벤트 구독
+    this.settingsService.on('change', (key) => {
+      if (key === 'signing_sdk.wallets') {
+        this.cache = null;
+      }
+    });
+  }
+
+  private async loadWallets(): Promise<WalletLinkConfig[]> {
+    if (this.cache) return this.cache;
+    const json = await this.settingsService.get('signing_sdk.wallets');
+    const parsed = json ? JSON.parse(json) : [];
+    this.cache = parsed.map((w: unknown) => WalletLinkConfigSchema.parse(w));
+    return this.cache!;
+  }
+}
+```
+
+#### URL 생성 로직
+
+```typescript
+buildUniversalLinkUrl(walletName: string, signRequest: SignRequest): string {
+  const config = this.getWalletLink(walletName);
+  return `${config.universalLink.base}${config.universalLink.signPath}`;
+  // 호출자가 ?data= 쿼리 파라미터를 추가한다 (SignRequestBuilder.build() 참조)
+}
+
+buildDeepLinkUrl(walletName: string, signRequest: SignRequest): string | null {
+  const config = this.getWalletLink(walletName);
+  if (!config.deepLink) return null;
+  return `${config.deepLink.scheme}://${config.deepLink.signPath}`;
+  // 호출자가 ?data= 쿼리 파라미터를 추가한다
+}
+```
+
+### 8.2 IApprovalChannelRouter 인터페이스
+
+지갑별 승인 채널을 5단계 우선순위로 결정한다.
+
+```typescript
+interface IApprovalChannelRouter {
+  /**
+   * 지갑에 대한 최적의 승인 채널을 결정한다.
+   * 5단계 우선순위 fallback 로직을 적용한다.
+   */
+  resolveChannel(wallet: Wallet): Promise<ResolvedChannel>;
+}
+
+type ResolvedChannel = {
+  type: 'sdk_ntfy' | 'sdk_telegram' | 'walletconnect' | 'telegram_bot' | 'rest';
+  signingChannel?: ISigningChannel;    // sdk_ntfy / sdk_telegram 시 해당 채널 인스턴스
+};
+```
+
+#### 의존
+
+| 의존 대상 | 용도 |
+|----------|------|
+| SettingsService | `signing_sdk.enabled`, `signing_sdk.preferred_channel` 조회 |
+| WcSigningBridge | WalletConnect 세션 활성 여부 확인 (기존 v1.6.1) |
+| NtfySigningChannel | sdk_ntfy 채널 인스턴스 |
+| TelegramSigningChannel | sdk_telegram 채널 인스턴스 |
+| TelegramNotificationService | Telegram chatId 설정 여부 확인 |
+
+#### 라우팅 로직 의사코드 (5단계 우선순위)
+
+```
+resolveChannel(wallet):
+
+  1. wallet.ownerApprovalMethod가 설정됨?
+     → YES: 해당 채널 반환
+       - 'sdk_ntfy'       → { type: 'sdk_ntfy', signingChannel: ntfySigningChannel }
+       - 'sdk_telegram'   → { type: 'sdk_telegram', signingChannel: telegramSigningChannel }
+       - 'walletconnect'  → { type: 'walletconnect' }
+       - 'telegram_bot'   → { type: 'telegram_bot' }
+       - 'rest'           → { type: 'rest' }
+     → NO: 2단계로
+
+  2. signing_sdk.enabled === true?
+     → NO: 4단계로
+
+  3. signing_sdk.preferred_channel 확인
+     → 'ntfy':     { type: 'sdk_ntfy', signingChannel: ntfySigningChannel }
+     → 'telegram': { type: 'sdk_telegram', signingChannel: telegramSigningChannel }
+
+  4. WalletConnect 세션 활성? (wcSigningBridge.hasActiveSession(wallet.id))
+     → YES: { type: 'walletconnect' }
+     → NO: 5단계로
+
+  5. Telegram chatId 설정됨? (telegramService.getChatIdForWallet(wallet.id))
+     → YES: { type: 'telegram_bot' }
+     → NO: { type: 'rest' }
+```
+
+#### 구현
+
+```typescript
+class ApprovalChannelRouter implements IApprovalChannelRouter {
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly wcSigningBridge: WcSigningBridge,
+    private readonly ntfySigningChannel: NtfySigningChannel,
+    private readonly telegramSigningChannel: TelegramSigningChannel,
+    private readonly telegramService: TelegramNotificationService,
+  ) {}
+
+  async resolveChannel(wallet: Wallet): Promise<ResolvedChannel> {
+    // 1. 지갑별 owner_approval_method 우선
+    if (wallet.ownerApprovalMethod) {
+      return this.resolveFromMethod(wallet.ownerApprovalMethod);
+    }
+
+    // 2. signing_sdk.enabled 확인
+    const sdkEnabled = await this.settingsService.get('signing_sdk.enabled');
+    if (sdkEnabled) {
+      // 3. preferred_channel로 SDK 채널 결정
+      const preferredChannel = await this.settingsService.get('signing_sdk.preferred_channel') ?? 'ntfy';
+      if (preferredChannel === 'ntfy') {
+        return { type: 'sdk_ntfy', signingChannel: this.ntfySigningChannel };
+      }
+      return { type: 'sdk_telegram', signingChannel: this.telegramSigningChannel };
+    }
+
+    // 4. WalletConnect 세션 확인
+    const hasWcSession = await this.wcSigningBridge.hasActiveSession(wallet.id);
+    if (hasWcSession) {
+      return { type: 'walletconnect' };
+    }
+
+    // 5. Telegram chatId 확인
+    const chatId = await this.telegramService.getChatIdForWallet(wallet.id);
+    if (chatId) {
+      return { type: 'telegram_bot' };
+    }
+
+    // 최종 fallback: REST API
+    return { type: 'rest' };
+  }
+
+  private resolveFromMethod(method: string): ResolvedChannel {
+    switch (method) {
+      case 'sdk_ntfy':
+        return { type: 'sdk_ntfy', signingChannel: this.ntfySigningChannel };
+      case 'sdk_telegram':
+        return { type: 'sdk_telegram', signingChannel: this.telegramSigningChannel };
+      case 'walletconnect':
+        return { type: 'walletconnect' };
+      case 'telegram_bot':
+        return { type: 'telegram_bot' };
+      case 'rest':
+      default:
+        return { type: 'rest' };
+    }
+  }
+}
+```
 
 ---
 
 ## 9. SettingsService signing_sdk 키
 
-> Plan 02에서 작성
+### 9.1 키 정의
+
+m26-01 objective에서 정의된 6개 키 + 지갑 목록 JSON을 공식화한다.
+
+| 키 | 타입 | 기본값 | 검증 | 설명 |
+|----|------|--------|------|------|
+| `signing_sdk.enabled` | boolean | `false` | - | SDK 전체 활성/비활성. `false` 시 ApprovalChannelRouter가 SDK 채널 건너뜀 |
+| `signing_sdk.request_expiry_min` | number | `30` | min:1, max:1440 | 서명 요청 유효 시간(분). SignRequestBuilder.build()에서 expiresAt 계산에 사용 |
+| `signing_sdk.preferred_channel` | string | `"ntfy"` | enum: `ntfy`, `telegram` | 글로벌 기본 응답 채널. owner_approval_method 미설정 + SDK 활성 시 사용 |
+| `signing_sdk.preferred_wallet` | string | `null` | WalletLinkRegistry에 등록된 name이어야 함 | 글로벌 기본 지갑. resolveWalletName() fallback에 사용 |
+| `signing_sdk.ntfy_request_topic_prefix` | string | `"waiaas-sign"` | regex: `^[a-z0-9-]+$` | ntfy 요청 토픽 접두어. 토픽 이름: `{prefix}-{walletId}` |
+| `signing_sdk.ntfy_response_topic_prefix` | string | `"waiaas-response"` | regex: `^[a-z0-9-]+$` | ntfy 응답 토픽 접두어. 토픽 이름: `{prefix}-{requestId}` |
+
+### 9.2 signing_sdk.wallets (JSON 배열)
+
+WalletLinkRegistry의 저장소로 사용되는 JSON 배열:
+
+| 키 | 타입 | 기본값 | 검증 | 설명 |
+|----|------|--------|------|------|
+| `signing_sdk.wallets` | JSON string | `"[]"` | WalletLinkConfigSchema[] 배열 | 등록된 지갑 목록 (Section 3.1 WalletLinkConfig 스키마 준수) |
+
+저장 예시:
+
+```json
+[
+  {
+    "name": "dcent",
+    "displayName": "D'CENT Wallet",
+    "universalLink": {
+      "base": "https://link.dcentwallet.com",
+      "signPath": "/waiaas/sign"
+    },
+    "deepLink": {
+      "scheme": "dcent",
+      "signPath": "/waiaas-sign"
+    },
+    "ntfy": {
+      "requestTopicPattern": "{prefix}-{walletId}"
+    },
+    "supportedChains": ["solana", "evm"]
+  }
+]
+```
+
+### 9.3 ntfy 서버 URL
+
+ntfy 서버 URL은 별도 signing_sdk 키를 추가하지 않고 기존 알림 설정을 재사용한다:
+
+| 키 | 위치 | 용도 |
+|----|------|------|
+| `notifications.ntfy_server` | 기존 SettingsService 키 | 서명 채널과 알림 채널 모두에서 공유 |
+
+**설계 근거**: 서명 채널과 알림 채널은 동일한 ntfy 서버를 사용하지만, 토픽 접두어(`waiaas-sign-*` vs `waiaas-notify-*`)로 완전히 분리된다. 별도 서버 URL을 추가하면 설정이 중복되고 불일치 위험이 생긴다.
+
+### 9.4 Admin UI 표시 위치
+
+System > Settings > Signing SDK 섹션에 7개 설정을 표시한다:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Signing SDK                                         │
+│                                                      │
+│  Enabled           [Toggle: Off]                     │
+│  Request Expiry    [30] min  (1-1440)               │
+│  Preferred Channel [ntfy ▼]                          │
+│  Preferred Wallet  [Select wallet... ▼]              │
+│                                                      │
+│  ntfy Topics                                         │
+│  Request Prefix    [waiaas-sign]                     │
+│  Response Prefix   [waiaas-response]                 │
+│                                                      │
+│  Registered Wallets                                  │
+│  ┌──────────────────────────────────────────────┐   │
+│  │ D'CENT Wallet                   [Edit] [Del] │   │
+│  │ dcent | solana, evm              │   │
+│  │ https://link.dcentwallet.com/waiaas/sign     │   │
+│  └──────────────────────────────────────────────┘   │
+│  [+ Add Wallet]                                     │
+│                                                      │
+│  [Save]                                             │
+└─────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 10. wallets.owner_approval_method 컬럼 + REST API
 
-> Plan 02에서 작성
+### 10.1 DB 스키마 변경
+
+wallets 테이블에 `owner_approval_method` 컬럼을 추가하여 지갑별 승인 방법을 설정한다.
+
+#### SQL 마이그레이션
+
+```sql
+ALTER TABLE wallets ADD COLUMN owner_approval_method TEXT;
+-- CHECK (owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'))
+```
+
+| 항목 | 값 |
+|------|-----|
+| 컬럼명 | `owner_approval_method` |
+| 타입 | `TEXT` |
+| NULL 허용 | YES (NULL = 글로벌 fallback, Section 8.2 라우팅 로직 적용) |
+| CHECK 제약 | `IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')` |
+| 마이그레이션 버전 | 기존 `schema_version` 테이블 패턴 따름 |
+
+#### 허용 값
+
+| 값 | 설명 | 연동 마일스톤 |
+|----|------|-------------|
+| `sdk_ntfy` | WAIaaS SDK + ntfy 직접 푸시 (메신저 불필요) | m26-01 |
+| `sdk_telegram` | WAIaaS SDK + Telegram 메신저 중계 | m26-01 |
+| `walletconnect` | WalletConnect v2 세션 기반 | v1.6.1 |
+| `telegram_bot` | Telegram Bot `/approve` 텍스트 명령 | v1.6 |
+| `rest` | REST API 직접 호출 (서명 수동 생성) | v1.2 |
+| `NULL` (미설정) | 글로벌 config 기본 우선순위 fallback | - |
+
+#### Drizzle 스키마 변경
+
+```typescript
+// packages/daemon/src/infrastructure/database/schema/wallets.ts
+import { text, sqliteTable } from 'drizzle-orm/sqlite-core';
+
+export const wallets = sqliteTable('wallets', {
+  // ... 기존 컬럼 ...
+
+  /** 지갑별 Owner 승인 방법. NULL = 글로벌 fallback */
+  ownerApprovalMethod: text('owner_approval_method'),
+});
+```
+
+Zod 검증 (Zod SSoT 원칙):
+
+```typescript
+const OwnerApprovalMethodSchema = z.enum([
+  'sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest',
+]).nullable();
+```
+
+### 10.2 REST API 변경
+
+#### PUT /v1/wallets/:id/owner -- 요청 스키마 변경
+
+기존 `approval_method` optional 필드를 추가한다:
+
+```typescript
+// 기존 스키마
+const UpdateOwnerSchema = z.object({
+  owner_address: z.string(),
+});
+
+// 변경 후 스키마
+const UpdateOwnerSchema = z.object({
+  owner_address: z.string(),
+  approval_method: z.enum([
+    'sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest',
+  ]).optional(),    // optional: 생략 시 기존 값 유지, 명시적으로 null 전송 시 초기화
+});
+```
+
+**요청 예시:**
+
+```json
+{
+  "owner_address": "0x1234...5678",
+  "approval_method": "sdk_ntfy"
+}
+```
+
+**검증 규칙:**
+
+| 조건 | 결과 | HTTP |
+|------|------|------|
+| `approval_method`가 유효한 enum 값 | 정상 처리, DB 업데이트 | 200 |
+| `approval_method`가 유효하지 않은 값 | 에러 | 400 `"Invalid approval method"` |
+| `approval_method` 생략 | 기존 값 유지 (NULL 또는 이전 설정) | 200 |
+| `approval_method: null` (명시적) | NULL로 초기화 (글로벌 fallback) | 200 |
+| Owner 미등록 지갑에 `approval_method` 설정 시도 | 에러 | 400 `"Owner must be registered first"` |
+
+#### GET /v1/wallets/:id -- 응답 스키마 변경
+
+응답에 `owner_approval_method` 필드를 포함한다:
+
+```json
+{
+  "id": "01935a3b-7c8d-7e00-b123-456789abcdef",
+  "name": "my-wallet",
+  "chain": "evm",
+  "network": "ethereum-mainnet",
+  "address": "0x1234...5678",
+  "owner_address": "0xabcd...ef01",
+  "owner_status": "LOCKED",
+  "owner_approval_method": "sdk_ntfy",
+  "created_at": "2026-02-19T14:00:00Z"
+}
+```
+
+`owner_approval_method`는 설정되지 않은 경우 `null`로 반환된다.
+
+### 10.3 Admin UI 변경
+
+지갑 상세 페이지의 Owner Settings 섹션에 Approval Method 라디오 버튼을 추가한다:
+
+```
+┌─────────────────────────────────────────────────┐
+│  Owner Settings                                  │
+│                                                  │
+│  Owner Address    0x1234...5678                  │
+│  Owner Status     LOCKED                         │
+│                                                  │
+│  Approval Method                                 │
+│  (*) Use default (from config)                   │
+│  ( ) D'CENT + ntfy (SDK direct push)            │
+│  ( ) D'CENT + Telegram (SDK messenger)          │
+│  ( ) WalletConnect                              │
+│  ( ) Telegram Bot (/approve command)            │
+│  ( ) Manual REST API                            │
+│                                                  │
+│  [Save]                                         │
+└─────────────────────────────────────────────────┘
+```
+
+#### UI 동작 규칙
+
+| 조건 | UI 동작 |
+|------|--------|
+| Owner 미등록 | Approval Method 라디오 전체 비활성(disabled). "Register an owner first" 안내 텍스트 |
+| Owner 등록됨 | 라디오 활성. 현재 설정값 선택 상태. "Use default" = `NULL` |
+| SDK 옵션 선택 + `signing_sdk.enabled` = false | 경고: "Signing SDK is not enabled. Enable it in System > Settings." |
+| SDK 옵션 선택 + `signing_sdk.wallets` = [] | 경고: "No wallet registered. Register a wallet in System > Settings > Signing SDK." |
+| sdk_ntfy 선택 + `notifications.ntfy_server` 미설정 | 경고: "ntfy is not configured. Configure ntfy server in System > Settings > Notifications." |
+| sdk_telegram 선택 + Telegram chatId 미설정 | 경고: "Telegram chat not configured for this wallet." |
+
+#### SDK 옵션 라벨
+
+`signing_sdk.wallets`에 등록된 지갑 목록을 기반으로 SDK 옵션 라벨에 지갑 이름을 표시한다:
+
+- 지갑 1개 등록: `D'CENT + ntfy (SDK direct push)`, `D'CENT + Telegram (SDK messenger)`
+- 지갑 미등록: `SDK + ntfy (no wallet registered)`, `SDK + Telegram (no wallet registered)`
+- 다중 지갑: `preferred_wallet`에 설정된 지갑 이름을 표시. 미설정 시 첫 번째 지갑
 
 ---
 
 ## 11. 기술 결정 요약
 
-> Plan 02에서 작성
+Phase 199(Wallet SDK + 데몬 컴포넌트 설계)에서 내린 설계 결정을 정리한다.
+
+### 11.1 SDK 측 결정 (Plan 01)
+
+| # | 결정 항목 | 선택 | 근거 |
+|---|----------|------|------|
+| 1 | parseSignRequest 반환 타입 | `SignRequest \| Promise<SignRequest>` | data 파라미터(인라인) → 동기, requestId(ntfy 조회) → 비동기. 호출자는 `await`로 통일 가능 |
+| 2 | SDK 외부 의존성 | zod만 peerDependency | fetch, EventSource, URL, TextEncoder는 모든 타겟 환경(React Native/Electron/Node.js 18+)에서 내장 |
+| 3 | 빌드 포맷 | tsup ESM + CJS dual output, ES2022 타겟 | React Native Hermes, Node.js 18+, Electron 모두 지원 |
+| 4 | sendViaTelegram 반환 타입 | `void` (동기) | URL 스킴 호출(tg://, https://t.me/)은 비동기 결과 확인 불가. fallback 체인: Android → iOS → clipboard |
+
+### 11.2 데몬 측 결정 (Plan 02)
+
+| # | 결정 항목 | 선택 | 근거 |
+|---|----------|------|------|
+| 5 | ISigningChannel 공통 인터페이스 | ntfy/telegram 채널 교체 가능 | sendRequest() + waitForResponse() 2메서드로 통일. 향후 Slack/Discord 채널 추가 시 동일 인터페이스 구현 |
+| 6 | WalletLinkRegistry 저장소 | SettingsService `signing_sdk.wallets` JSON 배열 | 지갑 등록 수가 소수(1-3개)이므로 별도 테이블 불필요. SettingsService 캐시/무효화 패턴 재사용 |
+| 7 | ApprovalChannelRouter 5단계 fallback | wallet.ownerApprovalMethod → SDK → WC → Telegram Bot → REST | 지갑별 설정 최우선, 글로벌 SDK 설정 차순위, 기존 인프라(WC/Telegram/REST) 순차 fallback |
+| 8 | owner_approval_method CHECK 제약 | `IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')` + NULL 허용 | NULL = 글로벌 fallback (ApprovalChannelRouter 라우팅 진입). 유효하지 않은 값은 DB 레벨에서 차단 |
+| 9 | SignRequest 임시 저장소 | 메모리 Map (기본), SQLite (후속 고려) | 데몬 재시작 시 PENDING_APPROVAL TX에 대해 새 SignRequest 재생성. 단순 + 빠름 우선 |
+| 10 | ntfy 서버 URL | 기존 `notifications.ntfy_server` 재사용 | 서명 채널과 알림 채널이 동일 서버를 공유. 별도 키 추가 시 설정 중복/불일치 위험 |
+| 11 | Telegram /sign_response 핸들러 | 기존 Long Polling handleUpdate()에 명령어 추가 | 별도 webhook 없이 기존 Bot 인프라를 확장. chatId + signerAddress + 서명의 3중 보안 |
+
+### 11.3 문서 메타데이터
+
+| 항목 | 값 |
+|------|-----|
+| 문서 번호 | 74 |
+| 문서 제목 | Wallet SDK + Daemon Components |
+| 생성일 | 2026-02-20 |
+| 최종 수정 | 2026-02-20 |
+| 선행 문서 | 73 (Signing Protocol v1) |
+| 관련 마일스톤 | m26-00 (설계), m26-01 (구현) |
+| 범위 | @waiaas/wallet-sdk 공개 API 6개 함수 + 데몬 컴포넌트 6개 인터페이스 + SettingsService 7키 + DB 스키마 + REST API |
+| 전체 섹션 수 | 11 |
+| SDK 공개 함수 | parseSignRequest, buildSignResponse, formatDisplayMessage, sendViaNtfy, sendViaTelegram, subscribeToRequests |
+| 데몬 컴포넌트 | SignRequestBuilder, SignResponseHandler, NtfySigningChannel, TelegramSigningChannel, WalletLinkRegistry, ApprovalChannelRouter |
 
 ---
 
