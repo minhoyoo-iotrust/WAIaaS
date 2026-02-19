@@ -48,6 +48,7 @@
       "component": "waiaas",
       "changelog-path": "CHANGELOG.md",
       "prerelease": true,
+      "prerelease-type": "rc",
       "extra-files": [
         "packages/core/package.json",
         "packages/daemon/package.json",
