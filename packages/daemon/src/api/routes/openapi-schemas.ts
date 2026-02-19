@@ -508,6 +508,8 @@ export const AdminStatusResponseSchema = z
   .object({
     status: z.string(),
     version: z.string(),
+    latestVersion: z.string().nullable(),
+    updateAvailable: z.boolean(),
     uptime: z.number().int(),
     walletCount: z.number().int(),
     activeSessionCount: z.number().int(),

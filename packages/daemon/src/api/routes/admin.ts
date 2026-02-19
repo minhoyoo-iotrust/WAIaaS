@@ -49,6 +49,7 @@ import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
+import type { VersionCheckService } from '../../infrastructure/version/version-check-service.js';
 import {
   AdminStatusResponseSchema,
   KillSwitchResponseSchema,
@@ -105,6 +106,7 @@ export interface AdminRouteDeps {
   forexRateService?: IForexRateService;
   sqlite?: SQLiteDatabase;
   dataDir?: string;
+  versionCheckService?: VersionCheckService | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -835,10 +837,18 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       ? deps.killSwitchService.getState()
       : deps.getKillSwitchState();
 
+    const latestVersion = deps.versionCheckService?.getLatest() ?? null;
+    const semverMod = await import('semver');
+    const updateAvailable = latestVersion !== null
+      && semverMod.default.valid(latestVersion) !== null
+      && semverMod.default.gt(latestVersion, deps.version);
+
     return c.json(
       {
         status: 'running',
         version: deps.version,
+        latestVersion,
+        updateAvailable,
         uptime,
         walletCount,
         activeSessionCount,

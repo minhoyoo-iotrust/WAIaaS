@@ -599,6 +599,30 @@ table .table-loading {
   font-size: var(--font-size-sm);
 }
 
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.update-banner-icon {
+  font-size: 1.1em;
+}
+
+.update-banner code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
 /* Page Actions */
 .page-actions {
   display: flex;

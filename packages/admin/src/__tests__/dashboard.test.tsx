@@ -49,6 +49,8 @@ import DashboardPage from '../pages/dashboard';
 const mockStatus = {
   status: 'running',
   version: '1.4.3',
+  latestVersion: null as string | null,
+  updateAvailable: false,
   uptime: 3661,
   walletCount: 3,
   activeSessionCount: 5,

@@ -450,6 +450,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         forexRateService: deps.forexRateService,
         sqlite: deps.sqlite,
         dataDir: deps.dataDir,
+        versionCheckService: deps.versionCheckService ?? null,
       }),
     );
 

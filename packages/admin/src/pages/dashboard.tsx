@@ -27,6 +27,8 @@ interface RecentTransaction {
 interface AdminStatus {
   status: string;
   version: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
   uptime: number;
   walletCount: number;
   activeSessionCount: number;
@@ -40,7 +42,7 @@ interface AdminStatus {
 }
 
 function StatCard({ label, value, loading, badge, href }: {
-  label: string; value: string; loading?: boolean; badge?: 'success' | 'danger'; href?: string;
+  label: string; value: string; loading?: boolean; badge?: 'success' | 'danger' | 'warning'; href?: string;
 }) {
   const content = (
     <>
@@ -236,8 +238,23 @@ export default function DashboardPage() {
           <Button variant="secondary" size="sm" onClick={fetchStatus}>Retry</Button>
         </div>
       )}
+      {data.value?.updateAvailable && (
+        <div class="update-banner" role="status">
+          <span class="update-banner-icon">{'\u2B06'}</span>
+          <span>
+            <strong>Update available:</strong>{' '}
+            {data.value.version} {'\u2192'} {data.value.latestVersion}{' — '}
+            Run <code>waiaas update</code> to update.
+          </span>
+        </div>
+      )}
       <div class="stat-grid">
-        <StatCard label="Version" value={data.value?.version ?? '\u2014'} loading={isInitialLoad} />
+        <StatCard
+          label="Version"
+          value={data.value?.version ?? '\u2014'}
+          loading={isInitialLoad}
+          badge={data.value ? (data.value.updateAvailable ? 'warning' : undefined) : undefined}
+        />
         <StatCard label="Uptime" value={data.value ? formatUptime(data.value.uptime) : '\u2014'} loading={isInitialLoad} />
         <StatCard label="Wallets" value={data.value?.walletCount?.toString() ?? '\u2014'} loading={isInitialLoad} href="#/wallets" />
         <StatCard label="Active Sessions" value={data.value?.activeSessionCount?.toString() ?? '\u2014'} loading={isInitialLoad} href="#/sessions" />
