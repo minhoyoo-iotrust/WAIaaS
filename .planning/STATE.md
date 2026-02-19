@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 194 (1 of 4 in v2.5) — CLI + 데몬 시작 DX
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-19 — Completed 194-01 (CLI first run DX)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-19 — Completed 194-02 (Daemon start DX)
 
-Progress: [█░░░░░░░░░] 12% (1/8 plans)
+Progress: [██░░░░░░░░] 25% (2/8 plans)
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [█░░░░░░░░░] 12% (1/8 plans)
 ### Decisions
 
 Full log in PROJECT.md and milestones/.
-Recent: Used createRequire for ESM package.json version reading (avoids dist/ copy issue).
+Recent: Step logs downgraded to console.debug; EADDRINUSE detected via server error event; Admin UI URL in ready message.
 
 ### Blockers/Concerns
 
@@ -34,5 +34,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 194-01-PLAN.md
+Stopped at: Completed 194-02-PLAN.md (Phase 194 complete)
 Resume file: None

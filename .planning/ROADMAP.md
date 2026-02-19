@@ -70,7 +70,7 @@ See `.planning/milestones/v2.4.1-ROADMAP.md` for full details.
 
 **Milestone Goal:** README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분 경험 마찰 제거.
 
-- [ ] **Phase 194: CLI + 데몬 시작 DX** - CLI 첫 실행(버전/엔진/init)과 데몬 시작(포트/로그/URL) 경험 개선
+- [x] **Phase 194: CLI + 데몬 시작 DX** - CLI 첫 실행(버전/엔진/init)과 데몬 시작(포트/로그/URL) 경험 개선 (completed 2026-02-19)
 - [ ] **Phase 195: Quickstart + MCP DX** - quickstart 영문화/멱등성/필드 수정과 MCP 세션 안내 강화
 - [ ] **Phase 196: README + SDK 문서 정합성** - README 코드 예시 수정, skill 파일 버전 자동 치환, 패키지 README 작성
 - [ ] **Phase 197: Docker + Python SDK DX** - docker-compose 이미지 참조, .env.example, Python SDK 정합성
@@ -147,7 +147,7 @@ Phases 194-195 are sequential (CLI/daemon before quickstart). Phases 196-197 are
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
 | 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
 | 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
-| 194. CLI + 데몬 시작 DX | 1/2 | In Progress|  | - |
+| 194. CLI + 데몬 시작 DX | 2/2 | Complete   | 2026-02-19 | - |
 | 195. Quickstart + MCP DX | v2.5 | 0/2 | Not started | - |
 | 196. README + SDK 문서 정합성 | v2.5 | 0/2 | Not started | - |
 | 197. Docker + Python SDK DX | v2.5 | 0/2 | Not started | - |

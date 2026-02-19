@@ -22,9 +22,9 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### 데몬 시작
 
-- [ ] **DAEMON-01**: 포트 충돌(EADDRINUSE) 시 "Port N is already in use" 메시지가 출력된다
-- [ ] **DAEMON-02**: 기본 모드에서 내부 Step 1~6 로그가 debug 레벨로 하향되어 미출력된다
-- [ ] **DAEMON-03**: 데몬 시작 완료 메시지에 Admin UI URL(`http://127.0.0.1:3100/admin`)이 포함된다
+- [x] **DAEMON-01**: 포트 충돌(EADDRINUSE) 시 "Port N is already in use" 메시지가 출력된다
+- [x] **DAEMON-02**: 기본 모드에서 내부 Step 1~6 로그가 debug 레벨로 하향되어 미출력된다
+- [x] **DAEMON-03**: 데몬 시작 완료 메시지에 Admin UI URL(`http://127.0.0.1:3100/admin`)이 포함된다
 - [ ] **DAEMON-04**: mcp setup 에러 메시지가 "Run waiaas quickstart first"로 안내된다
 
 ### quickstart
@@ -79,9 +79,9 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 | CLI-03 | 194 | Complete |
 | CLI-04 | 194 | Complete |
 | CLI-05 | 194 | Complete |
-| DAEMON-01 | 194 | Pending |
-| DAEMON-02 | 194 | Pending |
-| DAEMON-03 | 194 | Pending |
+| DAEMON-01 | 194 | Complete |
+| DAEMON-02 | 194 | Complete |
+| DAEMON-03 | 194 | Complete |
 | DAEMON-04 | 195 | Pending |
 | QS-01 | 195 | Pending |
 | QS-02 | 195 | Pending |
