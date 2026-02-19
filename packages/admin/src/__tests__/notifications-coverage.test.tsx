@@ -601,7 +601,7 @@ describe('NotificationsPage - Additional Coverage', () => {
   // -----------------------------------------------------------------------
 
   describe('notifications disabled banner', () => {
-    it('shows disabled banner when notifications are disabled', async () => {
+    it('shows disabled banner referencing Settings tab (not config.toml)', async () => {
       vi.useRealTimers();
 
       const disabledStatus = {
@@ -617,6 +617,50 @@ describe('NotificationsPage - Additional Coverage', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Notifications are disabled/)).toBeTruthy();
+      });
+
+      const banner = screen.getByText(/Notifications are disabled/).closest('.notif-disabled-banner');
+      expect(banner).toBeTruthy();
+      expect(banner!.textContent).not.toContain('config.toml');
+      expect(banner!.textContent).toContain('Settings tab');
+    });
+
+    it('navigates to Settings tab when banner link is clicked', async () => {
+      vi.useRealTimers();
+
+      const disabledStatus = {
+        enabled: false,
+        channels: [
+          { name: 'telegram', enabled: false },
+        ],
+      };
+
+      setupMocks(disabledStatus, mockLogs);
+
+      render(<NotificationsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Notifications are disabled/)).toBeTruthy();
+      });
+
+      // Click the Settings tab link in the banner (inside the banner, not the tab nav)
+      const banner = screen.getByText(/Notifications are disabled/).closest('.notif-disabled-banner');
+      const link = banner!.querySelector('a')!;
+      fireEvent.click(link);
+
+      // Should switch to Settings tab and show Notification Configuration
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(disabledStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve({
+          notifications: { enabled: 'false' },
+          telegram: { enabled: 'false' },
+        });
+        return Promise.resolve({});
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
       });
     });
   });
@@ -666,6 +710,48 @@ describe('NotificationsPage - Additional Coverage', () => {
   // -----------------------------------------------------------------------
 
   describe('Settings tab', () => {
+    it('renders Enabled toggle outside of Telegram FieldGroup', async () => {
+      vi.useRealTimers();
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve({
+          notifications: { enabled: 'true', locale: 'en' },
+          telegram: { enabled: 'false' },
+        });
+        return Promise.resolve({});
+      });
+
+      const { container } = render(<NotificationsPage />);
+
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
+      });
+
+      // The Enabled checkbox should NOT be inside a fieldset with "Telegram" legend
+      const enabledCheckbox = container.querySelector('[name="notifications.enabled"]');
+      expect(enabledCheckbox).toBeTruthy();
+
+      // Walk up the DOM to check it's not inside a Telegram fieldset
+      let parent = enabledCheckbox!.parentElement;
+      let insideTelegramFieldset = false;
+      while (parent) {
+        if (parent.tagName === 'FIELDSET') {
+          const legend = parent.querySelector('legend');
+          if (legend?.textContent === 'Telegram') {
+            insideTelegramFieldset = true;
+            break;
+          }
+        }
+        parent = parent.parentElement;
+      }
+      expect(insideTelegramFieldset).toBe(false);
+    });
+
     it('shows Settings tab with notification configuration', async () => {
       vi.useRealTimers();
 
