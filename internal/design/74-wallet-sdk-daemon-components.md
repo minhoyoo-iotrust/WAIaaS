@@ -768,13 +768,390 @@ class NetworkError extends WalletSdkError {
 
 ## 3. WalletLinkConfig + registerWallet()
 
-> Plan 02에서 작성
+### 3.1 WalletLinkConfig Zod 스키마
+
+지갑 개발사가 자사 지갑의 유니버셜 링크, 딥링크, ntfy 토픽 설정을 등록하기 위한 설정 스키마이다.
+
+```typescript
+import { z } from 'zod';
+
+const WalletLinkConfigSchema = z.object({
+  /** 지갑 식별자 (kebab-case, 소문자+숫자+하이픈만 허용) */
+  name: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),           // "dcent"
+
+  /** 사용자에게 표시되는 지갑 이름 */
+  displayName: z.string().min(1).max(100),                          // "D'CENT Wallet"
+
+  /** iOS AASA / Android App Links 기반 유니버셜 링크 설정 */
+  universalLink: z.object({
+    /** 지갑 개발사의 유니버셜 링크 도메인 (HTTPS URL) */
+    base: z.string().url(),                                         // "https://link.dcentwallet.com"
+    /** WAIaaS 서명 전용 경로 (/ 시작) */
+    signPath: z.string().startsWith('/'),                           // "/waiaas/sign"
+  }),
+
+  /** 유니버셜 링크 실패 시 커스텀 딥링크 fallback (선택) */
+  deepLink: z.object({
+    /** 커스텀 URL 스킴 */
+    scheme: z.string(),                                             // "dcent"
+    /** 서명 전용 경로 */
+    signPath: z.string(),                                           // "/waiaas-sign"
+  }).optional(),
+
+  /** ntfy 직접 푸시 구독 설정 (선택, ntfy 채널 사용 시 필수) */
+  ntfy: z.object({
+    /** ntfy 요청 토픽 패턴. {walletId}는 런타임에 치환 */
+    requestTopicPattern: z.string(),                                // "{prefix}-{walletId}"
+  }).optional(),
+
+  /** 지원하는 블록체인 종류 (최소 1개) */
+  supportedChains: z.array(z.enum(['solana', 'evm'])).min(1),
+});
+
+type WalletLinkConfig = z.infer<typeof WalletLinkConfigSchema>;
+```
+
+#### 필드 상세
+
+| 필드 | 타입 | 필수 | 설명 | 제약 조건 | 예시 |
+|------|------|------|------|-----------|------|
+| `name` | `string` | O | 지갑 고유 식별자 | 1-50자, `/^[a-z0-9-]+$/` | `"dcent"` |
+| `displayName` | `string` | O | UI 표시용 지갑 이름 | 1-100자 | `"D'CENT Wallet"` |
+| `universalLink.base` | `string` | O | 유니버셜 링크 도메인 | 유효한 URL | `"https://link.dcentwallet.com"` |
+| `universalLink.signPath` | `string` | O | 서명 경로 | `/`로 시작 | `"/waiaas/sign"` |
+| `deepLink.scheme` | `string` | X | 커스텀 URL 스킴 | - | `"dcent"` |
+| `deepLink.signPath` | `string` | X | 딥링크 서명 경로 | - | `"/waiaas-sign"` |
+| `ntfy.requestTopicPattern` | `string` | X | ntfy 토픽 패턴 | `{walletId}` 플레이스홀더 포함 | `"{prefix}-{walletId}"` |
+| `supportedChains` | `('solana' \| 'evm')[]` | O | 지원 체인 목록 | 최소 1개 | `['solana', 'evm']` |
+
+#### D'CENT 지갑 설정 예시
+
+```typescript
+const dcentConfig: WalletLinkConfig = {
+  name: 'dcent',
+  displayName: "D'CENT Wallet",
+  universalLink: {
+    base: 'https://link.dcentwallet.com',
+    signPath: '/waiaas/sign',
+  },
+  deepLink: {
+    scheme: 'dcent',
+    signPath: '/waiaas-sign',
+  },
+  ntfy: {
+    requestTopicPattern: '{prefix}-{walletId}',
+  },
+  supportedChains: ['solana', 'evm'],
+};
+```
+
+### 3.2 registerWallet() 인터페이스
+
+SDK 내부 레지스트리에 지갑 메타데이터를 등록한다. 등록된 지갑 설정은 URL 생성과 채널 선택에 사용된다.
+
+```typescript
+/**
+ * 지갑 메타데이터를 SDK 내부 레지스트리에 등록한다.
+ *
+ * - 동일 name으로 중복 등록 시 기존 설정을 덮어씌운다
+ * - SDK 초기화 시(앱 시작 시) 호출
+ * - 데몬 측 WalletLinkRegistry와는 별개 (SDK는 지갑 앱 내부용)
+ *
+ * @param config - WalletLinkConfig 스키마를 만족하는 지갑 설정
+ * @throws WalletConfigValidationError - Zod 스키마 검증 실패
+ */
+function registerWallet(config: WalletLinkConfig): void;
+```
+
+#### SDK 초기화 예시
+
+```typescript
+import { registerWallet, subscribeToRequests } from '@waiaas/wallet-sdk';
+
+// 1. 앱 시작 시 지갑 설정 등록
+registerWallet({
+  name: 'dcent',
+  displayName: "D'CENT Wallet",
+  universalLink: {
+    base: 'https://link.dcentwallet.com',
+    signPath: '/waiaas/sign',
+  },
+  deepLink: {
+    scheme: 'dcent',
+    signPath: '/waiaas-sign',
+  },
+  ntfy: {
+    requestTopicPattern: '{prefix}-{walletId}',
+  },
+  supportedChains: ['solana', 'evm'],
+});
+
+// 2. ntfy 서명 요청 구독 시작
+const unsubscribe = subscribeToRequests(
+  `waiaas-sign-${walletId}`,
+  (request) => {
+    showSigningUI(request);
+  },
+);
+
+// 3. 유니버셜 링크 수신 핸들러 등록
+registerUniversalLinkHandler('/waiaas/sign', async (url) => {
+  const request = await parseSignRequest(url);
+  showSigningUI(request);
+});
+```
+
+### 3.3 지갑 개발사 통합 작업 목록
+
+D'CENT 지갑을 레퍼런스로 한 통합 체크리스트:
+
+#### Phase 1: 인프라 준비
+
+- [ ] **AASA 파일 수정** -- `link.dcentwallet.com/.well-known/apple-app-site-association`에 `"/waiaas/*"` 경로 추가 (doc 73 Section 6.4 참조)
+- [ ] **assetlinks.json 확인** -- `link.dcentwallet.com/.well-known/assetlinks.json`에 Android 앱 패키지 등록 확인 (doc 73 Section 6.5 참조)
+- [ ] **AndroidManifest.xml** -- `android:pathPrefix="/waiaas"` intent-filter 추가
+
+#### Phase 2: SDK 통합
+
+- [ ] **SDK 설치** -- `npm install @waiaas/wallet-sdk` (React Native 프로젝트)
+- [ ] **registerWallet() 호출** -- 앱 시작 시 지갑 설정 등록
+- [ ] **URL 핸들러 구현** -- `/waiaas/sign` 경로 수신 시 `parseSignRequest()` 호출 + 서명 UI 표시
+
+#### Phase 3: 서명 플로우 구현
+
+- [ ] **서명 UI 구현** -- `formatDisplayMessage()`로 트랜잭션 상세 표시 + 승인/거부 버튼
+- [ ] **서명 생성** -- 지갑 앱 내부 키로 메시지 서명 (EVM: `personal_sign`, Solana: Ed25519)
+- [ ] **응답 전송** -- `buildSignResponse()` + `sendViaNtfy()` 또는 `sendViaTelegram()`
+
+#### Phase 4: ntfy 구독 (선택)
+
+- [ ] **ntfy 구독 설정** -- `subscribeToRequests('waiaas-sign-{walletId}')` 백그라운드 구독
+- [ ] **푸시 알림 처리** -- ntfy 푸시 알림 수신 시 앱 활성화 + 서명 UI 표시
+
+#### Phase 5: 웹 Fallback (선택)
+
+- [ ] **웹 fallback 페이지 구현** -- `link.dcentwallet.com/waiaas/sign` 웹페이지
+  - 앱 미설치 시: 스토어 설치 안내
+  - PC 접근 시: QR 코드 표시 (동일 유니버셜 링크 URL 인코딩)
 
 ---
 
 ## 4. 패키지 구조 + 빌드/배포
 
-> Plan 02에서 작성
+### 4.1 디렉토리 구조
+
+```
+packages/wallet-sdk/
+  src/
+    index.ts                        # re-export 공개 API (6개 함수 + 타입 + 에러 클래스)
+    schemas.ts                      # SignRequest/SignResponse Zod 스키마 (doc 73에서 정의)
+    parse-request.ts                # parseSignRequest()
+    build-response.ts               # buildSignResponse()
+    display.ts                      # formatDisplayMessage()
+    channels/
+      ntfy.ts                       # sendViaNtfy(), subscribeToRequests()
+      telegram.ts                   # sendViaTelegram()
+      index.ts                      # 채널 re-export
+    wallet-config.ts                # registerWallet(), WalletLinkConfig, 내부 Registry
+    utils/
+      base64url.ts                  # base64url encode/decode
+      platform.ts                   # detectPlatform() (android/ios/other)
+    errors.ts                       # SDK 전용 에러 클래스 (Section 2.7)
+  tests/
+    parse-request.test.ts           # parseSignRequest 단위 테스트
+    build-response.test.ts          # buildSignResponse 단위 테스트
+    display.test.ts                 # formatDisplayMessage 단위 테스트
+    channels/
+      ntfy.test.ts                  # sendViaNtfy, subscribeToRequests 단위 테스트
+      telegram.test.ts              # sendViaTelegram 단위 테스트
+    wallet-config.test.ts           # registerWallet, WalletLinkConfig 단위 테스트
+  package.json
+  tsconfig.json
+  tsup.config.ts
+  README.md
+```
+
+#### 파일별 역할
+
+| 파일 | 책임 | 의존 |
+|------|------|------|
+| `index.ts` | 공개 API re-export | 모든 모듈 |
+| `schemas.ts` | SignRequestSchema, SignResponseSchema Zod 정의 + 타입 derive | zod |
+| `parse-request.ts` | URL 파싱, base64url 디코딩, Zod 검증, 만료 체크 | schemas, utils/base64url, errors |
+| `build-response.ts` | SignResponse 생성, approve 시 signature 필수 검증 | schemas, errors |
+| `display.ts` | SignRequest -> 사람 읽기 텍스트 변환 | schemas |
+| `channels/ntfy.ts` | ntfy HTTP POST publish, SSE subscribe | schemas, utils/base64url, errors |
+| `channels/telegram.ts` | 플랫폼 감지 + Telegram 딥링크/유니버셜 링크 | utils/base64url, utils/platform |
+| `wallet-config.ts` | WalletLinkConfigSchema, registerWallet(), 내부 Map 레지스트리 | zod |
+| `utils/base64url.ts` | base64url encode/decode (URL-safe, padding 없음) | - |
+| `utils/platform.ts` | `detectPlatform()`: userAgent 또는 React Native Platform API | - |
+| `errors.ts` | 에러 클래스 계층 (WalletSdkError 기반) | - |
+
+### 4.2 package.json 핵심 설정
+
+```json
+{
+  "name": "@waiaas/wallet-sdk",
+  "version": "0.0.0",
+  "description": "WAIaaS Wallet Signing SDK for wallet developers",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "zod": "^3.22.0"
+  },
+  "keywords": ["waiaas", "wallet", "signing", "sdk", "blockchain"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS",
+    "directory": "packages/wallet-sdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
+```
+
+#### 의존성 설계
+
+| 구분 | 패키지 | 이유 |
+|------|--------|------|
+| `peerDependencies` | `zod ^3.22.0` | SignRequest/SignResponse 스키마 검증. 호스트 앱(지갑 앱)과 버전 공유 |
+| `devDependencies` | `tsup`, `typescript`, `vitest`, `zod` | 빌드, 타입 체크, 테스트 |
+| **없음** | `node-fetch`, `eventsource` 등 | `fetch`는 Node.js 18+, React Native, 브라우저 모두 내장. `EventSource`는 SSE용으로 내장 |
+
+**의존성 최소화 원칙**: zod만 peer dependency로 요구한다. fetch, EventSource, URL, TextEncoder 등은 모든 대상 환경에서 내장 제공된다.
+
+### 4.3 빌드 설정 (tsup)
+
+```typescript
+// tsup.config.ts
+import { defineConfig } from 'tsup';
+
+export default defineConfig({
+  entry: ['src/index.ts'],
+  format: ['esm', 'cjs'],             // ESM + CJS dual output
+  dts: true,                           // TypeScript 타입 선언 파일 생성
+  splitting: false,
+  sourcemap: true,
+  clean: true,
+  target: 'es2022',                    // Node.js 18+ / React Native Hermes
+  treeshake: true,
+  minify: false,                       // SDK는 minify하지 않음 (디버깅 편의)
+});
+```
+
+#### 빌드 출력
+
+```
+dist/
+  index.js          # ESM (import)
+  index.cjs         # CJS (require)
+  index.d.ts        # ESM 타입 선언
+  index.d.cts       # CJS 타입 선언
+  index.js.map      # 소스맵
+  index.cjs.map     # 소스맵
+```
+
+### 4.4 tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
+```
+
+### 4.5 대상 환경별 호환성
+
+| 환경 | 지원 | fetch | EventSource | URL/URLSearchParams | 비고 |
+|------|------|-------|------------|--------------------|----|
+| React Native (Hermes) | O | 내장 | 내장 | 내장 | D'CENT 브릿지 앱 등 지갑 앱 메인 타겟 |
+| Electron | O | 내장 (Chromium) | 내장 | 내장 | 데스크탑 지갑 앱 |
+| Node.js 18+ | O | 내장 (`globalThis.fetch`) | 폴리필 필요 (선택) | 내장 | CLI 도구, 테스트 환경 |
+| 브라우저 (모던) | 부분 | 내장 | 내장 | 내장 | `sendViaTelegram`만 사용 가능 (딥링크). ntfy 직접 구독은 CORS 제약 |
+
+#### Node.js EventSource 참고
+
+Node.js 환경에서 `subscribeToRequests()`의 SSE 기능을 사용하려면 EventSource 폴리필이 필요할 수 있다. SDK는 `globalThis.EventSource`가 존재하면 사용하고, 없으면 `fetch` 기반 SSE 파싱으로 fallback한다.
+
+### 4.6 배포
+
+기존 모노레포의 release-please + OIDC Trusted Publishing 파이프라인에 통합한다.
+
+#### release-please 설정 추가
+
+```json
+// release-please-config.json에 추가
+{
+  "packages": {
+    "packages/wallet-sdk": {
+      "release-type": "node",
+      "component": "wallet-sdk",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}
+```
+
+#### 모노레포 통합
+
+| 항목 | 설정 |
+|------|------|
+| pnpm workspace | `pnpm-workspace.yaml`에 `packages/wallet-sdk` 추가 |
+| turbo | `turbo.json`에 `@waiaas/wallet-sdk` 빌드 태스크 추가 |
+| npm publish | 기존 release.yml OIDC Trusted Publishing 파이프라인 자동 적용 |
+| CI | `pnpm turbo run lint typecheck test` 기존 파이프라인에 자동 포함 |
+
+#### 배포 순서
+
+1. milestone 브랜치에서 코드 구현 + 테스트
+2. PR → main 머지 (conventional commits: `feat(wallet-sdk): ...`)
+3. release-please가 자동으로 Release PR 생성
+4. Release PR 머지 → npm OIDC Trusted Publishing → `@waiaas/wallet-sdk` 패키지 배포
 
 ---
 
