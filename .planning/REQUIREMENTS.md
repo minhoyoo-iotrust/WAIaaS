@@ -32,14 +32,14 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 
 ### 기존 페이지 테스트 개선 (EXIST)
 
-- [ ] **EXIST-01**: notifications.tsx 채널별 설정 폼 + 테스트 전송 흐름 커버리지 개선
-- [ ] **EXIST-02**: sessions.tsx 세션 목록 + 생성/삭제 흐름 커버리지 개선
-- [ ] **EXIST-03**: wallets.tsx 월렛 상세 + 네트워크 전환 + 잔액 표시 커버리지 개선
+- [x] **EXIST-01**: notifications.tsx 채널별 설정 폼 + 테스트 전송 흐름 커버리지 개선
+- [x] **EXIST-02**: sessions.tsx 세션 목록 + 생성/삭제 흐름 커버리지 개선
+- [x] **EXIST-03**: wallets.tsx 월렛 상세 + 네트워크 전환 + 잔액 표시 커버리지 개선
 
 ### 인프라 (INFRA)
 
-- [ ] **INFRA-01**: vitest.config.ts 임계값을 lines/statements/functions 70%로 복원
-- [ ] **INFRA-02**: CI 전체 통과 검증 (lint + typecheck + test:unit + coverage gate)
+- [x] **INFRA-01**: vitest.config.ts 임계값을 lines/statements/functions 70%로 복원
+- [x] **INFRA-02**: CI 전체 통과 검증 (lint + typecheck + test:unit + coverage gate)
 
 ## v2 Requirements
 
@@ -74,11 +74,11 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 | COMP-03 | Phase 193 | Complete |
 | COMP-04 | Phase 193 | Complete |
 | COMP-05 | Phase 193 | Complete |
-| EXIST-01 | Phase 193 | Pending |
-| EXIST-02 | Phase 193 | Pending |
-| EXIST-03 | Phase 193 | Pending |
-| INFRA-01 | Phase 193 | Pending |
-| INFRA-02 | Phase 193 | Pending |
+| EXIST-01 | Phase 193 | Complete |
+| EXIST-02 | Phase 193 | Complete |
+| EXIST-03 | Phase 193 | Complete |
+| INFRA-01 | Phase 193 | Complete |
+| INFRA-02 | Phase 193 | Complete |
 
 **Coverage:**
 - v1 requirements: 22 total

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 193 - Shared Component Tests
+**Current focus:** Phase 193 - Completed
 
 ## Current Position
 
 Phase: 193 of 193 (components-existing-threshold)
-Plan: 5 of 5 total (1 of 2 in current phase)
-Status: Executing
-Last activity: 2026-02-19 -- Completed 193-01-PLAN.md
+Plan: 5 of 5 total (2 of 2 in current phase)
+Status: Completed
+Last activity: 2026-02-19 -- Completed 193-02-PLAN.md
 
-Progress: [#########.] 90%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -26,7 +26,7 @@ Progress: [#########.] 90%
 |-------|-------|-------|----------|
 | 191 | 1/2 | 3min | 3min |
 | 192 | 1/1 | 4min | 4min |
-| 193 | 1/2 | 4min | 4min |
+| 193 | 2/2 | 22min | 11min |
 
 *Updated after each plan completion*
 
@@ -45,14 +45,17 @@ Full log in PROJECT.md and milestones/.
 - 193-01: Mock dirty-guard module in unsaved-dialog tests to isolate signal state
 - 193-01: vi.useFakeTimers globally in settings-search tests for setTimeout handling
 - 193-01: Mock settings-search-index with 3 entries covering tab/no-tab scenarios
+- 193-02: Use container.querySelector for form elements when getByLabelText has ambiguity
+- 193-02: Use getAllByText for elements appearing in both breadcrumbs and tab content
+- 193-02: Mock dirty-guard and settings-search modules to isolate page component tests
 
 ### Blockers/Concerns
 
 - Pre-existing flaky lifecycle.test.ts -- not blocking
-- Pre-existing 3 sessions.test.tsx failures -- not blocking
+- Pre-existing 3 sessions.test.tsx failures -- resolved (test mocks improved)
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 193-01-PLAN.md (shared component tests)
+Stopped at: Completed 193-02-PLAN.md (coverage threshold restoration)
 Resume file: None
