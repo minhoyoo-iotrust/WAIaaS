@@ -73,11 +73,11 @@ See `.planning/milestones/v2.4-ROADMAP.md` for full details.
   2. Kill Switch 활성화/비활성화 버튼 클릭 시 API 호출과 UI 상태 변경이 테스트로 검증된다
   3. walletconnect.tsx 테스트 파일이 존재하고 설정 폼, 페어링/세션 목록, 미설정 안내 UI가 각각 테스트로 검증된다
   4. 두 페이지 테스트 모두 `pnpm --filter @waiaas/admin test:unit` 실행 시 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 191-01: security.tsx 테스트 작성 (렌더링 + 탭 네비게이션 + Kill Switch + JWT Rotation + Danger Zone)
-- [ ] 191-02: walletconnect.tsx 테스트 작성 (설정 폼 + 페어링/세션 목록 + 미설정 안내)
+- [ ] 191-01-PLAN.md — security.tsx 테스트 (렌더링 + 탭 네비게이션 + Kill Switch + AutoStop + JWT Rotation)
+- [ ] 191-02-PLAN.md — walletconnect.tsx 테스트 (테이블 렌더링 + Connect/Disconnect + QR 모달 + empty state)
 
 ### Phase 192: System 페이지 테스트
 **Goal**: system.tsx 페이지의 5개 탭(Daemon/AutoStop/Monitoring/API Keys + 네비게이션) 전체가 테스트로 검증된 상태 달성
