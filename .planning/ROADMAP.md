@@ -129,11 +129,11 @@ Plans:
   1. `docker compose up -d`로 GHCR 이미지를 바로 실행할 수 있고, `.env.example`에 필수 환경변수가 문서화되어 있다
   2. Python SDK `__version__`이 pyproject.toml version과 동일하고, README의 기본 포트가 3100이다
   3. `.venv/` 디렉토리가 git에서 추적되지 않는다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 197-01: Docker DX (docker-compose 이미지 참조 + .env.example)
-- [ ] 197-02: Python SDK 정합성 (버전/포트/gitignore)
+- [ ] 197-01-PLAN.md — Docker DX (docker-compose GHCR 이미지 참조 + .env.example)
+- [ ] 197-02-PLAN.md — Python SDK 정합성 (버전/포트/gitignore)
 
 ## Progress
 
