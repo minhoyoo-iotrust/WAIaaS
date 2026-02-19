@@ -1157,19 +1157,751 @@ Node.js 환경에서 `subscribeToRequests()`의 SSE 기능을 사용하려면 Ev
 
 ## 5. 데몬 측 컴포넌트 개요
 
-> Plan 02에서 작성
+### 5.1 컴포넌트 책임 매트릭스
+
+PENDING_APPROVAL 트랜잭션에 대해 Owner의 서명을 요청하고 응답을 처리하는 데몬 측 6개 컴포넌트의 역할, 의존 관계, 파일 위치를 정리한다.
+
+| 컴포넌트 | 역할 | 의존 | 위치 |
+|----------|------|------|------|
+| **SignRequestBuilder** | PENDING_APPROVAL 트랜잭션 → SignRequest 생성 + 유니버셜 링크 URL 조립 | WalletLinkRegistry, SettingsService | `packages/daemon/src/services/signing-sdk/sign-request-builder.ts` |
+| **SignResponseHandler** | SignResponse 파싱 + 만료/중복/서명 검증 + 트랜잭션 상태 전환 | ownerAuth, TransactionService | `packages/daemon/src/services/signing-sdk/sign-response-handler.ts` |
+| **NtfySigningChannel** | ntfy 기반 서명 채널: 요청 토픽 publish + 응답 토픽 SSE subscribe | SettingsService(ntfy_server, 토픽 접두어), fetch | `packages/daemon/src/services/signing-sdk/channels/ntfy-signing-channel.ts` |
+| **TelegramSigningChannel** | Telegram 기반 서명 채널: Bot API sendMessage + Long Polling /sign_response 핸들러 | TelegramNotificationService(v1.6 Bot 인프라) | `packages/daemon/src/services/signing-sdk/channels/telegram-signing-channel.ts` |
+| **WalletLinkRegistry** | 통합 지갑별 유니버셜 링크/딥링크 설정 관리 (CRUD) | SettingsService(signing_sdk.wallets JSON) | `packages/daemon/src/services/signing-sdk/wallet-link-registry.ts` |
+| **ApprovalChannelRouter** | 지갑별 승인 채널 5단계 우선순위 라우팅 | SettingsService, WcSigningBridge, NtfySigningChannel, TelegramSigningChannel | `packages/daemon/src/services/signing-sdk/approval-channel-router.ts` |
+
+### 5.2 컴포넌트 간 데이터 흐름
+
+PENDING_APPROVAL 트랜잭션이 발생하면 다음 순서로 데몬 컴포넌트가 동작한다:
+
+```
+PENDING_APPROVAL 트랜잭션 발생
+  |
+  v
+ApprovalChannelRouter.resolveChannel(wallet)
+  |  5단계 우선순위 라우팅으로 채널 결정
+  |  (sdk_ntfy / sdk_telegram / walletconnect / telegram_bot / rest)
+  |
+  v (sdk_ntfy 또는 sdk_telegram인 경우)
+SignRequestBuilder.build(transaction, wallet, channel)
+  |  (1) requestId 생성 (UUID v7)
+  |  (2) 서명 메시지 텍스트 생성 (doc 73 Section 5 템플릿)
+  |  (3) displayMessage 생성
+  |  (4) expiresAt 계산 (SettingsService 조회)
+  |  (5) responseChannel 구성 (채널별)
+  |  (6) SignRequest 조립
+  |  (7) 유니버셜 링크 URL 생성 (WalletLinkRegistry)
+  |  (8) base64url 인코딩 + 2KB 초과 체크
+  |
+  v
+ISigningChannel.sendRequest(signRequest, universalLinkUrl, wallet)
+  |  NtfySigningChannel: ntfy 요청 토픽에 JSON publish (Priority:5, Actions 헤더)
+  |  TelegramSigningChannel: Bot API sendMessage (InlineKeyboardMarkup + 유니버셜 링크)
+  |
+  v [Owner가 지갑 앱에서 서명]
+  |
+  v
+ISigningChannel.waitForResponse(requestId, expiresAt, signal?)
+  |  NtfySigningChannel: ntfy 응답 토픽 SSE 구독 → SignResponse 수신
+  |  TelegramSigningChannel: Long Polling /sign_response 명령어 핸들러 → Promise resolve
+  |
+  v
+SignResponseHandler.handle(signResponse, sourceChannel, telegramChatId?)
+  |  (1) requestId로 원본 SignRequest 조회
+  |  (2) 만료 확인 (expiresAt)
+  |  (3) 이미 처리 여부 확인 (SIGN_REQUEST_ALREADY_PROCESSED)
+  |  (4) signerAddress 검증 (Owner 주소 매칭)
+  |  (5) Telegram인 경우 chatId 검증
+  |  (6) action=approve: 서명 검증 (ownerAuth EIP-191/Ed25519)
+  |  (7) 트랜잭션 상태 전환 (EXECUTING / CANCELLED)
+  |  (8) 결과 반환
+```
+
+### 5.3 파일 구조
+
+m26-01 구현 시 실제 생성할 파일 목록:
+
+```
+packages/daemon/src/services/signing-sdk/
+  sign-request-builder.ts          # ISignRequestBuilder 구현
+  sign-response-handler.ts         # ISignResponseHandler 구현
+  wallet-link-registry.ts          # IWalletLinkRegistry 구현
+  channels/
+    signing-channel.interface.ts   # ISigningChannel 공통 인터페이스
+    ntfy-signing-channel.ts        # NtfySigningChannel 구현
+    telegram-signing-channel.ts    # TelegramSigningChannel 구현
+  approval-channel-router.ts       # IApprovalChannelRouter 구현
+```
+
+#### 기존 코드 재사용 지점
+
+| 기존 모듈 | 마일스톤 | 재사용 대상 | 사용 위치 |
+|-----------|---------|------------|----------|
+| `NtfyChannel` (알림) | v1.3 | ntfy HTTP publish 로직 | NtfySigningChannel.sendRequest() |
+| `TelegramNotificationService` | v1.6 | Bot API sendMessage + Long Polling | TelegramSigningChannel |
+| `ownerAuth` | v1.2 | EIP-191/Ed25519 서명 검증 | SignResponseHandler.handle() |
+| `WcSigningBridge` | v1.6.1 | WC 세션 활성 여부 확인 | ApprovalChannelRouter.resolveChannel() |
+| `TransactionService` | v1.1 | 트랜잭션 상태 전환 (EXECUTING/CANCELLED) | SignResponseHandler.handle() |
+| `SettingsService` | v1.4.4 | signing_sdk 키 조회, 런타임 변경 감지 | 전체 컴포넌트 |
 
 ---
 
 ## 6. SignRequestBuilder + SignResponseHandler
 
-> Plan 02에서 작성
+### 6.1 ISignRequestBuilder 인터페이스
+
+PENDING_APPROVAL 상태의 트랜잭션을 입력받아 SignRequest 객체와 유니버셜 링크 URL을 생성한다.
+
+```typescript
+interface ISignRequestBuilder {
+  build(params: BuildSignRequestParams): Promise<SignRequestResult>;
+}
+
+type BuildSignRequestParams = {
+  transaction: Transaction;           // PENDING_APPROVAL 상태의 트랜잭션
+  wallet: Wallet;                     // 지갑 정보 (chain, owner 주소)
+  channel: 'ntfy' | 'telegram';      // 선택된 응답 채널
+};
+
+type SignRequestResult = {
+  signRequest: SignRequest;
+  universalLinkUrl: string;
+  deepLinkUrl?: string;               // deepLink 설정이 있는 경우
+  responseTopic?: string;             // ntfy 채널인 경우
+};
+```
+
+#### 의존
+
+| 의존 대상 | 용도 |
+|----------|------|
+| WalletLinkRegistry | `preferred_wallet` 또는 지갑별 설정에서 유니버셜 링크 정보 조회, URL 생성 |
+| SettingsService | `signing_sdk.request_expiry_min`(만료 시간), `signing_sdk.ntfy_request_topic_prefix`/`ntfy_response_topic_prefix`(토픽 접두어), `notifications.ntfy_server`(ntfy 서버 URL) |
+
+#### build() 내부 로직 (7단계)
+
+```typescript
+async function build(params: BuildSignRequestParams): Promise<SignRequestResult> {
+  const { transaction, wallet, channel } = params;
+
+  // 1. requestId 생성 (UUID v7)
+  const requestId = generateUUIDv7();
+
+  // 2. 서명 메시지 텍스트 생성 (doc 73 Section 5 템플릿)
+  const message = formatSigningMessage({
+    txId: transaction.id,
+    type: transaction.type,
+    from: transaction.from,
+    to: transaction.to,
+    amount: transaction.amount,
+    symbol: transaction.symbol,
+    network: transaction.network,
+    policyTier: transaction.policyTier,
+    timestamp: new Date().toISOString(),
+    nonce: requestId,    // requestId 재사용 (doc 73 Section 5.2)
+  });
+
+  // 3. displayMessage 생성 (사람 읽기용 요약)
+  const displayMessage = formatDisplaySummary(transaction);
+
+  // 4. expiresAt 계산 (SettingsService에서 만료 시간 조회)
+  const expiryMin = await settingsService.get('signing_sdk.request_expiry_min') ?? 30;
+  const expiresAt = new Date(Date.now() + expiryMin * 60 * 1000).toISOString();
+
+  // 5. responseChannel 구성 (채널별)
+  const responseChannel = channel === 'ntfy'
+    ? {
+        type: 'ntfy' as const,
+        responseTopic: `${await settingsService.get('signing_sdk.ntfy_response_topic_prefix') ?? 'waiaas-response'}-${requestId}`,
+        serverUrl: await settingsService.get('notifications.ntfy_server') ?? undefined,
+      }
+    : {
+        type: 'telegram' as const,
+        botUsername: await settingsService.get('notifications.telegram_bot_username') ?? '',
+      };
+
+  // 6. SignRequest 조립
+  const signRequest: SignRequest = {
+    version: '1',
+    requestId,
+    chain: wallet.chain,
+    network: wallet.network,
+    message,
+    displayMessage,
+    metadata: {
+      txId: transaction.id,
+      type: transaction.type,
+      from: transaction.from,
+      to: transaction.to,
+      amount: transaction.amount,
+      symbol: transaction.symbol,
+      policyTier: transaction.policyTier,
+    },
+    responseChannel,
+    expiresAt,
+  };
+
+  // 7. 유니버셜 링크 URL 생성 (WalletLinkRegistry 조회)
+  const walletName = await resolveWalletName(wallet);
+  const universalLinkUrl = walletLinkRegistry.buildUniversalLinkUrl(walletName, signRequest);
+  const deepLinkUrl = walletLinkRegistry.buildDeepLinkUrl(walletName, signRequest);
+
+  // 8. base64url 인코딩 + 2KB 초과 체크
+  const encoded = base64url.encode(JSON.stringify(signRequest));
+  const fullUrl = `${universalLinkUrl}?data=${encoded}`;
+
+  if (fullUrl.length > 2048) {
+    // 2KB 초과 시 requestId 기반 fallback (doc 73 Section 6.7)
+    // URL에는 requestId만 포함, 전체 데이터는 ntfy 토픽에서 조회
+    const fallbackUrl = walletLinkRegistry.buildUniversalLinkUrl(walletName, signRequest)
+      + `?requestId=${requestId}&channel=ntfy&server=${encodeURIComponent(responseChannel.type === 'ntfy' ? responseChannel.serverUrl ?? 'https://ntfy.sh' : 'https://ntfy.sh')}`;
+    return {
+      signRequest,
+      universalLinkUrl: fallbackUrl,
+      deepLinkUrl: deepLinkUrl ?? undefined,
+      responseTopic: responseChannel.type === 'ntfy' ? responseChannel.responseTopic : undefined,
+    };
+  }
+
+  return {
+    signRequest,
+    universalLinkUrl: fullUrl,
+    deepLinkUrl: deepLinkUrl ? `${deepLinkUrl}?data=${encoded}` : undefined,
+    responseTopic: responseChannel.type === 'ntfy' ? responseChannel.responseTopic : undefined,
+  };
+}
+```
+
+#### resolveWalletName 헬퍼
+
+```typescript
+async function resolveWalletName(wallet: Wallet): Promise<string> {
+  // 1. 지갑별 owner_approval_method에서 연결된 지갑 이름 조회
+  //    (wallet.ownerApprovalMethod → SDK 채널 사용 시 preferred_wallet 참조)
+  // 2. 글로벌 signing_sdk.preferred_wallet 조회
+  // 3. WalletLinkRegistry에 등록된 첫 번째 지갑 반환
+  // 4. 없으면 WALLET_NOT_REGISTERED 에러
+  const preferred = await settingsService.get('signing_sdk.preferred_wallet');
+  if (preferred) return preferred;
+
+  const allWallets = walletLinkRegistry.getAllWallets();
+  if (allWallets.length === 0) throw new WAIaaSError('WALLET_NOT_REGISTERED', 404);
+  return allWallets[0].name;
+}
+```
+
+### 6.2 ISignResponseHandler 인터페이스
+
+ntfy 또는 Telegram 채널에서 수신한 SignResponse를 검증하고 트랜잭션 상태를 전환한다.
+
+```typescript
+interface ISignResponseHandler {
+  handle(params: HandleSignResponseParams): Promise<HandleSignResponseResult>;
+}
+
+type HandleSignResponseParams = {
+  signResponse: SignResponse;
+  sourceChannel: 'ntfy' | 'telegram';
+  telegramChatId?: number;            // telegram 채널인 경우 chatId 검증용
+};
+
+type HandleSignResponseResult = {
+  action: 'approved' | 'rejected';
+  transactionId: string;
+};
+```
+
+#### 의존
+
+| 의존 대상 | 용도 |
+|----------|------|
+| ownerAuth | 기존 v1.2 EIP-191/Ed25519 서명 검증 로직 재사용 |
+| TransactionService | 트랜잭션 상태 전환 (PENDING_APPROVAL → EXECUTING 또는 CANCELLED) |
+| SignRequest 저장소 | requestId → 원본 SignRequest 조회 (메모리 Map 또는 DB) |
+
+#### handle() 내부 로직 (8단계)
+
+```typescript
+async function handle(params: HandleSignResponseParams): Promise<HandleSignResponseResult> {
+  const { signResponse, sourceChannel, telegramChatId } = params;
+
+  // 1. requestId로 원본 SignRequest 조회
+  const signRequest = await findSignRequest(signResponse.requestId);
+  if (!signRequest) {
+    throw new WAIaaSError('SIGN_REQUEST_NOT_FOUND', 404);
+  }
+
+  // 2. 만료 확인 (expiresAt)
+  if (new Date() > new Date(signRequest.expiresAt)) {
+    throw new WAIaaSError('SIGN_REQUEST_EXPIRED', 408);
+  }
+
+  // 3. 이미 처리 여부 확인
+  if (signRequest.processed) {
+    throw new WAIaaSError('SIGN_REQUEST_ALREADY_PROCESSED', 409);
+  }
+
+  // 4. signerAddress 검증 (Owner 주소 매칭)
+  const wallet = await findWalletByTransactionId(signRequest.metadata.txId);
+  if (signResponse.signerAddress !== wallet.ownerAddress) {
+    throw new WAIaaSError('SIGNER_ADDRESS_MISMATCH', 403);
+  }
+
+  // 5. Telegram인 경우 chatId 검증
+  if (sourceChannel === 'telegram' && telegramChatId) {
+    const owner = await findOwnerByChatId(telegramChatId);
+    if (!owner || owner.address !== signResponse.signerAddress) {
+      throw new WAIaaSError('SIGNER_ADDRESS_MISMATCH', 403);
+    }
+  }
+
+  // 6. action=approve: 서명 검증 (ownerAuth EIP-191/Ed25519)
+  if (signResponse.action === 'approve') {
+    if (!signResponse.signature) {
+      throw new WAIaaSError('INVALID_SIGN_RESPONSE', 400);
+    }
+
+    const isValid = wallet.chain === 'evm'
+      ? await verifyEvmSignature(signRequest.message, signResponse.signature, signResponse.signerAddress)
+      : verifySolanaSignature(signRequest.message, signResponse.signature, signResponse.signerAddress);
+
+    if (!isValid) {
+      throw new WAIaaSError('INVALID_SIGNATURE', 401);
+    }
+  }
+
+  // 7. 트랜잭션 상태 전환
+  const transactionId = signRequest.metadata.txId;
+  if (signResponse.action === 'approve') {
+    await transactionService.transition(transactionId, 'EXECUTING');
+  } else {
+    await transactionService.transition(transactionId, 'CANCELLED');
+  }
+
+  // SignRequest를 처리 완료로 표시
+  await markSignRequestProcessed(signResponse.requestId);
+
+  // 8. 결과 반환
+  return {
+    action: signResponse.action === 'approve' ? 'approved' : 'rejected',
+    transactionId,
+  };
+}
+```
+
+#### 에러 코드 매핑
+
+doc 73 Section 11의 8개 에러 코드를 handle() 검증 단계에 매핑:
+
+| 검증 단계 | 실패 조건 | 에러 코드 | HTTP |
+|----------|----------|----------|------|
+| 1. requestId 조회 | 해당 요청 없음 | `SIGN_REQUEST_NOT_FOUND` | 404 |
+| 2. 만료 확인 | expiresAt 초과 | `SIGN_REQUEST_EXPIRED` | 408 |
+| 3. 중복 처리 확인 | 이미 approve/reject 완료 | `SIGN_REQUEST_ALREADY_PROCESSED` | 409 |
+| 4. signerAddress 검증 | Owner 주소 불일치 | `SIGNER_ADDRESS_MISMATCH` | 403 |
+| 5. chatId 검증 (Telegram) | Telegram chatId 불일치 | `SIGNER_ADDRESS_MISMATCH` | 403 |
+| 6-a. signature 존재 확인 | approve인데 signature 없음 | `INVALID_SIGN_RESPONSE` | 400 |
+| 6-b. 서명 값 검증 | EIP-191/Ed25519 검증 실패 | `INVALID_SIGNATURE` | 401 |
+| (사전 조건) | signing_sdk.enabled = false | `SIGNING_SDK_DISABLED` | 403 |
+
+### 6.3 SignRequest 저장소
+
+SignRequest는 build() 시점에 생성되고 handle() 시점에 조회되므로, 요청과 응답을 매칭하기 위한 임시 저장소가 필요하다.
+
+| 저장 방식 | 장점 | 단점 | 결정 |
+|----------|------|------|------|
+| 메모리 Map | 단순, 빠름 | 데몬 재시작 시 유실 | **기본 사용** |
+| SQLite 테이블 | 영속, 재시작 안전 | 복잡도 증가 | 후속 고려 |
+
+**기본 설계**: `Map<string, StoredSignRequest>` (requestId → SignRequest + metadata)
+
+```typescript
+type StoredSignRequest = {
+  signRequest: SignRequest;
+  transactionId: string;
+  walletId: string;
+  createdAt: Date;
+  processed: boolean;
+};
+```
+
+- 만료된 요청은 주기적으로 정리 (5분 간격 cleanup)
+- 데몬 재시작 시 PENDING_APPROVAL 상태 트랜잭션에 대해 새 SignRequest를 생성하여 재전송
 
 ---
 
 ## 7. NtfySigningChannel + TelegramSigningChannel
 
-> Plan 02에서 작성
+### 7.1 ISigningChannel 공통 인터페이스
+
+ntfy와 Telegram 두 채널을 교체 가능하게 만드는 공통 인터페이스:
+
+```typescript
+interface ISigningChannel {
+  /** 채널 타입 식별자 */
+  readonly type: 'ntfy' | 'telegram';
+
+  /**
+   * 서명 요청을 Owner에게 전송한다.
+   * - ntfy: 요청 토픽에 JSON publish (Priority:5, Actions 헤더)
+   * - telegram: Bot API sendMessage (InlineKeyboardMarkup + 유니버셜 링크)
+   */
+  sendRequest(signRequest: SignRequest, universalLinkUrl: string, wallet: Wallet): Promise<void>;
+
+  /**
+   * 서명 응답을 대기한다.
+   * - ntfy: 응답 토픽 SSE 구독 → SignResponse 수신
+   * - telegram: /sign_response 명령어 핸들러 → Promise resolve
+   *
+   * @returns SignResponse 수신 시 resolve, 만료/취소 시 reject
+   */
+  waitForResponse(requestId: string, expiresAt: Date, signal?: AbortSignal): Promise<SignResponse>;
+}
+```
+
+### 7.2 NtfySigningChannel 구현 설계
+
+#### 클래스 개요
+
+```typescript
+class NtfySigningChannel implements ISigningChannel {
+  readonly type = 'ntfy' as const;
+
+  constructor(
+    private readonly settingsService: SettingsService,
+  ) {}
+
+  async sendRequest(signRequest: SignRequest, universalLinkUrl: string, wallet: Wallet): Promise<void>;
+  async waitForResponse(requestId: string, expiresAt: Date, signal?: AbortSignal): Promise<SignResponse>;
+}
+```
+
+#### sendRequest() -- doc 73 Section 7.2 프로토콜
+
+ntfy 요청 토픽에 서명 요청을 JSON 형태로 publish한다. 기존 v1.3 NtfyChannel의 HTTP publish 로직을 재사용한다.
+
+```typescript
+async sendRequest(signRequest: SignRequest, universalLinkUrl: string, wallet: Wallet): Promise<void> {
+  const ntfyServer = await this.settingsService.get('notifications.ntfy_server') ?? 'https://ntfy.sh';
+  const topicPrefix = await this.settingsService.get('signing_sdk.ntfy_request_topic_prefix') ?? 'waiaas-sign';
+  const requestTopic = `${topicPrefix}-${wallet.id}`;
+
+  const body = JSON.stringify({
+    topic: requestTopic,
+    message: signRequest.displayMessage,
+    title: 'WAIaaS Sign Request',
+    priority: 5,
+    tags: ['waiaas', 'sign'],
+    actions: [
+      {
+        action: 'view',
+        label: '지갑에서 승인하기',
+        url: universalLinkUrl,
+      },
+    ],
+    click: universalLinkUrl,
+  });
+
+  const response = await fetch(`${ntfyServer}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new WAIaaSError('NTFY_PUBLISH_FAILED', response.status,
+      `Failed to publish sign request to ntfy topic '${requestTopic}': ${response.status} ${response.statusText}`);
+  }
+}
+```
+
+#### waitForResponse() -- doc 73 Section 7.3 SSE 프로토콜
+
+ntfy 응답 토픽을 SSE로 구독하여 SignResponse를 수신한다.
+
+```typescript
+async waitForResponse(requestId: string, expiresAt: Date, signal?: AbortSignal): Promise<SignResponse> {
+  const ntfyServer = await this.settingsService.get('notifications.ntfy_server') ?? 'https://ntfy.sh';
+  const topicPrefix = await this.settingsService.get('signing_sdk.ntfy_response_topic_prefix') ?? 'waiaas-response';
+  const responseTopic = `${topicPrefix}-${requestId}`;
+
+  return new Promise<SignResponse>((resolve, reject) => {
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 5000;
+    let aborted = false;
+
+    // 만료 타이머
+    const timeoutMs = expiresAt.getTime() - Date.now();
+    const expiryTimer = setTimeout(() => {
+      aborted = true;
+      reject(new WAIaaSError('SIGN_REQUEST_EXPIRED', 408));
+    }, timeoutMs);
+
+    // 외부 AbortSignal 연결
+    signal?.addEventListener('abort', () => {
+      aborted = true;
+      clearTimeout(expiryTimer);
+      reject(new Error('Subscription aborted'));
+    });
+
+    const connect = async () => {
+      if (aborted) return;
+
+      try {
+        const response = await fetch(`${ntfyServer}/${responseTopic}/sse`, {
+          signal: signal ?? AbortSignal.timeout(timeoutMs),
+        });
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!aborted) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+
+            try {
+              const ntfyMessage = JSON.parse(data);
+              if (ntfyMessage.event === 'message') {
+                const decoded = base64url.decode(ntfyMessage.message);
+                const parsed = JSON.parse(decoded);
+                const signResponse = SignResponseSchema.parse(parsed);
+
+                if (signResponse.requestId === requestId) {
+                  clearTimeout(expiryTimer);
+                  resolve(signResponse);
+                  return;
+                }
+              }
+            } catch {
+              // 파싱 실패 시 무시, 구독 유지
+            }
+          }
+        }
+      } catch (error) {
+        if (aborted) return;
+        retryCount++;
+        if (retryCount <= MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+          connect();
+        } else {
+          clearTimeout(expiryTimer);
+          reject(new Error(`SSE connection failed after ${MAX_RETRIES} retries`));
+        }
+      }
+    };
+
+    connect();
+  });
+}
+```
+
+#### 종료 조건 요약
+
+| 조건 | 동작 | 결과 |
+|------|------|------|
+| SignResponse 수신 (requestId 매칭) | SSE 종료 + Promise resolve | `SignResponse` 반환 |
+| expiresAt 도달 | 타이머 트리거 + SSE 종료 + Promise reject | `SIGN_REQUEST_EXPIRED` 에러 |
+| 네트워크 에러 | 재연결 시도 (최대 3회, 5초 간격) | 3회 실패 시 reject |
+| AbortSignal abort | SSE 종료 + Promise reject | 취소 에러 |
+
+#### 기존 인프라 재사용
+
+| 재사용 대상 | 출처 | 재사용 지점 |
+|------------|------|------------|
+| ntfy HTTP publish 로직 | v1.3 `NtfyChannel` | `sendRequest()`의 fetch POST 호출 |
+| ntfy 서버 URL 조회 | `SettingsService` `notifications.ntfy_server` | 서버 URL 결정 |
+| fetch API | Node.js 22 내장 | SSE 구독 및 publish |
+
+### 7.3 TelegramSigningChannel 구현 설계
+
+#### 클래스 개요
+
+```typescript
+class TelegramSigningChannel implements ISigningChannel {
+  readonly type = 'telegram' as const;
+
+  // /sign_response 수신 대기 중인 요청들의 Promise resolver
+  private readonly pendingResponses = new Map<string, {
+    resolve: (response: SignResponse) => void;
+    reject: (error: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }>();
+
+  constructor(
+    private readonly telegramService: TelegramNotificationService,  // v1.6 Bot 인프라
+  ) {}
+
+  async sendRequest(signRequest: SignRequest, universalLinkUrl: string, wallet: Wallet): Promise<void>;
+  async waitForResponse(requestId: string, expiresAt: Date, signal?: AbortSignal): Promise<SignResponse>;
+
+  /**
+   * Telegram Bot Long Polling 핸들러에서 호출되는 내부 메서드.
+   * /sign_response 명령어 수신 시 해당 requestId의 Promise를 resolve한다.
+   */
+  handleSignResponseCommand(chatId: number, signResponse: SignResponse): void;
+}
+```
+
+#### sendRequest() -- doc 73 Section 8.1 Bot API 프로토콜
+
+기존 v1.6 TelegramNotificationService의 sendMessage를 재사용하여 Owner의 chatId로 서명 요청 메시지를 전송한다.
+
+```typescript
+async sendRequest(signRequest: SignRequest, universalLinkUrl: string, wallet: Wallet): Promise<void> {
+  const chatId = await this.resolveChatId(wallet);
+
+  // InlineKeyboardMarkup에 유니버셜 링크 포함
+  const text = [
+    '🔐 WAIaaS 트랜잭션 승인 요청',
+    '',
+    `To: ${signRequest.metadata.to}`,
+    signRequest.metadata.amount
+      ? `Amount: ${signRequest.metadata.amount} ${signRequest.metadata.symbol ?? ''}`
+      : null,
+    `Type: ${signRequest.metadata.type}`,
+    `Network: ${signRequest.network}`,
+    '',
+    `만료: ${signRequest.expiresAt}`,
+  ].filter(Boolean).join('\n');
+
+  await this.telegramService.sendMessage({
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '지갑에서 승인하기',
+            url: universalLinkUrl,
+          },
+        ],
+      ],
+    },
+  });
+}
+```
+
+#### waitForResponse() -- Long Polling 기반
+
+기존 Telegram Bot Long Polling에 `/sign_response` 명령어 핸들러를 등록한다. `waitForResponse()` 호출 시 Promise를 생성하고, `/sign_response` 수신 시 `handleSignResponseCommand()`에서 resolve한다.
+
+```typescript
+async waitForResponse(requestId: string, expiresAt: Date, signal?: AbortSignal): Promise<SignResponse> {
+  return new Promise<SignResponse>((resolve, reject) => {
+    // 만료 타이머
+    const timeoutMs = expiresAt.getTime() - Date.now();
+    const timer = setTimeout(() => {
+      this.pendingResponses.delete(requestId);
+      reject(new WAIaaSError('SIGN_REQUEST_EXPIRED', 408));
+    }, timeoutMs);
+
+    // Promise resolver 등록
+    this.pendingResponses.set(requestId, { resolve, reject, timer });
+
+    // 외부 AbortSignal 연결
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      this.pendingResponses.delete(requestId);
+      reject(new Error('Subscription aborted'));
+    });
+  });
+}
+
+/**
+ * Telegram Bot의 /sign_response 명령어 핸들러에서 호출.
+ * 기존 Long Polling 루프에 이 핸들러를 등록한다.
+ */
+handleSignResponseCommand(chatId: number, signResponse: SignResponse): void {
+  const pending = this.pendingResponses.get(signResponse.requestId);
+  if (!pending) return; // 대기 중인 요청 없음 (이미 만료/처리됨)
+
+  clearTimeout(pending.timer);
+  this.pendingResponses.delete(signResponse.requestId);
+  pending.resolve(signResponse);
+}
+```
+
+#### resolveChatId 헬퍼
+
+```typescript
+private async resolveChatId(wallet: Wallet): Promise<number> {
+  // Owner의 Telegram chatId를 조회한다.
+  // 기존 v1.6 Telegram 알림 설정에서 chatId 매핑을 가져온다.
+  // chatId가 없으면 에러 (Telegram 채널 사용 불가)
+  const chatId = await this.telegramService.getChatIdForWallet(wallet.id);
+  if (!chatId) {
+    throw new WAIaaSError('TELEGRAM_CHAT_ID_NOT_FOUND', 400,
+      `Telegram chatId not configured for wallet '${wallet.id}'`);
+  }
+  return chatId;
+}
+```
+
+#### /sign_response 명령어 등록
+
+기존 Telegram Bot Long Polling 핸들러에 `/sign_response` 명령어를 추가한다:
+
+```typescript
+// packages/daemon/src/services/notifications/telegram-notification-service.ts
+// 기존 handleUpdate() 메서드에 추가
+
+private handleUpdate(update: TelegramUpdate): void {
+  // ... 기존 명령어 핸들러 ...
+
+  // /sign_response 명령어 처리 (SDK 서명 응답)
+  if (text.startsWith('/sign_response ')) {
+    const base64urlData = text.slice('/sign_response '.length).trim();
+    try {
+      const json = base64url.decode(base64urlData);
+      const parsed = JSON.parse(json);
+      const signResponse = SignResponseSchema.parse(parsed);
+
+      // TelegramSigningChannel에 전달
+      this.signingChannel?.handleSignResponseCommand(update.message.chat.id, signResponse);
+
+      // 확인 메시지 전송
+      this.sendMessage({
+        chat_id: update.message.chat.id,
+        text: signResponse.action === 'approve'
+          ? '서명 응답이 접수되었습니다. 검증 중...'
+          : '거부 응답이 접수되었습니다.',
+      });
+    } catch (error) {
+      this.sendMessage({
+        chat_id: update.message.chat.id,
+        text: '서명 응답 형식이 올바르지 않습니다.',
+      });
+    }
+  }
+}
+```
+
+#### 기존 인프라 재사용
+
+| 재사용 대상 | 출처 | 재사용 지점 |
+|------------|------|------------|
+| `sendMessage()` | v1.6 `TelegramNotificationService` | `sendRequest()`의 Bot API 메시지 전송 |
+| Long Polling 루프 | v1.6 `TelegramNotificationService.handleUpdate()` | `/sign_response` 명령어 핸들러 등록 |
+| chatId 매핑 | v1.6 알림 설정 | `resolveChatId()` 조회 |
+
+#### Telegram 3중 보안 (doc 73 Section 8.4)
+
+| 확인 단계 | 방법 | 설명 |
+|----------|------|------|
+| 1차: chatId | `message.chat.id` → Owner 조회 | Telegram 메시지 발신자가 등록된 Owner인지 확인 |
+| 2차: signerAddress | `SignResponse.signerAddress === owner.address` | 서명자 주소가 Owner 등록 주소와 일치 |
+| 3차: 서명 검증 | ownerAuth (EIP-191/Ed25519) | 서명이 해당 주소의 개인키로 생성되었는지 검증 |
 
 ---
 
