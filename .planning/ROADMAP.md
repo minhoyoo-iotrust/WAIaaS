@@ -135,7 +135,7 @@ Plans:
 
 Plans:
 - [x] 200-01-PLAN.md — 알림 채널 설계 (토픽 분리 + NotificationMessage + SDK API + WalletNotificationChannel 통합)
-- [ ] 200-02-PLAN.md — Push Relay Server 설계 (IPushProvider + Pushwoosh/FCM + ntfy 구독 + 디바이스 API + config + Docker)
+- [x] 200-02-PLAN.md — Push Relay Server 설계 (IPushProvider + Pushwoosh/FCM + ntfy 구독 + 디바이스 API + config + Docker)
 
 ### Phase 201: 기존 설계 문서 갱신 + 교차 검증
 **Goal**: 모든 신규 설계가 기존 설계 문서(doc 35/37/25/67)에 반영되고, 설계 간 일관성이 교차 검증되어 설계 부채 0건을 유지하는 상태
@@ -146,10 +146,10 @@ Plans:
   2. doc 37(REST API)에 PUT /wallets/:id/owner approval_method 필드 확장이 반영되어 있다
   3. doc 25(SQLite)에 wallets.owner_approval_method 컬럼과 마이그레이션 스키마가 추가되어 있다
   4. doc 67(Admin UI)에 Owner Settings > Approval Method UI 와이어프레임과 컴포넌트 설계가 추가되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 201-01: TBD
+- [ ] 201-01-PLAN.md — doc 35/37/25/67 업데이트 + 교차 검증 (4개 설계 문서 갱신 + 일관성 검증)
 
 ## Progress
 
