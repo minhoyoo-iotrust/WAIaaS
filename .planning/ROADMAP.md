@@ -118,8 +118,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 199-01-PLAN.md — SDK 공개 API 6개 함수 시그니처 + WalletLinkConfig 스키마 + 패키지 구조
-- [ ] 199-02-PLAN.md — 데몬 컴포넌트 인터페이스 + 채널 라우팅 + SettingsService 키 + DB 스키마
+- [x] 199-01-PLAN.md — SDK 공개 API 6개 함수 시그니처 + WalletLinkConfig 스키마 + 패키지 구조
+- [x] 199-02-PLAN.md — 데몬 컴포넌트 인터페이스 + 채널 라우팅 + SettingsService 키 + DB 스키마
 
 ### Phase 200: 알림 채널 + Push Relay Server 설계
 **Goal**: 지갑 앱 알림 채널과 Push Relay Server의 인터페이스가 확정되어, m26-02/m26-03에서 바로 구현을 시작할 수 있는 상태
@@ -131,11 +131,11 @@ Plans:
   3. WalletNotificationChannel과 기존 INotificationChannel의 통합 지점(NotificationService 확장 방식)이 확정되어 있다
   4. IPushProvider 인터페이스와 PushPayload/PushResult 스키마가 확정되고, PushwooshProvider/FcmProvider의 API 인증 + 페이로드 매핑이 설계되어 있다
   5. Push Relay Server의 디바이스 토큰 등록 API, config.toml 스키마, Docker 배포 설정이 확정되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 200-01: TBD
-- [ ] 200-02: TBD
+- [ ] 200-01-PLAN.md — 알림 채널 설계 (토픽 분리 + NotificationMessage + SDK API + WalletNotificationChannel 통합)
+- [ ] 200-02-PLAN.md — Push Relay Server 설계 (IPushProvider + Pushwoosh/FCM + ntfy 구독 + 디바이스 API + config + Docker)
 
 ### Phase 201: 기존 설계 문서 갱신 + 교차 검증
 **Goal**: 모든 신규 설계가 기존 설계 문서(doc 35/37/25/67)에 반영되고, 설계 간 일관성이 교차 검증되어 설계 부채 0건을 유지하는 상태
