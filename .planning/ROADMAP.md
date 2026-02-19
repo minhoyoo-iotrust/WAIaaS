@@ -59,7 +59,7 @@ See `.planning/milestones/v2.4-ROADMAP.md` for full details.
 **Milestone Goal:** v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 복원. 신규 페이지(security, system, walletconnect) 테스트 작성, 공용 컴포넌트 테스트 추가, 기존 페이지 테스트 개선을 통해 커버리지 임계값을 원래 수준으로 되돌리고 CI 게이트를 통과시킨다.
 
 - [x] **Phase 191: Security + WalletConnect 페이지 테스트** - security.tsx 4개 탭 + walletconnect.tsx 전체 테스트 작성 (completed 2026-02-19)
-- [ ] **Phase 192: System 페이지 테스트** - system.tsx 6개 섹션(API Keys/Oracle/Display Currency/Rate Limit/Log Level/Danger Zone) 전체 테스트 작성
+- [x] **Phase 192: System 페이지 테스트** - system.tsx 6개 섹션(API Keys/Oracle/Display Currency/Rate Limit/Log Level/Danger Zone) 전체 테스트 작성 (completed 2026-02-19)
 - [ ] **Phase 193: 공용 컴포넌트 + 기존 페이지 개선 + 임계값 복원** - 공용 컴포넌트 5개 테스트 + 기존 3페이지 개선 + 70% 게이트 복원
 
 ## Phase Details
@@ -121,5 +121,5 @@ Plans:
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
 | 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
 | 191 | v2.4.1 | 2/2 | Complete | 2026-02-19 |
-| 192 | v2.4.1 | 0/1 | Not started | - |
+| 192 | 1/1 | Complete   | 2026-02-19 | - |
 | 193 | v2.4.1 | 0/2 | Not started | - |

@@ -13,11 +13,11 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 - [x] **NEWPG-02**: security.tsx Kill Switch 활성화/비활성화 테스트
 - [x] **NEWPG-03**: security.tsx JWT Rotation 설정 테스트
 - [x] **NEWPG-04**: security.tsx Danger Zone 동작 테스트
-- [ ] **NEWPG-05**: system.tsx 렌더링 + 탭 네비게이션 테스트
-- [ ] **NEWPG-06**: system.tsx Daemon 설정 폼 제출 테스트
-- [ ] **NEWPG-07**: system.tsx AutoStop 설정 토글 + 저장 테스트
-- [ ] **NEWPG-08**: system.tsx Monitoring 설정 폼 테스트
-- [ ] **NEWPG-09**: system.tsx API Keys CRUD 테스트
+- [x] **NEWPG-05**: system.tsx 렌더링 + 탭 네비게이션 테스트
+- [x] **NEWPG-06**: system.tsx Daemon 설정 폼 제출 테스트
+- [x] **NEWPG-07**: system.tsx AutoStop 설정 토글 + 저장 테스트
+- [x] **NEWPG-08**: system.tsx Monitoring 설정 폼 테스트
+- [x] **NEWPG-09**: system.tsx API Keys CRUD 테스트
 - [x] **NEWPG-10**: walletconnect.tsx 설정 폼 테스트
 - [x] **NEWPG-11**: walletconnect.tsx 페어링/세션 목록 렌더링 테스트
 - [x] **NEWPG-12**: walletconnect.tsx 미설정 상태 안내 UI 테스트
@@ -61,11 +61,11 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 | NEWPG-02 | Phase 191 | Complete |
 | NEWPG-03 | Phase 191 | Complete |
 | NEWPG-04 | Phase 191 | Complete |
-| NEWPG-05 | Phase 192 | Pending |
-| NEWPG-06 | Phase 192 | Pending |
-| NEWPG-07 | Phase 192 | Pending |
-| NEWPG-08 | Phase 192 | Pending |
-| NEWPG-09 | Phase 192 | Pending |
+| NEWPG-05 | Phase 192 | Complete |
+| NEWPG-06 | Phase 192 | Complete |
+| NEWPG-07 | Phase 192 | Complete |
+| NEWPG-08 | Phase 192 | Complete |
+| NEWPG-09 | Phase 192 | Complete |
 | NEWPG-10 | Phase 191 | Complete |
 | NEWPG-11 | Phase 191 | Complete |
 | NEWPG-12 | Phase 191 | Complete |

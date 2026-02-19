@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 191 - Security + WalletConnect 페이지 테스트
+**Current focus:** Phase 192 - System 페이지 테스트
 
 ## Current Position
 
-Phase: 191 of 193 (Security + WalletConnect 페이지 테스트)
-Plan: 2 of 5 total (2 of 2 in current phase)
+Phase: 192 of 193 (System 페이지 테스트)
+Plan: 4 of 5 total (1 of 1 in current phase)
 Status: Executing
-Last activity: 2026-02-19 -- Completed 191-01-PLAN.md
+Last activity: 2026-02-19 -- Completed 192-01-PLAN.md
 
-Progress: [####......] 40%
+Progress: [########..] 80%
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [####......] 40%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 191 | 1/2 | 3min | 3min |
-| 192 | 0/1 | - | - |
+| 192 | 1/1 | 4min | 4min |
 | 193 | 0/2 | - | - |
 
 *Updated after each plan completion*
@@ -40,6 +40,8 @@ Full log in PROJECT.md and milestones/.
 - v2.4.1: 기능 변경 없이 순수 테스트 작성만 수행
 - 191-01: Mock dirty-guard + unsaved-dialog for tab switching in security page tests
 - 191-02: vi.useFakeTimers({ shouldAdvanceTime: true }) for polling tests
+- 192-01: Modal confirm button via CSS selector (.modal-footer button.btn-danger) for ambiguous text
+- 192-01: getAllByText for headings that also appear as form labels (Display Currency, Log Level)
 
 ### Blockers/Concerns
 
@@ -49,5 +51,5 @@ Full log in PROJECT.md and milestones/.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 191-01-PLAN.md (security page tests)
+Stopped at: Completed 192-01-PLAN.md (system page tests)
 Resume file: None
