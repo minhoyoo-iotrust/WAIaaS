@@ -99,11 +99,11 @@ See `.planning/milestones/v2.5-ROADMAP.md` for full details.
   2. 유니버셜 링크 URL 구조(지갑 도메인 활용, base64url 인코딩, 길이 제한 대응)가 확정되어 지갑 개발사가 AASA/assetlinks.json에 추가할 경로를 알 수 있다
   3. ntfy 요청/응답 토픽 네이밍 규칙과 보안 모델(requestId 기반 1회용 토픽, 만료 정책)이 확정되어 있다
   4. Telegram 인라인 버튼 + 공유 인텐트 응답 플로우가 PC/모바일 양쪽 시나리오에서 확정되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 198-01: TBD
-- [ ] 198-02: TBD
+- [ ] 198-01-PLAN.md — 프로토콜 개요 + SignRequest/SignResponse 스키마 + 서명 메시지 포맷 + 유니버셜 링크 URL 구조
+- [ ] 198-02-PLAN.md — ntfy 채널 프로토콜 + Telegram 채널 프로토콜 + 만료 정책 + 보안 모델 + 에러 코드
 
 ### Phase 199: Wallet SDK + 데몬 컴포넌트 설계
 **Goal**: @waiaas/wallet-sdk 패키지의 공개 API와 데몬 측 서명 컴포넌트(빌더/핸들러/채널/라우터)의 인터페이스가 확정되어, m26-01에서 바로 구현을 시작할 수 있는 상태
