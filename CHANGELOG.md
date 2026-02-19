@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.3.0-rc.1...v2.3.0-rc.2) (2026-02-19)
+
+
+### Bug Fixes
+
+* resolve all 7 open issues (094-100) ([#28](https://github.com/minhoyoo-iotrust/WAIaaS/issues/28)) ([1ee80b5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ee80b51f8fdcb6e251d2dc303f65aff571b860f))
+
 ## [2.3.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.3.0-rc...v2.3.0-rc.1) (2026-02-19)
 
 
