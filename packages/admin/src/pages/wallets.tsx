@@ -373,7 +373,13 @@ function WalletDetailView({ id }: { id: string }) {
       startPairingPoll();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
+      if (e.code === 'WC_NOT_CONFIGURED') {
+        showToast('error', 'WalletConnect is not configured. Redirecting to settings...');
+        pendingNavigation.value = { tab: 'walletconnect', fieldName: 'walletconnect.project_id' };
+        window.location.hash = '#/wallets';
+      } else {
+        showToast('error', getErrorMessage(e.code));
+      }
     } finally {
       wcPairingLoading.value = false;
     }
@@ -409,15 +415,15 @@ function WalletDetailView({ id }: { id: string }) {
     }
     ownerEditLoading.value = true;
     try {
-      const result = await apiPut<Partial<WalletDetail>>(API.WALLET_OWNER(id), {
+      await apiPut(API.WALLET_OWNER(id), {
         owner_address: editOwnerAddress.value.trim(),
       });
-      wallet.value = { ...wallet.value!, ...result };
+      await fetchWallet();
       ownerEditing.value = false;
       showToast('success', 'Owner address updated');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
+      showToast('error', getErrorMessage(e.code, e.serverMessage));
     } finally {
       ownerEditLoading.value = false;
     }
