@@ -14,10 +14,10 @@
  *   owner disconnect                  -- Disconnect WalletConnect session
  *   owner status                      -- Show WalletConnect session status
  *   mcp setup                         -- Set up MCP integration for Claude Desktop
- *   upgrade                           -- Upgrade WAIaaS to the latest version
- *   upgrade --check                   -- Check for available updates
- *   upgrade --to <version>            -- Upgrade to a specific version
- *   upgrade --rollback                -- Restore from the latest backup
+ *   update                            -- Update WAIaaS to the latest version
+ *   update --check                    -- Check for available updates
+ *   update --to <version>             -- Update to a specific version
+ *   update --rollback                 -- Restore from the latest backup
  *
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
  */
@@ -32,7 +32,7 @@ import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
 import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
-import { upgradeCommand } from './commands/upgrade.js';
+import { updateCommand } from './commands/update.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
@@ -236,13 +236,14 @@ mcp
   });
 
 program
-  .command('upgrade')
-  .description('Upgrade WAIaaS to the latest version')
+  .command('update')
+  .alias('upgrade')
+  .description('Update WAIaaS to the latest version')
   .option('--data-dir <path>', 'Data directory path')
   .option('--check', 'Check for updates without upgrading')
-  .option('--to <version>', 'Upgrade to a specific version')
+  .option('--to <version>', 'Update to a specific version')
   .option('--rollback', 'Restore from the latest backup')
-  .option('--no-start', 'Skip daemon restart after upgrade')
+  .option('--no-start', 'Skip daemon restart after update')
   .action(async (opts: {
     dataDir?: string;
     check?: boolean;
@@ -251,7 +252,7 @@ program
     start?: boolean; // commander inverts --no-start to start=false
   }) => {
     const dataDir = resolveDataDir(opts);
-    await upgradeCommand({
+    await updateCommand({
       dataDir,
       check: opts.check,
       to: opts.to,

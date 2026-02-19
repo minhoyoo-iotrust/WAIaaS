@@ -66,7 +66,7 @@ describe('checkAndNotifyUpdate', () => {
     expect(output).toContain('Update available');
     expect(output).toContain('1.7.0');
     expect(output).toContain('2.0.0');
-    expect(output).toContain('waiaas upgrade');
+    expect(output).toContain('waiaas update');
   });
 
   it('does not print when updateAvailable is false', async () => {

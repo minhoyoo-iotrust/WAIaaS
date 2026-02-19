@@ -117,7 +117,7 @@ function resolvePort(dataDir: string): number {
  */
 function renderNotification(currentVersion: string, latestVersion: string): void {
   const message = `Update available: ${currentVersion} → ${latestVersion}`;
-  const action = 'Run: waiaas upgrade';
+  const action = 'Run: waiaas update';
 
   // Calculate box width (account for 3-space padding on each side)
   const contentWidth = Math.max(message.length, action.length);

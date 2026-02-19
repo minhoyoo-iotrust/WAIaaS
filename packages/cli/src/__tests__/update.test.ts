@@ -1,5 +1,5 @@
 /**
- * Tests for `waiaas upgrade` command.
+ * Tests for `waiaas update` command.
  *
  * Covers: --check mode, 7-step sequence, --to version, --rollback,
  * --no-start, error scenarios, npm registry interaction.
@@ -41,12 +41,12 @@ vi.mock('node:module', () => ({
   },
 }));
 
-import { upgradeCommand } from '../commands/upgrade.js';
+import { updateCommand } from '../commands/update.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function makeTempDataDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'waiaas-upgrade-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'waiaas-update-test-'));
   mkdirSync(join(dir, 'data'), { recursive: true });
   return dir;
 }
@@ -66,7 +66,7 @@ function mockRegistryFailure() {
 
 // ── Test Suite ─────────────────────────────────────────────────────────────
 
-describe('upgrade command', () => {
+describe('update command', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -96,18 +96,18 @@ describe('upgrade command', () => {
 
   // ── --check mode ────────────────────────────────────────────────────────
 
-  describe('upgrade --check', () => {
+  describe('update --check', () => {
     it('reports update available when newer version exists', async () => {
       globalThis.fetch = mockRegistryResponse('2.0.0');
       const dataDir = makeTempDataDir();
 
-      await upgradeCommand({ dataDir, check: true });
+      await updateCommand({ dataDir, check: true });
 
       const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(output).toContain('Update available');
       expect(output).toContain('1.7.0');
       expect(output).toContain('2.0.0');
-      expect(output).toContain('waiaas upgrade');
+      expect(output).toContain('waiaas update');
       // npm install should NOT be called
       expect(mockExecSync).not.toHaveBeenCalled();
     });
@@ -116,7 +116,7 @@ describe('upgrade command', () => {
       globalThis.fetch = mockRegistryResponse('1.7.0');
       const dataDir = makeTempDataDir();
 
-      await upgradeCommand({ dataDir, check: true });
+      await updateCommand({ dataDir, check: true });
 
       const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(output).toContain('Already up to date');
@@ -128,7 +128,7 @@ describe('upgrade command', () => {
       globalThis.fetch = mockRegistryFailure();
       const dataDir = makeTempDataDir();
 
-      await expect(upgradeCommand({ dataDir, check: true }))
+      await expect(updateCommand({ dataDir, check: true }))
         .rejects.toThrow('process.exit called');
 
       const output = errorSpy.mock.calls.map((c) => String(c[0])).join('\n');
@@ -138,7 +138,7 @@ describe('upgrade command', () => {
 
   // ── Default 7-step mode ─────────────────────────────────────────────────
 
-  describe('upgrade (7-step sequence)', () => {
+  describe('update (7-step sequence)', () => {
     it('executes all 7 steps in order', async () => {
       globalThis.fetch = mockRegistryResponse('2.0.0');
       const dataDir = makeTempDataDir();
@@ -150,7 +150,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, noStart: true });
+      await updateCommand({ dataDir, noStart: true });
 
       const allOutput = logSpy.mock.calls.map((c) => String(c[0]));
       const stepLogs = allOutput.filter((line) => /^\[\d\/7\]/.test(line));
@@ -175,7 +175,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, noStart: true });
+      await updateCommand({ dataDir, noStart: true });
 
       expect(mockExecSync).toHaveBeenCalledWith(
         'npm install -g @waiaas/cli@2.0.0',
@@ -193,7 +193,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, noStart: true });
+      await updateCommand({ dataDir, noStart: true });
 
       expect(mockCreateBackup).toHaveBeenCalledWith('1.7.0');
     });
@@ -202,7 +202,7 @@ describe('upgrade command', () => {
       globalThis.fetch = mockRegistryResponse('1.7.0');
       const dataDir = makeTempDataDir();
 
-      await upgradeCommand({ dataDir });
+      await updateCommand({ dataDir });
 
       const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(output).toContain('Already up to date');
@@ -213,8 +213,8 @@ describe('upgrade command', () => {
 
   // ── --to mode ───────────────────────────────────────────────────────────
 
-  describe('upgrade --to', () => {
-    it('upgrades to a specific version', async () => {
+  describe('update --to', () => {
+    it('updates to a specific version', async () => {
       const dataDir = makeTempDataDir();
       mockExecSync.mockImplementation((cmd: string) => {
         if (typeof cmd === 'string' && cmd.includes('--version')) {
@@ -223,7 +223,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, to: '1.8.0', noStart: true });
+      await updateCommand({ dataDir, to: '1.8.0', noStart: true });
 
       expect(mockExecSync).toHaveBeenCalledWith(
         'npm install -g @waiaas/cli@1.8.0',
@@ -237,7 +237,7 @@ describe('upgrade command', () => {
     it('rejects invalid semver version', async () => {
       const dataDir = makeTempDataDir();
 
-      await expect(upgradeCommand({ dataDir, to: 'not-a-version' }))
+      await expect(updateCommand({ dataDir, to: 'not-a-version' }))
         .rejects.toThrow('process.exit called');
 
       const output = errorSpy.mock.calls.map((c) => String(c[0])).join('\n');
@@ -247,11 +247,11 @@ describe('upgrade command', () => {
 
   // ── --rollback mode ─────────────────────────────────────────────────────
 
-  describe('upgrade --rollback', () => {
+  describe('update --rollback', () => {
     it('calls BackupService.restoreLatest', async () => {
       const dataDir = makeTempDataDir();
 
-      await upgradeCommand({ dataDir, rollback: true });
+      await updateCommand({ dataDir, rollback: true });
 
       expect(mockRestoreLatest).toHaveBeenCalled();
       const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
@@ -264,7 +264,7 @@ describe('upgrade command', () => {
         throw new Error('No backups found');
       });
 
-      await expect(upgradeCommand({ dataDir, rollback: true }))
+      await expect(updateCommand({ dataDir, rollback: true }))
         .rejects.toThrow('process.exit called');
 
       const output = errorSpy.mock.calls.map((c) => String(c[0])).join('\n');
@@ -274,7 +274,7 @@ describe('upgrade command', () => {
 
   // ── --no-start mode ─────────────────────────────────────────────────────
 
-  describe('upgrade --no-start', () => {
+  describe('update --no-start', () => {
     it('skips daemon restart in Step 7', async () => {
       globalThis.fetch = mockRegistryResponse('2.0.0');
       const dataDir = makeTempDataDir();
@@ -285,7 +285,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, noStart: true });
+      await updateCommand({ dataDir, noStart: true });
 
       const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(output).toContain('Skipping daemon restart (--no-start)');
@@ -299,7 +299,7 @@ describe('upgrade command', () => {
 
   // ── Failure scenarios ───────────────────────────────────────────────────
 
-  describe('upgrade failure', () => {
+  describe('update failure', () => {
     it('shows rollback instructions when npm install fails', async () => {
       globalThis.fetch = mockRegistryResponse('2.0.0');
       const dataDir = makeTempDataDir();
@@ -310,12 +310,12 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await expect(upgradeCommand({ dataDir, noStart: true }))
+      await expect(updateCommand({ dataDir, noStart: true }))
         .rejects.toThrow('process.exit called');
 
       const output = errorSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(output).toContain('Package update failed');
-      expect(output).toContain('waiaas upgrade --rollback');
+      expect(output).toContain('waiaas update --rollback');
     });
 
     it('warns when installed version does not match target', async () => {
@@ -328,7 +328,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, noStart: true });
+      await updateCommand({ dataDir, noStart: true });
 
       const warnOutput = warnSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(warnOutput).toContain('Warning');
@@ -338,7 +338,7 @@ describe('upgrade command', () => {
 
   // ── Daemon stop ─────────────────────────────────────────────────────────
 
-  describe('daemon stop during upgrade', () => {
+  describe('daemon stop during update', () => {
     it('skips stop when no PID file exists', async () => {
       globalThis.fetch = mockRegistryResponse('2.0.0');
       const dataDir = makeTempDataDir();
@@ -349,7 +349,7 @@ describe('upgrade command', () => {
         return Buffer.from('');
       });
 
-      await upgradeCommand({ dataDir, noStart: true });
+      await updateCommand({ dataDir, noStart: true });
 
       const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(output).toContain('Daemon not running, skipping');
