@@ -85,7 +85,7 @@ See `.planning/milestones/v2.5-ROADMAP.md` for full details.
 
 - [x] **Phase 198: Signing Protocol v1 설계** - SignRequest/SignResponse 스키마, 유니버셜 링크, ntfy/Telegram 채널 프로토콜 확정
 - [x] **Phase 199: Wallet SDK + 데몬 컴포넌트 설계** - @waiaas/wallet-sdk 공개 API, 데몬 측 서명 컴포넌트, 채널 라우팅, DB 스키마 설계 확정 (completed 2026-02-19)
-- [ ] **Phase 200: 알림 채널 + Push Relay Server 설계** - 지갑 앱 알림 채널, IPushProvider 인터페이스, Push Relay 아키텍처 설계 확정
+- [x] **Phase 200: 알림 채널 + Push Relay Server 설계** - 지갑 앱 알림 채널, IPushProvider 인터페이스, Push Relay 아키텍처 설계 확정 (completed 2026-02-19)
 - [ ] **Phase 201: 기존 설계 문서 갱신 + 교차 검증** - doc 35/37/25/67 업데이트, 설계 간 일관성 검증
 
 ## Phase Details
@@ -159,5 +159,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 198. Signing Protocol v1 설계 | 2/2 | Complete | 2026-02-19 |
 | 199. Wallet SDK + 데몬 컴포넌트 설계 | 2/2 | Complete   | 2026-02-19 |
-| 200. 알림 채널 + Push Relay Server 설계 | 1/2 | In Progress | - |
+| 200. 알림 채널 + Push Relay Server 설계 | 2/2 | Complete   | 2026-02-19 |
 | 201. 기존 설계 문서 갱신 + 교차 검증 | 0/1 | Not started | - |

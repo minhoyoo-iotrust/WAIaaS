@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.6 Wallet SDK 설계 - Phase 200 Plan 01 complete, ready for Plan 02
+**Current focus:** v2.6 Wallet SDK 설계 - Phase 200 complete (알림 채널 + Push Relay Server 설계)
 
 ## Current Position
 
-Phase: 200 of 201 (알림 채널 설계)
-Plan: 1 of 2 in current phase
+Phase: 200 of 201 (알림 채널 + Push Relay Server 설계)
+Plan: 2 of 2 in current phase (complete)
 Status: In Progress
-Last activity: 2026-02-20 — Plan 200-01 completed (알림 채널 토픽 분리 + NotificationMessage + WalletNotificationChannel 설계)
+Last activity: 2026-02-20 — Plan 200-02 completed (Push Relay Server IPushProvider + Pushwoosh/FCM + Docker 배포 설계)
 
-Progress: [#######░░░] 71% (5/7 plans)
+Progress: [########░░] 86% (6/7 plans)
 
 ## Performance Metrics
 
@@ -65,6 +65,14 @@ v2.6 design decisions: See internal/objectives/m26-00 through m26-03.
 - NotificationEventType 25종 → NotificationCategory 6종 매핑
 - SettingsService 알림 3키로 doc 74의 6키와 합쳐 총 9개 signing_sdk 키
 
+**200-02 decisions:**
+- IPushProvider 인터페이스: send(tokens, payload) + validateConfig() 2메서드, createProvider 팩토리
+- FCM HTTP v1 단건 전송 + Promise.allSettled 병렬, access_token 만료 5분 전 자동 갱신
+- NtfySubscriber: 다중 토픽 SSE(콤마 구분 단일 연결), 지수 백오프 1s-60s, heartbeat 60초
+- DeviceRegistry: push_token 자연 PK, invalidTokens(FCM 404/410) 자동 정리
+- Push Relay config.toml: 별도 패키지이므로 중첩 섹션 허용, superRefine 조건부 검증
+- Docker 멀티스테이지(node:22-alpine) + 환경변수 오버라이드 10개
+
 ### Blockers/Concerns
 
 None.
@@ -72,5 +80,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 200-01-PLAN.md (알림 채널 토픽 분리 + NotificationMessage + WalletNotificationChannel 설계)
+Stopped at: Completed 200-02-PLAN.md (Push Relay Server IPushProvider + Pushwoosh/FCM + Docker 배포 설계)
 Resume file: None

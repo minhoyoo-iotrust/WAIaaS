@@ -36,10 +36,10 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ### Push Relay Server
 
-- [ ] **RELAY-01**: IPushProvider 인터페이스 + PushPayload/PushResult 스키마 확정
-- [ ] **RELAY-02**: PushwooshProvider + FcmProvider 구현 설계 (API 인증, 페이로드 매핑) 확정
-- [ ] **RELAY-03**: ntfy SSE 구독 + 메시지→PushPayload 변환 매핑 확정
-- [ ] **RELAY-04**: 디바이스 토큰 등록 API + config.toml 스키마 + Docker 배포 설계 확정
+- [x] **RELAY-01**: IPushProvider 인터페이스 + PushPayload/PushResult 스키마 확정
+- [x] **RELAY-02**: PushwooshProvider + FcmProvider 구현 설계 (API 인증, 페이로드 매핑) 확정
+- [x] **RELAY-03**: ntfy SSE 구독 + 메시지→PushPayload 변환 매핑 확정
+- [x] **RELAY-04**: 디바이스 토큰 등록 API + config.toml 스키마 + Docker 배포 설계 확정
 
 ### 설계 문서 갱신
 
@@ -84,10 +84,10 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 | NOTIF-01 | Phase 200 | Complete |
 | NOTIF-02 | Phase 200 | Complete |
 | NOTIF-03 | Phase 200 | Complete |
-| RELAY-01 | Phase 200 | Pending |
-| RELAY-02 | Phase 200 | Pending |
-| RELAY-03 | Phase 200 | Pending |
-| RELAY-04 | Phase 200 | Pending |
+| RELAY-01 | Phase 200 | Complete |
+| RELAY-02 | Phase 200 | Complete |
+| RELAY-03 | Phase 200 | Complete |
+| RELAY-04 | Phase 200 | Complete |
 | DOCS-01 | Phase 201 | Pending |
 | DOCS-02 | Phase 201 | Pending |
 | DOCS-03 | Phase 201 | Pending |
