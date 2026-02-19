@@ -102,7 +102,7 @@
 | 085 | ENHANCEMENT | MEDIUM | 스킬 파일 버전 자동 동기화 + 연결 디스커버리 가이드 추가 | v2.3 | OPEN | 2026-02-18 |
 | 086 | BUG | HIGH | CI --affected가 push to main에서 변경 감지 실패 + 알림 테스트 텍스트 불일치 | v2.3 | FIXED | 2026-02-18 |
 | 087 | ENHANCEMENT | MEDIUM | AI 에이전트용 연결 프롬프트(매직워드) 복사 기능 | v2.3 | OPEN | 2026-02-18 |
-| 088 | BUG | MEDIUM | NotificationService가 config.toml enabled=false일 때 미생성되어 Admin UI에서 알림 활성화 불가 | v2.3 | OPEN | 2026-02-18 |
+| 088 | BUG | MEDIUM | NotificationService가 config.toml enabled=false일 때 미생성되어 Admin UI에서 알림 활성화 불가 | v2.3 | FIXED | 2026-02-19 |
 | 089 | ENHANCEMENT | LOW | Admin UI JWT Rotation 명칭/설명이 내부 구현 용어 사용 — 사용자 이해 어려움 | v2.3 | OPEN | 2026-02-18 |
 | 090 | BUG | HIGH | 데몬 시작 시 마스터 패스워드 검증 없음 — 잘못된 패스워드로 시작 후 서명 시점에야 실패 | v2.3 | OPEN | 2026-02-19 |
 | 091 | ENHANCEMENT | LOW | quickset 명령어 추가 — quickstart와 start 이름 혼동 해소 | v2.3 | OPEN | 2026-02-19 |
@@ -119,8 +119,8 @@
 
 ## Summary
 
-- **OPEN:** 6
-- **FIXED:** 85
+- **OPEN:** 5
+- **FIXED:** 86
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 0
