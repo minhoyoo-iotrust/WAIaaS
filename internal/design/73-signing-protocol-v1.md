@@ -681,13 +681,505 @@ function parseSignRequest(url: string): SignRequest {
 
 ## 7. ntfy 채널 프로토콜
 
-<!-- Plan 02에서 작성 -->
+### 7.1 토픽 네이밍 규칙
+
+| 토픽 | 패턴 | 용도 | 생명주기 |
+|------|------|------|---------|
+| 요청 토픽 | `waiaas-sign-{walletId}` | 데몬이 서명 요청을 publish, 지갑 앱이 subscribe | 지갑 존재 기간 동안 유지 (장기) |
+| 응답 토픽 | `waiaas-response-{requestId}` | 지갑 앱이 서명 응답을 publish, 데몬이 subscribe | 요청별 1회용 (단기) |
+
+- **walletId**: 지갑 UUID (DB PK). UUID v7 형식이므로 122비트 엔트로피. 예: `01935a3b-7c8d-7e00-b123-456789abcdef`
+- **requestId**: 요청별 UUID v7. 1회용이며 추측 불가. 응답 토픽 이름에 포함되어 토픽 자체가 인증 역할
+
+토픽 접두어는 SettingsService에서 변경 가능:
+- `signing_sdk.ntfy_request_topic_prefix` (기본: `waiaas-sign`)
+- `signing_sdk.ntfy_response_topic_prefix` (기본: `waiaas-response`)
+
+### 7.2 요청 publish 프로토콜
+
+데몬이 PENDING_APPROVAL 트랜잭션에 대해 ntfy 요청 토픽에 서명 요청을 전송한다.
+
+**HTTP 요청:**
+
+```http
+POST https://{ntfy_server}/{requestTopic}
+Content-Type: application/json
+Title: WAIaaS Sign Request
+Priority: 5
+Tags: waiaas,sign
+Actions: view, 지갑에서 승인하기, {universalLinkUrl}
+```
+
+**Body (JSON):**
+
+```json
+{
+  "topic": "waiaas-sign-{walletId}",
+  "message": "{displayMessage}",
+  "title": "WAIaaS Sign Request",
+  "priority": 5,
+  "tags": ["waiaas", "sign"],
+  "actions": [
+    {
+      "action": "view",
+      "label": "지갑에서 승인하기",
+      "url": "https://link.dcentwallet.com/waiaas/sign?data={base64url(SignRequest)}"
+    }
+  ],
+  "attach": null,
+  "click": "https://link.dcentwallet.com/waiaas/sign?data={base64url(SignRequest)}"
+}
+```
+
+**주요 필드 설명:**
+
+| 필드 | 값 | 설명 |
+|------|-----|------|
+| `topic` | `waiaas-sign-{walletId}` | 지갑별 요청 토픽 |
+| `priority` | `5` (urgent) | 즉시 알림. 진동/소리 활성화 |
+| `actions[0].url` | 유니버셜 링크 URL | 모바일 알림에서 탭 시 지갑 앱 열림 |
+| `click` | 유니버셜 링크 URL | ntfy 알림 자체를 탭할 때도 지갑 앱으로 이동 |
+
+### 7.3 응답 subscribe 프로토콜
+
+데몬이 SignRequest를 publish한 직후, 해당 요청의 응답 토픽을 SSE로 구독하여 SignResponse를 기다린다.
+
+**SSE 구독 시작:**
+
+```http
+GET https://{ntfy_server}/{responseTopic}/sse
+```
+
+- `{responseTopic}`: `waiaas-response-{requestId}`
+- 구독 시작 시점: SignRequest publish 직후 (거의 동시)
+
+**구독 종료 조건:**
+
+| 조건 | 동작 |
+|------|------|
+| SignResponse 수신 | 응답 파싱 + 검증 → 토픽 구독 종료 |
+| expiresAt 도달 | 타임아웃 → SIGN_REQUEST_EXPIRED 처리 → 구독 종료 |
+| 네트워크 에러 | 재연결 시도 (최대 3회, 5초 간격) → 실패 시 구독 종료 |
+
+**SSE 메시지 수신 처리:**
+
+```typescript
+// 1. SSE 이벤트에서 data 필드 추출
+const sseData = event.data;
+
+// 2. ntfy JSON 메시지에서 message 필드 추출
+const ntfyMessage = JSON.parse(sseData);
+
+// 3. base64url 디코딩
+const json = base64url.decode(ntfyMessage.message);
+
+// 4. JSON 파싱
+const parsed = JSON.parse(json);
+
+// 5. Zod 검증
+const signResponse = SignResponseSchema.parse(parsed);
+
+// 6. requestId 매칭 확인
+if (signResponse.requestId !== expectedRequestId) {
+  throw new Error('SIGN_REQUEST_NOT_FOUND');
+}
+```
+
+### 7.4 응답 publish (지갑 앱 측)
+
+지갑 앱이 Owner 서명을 완료한 후, ntfy 응답 토픽에 SignResponse를 publish한다.
+
+**HTTP 요청:**
+
+```http
+POST https://{ntfy_server}/{responseTopic}
+Content-Type: text/plain
+```
+
+**Body:**
+
+```
+{base64url(JSON.stringify(SignResponse))}
+```
+
+- 응답 토픽: `waiaas-response-{requestId}` (SignRequest의 `responseChannel.responseTopic` 필드에서 획득)
+- ntfy 서버 URL: SignRequest의 `responseChannel.serverUrl` 필드 (생략 시 `https://ntfy.sh`)
+- **1회 publish 후 토픽 사용 종료** — 동일 토픽에 다시 publish하지 않음
+
+**SDK 코드 (지갑 앱 측):**
+
+```typescript
+// @waiaas/wallet-sdk
+async function sendViaNtfy(
+  response: SignResponse,
+  responseTopic: string,
+  serverUrl: string = 'https://ntfy.sh'
+): Promise<void> {
+  const encoded = base64url.encode(JSON.stringify(response));
+
+  await fetch(`${serverUrl}/${responseTopic}`, {
+    method: 'POST',
+    body: encoded,
+  });
+}
+```
+
+### 7.5 E2E 시퀀스 다이어그램
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│ AI Agent │     │  WAIaaS  │     │   ntfy   │     │ 지갑 앱   │
+│          │     │  데몬    │     │  서버    │     │(SDK내장) │
+└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+     │                │                │                │
+     │ 1. 고액 TX     │                │                │
+     │───────────────>│                │                │
+     │                │                │                │
+     │                │ 2. 정책 평가    │                │
+     │                │  → PENDING_APPROVAL             │
+     │                │                │                │
+     │                │ 3. POST /waiaas-sign-{walletId} │
+     │                │  SignRequest JSON               │
+     │                │  + 유니버셜 링크 액션 버튼       │
+     │                │───────────────>│                │
+     │                │                │                │
+     │                │ 4. GET /waiaas-response-{requestId}/sse
+     │                │  (SSE 구독 시작)│                │
+     │                │───────────────>│                │
+     │                │                │                │
+     │                │                │ 5. 푸시 알림    │
+     │                │                │───────────────>│
+     │                │                │                │
+     │                │                │    6. Owner 확인│
+     │                │                │    서명 생성    │
+     │                │                │                │
+     │                │                │ 7. POST /waiaas-response-{requestId}
+     │                │                │  base64url(SignResponse)
+     │                │                │<───────────────│
+     │                │                │                │
+     │                │ 8. SSE 이벤트  │                │
+     │                │  SignResponse 수신              │
+     │                │<───────────────│                │
+     │                │                │                │
+     │                │ 9. 서명 검증 (ownerAuth)         │
+     │                │  → 트랜잭션 실행                 │
+     │                │                │                │
+     │ 10. TX 완료    │                │                │
+     │<───────────────│                │                │
+     │                │                │                │
+```
+
+**단계별 상세:**
+
+| 단계 | 주체 | 동작 | HTTP 상세 |
+|------|------|------|-----------|
+| 1 | AI Agent | 고액 트랜잭션 요청 | POST /v1/transactions |
+| 2 | 데몬 | 정책 평가 → PENDING_APPROVAL | 내부 Pipeline Stage 4 |
+| 3 | 데몬 | ntfy 요청 토픽에 publish | POST ntfy.sh/waiaas-sign-{walletId} (JSON, Priority:5) |
+| 4 | 데몬 | ntfy 응답 토픽 SSE 구독 시작 | GET ntfy.sh/waiaas-response-{requestId}/sse |
+| 5 | ntfy | 지갑 앱으로 네이티브 푸시 전송 | ntfy 서버 → FCM/APNs → 지갑 앱 |
+| 6 | Owner | 트랜잭션 내용 확인 + 서명 | 지갑 앱 UI |
+| 7 | 지갑 앱 | 응답 토픽에 SignResponse publish | POST ntfy.sh/waiaas-response-{requestId} (base64url body) |
+| 8 | 데몬 | SSE 이벤트로 SignResponse 수신 | SSE data 이벤트 파싱 |
+| 9 | 데몬 | 서명 검증 + 트랜잭션 실행 | ownerAuth(EIP-191/Ed25519) → EXECUTING → CONFIRMED |
+| 10 | 데몬 | AI Agent에 결과 반환 | 트랜잭션 상태 CONFIRMED |
+
+### 7.6 self-hosted ntfy 지원
+
+WAIaaS는 self-hosted 데몬이므로 ntfy 서버도 self-hosted로 운영할 수 있다.
+
+**ntfy 서버 URL 결정 순서:**
+
+1. SignRequest의 `responseChannel.serverUrl` 필드 (요청별 지정)
+2. 데몬의 기존 `[notifications] ntfy_server` 설정 (전역 설정, SettingsService)
+3. 기본값: `https://ntfy.sh` (공개 서버)
+
+**self-hosted ntfy의 장점:**
+
+| 항목 | 공개 ntfy.sh | self-hosted ntfy |
+|------|-------------|-----------------|
+| 설정 | 없음 | Docker/바이너리 설치 필요 |
+| 네트워크 | 인터넷 경유 | 로컬 네트워크 가능 |
+| 토픽 보안 | 공개 (누구나 구독 가능) | 인증 설정 가능 (Authorization 헤더) |
+| 데이터 노출 | ntfy.sh 서버에 메시지 경유 | 자체 서버에서만 처리 |
+| 가용성 | ntfy.sh 서비스 의존 | 자체 관리 |
+
+**설정 예시:**
+
+```toml
+# config.toml — 기존 알림 설정과 공유
+[notifications]
+ntfy_server = "https://ntfy.example.com"
+```
+
+> **참고**: 서명 채널과 알림 채널은 동일한 ntfy 서버를 공유하지만, 토픽은 완전히 분리된다. 알림 토픽(`waiaas-notify-*`)과 서명 토픽(`waiaas-sign-*`, `waiaas-response-*`)은 접두어로 구분된다.
 
 ---
 
 ## 8. Telegram 채널 프로토콜
 
-<!-- Plan 02에서 작성 -->
+### 8.1 요청 전송 (Bot API)
+
+PENDING_APPROVAL 트랜잭션에 대해 Telegram Bot API를 통해 Owner의 chatId로 서명 요청 메시지를 전송한다.
+
+**Bot API 호출:**
+
+```http
+POST https://api.telegram.org/bot{token}/sendMessage
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "chat_id": "{ownerChatId}",
+  "text": "🔐 WAIaaS 트랜잭션 승인 요청\n\nTo: {to}\nAmount: {amount} {symbol}\nType: {type}\nNetwork: {network}\n\n만료: {expiresAt}",
+  "parse_mode": "HTML",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "text": "지갑에서 승인하기",
+          "url": "https://link.dcentwallet.com/waiaas/sign?data={base64url(SignRequest)}"
+        }
+      ]
+    ]
+  }
+}
+```
+
+**주요 필드:**
+
+| 필드 | 설명 |
+|------|------|
+| `chat_id` | Owner의 Telegram chat ID (기존 v1.6 알림 설정에서 획득) |
+| `text` | 트랜잭션 요약 정보. 사람이 읽을 수 있는 형식 |
+| `reply_markup.inline_keyboard` | 인라인 버튼 1개: "지갑에서 승인하기" + 유니버셜 링크 URL |
+
+**유니버셜 링크 URL**은 Section 6의 구조를 따른다:
+```
+https://{wallet.universalLink.base}{wallet.universalLink.signPath}?data={base64url(SignRequest)}
+```
+
+### 8.2 모바일 시나리오
+
+Owner가 모바일 Telegram 앱에서 서명 요청 알림을 수신하는 플로우:
+
+```
+1. Telegram 푸시 알림 수신
+   → Owner가 알림 탭
+
+2. Telegram 앱에서 메시지 확인
+   → 트랜잭션 요약 + [지갑에서 승인하기] 인라인 버튼
+
+3. [지갑에서 승인하기] 탭
+   → 유니버셜 링크 → 지갑 앱 열림 (앱 설치 시)
+   → 또는 웹페이지 이동 (앱 미설치 시 → 설치 안내)
+
+4. 지갑 앱에서 SignRequest 파싱 → 서명 UI 표시
+   → Owner가 트랜잭션 내용 확인
+   → 승인(서명 생성) 또는 거부
+
+5. 응답 전송: Telegram 공유 인텐트
+   → WAIaaS Bot 채팅으로 /sign_response {base64url(SignResponse)} 전송
+   → Owner는 Telegram으로 전환 후 [보내기] 1탭
+```
+
+**핵심 UX**: Owner 액션은 총 3탭 — (1) Telegram 알림 탭, (2) 지갑 앱에서 승인/거부, (3) Telegram [보내기] 탭.
+
+### 8.3 PC 시나리오
+
+Owner가 PC Telegram 데스크탑 앱에서 서명 요청을 수신하는 플로우:
+
+```
+1. PC Telegram 데스크탑에서 메시지 확인
+   → [지갑에서 승인하기] 인라인 버튼 클릭
+
+2. 기본 브라우저에서 웹페이지 열림
+   → URL: https://link.dcentwallet.com/waiaas/sign?data={base64url(SignRequest)}
+   → 웹페이지 내용:
+     - SignRequest 정보 표시 (트랜잭션 요약)
+     - QR 코드 생성 (QR 내용 = 동일 유니버셜 링크 URL)
+
+3. Owner가 모바일로 QR 코드 스캔
+   → 카메라 앱 또는 QR 스캐너 사용
+   → 유니버셜 링크 인식 → 지갑 앱 열림
+
+4. 지갑 앱에서 서명 (모바일 시나리오 4단계와 동일)
+   → SignRequest 파싱 → 서명 UI → 승인/거부
+
+5. 응답 전송 (모바일 시나리오 5단계와 동일)
+   → Telegram 공유 인텐트 → /sign_response 전송
+```
+
+**PC 시나리오 핵심**: 지갑 앱은 모바일에서만 동작하므로, PC에서는 QR 코드를 통해 모바일로 브릿지한다. QR 코드의 내용은 동일한 유니버셜 링크 URL이므로 모바일에서 스캔 시 지갑 앱이 바로 열린다.
+
+> **참고**: 이 웹페이지는 지갑 개발사(D'CENT 등)가 제공한다. WAIaaS는 웹페이지를 호스팅하지 않는다 (self-hosted 철학 유지).
+
+### 8.4 응답 수신 (Bot Long Polling)
+
+기존 Telegram Bot의 Long Polling 핸들러에 `/sign_response` 명령어를 추가하여 서명 응답을 수신한다.
+
+**명령어 형식:**
+
+```
+/sign_response {base64url(JSON.stringify(SignResponse))}
+```
+
+**파싱 프로세스:**
+
+```typescript
+// 1. 메시지에서 명령어와 데이터 분리
+const match = message.text.match(/^\/sign_response\s+(.+)$/);
+if (!match) return; // 무시
+
+const base64urlData = match[1];
+
+// 2. base64url 디코딩
+const json = base64url.decode(base64urlData);
+
+// 3. JSON 파싱
+const parsed = JSON.parse(json);
+
+// 4. Zod 검증
+const signResponse = SignResponseSchema.parse(parsed);
+
+// 5. chatId로 Owner 식별
+const owner = await findOwnerByChatId(message.chat.id);
+if (!owner) throw new Error('UNKNOWN_CHAT_ID');
+
+// 6. signerAddress로 이중 확인
+if (signResponse.signerAddress !== owner.address) {
+  throw new Error('SIGNER_ADDRESS_MISMATCH');
+}
+
+// 7. SignResponseHandler로 전달
+await signResponseHandler.handle(signResponse);
+```
+
+**이중 확인:**
+
+| 확인 단계 | 방법 | 설명 |
+|----------|------|------|
+| 1차: chatId | `message.chat.id` → Owner 조회 | Telegram 메시지 발신자가 등록된 Owner인지 확인 |
+| 2차: signerAddress | SignResponse.signerAddress === owner.address | 서명자 주소가 Owner 등록 주소와 일치하는지 확인 |
+| 3차: 서명 검증 | ownerAuth (EIP-191/Ed25519) | 서명이 실제로 해당 주소의 개인키로 생성되었는지 검증 |
+
+### 8.5 Telegram 공유 인텐트 URL 구조
+
+지갑 앱이 서명 완료 후 Telegram Bot으로 응답을 전송하기 위한 플랫폼별 URL:
+
+**Android (Telegram 딥링크):**
+
+```
+tg://msg?text=/sign_response {base64url(SignResponse)}&to={botUsername}
+```
+
+**iOS (Telegram 유니버셜 링크):**
+
+```
+https://t.me/{botUsername}?text=/sign_response {base64url(SignResponse)}
+```
+
+**Fallback (클립보드 복사):**
+
+```
+지갑 앱 → 클립보드에 "/sign_response {base64url(SignResponse)}" 복사
+→ 사용자에게 안내: "WAIaaS Bot 채팅에 붙여넣기 해주세요"
+```
+
+**SDK 구현 (플랫폼 감지):**
+
+```typescript
+// @waiaas/wallet-sdk
+function sendViaTelegram(
+  response: SignResponse,
+  botUsername: string
+): void {
+  const encoded = base64url.encode(JSON.stringify(response));
+  const text = `/sign_response ${encoded}`;
+
+  const platform = detectPlatform();
+
+  if (platform === 'android') {
+    // Android: Telegram 딥링크
+    window.location.href = `tg://msg?text=${encodeURIComponent(text)}&to=${botUsername}`;
+  } else if (platform === 'ios') {
+    // iOS: Telegram 유니버셜 링크
+    window.location.href = `https://t.me/${botUsername}?text=${encodeURIComponent(text)}`;
+  } else {
+    // Fallback: 클립보드 복사 + 안내
+    navigator.clipboard.writeText(text);
+    alert('응답이 클립보드에 복사되었습니다. WAIaaS Bot 채팅에 붙여넣기 해주세요.');
+  }
+}
+```
+
+### 8.6 E2E 시퀀스 다이어그램
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│ AI Agent │     │  WAIaaS  │     │ Telegram │     │  Owner   │     │ 지갑 앱   │
+│          │     │  데몬    │     │  서버    │     │  (모바일)│     │(SDK내장) │
+└────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘     └────┬─────┘
+     │                │                │                │                │
+     │ 1. 고액 TX     │                │                │                │
+     │───────────────>│                │                │                │
+     │                │                │                │                │
+     │                │ 2. 정책 평가    │                │                │
+     │                │  → PENDING_APPROVAL             │                │
+     │                │                │                │                │
+     │                │ 3. sendMessage │                │                │
+     │                │  (인라인 버튼   │                │                │
+     │                │   + 유니버셜 링크)               │                │
+     │                │───────────────>│                │                │
+     │                │                │                │                │
+     │                │                │ 4. 푸시 알림    │                │
+     │                │                │───────────────>│                │
+     │                │                │                │                │
+     │                │                │                │ 5. [지갑에서    │
+     │                │                │                │  승인하기] 탭   │
+     │                │                │                │  유니버셜 링크  │
+     │                │                │                │───────────────>│
+     │                │                │                │                │
+     │                │                │                │    6. Owner 확인│
+     │                │                │                │    서명 생성    │
+     │                │                │                │                │
+     │                │                │                │ 7. 공유 인텐트  │
+     │                │                │                │  /sign_response│
+     │                │                │                │<───────────────│
+     │                │                │                │                │
+     │                │                │ 8. [보내기] 탭  │                │
+     │                │                │<───────────────│                │
+     │                │                │                │                │
+     │                │ 9. Long Polling│                │                │
+     │                │  /sign_response 수신             │                │
+     │                │<───────────────│                │                │
+     │                │                │                │                │
+     │                │ 10. 서명 검증 (ownerAuth)         │                │
+     │                │   → 트랜잭션 실행                 │                │
+     │                │                │                │                │
+     │ 11. TX 완료    │                │                │                │
+     │<───────────────│                │                │                │
+     │                │                │                │                │
+```
+
+**단계별 상세:**
+
+| 단계 | 주체 | 동작 | 상세 |
+|------|------|------|------|
+| 1 | AI Agent | 고액 트랜잭션 요청 | POST /v1/transactions |
+| 2 | 데몬 | 정책 평가 → PENDING_APPROVAL | 내부 Pipeline Stage 4 |
+| 3 | 데몬 | Telegram Bot sendMessage | InlineKeyboardMarkup에 유니버셜 링크 버튼 포함 |
+| 4 | Telegram | Owner에게 푸시 알림 | Telegram 앱 알림 (모바일/PC) |
+| 5 | Owner | 인라인 버튼 탭 | 유니버셜 링크 → 지갑 앱 열림 (모바일) 또는 웹 QR (PC) |
+| 6 | Owner | 트랜잭션 확인 + 서명 | 지갑 앱 서명 UI |
+| 7 | 지갑 앱 | Telegram 공유 인텐트 실행 | `/sign_response {base64url(SignResponse)}` 메시지 준비 |
+| 8 | Owner | Telegram에서 [보내기] 탭 | 1탭으로 Bot에 응답 전송 |
+| 9 | 데몬 | Long Polling으로 응답 수신 | `/sign_response` 명령어 파싱 + chatId 확인 |
+| 10 | 데몬 | 서명 검증 + 트랜잭션 실행 | ownerAuth(EIP-191/Ed25519) → EXECUTING → CONFIRMED |
+| 11 | 데몬 | AI Agent에 결과 반환 | 트랜잭션 상태 CONFIRMED |
 
 ---
 
