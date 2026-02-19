@@ -83,7 +83,7 @@ See `.planning/milestones/v2.5-ROADMAP.md` for full details.
 
 **Milestone Goal:** 지갑 개발사(D'CENT 등)가 WAIaaS와 통합하기 위한 Wallet Signing SDK, 개방형 서명 프로토콜, 지갑 앱 알림 채널, Push Relay Server의 공통 설계를 확정한다.
 
-- [ ] **Phase 198: Signing Protocol v1 설계** - SignRequest/SignResponse 스키마, 유니버셜 링크, ntfy/Telegram 채널 프로토콜 확정
+- [x] **Phase 198: Signing Protocol v1 설계** - SignRequest/SignResponse 스키마, 유니버셜 링크, ntfy/Telegram 채널 프로토콜 확정
 - [ ] **Phase 199: Wallet SDK + 데몬 컴포넌트 설계** - @waiaas/wallet-sdk 공개 API, 데몬 측 서명 컴포넌트, 채널 라우팅, DB 스키마 설계 확정
 - [ ] **Phase 200: 알림 채널 + Push Relay Server 설계** - 지갑 앱 알림 채널, IPushProvider 인터페이스, Push Relay 아키텍처 설계 확정
 - [ ] **Phase 201: 기존 설계 문서 갱신 + 교차 검증** - doc 35/37/25/67 업데이트, 설계 간 일관성 검증
@@ -102,8 +102,8 @@ See `.planning/milestones/v2.5-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 198-01-PLAN.md — 프로토콜 개요 + SignRequest/SignResponse 스키마 + 서명 메시지 포맷 + 유니버셜 링크 URL 구조
-- [ ] 198-02-PLAN.md — ntfy 채널 프로토콜 + Telegram 채널 프로토콜 + 만료 정책 + 보안 모델 + 에러 코드
+- [x] 198-01-PLAN.md — 프로토콜 개요 + SignRequest/SignResponse 스키마 + 서명 메시지 포맷 + 유니버셜 링크 URL 구조
+- [x] 198-02-PLAN.md — ntfy 채널 프로토콜 + Telegram 채널 프로토콜 + 만료 정책 + 보안 모델 + 에러 코드
 
 ### Phase 199: Wallet SDK + 데몬 컴포넌트 설계
 **Goal**: @waiaas/wallet-sdk 패키지의 공개 API와 데몬 측 서명 컴포넌트(빌더/핸들러/채널/라우터)의 인터페이스가 확정되어, m26-01에서 바로 구현을 시작할 수 있는 상태
@@ -157,7 +157,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 198. Signing Protocol v1 설계 | 1/2 | In Progress|  |
+| 198. Signing Protocol v1 설계 | 2/2 | Complete | 2026-02-19 |
 | 199. Wallet SDK + 데몬 컴포넌트 설계 | 0/2 | Not started | - |
 | 200. 알림 채널 + Push Relay Server 설계 | 0/2 | Not started | - |
 | 201. 기존 설계 문서 갱신 + 교차 검증 | 0/1 | Not started | - |
