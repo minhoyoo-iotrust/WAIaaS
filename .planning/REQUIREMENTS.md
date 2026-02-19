@@ -47,8 +47,8 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### SDK 패키지
 
-- [ ] **SDK-01**: CLI 패키지에 npm 레지스트리용 최소 README가 존재한다
-- [ ] **SDK-02**: SDK 패키지에 npm 레지스트리용 최소 README가 존재한다
+- [x] **SDK-01**: CLI 패키지에 npm 레지스트리용 최소 README가 존재한다
+- [x] **SDK-02**: SDK 패키지에 npm 레지스트리용 최소 README가 존재한다
 
 ### MCP 안내
 
@@ -92,8 +92,8 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 | PY-01 | 197 | Complete |
 | PY-02 | 197 | Complete |
 | PY-03 | 197 | Complete |
-| SDK-01 | 196 | Pending |
-| SDK-02 | 196 | Pending |
+| SDK-01 | 196 | Complete |
+| SDK-02 | 196 | Complete |
 | MCP-01 | 195 | Complete |
 
 **Coverage:**
