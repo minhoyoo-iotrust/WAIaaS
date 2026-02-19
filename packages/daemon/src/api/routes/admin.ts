@@ -30,8 +30,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
-import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, NetworkType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment } from '@waiaas/core';
+import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
@@ -500,31 +500,36 @@ const adminWalletBalanceRoute = createRoute({
   method: 'get',
   path: '/admin/wallets/{id}/balance',
   tags: ['Admin'],
-  summary: 'Get wallet balance (native + tokens)',
+  summary: 'Get wallet balance across all available networks',
   request: {
     params: z.object({ id: z.string().uuid() }),
   },
   responses: {
     200: {
-      description: 'Wallet balance',
+      description: 'Wallet balances per network',
       content: {
         'application/json': {
           schema: z.object({
-            native: z
-              .object({
-                balance: z.string(),
-                symbol: z.string(),
-                network: z.string(),
-              })
-              .nullable(),
-            tokens: z.array(
+            balances: z.array(
               z.object({
-                symbol: z.string(),
-                balance: z.string(),
-                address: z.string(),
+                network: z.string(),
+                isDefault: z.boolean(),
+                native: z
+                  .object({
+                    balance: z.string(),
+                    symbol: z.string(),
+                  })
+                  .nullable(),
+                tokens: z.array(
+                  z.object({
+                    symbol: z.string(),
+                    balance: z.string(),
+                    address: z.string(),
+                  }),
+                ),
+                error: z.string().optional(),
               }),
             ),
-            error: z.string().optional(),
           }),
         },
       },
@@ -1514,45 +1519,56 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_NOT_FOUND');
     }
 
-    // If no adapter pool, return null balance
+    // If no adapter pool, return empty balances
     if (!deps.adapterPool) {
-      return c.json({ native: null, tokens: [] }, 200);
+      return c.json({ balances: [] }, 200);
     }
 
-    try {
-      const network = (wallet.defaultNetwork
-        ?? getDefaultNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType)) as NetworkType;
-      const rpcUrl = resolveRpcUrl(deps.daemonConfig!.rpc, wallet.chain, network);
-      const adapter = await deps.adapterPool.resolve(wallet.chain as ChainType, network, rpcUrl);
+    const chain = wallet.chain as ChainType;
+    const env = wallet.environment as EnvironmentType;
+    const networks = getNetworksForEnvironment(chain, env);
+    const defaultNetwork = wallet.defaultNetwork
+      ?? getDefaultNetwork(chain, env);
 
-      // Get native balance
-      const balanceInfo = await adapter.getBalance(wallet.publicKey);
-      const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
+    const results = await Promise.allSettled(
+      networks.map(async (network) => {
+        const rpcUrl = resolveRpcUrl(deps.daemonConfig!.rpc, wallet.chain, network);
+        if (!rpcUrl) {
+          return { network, isDefault: network === defaultNetwork, native: null, tokens: [], error: 'RPC endpoint not configured' };
+        }
+        const adapter = await deps.adapterPool!.resolve(chain, network, rpcUrl);
 
-      // Get token assets
-      const assets = await adapter.getAssets(wallet.publicKey);
-      const tokens = assets
-        .filter((a) => !a.isNative)
-        .map((a) => ({
-          symbol: a.symbol,
-          balance: (Number(a.balance) / 10 ** a.decimals).toString(),
-          address: a.mint,
-        }));
+        const balanceInfo = await adapter.getBalance(wallet.publicKey);
+        const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
 
-      return c.json(
-        {
-          native: { balance: nativeBalance, symbol: balanceInfo.symbol, network },
+        const assets = await adapter.getAssets(wallet.publicKey);
+        const tokens = assets
+          .filter((a) => !a.isNative)
+          .map((a) => ({
+            symbol: a.symbol,
+            balance: (Number(a.balance) / 10 ** a.decimals).toString(),
+            address: a.mint,
+          }));
+
+        return {
+          network,
+          isDefault: network === defaultNetwork,
+          native: { balance: nativeBalance, symbol: balanceInfo.symbol },
           tokens,
-        },
-        200,
-      );
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      return c.json(
-        { native: null, tokens: [], error: errorMessage },
-        200,
-      );
-    }
+        };
+      }),
+    );
+
+    const balances = results.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const errorMessage = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      return { network: networks[i]!, isDefault: networks[i] === defaultNetwork, native: null, tokens: [], error: errorMessage };
+    });
+
+    // Sort: default network first
+    balances.sort((a, b) => (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1));
+
+    return c.json({ balances }, 200);
   });
 
   // ---------------------------------------------------------------------------
