@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 190 of 190 (검증 및 정리 -- 완료)
 Plan: 1 of 1 in current phase (complete)
 Status: v2.4 milestone complete
-Last activity: 2026-02-19 - Completed quick task 6: Issue 087 AI agent connection prompt magic word
+Last activity: 2026-02-19 - Completed quick task 7: Issue 089 JWT rotation UI text clarity
 
 Progress: [██████████] 100%
 
@@ -40,6 +40,7 @@ Full log in PROJECT.md and milestones/.
 - [Phase quick-4]: NotificationService always-init with 0 channels when disabled -- enables Admin UI runtime activation via hot-reload
 - [Phase quick-5]: ESM sync-version.mjs using node:fs/path/url -- consistent with project ESM convention
 - [Phase quick-6]: Use existing session creation API (ttl) instead of adding new admin endpoints -- simpler, no daemon changes needed
+- [Phase quick-7]: Kept code comments unchanged (developer-facing); used regex in test assertions for fragility avoidance
 
 ### Blockers/Concerns
 
@@ -57,9 +58,10 @@ Full log in PROJECT.md and milestones/.
 | 4 | Issue 088: NotificationService always-init fix | 2026-02-19 | 3a54be4 | [4-issue-088-notificationservice-enabled-fa](./quick/4-issue-088-notificationservice-enabled-fa/) |
 | 5 | Issue 085: skill file version sync + discovery | 2026-02-19 | 49075cb | [5-issue-085](./quick/5-issue-085/) |
 | 6 | Issue 087: AI agent connection prompt magic word | 2026-02-19 | b52f5e8 | [6-issue-087-ai](./quick/6-issue-087-ai/) |
+| 7 | Issue 089: JWT rotation UI text clarity | 2026-02-19 | 5ac6676 | [7-issue-089-jwt-rotation-ui](./quick/7-issue-089-jwt-rotation-ui/) |
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed quick task 6: Issue 087 AI agent connection prompt magic word
-Resume file: .planning/quick/6-issue-087-ai/6-SUMMARY.md
+Stopped at: Completed quick task 7: Issue 089 JWT rotation UI text clarity
+Resume file: .planning/quick/7-issue-089-jwt-rotation-ui/7-SUMMARY.md
