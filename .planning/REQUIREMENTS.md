@@ -57,34 +57,34 @@ v2.3 Admin UI 메뉴 재구성으로 하락한 테스트 커버리지를 70%로 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NEWPG-01 | — | Pending |
-| NEWPG-02 | — | Pending |
-| NEWPG-03 | — | Pending |
-| NEWPG-04 | — | Pending |
-| NEWPG-05 | — | Pending |
-| NEWPG-06 | — | Pending |
-| NEWPG-07 | — | Pending |
-| NEWPG-08 | — | Pending |
-| NEWPG-09 | — | Pending |
-| NEWPG-10 | — | Pending |
-| NEWPG-11 | — | Pending |
-| NEWPG-12 | — | Pending |
-| COMP-01 | — | Pending |
-| COMP-02 | — | Pending |
-| COMP-03 | — | Pending |
-| COMP-04 | — | Pending |
-| COMP-05 | — | Pending |
-| EXIST-01 | — | Pending |
-| EXIST-02 | — | Pending |
-| EXIST-03 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
+| NEWPG-01 | Phase 191 | Pending |
+| NEWPG-02 | Phase 191 | Pending |
+| NEWPG-03 | Phase 191 | Pending |
+| NEWPG-04 | Phase 191 | Pending |
+| NEWPG-05 | Phase 192 | Pending |
+| NEWPG-06 | Phase 192 | Pending |
+| NEWPG-07 | Phase 192 | Pending |
+| NEWPG-08 | Phase 192 | Pending |
+| NEWPG-09 | Phase 192 | Pending |
+| NEWPG-10 | Phase 191 | Pending |
+| NEWPG-11 | Phase 191 | Pending |
+| NEWPG-12 | Phase 191 | Pending |
+| COMP-01 | Phase 193 | Pending |
+| COMP-02 | Phase 193 | Pending |
+| COMP-03 | Phase 193 | Pending |
+| COMP-04 | Phase 193 | Pending |
+| COMP-05 | Phase 193 | Pending |
+| EXIST-01 | Phase 193 | Pending |
+| EXIST-02 | Phase 193 | Pending |
+| EXIST-03 | Phase 193 | Pending |
+| INFRA-01 | Phase 193 | Pending |
+| INFRA-02 | Phase 193 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
