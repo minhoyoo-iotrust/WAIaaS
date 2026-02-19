@@ -5,20 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.4 npm Trusted Publishing 전환 -- Phase 188 완료, Phase 189 준비
+**Current focus:** v2.4 npm Trusted Publishing 전환 -- Phase 189 완료, Phase 190 준비
 
 ## Current Position
 
-Phase: 188 of 190 (사전 준비 -- 완료)
-Plan: 1 of 1 in current phase (complete)
-Status: Phase 188 complete, ready for Phase 189
-Last activity: 2026-02-19 — Phase 188 Plan 01 executed
+Phase: 189 of 190 (OIDC 전환 -- 완료)
+Plan: 2 of 2 in current phase (complete)
+Status: Phase 189 complete, ready for Phase 190
+Last activity: 2026-02-19 — Phase 189 Plan 02 executed
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
-**Cumulative:** 41 milestones, 188 phases, 399 plans, 1,094 reqs, ~3,880 tests, ~145,784 LOC TS
+**Cumulative:** 41 milestones, 189 phases, 401 plans, 1,094 reqs, ~3,880 tests, ~145,784 LOC TS
 
 **v2.4 Scope:** 3 phases, 4 plans (estimated), 12 requirements
 
