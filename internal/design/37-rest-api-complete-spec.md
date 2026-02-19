@@ -7,8 +7,9 @@
 **v0.7 보완:** 2026-02-08
 **v0.8 보완:** 2026-02-09
 **v0.10 보완:** 2026-02-09
+**v2.6 보완:** 2026-02-20
 **상태:** 완료
-**참조:** CORE-06 (29-api-framework-design.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md), objectives/v0.8-optional-owner-progressive-security.md
+**참조:** CORE-06 (29-api-framework-design.md), SDK-DAEMON (74-wallet-sdk-daemon-components.md), SESS-PROTO (30-session-token-protocol.md), TX-PIPE (32-transaction-pipeline-api.md), OWNR-CONN (34-owner-wallet-connection.md), KILL-AUTO-EVM (36-killswitch-autostop-evm.md), CORE-02 (25-sqlite-schema.md), CORE-05 (28-daemon-lifecycle-cli.md), AUTH-REDESIGN (52-auth-model-redesign.md), SESS-RENEW (53-session-renewal-protocol.md), DX-IMPROVE (55-dx-improvement-spec.md), TOKEN-EXT (56-token-transfer-extension-spec.md), ASSET-FEE (57-asset-query-fee-estimation-spec.md), CONTRACT (58-contract-call-spec.md), APPROVE (59-approve-management-spec.md), BATCH (60-batch-transaction-spec.md), ORACLE (61-price-oracle-spec.md), ACTION (62-action-provider-architecture.md), SWAP (63-swap-action-spec.md), objectives/v0.8-optional-owner-progressive-security.md
 **요구사항:** Phase 9 Success Criteria #1 -- REST API 전체 스펙 완성
 
 ---
@@ -62,7 +63,9 @@ SDK, MCP Server, Tauri Desktop, Telegram Bot 등 모든 클라이언트가 참�
 >
 > **[v0.8] 변경:** 1개 엔드포인트 추가: POST /v1/owner/agents/:agentId/withdraw (자금 회수). WithdrawService 도메인 서비스 설계 추가. WITHDRAW 도메인 에러 코드 4개 추가 (60개 -> 64개). objectives/v0.8-optional-owner-progressive-security.md §5 참조.
 >
-> **[v0.10] 변경:** SS10.12 에러 코드 통합 매트릭스 추가 (66개 에러 코드 전수 HTTP/retryable/backoff 매핑). OWNER 도메인 4->5 정정, ADMIN 도메인 1개 신설, 합계 64->66 정정. 429 응답 포맷 확정. SS8.9 PolicyType enum 4->10개 확장 + superRefine type별 rules 검증 분기 추가.
+> **[v0.10] 변경:** SS10.12 에러 코드 통합 매트릭스 추가 (66개 에러 코드 전수 HTTP/retryable/backoff 매핑). OWNER 도메인 4->5 정정, ADMIN 도메인 1개 신설, 합계 64->66 정정. 429 응답 포맷 확정. SS8.9 PolicyType enum 4->10개 확장 + superRefin type별 rules 검증 분기 추가.
+>
+> **[v2.6] 변경:** PUT /v1/wallets/:id/owner 요청 스키마에 `approval_method` optional 필드 추가. GET /v1/wallets/:id 응답에 `owner_approval_method` 필드 추가. doc 74 섹션 10.2 참조.
 
 ---
 
@@ -3099,6 +3102,39 @@ Kill Switch ACTIVATED 상태에서 killSwitchGuard(미들웨어 #7)가 5개 허�
 
 > **보안 근거:** 수신 주소가 `agents.owner_address`로 고정되므로 공격자가 자금을 탈취할 수 없다. 동적 경로(:agentId)이므로 killSwitchGuard에서 패턴 매칭(matchPath) 사용. (36-killswitch-autostop-evm.md 참조)
 
+### 8.19 [v2.6] PUT /v1/wallets/:id/owner -- approval_method 필드 추가
+
+기존 PUT /v1/wallets/:id/owner 요청 스키마에 `approval_method` optional 필드를 추가한다.
+
+**변경된 Request Zod 스키마:**
+
+```typescript
+const UpdateOwnerSchema = z.object({
+  owner_address: z.string(),
+  approval_method: z.enum([
+    'sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest',
+  ]).nullable().optional(),
+  // optional: 생략 시 기존 값 유지
+  // null: 글로벌 fallback으로 초기화
+});
+```
+
+**검증 규칙:**
+
+| 조건 | 결과 | HTTP |
+|------|------|------|
+| approval_method가 유효한 enum 값 | DB 업데이트 | 200 |
+| approval_method가 유효하지 않은 값 | 에러 | 400 |
+| approval_method 생략 | 기존 값 유지 | 200 |
+| approval_method: null (명시적) | NULL로 초기화 (글로벌 fallback) | 200 |
+| Owner 미등록 지갑에 설정 시도 | 에러 | 400 "Owner must be registered first" |
+
+**GET /v1/wallets/:id 응답 변경:**
+
+응답에 `owner_approval_method` 필드 추가 (null | string). 미설정 시 null.
+
+상세: doc 74 (74-wallet-sdk-daemon-components.md) 섹션 10.2 참조.
+
 ---
 
 ## 9. Admin API (masterAuth -- explicit/implicit)
@@ -3849,3 +3885,5 @@ WHERE id > :cursor ORDER BY id ASC LIMIT :limit + 1
 | 39 | POST | `/v1/owner/agents/:agentId/withdraw` | masterAuth(implicit) | Owner | withdrawAgentFunds | **[v0.8]** objectives §5 |
 | 40 | POST | `/v1/agents` | masterAuth(implicit) | Agent | createAgent | **[v1.1]** DD-01 |
 | 41 | GET | `/v1/transactions/:id` | sessionAuth | Transaction | getTransaction | **[v1.1]** DD-02 |
+
+> **[v2.6] 스키마 확장:** PUT /v1/wallets/:id/owner 요청에 `approval_method` optional 필드 추가. GET /v1/wallets/:id 응답에 `owner_approval_method` 필드 추가. 섹션 8.19 참조.
