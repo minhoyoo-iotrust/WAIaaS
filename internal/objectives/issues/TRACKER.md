@@ -108,13 +108,13 @@
 | 091 | ENHANCEMENT | LOW | quickset 명령어 추가 — quickstart와 start 이름 혼동 해소 | v2.4 | FIXED | 2026-02-19 |
 | 092 | BUG | MEDIUM | npm 패키지 homepage + repository URL 잘못 설정 — 패키지 페이지에서 리포지토리 접근 불가 | v2.4 | FIXED | 2026-02-19 |
 | 093 | BUG | HIGH | npm 패키지 페이지에 README 미표시 — 개별 패키지 디렉토리에 README.md 없음 | v2.4 | FIXED | 2026-02-19 |
-| 094 | ENHANCEMENT | MEDIUM | Admin 지갑 상세에서 모든 네트워크 잔액 미표시 — defaultNetwork 하나만 조회 | v2.4 | OPEN | 2026-02-19 |
-| 095 | ENHANCEMENT | MEDIUM | Admin 세션 페이지에서 MCP 세션 식별 불가 — source 컬럼 없음 | v2.4 | OPEN | 2026-02-19 |
-| 096 | ENHANCEMENT | MEDIUM | Admin 다중 지갑 일괄 세션/MCP 토큰 생성 기능 미지원 | v2.5 | OPEN | 2026-02-19 |
-| 097 | BUG | MEDIUM | Admin Owner 주소 등록 실패 시 구체적 에러 사유 미표시 — serverMessage 무시 | v2.5 | OPEN | 2026-02-19 |
-| 098 | BUG | MEDIUM | Admin Owner 주소 등록 후 ownerState 즉시 미반영 — PUT 응답에 ownerState 누락 | v2.5 | OPEN | 2026-02-19 |
-| 099 | ENHANCEMENT | LOW | WalletConnect 미설정 에러 시 설정 위치(Wallets > WalletConnect 탭) 이동 안내 없음 | v2.5 | OPEN | 2026-02-19 |
-| 100 | BUG | CRITICAL | npm publish가 workspace:* 미치환 상태로 배포 — RC 버전 글로벌 설치 불가 | v2.5 | OPEN | 2026-02-19 |
+| 094 | ENHANCEMENT | MEDIUM | Admin 지갑 상세에서 모든 네트워크 잔액 미표시 — defaultNetwork 하나만 조회 | v2.4 | FIXED | 2026-02-19 |
+| 095 | ENHANCEMENT | MEDIUM | Admin 세션 페이지에서 MCP 세션 식별 불가 — source 컬럼 없음 | v2.4 | FIXED | 2026-02-19 |
+| 096 | ENHANCEMENT | MEDIUM | Admin 다중 지갑 일괄 세션/MCP 토큰 생성 기능 미지원 | v2.5 | FIXED | 2026-02-19 |
+| 097 | BUG | MEDIUM | Admin Owner 주소 등록 실패 시 구체적 에러 사유 미표시 — serverMessage 무시 | v2.5 | FIXED | 2026-02-19 |
+| 098 | BUG | MEDIUM | Admin Owner 주소 등록 후 ownerState 즉시 미반영 — PUT 응답에 ownerState 누락 | v2.5 | FIXED | 2026-02-19 |
+| 099 | ENHANCEMENT | LOW | WalletConnect 미설정 에러 시 설정 위치(Wallets > WalletConnect 탭) 이동 안내 없음 | v2.5 | FIXED | 2026-02-19 |
+| 100 | BUG | CRITICAL | npm publish가 workspace:* 미치환 상태로 배포 — RC 버전 글로벌 설치 불가 | v2.5 | FIXED | 2026-02-19 |
 
 ## Type Legend
 
@@ -126,8 +126,8 @@
 
 ## Summary
 
-- **OPEN:** 7
-- **FIXED:** 93
+- **OPEN:** 0
+- **FIXED:** 100
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
