@@ -270,6 +270,53 @@ describe('startCommand', () => {
 
     vi.doUnmock('@waiaas/daemon');
   });
+
+  it('outputs port conflict hint when EADDRINUSE', async () => {
+    process.env['WAIAAS_MASTER_PASSWORD'] = 'test-password-123';
+
+    const mockStartDaemon = vi.fn().mockRejectedValue(
+      new Error('Port 3100 is already in use. Try a different port or stop the other process.'),
+    );
+    vi.doMock('@waiaas/daemon', () => ({
+      startDaemon: mockStartDaemon,
+    }));
+
+    const { startCommand } = await import('../commands/start.js');
+
+    await expect(startCommand(testDir)).rejects.toThrow(ExitError);
+
+    const allStderr = mockStderr.mock.calls.map((c) => c[0]).join('\n');
+    expect(allStderr).toContain('already in use');
+    expect(allStderr).toContain('lsof');
+
+    vi.doUnmock('@waiaas/daemon');
+  });
+
+  it('does not print Step logs on successful start (daemon uses console.debug)', async () => {
+    process.env['WAIAAS_MASTER_PASSWORD'] = 'test-password-123';
+
+    const mockStdout = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const mockStartDaemon = vi.fn().mockResolvedValue({});
+    vi.doMock('@waiaas/daemon', () => ({
+      startDaemon: mockStartDaemon,
+    }));
+
+    const { startCommand } = await import('../commands/start.js');
+    await startCommand(testDir);
+
+    // start.ts should not output any Step logs (those are console.debug in daemon.ts)
+    const allStdout = mockStdout.mock.calls.map((c) => c[0]).join('\n');
+    expect(allStdout).not.toContain('Step 1:');
+    expect(allStdout).not.toContain('Step 2:');
+    expect(allStdout).not.toContain('Step 3:');
+    expect(allStdout).not.toContain('Step 4');
+    expect(allStdout).not.toContain('Step 5:');
+    expect(allStdout).not.toContain('Step 6:');
+
+    mockStdout.mockRestore();
+    vi.doUnmock('@waiaas/daemon');
+  });
 });
 
 // ---------------------------------------------------------------------------
