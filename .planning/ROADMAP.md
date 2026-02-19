@@ -104,8 +104,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 195-01-PLAN.md — quickstart 영문화 + 멱등성 + availableNetworks 필드 수정
-- [ ] 195-02-PLAN.md — MCP setup 에러 메시지 + 만료 안내
+- [x] 195-01-PLAN.md — quickstart 영문화 + 멱등성 + availableNetworks 필드 수정
+- [x] 195-02-PLAN.md — MCP setup 에러 메시지 + 만료 안내
 
 ### Phase 196: README + SDK 문서 정합성
 **Goal**: README 코드 예시를 복붙하면 에러 없이 동작하고 npm 패키지 페이지에 사용법이 표시된다
@@ -132,8 +132,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 197-01-PLAN.md — Docker DX (docker-compose GHCR 이미지 참조 + .env.example)
-- [ ] 197-02-PLAN.md — Python SDK 정합성 (버전/포트/gitignore)
+- [x] 197-01-PLAN.md — Docker DX (docker-compose GHCR 이미지 참조 + .env.example)
+- [x] 197-02-PLAN.md — Python SDK 정합성 (버전/포트/gitignore)
 
 ## Progress
 
