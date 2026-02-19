@@ -34,4 +34,5 @@ export const API = {
   WALLET_OWNER_VERIFY: (id: string) => `/v1/wallets/${id}/owner/verify`,
   ADMIN_BULK_SESSIONS: '/v1/admin/sessions/bulk',
   ADMIN_BULK_MCP_TOKENS: '/v1/admin/mcp/tokens/bulk',
+  ADMIN_AGENT_PROMPT: '/v1/admin/agent-prompt',
 } as const;

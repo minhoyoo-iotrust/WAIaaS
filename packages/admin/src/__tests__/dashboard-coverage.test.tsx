@@ -462,3 +462,71 @@ describe('Dashboard coverage: fetchDisplayCurrency', () => {
     });
   });
 });
+
+describe('Dashboard coverage: Agent Connection Prompt card', () => {
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  it('renders prompt card with Generate button', async () => {
+    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Agent Connection Prompt')).toBeTruthy();
+    });
+    expect(screen.getByText('Generate')).toBeTruthy();
+  });
+
+  it('generates prompt and shows Copy/Regenerate buttons', async () => {
+    const { apiPost } = await import('../api/client');
+    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      prompt: '[WAIaaS Connection]\n- URL: http://localhost:3100\n\nWallets:\n1. alpha-bot',
+      walletCount: 1,
+      sessionsCreated: 1,
+      expiresAt: 1708000000,
+    });
+
+    const { fireEvent } = await import('@testing-library/preact');
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Generate')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Generate'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Copy to Clipboard')).toBeTruthy();
+      expect(screen.getByText('Regenerate')).toBeTruthy();
+    });
+  });
+
+  it('shows warning toast when no wallets found', async () => {
+    const { apiPost } = await import('../api/client');
+    const { showToast } = await import('../components/toast');
+    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
+    vi.mocked(apiPost).mockResolvedValueOnce({
+      prompt: '',
+      walletCount: 0,
+      sessionsCreated: 0,
+      expiresAt: 0,
+    });
+
+    const { fireEvent } = await import('@testing-library/preact');
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Generate')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Generate'));
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('warning', 'No active wallets found');
+    });
+  });
+});

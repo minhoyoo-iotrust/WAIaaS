@@ -84,10 +84,6 @@ vi.mock('../components/settings-search', () => {
   };
 });
 
-vi.mock('../utils/agent-prompt', () => ({
-  buildSingleWalletPrompt: vi.fn().mockReturnValue('mock agent prompt text'),
-}));
-
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { showToast } from '../components/toast';
 import { currentPath } from '../components/layout';
@@ -1284,45 +1280,3 @@ describe('WalletConnectTab', () => {
   });
 });
 
-describe('WalletDetailView: Copy Agent Prompt', () => {
-  beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
-  afterEach(() => { cleanup(); vi.clearAllMocks(); });
-
-  it('copies agent prompt on button click', async () => {
-    mockDetailApiCalls();
-
-    vi.mocked(apiPost).mockResolvedValueOnce({
-      id: 's-1',
-      token: 'test-session-token',
-      expiresAt: 1708000000,
-      walletId: 'test-wallet-1',
-    });
-
-    // Mock clipboard
-    Object.assign(navigator, {
-      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
-    });
-
-    await renderAndWaitForDetail();
-
-    fireEvent.click(screen.getByText('Copy Agent Prompt'));
-
-    await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Agent prompt copied!');
-    });
-  });
-
-  it('shows error when agent prompt creation fails', async () => {
-    mockDetailApiCalls();
-
-    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(500, 'PROMPT_ERROR', 'Failed'));
-
-    await renderAndWaitForDetail();
-
-    fireEvent.click(screen.getByText('Copy Agent Prompt'));
-
-    await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: PROMPT_ERROR');
-    });
-  });
-});

@@ -69,6 +69,8 @@ import {
   TestRpcRequestSchema,
   TestRpcResponseSchema,
   OracleStatusResponseSchema,
+  AgentPromptRequestSchema,
+  AgentPromptResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -1872,6 +1874,123 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
     const created = results.filter((r) => !r.error).length;
     return c.json({ results, created, failed: results.length - created, claudeDesktopConfig }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/agent-prompt — Generate agent connection prompt
+  // ---------------------------------------------------------------------------
+
+  const agentPromptRoute = createRoute({
+    method: 'post',
+    path: '/admin/agent-prompt',
+    tags: ['Admin'],
+    summary: 'Generate agent connection prompt (magic word)',
+    request: {
+      body: {
+        content: { 'application/json': { schema: AgentPromptRequestSchema } },
+      },
+    },
+    responses: {
+      201: {
+        description: 'Agent prompt generated',
+        content: { 'application/json': { schema: AgentPromptResponseSchema } },
+      },
+      ...buildErrorResponses(['ADAPTER_NOT_AVAILABLE']),
+    },
+  });
+
+  router.openapi(agentPromptRoute, async (c) => {
+    if (!deps.jwtSecretManager || !deps.daemonConfig) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', { message: 'JWT signing not available' });
+    }
+
+    const body = c.req.valid('json');
+    const config = deps.daemonConfig;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ttl = body.ttl ?? 86400;
+    const expiresAt = nowSec + ttl;
+    const absoluteExpiresAt = nowSec + config.security.session_absolute_lifetime;
+
+    // Get target wallets
+    let targetWallets: Array<{ id: string; name: string; chain: string; defaultNetwork: string | null }>;
+
+    if (body.walletIds && body.walletIds.length > 0) {
+      targetWallets = body.walletIds
+        .map((wid) => deps.db.select().from(wallets).where(eq(wallets.id, wid)).get())
+        .filter((w): w is NonNullable<typeof w> => w != null && w.status === 'ACTIVE')
+        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, defaultNetwork: w.defaultNetwork }));
+    } else {
+      targetWallets = deps.db
+        .select()
+        .from(wallets)
+        .where(eq(wallets.status, 'ACTIVE'))
+        .all()
+        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, defaultNetwork: w.defaultNetwork }));
+    }
+
+    if (targetWallets.length === 0) {
+      return c.json(
+        { prompt: '', walletCount: 0, sessionsCreated: 0, expiresAt },
+        201,
+      );
+    }
+
+    // Create sessions and build prompt
+    const lines: string[] = [];
+    const host = c.req.header('Host') ?? 'localhost:3100';
+    const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
+    const baseUrl = `${protocol}://${host}`;
+
+    lines.push('[WAIaaS Connection]');
+    lines.push(`- URL: ${baseUrl}`);
+    lines.push('');
+    lines.push('Wallets:');
+
+    let sessionsCreated = 0;
+
+    for (let i = 0; i < targetWallets.length; i++) {
+      const w = targetWallets[i]!;
+      const sessionId = generateId();
+      const jwtPayload: JwtPayload = { sub: sessionId, wlt: w.id, iat: nowSec, exp: expiresAt };
+      const token = await deps.jwtSecretManager.signToken(jwtPayload);
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+
+      deps.db.insert(sessions).values({
+        id: sessionId,
+        walletId: w.id,
+        tokenHash,
+        expiresAt: new Date(expiresAt * 1000),
+        absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+        createdAt: new Date(nowSec * 1000),
+        renewalCount: 0,
+        maxRenewals: config.security.session_max_renewals,
+        constraints: null,
+        source: 'api',
+      }).run();
+
+      void deps.notificationService?.notify('SESSION_CREATED', w.id, { sessionId });
+      sessionsCreated++;
+
+      const network = w.defaultNetwork ?? w.chain;
+      lines.push(`${i + 1}. ${w.name} (${w.id}) \u2014 ${network}`);
+      lines.push(`   Session: ${token}`);
+    }
+
+    lines.push('');
+    lines.push('When the session expires (401 Unauthorized),');
+    lines.push('renew with POST /v1/wallets/{walletId}/sessions/{sessionId}/renew.');
+    lines.push('');
+    lines.push('Connect to WAIaaS wallets using the above information to check balances and manage assets.');
+
+    return c.json(
+      {
+        prompt: lines.join('\n'),
+        walletCount: targetWallets.length,
+        sessionsCreated,
+        expiresAt,
+      },
+      201,
+    );
   });
 
   return router;
