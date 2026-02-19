@@ -63,3 +63,4 @@
 - Issue files are placed in `internal/objectives/issues/` with the format `{NNN}-{slug}.md`.
 - Register issues in `internal/objectives/issues/TRACKER.md` and update the status.
 - Types: BUG (defect) / ENHANCEMENT (improvement) / MISSING (missing feature).
+- **Include test items in issues.** When registering an issue, add a "테스트 항목" section listing unit/integration tests needed to verify the fix and prevent regression. Skip only when the change is purely non-functional (docs, config, naming).

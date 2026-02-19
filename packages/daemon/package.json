@@ -6,7 +6,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/minho-yoo/waiaas.git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
     "directory": "packages/daemon"
   },
   "homepage": "https://github.com/minho-yoo/waiaas#readme",

@@ -372,7 +372,15 @@ v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 9-패키지 모�
 
 ### 활성
 
-(없음 — 다음 마일스톤에서 정의)
+#### Current Milestone: v2.4 npm Trusted Publishing 전환
+
+**목표:** npm 패키지 발행을 Classic Automation Token에서 OIDC Trusted Publishing으로 전환하여 supply chain 보안 강화
+
+**대상 기능:**
+- npm 8개 패키지 Trusted Publishing 설정
+- release.yml OIDC 전환 (`id-token: write` + `--provenance`)
+- NPM_TOKEN 시크릿 제거
+- Provenance 빌드 출처 증명 검증
 
 ### 범위 외
 
