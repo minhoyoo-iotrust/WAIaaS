@@ -13,11 +13,43 @@ dispatch:
 
 WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana and Ethereum with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
 
-## 0. Connection Discovery
+## 0. Connection Info
+
+### Magic Word (Agent Connection Prompt)
+
+If the user provides a `[WAIaaS Connection]` block, extract connection info and start API calls immediately:
+
+- `URL` -> API base URL
+- `Wallets` -> numbered list with wallet name, ID, network, session token
+- `Session` -> use as `Authorization: Bearer {token}` header
+
+Example format:
+```
+[WAIaaS Connection]
+- URL: http://localhost:3100
+
+Wallets:
+1. solana-testnet (019c6fb6-...) -- solana-devnet
+   Session: eyJhbG...
+```
+
+### Session Renewal
+
+On `401 Unauthorized` response:
+1. Extract `sessionId` from JWT payload `sub` claim
+2. `POST /v1/wallets/{walletId}/sessions/{sessionId}/renew`
+3. Use the new token from response for subsequent requests
+
+### No Connection Info?
+
+Ask the user:
+"WAIaaS connection info is needed. Copy the agent prompt from the Admin UI dashboard or from the `waiaas quickstart` completion screen using 'Copy Agent Prompt' and paste it here."
+
+### Manual Discovery
 
 Check if the daemon is running and discover existing wallets before starting.
 
-### Health Check
+#### Health Check
 
 ```bash
 curl -s http://localhost:3100/health
@@ -25,7 +57,7 @@ curl -s http://localhost:3100/health
 
 If successful, you get `{"status":"ok", ...}`. If the daemon is not running, start it with `waiaas start`.
 
-### List Existing Wallets (requires masterAuth)
+#### List Existing Wallets (requires masterAuth)
 
 ```bash
 curl -s http://localhost:3100/v1/wallets \
