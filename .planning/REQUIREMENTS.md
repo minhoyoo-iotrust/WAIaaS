@@ -69,35 +69,35 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROTO-01 | — | Pending |
-| PROTO-02 | — | Pending |
-| PROTO-03 | — | Pending |
-| PROTO-04 | — | Pending |
-| WSDK-01 | — | Pending |
-| WSDK-02 | — | Pending |
-| WSDK-03 | — | Pending |
-| DMON-01 | — | Pending |
-| DMON-02 | — | Pending |
-| DMON-03 | — | Pending |
-| DMON-04 | — | Pending |
-| DMON-05 | — | Pending |
-| NOTIF-01 | — | Pending |
-| NOTIF-02 | — | Pending |
-| NOTIF-03 | — | Pending |
-| RELAY-01 | — | Pending |
-| RELAY-02 | — | Pending |
-| RELAY-03 | — | Pending |
-| RELAY-04 | — | Pending |
-| DOCS-01 | — | Pending |
-| DOCS-02 | — | Pending |
-| DOCS-03 | — | Pending |
-| DOCS-04 | — | Pending |
+| PROTO-01 | Phase 198 | Pending |
+| PROTO-02 | Phase 198 | Pending |
+| PROTO-03 | Phase 198 | Pending |
+| PROTO-04 | Phase 198 | Pending |
+| WSDK-01 | Phase 199 | Pending |
+| WSDK-02 | Phase 199 | Pending |
+| WSDK-03 | Phase 199 | Pending |
+| DMON-01 | Phase 199 | Pending |
+| DMON-02 | Phase 199 | Pending |
+| DMON-03 | Phase 199 | Pending |
+| DMON-04 | Phase 199 | Pending |
+| DMON-05 | Phase 199 | Pending |
+| NOTIF-01 | Phase 200 | Pending |
+| NOTIF-02 | Phase 200 | Pending |
+| NOTIF-03 | Phase 200 | Pending |
+| RELAY-01 | Phase 200 | Pending |
+| RELAY-02 | Phase 200 | Pending |
+| RELAY-03 | Phase 200 | Pending |
+| RELAY-04 | Phase 200 | Pending |
+| DOCS-01 | Phase 201 | Pending |
+| DOCS-02 | Phase 201 | Pending |
+| DOCS-03 | Phase 201 | Pending |
+| DOCS-04 | Phase 201 | Pending |
 
 **Coverage:**
 - v2.6 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
