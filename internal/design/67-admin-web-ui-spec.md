@@ -997,6 +997,24 @@ function formatUptime(seconds: number): string {
 │  Created:       2026-02-10 14:30                    │
 │  Updated:       2026-02-10 15:22                    │
 │                                                     │
+│                                                     │
+│  -- Owner Settings -------------------------------- │
+│                                                     │
+│  Owner Address: 0x1234...5678                       │
+│  Owner State:   [LOCKED]                            │
+│                                                     │
+│  Approval Method                                    │
+│  (*) Use default (from global config)               │
+│  ( ) SDK + ntfy (direct push)                       │
+│  ( ) SDK + Telegram (messenger)                     │
+│  ( ) WalletConnect                                  │
+│  ( ) Telegram Bot (/approve command)                │
+│  ( ) Manual REST API                                │
+│                                                     │
+│  [Save Approval Method]                             │
+│                                                     │
+│  ------------------------------------------------- │
+│                                                     │
 │  [🗑 Terminate Agent]                               │
 │                                                     │
 └─────────────────────────────────────────────────────┘
@@ -1019,7 +1037,54 @@ function formatUptime(seconds: number): string {
 - 이름 수정: `PUT /v1/wallets/{id}` `{ name }` → 200 → toast + 데이터 갱신
 - 삭제: `DELETE /v1/wallets/{id}` → 200 → `window.location.hash = '#/wallets'`
 
-**Owner 필드**: 읽기 전용. Owner 등록은 SIWS/SIWE 서명이 필요하므로 Admin UI 범위 밖 (CLI `waiaas owner register` 사용).
+**Owner 필드**: Owner Address/State는 읽기 전용. [v2.6] Approval Method는 Owner 등록 후 수정 가능 (라디오 선택 + Save).
+
+#### [v2.6] Owner Settings > Approval Method 컴포넌트
+
+**컴포넌트:** `ApprovalMethodSelector`
+
+**props:**
+
+| prop | 타입 | 설명 |
+|------|------|------|
+| walletId | string | 대상 지갑 ID |
+| currentMethod | string \| null | 현재 설정값 (null = Use default) |
+| ownerAddress | string \| null | Owner 주소 (null이면 전체 비활성) |
+| ownerState | 'NONE' \| 'GRACE' \| 'LOCKED' | Owner 상태 |
+
+**라디오 옵션:**
+
+| 값 | 라벨 | DB 값 |
+|-----|------|-------|
+| default | Use default (from global config) | NULL |
+| sdk_ntfy | SDK + ntfy (direct push) | 'sdk_ntfy' |
+| sdk_telegram | SDK + Telegram (messenger) | 'sdk_telegram' |
+| walletconnect | WalletConnect | 'walletconnect' |
+| telegram_bot | Telegram Bot (/approve command) | 'telegram_bot' |
+| rest | Manual REST API | 'rest' |
+
+**UI 동작 규칙:**
+
+| 조건 | 동작 |
+|------|------|
+| Owner 미등록 (ownerAddress === null) | 라디오 전체 disabled. 안내: "Register an owner first" |
+| Owner 등록됨 | 라디오 활성. 현재값 선택 상태 |
+| Save 클릭 | PUT /v1/wallets/{id}/owner { approval_method: selectedValue } |
+| "Use default" 선택 후 Save | PUT /v1/wallets/{id}/owner { approval_method: null } |
+
+**데이터 흐름:**
+- 마운트 시: GET /v1/wallets/{id} 응답의 owner_approval_method 값으로 초기 선택
+- Save: PUT /v1/wallets/{id}/owner { approval_method } -> 200: toast "Approval method updated" -> 데이터 갱신
+- 에러: 400 시 toast에 에러 메시지 표시
+
+**경고 메시지 (조건부):**
+
+| 조건 | 경고 텍스트 |
+|------|-----------|
+| SDK 옵션 + signing_sdk.enabled = false | "Signing SDK is not enabled. Enable it in System > Settings." |
+| SDK 옵션 + signing_sdk.wallets = [] | "No wallet registered in Signing SDK settings." |
+
+상세: doc 74 (74-wallet-sdk-daemon-components.md) 섹션 10.3 참조.
 
 ### 8.3 Sessions (PAGE-03)
 
@@ -2154,7 +2219,8 @@ const sessions = await apiGet<Session[]>(`${API.SESSIONS}?walletId=${walletId}`)
 | 52 | auth-model-redesign | masterAuth — Admin UI 인증 흐름의 기반 |
 | 54 | cli-flow-redesign | CLI 명령 체계 — Admin UI와 기능 대응 |
 | 55 | dx-improvement-spec | DX 개선 — Admin UI가 DX 향상의 핵심 수단 |
+| 74 | wallet-sdk-daemon-components | [v2.6] Wallet SDK + Daemon 컴포넌트 — Approval Method UI 원본 설계 |
 
 ---
 
-*최종 업데이트: 2026-02-11 — Phase 64 섹션 1-7, Phase 65 섹션 8-10 작성 완료. 전체 10개 섹션 완성.*
+*최종 업데이트: 2026-02-20 — v2.6 보완: Approval Method UI 와이어프레임 + ApprovalMethodSelector 컴포넌트 추가 (섹션 8.2.2).*
