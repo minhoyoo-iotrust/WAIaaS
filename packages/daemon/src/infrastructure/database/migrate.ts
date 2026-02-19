@@ -85,7 +85,8 @@ function getCreateTableStatements(): string[] {
   max_renewals INTEGER NOT NULL DEFAULT 30,
   last_renewed_at INTEGER,
   absolute_expires_at INTEGER NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'api'
 )`,
 
     // Table 3: transactions
