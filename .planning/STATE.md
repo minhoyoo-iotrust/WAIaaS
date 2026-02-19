@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 Phase: 190 of 190 (검증 및 정리 -- 완료)
 Plan: 1 of 1 in current phase (complete)
 Status: v2.4 milestone complete
-Last activity: 2026-02-19 — Phase 190 Plan 01 executed
+Last activity: 2026-02-19 - Completed quick task 1: Issue 090 데몬 시작 시 마스터 패스워드 검증 추가
 
 Progress: [██████████] 100%
 
@@ -42,6 +42,12 @@ Full log in PROJECT.md and milestones/.
 - Pre-existing flaky lifecycle.test.ts -- not blocking
 - Pre-existing 3 sessions.test.tsx failures -- not blocking
 - OIDC-01 (npmjs.com Trusted Publisher 등록)은 수동 웹 UI 작업 -- 코드 자동화 불가
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Issue 090: 데몬 시작 시 마스터 패스워드 검증 추가 | 2026-02-19 | b8e6a6a | [1-issue-090](./quick/1-issue-090/) |
 
 ## Session Continuity
 
