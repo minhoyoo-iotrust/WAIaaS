@@ -9,8 +9,8 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### README 정합성
 
-- [ ] **README-01**: README SDK 코드 예시의 응답 필드가 실제 API 응답과 일치한다 (`balance.amount` → `balance.balance`, `tx.signature` → `tx.id` 등)
-- [ ] **README-02**: skill 파일(7개)의 version 헤더가 빌드 타임에 패키지 버전으로 자동 치환된다
+- [x] **README-01**: README SDK 코드 예시의 응답 필드가 실제 API 응답과 일치한다 (`balance.amount` → `balance.balance`, `tx.signature` → `tx.id` 등)
+- [x] **README-02**: skill 파일(7개)의 version 헤더가 빌드 타임에 패키지 버전으로 자동 치환된다
 
 ### CLI 첫 실행
 
@@ -72,8 +72,8 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| README-01 | 196 | Pending |
-| README-02 | 196 | Pending |
+| README-01 | 196 | Complete |
+| README-02 | 196 | Complete |
 | CLI-01 | 194 | Complete |
 | CLI-02 | 194 | Complete |
 | CLI-03 | 194 | Complete |

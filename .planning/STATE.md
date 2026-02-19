@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 197 — Python SDK 정합성 (버전/포트/gitignore)
+**Current focus:** Phase 197 — Docker DX + Python SDK 정합성
 
 ## Current Position
 
-Phase: 197 (docker-python-sdk-dx) — Python SDK 정합성
+Phase: 197 (docker-python-sdk-dx) — Docker DX + Python SDK 정합성
 Plan: 2 of 2 in current phase (COMPLETE)
 Status: Phase Complete
-Last activity: 2026-02-19 — Completed 197-02 (Python SDK consistency fixes)
+Last activity: 2026-02-19 — Completed 197-01 (Docker compose GHCR image + .env.example)
 
-Progress: [██████░░░░] 60% (6/10 plans)
+Progress: [███████░░░] 70% (7/10 plans)
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ Recent: Step logs downgraded to console.debug; EADDRINUSE detected via server er
 - [Phase 195]: Manual YYYY-MM-DD HH:mm date formatting for locale-independent expiry display
 - [Phase 197]: Version synced to pyproject.toml 1.7.0 as single source of truth
 - [Phase 196]: README content kept minimal for npm pages -- install + quickstart + key commands/methods only
+- [Phase 196-01]: Root skills/ path resolved via relative navigation from packages/skills/; sync-version.mjs refactored to shared function
 
 ### Blockers/Concerns
 
@@ -37,5 +38,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 196-02-PLAN.md (CLI/SDK npm README)
+Stopped at: Re-executed 196-01-PLAN.md (README SDK code fix + skill version sync)
 Resume file: None
