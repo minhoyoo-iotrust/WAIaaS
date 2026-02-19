@@ -89,10 +89,10 @@ Plans:
   2. npmjs.com 패키지 페이지에 "Built and signed on GitHub Actions" provenance 배지가 표시된다
   3. GitHub Secrets에서 NPM_TOKEN 시크릿이 제거되어 있다
   4. Deploy summary에 provenance 정보(소스 저장소, 커밋, 워크플로 링크)가 포함된다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 190-01: E2E 릴리스 검증 + NPM_TOKEN 제거 + Deploy summary 개선
+- [ ] 190-01-PLAN.md -- Deploy summary provenance 강화 + E2E 릴리스 검증 + NPM_TOKEN 제거
 
 ## Progress
 
