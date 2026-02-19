@@ -92,7 +92,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 192-01-PLAN.md — system.tsx 테스트 작성 (렌더링 + Daemon 설정 + API Keys CRUD + Danger Zone)
+- [x] 192-01-PLAN.md — system.tsx 테스트 작성 (렌더링 + Daemon 설정 + API Keys CRUD + Danger Zone)
 
 ### Phase 193: 공용 컴포넌트 + 기존 페이지 개선 + 임계값 복원
 **Goal**: 공용 컴포넌트 테스트 완비, 기존 페이지 커버리지 개선, 70% 임계값 복원으로 CI 게이트 통과 상태 달성
@@ -103,12 +103,11 @@ Plans:
   2. notifications.tsx, sessions.tsx, wallets.tsx 기존 테스트의 커버리지가 개선되어 미검증 분기가 감소한다
   3. vitest.config.ts의 lines/statements/functions 임계값이 70%로 설정되어 있다
   4. `pnpm turbo run lint && pnpm turbo run typecheck && pnpm --filter @waiaas/admin test:unit` 전체 통과한다
-
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 193-01: 공용 컴포넌트 테스트 작성 (empty-state + unsaved-dialog + settings-search + policy-rules-summary + dirty-guard)
-- [ ] 193-02: 기존 페이지 테스트 개선 + 임계값 복원 + CI 검증
+- [ ] 193-01-PLAN.md — 공용 컴포넌트 테스트 작성 (empty-state + unsaved-dialog + settings-search + policy-rules-summary + dirty-guard)
+- [ ] 193-02-PLAN.md — 기존 페이지 테스트 개선 + 임계값 복원 + CI 검증
 
 ## Progress
 
@@ -121,5 +120,5 @@ Plans:
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
 | 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
 | 191 | v2.4.1 | 2/2 | Complete | 2026-02-19 |
-| 192 | 1/1 | Complete   | 2026-02-19 | - |
+| 192 | v2.4.1 | 1/1 | Complete | 2026-02-19 |
 | 193 | v2.4.1 | 0/2 | Not started | - |
