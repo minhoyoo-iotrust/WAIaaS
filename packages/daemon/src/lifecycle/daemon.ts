@@ -196,7 +196,7 @@ export class DaemonLifecycle {
         // Acquire daemon lock (flock-like via proper-lockfile)
         await this.acquireDaemonLock(dataDir);
 
-        console.log('Step 1: Config loaded, daemon lock acquired');
+        console.debug('Step 1: Config loaded, daemon lock acquired');
       })(),
       5_000,
       'STEP1_CONFIG_LOCK',
@@ -228,7 +228,7 @@ export class DaemonLifecycle {
           });
         }
         if (compatibility.action === 'migrate') {
-          console.log('Step 2: Schema migration needed, applying...');
+          console.debug('Step 2: Schema migration needed, applying...');
         }
 
         // Create all tables + run migrations (idempotent)
@@ -243,10 +243,10 @@ export class DaemonLifecycle {
         });
         const importResult = this._settingsService.importFromConfig();
         if (importResult.imported > 0) {
-          console.log(`Step 2: Settings imported from config.toml (${importResult.imported} keys)`);
+          console.debug(`Step 2: Settings imported from config.toml (${importResult.imported} keys)`);
         }
 
-        console.log('Step 2: Database initialized');
+        console.debug('Step 2: Database initialized');
       })(),
       30_000,
       'STEP2_DATABASE',
@@ -270,7 +270,7 @@ export class DaemonLifecycle {
             console.error('Invalid master password.');
             process.exit(1);
           }
-          console.log('Step 2b: Master password verified (DB hash)');
+          console.debug('Step 2b: Master password verified (DB hash)');
         } else {
           // Path B: No DB hash -> check for existing keystore files
           const keystoreDir = join(dataDir, 'keystore');
@@ -297,9 +297,9 @@ export class DaemonLifecycle {
               console.error('Invalid master password. Cannot decrypt existing wallets.');
               process.exit(1);
             }
-            console.log('Step 2b: Master password verified (keystore migration)');
+            console.debug('Step 2b: Master password verified (keystore migration)');
           } else {
-            console.log('Step 2b: First install, no password validation needed');
+            console.debug('Step 2b: First install, no password validation needed');
           }
 
           // Store hash in DB for future startups
@@ -342,9 +342,9 @@ export class DaemonLifecycle {
         // v1.1: just verify keystore infrastructure is accessible
         // Full key decryption happens when agents are accessed
         if (masterPassword) {
-          console.log('Step 3: Keystore infrastructure verified (master password provided)');
+          console.debug('Step 3: Keystore infrastructure verified (master password provided)');
         } else {
-          console.log('Step 3: Keystore infrastructure verified (no master password)');
+          console.debug('Step 3: Keystore infrastructure verified (no master password)');
         }
       })(),
       30_000,
@@ -359,7 +359,7 @@ export class DaemonLifecycle {
         (async () => {
           const { AdapterPool } = await import('../infrastructure/adapter-pool.js');
           this.adapterPool = new AdapterPool();
-          console.log('Step 4: AdapterPool created (lazy init)');
+          console.debug('Step 4: AdapterPool created (lazy init)');
         })(),
         10_000,
         'STEP4_ADAPTER',
@@ -382,7 +382,7 @@ export class DaemonLifecycle {
           policy_defaults_approval_timeout: this._config.security.policy_defaults_approval_timeout,
         },
       });
-      console.log('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
+      console.debug('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
     }
 
     // ------------------------------------------------------------------
@@ -397,7 +397,7 @@ export class DaemonLifecycle {
         timeCost: 2,
         parallelism: 1,
       });
-      console.log('Step 4c: JWT secret manager initialized, master password hashed');
+      console.debug('Step 4c: JWT secret manager initialized, master password hashed');
     }
 
     // ------------------------------------------------------------------
@@ -410,7 +410,7 @@ export class DaemonLifecycle {
         eventBus: this.eventBus,
       });
       this.killSwitchService.ensureInitialized();
-      console.log('Step 4c-2: KillSwitchService initialized');
+      console.debug('Step 4c-2: KillSwitchService initialized');
     }
 
     // ------------------------------------------------------------------
@@ -471,7 +471,7 @@ export class DaemonLifecycle {
       }
 
       const channelNames = this.notificationService.getChannelNames();
-      console.log(
+      console.debug(
         `Step 4d: NotificationService initialized (${channelNames.length} channels: ${channelNames.join(', ') || 'none'})`,
       );
     } catch (err) {
@@ -514,9 +514,9 @@ export class DaemonLifecycle {
 
         if (autoStopConfig.enabled) {
           this.autoStopService.start();
-          console.log('Step 4c-3: AutoStop engine started');
+          console.debug('Step 4c-3: AutoStop engine started');
         } else {
-          console.log('Step 4c-3: AutoStop engine disabled');
+          console.debug('Step 4c-3: AutoStop engine disabled');
         }
       }
     } catch (err) {
@@ -551,9 +551,9 @@ export class DaemonLifecycle {
 
         if (monitorConfig.enabled) {
           this.balanceMonitorService.start();
-          console.log('Step 4c-4: Balance monitor started');
+          console.debug('Step 4c-4: Balance monitor started');
         } else {
-          console.log('Step 4c-4: Balance monitor disabled');
+          console.debug('Step 4c-4: Balance monitor disabled');
         }
       }
     } catch (err) {
@@ -590,9 +590,9 @@ export class DaemonLifecycle {
         });
         this.telegramBotService.start();
         this.telegramBotRef.current = this.telegramBotService;
-        console.log('Step 4c-5: Telegram Bot started');
+        console.debug('Step 4c-5: Telegram Bot started');
       } else {
-        console.log('Step 4c-5: Telegram Bot disabled');
+        console.debug('Step 4c-5: Telegram Bot disabled');
       }
     } catch (err) {
       console.warn('Step 4c-5 (fail-soft): Telegram Bot init warning:', err);
@@ -613,9 +613,9 @@ export class DaemonLifecycle {
         });
         await this.wcSessionService.initialize();
         this.wcServiceRef.current = this.wcSessionService;
-        console.log('Step 4c-6: WalletConnect service initialized');
+        console.debug('Step 4c-6: WalletConnect service initialized');
       } else {
-        console.log('Step 4c-6: WalletConnect disabled (no project_id)');
+        console.debug('Step 4c-6: WalletConnect disabled (no project_id)');
       }
     } catch (err) {
       console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
@@ -636,7 +636,7 @@ export class DaemonLifecycle {
           notificationService: this.notificationService ?? undefined,
           eventBus: this.eventBus,
         });
-        console.log('Step 4c-7: WcSigningBridge initialized');
+        console.debug('Step 4c-7: WcSigningBridge initialized');
       }
     } catch (err) {
       console.warn('Step 4c-7 (fail-soft): WcSigningBridge init warning:', err);
@@ -668,7 +668,7 @@ export class DaemonLifecycle {
         crossValidationThreshold,
       });
 
-      console.log(
+      console.debug(
         `Step 4e: PriceOracle initialized (Pyth primary${coingeckoOracle ? ' + CoinGecko fallback' : ''})`,
       );
     } catch (err) {
@@ -692,7 +692,7 @@ export class DaemonLifecycle {
       const forexProvider = new CoinGeckoForexProvider(coingeckoApiKey);
       this.forexRateService = new ForexRateService({ forexProvider, cache: forexCache });
 
-      console.log('Step 4e-2: ForexRateService initialized (30min cache)');
+      console.debug('Step 4e-2: ForexRateService initialized (30min cache)');
     } catch (err) {
       console.warn('Step 4e-2 (fail-soft): ForexRateService init warning:', err);
       this.forexRateService = null;
@@ -712,11 +712,11 @@ export class DaemonLifecycle {
       const actionsDir = join(dataDir, 'actions');
       if (existsSync(actionsDir)) {
         const result = await this.actionProviderRegistry.loadPlugins(actionsDir);
-        console.log(
+        console.debug(
           `Step 4f: ActionProviderRegistry initialized (${result.loaded.length} plugins loaded, ${result.failed.length} failed)`,
         );
       } else {
-        console.log('Step 4f: ActionProviderRegistry initialized (no plugins directory)');
+        console.debug('Step 4f: ActionProviderRegistry initialized (no plugins directory)');
       }
     } catch (err) {
       console.warn('Step 4f (fail-soft): ActionProviderRegistry init warning:', err);
@@ -728,7 +728,7 @@ export class DaemonLifecycle {
     if (this.sqlite && this._config!.daemon.update_check) {
       const { VersionCheckService } = await import('../infrastructure/version/index.js');
       this._versionCheckService = new VersionCheckService(this.sqlite);
-      console.log('Step 4g: VersionCheckService created');
+      console.debug('Step 4g: VersionCheckService created');
     }
 
     // ------------------------------------------------------------------
@@ -785,14 +785,36 @@ export class DaemonLifecycle {
           versionCheckService: this._versionCheckService,
         });
 
-        this.httpServer = serve({
+        const hostname = this._config!.daemon.hostname;
+        const port = this._config!.daemon.port;
+        const server = serve({
           fetch: app.fetch,
-          hostname: this._config!.daemon.hostname,
-          port: this._config!.daemon.port,
+          hostname,
+          port,
+        });
+        this.httpServer = server;
+
+        // Wait for server to actually start listening (catches EADDRINUSE)
+        await new Promise<void>((resolve, reject) => {
+          const onListening = () => {
+            server.removeListener('error', onError);
+            resolve();
+          };
+          const onError = (err: NodeJS.ErrnoException) => {
+            server.removeListener('listening', onListening);
+            if (err.code === 'EADDRINUSE') {
+              reject(new Error(`Port ${port} is already in use. Try a different port or stop the other process.`));
+            } else {
+              reject(err);
+            }
+          };
+          // @hono/node-server serve() returns a Node.js http.Server
+          server.once('listening', onListening);
+          server.once('error', onError);
         });
 
-        console.log(
-          `Step 5: HTTP server listening on ${this._config!.daemon.hostname}:${this._config!.daemon.port}`,
+        console.debug(
+          `Step 5: HTTP server listening on ${hostname}:${port}`,
         );
       })(),
       5_000,
@@ -878,9 +900,9 @@ export class DaemonLifecycle {
           runImmediately: true,
           handler: async () => { await this._versionCheckService!.check(); },
         });
-        console.log('Step 6: Version check worker registered');
+        console.debug('Step 6: Version check worker registered');
       } else {
-        console.log('Step 6: Version check disabled');
+        console.debug('Step 6: Version check disabled');
       }
 
       this.workers.startAll();
@@ -889,8 +911,11 @@ export class DaemonLifecycle {
       this.pidPath = join(dataDir, this._config!.daemon.pid_file);
       writeFileSync(this.pidPath, String(process.pid), 'utf-8');
 
-      console.log(`Step 6: Workers started, PID file written`);
-      console.log(`WAIaaS daemon ready (PID: ${process.pid})`);
+      console.debug(`Step 6: Workers started, PID file written`);
+      console.log(
+        `WAIaaS daemon ready on http://${this._config!.daemon.hostname}:${this._config!.daemon.port} (PID: ${process.pid})\n` +
+        `  Admin UI: http://${this._config!.daemon.hostname}:${this._config!.daemon.port}/admin`,
+      );
     } catch (err) {
       console.warn('Step 6 (fail-soft): Worker/PID warning:', err);
     }

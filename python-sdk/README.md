@@ -13,7 +13,7 @@ pip install waiaas
 ```python
 from waiaas import WAIaaSClient
 
-async with WAIaaSClient("http://localhost:3000", "wai_sess_xxx") as client:
+async with WAIaaSClient("http://localhost:3100", "wai_sess_xxx") as client:
     balance = await client.get_balance()
     print(balance.balance, balance.symbol)
 ```

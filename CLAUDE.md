@@ -45,11 +45,12 @@
 
 - **Create a milestone branch before any work.** When starting a new milestone, create `milestone/v{X.Y}` branch from `main` before making any commits (including planning docs).
 - All milestone work (planning, implementation, tests) happens on the milestone branch.
-- Merge to `main` via PR when the milestone is complete.
+- Merge to `main` via PR when the milestone is complete. Never merge directly — always create a GitHub PR with `gh pr create`.
 
 ## Milestone Completion
 
-- **Run `pnpm turbo run lint` and `pnpm turbo run typecheck` before merging milestone branch to main.** Lint/type errors in merged code block release-please PRs.
+- **Create PR with `gh pr create`** when all phases are done. PR title: `Milestone v{X.Y}: {name}`. PR body: summary of phases, plans, key changes, and test results.
+- **Run `pnpm turbo run lint` and `pnpm turbo run typecheck` before creating the PR.** Lint/type errors in merged code block release-please PRs.
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).
 - **Release flow**: Merge PR (Conventional Commits) → release-please auto-creates Release PR → Merge Release PR (Gate 1: release decision) → release.yml quality gate → deploy job manual approval (Gate 2: deployment execution).
 - **Commit conventions**: `feat:` (minor), `fix:` (patch), `BREAKING CHANGE:` (major). `docs:`, `test:`, `chore:`, `ci:`, etc. are excluded from CHANGELOG.

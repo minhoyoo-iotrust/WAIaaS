@@ -19,6 +19,21 @@ hostname = "127.0.0.1"
 
 [database]
 path = "data/waiaas.db"
+
+# [security]
+# policy_defaults_delay = 0
+# policy_defaults_approval_timeout = 3600
+
+# [rpc]
+# solana_devnet = "https://api.devnet.solana.com"
+# ethereum_sepolia = "https://rpc.sepolia.org"
+
+# [notifications]
+# enabled = false
+# telegram_bot_token = ""
+# telegram_chat_id = ""
+
+# Full reference: https://github.com/minhoyoo-iotrust/WAIaaS#configuration
 `;
 
 export async function initCommand(dataDir: string): Promise<void> {
@@ -30,28 +45,44 @@ export async function initCommand(dataDir: string): Promise<void> {
     return;
   }
 
-  // Create data directory
-  mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+  try {
+    // Create data directory
+    mkdirSync(dataDir, { recursive: true, mode: 0o700 });
 
-  // Create subdirectories
-  const subdirs = ['keystore', 'data', 'logs', 'backups'];
-  for (const sub of subdirs) {
-    const subPath = join(dataDir, sub);
-    if (!existsSync(subPath)) {
-      mkdirSync(subPath, { recursive: true, mode: 0o700 });
+    // Create subdirectories
+    const subdirs = ['keystore', 'data', 'logs', 'backups'];
+    for (const sub of subdirs) {
+      const subPath = join(dataDir, sub);
+      if (!existsSync(subPath)) {
+        mkdirSync(subPath, { recursive: true, mode: 0o700 });
+      }
     }
-  }
 
-  // Write default config.toml (skip if already exists)
-  if (!existsSync(configPath)) {
-    writeFileSync(configPath, DEFAULT_CONFIG, { mode: 0o644 });
-  }
+    // Write default config.toml (skip if already exists)
+    if (!existsSync(configPath)) {
+      writeFileSync(configPath, DEFAULT_CONFIG, { mode: 0o644 });
+    }
 
-  console.log(`Initialized WAIaaS data directory: ${dataDir}`);
-  console.log(`  config.toml`);
-  for (const sub of subdirs) {
-    console.log(`  ${sub}/`);
+    console.log(`Initialized WAIaaS data directory: ${dataDir}`);
+    console.log(`  config.toml`);
+    for (const sub of subdirs) {
+      console.log(`  ${sub}/`);
+    }
+    console.log('');
+    console.log('Set your master password before starting:');
+    console.log('  export WAIAAS_MASTER_PASSWORD="your-secure-password"');
+    console.log('Or use a password file:');
+    console.log('  echo "your-secure-password" > ~/.waiaas/master-password.txt');
+    console.log('  export WAIAAS_MASTER_PASSWORD_FILE=~/.waiaas/master-password.txt');
+    console.log('');
+    console.log('Next: waiaas start');
+  } catch (err: unknown) {
+    const error = err as NodeJS.ErrnoException;
+    if (error.code === 'EACCES' || error.code === 'EPERM') {
+      console.error(`Permission denied: Cannot create ${dataDir}`);
+      console.error(`Try: sudo mkdir -p ${dataDir} && sudo chown $(whoami) ${dataDir}`);
+      process.exit(1);
+    }
+    throw error;
   }
-  console.log('');
-  console.log('Next: waiaas start');
 }

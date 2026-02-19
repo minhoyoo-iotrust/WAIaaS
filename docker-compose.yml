@@ -39,9 +39,7 @@
 
 services:
   daemon:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/minhoyoo-iotrust/waiaas:latest
     container_name: waiaas-daemon
     ports:
       - "127.0.0.1:3100:3100"

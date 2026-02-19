@@ -33,6 +33,7 @@ interface CreatedWallet {
   defaultNetwork: string | null;
   availableNetworks: string[];
   sessionToken: string | null;
+  expiresAt: number | null;
 }
 
 interface NetworkInfo {
@@ -161,14 +162,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       body: JSON.stringify({ name, chain, environment: mode }),
     });
 
-    if (!walletRes.ok) {
-      const body = await walletRes.json().catch(() => null) as Record<string, unknown> | null;
-      const msg = body?.['message'] ?? walletRes.statusText;
-      console.error(`Error: Failed to create ${chain} wallet (HTTP ${walletRes.status}): ${msg}`);
-      process.exit(1);
-    }
-
-    const walletData = await walletRes.json() as {
+    let walletData: {
       id: string;
       name: string;
       chain: string;
@@ -177,6 +171,49 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       defaultNetwork: string | null;
       session: { id: string; token: string; expiresAt: number } | null;
     };
+
+    if (walletRes.status === 409) {
+      // QS-03: Idempotent -- wallet with same name already exists, reuse it
+      const listRes = await fetch(`${baseUrl}/v1/wallets`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Master-Password': password,
+        },
+      });
+      if (!listRes.ok) {
+        console.error(`Error: Failed to list wallets (HTTP ${listRes.status})`);
+        process.exit(1);
+      }
+      const listData = await listRes.json() as { wallets: Array<{
+        id: string; name: string; chain: string; environment: string;
+        publicKey: string; defaultNetwork: string | null;
+      }> };
+      const existing = listData.wallets.find((w) => w.name === name);
+      if (!existing) {
+        console.error(`Error: Wallet '${name}' reported as existing but not found in list`);
+        process.exit(1);
+      }
+      console.log(`Reusing existing wallet: ${existing.name} (${existing.id})`);
+      walletData = {
+        ...existing,
+        session: null, // will create new session via fallback path
+      };
+    } else if (!walletRes.ok) {
+      const body = await walletRes.json().catch(() => null) as Record<string, unknown> | null;
+      const msg = body?.['message'] ?? walletRes.statusText;
+      console.error(`Error: Failed to create ${chain} wallet (HTTP ${walletRes.status}): ${msg}`);
+      process.exit(1);
+    } else {
+      walletData = await walletRes.json() as {
+        id: string;
+        name: string;
+        chain: string;
+        environment: string;
+        publicKey: string;
+        defaultNetwork: string | null;
+        session: { id: string; token: string; expiresAt: number } | null;
+      };
+    }
 
     // Fetch available networks (graceful degradation on failure)
     let availableNetworks: string[] = [];
@@ -188,8 +225,8 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
         },
       });
       if (networksRes.ok) {
-        const networksData = await networksRes.json() as { networks: NetworkInfo[] };
-        availableNetworks = (networksData.networks ?? []).map((n) => n.network);
+        const networksData = await networksRes.json() as { availableNetworks: NetworkInfo[] };
+        availableNetworks = (networksData.availableNetworks ?? []).map((n) => n.network);
       }
     } catch {
       // Graceful degradation: continue with empty networks
@@ -204,6 +241,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       defaultNetwork: walletData.defaultNetwork,
       availableNetworks,
       sessionToken: walletData.session?.token ?? null,
+      expiresAt: walletData.session?.expiresAt ?? null,
     });
   }
 
@@ -219,14 +257,15 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       await writeFile(tmpPath, wallet.sessionToken, 'utf-8');
       await rename(tmpPath, tokenPath);
     } else {
-      // Fallback: create session separately (for older daemons without auto-session)
-      await createSessionAndWriteToken({
+      // Fallback: create session separately (for older daemons without auto-session, or reused wallets)
+      const { expiresAt } = await createSessionAndWriteToken({
         baseUrl,
         dataDir: opts.dataDir,
         password,
         walletId: wallet.id,
         expiresIn,
       });
+      wallet.expiresAt = expiresAt;
     }
 
     const slug = toSlug(wallet.name);
@@ -256,12 +295,21 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
     if (wallet.availableNetworks.length > 0) {
       console.log(`  Available Networks: ${wallet.availableNetworks.join(', ')}`);
     }
+    if (wallet.expiresAt) {
+      const d = new Date(wallet.expiresAt * 1000);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      console.log(`  Expires at: ${yyyy}-${mm}-${dd} ${hh}:${min}`);
+    }
   }
 
   // Step 6: MCP config snippet
   console.log('');
   console.log('MCP Configuration:');
-  console.log('(claude_desktop_config.json에 추가하세요)');
+  console.log('(Add to your claude_desktop_config.json)');
   const configSnippet = { mcpServers };
   console.log(JSON.stringify(configSnippet, null, 2));
   printConfigPath();
@@ -281,9 +329,9 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
     console.log(`   Session: ${wallet.sessionToken ?? 'N/A'}`);
   });
   console.log('');
-  console.log('\uC138\uC158\uC774 \uB9CC\uB8CC\uB418\uBA74(401 Unauthorized)');
-  console.log('POST /v1/wallets/{walletId}/sessions/{sessionId}/renew \uC73C\uB85C \uAC31\uC2E0\uD558\uC138\uC694.');
+  console.log('If the session expires (401 Unauthorized),');
+  console.log('renew it via POST /v1/wallets/{walletId}/sessions/{sessionId}/renew');
   console.log('');
-  console.log('\uC704 \uC815\uBCF4\uB85C WAIaaS \uC9C0\uAC11\uC5D0 \uC5F0\uACB0\uD558\uC5EC \uC794\uC561\uC744 \uD655\uC778\uD558\uACE0 \uAD00\uB9AC\uD574\uC8FC\uC138\uC694.');
+  console.log('Use the above info to connect to WAIaaS wallets, check balances, and manage transactions.');
   console.log('\u2500'.repeat(40));
 }

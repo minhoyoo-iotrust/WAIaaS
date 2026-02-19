@@ -44,14 +44,16 @@ export async function startCommand(dataDir: string): Promise<void> {
   }
 
   // Start daemon (in-process)
+  // daemon.ts outputs "WAIaaS daemon ready on ..." + Admin UI URL on success
   try {
     const { startDaemon } = await import('@waiaas/daemon');
     await startDaemon(dataDir, password);
-    console.log(
-      `WAIaaS daemon started on 127.0.0.1:3100 (PID: ${process.pid})`,
-    );
   } catch (err) {
-    console.error(`Failed to start daemon: ${(err as Error).message}`);
+    const msg = (err as Error).message;
+    console.error(`Failed to start daemon: ${msg}`);
+    if (msg.includes('already in use')) {
+      console.error('Hint: Check what is using the port with: lsof -i :3100');
+    }
     process.exit(1);
   }
 }

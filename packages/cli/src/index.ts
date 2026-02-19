@@ -22,6 +22,7 @@
  * All commands accept --data-dir <path> (default: ~/.waiaas/)
  */
 
+import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { startCommand } from './commands/start.js';
@@ -35,12 +36,15 @@ import { upgradeCommand } from './commands/upgrade.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
+
 const program = new Command();
 
 program
   .name('waiaas')
   .description('WAIaaS - AI Agent Wallet-as-a-Service')
-  .version('0.0.0');
+  .version(pkg.version);
 
 program
   .command('init')

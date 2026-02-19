@@ -184,7 +184,7 @@ describe('mcpSetupCommand', () => {
     );
   });
 
-  it('no wallets -> error', async () => {
+  it('no wallets -> error with quickstart guidance', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string | URL) => {
       const urlStr = String(url);
       if (urlStr.includes('/health')) {
@@ -203,7 +203,7 @@ describe('mcpSetupCommand', () => {
     })).rejects.toThrow('process.exit(1)');
 
     expect(mockStderr).toHaveBeenCalledWith(
-      expect.stringContaining('No wallets found'),
+      expect.stringContaining('Run waiaas quickstart first'),
     );
   });
 
@@ -586,7 +586,7 @@ describe('mcpSetupCommand', () => {
     expect(config.mcpServers['waiaas-beta'].env['WAIAAS_WALLET_NAME']).toBe('Beta');
   });
 
-  it('CLIP-05: --all + 0 wallets -> error', async () => {
+  it('CLIP-05: --all + 0 wallets -> error with quickstart guidance', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string | URL) => {
       const urlStr = String(url);
       if (urlStr.includes('/health')) {
@@ -606,7 +606,7 @@ describe('mcpSetupCommand', () => {
     })).rejects.toThrow('process.exit(1)');
 
     expect(mockStderr).toHaveBeenCalledWith(
-      expect.stringContaining('No wallets found'),
+      expect.stringContaining('Run waiaas quickstart first'),
     );
   });
 
@@ -683,6 +683,133 @@ describe('mcpSetupCommand', () => {
 
     expect(mockStderr).toHaveBeenCalledWith(
       expect.stringContaining('Cannot use --all with --wallet'),
+    );
+  });
+
+  // ===== DAEMON-04 + MCP-01 requirement tests =====
+
+  it('DAEMON-04: no wallets error says "quickstart" not "init"', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string | URL) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/health')) {
+        return Promise.resolve(mockResponse(200, { status: 'ok' }));
+      }
+      if (urlStr.includes('/v1/wallets')) {
+        return Promise.resolve(mockResponse(200, { items: [] }));
+      }
+      return Promise.reject(new Error(`Unexpected: ${urlStr}`));
+    }));
+
+    const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
+    await expect(mcpSetupCommand({
+      dataDir: testDir,
+      masterPassword: 'test-pw',
+    })).rejects.toThrow('process.exit(1)');
+
+    // Should contain quickstart guidance
+    expect(mockStderr).toHaveBeenCalledWith(
+      expect.stringContaining('Run waiaas quickstart first'),
+    );
+    // Should NOT contain old "init" guidance
+    const allStderrCalls = mockStderr.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(allStderrCalls.every((s: string) => !s.includes('Run waiaas init first'))).toBe(true);
+  });
+
+  it('MCP-01: default expiry shows 24h warning', async () => {
+    vi.stubGlobal('fetch', createSuccessFetchMock());
+
+    const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
+    await mcpSetupCommand({
+      dataDir: testDir,
+      baseUrl: 'http://127.0.0.1:3100',
+      masterPassword: 'test-pw',
+      // expiresIn NOT specified -> defaults to 86400
+    });
+
+    expect(mockStdout).toHaveBeenCalledWith(
+      'Note: Session expires in 24 hours by default.',
+    );
+    expect(mockStdout).toHaveBeenCalledWith(
+      expect.stringContaining('--expires-in'),
+    );
+  });
+
+  it('MCP-01: custom expiry does NOT show 24h warning', async () => {
+    const fetchMock = vi.fn((url: string | URL) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/health')) {
+        return Promise.resolve(mockResponse(200, { status: 'ok' }));
+      }
+      if (urlStr.includes('/v1/wallets')) {
+        return Promise.resolve(mockResponse(200, {
+          items: [{ id: 'wallet-1', name: 'Test Wallet' }],
+        }));
+      }
+      if (urlStr.includes('/v1/sessions')) {
+        return Promise.resolve(mockResponse(200, {
+          id: 'session-123',
+          token: 'jwt.token.here',
+          expiresAt: Math.floor(Date.now() / 1000) + 7200,
+        }));
+      }
+      return Promise.reject(new Error(`Unexpected: ${urlStr}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
+    await mcpSetupCommand({
+      dataDir: testDir,
+      expiresIn: 7200, // Custom 2h
+      masterPassword: 'test-pw',
+    });
+
+    // Should NOT show 24h default warning
+    const allStdoutCalls = mockStdout.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(allStdoutCalls.every((s: string) => !s.includes('Session expires in 24 hours by default'))).toBe(true);
+  });
+
+  it('MCP-01: --all mode shows default expiry warning', async () => {
+    let sessionCallCount = 0;
+    const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/health')) {
+        return Promise.resolve(mockResponse(200, { status: 'ok' }));
+      }
+      if (urlStr.includes('/v1/wallets')) {
+        return Promise.resolve(mockResponse(200, {
+          items: [
+            { id: 'wallet-1', name: 'Alpha' },
+            { id: 'wallet-2', name: 'Beta' },
+          ],
+        }));
+      }
+      if (urlStr.includes('/v1/sessions')) {
+        sessionCallCount++;
+        const body = JSON.parse(init?.body as string) as { walletId: string };
+        return Promise.resolve(mockResponse(200, {
+          id: `session-${sessionCallCount}`,
+          token: `token-for-${body.walletId}`,
+          expiresAt: Math.floor(Date.now() / 1000) + 86400,
+        }));
+      }
+      return Promise.reject(new Error(`Unexpected: ${urlStr}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
+    await mcpSetupCommand({
+      dataDir: testDir,
+      baseUrl: 'http://127.0.0.1:3100',
+      all: true,
+      masterPassword: 'test-pw',
+      // expiresIn NOT specified -> defaults to 86400
+    });
+
+    expect(mockStdout).toHaveBeenCalledWith(
+      'Note: Session expires in 24 hours by default.',
+    );
+    expect(mockStdout).toHaveBeenCalledWith(
+      expect.stringContaining('--expires-in'),
     );
   });
 });

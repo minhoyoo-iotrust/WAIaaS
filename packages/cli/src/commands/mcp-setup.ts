@@ -158,7 +158,7 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     const wallets = await fetchWallets(baseUrl, password);
 
     if (wallets.length === 0) {
-      console.error('Error: No wallets found. Run waiaas init first.');
+      console.error('Error: No wallets found. Run waiaas quickstart first.');
       process.exit(1);
     }
 
@@ -194,6 +194,12 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     console.log('\nAdd to your Claude Desktop config.json:');
     console.log(JSON.stringify(configSnippet, null, 2));
     printConfigPath();
+
+    if (expiresIn === 86400) {
+      console.log('');
+      console.log('Note: Session expires in 24 hours by default.');
+      console.log('  Use --expires-in <seconds> to customize (e.g., --expires-in 604800 for 7 days).');
+    }
     return;
   }
 
@@ -207,7 +213,7 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
       const wallets = await fetchWallets(baseUrl, password);
 
       if (wallets.length === 0) {
-        console.error('Error: No wallets found. Run waiaas init first.');
+        console.error('Error: No wallets found. Run waiaas quickstart first.');
         process.exit(1);
       }
 
@@ -266,6 +272,12 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   console.log(`  Token file: ${tokenPath}`);
   console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
   console.log(`  Wallet: ${walletId}`);
+
+  if (expiresIn === 86400) {
+    console.log('');
+    console.log('Note: Session expires in 24 hours by default.');
+    console.log('  Use --expires-in <seconds> to customize (e.g., --expires-in 604800 for 7 days).');
+  }
 
   // Step 7: Print Claude Desktop config.json snippet (CLI-05 + CLIP-02/03)
   const slug = toSlug(walletName ?? walletId);

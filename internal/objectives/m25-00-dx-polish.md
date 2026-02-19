@@ -26,8 +26,7 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 | 항목 | 내용 | 위치 |
 |------|------|------|
 | **README SDK 코드 수정** | `balance.amount` → `balance.balance`, `tx.signature` → `tx.id` 등 실제 응답 필드로 교정 | `README.md` |
-| **example agent 금액 수정** | `'0.001'` (소수) → lamport/wei 단위 정수 문자열로 수정. SDK validator (`/^\d+$/`)와 일치 | `examples/simple-agent/src/index.ts` |
-| **skill 파일 버전 헤더** | 전체 skill 파일의 `version` 헤더를 실제 패키지 버전과 동기화 | `skills/*.skill.md` |
+| **skill 파일 버전 헤더** | 전체 skill 파일(7개)의 `version` 헤더가 `1.5.0~1.8.0`으로 현재 패키지 버전(`2.3.0`)과 불일치. 빌드 타임 자동 치환으로 동기화 | `skills/*.skill.md` |
 
 ### 2. CLI 첫 실행 경험 개선
 
@@ -43,8 +42,8 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 
 | 항목 | 내용 | 위치 |
 |------|------|------|
-| **포트 충돌 에러 명확화** | `EADDRINUSE` 감지 → "Port 3100 is already in use" 메시지 출력 | `packages/daemon/src/daemon.ts` |
-| **내부 Step 로그 억제** | 기본 모드에서 Step 1~6 내부 로그를 `debug` 레벨로 하향. 시작 완료 시 한 줄 요약만 출력 | `packages/daemon/src/daemon.ts` |
+| **포트 충돌 에러 명확화** | `EADDRINUSE` 감지 → "Port 3100 is already in use" 메시지 출력 | `packages/daemon/src/lifecycle/daemon.ts` |
+| **내부 Step 로그 억제** | 기본 모드에서 Step 1~6 내부 로그를 `debug` 레벨로 하향. 시작 완료 시 한 줄 요약만 출력 | `packages/daemon/src/lifecycle/daemon.ts` |
 | **Admin UI URL 출력** | 시작 완료 메시지에 `Admin UI: http://127.0.0.1:3100/admin` 포함 | `packages/cli/src/commands/start.ts` |
 | **mcp setup 에러 메시지 수정** | "Run waiaas init first" → "Run waiaas quickstart first" | `packages/cli/src/commands/mcp-setup.ts` |
 
@@ -55,6 +54,7 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 | **한글 출력 영문 전환** | `(claude_desktop_config.json에 추가하세요)` → 영문으로 변경 | `packages/cli/src/commands/quickstart.ts` |
 | **세션 만료 시점 표시** | 토큰 발급 후 `Expires at: YYYY-MM-DD HH:mm` 출력 | `packages/cli/src/commands/quickstart.ts` |
 | **멱등성 확보** | 동일 이름 지갑 존재 시 409 → 기존 지갑 재사용 + 세션만 재발급 | `packages/cli/src/commands/quickstart.ts` |
+| **네트워크 응답 필드 수정** | `networksData.networks` → `networksData.availableNetworks` — API 응답 필드와 불일치 수정 (line 191) | `packages/cli/src/commands/quickstart.ts` |
 
 ### 5. Docker DX
 
@@ -70,7 +70,7 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 | **버전 통일** | `__version__` = `pyproject.toml` version 동기화 | `python-sdk/waiaas/__init__.py`, `pyproject.toml` |
 | **README 기본 포트 수정** | `3000` → `3100` | `python-sdk/README.md` |
 | **`.venv/` gitignore** | `.venv/` 디렉토리를 `.gitignore`에 추가하고 git 추적에서 제거 | `python-sdk/.gitignore` |
-| **응답 필드명 정합** | `availableNetworks` vs `networks` — 실제 API 응답 기준으로 통일 | `python-sdk/waiaas/client.py` |
+| **응답 필드명 정합** | Python SDK는 이미 `availableNetworks` 정확히 사용 중. 실제 버그는 `quickstart.ts:191`에서 API 응답의 `availableNetworks`를 `.networks`로 잘못 읽는 문제 — 수정 대상은 quickstart | `packages/cli/src/commands/quickstart.ts` |
 
 ### 7. TypeScript SDK 개선
 
@@ -83,7 +83,7 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 
 | 항목 | 내용 | 위치 |
 |------|------|------|
-| **mcp setup 만료 안내** | 세션 발급 시 기본 만료 시간 경고 + `--expires-in` 옵션 안내 | `packages/cli/src/commands/mcp-setup.ts` |
+| **mcp setup 만료 안내** | 현재 `Expires at:` 타임스탬프는 출력됨. 추가로 기본 만료 기간(24h) 경고 + `--expires-in` 옵션 존재 안내 보강 | `packages/cli/src/commands/mcp-setup.ts` |
 
 ---
 
@@ -91,11 +91,11 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 
 | 항목 | 이유 | 대상 마일스톤 |
 |------|------|-------------|
-| Admin UI 온보딩 (지갑 0개 상태 CTA) | Admin UI 메뉴 재구성과 함께 처리 | m23 |
+| Admin UI 온보딩 (지갑 0개 상태 CTA) | v2.3에서 Admin UI 메뉴 재구성 완료. 온보딩 CTA는 미구현 상태로 잔류 | TBD |
 | `waiaas start --background` 데몬 모드 | 프로세스 관리 아키텍처 변경 필요 (별도 설계) | TBD |
 | SDK `createSession()` 메서드 추가 | SDK 인터페이스 확장 (별도 설계) | TBD |
-| Python SDK PyPI 게시 | npm Trusted Publishing (m24)와 병행 검토 | m24 |
-| `--password` CLI 인자 보안 경고 | 기능 변경이 아닌 문서화로 충분 | m21 (CONTRIBUTING.md 또는 docs/) |
+| Python SDK PyPI 게시 | v2.4에서 npm Trusted Publishing 완료. PyPI는 미처리 상태로 잔류 | TBD |
+| `--password` CLI 인자 보안 경고 | 기능 변경이 아닌 문서화로 충분 | TBD |
 
 ---
 
@@ -106,16 +106,16 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 | 1 | docker-compose.yml 기본 동작 | GHCR 이미지 pull | 대다수 사용자는 빌드 없이 실행 원함. 개발자용 빌드는 오버라이드 파일로 분리 |
 | 2 | quickstart 멱등성 전략 | 동일 이름 존재 시 재사용 | 409 에러보다 "이미 있으면 사용" 패턴이 자연스러움. 첫 사용자 재실행 시 혼란 방지 |
 | 3 | 데몬 Step 로그 처리 | debug 레벨 하향 | 운영자는 `--log-level debug`로 볼 수 있음. 기본 모드에서는 시작 요약 1줄만 출력 |
-| 4 | skill 파일 버전 동기화 방식 | 빌드 타임 자동 치환 | 수동 관리 대신 `version` 필드를 빌드 시 `package.json`에서 주입 |
+| 4 | skill 파일 버전 동기화 방식 | 빌드 타임 자동 치환 | `@waiaas/skills` 패키지의 빌드 스크립트에서 루트 `package.json`의 version을 읽어 `skills/*.skill.md`의 `version` 헤더를 치환. turbo `build` 파이프라인에 포함 |
 | 5 | Python SDK PyPI 게시 시점 | m24에서 npm과 함께 | Trusted Publishing 인프라를 npm + PyPI 동시에 구축하면 효율적 |
 
 ---
 
 ## E2E 검증 시나리오
 
-**자동화 비율: 87% — `[HUMAN]` 3건**
+**자동화 비율: 88% — `[HUMAN]` 3건**
 
-### 자동 검증 (20건)
+### 자동 검증 (21건)
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
@@ -139,14 +139,15 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 | 18 | mcp setup 에러 메시지에 "quickstart" 포함 | 지갑 0개 상태에서 mcp setup → 출력에 "quickstart" 포함 assert | [L0] |
 | 19 | CLI README 존재 | `packages/cli/README.md` 파일 존재 assert | [L0] |
 | 20 | SDK README 존재 | `packages/sdk/README.md` 파일 존재 assert | [L0] |
+| 21 | quickstart 네트워크 필드가 API 응답과 일치 | `quickstart.ts`에서 `availableNetworks` 필드 사용 assert | [L0] |
 
 ### 수동 검증 [HUMAN]
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 21 | 신규 환경에서 5분 내 첫 트랜잭션 | 클린 머신에서 `npm i -g @waiaas/cli` → quickstart → MCP 연결 → 잔액 조회까지 5분 내 완료 | [HUMAN] |
-| 22 | README 코드 복붙 동작 | README의 SDK 코드를 그대로 복사하여 실행 → 에러 없이 동작 | [HUMAN] |
-| 23 | Docker 첫 실행 | `docker compose up -d` → 30초 내 healthy → Admin UI 접속 가능 | [HUMAN] |
+| 22 | 신규 환경에서 5분 내 첫 트랜잭션 | 클린 머신에서 `npm i -g @waiaas/cli` → quickstart → MCP 연결 → 잔액 조회까지 5분 내 완료 | [HUMAN] |
+| 23 | README 코드 복붙 동작 | README의 SDK 코드를 그대로 복사하여 실행 → 에러 없이 동작 | [HUMAN] |
+| 24 | Docker 첫 실행 | `docker compose up -d` → 30초 내 healthy → Admin UI 접속 가능 | [HUMAN] |
 
 ---
 
@@ -166,8 +167,8 @@ v2.0.0-rc.1 기준 DX 분석 결과, 핵심 플로우는 동작하지만 첫 사
 | 1 | quickstart 멱등성 구현 복잡도 | 기존 지갑 재사용 시 세션·네트워크 상태 복원 로직 필요 | 단순히 이름 기준 GET → 존재하면 세션만 재발급. 상태 복원 미시도 |
 | 2 | Step 로그 하향 후 디버깅 어려움 | 사용자 보고 시 정보 부족 가능 | `--log-level debug` 사용 안내를 에러 메시지에 포함 |
 | 3 | docker-compose.yml 변경으로 기존 사용자 혼란 | `build:` → `image:` 전환 시 기존 사용자가 로컬 빌드 방법 모를 수 있음 | docker-compose.build.yml 존재를 README Docker 섹션에 명시 |
-| 4 | Python SDK 응답 필드 수정 시 breaking change | `availableNetworks` → `networks` 변경은 기존 사용자 코드 파손 | 실제 API 응답 필드를 기준으로 통일. Python SDK 미게시 상태이므로 breaking change 부담 없음 |
+| 4 | quickstart 네트워크 필드 수정 | `quickstart.ts`가 `.networks`로 읽지만 API는 `.availableNetworks` 반환 | quickstart 내부 코드 수정으로 해결. Python SDK는 이미 정확하므로 변경 불필요 |
 
 ---
 
-*최종 업데이트: 2026-02-18 — DX 분석 기반 초안 작성*
+*최종 업데이트: 2026-02-19 — 코드베이스 전수 대조 반영: skill 파일 version 필드 현황 정정, daemon.ts 경로 수정(lifecycle/daemon.ts), 빌드 타임 치환 메커니즘 구체화, mcp setup 기존 출력 반영, 제외 항목 마일스톤 참조 현행화*

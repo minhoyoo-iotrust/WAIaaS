@@ -66,15 +66,17 @@ const EVM_WALLET = {
   defaultNetwork: 'ethereum-sepolia',
 };
 
+const SESSION_EXPIRES_AT = Math.floor(Date.now() / 1000) + 86400;
+
 const SOLANA_NETWORKS = {
-  networks: [
+  availableNetworks: [
     { network: 'devnet', isDefault: true },
     { network: 'testnet', isDefault: false },
   ],
 };
 
 const EVM_NETWORKS = {
-  networks: [
+  availableNetworks: [
     { network: 'ethereum-sepolia', isDefault: true },
     { network: 'polygon-amoy', isDefault: false },
     { network: 'arbitrum-sepolia', isDefault: false },
@@ -94,14 +96,24 @@ function createQuickstartFetchMock(mode = 'testnet') {
       return Promise.resolve(mockResponse(200, { status: 'ok' }));
     }
 
-    // POST /v1/wallets
+    // POST /v1/wallets -- include session in response (daemon auto-creates session)
     if (urlStr.endsWith('/v1/wallets') && init?.method === 'POST') {
       const body = JSON.parse(init.body as string) as { chain: string; name: string; environment: string };
       if (body.chain === 'solana') {
-        const wallet = { ...SOLANA_WALLET, environment: mode, name: `solana-${mode}` };
+        const wallet = {
+          ...SOLANA_WALLET,
+          environment: mode,
+          name: `solana-${mode}`,
+          session: { id: 'session-1', token: 'jwt.token.1', expiresAt: SESSION_EXPIRES_AT },
+        };
         return Promise.resolve(mockResponse(200, wallet));
       }
-      const wallet = { ...EVM_WALLET, environment: mode, name: `evm-${mode}` };
+      const wallet = {
+        ...EVM_WALLET,
+        environment: mode,
+        name: `evm-${mode}`,
+        session: { id: 'session-2', token: 'jwt.token.2', expiresAt: SESSION_EXPIRES_AT },
+      };
       return Promise.resolve(mockResponse(200, wallet));
     }
 
@@ -113,13 +125,13 @@ function createQuickstartFetchMock(mode = 'testnet') {
       return Promise.resolve(mockResponse(200, EVM_NETWORKS));
     }
 
-    // POST /v1/sessions
+    // POST /v1/sessions (fallback path for reused wallets or older daemons)
     if (urlStr.includes('/v1/sessions') && init?.method === 'POST') {
       sessionCallCount++;
       return Promise.resolve(mockResponse(200, {
         id: `session-${sessionCallCount}`,
         token: `jwt.token.${sessionCallCount}`,
-        expiresAt: Math.floor(Date.now() / 1000) + 86400,
+        expiresAt: SESSION_EXPIRES_AT,
       }));
     }
 
@@ -151,7 +163,7 @@ describe('quicksetCommand (formerly quickstart)', () => {
     vi.doUnmock('../utils/password.js');
   });
 
-  it('testnet mode: creates 2 wallets, fetches networks, creates sessions', async () => {
+  it('testnet mode: creates 2 wallets, fetches networks, writes tokens', async () => {
     const fetchMock = createQuickstartFetchMock('testnet');
     vi.stubGlobal('fetch', fetchMock);
 
@@ -167,8 +179,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const calls = fetchMock.mock.calls;
     const urls = calls.map((c: unknown[]) => String(c[0]));
 
-    // 1 health + 2 wallet POST + 2 networks GET + 2 sessions POST = 7
-    expect(calls.length).toBe(7);
+    // 1 health + 2 wallet POST (with session) + 2 networks GET = 5
+    expect(calls.length).toBe(5);
 
     // Health check
     expect(urls[0]).toContain('/health');
@@ -191,10 +203,6 @@ describe('quicksetCommand (formerly quickstart)', () => {
     // Networks for evm
     expect(urls[4]).toContain('/networks');
 
-    // Sessions
-    expect(urls[5]).toContain('/v1/sessions');
-    expect(urls[6]).toContain('/v1/sessions');
-
     // Output checks
     expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
     expect(mockStdout).toHaveBeenCalledWith('Mode: testnet');
@@ -203,11 +211,22 @@ describe('quicksetCommand (formerly quickstart)', () => {
     expect(mockStdout).toHaveBeenCalledWith('  Available Networks: devnet, testnet');
     expect(mockStdout).toHaveBeenCalledWith('  Available Networks: ethereum-sepolia, polygon-amoy, arbitrum-sepolia, optimism-sepolia, base-sepolia');
 
+    // Expires at output (QS-02)
+    const expiresCalls = mockStdout.mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes('Expires at:'),
+    );
+    expect(expiresCalls.length).toBe(2); // one per wallet
+    for (const call of expiresCalls) {
+      expect(String(call[0])).toMatch(/Expires at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+    }
+
     // MCP token files
     expect(existsSync(join(testDir, 'mcp-tokens', 'sol-wallet-1'))).toBe(true);
     expect(existsSync(join(testDir, 'mcp-tokens', 'evm-wallet-1'))).toBe(true);
 
-    // MCP config snippet
+    // MCP config snippet with English label
+    expect(mockStdout).toHaveBeenCalledWith('(Add to your claude_desktop_config.json)');
+
     const jsonCalls = mockStdout.mock.calls
       .filter((c: unknown[]) => String(c[0]).includes('"mcpServers"'));
     expect(jsonCalls.length).toBe(1);
@@ -316,20 +335,19 @@ describe('quicksetCommand (formerly quickstart)', () => {
       if (urlStr.endsWith('/v1/wallets') && init?.method === 'POST') {
         const body = JSON.parse(init.body as string) as { chain: string };
         if (body.chain === 'solana') {
-          return Promise.resolve(mockResponse(200, SOLANA_WALLET));
+          return Promise.resolve(mockResponse(200, {
+            ...SOLANA_WALLET,
+            session: { id: 'session-1', token: 'jwt.token.1', expiresAt: SESSION_EXPIRES_AT },
+          }));
         }
-        return Promise.resolve(mockResponse(200, EVM_WALLET));
+        return Promise.resolve(mockResponse(200, {
+          ...EVM_WALLET,
+          session: { id: 'session-2', token: 'jwt.token.2', expiresAt: SESSION_EXPIRES_AT },
+        }));
       }
       // Networks API returns 500
       if (urlStr.includes('/networks')) {
         return Promise.resolve(mockResponse(500, { message: 'Internal error' }));
-      }
-      if (urlStr.includes('/v1/sessions') && init?.method === 'POST') {
-        return Promise.resolve(mockResponse(200, {
-          id: 'session-1',
-          token: 'jwt.token.1',
-          expiresAt: Math.floor(Date.now() / 1000) + 86400,
-        }));
       }
       return Promise.reject(new Error(`Unexpected: ${urlStr}`));
     });
@@ -403,7 +421,10 @@ describe('quicksetCommand (formerly quickstart)', () => {
         callCount++;
         // First wallet succeeds, second fails
         if (callCount === 1) {
-          return Promise.resolve(mockResponse(200, SOLANA_WALLET));
+          return Promise.resolve(mockResponse(200, {
+            ...SOLANA_WALLET,
+            session: { id: 'session-1', token: 'jwt.token.1', expiresAt: SESSION_EXPIRES_AT },
+          }));
         }
         return Promise.resolve(mockResponse(500, { message: 'Internal server error' }));
       }
@@ -423,5 +444,176 @@ describe('quicksetCommand (formerly quickstart)', () => {
     expect(mockStderr).toHaveBeenCalledWith(
       expect.stringContaining('Failed to create ethereum wallet (HTTP 500)'),
     );
+  });
+
+  it('QS-01: all output is English only (no Korean characters)', async () => {
+    const fetchMock = createQuickstartFetchMock('testnet');
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { quickstartCommand } = await import('../commands/quickstart.js');
+    await quickstartCommand({
+      dataDir: testDir,
+      masterPassword: 'test-pw',
+    });
+
+    // Check all console.log and console.error calls for Korean characters
+    const koreanPattern = /[\uAC00-\uD7AF\u1100-\u11FF]/;
+    const allLogCalls = mockStdout.mock.calls.map((c: unknown[]) => String(c[0]));
+    const allErrCalls = mockStderr.mock.calls.map((c: unknown[]) => String(c[0]));
+
+    for (const msg of [...allLogCalls, ...allErrCalls]) {
+      expect(msg).not.toMatch(koreanPattern);
+    }
+  });
+
+  it('QS-02: displays session expiry in YYYY-MM-DD HH:mm format', async () => {
+    const fetchMock = createQuickstartFetchMock('testnet');
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { quickstartCommand } = await import('../commands/quickstart.js');
+    await quickstartCommand({
+      dataDir: testDir,
+      masterPassword: 'test-pw',
+    });
+
+    // Should have 2 "Expires at:" lines (one per wallet)
+    const expiresCalls = mockStdout.mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes('Expires at:'),
+    );
+    expect(expiresCalls.length).toBe(2);
+
+    for (const call of expiresCalls) {
+      const msg = String(call[0]);
+      // Format: "  Expires at: YYYY-MM-DD HH:mm"
+      expect(msg).toMatch(/Expires at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+    }
+  });
+
+  it('QS-03: 409 conflict reuses existing wallet and creates new session', async () => {
+    let sessionCallCount = 0;
+
+    const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+      const urlStr = String(url);
+
+      if (urlStr.includes('/health')) {
+        return Promise.resolve(mockResponse(200, { status: 'ok' }));
+      }
+
+      // POST /v1/wallets -> both return 409
+      if (urlStr.endsWith('/v1/wallets') && init?.method === 'POST') {
+        return Promise.resolve(mockResponse(409, { message: 'Wallet name already exists' }));
+      }
+
+      // GET /v1/wallets -> list existing wallets
+      if (urlStr.endsWith('/v1/wallets') && (!init?.method || init.method === 'GET')) {
+        return Promise.resolve(mockResponse(200, {
+          wallets: [
+            { ...SOLANA_WALLET, name: 'solana-testnet' },
+            { ...EVM_WALLET, name: 'evm-testnet' },
+          ],
+        }));
+      }
+
+      // GET /v1/wallets/:id/networks
+      if (urlStr.includes('/networks')) {
+        if (urlStr.includes('sol-wallet')) {
+          return Promise.resolve(mockResponse(200, SOLANA_NETWORKS));
+        }
+        return Promise.resolve(mockResponse(200, EVM_NETWORKS));
+      }
+
+      // POST /v1/sessions (fallback for reused wallets)
+      if (urlStr.includes('/v1/sessions') && init?.method === 'POST') {
+        sessionCallCount++;
+        return Promise.resolve(mockResponse(200, {
+          id: `session-${sessionCallCount}`,
+          token: `jwt.token.${sessionCallCount}`,
+          expiresAt: SESSION_EXPIRES_AT,
+        }));
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${urlStr}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { quickstartCommand } = await import('../commands/quickstart.js');
+    await quickstartCommand({
+      dataDir: testDir,
+      masterPassword: 'test-pw',
+    });
+
+    // "Reusing existing wallet:" should appear twice
+    const reuseCalls = mockStdout.mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes('Reusing existing wallet:'),
+    );
+    expect(reuseCalls.length).toBe(2);
+    expect(String(reuseCalls[0]![0])).toContain('solana-testnet');
+    expect(String(reuseCalls[1]![0])).toContain('evm-testnet');
+
+    // Sessions should be created via fallback (2 POST /v1/sessions)
+    expect(sessionCallCount).toBe(2);
+
+    // Wallet list should be fetched (2 GET /v1/wallets for each 409)
+    const listCalls = fetchMock.mock.calls.filter(
+      (c: unknown[]) => String(c[0]).endsWith('/v1/wallets') && (!(c[1] as RequestInit | undefined)?.method || (c[1] as RequestInit | undefined)?.method === 'GET'),
+    );
+    expect(listCalls.length).toBe(2);
+
+    // MCP token files should still be created
+    expect(existsSync(join(testDir, 'mcp-tokens', 'sol-wallet-1'))).toBe(true);
+    expect(existsSync(join(testDir, 'mcp-tokens', 'evm-wallet-1'))).toBe(true);
+
+    // Completion message
+    expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
+  });
+
+  it('QS-04: parses availableNetworks field correctly (not networks)', async () => {
+    // This mock returns ONLY availableNetworks (no legacy "networks" key)
+    const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+      const urlStr = String(url);
+
+      if (urlStr.includes('/health')) {
+        return Promise.resolve(mockResponse(200, { status: 'ok' }));
+      }
+
+      if (urlStr.endsWith('/v1/wallets') && init?.method === 'POST') {
+        const body = JSON.parse(init.body as string) as { chain: string };
+        if (body.chain === 'solana') {
+          return Promise.resolve(mockResponse(200, {
+            ...SOLANA_WALLET,
+            session: { id: 'session-1', token: 'jwt.token.1', expiresAt: SESSION_EXPIRES_AT },
+          }));
+        }
+        return Promise.resolve(mockResponse(200, {
+          ...EVM_WALLET,
+          session: { id: 'session-2', token: 'jwt.token.2', expiresAt: SESSION_EXPIRES_AT },
+        }));
+      }
+
+      // Networks endpoint returns ONLY availableNetworks (no "networks" key)
+      if (urlStr.includes('/networks')) {
+        if (urlStr.includes('sol-wallet')) {
+          return Promise.resolve(mockResponse(200, {
+            availableNetworks: [{ network: 'devnet', isDefault: true }],
+          }));
+        }
+        return Promise.resolve(mockResponse(200, {
+          availableNetworks: [{ network: 'ethereum-sepolia', isDefault: true }],
+        }));
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch: ${urlStr}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { quickstartCommand } = await import('../commands/quickstart.js');
+    await quickstartCommand({
+      dataDir: testDir,
+      masterPassword: 'test-pw',
+    });
+
+    // Networks should be parsed correctly from availableNetworks
+    expect(mockStdout).toHaveBeenCalledWith('  Available Networks: devnet');
+    expect(mockStdout).toHaveBeenCalledWith('  Available Networks: ethereum-sepolia');
   });
 });
