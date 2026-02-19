@@ -1088,3 +1088,31 @@
 
 ---
 
+
+## v2.4 npm Trusted Publishing 전환 (Shipped: 2026-02-19)
+
+**Delivered:** npm 패키지 발행을 Classic Automation Token(NPM_TOKEN)에서 OIDC Trusted Publishing으로 전환하여, 장기 시크릿 없이 GitHub Actions OIDC 인증 + Sigstore provenance 배지를 확보한 supply chain 보안 강화 상태 달성. 병행하여 8건 품질/DX 이슈 수정 완료.
+
+**Phases completed:** 188-190 (3 phases, 4 plans, 12 requirements)
+
+**Key accomplishments:**
+
+- npm Trusted Publishing (OIDC) 전환 — 8개 패키지 장기 시크릿(NPM_TOKEN) 제거, GitHub Actions OIDC 인증으로 전환
+- Sigstore provenance 배지 확보 — 8개 패키지 모두 "Built and signed on GitHub Actions" 표시
+- v2.3.0-rc E2E 검증 완료 — release-please prerelease versioning으로 RC 릴리스 OIDC 발행 검증
+- Deploy summary provenance 메타데이터 추가 — Source/Commit/Workflow/Sigstore 링크 자동 생성
+- 8건 이슈 수정 — 마스터 패스워드 검증(#090), NotificationService always-init(#088), npm README 복사(#093), homepage/bugs URL(#092), 스킬 버전 동기화(#085), AI 연결 프롬프트(#087), JWT UI 텍스트(#089), quickset 별칭(#091)
+- 이슈 #094-095 등록 — Admin UI 개선 항목 다음 마일스톤으로 이관
+
+**Stats:**
+
+- 3 phases, 4 plans, 7 tasks + 8 quick tasks, 12 requirements
+- 66 files changed, +3,740 / -180 lines
+- ~146,464 LOC TypeScript
+- 40 commits, 1 day (2026-02-19)
+- Git range: ee51276..5d80fb6
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
+
+---
+

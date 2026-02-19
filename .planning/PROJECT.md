@@ -10,7 +10,7 @@
 
 ## Current State
 
-v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 9-패키지 모노레포 + Python SDK, ~145,784 LOC TypeScript (Admin UI 19,152 LOC), ~3,880 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.0.0-rc.1 publish, Docker Hub/GHCR dual push, 설계 문서 44개 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v2.4 npm Trusted Publishing 전환 shipped (2026-02-19). 9-패키지 모노레포 + Python SDK, ~146,464 LOC TypeScript (Admin UI 19,152 LOC), ~3,880 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.3.0-rc OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push, 설계 문서 44개 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -40,10 +40,11 @@ v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 9-패키지 모�
 - ✅ v2.0 전 기능 완성 릴리스 — shipped 2026-02-18 (~3,599 tests, ~124,830 LOC TS)
 - ✅ v2.2 테스트 커버리지 강화 — shipped 2026-02-18 (281 신규 tests, ~142,639 LOC TS)
 - ✅ v2.3 Admin UI 기능별 메뉴 재구성 — shipped 2026-02-18 (11 plans, 39 requirements, ~145,784 LOC TS)
+- ✅ v2.4 npm Trusted Publishing 전환 — shipped 2026-02-19 (4 plans, 12 requirements, ~146,464 LOC TS)
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~145,784 LOC TypeScript (ESM-only, Node.js 22, Admin UI 19,152 LOC)
+- ~146,464 LOC TypeScript (ESM-only, Node.js 22, Admin UI 19,152 LOC)
 - ~3,880 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
@@ -370,17 +371,14 @@ v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 9-패키지 모�
 - ✓ 미저장 경고 3버튼 다이얼로그 (탭 전환 + 사이드바 메뉴 전환 인터셉트) — v2.3 (DIRTY-01~02)
 - ✓ README Admin UI 섹션 7-메뉴 구조 갱신 — v2.3 (DOC-01)
 
+- ✓ npm Trusted Publishing (OIDC) 전환 — 8개 패키지 NPM_TOKEN 제거, GitHub Actions OIDC 인증 — v2.4 (PREP-01~03, OIDC-01~05)
+- ✓ Sigstore provenance 배지 확보 — 8개 패키지 "Built and signed on GitHub Actions" — v2.4 (VERIFY-01~02)
+- ✓ NPM_TOKEN 시크릿 제거 + Deploy summary provenance 메타데이터 추가 — v2.4 (VERIFY-03~04)
+- ✓ 8건 이슈 수정 — 마스터 패스워드 검증(#090), NotificationService always-init(#088), npm README 복사(#093), homepage/bugs URL(#092), 스킬 버전 동기화(#085), AI 연결 프롬프트(#087), JWT UI 텍스트(#089), quickset 별칭(#091) — v2.4 (quick tasks)
+
 ### 활성
 
-#### Current Milestone: v2.4 npm Trusted Publishing 전환
-
-**목표:** npm 패키지 발행을 Classic Automation Token에서 OIDC Trusted Publishing으로 전환하여 supply chain 보안 강화
-
-**대상 기능:**
-- npm 8개 패키지 Trusted Publishing 설정
-- release.yml OIDC 전환 (`id-token: write` + `--provenance`)
-- NPM_TOKEN 시크릿 제거
-- Provenance 빌드 출처 증명 검증
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -399,7 +397,7 @@ v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 9-패키지 모�
 
 ## 컨텍스트
 
-**누적:** 41 milestones (v0.1-v2.3), 187 phases, 398 plans, 1,094 requirements, 36 설계 문서(24-72), 8 objective 문서, ~145,784 LOC TS, ~3,880 테스트
+**누적:** 42 milestones (v0.1-v2.4), 190 phases, 402 plans, 1,106 requirements, 36 설계 문서(24-72), 8 objective 문서, ~146,464 LOC TS, ~3,880 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -430,6 +428,7 @@ v1.8 업그레이드 + 배포 인프라 shipped (2026-02-17). 5 페이즈, 12 �
 v2.0 전 기능 완성 릴리스 shipped (2026-02-18). 9 페이즈, 17 플랜, 25 요구사항, ~124,830 LOC TS, ~3,599 테스트, 39 설계 결정.
 v2.2 테스트 커버리지 강화 shipped (2026-02-18). 4 페이즈, 6 플랜, 11 요구사항, ~142,639 LOC TS, ~3,880 테스트, 9 설계 결정.
 v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 6 페이즈, 11 플랜, 39 요구사항, ~145,784 LOC TS, 31 설계 결정.
+v2.4 npm Trusted Publishing 전환 shipped (2026-02-19). 3 페이즈, 4 플랜, 12 요구사항, ~146,464 LOC TS, 7 설계 결정. + 8건 이슈 수정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -680,7 +679,7 @@ v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 6 페이즈, 11 �
 | admin 패키지 private:true | daemon에 번들, 별도 publish 불필요 | ✓ Good — v2.0 구현 |
 | release-as "2.0.0-rc.1" 명시적 | release-as와 prerelease-type 결합 불가 | ✓ Good — v2.0 구현 |
 | GITHUB_TOKEN → RELEASE_PAT | GITHUB_TOKEN은 다른 워크플로 트리거 불가 | ✓ Good — v2.0 구현 |
-| npm Classic Automation Token | Trusted Publishing은 v2.0.4에서 전환 | ✓ Good — v2.0 구현 |
+| npm Classic Automation Token | Trusted Publishing은 v2.0.4에서 전환 | ✓ Good — v2.0 구현, v2.4에서 OIDC 전환 완료 |
 | Dead code it.skip 문서화 패턴 | 도달 불가 코드는 강제 실행 대신 skip+설명 주석 | ✓ Good — v2.2 테스트 |
 | Branch-focused 별도 테스트 파일 | 기존 happy-path 테스트와 중복 없이 분기 집중 | ✓ Good — v2.2 테스트 |
 | Coverage 별도 테스트 파일 (mock 충돌 회피) | 기존 test와 mock 설정 충돌 방지 | ✓ Good — v2.2 테스트 |
@@ -697,6 +696,13 @@ v2.3 Admin UI 기능별 메뉴 재구성 shipped (2026-02-18). 6 페이즈, 11 �
 | Record<string, string> 맵 기반 field description | 동적 렌더링, settings-search-index.ts와 일관성 유지 | ✓ Good — v2.3 구현 |
 | Hidden input 패턴 (CurrencySelect name discovery) | FormField 외부 커스텀 컴포넌트의 querySelector 발견 지원 | ✓ Good — v2.3 구현 |
 | 각 Settings 탭 독립적 signal 상태 | 탭 간 상태 간섭 방지, 독립 dirty/save/load | ✓ Good — v2.3 구현 |
+| Job-level permissions (workflow-level 아닌) | OIDC scope를 deploy job에만 제한 | ✓ Good — v2.4 구현 |
+| npm publish 직접 호출 (pnpm 위임 대신) | OIDC 토큰 전달 경로 확실성 | ✓ Good — v2.4 구현 |
+| publish-check에서 --provenance 사용 금지 | dry-run + provenance 비호환 | ✓ Good — v2.4 구현 |
+| NPM_TOKEN은 OIDC E2E 검증 후에만 제거 | 롤백 가능성 유지 | ✓ Good — v2.4 구현 |
+| release-please prerelease versioning (rc type) | RC 릴리스로 OIDC 검증 수행 | ✓ Good — v2.4 구현 |
+| homepage 필드는 provenance 범위 밖 유지 | repository.url만 Sigstore에 사용 | ✓ Good — v2.4 구현 |
+| NotificationService always-init (0 channels) | Admin UI hot-reload 런타임 활성화 지원 | ✓ Good — v2.4 quick-4 |
 
 ---
-*최종 업데이트: 2026-02-18 after v2.3 milestone complete — Admin UI 기능별 메뉴 재구성*
+*최종 업데이트: 2026-02-19 after v2.4 milestone complete — npm Trusted Publishing 전환*

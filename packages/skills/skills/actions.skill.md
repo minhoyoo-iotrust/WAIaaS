@@ -3,7 +3,7 @@ name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
 tags: [wallet, blockchain, defi, actions, waiass]
-version: "1.5.0"
+version: "2.3.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

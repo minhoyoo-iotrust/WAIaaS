@@ -31,16 +31,16 @@ See [Security Model](docs/security-model.md) for full details.
 npm install -g @waiaas/cli
 waiaas init                        # Create data directory + config.toml
 waiaas start                       # Start daemon (sets master password on first run)
-waiaas quickstart --mode testnet   # Create wallets + MCP sessions in one step
+waiaas quickset --mode testnet     # Create wallets + MCP sessions in one step
 ```
 
-The `quickstart` command does everything you need to get started:
+The `quickset` command does everything you need to get started:
 
 1. Creates **Solana Devnet + EVM Sepolia** wallets automatically
 2. Issues **MCP session tokens** for each wallet
 3. Outputs a **Claude Desktop MCP config** snippet -- just copy and paste
 
-> Starting with mainnet? Use `waiaas quickstart --mode mainnet` to create Solana Mainnet + EVM Ethereum Mainnet wallets instead. Mainnet mode recommends configuring spending limits and registering an owner wallet for high-value transaction approval.
+> Starting with mainnet? Use `waiaas quickset --mode mainnet` to create Solana Mainnet + EVM Ethereum Mainnet wallets instead. Mainnet mode recommends configuring spending limits and registering an owner wallet for high-value transaction approval.
 
 ### Admin UI
 
@@ -48,14 +48,14 @@ After starting the daemon, manage everything from the admin panel at `http://127
 
 ## Connect Your AI Agent
 
-After quickstart, choose one of two integration paths:
+After quickset, choose one of two integration paths:
 
 ### Path A: MCP (Claude Desktop / Claude Code)
 
 For AI agents that support the [Model Context Protocol](https://modelcontextprotocol.io):
 
 ```bash
-# quickstart already printed the MCP config JSON -- paste it into
+# quickset already printed the MCP config JSON -- paste it into
 # ~/Library/Application Support/Claude/claude_desktop_config.json
 # Or auto-register with all wallets:
 waiaas mcp setup --all

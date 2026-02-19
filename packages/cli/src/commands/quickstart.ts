@@ -1,5 +1,6 @@
 /**
- * `waiaas quickstart` -- Create Solana + EVM wallets for quick setup.
+ * `waiaas quickset` -- Quick setup: create wallets, sessions, and MCP tokens.
+ * (Also available as `waiaas quickstart` for backward compatibility.)
  *
  * One-command multi-chain environment setup:
  *   1. Check daemon is running (GET /health)
@@ -238,7 +239,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   }
 
   // Step 5: Output results
-  console.log('WAIaaS Quickstart Complete!');
+  console.log('WAIaaS Quickset Complete!');
   console.log('');
   console.log(`Mode: ${mode}`);
 
@@ -264,4 +265,25 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   const configSnippet = { mcpServers };
   console.log(JSON.stringify(configSnippet, null, 2));
   printConfigPath();
+
+  // Step 7: Agent connection prompt (magic word)
+  console.log('');
+  console.log('AI Agent Connection Prompt:');
+  console.log('(Copy and paste the block below to your AI agent)');
+  console.log('\u2500'.repeat(40));
+  console.log('[WAIaaS Connection]');
+  console.log(`- URL: ${baseUrl}`);
+  console.log('');
+  console.log('Wallets:');
+  createdWallets.forEach((wallet, index) => {
+    const network = wallet.defaultNetwork ?? wallet.environment;
+    console.log(`${index + 1}. ${wallet.name} (${wallet.id}) \u2014 ${network}`);
+    console.log(`   Session: ${wallet.sessionToken ?? 'N/A'}`);
+  });
+  console.log('');
+  console.log('\uC138\uC158\uC774 \uB9CC\uB8CC\uB418\uBA74(401 Unauthorized)');
+  console.log('POST /v1/wallets/{walletId}/sessions/{sessionId}/renew \uC73C\uB85C \uAC31\uC2E0\uD558\uC138\uC694.');
+  console.log('');
+  console.log('\uC704 \uC815\uBCF4\uB85C WAIaaS \uC9C0\uAC11\uC5D0 \uC5F0\uACB0\uD558\uC5EC \uC794\uC561\uC744 \uD655\uC778\uD558\uACE0 \uAD00\uB9AC\uD574\uC8FC\uC138\uC694.');
+  console.log('\u2500'.repeat(40));
 }

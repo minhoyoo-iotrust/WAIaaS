@@ -1,17 +1,76 @@
 ---
-name: "WAIaaS Quickstart"
-description: "End-to-end quickstart: create wallet, session, check balance, send first transfer"
+name: "WAIaaS Quickset"
+description: "End-to-end quickset: create wallet, session, check balance, send first transfer"
 category: "api"
-tags: [wallet, blockchain, solana, ethereum, quickstart, waiass]
-version: "1.8.0"
+tags: [wallet, blockchain, solana, ethereum, quickset, quickstart, waiass]
+version: "2.3.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
 ---
 
-# WAIaaS Quickstart
+# WAIaaS Quickset
 
 WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana and Ethereum with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
+
+## 0. Connection Info
+
+### Magic Word (Agent Connection Prompt)
+
+If the user provides a `[WAIaaS Connection]` block, extract connection info and start API calls immediately:
+
+- `URL` -> API base URL
+- `Wallets` -> numbered list with wallet name, ID, network, session token
+- `Session` -> use as `Authorization: Bearer {token}` header
+
+Example format:
+```
+[WAIaaS Connection]
+- URL: http://localhost:3100
+
+Wallets:
+1. solana-testnet (019c6fb6-...) -- solana-devnet
+   Session: eyJhbG...
+```
+
+### Session Renewal
+
+On `401 Unauthorized` response:
+1. Extract `sessionId` from JWT payload `sub` claim
+2. `POST /v1/wallets/{walletId}/sessions/{sessionId}/renew`
+3. Use the new token from response for subsequent requests
+
+### No Connection Info?
+
+Ask the user:
+"WAIaaS connection info is needed. Copy the agent prompt from the Admin UI dashboard or from the `waiaas quickset` completion screen using 'Copy Agent Prompt' and paste it here."
+
+### Manual Discovery
+
+Check if the daemon is running and discover existing wallets before starting.
+
+#### Health Check
+
+```bash
+curl -s http://localhost:3100/health
+```
+
+If successful, you get `{"status":"ok", ...}`. If the daemon is not running, start it with `waiaas start`.
+
+#### List Existing Wallets (requires masterAuth)
+
+```bash
+curl -s http://localhost:3100/v1/wallets \
+  -H 'X-Master-Password: <master-password>'
+```
+
+This returns all wallets. If wallets already exist, you can skip to Step 3 (Create a Session) using an existing wallet ID.
+
+> **Note**: The master password is the value set during `waiaas init`.
+>
+> Skill files are API references. For interactive use with an AI agent,
+> set up the MCP server (`waiaas mcp setup`) or provide the daemon URL
+> and authentication credentials directly.
 
 ## Base URL
 
@@ -259,12 +318,12 @@ Transaction status values:
 - `FAILED` -- execution or confirmation failed
 - `CANCELLED` -- cancelled by wallet or owner
 
-## CLI Quickstart (Alternative)
+## CLI Quickset (Alternative)
 
 If you have the CLI installed, create wallets in one step:
 
 ```bash
-waiaas quickstart --mode testnet
+waiaas quickset --mode testnet
 ```
 
 This creates Solana + EVM wallets and prints MCP configuration.
@@ -304,3 +363,5 @@ Common error codes:
 - **transactions.skill.md** -- All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with full parameters
 - **policies.skill.md** -- Policy management (spending limits, whitelists, rate limits, approval tiers)
 - **admin.skill.md** -- Admin operations (kill switch, status, settings, notifications)
+- **actions.skill.md** -- DeFi action providers: list and execute DeFi actions through the transaction pipeline
+- **x402.skill.md** -- x402 auto-payment protocol for fetching paid URLs with cryptocurrency

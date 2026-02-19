@@ -276,7 +276,7 @@ export default function SettingsPage() {
     try {
       await apiPost<{ rotatedAt: number; message: string }>(API.ADMIN_ROTATE_SECRET);
       rotateModal.value = false;
-      showToast('success', 'JWT secret rotated. Old tokens valid for 5 minutes.');
+      showToast('success', 'All session tokens invalidated. Old tokens remain valid for 5 minutes.');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -1100,12 +1100,12 @@ export default function SettingsPage() {
 
       <div class="settings-section">
         <div class="settings-section-header">
-          <h3>JWT Secret Rotation</h3>
-          <p class="settings-description">Invalidate all existing JWT tokens. Old tokens remain valid for 5 minutes.</p>
+          <h3>Invalidate All Session Tokens</h3>
+          <p class="settings-description">Revoke all active session tokens by rotating the signing key. Existing tokens remain valid for 5 minutes, then all wallets must create new sessions.</p>
         </div>
         <div class="settings-section-body">
           <Button variant="secondary" onClick={() => { rotateModal.value = true; }}>
-            Rotate JWT Secret
+            Invalidate All Tokens
           </Button>
         </div>
       </div>
@@ -1125,17 +1125,17 @@ export default function SettingsPage() {
       {/* JWT Rotation Confirmation Modal */}
       <Modal
         open={rotateModal.value}
-        title="Rotate JWT Secret"
+        title="Invalidate All Session Tokens"
         onCancel={() => { rotateModal.value = false; }}
         onConfirm={handleRotate}
-        confirmText="Rotate"
+        confirmText="Invalidate"
         confirmVariant="primary"
         loading={rotateLoading.value}
       >
         <p>
-          Are you sure you want to rotate the JWT secret? All existing session
-          tokens will remain valid for 5 more minutes, then expire. Wallets will
-          need new sessions.
+          This will rotate the signing key and invalidate all active session tokens
+          after 5 minutes. Every wallet will need to create a new session to continue
+          API access. Use this when a token may have been compromised.
         </p>
       </Modal>
 

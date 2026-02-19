@@ -24,6 +24,7 @@ import {
   getEffectiveValue,
   getEffectiveBoolValue,
 } from '../utils/settings-helpers';
+import { buildSingleWalletPrompt } from '../utils/agent-prompt';
 
 interface Wallet {
   id: string;
@@ -222,6 +223,7 @@ function WalletDetailView({ id }: { id: string }) {
   const ownerEditing = useSignal(false);
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
+  const promptLoading = useSignal(false);
 
   const fetchWallet = async () => {
     try {
@@ -436,6 +438,46 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const handleCopyAgentPrompt = async () => {
+    if (!wallet.value) return;
+    promptLoading.value = true;
+    try {
+      const session = await apiPost<{ id: string; token: string; expiresAt: number; walletId: string }>(
+        API.SESSIONS,
+        { walletId: id, ttl: 86400 },
+      );
+      const baseUrl = window.location.origin || 'http://localhost:3100';
+      const text = buildSingleWalletPrompt(baseUrl, {
+        id: wallet.value.id,
+        name: wallet.value.name,
+        chain: wallet.value.chain,
+        defaultNetwork: wallet.value.defaultNetwork ?? wallet.value.network,
+        sessionToken: session.token,
+      });
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      showToast('success', 'Agent prompt copied!');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        showToast('error', getErrorMessage(err.code));
+      } else {
+        showToast('error', 'Failed to generate agent prompt');
+      }
+    } finally {
+      promptLoading.value = false;
+    }
+  };
+
   useEffect(() => {
     fetchWallet();
     fetchNetworks();
@@ -485,9 +527,19 @@ function WalletDetailView({ id }: { id: string }) {
                 </span>
               )}
             </div>
-            <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
-              Terminate Wallet
-            </Button>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyAgentPrompt}
+                loading={promptLoading.value}
+              >
+                Copy Agent Prompt
+              </Button>
+              <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
+                Terminate Wallet
+              </Button>
+            </div>
           </div>
 
           <div class="detail-grid">

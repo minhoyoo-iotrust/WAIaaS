@@ -1,6 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, ApiError } from '../api/client';
+import { apiGet, apiPost, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { formatUptime, formatDate } from '../utils/format';
 import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
@@ -8,6 +8,8 @@ import { Badge, Button } from '../components/form';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { getErrorMessage } from '../utils/error-messages';
+import { showToast } from '../components/toast';
+import { buildAgentPrompt, type WalletPromptInfo } from '../utils/agent-prompt';
 
 interface RecentTransaction {
   id: string;
@@ -115,12 +117,44 @@ function buildTxColumns(
   ];
 }
 
+interface DashboardWallet {
+  id: string;
+  name: string;
+  chain: string;
+  network: string;
+  environment: string;
+  status: string;
+}
+
+interface SessionCreateResult {
+  id: string;
+  token: string;
+  expiresAt: number;
+  walletId: string;
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+
 export default function DashboardPage() {
   const data = useSignal<AdminStatus | null>(null);
   const loading = useSignal(true);
   const error = useSignal<string | null>(null);
   const displayCurrency = useSignal<string>('USD');
   const displayRate = useSignal<number | null>(1);
+  const promptLoading = useSignal(false);
 
   const fetchStatus = async () => {
     loading.value = true;
@@ -136,6 +170,46 @@ export default function DashboardPage() {
       }
     } finally {
       loading.value = false;
+    }
+  };
+
+  const handleCopyAgentPrompt = async () => {
+    promptLoading.value = true;
+    try {
+      const { items } = await apiGet<{ items: DashboardWallet[] }>(API.WALLETS);
+      const activeWallets = items.filter((w) => w.status === 'ACTIVE');
+      if (activeWallets.length === 0) {
+        showToast('warning', 'No active wallets found');
+        return;
+      }
+
+      const walletInfos: WalletPromptInfo[] = [];
+      for (const w of activeWallets) {
+        const session = await apiPost<SessionCreateResult>(API.SESSIONS, {
+          walletId: w.id,
+          ttl: 86400,
+        });
+        walletInfos.push({
+          id: w.id,
+          name: w.name,
+          chain: w.chain,
+          defaultNetwork: w.network,
+          sessionToken: session.token,
+        });
+      }
+
+      const baseUrl = window.location.origin || 'http://localhost:3100';
+      const text = buildAgentPrompt(baseUrl, walletInfos);
+      await copyToClipboard(text);
+      showToast('success', 'Agent prompt copied!');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        showToast('error', getErrorMessage(err.code));
+      } else {
+        showToast('error', 'Failed to generate agent prompt');
+      }
+    } finally {
+      promptLoading.value = false;
     }
   };
 
@@ -197,7 +271,18 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div style={{ marginTop: 'var(--space-6)' }}>
+      <div style={{ marginTop: 'var(--space-4)', display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleCopyAgentPrompt}
+          loading={promptLoading.value}
+        >
+          Copy Agent Prompt
+        </Button>
+      </div>
+
+      <div style={{ marginTop: 'var(--space-4)' }}>
         <h3 style={{ marginBottom: 'var(--space-3)' }}>Recent Activity</h3>
         <Table
           columns={buildTxColumns(displayCurrency.value, displayRate.value)}

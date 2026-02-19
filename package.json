@@ -6,6 +6,10 @@
     "type": "git",
     "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git"
   },
+  "homepage": "https://github.com/minhoyoo-iotrust/WAIaaS#readme",
+  "bugs": {
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/issues"
+  },
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "engines": {

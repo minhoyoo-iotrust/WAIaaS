@@ -1,5 +1,5 @@
 /**
- * Tests for `waiaas quickstart` command.
+ * Tests for `waiaas quickset` command (formerly quickstart).
  *
  * Uses vi.stubGlobal('fetch') to mock HTTP calls.
  * Tests cover testnet/mainnet modes, error handling, and graceful degradation.
@@ -127,7 +127,7 @@ function createQuickstartFetchMock(mode = 'testnet') {
   });
 }
 
-describe('quickstartCommand', () => {
+describe('quicksetCommand (formerly quickstart)', () => {
   let testDir: string;
   let mockStdout: ReturnType<typeof vi.spyOn>;
   let mockStderr: ReturnType<typeof vi.spyOn>;
@@ -196,7 +196,7 @@ describe('quickstartCommand', () => {
     expect(urls[6]).toContain('/v1/sessions');
 
     // Output checks
-    expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickstart Complete!');
+    expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
     expect(mockStdout).toHaveBeenCalledWith('Mode: testnet');
     expect(mockStdout).toHaveBeenCalledWith('Solana Wallet:');
     expect(mockStdout).toHaveBeenCalledWith('EVM Wallet:');
@@ -343,7 +343,7 @@ describe('quickstartCommand', () => {
       masterPassword: 'test-pw',
     });
 
-    expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickstart Complete!');
+    expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
 
     // Should NOT have printed 'Available Networks:' lines
     const networkCalls = mockStdout.mock.calls.filter(
