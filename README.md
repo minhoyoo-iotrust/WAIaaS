@@ -93,13 +93,13 @@ const client = new WAIaaSClient({
 });
 
 const balance = await client.getBalance();
-console.log(`Balance: ${balance.amount} SOL`);
+console.log(`Balance: ${balance.balance} ${balance.symbol}`);
 
 const tx = await client.sendToken({
   to: 'recipient-address...',
   amount: '0.1',
 });
-console.log(`Transaction: ${tx.signature}`);
+console.log(`Transaction: ${tx.id}`);
 ```
 
 ## Admin UI
