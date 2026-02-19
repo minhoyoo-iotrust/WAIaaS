@@ -117,6 +117,10 @@
 | 100 | BUG | CRITICAL | npm publish가 workspace:* 미치환 상태로 배포 — RC 버전 글로벌 설치 불가 | v2.5 | FIXED | 2026-02-19 |
 | 101 | BUG | MEDIUM | Admin 알림 전체 활성 토글이 Telegram 영역 안에 배치 + 비활성 배너가 config.toml 참조 | v2.5 | FIXED | 2026-02-19 |
 | 102 | ENHANCEMENT | LOW | CLI `upgrade` → `update` 주 명령어 변경 + `upgrade` 별칭 유지 | TBD | OPEN | 2026-02-19 |
+| 103 | ENHANCEMENT | MEDIUM | Admin UI 대시보드에 업데이트 가능 배너 추가 | TBD | OPEN | 2026-02-19 |
+| 104 | ENHANCEMENT | MEDIUM | MCP 서버에서 AI 에이전트에게 업데이트 가능 알림 제공 | TBD | OPEN | 2026-02-19 |
+| 105 | ENHANCEMENT | LOW | 노티피케이션 채널을 통한 데몬 업데이트 알림 발송 | TBD | OPEN | 2026-02-19 |
+| 106 | ENHANCEMENT | MEDIUM | 매직워드 대시보드 전용 카드 승격 + REST API 추가 + skills 반영 | TBD | OPEN | 2026-02-20 |
 
 ## Type Legend
 
@@ -128,9 +132,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 5
 - **FIXED:** 101
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 102
+- **Total:** 106
