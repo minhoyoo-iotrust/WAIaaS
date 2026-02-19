@@ -134,7 +134,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 200-01-PLAN.md — 알림 채널 설계 (토픽 분리 + NotificationMessage + SDK API + WalletNotificationChannel 통합)
+- [x] 200-01-PLAN.md — 알림 채널 설계 (토픽 분리 + NotificationMessage + SDK API + WalletNotificationChannel 통합)
 - [ ] 200-02-PLAN.md — Push Relay Server 설계 (IPushProvider + Pushwoosh/FCM + ntfy 구독 + 디바이스 API + config + Docker)
 
 ### Phase 201: 기존 설계 문서 갱신 + 교차 검증
@@ -159,5 +159,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 198. Signing Protocol v1 설계 | 2/2 | Complete | 2026-02-19 |
 | 199. Wallet SDK + 데몬 컴포넌트 설계 | 2/2 | Complete   | 2026-02-19 |
-| 200. 알림 채널 + Push Relay Server 설계 | 0/2 | Not started | - |
+| 200. 알림 채널 + Push Relay Server 설계 | 1/2 | In Progress | - |
 | 201. 기존 설계 문서 갱신 + 교차 검증 | 0/1 | Not started | - |

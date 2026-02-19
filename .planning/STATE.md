@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.6 Wallet SDK 설계 - Phase 199 complete, ready for Phase 200
+**Current focus:** v2.6 Wallet SDK 설계 - Phase 200 Plan 01 complete, ready for Plan 02
 
 ## Current Position
 
 Phase: 200 of 201 (알림 채널 설계)
-Plan: 0 of ? in current phase
+Plan: 1 of 2 in current phase
 Status: In Progress
-Last activity: 2026-02-20 — Plan 199-02 completed (데몬 컴포넌트 인터페이스 + 채널 라우팅 + DB 스키마 설계)
+Last activity: 2026-02-20 — Plan 200-01 completed (알림 채널 토픽 분리 + NotificationMessage + WalletNotificationChannel 설계)
 
-Progress: [######░░░░] 57% (4/7 plans)
+Progress: [#######░░░] 71% (5/7 plans)
 
 ## Performance Metrics
 
@@ -56,6 +56,15 @@ v2.6 design decisions: See internal/objectives/m26-00 through m26-03.
 - ntfy 서버 URL: 기존 notifications.ntfy_server 재사용
 - Telegram /sign_response 핸들러: 기존 Long Polling handleUpdate()에 명령어 추가
 
+**200-01 decisions:**
+- 서명/알림 토픽 분리: waiaas-sign-*/waiaas-notify-* 접두어로 동일 ntfy 서버 내 구분
+- ntfy priority 차등: security_alert=5, policy_violation=4, 나머지=3
+- NotificationMessage type:'notification' 필드로 SignRequest와 구분
+- SDK export 8개 (기존 6개 + subscribeToNotifications + parseNotification)
+- WalletNotificationChannel 5단계 필터: walletId > sdk_ntfy > enabled > categories > publish
+- NotificationEventType 25종 → NotificationCategory 6종 매핑
+- SettingsService 알림 3키로 doc 74의 6키와 합쳐 총 9개 signing_sdk 키
+
 ### Blockers/Concerns
 
 None.
@@ -63,5 +72,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 199-02-PLAN.md (데몬 컴포넌트 인터페이스 + 채널 라우팅 + DB 스키마 설계)
+Stopped at: Completed 200-01-PLAN.md (알림 채널 토픽 분리 + NotificationMessage + WalletNotificationChannel 설계)
 Resume file: None

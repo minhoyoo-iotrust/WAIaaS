@@ -30,9 +30,9 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ### 알림 채널
 
-- [ ] **NOTIF-01**: 서명/알림 토픽 분리 구조 + ntfy priority 차등 설계 확정
-- [ ] **NOTIF-02**: NotificationMessage 스키마 + SDK subscribeToNotifications() 인터페이스 확정
-- [ ] **NOTIF-03**: WalletNotificationChannel + 기존 INotificationChannel 통합 설계 확정
+- [x] **NOTIF-01**: 서명/알림 토픽 분리 구조 + ntfy priority 차등 설계 확정
+- [x] **NOTIF-02**: NotificationMessage 스키마 + SDK subscribeToNotifications() 인터페이스 확정
+- [x] **NOTIF-03**: WalletNotificationChannel + 기존 INotificationChannel 통합 설계 확정
 
 ### Push Relay Server
 
@@ -81,9 +81,9 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 | DMON-03 | Phase 199 | Complete |
 | DMON-04 | Phase 199 | Complete |
 | DMON-05 | Phase 199 | Complete |
-| NOTIF-01 | Phase 200 | Pending |
-| NOTIF-02 | Phase 200 | Pending |
-| NOTIF-03 | Phase 200 | Pending |
+| NOTIF-01 | Phase 200 | Complete |
+| NOTIF-02 | Phase 200 | Complete |
+| NOTIF-03 | Phase 200 | Complete |
 | RELAY-01 | Phase 200 | Pending |
 | RELAY-02 | Phase 200 | Pending |
 | RELAY-03 | Phase 200 | Pending |
@@ -100,4 +100,4 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after roadmap creation*
+*Last updated: 2026-02-20 after Plan 200-01 (NOTIF-01/02/03 complete)*
