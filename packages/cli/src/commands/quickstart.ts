@@ -1,5 +1,6 @@
 /**
- * `waiaas quickstart` -- Create Solana + EVM wallets for quick setup.
+ * `waiaas quickset` -- Quick setup: create wallets, sessions, and MCP tokens.
+ * (Also available as `waiaas quickstart` for backward compatibility.)
  *
  * One-command multi-chain environment setup:
  *   1. Check daemon is running (GET /health)
@@ -238,7 +239,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   }
 
   // Step 5: Output results
-  console.log('WAIaaS Quickstart Complete!');
+  console.log('WAIaaS Quickset Complete!');
   console.log('');
   console.log(`Mode: ${mode}`);
 

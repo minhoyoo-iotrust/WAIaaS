@@ -6,7 +6,8 @@
  *   start                             -- Start the WAIaaS daemon
  *   stop                              -- Stop the WAIaaS daemon
  *   status                            -- Check WAIaaS daemon status
- *   quickstart                        -- Create Solana + EVM wallets for quick setup
+ *   quickset                          -- Quick setup: create wallets, sessions, and MCP tokens
+ *   quickstart                        -- (alias for quickset)
  *   wallet info                       -- Show wallet details
  *   wallet set-default-network <net>  -- Change default network
  *   owner connect                     -- Connect external wallet via WalletConnect QR
@@ -77,35 +78,48 @@ program
     await statusCommand(dataDir);
   });
 
+/** Shared handler for quickset / quickstart commands. */
+const quicksetAction = async (opts: {
+  dataDir?: string;
+  baseUrl?: string;
+  mode?: string;
+  expiresIn?: string;
+  password?: string;
+}) => {
+  const dataDir = resolveDataDir(opts);
+  const mode = opts.mode ?? 'testnet';
+  if (mode !== 'testnet' && mode !== 'mainnet') {
+    console.error("Error: --mode must be 'testnet' or 'mainnet'");
+    process.exit(1);
+  }
+  await quickstartCommand({
+    dataDir,
+    baseUrl: opts.baseUrl,
+    mode: mode as 'testnet' | 'mainnet',
+    expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
+    masterPassword: opts.password,
+  });
+};
+
 program
-  .command('quickstart')
-  .description('Create Solana + EVM wallets for quick setup')
+  .command('quickset')
+  .description('Quick setup: create wallets, sessions, and MCP tokens')
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
   .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'testnet')
   .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
   .option('--password <password>', 'Master password')
-  .action(async (opts: {
-    dataDir?: string;
-    baseUrl?: string;
-    mode?: string;
-    expiresIn?: string;
-    password?: string;
-  }) => {
-    const dataDir = resolveDataDir(opts);
-    const mode = opts.mode ?? 'testnet';
-    if (mode !== 'testnet' && mode !== 'mainnet') {
-      console.error("Error: --mode must be 'testnet' or 'mainnet'");
-      process.exit(1);
-    }
-    await quickstartCommand({
-      dataDir,
-      baseUrl: opts.baseUrl,
-      mode: mode as 'testnet' | 'mainnet',
-      expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
-      masterPassword: opts.password,
-    });
-  });
+  .action(quicksetAction);
+
+program
+  .command('quickstart')
+  .description('(alias for quickset) Quick setup: create wallets, sessions, and MCP tokens')
+  .option('--data-dir <path>', 'Data directory path')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'testnet')
+  .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
+  .option('--password <password>', 'Master password')
+  .action(quicksetAction);
 
 // Wallet subcommand group
 const wallet = program.command('wallet').description('Wallet management commands');
