@@ -157,7 +157,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 198. Signing Protocol v1 설계 | 0/2 | Not started | - |
+| 198. Signing Protocol v1 설계 | 1/2 | In Progress|  |
 | 199. Wallet SDK + 데몬 컴포넌트 설계 | 0/2 | Not started | - |
 | 200. 알림 채널 + Push Relay Server 설계 | 0/2 | Not started | - |
 | 201. 기존 설계 문서 갱신 + 교차 검증 | 0/1 | Not started | - |

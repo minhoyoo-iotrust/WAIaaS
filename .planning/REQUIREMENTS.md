@@ -9,8 +9,8 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 ### Signing Protocol v1
 
-- [ ] **PROTO-01**: SignRequest/SignResponse Zod 스키마 + 서명 메시지 포맷 설계서 확정
-- [ ] **PROTO-02**: 유니버셜 링크 URL 구조 (지갑 도메인 활용, base64url 인코딩) 설계서 확정
+- [x] **PROTO-01**: SignRequest/SignResponse Zod 스키마 + 서명 메시지 포맷 설계서 확정
+- [x] **PROTO-02**: 유니버셜 링크 URL 구조 (지갑 도메인 활용, base64url 인코딩) 설계서 확정
 - [ ] **PROTO-03**: ntfy 요청/응답 토픽 네이밍 규칙 + 보안 모델 설계서 확정
 - [ ] **PROTO-04**: Telegram 인라인 버튼 + 공유 인텐트 응답 플로우 설계서 확정
 
@@ -69,8 +69,8 @@ Wallet SDK 설계 마일스톤. 지갑 개발사(D'CENT 등)가 WAIaaS와 통합
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROTO-01 | Phase 198 | Pending |
-| PROTO-02 | Phase 198 | Pending |
+| PROTO-01 | Phase 198 | Complete |
+| PROTO-02 | Phase 198 | Complete |
 | PROTO-03 | Phase 198 | Pending |
 | PROTO-04 | Phase 198 | Pending |
 | WSDK-01 | Phase 199 | Pending |
