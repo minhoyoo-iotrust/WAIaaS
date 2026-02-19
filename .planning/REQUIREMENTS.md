@@ -25,14 +25,14 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 - [x] **DAEMON-01**: 포트 충돌(EADDRINUSE) 시 "Port N is already in use" 메시지가 출력된다
 - [x] **DAEMON-02**: 기본 모드에서 내부 Step 1~6 로그가 debug 레벨로 하향되어 미출력된다
 - [x] **DAEMON-03**: 데몬 시작 완료 메시지에 Admin UI URL(`http://127.0.0.1:3100/admin`)이 포함된다
-- [ ] **DAEMON-04**: mcp setup 에러 메시지가 "Run waiaas quickstart first"로 안내된다
+- [x] **DAEMON-04**: mcp setup 에러 메시지가 "Run waiaas quickstart first"로 안내된다
 
 ### quickstart
 
-- [ ] **QS-01**: quickstart 출력에 한글이 포함되지 않는다 (전체 영문)
-- [ ] **QS-02**: 토큰 발급 후 만료 시점(`Expires at: YYYY-MM-DD HH:mm`)이 출력된다
-- [ ] **QS-03**: 동일 이름 지갑 존재 시 409 에러 대신 기존 지갑을 재사용하고 세션만 재발급한다
-- [ ] **QS-04**: 네트워크 목록을 `availableNetworks` 필드로 정확히 읽는다
+- [x] **QS-01**: quickstart 출력에 한글이 포함되지 않는다 (전체 영문)
+- [x] **QS-02**: 토큰 발급 후 만료 시점(`Expires at: YYYY-MM-DD HH:mm`)이 출력된다
+- [x] **QS-03**: 동일 이름 지갑 존재 시 409 에러 대신 기존 지갑을 재사용하고 세션만 재발급한다
+- [x] **QS-04**: 네트워크 목록을 `availableNetworks` 필드로 정확히 읽는다
 
 ### Docker DX
 
@@ -52,7 +52,7 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 ### MCP 안내
 
-- [ ] **MCP-01**: mcp setup 시 기본 만료 기간(24h) 경고와 `--expires-in` 옵션이 안내된다
+- [x] **MCP-01**: mcp setup 시 기본 만료 기간(24h) 경고와 `--expires-in` 옵션이 안내된다
 
 ## v2 Requirements
 
@@ -82,11 +82,11 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 | DAEMON-01 | 194 | Complete |
 | DAEMON-02 | 194 | Complete |
 | DAEMON-03 | 194 | Complete |
-| DAEMON-04 | 195 | Pending |
-| QS-01 | 195 | Pending |
-| QS-02 | 195 | Pending |
-| QS-03 | 195 | Pending |
-| QS-04 | 195 | Pending |
+| DAEMON-04 | 195 | Complete |
+| QS-01 | 195 | Complete |
+| QS-02 | 195 | Complete |
+| QS-03 | 195 | Complete |
+| QS-04 | 195 | Complete |
 | DOCK-01 | 197 | Pending |
 | DOCK-02 | 197 | Pending |
 | PY-01 | 197 | Pending |
@@ -94,7 +94,7 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 | PY-03 | 197 | Pending |
 | SDK-01 | 196 | Pending |
 | SDK-02 | 196 | Pending |
-| MCP-01 | 195 | Pending |
+| MCP-01 | 195 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
