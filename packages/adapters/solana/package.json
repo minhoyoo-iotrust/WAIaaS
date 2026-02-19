@@ -9,7 +9,10 @@
     "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
     "directory": "packages/adapters/solana"
   },
-  "homepage": "https://github.com/minho-yoo/waiaas#readme",
+  "homepage": "https://github.com/minhoyoo-iotrust/WAIaaS#readme",
+  "bugs": {
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
