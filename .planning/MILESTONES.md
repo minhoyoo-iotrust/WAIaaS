@@ -1116,3 +1116,13 @@
 
 ---
 
+
+## v2.4.1 Admin UI 테스트 커버리지 복원 (Shipped: 2026-02-19)
+
+**Phases completed:** 144 phases, 307 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

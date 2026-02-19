@@ -190,19 +190,35 @@ function NotificationSettingsTab() {
           </p>
         </div>
         <div class="settings-category-body">
+          {/* Global notification settings — applies to all channels */}
+          <div class="settings-fields-grid" style={{ marginBottom: 'var(--space-4)' }}>
+            <div class="settings-field-full">
+              <FormField
+                label="Enabled"
+                name="notifications.enabled"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'notifications', 'enabled')}
+                onChange={(v) => handleFieldChange('notifications.enabled', v)}
+                description="Enable or disable notifications globally"
+              />
+            </div>
+
+            <FormField
+              label={keyToLabel('locale')}
+              name="notifications.locale"
+              type="select"
+              value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'locale') || 'en'}
+              onChange={(v) => handleFieldChange('notifications.locale', v)}
+              options={[
+                { label: 'English', value: 'en' },
+                { label: 'Korean', value: 'ko' },
+              ]}
+              description="Language for notification messages"
+            />
+          </div>
+
           <FieldGroup legend="Telegram" description="Telegram notification channel and bot configuration">
             <div class="settings-fields-grid">
-              <div class="settings-field-full">
-                <FormField
-                  label="Enabled"
-                  name="notifications.enabled"
-                  type="checkbox"
-                  value={getEffectiveBoolValue(settings.value, dirty.value, 'notifications', 'enabled')}
-                  onChange={(v) => handleFieldChange('notifications.enabled', v)}
-                  description="Enable or disable notifications globally"
-                />
-              </div>
-
               <FormField
                 label={keyToLabel('telegram_bot_token')}
                 name="notifications.telegram_bot_token"
@@ -220,19 +236,6 @@ function NotificationSettingsTab() {
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'telegram_chat_id')}
                 onChange={(v) => handleFieldChange('notifications.telegram_chat_id', v)}
                 description="Chat ID for Telegram notification delivery"
-              />
-
-              <FormField
-                label={keyToLabel('locale')}
-                name="notifications.locale"
-                type="select"
-                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'locale') || 'en'}
-                onChange={(v) => handleFieldChange('notifications.locale', v)}
-                options={[
-                  { label: 'English', value: 'en' },
-                  { label: 'Korean', value: 'ko' },
-                ]}
-                description="Language for notification messages"
               />
             </div>
 
@@ -535,7 +538,10 @@ export default function NotificationsPage() {
 
       {status.value && !status.value.enabled && (
         <div class="notif-disabled-banner">
-          Notifications are disabled. Set <code>notifications.enabled = true</code> in config.toml
+          Notifications are disabled.{' '}
+          <a href="#" onClick={(e: Event) => { e.preventDefault(); activeTab.value = 'settings'; }}>
+            Enable them in the Settings tab
+          </a>
         </div>
       )}
 

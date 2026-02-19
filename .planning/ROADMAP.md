@@ -6,6 +6,7 @@
 - ✅ **v2.2 테스트 커버리지 강화** — Phases 178-181 (shipped 2026-02-18)
 - ✅ **v2.3 Admin UI 기능별 메뉴 재구성** — Phases 182-187 (shipped 2026-02-18)
 - ✅ **v2.4 npm Trusted Publishing 전환** — Phases 188-190 (shipped 2026-02-19)
+- ✅ **v2.4.1 Admin UI 테스트 커버리지 복원** — Phases 191-193 (shipped 2026-02-19)
 
 ## Phases
 
@@ -53,6 +54,17 @@ See `.planning/milestones/v2.4-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v2.4.1 Admin UI 테스트 커버리지 복원 (Phases 191-193) — SHIPPED 2026-02-19</summary>
+
+- [x] Phase 191: Security + WalletConnect 페이지 테스트 (2/2 plans) — completed 2026-02-19
+- [x] Phase 192: System 페이지 테스트 (1/1 plan) — completed 2026-02-19
+- [x] Phase 193: 공용 컴포넌트 + 기존 페이지 개선 + 임계값 복원 (2/2 plans) — completed 2026-02-19
+
+See `.planning/milestones/v2.4.1-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -61,3 +73,4 @@ See `.planning/milestones/v2.4-ROADMAP.md` for full details.
 | 178-181 | v2.2 | 6/6 | Complete | 2026-02-18 |
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
 | 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
+| 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
