@@ -72,35 +72,35 @@ README/예시 코드를 복붙하면 바로 동작하는 상태 달성. 첫 5분
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| README-01 | — | Pending |
-| README-02 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| CLI-05 | — | Pending |
-| DAEMON-01 | — | Pending |
-| DAEMON-02 | — | Pending |
-| DAEMON-03 | — | Pending |
-| DAEMON-04 | — | Pending |
-| QS-01 | — | Pending |
-| QS-02 | — | Pending |
-| QS-03 | — | Pending |
-| QS-04 | — | Pending |
-| DOCK-01 | — | Pending |
-| DOCK-02 | — | Pending |
-| PY-01 | — | Pending |
-| PY-02 | — | Pending |
-| PY-03 | — | Pending |
-| SDK-01 | — | Pending |
-| SDK-02 | — | Pending |
-| MCP-01 | — | Pending |
+| README-01 | 196 | Pending |
+| README-02 | 196 | Pending |
+| CLI-01 | 194 | Pending |
+| CLI-02 | 194 | Pending |
+| CLI-03 | 194 | Pending |
+| CLI-04 | 194 | Pending |
+| CLI-05 | 194 | Pending |
+| DAEMON-01 | 194 | Pending |
+| DAEMON-02 | 194 | Pending |
+| DAEMON-03 | 194 | Pending |
+| DAEMON-04 | 195 | Pending |
+| QS-01 | 195 | Pending |
+| QS-02 | 195 | Pending |
+| QS-03 | 195 | Pending |
+| QS-04 | 195 | Pending |
+| DOCK-01 | 197 | Pending |
+| DOCK-02 | 197 | Pending |
+| PY-01 | 197 | Pending |
+| PY-02 | 197 | Pending |
+| PY-03 | 197 | Pending |
+| SDK-01 | 196 | Pending |
+| SDK-02 | 196 | Pending |
+| MCP-01 | 195 | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 ⚠️
+- v1 requirements: 23 total
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-19*
-*Last updated: 2026-02-19 after initial definition*
+*Last updated: 2026-02-19 after roadmap creation*
