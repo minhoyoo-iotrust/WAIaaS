@@ -1,7 +1,7 @@
 # 마일스톤 m26-03: Push Relay Server
 
-- **Status:** IN_PROGRESS
-- **Milestone:** v2.6
+- **Status:** PLANNED
+- **Milestone:** TBD
 
 ## 목표
 
@@ -135,12 +135,13 @@ service_account_key_path = "/etc/push-relay/service-account.json"
 
 #### 5. Device Token Registry
 
-지갑 앱이 자신의 푸시 토큰을 Relay Server에 등록하는 간단한 API.
+지갑 앱이 자신의 푸시 토큰을 Relay Server에 등록하는 API. **API 키 인증**으로 무단 등록을 방지한다.
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| POST | /devices | 디바이스 토큰 등록 (walletId + pushToken + platform) |
-| DELETE | /devices/:token | 디바이스 토큰 해제 |
+| 메서드 | 경로 | 인증 | 설명 |
+|--------|------|------|------|
+| POST | /devices | API Key | 디바이스 토큰 등록 (walletId + pushToken + platform) |
+| DELETE | /devices/:token | API Key | 디바이스 토큰 해제 |
+| GET | /health | 없음 | 헬스체크 (ntfy 연결 상태 + Push 프로바이더 상태) |
 
 ```typescript
 const DeviceRegistrationSchema = z.object({
@@ -150,16 +151,47 @@ const DeviceRegistrationSchema = z.object({
 });
 ```
 
+**인증**: `X-API-Key` 헤더로 API 키 검증. API 키는 config.toml `[relay.server] api_key`에 설정. 지갑 개발사가 자체 Relay를 운영하므로 단일 API 키로 충분.
+
 저장소: SQLite 단일 파일 (relay.db) — 인메모리 캐시 + 디스크 지속.
 
-#### 6. 메시지 변환 매핑
+#### 6. ntfy 메시지 파싱 규격
+
+WAIaaS 데몬은 ntfy HTTP publish API로 메시지를 전송한다. Relay는 ntfy SSE 스트림에서 수신한 메시지를 다음 규칙으로 파싱한다:
+
+| ntfy 필드 | 내용 |
+|-----------|------|
+| `topic` | 토픽 이름으로 메시지 유형 판별 (`*-sign-*` → 서명 요청, `*-notify-*` → 알림) |
+| `message` | JSON 문자열 (SignRequest 또는 NotificationMessage) |
+| `priority` | ntfy 우선순위 (5=urgent, 3=default) |
+| `title` | 푸시 알림 제목 (데몬이 설정) |
+
+**토픽 구성 규칙**: `{topic_prefix}-sign-{walletId}` / `{topic_prefix}-notify-{walletId}`
+- config.toml `topic_prefix`는 데몬의 `signing_sdk.ntfy_request_topic_prefix`에서 `waiaas-sign` → `waiaas` 부분과 일치해야 함
+
+#### 7. 메시지 변환 매핑
 
 | ntfy 메시지 유형 | Push 카테고리 | 제목 | 본문 |
 |-----------------|-------------|------|------|
 | 서명 요청 (waiaas-sign-*) | `sign_request` | "Transaction Approval" | displayMessage (To/Amount/Type) |
 | 일반 알림 (waiaas-notify-*) | `notification` | 이벤트 타입별 제목 | 이벤트 상세 |
 
+**ntfy → Push 우선순위 매핑:**
+
+| ntfy priority | Push 우선순위 | 용도 |
+|--------------|-------------|------|
+| 5 (urgent) | Pushwoosh: `"priority": "high"` / FCM: `"priority": "high"` | 서명 요청 (즉시 응답 필요) |
+| 3 (default) | Pushwoosh: `"priority": "normal"` / FCM: `"priority": "normal"` | 일반 알림 (정보성) |
+
 서명 요청의 경우, Push 페이로드의 `data` 필드에 전체 SignRequest JSON을 포함하여 지갑 앱이 서명 UI를 바로 표시할 수 있게 한다.
+
+#### 8. Push 전송 실패 시 재시도 정책
+
+| 실패 유형 | 동작 |
+|----------|------|
+| 일시적 네트워크 오류 (5xx, timeout) | 지수 백오프 재시도 (1s/2s/4s, 최대 3회) |
+| 인증 실패 (401/403) | 재시도 없음 + 에러 로그 |
+| 잘못된 토큰 (invalidTokens) | 재시도 없음 + DB에서 자동 삭제 |
 
 ### config.toml (push-relay 전용)
 
@@ -167,9 +199,9 @@ const DeviceRegistrationSchema = z.object({
 
 ```toml
 [relay]
-ntfy_server = "https://ntfy.sh"           # ntfy 서버 (self-hosted 가능)
-topic_prefix = "waiaas"                     # 토픽 접두어
-wallet_ids = ["wallet-uuid-1", "wallet-uuid-2"]  # 구독할 월렛 ID 목록
+ntfy_server = "https://ntfy.sh"           # ntfy 서버 — WAIaaS 데몬과 동일 서버를 가리켜야 함
+topic_prefix = "waiaas"                     # 토픽 접두어 — 데몬의 signing_sdk.ntfy_request_topic_prefix와 일치 필요
+wallet_ids = ["wallet-uuid-1", "wallet-uuid-2"]  # 구독할 월렛 ID 목록 (정적 설정, 수동 관리)
 
 [relay.push]
 provider = "pushwoosh"                      # "pushwoosh" | "fcm"
@@ -184,27 +216,40 @@ application_code = "ABCDE-12345"
 # service_account_key_path = "/etc/push-relay/service-account.json"
 
 [relay.server]
-port = 3100                                 # Device Registry API 포트
+port = 3200                                 # Device Registry API 포트 (WAIaaS 데몬 기본 3100과 충돌 방지)
 host = "0.0.0.0"
+api_key = "your-secret-api-key"             # Device Registry API 인증 키
 ```
+
+> **wallet_ids 정적 관리**: 초기 버전은 config.toml에 지갑 ID를 수동 나열한다. 지갑 추가/삭제 시 config 수정 + Relay 재시작이 필요하다. 동적 디스커버리(WAIaaS API 폴링)는 후속 확장으로 분리.
+
+### Graceful Shutdown
+
+SIGTERM/SIGINT 수신 시:
+1. ntfy SSE 연결 종료
+2. 대기 중인 Push 전송 완료 (최대 10초)
+3. SQLite 연결 종료
+4. process.exit(0)
 
 ### 파일/모듈 구조
 
 ```
 packages/push-relay/                        # @waiaas/push-relay 패키지
   src/
-    index.ts                                # 진입점 (서버 시작)
+    index.ts                                # 진입점 (서버 시작 + graceful shutdown)
     config.ts                               # TOML config 로딩 + Zod 검증
     subscriber/
       ntfy-subscriber.ts                    # ntfy SSE 구독 + 재연결
-      message-parser.ts                     # ntfy 메시지 → PushPayload 변환
+      message-parser.ts                     # ntfy 메시지 파싱 (토픽 판별 + JSON 추출)
     providers/
       push-provider.ts                      # IPushProvider 인터페이스
       pushwoosh-provider.ts                 # Pushwoosh API 연동
-      fcm-provider.ts                       # FCM API 연동
+      fcm-provider.ts                       # FCM API 연동 (OAuth2 토큰 자동 갱신)
     registry/
       device-registry.ts                    # SQLite 디바이스 토큰 관리
-      device-routes.ts                      # POST/DELETE /devices
+      device-routes.ts                      # POST/DELETE /devices + GET /health
+    middleware/
+      api-key-auth.ts                       # X-API-Key 헤더 검증
     server.ts                               # Hono HTTP 서버 (Device Registry API)
   Dockerfile
   docker-compose.yml
@@ -265,6 +310,16 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 | 12 | Pushwoosh 페이로드 포맷 | createMessage body → content, data, ios_root_params 올바른 구조 assert | [L0] |
 | 13 | Pushwoosh 인증 실패 | 잘못된 api_token → 에러 로그 + 재시도 없음 assert | [L0] |
 
+### 인증 + 헬스체크 + Graceful Shutdown
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 14 | Device API 인증 | X-API-Key 미포함 → 401 assert | [L0] |
+| 15 | 헬스체크 | GET /health → ntfy 연결 상태 + Push 프로바이더 상태 반환 assert | [L0] |
+| 16 | Graceful Shutdown | SIGTERM → 대기 중 Push 전송 완료 + SSE 연결 종료 + exit(0) assert | [L0] |
+| 17 | ntfy 우선순위 매핑 | priority 5 → Push high, priority 3 → Push normal assert | [L0] |
+| 18 | Push 재시도 | 5xx 응답 → 지수 백오프 3회 재시도 → 성공 assert | [L0] |
+
 ---
 
 ## 의존
@@ -272,7 +327,8 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 | 의존 대상 | 이유 |
 |----------|------|
 | m26-01 (Signing SDK) | ntfy 서명 토픽 구조, SignRequest 스키마 |
-| m26-02 (알림 채널) | ntfy 알림 토픽 구조, WalletNotification 스키마 |
+| m26-02 (알림 채널) | ntfy 알림 토픽 구조, NotificationMessage 스키마 |
+| **동일 ntfy 서버** | WAIaaS 데몬과 Relay가 같은 ntfy 서버를 바라봐야 함. 데몬의 `notifications.ntfy_server`와 Relay의 `relay.ntfy_server`가 일치해야 토픽 메시지 수신 가능 |
 
 ---
 
@@ -283,6 +339,7 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 | 1 | Pushwoosh API 변경 | Provider 호출 실패 | API 버전 고정 (1.3), 에러 응답 로깅으로 빠른 감지 |
 | 2 | ntfy SSE 장시간 연결 불안정 | 서명 요청 수신 지연 | 자동 재연결 + heartbeat 감지 (ntfy keepalive 30초) |
 | 3 | 디바이스 토큰 관리 부담 | 지갑사 추가 작업 | 토큰 등록 API 2개만 구현하면 완료. invalidTokens 자동 정리로 관리 최소화 |
+| 4 | wallet_ids 수동 관리 | 지갑 추가 시 config 수정 + 재시작 필요 | 초기 버전은 수동 관리. 동적 디스커버리는 후속 확장 |
 
 ---
 
@@ -292,7 +349,7 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 |------|------|
 | 페이즈 | 1개 |
 | 신규 파일 | 10-12개 (패키지 전체) |
-| 테스트 | 13개 |
+| 테스트 | 18개 |
 | DB | SQLite 1개 파일 (relay.db, 디바이스 토큰) |
 | 신규 패키지 | @waiaas/push-relay (모노레포 packages/push-relay) |
 
@@ -309,6 +366,82 @@ m26-03 완료 시 다음 문서에 Push Relay 연동 가이드를 추가한다:
 | `README.md` (루트) | Documentation 테이블에 Push Relay 가이드 링크 추가 |
 
 > m26-01에서 작성하는 `docs/wallet-sdk-integration.md`(이슈 108)는 ntfy 직접 통합과 Telegram 중계만 다룬다. Push Relay 섹션은 m26-03 완료 시 추가한다.
+
+---
+
+## 배포 인프라
+
+`@waiaas/push-relay`는 WAIaaS 모노레포 내 별도 패키지로 관리하며, 기존 배포 파이프라인(release-please + release.yml)에 통합한다.
+
+> **wallet-sdk**: `@waiaas/wallet-sdk`는 daemon이 의존하는 공유 스키마를 포함하므로 다른 패키지와 동일하게 배포한다 (별도 Docker 이미지 없음).
+> **push-relay**: 독립 실행 서버이므로 npm 패키지 + 전용 Docker 이미지로 배포한다.
+
+### 모노레포 등록
+
+| 항목 | 설정 |
+|------|------|
+| 패키지 경로 | `packages/push-relay` |
+| 패키지명 | `@waiaas/push-relay` |
+| `turbo.json` | `build`, `test`, `lint`, `typecheck` 파이프라인에 push-relay 포함 |
+| `pnpm-workspace.yaml` | `packages/push-relay` 항목 추가 (기존 glob `packages/*`로 자동 포함 확인) |
+
+### release-please 설정
+
+`release-please-config.json`에 패키지 등록:
+
+```json
+{
+  "packages": {
+    "packages/push-relay": {
+      "release-type": "node",
+      "component": "push-relay",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}
+```
+
+- 기존 prerelease 모드 설정 (`versioning: "prerelease"`, `prerelease: true`, `prerelease-type: "rc"`) 동일 적용
+- Conventional Commits로 독립 버전 관리
+
+### CI 파이프라인 (release.yml)
+
+| Job | 내용 |
+|-----|------|
+| quality-gate | 기존 job에 push-relay 빌드/테스트/lint/typecheck 포함 (turbo 자동) |
+| npm-publish | `@waiaas/push-relay` npm OIDC Trusted Publishing (Sigstore provenance) |
+| docker-push-relay | **신규 job** — `waiaas/push-relay` Docker 이미지 빌드 + Docker Hub/GHCR dual push |
+
+Docker 이미지 빌드:
+
+```dockerfile
+# packages/push-relay/Dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY packages/push-relay/dist ./dist
+COPY packages/push-relay/package.json ./
+RUN npm install --omit=dev
+EXPOSE 3200
+CMD ["node", "dist/index.js"]
+```
+
+### 테스트 커버리지 임계값
+
+| 지표 | 임계값 |
+|------|--------|
+| Lines | 80% |
+| Branches | 70% |
+| Functions | 70% |
+
+> daemon과 동일한 기준 적용. `vitest.config.ts`에 `coverage.thresholds` 설정.
+
+### 배포 산출물 요약
+
+| 산출물 | 대상 |
+|--------|------|
+| `@waiaas/push-relay` npm | npmjs.com (OIDC Trusted Publishing) |
+| `waiaas/push-relay` Docker | Docker Hub + GHCR dual push |
+| `@waiaas/wallet-sdk` npm | npmjs.com (기존 파이프라인과 동일) |
 
 ---
 
