@@ -37,6 +37,7 @@ PACKAGES=(
   "packages/skills"
   "packages/adapters/solana"
   "packages/adapters/evm"
+  "packages/wallet-sdk"
 )
 
 echo ""

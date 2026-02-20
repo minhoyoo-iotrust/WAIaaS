@@ -119,7 +119,7 @@ jobs:
           curl -f http://localhost:3100/health
           docker stop waiaas-release-test
 
-  # pnpm publish dry-run for all 8 publishable packages
+  # pnpm publish dry-run for all 9 publishable packages
   publish-check:
     runs-on: ubuntu-latest
     needs: test
@@ -144,6 +144,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/wallet-sdk
           )
           for pkg_path in "${PACKAGES[@]}"; do
             cp README.md "$pkg_path/README.md"
@@ -168,6 +169,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/wallet-sdk
           )
           for pkg_path in "${PACKAGES[@]}"; do
             echo "--- Checking $pkg_path ---"
@@ -187,6 +189,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/wallet-sdk
           )
           PACK_DIR=$(mktemp -d)
           FAILED=0
@@ -295,6 +298,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/wallet-sdk
           )
           for pkg_path in "${PACKAGES[@]}"; do
             cp README.md "$pkg_path/README.md"
@@ -325,6 +329,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/wallet-sdk
           )
           PACK_DIR=$(mktemp -d)
           for pkg_path in "${PACKAGES[@]}"; do
@@ -348,7 +353,7 @@ jobs:
           echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **npm:** 8 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm:** 9 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (GHCR):** ghcr.io/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (Hub):** waiaas/daemon" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
