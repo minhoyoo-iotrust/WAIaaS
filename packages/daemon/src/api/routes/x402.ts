@@ -38,6 +38,7 @@ import { signPayment } from '../../services/x402/payment-signer.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import { buildErrorResponses, openApiValidationHook } from './openapi-schemas.js';
+import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,6 +126,7 @@ const x402FetchRoute = createRoute({
             method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).default('GET'),
             headers: z.record(z.string()).optional(),
             body: z.string().optional(),
+            walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- defaults to session default wallet)'),
           }),
         },
       },
@@ -189,12 +191,10 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
       });
     }
 
-    // A2. Extract walletId + sessionId from sessionAuth context
-    const walletId = c.get('walletId' as never) as string;
-    const sessionId = c.get('sessionId' as never) as string | undefined;
-
-    // A3. Parse request body
+    // A2. Parse request body + resolve walletId
     const body = c.req.valid('json');
+    const walletId = resolveWalletId(c, deps.db, body.walletId);
+    const sessionId = c.get('sessionId' as never) as string | undefined;
     const targetUrl = new URL(body.url);
     const targetDomain = targetUrl.hostname;
 

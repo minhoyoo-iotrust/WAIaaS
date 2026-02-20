@@ -29,7 +29,7 @@ import { sessionWallets } from '../../infrastructure/database/schema.js';
  */
 export function resolveWalletId(
   c: Context,
-  db: BetterSQLite3Database,
+  db: BetterSQLite3Database<any>,
   bodyWalletId?: string,
 ): string {
   // Priority 1: explicit body parameter
@@ -64,4 +64,36 @@ export function resolveWalletId(
   }
 
   return walletId;
+}
+
+/**
+ * Verify that a session has access to a specific wallet via session_wallets junction table.
+ *
+ * Used when the walletId comes from a different source (e.g., transaction record)
+ * rather than from request parameters.
+ *
+ * @param sessionId - Session ID to check
+ * @param walletId - Wallet ID to verify access for
+ * @param db - Drizzle database instance
+ * @throws WAIaaSError('WALLET_ACCESS_DENIED') if session does not have access to the wallet
+ */
+export function verifyWalletAccess(
+  sessionId: string,
+  walletId: string,
+  db: BetterSQLite3Database<any>,
+): void {
+  const link = db
+    .select()
+    .from(sessionWallets)
+    .where(
+      and(
+        eq(sessionWallets.sessionId, sessionId),
+        eq(sessionWallets.walletId, walletId),
+      ),
+    )
+    .get();
+
+  if (!link) {
+    throw new WAIaaSError('WALLET_ACCESS_DENIED');
+  }
 }

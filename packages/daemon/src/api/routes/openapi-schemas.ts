@@ -879,6 +879,9 @@ export const TxSignRequestSchema = z
     network: z.string().optional().openapi({
       description: 'Network (optional -- resolved from wallet defaults)',
     }),
+    walletId: z.string().uuid().optional().openapi({
+      description: 'Target wallet ID (optional -- defaults to session default wallet)',
+    }),
   })
   .openapi('TxSignRequest');
 

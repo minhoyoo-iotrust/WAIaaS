@@ -72,6 +72,7 @@ import {
 } from './openapi-schemas.js';
 import { executeSignOnly } from '../../pipeline/sign-only.js';
 import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
+import { resolveWalletId, verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -285,8 +286,13 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(sendTransactionRoute, async (c) => {
-    // Get walletId from sessionAuth context (set by middleware at server level)
-    const walletId = c.get('walletId' as never) as string;
+    // Raw JSON body -- bypass Hono Zod validation (z.any() passthrough).
+    // Actual Zod validation is delegated to stage1Validate (5-type or legacy).
+    // NOTE: Must read body BEFORE resolveWalletId since raw JSON can only be read once.
+    const request = await c.req.json();
+
+    // Resolve walletId from body.walletId > query > defaultWalletId
+    const walletId = resolveWalletId(c, deps.db, request.walletId);
 
     // Look up wallet
     const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
@@ -298,10 +304,6 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     if (wallet.status === 'TERMINATED') {
       throw new WAIaaSError('WALLET_TERMINATED');
     }
-
-    // Raw JSON body -- bypass Hono Zod validation (z.any() passthrough).
-    // Actual Zod validation is delegated to stage1Validate (5-type or legacy).
-    const request = await c.req.json();
 
     // Resolve network: request > wallet.defaultNetwork > environment default
     let resolvedNetwork: string;
@@ -430,9 +432,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(signTransactionRoute, async (c) => {
-    const walletId = c.get('walletId' as never) as string;
-    const sessionId = c.get('sessionId' as never) as string | undefined;
     const body = c.req.valid('json');
+    const walletId = resolveWalletId(c, deps.db, body.walletId);
+    const sessionId = c.get('sessionId' as never) as string | undefined;
 
     // Look up wallet
     const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
@@ -495,7 +497,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(listTransactionsRoute, async (c) => {
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = resolveWalletId(c, deps.db);
     const { limit: rawLimit, cursor, display_currency: queryCurrency } = c.req.valid('query');
     const limit = rawLimit ?? 20;
 
@@ -551,7 +553,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(pendingTransactionsRoute, async (c) => {
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = resolveWalletId(c, deps.db);
 
     const rows = await deps.db
       .select()
@@ -734,10 +736,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     router.openapi(cancelTransactionRoute, async (c) => {
       const { id: txId } = c.req.valid('param');
 
-      // Get walletId from sessionAuth context
-      const sessionWalletId = c.get('walletId' as never) as string;
-
-      // Verify the tx exists and belongs to this wallet
+      // Verify the tx exists
       const tx = await deps.db
         .select()
         .from(transactions)
@@ -750,11 +749,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         });
       }
 
-      if (tx.walletId !== sessionWalletId) {
-        throw new WAIaaSError('TX_NOT_FOUND', {
-          message: `Transaction '${txId}' not found`,
-        });
-      }
+      // Verify session has access to the transaction's wallet via session_wallets
+      const callerSessionId = c.get('sessionId' as never) as string;
+      verifyWalletAccess(callerSessionId, tx.walletId, deps.db);
 
       // Cancel the delay
       delayQueue.cancelDelay(txId);

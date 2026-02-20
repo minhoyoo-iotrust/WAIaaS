@@ -31,6 +31,7 @@ import {
 import type { TokenRegistryService } from '../../infrastructure/token-registry/index.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
+import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 
 export interface WalletRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -220,7 +221,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
   router.openapi(walletAddressRoute, async (c) => {
     // Get walletId from sessionAuth context (set by middleware at server level)
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = resolveWalletId(c, deps.db);
     const wallet = await resolveWalletById(deps.db, walletId);
 
     return c.json(
@@ -236,7 +237,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   });
 
   router.openapi(walletBalanceRoute, async (c) => {
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = resolveWalletId(c, deps.db);
     const wallet = await resolveWalletById(deps.db, walletId);
 
     if (!deps.adapterPool || !deps.config) {
@@ -350,7 +351,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(walletAssetsRoute, async (c) => {
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = resolveWalletId(c, deps.db);
     const wallet = await resolveWalletById(deps.db, walletId);
 
     if (!deps.adapterPool || !deps.config) {
@@ -479,7 +480,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(walletDefaultNetworkRoute, async (c) => {
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = resolveWalletId(c, deps.db);
     const wallet = await resolveWalletById(deps.db, walletId);
 
     if (wallet.status === 'TERMINATED') {
