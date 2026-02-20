@@ -151,9 +151,9 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 210-01-PLAN.md — DB v19 마이그레이션 + Drizzle 스키마 + 에러 코드 4개 추가
-- [ ] 210-02-PLAN.md — 세션 생성 변경 (walletIds/walletId 정규화) + 세션-지갑 CRUD 4개 엔드포인트
-- [ ] 210-03-PLAN.md — 지갑 삭제 cascade 방어 + is_default 불변량 보장 + 엣지 케이스 테스트
+- [x] 210-01-PLAN.md — DB v19 마이그레이션 + Drizzle 스키마 + 에러 코드 4개 추가
+- [x] 210-02-PLAN.md — 세션 생성 변경 (walletIds/walletId 정규화) + 세션-지갑 CRUD 4개 엔드포인트
+- [x] 210-03-PLAN.md — 지갑 삭제 cascade 방어 + is_default 불변량 보장 + 엣지 케이스 테스트
 
 ### Phase 211: API 레이어 지갑 선택
 **Goal**: 모든 지갑 스코프 API가 선택적 walletId 파라미터를 지원하고, 미지정 시 기본 지갑으로 투명하게 동작하는 상태
@@ -165,12 +165,12 @@ Plans:
   3. 세션에 연결되지 않은 지갑 접근 시 WALLET_ACCESS_DENIED 에러가 반환된다
   4. 세션 목록/상세 응답에 wallets 배열이 포함되면서 하위 호환 walletId/walletName 필드도 유지된다
   5. 세션 갱신(renew) 시 현재 기본 지갑 기준으로 JWT가 발급된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 211-01: resolveWalletId 헬퍼 + session-auth/owner-auth 미들웨어 변경
-- [ ] 211-02: 전 엔드포인트 walletId 선택적 파라미터 적용 (wallet/transactions/x402/actions/wc)
-- [ ] 211-03: 세션 목록/상세 응답 확장 + 세션 갱신 변경 + 하위 호환 테스트
+- [ ] 211-01-PLAN.md — resolveWalletId 헬퍼 + session-auth/owner-auth 미들웨어 변경
+- [ ] 211-02-PLAN.md — 전 엔드포인트 walletId 선택적 파라미터 적용 (wallet/transactions/x402/actions/wc)
+- [ ] 211-03-PLAN.md — 세션 응답 OpenAPI 스키마 정합 + 하위 호환 테스트
 
 ### Phase 212: 자기 발견 엔드포인트
 **Goal**: 에이전트가 세션 토큰만으로 접근 가능한 지갑, 정책, capabilities, 자연어 프롬프트를 자동 파악할 수 있는 상태
