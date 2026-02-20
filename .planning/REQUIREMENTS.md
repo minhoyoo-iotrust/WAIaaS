@@ -30,7 +30,7 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 - [ ] **SDK-01**: @waiaas/wallet-sdk 패키지의 parseSignRequest(url)가 유니버셜 링크 URL에서 SignRequest를 추출하고 Zod 검증을 통과한다
 - [ ] **SDK-02**: buildSignResponse(requestId, action, signature?, address)가 유효한 SignResponse 객체를 생성한다
 - [ ] **SDK-03**: formatDisplayMessage(request)가 사람이 읽을 수 있는 트랜잭션 요약을 반환한다
-- [ ] **SDK-04**: sendViaNtfy(response, topic, serverUrl?)가 ntfy 응답 토픽에 HTTP PUT으로 publish한다
+- [ ] **SDK-04**: sendViaNtfy(response, topic, serverUrl?)가 ntfy 응답 토픽에 HTTP POST로 publish한다
 - [ ] **SDK-05**: sendViaTelegram(response, botUsername)이 Telegram 딥링크 또는 공유 인텐트 URL을 생성한다
 - [ ] **SDK-06**: subscribeToRequests(topic, serverUrl?, callback)가 ntfy SSE로 새 서명 요청 수신 시 콜백을 호출한다
 
@@ -47,7 +47,7 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 ### Configuration (CONF)
 
 - [ ] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
-- [ ] **CONF-02**: signing_sdk.wallets 키에 JSON 배열로 지갑별 유니버셜 링크 설정을 저장하고 Admin UI에서 CRUD 관리할 수 있다
+- [ ] **CONF-02**: signing_sdk.wallets 키에 JSON 배열로 지갑별 유니버셜 링크 설정을 저장하고 런타임에 CRUD 관리할 수 있다 (Admin UI CRUD는 Phase 203 WALLET-06 범위)
 
 ## v2 Requirements
 
