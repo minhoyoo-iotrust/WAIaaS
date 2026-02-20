@@ -14,7 +14,7 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
@@ -504,14 +504,65 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
 
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
 
-    // 1. Set status to TERMINATED
-    await deps.db
-      .update(wallets)
-      .set({ status: 'TERMINATED', updatedAt: now })
-      .where(eq(wallets.id, walletId))
+    // --- Cascade defense: process session_wallets before wallet termination ---
+
+    // Step 1: Find all session_wallets links for this wallet
+    const linkedSessions = deps.db
+      .select({
+        sessionId: sessionWallets.sessionId,
+        isDefault: sessionWallets.isDefault,
+      })
+      .from(sessionWallets)
+      .where(eq(sessionWallets.walletId, walletId))
+      .all();
+
+    // Step 2: Per-session cascade defense (auto-promote or auto-revoke)
+    for (const link of linkedSessions) {
+      // Find other wallets still linked to this session
+      const otherWallets = deps.db
+        .select({
+          walletId: sessionWallets.walletId,
+          createdAt: sessionWallets.createdAt,
+        })
+        .from(sessionWallets)
+        .where(and(
+          eq(sessionWallets.sessionId, link.sessionId),
+          sql`${sessionWallets.walletId} != ${walletId}`,
+        ))
+        .orderBy(sessionWallets.createdAt) // ASC: earliest-linked wallet first
+        .all();
+
+      if (otherWallets.length === 0) {
+        // Last wallet in this session -> auto-revoke the session
+        deps.db
+          .update(sessions)
+          .set({ revokedAt: now })
+          .where(eq(sessions.id, link.sessionId))
+          .run();
+      } else if (link.isDefault) {
+        // Default wallet being removed -> auto-promote earliest-linked wallet
+        const promotee = otherWallets[0]!;
+        deps.db
+          .update(sessionWallets)
+          .set({ isDefault: true })
+          .where(and(
+            eq(sessionWallets.sessionId, link.sessionId),
+            eq(sessionWallets.walletId, promotee.walletId),
+          ))
+          .run();
+      }
+      // Non-default wallet with other wallets remaining: junction row removal suffices
+    }
+
+    // Step 3: Remove all session_wallets links for this wallet
+    deps.db
+      .delete(sessionWallets)
+      .where(eq(sessionWallets.walletId, walletId))
       .run();
 
-    // 2. Cancel pending transactions
+    // --- End cascade defense ---
+
+    // 4. Cancel pending transactions
     await deps.db
       .update(transactions)
       .set({ status: 'CANCELLED' })
@@ -523,10 +574,11 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       )
       .run();
 
-    // 3. Delete session_wallets links for this wallet (cascade will clean up orphan sessions)
+    // 5. Set status to TERMINATED
     await deps.db
-      .delete(sessionWallets)
-      .where(eq(sessionWallets.walletId, walletId))
+      .update(wallets)
+      .set({ status: 'TERMINATED', updatedAt: now })
+      .where(eq(wallets.id, walletId))
       .run();
 
     return c.json(
