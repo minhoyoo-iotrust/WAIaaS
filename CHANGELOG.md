@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.7...v2.4.0-rc.8) (2026-02-20)
+
+
+### Bug Fixes
+
+* **ci:** skip already-published npm versions on deploy re-run ([5661295](https://github.com/minhoyoo-iotrust/WAIaaS/commit/56612959ce156eb6a5977f76291d38717097b886))
+
 ## [2.4.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.6...v2.4.0-rc.7) (2026-02-20)
 
 
