@@ -29,6 +29,7 @@ v2.6.1 shipped: Signing Protocol v1 + @waiaas/wallet-sdk + NtfySigningChannel + 
 v2.7: 사이드 채널 패턴 -- WalletNotificationChannel은 기존 channels[] 배열과 별도로 동작 (sendWithFallback과 독립 병행).
 206-01: NotificationMessage Zod schema + EVENT_CATEGORY_MAP (26->6) + signing_sdk.notifications_enabled/notify_categories settings. type-only import for NotificationEventType.
 206-03: parseNotification (base64url->JSON->Zod) + subscribeToNotifications (ntfy SSE) added to @waiaas/wallet-sdk. Reused subscribeToRequests SSE pattern.
+- [Phase 206]: Side channel invocation placed BEFORE channels.length guard to fire even with zero traditional channels. Fire-and-forget .catch() for complete isolation.
 
 ### Blockers/Concerns
 

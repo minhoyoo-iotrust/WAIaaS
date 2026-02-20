@@ -15,12 +15,12 @@ Requirements for v2.7. 각 요구사항은 로드맵 phase에 매핑됨.
 
 ### 데몬 사이드 채널
 
-- [ ] **DAEMON-01**: WalletNotificationChannel이 알림 이벤트 발생 시 waiaas-notify-{walletName} ntfy 토픽에 NotificationMessage를 base64url 인코딩하여 publish한다
-- [ ] **DAEMON-02**: 사이드 채널이 기존 sendWithFallback/broadcast와 독립 병행 동작한다 (양쪽 모두 수신)
-- [ ] **DAEMON-03**: owner_approval_method가 sdk_ntfy가 아닌 지갑에는 알림을 전송하지 않는다
-- [ ] **DAEMON-04**: 비-UUID walletId (system/빈값 등) 시 sdk_ntfy인 모든 지갑에 반복 전송하며, 각 메시지의 walletId는 실제 UUID로 설정한다
-- [ ] **DAEMON-05**: security_alert 카테고리는 ntfy priority 5, 일반 알림은 priority 3으로 전송한다
-- [ ] **DAEMON-06**: 사이드 채널 실패가 기존 채널 결과에 영향을 주지 않는다 (try/catch 격리)
+- [x] **DAEMON-01**: WalletNotificationChannel이 알림 이벤트 발생 시 waiaas-notify-{walletName} ntfy 토픽에 NotificationMessage를 base64url 인코딩하여 publish한다
+- [x] **DAEMON-02**: 사이드 채널이 기존 sendWithFallback/broadcast와 독립 병행 동작한다 (양쪽 모두 수신)
+- [x] **DAEMON-03**: owner_approval_method가 sdk_ntfy가 아닌 지갑에는 알림을 전송하지 않는다
+- [x] **DAEMON-04**: 비-UUID walletId (system/빈값 등) 시 sdk_ntfy인 모든 지갑에 반복 전송하며, 각 메시지의 walletId는 실제 UUID로 설정한다
+- [x] **DAEMON-05**: security_alert 카테고리는 ntfy priority 5, 일반 알림은 priority 3으로 전송한다
+- [x] **DAEMON-06**: 사이드 채널 실패가 기존 채널 결과에 영향을 주지 않는다 (try/catch 격리)
 
 ### SDK
 
@@ -66,12 +66,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCHEMA-01 | Phase 206 | Complete |
 | SCHEMA-02 | Phase 206 | Complete |
 | SCHEMA-03 | Phase 206 | Complete |
-| DAEMON-01 | Phase 206 | Pending |
-| DAEMON-02 | Phase 206 | Pending |
-| DAEMON-03 | Phase 206 | Pending |
-| DAEMON-04 | Phase 206 | Pending |
-| DAEMON-05 | Phase 206 | Pending |
-| DAEMON-06 | Phase 206 | Pending |
+| DAEMON-01 | Phase 206 | Complete |
+| DAEMON-02 | Phase 206 | Complete |
+| DAEMON-03 | Phase 206 | Complete |
+| DAEMON-04 | Phase 206 | Complete |
+| DAEMON-05 | Phase 206 | Complete |
+| DAEMON-06 | Phase 206 | Complete |
 | SDK-01 | Phase 206 | Complete |
 | SDK-02 | Phase 206 | Complete |
 | SETTINGS-01 | Phase 206 | Complete |
