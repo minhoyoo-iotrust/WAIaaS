@@ -94,6 +94,8 @@ export function registerShutdownListeners(shutdown: () => void): void {
 async function main(): Promise<void> {
   if (WALLET_NAME) {
     console.error(`[waiaas-mcp] Wallet: ${WALLET_NAME} (id: ${WALLET_ID ?? 'default'})`);
+  } else if (!WALLET_ID) {
+    console.error('[waiaas-mcp] Multi-wallet mode (no WAIAAS_WALLET_ID set)');
   }
 
   const sessionManager = new SessionManager({
