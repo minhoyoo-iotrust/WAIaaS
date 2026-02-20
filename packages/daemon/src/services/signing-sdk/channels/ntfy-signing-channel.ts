@@ -12,6 +12,7 @@
  */
 
 import {
+  type SignRequest,
   type SignResponse,
   SignResponseSchema,
 } from '@waiaas/core';
@@ -95,7 +96,7 @@ export class NtfySigningChannel {
     const ntfyServer = this.getNtfyServer();
 
     // 4. Publish to ntfy request topic (doc 73 Section 7.2)
-    await this.publishToNtfy(ntfyServer, requestTopic, request.displayMessage, universalLinkUrl);
+    await this.publishToNtfy(ntfyServer, requestTopic, request, universalLinkUrl);
 
     // 5. Determine response topic
     let responseTopic: string;
@@ -162,14 +163,15 @@ export class NtfySigningChannel {
   private async publishToNtfy(
     ntfyServer: string,
     requestTopic: string,
-    displayMessage: string,
+    request: SignRequest,
     universalLinkUrl: string,
   ): Promise<void> {
     const url = `${ntfyServer}/${requestTopic}`;
+    const encoded = Buffer.from(JSON.stringify(request), 'utf-8').toString('base64url');
     const body = JSON.stringify({
       topic: requestTopic,
-      message: displayMessage,
-      title: 'WAIaaS Sign Request',
+      message: encoded,
+      title: request.displayMessage,
       priority: 5,
       tags: ['waiaas', 'sign'],
       actions: [
