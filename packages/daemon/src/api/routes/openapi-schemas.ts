@@ -982,3 +982,36 @@ export const WithdrawResponseSchema = z.object({
     status: z.enum(['success', 'failed']),
   })),
 }).openapi('WithdrawResponse');
+
+// ---------------------------------------------------------------------------
+// Connect Info Response Schema (GET /v1/connect-info) -- Phase 212
+// ---------------------------------------------------------------------------
+
+export const ConnectInfoResponseSchema = z.object({
+  session: z.object({
+    id: z.string().uuid(),
+    expiresAt: z.number().int(),
+    source: z.enum(['api', 'mcp']),
+  }),
+  wallets: z.array(z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    environment: z.string(),
+    defaultNetwork: z.string().nullable(),
+    address: z.string(),
+    isDefault: z.boolean(),
+  })),
+  policies: z.record(z.string(), z.array(z.object({
+    type: z.string(),
+    rules: z.record(z.unknown()),
+    priority: z.number().int(),
+    network: z.string().nullable(),
+  }))),
+  capabilities: z.array(z.string()),
+  daemon: z.object({
+    version: z.string(),
+    baseUrl: z.string(),
+  }),
+  prompt: z.string(),
+}).openapi('ConnectInfoResponse');
