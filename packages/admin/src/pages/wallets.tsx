@@ -44,6 +44,7 @@ interface WalletDetail extends Wallet {
   ownerAddress: string | null;
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
+  approvalMethod: string | null;
   updatedAt: number | null;
 }
 
@@ -229,6 +230,12 @@ function WalletDetailView({ id }: { id: string }) {
   const ownerEditing = useSignal(false);
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
+  const approvalSettings = useSignal<{
+    signingEnabled: boolean;
+    telegramEnabled: boolean;
+    telegramBotConfigured: boolean;
+    wcConfigured: boolean;
+  } | null>(null);
   const fetchWallet = async () => {
     try {
       const result = await apiGet<WalletDetail>(API.WALLET(id));
@@ -448,12 +455,40 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const fetchApprovalSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      const signingEnabled = result['signing_sdk']?.['enabled'] === 'true';
+      const telegramEnabled = result['telegram']?.['enabled'] === 'true';
+      const telegramBotConfigured = result['telegram']?.['bot_token'] === true; // credential: boolean means configured
+      const wcConfigured = !!result['walletconnect']?.['project_id'] && result['walletconnect']['project_id'] !== '';
+      approvalSettings.value = { signingEnabled, telegramEnabled, telegramBotConfigured, wcConfigured };
+    } catch {
+      // Settings fetch failure is non-critical; warnings won't show
+    }
+  };
+
+  const handleApprovalMethodChange = async (method: string | null) => {
+    try {
+      await apiPut(API.WALLET_OWNER(id), {
+        owner_address: wallet.value!.ownerAddress!,
+        approval_method: method ?? null,
+      });
+      await fetchWallet();
+      showToast('success', 'Approval method updated');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code, e.serverMessage));
+    }
+  };
+
   useEffect(() => {
     fetchWallet();
     fetchNetworks();
     fetchBalance();
     fetchTransactions();
     fetchWcSession();
+    fetchApprovalSettings();
   }, [id]);
 
   useEffect(() => {
