@@ -1,5 +1,8 @@
 # 마일스톤 m29-03: Yield Trading (Pendle) + Yield 프레임워크
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 DeFi Yield 프레임워크(수익률 추적, 만기 관리, PT/YT 포지션 모니터링)를 구축하고, Pendle Finance를 첫 번째 Yield Provider로 구현하여, AI 에이전트가 고정 수익률 전략을 정책 평가 하에 실행할 수 있는 상태.

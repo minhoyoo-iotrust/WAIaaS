@@ -1,5 +1,8 @@
 # 마일스톤 m30: 운영 기능 확장 설계
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 m20 릴리스 이후 운영 환경에서 필요한 7가지 기능 — Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Metrics Export, Anomaly Detection, IP ACL — 을 **설계 수준에서** 정의한다. 각 기능의 인터페이스, 데이터 모델, 기존 설계 문서와의 통합 지점, 테스트 시나리오를 확정하여 구현 마일스톤의 입력을 생산한다.

@@ -1,5 +1,10 @@
 # 마일스톤 m24-01: Admin UI 테스트 커버리지 복원
 
+- **Status:** SHIPPED
+- **Milestone:** v2.4.1
+- **Package:** 2.4.0-rc.1
+- **Completed:** 2026-02-19
+
 ## 목표
 
 v2.3 Admin UI 메뉴 재구성으로 하락한 커버리지 임계값을 원래 수준(lines/statements 70%, functions 70%)으로 복원하여, CI 커버리지 게이트가 모든 패키지에서 일관된 품질 기준을 유지하는 상태.

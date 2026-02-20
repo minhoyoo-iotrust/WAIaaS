@@ -1,5 +1,8 @@
 # 마일스톤 m29-04: Solana Perp DEX (Drift) + Perp 프레임워크
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 DeFi Perp(무기한 선물) 프레임워크(레버리지 포지션 관리, 마진 모니터링, PnL 추적)를 구축하고, Drift Protocol을 첫 번째 Perp Provider로 구현하여, AI 에이전트가 Solana에서 레버리지 트레이딩을 정책 평가 하에 실행할 수 있는 상태.

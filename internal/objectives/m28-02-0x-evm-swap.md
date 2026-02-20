@@ -1,5 +1,8 @@
 # 마일스톤 m28-02: 0x EVM DEX Swap
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 v1.5 Action Provider 프레임워크 위에 0x Swap API를 ActionProvider로 구현하여, AI 에이전트가 EVM 체인(Ethereum, Base, Arbitrum 등)에서 토큰 스왑을 정책 평가 하에 실행할 수 있는 상태.

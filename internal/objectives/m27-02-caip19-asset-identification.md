@@ -1,5 +1,8 @@
 # 마일스톤 m27-02: CAIP-19 자산 식별 표준
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일하여, 모든 ActionProvider와 외부 인터페이스가 체인·네트워크·자산을 하나의 식별자로 표현할 수 있는 상태.

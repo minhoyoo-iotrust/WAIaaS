@@ -1,5 +1,8 @@
 # 마일스톤 m29-01: EVM Lending (Aave V3) + Lending 프레임워크
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 DeFi Lending 프레임워크(포지션 추적, 헬스 팩터 모니터링, 담보/차입 관리)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현하여, AI 에이전트가 EVM 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.

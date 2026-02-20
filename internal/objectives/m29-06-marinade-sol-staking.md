@@ -1,5 +1,8 @@
 # 마일스톤 m29-06: SOL Staking 확장 (Marinade)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 m28-04 Staking 인프라 위에 Marinade Finance를 추가 Staking Provider로 구현하여, AI 에이전트가 Jito 외에 Marinade의 분산 스테이킹(mSOL)도 선택할 수 있는 상태.

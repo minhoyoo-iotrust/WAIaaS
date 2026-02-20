@@ -1,5 +1,8 @@
 # 마일스톤 m31: Desktop App 아키텍처 재설계
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 설계 문서 39(Tauri Desktop Architecture)를 Admin Web UI 재사용 아키텍처로 변경한다. React 18로 8개 화면을 별도 구현하는 기존 설계를 폐기하고, 기존 Admin Web UI(Preact 10.x)를 Tauri WebView에서 로드하는 구조로 전환한다.

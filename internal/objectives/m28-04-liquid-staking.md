@@ -1,5 +1,8 @@
 # 마일스톤 m28-04: Liquid Staking (Lido + Jito)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 v1.5 Action Provider 프레임워크 위에 Lido(ETH)와 Jito(SOL) Liquid Staking을 ActionProvider로 구현하여, AI 에이전트가 유휴 ETH/SOL을 정책 평가 하에 스테이킹하고 유동성 토큰(stETH/JitoSOL)을 받을 수 있는 상태.

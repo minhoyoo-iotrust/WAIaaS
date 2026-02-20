@@ -1,5 +1,8 @@
 # 마일스톤 m30-03: ERC-4337 Account Abstraction 지원
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 EVM 지갑에 ERC-4337 스마트 어카운트 옵션을 추가하여, AI 에이전트가 Paymaster를 통한 가스비 스폰서십, 네이티브 배치 트랜잭션, 모듈러 권한 체계를 활용할 수 있는 상태.

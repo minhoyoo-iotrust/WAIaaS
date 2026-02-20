@@ -1,5 +1,8 @@
 # 마일스톤 m28-01: Jupiter Swap (첫 번째 Action Provider 구현체)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 v1.5에서 구축된 Action Provider 프레임워크 위에 Jupiter Swap을 첫 번째 내장 프로바이더로 구현하여, AI 에이전트가 Solana DEX 토큰 스왑을 정책 평가 하에 실행할 수 있는 상태.

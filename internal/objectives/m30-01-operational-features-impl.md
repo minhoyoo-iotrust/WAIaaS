@@ -1,5 +1,8 @@
 # 마일스톤 m30-01: 운영 기능 확장 구현
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 m30에서 설계한 7가지 운영 기능 — Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Metrics Export, Anomaly Detection, IP ACL — 을 구현하여, WAIaaS 데몬이 운영 환경에서 모니터링/감사/백업/보안 제어가 가능한 상태.
