@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 206 of 206 (지갑 앱 알림 사이드 채널)
-Plan: 3 of 4 in current phase
-Status: Executing
-Last activity: 2026-02-20 — Plan 206-03 complete (notification SDK functions)
+Plan: 4 of 4 in current phase
+Status: Phase Complete
+Last activity: 2026-02-20 — Plan 206-04 complete (Admin Settings notifications + skill file sync)
 
-Progress: [███████░░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ v2.6.1 shipped: Signing Protocol v1 + @waiaas/wallet-sdk + NtfySigningChannel + 
 v2.7: 사이드 채널 패턴 -- WalletNotificationChannel은 기존 channels[] 배열과 별도로 동작 (sendWithFallback과 독립 병행).
 206-01: NotificationMessage Zod schema + EVENT_CATEGORY_MAP (26->6) + signing_sdk.notifications_enabled/notify_categories settings. type-only import for NotificationEventType.
 206-03: parseNotification (base64url->JSON->Zod) + subscribeToNotifications (ntfy SSE) added to @waiaas/wallet-sdk. Reused subscribeToRequests SSE pattern.
+206-04: Admin Settings "Wallet App Notifications" subgroup with toggle + 6 category checkboxes. wallet.skill.md Section 13 documents SDK notification functions.
 - [Phase 206]: Side channel invocation placed BEFORE channels.length guard to fire even with zero traditional channels. Fire-and-forget .catch() for complete isolation.
 
 ### Blockers/Concerns
@@ -38,5 +39,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 206-03-PLAN.md (notification SDK functions)
+Stopped at: Completed 206-04-PLAN.md (Admin Settings notifications + skill file sync) -- Phase 206 complete
 Resume file: None

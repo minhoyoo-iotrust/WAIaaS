@@ -35,11 +35,11 @@ Requirements for v2.7. 각 요구사항은 로드맵 phase에 매핑됨.
 
 ### Admin UI
 
-- [ ] **ADMIN-01**: Settings 페이지에서 6개 카테고리 멀티셀렉트 체크박스로 notify_categories를 설정할 수 있다
+- [x] **ADMIN-01**: Settings 페이지에서 6개 카테고리 멀티셀렉트 체크박스로 notify_categories를 설정할 수 있다
 
 ### 인터페이스 동기화
 
-- [ ] **SYNC-01**: SDK 공개 API 변경(subscribeToNotifications, parseNotification, NotificationMessage)이 skill 파일에 반영된다
+- [x] **SYNC-01**: SDK 공개 API 변경(subscribeToNotifications, parseNotification, NotificationMessage)이 skill 파일에 반영된다
 
 ## v2 Requirements
 
@@ -77,8 +77,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SETTINGS-01 | Phase 206 | Complete |
 | SETTINGS-02 | Phase 206 | Complete |
 | SETTINGS-03 | Phase 206 | Complete |
-| ADMIN-01 | Phase 206 | Pending |
-| SYNC-01 | Phase 206 | Pending |
+| ADMIN-01 | Phase 206 | Complete |
+| SYNC-01 | Phase 206 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
