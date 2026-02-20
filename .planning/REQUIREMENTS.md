@@ -71,39 +71,39 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROTO-01 | — | Pending |
-| PROTO-02 | — | Pending |
-| PROTO-03 | — | Pending |
-| PROTO-04 | — | Pending |
-| PROTO-05 | — | Pending |
-| CHAN-01 | — | Pending |
-| CHAN-02 | — | Pending |
-| CHAN-03 | — | Pending |
-| CHAN-04 | — | Pending |
-| CHAN-05 | — | Pending |
-| CHAN-06 | — | Pending |
-| CHAN-07 | — | Pending |
-| SDK-01 | — | Pending |
-| SDK-02 | — | Pending |
-| SDK-03 | — | Pending |
-| SDK-04 | — | Pending |
-| SDK-05 | — | Pending |
-| SDK-06 | — | Pending |
-| WALLET-01 | — | Pending |
-| WALLET-02 | — | Pending |
-| WALLET-03 | — | Pending |
-| WALLET-04 | — | Pending |
-| WALLET-05 | — | Pending |
-| WALLET-06 | — | Pending |
-| WALLET-07 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
+| PROTO-01 | Phase 202 | Pending |
+| PROTO-02 | Phase 202 | Pending |
+| PROTO-03 | Phase 202 | Pending |
+| PROTO-04 | Phase 202 | Pending |
+| PROTO-05 | Phase 202 | Pending |
+| CHAN-01 | Phase 202 | Pending |
+| CHAN-02 | Phase 202 | Pending |
+| CHAN-03 | Phase 203 | Pending |
+| CHAN-04 | Phase 203 | Pending |
+| CHAN-05 | Phase 203 | Pending |
+| CHAN-06 | Phase 203 | Pending |
+| CHAN-07 | Phase 203 | Pending |
+| SDK-01 | Phase 202 | Pending |
+| SDK-02 | Phase 202 | Pending |
+| SDK-03 | Phase 202 | Pending |
+| SDK-04 | Phase 202 | Pending |
+| SDK-05 | Phase 202 | Pending |
+| SDK-06 | Phase 202 | Pending |
+| WALLET-01 | Phase 202 | Pending |
+| WALLET-02 | Phase 202 | Pending |
+| WALLET-03 | Phase 202 | Pending |
+| WALLET-04 | Phase 203 | Pending |
+| WALLET-05 | Phase 203 | Pending |
+| WALLET-06 | Phase 203 | Pending |
+| WALLET-07 | Phase 203 | Pending |
+| CONF-01 | Phase 202 | Pending |
+| CONF-02 | Phase 202 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after initial definition*
+*Last updated: 2026-02-20 after roadmap creation*
