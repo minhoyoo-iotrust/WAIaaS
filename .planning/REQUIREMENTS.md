@@ -39,9 +39,9 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 ### 통합 (INTG)
 
 - [x] **INTG-01**: SDK에 createSession({ walletIds }) 파라미터와 getConnectInfo() 메서드가 추가된다
-- [ ] **INTG-02**: MCP에 connect-info 도구가 추가된다
-- [ ] **INTG-03**: MCP 기존 도구에 선택적 walletId 파라미터가 추가된다
-- [ ] **INTG-04**: MCP가 단일 인스턴스로 동작한다 (WAIAAS_WALLET_ID 선택적, 단일 토큰 파일)
+- [x] **INTG-02**: MCP에 connect-info 도구가 추가된다
+- [x] **INTG-03**: MCP 기존 도구에 선택적 walletId 파라미터가 추가된다
+- [x] **INTG-04**: MCP가 단일 인스턴스로 동작한다 (WAIAAS_WALLET_ID 선택적, 단일 토큰 파일)
 - [x] **INTG-05**: Admin UI 세션 생성 폼에서 다중 지갑 선택과 기본 지갑 지정이 가능하다
 - [x] **INTG-06**: Admin UI 세션 상세에서 연결된 지갑 목록과 기본 지갑 배지가 표시된다
 - [x] **INTG-07**: CLI quickset이 단일 멀티 지갑 세션 + 단일 MCP config entry를 생성한다
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-03 | Phase 212 | Complete |
 | DISC-04 | Phase 212 | Complete |
 | INTG-01 | Phase 213 | Complete |
-| INTG-02 | Phase 213 | Pending |
-| INTG-03 | Phase 213 | Pending |
-| INTG-04 | Phase 213 | Pending |
+| INTG-02 | Phase 213 | Complete |
+| INTG-03 | Phase 213 | Complete |
+| INTG-04 | Phase 213 | Complete |
 | INTG-05 | Phase 213 | Complete |
 | INTG-06 | Phase 213 | Complete |
 | INTG-07 | Phase 213 | Complete |

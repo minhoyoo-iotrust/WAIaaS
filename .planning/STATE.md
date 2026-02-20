@@ -69,6 +69,10 @@ Progress: [##########] 100%
 - Admin UI: 단일 지갑은 walletId, 다중은 walletIds + defaultWalletId 전송 (하위 호환)
 - CLI quickset: 단일 POST /v1/sessions { walletIds } + 단일 mcp-token 파일
 - CLI MCP config: 단일 'waiaas' entry, WAIAAS_WALLET_ID 미설정 (connect-info로 발견)
+- MCP connect_info: walletContext prefix 없음 (세션 스코프, 지갑별 아님)
+- MCP wallet_id: snake_case(MCP param) -> walletId camelCase(API) 변환 컨벤션
+- MCP GET tools: walletId query param, POST/PUT: body, DELETE: query param
+- MCP action-provider dynamic tools에도 wallet_id 추가 (일관성)
 
 ### Blockers/Concerns
 
@@ -77,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 213-03-PLAN.md (Admin UI + CLI multi-wallet session support)
+Stopped at: Completed 213-02-PLAN.md (MCP multi-wallet support)
 Resume file: None
