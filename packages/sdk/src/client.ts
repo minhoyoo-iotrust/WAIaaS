@@ -1,11 +1,12 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 17 REST API methods with typed responses:
+ * Wraps 19 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo(), setDefaultNetwork() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
- * - renewSession() (session management)
+ * - createSession(), renewSession() (session management)
+ * - getConnectInfo() (discovery)
  * - encodeCalldata(), signTransaction() (utils)
  * - x402Fetch() (x402 auto-payment)
  * - wcConnect(), wcStatus(), wcDisconnect() (WalletConnect)
@@ -33,7 +34,10 @@ import type {
   TransactionListResponse,
   ListTransactionsParams,
   PendingTransactionsResponse,
+  CreateSessionParams,
+  CreateSessionResponse,
   RenewSessionResponse,
+  ConnectInfoResponse,
   EncodeCalldataParams,
   EncodeCalldataResponse,
   SignTransactionParams,
@@ -84,6 +88,10 @@ export class WAIaaSClient {
       });
     }
     return { Authorization: `Bearer ${this.sessionToken}` };
+  }
+
+  private masterHeaders(masterPassword: string): Record<string, string> {
+    return { 'X-Master-Password': masterPassword };
   }
 
   // --- Wallet queries ---
@@ -189,6 +197,34 @@ export class WAIaaSClient {
   }
 
   // --- Session management ---
+  async createSession(
+    params: CreateSessionParams,
+    masterPassword: string,
+  ): Promise<CreateSessionResponse> {
+    const body: Record<string, unknown> = {};
+    if (params.walletIds) body['walletIds'] = params.walletIds;
+    if (params.walletId) body['walletId'] = params.walletId;
+    if (params.defaultWalletId) body['defaultWalletId'] = params.defaultWalletId;
+    if (params.expiresIn !== undefined) body['expiresIn'] = params.expiresIn;
+    if (params.constraints) body['constraints'] = params.constraints;
+    if (params.source) body['source'] = params.source;
+
+    const result = await withRetry(
+      () => this.http.post<CreateSessionResponse>(
+        '/v1/sessions',
+        body,
+        this.masterHeaders(masterPassword),
+      ),
+      this.retryOptions,
+    );
+
+    // Auto-update session token and ID
+    this.sessionToken = result.token;
+    this.sessionId = result.id;
+
+    return result;
+  }
+
   async renewSession(): Promise<RenewSessionResponse> {
     if (!this.sessionId) {
       this.sessionId = this.extractSessionId();
@@ -204,6 +240,17 @@ export class WAIaaSClient {
     // Auto-update token after successful renewal
     this.sessionToken = result.token;
     return result;
+  }
+
+  // --- Discovery ---
+  async getConnectInfo(): Promise<ConnectInfoResponse> {
+    return withRetry(
+      () => this.http.get<ConnectInfoResponse>(
+        '/v1/connect-info',
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
   }
 
   // --- Utils ---

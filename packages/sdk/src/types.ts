@@ -170,11 +170,76 @@ export interface PendingTransactionsResponse {
 // Session Types
 // ---------------------------------------------------------------------------
 
+export interface CreateSessionParams {
+  /** Wallet IDs for multi-wallet session (plural) */
+  walletIds?: string[];
+  /** Single wallet ID (backward-compatible, singular) */
+  walletId?: string;
+  /** Default wallet ID override (optional) */
+  defaultWalletId?: string;
+  /** Session expiration time in seconds */
+  expiresIn?: number;
+  /** Session constraints */
+  constraints?: Record<string, unknown>;
+  /** Source indicator */
+  source?: 'api' | 'mcp';
+}
+
+export interface CreateSessionWallet {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export interface CreateSessionResponse {
+  id: string;
+  token: string;
+  expiresAt: number;
+  /** Default wallet ID (backward-compatible) */
+  walletId: string;
+  /** All wallets linked to this session */
+  wallets: CreateSessionWallet[];
+}
+
 export interface RenewSessionResponse {
   id: string;
   token: string;
   expiresAt: number;
   renewalCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Connect Info (Discovery) Types
+// ---------------------------------------------------------------------------
+
+export interface ConnectInfoWallet {
+  id: string;
+  name: string;
+  chain: string;
+  environment: string;
+  defaultNetwork: string;
+  address: string;
+  isDefault: boolean;
+  policies: Array<{ type: string; rules: Record<string, unknown> }>;
+}
+
+export interface ConnectInfoSession {
+  id: string;
+  expiresAt: number;
+  source: string;
+}
+
+export interface ConnectInfoDaemon {
+  version: string;
+  baseUrl: string;
+}
+
+export interface ConnectInfoResponse {
+  session: ConnectInfoSession;
+  wallets: ConnectInfoWallet[];
+  capabilities: string[];
+  daemon: ConnectInfoDaemon;
+  prompt: string;
 }
 
 // ---------------------------------------------------------------------------
