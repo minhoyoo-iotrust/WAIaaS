@@ -657,6 +657,7 @@ export class DaemonLifecycle {
           NtfySigningChannel,
           TelegramSigningChannel,
           ApprovalChannelRouter,
+          WalletNotificationChannel,
         } = await import('../services/signing-sdk/index.js');
 
         const walletLinkRegistry = new WalletLinkRegistry(this._settingsService!);
@@ -703,6 +704,14 @@ export class DaemonLifecycle {
           this.telegramBotService.setSignResponseHandler(signResponseHandler);
           console.debug('Step 4c-8: signResponseHandler injected into TelegramBotService');
         }
+
+        // Wallet Notification Side Channel (v2.7)
+        const walletNotifChannel = new WalletNotificationChannel({
+          sqlite: this.sqlite!,
+          settingsService: this._settingsService!,
+        });
+        this.notificationService?.setWalletNotificationChannel(walletNotifChannel);
+        console.debug('Step 4c-8: WalletNotificationChannel injected into NotificationService');
 
         console.debug('Step 4c-8: Signing SDK initialized (ApprovalChannelRouter + channels)');
       } else {
