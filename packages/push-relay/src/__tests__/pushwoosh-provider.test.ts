@@ -37,7 +37,7 @@ describe('PushwooshProvider', () => {
     expect(result.sent).toBe(2);
     expect(result.failed).toBe(0);
 
-    const fetchCall = vi.mocked(globalThis.fetch).mock.calls[0];
+    const fetchCall = vi.mocked(globalThis.fetch).mock.calls[0]!;
     const body = JSON.parse(fetchCall[1]!.body as string);
     expect(body.request.auth).toBe('test-token');
     expect(body.request.application).toBe('APP-123');

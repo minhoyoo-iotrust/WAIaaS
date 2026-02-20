@@ -24,7 +24,7 @@ describe('apiKeyAuth', () => {
     const app = makeApp();
     const res = await app.request('/protected');
     expect(res.status).toBe(401);
-    const body = await res.json();
+    const body = (await res.json()) as { error: string };
     expect(body.error).toBe('Unauthorized');
   });
 
