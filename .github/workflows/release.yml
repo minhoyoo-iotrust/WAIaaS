@@ -392,7 +392,16 @@ jobs:
           for pkg_path in "${PACKAGES[@]}"; do
             echo "--- Publishing $pkg_path ---"
             cd "$pkg_path"
+            PKG_NAME=$(node -p "require('./package.json').name")
             PKG_VERSION=$(node -p "require('./package.json').version")
+
+            # Skip if version already published
+            if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+              echo "  ⏭ ${PKG_NAME}@${PKG_VERSION} already published, skipping"
+              cd "$GITHUB_WORKSPACE"
+              continue
+            fi
+
             # pnpm pack resolves workspace:* → actual versions in tarball
             TARBALL=$(pnpm pack --pack-destination "$PACK_DIR" 2>/dev/null | tail -1)
             echo "  Packed: $TARBALL"
