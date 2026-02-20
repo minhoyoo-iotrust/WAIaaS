@@ -1,12 +1,13 @@
 /**
  * Tests for admin notification API endpoints.
  *
- * 10 tests covering:
+ * 11 tests covering:
  * 1. GET /admin/notifications/status returns channel status
  * 2. GET /admin/notifications/status returns all disabled when no service
  * 3. GET /admin/notifications/status never exposes credentials
  * 4. GET /admin/notifications/status requires masterAuth
- * 5. POST /admin/notifications/test sends test to active channels
+ * 5. GET /admin/notifications/status reflects dynamic SettingsService changes
+ * 6. POST /admin/notifications/test sends test to active channels
  * 6. POST /admin/notifications/test returns failure for broken channel
  * 7. POST /admin/notifications/test requires masterAuth
  * 8. GET /admin/notifications/log returns paginated logs
@@ -26,6 +27,7 @@ import { createApp } from '../api/server.js';
 import { NotificationService } from '../notifications/notification-service.js';
 import type { INotificationChannel } from '@waiaas/core';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -241,6 +243,38 @@ describe('GET /admin/notifications/status', () => {
     });
 
     expect(res.status).toBe(401);
+  });
+
+  it('should reflect dynamic SettingsService changes without restart', async () => {
+    // Start with notifications disabled in static config
+    const config = fullConfig({ enabled: false });
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+    });
+
+    // Initially disabled (SettingsService inherits config default)
+    const res1 = await app.request('/v1/admin/notifications/status', {
+      headers: masterHeaders(),
+    });
+    expect(res1.status).toBe(200);
+    const body1 = await json(res1);
+    expect(body1.enabled).toBe(false);
+
+    // Enable via SettingsService (simulates Admin Settings save)
+    settingsService.set('notifications.enabled', 'true');
+
+    // Should now reflect enabled=true without daemon restart
+    const res2 = await app.request('/v1/admin/notifications/status', {
+      headers: masterHeaders(),
+    });
+    expect(res2.status).toBe(200);
+    const body2 = await json(res2);
+    expect(body2.enabled).toBe(true);
   });
 });
 

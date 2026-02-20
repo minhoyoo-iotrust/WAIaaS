@@ -1115,37 +1115,40 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(notificationsStatusRoute, async (c) => {
-    const notifConfig = deps.notificationConfig;
+    const ss = deps.settingsService;
     const svc = deps.notificationService;
     const channelNames = svc ? svc.getChannelNames() : [];
+
+    // Read from SettingsService (dynamic) instead of static config snapshot
+    const enabled = ss ? ss.get('notifications.enabled') === 'true' : (deps.notificationConfig?.enabled ?? false);
 
     const channels = [
       {
         name: 'telegram',
         enabled: !!(
-          notifConfig?.telegram_bot_token &&
-          notifConfig?.telegram_chat_id &&
+          (ss ? ss.get('notifications.telegram_bot_token') : deps.notificationConfig?.telegram_bot_token) &&
+          (ss ? ss.get('notifications.telegram_chat_id') : deps.notificationConfig?.telegram_chat_id) &&
           channelNames.includes('telegram')
         ),
       },
       {
         name: 'discord',
         enabled: !!(
-          notifConfig?.discord_webhook_url &&
+          (ss ? ss.get('notifications.discord_webhook_url') : deps.notificationConfig?.discord_webhook_url) &&
           channelNames.includes('discord')
         ),
       },
       {
         name: 'ntfy',
         enabled: !!(
-          notifConfig?.ntfy_topic &&
+          (ss ? ss.get('notifications.ntfy_topic') : deps.notificationConfig?.ntfy_topic) &&
           channelNames.includes('ntfy')
         ),
       },
       {
         name: 'slack',
         enabled: !!(
-          notifConfig?.slack_webhook_url &&
+          (ss ? ss.get('notifications.slack_webhook_url') : deps.notificationConfig?.slack_webhook_url) &&
           channelNames.includes('slack')
         ),
       },
@@ -1153,7 +1156,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
     return c.json(
       {
-        enabled: notifConfig?.enabled ?? false,
+        enabled,
         channels,
       },
       200,
