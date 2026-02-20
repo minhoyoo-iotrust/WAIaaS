@@ -121,12 +121,13 @@ See `.planning/milestones/v2.6.1-ROADMAP.md` for full details.
   3. 사이드 채널 알림이 기존 Telegram/Slack/ntfy 채널과 독립 병행 동작하며 (양쪽 모두 수신), 사이드 채널 실패가 기존 채널에 영향을 주지 않는다
   4. Admin Settings에서 notifications_enabled 토글과 notify_categories 멀티셀렉트 체크박스로 알림 채널을 제어할 수 있으며, signing_sdk.enabled=false이면 알림이 전송되지 않는다
   5. security_alert 카테고리는 ntfy priority 5로, 일반 알림은 priority 3으로 전송되어 긴급도가 구분된다
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 206-01: TBD
-- [ ] 206-02: TBD
-- [ ] 206-03: TBD
+- [ ] 206-01-PLAN.md — NotificationMessage schema + EVENT_CATEGORY_MAP + settings keys
+- [ ] 206-02-PLAN.md — WalletNotificationChannel + NotificationService integration + daemon lifecycle
+- [ ] 206-03-PLAN.md — SDK subscribeToNotifications + parseNotification
+- [ ] 206-04-PLAN.md — Admin UI notify_categories checkboxes + skill file sync
 
 ## Progress
 
@@ -143,4 +144,4 @@ Phase 206
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
-| 206 | v2.7 | 0/TBD | Not started | - |
+| 206 | v2.7 | 0/4 | Not started | - |
