@@ -5,14 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.7 지갑 앱 알림 채널
+**Current focus:** v2.7 Phase 206 지갑 앱 알림 사이드 채널
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-20 — Milestone v2.7 started
+Phase: 206 of 206 (지갑 앱 알림 사이드 채널)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-20 — Roadmap created for v2.7
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -24,6 +26,7 @@ Last activity: 2026-02-20 — Milestone v2.7 started
 
 Full log in PROJECT.md and milestones/.
 v2.6.1 shipped: Signing Protocol v1 + @waiaas/wallet-sdk + NtfySigningChannel + TelegramSigningChannel + ApprovalChannelRouter + daemon lifecycle wiring.
+v2.7: 사이드 채널 패턴 -- WalletNotificationChannel은 기존 channels[] 배열과 별도로 동작 (sendWithFallback과 독립 병행).
 
 ### Blockers/Concerns
 
@@ -32,5 +35,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: v2.7 milestone started — defining requirements
+Stopped at: v2.7 roadmap created -- Phase 206 ready to plan
 Resume file: None

@@ -63,28 +63,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHEMA-01 | — | Pending |
-| SCHEMA-02 | — | Pending |
-| SCHEMA-03 | — | Pending |
-| DAEMON-01 | — | Pending |
-| DAEMON-02 | — | Pending |
-| DAEMON-03 | — | Pending |
-| DAEMON-04 | — | Pending |
-| DAEMON-05 | — | Pending |
-| DAEMON-06 | — | Pending |
-| SDK-01 | — | Pending |
-| SDK-02 | — | Pending |
-| SETTINGS-01 | — | Pending |
-| SETTINGS-02 | — | Pending |
-| SETTINGS-03 | — | Pending |
-| ADMIN-01 | — | Pending |
-| SYNC-01 | — | Pending |
+| SCHEMA-01 | Phase 206 | Pending |
+| SCHEMA-02 | Phase 206 | Pending |
+| SCHEMA-03 | Phase 206 | Pending |
+| DAEMON-01 | Phase 206 | Pending |
+| DAEMON-02 | Phase 206 | Pending |
+| DAEMON-03 | Phase 206 | Pending |
+| DAEMON-04 | Phase 206 | Pending |
+| DAEMON-05 | Phase 206 | Pending |
+| DAEMON-06 | Phase 206 | Pending |
+| SDK-01 | Phase 206 | Pending |
+| SDK-02 | Phase 206 | Pending |
+| SETTINGS-01 | Phase 206 | Pending |
+| SETTINGS-02 | Phase 206 | Pending |
+| SETTINGS-03 | Phase 206 | Pending |
+| ADMIN-01 | Phase 206 | Pending |
+| SYNC-01 | Phase 206 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after initial definition*
+*Last updated: 2026-02-20 after roadmap creation*
