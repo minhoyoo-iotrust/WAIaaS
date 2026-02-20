@@ -9,9 +9,9 @@ Requirements for v2.7. 각 요구사항은 로드맵 phase에 매핑됨.
 
 ### 스키마
 
-- [ ] **SCHEMA-01**: NotificationMessageSchema가 core signing-protocol.ts에 정의되어 26개 이벤트가 6개 카테고리로 매핑된다
-- [ ] **SCHEMA-02**: EVENT_CATEGORY_MAP 상수가 26개 NotificationEventType 전수를 커버한다 (누락 검증 테스트 포함)
-- [ ] **SCHEMA-03**: NotificationMessage 타입이 wallet-sdk에서 re-export된다
+- [x] **SCHEMA-01**: NotificationMessageSchema가 core signing-protocol.ts에 정의되어 26개 이벤트가 6개 카테고리로 매핑된다
+- [x] **SCHEMA-02**: EVENT_CATEGORY_MAP 상수가 26개 NotificationEventType 전수를 커버한다 (누락 검증 테스트 포함)
+- [x] **SCHEMA-03**: NotificationMessage 타입이 wallet-sdk에서 re-export된다
 
 ### 데몬 사이드 채널
 
@@ -29,9 +29,9 @@ Requirements for v2.7. 각 요구사항은 로드맵 phase에 매핑됨.
 
 ### 설정
 
-- [ ] **SETTINGS-01**: signing_sdk.notifications_enabled 토글로 지갑 알림 채널을 활성화/비활성화한다
-- [ ] **SETTINGS-02**: signing_sdk.enabled=false이면 notifications_enabled와 무관하게 알림이 미전송된다
-- [ ] **SETTINGS-03**: signing_sdk.notify_categories JSON array 필터로 특정 카테고리만 전송할 수 있다 (빈 배열 = 전체)
+- [x] **SETTINGS-01**: signing_sdk.notifications_enabled 토글로 지갑 알림 채널을 활성화/비활성화한다
+- [x] **SETTINGS-02**: signing_sdk.enabled=false이면 notifications_enabled와 무관하게 알림이 미전송된다
+- [x] **SETTINGS-03**: signing_sdk.notify_categories JSON array 필터로 특정 카테고리만 전송할 수 있다 (빈 배열 = 전체)
 
 ### Admin UI
 
@@ -63,9 +63,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHEMA-01 | Phase 206 | Pending |
-| SCHEMA-02 | Phase 206 | Pending |
-| SCHEMA-03 | Phase 206 | Pending |
+| SCHEMA-01 | Phase 206 | Complete |
+| SCHEMA-02 | Phase 206 | Complete |
+| SCHEMA-03 | Phase 206 | Complete |
 | DAEMON-01 | Phase 206 | Pending |
 | DAEMON-02 | Phase 206 | Pending |
 | DAEMON-03 | Phase 206 | Pending |
@@ -74,9 +74,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DAEMON-06 | Phase 206 | Pending |
 | SDK-01 | Phase 206 | Pending |
 | SDK-02 | Phase 206 | Pending |
-| SETTINGS-01 | Phase 206 | Pending |
-| SETTINGS-02 | Phase 206 | Pending |
-| SETTINGS-03 | Phase 206 | Pending |
+| SETTINGS-01 | Phase 206 | Complete |
+| SETTINGS-02 | Phase 206 | Complete |
+| SETTINGS-03 | Phase 206 | Complete |
 | ADMIN-01 | Phase 206 | Pending |
 | SYNC-01 | Phase 206 | Pending |
 
