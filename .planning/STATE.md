@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 212 - 자기 발견 엔드포인트
+**Current focus:** Phase 213 - 통합 레이어
 
 ## Current Position
 
-Phase: 212 of 213 (자기 발견 엔드포인트)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-21 -- Completed 212-02-PLAN.md (agent-prompt refactor + connect-info integration tests)
+Phase: 213 of 213 (통합 레이어)
+Plan: 1 of 4 in current phase
+Status: In Progress
+Last activity: 2026-02-21 -- Completed 213-01-PLAN.md (SDK multi-wallet session + discovery methods)
 
 Progress: [##########] 100%
 
@@ -27,7 +27,7 @@ Progress: [##########] 100%
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
 | 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
 | 212. 자기 발견 엔드포인트 | 2/2 | 9min | 4.5min |
-| 213. 통합 레이어 | 0/4 | - | - |
+| 213. 통합 레이어 | 1/4 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -61,6 +61,10 @@ Progress: [##########] 100%
 - agent-prompt: JWT wlt 클레임은 첫 번째(기본) 지갑 ID
 - agent-prompt: buildConnectInfoPrompt 출력 후 Session Token/ID 추가 (에이전트 즉시 사용 가능)
 - capabilities 동일 로직: connect-info와 agent-prompt 모두 동일한 동적 감지
+- SDK createSession: auto-updates sessionToken/sessionId (renewSession과 동일 패턴)
+- SDK masterHeaders(): masterAuth와 sessionAuth 헤더 구성 분리
+- Python SDK: get_connect_info만 추가 (sessionAuth 전용, masterAuth 미지원)
+- ConnectInfo 타입: daemon 응답 형태 그대로 미러링 (변환 없음)
 
 ### Blockers/Concerns
 
@@ -69,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 212-02-PLAN.md (agent-prompt refactor + connect-info integration tests)
+Stopped at: Completed 213-01-PLAN.md (SDK multi-wallet session + discovery methods)
 Resume file: None
