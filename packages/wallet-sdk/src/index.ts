@@ -20,6 +20,13 @@ export { parseSignRequest } from './parse-request.js';
 export { buildSignResponse } from './build-response.js';
 export { formatDisplayMessage } from './display.js';
 
+// Channel functions
+export {
+  sendViaNtfy,
+  subscribeToRequests,
+  sendViaTelegram,
+} from './channels/index.js';
+
 // Error classes
 export {
   InvalidSignRequestUrlError,
