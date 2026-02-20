@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.6...v2.4.0-rc.7) (2026-02-20)
+
+
+### Bug Fixes
+
+* separate push-relay CLI entry point from library exports ([81465f2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/81465f23fcc9d8444b12e5ddf670177ce4e733b4))
+
 ## [2.4.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.5...v2.4.0-rc.6) (2026-02-20)
 
 
