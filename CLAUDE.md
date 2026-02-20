@@ -62,6 +62,13 @@
   - `{seq}`: two-digit sequence number (01-99)
   - `{sub}`: two-digit sub-sequence (00 for main, 01-99 for sub-milestones)
   - `{slug}`: kebab-case topic name
+- **Milestone objective status header.** Every milestone objective file includes a status block after the title:
+  ```
+  - **Status:** PLANNED / IN_PROGRESS / SHIPPED
+  - **Milestone:** v{X.Y.Z}
+  - **Package:** {semver}              ← only when SHIPPED (npm release version)
+  - **Completed:** YYYY-MM-DD          ← only when SHIPPED
+  ```
 - Issue files are placed in `internal/objectives/issues/` with the format `{NNN}-{slug}.md`.
 - Register issues in `internal/objectives/issues/TRACKER.md` and update the status.
 - Types: BUG (defect) / ENHANCEMENT (improvement) / MISSING (missing feature).

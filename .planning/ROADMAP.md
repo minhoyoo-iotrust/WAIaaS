@@ -9,7 +9,7 @@
 - ✅ **v2.4.1 Admin UI 테스트 커버리지 복원** — Phases 191-193 (shipped 2026-02-19)
 - ✅ **v2.5 DX 품질 개선** — Phases 194-197 (shipped 2026-02-19)
 - ✅ **v2.6 Wallet SDK 설계** — Phases 198-201 (shipped 2026-02-20)
-- 🚧 **v2.6.1 WAIaaS Wallet Signing SDK** — Phases 202-205 (in progress)
+- ✅ **v2.6.1 WAIaaS Wallet Signing SDK** — Phases 202-205 (shipped 2026-02-20)
 
 ## Phases
 
@@ -92,88 +92,19 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v2.6.1 WAIaaS Wallet Signing SDK (In Progress)
+<details>
+<summary>✅ v2.6.1 WAIaaS Wallet Signing SDK (Phases 202-205) — SHIPPED 2026-02-20</summary>
 
-**Milestone Goal:** v2.6 설계(docs 73-75)를 코드로 실현하여, 지갑 개발사가 @waiaas/wallet-sdk를 통합하고 Owner가 지갑 앱에서 트랜잭션을 승인/거부할 수 있는 상태 달성
+- [x] Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널 (4/4 plans) — completed 2026-02-20
+- [x] Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI (4/4 plans) — completed 2026-02-20
+- [x] Phase 204: Signing SDK 데몬 라이프사이클 연결 (2/2 plans) — completed 2026-02-20
+- [x] Phase 205: Admin Settings API + Skills 동기화 (3/3 plans) — completed 2026-02-20
 
-- [x] **Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널** - SignRequest/Response Zod 스키마, 데몬 측 Builder/Handler, WalletLinkRegistry, DB 마이그레이션, SettingsService 키, NtfySigningChannel, @waiaas/wallet-sdk 신규 패키지 (completed 2026-02-20)
-- [x] **Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI** - TelegramSigningChannel, ApprovalChannelRouter 5단계 우선순위, PUT /wallets/:id/owner approval_method 확장, Admin UI Owner 승인 방법 설정 (completed 2026-02-20)
-- [x] **Phase 204: Signing SDK 데몬 라이프사이클 연결** - GAP-1/GAP-2 해소: 모든 signing SDK 클래스 daemon.ts 인스턴스화, ApprovalChannelRouter→ApprovalWorkflow 연결, signResponseHandler→TelegramBotService 주입 (completed 2026-02-20)
-- [x] **Phase 205: Admin Settings API + Skills 동기화** - GAP-3 해소: signing_sdk/telegram GET/PUT /admin/settings 노출, Admin Settings signing_sdk UI 섹션, skills files 동기화 (completed 2026-02-20)
+See `.planning/milestones/v2.6.1-ROADMAP.md` for full details.
 
-## Phase Details
-
-### Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널
-**Goal**: PENDING_APPROVAL 트랜잭션에서 SignRequest를 생성하여 ntfy로 지갑 앱에 전달하고, 지갑 앱이 @waiaas/wallet-sdk로 서명 응답을 반환하여 트랜잭션이 승인/거부되는 E2E 플로우가 동작하는 상태
-**Depends on**: Nothing (first phase of v2.6.1)
-**Requirements**: PROTO-01, PROTO-02, PROTO-03, PROTO-04, PROTO-05, CHAN-01, CHAN-02, SDK-01, SDK-02, SDK-03, SDK-04, SDK-05, SDK-06, WALLET-01, WALLET-02, WALLET-03, CONF-01, CONF-02
-**Success Criteria** (what must be TRUE):
-  1. PENDING_APPROVAL 트랜잭션에서 SignRequest가 생성되어 유니버셜 링크 URL로 인코딩되고, 만료/서명오류에 대해 적절한 에러가 반환된다
-  2. NtfySigningChannel이 요청 토픽에 SignRequest를 publish하고 응답 토픽을 subscribe하여 SignResponse 수신 시 트랜잭션을 승인/취소한다
-  3. @waiaas/wallet-sdk 패키지의 parseSignRequest, buildSignResponse, formatDisplayMessage, sendViaNtfy, sendViaTelegram, subscribeToRequests 6개 함수가 모두 정상 동작한다
-  4. WalletLinkRegistry에 지갑 메타데이터를 등록/조회할 수 있고, SettingsService에 signing_sdk.* 6개 키 + wallets JSON이 런타임 변경 가능하다
-  5. wallets 테이블에 owner_approval_method 컬럼이 추가되고 DB 마이그레이션이 정상 동작한다
-**Plans**: 4 plans
-
-Plans:
-- [ ] 202-01-PLAN.md — Signing Protocol Zod 스키마 + DB 마이그레이션 + Settings 키 + WalletLinkRegistry
-- [ ] 202-02-PLAN.md — SignRequestBuilder + SignResponseHandler (데몬 측 프로토콜 로직)
-- [ ] 202-03-PLAN.md — @waiaas/wallet-sdk 신규 npm 패키지 (6개 공개 함수)
-- [ ] 202-04-PLAN.md — NtfySigningChannel + signing-sdk 모듈 통합 + E2E 테스트
-
-### Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI
-**Goal**: Owner가 지갑별로 승인 방법(sdk_ntfy/sdk_telegram/walletconnect/telegram_bot/rest)을 설정하고, ApprovalChannelRouter가 설정에 따라 올바른 채널로 라우팅하며, Admin UI에서 시각적으로 관리할 수 있는 상태
-**Depends on**: Phase 202
-**Requirements**: CHAN-03, CHAN-04, CHAN-05, CHAN-06, CHAN-07, WALLET-04, WALLET-05, WALLET-06, WALLET-07
-**Success Criteria** (what must be TRUE):
-  1. TelegramSigningChannel이 유니버셜 링크 인라인 버튼 메시지를 전송하고, /sign_response 명령어로 SignResponse를 수신하여 트랜잭션을 처리한다
-  2. ApprovalChannelRouter가 지갑별 owner_approval_method 설정에 따라 올바른 채널로 라우팅하고, 미설정 시 글로벌 5단계 우선순위로 fallback한다
-  3. PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있고, 유효하지 않은 값에 대해 400 에러를 반환한다
-  4. Admin UI 지갑 상세 페이지에서 Owner 승인 방법을 라디오 선택으로 변경할 수 있고, 미구성 인프라 선택 시 경고를 표시한다
-**Plans**: 4 plans
-
-Plans:
-- [ ] 203-01-PLAN.md — TelegramSigningChannel 구현 (인라인 버튼 전송 + /sign_response 수신)
-- [ ] 203-02-PLAN.md — REST API approval_method 확장 (PUT /wallets/:id/owner + 검증)
-- [ ] 203-03-PLAN.md — ApprovalChannelRouter (5단계 우선순위 라우팅 + SDK 비활성 fallback)
-- [ ] 203-04-PLAN.md — Admin UI Owner 승인 방법 라디오 선택 + 인프라 경고
-
-### Phase 204: Signing SDK 데몬 라이프사이클 연결
-**Goal**: 모든 signing SDK 클래스를 daemon.ts 라이프사이클에 인스턴스화하고, ApprovalChannelRouter를 ApprovalWorkflow에 연결하고, signResponseHandler를 TelegramBotService에 주입하여, PENDING_APPROVAL 트랜잭션이 SDK 서명 채널을 통해 Owner에게 전달되는 E2E 플로우가 실제 런타임에서 동작하는 상태
-**Depends on**: Phase 203
-**Requirements**: PROTO-01, PROTO-03, CHAN-01, CHAN-02, CHAN-03, CHAN-04, CHAN-05, CHAN-06, CHAN-07, WALLET-01
-**Gap Closure**: Closes GAP-1 (10 reqs, lifecycle wiring) + GAP-2 (1 req, signResponseHandler injection) from audit
-**Success Criteria** (what must be TRUE):
-  1. signing_sdk.enabled=true 시 ApprovalChannelRouter, NtfySigningChannel, TelegramSigningChannel, SignRequestBuilder, SignResponseHandler, WalletLinkRegistry가 모두 daemon.ts에서 인스턴스화된다
-  2. PENDING_APPROVAL 트랜잭션이 ApprovalChannelRouter를 통해 올바른 signing channel로 라우팅된다
-  3. signResponseHandler가 TelegramBotService에 주입되어 /sign_response 명령어가 정상 동작한다
-  4. SDK ntfy signing flow E2E가 동작한다 (SignRequest → ntfy → SignResponse → 승인/거부)
-  5. Telegram SDK signing flow E2E가 동작한다 (SignRequest → Telegram → /sign_response → 승인/거부)
-
-Plans:
-- [ ] 204-01-PLAN.md — Signing SDK 라이프사이클 인스턴스화 + ApprovalWorkflow 연결
-- [ ] 204-02-PLAN.md — TelegramBotService signResponseHandler 주입 + 통합 테스트
-
-### Phase 205: Admin Settings API + Skills 동기화
-**Goal**: GET/PUT /admin/settings에 signing_sdk/telegram 카테고리가 노출되고, Admin UI에서 signing_sdk 설정을 관리할 수 있으며, skills files가 현재 API/설정을 정확히 반영하는 상태
-**Depends on**: Phase 204
-**Requirements**: WALLET-07, CONF-01
-**Gap Closure**: Closes GAP-3 (2 reqs, Admin Settings API) + tech debt (skills sync) from audit
-**Success Criteria** (what must be TRUE):
-  1. GET /admin/settings 응답에 signing_sdk, telegram 카테고리가 포함된다
-  2. PUT /admin/settings로 signing_sdk.* 키를 런타임 변경할 수 있다
-  3. Admin UI에서 signing_sdk 설정을 시각적으로 관리하는 섹션이 존재한다
-  4. Admin UI 인프라 경고가 실제 signing_sdk.enabled 값을 기반으로 정확히 표시된다
-  5. wallet.skill.md, admin.skill.md가 approval_method + signing_sdk 설정을 반영한다
-
-Plans:
-- [ ] 205-01-PLAN.md — GET/PUT /admin/settings signing_sdk/telegram 카테고리 노출
-- [ ] 205-02-PLAN.md — Admin Settings signing_sdk UI 섹션 + 인프라 경고 수정
-- [ ] 205-03-PLAN.md — Skills files 동기화 (wallet.skill.md, admin.skill.md)
+</details>
 
 ## Progress
-
-**Execution Order:** 202 → 203
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -184,7 +115,4 @@ Plans:
 | 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
-| 202 | v2.6.1 | 4/4 | Complete | 2026-02-20 |
-| 203 | v2.6.1 | 4/4 | Complete | 2026-02-20 |
-| 204 | 2/2 | Complete    | 2026-02-20 | — |
-| 205 | 3/3 | Complete    | 2026-02-20 | — |
+| 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
