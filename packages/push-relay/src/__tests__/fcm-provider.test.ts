@@ -27,6 +27,7 @@ const mockPayload: PushPayload = {
   title: 'Sign Request',
   body: 'Please approve tx',
   data: { type: 'sign_request', payload: '{}' },
+  category: 'sign_request',
   priority: 'high',
 };
 
