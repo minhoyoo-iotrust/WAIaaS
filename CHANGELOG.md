@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.1...v2.4.0-rc.2) (2026-02-20)
+
+
+### Features
+
+* **admin:** add agent connection prompt card with REST API ([af0999d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/af0999d6f0561e09ef7b34f5555af4b9812e5f55))
+* **admin:** add update available banner to dashboard ([14a6415](https://github.com/minhoyoo-iotrust/WAIaaS/commit/14a6415ef5f91c34384f49e8584989b66fea028f))
+* **daemon:** add UPDATE_AVAILABLE notification event type ([839149a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/839149a11cdf1ad443122e7465b95cbd003e9c4b)), closes [#105](https://github.com/minhoyoo-iotrust/WAIaaS/issues/105)
+
+
+### Bug Fixes
+
+* **cli:** rename upgrade command to update with upgrade alias ([d5ed4d3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5ed4d3a3afeea987ca606a994173d946a288c2d)), closes [#102](https://github.com/minhoyoo-iotrust/WAIaaS/issues/102)
+* update NotificationEventType count to 26 and clean up archived phases ([45ad6f4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/45ad6f4373434dccf22f5320f3baf380fad4b4ae))
+* update NotificationEventType expected count in enum SSoT verifier ([ca521ae](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ca521aeae7c85ef84a0e339f416102f6a7147c54))
+
 ## [2.4.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc...v2.4.0-rc.1) (2026-02-19)
 
 
