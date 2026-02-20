@@ -65,10 +65,10 @@ export function createOwnerAuth(deps: OwnerAuthDeps) {
     }
 
     // Look up wallet to verify owner_address match.
-    // Prefer walletId from sessionAuth context (set on /v1/transactions/* routes)
+    // Prefer defaultWalletId from sessionAuth context (set on /v1/transactions/* routes)
     // over c.req.param('id') which is the TRANSACTION ID on /v1/transactions/:id/*.
     // For direct wallet routes like /v1/wallets/:id/*, c.req.param('id') IS the wallet ID.
-    const walletId = (c.get('walletId' as never) as string | undefined) || c.req.param('id');
+    const walletId = (c.get('defaultWalletId' as never) as string | undefined) || c.req.param('id');
     if (!walletId) {
       throw new WAIaaSError('WALLET_NOT_FOUND', {
         message: 'Wallet ID required for owner authentication',
