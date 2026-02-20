@@ -1262,33 +1262,27 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
   router.openapi(settingsGetRoute, async (c) => {
     if (!deps.settingsService) {
+      const emptyCategory = {} as Record<string, string | boolean>;
       return c.json(
         {
-          notifications: {} as Record<string, string | boolean>,
-          rpc: {} as Record<string, string | boolean>,
-          security: {} as Record<string, string | boolean>,
-          daemon: {} as Record<string, string | boolean>,
-          walletconnect: {} as Record<string, string | boolean>,
-          oracle: {} as Record<string, string | boolean>,
-          display: {} as Record<string, string | boolean>,
+          notifications: emptyCategory,
+          rpc: emptyCategory,
+          security: emptyCategory,
+          daemon: emptyCategory,
+          walletconnect: emptyCategory,
+          oracle: emptyCategory,
+          display: emptyCategory,
+          autostop: emptyCategory,
+          monitoring: emptyCategory,
+          telegram: emptyCategory,
+          signing_sdk: emptyCategory,
         },
         200,
       );
     }
 
-    const masked = deps.settingsService.getAllMasked();
-    return c.json(
-      {
-        notifications: masked.notifications ?? {},
-        rpc: masked.rpc ?? {},
-        security: masked.security ?? {},
-        daemon: masked.daemon ?? {},
-        walletconnect: masked.walletconnect ?? {},
-        oracle: masked.oracle ?? {},
-        display: masked.display ?? {},
-      },
-      200,
-    );
+    const masked = deps.settingsService.getAllMasked() as z.infer<typeof SettingsResponseSchema>;
+    return c.json(masked, 200);
   });
 
   // ---------------------------------------------------------------------------
@@ -1323,19 +1317,11 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       deps.onSettingsChanged(entries.map((e) => e.key));
     }
 
-    const masked = deps.settingsService.getAllMasked();
+    const masked = deps.settingsService.getAllMasked() as z.infer<typeof SettingsResponseSchema>;
     return c.json(
       {
         updated: entries.length,
-        settings: {
-          notifications: masked.notifications ?? {},
-          rpc: masked.rpc ?? {},
-          security: masked.security ?? {},
-          daemon: masked.daemon ?? {},
-          walletconnect: masked.walletconnect ?? {},
-          oracle: masked.oracle ?? {},
-          display: masked.display ?? {},
-        },
+        settings: masked,
       },
       200,
     );

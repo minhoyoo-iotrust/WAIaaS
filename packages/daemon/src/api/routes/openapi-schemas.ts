@@ -741,6 +741,12 @@ export const SettingsResponseSchema = z
     security: z.record(z.union([z.string(), z.boolean()])),
     daemon: z.record(z.union([z.string(), z.boolean()])),
     walletconnect: z.record(z.union([z.string(), z.boolean()])),
+    oracle: z.record(z.union([z.string(), z.boolean()])),
+    display: z.record(z.union([z.string(), z.boolean()])),
+    autostop: z.record(z.union([z.string(), z.boolean()])),
+    monitoring: z.record(z.union([z.string(), z.boolean()])),
+    telegram: z.record(z.union([z.string(), z.boolean()])),
+    signing_sdk: z.record(z.union([z.string(), z.boolean()])),
   })
   .openapi('SettingsResponse');
 
