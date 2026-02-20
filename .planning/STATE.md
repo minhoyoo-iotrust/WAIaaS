@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 210 of 213 (세션 모델 재구조화)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-21 -- Roadmap created for v26.4 (4 phases, 12 plans, 30 requirements)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-21 -- Completed 210-01-PLAN.md (DB v19 migration + error codes + schema)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#░░░░░░░░░] 8%
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 210. 세션 모델 재구조화 | 0/3 | - | - |
+| 210. 세션 모델 재구조화 | 1/3 | 6min | 6min |
 | 211. API 레이어 지갑 선택 | 0/3 | - | - |
 | 212. 자기 발견 엔드포인트 | 0/2 | - | - |
 | 213. 통합 레이어 | 0/4 | - | - |
@@ -37,6 +37,9 @@ Progress: [░░░░░░░░░░] 0%
 - walletId 선택적 파라미터 (미지정 시 기본 지갑 자동 선택 -> 하위 호환 유지)
 - connect-info는 sessionAuth (마스터 패스워드 불필요)
 - 에러 코드 4개 신규: WALLET_ACCESS_DENIED, WALLET_ALREADY_LINKED, CANNOT_REMOVE_DEFAULT_WALLET, SESSION_REQUIRES_WALLET
+- session_wallets composite PK (session_id, wallet_id) -- surrogate key 불필요
+- v19 migration: 12-step sessions 재생성 + transactions FK reconnection
+- CreateSessionRequestSchema: Zod refine()으로 walletId/walletIds 상호 배타 검증
 
 ### Blockers/Concerns
 
@@ -45,5 +48,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Roadmap created, ready to plan Phase 210
+Stopped at: Completed 210-01-PLAN.md
 Resume file: None

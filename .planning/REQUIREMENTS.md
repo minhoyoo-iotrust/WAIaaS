@@ -15,9 +15,9 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 - [ ] **SESS-04**: 세션에서 지갑을 동적으로 제거할 수 있다 (DELETE /v1/sessions/:id/wallets/:walletId)
 - [ ] **SESS-05**: 세션의 기본 지갑을 변경할 수 있다 (PATCH /v1/sessions/:id/wallets/:walletId/default)
 - [ ] **SESS-06**: 세션에 연결된 지갑 목록을 조회할 수 있다 (GET /v1/sessions/:id/wallets)
-- [ ] **SESS-07**: DB v19 마이그레이션 — session_wallets junction 테이블 생성 + 기존 데이터 자동 이관
-- [ ] **SESS-08**: 기본 지갑 제거 시도 시 CANNOT_REMOVE_DEFAULT_WALLET 에러가 반환된다
-- [ ] **SESS-09**: 마지막 지갑 제거 시도 시 SESSION_REQUIRES_WALLET 에러가 반환된다
+- [x] **SESS-07**: DB v19 마이그레이션 — session_wallets junction 테이블 생성 + 기존 데이터 자동 이관
+- [x] **SESS-08**: 기본 지갑 제거 시도 시 CANNOT_REMOVE_DEFAULT_WALLET 에러가 반환된다
+- [x] **SESS-09**: 마지막 지갑 제거 시도 시 SESSION_REQUIRES_WALLET 에러가 반환된다
 - [ ] **SESS-10**: 지갑 삭제(TERMINATE) 시 해당 지갑이 기본 지갑이면 자동 승격, 마지막이면 세션 자동 revoke
 
 ### API 변경 (API)
@@ -81,9 +81,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-04 | Phase 210 | Pending |
 | SESS-05 | Phase 210 | Pending |
 | SESS-06 | Phase 210 | Pending |
-| SESS-07 | Phase 210 | Pending |
-| SESS-08 | Phase 210 | Pending |
-| SESS-09 | Phase 210 | Pending |
+| SESS-07 | Phase 210 | Complete |
+| SESS-08 | Phase 210 | Complete |
+| SESS-09 | Phase 210 | Complete |
 | SESS-10 | Phase 210 | Pending |
 | API-01 | Phase 211 | Pending |
 | API-02 | Phase 211 | Pending |
