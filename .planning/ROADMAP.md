@@ -99,7 +99,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 - [x] **Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널** - SignRequest/Response Zod 스키마, 데몬 측 Builder/Handler, WalletLinkRegistry, DB 마이그레이션, SettingsService 키, NtfySigningChannel, @waiaas/wallet-sdk 신규 패키지 (completed 2026-02-20)
 - [x] **Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI** - TelegramSigningChannel, ApprovalChannelRouter 5단계 우선순위, PUT /wallets/:id/owner approval_method 확장, Admin UI Owner 승인 방법 설정 (completed 2026-02-20)
 - [x] **Phase 204: Signing SDK 데몬 라이프사이클 연결** - GAP-1/GAP-2 해소: 모든 signing SDK 클래스 daemon.ts 인스턴스화, ApprovalChannelRouter→ApprovalWorkflow 연결, signResponseHandler→TelegramBotService 주입 (completed 2026-02-20)
-- [ ] **Phase 205: Admin Settings API + Skills 동기화** - GAP-3 해소: signing_sdk/telegram GET/PUT /admin/settings 노출, Admin Settings signing_sdk UI 섹션, skills files 동기화
+- [x] **Phase 205: Admin Settings API + Skills 동기화** - GAP-3 해소: signing_sdk/telegram GET/PUT /admin/settings 노출, Admin Settings signing_sdk UI 섹션, skills files 동기화 (completed 2026-02-20)
 
 ## Phase Details
 
@@ -187,4 +187,4 @@ Plans:
 | 202 | v2.6.1 | 4/4 | Complete | 2026-02-20 |
 | 203 | v2.6.1 | 4/4 | Complete | 2026-02-20 |
 | 204 | 2/2 | Complete    | 2026-02-20 | — |
-| 205 | 2/3 | In Progress|  | — |
+| 205 | 3/3 | Complete   | 2026-02-20 | — |

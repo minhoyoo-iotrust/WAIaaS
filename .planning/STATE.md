@@ -38,6 +38,7 @@ v2.6.1은 설계를 코드로 실현. Push Relay Server는 범위 밖 (ntfy 직�
 204-01: All 6 signing SDK classes instantiated in daemon.ts Step 4c-8. ApprovalChannelRouter wired through full pipeline request path. Fire-and-forget routing for PENDING_APPROVAL transactions. CreateAppDeps field added in Task 1 (not Task 2) to unblock typecheck.
 204-02: Late-binding setter pattern for signResponseHandler injection (consistent with VersionCheckService). 11 lifecycle integration tests cover instantiation, routing, shutdown, conditional init.
 205-01: Direct getAllMasked() return with z.infer type assertion instead of cherry-picked category passthrough. SettingsResponseSchema now declares all 11 categories.
+205-02: SigningSDKSettings component with 6 fields (enabled, expiry, channel, wallet, topic prefixes). wallets JSON key excluded from UI. Section placed after TelegramBot in render order.
 205-03: Skill files version bumped from 2.3.0 to 2.6.1. wallet.skill.md documents approval_method (6 valid values). admin.skill.md documents all 11 settings categories (was 5).
 
 ### Blockers/Concerns
@@ -47,5 +48,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 205-03-PLAN.md (phase 205 complete, all v2.6.1 phases done)
+Stopped at: Completed 205-02-PLAN.md (all 3 plans in phase 205 now complete)
 Resume file: None
