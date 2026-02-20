@@ -1,5 +1,45 @@
 # Changelog
 
+## [2.4.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.2...v2.4.0-rc.3) (2026-02-20)
+
+
+### Features
+
+* **202-01:** add DB migration v18, signing SDK settings, and WalletLinkRegistry ([777bf94](https://github.com/minhoyoo-iotrust/WAIaaS/commit/777bf94ee8ea62e945ee1a94c2b5b0c1cc3a8b1a))
+* **202-01:** add SIGNING domain error codes, signing protocol Zod schemas, and base64url utilities ([8c7f927](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8c7f927c85d14dc4284444f591c70c38aed3d53e))
+* **202-02:** implement SignRequestBuilder for PENDING_APPROVAL transactions ([cd76243](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cd762431d25df50b98103e85078c976cb0916ad4))
+* **202-02:** implement SignResponseHandler for signing SDK approve/reject ([a58eb28](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a58eb28fe85ebbde17efdf8a97bc2308defa3d21))
+* **202-03:** add sendViaNtfy, sendViaTelegram, subscribeToRequests channel functions ([c69dafb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c69dafb0d03831400fd43959a9242cfdb31300d6))
+* **202-03:** scaffold @waiaas/wallet-sdk with parseSignRequest, buildSignResponse, formatDisplayMessage ([228519a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/228519a4d93f0b03ec9f7a554f99ce13b5a02b96))
+* **202-04:** add signing-sdk module index and E2E integration tests ([fd995b8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fd995b8364f3a7afe9b03c6dbf9d272abb9c43c5))
+* **202-04:** implement NtfySigningChannel with SSE subscribe ([8e78c27](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8e78c277d38631ab1880b012e1752f4c2218c21b))
+* **203-01:** add /sign_response command to TelegramBotService + unit tests ([58f8915](https://github.com/minhoyoo-iotrust/WAIaaS/commit/58f8915959d758187e8e215a0472a4fa86942c2a))
+* **203-01:** implement TelegramSigningChannel with ISigningChannel interface ([120a42c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/120a42c3988e6598e753990b26bbdf5d616c73b0))
+* **203-02:** extend SetOwnerRequestSchema with approval_method field ([898908c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/898908c55d0903e4091d288c81cf72f08b9035a2))
+* **203-03:** implement ApprovalChannelRouter for signing channel routing ([cf68cf2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cf68cf22bd3563108d0dfdc993d619cbb0422799))
+* **203-04:** add approval method radio selection UI with infra warnings ([d29d50f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d29d50ffbdd201002a97064c066cd5507120240d))
+* **203-04:** add WalletDetail approvalMethod type + data loading ([332b96a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/332b96a6a598a9cdf71737ca7b3cabbeb082a56a))
+* **204-01:** wire ApprovalChannelRouter through pipeline request path ([479dfc2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/479dfc28996b77090c8891a500d1d1460c0d9104))
+* **204-01:** wire signing SDK classes into daemon lifecycle ([33b1987](https://github.com/minhoyoo-iotrust/WAIaaS/commit/33b19874d56b0bfb6fdb0140798fd50cb16d4b9f))
+* **204-02:** inject signResponseHandler into TelegramBotService via late-binding setter ([69c4976](https://github.com/minhoyoo-iotrust/WAIaaS/commit/69c49764f219ab0876cf366498d7da581c049055))
+* **205-01:** expose all 11 setting categories in admin settings API ([6667f56](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6667f563b65343db2a9af18fc0125aa070b30cf6))
+* **205-02:** add Signing SDK settings section to Admin Settings page ([cd0c94e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cd0c94e9d7d9ffac562f25f7d87439cef2587d49))
+* **cli:** change default environment mode from testnet to mainnet ([2f97679](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2f97679cbb8ca22b57f3f3b7cf85d9b9f5e1d306)), closes [#112](https://github.com/minhoyoo-iotrust/WAIaaS/issues/112)
+* **skills:** add platform-specific skill installers and integration guides ([3e3eb01](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3e3eb0156cec835032ac394b475d66485e13455d))
+
+
+### Bug Fixes
+
+* **202:** revise plans based on checker feedback ([82db3be](https://github.com/minhoyoo-iotrust/WAIaaS/commit/82db3beb310385ec9ce13e8d6124cfc5d84b1be4))
+* **203:** revise plans based on checker feedback ([1c08e55](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1c08e55e54cc3234d8cc6ce7315ab616bb2e155c))
+* **admin:** use PUT response settings to prevent save-then-revert UI bug ([f5807f1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f5807f114f47f9dace7ae9428364652b6ac16ceb)), closes [#116](https://github.com/minhoyoo-iotrust/WAIaaS/issues/116)
+* **ci:** add test:unit script to wallet-sdk for CI coverage report ([b6b3d4a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b6b3d4a4026e15a8779ed0c77c51ba345c8d6b23))
+* **ci:** handle hyphenated package names in coverage-gate.sh ([8b83854](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8b838543867560927057b0b445f91d5df66b58b5))
+* **daemon:** read notification status from SettingsService instead of static config ([758dbf4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/758dbf4bcfc008a648633437cf000b875b8d4deb)), closes [#115](https://github.com/minhoyoo-iotrust/WAIaaS/issues/115)
+* register wallet-sdk in release-please and add 5 missing packages to CI coverage ([88a90d2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/88a90d2c57f7225df2ff83f427c486436e908c66)), closes [#107](https://github.com/minhoyoo-iotrust/WAIaaS/issues/107)
+* replace remaining 'waiaas upgrade' references with 'waiaas update' ([5f25838](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5f2583845209b535321a8bfe5580b5e4dcfb2389)), closes [#110](https://github.com/minhoyoo-iotrust/WAIaaS/issues/110)
+* resolve lint errors in signing SDK test files and channel impl ([df573d7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/df573d7ce692da576ddd035c8d4287e2855e776e))
+
 ## [2.4.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.1...v2.4.0-rc.2) (2026-02-20)
 
 
