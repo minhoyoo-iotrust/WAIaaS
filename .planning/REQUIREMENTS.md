@@ -42,11 +42,11 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 - [x] **WALLET-04**: PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있다
 - [x] **WALLET-05**: 유효하지 않은 approval_method 값에 대해 400 에러를 반환한다
 - [x] **WALLET-06**: Admin UI 지갑 상세 페이지에서 Owner 승인 방법을 라디오 선택으로 변경할 수 있다
-- [ ] **WALLET-07**: 미구성 인프라 선택 시(예: ntfy 미설정 + sdk_ntfy) 경고 메시지를 표시한다
+- [x] **WALLET-07**: 미구성 인프라 선택 시(예: ntfy 미설정 + sdk_ntfy) 경고 메시지를 표시한다
 
 ### Configuration (CONF)
 
-- [ ] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
+- [x] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
 - [x] **CONF-02**: signing_sdk.wallets 키에 JSON 배열로 지갑별 유니버셜 링크 설정을 저장하고 런타임에 CRUD 관리할 수 있다 (Admin UI CRUD는 Phase 203 WALLET-06 범위)
 
 ## v2 Requirements
@@ -95,8 +95,8 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 | WALLET-04 | Phase 203 | Complete |
 | WALLET-05 | Phase 203 | Complete |
 | WALLET-06 | Phase 203 | Complete |
-| WALLET-07 | Phase 205 | Pending |
-| CONF-01 | Phase 205 | Pending |
+| WALLET-07 | Phase 205 | Complete |
+| CONF-01 | Phase 205 | Complete |
 | CONF-02 | Phase 202 | Complete |
 
 **Coverage:**
