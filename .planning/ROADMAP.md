@@ -168,9 +168,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 211-01-PLAN.md — resolveWalletId 헬퍼 + session-auth/owner-auth 미들웨어 변경
-- [ ] 211-02-PLAN.md — 전 엔드포인트 walletId 선택적 파라미터 적용 (wallet/transactions/x402/actions/wc)
-- [ ] 211-03-PLAN.md — 세션 응답 OpenAPI 스키마 정합 + 하위 호환 테스트
+- [x] 211-01-PLAN.md — resolveWalletId 헬퍼 + session-auth/owner-auth 미들웨어 변경
+- [x] 211-02-PLAN.md — 전 엔드포인트 walletId 선택적 파라미터 적용 (wallet/transactions/x402/actions/wc)
+- [x] 211-03-PLAN.md — 세션 응답 OpenAPI 스키마 정합 + 하위 호환 테스트
 
 ### Phase 212: 자기 발견 엔드포인트
 **Goal**: 에이전트가 세션 토큰만으로 접근 가능한 지갑, 정책, capabilities, 자연어 프롬프트를 자동 파악할 수 있는 상태
@@ -181,11 +181,11 @@ Plans:
   2. capabilities가 데몬 설정(Action Provider 등록, x402 설정, 서명 API 활성)에 따라 동적으로 결정된다
   3. connect-info에 에이전트가 즉시 사용할 수 있는 자연어 프롬프트가 포함된다
   4. POST /admin/agent-prompt가 단일 멀티 지갑 세션을 생성하고 connect-info 프롬프트 빌더를 공유한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 212-01: connect-info 라우트 + 응답 빌더 (지갑/정책/capabilities/prompt)
-- [ ] 212-02: agent-prompt 통합 (멀티 지갑 세션 생성 + 프롬프트 빌더 공유) + 테스트
+- [ ] 212-01-PLAN.md — connect-info 라우트 + 응답 빌더 (지갑/정책/capabilities/prompt)
+- [ ] 212-02-PLAN.md — agent-prompt 통합 (멀티 지갑 세션 생성 + 프롬프트 빌더 공유) + 테스트
 
 ### Phase 213: 통합 레이어
 **Goal**: SDK, MCP, Admin UI, CLI, 스킬 파일, 가이드 문서가 멀티 지갑 세션과 자기 발견을 완전히 반영하고, 기존 워크플로우가 무변경으로 동작하는 상태
