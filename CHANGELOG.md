@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.3...v2.4.0-rc.4) (2026-02-20)
+
+
+### Bug Fixes
+
+* **ci:** add wallet-sdk to release publish pipeline ([ca88b98](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ca88b98194a8fd76eb3b8b4cb83e546bf2b730ff))
+
 ## [2.4.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.2...v2.4.0-rc.3) (2026-02-20)
 
 
