@@ -277,7 +277,7 @@ describe('subscribeToRequests', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(callback).toHaveBeenCalledOnce();
-    const receivedRequest = callback.mock.calls[0][0] as SignRequest;
+    const receivedRequest = callback.mock.calls[0]![0] as SignRequest;
     expect(receivedRequest.requestId).toBe(request.requestId);
     expect(receivedRequest.displayMessage).toBe(request.displayMessage);
     expect(receivedRequest.chain).toBe('solana');
