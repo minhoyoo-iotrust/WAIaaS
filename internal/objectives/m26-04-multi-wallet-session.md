@@ -81,7 +81,7 @@ CREATE INDEX idx_session_wallets_wallet ON session_wallets(wallet_id);
 - 기본 지갑 변경 시: 트랜잭션 내에서 기존 default 해제 → 새 default 설정
 - 기본 지갑 제거 시: 에러 반환 (먼저 기본 지갑을 변경해야 함)
 
-**지갑 삭제 cascade 방어**: `session_wallets`에 `ON DELETE CASCADE`가 설정되어 있으므로, wallets 테이블에서 지갑 삭제 시 해당 junction 행이 자동 삭제된다. 기본 지갑이 삭제되면 is_default 불변량이 파손될 수 있다. **방어 로직**: 지갑 삭제(TERMINATE) API 핸들러에서 삭제 전 `session_wallets`를 조회하여, 해당 지갑이 어떤 세션의 is_default인 경우 (1) 다른 지갑이 있으면 자동으로 다음 지갑을 default로 승격, (2) 마지막 지갑이면 세션을 자동 revoke한다.
+**지갑 삭제 cascade 방어**: `session_wallets`에 `ON DELETE CASCADE`가 설정되어 있으므로, wallets 테이블에서 지갑 삭제 시 해당 junction 행이 자동 삭제된다. 기본 지갑이 삭제되면 is_default 불변량이 파손될 수 있다. **방어 로직**: 지갑 삭제(TERMINATE) API 핸들러에서 삭제 전 `session_wallets`를 조회하여, 해당 지갑이 어떤 세션의 is_default인 경우 (1) 다른 지갑이 있으면 `created_at ASC` 순서로 가장 먼저 연결된 지갑을 default로 승격, (2) 마지막 지갑이면 세션을 자동 revoke한다.
 
 `sessions.wallet_id` 컬럼은 **마이그레이션 과정에서 제거**:
 1. `session_wallets` 테이블 생성
@@ -184,6 +184,26 @@ PATCH  /v1/sessions/:id/wallets/:walletId/default                      → 기�
 GET    /v1/sessions/:id/wallets                                        → 연결된 지갑 목록 (masterAuth)
 ```
 
+**응답 스키마:**
+
+```typescript
+// POST /v1/sessions/:id/wallets → 201
+{ "sessionId": "sess_abc", "walletId": "wallet-3", "isDefault": false, "createdAt": 1740787200 }
+
+// DELETE /v1/sessions/:id/wallets/:walletId → 204 (No Content)
+
+// PATCH /v1/sessions/:id/wallets/:walletId/default → 200
+{ "sessionId": "sess_abc", "defaultWalletId": "wallet-2" }
+
+// GET /v1/sessions/:id/wallets → 200
+{
+  "wallets": [
+    { "id": "wallet-1", "name": "Solana Main", "chain": "solana", "isDefault": true, "createdAt": 1740787200 },
+    { "id": "wallet-2", "name": "Ethereum", "chain": "evm", "isDefault": false, "createdAt": 1740787300 }
+  ]
+}
+```
+
 **엣지 케이스 처리:**
 
 | 상황 | 동작 |
@@ -208,9 +228,9 @@ const defaultWallet = db.select().from(sessionWallets)
 const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWallet!.walletId, ... };
 ```
 
-#### 세션 목록 API 응답 변경
+#### 세션 목록/상세 API 응답 변경
 
-`GET /sessions` 응답에서 `walletId: string` → `wallets: Array<{ id, name, isDefault }>` 배열로 변경. 하위 호환을 위해 `walletId`(기본 지갑)와 `walletName`(기본 지갑 이름) 필드도 유지한다.
+`GET /sessions` (목록) 및 `GET /sessions/:id` (단건 조회) 응답에서 `walletId: string` → `wallets: Array<{ id, name, isDefault }>` 배열로 변경. 하위 호환을 위해 `walletId`(기본 지갑)와 `walletName`(기본 지갑 이름) 필드도 유지한다.
 
 ```typescript
 // 응답 예시
@@ -305,11 +325,47 @@ GET /v1/connect-info    (sessionAuth)
 | 컴포넌트 | 변경 내용 |
 |----------|----------|
 | **@waiaas/sdk** | `createSession({ walletIds })` 파라미터 추가. `getConnectInfo()` 메서드 추가 |
-| **MCP 서버** | `connect-info` 도구 추가. 세션 생성 시 멀티 지갑 지원. 기존 MCP 도구에 선택적 `walletId` 파라미터 추가 (미지정 시 기본 지갑) |
-| **Admin UI** | 세션 생성 폼에서 다중 지갑 선택 체크박스. 세션 상세에서 연결된 지갑 목록 표시 |
-| **CLI** | `waiaas quickset`이 생성하는 세션에 모든 지갑 자동 연결 |
+| **MCP 서버** | 아래 "MCP 구조 변경 상세" 참조 |
+| **Admin UI** | 세션 생성 폼에서 다중 지갑 선택 체크박스 + **기본 지갑 라디오 버튼**. 세션 상세에서 연결된 지갑 목록 + 기본 지갑 뱃지 표시 |
+| **CLI** | 아래 "CLI quickset 변경 상세" 참조 |
 | **Skills** | `quickstart.skill.md`에서 `connect-info` 사용법 안내 추가 |
 | **agent-prompt** | `POST /admin/agent-prompt` 라우트가 현재 **지갑당 개별 세션**을 생성하므로(`admin.ts:1940-1966`), 단일 멀티 지갑 세션 + 단일 토큰을 반환하도록 변경. 프롬프트 생성 로직은 connect-info 빌더와 공유 |
+
+#### MCP 구조 변경 상세
+
+현재 MCP는 **지갑당 별도 인스턴스** 구조로 동작한다:
+- `WAIAAS_WALLET_ID` 환경변수로 지갑 1개 지정 (`mcp/src/index.ts:30,103`)
+- `SessionManager`가 `walletId`로 토큰 파일 경로 격리: `DATA_DIR/mcp-tokens/<walletId>` (`mcp/src/session-manager.ts:506-512`)
+- CLI `quickset`이 지갑별 MCP config entry를 N개 생성 (`cli/src/commands/quickstart.ts:84-104`)
+
+멀티 지갑 세션 도입으로 다음을 변경한다:
+
+| 변경 대상 | Before | After |
+|----------|--------|-------|
+| MCP 인스턴스 | 지갑 N개 → 인스턴스 N개 | 세션 1개 → **인스턴스 1개** |
+| `WAIAAS_WALLET_ID` 환경변수 | 필수 (지갑 지정) | **선택적** (미지정 시 기본 지갑) |
+| SessionManager 토큰 경로 | `mcp-tokens/<walletId>` | **`mcp-token`** (단일 파일, 기존 경로 재사용) |
+| `connect-info` 도구 | 없음 | **추가** — 자기 발견 정보 반환 |
+| 기존 MCP 도구 | walletId 고정 | 선택적 `walletId` 파라미터 추가 (미지정 시 기본 지갑) |
+
+> **하위 호환**: `WAIAAS_WALLET_ID`가 설정된 기존 환경은 해당 지갑을 기본 지갑으로 사용. SessionManager는 `mcp-tokens/<walletId>` 경로를 우선 확인하고, 없으면 `mcp-token` 경로를 fallback 확인한다.
+
+#### CLI quickset 변경 상세
+
+현재 `quickset`은 지갑별 세션+토큰 파일을 개별 생성한다 (`cli/src/commands/quickstart.ts:45-82`):
+- 지갑 N개 → 세션 N개 → 토큰 파일 N개 (`mcp-tokens/<walletId>`)
+- MCP config snippet: 지갑별 entry N개 (각각 `WAIAAS_WALLET_ID` 설정)
+
+변경 내용:
+
+| 변경 대상 | Before | After |
+|----------|--------|-------|
+| 세션 생성 | 지갑별 `POST /v1/sessions { walletId }` 반복 | **단일** `POST /v1/sessions { walletIds: [...] }` |
+| 토큰 파일 | `mcp-tokens/<walletId>` N개 | **`mcp-token`** 1개 |
+| MCP config | entry N개 (`WAIAAS_WALLET_ID` 각각 설정) | **entry 1개** (`WAIAAS_WALLET_ID` 미설정) |
+| 출력 안내 | 세션 N개 정보 | 세션 1개 + 연결된 지갑 목록 |
+
+> **기존 토큰 파일 처리**: quickset 재실행 시 기존 `mcp-tokens/<walletId>` 파일은 삭제하지 않는다. SessionManager의 fallback 로직으로 기존 환경이 계속 동작한다.
 
 #### 알림 이벤트 walletId 처리
 
@@ -490,7 +546,7 @@ m26-04 완료 시 다음 문서를 갱신한다:
 |------|------|
 | 페이즈 | 3-4개 (설계 → 세션 모델 → API 변경 → 자기 발견 + SDK/MCP) |
 | 신규 파일 | 3-5개 (junction 스키마, resolveWalletId 헬퍼, connect-info 라우트, SDK 메서드) |
-| 수정 파일 | 15-20개 (세션 CRUD, 미들웨어, 전체 /v1/wallet/* 라우트, SDK, MCP, Admin UI, CLI) |
+| 수정 파일 | 25-30개 — 라우트 6개(wallet×4+transactions×5+x402×1+actions×1+wc×1+sessions), 미들웨어 2개(session-auth, owner-auth), DB 2개(schema, migrate), admin.ts, MCP 2개(index, session-manager), CLI(quickstart), SDK, Admin UI 컴포넌트, 테스트 5개+(session-auth.test, auth-coverage-audit.test, security-test-helpers 등) |
 | 테스트 | 36개 (E2E) + 단위 테스트 5대상 |
 | DB 마이그레이션 | 1건 (session_wallets 테이블 + 기존 데이터 이관) |
 
