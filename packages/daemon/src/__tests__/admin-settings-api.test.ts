@@ -1,27 +1,30 @@
 /**
  * Tests for admin settings API endpoints.
  *
- * 15 tests covering:
+ * 18 tests covering:
  * GET /v1/admin/settings:
- *   1. Returns 200 with all 5 categories
+ *   1. Returns 200 with all 11 categories (including signing_sdk, telegram)
  *   2. Returns default values when no DB entries exist
  *   3. Returns masked boolean for credential keys
  *   4. Returns actual values for non-credential keys
  *   5. Returns 401 without masterAuth header
+ *   6. Returns all 11 categories including signing_sdk and telegram with defaults
  *
  * PUT /v1/admin/settings:
- *   6. Returns 200 and updates a single setting
- *   7. Returns 200 and updates multiple settings
- *   8. Returns 400 for unknown setting key
- *   9. Persists credential values encrypted in DB
- *   10. Returns updated masked settings in response body
- *   11. Returns 401 without masterAuth header
- *   12. Calls onSettingsChanged callback with changed keys
+ *   7. Returns 200 and updates a single setting
+ *   8. Returns 200 and updates multiple settings
+ *   9. Returns 400 for unknown setting key
+ *   10. Persists credential values encrypted in DB
+ *   11. Returns updated masked settings in response body
+ *   12. Returns 401 without masterAuth header
+ *   13. Calls onSettingsChanged callback with changed keys
+ *   14. Can update signing_sdk.enabled
+ *   15. Can update signing_sdk.request_expiry_min
  *
  * POST /v1/admin/settings/test-rpc:
- *   13. Returns 200 with success:false for unreachable URL
- *   14. Returns 200 with success:false for invalid URL format
- *   15. Returns 401 without masterAuth header
+ *   16. Returns 200 with success:false for unreachable URL
+ *   17. Returns 200 with success:false for invalid URL format
+ *   18. Returns 401 without masterAuth header
  *
  * Uses createApp() + app.request() integration pattern with real SettingsService.
  *
@@ -138,7 +141,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('GET /admin/settings', () => {
-  it('should return 200 with all 5 categories', async () => {
+  it('should return 200 with all 11 categories', async () => {
     const config = fullConfig();
     const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
     const app = createApp({
@@ -159,6 +162,12 @@ describe('GET /admin/settings', () => {
     expect(body).toHaveProperty('security');
     expect(body).toHaveProperty('daemon');
     expect(body).toHaveProperty('walletconnect');
+    expect(body).toHaveProperty('oracle');
+    expect(body).toHaveProperty('display');
+    expect(body).toHaveProperty('autostop');
+    expect(body).toHaveProperty('monitoring');
+    expect(body).toHaveProperty('telegram');
+    expect(body).toHaveProperty('signing_sdk');
   });
 
   it('should return default values when no DB entries exist', async () => {
@@ -244,6 +253,42 @@ describe('GET /admin/settings', () => {
     });
 
     expect(res.status).toBe(401);
+  });
+
+  it('should return all 11 categories including signing_sdk and telegram with defaults', async () => {
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+    });
+
+    const res = await app.request('/v1/admin/settings', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+
+    // Verify all 11 category keys are present
+    const expectedCategories = [
+      'notifications', 'rpc', 'security', 'daemon', 'walletconnect',
+      'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk',
+    ];
+    for (const cat of expectedCategories) {
+      expect(body).toHaveProperty(cat);
+    }
+
+    // Verify signing_sdk defaults
+    const signingSDK = body.signing_sdk as Record<string, unknown>;
+    expect(signingSDK.enabled).toBe('false');
+    expect(signingSDK).toHaveProperty('request_expiry_min');
+
+    // Verify telegram defaults
+    const telegram = body.telegram as Record<string, unknown>;
+    expect(telegram).toHaveProperty('enabled');
   });
 });
 
@@ -440,6 +485,65 @@ describe('PUT /admin/settings', () => {
       'daemon.log_level',
       'security.session_ttl',
     ]);
+  });
+
+  it('should update signing_sdk.enabled via PUT and persist', async () => {
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+    });
+
+    // Update signing_sdk.enabled to true
+    const putRes = await app.request('/v1/admin/settings', {
+      method: 'PUT',
+      headers: masterJsonHeaders(),
+      body: JSON.stringify({
+        settings: [{ key: 'signing_sdk.enabled', value: 'true' }],
+      }),
+    });
+
+    expect(putRes.status).toBe(200);
+    const putBody = await json(putRes);
+    const putSettings = putBody.settings as Record<string, Record<string, unknown>>;
+    expect(putSettings.signing_sdk.enabled).toBe('true');
+
+    // Verify persistence via GET
+    const getRes = await app.request('/v1/admin/settings', {
+      headers: masterHeaders(),
+    });
+
+    expect(getRes.status).toBe(200);
+    const getBody = await json(getRes);
+    const signingSDK = getBody.signing_sdk as Record<string, unknown>;
+    expect(signingSDK.enabled).toBe('true');
+  });
+
+  it('should update signing_sdk.request_expiry_min via PUT', async () => {
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+    });
+
+    const res = await app.request('/v1/admin/settings', {
+      method: 'PUT',
+      headers: masterJsonHeaders(),
+      body: JSON.stringify({
+        settings: [{ key: 'signing_sdk.request_expiry_min', value: '15' }],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const settings = body.settings as Record<string, Record<string, unknown>>;
+    expect(settings.signing_sdk.request_expiry_min).toBe('15');
   });
 });
 
