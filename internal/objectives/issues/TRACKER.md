@@ -121,7 +121,7 @@
 | 104 | ENHANCEMENT | MEDIUM | MCP 서버에서 AI 에이전트에게 업데이트 가능 알림 제공 | v2.6 | FIXED | 2026-02-20 |
 | 105 | ENHANCEMENT | LOW | 노티피케이션 채널을 통한 데몬 업데이트 알림 발송 | v2.6 | FIXED | 2026-02-20 |
 | 106 | ENHANCEMENT | MEDIUM | 매직워드 대시보드 전용 카드 승격 + REST API 추가 + skills 반영 | v2.6 | FIXED | 2026-02-20 |
-| 107 | MISSING | HIGH | 신규/누락 패키지 release-please + CI 커버리지 설정 등록 | v2.6 | OPEN | 2026-02-20 |
+| 107 | MISSING | HIGH | 신규/누락 패키지 release-please + CI 커버리지 설정 등록 | v2.6 | FIXED | 2026-02-20 |
 
 ## Type Legend
 
@@ -133,8 +133,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 106
+- **OPEN:** 0
+- **FIXED:** 107
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
