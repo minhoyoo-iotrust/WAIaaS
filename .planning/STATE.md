@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v2.6.1 Phase 202 -- 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널
+**Current focus:** v2.6.1 Phase 203 -- Telegram 채널 + 채널 라우팅 + REST API + Admin UI
 
 ## Current Position
 
-Phase: 202 of 203 (서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널)
-Plan: 4 of 4 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-02-20 -- Completed 202-04 (NtfySigningChannel + E2E integration)
+Phase: 203 of 203 (Telegram 채널 + 채널 라우팅 + REST API + Admin UI)
+Plan: 0 of TBD in current phase
+Status: Planning
+Last activity: 2026-02-20 -- Phase 202 complete (4/4 plans), starting Phase 203 planning
 
-Progress: [##########] 100%
+Progress: [#####░░░░░] 50%
 
 ## Performance Metrics
 
