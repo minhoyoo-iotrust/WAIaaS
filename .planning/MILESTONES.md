@@ -1247,3 +1247,26 @@
 
 ---
 
+## v26.3 Push Relay Server (Shipped: 2026-02-20)
+
+**Delivered:** ntfy 토픽을 구독하여 Pushwoosh/FCM으로 변환/전달하는 경량 중계 서버(@waiaas/push-relay)를 구현하고, 데몬의 SignRequest 인코딩을 base64url로 통일하여, 기존 푸시 인프라만으로 서명 요청과 알림을 수신 가능한 상태 달성.
+
+**Phases completed:** 207-209 (3 phases, 8 plans, 25 requirements)
+
+**Key accomplishments:**
+
+- NtfySigningChannel base64url 인코딩 통일 — 서명 요청과 알림이 동일한 인코딩 패턴 사용
+- @waiaas/push-relay 신규 패키지 (12 소스 파일, 1,782 LOC) — ntfy SSE 구독 + Pushwoosh/FCM 푸시 변환 + SQLite Device Registry + REST API
+- 배포 인프라 통합 — Dockerfile, release-please, CI/CD 파이프라인 (10 npm 패키지, 2 Docker 이미지)
+- 51개 테스트 (8 테스트 파일) — config, message-parser, device-registry, device-routes, api-key-auth, push-provider, pushwoosh-provider, ntfy-subscriber
+- 이슈 2건 해소 — #117 정책 체크박스 버그 수정, #118 가이드 파일 재구성
+
+**Stats:**
+
+- 3 phases, 8 plans, 25 requirements, 45 files changed, +2,589/-26 lines
+- ~163,416 LOC TypeScript (push-relay 1,782 LOC), 51 신규 tests
+- 10 commits, 1 day (2026-02-20)
+- Git range: feat(207-01) → docs(#118)
+
+---
+

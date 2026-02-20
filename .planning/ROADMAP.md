@@ -11,6 +11,7 @@
 - ✅ **v2.6 Wallet SDK 설계** — Phases 198-201 (shipped 2026-02-20)
 - ✅ **v2.6.1 WAIaaS Wallet Signing SDK** — Phases 202-205 (shipped 2026-02-20)
 - ✅ **v2.7 지갑 앱 알림 채널** — Phase 206 (shipped 2026-02-20)
+- ✅ **v26.3 Push Relay Server** — Phases 207-209 (shipped 2026-02-20)
 
 ## Phases
 
@@ -114,10 +115,21 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v26.3 Push Relay Server (Phases 207-209) — SHIPPED 2026-02-20</summary>
+
+- [x] Phase 207: 데몬 SignRequest 인코딩 통일 (1/1 plan) — completed 2026-02-20
+- [x] Phase 208: Push Relay Server 구현 (5/5 plans) — completed 2026-02-20
+- [x] Phase 209: 배포 인프라 (2/2 plans) — completed 2026-02-20
+
+See `.planning/milestones/v26.3-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
-| Phase | Milestone | Plans | Status | Completed |
-|-------|-----------|-------|--------|-----------|
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
 | 1-173 | v0.1-v2.0 | — | Complete | 2026-02-18 |
 | 178-181 | v2.2 | 6/6 | Complete | 2026-02-18 |
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
@@ -127,3 +139,6 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
+| 207 | v26.3 | 1/1 | Complete | 2026-02-20 |
+| 208 | v26.3 | 5/5 | Complete | 2026-02-20 |
+| 209 | v26.3 | 2/2 | Complete | 2026-02-20 |

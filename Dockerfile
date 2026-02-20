@@ -30,6 +30,7 @@ COPY packages/adapters/evm/package.json packages/adapters/evm/package.json
 COPY packages/cli/package.json packages/cli/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
 COPY packages/mcp/package.json packages/mcp/package.json
+COPY packages/push-relay/package.json packages/push-relay/package.json
 
 # 3) Install all dependencies (frozen lockfile for reproducibility)
 RUN pnpm install --frozen-lockfile
@@ -83,6 +84,7 @@ COPY --from=builder /app/packages/adapters/evm/package.json packages/adapters/ev
 COPY --from=builder /app/packages/cli/package.json packages/cli/package.json
 COPY --from=builder /app/packages/sdk/package.json packages/sdk/package.json
 COPY --from=builder /app/packages/mcp/package.json packages/mcp/package.json
+COPY --from=builder /app/packages/push-relay/package.json packages/push-relay/package.json
 
 # 3) Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod

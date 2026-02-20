@@ -249,6 +249,42 @@ describe('subscribeToRequests', () => {
     unsubscribe();
   });
 
+  it('parses daemon base64url-encoded SignRequest in message field (ENCODE-03 compatibility)', async () => {
+    // Simulates the new daemon publish format: message = base64url(SignRequest)
+    const request = makeValidRequest();
+    const encoded = Buffer.from(JSON.stringify(request), 'utf-8').toString('base64url');
+    const sseData = JSON.stringify({ message: encoded });
+    const sseEvent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseEvent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('waiaas-sign-dcent', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(callback).toHaveBeenCalledOnce();
+    const receivedRequest = callback.mock.calls[0]![0] as SignRequest;
+    expect(receivedRequest.requestId).toBe(request.requestId);
+    expect(receivedRequest.displayMessage).toBe(request.displayMessage);
+    expect(receivedRequest.chain).toBe('solana');
+
+    unsubscribe();
+  });
+
   it('should ignore malformed SSE messages', async () => {
     const sseEvents = [
       'data: not-json\n\n',

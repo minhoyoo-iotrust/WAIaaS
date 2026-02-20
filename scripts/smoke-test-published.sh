@@ -38,6 +38,7 @@ PACKAGES=(
   "packages/adapters/solana"
   "packages/adapters/evm"
   "packages/wallet-sdk"
+  "packages/push-relay"
 )
 
 echo ""
@@ -74,6 +75,7 @@ npm install \
   "${TARBALLS[@waiaas/skills]}" \
   "${TARBALLS[@waiaas/adapter-solana]}" \
   "${TARBALLS[@waiaas/adapter-evm]}" \
+  "${TARBALLS[@waiaas/push-relay]}" \
   --save
 
 # Step 4: Verify ESM imports
@@ -105,6 +107,7 @@ verify_import "@waiaas/mcp" "import '@waiaas/mcp';" || true
 verify_import "@waiaas/daemon" "import '@waiaas/daemon';" || true
 verify_import "@waiaas/adapter-solana" "import { SolanaAdapter } from '@waiaas/adapter-solana';"
 verify_import "@waiaas/adapter-evm" "import { EvmAdapter } from '@waiaas/adapter-evm';"
+verify_import "@waiaas/push-relay" "import { loadConfig, DeviceRegistry } from '@waiaas/push-relay';"
 
 # Step 5: Verify Admin UI in daemon package
 echo ""

@@ -1,0 +1,60 @@
+{
+  "name": "@waiaas/push-relay",
+  "version": "0.0.1",
+  "description": "WAIaaS Push Relay Server - bridge ntfy topics to push notification services (Pushwoosh, FCM)",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
+    "directory": "packages/push-relay"
+  },
+  "homepage": "https://github.com/minhoyoo-iotrust/WAIaaS#readme",
+  "bugs": {
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "push-relay": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "config.example.toml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.12.0",
+    "@waiaas/core": "workspace:*",
+    "better-sqlite3": "^11.5.0",
+    "hono": "^4.5.0",
+    "smol-toml": "^1.3.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^25.2.3",
+    "vitest": "^3.0.0"
+  }
+}

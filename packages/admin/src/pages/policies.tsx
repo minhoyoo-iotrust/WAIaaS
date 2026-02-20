@@ -329,7 +329,7 @@ function PolicyDefaultsTab() {
                 label={keyToLabel('default_deny_tokens')}
                 name="policy.default_deny_tokens"
                 type="checkbox"
-                value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_tokens')}
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_tokens')}
                 onChange={(v) => handleFieldChange('policy.default_deny_tokens', v)}
                 description="Deny token transfers unless a matching whitelist policy exists"
               />
@@ -337,7 +337,7 @@ function PolicyDefaultsTab() {
                 label={keyToLabel('default_deny_contracts')}
                 name="policy.default_deny_contracts"
                 type="checkbox"
-                value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_contracts')}
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_contracts')}
                 onChange={(v) => handleFieldChange('policy.default_deny_contracts', v)}
                 description="Deny contract calls unless a matching whitelist policy exists"
               />
@@ -345,7 +345,7 @@ function PolicyDefaultsTab() {
                 label={keyToLabel('default_deny_spenders')}
                 name="policy.default_deny_spenders"
                 type="checkbox"
-                value={getEffectiveBoolValue(settings.value, dirty.value, 'security', 'default_deny_spenders')}
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_spenders')}
                 onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
                 description="Deny token approvals unless a matching whitelist policy exists"
               />

@@ -217,7 +217,7 @@ describe('NtfySigningChannel', () => {
 
     const publishBody = JSON.parse(publishOpts.body as string);
     expect(publishBody.topic).toBe('waiaas-sign-dcent');
-    expect(publishBody.title).toBe('WAIaaS Sign Request');
+    expect(publishBody.title).toBe(mockSignRequest.displayMessage);
     expect(publishBody.priority).toBe(5);
     expect(publishBody.tags).toEqual(['waiaas', 'sign']);
     expect(publishBody.actions).toHaveLength(1);
@@ -225,7 +225,13 @@ describe('NtfySigningChannel', () => {
     expect(publishBody.actions[0].label).toBe('Sign in wallet');
     expect(publishBody.actions[0].url).toBe(mockUniversalLinkUrl);
     expect(publishBody.click).toBe(mockUniversalLinkUrl);
-    expect(publishBody.message).toBe(mockSignRequest.displayMessage);
+
+    // message field contains base64url-encoded SignRequest
+    const decodedJson = Buffer.from(publishBody.message, 'base64url').toString('utf-8');
+    const decodedRequest = JSON.parse(decodedJson);
+    expect(decodedRequest.requestId).toBe(requestId);
+    expect(decodedRequest.displayMessage).toBe(mockSignRequest.displayMessage);
+    expect(decodedRequest.chain).toBe('evm');
 
     // Verify result
     expect(result.requestId).toBe(requestId);

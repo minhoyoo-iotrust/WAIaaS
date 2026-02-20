@@ -2,15 +2,17 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 8개 패키지) / Docker(`waiaas/daemon`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. Admin Web UI(`/admin`)는 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 구성되며, Ctrl+K 설정 검색/미저장 경고/필드 description help text 등 DX를 제공한다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 10개 패키지) / Docker(`waiaas/daemon`, `waiaas/push-relay`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. Admin Web UI(`/admin`)는 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 구성되며, Ctrl+K 설정 검색/미저장 경고/필드 description help text 등 DX를 제공한다. @waiaas/push-relay로 ntfy 토픽을 기존 푸시 인프라(Pushwoosh/FCM)로 변환·전달하여, 지갑 앱이 기존 푸시 파이프라인만으로 서명 요청과 알림을 수신할 수 있다. 자동 버전 체크 + CLI upgrade 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델로 배포 자동화를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: None (v26.3 shipped)
+
 ## Current State
 
-v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@waiaas/wallet-sdk) + Python SDK, ~161,634 LOC TypeScript (Admin UI ~20,000 LOC), 4,345+ 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.3.0-rc OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push, 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v26.3 Push Relay Server shipped (2026-02-20). 11-패키지 모노레포(@waiaas/push-relay 신규) + Python SDK, ~163,416 LOC TypeScript (Admin UI ~20,000 LOC), 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -46,11 +48,12 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@w
 - ✅ v2.6 Wallet SDK 설계 — shipped 2026-02-20 (7 plans, 23 requirements, 34 설계 결정, 설계 문서 3개 신규)
 - ✅ v2.6.1 WAIaaS Wallet Signing SDK — shipped 2026-02-20 (13 plans, 27 requirements, 4,323 tests, ~138,051 LOC TS)
 - ✅ v2.7 지갑 앱 알림 채널 — shipped 2026-02-20 (4 plans, 16 requirements, ~161,634 LOC TS)
+- ✅ v26.3 Push Relay Server — shipped 2026-02-20 (8 plans, 25 requirements, ~163,416 LOC TS)
 
 **코드베이스 현황:**
-- 10-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~161,634 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC)
-- 4,345+ 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin)
+- 11-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay + waiaas (Python)
+- ~163,416 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
+- 4,396+ 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin + push-relay)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -420,9 +423,15 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@w
 - ✓ signing_sdk.notifications_enabled/notify_categories 설정 + Admin UI 멀티셀렉트 체크박스 — v2.7 (SETTINGS-01~03, ADMIN-01)
 - ✓ wallet.skill.md Section 13 SDK 알림 함수 문서화 — v2.7 (SYNC-01)
 
+- ✓ NtfySigningChannel base64url 인코딩 통일 + wallet-sdk 호환성 검증 — v26.3 (ENCODE-01~03)
+- ✓ @waiaas/push-relay ntfy SSE 구독 + 메시지 파서 + config.toml/Zod 검증 — v26.3 (SUB-01~04, INFRA-05~06)
+- ✓ IPushProvider + PushwooshProvider + FcmProvider (지수 백오프 재시도, invalid token 자동 삭제) — v26.3 (PUSH-01~07)
+- ✓ Device Token Registry SQLite + REST API + API Key 인증 — v26.3 (REG-01~05)
+- ✓ npm 패키지 빌드 + Docker 이미지 + release-please + CI/CD 파이프라인 통합 — v26.3 (INFRA-01~04)
+
 ### 활성
 
-(다음 마일스톤에서 정의)
+(없음 — 다음 마일스톤 미정)
 
 ### 범위 외
 
@@ -441,7 +450,7 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@w
 
 ## 컨텍스트
 
-**누적:** 48 milestones (v0.1-v2.7), 206 phases, 439 plans, 1,217 requirements, 39 설계 문서(24-75), 8 objective 문서, ~161,634 LOC TS, 4,345+ 테스트
+**누적:** 49 milestones (v0.1-v26.3), 209 phases, 447 plans, 1,242 requirements, 39 설계 문서(24-75), 8 objective 문서, ~163,416 LOC TS, 4,396+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -478,6 +487,7 @@ v2.5 DX 품질 개선 shipped (2026-02-19). 4 페이즈, 8 플랜, 23 요구사�
 v2.6 Wallet SDK 설계 shipped (2026-02-20). 4 페이즈, 7 플랜, 23 요구사항, 55 파일 변경, +10,435/-324 lines, 33 커밋, 34 설계 결정, 설계 문서 3개 신규(73/74/75) + 4개(35/37/25/67) 갱신.
 v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 4 페이즈, 13 플랜, 27 요구사항, 206 파일 변경, +16,137/-332 lines, 67 커밋, 43 설계 결정.
 v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 1 페이즈, 4 플랜, 16 요구사항, 34 파일 변경, +3,722/-91 lines, 6 설계 결정.
+v26.3 Push Relay Server shipped (2026-02-20). 3 페이즈, 8 플랜, 25 요구사항, 45 파일 변경, +2,589/-26 lines, 6 설계 결정. @waiaas/push-relay 신규 패키지.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -492,7 +502,7 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 1 페이즈, 4 플랜, 16 �
 - Test: Vitest (forks pool for sodium mprotect) + v8 coverage + msw 2.x (mock HTTP)
 - Schema: Zod SSoT → TypeScript → OpenAPI → Drizzle CHECK
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
-- 미구현: Jupiter Swap, Tauri, Push Relay Server
+- 미구현: Jupiter Swap, Tauri
 
 **설계 문서:** 39개 (deliverables 24-75.md) + 대응표/테스트 전략/objective
 
@@ -782,10 +792,16 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 1 페이즈, 4 플랜, 16 �
 | SSE subscribeToNotifications reuse pattern | subscribeToRequests와 동일한 AbortController/재연결 패턴 재사용 | ✓ Good — v2.7 구현 |
 | Wallet App Notifications as subgroup under Signing SDK | 관련 SDK 설정과 함께 배치, 별도 카테고리 아닌 하위 그룹 | ✓ Good — v2.7 구현 |
 | JSON array string for notify_categories | 멀티셀렉트 체크박스 → JSON.stringify/parse, SettingsService 기존 패턴 | ✓ Good — v2.7 구현 |
+| NtfySigningChannel base64url 인코딩 통일 | 서명/알림 모두 동일 인코딩, Relay 파서 단일 로직 | ✓ Good — v26.3 구현 |
+| push-relay 독립 Dockerfile (daemon과 분리) | 지갑사 자체 운영 서버, daemon 배포와 독립 | ✓ Good — v26.3 구현 |
+| IPushProvider + withRetry 지수 백오프 | 5xx 재시도 3회, 401/403 즉시 에러, invalid token 자동 삭제 | ✓ Good — v26.3 구현 |
+| better-sqlite3 WAL mode Device Registry | daemon과 동일 DB 패턴, 동시 읽기 최적화 | ✓ Good — v26.3 구현 |
+| ntfy SSE subscriber 지수 백오프 재연결 (1s→60s) | 네트워크 불안정 대응, cap 60초 | ✓ Good — v26.3 구현 |
+| TOML 중첩 config 허용 (push-relay 전용) | WAIaaS flat-key 정책 미적용, 독립 패키지 | ✓ Good — v26.3 구현 |
 
-## Shipped: v2.7 지갑 앱 알림 채널
+## Shipped: v26.3 Push Relay Server
 
-v2.7 지갑 앱 알림 채널 shipped. NotificationMessage Zod 스키마 + WalletNotificationChannel 사이드 채널 + subscribeToNotifications/parseNotification SDK 함수 + Admin UI 카테고리 필터링. 지갑 앱(D'CENT 등)이 Telegram 없이 26개 알림 이벤트를 ntfy 사이드 채널로 수신 가능.
+v26.3 Push Relay Server shipped. @waiaas/push-relay 신규 패키지로 ntfy 토픽을 SSE로 구독하여 Pushwoosh/FCM 푸시로 변환·전달. Device Token Registry SQLite REST API, API Key 인증, 지수 백오프 재연결/재시도, graceful shutdown. npm + Docker + release-please CI/CD 통합. 이슈 #117(Admin UI 정책 체크박스 버그) + #118(에이전트 가이드 docs/guides/ 이동) 수정.
 
 ---
-*최종 업데이트: 2026-02-20 after v2.7 milestone complete*
+*최종 업데이트: 2026-02-20 after v26.3 milestone complete*

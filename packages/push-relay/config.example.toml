@@ -1,0 +1,22 @@
+[relay]
+ntfy_server = "https://ntfy.sh"
+sign_topic_prefix = "waiaas-sign"
+notify_topic_prefix = "waiaas-notify"
+wallet_names = ["dcent", "trading-bot"]
+
+[relay.push]
+provider = "pushwoosh"
+
+[relay.push.pushwoosh]
+api_token = "XXXXXX-XXXXXX"
+application_code = "ABCDE-12345"
+
+# Or use FCM:
+# [relay.push.fcm]
+# project_id = "my-wallet-app"
+# service_account_key_path = "/etc/push-relay/service-account.json"
+
+[relay.server]
+port = 3200
+host = "0.0.0.0"
+api_key = "your-secret-api-key"
