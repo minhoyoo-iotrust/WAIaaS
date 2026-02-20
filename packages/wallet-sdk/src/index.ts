@@ -10,6 +10,8 @@
  *   - sendViaNtfy(response, topic, serverUrl?) - Publish to ntfy response topic
  *   - sendViaTelegram(response, botUsername) - Generate Telegram deeplink URL
  *   - subscribeToRequests(topic, callback, serverUrl?) - SSE subscription for sign requests
+ *   - subscribeToNotifications(topic, callback, serverUrl?) - SSE subscription for notifications
+ *   - parseNotification(data) - Decode and validate base64url NotificationMessage
  *
  * @see internal/design/73-signing-protocol-v1.md
  * @see internal/design/74-wallet-sdk-daemon-components.md
@@ -25,6 +27,8 @@ export {
   sendViaNtfy,
   subscribeToRequests,
   sendViaTelegram,
+  subscribeToNotifications,
+  parseNotification,
 } from './channels/index.js';
 
 // Error classes

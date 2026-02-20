@@ -4,6 +4,10 @@ import { encodeSignRequest } from '@waiaas/core';
 import { sendViaNtfy } from '../channels/ntfy.js';
 import { sendViaTelegram } from '../channels/telegram.js';
 import { subscribeToRequests } from '../channels/ntfy.js';
+import {
+  parseNotification,
+  subscribeToNotifications,
+} from '../channels/ntfy.js';
 
 function makeValidResponse(): SignResponse {
   return {
@@ -273,6 +277,156 @@ describe('subscribeToRequests', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(callback).not.toHaveBeenCalled();
+
+    unsubscribe();
+  });
+});
+
+describe('parseNotification', () => {
+  it('decodes a valid base64url NotificationMessage', () => {
+    const msg = {
+      version: '1',
+      eventType: 'TX_CONFIRMED',
+      walletId: '01958f3a-1234-7000-8000-abcdef123456',
+      walletName: 'trading-bot',
+      category: 'transaction',
+      title: 'Transaction Confirmed',
+      body: 'Your transaction was confirmed on-chain',
+      timestamp: 1707000000,
+    };
+    const encoded = Buffer.from(JSON.stringify(msg), 'utf-8').toString(
+      'base64url',
+    );
+    const result = parseNotification(encoded);
+    expect(result.version).toBe('1');
+    expect(result.eventType).toBe('TX_CONFIRMED');
+    expect(result.walletName).toBe('trading-bot');
+    expect(result.category).toBe('transaction');
+  });
+
+  it('throws on invalid base64url', () => {
+    expect(() => parseNotification('!!!invalid!!!')).toThrow();
+  });
+
+  it('throws on valid base64url but invalid JSON', () => {
+    const encoded = Buffer.from('not-json', 'utf-8').toString('base64url');
+    expect(() => parseNotification(encoded)).toThrow();
+  });
+
+  it('throws on valid JSON but schema mismatch', () => {
+    const encoded = Buffer.from(JSON.stringify({ foo: 'bar' }), 'utf-8').toString(
+      'base64url',
+    );
+    expect(() => parseNotification(encoded)).toThrow();
+  });
+
+  it('accepts optional details field', () => {
+    const msg = {
+      version: '1',
+      eventType: 'KILL_SWITCH_ACTIVATED',
+      walletId: '01958f3a-0000-7000-8000-000000000000',
+      walletName: 'main-wallet',
+      category: 'security_alert',
+      title: 'Kill Switch',
+      body: 'Kill switch was activated',
+      details: { triggeredBy: 'admin' },
+      timestamp: 1707000000,
+    };
+    const encoded = Buffer.from(JSON.stringify(msg), 'utf-8').toString(
+      'base64url',
+    );
+    const result = parseNotification(encoded);
+    expect(result.details).toEqual({ triggeredBy: 'admin' });
+  });
+});
+
+describe('subscribeToNotifications', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns an object with unsubscribe method', () => {
+    // Mock fetch to return a never-resolving stream
+    fetchMock.mockReturnValue(new Promise(() => {}));
+
+    const sub = subscribeToNotifications('test-topic', () => {});
+    expect(sub).toHaveProperty('unsubscribe');
+    expect(typeof sub.unsubscribe).toBe('function');
+    sub.unsubscribe();
+  });
+
+  it('calls fetch with correct SSE URL', async () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
+
+    const sub = subscribeToNotifications(
+      'my-topic',
+      () => {},
+      'https://custom.ntfy.sh',
+    );
+    // Give event loop time
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://custom.ntfy.sh/my-topic/sse',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    sub.unsubscribe();
+  });
+
+  it('should call callback when valid NotificationMessage received via SSE', async () => {
+    const msg = {
+      version: '1',
+      eventType: 'TX_CONFIRMED',
+      walletId: '01958f3a-1234-7000-8000-abcdef123456',
+      walletName: 'trading-bot',
+      category: 'transaction',
+      title: 'Transaction Confirmed',
+      body: 'Your transaction was confirmed on-chain',
+      timestamp: 1707000000,
+    };
+    const encodedMsg = Buffer.from(JSON.stringify(msg), 'utf-8').toString(
+      'base64url',
+    );
+    const sseData = JSON.stringify({ message: encodedMsg });
+    const sseEvent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseEvent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToNotifications('my-topic', callback);
+
+    // Wait for async processing
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(callback).toHaveBeenCalledOnce();
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: '1',
+        eventType: 'TX_CONFIRMED',
+        walletName: 'trading-bot',
+      }),
+    );
 
     unsubscribe();
   });
