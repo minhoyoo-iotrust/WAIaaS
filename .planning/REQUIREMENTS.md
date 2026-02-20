@@ -76,37 +76,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENCODE-01 | — | Pending |
-| ENCODE-02 | — | Pending |
-| ENCODE-03 | — | Pending |
-| SUB-01 | — | Pending |
-| SUB-02 | — | Pending |
-| SUB-03 | — | Pending |
-| SUB-04 | — | Pending |
-| PUSH-01 | — | Pending |
-| PUSH-02 | — | Pending |
-| PUSH-03 | — | Pending |
-| PUSH-04 | — | Pending |
-| PUSH-05 | — | Pending |
-| PUSH-06 | — | Pending |
-| PUSH-07 | — | Pending |
-| REG-01 | — | Pending |
-| REG-02 | — | Pending |
-| REG-03 | — | Pending |
-| REG-04 | — | Pending |
-| REG-05 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| INFRA-06 | — | Pending |
+| ENCODE-01 | Phase 207 | Pending |
+| ENCODE-02 | Phase 207 | Pending |
+| ENCODE-03 | Phase 207 | Pending |
+| SUB-01 | Phase 208 | Pending |
+| SUB-02 | Phase 208 | Pending |
+| SUB-03 | Phase 208 | Pending |
+| SUB-04 | Phase 208 | Pending |
+| PUSH-01 | Phase 208 | Pending |
+| PUSH-02 | Phase 208 | Pending |
+| PUSH-03 | Phase 208 | Pending |
+| PUSH-04 | Phase 208 | Pending |
+| PUSH-05 | Phase 208 | Pending |
+| PUSH-06 | Phase 208 | Pending |
+| PUSH-07 | Phase 208 | Pending |
+| REG-01 | Phase 208 | Pending |
+| REG-02 | Phase 208 | Pending |
+| REG-03 | Phase 208 | Pending |
+| REG-04 | Phase 208 | Pending |
+| REG-05 | Phase 208 | Pending |
+| INFRA-01 | Phase 209 | Pending |
+| INFRA-02 | Phase 209 | Pending |
+| INFRA-03 | Phase 209 | Pending |
+| INFRA-04 | Phase 209 | Pending |
+| INFRA-05 | Phase 208 | Pending |
+| INFRA-06 | Phase 208 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after initial definition*
+*Last updated: 2026-02-20 after roadmap creation (traceability updated)*
