@@ -8,9 +8,9 @@
  * 4. returns 401 TOKEN_EXPIRED when token is expired
  * 5. returns 401 SESSION_REVOKED when session is revoked in DB
  * 6. returns 404 SESSION_NOT_FOUND when session ID not in DB
- * 7. passes through and sets sessionId/walletId/defaultWalletId when token is valid and session active
+ * 7. passes through and sets sessionId/defaultWalletId when token is valid and session active
  * 8. succeeds with old secret during dual-key rotation window
- * 9. sets both defaultWalletId and walletId (backward compat dual setting)
+ * 9. sets defaultWalletId only (walletId no longer set; resolved via resolveWalletId)
  *
  * Uses Hono app.request() testing pattern + in-memory SQLite.
  */
@@ -47,9 +47,8 @@ function createTestApp(jwtManager: JwtSecretManager, database: ReturnType<typeof
   );
   testApp.get('/protected/data', (c) => {
     const sessionId = c.get('sessionId' as never) as string | undefined;
-    const walletId = c.get('walletId' as never) as string | undefined;
     const defaultWalletId = c.get('defaultWalletId' as never) as string | undefined;
-    return c.json({ sessionId, walletId, defaultWalletId, ok: true });
+    return c.json({ sessionId, defaultWalletId, ok: true });
   });
   return testApp;
 }
@@ -211,7 +210,7 @@ describe('sessionAuth middleware', () => {
     expect(body.code).toBe('SESSION_NOT_FOUND');
   });
 
-  it('passes through and sets sessionId/walletId when token is valid and session active', async () => {
+  it('passes through and sets sessionId/defaultWalletId when token is valid and session active', async () => {
     seedTestData();
 
     const token = await signTestToken(manager);
@@ -224,10 +223,10 @@ describe('sessionAuth middleware', () => {
     const body = await json(res);
     expect(body.ok).toBe(true);
     expect(body.sessionId).toBe(TEST_SESSION_ID);
-    expect(body.walletId).toBe(TEST_WALLET_ID);
+    expect(body.defaultWalletId).toBe(TEST_WALLET_ID);
   });
 
-  it('sets both defaultWalletId and walletId (backward compat dual setting)', async () => {
+  it('sets defaultWalletId only (walletId no longer set)', async () => {
     seedTestData();
 
     const token = await signTestToken(manager);
@@ -240,9 +239,8 @@ describe('sessionAuth middleware', () => {
     const body = await json(res);
     expect(body.ok).toBe(true);
     expect(body.defaultWalletId).toBe(TEST_WALLET_ID);
-    expect(body.walletId).toBe(TEST_WALLET_ID);
-    // Both should be the same value (JWT wlt claim)
-    expect(body.defaultWalletId).toBe(body.walletId);
+    // walletId is no longer set by session-auth middleware (resolved via resolveWalletId)
+    expect(body).not.toHaveProperty('walletId');
   });
 
   it('succeeds with old secret during dual-key rotation window', async () => {
