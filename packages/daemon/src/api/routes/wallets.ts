@@ -315,6 +315,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerAddress: wallet.ownerAddress,
         ownerVerified: wallet.ownerVerified,
         ownerState,
+        approvalMethod: wallet.ownerApprovalMethod ?? null,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
         updatedAt: wallet.updatedAt ? Math.floor(wallet.updatedAt.getTime() / 1000) : null,
       },
@@ -586,6 +587,16 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // Set owner with normalized address
     ownerLifecycle.setOwner(walletId, normalizedAddress);
 
+    // Update approval_method if explicitly provided (three-state protocol):
+    //   undefined (omitted) = preserve existing value, no DB update
+    //   null (explicit) = clear column to NULL (revert to Auto/global fallback)
+    //   valid string = save value to DB
+    if (body.approval_method !== undefined) {
+      deps.sqlite.prepare(
+        'UPDATE wallets SET owner_approval_method = ? WHERE id = ?',
+      ).run(body.approval_method, walletId);
+    }
+
     // Fire-and-forget: notify owner set
     void deps.notificationService?.notify('OWNER_SET', walletId, {
       ownerAddress: normalizedAddress,
@@ -617,6 +628,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         status: updated!.status,
         ownerAddress: updated!.ownerAddress,
         ownerVerified: updated!.ownerVerified,
+        approvalMethod: updated!.ownerApprovalMethod ?? null,
         updatedAt: updated!.updatedAt ? Math.floor(updated!.updatedAt.getTime() / 1000) : null,
       },
       200,

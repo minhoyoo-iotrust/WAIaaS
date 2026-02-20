@@ -23,6 +23,7 @@ import {
   ContractCallRequestSchema,
   ApproveRequestSchema,
   BatchRequestSchema,
+  ApprovalMethodSchema,
 } from '@waiaas/core';
 import type { ErrorCode } from '@waiaas/core';
 
@@ -97,6 +98,7 @@ export const WalletOwnerResponseSchema = z
     status: z.string(),
     ownerAddress: z.string().nullable(),
     ownerVerified: z.boolean().nullable(),
+    approvalMethod: z.string().nullable().optional(),
     updatedAt: z.number().int().nullable(),
   })
   .openapi('WalletOwnerResponse');
@@ -435,6 +437,7 @@ export const WalletDetailResponseSchema = z
     ownerAddress: z.string().nullable(),
     ownerVerified: z.boolean().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
+    approvalMethod: z.string().nullable().optional(),
     createdAt: z.number().int(),
     updatedAt: z.number().int().nullable(),
   })
@@ -477,9 +480,14 @@ export const WalletNetworksResponseSchema = z
   .openapi('WalletNetworksResponse');
 
 // Owner address request body schema (for PUT /wallets/:id/owner)
+// approval_method uses three-state protocol:
+//   undefined (omitted) = preserve existing value
+//   null (explicit) = clear to NULL (revert to Auto/global fallback)
+//   valid string = save to DB
 export const SetOwnerRequestSchema = z
   .object({
     owner_address: z.string().min(1),
+    approval_method: ApprovalMethodSchema.nullable().optional(),
   })
   .openapi('SetOwnerRequest');
 
