@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 202 of 203 (서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: Executing
-Last activity: 2026-02-20 -- Completed 202-01 (Signing Protocol infrastructure)
+Last activity: 2026-02-20 -- Completed 202-03 (@waiaas/wallet-sdk package)
 
-Progress: [##░░░░░░░░] 25%
+Progress: [#######░░░] 75%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Full log in PROJECT.md and milestones/.
 v2.6 설계 완료 (docs 73-75): Signing Protocol v1, SDK + Daemon Components, Notification + Push Relay.
 v2.6.1은 설계를 코드로 실현. Push Relay Server는 범위 밖 (ntfy 직접 통신 우선).
 202-01: Error count 100 (baseline 93, not 74). CHECK constraint on owner_approval_method in fresh DDL. WalletLinkRegistry uses JSON in SettingsService. i18n messages added for all SIGNING codes.
+202-03: node>=18 engine for wallet SDK (React Native compat). ReadableStream SSE parsing (cross-platform). sendViaTelegram returns URL only (platform detection is wallet app's job).
 
 ### Blockers/Concerns
 
@@ -36,5 +37,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 202-01-PLAN.md
+Stopped at: Completed 202-03-PLAN.md
 Resume file: None

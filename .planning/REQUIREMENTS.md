@@ -27,12 +27,12 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 ### Wallet SDK (SDK)
 
-- [ ] **SDK-01**: @waiaas/wallet-sdk 패키지의 parseSignRequest(url)가 유니버셜 링크 URL에서 SignRequest를 추출하고 Zod 검증을 통과한다
-- [ ] **SDK-02**: buildSignResponse(requestId, action, signature?, address)가 유효한 SignResponse 객체를 생성한다
-- [ ] **SDK-03**: formatDisplayMessage(request)가 사람이 읽을 수 있는 트랜잭션 요약을 반환한다
-- [ ] **SDK-04**: sendViaNtfy(response, topic, serverUrl?)가 ntfy 응답 토픽에 HTTP POST로 publish한다
-- [ ] **SDK-05**: sendViaTelegram(response, botUsername)이 Telegram 딥링크 또는 공유 인텐트 URL을 생성한다
-- [ ] **SDK-06**: subscribeToRequests(topic, serverUrl?, callback)가 ntfy SSE로 새 서명 요청 수신 시 콜백을 호출한다
+- [x] **SDK-01**: @waiaas/wallet-sdk 패키지의 parseSignRequest(url)가 유니버셜 링크 URL에서 SignRequest를 추출하고 Zod 검증을 통과한다
+- [x] **SDK-02**: buildSignResponse(requestId, action, signature?, address)가 유효한 SignResponse 객체를 생성한다
+- [x] **SDK-03**: formatDisplayMessage(request)가 사람이 읽을 수 있는 트랜잭션 요약을 반환한다
+- [x] **SDK-04**: sendViaNtfy(response, topic, serverUrl?)가 ntfy 응답 토픽에 HTTP POST로 publish한다
+- [x] **SDK-05**: sendViaTelegram(response, botUsername)이 Telegram 딥링크 또는 공유 인텐트 URL을 생성한다
+- [x] **SDK-06**: subscribeToRequests(topic, serverUrl?, callback)가 ntfy SSE로 새 서명 요청 수신 시 콜백을 호출한다
 
 ### Wallet Settings (WALLET)
 
@@ -83,12 +83,12 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 | CHAN-05 | Phase 203 | Pending |
 | CHAN-06 | Phase 203 | Pending |
 | CHAN-07 | Phase 203 | Pending |
-| SDK-01 | Phase 202 | Pending |
-| SDK-02 | Phase 202 | Pending |
-| SDK-03 | Phase 202 | Pending |
-| SDK-04 | Phase 202 | Pending |
-| SDK-05 | Phase 202 | Pending |
-| SDK-06 | Phase 202 | Pending |
+| SDK-01 | Phase 202 | Complete |
+| SDK-02 | Phase 202 | Complete |
+| SDK-03 | Phase 202 | Complete |
+| SDK-04 | Phase 202 | Complete |
+| SDK-05 | Phase 202 | Complete |
+| SDK-06 | Phase 202 | Complete |
 | WALLET-01 | Phase 202 | Complete |
 | WALLET-02 | Phase 202 | Complete |
 | WALLET-03 | Phase 202 | Complete |
