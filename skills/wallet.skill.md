@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "2.6.1"
+version: "2.4.0-rc.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -25,13 +25,13 @@ Create a new wallet with an auto-generated key pair. Each wallet belongs to an *
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "trading-bot", "chain": "solana", "environment": "testnet"}'
+  -d '{"name": "trading-bot", "chain": "solana", "environment": "mainnet"}'
 ```
 
 Parameters:
 - `name` (required): string, 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks and default network
+- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks and default network
 - `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
 
 Response (201):
@@ -40,8 +40,8 @@ Response (201):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
+  "network": "mainnet",
+  "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "createdAt": 1707000000,
@@ -70,8 +70,8 @@ Response (200):
       "id": "01958f3a-1234-7000-8000-abcdef123456",
       "name": "trading-bot",
       "chain": "solana",
-      "network": "devnet",
-      "environment": "testnet",
+      "network": "mainnet",
+      "environment": "mainnet",
       "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
       "status": "ACTIVE",
       "createdAt": 1707000000
@@ -95,9 +95,9 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
-  "defaultNetwork": "devnet",
+  "network": "mainnet",
+  "environment": "mainnet",
+  "defaultNetwork": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": null,
@@ -165,8 +165,8 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
+  "network": "mainnet",
+  "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -244,11 +244,10 @@ Response (200):
 {
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "environment": "testnet",
-  "defaultNetwork": "devnet",
+  "environment": "mainnet",
+  "defaultNetwork": "mainnet",
   "availableNetworks": [
-    {"network": "devnet", "isDefault": true},
-    {"network": "testnet", "isDefault": false}
+    {"network": "mainnet", "isDefault": true}
   ]
 }
 ```

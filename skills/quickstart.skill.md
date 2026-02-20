@@ -3,7 +3,7 @@ name: "WAIaaS Quickset"
 description: "End-to-end quickset: create wallet, session, check balance, send first transfer"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, quickset, quickstart, waiass]
-version: "2.3.0"
+version: "2.4.0-rc.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -66,7 +66,7 @@ Create a new wallet with a key pair. Requires **masterAuth**. Each wallet belong
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-first-wallet", "chain": "solana", "environment": "testnet"}'
+  -d '{"name": "my-first-wallet", "chain": "solana", "environment": "mainnet"}'
 ```
 
 **EVM wallet (Ethereum):**
@@ -75,13 +75,13 @@ curl -s -X POST http://localhost:3100/v1/wallets \
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-eth-wallet", "chain": "ethereum", "environment": "testnet"}'
+  -d '{"name": "my-eth-wallet", "chain": "ethereum", "environment": "mainnet"}'
 ```
 
 Parameters:
 - `name` (required): 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks
+- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks
 - `createSession` (optional): boolean, default `true` -- auto-creates a session and includes it in the response
 
 Response (201):
@@ -90,8 +90,8 @@ Response (201):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "my-first-wallet",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
+  "network": "mainnet",
+  "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "createdAt": 1707000000,
@@ -103,7 +103,7 @@ Response (201):
 }
 ```
 
-The `network` field shows the wallet's default network, automatically assigned based on the chain and environment. For Solana testnet, the default is `devnet`. For Ethereum testnet, the default is `ethereum-sepolia`.
+The `network` field shows the wallet's default network, automatically assigned based on the chain and environment. For Solana mainnet, the default is `mainnet`. For Ethereum mainnet, the default is `ethereum-mainnet`.
 
 The `session` field contains the auto-created session token. Save the `token` value -- use it as `Authorization: Bearer <token>` for all wallet operations below. To skip auto-session creation, set `createSession: false`.
 
@@ -148,7 +148,7 @@ Response:
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "devnet",
+  "network": "mainnet",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "balance": "1000000000",
   "decimals": 9,
@@ -174,7 +174,7 @@ Response:
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "devnet",
+  "network": "mainnet",
   "assets": [
     {
       "mint": "So11111111111111111111111111111111111111112",
@@ -247,7 +247,7 @@ Response:
   "status": "CONFIRMED",
   "tier": "INSTANT",
   "chain": "solana",
-  "network": "devnet",
+  "network": "mainnet",
   "toAddress": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
   "amount": "100000000",
   "txHash": "5UfD...abc",
@@ -268,10 +268,10 @@ Transaction status values:
 If you have the CLI installed, create wallets in one step:
 
 ```bash
-waiaas quickset --mode testnet
+waiaas quickset
 ```
 
-This creates Solana + EVM wallets and prints MCP configuration.
+This creates Solana + EVM wallets in mainnet mode (default) and prints MCP configuration. Use `--mode testnet` for testnet.
 
 ## Error Handling
 

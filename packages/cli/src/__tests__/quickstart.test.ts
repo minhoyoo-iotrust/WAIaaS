@@ -263,8 +263,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
     expect(mockStdout).toHaveBeenCalledWith('Mode: mainnet');
   });
 
-  it('defaults to testnet when mode is not specified', async () => {
-    const fetchMock = createQuickstartFetchMock('testnet');
+  it('defaults to mainnet when mode is not specified', async () => {
+    const fetchMock = createQuickstartFetchMock('mainnet');
     vi.stubGlobal('fetch', fetchMock);
 
     const { quickstartCommand } = await import('../commands/quickstart.js');
@@ -274,17 +274,17 @@ describe('quicksetCommand (formerly quickstart)', () => {
       // mode not specified
     });
 
-    // Verify environment: 'testnet' in wallet creation calls
+    // Verify environment: 'mainnet' in wallet creation calls
     const walletCalls = fetchMock.mock.calls.filter(
       (c: unknown[]) => String(c[0]).endsWith('/v1/wallets') && (c[1] as RequestInit | undefined)?.method === 'POST',
     );
 
     for (const call of walletCalls) {
       const body = JSON.parse((call as [string, RequestInit])[1].body as string) as { environment: string };
-      expect(body.environment).toBe('testnet');
+      expect(body.environment).toBe('mainnet');
     }
 
-    expect(mockStdout).toHaveBeenCalledWith('Mode: testnet');
+    expect(mockStdout).toHaveBeenCalledWith('Mode: mainnet');
   });
 
   it('daemon unreachable: exits with error message', async () => {
@@ -504,12 +504,12 @@ describe('quicksetCommand (formerly quickstart)', () => {
         return Promise.resolve(mockResponse(409, { message: 'Wallet name already exists' }));
       }
 
-      // GET /v1/wallets -> list existing wallets
+      // GET /v1/wallets -> list existing wallets (mainnet names since default mode is now mainnet)
       if (urlStr.endsWith('/v1/wallets') && (!init?.method || init.method === 'GET')) {
         return Promise.resolve(mockResponse(200, {
           wallets: [
-            { ...SOLANA_WALLET, name: 'solana-testnet' },
-            { ...EVM_WALLET, name: 'evm-testnet' },
+            { ...SOLANA_WALLET, name: 'solana-mainnet', environment: 'mainnet' },
+            { ...EVM_WALLET, name: 'evm-mainnet', environment: 'mainnet' },
           ],
         }));
       }
@@ -547,8 +547,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
       (c: unknown[]) => String(c[0]).includes('Reusing existing wallet:'),
     );
     expect(reuseCalls.length).toBe(2);
-    expect(String(reuseCalls[0]![0])).toContain('solana-testnet');
-    expect(String(reuseCalls[1]![0])).toContain('evm-testnet');
+    expect(String(reuseCalls[0]![0])).toContain('solana-mainnet');
+    expect(String(reuseCalls[1]![0])).toContain('evm-mainnet');
 
     // Sessions should be created via fallback (2 POST /v1/sessions)
     expect(sessionCallCount).toBe(2);

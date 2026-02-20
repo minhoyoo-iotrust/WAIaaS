@@ -329,7 +329,7 @@ curl -X POST http://127.0.0.1:3100/v1/wallets \
   -d '{
     "name": "my-wallet",
     "chain": "solana",
-    "environment": "testnet"
+    "environment": "mainnet"
   }'
 ```
 
@@ -340,8 +340,8 @@ Response:
   "id": "01234567-89ab-cdef-0123-456789abcdef",
   "name": "my-wallet",
   "chain": "solana",
-  "network": "solana-devnet",
-  "environment": "testnet",
+  "network": "mainnet",
+  "environment": "mainnet",
   "publicKey": "ABC123...",
   "status": "ACTIVE",
   "ownerState": "NONE"
