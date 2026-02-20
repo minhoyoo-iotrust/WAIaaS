@@ -8,6 +8,7 @@
 - ✅ **v2.4 npm Trusted Publishing 전환** — Phases 188-190 (shipped 2026-02-19)
 - ✅ **v2.4.1 Admin UI 테스트 커버리지 복원** — Phases 191-193 (shipped 2026-02-19)
 - ✅ **v2.5 DX 품질 개선** — Phases 194-197 (shipped 2026-02-19)
+- ✅ **v2.6 Wallet SDK 설계** — Phases 198-201 (shipped 2026-02-20)
 
 ## Phases
 
@@ -77,3 +78,27 @@ See `.planning/milestones/v2.4.1-ROADMAP.md` for full details.
 See `.planning/milestones/v2.5-ROADMAP.md` for full details.
 
 </details>
+
+<details>
+<summary>✅ v2.6 Wallet SDK 설계 (Phases 198-201) — SHIPPED 2026-02-20</summary>
+
+- [x] Phase 198: Signing Protocol v1 설계 (2/2 plans) — completed 2026-02-19
+- [x] Phase 199: Wallet SDK + 데몬 컴포넌트 설계 (2/2 plans) — completed 2026-02-19
+- [x] Phase 200: 알림 채널 + Push Relay Server 설계 (2/2 plans) — completed 2026-02-19
+- [x] Phase 201: 기존 설계 문서 갱신 + 교차 검증 (1/1 plan) — completed 2026-02-20
+
+See `.planning/milestones/v2.6-ROADMAP.md` for full details.
+
+</details>
+
+## Progress
+
+| Phase | Milestone | Plans | Status | Completed |
+|-------|-----------|-------|--------|-----------|
+| 1-173 | v0.1-v2.0 | — | Complete | 2026-02-18 |
+| 178-181 | v2.2 | 6/6 | Complete | 2026-02-18 |
+| 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
+| 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
+| 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
+| 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
+| 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |

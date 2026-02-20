@@ -43,7 +43,7 @@ On `401 Unauthorized` response:
 ### No Connection Info?
 
 Ask the user:
-"WAIaaS connection info is needed. Copy the agent prompt from the Admin UI dashboard or from the `waiaas quickset` completion screen using 'Copy Agent Prompt' and paste it here."
+"WAIaaS connection info is needed. Generate the agent prompt from the Admin UI dashboard (Dashboard > Agent Connection Prompt > Generate) and paste it here."
 
 ### Manual Discovery
 

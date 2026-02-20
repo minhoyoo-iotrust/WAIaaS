@@ -728,6 +728,9 @@ export class DaemonLifecycle {
     if (this.sqlite && this._config!.daemon.update_check) {
       const { VersionCheckService } = await import('../infrastructure/version/index.js');
       this._versionCheckService = new VersionCheckService(this.sqlite);
+      if (this.notificationService) {
+        this._versionCheckService.setNotificationService(this.notificationService);
+      }
       console.debug('Step 4g: VersionCheckService created');
     }
 

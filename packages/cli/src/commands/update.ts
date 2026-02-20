@@ -1,11 +1,11 @@
 /**
- * `waiaas upgrade` -- Upgrade WAIaaS to the latest version.
+ * `waiaas update` -- Update WAIaaS to the latest version.
  *
  * Supports four modes:
  *   --check     Check for available updates without upgrading
  *   --rollback  Restore from the latest pre-upgrade backup
- *   --to <ver>  Upgrade to a specific version
- *   (default)   7-step upgrade sequence:
+ *   --to <ver>  Update to a specific version
+ *   (default)   7-step update sequence:
  *     1. Version check
  *     2. Stop daemon
  *     3. Create backup
@@ -28,7 +28,7 @@ const { version: CURRENT_VERSION } = require('../../package.json') as { version:
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org/@waiaas/cli';
 const FETCH_TIMEOUT_MS = 5000;
 
-export interface UpgradeOptions {
+export interface UpdateOptions {
   dataDir: string;
   check?: boolean;
   to?: string;
@@ -37,9 +37,9 @@ export interface UpgradeOptions {
 }
 
 /**
- * Execute the upgrade command based on the provided options.
+ * Execute the update command based on the provided options.
  */
-export async function upgradeCommand(opts: UpgradeOptions): Promise<void> {
+export async function updateCommand(opts: UpdateOptions): Promise<void> {
   if (opts.check) {
     return checkMode();
   }
@@ -48,7 +48,7 @@ export async function upgradeCommand(opts: UpgradeOptions): Promise<void> {
     return rollbackMode(opts.dataDir);
   }
 
-  return upgradeMode(opts);
+  return updateMode(opts);
 }
 
 /**
@@ -64,7 +64,7 @@ async function checkMode(): Promise<void> {
 
   if (semver.gt(latest, CURRENT_VERSION)) {
     console.log(`Update available: ${CURRENT_VERSION} \u2192 ${latest}`);
-    console.log('Run: waiaas upgrade');
+    console.log('Run: waiaas update');
   } else {
     console.log(`Already up to date (${CURRENT_VERSION})`);
   }
@@ -85,9 +85,9 @@ function rollbackMode(dataDir: string): void {
 }
 
 /**
- * Default mode: Execute the 7-step upgrade sequence.
+ * Default mode: Execute the 7-step update sequence.
  */
-async function upgradeMode(opts: UpgradeOptions): Promise<void> {
+async function updateMode(opts: UpdateOptions): Promise<void> {
   // Step 1: Version check
   let targetVersion: string;
 
@@ -127,7 +127,7 @@ async function upgradeMode(opts: UpgradeOptions): Promise<void> {
     console.log(`  Backup created: ${backupDir}`);
   } catch (err) {
     console.error(`Backup failed: ${(err as Error).message}`);
-    console.error('Upgrade aborted. No changes were made.');
+    console.error('Update aborted. No changes were made.');
     process.exit(1);
     return;
   }
@@ -138,7 +138,7 @@ async function upgradeMode(opts: UpgradeOptions): Promise<void> {
     execSync(`npm install -g @waiaas/cli@${targetVersion}`, { stdio: 'inherit' });
   } catch {
     console.error('Package update failed.');
-    console.error('Run: waiaas upgrade --rollback');
+    console.error('Run: waiaas update --rollback');
     process.exit(1);
     return;
   }
@@ -172,7 +172,7 @@ async function upgradeMode(opts: UpgradeOptions): Promise<void> {
     }
   }
 
-  console.log(`\nUpgrade complete: ${CURRENT_VERSION} \u2192 ${targetVersion}`);
+  console.log(`\nUpdate complete: ${CURRENT_VERSION} \u2192 ${targetVersion}`);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// NotificationEventType: event types from 35-notification-architecture (22 total)
+// NotificationEventType: event types from 35-notification-architecture (26 total)
 export const NOTIFICATION_EVENT_TYPES = [
   'TX_REQUESTED',
   'TX_QUEUED',
@@ -27,6 +27,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   'CUMULATIVE_LIMIT_WARNING',
   'LOW_BALANCE',
   'APPROVAL_CHANNEL_SWITCHED',
+  'UPDATE_AVAILABLE',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

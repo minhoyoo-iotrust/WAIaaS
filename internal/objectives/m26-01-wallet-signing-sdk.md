@@ -16,13 +16,13 @@ m26-01 완료 시 Owner는 5가지 승인 채널을 선택할 수 있다:
 |---------|------|---------|------|
 | 1 | **WAIaaS SDK + ntfy** | m26-01 | 메신저 불필요, 지갑 앱만으로 동작 |
 | 2 | **WAIaaS SDK + Telegram** | m26-01 | 메신저 중계, 파트너 지갑 전용 |
-| 3 | WalletConnect | v1.6.3 | 세션 기반, 범용 지갑 |
+| 3 | WalletConnect | v1.6.1 | 세션 기반, 범용 지갑 |
 | 4 | Telegram Bot `/approve` | v1.6 | chatId 기반, 텍스트 명령 |
 | 5 | REST API 직접 호출 | v1.2 | 서명 수동 생성 |
 
 ### WalletConnect vs WAIaaS Signing SDK
 
-| 비교 | WalletConnect (v1.6.3) | WAIaaS Signing SDK |
+| 비교 | WalletConnect (v1.6.1) | WAIaaS Signing SDK |
 |------|----------------------|-------------------|
 | 세션 관리 | 필요 (7일 TTL + extend) | **불필요 (1회성)** |
 | 외부 의존 | WC relay 서버 + Project ID | **ntfy 또는 Telegram (이미 설정됨)** |
@@ -264,32 +264,44 @@ const WalletLinkConfig = z.object({
 });
 ```
 
-### config.toml
+### Admin Settings (SettingsService)
 
-```toml
-[signing_sdk]
-enabled = true
-request_expiry_min = 30                  # 서명 요청 유효 시간 (기본 30분)
-preferred_channel = "ntfy"               # 기본 응답 채널: "ntfy" | "telegram"
-preferred_wallet = "dcent"               # Owner 기본 지갑 (fallback, 지갑별 설정 우선)
+Signing SDK 설정은 config.toml이 아닌 **Admin Settings**(SettingsService)를 통해 런타임 변경 가능하도록 구성한다. WAIaaS의 flat-key config 정책(중첩 금지)을 준수하며, 지갑 링크 설정 같은 복합 구조는 Admin UI에서 관리한다.
 
-# ntfy 직접 푸시 설정 (메신저 불필요)
-[signing_sdk.ntfy]
-server_url = "https://ntfy.sh"           # ntfy 서버 (self-hosted 가능)
-request_topic_prefix = "waiaas-sign"     # 요청 토픽 접두어
-response_topic_prefix = "waiaas-response" # 응답 토픽 접두어
+> **설계 근거**: ntfy 서버 URL은 기존 `[notifications] ntfy_server` 설정을 재사용한다. Signing SDK 전용 config.toml 섹션을 추가하지 않는다.
 
-# 지갑별 유니버셜 링크 설정
-[[signing_sdk.wallets]]
-name = "dcent"
-display_name = "D'CENT Wallet"
-universal_link_base = "https://link.dcentwallet.com"
-sign_path = "/waiaas/sign"
-deep_link_scheme = "dcent"
-deep_link_sign_path = "/waiaas-sign"
+#### SettingsService 키
+
+| 키 | 타입 | 기본값 | 설명 |
+|----|------|--------|------|
+| `signing_sdk.enabled` | boolean | `false` | Signing SDK 전체 활성화 |
+| `signing_sdk.request_expiry_min` | number | `30` | 서명 요청 유효 시간 (분) |
+| `signing_sdk.preferred_channel` | string | `"ntfy"` | 기본 응답 채널: `"ntfy"` \| `"telegram"` |
+| `signing_sdk.preferred_wallet` | string | `null` | Owner 기본 지갑 (fallback, 지갑별 설정 우선) |
+| `signing_sdk.ntfy_request_topic_prefix` | string | `"waiaas-sign"` | ntfy 요청 토픽 접두어 |
+| `signing_sdk.ntfy_response_topic_prefix` | string | `"waiaas-response"` | ntfy 응답 토픽 접두어 |
+
+#### WalletLinkRegistry (settings 테이블 JSON 또는 별도 테이블)
+
+지갑별 유니버셜 링크 설정은 Admin UI에서 CRUD 관리한다:
+
+```typescript
+// settings 테이블에 JSON으로 저장
+// key: "signing_sdk.wallets"
+// value: JSON array
+[
+  {
+    "name": "dcent",
+    "displayName": "D'CENT Wallet",
+    "universalLinkBase": "https://link.dcentwallet.com",
+    "signPath": "/waiaas/sign",
+    "deepLinkScheme": "dcent",
+    "deepLinkSignPath": "/waiaas-sign"
+  }
+]
 ```
 
-> **참고**: `preferred_wallet`과 `preferred_channel`은 글로벌 기본값이다. 각 지갑에 `owner_approval_method`가 설정되어 있으면 해당 설정이 글로벌 기본값보다 우선한다.
+> **참고**: `preferred_wallet`과 `preferred_channel`은 글로벌 기본값이다. 각 지갑에 `owner_approval_method`가 설정되어 있으면 해당 설정이 글로벌 기본값보다 우선한다. ntfy 서버 URL은 기존 `[notifications] ntfy_server` 설정을 공유한다.
 
 ### 지갑별 Owner 승인 방법 (DB)
 
@@ -304,23 +316,23 @@ ALTER TABLE wallets ADD COLUMN owner_approval_method TEXT;
 |----|------|-------------|
 | `sdk_ntfy` | WAIaaS SDK + ntfy 직접 푸시 (메신저 불필요) | m26-01 |
 | `sdk_telegram` | WAIaaS SDK + Telegram 메신저 중계 | m26-01 |
-| `walletconnect` | WalletConnect v2 세션 기반 | v1.6.3 |
+| `walletconnect` | WalletConnect v2 세션 기반 | v1.6.1 |
 | `telegram_bot` | Telegram Bot `/approve` 텍스트 명령 | v1.6 |
 | `rest` | REST API 직접 호출 (서명 수동 생성) | v1.2 |
 | `NULL` (미설정) | 글로벌 config 기본 우선순위 fallback | - |
 
 #### REST API 변경
 
-`PUT /v1/wallets/:id/owner` 요청에 `approvalMethod` 필드 추가:
+`PUT /v1/wallets/:id/owner` 요청에 `approval_method` 필드 추가:
 
 ```json
 {
-  "ownerAddress": "0x1234...",
-  "approvalMethod": "sdk_ntfy"
+  "owner_address": "0x1234...",
+  "approval_method": "sdk_ntfy"
 }
 ```
 
-`approvalMethod`는 optional. 생략 시 `NULL`(글로벌 fallback). Owner 등록 이후에도 `PUT /v1/wallets/:id/owner`로 변경 가능.
+`approval_method`는 optional. 생략 시 `NULL`(글로벌 fallback). Owner 등록 이후에도 `PUT /v1/wallets/:id/owner`로 변경 가능.
 
 #### ApprovalChannelRouter 라우팅 로직
 
@@ -387,13 +399,13 @@ packages/wallet-sdk/              # 신규 패키지 (@waiaas/wallet-sdk)
   tsconfig.json
 
 packages/daemon/src/api/routes/
-  wallets.ts                      # PUT /wallets/:id/owner에 approvalMethod 필드 추가
+  wallets.ts                      # PUT /wallets/:id/owner에 approval_method 필드 추가
 
 packages/daemon/src/infrastructure/database/
   migrations/                     # wallets.owner_approval_method 컬럼 추가 마이그레이션
 
-packages/admin/src/components/
-  wallet-detail.tsx               # Owner Settings 섹션에 Approval Method 라디오 선택 추가
+packages/admin/src/pages/
+  wallets.tsx                     # Owner Settings 섹션에 Approval Method 라디오 선택 추가
 ```
 
 ---
@@ -469,11 +481,11 @@ packages/admin/src/components/
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 21 | REST API로 승인 방법 설정 | PUT /wallets/:id/owner { approvalMethod: 'sdk_ntfy' } → 200 + DB 반영 assert | [L0] |
+| 21 | REST API로 승인 방법 설정 | PUT /wallets/:id/owner { approval_method: 'sdk_ntfy' } → 200 + DB 반영 assert | [L0] |
 | 22 | 지갑별 승인 방법 → 채널 라우팅 | wallet A(sdk_ntfy) + wallet B(walletconnect) → 각각 다른 채널로 라우팅 assert | [L0] |
 | 23 | 승인 방법 미설정 → 글로벌 fallback | owner_approval_method = NULL → config preferred_channel 기반 라우팅 assert | [L0] |
-| 24 | 유효하지 않은 승인 방법 → 400 에러 | PUT /wallets/:id/owner { approvalMethod: 'invalid' } → 400 에러 assert | [L0] |
-| 25 | Admin UI 승인 방법 변경 | 라디오 선택 → Save → GET /wallets/:id → approvalMethod 반영 assert | [L0] |
+| 24 | 유효하지 않은 승인 방법 → 400 에러 | PUT /wallets/:id/owner { approval_method: 'invalid' } → 400 에러 assert | [L0] |
+| 25 | Admin UI 승인 방법 변경 | 라디오 선택 → Save → GET /wallets/:id → approval_method 반영 assert | [L0] |
 | 26 | 미구성 인프라 경고 | ntfy 미설정 + sdk_ntfy 선택 → 경고 메시지 표시 assert | [L0] |
 
 ---
@@ -483,7 +495,7 @@ packages/admin/src/components/
 | 의존 대상 | 이유 |
 |----------|------|
 | v1.6 (Telegram Bot) | Telegram 메시지 전송 + Long Polling 수신 인프라. `/sign_response` 명령어 추가 |
-| v1.6.3 (WalletConnect) | ApprovalRequestBridge 패턴 재사용. 승인 채널 우선순위 라우팅에서 WC와 공존 |
+| v1.6.1 (WalletConnect) | WcSigningBridge 패턴 재사용. 승인 채널 우선순위 라우팅에서 WC와 공존 |
 | v1.3 (알림 시스템) | ntfy 채널 인프라 (ntfy HTTP publish). 서명 채널은 알림 채널과 별도이나 ntfy 연결 로직 재사용 |
 | v1.2 (인증) | ownerAuth 서명 검증 (Ed25519/SIWE) 재사용 |
 
@@ -518,7 +530,7 @@ packages/admin/src/components/
 |------|------|
 | 페이즈 | 2개 (프로토콜 + 데몬 측 구현 + ntfy 채널 1 / @waiaas/wallet-sdk 패키지 + Telegram 채널 + 채널 라우팅 1) |
 | 신규 파일 | 14-18개 (데몬 6-7 + wallet-sdk 패키지 8-11) |
-| 수정 파일 | 6-8개 (Telegram Bot 명령어, config loader, 승인 우선순위, package.json, wallets 라우트, Admin settings.tsx) |
+| 수정 파일 | 6-8개 (Telegram Bot 명령어, SettingsService 키 등록, 승인 우선순위, package.json, wallets 라우트, Admin UI) |
 | 테스트 | 26-30개 |
 | DB 마이그레이션 | 1개 (wallets 테이블에 owner_approval_method 컬럼 추가) |
 | 신규 패키지 | @waiaas/wallet-sdk (모노레포 packages/wallet-sdk) |
@@ -526,5 +538,6 @@ packages/admin/src/components/
 ---
 
 *생성일: 2026-02-15*
-*선행: v1.6.3 (WalletConnect Owner 승인)*
+*최종 수정: 2026-02-19 — 코드베이스 실측 반영 (config.toml → Admin Settings, v1.6.3 → v1.6.1, 파일 경로 정정)*
+*선행: v1.6.1 (WalletConnect Owner 승인), m25-00 (DX 품질 개선) 완료*
 *관련: D'CENT Wallet, WAIaaS Signing Protocol v1, ntfy (https://ntfy.sh), 유니버셜 링크 (iOS AASA / Android App Links)*

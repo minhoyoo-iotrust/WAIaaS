@@ -48,7 +48,9 @@ curl -s http://localhost:3100/v1/admin/status \
 ```json
 {
   "status": "running",
-  "version": "1.4.4",
+  "version": "2.4.0",
+  "latestVersion": null,
+  "updateAvailable": false,
   "uptime": 3600,
   "walletCount": 5,
   "activeSessionCount": 3,
@@ -60,14 +62,16 @@ curl -s http://localhost:3100/v1/admin/status \
 
 | Field                | Type    | Description                                   |
 | -------------------- | ------- | --------------------------------------------- |
-| `status`             | string  | Always "running" if daemon is up.             |
-| `version`            | string  | Daemon version.                               |
-| `uptime`             | integer | Seconds since daemon start.                   |
-| `walletCount`        | integer | Total wallets in database.                    |
-| `activeSessionCount` | integer | Non-expired, non-revoked sessions.            |
-| `killSwitchState`    | string  | "NORMAL" or "ACTIVATED".                      |
-| `adminTimeout`       | integer | Admin operation timeout (seconds).            |
-| `timestamp`          | integer | Current epoch timestamp (seconds).            |
+| `status`             | string        | Always "running" if daemon is up.             |
+| `version`            | string        | Daemon version.                               |
+| `latestVersion`      | string\|null  | Latest available version, or null.            |
+| `updateAvailable`    | boolean       | Whether a newer version is available.         |
+| `uptime`             | integer       | Seconds since daemon start.                   |
+| `walletCount`        | integer       | Total wallets in database.                    |
+| `activeSessionCount` | integer       | Non-expired, non-revoked sessions.            |
+| `killSwitchState`    | string        | "NORMAL" or "ACTIVATED".                      |
+| `adminTimeout`       | integer       | Admin operation timeout (seconds).            |
+| `timestamp`          | integer       | Current epoch timestamp (seconds).            |
 
 ### POST /v1/admin/shutdown -- Graceful Shutdown
 
@@ -99,6 +103,48 @@ curl -s -X POST http://localhost:3100/v1/admin/rotate-secret \
   "message": "JWT secret rotated. Old tokens valid for 5 minutes."
 }
 ```
+
+### POST /v1/admin/agent-prompt -- Generate Agent Connection Prompt
+
+Generate a connection prompt ("magic word") for AI agents. Creates sessions for all active wallets (or specified wallets) and returns a structured `[WAIaaS Connection]` block.
+
+```bash
+# All active wallets
+curl -s -X POST http://localhost:3100/v1/admin/agent-prompt \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{}'
+
+# Specific wallets only
+curl -s -X POST http://localhost:3100/v1/admin/agent-prompt \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletIds": ["<wallet-id-1>", "<wallet-id-2>"], "ttl": 86400}'
+```
+
+**Parameters:**
+
+| Parameter   | Type     | Required | Default | Description                           |
+| ----------- | -------- | -------- | ------- | ------------------------------------- |
+| `walletIds` | string[] | No       | all     | Specific wallet IDs. Omit for all active wallets. |
+| `ttl`       | integer  | No       | 86400   | Session TTL in seconds.               |
+
+**Response (201):**
+```json
+{
+  "prompt": "[WAIaaS Connection]\n- URL: http://localhost:3100\n\nWallets:\n1. my-wallet (019...) \u2014 devnet\n   Session: eyJ...\n\nWhen the session expires (401 Unauthorized),\nrenew with POST /v1/wallets/{walletId}/sessions/{sessionId}/renew.\n\nConnect to WAIaaS wallets using the above information to check balances and manage assets.",
+  "walletCount": 1,
+  "sessionsCreated": 1,
+  "expiresAt": 1707086400
+}
+```
+
+| Field             | Type    | Description                                    |
+| ----------------- | ------- | ---------------------------------------------- |
+| `prompt`          | string  | Full connection prompt text to paste to agents. |
+| `walletCount`     | integer | Number of wallets included.                    |
+| `sessionsCreated` | integer | Number of new sessions created.                |
+| `expiresAt`       | integer | Epoch seconds when sessions expire.            |
 
 ---
 

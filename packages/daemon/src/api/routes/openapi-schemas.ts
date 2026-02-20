@@ -508,6 +508,8 @@ export const AdminStatusResponseSchema = z
   .object({
     status: z.string(),
     version: z.string(),
+    latestVersion: z.string().nullable(),
+    updateAvailable: z.boolean(),
     uptime: z.number().int(),
     walletCount: z.number().int(),
     activeSessionCount: z.number().int(),
@@ -532,6 +534,22 @@ export const AdminStatusResponseSchema = z
     ),
   })
   .openapi('AdminStatusResponse');
+
+export const AgentPromptRequestSchema = z
+  .object({
+    walletIds: z.array(z.string()).optional().openapi({ description: 'Specific wallet IDs (all ACTIVE wallets if omitted)' }),
+    ttl: z.number().int().positive().optional().openapi({ description: 'Session TTL in seconds (default: 86400)' }),
+  })
+  .openapi('AgentPromptRequest');
+
+export const AgentPromptResponseSchema = z
+  .object({
+    prompt: z.string(),
+    walletCount: z.number().int(),
+    sessionsCreated: z.number().int(),
+    expiresAt: z.number().int(),
+  })
+  .openapi('AgentPromptResponse');
 
 export const KillSwitchResponseSchema = z
   .object({

@@ -133,6 +133,78 @@ describe('VersionCheckService', () => {
       expect(options.signal).toBeDefined();
     });
 
+    it('sends UPDATE_AVAILABLE notification on first detection of new version', async () => {
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+      const mockNotificationService = { notify: mockNotify } as unknown as import('../notifications/notification-service.js').NotificationService;
+      service.setNotificationService(mockNotificationService);
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ 'dist-tags': { latest: '99.0.0' } }),
+      }));
+
+      await service.check();
+
+      expect(mockNotify).toHaveBeenCalledWith('UPDATE_AVAILABLE', '', expect.objectContaining({
+        latestVersion: '99.0.0',
+        currentVersion: expect.any(String),
+      }));
+
+      // Verify notified version stored in DB
+      const row = db.prepare("SELECT value FROM key_value_store WHERE key = 'version_check_notified_version'").get() as { value: string } | undefined;
+      expect(row?.value).toBe('99.0.0');
+    });
+
+    it('does not send duplicate notification for same version', async () => {
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+      const mockNotificationService = { notify: mockNotify } as unknown as import('../notifications/notification-service.js').NotificationService;
+      service.setNotificationService(mockNotificationService);
+
+      // Pre-populate notified version
+      db.prepare("INSERT INTO key_value_store (key, value, updated_at) VALUES ('version_check_notified_version', '99.0.0', 0)").run();
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ 'dist-tags': { latest: '99.0.0' } }),
+      }));
+
+      await service.check();
+
+      expect(mockNotify).not.toHaveBeenCalled();
+    });
+
+    it('sends notification again for newer version', async () => {
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+      const mockNotificationService = { notify: mockNotify } as unknown as import('../notifications/notification-service.js').NotificationService;
+      service.setNotificationService(mockNotificationService);
+
+      // Pre-populate: already notified for 99.0.0
+      db.prepare("INSERT INTO key_value_store (key, value, updated_at) VALUES ('version_check_notified_version', '99.0.0', 0)").run();
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ 'dist-tags': { latest: '99.1.0' } }),
+      }));
+
+      await service.check();
+
+      expect(mockNotify).toHaveBeenCalledWith('UPDATE_AVAILABLE', '', expect.objectContaining({
+        latestVersion: '99.1.0',
+      }));
+    });
+
+    it('skips notification gracefully when NotificationService is not set', async () => {
+      // No setNotificationService call
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ 'dist-tags': { latest: '99.0.0' } }),
+      }));
+
+      // Should not throw
+      const result = await service.check();
+      expect(result.latest).toBe('99.0.0');
+    });
+
     it('overwrites existing version in key_value_store (INSERT OR REPLACE)', async () => {
       // Pre-populate
       db.prepare("INSERT INTO key_value_store (key, value, updated_at) VALUES ('version_check_latest', '1.0.0', 0)").run();

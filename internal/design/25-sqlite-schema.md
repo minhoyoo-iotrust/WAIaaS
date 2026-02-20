@@ -10,8 +10,9 @@
 **v0.7 스키마 CHECK/amount 보강:** 2026-02-08
 **v0.8 업데이트:** 2026-02-08
 **v0.10 업데이트:** 2026-02-09
+**v2.6 업데이트:** 2026-02-20
 **상태:** 완료
-**참조:** CORE-01, 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT), objectives/v0.8-optional-owner-progressive-security.md
+**참조:** CORE-01, SDK-DAEMON (74-wallet-sdk-daemon-components.md), 06-RESEARCH.md, 06-CONTEXT.md, 52-auth-model-redesign.md (v0.5), 53-session-renewal-protocol.md (Phase 20), CHAIN-EXT-03 (58-contract-call-spec.md), CHAIN-EXT-04 (59-approve-management-spec.md), CHAIN-EXT-05 (60-batch-transaction-spec.md), CHAIN-EXT-06 (61-price-oracle-spec.md), CHAIN-EXT-07 (62-action-provider-architecture.md), 30-session-token-protocol.md (v0.7 nonce 저장소), ENUM-MAP (45-enum-unified-mapping.md, ChainType/NetworkType SSoT), objectives/v0.8-optional-owner-progressive-security.md
 
 ---
 
@@ -112,6 +113,7 @@ export const agents = sqliteTable('agents', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
   suspensionReason: text('suspension_reason'),          // 정지 사유
+  ownerApprovalMethod: text('owner_approval_method'),  // [v2.6] 지갑별 승인 방법 (NULL = 글로벌 fallback)
 }, (table) => [
   uniqueIndex('idx_agents_public_key').on(table.publicKey),
   index('idx_agents_status').on(table.status),
@@ -121,6 +123,7 @@ export const agents = sqliteTable('agents', {
   check('check_chain', sql`chain IN ('solana', 'ethereum')`),
   check('check_network', sql`network IN ('mainnet', 'devnet', 'testnet')`),
   check('check_owner_verified', sql`owner_verified IN (0, 1)`),  // [v0.8] boolean CHECK 제약
+  check('check_owner_approval_method', sql`owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')`),  // [v2.6]
 ]);
 ```
 
@@ -143,7 +146,9 @@ CREATE TABLE agents (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   suspended_at INTEGER,
-  suspension_reason TEXT
+  suspension_reason TEXT,
+  owner_approval_method TEXT                                     -- [v2.6] 지갑별 Owner 승인 방법
+    CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'))
 );
 
 CREATE UNIQUE INDEX idx_agents_public_key ON agents(public_key);
@@ -168,6 +173,7 @@ CREATE INDEX idx_agents_owner_address ON agents(owner_address);
 | `updated_at` | INTEGER | NOT NULL | - | 최종 수정 시각 (Unix epoch, 초) |
 | `suspended_at` | INTEGER | NULL | - | 정지 시각. status가 SUSPENDED일 때만 값 존재 |
 | `suspension_reason` | TEXT | NULL | - | 정지 사유 (수동 정지, 정책 위반, Kill Switch 등) |
+| `owner_approval_method` | TEXT | NULL | - | [v2.6] 지갑별 Owner 승인 방법. NULL이면 ApprovalChannelRouter 글로벌 fallback 사용. enum: sdk_ntfy, sdk_telegram, walletconnect, telegram_bot, rest |
 
 <!-- [v0.9] agents.default_constraints: EXT-03으로 이연.
      v0.9에서 기본 constraints 결정 규칙 설계 (TG-04, TG-05: resolveDefaultConstraints 공용 함수).
@@ -1698,6 +1704,29 @@ CREATE INDEX idx_transactions_parent_id ON transactions(parent_id) WHERE parent_
 
 **ON DELETE CASCADE 선택 근거:** 부모-자식은 논리적 단위이므로 함께 관리한다. 거래 기록 보존은 agents -> transactions의 `ON DELETE RESTRICT`에서 보장되므로, 부모 삭제 시 자식도 함께 삭제되어야 일관성이 유지된다.
 
+### 4.15 [v2.6] 마이그레이션: wallets.owner_approval_method 컬럼 추가
+
+v2.6에서 wallets 테이블에 `owner_approval_method` 컬럼을 추가한다. NULL 허용이므로 ALTER TABLE ADD COLUMN으로 간단히 추가 가능하다 (테이블 재생성 불필요).
+
+**전제 조건:**
+- v0.8 마이그레이션(섹션 4.11) 완료 상태
+
+**마이그레이션 SQL:**
+
+```sql
+-- v2.6: owner_approval_method 컬럼 추가
+ALTER TABLE wallets ADD COLUMN owner_approval_method TEXT;
+```
+
+**CHECK 제약 추가 (선택적):**
+SQLite에서 ALTER TABLE으로 CHECK 제약을 추가할 수 없으므로, CHECK 제약은 애플리케이션 레벨(Zod 검증)에서 처리한다.
+향후 테이블 재생성이 필요한 다른 마이그레이션과 함께 CHECK 제약을 DB 레벨에 적용할 수 있다.
+
+**검증:**
+`PRAGMA table_info(wallets);` 로 owner_approval_method 컬럼 존재 확인.
+
+**상세:** doc 74 (74-wallet-sdk-daemon-components.md) 섹션 10.1 참조.
+
 ---
 
 ## 5. SQLite 운영 가이드
@@ -1845,7 +1874,7 @@ ORDER BY priority DESC;
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ══════════════════════════════════════════
-// agents (v0.8: owner_address nullable, owner_verified 추가)
+// agents (v0.8: owner_address nullable, owner_verified 추가, v2.6: owner_approval_method 추가)
 // ══════════════════════════════════════════
 export const agents = sqliteTable('agents', {
   id: text('id').primaryKey(),
@@ -1864,6 +1893,7 @@ export const agents = sqliteTable('agents', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
   suspensionReason: text('suspension_reason'),
+  ownerApprovalMethod: text('owner_approval_method'),    // [v2.6] 지갑별 승인 방법 (NULL = 글로벌 fallback)
 }, (table) => [
   uniqueIndex('idx_agents_public_key').on(table.publicKey),
   index('idx_agents_status').on(table.status),
@@ -1872,6 +1902,7 @@ export const agents = sqliteTable('agents', {
   check('check_chain', sql`chain IN ('solana', 'ethereum')`),
   check('check_network', sql`network IN ('mainnet', 'devnet', 'testnet')`),
   check('check_owner_verified', sql`owner_verified IN (0, 1)`),  // [v0.8]
+  check('check_owner_approval_method', sql`owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')`),  // [v2.6]
 ]);
 
 // ══════════════════════════════════════════
@@ -2198,6 +2229,12 @@ PUT /v1/agents/A { ownerAddress: "NEW_ADDR" }
 | OWNER-01 (Owner 선택적 등록) | agents | `owner_address` nullable 전환. NULL이면 Owner 미등록(OwnerState=NONE) |
 | OWNER-07 (유예->잠금 전이) | agents | `owner_verified` 컬럼. 0=GRACE, 1=LOCKED. CHECK 제약 `IN (0, 1)` |
 | WITHDRAW-06 (전량 회수) | 섹션 4.12.2 | `SweepResult` 타입 정의. `AssetInfo[]` 재사용 |
+
+### v2.6 요구사항 매핑 추가
+
+| 요구사항 | 테이블/섹션 | 커버리지 |
+|---------|-----------|---------|
+| DOCS-03 (owner_approval_method 컬럼) | wallets (섹션 2.1) | `owner_approval_method` TEXT nullable + CHECK 제약. NULL = 글로벌 fallback. enum: sdk_ntfy/sdk_telegram/walletconnect/telegram_bot/rest |
 
 ---
 

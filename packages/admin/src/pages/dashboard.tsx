@@ -9,7 +9,6 @@ import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { getErrorMessage } from '../utils/error-messages';
 import { showToast } from '../components/toast';
-import { buildAgentPrompt, type WalletPromptInfo } from '../utils/agent-prompt';
 
 interface RecentTransaction {
   id: string;
@@ -27,6 +26,8 @@ interface RecentTransaction {
 interface AdminStatus {
   status: string;
   version: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
   uptime: number;
   walletCount: number;
   activeSessionCount: number;
@@ -39,8 +40,15 @@ interface AdminStatus {
   recentTransactions: RecentTransaction[];
 }
 
+interface AgentPromptResult {
+  prompt: string;
+  walletCount: number;
+  sessionsCreated: number;
+  expiresAt: number;
+}
+
 function StatCard({ label, value, loading, badge, href }: {
-  label: string; value: string; loading?: boolean; badge?: 'success' | 'danger'; href?: string;
+  label: string; value: string; loading?: boolean; badge?: 'success' | 'danger' | 'warning'; href?: string;
 }) {
   const content = (
     <>
@@ -117,22 +125,6 @@ function buildTxColumns(
   ];
 }
 
-interface DashboardWallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-  environment: string;
-  status: string;
-}
-
-interface SessionCreateResult {
-  id: string;
-  token: string;
-  expiresAt: number;
-  walletId: string;
-}
-
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
@@ -155,6 +147,7 @@ export default function DashboardPage() {
   const displayCurrency = useSignal<string>('USD');
   const displayRate = useSignal<number | null>(1);
   const promptLoading = useSignal(false);
+  const promptText = useSignal<string | null>(null);
 
   const fetchStatus = async () => {
     loading.value = true;
@@ -173,35 +166,16 @@ export default function DashboardPage() {
     }
   };
 
-  const handleCopyAgentPrompt = async () => {
+  const handleGeneratePrompt = async () => {
     promptLoading.value = true;
     try {
-      const { items } = await apiGet<{ items: DashboardWallet[] }>(API.WALLETS);
-      const activeWallets = items.filter((w) => w.status === 'ACTIVE');
-      if (activeWallets.length === 0) {
+      const result = await apiPost<AgentPromptResult>(API.ADMIN_AGENT_PROMPT, {});
+      if (result.walletCount === 0) {
         showToast('warning', 'No active wallets found');
         return;
       }
-
-      const walletInfos: WalletPromptInfo[] = [];
-      for (const w of activeWallets) {
-        const session = await apiPost<SessionCreateResult>(API.SESSIONS, {
-          walletId: w.id,
-          ttl: 86400,
-        });
-        walletInfos.push({
-          id: w.id,
-          name: w.name,
-          chain: w.chain,
-          defaultNetwork: w.network,
-          sessionToken: session.token,
-        });
-      }
-
-      const baseUrl = window.location.origin || 'http://localhost:3100';
-      const text = buildAgentPrompt(baseUrl, walletInfos);
-      await copyToClipboard(text);
-      showToast('success', 'Agent prompt copied!');
+      promptText.value = result.prompt;
+      showToast('success', `Prompt generated for ${result.walletCount} wallet(s)`);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         showToast('error', getErrorMessage(err.code));
@@ -213,9 +187,14 @@ export default function DashboardPage() {
     }
   };
 
+  const handleCopyPrompt = async () => {
+    if (!promptText.value) return;
+    await copyToClipboard(promptText.value);
+    showToast('success', 'Copied to clipboard!');
+  };
+
   useEffect(() => {
     fetchStatus();
-    // Load display currency settings (fire-and-forget, graceful fallback)
     fetchDisplayCurrency()
       .then(({ currency, rate }) => {
         displayCurrency.value = currency;
@@ -236,8 +215,23 @@ export default function DashboardPage() {
           <Button variant="secondary" size="sm" onClick={fetchStatus}>Retry</Button>
         </div>
       )}
+      {data.value?.updateAvailable && (
+        <div class="update-banner" role="status">
+          <span class="update-banner-icon">{'\u2B06'}</span>
+          <span>
+            <strong>Update available:</strong>{' '}
+            {data.value.version} {'\u2192'} {data.value.latestVersion}{' \u2014 '}
+            Run <code>waiaas update</code> to update.
+          </span>
+        </div>
+      )}
       <div class="stat-grid">
-        <StatCard label="Version" value={data.value?.version ?? '\u2014'} loading={isInitialLoad} />
+        <StatCard
+          label="Version"
+          value={data.value?.version ?? '\u2014'}
+          loading={isInitialLoad}
+          badge={data.value ? (data.value.updateAvailable ? 'warning' : undefined) : undefined}
+        />
         <StatCard label="Uptime" value={data.value ? formatUptime(data.value.uptime) : '\u2014'} loading={isInitialLoad} />
         <StatCard label="Wallets" value={data.value?.walletCount?.toString() ?? '\u2014'} loading={isInitialLoad} href="#/wallets" />
         <StatCard label="Active Sessions" value={data.value?.activeSessionCount?.toString() ?? '\u2014'} loading={isInitialLoad} href="#/sessions" />
@@ -271,15 +265,34 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div style={{ marginTop: 'var(--space-4)', display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleCopyAgentPrompt}
-          loading={promptLoading.value}
-        >
-          Copy Agent Prompt
-        </Button>
+      <div class="prompt-card" style={{ marginTop: 'var(--space-4)' }}>
+        <h3 style={{ marginBottom: 'var(--space-2)' }}>Agent Connection Prompt</h3>
+        <p class="prompt-card-desc">
+          Generate a connection prompt for AI agents. Creates sessions for all active wallets.
+        </p>
+        {promptText.value ? (
+          <>
+            <pre class="prompt-preview">{promptText.value}</pre>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)' }}>
+              <Button variant="primary" size="sm" onClick={handleCopyPrompt}>
+                Copy to Clipboard
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleGeneratePrompt} loading={promptLoading.value}>
+                Regenerate
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleGeneratePrompt}
+            loading={promptLoading.value}
+            style={{ marginTop: 'var(--space-2)' }}
+          >
+            Generate
+          </Button>
+        )}
       </div>
 
       <div style={{ marginTop: 'var(--space-4)' }}>

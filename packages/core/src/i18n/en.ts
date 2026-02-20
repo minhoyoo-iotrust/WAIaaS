@@ -189,6 +189,7 @@ export const messages: Messages = {
     CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: 'Wallet {walletId} {type} spending at {ratio}% of limit (${spent} / ${limit}) {display_amount}' },
     LOW_BALANCE: { title: 'Low Balance Alert', body: 'Wallet {walletId} balance low: {balance} {currency}. Threshold: {threshold} {currency}. Please top up.' },
     APPROVAL_CHANNEL_SWITCHED: { title: 'Approval Channel Switched', body: 'Approval for transaction {txId} switched from {from_channel} to {to_channel}. Reason: {reason}' },
+    UPDATE_AVAILABLE: { title: 'WAIaaS Update Available', body: 'A new version {latestVersion} is available (current: {currentVersion}). Run `waiaas update` to update.' },
   },
   // System messages
   system: {

@@ -137,6 +137,7 @@ export const messages: Messages = {
     CUMULATIVE_LIMIT_WARNING: { title: '누적 지출 경고', body: '지갑 {walletId}의 {type} 누적 지출이 한도의 {ratio}%에 도달했습니다 (${spent} / ${limit}) {display_amount}' },
     LOW_BALANCE: { title: '잔액 부족 알림', body: '월렛 {walletId} 잔액 부족: {balance} {currency}. 임계값: {threshold} {currency}. 자금을 충전해주세요.' },
     APPROVAL_CHANNEL_SWITCHED: { title: '승인 채널 전환', body: '거래 {txId}의 승인 채널이 {from_channel}에서 {to_channel}(으)로 전환되었습니다. 사유: {reason}' },
+    UPDATE_AVAILABLE: { title: 'WAIaaS 업데이트 가능', body: '새 버전 {latestVersion}이(가) 출시되었습니다 (현재: {currentVersion}). `waiaas update`를 실행하여 업데이트하세요.' },
   },
   // System messages
   system: {

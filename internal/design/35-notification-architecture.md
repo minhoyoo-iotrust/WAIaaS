@@ -4,8 +4,9 @@
 **작성일:** 2026-02-05
 **v0.8 보완:** 2026-02-09
 **v0.9 보완:** 2026-02-09
+**v2.6 보완:** 2026-02-20
 **상태:** 완료
-**참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), TX-PIPE (32-transaction-pipeline-api.md), SESS-RENEW (53-session-renewal-protocol.md)
+**참조:** LOCK-MECH (33-time-lock-approval-mechanism.md), CORE-01 (24-monorepo-data-directory.md), CORE-02 (25-sqlite-schema.md), TX-PIPE (32-transaction-pipeline-api.md), SESS-RENEW (53-session-renewal-protocol.md), SIGN-PROTO (73-signing-protocol-v1.md), SDK-DAEMON (74-wallet-sdk-daemon-components.md), NOTIF-PUSH (75-notification-channel-push-relay.md)
 **요구사항:** NOTI-01 (멀티 채널 알림), NOTI-02 (최소 2채널 + 폴백)
 
 ---
@@ -19,6 +20,8 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 이 문서는 다음을 정의한다:
 - **INotificationChannel 인터페이스**: 채널 추상화 계약 (type/name/send/healthCheck)
 - **3개 채널 어댑터**: Telegram Bot API, Discord Webhook, ntfy.sh Push
+- **[v2.6] WalletNotificationChannel 어댑터**: 지갑 앱 알림 채널 (waiaas-notify-{walletId} ntfy 토픽)
+- **[v2.6] 서명/알림 토픽 분리**: waiaas-sign-{walletId} (서명 요청) vs waiaas-notify-{walletId} (일반 알림)
 - **NotificationService 오케스트레이터**: 우선순위 기반 전송 + 폴백 체인 + broadcast
 - **알림 이벤트 타입 체계**: 17개 NotificationEventType 열거형 (v0.8: 16개 + v0.9: SESSION_EXPIRING_SOON 1개)
 - **DB 스키마**: notification_channels + notification_log 테이블
@@ -87,6 +90,9 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
 | 세션 갱신 거부 | SESSION_RENEWAL_REJECTED | notify() (표준) | session-service (DELETE /v1/sessions/:id, details.trigger='renewal_rejected') (Phase 20 추가) |
 | [v0.9] 세션 갱신 후 만료 임박 판단 | SESSION_EXPIRING_SOON | notify() (표준) | SessionService.renewSession() 200 OK 후 + 403 에러 경로 보완 |
 | 일일 요약 | DAILY_SUMMARY | notify() (표준) | 일일 스케줄러 (선택) |
+| [v2.6] 지갑 앱 알림 | (25개 NotificationEventType 중 필터링) | WalletNotificationChannel.send() | NotificationService -> WalletNotificationChannel (별도 ntfy 토픽) |
+
+> **[v2.6] 토픽 분리:** 서명 요청은 `waiaas-sign-{walletId}` 토픽(doc 73 참조), 일반 알림은 `waiaas-notify-{walletId}` 토픽(doc 75 참조)으로 분리 전송된다. 동일 ntfy 서버를 공유하되 접두어로 용도를 구분한다.
 
 ---
 
@@ -101,9 +107,12 @@ WAIaaS 3계층 보안에서 알림은 모든 보안 이벤트를 Owner에게 전
  * 알림 채널 추상화 인터페이스.
  * 모든 알림 채널(Telegram, Discord, ntfy.sh)은 이 인터페이스를 구현한다.
  */
+// [v2.6] WalletNotificationChannel도 INotificationChannel을 구현한다.
+// 상세는 doc 75 (75-notification-channel-push-relay.md) 섹션 5 참조.
+
 export interface INotificationChannel {
-  /** 채널 타입 식별자 */
-  readonly type: 'TELEGRAM' | 'DISCORD' | 'NTFY'
+  /** 채널 타입 식별자 (v2.6: 'WALLET_NTFY' 추가) */
+  readonly type: 'TELEGRAM' | 'DISCORD' | 'NTFY' | 'WALLET_NTFY'
 
   /** 사용자 지정 채널 이름 (예: "내 텔레그램", "팀 Discord") */
   readonly name: string
@@ -2705,6 +2714,33 @@ function evaluate(request):
   // ... 기존 정책 평가 로직
 ```
 
+### 13.2 [v2.6] WalletNotificationChannel + 서명/알림 토픽 구조
+
+v2.6에서 WalletNotificationChannel이 4번째 INotificationChannel 구현체로 추가된다. 기존 3개 채널(Telegram/Discord/ntfy)과 병렬로 동작하며, 지갑 앱에 ntfy push로 알림을 전달한다.
+
+**토픽 분리:**
+
+| 토픽 | 접두어 | 용도 | 참조 |
+|------|--------|------|------|
+| 서명 요청 | waiaas-sign-{walletId} | 데몬 -> 지갑 앱: 서명 요청 | doc 73, doc 74 |
+| 서명 응답 | waiaas-response-{requestId} | 지갑 앱 -> 데몬: 서명 결과 | doc 73 |
+| 일반 알림 | waiaas-notify-{walletId} | 데몬 -> 지갑 앱: 알림 | doc 75 |
+
+**ntfy priority 차등 (알림 토픽):**
+
+| 카테고리 | priority | 예시 이벤트 |
+|---------|----------|------------|
+| security_alert | 5 (urgent) | KILL_SWITCH_ACTIVATED |
+| policy_violation | 4 (high) | 정책 위반 감지 |
+| transaction | 3 (default) | TX_CONFIRMED, TX_FAILED |
+| session | 3 (default) | SESSION_CREATED |
+| system | 3 (default) | DAILY_SUMMARY |
+| owner | 3 (default) | Owner 관련 알림 |
+
+**NotificationService 통합:** WalletNotificationChannel은 기존 채널 배열에 추가 등록되어 broadcast/notify 시 함께 호출된다. 내부에서 walletId 조건과 카테고리 필터를 적용하여 해당 지갑에 알림을 보낸다.
+
+**상세 설계:** doc 75 (75-notification-channel-push-relay.md) 섹션 5 참조.
+
 ---
 
 ## 14. 요구사항 매핑 총괄
@@ -2713,6 +2749,7 @@ function evaluate(request):
 |---------|----------|----------|
 | **NOTI-01** (멀티 채널 알림) | **충족** | 섹션 2-5: INotificationChannel + Telegram/Discord/ntfy.sh 3개 어댑터 + [v0.9] SESSION_EXPIRING_SOON 이벤트 (섹션 11.3) |
 | **NOTI-02** (최소 2채널 + 폴백) | **충족** | 섹션 6: NotificationService 폴백 체인 + 섹션 9: 최소 2채널 검증 + 제한 모드 |
+| **[v2.6] WalletNotificationChannel** | **doc 75로 확장** | 섹션 13.2: 토픽 분리 + WalletNotificationChannel 참조. 상세 구현은 doc 75 섹션 5 |
 
 ---
 

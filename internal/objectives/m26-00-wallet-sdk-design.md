@@ -89,7 +89,7 @@ WAIaaS 데몬에서 서명 요청을 생성하고 응답을 처리하는 컴포�
 
 - 각 컴포넌트 인터페이스 + 책임 정의
 - ApprovalChannelRouter 라우팅 로직 (지갑별 설정 > 글로벌 fallback)
-- config.toml [signing_sdk] 섹션 스키마
+- Admin Settings signing_sdk 설정 항목 (SettingsService 기반, config.toml 불필요)
 - wallets 테이블 owner_approval_method 컬럼 추가 설계
 
 ---
@@ -102,7 +102,7 @@ WAIaaS 데몬에서 서명 요청을 생성하고 응답을 처리하는 컴포�
 
 | 항목 | 내용 |
 |------|------|
-| 대상 | 기존 17개 NotificationEventType 전체 |
+| 대상 | 기존 25개 NotificationEventType 전체 |
 | 토픽 분리 | 서명 요청 토픽 (m26-01) + 일반 알림 토픽 (m26-02) |
 | SDK 확장 | subscribeToNotifications() — 알림 구독 API |
 | Admin UI | 알림 채널 설정에 "Wallet App" 옵션 추가 |
@@ -189,6 +189,7 @@ IPushProvider
 ---
 
 *생성일: 2026-02-15*
+*최종 수정: 2026-02-19 — 코드베이스 실측 반영 (config.toml → Admin Settings, 선행 마일스톤 현행화)*
 *범위: 설계 마일스톤 — 코드 구현은 m26-01~m26-03에서 수행*
-*선행: m20 (릴리스)*
+*선행: v2.0 (릴리스), m25-00 (DX 품질 개선) 완료*
 *관련: WAIaaS Signing Protocol v1, ntfy, 유니버셜 링크*

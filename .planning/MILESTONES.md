@@ -1168,3 +1168,29 @@
 
 ---
 
+
+## v2.6 Wallet SDK 설계 (Shipped: 2026-02-20)
+
+**Delivered:** 지갑 개발사(D'CENT 등)가 WAIaaS와 통합하기 위한 Wallet Signing SDK, 개방형 서명 프로토콜, 지갑 앱 알림 채널, Push Relay Server의 공통 설계를 확정. 설계 문서 3개 신규(73/74/75) + 기존 4개(35/37/25/67) 갱신, 교차 검증 5항목 PASS, 설계 부채 0건 유지.
+
+**Phases completed:** 198-201 (4 phases, 7 plans, 15 tasks, 23 requirements)
+
+**Key accomplishments:**
+
+- WAIaaS Signing Protocol v1 설계서 완성 (doc 73, 12개 섹션 1,465줄 — SignRequest/SignResponse Zod 스키마, EIP-191/Ed25519 서명 포맷, 유니버셜 링크, ntfy/Telegram 채널 프로토콜, 5가지 위협 분석 보안 모델, 8개 에러 코드)
+- @waiaas/wallet-sdk + 데몬 컴포넌트 설계서 완성 (doc 74, 11개 섹션 ~2,450줄 — SDK 8개 공개 API 시그니처, WalletLinkConfig Zod 스키마, ISigningChannel 공통 인터페이스, ApprovalChannelRouter 5단계 fallback)
+- 알림 채널 + Push Relay Server 설계서 완성 (doc 75, 13개 섹션 ~2,500줄 — 서명/알림 토픽 분리, NotificationMessage 6카테고리, IPushProvider 인터페이스, Pushwoosh/FCM, ntfy SSE, Docker 멀티스테이지)
+- 기존 설계 문서 4개(35/37/25/67) v2.6 통합 + 교차 검증 5항목 PASS, 설계 부채 0건 유지
+- 34개 설계 결정 확정 (프로토콜 11 + SDK 4 + 데몬 7 + 알림 7 + Push Relay 5)
+
+**Stats:**
+
+- 4 phases, 7 plans, 15 tasks, 23 requirements
+- 33 commits, 55 files changed, +10,435 / -324 lines
+- Timeline: 1 day (2026-02-19 → 2026-02-20)
+- Git range: d91a92f → af0999d
+
+**What's next:** 후속 구현 마일스톤 (m26-01 Wallet Signing SDK 구현, m26-02 알림 채널 구현, m26-03 Push Relay Server 구현)
+
+---
+
