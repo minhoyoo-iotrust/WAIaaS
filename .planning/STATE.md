@@ -31,6 +31,7 @@ v2.6.1은 설계를 코드로 실현. Push Relay Server는 범위 밖 (ntfy 직�
 202-02: Injectable verify functions (EvmVerifyFn/SolanaVerifyFn) for testability. ApprovalWorkflow bypass (same as Telegram bot). Solana verification via @solana/kit (not tweetnacl). DB chain='ethereum' not 'evm'.
 202-03: node>=18 engine for wallet SDK (React Native compat). ReadableStream SSE parsing (cross-platform). sendViaTelegram returns URL only (platform detection is wallet app's job).
 202-04: AsyncGenerator SSE parsing for NtfySigningChannel. Reconnect max 3 attempts 5s delay. Response filtering by requestId. ISigningChannel interface for future channels.
+203-01: TelegramSigningChannel is one-way push (no SSE); response via /sign_response bot command. Added url property to TelegramInlineKeyboardButton. /sign_response requires ADMIN tier.
 203-02: Three-state protocol (undefined=preserve, null=clear, string=save) for approval_method. approvalMethod in both WalletOwnerResponseSchema and WalletDetailResponseSchema.
 
 ### Blockers/Concerns
@@ -40,5 +41,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 203-02-PLAN.md
+Stopped at: Completed 203-01-PLAN.md (TelegramSigningChannel + /sign_response)
 Resume file: None
