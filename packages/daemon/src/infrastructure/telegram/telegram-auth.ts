@@ -22,7 +22,7 @@ import type { TelegramUserRole } from './telegram-types.js';
 
 export const PUBLIC_COMMANDS = ['/start', '/help'] as const;
 export const READONLY_COMMANDS = ['/status', '/wallets'] as const;
-export const ADMIN_COMMANDS = ['/pending', '/approve', '/reject', '/killswitch', '/newsession'] as const;
+export const ADMIN_COMMANDS = ['/pending', '/approve', '/reject', '/killswitch', '/newsession', '/sign_response'] as const;
 
 // ---------------------------------------------------------------------------
 // TelegramAuth
