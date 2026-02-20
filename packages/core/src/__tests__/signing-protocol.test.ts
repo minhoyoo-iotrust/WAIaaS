@@ -26,7 +26,11 @@ import {
   buildUniversalLinkUrl,
   WAIaaSError,
   ERROR_CODES,
+  EVENT_CATEGORY_MAP,
+  NOTIFICATION_CATEGORIES,
+  NotificationMessageSchema,
 } from '../index.js';
+import { NOTIFICATION_EVENT_TYPES } from '../enums/notification.js';
 import type {
   SignRequest,
   SignResponse,
@@ -416,5 +420,86 @@ describe('SIGNING domain error codes', () => {
   it('SIGN_REQUEST_ALREADY_PROCESSED has httpStatus 409', () => {
     const err = new WAIaaSError('SIGN_REQUEST_ALREADY_PROCESSED');
     expect(err.httpStatus).toBe(409);
+  });
+});
+
+describe('EVENT_CATEGORY_MAP', () => {
+  it('covers all 26 NotificationEventType values', () => {
+    for (const eventType of NOTIFICATION_EVENT_TYPES) {
+      expect(EVENT_CATEGORY_MAP[eventType]).toBeDefined();
+      expect(NOTIFICATION_CATEGORIES).toContain(EVENT_CATEGORY_MAP[eventType]);
+    }
+    expect(Object.keys(EVENT_CATEGORY_MAP)).toHaveLength(NOTIFICATION_EVENT_TYPES.length);
+  });
+
+  it('has no extra keys beyond NOTIFICATION_EVENT_TYPES', () => {
+    const mapKeys = new Set(Object.keys(EVENT_CATEGORY_MAP));
+    const enumKeys = new Set(NOTIFICATION_EVENT_TYPES as readonly string[]);
+    for (const key of mapKeys) {
+      expect(enumKeys.has(key)).toBe(true);
+    }
+  });
+});
+
+describe('NotificationMessageSchema', () => {
+  it('validates a correct NotificationMessage', () => {
+    const msg = {
+      version: '1' as const,
+      eventType: 'TX_CONFIRMED',
+      walletId: '01958f3a-1234-7000-8000-abcdef123456',
+      walletName: 'trading-bot',
+      category: 'transaction' as const,
+      title: 'Transaction Confirmed',
+      body: 'Your transaction has been confirmed',
+      timestamp: 1707000000,
+    };
+    const result = NotificationMessageSchema.safeParse(msg);
+    expect(result.success).toBe(true);
+  });
+
+  it('validates a NotificationMessage with optional details', () => {
+    const msg = {
+      version: '1' as const,
+      eventType: 'TX_CONFIRMED',
+      walletId: '01958f3a-1234-7000-8000-abcdef123456',
+      walletName: 'trading-bot',
+      category: 'transaction' as const,
+      title: 'Transaction Confirmed',
+      body: 'Your transaction has been confirmed',
+      details: { txHash: '0xabc123', amount: '1.5' },
+      timestamp: 1707000000,
+    };
+    const result = NotificationMessageSchema.safeParse(msg);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid category', () => {
+    const msg = {
+      version: '1',
+      eventType: 'TX_CONFIRMED',
+      walletId: 'id',
+      walletName: 'w',
+      category: 'invalid_category',
+      title: 'T',
+      body: 'B',
+      timestamp: 1707000000,
+    };
+    const result = NotificationMessageSchema.safeParse(msg);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid version', () => {
+    const msg = {
+      version: '2',
+      eventType: 'TX_CONFIRMED',
+      walletId: 'id',
+      walletName: 'w',
+      category: 'transaction',
+      title: 'T',
+      body: 'B',
+      timestamp: 1707000000,
+    };
+    const result = NotificationMessageSchema.safeParse(msg);
+    expect(result.success).toBe(false);
   });
 });
