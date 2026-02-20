@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 213 - 통합 레이어
+**Current focus:** Phase 214 - 검증 보고서 + SDK 타입 수정
 
 ## Current Position
 
-Phase: 213 of 213 (통합 레이어)
-Plan: 4 of 4 in current phase
-Status: Phase Complete
-Last activity: 2026-02-21 -- Completed 213-04-PLAN.md (Skill files + guides + notification events)
+Phase: 214 of 214 (검증 보고서 + SDK 타입 수정)
+Plan: 2 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-21 -- Completed 214-01-PLAN.md (Phase 212 VERIFICATION.md 생성)
 
-Progress: [##########] 100%
+Progress: [########--] 83%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [##########] 100%
 | 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
 | 212. 자기 발견 엔드포인트 | 2/2 | 9min | 4.5min |
 | 213. 통합 레이어 | 4/4 | 12min | 3.0min |
+| 214. 검증 보고서 + SDK 타입 수정 | 1/3 | 2min | 2.0min |
 
 ## Accumulated Context
 
@@ -73,6 +74,7 @@ Progress: [##########] 100%
 - MCP wallet_id: snake_case(MCP param) -> walletId camelCase(API) 변환 컨벤션
 - MCP GET tools: walletId query param, POST/PUT: body, DELETE: query param
 - MCP action-provider dynamic tools에도 wallet_id 추가 (일관성)
+- 212-VERIFICATION.md: 210-VERIFICATION.md 포맷 준수 (Observable Truths + Artifacts + Key Links + Requirements Coverage)
 
 ### Blockers/Concerns
 
@@ -81,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 213-04-PLAN.md (Skill files + guides + notification events)
+Stopped at: Completed 214-01-PLAN.md (Phase 212 VERIFICATION.md 생성)
 Resume file: None

@@ -244,4 +244,4 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 211 | 3/3 | Complete    | 2026-02-20 | - |
 | 212 | 2/2 | Complete   | 2026-02-20 | - |
 | 213 | 4/4 | Complete   | 2026-02-20 | - |
-| 214 | 0/3 | Pending    | - | - |
+| 214 | 1/3 | In Progress|  | - |
