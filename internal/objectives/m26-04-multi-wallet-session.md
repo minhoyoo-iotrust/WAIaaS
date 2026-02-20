@@ -81,11 +81,16 @@ CREATE INDEX idx_session_wallets_wallet ON session_wallets(wallet_id);
 - 기본 지갑 변경 시: 트랜잭션 내에서 기존 default 해제 → 새 default 설정
 - 기본 지갑 제거 시: 에러 반환 (먼저 기본 지갑을 변경해야 함)
 
+**지갑 삭제 cascade 방어**: `session_wallets`에 `ON DELETE CASCADE`가 설정되어 있으므로, wallets 테이블에서 지갑 삭제 시 해당 junction 행이 자동 삭제된다. 기본 지갑이 삭제되면 is_default 불변량이 파손될 수 있다. **방어 로직**: 지갑 삭제(TERMINATE) API 핸들러에서 삭제 전 `session_wallets`를 조회하여, 해당 지갑이 어떤 세션의 is_default인 경우 (1) 다른 지갑이 있으면 자동으로 다음 지갑을 default로 승격, (2) 마지막 지갑이면 세션을 자동 revoke한다.
+
 `sessions.wallet_id` 컬럼은 **마이그레이션 과정에서 제거**:
-1. `session_wallets`에 기존 `sessions.wallet_id` 데이터 이관 (`is_default = 1`)
-2. `sessions.wallet_id` 컬럼 삭제
+1. `session_wallets` 테이블 생성
+2. 기존 `sessions.wallet_id` 데이터를 `session_wallets`에 이관 (`is_default = 1`)
+3. `sessions.wallet_id` 컬럼 삭제
 
 > **SQLite 호환성**: `ALTER TABLE DROP COLUMN`은 SQLite 3.35.0+ 필요. better-sqlite3가 번들하는 SQLite 버전을 확인하고, 미지원 시 테이블 재생성(CREATE new → INSERT → DROP old → RENAME) 전략을 사용한다.
+
+**Drizzle 스키마 동기화 전략**: 마이그레이션 적용 후 `schema.ts`의 `sessions` 테이블에서 `walletId` 컬럼을 **즉시 제거**하고 `session_wallets` 테이블 정의를 추가한다. `getCreateTableStatements()`의 sessions DDL에서도 `wallet_id` 컬럼을 제거하고 `session_wallets` CREATE 문을 추가한다. `LATEST_SCHEMA_VERSION`을 19로 올린다.
 
 #### JWT 변경
 
@@ -98,15 +103,22 @@ CREATE INDEX idx_session_wallets_wallet ON session_wallets(wallet_id);
 
 #### Session Auth 미들웨어 변경
 
+`session-auth.ts`에서 `c.set('sessionId', payload.sub)`는 이미 존재한다. 변경점은 **`walletId` → `defaultWalletId`** 치환뿐이다:
+
 ```typescript
-// Before (session-auth.ts)
+// Before (session-auth.ts:66-67)
+c.set('sessionId', payload.sub);
 c.set('walletId', payload.wlt);  // JWT에서 단일 지갑
 
 // After
-c.set('sessionId', payload.sub);
-c.set('defaultWalletId', payload.wlt);  // 기본 지갑 (하위 호환)
-// walletId는 요청 파라미터 또는 기본 지갑에서 결정
+c.set('sessionId', payload.sub);                 // 기존 유지
+c.set('defaultWalletId', payload.wlt);            // walletId → defaultWalletId 변경
+// walletId는 요청 파라미터 또는 기본 지갑에서 resolveWalletId()로 결정
 ```
+
+#### Owner Auth 미들웨어 변경
+
+`owner-auth.ts:71`에서 `c.get('walletId')` → `c.get('defaultWalletId')`로 변경. 세션 토큰 기반 Owner 인증 시 기본 지갑을 사용하되, 명시적 `walletId` 파라미터가 있으면 이를 우선한다.
 
 ### 2. API 변경
 
@@ -129,9 +141,11 @@ POST /v1/transactions/send { walletId }   → 특정 지갑으로 전송
 세션에 연결되지 않은 지갑 요청 시 에러:
 
 ```typescript
-// 미들웨어 또는 헬퍼
-function resolveWalletId(c: Context): string {
-  const requested = c.req.query('walletId') ?? c.req.body?.walletId;
+// 헬퍼 함수 (라우트 핸들러에서 호출)
+function resolveWalletId(c: Context, bodyWalletId?: string): string {
+  // 우선순위: (1) body walletId → (2) query walletId → (3) 기본 지갑
+  // POST 요청은 body에서, GET 요청은 query에서 walletId를 지정한다.
+  const requested = bodyWalletId ?? c.req.query('walletId');
   const walletId = requested ?? c.get('defaultWalletId');
 
   // session_wallets 테이블에서 접근 권한 확인
@@ -145,6 +159,8 @@ function resolveWalletId(c: Context): string {
   return walletId;
 }
 ```
+
+> **walletId 파라미터 규칙**: POST/PUT 요청은 **body의 `walletId` 필드**만 사용하고 쿼리 파라미터를 허용하지 않는다. GET/DELETE 요청은 **쿼리 파라미터 `?walletId=`**만 사용한다. 두 곳에 동시 지정하는 상황은 발생하지 않는다.
 
 #### 세션 생성 API 변경
 
@@ -177,6 +193,44 @@ GET    /v1/sessions/:id/wallets                                        → 연�
 | 기본 지갑 제거 시도 | 400 `CANNOT_REMOVE_DEFAULT_WALLET` (먼저 PATCH로 기본 지갑 변경 필요) |
 | 마지막 지갑 제거 시도 | 400 `SESSION_REQUIRES_WALLET` (최소 1개 지갑 필요) |
 
+#### 세션 갱신 (renewal) 변경
+
+현재 `PUT /sessions/:id/renew` 핸들러가 `session.walletId`로 새 JWT의 `wlt` 클레임을 생성한다. `wallet_id` 컬럼 제거 후에는 `session_wallets` 테이블에서 `is_default = 1`인 지갑 ID를 조회하여 JWT `wlt` 클레임에 설정한다.
+
+```typescript
+// Before (sessions.ts:200)
+const jwtPayload: JwtPayload = { sub: sessionId, wlt: session.walletId, ... };
+
+// After
+const defaultWallet = db.select().from(sessionWallets)
+  .where(and(eq(sessionWallets.sessionId, session.id), eq(sessionWallets.isDefault, 1)))
+  .get();
+const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWallet!.walletId, ... };
+```
+
+#### 세션 목록 API 응답 변경
+
+`GET /sessions` 응답에서 `walletId: string` → `wallets: Array<{ id, name, isDefault }>` 배열로 변경. 하위 호환을 위해 `walletId`(기본 지갑)와 `walletName`(기본 지갑 이름) 필드도 유지한다.
+
+```typescript
+// 응답 예시
+{
+  "id": "sess_abc",
+  "walletId": "wallet-1",       // 하위 호환: 기본 지갑
+  "walletName": "Solana Main",  // 하위 호환: 기본 지갑 이름
+  "wallets": [                  // 신규: 연결된 전체 지갑 목록
+    { "id": "wallet-1", "name": "Solana Main", "isDefault": true },
+    { "id": "wallet-2", "name": "Ethereum", "isDefault": false }
+  ],
+  "status": "ACTIVE",
+  ...
+}
+```
+
+#### max_sessions_per_wallet 의미 변경
+
+현재 `sessions.wallet_id`로 지갑당 활성 세션 수를 체크한다(`sessions.ts:170-180`). `wallet_id` 컬럼 제거 후에는 `session_wallets` 조인으로 변경한다. 의미: **해당 지갑이 포함된 활성 세션 수**를 카운트한다. 멀티 지갑 세션 생성 시 `walletIds` 배열의 **각 지갑마다** 활성 세션 수를 체크하여 어느 하나라도 한도를 초과하면 `SESSION_LIMIT_EXCEEDED`를 반환한다.
+
 #### 세션 constraints와 멀티 지갑
 
 현재 세션의 `constraints` 필드(JSON)는 **세션 전체에 적용**된다 (지갑별 분리 없음). 지갑별 제한은 기존 **정책(policies)** 으로 관리한다. constraints는 세션 레벨 제약(시간 제한, 총 트랜잭션 수 등)을 담당한다.
@@ -194,7 +248,7 @@ GET /v1/connect-info    (sessionAuth)
 {
   "session": {
     "id": "sess_abc123",
-    "expiresAt": "2026-03-01T00:00:00Z",
+    "expiresAt": 1740787200,
     "source": "api"
   },
   "wallets": [
@@ -255,6 +309,24 @@ GET /v1/connect-info    (sessionAuth)
 | **Admin UI** | 세션 생성 폼에서 다중 지갑 선택 체크박스. 세션 상세에서 연결된 지갑 목록 표시 |
 | **CLI** | `waiaas quickset`이 생성하는 세션에 모든 지갑 자동 연결 |
 | **Skills** | `quickstart.skill.md`에서 `connect-info` 사용법 안내 추가 |
+| **agent-prompt** | `POST /admin/agent-prompt` 라우트가 현재 **지갑당 개별 세션**을 생성하므로(`admin.ts:1940-1966`), 단일 멀티 지갑 세션 + 단일 토큰을 반환하도록 변경. 프롬프트 생성 로직은 connect-info 빌더와 공유 |
+
+#### 알림 이벤트 walletId 처리
+
+현재 `notify('SESSION_CREATED', walletId, ...)` 호출에서 두 번째 파라미터가 walletId이다. 멀티 지갑 세션 생성 시 **기본 지갑의 walletId**로 알림을 발송한다. 지갑 동적 추가/제거 시에는 해당 지갑의 walletId로 `SESSION_WALLET_ADDED` / `SESSION_WALLET_REMOVED` 이벤트를 발송한다.
+
+---
+
+## 신규 에러 코드
+
+`error-codes.ts`에 다음 4개 에러 코드를 추가한다:
+
+| 코드 | 도메인 | HTTP | retryable | 메시지 |
+|------|--------|------|-----------|--------|
+| `WALLET_ACCESS_DENIED` | SESSION | 403 | false | Wallet not accessible from this session |
+| `WALLET_ALREADY_LINKED` | SESSION | 409 | false | Wallet already linked to this session |
+| `CANNOT_REMOVE_DEFAULT_WALLET` | SESSION | 400 | false | Cannot remove default wallet (change default first) |
+| `SESSION_REQUIRES_WALLET` | SESSION | 400 | false | Session must have at least one wallet |
 
 ---
 
@@ -317,7 +389,7 @@ GET /v1/connect-info    (sessionAuth)
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 18 | 기본 지갑 변경 | `PATCH /sessions/:id/wallets/w2/default` → 이후 walletId 미지정 요청이 w2 사용 assert | [L0] |
+| 18 | 기본 지갑 변경 | `PATCH /v1/sessions/:id/wallets/w2/default` → 이후 walletId 미지정 요청이 w2 사용 assert | [L0] |
 | 19 | 기본 지갑 제거 차단 | `DELETE /sessions/:id/wallets/w1` (기본 지갑) → 400 CANNOT_REMOVE_DEFAULT_WALLET assert | [L0] |
 | 20 | 마지막 지갑 제거 차단 | 지갑 1개 세션에서 `DELETE` → 400 SESSION_REQUIRES_WALLET assert | [L0] |
 | 21 | 존재하지 않는 지갑 추가 | `POST /sessions/:id/wallets { walletId: "invalid" }` → 404 WALLET_NOT_FOUND assert | [L0] |
@@ -419,7 +491,7 @@ m26-04 완료 시 다음 문서를 갱신한다:
 | 페이즈 | 3-4개 (설계 → 세션 모델 → API 변경 → 자기 발견 + SDK/MCP) |
 | 신규 파일 | 3-5개 (junction 스키마, resolveWalletId 헬퍼, connect-info 라우트, SDK 메서드) |
 | 수정 파일 | 15-20개 (세션 CRUD, 미들웨어, 전체 /v1/wallet/* 라우트, SDK, MCP, Admin UI, CLI) |
-| 테스트 | 22개 |
+| 테스트 | 36개 (E2E) + 단위 테스트 5대상 |
 | DB 마이그레이션 | 1건 (session_wallets 테이블 + 기존 데이터 이관) |
 
 ---
