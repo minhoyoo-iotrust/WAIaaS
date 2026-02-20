@@ -184,7 +184,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 212-01-PLAN.md — connect-info 라우트 + 응답 빌더 (지갑/정책/capabilities/prompt)
+- [x] 212-01-PLAN.md — connect-info 라우트 + 응답 빌더 (지갑/정책/capabilities/prompt)
 - [ ] 212-02-PLAN.md — agent-prompt 통합 (멀티 지갑 세션 생성 + 프롬프트 빌더 공유) + 테스트
 
 ### Phase 213: 통합 레이어

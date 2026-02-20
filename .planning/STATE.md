@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 211 - API 레이어 지갑 선택
+**Current focus:** Phase 212 - 자기 발견 엔드포인트
 
 ## Current Position
 
-Phase: 211 of 213 (API 레이어 지갑 선택)
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-21 -- Completed 211-02-PLAN.md (endpoint walletId selection migration + integration tests)
+Phase: 212 of 213 (자기 발견 엔드포인트)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-21 -- Completed 212-01-PLAN.md (GET /v1/connect-info endpoint + schema + server integration)
 
 Progress: [##########] 100%
 
@@ -26,7 +26,7 @@ Progress: [##########] 100%
 |-------|-------|-------|----------|
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
 | 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
-| 212. 자기 발견 엔드포인트 | 0/2 | - | - |
+| 212. 자기 발견 엔드포인트 | 1/2 | 3min | 3min |
 | 213. 통합 레이어 | 0/4 | - | - |
 
 ## Accumulated Context
@@ -54,6 +54,9 @@ Progress: [##########] 100%
 - POST body walletId: OpenAPI 스키마에 optional 필드로 추가 (TxSignRequest, x402 fetch, ActionExecuteRequest)
 - cancel 핸들러: verifyWalletAccess(sessionId, tx.walletId) 패턴 사용 (resolveWalletId 대신)
 - BetterSQLite3Database<any> 타입 확장으로 typed/untyped DB 인스턴스 호환
+- connect-info: policies grouped by walletId, capabilities dynamically computed (transfer/token_transfer/balance/assets + sign/actions/x402)
+- signing_sdk capability: settingsService.get() 사용 (DaemonConfig에 signing_sdk 섹션 없음)
+- buildConnectInfoPrompt: 재사용 가능 함수로 분리 (Plan 02 agent-prompt에서 재사용)
 
 ### Blockers/Concerns
 
@@ -62,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 211-02-PLAN.md (endpoint walletId selection migration + 10 integration tests)
+Stopped at: Completed 212-01-PLAN.md (GET /v1/connect-info endpoint + schema + server integration)
 Resume file: None
