@@ -768,11 +768,20 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 4 페이즈, 13 플랜, 2
 | Signing SDK fail-soft lifecycle (fire-and-forget) | enabled=false 시 스킵, 데몬 정상 동작 보장 | ✓ Good — v2.6.1 구현 |
 | Direct getAllMasked() return (z.infer assertion) | 카테고리 체리피킹 대신 직접 반환, 11개 카테고리 자동 노출 | ✓ Good — v2.6.1 구현 |
 
+## Current Milestone: v2.7 지갑 앱 알림 채널
+
+**Goal:** D'CENT 등 WAIaaS SDK 통합 지갑 앱에서 모든 알림(26개 이벤트)을 수신하여, Telegram 없이 지갑 앱 하나로 알림 수신 + 승인/거부까지 완결되는 UX 제공
+
+**Target features:**
+- NotificationMessageSchema + EVENT_CATEGORY_MAP (core 스키마, 26개 이벤트 → 6개 카테고리)
+- WalletNotificationChannel (데몬 사이드 채널, 기존 알림 시스템과 독립 병행)
+- subscribeToNotifications() / parseNotification() (wallet-sdk 알림 구독 API)
+- SettingsService 3개 키 (notifications_enabled, ntfy_notify_topic_prefix, notify_categories)
+- Admin Settings notify_categories 멀티셀렉트 체크박스 위젯
+
 ## Shipped: v2.6.1 WAIaaS Wallet Signing SDK
 
 v2.6.1 WAIaaS Wallet Signing SDK shipped. Signing Protocol v1 + @waiaas/wallet-sdk + 다중 서명 채널 + 데몬 라이프사이클 완전 연결 완료.
 
-**Next milestone:** TBD — `/gsd:new-milestone`로 정의
-
 ---
-*최종 업데이트: 2026-02-20 after v2.6.1 milestone shipped*
+*최종 업데이트: 2026-02-20 after v2.7 milestone started*
