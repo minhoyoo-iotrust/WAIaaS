@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 203 of 203 (Telegram 채널 + 채널 라우팅 + REST API + Admin UI)
-Plan: 3 of 4 in current phase
-Status: Executing
-Last activity: 2026-02-20 -- 203-03 complete (ApprovalChannelRouter)
+Plan: 4 of 4 in current phase
+Status: Phase Complete
+Last activity: 2026-02-20 -- 203-04 complete (Admin Approval Method UI)
 
-Progress: [#######░░░] 75%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ v2.6.1은 설계를 코드로 실현. Push Relay Server는 범위 밖 (ntfy 직�
 203-01: TelegramSigningChannel is one-way push (no SSE); response via /sign_response bot command. Added url property to TelegramInlineKeyboardButton. /sign_response requires ADMIN tier.
 203-02: Three-state protocol (undefined=preserve, null=clear, string=save) for approval_method. approvalMethod in both WalletOwnerResponseSchema and WalletDetailResponseSchema.
 203-03: ApprovalChannelRouter uses raw better-sqlite3 for wallet lookup. Non-SDK methods return null channelResult. SDK errors propagate (no silent fallback).
+203-04: ApprovalSettingsInfo interface for infrastructure detection. sdk_ntfy/sdk_telegram check signing_sdk.enabled (not ntfy_topic). handleApprovalMethodChange uses ?? null for explicit Auto clear.
 
 ### Blockers/Concerns
 
@@ -42,5 +43,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 203-03-PLAN.md (ApprovalChannelRouter + unit tests)
+Stopped at: Completed 203-04-PLAN.md (Admin Approval Method UI)
 Resume file: None

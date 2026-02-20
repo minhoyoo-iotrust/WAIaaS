@@ -97,7 +97,7 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 **Milestone Goal:** v2.6 설계(docs 73-75)를 코드로 실현하여, 지갑 개발사가 @waiaas/wallet-sdk를 통합하고 Owner가 지갑 앱에서 트랜잭션을 승인/거부할 수 있는 상태 달성
 
 - [x] **Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널** - SignRequest/Response Zod 스키마, 데몬 측 Builder/Handler, WalletLinkRegistry, DB 마이그레이션, SettingsService 키, NtfySigningChannel, @waiaas/wallet-sdk 신규 패키지 (completed 2026-02-20)
-- [ ] **Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI** - TelegramSigningChannel, ApprovalChannelRouter 5단계 우선순위, PUT /wallets/:id/owner approval_method 확장, Admin UI Owner 승인 방법 설정
+- [x] **Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI** - TelegramSigningChannel, ApprovalChannelRouter 5단계 우선순위, PUT /wallets/:id/owner approval_method 확장, Admin UI Owner 승인 방법 설정 (completed 2026-02-20)
 
 ## Phase Details
 
@@ -150,4 +150,4 @@ Plans:
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
 | 202 | v2.6.1 | 4/4 | Complete | 2026-02-20 |
-| 203 | 3/4 | In Progress|  | - |
+| 203 | 4/4 | Complete   | 2026-02-20 | - |
