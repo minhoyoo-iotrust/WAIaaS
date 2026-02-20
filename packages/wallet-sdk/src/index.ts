@@ -39,4 +39,5 @@ export type {
   SignRequest,
   SignResponse,
   WalletLinkConfig,
+  NotificationMessage,
 } from '@waiaas/core';

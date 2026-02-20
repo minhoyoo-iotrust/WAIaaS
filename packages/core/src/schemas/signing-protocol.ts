@@ -11,7 +11,7 @@
  */
 
 import { z } from 'zod';
-import { NOTIFICATION_EVENT_TYPES, type NotificationEventType } from '../enums/notification.js';
+import type { NotificationEventType } from '../enums/notification.js';
 
 // ---------------------------------------------------------------------------
 // Approval Methods
