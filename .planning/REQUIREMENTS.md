@@ -9,11 +9,11 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 ### Signing Protocol (PROTO)
 
-- [ ] **PROTO-01**: PENDING_APPROVAL 트랜잭션에서 SignRequest를 생성하여 유니버셜 링크 URL로 인코딩할 수 있다
+- [x] **PROTO-01**: PENDING_APPROVAL 트랜잭션에서 SignRequest를 생성하여 유니버셜 링크 URL로 인코딩할 수 있다
 - [x] **PROTO-02**: SignRequest를 Zod 스키마로 검증하고 base64url로 인코딩/디코딩할 수 있다
-- [ ] **PROTO-03**: SignResponse를 수신하여 requestId 매칭, 만료 체크, 서명 검증(ownerAuth 재사용) 후 트랜잭션을 승인/거부할 수 있다
-- [ ] **PROTO-04**: 만료된 요청(expiresAt 초과)에 대해 SIGN_REQUEST_EXPIRED 에러를 반환한다
-- [ ] **PROTO-05**: 잘못된 서명값에 대해 INVALID_SIGNATURE 에러를 반환한다
+- [x] **PROTO-03**: SignResponse를 수신하여 requestId 매칭, 만료 체크, 서명 검증(ownerAuth 재사용) 후 트랜잭션을 승인/거부할 수 있다
+- [x] **PROTO-04**: 만료된 요청(expiresAt 초과)에 대해 SIGN_REQUEST_EXPIRED 에러를 반환한다
+- [x] **PROTO-05**: 잘못된 서명값에 대해 INVALID_SIGNATURE 에러를 반환한다
 
 ### Signing Channels (CHAN)
 
@@ -71,11 +71,11 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROTO-01 | Phase 202 | Pending |
+| PROTO-01 | Phase 202 | Complete |
 | PROTO-02 | Phase 202 | Complete |
-| PROTO-03 | Phase 202 | Pending |
-| PROTO-04 | Phase 202 | Pending |
-| PROTO-05 | Phase 202 | Pending |
+| PROTO-03 | Phase 202 | Complete |
+| PROTO-04 | Phase 202 | Complete |
+| PROTO-05 | Phase 202 | Complete |
 | CHAN-01 | Phase 202 | Pending |
 | CHAN-02 | Phase 202 | Pending |
 | CHAN-03 | Phase 203 | Pending |

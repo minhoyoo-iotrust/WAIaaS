@@ -28,6 +28,7 @@ Full log in PROJECT.md and milestones/.
 v2.6 설계 완료 (docs 73-75): Signing Protocol v1, SDK + Daemon Components, Notification + Push Relay.
 v2.6.1은 설계를 코드로 실현. Push Relay Server는 범위 밖 (ntfy 직접 통신 우선).
 202-01: Error count 100 (baseline 93, not 74). CHECK constraint on owner_approval_method in fresh DDL. WalletLinkRegistry uses JSON in SettingsService. i18n messages added for all SIGNING codes.
+202-02: Injectable verify functions (EvmVerifyFn/SolanaVerifyFn) for testability. ApprovalWorkflow bypass (same as Telegram bot). Solana verification via @solana/kit (not tweetnacl). DB chain='ethereum' not 'evm'.
 202-03: node>=18 engine for wallet SDK (React Native compat). ReadableStream SSE parsing (cross-platform). sendViaTelegram returns URL only (platform detection is wallet app's job).
 
 ### Blockers/Concerns
