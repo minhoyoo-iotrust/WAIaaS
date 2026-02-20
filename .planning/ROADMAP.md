@@ -219,8 +219,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 214-01-PLAN.md — Phase 212 VERIFICATION.md 생성 (DISC-01~04 코드 검증)
-- [ ] 214-02-PLAN.md — Phase 213 VERIFICATION.md 생성 (INTG-01~10 코드 검증)
+- [x] 214-01-PLAN.md — Phase 212 VERIFICATION.md 생성 (DISC-01~04 코드 검증)
+- [x] 214-02-PLAN.md — Phase 213 VERIFICATION.md 생성 (INTG-01~10 코드 검증)
 - [ ] 214-03-PLAN.md — SDK ConnectInfoResponse 타입 수정 + 테스트
 
 ## Progress
@@ -244,4 +244,4 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 211 | 3/3 | Complete    | 2026-02-20 | - |
 | 212 | 2/2 | Complete   | 2026-02-20 | - |
 | 213 | 4/4 | Complete   | 2026-02-20 | - |
-| 214 | 1/3 | In Progress|  | - |
+| 214 | 2/3 | In Progress|  | - |
