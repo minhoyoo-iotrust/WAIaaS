@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 211 of 213 (API 레이어 지갑 선택)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-02-21 -- Completed 211-01-PLAN.md (resolveWalletId helper + middleware changes)
+Last activity: 2026-02-21 -- Completed 211-03-PLAN.md (session response backward compat tests)
 
-Progress: [####░░░░░░] 33%
+Progress: [#######░░░] 67%
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [####░░░░░░] 33%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
-| 211. API 레이어 지갑 선택 | 1/3 | 2min | 2min |
+| 211. API 레이어 지갑 선택 | 2/3 | 5min | 2.5min |
 | 212. 자기 발견 엔드포인트 | 0/2 | - | - |
 | 213. 통합 레이어 | 0/4 | - | - |
 
@@ -49,6 +49,8 @@ Progress: [####░░░░░░] 33%
 - CASCADE 방어: 지갑 상태 변경 전에 session_wallets 처리 (promote/revoke -> delete junction -> cancel txs -> TERMINATED)
 - 자동 승격: created_at ASC 순서로 가장 먼저 연결된 지갑이 기본 지갑으로 승격
 - 마지막 지갑 삭제 시 세션 자동 revoke (revokedAt 설정)
+- SessionRenewResponseSchema에 walletId 미포함 (의도적: JWT wlt 클레임이 기본 지갑 정보 전달)
+- OpenAPI 스키마는 Phase 210-02에서 이미 정합 완료 (211-03에서 변경 불필요)
 
 ### Blockers/Concerns
 
@@ -57,5 +59,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 211-01-PLAN.md (resolveWalletId helper + middleware changes)
+Stopped at: Completed 211-03-PLAN.md (session response backward compat tests)
 Resume file: None
