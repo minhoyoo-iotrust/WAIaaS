@@ -60,8 +60,10 @@ After (변경):
 
 **변경 범위:**
 - `packages/daemon/src/services/signing-sdk/channels/ntfy-signing-channel.ts` — publish 형식 변경
-- `packages/wallet-sdk/src/channels/ntfy.ts` — `subscribeToRequests()`가 base64url 디코딩 사용 (기존 `parseSignRequest` 패턴 재사용)
+- `packages/wallet-sdk/src/channels/ntfy.ts` — `subscribeToRequests()`는 이미 base64url 디코딩을 사용 중 (`Buffer.from(event.message, 'base64url')`, `parseNotification()`과 동일 패턴). **SDK 파싱 로직 변경 불필요** — 데몬 publish 형식만 변경하면 기존 SDK와 호환됨
 - 기존 테스트 업데이트
+
+> **참고:** 현재 NtfySigningChannel은 JSON body(`{ topic, message, title, ... }`)로 publish하고, WalletNotificationChannel은 raw HTTP body + headers(`Priority`, `Title`, `Tags`)로 publish한다. 인코딩 통일 시 publish 방식도 통일하여 Relay 파서의 일관성을 확보한다.
 
 **장점:** 서명 요청과 알림 모두 동일한 base64url 인코딩 패턴 → Relay 파서가 단일 로직으로 처리 가능. ntfy 데스크톱 알림 UI에는 `title` (displayMessage)이 표시되어 사용자 경험 유지.
 
@@ -331,7 +333,7 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 | 4 | ntfy 구독 방식 | SSE (EventSource) | WebSocket보다 단순, HTTP/2 호환, 재연결 로직 간단 |
 | 5 | 배포 방식 | Docker + docker-compose | 지갑 개발사가 자체 인프라에 원클릭 배포 가능 |
 | 6 | 운영 주체 | 지갑 개발사 | WAIaaS self-hosted 원칙 유지. Relay Server는 지갑사의 푸시 인증 정보를 사용하므로 지갑사가 운영 |
-| 7 | SignRequest 인코딩 통일 | base64url (알림과 동일) | Relay 파서 단일화, ntfy title에 displayMessage 표시로 UX 유지, wallet-sdk parseSignRequest 패턴 재사용 |
+| 7 | SignRequest 인코딩 통일 | base64url (알림과 동일) | Relay 파서 단일화, ntfy title에 displayMessage 표시로 UX 유지, wallet-sdk `subscribeToRequests()`가 이미 base64url 디코딩 사용 중이므로 SDK 변경 불필요 |
 | 8 | 토픽 식별자 | walletName (walletId 아님) | 데몬 구현(sign-request-builder.ts:162, wallet-notification-channel.ts:125)이 walletName 기반 |
 
 ---
@@ -400,7 +402,7 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 |----------|------|------|
 | m26-01 (Signing SDK) | ✅ SHIPPED (v2.6.1) | ntfy 서명 토픽 구조, SignRequest 스키마 |
 | m26-02 (알림 채널) | ✅ SHIPPED (v2.7) | ntfy 알림 토픽 구조, NotificationMessage 스키마 |
-| **동일 ntfy 서버** | 운영 요구 | WAIaaS 데몬과 Relay가 같은 ntfy 서버를 바라봐야 함. 데몬의 `signing_sdk.ntfy_server`와 Relay의 `relay.ntfy_server`가 일치해야 토픽 메시지 수신 가능 |
+| **동일 ntfy 서버** | 운영 요구 | WAIaaS 데몬과 Relay가 같은 ntfy 서버를 바라봐야 함. 데몬의 `notifications.ntfy_server`와 Relay의 `relay.ntfy_server`가 일치해야 토픽 메시지 수신 가능 |
 
 ---
 
@@ -412,7 +414,7 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 | 2 | ntfy SSE 장시간 연결 불안정 | 서명 요청 수신 지연 | 자동 재연결 + heartbeat 감지 (ntfy keepalive 30초) |
 | 3 | 디바이스 토큰 관리 부담 | 지갑사 추가 작업 | 토큰 등록 API 2개만 구현하면 완료. invalidTokens 자동 정리로 관리 최소화 |
 | 4 | wallet_names 수동 관리 | 지갑 이름변경/추가 시 config 수정 + 재시작 필요 | 초기 버전은 수동 관리. 동적 디스커버리는 후속 확장 |
-| 5 | SignRequest 인코딩 변경 | 기존 wallet-sdk subscribeToRequests 호환성 | wallet-sdk 동시 업데이트 + 테스트 검증 |
+| 5 | SignRequest 인코딩 변경 | 데몬 publish 형식 변경 시 기존 ntfy 직접 구독 클라이언트 호환성 | wallet-sdk `subscribeToRequests()`는 이미 base64url 디코딩을 사용 중이므로 SDK 호환성 문제 없음. 데몬 변경 + 테스트 검증으로 충분 |
 
 ---
 
@@ -468,7 +470,10 @@ m26-03 완료 시 다음 문서를 갱신한다:
     "packages/push-relay": {
       "release-type": "node",
       "component": "push-relay",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "versioning": "prerelease",
+      "prerelease": true,
+      "prerelease-type": "rc"
     }
   }
 }
@@ -485,7 +490,7 @@ m26-03 완료 시 다음 문서를 갱신한다:
 | npm-publish | `@waiaas/push-relay` npm OIDC Trusted Publishing (Sigstore provenance) |
 | docker-push-relay | **신규 job** — `waiaas/push-relay` Docker 이미지 빌드 + Docker Hub/GHCR dual push |
 
-> **release.yml 하드코딩 배열 업데이트**: 현재 npm publish/dry-run 배열이 4곳(L138, L163, L183, L323)에 하드코딩되어 있다. push-relay 추가 시 4곳 모두 업데이트 필요.
+> **release.yml 하드코딩 배열 업데이트**: 현재 npm publish/dry-run 배열이 5곳(L138, L163, L183, L292, L323)에 하드코딩되어 있다. push-relay 추가 시 5곳 모두 업데이트 필요.
 
 Docker 이미지 빌드:
 
@@ -521,6 +526,6 @@ CMD ["node", "dist/index.js"]
 ---
 
 *생성일: 2026-02-15*
-*수정일: 2026-02-20 — v2.7 코드베이스 대조 검증 (8건 이슈 수정)*
+*수정일: 2026-02-20 — v2.7 코드베이스 대조 검증 (8건 이슈 수정), 마일스톤 시작 전 검증 (5건 수정: release.yml 배열 5곳, config 키 notifications.ntfy_server, parseSignRequest→인라인 패턴, prerelease 키 누락, publish 방식 차이 명시)*
 *선행: m26-01 (Signing SDK, ✅ SHIPPED v2.6.1), m26-02 (알림 채널, ✅ SHIPPED v2.7)*
 *관련: Pushwoosh API (https://docs.pushwoosh.com), Firebase Cloud Messaging*
