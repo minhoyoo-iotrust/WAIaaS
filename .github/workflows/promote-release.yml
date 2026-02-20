@@ -84,4 +84,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "release-please will now create a stable Release PR on the next push to main." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "After the stable release is published, run the **Restore Prerelease Mode** workflow." >> $GITHUB_STEP_SUMMARY
+          echo "Prerelease mode will be **automatically restored** after the stable release deploys." >> $GITHUB_STEP_SUMMARY
+          echo "If auto-restore fails, run the **Restore Prerelease Mode** workflow manually." >> $GITHUB_STEP_SUMMARY

@@ -330,11 +330,13 @@ jobs:
     if: github.event_name == 'release'
     environment: production
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -429,3 +431,17 @@ jobs:
           echo "- **Commit:** [\`${GITHUB_SHA::7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
           echo "- **Workflow:** [release.yml#deploy](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
           echo "- **Sigstore:** Attestations logged in [Rekor transparency log](https://search.sigstore.dev/)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Restore prerelease mode (stable release only)
+        if: ${{ !contains(github.event.release.tag_name, '-rc.') }}
+        run: |
+          node scripts/promote-release.js --restore
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release-please-config.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: restore prerelease mode"
+            git push
+          else
+            echo "Prerelease mode already active, no changes needed"
+          fi

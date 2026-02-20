@@ -135,6 +135,7 @@
 | 118 | ENHANCEMENT | LOW | 에이전트 연동 가이드를 docs/guides/ 폴더로 이동 + README 링크 추가 | v26.3 | FIXED | 2026-02-20 |
 | 119 | MISSING | MEDIUM | wallet-sdk 연동 가이드에 Push Relay 시나리오 누락 | v26.4 | FIXED | 2026-02-21 |
 | 120 | ENHANCEMENT | MEDIUM | 정식 릴리스 승격을 GitHub Actions workflow_dispatch로 자동화 | v26.4 | FIXED | 2026-02-21 |
+| 121 | ENHANCEMENT | LOW | stable 릴리스 배포 후 prerelease 모드 자동 복원 | v26.4 | FIXED | 2026-02-21 |
 
 ## Type Legend
 
@@ -147,8 +148,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 120
+- **FIXED:** 121
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 120
+- **Total:** 121
