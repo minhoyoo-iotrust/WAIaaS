@@ -9,21 +9,21 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 ### Signing Protocol (PROTO)
 
-- [x] **PROTO-01**: PENDING_APPROVAL 트랜잭션에서 SignRequest를 생성하여 유니버셜 링크 URL로 인코딩할 수 있다
+- [ ] **PROTO-01**: PENDING_APPROVAL 트랜잭션에서 SignRequest를 생성하여 유니버셜 링크 URL로 인코딩할 수 있다
 - [x] **PROTO-02**: SignRequest를 Zod 스키마로 검증하고 base64url로 인코딩/디코딩할 수 있다
-- [x] **PROTO-03**: SignResponse를 수신하여 requestId 매칭, 만료 체크, 서명 검증(ownerAuth 재사용) 후 트랜잭션을 승인/거부할 수 있다
+- [ ] **PROTO-03**: SignResponse를 수신하여 requestId 매칭, 만료 체크, 서명 검증(ownerAuth 재사용) 후 트랜잭션을 승인/거부할 수 있다
 - [x] **PROTO-04**: 만료된 요청(expiresAt 초과)에 대해 SIGN_REQUEST_EXPIRED 에러를 반환한다
 - [x] **PROTO-05**: 잘못된 서명값에 대해 INVALID_SIGNATURE 에러를 반환한다
 
 ### Signing Channels (CHAN)
 
-- [x] **CHAN-01**: NtfySigningChannel이 ntfy 요청 토픽에 SignRequest를 publish하고 응답 토픽을 subscribe하여 SignResponse를 수신할 수 있다
-- [x] **CHAN-02**: NtfySigningChannel이 reject 응답 수신 시 트랜잭션을 CANCELLED 상태로 변경한다
-- [x] **CHAN-03**: TelegramSigningChannel이 유니버셜 링크 인라인 버튼이 포함된 메시지를 전송한다
-- [x] **CHAN-04**: TelegramSigningChannel이 /sign_response 명령어로 SignResponse를 수신하여 처리한다
-- [x] **CHAN-05**: ApprovalChannelRouter가 지갑별 owner_approval_method에 따라 올바른 채널로 라우팅한다
-- [x] **CHAN-06**: ApprovalChannelRouter가 owner_approval_method 미설정 시 글로벌 우선순위(SDK ntfy > SDK Telegram > WC > Telegram Bot > REST) fallback한다
-- [x] **CHAN-07**: SDK 채널 비활성(signing_sdk.enabled=false) 시 WalletConnect 또는 Telegram Bot으로 fallback한다
+- [ ] **CHAN-01**: NtfySigningChannel이 ntfy 요청 토픽에 SignRequest를 publish하고 응답 토픽을 subscribe하여 SignResponse를 수신할 수 있다
+- [ ] **CHAN-02**: NtfySigningChannel이 reject 응답 수신 시 트랜잭션을 CANCELLED 상태로 변경한다
+- [ ] **CHAN-03**: TelegramSigningChannel이 유니버셜 링크 인라인 버튼이 포함된 메시지를 전송한다
+- [ ] **CHAN-04**: TelegramSigningChannel이 /sign_response 명령어로 SignResponse를 수신하여 처리한다
+- [ ] **CHAN-05**: ApprovalChannelRouter가 지갑별 owner_approval_method에 따라 올바른 채널로 라우팅한다
+- [ ] **CHAN-06**: ApprovalChannelRouter가 owner_approval_method 미설정 시 글로벌 우선순위(SDK ntfy > SDK Telegram > WC > Telegram Bot > REST) fallback한다
+- [ ] **CHAN-07**: SDK 채널 비활성(signing_sdk.enabled=false) 시 WalletConnect 또는 Telegram Bot으로 fallback한다
 
 ### Wallet SDK (SDK)
 
@@ -36,17 +36,17 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 ### Wallet Settings (WALLET)
 
-- [x] **WALLET-01**: WalletLinkRegistry에 지갑 메타데이터(유니버셜 링크 base URL, 딥링크 스키마)를 등록하고 조회할 수 있다
+- [ ] **WALLET-01**: WalletLinkRegistry에 지갑 메타데이터(유니버셜 링크 base URL, 딥링크 스키마)를 등록하고 조회할 수 있다
 - [x] **WALLET-02**: 미등록 지갑 조회 시 WALLET_NOT_REGISTERED 에러를 반환한다
 - [x] **WALLET-03**: wallets 테이블에 owner_approval_method 컬럼이 추가되고 DB 마이그레이션이 정상 동작한다
 - [x] **WALLET-04**: PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있다
 - [x] **WALLET-05**: 유효하지 않은 approval_method 값에 대해 400 에러를 반환한다
 - [x] **WALLET-06**: Admin UI 지갑 상세 페이지에서 Owner 승인 방법을 라디오 선택으로 변경할 수 있다
-- [x] **WALLET-07**: 미구성 인프라 선택 시(예: ntfy 미설정 + sdk_ntfy) 경고 메시지를 표시한다
+- [ ] **WALLET-07**: 미구성 인프라 선택 시(예: ntfy 미설정 + sdk_ntfy) 경고 메시지를 표시한다
 
 ### Configuration (CONF)
 
-- [x] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
+- [ ] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
 - [x] **CONF-02**: signing_sdk.wallets 키에 JSON 배열로 지갑별 유니버셜 링크 설정을 저장하고 런타임에 CRUD 관리할 수 있다 (Admin UI CRUD는 Phase 203 WALLET-06 범위)
 
 ## v2 Requirements
@@ -71,37 +71,39 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROTO-01 | Phase 202 | Complete |
+| PROTO-01 | Phase 204 | Pending |
 | PROTO-02 | Phase 202 | Complete |
-| PROTO-03 | Phase 202 | Complete |
+| PROTO-03 | Phase 204 | Pending |
 | PROTO-04 | Phase 202 | Complete |
 | PROTO-05 | Phase 202 | Complete |
-| CHAN-01 | Phase 202 | Complete |
-| CHAN-02 | Phase 202 | Complete |
-| CHAN-03 | Phase 203 | Complete |
-| CHAN-04 | Phase 203 | Complete |
-| CHAN-05 | Phase 203 | Complete |
-| CHAN-06 | Phase 203 | Complete |
-| CHAN-07 | Phase 203 | Complete |
+| CHAN-01 | Phase 204 | Pending |
+| CHAN-02 | Phase 204 | Pending |
+| CHAN-03 | Phase 204 | Pending |
+| CHAN-04 | Phase 204 | Pending |
+| CHAN-05 | Phase 204 | Pending |
+| CHAN-06 | Phase 204 | Pending |
+| CHAN-07 | Phase 204 | Pending |
 | SDK-01 | Phase 202 | Complete |
 | SDK-02 | Phase 202 | Complete |
 | SDK-03 | Phase 202 | Complete |
 | SDK-04 | Phase 202 | Complete |
 | SDK-05 | Phase 202 | Complete |
 | SDK-06 | Phase 202 | Complete |
-| WALLET-01 | Phase 202 | Complete |
+| WALLET-01 | Phase 204 | Pending |
 | WALLET-02 | Phase 202 | Complete |
 | WALLET-03 | Phase 202 | Complete |
 | WALLET-04 | Phase 203 | Complete |
 | WALLET-05 | Phase 203 | Complete |
 | WALLET-06 | Phase 203 | Complete |
-| WALLET-07 | Phase 203 | Complete |
-| CONF-01 | Phase 202 | Complete |
+| WALLET-07 | Phase 205 | Pending |
+| CONF-01 | Phase 205 | Pending |
 | CONF-02 | Phase 202 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
 - Mapped to phases: 27
+- Satisfied: 15
+- Pending (gap closure): 12 (Phase 204: 11, Phase 205: 2)
 - Unmapped: 0
 
 ---
