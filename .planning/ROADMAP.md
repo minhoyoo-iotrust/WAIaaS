@@ -107,7 +107,7 @@ See `.planning/milestones/v2.6.1-ROADMAP.md` for full details.
 
 ### v2.7 지갑 앱 알림 채널
 
-- [ ] **Phase 206: 지갑 앱 알림 사이드 채널** - 알림 스키마 + 데몬 사이드 채널 + SDK 구독 함수 + 설정 + Admin UI + Skill 동기화
+- [x] **Phase 206: 지갑 앱 알림 사이드 채널** - 알림 스키마 + 데몬 사이드 채널 + SDK 구독 함수 + 설정 + Admin UI + Skill 동기화 (completed 2026-02-20)
 
 ## Phase Details
 
@@ -144,4 +144,4 @@ Phase 206
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
-| 206 | 4/4 | Complete   | 2026-02-20 | - |
+| 206 | 4/4 | Complete    | 2026-02-20 | - |
