@@ -10,7 +10,7 @@
 
 ## Current State
 
-v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 10-패키지 모노레포(@waiaas/wallet-sdk 신규) + Python SDK, ~138,051 LOC TypeScript (Admin UI ~20,000 LOC), 4,323 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.3.0-rc OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push, 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@waiaas/wallet-sdk) + Python SDK, ~161,634 LOC TypeScript (Admin UI ~20,000 LOC), 4,345+ 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.3.0-rc OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push, 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -45,11 +45,12 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 10-패키지 모노레포
 - ✅ v2.5 DX 품질 개선 — shipped 2026-02-19 (8 plans, 23 requirements)
 - ✅ v2.6 Wallet SDK 설계 — shipped 2026-02-20 (7 plans, 23 requirements, 34 설계 결정, 설계 문서 3개 신규)
 - ✅ v2.6.1 WAIaaS Wallet Signing SDK — shipped 2026-02-20 (13 plans, 27 requirements, 4,323 tests, ~138,051 LOC TS)
+- ✅ v2.7 지갑 앱 알림 채널 — shipped 2026-02-20 (4 plans, 16 requirements, ~161,634 LOC TS)
 
 **코드베이스 현황:**
 - 10-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
-- ~138,051 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC)
-- 4,323 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin)
+- ~161,634 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC)
+- 4,345+ 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 7개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -63,7 +64,7 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 10-패키지 모노레포
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
-- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 메시지 저장/조회 + DB v13
+- 알림 4채널 (Telegram/Discord/ntfy/Slack) + 지갑 앱 ntfy 사이드 채널(6 카테고리, priority 기반) + 메시지 저장/조회 + DB v13
 - API 키 관리 — DB 암호화 저장(HKDF+AES-256-GCM), Admin UI CRUD
 - pushSchema 3-step 순서 (tables→migrations→indexes) + 마이그레이션 체인 테스트
 - MCP graceful shutdown (stdin 감지 + force-exit 타임아웃)
@@ -72,8 +73,9 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 10-패키지 모노레포
 - BalanceMonitorService 5분 주기 잔액 체크 + LOW_BALANCE 알림 (24h 중복 방지)
 - TelegramBotService Long Polling + 10개 명령어 + 2-Tier 인증(ADMIN/READONLY/PENDING) + i18n(en/ko)
 - Docker 배포 (Multi-stage Dockerfile, docker-compose.yml, Docker Secrets _FILE 패턴, non-root UID 1001)
-- @waiaas/wallet-sdk (6개 공개 함수, SSE 자동 재연결, node>=18 engine)
+- @waiaas/wallet-sdk (8개 공개 함수, SSE 자동 재연결, node>=18 engine) — subscribeToNotifications/parseNotification 추가
 - Signing Protocol v1 (SignRequest/SignResponse, base64url, owner_approval_method 5-value)
+- WalletNotificationChannel 사이드 채널 (26 이벤트 → 6 카테고리, priority 기반, 기존 채널과 독립 병행)
 - ApprovalChannelRouter 5단계 우선순위 (SDK ntfy > SDK Telegram > WC > Telegram Bot > REST)
 - DB v18 마이그레이션 (owner_approval_method + CHECK 제약)
 - 설계 문서 39개 (24-75), 8 objective 문서
@@ -412,6 +414,12 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 10-패키지 모노레포
 - ✓ ApprovalChannelRouter 5단계 우선순위 라우팅 + SDK 비활성 fallback + 데몬 라이프사이클 완전 연결 — v2.6.1 (CHAN-05~07)
 - ✓ GET/PUT /admin/settings 11개 카테고리 노출 + Admin UI signing_sdk 설정 관리 + Skills 동기화 — v2.6.1 (CONF-01~02, WALLET-07)
 
+- ✓ NotificationMessageSchema Zod SSoT + EVENT_CATEGORY_MAP (26 events → 6 categories) — v2.7 (SCHEMA-01~03)
+- ✓ WalletNotificationChannel 사이드 채널 (sdk_ntfy 지갑 대상, 기존 채널과 독립 병행, priority 기반) — v2.7 (DAEMON-01~06)
+- ✓ subscribeToNotifications/parseNotification SDK 함수 (ntfy SSE + base64url Zod 검증) — v2.7 (SDK-01~02)
+- ✓ signing_sdk.notifications_enabled/notify_categories 설정 + Admin UI 멀티셀렉트 체크박스 — v2.7 (SETTINGS-01~03, ADMIN-01)
+- ✓ wallet.skill.md Section 13 SDK 알림 함수 문서화 — v2.7 (SYNC-01)
+
 ### 활성
 
 (다음 마일스톤에서 정의)
@@ -433,7 +441,7 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 10-패키지 모노레포
 
 ## 컨텍스트
 
-**누적:** 47 milestones (v0.1-v2.6.1), 205 phases, 435 plans, 1,201 requirements, 39 설계 문서(24-75), 8 objective 문서, ~138,051 LOC TS, 4,323 테스트
+**누적:** 48 milestones (v0.1-v2.7), 206 phases, 439 plans, 1,217 requirements, 39 설계 문서(24-75), 8 objective 문서, ~161,634 LOC TS, 4,345+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -469,6 +477,7 @@ v2.4.1 Admin UI 테스트 커버리지 복원 shipped (2026-02-19). 3 페이즈,
 v2.5 DX 품질 개선 shipped (2026-02-19). 4 페이즈, 8 플랜, 23 요구사항, 58 파일 변경, +3,333/-192 lines, 34 커밋.
 v2.6 Wallet SDK 설계 shipped (2026-02-20). 4 페이즈, 7 플랜, 23 요구사항, 55 파일 변경, +10,435/-324 lines, 33 커밋, 34 설계 결정, 설계 문서 3개 신규(73/74/75) + 4개(35/37/25/67) 갱신.
 v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 4 페이즈, 13 플랜, 27 요구사항, 206 파일 변경, +16,137/-332 lines, 67 커밋, 43 설계 결정.
+v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 1 페이즈, 4 플랜, 16 요구사항, 34 파일 변경, +3,722/-91 lines, 6 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -767,21 +776,16 @@ v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 4 페이즈, 13 플랜, 2
 | Late-binding setter for signResponseHandler injection | VersionCheckService 일관 패턴, 순환 의존 회피 | ✓ Good — v2.6.1 구현 |
 | Signing SDK fail-soft lifecycle (fire-and-forget) | enabled=false 시 스킵, 데몬 정상 동작 보장 | ✓ Good — v2.6.1 구현 |
 | Direct getAllMasked() return (z.infer assertion) | 카테고리 체리피킹 대신 직접 반환, 11개 카테고리 자동 노출 | ✓ Good — v2.6.1 구현 |
+| Side channel BEFORE channels.length guard | 기존 채널 0개여도 사이드 채널은 동작해야 함 | ✓ Good — v2.7 구현 |
+| Fire-and-forget .catch() 사이드 채널 격리 | 사이드 채널 실패가 기존 채널에 무영향 | ✓ Good — v2.7 구현 |
+| notify_categories 빈 배열 = 전체 카테고리 | 명시적 필터링 opt-in, 기본값은 모든 알림 수신 | ✓ Good — v2.7 구현 |
+| SSE subscribeToNotifications reuse pattern | subscribeToRequests와 동일한 AbortController/재연결 패턴 재사용 | ✓ Good — v2.7 구현 |
+| Wallet App Notifications as subgroup under Signing SDK | 관련 SDK 설정과 함께 배치, 별도 카테고리 아닌 하위 그룹 | ✓ Good — v2.7 구현 |
+| JSON array string for notify_categories | 멀티셀렉트 체크박스 → JSON.stringify/parse, SettingsService 기존 패턴 | ✓ Good — v2.7 구현 |
 
-## Current Milestone: v2.7 지갑 앱 알림 채널
+## Shipped: v2.7 지갑 앱 알림 채널
 
-**Goal:** D'CENT 등 WAIaaS SDK 통합 지갑 앱에서 모든 알림(26개 이벤트)을 수신하여, Telegram 없이 지갑 앱 하나로 알림 수신 + 승인/거부까지 완결되는 UX 제공
-
-**Target features:**
-- NotificationMessageSchema + EVENT_CATEGORY_MAP (core 스키마, 26개 이벤트 → 6개 카테고리)
-- WalletNotificationChannel (데몬 사이드 채널, 기존 알림 시스템과 독립 병행)
-- subscribeToNotifications() / parseNotification() (wallet-sdk 알림 구독 API)
-- SettingsService 3개 키 (notifications_enabled, ntfy_notify_topic_prefix, notify_categories)
-- Admin Settings notify_categories 멀티셀렉트 체크박스 위젯
-
-## Shipped: v2.6.1 WAIaaS Wallet Signing SDK
-
-v2.6.1 WAIaaS Wallet Signing SDK shipped. Signing Protocol v1 + @waiaas/wallet-sdk + 다중 서명 채널 + 데몬 라이프사이클 완전 연결 완료.
+v2.7 지갑 앱 알림 채널 shipped. NotificationMessage Zod 스키마 + WalletNotificationChannel 사이드 채널 + subscribeToNotifications/parseNotification SDK 함수 + Admin UI 카테고리 필터링. 지갑 앱(D'CENT 등)이 Telegram 없이 26개 알림 이벤트를 ntfy 사이드 채널로 수신 가능.
 
 ---
-*최종 업데이트: 2026-02-20 after v2.7 milestone started*
+*최종 업데이트: 2026-02-20 after v2.7 milestone complete*

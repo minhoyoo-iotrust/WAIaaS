@@ -76,9 +76,16 @@ CREATE INDEX idx_session_wallets_session ON session_wallets(session_id);
 CREATE INDEX idx_session_wallets_wallet ON session_wallets(wallet_id);
 ```
 
+**is_default 불변량**: 세션당 `is_default = 1`인 행이 정확히 1개여야 한다. SQLite CHECK 제약으로는 크로스-행 불변량을 표현할 수 없으므로, **애플리케이션 레벨**에서 다음을 보장한다:
+- 세션 생성 시: `defaultWalletId`(또는 첫 번째 지갑)에 `is_default = 1` 설정
+- 기본 지갑 변경 시: 트랜잭션 내에서 기존 default 해제 → 새 default 설정
+- 기본 지갑 제거 시: 에러 반환 (먼저 기본 지갑을 변경해야 함)
+
 `sessions.wallet_id` 컬럼은 **마이그레이션 과정에서 제거**:
 1. `session_wallets`에 기존 `sessions.wallet_id` 데이터 이관 (`is_default = 1`)
 2. `sessions.wallet_id` 컬럼 삭제
+
+> **SQLite 호환성**: `ALTER TABLE DROP COLUMN`은 SQLite 3.35.0+ 필요. better-sqlite3가 번들하는 SQLite 버전을 확인하고, 미지원 시 테이블 재생성(CREATE new → INSERT → DROP old → RENAME) 전략을 사용한다.
 
 #### JWT 변경
 
