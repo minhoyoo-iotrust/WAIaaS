@@ -263,6 +263,22 @@ importers:
         specifier: ^22.0.0
         version: 22.19.11
 
+  packages/wallet-sdk:
+    dependencies:
+      '@waiaas/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.2.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@25.2.3)(jsdom@26.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2)
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':
