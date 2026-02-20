@@ -1,7 +1,9 @@
 # 마일스톤 m26: Wallet SDK 설계
 
-- **Status:** IN_PROGRESS
+- **Status:** SHIPPED
 - **Milestone:** v2.6
+- **Package:** 2.4.0-rc.2
+- **Completed:** 2026-02-20
 
 ## 목표
 

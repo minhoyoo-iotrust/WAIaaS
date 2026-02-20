@@ -1,7 +1,9 @@
 # 마일스톤 m26-02: 지갑 앱 알림 채널
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v2.7
+- **Package:** 2.4.0-rc.3
+- **Completed:** 2026-02-20
 
 ## 목표
 
