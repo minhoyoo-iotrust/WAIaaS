@@ -135,7 +135,7 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 - [x] **Phase 211: API 레이어 지갑 선택** - resolveWalletId 헬퍼 + 전 엔드포인트 walletId 선택적 파라미터 + 세션 응답 확장 + 갱신 변경 (completed 2026-02-20)
 - [x] **Phase 212: 자기 발견 엔드포인트** - GET /v1/connect-info + capabilities 동적 결정 + 프롬프트 빌더 + agent-prompt 통합 (completed 2026-02-20)
 - [x] **Phase 213: 통합 레이어** - SDK/MCP/Admin UI/CLI quickset + 스킬 파일 + 가이드 문서 + 알림 이벤트 (completed 2026-02-20)
-- [ ] **Phase 214: 검증 보고서 + SDK 타입 수정** - Phase 212/213 VERIFICATION.md 생성 + SDK ConnectInfoResponse 타입 정합
+- [x] **Phase 214: 검증 보고서 + SDK 타입 수정** - Phase 212/213 VERIFICATION.md 생성 + SDK ConnectInfoResponse 타입 정합 (completed 2026-02-20)
 
 ## Phase Details
 
@@ -244,4 +244,4 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 211 | 3/3 | Complete    | 2026-02-20 | - |
 | 212 | 2/2 | Complete   | 2026-02-20 | - |
 | 213 | 4/4 | Complete   | 2026-02-20 | - |
-| 214 | 2/3 | In Progress|  | - |
+| 214 | 3/3 | Complete   | 2026-02-20 | - |

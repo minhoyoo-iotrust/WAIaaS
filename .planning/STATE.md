@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 214 of 214 (검증 보고서 + SDK 타입 수정)
-Plan: 3 of 3 in current phase
-Status: In Progress
-Last activity: 2026-02-21 -- Completed 214-02-PLAN.md (Phase 213 VERIFICATION.md 생성)
+Plan: 3 of 3 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-21 -- Completed 214-03-PLAN.md (SDK ConnectInfo 타입 수정)
 
-Progress: [#########-] 92%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [#########-] 92%
 | 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
 | 212. 자기 발견 엔드포인트 | 2/2 | 9min | 4.5min |
 | 213. 통합 레이어 | 4/4 | 12min | 3.0min |
-| 214. 검증 보고서 + SDK 타입 수정 | 2/3 | 5min | 2.5min |
+| 214. 검증 보고서 + SDK 타입 수정 | 3/3 | 7min | 2.3min |
 
 ## Accumulated Context
 
@@ -76,6 +76,7 @@ Progress: [#########-] 92%
 - MCP action-provider dynamic tools에도 wallet_id 추가 (일관성)
 - 212-VERIFICATION.md: 210-VERIFICATION.md 포맷 준수 (Observable Truths + Artifacts + Key Links + Requirements Coverage)
 - 213-VERIFICATION.md: INTG-01 SATISFIED with note about ConnectInfoResponse type refinement in Plan 214-03
+- ConnectInfoPolicyEntry has priority and network fields (matching daemon schema exactly)
 
 ### Blockers/Concerns
 
@@ -84,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 214-02-PLAN.md (Phase 213 VERIFICATION.md 생성)
+Stopped at: Completed 214-03-PLAN.md (SDK ConnectInfo 타입 수정 -- Phase 214 complete)
 Resume file: None
