@@ -212,6 +212,13 @@ export interface RenewSessionResponse {
 // Connect Info (Discovery) Types
 // ---------------------------------------------------------------------------
 
+export interface ConnectInfoPolicyEntry {
+  type: string;
+  rules: Record<string, unknown>;
+  priority: number;
+  network: string | null;
+}
+
 export interface ConnectInfoWallet {
   id: string;
   name: string;
@@ -220,7 +227,6 @@ export interface ConnectInfoWallet {
   defaultNetwork: string;
   address: string;
   isDefault: boolean;
-  policies: Array<{ type: string; rules: Record<string, unknown> }>;
 }
 
 export interface ConnectInfoSession {
@@ -237,6 +243,7 @@ export interface ConnectInfoDaemon {
 export interface ConnectInfoResponse {
   session: ConnectInfoSession;
   wallets: ConnectInfoWallet[];
+  policies: Record<string, ConnectInfoPolicyEntry[]>;
   capabilities: string[];
   daemon: ConnectInfoDaemon;
   prompt: string;

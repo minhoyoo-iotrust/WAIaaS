@@ -45,6 +45,7 @@ export type {
   RenewSessionResponse,
   ConnectInfoResponse,
   ConnectInfoWallet,
+  ConnectInfoPolicyEntry,
   ConnectInfoSession,
   ConnectInfoDaemon,
   ApproveResponse,
