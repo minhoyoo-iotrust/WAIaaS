@@ -26,13 +26,16 @@ export function registerEncodeCalldata(
       abi: z.array(z.record(z.unknown())).describe('ABI fragment array for the function (JSON array of objects)'),
       functionName: z.string().describe('Function name to encode (e.g., "transfer", "approve")'),
       args: z.array(z.any()).optional().describe('Function arguments array (e.g., ["0xAddress", "1000000"]). Omit for zero-arg functions.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
-      const result = await apiClient.post('/v1/utils/encode-calldata', {
+      const body: Record<string, unknown> = {
         abi: args.abi,
         functionName: args.functionName,
         args: args.args ?? [],
-      });
+      };
+      if (args.wallet_id) body.walletId = args.wallet_id;
+      const result = await apiClient.post('/v1/utils/encode-calldata', body);
       return toToolResult(result);
     },
   );

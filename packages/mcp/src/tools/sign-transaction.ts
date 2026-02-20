@@ -25,12 +25,14 @@ export function registerSignTransaction(
     {
       transaction: z.string().describe('Raw unsigned transaction (base64 for Solana, hex 0x-prefixed for EVM)'),
       network: z.string().optional().describe('Target network (e.g., "polygon-mainnet"). Omit to use wallet default.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
       const body: Record<string, unknown> = { transaction: args.transaction };
       if (args.network) {
         body['network'] = args.network;
       }
+      if (args.wallet_id) body.walletId = args.wallet_id;
       const result = await apiClient.post('/v1/transactions/sign', body);
       return toToolResult(result);
     },

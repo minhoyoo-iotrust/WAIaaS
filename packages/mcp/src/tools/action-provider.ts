@@ -85,11 +85,14 @@ export async function registerActionProviderTools(
             .describe('Action-specific parameters as key-value pairs'),
           network: z.string().optional()
             .describe('Target network. Defaults to wallet default network.'),
+          wallet_id: z.string().optional()
+            .describe('Target wallet ID. Omit to use the default wallet.'),
         },
         async (args) => {
           const body: Record<string, unknown> = {};
           if (args.params) body.params = args.params;
           if (args.network) body.network = args.network;
+          if (args.wallet_id) body.walletId = args.wallet_id;
           const res = await apiClient.post(
             `/v1/actions/${provider.name}/${action.name}`,
             body,

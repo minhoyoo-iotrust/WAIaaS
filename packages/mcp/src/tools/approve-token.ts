@@ -23,6 +23,7 @@ export function registerApproveToken(server: McpServer, apiClient: ApiClient, wa
       }).describe('Token info'),
       amount: z.string().describe('Approval amount in smallest unit'),
       network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Defaults to wallet default network.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
       const body: Record<string, unknown> = {
@@ -32,6 +33,7 @@ export function registerApproveToken(server: McpServer, apiClient: ApiClient, wa
         amount: args.amount,
       };
       if (args.network !== undefined) body.network = args.network;
+      if (args.wallet_id) body.walletId = args.wallet_id;
       const result = await apiClient.post('/v1/transactions/send', body);
       return toToolResult(result);
     },

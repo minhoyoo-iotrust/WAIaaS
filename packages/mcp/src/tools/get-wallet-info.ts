@@ -6,6 +6,7 @@
  * 2. GET /v1/wallets/:walletId/networks - available networks
  */
 
+import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type ApiClient, toToolResult } from '../api-client.js';
 import { type WalletContext, withWalletPrefix } from '../server.js';
@@ -14,8 +15,14 @@ export function registerGetWalletInfo(server: McpServer, apiClient: ApiClient, w
   server.tool(
     'get_wallet_info',
     withWalletPrefix('Get wallet info including chain, address, environment, and available networks.', walletContext?.walletName),
-    async () => {
-      const addressResult = await apiClient.get<Record<string, unknown>>('/v1/wallet/address');
+    {
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+    },
+    async (args) => {
+      const params = new URLSearchParams();
+      if (args.wallet_id) params.set('walletId', args.wallet_id);
+      const qs = params.toString();
+      const addressResult = await apiClient.get<Record<string, unknown>>('/v1/wallet/address' + (qs ? '?' + qs : ''));
       if (!addressResult.ok) {
         return toToolResult(addressResult);
       }
