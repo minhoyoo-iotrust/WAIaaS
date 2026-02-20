@@ -366,6 +366,57 @@ class WcDisconnectResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Connect Info (Discovery) models
+# ---------------------------------------------------------------------------
+
+
+class ConnectInfoWallet(BaseModel):
+    """Single wallet entry in connect-info response."""
+
+    id: str
+    name: str
+    chain: str
+    environment: str
+    default_network: str = Field(alias="defaultNetwork")
+    address: str
+    is_default: bool = Field(alias="isDefault")
+    policies: list[dict[str, Any]]
+
+    model_config = {"populate_by_name": True}
+
+
+class ConnectInfoSession(BaseModel):
+    """Session info in connect-info response."""
+
+    id: str
+    expires_at: int = Field(alias="expiresAt")
+    source: str
+
+    model_config = {"populate_by_name": True}
+
+
+class ConnectInfoDaemon(BaseModel):
+    """Daemon info in connect-info response."""
+
+    version: str
+    base_url: str = Field(alias="baseUrl")
+
+    model_config = {"populate_by_name": True}
+
+
+class ConnectInfo(BaseModel):
+    """Response from GET /v1/connect-info -- self-discovery for AI agents."""
+
+    session: ConnectInfoSession
+    wallets: list[ConnectInfoWallet]
+    capabilities: list[str]
+    daemon: ConnectInfoDaemon
+    prompt: str
+
+    model_config = {"populate_by_name": True}
+
+
 class SpendingLimitRules(BaseModel):
     """SPENDING_LIMIT policy rules schema.
 
