@@ -681,6 +681,12 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       createdAt: nowDate,
     }).run();
 
+    // Fire-and-forget: notify wallet addition
+    void deps.notificationService?.notify('SESSION_WALLET_ADDED', walletId, {
+      sessionId,
+      walletId,
+    });
+
     return c.json(
       {
         sessionId,
@@ -742,6 +748,12 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         ),
       )
       .run();
+
+    // Fire-and-forget: notify wallet removal
+    void deps.notificationService?.notify('SESSION_WALLET_REMOVED', walletId, {
+      sessionId,
+      walletId,
+    });
 
     return new Response(null, { status: 204 }) as any;
   });

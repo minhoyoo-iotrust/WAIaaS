@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// NotificationEventType: event types from 35-notification-architecture (26 total)
+// NotificationEventType: event types from 35-notification-architecture (28 total)
 export const NOTIFICATION_EVENT_TYPES = [
   'TX_REQUESTED',
   'TX_QUEUED',
@@ -20,6 +20,8 @@ export const NOTIFICATION_EVENT_TYPES = [
   'SESSION_EXPIRING_SOON',
   'SESSION_EXPIRED',
   'SESSION_CREATED',
+  'SESSION_WALLET_ADDED',
+  'SESSION_WALLET_REMOVED',
   'OWNER_SET',
   'OWNER_REMOVED',
   'OWNER_VERIFIED',

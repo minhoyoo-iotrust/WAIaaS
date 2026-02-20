@@ -194,6 +194,8 @@ export const messages: Messages = {
     SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for wallet {walletId} expires in {minutes} minutes' },
     SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for wallet {walletId} has expired' },
     SESSION_CREATED: { title: 'Session Created', body: 'New session created for wallet {walletId}' },
+    SESSION_WALLET_ADDED: { title: 'Wallet Added to Session', body: 'Wallet {walletId} has been added to session {sessionId}' },
+    SESSION_WALLET_REMOVED: { title: 'Wallet Removed from Session', body: 'Wallet {walletId} has been removed from session {sessionId}' },
     OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for wallet {walletId}: {ownerAddress}' },
     OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from wallet {walletId}' },
     OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for wallet {walletId}' },

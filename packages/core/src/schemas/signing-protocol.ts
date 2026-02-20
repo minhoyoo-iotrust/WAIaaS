@@ -201,6 +201,8 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   SESSION_EXPIRING_SOON: 'session',
   SESSION_EXPIRED: 'session',
   SESSION_CREATED: 'session',
+  SESSION_WALLET_ADDED: 'session',
+  SESSION_WALLET_REMOVED: 'session',
   OWNER_SET: 'owner',
   OWNER_REMOVED: 'owner',
   OWNER_VERIFIED: 'owner',

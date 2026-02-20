@@ -142,6 +142,8 @@ export const messages: Messages = {
     SESSION_EXPIRING_SOON: { title: '세션 만료 임박', body: '지갑 {walletId}의 세션 {sessionId}이 {minutes}분 후 만료됩니다' },
     SESSION_EXPIRED: { title: '세션 만료', body: '지갑 {walletId}의 세션 {sessionId}이 만료되었습니다' },
     SESSION_CREATED: { title: '세션 생성', body: '지갑 {walletId}의 새 세션이 생성되었습니다' },
+    SESSION_WALLET_ADDED: { title: '세션에 지갑 추가', body: '지갑 {walletId}이(가) 세션 {sessionId}에 추가되었습니다' },
+    SESSION_WALLET_REMOVED: { title: '세션에서 지갑 제거', body: '지갑 {walletId}이(가) 세션 {sessionId}에서 제거되었습니다' },
     OWNER_SET: { title: 'Owner 등록', body: '지갑 {walletId}에 Owner가 등록되었습니다: {ownerAddress}' },
     OWNER_REMOVED: { title: 'Owner 제거', body: '지갑 {walletId}에서 Owner가 제거되었습니다' },
     OWNER_VERIFIED: { title: 'Owner 인증', body: '지갑 {walletId}의 Owner가 인증되었습니다' },
