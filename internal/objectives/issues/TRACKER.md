@@ -133,6 +133,7 @@
 | 116 | BUG | MEDIUM | Telegram Bot Enabled 저장 후 비활성화로 되돌림 | v2.6.1 | FIXED | 2026-02-20 |
 | 117 | BUG | MEDIUM | Admin UI 정책 기본값 체크박스 클릭 시 즉시 반영 안 됨 — dirty/value 키 불일치 | v26.3 | FIXED | 2026-02-20 |
 | 118 | ENHANCEMENT | LOW | 에이전트 연동 가이드를 docs/guides/ 폴더로 이동 + README 링크 추가 | v26.3 | FIXED | 2026-02-20 |
+| 119 | MISSING | MEDIUM | wallet-sdk 연동 가이드에 Push Relay 시나리오 누락 | - | OPEN | - |
 
 ## Type Legend
 
@@ -144,9 +145,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 118
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 118
+- **Total:** 119
