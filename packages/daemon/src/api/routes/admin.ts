@@ -39,6 +39,7 @@ import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
+import { buildConnectInfoPrompt } from './connect-info.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -1906,21 +1907,21 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const expiresAt = nowSec + ttl;
     const absoluteExpiresAt = nowSec + config.security.session_absolute_lifetime;
 
-    // Get target wallets
-    let targetWallets: Array<{ id: string; name: string; chain: string; defaultNetwork: string | null }>;
+    // Get target wallets (with environment for prompt builder)
+    let targetWallets: Array<{ id: string; name: string; chain: string; environment: string; publicKey: string; defaultNetwork: string | null }>;
 
     if (body.walletIds && body.walletIds.length > 0) {
       targetWallets = body.walletIds
         .map((wid) => deps.db.select().from(wallets).where(eq(wallets.id, wid)).get())
         .filter((w): w is NonNullable<typeof w> => w != null && w.status === 'ACTIVE')
-        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, defaultNetwork: w.defaultNetwork }));
+        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey, defaultNetwork: w.defaultNetwork }));
     } else {
       targetWallets = deps.db
         .select()
         .from(wallets)
         .where(eq(wallets.status, 'ACTIVE'))
         .all()
-        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, defaultNetwork: w.defaultNetwork }));
+        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey, defaultNetwork: w.defaultNetwork }));
     }
 
     if (targetWallets.length === 0) {
@@ -1930,60 +1931,104 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       );
     }
 
-    // Create sessions and build prompt
-    const lines: string[] = [];
+    // Create a single multi-wallet session (one sessionId, one token)
+    const defaultWallet = targetWallets[0]!;
+    const sessionId = generateId();
+    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWallet.id, iat: nowSec, exp: expiresAt };
+    const token = await deps.jwtSecretManager.signToken(jwtPayload);
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    deps.db.insert(sessions).values({
+      id: sessionId,
+      tokenHash,
+      expiresAt: new Date(expiresAt * 1000),
+      absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+      createdAt: new Date(nowSec * 1000),
+      renewalCount: 0,
+      maxRenewals: config.security.session_max_renewals,
+      constraints: null,
+      source: 'api',
+    }).run();
+
+    // Insert N rows into session_wallets (first wallet is default)
+    for (let i = 0; i < targetWallets.length; i++) {
+      const w = targetWallets[i]!;
+      deps.db.insert(sessionWallets).values({
+        sessionId,
+        walletId: w.id,
+        isDefault: i === 0,
+        createdAt: new Date(nowSec * 1000),
+      }).run();
+    }
+
+    void deps.notificationService?.notify('SESSION_CREATED', defaultWallet.id, { sessionId });
+
+    // Query per-wallet policies for prompt builder
+    const promptWallets = targetWallets.map((w) => {
+      const walletPolicies = deps.db
+        .select({ type: policies.type })
+        .from(policies)
+        .where(and(eq(policies.walletId, w.id), eq(policies.enabled, true)))
+        .all();
+
+      return {
+        name: w.name,
+        chain: w.chain,
+        environment: w.environment,
+        address: w.publicKey,
+        defaultNetwork: w.defaultNetwork,
+        policies: walletPolicies,
+      };
+    });
+
+    // Compute capabilities dynamically (same logic as connect-info)
+    const capabilities: string[] = ['transfer', 'token_transfer', 'balance', 'assets'];
+
+    if (deps.settingsService) {
+      try {
+        if (deps.settingsService.get('signing_sdk.enabled') === 'true') {
+          capabilities.push('sign');
+        }
+      } catch {
+        // Setting key not found -- signing not available
+      }
+    }
+
+    if (deps.apiKeyStore) {
+      try {
+        const keys = deps.apiKeyStore.listAll();
+        if (keys.some((k) => k.hasKey)) {
+          capabilities.push('actions');
+        }
+      } catch {
+        // API key store not available
+      }
+    }
+
+    if (config.x402?.enabled === true) {
+      capabilities.push('x402');
+    }
+
+    // Build prompt using shared prompt builder
     const host = c.req.header('Host') ?? 'localhost:3100';
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
     const baseUrl = `${protocol}://${host}`;
 
-    lines.push('[WAIaaS Connection]');
-    lines.push(`- URL: ${baseUrl}`);
-    lines.push('');
-    lines.push('Wallets:');
+    const prompt = buildConnectInfoPrompt({
+      wallets: promptWallets,
+      capabilities,
+      baseUrl,
+      version: deps.version,
+    });
 
-    let sessionsCreated = 0;
-
-    for (let i = 0; i < targetWallets.length; i++) {
-      const w = targetWallets[i]!;
-      const sessionId = generateId();
-      const jwtPayload: JwtPayload = { sub: sessionId, wlt: w.id, iat: nowSec, exp: expiresAt };
-      const token = await deps.jwtSecretManager.signToken(jwtPayload);
-      const tokenHash = createHash('sha256').update(token).digest('hex');
-
-      deps.db.insert(sessions).values({
-        id: sessionId,
-        tokenHash,
-        expiresAt: new Date(expiresAt * 1000),
-        absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
-        createdAt: new Date(nowSec * 1000),
-        renewalCount: 0,
-        maxRenewals: config.security.session_max_renewals,
-        constraints: null,
-        source: 'api',
-      }).run();
-      deps.db.insert(sessionWallets).values({
-        sessionId, walletId: w.id, isDefault: true, createdAt: new Date(nowSec * 1000),
-      }).run();
-
-      void deps.notificationService?.notify('SESSION_CREATED', w.id, { sessionId });
-      sessionsCreated++;
-
-      const network = w.defaultNetwork ?? w.chain;
-      lines.push(`${i + 1}. ${w.name} (${w.id}) \u2014 ${network}`);
-      lines.push(`   Session: ${token}`);
-    }
-
-    lines.push('');
-    lines.push('When the session expires (401 Unauthorized),');
-    lines.push('renew with POST /v1/wallets/{walletId}/sessions/{sessionId}/renew.');
-    lines.push('');
-    lines.push('Connect to WAIaaS wallets using the above information to check balances and manage assets.');
+    // Append session token so the agent can start using it immediately
+    const fullPrompt = `${prompt}\n\nSession Token: ${token}\nSession ID: ${sessionId}`;
 
     return c.json(
       {
-        prompt: lines.join('\n'),
+        prompt: fullPrompt,
         walletCount: targetWallets.length,
-        sessionsCreated,
+        sessionsCreated: 1,
         expiresAt,
       },
       201,
