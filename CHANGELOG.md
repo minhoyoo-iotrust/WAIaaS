@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.4...v2.4.0-rc.5) (2026-02-20)
+
+
+### Bug Fixes
+
+* rename unused sql parameter to _sql in wallet notification test ([a8d2278](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a8d2278f27b49b831acbac02173b8f61e726881a))
+
 ## [2.4.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.3...v2.4.0-rc.4) (2026-02-20)
 
 
