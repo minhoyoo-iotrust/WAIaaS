@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 202 of 203 (서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-20 -- Roadmap created (2 phases, 27 requirements mapped)
+Plan: 1 of 4 in current phase
+Status: Executing
+Last activity: 2026-02-20 -- Completed 202-01 (Signing Protocol infrastructure)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -27,6 +27,7 @@ Progress: [░░░░░░░░░░] 0%
 Full log in PROJECT.md and milestones/.
 v2.6 설계 완료 (docs 73-75): Signing Protocol v1, SDK + Daemon Components, Notification + Push Relay.
 v2.6.1은 설계를 코드로 실현. Push Relay Server는 범위 밖 (ntfy 직접 통신 우선).
+202-01: Error count 100 (baseline 93, not 74). CHECK constraint on owner_approval_method in fresh DDL. WalletLinkRegistry uses JSON in SettingsService. i18n messages added for all SIGNING codes.
 
 ### Blockers/Concerns
 
@@ -35,5 +36,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Roadmap created for v2.6.1 (Phases 202-203)
+Stopped at: Completed 202-01-PLAN.md
 Resume file: None

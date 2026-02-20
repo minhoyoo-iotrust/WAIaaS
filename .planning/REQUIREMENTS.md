@@ -10,7 +10,7 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 ### Signing Protocol (PROTO)
 
 - [ ] **PROTO-01**: PENDING_APPROVAL 트랜잭션에서 SignRequest를 생성하여 유니버셜 링크 URL로 인코딩할 수 있다
-- [ ] **PROTO-02**: SignRequest를 Zod 스키마로 검증하고 base64url로 인코딩/디코딩할 수 있다
+- [x] **PROTO-02**: SignRequest를 Zod 스키마로 검증하고 base64url로 인코딩/디코딩할 수 있다
 - [ ] **PROTO-03**: SignResponse를 수신하여 requestId 매칭, 만료 체크, 서명 검증(ownerAuth 재사용) 후 트랜잭션을 승인/거부할 수 있다
 - [ ] **PROTO-04**: 만료된 요청(expiresAt 초과)에 대해 SIGN_REQUEST_EXPIRED 에러를 반환한다
 - [ ] **PROTO-05**: 잘못된 서명값에 대해 INVALID_SIGNATURE 에러를 반환한다
@@ -36,9 +36,9 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 ### Wallet Settings (WALLET)
 
-- [ ] **WALLET-01**: WalletLinkRegistry에 지갑 메타데이터(유니버셜 링크 base URL, 딥링크 스키마)를 등록하고 조회할 수 있다
-- [ ] **WALLET-02**: 미등록 지갑 조회 시 WALLET_NOT_REGISTERED 에러를 반환한다
-- [ ] **WALLET-03**: wallets 테이블에 owner_approval_method 컬럼이 추가되고 DB 마이그레이션이 정상 동작한다
+- [x] **WALLET-01**: WalletLinkRegistry에 지갑 메타데이터(유니버셜 링크 base URL, 딥링크 스키마)를 등록하고 조회할 수 있다
+- [x] **WALLET-02**: 미등록 지갑 조회 시 WALLET_NOT_REGISTERED 에러를 반환한다
+- [x] **WALLET-03**: wallets 테이블에 owner_approval_method 컬럼이 추가되고 DB 마이그레이션이 정상 동작한다
 - [ ] **WALLET-04**: PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있다
 - [ ] **WALLET-05**: 유효하지 않은 approval_method 값에 대해 400 에러를 반환한다
 - [ ] **WALLET-06**: Admin UI 지갑 상세 페이지에서 Owner 승인 방법을 라디오 선택으로 변경할 수 있다
@@ -46,8 +46,8 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 
 ### Configuration (CONF)
 
-- [ ] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
-- [ ] **CONF-02**: signing_sdk.wallets 키에 JSON 배열로 지갑별 유니버셜 링크 설정을 저장하고 런타임에 CRUD 관리할 수 있다 (Admin UI CRUD는 Phase 203 WALLET-06 범위)
+- [x] **CONF-01**: SettingsService에 signing_sdk.enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_request_topic_prefix, ntfy_response_topic_prefix 6개 키가 등록되어 런타임 변경 가능하다
+- [x] **CONF-02**: signing_sdk.wallets 키에 JSON 배열로 지갑별 유니버셜 링크 설정을 저장하고 런타임에 CRUD 관리할 수 있다 (Admin UI CRUD는 Phase 203 WALLET-06 범위)
 
 ## v2 Requirements
 
@@ -72,7 +72,7 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PROTO-01 | Phase 202 | Pending |
-| PROTO-02 | Phase 202 | Pending |
+| PROTO-02 | Phase 202 | Complete |
 | PROTO-03 | Phase 202 | Pending |
 | PROTO-04 | Phase 202 | Pending |
 | PROTO-05 | Phase 202 | Pending |
@@ -89,15 +89,15 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 | SDK-04 | Phase 202 | Pending |
 | SDK-05 | Phase 202 | Pending |
 | SDK-06 | Phase 202 | Pending |
-| WALLET-01 | Phase 202 | Pending |
-| WALLET-02 | Phase 202 | Pending |
-| WALLET-03 | Phase 202 | Pending |
+| WALLET-01 | Phase 202 | Complete |
+| WALLET-02 | Phase 202 | Complete |
+| WALLET-03 | Phase 202 | Complete |
 | WALLET-04 | Phase 203 | Pending |
 | WALLET-05 | Phase 203 | Pending |
 | WALLET-06 | Phase 203 | Pending |
 | WALLET-07 | Phase 203 | Pending |
-| CONF-01 | Phase 202 | Pending |
-| CONF-02 | Phase 202 | Pending |
+| CONF-01 | Phase 202 | Complete |
+| CONF-02 | Phase 202 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
