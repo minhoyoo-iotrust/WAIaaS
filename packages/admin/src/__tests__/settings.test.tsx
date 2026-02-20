@@ -124,6 +124,16 @@ const mockSettingsResponse = {
     low_balance_threshold_eth: '0.005',
     cooldown_hours: '24',
   },
+  signing_sdk: {
+    enabled: 'true',
+    request_expiry_min: '5',
+    preferred_channel: 'ntfy',
+    preferred_wallet: '',
+    ntfy_request_topic_prefix: '',
+    ntfy_response_topic_prefix: '',
+    notifications_enabled: 'false',
+    notify_categories: '[]',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -637,5 +647,29 @@ describe('SettingsPage', () => {
       expect(keys).toContain('autostop.consecutive_failures_threshold');
       expect(keys).toContain('monitoring.cooldown_hours');
     });
+  });
+
+  // ---- Test 26: Renders Wallet App Notifications subgroup in Signing SDK section ----
+  it('renders Wallet App Notifications subgroup in Signing SDK section', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    expect(screen.getByText('Wallet App Notifications')).toBeTruthy();
+    expect(screen.getByText('Notifications Enabled')).toBeTruthy();
+    expect(screen.getByText('Transaction Events')).toBeTruthy();
+    expect(screen.getByText('Policy Violations')).toBeTruthy();
+    expect(screen.getByText('Security Alerts')).toBeTruthy();
+    expect(screen.getByText('Session Events')).toBeTruthy();
+    expect(screen.getByText('Owner Events')).toBeTruthy();
+    expect(screen.getByText('System Notifications')).toBeTruthy();
+  });
+
+  // ---- Test 27: Shows all categories hint when none selected ----
+  it('shows all categories hint when no notify categories are selected', async () => {
+    mockApiCalls();
+    await renderAndWaitForLoad();
+
+    // With empty notify_categories (default), hint should show
+    expect(screen.getByText('(all categories)')).toBeTruthy();
   });
 });
