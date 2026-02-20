@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "2.4.0-rc.1"
+version: "2.7.0-rc.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -976,3 +976,67 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
     result = await client.wc_disconnect()
     print(result.disconnected)  # True
 ```
+
+## 13. Wallet SDK: Notification Functions
+
+The `@waiaas/wallet-sdk` package provides functions for wallet apps to receive real-time notification events from the WAIaaS daemon.
+
+### subscribeToNotifications(topic, callback, serverUrl?)
+
+Subscribe to notification events via ntfy SSE stream. The daemon pushes notification events (transaction confirmations, policy violations, security alerts, etc.) to `waiaas-notify-{walletName}` ntfy topics.
+
+```typescript
+import { subscribeToNotifications } from '@waiaas/wallet-sdk';
+
+const subscription = subscribeToNotifications(
+  'waiaas-notify-trading-bot',   // ntfy topic
+  (notification) => {
+    console.log(notification.eventType);  // e.g. 'TX_CONFIRMED'
+    console.log(notification.category);   // e.g. 'transaction'
+    console.log(notification.title);      // Human-readable title
+    console.log(notification.body);       // Human-readable body
+  },
+  'https://ntfy.sh',  // optional, defaults to https://ntfy.sh
+);
+
+// Later: unsubscribe
+subscription.unsubscribe();
+```
+
+### parseNotification(data)
+
+Decode and validate a base64url-encoded NotificationMessage. Used internally by `subscribeToNotifications`, but also available for manual parsing.
+
+```typescript
+import { parseNotification } from '@waiaas/wallet-sdk';
+
+const notification = parseNotification(base64urlEncodedString);
+// notification: { version, eventType, walletId, walletName, category, title, body, details?, timestamp }
+```
+
+### NotificationMessage Type
+
+```typescript
+interface NotificationMessage {
+  version: '1';
+  eventType: string;        // One of 26 NotificationEventType values
+  walletId: string;         // UUID of the wallet
+  walletName: string;       // Human-readable wallet name
+  category: 'transaction' | 'policy' | 'security_alert' | 'session' | 'owner' | 'system';
+  title: string;            // Notification title
+  body: string;             // Notification body
+  details?: Record<string, unknown>;  // Optional event-specific details
+  timestamp: number;        // Unix epoch seconds
+}
+```
+
+### Notification Categories
+
+| Category | Events | ntfy Priority |
+|----------|--------|---------------|
+| transaction | TX_REQUESTED, TX_QUEUED, TX_SUBMITTED, TX_CONFIRMED, TX_FAILED, TX_CANCELLED, TX_DOWNGRADED_DELAY, TX_APPROVAL_REQUIRED, TX_APPROVAL_EXPIRED | 3 (default) |
+| policy | POLICY_VIOLATION, CUMULATIVE_LIMIT_WARNING | 3 (default) |
+| security_alert | WALLET_SUSPENDED, KILL_SWITCH_ACTIVATED, KILL_SWITCH_RECOVERED, KILL_SWITCH_ESCALATED, AUTO_STOP_TRIGGERED | **5 (urgent)** |
+| session | SESSION_EXPIRING_SOON, SESSION_EXPIRED, SESSION_CREATED | 3 (default) |
+| owner | OWNER_SET, OWNER_REMOVED, OWNER_VERIFIED | 3 (default) |
+| system | DAILY_SUMMARY, LOW_BALANCE, APPROVAL_CHANNEL_SWITCHED, UPDATE_AVAILABLE | 3 (default) |

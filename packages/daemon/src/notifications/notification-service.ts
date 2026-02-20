@@ -12,6 +12,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { getNotificationMessage } from './templates/message-templates.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
+import type { WalletNotificationChannel } from '../services/signing-sdk/channels/wallet-notification-channel.js';
 
 // Broadcast event types -- sent to ALL channels simultaneously
 const BROADCAST_EVENTS: Set<string> = new Set([
@@ -29,6 +30,9 @@ export class NotificationService {
   private channels: INotificationChannel[] = [];
   private db: BetterSQLite3Database<typeof schema> | null = null;
   private config: NotificationServiceConfig = { locale: 'en', rateLimitRpm: 20 };
+
+  // Wallet notification side channel (v2.7 -- independent of traditional channels)
+  private walletNotificationChannel: WalletNotificationChannel | null = null;
 
   // Rate limiter: Map<channelName, timestamps[]>
   private rateLimitMap = new Map<string, number[]>();
@@ -74,6 +78,11 @@ export class NotificationService {
     this.config = { ...this.config, ...config };
   }
 
+  /** Set the wallet notification side channel (injected by daemon lifecycle). */
+  setWalletNotificationChannel(channel: WalletNotificationChannel | null): void {
+    this.walletNotificationChannel = channel;
+  }
+
   /**
    * Send notification via priority-based delivery with fallback.
    * Tries channels in order; on failure, falls back to next channel.
@@ -85,7 +94,15 @@ export class NotificationService {
     vars?: Record<string, string>,
     details?: Record<string, unknown>,
   ): Promise<void> {
-    if (this.channels.length === 0) return; // No channels configured
+    // Side channel: wallet app notification (independent of traditional channels, never blocks)
+    // Placed BEFORE the channels.length guard so it fires even with zero configured channels.
+    if (this.walletNotificationChannel) {
+      const { title: sideTitle, body: sideBody } = getNotificationMessage(eventType, this.config.locale, vars);
+      // Fire-and-forget with try/catch isolation (DAEMON-06)
+      this.walletNotificationChannel.notify(eventType, walletId, sideTitle, sideBody, details).catch(() => {});
+    }
+
+    if (this.channels.length === 0) return; // No traditional channels configured
 
     const { title, body } = getNotificationMessage(eventType, this.config.locale, vars);
     const payload: NotificationPayload = {

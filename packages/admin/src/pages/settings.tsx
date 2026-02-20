@@ -710,7 +710,34 @@ export default function SettingsPage() {
   // Section: Signing SDK
   // ---------------------------------------------------------------------------
 
+  const NOTIFY_CATEGORY_OPTIONS = [
+    { value: 'transaction', label: 'Transaction Events' },
+    { value: 'policy', label: 'Policy Violations' },
+    { value: 'security_alert', label: 'Security Alerts' },
+    { value: 'session', label: 'Session Events' },
+    { value: 'owner', label: 'Owner Events' },
+    { value: 'system', label: 'System Notifications' },
+  ];
+
   function SigningSDKSettings() {
+    // Parse current notify_categories JSON array
+    const currentCategoriesJson = getEffectiveValue('signing_sdk', 'notify_categories') || '[]';
+    let currentCategories: string[] = [];
+    try {
+      const parsed = JSON.parse(currentCategoriesJson);
+      if (Array.isArray(parsed)) currentCategories = parsed;
+    } catch { /* use empty */ }
+
+    const handleCategoryToggle = (categoryValue: string, checked: boolean) => {
+      let updated: string[];
+      if (checked) {
+        updated = [...currentCategories, categoryValue];
+      } else {
+        updated = currentCategories.filter((c) => c !== categoryValue);
+      }
+      handleFieldChange('signing_sdk.notify_categories', JSON.stringify(updated));
+    };
+
     return (
       <div class="settings-category">
         <div class="settings-category-header">
@@ -779,6 +806,45 @@ export default function SettingsPage() {
             Enable the Signing SDK to allow wallet owners to approve/reject transactions
             from their mobile wallet app. Requires a signing channel (ntfy or Telegram)
             to deliver sign requests.
+          </div>
+
+          <div class="settings-subgroup" style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <div class="settings-subgroup-title">Wallet App Notifications</div>
+            <p class="settings-description" style={{ marginBottom: '0.75rem' }}>
+              Push notifications to wallet apps via ntfy side channel. Only applies to wallets with sdk_ntfy approval method.
+            </p>
+            <div class="settings-fields-grid">
+              <div class="settings-field-full">
+                <FormField
+                  label="Notifications Enabled"
+                  name="signing_sdk.notifications_enabled"
+                  type="checkbox"
+                  value={getEffectiveBoolValue('signing_sdk', 'notifications_enabled')}
+                  onChange={(v) => handleFieldChange('signing_sdk.notifications_enabled', v)}
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: '0.75rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Notify Categories {currentCategories.length === 0 && <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(all categories)</span>}
+              </label>
+              <div class="settings-fields-grid">
+                {NOTIFY_CATEGORY_OPTIONS.map((opt) => (
+                  <FormField
+                    key={opt.value}
+                    label={opt.label}
+                    name={`notify_cat_${opt.value}`}
+                    type="checkbox"
+                    value={currentCategories.includes(opt.value)}
+                    onChange={(v) => handleCategoryToggle(opt.value, Boolean(v))}
+                  />
+                ))}
+              </div>
+              <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
+                Select specific categories to receive, or leave all unchecked to receive all notification types.
+                Security Alerts are delivered with high priority (ntfy priority 5).
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -13,3 +13,6 @@ export type {
 
 export { TelegramSigningChannel } from './telegram-signing-channel.js';
 export type { TelegramSigningChannelOpts } from './telegram-signing-channel.js';
+
+export { WalletNotificationChannel } from './wallet-notification-channel.js';
+export type { WalletNotificationChannelDeps } from './wallet-notification-channel.js';

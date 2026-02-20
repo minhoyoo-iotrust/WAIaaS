@@ -11,6 +11,7 @@
  */
 
 import { z } from 'zod';
+import type { NotificationEventType } from '../enums/notification.js';
 
 // ---------------------------------------------------------------------------
 // Approval Methods
@@ -166,3 +167,63 @@ export function buildUniversalLinkUrl(
   const path = walletConfig.universalLink.signPath;
   return `${base}${path}?data=${encoded}`;
 }
+
+// ---------------------------------------------------------------------------
+// Notification Categories & Event-to-Category Mapping
+// ---------------------------------------------------------------------------
+
+export const NOTIFICATION_CATEGORIES = [
+  'transaction',
+  'policy',
+  'security_alert',
+  'session',
+  'owner',
+  'system',
+] as const;
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
+
+export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCategory> = {
+  TX_REQUESTED: 'transaction',
+  TX_QUEUED: 'transaction',
+  TX_SUBMITTED: 'transaction',
+  TX_CONFIRMED: 'transaction',
+  TX_FAILED: 'transaction',
+  TX_CANCELLED: 'transaction',
+  TX_DOWNGRADED_DELAY: 'transaction',
+  TX_APPROVAL_REQUIRED: 'transaction',
+  TX_APPROVAL_EXPIRED: 'transaction',
+  POLICY_VIOLATION: 'policy',
+  WALLET_SUSPENDED: 'security_alert',
+  KILL_SWITCH_ACTIVATED: 'security_alert',
+  KILL_SWITCH_RECOVERED: 'security_alert',
+  KILL_SWITCH_ESCALATED: 'security_alert',
+  AUTO_STOP_TRIGGERED: 'security_alert',
+  SESSION_EXPIRING_SOON: 'session',
+  SESSION_EXPIRED: 'session',
+  SESSION_CREATED: 'session',
+  OWNER_SET: 'owner',
+  OWNER_REMOVED: 'owner',
+  OWNER_VERIFIED: 'owner',
+  DAILY_SUMMARY: 'system',
+  CUMULATIVE_LIMIT_WARNING: 'policy',
+  LOW_BALANCE: 'system',
+  APPROVAL_CHANNEL_SWITCHED: 'system',
+  UPDATE_AVAILABLE: 'system',
+};
+
+// ---------------------------------------------------------------------------
+// NotificationMessage Schema (v2.7 Side Channel)
+// ---------------------------------------------------------------------------
+
+export const NotificationMessageSchema = z.object({
+  version: z.literal('1'),
+  eventType: z.string(),
+  walletId: z.string(),
+  walletName: z.string(),
+  category: z.enum(NOTIFICATION_CATEGORIES),
+  title: z.string(),
+  body: z.string(),
+  details: z.record(z.unknown()).optional(),
+  timestamp: z.number(),
+});
+export type NotificationMessage = z.infer<typeof NotificationMessageSchema>;

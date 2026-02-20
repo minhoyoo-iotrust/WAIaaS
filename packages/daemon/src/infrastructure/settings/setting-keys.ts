@@ -137,6 +137,8 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'signing_sdk.ntfy_request_topic_prefix', category: 'signing_sdk', configPath: 'signing_sdk.ntfy_request_topic_prefix', defaultValue: 'waiaas-sign', isCredential: false },
   { key: 'signing_sdk.ntfy_response_topic_prefix', category: 'signing_sdk', configPath: 'signing_sdk.ntfy_response_topic_prefix', defaultValue: 'waiaas-response', isCredential: false },
   { key: 'signing_sdk.wallets', category: 'signing_sdk', configPath: 'signing_sdk.wallets', defaultValue: '[]', isCredential: false },
+  { key: 'signing_sdk.notifications_enabled', category: 'signing_sdk', configPath: 'signing_sdk.notifications_enabled', defaultValue: 'true', isCredential: false },
+  { key: 'signing_sdk.notify_categories', category: 'signing_sdk', configPath: 'signing_sdk.notify_categories', defaultValue: '[]', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

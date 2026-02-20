@@ -30,6 +30,10 @@ export type { NtfySigningChannelOpts, SendRequestParams, SendRequestResult } fro
 export { TelegramSigningChannel } from './channels/index.js';
 export type { TelegramSigningChannelOpts } from './channels/index.js';
 
+// Wallet notification side channel
+export { WalletNotificationChannel } from './channels/index.js';
+export type { WalletNotificationChannelDeps } from './channels/index.js';
+
 // Routing
 export { ApprovalChannelRouter } from './approval-channel-router.js';
 export type { ApprovalChannelRouterDeps, RouteResult } from './approval-channel-router.js';

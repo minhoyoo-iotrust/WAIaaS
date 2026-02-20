@@ -1,7 +1,9 @@
 # 마일스톤 m26-01: WAIaaS Wallet Signing SDK
 
-- **Status:** IN_PROGRESS
-- **Milestone:** v2.6
+- **Status:** SHIPPED
+- **Milestone:** v2.6.1
+- **Package:** 2.4.0-rc.3
+- **Completed:** 2026-02-20
 
 ## 목표
 

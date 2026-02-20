@@ -3,13 +3,15 @@
  *
  * sendViaNtfy - Publish a SignResponse to an ntfy response topic.
  * subscribeToRequests - SSE subscription for incoming sign requests.
+ * subscribeToNotifications - SSE subscription for notification events.
+ * parseNotification - Decode and validate base64url NotificationMessage.
  *
  * @see internal/design/73-signing-protocol-v1.md Section 7.4
  * @see internal/design/74-wallet-sdk-daemon-components.md Section 2.6
  */
 
-import type { SignRequest, SignResponse } from '@waiaas/core';
-import { SignRequestSchema } from '@waiaas/core';
+import type { SignRequest, SignResponse, NotificationMessage } from '@waiaas/core';
+import { SignRequestSchema, NotificationMessageSchema } from '@waiaas/core';
 
 const DEFAULT_SERVER_URL = 'https://ntfy.sh';
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -123,6 +125,108 @@ export function subscribeToRequests(
       }
     } catch (_err) {
       // Don't reconnect if explicitly aborted
+      if (abortController.signal.aborted) return;
+
+      reconnectAttempts++;
+      if (reconnectAttempts <= MAX_RECONNECT_ATTEMPTS) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, RECONNECT_DELAY_MS),
+        );
+        void connect();
+      }
+    }
+  }
+
+  void connect();
+
+  return {
+    unsubscribe(): void {
+      abortController.abort();
+    },
+  };
+}
+
+/**
+ * Parse and validate a base64url-encoded NotificationMessage.
+ *
+ * Decodes the base64url string, parses JSON, and validates against
+ * NotificationMessageSchema.
+ *
+ * @param data - base64url-encoded NotificationMessage JSON string
+ * @returns Validated NotificationMessage object
+ * @throws Error if decoding, parsing, or validation fails
+ */
+export function parseNotification(data: string): NotificationMessage {
+  const json = Buffer.from(data, 'base64url').toString('utf-8');
+  const parsed: unknown = JSON.parse(json);
+  return NotificationMessageSchema.parse(parsed);
+}
+
+/**
+ * Subscribe to notification events via ntfy SSE stream.
+ *
+ * Listens for new messages on the specified ntfy topic and parses them
+ * as NotificationMessage objects via parseNotification().
+ * Valid messages trigger the callback.
+ *
+ * @param topic - ntfy topic name (e.g., 'waiaas-notify-trading-bot')
+ * @param callback - Function called for each valid NotificationMessage received
+ * @param serverUrl - ntfy server URL (defaults to https://ntfy.sh)
+ * @returns Object with unsubscribe() method to close the SSE connection
+ */
+export function subscribeToNotifications(
+  topic: string,
+  callback: (message: NotificationMessage) => void,
+  serverUrl: string = DEFAULT_SERVER_URL,
+): { unsubscribe: () => void } {
+  const abortController = new AbortController();
+  let reconnectAttempts = 0;
+
+  async function connect(): Promise<void> {
+    if (abortController.signal.aborted) return;
+
+    try {
+      const url = `${serverUrl}/${topic}/sse`;
+      const res = await fetch(url, {
+        signal: abortController.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        throw new Error(`SSE connection failed: HTTP ${String(res.status)}`);
+      }
+
+      reconnectAttempts = 0;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (!abortController.signal.aborted) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+
+          const dataStr = line.slice(6).trim();
+          if (!dataStr) continue;
+
+          try {
+            const event = JSON.parse(dataStr) as { message?: string };
+            if (!event.message) continue;
+
+            const notification = parseNotification(event.message);
+            callback(notification);
+          } catch {
+            // Ignore malformed messages
+          }
+        }
+      }
+    } catch (_err) {
       if (abortController.signal.aborted) return;
 
       reconnectAttempts++;

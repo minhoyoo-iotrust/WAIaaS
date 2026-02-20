@@ -1225,3 +1225,25 @@
 
 ---
 
+
+## v2.7 지갑 앱 알림 채널 (Shipped: 2026-02-20)
+
+**Delivered:** 지갑 앱(D'CENT 등)이 Telegram 없이 모든 알림 이벤트(26개)를 ntfy 사이드 채널로 수신하고, 카테고리별 필터링과 우선순위 기반 전송으로 긴급도를 구분하는 상태 달성
+
+**Phases completed:** 206 (1 phase, 4 plans, 7 tasks)
+
+**Key accomplishments:**
+
+- NotificationMessageSchema Zod SSoT + EVENT_CATEGORY_MAP (26 events → 6 categories) 정의
+- WalletNotificationChannel 사이드 채널 구현 (기존 알림 시스템과 독립 병행, security_alert priority 5)
+- subscribeToNotifications/parseNotification SDK 함수 추가 (ntfy SSE + base64url Zod 검증)
+- Admin Settings 알림 카테고리 멀티셀렉트 체크박스 UI + wallet.skill.md Section 13 동기화
+
+**Stats:**
+
+- 1 phase, 4 plans, 16 requirements, 34 files changed, +3,722/-91 lines
+- ~161,634 LOC TypeScript, 2,637+ tests
+- Git range: feat(206-01) → feat(206-04)
+
+---
+

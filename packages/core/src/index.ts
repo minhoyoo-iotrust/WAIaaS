@@ -129,6 +129,11 @@ export {
   encodeSignRequest,
   decodeSignRequest,
   buildUniversalLinkUrl,
+  NOTIFICATION_CATEGORIES,
+  type NotificationCategory,
+  EVENT_CATEGORY_MAP,
+  NotificationMessageSchema,
+  type NotificationMessage,
 } from './schemas/signing-protocol.js';
 
 // Errors (100 error codes across 12 domains + WAIaaSError + ChainError)
