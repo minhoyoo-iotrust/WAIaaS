@@ -1,10 +1,16 @@
 /**
  * Session routes: POST /sessions (create + JWT issuance),
  * GET /sessions (list active), DELETE /sessions/:id (revoke),
- * PUT /sessions/:id/renew (token renewal with 5 safety checks).
+ * PUT /sessions/:id/renew (token renewal with 5 safety checks),
+ * POST /sessions/:id/wallets (add wallet),
+ * DELETE /sessions/:id/wallets/:walletId (remove wallet),
+ * PATCH /sessions/:id/wallets/:walletId/default (set default),
+ * GET /sessions/:id/wallets (list wallets).
  *
  * CRUD routes are protected by masterAuth middleware at the server level.
  * Renewal route is protected by sessionAuth (session's own token).
+ *
+ * v26.4: Multi-wallet session model via session_wallets junction table.
  *
  * @see docs/52-auth-redesign.md
  * @see docs/37-rest-api-complete-spec.md
@@ -17,7 +23,7 @@ import { eq, and, isNull, gt, sql } from 'drizzle-orm';
 import { WAIaaSError, type EventBus } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
-import { wallets, sessions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -27,6 +33,9 @@ import {
   SessionListItemSchema,
   SessionRevokeResponseSchema,
   SessionRenewResponseSchema,
+  SessionWalletSchema,
+  SessionWalletListSchema,
+  SessionDefaultWalletSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -129,16 +138,90 @@ const renewSessionRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Session-Wallet Management Route Definitions (v26.4)
+// ---------------------------------------------------------------------------
+
+const addWalletRoute = createRoute({
+  method: 'post',
+  path: '/sessions/{id}/wallets',
+  tags: ['Sessions'],
+  summary: 'Add wallet to session',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { 'application/json': { schema: z.object({ walletId: z.string().uuid() }) } } },
+  },
+  responses: {
+    201: {
+      description: 'Wallet added',
+      content: { 'application/json': { schema: SessionWalletSchema } },
+    },
+    ...buildErrorResponses(['SESSION_NOT_FOUND', 'WALLET_NOT_FOUND', 'WALLET_ALREADY_LINKED', 'SESSION_LIMIT_EXCEEDED']),
+  },
+});
+
+const removeWalletRoute = createRoute({
+  method: 'delete',
+  path: '/sessions/{id}/wallets/{walletId}',
+  tags: ['Sessions'],
+  summary: 'Remove wallet from session',
+  request: {
+    params: z.object({ id: z.string().uuid(), walletId: z.string().uuid() }),
+  },
+  responses: {
+    204: { description: 'Wallet removed' },
+    ...buildErrorResponses(['SESSION_NOT_FOUND', 'CANNOT_REMOVE_DEFAULT_WALLET', 'SESSION_REQUIRES_WALLET']),
+  },
+});
+
+const setDefaultWalletRoute = createRoute({
+  method: 'patch',
+  path: '/sessions/{id}/wallets/{walletId}/default',
+  tags: ['Sessions'],
+  summary: 'Set default wallet for session',
+  request: {
+    params: z.object({ id: z.string().uuid(), walletId: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Default wallet changed',
+      content: { 'application/json': { schema: SessionDefaultWalletSchema } },
+    },
+    ...buildErrorResponses(['SESSION_NOT_FOUND']),
+  },
+});
+
+const listSessionWalletsRoute = createRoute({
+  method: 'get',
+  path: '/sessions/{id}/wallets',
+  tags: ['Sessions'],
+  summary: 'List wallets linked to session',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Session wallet list',
+      content: { 'application/json': { schema: SessionWalletListSchema } },
+    },
+    ...buildErrorResponses(['SESSION_NOT_FOUND']),
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
 /**
  * Create session route sub-router.
  *
- * POST /sessions         -> create session + JWT issuance (201)
- * GET /sessions          -> list active sessions for wallet (200)
- * DELETE /sessions/:id   -> revoke session (200)
- * PUT /sessions/:id/renew -> renew session token (200)
+ * POST /sessions                            -> create session + JWT issuance (201)
+ * GET /sessions                             -> list active sessions for wallet (200)
+ * DELETE /sessions/:id                      -> revoke session (200)
+ * PUT /sessions/:id/renew                   -> renew session token (200)
+ * POST /sessions/:id/wallets                -> add wallet to session (201)
+ * DELETE /sessions/:id/wallets/:walletId    -> remove wallet from session (204)
+ * PATCH /sessions/:id/wallets/:wId/default  -> set default wallet (200)
+ * GET /sessions/:id/wallets                 -> list session wallets (200)
  */
 export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -149,43 +232,51 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
   router.openapi(createSessionRoute, async (c) => {
     const parsed = c.req.valid('json');
 
-    // Verify wallet exists
-    const wallet = deps.db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.id, parsed.walletId))
-      .get();
+    // Normalize walletId/walletIds
+    const walletIds: string[] = parsed.walletIds ?? (parsed.walletId ? [parsed.walletId] : []);
+    const defaultWalletId = parsed.defaultWalletId ?? walletIds[0]!;
 
-    if (!wallet) {
-      throw new WAIaaSError('WALLET_NOT_FOUND');
-    }
-    if (wallet.status === 'TERMINATED') {
-      throw new WAIaaSError('WALLET_TERMINATED');
+    // Verify all wallets exist and are active
+    for (const wId of walletIds) {
+      const wallet = deps.db
+        .select()
+        .from(wallets)
+        .where(eq(wallets.id, wId))
+        .get();
+
+      if (!wallet) {
+        throw new WAIaaSError('WALLET_NOT_FOUND');
+      }
+      if (wallet.status === 'TERMINATED') {
+        throw new WAIaaSError('WALLET_TERMINATED');
+      }
     }
 
-    // Check active session count for this wallet
+    // Check active session count for each wallet (via session_wallets JOIN)
     const nowSec = Math.floor(Date.now() / 1000);
     const nowDate = new Date(nowSec * 1000);
-
-    const activeCountResult = deps.db
-      .select({ count: sql<number>`count(*)` })
-      .from(sessions)
-      .where(
-        and(
-          eq(sessions.walletId, parsed.walletId),
-          isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, nowDate),
-        ),
-      )
-      .get();
-
-    const activeCount = activeCountResult?.count ?? 0;
     const maxSessions = deps.config.security.max_sessions_per_wallet;
 
-    if (activeCount >= maxSessions) {
-      throw new WAIaaSError('SESSION_LIMIT_EXCEEDED', {
-        message: `Wallet has ${activeCount} active sessions (max: ${maxSessions})`,
-      });
+    for (const wId of walletIds) {
+      const activeCountResult = deps.db
+        .select({ count: sql<number>`count(*)` })
+        .from(sessionWallets)
+        .innerJoin(sessions, eq(sessionWallets.sessionId, sessions.id))
+        .where(
+          and(
+            eq(sessionWallets.walletId, wId),
+            isNull(sessions.revokedAt),
+            gt(sessions.expiresAt, nowDate),
+          ),
+        )
+        .get();
+
+      const activeCount = activeCountResult?.count ?? 0;
+      if (activeCount >= maxSessions) {
+        throw new WAIaaSError('SESSION_LIMIT_EXCEEDED', {
+          message: `Wallet ${wId} has reached session limit (max: ${maxSessions})`,
+        });
+      }
     }
 
     // Generate session ID
@@ -196,10 +287,10 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     const expiresAt = nowSec + ttl;
     const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
 
-    // Create JWT payload and sign token
+    // Create JWT payload with defaultWalletId
     const jwtPayload: JwtPayload = {
       sub: sessionId,
-      wlt: parsed.walletId,
+      wlt: defaultWalletId,
       iat: nowSec,
       exp: expiresAt,
     };
@@ -208,10 +299,9 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Compute token hash for storage (never store raw token)
     const tokenHash = createHash('sha256').update(token).digest('hex');
 
-    // Insert session into DB
+    // Insert session into DB (no walletId column -- uses session_wallets)
     deps.db.insert(sessions).values({
       id: sessionId,
-      walletId: parsed.walletId,
       tokenHash,
       expiresAt: new Date(expiresAt * 1000),
       absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
@@ -221,14 +311,30 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       constraints: parsed.constraints ? JSON.stringify(parsed.constraints) : null,
     }).run();
 
+    // Insert session_wallets rows for each wallet
+    for (const wId of walletIds) {
+      deps.db.insert(sessionWallets).values({
+        sessionId,
+        walletId: wId,
+        isDefault: wId === defaultWalletId,
+        createdAt: new Date(nowSec * 1000),
+      }).run();
+    }
+
+    // Build wallets array for response
+    const walletRows = walletIds.map((wId) => {
+      const w = deps.db.select().from(wallets).where(eq(wallets.id, wId)).get()!;
+      return { id: w.id, name: w.name, isDefault: wId === defaultWalletId };
+    });
+
     // Fire-and-forget: notify session creation
-    void deps.notificationService?.notify('SESSION_CREATED', parsed.walletId, {
+    void deps.notificationService?.notify('SESSION_CREATED', defaultWalletId, {
       sessionId,
     });
 
     // v1.6: emit wallet:activity SESSION_CREATED event
     deps.eventBus?.emit('wallet:activity', {
-      walletId: parsed.walletId,
+      walletId: defaultWalletId,
       activity: 'SESSION_CREATED',
       details: { sessionId },
       timestamp: Math.floor(Date.now() / 1000),
@@ -239,52 +345,92 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         id: sessionId,
         token,
         expiresAt,
-        walletId: parsed.walletId,
+        walletId: defaultWalletId,
+        wallets: walletRows,
       },
       201,
     );
   });
 
   // -------------------------------------------------------------------------
-  // GET /sessions -- list active sessions for a wallet
+  // GET /sessions -- list active sessions
   // -------------------------------------------------------------------------
   router.openapi(listSessionsRoute, (c) => {
-    const { walletId } = c.req.valid('query');
+    const { walletId: filterWalletId } = c.req.valid('query');
 
-    const conditions = [isNull(sessions.revokedAt)];
-    if (walletId) {
-      conditions.push(eq(sessions.walletId, walletId));
+    // Base query: all non-revoked sessions
+    let sessionRows;
+    if (filterWalletId) {
+      // Filter by wallet: JOIN session_wallets to find sessions linked to this wallet
+      sessionRows = deps.db
+        .select({
+          id: sessions.id,
+          expiresAt: sessions.expiresAt,
+          absoluteExpiresAt: sessions.absoluteExpiresAt,
+          createdAt: sessions.createdAt,
+          renewalCount: sessions.renewalCount,
+          maxRenewals: sessions.maxRenewals,
+          lastRenewedAt: sessions.lastRenewedAt,
+          source: sessions.source,
+        })
+        .from(sessions)
+        .innerJoin(sessionWallets, eq(sessions.id, sessionWallets.sessionId))
+        .where(
+          and(
+            isNull(sessions.revokedAt),
+            eq(sessionWallets.walletId, filterWalletId),
+          ),
+        )
+        .orderBy(sql`${sessions.createdAt} DESC`)
+        .all();
+    } else {
+      sessionRows = deps.db
+        .select({
+          id: sessions.id,
+          expiresAt: sessions.expiresAt,
+          absoluteExpiresAt: sessions.absoluteExpiresAt,
+          createdAt: sessions.createdAt,
+          renewalCount: sessions.renewalCount,
+          maxRenewals: sessions.maxRenewals,
+          lastRenewedAt: sessions.lastRenewedAt,
+          source: sessions.source,
+        })
+        .from(sessions)
+        .where(isNull(sessions.revokedAt))
+        .orderBy(sql`${sessions.createdAt} DESC`)
+        .all();
     }
-
-    const rows = deps.db
-      .select({
-        id: sessions.id,
-        walletId: sessions.walletId,
-        expiresAt: sessions.expiresAt,
-        absoluteExpiresAt: sessions.absoluteExpiresAt,
-        createdAt: sessions.createdAt,
-        renewalCount: sessions.renewalCount,
-        maxRenewals: sessions.maxRenewals,
-        lastRenewedAt: sessions.lastRenewedAt,
-        source: sessions.source,
-        walletName: wallets.name,
-      })
-      .from(sessions)
-      .leftJoin(wallets, eq(sessions.walletId, wallets.id))
-      .where(and(...conditions))
-      .orderBy(sql`${sessions.createdAt} DESC`)
-      .all();
 
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const result = rows.map((row) => {
+    const result = sessionRows.map((row) => {
       const expiresAtSec = Math.floor(row.expiresAt.getTime() / 1000);
       const status = expiresAtSec < nowSec ? 'EXPIRED' : 'ACTIVE';
 
+      // Fetch wallets linked to this session
+      const swRows = deps.db
+        .select({
+          walletId: sessionWallets.walletId,
+          isDefault: sessionWallets.isDefault,
+          walletName: wallets.name,
+        })
+        .from(sessionWallets)
+        .leftJoin(wallets, eq(sessionWallets.walletId, wallets.id))
+        .where(eq(sessionWallets.sessionId, row.id))
+        .all();
+
+      const defaultSw = swRows.find((sw) => sw.isDefault);
+      const walletsList = swRows.map((sw) => ({
+        id: sw.walletId,
+        name: sw.walletName ?? 'Unknown',
+        isDefault: sw.isDefault,
+      }));
+
       return {
         id: row.id,
-        walletId: row.walletId,
-        walletName: row.walletName ?? null,
+        walletId: defaultSw?.walletId ?? walletsList[0]?.id ?? '',
+        walletName: defaultSw?.walletName ?? walletsList[0]?.name ?? null,
+        wallets: walletsList,
         status,
         renewalCount: row.renewalCount,
         maxRenewals: row.maxRenewals,
@@ -393,13 +539,25 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('RENEWAL_TOO_EARLY');
     }
 
+    // ----- Get default wallet from session_wallets -----
+    const defaultWallet = deps.db
+      .select()
+      .from(sessionWallets)
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.isDefault, true),
+        ),
+      )
+      .get();
+
     // ----- Issue new token -----
     const newTtl = currentTtl;
     const newExpiresAt = Math.min(nowSec + newTtl, absoluteExpiresAtSec);
 
     const newPayload: JwtPayload = {
       sub: sessionId,
-      wlt: session.walletId,
+      wlt: defaultWallet!.walletId,
       iat: nowSec,
       exp: newExpiresAt,
     };
@@ -436,6 +594,254 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       },
       200,
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /sessions/:id/wallets -- add wallet to session
+  // -------------------------------------------------------------------------
+  router.openapi(addWalletRoute, (c) => {
+    const { id: sessionId } = c.req.valid('param');
+    const { walletId } = c.req.valid('json');
+
+    // 1. Session exists and not revoked
+    const session = deps.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .get();
+
+    if (!session) {
+      throw new WAIaaSError('SESSION_NOT_FOUND');
+    }
+    if (session.revokedAt !== null) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', {
+        message: 'Session is revoked',
+      });
+    }
+
+    // 2. Wallet exists and not terminated
+    const wallet = deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
+    }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
+    }
+
+    // 3. Check not already linked
+    const existing = deps.db
+      .select()
+      .from(sessionWallets)
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.walletId, walletId),
+        ),
+      )
+      .get();
+
+    if (existing) {
+      throw new WAIaaSError('WALLET_ALREADY_LINKED');
+    }
+
+    // 4. Check max_sessions_per_wallet limit
+    const nowSec = Math.floor(Date.now() / 1000);
+    const nowDate = new Date(nowSec * 1000);
+    const maxSessions = deps.config.security.max_sessions_per_wallet;
+
+    const activeCountResult = deps.db
+      .select({ count: sql<number>`count(*)` })
+      .from(sessionWallets)
+      .innerJoin(sessions, eq(sessionWallets.sessionId, sessions.id))
+      .where(
+        and(
+          eq(sessionWallets.walletId, walletId),
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, nowDate),
+        ),
+      )
+      .get();
+
+    if ((activeCountResult?.count ?? 0) >= maxSessions) {
+      throw new WAIaaSError('SESSION_LIMIT_EXCEEDED', {
+        message: `Wallet ${walletId} has reached session limit (max: ${maxSessions})`,
+      });
+    }
+
+    // 5. Insert (is_default = false)
+    deps.db.insert(sessionWallets).values({
+      sessionId,
+      walletId,
+      isDefault: false,
+      createdAt: nowDate,
+    }).run();
+
+    return c.json(
+      {
+        sessionId,
+        walletId,
+        isDefault: false,
+        createdAt: nowSec,
+      },
+      201,
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // DELETE /sessions/:id/wallets/:walletId -- remove wallet from session
+  // -------------------------------------------------------------------------
+  router.openapi(removeWalletRoute, (c) => {
+    const { id: sessionId, walletId } = c.req.valid('param');
+
+    // 1. Find the session-wallet link
+    const sw = deps.db
+      .select()
+      .from(sessionWallets)
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.walletId, walletId),
+        ),
+      )
+      .get();
+
+    if (!sw) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', {
+        message: 'Wallet is not linked to this session',
+      });
+    }
+
+    // 2. Cannot remove default wallet
+    if (sw.isDefault) {
+      throw new WAIaaSError('CANNOT_REMOVE_DEFAULT_WALLET');
+    }
+
+    // 3. Must have at least 1 wallet remaining
+    const countResult = deps.db
+      .select({ count: sql<number>`count(*)` })
+      .from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, sessionId))
+      .get();
+
+    if ((countResult?.count ?? 0) <= 1) {
+      throw new WAIaaSError('SESSION_REQUIRES_WALLET');
+    }
+
+    // 4. Delete
+    deps.db
+      .delete(sessionWallets)
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.walletId, walletId),
+        ),
+      )
+      .run();
+
+    return new Response(null, { status: 204 }) as any;
+  });
+
+  // -------------------------------------------------------------------------
+  // PATCH /sessions/:id/wallets/:walletId/default -- set default wallet
+  // -------------------------------------------------------------------------
+  router.openapi(setDefaultWalletRoute, (c) => {
+    const { id: sessionId, walletId } = c.req.valid('param');
+
+    // 1. Check that wallet is linked to session
+    const sw = deps.db
+      .select()
+      .from(sessionWallets)
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.walletId, walletId),
+        ),
+      )
+      .get();
+
+    if (!sw) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', {
+        message: 'Wallet is not linked to this session',
+      });
+    }
+
+    // 2. Atomic swap: unset old default, set new default
+    deps.db
+      .update(sessionWallets)
+      .set({ isDefault: false })
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.isDefault, true),
+        ),
+      )
+      .run();
+
+    deps.db
+      .update(sessionWallets)
+      .set({ isDefault: true })
+      .where(
+        and(
+          eq(sessionWallets.sessionId, sessionId),
+          eq(sessionWallets.walletId, walletId),
+        ),
+      )
+      .run();
+
+    return c.json(
+      {
+        sessionId,
+        defaultWalletId: walletId,
+      },
+      200,
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /sessions/:id/wallets -- list wallets linked to session
+  // -------------------------------------------------------------------------
+  router.openapi(listSessionWalletsRoute, (c) => {
+    const { id: sessionId } = c.req.valid('param');
+
+    // 1. Session exists
+    const session = deps.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .get();
+
+    if (!session) {
+      throw new WAIaaSError('SESSION_NOT_FOUND');
+    }
+
+    // 2. Join session_wallets + wallets
+    const rows = deps.db
+      .select({
+        walletId: sessionWallets.walletId,
+        isDefault: sessionWallets.isDefault,
+        swCreatedAt: sessionWallets.createdAt,
+        walletName: wallets.name,
+        chain: wallets.chain,
+      })
+      .from(sessionWallets)
+      .leftJoin(wallets, eq(sessionWallets.walletId, wallets.id))
+      .where(eq(sessionWallets.sessionId, sessionId))
+      .all();
+
+    const walletsList = rows.map((row) => ({
+      id: row.walletId,
+      name: row.walletName ?? 'Unknown',
+      chain: row.chain ?? 'unknown',
+      isDefault: row.isDefault,
+      createdAt: Math.floor(row.swCreatedAt.getTime() / 1000),
+    }));
+
+    return c.json({ wallets: walletsList }, 200);
   });
 
   return router;

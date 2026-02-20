@@ -27,7 +27,7 @@ import { keyValueStore } from '../database/schema.js';
 
 export interface JwtPayload {
   sub: string; // sessionId
-  wlt: string; // walletId
+  wlt: string; // defaultWalletId (backward compat: also set as walletId until Phase 211)
   iat: number; // issued at (epoch seconds)
   exp: number; // expires at (epoch seconds)
 }

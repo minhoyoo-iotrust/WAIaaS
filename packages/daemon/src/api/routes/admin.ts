@@ -37,7 +37,7 @@ import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment } from '@waia
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
-import { wallets, sessions, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -1769,12 +1769,15 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         const tokenHash = createHash('sha256').update(token).digest('hex');
 
         deps.db.insert(sessions).values({
-          id: sessionId, walletId, tokenHash,
+          id: sessionId, tokenHash,
           expiresAt: new Date(expiresAt * 1000),
           absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
           createdAt: new Date(nowSec * 1000),
           renewalCount: 0, maxRenewals: config.security.session_max_renewals,
           constraints: null, source: 'api',
+        }).run();
+        deps.db.insert(sessionWallets).values({
+          sessionId, walletId, isDefault: true, createdAt: new Date(nowSec * 1000),
         }).run();
 
         void deps.notificationService?.notify('SESSION_CREATED', walletId, { sessionId });
@@ -1825,12 +1828,15 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         const tokenHash = createHash('sha256').update(token).digest('hex');
 
         deps.db.insert(sessions).values({
-          id: sessionId, walletId, tokenHash,
+          id: sessionId, tokenHash,
           expiresAt: new Date(expiresAt * 1000),
           absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
           createdAt: new Date(nowSec * 1000),
           renewalCount: 0, maxRenewals: config.security.session_max_renewals,
           constraints: null, source: 'mcp',
+        }).run();
+        deps.db.insert(sessionWallets).values({
+          sessionId, walletId, isDefault: true, createdAt: new Date(nowSec * 1000),
         }).run();
 
         // Write token file
@@ -1946,7 +1952,6 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
       deps.db.insert(sessions).values({
         id: sessionId,
-        walletId: w.id,
         tokenHash,
         expiresAt: new Date(expiresAt * 1000),
         absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
@@ -1955,6 +1960,9 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         maxRenewals: config.security.session_max_renewals,
         constraints: null,
         source: 'api',
+      }).run();
+      deps.db.insert(sessionWallets).values({
+        sessionId, walletId: w.id, isDefault: true, createdAt: new Date(nowSec * 1000),
       }).run();
 
       void deps.notificationService?.notify('SESSION_CREATED', w.id, { sessionId });

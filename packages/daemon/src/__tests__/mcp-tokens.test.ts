@@ -22,7 +22,7 @@ import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
-import { sessions } from '../infrastructure/database/schema.js';
+import { sessions, sessionWallets } from '../infrastructure/database/schema.js';
 import { eq } from 'drizzle-orm';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -320,17 +320,26 @@ describe('POST /v1/mcp/tokens', () => {
 
     expect(res.status).toBe(201);
 
-    // Query sessions table for this wallet
-    const walletSessions = conn.db
+    // Query session_wallets table for this wallet (v26.4: 1:N model)
+    const walletLinks = conn.db
       .select()
-      .from(sessions)
-      .where(eq(sessions.walletId, walletId))
+      .from(sessionWallets)
+      .where(eq(sessionWallets.walletId, walletId))
       .all();
 
-    expect(walletSessions.length).toBe(1);
-    expect(walletSessions[0]!.walletId).toBe(walletId);
-    expect(walletSessions[0]!.tokenHash).toBeTruthy();
-    expect(walletSessions[0]!.renewalCount).toBe(0);
+    expect(walletLinks.length).toBe(1);
+    expect(walletLinks[0]!.walletId).toBe(walletId);
+    expect(walletLinks[0]!.isDefault).toBe(true);
+
+    // Verify session exists
+    const sessionRow = conn.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, walletLinks[0]!.sessionId))
+      .get();
+    expect(sessionRow).toBeDefined();
+    expect(sessionRow!.tokenHash).toBeTruthy();
+    expect(sessionRow!.renewalCount).toBe(0);
   });
 
   // -------------------------------------------------------------------------

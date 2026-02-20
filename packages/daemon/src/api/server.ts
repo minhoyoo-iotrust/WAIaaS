@@ -157,6 +157,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       }
       return masterAuth(c, next);
     });
+    // masterAuth on session-wallet management sub-routes (v26.4)
+    app.use('/v1/sessions/:id/wallets', masterAuth);
+    app.use('/v1/sessions/:id/wallets/*', masterAuth);
   }
 
   // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip sub-paths with own auth

@@ -147,15 +147,25 @@ export const SessionCreateResponseSchema = z
     id: z.string().uuid(),
     token: z.string(),
     expiresAt: z.number().int(),
-    walletId: z.string().uuid(),
+    walletId: z.string().uuid(), // backward compat: default wallet
+    wallets: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      isDefault: z.boolean(),
+    })),
   })
   .openapi('SessionCreateResponse');
 
 export const SessionListItemSchema = z
   .object({
     id: z.string().uuid(),
-    walletId: z.string().uuid(),
-    walletName: z.string().nullable(),
+    walletId: z.string().uuid(), // backward compat: default wallet
+    walletName: z.string().nullable(), // backward compat: default wallet name
+    wallets: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      isDefault: z.boolean(),
+    })),
     status: z.string(),
     renewalCount: z.number().int(),
     maxRenewals: z.number().int(),
@@ -166,6 +176,32 @@ export const SessionListItemSchema = z
     source: z.enum(['api', 'mcp']),
   })
   .openapi('SessionListItem');
+
+// ---------------------------------------------------------------------------
+// Session-Wallet Management Schemas (v26.4)
+// ---------------------------------------------------------------------------
+
+export const SessionWalletSchema = z.object({
+  sessionId: z.string().uuid(),
+  walletId: z.string().uuid(),
+  isDefault: z.boolean(),
+  createdAt: z.number().int(),
+}).openapi('SessionWallet');
+
+export const SessionWalletListSchema = z.object({
+  wallets: z.array(z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    isDefault: z.boolean(),
+    createdAt: z.number().int(),
+  })),
+}).openapi('SessionWalletList');
+
+export const SessionDefaultWalletSchema = z.object({
+  sessionId: z.string().uuid(),
+  defaultWalletId: z.string().uuid(),
+}).openapi('SessionDefaultWallet');
 
 export const SessionRevokeResponseSchema = z
   .object({

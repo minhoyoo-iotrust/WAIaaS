@@ -20,7 +20,7 @@ import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment } from '@waiaas/core';
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
-import { wallets, sessions, transactions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -383,7 +383,6 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
 
       deps.db.insert(sessions).values({
         id: sessionId,
-        walletId: id,
         tokenHash,
         expiresAt: new Date(expiresAt * 1000),
         absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
@@ -391,6 +390,14 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         renewalCount: 0,
         maxRenewals: deps.config.security.session_max_renewals,
         constraints: null,
+      }).run();
+
+      // Insert session_wallets link (v26.4: 1:N session-wallet model)
+      deps.db.insert(sessionWallets).values({
+        sessionId,
+        walletId: id,
+        isDefault: true,
+        createdAt: now,
       }).run();
 
       session = { id: sessionId, token, expiresAt };
@@ -516,10 +523,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       )
       .run();
 
-    // 3. Delete active JWT sessions
+    // 3. Delete session_wallets links for this wallet (cascade will clean up orphan sessions)
     await deps.db
-      .delete(sessions)
-      .where(eq(sessions.walletId, walletId))
+      .delete(sessionWallets)
+      .where(eq(sessionWallets.walletId, walletId))
       .run();
 
     return c.json(
