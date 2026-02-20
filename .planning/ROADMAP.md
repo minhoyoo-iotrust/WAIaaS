@@ -148,12 +148,12 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
   3. 기본 지갑 제거 시 CANNOT_REMOVE_DEFAULT_WALLET, 마지막 지갑 제거 시 SESSION_REQUIRES_WALLET 에러가 반환된다
   4. DB v19 마이그레이션이 기존 sessions.wallet_id 데이터를 session_wallets로 무손실 이관하고, 이관 후 모든 세션에 is_default=1 행이 정확히 1개 존재한다
   5. 지갑 삭제(TERMINATE) 시 해당 지갑이 기본 지갑이면 자동 승격되고, 마지막 지갑이면 세션이 자동 revoke된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 210-01: DB v19 마이그레이션 + Drizzle 스키마 + 에러 코드 4개 추가
-- [ ] 210-02: 세션 생성 변경 (walletIds/walletId 정규화) + 세션-지갑 CRUD 4개 엔드포인트
-- [ ] 210-03: 지갑 삭제 cascade 방어 + is_default 불변량 보장 + 엣지 케이스 테스트
+- [ ] 210-01-PLAN.md — DB v19 마이그레이션 + Drizzle 스키마 + 에러 코드 4개 추가
+- [ ] 210-02-PLAN.md — 세션 생성 변경 (walletIds/walletId 정규화) + 세션-지갑 CRUD 4개 엔드포인트
+- [ ] 210-03-PLAN.md — 지갑 삭제 cascade 방어 + is_default 불변량 보장 + 엣지 케이스 테스트
 
 ### Phase 211: API 레이어 지갑 선택
 **Goal**: 모든 지갑 스코프 API가 선택적 walletId 파라미터를 지원하고, 미지정 시 기본 지갑으로 투명하게 동작하는 상태
