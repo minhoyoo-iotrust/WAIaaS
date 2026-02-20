@@ -25,7 +25,7 @@
     }
   },
   "bin": {
-    "push-relay": "dist/index.js"
+    "push-relay": "dist/bin.js"
   },
   "files": [
     "dist",
@@ -34,7 +34,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/index.js",
+    "start": "node dist/bin.js",
     "test": "vitest run",
     "test:unit": "vitest run",
     "lint": "eslint src/",

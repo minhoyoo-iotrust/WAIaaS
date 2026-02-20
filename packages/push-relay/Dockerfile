@@ -92,4 +92,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 USER waiaas
 
-CMD ["node", "packages/push-relay/dist/index.js"]
+CMD ["node", "packages/push-relay/dist/bin.js"]
