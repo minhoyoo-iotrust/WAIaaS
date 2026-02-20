@@ -146,6 +146,9 @@ Enabled by default (`admin_ui = true` in config.toml).
 | [Security Model](docs/security-model.md) | Authentication, policy engine, Kill Switch, AutoStop |
 | [Deployment Guide](docs/deployment.md) | Docker, npm, configuration reference |
 | [API Reference](docs/api-reference.md) | REST API endpoints and authentication |
+| [Agent Skills Integration](docs/guides/agent-skills-integration.md) | Universal guide for 27+ AI agent platforms |
+| [Claude Code Integration](docs/guides/claude-code-integration.md) | Skill files + MCP server setup for Claude Code |
+| [OpenClaw Integration](docs/guides/openclaw-integration.md) | Quick setup for OpenClaw bot |
 | [Wallet SDK Integration](docs/wallet-sdk-integration.md) | Integration guide for wallet developers |
 | [Why WAIaaS?](docs/why-waiaas/) | Background on AI agent wallet security |
 | [Contributing](CONTRIBUTING.md) | Development setup, code style, testing, PR guidelines |
