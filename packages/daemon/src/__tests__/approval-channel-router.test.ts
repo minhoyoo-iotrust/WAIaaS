@@ -12,9 +12,8 @@
  * @see packages/daemon/src/services/signing-sdk/approval-channel-router.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
-import type { ApprovalChannelRouterDeps } from '../services/signing-sdk/approval-channel-router.js';
 import type { NtfySigningChannel } from '../services/signing-sdk/channels/ntfy-signing-channel.js';
 import type { TelegramSigningChannel } from '../services/signing-sdk/channels/telegram-signing-channel.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';

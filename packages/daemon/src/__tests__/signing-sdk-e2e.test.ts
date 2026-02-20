@@ -19,7 +19,7 @@ import type { SignRequest, SignResponse } from '@waiaas/core';
 import { encodeSignRequest } from '@waiaas/core';
 import { NtfySigningChannel } from '../services/signing-sdk/channels/ntfy-signing-channel.js';
 import { SignRequestBuilder } from '../services/signing-sdk/sign-request-builder.js';
-import type { SignResponseHandler, HandleResult } from '../services/signing-sdk/sign-response-handler.js';
+import type { HandleResult } from '../services/signing-sdk/sign-response-handler.js';
 import type { WalletLinkConfig } from '@waiaas/core';
 
 // Verify module index exports work

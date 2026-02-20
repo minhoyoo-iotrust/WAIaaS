@@ -117,7 +117,7 @@ describe('Fresh DB (pushSchema)', () => {
 describe('v18 migration on existing DB', () => {
   let v17Sqlite: DatabaseType;
 
-  function createV17Database(): DatabaseType {
+  function _createV17Database(): DatabaseType {
     const conn = createDatabase(':memory:');
     const db = conn.sqlite;
     pushSchema(db);

@@ -131,11 +131,11 @@ function createTestResponse(overrides: Partial<SignResponse> = {}): SignResponse
 // Mock verify functions
 // ---------------------------------------------------------------------------
 
-function createMockEvmVerify(returns = true): EvmVerifyFn {
+function _createMockEvmVerify(returns = true): EvmVerifyFn {
   return vi.fn().mockResolvedValue(returns);
 }
 
-function createMockSolanaVerify(returns = true): SolanaVerifyFn {
+function _createMockSolanaVerify(returns = true): SolanaVerifyFn {
   return vi.fn().mockResolvedValue(returns);
 }
 

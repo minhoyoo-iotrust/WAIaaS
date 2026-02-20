@@ -121,7 +121,7 @@ export function subscribeToRequests(
           }
         }
       }
-    } catch (err) {
+    } catch (_err) {
       // Don't reconnect if explicitly aborted
       if (abortController.signal.aborted) return;
 

@@ -19,7 +19,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { TelegramSigningChannel } from '../services/signing-sdk/channels/telegram-signing-channel.js';
-import { TelegramBotService, escapeMarkdownV2 } from '../infrastructure/telegram/telegram-bot-service.js';
+import { TelegramBotService } from '../infrastructure/telegram/telegram-bot-service.js';
 import type { TelegramApi } from '../infrastructure/telegram/telegram-api.js';
 import type { TelegramUpdate } from '../infrastructure/telegram/telegram-types.js';
 import type { SignRequestBuilder } from '../services/signing-sdk/sign-request-builder.js';

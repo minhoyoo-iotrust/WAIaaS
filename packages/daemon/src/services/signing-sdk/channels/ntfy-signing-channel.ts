@@ -272,7 +272,7 @@ export class NtfySigningChannel {
           // Ignore malformed messages or handler errors
         }
       }
-    } catch (err) {
+    } catch (_err) {
       // Don't reconnect if explicitly aborted
       if (abortController.signal.aborted) {
         clearTimeout(expirationTimer);
