@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 213 of 213 (통합 레이어)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In Progress
-Last activity: 2026-02-21 -- Completed 213-01-PLAN.md (SDK multi-wallet session + discovery methods)
+Last activity: 2026-02-21 -- Completed 213-03-PLAN.md (Admin UI + CLI multi-wallet session support)
 
 Progress: [##########] 100%
 
@@ -27,7 +27,7 @@ Progress: [##########] 100%
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
 | 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
 | 212. 자기 발견 엔드포인트 | 2/2 | 9min | 4.5min |
-| 213. 통합 레이어 | 1/4 | 2min | 2min |
+| 213. 통합 레이어 | 3/4 | 8min | 2.7min |
 
 ## Accumulated Context
 
@@ -65,6 +65,10 @@ Progress: [##########] 100%
 - SDK masterHeaders(): masterAuth와 sessionAuth 헤더 구성 분리
 - Python SDK: get_connect_info만 추가 (sessionAuth 전용, masterAuth 미지원)
 - ConnectInfo 타입: daemon 응답 형태 그대로 미러링 (변환 없음)
+- Admin UI: Create Session 모달로 전환 (체크박스 멀티 지갑 선택 + 라디오 기본 지갑)
+- Admin UI: 단일 지갑은 walletId, 다중은 walletIds + defaultWalletId 전송 (하위 호환)
+- CLI quickset: 단일 POST /v1/sessions { walletIds } + 단일 mcp-token 파일
+- CLI MCP config: 단일 'waiaas' entry, WAIAAS_WALLET_ID 미설정 (connect-info로 발견)
 
 ### Blockers/Concerns
 
@@ -73,5 +77,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 213-01-PLAN.md (SDK multi-wallet session + discovery methods)
+Stopped at: Completed 213-03-PLAN.md (Admin UI + CLI multi-wallet session support)
 Resume file: None
