@@ -381,7 +381,6 @@ class ConnectInfoWallet(BaseModel):
     default_network: str = Field(alias="defaultNetwork")
     address: str
     is_default: bool = Field(alias="isDefault")
-    policies: list[dict[str, Any]]
 
     model_config = {"populate_by_name": True}
 
@@ -410,6 +409,7 @@ class ConnectInfo(BaseModel):
 
     session: ConnectInfoSession
     wallets: list[ConnectInfoWallet]
+    policies: dict[str, list[dict[str, Any]]]
     capabilities: list[str]
     daemon: ConnectInfoDaemon
     prompt: str
