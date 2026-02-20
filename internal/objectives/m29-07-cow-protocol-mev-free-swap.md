@@ -1,5 +1,8 @@
 # 마일스톤 m29-07: MEV-free Swap (CoW Protocol)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 v1.5 Action Provider 프레임워크 위에 CoW Protocol을 ActionProvider로 구현하여, AI 에이전트가 EVM 체인에서 MEV 공격 없는 gasless 스왑을 실행할 수 있는 상태.

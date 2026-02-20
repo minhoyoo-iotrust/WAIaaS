@@ -11,6 +11,7 @@
  * WALLET_STATUSES used for status CHECK constraint.
  *
  * v1.4.6: Environment model -- wallets.network replaced by wallets.environment + wallets.defaultNetwork.
+ * v2.6.1: owner_approval_method column added for signing SDK approval channel preference.
  * transactions.network and policies.network columns added.
  *
  * @see docs/25-sqlite-schema.md
@@ -67,6 +68,7 @@ export const wallets = sqliteTable(
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
     suspensionReason: text('suspension_reason'),
+    ownerApprovalMethod: text('owner_approval_method'),
   },
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),

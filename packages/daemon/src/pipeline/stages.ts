@@ -44,6 +44,7 @@ import type { SettingsService } from '../infrastructure/settings/settings-servic
 import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { formatDisplayCurrency, type EventBus } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
+import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
 
@@ -101,6 +102,8 @@ export interface PipelineContext {
   eventBus?: EventBus;
   // v1.6.1: WC signing bridge for APPROVAL fire-and-forget
   wcSigningBridge?: WcSigningBridge;
+  // v2.6.1: signing SDK channel router for APPROVAL fire-and-forget
+  approvalChannelRouter?: ApprovalChannelRouter;
 }
 
 // ---------------------------------------------------------------------------
@@ -553,6 +556,21 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
         ctx.txId,
         ctx.wallet.chain,
       );
+    }
+
+    // v2.6.1: fire-and-forget SDK signing channel routing (non-blocking)
+    if (ctx.approvalChannelRouter) {
+      void ctx.approvalChannelRouter.route(ctx.walletId, {
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        chain: ctx.wallet.chain as 'solana' | 'evm',
+        network: ctx.resolvedNetwork,
+        type: (ctx.request as any).type ?? 'TRANSFER',
+        from: ctx.wallet.publicKey,
+        to: getRequestTo(ctx.request),
+        amount: getRequestAmount(ctx.request),
+        policyTier: 'APPROVAL',
+      });
     }
 
     // Halt pipeline -- transaction will be picked up by approve/reject/expire

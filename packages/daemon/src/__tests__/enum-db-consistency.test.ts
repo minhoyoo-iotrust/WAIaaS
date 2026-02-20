@@ -252,12 +252,12 @@ describe('IT-03: sqlite_master CHECK SQL matches SSoT', () => {
 // ---------------------------------------------------------------------------
 
 describe('IT-04: expected CHECK constraints exist', () => {
-  it('7 SSoT-derived CHECK constraints across 4 tables (wallets, transactions, policies, notification_logs)', () => {
-    // wallets: chain, environment, default_network, status = 4 SSoT + owner_verified(IN) = 5 IN-based
+  it('SSoT-derived CHECK constraints across 4 tables (wallets, transactions, policies, notification_logs)', () => {
+    // wallets: chain, environment, default_network, status, owner_approval_method = 5 SSoT + owner_verified(IN) = 6 IN-based
     // transactions: type, status, tier, network = 4 IN-based
     // policies: type, network = 2 IN-based
     // notification_logs: status = 1 IN-based
-    // Total IN-based: 5+4+2+1 = 12
+    // Total IN-based: 6+4+2+1 = 13
 
     const tables = ['wallets', 'transactions', 'policies', 'notification_logs'];
     let inBasedCheckCount = 0;
@@ -269,8 +269,8 @@ describe('IT-04: expected CHECK constraints exist', () => {
       if (matches) inBasedCheckCount += matches.length;
     }
 
-    // 12 IN-based CHECK constraints (11 SSoT-derived + 1 owner_verified boolean)
-    expect(inBasedCheckCount).toBe(12);
+    // 13 IN-based CHECK constraints (12 SSoT-derived + 1 owner_verified boolean)
+    expect(inBasedCheckCount).toBe(13);
   });
 });
 

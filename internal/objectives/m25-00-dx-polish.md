@@ -1,5 +1,10 @@
 # 마일스톤 m25: DX(Developer Experience) 품질 개선
 
+- **Status:** SHIPPED
+- **Milestone:** v2.5
+- **Package:** 2.4.0-rc.2
+- **Completed:** 2026-02-19
+
 ## 목표
 
 `npm install -g @waiaas/cli` → `waiaas init` → `waiaas start` → `waiaas quickstart` 의 첫 5분 경험에서 발견된 마찰을 제거하고, README·SDK·Docker·MCP 각 진입 경로에서 첫 사용자가 막힘 없이 동작하는 상태. 퍼블릭 리포에서 README 코드를 복붙했을 때 즉시 동작해야 한다.

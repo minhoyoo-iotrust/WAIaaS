@@ -1,5 +1,8 @@
 # 마일스톤 m26-02: 지갑 앱 알림 채널
 
+- **Status:** IN_PROGRESS
+- **Milestone:** v2.6
+
 ## 목표
 
 D'CENT 등 WAIaaS SDK 통합 지갑 앱에서 **모든 알림을 수신**할 수 있는 상태. Telegram 없이 지갑 앱 하나로 알림 수신 + 승인/거부까지 완결되는 UX를 제공한다.

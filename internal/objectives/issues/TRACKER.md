@@ -121,6 +121,16 @@
 | 104 | ENHANCEMENT | MEDIUM | MCP 서버에서 AI 에이전트에게 업데이트 가능 알림 제공 | v2.6 | FIXED | 2026-02-20 |
 | 105 | ENHANCEMENT | LOW | 노티피케이션 채널을 통한 데몬 업데이트 알림 발송 | v2.6 | FIXED | 2026-02-20 |
 | 106 | ENHANCEMENT | MEDIUM | 매직워드 대시보드 전용 카드 승격 + REST API 추가 + skills 반영 | v2.6 | FIXED | 2026-02-20 |
+| 107 | MISSING | HIGH | 신규/누락 패키지 release-please + CI 커버리지 설정 등록 | v2.6 | FIXED | 2026-02-20 |
+| 108 | MISSING | HIGH | wallet-sdk 연동 가이드 문서 작성 | v2.6.1 | FIXED | 2026-02-20 |
+| 109 | ENHANCEMENT | LOW | 기존 마일스톤 목표 문서에 상태 헤더 추가 | v2.6.1 | FIXED | 2026-02-20 |
+| 110 | ENHANCEMENT | LOW | 소스코드 메시지 및 문서에서 `waiaas upgrade` → `waiaas update` 일괄 변경 | v2.6.1 | FIXED | 2026-02-20 |
+| 111 | ENHANCEMENT | MEDIUM | OpenClaw 연동 퀵 가이드 + 스킬 설치 명령어 | v2.6.1 | FIXED | 2026-02-20 |
+| 112 | ENHANCEMENT | MEDIUM | 기본 환경 모드를 testnet → mainnet으로 변경 | v2.6.1 | FIXED | 2026-02-20 |
+| 113 | ENHANCEMENT | MEDIUM | Claude Code 연동 퀵 가이드 + 스킬 설치 명령어 | v2.6.1 | FIXED | 2026-02-20 |
+| 114 | ENHANCEMENT | MEDIUM | 범용 Agent Skills 연동 가이드 + 플랫폼별 설치 명령어 | v2.6.1 | FIXED | 2026-02-20 |
+| 115 | BUG | MEDIUM | Notifications 상태 API가 정적 config 참조하여 활성화 배너 미갱신 | v2.6.1 | FIXED | 2026-02-20 |
+| 116 | BUG | MEDIUM | Telegram Bot Enabled 저장 후 비활성화로 되돌림 | v2.6.1 | FIXED | 2026-02-20 |
 
 ## Type Legend
 
@@ -133,8 +143,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 106
+- **FIXED:** 116
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 106
+- **Total:** 116

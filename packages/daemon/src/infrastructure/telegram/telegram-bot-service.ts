@@ -26,13 +26,14 @@
 import { createHash } from 'node:crypto';
 import type { Database } from 'better-sqlite3';
 import type { SupportedLocale } from '@waiaas/core';
-import { getMessages } from '@waiaas/core';
+import { getMessages, SignResponseSchema, WAIaaSError } from '@waiaas/core';
 import type { TelegramApi } from './telegram-api.js';
 import type { TelegramUpdate, TelegramMessage } from './telegram-types.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { SettingsService } from '../settings/settings-service.js';
 import type { JwtSecretManager, JwtPayload } from '../jwt/index.js';
+import type { SignResponseHandler } from '../../services/signing-sdk/sign-response-handler.js';
 import { TelegramAuth } from './telegram-auth.js';
 import { buildConfirmKeyboard, buildWalletSelectKeyboard, buildApprovalKeyboard } from './telegram-keyboard.js';
 
@@ -59,6 +60,7 @@ export interface TelegramBotServiceOptions {
   notificationService?: NotificationService;
   settingsService?: SettingsService;
   jwtSecretManager?: JwtSecretManager;
+  signResponseHandler?: SignResponseHandler;
   sessionTtl?: number;
 }
 
@@ -73,6 +75,7 @@ export class TelegramBotService {
   private killSwitchService?: KillSwitchService;
   private jwtSecretManager?: JwtSecretManager;
   private settingsService?: SettingsService;
+  private signResponseHandler?: SignResponseHandler;
   private sessionTtl: number;
   private auth: TelegramAuth;
   private running = false;
@@ -89,8 +92,17 @@ export class TelegramBotService {
     this.killSwitchService = opts.killSwitchService;
     this.jwtSecretManager = opts.jwtSecretManager;
     this.settingsService = opts.settingsService;
+    this.signResponseHandler = opts.signResponseHandler;
     this.sessionTtl = opts.sessionTtl ?? 3600; // default 1 hour
     this.auth = new TelegramAuth(opts.sqlite);
+  }
+
+  /**
+   * Set the signResponseHandler for /sign_response command (late-binding from signing SDK lifecycle).
+   * Same late-binding pattern as VersionCheckService.setNotificationService().
+   */
+  setSignResponseHandler(handler: SignResponseHandler): void {
+    this.signResponseHandler = handler;
   }
 
   /**
@@ -242,6 +254,9 @@ export class TelegramBotService {
           break;
         case '/newsession':
           await this.handleNewSession(chatId);
+          break;
+        case '/sign_response':
+          await this.handleSignResponse(chatId, parts[1]);
           break;
         default:
           // Unknown command -- ignore silently
@@ -733,6 +748,58 @@ export class TelegramBotService {
     // Send token to user (monospace in MarkdownV2)
     const msg = msgs.telegram.bot_newsession_created.replace('{token}', token);
     await this.api.sendMessage(chatId, msg);
+  }
+
+  // -----------------------------------------------------------------------
+  // /sign_response {encoded} -- process SignResponse from wallet app
+  // -----------------------------------------------------------------------
+
+  private async handleSignResponse(chatId: number, encodedResponse?: string): Promise<void> {
+    if (!this.signResponseHandler) {
+      await this.api.sendMessage(
+        chatId,
+        escapeMarkdownV2('Signing SDK is not enabled'),
+      );
+      return;
+    }
+
+    if (!encodedResponse) {
+      await this.api.sendMessage(
+        chatId,
+        escapeMarkdownV2('Usage: /sign_response {encoded_response}'),
+      );
+      return;
+    }
+
+    try {
+      // Decode base64url string to JSON
+      const json = Buffer.from(encodedResponse, 'base64url').toString('utf-8');
+      const parsed: unknown = JSON.parse(json);
+
+      // Validate with Zod schema
+      const signResponse = SignResponseSchema.parse(parsed);
+
+      // Delegate to SignResponseHandler
+      const result = await this.signResponseHandler.handle(signResponse);
+
+      // Send confirmation
+      await this.api.sendMessage(
+        chatId,
+        escapeMarkdownV2(`Sign response processed: ${result.action}`),
+      );
+    } catch (err) {
+      // Handle WAIaaSError or parse errors
+      const message =
+        err instanceof WAIaaSError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Unknown error processing sign response';
+      await this.api.sendMessage(
+        chatId,
+        escapeMarkdownV2(`Error: ${message}`),
+      );
+    }
   }
 
   // -----------------------------------------------------------------------

@@ -70,6 +70,7 @@ import type { IPolicyEngine, IPriceOracle, IForexRateService, EventBus } from '@
 import type { KillSwitchService } from '../services/kill-switch-service.js';
 import type { WcServiceRef } from '../services/wc-session-service.js';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
+import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
 import type { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { DelayQueue } from '../workflow/delay-queue.js';
@@ -114,6 +115,7 @@ export interface CreateAppDeps {
   killSwitchService?: KillSwitchService;
   wcServiceRef?: WcServiceRef;
   wcSigningBridge?: WcSigningBridge;
+  approvalChannelRouter?: ApprovalChannelRouter;
   versionCheckService?: VersionCheckService | null;
 }
 
@@ -336,6 +338,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         forexRateService: deps.forexRateService,
         eventBus: deps.eventBus,
         wcSigningBridge: deps.wcSigningBridge,
+        approvalChannelRouter: deps.approvalChannelRouter,
       }),
     );
   }

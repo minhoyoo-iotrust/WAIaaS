@@ -1,5 +1,8 @@
 # 마일스톤 m31-01: Tauri Desktop App
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 Tauri 2 기반 데스크탑 앱으로 WAIaaS 데몬을 GUI에서 관리할 수 있는 상태. Sidecar로 데몬 바이너리를 내장하고, **기존 Admin Web UI(`packages/admin/`)를 WebView에 그대로 로드**하여 코드 중복 없이 전체 기능을 제공한다. Desktop 전용 기능(Sidecar Manager, 시스템 트레이, Setup Wizard, WalletConnect)만 Tauri 네이티브 레이어에서 추가한다.

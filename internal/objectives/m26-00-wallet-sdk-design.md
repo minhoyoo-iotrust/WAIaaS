@@ -1,5 +1,8 @@
 # 마일스톤 m26: Wallet SDK 설계
 
+- **Status:** IN_PROGRESS
+- **Milestone:** v2.6
+
 ## 목표
 
 지갑 개발사(D'CENT 등)가 WAIaaS와 통합하기 위한 Wallet Signing SDK와 개방형 서명 프로토콜, 지갑 앱 알림 채널, Push Relay Server의 공통 설계를 확정한다. m26-01(Signing SDK 구현), m26-02(알림 채널 구현), m26-03(Push Relay Server)의 입력을 생산한다.

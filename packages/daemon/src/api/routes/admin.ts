@@ -1115,37 +1115,40 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(notificationsStatusRoute, async (c) => {
-    const notifConfig = deps.notificationConfig;
+    const ss = deps.settingsService;
     const svc = deps.notificationService;
     const channelNames = svc ? svc.getChannelNames() : [];
+
+    // Read from SettingsService (dynamic) instead of static config snapshot
+    const enabled = ss ? ss.get('notifications.enabled') === 'true' : (deps.notificationConfig?.enabled ?? false);
 
     const channels = [
       {
         name: 'telegram',
         enabled: !!(
-          notifConfig?.telegram_bot_token &&
-          notifConfig?.telegram_chat_id &&
+          (ss ? ss.get('notifications.telegram_bot_token') : deps.notificationConfig?.telegram_bot_token) &&
+          (ss ? ss.get('notifications.telegram_chat_id') : deps.notificationConfig?.telegram_chat_id) &&
           channelNames.includes('telegram')
         ),
       },
       {
         name: 'discord',
         enabled: !!(
-          notifConfig?.discord_webhook_url &&
+          (ss ? ss.get('notifications.discord_webhook_url') : deps.notificationConfig?.discord_webhook_url) &&
           channelNames.includes('discord')
         ),
       },
       {
         name: 'ntfy',
         enabled: !!(
-          notifConfig?.ntfy_topic &&
+          (ss ? ss.get('notifications.ntfy_topic') : deps.notificationConfig?.ntfy_topic) &&
           channelNames.includes('ntfy')
         ),
       },
       {
         name: 'slack',
         enabled: !!(
-          notifConfig?.slack_webhook_url &&
+          (ss ? ss.get('notifications.slack_webhook_url') : deps.notificationConfig?.slack_webhook_url) &&
           channelNames.includes('slack')
         ),
       },
@@ -1153,7 +1156,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
     return c.json(
       {
-        enabled: notifConfig?.enabled ?? false,
+        enabled,
         channels,
       },
       200,
@@ -1262,33 +1265,27 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
   router.openapi(settingsGetRoute, async (c) => {
     if (!deps.settingsService) {
+      const emptyCategory = {} as Record<string, string | boolean>;
       return c.json(
         {
-          notifications: {} as Record<string, string | boolean>,
-          rpc: {} as Record<string, string | boolean>,
-          security: {} as Record<string, string | boolean>,
-          daemon: {} as Record<string, string | boolean>,
-          walletconnect: {} as Record<string, string | boolean>,
-          oracle: {} as Record<string, string | boolean>,
-          display: {} as Record<string, string | boolean>,
+          notifications: emptyCategory,
+          rpc: emptyCategory,
+          security: emptyCategory,
+          daemon: emptyCategory,
+          walletconnect: emptyCategory,
+          oracle: emptyCategory,
+          display: emptyCategory,
+          autostop: emptyCategory,
+          monitoring: emptyCategory,
+          telegram: emptyCategory,
+          signing_sdk: emptyCategory,
         },
         200,
       );
     }
 
-    const masked = deps.settingsService.getAllMasked();
-    return c.json(
-      {
-        notifications: masked.notifications ?? {},
-        rpc: masked.rpc ?? {},
-        security: masked.security ?? {},
-        daemon: masked.daemon ?? {},
-        walletconnect: masked.walletconnect ?? {},
-        oracle: masked.oracle ?? {},
-        display: masked.display ?? {},
-      },
-      200,
-    );
+    const masked = deps.settingsService.getAllMasked() as z.infer<typeof SettingsResponseSchema>;
+    return c.json(masked, 200);
   });
 
   // ---------------------------------------------------------------------------
@@ -1323,19 +1320,11 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       deps.onSettingsChanged(entries.map((e) => e.key));
     }
 
-    const masked = deps.settingsService.getAllMasked();
+    const masked = deps.settingsService.getAllMasked() as z.infer<typeof SettingsResponseSchema>;
     return c.json(
       {
         updated: entries.length,
-        settings: {
-          notifications: masked.notifications ?? {},
-          rpc: masked.rpc ?? {},
-          security: masked.security ?? {},
-          daemon: masked.daemon ?? {},
-          walletconnect: masked.walletconnect ?? {},
-          oracle: masked.oracle ?? {},
-          display: masked.display ?? {},
-        },
+        settings: masked,
       },
       200,
     );

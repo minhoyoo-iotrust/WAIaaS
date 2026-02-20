@@ -31,6 +31,9 @@ Thumbs.db
 # Temporary
 *.tsbuildinfo
 
+# SQLite database files
+*.db
+
 # pnpm pack artifacts
 package/
 *.tgz

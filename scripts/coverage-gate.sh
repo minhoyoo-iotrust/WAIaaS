@@ -15,18 +15,28 @@ set -euo pipefail
 
 MODE="${COVERAGE_GATE_MODE:-soft}"
 
-# Core 4 packages and their thresholds (parallel arrays for bash 3.x compat)
+# All 9 packages and their thresholds (parallel arrays for bash 3.x compat)
 PACKAGES=(
   "packages/core"
   "packages/daemon"
   "packages/adapters/solana"
   "packages/sdk"
+  "packages/cli"
+  "packages/mcp"
+  "packages/admin"
+  "packages/adapters/evm"
+  "packages/wallet-sdk"
 )
 THRESHOLDS=(
   90
   85
   80
   80
+  70    # cli
+  70    # mcp
+  70    # admin
+  50    # adapters/evm
+  80    # wallet-sdk
 )
 
 get_threshold() {
@@ -58,7 +68,7 @@ check_package() {
 
   # Per-package mode override: COVERAGE_GATE_PACKAGES_CORE, COVERAGE_GATE_PACKAGES_DAEMON, etc.
   local pkg_var
-  pkg_var="COVERAGE_GATE_$(echo "$pkg" | tr '/' '_' | tr '[:lower:]' '[:upper:]')"
+  pkg_var="COVERAGE_GATE_$(echo "$pkg" | tr '/-' '__' | tr '[:lower:]' '[:upper:]')"
   local pkg_mode="${!pkg_var:-$MODE}"
 
   if (( $(echo "$lines < $threshold" | bc -l) )); then

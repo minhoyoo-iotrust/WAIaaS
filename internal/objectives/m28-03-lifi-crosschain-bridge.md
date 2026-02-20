@@ -1,5 +1,8 @@
 # 마일스톤 m28-03: LI.FI 크로스체인 브릿지
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 v1.5 Action Provider 프레임워크 위에 LI.FI를 ActionProvider로 구현하여, AI 에이전트가 Solana↔EVM 또는 EVM↔EVM 체인 간 자산을 정책 평가 하에 브릿지/스왑할 수 있는 상태.

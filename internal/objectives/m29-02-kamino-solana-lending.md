@@ -1,5 +1,8 @@
 # 마일스톤 m29-02: Solana Lending (Kamino)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 m28에서 구축된 Lending 프레임워크 위에 Kamino K-Lend를 Solana Lending Provider로 구현하여, AI 에이전트가 Solana 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.

@@ -996,8 +996,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 17
-    expect(LATEST_SCHEMA_VERSION).toBe(17);
+    // Verify LATEST_SCHEMA_VERSION is 18
+    expect(LATEST_SCHEMA_VERSION).toBe(18);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1323,10 +1323,10 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Run full pushSchema (v2 -> v12 chain)
     pushSchema(db);
 
-    // Verify final version is 17
+    // Verify final version is 18
     const versions = getVersions(db);
-    expect(versions).toContain(17);
-    expect(Math.max(...versions)).toBe(17);
+    expect(versions).toContain(18);
+    expect(Math.max(...versions)).toBe(18);
 
     // Verify data survived the entire chain
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
@@ -1504,10 +1504,10 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Run full pushSchema (v2 -> v13 chain)
     pushSchema(db);
 
-    // Verify final version is 17
+    // Verify final version is 18
     const versions = getVersions(db);
-    expect(versions).toContain(17);
-    expect(Math.max(...versions)).toBe(17);
+    expect(versions).toContain(18);
+    expect(Math.max(...versions)).toBe(18);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1719,10 +1719,10 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Run full pushSchema (v2 -> v16 chain)
     pushSchema(db);
 
-    // Verify final version is 17
+    // Verify final version is 18
     const versions = getVersions(db);
-    expect(versions).toContain(17);
-    expect(Math.max(...versions)).toBe(17);
+    expect(versions).toContain(18);
+    expect(Math.max(...versions)).toBe(18);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(

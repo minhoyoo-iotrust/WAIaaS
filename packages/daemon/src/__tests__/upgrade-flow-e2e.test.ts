@@ -228,7 +228,7 @@ describe('upgrade flow E2E', () => {
       expect(result.action).toBe('reject');
       if (result.action === 'reject') {
         expect(result.reason).toBe('code_too_old');
-        expect(result.message).toContain('waiaas upgrade');
+        expect(result.message).toContain('waiaas update');
       }
     });
 
@@ -340,7 +340,7 @@ describe('upgrade flow E2E', () => {
     });
 
     it('upgrade --check equivalent: health info reflects version check state', async () => {
-      // Simulate what `waiaas upgrade --check` does:
+      // Simulate what `waiaas update --check` does:
       // 1. Fetch /health from daemon
       // 2. Check updateAvailable + latestVersion
 

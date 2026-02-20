@@ -63,7 +63,7 @@ export function checkSchemaCompatibility(sqlite: Database): CompatibilityResult 
         `Step-by-step upgrade required:`,
         `  1. Install the intermediate version: npm install -g @waiaas/cli@<intermediate-version>`,
         `  2. Run: waiaas start (to migrate DB to intermediate schema)`,
-        `  3. Then upgrade to latest: waiaas upgrade`,
+        `  3. Then upgrade to latest: waiaas update`,
       ].join('\n'),
     };
   }
@@ -75,7 +75,7 @@ export function checkSchemaCompatibility(sqlite: Database): CompatibilityResult 
       message: [
         `DB schema version ${dbVersion} is newer than code expects (${LATEST_SCHEMA_VERSION}).`,
         `This database was created or migrated by a newer version of WAIaaS.`,
-        `Run: waiaas upgrade`,
+        `Run: waiaas update`,
       ].join('\n'),
     };
   }

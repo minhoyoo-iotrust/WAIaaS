@@ -9,6 +9,7 @@
 - ✅ **v2.4.1 Admin UI 테스트 커버리지 복원** — Phases 191-193 (shipped 2026-02-19)
 - ✅ **v2.5 DX 품질 개선** — Phases 194-197 (shipped 2026-02-19)
 - ✅ **v2.6 Wallet SDK 설계** — Phases 198-201 (shipped 2026-02-20)
+- ✅ **v2.6.1 WAIaaS Wallet Signing SDK** — Phases 202-205 (shipped 2026-02-20)
 
 ## Phases
 
@@ -91,6 +92,18 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v2.6.1 WAIaaS Wallet Signing SDK (Phases 202-205) — SHIPPED 2026-02-20</summary>
+
+- [x] Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널 (4/4 plans) — completed 2026-02-20
+- [x] Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI (4/4 plans) — completed 2026-02-20
+- [x] Phase 204: Signing SDK 데몬 라이프사이클 연결 (2/2 plans) — completed 2026-02-20
+- [x] Phase 205: Admin Settings API + Skills 동기화 (3/3 plans) — completed 2026-02-20
+
+See `.planning/milestones/v2.6.1-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -102,3 +115,4 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
 | 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
+| 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |

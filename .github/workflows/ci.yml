@@ -131,3 +131,48 @@ jobs:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json
           working-directory: packages/sdk
+
+      - name: 'Coverage Report - @waiaas/cli'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/cli'
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+          working-directory: packages/cli
+
+      - name: 'Coverage Report - @waiaas/mcp'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/mcp'
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+          working-directory: packages/mcp
+
+      - name: 'Coverage Report - @waiaas/admin'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/admin'
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+          working-directory: packages/admin
+
+      - name: 'Coverage Report - @waiaas/adapter-evm'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/adapter-evm'
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+          working-directory: packages/adapters/evm
+
+      - name: 'Coverage Report - @waiaas/wallet-sdk'
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
+        with:
+          name: '@waiaas/wallet-sdk'
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
+          working-directory: packages/wallet-sdk

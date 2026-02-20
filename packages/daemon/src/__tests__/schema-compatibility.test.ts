@@ -62,7 +62,7 @@ describe('checkSchemaCompatibility', () => {
     expect(result).toEqual({ action: 'ok' });
   });
 
-  it('Scenario C: code < db -- returns reject with code_too_old and waiaas upgrade hint', () => {
+  it('Scenario C: code < db -- returns reject with code_too_old and waiaas update hint', () => {
     // Insert a version beyond what code expects
     sqlite
       .prepare(
@@ -74,7 +74,7 @@ describe('checkSchemaCompatibility', () => {
     expect(result.action).toBe('reject');
     if (result.action === 'reject') {
       expect(result.reason).toBe('code_too_old');
-      expect(result.message).toContain('waiaas upgrade');
+      expect(result.message).toContain('waiaas update');
     }
   });
 
@@ -149,7 +149,7 @@ describe('checkSchemaCompatibility', () => {
     expect(result.action).toBe('reject');
     if (result.action === 'reject') {
       expect(result.reason).toBe('code_too_old');
-      expect(result.message).toContain('waiaas upgrade');
+      expect(result.message).toContain('waiaas update');
     }
   });
 });

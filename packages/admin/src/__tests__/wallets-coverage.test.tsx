@@ -1143,7 +1143,7 @@ describe('RpcEndpointsTab', () => {
       if (path === '/v1/admin/settings') return mockSettingsData;
       return {};
     });
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
 
     render(<WalletsPage />);
 
@@ -1210,7 +1210,7 @@ describe('BalanceMonitoringTab', () => {
       if (path === '/v1/admin/settings') return mockSettingsData;
       return {};
     });
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
 
     render(<WalletsPage />);
 
@@ -1250,7 +1250,7 @@ describe('WalletConnectTab', () => {
       if (path === '/v1/admin/settings') return mockSettingsData;
       return {};
     });
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
 
     render(<WalletsPage />);
 

@@ -3,7 +3,7 @@ name: "WAIaaS Admin"
 description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management"
 category: "api"
 tags: [wallet, blockchain, admin, security, oracle, defi, waiass]
-version: "2.3.0"
+version: "2.4.0-rc.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -48,9 +48,7 @@ curl -s http://localhost:3100/v1/admin/status \
 ```json
 {
   "status": "running",
-  "version": "2.4.0",
-  "latestVersion": null,
-  "updateAvailable": false,
+  "version": "1.4.4",
   "uptime": 3600,
   "walletCount": 5,
   "activeSessionCount": 3,
@@ -62,16 +60,14 @@ curl -s http://localhost:3100/v1/admin/status \
 
 | Field                | Type    | Description                                   |
 | -------------------- | ------- | --------------------------------------------- |
-| `status`             | string        | Always "running" if daemon is up.             |
-| `version`            | string        | Daemon version.                               |
-| `latestVersion`      | string\|null  | Latest available version, or null.            |
-| `updateAvailable`    | boolean       | Whether a newer version is available.         |
-| `uptime`             | integer       | Seconds since daemon start.                   |
-| `walletCount`        | integer       | Total wallets in database.                    |
-| `activeSessionCount` | integer       | Non-expired, non-revoked sessions.            |
-| `killSwitchState`    | string        | "NORMAL" or "ACTIVATED".                      |
-| `adminTimeout`       | integer       | Admin operation timeout (seconds).            |
-| `timestamp`          | integer       | Current epoch timestamp (seconds).            |
+| `status`             | string  | Always "running" if daemon is up.             |
+| `version`            | string  | Daemon version.                               |
+| `uptime`             | integer | Seconds since daemon start.                   |
+| `walletCount`        | integer | Total wallets in database.                    |
+| `activeSessionCount` | integer | Non-expired, non-revoked sessions.            |
+| `killSwitchState`    | string  | "NORMAL" or "ACTIVATED".                      |
+| `adminTimeout`       | integer | Admin operation timeout (seconds).            |
+| `timestamp`          | integer | Current epoch timestamp (seconds).            |
 
 ### POST /v1/admin/shutdown -- Graceful Shutdown
 
@@ -103,48 +99,6 @@ curl -s -X POST http://localhost:3100/v1/admin/rotate-secret \
   "message": "JWT secret rotated. Old tokens valid for 5 minutes."
 }
 ```
-
-### POST /v1/admin/agent-prompt -- Generate Agent Connection Prompt
-
-Generate a connection prompt ("magic word") for AI agents. Creates sessions for all active wallets (or specified wallets) and returns a structured `[WAIaaS Connection]` block.
-
-```bash
-# All active wallets
-curl -s -X POST http://localhost:3100/v1/admin/agent-prompt \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{}'
-
-# Specific wallets only
-curl -s -X POST http://localhost:3100/v1/admin/agent-prompt \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletIds": ["<wallet-id-1>", "<wallet-id-2>"], "ttl": 86400}'
-```
-
-**Parameters:**
-
-| Parameter   | Type     | Required | Default | Description                           |
-| ----------- | -------- | -------- | ------- | ------------------------------------- |
-| `walletIds` | string[] | No       | all     | Specific wallet IDs. Omit for all active wallets. |
-| `ttl`       | integer  | No       | 86400   | Session TTL in seconds.               |
-
-**Response (201):**
-```json
-{
-  "prompt": "[WAIaaS Connection]\n- URL: http://localhost:3100\n\nWallets:\n1. my-wallet (019...) \u2014 devnet\n   Session: eyJ...\n\nWhen the session expires (401 Unauthorized),\nrenew with POST /v1/wallets/{walletId}/sessions/{sessionId}/renew.\n\nConnect to WAIaaS wallets using the above information to check balances and manage assets.",
-  "walletCount": 1,
-  "sessionsCreated": 1,
-  "expiresAt": 1707086400
-}
-```
-
-| Field             | Type    | Description                                    |
-| ----------------- | ------- | ---------------------------------------------- |
-| `prompt`          | string  | Full connection prompt text to paste to agents. |
-| `walletCount`     | integer | Number of wallets included.                    |
-| `sessionsCreated` | integer | Number of new sessions created.                |
-| `expiresAt`       | integer | Epoch seconds when sessions expire.            |
 
 ---
 
@@ -314,7 +268,7 @@ Dynamic daemon settings with hot-reload support. Changes take effect immediately
 
 ### GET /v1/admin/settings -- Get All Settings
 
-Returns all settings organized by 5 categories. Credential values are masked as boolean (`true` if configured, `false` if empty).
+Returns all settings organized by category. Credential values are masked as boolean (`true` if configured, `false` if empty).
 
 ```bash
 curl -s http://localhost:3100/v1/admin/settings \
@@ -366,6 +320,41 @@ curl -s http://localhost:3100/v1/admin/settings \
   },
   "walletconnect": {
     "walletconnect.project_id": ""
+  },
+  "oracle": {
+    "oracle.coingecko_api_key": false,
+    "oracle.cross_validation_threshold": "5"
+  },
+  "display": {
+    "display.currency": "USD"
+  },
+  "autostop": {
+    "autostop.enabled": "true",
+    "autostop.consecutive_failures_threshold": "5",
+    "autostop.unusual_activity_threshold": "20",
+    "autostop.unusual_activity_window_sec": "300",
+    "autostop.idle_timeout_sec": "3600",
+    "autostop.idle_check_interval_sec": "60"
+  },
+  "monitoring": {
+    "monitoring.enabled": "true",
+    "monitoring.check_interval_sec": "300",
+    "monitoring.low_balance_threshold_sol": "0.01",
+    "monitoring.low_balance_threshold_eth": "0.005",
+    "monitoring.cooldown_hours": "24"
+  },
+  "telegram": {
+    "telegram.enabled": "false",
+    "telegram.bot_token": false,
+    "telegram.locale": "en"
+  },
+  "signing_sdk": {
+    "signing_sdk.enabled": "false",
+    "signing_sdk.request_expiry_min": "30",
+    "signing_sdk.preferred_channel": "ntfy",
+    "signing_sdk.preferred_wallet": "",
+    "signing_sdk.ntfy_request_topic_prefix": "waiaas-sign",
+    "signing_sdk.ntfy_response_topic_prefix": "waiaas-response"
   }
 }
 ```
@@ -379,6 +368,12 @@ curl -s http://localhost:3100/v1/admin/settings \
 | `security`      | session_ttl, max_sessions_*, rate_limit_*, policy_defaults_* | Security and rate limiting.         |
 | `daemon`        | log_level                                               | Daemon runtime settings.               |
 | `walletconnect` | project_id                                              | WalletConnect project configuration.   |
+| `oracle`        | coingecko_api_key, cross_validation_threshold            | Price oracle configuration.            |
+| `display`       | currency                                                 | Display currency for USD conversion.   |
+| `autostop`      | enabled, consecutive_failures_*, unusual_activity_*, idle_* | Automatic protection rules.          |
+| `monitoring`    | enabled, check_interval_sec, low_balance_threshold_*, cooldown_hours | Balance monitoring configuration. |
+| `telegram`      | enabled, bot_token, locale                               | Telegram Bot interactive commands.     |
+| `signing_sdk`   | enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_*_topic_prefix | Wallet Signing SDK for owner approval. |
 
 ### PUT /v1/admin/settings -- Update Settings
 
@@ -466,6 +461,41 @@ Daemon:
 
 WalletConnect:
 - `walletconnect.project_id` -- WalletConnect Cloud project ID
+
+Oracle:
+- `oracle.coingecko_api_key` -- CoinGecko API key (credential, encrypted at rest)
+- `oracle.cross_validation_threshold` -- Price deviation threshold % (default: "5")
+
+Display:
+- `display.currency` -- Display currency code (default: "USD")
+
+AutoStop:
+- `autostop.enabled` -- Enable/disable autostop ("true"/"false", default: "true")
+- `autostop.consecutive_failures_threshold` -- Consecutive failure threshold (default: "5")
+- `autostop.unusual_activity_threshold` -- Unusual activity count threshold (default: "20")
+- `autostop.unusual_activity_window_sec` -- Unusual activity time window (default: "300")
+- `autostop.idle_timeout_sec` -- Session idle timeout (default: "3600")
+- `autostop.idle_check_interval_sec` -- Idle check interval (default: "60")
+
+Monitoring:
+- `monitoring.enabled` -- Enable/disable balance monitoring (default: "true")
+- `monitoring.check_interval_sec` -- Check interval (default: "300")
+- `monitoring.low_balance_threshold_sol` -- SOL low balance threshold (default: "0.01")
+- `monitoring.low_balance_threshold_eth` -- ETH low balance threshold (default: "0.005")
+- `monitoring.cooldown_hours` -- Alert cooldown hours (default: "24")
+
+Telegram:
+- `telegram.enabled` -- Enable Telegram bot ("true"/"false", default: "false")
+- `telegram.bot_token` -- Telegram bot API token (credential, encrypted at rest)
+- `telegram.locale` -- Telegram bot locale ("en", "ko", default: "en")
+
+Signing SDK:
+- `signing_sdk.enabled` -- Enable Signing SDK ("true"/"false", default: "false")
+- `signing_sdk.request_expiry_min` -- Sign request expiry in minutes (default: "30")
+- `signing_sdk.preferred_channel` -- Preferred signing channel ("ntfy" or "telegram", default: "ntfy")
+- `signing_sdk.preferred_wallet` -- Preferred wallet app name (default: "")
+- `signing_sdk.ntfy_request_topic_prefix` -- Ntfy request topic prefix (default: "waiaas-sign")
+- `signing_sdk.ntfy_response_topic_prefix` -- Ntfy response topic prefix (default: "waiaas-response")
 
 ### POST /v1/admin/settings/test-rpc -- Test RPC Connectivity
 

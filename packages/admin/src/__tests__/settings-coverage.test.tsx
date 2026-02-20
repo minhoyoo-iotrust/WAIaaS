@@ -772,7 +772,7 @@ describe('Settings coverage: field helpers', () => {
     });
 
     // Save should include the boolean field as string
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {

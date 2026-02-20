@@ -1,5 +1,8 @@
 # 마일스톤 m26-03: Push Relay Server
 
+- **Status:** IN_PROGRESS
+- **Milestone:** v2.6
+
 ## 목표
 
 ntfy 토픽을 구독하여 지갑 개발사의 기존 푸시 인프라(Pushwoosh, FCM 등)로 변환·전달하는 경량 중계 서버를 구현하여, ntfy SDK를 앱에 직접 내장할 수 없는 지갑 개발사가 기존 푸시 파이프라인만으로 WAIaaS 서명 요청과 알림을 수신할 수 있는 상태.
@@ -292,6 +295,20 @@ packages/push-relay/                        # @waiaas/push-relay 패키지
 | 테스트 | 13개 |
 | DB | SQLite 1개 파일 (relay.db, 디바이스 토큰) |
 | 신규 패키지 | @waiaas/push-relay (모노레포 packages/push-relay) |
+
+---
+
+## 문서 업데이트
+
+m26-03 완료 시 다음 문서에 Push Relay 연동 가이드를 추가한다:
+
+| 문서 | 추가 내용 |
+|------|----------|
+| `docs/wallet-sdk-integration.md` | Push Relay 통합 옵션 (옵션 B) 섹션 추가: 아키텍처, docker-compose 배포, Device Token 등록 API, Pushwoosh/FCM 설정 |
+| `packages/push-relay/README.md` | npm 패키지 README: 설치, config.toml 설정, Docker 배포, API 레퍼런스 |
+| `README.md` (루트) | Documentation 테이블에 Push Relay 가이드 링크 추가 |
+
+> m26-01에서 작성하는 `docs/wallet-sdk-integration.md`(이슈 108)는 ntfy 직접 통합과 Telegram 중계만 다룬다. Push Relay 섹션은 m26-03 완료 시 추가한다.
 
 ---
 

@@ -1,5 +1,8 @@
 # 마일스톤 m27-01: 수신 트랜잭션 모니터링 구현
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 m27에서 설계한 수신 트랜잭션 모니터링 — IncomingTransactionMonitor, 수신 TX 저장, 조회 API, 이벤트/알림 연동 — 을 구현하여, 에이전트 지갑으로 들어오는 입금을 실시간 감지하고 DB에 기록하며 Owner에게 알림을 발송할 수 있는 상태.

@@ -44,6 +44,7 @@ interface WalletDetail extends Wallet {
   ownerAddress: string | null;
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
+  approvalMethod: string | null;
   updatedAt: number | null;
 }
 
@@ -202,6 +203,60 @@ function DetailRow({
   );
 }
 
+interface ApprovalSettingsInfo {
+  signingEnabled: boolean;
+  telegramEnabled: boolean;
+  telegramBotConfigured: boolean;
+  wcConfigured: boolean;
+}
+
+const APPROVAL_OPTIONS: Array<{
+  value: string | null;
+  label: string;
+  description: string;
+  warning?: string;
+  warningCondition?: (settings: ApprovalSettingsInfo | null) => boolean;
+}> = [
+  {
+    value: null,
+    label: 'Auto (Global Fallback)',
+    description: 'System decides based on configured channels: SDK ntfy > SDK Telegram > WalletConnect > Telegram Bot > REST',
+  },
+  {
+    value: 'sdk_ntfy',
+    label: 'SDK via ntfy',
+    description: 'Push notifications via ntfy server to wallet app',
+    warning: 'Signing SDK is not enabled. Go to System > Signing SDK settings.',
+    warningCondition: (s) => !s?.signingEnabled,
+  },
+  {
+    value: 'sdk_telegram',
+    label: 'SDK via Telegram',
+    description: 'Send sign request to Telegram with universal link',
+    warning: 'Signing SDK or Telegram bot is not enabled. Check System > Signing SDK and Telegram settings.',
+    warningCondition: (s) => !s?.signingEnabled || !s?.telegramEnabled || !s?.telegramBotConfigured,
+  },
+  {
+    value: 'walletconnect',
+    label: 'WalletConnect',
+    description: "Approve via connected WalletConnect wallet (D'CENT, MetaMask, etc.)",
+    warning: 'WalletConnect project ID is not configured. Go to Wallets > WalletConnect tab.',
+    warningCondition: (s) => !s?.wcConfigured,
+  },
+  {
+    value: 'telegram_bot',
+    label: 'Telegram Bot',
+    description: 'Approve/reject via Telegram bot /approve and /reject commands',
+    warning: 'Telegram bot is not enabled. Go to System > Telegram settings.',
+    warningCondition: (s) => !s?.telegramEnabled || !s?.telegramBotConfigured,
+  },
+  {
+    value: 'rest',
+    label: 'REST API',
+    description: 'Manual approval via REST API endpoints (POST /approve, /reject)',
+  },
+];
+
 function WalletDetailView({ id }: { id: string }) {
   const wallet = useSignal<WalletDetail | null>(null);
   const loading = useSignal(true);
@@ -229,6 +284,7 @@ function WalletDetailView({ id }: { id: string }) {
   const ownerEditing = useSignal(false);
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
+  const approvalSettings = useSignal<ApprovalSettingsInfo | null>(null);
   const fetchWallet = async () => {
     try {
       const result = await apiGet<WalletDetail>(API.WALLET(id));
@@ -448,12 +504,40 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
+  const fetchApprovalSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      const signingEnabled = result['signing_sdk']?.['enabled'] === 'true';
+      const telegramEnabled = result['telegram']?.['enabled'] === 'true';
+      const telegramBotConfigured = result['telegram']?.['bot_token'] === true; // credential: boolean means configured
+      const wcConfigured = !!result['walletconnect']?.['project_id'] && result['walletconnect']['project_id'] !== '';
+      approvalSettings.value = { signingEnabled, telegramEnabled, telegramBotConfigured, wcConfigured };
+    } catch {
+      // Settings fetch failure is non-critical; warnings won't show
+    }
+  };
+
+  const handleApprovalMethodChange = async (method: string | null) => {
+    try {
+      await apiPut(API.WALLET_OWNER(id), {
+        owner_address: wallet.value!.ownerAddress!,
+        approval_method: method ?? null,
+      });
+      await fetchWallet();
+      showToast('success', 'Approval method updated');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code, e.serverMessage));
+    }
+  };
+
   useEffect(() => {
     fetchWallet();
     fetchNetworks();
     fetchBalance();
     fetchTransactions();
     fetchWcSession();
+    fetchApprovalSettings();
   }, [id]);
 
   useEffect(() => {
@@ -726,6 +810,53 @@ function WalletDetailView({ id }: { id: string }) {
               </div>
             )}
 
+            {wallet.value.ownerState !== 'NONE' && (
+              <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+                <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>Approval Method</h4>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>
+                  Choose how transaction approvals are delivered to the owner.
+                  Leave as "Auto (Global Fallback)" to use the system-wide priority.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {APPROVAL_OPTIONS.map(opt => (
+                    <label key={opt.value ?? 'auto'} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)',
+                      padding: 'var(--space-2) var(--space-3)',
+                      background: wallet.value?.approvalMethod === opt.value ? 'var(--color-bg-secondary)' : 'transparent',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                    }}>
+                      <input
+                        type="radio"
+                        name="approval_method"
+                        value={opt.value ?? ''}
+                        checked={wallet.value?.approvalMethod === opt.value}
+                        onChange={() => handleApprovalMethodChange(opt.value)}
+                        style={{ marginTop: '2px' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{opt.label}</div>
+                        <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>{opt.description}</div>
+                        {opt.warning && opt.warningCondition?.(approvalSettings.value) && (
+                          <div style={{
+                            marginTop: 'var(--space-1)',
+                            padding: 'var(--space-1) var(--space-2)',
+                            background: 'var(--color-warning-bg, #fff3cd)',
+                            border: '1px solid var(--color-warning-border, #ffc107)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: '0.75rem',
+                            color: 'var(--color-warning-text, #856404)',
+                          }}>
+                            {opt.warning}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
               <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>WalletConnect</h4>
               {wcSessionLoading.value ? (
@@ -946,9 +1077,9 @@ function RpcEndpointsTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('rpc.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'Settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -1140,9 +1271,9 @@ function BalanceMonitoringTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('monitoring.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'Settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -1286,9 +1417,9 @@ function WalletConnectTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('walletconnect.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'Settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

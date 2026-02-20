@@ -117,7 +117,7 @@ function printConfigPath(): void {
 
 export async function quickstartCommand(opts: QuickstartOptions): Promise<void> {
   const baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:3100').replace(/\/+$/, '');
-  const mode = opts.mode ?? 'testnet';
+  const mode = opts.mode ?? 'mainnet';
   const expiresIn = opts.expiresIn ?? 86400;
 
   // Validate mode

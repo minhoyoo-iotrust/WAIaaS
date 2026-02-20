@@ -1,5 +1,8 @@
 # 마일스톤 m28: 기본 DeFi 프로토콜 설계 (Swap/Bridge/Staking)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 v1.5에서 구축된 Action Provider 프레임워크 위에 4개 기본 DeFi 프로토콜(DEX Swap, EVM Swap, 크로스체인 브릿지, Liquid Staking)을 구현하기 위한 공통 설계를 확정한다. packages/actions/ 패키지 구조, REST API → calldata 변환 공통 패턴, 정책 연동 설계, 비동기 상태 추적 패턴, 테스트 전략을 정의하여 m28-01~m28-04 구현 마일스톤의 입력을 생산한다.

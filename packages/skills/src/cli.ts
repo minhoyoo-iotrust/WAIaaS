@@ -3,6 +3,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getSkillsDir, SKILL_REGISTRY } from "./registry.js";
+import { installOpenClawSkills } from "./openclaw.js";
+import { installClaudeCodeSkills } from "./claude-code.js";
+import { installAgentSkills } from "./agent-skills.js";
 
 const VERSION = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
@@ -20,6 +23,11 @@ Commands:
   list              List all available skill files
   add <name>        Copy a skill file to the current directory
   add all           Copy all skill files to the current directory
+  openclaw          Install skills to ~/.openclaw/skills/ (OpenClaw)
+  claude-code       Install skills to .claude/skills/ (Claude Code)
+  agent-skills      Install skills to .agents/skills/ (Codex, Gemini CLI, Goose, Amp)
+                    --target cursor    Install to .cursor/skills/
+                    --target github    Install to .github/skills/
   help              Show this help message
 
 Options:
@@ -31,7 +39,10 @@ Examples:
   npx @waiaas/skills list
   npx @waiaas/skills add quickstart
   npx @waiaas/skills add all
-  npx @waiaas/skills add wallet --force
+  npx @waiaas/skills openclaw
+  npx @waiaas/skills claude-code
+  npx @waiaas/skills agent-skills
+  npx @waiaas/skills agent-skills --target cursor
 `);
 }
 
@@ -99,7 +110,7 @@ function main(): void {
   const args = process.argv.slice(2);
   const force = args.includes("--force");
   const filteredArgs = args.filter(
-    (a) => a !== "--force" && a !== "--help" && a !== "-h" && a !== "--version" && a !== "-v",
+    (a) => a !== "--force" && a !== "--help" && a !== "-h" && a !== "--version" && a !== "-v" && !a.startsWith("--target"),
   );
 
   // Handle flags
@@ -112,6 +123,10 @@ function main(): void {
     printVersion();
     process.exit(0);
   }
+
+  // Parse --target option
+  const targetIdx = args.indexOf("--target");
+  const targetValue = targetIdx >= 0 ? args[targetIdx + 1] : undefined;
 
   const command = filteredArgs[0];
 
@@ -138,6 +153,21 @@ function main(): void {
       } else {
         addSkills([target], force);
       }
+      break;
+    }
+
+    case "openclaw": {
+      installOpenClawSkills({ force });
+      break;
+    }
+
+    case "claude-code": {
+      installClaudeCodeSkills({ force });
+      break;
+    }
+
+    case "agent-skills": {
+      installAgentSkills({ force, target: targetValue });
       break;
     }
 

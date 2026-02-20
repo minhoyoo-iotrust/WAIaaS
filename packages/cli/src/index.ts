@@ -91,7 +91,7 @@ const quicksetAction = async (opts: {
   password?: string;
 }) => {
   const dataDir = resolveDataDir(opts);
-  const mode = opts.mode ?? 'testnet';
+  const mode = opts.mode ?? 'mainnet';
   if (mode !== 'testnet' && mode !== 'mainnet') {
     console.error("Error: --mode must be 'testnet' or 'mainnet'");
     process.exit(1);
@@ -110,7 +110,7 @@ program
   .description('Quick setup: create wallets, sessions, and MCP tokens')
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
-  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'testnet')
+  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'mainnet')
   .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
   .option('--password <password>', 'Master password')
   .action(quicksetAction);
@@ -120,7 +120,7 @@ program
   .description('(alias for quickset) Quick setup: create wallets, sessions, and MCP tokens')
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
-  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'testnet')
+  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'mainnet')
   .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
   .option('--password <password>', 'Master password')
   .action(quicksetAction);

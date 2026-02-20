@@ -7,6 +7,7 @@
  *   3. Keystore unlock (30s timeout, fail-fast)
  *   4. Adapter initialization (10s, fail-soft)
  *      4c-6. WalletConnect service (fail-soft)
+ *      4c-8. Signing SDK lifecycle (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -141,6 +142,7 @@ export class DaemonLifecycle {
   private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
   private wcServiceRef: import('../services/wc-session-service.js').WcServiceRef = { current: null };
   private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
+  private approvalChannelRouter: import('../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter | null = null;
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
 
   /** Whether shutdown has been initiated. */
@@ -644,6 +646,73 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-8: Signing SDK lifecycle (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this._settingsService?.get('signing_sdk.enabled') === 'true') {
+        const {
+          SignRequestBuilder,
+          SignResponseHandler,
+          WalletLinkRegistry,
+          NtfySigningChannel,
+          TelegramSigningChannel,
+          ApprovalChannelRouter,
+        } = await import('../services/signing-sdk/index.js');
+
+        const walletLinkRegistry = new WalletLinkRegistry(this._settingsService!);
+        const signRequestBuilder = new SignRequestBuilder({
+          settingsService: this._settingsService!,
+          walletLinkRegistry,
+        });
+        const signResponseHandler = new SignResponseHandler({ sqlite: this.sqlite! });
+        const ntfyChannel = new NtfySigningChannel({
+          signRequestBuilder,
+          signResponseHandler,
+          settingsService: this._settingsService!,
+        });
+
+        // Conditionally create TelegramSigningChannel (only if Telegram bot is running)
+        let telegramChannel: InstanceType<typeof TelegramSigningChannel> | undefined;
+        if (this.telegramBotService) {
+          const { TelegramApi } = await import('../infrastructure/telegram/index.js');
+          const botToken =
+            (this._settingsService
+              ? this._settingsService.get('telegram.bot_token') ||
+                this._settingsService.get('notifications.telegram_bot_token')
+              : null) || this._config!.telegram.bot_token;
+          if (botToken) {
+            const signingTelegramApi = new TelegramApi(botToken);
+            telegramChannel = new TelegramSigningChannel({
+              signRequestBuilder,
+              signResponseHandler,
+              settingsService: this._settingsService!,
+              telegramApi: signingTelegramApi,
+            });
+          }
+        }
+
+        this.approvalChannelRouter = new ApprovalChannelRouter({
+          sqlite: this.sqlite!,
+          settingsService: this._settingsService!,
+          ntfyChannel,
+          telegramChannel,
+        });
+
+        // Inject signResponseHandler into TelegramBotService for /sign_response command (GAP-2: CHAN-04)
+        if (this.telegramBotService) {
+          this.telegramBotService.setSignResponseHandler(signResponseHandler);
+          console.debug('Step 4c-8: signResponseHandler injected into TelegramBotService');
+        }
+
+        console.debug('Step 4c-8: Signing SDK initialized (ApprovalChannelRouter + channels)');
+      } else {
+        console.debug('Step 4c-8: Signing SDK disabled');
+      }
+    } catch (err) {
+      console.warn('Step 4c-8 (fail-soft): Signing SDK init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -785,6 +854,7 @@ export class DaemonLifecycle {
           killSwitchService: this.killSwitchService ?? undefined,
           wcServiceRef: this.wcServiceRef,
           wcSigningBridge: this.wcSigningBridge ?? undefined,
+          approvalChannelRouter: this.approvalChannelRouter ?? undefined,
           versionCheckService: this._versionCheckService,
         });
 
@@ -982,6 +1052,12 @@ export class DaemonLifecycle {
         this.telegramBotService.stop();
         this.telegramBotService = null;
         this.telegramBotRef.current = null;
+      }
+
+      // Stop ApprovalChannelRouter (shuts down signing channels)
+      if (this.approvalChannelRouter) {
+        this.approvalChannelRouter.shutdown();
+        this.approvalChannelRouter = null;
       }
 
       // Stop WcSessionService (before EventBus cleanup)

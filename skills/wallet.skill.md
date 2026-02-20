@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "2.3.0"
+version: "2.4.0-rc.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -25,13 +25,13 @@ Create a new wallet with an auto-generated key pair. Each wallet belongs to an *
 curl -s -X POST http://localhost:3100/v1/wallets \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "trading-bot", "chain": "solana", "environment": "testnet"}'
+  -d '{"name": "trading-bot", "chain": "solana", "environment": "mainnet"}'
 ```
 
 Parameters:
 - `name` (required): string, 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `environment` (optional): `"testnet"` (default) or `"mainnet"` -- determines available networks and default network
+- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks and default network
 - `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
 
 Response (201):
@@ -40,8 +40,8 @@ Response (201):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
+  "network": "mainnet",
+  "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "createdAt": 1707000000,
@@ -70,8 +70,8 @@ Response (200):
       "id": "01958f3a-1234-7000-8000-abcdef123456",
       "name": "trading-bot",
       "chain": "solana",
-      "network": "devnet",
-      "environment": "testnet",
+      "network": "mainnet",
+      "environment": "mainnet",
       "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
       "status": "ACTIVE",
       "createdAt": 1707000000
@@ -95,20 +95,23 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
-  "defaultNetwork": "devnet",
+  "network": "mainnet",
+  "environment": "mainnet",
+  "defaultNetwork": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": null,
   "ownerVerified": null,
   "ownerState": "NONE",
+  "approvalMethod": null,
   "createdAt": 1707000000,
   "updatedAt": null
 }
 ```
 
 Owner states: `NONE` (no owner set), `GRACE` (owner set, not verified), `LOCKED` (owner verified via SIWS/SIWE signature).
+
+Approval methods: `sdk_ntfy` (Wallet SDK via ntfy), `sdk_telegram` (Wallet SDK via Telegram), `walletconnect` (WalletConnect), `telegram_bot` (Telegram Bot), `rest` (REST API polling), or `null` (auto-detect based on infrastructure).
 
 ### PUT /v1/wallets/{id} -- Update Wallet Name (sessionAuth)
 
@@ -154,6 +157,7 @@ curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef12
 
 Parameters:
 - `owner_address` (required): blockchain address (Solana base58 or Ethereum 0x-prefixed, EIP-55 normalized)
+- `approval_method` (optional): Owner approval method override for this wallet. Valid values: `"sdk_ntfy"`, `"sdk_telegram"`, `"walletconnect"`, `"telegram_bot"`, `"rest"`, or `null` (auto-detect). Set to `null` to clear and use automatic channel detection.
 
 Response (200):
 ```json
@@ -161,12 +165,13 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "devnet",
-  "environment": "testnet",
+  "network": "mainnet",
+  "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "ownerVerified": false,
+  "approvalMethod": null,
   "updatedAt": 1707000100
 }
 ```
@@ -239,11 +244,10 @@ Response (200):
 {
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "environment": "testnet",
-  "defaultNetwork": "devnet",
+  "environment": "mainnet",
+  "defaultNetwork": "mainnet",
   "availableNetworks": [
-    {"network": "devnet", "isDefault": true},
-    {"network": "testnet", "isDefault": false}
+    {"network": "mainnet", "isDefault": true}
   ]
 }
 ```

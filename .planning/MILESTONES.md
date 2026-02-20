@@ -1194,3 +1194,34 @@
 
 ---
 
+
+## v2.6.1 WAIaaS Wallet Signing SDK (Shipped: 2026-02-20)
+
+**Delivered:** v2.6 설계(docs 73-75)를 코드로 실현하여, @waiaas/wallet-sdk 패키지를 통해 지갑 개발사가 서명 프로토콜을 통합하고, Owner가 ntfy/Telegram 채널을 통해 트랜잭션을 승인/거부할 수 있는 상태 달성. 5단계 우선순위 채널 라우팅 + 데몬 라이프사이클 완전 연결 + Admin Settings 런타임 관리.
+
+**Phases completed:** 202-205 (4 phases, 13 plans, 27 requirements)
+
+**Key accomplishments:**
+
+- Signing Protocol v1 구현 — SignRequest/SignResponse Zod 스키마, base64url 인코딩, DB migration v18 (owner_approval_method), 7개 도메인 에러 코드
+- @waiaas/wallet-sdk 신규 npm 패키지 — 6개 공개 함수 (parseSignRequest, buildSignResponse, formatDisplayMessage, sendViaNtfy, sendViaTelegram, subscribeToRequests) + SSE 자동 재연결
+- 다중 서명 채널 — NtfySigningChannel (양방향 SSE) + TelegramSigningChannel (인라인 버튼 + /sign_response) + ApprovalChannelRouter 5단계 우선순위 fallback
+- 데몬 라이프사이클 연결 — 6개 signing SDK 클래스 daemon.ts 인스턴스화, pipeline PENDING_APPROVAL → 채널 라우팅 fire-and-forget 통합
+- Admin Settings + Skills 동기화 — GET/PUT /admin/settings 11개 카테고리 노출, signing_sdk UI 섹션, skill files v2.6.1 버전 동기화
+
+**Stats:**
+
+- 4 phases, 13 plans, 27 requirements, 206 files changed, +16,137/-332 lines
+- ~138,051 LOC TypeScript, 4,323 tests (29 new in @waiaas/wallet-sdk)
+- 67 commits, 2 days (2026-02-19 → 2026-02-20)
+- Git range: milestone/v2.6..milestone/v2.6.1
+
+### Known Gaps
+
+- Phase 202/203 VERIFICATION.md 누락 (절차적 갭, 코드 갭 아님 — 27/27 reqs 구현 완료 + integration 27/27 wired)
+- 2 E2E flows need human testing with live infra (ntfy/Telegram SDK signing)
+
+**What's next:** Wallet SDK 설계 고도화 or 추가 서명 채널 (Slack/Discord)
+
+---
+

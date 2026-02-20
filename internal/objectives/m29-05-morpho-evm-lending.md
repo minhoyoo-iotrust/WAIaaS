@@ -1,5 +1,8 @@
 # 마일스톤 m29-05: EVM Lending 확장 (Morpho)
 
+- **Status:** PLANNED
+- **Milestone:** TBD
+
 ## 목표
 
 m29-01 Lending 프레임워크 위에 Morpho Blue를 추가 Lending Provider로 구현하여, AI 에이전트가 Aave 외에 Morpho의 모듈형 대출 시장에서도 자산 예치/차입을 실행할 수 있는 상태.

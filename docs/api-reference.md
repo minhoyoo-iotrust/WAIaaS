@@ -26,7 +26,7 @@ Used for system administration: creating wallets, managing sessions, configuring
 curl -X POST http://127.0.0.1:3100/v1/wallets \
   -H "Content-Type: application/json" \
   -H "X-Master-Password: my-secret-password" \
-  -d '{"name": "my-wallet", "chain": "solana", "environment": "testnet"}'
+  -d '{"name": "my-wallet", "chain": "solana", "environment": "mainnet"}'
 ```
 
 ### sessionAuth (AI Agent)

@@ -229,9 +229,9 @@ function AutoStopTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('autostop.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'AutoStop settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

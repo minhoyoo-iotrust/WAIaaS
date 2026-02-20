@@ -1,5 +1,8 @@
 # 마일스톤 m26-01: WAIaaS Wallet Signing SDK
 
+- **Status:** IN_PROGRESS
+- **Milestone:** v2.6
+
 ## 목표
 
 지갑 개발사(D'CENT 등)가 통합할 수 있는 Wallet Signing SDK와 개방형 서명 프로토콜을 제공하여, Owner가 지갑 앱에서 트랜잭션을 승인/거부할 수 있는 상태. 메신저(Telegram) 중계 모델과 ntfy 직접 푸시 모델을 모두 지원하며, 세션 관리 없는 1회성 서명 플로우로 WalletConnect 대비 단순한 UX를 제공한다.

@@ -60,6 +60,7 @@
         "packages/admin/package.json",
         "packages/adapters/solana/package.json",
         "packages/adapters/evm/package.json",
+        "packages/wallet-sdk/package.json",
         "python-sdk/pyproject.toml"
       ]
     }
