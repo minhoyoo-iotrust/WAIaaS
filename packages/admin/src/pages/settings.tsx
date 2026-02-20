@@ -707,6 +707,85 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: Signing SDK
+  // ---------------------------------------------------------------------------
+
+  function SigningSDKSettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Signing SDK</h3>
+          <p class="settings-description">
+            Configure the Wallet Signing SDK for owner approval via mobile wallet app
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="SDK Enabled"
+              name="signing_sdk.enabled"
+              type="select"
+              value={getEffectiveValue('signing_sdk', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('signing_sdk.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+            />
+            <FormField
+              label={keyToLabel('request_expiry_min')}
+              name="signing_sdk.request_expiry_min"
+              type="number"
+              value={Number(getEffectiveValue('signing_sdk', 'request_expiry_min')) || 5}
+              onChange={(v) => handleFieldChange('signing_sdk.request_expiry_min', v)}
+              min={1}
+              max={1440}
+            />
+            <FormField
+              label={keyToLabel('preferred_channel')}
+              name="signing_sdk.preferred_channel"
+              type="select"
+              value={getEffectiveValue('signing_sdk', 'preferred_channel') || 'ntfy'}
+              onChange={(v) => handleFieldChange('signing_sdk.preferred_channel', v)}
+              options={[
+                { label: 'ntfy', value: 'ntfy' },
+                { label: 'Telegram', value: 'telegram' },
+              ]}
+            />
+            <FormField
+              label={keyToLabel('preferred_wallet')}
+              name="signing_sdk.preferred_wallet"
+              type="text"
+              value={getEffectiveValue('signing_sdk', 'preferred_wallet')}
+              onChange={(v) => handleFieldChange('signing_sdk.preferred_wallet', v)}
+              placeholder="Optional wallet app name"
+            />
+            <FormField
+              label={keyToLabel('ntfy_request_topic_prefix')}
+              name="signing_sdk.ntfy_request_topic_prefix"
+              type="text"
+              value={getEffectiveValue('signing_sdk', 'ntfy_request_topic_prefix')}
+              onChange={(v) => handleFieldChange('signing_sdk.ntfy_request_topic_prefix', v)}
+            />
+            <FormField
+              label={keyToLabel('ntfy_response_topic_prefix')}
+              name="signing_sdk.ntfy_response_topic_prefix"
+              type="text"
+              value={getEffectiveValue('signing_sdk', 'ntfy_response_topic_prefix')}
+              onChange={(v) => handleFieldChange('signing_sdk.ntfy_response_topic_prefix', v)}
+            />
+          </div>
+          <div class="settings-info-box">
+            Enable the Signing SDK to allow wallet owners to approve/reject transactions
+            from their mobile wallet app. Requires a signing channel (ntfy or Telegram)
+            to deliver sign requests.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Section: Display
   // ---------------------------------------------------------------------------
 
@@ -1003,6 +1082,7 @@ export default function SettingsPage() {
           <SecuritySettings />
           <WalletConnectSettings />
           <TelegramBotSettings />
+          <SigningSDKSettings />
           <DaemonSettings />
           <DisplaySettings />
           <ApiKeysSection />

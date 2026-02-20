@@ -113,6 +113,13 @@ export function keyToLabel(key: string): string {
     session_max_renewals: 'Max Renewals',
     // telegram bot keys
     bot_token: 'Bot Token',
+    // signing_sdk keys
+    request_expiry_min: 'Request Expiry (minutes)',
+    preferred_channel: 'Preferred Channel',
+    preferred_wallet: 'Preferred Wallet',
+    ntfy_request_topic_prefix: 'Ntfy Request Topic Prefix',
+    ntfy_response_topic_prefix: 'Ntfy Response Topic Prefix',
+    wallets: 'Registered Wallets (JSON)',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
