@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.5...v2.4.0-rc.6) (2026-02-20)
+
+
+### Features
+
+* **207-01:** change NtfySigningChannel to base64url encode SignRequest ([01795f7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/01795f7865f6ac38a431aabba97e9ff5b3978056))
+* **208:** add @waiaas/push-relay package ([8145f29](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8145f29c24091e56a184459578ea0c134c658d86))
+* **209:** add push-relay deployment infrastructure ([f7b1ca9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f7b1ca94d111b1f3257b9f74ef8a906b60ed13d9))
+
+
+### Bug Fixes
+
+* add non-null assertion in wallet-sdk channel test ([6057091](https://github.com/minhoyoo-iotrust/WAIaaS/commit/60570914f816f70a33f0befaa90c445882eeb4ec))
+* correct policy defaults checkbox category key mismatch ([#117](https://github.com/minhoyoo-iotrust/WAIaaS/issues/117)) ([4900cf4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4900cf4c454d48552deb35d5dd28b6d89b381e01))
+* **push-relay:** add missing category field in fcm-provider test fixture ([19ef866](https://github.com/minhoyoo-iotrust/WAIaaS/commit/19ef866b84e2ef4d8271a7b32d6e969094452710))
+
 ## [2.4.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.4...v2.4.0-rc.5) (2026-02-20)
 
 
