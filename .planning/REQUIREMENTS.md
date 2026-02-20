@@ -34,7 +34,7 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 - [x] **DISC-01**: 에이전트가 세션 토큰으로 GET /v1/connect-info를 조회하여 접근 가능 지갑/정책/capabilities를 파악할 수 있다
 - [x] **DISC-02**: connect-info의 capabilities가 데몬 설정에 따라 동적으로 결정된다
 - [x] **DISC-03**: connect-info에 에이전트용 자연어 프롬프트가 포함된다
-- [ ] **DISC-04**: POST /admin/agent-prompt가 단일 멀티 지갑 세션을 생성하고 connect-info 프롬프트 빌더를 공유한다
+- [x] **DISC-04**: POST /admin/agent-prompt가 단일 멀티 지갑 세션을 생성하고 connect-info 프롬프트 빌더를 공유한다
 
 ### 통합 (INTG)
 
@@ -94,7 +94,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-01 | Phase 212 | Complete |
 | DISC-02 | Phase 212 | Complete |
 | DISC-03 | Phase 212 | Complete |
-| DISC-04 | Phase 212 | Pending |
+| DISC-04 | Phase 212 | Complete |
 | INTG-01 | Phase 213 | Pending |
 | INTG-02 | Phase 213 | Pending |
 | INTG-03 | Phase 213 | Pending |

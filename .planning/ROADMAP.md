@@ -133,7 +133,7 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 
 - [x] **Phase 210: 세션 모델 재구조화** - DB v19 마이그레이션(session_wallets junction) + 1:N 세션 모델 + 세션-지갑 CRUD API + 에러 코드 (completed 2026-02-20)
 - [x] **Phase 211: API 레이어 지갑 선택** - resolveWalletId 헬퍼 + 전 엔드포인트 walletId 선택적 파라미터 + 세션 응답 확장 + 갱신 변경 (completed 2026-02-20)
-- [ ] **Phase 212: 자기 발견 엔드포인트** - GET /v1/connect-info + capabilities 동적 결정 + 프롬프트 빌더 + agent-prompt 통합
+- [x] **Phase 212: 자기 발견 엔드포인트** - GET /v1/connect-info + capabilities 동적 결정 + 프롬프트 빌더 + agent-prompt 통합 (completed 2026-02-20)
 - [ ] **Phase 213: 통합 레이어** - SDK/MCP/Admin UI/CLI quickset + 스킬 파일 + 가이드 문서 + 알림 이벤트
 
 ## Phase Details
@@ -224,5 +224,5 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
 | 210 | 3/3 | Complete    | 2026-02-20 | - |
 | 211 | 3/3 | Complete    | 2026-02-20 | - |
-| 212 | v26.4 | 0/2 | Not started | - |
+| 212 | 2/2 | Complete   | 2026-02-20 | - |
 | 213 | v26.4 | 0/4 | Not started | - |

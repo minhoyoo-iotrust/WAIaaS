@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 212 of 213 (자기 발견 엔드포인트)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-21 -- Completed 212-01-PLAN.md (GET /v1/connect-info endpoint + schema + server integration)
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-21 -- Completed 212-02-PLAN.md (agent-prompt refactor + connect-info integration tests)
 
 Progress: [##########] 100%
 
@@ -26,7 +26,7 @@ Progress: [##########] 100%
 |-------|-------|-------|----------|
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
 | 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
-| 212. 자기 발견 엔드포인트 | 1/2 | 3min | 3min |
+| 212. 자기 발견 엔드포인트 | 2/2 | 9min | 4.5min |
 | 213. 통합 레이어 | 0/4 | - | - |
 
 ## Accumulated Context
@@ -57,6 +57,10 @@ Progress: [##########] 100%
 - connect-info: policies grouped by walletId, capabilities dynamically computed (transfer/token_transfer/balance/assets + sign/actions/x402)
 - signing_sdk capability: settingsService.get() 사용 (DaemonConfig에 signing_sdk 섹션 없음)
 - buildConnectInfoPrompt: 재사용 가능 함수로 분리 (Plan 02 agent-prompt에서 재사용)
+- agent-prompt: 단일 세션 생성 (N개 지갑당 1세션, session_wallets N행)
+- agent-prompt: JWT wlt 클레임은 첫 번째(기본) 지갑 ID
+- agent-prompt: buildConnectInfoPrompt 출력 후 Session Token/ID 추가 (에이전트 즉시 사용 가능)
+- capabilities 동일 로직: connect-info와 agent-prompt 모두 동일한 동적 감지
 
 ### Blockers/Concerns
 
@@ -65,5 +69,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 212-01-PLAN.md (GET /v1/connect-info endpoint + schema + server integration)
+Stopped at: Completed 212-02-PLAN.md (agent-prompt refactor + connect-info integration tests)
 Resume file: None
