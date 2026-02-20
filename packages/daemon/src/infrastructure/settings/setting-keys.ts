@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -41,6 +41,7 @@ export const SETTING_CATEGORIES = [
   'autostop',
   'monitoring',
   'telegram',
+  'signing_sdk',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -127,6 +128,15 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'telegram.enabled', category: 'telegram', configPath: 'telegram.enabled', defaultValue: 'false', isCredential: false },
   { key: 'telegram.bot_token', category: 'telegram', configPath: 'telegram.bot_token', defaultValue: '', isCredential: true },
   { key: 'telegram.locale', category: 'telegram', configPath: 'telegram.locale', defaultValue: 'en', isCredential: false },
+
+  // --- signing_sdk category (CONF-01: 6 operational keys, CONF-02: 1 wallets JSON key) ---
+  { key: 'signing_sdk.enabled', category: 'signing_sdk', configPath: 'signing_sdk.enabled', defaultValue: 'false', isCredential: false },
+  { key: 'signing_sdk.request_expiry_min', category: 'signing_sdk', configPath: 'signing_sdk.request_expiry_min', defaultValue: '30', isCredential: false },
+  { key: 'signing_sdk.preferred_channel', category: 'signing_sdk', configPath: 'signing_sdk.preferred_channel', defaultValue: 'ntfy', isCredential: false },
+  { key: 'signing_sdk.preferred_wallet', category: 'signing_sdk', configPath: 'signing_sdk.preferred_wallet', defaultValue: '', isCredential: false },
+  { key: 'signing_sdk.ntfy_request_topic_prefix', category: 'signing_sdk', configPath: 'signing_sdk.ntfy_request_topic_prefix', defaultValue: 'waiaas-sign', isCredential: false },
+  { key: 'signing_sdk.ntfy_response_topic_prefix', category: 'signing_sdk', configPath: 'signing_sdk.ntfy_response_topic_prefix', defaultValue: 'waiaas-response', isCredential: false },
+  { key: 'signing_sdk.wallets', category: 'signing_sdk', configPath: 'signing_sdk.wallets', defaultValue: '[]', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
