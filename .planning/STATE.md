@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v26.3 Push Relay Server
 
 ## Current Position
 
-Phase: 206 of 206 (v2.7 complete)
-Plan: Complete
-Status: Milestone v2.7 shipped
-Last activity: 2026-02-20 — v2.7 지갑 앱 알림 채널 milestone complete
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-20 — Milestone v26.3 started
 
 ## Performance Metrics
 
@@ -34,5 +32,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: v2.7 milestone complete
+Stopped at: Milestone v26.3 requirements definition
 Resume file: None

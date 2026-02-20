@@ -8,6 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v26.3 Push Relay Server
+
+**Goal:** ntfy 토픽을 구독하여 지갑 개발사의 기존 푸시 인프라(Pushwoosh, FCM 등)로 변환·전달하는 경량 중계 서버를 구현하여, ntfy SDK를 앱에 직접 내장할 수 없는 지갑 개발사가 기존 푸시 파이프라인만으로 WAIaaS 서명 요청과 알림을 수신할 수 있는 상태.
+
+**Target features:**
+- 데몬 SignRequest 인코딩 통일 (NtfySigningChannel base64url)
+- Push Relay Server (@waiaas/push-relay 신규 패키지)
+- IPushProvider 인터페이스 + PushwooshProvider + FcmProvider
+- Device Token Registry (SQLite + REST API)
+- ntfy SSE Subscriber (자동 재연결, 멀티 토픽)
+- 배포 인프라 (npm + Docker + release-please + CI)
+
 ## Current State
 
 v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@waiaas/wallet-sdk) + Python SDK, ~161,634 LOC TypeScript (Admin UI ~20,000 LOC), 4,345+ 테스트 통과. MIT 라이선스, npm 8개 패키지 v2.3.0-rc OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push, 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
@@ -422,7 +434,11 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 10-패키지 모노레포(@w
 
 ### 활성
 
-(다음 마일스톤에서 정의)
+- [ ] 데몬 NtfySigningChannel base64url 인코딩 통일
+- [ ] Push Relay Server 핵심 구현 (@waiaas/push-relay)
+- [ ] PushwooshProvider + FcmProvider 구현
+- [ ] Device Token Registry API
+- [ ] 배포 인프라 통합 (npm, Docker, CI)
 
 ### 범위 외
 
