@@ -53,7 +53,6 @@ Add the WAIaaS environment variables to your `~/.openclaw/openclaw.json`:
       "waiaas-quickstart": {
         "env": {
           "WAIAAS_BASE_URL": "http://localhost:3100",
-          "WAIAAS_MASTER_PASSWORD": "<your-master-password>",
           "WAIAAS_SESSION_TOKEN": "<your-session-token>"
         }
       }
@@ -62,7 +61,18 @@ Add the WAIaaS environment variables to your `~/.openclaw/openclaw.json`:
 }
 ```
 
-Replace `<your-master-password>` and `<your-session-token>` with the values from step 1.
+The agent no longer needs the master password. Provide only the session token from step 1.
+
+### 4. Agent Self-Discovery
+
+On startup, the agent should call `GET /v1/connect-info` with the session token to discover available wallets, policies, and capabilities:
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H 'Authorization: Bearer <session-token>'
+```
+
+This returns an AI-ready prompt describing the environment, eliminating the need for manual configuration.
 
 ## Verification
 
@@ -118,8 +128,8 @@ waiaas start
 
 ### Authentication errors
 
-Check that your master password and session token are correct in `openclaw.json`. You can verify with:
+Check that your session token is correct in `openclaw.json`. You can verify with:
 
 ```bash
-curl -H "X-Master-Password: <your-password>" http://localhost:3100/v1/wallets
+curl -H "Authorization: Bearer <session-token>" http://localhost:3100/v1/connect-info
 ```

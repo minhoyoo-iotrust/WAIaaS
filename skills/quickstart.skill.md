@@ -33,6 +33,23 @@ WAIaaS uses two authentication methods:
 - **masterAuth** is for administrative operations. The master password is set in `config.toml` or via `WAIAAS_SECURITY_MASTER_PASSWORD` env var.
 - **sessionAuth** is for wallet-scoped operations. You get a JWT token by creating a session (Step 3 below). Each session is bound to one wallet.
 
+## Self-Discovery (Recommended First Step)
+
+Call `GET /v1/connect-info` with your session token to discover:
+- Which wallets you can access
+- What policies apply to each wallet
+- Available capabilities (transfer, sign, x402, actions)
+- AI-ready prompt with usage instructions
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H 'Authorization: Bearer <session-token>'
+```
+
+If using MCP, call the `connect_info` tool instead.
+
+For multi-wallet sessions, specify `wallet_id` parameter to target a specific wallet. Omit to use the default wallet.
+
 ## Step-by-Step Workflow
 
 ### Step 1: Health Check

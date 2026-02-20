@@ -53,6 +53,8 @@ waiaas mcp setup
 
 This writes the MCP configuration to your Claude Desktop config. Claude Code can then use WAIaaS tools directly (e.g., `get_balance`, `send_transaction`).
 
+The MCP server includes a `connect_info` tool that returns all accessible wallets, policies, and capabilities. Call it first to understand your environment. No `WAIAAS_WALLET_ID` environment variable is needed -- the agent discovers wallets via connect-info.
+
 ## Skills vs MCP
 
 | Feature | Skills | MCP |

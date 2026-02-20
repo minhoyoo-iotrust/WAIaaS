@@ -67,11 +67,21 @@ Set these environment variables for your AI agent:
 
 ```bash
 export WAIAAS_BASE_URL=http://localhost:3100
-export WAIAAS_MASTER_PASSWORD=<your-master-password>
 export WAIAAS_SESSION_TOKEN=<your-session-token>
 ```
 
-Replace the placeholder values with the credentials from step 1.
+The agent no longer needs the master password. Provide only the session token from step 1.
+
+### 4. Environment Auto-Discovery
+
+With connect-info, the agent can discover capabilities without loading skill files. On startup, call:
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H 'Authorization: Bearer $WAIAAS_SESSION_TOKEN'
+```
+
+This returns all accessible wallets, policies, and capabilities with an AI-ready prompt, enabling automatic environment discovery.
 
 ## Available Skills
 
