@@ -185,7 +185,7 @@ Plans:
 
 Plans:
 - [x] 212-01-PLAN.md — connect-info 라우트 + 응답 빌더 (지갑/정책/capabilities/prompt)
-- [ ] 212-02-PLAN.md — agent-prompt 통합 (멀티 지갑 세션 생성 + 프롬프트 빌더 공유) + 테스트
+- [x] 212-02-PLAN.md — agent-prompt 통합 (멀티 지갑 세션 생성 + 프롬프트 빌더 공유) + 테스트
 
 ### Phase 213: 통합 레이어
 **Goal**: SDK, MCP, Admin UI, CLI, 스킬 파일, 가이드 문서가 멀티 지갑 세션과 자기 발견을 완전히 반영하고, 기존 워크플로우가 무변경으로 동작하는 상태
@@ -197,13 +197,13 @@ Plans:
   3. Admin UI 세션 생성 폼에서 다중 지갑 선택과 기본 지갑 지정이 가능하고, 세션 상세에서 연결된 지갑 목록과 기본 지갑 배지가 표시된다
   4. CLI quickset이 단일 멀티 지갑 세션 + 단일 MCP config entry를 생성하고, 스킬 파일과 가이드 문서에서 마스터 패스워드 의존이 제거된다
   5. 지갑 동적 추가/제거 시 SESSION_WALLET_ADDED/SESSION_WALLET_REMOVED 알림 이벤트가 발송된다
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 213-01: SDK 변경 (createSession walletIds + getConnectInfo) + Python SDK 동기화
-- [ ] 213-02: MCP 단일 인스턴스 전환 + connect-info 도구 + 기존 도구 walletId 파라미터
-- [ ] 213-03: Admin UI 세션 폼/상세 + CLI quickset 변경
-- [ ] 213-04: 스킬 파일 + 가이드 문서 업데이트 + 알림 이벤트 추가
+- [ ] 213-01-PLAN.md — SDK 변경 (createSession walletIds + getConnectInfo) + Python SDK 동기화
+- [ ] 213-02-PLAN.md — MCP 단일 인스턴스 전환 + connect-info 도구 + 기존 도구 walletId 파라미터
+- [ ] 213-03-PLAN.md — Admin UI 세션 폼/상세 + CLI quickset 변경
+- [ ] 213-04-PLAN.md — 스킬 파일 + 가이드 문서 업데이트 + 알림 이벤트 추가
 
 ## Progress
 
