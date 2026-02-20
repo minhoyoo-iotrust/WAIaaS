@@ -12,7 +12,7 @@
 - ✅ **v2.6.1 WAIaaS Wallet Signing SDK** — Phases 202-205 (shipped 2026-02-20)
 - ✅ **v2.7 지갑 앱 알림 채널** — Phase 206 (shipped 2026-02-20)
 - ✅ **v26.3 Push Relay Server** — Phases 207-209 (shipped 2026-02-20)
-- 🚧 **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** — Phases 210-213 (in progress)
+- 🚧 **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** — Phases 210-214 (in progress)
 
 ## Phases
 
@@ -135,6 +135,7 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 - [x] **Phase 211: API 레이어 지갑 선택** - resolveWalletId 헬퍼 + 전 엔드포인트 walletId 선택적 파라미터 + 세션 응답 확장 + 갱신 변경 (completed 2026-02-20)
 - [x] **Phase 212: 자기 발견 엔드포인트** - GET /v1/connect-info + capabilities 동적 결정 + 프롬프트 빌더 + agent-prompt 통합 (completed 2026-02-20)
 - [x] **Phase 213: 통합 레이어** - SDK/MCP/Admin UI/CLI quickset + 스킬 파일 + 가이드 문서 + 알림 이벤트 (completed 2026-02-20)
+- [ ] **Phase 214: 검증 보고서 + SDK 타입 수정** - Phase 212/213 VERIFICATION.md 생성 + SDK ConnectInfoResponse 타입 정합
 
 ## Phase Details
 
@@ -200,10 +201,27 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 213-01-PLAN.md — SDK 변경 (createSession walletIds + getConnectInfo) + Python SDK 동기화
-- [ ] 213-02-PLAN.md — MCP 단일 인스턴스 전환 + connect-info 도구 + 기존 도구 walletId 파라미터
-- [ ] 213-03-PLAN.md — Admin UI 세션 폼/상세 + CLI quickset 변경
-- [ ] 213-04-PLAN.md — 스킬 파일 + 가이드 문서 업데이트 + 알림 이벤트 추가
+- [x] 213-01-PLAN.md — SDK 변경 (createSession walletIds + getConnectInfo) + Python SDK 동기화
+- [x] 213-02-PLAN.md — MCP 단일 인스턴스 전환 + connect-info 도구 + 기존 도구 walletId 파라미터
+- [x] 213-03-PLAN.md — Admin UI 세션 폼/상세 + CLI quickset 변경
+- [x] 213-04-PLAN.md — 스킬 파일 + 가이드 문서 업데이트 + 알림 이벤트 추가
+
+### Phase 214: 검증 보고서 + SDK 타입 수정
+**Goal**: Phase 212/213의 VERIFICATION.md가 존재하고 모든 요구사항이 검증 증거와 함께 확인되며, SDK 타입이 데몬 응답과 정합하는 상태
+**Depends on**: Phase 213
+**Requirements**: DISC-01, DISC-02, DISC-03, DISC-04, INTG-01, INTG-02, INTG-03, INTG-04, INTG-05, INTG-06, INTG-07, INTG-08, INTG-09, INTG-10
+**Gap Closure:** Closes gaps from audit (v26.4-MILESTONE-AUDIT.md)
+**Success Criteria** (what must be TRUE):
+  1. Phase 212 VERIFICATION.md가 존재하고 DISC-01~04 각각에 대해 코드 증거가 기록되어 있다
+  2. Phase 213 VERIFICATION.md가 존재하고 INTG-01~10 각각에 대해 코드 증거가 기록되어 있다
+  3. SDK ConnectInfoResponse 타입이 데몬의 connect-info 응답 형태(top-level policies Record)와 일치한다
+  4. 재감사 시 모든 30개 요구사항이 satisfied 상태이다
+**Plans**: 3 plans
+
+Plans:
+- [ ] 214-01-PLAN.md — Phase 212 VERIFICATION.md 생성 (DISC-01~04 코드 검증)
+- [ ] 214-02-PLAN.md — Phase 213 VERIFICATION.md 생성 (INTG-01~10 코드 검증)
+- [ ] 214-03-PLAN.md — SDK ConnectInfoResponse 타입 수정 + 테스트
 
 ## Progress
 
@@ -226,3 +244,4 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 211 | 3/3 | Complete    | 2026-02-20 | - |
 | 212 | 2/2 | Complete   | 2026-02-20 | - |
 | 213 | 4/4 | Complete   | 2026-02-20 | - |
+| 214 | 0/3 | Pending    | - | - |

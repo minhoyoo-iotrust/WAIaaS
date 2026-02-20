@@ -31,23 +31,23 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 
 ### 자기 발견 (DISC)
 
-- [x] **DISC-01**: 에이전트가 세션 토큰으로 GET /v1/connect-info를 조회하여 접근 가능 지갑/정책/capabilities를 파악할 수 있다
-- [x] **DISC-02**: connect-info의 capabilities가 데몬 설정에 따라 동적으로 결정된다
-- [x] **DISC-03**: connect-info에 에이전트용 자연어 프롬프트가 포함된다
-- [x] **DISC-04**: POST /admin/agent-prompt가 단일 멀티 지갑 세션을 생성하고 connect-info 프롬프트 빌더를 공유한다
+- [ ] **DISC-01**: 에이전트가 세션 토큰으로 GET /v1/connect-info를 조회하여 접근 가능 지갑/정책/capabilities를 파악할 수 있다
+- [ ] **DISC-02**: connect-info의 capabilities가 데몬 설정에 따라 동적으로 결정된다
+- [ ] **DISC-03**: connect-info에 에이전트용 자연어 프롬프트가 포함된다
+- [ ] **DISC-04**: POST /admin/agent-prompt가 단일 멀티 지갑 세션을 생성하고 connect-info 프롬프트 빌더를 공유한다
 
 ### 통합 (INTG)
 
-- [x] **INTG-01**: SDK에 createSession({ walletIds }) 파라미터와 getConnectInfo() 메서드가 추가된다
-- [x] **INTG-02**: MCP에 connect-info 도구가 추가된다
-- [x] **INTG-03**: MCP 기존 도구에 선택적 walletId 파라미터가 추가된다
-- [x] **INTG-04**: MCP가 단일 인스턴스로 동작한다 (WAIAAS_WALLET_ID 선택적, 단일 토큰 파일)
-- [x] **INTG-05**: Admin UI 세션 생성 폼에서 다중 지갑 선택과 기본 지갑 지정이 가능하다
-- [x] **INTG-06**: Admin UI 세션 상세에서 연결된 지갑 목록과 기본 지갑 배지가 표시된다
-- [x] **INTG-07**: CLI quickset이 단일 멀티 지갑 세션 + 단일 MCP config entry를 생성한다
-- [x] **INTG-08**: 스킬 파일(quickstart/wallet/admin)에 connect-info 사용법과 walletId 파라미터가 문서화된다
-- [x] **INTG-09**: 가이드 문서에서 마스터 패스워드 의존이 제거되고 세션 토큰 단독 설정으로 변경된다
-- [x] **INTG-10**: SESSION_WALLET_ADDED/SESSION_WALLET_REMOVED 알림 이벤트가 발송된다
+- [ ] **INTG-01**: SDK에 createSession({ walletIds }) 파라미터와 getConnectInfo() 메서드가 추가된다
+- [ ] **INTG-02**: MCP에 connect-info 도구가 추가된다
+- [ ] **INTG-03**: MCP 기존 도구에 선택적 walletId 파라미터가 추가된다
+- [ ] **INTG-04**: MCP가 단일 인스턴스로 동작한다 (WAIAAS_WALLET_ID 선택적, 단일 토큰 파일)
+- [ ] **INTG-05**: Admin UI 세션 생성 폼에서 다중 지갑 선택과 기본 지갑 지정이 가능하다
+- [ ] **INTG-06**: Admin UI 세션 상세에서 연결된 지갑 목록과 기본 지갑 배지가 표시된다
+- [ ] **INTG-07**: CLI quickset이 단일 멀티 지갑 세션 + 단일 MCP config entry를 생성한다
+- [ ] **INTG-08**: 스킬 파일(quickstart/wallet/admin)에 connect-info 사용법과 walletId 파라미터가 문서화된다
+- [ ] **INTG-09**: 가이드 문서에서 마스터 패스워드 의존이 제거되고 세션 토큰 단독 설정으로 변경된다
+- [ ] **INTG-10**: SESSION_WALLET_ADDED/SESSION_WALLET_REMOVED 알림 이벤트가 발송된다
 
 ## v2 Requirements
 
@@ -91,25 +91,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-04 | Phase 211 | Complete |
 | API-05 | Phase 211 | Complete |
 | API-06 | Phase 211 | Complete |
-| DISC-01 | Phase 212 | Complete |
-| DISC-02 | Phase 212 | Complete |
-| DISC-03 | Phase 212 | Complete |
-| DISC-04 | Phase 212 | Complete |
-| INTG-01 | Phase 213 | Complete |
-| INTG-02 | Phase 213 | Complete |
-| INTG-03 | Phase 213 | Complete |
-| INTG-04 | Phase 213 | Complete |
-| INTG-05 | Phase 213 | Complete |
-| INTG-06 | Phase 213 | Complete |
-| INTG-07 | Phase 213 | Complete |
-| INTG-08 | Phase 213 | Complete |
-| INTG-09 | Phase 213 | Complete |
-| INTG-10 | Phase 213 | Complete |
+| DISC-01 | Phase 212 → 214 | Pending |
+| DISC-02 | Phase 212 → 214 | Pending |
+| DISC-03 | Phase 212 → 214 | Pending |
+| DISC-04 | Phase 212 → 214 | Pending |
+| INTG-01 | Phase 213 → 214 | Pending |
+| INTG-02 | Phase 213 → 214 | Pending |
+| INTG-03 | Phase 213 → 214 | Pending |
+| INTG-04 | Phase 213 → 214 | Pending |
+| INTG-05 | Phase 213 → 214 | Pending |
+| INTG-06 | Phase 213 → 214 | Pending |
+| INTG-07 | Phase 213 → 214 | Pending |
+| INTG-08 | Phase 213 → 214 | Pending |
+| INTG-09 | Phase 213 → 214 | Pending |
+| INTG-10 | Phase 213 → 214 | Pending |
 
 **Coverage:**
 - v1 requirements: 30 total
 - Mapped to phases: 30
-- Unmapped: 0
+- Complete: 16 (SESS-01~10, API-01~06)
+- Pending (gap closure): 14 (DISC-01~04, INTG-01~10 → Phase 214)
 
 ---
 *Requirements defined: 2026-02-21*
