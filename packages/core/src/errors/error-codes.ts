@@ -9,7 +9,8 @@ export type ErrorDomain =
   | 'WITHDRAW'
   | 'ACTION'
   | 'ADMIN'
-  | 'X402';
+  | 'X402'
+  | 'SIGNING';
 
 export interface ErrorCodeEntry {
   code: string;
@@ -20,8 +21,8 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 74 error codes from SS10.12 unified error code matrix.
- * SSoT: 37-rest-api-complete-spec.md section 10.12
+ * 100 error codes from SS10.12 unified error code matrix + signing protocol.
+ * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
  */
 export const ERROR_CODES = {
   // --- AUTH domain (8) ---
@@ -699,6 +700,57 @@ export const ERROR_CODES = {
     httpStatus: 502,
     retryable: true,
     message: 'Resource server error after x402 payment',
+  },
+
+  // --- SIGNING domain (7) ---
+  WALLET_NOT_REGISTERED: {
+    code: 'WALLET_NOT_REGISTERED',
+    domain: 'SIGNING',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Wallet not registered in signing SDK',
+  },
+  SIGNING_SDK_DISABLED: {
+    code: 'SIGNING_SDK_DISABLED',
+    domain: 'SIGNING',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Signing SDK is disabled',
+  },
+  SIGN_REQUEST_NOT_FOUND: {
+    code: 'SIGN_REQUEST_NOT_FOUND',
+    domain: 'SIGNING',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Sign request not found',
+  },
+  SIGN_REQUEST_EXPIRED: {
+    code: 'SIGN_REQUEST_EXPIRED',
+    domain: 'SIGNING',
+    httpStatus: 408,
+    retryable: false,
+    message: 'Sign request has expired',
+  },
+  SIGNER_ADDRESS_MISMATCH: {
+    code: 'SIGNER_ADDRESS_MISMATCH',
+    domain: 'SIGNING',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Signer address does not match wallet owner',
+  },
+  INVALID_SIGN_RESPONSE: {
+    code: 'INVALID_SIGN_RESPONSE',
+    domain: 'SIGNING',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Invalid sign response format',
+  },
+  SIGN_REQUEST_ALREADY_PROCESSED: {
+    code: 'SIGN_REQUEST_ALREADY_PROCESSED',
+    domain: 'SIGNING',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Sign request has already been processed',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

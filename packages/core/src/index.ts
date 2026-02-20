@@ -107,7 +107,31 @@ export {
   type AssetInfoDto,
 } from './schemas/index.js';
 
-// Errors (84 error codes + WAIaaSError + ChainError)
+// Signing Protocol (v2.6.1 Zod schemas + types + utilities)
+export {
+  APPROVAL_METHODS,
+  ApprovalMethodSchema,
+  type ApprovalMethod,
+  NtfyResponseChannelSchema,
+  TelegramResponseChannelSchema,
+  ResponseChannelSchema,
+  type NtfyResponseChannel,
+  type TelegramResponseChannel,
+  type ResponseChannel,
+  SignRequestMetadataSchema,
+  type SignRequestMetadata,
+  SignRequestSchema,
+  type SignRequest,
+  SignResponseSchema,
+  type SignResponse,
+  WalletLinkConfigSchema,
+  type WalletLinkConfig,
+  encodeSignRequest,
+  decodeSignRequest,
+  buildUniversalLinkUrl,
+} from './schemas/signing-protocol.js';
+
+// Errors (100 error codes across 12 domains + WAIaaSError + ChainError)
 export {
   ERROR_CODES,
   type ErrorCode,

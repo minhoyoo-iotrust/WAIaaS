@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (74 error codes)
+  // Error messages (100 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -109,6 +109,14 @@ export const messages: Messages = {
     X402_DELAY_TIMEOUT: 'x402 결제가 요청 타임아웃을 초과했습니다 (DELAY 계층)',
     X402_APPROVAL_REQUIRED: 'x402 결제에 Owner 승인이 필요합니다 (금액 초과)',
     X402_SERVER_ERROR: 'x402 결제 후 리소스 서버 오류가 발생했습니다',
+    // SIGNING domain (7)
+    WALLET_NOT_REGISTERED: '서명 SDK에 등록되지 않은 지갑입니다',
+    SIGNING_SDK_DISABLED: '서명 SDK가 비활성화되어 있습니다',
+    SIGN_REQUEST_NOT_FOUND: '서명 요청을 찾을 수 없습니다',
+    SIGN_REQUEST_EXPIRED: '서명 요청이 만료되었습니다',
+    SIGNER_ADDRESS_MISMATCH: '서명자 주소가 지갑 Owner와 일치하지 않습니다',
+    INVALID_SIGN_RESPONSE: '유효하지 않은 서명 응답 형식입니다',
+    SIGN_REQUEST_ALREADY_PROCESSED: '이미 처리된 서명 요청입니다',
   },
   // Notification templates (22 event types)
   notifications: {

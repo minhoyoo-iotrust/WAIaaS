@@ -3,7 +3,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 
 /**
  * Messages type definition. Enforces key parity across all locales.
- * Keys in errors must match ERROR_CODES keys exactly (74 error codes).
+ * Keys in errors must match ERROR_CODES keys exactly (100 error codes).
  * Notification templates cover all 22 event types.
  */
 export interface Messages {
@@ -53,7 +53,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (74 error codes from SS10.12 unified matrix)
+  // Error messages (100 error codes from SS10.12 unified matrix + signing protocol)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -161,6 +161,14 @@ export const messages: Messages = {
     X402_DELAY_TIMEOUT: 'x402 payment exceeds request timeout (DELAY tier)',
     X402_APPROVAL_REQUIRED: 'x402 payment requires owner approval (amount too high)',
     X402_SERVER_ERROR: 'Resource server error after x402 payment',
+    // SIGNING domain (7)
+    WALLET_NOT_REGISTERED: 'Wallet not registered in signing SDK',
+    SIGNING_SDK_DISABLED: 'Signing SDK is disabled',
+    SIGN_REQUEST_NOT_FOUND: 'Sign request not found',
+    SIGN_REQUEST_EXPIRED: 'Sign request has expired',
+    SIGNER_ADDRESS_MISMATCH: 'Signer address does not match wallet owner',
+    INVALID_SIGN_RESPONSE: 'Invalid sign response format',
+    SIGN_REQUEST_ALREADY_PROCESSED: 'Sign request has already been processed',
   },
   // Notification templates (22 event types)
   notifications: {

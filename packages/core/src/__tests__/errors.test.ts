@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { WAIaaSError, ERROR_CODES } from '../index.js';
 
 describe('Error code matrix', () => {
-  it('has exactly 93 error codes', () => {
-    expect(Object.keys(ERROR_CODES)).toHaveLength(93);
+  it('has exactly 100 error codes', () => {
+    expect(Object.keys(ERROR_CODES)).toHaveLength(100);
   });
 
   it('every error code entry has required fields', () => {
@@ -17,7 +17,7 @@ describe('Error code matrix', () => {
     }
   });
 
-  it('covers all 11 domains', () => {
+  it('covers all 12 domains', () => {
     const domains = new Set(Object.values(ERROR_CODES).map((e) => e.domain));
     expect(domains).toContain('AUTH');
     expect(domains).toContain('SESSION');
@@ -30,7 +30,8 @@ describe('Error code matrix', () => {
     expect(domains).toContain('ACTION');
     expect(domains).toContain('ADMIN');
     expect(domains).toContain('X402');
-    expect(domains.size).toBe(11);
+    expect(domains).toContain('SIGNING');
+    expect(domains.size).toBe(12);
   });
 
   it('AUTH domain has 8 codes', () => {
