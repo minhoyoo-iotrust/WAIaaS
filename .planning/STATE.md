@@ -2,19 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-20)
+See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v26.3 milestone shipped -- ready for next milestone
+**Current focus:** v26.4 멀티 지갑 세션 + 에이전트 자기 발견
 
 ## Current Position
 
-Phase: None (between milestones)
-Plan: N/A
-Status: v26.3 shipped, no active milestone
-Last activity: 2026-02-20 -- v26.3 Push Relay Server archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-21 — Milestone v26.4 started
 
 ## Performance Metrics
 
@@ -32,6 +30,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: v26.3 archived, ready for /gsd:new-milestone
+Last session: 2026-02-21
+Stopped at: Milestone v26.4 initialized, defining requirements
 Resume file: None

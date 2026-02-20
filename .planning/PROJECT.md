@@ -8,7 +8,15 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: None (v26.3 shipped)
+## Current Milestone: v26.4 멀티 지갑 세션 + 에이전트 자기 발견
+
+**Goal:** 하나의 세션 토큰으로 여러 지갑에 접근할 수 있는 API 키 모델 세션 구조를 제공하여, AI 에이전트가 토큰 하나로 멀티체인 지갑 포트폴리오를 관리하고 마스터 패스워드 없이 자기 상황을 파악(자기 발견)할 수 있는 상태.
+
+**Target features:**
+- 세션 모델 변경 (1:1 → 1:N) — session_wallets junction 테이블, DB v19 마이그레이션
+- API 변경 — walletId 선택적 파라미터, 세션-지갑 동적 관리 4개 엔드포인트
+- 자기 발견 엔드포인트 (GET /v1/connect-info) — sessionAuth로 지갑/정책/capabilities/prompt 자동 파악
+- SDK/MCP/Admin UI/CLI 반영 — MCP 단일 인스턴스, quickset 통합, connect-info 도구
 
 ## Current State
 
