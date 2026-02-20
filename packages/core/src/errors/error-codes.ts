@@ -21,7 +21,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 100 error codes from SS10.12 unified error code matrix + signing protocol.
+ * 104 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet.
  * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
  */
 export const ERROR_CODES = {
@@ -83,7 +83,7 @@ export const ERROR_CODES = {
     message: 'System is locked',
   },
 
-  // --- SESSION domain (8) ---
+  // --- SESSION domain (12) ---
   SESSION_NOT_FOUND: {
     code: 'SESSION_NOT_FOUND',
     domain: 'SESSION',
@@ -139,6 +139,34 @@ export const ERROR_CODES = {
     httpStatus: 403,
     retryable: false,
     message: 'Session renewal count mismatch',
+  },
+  WALLET_ACCESS_DENIED: {
+    code: 'WALLET_ACCESS_DENIED',
+    domain: 'SESSION',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Wallet not accessible from this session',
+  },
+  WALLET_ALREADY_LINKED: {
+    code: 'WALLET_ALREADY_LINKED',
+    domain: 'SESSION',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Wallet already linked to this session',
+  },
+  CANNOT_REMOVE_DEFAULT_WALLET: {
+    code: 'CANNOT_REMOVE_DEFAULT_WALLET',
+    domain: 'SESSION',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Cannot remove default wallet (change default first)',
+  },
+  SESSION_REQUIRES_WALLET: {
+    code: 'SESSION_REQUIRES_WALLET',
+    domain: 'SESSION',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Session must have at least one wallet',
   },
 
   // --- PIPELINE domain (1) ---
