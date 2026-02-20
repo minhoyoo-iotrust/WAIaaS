@@ -44,6 +44,7 @@ v2.6 Wallet SDK 설계 shipped (2026-02-20). 9-패키지 모노레포 + Python S
 - ✅ v2.4.1 Admin UI 테스트 커버리지 복원 — shipped 2026-02-19 (5 plans, 22 requirements, ~151,015 LOC TS)
 - ✅ v2.5 DX 품질 개선 — shipped 2026-02-19 (8 plans, 23 requirements)
 - ✅ v2.6 Wallet SDK 설계 — shipped 2026-02-20 (7 plans, 23 requirements, 34 설계 결정, 설계 문서 3개 신규)
+- 🚧 v2.6.1 WAIaaS Wallet Signing SDK — in progress
 
 **코드베이스 현황:**
 - 9-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/mcp, @waiaas/admin + waiaas (Python)
@@ -745,9 +746,19 @@ v2.6 Wallet SDK 설계 shipped (2026-02-20). 4 페이즈, 7 플랜, 23 요구사
 | Push Relay 별도 패키지 중첩 config.toml 허용 | WAIaaS flat-key 정책 미적용 (독립 패키지) | ✓ Good — v2.6 설계 |
 | INotificationChannel type에 'WALLET_NTFY' 추가 | 4번째 채널 타입, 타입 안전성 유지 | ✓ Good — v2.6 설계 |
 
-## Current Milestone
+## Current Milestone: v2.6.1 WAIaaS Wallet Signing SDK
 
-(다음 마일스톤 미정)
+**Goal:** v2.6에서 완성된 Signing Protocol v1 설계(docs 73-75)를 구현하여, 지갑 개발사가 @waiaas/wallet-sdk로 통합하고 Owner가 지갑 앱에서 트랜잭션을 승인/거부할 수 있는 상태 달성
+
+**Target features:**
+- WAIaaS Signing Protocol v1 (SignRequest/SignResponse, JSON+base64url, Zod 스키마)
+- NtfySigningChannel (ntfy publish/subscribe 양방향 서명 채널)
+- TelegramSigningChannel (기존 Bot 확장, /sign_response 명령어)
+- ApprovalChannelRouter (5단계 우선순위 라우팅: SDK ntfy > SDK Telegram > WC > Telegram Bot > REST)
+- WalletLinkRegistry (지갑별 유니버셜 링크 패턴 관리)
+- @waiaas/wallet-sdk npm 패키지 (parseSignRequest, buildSignResponse, sendViaNtfy, sendViaTelegram, subscribeToRequests)
+- wallets.owner_approval_method DB 컬럼 + REST API + Admin UI
+- SettingsService signing_sdk.* 키 6개 (런타임 변경)
 
 ---
-*최종 업데이트: 2026-02-20 after v2.6 milestone shipped — Wallet SDK 설계*
+*최종 업데이트: 2026-02-20 after v2.6.1 milestone started — Wallet Signing SDK 구현*
