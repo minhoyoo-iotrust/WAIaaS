@@ -39,8 +39,8 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 - [x] **WALLET-01**: WalletLinkRegistry에 지갑 메타데이터(유니버셜 링크 base URL, 딥링크 스키마)를 등록하고 조회할 수 있다
 - [x] **WALLET-02**: 미등록 지갑 조회 시 WALLET_NOT_REGISTERED 에러를 반환한다
 - [x] **WALLET-03**: wallets 테이블에 owner_approval_method 컬럼이 추가되고 DB 마이그레이션이 정상 동작한다
-- [ ] **WALLET-04**: PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있다
-- [ ] **WALLET-05**: 유효하지 않은 approval_method 값에 대해 400 에러를 반환한다
+- [x] **WALLET-04**: PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있다
+- [x] **WALLET-05**: 유효하지 않은 approval_method 값에 대해 400 에러를 반환한다
 - [ ] **WALLET-06**: Admin UI 지갑 상세 페이지에서 Owner 승인 방법을 라디오 선택으로 변경할 수 있다
 - [ ] **WALLET-07**: 미구성 인프라 선택 시(예: ntfy 미설정 + sdk_ntfy) 경고 메시지를 표시한다
 
@@ -92,8 +92,8 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 | WALLET-01 | Phase 202 | Complete |
 | WALLET-02 | Phase 202 | Complete |
 | WALLET-03 | Phase 202 | Complete |
-| WALLET-04 | Phase 203 | Pending |
-| WALLET-05 | Phase 203 | Pending |
+| WALLET-04 | Phase 203 | Complete |
+| WALLET-05 | Phase 203 | Complete |
 | WALLET-06 | Phase 203 | Pending |
 | WALLET-07 | Phase 203 | Pending |
 | CONF-01 | Phase 202 | Complete |
