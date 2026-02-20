@@ -6,6 +6,8 @@
  *   - SignResponseHandler: processes wallet app SignResponse (approve/reject)
  *   - WalletLinkRegistry: manages registered wallet configurations
  *   - NtfySigningChannel: ntfy-based publish/subscribe signing channel
+ *   - TelegramSigningChannel: Telegram-based one-way push signing channel
+ *   - ApprovalChannelRouter: routes to correct channel based on wallet's owner_approval_method
  *   - ISigningChannel: channel interface for future channel implementations
  *
  * @see internal/design/73-signing-protocol-v1.md
@@ -27,6 +29,10 @@ export type { NtfySigningChannelOpts, SendRequestParams, SendRequestResult } fro
 
 export { TelegramSigningChannel } from './channels/index.js';
 export type { TelegramSigningChannelOpts } from './channels/index.js';
+
+// Routing
+export { ApprovalChannelRouter } from './approval-channel-router.js';
+export type { ApprovalChannelRouterDeps, RouteResult } from './approval-channel-router.js';
 
 // ---------------------------------------------------------------------------
 // ISigningChannel interface (for future TelegramSigningChannel, etc.)
