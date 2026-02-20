@@ -698,6 +698,12 @@ export class DaemonLifecycle {
           telegramChannel,
         });
 
+        // Inject signResponseHandler into TelegramBotService for /sign_response command (GAP-2: CHAN-04)
+        if (this.telegramBotService) {
+          this.telegramBotService.setSignResponseHandler(signResponseHandler);
+          console.debug('Step 4c-8: signResponseHandler injected into TelegramBotService');
+        }
+
         console.debug('Step 4c-8: Signing SDK initialized (ApprovalChannelRouter + channels)');
       } else {
         console.debug('Step 4c-8: Signing SDK disabled');

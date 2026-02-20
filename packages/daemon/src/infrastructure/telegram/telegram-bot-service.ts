@@ -98,6 +98,14 @@ export class TelegramBotService {
   }
 
   /**
+   * Set the signResponseHandler for /sign_response command (late-binding from signing SDK lifecycle).
+   * Same late-binding pattern as VersionCheckService.setNotificationService().
+   */
+  setSignResponseHandler(handler: SignResponseHandler): void {
+    this.signResponseHandler = handler;
+  }
+
+  /**
    * Start the Long Polling loop (fire-and-forget, runs in background).
    * Does NOT block -- returns immediately after starting the async loop.
    */
