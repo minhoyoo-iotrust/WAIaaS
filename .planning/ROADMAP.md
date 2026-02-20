@@ -128,11 +128,13 @@ Plans:
   2. ApprovalChannelRouter가 지갑별 owner_approval_method 설정에 따라 올바른 채널로 라우팅하고, 미설정 시 글로벌 5단계 우선순위로 fallback한다
   3. PUT /v1/wallets/:id/owner 요청에 approval_method 필드를 포함하여 승인 방법을 설정할 수 있고, 유효하지 않은 값에 대해 400 에러를 반환한다
   4. Admin UI 지갑 상세 페이지에서 Owner 승인 방법을 라디오 선택으로 변경할 수 있고, 미구성 인프라 선택 시 경고를 표시한다
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 203-01: TBD
-- [ ] 203-02: TBD
+- [ ] 203-01-PLAN.md — TelegramSigningChannel 구현 (인라인 버튼 전송 + /sign_response 수신)
+- [ ] 203-02-PLAN.md — REST API approval_method 확장 (PUT /wallets/:id/owner + 검증)
+- [ ] 203-03-PLAN.md — ApprovalChannelRouter (5단계 우선순위 라우팅 + SDK 비활성 fallback)
+- [ ] 203-04-PLAN.md — Admin UI Owner 승인 방법 라디오 선택 + 인프라 경고
 
 ## Progress
 
@@ -147,5 +149,5 @@ Plans:
 | 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
-| 202 | 4/4 | Complete   | 2026-02-20 | - |
-| 203 | v2.6.1 | 0/TBD | Not started | - |
+| 202 | v2.6.1 | 4/4 | Complete | 2026-02-20 |
+| 203 | v2.6.1 | 0/4 | Not started | - |
