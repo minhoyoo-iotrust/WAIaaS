@@ -25,6 +25,9 @@ export { WalletLinkRegistry } from './wallet-link-registry.js';
 export { NtfySigningChannel } from './channels/index.js';
 export type { NtfySigningChannelOpts, SendRequestParams, SendRequestResult } from './channels/index.js';
 
+export { TelegramSigningChannel } from './channels/index.js';
+export type { TelegramSigningChannelOpts } from './channels/index.js';
+
 // ---------------------------------------------------------------------------
 // ISigningChannel interface (for future TelegramSigningChannel, etc.)
 // ---------------------------------------------------------------------------

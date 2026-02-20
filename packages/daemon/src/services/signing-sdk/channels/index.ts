@@ -10,3 +10,6 @@ export type {
   SendRequestParams,
   SendRequestResult,
 } from './ntfy-signing-channel.js';
+
+export { TelegramSigningChannel } from './telegram-signing-channel.js';
+export type { TelegramSigningChannelOpts } from './telegram-signing-channel.js';
