@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 211 of 213 (API 레이어 지갑 선택)
-Plan: 2 of 3 in current phase
-Status: In Progress
-Last activity: 2026-02-21 -- Completed 211-03-PLAN.md (session response backward compat tests)
+Plan: 3 of 3 in current phase
+Status: Complete
+Last activity: 2026-02-21 -- Completed 211-02-PLAN.md (endpoint walletId selection migration + integration tests)
 
-Progress: [#######░░░] 67%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [#######░░░] 67%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
-| 211. API 레이어 지갑 선택 | 2/3 | 5min | 2.5min |
+| 211. API 레이어 지갑 선택 | 3/3 | 11min | 3.7min |
 | 212. 자기 발견 엔드포인트 | 0/2 | - | - |
 | 213. 통합 레이어 | 0/4 | - | - |
 
@@ -51,6 +51,9 @@ Progress: [#######░░░] 67%
 - 마지막 지갑 삭제 시 세션 자동 revoke (revokedAt 설정)
 - SessionRenewResponseSchema에 walletId 미포함 (의도적: JWT wlt 클레임이 기본 지갑 정보 전달)
 - OpenAPI 스키마는 Phase 210-02에서 이미 정합 완료 (211-03에서 변경 불필요)
+- POST body walletId: OpenAPI 스키마에 optional 필드로 추가 (TxSignRequest, x402 fetch, ActionExecuteRequest)
+- cancel 핸들러: verifyWalletAccess(sessionId, tx.walletId) 패턴 사용 (resolveWalletId 대신)
+- BetterSQLite3Database<any> 타입 확장으로 typed/untyped DB 인스턴스 호환
 
 ### Blockers/Concerns
 
@@ -59,5 +62,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 211-03-PLAN.md (session response backward compat tests)
+Stopped at: Completed 211-02-PLAN.md (endpoint walletId selection migration + 10 integration tests)
 Resume file: None

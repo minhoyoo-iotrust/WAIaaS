@@ -23,8 +23,8 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 ### API 변경 (API)
 
 - [x] **API-01**: walletId 미지정 시 기본 지갑이 자동 선택되어 기존 코드가 무변경으로 동작한다
-- [ ] **API-02**: GET 요청에서 ?walletId= 쿼리 파라미터로 특정 지갑을 지정할 수 있다
-- [ ] **API-03**: POST/PUT 요청에서 body walletId 필드로 특정 지갑을 지정할 수 있다
+- [x] **API-02**: GET 요청에서 ?walletId= 쿼리 파라미터로 특정 지갑을 지정할 수 있다
+- [x] **API-03**: POST/PUT 요청에서 body walletId 필드로 특정 지갑을 지정할 수 있다
 - [x] **API-04**: 세션에 연결되지 않은 지갑 접근 시 WALLET_ACCESS_DENIED 에러가 반환된다
 - [x] **API-05**: 세션 목록/상세 응답에 wallets 배열이 포함된다 (하위 호환 walletId/walletName 유지)
 - [x] **API-06**: 세션 갱신(renew) 시 현재 기본 지갑으로 JWT가 발급된다
@@ -86,8 +86,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-09 | Phase 210 | Complete |
 | SESS-10 | Phase 210 | Complete |
 | API-01 | Phase 211 | Complete |
-| API-02 | Phase 211 | Pending |
-| API-03 | Phase 211 | Pending |
+| API-02 | Phase 211 | Complete |
+| API-03 | Phase 211 | Complete |
 | API-04 | Phase 211 | Complete |
 | API-05 | Phase 211 | Complete |
 | API-06 | Phase 211 | Complete |
