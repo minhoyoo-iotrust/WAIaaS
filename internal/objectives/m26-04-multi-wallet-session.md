@@ -162,10 +162,24 @@ POST /v1/sessions { walletId: "wallet-1" }  → walletIds: ["wallet-1"]
 #### 세션에 지갑 동적 추가/제거
 
 ```
-POST   /v1/sessions/:id/wallets     { walletId }        → 지갑 추가 (masterAuth)
-DELETE /v1/sessions/:id/wallets/:walletId                → 지갑 제거 (masterAuth)
-GET    /v1/sessions/:id/wallets                          → 연결된 지갑 목록 (masterAuth)
+POST   /v1/sessions/:id/wallets                { walletId }           → 지갑 추가 (masterAuth)
+DELETE /v1/sessions/:id/wallets/:walletId                              → 지갑 제거 (masterAuth)
+PATCH  /v1/sessions/:id/wallets/:walletId/default                      → 기본 지갑 변경 (masterAuth)
+GET    /v1/sessions/:id/wallets                                        → 연결된 지갑 목록 (masterAuth)
 ```
+
+**엣지 케이스 처리:**
+
+| 상황 | 동작 |
+|------|------|
+| 존재하지 않는 walletId로 추가 | 404 `WALLET_NOT_FOUND` |
+| 이미 연결된 walletId 추가 | 409 `WALLET_ALREADY_LINKED` |
+| 기본 지갑 제거 시도 | 400 `CANNOT_REMOVE_DEFAULT_WALLET` (먼저 PATCH로 기본 지갑 변경 필요) |
+| 마지막 지갑 제거 시도 | 400 `SESSION_REQUIRES_WALLET` (최소 1개 지갑 필요) |
+
+#### 세션 constraints와 멀티 지갑
+
+현재 세션의 `constraints` 필드(JSON)는 **세션 전체에 적용**된다 (지갑별 분리 없음). 지갑별 제한은 기존 **정책(policies)** 으로 관리한다. constraints는 세션 레벨 제약(시간 제한, 총 트랜잭션 수 등)을 담당한다.
 
 ### 3. 자기 발견 엔드포인트
 
@@ -188,7 +202,8 @@ GET /v1/connect-info    (sessionAuth)
       "id": "wallet-1",
       "name": "Solana Main",
       "chain": "solana",
-      "network": "mainnet-beta",
+      "environment": "mainnet",
+      "defaultNetwork": "mainnet-beta",
       "address": "ABC...xyz",
       "isDefault": true
     },
@@ -196,7 +211,8 @@ GET /v1/connect-info    (sessionAuth)
       "id": "wallet-2",
       "name": "Ethereum",
       "chain": "evm",
-      "network": "ethereum-mainnet",
+      "environment": "mainnet",
+      "defaultNetwork": "ethereum-mainnet",
       "address": "0x123...abc",
       "isDefault": false
     }
@@ -222,14 +238,20 @@ GET /v1/connect-info    (sessionAuth)
 }
 ```
 
-`prompt` 필드에는 현재 매직워드(`/admin/agent-prompt`)와 유사한 자연어 프롬프트가 포함되지만, **세션 스코프에 맞게 필터링**된 정보만 제공한다.
+**capabilities 동적 결정**: capabilities는 정적 리스트가 아니라, 세션 연결 지갑과 데몬 설정에 따라 **동적으로 결정**된다:
+- `transfer`, `token_transfer`, `balance`, `assets`: 항상 포함 (기본 기능)
+- `sign`: 서명 API 활성 시 포함
+- `actions`: Action Provider API 키 1개 이상 등록 시 포함
+- `x402`: x402 설정 완료 시 포함
+
+**prompt 생성**: 현재 매직워드(`GET /admin/agent-prompt`, masterAuth)의 프롬프트 생성 로직을 **내부 함수로 분리**하여 재사용한다. connect-info의 prompt는 **세션 스코프에 맞게 필터링**된 정보만 포함한다 (세션에 연결된 지갑, 해당 지갑 정책, 사용 가능 capabilities만).
 
 ### 4. SDK / MCP / Admin UI 반영
 
 | 컴포넌트 | 변경 내용 |
 |----------|----------|
 | **@waiaas/sdk** | `createSession({ walletIds })` 파라미터 추가. `getConnectInfo()` 메서드 추가 |
-| **MCP 서버** | `connect-info` 도구 추가. 세션 생성 시 멀티 지갑 지원 |
+| **MCP 서버** | `connect-info` 도구 추가. 세션 생성 시 멀티 지갑 지원. 기존 MCP 도구에 선택적 `walletId` 파라미터 추가 (미지정 시 기본 지갑) |
 | **Admin UI** | 세션 생성 폼에서 다중 지갑 선택 체크박스. 세션 상세에서 연결된 지갑 목록 표시 |
 | **CLI** | `waiaas quickset`이 생성하는 세션에 모든 지갑 자동 연결 |
 | **Skills** | `quickstart.skill.md`에서 `connect-info` 사용법 안내 추가 |
@@ -289,6 +311,31 @@ GET /v1/connect-info    (sessionAuth)
 | 14 | SDK createSession 멀티 지갑 | `sdk.createSession({ walletIds })` → 멀티 지갑 세션 생성 assert | [L0] |
 | 15 | SDK getConnectInfo | `sdk.getConnectInfo()` → ConnectInfo 객체 반환 assert | [L0] |
 | 16 | MCP connect-info 도구 | MCP `connect-info` → 자기 발견 정보 반환 assert | [L0] |
+| 17 | MCP 지갑 전환 | MCP `send-transfer { walletId: w2 }` → w2에서 전송 assert | [L0] |
+
+### 엣지 케이스
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 18 | 기본 지갑 변경 | `PATCH /sessions/:id/wallets/w2/default` → 이후 walletId 미지정 요청이 w2 사용 assert | [L0] |
+| 19 | 기본 지갑 제거 차단 | `DELETE /sessions/:id/wallets/w1` (기본 지갑) → 400 CANNOT_REMOVE_DEFAULT_WALLET assert | [L0] |
+| 20 | 마지막 지갑 제거 차단 | 지갑 1개 세션에서 `DELETE` → 400 SESSION_REQUIRES_WALLET assert | [L0] |
+| 21 | 존재하지 않는 지갑 추가 | `POST /sessions/:id/wallets { walletId: "invalid" }` → 404 WALLET_NOT_FOUND assert | [L0] |
+| 22 | capabilities 동적 결정 | x402 미설정 → connect-info.capabilities에 "x402" 미포함 assert | [L0] |
+
+---
+
+## 문서 업데이트
+
+m26-04 완료 시 다음 문서를 갱신한다:
+
+| 문서 | 변경 내용 |
+|------|----------|
+| `docs/wallet-sdk-integration.md` | connect-info 사용법, 멀티 지갑 세션 설정 가이드 추가 |
+| `skills/quickstart.skill.md` | 에이전트 자기 발견 워크플로우 (`GET /v1/connect-info`) 안내 추가 |
+| `skills/wallet.skill.md` | `walletId` 쿼리 파라미터 사용법, 멀티 지갑 예시 추가 |
+| `skills/admin.skill.md` | 세션 생성 시 `walletIds` 파라미터, 세션-지갑 동적 관리 API 추가 |
+| `packages/sdk/README.md` | `createSession({ walletIds })`, `getConnectInfo()` 메서드 문서화 |
 
 ---
 
@@ -321,7 +368,7 @@ GET /v1/connect-info    (sessionAuth)
 | 페이즈 | 3-4개 (설계 → 세션 모델 → API 변경 → 자기 발견 + SDK/MCP) |
 | 신규 파일 | 3-5개 (junction 스키마, resolveWalletId 헬퍼, connect-info 라우트, SDK 메서드) |
 | 수정 파일 | 15-20개 (세션 CRUD, 미들웨어, 전체 /v1/wallet/* 라우트, SDK, MCP, Admin UI, CLI) |
-| 테스트 | 16개 |
+| 테스트 | 22개 |
 | DB 마이그레이션 | 1건 (session_wallets 테이블 + 기존 데이터 이관) |
 
 ---
