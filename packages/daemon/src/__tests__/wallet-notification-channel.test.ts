@@ -57,7 +57,7 @@ interface MockWalletRow {
 
 function createMockSqlite(wallets: MockWalletRow[]) {
   return {
-    prepare: vi.fn((sql: string) => ({
+    prepare: vi.fn((_sql: string) => ({
       get: vi.fn((walletId: string) => {
         return wallets.find((w) => w.id === walletId) ?? undefined;
       }),
