@@ -75,42 +75,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | — | Pending |
-| SESS-02 | — | Pending |
-| SESS-03 | — | Pending |
-| SESS-04 | — | Pending |
-| SESS-05 | — | Pending |
-| SESS-06 | — | Pending |
-| SESS-07 | — | Pending |
-| SESS-08 | — | Pending |
-| SESS-09 | — | Pending |
-| SESS-10 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| DISC-01 | — | Pending |
-| DISC-02 | — | Pending |
-| DISC-03 | — | Pending |
-| DISC-04 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| INTG-04 | — | Pending |
-| INTG-05 | — | Pending |
-| INTG-06 | — | Pending |
-| INTG-07 | — | Pending |
-| INTG-08 | — | Pending |
-| INTG-09 | — | Pending |
-| INTG-10 | — | Pending |
+| SESS-01 | Phase 210 | Pending |
+| SESS-02 | Phase 210 | Pending |
+| SESS-03 | Phase 210 | Pending |
+| SESS-04 | Phase 210 | Pending |
+| SESS-05 | Phase 210 | Pending |
+| SESS-06 | Phase 210 | Pending |
+| SESS-07 | Phase 210 | Pending |
+| SESS-08 | Phase 210 | Pending |
+| SESS-09 | Phase 210 | Pending |
+| SESS-10 | Phase 210 | Pending |
+| API-01 | Phase 211 | Pending |
+| API-02 | Phase 211 | Pending |
+| API-03 | Phase 211 | Pending |
+| API-04 | Phase 211 | Pending |
+| API-05 | Phase 211 | Pending |
+| API-06 | Phase 211 | Pending |
+| DISC-01 | Phase 212 | Pending |
+| DISC-02 | Phase 212 | Pending |
+| DISC-03 | Phase 212 | Pending |
+| DISC-04 | Phase 212 | Pending |
+| INTG-01 | Phase 213 | Pending |
+| INTG-02 | Phase 213 | Pending |
+| INTG-03 | Phase 213 | Pending |
+| INTG-04 | Phase 213 | Pending |
+| INTG-05 | Phase 213 | Pending |
+| INTG-06 | Phase 213 | Pending |
+| INTG-07 | Phase 213 | Pending |
+| INTG-08 | Phase 213 | Pending |
+| INTG-09 | Phase 213 | Pending |
+| INTG-10 | Phase 213 | Pending |
 
 **Coverage:**
 - v1 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30 ⚠️
+- Mapped to phases: 30
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after initial definition*
+*Last updated: 2026-02-21 after roadmap creation*
