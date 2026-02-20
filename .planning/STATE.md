@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 210 of 213 (세션 모델 재구조화)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-21 -- Completed 210-01-PLAN.md (DB v19 migration + error codes + schema)
+Last activity: 2026-02-21 -- Completed 210-02-PLAN.md (session-auth + CRUD endpoints + tests)
 
-Progress: [#░░░░░░░░░] 8%
+Progress: [##░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [#░░░░░░░░░] 8%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 210. 세션 모델 재구조화 | 1/3 | 6min | 6min |
+| 210. 세션 모델 재구조화 | 2/3 | 15min | 7.5min |
 | 211. API 레이어 지갑 선택 | 0/3 | - | - |
 | 212. 자기 발견 엔드포인트 | 0/2 | - | - |
 | 213. 통합 레이어 | 0/4 | - | - |
@@ -40,6 +40,10 @@ Progress: [#░░░░░░░░░] 8%
 - session_wallets composite PK (session_id, wallet_id) -- surrogate key 불필요
 - v19 migration: 12-step sessions 재생성 + transactions FK reconnection
 - CreateSessionRequestSchema: Zod refine()으로 walletId/walletIds 상호 배타 검증
+- session-auth: defaultWalletId + walletId 듀얼 설정 (Phase 211에서 walletId 제거)
+- 세션 생성: walletIds/walletId 정규화, 첫 번째 지갑이 기본 지갑
+- 세션 갱신: session_wallets에서 is_default=true 지갑을 JWT wlt 클레임에 설정
+- masterAuth: /v1/sessions/:id/wallets 및 하위 경로 보호
 
 ### Blockers/Concerns
 
@@ -48,5 +52,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 210-01-PLAN.md
+Stopped at: Completed 210-02-PLAN.md
 Resume file: None

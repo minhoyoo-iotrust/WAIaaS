@@ -222,7 +222,7 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
 | 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
-| 210 | 1/3 | In Progress|  | - |
+| 210 | 2/3 | In Progress|  | - |
 | 211 | v26.4 | 0/3 | Not started | - |
 | 212 | v26.4 | 0/2 | Not started | - |
 | 213 | v26.4 | 0/4 | Not started | - |

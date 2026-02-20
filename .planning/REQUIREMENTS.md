@@ -9,12 +9,12 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 
 ### 세션 모델 (SESSION)
 
-- [ ] **SESS-01**: 세션 생성 시 여러 지갑을 한 번에 연결할 수 있다 (walletIds 복수 파라미터)
-- [ ] **SESS-02**: 기존 단일 지갑 세션(walletId 단수)이 하위 호환으로 동작한다
-- [ ] **SESS-03**: 세션에 지갑을 동적으로 추가할 수 있다 (POST /v1/sessions/:id/wallets)
-- [ ] **SESS-04**: 세션에서 지갑을 동적으로 제거할 수 있다 (DELETE /v1/sessions/:id/wallets/:walletId)
-- [ ] **SESS-05**: 세션의 기본 지갑을 변경할 수 있다 (PATCH /v1/sessions/:id/wallets/:walletId/default)
-- [ ] **SESS-06**: 세션에 연결된 지갑 목록을 조회할 수 있다 (GET /v1/sessions/:id/wallets)
+- [x] **SESS-01**: 세션 생성 시 여러 지갑을 한 번에 연결할 수 있다 (walletIds 복수 파라미터)
+- [x] **SESS-02**: 기존 단일 지갑 세션(walletId 단수)이 하위 호환으로 동작한다
+- [x] **SESS-03**: 세션에 지갑을 동적으로 추가할 수 있다 (POST /v1/sessions/:id/wallets)
+- [x] **SESS-04**: 세션에서 지갑을 동적으로 제거할 수 있다 (DELETE /v1/sessions/:id/wallets/:walletId)
+- [x] **SESS-05**: 세션의 기본 지갑을 변경할 수 있다 (PATCH /v1/sessions/:id/wallets/:walletId/default)
+- [x] **SESS-06**: 세션에 연결된 지갑 목록을 조회할 수 있다 (GET /v1/sessions/:id/wallets)
 - [x] **SESS-07**: DB v19 마이그레이션 — session_wallets junction 테이블 생성 + 기존 데이터 자동 이관
 - [x] **SESS-08**: 기본 지갑 제거 시도 시 CANNOT_REMOVE_DEFAULT_WALLET 에러가 반환된다
 - [x] **SESS-09**: 마지막 지갑 제거 시도 시 SESSION_REQUIRES_WALLET 에러가 반환된다
@@ -75,12 +75,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | Phase 210 | Pending |
-| SESS-02 | Phase 210 | Pending |
-| SESS-03 | Phase 210 | Pending |
-| SESS-04 | Phase 210 | Pending |
-| SESS-05 | Phase 210 | Pending |
-| SESS-06 | Phase 210 | Pending |
+| SESS-01 | Phase 210 | Complete |
+| SESS-02 | Phase 210 | Complete |
+| SESS-03 | Phase 210 | Complete |
+| SESS-04 | Phase 210 | Complete |
+| SESS-05 | Phase 210 | Complete |
+| SESS-06 | Phase 210 | Complete |
 | SESS-07 | Phase 210 | Complete |
 | SESS-08 | Phase 210 | Complete |
 | SESS-09 | Phase 210 | Complete |
