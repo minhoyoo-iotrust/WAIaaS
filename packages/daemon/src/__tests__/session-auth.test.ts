@@ -8,8 +8,9 @@
  * 4. returns 401 TOKEN_EXPIRED when token is expired
  * 5. returns 401 SESSION_REVOKED when session is revoked in DB
  * 6. returns 404 SESSION_NOT_FOUND when session ID not in DB
- * 7. passes through and sets sessionId/walletId when token is valid and session active
+ * 7. passes through and sets sessionId/walletId/defaultWalletId when token is valid and session active
  * 8. succeeds with old secret during dual-key rotation window
+ * 9. sets both defaultWalletId and walletId (backward compat dual setting)
  *
  * Uses Hono app.request() testing pattern + in-memory SQLite.
  */
@@ -47,12 +48,13 @@ function createTestApp(jwtManager: JwtSecretManager, database: ReturnType<typeof
   testApp.get('/protected/data', (c) => {
     const sessionId = c.get('sessionId' as never) as string | undefined;
     const walletId = c.get('walletId' as never) as string | undefined;
-    return c.json({ sessionId, walletId, ok: true });
+    const defaultWalletId = c.get('defaultWalletId' as never) as string | undefined;
+    return c.json({ sessionId, walletId, defaultWalletId, ok: true });
   });
   return testApp;
 }
 
-/** Helper: insert a test agent and session into the database */
+/** Helper: insert a test wallet and session into the database (v26.4: uses session_wallets) */
 function seedTestData(opts?: { revokedAt?: number }) {
   const ts = nowSeconds();
   sqlite.prepare(
@@ -61,17 +63,22 @@ function seedTestData(opts?: { revokedAt?: number }) {
   ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-session-auth-${Math.random()}`, 'ACTIVE', 0, ts, ts);
 
   sqlite.prepare(
-    `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
   ).run(
     TEST_SESSION_ID,
-    TEST_WALLET_ID,
     'test-token-hash',
     ts + 86400,
     ts + 86400 * 30,
     ts,
     opts?.revokedAt ?? null,
   );
+
+  // v26.4: Insert session_wallets junction row
+  sqlite.prepare(
+    `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+     VALUES (?, ?, ?, ?)`,
+  ).run(TEST_SESSION_ID, TEST_WALLET_ID, 1, ts);
 }
 
 /** Helper: sign a valid test token */
@@ -218,6 +225,24 @@ describe('sessionAuth middleware', () => {
     expect(body.ok).toBe(true);
     expect(body.sessionId).toBe(TEST_SESSION_ID);
     expect(body.walletId).toBe(TEST_WALLET_ID);
+  });
+
+  it('sets both defaultWalletId and walletId (backward compat dual setting)', async () => {
+    seedTestData();
+
+    const token = await signTestToken(manager);
+
+    const res = await app.request('/protected/data', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body.ok).toBe(true);
+    expect(body.defaultWalletId).toBe(TEST_WALLET_ID);
+    expect(body.walletId).toBe(TEST_WALLET_ID);
+    // Both should be the same value (JWT wlt claim)
+    expect(body.defaultWalletId).toBe(body.walletId);
   });
 
   it('succeeds with old secret during dual-key rotation window', async () => {
