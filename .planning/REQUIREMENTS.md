@@ -18,7 +18,7 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 - [x] **SESS-07**: DB v19 마이그레이션 — session_wallets junction 테이블 생성 + 기존 데이터 자동 이관
 - [x] **SESS-08**: 기본 지갑 제거 시도 시 CANNOT_REMOVE_DEFAULT_WALLET 에러가 반환된다
 - [x] **SESS-09**: 마지막 지갑 제거 시도 시 SESSION_REQUIRES_WALLET 에러가 반환된다
-- [ ] **SESS-10**: 지갑 삭제(TERMINATE) 시 해당 지갑이 기본 지갑이면 자동 승격, 마지막이면 세션 자동 revoke
+- [x] **SESS-10**: 지갑 삭제(TERMINATE) 시 해당 지갑이 기본 지갑이면 자동 승격, 마지막이면 세션 자동 revoke
 
 ### API 변경 (API)
 
@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SESS-07 | Phase 210 | Complete |
 | SESS-08 | Phase 210 | Complete |
 | SESS-09 | Phase 210 | Complete |
-| SESS-10 | Phase 210 | Pending |
+| SESS-10 | Phase 210 | Complete |
 | API-01 | Phase 211 | Pending |
 | API-02 | Phase 211 | Pending |
 | API-03 | Phase 211 | Pending |

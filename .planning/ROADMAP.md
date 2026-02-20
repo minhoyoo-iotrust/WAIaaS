@@ -131,7 +131,7 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 
 **Milestone Goal:** 하나의 세션 토큰으로 여러 지갑에 접근할 수 있는 1:N 세션 모델을 구축하고, 에이전트가 마스터 패스워드 없이 자기 상황을 파악할 수 있는 자기 발견 엔드포인트를 제공한다. DB 마이그레이션과 세션 모델 변경을 기반으로, API 레이어의 지갑 선택 로직을 교체하고, connect-info 자기 발견 엔드포인트를 구현한 뒤, SDK/MCP/Admin UI/CLI 통합으로 마무리한다.
 
-- [ ] **Phase 210: 세션 모델 재구조화** - DB v19 마이그레이션(session_wallets junction) + 1:N 세션 모델 + 세션-지갑 CRUD API + 에러 코드
+- [x] **Phase 210: 세션 모델 재구조화** - DB v19 마이그레이션(session_wallets junction) + 1:N 세션 모델 + 세션-지갑 CRUD API + 에러 코드 (completed 2026-02-20)
 - [ ] **Phase 211: API 레이어 지갑 선택** - resolveWalletId 헬퍼 + 전 엔드포인트 walletId 선택적 파라미터 + 세션 응답 확장 + 갱신 변경
 - [ ] **Phase 212: 자기 발견 엔드포인트** - GET /v1/connect-info + capabilities 동적 결정 + 프롬프트 빌더 + agent-prompt 통합
 - [ ] **Phase 213: 통합 레이어** - SDK/MCP/Admin UI/CLI quickset + 스킬 파일 + 가이드 문서 + 알림 이벤트
@@ -222,7 +222,7 @@ Phases execute in numeric order: 210 -> 211 -> 212 -> 213
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
 | 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
-| 210 | 2/3 | In Progress|  | - |
+| 210 | 3/3 | Complete   | 2026-02-20 | - |
 | 211 | v26.4 | 0/3 | Not started | - |
 | 212 | v26.4 | 0/2 | Not started | - |
 | 213 | v26.4 | 0/4 | Not started | - |
