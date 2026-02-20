@@ -45,9 +45,9 @@ Requirements for v26.4 멀티 지갑 세션 + 에이전트 자기 발견. Each m
 - [x] **INTG-05**: Admin UI 세션 생성 폼에서 다중 지갑 선택과 기본 지갑 지정이 가능하다
 - [x] **INTG-06**: Admin UI 세션 상세에서 연결된 지갑 목록과 기본 지갑 배지가 표시된다
 - [x] **INTG-07**: CLI quickset이 단일 멀티 지갑 세션 + 단일 MCP config entry를 생성한다
-- [ ] **INTG-08**: 스킬 파일(quickstart/wallet/admin)에 connect-info 사용법과 walletId 파라미터가 문서화된다
-- [ ] **INTG-09**: 가이드 문서에서 마스터 패스워드 의존이 제거되고 세션 토큰 단독 설정으로 변경된다
-- [ ] **INTG-10**: SESSION_WALLET_ADDED/SESSION_WALLET_REMOVED 알림 이벤트가 발송된다
+- [x] **INTG-08**: 스킬 파일(quickstart/wallet/admin)에 connect-info 사용법과 walletId 파라미터가 문서화된다
+- [x] **INTG-09**: 가이드 문서에서 마스터 패스워드 의존이 제거되고 세션 토큰 단독 설정으로 변경된다
+- [x] **INTG-10**: SESSION_WALLET_ADDED/SESSION_WALLET_REMOVED 알림 이벤트가 발송된다
 
 ## v2 Requirements
 
@@ -102,9 +102,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTG-05 | Phase 213 | Complete |
 | INTG-06 | Phase 213 | Complete |
 | INTG-07 | Phase 213 | Complete |
-| INTG-08 | Phase 213 | Pending |
-| INTG-09 | Phase 213 | Pending |
-| INTG-10 | Phase 213 | Pending |
+| INTG-08 | Phase 213 | Complete |
+| INTG-09 | Phase 213 | Complete |
+| INTG-10 | Phase 213 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
