@@ -24,8 +24,8 @@ Requirements for v2.7. 각 요구사항은 로드맵 phase에 매핑됨.
 
 ### SDK
 
-- [ ] **SDK-01**: subscribeToNotifications(topic, callback, serverUrl?)가 ntfy SSE를 구독하고 콜백으로 NotificationMessage를 전달한다
-- [ ] **SDK-02**: parseNotification(data)이 base64url 디코딩 → JSON 파싱 → Zod 검증으로 NotificationMessage를 반환한다
+- [x] **SDK-01**: subscribeToNotifications(topic, callback, serverUrl?)가 ntfy SSE를 구독하고 콜백으로 NotificationMessage를 전달한다
+- [x] **SDK-02**: parseNotification(data)이 base64url 디코딩 → JSON 파싱 → Zod 검증으로 NotificationMessage를 반환한다
 
 ### 설정
 
@@ -72,8 +72,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DAEMON-04 | Phase 206 | Pending |
 | DAEMON-05 | Phase 206 | Pending |
 | DAEMON-06 | Phase 206 | Pending |
-| SDK-01 | Phase 206 | Pending |
-| SDK-02 | Phase 206 | Pending |
+| SDK-01 | Phase 206 | Complete |
+| SDK-02 | Phase 206 | Complete |
 | SETTINGS-01 | Phase 206 | Complete |
 | SETTINGS-02 | Phase 206 | Complete |
 | SETTINGS-03 | Phase 206 | Complete |
