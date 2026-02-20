@@ -111,12 +111,13 @@ See `.planning/milestones/v2.6-ROADMAP.md` for full details.
   3. @waiaas/wallet-sdk 패키지의 parseSignRequest, buildSignResponse, formatDisplayMessage, sendViaNtfy, sendViaTelegram, subscribeToRequests 6개 함수가 모두 정상 동작한다
   4. WalletLinkRegistry에 지갑 메타데이터를 등록/조회할 수 있고, SettingsService에 signing_sdk.* 6개 키 + wallets JSON이 런타임 변경 가능하다
   5. wallets 테이블에 owner_approval_method 컬럼이 추가되고 DB 마이그레이션이 정상 동작한다
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 202-01: TBD
-- [ ] 202-02: TBD
-- [ ] 202-03: TBD
+- [ ] 202-01-PLAN.md — Signing Protocol Zod 스키마 + DB 마이그레이션 + Settings 키 + WalletLinkRegistry
+- [ ] 202-02-PLAN.md — SignRequestBuilder + SignResponseHandler (데몬 측 프로토콜 로직)
+- [ ] 202-03-PLAN.md — @waiaas/wallet-sdk 신규 npm 패키지 (6개 공개 함수)
+- [ ] 202-04-PLAN.md — NtfySigningChannel + signing-sdk 모듈 통합 + E2E 테스트
 
 ### Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI
 **Goal**: Owner가 지갑별로 승인 방법(sdk_ntfy/sdk_telegram/walletconnect/telegram_bot/rest)을 설정하고, ApprovalChannelRouter가 설정에 따라 올바른 채널로 라우팅하며, Admin UI에서 시각적으로 관리할 수 있는 상태
@@ -146,5 +147,5 @@ Plans:
 | 191-193 | v2.4.1 | 5/5 | Complete | 2026-02-19 |
 | 194-197 | v2.5 | 8/8 | Complete | 2026-02-19 |
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
-| 202 | v2.6.1 | 0/TBD | Not started | - |
+| 202 | v2.6.1 | 0/4 | Not started | - |
 | 203 | v2.6.1 | 0/TBD | Not started | - |
