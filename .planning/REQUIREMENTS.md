@@ -20,7 +20,7 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 - [x] **CHAN-01**: NtfySigningChannel이 ntfy 요청 토픽에 SignRequest를 publish하고 응답 토픽을 subscribe하여 SignResponse를 수신할 수 있다
 - [x] **CHAN-02**: NtfySigningChannel이 reject 응답 수신 시 트랜잭션을 CANCELLED 상태로 변경한다
 - [x] **CHAN-03**: TelegramSigningChannel이 유니버셜 링크 인라인 버튼이 포함된 메시지를 전송한다
-- [ ] **CHAN-04**: TelegramSigningChannel이 /sign_response 명령어로 SignResponse를 수신하여 처리한다
+- [x] **CHAN-04**: TelegramSigningChannel이 /sign_response 명령어로 SignResponse를 수신하여 처리한다
 - [x] **CHAN-05**: ApprovalChannelRouter가 지갑별 owner_approval_method에 따라 올바른 채널로 라우팅한다
 - [x] **CHAN-06**: ApprovalChannelRouter가 owner_approval_method 미설정 시 글로벌 우선순위(SDK ntfy > SDK Telegram > WC > Telegram Bot > REST) fallback한다
 - [x] **CHAN-07**: SDK 채널 비활성(signing_sdk.enabled=false) 시 WalletConnect 또는 Telegram Bot으로 fallback한다
@@ -79,7 +79,7 @@ m26-01 objective + 설계 문서 73-75 기반. v2.6 설계를 코드로 실현.
 | CHAN-01 | Phase 204 | Complete |
 | CHAN-02 | Phase 204 | Complete |
 | CHAN-03 | Phase 204 | Complete |
-| CHAN-04 | Phase 204 | Pending |
+| CHAN-04 | Phase 204 | Complete |
 | CHAN-05 | Phase 204 | Complete |
 | CHAN-06 | Phase 204 | Complete |
 | CHAN-07 | Phase 204 | Complete |
