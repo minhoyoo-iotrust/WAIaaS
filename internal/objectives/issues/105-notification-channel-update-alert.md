@@ -33,7 +33,7 @@ const NOTIFICATION_EVENT_TYPES = [
 
 ```
 title: "WAIaaS Update Available"
-body: "A new version {latestVersion} is available (current: {currentVersion}). Run `waiaas upgrade` to update."
+body: "A new version {latestVersion} is available (current: {currentVersion}). Run `waiaas update` to update."
 ```
 
 ### 3. VersionCheckService에서 NotificationService 호출

@@ -71,17 +71,17 @@ Expected response:
 waiaas stop
 ```
 
-### 6. Upgrade
+### 6. Update
 
 ```bash
-# Recommended: built-in upgrade command (7-step process with backup)
-waiaas upgrade
+# Recommended: built-in update command (7-step process with backup)
+waiaas update
 
 # Alternative: manual npm update
 npm install -g @waiaas/cli@latest
 ```
 
-The `waiaas upgrade` command checks for new versions, creates a backup, downloads the update, runs database migrations, and restarts the daemon.
+The `waiaas update` command checks for new versions, creates a backup, downloads the update, runs database migrations, and restarts the daemon.
 
 ### Data Directory Structure
 
@@ -429,7 +429,7 @@ Before running in production, verify these security settings:
 - [ ] **Enable TLS via reverse proxy** -- If accessed remotely, place behind nginx/Caddy with TLS. WAIaaS itself does not serve HTTPS.
 - [ ] **Restrict file permissions** -- `chmod 600` on config.toml, keystore files, and Docker secret files.
 - [ ] **Regular backups** -- Use `waiaas backup` or configure automatic backups.
-- [ ] **Keep updated** -- Enable Watchtower (Docker) or periodically run `waiaas upgrade` (npm).
+- [ ] **Keep updated** -- Enable Watchtower (Docker) or periodically run `waiaas update` (npm).
 
 ---
 
