@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 210 - 세션 모델 재구조화
+**Current focus:** Phase 211 - API 레이어 지갑 선택
 
 ## Current Position
 
-Phase: 210 of 213 (세션 모델 재구조화 -- COMPLETE)
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-02-21 -- Completed 210-03-PLAN.md (cascade defense + is_default invariant tests)
+Phase: 211 of 213 (API 레이어 지갑 선택)
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-21 -- Completed 211-01-PLAN.md (resolveWalletId helper + middleware changes)
 
-Progress: [##░░░░░░░░] 25%
+Progress: [####░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [##░░░░░░░░] 25%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 210. 세션 모델 재구조화 | 3/3 | 19min | 6.3min |
-| 211. API 레이어 지갑 선택 | 0/3 | - | - |
+| 211. API 레이어 지갑 선택 | 1/3 | 2min | 2min |
 | 212. 자기 발견 엔드포인트 | 0/2 | - | - |
 | 213. 통합 레이어 | 0/4 | - | - |
 
@@ -40,7 +40,9 @@ Progress: [##░░░░░░░░] 25%
 - session_wallets composite PK (session_id, wallet_id) -- surrogate key 불필요
 - v19 migration: 12-step sessions 재생성 + transactions FK reconnection
 - CreateSessionRequestSchema: Zod refine()으로 walletId/walletIds 상호 배타 검증
-- session-auth: defaultWalletId + walletId 듀얼 설정 (Phase 211에서 walletId 제거)
+- session-auth: defaultWalletId만 설정 (walletId 제거 완료, Phase 211-01)
+- resolveWalletId: body > query > defaultWalletId 3단계 우선순위 + session_wallets 접근 검증
+- owner-auth: defaultWalletId 사용 (walletId 대신)
 - 세션 생성: walletIds/walletId 정규화, 첫 번째 지갑이 기본 지갑
 - 세션 갱신: session_wallets에서 is_default=true 지갑을 JWT wlt 클레임에 설정
 - masterAuth: /v1/sessions/:id/wallets 및 하위 경로 보호
@@ -55,5 +57,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 210-03-PLAN.md (Phase 210 complete)
+Stopped at: Completed 211-01-PLAN.md (resolveWalletId helper + middleware changes)
 Resume file: None
