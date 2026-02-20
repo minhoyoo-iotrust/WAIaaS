@@ -419,7 +419,7 @@ describe('Security page: AutoStop Rules tab', () => {
       expect(screen.getByText(/unsaved change/)).toBeTruthy();
     });
 
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
     fireEvent.click(screen.getByText('Save'));
 

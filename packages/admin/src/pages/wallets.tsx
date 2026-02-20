@@ -1077,9 +1077,9 @@ function RpcEndpointsTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('rpc.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'Settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -1271,9 +1271,9 @@ function BalanceMonitoringTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('monitoring.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'Settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -1417,9 +1417,9 @@ function WalletConnectTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('walletconnect.'))
         .map(([key, value]) => ({ key, value }));
-      await apiPut(API.ADMIN_SETTINGS, { settings: entries });
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
       dirty.value = {};
-      await fetchSettings();
       showToast('success', 'Settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

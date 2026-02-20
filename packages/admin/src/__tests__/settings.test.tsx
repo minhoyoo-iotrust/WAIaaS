@@ -281,7 +281,7 @@ describe('SettingsPage', () => {
     });
 
     // Mock PUT success and re-fetch
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
     // Click Save
     fireEvent.click(screen.getByText('Save'));
@@ -623,7 +623,7 @@ describe('SettingsPage', () => {
     });
 
     // Mock PUT success
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
     // Click Save
     fireEvent.click(screen.getByText('Save'));

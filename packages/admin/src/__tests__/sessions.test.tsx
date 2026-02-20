@@ -652,7 +652,18 @@ describe('SessionsPage - Settings tab', () => {
   it('saves session settings', async () => {
     setupSessionsMocks();
 
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+    const mockSessionSettings = {
+      security: {
+        session_ttl: '7200',
+        session_absolute_lifetime: '86400',
+        session_max_renewals: '10',
+        max_sessions_per_wallet: '5',
+        max_pending_tx: '10',
+        rate_limit_session_rpm: '60',
+        rate_limit_tx_rpm: '10',
+      },
+    };
+    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSessionSettings });
 
     render(<SessionsPage />);
 

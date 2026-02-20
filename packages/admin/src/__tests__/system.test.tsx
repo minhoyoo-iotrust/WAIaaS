@@ -319,7 +319,7 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
@@ -351,7 +351,7 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
@@ -598,7 +598,7 @@ describe('SystemPage', () => {
       // FormField uses onInput for password type
       fireEvent.input(input, { target: { value: 'new-key' } });
 
-      vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 

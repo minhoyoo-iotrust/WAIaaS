@@ -817,7 +817,19 @@ describe('NotificationsPage - Additional Coverage', () => {
         });
         return Promise.resolve({});
       });
-      vi.mocked(apiPut).mockResolvedValueOnce(undefined);
+      const settingsForPut = {
+        notifications: {
+          enabled: 'true',
+          telegram_chat_id: '99999',
+          locale: 'en',
+          rate_limit_rpm: '20',
+        },
+        telegram: {
+          enabled: 'false',
+          locale: 'en',
+        },
+      };
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: settingsForPut });
 
       render(<NotificationsPage />);
 
