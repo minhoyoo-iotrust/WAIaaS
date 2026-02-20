@@ -338,6 +338,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         forexRateService: deps.forexRateService,
         eventBus: deps.eventBus,
         wcSigningBridge: deps.wcSigningBridge,
+        approvalChannelRouter: deps.approvalChannelRouter,
       }),
     );
   }

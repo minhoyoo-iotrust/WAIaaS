@@ -49,6 +49,7 @@ import type { NotificationService } from '../../notifications/notification-servi
 import type { IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WcSigningBridge } from '../../services/wc-signing-bridge.js';
+import type { ApprovalChannelRouter } from '../../services/signing-sdk/approval-channel-router.js';
 import {
   TransactionRequestOpenAPI,
   TransferRequestOpenAPI,
@@ -89,6 +90,7 @@ export interface TransactionRouteDeps {
   forexRateService?: IForexRateService;
   eventBus?: EventBus;
   wcSigningBridge?: WcSigningBridge;
+  approvalChannelRouter?: ApprovalChannelRouter;
 }
 
 // ---------------------------------------------------------------------------
@@ -369,6 +371,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       forexRateService: deps.forexRateService,
       eventBus: deps.eventBus,
       wcSigningBridge: deps.wcSigningBridge,
+      approvalChannelRouter: deps.approvalChannelRouter,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
