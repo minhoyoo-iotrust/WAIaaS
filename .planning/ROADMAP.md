@@ -119,9 +119,9 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 
 **Milestone Goal:** ntfy 토픽을 구독하여 지갑 개발사의 기존 푸시 인프라(Pushwoosh, FCM)로 변환/전달하는 경량 중계 서버를 구현하여, ntfy SDK를 앱에 직접 내장할 수 없는 지갑 개발사가 기존 푸시 파이프라인만으로 서명 요청과 알림을 수신할 수 있는 상태.
 
-- [ ] **Phase 207: 데몬 SignRequest 인코딩 통일** - NtfySigningChannel의 publish 형식을 base64url로 변경하여 서명 요청과 알림이 동일한 인코딩 패턴을 사용하는 상태
-- [ ] **Phase 208: Push Relay Server 구현** - @waiaas/push-relay 신규 패키지로 ntfy SSE 구독 + Push 변환 + Device Registry를 구현하여 E2E 동작하는 상태
-- [ ] **Phase 209: 배포 인프라** - npm 발행 + Docker 이미지 + release-please + CI/CD 파이프라인을 구축하여 기존 릴리스 프로세스에 통합된 상태
+- [x] **Phase 207: 데몬 SignRequest 인코딩 통일** - NtfySigningChannel의 publish 형식을 base64url로 변경하여 서명 요청과 알림이 동일한 인코딩 패턴을 사용하는 상태
+- [x] **Phase 208: Push Relay Server 구현** - @waiaas/push-relay 신규 패키지로 ntfy SSE 구독 + Push 변환 + Device Registry를 구현하여 E2E 동작하는 상태
+- [x] **Phase 209: 배포 인프라** - npm 발행 + Docker 이미지 + release-please + CI/CD 파이프라인을 구축하여 기존 릴리스 프로세스에 통합된 상태
 
 ## Phase Details
 
@@ -136,7 +136,7 @@ See `.planning/milestones/v2.7-ROADMAP.md` for full details.
 **Plans**: TBD
 
 Plans:
-- [ ] 207-01: NtfySigningChannel base64url 인코딩 변경 + wallet-sdk 호환성 검증
+- [x] 207-01: NtfySigningChannel base64url 인코딩 변경 + wallet-sdk 호환성 검증
 
 ### Phase 208: Push Relay Server 구현
 **Goal**: @waiaas/push-relay 패키지가 ntfy 토픽을 SSE로 구독하고, 수신한 서명 요청/알림을 Pushwoosh 또는 FCM으로 변환/전달하며, 지갑 앱이 Device Registry API로 푸시 토큰을 등록/해제할 수 있는 상태
@@ -151,11 +151,11 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 208-01: 패키지 스캐폴딩 + config.toml 로딩 + Zod 검증
-- [ ] 208-02: ntfy SSE Subscriber + 메시지 파서
-- [ ] 208-03: IPushProvider + PushwooshProvider + FcmProvider
-- [ ] 208-04: Device Token Registry (SQLite + REST API + API Key 인증)
-- [ ] 208-05: 통합 연결 + Graceful Shutdown + E2E 테스트
+- [x] 208-01: 패키지 스캐폴딩 + config.toml 로딩 + Zod 검증
+- [x] 208-02: ntfy SSE Subscriber + 메시지 파서
+- [x] 208-03: IPushProvider + PushwooshProvider + FcmProvider
+- [x] 208-04: Device Token Registry (SQLite + REST API + API Key 인증)
+- [x] 208-05: 통합 연결 + Graceful Shutdown + E2E 테스트
 
 ### Phase 209: 배포 인프라
 **Goal**: @waiaas/push-relay가 npm OIDC Trusted Publishing으로 발행되고, waiaas/push-relay Docker 이미지가 빌드되며, release-please와 CI/CD 파이프라인에 통합되어 기존 릴리스 프로세스로 자동 배포되는 상태
@@ -169,8 +169,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 209-01: npm 패키지 빌드 + Docker 이미지 + release-please 등록
-- [ ] 209-02: release.yml CI/CD 파이프라인 통합
+- [x] 209-01: npm 패키지 빌드 + Docker 이미지 + release-please 등록
+- [x] 209-02: release.yml CI/CD 파이프라인 통합
 
 ## Progress
 
@@ -188,6 +188,6 @@ Phases execute in numeric order: 207 → 208 → 209
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
-| 207 | v26.3 | 0/1 | Not started | - |
-| 208 | v26.3 | 0/5 | Not started | - |
-| 209 | v26.3 | 0/2 | Not started | - |
+| 207 | v26.3 | 1/1 | Complete | 2026-02-20 |
+| 208 | v26.3 | 5/5 | Complete | 2026-02-20 |
+| 209 | v26.3 | 2/2 | Complete | 2026-02-20 |
