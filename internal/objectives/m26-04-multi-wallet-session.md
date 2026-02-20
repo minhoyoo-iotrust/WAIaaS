@@ -323,6 +323,54 @@ GET /v1/connect-info    (sessionAuth)
 | 21 | 존재하지 않는 지갑 추가 | `POST /sessions/:id/wallets { walletId: "invalid" }` → 404 WALLET_NOT_FOUND assert | [L0] |
 | 22 | capabilities 동적 결정 | x402 미설정 → connect-info.capabilities에 "x402" 미포함 assert | [L0] |
 
+### 보안
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 23 | 크로스 세션 접근 차단 | 세션 A 토큰으로 세션 B 전용 지갑 접근 → WALLET_ACCESS_DENIED assert | [L0] |
+| 24 | 만료 토큰 connect-info 거부 | 만료된 세션 토큰으로 `GET /v1/connect-info` → 401 assert | [L0] |
+| 25 | 세션-지갑 관리 API 권한 검증 | sessionAuth로 `POST /v1/sessions/:id/wallets` → 403 (masterAuth 전용) assert | [L0] |
+| 26 | 지갑 제거 즉시 반영 | 지갑 제거 직후 동일 세션 토큰으로 해당 지갑 트랜잭션 → WALLET_ACCESS_DENIED assert | [L0] |
+
+### DB 마이그레이션
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 27 | 대량 이관 정합성 | 세션 100개 생성 → 마이그레이션 → session_wallets 행 수 = 세션 수 assert | [L0] |
+| 28 | is_default 불변량 | 마이그레이션 후 모든 세션에 `is_default = 1` 행이 정확히 1개 assert | [L0] |
+| 29 | wallet_id NULL 방어 | wallet_id가 NULL인 비정상 세션 → 마이그레이션 시 스킵 또는 정리, 크래시 없음 assert | [L0] |
+| 30 | 이관 실패 롤백 | 마이그레이션 중간 에러 주입 → 트랜잭션 롤백, 기존 데이터 무손상 assert | [L0] |
+
+### 기존 기능 회귀
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 31 | 단일 지갑 트랜잭션 (기존 플로우) | 단일 지갑 세션으로 `POST /v1/transactions/send` → 기존과 동일하게 성공 assert | [L0] |
+| 32 | 단일 지갑 정책 평가 | 단일 지갑 세션 + TRANSFER_LIMIT 정책 → 한도 초과 시 DELAY/APPROVAL 동작 assert | [L0] |
+| 33 | MCP 기존 도구 하위 호환 | MCP `send-transfer` (walletId 미지정) → 기본 지갑으로 정상 전송 assert | [L0] |
+| 34 | Admin UI 세션 목록 | 멀티 지갑 세션 생성 후 Admin 세션 목록에 정상 표시 + 지갑 수 표시 assert | [L0] |
+
+### 동시성
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 35 | 동시 지갑 추가/제거 | 같은 세션에 지갑 추가와 제거를 동시 실행 → DB 정합성 유지 assert | [L1] |
+| 36 | 지갑 제거 중 트랜잭션 | 지갑 제거 요청과 해당 지갑 트랜잭션 동시 발생 → 둘 중 하나 실패, 비정합 없음 assert | [L1] |
+
+---
+
+## 단위 테스트 방침
+
+E2E 시나리오 외에 다음 핵심 함수의 단위 테스트를 작성한다:
+
+| 대상 | 테스트 포인트 |
+|------|-------------|
+| `resolveWalletId` 헬퍼 | 쿼리 파라미터 우선순위, 기본 지갑 폴백, 미연결 지갑 에러 |
+| `session_wallets` CRUD | 추가/제거/기본 변경, is_default 불변량 보장 |
+| connect-info 빌더 | 지갑 필터링, 정책 매핑, capabilities 동적 결정, prompt 생성 |
+| JWT 파싱 (하위 호환) | 기존 `wlt` 클레임 → 새 미들웨어에서 defaultWalletId로 매핑 |
+| 세션 생성 (walletId/walletIds) | 단수/복수 파라미터 정규화, defaultWalletId 자동 선택 |
+
 ---
 
 ## 문서 업데이트
@@ -336,6 +384,9 @@ m26-04 완료 시 다음 문서를 갱신한다:
 | `skills/wallet.skill.md` | `walletId` 쿼리 파라미터 사용법, 멀티 지갑 예시 추가 |
 | `skills/admin.skill.md` | 세션 생성 시 `walletIds` 파라미터, 세션-지갑 동적 관리 API 추가 |
 | `packages/sdk/README.md` | `createSession({ walletIds })`, `getConnectInfo()` 메서드 문서화 |
+| `docs/guides/openclaw-integration.md` | `WAIAAS_MASTER_PASSWORD` 설정 항목 제거, 세션 토큰만으로 연동하도록 변경 |
+| `docs/guides/claude-code-integration.md` | 마스터 패스워드 의존 제거, connect-info 기반 자기 발견 안내 추가 |
+| `docs/guides/agent-skills-integration.md` | 에이전트 환경 변수에서 마스터 패스워드 제거, 세션 토큰 단독 설정으로 변경 |
 
 ---
 
