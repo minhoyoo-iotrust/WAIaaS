@@ -64,51 +64,51 @@ describe('Migration Runner', () => {
   it('should return { applied: 0, skipped: 0 } for empty migrations array', () => {
     const result = runMigrations(sqlite, []);
     expect(result).toEqual({ applied: 0, skipped: 0 });
-    expect(getMaxVersion()).toBe(20); // v1~v19 (session_wallets junction)
+    expect(getMaxVersion()).toBe(21); // v1~v21 (incoming_transactions)
   });
 
   it('should execute new migrations sequentially', () => {
     const migrations: Migration[] = [
       {
-        version: 21,
+        version: 22,
         description: 'Add test_column to wallets',
         up: (db) => {
-          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v21 TEXT');
+          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v22 TEXT');
         },
       },
       {
-        version: 22,
+        version: 23,
         description: 'Add another test_column to wallets',
         up: (db) => {
-          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v22 TEXT');
+          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v23 TEXT');
         },
       },
     ];
 
     const result = runMigrations(sqlite, migrations);
     expect(result).toEqual({ applied: 2, skipped: 0 });
-    expect(getMaxVersion()).toBe(22);
-    expect(getVersions()).toContain(21);
+    expect(getMaxVersion()).toBe(23);
     expect(getVersions()).toContain(22);
+    expect(getVersions()).toContain(23);
 
     // Verify columns were actually added
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
     const colNames = columns.map((c) => c.name);
-    expect(colNames).toContain('test_col_v21');
     expect(colNames).toContain('test_col_v22');
+    expect(colNames).toContain('test_col_v23');
   });
 
   it('should skip already-applied migrations', () => {
     const migrations: Migration[] = [
       {
-        version: 21,
+        version: 22,
         description: 'Add test_column to wallets',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN test_col_skip TEXT');
         },
       },
       {
-        version: 22,
+        version: 23,
         description: 'Add another column',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN test_col_skip2 TEXT');
@@ -123,20 +123,20 @@ describe('Migration Runner', () => {
     // Second run: skip both
     const second = runMigrations(sqlite, migrations);
     expect(second).toEqual({ applied: 0, skipped: 2 });
-    expect(getMaxVersion()).toBe(22);
+    expect(getMaxVersion()).toBe(23);
   });
 
   it('should rollback failed migration and not execute subsequent ones', () => {
     const migrations: Migration[] = [
       {
-        version: 21,
+        version: 22,
         description: 'Failing migration',
         up: () => {
           throw new Error('Intentional migration failure');
         },
       },
       {
-        version: 22,
+        version: 23,
         description: 'Should not be reached',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN should_not_exist TEXT');
@@ -145,11 +145,11 @@ describe('Migration Runner', () => {
     ];
 
     expect(() => runMigrations(sqlite, migrations)).toThrow(
-      /Migration v21.*failed.*Intentional migration failure/,
+      /Migration v22.*failed.*Intentional migration failure/,
     );
 
-    // version 21 should NOT be recorded (max stays at 20 from pushSchema)
-    expect(getMaxVersion()).toBe(20);
+    // version 22 should NOT be recorded (max stays at 21 from pushSchema)
+    expect(getMaxVersion()).toBe(21);
 
     // version 21 should NOT have been executed
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
@@ -162,19 +162,11 @@ describe('Migration Runner', () => {
 
     const migrations: Migration[] = [
       {
-        version: 23,
-        description: 'Twenty-third',
+        version: 24,
+        description: 'Twenty-fourth',
         up: (db) => {
-          executionOrder.push(23);
-          db.exec('ALTER TABLE wallets ADD COLUMN order_v23 TEXT');
-        },
-      },
-      {
-        version: 21,
-        description: 'Twenty-first',
-        up: (db) => {
-          executionOrder.push(21);
-          db.exec('ALTER TABLE wallets ADD COLUMN order_v21 TEXT');
+          executionOrder.push(24);
+          db.exec('ALTER TABLE wallets ADD COLUMN order_v24 TEXT');
         },
       },
       {
@@ -185,14 +177,22 @@ describe('Migration Runner', () => {
           db.exec('ALTER TABLE wallets ADD COLUMN order_v22 TEXT');
         },
       },
+      {
+        version: 23,
+        description: 'Twenty-third',
+        up: (db) => {
+          executionOrder.push(23);
+          db.exec('ALTER TABLE wallets ADD COLUMN order_v23 TEXT');
+        },
+      },
     ];
 
     const result = runMigrations(sqlite, migrations);
     expect(result).toEqual({ applied: 3, skipped: 0 });
-    expect(executionOrder).toEqual([21, 22, 23]);
-    expect(getVersions()).toContain(21);
+    expect(executionOrder).toEqual([22, 23, 24]);
     expect(getVersions()).toContain(22);
     expect(getVersions()).toContain(23);
+    expect(getVersions()).toContain(24);
   });
 
   it('should skip version 1-20 migrations (already applied from pushSchema)', () => {
@@ -339,6 +339,13 @@ describe('Migration Runner', () => {
       },
       {
         version: 21,
+        description: 'Should be skipped (pushSchema records v21)',
+        up: () => {
+          throw new Error('Should not execute');
+        },
+      },
+      {
+        version: 22,
         description: 'Should execute',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN v1_skip_test TEXT');
@@ -347,14 +354,14 @@ describe('Migration Runner', () => {
     ];
 
     const result = runMigrations(sqlite, migrations);
-    expect(result).toEqual({ applied: 1, skipped: 20 });
-    expect(getMaxVersion()).toBe(21);
+    expect(result).toEqual({ applied: 1, skipped: 21 });
+    expect(getMaxVersion()).toBe(22);
   });
 
   it('should record description in schema_version for applied migrations', () => {
     const migrations: Migration[] = [
       {
-        version: 21,
+        version: 22,
         description: 'Add token_balances table',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN desc_test TEXT');
@@ -365,7 +372,7 @@ describe('Migration Runner', () => {
     runMigrations(sqlite, migrations);
 
     const row = sqlite
-      .prepare('SELECT description FROM schema_version WHERE version = 21')
+      .prepare('SELECT description FROM schema_version WHERE version = 22')
       .get() as { description: string } | undefined;
     expect(row).toBeDefined();
     expect(row!.description).toBe('Add token_balances table');
@@ -382,7 +389,7 @@ describe('managesOwnTransaction migrations', () => {
 
     const migrations: Migration[] = [
       {
-        version: 21,
+        version: 22,
         description: 'Self-managed PRAGMA migration',
         managesOwnTransaction: true,
         up: (db) => {
@@ -407,14 +414,14 @@ describe('managesOwnTransaction migrations', () => {
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
     expect(fkAfter[0]!.foreign_keys).toBe(1);
 
-    // schema_version should record version 21
-    expect(getMaxVersion()).toBe(21);
+    // schema_version should record version 22
+    expect(getMaxVersion()).toBe(22);
   });
 
   it('should still allow retry after failure and restore foreign_keys', () => {
     const migrations: Migration[] = [
       {
-        version: 21,
+        version: 22,
         description: 'Failing self-managed migration',
         managesOwnTransaction: true,
         up: () => {
@@ -425,11 +432,11 @@ describe('managesOwnTransaction migrations', () => {
 
     // Should throw the migration error
     expect(() => runMigrations(sqlite, migrations)).toThrow(
-      /Migration v21.*failed.*Intentional self-managed failure/,
+      /Migration v22.*failed.*Intentional self-managed failure/,
     );
 
-    // Version 21 should NOT be recorded (max stays at 19 from pushSchema)
-    expect(getMaxVersion()).toBe(20);
+    // Version 22 should NOT be recorded (max stays at 21 from pushSchema)
+    expect(getMaxVersion()).toBe(21);
 
     // foreign_keys should be restored to ON (1)
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;

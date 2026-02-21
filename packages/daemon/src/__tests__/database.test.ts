@@ -50,7 +50,7 @@ const now = () => Math.floor(Date.now() / 1000);
 // ---------------------------------------------------------------------------
 
 describe('Schema creation', () => {
-  it('should create all 16 tables', () => {
+  it('should create all 18 tables', () => {
     const tables = sqlite
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all() as Array<{ name: string }>;
@@ -59,6 +59,8 @@ describe('Schema creation', () => {
     expect(tableNames).toEqual([
       'api_keys',
       'audit_log',
+      'incoming_transactions',
+      'incoming_tx_cursors',
       'key_value_store',
       'notification_logs',
       'pending_approvals',
@@ -98,7 +100,8 @@ describe('Schema creation', () => {
     expect(colNames).toContain('suspended_at');
     expect(colNames).toContain('suspension_reason');
     expect(colNames).toContain('owner_approval_method');
-    expect(colNames).toHaveLength(14);
+    expect(colNames).toContain('monitor_incoming');
+    expect(colNames).toHaveLength(15);
   });
 
   it('transactions table should have correct columns including v0.6 and v0.10 additions', () => {
