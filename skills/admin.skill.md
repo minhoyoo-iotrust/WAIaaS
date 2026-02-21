@@ -31,6 +31,60 @@ The master password is set in `config.toml` under `[security]` or via environmen
 
 ---
 
+## Session Creation (Multi-Wallet)
+
+### POST /v1/sessions -- Create Session (masterAuth)
+
+```bash
+curl -s -X POST http://localhost:3100/v1/sessions \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"], "defaultWalletId": "wallet-1-uuid"}'
+```
+
+Body:
+- `walletIds`: string[] -- Connect multiple wallets (new)
+- `walletId`: string -- Connect single wallet (backward compatible)
+- `defaultWalletId`?: string -- Specify default wallet (optional, defaults to first)
+- `expiresIn`?: number -- TTL in seconds
+
+## Session-Wallet Management (masterAuth required)
+
+Dynamic wallet management for existing sessions.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v1/sessions/:id/wallets` | Add wallet `{ walletId }` |
+| DELETE | `/v1/sessions/:id/wallets/:walletId` | Remove wallet |
+| PATCH | `/v1/sessions/:id/wallets/:walletId/default` | Set default |
+| GET | `/v1/sessions/:id/wallets` | List connected wallets |
+
+Wallet addition/removal triggers `SESSION_WALLET_ADDED` / `SESSION_WALLET_REMOVED` notifications.
+
+## Agent Self-Discovery
+
+### GET /v1/connect-info (sessionAuth)
+
+Returns wallets, policies, capabilities, and AI prompt for the authenticated session.
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H 'Authorization: Bearer <session-token>'
+```
+
+### POST /admin/agent-prompt (masterAuth)
+
+Creates a multi-wallet session and returns a connection prompt with session token.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/admin/agent-prompt \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"]}'
+```
+
+---
+
 ## 1. Daemon Status & Control
 
 > **See also:** `GET /health` (no auth required, includes version check info: `latestVersion`, `updateAvailable`, `schemaVersion`). Documented in **quickstart.skill.md** Step 1.

@@ -1,0 +1,88 @@
+name: Promote RC to Stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      rc_version:
+        description: 'RC version to promote (leave empty to auto-detect latest RC)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Determine RC version
+        id: rc
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RC_VERSION="${{ inputs.rc_version }}"
+          if [ -z "$RC_VERSION" ]; then
+            echo "No RC version provided, auto-detecting latest RC..."
+            RC_VERSION=$(gh release list --exclude-drafts --json tagName,isPrerelease \
+              -q '[.[] | select(.isPrerelease)] | .[0].tagName')
+            if [ -z "$RC_VERSION" ]; then
+              echo "Error: No RC release found"
+              exit 1
+            fi
+            echo "Auto-detected: $RC_VERSION"
+          fi
+
+          # Strip v prefix for validation
+          STRIPPED="${RC_VERSION#v}"
+          if ! echo "$STRIPPED" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'; then
+            echo "Error: '$RC_VERSION' is not a valid RC version (expected vX.Y.Z-rc.N or X.Y.Z-rc.N)"
+            exit 1
+          fi
+
+          # Verify the release/tag exists
+          if ! gh release view "$RC_VERSION" --json tagName >/dev/null 2>&1; then
+            # Try with v prefix
+            if ! gh release view "v${STRIPPED}" --json tagName >/dev/null 2>&1; then
+              echo "Error: Release '$RC_VERSION' not found"
+              exit 1
+            fi
+            RC_VERSION="v${STRIPPED}"
+          fi
+
+          STABLE_VERSION=$(echo "$STRIPPED" | sed 's/-rc\.[0-9]*//')
+          echo "rc_version=$RC_VERSION" >> "$GITHUB_OUTPUT"
+          echo "stable_version=$STABLE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "RC: $RC_VERSION -> Stable: $STABLE_VERSION"
+
+      - name: Update release-please-config.json
+        run: node scripts/promote-release.js "${{ steps.rc.outputs.rc_version }}"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release-please-config.json
+          git commit -m "fix: promote ${{ steps.rc.outputs.rc_version }} to stable ${{ steps.rc.outputs.stable_version }}"
+          git push
+
+      - name: Summary
+        run: |
+          echo "## Promote RC to Stable" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **RC Version:** ${{ steps.rc.outputs.rc_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stable Version:** ${{ steps.rc.outputs.stable_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "release-please will now create a stable Release PR on the next push to main." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Prerelease mode will be **automatically restored** after the stable release deploys." >> $GITHUB_STEP_SUMMARY
+          echo "If auto-restore fails, run the **Restore Prerelease Mode** workflow manually." >> $GITHUB_STEP_SUMMARY

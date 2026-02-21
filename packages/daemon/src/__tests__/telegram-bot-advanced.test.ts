@@ -441,10 +441,12 @@ describe('TelegramBotService /newsession', () => {
     }, { timeout: 3000 });
     service.stop();
 
-    // Verify session was inserted
-    const session = db.prepare('SELECT * FROM sessions WHERE wallet_id = ?').get('w-1') as any;
+    // Verify session was inserted (session_wallets junction table)
+    const sw = db.prepare('SELECT * FROM session_wallets WHERE wallet_id = ?').get('w-1') as any;
+    expect(sw).toBeDefined();
+    expect(sw.wallet_id).toBe('w-1');
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(sw.session_id) as any;
     expect(session).toBeDefined();
-    expect(session.wallet_id).toBe('w-1');
     expect(session.token_hash).toBeDefined();
     expect(session.token_hash.length).toBe(64); // SHA-256 hex
     expect(session.renewal_count).toBe(0);

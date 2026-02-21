@@ -53,7 +53,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (100 error codes from SS10.12 unified matrix + signing protocol)
+  // Error messages (104 error codes from SS10.12 unified matrix + signing protocol + session multi-wallet)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -66,7 +66,7 @@ export const messages: Messages = {
     INVALID_MASTER_PASSWORD: 'Invalid master password',
     MASTER_PASSWORD_LOCKED: 'Master password locked due to too many attempts',
     SYSTEM_LOCKED: 'System is locked (Kill Switch active)',
-    // SESSION domain (8)
+    // SESSION domain (12)
     SESSION_NOT_FOUND: 'Session not found',
     SESSION_EXPIRED: 'Session has expired',
     SESSION_LIMIT_EXCEEDED: 'Session limit exceeded',
@@ -75,6 +75,10 @@ export const messages: Messages = {
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: 'Session absolute lifetime exceeded',
     RENEWAL_TOO_EARLY: 'Session renewal too early',
     SESSION_RENEWAL_MISMATCH: 'Session renewal token mismatch',
+    WALLET_ACCESS_DENIED: 'Wallet not accessible from this session',
+    WALLET_ALREADY_LINKED: 'Wallet already linked to this session',
+    CANNOT_REMOVE_DEFAULT_WALLET: 'Cannot remove default wallet (change default first)',
+    SESSION_REQUIRES_WALLET: 'Session must have at least one wallet',
     // TX domain (25)
     INSUFFICIENT_BALANCE: 'Insufficient balance',
     INVALID_ADDRESS: 'Invalid address format',
@@ -190,6 +194,8 @@ export const messages: Messages = {
     SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for wallet {walletId} expires in {minutes} minutes' },
     SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for wallet {walletId} has expired' },
     SESSION_CREATED: { title: 'Session Created', body: 'New session created for wallet {walletId}' },
+    SESSION_WALLET_ADDED: { title: 'Wallet Added to Session', body: 'Wallet {walletId} has been added to session {sessionId}' },
+    SESSION_WALLET_REMOVED: { title: 'Wallet Removed from Session', body: 'Wallet {walletId} has been removed from session {sessionId}' },
     OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for wallet {walletId}: {ownerAddress}' },
     OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from wallet {walletId}' },
     OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for wallet {walletId}' },

@@ -123,12 +123,12 @@ export function createSecurityTestApp(opts: {
   // Protected route handlers
   app.get('/v1/wallet/balance', (c) => {
     const sessionId = c.get('sessionId' as never) as string;
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = c.get('defaultWalletId' as never) as string;
     return c.json({ balance: '1000000000', sessionId, walletId });
   });
 
   app.post('/v1/transactions', (c) => {
-    const walletId = c.get('walletId' as never) as string;
+    const walletId = c.get('defaultWalletId' as never) as string;
     return c.json({ id: 'tx-test', walletId, status: 'PENDING' });
   });
 
@@ -177,12 +177,11 @@ export function seedSecurityTestData(
 
   sqlite
     .prepare(
-      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, constraints, usage_stats, absolute_expires_at, created_at, revoked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sessions (id, token_hash, expires_at, constraints, usage_stats, absolute_expires_at, created_at, revoked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       sessionId,
-      walletId,
       `hash-${sessionId.slice(0, 8)}`,
       opts.expiresAt ?? ts + 86400,
       opts.constraints ?? null,
@@ -191,6 +190,12 @@ export function seedSecurityTestData(
       ts,
       opts.revokedAt ?? null,
     );
+  sqlite
+    .prepare(
+      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+       VALUES (?, ?, 1, ?)`,
+    )
+    .run(sessionId, walletId, ts);
 
   return { walletId, sessionId };
 }

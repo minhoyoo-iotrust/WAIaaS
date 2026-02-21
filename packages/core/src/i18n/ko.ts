@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (100 error codes)
+  // Error messages (104 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -14,7 +14,7 @@ export const messages: Messages = {
     INVALID_MASTER_PASSWORD: '마스터 패스워드가 올바르지 않습니다',
     MASTER_PASSWORD_LOCKED: '로그인 시도 초과로 마스터 패스워드가 잠겼습니다',
     SYSTEM_LOCKED: '시스템이 잠겼습니다 (킬 스위치 활성)',
-    // SESSION domain (8)
+    // SESSION domain (12)
     SESSION_NOT_FOUND: '세션을 찾을 수 없습니다',
     SESSION_EXPIRED: '세션이 만료되었습니다',
     SESSION_LIMIT_EXCEEDED: '세션 제한을 초과했습니다',
@@ -23,6 +23,10 @@ export const messages: Messages = {
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: '세션 절대 수명을 초과했습니다',
     RENEWAL_TOO_EARLY: '세션 갱신이 너무 이릅니다',
     SESSION_RENEWAL_MISMATCH: '세션 갱신 토큰이 일치하지 않습니다',
+    WALLET_ACCESS_DENIED: '이 세션에서 접근할 수 없는 지갑입니다',
+    WALLET_ALREADY_LINKED: '이미 이 세션에 연결된 지갑입니다',
+    CANNOT_REMOVE_DEFAULT_WALLET: '기본 지갑을 제거할 수 없습니다 (먼저 기본값을 변경하세요)',
+    SESSION_REQUIRES_WALLET: '세션에는 최소 하나의 지갑이 필요합니다',
     // TX domain (25)
     INSUFFICIENT_BALANCE: '잔액이 부족합니다',
     INVALID_ADDRESS: '유효하지 않은 주소 형식입니다',
@@ -138,6 +142,8 @@ export const messages: Messages = {
     SESSION_EXPIRING_SOON: { title: '세션 만료 임박', body: '지갑 {walletId}의 세션 {sessionId}이 {minutes}분 후 만료됩니다' },
     SESSION_EXPIRED: { title: '세션 만료', body: '지갑 {walletId}의 세션 {sessionId}이 만료되었습니다' },
     SESSION_CREATED: { title: '세션 생성', body: '지갑 {walletId}의 새 세션이 생성되었습니다' },
+    SESSION_WALLET_ADDED: { title: '세션에 지갑 추가', body: '지갑 {walletId}이(가) 세션 {sessionId}에 추가되었습니다' },
+    SESSION_WALLET_REMOVED: { title: '세션에서 지갑 제거', body: '지갑 {walletId}이(가) 세션 {sessionId}에서 제거되었습니다' },
     OWNER_SET: { title: 'Owner 등록', body: '지갑 {walletId}에 Owner가 등록되었습니다: {ownerAddress}' },
     OWNER_REMOVED: { title: 'Owner 제거', body: '지갑 {walletId}에서 Owner가 제거되었습니다' },
     OWNER_VERIFIED: { title: 'Owner 인증', body: '지갑 {walletId}의 Owner가 인증되었습니다' },

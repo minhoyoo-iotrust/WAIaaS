@@ -62,6 +62,7 @@ import { skillsRoutes } from './routes/skills.js';
 import { adminRoutes } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
+import { connectInfoRoutes } from './routes/connect-info.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -157,6 +158,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       }
       return masterAuth(c, next);
     });
+    // masterAuth on session-wallet management sub-routes (v26.4)
+    app.use('/v1/sessions/:id/wallets', masterAuth);
+    app.use('/v1/sessions/:id/wallets/*', masterAuth);
   }
 
   // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip sub-paths with own auth
@@ -197,6 +201,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/utils/*', sessionAuth);
     app.use('/v1/actions/*', sessionAuth);
     app.use('/v1/x402/*', sessionAuth);
+    app.use('/v1/connect-info', sessionAuth);
   }
 
   // ownerAuth for approve and reject routes (requires DB for agent lookup)
@@ -511,6 +516,17 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const wcServiceRef = deps.wcServiceRef ?? { current: null };
     app.route('/v1', wcRoutes({ db: deps.db, wcServiceRef }));
     app.route('/v1', wcSessionRoutes({ db: deps.db, wcServiceRef }));
+  }
+
+  // Register connect-info route (sessionAuth, no masterAuth)
+  if (deps.db) {
+    app.route('/v1', connectInfoRoutes({
+      db: deps.db,
+      config: deps.config ?? {} as DaemonConfig,
+      settingsService: deps.settingsService,
+      apiKeyStore: deps.apiKeyStore,
+      version: DAEMON_VERSION,
+    }));
   }
 
   // Register OpenAPI spec endpoint (GET /doc)

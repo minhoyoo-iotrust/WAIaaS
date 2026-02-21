@@ -14,10 +14,14 @@ export function registerGetTransaction(server: McpServer, apiClient: ApiClient, 
     {
       transaction_id: z.string().describe('Transaction ID to retrieve'),
       display_currency: z.string().optional().describe('Display currency for amount conversion (e.g. KRW, EUR). Defaults to server setting.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
-      const qs = args.display_currency ? '?display_currency=' + encodeURIComponent(args.display_currency) : '';
-      const result = await apiClient.get(`/v1/transactions/${args.transaction_id}${qs}`);
+      const params = new URLSearchParams();
+      if (args.display_currency) params.set('display_currency', args.display_currency);
+      if (args.wallet_id) params.set('walletId', args.wallet_id);
+      const qs = params.toString();
+      const result = await apiClient.get(`/v1/transactions/${args.transaction_id}${qs ? '?' + qs : ''}`);
       return toToolResult(result);
     },
   );

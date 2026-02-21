@@ -11,6 +11,7 @@ export type { Migration } from './migrate.js';
 export {
   wallets,
   sessions,
+  sessionWallets,
   transactions,
   policies,
   pendingApprovals,

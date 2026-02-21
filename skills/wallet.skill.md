@@ -252,9 +252,33 @@ Response (200):
 }
 ```
 
-## 2. Wallet Query (Session-Scoped)
+## 2. Multi-Wallet Operations
 
-These endpoints operate on the wallet bound to the session token. Require **sessionAuth**.
+When your session has multiple wallets, you can target a specific wallet:
+- GET requests: add `?walletId=<id>` query parameter
+- POST requests: add `walletId` field in request body
+- Omitting walletId uses the session's default wallet
+
+Example:
+```bash
+GET /v1/wallet/balance?walletId=wallet-abc
+POST /v1/transactions/send { "walletId": "wallet-abc", "to": "...", "amount": "..." }
+```
+
+### Self-Discovery via connect-info
+
+Call `GET /v1/connect-info` (sessionAuth) to discover all accessible wallets, policies, and capabilities:
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H 'Authorization: Bearer <session-token>'
+```
+
+Returns wallets with their addresses and chains, applicable policies per wallet, available capabilities (transfer, token_transfer, balance, assets, sign, actions, x402), and an AI-ready prompt.
+
+## 3. Wallet Query (Session-Scoped)
+
+These endpoints operate on the wallet bound to the session token (or the specified walletId). Require **sessionAuth**.
 
 ### GET /v1/wallet/address -- Get Wallet Address
 
@@ -459,12 +483,13 @@ Response (200):
 
 Error: `ENVIRONMENT_NETWORK_MISMATCH` (400) if the specified network is not valid for the wallet's environment.
 
-## 3. Session Management
+## 4. Session Management
 
 Session creation and listing require **masterAuth**. Revocation requires **masterAuth**. Renewal requires **sessionAuth** (the session's own token).
 
 ### POST /v1/sessions -- Create Session (masterAuth)
 
+**Single wallet:**
 ```bash
 curl -s -X POST http://localhost:3100/v1/sessions \
   -H 'Content-Type: application/json' \
@@ -472,8 +497,18 @@ curl -s -X POST http://localhost:3100/v1/sessions \
   -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456", "ttl": 86400}'
 ```
 
+**Multi-wallet:**
+```bash
+curl -s -X POST http://localhost:3100/v1/sessions \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"], "defaultWalletId": "wallet-1-uuid"}'
+```
+
 Parameters:
-- `walletId` (required): UUID of the wallet
+- `walletId` (string): UUID of a single wallet (backward compatible)
+- `walletIds` (string[]): UUIDs of multiple wallets (mutually exclusive with walletId)
+- `defaultWalletId` (optional): specify default wallet (defaults to first in walletIds)
 - `ttl` (optional): session lifetime in seconds, 300-604800 (default: 86400 = 24 hours)
 - `constraints` (optional): custom constraints object
 
@@ -554,7 +589,7 @@ Safety checks: 50% TTL must have elapsed, max 30 renewals, 30-day absolute lifet
 
 Errors: `RENEWAL_TOO_EARLY` (403), `RENEWAL_LIMIT_REACHED` (403), `SESSION_REVOKED` (401), `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` (403), `SESSION_RENEWAL_MISMATCH` (401).
 
-## 4. Token Registry (EVM Only)
+## 5. Token Registry (EVM Only)
 
 Manage the known token list for EVM networks. Token registry is UX-only -- adding/removing tokens here does NOT affect ALLOWED_TOKENS policy. Requires **masterAuth**.
 
@@ -637,7 +672,7 @@ Response (200):
 }
 ```
 
-## 5. MCP Token Provisioning (masterAuth)
+## 6. MCP Token Provisioning (masterAuth)
 
 One-stop provisioning for Claude Desktop MCP integration: creates a session, writes the JWT to a token file, and returns the Claude Desktop config snippet.
 
@@ -678,7 +713,7 @@ Response (201):
 
 Copy the `claudeDesktopConfig` object into your Claude Desktop `claude_desktop_config.json` under `mcpServers`.
 
-## 6. Auth Nonce
+## 7. Auth Nonce
 
 Public endpoint (no auth required). Returns a nonce for owner signature verification (SIWS for Solana, SIWE for Ethereum).
 
@@ -698,7 +733,7 @@ Response (200):
 
 The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wallets to construct SIWS/SIWE authentication signatures.
 
-## 7. Multi-Chain Notes
+## 8. Multi-Chain Notes
 
 ### Environment-Network Reference
 
@@ -721,7 +756,7 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 | Batch transactions | Supported | Not supported (BATCH_NOT_SUPPORTED) |
 | Owner signature | SIWS (Sign-In With Solana) | SIWE (Sign-In With Ethereum) |
 
-## 8. MCP Tools Reference
+## 9. MCP Tools Reference
 
 The MCP server exposes 18 tools for AI agents. Key wallet management tools:
 
@@ -752,7 +787,7 @@ Get all assets (native + tokens). Same `network` parameter support as `get_balan
 
 Combined wallet information including address, chain, environment, and available networks with their default status.
 
-## 9. CLI Commands
+## 10. CLI Commands
 
 ### waiaas wallet info
 
@@ -770,7 +805,7 @@ Changes the wallet's default network.
 waiaas wallet set-default-network polygon-amoy
 ```
 
-## 10. SDK Methods
+## 11. SDK Methods
 
 ### TypeScript SDK
 
@@ -813,7 +848,7 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
     all_assets = await client.get_all_assets()
 ```
 
-## 11. Error Reference
+## 12. Error Reference
 
 | Code | HTTP | Description |
 |------|------|-------------|
@@ -833,7 +868,7 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
 | `CHAIN_ERROR` | 502 | Blockchain RPC error |
 | `UNAUTHORIZED` | 401 | Missing or invalid auth header |
 
-## 12. WalletConnect Session Management
+## 13. WalletConnect Session Management
 
 WalletConnect allows the wallet owner to connect an external wallet (D'CENT, MetaMask, Phantom, etc.) to approve high-tier transactions. The daemon manages WC pairing, sessions, and signing bridges.
 
@@ -977,7 +1012,7 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
     print(result.disconnected)  # True
 ```
 
-## 13. Wallet SDK: Notification Functions
+## 14. Wallet SDK: Notification Functions
 
 The `@waiaas/wallet-sdk` package provides functions for wallet apps to receive real-time notification events from the WAIaaS daemon.
 
@@ -1019,7 +1054,7 @@ const notification = parseNotification(base64urlEncodedString);
 ```typescript
 interface NotificationMessage {
   version: '1';
-  eventType: string;        // One of 26 NotificationEventType values
+  eventType: string;        // One of 28 NotificationEventType values
   walletId: string;         // UUID of the wallet
   walletName: string;       // Human-readable wallet name
   category: 'transaction' | 'policy' | 'security_alert' | 'session' | 'owner' | 'system';
@@ -1037,6 +1072,6 @@ interface NotificationMessage {
 | transaction | TX_REQUESTED, TX_QUEUED, TX_SUBMITTED, TX_CONFIRMED, TX_FAILED, TX_CANCELLED, TX_DOWNGRADED_DELAY, TX_APPROVAL_REQUIRED, TX_APPROVAL_EXPIRED | 3 (default) |
 | policy | POLICY_VIOLATION, CUMULATIVE_LIMIT_WARNING | 3 (default) |
 | security_alert | WALLET_SUSPENDED, KILL_SWITCH_ACTIVATED, KILL_SWITCH_RECOVERED, KILL_SWITCH_ESCALATED, AUTO_STOP_TRIGGERED | **5 (urgent)** |
-| session | SESSION_EXPIRING_SOON, SESSION_EXPIRED, SESSION_CREATED | 3 (default) |
+| session | SESSION_EXPIRING_SOON, SESSION_EXPIRED, SESSION_CREATED, SESSION_WALLET_ADDED, SESSION_WALLET_REMOVED | 3 (default) |
 | owner | OWNER_SET, OWNER_REMOVED, OWNER_VERIFIED | 3 (default) |
 | system | DAILY_SUMMARY, LOW_BALANCE, APPROVAL_CHANNEL_SWITCHED, UPDATE_AVAILABLE | 3 (default) |

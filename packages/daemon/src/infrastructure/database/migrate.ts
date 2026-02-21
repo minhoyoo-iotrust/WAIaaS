@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 15 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 16 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -43,7 +43,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 15 tables (latest schema: wallets + wallet_id + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store)
+// DDL statements for all 16 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store)
 // ---------------------------------------------------------------------------
 
 /**
@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 18;
+export const LATEST_SCHEMA_VERSION = 19;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -73,10 +73,9 @@ function getCreateTableStatements(): string[] {
   owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'))
 )`,
 
-    // Table 2: sessions
+    // Table 2: sessions (v26.4: wallet_id removed, migrated to session_wallets)
     `CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
-  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
   constraints TEXT,
@@ -88,6 +87,15 @@ function getCreateTableStatements(): string[] {
   absolute_expires_at INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
   source TEXT NOT NULL DEFAULT 'api'
+)`,
+
+    // Table 2b: session_wallets (v26.4: session-wallet junction for 1:N model)
+    `CREATE TABLE IF NOT EXISTS session_wallets (
+  session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (session_id, wallet_id)
 )`,
 
     // Table 3: transactions
@@ -256,10 +264,13 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_wallets_chain_environment ON wallets(chain, environment)',
     'CREATE INDEX IF NOT EXISTS idx_wallets_owner_address ON wallets(owner_address)',
 
-    // sessions indexes
-    'CREATE INDEX IF NOT EXISTS idx_sessions_wallet_id ON sessions(wallet_id)',
+    // sessions indexes (v26.4: idx_sessions_wallet_id removed, wallet_id moved to session_wallets)
     'CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)',
     'CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)',
+
+    // session_wallets indexes (v26.4)
+    'CREATE INDEX IF NOT EXISTS idx_session_wallets_session ON session_wallets(session_id)',
+    'CREATE INDEX IF NOT EXISTS idx_session_wallets_wallet ON session_wallets(wallet_id)',
 
     // transactions indexes
     'CREATE INDEX IF NOT EXISTS idx_transactions_wallet_status ON transactions(wallet_id, status)',
@@ -1295,6 +1306,132 @@ MIGRATIONS.push({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Migration v19: Create session_wallets junction table, migrate sessions.wallet_id, drop wallet_id column
+// ---------------------------------------------------------------------------
+// 12-step table recreation for sessions (wallet_id column removal).
+// Creates session_wallets junction table, migrates existing 1:1 data as is_default=1,
+// then recreates sessions without wallet_id and reconnects FK-dependent transactions.
+// wallet_id IS NULL sessions are skipped (no crash).
+
+MIGRATIONS.push({
+  version: 19,
+  description: 'Create session_wallets junction table, migrate sessions.wallet_id, drop wallet_id column',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+    try {
+      // Step 1: Create session_wallets table
+      sqlite.exec(`CREATE TABLE session_wallets (
+  session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (session_id, wallet_id)
+)`);
+      sqlite.exec('CREATE INDEX idx_session_wallets_session ON session_wallets(session_id)');
+      sqlite.exec('CREATE INDEX idx_session_wallets_wallet ON session_wallets(wallet_id)');
+
+      // Step 2: Migrate existing sessions.wallet_id -> session_wallets (is_default = 1)
+      // wallet_id가 NULL인 비정상 세션은 스킵 (WHERE wallet_id IS NOT NULL)
+      sqlite.exec(`INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+  SELECT id, wallet_id, 1, CAST(strftime('%s', 'now') AS INTEGER)
+  FROM sessions
+  WHERE wallet_id IS NOT NULL`);
+
+      // Step 3: Recreate sessions table without wallet_id column (12-step)
+      sqlite.exec(`CREATE TABLE sessions_new (
+  id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  constraints TEXT,
+  usage_stats TEXT,
+  revoked_at INTEGER,
+  renewal_count INTEGER NOT NULL DEFAULT 0,
+  max_renewals INTEGER NOT NULL DEFAULT 30,
+  last_renewed_at INTEGER,
+  absolute_expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'api'
+)`);
+
+      // Step 4: Copy data (excluding wallet_id)
+      sqlite.exec(`INSERT INTO sessions_new (id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at, source)
+  SELECT id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at, source
+  FROM sessions`);
+
+      // Step 5: Drop old sessions table
+      sqlite.exec('DROP TABLE sessions');
+
+      // Step 6: Rename new table
+      sqlite.exec('ALTER TABLE sessions_new RENAME TO sessions');
+
+      // Step 7: Recreate sessions indexes (without wallet_id index)
+      sqlite.exec('CREATE INDEX idx_sessions_expires_at ON sessions(expires_at)');
+      sqlite.exec('CREATE INDEX idx_sessions_token_hash ON sessions(token_hash)');
+
+      // Step 8: Recreate transactions table to fix FK reference to sessions
+      // (sessions was dropped+renamed, need FK reconnection)
+      // transactions references sessions(id) ON DELETE SET NULL
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions_new(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  amount_usd REAL,
+  reserved_amount_usd REAL,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+)`);
+
+      sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network)
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network FROM transactions`);
+      sqlite.exec('DROP TABLE transactions');
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+
+      // Recreate transactions indexes
+      sqlite.exec('CREATE INDEX idx_transactions_wallet_status ON transactions(wallet_id, status)');
+      sqlite.exec('CREATE INDEX idx_transactions_session_id ON transactions(session_id)');
+      sqlite.exec('CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash)');
+      sqlite.exec('CREATE INDEX idx_transactions_queued_at ON transactions(queued_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_created_at ON transactions(created_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_type ON transactions(type)');
+      sqlite.exec('CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)');
+      sqlite.exec('CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)');
+
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v19: ${JSON.stringify(fkErrors)}`);
+    }
+  },
+});
+
 /**
  * Run incremental migrations against the database.
  *
@@ -1422,11 +1559,38 @@ export function pushSchema(sqlite: Database): void {
         .get() as { name: string } | undefined
     ) !== undefined;
 
+  // Pre-v19 databases have sessions.wallet_id (or agent_id) which gets migrated to
+  // session_wallets by v19 migration. Skip creating session_wallets DDL so v19 migration
+  // can handle it. Detect existing DB by checking if schema_version has v1 recorded
+  // (existing DB) AND v19 not yet applied. (MIGR-01c fix)
+  const hasSchemaVersionTable =
+    (
+      sqlite
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'")
+        .get() as { name: string } | undefined
+    ) !== undefined;
+  const isExistingDbPreV19 =
+    hasSchemaVersionTable &&
+    (
+      sqlite
+        .prepare('SELECT version FROM schema_version WHERE version = 1')
+        .get() as { version: number } | undefined
+    ) !== undefined &&
+    (
+      sqlite
+        .prepare('SELECT version FROM schema_version WHERE version = 19')
+        .get() as { version: number } | undefined
+    ) === undefined;
+
   sqlite.exec('BEGIN');
   try {
     for (const stmt of tables) {
       // Skip wallets table creation if agents table exists (v3 migration will handle rename)
       if (hasAgentsTable && stmt.includes('CREATE TABLE IF NOT EXISTS wallets')) {
+        continue;
+      }
+      // Skip session_wallets creation if this is a pre-v19 existing DB (v19 migration will handle)
+      if (isExistingDbPreV19 && stmt.includes('CREATE TABLE IF NOT EXISTS session_wallets')) {
         continue;
       }
       sqlite.exec(stmt);
@@ -1444,7 +1608,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, ts, 'Initial schema (15 tables)');
+        .run(1, ts, 'Initial schema (16 tables)');
 
       // Record all migration versions as already applied (DDL is up-to-date)
       for (const migration of MIGRATIONS) {

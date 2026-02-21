@@ -654,10 +654,14 @@ describe('PLAT-03 Telegram Bot Platform Tests', () => {
 
       expect(jwt.signToken).toHaveBeenCalledTimes(1);
 
-      // Session inserted in DB
-      const session = db
-        .prepare('SELECT * FROM sessions WHERE wallet_id = ?')
+      // Session inserted in DB (session_wallets junction table)
+      const sw = db
+        .prepare('SELECT * FROM session_wallets WHERE wallet_id = ?')
         .get('w-ns1') as any;
+      expect(sw).toBeDefined();
+      const session = db
+        .prepare('SELECT * FROM sessions WHERE id = ?')
+        .get(sw.session_id) as any;
       expect(session).toBeDefined();
       expect(session.token_hash).toHaveLength(64); // SHA-256 hex
 

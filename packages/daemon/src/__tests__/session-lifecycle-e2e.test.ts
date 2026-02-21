@@ -362,6 +362,13 @@ describe('Session Lifecycle E2E (TEST-03)', () => {
     const sessionId = created.id as string;
     const token = created.token as string;
     expect(token.startsWith('wai_sess_')).toBe(true);
+    // v26.4: Response includes wallets array + backward compat walletId
+    expect(created.walletId).toBe(testWalletId);
+    expect(created.wallets).toBeDefined();
+    const createdWallets = created.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    expect(createdWallets).toHaveLength(1);
+    expect(createdWallets[0]!.id).toBe(testWalletId);
+    expect(createdWallets[0]!.isDefault).toBe(true);
 
     // 2. GET /v1/wallet/address with Bearer token -> 200
     const walletRes = await app.request('/v1/wallet/address', {
@@ -739,5 +746,308 @@ describe('APPROVAL Workflow E2E (TEST-04)', () => {
       .get(txId) as { status: string; reserved_amount: string | null };
     expect(expiredRow.status).toBe('EXPIRED');
     expect(expiredRow.reserved_amount).toBeNull();
+  });
+});
+
+// ===========================================================================
+// Multi-Wallet Session E2E (v26.4)
+// ===========================================================================
+
+describe('Multi-Wallet Session E2E (v26.4)', () => {
+  let wallet2Id: string;
+  let wallet3Id: string;
+
+  beforeEach(() => {
+    wallet2Id = generateId();
+    wallet3Id = generateId();
+    seedWallet(sqlite, wallet2Id);
+    seedWallet(sqlite, wallet3Id);
+  });
+
+  it('creates session with walletIds (plural) parameter', async () => {
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id] }),
+    });
+    expect(res.status).toBe(201);
+    const body = await json(res);
+
+    // walletId (backward compat) = first wallet = default
+    expect(body.walletId).toBe(testWalletId);
+
+    // wallets array has 2 entries
+    const walletsList = body.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    expect(walletsList).toHaveLength(2);
+    expect(walletsList.find((w) => w.id === testWalletId)!.isDefault).toBe(true);
+    expect(walletsList.find((w) => w.id === wallet2Id)!.isDefault).toBe(false);
+  });
+
+  it('creates session with walletId (singular, backward compat)', async () => {
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(res.status).toBe(201);
+    const body = await json(res);
+
+    expect(body.walletId).toBe(testWalletId);
+    const walletsList = body.wallets as Array<{ id: string; isDefault: boolean }>;
+    expect(walletsList).toHaveLength(1);
+    expect(walletsList[0]!.id).toBe(testWalletId);
+    expect(walletsList[0]!.isDefault).toBe(true);
+  });
+
+  it('GET /v1/sessions includes wallets array in listing', async () => {
+    // Create multi-wallet session
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id] }),
+    });
+    expect(createRes.status).toBe(201);
+
+    // List sessions
+    const listRes = await app.request('/v1/sessions', {
+      headers: masterAuthHeader(),
+    });
+    expect(listRes.status).toBe(200);
+    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
+    expect(sessions.length).toBeGreaterThanOrEqual(1);
+
+    const session = sessions[0]!;
+    const walletsList = session.wallets as Array<{ id: string; isDefault: boolean }>;
+    expect(walletsList).toHaveLength(2);
+    // walletId backward compat = default wallet
+    expect(session.walletId).toBe(testWalletId);
+  });
+
+  it('POST /sessions/:id/wallets adds a wallet to the session', async () => {
+    // Create single-wallet session
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Add wallet2
+    const addRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: wallet2Id }),
+    });
+    expect(addRes.status).toBe(201);
+    const addBody = await json(addRes);
+    expect(addBody.sessionId).toBe(sessionId);
+    expect(addBody.walletId).toBe(wallet2Id);
+    expect(addBody.isDefault).toBe(false);
+
+    // Verify via list
+    const listRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
+      headers: masterAuthHeader(),
+    });
+    expect(listRes.status).toBe(200);
+    const listBody = await json(listRes);
+    const walletsList = listBody.wallets as Array<{ id: string; isDefault: boolean }>;
+    expect(walletsList).toHaveLength(2);
+  });
+
+  it('POST /sessions/:id/wallets returns 409 WALLET_ALREADY_LINKED for duplicate', async () => {
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Try to add same wallet again
+    const addRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(addRes.status).toBe(409);
+    const body = await json(addRes);
+    expect(body.code).toBe('WALLET_ALREADY_LINKED');
+  });
+
+  it('DELETE /sessions/:id/wallets/:walletId removes a non-default wallet', async () => {
+    // Create session with 2 wallets
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id] }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Remove wallet2 (non-default)
+    const removeRes = await app.request(`/v1/sessions/${sessionId}/wallets/${wallet2Id}`, {
+      method: 'DELETE',
+      headers: masterAuthHeader(),
+    });
+    expect(removeRes.status).toBe(204);
+
+    // Verify only 1 wallet remains
+    const listRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
+      headers: masterAuthHeader(),
+    });
+    expect(listRes.status).toBe(200);
+    const listBody = await json(listRes);
+    const walletsList = listBody.wallets as Array<{ id: string }>;
+    expect(walletsList).toHaveLength(1);
+    expect(walletsList[0]!.id).toBe(testWalletId);
+  });
+
+  it('DELETE /sessions/:id/wallets/:walletId returns 400 CANNOT_REMOVE_DEFAULT_WALLET', async () => {
+    // Create session with 2 wallets (testWalletId is default)
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id] }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Try to remove default wallet
+    const removeRes = await app.request(`/v1/sessions/${sessionId}/wallets/${testWalletId}`, {
+      method: 'DELETE',
+      headers: masterAuthHeader(),
+    });
+    expect(removeRes.status).toBe(400);
+    const body = await json(removeRes);
+    expect(body.code).toBe('CANNOT_REMOVE_DEFAULT_WALLET');
+  });
+
+  it('DELETE /sessions/:id/wallets/:walletId returns 400 SESSION_REQUIRES_WALLET for last wallet', async () => {
+    // Create single-wallet session
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Try to remove the only wallet (also the default)
+    const removeRes = await app.request(`/v1/sessions/${sessionId}/wallets/${testWalletId}`, {
+      method: 'DELETE',
+      headers: masterAuthHeader(),
+    });
+    // Should get CANNOT_REMOVE_DEFAULT_WALLET since it's the default
+    expect(removeRes.status).toBe(400);
+    const body = await json(removeRes);
+    expect(body.code).toBe('CANNOT_REMOVE_DEFAULT_WALLET');
+  });
+
+  it('PATCH /sessions/:id/wallets/:walletId/default changes default wallet', async () => {
+    // Create session with 2 wallets
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id] }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Change default to wallet2
+    const patchRes = await app.request(`/v1/sessions/${sessionId}/wallets/${wallet2Id}/default`, {
+      method: 'PATCH',
+      headers: masterAuthHeader(),
+    });
+    expect(patchRes.status).toBe(200);
+    const patchBody = await json(patchRes);
+    expect(patchBody.sessionId).toBe(sessionId);
+    expect(patchBody.defaultWalletId).toBe(wallet2Id);
+
+    // Verify via list -- wallet2 should be default
+    const listRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
+      headers: masterAuthHeader(),
+    });
+    expect(listRes.status).toBe(200);
+    const listBody = await json(listRes);
+    const walletsList = listBody.wallets as Array<{ id: string; isDefault: boolean }>;
+    const w1 = walletsList.find((w) => w.id === testWalletId)!;
+    const w2 = walletsList.find((w) => w.id === wallet2Id)!;
+    expect(w1.isDefault).toBe(false);
+    expect(w2.isDefault).toBe(true);
+  });
+
+  it('GET /sessions/:id/wallets returns wallet list with details', async () => {
+    // Create session with 2 wallets
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id] }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    const listRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
+      headers: masterAuthHeader(),
+    });
+    expect(listRes.status).toBe(200);
+    const listBody = await json(listRes);
+    const walletsList = listBody.wallets as Array<{
+      id: string;
+      name: string;
+      chain: string;
+      isDefault: boolean;
+      createdAt: number;
+    }>;
+    expect(walletsList).toHaveLength(2);
+
+    // Each wallet should have chain, name, createdAt
+    for (const w of walletsList) {
+      expect(w.name).toBeTruthy();
+      expect(w.chain).toBeTruthy();
+      expect(w.createdAt).toBeGreaterThan(0);
+    }
+  });
+
+  it('PUT /sessions/:id/renew uses default wallet from session_wallets', async () => {
+    // Create session with 2 wallets
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [testWalletId, wallet2Id], ttl: SESSION_TTL }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+    const token = created.token as string;
+
+    // Advance past 50% TTL
+    vi.advanceTimersByTime(1801 * 1000);
+
+    // Renew
+    const renewRes = await app.request(`/v1/sessions/${sessionId}/renew`, {
+      method: 'PUT',
+      headers: bearerHeader(token),
+    });
+    expect(renewRes.status).toBe(200);
+    const renewed = await json(renewRes);
+    expect(renewed.token).toBeDefined();
+    expect(renewed.renewalCount).toBe(1);
+
+    // Use renewed token to access wallet -- should still work
+    const newToken = renewed.token as string;
+    const walletRes = await app.request('/v1/wallet/address', {
+      headers: bearerHeader(newToken),
+    });
+    expect(walletRes.status).toBe(200);
+    const walletBody = await json(walletRes);
+    expect(walletBody.walletId).toBe(testWalletId); // default wallet
   });
 });

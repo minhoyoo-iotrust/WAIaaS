@@ -396,10 +396,16 @@ describe('Chain 5: Time-based expiry + tier escalation + AutoStop', { timeout: 3
     const sessionNow = Math.floor(Date.now() / 1000);
     conn.sqlite
       .prepare(
-        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(sess2, wId, `hash-${sess2.slice(0, 8)}`, sessionNow + 86400, sessionNow + 86400 * 30, sessionNow);
+      .run(sess2, `hash-${sess2.slice(0, 8)}`, sessionNow + 86400, sessionNow + 86400 * 30, sessionNow);
+    conn.sqlite
+      .prepare(
+        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+         VALUES (?, ?, 1, ?)`,
+      )
+      .run(sess2, wId, sessionNow);
     const newToken = await signTestToken(jwtManager, sess2, wId);
 
     const res2 = await app.request('/v1/wallet/balance', {

@@ -27,6 +27,7 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
         decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
         symbol: z.string().describe('Token symbol (e.g., USDC)'),
       }).optional().describe('Required for TOKEN_TRANSFER'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
       const body: Record<string, unknown> = { to: args.to, amount: args.amount };
@@ -34,6 +35,7 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
       if (args.type) body.type = args.type;
       if (args.token) body.token = args.token;
       if (args.network !== undefined) body.network = args.network;
+      if (args.wallet_id) body.walletId = args.wallet_id;
       const result = await apiClient.post('/v1/transactions/send', body);
       return toToolResult(result);
     },

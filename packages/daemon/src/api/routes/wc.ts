@@ -31,6 +31,7 @@ import {
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 
 // ---------------------------------------------------------------------------
 // Deps
@@ -326,11 +327,9 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
   const { db, wcServiceRef } = deps;
 
-  // Helper: get walletId from sessionAuth JWT context
+  // Helper: resolve walletId from query > defaultWalletId with session_wallets access check
   const getWalletId = (c: any): string => {
-    const walletId = c.get('walletId') as string | undefined;
-    if (!walletId) throw new WAIaaSError('WALLET_NOT_FOUND');
-    return walletId;
+    return resolveWalletId(c, db);
   };
 
   // Helper: raw SQL lookup for wallet

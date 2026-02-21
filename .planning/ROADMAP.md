@@ -12,6 +12,7 @@
 - ✅ **v2.6.1 WAIaaS Wallet Signing SDK** — Phases 202-205 (shipped 2026-02-20)
 - ✅ **v2.7 지갑 앱 알림 채널** — Phase 206 (shipped 2026-02-20)
 - ✅ **v26.3 Push Relay Server** — Phases 207-209 (shipped 2026-02-20)
+- ✅ **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** — Phases 210-214 (shipped 2026-02-21)
 
 ## Phases
 
@@ -126,6 +127,19 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 (Phases 210-214) — SHIPPED 2026-02-21</summary>
+
+- [x] Phase 210: 세션 모델 재구조화 (3/3 plans) — completed 2026-02-20
+- [x] Phase 211: API 레이어 지갑 선택 (3/3 plans) — completed 2026-02-20
+- [x] Phase 212: 자기 발견 엔드포인트 (2/2 plans) — completed 2026-02-20
+- [x] Phase 213: 통합 레이어 (4/4 plans) — completed 2026-02-20
+- [x] Phase 214: 검증 보고서 + SDK 타입 수정 (3/3 plans) — completed 2026-02-21
+
+See `.planning/milestones/v26.4-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -139,6 +153,5 @@ See `.planning/milestones/v26.3-ROADMAP.md` for full details.
 | 198-201 | v2.6 | 7/7 | Complete | 2026-02-20 |
 | 202-205 | v2.6.1 | 13/13 | Complete | 2026-02-20 |
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
-| 207 | v26.3 | 1/1 | Complete | 2026-02-20 |
-| 208 | v26.3 | 5/5 | Complete | 2026-02-20 |
-| 209 | v26.3 | 2/2 | Complete | 2026-02-20 |
+| 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
+| 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |

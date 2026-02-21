@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 14 tables: wallets, sessions, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users, wc_sessions, wc_store
+ * 15 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users, wc_sessions, wc_store
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -13,6 +13,8 @@
  * v1.4.6: Environment model -- wallets.network replaced by wallets.environment + wallets.defaultNetwork.
  * v2.6.1: owner_approval_method column added for signing SDK approval channel preference.
  * transactions.network and policies.network columns added.
+ * v26.4: session_wallets junction table added for 1:N session-wallet model.
+ * sessions.walletId removed (migrated to session_wallets).
  *
  * @see docs/25-sqlite-schema.md
  */
@@ -90,15 +92,13 @@ export const wallets = sqliteTable(
 
 // ---------------------------------------------------------------------------
 // Table 2: sessions -- JWT session tracking
+// v26.4: walletId removed (migrated to session_wallets junction table)
 // ---------------------------------------------------------------------------
 
 export const sessions = sqliteTable(
   'sessions',
   {
     id: text('id').primaryKey(),
-    walletId: text('wallet_id')
-      .notNull()
-      .references(() => wallets.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull(),
     expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
     constraints: text('constraints'),
@@ -112,9 +112,30 @@ export const sessions = sqliteTable(
     source: text('source').notNull().default('api'),
   },
   (table) => [
-    index('idx_sessions_wallet_id').on(table.walletId),
     index('idx_sessions_expires_at').on(table.expiresAt),
     index('idx_sessions_token_hash').on(table.tokenHash),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 2b: session_wallets -- session-wallet junction (1:N, v26.4)
+// ---------------------------------------------------------------------------
+
+export const sessionWallets = sqliteTable(
+  'session_wallets',
+  {
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id, { onDelete: 'cascade' }),
+    isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_session_wallets_session').on(table.sessionId),
+    index('idx_session_wallets_wallet').on(table.walletId),
   ],
 );
 

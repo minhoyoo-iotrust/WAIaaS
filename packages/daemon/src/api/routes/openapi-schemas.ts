@@ -147,15 +147,25 @@ export const SessionCreateResponseSchema = z
     id: z.string().uuid(),
     token: z.string(),
     expiresAt: z.number().int(),
-    walletId: z.string().uuid(),
+    walletId: z.string().uuid(), // backward compat: default wallet
+    wallets: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      isDefault: z.boolean(),
+    })),
   })
   .openapi('SessionCreateResponse');
 
 export const SessionListItemSchema = z
   .object({
     id: z.string().uuid(),
-    walletId: z.string().uuid(),
-    walletName: z.string().nullable(),
+    walletId: z.string().uuid(), // backward compat: default wallet
+    walletName: z.string().nullable(), // backward compat: default wallet name
+    wallets: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      isDefault: z.boolean(),
+    })),
     status: z.string(),
     renewalCount: z.number().int(),
     maxRenewals: z.number().int(),
@@ -166,6 +176,32 @@ export const SessionListItemSchema = z
     source: z.enum(['api', 'mcp']),
   })
   .openapi('SessionListItem');
+
+// ---------------------------------------------------------------------------
+// Session-Wallet Management Schemas (v26.4)
+// ---------------------------------------------------------------------------
+
+export const SessionWalletSchema = z.object({
+  sessionId: z.string().uuid(),
+  walletId: z.string().uuid(),
+  isDefault: z.boolean(),
+  createdAt: z.number().int(),
+}).openapi('SessionWallet');
+
+export const SessionWalletListSchema = z.object({
+  wallets: z.array(z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    isDefault: z.boolean(),
+    createdAt: z.number().int(),
+  })),
+}).openapi('SessionWalletList');
+
+export const SessionDefaultWalletSchema = z.object({
+  sessionId: z.string().uuid(),
+  defaultWalletId: z.string().uuid(),
+}).openapi('SessionDefaultWallet');
 
 export const SessionRevokeResponseSchema = z
   .object({
@@ -843,6 +879,9 @@ export const TxSignRequestSchema = z
     network: z.string().optional().openapi({
       description: 'Network (optional -- resolved from wallet defaults)',
     }),
+    walletId: z.string().uuid().optional().openapi({
+      description: 'Target wallet ID (optional -- defaults to session default wallet)',
+    }),
   })
   .openapi('TxSignRequest');
 
@@ -943,3 +982,36 @@ export const WithdrawResponseSchema = z.object({
     status: z.enum(['success', 'failed']),
   })),
 }).openapi('WithdrawResponse');
+
+// ---------------------------------------------------------------------------
+// Connect Info Response Schema (GET /v1/connect-info) -- Phase 212
+// ---------------------------------------------------------------------------
+
+export const ConnectInfoResponseSchema = z.object({
+  session: z.object({
+    id: z.string().uuid(),
+    expiresAt: z.number().int(),
+    source: z.enum(['api', 'mcp']),
+  }),
+  wallets: z.array(z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    chain: z.string(),
+    environment: z.string(),
+    defaultNetwork: z.string().nullable(),
+    address: z.string(),
+    isDefault: z.boolean(),
+  })),
+  policies: z.record(z.string(), z.array(z.object({
+    type: z.string(),
+    rules: z.record(z.unknown()),
+    priority: z.number().int(),
+    network: z.string().nullable(),
+  }))),
+  capabilities: z.array(z.string()),
+  daemon: z.object({
+    version: z.string(),
+    baseUrl: z.string(),
+  }),
+  prompt: z.string(),
+}).openapi('ConnectInfoResponse');

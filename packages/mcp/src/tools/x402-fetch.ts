@@ -30,12 +30,14 @@ export function registerX402Fetch(
         .describe('Additional HTTP headers'),
       body: z.string().optional()
         .describe('Request body string'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
       const requestBody: Record<string, unknown> = { url: args.url };
       if (args.method) requestBody['method'] = args.method;
       if (args.headers) requestBody['headers'] = args.headers;
       if (args.body) requestBody['body'] = args.body;
+      if (args.wallet_id) requestBody['walletId'] = args.wallet_id;
       const result = await apiClient.post('/v1/x402/fetch', requestBody);
       return toToolResult(result);
     },

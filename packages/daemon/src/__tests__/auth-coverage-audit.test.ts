@@ -128,17 +128,20 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   function seedSession(opts: { expiresAt?: number; revokedAt?: number | null } = {}) {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     ).run(
       TEST_SESSION_ID,
-      TEST_WALLET_ID,
       'test-token-hash-audit',
       opts.expiresAt ?? ts + 86400,
       ts + 86400 * 30,
       ts,
       opts.revokedAt ?? null,
     );
+    sqlite.prepare(
+      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+       VALUES (?, ?, 1, ?)`,
+    ).run(TEST_SESSION_ID, TEST_WALLET_ID, ts);
   }
 
   async function signTestToken(overrides?: Partial<JwtPayload>) {

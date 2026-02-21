@@ -50,7 +50,7 @@ const now = () => Math.floor(Date.now() / 1000);
 // ---------------------------------------------------------------------------
 
 describe('Schema creation', () => {
-  it('should create all 15 tables', () => {
+  it('should create all 16 tables', () => {
     const tables = sqlite
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all() as Array<{ name: string }>;
@@ -64,6 +64,7 @@ describe('Schema creation', () => {
       'pending_approvals',
       'policies',
       'schema_version',
+      'session_wallets',
       'sessions',
       'settings',
       'telegram_users',
@@ -456,16 +457,22 @@ describe('UUID v7 ordering', () => {
 describe('Foreign key constraints', () => {
   const ts0 = now();
 
-  it('should reject session with non-existent walletId', () => {
+  it('should reject session_wallets with non-existent walletId', () => {
+    const sessId = generateId();
+    sqlite.prepare(
+      `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(sessId, 'hash123', ts0 + 3600, ts0 + 86400, ts0);
+
     expect(() => {
       sqlite.prepare(
-        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(generateId(), 'non-existent-wallet-id', 'hash123', ts0 + 3600, ts0 + 86400, ts0);
+        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+         VALUES (?, ?, 1, ?)`,
+      ).run(sessId, 'non-existent-wallet-id', ts0);
     }).toThrow(/FOREIGN KEY/i);
   });
 
-  it('should CASCADE delete sessions when wallet is deleted', () => {
+  it('should CASCADE delete session_wallets when wallet is deleted', () => {
     const walletId = generateId();
     const sessionId = generateId();
 
@@ -475,18 +482,22 @@ describe('Foreign key constraints', () => {
     ).run(walletId, 'Agent', 'solana', 'mainnet', 'mainnet', 'pk-fk-cascade', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
-      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(sessionId, walletId, 'hash456', ts0 + 3600, ts0 + 86400, ts0);
+      `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(sessionId, 'hash456', ts0 + 3600, ts0 + 86400, ts0);
+    sqlite.prepare(
+      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+       VALUES (?, ?, 1, ?)`,
+    ).run(sessionId, walletId, ts0);
 
-    // Verify session exists
-    const before = sqlite.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE id = ?').get(sessionId) as { cnt: number };
+    // Verify session_wallets exists
+    const before = sqlite.prepare('SELECT COUNT(*) as cnt FROM session_wallets WHERE session_id = ?').get(sessionId) as { cnt: number };
     expect(before.cnt).toBe(1);
 
-    // Delete agent -> should cascade
+    // Delete wallet -> should cascade session_wallets
     sqlite.prepare('DELETE FROM wallets WHERE id = ?').run(walletId);
 
-    const after = sqlite.prepare('SELECT COUNT(*) as cnt FROM sessions WHERE id = ?').get(sessionId) as { cnt: number };
+    const after = sqlite.prepare('SELECT COUNT(*) as cnt FROM session_wallets WHERE session_id = ?').get(sessionId) as { cnt: number };
     expect(after.cnt).toBe(0);
   });
 
@@ -521,9 +532,13 @@ describe('Foreign key constraints', () => {
     ).run(walletId, 'Agent', 'solana', 'mainnet', 'mainnet', 'pk-fk-setnull', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
-      `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(sessionId, walletId, 'hash789', ts0 + 3600, ts0 + 86400, ts0);
+      `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(sessionId, 'hash789', ts0 + 3600, ts0 + 86400, ts0);
+    sqlite.prepare(
+      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+       VALUES (?, ?, 1, ?)`,
+    ).run(sessionId, walletId, ts0);
 
     sqlite.prepare(
       `INSERT INTO transactions (id, wallet_id, session_id, chain, type, status, created_at)

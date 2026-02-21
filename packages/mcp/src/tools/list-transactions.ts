@@ -15,12 +15,14 @@ export function registerListTransactions(server: McpServer, apiClient: ApiClient
       limit: z.number().optional().describe('Maximum number of transactions to return'),
       cursor: z.string().optional().describe('Pagination cursor from previous response'),
       display_currency: z.string().optional().describe('Display currency for amount conversion (e.g. KRW, EUR). Defaults to server setting.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();
       if (args.limit !== undefined) params.set('limit', String(args.limit));
       if (args.cursor !== undefined) params.set('cursor', args.cursor);
       if (args.display_currency !== undefined) params.set('display_currency', args.display_currency);
+      if (args.wallet_id) params.set('walletId', args.wallet_id);
       const qs = params.toString();
       const result = await apiClient.get(`/v1/transactions${qs ? `?${qs}` : ''}`);
       return toToolResult(result);

@@ -18,7 +18,7 @@ import { WAIaaSError } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
-import { wallets, sessions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -111,10 +111,11 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
 
     const activeCountResult = deps.db
       .select({ count: sql<number>`count(*)` })
-      .from(sessions)
+      .from(sessionWallets)
+      .innerJoin(sessions, eq(sessionWallets.sessionId, sessions.id))
       .where(
         and(
-          eq(sessions.walletId, parsed.walletId),
+          eq(sessionWallets.walletId, parsed.walletId),
           isNull(sessions.revokedAt),
           gt(sessions.expiresAt, nowDate),
         ),
@@ -150,7 +151,6 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
 
     deps.db.insert(sessions).values({
       id: sessionId,
-      walletId: parsed.walletId,
       tokenHash,
       expiresAt: new Date(expiresAt * 1000),
       absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
@@ -159,6 +159,14 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
       maxRenewals: deps.config.security.session_max_renewals,
       constraints: null,
       source: 'mcp',
+    }).run();
+
+    // Insert session_wallets link (v26.4: 1:N session-wallet model)
+    deps.db.insert(sessionWallets).values({
+      sessionId,
+      walletId: parsed.walletId,
+      isDefault: true,
+      createdAt: new Date(nowSec * 1000),
     }).run();
 
     // 6. Write JWT to dataDir/mcp-tokens/<walletId> atomically

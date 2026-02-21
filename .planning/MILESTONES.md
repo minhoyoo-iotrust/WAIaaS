@@ -1270,3 +1270,30 @@
 
 ---
 
+
+## v26.4 멀티 지갑 세션 + 에이전트 자기 발견 (Shipped: 2026-02-21)
+
+**Delivered:** 하나의 세션 토큰으로 여러 지갑에 접근할 수 있는 1:N 세션 모델을 구축하고, 에이전트가 마스터 패스워드 없이 자기 상황을 파악할 수 있는 GET /v1/connect-info 자기 발견 엔드포인트를 제공. SDK/MCP/Admin UI/CLI 전면 통합 완료. 병행하여 이슈 #119-#120 해소 및 릴리스 자동화 워크플로우 구축.
+
+**Phases completed:** 210-214 (5 phases, 15 plans, 30 requirements)
+
+**Key accomplishments:**
+
+- DB v19 마이그레이션 — session_wallets junction 테이블로 세션-지갑 1:N 관계 구현, 기존 데이터 무손실 이관, 에러 코드 4개 신규 (WALLET_ACCESS_DENIED, WALLET_ALREADY_LINKED, CANNOT_REMOVE_DEFAULT_WALLET, SESSION_REQUIRES_WALLET)
+- resolveWalletId 헬퍼 — body > query > defaultWalletId 3단계 우선순위로 모든 API 엔드포인트에 선택적 walletId 지원 (하위 호환 100%)
+- GET /v1/connect-info 자기 발견 엔드포인트 — 세션 토큰만으로 접근 가능 지갑/정책/capabilities/자연어 프롬프트 자동 파악, agent-prompt 통합
+- SDK/MCP/Admin UI/CLI 전면 통합 — createSession({ walletIds }) + getConnectInfo(), MCP connect_info 도구, Admin UI 멀티 지갑 세션 생성 모달, CLI quickset 단일 세션
+- 릴리스 자동화 — promote-release.yml/restore-prerelease.yml workflow_dispatch 워크플로우, 모노레포 대응 promote-release.js 스크립트
+
+**Stats:**
+
+- 5 phases, 15 plans, 30 requirements, 80 설계 결정
+- 78 code files changed, +5,381 / -547 lines
+- ~145,704 LOC TypeScript
+- 62 commits, 1 day (2026-02-21)
+- Git range: feat(210-01) → feat(#120)
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
+
+---
+

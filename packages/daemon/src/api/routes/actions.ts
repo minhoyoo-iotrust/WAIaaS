@@ -49,6 +49,7 @@ import {
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 
 // ---------------------------------------------------------------------------
 // Action Route Dependencies
@@ -105,6 +106,7 @@ const ActionExecuteRequestSchema = z
   .object({
     params: z.record(z.unknown()).optional().default({}),
     network: z.string().optional(),
+    walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- defaults to session default wallet)'),
   })
   .openapi('ActionExecuteRequest');
 
@@ -230,8 +232,8 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       }
     }
 
-    // 3. Extract session context (set by sessionAuth middleware)
-    const walletId = c.get('walletId' as never) as string;
+    // 3. Resolve walletId from body.walletId > query > defaultWalletId
+    const walletId = resolveWalletId(c, deps.db, body.walletId);
     const sessionId = c.get('sessionId' as never) as string | undefined;
 
     // 4. Look up wallet

@@ -54,7 +54,7 @@
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).
 - **Release flow**: Merge PR (Conventional Commits) → release-please auto-creates Release PR → Merge Release PR (Gate 1: release decision) → release.yml quality gate → deploy job manual approval (Gate 2: deployment execution).
 - **Commit conventions**: `feat:` (minor), `fix:` (patch), `BREAKING CHANGE:` (major). `docs:`, `test:`, `chore:`, `ci:`, etc. are excluded from CHANGELOG.
-- **Prerelease mode restore after stable release**: The default release mode is prerelease (`versioning: "prerelease"`, `prerelease: true`, `prerelease-type: "rc"` in `release-please-config.json`). When promoting RC to stable, these settings are temporarily removed and `release-as` is added. After the stable release is published, remove `release-as` and restore the three prerelease settings immediately.
+- **RC promotion and prerelease restore via GitHub Actions**: Use the `Promote RC to Stable` workflow_dispatch to promote the latest RC to a stable release (auto-detects latest RC, or specify a version). After the stable release is published, run the `Restore Prerelease Mode` workflow_dispatch. Both workflows can also be run locally via `node scripts/promote-release.js <rc-version>` and `node scripts/promote-release.js --restore`.
 
 ## Milestone & Issue Naming
 

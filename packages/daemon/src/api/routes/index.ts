@@ -13,3 +13,4 @@ export { utilsRoutes } from './utils.js';
 export { skillsRoutes } from './skills.js';
 export { adminRoutes, type AdminRouteDeps, type KillSwitchState } from './admin.js';
 export { tokenRegistryRoutes, type TokenRegistryRouteDeps } from './tokens.js';
+export { connectInfoRoutes, type ConnectInfoRouteDeps } from './connect-info.js';

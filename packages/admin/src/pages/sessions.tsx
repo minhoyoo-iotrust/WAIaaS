@@ -27,10 +27,17 @@ interface Wallet {
   createdAt: number;
 }
 
+interface SessionWallet {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
 interface Session {
   id: string;
   walletId: string;
   walletName: string | null;
+  wallets?: SessionWallet[];
   status: string;
   renewalCount: number;
   maxRenewals: number;
@@ -46,6 +53,7 @@ interface CreatedSession {
   token: string;
   expiresAt: number;
   walletId: string;
+  wallets?: SessionWallet[];
 }
 
 function openRevoke(
@@ -278,6 +286,11 @@ export default function SessionsPage() {
   const revokeSessionId = useSignal('');
   const revokeLoading = useSignal(false);
 
+  // Multi-wallet session creation modal state
+  const createModal = useSignal(false);
+  const createSelectedIds = useSignal<Set<string>>(new Set());
+  const createDefaultWalletId = useSignal('');
+
   // Bulk creation state
   const bulkModal = useSignal(false);
   const bulkType = useSignal<'api' | 'mcp'>('api');
@@ -315,14 +328,35 @@ export default function SessionsPage() {
     }
   };
 
+  const toggleCreateSelect = (id: string) => {
+    const next = new Set(createSelectedIds.value);
+    if (next.has(id)) {
+      next.delete(id);
+      // If removed wallet was the default, reset default
+      if (createDefaultWalletId.value === id) {
+        createDefaultWalletId.value = next.size > 0 ? (Array.from(next)[0] ?? '') : '';
+      }
+    } else {
+      next.add(id);
+      // Auto-set first selected wallet as default
+      if (next.size === 1) {
+        createDefaultWalletId.value = id;
+      }
+    }
+    createSelectedIds.value = next;
+  };
+
   const handleCreate = async () => {
     createLoading.value = true;
     try {
-      const result = await apiPost<CreatedSession>(API.SESSIONS, {
-        walletId: selectedWalletId.value,
-      });
+      const ids = Array.from(createSelectedIds.value);
+      const body: Record<string, unknown> = ids.length === 1
+        ? { walletId: ids[0] }
+        : { walletIds: ids, defaultWalletId: createDefaultWalletId.value || ids[0] };
+      const result = await apiPost<CreatedSession>(API.SESSIONS, body);
       createdToken.value = result.token;
       tokenModal.value = true;
+      createModal.value = false;
       await fetchSessions();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -409,13 +443,27 @@ export default function SessionsPage() {
     {
       key: 'walletName',
       header: 'Wallet',
-      render: (s) => s.walletName ?? s.walletId.slice(0, 8) + '...',
+      render: (s) => {
+        if (s.wallets && s.wallets.length > 0) {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {s.wallets.map((w) => (
+                <span key={w.id}>
+                  {w.name ?? w.id.slice(0, 8)}
+                  {w.isDefault && <Badge variant="info">default</Badge>}
+                </span>
+              ))}
+            </div>
+          );
+        }
+        return s.walletName ?? s.walletId.slice(0, 8) + '...';
+      },
     },
     {
       key: 'source',
       header: 'Source',
       render: (s) => (
-        <Badge variant={s.source === 'mcp' ? 'info' : 'default'}>
+        <Badge variant={s.source === 'mcp' ? 'info' : 'neutral'}>
           {s.source === 'mcp' ? 'MCP' : 'API'}
         </Badge>
       ),
@@ -501,9 +549,12 @@ export default function SessionsPage() {
               </select>
             </div>
             <Button
-              onClick={handleCreate}
-              disabled={!selectedWalletId.value}
-              loading={createLoading.value}
+              onClick={() => {
+                createSelectedIds.value = new Set();
+                createDefaultWalletId.value = '';
+                createModal.value = true;
+              }}
+              disabled={wallets.value.length === 0}
             >
               Create Session
             </Button>
@@ -557,6 +608,46 @@ export default function SessionsPage() {
               Are you sure you want to revoke this session? The associated token will be immediately
               invalidated.
             </p>
+          </Modal>
+
+          {/* Create Session Modal — multi-wallet selection */}
+          <Modal
+            open={createModal.value}
+            title="Create Session"
+            onCancel={() => { createModal.value = false; }}
+            onConfirm={handleCreate}
+            confirmText={`Create Session (${createSelectedIds.value.size} wallet${createSelectedIds.value.size !== 1 ? 's' : ''})`}
+            confirmDisabled={createSelectedIds.value.size === 0}
+            loading={createLoading.value}
+          >
+            <div>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: 'var(--space-2)' }}>Select Wallets</label>
+              <div style={{ maxHeight: '250px', overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2)' }}>
+                {wallets.value.map((w) => (
+                  <label key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-1) 0', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={createSelectedIds.value.has(w.id)}
+                      onChange={() => toggleCreateSelect(w.id)} />
+                    <span>{w.name}</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>({w.chain}/{w.network})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {createSelectedIds.value.size > 1 && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <label style={{ fontWeight: 600, display: 'block', marginBottom: 'var(--space-2)' }}>Default Wallet</label>
+                <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2)' }}>
+                  {wallets.value.filter((w) => createSelectedIds.value.has(w.id)).map((w) => (
+                    <label key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-1) 0', cursor: 'pointer' }}>
+                      <input type="radio" name="defaultWallet" checked={createDefaultWalletId.value === w.id}
+                        onChange={() => { createDefaultWalletId.value = w.id; }} />
+                      <span>{w.name}</span>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>({w.chain}/{w.network})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </Modal>
 
           {/* Bulk Create Modal — wallet selection */}

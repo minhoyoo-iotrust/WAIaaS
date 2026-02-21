@@ -8,6 +8,7 @@ import httpx
 
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
+    ConnectInfo,
     EncodeCalldataRequest,
     EncodeCalldataResponse,
     MultiNetworkAssetsResponse,
@@ -307,6 +308,19 @@ class WAIaaSClient:
         # Auto-update session token
         self.set_session_token(result.token)
         return result
+
+    # -----------------------------------------------------------------
+    # Discovery API
+    # -----------------------------------------------------------------
+
+    async def get_connect_info(self) -> ConnectInfo:
+        """GET /v1/connect-info -- Get self-discovery info for this session.
+
+        Returns wallets, policies, capabilities, and AI-ready prompt.
+        Requires only session token (no master password).
+        """
+        resp = await self._request("GET", "/v1/connect-info")
+        return ConnectInfo.model_validate(resp.json())
 
     # -----------------------------------------------------------------
     # Utils API

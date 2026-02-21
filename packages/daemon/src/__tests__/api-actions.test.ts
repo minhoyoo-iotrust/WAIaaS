@@ -344,9 +344,13 @@ async function createSessionToken(walletId: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
 
   conn.sqlite.prepare(
-    `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(sessionId, walletId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+    `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+  conn.sqlite.prepare(
+    `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+     VALUES (?, ?, 1, ?)`,
+  ).run(sessionId, walletId, now);
 
   const payload: JwtPayload = {
     sub: sessionId,
