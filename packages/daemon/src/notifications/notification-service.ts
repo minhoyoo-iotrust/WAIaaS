@@ -9,6 +9,7 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { eq } from 'drizzle-orm';
 import { getNotificationMessage } from './templates/message-templates.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -95,20 +96,29 @@ export class NotificationService {
     vars?: Record<string, string>,
     details?: Record<string, unknown>,
   ): Promise<void> {
+    // Look up wallet info for display (walletName, address, network)
+    const walletInfo = this.lookupWallet(walletId);
+    const mergedVars = walletInfo.walletName
+      ? { walletName: walletInfo.walletName, ...vars }
+      : { walletName: walletId, ...vars };
+
     // Side channel: wallet app notification (independent of traditional channels, never blocks)
     // Placed BEFORE the channels.length guard so it fires even with zero configured channels.
     if (this.walletNotificationChannel) {
-      const { title: sideTitle, body: sideBody } = getNotificationMessage(eventType, this.config.locale, vars);
+      const { title: sideTitle, body: sideBody } = getNotificationMessage(eventType, this.config.locale, mergedVars);
       // Fire-and-forget with try/catch isolation (DAEMON-06)
       this.walletNotificationChannel.notify(eventType, walletId, sideTitle, sideBody, details).catch(() => {});
     }
 
     if (this.channels.length === 0) return; // No traditional channels configured
 
-    const { title, body } = getNotificationMessage(eventType, this.config.locale, vars);
+    const { title, body } = getNotificationMessage(eventType, this.config.locale, mergedVars);
     const payload: NotificationPayload = {
       eventType,
       walletId,
+      walletName: walletInfo.walletName,
+      walletAddress: walletInfo.walletAddress,
+      network: walletInfo.network,
       title,
       body,
       message: `${title}\n${body}`,
@@ -198,6 +208,36 @@ export class NotificationService {
     const timestamps = this.rateLimitMap.get(channelName) ?? [];
     timestamps.push(Date.now());
     this.rateLimitMap.set(channelName, timestamps);
+  }
+
+  /**
+   * Look up wallet name, address, and network from DB.
+   * Returns empty strings when DB unavailable, walletId is empty/system, or wallet not found.
+   */
+  private lookupWallet(walletId: string): { walletName: string; walletAddress: string; network: string } {
+    const empty = { walletName: '', walletAddress: '', network: '' };
+    if (!this.db || !walletId || walletId === 'system') return empty;
+
+    try {
+      const row = this.db
+        .select({
+          name: schema.wallets.name,
+          publicKey: schema.wallets.publicKey,
+          defaultNetwork: schema.wallets.defaultNetwork,
+          chain: schema.wallets.chain,
+        })
+        .from(schema.wallets)
+        .where(eq(schema.wallets.id, walletId))
+        .get();
+      if (!row) return empty;
+      return {
+        walletName: row.name,
+        walletAddress: row.publicKey,
+        network: row.defaultNetwork ?? row.chain,
+      };
+    } catch {
+      return empty;
+    }
   }
 
   /**

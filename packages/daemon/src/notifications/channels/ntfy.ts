@@ -1,4 +1,5 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { abbreviateId, abbreviateAddress } from './format-utils.js';
 
 export class NtfyChannel implements INotificationChannel {
   readonly name = 'ntfy';
@@ -21,7 +22,15 @@ export class NtfyChannel implements INotificationChannel {
 
     const bodyParts = [payload.body];
     if (payload.walletId) {
-      bodyParts.push(`\nWallet: ${payload.walletId}\nTime: ${new Date(payload.timestamp * 1000).toISOString()}`);
+      const name = payload.walletName || payload.walletId;
+      const idAbbr = abbreviateId(payload.walletId);
+      bodyParts.push(`\n${name} (${idAbbr})`);
+      if (payload.walletAddress) {
+        const addrAbbr = abbreviateAddress(payload.walletAddress);
+        const net = payload.network ?? '';
+        bodyParts.push(net ? `${addrAbbr} · ${net}` : addrAbbr);
+      }
+      bodyParts.push(`Time: ${new Date(payload.timestamp * 1000).toISOString()}`);
     }
 
     const response = await fetch(url, {

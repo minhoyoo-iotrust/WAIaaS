@@ -9,6 +9,12 @@ export interface NotificationPayload {
   eventType: NotificationEventType;
   /** Wallet ID associated with the event. */
   walletId: string;
+  /** Human-readable wallet name (e.g. "my-sol-wallet"). */
+  walletName?: string;
+  /** On-chain wallet address / public key. */
+  walletAddress?: string;
+  /** Network identifier (e.g. "solana-devnet"). */
+  network?: string;
   /** Notification title (short, human-readable). */
   title: string;
   /** Notification body (detailed message). */

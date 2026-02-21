@@ -126,14 +126,14 @@ describe('Balance Monitor notification types', () => {
 describe('Balance Monitor i18n templates', () => {
   it('LOW_BALANCE en 템플릿이 올바른 보간 결과 반환', () => {
     const msg = getNotificationMessage('LOW_BALANCE', 'en', {
-      walletId: 'w1',
+      walletName: 'my-wallet',
       balance: '0.005',
       currency: 'SOL',
       threshold: '0.01',
     });
 
     expect(msg.title).toBe('Low Balance Alert');
-    expect(msg.body).toContain('w1');
+    expect(msg.body).toContain('my-wallet');
     expect(msg.body).toContain('0.005');
     expect(msg.body).toContain('SOL');
     expect(msg.body).toContain('0.01');
@@ -141,14 +141,14 @@ describe('Balance Monitor i18n templates', () => {
 
   it('LOW_BALANCE ko 템플릿이 한글로 반환', () => {
     const msg = getNotificationMessage('LOW_BALANCE', 'ko', {
-      walletId: 'w1',
+      walletName: 'my-wallet',
       balance: '0.005',
       currency: 'SOL',
       threshold: '0.01',
     });
 
     expect(msg.title).toBe('잔액 부족 알림');
-    expect(msg.body).toContain('w1');
+    expect(msg.body).toContain('my-wallet');
     expect(msg.body).toContain('0.005');
     expect(msg.body).toContain('SOL');
     expect(msg.body).toContain('0.01');

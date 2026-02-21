@@ -1,4 +1,5 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { abbreviateId, abbreviateAddress } from './format-utils.js';
 
 export class DiscordChannel implements INotificationChannel {
   readonly name = 'discord';
@@ -17,7 +18,14 @@ export class DiscordChannel implements INotificationChannel {
 
     const fields: Array<{ name: string; value: string; inline: boolean }> = [];
     if (payload.walletId) {
-      fields.push({ name: 'Wallet', value: payload.walletId, inline: true });
+      fields.push({ name: 'Wallet', value: payload.walletName || payload.walletId, inline: true });
+      fields.push({ name: 'ID', value: abbreviateId(payload.walletId), inline: true });
+      if (payload.walletAddress) {
+        fields.push({ name: 'Address', value: abbreviateAddress(payload.walletAddress), inline: true });
+      }
+      if (payload.network) {
+        fields.push({ name: 'Network', value: payload.network, inline: true });
+      }
     }
     fields.push({ name: 'Event', value: payload.eventType, inline: true });
 

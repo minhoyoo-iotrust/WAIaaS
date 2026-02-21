@@ -1,4 +1,5 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { abbreviateId, abbreviateAddress } from './format-utils.js';
 
 export class TelegramChannel implements INotificationChannel {
   readonly name = 'telegram';
@@ -45,7 +46,14 @@ export class TelegramChannel implements INotificationChannel {
 
     // Only show wallet/time for wallet-specific events
     if (payload.walletId) {
-      parts.push('', escape(`Wallet: ${payload.walletId}`));
+      const name = payload.walletName || payload.walletId;
+      const idAbbr = abbreviateId(payload.walletId);
+      parts.push('', escape(`${name} (${idAbbr})`));
+      if (payload.walletAddress) {
+        const addrAbbr = abbreviateAddress(payload.walletAddress);
+        const net = payload.network ?? '';
+        parts.push(escape(net ? `${addrAbbr} · ${net}` : addrAbbr));
+      }
       parts.push(escape(new Date(payload.timestamp * 1000).toISOString()));
     }
 

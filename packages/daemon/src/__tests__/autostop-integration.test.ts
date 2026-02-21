@@ -358,22 +358,22 @@ describe('AutoStop enabled/disabled', () => {
 // ---------------------------------------------------------------------------
 
 describe('i18n template', () => {
-  it('AUTO_STOP_TRIGGERED en 템플릿에 {walletId}, {reason}, {rule} 변수가 포함됨', () => {
+  it('AUTO_STOP_TRIGGERED en 템플릿에 {walletName}, {reason}, {rule} 변수가 포함됨', () => {
     const en = getMessages('en');
     const template = en.notifications.AUTO_STOP_TRIGGERED;
 
     expect(template.title).toBe('Auto-Stop Triggered');
-    expect(template.body).toContain('{walletId}');
+    expect(template.body).toContain('{walletName}');
     expect(template.body).toContain('{reason}');
     expect(template.body).toContain('{rule}');
   });
 
-  it('AUTO_STOP_TRIGGERED ko 템플릿에 {walletId}, {reason}, {rule} 변수가 포함됨', () => {
+  it('AUTO_STOP_TRIGGERED ko 템플릿에 {walletName}, {reason}, {rule} 변수가 포함됨', () => {
     const ko = getMessages('ko');
     const template = ko.notifications.AUTO_STOP_TRIGGERED;
 
     expect(template.title).toBe('자동 정지 발동');
-    expect(template.body).toContain('{walletId}');
+    expect(template.body).toContain('{walletName}');
     expect(template.body).toContain('{reason}');
     expect(template.body).toContain('{rule}');
   });
