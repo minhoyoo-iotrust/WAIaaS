@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 225 - Chain Subscriber Implementations
+**Current focus:** Phase 226 - Monitor Service + Resilience
 
 ## Current Position
 
-Phase: 225 (2 of 6 in v27.1) (Chain Subscriber Implementations)
-Plan: 3 of 3 in current phase (all complete)
+Phase: 226 (3 of 6 in v27.1) (Monitor Service + Resilience)
+Plan: 2 of 4 in current phase
 Status: In Progress
-Last activity: 2026-02-22 -- Completed 225-02 (EvmIncomingSubscriber ERC-20 + native ETH detection)
+Last activity: 2026-02-22 -- Completed 226-02 (SubscriptionMultiplexer connection sharing + reconnection)
 
-Progress: [#####___________] 31% (5/16 plans)
+Progress: [#######_________] 44% (7/16 plans)
 
 ## Performance Metrics
 
@@ -53,6 +53,11 @@ From 225-03:
 - Duck-typed subscriber parameter (connect/waitForDisconnect) avoids circular dependency with IChainSubscriber
 - 100ms floor clamp on calculateDelay prevents zero/negative delays from rounding
 
+From 226-02:
+- IChainSubscriber.subscribe() takes 4 params (walletId, address, network, onTransaction) -- plan's pseudo-code had 3 params
+- reconnectLoop starts after initial waitForDisconnect resolves -- avoids double-connect on addWallet
+- State change guard checks entry identity before updating -- prevents stale updates after removeWallet
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -60,5 +65,5 @@ From 225-03:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 225-01-PLAN.md (all Phase 225 plans complete)
+Stopped at: Completed 226-02-PLAN.md
 Resume file: None

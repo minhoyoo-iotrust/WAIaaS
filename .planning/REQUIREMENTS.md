@@ -13,8 +13,8 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 - [x] **SUB-02**: SolanaIncomingSubscriber implements logsSubscribe({mentions}) + getTransaction(jsonParsed) for SOL/SPL/Token-2022 incoming detection
 - [x] **SUB-03**: EvmIncomingSubscriber implements getLogs(Transfer event) + getBlock(includeTransactions:true) for ERC-20/native ETH incoming detection
 - [x] **SUB-04**: WebSocket-to-polling automatic fallback with 3-state connection machine (WS_ACTIVE/POLLING_FALLBACK/RECONNECTING)
-- [ ] **SUB-05**: Gap recovery via incoming_tx_cursors table -- reconnection after blind spot recovers missed transactions
-- [ ] **SUB-06**: SubscriptionMultiplexer shares single WebSocket connection per chain:network combination
+- [x] **SUB-05**: Gap recovery via incoming_tx_cursors table -- reconnection after blind spot recovers missed transactions
+- [x] **SUB-06**: SubscriptionMultiplexer shares single WebSocket connection per chain:network combination
 - [x] **SUB-07**: Solana heartbeat ping (60s interval + jitter) prevents 10-minute inactivity timeout disconnection
 
 ### Data Storage
@@ -88,8 +88,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SUB-02 | Phase 225 | Complete |
 | SUB-03 | Phase 225 | Complete |
 | SUB-04 | Phase 225 | Complete |
-| SUB-05 | Phase 226 | Pending |
-| SUB-06 | Phase 226 | Pending |
+| SUB-05 | Phase 226 | Complete |
+| SUB-06 | Phase 226 | Complete |
 | SUB-07 | Phase 225 | Complete |
 | STO-01 | Phase 224 | Complete |
 | STO-02 | Phase 226 | Pending |
