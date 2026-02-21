@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 222 (8 of 9 in v27.0) — 설계 문서 Critical/High 불일치 수정
-Plan: 0 of 2 in current phase
-Status: Gap closure phases added from audit
-Last activity: 2026-02-21 — Gap closure phases 222-223 created
+Plan: 1 of 2 in current phase
+Status: Executing gap closure — Plan 222-01 complete (GAP-1, GAP-4 resolved)
+Last activity: 2026-02-21 — Plan 222-01 complete
 
 Progress: [███████░░░] 78% (7/9 phases)
 
@@ -22,7 +22,7 @@ Progress: [███████░░░] 78% (7/9 phases)
 
 **v27.0 (in progress):**
 - Phases: 9 (215-223) — 7 done, 2 gap closure pending
-- Plans: 16 total (12 done + 4 pending)
+- Plans: 16 total (13 done + 3 pending)
 - Requirements: 29 — all done
 - Gap closure: 9 items (4 critical/high + 5 medium/low)
 - Design decisions: 17 (D-01 ~ D-17)
@@ -49,6 +49,8 @@ Progress: [███████░░░] 78% (7/9 phases)
 15. D-15: v21 마이그레이션
 16. D-16: 6키 모두 hot-reload 가능
 17. D-17: confirmed 감지 → finalized 확정
+18. GAP-1 해결: IChainSubscriber에 connect()/waitForDisconnect() 필수 메서드 추가 (6메서드)
+19. GAP-4 해결: flush() 반환 IncomingTransaction[], 개별 TX 이벤트 + 집계 이벤트 분리
 
 ### Blockers/Concerns
 
@@ -57,5 +59,5 @@ Progress: [███████░░░] 78% (7/9 phases)
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Gap closure phases 222-223 created, ready for /gsd:plan-phase 222
+Stopped at: Completed 222-01-PLAN.md (GAP-1, GAP-4 resolved)
 Resume file: None

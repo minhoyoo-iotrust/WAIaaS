@@ -317,5 +317,5 @@ Phases execute in numeric order: 215 -> 216 -> 217 -> 218 -> 219 -> 220 -> 221 -
 | 219. 알림 이벤트 + 의심 감지 | v27.0 | 2/2 | Complete | 2026-02-21 |
 | 220. REST API + SDK/MCP | v27.0 | 2/2 | Complete | 2026-02-21 |
 | 221. 설정 + 통합 검증 | v27.0 | 2/2 | Complete | 2026-02-21 |
-| 222. 설계 Critical/High 수정 | v27.0 | 0/2 | Pending | — |
+| 222. 설계 Critical/High 수정 | 1/2 | In Progress|  | — |
 | 223. 알림 명세 + 문서 정합성 | v27.0 | 0/2 | Pending | — |
