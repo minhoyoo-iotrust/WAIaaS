@@ -8,7 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: (없음 — 다음 마일스톤 미정)
+## Current Milestone: v27.1 수신 트랜잭션 모니터링 구현
+
+**Goal:** v27.0에서 설계한 수신 트랜잭션 모니터링(doc 76, ITM-01~ITM-05)을 구현하여, 에이전트 지갑으로 들어오는 입금을 실시간 감지·저장·알림하는 상태 달성.
+
+**Target features:**
+- IChainSubscriber 인터페이스 + SolanaSubscriber/EvmSubscriber 구현 (WebSocket→폴링 폴백, 갭 보상)
+- incoming_transactions/incoming_tx_cursors DB 스키마 + 메모리 큐 배치 flush + 보존 정책
+- GET /v1/wallet/incoming, /summary REST API + SDK/MCP 확장
+- EventBus `transaction:incoming` + TX_INCOMING/TX_INCOMING_SUSPICIOUS 알림 + KillSwitch 연동
+- config.toml [incoming] 7키 + 지갑별 monitor_incoming opt-in + Admin Settings 런타임 변경
 
 ## Current State
 
