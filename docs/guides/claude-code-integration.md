@@ -36,7 +36,26 @@ This installs 7 WAIaaS skill files to `.claude/skills/` in your project director
   waiaas-x402/SKILL.md
 ```
 
-### 3. Use in Claude Code
+### 3. Configure Session Token
+
+Add your WAIaaS session credentials to `.claude/settings.json` in your project directory:
+
+```json
+{
+  "env": {
+    "WAIAAS_BASE_URL": "http://localhost:3100",
+    "WAIAAS_SESSION_TOKEN": "<your-session-token>"
+  }
+}
+```
+
+- Copy the session token from `waiaas quickset` output or the Admin Dashboard magic word
+- Only the session token is needed (no master password)
+- These environment variables are referenced by skill file curl commands
+
+> **Note:** If using MCP integration instead, `waiaas mcp setup` manages tokens automatically — no manual environment variable setup is required.
+
+### 4. Use in Claude Code
 
 Claude Code automatically discovers skills in `.claude/skills/`. You can:
 
