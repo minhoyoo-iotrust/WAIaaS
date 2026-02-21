@@ -17,10 +17,14 @@ import { getNotificationMessage } from '../notifications/templates/message-templ
 // ---------------------------------------------------------------------------
 
 function makePayload(overrides?: Partial<NotificationPayload>): NotificationPayload {
+  const title = overrides?.title ?? 'Transaction Confirmed';
+  const body = overrides?.body ?? 'Transaction abc123 confirmed. Amount: 1.5 SOL';
   return {
     eventType: 'TX_CONFIRMED',
     walletId: 'agent-001',
-    message: 'Transaction abc123 confirmed. Amount: 1.5 SOL',
+    title,
+    body,
+    message: `${title}\n${body}`,
     details: { txId: 'abc123', amount: '1.5 SOL' },
     timestamp: 1700000000,
     ...overrides,
@@ -40,8 +44,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('NotificationEventType', () => {
-  it('has exactly 28 event types', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(28);
+  it('has exactly 30 event types', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(30);
   });
 
   it('contains the 5 new event types added in v1.3', () => {
@@ -170,8 +174,8 @@ describe('TelegramChannel', () => {
 
   it('send() formats message with MarkdownV2 escaping', async () => {
     await channel.initialize({ telegram_bot_token: 'tok', telegram_chat_id: '1' });
-    // Message with special chars that need escaping
-    await channel.send(makePayload({ message: 'Amount: 1.5 SOL (test)' }));
+    // Body with special chars that need escaping
+    await channel.send(makePayload({ body: 'Amount: 1.5 SOL (test)' }));
 
     const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
     // MarkdownV2 should escape . and ( )
@@ -230,6 +234,7 @@ describe('DiscordChannel', () => {
     expect(url).toBe('https://discord.com/api/webhooks/1/x');
     const body = JSON.parse(options!.body as string);
     expect(body.embeds).toHaveLength(1);
+    expect(body.embeds[0].title).toBe('Transaction Confirmed');
     expect(body.embeds[0].description).toBe('Transaction abc123 confirmed. Amount: 1.5 SOL');
   });
 
@@ -388,7 +393,7 @@ describe('NtfyChannel', () => {
     await channel.send(makePayload({ eventType: 'TX_CONFIRMED' }));
 
     const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Title']).toBe('[WAIaaS] TX CONFIRMED');
+    expect((options.headers as Record<string, string>)['Title']).toBe('[WAIaaS] Transaction Confirmed');
   });
 });
 
@@ -427,6 +432,7 @@ describe('SlackChannel', () => {
     expect(url).toBe('https://hooks.slack.com/services/T/B/xxx');
     const body = JSON.parse(options!.body as string);
     expect(body.attachments).toHaveLength(1);
+    expect(body.attachments[0].title).toContain('Transaction Confirmed');
     expect(body.attachments[0].text).toBe('Transaction abc123 confirmed. Amount: 1.5 SOL');
   });
 

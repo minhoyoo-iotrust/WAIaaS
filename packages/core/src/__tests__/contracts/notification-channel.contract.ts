@@ -17,7 +17,9 @@ import type { INotificationChannel, NotificationPayload } from '../../interfaces
 const CONTRACT_TEST_PAYLOAD: NotificationPayload = {
   eventType: 'TX_SUBMITTED',
   walletId: 'wallet-contract-test',
-  message: 'Contract test notification',
+  title: 'Transaction Submitted',
+  body: 'Contract test notification',
+  message: 'Transaction Submitted\nContract test notification',
   timestamp: Math.floor(Date.now() / 1000),
 };
 
@@ -69,7 +71,9 @@ export function notificationChannelContractTests(
       const payload: NotificationPayload = {
         eventType: 'TX_CONFIRMED',
         walletId: 'wallet-full-test',
-        message: 'Full payload test with details',
+        title: 'Transaction Confirmed',
+        body: 'Full payload test with details',
+        message: 'Transaction Confirmed\nFull payload test with details',
         details: { txHash: '0xabc123', amount: '1.0' },
         timestamp: Math.floor(Date.now() / 1000),
       };

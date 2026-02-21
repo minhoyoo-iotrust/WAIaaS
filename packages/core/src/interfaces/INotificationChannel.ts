@@ -9,7 +9,11 @@ export interface NotificationPayload {
   eventType: NotificationEventType;
   /** Wallet ID associated with the event. */
   walletId: string;
-  /** Human-readable message. */
+  /** Notification title (short, human-readable). */
+  title: string;
+  /** Notification body (detailed message). */
+  body: string;
+  /** Human-readable message (title + body combined, for logging). */
   message: string;
   /** Additional event-specific details. */
   details?: Record<string, unknown>;

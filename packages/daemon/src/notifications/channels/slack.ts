@@ -15,10 +15,11 @@ export class SlackChannel implements INotificationChannel {
     // Slack Incoming Webhook with attachments format
     const color = this.getColor(payload.eventType);
 
-    const fields = [
-      { title: 'Wallet', value: payload.walletId, short: true },
-      { title: 'Event', value: payload.eventType, short: true },
-    ];
+    const fields: Array<{ title: string; value: string; short: boolean }> = [];
+    if (payload.walletId) {
+      fields.push({ title: 'Wallet', value: payload.walletId, short: true });
+    }
+    fields.push({ title: 'Event', value: payload.eventType, short: true });
 
     // Add details fields if present
     if (payload.details) {
@@ -30,10 +31,10 @@ export class SlackChannel implements INotificationChannel {
     const attachment = {
       fallback: payload.message,
       color,
-      title: `[WAIaaS] ${payload.eventType.replace(/_/g, ' ')}`,
-      text: payload.message,
+      title: `[WAIaaS] ${payload.title}`,
+      text: payload.body,
       fields,
-      ts: payload.timestamp,
+      ...(payload.walletId ? { ts: payload.timestamp } : {}),
     };
 
     const response = await fetch(this.webhookUrl, {

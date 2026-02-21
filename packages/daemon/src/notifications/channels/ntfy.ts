@@ -19,14 +19,19 @@ export class NtfyChannel implements INotificationChannel {
     const tags = this.mapTags(payload.eventType);
     const url = `${this.server}/${this.topic}`;
 
+    const bodyParts = [payload.body];
+    if (payload.walletId) {
+      bodyParts.push(`\nWallet: ${payload.walletId}\nTime: ${new Date(payload.timestamp * 1000).toISOString()}`);
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Title': `[WAIaaS] ${payload.eventType.replace(/_/g, ' ')}`,
+        'Title': `[WAIaaS] ${payload.title}`,
         'Priority': String(priority),
         'Tags': tags,
       },
-      body: `${payload.message}\n\nWallet: ${payload.walletId}\nTime: ${new Date(payload.timestamp * 1000).toISOString()}`,
+      body: bodyParts.join(''),
     });
 
     if (!response.ok) {

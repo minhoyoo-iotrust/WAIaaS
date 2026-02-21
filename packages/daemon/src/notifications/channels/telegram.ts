@@ -39,11 +39,16 @@ export class TelegramChannel implements INotificationChannel {
     const escape = (s: string) =>
       s.replace(/([_*[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
 
-    const title = `*${escape(payload.message.split('\n')[0] ?? payload.eventType)}*`;
-    const body = escape(payload.message);
-    const agent = escape(`Wallet: ${payload.walletId}`);
-    const time = escape(new Date(payload.timestamp * 1000).toISOString());
+    const title = `*${escape(payload.title)}*`;
+    const body = escape(payload.body);
+    const parts = [title, '', body];
 
-    return `${title}\n\n${body}\n\n${agent}\n${time}`;
+    // Only show wallet/time for wallet-specific events
+    if (payload.walletId) {
+      parts.push('', escape(`Wallet: ${payload.walletId}`));
+      parts.push(escape(new Date(payload.timestamp * 1000).toISOString()));
+    }
+
+    return parts.join('\n');
   }
 }

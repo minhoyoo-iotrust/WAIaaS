@@ -109,6 +109,8 @@ export class NotificationService {
     const payload: NotificationPayload = {
       eventType,
       walletId,
+      title,
+      body,
       message: `${title}\n${body}`,
       details,
       timestamp: Math.floor(Date.now() / 1000),
