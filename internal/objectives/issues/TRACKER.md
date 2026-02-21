@@ -141,8 +141,9 @@
 | 124 | ENHANCEMENT | MEDIUM | 매직워드 프롬프트 생성 시 기존 세션 재활용 | v26.5 | FIXED | 2026-02-21 |
 | 125 | ENHANCEMENT | MEDIUM | Admin UI 세션 토큰 재발급 + 발급 이력 추적 | v26.5 | FIXED | 2026-02-21 |
 | 126 | BUG | MEDIUM | release.yml prerelease 복원 스텝이 detached HEAD에서 push 실패 | v26.5 | FIXED | 2026-02-21 |
-| 127 | BUG | HIGH | Promote RC 워크플로우가 번호 없는 RC 태그를 거부 | v27.0 | OPEN | |
+| 127 | BUG | HIGH | Promote RC 워크플로우가 번호 없는 RC 태그를 거부 | v27.0 | FIXED | 2026-02-21 |
 | 128 | ENHANCEMENT | HIGH | 에이전트 읽기 전용 API 접근 확대 + 스킬 파일 권한 구분 명확화 | v27.0 | OPEN | |
+| 129 | BUG | HIGH | 데몬 재시작 시 Admin UI에서 설정한 알림 채널이 로드되지 않음 | v27.0 | OPEN | |
 
 ## Type Legend
 
@@ -155,8 +156,8 @@
 ## Summary
 
 - **OPEN:** 2
-- **FIXED:** 126
+- **FIXED:** 127
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 128
+- **Total:** 129
