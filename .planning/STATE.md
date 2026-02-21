@@ -5,31 +5,40 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v27.1 수신 트랜잭션 모니터링 구현
+**Current focus:** Phase 224 - Core Types + DB Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-21 — Milestone v27.1 started
+Phase: 224 (1 of 6 in v27.1) (Core Types + DB Foundation)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-21 -- Roadmap created for v27.1 (6 phases, 30 reqs, 16 plans)
+
+Progress: [________________] 0% (0/16 plans)
 
 ## Performance Metrics
 
 **Cumulative:** 51 milestones, 223 phases, 478 plans, 1,301 reqs, 4,396+ tests, ~145,704 LOC TS
 
+**v27.1 Scope:** 6 phases, 16 plans, 30 requirements
+
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared — full decision log in PROJECT.md)
+(Cleared -- full decision log in PROJECT.md)
+
+Recent from v27.0 design:
+- IChainSubscriber는 IChainAdapter와 완전 분리 (stateless vs stateful)
+- 큐 레벨 Map 기반 중복 제거는 필수 (설계 문서 "optional" 표기는 오류)
+- EVM은 폴링 우선, Solana는 WebSocket 우선 (비대칭 전략)
 
 ### Blockers/Concerns
 
-- (None)
+- @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
 
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v27.1 milestone started, defining requirements
+Stopped at: v27.1 roadmap created, ready to plan Phase 224
 Resume file: None
