@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 224 - Core Types + DB Foundation
+**Current focus:** Phase 225 - Chain Subscriber Implementations
 
 ## Current Position
 
-Phase: 224 (1 of 6 in v27.1) (Core Types + DB Foundation)
-Plan: 1 of 2 in current phase
+Phase: 225 (2 of 6 in v27.1) (Chain Subscriber Implementations)
+Plan: 0 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-21 -- Completed 224-01 (core types + interfaces + events in @waiaas/core)
+Last activity: 2026-02-22 -- Completed 224-02 (DB v21 migration + Drizzle schema for incoming TX)
 
-Progress: [#_______________] 6% (1/16 plans)
+Progress: [##______________] 12% (2/16 plans)
 
 ## Performance Metrics
 
@@ -35,12 +35,16 @@ From 224-01:
 - IncomingTransaction: interface (chain-subscriber.types.ts) + Zod schema (incoming-transaction.schema.ts) 이중 정의 -- interface는 코드 계약, Zod는 검증/OpenAPI SSoT
 - IncomingTransactionDto alias로 schemas/index.ts에서 이름 충돌 방지
 
+From 224-02:
+- v21 migration은 CREATE TABLE IF NOT EXISTS 사용 (pushSchema DDL 실행 순서와 호환)
+- New table migrations use IF NOT EXISTS pattern (기존 v4, v5, v15, v16과 일관)
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
 
 ## Session Continuity
 
-Last session: 2026-02-21
-Stopped at: Completed 224-01-PLAN.md
+Last session: 2026-02-22
+Stopped at: Completed 224-02-PLAN.md
 Resume file: None

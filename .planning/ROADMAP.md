@@ -167,7 +167,7 @@ See `.planning/milestones/v27.0-ROADMAP.md` for full details.
 - Integer phases (224, 225, ...): Planned milestone work
 - Decimal phases (224.1, 224.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 224: Core Types + DB Foundation** - IChainSubscriber 인터페이스, 타입 시스템, DB v21 마이그레이션
+- [x] **Phase 224: Core Types + DB Foundation** - IChainSubscriber 인터페이스, 타입 시스템, DB v21 마이그레이션 (completed 2026-02-21)
 - [ ] **Phase 225: Chain Subscriber Implementations** - SolanaIncomingSubscriber + EvmIncomingSubscriber 체인별 감지 구현
 - [ ] **Phase 226: Monitor Service + Resilience** - IncomingTxQueue, SubscriptionMultiplexer, IncomingTxMonitorService, 안전 규칙, 라이프사이클
 - [ ] **Phase 227: Config + Settings + Notifications** - config.toml [incoming] 섹션, SettingsService, HotReload, i18n 메시지 템플릿
@@ -292,7 +292,7 @@ Note: Phase 227 depends only on Phase 224 and can logically run in parallel with
 | 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
 | 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
-| 224. Core Types + DB | 1/2 | In Progress|  | - |
+| 224. Core Types + DB | 2/2 | Complete   | 2026-02-21 | - |
 | 225. Chain Subscribers | v27.1 | 0/3 | Not started | - |
 | 226. Monitor Service | v27.1 | 0/4 | Not started | - |
 | 227. Config + Notifications | v27.1 | 0/2 | Not started | - |
