@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 229 (6 of 6 in v27.1) (Integration Testing)
-Plan: 0 of 2 in current phase
-Status: Planning
-Last activity: 2026-02-22 -- Completed Phase 228 (REST API + SDK + MCP)
+Plan: 2 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 229-02-PLAN.md (Integration Resilience Tests)
 
-Progress: [##############__] 87% (14/16 plans)
+Progress: [################] 100% (16/16 plans)
 
 ## Performance Metrics
 
@@ -96,6 +96,11 @@ From 228-03:
 - MCP tool param names match REST API query params exactly (token, from_address, wallet_id)
 - Tool count updated from 21 to 23 in server.ts; skill file tool count updated from 18 to 23
 
+From 229-02:
+- Fresh service instance per KillSwitch test for cooldown isolation (preferred over manual cooldown clear)
+- 50 dust TX flood produces exactly 1 notification (stricter than plan's <=5 threshold)
+- createFreshService() factory centralizes mock wiring for integration resilience tests
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -103,5 +108,5 @@ From 228-03:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 228-03-PLAN.md (MCP Tools + Skill Docs)
+Stopped at: Completed 229-02-PLAN.md (Integration Resilience Tests)
 Resume file: None
