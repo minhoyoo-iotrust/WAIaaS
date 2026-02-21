@@ -38,11 +38,11 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 ### Events and Notifications
 
 - [x] **EVT-01**: EventBus emits 'transaction:incoming' and 'transaction:incoming:suspicious' events via WaiaasEventMap
-- [ ] **EVT-02**: NotificationEventType adds TX_INCOMING and TX_INCOMING_SUSPICIOUS (28 to 30 total)
+- [x] **EVT-02**: NotificationEventType adds TX_INCOMING and TX_INCOMING_SUSPICIOUS (28 to 30 total)
 - [x] **EVT-03**: 3 IIncomingSafetyRule implementations detect dust attacks, unknown tokens, and unusually large amounts
 - [x] **EVT-04**: KillSwitch SUSPENDED/LOCKED state suppresses incoming TX notifications while maintaining DB records
 - [x] **EVT-05**: Per-wallet per-event-type notification cooldown prevents spam during token airdrops and dust attacks
-- [ ] **EVT-06**: i18n message templates (en/ko) for TX_INCOMING and TX_INCOMING_SUSPICIOUS notification types
+- [x] **EVT-06**: i18n message templates (en/ko) for TX_INCOMING and TX_INCOMING_SUSPICIOUS notification types
 
 ### Configuration
 
@@ -104,11 +104,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-06 | Phase 228 | Pending |
 | API-07 | Phase 228 | Pending |
 | EVT-01 | Phase 226 | Complete |
-| EVT-02 | Phase 227 | Pending |
+| EVT-02 | Phase 227 | Complete |
 | EVT-03 | Phase 226 | Complete |
 | EVT-04 | Phase 226 | Complete |
 | EVT-05 | Phase 226 | Complete |
-| EVT-06 | Phase 227 | Pending |
+| EVT-06 | Phase 227 | Complete |
 | CFG-01 | Phase 227 | Complete |
 | CFG-02 | Phase 227 | Complete |
 | CFG-03 | Phase 227 | Complete |

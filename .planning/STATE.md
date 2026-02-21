@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 227 (4 of 6 in v27.1) (Config + Settings + Notifications)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-22 -- Completed 227-01 (config.toml [incoming] section + tests)
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-22 -- Completed 227-02 (notification events + i18n + Admin UI IncomingSettings)
 
-Progress: [##########______] 63% (10/16 plans)
+Progress: [###########_____] 69% (11/16 plans)
 
 ## Performance Metrics
 
@@ -77,6 +77,11 @@ From 227-01:
 - No `mode` config key: setting-keys.ts uses cooldown_minutes; subscriber auto-detects WS vs polling
 - Config section + KNOWN_SECTIONS + setting-keys.ts triple SSoT consistency verified by cross-tests
 
+From 227-02:
+- TX_INCOMING_SUSPICIOUS categorized as security_alert in EVENT_CATEGORY_MAP (broadcast to all channels)
+- TX_INCOMING categorized as transaction (standard priority-based delivery)
+- EVENT_CATEGORY_MAP must be updated when NOTIFICATION_EVENT_TYPES grows (Record<NotificationEventType, ...> enforces parity)
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -84,5 +89,5 @@ From 227-01:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 227-01-PLAN.md
+Stopped at: Completed 227-02-PLAN.md (Phase 227 complete)
 Resume file: None
