@@ -3,7 +3,7 @@
 ## Language
 
 - All planning/design documents and issue reports are written in Korean.
-- Commit messages, PR titles/bodies, Git tag messages, and GitHub Release titles/bodies are written in English.
+- **⚠️ CRITICAL: Commit messages, PR titles/bodies, Git tag messages, and GitHub Release titles/bodies MUST be written in English. NO EXCEPTIONS.** Do not use Korean in any git-facing or GitHub-facing output. This applies to `git commit -m`, `gh pr create --title/--body`, `git tag -m`, and `gh release create --title/--notes`.
 - Code comments, variable names, and API responses use English.
 
 ## Communication
