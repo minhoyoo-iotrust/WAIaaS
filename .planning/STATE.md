@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 228 (5 of 6 in v27.1) (REST API + SDK + MCP)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-22 -- Completed 228-01 (REST API Incoming TX Endpoints)
+Last activity: 2026-02-22 -- Completed 228-02 (SDK Incoming TX Methods)
 
-Progress: [############____] 75% (12/16 plans)
+Progress: [#############___] 81% (13/16 plans)
 
 ## Performance Metrics
 
@@ -88,6 +88,10 @@ From 228-01:
 - Duck-typed incomingTxMonitorService in CreateAppDeps (consistent with 226-04 pattern)
 - PriceInfo.usdPrice field for USD conversion (not .price)
 
+From 228-02:
+- Follow existing SDK patterns exactly: URLSearchParams for TS, params dict for Python
+- Python models use dict literal model_config for consistency with existing models (not ConfigDict)
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -95,5 +99,5 @@ From 228-01:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 228-01-PLAN.md (REST API Incoming TX Endpoints)
+Stopped at: Completed 228-02-PLAN.md (SDK Incoming TX Methods)
 Resume file: None
