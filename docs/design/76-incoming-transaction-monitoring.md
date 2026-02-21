@@ -176,6 +176,7 @@ CREATE TABLE incoming_transactions (
   block_number INTEGER,                                   -- 슬롯(Solana) / 블록(EVM)
   detected_at INTEGER NOT NULL,                           -- Unix epoch seconds
   confirmed_at INTEGER,                                   -- CONFIRMED 전환 시각
+  is_suspicious INTEGER NOT NULL DEFAULT 0,             -- 의심 TX 플래그 (IIncomingSafetyRule 판정)
   UNIQUE(tx_hash, wallet_id)                              -- 동일 TX + 동일 지갑 중복 방지
 );
 ```
@@ -293,8 +294,8 @@ class IncomingTxQueue {
     const stmt = sqlite.prepare(`
       INSERT INTO incoming_transactions
         (id, tx_hash, wallet_id, from_address, amount, token_address,
-         chain, network, status, block_number, detected_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         chain, network, status, block_number, detected_at, is_suspicious)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(tx_hash, wallet_id) DO NOTHING
     `);
 
@@ -304,7 +305,7 @@ class IncomingTxQueue {
         const result = stmt.run(
           tx.id, tx.txHash, tx.walletId, tx.fromAddress, tx.amount,
           tx.tokenAddress, tx.chain, tx.network, tx.status,
-          tx.blockNumber, tx.detectedAt,
+          tx.blockNumber, tx.detectedAt, tx.isSuspicious ?? 0,
         );
         if (result.changes > 0) insertedTxs.push(tx);
       }
@@ -345,6 +346,10 @@ workers.register('incoming-tx-flush', {
 });
 ```
 
+**참고:** is_suspicious는 IncomingTxQueue.push() 시점에는 0으로 설정.
+IIncomingSafetyRule 평가는 flush 후 별도 단계에서 수행하며,
+의심 판정 시 UPDATE incoming_transactions SET is_suspicious = 1 WHERE id = ? 실행.
+
 ### 2.7 v21 마이그레이션 전략
 
 ```typescript
@@ -372,6 +377,7 @@ MIGRATIONS.push({
         block_number INTEGER,
         detected_at INTEGER NOT NULL,
         confirmed_at INTEGER,
+        is_suspicious INTEGER NOT NULL DEFAULT 0,
         UNIQUE(tx_hash, wallet_id)
       )
     `);
@@ -1958,7 +1964,7 @@ SELECT
   date(detected_at, 'unixepoch') AS date,
   COUNT(*) AS total_count,
   SUM(CAST(amount AS INTEGER)) AS total_amount_native,
-  COUNT(CASE WHEN id IN (SELECT incoming_tx_id FROM incoming_tx_suspicious) THEN 1 END) AS suspicious_count
+  COUNT(CASE WHEN is_suspicious = 1 THEN 1 END) AS suspicious_count
 FROM incoming_transactions
 WHERE wallet_id = ?
 GROUP BY date(detected_at, 'unixepoch')
@@ -1966,7 +1972,7 @@ ORDER BY date DESC
 LIMIT 30;
 ```
 
-**참고:** 의심 TX 카운트를 위해 별도 테이블이 필요할 수 있으나, 설계 단순화를 위해 `incoming_transactions`에 `is_suspicious INTEGER DEFAULT 0` 컬럼을 추가하는 것도 고려. 구현 시 결정.
+**참고:** is_suspicious 컬럼은 §2.1 DDL에 정의. IIncomingSafetyRule(§6.5) 평가 후 UPDATE로 설정.
 
 ---
 
