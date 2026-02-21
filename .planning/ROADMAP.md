@@ -286,11 +286,11 @@ Plans:
   2. getDecimals() 헬퍼 함수가 DustAttackRule, LargeAmountRule에서 사용 가능한 수준으로 정의됨
   3. §8.6 doc 31 영향 분석에 PATCH /v1/wallet/:id 변경이 추가됨
   4. skills/ 파일 업데이트 요구사항(wallet.skill.md, transactions.skill.md)이 명시됨
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 223-01: SUSPICIOUS priority 라우팅 + getDecimals() 헬퍼 명세
-- [ ] 223-02: doc 31 PATCH 영향 분석 추가 + skills/ 업데이트 요구사항 명시
+- [ ] 223-01-PLAN.md — SUSPICIOUS priority 라우팅 + getDecimals() 헬퍼 명세 (EVT-02, EVT-05)
+- [ ] 223-02-PLAN.md — doc 31 PATCH 영향 분석 추가 + skills/ 업데이트 요구사항 명시 (VER-01)
 
 ## Progress
 
