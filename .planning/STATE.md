@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 225 (2 of 6 in v27.1) (Chain Subscriber Implementations)
-Plan: 0 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 224-02 (DB v21 migration + Drizzle schema for incoming TX)
+Plan: 3 of 3 in current phase
+Status: In Progress
+Last activity: 2026-02-22 -- Completed 225-03 (ConnectionState 3-state machine + reconnectLoop)
 
-Progress: [##______________] 12% (2/16 plans)
+Progress: [#####___________] 31% (5/16 plans)
 
 ## Performance Metrics
 
@@ -39,6 +39,10 @@ From 224-02:
 - v21 migration은 CREATE TABLE IF NOT EXISTS 사용 (pushSchema DDL 실행 순서와 호환)
 - New table migrations use IF NOT EXISTS pattern (기존 v4, v5, v15, v16과 일관)
 
+From 225-03:
+- Duck-typed subscriber parameter (connect/waitForDisconnect) avoids circular dependency with IChainSubscriber
+- 100ms floor clamp on calculateDelay prevents zero/negative delays from rounding
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -46,5 +50,5 @@ From 224-02:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 224-02-PLAN.md
+Stopped at: Completed 225-03-PLAN.md
 Resume file: None
