@@ -1608,3 +1608,304 @@ export const MESSAGE_TEMPLATES = {
 - `dust` → "먼지 공격 의심 (소액 입금)"
 - `unknownToken` → "미등록 토큰"
 - `largeAmount` → "비정상 대량 입금"
+
+---
+
+## 7. REST API + SDK/MCP 명세
+
+### 7.1 GET /v1/wallet/incoming
+
+수신 트랜잭션 이력을 조회하는 엔드포인트.
+
+**경로:** `GET /v1/wallet/incoming`
+**인증:** sessionAuth (JWT)
+**지갑 선택:** resolveWalletId 3단계 우선순위 (헤더 → 세션 기본 → 단일 지갑)
+
+**Query Parameters:**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| cursor | string | N | 페이지네이션 커서 (이전 응답의 nextCursor) |
+| limit | number | N | 페이지 크기 (기본 20, 최대 100) |
+| from_address | string | N | 송신자 주소 필터 |
+| token | string | N | 토큰 주소 필터 ('native' = 네이티브 토큰) |
+| chain | string | N | 체인 필터 ('solana' \| 'ethereum') |
+| status | string | N | 상태 필터 ('DETECTED' \| 'CONFIRMED') |
+| since | number | N | 시작 시각 (Unix epoch seconds) |
+| until | number | N | 종료 시각 (Unix epoch seconds) |
+
+**응답:**
+```json
+{
+  "data": [
+    {
+      "id": "019...",
+      "txHash": "5xYz...",
+      "walletId": "wallet-uuid",
+      "fromAddress": "8xAB...",
+      "amount": "1000000000",
+      "tokenAddress": null,
+      "chain": "solana",
+      "network": "mainnet",
+      "status": "CONFIRMED",
+      "blockNumber": 12345678,
+      "detectedAt": 1708502400,
+      "confirmedAt": 1708502430
+    }
+  ],
+  "nextCursor": "eyJ...",
+  "hasMore": true
+}
+```
+
+**커서 페이지네이션:**
+- 커서 = Base64(JSON({ detectedAt, id })) — detected_at DESC, id DESC 정렬
+- `WHERE (detected_at, id) < (?, ?)` 조건으로 효율적 페이지네이션
+- `idx_incoming_tx_wallet_detected` 인덱스 활용
+
+### 7.2 Zod SSoT 스키마
+
+```typescript
+// packages/daemon/src/api/routes/openapi-schemas.ts
+
+import { z } from 'zod';
+
+// Query
+export const IncomingTransactionQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  from_address: z.string().optional(),
+  token: z.string().optional(), // 'native' | token address
+  chain: z.enum(['solana', 'ethereum']).optional(),
+  status: z.enum(['DETECTED', 'CONFIRMED']).optional(),
+  since: z.coerce.number().int().optional(),
+  until: z.coerce.number().int().optional(),
+});
+
+// Response item
+export const IncomingTransactionSchema = z.object({
+  id: z.string(),
+  txHash: z.string(),
+  walletId: z.string(),
+  fromAddress: z.string(),
+  amount: z.string(),
+  tokenAddress: z.string().nullable(),
+  chain: z.enum(['solana', 'ethereum']),
+  network: z.string(),
+  status: z.enum(['DETECTED', 'CONFIRMED']),
+  blockNumber: z.number().nullable(),
+  detectedAt: z.number(),
+  confirmedAt: z.number().nullable(),
+});
+
+// Response
+export const IncomingTransactionListResponseSchema = z.object({
+  data: z.array(IncomingTransactionSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+
+// Summary response
+export const IncomingTransactionSummarySchema = z.object({
+  period: z.enum(['daily', 'weekly', 'monthly']),
+  entries: z.array(z.object({
+    date: z.string(), // YYYY-MM-DD
+    totalCount: z.number(),
+    totalAmountNative: z.string(), // 네이티브 토큰 합계
+    totalAmountUsd: z.number().nullable(), // USD 합계 (PriceOracle)
+    suspiciousCount: z.number(),
+  })),
+});
+```
+
+### 7.3 PATCH /v1/wallet/:id 확장
+
+기존 지갑 업데이트 엔드포인트에 `monitorIncoming` 필드 추가:
+
+```typescript
+// 기존 WalletUpdateSchema 확장
+export const WalletUpdateSchema = z.object({
+  // ... 기존 필드 ...
+  monitorIncoming: z.boolean().optional(), // 수신 모니터링 opt-in/out
+});
+```
+
+**동작:**
+- `monitorIncoming: true` → `monitor_incoming = 1` + syncSubscriptions() 즉시 호출
+- `monitorIncoming: false` → `monitor_incoming = 0` + 해당 지갑 구독 해제
+
+### 7.4 SDK 메서드 명세
+
+#### TypeScript SDK
+
+```typescript
+// packages/sdk/src/client.ts
+
+export class WAIaaSClient {
+  /**
+   * 수신 트랜잭션 이력 조회.
+   */
+  async listIncomingTransactions(
+    options?: ListIncomingTransactionsOptions,
+  ): Promise<IncomingTransactionListResponse> {
+    const params = new URLSearchParams();
+    if (options?.cursor) params.set('cursor', options.cursor);
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.fromAddress) params.set('from_address', options.fromAddress);
+    if (options?.token) params.set('token', options.token);
+    if (options?.chain) params.set('chain', options.chain);
+    if (options?.status) params.set('status', options.status);
+    if (options?.since) params.set('since', String(options.since));
+    if (options?.until) params.set('until', String(options.until));
+
+    return this.get(`/v1/wallet/incoming?${params}`);
+  }
+
+  /**
+   * 수신 트랜잭션 집계 요약 조회.
+   */
+  async getIncomingTransactionSummary(
+    period: 'daily' | 'weekly' | 'monthly' = 'daily',
+  ): Promise<IncomingTransactionSummary> {
+    return this.get(`/v1/wallet/incoming/summary?period=${period}`);
+  }
+}
+
+export interface ListIncomingTransactionsOptions {
+  cursor?: string;
+  limit?: number;
+  fromAddress?: string;
+  token?: string;
+  chain?: 'solana' | 'ethereum';
+  status?: 'DETECTED' | 'CONFIRMED';
+  since?: number;
+  until?: number;
+}
+```
+
+#### Python SDK
+
+```python
+# python-sdk/waiaas/client.py
+
+class WAIaaSClient:
+    def list_incoming_transactions(
+        self,
+        cursor: str | None = None,
+        limit: int = 20,
+        from_address: str | None = None,
+        token: str | None = None,
+        chain: str | None = None,
+        status: str | None = None,
+        since: int | None = None,
+        until: int | None = None,
+    ) -> IncomingTransactionListResponse:
+        """수신 트랜잭션 이력 조회."""
+        params = {"limit": limit}
+        if cursor: params["cursor"] = cursor
+        if from_address: params["from_address"] = from_address
+        if token: params["token"] = token
+        if chain: params["chain"] = chain
+        if status: params["status"] = status
+        if since: params["since"] = since
+        if until: params["until"] = until
+        return self._get("/v1/wallet/incoming", params=params)
+
+    def get_incoming_transaction_summary(
+        self,
+        period: str = "daily",
+    ) -> IncomingTransactionSummary:
+        """수신 트랜잭션 집계 요약 조회."""
+        return self._get("/v1/wallet/incoming/summary", params={"period": period})
+```
+
+### 7.5 MCP 도구 명세
+
+```typescript
+// packages/mcp/src/tools/
+
+export const list_incoming_transactions = {
+  name: 'list_incoming_transactions',
+  description: '수신 트랜잭션 이력을 조회합니다. 지갑으로 들어온 토큰/코인 수신 내역을 확인할 수 있습니다.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cursor: { type: 'string', description: '페이지네이션 커서' },
+      limit: { type: 'number', description: '조회 개수 (기본 20, 최대 100)' },
+      from_address: { type: 'string', description: '송신자 주소 필터' },
+      token: { type: 'string', description: '토큰 주소 필터 (native = 네이티브 토큰)' },
+      chain: { type: 'string', enum: ['solana', 'ethereum'], description: '체인 필터' },
+      status: { type: 'string', enum: ['DETECTED', 'CONFIRMED'], description: '상태 필터' },
+      since: { type: 'number', description: '시작 시각 (Unix epoch seconds)' },
+      until: { type: 'number', description: '종료 시각 (Unix epoch seconds)' },
+    },
+  },
+};
+
+export const get_incoming_summary = {
+  name: 'get_incoming_summary',
+  description: '수신 트랜잭션 집계 요약을 조회합니다. 일별/주별/월별 수신 합계를 확인할 수 있습니다.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      period: {
+        type: 'string',
+        enum: ['daily', 'weekly', 'monthly'],
+        description: '집계 기간 (기본: daily)',
+      },
+    },
+  },
+};
+```
+
+### 7.6 GET /v1/wallet/incoming/summary
+
+수신 트랜잭션 집계 요약 엔드포인트.
+
+**경로:** `GET /v1/wallet/incoming/summary`
+**인증:** sessionAuth
+**Query Parameters:**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| period | string | N | 집계 기간: 'daily' (기본) \| 'weekly' \| 'monthly' |
+
+**응답:**
+```json
+{
+  "period": "daily",
+  "entries": [
+    {
+      "date": "2026-02-21",
+      "totalCount": 5,
+      "totalAmountNative": "15000000000",
+      "totalAmountUsd": 150.50,
+      "suspiciousCount": 1
+    },
+    {
+      "date": "2026-02-20",
+      "totalCount": 3,
+      "totalAmountNative": "8000000000",
+      "totalAmountUsd": 80.25,
+      "suspiciousCount": 0
+    }
+  ]
+}
+```
+
+**SQL 쿼리:**
+```sql
+-- Daily aggregation
+SELECT
+  date(detected_at, 'unixepoch') AS date,
+  COUNT(*) AS total_count,
+  SUM(CAST(amount AS INTEGER)) AS total_amount_native,
+  COUNT(CASE WHEN id IN (SELECT incoming_tx_id FROM incoming_tx_suspicious) THEN 1 END) AS suspicious_count
+FROM incoming_transactions
+WHERE wallet_id = ?
+GROUP BY date(detected_at, 'unixepoch')
+ORDER BY date DESC
+LIMIT 30;
+```
+
+**참고:** 의심 TX 카운트를 위해 별도 테이블이 필요할 수 있으나, 설계 단순화를 위해 `incoming_transactions`에 `is_suspicious INTEGER DEFAULT 0` 컬럼을 추가하는 것도 고려. 구현 시 결정.
