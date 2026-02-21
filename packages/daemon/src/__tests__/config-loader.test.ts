@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { loadConfig, parseEnvValue, detectNestedSections, DaemonConfigSchema } from '../infrastructure/config/index.js';
+import { SETTING_DEFINITIONS } from '../infrastructure/settings/setting-keys.js';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -547,5 +548,93 @@ describe('NOTE-08: Docker shutdown timeline (shutdown_timeout)', () => {
     const dir = saveTempDir(createTempDir());
     writeFileSync(join(dir, 'config.toml'), '[daemon]\nshutdown_timeout = 4\n');
     expect(() => loadConfig(dir)).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [incoming] section tests (Phase 227-01)
+// ---------------------------------------------------------------------------
+
+describe('[incoming] section', () => {
+  it('loads [incoming] section with all 7 defaults when no config.toml', () => {
+    const dir = saveTempDir(createTempDir());
+    const config = loadConfig(dir);
+    expect(config.incoming.enabled).toBe(false);
+    expect(config.incoming.poll_interval).toBe(30);
+    expect(config.incoming.retention_days).toBe(90);
+    expect(config.incoming.suspicious_dust_usd).toBe(0.01);
+    expect(config.incoming.suspicious_amount_multiplier).toBe(10);
+    expect(config.incoming.cooldown_minutes).toBe(5);
+    expect(config.incoming.wss_url).toBe('');
+  });
+
+  it('config.toml [incoming] section accepted and parsed', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(
+      join(dir, 'config.toml'),
+      `[incoming]
+enabled = true
+poll_interval = 60
+`,
+    );
+    const config = loadConfig(dir);
+    expect(config.incoming.enabled).toBe(true);
+    expect(config.incoming.poll_interval).toBe(60);
+    // Other keys should have defaults
+    expect(config.incoming.retention_days).toBe(90);
+    expect(config.incoming.suspicious_dust_usd).toBe(0.01);
+    expect(config.incoming.suspicious_amount_multiplier).toBe(10);
+    expect(config.incoming.cooldown_minutes).toBe(5);
+    expect(config.incoming.wss_url).toBe('');
+  });
+
+  it('WAIAAS_INCOMING_ENABLED=true overrides incoming.enabled', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_INCOMING_ENABLED', 'true');
+    const config = loadConfig(dir);
+    expect(config.incoming.enabled).toBe(true);
+  });
+
+  it('WAIAAS_INCOMING_POLL_INTERVAL=120 overrides incoming.poll_interval', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_INCOMING_POLL_INTERVAL', '120');
+    const config = loadConfig(dir);
+    expect(config.incoming.poll_interval).toBe(120);
+  });
+
+  it('Zod rejects invalid poll_interval below minimum (5)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[incoming]\npoll_interval = 2\n');
+    expect(() => loadConfig(dir)).toThrow();
+  });
+
+  // CFG-02 verification: incoming keys registered in setting-keys.ts
+  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 7 incoming.* keys', () => {
+    const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
+    expect(incomingDefs).toHaveLength(7);
+    const keys = incomingDefs.map((d) => d.key).sort();
+    expect(keys).toEqual([
+      'incoming.cooldown_minutes',
+      'incoming.enabled',
+      'incoming.poll_interval',
+      'incoming.retention_days',
+      'incoming.suspicious_amount_multiplier',
+      'incoming.suspicious_dust_usd',
+      'incoming.wss_url',
+    ]);
+  });
+
+  // CFG-03 verification: HotReloadOrchestrator has incoming key detection
+  // INCOMING_KEYS_PREFIX is not exported, so we verify by reading the module source
+  it('CFG-03 verify: hot-reload.ts contains INCOMING_KEYS_PREFIX constant', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const hotReloadPath = resolve(
+      import.meta.dirname,
+      '../infrastructure/settings/hot-reload.ts',
+    );
+    const source = readFileSync(hotReloadPath, 'utf-8');
+    expect(source).toContain('INCOMING_KEYS_PREFIX');
+    expect(source).toContain("'incoming.'");
   });
 });
