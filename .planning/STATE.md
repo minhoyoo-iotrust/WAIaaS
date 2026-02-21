@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 
 ## Current Position
 
-Phase: 226 (3 of 6 in v27.1) (Monitor Service + Resilience)
-Plan: 3 of 4 in current phase
-Status: In Progress
-Last activity: 2026-02-22 -- Completed 226-03 (Worker handlers + cursor utilities)
+Phase: 226 (3 of 6 in v27.1) (Monitor Service + Resilience) -- COMPLETE
+Plan: 4 of 4 in current phase (all done)
+Status: Phase 226 Complete
+Last activity: 2026-02-22 -- Completed 226-04 (Safety rules + monitor service + lifecycle)
 
-Progress: [########________] 50% (8/16 plans)
+Progress: [#########_______] 56% (9/16 plans)
 
 ## Performance Metrics
 
@@ -67,6 +67,12 @@ From 226-03:
 - Cursor table uses wallet_id as PK with last_signature (Solana) / last_block_number (EVM) dual fields
 - Retention worker uses raw SQL DELETE for efficiency (not Drizzle ORM)
 
+From 226-04:
+- SubscriberFactory type broadened to IChainSubscriber | Promise<IChainSubscriber> for async dynamic import support
+- Safety rules use null-safe defaults: when price data is unavailable, rules return false (not suspicious)
+- Duck-typed incomingTxMonitorService in HotReloadDeps to avoid circular imports
+- 7 incoming.* setting keys registered for SettingsService/Admin UI
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -74,5 +80,5 @@ From 226-03:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 226-03-PLAN.md (226-01 + 226-02 + 226-03 complete, 3 of 4 plans done)
+Stopped at: Completed 226-04-PLAN.md (Phase 226 complete, all 4 plans done)
 Resume file: None

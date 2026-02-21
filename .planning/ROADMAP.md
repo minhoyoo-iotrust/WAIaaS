@@ -169,7 +169,7 @@ See `.planning/milestones/v27.0-ROADMAP.md` for full details.
 
 - [x] **Phase 224: Core Types + DB Foundation** - IChainSubscriber 인터페이스, 타입 시스템, DB v21 마이그레이션 (completed 2026-02-21)
 - [x] **Phase 225: Chain Subscriber Implementations** - SolanaIncomingSubscriber + EvmIncomingSubscriber 체인별 감지 구현 (completed 2026-02-21)
-- [ ] **Phase 226: Monitor Service + Resilience** - IncomingTxQueue, SubscriptionMultiplexer, IncomingTxMonitorService, 안전 규칙, 라이프사이클
+- [x] **Phase 226: Monitor Service + Resilience** - IncomingTxQueue, SubscriptionMultiplexer, IncomingTxMonitorService, 안전 규칙, 라이프사이클 (completed 2026-02-21)
 - [ ] **Phase 227: Config + Settings + Notifications** - config.toml [incoming] 섹션, SettingsService, HotReload, i18n 메시지 템플릿
 - [ ] **Phase 228: REST API + SDK + MCP** - 조회 API, TypeScript/Python SDK 메서드, MCP 도구, 스킬 파일
 - [ ] **Phase 229: Integration Testing** - E2E 통합 테스트 (T-01~T-17, S-01~S-04), 6대 피트폴 검증
@@ -294,7 +294,7 @@ Note: Phase 227 depends only on Phase 224 and can logically run in parallel with
 | 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
 | 224. Core Types + DB | 2/2 | Complete    | 2026-02-21 | - |
 | 225. Chain Subscribers | 3/3 | Complete    | 2026-02-21 | - |
-| 226. Monitor Service | 3/4 | In Progress|  | - |
+| 226. Monitor Service | 4/4 | Complete   | 2026-02-21 | - |
 | 227. Config + Notifications | v27.1 | 0/2 | Not started | - |
 | 228. REST API + SDK + MCP | v27.1 | 0/3 | Not started | - |
 | 229. Integration Testing | v27.1 | 0/2 | Not started | - |

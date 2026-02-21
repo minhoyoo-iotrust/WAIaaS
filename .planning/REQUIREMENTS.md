@@ -37,11 +37,11 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 
 ### Events and Notifications
 
-- [ ] **EVT-01**: EventBus emits 'transaction:incoming' and 'transaction:incoming:suspicious' events via WaiaasEventMap
+- [x] **EVT-01**: EventBus emits 'transaction:incoming' and 'transaction:incoming:suspicious' events via WaiaasEventMap
 - [ ] **EVT-02**: NotificationEventType adds TX_INCOMING and TX_INCOMING_SUSPICIOUS (28 to 30 total)
-- [ ] **EVT-03**: 3 IIncomingSafetyRule implementations detect dust attacks, unknown tokens, and unusually large amounts
-- [ ] **EVT-04**: KillSwitch SUSPENDED/LOCKED state suppresses incoming TX notifications while maintaining DB records
-- [ ] **EVT-05**: Per-wallet per-event-type notification cooldown prevents spam during token airdrops and dust attacks
+- [x] **EVT-03**: 3 IIncomingSafetyRule implementations detect dust attacks, unknown tokens, and unusually large amounts
+- [x] **EVT-04**: KillSwitch SUSPENDED/LOCKED state suppresses incoming TX notifications while maintaining DB records
+- [x] **EVT-05**: Per-wallet per-event-type notification cooldown prevents spam during token airdrops and dust attacks
 - [ ] **EVT-06**: i18n message templates (en/ko) for TX_INCOMING and TX_INCOMING_SUSPICIOUS notification types
 
 ### Configuration
@@ -49,7 +49,7 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 - [ ] **CFG-01**: config.toml [incoming] section with 7 keys (enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier, wss_url)
 - [ ] **CFG-02**: SettingsService registers 'incoming' category with 7 setting keys supporting hot-reload
 - [ ] **CFG-03**: HotReloadOrchestrator handles incoming.* key changes by restarting monitor with new settings
-- [ ] **CFG-04**: DaemonLifecycle Step 4c-9 initializes IncomingTxMonitorService with fail-soft pattern and proper shutdown hook
+- [x] **CFG-04**: DaemonLifecycle Step 4c-9 initializes IncomingTxMonitorService with fail-soft pattern and proper shutdown hook
 - [ ] **CFG-05**: Environment variable mapping follows WAIAAS_INCOMING_* pattern for all 7 config keys
 
 ## v2 Requirements
@@ -103,16 +103,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-05 | Phase 228 | Pending |
 | API-06 | Phase 228 | Pending |
 | API-07 | Phase 228 | Pending |
-| EVT-01 | Phase 226 | Pending |
+| EVT-01 | Phase 226 | Complete |
 | EVT-02 | Phase 227 | Pending |
-| EVT-03 | Phase 226 | Pending |
-| EVT-04 | Phase 226 | Pending |
-| EVT-05 | Phase 226 | Pending |
+| EVT-03 | Phase 226 | Complete |
+| EVT-04 | Phase 226 | Complete |
+| EVT-05 | Phase 226 | Complete |
 | EVT-06 | Phase 227 | Pending |
 | CFG-01 | Phase 227 | Pending |
 | CFG-02 | Phase 227 | Pending |
 | CFG-03 | Phase 227 | Pending |
-| CFG-04 | Phase 226 | Pending |
+| CFG-04 | Phase 226 | Complete |
 | CFG-05 | Phase 227 | Pending |
 
 **Coverage:**
