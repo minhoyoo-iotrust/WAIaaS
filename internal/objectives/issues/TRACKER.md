@@ -148,6 +148,7 @@
 | 131 | ENHANCEMENT | MEDIUM | X402_ALLOWED_DOMAINS 정책에 default-deny 토글 추가 | v27.0 | OPEN | |
 | 132 | BUG | HIGH | Admin UI에서 킬 스위치 Recover 시 SYSTEM_LOCKED 에러 발생 | v27.0 | OPEN | |
 | 133 | MISSING | HIGH | 지갑 Suspend/Resume REST API 및 Admin UI 버튼 추가 | v27.0 | OPEN | |
+| 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.0 | OPEN | |
 
 ## Type Legend
 
@@ -159,9 +160,9 @@
 
 ## Summary
 
-- **OPEN:** 3
+- **OPEN:** 4
 - **FIXED:** 130
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 133
+- **Total:** 134
