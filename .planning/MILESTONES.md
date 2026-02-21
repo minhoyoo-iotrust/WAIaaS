@@ -1,5 +1,30 @@
 # Project Milestones: WAIaaS
 
+## v27.0 수신 트랜잭션 모니터링 설계 (Shipped: 2026-02-21)
+
+**Delivered:** 지갑으로 들어오는 수신 트랜잭션을 실시간 감지·기록·알림하는 인프라를 설계 수준에서 완전히 정의. IChainSubscriber 6-메서드 인터페이스, incoming_transactions DB 스키마, Solana/EVM 체인별 감지 전략, WebSocket 3-state 상태 머신 + 폴링 폴백, 의심 입금 감지 3규칙, REST API/SDK/MCP 명세, config.toml [incoming] 6키 설정까지 설계 문서(doc 76, ~2,300줄, 8섹션)로 완성. 감사 갭 9건 전량 해결.
+
+**Phases completed:** 215-223 (9 phases, 16 plans, 29 requirements + 9 gap closure items)
+
+**Key accomplishments:**
+
+- IChainSubscriber 6-메서드 인터페이스(subscribe/unsubscribe/subscribedAddresses/connect/waitForDisconnect/destroy) + IncomingTransaction 타입 + incoming_transactions DDL(v21 마이그레이션) 완성
+- Solana logsSubscribe(mentions) + getTransaction(jsonParsed) SOL/SPL/Token-2022 이중 감지 + ATA 자동 감지 전략 설계
+- EVM getLogs Transfer + getBlock(includeTransactions) ETH/ERC-20 이중 감지 + token_registry 화이트리스트 오탐 방지 전략 설계
+- 3-state WebSocket 상태 머신(WS_ACTIVE/POLLING_FALLBACK/RECONNECTING) + SubscriptionMultiplexer 연결 공유 + 블라인드 구간 커서 기반 복구 설계
+- INCOMING_TX_DETECTED/SUSPICIOUS 이벤트 + IIncomingSafetyRule 3규칙(dust/unknownToken/largeAmount) + i18n(en/ko) + 5채널 알림 연동 명세
+- REST API(GET /v1/wallet/incoming + /summary) + SDK/MCP 인터페이스 Zod SSoT 명세 + config.toml [incoming] 6키 + 지갑별 opt-in 설계
+
+**Stats:**
+
+- 9 phases, 16 plans, 29 requirements, 26 design decisions, 9 gap closure items
+- 101 files changed, +8,058 / -2,158 lines
+- Output: docs/design/76-incoming-transaction-monitoring.md (~2,300 lines, 8 sections)
+- Timeline: 1 day (2026-02-21)
+- Git range: 1618dce → e32e2f0 (40 commits)
+
+---
+
 ## v2.0 전 기능 완성 릴리스 (Shipped: 2026-02-18)
 
 **Delivered:** v0.1~v1.8까지 37개 마일스톤으로 축적된 설계와 구현의 최종 검증, 문서화, 공개 릴리스를 달성. 설계 부채 0건 확인, 테스트 게이트 전수 통과, 영문 사용자 문서 완비, npm 8개 패키지 + Docker 이미지 배포 활성화, v2.0.0-rc.1 pre-release 발행.
@@ -1296,4 +1321,6 @@
 **What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
+
+
 

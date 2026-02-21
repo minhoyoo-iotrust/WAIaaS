@@ -8,18 +8,7 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v27.0 수신 트랜잭션 모니터링 설계
-
-**Goal:** 지갑으로 들어오는 수신 트랜잭션을 실시간 감지·기록·알림하는 인프라를 설계 수준에서 정의
-
-**Target features:**
-- IChainSubscriber 인터페이스 + WebSocket/폴링 전략 설계 (ITM-01)
-- incoming_transactions 테이블 스키마 + 중복 방지 + 보존 정책 설계 (ITM-02)
-- 수신 이력 조회 API (REST/SDK/MCP) 설계 (ITM-03)
-- 수신 이벤트 + 알림 연동 + 의심 입금 감지 규칙 설계 (ITM-04)
-- config.toml [incoming] 섹션 + 지갑별 opt-in 설정 구조 설계 (ITM-05)
-
-**Scope:** 설계 마일스톤 — 코드 구현은 범위 외 (m27-01에서 구현)
+## Current Milestone: (없음 — 다음 마일스톤 미정)
 
 ## Current State
 
@@ -61,6 +50,7 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 - ✅ v2.7 지갑 앱 알림 채널 — shipped 2026-02-20 (4 plans, 16 requirements, ~161,634 LOC TS)
 - ✅ v26.3 Push Relay Server — shipped 2026-02-20 (8 plans, 25 requirements, ~163,416 LOC TS)
 - ✅ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 — shipped 2026-02-21 (15 plans, 30 requirements, ~145,704 LOC TS)
+- ✅ v27.0 수신 트랜잭션 모니터링 설계 — shipped 2026-02-21 (16 plans, 29 requirements, 26 설계 결정, docs 76)
 
 **코드베이스 현황:**
 - 11-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay + waiaas (Python)
@@ -447,6 +437,16 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 - ✓ GET /v1/connect-info 자기 발견 (지갑/정책/capabilities/prompt) + agent-prompt 통합 — v26.4 (DISC-01~04)
 - ✓ SDK/MCP/Admin UI/CLI 멀티 지갑 세션 + connect-info 통합 + 이슈 #119-#120 — v26.4 (INTG-01~10)
 
+- ✓ IChainSubscriber 6-메서드 인터페이스 + IncomingTransaction 타입 + incoming_transactions DDL(v21) 완성 — v27.0 (MON-01, DATA-01~04)
+- ✓ Solana logsSubscribe(mentions) + getTransaction(jsonParsed) SOL/SPL/Token-2022 이중 감지 + ATA 자동 감지 전략 설계 — v27.0 (MON-02, MON-08)
+- ✓ EVM getLogs Transfer + getBlock(includeTransactions) ETH/ERC-20 이중 감지 + token_registry 오탐 방지 전략 설계 — v27.0 (MON-03)
+- ✓ 3-state WebSocket 상태 머신 + SubscriptionMultiplexer 연결 공유 + 블라인드 구간 복구 설계 — v27.0 (MON-04~07, MON-09)
+- ✓ INCOMING_TX_DETECTED/SUSPICIOUS 이벤트 + IIncomingSafetyRule 3규칙 + i18n(en/ko) + 5채널 알림 연동 명세 — v27.0 (EVT-01~05)
+- ✓ REST API(GET /v1/wallet/incoming + /summary) + SDK/MCP 인터페이스 Zod SSoT 명세 — v27.0 (API-01~05)
+- ✓ config.toml [incoming] 6키 + 지갑별 monitor_incoming opt-in + 환경변수 매핑 — v27.0 (CFG-01~03)
+- ✓ 기존 설계 문서 9개 영향 분석 + 17개 검증 시나리오 + 교차 검증 PASS — v27.0 (VER-01~03)
+- ✓ 감사 갭 9건 전량 해결 (IChainSubscriber connect()/waitForDisconnect(), 폴링 BackgroundWorker 등록, is_suspicious 컬럼, eventBus 타입 통일, FLOW-2 E2E, NOTIFY-1 priority 라우팅, getDecimals 헬퍼, doc 31 PATCH, skills/ 업데이트) — v27.0 (Phase 222-223)
+
 ### 활성
 
 (없음 — 다음 마일스톤 미정)
@@ -468,7 +468,7 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 
 ## 컨텍스트
 
-**누적:** 49 milestones (v0.1-v26.3), 209 phases, 447 plans, 1,242 requirements, 39 설계 문서(24-75), 8 objective 문서, ~163,416 LOC TS, 4,396+ 테스트
+**누적:** 51 milestones (v0.1-v27.0), 223 phases, 478 plans, 1,301 requirements, 39 설계 문서(24-76), 8 objective 문서, ~145,704 LOC TS, 4,396+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -506,6 +506,8 @@ v2.6 Wallet SDK 설계 shipped (2026-02-20). 4 페이즈, 7 플랜, 23 요구사
 v2.6.1 WAIaaS Wallet Signing SDK shipped (2026-02-20). 4 페이즈, 13 플랜, 27 요구사항, 206 파일 변경, +16,137/-332 lines, 67 커밋, 43 설계 결정.
 v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 1 페이즈, 4 플랜, 16 요구사항, 34 파일 변경, +3,722/-91 lines, 6 설계 결정.
 v26.3 Push Relay Server shipped (2026-02-20). 3 페이즈, 8 플랜, 25 요구사항, 45 파일 변경, +2,589/-26 lines, 6 설계 결정. @waiaas/push-relay 신규 패키지.
+v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 5 페이즈, 15 플랜, 30 요구사항, ~145,704 LOC TS, 4,396+ 테스트, 5 설계 결정.
+v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈, 16 플랜, 29 요구사항, 101 파일 변경, +8,058/-2,158 lines, 26 설계 결정. 설계 문서 76(~2,300줄, 8섹션).
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -522,7 +524,7 @@ v26.3 Push Relay Server shipped (2026-02-20). 3 페이즈, 8 플랜, 25 요구�
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
 - 미구현: Jupiter Swap, Tauri
 
-**설계 문서:** 39개 (deliverables 24-75.md) + 대응표/테스트 전략/objective
+**설계 문서:** 40개 (deliverables 24-76.md) + 대응표/테스트 전략/objective
 
 ### 알려진 이슈
 
@@ -821,10 +823,26 @@ v26.3 Push Relay Server shipped (2026-02-20). 3 페이즈, 8 플랜, 25 요구�
 | connect-info sessionAuth 전용 (마스터 패스워드 불필요) | 에이전트 자율 발견, 보안 경계 유지 | ✓ Good — v26.4 구현 |
 | MCP 단일 인스턴스 (지갑별 인스턴스 제거) | connect-info로 발견, MCP config 단순화 | ✓ Good — v26.4 구현 |
 | workflow_dispatch RC 승격 자동화 | 로컬 수동 편집 제거, 모노레포 전 패키지 일괄 처리 | ✓ Good — v26.4 구현 |
+| IChainSubscriber를 IChainAdapter와 별도 인터페이스 | 구독(수신 감지)과 어댑터(발신 TX) 책임 분리 | ✓ Good — v27.0 설계 |
+| UNIQUE(tx_hash, wallet_id) 복합 제약 | 동일 TX 다른 지갑 허용, 같은 지갑 중복 차단 | ✓ Good — v27.0 설계 |
+| 2단계 상태 DETECTED/CONFIRMED | finality 수준 추적, 거래소급 안전성 | ✓ Good — v27.0 설계 |
+| 메모리 큐 + 5초 flush (SQLite 보호) | 단일 라이터 병목 해소, 배치 INSERT | ✓ Good — v27.0 설계 |
+| Solana logsSubscribe({ mentions }) 단일 구독 | SOL+SPL+Token-2022 통합 감지, mentions로 ATA 자동 포함 | ✓ Good — v27.0 설계 |
+| EVM 폴링(getLogs) 우선 | WebSocket 불안정 EVM RPC 대응, 폴백 아닌 주방식 | ✓ Good — v27.0 설계 |
+| 3-state 연결 상태 머신 (WS_ACTIVE/POLLING_FALLBACK/RECONNECTING) | 명확한 전환 조건, 복구 자동화 | ✓ Good — v27.0 설계 |
+| 체인별 WebSocket 공유 멀티플렉서 | 같은 체인 N개 지갑이 1개 연결 공유 | ✓ Good — v27.0 설계 |
+| config.toml [incoming] 6키 flat | 기존 flat-key 패턴 일관성, hot-reload 가능 | ✓ Good — v27.0 설계 |
+| 전역 게이트 + 지갑별 opt-in 2단계 | 글로벌 enabled → 지갑별 monitor_incoming | ✓ Good — v27.0 설계 |
+| IChainSubscriber connect()/waitForDisconnect() 필수 | reconnectLoop에서 호출 가능, 인터페이스 완전성 | ✓ Good — v27.0 갭 해결 |
+| flush() 반환 IncomingTransaction[] + 개별/집계 이벤트 분리 | eventBus 타입 안전성, 개별 TX 이벤트 + 집계 카운트 분리 | ✓ Good — v27.0 갭 해결 |
+| is_suspicious 컬럼 (별도 테이블 아님) | incoming_transactions 단일 테이블, JOIN 불필요, Summary SQL 정합 | ✓ Good — v27.0 갭 해결 |
+| 폴링 BackgroundWorker Step 6 등록 | incoming-tx-poll-solana/evm 2개, DaemonLifecycle 완전 통합 | ✓ Good — v27.0 갭 해결 |
+| SUSPICIOUS priority:high 채널 내부 eventType 매핑 | NotificationPayload 변경 없이 priority 라우팅 | ✓ Good — v27.0 갭 해결 |
+| SafetyRuleContext.decimals + getDecimals() 헬퍼 | IncomingTransaction 타입 변경 없이 decimals 전달 | ✓ Good — v27.0 갭 해결 |
 
-## Shipped: v26.4 멀티 지갑 세션 + 에이전트 자기 발견
+## Shipped: v27.0 수신 트랜잭션 모니터링 설계
 
-v26.4 shipped. 1:N 세션 모델(session_wallets junction, DB v19), resolveWalletId 3단계 우선순위, GET /v1/connect-info 자기 발견(capabilities 동적 결정, 자연어 프롬프트), SDK/MCP/Admin UI/CLI 전면 통합. promote-release.yml/restore-prerelease.yml workflow_dispatch RC 승격 자동화. 이슈 #119(wallet-sdk 가이드 Push Relay 시나리오) + #120(릴리스 승격 자동화) 수정.
+v27.0 shipped. IChainSubscriber 6-메서드 인터페이스 + incoming_transactions DB 스키마(v21), Solana logsSubscribe(mentions) + EVM getLogs/watchBlocks 이중 감지 전략, 3-state WebSocket 상태 머신 + 멀티플렉서 + 블라인드 구간 복구, INCOMING_TX_DETECTED/SUSPICIOUS 이벤트 + IIncomingSafetyRule 3규칙, REST API/SDK/MCP Zod SSoT 명세, config.toml [incoming] 6키 설정, 감사 갭 9건 전량 해결. 설계 문서 76(~2,300줄, 8섹션) 완성.
 
 ---
-*최종 업데이트: 2026-02-21 after v26.4 milestone complete*
+*최종 업데이트: 2026-02-21 after v27.0 milestone complete*
