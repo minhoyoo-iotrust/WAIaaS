@@ -5,7 +5,3 @@
  */
 
 export { IncomingTxQueue } from './incoming-tx-queue.js';
-export {
-  SubscriptionMultiplexer,
-  type MultiplexerDeps,
-} from './subscription-multiplexer.js';
