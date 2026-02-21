@@ -266,11 +266,11 @@ Plans:
   3. 50-블록 갭을 시뮬레이션하면 gap recovery가 누락된 모든 트랜잭션을 복구한다
   4. KillSwitch를 SUSPENDED로 설정하고 TX를 flush하면 DB에는 기록되지만 EventBus 이벤트는 발생하지 않는다 (M-03 검증)
   5. 50개 더스트 TX를 연속 전송해도 알림이 5개 이하로 제한된다 (M-07 검증)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 229-01: 핵심 피트폴 E2E 테스트 (C-01, C-02, C-04, C-05, C-06)
-- [ ] 229-02: 보안 + 복원력 E2E 테스트 (gap recovery, KillSwitch, 알림 쿨다운)
+- [ ] 229-01-PLAN.md -- Core pitfall integration tests (C-01 listener leak, C-02 SQLite contention, C-04 duplicate events, C-05 shutdown data loss, C-06 EVM reorg)
+- [ ] 229-02-PLAN.md -- Security + resilience integration tests (gap recovery, KillSwitch M-03, notification cooldown M-07)
 
 ## Progress
 
