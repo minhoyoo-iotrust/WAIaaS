@@ -11,6 +11,8 @@ from waiaas.models import (
     ConnectInfo,
     EncodeCalldataRequest,
     EncodeCalldataResponse,
+    IncomingTransactionList,
+    IncomingTransactionSummary,
     MultiNetworkAssetsResponse,
     MultiNetworkBalanceResponse,
     PendingTransactionList,
@@ -287,6 +289,96 @@ class WAIaaSClient:
         """GET /v1/transactions/pending -- List pending transactions."""
         resp = await self._request("GET", "/v1/transactions/pending")
         return PendingTransactionList.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # Incoming Transaction API
+    # -----------------------------------------------------------------
+
+    async def list_incoming_transactions(
+        self,
+        *,
+        limit: int = 20,
+        cursor: Optional[str] = None,
+        chain: Optional[str] = None,
+        network: Optional[str] = None,
+        status: Optional[str] = None,
+        token: Optional[str] = None,
+        from_address: Optional[str] = None,
+        since: Optional[int] = None,
+        until: Optional[int] = None,
+        wallet_id: Optional[str] = None,
+    ) -> IncomingTransactionList:
+        """GET /v1/wallet/incoming -- List incoming transactions.
+
+        Args:
+            limit: Max transactions to return (1-100, default 20).
+            cursor: Pagination cursor from previous response.
+            chain: Filter by chain ('solana' or 'ethereum').
+            network: Filter by network.
+            status: Filter by status ('DETECTED' or 'CONFIRMED').
+            token: Filter by token address.
+            from_address: Filter by sender address.
+            since: Filter transactions detected after this epoch (seconds).
+            until: Filter transactions detected before this epoch (seconds).
+            wallet_id: Target wallet ID (multi-wallet sessions).
+        """
+        params: dict[str, Any] = {"limit": limit}
+        if cursor is not None:
+            params["cursor"] = cursor
+        if chain is not None:
+            params["chain"] = chain
+        if network is not None:
+            params["network"] = network
+        if status is not None:
+            params["status"] = status
+        if token is not None:
+            params["token"] = token
+        if from_address is not None:
+            params["from_address"] = from_address
+        if since is not None:
+            params["since"] = since
+        if until is not None:
+            params["until"] = until
+        if wallet_id is not None:
+            params["wallet_id"] = wallet_id
+        resp = await self._request("GET", "/v1/wallet/incoming", params=params)
+        return IncomingTransactionList.model_validate(resp.json())
+
+    async def get_incoming_transaction_summary(
+        self,
+        *,
+        period: str = "daily",
+        chain: Optional[str] = None,
+        network: Optional[str] = None,
+        since: Optional[int] = None,
+        until: Optional[int] = None,
+        wallet_id: Optional[str] = None,
+    ) -> IncomingTransactionSummary:
+        """GET /v1/wallet/incoming/summary -- Get incoming transaction summary.
+
+        Args:
+            period: Aggregation period ('daily', 'weekly', or 'monthly'). Default: 'daily'.
+            chain: Filter by chain.
+            network: Filter by network.
+            since: Filter start epoch (seconds).
+            until: Filter end epoch (seconds).
+            wallet_id: Target wallet ID (multi-wallet sessions).
+        """
+        params: dict[str, Any] = {"period": period}
+        if chain is not None:
+            params["chain"] = chain
+        if network is not None:
+            params["network"] = network
+        if since is not None:
+            params["since"] = since
+        if until is not None:
+            params["until"] = until
+        if wallet_id is not None:
+            params["wallet_id"] = wallet_id
+        resp = await self._request(
+            "GET", "/v1/wallet/incoming/summary", params=params
+        )
+        return IncomingTransactionSummary.model_validate(resp.json())
 
     # -----------------------------------------------------------------
     # Session API
