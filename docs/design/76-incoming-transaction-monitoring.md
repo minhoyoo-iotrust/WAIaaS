@@ -120,6 +120,19 @@ export interface IChainSubscriber {
   subscribedWallets(): string[];
 
   /**
+   * WebSocket 연결 시작. 폴링 전용 구현체는 즉시 resolve (no-op).
+   * reconnectLoop(§5.2)에서 호출.
+   */
+  connect(): Promise<void>;
+
+  /**
+   * WebSocket 연결 끊김 대기. 연결 중단 시 resolve.
+   * 폴링 전용 구현체는 never-resolving Promise 반환.
+   * reconnectLoop(§5.2)에서 호출.
+   */
+  waitForDisconnect(): Promise<void>;
+
+  /**
    * 모든 구독 해제 + WebSocket/폴링 연결 정리.
    * DaemonLifecycle shutdown 시 호출.
    */
@@ -682,6 +695,20 @@ export class SolanaIncomingSubscriber implements IChainSubscriber {
     return Array.from(this.subscriptions.keys());
   }
 
+  async connect(): Promise<void> {
+    // WebSocket 연결 시작: wsUrl에 연결 후 구독 중인 모든 지갑에 대해
+    // logsSubscribe({ mentions }) 재등록
+    // 실패 시 throw → reconnectLoop가 catch하여 재시도
+  }
+
+  async waitForDisconnect(): Promise<void> {
+    // WebSocket 연결 종료 시 resolve하는 Promise 반환
+    // AbortController.signal 또는 WebSocket 'close' 이벤트로 감지
+    return new Promise((resolve) => {
+      this.ws?.addEventListener('close', () => resolve(), { once: true });
+    });
+  }
+
   async destroy(): Promise<void> {
     for (const [walletId] of this.subscriptions) {
       await this.unsubscribe(walletId);
@@ -970,6 +997,19 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
 
   subscribedWallets(): string[] {
     return Array.from(this.subscriptions.keys());
+  }
+
+  /** 폴링 전용: no-op (즉시 resolve) */
+  async connect(): Promise<void> {
+    // EVM은 폴링 우선(D-06) — WebSocket 연결 불필요
+  }
+
+  /** 폴링 전용: never-resolving Promise (폴링 모드에서 reconnectLoop 블록 방지) */
+  async waitForDisconnect(): Promise<void> {
+    // 영원히 resolve하지 않음 — reconnectLoop가 EVM에 대해서는
+    // connect() 즉시 성공 → waitForDisconnect()에서 무한 대기
+    // → WebSocket 실패/폴링 전환이 필요 없는 구조
+    return new Promise(() => {});
   }
 
   async destroy(): Promise<void> {
