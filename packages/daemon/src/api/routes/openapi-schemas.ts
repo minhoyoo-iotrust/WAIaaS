@@ -596,6 +596,15 @@ export const AgentPromptResponseSchema = z
   })
   .openapi('AgentPromptResponse');
 
+export const SessionReissueResponseSchema = z
+  .object({
+    token: z.string(),
+    sessionId: z.string().uuid(),
+    tokenIssuedCount: z.number().int(),
+    expiresAt: z.number().int(),
+  })
+  .openapi('SessionReissueResponse');
+
 export const KillSwitchResponseSchema = z
   .object({
     state: z.string(),

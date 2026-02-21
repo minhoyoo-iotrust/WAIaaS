@@ -72,6 +72,7 @@ import {
   OracleStatusResponseSchema,
   AgentPromptRequestSchema,
   AgentPromptResponseSchema,
+  SessionReissueResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -2105,6 +2106,86 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       },
       201,
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/sessions/:id/reissue — Reissue session token
+  // ---------------------------------------------------------------------------
+
+  const sessionReissueRoute = createRoute({
+    method: 'post',
+    path: '/admin/sessions/{id}/reissue',
+    tags: ['Admin'],
+    summary: 'Reissue session token (re-sign JWT for existing session)',
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: 'Token reissued',
+        content: { 'application/json': { schema: SessionReissueResponseSchema } },
+      },
+      ...buildErrorResponses(['SESSION_NOT_FOUND', 'SESSION_REVOKED']),
+    },
+  });
+
+  router.openapi(sessionReissueRoute, async (c) => {
+    if (!deps.jwtSecretManager) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', { message: 'JWT signing not available' });
+    }
+
+    const { id: sessionId } = c.req.valid('param');
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // Find session
+    const session = deps.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .get();
+
+    if (!session) {
+      throw new WAIaaSError('SESSION_NOT_FOUND');
+    }
+
+    if (session.revokedAt) {
+      throw new WAIaaSError('SESSION_REVOKED');
+    }
+
+    const expiresAtSec = session.expiresAt instanceof Date
+      ? Math.floor(session.expiresAt.getTime() / 1000)
+      : (session.expiresAt as number);
+
+    if (expiresAtSec <= nowSec) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', { message: 'Session expired' });
+    }
+
+    // Get default wallet for JWT
+    const defaultSw = deps.db
+      .select({ walletId: sessionWallets.walletId })
+      .from(sessionWallets)
+      .where(and(eq(sessionWallets.sessionId, sessionId), eq(sessionWallets.isDefault, true)))
+      .get();
+
+    const defaultWalletId = defaultSw?.walletId ?? '';
+
+    // Re-sign JWT
+    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWalletId, iat: nowSec, exp: expiresAtSec };
+    const token = await deps.jwtSecretManager.signToken(jwtPayload);
+
+    // Increment token_issued_count
+    const newCount = (session.tokenIssuedCount ?? 1) + 1;
+    deps.db.update(sessions)
+      .set({ tokenIssuedCount: newCount })
+      .where(eq(sessions.id, sessionId))
+      .run();
+
+    return c.json({
+      token,
+      sessionId,
+      tokenIssuedCount: newCount,
+      expiresAt: expiresAtSec,
+    }, 200);
   });
 
   return router;

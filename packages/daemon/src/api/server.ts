@@ -236,6 +236,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/tokens', masterAuthForAdmin);
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
     app.use('/v1/admin/wallets/*', masterAuthForAdmin);
+    app.use('/v1/admin/sessions/*', masterAuthForAdmin);
     app.use('/v1/admin/telegram-users', masterAuthForAdmin);
     app.use('/v1/admin/telegram-users/*', masterAuthForAdmin);
   }

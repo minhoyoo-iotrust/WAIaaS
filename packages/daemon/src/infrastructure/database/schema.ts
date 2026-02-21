@@ -110,6 +110,7 @@ export const sessions = sqliteTable(
     absoluteExpiresAt: integer('absolute_expires_at', { mode: 'timestamp' }).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     source: text('source').notNull().default('api'),
+    tokenIssuedCount: integer('token_issued_count').notNull().default(1),
   },
   (table) => [
     index('idx_sessions_expires_at').on(table.expiresAt),

@@ -629,3 +629,99 @@ describe('POST /v1/admin/agent-prompt', () => {
     expect(caps).toContain('balance');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tests: POST /v1/admin/sessions/:id/reissue
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/admin/sessions/:id/reissue', () => {
+  it('reissues token for active session', async () => {
+    // Create session via agent-prompt
+    const promptRes = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA] }),
+    });
+    expect(promptRes.status).toBe(201);
+    const promptBody = await json(promptRes);
+    const prompt = promptBody.prompt as string;
+    const sessionIdMatch = prompt.match(/Session ID: (\S+)/);
+    expect(sessionIdMatch).toBeTruthy();
+    const sid = sessionIdMatch![1]!;
+
+    // Reissue
+    const reissueRes = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect(reissueRes.status).toBe(200);
+
+    const reissueBody = await json(reissueRes);
+    expect(reissueBody.sessionId).toBe(sid);
+    expect(reissueBody.tokenIssuedCount).toBe(2);
+    expect(typeof reissueBody.token).toBe('string');
+    expect((reissueBody.token as string).startsWith('wai_sess_')).toBe(true);
+
+    // Reissued token should work
+    const balanceRes = await app.request('/v1/connect-info', {
+      headers: bearerHeader(reissueBody.token as string),
+    });
+    expect(balanceRes.status).toBe(200);
+  });
+
+  it('increments tokenIssuedCount on each reissue', async () => {
+    const promptRes = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA] }),
+    });
+    const promptBody = await json(promptRes);
+    const sid = (promptBody.prompt as string).match(/Session ID: (\S+)/)![1]!;
+
+    // First reissue: count becomes 2
+    const r1 = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect((await json(r1)).tokenIssuedCount).toBe(2);
+
+    // Second reissue: count becomes 3
+    const r2 = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect((await json(r2)).tokenIssuedCount).toBe(3);
+  });
+
+  it('rejects reissue for non-existent session', async () => {
+    const res = await app.request('/v1/admin/sessions/00000000-0000-0000-0000-000000000000/reissue', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects reissue for revoked session', async () => {
+    // Create session
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: walletA }),
+    });
+    const createBody = await json(createRes);
+    const sid = createBody.id as string;
+
+    // Revoke it
+    await app.request(`/v1/sessions/${sid}`, {
+      method: 'DELETE',
+      headers: masterAuthJsonHeaders(),
+    });
+
+    // Attempt reissue — SESSION_REVOKED returns 401
+    const res = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect(res.status).toBe(401);
+  });
+});
