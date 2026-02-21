@@ -151,6 +151,8 @@
 | 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.0 | OPEN | |
 | 135 | ENHANCEMENT | MEDIUM | 알림 메시지에서 walletId 대신 walletName 주 표시 + 부가 정보 축약 | v27.0 | OPEN | |
 | 136 | BUG | HIGH | 루트 skills/와 packages/skills/skills/ 내용 불일치로 npm에 오래된 스킬 배포 | v27.0 | OPEN | |
+| 137 | BUG | MEDIUM | 알림 메시지 제목 중복 표시 — 4개 채널 모두 title이 2번 출력 | v27.1 | OPEN | |
+| 138 | BUG | LOW | 시스템 이벤트 알림에 불필요한 Wallet/타임스탬프 표시 — UPDATE_AVAILABLE 등 | v27.1 | OPEN | |
 
 ## Type Legend
 
@@ -162,9 +164,9 @@
 
 ## Summary
 
-- **OPEN:** 6
+- **OPEN:** 8
 - **FIXED:** 130
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 136
+- **Total:** 138
