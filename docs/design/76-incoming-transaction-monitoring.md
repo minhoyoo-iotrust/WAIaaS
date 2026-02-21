@@ -1721,8 +1721,40 @@ export interface SafetyRuleContext {
   usdPrice: number | null;
   /** 최근 30일 평균 수신 금액 (USD, null = 이력 없음) */
   avgIncomingUsd: number | null;
+  /** 토큰 소수점 자릿수 (네이티브: SOL=9, ETH=18 / 토큰: token_registry 조회) */
+  decimals: number;
 }
 ```
+
+#### getDecimals() 헬퍼 함수
+
+IncomingTxMonitorService가 SafetyRuleContext.decimals를 구성할 때 사용하는 유틸리티 함수. 네이티브 토큰은 체인별 상수, 토큰은 token_registry 조회로 decimals를 결정한다.
+
+```typescript
+// packages/daemon/src/services/incoming/utils.ts
+
+const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
+
+/**
+ * IncomingTransaction의 chain + tokenAddress로 decimals를 결정.
+ * - 네이티브 토큰 (tokenAddress === null): 체인별 상수 (SOL=9, ETH=18)
+ * - 토큰 (tokenAddress !== null): token_registry에서 조회 (실패 시 fallback 18)
+ * IncomingTxMonitorService가 SafetyRuleContext.decimals 구성 시 사용.
+ */
+export function getDecimals(
+  chain: string,
+  tokenAddress: string | null,
+  tokenRegistryLookup?: (address: string) => number | null,
+): number {
+  if (tokenAddress === null) return NATIVE_DECIMALS[chain] ?? 18;
+  return tokenRegistryLookup?.(tokenAddress) ?? 18;
+}
+```
+
+**설계 근거:**
+- `NATIVE_DECIMALS` 맵은 기존 `resolve-effective-amount-usd.ts`의 패턴과 동일
+- fallback 18: EVM 표준 decimals. Solana SPL 미등록 토큰은 UnknownTokenRule에 먼저 걸리므로 decimals 정확도 무관
+- `tokenRegistryLookup` 콜백: DI 패턴으로 DB 의존성을 분리. IncomingTxMonitorService가 token_registry 조회 함수를 주입
 
 ### 6.6 감지 규칙 3종
 
@@ -1734,7 +1766,7 @@ class DustAttackRule implements IIncomingSafetyRule {
 
   check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
     if (ctx.usdPrice === null) return false; // 가격 불명 시 판단 불가
-    const amountUsd = Number(tx.amount) * ctx.usdPrice / Math.pow(10, getDecimals(tx));
+    const amountUsd = Number(tx.amount) * ctx.usdPrice / Math.pow(10, ctx.decimals);
     return amountUsd < ctx.dustThresholdUsd; // 기본 $0.01
   }
 }
@@ -1763,7 +1795,7 @@ class LargeAmountRule implements IIncomingSafetyRule {
 
   check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
     if (ctx.avgIncomingUsd === null || ctx.usdPrice === null) return false;
-    const amountUsd = Number(tx.amount) * ctx.usdPrice / Math.pow(10, getDecimals(tx));
+    const amountUsd = Number(tx.amount) * ctx.usdPrice / Math.pow(10, ctx.decimals);
     return amountUsd > ctx.avgIncomingUsd * ctx.amountMultiplier; // 기본 10x
   }
 }
