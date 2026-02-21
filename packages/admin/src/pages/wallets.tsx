@@ -45,6 +45,8 @@ interface WalletDetail extends Wallet {
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
   approvalMethod: string | null;
+  suspendedAt: number | null;
+  suspensionReason: string | null;
   updatedAt: number | null;
 }
 
@@ -155,7 +157,7 @@ const walletColumns: Column<Wallet>[] = [
     key: 'status',
     header: 'Status',
     render: (a) => (
-      <Badge variant={a.status === 'ACTIVE' ? 'success' : 'danger'}>{a.status}</Badge>
+      <Badge variant={a.status === 'ACTIVE' ? 'success' : a.status === 'SUSPENDED' ? 'warning' : 'danger'}>{a.status}</Badge>
     ),
   },
   {
@@ -285,6 +287,10 @@ function WalletDetailView({ id }: { id: string }) {
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
   const approvalSettings = useSignal<ApprovalSettingsInfo | null>(null);
+  const suspendModal = useSignal(false);
+  const suspendLoading = useSignal(false);
+  const suspendReason = useSignal('');
+  const resumeLoading = useSignal(false);
   const fetchWallet = async () => {
     try {
       const result = await apiGet<WalletDetail>(API.WALLET(id));
@@ -323,6 +329,38 @@ function WalletDetailView({ id }: { id: string }) {
       showToast('error', getErrorMessage(e.code));
     } finally {
       deleteLoading.value = false;
+    }
+  };
+
+  const handleSuspend = async () => {
+    suspendLoading.value = true;
+    try {
+      await apiPost(API.WALLET_SUSPEND(id), {
+        reason: suspendReason.value.trim() || undefined,
+      });
+      showToast('success', 'Wallet suspended');
+      suspendModal.value = false;
+      suspendReason.value = '';
+      await fetchWallet();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      suspendLoading.value = false;
+    }
+  };
+
+  const handleResume = async () => {
+    resumeLoading.value = true;
+    try {
+      await apiPost(API.WALLET_RESUME(id));
+      showToast('success', 'Wallet resumed');
+      await fetchWallet();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      resumeLoading.value = false;
     }
   };
 
@@ -582,9 +620,21 @@ function WalletDetailView({ id }: { id: string }) {
               )}
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
-                Terminate Wallet
-              </Button>
+              {wallet.value.status === 'ACTIVE' && (
+                <Button variant="secondary" onClick={() => { suspendModal.value = true; }}>
+                  Suspend Wallet
+                </Button>
+              )}
+              {wallet.value.status === 'SUSPENDED' && (
+                <Button variant="primary" onClick={handleResume} loading={resumeLoading.value}>
+                  Resume Wallet
+                </Button>
+              )}
+              {wallet.value.status !== 'TERMINATED' && (
+                <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
+                  Terminate Wallet
+                </Button>
+              )}
             </div>
           </div>
 
@@ -599,10 +649,16 @@ function WalletDetailView({ id }: { id: string }) {
             </DetailRow>
             <DetailRow label="Default Network" value={wallet.value.defaultNetwork ?? wallet.value.network} />
             <DetailRow label="Status">
-              <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : 'danger'}>
+              <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : wallet.value.status === 'SUSPENDED' ? 'warning' : 'danger'}>
                 {wallet.value.status}
               </Badge>
             </DetailRow>
+            {wallet.value.status === 'SUSPENDED' && (
+              <>
+                <DetailRow label="Suspended At" value={wallet.value.suspendedAt ? formatDate(wallet.value.suspendedAt) : '--'} />
+                <DetailRow label="Suspension Reason" value={wallet.value.suspensionReason ?? '--'} />
+              </>
+            )}
             <DetailRow label="Created" value={formatDate(wallet.value.createdAt)} />
             <DetailRow
               label="Updated"
@@ -983,6 +1039,28 @@ function WalletDetailView({ id }: { id: string }) {
                 </p>
               </div>
             )}
+          </Modal>
+
+          <Modal
+            open={suspendModal.value}
+            title="Suspend Wallet"
+            onCancel={() => { suspendModal.value = false; suspendReason.value = ''; }}
+            onConfirm={handleSuspend}
+            confirmText="Suspend"
+            confirmVariant="danger"
+            loading={suspendLoading.value}
+          >
+            <p style={{ marginBottom: 'var(--space-3)' }}>
+              Are you sure you want to suspend wallet <strong>{wallet.value.name}</strong>?
+              Suspended wallets cannot process transactions until resumed.
+            </p>
+            <FormField
+              label="Reason (optional)"
+              name="suspend-reason"
+              value={suspendReason.value}
+              onChange={(v) => { suspendReason.value = v as string; }}
+              placeholder="e.g. suspicious activity"
+            />
           </Modal>
         </div>
       ) : (

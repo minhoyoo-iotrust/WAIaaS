@@ -474,6 +474,8 @@ export const WalletDetailResponseSchema = z
     ownerVerified: z.boolean().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     approvalMethod: z.string().nullable().optional(),
+    suspendedAt: z.number().int().nullable().optional(),
+    suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),
     updatedAt: z.number().int().nullable(),
   })
@@ -543,6 +545,28 @@ export const WalletDeleteResponseSchema = z
     status: z.literal('TERMINATED'),
   })
   .openapi('WalletDeleteResponse');
+
+export const WalletSuspendRequestSchema = z
+  .object({
+    reason: z.string().max(200).optional(),
+  })
+  .openapi('WalletSuspendRequest');
+
+export const WalletSuspendResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.literal('SUSPENDED'),
+    suspendedAt: z.number().int(),
+    suspensionReason: z.string(),
+  })
+  .openapi('WalletSuspendResponse');
+
+export const WalletResumeResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.literal('ACTIVE'),
+  })
+  .openapi('WalletResumeResponse');
 
 // ---------------------------------------------------------------------------
 // Admin Response Schemas (6 admin endpoints)
