@@ -10,21 +10,21 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 223 (9 of 9 in v27.0) — 설계 문서 Medium/Low 불일치 수정
-Plan: 2 of 2 in current phase
-Status: Plan 223-02 complete — doc 31 PATCH 영향 분석 + skills/ 업데이트 요구사항 추가.
-Last activity: 2026-02-21 — Plan 223-02 complete
+Plan: 2 of 2 in current phase (all complete)
+Status: Phase 223 complete — NOTIFY-1 + getDecimals + doc 31 PATCH + skills/ 총 4건 해결. v27.0 설계 마일스톤 완료.
+Last activity: 2026-02-21 — Plan 223-01 complete (getDecimals/SafetyRuleContext.decimals)
 
-Progress: [████████░░] 89% (8/9 phases)
+Progress: [██████████] 100% (9/9 phases)
 
 ## Performance Metrics
 
 **Cumulative:** 50 milestones, 214 phases, 462 plans, 1,272 reqs, 4,396+ tests, ~145,704 LOC TS
 
 **v27.0 (in progress):**
-- Phases: 9 (215-223) — 7 done, 2 gap closure pending
-- Plans: 17 total (16 done + 1 pending)
+- Phases: 9 (215-223) — 9 done
+- Plans: 17 total (17 done)
 - Requirements: 29 — all done
-- Gap closure: 9 items (4 critical/high done + 5 medium/low pending)
+- Gap closure: 9 items (9/9 done — 4 critical/high + 5 medium/low)
 - Design decisions: 17 (D-01 ~ D-17) + 6 gap decisions
 - Output: docs/design/76-incoming-transaction-monitoring.md (8 sections, ~2,300 lines)
 
@@ -56,6 +56,8 @@ Progress: [████████░░] 89% (8/9 phases)
 22. FLOW-2 해결: WS 실패 → 폴링 활성화 → TX 감지 → DB 기록 → WS 복구 5단계 E2E 완성
 23. pollAll()은 IChainSubscriber 인터페이스에 미추가 (구현체 전용 메서드)
 24. skills/ 파일은 설계 시점에 수정하지 않고 구현 마일스톤에서 업데이트할 범위만 명세 (§8.11)
+25. NOTIFY-1 해결: 채널 내부 eventType 매핑으로 SUSPICIOUS priority:high 라우팅 (NotificationPayload 변경 없음)
+26. getDecimals 해결: SafetyRuleContext.decimals + getDecimals() 헬퍼 (IncomingTransaction 타입/DDL 변경 없음)
 
 ### Blockers/Concerns
 
@@ -64,5 +66,5 @@ Progress: [████████░░] 89% (8/9 phases)
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 223-02-PLAN.md (doc 31 PATCH impact analysis + skills/ update requirements)
+Stopped at: Completed 223-01-PLAN.md (NOTIFY-1 + getDecimals resolved — Phase 223 complete, v27.0 milestone complete)
 Resume file: None
