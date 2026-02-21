@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 225 (2 of 6 in v27.1) (Chain Subscriber Implementations)
-Plan: 3 of 3 in current phase
+Plan: 3 of 3 in current phase (all complete)
 Status: In Progress
-Last activity: 2026-02-22 -- Completed 225-03 (ConnectionState 3-state machine + reconnectLoop)
+Last activity: 2026-02-22 -- Completed 225-02 (EvmIncomingSubscriber ERC-20 + native ETH detection)
 
 Progress: [#####___________] 31% (5/16 plans)
 
@@ -39,6 +39,11 @@ From 224-02:
 - v21 migration은 CREATE TABLE IF NOT EXISTS 사용 (pushSchema DDL 실행 순서와 호환)
 - New table migrations use IF NOT EXISTS pattern (기존 v4, v5, v15, v16과 일관)
 
+From 225-02:
+- EVM polling-first strategy: connect() no-op, waitForDisconnect() never-resolving Promise (D-06)
+- 10-block cap per poll cycle (MAX_BLOCK_RANGE = 10n) prevents RPC provider limits
+- Per-wallet error isolation in pollAll() -- console.warn on failure, continue other wallets
+
 From 225-03:
 - Duck-typed subscriber parameter (connect/waitForDisconnect) avoids circular dependency with IChainSubscriber
 - 100ms floor clamp on calculateDelay prevents zero/negative delays from rounding
@@ -50,5 +55,5 @@ From 225-03:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 225-03-PLAN.md
+Stopped at: Completed 225-02-PLAN.md (all Phase 225 plans complete)
 Resume file: None
