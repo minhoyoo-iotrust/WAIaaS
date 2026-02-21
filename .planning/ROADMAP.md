@@ -295,6 +295,6 @@ Note: Phase 227 depends only on Phase 224 and can logically run in parallel with
 | 224. Core Types + DB | 2/2 | Complete    | 2026-02-21 | - |
 | 225. Chain Subscribers | 3/3 | Complete    | 2026-02-21 | - |
 | 226. Monitor Service | 4/4 | Complete   | 2026-02-21 | - |
-| 227. Config + Notifications | v27.1 | 0/2 | Not started | - |
+| 227. Config + Notifications | v27.1 | 1/2 | In progress | - |
 | 228. REST API + SDK + MCP | v27.1 | 0/3 | Not started | - |
 | 229. Integration Testing | v27.1 | 0/2 | Not started | - |

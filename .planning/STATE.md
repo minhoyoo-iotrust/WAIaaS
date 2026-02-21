@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 227 (4 of 6 in v27.1) (Config + Settings + Notifications)
-Plan: 0 of 2 in current phase
-Status: Planning
-Last activity: 2026-02-22 -- Completed Phase 226 (Monitor Service + Resilience, 106 tests)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-22 -- Completed 227-01 (config.toml [incoming] section + tests)
 
-Progress: [#########_______] 56% (9/16 plans)
+Progress: [##########______] 63% (10/16 plans)
 
 ## Performance Metrics
 
@@ -73,6 +73,10 @@ From 226-04:
 - Duck-typed incomingTxMonitorService in HotReloadDeps to avoid circular imports
 - 7 incoming.* setting keys registered for SettingsService/Admin UI
 
+From 227-01:
+- No `mode` config key: setting-keys.ts uses cooldown_minutes; subscriber auto-detects WS vs polling
+- Config section + KNOWN_SECTIONS + setting-keys.ts triple SSoT consistency verified by cross-tests
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -80,5 +84,5 @@ From 226-04:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 226 complete, moving to Phase 227 planning
+Stopped at: Completed 227-01-PLAN.md
 Resume file: None

@@ -46,11 +46,11 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 
 ### Configuration
 
-- [ ] **CFG-01**: config.toml [incoming] section with 7 keys (enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier, wss_url)
-- [ ] **CFG-02**: SettingsService registers 'incoming' category with 7 setting keys supporting hot-reload
-- [ ] **CFG-03**: HotReloadOrchestrator handles incoming.* key changes by restarting monitor with new settings
+- [x] **CFG-01**: config.toml [incoming] section with 7 keys (enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier, wss_url)
+- [x] **CFG-02**: SettingsService registers 'incoming' category with 7 setting keys supporting hot-reload
+- [x] **CFG-03**: HotReloadOrchestrator handles incoming.* key changes by restarting monitor with new settings
 - [x] **CFG-04**: DaemonLifecycle Step 4c-9 initializes IncomingTxMonitorService with fail-soft pattern and proper shutdown hook
-- [ ] **CFG-05**: Environment variable mapping follows WAIAAS_INCOMING_* pattern for all 7 config keys
+- [x] **CFG-05**: Environment variable mapping follows WAIAAS_INCOMING_* pattern for all 7 config keys
 
 ## v2 Requirements
 
@@ -109,11 +109,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EVT-04 | Phase 226 | Complete |
 | EVT-05 | Phase 226 | Complete |
 | EVT-06 | Phase 227 | Pending |
-| CFG-01 | Phase 227 | Pending |
-| CFG-02 | Phase 227 | Pending |
-| CFG-03 | Phase 227 | Pending |
+| CFG-01 | Phase 227 | Complete |
+| CFG-02 | Phase 227 | Complete |
+| CFG-03 | Phase 227 | Complete |
 | CFG-04 | Phase 226 | Complete |
-| CFG-05 | Phase 227 | Pending |
+| CFG-05 | Phase 227 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
