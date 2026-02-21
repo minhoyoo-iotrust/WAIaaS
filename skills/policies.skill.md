@@ -3,7 +3,7 @@ name: "WAIaaS Policies"
 description: "Policy engine CRUD: 12 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
-version: "2.4.0-rc.7"
+version: "2.5.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

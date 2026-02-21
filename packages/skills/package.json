@@ -24,7 +24,7 @@
     "skills"
   ],
   "scripts": {
-    "prebuild": "node scripts/sync-version.mjs",
+    "prebuild": "node scripts/sync-skills.mjs",
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist"
   },
