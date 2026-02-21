@@ -32,8 +32,8 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 - [x] **API-03**: PATCH /v1/wallet/:id accepts monitorIncoming field for per-wallet monitoring opt-in
 - [x] **API-04**: TypeScript SDK adds listIncomingTransactions() and getIncomingTransactionSummary() methods
 - [x] **API-05**: Python SDK adds list_incoming_transactions() and get_incoming_transaction_summary() methods
-- [ ] **API-06**: MCP adds 2 tools (list-incoming-transactions, get-incoming-summary) bringing total to 20+
-- [ ] **API-07**: Skills wallet.skill.md updated with incoming transaction section
+- [x] **API-06**: MCP adds 2 tools (list-incoming-transactions, get-incoming-summary) bringing total to 20+
+- [x] **API-07**: Skills wallet.skill.md updated with incoming transaction section
 
 ### Events and Notifications
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-03 | Phase 228 | Complete |
 | API-04 | Phase 228 | Complete |
 | API-05 | Phase 228 | Complete |
-| API-06 | Phase 228 | Pending |
-| API-07 | Phase 228 | Pending |
+| API-06 | Phase 228 | Complete |
+| API-07 | Phase 228 | Complete |
 | EVT-01 | Phase 226 | Complete |
 | EVT-02 | Phase 227 | Complete |
 | EVT-03 | Phase 226 | Complete |

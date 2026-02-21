@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 228 (5 of 6 in v27.1) (REST API + SDK + MCP)
-Plan: 2 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-22 -- Completed 228-02 (SDK Incoming TX Methods)
+Last activity: 2026-02-22 -- Completed 228-03 (MCP Tools + Skill Docs)
 
-Progress: [#############___] 81% (13/16 plans)
+Progress: [##############__] 87% (14/16 plans)
 
 ## Performance Metrics
 
@@ -92,6 +92,10 @@ From 228-02:
 - Follow existing SDK patterns exactly: URLSearchParams for TS, params dict for Python
 - Python models use dict literal model_config for consistency with existing models (not ConfigDict)
 
+From 228-03:
+- MCP tool param names match REST API query params exactly (token, from_address, wallet_id)
+- Tool count updated from 21 to 23 in server.ts; skill file tool count updated from 18 to 23
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -99,5 +103,5 @@ From 228-02:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 228-02-PLAN.md (SDK Incoming TX Methods)
+Stopped at: Completed 228-03-PLAN.md (MCP Tools + Skill Docs)
 Resume file: None
