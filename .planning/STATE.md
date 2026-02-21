@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 223 (9 of 9 in v27.0) — 설계 문서 Medium/Low 불일치 수정
-Plan: 0 of ? in current phase
-Status: Phase 222 complete — GAP-1~4 + FLOW-2 총 5건 해결. Phase 223 대기.
-Last activity: 2026-02-21 — Plan 222-02 complete
+Plan: 2 of 2 in current phase
+Status: Plan 223-02 complete — doc 31 PATCH 영향 분석 + skills/ 업데이트 요구사항 추가.
+Last activity: 2026-02-21 — Plan 223-02 complete
 
 Progress: [████████░░] 89% (8/9 phases)
 
@@ -22,7 +22,7 @@ Progress: [████████░░] 89% (8/9 phases)
 
 **v27.0 (in progress):**
 - Phases: 9 (215-223) — 7 done, 2 gap closure pending
-- Plans: 16 total (15 done + 1 pending)
+- Plans: 17 total (16 done + 1 pending)
 - Requirements: 29 — all done
 - Gap closure: 9 items (4 critical/high done + 5 medium/low pending)
 - Design decisions: 17 (D-01 ~ D-17) + 6 gap decisions
@@ -55,6 +55,7 @@ Progress: [████████░░] 89% (8/9 phases)
 21. GAP-2 해결: incoming-tx-poll-solana/evm 2개 폴링 워커 Step 6 등록 (총 6개)
 22. FLOW-2 해결: WS 실패 → 폴링 활성화 → TX 감지 → DB 기록 → WS 복구 5단계 E2E 완성
 23. pollAll()은 IChainSubscriber 인터페이스에 미추가 (구현체 전용 메서드)
+24. skills/ 파일은 설계 시점에 수정하지 않고 구현 마일스톤에서 업데이트할 범위만 명세 (§8.11)
 
 ### Blockers/Concerns
 
@@ -63,5 +64,5 @@ Progress: [████████░░] 89% (8/9 phases)
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 222-02-PLAN.md (GAP-2, GAP-3, FLOW-2 resolved — Phase 222 complete)
+Stopped at: Completed 223-02-PLAN.md (doc 31 PATCH impact analysis + skills/ update requirements)
 Resume file: None
