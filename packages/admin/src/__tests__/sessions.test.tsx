@@ -145,29 +145,32 @@ describe('SessionsPage', () => {
     vi.mocked(apiGet)
       .mockResolvedValueOnce(mockWallets) // initial wallets load
       .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce(mockSessions) // sessions after wallet select
       .mockResolvedValueOnce(mockSessions); // refresh after create
 
     vi.mocked(apiPost).mockResolvedValueOnce(mockCreatedSession);
 
-    render(<SessionsPage />);
+    const { container } = render(<SessionsPage />);
 
     // Wait for wallets dropdown
     await waitFor(() => {
       expect(screen.getByText(/bot-alpha/)).toBeTruthy();
     });
 
-    // Select wallet
-    const select = screen.getByLabelText('Wallet') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: 'wallet-1' } });
+    // Click Create Session to open the multi-wallet selection modal
+    fireEvent.click(screen.getByText('Create Session'));
 
-    // Wait for sessions to load
+    // Wait for the wallet selection modal to appear
     await waitFor(() => {
-      expect(screen.getByText('ACTIVE')).toBeTruthy();
+      expect(screen.getByText('Select Wallets')).toBeTruthy();
     });
 
-    // Click Create Session
-    fireEvent.click(screen.getByText('Create Session'));
+    // Select wallet-1 via checkbox in the create modal
+    const checkboxes = container.querySelectorAll('.modal-body input[type="checkbox"]');
+    fireEvent.click(checkboxes[0]); // first wallet checkbox
+
+    // Click the confirm button to create the session
+    const confirmBtn = screen.getByText(/Create Session \(1 wallet\)/);
+    fireEvent.click(confirmBtn);
 
     // Wait for token modal
     await waitFor(() => {
@@ -354,22 +357,27 @@ describe('SessionsPage - Error handling', () => {
 
     vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(400, 'CREATE_FAIL', 'Creation failed'));
 
-    render(<SessionsPage />);
+    const { container } = render(<SessionsPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/bot-alpha/)).toBeTruthy();
     });
 
-    // Select wallet first (Create Session is disabled without wallet)
-    const select = screen.getByLabelText('Wallet') as HTMLSelectElement;
-    vi.mocked(apiGet).mockResolvedValueOnce(mockSessionsFull);
-    fireEvent.change(select, { target: { value: 'wallet-1' } });
+    // Click Create Session to open the multi-wallet selection modal
+    fireEvent.click(screen.getByText('Create Session'));
 
+    // Wait for the wallet selection modal
     await waitFor(() => {
-      expect(screen.getByText('Create Session')).toBeTruthy();
+      expect(screen.getByText('Select Wallets')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Create Session'));
+    // Select wallet-1 via checkbox
+    const checkboxes = container.querySelectorAll('.modal-body input[type="checkbox"]');
+    fireEvent.click(checkboxes[0]);
+
+    // Click confirm to trigger the API call that will fail
+    const confirmBtn = screen.getByText(/Create Session \(1 wallet\)/);
+    fireEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: CREATE_FAIL');

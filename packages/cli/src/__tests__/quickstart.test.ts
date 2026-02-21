@@ -179,8 +179,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const calls = fetchMock.mock.calls;
     const urls = calls.map((c: unknown[]) => String(c[0]));
 
-    // 1 health + 2 wallet POST (with session) + 2 networks GET = 5
-    expect(calls.length).toBe(5);
+    // 1 health + 2 wallet POST + 2 networks GET + 1 session POST = 6
+    expect(calls.length).toBe(6);
 
     // Health check
     expect(urls[0]).toContain('/health');
@@ -203,6 +203,9 @@ describe('quicksetCommand (formerly quickstart)', () => {
     // Networks for evm
     expect(urls[4]).toContain('/networks');
 
+    // POST /v1/sessions (multi-wallet)
+    expect(urls[5]).toContain('/v1/sessions');
+
     // Output checks
     expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
     expect(mockStdout).toHaveBeenCalledWith('Mode: testnet');
@@ -211,18 +214,15 @@ describe('quicksetCommand (formerly quickstart)', () => {
     expect(mockStdout).toHaveBeenCalledWith('  Available Networks: devnet, testnet');
     expect(mockStdout).toHaveBeenCalledWith('  Available Networks: ethereum-sepolia, polygon-amoy, arbitrum-sepolia, optimism-sepolia, base-sepolia');
 
-    // Expires at output (QS-02)
+    // Single "Expires at:" line (one multi-wallet session)
     const expiresCalls = mockStdout.mock.calls.filter(
       (c: unknown[]) => String(c[0]).includes('Expires at:'),
     );
-    expect(expiresCalls.length).toBe(2); // one per wallet
-    for (const call of expiresCalls) {
-      expect(String(call[0])).toMatch(/Expires at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
-    }
+    expect(expiresCalls.length).toBe(1);
+    expect(String(expiresCalls[0]![0])).toMatch(/Expires at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
 
-    // MCP token files
-    expect(existsSync(join(testDir, 'mcp-tokens', 'sol-wallet-1'))).toBe(true);
-    expect(existsSync(join(testDir, 'mcp-tokens', 'evm-wallet-1'))).toBe(true);
+    // Single MCP token file
+    expect(existsSync(join(testDir, 'mcp-token'))).toBe(true);
 
     // MCP config snippet with English label
     expect(mockStdout).toHaveBeenCalledWith('(Add to your claude_desktop_config.json)');
@@ -234,8 +234,9 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const config = JSON.parse(String(jsonCalls[0]![0])) as {
       mcpServers: Record<string, { env: Record<string, string> }>;
     };
-    expect(config.mcpServers['waiaas-solana-testnet']).toBeDefined();
-    expect(config.mcpServers['waiaas-evm-testnet']).toBeDefined();
+    // Single MCP entry 'waiaas' (no per-wallet entries)
+    expect(config.mcpServers['waiaas']).toBeDefined();
+    expect(Object.keys(config.mcpServers).length).toBe(1);
   });
 
   it('mainnet mode: passes environment mainnet to wallet creation', async () => {
@@ -335,19 +336,21 @@ describe('quicksetCommand (formerly quickstart)', () => {
       if (urlStr.endsWith('/v1/wallets') && init?.method === 'POST') {
         const body = JSON.parse(init.body as string) as { chain: string };
         if (body.chain === 'solana') {
-          return Promise.resolve(mockResponse(200, {
-            ...SOLANA_WALLET,
-            session: { id: 'session-1', token: 'jwt.token.1', expiresAt: SESSION_EXPIRES_AT },
-          }));
+          return Promise.resolve(mockResponse(200, SOLANA_WALLET));
         }
-        return Promise.resolve(mockResponse(200, {
-          ...EVM_WALLET,
-          session: { id: 'session-2', token: 'jwt.token.2', expiresAt: SESSION_EXPIRES_AT },
-        }));
+        return Promise.resolve(mockResponse(200, EVM_WALLET));
       }
       // Networks API returns 500
       if (urlStr.includes('/networks')) {
         return Promise.resolve(mockResponse(500, { message: 'Internal error' }));
+      }
+      // POST /v1/sessions (multi-wallet session)
+      if (urlStr.includes('/v1/sessions') && init?.method === 'POST') {
+        return Promise.resolve(mockResponse(200, {
+          id: 'session-nf',
+          token: 'jwt.token.nf',
+          expiresAt: SESSION_EXPIRES_AT,
+        }));
       }
       return Promise.reject(new Error(`Unexpected: ${urlStr}`));
     });
@@ -392,22 +395,16 @@ describe('quicksetCommand (formerly quickstart)', () => {
       }>;
     };
 
-    // Two entries: solana and evm
+    // Single entry: 'waiaas' (multi-wallet, no per-wallet entries)
     const keys = Object.keys(config.mcpServers);
-    expect(keys.length).toBe(2);
+    expect(keys.length).toBe(1);
 
-    const solanaEntry = config.mcpServers['waiaas-solana-testnet'];
-    expect(solanaEntry).toBeDefined();
-    expect(solanaEntry.command).toBe('npx');
-    expect(solanaEntry.args).toEqual(['@waiaas/mcp']);
-    expect(solanaEntry.env['WAIAAS_WALLET_ID']).toBe('sol-wallet-1');
-    expect(solanaEntry.env['WAIAAS_WALLET_NAME']).toBe('solana-testnet');
-    expect(solanaEntry.env['WAIAAS_DATA_DIR']).toBe(testDir);
-    expect(solanaEntry.env['WAIAAS_BASE_URL']).toBe('http://127.0.0.1:3100');
-
-    const evmEntry = config.mcpServers['waiaas-evm-testnet'];
-    expect(evmEntry).toBeDefined();
-    expect(evmEntry.env['WAIAAS_WALLET_ID']).toBe('evm-wallet-1');
+    const entry = config.mcpServers['waiaas'];
+    expect(entry).toBeDefined();
+    expect(entry.command).toBe('npx');
+    expect(entry.args).toEqual(['@waiaas/mcp']);
+    expect(entry.env['WAIAAS_DATA_DIR']).toBe(testDir);
+    expect(entry.env['WAIAAS_BASE_URL']).toBe('http://127.0.0.1:3100');
   });
 
   it('wallet creation 500 error: exits with HTTP status in message', async () => {
@@ -476,17 +473,15 @@ describe('quicksetCommand (formerly quickstart)', () => {
       masterPassword: 'test-pw',
     });
 
-    // Should have 2 "Expires at:" lines (one per wallet)
+    // Should have 1 "Expires at:" line (single multi-wallet session)
     const expiresCalls = mockStdout.mock.calls.filter(
       (c: unknown[]) => String(c[0]).includes('Expires at:'),
     );
-    expect(expiresCalls.length).toBe(2);
+    expect(expiresCalls.length).toBe(1);
 
-    for (const call of expiresCalls) {
-      const msg = String(call[0]);
-      // Format: "  Expires at: YYYY-MM-DD HH:mm"
-      expect(msg).toMatch(/Expires at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
-    }
+    const msg = String(expiresCalls[0]![0]);
+    // Format: "  Expires at: YYYY-MM-DD HH:mm"
+    expect(msg).toMatch(/Expires at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
   });
 
   it('QS-03: 409 conflict reuses existing wallet and creates new session', async () => {
@@ -550,8 +545,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
     expect(String(reuseCalls[0]![0])).toContain('solana-mainnet');
     expect(String(reuseCalls[1]![0])).toContain('evm-mainnet');
 
-    // Sessions should be created via fallback (2 POST /v1/sessions)
-    expect(sessionCallCount).toBe(2);
+    // Single multi-wallet session created via POST /v1/sessions
+    expect(sessionCallCount).toBe(1);
 
     // Wallet list should be fetched (2 GET /v1/wallets for each 409)
     const listCalls = fetchMock.mock.calls.filter(
@@ -559,9 +554,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
     );
     expect(listCalls.length).toBe(2);
 
-    // MCP token files should still be created
-    expect(existsSync(join(testDir, 'mcp-tokens', 'sol-wallet-1'))).toBe(true);
-    expect(existsSync(join(testDir, 'mcp-tokens', 'evm-wallet-1'))).toBe(true);
+    // Single MCP token file should be created
+    expect(existsSync(join(testDir, 'mcp-token'))).toBe(true);
 
     // Completion message
     expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
@@ -587,6 +581,15 @@ describe('quicksetCommand (formerly quickstart)', () => {
         return Promise.resolve(mockResponse(200, {
           ...EVM_WALLET,
           session: { id: 'session-2', token: 'jwt.token.2', expiresAt: SESSION_EXPIRES_AT },
+        }));
+      }
+
+      // POST /v1/sessions (multi-wallet session creation)
+      if (urlStr.includes('/v1/sessions') && init?.method === 'POST') {
+        return Promise.resolve(mockResponse(200, {
+          id: 'session-qs4',
+          token: 'jwt.token.qs4',
+          expiresAt: SESSION_EXPIRES_AT,
         }));
       }
 

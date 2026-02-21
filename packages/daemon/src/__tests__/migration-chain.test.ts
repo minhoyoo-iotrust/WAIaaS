@@ -428,7 +428,7 @@ function getVersions(db: DatabaseType): number[] {
   return rows.map((r) => r.version);
 }
 
-/** All 33 expected indexes in the latest schema. */
+/** All expected indexes in the latest schema. */
 const EXPECTED_INDEXES = [
   'idx_audit_log_event_type',
   'idx_audit_log_severity',
@@ -444,9 +444,10 @@ const EXPECTED_INDEXES = [
   'idx_policies_network',
   'idx_policies_type',
   'idx_policies_wallet_enabled',
+  'idx_session_wallets_session',
+  'idx_session_wallets_wallet',
   'idx_sessions_expires_at',
   'idx_sessions_token_hash',
-  'idx_sessions_wallet_id',
   'idx_settings_category',
   'idx_token_registry_network',
   'idx_token_registry_network_address',
@@ -467,7 +468,7 @@ const EXPECTED_INDEXES = [
 ].sort();
 
 const ALL_TABLES = [
-  'wallets', 'sessions', 'transactions', 'policies', 'pending_approvals',
+  'wallets', 'sessions', 'session_wallets', 'transactions', 'policies', 'pending_approvals',
   'audit_log', 'key_value_store', 'notification_logs', 'token_registry',
   'settings', 'api_keys', 'schema_version', 'telegram_users',
   'wc_sessions', 'wc_store',
@@ -530,7 +531,7 @@ describe('pushSchema on existing databases', () => {
 
     expect(() => pushSchema(db)).not.toThrow();
 
-    // All 15 tables should exist
+    // All 16 tables should exist
     for (const table of ALL_TABLES) {
       const result = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -582,7 +583,7 @@ describe('migration chain schema equivalence', () => {
     migratedDb = createV5SchemaDatabase();
     pushSchema(migratedDb);
 
-    // Compare all 15 tables column names
+    // Compare all 16 tables column names
     for (const table of ALL_TABLES) {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
@@ -607,7 +608,7 @@ describe('migration chain schema equivalence', () => {
     migratedDb = createV1SchemaDatabase();
     pushSchema(migratedDb);
 
-    // Compare all 15 tables column names
+    // Compare all 16 tables column names
     for (const table of ALL_TABLES) {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
@@ -847,9 +848,9 @@ describe('data transformation: v3 agents to wallets', () => {
 
     pushSchema(db);
 
-    // session should have wallet_id = original agent_id
-    const session = db.prepare('SELECT wallet_id FROM sessions WHERE id = ?').get('sess-fk-1') as { wallet_id: string };
-    expect(session.wallet_id).toBe('a-fk-1');
+    // session wallet_id is now in session_wallets junction table (v19 migration)
+    const sw = db.prepare('SELECT wallet_id FROM session_wallets WHERE session_id = ?').get('sess-fk-1') as { wallet_id: string };
+    expect(sw.wallet_id).toBe('a-fk-1');
   });
 
   it('T-9c: AGENT_SUSPENDED -> WALLET_SUSPENDED notification_logs transformation', () => {
@@ -996,8 +997,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 18
-    expect(LATEST_SCHEMA_VERSION).toBe(18);
+    // Verify LATEST_SCHEMA_VERSION is 19
+    expect(LATEST_SCHEMA_VERSION).toBe(19);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1323,10 +1324,10 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Run full pushSchema (v2 -> v12 chain)
     pushSchema(db);
 
-    // Verify final version is 18
+    // Verify final version is 19
     const versions = getVersions(db);
-    expect(versions).toContain(18);
-    expect(Math.max(...versions)).toBe(18);
+    expect(versions).toContain(19);
+    expect(Math.max(...versions)).toBe(19);
 
     // Verify data survived the entire chain
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
@@ -1504,10 +1505,10 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Run full pushSchema (v2 -> v13 chain)
     pushSchema(db);
 
-    // Verify final version is 18
+    // Verify final version is 19
     const versions = getVersions(db);
-    expect(versions).toContain(18);
-    expect(Math.max(...versions)).toBe(18);
+    expect(versions).toContain(19);
+    expect(Math.max(...versions)).toBe(19);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1719,10 +1720,10 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Run full pushSchema (v2 -> v16 chain)
     pushSchema(db);
 
-    // Verify final version is 18
+    // Verify final version is 19
     const versions = getVersions(db);
-    expect(versions).toContain(18);
-    expect(Math.max(...versions)).toBe(18);
+    expect(versions).toContain(19);
+    expect(Math.max(...versions)).toBe(19);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(

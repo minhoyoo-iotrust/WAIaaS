@@ -243,7 +243,8 @@ export class AutoStopService {
 
     const result = this.sqlite
       .prepare(
-        'UPDATE sessions SET revoked_at = ? WHERE id = ? AND wallet_id = ? AND revoked_at IS NULL',
+        `UPDATE sessions SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL
+         AND EXISTS (SELECT 1 FROM session_wallets WHERE session_id = sessions.id AND wallet_id = ?)`,
       )
       .run(now, sessionId, walletId);
 

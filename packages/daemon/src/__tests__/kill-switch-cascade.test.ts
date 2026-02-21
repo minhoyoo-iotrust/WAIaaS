@@ -39,7 +39,6 @@ describe('KillSwitchService cascade', () => {
       );
       CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
-        wallet_id TEXT NOT NULL,
         token_hash TEXT NOT NULL,
         expires_at INTEGER NOT NULL,
         revoked_at INTEGER,
@@ -47,6 +46,13 @@ describe('KillSwitchService cascade', () => {
         max_renewals INTEGER NOT NULL DEFAULT 30,
         absolute_expires_at INTEGER NOT NULL,
         created_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS session_wallets (
+        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (session_id, wallet_id)
       );
       CREATE TABLE IF NOT EXISTS transactions (
         id TEXT PRIMARY KEY,
@@ -94,17 +100,38 @@ describe('KillSwitchService cascade', () => {
     // Insert test data
     const futureTime = now + 3600;
 
+    // Wallets: 2 ACTIVE, 1 SUSPENDED (should remain unchanged)
+    // (must be inserted before session_wallets due to FK constraint)
+    db.prepare(
+      'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run('wallet-1', 'test-wallet-1', 'solana', 'testnet', 'pk1', 'ACTIVE', now, now);
+    db.prepare(
+      'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run('wallet-2', 'test-wallet-2', 'ethereum', 'testnet', 'pk2', 'ACTIVE', now, now);
+    db.prepare(
+      'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run('wallet-3', 'test-wallet-3', 'solana', 'testnet', 'pk3', 'SUSPENDED', now, now);
+
     // 2 active sessions
     db.prepare(
-      'INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    ).run('sess-1', 'wallet-1', 'hash1', futureTime, futureTime, now);
+      'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run('sess-1', 'hash1', futureTime, futureTime, now);
     db.prepare(
-      'INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    ).run('sess-2', 'wallet-2', 'hash2', futureTime, futureTime, now);
+      'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+    ).run('sess-1', 'wallet-1', now);
+    db.prepare(
+      'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run('sess-2', 'hash2', futureTime, futureTime, now);
+    db.prepare(
+      'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+    ).run('sess-2', 'wallet-2', now);
     // 1 already revoked session (should remain unchanged)
     db.prepare(
-      'INSERT INTO sessions (id, wallet_id, token_hash, expires_at, revoked_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).run('sess-3', 'wallet-1', 'hash3', futureTime, now - 100, futureTime, now);
+      'INSERT INTO sessions (id, token_hash, expires_at, revoked_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    ).run('sess-3', 'hash3', futureTime, now - 100, futureTime, now);
+    db.prepare(
+      'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+    ).run('sess-3', 'wallet-1', now);
 
     // Transactions: PENDING, QUEUED, EXECUTING, CONFIRMED (should not be cancelled)
     db.prepare(
@@ -119,17 +146,6 @@ describe('KillSwitchService cascade', () => {
     db.prepare(
       'INSERT INTO transactions (id, wallet_id, chain, type, status, created_at) VALUES (?, ?, ?, ?, ?, ?)',
     ).run('tx-4', 'wallet-1', 'solana', 'TRANSFER', 'CONFIRMED', now);
-
-    // Wallets: 2 ACTIVE, 1 SUSPENDED (should remain unchanged)
-    db.prepare(
-      'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run('wallet-1', 'test-wallet-1', 'solana', 'testnet', 'pk1', 'ACTIVE', now, now);
-    db.prepare(
-      'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run('wallet-2', 'test-wallet-2', 'ethereum', 'testnet', 'pk2', 'ACTIVE', now, now);
-    db.prepare(
-      'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run('wallet-3', 'test-wallet-3', 'solana', 'testnet', 'pk3', 'SUSPENDED', now, now);
 
     // Create mocks
     mockNotify = vi.fn().mockResolvedValue(undefined);

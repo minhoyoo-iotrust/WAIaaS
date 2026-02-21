@@ -1559,11 +1559,38 @@ export function pushSchema(sqlite: Database): void {
         .get() as { name: string } | undefined
     ) !== undefined;
 
+  // Pre-v19 databases have sessions.wallet_id (or agent_id) which gets migrated to
+  // session_wallets by v19 migration. Skip creating session_wallets DDL so v19 migration
+  // can handle it. Detect existing DB by checking if schema_version has v1 recorded
+  // (existing DB) AND v19 not yet applied. (MIGR-01c fix)
+  const hasSchemaVersionTable =
+    (
+      sqlite
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'")
+        .get() as { name: string } | undefined
+    ) !== undefined;
+  const isExistingDbPreV19 =
+    hasSchemaVersionTable &&
+    (
+      sqlite
+        .prepare('SELECT version FROM schema_version WHERE version = 1')
+        .get() as { version: number } | undefined
+    ) !== undefined &&
+    (
+      sqlite
+        .prepare('SELECT version FROM schema_version WHERE version = 19')
+        .get() as { version: number } | undefined
+    ) === undefined;
+
   sqlite.exec('BEGIN');
   try {
     for (const stmt of tables) {
       // Skip wallets table creation if agents table exists (v3 migration will handle rename)
       if (hasAgentsTable && stmt.includes('CREATE TABLE IF NOT EXISTS wallets')) {
+        continue;
+      }
+      // Skip session_wallets creation if this is a pre-v19 existing DB (v19 migration will handle)
+      if (isExistingDbPreV19 && stmt.includes('CREATE TABLE IF NOT EXISTS session_wallets')) {
         continue;
       }
       sqlite.exec(stmt);

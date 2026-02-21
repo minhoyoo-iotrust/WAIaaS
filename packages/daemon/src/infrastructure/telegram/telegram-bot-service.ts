@@ -718,19 +718,25 @@ export class TelegramBotService {
     // Compute token hash for storage
     const tokenHash = createHash('sha256').update(token).digest('hex');
 
-    // Insert session into DB (direct SQL, same pattern as KillSwitchService)
+    // Insert session into DB (v26.4: session + session_wallets junction)
     this.sqlite
       .prepare(
-        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at)
-         VALUES (?, ?, ?, ?, NULL, NULL, NULL, 0, ?, NULL, ?, ?)`,
+        `INSERT INTO sessions (id, token_hash, expires_at, constraints, usage_stats, revoked_at, renewal_count, max_renewals, last_renewed_at, absolute_expires_at, created_at, source)
+         VALUES (?, ?, ?, NULL, NULL, NULL, 0, ?, NULL, ?, ?, 'telegram')`,
       )
       .run(
-        sessionId, walletId, tokenHash, expiresAt,
+        sessionId, tokenHash, expiresAt,
         this.settingsService
           ? parseInt(this.settingsService.get('security.session_max_renewals'), 10) || 12
           : 12,
         absoluteExpiresAt, nowSec,
       );
+    this.sqlite
+      .prepare(
+        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+         VALUES (?, ?, 1, ?)`,
+      )
+      .run(sessionId, walletId, nowSec);
 
     // Audit log
     this.sqlite

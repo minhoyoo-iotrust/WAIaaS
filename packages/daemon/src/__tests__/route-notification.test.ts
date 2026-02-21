@@ -277,15 +277,23 @@ describe('SESSION_EXPIRED notification', () => {
     const pastTimestamp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
     sqlite
       .prepare(
-        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(sessionId, testWalletId, 'hash-expired', pastTimestamp, pastTimestamp + 86400, pastTimestamp);
+      .run(sessionId, 'hash-expired', pastTimestamp, pastTimestamp + 86400, pastTimestamp);
+    sqlite
+      .prepare(
+        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+         VALUES (?, ?, 1, ?)`,
+      )
+      .run(sessionId, testWalletId, pastTimestamp);
 
     // Simulate the session-cleanup worker's notify-before-delete pattern
     // This is the same logic as in daemon.ts session-cleanup handler
     const expired = sqlite.prepare(
-      "SELECT id, wallet_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+      `SELECT s.id, sw.wallet_id FROM sessions s
+       JOIN session_wallets sw ON sw.session_id = s.id
+       WHERE s.expires_at < unixepoch() AND s.revoked_at IS NULL`,
     ).all() as Array<{ id: string; wallet_id: string }>;
 
     // Should find our expired session
@@ -326,16 +334,25 @@ describe('SESSION_EXPIRED notification', () => {
     // Insert a non-expired session (expires_at in the future)
     const sessionId = generateId();
     const futureTimestamp = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+    const nowTs = Math.floor(Date.now() / 1000);
     sqlite
       .prepare(
-        `INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(sessionId, testWalletId, 'hash-active', futureTimestamp, futureTimestamp + 86400, Math.floor(Date.now() / 1000));
+      .run(sessionId, 'hash-active', futureTimestamp, futureTimestamp + 86400, nowTs);
+    sqlite
+      .prepare(
+        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
+         VALUES (?, ?, 1, ?)`,
+      )
+      .run(sessionId, testWalletId, nowTs);
 
     // Query for expired sessions
     const expired = sqlite.prepare(
-      "SELECT id, wallet_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+      `SELECT s.id, sw.wallet_id FROM sessions s
+       JOIN session_wallets sw ON sw.session_id = s.id
+       WHERE s.expires_at < unixepoch() AND s.revoked_at IS NULL`,
     ).all() as Array<{ id: string; wallet_id: string }>;
 
     // No expired sessions

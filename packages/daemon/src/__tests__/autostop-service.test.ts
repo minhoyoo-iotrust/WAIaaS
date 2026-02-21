@@ -47,10 +47,9 @@ function createTestDb(): DatabaseType {
     suspension_reason TEXT
   )`);
 
-  // sessions table
+  // sessions table (v26.4: wallet_id moved to session_wallets)
   db.exec(`CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
-    wallet_id TEXT NOT NULL,
     token_hash TEXT NOT NULL,
     expires_at INTEGER NOT NULL,
     constraints TEXT,
@@ -60,8 +59,16 @@ function createTestDb(): DatabaseType {
     max_renewals INTEGER NOT NULL DEFAULT 30,
     last_renewed_at INTEGER,
     absolute_expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`);
+
+  // session_wallets junction table (v26.4)
+  db.exec(`CREATE TABLE IF NOT EXISTS session_wallets (
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    is_default INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
-    FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+    PRIMARY KEY (session_id, wallet_id)
   )`);
 
   // audit_log table
@@ -120,8 +127,11 @@ function insertWallet(db: DatabaseType, id: string, status = 'ACTIVE'): void {
 function insertSession(db: DatabaseType, id: string, walletId: string): void {
   const now = Math.floor(Date.now() / 1000);
   db.prepare(
-    'INSERT INTO sessions (id, wallet_id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-  ).run(id, walletId, `hash-${id}`, now + 3600, now + 86400, now);
+    'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+  ).run(id, `hash-${id}`, now + 3600, now + 86400, now);
+  db.prepare(
+    'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+  ).run(id, walletId, now);
 }
 
 // ---------------------------------------------------------------------------
