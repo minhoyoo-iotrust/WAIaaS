@@ -217,13 +217,13 @@ Plans:
   3. 재연결 후 incoming_tx_cursors 테이블의 커서 기준으로 blind gap recovery가 실행되어 끊어진 동안의 트랜잭션을 복구한다
   4. DustAttackRule/UnknownTokenRule/LargeAmountRule 3개 안전 규칙이 의심 입금을 감지하면 transaction:incoming:suspicious 이벤트가 발생하고, KillSwitch SUSPENDED/LOCKED 상태에서는 알림이 억제되지만 DB 기록은 유지된다
   5. 데몬 종료 시 IncomingTxMonitorService.stop()이 큐의 미처리 트랜잭션을 최종 flush하고, 보존 정책 워커가 incoming_retention_days 초과 레코드를 자동 삭제한다
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 226-01: IncomingTxQueue (Map 중복 제거 + 배치 flush + ON CONFLICT)
-- [ ] 226-02: SubscriptionMultiplexer (연결 공유 + 재연결 + 폴백)
-- [ ] 226-03: Gap recovery + 확인 업그레이드 워커 + 보존 정책
-- [ ] 226-04: IncomingTxMonitorService 오케스트레이터 + 안전 규칙 + 라이프사이클
+- [ ] 226-01-PLAN.md -- IncomingTxQueue (Map dedup + batch flush + ON CONFLICT DO NOTHING)
+- [ ] 226-02-PLAN.md -- SubscriptionMultiplexer (connection sharing + reconnection + polling fallback)
+- [ ] 226-03-PLAN.md -- Gap recovery + confirmation upgrade worker + retention policy worker
+- [ ] 226-04-PLAN.md -- IncomingTxMonitorService orchestrator + 3 safety rules + DaemonLifecycle Step 4c-9
 
 ### Phase 227: Config + Settings + Notifications
 **Goal**: 운영자가 config.toml [incoming] 섹션과 Admin Settings로 모니터링을 구성하고, 수신 트랜잭션 알림이 한국어/영어 템플릿으로 전달되는 상태
