@@ -72,6 +72,7 @@ const SECURITY_KEYS = new Set([
   'policy.default_deny_tokens',
   'policy.default_deny_contracts',
   'policy.default_deny_spenders',
+  'policy.default_deny_x402_domains',
 ]);
 
 const AUTOSTOP_KEYS_PREFIX = 'autostop.';

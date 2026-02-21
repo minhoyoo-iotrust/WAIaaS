@@ -349,6 +349,14 @@ function PolicyDefaultsTab() {
                 onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
                 description="Deny token approvals unless a matching whitelist policy exists"
               />
+              <FormField
+                label={keyToLabel('default_deny_x402_domains')}
+                name="policy.default_deny_x402_domains"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_x402_domains')}
+                onChange={(v) => handleFieldChange('policy.default_deny_x402_domains', v)}
+                description="Deny x402 payments unless a matching domain whitelist policy exists"
+              />
             </div>
           </div>
 

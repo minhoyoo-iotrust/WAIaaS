@@ -608,6 +608,13 @@ export default function SettingsPage() {
                 value={getEffectiveBoolValue('security', 'default_deny_spenders')}
                 onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
               />
+              <FormField
+                label={keyToLabel('default_deny_x402_domains')}
+                name="policy.default_deny_x402_domains"
+                type="checkbox"
+                value={getEffectiveBoolValue('security', 'default_deny_x402_domains')}
+                onChange={(v) => handleFieldChange('policy.default_deny_x402_domains', v)}
+              />
             </div>
           </div>
         </div>

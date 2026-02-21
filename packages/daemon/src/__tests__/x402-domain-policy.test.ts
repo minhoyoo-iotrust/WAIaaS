@@ -101,6 +101,25 @@ describe('evaluateX402Domain', () => {
       expect(result!.allowed).toBe(false);
       expect(result!.reason).toContain('x402 payments disabled');
     });
+
+    it('returns null (allow) when default_deny_x402_domains is false', () => {
+      const settingsService = { get: (key: string) => key === 'policy.default_deny_x402_domains' ? 'false' : 'true' };
+      const result = evaluateX402Domain([], 'api.example.com', settingsService);
+      expect(result).toBeNull();
+    });
+
+    it('returns deny when default_deny_x402_domains is true', () => {
+      const settingsService = { get: (key: string) => key === 'policy.default_deny_x402_domains' ? 'true' : 'true' };
+      const result = evaluateX402Domain([], 'api.example.com', settingsService);
+      expect(result).not.toBeNull();
+      expect(result!.allowed).toBe(false);
+    });
+
+    it('returns deny when no settingsService provided (default deny)', () => {
+      const result = evaluateX402Domain([], 'api.example.com', undefined);
+      expect(result).not.toBeNull();
+      expect(result!.allowed).toBe(false);
+    });
   });
 
   describe('domain allowed', () => {

@@ -16,6 +16,11 @@
 
 import type { PolicyEvaluation, PolicyTier } from '@waiaas/core';
 
+/** Minimal SettingsService interface to avoid circular imports. */
+interface SettingsReader {
+  get(key: string): string;
+}
+
 // ---------------------------------------------------------------------------
 // Types (local definition -- PolicyRow is private in DatabasePolicyEngine)
 // ---------------------------------------------------------------------------
@@ -79,16 +84,21 @@ export function matchDomain(pattern: string, target: string): boolean {
  *
  * @param resolved - Resolved policy rows (after override resolution)
  * @param targetDomain - The domain to evaluate (e.g., "api.example.com")
+ * @param settingsService - Optional settings service for default-deny toggle check
  * @returns PolicyEvaluation with allowed=false if denied, null if allowed (continue to next evaluation)
  */
 export function evaluateX402Domain(
   resolved: PolicyRow[],
   targetDomain: string,
+  settingsService?: SettingsReader,
 ): PolicyEvaluation | null {
   const policy = resolved.find((p) => p.type === 'X402_ALLOWED_DOMAINS');
 
-  // No policy -> default deny (same pattern as ALLOWED_TOKENS)
+  // No policy -> check toggle, then deny (default deny)
   if (!policy) {
+    if (settingsService?.get('policy.default_deny_x402_domains') === 'false') {
+      return null; // default-allow mode: skip x402 domain whitelist check
+    }
     return {
       allowed: false,
       tier: 'INSTANT' as PolicyTier,
