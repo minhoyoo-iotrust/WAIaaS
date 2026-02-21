@@ -30,6 +30,7 @@ import { SubscriptionMultiplexer } from './subscription-multiplexer.js';
 import {
   createConfirmationWorkerHandler,
   createRetentionWorkerHandler,
+  createGapRecoveryHandler,
   updateCursor,
 } from './incoming-tx-workers.js';
 import {
@@ -124,15 +125,15 @@ export class IncomingTxMonitorService {
       onGapRecovery: async (
         chain: string,
         network: string,
-        _walletIds: string[],
+        walletIds: string[],
       ) => {
-        // Gap recovery: trigger polling on the subscriber via the multiplexer's
-        // internal connection. We use a minimal approach -- log for now since
-        // the gap recovery handler requires access to subscriber instances which
-        // the multiplexer manages internally.
-        console.debug(
-          `Gap recovery triggered for ${chain}:${network}`,
-        );
+        // Wire to createGapRecoveryHandler using multiplexer's subscriber access.
+        // this.multiplexer is captured via closure on 'this' -- safe because
+        // onGapRecovery is never called during construction (only on reconnect).
+        const handler = createGapRecoveryHandler({
+          subscribers: this.multiplexer.getSubscriberEntries(),
+        });
+        await handler(chain, network, walletIds);
       },
     });
 
@@ -438,9 +439,14 @@ export class IncomingTxMonitorService {
     this.workers.register('incoming-tx-poll-solana', {
       interval: this.config.pollIntervalSec * 1000,
       handler: async () => {
-        // Poll for POLLING_FALLBACK state Solana connections
-        // Actual polling is driven by subscriber.pollAll() which is
-        // triggered by the multiplexer's gap recovery callback
+        const entries = this.multiplexer.getSubscribersForChain('solana');
+        for (const { subscriber } of entries) {
+          try {
+            await (subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+          } catch (err) {
+            console.warn('Solana polling worker error:', err);
+          }
+        }
       },
     });
 
@@ -448,8 +454,14 @@ export class IncomingTxMonitorService {
     this.workers.register('incoming-tx-poll-evm', {
       interval: this.config.pollIntervalSec * 1000,
       handler: async () => {
-        // Poll for EVM connections -- EVM uses polling-first strategy
-        // Actual polling is driven by subscriber.pollAll()
+        const entries = this.multiplexer.getSubscribersForChain('ethereum');
+        for (const { subscriber } of entries) {
+          try {
+            await (subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+          } catch (err) {
+            console.warn('EVM polling worker error:', err);
+          }
+        }
       },
     });
   }

@@ -201,6 +201,41 @@ export class SubscriptionMultiplexer {
   }
 
   /**
+   * Get subscriber entries for gap recovery.
+   * Returns a read-only view compatible with createGapRecoveryHandler deps.
+   *
+   * Note: pollAll() is not part of IChainSubscriber interface but
+   * exists on both SolanaIncomingSubscriber and EvmIncomingSubscriber.
+   * The returned type uses structural typing to express this.
+   */
+  getSubscriberEntries(): Map<string, { subscriber: { pollAll: () => Promise<void> } }> {
+    return this.connections as unknown as Map<
+      string,
+      { subscriber: { pollAll: () => Promise<void> } }
+    >;
+  }
+
+  /**
+   * Get subscribers for a specific chain prefix (e.g., "solana", "ethereum").
+   * Used by polling workers to iterate chain-specific subscribers.
+   */
+  getSubscribersForChain(chainPrefix: string): Array<{
+    key: string;
+    subscriber: IChainSubscriber;
+  }> {
+    const result: Array<{
+      key: string;
+      subscriber: IChainSubscriber;
+    }> = [];
+    for (const [key, entry] of this.connections) {
+      if (key.startsWith(`${chainPrefix}:`)) {
+        result.push({ key, subscriber: entry.subscriber });
+      }
+    }
+    return result;
+  }
+
+  /**
    * Stop all connections: abort reconnect loops, unsubscribe wallets, destroy subscribers.
    * Clears the connections Map.
    */

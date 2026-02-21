@@ -752,6 +752,12 @@ export class DaemonLifecycle {
     // ------------------------------------------------------------------
     // Step 4c-9: IncomingTxMonitorService initialization (fail-soft)
     // ------------------------------------------------------------------
+    // Pre-create BackgroundWorkers so Step 4c-9 (incoming monitor) can register its workers.
+    // startAll() is still called in Step 6 after all workers are registered.
+    if (!this.workers) {
+      this.workers = new BackgroundWorkers();
+    }
+
     try {
       if (this.sqlite && this._settingsService) {
         const incoming_enabled = this._settingsService.get('incoming.enabled');
@@ -993,7 +999,10 @@ export class DaemonLifecycle {
     // Step 6: Background workers + PID (no timeout, fail-soft)
     // ------------------------------------------------------------------
     try {
-      this.workers = new BackgroundWorkers();
+      // Ensure workers instance exists (should already be created before Step 4c-9)
+      if (!this.workers) {
+        this.workers = new BackgroundWorkers();
+      }
 
       // Register WAL checkpoint worker (default: 5 min = 300s)
       const walInterval = this._config!.database.wal_checkpoint_interval * 1000;
