@@ -17,3 +17,15 @@ export {
   DEFAULT_EVM_CONFIRMATIONS,
   SOLANA_CONFIRMATION,
 } from './incoming-tx-workers.js';
+export { IncomingTxMonitorService } from './incoming-tx-monitor-service.js';
+export type { IncomingTxMonitorConfig, IncomingTxMonitorDeps, SubscriberFactory } from './incoming-tx-monitor-service.js';
+export {
+  DustAttackRule,
+  UnknownTokenRule,
+  LargeAmountRule,
+} from './safety-rules.js';
+export type {
+  IIncomingSafetyRule,
+  SafetyRuleContext,
+  SuspiciousReason,
+} from './safety-rules.js';

@@ -38,7 +38,7 @@ interface ConnectionEntry {
   abortController: AbortController;
 }
 
-type SubscriberFactory = (chain: string, network: string) => IChainSubscriber;
+type SubscriberFactory = (chain: string, network: string) => IChainSubscriber | Promise<IChainSubscriber>;
 type OnTransactionCallback = (tx: IncomingTransaction) => void;
 type GapRecoveryCallback = (
   chain: string,
@@ -92,7 +92,7 @@ export class SubscriptionMultiplexer {
     }
 
     // Create new connection entry
-    const subscriber = this.deps.subscriberFactory(chain, network);
+    const subscriber = await this.deps.subscriberFactory(chain, network);
     const abortController = new AbortController();
     const entry: ConnectionEntry = {
       subscriber,
