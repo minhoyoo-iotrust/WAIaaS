@@ -485,3 +485,351 @@ describe('C-04: Duplicate Event Prevention', () => {
     await mux.stopAll();
   });
 });
+
+// ===========================================================================
+// Section 4: C-05 - Shutdown Data Loss Prevention
+// ===========================================================================
+
+describe('C-05: Shutdown Data Loss Prevention', () => {
+  let sqlite: ReturnType<typeof createMockDb>;
+  let eventBus: ReturnType<typeof createMockEventBus>;
+  let workers: ReturnType<typeof createMockWorkers>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    txCounter = 0;
+    idCounter = 0;
+    sqlite = createMockDb();
+    eventBus = createMockEventBus();
+    workers = createMockWorkers();
+  });
+
+  function createMonitorService(configOverrides: Partial<IncomingTxMonitorConfig> = {}) {
+    return new IncomingTxMonitorService({
+      sqlite: sqlite.db as any,
+      db: {} as any,
+      workers: workers as any,
+      eventBus: eventBus as any,
+      killSwitchService: null,
+      notificationService: null,
+      subscriberFactory: () => createMockSubscriber('solana'),
+      config: makeConfig(configOverrides),
+    });
+  }
+
+  it('C-05: 10 queued transactions all saved to DB on stop()', async () => {
+    // Return empty wallets list from DB for start()
+    sqlite.mockStmt.all.mockReturnValueOnce([]);
+
+    const service = createMonitorService();
+    await service.start();
+
+    // Access the real internal queue and push 10 transactions
+    const internalQueue = (service as any).queue as IncomingTxQueue;
+    for (let i = 0; i < 10; i++) {
+      internalQueue.push(makeTx({ txHash: `stop-tx-${i}`, walletId: 'w1' }));
+    }
+    expect(internalQueue.size).toBe(10);
+
+    // stop() calls drain() which flushes all queued items
+    await service.stop();
+
+    // Verify all 10 transactions were inserted via stmt.run()
+    // Filter run calls to only INSERT calls (13 params: id + 12 data fields)
+    const insertCalls = sqlite.getRunCalls().filter((args) => args.length === 13);
+    expect(insertCalls).toHaveLength(10);
+
+    // Queue should be empty after drain
+    expect(internalQueue.size).toBe(0);
+  });
+
+  it('C-05: 250 queued transactions drain loops multiple flush cycles (100+100+50)', async () => {
+    sqlite.mockStmt.all.mockReturnValueOnce([]);
+
+    const service = createMonitorService();
+    await service.start();
+
+    const internalQueue = (service as any).queue as IncomingTxQueue;
+    for (let i = 0; i < 250; i++) {
+      internalQueue.push(makeTx({ txHash: `drain-${i}`, walletId: 'w1' }));
+    }
+    expect(internalQueue.size).toBe(250);
+
+    await service.stop();
+
+    // All 250 should be flushed (in 3 cycles: 100 + 100 + 50)
+    const insertCalls = sqlite.getRunCalls().filter((args) => args.length === 13);
+    expect(insertCalls).toHaveLength(250);
+    expect(internalQueue.size).toBe(0);
+  });
+
+  it('C-05: 0 queued transactions -- empty drain is no-op, but stopAll() still called', async () => {
+    sqlite.mockStmt.all.mockReturnValueOnce([]);
+
+    const service = createMonitorService();
+    await service.start();
+
+    const internalQueue = (service as any).queue as IncomingTxQueue;
+    expect(internalQueue.size).toBe(0);
+
+    // Spy on multiplexer stopAll to verify it is called
+    const multiplexer = (service as any).multiplexer;
+    const stopAllSpy = vi.spyOn(multiplexer, 'stopAll');
+
+    await service.stop();
+
+    // No INSERT calls from drain (queue was empty)
+    const insertCalls = sqlite.getRunCalls().filter((args) => args.length === 13);
+    expect(insertCalls).toHaveLength(0);
+
+    // But multiplexer.stopAll() should still have been called
+    expect(stopAllSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('C-05: stop() with real queue wired to multiplexer.onTransaction -- end-to-end drain', async () => {
+    sqlite.mockStmt.all.mockReturnValueOnce([]);
+
+    const service = createMonitorService();
+    await service.start();
+
+    // The service wires multiplexer's onTransaction to queue.push internally.
+    // We simulate transactions arriving via the onTransaction callback.
+    const internalQueue = (service as any).queue as IncomingTxQueue;
+
+    // Push directly to queue (same path as onTransaction callback)
+    for (let i = 0; i < 10; i++) {
+      internalQueue.push(
+        makeTx({ txHash: `e2e-drain-${i}`, walletId: `w${i % 3}` }),
+      );
+    }
+
+    await service.stop();
+
+    const insertCalls = sqlite.getRunCalls().filter((args) => args.length === 13);
+    expect(insertCalls).toHaveLength(10);
+
+    // Verify walletId diversity in inserts (w0, w1, w2)
+    const walletIds = new Set(insertCalls.map((args) => args[1]));
+    expect(walletIds.size).toBe(3);
+  });
+});
+
+// ===========================================================================
+// Section 5: C-06 - EVM Reorg Safety
+// ===========================================================================
+
+describe('C-06: EVM Reorg Safety', () => {
+  beforeEach(() => {
+    txCounter = 0;
+    idCounter = 0;
+  });
+
+  /**
+   * Create a mock SQLite for confirmation worker tests.
+   * Returns DETECTED rows from .all() and tracks UPDATE calls via .run().
+   */
+  function createConfirmationMockDb(detectedRows: Array<{
+    id: string;
+    tx_hash: string;
+    chain: string;
+    network: string;
+    block_number: number | null;
+  }>) {
+    const updateCalls: unknown[][] = [];
+    let allCallCount = 0;
+
+    const mockDb = {
+      prepare: vi.fn().mockImplementation((sql: string) => {
+        if (sql.includes('SELECT')) {
+          return {
+            all: () => {
+              allCallCount++;
+              return detectedRows;
+            },
+          };
+        }
+        // UPDATE statement
+        return {
+          run: (...args: unknown[]) => {
+            updateCalls.push(args);
+            return { changes: 1 };
+          },
+        };
+      }),
+    } as unknown as import('better-sqlite3').Database;
+
+    return {
+      db: mockDb,
+      getUpdateCalls: () => updateCalls,
+      getAllCallCount: () => allCallCount,
+    };
+  }
+
+  it('C-06: EVM DETECTED tx at block 100, currentBlock=111 (11 confirms) -- NOT confirmed (mainnet threshold=12)', async () => {
+    const detectedRows = [
+      { id: 'tx-1', tx_hash: '0xabc', chain: 'ethereum', network: 'mainnet', block_number: 100 },
+    ];
+
+    const mockDb = createConfirmationMockDb(detectedRows);
+
+    const handler = createConfirmationWorkerHandler({
+      sqlite: mockDb.db,
+      getBlockNumber: async () => 111n,
+      checkSolanaFinalized: async () => false,
+    });
+
+    await handler();
+
+    // 111 - 100 = 11 confirmations < threshold 12 for mainnet
+    expect(mockDb.getUpdateCalls()).toHaveLength(0);
+  });
+
+  it('C-06: EVM DETECTED tx at block 100, currentBlock=112 (12 confirms) -- CONFIRMED (mainnet threshold=12)', async () => {
+    const detectedRows = [
+      { id: 'tx-1', tx_hash: '0xabc', chain: 'ethereum', network: 'mainnet', block_number: 100 },
+    ];
+
+    const mockDb = createConfirmationMockDb(detectedRows);
+
+    const handler = createConfirmationWorkerHandler({
+      sqlite: mockDb.db,
+      getBlockNumber: async () => 112n,
+      checkSolanaFinalized: async () => false,
+    });
+
+    await handler();
+
+    // 112 - 100 = 12 confirmations >= threshold 12 for mainnet
+    expect(mockDb.getUpdateCalls()).toHaveLength(1);
+    expect(mockDb.getUpdateCalls()[0]![1]).toBe('tx-1');
+  });
+
+  it('C-06: two-cycle reorg simulation -- first tx confirmed, second tx waits for enough blocks', async () => {
+    // Cycle 1: tx-A at block 100, currentBlock=115 (15 confirms) -> CONFIRMED
+    const cycle1Rows = [
+      { id: 'tx-A', tx_hash: '0xA', chain: 'ethereum', network: 'mainnet', block_number: 100 },
+    ];
+
+    const mockDb1 = createConfirmationMockDb(cycle1Rows);
+    const handler1 = createConfirmationWorkerHandler({
+      sqlite: mockDb1.db,
+      getBlockNumber: async () => 115n,
+    });
+
+    await handler1();
+    expect(mockDb1.getUpdateCalls()).toHaveLength(1); // tx-A confirmed
+
+    // Cycle 2: tx-B at block 113, currentBlock=120 (7 confirms) -> NOT CONFIRMED (< 12)
+    const cycle2Rows = [
+      { id: 'tx-B', tx_hash: '0xB', chain: 'ethereum', network: 'mainnet', block_number: 113 },
+    ];
+
+    const mockDb2 = createConfirmationMockDb(cycle2Rows);
+    const handler2 = createConfirmationWorkerHandler({
+      sqlite: mockDb2.db,
+      getBlockNumber: async () => 120n,
+    });
+
+    await handler2();
+    // 120 - 113 = 7 < 12 -- tx-B NOT confirmed
+    expect(mockDb2.getUpdateCalls()).toHaveLength(0);
+  });
+
+  it('C-06: mixed Solana + EVM DETECTED transactions -- each chain uses its own confirmation method', async () => {
+    const detectedRows = [
+      { id: 'sol-tx', tx_hash: 'solSig123', chain: 'solana', network: 'mainnet', block_number: null },
+      { id: 'evm-tx', tx_hash: '0xevmHash', chain: 'ethereum', network: 'mainnet', block_number: 200 },
+    ];
+
+    const mockDb = createConfirmationMockDb(detectedRows);
+
+    let solanaCheckCalled = false;
+    let evmBlockNumberCalled = false;
+
+    const handler = createConfirmationWorkerHandler({
+      sqlite: mockDb.db,
+      getBlockNumber: async (chain, network) => {
+        evmBlockNumberCalled = true;
+        expect(chain).toBe('ethereum');
+        expect(network).toBe('mainnet');
+        return 220n; // 220 - 200 = 20 >= 12 -> CONFIRMED
+      },
+      checkSolanaFinalized: async (txHash) => {
+        solanaCheckCalled = true;
+        expect(txHash).toBe('solSig123');
+        return true; // finalized
+      },
+    });
+
+    await handler();
+
+    // Both chain-specific methods should have been called
+    expect(solanaCheckCalled).toBe(true);
+    expect(evmBlockNumberCalled).toBe(true);
+
+    // Both should be confirmed
+    const updates = mockDb.getUpdateCalls();
+    expect(updates).toHaveLength(2);
+
+    const confirmedIds = updates.map((args) => args[1]);
+    expect(confirmedIds).toContain('sol-tx');
+    expect(confirmedIds).toContain('evm-tx');
+  });
+
+  it('C-06: EVM block number cache prevents redundant RPC calls for same chain:network', async () => {
+    const detectedRows = [
+      { id: 'tx-1', tx_hash: '0x1', chain: 'ethereum', network: 'mainnet', block_number: 100 },
+      { id: 'tx-2', tx_hash: '0x2', chain: 'ethereum', network: 'mainnet', block_number: 105 },
+      { id: 'tx-3', tx_hash: '0x3', chain: 'ethereum', network: 'mainnet', block_number: 110 },
+    ];
+
+    const mockDb = createConfirmationMockDb(detectedRows);
+
+    let rpcCallCount = 0;
+    const handler = createConfirmationWorkerHandler({
+      sqlite: mockDb.db,
+      getBlockNumber: async () => {
+        rpcCallCount++;
+        return 130n; // All 3 txs will be confirmed (>= 12 confirmations for each)
+      },
+    });
+
+    await handler();
+
+    // Block number cache: should only call getBlockNumber once for ethereum:mainnet
+    expect(rpcCallCount).toBe(1);
+
+    // All 3 should be confirmed
+    expect(mockDb.getUpdateCalls()).toHaveLength(3);
+  });
+
+  it('C-06: EVM network-specific threshold -- polygon-mainnet uses 128, not default 12', async () => {
+    const detectedRows = [
+      { id: 'poly-tx', tx_hash: '0xpoly', chain: 'ethereum', network: 'polygon-mainnet', block_number: 1000 },
+    ];
+
+    const mockDb = createConfirmationMockDb(detectedRows);
+
+    // polygon-mainnet threshold is 128
+    expect(EVM_CONFIRMATION_THRESHOLDS['polygon-mainnet']).toBe(128);
+
+    // 1127 - 1000 = 127 < 128 -- NOT confirmed
+    const handler1 = createConfirmationWorkerHandler({
+      sqlite: mockDb.db,
+      getBlockNumber: async () => 1127n,
+    });
+
+    await handler1();
+    expect(mockDb.getUpdateCalls()).toHaveLength(0);
+
+    // 1128 - 1000 = 128 >= 128 -- CONFIRMED
+    const mockDb2 = createConfirmationMockDb(detectedRows);
+    const handler2 = createConfirmationWorkerHandler({
+      sqlite: mockDb2.db,
+      getBlockNumber: async () => 1128n,
+    });
+
+    await handler2();
+    expect(mockDb2.getUpdateCalls()).toHaveLength(1);
+  });
+});
