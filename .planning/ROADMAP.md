@@ -200,12 +200,12 @@ Plans:
   2. EvmIncomingSubscriber가 getLogs 폴링으로 ERC-20 Transfer 이벤트를, getBlock 폴링으로 네이티브 ETH 수신을 감지하여 onTransaction 콜백을 호출한다
   3. WebSocket 연결 실패 시 3-state 연결 머신(WS_ACTIVE/POLLING_FALLBACK/RECONNECTING)이 자동으로 폴링 모드로 전환한다
   4. Solana 60초 하트비트(getSlot RPC)가 10분 비활성 타임아웃을 방지한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 225-01: SolanaIncomingSubscriber (WebSocket + 파싱 + 폴링 폴백)
-- [ ] 225-02: EvmIncomingSubscriber (getLogs + getBlock 폴링)
-- [ ] 225-03: 3-state 연결 머신 + Solana 하트비트
+- [ ] 225-01-PLAN.md -- SolanaIncomingSubscriber + incoming-tx-parser + SolanaHeartbeat + tests
+- [ ] 225-02-PLAN.md -- EvmIncomingSubscriber (getLogs + getBlock polling) + tests
+- [ ] 225-03-PLAN.md -- 3-state connection machine (ConnectionState + calculateDelay + reconnectLoop) + tests
 
 ### Phase 226: Monitor Service + Resilience
 **Goal**: IncomingTxMonitorService가 구독자들을 조율하여 수신 트랜잭션을 메모리 큐에 수집, 배치 flush로 DB에 저장, 의심 입금을 감지하고, KillSwitch 상태에 따라 알림을 제어하는 상태
