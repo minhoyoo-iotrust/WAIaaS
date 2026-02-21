@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Gap closure phase 230 in progress
+**Current focus:** Gap closure phase 230 complete
 
 ## Current Position
 
 Phase: 230 (integration-wiring-fixes)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-22 -- Plan 01 complete (3 wiring bugs fixed)
+Plan: 2 of 2 in current phase
+Status: Complete
+Last activity: 2026-02-22 -- Plan 02 complete (7 integration wiring tests)
 
-Progress: [########--------] 50% (1/2 plans)
+Progress: [################] 100% (2/2 plans)
 
 ## Performance Metrics
 
@@ -110,6 +110,10 @@ From 230-01:
 - BackgroundWorkers pre-created with double guard (before Step 4c-9 + inside Step 6 try block) for defensive coding
 - Polling workers use structural typing cast (subscriber as unknown as { pollAll }) since pollAll() is not on IChainSubscriber interface
 
+From 230-02:
+- Access onGapRecovery callback via (multiplexer as any).deps.onGapRecovery for direct invocation testing
+- Worker handler extraction pattern: find specific worker by name from workers.register.mock.calls
+
 ### Blockers/Concerns
 
 None.
@@ -117,5 +121,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 230-01-PLAN.md
+Stopped at: Completed 230-02-PLAN.md
 Resume file: None
