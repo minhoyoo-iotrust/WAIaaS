@@ -149,6 +149,7 @@
 | 132 | BUG | HIGH | Admin UI에서 킬 스위치 Recover 시 SYSTEM_LOCKED 에러 발생 | v27.0 | OPEN | |
 | 133 | MISSING | HIGH | 지갑 Suspend/Resume REST API 및 Admin UI 버튼 추가 | v27.0 | OPEN | |
 | 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.0 | OPEN | |
+| 135 | ENHANCEMENT | MEDIUM | 알림 메시지에서 walletId 대신 walletName 주 표시 + 부가 정보 축약 | v27.0 | OPEN | |
 
 ## Type Legend
 
@@ -160,9 +161,9 @@
 
 ## Summary
 
-- **OPEN:** 4
+- **OPEN:** 5
 - **FIXED:** 130
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 134
+- **Total:** 135
