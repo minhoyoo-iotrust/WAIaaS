@@ -1,7 +1,9 @@
 # 마일스톤 m26-04: 멀티 지갑 세션 + 에이전트 자기 발견
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v26.4
+- **Package:** 2.4.0-rc.7
+- **Completed:** 2026-02-21
 
 ## 목표
 
