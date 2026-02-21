@@ -701,3 +701,313 @@ export class SolanaIncomingSubscriber implements IChainSubscriber {
   }
 }
 ```
+
+---
+
+## 4. EVM 수신 감지 전략
+
+### 4.1 감지 방식 결정: 폴링 우선
+
+EVM 수신 감지는 **폴링(getLogs) 우선** 전략을 채택한다.
+
+**근거:**
+1. `getLogs`는 HTTP RPC로 동작 — WebSocket 연결 관리 복잡도 제거
+2. viem의 `watchEvent`는 내부적으로 `eth_subscribe` 또는 폴링을 자동 선택 — transport에 따라 동작이 달라져 예측 어려움
+3. Self-hosted 환경에서 WebSocket RPC 가용성이 보장되지 않음
+4. EVM 블록 간격(~12초)이 폴링 간격과 자연스럽게 일치
+
+**WebSocket 전환 조건:** config.toml `incoming_mode = 'websocket'` 설정 시 `watchEvent(poll: false)` + `watchBlocks` 방식으로 전환 (Phase 218에서 상세화)
+
+### 4.2 ERC-20 Transfer 이벤트 감지
+
+```typescript
+// viem getLogs 폴링 패턴
+import { parseAbiItem, type Address, type Log } from 'viem';
+
+const TRANSFER_EVENT = parseAbiItem(
+  'event Transfer(address indexed from, address indexed to, uint256 value)',
+);
+
+async function pollERC20Transfers(
+  client: PublicClient,
+  walletAddress: Address,
+  fromBlock: bigint,
+  toBlock: bigint,
+): Promise<Log[]> {
+  return client.getLogs({
+    event: TRANSFER_EVENT,
+    args: {
+      to: walletAddress, // indexed 파라미터로 수신자 필터
+    },
+    fromBlock,
+    toBlock,
+  });
+}
+```
+
+**Transfer 이벤트 토픽:**
+```
+topic[0] = keccak256("Transfer(address,address,uint256)")
+         = 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+topic[2] = walletAddress (to — indexed)
+```
+
+### 4.3 네이티브 ETH 수신 감지
+
+ERC-20 Transfer 이벤트로는 네이티브 ETH 이체를 감지할 수 없다 — 이벤트 로그를 생성하지 않기 때문.
+
+```typescript
+async function pollNativeETHTransfers(
+  client: PublicClient,
+  walletAddress: Address,
+  fromBlock: bigint,
+  toBlock: bigint,
+): Promise<IncomingTransaction[]> {
+  const results: IncomingTransaction[] = [];
+
+  for (let blockNum = fromBlock; blockNum <= toBlock; blockNum++) {
+    const block = await client.getBlock({
+      blockNumber: blockNum,
+      includeTransactions: true,
+    });
+
+    for (const tx of block.transactions) {
+      if (typeof tx === 'string') continue; // hash-only 건너뜀
+
+      // to 주소가 지갑이고 value > 0인 TX = 네이티브 ETH 수신
+      if (
+        tx.to?.toLowerCase() === walletAddress.toLowerCase() &&
+        tx.value > 0n
+      ) {
+        results.push({
+          id: generateUUIDv7(),
+          txHash: tx.hash,
+          walletId: '',
+          fromAddress: tx.from,
+          amount: tx.value.toString(),
+          tokenAddress: null, // 네이티브 ETH
+          chain: 'ethereum',
+          network: '',
+          status: 'DETECTED',
+          blockNumber: Number(blockNum),
+          detectedAt: Math.floor(Date.now() / 1000),
+          confirmedAt: null,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+```
+
+**주의:** 블록별 `getBlock(includeTransactions: true)` 호출은 RPC 부하가 높음. 최적화 전략:
+- 한 번에 최대 10블록씩 조회 (약 2분 분량)
+- BackgroundWorkers 간격 12초 (1블록 = ~12초)
+- 빈 블록(walletAddress TX 없음)은 빠르게 스킵
+
+### 4.4 token_registry 화이트리스트 필터
+
+Transfer 이벤트 오탐 방지를 위해 `token_registry` 테이블의 등록 토큰만 유효한 수신으로 처리:
+
+```typescript
+function filterByTokenRegistry(
+  logs: Log[],
+  sqlite: Database,
+  walletId: string,
+): Log[] {
+  // 1. 해당 지갑이 속한 체인의 등록된 토큰 목록 조회
+  const registeredTokens = sqlite.prepare(
+    "SELECT token_address FROM token_registry WHERE chain = 'ethereum'"
+  ).all() as { token_address: string }[];
+
+  const registeredSet = new Set(
+    registeredTokens.map((t) => t.token_address.toLowerCase()),
+  );
+
+  // 2. 등록되지 않은 토큰의 Transfer 이벤트는 SUSPICIOUS로 분류 (§6 참조)
+  return logs.filter((log) => {
+    const contractAddress = log.address.toLowerCase();
+    if (registeredSet.has(contractAddress)) {
+      return true; // 등록된 토큰 — 정상 수신
+    }
+    // 미등록 토큰 — INCOMING_TX_SUSPICIOUS 이벤트로 분류 (Phase 219)
+    return false;
+  });
+}
+```
+
+**정책:**
+- 등록된 토큰: `INCOMING_TX_DETECTED` 이벤트 발행
+- 미등록 토큰: `INCOMING_TX_SUSPICIOUS` 이벤트 발행 (의심 사유: `unknownToken`)
+- 미등록 토큰도 `incoming_transactions` 테이블에 저장 (기록은 유지)
+
+### 4.5 폴링 커서 관리
+
+```typescript
+interface EvmPollingState {
+  lastProcessedBlock: bigint;
+}
+
+async function getPollingCursor(
+  sqlite: Database,
+  walletId: string,
+): Promise<bigint> {
+  const cursor = sqlite.prepare(
+    'SELECT last_block_number FROM incoming_tx_cursors WHERE wallet_id = ?'
+  ).get(walletId) as { last_block_number: number } | undefined;
+
+  if (cursor?.last_block_number) {
+    return BigInt(cursor.last_block_number);
+  }
+
+  // 커서 없음 — 현재 블록부터 시작 (과거 백필 없음)
+  return 0n; // IncomingTxMonitorService에서 현재 블록 번호로 초기화
+}
+
+async function updatePollingCursor(
+  sqlite: Database,
+  walletId: string,
+  chain: string,
+  network: string,
+  blockNumber: bigint,
+): Promise<void> {
+  sqlite.prepare(`
+    INSERT INTO incoming_tx_cursors (wallet_id, chain, network, last_block_number, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(wallet_id) DO UPDATE SET
+      last_block_number = excluded.last_block_number,
+      updated_at = excluded.updated_at
+  `).run(walletId, chain, network, Number(blockNumber), Math.floor(Date.now() / 1000));
+}
+```
+
+### 4.6 Confirmation 정책
+
+| 체인 | 확정 기준 | 블록 수 | 시간 |
+|------|----------|---------|------|
+| Ethereum Mainnet | 12 confirmations | ~12 blocks | ~2.4분 |
+| Ethereum Sepolia | 3 confirmations | ~3 blocks | ~36초 |
+| Base/Arbitrum/등 L2 | 1 confirmation | ~1 block | 즉시 |
+
+```typescript
+const CONFIRMATION_THRESHOLDS: Record<string, number> = {
+  'ethereum-mainnet': 12,
+  'ethereum-sepolia': 3,
+  'base-mainnet': 1,
+  'base-sepolia': 1,
+  'arbitrum-mainnet': 1,
+  'arbitrum-sepolia': 1,
+};
+
+// BackgroundWorkers 확인 루프 (30초 간격)
+workers.register('incoming-tx-confirm-evm', {
+  interval: 30_000,
+  handler: async () => {
+    const pending = sqlite.prepare(
+      "SELECT * FROM incoming_transactions WHERE chain = 'ethereum' AND status = 'DETECTED'"
+    ).all();
+
+    const currentBlock = await client.getBlockNumber();
+
+    for (const tx of pending) {
+      const threshold = CONFIRMATION_THRESHOLDS[tx.network] ?? 12;
+      if (tx.block_number && currentBlock - BigInt(tx.block_number) >= BigInt(threshold)) {
+        sqlite.prepare(
+          "UPDATE incoming_transactions SET status = 'CONFIRMED', confirmed_at = ? WHERE id = ?"
+        ).run(Math.floor(Date.now() / 1000), tx.id);
+      }
+    }
+  },
+});
+```
+
+### 4.7 EvmIncomingSubscriber 전체 구조
+
+```typescript
+// packages/adapters/evm/src/evm-incoming-subscriber.ts
+
+export class EvmIncomingSubscriber implements IChainSubscriber {
+  readonly chain = 'ethereum' as ChainType;
+
+  private subscriptions = new Map<string, {
+    address: string;
+    network: string;
+    onTransaction: (tx: IncomingTransaction) => void;
+    lastBlock: bigint;
+  }>();
+
+  private rpcUrl: string;
+  private client: PublicClient;
+
+  constructor(config: { rpcUrl: string }) {
+    this.rpcUrl = config.rpcUrl;
+    this.client = createPublicClient({
+      transport: http(config.rpcUrl),
+    });
+  }
+
+  async subscribe(
+    walletId: string,
+    address: string,
+    network: string,
+    onTransaction: (tx: IncomingTransaction) => void,
+  ): Promise<void> {
+    if (this.subscriptions.has(walletId)) return;
+
+    const currentBlock = await this.client.getBlockNumber();
+    this.subscriptions.set(walletId, {
+      address,
+      network,
+      onTransaction,
+      lastBlock: currentBlock,
+    });
+  }
+
+  async unsubscribe(walletId: string): Promise<void> {
+    this.subscriptions.delete(walletId);
+  }
+
+  subscribedWallets(): string[] {
+    return Array.from(this.subscriptions.keys());
+  }
+
+  async destroy(): Promise<void> {
+    this.subscriptions.clear();
+  }
+
+  /**
+   * BackgroundWorkers에서 호출 — 모든 구독 지갑에 대해 폴링 수행
+   */
+  async pollAll(): Promise<void> {
+    const currentBlock = await this.client.getBlockNumber();
+
+    for (const [walletId, sub] of this.subscriptions) {
+      try {
+        if (sub.lastBlock >= currentBlock) continue;
+
+        const toBlock = sub.lastBlock + 10n < currentBlock
+          ? sub.lastBlock + 10n
+          : currentBlock;
+
+        // ERC-20 Transfer 이벤트 조회
+        const erc20Txs = await this.pollERC20(sub.address, sub.lastBlock + 1n, toBlock, walletId, sub.network);
+        // 네이티브 ETH 수신 조회
+        const ethTxs = await this.pollNativeETH(sub.address, sub.lastBlock + 1n, toBlock, walletId, sub.network);
+
+        for (const tx of [...erc20Txs, ...ethTxs]) {
+          sub.onTransaction(tx);
+        }
+
+        sub.lastBlock = toBlock;
+      } catch (err) {
+        // Per-wallet error isolation
+        console.warn(`EVM poll failed for wallet ${walletId}:`, err);
+      }
+    }
+  }
+
+  private async pollERC20(...): Promise<IncomingTransaction[]> { /* §4.2 */ }
+  private async pollNativeETH(...): Promise<IncomingTransaction[]> { /* §4.3 */ }
+}
+```
