@@ -1365,3 +1365,246 @@ async function recoverBlindGap(
 **커서 업데이트:**
 - 갭 복구 완료 후 커서를 최신 위치로 업데이트
 - idempotent INSERT(ON CONFLICT DO NOTHING)로 중복 안전
+
+---
+
+## 6. 알림 이벤트 + 의심 입금 감지
+
+### 6.1 이벤트 타입 확장
+
+기존 28개 NotificationEventType에 2개 추가 (28 → 30):
+
+```typescript
+// packages/core/src/enums/notification.ts — SSoT
+export const NOTIFICATION_EVENT_TYPES = [
+  // ... 기존 28개 ...
+  'INCOMING_TX_DETECTED',    // 수신 TX 감지
+  'INCOMING_TX_SUSPICIOUS',  // 의심 수신 TX 감지
+] as const;
+```
+
+**EventBus 확장:**
+```typescript
+// packages/core/src/events/event-types.ts
+export interface WaiaasEventMap {
+  // ... 기존 이벤트 ...
+  'transaction:incoming': IncomingTxEvent;
+  'transaction:incoming:suspicious': IncomingSuspiciousTxEvent;
+}
+
+export interface IncomingTxEvent {
+  walletId: string;
+  txHash: string;
+  fromAddress: string;
+  amount: string;
+  tokenAddress: string | null;
+  chain: string;
+  network: string;
+  detectedAt: number;
+}
+
+export interface IncomingSuspiciousTxEvent extends IncomingTxEvent {
+  suspiciousReasons: SuspiciousReason[];
+}
+
+export type SuspiciousReason = 'dust' | 'unknownToken' | 'largeAmount';
+```
+
+### 6.2 INCOMING_TX_DETECTED 이벤트
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| walletId | string | 수신 지갑 ID |
+| txHash | string | 블록체인 TX 해시 |
+| fromAddress | string | 송신자 주소 |
+| amount | string | 수신 금액 (최소 단위) |
+| tokenAddress | string \| null | 토큰 주소 (null = 네이티브) |
+| chain | string | 'solana' \| 'ethereum' |
+| network | string | 네트워크 식별자 |
+| detectedAt | number | Unix epoch seconds |
+
+**발행 시점:** BackgroundWorkers flush 후 새로 INSERT된 TX에 대해 발행
+**알림 우선순위:** `normal` (기존 카테고리 체계 — `transaction` 카테고리)
+
+### 6.3 INCOMING_TX_SUSPICIOUS 이벤트
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| (IncomingTxEvent 상속) | | |
+| suspiciousReasons | SuspiciousReason[] | 의심 사유 배열 |
+
+**의심 사유:**
+- `dust`: 금액이 임계값 미만 (먼지 공격 의심)
+- `unknownToken`: token_registry에 미등록 토큰
+- `largeAmount`: 평소 수신 대비 비정상적으로 큰 금액
+
+**발행 시점:** IIncomingSafetyRule 검사 결과 1개 이상 규칙 위반 시
+**알림 우선순위:** `high` (즉시 알림)
+
+### 6.4 기존 알림 채널 연동
+
+| 채널 | 연동 방식 | 비고 |
+|------|----------|------|
+| Telegram | NotificationService.notify() | 기존 채널 재사용 |
+| Discord | NotificationService.notify() | webhook 메시지 포맷 |
+| ntfy | NotificationService.notify() | push 알림 |
+| Slack | NotificationService.notify() | webhook 메시지 포맷 |
+| WalletNotificationChannel | 사이드 채널 전달 | 지갑 앱 알림용 |
+
+**NotificationService 연동:**
+```typescript
+// IncomingTxMonitorService 내부
+private async notifyIncomingTx(tx: IncomingTransaction): Promise<void> {
+  if (!this.notificationService) return;
+
+  // 1. 의심 검사
+  const suspiciousReasons = this.checkSuspicious(tx);
+
+  if (suspiciousReasons.length > 0) {
+    // 의심 TX 알림
+    await this.notificationService.notify(
+      'INCOMING_TX_SUSPICIOUS',
+      tx.walletId,
+      {
+        txHash: tx.txHash,
+        from: tx.fromAddress,
+        amount: tx.amount,
+        token: tx.tokenAddress ?? 'native',
+        chain: tx.chain,
+        reasons: suspiciousReasons.join(', '),
+      },
+    );
+    this.eventBus.emit('transaction:incoming:suspicious', {
+      ...tx,
+      suspiciousReasons,
+    });
+  } else {
+    // 정상 수신 알림
+    await this.notificationService.notify(
+      'INCOMING_TX_DETECTED',
+      tx.walletId,
+      {
+        txHash: tx.txHash,
+        from: tx.fromAddress,
+        amount: tx.amount,
+        token: tx.tokenAddress ?? 'native',
+        chain: tx.chain,
+      },
+    );
+    this.eventBus.emit('transaction:incoming', tx);
+  }
+}
+```
+
+**알림 카테고리:**
+```typescript
+// 기존 NOTIFICATION_CATEGORIES 확장
+export const NOTIFICATION_CATEGORIES = {
+  // ... 기존 카테고리 ...
+  incoming: {
+    events: ['INCOMING_TX_DETECTED', 'INCOMING_TX_SUSPICIOUS'],
+    priority: 'normal', // SUSPICIOUS는 개별 high
+  },
+} as const;
+```
+
+### 6.5 IIncomingSafetyRule 인터페이스
+
+```typescript
+// packages/core/src/interfaces/IIncomingSafetyRule.ts
+
+export interface IIncomingSafetyRule {
+  /** 규칙 식별자 */
+  readonly name: SuspiciousReason;
+
+  /**
+   * 수신 TX가 의심스러운지 검사.
+   * @returns true면 의심, false면 정상
+   */
+  check(tx: IncomingTransaction, context: SafetyRuleContext): boolean;
+}
+
+export interface SafetyRuleContext {
+  /** config.toml [incoming] 설정값 */
+  dustThresholdUsd: number;
+  amountMultiplier: number;
+  /** token_registry 등록 여부 */
+  isRegisteredToken: boolean;
+  /** PriceOracle USD 가격 (null = 가격 불명) */
+  usdPrice: number | null;
+  /** 최근 30일 평균 수신 금액 (USD, null = 이력 없음) */
+  avgIncomingUsd: number | null;
+}
+```
+
+### 6.6 감지 규칙 3종
+
+#### 규칙 1: DustAttackRule
+
+```typescript
+class DustAttackRule implements IIncomingSafetyRule {
+  readonly name = 'dust' as const;
+
+  check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
+    if (ctx.usdPrice === null) return false; // 가격 불명 시 판단 불가
+    const amountUsd = Number(tx.amount) * ctx.usdPrice / Math.pow(10, getDecimals(tx));
+    return amountUsd < ctx.dustThresholdUsd; // 기본 $0.01
+  }
+}
+```
+
+**임계값:** `incoming_suspicious_dust_usd` (기본 0.01 USD)
+
+#### 규칙 2: UnknownTokenRule
+
+```typescript
+class UnknownTokenRule implements IIncomingSafetyRule {
+  readonly name = 'unknownToken' as const;
+
+  check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
+    if (tx.tokenAddress === null) return false; // 네이티브 토큰은 항상 알려진 토큰
+    return !ctx.isRegisteredToken;
+  }
+}
+```
+
+#### 규칙 3: LargeAmountRule
+
+```typescript
+class LargeAmountRule implements IIncomingSafetyRule {
+  readonly name = 'largeAmount' as const;
+
+  check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
+    if (ctx.avgIncomingUsd === null || ctx.usdPrice === null) return false;
+    const amountUsd = Number(tx.amount) * ctx.usdPrice / Math.pow(10, getDecimals(tx));
+    return amountUsd > ctx.avgIncomingUsd * ctx.amountMultiplier; // 기본 10x
+  }
+}
+```
+
+**임계값:** `incoming_suspicious_amount_multiplier` (기본 10 — 평균의 10배 초과 시 의심)
+
+### 6.7 i18n 메시지 템플릿
+
+```typescript
+// packages/daemon/src/notifications/templates/message-templates.ts
+
+export const MESSAGE_TEMPLATES = {
+  // ... 기존 템플릿 ...
+
+  INCOMING_TX_DETECTED: {
+    en: '💰 Incoming transaction detected\nWallet: {walletName}\nFrom: {from}\nAmount: {amount} {token}\nChain: {chain}\nTx: {txHash}',
+    ko: '💰 수신 트랜잭션 감지\n지갑: {walletName}\n발신: {from}\n금액: {amount} {token}\n체인: {chain}\nTx: {txHash}',
+  },
+
+  INCOMING_TX_SUSPICIOUS: {
+    en: '⚠️ Suspicious incoming transaction\nWallet: {walletName}\nFrom: {from}\nAmount: {amount} {token}\nChain: {chain}\nReason: {reasons}\nTx: {txHash}',
+    ko: '⚠️ 의심 수신 트랜잭션\n지갑: {walletName}\n발신: {from}\n금액: {amount} {token}\n체인: {chain}\n사유: {reasons}\nTx: {txHash}',
+  },
+} as const;
+```
+
+**reasons 한국어 매핑:**
+- `dust` → "먼지 공격 의심 (소액 입금)"
+- `unknownToken` → "미등록 토큰"
+- `largeAmount` → "비정상 대량 입금"
