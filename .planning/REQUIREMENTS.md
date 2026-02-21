@@ -78,13 +78,41 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (to be filled by roadmapper) | | |
+| MON-01 | Phase 215 | Pending |
+| MON-02 | Phase 216 | Pending |
+| MON-03 | Phase 217 | Pending |
+| MON-04 | Phase 218 | Pending |
+| MON-05 | Phase 218 | Pending |
+| MON-06 | Phase 218 | Pending |
+| MON-07 | Phase 218 | Pending |
+| MON-08 | Phase 216 | Pending |
+| MON-09 | Phase 218 | Pending |
+| DATA-01 | Phase 215 | Pending |
+| DATA-02 | Phase 215 | Pending |
+| DATA-03 | Phase 215 | Pending |
+| DATA-04 | Phase 215 | Pending |
+| API-01 | Phase 220 | Pending |
+| API-02 | Phase 220 | Pending |
+| API-03 | Phase 220 | Pending |
+| API-04 | Phase 220 | Pending |
+| API-05 | Phase 220 | Pending |
+| EVT-01 | Phase 219 | Pending |
+| EVT-02 | Phase 219 | Pending |
+| EVT-03 | Phase 219 | Pending |
+| EVT-04 | Phase 219 | Pending |
+| EVT-05 | Phase 219 | Pending |
+| CFG-01 | Phase 221 | Pending |
+| CFG-02 | Phase 221 | Pending |
+| CFG-03 | Phase 221 | Pending |
+| VER-01 | Phase 221 | Pending |
+| VER-02 | Phase 221 | Pending |
+| VER-03 | Phase 221 | Pending |
 
 **Coverage:**
-- v1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28 ⚠️
+- v1 requirements: 29 total
+- Mapped to phases: 29
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after initial definition*
+*Last updated: 2026-02-21 after roadmap creation (traceability added)*
