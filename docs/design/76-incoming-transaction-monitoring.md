@@ -286,8 +286,8 @@ class IncomingTxQueue {
     this.queue.push(tx);
   }
 
-  flush(sqlite: Database): number {
-    if (this.queue.length === 0) return 0;
+  flush(sqlite: Database): IncomingTransaction[] {
+    if (this.queue.length === 0) return [];
 
     const batch = this.queue.splice(0, this.MAX_BATCH);
     const stmt = sqlite.prepare(`
@@ -299,19 +299,19 @@ class IncomingTxQueue {
     `);
 
     const insertMany = sqlite.transaction((txs: IncomingTransaction[]) => {
-      let inserted = 0;
+      const insertedTxs: IncomingTransaction[] = [];
       for (const tx of txs) {
         const result = stmt.run(
           tx.id, tx.txHash, tx.walletId, tx.fromAddress, tx.amount,
           tx.tokenAddress, tx.chain, tx.network, tx.status,
           tx.blockNumber, tx.detectedAt,
         );
-        if (result.changes > 0) inserted++;
+        if (result.changes > 0) insertedTxs.push(tx);
       }
-      return inserted;
+      return insertedTxs;
     });
 
-    return insertMany(batch);
+    return insertMany(batch); // 실제 삽입된 TX 목록 반환 (ON CONFLICT로 무시된 것 제외)
   }
 }
 ```
@@ -322,9 +322,24 @@ workers.register('incoming-tx-flush', {
   interval: 5_000, // 5초마다
   handler: () => {
     const inserted = incomingTxQueue.flush(sqlite);
-    if (inserted > 0) {
-      // 이벤트 발행은 flush 완료 후
-      eventBus.emit('transaction:incoming', { count: inserted });
+
+    // 개별 TX에 대해 이벤트 발행 (§6.1 IncomingTxEvent 타입 일치)
+    for (const tx of inserted) {
+      eventBus.emit('transaction:incoming', {
+        walletId: tx.walletId,
+        txHash: tx.txHash,
+        fromAddress: tx.fromAddress,
+        amount: tx.amount,
+        tokenAddress: tx.tokenAddress,
+        chain: tx.chain,
+        network: tx.network,
+        detectedAt: tx.detectedAt,
+      } satisfies IncomingTxEvent);
+    }
+
+    // 내부 오케스트레이션용 집계 이벤트 (옵저버빌리티/로깅)
+    if (inserted.length > 0) {
+      eventBus.emit('incoming:flush:complete', { count: inserted.length });
     }
   },
 });
@@ -1430,6 +1445,9 @@ export interface WaiaasEventMap {
   // ... 기존 이벤트 ...
   'transaction:incoming': IncomingTxEvent;
   'transaction:incoming:suspicious': IncomingSuspiciousTxEvent;
+
+  // 내부 오케스트레이션 이벤트 (알림 트리거 아님)
+  'incoming:flush:complete': { count: number };
 }
 
 export interface IncomingTxEvent {
