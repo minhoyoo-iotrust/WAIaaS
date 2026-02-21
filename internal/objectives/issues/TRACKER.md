@@ -153,6 +153,8 @@
 | 136 | BUG | HIGH | 루트 skills/와 packages/skills/skills/ 내용 불일치로 npm에 오래된 스킬 배포 | v27.1 | FIXED | 2026-02-21 |
 | 137 | BUG | MEDIUM | 알림 메시지 제목 중복 표시 — 4개 채널 모두 title이 2번 출력 | v27.1 | FIXED | 2026-02-21 |
 | 138 | BUG | LOW | 시스템 이벤트 알림에 불필요한 Wallet/타임스탬프 표시 — UPDATE_AVAILABLE 등 | v27.1 | FIXED | 2026-02-21 |
+| 139 | BUG | HIGH | telegram.enabled 미제거 — Approval Method가 Telegram Bot 비활성으로 판단 | v27.1 | OPEN | |
+| 140 | ENHANCEMENT | LOW | Approval Method 라벨 "SDK" → "Wallet App" 변경 — 사용자 직관성 개선 | v27.1 | OPEN | |
 
 ## Type Legend
 
@@ -164,9 +166,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 138
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 138
+- **Total:** 140
