@@ -233,11 +233,11 @@ Plans:
   1. config.toml에 [incoming] 섹션 7키(enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier, wss_url)가 Zod 스키마로 검증되고, WAIAAS_INCOMING_* 환경 변수로 오버라이드 가능하다
   2. SettingsService에 'incoming' 카테고리 7키가 등록되어 Admin Settings UI에서 런타임 변경 가능하고, HotReloadOrchestrator가 변경 시 모니터 서비스를 재시작한다
   3. NotificationEventType에 TX_INCOMING/TX_INCOMING_SUSPICIOUS가 추가되어 총 30개 타입이 되고, en/ko i18n 메시지 템플릿이 정의되어 4채널(Telegram/Discord/ntfy/Slack)로 전달된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 227-01: config.toml [incoming] 섹션 + Zod 스키마 + 환경 변수 매핑
-- [ ] 227-02: SettingsService 등록 + HotReloadOrchestrator + NotificationEventType + i18n 템플릿
+- [ ] 227-01-PLAN.md -- config.toml [incoming] Zod schema + KNOWN_SECTIONS + env var mapping + config-loader tests + CFG-02/CFG-03 verification
+- [ ] 227-02-PLAN.md -- NotificationEventType TX_INCOMING/TX_INCOMING_SUSPICIOUS + en/ko i18n templates + BROADCAST_EVENTS + monitor service fix + Admin UI IncomingSettings
 
 ### Phase 228: REST API + SDK + MCP
 **Goal**: 에이전트와 사용자가 REST API, TypeScript/Python SDK, MCP 도구를 통해 수신 트랜잭션 내역을 조회하고, 지갑별 모니터링을 활성화/비활성화할 수 있는 상태
