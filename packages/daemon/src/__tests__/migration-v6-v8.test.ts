@@ -519,7 +519,7 @@ describe('pushSchema vs migration schema equivalence', () => {
     }
   });
 
-  it('should have LATEST_SCHEMA_VERSION = 19', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(19);
+  it('should have LATEST_SCHEMA_VERSION = 20', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(20);
   });
 });
