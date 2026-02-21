@@ -201,11 +201,8 @@ describe('Integration Resilience', () => {
         resolveDisconnect = resolve;
       });
 
-      let connectCount = 0;
       const mockSubscriber = {
-        connect: vi.fn().mockImplementation(async () => {
-          connectCount++;
-        }),
+        connect: vi.fn().mockResolvedValue(undefined),
         waitForDisconnect: vi.fn()
           .mockReturnValueOnce(disconnectPromise) // first call: controllable
           .mockReturnValue(new Promise(() => {})), // subsequent: never resolve

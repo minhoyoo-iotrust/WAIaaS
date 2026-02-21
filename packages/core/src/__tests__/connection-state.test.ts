@@ -109,11 +109,8 @@ describe('reconnectLoop', () => {
 
   it('transitions to WS_ACTIVE on successful connect', async () => {
     const controller = new AbortController();
-    let connectCalls = 0;
-
     const subscriber = {
       connect: vi.fn(async () => {
-        connectCalls++;
       }),
       waitForDisconnect: vi.fn(async () => {
         // Abort after first successful cycle

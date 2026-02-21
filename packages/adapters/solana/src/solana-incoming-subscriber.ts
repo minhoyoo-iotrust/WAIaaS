@@ -290,7 +290,7 @@ export class SolanaIncomingSubscriber implements IChainSubscriber {
             // Skip individual transaction processing errors
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // If abort was requested, silently exit
         if (abortController.signal.aborted) return;
         // Otherwise, signal disconnection
