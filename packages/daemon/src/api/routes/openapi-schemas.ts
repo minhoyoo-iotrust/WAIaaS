@@ -591,6 +591,7 @@ export const AgentPromptResponseSchema = z
     prompt: z.string(),
     walletCount: z.number().int(),
     sessionsCreated: z.number().int(),
+    sessionReused: z.boolean(),
     expiresAt: z.number().int(),
   })
   .openapi('AgentPromptResponse');

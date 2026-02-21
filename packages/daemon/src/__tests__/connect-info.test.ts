@@ -455,6 +455,7 @@ describe('POST /v1/admin/agent-prompt', () => {
 
     const body = await json(res);
     expect(body.sessionsCreated).toBe(1);
+    expect(body.sessionReused).toBe(false);
     expect(body.walletCount).toBe(2);
 
     // Count sessions after -- exactly 1 new session
@@ -511,6 +512,74 @@ describe('POST /v1/admin/agent-prompt', () => {
     // Session token and ID appended
     expect(prompt).toContain('Session Token:');
     expect(prompt).toContain('Session ID:');
+  });
+
+  it('reuses existing valid session instead of creating new one', async () => {
+    // First call creates a new session
+    const res1 = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(res1.status).toBe(201);
+
+    const body1 = await json(res1);
+    expect(body1.sessionsCreated).toBe(1);
+    expect(body1.sessionReused).toBe(false);
+
+    const sessionsBeforeReuse = sqlite
+      .prepare('SELECT count(*) AS cnt FROM sessions')
+      .get() as { cnt: number };
+
+    // Second call should reuse the session
+    const res2 = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(res2.status).toBe(201);
+
+    const body2 = await json(res2);
+    expect(body2.sessionsCreated).toBe(0);
+    expect(body2.sessionReused).toBe(true);
+
+    // No new session created
+    const sessionsAfterReuse = sqlite
+      .prepare('SELECT count(*) AS cnt FROM sessions')
+      .get() as { cnt: number };
+    expect(sessionsAfterReuse.cnt).toBe(sessionsBeforeReuse.cnt);
+
+    // Token from reused session should work
+    const prompt = body2.prompt as string;
+    const tokenMatch = prompt.match(/Session Token: (wai_sess_\S+)/);
+    expect(tokenMatch).toBeTruthy();
+    const reusedToken = tokenMatch![1]!;
+
+    const balanceRes = await app.request('/v1/connect-info', {
+      headers: bearerHeader(reusedToken),
+    });
+    expect(balanceRes.status).toBe(200);
+  });
+
+  it('creates new session when existing session covers only partial wallets', async () => {
+    // Create session with walletA only
+    await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA] }),
+    });
+
+    // Request session for both walletA and walletB -- cannot reuse
+    const res = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(res.status).toBe(201);
+
+    const body = await json(res);
+    expect(body.sessionsCreated).toBe(1);
+    expect(body.sessionReused).toBe(false);
   });
 
   it('end-to-end: agent-prompt -> connect-info returns matching data', async () => {
