@@ -249,12 +249,12 @@ Plans:
   3. PATCH /v1/wallet/:id에 monitorIncoming 필드를 전달하면 지갑별 모니터링이 토글되고, syncSubscriptions()가 비동기로 실행된다
   4. TypeScript SDK의 listIncomingTransactions()/getIncomingTransactionSummary()와 Python SDK의 list_incoming_transactions()/get_incoming_transaction_summary()가 API를 호출하여 결과를 반환한다
   5. MCP에 list-incoming-transactions/get-incoming-summary 2개 도구가 추가되어 총 22+ 도구가 되고, wallet.skill.md에 수신 트랜잭션 섹션이 추가된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 228-01: REST API 엔드포인트 (GET incoming + GET summary + PATCH wallet toggle)
-- [ ] 228-02: TypeScript SDK + Python SDK 메서드 추가
-- [ ] 228-03: MCP 도구 + 스킬 파일 업데이트
+- [ ] 228-01-PLAN.md -- REST API endpoints (GET /v1/wallet/incoming + GET /v1/wallet/incoming/summary + PATCH /v1/wallets/:id monitorIncoming) with OpenAPI schemas
+- [ ] 228-02-PLAN.md -- TypeScript SDK (listIncomingTransactions + getIncomingTransactionSummary) + Python SDK (list_incoming_transactions + get_incoming_transaction_summary)
+- [ ] 228-03-PLAN.md -- MCP tools (list_incoming_transactions + get_incoming_summary) + wallet.skill.md update
 
 ### Phase 229: Integration Testing
 **Goal**: 수신 트랜잭션 모니터링 전체 파이프라인이 E2E로 검증되어, 6대 피트폴(WebSocket 리스너 누수, SQLite 이벤트 루프 고갈, 미확정 TX 소비, 중복 이벤트, 셧다운 데이터 손실, EVM reorg)이 모두 테스트로 방어되는 상태
