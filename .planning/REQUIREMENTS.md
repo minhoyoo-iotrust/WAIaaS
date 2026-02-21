@@ -27,9 +27,9 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 
 ### Query API
 
-- [ ] **API-01**: GET /v1/wallet/incoming returns paginated incoming transactions with cursor pagination and chain/network/status/token filters
-- [ ] **API-02**: GET /v1/wallet/incoming/summary returns period-based incoming totals (daily/weekly/monthly)
-- [ ] **API-03**: PATCH /v1/wallet/:id accepts monitorIncoming field for per-wallet monitoring opt-in
+- [x] **API-01**: GET /v1/wallet/incoming returns paginated incoming transactions with cursor pagination and chain/network/status/token filters
+- [x] **API-02**: GET /v1/wallet/incoming/summary returns period-based incoming totals (daily/weekly/monthly)
+- [x] **API-03**: PATCH /v1/wallet/:id accepts monitorIncoming field for per-wallet monitoring opt-in
 - [ ] **API-04**: TypeScript SDK adds listIncomingTransactions() and getIncomingTransactionSummary() methods
 - [ ] **API-05**: Python SDK adds list_incoming_transactions() and get_incoming_transaction_summary() methods
 - [ ] **API-06**: MCP adds 2 tools (list-incoming-transactions, get-incoming-summary) bringing total to 20+
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STO-03 | Phase 226 | Complete |
 | STO-04 | Phase 226 | Complete |
 | STO-05 | Phase 226 | Complete |
-| API-01 | Phase 228 | Pending |
-| API-02 | Phase 228 | Pending |
-| API-03 | Phase 228 | Pending |
+| API-01 | Phase 228 | Complete |
+| API-02 | Phase 228 | Complete |
+| API-03 | Phase 228 | Complete |
 | API-04 | Phase 228 | Pending |
 | API-05 | Phase 228 | Pending |
 | API-06 | Phase 228 | Pending |

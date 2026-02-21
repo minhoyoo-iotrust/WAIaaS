@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 228 (5 of 6 in v27.1) (REST API + SDK + MCP)
-Plan: 0 of 3 in current phase
-Status: Planning
-Last activity: 2026-02-22 -- Completed Phase 227 (Config + Settings + Notifications)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 228-01 (REST API Incoming TX Endpoints)
 
-Progress: [###########_____] 69% (11/16 plans)
+Progress: [############____] 75% (12/16 plans)
 
 ## Performance Metrics
 
@@ -82,6 +82,12 @@ From 227-02:
 - TX_INCOMING categorized as transaction (standard priority-based delivery)
 - EVENT_CATEGORY_MAP must be updated when NOTIFICATION_EVENT_TYPES grows (Record<NotificationEventType, ...> enforces parity)
 
+From 228-01:
+- Composite cursor uses base64url JSON {d: detectedAt, i: id} for keyset pagination
+- Summary endpoint fetches all rows and aggregates in JS BigInt (no SQL SUM)
+- Duck-typed incomingTxMonitorService in CreateAppDeps (consistent with 226-04 pattern)
+- PriceInfo.usdPrice field for USD conversion (not .price)
+
 ### Blockers/Concerns
 
 - @solana/kit logsNotifications reconnection 동작 미검증 (Phase 226에서 경험적 확인 필요)
@@ -89,5 +95,5 @@ From 227-02:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 227 complete, moving to Phase 228 planning
+Stopped at: Completed 228-01-PLAN.md (REST API Incoming TX Endpoints)
 Resume file: None
