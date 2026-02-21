@@ -50,11 +50,11 @@ Examples:
 }
 
 function extractStableVersion(rcVersion) {
-  // 2.4.0-rc.8 -> 2.4.0, v2.4.0-rc.8 -> 2.4.0
+  // 2.4.0-rc.8 -> 2.4.0, v2.4.0-rc -> 2.4.0
   const stripped = rcVersion.replace(/^v/, '');
-  const match = stripped.match(/^(\d+\.\d+\.\d+)-rc\.\d+$/);
+  const match = stripped.match(/^(\d+\.\d+\.\d+)-rc(\.\d+)?$/);
   if (!match) {
-    console.error(`Error: "${rcVersion}" is not a valid RC version (expected X.Y.Z-rc.N)`);
+    console.error(`Error: "${rcVersion}" is not a valid RC version (expected X.Y.Z-rc[.N])`);
     process.exit(1);
   }
   return match[1];

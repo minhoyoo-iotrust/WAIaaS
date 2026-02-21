@@ -433,7 +433,7 @@ jobs:
           echo "- **Sigstore:** Attestations logged in [Rekor transparency log](https://search.sigstore.dev/)" >> $GITHUB_STEP_SUMMARY
 
       - name: Restore prerelease mode (stable release only)
-        if: ${{ !contains(github.event.release.tag_name, '-rc.') }}
+        if: ${{ !contains(github.event.release.tag_name, '-rc') }}
         run: |
           git fetch origin main
           git checkout main
