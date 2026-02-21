@@ -150,6 +150,7 @@
 | 133 | MISSING | HIGH | 지갑 Suspend/Resume REST API 및 Admin UI 버튼 추가 | v27.0 | OPEN | |
 | 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.0 | OPEN | |
 | 135 | ENHANCEMENT | MEDIUM | 알림 메시지에서 walletId 대신 walletName 주 표시 + 부가 정보 축약 | v27.0 | OPEN | |
+| 136 | BUG | HIGH | 루트 skills/와 packages/skills/skills/ 내용 불일치로 npm에 오래된 스킬 배포 | v27.0 | OPEN | |
 
 ## Type Legend
 
@@ -161,9 +162,9 @@
 
 ## Summary
 
-- **OPEN:** 5
+- **OPEN:** 6
 - **FIXED:** 130
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 135
+- **Total:** 136
