@@ -207,6 +207,16 @@ export type {
   // v27.1 incoming transaction subscriber types
   IncomingTransaction,
   IChainSubscriber,
+  // v27.1 connection state machine types
+  ConnectionState,
+  ReconnectConfig,
+} from './interfaces/index.js';
+
+// v27.1 connection state machine (value exports)
+export {
+  calculateDelay,
+  DEFAULT_RECONNECT_CONFIG,
+  reconnectLoop,
 } from './interfaces/index.js';
 
 // v1.5 Price Oracle Zod schemas (value exports)
