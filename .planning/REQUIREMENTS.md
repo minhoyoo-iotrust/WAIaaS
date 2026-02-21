@@ -113,10 +113,10 @@
 | Gap ID | 설명 | 심각도 | Phase | Status |
 |--------|------|--------|-------|--------|
 | GAP-1 | reconnectLoop IChainSubscriber connect()/waitForDisconnect() 미정의 | high | Phase 222 | Done |
-| GAP-2 | 폴링 BackgroundWorker 미등록 | critical | Phase 222 | Pending |
-| GAP-3 | Summary SQL incoming_tx_suspicious 미정의 테이블 참조 | critical | Phase 222 | Pending |
+| GAP-2 | 폴링 BackgroundWorker 미등록 | critical | Phase 222 | Done |
+| GAP-3 | Summary SQL incoming_tx_suspicious 미정의 테이블 참조 | critical | Phase 222 | Done |
 | GAP-4 | eventBus.emit 타입 충돌 | high | Phase 222 | Done |
-| FLOW-2 | WebSocket→폴링 폴백 흐름 중단 | critical | Phase 222 | Pending |
+| FLOW-2 | WebSocket→폴링 폴백 흐름 중단 | critical | Phase 222 | Done |
 | NOTIFY-1 | SUSPICIOUS priority:high 라우팅 미명세 | medium | Phase 223 | Pending |
 | — | getDecimals() 헬퍼 미정의 | medium | Phase 223 | Pending |
 | — | doc 31 PATCH 영향 분석 누락 | low | Phase 223 | Pending |
