@@ -1971,12 +1971,19 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         .where(and(eq(policies.walletId, w.id), eq(policies.enabled, true)))
         .all();
 
+      const networks = getNetworksForEnvironment(
+        w.chain as Parameters<typeof getNetworksForEnvironment>[0],
+        w.environment as Parameters<typeof getNetworksForEnvironment>[1],
+      );
+
       return {
+        id: w.id,
         name: w.name,
         chain: w.chain,
         environment: w.environment,
         address: w.publicKey,
         defaultNetwork: w.defaultNetwork,
+        networks: networks.map((n) => n),
         policies: walletPolicies,
       };
     });

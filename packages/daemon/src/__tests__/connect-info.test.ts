@@ -379,7 +379,7 @@ describe('GET /v1/connect-info', () => {
     expect(caps).not.toContain('x402');
   });
 
-  it('prompt contains wallet names and addresses', async () => {
+  it('prompt contains wallet names, UUIDs, and addresses', async () => {
     const res = await app.request('/v1/connect-info', {
       headers: bearerHeader(sessionToken),
     });
@@ -393,6 +393,36 @@ describe('GET /v1/connect-info', () => {
     expect(prompt).toContain(PK_A);
     expect(prompt).toContain(PK_B);
     expect(prompt).toContain('WAIaaS daemon');
+
+    // UUID must appear in prompt (ID: line)
+    expect(prompt).toContain(`ID: ${walletA}`);
+    expect(prompt).toContain(`ID: ${walletB}`);
+
+    // Network list must appear
+    expect(prompt).toContain('Networks:');
+    expect(prompt).toContain('devnet');
+    expect(prompt).toContain('testnet');
+
+    // walletId usage instructions reference UUID
+    expect(prompt).toContain('UUID from the ID field above');
+    expect(prompt).toContain('?network=');
+  });
+
+  it('wallets include availableNetworks array', async () => {
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const ws = body.wallets as Array<{ id: string; availableNetworks: string[] }>;
+
+    const wA = ws.find((w) => w.id === walletA)!;
+    expect(wA.availableNetworks).toBeDefined();
+    expect(Array.isArray(wA.availableNetworks)).toBe(true);
+    expect(wA.availableNetworks.length).toBeGreaterThan(0);
+    expect(wA.availableNetworks).toContain('devnet');
+    expect(wA.availableNetworks).toContain('testnet');
   });
 
   it('rejects without session token (401)', async () => {
@@ -462,7 +492,7 @@ describe('POST /v1/admin/agent-prompt', () => {
     const body = await json(res);
     const prompt = body.prompt as string;
 
-    // buildConnectInfoPrompt format includes wallet names, addresses, capabilities
+    // buildConnectInfoPrompt format includes wallet names, UUIDs, addresses, capabilities
     expect(prompt).toContain('Wallet Alpha');
     expect(prompt).toContain('Wallet Beta');
     expect(prompt).toContain(PK_A);
@@ -470,6 +500,13 @@ describe('POST /v1/admin/agent-prompt', () => {
     expect(prompt).toContain('Available capabilities:');
     expect(prompt).toContain('transfer');
     expect(prompt).toContain('WAIaaS daemon');
+
+    // UUID must be in prompt
+    expect(prompt).toContain(`ID: ${walletA}`);
+    expect(prompt).toContain(`ID: ${walletB}`);
+
+    // Network list must be in prompt
+    expect(prompt).toContain('Networks:');
 
     // Session token and ID appended
     expect(prompt).toContain('Session Token:');

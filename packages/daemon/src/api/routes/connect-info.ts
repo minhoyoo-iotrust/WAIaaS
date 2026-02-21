@@ -17,6 +17,8 @@ import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
+import { getNetworksForEnvironment } from '@waiaas/core';
+import type { ChainType, EnvironmentType } from '@waiaas/core';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
 import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
@@ -46,11 +48,13 @@ export interface ConnectInfoRouteDeps {
 
 export interface BuildConnectInfoPromptParams {
   wallets: Array<{
+    id: string;
     name: string;
     chain: string;
     environment: string;
     address: string;
     defaultNetwork: string | null;
+    networks: string[];
     policies: Array<{ type: string }>;
   }>;
   capabilities: string[];
@@ -80,8 +84,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
       : 'No restrictions';
 
     lines.push(`${i + 1}. ${w.name} (${w.chain}/${w.environment})`);
+    lines.push(`   ID: ${w.id}`);
     lines.push(`   Address: ${w.address}`);
-    lines.push(`   Network: ${network}`);
+    lines.push(`   Networks: ${w.networks.join(', ')} (default: ${network})`);
     lines.push(`   Policies: ${policySummary}`);
     lines.push('');
   }
@@ -90,7 +95,8 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('');
   lines.push('Use GET /v1/wallet/balance to check balances.');
   lines.push('Use POST /v1/transactions/send to transfer funds.');
-  lines.push('Specify walletId parameter to target a specific wallet.');
+  lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
+  lines.push('Append ?network=<network> to query a specific network (defaults to wallet default network).');
   lines.push('When session expires (401), renew with PUT /v1/sessions/{sessionId}/renew.');
 
   return lines.join('\n');
@@ -226,14 +232,22 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
     const baseUrl = `${protocol}://${host}`;
 
     // g. Build prompt
-    const promptWallets = linkedWallets.map((w) => ({
-      name: w.name,
-      chain: w.chain,
-      environment: w.environment,
-      address: w.publicKey,
-      defaultNetwork: w.defaultNetwork,
-      policies: policiesMap[w.id] ?? [],
-    }));
+    const promptWallets = linkedWallets.map((w) => {
+      const networks = getNetworksForEnvironment(
+        w.chain as ChainType,
+        w.environment as EnvironmentType,
+      );
+      return {
+        id: w.id,
+        name: w.name,
+        chain: w.chain,
+        environment: w.environment,
+        address: w.publicKey,
+        defaultNetwork: w.defaultNetwork,
+        networks: networks.map((n) => n),
+        policies: policiesMap[w.id] ?? [],
+      };
+    });
 
     const prompt = buildConnectInfoPrompt({
       wallets: promptWallets,
@@ -253,15 +267,22 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         expiresAt: expiresAtSec,
         source: session.source as 'api' | 'mcp',
       },
-      wallets: linkedWallets.map((w) => ({
-        id: w.id,
-        name: w.name,
-        chain: w.chain,
-        environment: w.environment,
-        defaultNetwork: w.defaultNetwork,
-        address: w.publicKey,
-        isDefault: w.isDefault ?? (w.id === defaultWalletId),
-      })),
+      wallets: linkedWallets.map((w) => {
+        const networks = getNetworksForEnvironment(
+          w.chain as ChainType,
+          w.environment as EnvironmentType,
+        );
+        return {
+          id: w.id,
+          name: w.name,
+          chain: w.chain,
+          environment: w.environment,
+          defaultNetwork: w.defaultNetwork,
+          address: w.publicKey,
+          isDefault: w.isDefault ?? (w.id === defaultWalletId),
+          availableNetworks: networks.map((n) => n),
+        };
+      }),
       policies: policiesMap,
       capabilities,
       daemon: {

@@ -1001,6 +1001,7 @@ export const ConnectInfoResponseSchema = z.object({
     defaultNetwork: z.string().nullable(),
     address: z.string(),
     isDefault: z.boolean(),
+    availableNetworks: z.array(z.string()),
   })),
   policies: z.record(z.string(), z.array(z.object({
     type: z.string(),
