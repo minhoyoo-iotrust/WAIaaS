@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { EvmNetworkTypeEnum } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
-// Zod Schema: 10 sections, flat keys, with defaults
+// Zod Schema: 11 sections, flat keys, with defaults
 // ---------------------------------------------------------------------------
 
 export const DaemonConfigSchema = z.object({
@@ -156,6 +156,17 @@ export const DaemonConfigSchema = z.object({
       locale: z.enum(['en', 'ko']).default('en'),
     })
     .default({}),
+  incoming: z
+    .object({
+      enabled: z.boolean().default(false),
+      poll_interval: z.number().int().min(5).max(3600).default(30),
+      retention_days: z.number().int().min(1).max(365).default(90),
+      suspicious_dust_usd: z.number().min(0).max(1000).default(0.01),
+      suspicious_amount_multiplier: z.number().min(1).max(1000).default(10),
+      cooldown_minutes: z.number().int().min(1).max(1440).default(5),
+      wss_url: z.string().default(''),
+    })
+    .default({}),
 });
 
 export type DaemonConfig = z.infer<typeof DaemonConfigSchema>;
@@ -175,6 +186,7 @@ const KNOWN_SECTIONS = [
   'x402',
   'display',
   'telegram',
+  'incoming',
 ] as const;
 
 // ---------------------------------------------------------------------------
