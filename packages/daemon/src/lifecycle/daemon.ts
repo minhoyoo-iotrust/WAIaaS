@@ -8,6 +8,7 @@
  *   4. Adapter initialization (10s, fail-soft)
  *      4c-6. WalletConnect service (fail-soft)
  *      4c-8. Signing SDK lifecycle (fail-soft)
+ *      4c-9. IncomingTxMonitorService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -16,7 +17,7 @@
  *   2-4. HTTP server close
  *   5. In-flight signing -- STUB (Phase 50-04)
  *   6. Pending queue persistence -- STUB (Phase 50-04)
- *   6a. Stop TelegramBot, WcSessionService, AutoStop, BalanceMonitor
+ *   6a. Stop TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
@@ -144,6 +145,7 @@ export class DaemonLifecycle {
   private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
   private approvalChannelRouter: import('../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter | null = null;
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
+  private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -748,6 +750,63 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-9: IncomingTxMonitorService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this._settingsService) {
+        const incoming_enabled = this._settingsService.get('incoming.enabled');
+        if (incoming_enabled === 'true') {
+          const { IncomingTxMonitorService: IncomingTxMonitorCls } = await import(
+            '../services/incoming/incoming-tx-monitor-service.js'
+          );
+          // Build config from SettingsService
+          const ss = this._settingsService;
+          const monitorConfig = {
+            enabled: true,
+            pollIntervalSec: parseInt(ss.get('incoming.poll_interval') || '30', 10),
+            retentionDays: parseInt(ss.get('incoming.retention_days') || '90', 10),
+            dustThresholdUsd: parseFloat(ss.get('incoming.suspicious_dust_usd') || '0.01'),
+            amountMultiplier: parseFloat(ss.get('incoming.suspicious_amount_multiplier') || '10'),
+            cooldownMinutes: parseInt(ss.get('incoming.cooldown_minutes') || '5', 10),
+          };
+          // subscriberFactory creates chain-specific subscribers via dynamic import
+          const subscriberFactory = async (chain: string, network: string) => {
+            const sSvc = this._settingsService!;
+            if (chain === 'solana') {
+              const rpcUrl = sSvc.get(`rpc.solana_${network}`);
+              // WSS URL: derive from RPC URL (replace https:// with wss://)
+              const wssUrl = sSvc.get('incoming.wss_url') || rpcUrl.replace(/^https:\/\//, 'wss://');
+              const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
+              return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
+            }
+            // EVM chains
+            const rpcKey = `rpc.evm_${chain}_${network.replace(/-/g, '_')}`;
+            const rpcUrl = sSvc.get(rpcKey);
+            const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
+            return new EvmIncomingSubscriber({ rpcUrl });
+          };
+          this.incomingTxMonitorService = new IncomingTxMonitorCls({
+            sqlite: this.sqlite,
+            db: this._db!,
+            workers: this.workers ?? new BackgroundWorkers(),
+            eventBus: this.eventBus,
+            killSwitchService: this.killSwitchService,
+            notificationService: this.notificationService,
+            subscriberFactory,
+            config: monitorConfig,
+          });
+          await this.incomingTxMonitorService.start();
+          console.debug('Step 4c-9: Incoming TX monitor started');
+        } else {
+          console.debug('Step 4c-9: Incoming TX monitor disabled');
+        }
+      }
+    } catch (err) {
+      console.warn('Step 4c-9 (fail-soft): Incoming TX monitor init warning:', err);
+      this.incomingTxMonitorService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -857,6 +916,7 @@ export class DaemonLifecycle {
           sqlite: this.sqlite,
           telegramBotRef: this.telegramBotRef,
           killSwitchService: this.killSwitchService,
+          incomingTxMonitorService: this.incomingTxMonitorService,
         });
 
         const app = createApp({
@@ -1104,6 +1164,16 @@ export class DaemonLifecycle {
         }
         this.wcSessionService = null;
         this.wcServiceRef.current = null;
+      }
+
+      // Stop IncomingTxMonitorService (final flush + destroy subscribers)
+      if (this.incomingTxMonitorService) {
+        try {
+          await this.incomingTxMonitorService.stop();
+        } catch (err) {
+          console.warn('IncomingTxMonitorService shutdown warning:', err);
+        }
+        this.incomingTxMonitorService = null;
       }
 
       // Step 6b: Remove all EventBus listeners

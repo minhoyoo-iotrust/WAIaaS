@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk, incoming
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -42,6 +42,7 @@ export const SETTING_CATEGORIES = [
   'monitoring',
   'telegram',
   'signing_sdk',
+  'incoming',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -139,6 +140,15 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'signing_sdk.wallets', category: 'signing_sdk', configPath: 'signing_sdk.wallets', defaultValue: '[]', isCredential: false },
   { key: 'signing_sdk.notifications_enabled', category: 'signing_sdk', configPath: 'signing_sdk.notifications_enabled', defaultValue: 'true', isCredential: false },
   { key: 'signing_sdk.notify_categories', category: 'signing_sdk', configPath: 'signing_sdk.notify_categories', defaultValue: '[]', isCredential: false },
+
+  // --- incoming category (Incoming TX monitor settings) ---
+  { key: 'incoming.enabled', category: 'incoming', configPath: 'incoming.enabled', defaultValue: 'false', isCredential: false },
+  { key: 'incoming.poll_interval', category: 'incoming', configPath: 'incoming.poll_interval', defaultValue: '30', isCredential: false },
+  { key: 'incoming.retention_days', category: 'incoming', configPath: 'incoming.retention_days', defaultValue: '90', isCredential: false },
+  { key: 'incoming.suspicious_dust_usd', category: 'incoming', configPath: 'incoming.suspicious_dust_usd', defaultValue: '0.01', isCredential: false },
+  { key: 'incoming.suspicious_amount_multiplier', category: 'incoming', configPath: 'incoming.suspicious_amount_multiplier', defaultValue: '10', isCredential: false },
+  { key: 'incoming.cooldown_minutes', category: 'incoming', configPath: 'incoming.cooldown_minutes', defaultValue: '5', isCredential: false },
+  { key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.wss_url', defaultValue: '', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

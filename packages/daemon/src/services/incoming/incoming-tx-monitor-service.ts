@@ -30,7 +30,6 @@ import { SubscriptionMultiplexer } from './subscription-multiplexer.js';
 import {
   createConfirmationWorkerHandler,
   createRetentionWorkerHandler,
-  createGapRecoveryHandler,
   updateCursor,
 } from './incoming-tx-workers.js';
 import {
@@ -71,7 +70,6 @@ export interface IncomingTxMonitorDeps {
 
 export class IncomingTxMonitorService {
   private readonly sqlite: Database;
-  private readonly db: BetterSQLite3Database<any>;
   private readonly workers: BackgroundWorkers;
   private readonly eventBus: EventBus;
   private readonly killSwitchService: KillSwitchService | null;
@@ -86,7 +84,6 @@ export class IncomingTxMonitorService {
 
   constructor(deps: IncomingTxMonitorDeps) {
     this.sqlite = deps.sqlite;
-    this.db = deps.db;
     this.workers = deps.workers;
     this.eventBus = deps.eventBus;
     this.killSwitchService = deps.killSwitchService ?? null;

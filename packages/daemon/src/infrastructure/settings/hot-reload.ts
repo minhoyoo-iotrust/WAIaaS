@@ -34,6 +34,8 @@ export interface HotReloadDeps {
   /** Mutable ref for Telegram Bot hot-reload */
   telegramBotRef?: { current: TelegramBotService | null };
   killSwitchService?: KillSwitchService | null;
+  /** Duck-typed IncomingTxMonitorService to avoid circular imports */
+  incomingTxMonitorService?: { updateConfig: (config: Partial<any>) => void } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +80,8 @@ const MONITORING_KEYS_PREFIX = 'monitoring.';
 
 const WALLETCONNECT_KEYS_PREFIX = 'walletconnect.';
 
+const INCOMING_KEYS_PREFIX = 'incoming.';
+
 const TELEGRAM_BOT_KEYS = new Set([
   'telegram.enabled',
   'telegram.bot_token',
@@ -111,6 +115,7 @@ export class HotReloadOrchestrator {
     const hasMonitoringChanges = changedKeys.some((k) => k.startsWith(MONITORING_KEYS_PREFIX));
     const hasWalletConnectChanges = changedKeys.some((k) => k.startsWith(WALLETCONNECT_KEYS_PREFIX));
     const hasTelegramBotChanges = changedKeys.some((k) => TELEGRAM_BOT_KEYS.has(k));
+    const hasIncomingChanges = changedKeys.some((k) => k.startsWith(INCOMING_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -172,6 +177,14 @@ export class HotReloadOrchestrator {
           console.warn('Hot-reload Telegram Bot failed:', err);
         }),
       );
+    }
+
+    if (hasIncomingChanges) {
+      try {
+        this.reloadIncomingMonitor();
+      } catch (err) {
+        console.warn('Hot-reload incoming monitor failed:', err);
+      }
     }
 
     await Promise.all(reloads);
@@ -287,6 +300,26 @@ export class HotReloadOrchestrator {
 
     svc.updateConfig(newConfig);
     console.log('Hot-reload: Balance monitor config updated (effective immediately)');
+  }
+
+  /**
+   * Reload Incoming TX Monitor with current settings from SettingsService.
+   * Synchronous: reads new values and calls incomingTxMonitorService.updateConfig().
+   */
+  private reloadIncomingMonitor(): void {
+    const svc = this.deps.incomingTxMonitorService;
+    if (!svc) return;
+
+    const ss = this.deps.settingsService;
+    svc.updateConfig({
+      enabled: ss.get('incoming.enabled') === 'true',
+      pollIntervalSec: parseInt(ss.get('incoming.poll_interval') || '30', 10),
+      retentionDays: parseInt(ss.get('incoming.retention_days') || '90', 10),
+      dustThresholdUsd: parseFloat(ss.get('incoming.suspicious_dust_usd') || '0.01'),
+      amountMultiplier: parseFloat(ss.get('incoming.suspicious_amount_multiplier') || '10'),
+      cooldownMinutes: parseInt(ss.get('incoming.cooldown_minutes') || '5', 10),
+    });
+    console.log('Hot-reload: Incoming TX monitor config updated');
   }
 
   /**
