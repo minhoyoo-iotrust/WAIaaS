@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.5.0-rc...v2.5.0-rc.1) (2026-02-21)
+
+
+### Features
+
+* add agent read-only access to policies and tokens APIs ([724f4df](https://github.com/minhoyoo-iotrust/WAIaaS/commit/724f4df3c422fb9c0a36ef064196a27bfbfa6036)), closes [#128](https://github.com/minhoyoo-iotrust/WAIaaS/issues/128)
+* remove bulk session/MCP token creation (superseded by 1:N model) ([c3dffe2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c3dffe25e3ee78eae61eec4f0ddaca0a86392f77)), closes [#130](https://github.com/minhoyoo-iotrust/WAIaaS/issues/130)
+
+
+### Bug Fixes
+
+* accept numberless RC tags in promote and release workflows ([a81c0d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a81c0d46d640396786b8167818643c01f1b3afa7)), closes [#127](https://github.com/minhoyoo-iotrust/WAIaaS/issues/127)
+* load notification channels from SettingsService on daemon startup ([028696a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/028696a13f25a381a27e5ba8d8dd23cd046b7c83)), closes [#129](https://github.com/minhoyoo-iotrust/WAIaaS/issues/129)
+
 ## [2.5.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0...v2.5.0-rc) (2026-02-21)
 
 
