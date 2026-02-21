@@ -1909,3 +1909,253 @@ LIMIT 30;
 ```
 
 **참고:** 의심 TX 카운트를 위해 별도 테이블이 필요할 수 있으나, 설계 단순화를 위해 `incoming_transactions`에 `is_suspicious INTEGER DEFAULT 0` 컬럼을 추가하는 것도 고려. 구현 시 결정.
+
+---
+
+## 8. 설정 구조 + 설계 통합 검증
+
+### 8.1 config.toml [incoming] 섹션
+
+기존 WAIaaS config.toml 평탄화 원칙을 준수하여 `[incoming]` 섹션을 정의한다.
+
+```toml
+[incoming]
+# 수신 모니터링 전역 활성화 (기본: false)
+incoming_enabled = false
+
+# 모니터링 모드: "polling" | "websocket" | "auto" (기본: "auto")
+# auto: WebSocket 시도 → 실패 시 폴링 자동 전환
+incoming_mode = "auto"
+
+# 폴링 간격 (초, 기본: 30)
+incoming_poll_interval = 30
+
+# 수신 이력 보존 기간 (일, 기본: 90)
+incoming_retention_days = 90
+
+# 먼지 공격 의심 임계값 (USD, 기본: 0.01)
+incoming_suspicious_dust_usd = 0.01
+
+# 대량 입금 의심 배수 (평균의 N배 초과, 기본: 10)
+incoming_suspicious_amount_multiplier = 10
+```
+
+**평탄화 원칙 준수:**
+- 섹션명: `[incoming]`
+- 키 접두사: `incoming_` (기존 `[balance_monitor]` → `monitoring_` 패턴과 동일)
+- 중첩 없음: 모든 키가 1-depth flat
+
+### 8.2 SettingsService 등록
+
+```typescript
+// packages/daemon/src/infrastructure/settings/setting-keys.ts
+
+export const SETTING_KEYS = {
+  // ... 기존 키 ...
+
+  // Incoming Transaction Monitoring
+  'incoming.enabled': { default: 'false', hotReload: true },
+  'incoming.mode': { default: 'auto', hotReload: true },
+  'incoming.poll_interval': { default: '30', hotReload: true },
+  'incoming.retention_days': { default: '90', hotReload: true },
+  'incoming.suspicious_dust_usd': { default: '0.01', hotReload: true },
+  'incoming.suspicious_amount_multiplier': { default: '10', hotReload: true },
+} as const;
+```
+
+**hot-reload 대상 (재시작 불필요):**
+- `incoming.enabled`: 활성화/비활성화 즉시 반영
+- `incoming.mode`: 모드 전환 즉시 반영 (구독 재설정)
+- `incoming.poll_interval`: 다음 폴링 주기부터 반영
+- `incoming.retention_days`: 다음 정리 주기부터 반영
+- `incoming.suspicious_dust_usd`: 다음 검사부터 반영
+- `incoming.suspicious_amount_multiplier`: 다음 검사부터 반영
+
+**모든 6개 키가 hot-reload 가능** — 재시작 필요 없음
+
+### 8.3 환경변수 매핑
+
+기존 `WAIAAS_{SECTION}_{KEY}` 패턴:
+
+| config.toml 키 | 환경변수 |
+|---------------|---------|
+| incoming_enabled | WAIAAS_INCOMING_ENABLED |
+| incoming_mode | WAIAAS_INCOMING_MODE |
+| incoming_poll_interval | WAIAAS_INCOMING_POLL_INTERVAL |
+| incoming_retention_days | WAIAAS_INCOMING_RETENTION_DAYS |
+| incoming_suspicious_dust_usd | WAIAAS_INCOMING_SUSPICIOUS_DUST_USD |
+| incoming_suspicious_amount_multiplier | WAIAAS_INCOMING_SUSPICIOUS_AMOUNT_MULTIPLIER |
+
+**우선순위:** 환경변수 > config.toml > 기본값 (기존 패턴과 동일)
+
+### 8.4 지갑별 opt-in 설정
+
+```
+전역 게이트                    지갑별 게이트
+incoming_enabled=true  AND  monitor_incoming=1  →  모니터링 활성
+incoming_enabled=true  AND  monitor_incoming=0  →  모니터링 비활성
+incoming_enabled=false AND  (any)               →  전체 비활성
+```
+
+- `incoming_enabled = false` (기본값): 전역 비활성 — 어떤 지갑도 모니터링 안 됨
+- `incoming_enabled = true`: 전역 활성 — `monitor_incoming = 1`인 지갑만 모니터링
+- 새 지갑 생성 시 `monitor_incoming = 0` (기본값 — opt-in 필요)
+
+**API 활성화:**
+```
+PATCH /v1/wallet/:id  { "monitorIncoming": true }
+```
+
+**Admin UI 활성화:**
+- Wallet 상세 페이지에 "수신 모니터링" 토글 스위치
+
+### 8.5 HotReloadOrchestrator 확장
+
+```typescript
+// packages/daemon/src/infrastructure/settings/hot-reload.ts
+
+const INCOMING_KEYS_PREFIX = 'incoming.';
+
+export interface HotReloadDeps {
+  // ... 기존 ...
+  incomingTxMonitorService?: IncomingTxMonitorService | null;
+}
+
+// handleChangedKeys 내부 추가
+if (hasIncomingChanges) {
+  try {
+    this.reloadIncomingMonitor();
+  } catch (err) {
+    console.warn('Hot-reload incoming monitor failed:', err);
+  }
+}
+
+private reloadIncomingMonitor(): void {
+  const svc = this.deps.incomingTxMonitorService;
+  if (!svc) return;
+
+  const ss = this.deps.settingsService;
+  svc.updateConfig({
+    enabled: ss.get('incoming.enabled') === 'true',
+    mode: ss.get('incoming.mode') as 'polling' | 'websocket' | 'auto',
+    pollIntervalSec: parseInt(ss.get('incoming.poll_interval'), 10),
+    retentionDays: parseInt(ss.get('incoming.retention_days'), 10),
+    suspiciousDustUsd: parseFloat(ss.get('incoming.suspicious_dust_usd')),
+    suspiciousAmountMultiplier: parseFloat(ss.get('incoming.suspicious_amount_multiplier')),
+  });
+}
+```
+
+### 8.6 기존 설계 문서 영향 분석
+
+| 문서 | 영향 범위 | 변경 내용 |
+|------|----------|-----------|
+| doc 25 (DB 스키마) | 테이블 추가 | incoming_transactions, incoming_tx_cursors 테이블 + wallets.monitor_incoming 컬럼 |
+| doc 27 (이벤트 시스템) | 이벤트 타입 추가 | INCOMING_TX_DETECTED, INCOMING_TX_SUSPICIOUS (28→30) |
+| doc 28 (알림 시스템) | 메시지 템플릿 추가 | en/ko 템플릿 2개, 카테고리 'incoming' 추가 |
+| doc 29 (보안 모델) | 의심 감지 규칙 추가 | IIncomingSafetyRule 3종 (dust/unknownToken/largeAmount) |
+| doc 31 (API 설계) | 엔드포인트 추가 | GET /v1/wallet/incoming, GET /v1/wallet/incoming/summary |
+| doc 35 (설정 모델) | 섹션 추가 | [incoming] 6키, SettingsService 등록, HotReload 확장 |
+| doc 37 (SDK 인터페이스) | 메서드 추가 | listIncomingTransactions, getIncomingTransactionSummary |
+| doc 38 (MCP 도구) | 도구 추가 | list_incoming_transactions, get_incoming_summary |
+| doc 75 (알림 채널) | 이벤트 라우팅 확장 | INCOMING_TX_* 이벤트 → 기존 5채널 라우팅 |
+
+**충돌 없음 확인:**
+- 모든 변경은 **확장**(추가)이며 기존 인터페이스 수정 없음
+- IChainAdapter 22메서드 불변 — IChainSubscriber 별도 인터페이스
+- 기존 transactions 테이블 불변 — incoming_transactions 별도 테이블
+
+### 8.7 검증 시나리오
+
+#### 핵심 검증 (T-01 ~ T-17)
+
+| ID | 시나리오 | 검증 대상 |
+|----|---------|----------|
+| T-01 | Solana SOL 네이티브 수신 감지 | §3.2.1 SOL 파싱 알고리즘 |
+| T-02 | Solana SPL 토큰 수신 감지 | §3.2.2 SPL 파싱 알고리즘 |
+| T-03 | Solana Token-2022 수신 감지 | §3.3 Token-2022 지원 |
+| T-04 | Solana 신규 ATA 최초 수신 | §3.4 ATA 2레벨 (pre=0n) |
+| T-05 | EVM 네이티브 ETH 수신 감지 | §4.3 watchBlocks + to 필터 |
+| T-06 | EVM ERC-20 수신 감지 | §4.2 Transfer 이벤트 |
+| T-07 | WebSocket → 폴링 자동 전환 | §5.1 상태 머신 |
+| T-08 | 폴링 → WebSocket 자동 복귀 | §5.1 상태 머신 |
+| T-09 | 블라인드 구간 TX 복구 | §5.6 갭 보상 폴링 |
+| T-10 | 동일 TX 중복 삽입 방지 | §2.4 ON CONFLICT DO NOTHING |
+| T-11 | 보존 정책 자동 삭제 | §2.5 retention_days |
+| T-12 | DETECTED → CONFIRMED 전환 | §1.3 2단계 상태 |
+| T-13 | 먼지 공격 감지 | §6.6 DustAttackRule |
+| T-14 | 미등록 토큰 감지 | §6.6 UnknownTokenRule |
+| T-15 | 대량 입금 감지 | §6.6 LargeAmountRule |
+| T-16 | 수신 이력 API 커서 페이지네이션 | §7.1 cursor pagination |
+| T-17 | hot-reload 설정 변경 반영 | §8.5 HotReloadOrchestrator |
+
+#### 보안 검증 (S-01 ~ S-04)
+
+| ID | 시나리오 | 검증 대상 |
+|----|---------|----------|
+| S-01 | confirmed TX 롤백 후 에이전트 반응 없음 | §1.3 CONFIRMED만 트리거 |
+| S-02 | KillSwitch SUSPENDED 시 모니터링 중단 | §5.1 DISABLED 전환 |
+| S-03 | sessionAuth 없이 /incoming 접근 거부 | §7.1 인증 |
+| S-04 | 타 지갑 수신 이력 접근 불가 | §7.1 resolveWalletId |
+
+### 8.8 교차 검증 체크리스트
+
+| 항목 | 상태 | 근거 |
+|------|------|------|
+| Zod SSoT 파이프라인 준수 | ✅ | §7.2 Zod → TS → OpenAPI 순서 |
+| config.toml 평탄화 원칙 | ✅ | §8.1 [incoming] 6키 flat, incoming_ 접두사 |
+| 환경변수 WAIAAS_* 패턴 | ✅ | §8.3 WAIAAS_INCOMING_* 매핑 |
+| NotificationEventType SSoT | ✅ | §6.1 NOTIFICATION_EVENT_TYPES 배열 확장 |
+| DB 마이그레이션 v21 | ✅ | §2.7 ALTER TABLE + CREATE TABLE |
+| IChainAdapter 불변 | ✅ | §1.1 별도 IChainSubscriber 인터페이스 |
+| BackgroundWorkers 패턴 | ✅ | §2.6 flush + §2.5 retention + §3.6/4.6 confirm |
+| SettingsService hot-reload | ✅ | §8.2 6키 모두 hotReload: true |
+| HotReloadOrchestrator 확장 | ✅ | §8.5 incoming prefix 감지 + updateConfig |
+| DaemonLifecycle 통합 | ✅ | Step 4c-9 fail-soft 초기화 |
+| discriminatedUnion 5-type 불변 | ✅ | 수신 TX는 별도 테이블, 기존 TX 타입 불변 |
+| 에러 코드 체계 충돌 없음 | ✅ | 신규 에러 코드 할당 필요 시 구현 마일스톤에서 정의 |
+
+### 8.9 DaemonLifecycle 통합 위치
+
+```
+Step 4c-4: BalanceMonitorService (기존)
+Step 4c-9: IncomingTxMonitorService (신규, fail-soft)
+  ├── IncomingTxQueue (메모리 큐)
+  ├── SubscriptionMultiplexer (WebSocket/폴링 관리)
+  ├── SolanaIncomingSubscriber (체인별 구현)
+  └── EvmIncomingSubscriber (체인별 구현)
+
+Step 5: HTTP Server
+  └── HotReloadOrchestrator deps에 incomingTxMonitorService 추가
+
+Step 6: BackgroundWorkers
+  ├── incoming-tx-flush (5초, 메모리 큐 → DB)
+  ├── incoming-tx-retention (1시간, 보존 정책)
+  ├── incoming-tx-confirm-solana (30초, DETECTED → CONFIRMED)
+  └── incoming-tx-confirm-evm (30초, DETECTED → CONFIRMED)
+
+Shutdown:
+  └── incomingTxMonitorService.stop() (구독 해제, 큐 최종 flush)
+```
+
+### 8.10 설계 결정 요약
+
+| # | 결정 | 근거 |
+|---|------|------|
+| D-01 | IChainSubscriber를 IChainAdapter와 분리 | stateful vs stateless, AdapterPool 호환성 |
+| D-02 | UNIQUE(tx_hash, wallet_id) 복합 제약 | 배치 전송 시 다중 지갑 수신 가능 |
+| D-03 | 2단계 상태 (DETECTED/CONFIRMED) | 빠른 알림 vs 안전한 트리거 분리 |
+| D-04 | 메모리 큐 + 5초 flush | SQLite 단일 라이터 보호 (C-02) |
+| D-05 | Solana: logsSubscribe({ mentions }) | SOL + SPL + ATA 단일 구독 해결 |
+| D-06 | EVM: 폴링(getLogs) 우선 | self-hosted WebSocket 가용성 불확실 |
+| D-07 | 3-state 연결 상태 머신 | WebSocket ↔ 폴링 자동 전환 |
+| D-08 | 체인별 WebSocket 공유 멀티플렉서 | 연결 수 최소화, 확장성 |
+| D-09 | 블라인드 구간 커서 기반 복구 | TX 유실 방지 (C-01) |
+| D-10 | NotificationEventType 28→30 | INCOMING_TX_DETECTED + SUSPICIOUS |
+| D-11 | IIncomingSafetyRule 3규칙 | dust + unknownToken + largeAmount |
+| D-12 | config.toml [incoming] 6키 flat | 기존 평탄화 원칙 준수 |
+| D-13 | 전역 게이트 + 지갑별 opt-in 2단계 | 기본 비활성, RPC 비용 제어 |
+| D-14 | incoming_tx_cursors 별도 테이블 | 커서 관리 분리, FK CASCADE |
+| D-15 | v21 마이그레이션 | ALTER TABLE + CREATE TABLE 2개 |
+| D-16 | 6키 모두 hot-reload 가능 | 재시작 불필요, 즉시 반영 |
+| D-17 | confirmed 감지 → finalized 확정 | Solana C-03 대응 |
