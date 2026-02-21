@@ -1,7 +1,8 @@
 # 마일스톤 m27: 수신 트랜잭션 모니터링 설계
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v27.0
+- **Completed:** 2026-02-21
 
 ## 목표
 

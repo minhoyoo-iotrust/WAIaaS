@@ -13,6 +13,20 @@ dispatch:
 
 Complete reference for all 5 transaction types, lifecycle management, and policy interaction. All endpoints use base URL `http://localhost:3100`. Transaction endpoints require **sessionAuth** (`Authorization: Bearer <token>`) unless noted otherwise.
 
+## Permissions
+
+### Agent (sessionAuth)
+- Send all 5 transaction types via `POST /v1/transactions/send`
+- Sign raw transactions via `POST /v1/transactions/sign`
+- Query transaction status and history
+- Renew session tokens
+
+### Owner (ownerAuth -- SIWS/SIWE)
+- Approve pending transactions via `POST /v1/transactions/{id}/approve`
+- Reject pending transactions via `POST /v1/transactions/{id}/reject`
+
+**Prerequisite:** Policy types (ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS) must be configured by admin before agents can use TOKEN_TRANSFER, CONTRACT_CALL, and APPROVE transaction types.
+
 ## 1. Overview
 
 WAIaaS uses a **discriminatedUnion 5-type** system for transactions. The `type` field in the request body determines which transaction variant to execute:

@@ -44,8 +44,8 @@ jobs:
 
           # Strip v prefix for validation
           STRIPPED="${RC_VERSION#v}"
-          if ! echo "$STRIPPED" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'; then
-            echo "Error: '$RC_VERSION' is not a valid RC version (expected vX.Y.Z-rc.N or X.Y.Z-rc.N)"
+          if ! echo "$STRIPPED" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-rc(\.[0-9]+)?$'; then
+            echo "Error: '$RC_VERSION' is not a valid RC version (expected vX.Y.Z-rc[.N] or X.Y.Z-rc[.N])"
             exit 1
           fi
 
@@ -59,7 +59,7 @@ jobs:
             RC_VERSION="v${STRIPPED}"
           fi
 
-          STABLE_VERSION=$(echo "$STRIPPED" | sed 's/-rc\.[0-9]*//')
+          STABLE_VERSION=$(echo "$STRIPPED" | sed 's/-rc\(\.[0-9]*\)\{0,1\}//')
           echo "rc_version=$RC_VERSION" >> "$GITHUB_OUTPUT"
           echo "stable_version=$STABLE_VERSION" >> "$GITHUB_OUTPUT"
           echo "RC: $RC_VERSION -> Stable: $STABLE_VERSION"

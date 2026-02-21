@@ -1,805 +1,477 @@
-# Architecture Patterns: WalletConnect Owner 승인
+# Architecture Patterns: Incoming Transaction Monitoring
 
-**Domain:** WalletConnect v2 SignClient 통합 -- 외부 지갑을 통한 APPROVAL 트랜잭션 서명
-**Researched:** 2026-02-16
-**Confidence:** MEDIUM (WC SDK 공식 문서 + 코드베이스 정밀 분석 기반, Node.js 서버 장기 실행 이슈 LOW)
-
----
-
-## Recommended Architecture
-
-WAIaaS 데몬이 WalletConnect v2 **SignClient를 dApp 역할**로 호스팅한다. Owner의 외부 지갑(MetaMask, Phantom 등)이 wallet 역할이 된다. APPROVAL 상태 트랜잭션이 발생하면, 데몬이 SignClient를 통해 Owner 지갑에 서명 요청을 보내고, Owner가 외부 지갑에서 승인/거절한다.
-
-### 핵심 설계 원칙
-
-1. **데몬 = dApp**: SignClient.connect()로 URI 생성, SignClient.request()로 서명 요청 전송
-2. **Owner 지갑 = Wallet**: QR 스캔으로 페어링, 서명 요청 수신 후 승인/거절
-3. **Telegram = Fallback**: WC 세션 없거나 서명 실패 시 기존 /approve /reject 명령어로 대체
-4. **Admin UI = QR 표시**: 페어링 URI를 QR 코드로 렌더링, 세션 상태 표시
-5. **WC = 보너스 채널**: WC 없이도 기존 ownerAuth REST API + Telegram이 100% 동작. WC 실패는 로깅만.
+**Domain:** 인바운드 트랜잭션 모니터링 — 기존 WAIaaS 아키텍처 통합
+**Researched:** 2026-02-21
+**Sources:** 코드베이스 직접 분석 (packages/core, packages/daemon, packages/adapters)
 
 ---
 
-## Component Boundaries
+## 권고 아키텍처
 
-```
-                                  WalletConnect Relay (wss://relay.walletconnect.com)
-                                        |
-                                        v
-  +------------------------------------+     +-------------------+
-  |         WAIaaS Daemon              |     |  Owner's Wallet   |
-  |                                    |     |  (MetaMask etc.)  |
-  |  +-----------------------------+   |     |                   |
-  |  | WalletConnectService        |<--+---->|  session_request  |
-  |  | - signClient: SignClient    |   |     |  approve/reject   |
-  |  | - sessions: Map<walletId>   |   |     +-------------------+
-  |  | - connect() -> URI          |   |
-  |  | - requestApproval(txId)     |   |     +-------------------+
-  |  +------------|----------------+   |     |  Admin UI         |
-  |               |                    |     |  /admin/wc        |
-  |               v                    |     |  - QR 렌더링      |
-  |  +-----------------------------+   |     |  - 세션 상태 표시  |
-  |  | ApprovalWorkflow            |   |     +-------------------+
-  |  | - requestApproval(txId)     |   |
-  |  | - approve(txId, sig)        |   |     +-------------------+
-  |  | - reject(txId)              |   |     |  Telegram Bot     |
-  |  +-----------------------------+   |     |  /approve /reject |
-  |               |                    |     |  (fallback)       |
-  |               v                    |     +-------------------+
-  |  +-----------------------------+   |
-  |  | NotificationService        |   |
-  |  | - APPROVAL_REQUESTED 이벤트 |   |
-  |  +-----------------------------+   |
-  +------------------------------------+
-```
+### 핵심 설계 결정 요약
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| WalletConnectService | WC SignClient 생명주기, 세션 관리, 서명 요청 전송 | WC Relay, ApprovalWorkflow, SettingsService, SQLite |
-| WC Admin API routes | QR 페어링 URI 생성, 세션 조회/해제 API | WalletConnectService, masterAuth |
-| Admin UI WC page | QR 코드 렌더링, 세션 상태 표시, 연결/해제 UI | WC Admin API (fetch) |
-| SqliteKeyValueStorage | WC SDK 내부 스토리지를 SQLite에 영속화 | wc_store 테이블, better-sqlite3 |
-| CAIP-2 매핑 유틸리티 | WAIaaS chain+network -> WC namespace 변환 | 정적 매핑 테이블 |
+| 질문 | 권고 결정 | 근거 |
+|------|-----------|------|
+| IChainSubscriber 위치 | IChainAdapter와 **별도 인터페이스** | 기존 22메서드 어댑터에 상태(WebSocket 연결)를 주입하면 단순 RPC 호출과 구독 생명주기가 섞임 |
+| WebSocket 관리 | 모니터링 대상 지갑이 있을 때만 **lazy start** | 구독 비용이 제로인 상태를 기본값으로 유지 |
+| 트랜잭션 파싱 위치 | **체인 전용 Normalizer** (어댑터 내부) | raw chain 이벤트 → IncomingTx 정규화는 체인 지식 필요 |
+| incoming_transactions 테이블 | **별도 테이블**, walletId FK만 공유 | 상태 머신, 방향, 소스 개념이 outgoing과 다름 |
+| EventBus 통합 | 기존 EventBus에 **새 이벤트 타입 추가** | 전용 채널은 과잉 설계. 기존 typed WaiaasEventMap 확장이 일관성 있음 |
+| 폴링 폴백 | **BackgroundWorkers.register()** 활용 | 이미 WAL checkpoint, session-cleanup 등과 동일 패턴 |
+| monitor_incoming 상태 전파 | **IncomingTxMonitorService**가 wallets 테이블을 직접 조회 | 구독 시작/중지 시 DB SELECT WHERE monitor_incoming=1 실행 |
 
 ---
 
-## New Components (5개)
+## 컴포넌트 경계
 
-### 1. WalletConnectService (신규)
+### 기존 컴포넌트 (수정 대상)
 
-**위치:** `packages/daemon/src/services/walletconnect-service.ts`
-**책임:** WC SignClient 생명주기, 세션 관리, 서명 요청 전송
-**의존:** SettingsService (project_id), ApprovalWorkflow, NotificationService, SQLite (세션 영속화)
+| 컴포넌트 | 현재 상태 | 필요한 변경 |
+|----------|-----------|-------------|
+| `IChainAdapter` (core) | 22 메서드, 상태 없음 | 변경 없음 |
+| `WaiaasEventMap` (core) | 5 이벤트 타입 | `transaction:incoming` 이벤트 추가 |
+| `NOTIFICATION_EVENT_TYPES` (core) | 28개 | `TX_INCOMING` 추가 |
+| `wallets` 테이블 | 기존 컬럼 | `monitor_incoming INTEGER NOT NULL DEFAULT 0` 추가 |
+| `DaemonLifecycle` | Step 4c-4 위치에 BalanceMonitor | Step 4c-9 위치에 IncomingTxMonitorService 추가 |
+| `migrate.ts` | v20까지 | v21 마이그레이션: wallets.monitor_incoming 컬럼 추가 |
+
+### 신규 컴포넌트
+
+| 컴포넌트 | 위치 | 역할 |
+|----------|------|------|
+| `IChainSubscriber` | `packages/core/src/interfaces/` | 인바운드 구독 인터페이스 |
+| `incoming_transactions` 테이블 | DB schema | 수신 TX 레코드 저장 |
+| `IncomingTxMonitorService` | `packages/daemon/src/services/monitoring/` | 구독 오케스트레이터, 생명주기 관리 |
+| `SolanaIncomingSubscriber` | `packages/adapters/solana/src/` | Solana logsNotifications 구현 |
+| `EvmIncomingSubscriber` | `packages/adapters/evm/src/` | viem getLogs 폴링 구현 |
+
+---
+
+## Q1: IChainSubscriber — 별도 인터페이스로 분리
+
+### 권고: IChainAdapter와 **별도 인터페이스** 작성
+
+IChainAdapter는 stateless request-response 패턴이다. 구독은 stateful 연결(WebSocket)을 보유하며 생명주기가 다르다. 둘을 합치면:
+
+- AdapterPool의 캐싱 키(`chain:network`)가 구독 스코프와 다름 (구독은 지갑 주소별)
+- 기존 22메서드 계약 테스트(`chain-adapter-contract.ts`)가 구독 상태에 오염됨
+- 어댑터를 구현하는 외부 플러그인이 구독 지원 없이도 동작해야 함
 
 ```typescript
-// 핵심 인터페이스
-interface WalletConnectService {
-  // 초기화 (데몬 시작 시)
-  initialize(projectId: string): Promise<void>;
+// packages/core/src/interfaces/IChainSubscriber.ts
 
-  // 페어링: QR URI 생성 (walletId 단위)
-  connect(walletId: string, chain: ChainType, network: string): Promise<{ uri: string; topic: string }>;
-
-  // 서명 요청 전송 (APPROVAL 트랜잭션)
-  requestSignature(txId: string, walletId: string, params: SignRequestParams): Promise<SignResult>;
-
-  // 세션 상태 조회
-  getSession(walletId: string): WCSessionInfo | null;
-
-  // 활성 세션 존재 여부
-  hasActiveSession(walletId: string): boolean;
-
-  // 세션 해제
-  disconnect(walletId: string): Promise<void>;
-
-  // 셧다운 (데몬 종료 시)
-  shutdown(): Promise<void>;
+export interface IncomingTransaction {
+  txHash: string;
+  walletAddress: string;       // 수신 지갑의 온체인 주소
+  fromAddress: string | null;  // 발신자 (Solana logs에서 추출 불가 시 null)
+  amount: string;              // 최소 단위 (lamports, wei)
+  tokenMint?: string;          // SPL/ERC-20 토큰 주소 (네이티브이면 undefined)
+  chain: ChainType;
+  network: NetworkType;
+  blockNumber?: bigint;        // EVM에서 사용
+  slot?: bigint;               // Solana에서 사용
+  timestamp: number;           // Unix epoch seconds
 }
 
-interface SignRequestParams {
-  chain: ChainType;          // 'solana' | 'ethereum'
-  network: string;           // 'ethereum-mainnet' | 'devnet' 등
-  ownerAddress: string;      // Owner 지갑 주소
-  // EVM: personal_sign 메시지 (트랜잭션 요약)
-  // Solana: 직렬화된 트랜잭션 바이트
-  messageOrTx: string;
+export interface IChainSubscriber {
+  /**
+   * 지정 주소에 대한 인바운드 TX 구독을 시작한다.
+   * 이미 구독 중인 주소는 무시된다 (idempotent).
+   */
+  subscribe(address: string, onTransaction: (tx: IncomingTransaction) => void): Promise<void>;
+
+  /**
+   * 지정 주소의 구독을 취소한다.
+   */
+  unsubscribe(address: string): Promise<void>;
+
+  /**
+   * 현재 구독 중인 주소 목록을 반환한다.
+   */
+  subscribedAddresses(): string[];
+
+  /**
+   * 모든 구독과 WebSocket 연결을 정리한다.
+   * DaemonLifecycle.shutdown()에서 호출.
+   */
+  destroy(): Promise<void>;
 }
+```
 
-type SignResult =
-  | { status: 'approved'; signature: string }
-  | { status: 'rejected'; reason?: string }
-  | { status: 'timeout' }
-  | { status: 'no_session'; fallback: 'telegram' };
+**어댑터와의 관계:** IChainSubscriber는 IChainAdapter의 RPC URL을 공유하지만 별도로 인스턴스화된다. SolanaIncomingSubscriber는 `createSolanaRpcSubscriptions()` WebSocket 클라이언트를 내부적으로 보유하고, EvmIncomingSubscriber는 viem `publicClient`를 재사용한다.
 
-interface WCSessionInfo {
+---
+
+## Q2: WebSocket 연결 관리 — lazy initialization
+
+### 권고: **첫 번째 subscribe() 호출 시 lazy 연결**
+
+```
+모니터링 대상 지갑 0개 → WebSocket 연결 없음
+첫 번째 monitor_incoming=1 지갑 추가 → subscribe() → WebSocket 연결
+모든 지갑 monitor_incoming=0으로 변경 → destroy() → 연결 해제
+```
+
+**이유:**
+- `BalanceMonitorService`가 동일 패턴 사용 (setInterval이 enabled=false면 start() 호출 안 함)
+- RPC 제공자 WebSocket 연결은 비용이 있음 (API 할당량, keep-alive)
+- 테스트 환경에서 연결 없이 단위 테스트 가능
+
+**연결 재시도:** WebSocket 끊김은 지수 백오프(1s, 2s, 4s, max 30s)로 재연결. 재연결 후 구독 목록을 복원한다.
+
+**데몬 시작 시 처리:**
+```
+Step 4c-9 (fail-soft):
+  1. wallets WHERE monitor_incoming=1 조회
+  2. 목록이 비어있으면 IncomingTxMonitorService는 대기 상태 유지
+  3. 목록이 있으면 subscriber.subscribe(address) 일괄 등록
+```
+
+---
+
+## Q3: 트랜잭션 파싱 — 체인 전용 Normalizer
+
+### 권고: **어댑터 내부 Normalizer**, 서비스 레이어에서는 IncomingTransaction만 처리
+
+체인별 raw 이벤트 형태가 다르다:
+
+| 체인 | raw 이벤트 | 파싱 난이도 |
+|------|-----------|------------|
+| Solana | `logsNotifications` → signature만 포함, 금액 없음 | HIGH: signature로 getTransaction 추가 호출 필요 |
+| EVM | `getLogs` → Transfer(address,address,uint256) event | MEDIUM: address 필터로 수신 여부 판단 가능 |
+
+```
+SolanaIncomingSubscriber:
+  logsNotifications(mentions: [address]) →
+    getTransaction(signature) →        ← 추가 RPC 호출
+    parseAccountChanges(tx, address) →
+    emit IncomingTransaction
+
+EvmIncomingSubscriber:
+  getLogs(address, fromBlock, toBlock) →
+    filterToAddress(address) →         ← 이미 logs에 포함
+    emit IncomingTransaction
+```
+
+**Normalizer 위치:** 각 subscriber 파일 내부의 private 함수. 공통 normalize 레이어 불필요 — 체인 간 raw 형태가 너무 달라서 추상화 비용이 실익보다 크다.
+
+**fromAddress 처리:** Solana에서는 logsNotifications의 signature로 getTransaction을 호출해야 발신자를 알 수 있다. 비용이 크므로 **fromAddress는 Solana에서 NULL 허용**한다.
+
+---
+
+## Q4: incoming_transactions 테이블 — 별도 테이블
+
+### 권고: **완전히 별도인 incoming_transactions 테이블**, transactions와 FK 없음
+
+**분리 이유:**
+- `transactions`는 9-state 아웃고잉 파이프라인 상태 머신을 위한 구조
+- `incoming_transactions`는 단방향 수신 이력 (DETECTED → CONFIRMED 2-state)
+- sessionId, tier, reservedAmount, approvalChannel 등 아웃고잉 전용 컬럼이 인바운드에 없음
+- TRANSACTION_TYPES SSoT에 새 타입 추가하면 기존 discriminatedUnion 계약에 영향
+
+**신규 테이블 DDL (v21 마이그레이션):**
+
+```sql
+CREATE TABLE IF NOT EXISTS incoming_transactions (
+  id TEXT PRIMARY KEY,                        -- UUID v7
+  wallet_id TEXT NOT NULL
+    REFERENCES wallets(id) ON DELETE CASCADE,
+  chain TEXT NOT NULL,
+  network TEXT,
+  tx_hash TEXT NOT NULL,
+  from_address TEXT,                          -- Solana에서는 NULL 가능
+  amount TEXT NOT NULL,                       -- 최소 단위 문자열
+  token_mint TEXT,                            -- SPL/ERC-20, NULL이면 네이티브
+  status TEXT NOT NULL DEFAULT 'DETECTED'
+    CHECK (status IN ('DETECTED', 'CONFIRMED')),
+  block_number TEXT,                          -- EVM bigint (TEXT로 저장)
+  slot TEXT,                                  -- Solana slot (TEXT로 저장)
+  detected_at INTEGER NOT NULL,               -- Unix epoch seconds
+  confirmed_at INTEGER,
+  raw_metadata TEXT                           -- chain-specific JSON (선택적)
+)
+```
+
+**인덱스:**
+```sql
+CREATE UNIQUE INDEX idx_incoming_tx_hash ON incoming_transactions(tx_hash);
+CREATE INDEX idx_incoming_wallet_status ON incoming_transactions(wallet_id, status);
+CREATE INDEX idx_incoming_detected_at ON incoming_transactions(detected_at);
+CREATE INDEX idx_incoming_token_mint ON incoming_transactions(token_mint);
+```
+
+**중복 방지:** `tx_hash`에 UNIQUE 제약 — 동일 TX가 재구독 시 중복 삽입되지 않음.
+
+**wallets 테이블 변경 (v21 마이그레이션):**
+```sql
+ALTER TABLE wallets ADD COLUMN monitor_incoming INTEGER NOT NULL DEFAULT 0;
+```
+- 0 = 비활성 (기본값, 기존 지갑 영향 없음)
+- 1 = 활성
+
+---
+
+## Q5: EventBus 통합 — 기존 버스에 새 이벤트 추가
+
+### 권고: `WaiaasEventMap`에 **`transaction:incoming` 이벤트 타입 추가**
+
+전용 이벤트 채널을 만드는 것은 과잉 설계다. 기존 EventBus가 이미:
+- listener 에러 격리 (try/catch per listener)
+- typed event map
+- removeAllListeners 지원 (shutdown 시 정리 완료)
+
+**코어 변경:**
+
+```typescript
+// packages/core/src/events/event-types.ts에 추가
+
+export interface TransactionIncomingEvent {
   walletId: string;
-  topic: string;
-  peerMeta: { name: string; url?: string; icons?: string[] } | null;
-  chainId: string;          // CAIP-2 형식: 'eip155:1' 또는 'solana:5eykt...'
-  ownerAddress: string;
-  expiry: number;           // Unix epoch seconds
-  connected: boolean;
+  txHash: string;
+  fromAddress: string | null;
+  amount: string;
+  tokenMint?: string;
+  chain: ChainType;
+  network: NetworkType;
+  timestamp: number;
 }
+
+// WaiaasEventMap에 추가:
+'transaction:incoming': TransactionIncomingEvent;
 ```
 
-**생명주기:**
-- 데몬 Step 4c-6에서 초기화 (fail-soft)
-- walletconnect.project_id 설정 시만 활성화
-- 셧다운 시 SignClient.disconnect() + 리소스 해제
-- 기존 wc_sessions에서 세션 복원 (데몬 재시작 시 자동 복구)
-
-**SignClient 초기화 상세:**
-
+**NOTIFICATION_EVENT_TYPES에 추가 (28개 → 29개):**
 ```typescript
-async initialize(projectId: string): Promise<void> {
-  // SQLite 기반 커스텀 스토리지 (데몬 재시작 시 세션 복원)
-  const storage = new SqliteKeyValueStorage(this.sqlite, 'wc_store');
-
-  const core = new Core({
-    projectId,
-    storage,
-    relayUrl: 'wss://relay.walletconnect.com',
-  });
-
-  this.signClient = await SignClient.init({
-    core,
-    metadata: {
-      name: 'WAIaaS Daemon',
-      description: 'AI Agent Wallet-as-a-Service',
-      url: 'http://localhost',
-      icons: [],
-    },
-  });
-
-  // 기존 세션 복원: wc_sessions 테이블에서 walletId -> topic 매핑 로드
-  this.restoreSessions();
-
-  // 세션 삭제 이벤트 리스너
-  this.signClient.on('session_delete', ({ topic }) => {
-    this.handleSessionDelete(topic);
-  });
-}
+'TX_INCOMING'
 ```
 
-### 2. SqliteKeyValueStorage (신규)
-
-**위치:** `packages/daemon/src/services/walletconnect-storage.ts`
-**책임:** WC SDK의 IKeyValueStorage 인터페이스를 SQLite로 구현
-
-```typescript
-// WC SDK의 IKeyValueStorage 인터페이스 구현
-class SqliteKeyValueStorage implements IKeyValueStorage {
-  constructor(private sqlite: Database, private tableName: string = 'wc_store') {}
-
-  async getKeys(): Promise<string[]> {
-    return this.sqlite
-      .prepare(`SELECT key FROM ${this.tableName}`)
-      .all()
-      .map((row: any) => row.key);
-  }
-
-  async getEntries<T>(): Promise<[string, T][]> {
-    return this.sqlite
-      .prepare(`SELECT key, value FROM ${this.tableName}`)
-      .all()
-      .map((row: any) => [row.key, JSON.parse(row.value)]);
-  }
-
-  async getItem<T>(key: string): Promise<T | undefined> {
-    const row = this.sqlite
-      .prepare(`SELECT value FROM ${this.tableName} WHERE key = ?`)
-      .get(key) as { value: string } | undefined;
-    return row ? JSON.parse(row.value) : undefined;
-  }
-
-  async setItem<T>(key: string, value: T): Promise<void> {
-    this.sqlite
-      .prepare(
-        `INSERT OR REPLACE INTO ${this.tableName} (key, value) VALUES (?, ?)`
-      )
-      .run(key, JSON.stringify(value));
-  }
-
-  async removeItem(key: string): Promise<void> {
-    this.sqlite
-      .prepare(`DELETE FROM ${this.tableName} WHERE key = ?`)
-      .run(key);
-  }
-}
+**데이터 흐름:**
 ```
-
-### 3. CAIP-2 매핑 유틸리티 (신규)
-
-**위치:** `packages/daemon/src/services/walletconnect-caip.ts`
-**책임:** WAIaaS chain+network -> WC CAIP-2 namespace 변환
-
-```typescript
-// EVM chainId 매핑 (viem에서 chainId 참조 가능하지만 명시적 매핑이 안전)
-const EVM_CHAIN_IDS: Record<string, number> = {
-  'ethereum-mainnet': 1,
-  'ethereum-sepolia': 11155111,
-  'polygon-mainnet': 137,
-  'polygon-amoy': 80002,
-  'arbitrum-mainnet': 42161,
-  'arbitrum-sepolia': 421614,
-  'optimism-mainnet': 10,
-  'optimism-sepolia': 11155420,
-  'base-mainnet': 8453,
-  'base-sepolia': 84532,
-};
-
-// Solana genesis hash prefix 매핑 (CAIP-2 spec)
-const SOLANA_GENESIS_HASHES: Record<string, string> = {
-  'mainnet': '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-  'devnet': 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
-  'testnet': '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z',
-};
-
-export function toCAIP2(chain: ChainType, network: string): string {
-  if (chain === 'ethereum') {
-    const chainId = EVM_CHAIN_IDS[network];
-    if (!chainId) throw new Error(`Unknown EVM network: ${network}`);
-    return `eip155:${chainId}`;
-  }
-  if (chain === 'solana') {
-    const hash = SOLANA_GENESIS_HASHES[network];
-    if (!hash) throw new Error(`Unknown Solana network: ${network}`);
-    return `solana:${hash}`;
-  }
-  throw new Error(`Unsupported chain: ${chain}`);
-}
-
-export function getWCNamespace(chain: ChainType): string {
-  return chain === 'ethereum' ? 'eip155' : 'solana';
-}
-
-export function getWCMethods(chain: ChainType): string[] {
-  if (chain === 'ethereum') {
-    return ['personal_sign', 'eth_signTypedData_v4'];
-  }
-  if (chain === 'solana') {
-    return ['solana_signTransaction', 'solana_signMessage'];
-  }
-  return [];
-}
+IChainSubscriber.onTransaction()
+  → IncomingTxMonitorService._handleIncoming()
+    → INSERT INTO incoming_transactions
+    → eventBus.emit('transaction:incoming', {...})
+      → NotificationService.notify('TX_INCOMING', walletId, {...})
 ```
-
-### 4. WC Admin API 라우트 (신규)
-
-**위치:** `packages/daemon/src/api/routes/walletconnect.ts`
-**책임:** QR 페어링 URI 생성, 세션 관리 API
-**인증:** masterAuth (Admin 전용)
-
-```
-POST /v1/admin/wc/connect/:walletId  -> { uri, topic, expiresAt }
-GET  /v1/admin/wc/session/:walletId  -> { connected, peerMeta, chainId, ownerAddress, expiry }
-GET  /v1/admin/wc/sessions           -> [{ walletId, connected, peerMeta, ... }]
-POST /v1/admin/wc/disconnect/:walletId -> { disconnected: true }
-```
-
-### 5. Admin UI WC 페이지 (신규)
-
-**위치:** `packages/admin/src/pages/walletconnect.tsx`
-**책임:** QR 코드 렌더링, 세션 상태 표시, 연결/해제 UI
-
-QR 렌더링 방식: `qrcode` npm 패키지로 data URL 생성 (canvas 불필요, img src로 직접 사용).
-세션 상태 폴링: 2초 간격 GET /wc/session/:walletId (SSE 대비 단순하고 Admin 전용이므로 충분).
 
 ---
 
-## Modified Components (8개)
+## Q6: 폴링 폴백 — BackgroundWorkers 재사용
 
-### 1. Pipeline Stage 3/4 -- WC 서명 요청 트리거
+### 권고: **`BackgroundWorkers.register()`로 EVM 폴링 등록**
 
-**변경 위치:** `packages/daemon/src/pipeline/stages.ts` (stage3Policy 또는 stage4Wait)
-**변경 내용:** APPROVAL 티어 진입 시 WC 서명 요청을 fire-and-forget으로 트리거
+EVM은 WebSocket 구독 대신 블록 폴링 방식이 더 안정적이다 (viem `getLogs`는 HTTP도 지원). Solana는 `logsNotifications` WebSocket을 우선 사용하되, WebSocket 불가 시 `getSignaturesForAddress` 폴링으로 폴백.
 
-현재 흐름:
-1. Stage 3에서 `TX_APPROVAL_REQUIRED` 알림 발송
-2. Stage 4에서 `approvalWorkflow.requestApproval(txId)` + PIPELINE_HALTED throw
-
-수정 흐름:
-1. Stage 3에서 `TX_APPROVAL_REQUIRED` 알림 발송 (기존 유지)
-2. Stage 4에서 `approvalWorkflow.requestApproval(txId)` (기존 유지)
-3. **Stage 4에서 WC 서명 요청 fire-and-forget 추가:**
-
+**EVM 폴링 패턴:**
 ```typescript
-// stage4Wait() 내 APPROVAL 분기 (stages.ts L539-551 부근)
-if (tier === 'APPROVAL') {
-  if (!ctx.approvalWorkflow) return;
-  ctx.approvalWorkflow.requestApproval(ctx.txId);
-
-  // [NEW] WC 서명 요청 (fire-and-forget)
-  if (ctx.wcService?.hasActiveSession(ctx.walletId)) {
-    void ctx.wcService.requestSignature(ctx.txId, ctx.walletId, {
-      chain: ctx.wallet.chain as ChainType,
-      network: ctx.resolvedNetwork,
-      ownerAddress: /* wallets 테이블에서 조회 */,
-      messageOrTx: buildApprovalMessage(ctx),
-    }).then((result) => {
-      if (result.status === 'approved') {
-        ctx.approvalWorkflow!.approve(ctx.txId, result.signature);
-        // executeFromStage5 트리거 (DaemonLifecycle에서)
-      }
-      // rejected/timeout: Telegram fallback이 이미 활성화되어 있음
-      // no_session: 기존 경로 유지
-    }).catch(() => {
-      // WC 실패 시 로깅만 -- 기존 경로 영향 없음
-    });
+// EvmIncomingSubscriber 내부
+// Step 4c-9에서 BackgroundWorkers에 등록
+workers.register('incoming-tx-evm', {
+  interval: 12_000,  // 12초 (EVM 블록 시간)
+  handler: async () => {
+    // getLogs(fromBlock: lastProcessedBlock, toBlock: 'latest')
+    // per-address 필터
   }
+});
+```
 
-  throw new WAIaaSError('PIPELINE_HALTED', { ... });
+**Solana WebSocket + 폴링 혼용:**
+```typescript
+// SolanaIncomingSubscriber 내부
+// Primary: logsNotifications (WebSocket)
+// Fallback (연결 끊김 >30s): getSignaturesForAddress 폴링
+// BackgroundWorkers에 'incoming-tx-solana-poll' 등록 (60초 간격)
+```
+
+**기존 workers 목록 (현재 5개 → 7개로 증가):**
+- wal-checkpoint (5분)
+- session-cleanup (1분)
+- delay-expired (5초)
+- approval-expired (30초)
+- version-check (24시간)
+- + `incoming-tx-evm` (12초, 신규)
+- + `incoming-tx-solana-poll` (60초, Solana 폴링 폴백, 신규)
+
+---
+
+## Q7: monitor_incoming 상태 전파 — DB 직접 조회
+
+### 권고: **IncomingTxMonitorService가 wallets 테이블을 직접 조회**
+
+BalanceMonitorService가 동일 패턴을 사용하고 있다:
+```typescript
+// BalanceMonitorService.checkAllWallets()
+const wallets = this.sqlite
+  .prepare("SELECT id, chain, environment, default_network, public_key FROM wallets WHERE status = 'ACTIVE'")
+  .all();
+```
+
+동일하게 IncomingTxMonitorService는:
+```typescript
+private getMonitoredWallets(): WalletMonitorRow[] {
+  return this.sqlite
+    .prepare(
+      "SELECT id, chain, environment, default_network, public_key FROM wallets " +
+      "WHERE monitor_incoming = 1 AND status = 'ACTIVE'"
+    )
+    .all() as WalletMonitorRow[];
 }
 ```
 
-**핵심:** WC 서명 요청은 PIPELINE_HALTED **이전에** fire-and-forget으로 시작된다. PIPELINE_HALTED가 throw되어도 WC Promise는 백그라운드에서 계속 실행된다.
+**REST API 연동:** `PUT /v1/wallets/:id` 또는 Admin UI에서 `monitor_incoming` 토글 시:
+1. DB 업데이트
+2. `IncomingTxMonitorService.syncSubscriptions()` 호출 (신규 추가 → subscribe, 제거 → unsubscribe)
 
-### 2. PipelineContext (수정)
+HotReloadOrchestrator 패턴처럼 서비스 참조를 DaemonLifecycle이 보유하고 API 레이어에 주입.
 
-**변경:** wcService 옵셔널 필드 추가
+---
 
-```typescript
-export interface PipelineContext {
-  // ... 기존 필드 모두 유지 ...
-  // v1.7: WalletConnect service for APPROVAL tier WC signing
-  wcService?: WalletConnectService;
-}
+## 전체 데이터 흐름
+
+```
+[Blockchain] ──logsNotifications/getLogs──▶ [IChainSubscriber impl]
+                                                      |
+                                              parse & normalize
+                                                      |
+                                                      v
+                                         [IncomingTxMonitorService]
+                                          _handleIncoming(tx)
+                                              |           |
+                                    INSERT INTO    eventBus.emit
+                                  incoming_txns  'transaction:incoming'
+                                                      |
+                                              +-------+-------+
+                                              v               v
+                                    [NotificationService]  [AutoStopService]
+                                    notify('TX_INCOMING')   (감시용)
 ```
 
-### 3. ApprovalWorkflow (수정)
+---
 
-**변경 내용:** approval_channel 기록
+## 신규 vs 수정 컴포넌트 명세
 
-현재 `approve(txId, ownerSignature)` 시그니처는 동일하게 유지.
-pending_approvals 테이블의 신규 `approval_channel` 컬럼에 승인 경로를 기록.
+### 신규 파일
 
-```typescript
-// approve() 내부 -- ownerSignature 형태로 channel 판별
-approve(txId: string, ownerSignature: string, channel?: 'rest_api' | 'telegram' | 'walletconnect'): ApproveResult {
-  // ... 기존 로직 동일 ...
+| 파일 | 역할 |
+|------|------|
+| `packages/core/src/interfaces/IChainSubscriber.ts` | 구독 인터페이스 |
+| `packages/daemon/src/services/monitoring/incoming-tx-monitor-service.ts` | 오케스트레이터 |
+| `packages/adapters/solana/src/incoming-subscriber.ts` | Solana logsNotifications 구현 |
+| `packages/adapters/evm/src/incoming-subscriber.ts` | EVM getLogs 폴링 구현 |
 
-  // [NEW] approval_channel 기록
-  const resolvedChannel = channel ?? 'rest_api';
-  this.sqlite
-    .prepare('UPDATE pending_approvals SET approved_at = ?, owner_signature = ?, approval_channel = ? WHERE id = ?')
-    .run(now, ownerSignature, resolvedChannel, approval.id);
-  // ...
-}
+### 수정 파일
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `packages/core/src/events/event-types.ts` | `transaction:incoming` 이벤트 추가 |
+| `packages/core/src/enums/notification.ts` | `TX_INCOMING` 추가 (28→29) |
+| `packages/core/src/interfaces/index.ts` | IChainSubscriber export 추가 |
+| `packages/core/src/index.ts` | IChainSubscriber 재export |
+| `packages/daemon/src/infrastructure/database/schema.ts` | `incoming_transactions` 테이블 Drizzle 스키마, wallets.monitor_incoming |
+| `packages/daemon/src/infrastructure/database/migrate.ts` | v21 마이그레이션 |
+| `packages/daemon/src/lifecycle/daemon.ts` | Step 4c-9 IncomingTxMonitorService 초기화 |
+
+---
+
+## 빌드 순서 (의존성 순서)
+
+```
+1단계: 인터페이스 레이어 (core)
+  - IChainSubscriber.ts 신규 작성
+  - WaiaasEventMap에 transaction:incoming 추가
+  - NOTIFICATION_EVENT_TYPES에 TX_INCOMING 추가
+
+2단계: DB 스키마 (daemon)
+  - incoming_transactions Drizzle 스키마 추가
+  - wallets.monitor_incoming 컬럼 추가
+  - v21 마이그레이션 작성
+
+3단계: 어댑터 구현 (adapters/solana, adapters/evm)
+  - SolanaIncomingSubscriber (IChainSubscriber 구현)
+  - EvmIncomingSubscriber (IChainSubscriber 구현)
+  - 각 어댑터 package index에서 export
+
+4단계: 서비스 레이어 (daemon)
+  - IncomingTxMonitorService (구독 오케스트레이터)
+  - DaemonLifecycle Step 4c-9에 통합
+  - BackgroundWorkers에 폴링 worker 등록
+
+5단계: API 레이어 (daemon)
+  - wallet PATCH/PUT 엔드포인트에 monitor_incoming 필드 추가
+  - GET /v1/wallets 응답에 monitor_incoming 포함
+  - GET /v1/wallets/:id/incoming-transactions 엔드포인트
+  - Skill Files 업데이트 (wallet.skill.md, admin.skill.md)
 ```
 
-기존 호출자 (REST API ownerAuth, Telegram Bot)는 channel 파라미터 없이 호출 -> 기본값 'rest_api'. Telegram은 'telegram', WC는 'walletconnect'.
+---
 
-### 4. DaemonLifecycle (수정)
+## 주의해야 할 아키텍처 패턴
 
-**변경:** Step 4c-6에서 WalletConnectService 초기화 (fail-soft), 셧다운 시 정리
+### 따라야 할 패턴
 
+**Pattern 1: fail-soft 초기화 (BalanceMonitorService 동일)**
 ```typescript
-// Step 4c-6: WalletConnectService initialization (fail-soft)
+// Step 4c-9: IncomingTxMonitorService (fail-soft)
 try {
-  const wcProjectId = this._settingsService?.get('walletconnect.project_id');
-  if (wcProjectId) {
-    const { WalletConnectService: WCServiceCls } = await import(
-      '../services/walletconnect-service.js'
-    );
-    this.wcService = new WCServiceCls({
-      sqlite: this.sqlite!,
-      approvalWorkflow: this.approvalWorkflow!,
-      notificationService: this.notificationService,
-      settingsService: this._settingsService!,
-    });
-    await this.wcService.initialize(wcProjectId);
-    console.log('Step 4c-6: WalletConnect service initialized');
-  } else {
-    console.log('Step 4c-6: WalletConnect disabled (no project_id)');
-  }
+  this.incomingTxMonitor = new IncomingTxMonitorService({...});
+  await this.incomingTxMonitor.start();
 } catch (err) {
-  console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
-  this.wcService = null;
+  console.warn('Step 4c-9 (fail-soft): IncomingTxMonitor init warning:', err);
+  this.incomingTxMonitor = null;
 }
 ```
 
-셧다운 시 (TelegramBotService.stop() 직후):
+**Pattern 2: SSoT enum 추가 (notification.ts + transaction.ts)**
+- `NOTIFICATION_EVENT_TYPES`에 `TX_INCOMING` 추가 → 자동으로 Zod, TypeScript, CHECK constraint 전파
+- 기존 SSoT 수정 시 CHECK constraint 갱신이 필요한 경우 12-step 마이그레이션 필요
+- `notification_logs`는 단순 TEXT column이므로 마이그레이션 불필요
+
+**Pattern 3: tx_hash UNIQUE 중복 방지**
 ```typescript
-if (this.wcService) {
-  await this.wcService.shutdown();
-  this.wcService = null;
-}
+// INSERT OR IGNORE를 사용하여 중복 구독 시 중복 레코드 방지
+sqlite.prepare(
+  'INSERT OR IGNORE INTO incoming_transactions (...) VALUES (?,...)'
+).run(...);
 ```
 
-### 5. createApp() / CreateAppDeps (수정)
+### 피해야 할 패턴
 
-**변경:** wcService를 deps로 전달, WC Admin 라우트 등록
+**Anti-Pattern 1: IChainAdapter에 구독 메서드 추가**
+- 22개 메서드 계약 테스트에 영향
+- stateless 어댑터에 stateful WebSocket 혼입
+- 대신: 별도 IChainSubscriber 사용
 
-```typescript
-export interface CreateAppDeps {
-  // ... 기존 필드 ...
-  wcService?: WalletConnectService;
-}
+**Anti-Pattern 2: incoming_transactions를 transactions에 합침**
+- `type='INCOMING'` 추가는 discriminatedUnion 5-type 계약 위반
+- 아웃고잉 파이프라인 stage 상태 머신 로직이 인바운드 레코드에 오작동
+- 대신: 별도 테이블 사용
 
-// createApp() 내부:
-// WC Admin routes (masterAuth)
-if (deps.wcService) {
-  const wcRoutes = walletconnectRoutes({ wcService: deps.wcService, db: deps.db! });
-  app.route('/v1/admin/wc', wcRoutes);
-}
-```
-
-### 6. HotReloadOrchestrator (수정)
-
-**변경:** walletconnect 키 변경 시 WC 서비스 재초기화
-
-```typescript
-const WALLETCONNECT_KEYS = new Set(['walletconnect.project_id']);
-
-// handleChangedKeys() 내부:
-if (changedKeys.some(k => WALLETCONNECT_KEYS.has(k))) {
-  void this.reloadWalletConnect().catch(err => {
-    console.warn('Hot-reload WalletConnect failed:', err);
-  });
-}
-```
-
-### 7. SettingDefinitions (수정)
-
-**변경:** walletconnect 카테고리에 추가 설정 키
-
-```typescript
-// 기존
-{ key: 'walletconnect.project_id', category: 'walletconnect', ... },
-
-// 추가
-{ key: 'walletconnect.relay_url', category: 'walletconnect',
-  configPath: 'walletconnect.relay_url',
-  defaultValue: 'wss://relay.walletconnect.com', isCredential: false },
-{ key: 'walletconnect.request_timeout', category: 'walletconnect',
-  configPath: 'walletconnect.request_timeout',
-  defaultValue: '300', isCredential: false },  // 서명 요청 타임아웃 (초)
-```
-
-### 8. TelegramBotService (수정)
-
-**변경 범위:** 최소 -- /approve /reject 핸들러에 `approval_channel: 'telegram'` 전달
-
-```typescript
-// handleApprove() 내부 -- 기존 직접 SQL UPDATE에 approval_channel 추가
-this.sqlite
-  .prepare(
-    'UPDATE pending_approvals SET approved_at = unixepoch(), approval_channel = ? WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL',
-  )
-  .run('telegram', txId);
-```
+**Anti-Pattern 3: 전용 EventBus 인스턴스 생성**
+- shutdown 시 `eventBus.removeAllListeners()` 자동 정리가 동작하지 않음
+- 대신: 기존 eventBus에 이벤트 타입 추가
 
 ---
 
-## Data Flow
+## 확장성 고려
 
-### Flow 1: QR 페어링 (최초 1회)
-
-```
-Admin UI                 Daemon API              WalletConnectService        WC Relay           Owner Wallet
-   |                        |                           |                       |                    |
-   |-- POST /wc/connect --->|                           |                       |                    |
-   |                        |-- connect(walletId) ----->|                       |                    |
-   |                        |                           |-- SignClient.connect() -->|                |
-   |                        |                           |   requiredNamespaces:  |                    |
-   |                        |                           |   eip155: {            |                    |
-   |                        |                           |     methods: [         |                    |
-   |                        |                           |       personal_sign,   |                    |
-   |                        |                           |       eth_signTypedData|                    |
-   |                        |                           |     ],                 |                    |
-   |                        |                           |     chains: [eip155:1] |                    |
-   |                        |                           |   }                    |                    |
-   |                        |                           |<-- { uri, approval } --|                    |
-   |                        |<-- { uri, topic } --------|                       |                    |
-   |<-- 200 { uri } --------|                           |                       |                    |
-   |                        |                           |                       |                    |
-   | [QR 렌더링 + Owner 스캔]                            |                       |                    |
-   |                        |                           |                       |<--- pair(uri) ------|
-   |                        |                           |<-- session approved ---|                    |
-   |                        |                           | [wc_sessions DB 저장]  |                    |
-   |                        |                           | [wallets.ownerAddress  |                    |
-   |                        |                           |  자동 등록 (미설정 시)] |                    |
-   | [폴링: GET /session]    |                           |                       |                    |
-   |<-- 200 { connected } --|                           |                       |                    |
-```
-
-**ownerAddress 자동 등록:** WC 세션 승인 시, 페어링된 지갑의 account 주소를 wallets 테이블의 ownerAddress로 자동 등록한다 (ownerAddress가 NULL인 경우에만). 이미 등록된 경우 일치 여부만 검증.
-
-### Flow 2: APPROVAL 서명 요청
-
-```
-Pipeline Stage 3-4       ApprovalWorkflow       WalletConnectService        WC Relay           Owner Wallet
-   |                        |                           |                       |                    |
-   |-- tier = APPROVAL      |                           |                       |                    |
-   |-- TX_APPROVAL_REQUIRED |                           |                       |                    |
-   |   알림 발송 (기존)      |                           |                       |                    |
-   |                        |                           |                       |                    |
-   |-- requestApproval() -->|                           |                       |                    |
-   |                        |-- [DB: QUEUED] ---------> |                       |                    |
-   |                        |                           |                       |                    |
-   |-- fire-and-forget:     |                           |                       |                    |
-   |   requestSignature() --|-------------------------->|                       |                    |
-   |                        |                           |-- SignClient.request() -->|                |
-   |                        |                           |   topic: session.topic |                    |
-   |                        |                           |   method: personal_sign|                    |
-   |                        |                           |   params: [message, addr]                  |
-   |                        |                           |                       |-- session_request-->|
-   |                        |                           |                       |                    |
-   |-- PIPELINE_HALTED ---->|                           |                       |     [Owner 승인]   |
-   |                        |                           |                       |<-- response -------|
-   |                        |                           |<-- signature ---------|                    |
-   |                        |<-- approve(txId, sig,     |                       |                    |
-   |                        |    'walletconnect') ------|                       |                    |
-   |                        |-- [DB: EXECUTING] ------->|                       |                    |
-   |                        |                           |                       |                    |
-   | [DaemonLifecycle.      |                           |                       |                    |
-   |  executeFromStage5()] <|                           |                       |                    |
-```
-
-**핵심 타이밍:** fire-and-forget requestSignature()는 PIPELINE_HALTED throw **이전에** 시작된다. Promise는 백그라운드에서 WC relay 응답을 기다린다. Owner가 승인하면 approve() -> EXECUTING -> executeFromStage5() 체인이 자동 실행된다.
-
-### Flow 3: Telegram Fallback (WC 세션 없을 때)
-
-```
-Pipeline Stage 4         WalletConnectService    NotificationService        Telegram Bot
-   |                        |                         |                         |
-   |-- hasActiveSession() ->|                         |                         |
-   |<-- false --------------|                         |                         |
-   |                        |                         |                         |
-   | [WC 서명 요청 스킵]     |                         |                         |
-   |                        |                         |                         |
-   | [기존 동작 유지]         |                         |                         |
-   |                        |                  TX_APPROVAL_REQUIRED              |
-   |                        |                  알림 발송 (기존) ------------------>|
-   |                        |                         |                         |
-   |                        |                         |     /pending 표시        |
-   |                        |                         |     /approve {txId}      |
-   |                        |                         |     [DB 직접 approve]    |
-```
-
-### Flow 4: WC 서명 거절/타임아웃 시
-
-```
-WalletConnectService         ApprovalWorkflow        NotificationService
-   |                              |                         |
-   | [Owner 거절 또는 타임아웃]    |                         |
-   |-- result: 'rejected'        |                         |
-   |   또는 'timeout'            |                         |
-   |                              |                         |
-   | [아무것도 하지 않음]          |                         |
-   | (Telegram /approve /reject   |                         |
-   |  여전히 활성화 상태)          |                         |
-   |                              |                         |
-   | [approval_timeout 만료 시:]   |                         |
-   |                              |-- processExpiredApprovals()                 |
-   |                              |-- [DB: EXPIRED]        |                    |
-```
-
-**핵심:** WC 거절/타임아웃은 ApprovalWorkflow의 상태를 변경하지 않는다. Owner는 여전히 Telegram이나 REST API로 승인/거절할 수 있다. WC 타임아웃과 approval_timeout은 독립적이다 (WC 타임아웃 < approval_timeout).
+| 상황 | 접근법 |
+|------|--------|
+| 지갑 100개 모니터링 | Solana: 100개 logsNotifications 구독 (각 WebSocket message), EVM: 100개 주소를 getLogs address[] 배열로 단일 배치 쿼리 |
+| RPC WebSocket 불안정 | 지수 백오프 재연결 + 폴링 폴백으로 연속성 보장 |
+| 새 체인 어댑터 추가 | IChainSubscriber 구현만 추가, IncomingTxMonitorService는 변경 없음 |
+| 대용량 트래픽 지갑 | incoming_transactions 테이블 파티셔닝 불필요 (SQLite, 로컬 데몬). 초당 수백 TX 이상이면 이미 WAIaaS가 적합하지 않은 규모 |
 
 ---
 
-## Patterns to Follow
+## 소스
 
-### Pattern 1: fail-soft 서비스 초기화
-
-**기존 패턴:** TelegramBotService, BalanceMonitorService, AutoStopService 모두 fail-soft (try/catch + null fallback)
-**WC 적용:** WalletConnectService도 동일 패턴. project_id 미설정이면 비활성화, 초기화 실패해도 데몬 계속 동작.
-
-```typescript
-// daemon.ts: TelegramBotService와 동일 패턴
-try {
-  if (wcProjectId) {
-    this.wcService = new WalletConnectService({ ... });
-    await this.wcService.initialize(wcProjectId);
-    console.log('Step 4c-6: WalletConnect service initialized');
-  } else {
-    console.log('Step 4c-6: WalletConnect disabled (no project_id)');
-  }
-} catch (err) {
-  console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
-  this.wcService = null;
-}
-```
-
-### Pattern 2: fire-and-forget 서명 요청
-
-**기존 패턴:** NotificationService.notify()는 void 반환, pipeline 차단 없음
-**WC 적용:** WC 서명 요청도 fire-and-forget. 성공 시 ApprovalWorkflow.approve() 호출, 실패 시 기존 Telegram/REST 경로 그대로.
-
-```typescript
-// GOOD: fire-and-forget, pipeline 차단 없음
-if (ctx.wcService?.hasActiveSession(ctx.walletId)) {
-  void ctx.wcService.requestSignature(txId, walletId, params).then(result => {
-    if (result.status === 'approved') {
-      approvalWorkflow.approve(txId, result.signature, 'walletconnect');
-    }
-    // rejected/timeout: 기존 경로(Telegram, REST)가 여전히 활성화
-  }).catch(() => { /* 로깅만 */ });
-}
-```
-
-### Pattern 3: walletId 단위 세션 관리
-
-**기존 패턴:** Owner 3-State (NONE/GRACE/LOCKED)는 walletId 단위
-**WC 적용:** WC 세션도 walletId 단위. 하나의 wallet에 하나의 WC 세션만 유지.
-
-```typescript
-// 1 wallet = 1 WC session 보장
-async connect(walletId: string, chain: ChainType, network: string): Promise<ConnectResult> {
-  // 기존 세션이 있으면 먼저 해제
-  if (this.sessions.has(walletId)) {
-    await this.disconnect(walletId);
-  }
-  // 새 세션 생성
-  const { uri, approval } = await this.signClient.connect({ ... });
-  // approval promise를 백그라운드에서 대기 (세션 확립 시 DB 저장)
-  void approval.then(session => this.onSessionApproved(walletId, session));
-  return { uri, topic: /* from pairing */ };
-}
-```
-
-### Pattern 4: SQLite 직접 접근 (better-sqlite3)
-
-**기존 패턴:** KillSwitchService, TelegramBotService는 better-sqlite3 직접 사용 (Drizzle 우회)
-**WC 적용:** WC 세션 영속화 + WC SDK 스토리지 모두 better-sqlite3 직접 사용.
-
-### Pattern 5: 감사 로그 기록
-
-**기존 패턴:** Telegram 승인/거절 시 `TX_APPROVED_VIA_TELEGRAM` / `TX_REJECTED_VIA_TELEGRAM` 감사 로그
-**WC 적용:** WC 승인 시 `TX_APPROVED_VIA_WALLETCONNECT` 감사 로그, 세션 연결/해제 시 `WC_SESSION_CONNECTED` / `WC_SESSION_DISCONNECTED` 감사 로그
-
----
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: WC SDK 기본 스토리지 사용
-
-**위험:** @walletconnect/keyvaluestorage는 브라우저 localStorage 또는 파일 시스템 기반. Node.js 서버에서 불안정하며, 데몬 재시작 시 파일 시스템 경로 불일치 위험.
-**대신:** custom IKeyValueStorage 구현체로 SQLite 기반 스토리지 주입. WAIaaS DB에 `wc_store` 테이블 추가.
-
-### Anti-Pattern 2: WC 세션에 의존하는 파이프라인
-
-**위험:** WC 세션 불안정 시 (relay 다운, 네트워크 문제) 전체 APPROVAL 플로우 차단.
-**대신:** WC는 "보너스 채널". 없어도 기존 ownerAuth REST API + Telegram이 100% 동작. WC 실패는 로깅만.
-
-### Anti-Pattern 3: 다중 WC 세션 per wallet
-
-**위험:** 하나의 walletId에 여러 WC 세션이 공존하면 어떤 세션에 요청을 보낼지 모호.
-**대신:** 1 wallet = 1 WC session. 새 세션 연결 시 기존 세션 자동 해제.
-
-### Anti-Pattern 4: WC SignClient 다중 인스턴스
-
-**위험:** walletId마다 SignClient를 생성하면 WebSocket 연결 폭증.
-**대신:** 단일 SignClient 인스턴스로 모든 walletId의 세션을 관리. 세션별 topic으로 구분.
-
-### Anti-Pattern 5: WC 타임아웃과 approval_timeout 혼동
-
-**위험:** WC 서명 요청 타임아웃(walletconnect.request_timeout = 300s)이 approval_timeout(3600s)보다 짧다. WC 타임아웃 시 트랜잭션을 EXPIRED로 만들면 Telegram 경로가 차단됨.
-**대신:** WC 타임아웃은 WC 서명 요청만 종료. ApprovalWorkflow의 approval_timeout은 별도로 관리. WC 타임아웃 후에도 Telegram/REST로 승인 가능.
-
----
-
-## DB Schema 변경
-
-### 신규 테이블 1: `wc_sessions`
-
-```sql
-CREATE TABLE wc_sessions (
-  wallet_id    TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
-  topic        TEXT NOT NULL UNIQUE,
-  peer_meta    TEXT,               -- JSON: { name, url, icons }
-  chain_id     TEXT NOT NULL,      -- CAIP-2: 'eip155:1' or 'solana:5eykt...'
-  owner_address TEXT NOT NULL,     -- 페어링된 Owner 지갑 주소
-  namespaces   TEXT,               -- JSON: approved namespaces
-  expiry       INTEGER NOT NULL,   -- Unix epoch seconds
-  created_at   INTEGER NOT NULL
-);
-CREATE INDEX idx_wc_sessions_topic ON wc_sessions(topic);
-```
-
-### 신규 테이블 2: `wc_store`
-
-```sql
-CREATE TABLE wc_store (
-  key   TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-```
-
-### 기존 테이블 변경: `pending_approvals`
-
-```sql
-ALTER TABLE pending_approvals ADD COLUMN approval_channel TEXT DEFAULT 'rest_api';
--- CHECK 제약은 pushSchema() 시 Drizzle에서 설정
--- 유효 값: 'rest_api', 'telegram', 'walletconnect'
-```
-
-**총 스키마 변경:** 2개 신규 테이블 + 1개 ALTER TABLE = DB v16 마이그레이션
-
----
-
-## Scalability Considerations
-
-| Concern | 1 지갑 | 10 지갑 | 100+ 지갑 |
-|---------|--------|---------|-----------|
-| WC 세션 수 | 1 SignClient, 1 세션 | 1 SignClient, 10 세션 (동일 클라이언트) | 1 SignClient, N 세션 (WC SDK 다중 세션 지원) |
-| Relay WebSocket | 1 연결 | 1 연결 (세션은 topic으로 구분) | 1 연결 (relay는 topic 기반 라우팅) |
-| QR 페어링 빈도 | 설정 시 1회 | 10회 (초기만) | 100회 (초기만) |
-| 서명 요청 빈도 | APPROVAL 빈도와 동일 | 10x | 100x (relay 부하 주의, rate limit 확인 필요) |
-| 메모리 오버헤드 | ~5MB (SignClient) | ~8MB | ~15MB (세션 메타데이터 누적) |
-| wc_store 테이블 | ~50 rows | ~200 rows | ~1000 rows (WC SDK 내부 상태) |
-
----
-
-## Integration Points Summary
-
-| Integration Point | Existing Component | Change Type | Complexity |
-|-------------------|-------------------|-------------|------------|
-| WalletConnectService | 없음 (신규) | **NEW** | High |
-| SqliteKeyValueStorage | 없음 (신규) | **NEW** | Medium |
-| CAIP-2 매핑 유틸리티 | 없음 (신규) | **NEW** | Low |
-| WC Admin API routes | 없음 (신규) | **NEW** | Medium |
-| Admin UI WC page | 없음 (신규) | **NEW** | Medium |
-| Pipeline Stage 3/4 | stages.ts L539-551 | **MODIFY** | Medium |
-| PipelineContext | stages.ts L59-101 | **MODIFY** | Low |
-| ApprovalWorkflow | approval-workflow.ts | **MODIFY** | Low |
-| DaemonLifecycle | daemon.ts start/shutdown | **MODIFY** | Low |
-| createApp() deps | server.ts CreateAppDeps | **MODIFY** | Low |
-| HotReloadOrchestrator | hot-reload.ts | **MODIFY** | Low |
-| SettingDefinitions | setting-keys.ts | **MODIFY** | Low |
-| TelegramBotService | telegram-bot-service.ts | **MODIFY** | Low |
-| DB Schema v16 | 2 테이블 + 1 ALTER | **MIGRATE** | Medium |
-
----
-
-## Suggested Build Order
-
-의존 관계 기반 최적 빌드 순서:
-
-### Phase A: 인프라 기반 (WC SDK 통합 + DB)
-
-1. **DB v16 마이그레이션** -- wc_sessions, wc_store 테이블 추가, pending_approvals ALTER
-2. **SqliteKeyValueStorage** -- WC SDK 커스텀 스토리지 (wc_store 테이블 기반)
-3. **CAIP-2 매핑 유틸리티** -- toCAIP2(), getWCNamespace(), getWCMethods()
-4. **WalletConnectService 코어** -- SignClient 초기화, connect(), disconnect(), shutdown()
-
-### Phase B: 서명 요청 + 파이프라인 통합
-
-5. **WalletConnectService.requestSignature()** -- 서명 요청 전송 + 결과 처리
-6. **Pipeline 통합** -- PipelineContext 확장, Stage 4에서 WC fire-and-forget 트리거
-7. **ApprovalWorkflow 확장** -- approval_channel 기록, WC 승인 -> executeFromStage5
-8. **TelegramBotService 수정** -- approval_channel = 'telegram' 기록
-
-### Phase C: Admin API + UI
-
-9. **WC Admin API routes** -- POST /connect, GET /session, GET /sessions, POST /disconnect
-10. **Admin UI WC 페이지** -- QR 코드 렌더링 (qrcode npm), 세션 상태 폴링, 연결/해제
-
-### Phase D: 운영 통합
-
-11. **DaemonLifecycle 통합** -- Step 4c-6 초기화, 셧다운 추가
-12. **HotReload 통합** -- walletconnect.project_id 변경 시 WC 재초기화
-13. **Settings 확장** -- walletconnect.relay_url, walletconnect.request_timeout 추가
-14. **감사 로그 + 알림** -- WC_SESSION_CONNECTED, TX_APPROVED_VIA_WALLETCONNECT 이벤트
-
-**순서 근거:**
-- Phase A가 먼저: DB 마이그레이션과 스토리지가 WC 초기화의 전제 조건
-- Phase B가 Phase A 이후: SignClient가 있어야 서명 요청 가능
-- Phase C는 Phase B와 독립 가능하지만, 서명 요청 테스트를 위해 B 이후 권장
-- Phase D는 마지막: 모든 컴포넌트가 동작한 후 DaemonLifecycle에 통합
-
----
-
-## Sources
-
-- [WalletConnect Dapp Usage (Reown Docs)](https://docs.reown.com/advanced/api/sign/dapp-usage) -- HIGH confidence
-- [WalletConnect Wallet Usage](https://docs.walletconnect.com/api/sign/wallet-usage) -- MEDIUM confidence
-- [@walletconnect/sign-client npm](https://www.npmjs.com/package/@walletconnect/sign-client) -- MEDIUM confidence
-- [WalletConnect Session Events Spec](https://specs.walletconnect.com/2.0/specs/clients/sign/session-events) -- HIGH confidence
-- [WalletConnect Storage API Spec](https://specs.walletconnect.com/2.0/specs/clients/core/storage) -- MEDIUM confidence
-- [@walletconnect/keyvaluestorage npm](https://www.npmjs.com/package/@walletconnect/keyvaluestorage) -- MEDIUM confidence
-- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) -- HIGH confidence
-- [WalletConnect Sign API Overview Spec](https://specs.walletconnect.com/2.0/specs/clients/sign) -- HIGH confidence
-- [WC Node.js 크래시 이슈 #5588](https://github.com/WalletConnect/walletconnect-monorepo/issues/5588) -- LOW confidence (특정 버전 이슈)
-- WAIaaS 코드베이스 분석 (approval-workflow.ts, stages.ts, daemon.ts, setting-keys.ts, telegram-bot-service.ts, notification-service.ts, event-types.ts 등) -- HIGH confidence
+- `packages/core/src/interfaces/IChainAdapter.ts` — 기존 22메서드 계약 (수정 대상 아님)
+- `packages/core/src/events/event-bus.ts` — EventBus 구현 (재사용)
+- `packages/core/src/events/event-types.ts` — WaiaasEventMap (확장 대상)
+- `packages/daemon/src/lifecycle/daemon.ts` — 6-step 시작/10-step 종료 시퀀스
+- `packages/daemon/src/lifecycle/workers.ts` — BackgroundWorkers 패턴 (재사용)
+- `packages/daemon/src/services/monitoring/balance-monitor-service.ts` — 참조 구현 패턴
+- `packages/daemon/src/infrastructure/database/migrate.ts` — v20 마이그레이션 패턴
+- `packages/daemon/src/infrastructure/database/schema.ts` — Drizzle 스키마 구조
+- `@solana/rpc-subscriptions-api@6.0.1` — `logsNotifications(mentions: [address])` 확인
+- `viem@2.45.3` — `getLogs`, `watchBlocks` API 확인

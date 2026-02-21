@@ -19,22 +19,36 @@ Policy engine for enforcing rules on wallet operations. Policies control spendin
 http://localhost:3100
 ```
 
+## Permissions
+
+### Agent (sessionAuth)
+- **GET /v1/policies** -- Query policies applied to own wallet (filtered by session wallet)
+
+### Admin (masterAuth)
+- **GET /v1/policies** -- Query all policies (with optional walletId filter)
+- **POST /v1/policies** -- Create new policies
+- **PUT /v1/policies/{id}** -- Update existing policies
+- **DELETE /v1/policies/{id}** -- Delete policies
+
 ## Authentication
 
-All policy endpoints require **sessionAuth** -- include `Authorization: Bearer <token>` header from a session JWT.
+- **GET** accepts both `Authorization: Bearer <token>` (sessionAuth) and `X-Master-Password` (masterAuth).
+  - sessionAuth: returns only policies for the session's wallet + global policies.
+  - masterAuth: returns all policies (with optional walletId filter).
+- **POST/PUT/DELETE** require `X-Master-Password` (masterAuth) only.
 
 ---
 
 ## 1. Policy CRUD Endpoints
 
-### POST /v1/policies -- Create Policy
+### POST /v1/policies -- Create Policy (masterAuth)
 
 Create a new policy. Policies can be wallet-specific (`walletId`) or global (omit `walletId`).
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{
     "walletId": "<wallet-uuid>",
     "type": "SPENDING_LIMIT",
@@ -70,13 +84,18 @@ curl -s -X POST http://localhost:3100/v1/policies \
 }
 ```
 
-### GET /v1/policies -- List Policies
+### GET /v1/policies -- List Policies (sessionAuth or masterAuth)
 
-List policies. If `walletId` is provided, returns wallet-specific + global policies.
+List policies. Agents see only their own wallet's policies + global policies. Admins see all.
 
 ```bash
-curl -s 'http://localhost:3100/v1/policies?walletId=<wallet-uuid>' \
+# Agent (sessionAuth) -- auto-scoped to session wallet
+curl -s 'http://localhost:3100/v1/policies' \
   -H 'Authorization: Bearer <token>'
+
+# Admin (masterAuth) -- all policies or filtered
+curl -s 'http://localhost:3100/v1/policies?walletId=<wallet-uuid>' \
+  -H 'X-Master-Password: <password>'
 ```
 
 **Query Parameters:**
@@ -87,14 +106,14 @@ curl -s 'http://localhost:3100/v1/policies?walletId=<wallet-uuid>' \
 
 **Response (200):** Array of policy objects, ordered by priority descending.
 
-### PUT /v1/policies/{id} -- Update Policy
+### PUT /v1/policies/{id} -- Update Policy (masterAuth)
 
 Update a policy's rules, priority, or enabled state. All fields are optional (partial update).
 
 ```bash
 curl -s -X PUT http://localhost:3100/v1/policies/<policy-uuid> \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"rules": {"instant_max": "200000000", "notify_max": "1000000000", "delay_max": "2000000000"}, "enabled": true}'
 ```
 
@@ -108,11 +127,11 @@ curl -s -X PUT http://localhost:3100/v1/policies/<policy-uuid> \
 
 **Response (200):** Updated policy object.
 
-### DELETE /v1/policies/{id} -- Delete Policy
+### DELETE /v1/policies/{id} -- Delete Policy (masterAuth)
 
 ```bash
 curl -s -X DELETE http://localhost:3100/v1/policies/<policy-uuid> \
-  -H 'Authorization: Bearer <token>'
+  -H 'X-Master-Password: <password>'
 ```
 
 **Response (200):**
@@ -164,7 +183,7 @@ Maximum spend per tier. Amounts are digit strings in the chain's smallest unit (
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000","daily_limit_usd":500,"monthly_limit_usd":5000}}'
 ```
 
@@ -186,7 +205,7 @@ Allowed recipient addresses. Transactions to addresses not in the list are block
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"WHITELIST","rules":{"allowed_addresses":["<addr1>","<addr2>"]}}'
 ```
 
@@ -210,7 +229,7 @@ Allowed time windows for transactions. Transactions outside the window are block
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"TIME_RESTRICTION","rules":{"allowedHours":{"start":9,"end":17},"timezone":"UTC"}}'
 ```
 
@@ -234,7 +253,7 @@ Maximum number of transactions per time period.
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"RATE_LIMIT","rules":{"maxTransactions":10,"period":"hourly"}}'
 ```
 
@@ -262,7 +281,7 @@ Token whitelist for TOKEN_TRANSFER transactions. **Default deny**: tokens not li
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"ALLOWED_TOKENS","rules":{"tokens":[{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","symbol":"USDC","chain":"solana"}]}}'
 ```
 
@@ -289,7 +308,7 @@ Contract address whitelist for CONTRACT_CALL transactions. **Default deny**: con
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"CONTRACT_WHITELIST","rules":{"contracts":[{"address":"0xE592427A0AEce92De3Edee1F18E0157C05861564","name":"Uniswap V3 Router","chain":"ethereum"}]}}'
 ```
 
@@ -321,7 +340,7 @@ Common EVM selectors:
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"METHOD_WHITELIST","rules":{"methods":[{"contractAddress":"0xE592427A0AEce92De3Edee1F18E0157C05861564","selectors":["0xa9059cbb","0x095ea7b3"]}]}}'
 ```
 
@@ -348,7 +367,7 @@ Allowed spender addresses for APPROVE transactions. **Default deny**: spenders n
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"APPROVED_SPENDERS","rules":{"spenders":[{"address":"0xE592427A0AEce92De3Edee1F18E0157C05861564","name":"Uniswap V3 Router","maxAmount":"1000000000000000000"}]}}'
 ```
 
@@ -372,7 +391,7 @@ Maximum approval amount and unlimited approval blocking for APPROVE transactions
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"APPROVE_AMOUNT_LIMIT","rules":{"maxAmount":"1000000000000000000","blockUnlimited":true}}'
 ```
 
@@ -394,7 +413,7 @@ Force a specific policy tier for all APPROVE transactions. Useful for requiring 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"APPROVE_TIER_OVERRIDE","rules":{"tier":"APPROVAL"}}'
 ```
 
@@ -421,7 +440,7 @@ Restrict which networks a wallet can use for transactions. Permissive by default
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
 ```
 
@@ -445,7 +464,7 @@ Allowed domains for x402 automatic payments. **Default deny**: if any X402_ALLOW
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"X402_ALLOWED_DOMAINS","rules":{"domains":["api.example.com","*.openai.com"]}}'
 ```
 
@@ -485,7 +504,7 @@ If no policies of a given default-deny type exist for a wallet, the check is ski
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"ALLOWED_TOKENS","rules":{"tokens":[{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","symbol":"USDC"}]}}'
 ```
 
@@ -493,7 +512,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
 ```bash
 curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"type":"TOKEN_TRANSFER","to":"<recipient>","amount":"5000000","token":{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","decimals":6,"symbol":"USDC"}}'
 ```
 
@@ -503,7 +522,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"CONTRACT_WHITELIST","rules":{"contracts":[{"address":"0xE592427A0AEce92De3Edee1F18E0157C05861564","name":"Uniswap V3 Router"}]}}'
 ```
 
@@ -511,7 +530,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"METHOD_WHITELIST","rules":{"methods":[{"contractAddress":"0xE592427A0AEce92De3Edee1F18E0157C05861564","selectors":["0x414bf389"]}]}}'
 ```
 
@@ -521,7 +540,7 @@ Create SPENDING_LIMIT with low tier thresholds:
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"10000000","notify_max":"100000000","delay_max":"500000000"}}'
 ```
 
@@ -532,7 +551,7 @@ Any transfer exceeding `delay_max` (500M lamports = 0.5 SOL) requires owner appr
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"APPROVE_TIER_OVERRIDE","rules":{"tier":"APPROVAL"}}'
 ```
 
@@ -541,7 +560,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
 ```
 
@@ -553,7 +572,7 @@ Prevent split-transaction bypass by limiting total USD spending per rolling wind
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <token>' \
+  -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000","daily_limit_usd":500,"monthly_limit_usd":5000}}'
 ```
 

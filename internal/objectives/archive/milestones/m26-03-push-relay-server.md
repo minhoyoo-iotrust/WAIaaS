@@ -1,7 +1,9 @@
 # 마일스톤 m26-03: Push Relay Server
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v26.3
+- **Package:** 2.4.0-rc.4
+- **Completed:** 2026-02-21
 
 ## 목표
 

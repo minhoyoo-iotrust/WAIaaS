@@ -1,7 +1,8 @@
 /**
  * Policy CRUD routes: POST, GET, PUT, DELETE /policies.
  *
- * All routes are protected by masterAuth middleware at the server level.
+ * POST/PUT/DELETE are protected by masterAuth at the server level.
+ * GET accepts both sessionAuth (agent read-only) and masterAuth (admin).
  *
  * POST /policies         -> create a new policy (201)
  * GET /policies          -> list policies with optional walletId filter (200)
@@ -27,6 +28,7 @@ import {
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -261,11 +263,12 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
   // GET /policies -- list policies with optional walletId filter
   // -------------------------------------------------------------------------
   router.openapi(listPoliciesRoute, (c) => {
-    const { walletId } = c.req.valid('query');
+    const sessionId = c.get('sessionId' as never) as string | undefined;
 
     let rows;
-    if (walletId) {
-      // Return wallet-specific + global policies
+    if (sessionId) {
+      // sessionAuth: restrict to session's wallet policies + global policies
+      const walletId = resolveWalletId(c, deps.db);
       rows = deps.db
         .select()
         .from(policies)
@@ -275,12 +278,24 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
         .orderBy(desc(policies.priority))
         .all();
     } else {
-      // Return all policies
-      rows = deps.db
-        .select()
-        .from(policies)
-        .orderBy(desc(policies.priority))
-        .all();
+      // masterAuth: existing admin behavior
+      const { walletId } = c.req.valid('query');
+      if (walletId) {
+        rows = deps.db
+          .select()
+          .from(policies)
+          .where(
+            or(eq(policies.walletId, walletId), isNull(policies.walletId)),
+          )
+          .orderBy(desc(policies.priority))
+          .all();
+      } else {
+        rows = deps.db
+          .select()
+          .from(policies)
+          .orderBy(desc(policies.priority))
+          .all();
+      }
     }
 
     const result = rows.map((row) => ({

@@ -425,48 +425,74 @@ export class DaemonLifecycle {
       const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } =
         await import('../notifications/index.js');
 
+      // Read notification settings from SettingsService first, fall back to config.toml
+      const ss = this._settingsService;
+      const notifLocale = ((ss ? ss.get('notifications.locale') : null)
+        || this._config!.notifications.locale || 'en') as 'en' | 'ko';
+      const notifRateLimitRpm = Number(
+        (ss ? ss.get('notifications.rate_limit_rpm') : null)
+        || this._config!.notifications.rate_limit_rpm
+        || 20,
+      );
+
       this.notificationService = new NotificationService({
         db: this._db ?? undefined,
         config: {
-          locale: (this._config!.notifications.locale ?? 'en') as 'en' | 'ko',
-          rateLimitRpm: this._config!.notifications.rate_limit_rpm ?? 20,
+          locale: notifLocale,
+          rateLimitRpm: notifRateLimitRpm,
         },
       });
 
-      // Initialize configured channels only when enabled
-      if (this._config!.notifications.enabled) {
+      // Initialize configured channels: SettingsService (DB) takes priority over config.toml
+      const notifEnabled = ss
+        ? ss.get('notifications.enabled') === 'true'
+        : this._config!.notifications.enabled;
+
+      if (notifEnabled) {
         const notifConfig = this._config!.notifications;
 
-        if (notifConfig.telegram_bot_token && notifConfig.telegram_chat_id) {
+        const tgToken = (ss ? ss.get('notifications.telegram_bot_token') : null)
+          || notifConfig.telegram_bot_token;
+        const tgChatId = (ss ? ss.get('notifications.telegram_chat_id') : null)
+          || notifConfig.telegram_chat_id;
+        if (tgToken && tgChatId) {
           const telegram = new TelegramChannel();
           await telegram.initialize({
-            telegram_bot_token: notifConfig.telegram_bot_token,
-            telegram_chat_id: notifConfig.telegram_chat_id,
+            telegram_bot_token: tgToken,
+            telegram_chat_id: tgChatId,
           });
           this.notificationService.addChannel(telegram);
         }
 
-        if (notifConfig.discord_webhook_url) {
+        const discordUrl = (ss ? ss.get('notifications.discord_webhook_url') : null)
+          || notifConfig.discord_webhook_url;
+        if (discordUrl) {
           const discord = new DiscordChannel();
           await discord.initialize({
-            discord_webhook_url: notifConfig.discord_webhook_url,
+            discord_webhook_url: discordUrl,
           });
           this.notificationService.addChannel(discord);
         }
 
-        if (notifConfig.ntfy_topic) {
+        const ntfyTopic = (ss ? ss.get('notifications.ntfy_topic') : null)
+          || notifConfig.ntfy_topic;
+        if (ntfyTopic) {
+          const ntfyServer = (ss ? ss.get('notifications.ntfy_server') : null)
+            || notifConfig.ntfy_server;
           const ntfy = new NtfyChannel();
           await ntfy.initialize({
-            ntfy_server: notifConfig.ntfy_server,
-            ntfy_topic: notifConfig.ntfy_topic,
+            ntfy_server: ntfyServer,
+            ntfy_topic: ntfyTopic,
           });
           this.notificationService.addChannel(ntfy);
         }
 
-        if (notifConfig.slack_webhook_url) {
+        const slackUrl = (ss ? ss.get('notifications.slack_webhook_url') : null)
+          || notifConfig.slack_webhook_url;
+        if (slackUrl) {
           const slack = new SlackChannel();
           await slack.initialize({
-            slack_webhook_url: notifConfig.slack_webhook_url,
+            slack_webhook_url: slackUrl,
           });
           this.notificationService.addChannel(slack);
         }

@@ -13,6 +13,7 @@
 - ✅ **v2.7 지갑 앱 알림 채널** — Phase 206 (shipped 2026-02-20)
 - ✅ **v26.3 Push Relay Server** — Phases 207-209 (shipped 2026-02-20)
 - ✅ **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** — Phases 210-214 (shipped 2026-02-21)
+- ✅ **v27.0 수신 트랜잭션 모니터링 설계** — Phases 215-223 (shipped 2026-02-21)
 
 ## Phases
 
@@ -140,11 +141,28 @@ See `.planning/milestones/v26.4-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v27.0 수신 트랜잭션 모니터링 설계 (Phases 215-223) — SHIPPED 2026-02-21</summary>
+
+- [x] Phase 215: IChainSubscriber 인터페이스 + DB 스키마 설계 (2/2 plans) — completed 2026-02-21
+- [x] Phase 216: Solana 수신 감지 전략 설계 (1/1 plan) — completed 2026-02-21
+- [x] Phase 217: EVM 수신 감지 전략 설계 (1/1 plan) — completed 2026-02-21
+- [x] Phase 218: WebSocket 연결 관리 + 폴링 폴백 설계 (2/2 plans) — completed 2026-02-21
+- [x] Phase 219: 알림 이벤트 + 의심 입금 감지 설계 (2/2 plans) — completed 2026-02-21
+- [x] Phase 220: REST API + SDK/MCP 명세 설계 (2/2 plans) — completed 2026-02-21
+- [x] Phase 221: 설정 구조 + 설계 통합 검증 (2/2 plans) — completed 2026-02-21
+- [x] Phase 222: 설계 문서 Critical/High 불일치 수정 (2/2 plans) — completed 2026-02-21
+- [x] Phase 223: 알림 명세 보완 + 문서 정합성 (2/2 plans) — completed 2026-02-21
+
+See `.planning/milestones/v27.0-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1-173 | v0.1-v2.0 | — | Complete | 2026-02-18 |
+| 1-173 | v0.1-v2.0 | -- | Complete | 2026-02-18 |
 | 178-181 | v2.2 | 6/6 | Complete | 2026-02-18 |
 | 182-187 | v2.3 | 11/11 | Complete | 2026-02-18 |
 | 188-190 | v2.4 | 4/4 | Complete | 2026-02-19 |
@@ -155,3 +173,4 @@ See `.planning/milestones/v26.4-ROADMAP.md` for full details.
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
 | 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
+| 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
