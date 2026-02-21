@@ -629,6 +629,9 @@ async function pollSolanaTransactions(
 - 최초 구독 시 `lastSignature = null` → 최근 100개 TX 조회 (과거 백필은 하지 않음 — Out of Scope)
 - 폴링 간격: `incoming_poll_interval` 설정값 (기본 30초)
 
+**참고:** 이 standalone 함수는 §3.7 SolanaIncomingSubscriber.pollAll() 내부에서 호출된다.
+pollAll()이 구독된 모든 지갑을 순회하면서 per-wallet 단위로 이 함수를 사용.
+
 ### 3.6 Commitment 정책
 
 | 단계 | Commitment | 용도 |
@@ -728,6 +731,42 @@ export class SolanaIncomingSubscriber implements IChainSubscriber {
     return new Promise((resolve) => {
       this.ws?.addEventListener('close', () => resolve(), { once: true });
     });
+  }
+
+  /**
+   * 폴링 모드에서 BackgroundWorkers가 호출.
+   * 구독 중인 모든 지갑에 대해 getSignaturesForAddress 폴링 수행.
+   * §3.5의 pollSolanaTransactions 로직을 클래스 메서드로 통합.
+   */
+  async pollAll(): Promise<void> {
+    for (const [walletId, sub] of this.subscriptions) {
+      try {
+        const cursor = await getCursor(walletId); // incoming_tx_cursors에서 조회
+        const signatures = await pollSolanaTransactions(
+          this.rpc, sub.address, cursor?.lastSignature ?? null,
+        );
+
+        for (const sig of signatures) {
+          const txDetail = await this.rpc.getTransaction(sig, {
+            commitment: 'confirmed',
+            maxSupportedTransactionVersion: 0,
+          }).send();
+
+          if (txDetail) {
+            const parsed = this.parseTransaction(txDetail, walletId, sub.network);
+            if (parsed) sub.onTransaction(parsed);
+          }
+        }
+
+        // 커서 업데이트
+        if (signatures.length > 0) {
+          await updateCursor(walletId, { lastSignature: signatures[signatures.length - 1] });
+        }
+      } catch (err) {
+        // Per-wallet error isolation
+        console.warn(`Solana poll failed for wallet ${walletId}:`, err);
+      }
+    }
   }
 
   async destroy(): Promise<void> {
@@ -1110,6 +1149,12 @@ WebSocket과 폴링 간 자동 전환을 상태 머신으로 관리한다.
 - `* → DISABLED`: `incoming_enabled = false` 설정 또는 KillSwitch SUSPENDED 시
 - `DISABLED → POLLING/WEBSOCKET`: `incoming_enabled = true` 복원 시
 
+**폴링 워커 연동:**
+- `→ POLLING` 진입: incoming-tx-poll-solana, incoming-tx-poll-evm 워커가 다음 interval부터 pollAll() 실행 시작.
+  워커 handler 내부에서 `multiplexer.connectionState === 'POLLING'` 조건을 확인하여 활성화.
+- `→ WEBSOCKET` 복귀: 폴링 워커가 connectionState 체크에서 skip 처리되어 자동 비활성화.
+  별도 unregister 불필요 -- 워커는 항상 등록된 상태이며, 조건부 실행으로 제어.
+
 ### 5.2 재연결 지수 백오프
 
 ```typescript
@@ -1165,6 +1210,34 @@ async function reconnectLoop(
     }
   }
 }
+```
+
+**WebSocket → 폴링 폴백 E2E 흐름 (FLOW-2):**
+
+```
+1. WS 연결 실패
+   → reconnectLoop에서 subscriber.connect() throw
+   → attempt++ (3회까지 재시도)
+
+2. 3회 실패 시 폴링 전환
+   → onStateChange('POLLING')
+   → multiplexer.connectionState = 'POLLING'
+
+3. 폴링 워커 활성화
+   → incoming-tx-poll-{chain} 워커의 다음 interval에서 connectionState 체크 통과
+   → subscriber.pollAll() 실행
+   → getSignaturesForAddress(Solana) / getLogs(EVM) 호출
+
+4. TX 감지 → DB 기록
+   → pollAll()에서 감지된 TX → onTransaction 콜백 → memoryQueue.push()
+   → incoming-tx-flush 워커(5초)가 큐 → DB 기록
+   → eventBus.emit('transaction:incoming', IncomingTxEvent) per TX
+
+5. WS 재연결 성공 시 복귀
+   → reconnectLoop 백그라운드 재시도에서 subscriber.connect() 성공
+   → onStateChange('WEBSOCKET')
+   → 폴링 워커 자동 비활성화 (connectionState 체크에서 skip)
+   → 블라인드 구간 복구: 마지막 커서 이후 gap 보상 폴링 1회 실행
 ```
 
 ### 5.3 Heartbeat
@@ -2196,10 +2269,32 @@ Step 6: BackgroundWorkers
   ├── incoming-tx-flush (5초, 메모리 큐 → DB)
   ├── incoming-tx-retention (1시간, 보존 정책)
   ├── incoming-tx-confirm-solana (30초, DETECTED → CONFIRMED)
-  └── incoming-tx-confirm-evm (30초, DETECTED → CONFIRMED)
+  ├── incoming-tx-confirm-evm (30초, DETECTED → CONFIRMED)
+  ├── incoming-tx-poll-solana (incoming_poll_interval, POLLING 상태에서만 활성)
+  └── incoming-tx-poll-evm (incoming_poll_interval, POLLING 상태에서만 활성)
 
 Shutdown:
   └── incomingTxMonitorService.stop() (구독 해제, 큐 최종 flush)
+```
+
+**폴링 워커 등록:**
+```typescript
+// POLLING 상태일 때만 실행하는 폴링 워커
+workers.register('incoming-tx-poll-solana', {
+  interval: config.incoming.incoming_poll_interval * 1000, // 기본 30초
+  handler: async () => {
+    if (multiplexer.connectionState !== 'POLLING') return; // WEBSOCKET 상태에서는 skip
+    await solanaSubscriber.pollAll();
+  },
+});
+
+workers.register('incoming-tx-poll-evm', {
+  interval: config.incoming.incoming_poll_interval * 1000,
+  handler: async () => {
+    if (multiplexer.connectionState !== 'POLLING') return; // WEBSOCKET 상태에서는 skip
+    await evmSubscriber.pollAll();
+  },
+});
 ```
 
 ### 8.10 설계 결정 요약
