@@ -173,7 +173,7 @@ describe('EvmIncomingSubscriber - pollAll ERC-20', () => {
     await subscriber.pollAll();
 
     expect(onTransaction).toHaveBeenCalledOnce();
-    const tx = onTransaction.mock.calls[0][0];
+    const tx = onTransaction.mock.calls[0]![0];
     expect(tx).toMatchObject({
       id: 'test-id-1',
       txHash: '0xabc123',
@@ -210,8 +210,8 @@ describe('EvmIncomingSubscriber - pollAll ERC-20', () => {
     await subscriber.pollAll();
 
     // getLogs should have been called with fromBlock:106n, toBlock:106n on second poll
-    const secondCall = mockClient.getLogs.mock.calls[1];
-    expect(secondCall[0]).toMatchObject({
+    const secondCall = mockClient.getLogs.mock.calls[1]!;
+    expect(secondCall[0]!).toMatchObject({
       fromBlock: 106n,
       toBlock: 106n,
     });
@@ -268,7 +268,7 @@ describe('EvmIncomingSubscriber - pollAll native ETH', () => {
     await subscriber.pollAll();
 
     expect(onTransaction).toHaveBeenCalledOnce();
-    const tx = onTransaction.mock.calls[0][0];
+    const tx = onTransaction.mock.calls[0]![0];
     expect(tx).toMatchObject({
       id: 'test-id-1',
       txHash: '0xdef456',
@@ -449,7 +449,7 @@ describe('EvmIncomingSubscriber - pollAll resilience', () => {
 
     // wallet-2 should have received the ERC-20 transfer
     expect(onTx2).toHaveBeenCalledOnce();
-    expect(onTx2.mock.calls[0][0]).toMatchObject({
+    expect(onTx2.mock.calls[0]![0]).toMatchObject({
       txHash: '0xsecondwallet',
       walletId: 'wallet-2',
     });
@@ -506,12 +506,12 @@ describe('EvmIncomingSubscriber - pollAll resilience', () => {
 
     expect(onTransaction).toHaveBeenCalledTimes(2);
     // First call: ERC-20
-    expect(onTransaction.mock.calls[0][0]).toMatchObject({
+    expect(onTransaction.mock.calls[0]![0]).toMatchObject({
       tokenAddress: TEST_TOKEN_ADDRESS,
       txHash: '0xerc20tx',
     });
     // Second call: native ETH
-    expect(onTransaction.mock.calls[1][0]).toMatchObject({
+    expect(onTransaction.mock.calls[1]![0]).toMatchObject({
       tokenAddress: null,
       txHash: '0xnatvetx',
     });
