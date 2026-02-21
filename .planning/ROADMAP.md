@@ -318,4 +318,4 @@ Phases execute in numeric order: 215 -> 216 -> 217 -> 218 -> 219 -> 220 -> 221 -
 | 220. REST API + SDK/MCP | v27.0 | 2/2 | Complete | 2026-02-21 |
 | 221. 설정 + 통합 검증 | v27.0 | 2/2 | Complete | 2026-02-21 |
 | 222. 설계 Critical/High 수정 | 2/2 | Complete    | 2026-02-21 | — |
-| 223. 알림 명세 + 문서 정합성 | 2/2 | Complete   | 2026-02-21 | — |
+| 223. 알림 명세 + 문서 정합성 | 2/2 | Complete    | 2026-02-21 | — |
