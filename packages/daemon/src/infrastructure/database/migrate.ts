@@ -1497,7 +1497,7 @@ MIGRATIONS.push({
     sqlite.exec('ALTER TABLE wallets ADD COLUMN monitor_incoming INTEGER NOT NULL DEFAULT 0');
 
     // 2. incoming_transactions table (13 columns + UNIQUE constraint)
-    sqlite.exec(`CREATE TABLE incoming_transactions (
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS incoming_transactions (
   id TEXT PRIMARY KEY,
   tx_hash TEXT NOT NULL,
   wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
@@ -1515,7 +1515,7 @@ MIGRATIONS.push({
 )`);
 
     // 3. incoming_tx_cursors table (6 columns)
-    sqlite.exec(`CREATE TABLE incoming_tx_cursors (
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS incoming_tx_cursors (
   wallet_id TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
   chain TEXT NOT NULL,
   network TEXT NOT NULL,
@@ -1525,10 +1525,10 @@ MIGRATIONS.push({
 )`);
 
     // 4. Indexes on incoming_transactions
-    sqlite.exec('CREATE INDEX idx_incoming_tx_wallet_detected ON incoming_transactions(wallet_id, detected_at DESC)');
-    sqlite.exec('CREATE INDEX idx_incoming_tx_detected_at ON incoming_transactions(detected_at)');
-    sqlite.exec('CREATE INDEX idx_incoming_tx_chain_network ON incoming_transactions(chain, network)');
-    sqlite.exec("CREATE INDEX idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'");
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_incoming_tx_wallet_detected ON incoming_transactions(wallet_id, detected_at DESC)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_incoming_tx_detected_at ON incoming_transactions(detected_at)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_incoming_tx_chain_network ON incoming_transactions(chain, network)');
+    sqlite.exec("CREATE INDEX IF NOT EXISTS idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'");
   },
 });
 

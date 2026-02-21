@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 15 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users, wc_sessions, wc_store
+ * 17 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -40,6 +40,7 @@ import {
   POLICY_TYPES,
   POLICY_TIERS,
   NOTIFICATION_LOG_STATUSES,
+  INCOMING_TX_STATUSES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -71,6 +72,7 @@ export const wallets = sqliteTable(
     suspendedAt: integer('suspended_at', { mode: 'timestamp' }),
     suspensionReason: text('suspension_reason'),
     ownerApprovalMethod: text('owner_approval_method'),
+    monitorIncoming: integer('monitor_incoming', { mode: 'boolean' }).notNull().default(false),
   },
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),
@@ -424,4 +426,51 @@ export const wcSessions = sqliteTable(
 export const wcStore = sqliteTable('wc_store', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Table 16: incoming_transactions -- detected incoming transfers to monitored wallets
+// v27.1: Added for incoming transaction monitoring
+// ---------------------------------------------------------------------------
+
+export const incomingTransactions = sqliteTable(
+  'incoming_transactions',
+  {
+    id: text('id').primaryKey(),
+    txHash: text('tx_hash').notNull(),
+    walletId: text('wallet_id').notNull().references(() => wallets.id, { onDelete: 'cascade' }),
+    fromAddress: text('from_address').notNull(),
+    amount: text('amount').notNull(),
+    tokenAddress: text('token_address'),
+    chain: text('chain').notNull(),
+    network: text('network').notNull(),
+    status: text('status').notNull().default('DETECTED'),
+    blockNumber: integer('block_number'),
+    detectedAt: integer('detected_at', { mode: 'timestamp' }).notNull(),
+    confirmedAt: integer('confirmed_at', { mode: 'timestamp' }),
+    isSuspicious: integer('is_suspicious', { mode: 'boolean' }).notNull().default(false),
+  },
+  (table) => [
+    index('idx_incoming_tx_wallet_detected').on(table.walletId, table.detectedAt),
+    index('idx_incoming_tx_detected_at').on(table.detectedAt),
+    index('idx_incoming_tx_chain_network').on(table.chain, table.network),
+    index('idx_incoming_tx_status').on(table.status),
+    uniqueIndex('idx_incoming_tx_unique').on(table.txHash, table.walletId),
+    check('check_incoming_chain', buildCheckSql('chain', CHAIN_TYPES)),
+    check('check_incoming_status', buildCheckSql('status', INCOMING_TX_STATUSES)),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 17: incoming_tx_cursors -- per-wallet cursor for gap recovery
+// v27.1: Added for incoming transaction monitoring
+// ---------------------------------------------------------------------------
+
+export const incomingTxCursors = sqliteTable('incoming_tx_cursors', {
+  walletId: text('wallet_id').primaryKey().references(() => wallets.id, { onDelete: 'cascade' }),
+  chain: text('chain').notNull(),
+  network: text('network').notNull(),
+  lastSignature: text('last_signature'),
+  lastBlockNumber: integer('last_block_number'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
