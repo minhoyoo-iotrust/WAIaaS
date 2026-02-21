@@ -14,7 +14,7 @@
 - ✅ **v26.3 Push Relay Server** -- Phases 207-209 (shipped 2026-02-20)
 - ✅ **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** -- Phases 210-214 (shipped 2026-02-21)
 - ✅ **v27.0 수신 트랜잭션 모니터링 설계** -- Phases 215-223 (shipped 2026-02-21)
-- [ ] **v27.1 수신 트랜잭션 모니터링 구현** -- Phases 224-229 (in progress)
+- [ ] **v27.1 수신 트랜잭션 모니터링 구현** -- Phases 224-230 (in progress)
 
 ## Phases
 
@@ -173,6 +173,8 @@ See `.planning/milestones/v27.0-ROADMAP.md` for full details.
 - [x] **Phase 227: Config + Settings + Notifications** - config.toml [incoming] 섹션, SettingsService, HotReload, i18n 메시지 템플릿 (completed 2026-02-21)
 - [x] **Phase 228: REST API + SDK + MCP** - 조회 API, TypeScript/Python SDK 메서드, MCP 도구, 스킬 파일 (completed 2026-02-21)
 - [x] **Phase 229: Integration Testing** - E2E 통합 테스트 (T-01~T-17, S-01~S-04), 6대 피트폴 검증 (completed 2026-02-21)
+- [ ] **Phase 230: Integration Wiring Fixes** - BUG-1 BackgroundWorkers 통합, BUG-2 폴링 워커 구현, BUG-3 Gap Recovery 배선 (gap closure)
+- [ ] **Phase 230: Integration Wiring Fixes** - BUG-1 BackgroundWorkers 통합, BUG-2 폴링 워커 구현, BUG-3 Gap Recovery 배선 (gap closure)
 
 ## Phase Details
 
@@ -272,6 +274,21 @@ Plans:
 - [x] 229-01-PLAN.md -- Core pitfall integration tests (C-01 listener leak, C-02 SQLite contention, C-04 duplicate events, C-05 shutdown data loss, C-06 EVM reorg)
 - [x] 229-02-PLAN.md -- Security + resilience integration tests (gap recovery, KillSwitch M-03, notification cooldown M-07)
 
+### Phase 230: Integration Wiring Fixes
+**Goal**: 감사에서 발견된 3개 통합 버그(BUG-1 BackgroundWorkers 인스턴스 분리, BUG-2 폴링 워커 빈 핸들러, BUG-3 Gap Recovery 스텁)를 수정하여, 8개 partial 요구사항을 satisfied로 전환하고 3개 깨진 E2E 플로우를 복구하는 상태
+**Depends on**: Phase 229
+**Requirements**: SUB-02, SUB-03, SUB-04, SUB-05, STO-02, STO-03, STO-05, CFG-04
+**Gap Closure**: Closes gaps from v27.1 audit (BUG-1, BUG-2, BUG-3)
+**Success Criteria** (what must be TRUE):
+  1. IncomingTxMonitorService의 6개 워커가 daemon의 공유 BackgroundWorkers 인스턴스에 등록되어 startAll()로 실제 시작된다
+  2. 폴링 워커 5(Solana)/6(EVM)의 핸들러가 multiplexer를 통해 subscriber.pollAll()을 호출하여 POLLING_FALLBACK 상태에서 트랜잭션을 감지한다
+  3. onGapRecovery 콜백이 createGapRecoveryHandler를 통해 실제 갭 복구를 실행하여, WebSocket 재연결 후 누락 트랜잭션을 복구한다
+  4. 기존 단위 테스트와 통합 테스트가 모두 통과하고, 새 통합 테스트가 3개 버그 수정을 검증한다
+**Plans**: TBD
+
+Plans:
+- [ ] 230-01-PLAN.md -- BUG-1 BackgroundWorkers 통합 + BUG-2 폴링 워커 구현 + BUG-3 Gap Recovery 배선 + integration tests
+
 ## Progress
 
 **Execution Order:**
@@ -298,3 +315,4 @@ Note: Phase 227 depends only on Phase 224 and can logically run in parallel with
 | 227. Config + Notifications | 2/2 | Complete   | 2026-02-21 | - |
 | 228. REST API + SDK + MCP | 3/3 | Complete   | 2026-02-21 | - |
 | 229. Integration Testing | 2/2 | Complete   | 2026-02-21 | - |
+| 230. Integration Wiring Fixes | 0/1 | Pending | - | - |

@@ -10,20 +10,20 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 ### Subscription Infrastructure
 
 - [x] **SUB-01**: IChainSubscriber 6-method interface (subscribe/unsubscribe/subscribedAddresses/connect/waitForDisconnect/destroy) defined in @waiaas/core
-- [x] **SUB-02**: SolanaIncomingSubscriber implements logsSubscribe({mentions}) + getTransaction(jsonParsed) for SOL/SPL/Token-2022 incoming detection
-- [x] **SUB-03**: EvmIncomingSubscriber implements getLogs(Transfer event) + getBlock(includeTransactions:true) for ERC-20/native ETH incoming detection
-- [x] **SUB-04**: WebSocket-to-polling automatic fallback with 3-state connection machine (WS_ACTIVE/POLLING_FALLBACK/RECONNECTING)
-- [x] **SUB-05**: Gap recovery via incoming_tx_cursors table -- reconnection after blind spot recovers missed transactions
+- [ ] **SUB-02**: SolanaIncomingSubscriber implements logsSubscribe({mentions}) + getTransaction(jsonParsed) for SOL/SPL/Token-2022 incoming detection
+- [ ] **SUB-03**: EvmIncomingSubscriber implements getLogs(Transfer event) + getBlock(includeTransactions:true) for ERC-20/native ETH incoming detection
+- [ ] **SUB-04**: WebSocket-to-polling automatic fallback with 3-state connection machine (WS_ACTIVE/POLLING_FALLBACK/RECONNECTING)
+- [ ] **SUB-05**: Gap recovery via incoming_tx_cursors table -- reconnection after blind spot recovers missed transactions
 - [x] **SUB-06**: SubscriptionMultiplexer shares single WebSocket connection per chain:network combination
 - [x] **SUB-07**: Solana heartbeat ping (60s interval + jitter) prevents 10-minute inactivity timeout disconnection
 
 ### Data Storage
 
 - [x] **STO-01**: DB v21 migration adds incoming_transactions table, incoming_tx_cursors table, and wallets.monitor_incoming column
-- [x] **STO-02**: IncomingTxQueue memory queue with BackgroundWorkers 5-second batch flush prevents SQLITE_BUSY under high-frequency events
-- [x] **STO-03**: 2-phase transaction status (DETECTED to CONFIRMED) with background confirmation upgrade worker
+- [ ] **STO-02**: IncomingTxQueue memory queue with BackgroundWorkers 5-second batch flush prevents SQLITE_BUSY under high-frequency events
+- [ ] **STO-03**: 2-phase transaction status (DETECTED to CONFIRMED) with background confirmation upgrade worker
 - [x] **STO-04**: tx_hash UNIQUE constraint and Map-based in-memory dedup prevent duplicate transaction records
-- [x] **STO-05**: Retention policy worker auto-deletes records older than incoming_retention_days setting
+- [ ] **STO-05**: Retention policy worker auto-deletes records older than incoming_retention_days setting
 
 ### Query API
 
@@ -49,7 +49,7 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 - [x] **CFG-01**: config.toml [incoming] section with 7 keys (enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier, wss_url)
 - [x] **CFG-02**: SettingsService registers 'incoming' category with 7 setting keys supporting hot-reload
 - [x] **CFG-03**: HotReloadOrchestrator handles incoming.* key changes by restarting monitor with new settings
-- [x] **CFG-04**: DaemonLifecycle Step 4c-9 initializes IncomingTxMonitorService with fail-soft pattern and proper shutdown hook
+- [ ] **CFG-04**: DaemonLifecycle Step 4c-9 initializes IncomingTxMonitorService with fail-soft pattern and proper shutdown hook
 - [x] **CFG-05**: Environment variable mapping follows WAIAAS_INCOMING_* pattern for all 7 config keys
 
 ## v2 Requirements
@@ -85,17 +85,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SUB-01 | Phase 224 | Complete |
-| SUB-02 | Phase 225 | Complete |
-| SUB-03 | Phase 225 | Complete |
-| SUB-04 | Phase 225 | Complete |
-| SUB-05 | Phase 226 | Complete |
+| SUB-02 | Phase 230 | Pending |
+| SUB-03 | Phase 230 | Pending |
+| SUB-04 | Phase 230 | Pending |
+| SUB-05 | Phase 230 | Pending |
 | SUB-06 | Phase 226 | Complete |
 | SUB-07 | Phase 225 | Complete |
 | STO-01 | Phase 224 | Complete |
-| STO-02 | Phase 226 | Complete |
-| STO-03 | Phase 226 | Complete |
+| STO-02 | Phase 230 | Pending |
+| STO-03 | Phase 230 | Pending |
 | STO-04 | Phase 226 | Complete |
-| STO-05 | Phase 226 | Complete |
+| STO-05 | Phase 230 | Pending |
 | API-01 | Phase 228 | Complete |
 | API-02 | Phase 228 | Complete |
 | API-03 | Phase 228 | Complete |
@@ -112,14 +112,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CFG-01 | Phase 227 | Complete |
 | CFG-02 | Phase 227 | Complete |
 | CFG-03 | Phase 227 | Complete |
-| CFG-04 | Phase 226 | Complete |
+| CFG-04 | Phase 230 | Pending |
 | CFG-05 | Phase 227 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
-- Mapped to phases: 30
+- Satisfied: 22
+- Pending (gap closure Phase 230): 8 (SUB-02, SUB-03, SUB-04, SUB-05, STO-02, STO-03, STO-05, CFG-04)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after roadmap creation*
+*Last updated: 2026-02-22 after gap closure phase creation*
