@@ -21,6 +21,16 @@ http://localhost:3100
 
 All action endpoints require **sessionAuth** via `Authorization: Bearer <token>` header.
 
+## Permissions
+
+### Agent (sessionAuth)
+- List action providers and their available actions
+- Execute actions (subject to policy evaluation)
+
+### Admin (masterAuth -- prerequisite)
+- Register API keys for action providers via Admin UI Settings
+- Configure CONTRACT_WHITELIST/ALLOWED_TOKENS policies for provider contracts
+
 ```
 Authorization: Bearer wai_sess_eyJ...
 ```

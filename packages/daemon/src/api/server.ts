@@ -146,7 +146,19 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.masterPasswordHash !== undefined) {
     const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
     app.use('/v1/wallets', masterAuth);
-    app.use('/v1/policies', masterAuth);
+    // /v1/policies: GET allows sessionAuth or masterAuth, others require masterAuth only
+    app.use('/v1/policies', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          // sessionAuth will handle GET in the sessionAuth block below
+          await next();
+          return;
+        }
+        // Otherwise fall through to masterAuth (admin GET)
+      }
+      return masterAuth(c, next);
+    });
     app.use('/v1/policies/:id', masterAuth);
     // masterAuth on /v1/sessions (POST create, GET list)
     app.use('/v1/sessions', masterAuth);
@@ -202,6 +214,26 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/actions/*', sessionAuth);
     app.use('/v1/x402/*', sessionAuth);
     app.use('/v1/connect-info', sessionAuth);
+    // sessionAuth for GET /v1/policies and GET /v1/tokens (dual-auth: agent read-only access)
+    // Only apply sessionAuth when Bearer token is present; masterAuth GET is handled above.
+    app.use('/v1/policies', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          return sessionAuth(c, next);
+        }
+      }
+      await next();
+    });
+    app.use('/v1/tokens', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          return sessionAuth(c, next);
+        }
+      }
+      await next();
+    });
   }
 
   // ownerAuth for approve and reject routes (requires DB for agent lookup)
@@ -233,7 +265,19 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/api-keys/*', masterAuthForAdmin);
     app.use('/v1/admin/forex/*', masterAuthForAdmin);
     app.use('/v1/admin/kill-switch/escalate', masterAuthForAdmin);
-    app.use('/v1/tokens', masterAuthForAdmin);
+    // /v1/tokens: GET allows sessionAuth or masterAuth, others require masterAuth only
+    app.use('/v1/tokens', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          // sessionAuth will handle GET in the sessionAuth block below
+          await next();
+          return;
+        }
+        // Otherwise fall through to masterAuth (admin GET)
+      }
+      return masterAuthForAdmin(c, next);
+    });
     app.use('/v1/mcp/tokens', masterAuthForAdmin);
     app.use('/v1/admin/wallets/*', masterAuthForAdmin);
     app.use('/v1/admin/sessions/*', masterAuthForAdmin);
