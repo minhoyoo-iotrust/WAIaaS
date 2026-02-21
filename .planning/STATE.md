@@ -53,6 +53,10 @@ From 225-03:
 - Duck-typed subscriber parameter (connect/waitForDisconnect) avoids circular dependency with IChainSubscriber
 - 100ms floor clamp on calculateDelay prevents zero/negative delays from rounding
 
+From 226-01:
+- Plan's INSERT SQL had to_address and decimals columns that don't exist in DB v21 -- corrected to actual 13 columns
+- generateId() called during flush() for UUID v7 time ordering at insertion time
+
 From 226-02:
 - IChainSubscriber.subscribe() takes 4 params (walletId, address, network, onTransaction) -- plan's pseudo-code had 3 params
 - reconnectLoop starts after initial waitForDisconnect resolves -- avoids double-connect on addWallet
@@ -65,5 +69,5 @@ From 226-02:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 226-02-PLAN.md
+Stopped at: Completed 226-01-PLAN.md (226-01 + 226-02 complete, 2 of 4 plans done)
 Resume file: None

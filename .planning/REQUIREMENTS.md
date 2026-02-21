@@ -20,9 +20,9 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 ### Data Storage
 
 - [x] **STO-01**: DB v21 migration adds incoming_transactions table, incoming_tx_cursors table, and wallets.monitor_incoming column
-- [ ] **STO-02**: IncomingTxQueue memory queue with BackgroundWorkers 5-second batch flush prevents SQLITE_BUSY under high-frequency events
+- [x] **STO-02**: IncomingTxQueue memory queue with BackgroundWorkers 5-second batch flush prevents SQLITE_BUSY under high-frequency events
 - [ ] **STO-03**: 2-phase transaction status (DETECTED to CONFIRMED) with background confirmation upgrade worker
-- [ ] **STO-04**: tx_hash UNIQUE constraint and Map-based in-memory dedup prevent duplicate transaction records
+- [x] **STO-04**: tx_hash UNIQUE constraint and Map-based in-memory dedup prevent duplicate transaction records
 - [ ] **STO-05**: Retention policy worker auto-deletes records older than incoming_retention_days setting
 
 ### Query API
@@ -92,9 +92,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SUB-06 | Phase 226 | Complete |
 | SUB-07 | Phase 225 | Complete |
 | STO-01 | Phase 224 | Complete |
-| STO-02 | Phase 226 | Pending |
+| STO-02 | Phase 226 | Complete |
 | STO-03 | Phase 226 | Pending |
-| STO-04 | Phase 226 | Pending |
+| STO-04 | Phase 226 | Complete |
 | STO-05 | Phase 226 | Pending |
 | API-01 | Phase 228 | Pending |
 | API-02 | Phase 228 | Pending |
