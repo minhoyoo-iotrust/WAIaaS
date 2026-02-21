@@ -1,6 +1,6 @@
 // @waiaas/core - shared types, schemas, errors, interfaces
 
-// Enums (12 SSoT enums + EVM/Solana subsets + validateChainNetwork + environment model)
+// Enums (13 SSoT enums + EVM/Solana subsets + validateChainNetwork + environment model)
 export {
   CHAIN_TYPES,
   type ChainType,
@@ -56,6 +56,9 @@ export {
   OWNER_STATES,
   type OwnerState,
   OwnerStateEnum,
+  INCOMING_TX_STATUSES,
+  type IncomingTxStatus,
+  IncomingTxStatusEnum,
 } from './enums/index.js';
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
@@ -105,6 +108,8 @@ export {
   type Config,
   AssetInfoSchema,
   type AssetInfoDto,
+  IncomingTransactionSchema,
+  type IncomingTransactionDto,
 } from './schemas/index.js';
 
 // Signing Protocol (v2.6.1 Zod schemas + types + utilities)
@@ -149,7 +154,7 @@ export {
   CHAIN_ERROR_CATEGORIES,
 } from './errors/index.js';
 
-// Interfaces (5 contracts + chain adapter types + v1.5 price oracle types + v1.5.1 x402 types)
+// Interfaces (7 contracts + chain adapter types + v1.5 price oracle types + v1.5.1 x402 types)
 export type {
   TokenAmount,
   TransferRequest,
@@ -199,6 +204,9 @@ export type {
   PaymentRequired,
   PaymentPayload,
   PaymentRequirements,
+  // v27.1 incoming transaction subscriber types
+  IncomingTransaction,
+  IChainSubscriber,
 } from './interfaces/index.js';
 
 // v1.5 Price Oracle Zod schemas (value exports)
@@ -237,11 +245,13 @@ export { formatAmount, parseAmount } from './utils/index.js';
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
 
-// v1.6 Events (EventBus + typed event definitions)
+// v1.6 Events (EventBus + 7 typed event definitions)
 export { EventBus } from './events/index.js';
 export type {
   WaiaasEventMap,
   TransactionCompletedEvent,
   TransactionFailedEvent,
   WalletActivityEvent,
+  IncomingTxEvent,
+  IncomingTxSuspiciousEvent,
 } from './events/index.js';

@@ -39,3 +39,9 @@ export {
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
 export { AssetInfoSchema, type AssetInfoDto } from './asset.schema.js';
+
+// v27.1 incoming transaction schema (Zod SSoT)
+export {
+  IncomingTransactionSchema,
+  type IncomingTransaction as IncomingTransactionDto,
+} from './incoming-transaction.schema.js';

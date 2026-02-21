@@ -7,4 +7,6 @@ export type {
   WalletActivityEvent,
   KillSwitchStateChangedEvent,
   ApprovalChannelSwitchedEvent,
+  IncomingTxEvent,
+  IncomingTxSuspiciousEvent,
 } from './event-types.js';
