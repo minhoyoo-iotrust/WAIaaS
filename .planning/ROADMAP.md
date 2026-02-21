@@ -174,7 +174,7 @@ See `.planning/milestones/v27.0-ROADMAP.md` for full details.
 - [x] **Phase 228: REST API + SDK + MCP** - 조회 API, TypeScript/Python SDK 메서드, MCP 도구, 스킬 파일 (completed 2026-02-21)
 - [x] **Phase 229: Integration Testing** - E2E 통합 테스트 (T-01~T-17, S-01~S-04), 6대 피트폴 검증 (completed 2026-02-21)
 - [x] **Phase 230: Integration Wiring Fixes** - BUG-1 BackgroundWorkers 통합, BUG-2 폴링 워커 구현, BUG-3 Gap Recovery 배선 (gap closure) (completed 2026-02-21)
-- [ ] **Phase 230: Integration Wiring Fixes** - BUG-1 BackgroundWorkers 통합, BUG-2 폴링 워커 구현, BUG-3 Gap Recovery 배선 (gap closure)
+- [x] **Phase 230: Integration Wiring Fixes** - BUG-1 BackgroundWorkers 통합, BUG-2 폴링 워커 구현, BUG-3 Gap Recovery 배선 (gap closure) (completed 2026-02-21)
 
 ## Phase Details
 
@@ -316,4 +316,4 @@ Note: Phase 227 depends only on Phase 224 and can logically run in parallel with
 | 227. Config + Notifications | 2/2 | Complete   | 2026-02-21 | - |
 | 228. REST API + SDK + MCP | 3/3 | Complete   | 2026-02-21 | - |
 | 229. Integration Testing | 2/2 | Complete   | 2026-02-21 | - |
-| 230. Integration Wiring Fixes | 2/2 | Complete   | 2026-02-21 | - |
+| 230. Integration Wiring Fixes | 2/2 | Complete    | 2026-02-21 | - |
