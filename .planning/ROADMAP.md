@@ -185,11 +185,11 @@ See `.planning/milestones/v27.0-ROADMAP.md` for full details.
   2. DB v21 마이그레이션이 실행되면 incoming_transactions 테이블(12 컬럼, 4 인덱스), incoming_tx_cursors 테이블, wallets.monitor_incoming 컬럼이 생성된다
   3. IncomingTransaction Zod 스키마와 IncomingTxStatus enum이 @waiaas/core에서 export되어 다른 패키지에서 사용할 수 있다
   4. pushSchema DDL, Drizzle 스키마, 마이그레이션 체인 테스트가 모두 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 224-01: IChainSubscriber 인터페이스 + core 타입 시스템
-- [ ] 224-02: DB v21 마이그레이션 + Drizzle 스키마 + 마이그레이션 체인 테스트
+- [ ] 224-01-PLAN.md -- IChainSubscriber 6-method interface + IncomingTxStatus enum + Zod SSoT schema + EventBus event types in @waiaas/core
+- [ ] 224-02-PLAN.md -- DB v21 migration (incoming_transactions + incoming_tx_cursors + wallets.monitor_incoming) + Drizzle schema + migration chain tests
 
 ### Phase 225: Chain Subscriber Implementations
 **Goal**: Solana와 EVM 체인에서 지갑 주소로 들어오는 입금(네이티브 + 토큰)을 감지하는 구독자가 동작하여, mock RPC 환경에서 수신 트랜잭션을 콜백으로 전달할 수 있는 상태
