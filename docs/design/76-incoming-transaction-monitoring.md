@@ -375,3 +375,329 @@ MIGRATIONS.push({
 - `managesOwnTransaction: false` (기본값) — ALTER TABLE + CREATE TABLE은 단순 DDL이므로 자동 트랜잭션 래핑으로 충분
 - 기존 데이터 변환 없음 — 신규 테이블 생성 + 컬럼 추가만
 - 롤백: 설계 문서에서는 롤백 전략을 별도 정의하지 않음 (SQLite ALTER TABLE DROP COLUMN은 3.35.0+에서 가능하나 운영 환경에서의 롤백은 DB 백업 복원 권장)
+
+---
+
+## 3. Solana 수신 감지 전략
+
+### 3.1 구독 방식: logsSubscribe({ mentions })
+
+Solana RPC의 `logsSubscribe` 메서드를 사용하여 지갑 주소가 관여하는 모든 트랜잭션 로그를 구독한다.
+
+```typescript
+// @solana/kit API 패턴
+const rpcSubscriptions = createSolanaRpcSubscriptions(wsUrl);
+
+// 지갑 주소를 mentions로 구독 — SOL + 모든 SPL 토큰 감지
+const logsNotifications = rpcSubscriptions.logsNotifications(
+  { mentions: [walletAddress] },
+  { commitment: 'confirmed' },
+);
+
+// AsyncIterable 소비
+for await (const notification of logsNotifications) {
+  const { signature, err } = notification.value;
+  if (err) continue; // 실패 TX 무시
+  // signature로 TX 상세 조회 후 파싱
+  await processSignature(signature);
+}
+```
+
+**핵심 특성:**
+- `mentions: [walletAddress]` — 해당 주소가 관여하는 **모든** TX를 캐치 (SOL 전송, SPL 전송, ATA 생성 등)
+- 지갑당 **별도 구독** 필요 — `mentions`는 배열이지만 Solana RPC는 단일 주소만 허용 (QuickNode 확인)
+- commitment: `confirmed` → 빠른 감지, `finalized` → CONFIRMED 전환 시 별도 확인
+
+### 3.2 TX 파싱 알고리즘
+
+`logsSubscribe`는 signature만 반환하므로, `getTransaction(signature, { encoding: 'jsonParsed' })`로 상세 정보를 조회한다.
+
+#### 3.2.1 SOL 네이티브 전송 감지
+
+```typescript
+async function parseSOLTransfer(
+  tx: ParsedTransactionWithMeta,
+  walletAddress: string,
+): IncomingTransaction | null {
+  const { meta, transaction } = tx;
+  if (!meta || meta.err) return null;
+
+  // 1. 지갑 주소의 계정 인덱스 찾기
+  const accountKeys = transaction.message.accountKeys;
+  const walletIndex = accountKeys.findIndex(
+    (key) => key.pubkey.toString() === walletAddress,
+  );
+  if (walletIndex === -1) return null;
+
+  // 2. preBalances/postBalances 비교로 SOL 수신 금액 계산
+  const preBalance = BigInt(meta.preBalances[walletIndex]);
+  const postBalance = BigInt(meta.postBalances[walletIndex]);
+  const delta = postBalance - preBalance;
+
+  if (delta <= 0n) return null; // 수신이 아님 (발신 또는 변화 없음)
+
+  // 3. 송신자 추정: SOL 잔액이 감소한 최초 계정
+  const fromIndex = meta.preBalances.findIndex((pre, i) => {
+    if (i === walletIndex) return false;
+    return BigInt(pre) > BigInt(meta.postBalances[i]);
+  });
+  const fromAddress = fromIndex >= 0
+    ? accountKeys[fromIndex].pubkey.toString()
+    : 'unknown';
+
+  return {
+    id: generateUUIDv7(),
+    txHash: tx.transaction.signatures[0],
+    walletId: '', // IncomingTxMonitorService에서 채움
+    fromAddress,
+    amount: delta.toString(),
+    tokenAddress: null, // 네이티브 SOL
+    chain: 'solana',
+    network: '', // 호출 시 주입
+    status: 'DETECTED',
+    blockNumber: tx.slot,
+    detectedAt: Math.floor(Date.now() / 1000),
+    confirmedAt: null,
+  };
+}
+```
+
+#### 3.2.2 SPL 토큰 전송 감지
+
+```typescript
+async function parseSPLTransfer(
+  tx: ParsedTransactionWithMeta,
+  walletAddress: string,
+): IncomingTransaction[] {
+  const { meta } = tx;
+  if (!meta || meta.err) return [];
+
+  const results: IncomingTransaction[] = [];
+
+  // preTokenBalances/postTokenBalances 비교
+  const preMap = new Map<string, { amount: bigint; mint: string; owner: string }>();
+  for (const tb of meta.preTokenBalances ?? []) {
+    if (tb.owner === walletAddress) {
+      preMap.set(tb.mint, {
+        amount: BigInt(tb.uiTokenAmount.amount),
+        mint: tb.mint,
+        owner: tb.owner,
+      });
+    }
+  }
+
+  for (const tb of meta.postTokenBalances ?? []) {
+    if (tb.owner !== walletAddress) continue;
+
+    const pre = preMap.get(tb.mint);
+    const preAmount = pre?.amount ?? 0n; // 최초 수신 시 pre 없음 → 0n
+    const postAmount = BigInt(tb.uiTokenAmount.amount);
+    const delta = postAmount - preAmount;
+
+    if (delta <= 0n) continue;
+
+    // 송신자: 같은 mint에서 잔액이 감소한 owner
+    let fromAddress = 'unknown';
+    for (const preTb of meta.preTokenBalances ?? []) {
+      if (preTb.mint !== tb.mint || preTb.owner === walletAddress) continue;
+      const postTb = meta.postTokenBalances?.find(
+        (p) => p.mint === preTb.mint && p.owner === preTb.owner,
+      );
+      if (postTb && BigInt(preTb.uiTokenAmount.amount) > BigInt(postTb.uiTokenAmount.amount)) {
+        fromAddress = preTb.owner;
+        break;
+      }
+    }
+
+    results.push({
+      id: generateUUIDv7(),
+      txHash: tx.transaction.signatures[0],
+      walletId: '',
+      fromAddress,
+      amount: delta.toString(),
+      tokenAddress: tb.mint, // SPL 토큰 mint 주소
+      chain: 'solana',
+      network: '',
+      status: 'DETECTED',
+      blockNumber: tx.slot,
+      detectedAt: Math.floor(Date.now() / 1000),
+      confirmedAt: null,
+    });
+  }
+
+  return results;
+}
+```
+
+### 3.3 Token-2022 지원
+
+SPL Token Program과 Token-2022 Program 양쪽 모두 지원:
+
+| 프로그램 | Program ID | 감지 방법 |
+|---------|------------|-----------|
+| SPL Token | `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` | preTokenBalances/postTokenBalances |
+| Token-2022 | `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` | 동일한 preTokenBalances/postTokenBalances 메커니즘 |
+
+- `getTransaction(jsonParsed)` 응답의 `preTokenBalances`/`postTokenBalances`는 **프로그램 구분 없이** 모든 토큰 잔액 변화를 포함
+- 별도 필터링 불필요 — `owner === walletAddress` 조건만으로 양쪽 프로그램 토큰 모두 감지
+
+### 3.4 ATA 2레벨 구독
+
+Solana SPL 토큰은 지갑 주소가 아닌 **ATA(Associated Token Account)** 에서 잔액이 변경된다.
+
+#### 레벨 1: 기존 ATA 구독
+
+`logsSubscribe({ mentions: [walletAddress] })`는 지갑이 관여하는 모든 TX를 감지하므로, **기존 ATA에 대한 전송도 자동 감지**된다. 별도 ATA 주소 구독 불필요.
+
+#### 레벨 2: 신규 ATA 생성 감지
+
+최초 토큰 수신 시 ATA가 자동 생성된다. 이 경우:
+1. `logsSubscribe({ mentions: [walletAddress] })`가 ATA 생성 TX를 감지 (지갑이 owner이므로 mentions에 포함)
+2. `getTransaction(jsonParsed)` 응답의 `postTokenBalances`에 해당 mint의 새 항목이 추가됨
+3. `preTokenBalances`에 해당 mint 항목이 없으므로 `preAmount = 0n` 처리 (§3.2.2 로직)
+
+**결론:** `mentions` 구독 방식으로 ATA 2레벨 구독이 **자연스럽게 해결**됨. 별도 메커니즘 불필요.
+
+### 3.5 폴링 폴백: getSignaturesForAddress
+
+WebSocket 연결 불가 시 HTTP RPC 폴링으로 전환:
+
+```typescript
+async function pollSolanaTransactions(
+  rpc: SolanaRpc,
+  walletAddress: string,
+  lastSignature: string | null,
+): Promise<string[]> {
+  const options: GetSignaturesForAddressOptions = {
+    limit: 100,
+    commitment: 'confirmed',
+  };
+
+  if (lastSignature) {
+    options.until = lastSignature; // lastSignature 이후의 TX만 조회
+  }
+
+  const signatures = await rpc.getSignaturesForAddress(
+    walletAddress,
+    options,
+  ).send();
+
+  // 최신 순으로 반환되므로 역순 처리 (오래된 것부터)
+  return signatures
+    .filter((s) => !s.err) // 실패 TX 제외
+    .reverse()
+    .map((s) => s.signature);
+}
+```
+
+**커서 관리:**
+- `lastSignature`를 `incoming_tx_cursors.last_signature`에 저장
+- 최초 구독 시 `lastSignature = null` → 최근 100개 TX 조회 (과거 백필은 하지 않음 — Out of Scope)
+- 폴링 간격: `incoming_poll_interval` 설정값 (기본 30초)
+
+### 3.6 Commitment 정책
+
+| 단계 | Commitment | 용도 |
+|------|-----------|------|
+| 감지 | `confirmed` | 빠른 알림 발송 (~400ms 후 확정 가능) |
+| 확정 | `finalized` | DB 상태 DETECTED → CONFIRMED 전환 |
+
+**확정 확인 루프:**
+```typescript
+// BackgroundWorkers 등록 (30초 간격)
+workers.register('incoming-tx-confirm-solana', {
+  interval: 30_000,
+  handler: async () => {
+    const pending = sqlite.prepare(
+      "SELECT * FROM incoming_transactions WHERE chain = 'solana' AND status = 'DETECTED'"
+    ).all();
+
+    for (const tx of pending) {
+      const result = await rpc.getTransaction(tx.tx_hash, {
+        commitment: 'finalized',
+      }).send();
+
+      if (result) {
+        sqlite.prepare(
+          "UPDATE incoming_transactions SET status = 'CONFIRMED', confirmed_at = ? WHERE id = ?"
+        ).run(Math.floor(Date.now() / 1000), tx.id);
+      }
+      // result가 null이면 아직 finalized 아님 — 다음 루프에서 재시도
+    }
+  },
+});
+```
+
+### 3.7 SolanaIncomingSubscriber 전체 구조
+
+```typescript
+// packages/adapters/solana/src/solana-incoming-subscriber.ts
+
+export class SolanaIncomingSubscriber implements IChainSubscriber {
+  readonly chain = 'solana' as ChainType;
+
+  private subscriptions = new Map<string, {
+    address: string;
+    network: string;
+    abortController: AbortController;
+    onTransaction: (tx: IncomingTransaction) => void;
+  }>();
+
+  private rpcUrl: string;
+  private wsUrl: string;
+  private mode: 'websocket' | 'polling';
+
+  constructor(config: { rpcUrl: string; wsUrl: string; mode?: 'websocket' | 'polling' }) {
+    this.rpcUrl = config.rpcUrl;
+    this.wsUrl = config.wsUrl;
+    this.mode = config.mode ?? 'websocket';
+  }
+
+  async subscribe(
+    walletId: string,
+    address: string,
+    network: string,
+    onTransaction: (tx: IncomingTransaction) => void,
+  ): Promise<void> {
+    if (this.subscriptions.has(walletId)) return; // idempotent
+
+    const abortController = new AbortController();
+    this.subscriptions.set(walletId, { address, network, abortController, onTransaction });
+
+    if (this.mode === 'websocket') {
+      this.startWebSocketSubscription(walletId, address, network, onTransaction, abortController);
+    } else {
+      // 폴링은 BackgroundWorkers에서 주기적 호출
+    }
+  }
+
+  async unsubscribe(walletId: string): Promise<void> {
+    const sub = this.subscriptions.get(walletId);
+    if (!sub) return; // idempotent
+    sub.abortController.abort();
+    this.subscriptions.delete(walletId);
+  }
+
+  subscribedWallets(): string[] {
+    return Array.from(this.subscriptions.keys());
+  }
+
+  async destroy(): Promise<void> {
+    for (const [walletId] of this.subscriptions) {
+      await this.unsubscribe(walletId);
+    }
+  }
+
+  private startWebSocketSubscription(
+    walletId: string,
+    address: string,
+    network: string,
+    onTransaction: (tx: IncomingTransaction) => void,
+    abortController: AbortController,
+  ): void {
+    // logsNotifications + getTransaction 파싱 루프 시작
+    // 상세 구현은 §3.1 + §3.2 참조
+    // 재연결은 Phase 218에서 정의
+  }
+}
+```
