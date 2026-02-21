@@ -155,6 +155,7 @@
 | 138 | BUG | LOW | 시스템 이벤트 알림에 불필요한 Wallet/타임스탬프 표시 — UPDATE_AVAILABLE 등 | v27.1 | FIXED | 2026-02-21 |
 | 139 | BUG | HIGH | telegram.enabled 미제거 — Approval Method가 Telegram Bot 비활성으로 판단 | v27.1 | OPEN | |
 | 140 | ENHANCEMENT | LOW | Approval Method 라벨 "SDK" → "Wallet App" 변경 — 사용자 직관성 개선 | v27.1 | OPEN | |
+| 141 | BUG | HIGH | Signing SDK 설정이 리뉴얼된 Admin UI에서 접근 불가 — 메뉴 재구성 시 누락 | v27.1 | OPEN | |
 
 ## Type Legend
 
@@ -166,9 +167,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 3
 - **FIXED:** 138
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 140
+- **Total:** 141
