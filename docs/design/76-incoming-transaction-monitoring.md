@@ -1011,3 +1011,357 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   private async pollNativeETH(...): Promise<IncomingTransaction[]> { /* §4.3 */ }
 }
 ```
+
+---
+
+## 5. WebSocket 연결 관리 + 폴링 폴백
+
+### 5.1 연결 상태 머신
+
+WebSocket과 폴링 간 자동 전환을 상태 머신으로 관리한다.
+
+```
+                    ┌──────────────────────┐
+                    │                      │
+                    ▼                      │
+  ┌──────────┐   WS 연결    ┌──────────┐   │   WS 복구
+  │          │──────────→│          │───┘
+  │ POLLING  │            │ WEBSOCKET│
+  │          │←──────────│          │
+  └──────────┘   WS 실패    └──────────┘
+       │                       │
+       │    ┌──────────┐       │
+       └──→│          │←──────┘
+            │ DISABLED │ (incoming_enabled=false)
+            │          │
+            └──────────┘
+```
+
+| 상태 | 설명 | 동작 |
+|------|------|------|
+| WEBSOCKET | WebSocket 구독 활성 | 실시간 이벤트 수신 |
+| POLLING | 폴링 모드 (WebSocket 불가) | BackgroundWorkers 주기적 조회 |
+| DISABLED | 모니터링 비활성 | 구독/폴링 없음 |
+
+**상태 전환 규칙:**
+- `WEBSOCKET → POLLING`: WebSocket 연결 끊김 + 재연결 3회 실패 시 자동 전환
+- `POLLING → WEBSOCKET`: 재연결 성공 시 자동 복귀 (백그라운드 재연결 시도 유지)
+- `* → DISABLED`: `incoming_enabled = false` 설정 또는 KillSwitch SUSPENDED 시
+- `DISABLED → POLLING/WEBSOCKET`: `incoming_enabled = true` 복원 시
+
+### 5.2 재연결 지수 백오프
+
+```typescript
+interface ReconnectConfig {
+  initialDelayMs: number;   // 1000 (1초)
+  maxDelayMs: number;       // 60000 (60초)
+  maxAttempts: number;      // Infinity (무한 재시도)
+  jitterFactor: number;     // 0.3 (±30% 랜덤 지터)
+}
+
+const DEFAULT_RECONNECT: ReconnectConfig = {
+  initialDelayMs: 1000,
+  maxDelayMs: 60000,
+  maxAttempts: Infinity,
+  jitterFactor: 0.3,
+};
+
+function calculateDelay(attempt: number, config: ReconnectConfig): number {
+  // 지수 백오프: 1s → 2s → 4s → 8s → 16s → 32s → 60s (cap)
+  const baseDelay = Math.min(
+    config.initialDelayMs * Math.pow(2, attempt),
+    config.maxDelayMs,
+  );
+
+  // 지터 추가: ±30%
+  const jitter = baseDelay * config.jitterFactor * (2 * Math.random() - 1);
+  return Math.max(100, Math.floor(baseDelay + jitter));
+}
+```
+
+**재연결 루프:**
+```typescript
+async function reconnectLoop(
+  subscriber: IChainSubscriber,
+  config: ReconnectConfig,
+  onStateChange: (state: 'WEBSOCKET' | 'POLLING') => void,
+): Promise<void> {
+  let attempt = 0;
+
+  while (true) {
+    try {
+      await subscriber.connect(); // WebSocket 연결 시도
+      attempt = 0; // 성공 시 카운터 리셋
+      onStateChange('WEBSOCKET');
+      await subscriber.waitForDisconnect(); // 연결 끊길 때까지 대기
+    } catch {
+      attempt++;
+      if (attempt >= 3) {
+        onStateChange('POLLING'); // 3회 실패 시 폴링 전환
+      }
+      const delay = calculateDelay(attempt, config);
+      await sleep(delay);
+    }
+  }
+}
+```
+
+### 5.3 Heartbeat
+
+| 체인 | 이슈 | Heartbeat 전략 |
+|------|------|----------------|
+| Solana | 10분 inactivity timeout (Helius/QuickNode) | 60초 ping 간격 |
+| EVM | viem WebSocket transport 내장 keepAlive | `keepAlive: { interval: 30_000 }` |
+
+**Solana heartbeat 구현:**
+```typescript
+class SolanaHeartbeat {
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private readonly INTERVAL_MS = 60_000; // 60초
+
+  start(ws: WebSocket): void {
+    this.stop();
+    this.timer = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping(); // WebSocket ping frame
+      }
+    }, this.INTERVAL_MS);
+    this.timer.unref(); // 프로세스 종료 차단 방지
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+```
+
+**EVM heartbeat:**
+```typescript
+// viem WebSocket transport — 내장 keepAlive 사용
+const wsTransport = webSocket(wsUrl, {
+  keepAlive: { interval: 30_000 }, // 30초 ping
+  reconnect: { attempts: 10 },     // 자동 재연결 10회
+});
+```
+
+### 5.4 WebSocket 멀티플렉서
+
+같은 체인+네트워크의 여러 지갑이 **하나의 WebSocket 연결을 공유**한다.
+
+```typescript
+class SubscriptionMultiplexer {
+  // 체인+네트워크별 단일 WebSocket 연결
+  private connections = new Map<string, {
+    ws: WebSocket; // 또는 viem PublicClient
+    heartbeat: SolanaHeartbeat;
+    subscriptions: Map<string, WalletSubscription>; // walletId → subscription
+  }>();
+
+  /**
+   * 연결 키: "solana:mainnet" 또는 "ethereum:ethereum-mainnet"
+   */
+  private connectionKey(chain: string, network: string): string {
+    return `${chain}:${network}`;
+  }
+
+  async addWallet(
+    walletId: string,
+    address: string,
+    chain: string,
+    network: string,
+    rpcWsUrl: string,
+    onTransaction: (tx: IncomingTransaction) => void,
+  ): Promise<void> {
+    const key = this.connectionKey(chain, network);
+    let conn = this.connections.get(key);
+
+    if (!conn) {
+      // 새 연결 생성
+      const ws = await this.createConnection(chain, rpcWsUrl);
+      conn = {
+        ws,
+        heartbeat: new SolanaHeartbeat(),
+        subscriptions: new Map(),
+      };
+      this.connections.set(key, conn);
+      if (chain === 'solana') conn.heartbeat.start(ws);
+    }
+
+    // 지갑별 구독 추가
+    conn.subscriptions.set(walletId, {
+      address,
+      network,
+      onTransaction,
+      unsubscribeFn: null, // 체인별 구독 해제 함수
+    });
+
+    // 체인별 구독 시작
+    await this.startSubscription(conn, walletId, address, chain, network);
+  }
+
+  async removeWallet(walletId: string): Promise<void> {
+    for (const [key, conn] of this.connections) {
+      const sub = conn.subscriptions.get(walletId);
+      if (sub) {
+        if (sub.unsubscribeFn) await sub.unsubscribeFn();
+        conn.subscriptions.delete(walletId);
+
+        // 구독 없으면 연결 종료
+        if (conn.subscriptions.size === 0) {
+          conn.heartbeat.stop();
+          conn.ws.close();
+          this.connections.delete(key);
+        }
+        break;
+      }
+    }
+  }
+
+  async destroyAll(): Promise<void> {
+    for (const [, conn] of this.connections) {
+      conn.heartbeat.stop();
+      for (const [, sub] of conn.subscriptions) {
+        if (sub.unsubscribeFn) await sub.unsubscribeFn();
+      }
+      conn.ws.close();
+    }
+    this.connections.clear();
+  }
+}
+
+interface WalletSubscription {
+  address: string;
+  network: string;
+  onTransaction: (tx: IncomingTransaction) => void;
+  unsubscribeFn: (() => Promise<void>) | null;
+}
+```
+
+**Solana 제약:**
+- `logsSubscribe({ mentions })` 는 **지갑당 별도 구독** 필요 (단일 주소만 허용)
+- 동일 WebSocket 연결에 여러 `logsSubscribe` 구독 가능 — 연결 공유, 구독은 개별
+
+**EVM 제약:**
+- `getLogs` 폴링은 HTTP 기반이므로 WebSocket 멀티플렉서 불필요
+- WebSocket 모드(`watchEvent`) 사용 시: 단일 연결에 여러 `eth_subscribe` 가능
+
+### 5.5 동적 구독 관리
+
+런타임에 지갑이 추가/삭제/활성화/비활성화될 때 구독을 동적으로 관리한다.
+
+```typescript
+class IncomingTxMonitorService {
+  /**
+   * 주기적으로 호출되어 DB 상태와 구독 상태를 동기화.
+   * SettingsService hot-reload 또는 Admin UI 변경 시에도 호출.
+   */
+  async syncSubscriptions(): Promise<void> {
+    // 1. DB에서 모니터링 대상 지갑 조회
+    const monitoredWallets = this.sqlite.prepare(
+      "SELECT id, chain, environment, default_network, public_key FROM wallets WHERE status = 'ACTIVE' AND monitor_incoming = 1"
+    ).all() as WalletRow[];
+
+    const monitoredSet = new Set(monitoredWallets.map((w) => w.id));
+
+    // 2. 현재 구독 중이지만 DB에서 제거/비활성된 지갑 해제
+    for (const walletId of this.multiplexer.subscribedWallets()) {
+      if (!monitoredSet.has(walletId)) {
+        await this.multiplexer.removeWallet(walletId);
+      }
+    }
+
+    // 3. DB에서 모니터링 대상이지만 미구독인 지갑 구독 추가
+    const subscribedSet = new Set(this.multiplexer.subscribedWallets());
+    for (const wallet of monitoredWallets) {
+      if (!subscribedSet.has(wallet.id)) {
+        const network = wallet.default_network ?? getDefaultNetwork(wallet.chain, wallet.environment);
+        const rpcWsUrl = this.resolveWsUrl(wallet.chain, network);
+        await this.multiplexer.addWallet(
+          wallet.id,
+          wallet.public_key,
+          wallet.chain,
+          network,
+          rpcWsUrl,
+          this.onTransaction.bind(this),
+        );
+      }
+    }
+  }
+}
+```
+
+**트리거 시점:**
+- 서비스 시작 시 (`start()`)
+- 지갑 생성/삭제/상태 변경 시 (eventBus `wallet:activity` 이벤트)
+- Admin Settings에서 `monitor_incoming` 변경 시 (hot-reload)
+- BackgroundWorkers 주기적 동기화 (5분 간격 — drift 방지)
+
+### 5.6 블라인드 구간 복구
+
+WebSocket 재연결 구간에서 발생한 TX를 복구하는 전략 (C-01 대응):
+
+```
+   ▼ WS 끊김         ▼ 재연결 성공
+───●───────────────────●───→
+   │ ← 블라인드 구간 → │
+   │  여기서 발생한     │
+   │  TX가 유실됨       │
+```
+
+**복구 전략:**
+```typescript
+async function recoverBlindGap(
+  subscriber: IChainSubscriber,
+  cursor: IncomingTxCursor,
+  chain: string,
+): Promise<void> {
+  if (chain === 'solana') {
+    // Solana: getSignaturesForAddress(until: lastSignature) 로 갭 보상
+    const missedSignatures = await rpc.getSignaturesForAddress(
+      cursor.address,
+      { until: cursor.lastSignature, limit: 1000, commitment: 'confirmed' },
+    ).send();
+
+    for (const sig of missedSignatures.reverse()) {
+      if (!sig.err) {
+        const tx = await rpc.getTransaction(sig.signature, {
+          encoding: 'jsonParsed',
+          commitment: 'confirmed',
+        }).send();
+        if (tx) await processTransaction(tx, cursor.walletId);
+      }
+    }
+  } else if (chain === 'ethereum') {
+    // EVM: getLogs(fromBlock: lastBlock+1, toBlock: 'latest') 로 갭 보상
+    const missedLogs = await client.getLogs({
+      event: TRANSFER_EVENT,
+      args: { to: cursor.address },
+      fromBlock: BigInt(cursor.lastBlockNumber) + 1n,
+      toBlock: 'latest',
+    });
+
+    for (const log of missedLogs) {
+      await processLog(log, cursor.walletId);
+    }
+
+    // 네이티브 ETH도 별도 복구
+    await pollNativeETHTransfers(
+      client, cursor.address,
+      BigInt(cursor.lastBlockNumber) + 1n,
+      await client.getBlockNumber(),
+    );
+  }
+}
+```
+
+**복구 실행 시점:**
+1. WebSocket 재연결 성공 직후 — 구독 재개 **전에** 갭 보상 수행
+2. 서비스 시작 시 — 이전 종료 후 미처리 구간 복구
+3. 커서가 있는 모든 지갑에 대해 실행
+
+**커서 업데이트:**
+- 갭 복구 완료 후 커서를 최신 위치로 업데이트
+- idempotent INSERT(ON CONFLICT DO NOTHING)로 중복 안전
