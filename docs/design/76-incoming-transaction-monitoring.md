@@ -1576,7 +1576,14 @@ export type SuspiciousReason = 'dust' | 'unknownToken' | 'largeAmount';
 - `largeAmount`: 평소 수신 대비 비정상적으로 큰 금액
 
 **발행 시점:** IIncomingSafetyRule 검사 결과 1개 이상 규칙 위반 시
-**알림 우선순위:** `high` (즉시 알림)
+
+**알림 우선순위: `high` — 채널별 priority 라우팅 메커니즘**
+
+INCOMING_TX_SUSPICIOUS 이벤트는 채널 구현 내부에서 eventType/category 기반으로 priority를 결정하는 기존 패턴을 따른다. NotificationService.notify() 시그니처에 priority 파라미터를 추가하지 않으며, 각 채널이 수신한 eventType 문자열을 기반으로 우선순위를 자체 결정한다.
+
+- **NtfyChannel**: `mapPriority()` 메서드에서 `SUSPICIOUS` 패턴 매칭 → ntfy priority 4 (high). 상세 매핑은 §6.4 참조.
+- **WalletNotificationChannel**: eventType 개별 판정으로 `INCOMING_TX_SUSPICIOUS`를 high priority(5)로 처리. 상세 분기는 §6.4 참조.
+- **Telegram/Discord/Slack**: 메시지 포맷에 경고 이모지(⚠️)를 포함하며, 채널 자체 priority 개념 없음 (메시지 발송 우선순위는 NotificationService 큐 레벨에서 동일).
 
 ### 6.4 기존 알림 채널 연동
 
@@ -1633,6 +1640,45 @@ private async notifyIncomingTx(tx: IncomingTransaction): Promise<void> {
 }
 ```
 
+**채널별 priority 라우팅 메커니즘:**
+
+NotificationService.notify() 시그니처는 변경하지 않는다. priority는 기존 패턴대로 각 채널 구현 내부에서 eventType/category 기반으로 결정한다.
+
+#### NtfyChannel.mapPriority() 확장
+
+기존 `mapPriority()` 메서드에 `SUSPICIOUS` 패턴 매칭을 추가하여 INCOMING_TX_SUSPICIOUS가 ntfy priority 4 (high)로 발송되도록 한다:
+
+```typescript
+/** Map event type to ntfy priority (1-5, where 5=max). */
+private mapPriority(eventType: string): number {
+  if (eventType.includes('KILL_SWITCH') || eventType.includes('AUTO_STOP')) return 5; // urgent
+  if (eventType.includes('SUSPICIOUS') || eventType.includes('SUSPENDED')
+    || eventType.includes('FAILED') || eventType.includes('VIOLATION')) return 4; // high
+  if (eventType.includes('APPROVAL') || eventType.includes('EXPIR')) return 3; // default
+  if (eventType.includes('INCOMING_TX_DETECTED')) return 3; // normal incoming
+  return 2; // low for informational
+}
+```
+
+- `SUSPICIOUS` 패턴 매칭이 `INCOMING_TX_SUSPICIOUS`를 포함하여 priority 4 (high) 반환
+- `INCOMING_TX_DETECTED`는 priority 3 (normal)으로 별도 매핑 -- 일반 수신 TX는 기본 알림 수준
+- 기존 `SUSPENDED`, `FAILED`, `VIOLATION` 패턴은 변경 없이 동일 priority 4 유지
+
+#### WalletNotificationChannel priority 분기 확장
+
+기존 category 기반 priority 결정 로직에 `INCOMING_TX_SUSPICIOUS` eventType 개별 판정을 추가한다:
+
+```typescript
+// WalletNotificationChannel.notify() 내부 -- priority 결정
+const isHighPriority = category === 'security_alert'
+  || eventType === 'INCOMING_TX_SUSPICIOUS';
+const priority = isHighPriority ? 5 : 3;
+```
+
+- `INCOMING_TX_SUSPICIOUS`는 `incoming` 카테고리에 속하지만, eventType 개별 판정으로 high priority(5) 처리
+- `INCOMING_TX_DETECTED`는 `incoming` 카테고리의 기본 priority 3 적용
+- 기존 `security_alert` 카테고리 처리는 변경 없음
+
 **알림 카테고리:**
 ```typescript
 // 기존 NOTIFICATION_CATEGORIES 확장
@@ -1640,7 +1686,11 @@ export const NOTIFICATION_CATEGORIES = {
   // ... 기존 카테고리 ...
   incoming: {
     events: ['INCOMING_TX_DETECTED', 'INCOMING_TX_SUSPICIOUS'],
-    priority: 'normal', // SUSPICIOUS는 개별 high
+    priority: 'normal',
+    // INCOMING_TX_SUSPICIOUS는 카테고리 priority와 무관하게
+    // 채널별 eventType 개별 판정으로 high priority 적용:
+    // - NtfyChannel: mapPriority()에서 'SUSPICIOUS' 패턴 -> priority 4
+    // - WalletNotificationChannel: eventType === 'INCOMING_TX_SUSPICIOUS' -> priority 5
   },
 } as const;
 ```
@@ -2191,7 +2241,7 @@ private reloadIncomingMonitor(): void {
 | doc 27 (이벤트 시스템) | 이벤트 타입 추가 | INCOMING_TX_DETECTED, INCOMING_TX_SUSPICIOUS (28→30) |
 | doc 28 (알림 시스템) | 메시지 템플릿 추가 | en/ko 템플릿 2개, 카테고리 'incoming' 추가 |
 | doc 29 (보안 모델) | 의심 감지 규칙 추가 | IIncomingSafetyRule 3종 (dust/unknownToken/largeAmount) |
-| doc 31 (API 설계) | 엔드포인트 추가 | GET /v1/wallet/incoming, GET /v1/wallet/incoming/summary |
+| doc 31 (API 설계) | 엔드포인트 추가 + 기존 API 확장 | GET /v1/wallet/incoming, GET /v1/wallet/incoming/summary 엔드포인트 추가. PATCH /v1/wallet/:id monitorIncoming 필드 추가 (기존 지갑 업데이트 API 확장, masterAuth 인증, WalletUpdateSchema 확장, syncSubscriptions 호출로 구독 동적 변경) |
 | doc 35 (설정 모델) | 섹션 추가 | [incoming] 6키, SettingsService 등록, HotReload 확장 |
 | doc 37 (SDK 인터페이스) | 메서드 추가 | listIncomingTransactions, getIncomingTransactionSummary |
 | doc 38 (MCP 도구) | 도구 추가 | list_incoming_transactions, get_incoming_summary |
@@ -2318,3 +2368,16 @@ workers.register('incoming-tx-poll-evm', {
 | D-15 | v21 마이그레이션 | ALTER TABLE + CREATE TABLE 2개 |
 | D-16 | 6키 모두 hot-reload 가능 | 재시작 불필요, 즉시 반영 |
 | D-17 | confirmed 감지 → finalized 확정 | Solana C-03 대응 |
+
+### 8.11 skills/ 파일 업데이트 요구사항
+
+CLAUDE.md "Interface Sync" 규칙에 따라, 구현 마일스톤(m27-01)에서 다음 skill 파일을 업데이트한다.
+
+> **시점:** API가 실제 구현된 후 동기화. 설계 시점에서는 범위만 명세한다.
+
+| skill 파일 | 변경 내용 |
+|------------|-----------|
+| `wallet.skill.md` | "Wallet Query" 섹션에 `GET /v1/wallet/incoming` (수신 이력 조회), `GET /v1/wallet/incoming/summary` (수신 집계) 추가. `PATCH /v1/wallet/:id` monitorIncoming 필드 추가. MCP 도구 `list_incoming_transactions`, `get_incoming_summary` 추가. SDK 메서드 `listIncomingTransactions`, `getIncomingTransactionSummary` 추가. 알림 카테고리 테이블에 `incoming` 카테고리 추가 (`INCOMING_TX_DETECTED`, `INCOMING_TX_SUSPICIOUS` 이벤트). |
+| `transactions.skill.md` | 변경 없음 -- 수신 TX는 아웃고잉 TX 5-type과 별개 도메인이므로 `wallet.skill.md`에 배치. |
+
+**규칙 참조:** CLAUDE.md "Interface Sync" 섹션 -- REST API/SDK/MCP 변경 시 skills/ 동기화 필수.
