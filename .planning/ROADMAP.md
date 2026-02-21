@@ -264,7 +264,7 @@ Plans:
   1. WebSocket 연결을 10회 반복 연결/해제해도 리스너 수가 일정하게 유지된다 (C-01 검증)
   2. 큐에 10개 트랜잭션을 넣고 stop()을 호출하면 10개 모두 DB에 기록된다 (C-05 검증)
   3. 50-블록 갭을 시뮬레이션하면 gap recovery가 누락된 모든 트랜잭션을 복구한다
-  4. KillSwitch를 SUSPENDED로 설정하고 TX를 flush하면 DB에는 기록되지만 EventBus 이벤트는 발생하지 않는다 (M-03 검증)
+  4. KillSwitch를 SUSPENDED로 설정하고 TX를 flush하면 DB에는 기록되고 EventBus 이벤트는 발생하지만, 외부 알림(NotificationService)은 발생하지 않는다 (M-03 검증)
   5. 50개 더스트 TX를 연속 전송해도 알림이 5개 이하로 제한된다 (M-07 검증)
 **Plans**: 2 plans
 
