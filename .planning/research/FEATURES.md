@@ -1,239 +1,245 @@
-# Feature Landscape: npm Trusted Publishing OIDC 전환
+# Feature Research: Incoming Transaction Monitoring
 
-**Domain:** CI/CD Supply Chain Security -- npm Trusted Publishing (OIDC)
-**Researched:** 2026-02-18
-**Overall confidence:** HIGH (공식 문서 + 다수 1차 소스 교차 검증)
-
----
-
-## Table Stakes
-
-사용자(소비자/감사자)가 기대하는 기본 기능. 누락 시 전환의 의미가 없음.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| 8개 패키지 Trusted Publisher 등록 | OIDC 인증의 전제 조건. 미등록 패키지는 OIDC로 발행 불가 | Low | npmjs.com 웹 UI에서 패키지별 수동 등록. `npm trust github-actions` CLI로 스크립트화 가능 (npm >=11.5.1) |
-| `id-token: write` 권한 추가 | OIDC 토큰 생성의 필수 퍼미션. 없으면 GitHub가 OIDC JWT를 발급하지 않음 | Low | deploy 잡에만 추가 (최소 권한 원칙) |
-| Provenance 자동 생성 | Trusted Publishing 사용 시 npm CLI가 provenance를 자동 생성. 공급망 보안의 핵심 가치 | Low | npm >=11.5.1에서 Trusted Publishing 사용 시 `--provenance` 플래그 없이도 자동 생성. 단, 명시적 `--provenance` 또는 `NPM_CONFIG_PROVENANCE=true` 권장 (필드 누락 방지) |
-| NPM_TOKEN 시크릿 제거 | 전환의 핵심 목표. 장기 시크릿 제거로 유출 위험 원천 차단 | Low | `.npmrc` Setup 스텝도 함께 제거 |
-| npm CLI >=11.5.1 확보 | OIDC Trusted Publishing의 최소 npm 버전 요구사항 | Low | Node.js 22 LTS 최신(22.22.0+)은 npm 11.8.0 번들. `actions/setup-node@v4` + `node-version: 22`로 충분. 구 버전 Node 22는 npm 10이므로 `npm install -g npm@latest` 필요할 수 있음 |
-| Pre-release (rc tag) 발행 호환 | 현재 `--tag rc` 사용 중. OIDC/provenance와 `--tag rc` 조합 필수 | Low | `--provenance --tag rc --access public` 조합 호환 확인됨. npm은 dist-tag과 provenance를 독립 처리 |
-| `repository.url` 정합성 보장 | Sigstore가 OIDC 토큰의 source repository URI와 package.json `repository.url`을 대조. 불일치 시 422 에러 | **CRITICAL** | **현재 package.json: `minho-yoo/waiaas.git`, 실제 remote: `minhoyoo-iotrust/WAIaaS`**. 대소문자 + org 이름 불일치. 반드시 수정 필요 |
-| monorepo `directory` 필드 유지 | 모노레포 패키지의 출처를 정확히 식별. 이미 설정되어 있으므로 유지만 확인 | Low | 8개 패키지 모두 `"directory": "packages/..."` 설정 완료 상태 |
+**Domain:** Crypto Wallet Incoming Transaction Monitoring (AI Agent Wallet Service — WAIaaS)
+**Researched:** 2026-02-21
+**Confidence:** HIGH (design doc m27-00 verified against official RPC docs and industry patterns)
 
 ---
 
-## Differentiators
+## Context
 
-기대하지는 않지만 있으면 supply chain 보안 수준을 한 단계 높이는 기능.
+WAIaaS already has: 6-stage outgoing TX pipeline, 28-event INotificationChannel, 60+ REST endpoints,
+18 MCP tools, config.toml flat-section config, SettingsService hot-reload, wallet-level opt-in policies.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| npm 패키지 페이지 Provenance 배지 | 버전 번호 옆 녹색 체크마크 + "Built and signed on GitHub Actions" 표시. 소비자 신뢰도 향상 | Free | provenance 생성 시 자동 표시. 추가 작업 불필요 |
-| `publishConfig.provenance: true` in package.json | CLI 플래그 의존 제거. 어떤 환경에서든 provenance 생성 보장 | Low | 8개 package.json에 추가. NPM_CONFIG_PROVENANCE 환경변수 대비 더 명시적 |
-| GitHub Environment (`production`) 연동 | 환경 보호 규칙(manual approval)과 OIDC 스코프를 결합. 승인 없이는 발행 불가 | Low | 현재 deploy 잡이 이미 `environment: production` 사용. npm Trusted Publisher 등록 시 Environment 필드에 `production` 지정하면 이중 보호 |
-| `npm trust` CLI로 설정 스크립트화 | 8개 패키지 수동 등록 대신 스크립트로 일괄 등록. 재현 가능성 확보 | Med | `npm trust github-actions @waiaas/core --repository minhoyoo-iotrust/WAIaaS --workflow release.yml --environment production --yes` 형태. npm login 필요 |
-| Deploy summary에 provenance 정보 추가 | $GITHUB_STEP_SUMMARY에 provenance 링크 포함. 릴리스 검증 편의 | Low | 각 패키지 발행 후 npmjs.com 링크 출력 |
-| publish-check에서 repository.url 사전 검증 | dry-run 단계에서 repository.url 정합성 오류 조기 발견 | Med | repository.url vs GitHub 환경변수 비교 스크립트 추가 |
+This research covers what to ADD for incoming transaction monitoring — specifically for a design-only milestone.
+The downstream consumer is the roadmap + design specification authors for milestone m27.
 
 ---
 
-## Anti-Features
+## Feature Landscape
 
-명시적으로 구현하지 않아야 하는 것.
+### Table Stakes (Users Expect These)
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Top-level `id-token: write` 퍼미션 | 6개 잡 중 deploy만 OIDC 필요. 나머지 잡에 불필요한 권한 부여는 최소 권한 원칙 위반 | deploy 잡에만 `permissions.id-token: write` 추가 |
-| NPM_TOKEN 병행 유지 (fallback) | 전환의 보안 이점을 무효화. "장기 시크릿 제거"가 핵심 목표 | 전환 완료 후 즉시 제거. fallback 기간 불필요 (dry-run 검증으로 충분) |
-| publish-check에서 `--provenance` 강제 | dry-run은 OIDC 토큰 없이 실행됨. `--provenance`가 OIDC 미감지 시 예측 불가 동작 | publish-check에서는 `--provenance` 제외. 대신 `repository.url` 검증 스크립트 추가 |
-| Self-hosted runner 사용 | npm Trusted Publishing은 현재 cloud-hosted runner만 지원. self-hosted에서 OIDC 토큰 검증 실패 | `runs-on: ubuntu-latest` 유지 (현재 상태 그대로) |
-| Reusable workflow로 publish 로직 분리 | npm Trusted Publisher가 "caller workflow" 파일명을 기준으로 매칭. reusable workflow 사용 시 workflow 파일명이 caller여야 함 -- 복잡도 증가 | 현재처럼 release.yml 단일 파일에 deploy 잡 유지 |
-| `.npmrc` 수동 생성 유지 | OIDC 모드에서는 `.npmrc`의 `_authToken`이 불필요. npm CLI가 OIDC 환경을 자동 감지 | `Setup npmrc` 스텝 완전 제거 |
-| 토큰 없이 `npm whoami` 검증 | OIDC 모드에서 `npm whoami`는 401 반환 (정상 동작). 이를 에러로 처리하면 파이프라인 실패 | whoami 검증 스텝이 있다면 제거 또는 조건부 스킵 |
+Features an AI agent wallet service must have for incoming TX monitoring to feel complete.
+Missing any of these = incoming TX feature is not shippable.
+
+| Feature | Why Expected | Complexity | WAIaaS Dependency | Confidence |
+|---------|--------------|------------|-------------------|------------|
+| Real-time incoming TX detection | Every major wallet (Phantom, MetaMask, Trust Wallet) provides push notification on receive; AI agents need to react to inbound funds | MEDIUM | IChainAdapter — new IChainSubscriber layer; WebSocket on RPC node | HIGH |
+| Native token detection (SOL, ETH) | Base expectation — wallet must know when its primary asset arrives | LOW | accountSubscribe (Solana); eth_subscribe newHeads + to-filter (EVM) | HIGH |
+| SPL / ERC-20 token detection | AI agents manage token-denominated flows (USDC, stablecoins); detecting token arrivals is mandatory for complete fund tracking | MEDIUM | accountSubscribe per ATA (Solana); eth_subscribe logs + Transfer topic filter (EVM) | HIGH |
+| Persistent storage of incoming TX history | Without a DB record, agents cannot query "what arrived since last run"; all wallet services reviewed keep full history | LOW | New `incoming_transactions` table; tx_hash UNIQUE constraint for dedup | HIGH |
+| Duplicate detection | RPC WebSocket can deliver the same event multiple times on reconnect replay; duplicates corrupt accounting | LOW | ON CONFLICT IGNORE on tx_hash UNIQUE | HIGH |
+| Opt-in per-wallet activation with global gate | Inactive wallets must incur zero additional RPC cost; self-hosted constraint. Two-gate model: global incoming_enabled AND per-wallet monitor_incoming | LOW | monitor_incoming boolean column in wallets table + global incoming_enabled config key | HIGH |
+| Polling fallback when WebSocket unavailable | Not all RPC endpoints support WebSocket (public HTTP endpoints, restrictive firewalls); must degrade gracefully without silent failure | MEDIUM | getSignaturesForAddress (Solana); eth_getBlockByNumber scan (EVM) | HIGH |
+| Retention / auto-purge policy | Self-hosted SQLite cannot grow unbounded; incoming_retention_days config key; scheduled cleanup job | LOW | Existing pattern from balance monitor; new scheduler for incoming_transactions table | HIGH |
+| Incoming history REST API | AI agent or admin needs to query history with date/address/token filters | MEDIUM | New GET /v1/wallet/incoming endpoint; cursor pagination matching existing TX list pattern | HIGH |
+| INCOMING_TX_DETECTED notification event | Owner wants a push alert on deposit via Telegram/ntfy/Discord/Slack; MetaMask and Phantom both deliver real-time receive notifications | LOW | 2 new NotificationEventType entries added to existing 28-event enum | HIGH |
+| Wallet-level monitoring activation gate | Only explicitly opted-in wallets generate events and RPC subscriptions; prevents runaway cost | LOW | resolveWalletId + monitor_incoming flag gate before subscribing | HIGH |
+
+### Differentiators (Competitive Advantage)
+
+Features that go beyond baseline and are especially valuable in the AI agent context.
+
+| Feature | Value Proposition | Complexity | WAIaaS Dependency | Confidence |
+|---------|-------------------|------------|-------------------|------------|
+| Suspicious incoming TX detection (INCOMING_TX_SUSPICIOUS) | Dust attacks use tiny token airdrops to deanonymize wallets or introduce poisoned coins. AI agents that auto-spend received funds are at higher risk than human-controlled wallets. Threshold-based detection ($0.01 USD) plus ALLOWED_TOKENS cross-check gives immediate protection | MEDIUM | IIncomingSafetyRule interface; price oracle (v1.5 already in WAIaaS) for USD conversion; ALLOWED_TOKENS policy | HIGH |
+| WebSocket connection sharing across wallets on same chain | One WebSocket per chain, not one per wallet. Critical for scaling beyond 5 wallets on a self-hosted node. Geth and Solana both support multiple subscriptions per single connection | MEDIUM | ChainSubscriber multiplexer registry; subscription ID → walletId map; resubscribe all on reconnect | HIGH |
+| Exponential backoff reconnection with jitter | WebSocket drops happen. Without reconnect, monitoring silently stops for hours. Production grade: 1s→2s→4s→…→60s backoff with random jitter to prevent thundering herd. Subscription state must survive reconnect and be replayed automatically | MEDIUM | IChainSubscriber reconnect state machine; subscription registry persisted in memory across reconnects | HIGH |
+| MCP tool: list_incoming_transactions | AI agent can ask "what payments have I received?" directly via MCP without custom REST client code. Enables autonomous DeFi reactions: receive deposit → query balance → swap → yield | LOW | 21st MCP tool; wraps GET /v1/wallet/incoming | HIGH |
+| Unknown token flagging | Any token not in the wallet's ALLOWED_TOKENS policy list triggers INCOMING_TX_SUSPICIOUS. Prevents AI agents from treating malicious airdropped tokens as spendable funds without owner review | LOW | Cross-reference with existing ALLOWED_TOKENS policy store; no USD price needed | HIGH |
+| Large deposit anomaly detection | Alert when a single deposit is N× the wallet's rolling average. Legitimate for AI agents managing treasury — a sudden large inflow is unusual and should prompt owner awareness before agent auto-acts | MEDIUM | Rolling average calculation in IncomingTransactionMonitor on incoming_transactions table; configurable multiplier (default 10×) | MEDIUM |
+| Per-ATA dynamic subscription management (Solana) | SPL tokens live in Associated Token Accounts, not the wallet address itself. A static ATA list at daemon startup is insufficient — new ATAs created after startup must be detected and subscribed dynamically. This is required for complete Solana token monitoring | HIGH | accountSubscribe per ATA; wallet-level accountSubscribe to detect new ATA creation (owner field change in account data); ATA registry with add/remove hooks | HIGH |
+| Summary / income aggregation endpoint | GET /v1/wallet/incoming/summary with daily/weekly/monthly totals. Useful for AI agents managing recurring income streams (subscription payments, yield collection, grant disbursements) | MEDIUM | SQL aggregation on incoming_transactions; optional USD conversion via price oracle | MEDIUM |
+
+### Anti-Features (Commonly Requested, Often Problematic)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| External indexer / Helius Webhook push | "Zero polling" incoming TX with instant sub-100ms delivery via Helius/Alchemy managed webhooks | Violates Self-Hosted principle: requires outbound registration to 3rd-party service, API key management, external dependency, and internet egress. WAIaaS must operate without connectivity to indexer services | RPC WebSocket subscription achieves near-identical latency without external dependency |
+| NFT incoming detection | Users want notification when receiving an NFT (Metaplex / ERC-721 / ERC-1155) | NFT metadata parsing is complex: Metaplex for Solana, varying ABI for EVM. No reliable USD floor for price-based dust threshold. Scope expansion risks derailing the core monitoring design | Defer to separate milestone; core monitoring covers fungible tokens only (explicitly out of scope in m27-00) |
+| Historical backfill on activation | "When I turn on monitoring, show all past deposits from before activation" | Requires archive RPC node (512-1024 GB RAM) or Etherscan/Solscan API dependency. Public RPC nodes typically only provide recent signature history (limited getSignaturesForAddress lookback). False sense of completeness creates accounting errors | Document clearly: monitoring starts from activation timestamp. Past TX is visible via block explorer links included in INCOMING_TX_DETECTED notification details |
+| Incoming TX policy enforcement (auto-reject / auto-block) | "Block suspicious incoming funds automatically" | Incoming TX cannot be blocked at the RPC layer — funds arrive on-chain regardless of daemon state. Claiming to "block" incoming TX is technically misleading and could create false security expectations | Record incoming TX with is_suspicious flag; emit INCOMING_TX_SUSPICIOUS alert; let Owner decide. Never claim incoming TX was blocked |
+| Global monitoring on by default (all wallets always watched) | "Simpler UX — just monitor everything" | RPC connection cost scales with wallet count. Public RPC nodes have rate limits. On self-hosted nodes with limited hardware, unlimited subscriptions risk overwhelming the node. WAIaaS default-deny policy applies | Opt-in per-wallet with global enable gate. Cost is documented in config.toml. Operators choose which wallets warrant monitoring cost |
+| Real-time balance streaming to AI agent (SSE / WebSocket push) | "Push balance changes to agent as they happen" | Adds SSE/WebSocket server complexity to daemon; agent frameworks poll MCP resources rather than maintaining persistent connections; existing getBalance() RPC call is sufficient for spot queries | On INCOMING_TX_DETECTED event, daemon updates MCP resource state; agent framework fetches on next poll cycle |
 
 ---
 
 ## Feature Dependencies
 
 ```
-repository.url 수정 (8개 package.json) ──┐
-                                          ├── npm Trusted Publisher 등록 (8개)
-npm CLI >=11.5.1 확보 ────────────────────┘        │
-                                                    │
-id-token: write 퍼미션 추가 ───────────────────────┤
-                                                    │
-                                                    v
-                                            pnpm publish --provenance 실행
-                                                    │
-                                                    v
-                                            Provenance 배지 표시 (자동)
-                                                    │
-NPM_TOKEN 제거 ←── 전환 성공 확인 후 ──────────────┘
-.npmrc 스텝 제거 ←──┘
+[incoming_enabled config.toml key (global gate)]
+    └──gates──> [per-wallet monitor_incoming flag]
+                    └──enables──> [IChainSubscriber subscription]
+                                      ├──primary──> [WebSocket RPC (Solana: accountSubscribe; EVM: eth_subscribe)]
+                                      └──fallback──> [Polling (getSignaturesForAddress / eth_getBlockByNumber)]
+                                      └──produces──> [incoming TX event]
+                                                         ├──writes──> [incoming_transactions table (new)]
+                                                         ├──emits──> [INCOMING_TX_DETECTED notification]
+                                                         │               ├──feeds──> [INotificationChannel: Telegram/Discord/ntfy]
+                                                         │               └──feeds──> [WalletNotificationChannel: SDK side channel]
+                                                         └──emits──> [INCOMING_TX_SUSPICIOUS (conditional)]
+
+[SPL Token detection (Solana)]
+    └──requires──> [ATA enumeration via getTokenAccountsByOwner on startup]
+    └──requires──> [accountSubscribe per ATA]
+    └──requires──> [wallet accountSubscribe to detect new ATA creation]
+
+[INCOMING_TX_SUSPICIOUS event]
+    └──requires──> [incoming_transactions table] (rolling average for anomaly detection)
+    └──requires──> [ALLOWED_TOKENS policy store] (unknown token check)
+    └──optionally-uses──> [price oracle (v1.5)] (for USD-based dust threshold)
+
+[GET /v1/wallet/incoming REST API]
+    └──requires──> [incoming_transactions table]
+
+[MCP tool: list_incoming_transactions]
+    └──requires──> [GET /v1/wallet/incoming REST endpoint]
+
+[Summary endpoint: GET /v1/wallet/incoming/summary]
+    └──requires──> [incoming_transactions table]
+    └──optionally-uses──> [price oracle] (for USD totals)
+
+[WebSocket connection sharing]
+    └──requires──> [subscription ID → walletId registry in ChainSubscriber]
+    └──requires──> [resubscribe-all logic in reconnect handler]
+
+[Exponential backoff reconnection]
+    └──requires──> [IChainSubscriber reconnect state machine]
+    └──enhances──> [WebSocket connection sharing] (resubscribes all wallets in registry after reconnect)
 ```
 
-**핵심 의존성 체인:**
-1. `repository.url` 수정이 모든 것의 전제 (Sigstore 검증 실패 방지)
-2. Trusted Publisher 등록 + id-token 퍼미션이 OIDC 발행의 전제
-3. NPM_TOKEN 제거는 반드시 전환 성공 확인 **이후**
+### Dependency Notes
+
+- **SPL Token detection is the highest-complexity item.** Solana accountSubscribe tracks state changes on a single account. SPL tokens live in ATAs (Associated Token Accounts), not the wallet address. A static ATA list captured at daemon startup is insufficient — new ATAs created after startup (from new token airdrops or first-time receives) must be detected and subscribed. This requires a wallet-level subscription plus ATA registry with dynamic add hooks.
+- **Suspicious TX detection uses price oracle optionally.** The USD dust threshold ($0.01) requires USD price lookup. Price oracle exists in WAIaaS since v1.5. If oracle unavailable for a specific token, fall back to raw token-unit threshold (configurable minimum token units as a secondary threshold).
+- **WebSocket connection sharing must be designed upfront.** Retrofitting from "one connection per wallet" to "one connection per chain" is expensive. ChainSubscriber must be a multiplexer from the start.
+- **Polling fallback has unavoidable detection lag.** At 30-second intervals (default), maximum lag is 30 seconds. This is acceptable for treasury monitoring. Design docs must state this explicitly so AI agent implementations do not assume real-time latency in polling mode.
 
 ---
 
-## MVP Recommendation
+## MVP Definition
 
-**Phase 1 (선행 조건):**
-1. **repository.url 수정** -- 8개 package.json의 `repository.url`을 실제 GitHub remote (`https://github.com/minhoyoo-iotrust/WAIaaS`) 와 정확히 일치하도록 수정. 대소문자 포함 정확 매칭 필수.
-2. **npm CLI 버전 확인** -- `actions/setup-node@v4` + `node-version: 22`가 npm >=11.5.1을 제공하는지 확인. 부족 시 `npm install -g npm@latest` 스텝 추가.
+This is a design-only milestone. MVP = what the design documents must fully specify before implementation begins.
 
-**Phase 2 (핵심 전환):**
-1. **8개 패키지 Trusted Publisher 등록** -- npmjs.com에서 수동 등록 또는 `npm trust github-actions` CLI 사용
-2. **release.yml deploy 잡 수정** -- `id-token: write` + `--provenance` 추가, `.npmrc` 스텝 제거
-3. **publishConfig.provenance: true** -- 8개 package.json에 추가 (선택이지만 권장)
+### Launch With — Core Design Deliverables (P1)
 
-**Phase 3 (정리 + 검증):**
-1. **실제 릴리스로 E2E 검증** -- rc 릴리스로 전체 파이프라인 테스트
-2. **NPM_TOKEN 시크릿 제거** -- 전환 성공 확인 후
-3. **Deploy summary 업데이트** -- provenance 정보 포함
+- [ ] IChainSubscriber interface — subscribe/unsubscribe/onTransaction + reconnect lifecycle methods
+- [ ] SolanaSubscriber design — accountSubscribe for native SOL + ATA enumeration + dynamic ATA subscription + getSignaturesForAddress fallback
+- [ ] EvmSubscriber design — eth_subscribe logs (ERC-20 Transfer topic filter) + eth_subscribe newHeads (native ETH to-address filter) + eth_getBlockByNumber polling fallback
+- [ ] `incoming_transactions` table schema — id (UUID v7), wallet_id, tx_hash (UNIQUE), from_address, amount, token_address, chain, confirmed_at, is_suspicious (BOOLEAN), created_at; retention TTL via scheduled purge
+- [ ] INCOMING_TX_DETECTED + INCOMING_TX_SUSPICIOUS notification event types (28→30)
+- [ ] GET /v1/wallet/incoming REST endpoint spec — filters (from_address, token_address, chain, since, until), cursor pagination, sessionAuth, limit 50/max 200
+- [ ] config.toml [incoming] section — 6 flat keys: incoming_enabled, incoming_mode, incoming_poll_interval, incoming_retention_days, incoming_suspicious_dust_usd, incoming_suspicious_amount_multiplier
+- [ ] wallets table — monitor_incoming column addition (BOOLEAN DEFAULT 0)
+- [ ] Deduplication strategy — ON CONFLICT IGNORE on tx_hash; idempotent event emission
 
-**Defer:**
-- `npm trust` CLI 스크립트화: 일회성 작업이므로 웹 UI 수동 등록으로 충분. 추후 패키지 추가 시 고려.
-- publish-check provenance 사전 검증: dry-run 환경에서의 OIDC 동작이 불명확. repository.url 검증 스크립트만 추가.
+### Add After Validation — Differentiator Design Deliverables (P2)
 
----
+- [ ] WebSocket connection sharing — ChainSubscriber multiplexer design; subscription registry spec
+- [ ] Exponential backoff reconnection — state machine spec (1s/2s/4s/…/60s, jitter, max attempts, subscription replay)
+- [ ] MCP tool list_incoming_transactions — parameters, response schema, error handling
+- [ ] IIncomingSafetyRule interface — dust threshold rule, unknown token rule, large deposit anomaly rule
+- [ ] Per-ATA dynamic subscription management — ATA discovery flow, dynamic add/remove, new ATA detection trigger
 
-## 모노레포 특수 고려사항 (8개 패키지)
+### Future Consideration — Defer
 
-| Concern | Status | Action Needed |
-|---------|--------|---------------|
-| 패키지별 Trusted Publisher 등록 | 각 패키지 개별 등록 필수 | 8회 반복 (org 단위 일괄 등록 미지원) |
-| 동일 workflow/environment 공유 | 가능 | 8개 모두 `release.yml` + `production` 환경으로 동일 설정 |
-| 순차 발행 시 OIDC 토큰 재사용 | pnpm이 내부적으로 npm publish 호출. OIDC 토큰은 워크플로 레벨에서 유효 | 단일 잡 내 8개 순차 발행은 문제 없음 |
-| repository.url + directory 조합 | Sigstore가 repository.url만 검증, directory는 메타데이터 | directory 필드 유지 (현재 설정 OK) |
-| pnpm의 OIDC 지원 현황 | pnpm publish가 내부적으로 npm publish 호출하므로 동작함 | npm >=11.5.1이 시스템에 있으면 OK. `NPM_CONFIG_PROVENANCE=true` 환경변수로 설정 권장 |
+- [ ] MCP Resource waiaas://wallet/incoming — depends on MCP SSE infrastructure not yet designed
+- [ ] Summary endpoint GET /v1/wallet/incoming/summary — SQL aggregation, acceptable to defer
+- [ ] NFT incoming detection — separate milestone, explicitly out of scope per m27-00
 
 ---
 
-## OIDC 토큰 교환 플로우 상세
+## Feature Prioritization Matrix
 
-```
-1. GitHub Actions 런타임이 OIDC JWT 생성
-   - Claims: repository, workflow, environment, ref, sha 등
-
-2. npm CLI가 OIDC 환경 자동 감지
-   - id-token: write 퍼미션 확인
-   - ACTIONS_ID_TOKEN_REQUEST_URL 환경변수 존재 확인
-
-3. npm CLI -> npm registry: OIDC JWT 전송
-   - registry가 JWT 서명을 GitHub OIDC provider 공개키로 검증
-   - JWT claims를 패키지의 Trusted Publisher 설정과 매칭
-     (owner, repository, workflow file, environment)
-
-4. npm registry -> npm CLI: 단기 publish 토큰 발급
-   - 해당 워크플로 실행에만 유효한 scoped 토큰
-
-5. npm CLI: 패키지 발행 + Sigstore 서명
-   - Fulcio에서 단기 서명 인증서 획득
-   - 패키지 tarball + 메타데이터에 서명
-   - Rekor 투명성 로그에 기록
-
-6. npm registry: 서버측 검증
-   - Sigstore 번들 검증
-   - certificate의 sourceRepositoryURI와 package.json repository.url 대조
-   - 검증 성공 시 publish attestation 생성
-```
+| Feature | AI Agent Value | Design Cost | Priority |
+|---------|---------------|-------------|----------|
+| Native token detection (SOL/ETH) | HIGH | LOW | P1 |
+| Incoming TX storage + dedup | HIGH | LOW | P1 |
+| INCOMING_TX_DETECTED notification | HIGH | LOW | P1 |
+| SPL / ERC-20 detection | HIGH | MEDIUM | P1 |
+| Opt-in per-wallet + global gate | HIGH | LOW | P1 |
+| Polling fallback strategy | HIGH | MEDIUM | P1 |
+| GET /v1/wallet/incoming REST | HIGH | MEDIUM | P1 |
+| Retention / auto-purge | MEDIUM | LOW | P1 |
+| Exponential backoff reconnection | HIGH | MEDIUM | P2 |
+| WebSocket connection sharing | HIGH | MEDIUM | P2 |
+| Suspicious TX detection (dust, unknown token) | MEDIUM | MEDIUM | P2 |
+| Large deposit anomaly detection | MEDIUM | MEDIUM | P2 |
+| Per-ATA dynamic subscription (Solana) | HIGH | HIGH | P2 |
+| MCP tool list_incoming_transactions | HIGH | LOW | P2 |
+| Summary endpoint | LOW | MEDIUM | P3 |
+| MCP Resource waiaas://wallet/incoming | MEDIUM | HIGH | P3 |
 
 ---
 
-## Provenance 메타데이터 상세
+## Chain-Specific Feature Comparison
 
-npm 패키지 provenance는 **SLSA Build Level 2** 달성 (HIGH confidence -- 공식 문서 + deps.dev 확인).
-
-**Provenance Statement 포함 내용:**
-- Source repository URI (GitHub repo URL)
-- Source commit SHA
-- Build workflow URI (GitHub Actions workflow)
-- Build invocation URI (특정 workflow run URL)
-- Builder ID (GitHub Actions runner)
-- SLSA predicate (v0.2 또는 v1.0)
-
-**npm 패키지 페이지 표시:**
-- 버전 번호 옆 녹색 체크마크 배지
-- "Built and signed on GitHub Actions" 텍스트
-- 클릭 시 provenance 상세: 소스 저장소, 커밋, 워크플로 링크
-- Sigstore Rekor 투명성 로그 링크
-
-**검증 체인:**
-- Sigstore Fulcio (서명 인증서) + Rekor (투명성 로그)
-- npm 설치 시 자동 검증 (향후 `npm audit signatures` 강화 예정)
+| Feature | Solana | EVM (Ethereum, Base, etc.) |
+|---------|--------|---------------------------|
+| Native token detection subscription method | accountSubscribe(walletAddress) — detects lamport changes | eth_subscribe("newHeads") + filter block tx.to == walletAddress |
+| Token detection subscription method | accountSubscribe per ATA (one subscription per token account) | eth_subscribe("logs") with topics: [Transfer sig, null, walletAddress] — single subscription covers all ERC-20 tokens |
+| Multiple wallets per connection | Multiple accountSubscribe calls on single WS — supported | Multiple eth_subscribe calls on single WS — supported (Geth: no documented limit, 10k buffer before disconnect) |
+| Commitment level | confirmed (fast, rare reorgs acceptable for monitoring; finalized for accounting) | Block inclusion (latest); reorganization depth typically 1-2 blocks on PoS Ethereum |
+| Dedup sensitivity | confirmed→finalized state transition can trigger duplicate account change events | Uncle blocks on pre-Merge chains; PoS reorgs are rare but possible |
+| Polling fallback method | getSignaturesForAddress(address, { until: lastKnownSig }) | eth_getBlockByNumber(latest) + scan tx array for to == walletAddress; per-block full scan is expensive |
+| New token receive (first time) | Creates new ATA — must detect accountSubscribe on wallet for program-owner-change events | Same eth_subscribe logs filter covers first-time ERC-20 transfers without extra setup |
+| ATA complexity | HIGH — per-token-mint ATA must be discovered and individually subscribed | LOW — single logs subscription covers all ERC-20 Transfer events to wallet address |
 
 ---
 
-## `--dry-run` + `--provenance` 호환성
+## Competitor / Reference Analysis
 
-| 환경 | 동작 | 권장 |
-|------|------|------|
-| OIDC 있는 환경 (deploy 잡) | dry-run + provenance 모두 동작하나, 실제 발행 안 함 | 불필요 (실제 발행에서 검증) |
-| OIDC 없는 환경 (publish-check 잡) | provenance 검증을 건너뛰거나 예측 불가 동작 | **publish-check에서 `--provenance` 제외** |
-| 로컬 개발 환경 | OIDC 토큰 없음. provenance 생성 실패 가능 | `--provenance` 없이 dry-run |
-
-**결론**: publish-check 잡에서는 현재처럼 `pnpm publish --dry-run --no-git-checks`만 유지. provenance 검증은 deploy 잡의 실제 발행에서 수행.
-
----
-
-## Classic Token 폐지 타임라인 (긴급성 근거)
-
-| Date | Event |
-|------|-------|
-| 2025-11-05 | Classic token 신규 생성 비활성화 |
-| 2025-12-09 | **Classic token 영구 폐기** -- 모든 기존 classic token 작동 중지 |
-| 현재 (2026-02) | Classic token 완전 불가. Granular token (90일 만료) 또는 Trusted Publishing 필수 |
-
-**WAIaaS 현황**: `NPM_TOKEN`이 classic token이었다면 이미 작동하지 않음. Granular token으로 교체되었을 가능성이 있으나, Trusted Publishing 전환이 장기적으로 관리 부담 최소화 (토큰 회전 불필요).
+| Capability | MetaMask Portfolio | Phantom | Trust Wallet | Coinbase Wallet | WAIaaS Target |
+|------------|-------------------|---------|--------------|-----------------|---------------|
+| Incoming TX push notification | Yes (ETH, tokens, NFTs, staking unstake) | Yes (opt-in push, granular by type) | Yes (basic) | Yes (basic) | Yes — INotificationChannel (Telegram/ntfy/Discord/Slack) |
+| Notification granularity | Per account, per event type, Settings toggle | Opt-in by category (transactions, perps, markets) | On/off only | On/off only | Per wallet + per category (signing_sdk.notify_categories existing) |
+| Full TX history (incoming + outgoing) | Yes — MetaMask Portfolio (cloud-indexed) | Yes — chain indexed | Yes — chain indexed | Yes — chain indexed | Currently outgoing only → add incoming via incoming_transactions table |
+| Retention period | Blockchain permanent; local cache varies | Blockchain permanent | Blockchain permanent | 30-day export window | 90-day default, configurable via incoming_retention_days |
+| Dust attack detection | No native (Blowfish focuses on outgoing) | Blocklist + Blowfish (outgoing-focused) | No | No | Yes — INCOMING_TX_SUSPICIOUS with configurable dust_usd threshold |
+| Unknown token flagging | Warning badge (informal) | SimpleHash blocklist | No | No | Yes — cross-reference ALLOWED_TOKENS policy (default-deny applies) |
+| AI agent event reaction support | No (consumer wallet) | No (consumer wallet) | No | Yes (CDP Agentic Wallets — managed service) | Yes — MCP tool + INCOMING_TX_DETECTED event |
+| Self-hosted, no external indexer | No | No | No | No (CDP is managed) | Yes — RPC WebSocket only, no Helius/Alchemy dependency |
 
 ---
 
-## Trusted Publisher 등록 필드 상세 (npmjs.com)
+## Self-Hosted Design Constraints (WAIaaS-Specific)
 
-각 패키지 (`npmjs.com/package/@waiaas/<name>/access`)에서 설정:
+These constraints must inform every feature design decision in the milestone.
 
-| Field | Value | Notes |
-|-------|-------|-------|
-| Provider | GitHub Actions | 드롭다운 선택 |
-| Owner | `minhoyoo-iotrust` | **대소문자 정확 매칭 필수** |
-| Repository | `WAIaaS` | **대소문자 정확 매칭 필수** |
-| Workflow | `release.yml` | `.yml` 확장자 포함, 파일명만 (경로 제외) |
-| Environment | `production` | 선택사항이나 deploy 잡이 이미 사용 중이므로 설정 권장 |
-
-**8개 패키지 모두 동일한 값으로 등록** (모노레포이므로 repo/workflow/environment 동일).
+| Constraint | Implication |
+|------------|-------------|
+| No external indexer (Helius, Alchemy Notify, Etherscan webhooks ruled out) | WebSocket subscription to RPC node is the only detection path. Polling fallback is mandatory for HTTP-only RPC endpoints |
+| SQLite on single machine (self-hosted) | Batch INSERT on high-frequency incoming TX streams prevents write stalls. Retention policy is critical — unbounded append breaks self-hosted deployments |
+| Default-deny (WAIaaS policy principle) | incoming_enabled=false by default. monitor_incoming=false by default. No wallet is monitored without explicit double opt-in |
+| Config.toml flat-section rule (no nesting) | [incoming] section with 6 flat keys — no nested TOML objects |
+| SettingsService hot-reload for runtime adjustables | incoming_poll_interval, incoming_suspicious_dust_usd, incoming_suspicious_amount_multiplier are runtime adjustable via SettingsService (no daemon restart). incoming_enabled and incoming_mode require restart |
+| Existing INotificationChannel unchanged | Add 2 new event type strings to NOTIFICATION_EVENT_TYPES array — no interface breaking change |
+| Existing 6 NotificationCategory values | INCOMING_TX_DETECTED maps to 'transaction' category; INCOMING_TX_SUSPICIOUS maps to 'security_alert' category — no new categories needed |
 
 ---
 
 ## Sources
 
-### 공식 문서 (HIGH confidence)
-- [npm Trusted Publishing docs](https://docs.npmjs.com/trusted-publishers/)
-- [npm Generating Provenance Statements](https://docs.npmjs.com/generating-provenance-statements/)
-- [npm-trust CLI docs](https://docs.npmjs.com/cli/v11/commands/npm-trust/)
-- [npm/provenance GitHub](https://github.com/npm/provenance)
+- Geth official docs, Real-time Events (pubsub): https://geth.ethereum.org/docs/interacting-with-geth/rpc/pubsub — eth_subscribe types, address filtering in logs, 10k notification buffer limit per connection (HIGH confidence)
+- Solana official RPC docs, accountSubscribe: https://solana.com/docs/rpc/websocket/accountsubscribe — parameters, commitment levels, return format (HIGH confidence)
+- Solana official RPC docs, WebSocket methods index: https://solana.com/docs/rpc/websocket — full subscription method list (HIGH confidence)
+- Alchemy, WebSocket Best Practices for Web3: https://www.alchemy.com/docs/reference/best-practices-for-using-websockets-in-web3 — push-only recommendation, filtered subscriptions reduce bandwidth (HIGH confidence)
+- QuickNode, Solana WebSocket Subscriptions guide: https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-websocket-subscriptions-to-solana-blockchain-using-typescript — ATA monitoring pattern, reconnect with exponential backoff (MEDIUM confidence)
+- CoinTelegraph, Dust attack explained: https://cointelegraph.com/explained/what-is-a-crypto-dusting-attack-and-how-do-you-avoid-it — dust definition, threshold patterns (MEDIUM confidence)
+- Trezor, Dusting attacks and airdrop scam tokens: https://trezor.io/support/troubleshooting/coins-tokens/dusting-attacks-airdrop-scam-tokens — isolation strategy, recommended not to spend dust (MEDIUM confidence)
+- MetaMask, Introducing Wallet Notifications: https://metamask.io/news/introducing-wallet-notifications — event types supported (receive ETH, tokens, NFTs, staking) (MEDIUM confidence)
+- Phantom product update (notifications): https://phantom.com/learn/blog/product-updates-recent-activity-notifications-performance-and-more — opt-in push notification, granular type control (MEDIUM confidence)
+- Coinbase, Agentic Wallets launch: https://www.coinbase.com/developer-platform/discover/launches/agentic-wallets — AI agent deposit reaction patterns, programmable guardrails (MEDIUM confidence)
+- Chainscore Labs / Solana monitoring guide: https://pandaacademy.medium.com/solana-on-chain-event-monitoring-guide-from-theory-to-practice-6750ee9a3933 — ATA subscription strategy, WebSocket + poll hybrid (MEDIUM confidence — 403 on direct fetch, referenced via search summary)
+- WAIaaS internal, m27-00-incoming-transaction-monitoring.md — primary design specification for this milestone (HIGH confidence)
+- WAIaaS internal, packages/core/src/enums/notification.ts — current 28 NotificationEventType entries (HIGH confidence)
+- WAIaaS internal, packages/core/src/interfaces/IChainAdapter.ts — existing 22-method IChainAdapter interface (HIGH confidence)
+- WAIaaS internal, packages/core/src/schemas/signing-protocol.ts — EVENT_CATEGORY_MAP with 6 NotificationCategory values (HIGH confidence)
+- WAIaaS internal, packages/daemon/src/services/signing-sdk/channels/wallet-notification-channel.ts — WalletNotificationChannel implementation with category-based filtering (HIGH confidence)
 
-### 기술 가이드 (MEDIUM confidence)
-- [Phil Nash -- Things you need to do for npm trusted publishing to work](https://philna.sh/blog/2026/01/28/trusted-publishing-npm/)
-- [leechael -- npm Trusted Publishers: The Complete Guide](https://leechael.org/posts/2025/npm-trusted-publishers-the-complete-guide/)
-- [remarkablemark -- How to set up trusted publishing for npm](https://remarkablemark.org/blog/2025/12/19/npm-trusted-publishing/)
-- [Speakeasy -- Securing Your NPM Publishing](https://www.speakeasy.com/blog/npm-trusted-publishing-security)
-- [MakerX -- Catch up on npm Trusted Publishing](https://blog.makerx.com.au/catch-up-on-the-new-npm-trusted-publishing-feature/)
-- [robino.dev -- NPM Trusted Publishing](https://blog.robino.dev/posts/npm-trusted-publishing)
+---
 
-### pnpm OIDC 지원 (MEDIUM confidence)
-- [pnpm/pnpm#9812 -- Support OIDC publishing](https://github.com/pnpm/pnpm/issues/9812) -- pnpm publish가 내부적으로 npm publish 호출하므로 동작 확인
-
-### Provenance / SLSA (HIGH confidence)
-- [deps.dev -- npm SLSA provenance support](https://blog.deps.dev/npm-provenance/)
-- [SLSA -- Node.js ecosystem](https://slsa.dev/blog/2023/05/bringing-improved-supply-chain-security-to-the-nodejs-ecosystem)
-- [Sigstore -- npm provenance GA](https://blog.sigstore.dev/npm-provenance-ga/)
-- [tsmx -- Built and signed on GitHub Actions](https://tsmx.net/npmjs-built-and-signed-on-github-actions/)
-
-### Classic Token 폐기 (HIGH confidence)
-- [GitHub Discussion #179562 -- Classic token removal Dec 9](https://github.com/orgs/community/discussions/179562)
-- [npm/cli#8036 -- repository.url provenance conflict](https://github.com/npm/cli/issues/8036)
+*Feature research for: WAIaaS Incoming Transaction Monitoring (m27)*
+*Researched: 2026-02-21*
+*Mode: Ecosystem — what features exist in the domain, what is expected, what differentiates*

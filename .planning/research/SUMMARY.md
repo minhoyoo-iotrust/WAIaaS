@@ -1,224 +1,209 @@
 # Project Research Summary
 
-**Project:** WAIaaS m24 — npm Trusted Publishing (OIDC 전환)
-**Domain:** CI/CD Supply Chain Security — npm 발행 인증 방식 전환
-**Researched:** 2026-02-18
-**Confidence:** HIGH
+**Project:** WAIaaS 인커밍 트랜잭션 모니터링 설계 (m27)
+**Domain:** Crypto Wallet Incoming Transaction Monitoring — Self-Hosted AI Agent Wallet Service
+**Researched:** 2026-02-21
+**Confidence:** HIGH (Solana/EVM 공식 문서 + viem 소스코드 + WAIaaS 코드베이스 직접 분석)
 
 ## Executive Summary
 
-npm Trusted Publishing은 GitHub Actions OIDC 토큰으로 npm 레지스트리에 인증하여 장기 시크릿(NPM_TOKEN) 없이 패키지를 발행하는 보안 강화 메커니즘이다. WAIaaS는 이미 `release.yml`의 deploy 잡이 `environment: production` 수동 승인 게이트를 갖춘 성숙한 6-job 파이프라인을 보유하고 있어, 전환에 필요한 구조적 변경은 최소화된다. 새로운 라이브러리나 도구 추가 없이 기존 워크플로의 deploy 잡 설정 변경과 npmjs.com 수동 등록만으로 전환이 완료된다.
+WAIaaS는 아웃고잉 TX만 추적하는 현재 구조에 인커밍 TX 모니터링 레이어를 추가하는 설계 마일스톤이다. 신규 npm 패키지는 전혀 필요 없다. `@solana/kit ^6.0.1`의 `logsNotifications()` WebSocket 구독과 `viem ^2.21.0`의 `watchEvent`/`watchBlocks`가 필요한 모든 API를 이미 포함한다. Solana는 `logsSubscribe({ mentions: [walletAddress] })` 단일 구독으로 SOL + 모든 SPL 토큰을 감지할 수 있으며, EVM은 `eth_subscribe("logs")` + Transfer 토픽 필터로 ERC-20을, `eth_subscribe("newHeads")` + TX 스캔으로 네이티브 ETH를 감지한다.
 
-전환의 핵심 선행 조건은 **repository.url 불일치 수정**이다. 현재 8개(+ admin 1개) package.json 파일에 `"url": "https://github.com/minho-yoo/waiaas.git"`로 잘못 설정되어 있으나, 실제 GitHub 원격은 `minhoyoo-iotrust/WAIaaS`이다. provenance 생성 시 Sigstore가 OIDC 토큰의 repository 정보와 이 필드를 대조하여 불일치 시 422 에러로 발행 전체가 실패한다. 이 수정은 독립적으로 가장 먼저 수행해야 하며, 이후 npmjs.com 수동 등록 → release.yml 수정 → 검증 및 정리의 3단계로 진행한다.
+가장 중요한 아키텍처 결정은 **IChainSubscriber를 IChainAdapter와 분리된 별도 인터페이스**로 설계하는 것이다. 기존 22메서드 stateless 어댑터에 WebSocket 상태를 혼입하면 AdapterPool 캐싱, 계약 테스트, 외부 플러그인 호환성이 모두 깨진다. 신규 `IncomingTxMonitorService`가 구독 생명주기를 오케스트레이션하고, `incoming_transactions` 별도 테이블(v21 마이그레이션)에 수신 이력을 저장하며, 기존 EventBus에 `transaction:incoming` 이벤트를 추가하는 구조가 WAIaaS 코드베이스에 가장 적합하다.
 
-주요 위험은 npm CLI 버전 요구사항(>=11.5.1)과 OIDC 권한 배치의 세부 사항에 있다. Node 22 기본 번들 npm이 구버전일 수 있으므로 deploy 잡에 `npm install -g npm@latest` 스텝을 추가해야 한다. `id-token: write`는 반드시 deploy 잡 레벨에만 추가해야 하며, job-level permissions는 top-level을 완전히 대체하므로 `contents: read`도 함께 명시해야 한다. NPM_TOKEN은 OIDC 전환이 검증된 이후(최소 2회 성공 릴리스)에만 제거한다.
+핵심 위험은 세 가지다. 첫째, WebSocket 재연결 구간에서 발생한 TX가 영구 유실되는 "블라인드 구간" 문제로, 커서 기반 갭 보상 폴링이 필수 컴포넌트다. 둘째, better-sqlite3 단일 라이터에 WebSocket 고빈도 이벤트가 충돌하는 SQLITE_BUSY 문제로, 메모리 큐 + BackgroundWorkers flush 패턴으로 해결해야 한다. 셋째, Solana에서 `confirmed` 레벨 수신 TX 롤백 가능성으로, AI 에이전트 로직 트리거는 `finalized` 상태에서만 허용해야 한다.
+
+---
 
 ## Key Findings
 
-### 권장 스택 변경사항
+### Recommended Stack
 
-npm Trusted Publishing 전환은 **새로운 도구 없이 기존 스택에서 설정 변경만으로** 완료된다. 유일한 버전 요구사항은 npm CLI >= 11.5.1이며, 이는 `npm install -g npm@latest`로 충족된다. pnpm과 Node.js는 현재 버전(9.15.4, 22.x)을 그대로 유지한다.
+신규 npm 패키지 추가 없이 기존 스택만으로 완전한 인커밍 TX 모니터링이 구현 가능하다. viem의 WebSocket transport는 `reconnect: { attempts: 10 }` + `keepAlive: { interval: 30_000 }` 내장 지원으로 EVM 재연결을 자동 처리하며, Solana의 `@solana/kit`은 자동 재연결을 제공하지 않아 어플리케이션 레벨 재연결 루프(지수 백오프, max 30s)를 직접 구현해야 한다. 폴링 폴백은 Solana의 `getSignaturesForAddress({ until: lastKnownSig })` + EVM의 `getLogs({ fromBlock, toBlock })` 조합으로 기존 HTTP 클라이언트를 재사용한다.
 
-**핵심 변경사항:**
-- **npm CLI >=11.5.1**: OIDC 토큰 교환 필수 버전 — deploy 잡에 업그레이드 스텝 추가
-- **npm publish 직접 호출**: pnpm이 내부적으로 npm publish를 위임하지만, OIDC 토큰 전달 경로의 확실성을 위해 직접 호출 권장
-- **GitHub Actions permissions**: deploy 잡에만 `id-token: write` + `contents: read` 추가
-- **제거 대상**: `.npmrc` 수동 설정 스텝, `NODE_AUTH_TOKEN` 환경변수, `NPM_TOKEN` 시크릿 (검증 후)
+**Core technologies:**
+- `@solana/kit ^6.0.1`: Solana WebSocket 구독(`logsNotifications`) + TX 상세 파싱(`getTransaction jsonParsed`) + 폴링 폴백(`getSignaturesForAddress`) — 이미 설치됨
+- `viem ^2.21.0`: EVM WebSocket 구독(`watchEvent poll:false`, `watchBlocks`) + 이벤트 로그 파싱(`parseEventLogs`) + 폴링 폴백(`getLogs`) — 이미 설치됨
+- Node.js 22 / better-sqlite3: 단일 라이터 SQLite — 메모리 큐 + BackgroundWorkers flush 패턴 필수
 
-**사용하지 않아야 할 것들:**
-- `actions/attest-build-provenance`: npm CLI가 Sigstore 서명 내장, 불필요
-- top-level `id-token: write`: 최소 권한 원칙 위반
-- publish-check 잡에서 `--provenance` 플래그: dry-run + provenance 비호환
+**중요 API 주의사항:**
+- `@solana/kit`에서 `logsSubscribe`는 `logsNotifications()`로 노출됨 (메서드명 코드 레벨 재확인 필요 — MEDIUM 신뢰도)
+- viem `webSocket()` transport와 `fallback()` transport를 함께 쓰면 auto-reconnect 버그 발생 — WebSocket 단독 사용 필수
+- EVM native ETH 이체는 이벤트 로그를 생성하지 않으므로 `watchBlocks({ includeTransactions: true })` 블록 스캔 필수
 
-### 필요 기능 (Feature Landscape)
+### Expected Features
 
-**필수 (Table Stakes):**
-- 8개 패키지 Trusted Publisher 등록 — OIDC 인증의 전제 조건, 패키지별 수동 등록 필수
-- `id-token: write` 권한 추가 (deploy 잡 레벨) — OIDC JWT 발급 필수
-- Provenance 자동 생성 (`--provenance` 플래그) — 공급망 보안의 핵심 가치
-- NPM_TOKEN 시크릿 제거 + `.npmrc` 스텝 제거 — 전환의 보안 목적
-- npm CLI >=11.5.1 확보 — OIDC 토큰 교환 최소 요구사항
-- `repository.url` 정합성 보장 — Sigstore 검증 필수 (CRITICAL, 현재 불일치)
+**Must have (table stakes — P1):**
+- 네이티브 토큰 수신 감지 (SOL, ETH) — 모든 지갑 서비스의 기본 기대
+- SPL / ERC-20 토큰 수신 감지 — AI 에이전트의 토큰 자금 흐름 추적 필수
+- `incoming_transactions` 테이블 + 중복 제거 (`tx_hash` UNIQUE + ON CONFLICT IGNORE)
+- 전역 게이트(`incoming_enabled`) + 지갑별 옵트인(`monitor_incoming` 컬럼) 2단계 활성화
+- WebSocket 불가 시 폴링 폴백 (최대 30초 지연 허용, 설계 문서에 명시 필요)
+- 수신 이력 REST API (`GET /v1/wallet/incoming`, 커서 페이지네이션)
+- `TX_INCOMING` 알림 이벤트 (28→29개, 기존 `transaction` 카테고리 재사용)
+- 수신 이력 보존 정책 (`incoming_retention_days`, 기본 90일)
 
-**차별화 기능 (Differentiators):**
-- npm 패키지 페이지 Provenance 배지 — `--provenance` 사용 시 자동 표시, 추가 작업 불필요
-- GitHub Environment(`production`) 연동 — 이미 deploy 잡에 설정, npmjs.com에도 등록하면 이중 보호
-- `publishConfig.provenance: true` in package.json — 선택적이나 의도 명확화에 유용
+**Should have (competitive — P2):**
+- WebSocket 연결 체인당 공유 (지갑별 개별 연결 아닌 멀티플렉서) — 확장성 핵심
+- 지수 백오프 재연결 (1s→2s→…→60s + jitter) — 재연결 폭풍 방지
+- 의심 TX 감지 (`INCOMING_TX_SUSPICIOUS`): 먼지 공격 임계값 + 미등록 토큰 플래그
+- MCP 도구 `list_incoming_transactions` — AI 에이전트 자율 DeFi 반응 활성화
+- Solana ATA 동적 구독 관리 — 신규 토큰 최초 수신 시 ATA 자동 등록
 
-**구현하지 않을 것 (Anti-Features):**
-- NPM_TOKEN 병행 유지(fallback): 전환 검증 후 즉시 제거
-- publish-check에서 `--provenance` 강제: OIDC 없는 환경에서 예측 불가 동작
-- reusable workflow로 publish 로직 분리: Trusted Publisher 매칭이 caller workflow 기준이라 복잡도 증가
-- `.npmrc` 수동 생성 유지: OIDC 모드에서 `_authToken` 불필요, 충돌 위험
+**Defer (v2+):**
+- MCP Resource `waiaas://wallet/incoming` — SSE 인프라 미설계
+- 수신 집계 요약 엔드포인트 (`GET /v1/wallet/incoming/summary`)
+- NFT 수신 감지 — 별도 마일스톤으로 명시적 분리
 
-**연기할 것:**
-- `npm trust` CLI 스크립트화: 일회성 작업이므로 웹 UI 수동 등록으로 충분
-- publish-check에서 repository.url 사전 검증 스크립트: dry-run의 OIDC 동작이 불명확
+**Anti-features (채택 금지):**
+- 외부 인덱서 (Helius, Alchemy Notify) — self-hosted 철학 위반
+- 활성화 시 과거 이력 백필 — archive RPC 필요, 거짓 완전성 보장
+- 기본 전체 감시 (모든 지갑 자동 구독) — RPC 비용 폭발
 
-### 아키텍처 접근 방식
+### Architecture Approach
 
-기존 6-job 파이프라인 구조는 **그대로 유지**되며, deploy 잡만 수정된다. OIDC 인증 흐름은 GitHub Actions Runner → npm CLI → npm Registry → Sigstore 순으로 진행되며, npm CLI가 OIDC 환경을 자동 감지하여 토큰 교환을 수행한다. `NODE_AUTH_TOKEN`이 설정되어 있으면 OIDC 대신 토큰 인증으로 폴백되므로 반드시 제거해야 한다.
+기존 WAIaaS 아키텍처 패턴을 최대한 재사용한다. `IChainSubscriber` 신규 인터페이스를 `packages/core/src/interfaces/`에 추가하고, 체인별 구현체(`SolanaIncomingSubscriber`, `EvmIncomingSubscriber`)를 각 어댑터 패키지에 배치한다. `IncomingTxMonitorService`가 오케스트레이터 역할로 DaemonLifecycle Step 4c-9(fail-soft)에 통합된다. 데이터는 `incoming_transactions` 별도 테이블에 저장하고(v21 마이그레이션), 이벤트는 기존 EventBus에 `transaction:incoming` 추가로 전파한다.
 
-**변경되는 컴포넌트:**
-1. **deploy job (release.yml)** — permissions 추가, npm upgrade 스텝, publish 명령어 변경, Setup npmrc 제거
-2. **9개 package.json** — repository.url을 `git+https://github.com/minhoyoo-iotrust/WAIaaS.git`으로 수정
-3. **npmjs.com 각 패키지 설정** — 8개 패키지에 Trusted Publisher 수동 등록 (패키지별 2FA 필요)
-4. **GitHub Secrets** — NPM_TOKEN 시크릿 삭제 (검증 후)
+**Major components:**
+1. `IChainSubscriber` (core/interfaces) — `subscribe()`, `unsubscribe()`, `subscribedAddresses()`, `destroy()` 4메서드 인터페이스
+2. `SolanaIncomingSubscriber` (adapters/solana) — `logsNotifications({ mentions })` 구독, `getTransaction(jsonParsed)` 파싱, `getSignaturesForAddress` 폴링 폴백
+3. `EvmIncomingSubscriber` (adapters/evm) — `getLogs` 폴링 구현, `parseEventLogs` 파싱, BackgroundWorkers 등록
+4. `IncomingTxMonitorService` (daemon/services/monitoring) — 구독 생명주기 오케스트레이션, DB 직접 쿼리(`monitor_incoming=1` 지갑), `syncSubscriptions()` hot-reload 연동
+5. `incoming_transactions` 테이블 (DB v21) — `tx_hash` UNIQUE, `wallet_id` FK CASCADE, 2-state(`DETECTED`/`CONFIRMED`), 보존 정책
 
-**변경되지 않는 컴포넌트:**
-- test, chain-integration, platform, docker-publish, publish-check 잡
-- release-please.yml, ci.yml, nightly.yml 워크플로
-- pnpm, Node.js 버전
-
-**핵심 OIDC 데이터 흐름:**
+**데이터 흐름:**
 ```
-GitHub OIDC Provider -> JWT (repo, workflow, environment claims)
-  -> npm CLI 자동 감지 -> npm Registry 제출
-  -> Trusted Publisher 규칙 매칭 -> 단기 API 토큰 교환
-  -> 패키지 발행 + Sigstore 서명 (Fulcio + Rekor)
-  -> npm 패키지 페이지 provenance 배지 자동 표시
+블록체인 → IChainSubscriber → IncomingTxMonitorService
+  → 메모리 큐 → BackgroundWorkers flush
+  → INSERT incoming_transactions (ON CONFLICT IGNORE)
+  → eventBus.emit('transaction:incoming')
+    → NotificationService.notify('TX_INCOMING')
 ```
 
-### 핵심 함정 (Top 5)
+**빌드 순서:** core 인터페이스 → DB 스키마 → 어댑터 구현 → 서비스 레이어 → API 레이어
 
-1. **repository.url 불일치 (CRITICAL)** — `minho-yoo/waiaas` -> `minhoyoo-iotrust/WAIaaS` 수정 필수. Phase 1에서 가장 먼저 수행. 불일치 시 422 에러로 전체 발행 실패.
+### Critical Pitfalls
 
-2. **npm CLI 버전 부족 (CRITICAL)** — deploy 잡에 `npm install -g npm@latest` 스텝 추가. Node 22 번들 npm이 11.5.1 미만이면 OIDC 토큰 교환 404 에러 발생.
+1. **블라인드 구간 TX 유실 (C-01, CRITICAL)** — WebSocket 재연결 중 발생한 TX 영구 누락. 마지막 처리 서명/블록 커서를 DB에 저장하고, 재연결 직후 커서 이후 갭 보상 폴링 필수. idempotent INSERT(ON CONFLICT IGNORE)로 WebSocket + 폴링 중복 처리 안전 보장.
 
-3. **id-token 퍼미션 배치 오류 (CRITICAL)** — deploy 잡에 `contents: read` + `id-token: write` 모두 명시. job-level permissions는 top-level을 override하므로 contents: read 누락 시 checkout 실패.
+2. **SQLite 단일 라이터 충돌 (C-02, CRITICAL)** — WebSocket 고빈도 이벤트가 better-sqlite3 동기 쓰기와 충돌 → SQLITE_BUSY 에러. WebSocket 핸들러에서 직접 DB 쓰기 금지. 메모리 큐 → BackgroundWorkers flush 단일 라이터 패턴 적용. `PRAGMA busy_timeout = 5000` 설정.
 
-4. **NPM_TOKEN 조기 제거 (CRITICAL)** — OIDC 검증 완료(최소 2회 성공 릴리스) 후에만 제거. 조기 제거 시 롤백 수단 상실.
+3. **Solana confirmed 롤백 위험 (C-03, CRITICAL)** — `confirmed` 레벨 수신 후 롤백 시 에이전트가 없는 자금 기준으로 행동. 알림은 `confirmed`에 발송 가능하나, 에이전트 로직 트리거는 `finalized`만 허용. DB 상태를 `DETECTED`/`CONFIRMED` 2단계로 설계.
 
-5. **dry-run + provenance 비호환 (MODERATE)** — publish-check 잡에서 `--provenance` 플래그 사용 금지. OIDC 토큰 없는 환경에서 에러 발생 또는 의도치 않은 Sigstore 기록.
+4. **Solana ATA 감지 누락 (H-01, HIGH)** — SPL 토큰은 지갑 주소가 아닌 ATA(Associated Token Account)에서 잔액이 변경됨. `logsSubscribe({ mentions })` 방식은 이를 포함해 감지하나, `getTransaction(jsonParsed)` 파싱 시 `preTokenBalances` 항목이 없는 경우(최초 수신)를 0n으로 처리해야 함. Token-2022 Program ID도 양쪽 모두 지원 필요.
+
+5. **WebSocket 메모리 누수 (H-02, HIGH)** — 재연결 시 이전 구독 핸들러 미정리 → 동일 TX 중복 처리 + 메모리 단조 증가. `Map<walletId, { unsubscribe: () => void }>` 구독 레지스트리 필수. 재연결 전 전체 정리 실행.
+
+---
 
 ## Implications for Roadmap
 
-의존성 체인 기반 3단계 구조 권장:
+이 마일스톤은 **설계 전용**이다. 구현은 별도 마일스톤에서 진행된다. 설계 문서가 구체적인 API 명세, 스키마 DDL, 상태 모델, 인터페이스 계약을 모두 포함해야 구현 마일스톤에서 재연구 없이 바로 착수 가능하다.
 
-```
-repository.url 수정 -> Trusted Publisher 등록 -> release.yml 수정 -> E2E 검증 -> 정리
-```
+### Phase 1: 핵심 인터페이스 + DB 스키마 설계
+**Rationale:** 하위 모든 phase가 IChainSubscriber 인터페이스 계약과 DB 스키마에 의존한다. 의존성 최상위에 위치.
+**Delivers:** `IChainSubscriber.ts` 인터페이스 명세 (4메서드 + `IncomingTransaction` 타입), `incoming_transactions` DDL (인덱스 + CHECK constraints 포함), `wallets.monitor_incoming` 컬럼 명세, v21 마이그레이션 전략, 2단계 상태 모델(`DETECTED`/`CONFIRMED`), 커서 저장 전략
+**Addresses:** 테이블 스테이크 기능 전체의 데이터 기반
+**Avoids:** C-01(커서 컬럼 포함 여부 결정), C-02(메모리 큐 flush 전략 결정), M-03(마이그레이션 번호 및 전략 명시)
 
-### Phase 1: 선행 조건 확보 (Package Metadata + 수동 등록)
+### Phase 2: Solana 감지 전략 설계
+**Rationale:** Solana는 ATA 복잡성으로 EVM보다 설계 난이도가 높다. EVM 설계의 참조 기준이 되므로 먼저 확정.
+**Delivers:** `SolanaIncomingSubscriber` 설계 — `logsNotifications({ mentions })` 구독 패턴, `getTransaction(jsonParsed)` 파싱 알고리즘(preBalances/postBalances, preTokenBalances/postTokenBalances), Token-2022 지원, `getSignaturesForAddress` 폴링 폴백 커서 관리, 재연결 루프 명세
+**Uses:** `@solana/kit` `logsNotifications()` (MEDIUM 신뢰도 — 메서드명 코드 재확인 포함)
+**Avoids:** H-01(ATA 감지 누락 해소), C-01(갭 보상 폴링 명세), C-03(finalized commitment 정책)
 
-**Rationale:** repository.url 수정은 모든 것의 전제 조건. 이 수정 없이 OIDC 전환 시 provenance 검증이 즉시 실패한다. npmjs.com 등록은 CI와 독립적으로 수행 가능하며, 등록만으로는 기존 발행에 영향 없다.
+### Phase 3: EVM 감지 전략 설계
+**Rationale:** Solana 설계와 동일한 패턴(IChainSubscriber 구현, 커서, 폴링 폴백)을 적용. EVM은 ATA 복잡성 없이 단일 `getLogs` 배치 쿼리로 모든 ERC-20 감지 가능.
+**Delivers:** `EvmIncomingSubscriber` 설계 — `getLogs` 폴링 방식(안정성 우선), native ETH `watchBlocks({ includeTransactions: true })` + to-주소 필터, ERC-20 `parseEventLogs` 파싱, BackgroundWorkers 등록 명세(간격 12초), token_registry 화이트리스트 필터
+**Uses:** `viem` `getLogs`, `watchBlocks`, `parseEventLogs`
+**Avoids:** H-05(Transfer 이벤트 오탐 — token_registry 화이트리스트 명세), H-02(unwatch 레지스트리)
 
-**Delivers:**
-- 9개 package.json의 repository.url이 실제 GitHub 원격과 일치
-- 8개 패키지의 npmjs.com Trusted Publisher 등록 완료 (체크리스트 검증)
+### Phase 4: WebSocket 연결 관리 + 재연결 설계
+**Rationale:** WebSocket 재연결 로직은 Solana/EVM 양쪽에 공통 적용되는 횡단 관심사. 개별 어댑터 설계 완료 후 통합 명세 작성.
+**Delivers:** 지수 백오프 재연결 상태 머신 (1s→2s→4s→…→60s + jitter), 구독 레지스트리 자료구조(`Map<walletId, unsubscribeFn>`), 재연결 후 갭 보상 흐름도, Solana 10분 inactivity 대응 heartbeat(60초 간격), viem WebSocket transport 설정(`reconnect`, `keepAlive`), 체인당 단일 WebSocket 공유 멀티플렉서 명세
+**Avoids:** H-02(메모리 누수), H-03(RPC 구독 한도), M-01(inactivity timeout)
 
-**Addresses:** Table stakes의 repository.url 정합성, Trusted Publisher 등록
+### Phase 5: IncomingTxMonitorService + 데이터 레이어 설계
+**Rationale:** 어댑터 인터페이스와 DB 스키마 확정 후 오케스트레이터 레이어를 설계. BackgroundWorkers 통합 패턴이 BalanceMonitorService와 동일하므로 기존 패턴 명세 참조.
+**Delivers:** `IncomingTxMonitorService` 명세 — fail-soft 초기화(Step 4c-9), `getMonitoredWallets()` DB 직접 쿼리, `syncSubscriptions()` hot-reload 연동, 메모리 큐 + flush 배치 INSERT 전략, KillSwitch 상태 확인 흐름, `PRAGMA busy_timeout = 5000` 명세
+**Avoids:** C-02(SQLite 단일 라이터 충돌), M-06(BackgroundWorkers 데드락), M-05(KillSwitch 미통합)
 
-**Avoids:** Pitfall 1 (repository.url 불일치), Pitfall 3 (패키지 누락 등록), Pitfall 7/8 (필드값 불일치)
+### Phase 6: 알림 이벤트 + REST API + MCP 명세
+**Rationale:** 서비스 레이어 확정 후 외부 인터페이스를 명세. SSoT 순서(Zod enum → TypeScript → DB CHECK) 준수.
+**Delivers:** `TX_INCOMING` 알림 이벤트 추가 명세(28→29), 메시지 템플릿(ko/en), 먼지 공격 임계값 필터 설계, `GET /v1/wallet/incoming` REST API 명세(필터, 커서 페이지네이션, sessionAuth), wallet PATCH endpoint `monitor_incoming` 필드 추가, MCP `list_incoming_transactions` 도구 명세, skill 파일 업데이트 계획
+**Avoids:** M-02(알림 폭탄), M-04(SSoT 이벤트 미등록)
 
-**주요 작업:**
-- 9개 package.json: `"url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git"` + homepage URL 수정
-- npmjs.com에서 8개 패키지 각각 Trusted Publisher 등록
-  - Organization: `minhoyoo-iotrust`, Repository: `WAIaaS`, Workflow: `release.yml`, Environment: `production`
-  - 대소문자 정확 매칭, 체크리스트 + 스크린샷으로 검증
+### Phase 7: config.toml [incoming] 섹션 + 설계 통합 검증
+**Rationale:** 모든 설계 결정을 설정 모델로 통합하고, 설계 문서 간 교차 검증 수행. 설계-only 마일스톤의 최종 deliverable.
+**Delivers:** `[incoming]` 섹션 6개 flat 키 명세(`incoming_enabled`, `incoming_mode`, `incoming_poll_interval`, `incoming_retention_days`, `incoming_suspicious_dust_usd`, `incoming_suspicious_amount_multiplier`), SettingsService hot-reload 대상 구분(재시작 불필요 vs 필요), 설계 결정 SSoT 문서, 전체 설계 교차 검증 체크리스트
+**Avoids:** 설계 일관성 결함, 구현 마일스톤에서의 재설계 비용
 
-### Phase 2: OIDC 전환 (release.yml 수정)
+### Phase Ordering Rationale
 
-**Rationale:** Phase 1 완료 후 실제 파이프라인 변경. deploy 잡에 최소 변경만 적용하여 위험 최소화. NPM_TOKEN은 이 단계에서 아직 유지 (롤백 대비).
-
-**Delivers:**
-- release.yml deploy 잡의 OIDC 인증 전환 완료
-- `--provenance` 플래그로 Sigstore 서명 및 npm 배지 활성화
-- publish-check 잡은 기존 그대로 유지 (dry-run + provenance 비호환 방지)
-
-**Uses:** npm CLI >=11.5.1, `id-token: write` + `contents: read` job-level permissions
-
-**Implements:** OIDC 데이터 흐름 전체 (JWT 발급 -> 토큰 교환 -> 패키지 발행 -> Sigstore 서명)
-
-**deploy 잡 변경 요약:**
-- `permissions: { contents: read, id-token: write }` 추가 (job-level)
-- "Upgrade npm for OIDC" 스텝 추가 (`npm install -g npm@latest`)
-- "Setup npmrc" 스텝 제거
-- `pnpm publish --access public --no-git-checks` -> `npm publish --provenance --access public`
-- `NODE_AUTH_TOKEN` 환경변수 제거
-
-**Avoids:** Pitfall 2 (npm CLI 버전), Pitfall 4 (id-token 퍼미션 배치), Pitfall 6 (dry-run + provenance), Pitfall 9 (scoped 패키지 OIDC 404)
-
-### Phase 3: 검증 및 정리
-
-**Rationale:** 실제 릴리스로 E2E 검증 후, 장기 시크릿 제거로 전환 완료. NPM_TOKEN은 검증 완료 후에만 제거하여 롤백 가능성 유지.
-
-**Delivers:**
-- npm 패키지 페이지 provenance 배지 확인
-- NPM_TOKEN 시크릿 완전 제거로 보안 강화 완료
-- Deploy summary에 provenance 정보 추가
-
-**Avoids:** Pitfall 5 (NPM_TOKEN 조기 제거)
-
-**검증 체크리스트:**
-- 8개 패키지 모두 발행 성공 확인
-- npm 패키지 페이지에서 "Built and signed on GitHub Actions" 배지 확인
-- provenance 상세에서 소스 저장소, 커밋, 워크플로 링크 정확성 확인
-- 최소 2회 성공 릴리스 후 NPM_TOKEN 제거
-
-### Phase 순서 근거
-
-- **Phase 1 선행 필수:** repository.url 불일치는 즉각적 발행 실패를 유발하며, npmjs.com 등록은 기존 발행에 영향 없이 선행 가능
-- **Phase 2는 Phase 1 완료 후:** Trusted Publisher 미등록 상태에서 OIDC 전환 시 404 에러 불가피
-- **NPM_TOKEN은 마지막:** OIDC 검증 완료 전 제거 시 롤백 불가
-- **publish-check 잡은 건드리지 않음:** dry-run은 OIDC와 무관하게 동작하며, provenance 추가 시 오히려 파이프라인이 깨짐
+- **인터페이스 → 어댑터 → 서비스 → API 순서**는 WAIaaS 표준 빌드 순서와 동일. 하위 계층이 상위 계층의 계약에 의존하는 단방향 의존성.
+- **Solana 먼저**: EVM보다 ATA 복잡성이 높아 설계 위험이 크다. 먼저 확정하면 설계 결정이 EVM Phase에 패턴을 제공.
+- **WebSocket 관리 별도 Phase**: Solana와 EVM 양쪽에 걸친 횡단 관심사를 개별 어댑터 설계와 분리하면 중복 없이 통합 명세 가능.
+- **알림/API 마지막**: 서비스 레이어 데이터 모델이 확정된 후에야 API 응답 스키마와 알림 페이로드를 정확히 명세할 수 있음.
 
 ### Research Flags
 
-**표준 패턴 (추가 리서치 불필요):**
-- **Phase 1 (package.json 수정):** 단순 텍스트 수정, 확립된 패턴
-- **Phase 2 (release.yml 수정):** npm 공식 문서 + 다수 실전 블로그에서 충분히 검증된 패턴
-- **Phase 3 (정리):** 표준 정리 작업
+설계 phase에서 추가 조사가 필요한 항목:
+- **Phase 2 (`@solana/kit` API 메서드명):** `logsNotifications()` 메서드명을 코드베이스(`packages/adapters/solana/`)에서 직접 확인 필요. MEDIUM 신뢰도 항목 — QuickNode 가이드 기반이며 공식 문서 미확인. 임포트 경로 및 타입 시그니처 코드 레벨 검증 권장.
+- **Phase 2 (logsSubscribe 주소 배열 지원 여부):** QuickNode 가이드에서 주소 1개 제한 언급. 멀티플렉서 설계에 영향을 미치므로 Phase 2에서 확인 후 Phase 4 설계에 반영.
+- **Phase 4 (RPC 구독 한도):** Solana 공개 mainnet RPC의 WebSocket 동시 구독 수 한도가 문서화되지 않음. 운영 환경에서 지갑 수 증가 시 실제 한도 테스트 필요.
 
-**실행 중 확인이 필요한 사항:**
-- `actions/setup-node@v4` + `node-version: 22`가 제공하는 실제 npm 버전 (`npm --version`으로 확인)
-- 첫 OIDC 릴리스를 rc 버전으로 진행하여 `--provenance --tag rc` 조합 검증
+표준 패턴으로 추가 연구 불필요한 항목:
+- **Phase 3 (EVM getLogs 폴링):** viem 공식 문서 고신뢰도 확인 완료. 구현 패턴 명확.
+- **Phase 5 (BackgroundWorkers 통합):** BalanceMonitorService 기존 패턴 그대로 적용. 재연구 불필요.
+- **Phase 6 (알림 SSoT):** NOTIFICATION_EVENT_TYPES 확장 패턴 확립됨. CLAUDE.md 규칙 명시.
+- **Phase 7 (config.toml flat-section):** WAIaaS 기존 [balance_monitor] 섹션 패턴 그대로 적용.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | npm 공식 문서 + nodejs/node#58423 + pnpm/pnpm#9812 교차 검증 |
-| Features | HIGH | npm 공식 문서 + 다수 1차 소스 교차 검증. Classic token 폐기 타임라인 공식 확인 |
-| Architecture | HIGH | npm/cli 이슈 트래커 + GitHub 공식 문서 + 실전 블로그 다수 일치 |
-| Pitfalls | HIGH | npm/cli#8036, #8678, #7654, #8730 실제 버그 리포트 + Phil Nash 실전 가이드 교차 확인 |
+| Stack | HIGH | Solana 공식 RPC 문서 + viem 소스코드 직접 확인. 단, `@solana/kit`의 `logsNotifications()` 메서드명은 MEDIUM |
+| Features | HIGH | 경쟁사 분석(MetaMask/Phantom/Trust Wallet) + WAIaaS 코드베이스 직접 검증 + m27-00 설계 문서 교차 확인 |
+| Architecture | HIGH | WAIaaS 코드베이스 직접 분석. BalanceMonitorService, BackgroundWorkers, EventBus 기존 패턴 확인 완료 |
+| Pitfalls | MEDIUM-HIGH | Critical/High 함정은 공식 문서 + GitHub 이슈 검증. RPC 구독 수 한도 수치는 LOW (제공자별 미문서화) |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **pnpm publish OIDC 위임 신뢰도 (MEDIUM):** pnpm maintainer가 "npm publish에 위임"을 확인했으나, 정확한 OIDC 토큰 전달 경로는 pnpm 버전에 따라 다를 수 있음. npm publish 직접 호출로 위험 제거.
+- **`@solana/kit` `logsNotifications()` 메서드명**: 설계 Phase 2에서 코드베이스(`packages/adapters/solana/src/`)의 실제 임포트를 확인하여 메서드명과 타입 시그니처를 고정. 구현 시 혼선 방지.
+- **Solana RPC `logsSubscribe` 구독당 주소 제한**: QuickNode 가이드에서 1개 주소만 허용한다고 언급. 공식 문서에서 배열 지원 여부 확인 후 멀티플렉서 설계(체인당 단일 WebSocket, 지갑당 별도 구독)에 반영.
+- **EVM WebSocket vs 폴링 우선순위 결정**: ARCHITECTURE.md는 폴링 우선을 권고하나 STACK.md는 WebSocket 방식도 제시. `EvmIncomingSubscriber`가 WebSocket(`watchBlocks`) 우선인지 폴링(`getLogs`) 우선인지를 Phase 3 설계에서 명시적으로 결정.
+- **KillSwitch 통합 동작 정책**: SUSPENDED 상태에서 인커밍 알림을 suppress할지 모니터링 전체를 중단할지 설계 결정이 필요. Phase 5에서 명시.
 
-- **순차 발행 중 OIDC 토큰 재교환 (MEDIUM):** 각 `npm publish` 호출마다 개별 OIDC 토큰 교환이 발생하는 것으로 문서 확인됨. 단, 8개 패키지 순차 발행에서의 실제 동작은 첫 릴리스에서 검증.
-
-- **pre-release + provenance 조합 (MEDIUM):** `--provenance --tag rc` 조합은 이론적으로 호환되나, WAIaaS 파이프라인에서 실제 검증 미완료. 첫 OIDC 릴리스를 rc 버전으로 진행하여 확인.
-
-- **Node 22 최신 번들 npm 버전 (MEDIUM):** Node 22.14.0이 npm 11.2.0을 번들한다고 알려져 있으나, 최신 22.x가 11.5.1 이상을 제공하는지 실행 시 `npm --version`으로 확인 필요.
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [npm Trusted Publishing 공식 문서](https://docs.npmjs.com/trusted-publishers/)
-- [npm Generating Provenance Statements](https://docs.npmjs.com/generating-provenance-statements/)
-- [npm-trust CLI 문서](https://docs.npmjs.com/cli/v11/commands/npm-trust/)
-- [GitHub Actions OIDC Permissions 공식 문서](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/controlling-permissions-for-github_token)
+- Solana 공식 RPC 문서 — `logsSubscribe`, `accountSubscribe`, `getSignaturesForAddress`, `getTransaction jsonParsed`
+- Solana Exchange Integration Guide — ATA 모니터링 패턴, preBalances/postBalances 파싱
+- viem 공식 문서 + GitHub 소스코드 — `watchEvent`, `watchBlocks`, `getLogs`, `parseEventLogs`, `webSocket transport`
+- viem GitHub Issue #2325 (closed 2024-07-26) — WebSocket reconnect 버그 수정 확인
+- viem GitHub Discussion #503 — eth_subscribe vs polling 동작 검증
+- WAIaaS 코드베이스 직접 분석 — `schema.ts`(DB v20), `migrate.ts`(LATEST_SCHEMA_VERSION=20), `balance-monitor-service.ts`, `workers.ts`, `notification-service.ts`, `daemon.ts`, `IChainAdapter.ts`
+- WAIaaS 내부 설계 문서 m27-00 — 인커밍 TX 모니터링 기본 설계
 
 ### Secondary (MEDIUM confidence)
-- [Phil Nash: Things you need to do for npm trusted publishing to work (2026-01)](https://philna.sh/blog/2026/01/28/trusted-publishing-npm/) — 실전 필수 체크리스트
-- [remarkablemark: How to set up trusted publishing for npm (2025-12)](https://remarkablemark.org/blog/2025/12/19/npm-trusted-publishing/)
-- [vcfvct: Publishing to npm with GitHub Actions + OIDC (2026-01)](https://vcfvct.wordpress.com/2026/01/17/publishing-to-npm-with-github-actions-oidc-trusted-publishing-what-i-learned/)
-- [MakerX: Catch up on the new NPM Trusted Publishing feature](https://blog.makerx.com.au/catch-up-on-the-new-npm-trusted-publishing-feature/)
-- [Sigstore: npm provenance GA](https://blog.sigstore.dev/npm-provenance-ga/)
+- QuickNode — `@solana/kit` `createSolanaRpcSubscriptions` API 패턴, `logsNotifications()` 메서드명
+- Helius 문서 — Solana commitment levels, 10분 inactivity timeout, heartbeat 권장
+- Geth 공식 문서 — `eth_subscribe` 타입, 10k notification buffer 제한
+- MetaMask / Phantom 제품 문서 — 경쟁사 알림 기능 분석
+- ethers.js GitHub Issue #1121 — WebSocket 재연결 메모리 누수 패턴
+- Trust Wallet 지원 문서 — 먼지 공격 특성 및 방어 임계값
 
-### Issues & Discussions (HIGH confidence)
-- [pnpm/pnpm#9812: OIDC 지원 (pnpm은 npm publish 내부 위임으로 동작 확인)](https://github.com/pnpm/pnpm/issues/9812)
-- [npm/cli#8036: repository.url 불일치 provenance 에러](https://github.com/npm/cli/issues/8036)
-- [npm/cli#8678: Scoped 패키지 OIDC 404 버그 (11.5.1에서 수정)](https://github.com/npm/cli/issues/8678)
-- [npm/cli#7654: dry-run에서도 provenance 생성 버그](https://github.com/npm/cli/issues/7654)
-- [nodejs/node#58423: Node.js v22에 npm v11 병합](https://github.com/nodejs/node/issues/58423)
-- [GitHub community #176761: NPM publish using OIDC](https://github.com/orgs/community/discussions/176761)
-- [GitHub Discussion #179562: Classic token 제거 타임라인](https://github.com/orgs/community/discussions/179562)
+### Tertiary (LOW confidence)
+- EVM Transfer 이벤트 위장 시나리오 — 이론적 분석, 실제 사례 미확인
+- WAL checkpoint + WebSocket 이벤트 데드락 — 아키텍처적 추론, 부하 테스트 미수행
+- Solana 공개 RPC WebSocket 동시 구독 수 한도 — 제공자별 미문서화, 경험적 데이터 기반
 
 ---
-*Research completed: 2026-02-18*
+*Research completed: 2026-02-21*
 *Ready for roadmap: yes*
