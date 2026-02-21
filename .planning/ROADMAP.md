@@ -270,11 +270,11 @@ Plans:
   3. Summary SQL의 incoming_tx_suspicious 테이블 참조가 is_suspicious 컬럼으로 대체됨 (§2.1, §2.7, §7.6 일관)
   4. eventBus.emit('transaction:incoming') 이벤트 타입이 IncomingTxEvent와 일치하게 통일됨
   5. FLOW-2 (WebSocket 실패 → 폴링 폴백) E2E 흐름이 완성됨
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 222-01: IChainSubscriber 인터페이스 + reconnectLoop 일관성 수정 + eventBus 타입 통일
-- [ ] 222-02: 폴링 BackgroundWorker 등록 + Summary SQL 수정 + FLOW-2 완성
+- [ ] 222-01-PLAN.md — IChainSubscriber 인터페이스 connect()/waitForDisconnect() 추가 + eventBus 타입 통일 (GAP-1, GAP-4)
+- [ ] 222-02-PLAN.md — 폴링 BackgroundWorker 등록 + is_suspicious 컬럼 + FLOW-2 E2E 완성 (GAP-2, GAP-3, FLOW-2)
 
 ### Phase 223: 알림 명세 보완 + 문서 정합성
 **Goal**: Medium/Low 설계 보완 4건을 수정하여 구현 마일스톤 진입 준비 완료
