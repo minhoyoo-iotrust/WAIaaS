@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "2.4.0-rc.7"
+version: "2.5.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -774,7 +774,7 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 ## 9. MCP Tools Reference
 
-The MCP server exposes 18 tools for AI agents. Key wallet management tools:
+The MCP server exposes 23 tools for AI agents. Key wallet management tools:
 
 ### set_default_network
 
@@ -1091,3 +1091,124 @@ interface NotificationMessage {
 | session | SESSION_EXPIRING_SOON, SESSION_EXPIRED, SESSION_CREATED, SESSION_WALLET_ADDED, SESSION_WALLET_REMOVED | 3 (default) |
 | owner | OWNER_SET, OWNER_REMOVED, OWNER_VERIFIED | 3 (default) |
 | system | DAILY_SUMMARY, LOW_BALANCE, APPROVAL_CHANNEL_SWITCHED, UPDATE_AVAILABLE | 3 (default) |
+
+## 15. Incoming Transactions
+
+Monitor and query incoming (received) transactions to your wallet. Requires **sessionAuth**.
+
+### GET /v1/wallet/incoming -- List Incoming Transactions (sessionAuth)
+
+List incoming transactions with cursor-based pagination and filters. By default, only confirmed transactions are returned.
+
+```bash
+curl -s http://localhost:3100/v1/wallet/incoming \
+  -H 'Authorization: Bearer wai_sess_xxx'
+```
+
+Query Parameters:
+- `limit` (optional): Max results, 1-100 (default: 20)
+- `cursor` (optional): Pagination cursor from previous response
+- `chain` (optional): Filter by chain (`solana` or `ethereum`)
+- `network` (optional): Filter by network (e.g., `devnet`, `ethereum-mainnet`)
+- `status` (optional): `DETECTED` or `CONFIRMED` (default: `CONFIRMED`)
+- `token` (optional): Filter by token address (omit for native transfers)
+- `from_address` (optional): Filter by sender address
+- `since` (optional): Only transactions detected after this epoch (seconds)
+- `until` (optional): Only transactions detected before this epoch (seconds)
+- `wallet_id` (optional): Target wallet ID (for multi-wallet sessions)
+
+Response (200):
+```json
+{
+  "data": [
+    {
+      "id": "01958f3a-1234-7000-8000-abcdef123456",
+      "txHash": "5VERv8NMvzbJ...",
+      "walletId": "01958f3a-0000-7000-8000-abcdef000001",
+      "fromAddress": "7xKXtg2CW87d...",
+      "amount": "1000000000",
+      "tokenAddress": null,
+      "chain": "solana",
+      "network": "devnet",
+      "status": "CONFIRMED",
+      "blockNumber": 280000000,
+      "detectedAt": 1707000000,
+      "confirmedAt": 1707000030,
+      "suspicious": false
+    }
+  ],
+  "nextCursor": "eyJkIjoxNzA3MDAwMDAwLCJpIjoiMDE5NThmM2EtMTIzNC03MDAwLTgwMDAtYWJjZGVmMTIzNDU2In0",
+  "hasMore": true
+}
+```
+
+### GET /v1/wallet/incoming/summary -- Incoming Transaction Summary (sessionAuth)
+
+Get period-based aggregated summary of incoming transactions with USD conversion.
+
+```bash
+curl -s 'http://localhost:3100/v1/wallet/incoming/summary?period=daily' \
+  -H 'Authorization: Bearer wai_sess_xxx'
+```
+
+Query Parameters:
+- `period` (optional): `daily`, `weekly`, or `monthly` (default: `daily`)
+- `chain` (optional): Filter by chain
+- `network` (optional): Filter by network
+- `since` (optional): Summary start epoch (seconds)
+- `until` (optional): Summary end epoch (seconds)
+- `wallet_id` (optional): Target wallet ID
+
+Response (200):
+```json
+{
+  "period": "daily",
+  "entries": [
+    {
+      "date": "2026-02-22",
+      "totalCount": 5,
+      "totalAmountNative": "5500000000",
+      "totalAmountUsd": 825.00,
+      "suspiciousCount": 0
+    }
+  ]
+}
+```
+
+### PATCH /v1/wallets/{id} -- Toggle Incoming Monitoring (masterAuth)
+
+Enable or disable incoming transaction monitoring for a specific wallet.
+
+```bash
+curl -s -X PATCH http://localhost:3100/v1/wallets/WALLET_ID \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"monitorIncoming": true}'
+```
+
+Response (200):
+```json
+{
+  "id": "01958f3a-0000-7000-8000-abcdef000001",
+  "monitorIncoming": true
+}
+```
+
+### MCP Tools
+
+- **list_incoming_transactions**: List incoming transaction history with filters and pagination.
+- **get_incoming_summary**: Get period-based incoming transaction summary (daily/weekly/monthly).
+
+### SDK Methods
+
+**TypeScript:**
+```typescript
+const incoming = await client.listIncomingTransactions({ limit: 10, status: 'CONFIRMED' });
+const summary = await client.getIncomingTransactionSummary({ period: 'weekly' });
+```
+
+**Python:**
+```python
+incoming = await client.list_incoming_transactions(limit=10, status="CONFIRMED")
+summary = await client.get_incoming_transaction_summary(period="weekly")
+```
