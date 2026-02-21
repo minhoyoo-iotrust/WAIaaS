@@ -39,6 +39,11 @@ From 224-02:
 - v21 migration은 CREATE TABLE IF NOT EXISTS 사용 (pushSchema DDL 실행 순서와 호환)
 - New table migrations use IF NOT EXISTS pattern (기존 v4, v5, v15, v16과 일관)
 
+From 225-01:
+- getTransaction requires explicit encoding: 'jsonParsed' in @solana/kit 6.0.1 TypeScript types
+- generateId injected via constructor (DI) -- crypto.randomUUID() default, UUID v7 from Phase 226
+- address() mocked as passthrough in subscriber tests for synthetic test addresses
+
 From 225-02:
 - EVM polling-first strategy: connect() no-op, waitForDisconnect() never-resolving Promise (D-06)
 - 10-block cap per poll cycle (MAX_BLOCK_RANGE = 10n) prevents RPC provider limits
@@ -55,5 +60,5 @@ From 225-03:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 225-02-PLAN.md (all Phase 225 plans complete)
+Stopped at: Completed 225-01-PLAN.md (all Phase 225 plans complete)
 Resume file: None
