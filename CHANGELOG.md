@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.9...v2.4.0) (2026-02-21)
+
+
+### Bug Fixes
+
+* promote v2.4.0-rc.9 to stable 2.4.0 ([ab7aa13](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ab7aa138fb8b6e1ed5fc7c83a812684ee0e9f617))
+
 ## [2.4.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.8...v2.4.0-rc.9) (2026-02-21)
 
 
