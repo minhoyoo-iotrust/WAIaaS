@@ -1108,6 +1108,99 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: Incoming Transaction Monitoring
+  // ---------------------------------------------------------------------------
+
+  function IncomingSettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Incoming Transaction Monitoring</h3>
+          <p class="settings-description">
+            Monitor incoming transactions to wallets. Detects native and token transfers,
+            flags suspicious activity (dust attacks, large amounts, unknown tokens).
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="Monitoring Enabled"
+              name="incoming.enabled"
+              type="select"
+              value={getEffectiveValue('incoming', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('incoming.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+            />
+            <FormField
+              label="Poll Interval (seconds)"
+              name="incoming.poll_interval"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'poll_interval')) || 30}
+              onChange={(v) => handleFieldChange('incoming.poll_interval', v)}
+              min={5}
+              max={3600}
+            />
+            <FormField
+              label="Retention Days"
+              name="incoming.retention_days"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'retention_days')) || 90}
+              onChange={(v) => handleFieldChange('incoming.retention_days', v)}
+              min={1}
+              max={365}
+            />
+            <FormField
+              label="Suspicious Dust USD Threshold"
+              name="incoming.suspicious_dust_usd"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'suspicious_dust_usd')) || 0.01}
+              onChange={(v) => handleFieldChange('incoming.suspicious_dust_usd', v)}
+              min={0}
+              max={1000}
+            />
+            <FormField
+              label="Suspicious Amount Multiplier"
+              name="incoming.suspicious_amount_multiplier"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'suspicious_amount_multiplier')) || 10}
+              onChange={(v) => handleFieldChange('incoming.suspicious_amount_multiplier', v)}
+              min={1}
+              max={1000}
+            />
+            <FormField
+              label="Notification Cooldown (minutes)"
+              name="incoming.cooldown_minutes"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'cooldown_minutes')) || 5}
+              onChange={(v) => handleFieldChange('incoming.cooldown_minutes', v)}
+              min={1}
+              max={1440}
+            />
+            <FormField
+              label="WebSocket URL (optional)"
+              name="incoming.wss_url"
+              type="text"
+              value={getEffectiveValue('incoming', 'wss_url')}
+              onChange={(v) => handleFieldChange('incoming.wss_url', v)}
+              placeholder="wss://custom-rpc.example.com"
+            />
+          </div>
+          <div class="settings-info-box">
+            Monitors wallets with incoming monitoring enabled for incoming transactions.
+            Uses WebSocket subscription when available, falls back to polling.
+            Suspicious transactions (dust attacks, unusually large amounts, unknown tokens)
+            trigger broadcast alerts to all notification channels.
+            Changes take effect immediately via hot-reload.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
 
@@ -1154,6 +1247,7 @@ export default function SettingsPage() {
           <ApiKeysSection />
           <AutoStopSettings />
           <MonitoringSettings />
+          <IncomingSettings />
         </>
       )}
 
