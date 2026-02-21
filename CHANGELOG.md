@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.4.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.8...v2.4.0-rc.9) (2026-02-21)
+
+
+### Features
+
+* **210-01:** add 4 session error codes + extend CreateSessionRequestSchema ([a678870](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a67887092861cd2df89fb0dbbc525c40568f19f5))
+* **210-01:** add DB v19 migration for session_wallets junction table ([cffc76a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cffc76ae54250be8f5fbe351ca13416bccb685b5))
+* **210-02:** session-auth dual context + multi-wallet session creation + OpenAPI schemas ([3891ad6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3891ad6e348613f569533365541126d5f384a226))
+* **210-03:** add cascade defense logic to TERMINATE handler ([9608028](https://github.com/minhoyoo-iotrust/WAIaaS/commit/96080288ded56999f6d175c2bb62e644b9217c2d))
+* **211-01:** add resolveWalletId helper and remove walletId from session-auth ([4b1e6c5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4b1e6c5d19c4b79beae6d7e959dc50b80c675684))
+* **211-02:** replace c.get('walletId') with resolveWalletId() across all endpoints ([5c52176](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5c52176787701fccd6d8935f77e4fccc277b0ce0))
+* **212-01:** add ConnectInfoResponseSchema and GET /v1/connect-info route handler ([9c3bfb9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9c3bfb9e7db962bb83e8c2a8d5286352df393644))
+* **212-01:** integrate connect-info route with sessionAuth middleware ([771b9d9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/771b9d9d4528498ccad81d4ae8c9d453d5ea716b))
+* **212-02:** refactor agent-prompt to single multi-wallet session + shared prompt builder ([e039fcb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e039fcb2978a1d341fde4198c646ed4c00c80d5a))
+* **213-01:** add createSession and getConnectInfo to TypeScript SDK ([b8bf1fe](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b8bf1fef6f43e99d3922f5f90ba068818d7d2273))
+* **213-01:** add get_connect_info to Python SDK with ConnectInfo model ([c894fc4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c894fc4c0abad05ead680e89a4f94a812b4a220d))
+* **213-02:** add connect_info MCP tool and wallet_id param to all tools ([0b75dda](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0b75dda8b64f8d98c48c36562651c425257d02ee))
+* **213-02:** MCP single-instance model with optional WAIAAS_WALLET_ID ([e575f2e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e575f2e713835340aeb69185a463b21dffa7f745))
+* **213-03:** admin UI multi-wallet session creation + wallet list display ([9023796](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9023796867f0618a68fb42eae2dfce9359263351))
+* **213-03:** CLI quickset single multi-wallet session + single MCP config ([fce42f5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fce42f51784f9a477b760bae0fcd20ff2fcd5142))
+* **213-04:** add SESSION_WALLET_ADDED/SESSION_WALLET_REMOVED notification events ([b0f993c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b0f993cf0a0e8ec75288699e8b77bcea28857145))
+* automate RC-to-stable promotion via workflow_dispatch ([#120](https://github.com/minhoyoo-iotrust/WAIaaS/issues/120)) ([d07ca6a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d07ca6a0bba74a2d9b56ca88c81eb6325637dc75))
+
+
+### Bug Fixes
+
+* **210:** revise 210-02 plan based on checker feedback ([103df89](https://github.com/minhoyoo-iotrust/WAIaaS/commit/103df89481f80d10a0ef831137af93481895af1e))
+* **214-03:** align Python SDK ConnectInfo type with daemon schema ([cdd064b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cdd064b9b14c5329a26fe9d541fa7fcf9f0fa452))
+* **214-03:** align SDK ConnectInfoResponse type with daemon schema ([7ab8828](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7ab8828cefe1533fd5866e18d83c93fba767bb40))
+* auto-restore prerelease mode after stable deploy ([#121](https://github.com/minhoyoo-iotrust/WAIaaS/issues/121)) ([03ed654](https://github.com/minhoyoo-iotrust/WAIaaS/commit/03ed654092e4087b5bc6525caf91b208123340f8))
+* migrate session tests and code to v19 session_wallets junction table ([79c7b25](https://github.com/minhoyoo-iotrust/WAIaaS/commit/79c7b25e11b9b973fd0c6bd85f7e6a14daf1da6e))
+* update error code count in tests from 100 to 104 ([2073d94](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2073d94e8c632e478be81121b5dab108fc6496c7))
+* update NotificationEventType count from 26 to 28 in enum SSoT ([d4e38c7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d4e38c7c416c70711599e5967890be2c26fb3670))
+
 ## [2.4.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.7...v2.4.0-rc.8) (2026-02-20)
 
 
