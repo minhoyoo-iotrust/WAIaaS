@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v27.1 complete — handling open issues
+**Current focus:** Gap closure phase 230 in progress
 
 ## Current Position
 
-Phase: 229 (6 of 6 in v27.1) (Integration Testing)
-Plan: 2 of 2 in current phase
-Status: Complete
-Last activity: 2026-02-22 -- All 6 phases (224-229) complete, lint clean
+Phase: 230 (integration-wiring-fixes)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-22 -- Plan 01 complete (3 wiring bugs fixed)
 
-Progress: [################] 100% (16/16 plans)
+Progress: [########--------] 50% (1/2 plans)
 
 ## Performance Metrics
 
@@ -106,12 +106,16 @@ From 229-02:
 - 50 dust TX flood produces exactly 1 notification (stricter than plan's <=5 threshold)
 - createFreshService() factory centralizes mock wiring for integration resilience tests
 
+From 230-01:
+- BackgroundWorkers pre-created with double guard (before Step 4c-9 + inside Step 6 try block) for defensive coding
+- Polling workers use structural typing cast (subscriber as unknown as { pollAll }) since pollAll() is not on IChainSubscriber interface
+
 ### Blockers/Concerns
 
-None — all phases complete, lint clean.
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: All phases complete, handling open issues (#132, #133)
+Stopped at: Completed 230-01-PLAN.md
 Resume file: None

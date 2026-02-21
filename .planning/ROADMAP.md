@@ -316,4 +316,4 @@ Note: Phase 227 depends only on Phase 224 and can logically run in parallel with
 | 227. Config + Notifications | 2/2 | Complete   | 2026-02-21 | - |
 | 228. REST API + SDK + MCP | 3/3 | Complete   | 2026-02-21 | - |
 | 229. Integration Testing | 2/2 | Complete   | 2026-02-21 | - |
-| 230. Integration Wiring Fixes | 0/1 | Pending | - | - |
+| 230. Integration Wiring Fixes | 1/2 | In Progress|  | - |
