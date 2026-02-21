@@ -180,7 +180,7 @@ describe('errorHandler', () => {
 
     expect(res.status).toBe(500);
     const body = await json(res);
-    expect(body.code).toBe('SYSTEM_LOCKED');
+    expect(body.code).toBe('INTERNAL_ERROR');
     expect(body.message).toBe('Something unexpected happened');
     expect(body.retryable).toBe(false);
   });

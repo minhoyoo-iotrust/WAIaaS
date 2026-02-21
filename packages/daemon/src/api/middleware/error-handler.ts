@@ -4,7 +4,7 @@
  * - WAIaaSError: responds with error.httpStatus and error.toJSON()
  *   - Enriches response with hint field from error-hints.ts for AI agent self-recovery
  * - ZodError: responds with 400 and formatted validation error
- * - Generic Error: responds with 500 and SYSTEM_LOCKED error
+ * - Generic Error: responds with 500 and INTERNAL_ERROR
  *
  * Always includes requestId from context in the error response.
  *
@@ -50,7 +50,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
   // Generic error -> 500
   return c.json(
     {
-      code: 'SYSTEM_LOCKED',
+      code: 'INTERNAL_ERROR',
       message: err instanceof Error ? err.message : 'Internal server error',
       requestId,
       retryable: false,
