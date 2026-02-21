@@ -26,7 +26,6 @@ import type { IncomingTxMonitorConfig } from '../incoming-tx-monitor-service.js'
 import {
   createConfirmationWorkerHandler,
   EVM_CONFIRMATION_THRESHOLDS,
-  DEFAULT_EVM_CONFIRMATIONS,
 } from '../incoming-tx-workers.js';
 
 // ---------------------------------------------------------------------------

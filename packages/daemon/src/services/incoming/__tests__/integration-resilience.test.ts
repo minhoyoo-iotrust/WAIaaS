@@ -219,7 +219,7 @@ describe('Integration Resilience', () => {
       const onTransaction = vi.fn();
 
       const multiplexer = new SubscriptionMultiplexer({
-        subscriberFactory: () => mockSubscriber,
+        subscriberFactory: () => mockSubscriber as unknown as import('@waiaas/core').IChainSubscriber,
         onTransaction,
         onGapRecovery,
         reconnectConfig: {
