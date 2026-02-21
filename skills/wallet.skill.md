@@ -3,7 +3,7 @@ name: "WAIaaS Wallet Management"
 description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
-version: "2.7.0-rc.1"
+version: "2.4.0-rc.7"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

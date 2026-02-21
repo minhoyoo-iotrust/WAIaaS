@@ -136,6 +136,10 @@
 | 119 | MISSING | MEDIUM | wallet-sdk 연동 가이드에 Push Relay 시나리오 누락 | v26.4 | FIXED | 2026-02-21 |
 | 120 | ENHANCEMENT | MEDIUM | 정식 릴리스 승격을 GitHub Actions workflow_dispatch로 자동화 | v26.4 | FIXED | 2026-02-21 |
 | 121 | ENHANCEMENT | LOW | stable 릴리스 배포 후 prerelease 모드 자동 복원 | v26.4 | FIXED | 2026-02-21 |
+| 122 | MISSING | MEDIUM | Claude Code 연동 가이드에 세션 토큰 설정 방법 누락 | - | OPEN | - |
+| 123 | BUG | HIGH | 에이전트 프롬프트에 지갑 UUID 및 사용 가능 네트워크 누락 | - | OPEN | - |
+| 124 | ENHANCEMENT | MEDIUM | 매직워드 프롬프트 생성 시 기존 세션 재활용 | - | OPEN | - |
+| 125 | ENHANCEMENT | MEDIUM | Admin UI 세션 토큰 재발급 + 발급 이력 추적 | - | OPEN | - |
 
 ## Type Legend
 
@@ -147,9 +151,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 4
 - **FIXED:** 121
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 121
+- **Total:** 125
