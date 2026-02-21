@@ -27,7 +27,7 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - "docs/design/76-incoming-transaction-monitoring.md"
+    - "internal/design/76-incoming-transaction-monitoring.md"
 
 key-decisions:
   - "IChainSubscriber에 connect()/waitForDisconnect()를 필수 메서드로 추가 (optional 아닌 required)"
@@ -73,7 +73,7 @@ Each task was committed atomically:
 2. **Task 2: eventBus.emit 타입 통일 + WaiaasEventMap 내부 이벤트 추가** - `09addb2` (docs)
 
 ## Files Created/Modified
-- `docs/design/76-incoming-transaction-monitoring.md` - Section 1.4 인터페이스 확장, Section 3.7 Solana 구현체, Section 4.7 EVM 구현체, Section 2.6 flush 패턴/이벤트 발행, Section 6.1 WaiaasEventMap
+- `internal/design/76-incoming-transaction-monitoring.md` - Section 1.4 인터페이스 확장, Section 3.7 Solana 구현체, Section 4.7 EVM 구현체, Section 2.6 flush 패턴/이벤트 발행, Section 6.1 WaiaasEventMap
 
 ## Decisions Made
 - IChainSubscriber에 connect()/waitForDisconnect()를 optional이 아닌 required 메서드로 추가 -- TypeScript에서 optional 인터페이스는 런타임 체크 필요하여 복잡도 증가
@@ -98,7 +98,7 @@ None - no external service configuration required.
 
 ## Self-Check: PASSED
 
-- FOUND: docs/design/76-incoming-transaction-monitoring.md
+- FOUND: internal/design/76-incoming-transaction-monitoring.md
 - FOUND: .planning/phases/222-design-critical-fix/222-01-SUMMARY.md
 - FOUND: 439396f (Task 1 commit)
 - FOUND: 09addb2 (Task 2 commit)

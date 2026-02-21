@@ -13,7 +13,7 @@
 7. WebSocket 전환은 config.toml incoming_mode='websocket' 설정 시에만
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 4
+- internal/design/76-incoming-transaction-monitoring.md 섹션 4
 
 ## Requirements Covered
 - MON-03: eth_subscribe(logs) Transfer + watchBlocks 이중 전략 정의 ✅

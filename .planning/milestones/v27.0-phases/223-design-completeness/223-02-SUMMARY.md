@@ -21,7 +21,7 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - "docs/design/76-incoming-transaction-monitoring.md"
+    - "internal/design/76-incoming-transaction-monitoring.md"
 
 key-decisions:
   - "skills/ files not modified at design time to prevent agents from calling non-existent MCP tools"
@@ -61,7 +61,7 @@ Each task was committed atomically:
 1. **Task 1: section 8.6 doc 31 PATCH impact + section 8.11 skills/ update requirements** - `3ad25f6` (docs)
 
 ## Files Created/Modified
-- `docs/design/76-incoming-transaction-monitoring.md` - Extended section 8.6 doc 31 impact analysis row and added section 8.11 skills/ file update requirements
+- `internal/design/76-incoming-transaction-monitoring.md` - Extended section 8.6 doc 31 impact analysis row and added section 8.11 skills/ file update requirements
 
 ## Decisions Made
 - skills/ files not modified at design time: premature updates would cause agents to call non-existent MCP tools, leading to runtime failures. Only the scope is specified for the implementation milestone.
@@ -83,7 +83,7 @@ None - no external service configuration required.
 
 ## Self-Check: PASSED
 
-- FOUND: docs/design/76-incoming-transaction-monitoring.md
+- FOUND: internal/design/76-incoming-transaction-monitoring.md
 - FOUND: .planning/phases/223-design-completeness/223-02-SUMMARY.md
 - FOUND: commit 3ad25f6
 

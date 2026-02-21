@@ -53,6 +53,8 @@ export interface IncomingTransaction {
   detectedAt: number;
   /** 확정 시각 (Unix epoch seconds, CONFIRMED 전환 시) */
   confirmedAt: number | null;
+  /** 의심 TX 여부 (IIncomingSafetyRule 판정, §6.5) — DB is_suspicious 컬럼 매핑 */
+  isSuspicious?: boolean;
 }
 ```
 
@@ -2115,10 +2117,12 @@ export const get_incoming_summary = {
 **SQL 쿼리:**
 ```sql
 -- Daily aggregation
+-- 주의: amount는 lamports/wei 단위 TEXT 문자열이므로 CAST(... AS INTEGER)는
+-- ETH wei(10^18)에서 SQLite INTEGER 범위(2^63)를 초과할 수 있다.
+-- 네이티브 합계는 토큰별로 분리하여 애플리케이션 레이어에서 BigInt 합산한다.
 SELECT
   date(detected_at, 'unixepoch') AS date,
   COUNT(*) AS total_count,
-  SUM(CAST(amount AS INTEGER)) AS total_amount_native,
   COUNT(CASE WHEN is_suspicious = 1 THEN 1 END) AS suspicious_count
 FROM incoming_transactions
 WHERE wallet_id = ?
@@ -2126,6 +2130,11 @@ GROUP BY date(detected_at, 'unixepoch')
 ORDER BY date DESC
 LIMIT 30;
 ```
+
+**totalAmountNative / totalAmountUsd 계산:**
+- SQL에서 amount 합산을 하지 않고, 해당 기간의 TX 목록을 조회하여 애플리케이션 레이어에서 BigInt 합산
+- USD 환산은 PriceOracle을 통해 토큰별로 계산 후 합산
+- 응답 스키마의 `totalAmountNative`는 가장 빈번한 네이티브 토큰 합계 (SOL 또는 ETH), `totalAmountUsd`는 전체 USD 합산
 
 **참고:** is_suspicious 컬럼은 §2.1 DDL에 정의. IIncomingSafetyRule(§6.5) 평가 후 UPDATE로 설정.
 
@@ -2157,12 +2166,22 @@ incoming_suspicious_dust_usd = 0.01
 
 # 대량 입금 의심 배수 (평균의 N배 초과, 기본: 10)
 incoming_suspicious_amount_multiplier = 10
+
+# WebSocket RPC URL (기본: 빈 문자열 — rpc_url에서 https→wss 자동 변환)
+# Solana: logsSubscribe 구독용. EVM: websocket 모드 시 eth_subscribe용.
+# Admin Settings에서 런타임 변경 가능 (hot-reload).
+incoming_wss_url = ""
 ```
 
 **평탄화 원칙 준수:**
 - 섹션명: `[incoming]`
 - 키 접두사: `incoming_` (기존 `[balance_monitor]` → `monitoring_` 패턴과 동일)
 - 중첩 없음: 모든 키가 1-depth flat
+
+**incoming_wss_url 자동 유도 로직:**
+- 빈 문자열(기본값): 기존 `[rpc]` 섹션의 `rpc_url`에서 `https://` → `wss://` 변환하여 사용
+- 명시적 설정: 사용자 지정 WSS URL 사용 (전용 WSS 엔드포인트가 있는 경우)
+- Admin Settings에서 런타임 변경 시 기존 WebSocket 연결을 끊고 새 URL로 재연결
 
 ### 8.2 SettingsService 등록
 
@@ -2179,6 +2198,7 @@ export const SETTING_KEYS = {
   'incoming.retention_days': { default: '90', hotReload: true },
   'incoming.suspicious_dust_usd': { default: '0.01', hotReload: true },
   'incoming.suspicious_amount_multiplier': { default: '10', hotReload: true },
+  'incoming.wss_url': { default: '', hotReload: true },
 } as const;
 ```
 
@@ -2189,8 +2209,9 @@ export const SETTING_KEYS = {
 - `incoming.retention_days`: 다음 정리 주기부터 반영
 - `incoming.suspicious_dust_usd`: 다음 검사부터 반영
 - `incoming.suspicious_amount_multiplier`: 다음 검사부터 반영
+- `incoming.wss_url`: 변경 시 기존 WebSocket 연결 끊고 새 URL로 재연결
 
-**모든 6개 키가 hot-reload 가능** — 재시작 필요 없음
+**모든 7개 키가 hot-reload 가능** — 재시작 필요 없음
 
 ### 8.3 환경변수 매핑
 
@@ -2204,8 +2225,9 @@ export const SETTING_KEYS = {
 | incoming_retention_days | WAIAAS_INCOMING_RETENTION_DAYS |
 | incoming_suspicious_dust_usd | WAIAAS_INCOMING_SUSPICIOUS_DUST_USD |
 | incoming_suspicious_amount_multiplier | WAIAAS_INCOMING_SUSPICIOUS_AMOUNT_MULTIPLIER |
+| incoming_wss_url | WAIAAS_INCOMING_WSS_URL |
 
-**우선순위:** 환경변수 > config.toml > 기본값 (기존 패턴과 동일)
+**우선순위:** 환경변수 > config.toml > SettingsService(Admin UI) > 기본값 (기존 패턴과 동일)
 
 ### 8.4 지갑별 opt-in 설정
 
@@ -2261,6 +2283,7 @@ private reloadIncomingMonitor(): void {
     retentionDays: parseInt(ss.get('incoming.retention_days'), 10),
     suspiciousDustUsd: parseFloat(ss.get('incoming.suspicious_dust_usd')),
     suspiciousAmountMultiplier: parseFloat(ss.get('incoming.suspicious_amount_multiplier')),
+    wssUrl: ss.get('incoming.wss_url') || '', // 빈 문자열이면 rpc_url에서 자동 유도
   });
 }
 ```
@@ -2328,7 +2351,7 @@ private reloadIncomingMonitor(): void {
 | DB 마이그레이션 v21 | ✅ | §2.7 ALTER TABLE + CREATE TABLE |
 | IChainAdapter 불변 | ✅ | §1.1 별도 IChainSubscriber 인터페이스 |
 | BackgroundWorkers 패턴 | ✅ | §2.6 flush + §2.5 retention + §3.6/4.6 confirm |
-| SettingsService hot-reload | ✅ | §8.2 6키 모두 hotReload: true |
+| SettingsService hot-reload | ✅ | §8.2 7키 모두 hotReload: true (wss_url 포함) |
 | HotReloadOrchestrator 확장 | ✅ | §8.5 incoming prefix 감지 + updateConfig |
 | DaemonLifecycle 통합 | ✅ | Step 4c-9 fail-soft 초기화 |
 | discriminatedUnion 5-type 불변 | ✅ | 수신 TX는 별도 테이블, 기존 TX 타입 불변 |
@@ -2394,12 +2417,14 @@ workers.register('incoming-tx-poll-evm', {
 | D-09 | 블라인드 구간 커서 기반 복구 | TX 유실 방지 (C-01) |
 | D-10 | NotificationEventType 28→30 | INCOMING_TX_DETECTED + SUSPICIOUS |
 | D-11 | IIncomingSafetyRule 3규칙 | dust + unknownToken + largeAmount |
-| D-12 | config.toml [incoming] 6키 flat | 기존 평탄화 원칙 준수 |
+| D-12 | config.toml [incoming] 7키 flat | 기존 평탄화 원칙 준수 |
 | D-13 | 전역 게이트 + 지갑별 opt-in 2단계 | 기본 비활성, RPC 비용 제어 |
 | D-14 | incoming_tx_cursors 별도 테이블 | 커서 관리 분리, FK CASCADE |
 | D-15 | v21 마이그레이션 | ALTER TABLE + CREATE TABLE 2개 |
-| D-16 | 6키 모두 hot-reload 가능 | 재시작 불필요, 즉시 반영 |
+| D-16 | 7키 모두 hot-reload 가능 | 재시작 불필요, 즉시 반영 |
 | D-17 | confirmed 감지 → finalized 확정 | Solana C-03 대응 |
+| D-18 | incoming_wss_url Admin Settings에서 런타임 변경 가능 | rpc_url과 분리, 전용 WSS 엔드포인트 지원, 빈 값 시 rpc_url에서 자동 유도 |
+| D-19 | Summary SQL에서 amount 합산하지 않음 | lamports/wei TEXT가 SQLite INTEGER 범위 초과 가능 — 앱 레이어 BigInt 합산 |
 
 ### 8.11 skills/ 파일 업데이트 요구사항
 

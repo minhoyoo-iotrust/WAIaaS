@@ -19,7 +19,7 @@
 
 - 9 phases, 16 plans, 29 requirements, 26 design decisions, 9 gap closure items
 - 101 files changed, +8,058 / -2,158 lines
-- Output: docs/design/76-incoming-transaction-monitoring.md (~2,300 lines, 8 sections)
+- Output: internal/design/76-incoming-transaction-monitoring.md (~2,300 lines, 8 sections)
 - Timeline: 1 day (2026-02-21)
 - Git range: 1618dce → e32e2f0 (40 commits)
 
