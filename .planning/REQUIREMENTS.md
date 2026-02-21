@@ -9,50 +9,50 @@
 
 ### 모니터링 인프라 (ITM-01)
 
-- [ ] **MON-01**: IChainSubscriber 인터페이스가 subscribe/unsubscribe/onTransaction 메서드로 Solana/EVM 양쪽 구현 가능한 수준으로 정의됨
-- [ ] **MON-02**: SolanaSubscriber 설계가 logsSubscribe(mentions) + getTransaction(jsonParsed) 파싱 전략을 포함하여 SOL + SPL 토큰 수신을 모두 감지 가능
-- [ ] **MON-03**: EvmSubscriber 설계가 eth_subscribe(logs) Transfer 이벤트 + watchBlocks(네이티브 ETH) 이중 전략을 포함
-- [ ] **MON-04**: WebSocket 연결 실패 시 폴링 폴백 전략이 자동 전환/복구를 포함하여 명확히 정의됨
-- [ ] **MON-05**: 연결 관리 설계가 재연결 지수 백오프, heartbeat(60초 ping), 연결 상태 모니터링을 포함
-- [ ] **MON-06**: 지갑 동적 구독 관리가 런타임 추가/삭제/활성화/비활성화를 커버
-- [ ] **MON-07**: WebSocket 연결 공유 설계가 같은 체인의 여러 지갑이 하나의 연결을 공유하는 멀티플렉서로 정의됨
-- [ ] **MON-08**: Solana ATA 2레벨 구독 설계가 기존 ATA 구독 + 신규 ATA 생성 감지를 포함
-- [ ] **MON-09**: 블라인드 구간 복구 설계가 재연결 시 getSignaturesForAddress/getLogs로 누락 TX를 보장
+- [x] **MON-01**: IChainSubscriber 인터페이스가 subscribe/unsubscribe/onTransaction 메서드로 Solana/EVM 양쪽 구현 가능한 수준으로 정의됨
+- [x] **MON-02**: SolanaSubscriber 설계가 logsSubscribe(mentions) + getTransaction(jsonParsed) 파싱 전략을 포함하여 SOL + SPL 토큰 수신을 모두 감지 가능
+- [x] **MON-03**: EvmSubscriber 설계가 eth_subscribe(logs) Transfer 이벤트 + watchBlocks(네이티브 ETH) 이중 전략을 포함
+- [x] **MON-04**: WebSocket 연결 실패 시 폴링 폴백 전략이 자동 전환/복구를 포함하여 명확히 정의됨
+- [x] **MON-05**: 연결 관리 설계가 재연결 지수 백오프, heartbeat(60초 ping), 연결 상태 모니터링을 포함
+- [x] **MON-06**: 지갑 동적 구독 관리가 런타임 추가/삭제/활성화/비활성화를 커버
+- [x] **MON-07**: WebSocket 연결 공유 설계가 같은 체인의 여러 지갑이 하나의 연결을 공유하는 멀티플렉서로 정의됨
+- [x] **MON-08**: Solana ATA 2레벨 구독 설계가 기존 ATA 구독 + 신규 ATA 생성 감지를 포함
+- [x] **MON-09**: 블라인드 구간 복구 설계가 재연결 시 getSignaturesForAddress/getLogs로 누락 TX를 보장
 
 ### 데이터 레이어 (ITM-02)
 
-- [ ] **DATA-01**: incoming_transactions 테이블 스키마가 id, tx_hash, wallet_id, from_address, amount, token_address, chain, confirmed_at을 포함하여 완성됨
-- [ ] **DATA-02**: tx_hash UNIQUE 제약으로 동일 TX 중복 삽입 방지 전략이 정의됨
-- [ ] **DATA-03**: 보존 정책 설계가 retention_days 기반 자동 삭제 스케줄러를 포함
-- [ ] **DATA-04**: 메모리 큐 + 배치 flush 패턴이 SQLite 단일 라이터 보호를 위해 설계됨
+- [x] **DATA-01**: incoming_transactions 테이블 스키마가 id, tx_hash, wallet_id, from_address, amount, token_address, chain, confirmed_at을 포함하여 완성됨
+- [x] **DATA-02**: tx_hash UNIQUE 제약으로 동일 TX 중복 삽입 방지 전략이 정의됨
+- [x] **DATA-03**: 보존 정책 설계가 retention_days 기반 자동 삭제 스케줄러를 포함
+- [x] **DATA-04**: 메모리 큐 + 배치 flush 패턴이 SQLite 단일 라이터 보호를 위해 설계됨
 
 ### API 설계 (ITM-03)
 
-- [ ] **API-01**: GET /v1/wallet/incoming 엔드포인트 스키마가 cursor pagination, 필터(from_address, token, since/until, chain)를 포함
-- [ ] **API-02**: IncomingTransactionQuerySchema, IncomingTransactionResponseSchema가 Zod SSoT로 정의됨
-- [ ] **API-03**: SDK 메서드 명세(listIncomingTransactions)가 TS/Python SDK 인터페이스로 정의됨
-- [ ] **API-04**: MCP 도구 명세(list_incoming_transactions)가 도구 스키마로 정의됨
-- [ ] **API-05**: GET /v1/wallet/incoming/summary 집계 엔드포인트 스키마가 일별/주별/월별 수신 합계로 정의됨
+- [x] **API-01**: GET /v1/wallet/incoming 엔드포인트 스키마가 cursor pagination, 필터(from_address, token, since/until, chain)를 포함
+- [x] **API-02**: IncomingTransactionQuerySchema, IncomingTransactionResponseSchema가 Zod SSoT로 정의됨
+- [x] **API-03**: SDK 메서드 명세(listIncomingTransactions)가 TS/Python SDK 인터페이스로 정의됨
+- [x] **API-04**: MCP 도구 명세(list_incoming_transactions)가 도구 스키마로 정의됨
+- [x] **API-05**: GET /v1/wallet/incoming/summary 집계 엔드포인트 스키마가 일별/주별/월별 수신 합계로 정의됨
 
 ### 이벤트/알림 (ITM-04)
 
-- [ ] **EVT-01**: INCOMING_TX_DETECTED 이벤트 스키마가 페이로드(walletId, txHash, from, amount, token, chain)를 포함하여 정의됨
-- [ ] **EVT-02**: INCOMING_TX_SUSPICIOUS 이벤트 스키마가 의심 사유(dust/unknownToken/largeAmount)를 포함하여 정의됨
-- [ ] **EVT-03**: 기존 알림 채널(Telegram/Discord/ntfy/Slack + WalletNotificationChannel) 연동 명세가 정의됨
-- [ ] **EVT-04**: i18n 메시지 템플릿(en/ko)이 INCOMING_TX_DETECTED, INCOMING_TX_SUSPICIOUS 두 이벤트에 대해 정의됨
-- [ ] **EVT-05**: 의심 입금 감지 규칙 인터페이스(IIncomingSafetyRule)가 dust attack, 미등록 토큰, 대량 입금 3개 규칙을 포함
+- [x] **EVT-01**: INCOMING_TX_DETECTED 이벤트 스키마가 페이로드(walletId, txHash, from, amount, token, chain)를 포함하여 정의됨
+- [x] **EVT-02**: INCOMING_TX_SUSPICIOUS 이벤트 스키마가 의심 사유(dust/unknownToken/largeAmount)를 포함하여 정의됨
+- [x] **EVT-03**: 기존 알림 채널(Telegram/Discord/ntfy/Slack + WalletNotificationChannel) 연동 명세가 정의됨
+- [x] **EVT-04**: i18n 메시지 템플릿(en/ko)이 INCOMING_TX_DETECTED, INCOMING_TX_SUSPICIOUS 두 이벤트에 대해 정의됨
+- [x] **EVT-05**: 의심 입금 감지 규칙 인터페이스(IIncomingSafetyRule)가 dust attack, 미등록 토큰, 대량 입금 3개 규칙을 포함
 
 ### 설정 구조 (ITM-05)
 
-- [ ] **CFG-01**: config.toml [incoming] 섹션이 6개 키(enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier)로 정의됨
-- [ ] **CFG-02**: 지갑별 monitor_incoming opt-in 설정이 wallets 테이블 컬럼 추가 + API 필드 확장으로 정의됨
-- [ ] **CFG-03**: 환경변수 매핑(WAIAAS_INCOMING_*)이 기존 WAIAAS_{SECTION}_{KEY} 패턴과 일관되게 정의됨
+- [x] **CFG-01**: config.toml [incoming] 섹션이 6개 키(enabled, mode, poll_interval, retention_days, suspicious_dust_usd, suspicious_amount_multiplier)로 정의됨
+- [x] **CFG-02**: 지갑별 monitor_incoming opt-in 설정이 wallets 테이블 컬럼 추가 + API 필드 확장으로 정의됨
+- [x] **CFG-03**: 환경변수 매핑(WAIAAS_INCOMING_*)이 기존 WAIAAS_{SECTION}_{KEY} 패턴과 일관되게 정의됨
 
 ### 설계 일관성 검증
 
-- [ ] **VER-01**: 기존 설계 문서(25/27/28/29/31/35/37/38/75) 영향 분석이 변경 범위와 함께 문서화됨
-- [ ] **VER-02**: 17개 핵심 검증 시나리오(T-01~T-17) + 4개 보안 시나리오(S-01~S-04)가 설계 문서에 명시됨
-- [ ] **VER-03**: Zod SSoT 파이프라인, config.toml 평탄화 원칙, 에러 코드 체계와의 충돌이 없음이 검증됨
+- [x] **VER-01**: 기존 설계 문서(25/27/28/29/31/35/37/38/75) 영향 분석이 변경 범위와 함께 문서화됨
+- [x] **VER-02**: 17개 핵심 검증 시나리오(T-01~T-17) + 4개 보안 시나리오(S-01~S-04)가 설계 문서에 명시됨
+- [x] **VER-03**: Zod SSoT 파이프라인, config.toml 평탄화 원칙, 에러 코드 체계와의 충돌이 없음이 검증됨
 
 ## Future Requirements (m27-01 구현 마일스톤)
 
@@ -78,41 +78,41 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MON-01 | Phase 215 | Pending |
-| MON-02 | Phase 216 | Pending |
-| MON-03 | Phase 217 | Pending |
-| MON-04 | Phase 218 | Pending |
-| MON-05 | Phase 218 | Pending |
-| MON-06 | Phase 218 | Pending |
-| MON-07 | Phase 218 | Pending |
-| MON-08 | Phase 216 | Pending |
-| MON-09 | Phase 218 | Pending |
-| DATA-01 | Phase 215 | Pending |
-| DATA-02 | Phase 215 | Pending |
-| DATA-03 | Phase 215 | Pending |
-| DATA-04 | Phase 215 | Pending |
-| API-01 | Phase 220 | Pending |
-| API-02 | Phase 220 | Pending |
-| API-03 | Phase 220 | Pending |
-| API-04 | Phase 220 | Pending |
-| API-05 | Phase 220 | Pending |
-| EVT-01 | Phase 219 | Pending |
-| EVT-02 | Phase 219 | Pending |
-| EVT-03 | Phase 219 | Pending |
-| EVT-04 | Phase 219 | Pending |
-| EVT-05 | Phase 219 | Pending |
-| CFG-01 | Phase 221 | Pending |
-| CFG-02 | Phase 221 | Pending |
-| CFG-03 | Phase 221 | Pending |
-| VER-01 | Phase 221 | Pending |
-| VER-02 | Phase 221 | Pending |
-| VER-03 | Phase 221 | Pending |
+| MON-01 | Phase 215 | Done |
+| MON-02 | Phase 216 | Done |
+| MON-03 | Phase 217 | Done |
+| MON-04 | Phase 218 | Done |
+| MON-05 | Phase 218 | Done |
+| MON-06 | Phase 218 | Done |
+| MON-07 | Phase 218 | Done |
+| MON-08 | Phase 216 | Done |
+| MON-09 | Phase 218 | Done |
+| DATA-01 | Phase 215 | Done |
+| DATA-02 | Phase 215 | Done |
+| DATA-03 | Phase 215 | Done |
+| DATA-04 | Phase 215 | Done |
+| API-01 | Phase 220 | Done |
+| API-02 | Phase 220 | Done |
+| API-03 | Phase 220 | Done |
+| API-04 | Phase 220 | Done |
+| API-05 | Phase 220 | Done |
+| EVT-01 | Phase 219 | Done |
+| EVT-02 | Phase 219 | Done |
+| EVT-03 | Phase 219 | Done |
+| EVT-04 | Phase 219 | Done |
+| EVT-05 | Phase 219 | Done |
+| CFG-01 | Phase 221 | Done |
+| CFG-02 | Phase 221 | Done |
+| CFG-03 | Phase 221 | Done |
+| VER-01 | Phase 221 | Done |
+| VER-02 | Phase 221 | Done |
+| VER-03 | Phase 221 | Done |
 
 **Coverage:**
 - v1 requirements: 29 total
-- Mapped to phases: 29
-- Unmapped: 0
+- Completed: 29
+- Remaining: 0
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after roadmap creation (traceability added)*
+*Last updated: 2026-02-21 — all 29 requirements completed*

@@ -140,17 +140,17 @@ See `.planning/milestones/v26.4-ROADMAP.md` for full details.
 
 </details>
 
-### v27.0 수신 트랜잭션 모니터링 설계 (In Progress)
+### v27.0 수신 트랜잭션 모니터링 설계 (Complete)
 
 **Milestone Goal:** 지갑으로 들어오는 수신 트랜잭션을 실시간 감지/기록/알림하는 인프라를 설계 수준에서 정의
 
-- [ ] **Phase 215: IChainSubscriber 인터페이스 + DB 스키마 설계** - 모니터링 핵심 인터페이스와 데이터 모델 정의
-- [ ] **Phase 216: Solana 수신 감지 전략 설계** - SolanaSubscriber의 구독/파싱/ATA 전략 명세
-- [ ] **Phase 217: EVM 수신 감지 전략 설계** - EvmSubscriber의 폴링/이벤트 파싱 전략 명세
-- [ ] **Phase 218: WebSocket 연결 관리 + 폴링 폴백 설계** - 재연결, 멀티플렉서, 블라인드 구간 복구 명세
-- [ ] **Phase 219: 알림 이벤트 + 의심 입금 감지 설계** - 2개 이벤트 타입, 감지 규칙, i18n 메시지 명세
-- [ ] **Phase 220: REST API + SDK/MCP 명세 설계** - 수신 이력 조회 엔드포인트, SDK/MCP 도구 명세
-- [ ] **Phase 221: 설정 구조 + 설계 통합 검증** - config.toml [incoming] 섹션, 지갑별 opt-in, 교차 검증
+- [x] **Phase 215: IChainSubscriber 인터페이스 + DB 스키마 설계** - 모니터링 핵심 인터페이스와 데이터 모델 정의
+- [x] **Phase 216: Solana 수신 감지 전략 설계** - SolanaSubscriber의 구독/파싱/ATA 전략 명세
+- [x] **Phase 217: EVM 수신 감지 전략 설계** - EvmSubscriber의 폴링/이벤트 파싱 전략 명세
+- [x] **Phase 218: WebSocket 연결 관리 + 폴링 폴백 설계** - 재연결, 멀티플렉서, 블라인드 구간 복구 명세
+- [x] **Phase 219: 알림 이벤트 + 의심 입금 감지 설계** - 2개 이벤트 타입, 감지 규칙, i18n 메시지 명세
+- [x] **Phase 220: REST API + SDK/MCP 명세 설계** - 수신 이력 조회 엔드포인트, SDK/MCP 도구 명세
+- [x] **Phase 221: 설정 구조 + 설계 통합 검증** - config.toml [incoming] 섹션, 지갑별 opt-in, 교차 검증
 
 ## Phase Details
 
@@ -166,8 +166,8 @@ See `.planning/milestones/v26.4-ROADMAP.md` for full details.
 **Plans**: TBD
 
 Plans:
-- [ ] 215-01: IChainSubscriber 인터페이스 + IncomingTransaction 타입 정의
-- [ ] 215-02: incoming_transactions 테이블 스키마 + 중복 방지 + 보존 정책 + 마이그레이션 명세
+- [x] 215-01: IChainSubscriber 인터페이스 + IncomingTransaction 타입 정의
+- [x] 215-02: incoming_transactions 테이블 스키마 + 중복 방지 + 보존 정책 + 마이그레이션 명세
 
 ### Phase 216: Solana 수신 감지 전략 설계
 **Goal**: SolanaIncomingSubscriber가 SOL + SPL 토큰(Token-2022 포함) 수신을 빠짐없이 감지하는 전략이 정의됨
@@ -180,7 +180,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 216-01: SolanaIncomingSubscriber 구독 전략 + TX 파싱 알고리즘 + ATA 감지 명세
+- [x] 216-01: SolanaIncomingSubscriber 구독 전략 + TX 파싱 알고리즘 + ATA 감지 명세
 
 ### Phase 217: EVM 수신 감지 전략 설계
 **Goal**: EvmIncomingSubscriber가 네이티브 ETH + ERC-20 토큰 수신을 빠짐없이 감지하는 전략이 정의됨
@@ -193,7 +193,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 217-01: EvmIncomingSubscriber 감지 전략 + ETH/ERC-20 파싱 + 폴링 명세
+- [x] 217-01: EvmIncomingSubscriber 감지 전략 + ETH/ERC-20 파싱 + 폴링 명세
 
 ### Phase 218: WebSocket 연결 관리 + 폴링 폴백 설계
 **Goal**: Solana/EVM 공통 WebSocket 재연결, 연결 공유, 블라인드 구간 복구 전략이 정의됨
@@ -208,8 +208,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 218-01: 폴링 폴백 전환 상태 머신 + 재연결 백오프 + heartbeat 명세
-- [ ] 218-02: WebSocket 멀티플렉서 + 구독 레지스트리 + 동적 관리 + 블라인드 구간 복구 명세
+- [x] 218-01: 폴링 폴백 전환 상태 머신 + 재연결 백오프 + heartbeat 명세
+- [x] 218-02: WebSocket 멀티플렉서 + 구독 레지스트리 + 동적 관리 + 블라인드 구간 복구 명세
 
 ### Phase 219: 알림 이벤트 + 의심 입금 감지 설계
 **Goal**: 수신 TX 감지 시 기존 알림 인프라를 통해 Owner/에이전트에 통보하고 의심 입금을 식별하는 체계가 정의됨
@@ -223,8 +223,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 219-01: INCOMING_TX_DETECTED/SUSPICIOUS 이벤트 스키마 + 알림 채널 연동 명세
-- [ ] 219-02: IIncomingSafetyRule 인터페이스 + 감지 규칙 3종 + i18n 메시지 템플릿
+- [x] 219-01: INCOMING_TX_DETECTED/SUSPICIOUS 이벤트 스키마 + 알림 채널 연동 명세
+- [x] 219-02: IIncomingSafetyRule 인터페이스 + 감지 규칙 3종 + i18n 메시지 템플릿
 
 ### Phase 220: REST API + SDK/MCP 명세 설계
 **Goal**: 수신 이력 조회를 위한 REST API, SDK 메서드, MCP 도구가 명세됨
@@ -238,8 +238,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 220-01: REST API 엔드포인트 스키마 + Zod SSoT 명세
-- [ ] 220-02: SDK/MCP 인터페이스 + summary 집계 엔드포인트 명세
+- [x] 220-01: REST API 엔드포인트 스키마 + Zod SSoT 명세
+- [x] 220-02: SDK/MCP 인터페이스 + summary 집계 엔드포인트 명세
 
 ### Phase 221: 설정 구조 + 설계 통합 검증
 **Goal**: config.toml [incoming] 섹션과 지갑별 opt-in 설정이 정의되고, 전체 설계가 기존 코드베이스와 충돌 없이 통합됨
@@ -254,8 +254,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 221-01: config.toml [incoming] 섹션 + 지갑별 opt-in + 환경변수 매핑 명세
-- [ ] 221-02: 기존 설계 문서 영향 분석 + 검증 시나리오 + 교차 검증 체크리스트
+- [x] 221-01: config.toml [incoming] 섹션 + 지갑별 opt-in + 환경변수 매핑 명세
+- [x] 221-02: 기존 설계 문서 영향 분석 + 검증 시나리오 + 교차 검증 체크리스트
 
 ## Progress
 
@@ -275,10 +275,10 @@ Phases execute in numeric order: 215 -> 216 -> 217 -> 218 -> 219 -> 220 -> 221
 | 206 | v2.7 | 4/4 | Complete | 2026-02-20 |
 | 207-209 | v26.3 | 8/8 | Complete | 2026-02-20 |
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
-| 215. IChainSubscriber + DB 스키마 | v27.0 | 0/2 | Not started | - |
-| 216. Solana 감지 전략 | v27.0 | 0/1 | Not started | - |
-| 217. EVM 감지 전략 | v27.0 | 0/1 | Not started | - |
-| 218. WebSocket 관리 + 폴백 | v27.0 | 0/2 | Not started | - |
-| 219. 알림 이벤트 + 의심 감지 | v27.0 | 0/2 | Not started | - |
-| 220. REST API + SDK/MCP | v27.0 | 0/2 | Not started | - |
-| 221. 설정 + 통합 검증 | v27.0 | 0/2 | Not started | - |
+| 215. IChainSubscriber + DB 스키마 | v27.0 | 2/2 | Complete | 2026-02-21 |
+| 216. Solana 감지 전략 | v27.0 | 1/1 | Complete | 2026-02-21 |
+| 217. EVM 감지 전략 | v27.0 | 1/1 | Complete | 2026-02-21 |
+| 218. WebSocket 관리 + 폴백 | v27.0 | 2/2 | Complete | 2026-02-21 |
+| 219. 알림 이벤트 + 의심 감지 | v27.0 | 2/2 | Complete | 2026-02-21 |
+| 220. REST API + SDK/MCP | v27.0 | 2/2 | Complete | 2026-02-21 |
+| 221. 설정 + 통합 검증 | v27.0 | 2/2 | Complete | 2026-02-21 |
