@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v27.0 수신 트랜잭션 모니터링 설계
 
 ## Current Position
 
-Phase: (none -- milestone v26.4 complete)
-Plan: N/A
-Status: Milestone Complete
-Last activity: 2026-02-21 -- Milestone v26.4 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-21 — Milestone v27.0 started
 
-Progress: [##########] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [##########] 100%
 
 ### Decisions
 
-(Cleared -- see .planning/milestones/v26.4-ROADMAP.md for v26.4 decisions)
+(New milestone — no decisions yet)
 
 ### Blockers/Concerns
 
@@ -33,5 +33,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Milestone v26.4 complete -- ready for /gsd:new-milestone
+Stopped at: Defining requirements for v27.0
 Resume file: None

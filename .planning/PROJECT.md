@@ -8,7 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: (planning next)
+## Current Milestone: v27.0 수신 트랜잭션 모니터링 설계
+
+**Goal:** 지갑으로 들어오는 수신 트랜잭션을 실시간 감지·기록·알림하는 인프라를 설계 수준에서 정의
+
+**Target features:**
+- IChainSubscriber 인터페이스 + WebSocket/폴링 전략 설계 (ITM-01)
+- incoming_transactions 테이블 스키마 + 중복 방지 + 보존 정책 설계 (ITM-02)
+- 수신 이력 조회 API (REST/SDK/MCP) 설계 (ITM-03)
+- 수신 이벤트 + 알림 연동 + 의심 입금 감지 규칙 설계 (ITM-04)
+- config.toml [incoming] 섹션 + 지갑별 opt-in 설정 구조 설계 (ITM-05)
+
+**Scope:** 설계 마일스톤 — 코드 구현은 범위 외 (m27-01에서 구현)
 
 ## Current State
 
