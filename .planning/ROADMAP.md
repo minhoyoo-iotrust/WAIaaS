@@ -140,7 +140,7 @@ See `.planning/milestones/v26.4-ROADMAP.md` for full details.
 
 </details>
 
-### v27.0 수신 트랜잭션 모니터링 설계 (Complete)
+### v27.0 수신 트랜잭션 모니터링 설계
 
 **Milestone Goal:** 지갑으로 들어오는 수신 트랜잭션을 실시간 감지/기록/알림하는 인프라를 설계 수준에서 정의
 
@@ -151,6 +151,8 @@ See `.planning/milestones/v26.4-ROADMAP.md` for full details.
 - [x] **Phase 219: 알림 이벤트 + 의심 입금 감지 설계** - 2개 이벤트 타입, 감지 규칙, i18n 메시지 명세
 - [x] **Phase 220: REST API + SDK/MCP 명세 설계** - 수신 이력 조회 엔드포인트, SDK/MCP 도구 명세
 - [x] **Phase 221: 설정 구조 + 설계 통합 검증** - config.toml [incoming] 섹션, 지갑별 opt-in, 교차 검증
+- [ ] **Phase 222: 설계 문서 Critical/High 불일치 수정** - GAP-1~4 + FLOW-2 수정으로 구현 전 설계 완결성 확보
+- [ ] **Phase 223: 알림 명세 보완 + 문서 정합성** - NOTIFY-1, getDecimals, doc 31, skills/ 보완
 
 ## Phase Details
 
@@ -257,10 +259,43 @@ Plans:
 - [x] 221-01: config.toml [incoming] 섹션 + 지갑별 opt-in + 환경변수 매핑 명세
 - [x] 221-02: 기존 설계 문서 영향 분석 + 검증 시나리오 + 교차 검증 체크리스트
 
+### Phase 222: 설계 문서 Critical/High 불일치 수정
+**Goal**: 감사에서 발견된 Critical/High 설계 불일치 4건을 수정하여 구현 전 설계 완결성 확보
+**Depends on**: Phase 221 (통합 검증 완료 후 불일치 수정)
+**Requirements**: Gap closure (MON-01, MON-03, MON-04, API-05 관련 설계 내부 일관성)
+**Gap Closure**: GAP-1, GAP-2, GAP-3, GAP-4, FLOW-2
+**Success Criteria** (what must be TRUE):
+  1. IChainSubscriber에 connect()/waitForDisconnect() 메서드가 추가되거나 reconnectLoop 시그니처가 일관되게 변경됨
+  2. incoming-tx-poll-evm, incoming-tx-poll-solana BackgroundWorker가 §8.9 DaemonLifecycle Step 6에 등록됨
+  3. Summary SQL의 incoming_tx_suspicious 테이블 참조가 is_suspicious 컬럼으로 대체됨 (§2.1, §2.7, §7.6 일관)
+  4. eventBus.emit('transaction:incoming') 이벤트 타입이 IncomingTxEvent와 일치하게 통일됨
+  5. FLOW-2 (WebSocket 실패 → 폴링 폴백) E2E 흐름이 완성됨
+**Plans**: TBD
+
+Plans:
+- [ ] 222-01: IChainSubscriber 인터페이스 + reconnectLoop 일관성 수정 + eventBus 타입 통일
+- [ ] 222-02: 폴링 BackgroundWorker 등록 + Summary SQL 수정 + FLOW-2 완성
+
+### Phase 223: 알림 명세 보완 + 문서 정합성
+**Goal**: Medium/Low 설계 보완 4건을 수정하여 구현 마일스톤 진입 준비 완료
+**Depends on**: Phase 222 (Critical/High 수정 후 나머지 보완)
+**Requirements**: Gap closure (EVT-02, EVT-05, VER-01 관련 명세 보완)
+**Gap Closure**: NOTIFY-1, getDecimals, doc 31 PATCH, skills/
+**Success Criteria** (what must be TRUE):
+  1. SUSPICIOUS 이벤트 priority:high 라우팅 메커니즘이 NotificationService.notify() 호출 시 priority 전달 방법으로 명세됨
+  2. getDecimals() 헬퍼 함수가 DustAttackRule, LargeAmountRule에서 사용 가능한 수준으로 정의됨
+  3. §8.6 doc 31 영향 분석에 PATCH /v1/wallet/:id 변경이 추가됨
+  4. skills/ 파일 업데이트 요구사항(wallet.skill.md, transactions.skill.md)이 명시됨
+**Plans**: TBD
+
+Plans:
+- [ ] 223-01: SUSPICIOUS priority 라우팅 + getDecimals() 헬퍼 명세
+- [ ] 223-02: doc 31 PATCH 영향 분석 추가 + skills/ 업데이트 요구사항 명시
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 215 -> 216 -> 217 -> 218 -> 219 -> 220 -> 221
+Phases execute in numeric order: 215 -> 216 -> 217 -> 218 -> 219 -> 220 -> 221 -> 222 -> 223
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -282,3 +317,5 @@ Phases execute in numeric order: 215 -> 216 -> 217 -> 218 -> 219 -> 220 -> 221
 | 219. 알림 이벤트 + 의심 감지 | v27.0 | 2/2 | Complete | 2026-02-21 |
 | 220. REST API + SDK/MCP | v27.0 | 2/2 | Complete | 2026-02-21 |
 | 221. 설정 + 통합 검증 | v27.0 | 2/2 | Complete | 2026-02-21 |
+| 222. 설계 Critical/High 수정 | v27.0 | 0/2 | Pending | — |
+| 223. 알림 명세 + 문서 정합성 | v27.0 | 0/2 | Pending | — |

@@ -108,11 +108,26 @@
 | VER-02 | Phase 221 | Done |
 | VER-03 | Phase 221 | Done |
 
+## Gap Closure Phases (감사 결과)
+
+| Gap ID | 설명 | 심각도 | Phase | Status |
+|--------|------|--------|-------|--------|
+| GAP-1 | reconnectLoop IChainSubscriber connect()/waitForDisconnect() 미정의 | high | Phase 222 | Pending |
+| GAP-2 | 폴링 BackgroundWorker 미등록 | critical | Phase 222 | Pending |
+| GAP-3 | Summary SQL incoming_tx_suspicious 미정의 테이블 참조 | critical | Phase 222 | Pending |
+| GAP-4 | eventBus.emit 타입 충돌 | high | Phase 222 | Pending |
+| FLOW-2 | WebSocket→폴링 폴백 흐름 중단 | critical | Phase 222 | Pending |
+| NOTIFY-1 | SUSPICIOUS priority:high 라우팅 미명세 | medium | Phase 223 | Pending |
+| — | getDecimals() 헬퍼 미정의 | medium | Phase 223 | Pending |
+| — | doc 31 PATCH 영향 분석 누락 | low | Phase 223 | Pending |
+| — | skills/ 업데이트 요구사항 미언급 | low | Phase 223 | Pending |
+
 **Coverage:**
 - v1 requirements: 29 total
 - Completed: 29
 - Remaining: 0
+- Gap closure: 9 items across 2 phases (Phase 222-223)
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 — all 29 requirements completed*
+*Last updated: 2026-02-21 — all 29 requirements completed, 9 gap closure items pending*
