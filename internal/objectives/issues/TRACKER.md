@@ -145,14 +145,14 @@
 | 128 | ENHANCEMENT | HIGH | 에이전트 읽기 전용 API 접근 확대 + 스킬 파일 권한 구분 명확화 | v27.0 | FIXED | 2026-02-21 |
 | 129 | BUG | HIGH | 데몬 재시작 시 Admin UI에서 설정한 알림 채널이 로드되지 않음 | v27.0 | FIXED | 2026-02-21 |
 | 130 | ENHANCEMENT | MEDIUM | 1:N 세션 모델 도입으로 불필요해진 벌크 세션/MCP 토큰 생성 기능 제거 | v27.0 | FIXED | 2026-02-21 |
-| 131 | ENHANCEMENT | MEDIUM | X402_ALLOWED_DOMAINS 정책에 default-deny 토글 추가 | v27.0 | OPEN | |
-| 132 | BUG | HIGH | Admin UI에서 킬 스위치 Recover 시 SYSTEM_LOCKED 에러 발생 | v27.0 | OPEN | |
-| 133 | MISSING | HIGH | 지갑 Suspend/Resume REST API 및 Admin UI 버튼 추가 | v27.0 | OPEN | |
-| 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.0 | OPEN | |
-| 135 | ENHANCEMENT | MEDIUM | 알림 메시지에서 walletId 대신 walletName 주 표시 + 부가 정보 축약 | v27.0 | OPEN | |
-| 136 | BUG | HIGH | 루트 skills/와 packages/skills/skills/ 내용 불일치로 npm에 오래된 스킬 배포 | v27.0 | OPEN | |
-| 137 | BUG | MEDIUM | 알림 메시지 제목 중복 표시 — 4개 채널 모두 title이 2번 출력 | v27.1 | OPEN | |
-| 138 | BUG | LOW | 시스템 이벤트 알림에 불필요한 Wallet/타임스탬프 표시 — UPDATE_AVAILABLE 등 | v27.1 | OPEN | |
+| 131 | ENHANCEMENT | MEDIUM | X402_ALLOWED_DOMAINS 정책에 default-deny 토글 추가 | v27.1 | FIXED | 2026-02-21 |
+| 132 | BUG | HIGH | Admin UI에서 킬 스위치 Recover 시 SYSTEM_LOCKED 에러 발생 | v27.1 | FIXED | 2026-02-21 |
+| 133 | MISSING | HIGH | 지갑 Suspend/Resume REST API 및 Admin UI 버튼 추가 | v27.1 | FIXED | 2026-02-21 |
+| 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.1 | FIXED | 2026-02-21 |
+| 135 | ENHANCEMENT | MEDIUM | 알림 메시지에서 walletId 대신 walletName 주 표시 + 부가 정보 축약 | v27.1 | FIXED | 2026-02-21 |
+| 136 | BUG | HIGH | 루트 skills/와 packages/skills/skills/ 내용 불일치로 npm에 오래된 스킬 배포 | v27.1 | FIXED | 2026-02-21 |
+| 137 | BUG | MEDIUM | 알림 메시지 제목 중복 표시 — 4개 채널 모두 title이 2번 출력 | v27.1 | FIXED | 2026-02-21 |
+| 138 | BUG | LOW | 시스템 이벤트 알림에 불필요한 Wallet/타임스탬프 표시 — UPDATE_AVAILABLE 등 | v27.1 | FIXED | 2026-02-21 |
 
 ## Type Legend
 
@@ -164,8 +164,8 @@
 
 ## Summary
 
-- **OPEN:** 8
-- **FIXED:** 130
+- **OPEN:** 0
+- **FIXED:** 138
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
