@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0...v2.4.0) (2026-02-21)
+
+
+### Features
+
+* add session token reissue API and token issued count tracking ([#125](https://github.com/minhoyoo-iotrust/WAIaaS/issues/125)) ([0c4bc07](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0c4bc07fe8bb0156197934b596c3c16a5499a2bf))
+* reuse existing session in agent-prompt generation ([#124](https://github.com/minhoyoo-iotrust/WAIaaS/issues/124)) ([b7ea2d3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b7ea2d31c317fbe3c03369810a68bdf10bf70eaf))
+
+
+### Bug Fixes
+
+* add session token setup instructions to Claude Code guide ([#122](https://github.com/minhoyoo-iotrust/WAIaaS/issues/122)) ([ae64a71](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ae64a71dda8d8cb8e109da6ef47e999c61f1ef95))
+* include wallet UUID and available networks in agent prompt ([#123](https://github.com/minhoyoo-iotrust/WAIaaS/issues/123)) ([357659f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/357659ff2323ccfcd3f21b5671447a5bd25b8305))
+* resolve detached HEAD in release.yml prerelease restore step ([#126](https://github.com/minhoyoo-iotrust/WAIaaS/issues/126)) ([29e6e03](https://github.com/minhoyoo-iotrust/WAIaaS/commit/29e6e0313a7d1576bacb9da215cf25fdc6502534))
+* update schema version assertions from 19 to 20 in remaining test files ([e588fe6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e588fe671df9eacbfb6b97b55742f801757f3811))
+
 ## [2.4.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.4.0-rc.9...v2.4.0) (2026-02-21)
 
 
