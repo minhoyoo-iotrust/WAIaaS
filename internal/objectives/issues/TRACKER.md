@@ -145,6 +145,7 @@
 | 128 | ENHANCEMENT | HIGH | 에이전트 읽기 전용 API 접근 확대 + 스킬 파일 권한 구분 명확화 | v27.0 | FIXED | 2026-02-21 |
 | 129 | BUG | HIGH | 데몬 재시작 시 Admin UI에서 설정한 알림 채널이 로드되지 않음 | v27.0 | FIXED | 2026-02-21 |
 | 130 | ENHANCEMENT | MEDIUM | 1:N 세션 모델 도입으로 불필요해진 벌크 세션/MCP 토큰 생성 기능 제거 | v27.0 | FIXED | 2026-02-21 |
+| 131 | ENHANCEMENT | MEDIUM | X402_ALLOWED_DOMAINS 정책에 default-deny 토글 추가 | v27.0 | OPEN | |
 
 ## Type Legend
 
@@ -156,9 +157,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 130
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 130
+- **Total:** 131
