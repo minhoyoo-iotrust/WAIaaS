@@ -269,8 +269,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 229-01-PLAN.md -- Core pitfall integration tests (C-01 listener leak, C-02 SQLite contention, C-04 duplicate events, C-05 shutdown data loss, C-06 EVM reorg)
-- [ ] 229-02-PLAN.md -- Security + resilience integration tests (gap recovery, KillSwitch M-03, notification cooldown M-07)
+- [x] 229-01-PLAN.md -- Core pitfall integration tests (C-01 listener leak, C-02 SQLite contention, C-04 duplicate events, C-05 shutdown data loss, C-06 EVM reorg)
+- [x] 229-02-PLAN.md -- Security + resilience integration tests (gap recovery, KillSwitch M-03, notification cooldown M-07)
 
 ## Progress
 

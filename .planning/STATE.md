@@ -96,6 +96,11 @@ From 228-03:
 - MCP tool param names match REST API query params exactly (token, from_address, wallet_id)
 - Tool count updated from 21 to 23 in server.ts; skill file tool count updated from 18 to 23
 
+From 229-01:
+- Used real IncomingTxQueue/SubscriptionMultiplexer/IncomingTxMonitorService with mock DB/IChainSubscriber boundaries for integration tests
+- Separate createConfirmationMockDb helper for C-06 tests: fine-grained SQL SELECT vs UPDATE mocking
+- C-05 tests access internal queue via (service as any).queue for direct manipulation without starting workers
+
 From 229-02:
 - Fresh service instance per KillSwitch test for cooldown isolation (preferred over manual cooldown clear)
 - 50 dust TX flood produces exactly 1 notification (stricter than plan's <=5 threshold)
@@ -108,5 +113,5 @@ From 229-02:
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 229-02-PLAN.md (Integration Resilience Tests)
+Stopped at: Completed 229-01-PLAN.md (Core Pitfall Integration Tests)
 Resume file: None
