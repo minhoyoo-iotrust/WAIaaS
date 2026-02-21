@@ -1,477 +1,818 @@
-# Architecture Patterns: Incoming Transaction Monitoring
+# Architecture Patterns: Incoming Transaction Monitoring Integration
 
-**Domain:** 인바운드 트랜잭션 모니터링 — 기존 WAIaaS 아키텍처 통합
+**Domain:** Incoming TX monitoring for existing WAIaaS daemon
 **Researched:** 2026-02-21
-**Sources:** 코드베이스 직접 분석 (packages/core, packages/daemon, packages/adapters)
+**Source:** Codebase analysis + design doc 76 (2,441 lines)
+**Confidence:** HIGH (all integration points verified against source code)
 
 ---
 
-## 권고 아키텍처
+## Recommended Architecture
 
-### 핵심 설계 결정 요약
+Incoming transaction monitoring introduces a **parallel subsystem** alongside the existing outgoing TX pipeline. The design strictly avoids modifying any existing interfaces (IChainAdapter, AdapterPool, 6-stage pipeline) and instead adds new interfaces, services, and data paths that integrate through established daemon patterns.
 
-| 질문 | 권고 결정 | 근거 |
-|------|-----------|------|
-| IChainSubscriber 위치 | IChainAdapter와 **별도 인터페이스** | 기존 22메서드 어댑터에 상태(WebSocket 연결)를 주입하면 단순 RPC 호출과 구독 생명주기가 섞임 |
-| WebSocket 관리 | 모니터링 대상 지갑이 있을 때만 **lazy start** | 구독 비용이 제로인 상태를 기본값으로 유지 |
-| 트랜잭션 파싱 위치 | **체인 전용 Normalizer** (어댑터 내부) | raw chain 이벤트 → IncomingTx 정규화는 체인 지식 필요 |
-| incoming_transactions 테이블 | **별도 테이블**, walletId FK만 공유 | 상태 머신, 방향, 소스 개념이 outgoing과 다름 |
-| EventBus 통합 | 기존 EventBus에 **새 이벤트 타입 추가** | 전용 채널은 과잉 설계. 기존 typed WaiaasEventMap 확장이 일관성 있음 |
-| 폴링 폴백 | **BackgroundWorkers.register()** 활용 | 이미 WAL checkpoint, session-cleanup 등과 동일 패턴 |
-| monitor_incoming 상태 전파 | **IncomingTxMonitorService**가 wallets 테이블을 직접 조회 | 구독 시작/중지 시 DB SELECT WHERE monitor_incoming=1 실행 |
+### High-Level Component Topology
+
+```
+DaemonLifecycle
+  |
+  +-- Step 4c-9: IncomingTxMonitorService (NEW, fail-soft)
+  |     |-- IncomingTxQueue (memory queue)
+  |     |-- SubscriptionMultiplexer (WS/polling manager)
+  |     |    |-- SolanaIncomingSubscriber (IChainSubscriber impl)
+  |     |    +-- EvmIncomingSubscriber (IChainSubscriber impl)
+  |     +-- IIncomingSafetyRule[] (dust, unknownToken, largeAmount)
+  |
+  +-- Step 5: HTTP Server
+  |     |-- GET /v1/wallet/incoming (NEW route)
+  |     |-- GET /v1/wallet/incoming/summary (NEW route)
+  |     +-- PATCH /v1/wallet/:id (MODIFIED: monitorIncoming field)
+  |
+  +-- Step 6: BackgroundWorkers (6 NEW workers)
+  |     |-- incoming-tx-flush (5s)
+  |     |-- incoming-tx-retention (1h)
+  |     |-- incoming-tx-confirm-solana (30s)
+  |     |-- incoming-tx-confirm-evm (30s)
+  |     |-- incoming-tx-poll-solana (configurable)
+  |     +-- incoming-tx-poll-evm (configurable)
+  |
+  +-- EventBus (EXTENDED: 3 new event types)
+  |     |-- 'transaction:incoming' -> NotificationService
+  |     |-- 'transaction:incoming:suspicious' -> NotificationService
+  |     +-- 'incoming:flush:complete' -> internal orchestration
+  |
+  +-- DB v21 Migration (NEW tables + column)
+        |-- incoming_transactions (4 indexes)
+        |-- incoming_tx_cursors
+        +-- wallets.monitor_incoming column
+```
 
 ---
 
-## 컴포넌트 경계
+## Component Boundaries
 
-### 기존 컴포넌트 (수정 대상)
-
-| 컴포넌트 | 현재 상태 | 필요한 변경 |
-|----------|-----------|-------------|
-| `IChainAdapter` (core) | 22 메서드, 상태 없음 | 변경 없음 |
-| `WaiaasEventMap` (core) | 5 이벤트 타입 | `transaction:incoming` 이벤트 추가 |
-| `NOTIFICATION_EVENT_TYPES` (core) | 28개 | `TX_INCOMING` 추가 |
-| `wallets` 테이블 | 기존 컬럼 | `monitor_incoming INTEGER NOT NULL DEFAULT 0` 추가 |
-| `DaemonLifecycle` | Step 4c-4 위치에 BalanceMonitor | Step 4c-9 위치에 IncomingTxMonitorService 추가 |
-| `migrate.ts` | v20까지 | v21 마이그레이션: wallets.monitor_incoming 컬럼 추가 |
-
-### 신규 컴포넌트
-
-| 컴포넌트 | 위치 | 역할 |
-|----------|------|------|
-| `IChainSubscriber` | `packages/core/src/interfaces/` | 인바운드 구독 인터페이스 |
-| `incoming_transactions` 테이블 | DB schema | 수신 TX 레코드 저장 |
-| `IncomingTxMonitorService` | `packages/daemon/src/services/monitoring/` | 구독 오케스트레이터, 생명주기 관리 |
-| `SolanaIncomingSubscriber` | `packages/adapters/solana/src/` | Solana logsNotifications 구현 |
-| `EvmIncomingSubscriber` | `packages/adapters/evm/src/` | viem getLogs 폴링 구현 |
+| Component | Package | Responsibility | Communicates With |
+|-----------|---------|---------------|-------------------|
+| `IChainSubscriber` | `@waiaas/core` | Interface definition for chain-specific subscription | Implemented by adapter packages |
+| `IIncomingSafetyRule` | `@waiaas/core` | Interface for suspicious TX detection rules | Consumed by IncomingTxMonitorService |
+| `IncomingTransaction` type | `@waiaas/core` | Shared type for incoming TX data | Used by all incoming TX components |
+| `IncomingTxEvent` / `IncomingSuspiciousTxEvent` | `@waiaas/core` | EventBus event payloads | WaiaasEventMap extension |
+| `SolanaIncomingSubscriber` | `@waiaas/adapter-solana` | Solana logsSubscribe + polling | IncomingTxMonitorService via IChainSubscriber |
+| `EvmIncomingSubscriber` | `@waiaas/adapter-evm` | EVM getLogs polling + optional WS | IncomingTxMonitorService via IChainSubscriber |
+| `IncomingTxMonitorService` | `@waiaas/daemon` | Orchestrator: subscription lifecycle, queue, events | DaemonLifecycle, EventBus, NotificationService, BackgroundWorkers |
+| `IncomingTxQueue` | `@waiaas/daemon` | Memory queue + batch flush to DB | IncomingTxMonitorService, BackgroundWorkers |
+| `SubscriptionMultiplexer` | `@waiaas/daemon` | WebSocket connection sharing per chain:network | IChainSubscriber instances |
+| `DustAttackRule` / `UnknownTokenRule` / `LargeAmountRule` | `@waiaas/daemon` | IIncomingSafetyRule implementations | IncomingTxMonitorService |
+| Incoming TX REST routes | `@waiaas/daemon` | API endpoints for incoming TX query | sessionAuth middleware, resolveWalletId |
+| SDK methods | `@waiaas/sdk` | `listIncomingTransactions`, `getIncomingTransactionSummary` | REST API |
+| MCP tools | `@waiaas/mcp` | `list_incoming_transactions`, `get_incoming_summary` | ApiClient -> REST API |
 
 ---
 
-## Q1: IChainSubscriber — 별도 인터페이스로 분리
+## Integration Point 1: IChainSubscriber in @waiaas/core
 
-### 권고: IChainAdapter와 **별도 인터페이스** 작성
+**Location:** `packages/core/src/interfaces/IChainSubscriber.ts`
 
-IChainAdapter는 stateless request-response 패턴이다. 구독은 stateful 연결(WebSocket)을 보유하며 생명주기가 다르다. 둘을 합치면:
+IChainSubscriber is intentionally separate from IChainAdapter (22 methods, unchanged). This is the correct design because:
 
-- AdapterPool의 캐싱 키(`chain:network`)가 구독 스코프와 다름 (구독은 지갑 주소별)
-- 기존 22메서드 계약 테스트(`chain-adapter-contract.ts`)가 구독 상태에 오염됨
-- 어댑터를 구현하는 외부 플러그인이 구독 지원 없이도 동작해야 함
+1. **State model mismatch**: IChainAdapter is stateless request-response; IChainSubscriber is stateful long-running (WebSocket connections, subscription registries, reconnection state)
+2. **AdapterPool compatibility**: AdapterPool caches `Map<key, IChainAdapter>`. Mixing WebSocket state would cause subscription loss on eviction
+3. **SRP**: Outgoing TX build/sign/submit is a completely different concern from incoming TX detection/parsing
 
+**New files in @waiaas/core:**
+```
+packages/core/src/interfaces/
+  IChainSubscriber.ts          (NEW - interface definition)
+  chain-subscriber.types.ts    (NEW - IncomingTransaction, IncomingTxStatus)
+  IIncomingSafetyRule.ts        (NEW - safety rule interface)
+```
+
+**Export from core barrel:**
 ```typescript
-// packages/core/src/interfaces/IChainSubscriber.ts
-
-export interface IncomingTransaction {
-  txHash: string;
-  walletAddress: string;       // 수신 지갑의 온체인 주소
-  fromAddress: string | null;  // 발신자 (Solana logs에서 추출 불가 시 null)
-  amount: string;              // 최소 단위 (lamports, wei)
-  tokenMint?: string;          // SPL/ERC-20 토큰 주소 (네이티브이면 undefined)
-  chain: ChainType;
-  network: NetworkType;
-  blockNumber?: bigint;        // EVM에서 사용
-  slot?: bigint;               // Solana에서 사용
-  timestamp: number;           // Unix epoch seconds
-}
-
-export interface IChainSubscriber {
-  /**
-   * 지정 주소에 대한 인바운드 TX 구독을 시작한다.
-   * 이미 구독 중인 주소는 무시된다 (idempotent).
-   */
-  subscribe(address: string, onTransaction: (tx: IncomingTransaction) => void): Promise<void>;
-
-  /**
-   * 지정 주소의 구독을 취소한다.
-   */
-  unsubscribe(address: string): Promise<void>;
-
-  /**
-   * 현재 구독 중인 주소 목록을 반환한다.
-   */
-  subscribedAddresses(): string[];
-
-  /**
-   * 모든 구독과 WebSocket 연결을 정리한다.
-   * DaemonLifecycle.shutdown()에서 호출.
-   */
-  destroy(): Promise<void>;
-}
+// packages/core/src/index.ts -- add exports
+export type { IChainSubscriber } from './interfaces/IChainSubscriber.js';
+export type { IncomingTransaction, IncomingTxStatus } from './interfaces/chain-subscriber.types.js';
+export type { IIncomingSafetyRule, SafetyRuleContext, SuspiciousReason } from './interfaces/IIncomingSafetyRule.js';
 ```
 
-**어댑터와의 관계:** IChainSubscriber는 IChainAdapter의 RPC URL을 공유하지만 별도로 인스턴스화된다. SolanaIncomingSubscriber는 `createSolanaRpcSubscriptions()` WebSocket 클라이언트를 내부적으로 보유하고, EvmIncomingSubscriber는 viem `publicClient`를 재사용한다.
+**Key design: IChainSubscriber has 6 methods** (subscribe, unsubscribe, subscribedWallets, connect, waitForDisconnect, destroy) vs IChainAdapter's 22 methods. The `onTransaction` callback is injected by IncomingTxMonitorService and synchronously pushes to IncomingTxQueue -- no DB writes in callback.
 
 ---
 
-## Q2: WebSocket 연결 관리 — lazy initialization
+## Integration Point 2: Adapter Package Implementations
 
-### 권고: **첫 번째 subscribe() 호출 시 lazy 연결**
+### @waiaas/adapter-solana
 
-```
-모니터링 대상 지갑 0개 → WebSocket 연결 없음
-첫 번째 monitor_incoming=1 지갑 추가 → subscribe() → WebSocket 연결
-모든 지갑 monitor_incoming=0으로 변경 → destroy() → 연결 해제
-```
-
-**이유:**
-- `BalanceMonitorService`가 동일 패턴 사용 (setInterval이 enabled=false면 start() 호출 안 함)
-- RPC 제공자 WebSocket 연결은 비용이 있음 (API 할당량, keep-alive)
-- 테스트 환경에서 연결 없이 단위 테스트 가능
-
-**연결 재시도:** WebSocket 끊김은 지수 백오프(1s, 2s, 4s, max 30s)로 재연결. 재연결 후 구독 목록을 복원한다.
-
-**데몬 시작 시 처리:**
-```
-Step 4c-9 (fail-soft):
-  1. wallets WHERE monitor_incoming=1 조회
-  2. 목록이 비어있으면 IncomingTxMonitorService는 대기 상태 유지
-  3. 목록이 있으면 subscriber.subscribe(address) 일괄 등록
-```
-
----
-
-## Q3: 트랜잭션 파싱 — 체인 전용 Normalizer
-
-### 권고: **어댑터 내부 Normalizer**, 서비스 레이어에서는 IncomingTransaction만 처리
-
-체인별 raw 이벤트 형태가 다르다:
-
-| 체인 | raw 이벤트 | 파싱 난이도 |
-|------|-----------|------------|
-| Solana | `logsNotifications` → signature만 포함, 금액 없음 | HIGH: signature로 getTransaction 추가 호출 필요 |
-| EVM | `getLogs` → Transfer(address,address,uint256) event | MEDIUM: address 필터로 수신 여부 판단 가능 |
+**New file:** `packages/adapters/solana/src/solana-incoming-subscriber.ts`
 
 ```
-SolanaIncomingSubscriber:
-  logsNotifications(mentions: [address]) →
-    getTransaction(signature) →        ← 추가 RPC 호출
-    parseAccountChanges(tx, address) →
-    emit IncomingTransaction
-
-EvmIncomingSubscriber:
-  getLogs(address, fromBlock, toBlock) →
-    filterToAddress(address) →         ← 이미 logs에 포함
-    emit IncomingTransaction
+SolanaIncomingSubscriber implements IChainSubscriber
+  - Uses @solana/kit createSolanaRpcSubscriptions for logsSubscribe
+  - Per-wallet subscription via mentions:[walletAddress]
+  - SOL native detection: preBalances/postBalances delta
+  - SPL/Token-2022 detection: preTokenBalances/postTokenBalances delta
+  - ATA 2-level: automatically handled by mentions subscription
+  - Polling fallback: getSignaturesForAddress + getTransaction
 ```
 
-**Normalizer 위치:** 각 subscriber 파일 내부의 private 함수. 공통 normalize 레이어 불필요 — 체인 간 raw 형태가 너무 달라서 추상화 비용이 실익보다 크다.
-
-**fromAddress 처리:** Solana에서는 logsNotifications의 signature로 getTransaction을 호출해야 발신자를 알 수 있다. 비용이 크므로 **fromAddress는 Solana에서 NULL 허용**한다.
-
----
-
-## Q4: incoming_transactions 테이블 — 별도 테이블
-
-### 권고: **완전히 별도인 incoming_transactions 테이블**, transactions와 FK 없음
-
-**분리 이유:**
-- `transactions`는 9-state 아웃고잉 파이프라인 상태 머신을 위한 구조
-- `incoming_transactions`는 단방향 수신 이력 (DETECTED → CONFIRMED 2-state)
-- sessionId, tier, reservedAmount, approvalChannel 등 아웃고잉 전용 컬럼이 인바운드에 없음
-- TRANSACTION_TYPES SSoT에 새 타입 추가하면 기존 discriminatedUnion 계약에 영향
-
-**신규 테이블 DDL (v21 마이그레이션):**
-
-```sql
-CREATE TABLE IF NOT EXISTS incoming_transactions (
-  id TEXT PRIMARY KEY,                        -- UUID v7
-  wallet_id TEXT NOT NULL
-    REFERENCES wallets(id) ON DELETE CASCADE,
-  chain TEXT NOT NULL,
-  network TEXT,
-  tx_hash TEXT NOT NULL,
-  from_address TEXT,                          -- Solana에서는 NULL 가능
-  amount TEXT NOT NULL,                       -- 최소 단위 문자열
-  token_mint TEXT,                            -- SPL/ERC-20, NULL이면 네이티브
-  status TEXT NOT NULL DEFAULT 'DETECTED'
-    CHECK (status IN ('DETECTED', 'CONFIRMED')),
-  block_number TEXT,                          -- EVM bigint (TEXT로 저장)
-  slot TEXT,                                  -- Solana slot (TEXT로 저장)
-  detected_at INTEGER NOT NULL,               -- Unix epoch seconds
-  confirmed_at INTEGER,
-  raw_metadata TEXT                           -- chain-specific JSON (선택적)
-)
-```
-
-**인덱스:**
-```sql
-CREATE UNIQUE INDEX idx_incoming_tx_hash ON incoming_transactions(tx_hash);
-CREATE INDEX idx_incoming_wallet_status ON incoming_transactions(wallet_id, status);
-CREATE INDEX idx_incoming_detected_at ON incoming_transactions(detected_at);
-CREATE INDEX idx_incoming_token_mint ON incoming_transactions(token_mint);
-```
-
-**중복 방지:** `tx_hash`에 UNIQUE 제약 — 동일 TX가 재구독 시 중복 삽입되지 않음.
-
-**wallets 테이블 변경 (v21 마이그레이션):**
-```sql
-ALTER TABLE wallets ADD COLUMN monitor_incoming INTEGER NOT NULL DEFAULT 0;
-```
-- 0 = 비활성 (기본값, 기존 지갑 영향 없음)
-- 1 = 활성
-
----
-
-## Q5: EventBus 통합 — 기존 버스에 새 이벤트 추가
-
-### 권고: `WaiaasEventMap`에 **`transaction:incoming` 이벤트 타입 추가**
-
-전용 이벤트 채널을 만드는 것은 과잉 설계다. 기존 EventBus가 이미:
-- listener 에러 격리 (try/catch per listener)
-- typed event map
-- removeAllListeners 지원 (shutdown 시 정리 완료)
-
-**코어 변경:**
-
+**Export addition:**
 ```typescript
-// packages/core/src/events/event-types.ts에 추가
-
-export interface TransactionIncomingEvent {
-  walletId: string;
-  txHash: string;
-  fromAddress: string | null;
-  amount: string;
-  tokenMint?: string;
-  chain: ChainType;
-  network: NetworkType;
-  timestamp: number;
-}
-
-// WaiaasEventMap에 추가:
-'transaction:incoming': TransactionIncomingEvent;
+// packages/adapters/solana/src/index.ts
+export { SolanaAdapter } from './adapter.js';
+export { SolanaIncomingSubscriber } from './solana-incoming-subscriber.js'; // NEW
 ```
 
-**NOTIFICATION_EVENT_TYPES에 추가 (28개 → 29개):**
+**Connection independence:** SolanaIncomingSubscriber creates its OWN RPC connections (both HTTP for polling and WebSocket for subscriptions). It does NOT share SolanaAdapter's HTTP RPC connection because:
+- SolanaAdapter uses `createSolanaRpc(httpUrl)` -- HTTP only
+- SolanaIncomingSubscriber needs `createSolanaRpcSubscriptions(wsUrl)` -- WebSocket
+- Even for polling fallback, a separate HTTP client avoids contention
+
+### @waiaas/adapter-evm
+
+**New file:** `packages/adapters/evm/src/evm-incoming-subscriber.ts`
+
+```
+EvmIncomingSubscriber implements IChainSubscriber
+  - Polling-first: viem createPublicClient + getLogs
+  - ERC-20 Transfer event detection via indexed `to` parameter
+  - Native ETH detection via getBlock(includeTransactions: true)
+  - token_registry whitelist filter
+  - connect()/waitForDisconnect() are no-ops (polling mode)
+```
+
+**Export addition:**
 ```typescript
-'TX_INCOMING'
+// packages/adapters/evm/src/index.ts
+export { EvmAdapter } from './adapter.js';
+export { EvmIncomingSubscriber } from './evm-incoming-subscriber.js'; // NEW
+export { EVM_CHAIN_MAP, type EvmChainEntry } from './evm-chain-map.js';
+export { ERC20_ABI } from './abi/erc20.js';
 ```
 
-**데이터 흐름:**
-```
-IChainSubscriber.onTransaction()
-  → IncomingTxMonitorService._handleIncoming()
-    → INSERT INTO incoming_transactions
-    → eventBus.emit('transaction:incoming', {...})
-      → NotificationService.notify('TX_INCOMING', walletId, {...})
-```
+**Connection independence:** EvmIncomingSubscriber creates its OWN viem PublicClient via `createPublicClient({ transport: http(rpcUrl) })`. It does NOT share EvmAdapter's client because the existing EvmAdapter stores `client` as a private field with no accessor, and sharing would introduce coupling.
 
 ---
 
-## Q6: 폴링 폴백 — BackgroundWorkers 재사용
+## Integration Point 3: Daemon Lifecycle Integration
 
-### 권고: **`BackgroundWorkers.register()`로 EVM 폴링 등록**
+**Location:** `packages/daemon/src/lifecycle/daemon.ts`
 
-EVM은 WebSocket 구독 대신 블록 폴링 방식이 더 안정적이다 (viem `getLogs`는 HTTP도 지원). Solana는 `logsNotifications` WebSocket을 우선 사용하되, WebSocket 불가 시 `getSignaturesForAddress` 폴링으로 폴백.
+### Startup: Step 4c-9 (NEW, fail-soft)
 
-**EVM 폴링 패턴:**
-```typescript
-// EvmIncomingSubscriber 내부
-// Step 4c-9에서 BackgroundWorkers에 등록
-workers.register('incoming-tx-evm', {
-  interval: 12_000,  // 12초 (EVM 블록 시간)
-  handler: async () => {
-    // getLogs(fromBlock: lastProcessedBlock, toBlock: 'latest')
-    // per-address 필터
-  }
-});
-```
+Inserted between Step 4c-4 (BalanceMonitorService) and Step 4c-5 (TelegramBotService) in the startup sequence. The ordering matters because IncomingTxMonitorService depends on:
+- `sqlite` (Step 2)
+- `_settingsService` (Step 2)
+- `adapterPool` (Step 4 -- for resolveRpcUrl)
+- `eventBus` (class field)
+- `notificationService` (Step 4d)
 
-**Solana WebSocket + 폴링 혼용:**
-```typescript
-// SolanaIncomingSubscriber 내부
-// Primary: logsNotifications (WebSocket)
-// Fallback (연결 끊김 >30s): getSignaturesForAddress 폴링
-// BackgroundWorkers에 'incoming-tx-solana-poll' 등록 (60초 간격)
-```
-
-**기존 workers 목록 (현재 5개 → 7개로 증가):**
-- wal-checkpoint (5분)
-- session-cleanup (1분)
-- delay-expired (5초)
-- approval-expired (30초)
-- version-check (24시간)
-- + `incoming-tx-evm` (12초, 신규)
-- + `incoming-tx-solana-poll` (60초, Solana 폴링 폴백, 신규)
-
----
-
-## Q7: monitor_incoming 상태 전파 — DB 직접 조회
-
-### 권고: **IncomingTxMonitorService가 wallets 테이블을 직접 조회**
-
-BalanceMonitorService가 동일 패턴을 사용하고 있다:
-```typescript
-// BalanceMonitorService.checkAllWallets()
-const wallets = this.sqlite
-  .prepare("SELECT id, chain, environment, default_network, public_key FROM wallets WHERE status = 'ACTIVE'")
-  .all();
-```
-
-동일하게 IncomingTxMonitorService는:
-```typescript
-private getMonitoredWallets(): WalletMonitorRow[] {
-  return this.sqlite
-    .prepare(
-      "SELECT id, chain, environment, default_network, public_key FROM wallets " +
-      "WHERE monitor_incoming = 1 AND status = 'ACTIVE'"
-    )
-    .all() as WalletMonitorRow[];
-}
-```
-
-**REST API 연동:** `PUT /v1/wallets/:id` 또는 Admin UI에서 `monitor_incoming` 토글 시:
-1. DB 업데이트
-2. `IncomingTxMonitorService.syncSubscriptions()` 호출 (신규 추가 → subscribe, 제거 → unsubscribe)
-
-HotReloadOrchestrator 패턴처럼 서비스 참조를 DaemonLifecycle이 보유하고 API 레이어에 주입.
-
----
-
-## 전체 데이터 흐름
-
-```
-[Blockchain] ──logsNotifications/getLogs──▶ [IChainSubscriber impl]
-                                                      |
-                                              parse & normalize
-                                                      |
-                                                      v
-                                         [IncomingTxMonitorService]
-                                          _handleIncoming(tx)
-                                              |           |
-                                    INSERT INTO    eventBus.emit
-                                  incoming_txns  'transaction:incoming'
-                                                      |
-                                              +-------+-------+
-                                              v               v
-                                    [NotificationService]  [AutoStopService]
-                                    notify('TX_INCOMING')   (감시용)
-```
-
----
-
-## 신규 vs 수정 컴포넌트 명세
-
-### 신규 파일
-
-| 파일 | 역할 |
-|------|------|
-| `packages/core/src/interfaces/IChainSubscriber.ts` | 구독 인터페이스 |
-| `packages/daemon/src/services/monitoring/incoming-tx-monitor-service.ts` | 오케스트레이터 |
-| `packages/adapters/solana/src/incoming-subscriber.ts` | Solana logsNotifications 구현 |
-| `packages/adapters/evm/src/incoming-subscriber.ts` | EVM getLogs 폴링 구현 |
-
-### 수정 파일
-
-| 파일 | 변경 내용 |
-|------|-----------|
-| `packages/core/src/events/event-types.ts` | `transaction:incoming` 이벤트 추가 |
-| `packages/core/src/enums/notification.ts` | `TX_INCOMING` 추가 (28→29) |
-| `packages/core/src/interfaces/index.ts` | IChainSubscriber export 추가 |
-| `packages/core/src/index.ts` | IChainSubscriber 재export |
-| `packages/daemon/src/infrastructure/database/schema.ts` | `incoming_transactions` 테이블 Drizzle 스키마, wallets.monitor_incoming |
-| `packages/daemon/src/infrastructure/database/migrate.ts` | v21 마이그레이션 |
-| `packages/daemon/src/lifecycle/daemon.ts` | Step 4c-9 IncomingTxMonitorService 초기화 |
-
----
-
-## 빌드 순서 (의존성 순서)
-
-```
-1단계: 인터페이스 레이어 (core)
-  - IChainSubscriber.ts 신규 작성
-  - WaiaasEventMap에 transaction:incoming 추가
-  - NOTIFICATION_EVENT_TYPES에 TX_INCOMING 추가
-
-2단계: DB 스키마 (daemon)
-  - incoming_transactions Drizzle 스키마 추가
-  - wallets.monitor_incoming 컬럼 추가
-  - v21 마이그레이션 작성
-
-3단계: 어댑터 구현 (adapters/solana, adapters/evm)
-  - SolanaIncomingSubscriber (IChainSubscriber 구현)
-  - EvmIncomingSubscriber (IChainSubscriber 구현)
-  - 각 어댑터 package index에서 export
-
-4단계: 서비스 레이어 (daemon)
-  - IncomingTxMonitorService (구독 오케스트레이터)
-  - DaemonLifecycle Step 4c-9에 통합
-  - BackgroundWorkers에 폴링 worker 등록
-
-5단계: API 레이어 (daemon)
-  - wallet PATCH/PUT 엔드포인트에 monitor_incoming 필드 추가
-  - GET /v1/wallets 응답에 monitor_incoming 포함
-  - GET /v1/wallets/:id/incoming-transactions 엔드포인트
-  - Skill Files 업데이트 (wallet.skill.md, admin.skill.md)
-```
-
----
-
-## 주의해야 할 아키텍처 패턴
-
-### 따라야 할 패턴
-
-**Pattern 1: fail-soft 초기화 (BalanceMonitorService 동일)**
 ```typescript
 // Step 4c-9: IncomingTxMonitorService (fail-soft)
 try {
-  this.incomingTxMonitor = new IncomingTxMonitorService({...});
-  await this.incomingTxMonitor.start();
+  if (this.sqlite && this._settingsService && this.adapterPool && this._config) {
+    const enabled = this._settingsService.get('incoming.enabled') === 'true';
+
+    const { IncomingTxMonitorService } = await import(
+      '../services/incoming/incoming-tx-monitor-service.js'
+    );
+
+    this.incomingTxMonitorService = new IncomingTxMonitorService({
+      sqlite: this.sqlite,
+      settingsService: this._settingsService,
+      config: this._config,
+      eventBus: this.eventBus,
+      notificationService: this.notificationService ?? undefined,
+      priceOracle: this.priceOracle,
+    });
+
+    if (enabled) {
+      await this.incomingTxMonitorService.start();
+      console.debug('Step 4c-9: IncomingTxMonitorService started');
+    } else {
+      console.debug('Step 4c-9: IncomingTxMonitorService disabled');
+    }
+  }
 } catch (err) {
-  console.warn('Step 4c-9 (fail-soft): IncomingTxMonitor init warning:', err);
-  this.incomingTxMonitor = null;
+  console.warn('Step 4c-9 (fail-soft): IncomingTxMonitorService init warning:', err);
+  this.incomingTxMonitorService = null;
 }
 ```
 
-**Pattern 2: SSoT enum 추가 (notification.ts + transaction.ts)**
-- `NOTIFICATION_EVENT_TYPES`에 `TX_INCOMING` 추가 → 자동으로 Zod, TypeScript, CHECK constraint 전파
-- 기존 SSoT 수정 시 CHECK constraint 갱신이 필요한 경우 12-step 마이그레이션 필요
-- `notification_logs`는 단순 TEXT column이므로 마이그레이션 불필요
-
-**Pattern 3: tx_hash UNIQUE 중복 방지**
+**New DaemonLifecycle private field:**
 ```typescript
-// INSERT OR IGNORE를 사용하여 중복 구독 시 중복 레코드 방지
-sqlite.prepare(
-  'INSERT OR IGNORE INTO incoming_transactions (...) VALUES (?,...)'
-).run(...);
+private incomingTxMonitorService: IncomingTxMonitorService | null = null;
 ```
 
-### 피해야 할 패턴
+### Shutdown: Before EventBus cleanup
 
-**Anti-Pattern 1: IChainAdapter에 구독 메서드 추가**
-- 22개 메서드 계약 테스트에 영향
-- stateless 어댑터에 stateful WebSocket 혼입
-- 대신: 별도 IChainSubscriber 사용
+```typescript
+// Stop IncomingTxMonitorService (before EventBus cleanup)
+if (this.incomingTxMonitorService) {
+  await this.incomingTxMonitorService.stop(); // unsubscribe all, final flush
+  this.incomingTxMonitorService = null;
+}
+```
 
-**Anti-Pattern 2: incoming_transactions를 transactions에 합침**
-- `type='INCOMING'` 추가는 discriminatedUnion 5-type 계약 위반
-- 아웃고잉 파이프라인 stage 상태 머신 로직이 인바운드 레코드에 오작동
-- 대신: 별도 테이블 사용
+### HotReloadOrchestrator: Wire incoming monitor ref
 
-**Anti-Pattern 3: 전용 EventBus 인스턴스 생성**
-- shutdown 시 `eventBus.removeAllListeners()` 자동 정리가 동작하지 않음
-- 대신: 기존 eventBus에 이벤트 타입 추가
+```typescript
+// Step 5: createApp deps -- add incomingTxMonitorService to HotReloadOrchestrator
+const hotReloader = new HotReloadOrchestrator({
+  // ... existing deps ...
+  incomingTxMonitorService: this.incomingTxMonitorService, // NEW
+});
+```
 
 ---
 
-## 확장성 고려
+## Integration Point 4: DB Tables and Migrations
 
-| 상황 | 접근법 |
+**Location:** `packages/daemon/src/infrastructure/database/migrate.ts`
+
+### Migration v21
+
+Current schema version is 20 (`LATEST_SCHEMA_VERSION = 20`). The new migration increments to v21.
+
+```typescript
+MIGRATIONS.push({
+  version: 21,
+  description: 'Add incoming transaction monitoring tables and wallet opt-in column',
+  up: (sqlite) => {
+    // 1. wallets table: add monitor_incoming column
+    sqlite.exec('ALTER TABLE wallets ADD COLUMN monitor_incoming INTEGER NOT NULL DEFAULT 0');
+
+    // 2. incoming_transactions table
+    sqlite.exec(`CREATE TABLE incoming_transactions (...)`);
+
+    // 3. incoming_tx_cursors table
+    sqlite.exec(`CREATE TABLE incoming_tx_cursors (...)`);
+
+    // 4. 4 indexes on incoming_transactions
+  },
+});
+```
+
+### pushSchema DDL Update
+
+For fresh databases, update `getCreateTableStatements()` to include the new tables and column in the DDL:
+- Add `monitor_incoming INTEGER NOT NULL DEFAULT 0` to wallets CREATE TABLE
+- Add `incoming_transactions` CREATE TABLE
+- Add `incoming_tx_cursors` CREATE TABLE
+- Update `LATEST_SCHEMA_VERSION` from 20 to 21
+
+### Drizzle Schema Extension
+
+**Location:** `packages/daemon/src/infrastructure/database/schema.ts`
+
+Add Drizzle table definitions for the new tables so that Drizzle ORM queries work:
+```typescript
+export const incomingTransactions = sqliteTable('incoming_transactions', { ... });
+export const incomingTxCursors = sqliteTable('incoming_tx_cursors', { ... });
+```
+
+**No existing table modifications** -- `wallets.monitor_incoming` is added via migration ALTER TABLE but the existing `wallets` Drizzle schema definition also needs the column added.
+
+---
+
+## Integration Point 5: EventBus Event Flow
+
+**Location:** `packages/core/src/events/event-types.ts`
+
+### New Event Types
+
+Current WaiaasEventMap has 5 events. Add 3 new ones (5 -> 8):
+
+```typescript
+export interface WaiaasEventMap {
+  // ... existing 5 events ...
+  'transaction:incoming': IncomingTxEvent;                    // NEW
+  'transaction:incoming:suspicious': IncomingSuspiciousTxEvent; // NEW
+  'incoming:flush:complete': { count: number };                // NEW (internal)
+}
+```
+
+### Data Flow: Memory Queue to Notification
+
+```
+Chain Event (WS/Poll)
+  |
+  v
+onTransaction callback (synchronous)
+  |
+  v
+IncomingTxQueue.push(tx) -- in-memory, no DB access
+  |
+  v  [5-second interval]
+BackgroundWorker 'incoming-tx-flush'
+  |
+  v
+IncomingTxQueue.flush(sqlite) -- batch INSERT ON CONFLICT DO NOTHING
+  |
+  v
+For each newly inserted TX:
+  |
+  +-- IIncomingSafetyRule.check() -- dust/unknownToken/largeAmount
+  |     |
+  |     +-- suspicious? -> eventBus.emit('transaction:incoming:suspicious', ...)
+  |     |                   + notificationService.notify('INCOMING_TX_SUSPICIOUS', ...)
+  |     +-- normal?     -> eventBus.emit('transaction:incoming', ...)
+  |                         + notificationService.notify('INCOMING_TX_DETECTED', ...)
+  |
+  v
+NotificationService.notify()
+  |
+  +-- WalletNotificationChannel (side channel, priority routing)
+  +-- Telegram/Discord/ntfy/Slack (traditional channels)
+```
+
+### NotificationEventType SSoT Extension
+
+**Location:** `packages/core/src/enums/notification.ts`
+
+Add 2 new event types to the SSoT array (28 -> 30):
+```typescript
+export const NOTIFICATION_EVENT_TYPES = [
+  // ... existing 28 ...
+  'INCOMING_TX_DETECTED',     // NEW
+  'INCOMING_TX_SUSPICIOUS',   // NEW
+] as const;
+```
+
+### KillSwitch State Integration
+
+When KillSwitch is SUSPENDED or LOCKED:
+- IncomingTxMonitorService transitions to DISABLED state
+- All subscriptions are paused (not destroyed)
+- Notifications are suppressed
+- On recovery (ACTIVE), monitoring resumes from cursor position
+
+This is handled by listening to `'kill-switch:state-changed'` on EventBus within IncomingTxMonitorService.
+
+---
+
+## Integration Point 6: REST API Routes
+
+**Location:** `packages/daemon/src/api/routes/`
+
+### New Route File
+
+Create `packages/daemon/src/api/routes/incoming.ts` with:
+- `GET /v1/wallet/incoming` -- list incoming transactions (sessionAuth, resolveWalletId)
+- `GET /v1/wallet/incoming/summary` -- aggregated summary (sessionAuth, resolveWalletId)
+
+### Route Registration in server.ts
+
+```typescript
+// In createApp():
+import { incomingRoutes } from './routes/incoming.js';
+
+// After walletRoutes registration
+if (deps.db && deps.sqlite) {
+  app.route('/v1', incomingRoutes({
+    db: deps.db,
+    sqlite: deps.sqlite,
+    priceOracle: deps.priceOracle,
+    settingsService: deps.settingsService,
+    forexRateService: deps.forexRateService,
+  }));
+}
+```
+
+### Auth Middleware
+
+`/v1/wallet/incoming` and `/v1/wallet/incoming/summary` are covered by the existing sessionAuth wildcard at line 209 of server.ts:
+```typescript
+app.use('/v1/wallet/*', sessionAuth);
+```
+
+No additional auth middleware registration needed -- the existing wildcard already covers all `/v1/wallet/*` sub-paths.
+
+### PATCH /v1/wallet/:id Extension (wallets.ts)
+
+Existing `walletCrudRoutes` in `packages/daemon/src/api/routes/wallets.ts` needs:
+1. `monitorIncoming` field in WalletUpdateSchema
+2. On update with `monitorIncoming`, set `wallets.monitor_incoming` in DB
+3. Trigger `incomingTxMonitorService.syncSubscriptions()` after update
+
+This requires passing `incomingTxMonitorService` (or a callback) to CreateAppDeps and walletCrudRoutes deps.
+
+### Barrel Export Update
+
+```typescript
+// packages/daemon/src/api/routes/index.ts
+export { incomingRoutes, type IncomingRouteDeps } from './incoming.js'; // NEW
+```
+
+### Zod SSoT Schemas
+
+Add to `packages/daemon/src/api/routes/openapi-schemas.ts`:
+```typescript
+export const IncomingTransactionQuerySchema = z.object({ ... });
+export const IncomingTransactionSchema = z.object({ ... });
+export const IncomingTransactionListResponseSchema = z.object({ ... });
+export const IncomingTransactionSummarySchema = z.object({ ... });
+```
+
+---
+
+## Integration Point 7: SDK and MCP Extensions
+
+### TypeScript SDK (@waiaas/sdk)
+
+**Location:** `packages/sdk/src/client.ts`
+
+Add 2 methods to WAIaaSClient:
+```typescript
+async listIncomingTransactions(options?: ListIncomingTransactionsOptions): Promise<IncomingTransactionListResponse>
+async getIncomingTransactionSummary(period?: 'daily' | 'weekly' | 'monthly'): Promise<IncomingTransactionSummary>
+```
+
+Add corresponding types to `packages/sdk/src/types.ts`.
+
+### Python SDK
+
+**Location:** `python-sdk/waiaas/client.py`
+
+Add 2 methods:
+```python
+def list_incoming_transactions(self, ...) -> IncomingTransactionListResponse
+def get_incoming_transaction_summary(self, period="daily") -> IncomingTransactionSummary
+```
+
+### MCP (@waiaas/mcp)
+
+**New tool files:**
+- `packages/mcp/src/tools/list-incoming-transactions.ts`
+- `packages/mcp/src/tools/get-incoming-summary.ts`
+
+**Server registration:** Add to `packages/mcp/src/server.ts`:
+```typescript
+import { registerListIncomingTransactions } from './tools/list-incoming-transactions.js';
+import { registerGetIncomingSummary } from './tools/get-incoming-summary.js';
+
+// Register 23 tools (was 21)
+registerListIncomingTransactions(server, apiClient, walletContext);
+registerGetIncomingSummary(server, apiClient, walletContext);
+```
+
+### Skills Files
+
+**Update:** `packages/skills/wallet.skill.md` -- add incoming TX section with endpoints, MCP tools, SDK methods, and notification category.
+
+---
+
+## Integration Point 8: Admin Settings for [incoming] Config
+
+### Setting Keys Registration
+
+**Location:** `packages/daemon/src/infrastructure/settings/setting-keys.ts`
+
+Add 'incoming' to SETTING_CATEGORIES:
+```typescript
+export const SETTING_CATEGORIES = [
+  // ... existing 11 categories ...
+  'incoming',  // NEW (12th)
+] as const;
+```
+
+Add 7 setting definitions:
+```typescript
+// --- incoming category ---
+{ key: 'incoming.enabled', category: 'incoming', configPath: 'incoming.incoming_enabled', defaultValue: 'false', isCredential: false },
+{ key: 'incoming.mode', category: 'incoming', configPath: 'incoming.incoming_mode', defaultValue: 'auto', isCredential: false },
+{ key: 'incoming.poll_interval', category: 'incoming', configPath: 'incoming.incoming_poll_interval', defaultValue: '30', isCredential: false },
+{ key: 'incoming.retention_days', category: 'incoming', configPath: 'incoming.incoming_retention_days', defaultValue: '90', isCredential: false },
+{ key: 'incoming.suspicious_dust_usd', category: 'incoming', configPath: 'incoming.incoming_suspicious_dust_usd', defaultValue: '0.01', isCredential: false },
+{ key: 'incoming.suspicious_amount_multiplier', category: 'incoming', configPath: 'incoming.incoming_suspicious_amount_multiplier', defaultValue: '10', isCredential: false },
+{ key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.incoming_wss_url', defaultValue: '', isCredential: false },
+```
+
+All 7 keys are hot-reload capable (no daemon restart required).
+
+### DaemonConfig Schema Extension
+
+**Location:** `packages/daemon/src/infrastructure/config/loader.ts`
+
+Add `[incoming]` section to DaemonConfigSchema:
+```typescript
+incoming: z.object({
+  incoming_enabled: z.boolean().default(false),
+  incoming_mode: z.enum(['polling', 'websocket', 'auto']).default('auto'),
+  incoming_poll_interval: z.number().int().min(5).default(30),
+  incoming_retention_days: z.number().int().min(1).default(90),
+  incoming_suspicious_dust_usd: z.number().min(0).default(0.01),
+  incoming_suspicious_amount_multiplier: z.number().min(1).default(10),
+  incoming_wss_url: z.string().default(''),
+}).default({}),
+```
+
+### HotReloadOrchestrator Extension
+
+**Location:** `packages/daemon/src/infrastructure/settings/hot-reload.ts`
+
+```typescript
+// Add key prefix
+const INCOMING_KEYS_PREFIX = 'incoming.';
+
+// Add to HotReloadDeps
+export interface HotReloadDeps {
+  // ... existing ...
+  incomingTxMonitorService?: IncomingTxMonitorService | null; // NEW
+}
+
+// In handleChangedKeys()
+const hasIncomingChanges = changedKeys.some(k => k.startsWith(INCOMING_KEYS_PREFIX));
+if (hasIncomingChanges) {
+  try { this.reloadIncomingMonitor(); }
+  catch (err) { console.warn('Hot-reload incoming monitor failed:', err); }
+}
+```
+
+### Admin UI Integration
+
+The Admin Settings page in `packages/admin/` already renders setting categories dynamically. Adding the 'incoming' category with its 7 keys will automatically generate the settings form in the Admin UI -- no special Admin UI code needed beyond category rendering.
+
+---
+
+## Patterns to Follow
+
+### Pattern 1: BackgroundWorkers Registration
+
+Follow the existing pattern used by wal-checkpoint, session-cleanup, delay-expired, approval-expired, and version-check workers.
+
+```typescript
+// Register in DaemonLifecycle Step 6, AFTER IncomingTxMonitorService.start()
+if (this.incomingTxMonitorService) {
+  // Flush queue to DB
+  this.workers.register('incoming-tx-flush', {
+    interval: 5_000,
+    handler: () => {
+      if (this._isShuttingDown) return;
+      this.incomingTxMonitorService!.flush();
+    },
+  });
+
+  // Confirmation upgrade
+  this.workers.register('incoming-tx-confirm', {
+    interval: 30_000,
+    handler: async () => {
+      if (this._isShuttingDown) return;
+      await this.incomingTxMonitorService!.confirmPending();
+    },
+  });
+
+  // Retention cleanup
+  this.workers.register('incoming-tx-retention', {
+    interval: 3600_000,
+    handler: () => {
+      if (this._isShuttingDown) return;
+      this.incomingTxMonitorService!.cleanupRetention();
+    },
+  });
+
+  // Polling workers (conditional on connection state)
+  // ... incoming-tx-poll-solana, incoming-tx-poll-evm
+}
+```
+
+### Pattern 2: Fail-Soft Service Initialization
+
+All monitoring services (AutoStop, BalanceMonitor, TelegramBot) follow the same try/catch fail-soft pattern. IncomingTxMonitorService follows this exactly.
+
+### Pattern 3: EventBus Emit After DB Write
+
+The existing pattern is: persist to DB first, then emit event. The incoming TX flow follows this by flushing the memory queue to DB in the BackgroundWorker, then emitting `'transaction:incoming'` for each successfully inserted row. This prevents ghost events (events without DB backing).
+
+### Pattern 4: Memory Queue + Batch Flush
+
+This is a new pattern introduced specifically for incoming TX to avoid SQLite SQLITE_BUSY errors from concurrent WebSocket callbacks. The onTransaction callback is synchronous push-only; DB writes are batched every 5 seconds. This pattern should be used for any future high-frequency data ingestion.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Mixing Subscriber State into AdapterPool
+
+**What:** Adding IChainSubscriber methods to IChainAdapter or storing subscribers in AdapterPool's Map
+**Why bad:** AdapterPool's evict/reconnect logic would destroy WebSocket subscriptions. State models are incompatible (stateless vs stateful).
+**Instead:** Keep IChainSubscriber instances in IncomingTxMonitorService, entirely separate from AdapterPool.
+
+### Anti-Pattern 2: Direct DB Writes in WebSocket Callbacks
+
+**What:** Calling `sqlite.prepare(...).run(...)` inside the `onTransaction` callback
+**Why bad:** WebSocket events can arrive at high frequency. better-sqlite3 is single-threaded synchronous; concurrent write attempts from multiple async contexts cause SQLITE_BUSY errors.
+**Instead:** Push to in-memory queue, batch flush every 5 seconds via BackgroundWorkers.
+
+### Anti-Pattern 3: Sharing RPC Clients Between Adapters and Subscribers
+
+**What:** Exposing SolanaAdapter's internal `rpc` client or EvmAdapter's internal `client` for subscriber use
+**Why bad:** Tight coupling, potential state conflicts, violates encapsulation
+**Instead:** Subscribers create their own RPC clients. The RPC URL is the shared resource, not the client instance.
+
+### Anti-Pattern 4: Modifying Existing Transaction Tables
+
+**What:** Adding incoming TX data to the existing `transactions` table
+**Why bad:** The transactions table has a discriminatedUnion 5-type schema (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH) with an 8-state machine. Incoming TX have a completely different lifecycle (DETECTED/CONFIRMED).
+**Instead:** Use the separate `incoming_transactions` table.
+
+---
+
+## New File Inventory
+
+### @waiaas/core (3 new files)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `packages/core/src/interfaces/IChainSubscriber.ts` | NEW | Interface definition (6 methods) |
+| `packages/core/src/interfaces/chain-subscriber.types.ts` | NEW | IncomingTransaction, IncomingTxStatus types |
+| `packages/core/src/interfaces/IIncomingSafetyRule.ts` | NEW | Safety rule interface, SafetyRuleContext |
+
+### @waiaas/adapter-solana (1 new file)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `packages/adapters/solana/src/solana-incoming-subscriber.ts` | NEW | SolanaIncomingSubscriber class |
+
+### @waiaas/adapter-evm (1 new file)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `packages/adapters/evm/src/evm-incoming-subscriber.ts` | NEW | EvmIncomingSubscriber class |
+
+### @waiaas/daemon (6+ new files)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `packages/daemon/src/services/incoming/incoming-tx-monitor-service.ts` | NEW | Main orchestrator service |
+| `packages/daemon/src/services/incoming/incoming-tx-queue.ts` | NEW | Memory queue + batch flush |
+| `packages/daemon/src/services/incoming/subscription-multiplexer.ts` | NEW | WebSocket connection sharing |
+| `packages/daemon/src/services/incoming/safety-rules.ts` | NEW | 3 IIncomingSafetyRule implementations |
+| `packages/daemon/src/services/incoming/utils.ts` | NEW | getDecimals helper, cursor helpers |
+| `packages/daemon/src/services/incoming/index.ts` | NEW | Barrel export |
+| `packages/daemon/src/api/routes/incoming.ts` | NEW | REST API routes |
+
+### @waiaas/sdk (0 new files, 2 modified)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `packages/sdk/src/client.ts` | MODIFIED | Add 2 methods |
+| `packages/sdk/src/types.ts` | MODIFIED | Add incoming TX types |
+
+### @waiaas/mcp (2 new files, 1 modified)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `packages/mcp/src/tools/list-incoming-transactions.ts` | NEW | MCP tool |
+| `packages/mcp/src/tools/get-incoming-summary.ts` | NEW | MCP tool |
+| `packages/mcp/src/server.ts` | MODIFIED | Register 2 new tools (21 -> 23) |
+
+### Modified Existing Files Summary
+
+| File | Change |
 |------|--------|
-| 지갑 100개 모니터링 | Solana: 100개 logsNotifications 구독 (각 WebSocket message), EVM: 100개 주소를 getLogs address[] 배열로 단일 배치 쿼리 |
-| RPC WebSocket 불안정 | 지수 백오프 재연결 + 폴링 폴백으로 연속성 보장 |
-| 새 체인 어댑터 추가 | IChainSubscriber 구현만 추가, IncomingTxMonitorService는 변경 없음 |
-| 대용량 트래픽 지갑 | incoming_transactions 테이블 파티셔닝 불필요 (SQLite, 로컬 데몬). 초당 수백 TX 이상이면 이미 WAIaaS가 적합하지 않은 규모 |
+| `packages/core/src/events/event-types.ts` | Add 3 event types to WaiaasEventMap (5 -> 8) |
+| `packages/core/src/enums/notification.ts` | Add 2 NotificationEventType entries (28 -> 30) |
+| `packages/core/src/index.ts` | Export new types |
+| `packages/daemon/src/lifecycle/daemon.ts` | Step 4c-9, shutdown, new field |
+| `packages/daemon/src/infrastructure/database/migrate.ts` | v21 migration, LATEST_SCHEMA_VERSION 20->21 |
+| `packages/daemon/src/infrastructure/database/schema.ts` | Drizzle schema for 2 new tables + wallets column |
+| `packages/daemon/src/infrastructure/config/loader.ts` | [incoming] config section |
+| `packages/daemon/src/infrastructure/settings/setting-keys.ts` | 7 setting definitions, 'incoming' category |
+| `packages/daemon/src/infrastructure/settings/hot-reload.ts` | HotReloadDeps + reloadIncomingMonitor |
+| `packages/daemon/src/api/server.ts` | Register incoming routes + deps |
+| `packages/daemon/src/api/routes/index.ts` | Export incoming routes |
+| `packages/daemon/src/api/routes/wallets.ts` | monitorIncoming field in PATCH |
+| `packages/daemon/src/api/routes/openapi-schemas.ts` | Incoming TX Zod schemas |
+| `packages/daemon/src/notifications/templates/message-templates.ts` | 2 new message templates |
+| `packages/adapters/solana/src/index.ts` | Export SolanaIncomingSubscriber |
+| `packages/adapters/evm/src/index.ts` | Export EvmIncomingSubscriber |
+| `packages/skills/wallet.skill.md` | Incoming TX section |
 
 ---
 
-## 소스
+## Suggested Build Order
 
-- `packages/core/src/interfaces/IChainAdapter.ts` — 기존 22메서드 계약 (수정 대상 아님)
-- `packages/core/src/events/event-bus.ts` — EventBus 구현 (재사용)
-- `packages/core/src/events/event-types.ts` — WaiaasEventMap (확장 대상)
-- `packages/daemon/src/lifecycle/daemon.ts` — 6-step 시작/10-step 종료 시퀀스
-- `packages/daemon/src/lifecycle/workers.ts` — BackgroundWorkers 패턴 (재사용)
-- `packages/daemon/src/services/monitoring/balance-monitor-service.ts` — 참조 구현 패턴
-- `packages/daemon/src/infrastructure/database/migrate.ts` — v20 마이그레이션 패턴
-- `packages/daemon/src/infrastructure/database/schema.ts` — Drizzle 스키마 구조
-- `@solana/rpc-subscriptions-api@6.0.1` — `logsNotifications(mentions: [address])` 확인
-- `viem@2.45.3` — `getLogs`, `watchBlocks` API 확인
+The build order respects package dependency flow: core -> adapters -> daemon -> sdk/mcp.
+
+### Phase 1: Core Types + DB Foundation
+
+1. **@waiaas/core interfaces and types**
+   - IChainSubscriber.ts, chain-subscriber.types.ts, IIncomingSafetyRule.ts
+   - WaiaasEventMap extension (3 new events)
+   - NotificationEventType extension (28 -> 30)
+   - Core barrel exports
+
+2. **DB migration v21**
+   - incoming_transactions table + 4 indexes
+   - incoming_tx_cursors table
+   - wallets.monitor_incoming column
+   - Drizzle schema definitions
+   - pushSchema DDL update, LATEST_SCHEMA_VERSION = 21
+
+**Rationale:** Everything else depends on these types and tables existing.
+
+### Phase 2: Chain Subscriber Implementations
+
+3. **SolanaIncomingSubscriber**
+   - logsSubscribe + getTransaction parsing
+   - SOL native + SPL/Token-2022 detection
+   - Polling fallback (getSignaturesForAddress)
+   - Unit tests with mock RPC
+
+4. **EvmIncomingSubscriber**
+   - getLogs polling (ERC-20 Transfer events)
+   - getBlock polling (native ETH)
+   - token_registry filter
+   - Unit tests with mock viem client
+
+**Rationale:** Subscribers are independent of each other and can be built in parallel. They depend only on IChainSubscriber from Phase 1.
+
+### Phase 3: Monitor Service + Workers
+
+5. **IncomingTxMonitorService**
+   - IncomingTxQueue (memory queue + batch flush)
+   - SubscriptionMultiplexer (WS connection sharing)
+   - IIncomingSafetyRule implementations (3 rules)
+   - syncSubscriptions() logic
+   - reconnectLoop + blind gap recovery
+
+6. **DaemonLifecycle integration**
+   - Step 4c-9 initialization
+   - Shutdown hook
+   - BackgroundWorkers registration (6 workers)
+   - HotReloadOrchestrator extension
+
+**Rationale:** The service orchestrates subscribers (Phase 2) and depends on DB (Phase 1).
+
+### Phase 4: Config + Settings
+
+7. **Config and Settings**
+   - DaemonConfig [incoming] section
+   - SETTING_DEFINITIONS (7 keys)
+   - SETTING_CATEGORIES (add 'incoming')
+   - HotReloadOrchestrator incoming reload
+   - Notification message templates (2 new)
+
+**Rationale:** Can be built in parallel with Phase 3 but logically groups config concerns.
+
+### Phase 5: REST API + SDK/MCP
+
+8. **REST API routes**
+   - GET /v1/wallet/incoming (cursor pagination)
+   - GET /v1/wallet/incoming/summary (aggregation)
+   - PATCH /v1/wallet/:id monitorIncoming extension
+   - Zod SSoT schemas
+
+9. **SDK + MCP**
+   - TypeScript SDK: 2 methods + types
+   - Python SDK: 2 methods
+   - MCP: 2 tools (21 -> 23)
+   - Skills file update
+
+**Rationale:** API depends on DB tables (Phase 1) and types (Phase 1). SDK/MCP depend on API being defined.
+
+### Phase 6: Integration Testing
+
+10. **E2E and integration tests**
+    - T-01 through T-17 (core verification)
+    - S-01 through S-04 (security verification)
+    - WebSocket -> polling fallback E2E
+    - Blind gap recovery E2E
+    - Hot-reload setting changes E2E
+
+**Rationale:** Integration tests require all components to be in place.
+
+---
+
+## Scalability Considerations
+
+| Concern | 10 wallets | 100 wallets | 1000 wallets |
+|---------|-----------|-------------|--------------|
+| WebSocket connections | 1 per chain:network (multiplexed) | Same (multiplexed) | 1 per chain:network; Solana needs per-wallet logsSubscribe on shared WS |
+| Polling load | Negligible | ~100 RPC calls per poll cycle | Rate limiting needed; batch getLogs across wallets |
+| Memory queue | < 1 KB | < 10 KB | < 100 KB (flushed every 5s) |
+| DB writes | ~1-5 rows per flush | ~10-50 rows per flush | ~100-500 rows per flush; batch INSERT handles well |
+| DB size (90d) | < 10 MB | < 100 MB | ~1 GB; retention policy critical |
+
+**Key insight:** The SubscriptionMultiplexer pattern ensures WebSocket connections scale with chain:network combinations (typically 2-4), not with wallet count. Solana's per-wallet logsSubscribe limitation means N subscriptions on 1 WS connection per network.
+
+---
+
+## Sources
+
+- Design doc 76: `/Users/minho.yoo/dev/wallet/WAIaaS/internal/design/76-incoming-transaction-monitoring.md` (2,441 lines, 19 design decisions)
+- IChainAdapter: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/core/src/interfaces/IChainAdapter.ts` (22 methods)
+- EventBus: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/core/src/events/event-bus.ts`
+- WaiaasEventMap: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/core/src/events/event-types.ts` (5 current events)
+- NotificationEventType: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/core/src/enums/notification.ts` (28 current)
+- DaemonLifecycle: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/lifecycle/daemon.ts` (1,309 lines)
+- AdapterPool: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/infrastructure/adapter-pool.ts`
+- BackgroundWorkers: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/lifecycle/workers.ts`
+- NotificationService: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/notifications/notification-service.ts`
+- SettingsService: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/infrastructure/settings/settings-service.ts`
+- Setting Keys: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/infrastructure/settings/setting-keys.ts`
+- HotReloadOrchestrator: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/infrastructure/settings/hot-reload.ts`
+- Server (createApp): `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/api/server.ts`
+- Route barrel: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/api/routes/index.ts`
+- MCP server: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/mcp/src/server.ts` (21 tools, 4 resource groups)
+- Migrate: `/Users/minho.yoo/dev/wallet/WAIaaS/packages/daemon/src/infrastructure/database/migrate.ts` (LATEST_SCHEMA_VERSION=20)

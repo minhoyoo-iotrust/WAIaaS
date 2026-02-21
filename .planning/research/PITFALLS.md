@@ -1,646 +1,578 @@
-# Pitfalls Research
+# Domain Pitfalls: Incoming Transaction Monitoring Implementation
 
-**Domain:** 수신 트랜잭션 모니터링 — Self-hosted AI agent wallet (WAIaaS)에 수신 TX 감지 기능 추가
+**Domain:** Adding real-time incoming transaction monitoring to an existing wallet daemon (WAIaaS v27.1, doc 76)
 **Researched:** 2026-02-21
-**Confidence:** MEDIUM-HIGH (공식 Solana/viem 문서, GitHub 이슈 트래커, 코드베이스 직접 분석 기반. 일부 rate limit 수치는 제공자마다 달라 LOW 표기)
-
----
-
-## Overview
-
-이 문서는 **기존 WAIaaS (아웃고잉 TX 전용)에 인커밍 TX 모니터링을 추가할 때** 발생하는 함정을 다룬다.
-
-기존 아키텍처:
-- 아웃고잉만 추적하는 `transactions` 테이블 (파이프라인 6-stage 기반)
-- better-sqlite3 단일 라이터 SQLite (DB v20, LATEST_SCHEMA_VERSION=20)
-- `BackgroundWorkers` 폴링 패턴 (`setInterval` + runImmediately 옵션)
-- `BalanceMonitorService` 패턴 (5분 주기, per-wallet 오류 격리)
-- `NotificationService` (26 이벤트, 우선순위 기반 채널 fallback)
-
-함정은 **Critical(운영 중단 또는 TX 유실)**, **High(기능 결함 또는 주요 재작업)**, **Moderate(기술 부채 또는 운영 복잡성)** 3단계로 분류한다.
+**Confidence:** MEDIUM-HIGH (based on Solana/EVM official docs, GitHub issue trackers, codebase analysis. Some RPC rate limit numbers are provider-specific and marked accordingly.)
 
 ---
 
 ## Critical Pitfalls
 
-운영 중단, TX 유실, 또는 데이터 무결성 파괴를 야기하는 실수.
+Mistakes that cause data loss, missed transactions, or require architectural rework.
 
 ---
 
-### C-01: WebSocket 재연결 중 수신 TX 유실 -- "블라인드 구간"
+### Pitfall C-01: WebSocket Event Listener Leak on Reconnection
 
-**Severity:** CRITICAL
-**Confidence:** HIGH (Solana 공식 문서, GitHub Issue #35489, Helius 문서)
+**What goes wrong:** Each reconnection cycle registers new `message`, `close`, `error` listeners on a fresh WebSocket instance, but old listeners on the previous (now-closed) WebSocket are never removed. Over days of operation, the EventEmitter accumulates zombie listeners. Node.js emits `MaxListenersExceededWarning` first, then memory grows linearly with reconnection count.
 
-**What goes wrong:**
-WebSocket 구독(Solana `accountSubscribe`, EVM `eth_subscribe`)이 끊어지고 재연결되는 사이에 발생한 트랜잭션은 영구 유실된다.
+**Why it happens:** The `reconnectLoop` creates a new WebSocket via `subscriber.connect()`, but the previous WebSocket's event handlers reference closures that hold `Map` entries, parsed transaction buffers, and the `onTransaction` callback. If the old WebSocket reference is not explicitly cleaned before creating the new one, the GC cannot collect it because the registered handlers form a reference chain: old WebSocket -> handler closure -> subscription Map -> IncomingTxMonitorService.
 
-구체적인 시나리오:
-1. WebSocket 연결이 끊어짐 (네트워크 불안정, RPC 서버 재시작, 10분 inactivity timeout)
-2. 재연결 중 (exponential backoff 동안) N개의 트랜잭션이 발생
-3. WebSocket이 복구되어 구독을 재등록 (`accountSubscribe` 재전송)
-4. 재연결 이후 발생하는 트랜잭션은 감지되지만, 블라인드 구간의 TX는 **영구 누락**
-
-Solana에서 추가로 확인된 문제:
-- 단일 RPC 노드는 `getSignaturesForAddress` 폴링과 달리 일부 TX를 스킵할 수 있음 (GitHub Issue #35489)
-- 공식 Solana WebSocket 엔드포인트는 10분 inactivity timeout 존재 → 활동 없는 지갑(대부분의 AI agent 지갑) 구독이 자동 종료됨
-
-**Why it happens:**
-- WebSocket push 모델은 "연결되어 있을 때만" 이벤트를 수신 → pull 모델(폴링)과 달리 과거 이력 조회 불가
-- 재연결 후 구독 재등록만 하고 "블라인드 구간" 보상 폴링을 하지 않으면 누락이 영구화됨
-- 기존 `BalanceMonitorService`는 잔액 변화만 감지하므로 개별 수신 TX 추적 용도가 아님
-
-**How to avoid:**
-1. **폴링 fallback을 필수 컴포넌트로 설계**: WebSocket이 아닌 `getSignaturesForAddress` (Solana) / `eth_getLogs` (EVM) 폴링을 "보조 채널"이 아닌 "보장 채널"로 설계
-2. **마지막 처리 서명/블록 커서 저장**: `incoming_tx_cursors` 테이블(walletId, lastSignature, lastBlockNumber)을 유지하여, 재연결 시 블라인드 구간을 폴링으로 채움
-3. **재연결 직후 갭 보상**: WebSocket reconnect 핸들러에서 cursor 이후의 신규 TX를 폴링으로 즉시 검색
-4. **idempotent 처리**: WebSocket과 폴링이 동일 TX를 중복 리포트해도 안전하도록 `ON CONFLICT IGNORE` 또는 서명/해시 기반 중복 제거
+**Consequences:**
+- Memory growth: ~2-5 MB per reconnection cycle (WebSocket buffer + closure references)
+- After 100+ reconnections: RSS exceeds container limits, OOM kill
+- `MaxListenersExceededWarning` floods logs, obscuring real errors
+- Degraded EventBus performance as orphaned listeners fire on stale data
 
 **Warning signs:**
-- 재연결 핸들러가 `subscribe()` 재호출만 하고 갭 보상 폴링을 누락
-- `lastProcessedSignature` 같은 커서 개념 없이 모니터링 설계
-- "WebSocket이 복구되면 자동으로 이벤트를 다시 받겠지"라는 가정
-- 단위 테스트에서 연결 끊김-재연결 시나리오 없음
+- `MaxListenersExceededWarning` in process stderr
+- RSS memory monotonically increasing across reconnections (never returns to baseline)
+- `process.memoryUsage().heapUsed` delta > 1MB per reconnection
 
-**Phase to address:** 인커밍 TX 모니터링 아키텍처 설계 phase (가장 첫 번째)
+**Prevention:**
+1. In `SolanaIncomingSubscriber.connect()`, explicitly call `this.ws?.removeAllListeners()` and `this.ws?.terminate()` (not `.close()` -- terminate is synchronous) before creating a new WebSocket
+2. Use AbortController per connection cycle: `new AbortController()` on connect, `controller.abort()` on disconnect. Pass `signal` to all `for await` loops (Solana Kit's `logsNotifications` supports this)
+3. Add a `connectionGeneration` counter. Increment on each connect. All callbacks check `if (this.currentGeneration !== myGeneration) return;` to short-circuit stale handler execution
+4. Set `emitter.setMaxListeners(0)` only for the SubscriptionMultiplexer internal emitter (not globally), and add a periodic health check that logs listener count per event
+
+**Detection:** Unit test: call `connect()` 10 times in sequence, assert `ws.listenerCount('message') === expectedCount` (not `10 * expectedCount`)
+
+**Phase:** Must be addressed in the WebSocket connection management phase (SolanaIncomingSubscriber + SubscriptionMultiplexer implementation)
+
+**Confidence:** HIGH -- well-documented Node.js pattern ([ws library issue #804](https://github.com/websockets/ws/issues/804), [ws library issue #1617](https://github.com/websockets/ws/issues/1617))
 
 ---
 
-### C-02: SQLite 단일 라이터와 고빈도 수신 이벤트 충돌 -- SQLITE_BUSY 폭발
+### Pitfall C-02: Flush Worker vs Pipeline Writer SQLITE_BUSY Contention
 
-**Severity:** CRITICAL
-**Confidence:** HIGH (better-sqlite3 공식 문서 + SQLite WAL 동작 원리 + WAIaaS 코드 직접 분석)
+**What goes wrong:** The `incoming-tx-flush` BackgroundWorker uses `sqlite.transaction()` to batch-INSERT incoming transactions. Simultaneously, the existing 6-stage pipeline's Stage 5 (database write) also uses `BEGIN IMMEDIATE` for outgoing transaction state changes. When both run concurrently, one gets `SQLITE_BUSY` even with `busy_timeout = 5000ms` because better-sqlite3 is synchronous -- it blocks the Node.js event loop during the busy wait.
 
-**What goes wrong:**
-WAIaaS는 `better-sqlite3` (동기 SQLite)를 사용하며 모든 쓰기는 단일 라이터 직렬화가 요구된다. 현재 아키텍처:
-- `BackgroundWorkers`의 폴링 핸들러가 주기적으로 DB에 씀 (balance check, session cleanup, WAL checkpoint)
-- 파이프라인 TX 처리가 중간에 DB에 씀
+**Why it happens:** WAIaaS uses a single better-sqlite3 connection (single process, single thread). `better-sqlite3` is synchronous, so `BEGIN IMMEDIATE` actually blocks the calling thread. The existing system never had two high-frequency writers: outgoing TX writes are infrequent (user-initiated). Adding incoming TX flush (every 5 seconds, up to 100 rows per batch) introduces the first high-throughput write pattern.
 
-수신 TX 모니터링을 추가하면:
-1. WebSocket 이벤트가 고빈도로 수신 → 각 이벤트마다 `incoming_transactions` 테이블 INSERT
-2. 폴링 fallback이 동시에 돌면서 INSERT 시도
-3. 기존 파이프라인 처리, WAL checkpoint, balance monitor가 동시에 쓰기 경쟁
-4. `BEGIN IMMEDIATE`로 write lock을 잡으려 할 때 기존 write transaction이 점유 중이면 `SQLITE_BUSY` 에러
-5. WAIaaS 전체가 "database is locked" 에러로 불안정해짐
+The real danger is not `SQLITE_BUSY` itself (better-sqlite3 handles that with the configured `busy_timeout`), but rather **event loop starvation**: a 100-row INSERT inside a transaction holds the database lock for 5-50ms. During that time, any HTTP request handler that needs a database read (e.g., GET /v1/wallet/incoming) blocks synchronously, adding latency to API responses.
 
-현재 코드의 맥락:
-```
-// better-sqlite3는 Node.js event loop 위에서 동기적으로 실행
-// WebSocket 이벤트 핸들러 → 동기 DB 쓰기 → event loop 점유
-// 고빈도 이벤트 + 긴 쓰기 = event loop 블로킹
-```
-
-**Why it happens:**
-- WebSocket 이벤트는 비동기 이벤트 루프에서 수신되지만, better-sqlite3 쓰기는 동기이므로 event loop를 블로킹
-- 많은 지갑을 모니터링할수록 이벤트 빈도가 높아짐 → 직렬화 병목 심화
-- 폴링 fallback이 "혹시 놓쳤을까봐" 주기적으로 같은 TX를 재검색하면 불필요한 INSERT 시도 급증
-
-**How to avoid:**
-1. **인커밍 TX를 즉시 DB에 쓰지 않음**: 메모리 큐(in-process queue)에 먼저 수집 → `BackgroundWorkers`의 단일 "flush" 태스크가 배치 INSERT
-2. **단일 라이터 원칙 강화**: 인커밍 TX INSERT는 기존 파이프라인/balance monitor와 동일한 순서 규칙으로 직렬화. `BEGIN IMMEDIATE`를 명시적으로 사용
-3. **배치 처리**: `INSERT OR IGNORE INTO incoming_transactions VALUES (...), (...), (...)` 배치 INSERT로 트랜잭션 오버헤드 최소화
-4. **busy_timeout 설정**: `PRAGMA busy_timeout = 5000` (5초). better-sqlite3는 기본 0ms이므로 즉시 SQLITE_BUSY 에러 발생
+**Consequences:**
+- API response latency spikes during flush cycles (P99 increases from 5ms to 50ms+)
+- If flush batches are large (100+ rows), HTTP handlers see consistent 30-50ms pauses
+- WAL file growth if checkpoint runs during a long flush transaction
+- In extreme cases (500+ queued TXs after reconnection gap recovery), flush transaction can take 200ms+, causing visible API stutter
 
 **Warning signs:**
-- WebSocket 이벤트 핸들러에서 직접 DB INSERT (await 없이)
-- 폴링 fallback과 WebSocket 핸들러 양쪽에서 독립적으로 DB에 씀
-- `PRAGMA busy_timeout` 미설정
+- API P99 latency correlates with `incoming-tx-flush` worker schedule
+- WAL file size spikes periodically
+- `incoming-tx-flush` worker duration exceeds 50ms (log worker execution time)
 
-**Phase to address:** 데이터 레이어 설계 phase (DB 쓰기 직렬화 전략 확정)
+**Prevention:**
+1. Keep batch size small: `MAX_BATCH = 50` (not 100). Multiple flushes per cycle is fine (the worker will flush again next interval)
+2. Use prepared statement + `sqlite.transaction()` pattern (already in doc 76 design) -- this is the fastest path in better-sqlite3
+3. Add worker execution time logging: `const start = performance.now(); flush(); const dur = performance.now() - start; if (dur > 50) logger.warn(...)`
+4. Consider splitting gap recovery writes into micro-batches of 20 with `setImmediate()` between batches to yield the event loop
+5. **Do NOT** create a second database connection. better-sqlite3 in the same process with WAL mode and single connection is the correct architecture for WAIaaS. Multiple connections add WAL checkpoint starvation risk.
+
+**Detection:** Integration test: run flush worker and API GET concurrently, measure API response time, assert < 100ms
+
+**Phase:** Must be addressed in IncomingTxQueue + BackgroundWorkers flush implementation
+
+**Confidence:** HIGH -- confirmed by [SQLite WAL documentation](https://sqlite.org/wal.html), [better-sqlite3 performance docs](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md)
 
 ---
 
-### C-03: Solana `confirmed` 레벨 이벤트 수신 후 롤백 -- 돈을 받았다 표시했는데 실제로 없음
+### Pitfall C-03: Solana `confirmed` Rollback Acting on Unfinalized TX
 
-**Severity:** CRITICAL
-**Confidence:** HIGH (Solana 공식 Commitment Levels 문서 + Helius 블로그)
+**What goes wrong:** An AI agent reads a DETECTED incoming transaction (committed at `confirmed` level) and takes action (e.g., sends a reply transfer, updates an internal ledger). The `confirmed` block is then dropped during a fork, and the incoming TX never finalizes. The agent has now acted on a phantom deposit.
 
-**What goes wrong:**
-Solana의 commitment level은 세 단계: `processed` → `confirmed` → `finalized`
+**Why it happens:** Solana's `confirmed` commitment means the cluster voted on the block with supermajority, but ~5% of blocks do not end up being finalized. While the probability of a confirmed TX being rolled back is low, it is non-zero. The design doc's 2-phase status model (DETECTED -> CONFIRMED) correctly separates detection from finalization, but the pitfall is in **how downstream consumers (EventBus listeners, SDK users, MCP tool responses) treat DETECTED events**.
 
-- `confirmed`: stake 2/3이 투표 완료. 이론적으로 롤백 가능하나 실제 사례 없음 (~1-2초 후)
-- `finalized`: 32+ 블록이 confirmed 위에 쌓임 (~13초 후). 사실상 불가역
-
-`accountSubscribe`의 기본값은 `finalized`이다. 그러나 지연을 줄이려고 `confirmed`로 설정하면:
-1. 수신 이벤트가 `confirmed` 상태로 도달 → "입금 완료"로 처리
-2. 이론적으로 해당 블록이 롤백되면 입금이 취소됨
-3. 지갑 잔액 표시나 에이전트 로직이 실제로 없는 잔액을 믿고 행동
-
-AI agent 지갑에서의 실제 위험:
-- 에이전트가 수신 확인 후 즉시 다른 TX를 발행 → 롤백되면 이미 나간 TX는 되돌릴 수 없음
-
-**Why it happens:**
-- 실시간성을 위해 `processed`나 `confirmed`를 선택하는 것은 자연스러운 유혹
-- "Solana는 빠르니까 rollback 없겠지"라는 잘못된 확신
-- Helius 문서에도 명시: "no confirmed block has reverted in Solana's five-year history" — 하지만 이것은 보장이 아님
-
-**How to avoid:**
-1. **수신 이벤트는 `finalized`로만 처리**: AI agent 지갑에서 수신 TX를 "완료"로 처리하려면 `finalized` commitment 필수. ~13초 지연은 보안과의 트레이드오프
-2. **2단계 상태 관리**: `INCOMING_PENDING` (confirmed 수신) → `INCOMING_CONFIRMED` (finalized). 에이전트 로직은 `INCOMING_CONFIRMED` 상태만 신뢰
-3. `confirmed` 수신 시 알림은 보내되 ("입금 예정"), `finalized` 완료 시 최종 확인 알림 별도 발송
+**Consequences:**
+- Double-spend vulnerability: agent acts on unconfirmed deposit
+- Accounting mismatch: internal records show deposit that never finalized
+- Trust erosion: owner sees completed action for non-existent deposit
 
 **Warning signs:**
-- `accountSubscribe` commitment를 `processed`로 설정
-- "빠른 알림을 위해" `confirmed` 수신 후 바로 에이전트 로직 실행
-- 수신 TX 상태를 단일 boolean으로만 저장
+- `DETECTED` rows that never transition to `CONFIRMED` after 5+ minutes
+- `incoming-tx-confirm-solana` worker finding `getTransaction(finalized)` returning null for old DETECTED rows
+- EventBus `transaction:incoming` events followed by no corresponding `transaction:incoming:confirmed` event
 
-**Phase to address:** 인커밍 TX 상태 모델 설계 phase
+**Prevention:**
+1. **API response must include status field prominently.** SDK/MCP consumers must check `status === 'CONFIRMED'` before acting on financial data
+2. **Add `INCOMING_TX_CONFIRMED` notification event** (in addition to `DETECTED`). Agents should subscribe to CONFIRMED events for automated actions, DETECTED events for informational display only
+3. **Document in skill files**: "Do NOT initiate transfers based on DETECTED incoming transactions. Wait for CONFIRMED status."
+4. **Add stale DETECTED cleanup**: BackgroundWorker that marks DETECTED rows older than 1 hour as expired (new status `EXPIRED` or delete) -- if not confirmed after 1 hour on Solana, it was rolled back
+5. **REST API default filter**: `GET /v1/wallet/incoming` should default to `status=CONFIRMED` unless explicitly overridden. This prevents casual API consumers from acting on unconfirmed data
+
+**Detection:** Integration test: insert DETECTED row, simulate rollback (getTransaction returns null at finalized), verify row is cleaned up
+
+**Phase:** Must be addressed in the EventBus event design phase and REST API implementation phase
+
+**Confidence:** HIGH -- [Solana commitment levels documentation](https://www.helius.dev/blog/solana-commitment-levels), [Solana TX confirmation guide](https://solana.com/developers/guides/advanced/confirmation)
 
 ---
 
-## High Pitfalls
+### Pitfall C-04: Gap Recovery Producing Duplicate Events via Memory Queue
 
-기능 결함, 주요 재작업, 또는 운영 장애를 야기하는 실수.
+**What goes wrong:** WebSocket disconnects. During the blind gap, 3 TXs arrive. WebSocket reconnects. Gap recovery runs `getSignaturesForAddress(until: lastSignature)` and finds the 3 TXs. Meanwhile, the daemon had already fallen back to polling mode, and the polling worker (`incoming-tx-poll-solana`) already found 2 of the 3 TXs. Gap recovery pushes all 3 into the memory queue. Polling already pushed 2. The queue now has 5 entries representing 3 unique TXs.
 
----
+The DB-level `ON CONFLICT(tx_hash, wallet_id) DO NOTHING` correctly deduplicates at INSERT time. The flush handler correctly emits EventBus events only for rows where `result.changes > 0`. **BUT**: the doc 76 design marks the `Set<txHash+walletId>` dedup in the memory queue as "optional optimization" (section 2.4). This is **not optional** -- it is required.
 
-### H-01: Solana SPL/Token-2022 토큰 수신 감지 실패 -- ATA 무지
+Without queue-level dedup, the flush worker wastes DB operations on INSERT statements that hit ON CONFLICT DO NOTHING. More importantly, during gap recovery with 1000+ signatures, the queue balloons with duplicates, increasing memory pressure and flush time.
 
-**Severity:** HIGH
-**Confidence:** HIGH (Solana 공식 Exchange Guide, Solana Program Library 문서, 다수 개발자 가이드)
+**Why it happens:** Three sources can produce the same TX simultaneously: (1) WebSocket subscription (if it reconnects fast), (2) polling fallback, (3) gap recovery. All three push to the same memory queue.
 
-**What goes wrong:**
-Solana에서 SOL 수신과 토큰 수신의 감지 방식이 근본적으로 다르다:
-
-- **SOL 수신**: wallet의 주소(`publicKey`)에 `accountSubscribe` → 잔액 변화 감지
-- **SPL 토큰 수신**: 토큰은 Associated Token Account (ATA)로 전달됨. ATA는 `{walletAddress, mintAddress}`로부터 PDA(Program Derived Address)로 도출되는 **별도 계정**
-
-잘못된 설계:
-1. `accountSubscribe`를 wallet의 `publicKey`에만 등록
-2. 에이전트가 SPL 토큰을 받아도 감지 불가 — wallet 주소가 아닌 ATA 주소의 잔액이 변하기 때문
-
-**추가 복잡성**:
-- 기존 ATA 목록을 모니터링하는 것으로 충분하지 않음: **최초로 특정 토큰을 받을 때 ATA가 새로 생성됨**
-- ATA 생성 이벤트는 wallet 주소를 `accountSubscribe`해야 감지 가능 (rent 차감)
-- Token-2022 (Token Extensions Program)는 별도 Program ID 사용 → ATA 도출 공식이 다름
-
-**현재 코드와의 충돌**:
-```typescript
-// SolanaAdapter의 ATA_RENT_LAMPORTS 상수가 이미 존재
-// 아웃고잉 TOKEN_TRANSFER 시 ATA 생성은 이미 구현됨
-// 하지만 수신 시 ATA 감지는 별도 구현 필요
-const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
-```
-
-**How to avoid:**
-1. **2레벨 구독 전략**:
-   - Level 1: wallet `publicKey` 구독 → SOL 수신 + 신규 ATA 생성 감지
-   - Level 2: 알려진 ATA 주소 각각 구독 → 기존 토큰 수신 감지
-2. **ATA 동적 등록**: Level 1에서 ATA 생성 감지 시, 해당 ATA를 Level 2 구독에 자동 추가
-3. **Token-2022 지원**: `TOKEN_PROGRAM_ADDRESS`와 `TOKEN_2022_PROGRAM_ID` 양쪽으로 ATA 도출 시도
+**Consequences:**
+- Wasted DB write operations (INSERT that hits ON CONFLICT DO NOTHING)
+- Memory queue grows faster than necessary during gap recovery
+- If the flush handler logic is ever refactored to not check `result.changes`, duplicate notifications become possible
 
 **Warning signs:**
-- `accountSubscribe` 대상이 wallet `publicKey`만 있고 ATA 주소가 없음
-- `token_registry`에 등록된 토큰의 ATA를 사전 계산하지 않음
-- Token-2022 토큰을 수신해도 감지 안 됨 (테스트 누락 가능성)
+- `incoming-tx-flush` logs show high `ON CONFLICT DO NOTHING` hit rate (> 10% of batch)
+- Memory queue size spikes during reconnection sequences
 
-**Phase to address:** Solana 수신 TX 감지 설계 phase
+**Prevention:**
+1. **Make queue-level dedup mandatory**, not optional. Use `Map<string, IncomingTransaction>` keyed by `${txHash}:${walletId}` instead of plain array. `push()` becomes `set()` -- idempotent
+2. During gap recovery, acquire a lock or set a flag that pauses polling for that specific wallet until gap recovery completes
+3. Log dedup statistics: `inserted: N, duplicates_skipped: M` per flush cycle for observability
 
----
+**Detection:** Test: push same TX to queue 3 times, call flush, assert exactly 1 DB row and 1 EventBus emit
 
-### H-02: WebSocket 메모리 누수 -- 재연결 시 이전 구독 정리 누락
+**Phase:** Must be addressed in IncomingTxQueue implementation and gap recovery logic
 
-**Severity:** HIGH
-**Confidence:** HIGH (ethers.js GitHub Issue #1121, viem CHANGELOG, WAIaaS WalletConnect 경험)
-
-**What goes wrong:**
-WebSocket이 끊기고 재연결될 때, 이전 구독 핸들러를 정리하지 않으면:
-
-1. `reconnect()` 호출 → 새 WebSocket 연결 생성 + `accountSubscribe` 재등록
-2. 이전 연결의 이벤트 핸들러 참조가 클로저로 살아있음 → GC 안 됨
-3. 재연결이 반복될수록 핸들러가 누적 → 메모리 사용량 단조 증가
-4. 동일 이벤트에 N개의 핸들러가 등록 → 같은 TX가 N번 처리됨
-
-WAIaaS 특유의 위험:
-- 데몬은 24/7 장기 운영 → 누수가 시간에 따라 누적
-- AI agent 지갑은 개수가 많을 수 있음 → 구독 수 증가 → 누수 가속
-- `BalanceMonitorService`의 `lastNotified` Map과 유사한 메모리 누수 위험
-
-**How to avoid:**
-1. **구독 레지스트리 관리**: `Map<walletId, { unsubscribe: () => void }>` 형태로 각 구독의 해제 함수를 보관
-2. **재연결 전 구독 해제**: reconnect 핸들러에서 `registry.forEach(sub => sub.unsubscribe())` 먼저 실행
-3. **지갑 비활성화 시 즉시 해제**: 지갑이 SUSPENDED/DELETED 상태로 바뀌면 해당 구독 즉시 정리
-4. **viem `watchBlocks` 반환값 보관**: viem의 watch 함수들은 unwatch 함수를 반환함 — 이를 레지스트리에 저장
-
-**Warning signs:**
-- Node.js `process.memoryUsage().heapUsed` 가 시간에 따라 단조 증가
-- 재연결 카운터가 늘어날수록 동일 TX가 중복 처리됨
-- unsubscribe/unwatch 반환값을 버림 (`void watchBlocks(...)`)
-
-**Phase to address:** WebSocket 연결 관리 설계 phase
+**Confidence:** HIGH -- derived from doc 76 design analysis
 
 ---
 
-### H-03: 공개 RPC 구독 한도 초과 -- Silent 모니터링 중단
+### Pitfall C-05: Shutdown Data Loss -- Memory Queue Not Flushed
 
-**Severity:** HIGH
-**Confidence:** MEDIUM (Solana 공식 RPC 문서, 제공자별 문서. 구체적 수치는 제공자마다 다름)
+**What goes wrong:** The daemon receives SIGTERM. DaemonLifecycle shutdown sequence runs. Step 6a stops services, Step 7 calls `workers.stopAll()`, Step 8 does WAL checkpoint, Step 9 locks keystore, Step 10 closes SQLite. But `IncomingTxMonitorService.stop()` is called in Step 6a, which stops WebSocket subscriptions. The memory queue may still contain unflushed TXs (up to 5 seconds of accumulated events). If `workers.stopAll()` in Step 7 has already cleared the `incoming-tx-flush` timer, those TXs are lost.
 
-**What goes wrong:**
-공개 RPC 엔드포인트는 WebSocket 구독 수를 제한한다:
+**Why it happens:** The `BackgroundWorkers.stopAll()` clears all interval timers and waits up to 5 seconds for in-progress handlers. But it does NOT run one final iteration of each worker. If the flush worker last ran 4 seconds ago and the daemon shuts down, up to 4 seconds of queued TXs are lost.
 
-- **Solana 공개 mainnet**: IP당 WebSocket 연결 수 제한 존재. 대규모 서비스용 미권장 (공식 문서 명시)
-- **Helius/QuickNode 등 유료 서비스**: plan에 따라 동시 WebSocket 연결 또는 구독 수 제한
-- **WAIaaS 상황**: AI agent 지갑이 N개일 때, SOL 구독 N개 + 토큰 ATA 구독 N×M개 필요
+The **critical escalation**: if the last flush updated the cursor to include these TXs but the TXs themselves were not flushed (cursor and data are updated in separate steps), the cursor points past unflushed data -- **permanent data loss** because gap recovery skips them.
 
-예: 50개 지갑, 지갑당 평균 5개 토큰 ATA → 구독 수 = 50 + 250 = 300
-
-이 300개 구독이 rate limit을 초과하면:
-1. 신규 `accountSubscribe` 요청 실패 (error 또는 silent ignore)
-2. **일부 지갑의 모니터링이 중단되지만 에러가 명확하지 않음** → 알아채기 어려움
-
-**Why it happens:**
-- "지갑 수가 적으니 괜찮겠지"라는 초기 가정이 운영 단계에서 깨짐
-- 구독 실패가 예외를 던지지 않고 조용히 무시될 수 있음
-- 플랜 변경 없이 지갑 수가 늘어나면 임계값 초과
-
-**How to avoid:**
-1. **구독 성공 여부를 명시적으로 확인**: `accountSubscribe`의 응답에서 subscription ID를 확인. 실패 시 에러 로그 + 알림
-2. **구독 수 제한 설정**: config에 `max_monitored_wallets` 설정. 초과 시 "모니터링 불가" 상태로 표시 (모니터링 없이 무음으로 운영하는 것보다 나음)
-3. **선택적 모니터링 기본값**: 모든 지갑이 모니터링을 원하지 않을 수 있음 — `incoming_monitor_enabled` per-wallet 설정으로 옵트인 방식 권장
-4. **폴링 fallback의 rate limit 계산**: 폴링 모드에서 N개 지갑 × 폴링 주기 = HTTP 요청 수 — 이것도 rate limit 영향
+**Consequences:**
+- 0-5 seconds of incoming TXs lost on every daemon restart
+- If cursor is ahead of actual data, permanent data loss (gap recovery skips the gap)
 
 **Warning signs:**
-- 지갑 수가 많아지는 테스트 없이 출시
-- 구독 실패 이벤트 핸들러 없음
-- 모든 ACTIVE 지갑에 자동으로 구독 등록 (옵트인 없음)
+- Missing incoming TXs after daemon restart that gap recovery should have caught
+- Cursor timestamp newer than newest `incoming_transactions.detected_at` for a wallet
 
-**Phase to address:** RPC 제공자 제한 분석 phase + 구독 관리 설계 phase
+**Prevention:**
+1. **In `IncomingTxMonitorService.stop()`, call `this.queue.flush(this.sqlite)` as the LAST step** -- after stopping subscriptions but before returning. This ensures all queued TXs are persisted
+2. **Update cursor ONLY inside the flush transaction**, not separately. Cursor and TX data must be atomically consistent. Use a single `sqlite.transaction()` that inserts TXs AND updates the cursor
+3. **In DaemonLifecycle shutdown, call `incomingTxMonitorService.stop()` BEFORE `workers.stopAll()`** (verify this ordering in implementation)
+4. Add shutdown log: `Flushed N remaining incoming TXs during shutdown`
+
+**Detection:** Test: push 10 TXs to queue, call `service.stop()`, verify all 10 are in DB. Test: crash simulation (no graceful shutdown), verify gap recovery catches missed TXs on restart
+
+**Phase:** Must be addressed in DaemonLifecycle integration phase
+
+**Confidence:** HIGH -- derived from codebase analysis (BackgroundWorkers.stopAll in `workers.ts` lines 94-105 does not run final iteration)
 
 ---
 
-### H-04: 폴링 fallback의 폭발적 RPC 비용 -- "조용히 쌓이는 청구서"
+### Pitfall C-06: EVM Reorg Causing False CONFIRMED Status
 
-**Severity:** HIGH
-**Confidence:** MEDIUM (Solana/EVM RPC 비용 구조 분석, WAIaaS self-hosted 맥락)
+**What goes wrong:** An EVM block at height N includes a transfer to a monitored wallet. The polling worker detects it, inserts as DETECTED with `block_number = N`. The confirm worker runs, sees `currentBlock - N >= 12`, marks it as CONFIRMED. Later, a chain reorganization replaces block N with a different block that does NOT include the transfer. The DB now has a CONFIRMED record for a transaction that does not exist on the canonical chain.
 
-**What goes wrong:**
-WebSocket 실패 시 폴링 fallback으로 전환되는 설계에서:
+**Why it happens:** The EVM confirm worker (doc 76 section 4.6) only checks `currentBlock - tx.block_number >= BigInt(threshold)`. It does NOT re-verify that the transaction still exists at the claimed block. Reorgs deeper than 12 blocks are extremely rare on Ethereum mainnet post-Merge (~0%), but on testnets (Sepolia) and L2s, reorgs can be more common.
 
-1. WebSocket 재연결 실패가 반복되거나, 공개 RPC가 WebSocket을 지원하지 않는 경우 → 폴링 모드로 전락
-2. 폴링 주기 30초 × 지갑 100개 × `getSignaturesForAddress` 1회 = **분당 200회 RPC 요청**
-3. 유료 RPC 서비스에서 이는 credit 소모 → 예상치 못한 청구
-4. 공개 RPC에서는 429 Too Many Requests → 폴링도 실패 → 모니터링 완전 중단
-
-폴링의 추가 cost:
-- `getSignaturesForAddress` → `getTransaction`(per signature) 추가 호출 필요 → 지수적 비용 증가
-- EVM에서 `eth_getLogs` with block range: 대용량 블록 범위 요청 시 시간 초과 가능
-
-**How to avoid:**
-1. **폴링 주기를 보수적으로 설정**: 기본값 5분 (BalanceMonitorService와 동일). 운영자가 줄일 수 있게 하되 최소값 경고
-2. **폴링 비용 예측 표시**: Admin UI에 "현재 폴링 모드 — 분당 N회 RPC 요청 예상" 표시
-3. **배치 쿼리**: `getSignaturesForAddress`를 지갑별로 독립 호출하지 않고 슬롯/블록 범위 기준 배치 처리
-4. **폴링은 "보완"이지 "기본"이 아님**: WebSocket 복구 즉시 폴링 중단, WebSocket을 항상 우선으로 사용
+**Consequences:**
+- False CONFIRMED record in the database
+- Agent acts on non-existent deposit with full confidence (CONFIRMED status)
+- No automatic correction mechanism
 
 **Warning signs:**
-- 폴링 주기가 10초 미만으로 설정
-- 지갑 수 × 폴링 빈도를 Admin UI에서 확인 불가
-- 폴링 fallback이 WebSocket 복구 후에도 계속 돌아감 (정리 로직 없음)
+- Transaction hash returns `null` from `eth_getTransactionReceipt` despite being CONFIRMED in DB
+- Block number in DB does not match the block containing the TX hash on-chain
 
-**Phase to address:** 폴링 fallback 설계 phase
+**Prevention:**
+1. **In the confirm worker, re-fetch the transaction receipt** (`eth_getTransactionReceipt(txHash)`) before marking CONFIRMED. Verify receipt exists AND `receipt.blockNumber` matches stored `block_number`
+2. If `receipt.blockNumber` differs from stored value, update the stored `block_number` and reset to DETECTED (the TX was reorged but re-included in a different block)
+3. If receipt is null, mark the TX as `EXPIRED` or delete it (TX was dropped from canonical chain)
+4. For L2s (Base, Arbitrum) where `CONFIRMATION_THRESHOLDS` is 1, the confirm worker should still re-verify the receipt -- L2 finality is derived from L1 batch posting, not L2 block count
 
----
+**Detection:** Integration test with mocked RPC: insert DETECTED TX at block N, mock `getBlockNumber()` to return N+12, mock `getTransactionReceipt()` to return null, verify TX is NOT marked CONFIRMED
 
-### H-05: EVM 전송 이벤트 오탐 -- 프록시 컨트랙트 & Transfer 이벤트 위장
+**Phase:** Must be addressed in the EVM confirmation worker implementation
 
-**Severity:** HIGH
-**Confidence:** MEDIUM (EVM proxy contract 스펙, ERC-20 표준 분석)
-
-**What goes wrong:**
-EVM에서 인커밍 ERC-20 토큰 수신을 `eth_subscribe("logs")` + `Transfer(address,address,uint256)` 토픽으로 감지할 때:
-
-1. **프록시 컨트랙트**: ERC-1967 업그레이드 가능 컨트랙트는 implementation이 바뀔 수 있음. 구독 시 컨트랙트 주소는 같지만 Transfer 이벤트 시그니처가 다를 수 있음
-2. **이벤트 위장**: 악의적 컨트랙트가 표준 `Transfer` 이벤트 시그니처(`0xddf252...`)를 emit하지만 실제로 토큰을 이전하지 않음 (또는 반대로 이전하면서 이벤트를 다르게 emit)
-3. **토큰이 아닌 컨트랙트에서 Transfer 이벤트**: NFT(ERC-721), 브릿지 계약 등도 동일 토픽을 사용 — ERC-20 Transfer와 구분 불가
-4. **Wrapped native token**: WETH의 `Deposit`/`Withdrawal` 이벤트는 ERC-20 Transfer와 다름
-
-**How to avoid:**
-1. **컨트랙트 주소 화이트리스트**: `token_registry`에 등록된 컨트랙트 주소만 신뢰. 미등록 컨트랙트의 Transfer 이벤트는 무시 또는 경고 처리
-2. **Transfer 수신 후 잔액 재확인**: 이벤트 수신 후 `getBalance` / `balanceOf` 호출로 실제 잔액 변화를 확인. 이벤트만으로 최종 처리 금지
-3. **ERC-721 필터링**: Transfer 이벤트의 `value` 파라미터가 0이거나 이상하면 NFT 전송으로 판단 → 무시
-
-**Warning signs:**
-- `token_registry` 확인 없이 모든 Transfer 이벤트를 처리
-- Transfer 이벤트 수신 후 잔액 재확인 단계 없음
-
-**Phase to address:** EVM 수신 TX 파싱 설계 phase
+**Confidence:** MEDIUM -- post-Merge Ethereum reorgs > 12 blocks are theoretical only on mainnet, but L2/testnet scenarios are real. [Geth newHeads reorg behavior](https://github.com/ethereum/go-ethereum/issues/24699)
 
 ---
 
 ## Moderate Pitfalls
 
-기술 부채, 운영 복잡성, 또는 UX 혼란을 야기하는 실수.
+Mistakes that cause degraded performance, incorrect behavior in edge cases, or debugging difficulty.
 
 ---
 
-### M-01: Solana 10분 inactivity timeout -- 활동 없는 지갑의 구독 자동 종료
+### Pitfall M-01: Solana 10-Minute Inactivity Timeout Killing Subscriptions Silently
 
-**Severity:** MEDIUM
-**Confidence:** HIGH (Solana RPC 공식 문서, Helius 문서, QuickNode 가이드)
+**What goes wrong:** A monitored wallet receives no transactions for 10+ minutes. The Solana RPC provider (Helius, QuickNode, public RPC) silently closes the WebSocket connection due to its inactivity timeout policy. The `SolanaHeartbeat` (doc 76 section 5.3) sends ping frames every 60 seconds, which should prevent this. **BUT**: some RPC providers require application-level pings (JSON-RPC ping method), not WebSocket protocol-level ping frames. The `ws.ping()` call in the heartbeat sends a WebSocket frame, which may not be recognized by the RPC server's inactivity timer.
 
-**What goes wrong:**
-Solana WebSocket 엔드포인트는 10분 동안 아무 메시지가 없으면 연결을 종료한다. AI agent 지갑의 특성상 대부분은 수신 TX가 드물다 → 10분마다 구독이 종료 → 재연결 반복.
+**Why it happens:** WebSocket ping/pong is a protocol-level mechanism. RPC providers may track "inactivity" at the application level (no subscription-related JSON-RPC messages), not the transport level.
 
-재연결 폭풍 시나리오:
-1. 지갑 100개, 모두 inactivity로 10분마다 연결 끊김
-2. 모두 비슷한 타이밍에 재연결 시도 → RPC에 동시 reconnect 부하
-3. RPC가 일시적으로 거부 → 재연결 실패 → exponential backoff → 구독 없는 기간 장기화
+**Prevention:**
+1. Use both mechanisms: WebSocket `ws.ping()` AND a lightweight JSON-RPC call (e.g., `getHealth()` or `getSlot()`) on the same connection every 60 seconds
+2. Add jitter to the heartbeat interval: `60_000 + Math.random() * 10_000` to prevent thundering herd if multiple daemons restart simultaneously
+3. Monitor WebSocket `close` events and log the close code + reason. Code 1000 = normal, 1001 = going away (likely timeout), 1006 = abnormal (network issue)
+4. Test with the actual RPC provider in staging to confirm which ping mechanism prevents timeout
 
-**How to avoid:**
-1. **Heartbeat 구현**: 매 60초마다 WebSocket ping 프레임 전송. 단순 ping/pong으로 연결 유지
-2. **`@solana/kit`의 `createSolanaRpcSubscriptions`**: kit의 구독 API가 내부적으로 keepalive를 처리하는지 확인 후, 처리 안 하면 수동 구현
-3. **jitter backoff**: 재연결 타이밍을 지갑별로 랜덤 분산하여 동시 reconnect storm 방지
+**Detection:** Log WebSocket connection duration. If connections consistently last exactly 10 minutes, the heartbeat is not working.
 
-**Warning signs:**
-- Heartbeat/ping 로직 없음
-- 모든 지갑의 reconnect 타이머가 동일한 base interval
-- 로그에 주기적으로 "connection closed" + "reconnecting" 패턴 반복
+**Phase:** SolanaIncomingSubscriber heartbeat implementation
 
-**Phase to address:** WebSocket 연결 관리 설계 phase
+**Confidence:** MEDIUM -- [Solana WebSocket docs](https://solana.com/docs/rpc/websocket), [QuickNode WebSocket guide](https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-websocket-subscriptions-to-solana-blockchain-using-typescript)
 
 ---
 
-### M-02: 먼지 공격(Dust Attack) 오탐 -- 불필요한 알림 폭탄
+### Pitfall M-02: getSignaturesForAddress `until` Parameter Ordering Gotcha
 
-**Severity:** MEDIUM
-**Confidence:** MEDIUM (Trust Wallet 지원 문서, 커뮤니티 공개 자료)
+**What goes wrong:** Gap recovery calls `getSignaturesForAddress(address, { until: lastSignature })` to fetch TXs that occurred after the last processed signature. The results are returned in **newest-first** order. The code reverses them (`.reverse()`) to process oldest-first. **BUT**: if the address had multiple TXs in the same slot (common for token airdrops or bot activity), the ordering within a slot is inconsistent between blockstore and bigtable backends.
 
-**What goes wrong:**
-먼지 공격(Dust Attack)은 공격자가 추적 목적으로 수천 개 주소에 극소량의 토큰을 전송하는 기법이다. AI agent 지갑에 인커밍 TX 알림을 추가하면:
+**Why it happens:** Solana's `getSignaturesForAddress` ordering is not fully deterministic within a single slot. [GitHub issue #35521](https://github.com/solana-labs/solana/issues/35521) documents that ordering differs based on whether the data is served from the validator's blockstore (recent) or bigtable (archival). Using `until` with a signature that is in the middle of a slot can produce different results depending on the backend.
 
-1. 에이전트 지갑 주소가 공개되거나 유추 가능한 경우, 먼지 공격 대상이 됨
-2. 수백 개의 소액 수신 → 수백 개의 알림 → 알림 채널 과부하 (Telegram rate limit 초과 등)
-3. 운영자가 알림에 무감각해지거나 실제 수신을 놓침 → "알림 피로"
+**Consequences:**
+- Missing 1-2 TXs during gap recovery if the cursor signature is in the middle of a multi-TX slot
+- Inconsistent behavior between fresh nodes (blockstore) and archival queries (bigtable)
+- Difficult to reproduce in testing because it depends on RPC backend state
 
-Solana에서 특히 위험한 경우:
-- 알 수 없는 토큰(미등록 SPL 토큰)이 수신되어도 알림이 발생하면 혼란 가중
+**Prevention:**
+1. After gap recovery, subtract 1 slot from the cursor and refetch to ensure no intra-slot gaps
+2. Use `ON CONFLICT DO NOTHING` (already in design) to handle the resulting duplicates safely
+3. Process ALL signatures returned, even if some were already processed (idempotent insert handles this)
+4. Log the slot number alongside signature in cursor updates for debugging
+5. Consider using slot-based cursors (Helius `getTransactionsForAddress`) instead of signature-based cursors for more reliable pagination
 
-**How to avoid:**
-1. **최소 임계값 필터**: config에 `min_notify_amount_sol`, `min_notify_amount_token` 설정. 임계값 미만 수신은 DB 기록만 하고 알림 미전송
-2. **미등록 토큰 필터**: `token_registry`에 없는 토큰은 알림하지 않고 경고 로그만 (단, DB에는 기록)
-3. **알림 cooldown**: 동일 송신자에서 짧은 시간 내 반복 소액 수신 시, 배치 요약 알림으로 통합
-4. **NotificationService의 rateLimitRpm 활용**: 기존 20rpm 제한을 인커밍 TX 알림에도 적용
+**Detection:** Integration test: create 3 TXs in same slot affecting same address, verify gap recovery finds all 3
 
-**Warning signs:**
-- 임계값 없이 모든 수신 TX에 알림
-- 미등록 토큰 수신 알림이 활성화됨
-- 알림 채널 rate limit이 인커밍 알림으로 소진되어 기존 중요 알림(TX_FAILED, KILL_SWITCH_ACTIVATED 등)이 지연
+**Phase:** SolanaIncomingSubscriber.pollAll() and gap recovery implementation
 
-**Phase to address:** 알림 전략 설계 phase
+**Confidence:** MEDIUM -- [Solana GitHub issue #35521](https://github.com/solana-labs/solana/issues/35521), [Solana GitHub issue #22456](https://github.com/solana-labs/solana/issues/22456)
 
 ---
 
-### M-03: 새 DB 테이블 추가 시 마이그레이션 미작성 -- 기존 사용자 DB 파괴
+### Pitfall M-03: KillSwitch Cascade Race With Incoming TX Flush
 
-**Severity:** MEDIUM
-**Confidence:** HIGH (WAIaaS 코드베이스 직접 분석 — CLAUDE.md 및 migrate.ts 패턴 명시)
+**What goes wrong:** KillSwitch activates (ACTIVE -> SUSPENDED). The 6-step cascade runs: revoke sessions, cancel in-flight TXs, suspend wallets. Meanwhile, the `incoming-tx-flush` worker fires (it runs on a 5-second timer, independent of KillSwitch). The flush worker inserts incoming TXs and emits `transaction:incoming` events. Notification listeners fire, sending "Incoming TX detected" notifications -- AFTER the KillSwitch was activated.
 
-**What goes wrong:**
-인커밍 TX 모니터링을 위해 새 테이블(`incoming_transactions`, `incoming_tx_cursors` 등)이 필요하다. `LATEST_SCHEMA_VERSION`이 현재 20이다.
+The user receives contradictory signals: "Kill switch activated, all operations suspended" followed by "New incoming transaction detected for wallet X". This creates confusion about whether the system is actually locked down.
 
-잘못된 접근:
-1. `schema.ts`에 새 테이블 추가만 하고 `CREATE TABLE IF NOT EXISTS` DDL만 업데이트
-2. 기존 사용자(DB v20 보유)는 `pushSchema()`의 `IF NOT EXISTS`로 신규 테이블이 생성될 것을 기대
+**Why it happens:** BackgroundWorkers run on `setInterval` timers that are independent of KillSwitch state. The flush worker does not check KillSwitch state before flushing. The KillSwitch cascade does not stop background workers (it only revokes sessions, cancels in-flight TXs, and suspends wallets).
 
-실제 문제:
-- `pushSchema()`는 **신규 설치만** 대상 — 기존 DB는 `runMigrations()`가 담당
-- `runMigrations()`에 v21 마이그레이션이 없으면 기존 사용자는 새 테이블 없이 실행 → 런타임 에러
-- `LATEST_SCHEMA_VERSION`을 올리지 않으면 스키마 버전 체크가 통과되어 무음 실패
+**Consequences:**
+- Confusing notification sequence for the owner
+- Incoming TXs continue to be recorded in DB even while system is "locked down" (this is actually correct -- we want the audit trail)
+- But notifications should be suppressed during SUSPENDED/LOCKED state
 
-**How to avoid:**
-1. **반드시 증분 마이그레이션 작성**: `runMigrations()`에 v21 케이스 추가. `CREATE TABLE IF NOT EXISTS incoming_transactions ...`
-2. **LATEST_SCHEMA_VERSION 업데이트**: 20 → 21
-3. **스키마 스냅샷 픽스처 업데이트**: 마이그레이션 테스트 (`migration-v*.test.ts`)에 신규 스키마 검증 추가
-4. **CLAUDE.md 규칙 준수**: "DB migrations required since v1.4: Provide incremental ALTER TABLE migrations"
+**Prevention:**
+1. **Flush worker should still write to DB** during KillSwitch SUSPENDED/LOCKED (preserving audit trail is important)
+2. **BUT: suppress notification emission** when KillSwitch state is not ACTIVE. Check `killSwitchService.getState().state === 'ACTIVE'` before emitting EventBus events in the flush handler
+3. **Add to DaemonLifecycle shutdown cascade**: set `incomingTxMonitorService.suppressNotifications = true` alongside the KillSwitch activation
+4. After KillSwitch recovery (SUSPENDED -> ACTIVE), do NOT retroactively send notifications for TXs recorded during suspension. They are in the DB for audit, not for alerts.
 
-**Warning signs:**
-- `schema.ts`에 테이블 추가했지만 `migrate.ts`에 케이스 없음
-- `LATEST_SCHEMA_VERSION` 미변경
-- 마이그레이션 테스트 없이 스키마 변경
+**Detection:** Test: activate KillSwitch, push incoming TX to queue, run flush, verify DB has the TX but no EventBus `transaction:incoming` event was emitted and no notification was sent
 
-**Phase to address:** DB 스키마 설계 phase (설계-only 마일스톤이어도 migration 번호와 전략은 설계에 포함)
+**Phase:** IncomingTxMonitorService integration with KillSwitchService
+
+**Confidence:** HIGH -- derived from codebase analysis (KillSwitchService.executeCascade does not stop BackgroundWorkers)
 
 ---
 
-### M-04: 기존 NotificationEventType SSoT 위반 -- 새 이벤트 미등록
+### Pitfall M-04: Memory Queue Unbounded Growth During Extended Disconnect
 
-**Severity:** MEDIUM
-**Confidence:** HIGH (WAIaaS 코드베이스 직접 분석 — CLAUDE.md "Zod SSoT" 원칙)
+**What goes wrong:** WebSocket disconnects. Polling mode activates. RPC provider is also having issues (rate limiting, downtime). Polling fails repeatedly. WebSocket reconnection also fails. Gap recovery accumulates. When connectivity restores, gap recovery fetches up to 1000 signatures per wallet, each requiring a `getTransaction()` call. For 10 monitored wallets, that is 10,000 TXs pushed to the memory queue in rapid succession.
 
-**What goes wrong:**
-인커밍 TX 관련 새 알림 이벤트(예: `INCOMING_TX_RECEIVED`, `INCOMING_TX_CONFIRMED`)를 추가할 때:
+If the `IncomingTxQueue` is a plain array with no size limit, it grows to 10,000+ entries. The next flush cycle processes `MAX_BATCH = 100`, so it takes 100 flush cycles (500 seconds = 8+ minutes) to drain the queue. During this time, the array holds ~10,000 `IncomingTransaction` objects in memory (~5KB each = ~50MB).
 
-1. `notification-service.ts`에 하드코딩된 이벤트 타입 문자열 사용
-2. `core/src/enums/notification.ts`의 `NOTIFICATION_EVENT_TYPES` 배열에 미추가
-3. `message-templates.ts`에 새 이벤트 템플릿 미작성
-4. `notification_logs` 테이블의 CHECK constraint (`check_event_type`)가 새 이벤트를 거부 → INSERT 실패
+**Why it happens:** Gap recovery is designed to fetch ALL missed TXs, which is correct for data completeness. But it pushes all results synchronously into the memory queue without backpressure.
 
-현재 `NOTIFICATION_EVENT_TYPES`는 28개. 새 이벤트 추가 시 반드시 배열에 포함해야 한다.
+**Consequences:**
+- 50MB+ memory spike during gap recovery
+- 8+ minutes of elevated flush activity, degrading API performance
+- If daemon restarts during this period, unflushed TXs are lost (see C-05)
 
-**How to avoid:**
-1. **SSoT 순서 준수**: `core/src/enums/notification.ts` → Zod enum 자동 파생 → DB CHECK constraint 자동 반영
-2. **템플릿 동시 작성**: 새 이벤트 추가 시 `message-templates.ts`에 모든 로케일(en/ko) 템플릿 추가
-3. **테스트 업데이트**: `NOTIFICATION_EVENT_TYPES.length` 를 체크하는 기존 테스트 업데이트
+**Prevention:**
+1. **Add queue size limit**: `MAX_QUEUE_SIZE = 1000`. If queue exceeds limit, log a warning and drop oldest entries (they can be re-fetched via gap recovery on next restart)
+2. **Process gap recovery in streaming fashion**: fetch 100 signatures, flush, update cursor, fetch next 100. Do NOT accumulate all 1000 in memory
+3. **Add backpressure to gap recovery**: `if (queue.length > 500) await sleep(1000)` between wallet iterations
+4. **Log queue high-water mark**: track and log the maximum queue size per flush cycle for capacity planning
 
-**Warning signs:**
-- `notification-service.ts`에 `as NotificationEventType` 타입 캐스팅
-- `message-templates.ts`에 이벤트 케이스 없이 폴백 메시지만 사용
-- DB INSERT 시 "CHECK constraint failed: check_event_type" 에러
+**Detection:** Load test: simulate 1000 missed TXs across 10 wallets, monitor memory usage during gap recovery, assert RSS delta < 100MB
 
-**Phase to address:** 알림 이벤트 설계 phase
+**Phase:** Gap recovery implementation and IncomingTxQueue design
+
+**Confidence:** HIGH -- straightforward engineering concern
 
 ---
 
-### M-05: 인커밍 TX 모니터링과 KillSwitch 상호작용 미정의
+### Pitfall M-05: EVM Native ETH Detection via getBlock(includeTransactions) Performance
 
-**Severity:** MEDIUM
-**Confidence:** HIGH (WAIaaS 코드베이스 KillSwitchService 직접 분석)
+**What goes wrong:** The EVM polling worker calls `getBlock({ blockNumber, includeTransactions: true })` for every block to detect native ETH transfers. Each call returns the FULL block including ALL transactions (not just those relevant to monitored wallets). On Ethereum mainnet, blocks average 150+ transactions. For a 30-second polling interval catching ~2 blocks, that is 300+ full transaction objects deserialized per cycle, but only 0-1 are relevant.
 
-**What goes wrong:**
-KillSwitch가 SUSPENDED/LOCKED 상태일 때:
-- 아웃고잉 TX: `killSwitchGuard` 미들웨어로 REST API 차단 → 자동 방어
-- 인커밍 TX 모니터링: **REST API 바깥의 이벤트 루프에서 처리 → killSwitchGuard 미적용**
+**Why it happens:** Native ETH transfers do not emit events. There is no `getLogs` equivalent for ETH transfers. The only way to detect them is to scan full blocks. This is inherently expensive.
 
-정의되지 않은 동작:
-1. KillSwitch SUSPENDED → 인커밍 TX 모니터링은 계속 돌아감 → 수신 TX가 DB에 기록됨 → 알림 발송됨
-2. 알림을 받은 에이전트가 "수신 완료" 라고 판단하고 아웃고잉 TX 발행 시도 → KillSwitch가 차단
-3. 하지만 인커밍 TX 이벤트를 어떻게 처리할지 정의 안 된 채 시스템 불일치
+**Consequences:**
+- High RPC credit consumption (Helius/QuickNode charge per call, and `getBlock(full)` is expensive)
+- Deserialization overhead: 300 transaction objects per block, most discarded
+- If polling falls behind (RPC slow), the 10-block batch means 1500+ transactions to deserialize
 
-**How to avoid:**
-1. **인커밍 모니터링 이벤트 핸들러에서 KillSwitch 상태 확인**: SUSPENDED/LOCKED 시 알림 미발송 (DB 기록은 유지)
-2. **설계 결정**: 알림을 suppressing하는 것 vs 모니터링 전체를 일시 중단하는 것 중 선택 (설계 문서에 명시)
-3. **KillSwitch 복구 후 "누락 알림 재발송"** 옵션 고려: LOCKED 동안 쌓인 인커밍 TX들을 복구 후 배치 요약
+**Prevention:**
+1. **Optimize: use `eth_getBlockReceipts` instead of `getBlock(includeTransactions: true)`** -- some providers support it, and it is more efficient for scanning
+2. **Filter early**: check `tx.to?.toLowerCase() === walletAddress.toLowerCase()` AND `tx.value > 0n` before any other processing
+3. **Consider provider-specific enhanced APIs** (Alchemy `alchemy_getAssetTransfers`, QuickNode equivalents) for production deployments -- these provide indexed ETH transfer lookups without full block scanning
+4. **Rate limit block fetches**: max 2 blocks per polling cycle. If behind by more than 10 blocks, process in next cycle (don't try to catch up in one burst)
+5. **Skip blocks with no relevant TXs quickly**: check block's `transactions` array length
+6. **Document in config**: recommend users enable native ETH detection only if needed. ERC-20 only users can disable it to save RPC costs
 
-**Warning signs:**
-- 인커밍 이벤트 핸들러에서 `killSwitchService.getState()` 호출 없음
-- KillSwitch 상태와 인커밍 알림 동작에 대한 설계 문서 없음
+**Detection:** Log RPC call count per polling cycle and average response time. Alert if > 5 calls per cycle.
 
-**Phase to address:** KillSwitch 통합 설계 phase
+**Phase:** EvmIncomingSubscriber.pollNativeETH implementation
 
----
-
-### M-06: BackgroundWorkers와 WebSocket 이벤트의 SQLite 쓰기 순서 -- 데드락 리스크
-
-**Severity:** MEDIUM
-**Confidence:** MEDIUM (better-sqlite3 WAL 모드 동작 + WAIaaS 코드 구조 분석)
-
-**What goes wrong:**
-현재 `BackgroundWorkers`는 `setInterval` 기반이고 handler는 `async` 함수다. WebSocket 이벤트 핸들러도 비동기다. 두 핸들러가 동시에 SQLite BEGIN IMMEDIATE 트랜잭션을 시도하면:
-
-```
-WebSocket handler: BEGIN IMMEDIATE → waiting for lock
-BackgroundWorkers WAL checkpoint: BEGIN EXCLUSIVE → waiting for the same lock
-```
-
-WAL checkpoint(`PRAGMA wal_checkpoint(TRUNCATE)`)는 5분마다 실행되며, 이것이 write lock을 잡는 동안 모든 다른 write가 블로킹된다.
-
-**How to avoid:**
-1. **단일 라이터 채널**: 인커밍 TX 저장을 항상 메모리 큐 → flush 패턴으로 처리. WebSocket 핸들러에서 직접 SQLite 쓰기 금지
-2. **WAL checkpoint와 인커밍 flush가 충돌하지 않도록**: flush 태스크를 BackgroundWorkers에 등록하여 직렬화
-
-**Warning signs:**
-- WebSocket 이벤트 핸들러에서 직접 `db.prepare().run()` 호출
-- flush 태스크와 WAL checkpoint가 독립된 타이머로 실행
-
-**Phase to address:** 데이터 레이어 설계 phase (C-02와 함께)
+**Confidence:** HIGH -- inherent limitation of EVM architecture, no log events for native transfers
 
 ---
 
-## Technical Debt Patterns
+### Pitfall M-06: HotReload WSS URL Change Causing Subscription Leak
 
-초기에 합리적으로 보이지만 장기적으로 문제를 만드는 지름길.
+**What goes wrong:** Admin changes `incoming.wss_url` via Settings UI. HotReloadOrchestrator calls `incomingTxMonitorService.updateConfig({ wssUrl: newUrl })`. The service creates a new WebSocket connection to the new URL. But the old WebSocket connection (to the old URL) is not properly closed because `updateConfig` only updates the config, it does not trigger `SubscriptionMultiplexer.destroyAll()` + re-subscribe.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| 모든 ACTIVE 지갑 자동 구독 | 설정 없이 모니터링 활성화 | rate limit 초과, 자원 낭비 (비활성 지갑) | 절대 금지 — opt-in 방식 필수 |
-| `confirmed`로 즉시 알림 | 빠른 알림 (~1초) | rollback 가능성, 에이전트 오동작 위험 | 알림용으로는 OK, 에이전트 로직 트리거로는 금지 |
-| 폴링만으로 구현 | WebSocket 복잡성 없음 | 고 RPC 비용, 높은 지연, rate limit 위험 | MVP 테스트 한정, 프로덕션 금지 |
-| 인커밍 TX DB 스키마 없이 메모리만 | 마이그레이션 불필요 | 데몬 재시작 시 인커밍 이력 유실 | 절대 금지 |
-| 모든 Transfer 이벤트 처리 | 구현 단순 | 프록시 컨트랙트, ERC-721, 위장 이벤트 오탐 | 절대 금지 — 화이트리스트 필수 |
+**Why it happens:** Doc 76 section 8.5 shows `updateConfig()` but does not detail the WebSocket lifecycle during URL change. The multiplexer caches connections by `${chain}:${network}` key. If the URL changes but the key stays the same, the multiplexer still holds the old connection object.
 
----
+**Consequences:**
+- Two WebSocket connections to different RPC endpoints for the same chain
+- Both produce events, leading to genuine duplicate TXs in the queue (same TX from two sources)
+- Old connection eventually times out (10 min), but until then, double processing
 
-## Integration Gotchas
+**Prevention:**
+1. **`updateConfig()` must call `this.multiplexer.destroyAll()` when `wssUrl` changes**, then `syncSubscriptions()` to re-establish connections with the new URL
+2. Compare old and new wssUrl before destroying. If unchanged, skip reconnection
+3. Add a brief cooldown (1-2 seconds) between destroy and re-subscribe to avoid racing with the old connection's close handlers
 
-외부 서비스 연동 시 흔한 실수.
+**Detection:** Test: call `updateConfig` with new URL, verify old WebSocket is terminated, verify only one active connection per chain:network
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Solana `accountSubscribe` | SOL 지갑 주소만 구독 | wallet pubkey + 모든 알려진 ATA 주소 동시 구독 |
-| Solana `logsSubscribe` | 단일 주소에 대한 배열 시도 | 주소당 별도 구독 필수 (배열 미지원) |
-| EVM `eth_subscribe("logs")` | 필터 없이 전체 logs 구독 | `address`와 `topics` 필터 적용 |
-| 공개 RPC | WebSocket 장기 연결 | Heartbeat ping 60초 간격 + 10분 timeout 대응 |
-| `getSignaturesForAddress` | 100개씩 페이지네이션 없이 조회 | `before`/`until` 파라미터로 커서 기반 페이지네이션 |
-| viem `watchBlocks` | unwatch 함수 버림 | 반환된 unwatch 함수를 레지스트리에 저장하여 정리 |
-| NotificationService | 인커밍 알림으로 rateLimitRpm 소진 | 인커밍 알림 전용 cooldown 또는 별도 rate limit |
+**Phase:** HotReloadOrchestrator incoming config integration
+
+**Confidence:** HIGH -- derived from doc 76 design analysis
 
 ---
 
-## Performance Traps
+### Pitfall M-07: Notification Storm on Airdrop / Token Spam
 
-소규모에서는 동작하지만 확장 시 실패하는 패턴.
+**What goes wrong:** A wallet receives 50 dust-value token transfers in rapid succession (common in Solana ecosystem for token spam/airdrops). Each one triggers `INCOMING_TX_SUSPICIOUS` notification via all configured channels (Telegram, ntfy, Discord, Slack, WalletNotificationChannel). Owner receives 50x5 = 250 notifications in 30 seconds.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| 지갑당 독립 폴링 루프 | CPU/메모리 증가, RPC 과부하 | 모든 지갑을 단일 루프에서 배치 처리 | 지갑 10개 이상 |
-| 모든 수신 TX에 알림 발송 | Telegram rate limit 초과, 알림 큐 적체 | 최소 임계값 + cooldown | 먼지 공격 시 즉시 |
-| 이벤트 수신 즉시 DB INSERT | SQLITE_BUSY 에러, event loop 블로킹 | 메모리 큐 + 배치 flush | 초당 10+ 이벤트 |
-| WebSocket + 폴링 동시 운영 | 동일 TX 중복 처리, DB 중복 INSERT | 명확한 우선순위 정책 + idempotent INSERT | 항상 (두 채널 오버랩) |
+**Why it happens:** The notification system processes each TX independently. There is no rate limiting or aggregation for incoming TX notifications. The IIncomingSafetyRule correctly flags each as suspicious (dust attack), but the notification dispatch does not aggregate.
 
----
+**Consequences:**
+- Notification channel rate limits hit (Telegram: 30 messages/second per bot)
+- Owner notification fatigue -- ignores future legitimate suspicious TX alerts
+- Telegram bot potentially banned for flooding
+- ntfy channel overwhelmed
 
-## Security Mistakes
+**Prevention:**
+1. **Add cooldown per wallet per event type**: after sending `INCOMING_TX_SUSPICIOUS` for wallet X, suppress further SUSPICIOUS notifications for wallet X for 60 seconds. Accumulate suppressed count. After cooldown, send summary: "15 more suspicious TXs detected for wallet X"
+2. **Batch notifications**: in the flush handler, count suspicious TXs per wallet. If > 3 in one flush cycle, send a single aggregated notification instead of individual ones
+3. **Add `incoming_notification_cooldown` setting** (default: 60 seconds) to SettingsService
+4. **Separate DETECTED and SUSPICIOUS notification cadence**: normal incoming TX notifications can be batched (send summary every 5 minutes), suspicious ones are individual but rate-limited
 
-수신 TX 모니터링 도메인 특유의 보안 이슈.
+**Detection:** Load test: push 50 dust TXs for one wallet, verify <= 5 notifications sent (not 50)
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| `confirmed` 상태 수신 TX를 최종으로 처리 | rollback 시 에이전트가 없는 자금 기준으로 행동 | `finalized`만 최종 상태로 처리 |
-| 미검증 컨트랙트 Transfer 이벤트 신뢰 | 위장 Transfer로 잔액 표시 오염 | token_registry 화이트리스트 + 잔액 재확인 |
-| 수신 TX 데이터를 알림 메시지에 날것으로 삽입 | 악의적 토큰 이름/메모가 MarkdownV2 injection 유발 | `escapeMarkdownV2()` 적용 (기존 패턴 재사용) |
-| 인커밍 TX 이력 공개 API 노출 | 지갑 추적, 프라이버시 침해 | sessionAuth 필수, walletId 소유권 검증 |
+**Phase:** NotificationService integration in flush handler
 
----
-
-## "Looks Done But Isn't" Checklist
-
-완성처럼 보이지만 핵심이 빠진 것들.
-
-- [ ] **수신 TX 감지**: SOL 수신만 감지되고 SPL 토큰 수신은 누락 — ATA 구독 구현 확인
-- [ ] **연결 관리**: 재연결 시 이전 구독을 정리하는 로직 확인 (구독 레지스트리 존재 여부)
-- [ ] **블라인드 구간 보상**: 재연결 후 갭 보상 폴링이 실행되는지 확인 (lastProcessedCursor 활용)
-- [ ] **DB 마이그레이션**: `LATEST_SCHEMA_VERSION` 증가 + runMigrations() 케이스 추가 확인
-- [ ] **SSoT 이벤트 등록**: `NOTIFICATION_EVENT_TYPES` 배열에 새 이벤트 추가 + CHECK constraint 반영
-- [ ] **KillSwitch 통합**: 인커밍 이벤트 핸들러에서 killSwitch 상태 확인 로직 존재 여부
-- [ ] **Heartbeat 구현**: 10분 inactivity timeout 대응 ping 로직 존재 여부
-- [ ] **알림 임계값**: dust attack 방어용 최소 알림 금액 설정 가능 여부
+**Confidence:** HIGH -- well-known problem in blockchain monitoring systems
 
 ---
 
-## Recovery Strategies
+## Minor Pitfalls
 
-함정이 발생했을 때 복구 전략.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| C-01: 블라인드 구간 TX 유실 | HIGH | cursor 기반 getSignaturesForAddress 소급 실행, 유실 TX 수동 확인 |
-| C-02: SQLITE_BUSY 폭발 | MEDIUM | busy_timeout 증가 + 인커밍 flush 배치화 후 재시작 |
-| C-03: confirmed TX 롤백 | HIGH | 에이전트 로직 재검토 + finalized 전환 + 영향받은 TX 수동 감사 |
-| H-01: ATA 누락 | MEDIUM | 기존 ATA 목록을 소급 계산하여 구독 추가 + 누락 구간 폴링 |
-| H-02: 메모리 누수 | LOW | 데몬 재시작으로 즉시 해소, 구독 레지스트리 로직 추가 후 재배포 |
-| M-03: 마이그레이션 누락 | MEDIUM | 긴급 마이그레이션 추가 릴리스, 기존 사용자 업그레이드 가이드 |
+Issues that cause confusion, test instability, or minor misbehavior.
 
 ---
 
-## Pitfall-to-Phase Mapping
+### Pitfall L-01: WebSocket Mock Timing in Vitest Tests
 
-로드맵 phase가 각 함정을 어떻게 처리해야 하는지.
+**What goes wrong:** Tests for SolanaIncomingSubscriber use mock WebSocket servers. Test sends a mock `logsSubscribe` notification, then immediately asserts that `onTransaction` callback was called. But the callback fires asynchronously (after JSON parsing, TX lookup, queue push). The assertion runs before the callback, causing a flaky test that passes 90% of the time.
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| C-01: 블라인드 구간 TX 유실 | 아키텍처 설계 (첫 번째) | 연결 끊김-재연결 시나리오 테스트 케이스 |
-| C-02: SQLite 단일 라이터 충돌 | 데이터 레이어 설계 | SQLITE_BUSY 에러 없이 동시 이벤트 처리 확인 |
-| C-03: confirmed 롤백 위험 | 수신 TX 상태 모델 설계 | 2단계 상태(PENDING/CONFIRMED) 명세 존재 |
-| H-01: Solana ATA 감지 실패 | Solana 감지 설계 | SPL 토큰 수신 테스트 케이스 |
-| H-02: 메모리 누수 | WebSocket 연결 관리 설계 | 구독 레지스트리 + unsubscribe 패턴 명세 |
-| H-03: RPC 구독 한도 초과 | RPC 제한 분석 | max_monitored_wallets 설정 + 오류 처리 명세 |
-| H-04: 폴링 RPC 비용 폭발 | 폴링 fallback 설계 | Admin UI RPC 사용량 표시 명세 |
-| H-05: EVM Transfer 오탐 | EVM 감지 설계 | 화이트리스트 기반 필터 + 잔액 재확인 명세 |
-| M-01: inactivity timeout | WebSocket 연결 관리 설계 | Heartbeat 간격 명세 (≤60초) |
-| M-02: 먼지 공격 알림 폭탄 | 알림 전략 설계 | 임계값 설정 + cooldown 명세 |
-| M-03: 마이그레이션 미작성 | DB 스키마 설계 | LATEST_SCHEMA_VERSION+1 + runMigrations() 케이스 명세 |
-| M-04: SSoT 이벤트 미등록 | 알림 이벤트 설계 | NOTIFICATION_EVENT_TYPES 배열 추가 명세 |
-| M-05: KillSwitch 미통합 | KillSwitch 통합 설계 | 이벤트 핸들러 killSwitch 상태 확인 명세 |
-| M-06: BackgroundWorkers 충돌 | 데이터 레이어 설계 | 단일 라이터 flush 패턴 명세 (C-02와 통합) |
+**Prevention:**
+1. Use `vi.waitFor()` or `waitForExpect()` pattern instead of immediate assertions
+2. Use `vitest-websocket-mock` library for structured WS mock assertions with built-in timeouts
+3. All WebSocket test assertions should be wrapped in `await expect(async () => ...).resolves` or use explicit `Promise`-based synchronization
+4. Set deterministic test timeouts: `{ timeout: 5000 }` per test, not relying on global defaults
+5. Use `vi.useFakeTimers()` for BackgroundWorkers tests to avoid real timer dependencies
+
+**Phase:** All test phases for incoming TX monitoring
+
+**Confidence:** HIGH -- [vitest-websocket-mock](https://github.com/akiomik/vitest-websocket-mock), [Vitest flaky test guide](https://trunk.io/blog/how-to-avoid-and-detect-flaky-tests-in-vitest)
+
+---
+
+### Pitfall L-02: Cursor Atomicity -- Cursor Updated Separately From TX Data
+
+**What goes wrong:** The flush handler inserts TXs into `incoming_transactions`, then separately updates `incoming_tx_cursors`. If the process crashes between the two operations, the cursor is stale (behind the actual data). This is the benign case -- gap recovery will re-process some TXs (handled by ON CONFLICT). The **dangerous** reverse case (cursor ahead of data) is covered in C-05.
+
+**Prevention:**
+1. **Wrap both operations in a single `sqlite.transaction()`**: insert TXs and update cursor atomically
+2. Only update cursor to the last TX in the successfully inserted batch
+3. After crash recovery, cursor may be slightly behind -- this is safe because ON CONFLICT DO NOTHING handles re-inserts
+
+**Phase:** IncomingTxQueue flush and cursor management
+
+**Confidence:** HIGH -- standard database consistency pattern
+
+---
+
+### Pitfall L-03: EventBus Event Type Collision with Existing Listeners
+
+**What goes wrong:** Doc 76 adds `'transaction:incoming'` to `WaiaasEventMap`. Existing consumers that use string-based patterns or iterate over all `transaction:*` events might accidentally process incoming TX events as outgoing TX events. For example, a logging middleware that logs all events starting with `'transaction:'` would log incoming TXs with outgoing TX format expectations.
+
+**Prevention:**
+1. **Review all existing EventBus consumers** (`on('transaction:...')`) to ensure they handle the new event type correctly or ignore it
+2. Use the TypeScript type system: `WaiaasEventMap` is already typed, so mismatched handlers will cause compilation errors
+3. Add the new event types to `WaiaasEventMap` with their distinct payload interfaces (doc 76 section 6.1 already does this correctly)
+4. Test: emit `transaction:incoming`, verify no existing listener (transaction:completed, transaction:failed) fires
+
+**Phase:** EventBus event type extension phase
+
+**Confidence:** HIGH -- the existing typed EventBus system prevents this at compile time, but runtime consumers (logging, metrics) may not be typed
+
+---
+
+### Pitfall L-04: WAL File Growth During Continuous Incoming TX Writes
+
+**What goes wrong:** The existing WAL checkpoint worker runs PASSIVE checkpoints every 5 minutes. With incoming TX monitoring adding writes every 5 seconds (flush worker), the WAL file grows faster than before. PASSIVE checkpoints only checkpoint pages not being read. If the `incoming-tx-confirm-*` workers are reading DETECTED rows while a checkpoint runs, those pages cannot be checkpointed, causing WAL growth.
+
+**Prevention:**
+1. **Current PASSIVE checkpoint interval (5 min) is sufficient** for the expected write volume (50 rows per batch max, 10 batches per 5 min = 500 rows). WAL file will grow to ~1-5MB between checkpoints, which is acceptable
+2. **Monitor WAL file size** after enabling incoming TX monitoring. Add `PRAGMA wal_checkpoint(PASSIVE)` result logging (pages checkpointed vs. total pages)
+3. If WAL exceeds 50MB, consider reducing checkpoint interval to 2 minutes
+4. **Do NOT change to TRUNCATE checkpoints** during normal operation -- TRUNCATE blocks readers. Keep TRUNCATE only for shutdown (already implemented)
+5. The existing `busy_timeout = 5000ms` is sufficient for this write volume
+
+**Phase:** Post-integration monitoring, not a specific implementation phase
+
+**Confidence:** HIGH -- [SQLite WAL documentation](https://sqlite.org/wal.html), current WAIaaS PASSIVE checkpoint pattern is correct
+
+---
+
+### Pitfall L-05: Admin UI Monitoring Toggle Creates Subscription Timing Issue
+
+**What goes wrong:** User enables monitoring for a wallet via Admin UI (`PATCH /v1/wallet/:id { monitorIncoming: true }`). The API handler sets `monitor_incoming = 1` in DB and calls `syncSubscriptions()`. If `syncSubscriptions()` is awaited, the API request hangs for 2-3 seconds while WebSocket subscription is established.
+
+**Prevention:**
+1. **Make `syncSubscriptions()` fire-and-forget from the API handler**: `void this.syncSubscriptions()` -- do not await it
+2. Return the API response immediately with `monitorIncoming: true` status
+3. Add a monitoring status field to the wallet response: `monitoringStatus: 'activating' | 'active' | 'error'` that reflects actual subscription state
+4. `syncSubscriptions()` should be resilient to individual wallet subscription failures (already has per-wallet error isolation in doc 76)
+
+**Phase:** PATCH /v1/wallet/:id API handler implementation
+
+**Confidence:** MEDIUM -- depends on implementation choices for sync vs async subscription setup
+
+---
+
+### Pitfall L-06: EVM `getLogs` Block Range Limit per RPC Provider
+
+**What goes wrong:** EVM polling falls behind (daemon was down for 1 hour, ~300 blocks). Gap recovery calls `getLogs({ fromBlock: lastBlock + 1, toBlock: 'latest' })` with a 300-block range. Some RPC providers limit `getLogs` to 2,000-10,000 blocks per request. Others return errors for ranges exceeding their limit.
+
+**Prevention:**
+1. **Cap block range per getLogs call**: max 100 blocks (already partially in doc 76 `sub.lastBlock + 10n` pattern)
+2. For gap recovery specifically, iterate in chunks: `for (let b = fromBlock; b <= toBlock; b += 100n)`
+3. Handle `eth_getLogs` errors gracefully: if provider returns "block range too large" error, reduce chunk size and retry
+4. Log: `Gap recovery: processing blocks ${from} to ${to} (${count} blocks, ${chunks} chunks)`
+
+**Phase:** EvmIncomingSubscriber.pollAll() and gap recovery
+
+**Confidence:** HIGH -- well-known RPC provider limitation
+
+---
+
+### Pitfall L-07: Solana logsSubscribe Single-Address-Per-Subscription Limit
+
+**What goes wrong:** Developer assumes `logsSubscribe({ mentions: [addr1, addr2, addr3] })` monitors all three addresses with a single subscription. In reality, Solana RPC requires one subscription per address in the `mentions` array. Passing multiple addresses may silently filter by only the first one, or return unexpected results.
+
+**Prevention:**
+1. **One `logsSubscribe` call per wallet address** -- this is already the design in doc 76 section 3.1
+2. All subscriptions share one WebSocket connection via SubscriptionMultiplexer (connection sharing, not subscription sharing)
+3. Be aware of per-connection subscription limits -- most providers allow 100-200 concurrent subscriptions per WebSocket
+4. Add `max_monitored_wallets` config setting (already in design as H-3) to prevent exceeding subscription limits
+
+**Phase:** SolanaIncomingSubscriber.subscribe() implementation
+
+**Confidence:** HIGH -- [Solana logsSubscribe docs](https://solana.com/docs/rpc/websocket/logssubscribe)
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Severity | Mitigation |
+|-------------|---------------|----------|------------|
+| IChainSubscriber interface + types | L-03 EventBus collision | Low | Type system guards, review existing consumers |
+| DB schema v21 migration | None significant | N/A | Standard DDL migration, well-tested pattern |
+| SolanaIncomingSubscriber | C-01 listener leak, M-01 heartbeat, M-02 cursor ordering | Critical/Moderate | AbortController per generation, dual ping, slot-based fallback |
+| EvmIncomingSubscriber | M-05 getBlock performance, L-06 block range limits, C-06 false CONFIRMED | Critical/Moderate | Enhanced API if available, chunk processing, receipt re-verification |
+| IncomingTxQueue + flush | C-02 SQLITE_BUSY, C-04 duplicate events, M-04 unbounded growth | Critical/Moderate | Small batches, Map-based dedup, queue size limit |
+| WebSocket SubscriptionMultiplexer | C-01 listener leak, M-06 HotReload URL change | Critical/Moderate | Explicit cleanup, destroy-before-reconnect |
+| Gap recovery | C-04 duplicates, M-02 cursor ordering, M-04 memory growth | Critical/Moderate | Streaming recovery, mandatory dedup, backpressure |
+| KillSwitch integration | M-03 race condition | Moderate | Check KillSwitch state before EventBus emit |
+| Notification integration | M-07 storm, C-03 acting on DETECTED | Critical/Moderate | Cooldown, aggregation, status-aware notifications |
+| DaemonLifecycle shutdown | C-05 unflushed queue | Critical | Final flush in stop(), cursor atomicity |
+| REST API + SDK | C-03 consumer confusion on DETECTED | Critical | Default to CONFIRMED, document prominently |
+| Testing | L-01 WebSocket mock flakiness | Low | vitest-websocket-mock, fake timers, Promise sync |
+
+---
+
+## Integration Pitfalls Summary
+
+These are pitfalls specifically arising from integrating incoming TX monitoring into the existing WAIaaS daemon architecture:
+
+| Integration Point | Existing Service | New Component | Risk | Mitigation |
+|---|---|---|---|---|
+| EventBus | typed WaiaasEventMap (5 events) | 3 new events | Type safety OK, but runtime log/metric consumers may not expect new events | Audit all `eventBus.on()` registrations |
+| BackgroundWorkers | 3 workers (WAL, session, version) | 6 new workers | Timer scheduling density increases. Flush + poll + confirm all running concurrently | Stagger intervals (flush: 5s, poll: 30s, confirm: 30s, retention: 3600s) |
+| KillSwitchService | 6-step cascade | Incoming TX flush continues during cascade | Notifications sent after lockdown | Suppress EventBus emit when state != ACTIVE |
+| DaemonLifecycle | 10-step shutdown | IncomingTxMonitorService cleanup | Unflushed queue data loss | Final flush before service stop |
+| NotificationService | 28 event types, 5 channels | 2 new event types, potential flood | Rate limit exhaustion on Telegram/ntfy | Per-wallet cooldown, batch aggregation |
+| SettingsService | Hot-reload for 50+ keys | 7 new incoming.* keys | WSS URL change requires WebSocket lifecycle management | Destroy + re-subscribe on URL change |
+| SQLite single writer | Pipeline Stage 5 writes | Flush worker writes every 5s | Event loop blocking during long transactions | Small batches (50 max), worker time logging |
 
 ---
 
 ## Sources
 
-### HIGH Confidence
-- WAIaaS 코드베이스 직접 분석: `schema.ts`(DB v20), `migrate.ts`(LATEST_SCHEMA_VERSION=20), `balance-monitor-service.ts`, `workers.ts`, `notification-service.ts`, `telegram-bot-service.ts`
-- [Solana accountSubscribe RPC Method](https://solana.com/docs/rpc/websocket/accountsubscribe) — commitment 레벨, 구독 포맷
-- [Helius: What are Solana Commitment Levels?](https://www.helius.dev/blog/solana-commitment-levels) — confirmed vs finalized 차이
-- [Solana WebSocket: Real-Time Blockchain Data Streaming (Helius Docs)](https://www.helius.dev/docs/rpc/websocket) — 10분 inactivity timeout, heartbeat 60초 권장
-- [QuickNode: Monitor Solana Accounts Using WebSockets and Solana Kit](https://www.quicknode.com/guides/solana-development/tooling/web3-2/subscriptions) — logsSubscribe 1주소 제한
-- [Solana Official Exchange Guide](https://solana.com/developers/guides/advanced/exchange) — ATA 모니터링 권장사항
-- [ethers.js GitHub Issue #1121: memory leak on WebSocketProvider](https://github.com/ethers-io/ethers.js/issues/1121) — WebSocket 재연결 시 메모리 누수
+### Official Documentation
+- [Solana RPC WebSocket Methods](https://solana.com/docs/rpc/websocket)
+- [Solana logsSubscribe](https://solana.com/docs/rpc/websocket/logssubscribe)
+- [Solana Transaction Confirmation & Expiration](https://solana.com/developers/guides/advanced/confirmation)
+- [Solana Commitment Levels (Helius)](https://www.helius.dev/blog/solana-commitment-levels)
+- [SQLite WAL Documentation](https://sqlite.org/wal.html)
+- [SQLite busy_timeout](https://sqlite.org/c3ref/busy_timeout.html)
 
-### MEDIUM Confidence
-- [Solana GitHub Issue #35489: node websocket subscription has 15s delay and missing data](https://github.com/solana-labs/solana/issues/35489) — 단일 노드 TX 스킵 가능성
-- [viem watchBlocks (rc)](https://rc.viem.sh/docs/actions/public/watchBlocks.html) — unwatch 반환값 패턴
-- [viem GitHub Discussion #503: eth_subscribe push vs polling](https://github.com/wevm/viem/discussions/503) — WebSocket 구독 vs 폴링 비교
-- [Chainstack: Solana Transaction Commitment Levels](https://chainstack.com/solana-transaction-commitment-levels/) — commitment level 실용 가이드
-- [SQLite Forum: High write activity optimization](https://sqlite.org/forum/info/2dcc4a2cc0600845facdeee3b03528aca8e0f41d7c5c0889a43f21b03890978c) — 단일 라이터 패턴 권장
-- [Trust Wallet: Dust Attacks Guide](https://support.trustwallet.com/support/solutions/articles/67000734543-what-are-dust-attacks-a-simple-guide-to-protect-your-assets) — 먼지 공격 특성 및 임계값 방어
-- [Tracking Token Transfers on Solana (Medium/Nodit)](https://blog.nodit.io/chapter-2-of-solana-accounts-programs-wallets-mints-token-accounts-explained/) — ATA 모니터링 복잡성
+### GitHub Issues & Discussions
+- [Solana getSignaturesForAddress ordering inconsistency (#35521)](https://github.com/solana-labs/solana/issues/35521)
+- [Solana getSignaturesForAddress wrong results (#21039)](https://github.com/solana-labs/solana/issues/21039)
+- [Solana WebSocket subscription expiry (#16937)](https://github.com/solana-labs/solana/issues/16937)
+- [Solana node websocket delay (#35489)](https://github.com/solana-labs/solana/issues/35489)
+- [Geth newHeads wrong block hash on reorg (#24699)](https://github.com/ethereum/go-ethereum/issues/24699)
+- [ws library memory leak (#804)](https://github.com/websockets/ws/issues/804)
+- [ws per-message deflate memory leak (#1617)](https://github.com/websockets/ws/issues/1617)
 
-### LOW Confidence (아키텍처적 추론 기반)
-- EVM Transfer 이벤트 위장 시나리오 — 이론적 분석, 실제 사례 미확인
-- WAL checkpoint와 WebSocket 이벤트 핸들러 데드락 — 아키텍처적 추론, 부하 테스트 미수행
-- Solana 공개 RPC 구독 수 한도 — 문서화된 수치 없음, 경험적 데이터 기반
+### Performance & Best Practices
+- [better-sqlite3 performance docs](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md)
+- [SQLite performance tuning (phiresky)](https://phiresky.github.io/blog/2020/sqlite-performance-tuning/)
+- [SQLite BUSY errors despite timeout](https://berthub.eu/articles/posts/a-brief-post-on-sqlite3-database-locked-despite-timeout/)
+- [PowerSync SQLite optimizations](https://www.powersync.com/blog/sqlite-optimizations-for-ultra-high-performance)
 
----
+### Testing
+- [vitest-websocket-mock](https://github.com/akiomik/vitest-websocket-mock)
+- [Avoiding flaky tests in Vitest](https://trunk.io/blog/how-to-avoid-and-detect-flaky-tests-in-vitest)
 
-*Pitfalls research for: WAIaaS 수신 트랜잭션 모니터링 설계*
-*Researched: 2026-02-21*
+### RPC Provider Limits
+- [Helius RPC optimization](https://www.helius.dev/docs/rpc/optimization-techniques)
+- [QuickNode rate limits guide](https://www.quicknode.com/guides/quicknode-products/endpoint-security/how-to-setup-method-rate-limits)
+- [Solana RPC providers comparison 2025](https://chainstack.com/best-solana-rpc-providers-2025/)
+
+### Internal Design References
+- WAIaaS Design Doc 76: Incoming Transaction Monitoring (~2,300 lines)
+- WAIaaS BackgroundWorkers (`packages/daemon/src/lifecycle/workers.ts`)
+- WAIaaS KillSwitchService (`packages/daemon/src/services/kill-switch-service.ts`)
+- WAIaaS EventBus (`packages/core/src/events/event-bus.ts`)
+- WAIaaS DB connection (`packages/daemon/src/infrastructure/database/connection.ts`)
