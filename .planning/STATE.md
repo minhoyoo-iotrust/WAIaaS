@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 228 - REST API + SDK + MCP
+**Current focus:** Phase 229 - Integration Testing
 
 ## Current Position
 
-Phase: 228 (5 of 6 in v27.1) (REST API + SDK + MCP)
-Plan: 3 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 228-03 (MCP Tools + Skill Docs)
+Phase: 229 (6 of 6 in v27.1) (Integration Testing)
+Plan: 0 of 2 in current phase
+Status: Planning
+Last activity: 2026-02-22 -- Completed Phase 228 (REST API + SDK + MCP)
 
 Progress: [##############__] 87% (14/16 plans)
 
