@@ -526,7 +526,7 @@ describe('IncomingTxMonitorService', () => {
       const cooldownMap = (service as any).notifyCooldown as Map<string, number>;
       // Set last notified to 6 minutes ago (past the 5-minute cooldown)
       cooldownMap.set(
-        'wallet-001:INCOMING_TX_DETECTED',
+        'wallet-001:TX_INCOMING',
         Math.floor(Date.now() / 1000) - 360,
       );
 

@@ -294,13 +294,21 @@ export class IncomingTxMonitorService {
         const killState = this.killSwitchService?.getState();
         if (!killState || killState.state === 'ACTIVE') {
           const eventType = isSuspicious
-            ? 'INCOMING_TX_SUSPICIOUS'
-            : 'INCOMING_TX_DETECTED';
+            ? 'TX_INCOMING_SUSPICIOUS' as const
+            : 'TX_INCOMING' as const;
           if (!this.isCooldownActive(tx.walletId, eventType)) {
             this.notificationService?.notify(
-              eventType as any,
+              eventType,
               tx.walletId,
-              { txHash: tx.txHash, amount: tx.amount, chain: tx.chain },
+              {
+                walletId: tx.walletId,
+                txHash: tx.txHash,
+                amount: tx.amount,
+                fromAddress: tx.fromAddress,
+                chain: tx.chain,
+                display_amount: '',
+                ...(isSuspicious && suspiciousReasons ? { reasons: suspiciousReasons.join(', ') } : {}),
+              },
             );
             this.recordCooldown(tx.walletId, eventType);
           }

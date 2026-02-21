@@ -4,7 +4,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 /**
  * Messages type definition. Enforces key parity across all locales.
  * Keys in errors must match ERROR_CODES keys exactly (100 error codes).
- * Notification templates cover all 22 event types.
+ * Notification templates cover all 30 event types.
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
@@ -174,7 +174,7 @@ export const messages: Messages = {
     INVALID_SIGN_RESPONSE: 'Invalid sign response format',
     SIGN_REQUEST_ALREADY_PROCESSED: 'Sign request has already been processed',
   },
-  // Notification templates (22 event types)
+  // Notification templates (30 event types)
   notifications: {
     TX_REQUESTED: { title: 'Transaction Requested', body: 'Wallet {walletId} requested {amount} transfer to {to} {display_amount}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
@@ -204,6 +204,8 @@ export const messages: Messages = {
     LOW_BALANCE: { title: 'Low Balance Alert', body: 'Wallet {walletId} balance low: {balance} {currency}. Threshold: {threshold} {currency}. Please top up.' },
     APPROVAL_CHANNEL_SWITCHED: { title: 'Approval Channel Switched', body: 'Approval for transaction {txId} switched from {from_channel} to {to_channel}. Reason: {reason}' },
     UPDATE_AVAILABLE: { title: 'WAIaaS Update Available', body: 'A new version {latestVersion} is available (current: {currentVersion}). Run `waiaas update` to update.' },
+    TX_INCOMING: { title: 'Incoming Transaction Detected', body: 'Wallet {walletId} received {amount} from {fromAddress} on {chain} {display_amount}' },
+    TX_INCOMING_SUSPICIOUS: { title: 'Suspicious Incoming Transaction', body: 'Wallet {walletId} received suspicious transaction: {amount} from {fromAddress}. Reasons: {reasons} {display_amount}' },
   },
   // System messages
   system: {

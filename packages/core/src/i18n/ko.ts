@@ -122,7 +122,7 @@ export const messages: Messages = {
     INVALID_SIGN_RESPONSE: '유효하지 않은 서명 응답 형식입니다',
     SIGN_REQUEST_ALREADY_PROCESSED: '이미 처리된 서명 요청입니다',
   },
-  // Notification templates (22 event types)
+  // Notification templates (30 event types)
   notifications: {
     TX_REQUESTED: { title: '거래 요청', body: '지갑 {walletId}이 {to}로 {amount} 전송을 요청했습니다 {display_amount}' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
@@ -152,6 +152,8 @@ export const messages: Messages = {
     LOW_BALANCE: { title: '잔액 부족 알림', body: '월렛 {walletId} 잔액 부족: {balance} {currency}. 임계값: {threshold} {currency}. 자금을 충전해주세요.' },
     APPROVAL_CHANNEL_SWITCHED: { title: '승인 채널 전환', body: '거래 {txId}의 승인 채널이 {from_channel}에서 {to_channel}(으)로 전환되었습니다. 사유: {reason}' },
     UPDATE_AVAILABLE: { title: 'WAIaaS 업데이트 가능', body: '새 버전 {latestVersion}이(가) 출시되었습니다 (현재: {currentVersion}). `waiaas update`를 실행하여 업데이트하세요.' },
+    TX_INCOMING: { title: '수신 트랜잭션 감지', body: '지갑 {walletId}이(가) {chain}에서 {fromAddress}로부터 {amount}을(를) 수신했습니다 {display_amount}' },
+    TX_INCOMING_SUSPICIOUS: { title: '의심스러운 수신 트랜잭션', body: '지갑 {walletId}에 의심스러운 입금 감지: {fromAddress}로부터 {amount}. 사유: {reasons} {display_amount}' },
   },
   // System messages
   system: {
