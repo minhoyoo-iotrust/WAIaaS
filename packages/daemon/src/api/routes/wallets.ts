@@ -46,6 +46,8 @@ import {
   WalletDetailResponseSchema,
   WalletDeleteResponseSchema,
   WithdrawResponseSchema,
+  PatchWalletRequestSchema,
+  PatchWalletResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -60,6 +62,8 @@ export interface WalletCrudRouteDeps {
   notificationService?: NotificationService;
   eventBus?: EventBus;
   jwtSecretManager?: JwtSecretManager;
+  /** Duck-typed to avoid circular dependency with IncomingTxMonitorService */
+  incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
 }
 
 // ---------------------------------------------------------------------------
@@ -173,6 +177,28 @@ const updateWalletRoute = createRoute({
     200: {
       description: 'Wallet updated',
       content: { 'application/json': { schema: WalletCrudResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+const patchWalletRoute = createRoute({
+  method: 'patch',
+  path: '/wallets/{id}',
+  tags: ['Wallets'],
+  summary: 'Update wallet monitoring settings',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: PatchWalletRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Wallet monitoring settings updated',
+      content: { 'application/json': { schema: PatchWalletResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
@@ -472,6 +498,53 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           ownerVerified: wallet.ownerVerified,
         }),
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // PATCH /wallets/:id (update monitoring settings)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(patchWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    if (body.monitorIncoming !== undefined) {
+      await deps.db
+        .update(wallets)
+        .set({ monitorIncoming: body.monitorIncoming })
+        .where(eq(wallets.id, walletId))
+        .run();
+
+      // Fire-and-forget: reconcile subscriptions with updated DB state
+      void deps.incomingTxMonitorService?.syncSubscriptions();
+    }
+
+    // Re-fetch wallet to get updated state
+    const updated = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    return c.json(
+      {
+        id: walletId,
+        monitorIncoming: updated?.monitorIncoming ?? false,
       },
       200,
     );
