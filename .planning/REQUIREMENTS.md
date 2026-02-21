@@ -9,7 +9,7 @@ Requirements for v27.1 milestone. Each maps to roadmap phases.
 
 ### Subscription Infrastructure
 
-- [ ] **SUB-01**: IChainSubscriber 6-method interface (subscribe/unsubscribe/subscribedAddresses/connect/waitForDisconnect/destroy) defined in @waiaas/core
+- [x] **SUB-01**: IChainSubscriber 6-method interface (subscribe/unsubscribe/subscribedAddresses/connect/waitForDisconnect/destroy) defined in @waiaas/core
 - [ ] **SUB-02**: SolanaIncomingSubscriber implements logsSubscribe({mentions}) + getTransaction(jsonParsed) for SOL/SPL/Token-2022 incoming detection
 - [ ] **SUB-03**: EvmIncomingSubscriber implements getLogs(Transfer event) + getBlock(includeTransactions:true) for ERC-20/native ETH incoming detection
 - [ ] **SUB-04**: WebSocket-to-polling automatic fallback with 3-state connection machine (WS_ACTIVE/POLLING_FALLBACK/RECONNECTING)
@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | Phase 224 | Pending |
+| SUB-01 | Phase 224 | Complete |
 | SUB-02 | Phase 225 | Pending |
 | SUB-03 | Phase 225 | Pending |
 | SUB-04 | Phase 225 | Pending |

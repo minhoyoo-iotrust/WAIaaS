@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 224 (1 of 6 in v27.1) (Core Types + DB Foundation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-21 -- Roadmap created for v27.1 (6 phases, 30 reqs, 16 plans)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-21 -- Completed 224-01 (core types + interfaces + events in @waiaas/core)
 
-Progress: [________________] 0% (0/16 plans)
+Progress: [#_______________] 6% (1/16 plans)
 
 ## Performance Metrics
 
@@ -26,12 +26,14 @@ Progress: [________________] 0% (0/16 plans)
 
 ### Decisions
 
-(Cleared -- full decision log in PROJECT.md)
-
 Recent from v27.0 design:
 - IChainSubscriber는 IChainAdapter와 완전 분리 (stateless vs stateful)
 - 큐 레벨 Map 기반 중복 제거는 필수 (설계 문서 "optional" 표기는 오류)
 - EVM은 폴링 우선, Solana는 WebSocket 우선 (비대칭 전략)
+
+From 224-01:
+- IncomingTransaction: interface (chain-subscriber.types.ts) + Zod schema (incoming-transaction.schema.ts) 이중 정의 -- interface는 코드 계약, Zod는 검증/OpenAPI SSoT
+- IncomingTransactionDto alias로 schemas/index.ts에서 이름 충돌 방지
 
 ### Blockers/Concerns
 
@@ -40,5 +42,5 @@ Recent from v27.0 design:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v27.1 roadmap created, ready to plan Phase 224
+Stopped at: Completed 224-01-PLAN.md
 Resume file: None
