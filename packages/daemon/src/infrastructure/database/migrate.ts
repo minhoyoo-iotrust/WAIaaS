@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 16 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 18 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -34,6 +34,7 @@ import {
   POLICY_TYPES,
   POLICY_TIERS,
   NOTIFICATION_LOG_STATUSES,
+  INCOMING_TX_STATUSES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ import {
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 16 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store)
+// DDL statements for all 18 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
 // ---------------------------------------------------------------------------
 
 /**
@@ -51,7 +52,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 20;
+export const LATEST_SCHEMA_VERSION = 21;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -70,6 +71,7 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL,
   suspended_at INTEGER,
   suspension_reason TEXT,
+  monitor_incoming INTEGER NOT NULL DEFAULT 0,
   owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'))
 )`,
 
@@ -250,6 +252,34 @@ function getCreateTableStatements(): string[] {
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 )`,
+
+    // Table 16: incoming_transactions (detected incoming transfers to monitored wallets, v27.1)
+    `CREATE TABLE IF NOT EXISTS incoming_transactions (
+  id TEXT PRIMARY KEY,
+  tx_hash TEXT NOT NULL,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  from_address TEXT NOT NULL,
+  amount TEXT NOT NULL,
+  token_address TEXT,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'DETECTED' CHECK (status IN (${inList(INCOMING_TX_STATUSES)})),
+  block_number INTEGER,
+  detected_at INTEGER NOT NULL,
+  confirmed_at INTEGER,
+  is_suspicious INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(tx_hash, wallet_id)
+)`,
+
+    // Table 17: incoming_tx_cursors (per-wallet cursor for gap recovery, v27.1)
+    `CREATE TABLE IF NOT EXISTS incoming_tx_cursors (
+  wallet_id TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
+  chain TEXT NOT NULL,
+  network TEXT NOT NULL,
+  last_signature TEXT,
+  last_block_number INTEGER,
+  updated_at INTEGER NOT NULL
+)`,
   ];
 }
 
@@ -317,6 +347,12 @@ function getCreateIndexStatements(): string[] {
 
     // wc_sessions indexes
     'CREATE INDEX IF NOT EXISTS idx_wc_sessions_topic ON wc_sessions(topic)',
+
+    // incoming_transactions indexes
+    'CREATE INDEX IF NOT EXISTS idx_incoming_tx_wallet_detected ON incoming_transactions(wallet_id, detected_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_incoming_tx_detected_at ON incoming_transactions(detected_at)',
+    'CREATE INDEX IF NOT EXISTS idx_incoming_tx_chain_network ON incoming_transactions(chain, network)',
+    "CREATE INDEX IF NOT EXISTS idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'",
   ];
 }
 
@@ -1445,6 +1481,57 @@ MIGRATIONS.push({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Migration v21: Add incoming transaction monitoring tables and wallet opt-in column
+// ---------------------------------------------------------------------------
+// Creates incoming_transactions (13 columns + UNIQUE constraint), incoming_tx_cursors (6 columns),
+// and adds wallets.monitor_incoming opt-in column.
+// Simple ALTER TABLE + CREATE TABLE -- no CHECK constraint changes on existing tables,
+// no table recreation needed.
+
+MIGRATIONS.push({
+  version: 21,
+  description: 'Add incoming transaction monitoring tables and wallet opt-in column',
+  up: (sqlite) => {
+    // 1. wallets.monitor_incoming opt-in column
+    sqlite.exec('ALTER TABLE wallets ADD COLUMN monitor_incoming INTEGER NOT NULL DEFAULT 0');
+
+    // 2. incoming_transactions table (13 columns + UNIQUE constraint)
+    sqlite.exec(`CREATE TABLE incoming_transactions (
+  id TEXT PRIMARY KEY,
+  tx_hash TEXT NOT NULL,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  from_address TEXT NOT NULL,
+  amount TEXT NOT NULL,
+  token_address TEXT,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'DETECTED' CHECK (status IN (${inList(INCOMING_TX_STATUSES)})),
+  block_number INTEGER,
+  detected_at INTEGER NOT NULL,
+  confirmed_at INTEGER,
+  is_suspicious INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(tx_hash, wallet_id)
+)`);
+
+    // 3. incoming_tx_cursors table (6 columns)
+    sqlite.exec(`CREATE TABLE incoming_tx_cursors (
+  wallet_id TEXT PRIMARY KEY REFERENCES wallets(id) ON DELETE CASCADE,
+  chain TEXT NOT NULL,
+  network TEXT NOT NULL,
+  last_signature TEXT,
+  last_block_number INTEGER,
+  updated_at INTEGER NOT NULL
+)`);
+
+    // 4. Indexes on incoming_transactions
+    sqlite.exec('CREATE INDEX idx_incoming_tx_wallet_detected ON incoming_transactions(wallet_id, detected_at DESC)');
+    sqlite.exec('CREATE INDEX idx_incoming_tx_detected_at ON incoming_transactions(detected_at)');
+    sqlite.exec('CREATE INDEX idx_incoming_tx_chain_network ON incoming_transactions(chain, network)');
+    sqlite.exec("CREATE INDEX idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'");
+  },
+});
+
 /**
  * Run incremental migrations against the database.
  *
@@ -1621,7 +1708,7 @@ export function pushSchema(sqlite: Database): void {
         .prepare(
           'INSERT INTO schema_version (version, applied_at, description) VALUES (?, ?, ?)',
         )
-        .run(1, ts, 'Initial schema (16 tables)');
+        .run(1, ts, 'Initial schema (18 tables)');
 
       // Record all migration versions as already applied (DDL is up-to-date)
       for (const migration of MIGRATIONS) {
