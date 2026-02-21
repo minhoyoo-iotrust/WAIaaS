@@ -141,7 +141,7 @@ describe('IncomingTxQueue', () => {
       const mock = createMockDb();
       const result = queue.flush(mock.db);
       // Should have the first entry's amount, not the second
-      expect(result[0].amount).toBe('100');
+      expect(result[0]!.amount).toBe('100');
     });
   });
 
@@ -186,8 +186,8 @@ describe('IncomingTxQueue', () => {
       queue.push(makeTx());
 
       const result = queue.flush(mock.db);
-      expect(result[0].id).toBe('uuid-1');
-      expect(result[1].id).toBe('uuid-2');
+      expect(result[0]!.id).toBe('uuid-1');
+      expect(result[1]!.id).toBe('uuid-2');
     });
 
     it('should pass correct parameters to stmt.run()', () => {
@@ -235,17 +235,17 @@ describe('IncomingTxQueue', () => {
       queue.flush(mock.db);
       const calls = mock.getRunCalls();
       // Last parameter is isSuspicious
-      expect(calls[0][12]).toBe(0);
+      expect(calls[0]![12]).toBe(0);
     });
 
     it('should convert undefined isSuspicious to 0', () => {
       const mock = createMockDb();
       const tx = makeTx();
-      delete (tx as Record<string, unknown>).isSuspicious;
+      delete (tx as unknown as Record<string, unknown>).isSuspicious;
       queue.push(tx);
       queue.flush(mock.db);
       const calls = mock.getRunCalls();
-      expect(calls[0][12]).toBe(0);
+      expect(calls[0]![12]).toBe(0);
     });
   });
 
@@ -264,8 +264,8 @@ describe('IncomingTxQueue', () => {
 
       const result = queue.flush(mock.db);
       expect(result).toHaveLength(2);
-      expect(result[0].txHash).toBe('a');
-      expect(result[1].txHash).toBe('c');
+      expect(result[0]!.txHash).toBe('a');
+      expect(result[1]!.txHash).toBe('c');
     });
 
     it('should return empty array if all items conflict', () => {
@@ -432,7 +432,7 @@ describe('IncomingTxQueue', () => {
       queue.push(makeTx({ txHash: 'batch2-a' }));
       const result2 = queue.flush(mock.db);
       expect(result2).toHaveLength(1);
-      expect(result2[0].txHash).toBe('batch2-a');
+      expect(result2[0]!.txHash).toBe('batch2-a');
       expect(queue.size).toBe(0);
     });
   });
@@ -448,7 +448,7 @@ describe('IncomingTxQueue', () => {
       queue.flush(mock.db);
       const calls = mock.getRunCalls();
       // tokenAddress is at index 7 in the parameter list
-      expect(calls[0][7]).toBeNull();
+      expect(calls[0]![7]).toBeNull();
     });
 
     it('should handle token transfer with tokenAddress', () => {
@@ -456,7 +456,7 @@ describe('IncomingTxQueue', () => {
       queue.push(makeTx({ tokenAddress: 'So11111111111111111111111111111111111111112' }));
       queue.flush(mock.db);
       const calls = mock.getRunCalls();
-      expect(calls[0][7]).toBe('So11111111111111111111111111111111111111112');
+      expect(calls[0]![7]).toBe('So11111111111111111111111111111111111111112');
     });
 
     it('should handle isSuspicious=true correctly in flush parameters', () => {
@@ -465,7 +465,7 @@ describe('IncomingTxQueue', () => {
       queue.flush(mock.db);
       const calls = mock.getRunCalls();
       // isSuspicious is at index 12 (last parameter)
-      expect(calls[0][12]).toBe(1);
+      expect(calls[0]![12]).toBe(1);
     });
 
     it('should correctly extract exactly MAX_BATCH from larger queue', () => {

@@ -166,8 +166,8 @@ describe('incoming-tx-workers', () => {
       const updates = mock.getUpdateCalls();
       expect(updates).toHaveLength(1);
       // confirmed_at should be a Unix timestamp
-      expect(typeof updates[0][0]).toBe('number');
-      expect(updates[0][1]).toBe('sol-1');
+      expect(typeof updates[0]![0]).toBe('number');
+      expect(updates[0]![1]).toBe('sol-1');
     });
 
     it('should NOT upgrade when checkSolanaFinalized returns false', async () => {
@@ -205,7 +205,7 @@ describe('incoming-tx-workers', () => {
       // Only sol-ok should be updated
       const updates = mock.getUpdateCalls();
       expect(updates).toHaveLength(1);
-      expect(updates[0][1]).toBe('sol-ok');
+      expect(updates[0]![1]).toBe('sol-ok');
       expect(warnSpy).toHaveBeenCalled();
 
       warnSpy.mockRestore();
@@ -234,7 +234,7 @@ describe('incoming-tx-workers', () => {
 
       expect(getBlockNumber).toHaveBeenCalledWith('ethereum', 'mainnet');
       expect(mock.getUpdateCalls()).toHaveLength(1);
-      expect(mock.getUpdateCalls()[0][1]).toBe('evm-1');
+      expect(mock.getUpdateCalls()[0]![1]).toBe('evm-1');
     });
 
     it('should NOT upgrade EVM tx when confirmations < mainnet threshold', async () => {
@@ -419,12 +419,12 @@ describe('incoming-tx-workers', () => {
       const calls = mock.getRunCalls();
       expect(calls).toHaveLength(1);
       // walletId, chain, network, last_signature, last_block_number, updated_at
-      expect(calls[0][0]).toBe('wallet-1');
-      expect(calls[0][1]).toBe('solana');
-      expect(calls[0][2]).toBe('mainnet');
-      expect(calls[0][3]).toBe('sig-abc123'); // last_signature
-      expect(calls[0][4]).toBeNull(); // last_block_number null for Solana
-      expect(typeof calls[0][5]).toBe('number'); // updated_at
+      expect(calls[0]![0]).toBe('wallet-1');
+      expect(calls[0]![1]).toBe('solana');
+      expect(calls[0]![2]).toBe('mainnet');
+      expect(calls[0]![3]).toBe('sig-abc123'); // last_signature
+      expect(calls[0]![4]).toBeNull(); // last_block_number null for Solana
+      expect(typeof calls[0]![5]).toBe('number'); // updated_at
     });
 
     it('should INSERT OR REPLACE cursor for EVM wallet (last_block_number)', () => {
@@ -434,11 +434,11 @@ describe('incoming-tx-workers', () => {
 
       const calls = mock.getRunCalls();
       expect(calls).toHaveLength(1);
-      expect(calls[0][0]).toBe('wallet-2');
-      expect(calls[0][1]).toBe('ethereum');
-      expect(calls[0][2]).toBe('mainnet');
-      expect(calls[0][3]).toBeNull(); // last_signature null for EVM
-      expect(calls[0][4]).toBe(12345); // last_block_number parsed
+      expect(calls[0]![0]).toBe('wallet-2');
+      expect(calls[0]![1]).toBe('ethereum');
+      expect(calls[0]![2]).toBe('mainnet');
+      expect(calls[0]![3]).toBeNull(); // last_signature null for EVM
+      expect(calls[0]![4]).toBe(12345); // last_block_number parsed
     });
 
     it('should replace existing cursor for same wallet+chain+network', () => {
@@ -450,8 +450,8 @@ describe('incoming-tx-workers', () => {
       // Both should execute (INSERT OR REPLACE handles the update at DB level)
       const calls = mock.getRunCalls();
       expect(calls).toHaveLength(2);
-      expect(calls[0][3]).toBe('sig-1');
-      expect(calls[1][3]).toBe('sig-2');
+      expect(calls[0]![3]).toBe('sig-1');
+      expect(calls[1]![3]).toBe('sig-2');
     });
   });
 
