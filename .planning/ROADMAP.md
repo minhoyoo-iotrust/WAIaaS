@@ -284,10 +284,11 @@ Plans:
   2. 폴링 워커 5(Solana)/6(EVM)의 핸들러가 multiplexer를 통해 subscriber.pollAll()을 호출하여 POLLING_FALLBACK 상태에서 트랜잭션을 감지한다
   3. onGapRecovery 콜백이 createGapRecoveryHandler를 통해 실제 갭 복구를 실행하여, WebSocket 재연결 후 누락 트랜잭션을 복구한다
   4. 기존 단위 테스트와 통합 테스트가 모두 통과하고, 새 통합 테스트가 3개 버그 수정을 검증한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 230-01-PLAN.md -- BUG-1 BackgroundWorkers 통합 + BUG-2 폴링 워커 구현 + BUG-3 Gap Recovery 배선 + integration tests
+- [ ] 230-01-PLAN.md -- BUG-1 BackgroundWorkers instance fix + BUG-2 polling worker handlers + BUG-3 gap recovery wiring
+- [ ] 230-02-PLAN.md -- Integration tests verifying all 3 bug fixes
 
 ## Progress
 
