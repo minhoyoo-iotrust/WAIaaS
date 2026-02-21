@@ -1,10 +1,11 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 19 REST API methods with typed responses:
+ * Wraps 21 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo(), setDefaultNetwork() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
+ * - listIncomingTransactions(), getIncomingTransactionSummary() (incoming transactions)
  * - createSession(), renewSession() (session management)
  * - getConnectInfo() (discovery)
  * - encodeCalldata(), signTransaction() (utils)
@@ -51,6 +52,10 @@ import type {
   WcPairingResponse,
   WcSessionResponse,
   WcDisconnectResponse,
+  IncomingTransactionListResponse,
+  ListIncomingTransactionsParams,
+  IncomingTransactionSummaryResponse,
+  GetIncomingTransactionSummaryParams,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -190,6 +195,51 @@ export class WAIaaSClient {
     return withRetry(
       () => this.http.get<PendingTransactionsResponse>(
         '/v1/transactions/pending',
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- Incoming transactions ---
+  async listIncomingTransactions(
+    params?: ListIncomingTransactionsParams,
+  ): Promise<IncomingTransactionListResponse> {
+    const query = new URLSearchParams();
+    if (params?.cursor) query.set('cursor', params.cursor);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.chain) query.set('chain', params.chain);
+    if (params?.network) query.set('network', params.network);
+    if (params?.status) query.set('status', params.status);
+    if (params?.token) query.set('token', params.token);
+    if (params?.fromAddress) query.set('from_address', params.fromAddress);
+    if (params?.since) query.set('since', String(params.since));
+    if (params?.until) query.set('until', String(params.until));
+    if (params?.walletId) query.set('wallet_id', params.walletId);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<IncomingTransactionListResponse>(
+        `/v1/wallet/incoming${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async getIncomingTransactionSummary(
+    params?: GetIncomingTransactionSummaryParams,
+  ): Promise<IncomingTransactionSummaryResponse> {
+    const query = new URLSearchParams();
+    if (params?.period) query.set('period', params.period);
+    if (params?.chain) query.set('chain', params.chain);
+    if (params?.network) query.set('network', params.network);
+    if (params?.since) query.set('since', String(params.since));
+    if (params?.until) query.set('until', String(params.until));
+    if (params?.walletId) query.set('wallet_id', params.walletId);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<IncomingTransactionSummaryResponse>(
+        `/v1/wallet/incoming/summary${qs ? `?${qs}` : ''}`,
         this.authHeaders(),
       ),
       this.retryOptions,

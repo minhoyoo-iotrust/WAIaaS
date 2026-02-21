@@ -68,4 +68,10 @@ export type {
   WcPairingResponse,
   WcSessionResponse,
   WcDisconnectResponse,
+  IncomingTransactionItem,
+  IncomingTransactionListResponse,
+  ListIncomingTransactionsParams,
+  IncomingSummaryEntry,
+  IncomingTransactionSummaryResponse,
+  GetIncomingTransactionSummaryParams,
 } from './types.js';
