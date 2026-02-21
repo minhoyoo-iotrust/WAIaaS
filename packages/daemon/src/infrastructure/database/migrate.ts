@@ -51,7 +51,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 19;
+export const LATEST_SCHEMA_VERSION = 20;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -73,7 +73,7 @@ function getCreateTableStatements(): string[] {
   owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'))
 )`,
 
-    // Table 2: sessions (v26.4: wallet_id removed, migrated to session_wallets)
+    // Table 2: sessions (v26.4: wallet_id removed, v26.5: token_issued_count added)
     `CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   token_hash TEXT NOT NULL,
@@ -86,7 +86,8 @@ function getCreateTableStatements(): string[] {
   last_renewed_at INTEGER,
   absolute_expires_at INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
-  source TEXT NOT NULL DEFAULT 'api'
+  source TEXT NOT NULL DEFAULT 'api',
+  token_issued_count INTEGER NOT NULL DEFAULT 1
 )`,
 
     // Table 2b: session_wallets (v26.4: session-wallet junction for 1:N model)
@@ -1429,6 +1430,18 @@ MIGRATIONS.push({
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v19: ${JSON.stringify(fkErrors)}`);
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v20: Add token_issued_count to sessions (v26.5)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 20,
+  description: 'Add token_issued_count column to sessions table',
+  up: (sqlite) => {
+    sqlite.exec('ALTER TABLE sessions ADD COLUMN token_issued_count INTEGER NOT NULL DEFAULT 1');
   },
 });
 

@@ -35,4 +35,5 @@ export const API = {
   ADMIN_BULK_SESSIONS: '/v1/admin/sessions/bulk',
   ADMIN_BULK_MCP_TOKENS: '/v1/admin/mcp/tokens/bulk',
   ADMIN_AGENT_PROMPT: '/v1/admin/agent-prompt',
+  ADMIN_SESSION_REISSUE: (id: string) => `/v1/admin/sessions/${id}/reissue`,
 } as const;

@@ -372,6 +372,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
           maxRenewals: sessions.maxRenewals,
           lastRenewedAt: sessions.lastRenewedAt,
           source: sessions.source,
+          tokenIssuedCount: sessions.tokenIssuedCount,
         })
         .from(sessions)
         .innerJoin(sessionWallets, eq(sessions.id, sessionWallets.sessionId))
@@ -394,6 +395,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
           maxRenewals: sessions.maxRenewals,
           lastRenewedAt: sessions.lastRenewedAt,
           source: sessions.source,
+          tokenIssuedCount: sessions.tokenIssuedCount,
         })
         .from(sessions)
         .where(isNull(sessions.revokedAt))
@@ -441,6 +443,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
           ? Math.floor(row.lastRenewedAt.getTime() / 1000)
           : null,
         source: (row.source ?? 'api') as 'api' | 'mcp',
+        tokenIssuedCount: row.tokenIssuedCount ?? 1,
       };
     });
 

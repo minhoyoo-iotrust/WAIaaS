@@ -379,7 +379,7 @@ describe('GET /v1/connect-info', () => {
     expect(caps).not.toContain('x402');
   });
 
-  it('prompt contains wallet names and addresses', async () => {
+  it('prompt contains wallet names, UUIDs, and addresses', async () => {
     const res = await app.request('/v1/connect-info', {
       headers: bearerHeader(sessionToken),
     });
@@ -393,6 +393,36 @@ describe('GET /v1/connect-info', () => {
     expect(prompt).toContain(PK_A);
     expect(prompt).toContain(PK_B);
     expect(prompt).toContain('WAIaaS daemon');
+
+    // UUID must appear in prompt (ID: line)
+    expect(prompt).toContain(`ID: ${walletA}`);
+    expect(prompt).toContain(`ID: ${walletB}`);
+
+    // Network list must appear
+    expect(prompt).toContain('Networks:');
+    expect(prompt).toContain('devnet');
+    expect(prompt).toContain('testnet');
+
+    // walletId usage instructions reference UUID
+    expect(prompt).toContain('UUID from the ID field above');
+    expect(prompt).toContain('?network=');
+  });
+
+  it('wallets include availableNetworks array', async () => {
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const ws = body.wallets as Array<{ id: string; availableNetworks: string[] }>;
+
+    const wA = ws.find((w) => w.id === walletA)!;
+    expect(wA.availableNetworks).toBeDefined();
+    expect(Array.isArray(wA.availableNetworks)).toBe(true);
+    expect(wA.availableNetworks.length).toBeGreaterThan(0);
+    expect(wA.availableNetworks).toContain('devnet');
+    expect(wA.availableNetworks).toContain('testnet');
   });
 
   it('rejects without session token (401)', async () => {
@@ -425,6 +455,7 @@ describe('POST /v1/admin/agent-prompt', () => {
 
     const body = await json(res);
     expect(body.sessionsCreated).toBe(1);
+    expect(body.sessionReused).toBe(false);
     expect(body.walletCount).toBe(2);
 
     // Count sessions after -- exactly 1 new session
@@ -462,7 +493,7 @@ describe('POST /v1/admin/agent-prompt', () => {
     const body = await json(res);
     const prompt = body.prompt as string;
 
-    // buildConnectInfoPrompt format includes wallet names, addresses, capabilities
+    // buildConnectInfoPrompt format includes wallet names, UUIDs, addresses, capabilities
     expect(prompt).toContain('Wallet Alpha');
     expect(prompt).toContain('Wallet Beta');
     expect(prompt).toContain(PK_A);
@@ -471,9 +502,84 @@ describe('POST /v1/admin/agent-prompt', () => {
     expect(prompt).toContain('transfer');
     expect(prompt).toContain('WAIaaS daemon');
 
+    // UUID must be in prompt
+    expect(prompt).toContain(`ID: ${walletA}`);
+    expect(prompt).toContain(`ID: ${walletB}`);
+
+    // Network list must be in prompt
+    expect(prompt).toContain('Networks:');
+
     // Session token and ID appended
     expect(prompt).toContain('Session Token:');
     expect(prompt).toContain('Session ID:');
+  });
+
+  it('reuses existing valid session instead of creating new one', async () => {
+    // First call creates a new session
+    const res1 = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(res1.status).toBe(201);
+
+    const body1 = await json(res1);
+    expect(body1.sessionsCreated).toBe(1);
+    expect(body1.sessionReused).toBe(false);
+
+    const sessionsBeforeReuse = sqlite
+      .prepare('SELECT count(*) AS cnt FROM sessions')
+      .get() as { cnt: number };
+
+    // Second call should reuse the session
+    const res2 = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(res2.status).toBe(201);
+
+    const body2 = await json(res2);
+    expect(body2.sessionsCreated).toBe(0);
+    expect(body2.sessionReused).toBe(true);
+
+    // No new session created
+    const sessionsAfterReuse = sqlite
+      .prepare('SELECT count(*) AS cnt FROM sessions')
+      .get() as { cnt: number };
+    expect(sessionsAfterReuse.cnt).toBe(sessionsBeforeReuse.cnt);
+
+    // Token from reused session should work
+    const prompt = body2.prompt as string;
+    const tokenMatch = prompt.match(/Session Token: (wai_sess_\S+)/);
+    expect(tokenMatch).toBeTruthy();
+    const reusedToken = tokenMatch![1]!;
+
+    const balanceRes = await app.request('/v1/connect-info', {
+      headers: bearerHeader(reusedToken),
+    });
+    expect(balanceRes.status).toBe(200);
+  });
+
+  it('creates new session when existing session covers only partial wallets', async () => {
+    // Create session with walletA only
+    await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA] }),
+    });
+
+    // Request session for both walletA and walletB -- cannot reuse
+    const res = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(res.status).toBe(201);
+
+    const body = await json(res);
+    expect(body.sessionsCreated).toBe(1);
+    expect(body.sessionReused).toBe(false);
   });
 
   it('end-to-end: agent-prompt -> connect-info returns matching data', async () => {
@@ -521,5 +627,101 @@ describe('POST /v1/admin/agent-prompt', () => {
     const caps = infoBody.capabilities as string[];
     expect(caps).toContain('transfer');
     expect(caps).toContain('balance');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: POST /v1/admin/sessions/:id/reissue
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/admin/sessions/:id/reissue', () => {
+  it('reissues token for active session', async () => {
+    // Create session via agent-prompt
+    const promptRes = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA] }),
+    });
+    expect(promptRes.status).toBe(201);
+    const promptBody = await json(promptRes);
+    const prompt = promptBody.prompt as string;
+    const sessionIdMatch = prompt.match(/Session ID: (\S+)/);
+    expect(sessionIdMatch).toBeTruthy();
+    const sid = sessionIdMatch![1]!;
+
+    // Reissue
+    const reissueRes = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect(reissueRes.status).toBe(200);
+
+    const reissueBody = await json(reissueRes);
+    expect(reissueBody.sessionId).toBe(sid);
+    expect(reissueBody.tokenIssuedCount).toBe(2);
+    expect(typeof reissueBody.token).toBe('string');
+    expect((reissueBody.token as string).startsWith('wai_sess_')).toBe(true);
+
+    // Reissued token should work
+    const balanceRes = await app.request('/v1/connect-info', {
+      headers: bearerHeader(reissueBody.token as string),
+    });
+    expect(balanceRes.status).toBe(200);
+  });
+
+  it('increments tokenIssuedCount on each reissue', async () => {
+    const promptRes = await app.request('/v1/admin/agent-prompt', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA] }),
+    });
+    const promptBody = await json(promptRes);
+    const sid = (promptBody.prompt as string).match(/Session ID: (\S+)/)![1]!;
+
+    // First reissue: count becomes 2
+    const r1 = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect((await json(r1)).tokenIssuedCount).toBe(2);
+
+    // Second reissue: count becomes 3
+    const r2 = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect((await json(r2)).tokenIssuedCount).toBe(3);
+  });
+
+  it('rejects reissue for non-existent session', async () => {
+    const res = await app.request('/v1/admin/sessions/00000000-0000-0000-0000-000000000000/reissue', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects reissue for revoked session', async () => {
+    // Create session
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: walletA }),
+    });
+    const createBody = await json(createRes);
+    const sid = createBody.id as string;
+
+    // Revoke it
+    await app.request(`/v1/sessions/${sid}`, {
+      method: 'DELETE',
+      headers: masterAuthJsonHeaders(),
+    });
+
+    // Attempt reissue — SESSION_REVOKED returns 401
+    const res = await app.request(`/v1/admin/sessions/${sid}/reissue`, {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+    });
+    expect(res.status).toBe(401);
   });
 });

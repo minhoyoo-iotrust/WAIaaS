@@ -46,6 +46,7 @@ interface Session {
   createdAt: number;
   lastRenewedAt: number | null;
   source: 'api' | 'mcp';
+  tokenIssuedCount?: number;
 }
 
 interface CreatedSession {
@@ -285,6 +286,7 @@ export default function SessionsPage() {
   const revokeModal = useSignal(false);
   const revokeSessionId = useSignal('');
   const revokeLoading = useSignal(false);
+  const reissueLoading = useSignal<string | null>(null);
 
   // Multi-wallet session creation modal state
   const createModal = useSignal(false);
@@ -429,6 +431,24 @@ export default function SessionsPage() {
     }
   };
 
+  const handleReissue = async (sessionId: string) => {
+    reissueLoading.value = sessionId;
+    try {
+      const result = await apiPost<{ token: string; tokenIssuedCount: number }>(
+        API.ADMIN_SESSION_REISSUE(sessionId),
+        {},
+      );
+      createdToken.value = result.token;
+      tokenModal.value = true;
+      await fetchSessions();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      reissueLoading.value = null;
+    }
+  };
+
   useEffect(() => {
     fetchWallets();
   }, []);
@@ -487,19 +507,34 @@ export default function SessionsPage() {
       header: 'Renewals',
       render: (s) => `${s.renewalCount}/${s.maxRenewals}`,
     },
+    {
+      key: 'tokenIssuedCount',
+      header: 'Tokens',
+      render: (s) => String(s.tokenIssuedCount ?? 1),
+    },
     { key: 'createdAt', header: 'Created', render: (s) => formatDate(s.createdAt) },
     {
       key: 'actions',
       header: 'Actions',
       render: (s) =>
         s.status === 'ACTIVE' ? (
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={() => openRevoke(s.id, revokeSessionId, revokeModal)}
-          >
-            Revoke
-          </Button>
+          <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => handleReissue(s.id)}
+              loading={reissueLoading.value === s.id}
+            >
+              Reissue
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => openRevoke(s.id, revokeSessionId, revokeModal)}
+            >
+              Revoke
+            </Button>
+          </div>
         ) : null,
     },
   ];

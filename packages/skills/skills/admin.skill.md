@@ -3,7 +3,7 @@ name: "WAIaaS Admin"
 description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management"
 category: "api"
 tags: [wallet, blockchain, admin, security, oracle, defi, waiass]
-version: "2.4.0-rc.1"
+version: "2.4.0-rc.7"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

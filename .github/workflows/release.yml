@@ -435,6 +435,8 @@ jobs:
       - name: Restore prerelease mode (stable release only)
         if: ${{ !contains(github.event.release.tag_name, '-rc.') }}
         run: |
+          git fetch origin main
+          git checkout main
           node scripts/promote-release.js --restore
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

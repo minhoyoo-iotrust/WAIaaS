@@ -27,7 +27,7 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { sql, desc, eq, and, count as drizzleCount } from 'drizzle-orm';
+import { sql, desc, eq, and, isNull, gt, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
@@ -72,6 +72,7 @@ import {
   OracleStatusResponseSchema,
   AgentPromptRequestSchema,
   AgentPromptResponseSchema,
+  SessionReissueResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -1926,42 +1927,106 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
     if (targetWallets.length === 0) {
       return c.json(
-        { prompt: '', walletCount: 0, sessionsCreated: 0, expiresAt },
+        { prompt: '', walletCount: 0, sessionsCreated: 0, sessionReused: false, expiresAt },
         201,
       );
     }
 
-    // Create a single multi-wallet session (one sessionId, one token)
+    // Try to reuse an existing valid session covering all target wallets
     const defaultWallet = targetWallets[0]!;
-    const sessionId = generateId();
-    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWallet.id, iat: nowSec, exp: expiresAt };
-    const token = await deps.jwtSecretManager.signToken(jwtPayload);
-    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const targetWalletIds = targetWallets.map((w) => w.id);
+    const minRemainingTtl = Math.max(Math.floor(ttl * 0.1), 3600); // 10% of TTL or 1 hour
+    const minExpiresAt = new Date((nowSec + minRemainingTtl) * 1000);
 
-    deps.db.insert(sessions).values({
-      id: sessionId,
-      tokenHash,
-      expiresAt: new Date(expiresAt * 1000),
-      absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
-      createdAt: new Date(nowSec * 1000),
-      renewalCount: 0,
-      maxRenewals: config.security.session_max_renewals,
-      constraints: null,
-      source: 'api',
-    }).run();
+    let sessionId: string;
+    let sessionReused = false;
+    let sessionsCreated = 1;
+    let actualExpiresAt = expiresAt;
 
-    // Insert N rows into session_wallets (first wallet is default)
-    for (let i = 0; i < targetWallets.length; i++) {
-      const w = targetWallets[i]!;
-      deps.db.insert(sessionWallets).values({
-        sessionId,
-        walletId: w.id,
-        isDefault: i === 0,
-        createdAt: new Date(nowSec * 1000),
-      }).run();
+    // Find active sessions that cover all target wallets with sufficient TTL
+    const candidateSessions = deps.db
+      .select({
+        id: sessions.id,
+        expiresAt: sessions.expiresAt,
+      })
+      .from(sessions)
+      .where(
+        and(
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, minExpiresAt),
+        ),
+      )
+      .all();
+
+    let reusableSessionId: string | null = null;
+    let reusableExpiresAt = 0;
+
+    for (const candidate of candidateSessions) {
+      // Count how many of our target wallets are linked to this session
+      const linkedCount = deps.db
+        .select({ cnt: drizzleCount() })
+        .from(sessionWallets)
+        .where(
+          and(
+            eq(sessionWallets.sessionId, candidate.id),
+            sql`${sessionWallets.walletId} IN (${sql.join(targetWalletIds.map((id) => sql`${id}`), sql`, `)})`,
+          ),
+        )
+        .get();
+
+      if (linkedCount && linkedCount.cnt === targetWalletIds.length) {
+        reusableSessionId = candidate.id;
+        reusableExpiresAt = candidate.expiresAt instanceof Date
+          ? Math.floor(candidate.expiresAt.getTime() / 1000)
+          : (candidate.expiresAt as number);
+        break;
+      }
     }
 
-    void deps.notificationService?.notify('SESSION_CREATED', defaultWallet.id, { sessionId });
+    if (reusableSessionId) {
+      // Reuse existing session — re-sign JWT with existing session ID
+      sessionId = reusableSessionId;
+      sessionReused = true;
+      sessionsCreated = 0;
+      actualExpiresAt = reusableExpiresAt;
+    } else {
+      // Create a new multi-wallet session
+      sessionId = generateId();
+
+      deps.db.insert(sessions).values({
+        id: sessionId,
+        tokenHash: '',
+        expiresAt: new Date(expiresAt * 1000),
+        absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+        createdAt: new Date(nowSec * 1000),
+        renewalCount: 0,
+        maxRenewals: config.security.session_max_renewals,
+        constraints: null,
+        source: 'api',
+      }).run();
+
+      // Insert N rows into session_wallets (first wallet is default)
+      for (let i = 0; i < targetWallets.length; i++) {
+        const w = targetWallets[i]!;
+        deps.db.insert(sessionWallets).values({
+          sessionId,
+          walletId: w.id,
+          isDefault: i === 0,
+          createdAt: new Date(nowSec * 1000),
+        }).run();
+      }
+
+      void deps.notificationService?.notify('SESSION_CREATED', defaultWallet.id, { sessionId });
+    }
+
+    // Sign JWT (new or re-signed for reused session)
+    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWallet.id, iat: nowSec, exp: actualExpiresAt };
+    const token = await deps.jwtSecretManager.signToken(jwtPayload);
+
+    if (!sessionReused) {
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      deps.db.update(sessions).set({ tokenHash }).where(eq(sessions.id, sessionId)).run();
+    }
 
     // Query per-wallet policies for prompt builder
     const promptWallets = targetWallets.map((w) => {
@@ -1971,12 +2036,19 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         .where(and(eq(policies.walletId, w.id), eq(policies.enabled, true)))
         .all();
 
+      const networks = getNetworksForEnvironment(
+        w.chain as Parameters<typeof getNetworksForEnvironment>[0],
+        w.environment as Parameters<typeof getNetworksForEnvironment>[1],
+      );
+
       return {
+        id: w.id,
         name: w.name,
         chain: w.chain,
         environment: w.environment,
         address: w.publicKey,
         defaultNetwork: w.defaultNetwork,
+        networks: networks.map((n) => n),
         policies: walletPolicies,
       };
     });
@@ -2028,11 +2100,92 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       {
         prompt: fullPrompt,
         walletCount: targetWallets.length,
-        sessionsCreated: 1,
-        expiresAt,
+        sessionsCreated,
+        sessionReused,
+        expiresAt: actualExpiresAt,
       },
       201,
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/sessions/:id/reissue — Reissue session token
+  // ---------------------------------------------------------------------------
+
+  const sessionReissueRoute = createRoute({
+    method: 'post',
+    path: '/admin/sessions/{id}/reissue',
+    tags: ['Admin'],
+    summary: 'Reissue session token (re-sign JWT for existing session)',
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: 'Token reissued',
+        content: { 'application/json': { schema: SessionReissueResponseSchema } },
+      },
+      ...buildErrorResponses(['SESSION_NOT_FOUND', 'SESSION_REVOKED']),
+    },
+  });
+
+  router.openapi(sessionReissueRoute, async (c) => {
+    if (!deps.jwtSecretManager) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', { message: 'JWT signing not available' });
+    }
+
+    const { id: sessionId } = c.req.valid('param');
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // Find session
+    const session = deps.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .get();
+
+    if (!session) {
+      throw new WAIaaSError('SESSION_NOT_FOUND');
+    }
+
+    if (session.revokedAt) {
+      throw new WAIaaSError('SESSION_REVOKED');
+    }
+
+    const expiresAtSec = session.expiresAt instanceof Date
+      ? Math.floor(session.expiresAt.getTime() / 1000)
+      : (session.expiresAt as number);
+
+    if (expiresAtSec <= nowSec) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', { message: 'Session expired' });
+    }
+
+    // Get default wallet for JWT
+    const defaultSw = deps.db
+      .select({ walletId: sessionWallets.walletId })
+      .from(sessionWallets)
+      .where(and(eq(sessionWallets.sessionId, sessionId), eq(sessionWallets.isDefault, true)))
+      .get();
+
+    const defaultWalletId = defaultSw?.walletId ?? '';
+
+    // Re-sign JWT
+    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWalletId, iat: nowSec, exp: expiresAtSec };
+    const token = await deps.jwtSecretManager.signToken(jwtPayload);
+
+    // Increment token_issued_count
+    const newCount = (session.tokenIssuedCount ?? 1) + 1;
+    deps.db.update(sessions)
+      .set({ tokenIssuedCount: newCount })
+      .where(eq(sessions.id, sessionId))
+      .run();
+
+    return c.json({
+      token,
+      sessionId,
+      tokenIssuedCount: newCount,
+      expiresAt: expiresAtSec,
+    }, 200);
   });
 
   return router;

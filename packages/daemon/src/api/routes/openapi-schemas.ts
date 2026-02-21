@@ -591,9 +591,19 @@ export const AgentPromptResponseSchema = z
     prompt: z.string(),
     walletCount: z.number().int(),
     sessionsCreated: z.number().int(),
+    sessionReused: z.boolean(),
     expiresAt: z.number().int(),
   })
   .openapi('AgentPromptResponse');
+
+export const SessionReissueResponseSchema = z
+  .object({
+    token: z.string(),
+    sessionId: z.string().uuid(),
+    tokenIssuedCount: z.number().int(),
+    expiresAt: z.number().int(),
+  })
+  .openapi('SessionReissueResponse');
 
 export const KillSwitchResponseSchema = z
   .object({
@@ -1001,6 +1011,7 @@ export const ConnectInfoResponseSchema = z.object({
     defaultNetwork: z.string().nullable(),
     address: z.string(),
     isDefault: z.boolean(),
+    availableNetworks: z.array(z.string()),
   })),
   policies: z.record(z.string(), z.array(z.object({
     type: z.string(),
