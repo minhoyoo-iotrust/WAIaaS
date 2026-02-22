@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 3 of 4 (Phase 233: DB Migration + Schema + Policy)
-Plan: 1 of 3 in current phase (COMPLETE)
+Plan: 2 of 3 in current phase (COMPLETE)
 Status: Executing Phase 233
-Last activity: 2026-02-22 -- Completed 233-01 DB v22 migration + token API assetId
+Last activity: 2026-02-22 -- Completed 233-02 Schema + pipeline assetId extension
 
-Progress: [██████░░░░] 58%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 5 (this milestone)
-- Average duration: 5.0min
-- Total execution time: 0.42 hours
+- Total plans completed: 6 (this milestone)
+- Average duration: 4.7min
+- Total execution time: 0.47 hours
 
 **By Phase:**
 
@@ -31,7 +31,7 @@ Progress: [██████░░░░] 58%
 |-------|-------|-------|----------|
 | 231 | 2/2 | 7min | 3.5min |
 | 232 | 2/2 | 11min | 5.5min |
-| 233 | 1/3 | 8min | 8min |
+| 233 | 2/3 | 11min | 5.5min |
 
 *Updated after each plan completion*
 
@@ -59,6 +59,8 @@ Progress: [██████░░░░] 58%
 - Pipeline network threading: resolveEffectiveAmountUsd passes optional network to oracle for L2 token pricing
 - PRAGMA table_info guard before ALTER TABLE ADD COLUMN for idempotent migrations on fresh-DDL databases
 - Test fixture migration versions bumped +1 when real migration version is added
+- Case-insensitive address comparison in TokenInfoSchema cross-validation for EVM checksummed vs lowercased
+- APPROVE case in buildTransactionParam now includes tokenAddress (was missing -- bug fix alongside assetId addition)
 
 ### Blockers/Concerns
 
@@ -68,5 +70,5 @@ Progress: [██████░░░░] 58%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 233-01-PLAN.md (DB v22 migration + token API assetId)
+Stopped at: Completed 233-02-PLAN.md (Schema + pipeline assetId extension)
 Resume file: None

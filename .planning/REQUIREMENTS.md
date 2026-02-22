@@ -34,9 +34,9 @@
 
 ### Transaction Schema
 
-- [ ] **TXSC-01**: Transaction request schemas (TokenInfoSchema) accept optional assetId field
-- [ ] **TXSC-02**: When assetId is provided, address is extracted and cross-validated against assetId
-- [ ] **TXSC-03**: Existing transactions without assetId continue to work identically (backward compatible)
+- [x] **TXSC-01**: Transaction request schemas (TokenInfoSchema) accept optional assetId field
+- [x] **TXSC-02**: When assetId is provided, address is extracted and cross-validated against assetId
+- [x] **TXSC-03**: Existing transactions without assetId continue to work identically (backward compatible)
 
 ### Policy
 
@@ -101,9 +101,9 @@
 | ORCL-02 | Phase 232 | Complete |
 | ORCL-03 | Phase 232 | Complete |
 | ORCL-04 | Phase 232 | Complete |
-| TXSC-01 | Phase 233 | Pending |
-| TXSC-02 | Phase 233 | Pending |
-| TXSC-03 | Phase 233 | Pending |
+| TXSC-01 | Phase 233 | Complete |
+| TXSC-02 | Phase 233 | Complete |
+| TXSC-03 | Phase 233 | Complete |
 | PLCY-01 | Phase 233 | Pending |
 | PLCY-02 | Phase 233 | Pending |
 | PLCY-03 | Phase 233 | Pending |
