@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.6.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.1...v2.6.0-rc.2) (2026-02-22)
+
+
+### Features
+
+* **235-01:** implement TokenLimitSchema with superRefine validation for SPENDING_LIMIT ([c2bc8a9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c2bc8a9db3ce6066fe6e9aeded8d522615744cea))
+* **235-01:** unblock USD-only and token_limits-only policy creation at daemon level ([d57b4f5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d57b4f5126db1f65a6231ce41582dfcf53b58938))
+* **236-01:** add tokenDecimals to TransactionParam + wire through buildTransactionParam ([062ca6a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/062ca6a3233bdc150cbec482418aa7bd42fd25ff))
+* **236-02:** implement evaluateTokenTier + token_limits evaluation in policy engine ([2736239](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2736239b648bb98f6c095938a71395c96c601b9a))
+* **236-03:** wire tokenContext through all evaluateSpendingLimit callsites ([4f78886](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4f7888618b785b3f8487f8aa503ecf771e5643e4))
+* **237-01:** extend PolicyFormProps with network and update validateRules ([dbf8aa3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dbf8aa3970b19c565f083495513dc33d25009d9d))
+* **237-01:** restructure SpendingLimitForm with USD top, token limits, and deprecated raw tiers ([42bcde8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/42bcde879e5b6ffd75c3fbba04ab040df1d28d01))
+* **237-02:** add CAIP-19 token limit rows with registry integration ([b7c279b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b7c279b1c13f4c9883e7f440be751b88acc6c4c2))
+* **237-02:** add token_limits ordering validation and deprecated warning ([b230e93](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b230e93ce700ece1bcd392c4eb7fdda29f5b5ee8))
+
+
+### Bug Fixes
+
+* **235:** revise plans based on checker feedback ([d47234c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d47234c12e9171de0687824bb32039148ce44640))
+* **admin:** add USD defaults to SPENDING_LIMIT and update tests ([893b7f4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/893b7f40cfb4cda3fd631c90fb9402c435f61f68))
+* **daemon:** update APPROVE tier tests for Phase 236 behavior change ([60aa3da](https://github.com/minhoyoo-iotrust/WAIaaS/commit/60aa3dad97b7581595eb7e3cb7523a9ea4aea29e))
+
 ## [2.6.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc...v2.6.0-rc.1) (2026-02-22)
 
 
