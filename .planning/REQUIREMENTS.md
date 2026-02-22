@@ -7,12 +7,12 @@
 
 ### Schema (Zod SSoT)
 
-- [ ] **SCHM-01**: TokenLimitSchema(instant_max/notify_max/delay_max 사람 읽기 단위) Zod 스키마가 정의됨
-- [ ] **SCHM-02**: raw 필드(instant_max/notify_max/delay_max)가 optional로 전환됨
-- [ ] **SCHM-03**: token_limits 필드가 CAIP-19 키 기반 z.record로 추가됨
-- [ ] **SCHM-04**: superRefine으로 "USD/token_limits/raw 중 하나 이상 필수" 검증이 동작함
-- [ ] **SCHM-05**: token_limits 내 instant_max <= notify_max <= delay_max 순서가 검증됨
-- [ ] **SCHM-06**: token_limits 키가 native/native:{chain}/CAIP-19 형식만 허용됨
+- [x] **SCHM-01**: TokenLimitSchema(instant_max/notify_max/delay_max 사람 읽기 단위) Zod 스키마가 정의됨
+- [x] **SCHM-02**: raw 필드(instant_max/notify_max/delay_max)가 optional로 전환됨
+- [x] **SCHM-03**: token_limits 필드가 CAIP-19 키 기반 z.record로 추가됨
+- [x] **SCHM-04**: superRefine으로 "USD/token_limits/raw 중 하나 이상 필수" 검증이 동작함
+- [x] **SCHM-05**: token_limits 내 instant_max <= notify_max <= delay_max 순서가 검증됨
+- [x] **SCHM-06**: token_limits 키가 native/native:{chain}/CAIP-19 형식만 허용됨
 
 ### Engine (정책 평가)
 
@@ -60,12 +60,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | Phase 235 | Pending |
-| SCHM-02 | Phase 235 | Pending |
-| SCHM-03 | Phase 235 | Pending |
-| SCHM-04 | Phase 235 | Pending |
-| SCHM-05 | Phase 235 | Pending |
-| SCHM-06 | Phase 235 | Pending |
+| SCHM-01 | Phase 235 | Complete |
+| SCHM-02 | Phase 235 | Complete |
+| SCHM-03 | Phase 235 | Complete |
+| SCHM-04 | Phase 235 | Complete |
+| SCHM-05 | Phase 235 | Complete |
+| SCHM-06 | Phase 235 | Complete |
 | ENGN-01 | Phase 236 | Pending |
 | ENGN-02 | Phase 236 | Pending |
 | ENGN-03 | Phase 236 | Pending |
