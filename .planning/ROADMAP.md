@@ -215,11 +215,11 @@ Plans:
   2. CoinGecko를 통해 Polygon, Arbitrum, Optimism, Base 메인넷의 ERC-20 토큰 가격을 조회할 수 있다
   3. PYTH_FEED_IDS 키가 CAIP-19 형식으로 업데이트되어 기존 Pyth 가격 피드가 정상 동작한다
   4. 데몬 재시작 후 새로운 캐시 키 형식이 자동 적용된다 (인메모리 캐시이므로 데이터 마이그레이션 불필요)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 232-01: CoinGecko L2 플랫폼 맵 확장 + buildCacheKey CAIP-19 전환
-- [ ] 232-02: PYTH_FEED_IDS 키 전환 + oracle chain TokenRef.network 전파
+- [ ] 232-01-PLAN.md — buildCacheKey CAIP-19 전환 + CoinGecko L2 플랫폼 맵 확장 + PYTH_FEED_IDS 원자적 키 전환 + 전체 oracle 호출자 시그니처 마이그레이션
+- [ ] 232-02-PLAN.md — Oracle 테스트 CAIP-19 기대값 갱신 + L2 가격 조회 테스트 + 파이프라인 network 전파
 
 ### Phase 233: DB Migration + Schema + Policy
 **Goal**: token_registry DB 테이블에 CAIP-19 asset_id가 저장되고, 트랜잭션 요청과 정책 규칙이 assetId 필드를 지원하여, 동일 주소의 다른 체인 토큰을 정책 수준에서 구분할 수 있는 상태
