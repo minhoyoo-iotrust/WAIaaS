@@ -186,6 +186,8 @@ interface TransactionParam {
   selector?: string;
   spenderAddress?: string;
   approveAmount?: string;
+  /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
+  tokenDecimals?: number;
 }
 
 function buildTransactionParam(
@@ -195,7 +197,7 @@ function buildTransactionParam(
 ): TransactionParam {
   switch (txType) {
     case 'TOKEN_TRANSFER': {
-      const r = req as { to: string; amount: string; token: { address: string; assetId?: string } };
+      const r = req as { to: string; amount: string; token: { address: string; assetId?: string; decimals: number } };
       return {
         type: 'TOKEN_TRANSFER',
         amount: r.amount,
@@ -203,6 +205,7 @@ function buildTransactionParam(
         chain,
         tokenAddress: r.token.address,
         assetId: r.token.assetId,
+        tokenDecimals: r.token.decimals,
       };
     }
     case 'CONTRACT_CALL': {
@@ -217,7 +220,7 @@ function buildTransactionParam(
       };
     }
     case 'APPROVE': {
-      const r = req as { spender: string; amount: string; token: { address: string; assetId?: string } };
+      const r = req as { spender: string; amount: string; token: { address: string; assetId?: string; decimals: number } };
       return {
         type: 'APPROVE',
         amount: r.amount,
@@ -227,6 +230,7 @@ function buildTransactionParam(
         assetId: r.token.assetId,
         spenderAddress: r.spender,
         approveAmount: r.amount,
+        tokenDecimals: r.token.decimals,
       };
     }
     case 'TRANSFER':

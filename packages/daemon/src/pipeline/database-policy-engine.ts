@@ -130,6 +130,8 @@ interface TransactionParam {
   spenderAddress?: string;
   /** Approve amount in raw units for APPROVE_AMOUNT_LIMIT evaluation (APPROVE only). */
   approveAmount?: string;
+  /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
+  tokenDecimals?: number;
 }
 
 // ---------------------------------------------------------------------------

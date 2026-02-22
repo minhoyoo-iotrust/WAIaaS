@@ -88,10 +88,14 @@ interface TransactionParam {
   chain: string;
   network?: string;
   tokenAddress?: string;
+  /** CAIP-19 asset identifier for ALLOWED_TOKENS 4-scenario matching (TOKEN_TRANSFER only). */
+  assetId?: string;
   contractAddress?: string;
   selector?: string;
   spenderAddress?: string;
   approveAmount?: string;
+  /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
+  tokenDecimals?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +136,7 @@ export function mapOperationToParam(
         chain,
         network,
         tokenAddress: op.token,
+        assetId: undefined, // ParsedOperation does not carry assetId
       };
 
     case 'CONTRACT_CALL':
