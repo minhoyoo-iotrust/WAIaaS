@@ -556,7 +556,10 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.db && tokenRegistryService) {
     app.route(
       '/v1',
-      tokenRegistryRoutes({ tokenRegistryService }),
+      tokenRegistryRoutes({
+        tokenRegistryService,
+        rpcConfig: deps.config?.rpc as unknown as Record<string, string>,
+      }),
     );
   }
 

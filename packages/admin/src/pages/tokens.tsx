@@ -1,5 +1,5 @@
 import { useSignal } from '@preact/signals';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { Badge, Button } from '../components/form';
@@ -68,7 +68,9 @@ export default function TokensPage() {
   const name = useSignal('');
   const decimals = useSignal('18');
   const adding = useSignal(false);
+  const resolving = useSignal(false);
   const deleting = useSignal<string | null>(null);
+  const resolveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // -------------------------------------------------------------------------
   // Fetch
@@ -112,7 +114,36 @@ export default function TokensPage() {
     symbol.value = '';
     name.value = '';
     decimals.value = '18';
+    resolving.value = false;
     showAddForm.value = false;
+    if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+  }
+
+  async function resolveTokenMetadata(contractAddress: string) {
+    resolving.value = true;
+    try {
+      const result = await apiGet<{ symbol: string; name: string; decimals: number }>(
+        `${API.TOKENS_RESOLVE}?network=${encodeURIComponent(network.value)}&address=${encodeURIComponent(contractAddress)}`,
+      );
+      symbol.value = result.symbol;
+      name.value = result.name;
+      decimals.value = String(result.decimals);
+      showToast('success', `Resolved: ${result.symbol} (${result.name})`);
+    } catch {
+      // Auto-resolve failed — user can still enter manually
+    } finally {
+      resolving.value = false;
+    }
+  }
+
+  function handleAddressInput(e: Event) {
+    const val = (e.target as HTMLInputElement).value;
+    address.value = val;
+    // Auto-resolve when address looks like a valid EVM address (0x + 40 hex chars)
+    if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+    if (/^0x[a-fA-F0-9]{40}$/.test(val)) {
+      resolveTimerRef.current = setTimeout(() => resolveTokenMetadata(val), 500);
+    }
   }
 
   async function handleAddToken() {
@@ -208,15 +239,13 @@ export default function TokensPage() {
           <h3 style={{ marginBottom: 'var(--space-3)' }}>Add Custom Token</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
             <div class="form-field">
-              <label for="token-address">Contract Address</label>
+              <label for="token-address">Contract Address {resolving.value && <span style={{ color: 'var(--warning)', fontSize: '0.85em' }}>(resolving...)</span>}</label>
               <input
                 id="token-address"
                 type="text"
                 value={address.value}
-                onInput={(e) => {
-                  address.value = (e.target as HTMLInputElement).value;
-                }}
-                placeholder="0x..."
+                onInput={handleAddressInput}
+                placeholder="0x... (metadata auto-fetched)"
               />
             </div>
             <div class="form-field">
