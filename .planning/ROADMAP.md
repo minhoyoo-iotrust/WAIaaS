@@ -239,11 +239,11 @@ Plans:
   3. 서버사이드 페이지네이션으로 페이지를 이동하면 새 데이터가 로드되며, 트랜잭션 행을 클릭하면 전체 필드가 확장 표시된다
   4. 대시보드에서 APPROVAL 대기 건수 카드가 표시되고, Failed Txns/Recent Activity 카드 클릭 시 /transactions로 해당 필터가 적용된 채 이동한다
   5. 대시보드 Recent Activity 테이블에 네트워크 컬럼과 txHash 익스플로러 링크가 표시된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 240-01: Transactions page (table, filters, pagination, search, row expand)
-- [ ] 240-02: Dashboard improvements (approval card, clickable cards, network/txHash columns)
+- [ ] 240-01-PLAN.md -- Transactions page (table, filters, search, pagination, row expand) + tests
+- [ ] 240-02-PLAN.md -- Dashboard improvements (approval card, clickable cards, network/txHash columns) + tests
 
 ### Phase 241: Token Registry + Notification Log
 **Goal**: 운영자가 Admin UI에서 네트워크별 토큰을 조회/추가/삭제할 수 있고, 알림 로그를 이벤트/채널/상태/날짜로 필터링하여 특정 이벤트를 추적할 수 있다
