@@ -29,7 +29,7 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { sql, desc, eq, and, isNull, gt, count as drizzleCount } from 'drizzle-orm';
+import { sql, desc, eq, and, isNull, gt, gte, lte, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
@@ -255,6 +255,9 @@ const notificationLogQuerySchema = z.object({
   pageSize: z.string().optional().default('20'),
   channel: z.string().optional(),
   status: z.string().optional(),
+  eventType: z.string().optional(),
+  since: z.string().optional(),
+  until: z.string().optional(),
 });
 
 const notificationsLogRoute = createRoute({
@@ -1217,6 +1220,21 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
     if (query.status) {
       conditions.push(eq(notificationLogs.status, query.status));
+    }
+    if (query.eventType) {
+      conditions.push(eq(notificationLogs.eventType, query.eventType));
+    }
+    if (query.since) {
+      const sinceTs = parseInt(query.since, 10);
+      if (!isNaN(sinceTs)) {
+        conditions.push(gte(notificationLogs.createdAt, new Date(sinceTs * 1000)));
+      }
+    }
+    if (query.until) {
+      const untilTs = parseInt(query.until, 10);
+      if (!isNaN(untilTs)) {
+        conditions.push(lte(notificationLogs.createdAt, new Date(untilTs * 1000)));
+      }
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

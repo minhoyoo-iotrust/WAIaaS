@@ -4,6 +4,7 @@ import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
+import { FilterBar, type FilterField } from '../components/filter-bar';
 import { FormField, Button, Badge } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
@@ -65,6 +66,52 @@ const NOTIFICATIONS_TABS = [
   { key: 'channels', label: 'Channels & Logs' },
   { key: 'telegram', label: 'Telegram Users' },
   { key: 'settings', label: 'Settings' },
+];
+
+const LOG_FILTER_FIELDS: FilterField[] = [
+  {
+    key: 'eventType',
+    label: 'Event Type',
+    type: 'select',
+    options: [
+      { value: 'tx.submitted', label: 'tx.submitted' },
+      { value: 'tx.confirmed', label: 'tx.confirmed' },
+      { value: 'tx.failed', label: 'tx.failed' },
+      { value: 'policy.violation', label: 'policy.violation' },
+      { value: 'security.kill_switch', label: 'security.kill_switch' },
+      { value: 'security.auto_stop', label: 'security.auto_stop' },
+      { value: 'security.suspicious_tx', label: 'security.suspicious_tx' },
+      { value: 'session.created', label: 'session.created' },
+      { value: 'session.expired', label: 'session.expired' },
+      { value: 'owner.registered', label: 'owner.registered' },
+      { value: 'owner.verified', label: 'owner.verified' },
+      { value: 'incoming.detected', label: 'incoming.detected' },
+      { value: 'incoming.suspicious', label: 'incoming.suspicious' },
+    ],
+  },
+  {
+    key: 'channel',
+    label: 'Channel',
+    type: 'select',
+    options: [
+      { value: 'telegram', label: 'Telegram' },
+      { value: 'discord', label: 'Discord' },
+      { value: 'ntfy', label: 'ntfy' },
+      { value: 'slack', label: 'Slack' },
+      { value: 'wallet_app', label: 'Wallet App' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'sent', label: 'Sent' },
+      { value: 'failed', label: 'Failed' },
+    ],
+  },
+  { key: 'since', label: 'Since', type: 'date' },
+  { key: 'until', label: 'Until', type: 'date' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -417,6 +464,13 @@ export default function NotificationsPage() {
   const logsLoading = useSignal(true);
   const currentPage = useSignal(1);
   const selectedLog = useSignal<NotificationLogEntry | null>(null);
+  const filters = useSignal<Record<string, string>>({
+    eventType: '',
+    channel: '',
+    status: '',
+    since: '',
+    until: '',
+  });
 
   const fetchStatus = async () => {
     try {
@@ -433,8 +487,26 @@ export default function NotificationsPage() {
   const fetchLogs = async (page: number) => {
     logsLoading.value = true;
     try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('pageSize', String(PAGE_SIZE));
+      const f = filters.value;
+      if (f.eventType) params.set('eventType', f.eventType);
+      if (f.channel) params.set('channel', f.channel);
+      if (f.status) params.set('status', f.status);
+      if (f.since) {
+        const d = new Date(f.since);
+        if (!isNaN(d.getTime())) params.set('since', String(Math.floor(d.getTime() / 1000)));
+      }
+      if (f.until) {
+        const d = new Date(f.until);
+        if (!isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999);
+          params.set('until', String(Math.floor(d.getTime() / 1000)));
+        }
+      }
       const result = await apiGet<NotificationLogResponse>(
-        `${API.ADMIN_NOTIFICATIONS_LOG}?page=${page}&pageSize=${PAGE_SIZE}`,
+        `${API.ADMIN_NOTIFICATIONS_LOG}?${params.toString()}`,
       );
       logs.value = result;
     } catch (err) {
@@ -506,6 +578,12 @@ export default function NotificationsPage() {
     selectedLog.value = selectedLog.value?.id === log.id ? null : log;
   };
 
+  const handleFilterChange = (newFilters: Record<string, string>) => {
+    filters.value = newFilters;
+    currentPage.value = 1;
+    fetchLogs(1);
+  };
+
   useEffect(() => {
     fetchStatus();
     fetchLogs(1);
@@ -522,7 +600,18 @@ export default function NotificationsPage() {
     {
       key: 'walletId',
       header: 'Wallet ID',
-      render: (entry) => entry.walletId ? entry.walletId.slice(0, 8) + '...' : '\u2014',
+      render: (entry) => entry.walletId
+        ? (
+          <a
+            href={`#/wallets/${entry.walletId}`}
+            class="wallet-link"
+            onClick={(e: Event) => e.stopPropagation()}
+            title={entry.walletId}
+          >
+            {entry.walletId.slice(0, 8)}...
+          </a>
+        )
+        : '\u2014',
     },
     {
       key: 'channel',
@@ -640,6 +729,12 @@ export default function NotificationsPage() {
 
       {/* Section 2: Delivery Log Table */}
       <h2>Delivery Log</h2>
+      <FilterBar
+        fields={LOG_FILTER_FIELDS}
+        values={filters.value}
+        onChange={handleFilterChange}
+        syncUrl={false}
+      />
       <Table<NotificationLogEntry>
         columns={logColumns}
         data={logs.value?.logs ?? []}
