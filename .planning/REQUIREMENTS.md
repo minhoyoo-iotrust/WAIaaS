@@ -29,10 +29,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Token Registry
 
-- [ ] **TOKR-01**: /tokens 페이지에서 네트워크 필터로 빌트인 + 커스텀 토큰 목록을 조회할 수 있다
-- [ ] **TOKR-02**: 컨트랙트 주소 입력 시 온체인 메타데이터 자동 조회 후 커스텀 토큰을 추가할 수 있다
-- [ ] **TOKR-03**: 커스텀 토큰만 삭제 가능하며 빌트인 토큰은 삭제 불가 표시된다
-- [ ] **TOKR-04**: 토큰 테이블이 심볼, 이름, 주소, decimals, source 배지를 표시한다
+- [x] **TOKR-01**: /tokens 페이지에서 네트워크 필터로 빌트인 + 커스텀 토큰 목록을 조회할 수 있다
+- [x] **TOKR-02**: 컨트랙트 주소 입력 시 온체인 메타데이터 자동 조회 후 커스텀 토큰을 추가할 수 있다
+- [x] **TOKR-03**: 커스텀 토큰만 삭제 가능하며 빌트인 토큰은 삭제 불가 표시된다
+- [x] **TOKR-04**: 토큰 테이블이 심볼, 이름, 주소, decimals, source 배지를 표시한다
 
 ### Incoming TX
 
@@ -103,10 +103,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | DASH-02 | Phase 240 | Complete |
 | DASH-03 | Phase 240 | Complete |
 | DASH-04 | Phase 240 | Complete |
-| TOKR-01 | Phase 241 | Pending |
-| TOKR-02 | Phase 241 | Pending |
-| TOKR-03 | Phase 241 | Pending |
-| TOKR-04 | Phase 241 | Pending |
+| TOKR-01 | Phase 241 | Complete |
+| TOKR-02 | Phase 241 | Complete |
+| TOKR-03 | Phase 241 | Complete |
+| TOKR-04 | Phase 241 | Complete |
 | NLOG-01 | Phase 241 | Pending |
 | NLOG-02 | Phase 241 | Pending |
 | INTX-01 | Phase 242 | Pending |

@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 240 -- Transactions Page + Dashboard
+**Current focus:** Phase 241 -- Token Registry + Notification Log
 
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 2 of 5 (Phase 240: Transactions Page + Dashboard) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-22 -- Completed 240-02 (Dashboard Enhancements)
+Phase: 3 of 5 (Phase 241: Token Registry + Notification Log) -- IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Plan 241-01 complete
+Last activity: 2026-02-23 -- Completed 241-01 (Token Registry Page)
 
-Progress: [####......] 40%
+Progress: [#####.....] 50%
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ Progress: [####......] 40%
 | 238 | 1/1 | 3min | 3min |
 | 239 | 2/2 | -- | -- |
 | 240 | 2/2 | 10min | 5min |
+| 241 | 1/2 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -55,6 +56,8 @@ Progress: [####......] 40%
 - 240-01: 13 network options in filter dropdown matching EXPLORER_MAP networks
 - 240-02: Approval count fetched via separate lightweight API call (limit=1+total) not client-side computation
 - 240-02: Network column before Status, Tx Hash column after Status in Recent Activity table
+- 241-01: apiDelete extended with optional body parameter for DELETE /v1/tokens JSON body requirement
+- 241-01: Inlined EVM_NETWORKS constant (10 networks) in tokens.tsx, matching pattern from transactions.tsx
 
 ### Blockers/Concerns
 
@@ -62,6 +65,6 @@ Progress: [####......] 40%
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed 240-02-PLAN.md
+Last session: 2026-02-23
+Stopped at: Completed 241-01-PLAN.md
 Resume file: None
