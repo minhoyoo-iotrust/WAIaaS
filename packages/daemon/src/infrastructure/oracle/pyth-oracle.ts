@@ -12,7 +12,7 @@
  * - Price conversion: Number(price) * 10^expo for USD value.
  */
 import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@waiaas/core';
-import { buildCacheKey } from './price-cache.js';
+import { buildCacheKey, resolveNetwork } from './price-cache.js';
 import { getFeedId } from './pyth-feed-ids.js';
 import { PriceNotAvailableError } from './oracle-errors.js';
 
@@ -68,7 +68,8 @@ export class PythOracle implements IPriceOracle {
    * @throws Error if Pyth API returns HTTP error or invalid response.
    */
   async getPrice(token: TokenRef): Promise<PriceInfo> {
-    const cacheKey = buildCacheKey(token.chain, token.address);
+    const network = resolveNetwork(token.chain, token.network);
+    const cacheKey = buildCacheKey(network, token.address);
     const feedId = getFeedId(cacheKey);
 
     if (!feedId) {
@@ -115,7 +116,8 @@ export class PythOracle implements IPriceOracle {
     const feedIds: string[] = [];
 
     for (const token of tokens) {
-      const cacheKey = buildCacheKey(token.chain, token.address);
+      const network = resolveNetwork(token.chain, token.network);
+      const cacheKey = buildCacheKey(network, token.address);
       const feedId = getFeedId(cacheKey);
       if (feedId) {
         feedToCacheKey.set(feedId, cacheKey);
@@ -163,8 +165,9 @@ export class PythOracle implements IPriceOracle {
    * @throws PriceNotAvailableError if chain has no native feed mapping.
    */
   async getNativePrice(chain: ChainType): Promise<PriceInfo> {
+    const network = resolveNetwork(chain);
     const decimals = chain === 'solana' ? 9 : 18;
-    return this.getPrice({ address: 'native', decimals, chain });
+    return this.getPrice({ address: 'native', decimals, chain, network });
   }
 
   /**

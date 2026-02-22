@@ -29,9 +29,14 @@ export class DiscordChannel implements INotificationChannel {
     }
     fields.push({ name: 'Event', value: payload.eventType, inline: true });
 
+    // Add explorer link to description when available
+    const description = payload.explorerUrl
+      ? `${payload.body}\n[View on Explorer](${payload.explorerUrl})`
+      : payload.body;
+
     const embed: Record<string, unknown> = {
       title: payload.title,
-      description: payload.body,
+      description,
       color,
       fields,
       ...(payload.walletId ? { timestamp: new Date(payload.timestamp * 1000).toISOString() } : {}),

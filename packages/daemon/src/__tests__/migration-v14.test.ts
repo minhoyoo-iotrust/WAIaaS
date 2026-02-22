@@ -242,8 +242,8 @@ describe('v14 migration: kill_switch_state value conversion', () => {
     }
   });
 
-  it('LATEST_SCHEMA_VERSION is 21', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(21);
+  it('LATEST_SCHEMA_VERSION is 22', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(22);
   });
 
   it('NORMAL -> ACTIVE conversion', () => {
@@ -356,7 +356,7 @@ describe('v14 migration: kill_switch_state value conversion', () => {
 
     const versions = getVersions(db);
     expect(versions).toContain(21);
-    expect(Math.max(...versions)).toBe(21);
+    expect(Math.max(...versions)).toBe(22);
   });
 
   it('updated_at is refreshed on conversion', () => {

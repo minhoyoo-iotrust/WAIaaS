@@ -138,6 +138,7 @@ Parameters:
   - `address` (required): mint address (SPL) or contract address (ERC-20)
   - `decimals` (required): integer, 0-18
   - `symbol` (required): string, 1-10 characters
+  - `assetId` (optional): CAIP-19 asset identifier (e.g., `"eip155:1/erc20:0xa0b8..."`). Cross-validated against `address` when provided.
 - `memo` (optional): string, max 256 characters
 - `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
@@ -264,6 +265,7 @@ Parameters:
   - `address` (required): token contract/mint address
   - `decimals` (required): integer, 0-18
   - `symbol` (required): string, 1-10 characters
+  - `assetId` (optional): CAIP-19 asset identifier. Cross-validated against `address` when provided.
 - `amount` (required): string of digits, max approval amount in token's smallest unit
 - `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
 
@@ -719,3 +721,72 @@ curl -s -X POST http://localhost:3100/v1/utils/encode-calldata \
 - Python: `await client.encode_calldata(abi, function_name, args)`
 
 **MCP Tool:** `encode_calldata` with parameters `abi`, `functionName`, `args`
+
+## 13. CAIP-19 Asset Identification
+
+WAIaaS supports [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md) standard asset identifiers for cross-chain token identification. The `assetId` field is an optional addition to token objects in TOKEN_TRANSFER and APPROVE requests.
+
+### Format
+
+```
+{CAIP-2 chain ID}/{asset namespace}:{asset reference}
+```
+
+### Examples by Chain
+
+| Chain | Type | assetId | Description |
+|-------|------|---------|-------------|
+| Ethereum | ERC-20 | `eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` | USDC on Ethereum Mainnet |
+| Polygon | ERC-20 | `eip155:137/erc20:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359` | USDC on Polygon |
+| Solana | SPL | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | USDC on Solana Mainnet |
+| Ethereum | Native | `eip155:1/slip44:60` | ETH (native) |
+| Solana | Native | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501` | SOL (native) |
+| Polygon | Native | `eip155:137/slip44:966` | POL (native) |
+
+**Important:** EVM addresses in CAIP-19 must be **lowercase** (not checksummed).
+
+### Usage in TOKEN_TRANSFER
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TOKEN_TRANSFER",
+    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    "amount": "5000000",
+    "token": {
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "decimals": 6,
+      "symbol": "USDC",
+      "assetId": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    }
+  }'
+```
+
+### Usage in APPROVE
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "APPROVE",
+    "spender": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "token": {
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "decimals": 6,
+      "symbol": "USDC",
+      "assetId": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    "amount": "1000000000"
+  }'
+```
+
+### Cross-Validation
+
+When both `address` and `assetId` are provided, the daemon extracts the address from the CAIP-19 URI and validates it matches `token.address` (case-insensitive for EVM). If they don't match, the request is rejected with `ACTION_VALIDATION_FAILED`.
+
+### Backward Compatibility
+
+`assetId` is fully optional. Existing requests without `assetId` continue to work unchanged. You can gradually adopt CAIP-19 identifiers without breaking existing integrations.

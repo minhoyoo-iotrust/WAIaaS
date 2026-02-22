@@ -13,9 +13,12 @@ import { tokenRegistry } from '../database/schema.js';
 import type * as schema from '../database/schema.js';
 import { getBuiltinTokens, type TokenEntry } from './builtin-tokens.js';
 import { generateId } from '../database/id.js';
+import { tokenAssetId } from '@waiaas/core';
+import type { NetworkType } from '@waiaas/core';
 
 export interface RegistryToken extends TokenEntry {
   source: 'builtin' | 'custom';
+  assetId?: string | null;
 }
 
 export class TokenRegistryService {
@@ -40,16 +43,27 @@ export class TokenRegistryService {
     const merged = new Map<string, RegistryToken>();
 
     for (const t of builtins) {
-      merged.set(t.address.toLowerCase(), { ...t, source: 'builtin' });
+      let assetId: string | null = null;
+      try {
+        assetId = tokenAssetId(network as NetworkType, t.address);
+      } catch { /* unknown network */ }
+      merged.set(t.address.toLowerCase(), { ...t, source: 'builtin', assetId });
     }
 
     for (const row of customRows) {
+      let assetId: string | null = row.assetId ?? null;
+      if (!assetId) {
+        try {
+          assetId = tokenAssetId(network as NetworkType, row.address);
+        } catch { /* fallback null */ }
+      }
       merged.set(row.address.toLowerCase(), {
         address: row.address,
         symbol: row.symbol,
         name: row.name,
         decimals: row.decimals,
         source: row.source as 'builtin' | 'custom',
+        assetId,
       });
     }
 

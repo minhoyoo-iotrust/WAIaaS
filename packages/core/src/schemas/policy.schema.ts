@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PolicyTypeEnum, PolicyTierEnum } from '../enums/policy.js';
 import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
+import { Caip19Schema } from '../caip/index.js';
 
 export const PolicySchema = z.object({
   id: z.string().uuid(),
@@ -19,12 +20,13 @@ export type Policy = z.infer<typeof PolicySchema>;
 // Used by superRefine to validate rules per PolicyType.
 // ---------------------------------------------------------------------------
 
-/** ALLOWED_TOKENS: rules.tokens array (mint/contract addresses). */
+/** ALLOWED_TOKENS: rules.tokens array (mint/contract addresses + optional CAIP-19). */
 const AllowedTokensRulesSchema = z.object({
   tokens: z.array(z.object({
     address: z.string().min(1),
     symbol: z.string().min(1).max(10).optional(),
     chain: ChainTypeEnum.optional(),
+    assetId: Caip19Schema.optional(),
   })).min(1, 'At least one token required'),
 });
 

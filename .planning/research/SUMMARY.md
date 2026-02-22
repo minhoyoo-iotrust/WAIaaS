@@ -1,230 +1,199 @@
 # Project Research Summary
 
-**Project:** WAIaaS v27.1 — Incoming Transaction Monitoring Implementation
-**Domain:** Real-time blockchain incoming transaction monitoring for self-hosted wallet daemon
-**Researched:** 2026-02-21
+**Project:** WAIaaS CAIP-19 Asset Identification (m27-02)
+**Domain:** Multi-chain asset identification standard integration into existing wallet infrastructure
+**Researched:** 2026-02-22
 **Confidence:** HIGH
 
 ## Executive Summary
 
-WAIaaS v27.1 implements the incoming transaction monitoring system fully specified in design doc 76 (~2,441 lines, 19 locked decisions). This is an implementation milestone, not a design milestone — the architecture is fully determined and the only remaining question is execution order. The recommended approach adds a parallel subsystem to the existing daemon without touching the outgoing TX pipeline (IChainAdapter, AdapterPool, 6-stage pipeline). The new subsystem introduces IChainSubscriber (a stateful counterpart to the stateless IChainAdapter), two chain-specific subscriber implementations, a memory queue with batch flush, and a central orchestration service. No new npm dependencies are required: @solana/kit ^6.0.1 already provides `createSolanaRpcSubscriptions` with `logsNotifications` AsyncIterables, and viem ^2.21.0 provides `watchEvent`/`getLogs`/`watchBlocks`.
+WAIaaS currently fragments token identification across multiple representations: `{address, decimals, symbol}` + `chain` in transaction requests, `${chain}:${address}` as price oracle cache keys, `(network, address)` as the token registry primary index, and a partial CAIP-2 mapping already used for x402 and WalletConnect. This fragmentation directly causes the inability to resolve L2 token prices (Polygon USDC, Arbitrum USDC) because the oracle cannot distinguish same-address tokens deployed on different EVM chains. CAIP-19 (`chainId/namespace:reference`) is the industry-standard solution, with the ChainAgnostic Improvement Proposals providing exact specifications for all 13 WAIaaS networks across both Solana and EVM chains.
 
-The recommended implementation strategy is polling-first for EVM (HTTP `getLogs` for ERC-20, `getBlock(includeTransactions: true)` for native ETH) and WebSocket-first for Solana (`logsSubscribe` with per-wallet subscriptions sharing one WebSocket connection via SubscriptionMultiplexer). This asymmetry is intentional: EVM's 12-second block time makes polling economical and removes WebSocket dependency in self-hosted environments where WS RPC is often unavailable, while Solana's 400ms slot time makes polling impractical at scale. Resilience is achieved via a 3-state connection machine (WEBSOCKET -> POLLING -> DISABLED), exponential backoff reconnection with jitter, blind gap recovery using per-chain cursors in `incoming_tx_cursors` table, and a memory queue that decouples high-frequency WebSocket callbacks from SQLite writes via BackgroundWorkers.
+The recommended approach is a custom ~240 LOC CAIP module (`packages/core/src/caip/`) with zero new npm dependencies. All four evaluated external libraries were rejected: the leading `caip` npm package (v1.1.1) has an incorrect regex that omits `.` and `%` from `asset_reference`, is effectively unmaintained (last real update 2022), and uses an OOP API incompatible with WAIaaS's Zod SSoT discipline; `@shapeshiftoss/caip` is 4.36 MB and drags in axios; the remaining two candidates are pre-release (v0.1.x) with no track record. The implementation consolidates the existing `CAIP2_TO_NETWORK` map from `x402.types.ts` into the new module, eliminating duplication between x402 types and the WalletConnect session service. All integration points use optional additive fields, preserving backward compatibility for all existing SDK and MCP consumers.
 
-The key risks are concentrated in the WebSocket lifecycle and data consistency layers. Six critical pitfalls (C-01 through C-06) have been identified that cause data loss or incorrect financial behavior: WebSocket listener leaks on reconnection, SQLite event loop starvation from large batch flushes, agents acting on unfinalized Solana `confirmed` transactions, duplicate events from concurrent gap recovery and polling, data loss from unflushed memory queues on shutdown, and EVM reorg producing false CONFIRMED status. All six have concrete prevention strategies mapped to specific implementation phases. The single most important non-obvious rule: queue-level dedup via `Map<txHash:walletId, tx>` is **mandatory**, not optional — the "optional optimization" label in design doc 76 section 2.4 is incorrect.
+The highest-risk area is not the CAIP parser itself (trivial string manipulation) but the transition layer: EVM address case normalization must happen at CAIP construction time or cache misses and policy bypass vulnerabilities emerge; the DB migration that auto-populates `asset_id` must enumerate all 13 networks correctly or produce silent data corruption; and the policy engine must handle all four address/assetId matching combinations or a silent security regression occurs. A 4-phase build order — Core CAIP module, Oracle/TokenRef, DB/Registry/Schema, Pipeline/Policy/API/MCP — mirrors the natural dependency chain and isolates risk at each step.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new packages are needed. All required capabilities exist in the current dependency set. @solana/kit's `createSolanaRpcSubscriptions` exposes `logsNotifications` as an AsyncIterable — subscribe via `for await` loop, cancel via AbortController. viem's `watchEvent(poll: false)` uses `eth_subscribe("logs")` over WebSocket, while `getLogs` uses standard HTTP RPC — the polling-first design defaults to HTTP. SQLite writes use raw `better-sqlite3` prepared statements inside `sqlite.transaction()` for batch INSERT (50x faster than individual inserts), with Drizzle ORM reserved for read queries. The existing `BackgroundWorkers` timer scheduler handles all periodic tasks (flush, poll, confirm, retention) without modification. See STACK.md for full API surface details and code examples.
+Zero new npm dependencies are required. The custom `caip/` module uses the existing Zod 3.x infrastructure for schema validation via two regex-based schemas (`Caip2Schema`, `Caip19AssetTypeSchema`). The CAIP-19 spec's exact regexes have been verified against the official ChainAgnostic standards site and differ meaningfully from what the `caip` npm package implements (the npm package incorrectly uses `[-a-zA-Z0-9]` for `asset_reference`, missing `.` and `%`). The existing CoinGecko platform ID map (`coingecko-platform-ids.ts`) needs to be extended with 4 L2 mainnet entries keyed by CAIP-2 chain ID rather than by chain type string.
 
 **Core technologies:**
-- `@solana/kit ^6.0.1`: Solana WebSocket subscriptions via `createSolanaRpcSubscriptions` + `logsNotifications` AsyncIterable; TX parsing via `getTransaction(jsonParsed)`; polling fallback via `getSignaturesForAddress` — already installed, no additional WebSocket library needed
-- `viem ^2.21.0`: EVM polling via `getLogs` + `getBlock(includeTransactions: true)`; optional WebSocket via `watchEvent(poll: false)`; viem issues #2325 and #2563 (WebSocket reconnect) both fixed in installed version ^2.21.0
-- `better-sqlite3 ^12.6.0`: Batch INSERT with `sqlite.transaction()` + prepared statements for the hot write path; existing 7 PRAGMA configuration (WAL, synchronous=NORMAL, busy_timeout=5000) already optimal
-- `drizzle-orm ^0.45.0`: Query builder for read paths (list, summary, admin queries); avoid for batch write path (Drizzle issue #2474: returning + onConflictDoNothing limitation)
-- `BackgroundWorkers` (internal): Existing timer scheduler; handles overlap prevention via `running` Map and uses `unref()` timers; 6 new workers needed (flush/confirm/poll/retention)
-- Node.js 22 native WebSocket: Used internally by @solana/kit; no `ws` package needed; NOTE: lacks `ws.ping()` — application-level heartbeat via `getSlot()` RPC call is required for Solana 10-minute inactivity timeout prevention
-
-**What NOT to add:**
-- `ws` npm package, `reconnecting-websocket`, `buffered-queue`, `bull`/`bullmq`, Helius/Alchemy webhook SDKs — all violate self-hosted principle or duplicate existing functionality
+- Custom `packages/core/src/caip/` module (5 files, ~240 LOC): CAIP-2 and CAIP-19 parsing/formatting — zero-dependency, spec-compliant, integrates with Zod SSoT. Existing `parseCaip2()` in `x402.types.ts` is the proof-of-concept foundation.
+- Zod 3.x (existing): CAIP URI validation — regex-based schemas maintain the Zod SSoT derivation chain (Zod -> TS -> OpenAPI -> Drizzle).
+- `coingecko-platform-ids.ts` (extend existing): L2 price oracle mapping — extend with `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` platform IDs keyed by CAIP-2 string.
 
 ### Expected Features
 
-Research (via design doc 76) identifies 12 table-stakes features and 13 differentiators. The implementation scope is fully bounded.
+**Must have (table stakes) — 19 features total:**
+- CAIP-2 parser/formatter (generalize existing `parseCaip2()` from x402.types.ts, add `formatCaip2()`)
+- CAIP-19 parser/formatter with spec-compliant regex including `.` and `%` in `asset_reference`
+- Zod validation schemas `Caip2Schema` and `Caip19AssetTypeSchema`
+- Consolidated NetworkType <-> CAIP-2 bidirectional map (eliminate x402 + WC session service duplicates)
+- `nativeAssetId(network)`, `tokenAssetId(network, address)`, `isNativeAsset()` helpers
+- EVM address lowercase normalization at CAIP-19 construction (Solana MUST NOT be lowercased — base58 is case-sensitive)
+- TokenRef extension with optional `assetId` and `network` fields
+- Price oracle cache key migration to CAIP-19 format (network-aware, atomic with PYTH_FEED_IDS update)
+- CoinGecko L2 platform ID mapping for all 5 EVM mainnets
+- Token registry DB migration v22 with `asset_id` column and application-level backfill
+- Transaction request `assetId` optional field with Stage 1 extraction and cross-validation against `address`
+- ALLOWED_TOKENS policy: `assetId` support in rules and 4-scenario evaluation logic
+- MCP tools: `assetId` parameter on `send_token`, `approve_token`, `get_token_balance`
+- SDK (TS + Python): optional `assetId` field support
+- Skills files: CAIP-19 documentation for AI agents
 
-**Must have (table stakes):**
-- Solana SOL native receive detection — core use case; `preBalances`/`postBalances` delta from `getTransaction(jsonParsed)`
-- Solana SPL token + Token-2022 detection — `preTokenBalances`/`postTokenBalances` delta; same mechanism, no separate code
-- EVM native ETH receive detection — `getBlock(includeTransactions: true)` + `tx.to === walletAddress && tx.value > 0n` filter
-- EVM ERC-20 Transfer event detection — `getLogs` with indexed `to` parameter filter on Transfer topic
-- 2-phase status (DETECTED -> CONFIRMED) — fast notification at detection, safe action threshold at confirmation
-- Wallet-level opt-in toggle (`wallets.monitor_incoming` column) — RPC cost control; default OFF
-- Global enable/disable gate (`incoming.enabled` config key) — operator-level control
-- Incoming TX history REST API with cursor pagination — `GET /v1/wallet/incoming`
-- DB migration v21 (3 DDL statements: 2 new tables + 1 ALTER TABLE) — foundation for all other features
-- Notification events `INCOMING_TX_DETECTED` and `INCOMING_TX_SUSPICIOUS` (28 -> 30 event types)
-- Config.toml `[incoming]` section with 7 keys — operator configuration surface
-- SettingsService hot-reload for all 7 keys — no daemon restart required
+**Should have (differentiators — highest priority first):**
+- L2 token price resolution — the primary business value: Polygon USDC, Arbitrum USDC, Base USDC prices now resolvable via CoinGecko L2 platform mapping
+- CAIP-19 policy scoping — closes L2 address collision security gap (same USDC address on Ethereum vs Polygon treated as distinct assets)
+- `assetId` -> auto-extraction of `{address, chain, network}` — superior DX: AI agent sends one field instead of four
+- x402 + WalletConnect CAIP-2 code consolidation — maintenance debt elimination, single SSoT
 
-**Should have (differentiators):**
-- Suspicious deposit detection (3 rules: DustAttackRule, UnknownTokenRule, LargeAmountRule) — proactive security for AI agents
-- WebSocket -> polling auto-fallback (3-state connection machine) — resilience for unreliable self-hosted RPC
-- Blind gap recovery via `incoming_tx_cursors` table — zero TX loss during disconnections
-- SubscriptionMultiplexer (shared WebSocket per chain:network) — N wallet subscriptions on 1 connection
-- Dynamic subscription sync at runtime (`syncSubscriptions()`) — add/remove monitored wallets without restart
-- Notification cooldown + batch aggregation — prevents notification storm on token spam/airdrops (50 dust TXs -> max 5 notifications)
-- TypeScript SDK 2 methods + Python SDK 2 methods + MCP 2 new tools (21 -> 23 total) — AI agent programmatic access
-- `GET /v1/wallet/incoming/summary` aggregation endpoint
-- i18n message templates (en/ko) — bilingual notifications
-
-**Defer (not in v27.1 scope per design doc 76):**
-- Admin UI incoming TX list panel — agents use API directly; nice-to-have
-- EVM WebSocket mode (`incoming_mode = 'websocket'`) — polling-first covers all cases; WS is opt-in future optimization
-- Historical backfill on first subscribe — unbounded RPC cost, unclear value for AI agents
-- NFT receive detection — different data model, separate milestone
-- Geyser plugin (Solana) — requires custom validator infrastructure, violates self-hosted principle
-- Real-time WebSocket push to API clients — adds WebSocket server complexity; polling REST API + notifications covers urgency
+**Defer to follow-up:**
+- ActionProvider CAIP-19 input standard (no current ActionProvider to retrofit; define interface now, implement later)
+- Incoming TX `asset_id` column backfill (minor enhancement, quick follow-up task after v27.1 known gap STO-03 resolution)
+- Admin UI CAIP-19 display (low priority vs API/MCP consumers)
+- NFT support (erc721, nft namespace) — explicitly out of scope for fungible-asset wallet
 
 ### Architecture Approach
 
-The incoming TX subsystem is a parallel data path that does NOT modify the existing outgoing TX pipeline. The key architectural decision (from design doc 76, confirmed by codebase analysis) is to keep `IChainSubscriber` strictly separate from `IChainAdapter`: the adapter is stateless request-response while the subscriber is stateful with WebSocket connections, subscription registries, and reconnection state. Mixing them would break AdapterPool's eviction logic and violate SRP. All writes go through a memory queue -> batch flush -> SQLite path, never directly from WebSocket callbacks, to avoid SQLITE_BUSY errors from concurrent async contexts. The SubscriptionMultiplexer pools WebSocket connections by `chain:network` key so N wallets share 1 connection per network. See ARCHITECTURE.md for full integration point specifications against the actual codebase.
+The integration is a widening operation: a single new module (`packages/core/src/caip/`) becomes the canonical identification layer, and 14 existing files are modified to flow `assetId`/`network` context through the stack. The caip module has clean internal dependency ordering (caip2 -> caip19 -> network-map -> asset-helpers -> index) with no circular dependencies. The existing CAIP-2 foundation in `x402.types.ts` is re-exported from the new module for backward compatibility, eliminating duplication without breaking existing imports. The adapter layer (SolanaAdapter, EvmAdapter) is intentionally not touched — CAIP-19 is resolved to raw `{address, chain}` before reaching adapters, preserving their single responsibility.
 
 **Major components:**
-1. `IChainSubscriber` (@waiaas/core) — 6-method interface (subscribe, unsubscribe, subscribedWallets, connect, waitForDisconnect, destroy); stateful counterpart to IChainAdapter; `onTransaction` callback injected by IncomingTxMonitorService pushes synchronously to memory queue — no DB writes in callback
-2. `SolanaIncomingSubscriber` (@waiaas/adapter-solana) — `logsNotifications({ mentions: [walletAddress] })` per wallet; `getTransaction(jsonParsed)` for SOL/SPL parsing; `getSignaturesForAddress` polling fallback; creates its OWN RPC connections (does not share SolanaAdapter's HTTP client)
-3. `EvmIncomingSubscriber` (@waiaas/adapter-evm) — `getLogs` polling (ERC-20); `getBlock(includeTransactions: true)` polling (native ETH); `connect()`/`waitForDisconnect()` are no-ops in polling mode; creates its OWN viem PublicClient
-4. `IncomingTxQueue` (@waiaas/daemon) — `Map<txHash:walletId, tx>` for mandatory dedup (not array); `splice(0, MAX_BATCH)` flush; `ON CONFLICT(tx_hash, wallet_id) DO NOTHING` INSERT; `MAX_BATCH=50`, `MAX_QUEUE_SIZE=1000`
-5. `SubscriptionMultiplexer` (@waiaas/daemon) — per `chain:network` WebSocket connection sharing; 3-state machine (WEBSOCKET/POLLING/DISABLED); `reconnectLoop` with `calculateDelay(attempt)` exponential backoff + jitter; Solana 60s `getSlot()` heartbeat
-6. `IncomingTxMonitorService` (@waiaas/daemon) — orchestrator; registered at DaemonLifecycle Step 4c-9 fail-soft; `syncSubscriptions()` for dynamic wallet management; `IIncomingSafetyRule[]` evaluation post-flush; notification emission after DB write
-7. Safety rules (@waiaas/daemon) — `DustAttackRule` (USD threshold via PriceOracle), `UnknownTokenRule` (token_registry check), `LargeAmountRule` (10x historical average)
+1. `packages/core/src/caip/` (NEW, 5 files, ~240 LOC) — canonical CAIP-2/19 parsing, formatting, validation, and network mapping; consolidates existing x402.types.ts maps
+2. Price oracle chain (MODIFY 4 files: `price-cache.ts`, `coingecko-platform-ids.ts`, `coingecko-oracle.ts`, `oracle-chain.ts`) — TokenRef gains `network`, cache keys become CAIP-19, CoinGecko platform map gains 4 L2 entries
+3. DB migration v22 + token registry (MODIFY 3 files: `schema.ts`, `migrate.ts`, `token-registry-service.ts`) — `asset_id` column with application-level backfill for all 13 networks
+4. Schema extensions (MODIFY 2 files: `transaction.schema.ts`, `policy.schema.ts`) — optional `assetId` on `TokenInfoSchema` and `AllowedTokensRulesSchema`
+5. Pipeline/policy/API/MCP/SDK/Skills (MODIFY 7+ files) — optional `assetId` integration at all consumer-facing touch points
+6. x402.types.ts + wc-session-service.ts (MODIFY 2 files) — re-export from caip/ module, eliminating duplication
 
-**Data flow:**
-```
-Chain event (WS/Poll) -> onTransaction callback (sync push) -> IncomingTxQueue (Map dedup)
-  -> BackgroundWorker 'incoming-tx-flush' (5s interval)
-  -> sqlite.transaction(): INSERT incoming_transactions ON CONFLICT DO NOTHING + UPDATE cursor
-  -> For each inserted row: IIncomingSafetyRule.check() -> EventBus emit -> NotificationService.notify()
-```
-
-**DB additions (v21 migration):**
-- `incoming_transactions` table: 12 columns, 4 indexes (wallet_id, status, detected_at, UNIQUE(tx_hash, wallet_id))
-- `incoming_tx_cursors` table: per-chain/network cursor state for gap recovery
-- `wallets.monitor_incoming INTEGER NOT NULL DEFAULT 0`: per-wallet opt-in column
-
-**Package modifications summary:** 3 new files in @waiaas/core, 1 new file per adapter, 6+ new files in @waiaas/daemon, 2 modified files in @waiaas/sdk, 2 new + 1 modified in @waiaas/mcp, 14 modified existing files across all packages.
+**Key patterns to follow:**
+- Optional field with priority resolution: `assetId` takes priority when present; legacy `address`+`chain` path unchanged when absent
+- Cache key migration via volatile cache: in-memory cache clears on restart, so format changes require no data migration
+- DB column addition with application-level backfill: SELECT + loop + UPDATE in migration runner (follows established v6b pattern)
 
 ### Critical Pitfalls
 
-1. **WebSocket listener leak on reconnection (C-01)** — Each reconnect cycle creates new WebSocket but old listeners are never removed. Memory grows linearly with reconnections; MaxListenersExceededWarning floods logs. Prevention: AbortController per connection generation + `connectionGeneration` counter to short-circuit stale handler execution; call `removeAllListeners()` before creating new WebSocket. Test: connect 10 times, assert listener count stays constant.
+1. **EVM address case normalization (C-01, CRITICAL)** — EVM addresses must be lowercased at `formatCaip19()` / `tokenAssetId()` construction time. The existing codebase already lowercases in `price-cache.ts:38-41`, `coingecko-oracle.ts:67`, and `database-policy-engine.ts:927`. If CAIP-19 strings are constructed with EIP-55 checksum addresses (mixed case) but compared against lowercase cache keys, cache misses and policy bypass vulnerabilities emerge. Prevention: canonicalize when `chainNamespace === 'eip155'` in the formatter; never compare raw CAIP-19 strings.
 
-2. **Shutdown data loss — memory queue not flushed (C-05)** — BackgroundWorkers.stopAll() does NOT run one final iteration. Up to 5 seconds of queued TXs are lost on every restart. Prevention: `IncomingTxMonitorService.stop()` must call `queue.flush(sqlite)` as its LAST step BEFORE returning; cursor update MUST be inside the same `sqlite.transaction()` as TX inserts (atomic consistency); call `incomingTxMonitorService.stop()` BEFORE `workers.stopAll()` in DaemonLifecycle shutdown sequence.
+2. **Solana base58 must never be lowercased (C-02, CRITICAL)** — Base58 is case-sensitive: lowercasing `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (USDC mint) produces an invalid and different address. Prevention: branch on CAIP-2 namespace — lowercase only when `namespace === 'eip155'`; add explicit "NEVER lowercase Solana addresses" comment; existing security test `policy-bypass-attacks.security.test.ts:313` documents this exact scenario.
 
-3. **Agents acting on Solana `confirmed` (unfinalized) transactions (C-03)** — Solana `confirmed` blocks have ~5% rollback probability. Agents acting on DETECTED events can trigger actions on phantom deposits. Prevention: REST API MUST default to `status=CONFIRMED` filter; add `INCOMING_TX_CONFIRMED` notification event; document in skill files: "Do NOT initiate transfers based on DETECTED status"; add stale DETECTED cleanup (> 1 hour without CONFIRMED = rollback, mark EXPIRED).
+3. **Policy evaluation 4-scenario correctness (C-03, CRITICAL)** — During the dual-support period, the policy engine encounters four matching combinations: (address policy, address tx), (address policy, assetId tx), (assetId policy, address tx), (assetId policy, assetId tx). Missing any scenario creates a default-deny bypass security gap. Prevention: normalize both policy rule and transaction to a `(chain, network, address)` tuple before comparison; 16+ test cases minimum for ALLOWED_TOKENS alone.
 
-4. **Duplicate events from gap recovery + polling running concurrently (C-04)** — Gap recovery + polling fallback + WebSocket reconnect can all detect the same TX simultaneously. Without queue-level dedup, flush handler processes duplicates (wasted DB writes, memory pressure during large gap recovery). Prevention: `Map<txHash:walletId, tx>` dedup in IncomingTxQueue is MANDATORY (design doc labels it "optional" — that is wrong); DB-level `ON CONFLICT DO NOTHING` is the safety net, not the primary defense; pause polling for affected wallets during gap recovery.
+4. **DB migration auto-population errors (C-04, CRITICAL)** — The migration SQL CASE statement must enumerate all 13 networks explicitly. A missing branch silently produces NULL or wrong `asset_id` values. After the unique index is created, wrong values cause constraint violations on future inserts. CAIP-2 mapping lives in JavaScript, not SQL — use application-level SELECT + loop + UPDATE (established WAIaaS pattern from migration v6b). Prevention: write a TypeScript round-trip verification test after migration runs; handle NULLs gracefully for any unmappable rows.
 
-5. **SQLite event loop starvation from large flush batch (C-02)** — 100-row INSERT in a `sqlite.transaction()` can block the Node.js event loop for 50ms+, causing API latency spikes that correlate with flush schedule. Prevention: `MAX_BATCH = 50` (not 100); gap recovery must use micro-batches of 20 with `setImmediate()` yield between iterations; log flush worker execution time, alert if > 50ms.
-
-6. **EVM reorg causing false CONFIRMED status (C-06)** — EVM confirmation worker checks only `currentBlock - tx.block_number >= 12` without re-verifying the TX still exists. A reorg can invalidate the TX while the DB shows CONFIRMED. Prevention: confirmation worker must re-fetch `eth_getTransactionReceipt(txHash)` and verify receipt exists; if null, mark TX as EXPIRED; if `receipt.blockNumber` differs from stored value, update and reset to DETECTED. Critical for L2s where CONFIRMATION_THRESHOLDS = 1.
+5. **Price oracle cache key atomic switchover (C-05, CRITICAL)** — Changing `buildCacheKey()` from `${chain}:${address}` to CAIP-19 format orphans `PYTH_FEED_IDS` map keys (currently `solana:native`, `ethereum:0x...`). Prevention: update `buildCacheKey()`, `PYTH_FEED_IDS`, and `COINGECKO_PLATFORM_MAP` in the same Phase 2 commit. The cache is volatile (in-memory only, clears on restart) so no persistent data migration is needed; a daemon restart after deploy is sufficient.
 
 ## Implications for Roadmap
 
-Based on research, the dependency graph mandates 6 phases. Core types must precede adapters, adapters must precede the orchestration service, the service must precede REST API, and integration testing comes last. The design is fully specified — no research-phase iterations are needed during implementation.
+Based on research, the natural dependency chain drives a 4-phase build order. Every subsequent phase imports from the caip module, so Phase 1 is an unblockable prerequisite. The oracle changes (Phase 2) are independent of the DB changes (Phase 3), but both must be complete before Phase 4 pipeline integration can be tested end-to-end.
 
-### Phase 1: Core Types + DB Foundation
-**Rationale:** Everything else has compile-time dependency on the IChainSubscriber interface and IncomingTransaction types. The DB schema must exist before any INSERT can be tested. This is the root dependency node.
-**Delivers:** IChainSubscriber interface (6 methods), IIncomingSafetyRule interface, IncomingTransaction type + IncomingTxStatus enum, WaiaasEventMap extension (5 -> 8 events: transaction:incoming, transaction:incoming:suspicious, incoming:flush:complete), NotificationEventType extension (28 -> 30: INCOMING_TX_DETECTED, INCOMING_TX_SUSPICIOUS), DB migration v21 (incoming_transactions + incoming_tx_cursors tables + wallets.monitor_incoming column, 4 indexes), Drizzle schema for new tables, pushSchema DDL update, LATEST_SCHEMA_VERSION 20 -> 21, core barrel exports
-**Addresses:** DB migration v21 (table stake), IChainSubscriber interface (foundation for all detection)
-**Avoids:** L-03 EventBus type collision — TypeScript's typed WaiaasEventMap prevents mismatched handlers at compile time
-**Research flag:** None — DB migration framework and TypeScript interface patterns are fully established in this codebase
+### Phase 1: Core CAIP Module + Network Map Consolidation
 
-### Phase 2: Chain Subscriber Implementations
-**Rationale:** SolanaIncomingSubscriber and EvmIncomingSubscriber are independent of each other and can be built in parallel. Both depend only on Phase 1 types. This is where the bulk of chain-specific complexity lives.
-**Delivers:** `SolanaIncomingSubscriber` (logsSubscribe via `logsNotifications` AsyncIterable, `getTransaction(jsonParsed)` parsing for SOL native via preBalances/postBalances delta + SPL/Token-2022 via preTokenBalances/postTokenBalances delta, polling fallback via `getSignaturesForAddress`, AbortController-based cancellation, connection independence from SolanaAdapter), `EvmIncomingSubscriber` (getLogs polling for ERC-20 Transfer events with indexed `to` filter, getBlock polling for native ETH, token_registry whitelist filter, 100-block chunk cap per getLogs call, connection independence from EvmAdapter), unit tests for both with mock RPC
-**Uses:** @solana/kit `createSolanaRpcSubscriptions` + `logsNotifications`; viem `getLogs` + `getBlock` + `parseAbiItem`
-**Avoids:** M-01 Solana heartbeat (dual mechanism: 60s `getSlot()` RPC call + WebSocket transport keepAlive); M-02 `getSignaturesForAddress` ordering gotcha (process ALL signatures returned, use ON CONFLICT for idempotency, consider slot-based fallback); M-05 getBlock performance (early `tx.to`/`tx.value` filter, max 10 blocks per cycle); L-06 getLogs block range limits (100-block chunks with error handling for "range too large"); L-07 single-address logsSubscribe constraint (one subscription per wallet address — multiple addresses in `mentions` array is unsupported)
-**Research flag:** MEDIUM — @solana/kit `logsNotifications` TypeScript generics and exact method names should be verified against installed package type definitions before writing the subscriber. The QuickNode guide confirms the pattern but package-level TypeScript types need code-level verification.
+**Rationale:** Every other phase depends on `packages/core/src/caip/`. Build this first with comprehensive unit tests so downstream phases have a reliable, independently-verified foundation. Consolidating `CAIP2_TO_NETWORK` from x402 and WC in this phase prevents duplication drift (Pitfall L-06) and makes the SSoT canonical from the start.
 
-### Phase 3: Monitor Service + Resilience
-**Rationale:** IncomingTxMonitorService depends on both subscribers (Phase 2) and the DB schema (Phase 1). This phase contains the highest-complexity components: SubscriptionMultiplexer (3-state machine, reconnectLoop) and blind gap recovery. Build IncomingTxQueue before the service so the queue contract is stable during service development.
-**Delivers:** `IncomingTxQueue` (Map-based mandatory dedup keyed by `txHash:walletId`, `MAX_BATCH=50`, `MAX_QUEUE_SIZE=1000`, streaming gap recovery at 100-signatures-at-a-time), `SubscriptionMultiplexer` (per chain:network WebSocket sharing, 3-state machine WEBSOCKET/POLLING/DISABLED, `reconnectLoop` with `calculateDelay` exponential backoff 1s->60s + jitter, Solana 60s heartbeat via `getSlot()`, fallback to POLLING after 3 failed reconnect attempts), `IncomingTxMonitorService` (orchestrator with IIncomingSafetyRule evaluation), `syncSubscriptions()` dynamic wallet management, blind gap recovery via cursor-based `getSignaturesForAddress`/`getLogs` fetching, 3 safety rule implementations (DustAttackRule, UnknownTokenRule, LargeAmountRule), DaemonLifecycle Step 4c-9 fail-soft integration, shutdown final flush in `stop()`, BackgroundWorkers registration (6 workers: incoming-tx-flush 5s, incoming-tx-confirm-solana 30s, incoming-tx-confirm-evm 30s, incoming-tx-poll-solana configurable, incoming-tx-poll-evm configurable, incoming-tx-retention 1h), HotReloadOrchestrator extension for incoming config
-**Avoids:** C-01 listener leak (AbortController per generation + connectionGeneration counter + removeAllListeners before reconnect); C-02 SQLite starvation (MAX_BATCH=50, gap recovery micro-batches with setImmediate yield); C-04 duplicate events (Map-based mandatory dedup in queue, pause polling during gap recovery); C-05 shutdown data loss (final flush in stop(), cursor inside flush transaction — single sqlite.transaction() for both); C-06 EVM false CONFIRMED (re-fetch getTransactionReceipt before promoting, mark EXPIRED if null); M-03 KillSwitch race (check KillSwitch state != ACTIVE before EventBus emit, DB writes continue for audit trail); M-04 unbounded queue growth (MAX_QUEUE_SIZE=1000, streaming gap recovery with backpressure); M-06 HotReload WSS URL leak (SubscriptionMultiplexer.destroyAll() + re-subscribe when wssUrl changes, compare before destroying); M-07 notification storm (per-wallet cooldown 60s, batch aggregation: > 3 suspicious TXs per flush cycle -> single summary notification)
-**Research flag:** HIGH — SubscriptionMultiplexer and reconnect loop are the highest-complexity components. @solana/kit reconnection behavior (what happens mid-`for await` when WebSocket drops) has MEDIUM confidence — no official documentation. Verify empirically early in Phase 3 with a minimal test: drop the WebSocket, confirm the iterator throws/completes, confirm reconnect loop catches it. Keep all state transitions observable via debug logging.
+**Delivers:** `caip2.ts` (parser/formatter/Zod schema), `caip19.ts` (parser/formatter/Zod schema with spec-compliant `.%` in asset_reference), `network-map.ts` (consolidated 13-network bidirectional map), `asset-helpers.ts` (`nativeAssetId`, `tokenAssetId`, `isNativeAsset`, `extractAddress`, `resolveAssetId`), `index.ts` (barrel export). Modified files: `x402.types.ts` (re-export from caip/), `wc-session-service.ts` (import from caip/), `price-oracle.types.ts` (optional `assetId` + `network` on TokenRef).
 
-### Phase 4: Config + Settings + Notifications
-**Rationale:** Can be built in parallel with Phase 3 logically. Message templates and SettingsService keys must be committed before the Phase 3 service emits notifications. Group here to keep config concerns cohesive and avoid cross-phase merge conflicts.
-**Delivers:** DaemonConfig `[incoming]` section with Zod schema (7 keys: incoming_enabled, incoming_mode, incoming_poll_interval, incoming_retention_days, incoming_suspicious_dust_usd, incoming_suspicious_amount_multiplier, incoming_wss_url), SETTING_DEFINITIONS (7 new entries), SETTING_CATEGORIES (add 'incoming' as 12th category), HotReloadOrchestrator extension (HotReloadDeps + reloadIncomingMonitor with destroyAll on wssUrl change), 2 notification message templates (en/ko for INCOMING_TX_DETECTED and INCOMING_TX_SUSPICIOUS), `mapPriority()` extension for new event types, NOTIFICATION_EVENT_TYPES SSoT array update (28 -> 30)
-**Addresses:** Global enable/disable gate (table stake), config.toml [incoming] 7 keys (table stake), hot-reload all 7 keys (differentiator), bilingual templates (differentiator)
-**Avoids:** M-06 HotReload WSS URL subscription leak (destroyAll + re-subscribe on URL change, compare old vs new URL first)
-**Research flag:** None — follows established [balance_monitor] config pattern exactly; SettingsService registration pattern is well-documented
+**Addresses (from FEATURES.md):** All 7 table-stakes parser/formatter/schema/map features; x402 + WC code consolidation differentiator; TokenRef extension.
 
-### Phase 5: REST API + SDK + MCP
-**Rationale:** REST API depends on DB tables (Phase 1) and types (Phase 1). SDK and MCP depend on the API contract being defined. This phase is lower complexity than Phase 3 because it follows established codebase patterns throughout.
-**Delivers:** `GET /v1/wallet/incoming` (cursor pagination via UUID v7, sessionAuth via existing wildcard `/v1/wallet/*`, resolveWalletId), `GET /v1/wallet/incoming/summary` (SQL aggregation with USD conversion via PriceOracle + ForexRateService), PATCH `/v1/wallet/:id` extension (monitorIncoming field + `void syncSubscriptions()` fire-and-forget), Zod SSoT schemas (IncomingTransactionQuerySchema, IncomingTransactionSchema, IncomingTransactionListResponseSchema, IncomingTransactionSummarySchema), OpenAPI spec update, TypeScript SDK 2 methods (listIncomingTransactions, getIncomingTransactionSummary) + types, Python SDK 2 methods (list_incoming_transactions, get_incoming_transaction_summary), MCP tools 2 new (list_incoming_transactions, get_incoming_summary) registered in server.ts (21 -> 23 tools total), skills file update (wallet.skill.md incoming TX section with endpoints, MCP tools, SDK methods, notification category, status semantics)
-**Addresses:** Incoming TX history API (table stake), PATCH monitorIncoming opt-in toggle (table stake), SDK/MCP access (differentiator)
-**Avoids:** C-03 consumer confusion — REST API MUST default to `status=CONFIRMED` filter, not DETECTED; document DETECTED vs CONFIRMED semantics prominently in skill files with explicit warning; L-05 toggle timing — `syncSubscriptions()` MUST be fire-and-forget (not awaited) from PATCH handler to avoid 2-3s response delay
-**Research flag:** None — cursor pagination (UUID v7 cursor pattern), SDK delegation via URLSearchParams, MCP tool registration all follow existing patterns with no novel elements
+**Avoids (from PITFALLS.md):** C-01 (EVM lowercase at construction), C-02 (Solana preservation via namespace branch), M-01 (spec-compliant regex including `_` in CAIP-2 reference and `.%` in CAIP-19 reference), M-02 (use `token` namespace for both SPL and Token-2022), L-05 (slip44 native asset convention with ETH=60, SOL=501), L-06 (x402 duplication eliminated via re-export).
 
-### Phase 6: Integration Testing
-**Rationale:** Integration tests require all components in place. Unit tests belong to each phase (built alongside the code). E2E tests require the full system: WebSocket -> polling fallback, blind gap recovery, notification storm prevention, shutdown flush, KillSwitch + incoming TX race.
-**Delivers:** T-01 through T-17 (design doc 76 core verification tests), S-01 through S-04 (security verification), WebSocket -> polling E2E test, blind gap recovery E2E test (simulate 50-block gap, verify all TXs recovered), shutdown data loss prevention test (push 10 TXs to queue, call stop(), verify all 10 in DB), KillSwitch + incoming TX race test (activate KillSwitch, push TX, flush, verify DB has TX but no EventBus event emitted), notification storm test (push 50 dust TXs, verify <= 5 notifications sent), EVM reorg mock test (mock getTransactionReceipt returning null, verify TX marked EXPIRED not CONFIRMED), cursor atomicity test (crash between TX insert and cursor update, verify gap recovery catches on restart)
-**Addresses:** All 6 critical pitfalls each have a specific test scenario from PITFALLS.md
-**Avoids:** L-01 WebSocket mock flakiness — use `vitest-websocket-mock` (NOT raw mock WebSocket); use `vi.useFakeTimers()` for BackgroundWorkers timing; wrap all WS event assertions in `await expect(async () => ...).resolves` or explicit Promise sync; set `{ timeout: 5000 }` per WS test; NEVER use immediate assertions after emitting WS events
-**Research flag:** None — vitest and BackgroundWorkers test patterns are established; vitest-websocket-mock has a clear, documented API
+### Phase 2: Oracle L2 Support + Cache Key Migration
+
+**Rationale:** The primary business value of this milestone is L2 token price resolution. This phase activates that capability immediately after the CAIP module is available. Cache key migration is isolated here because it is volatile (no persistent data risk). The atomic switchover requirement (C-05) means all oracle touch points must land in one commit.
+
+**Delivers:** Extended `coingecko-platform-ids.ts` with 5 CAIP-2 keyed mainnet entries (`polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base`, `solana`), updated `buildCacheKey()` producing CAIP-19 format when network context is available with legacy fallback, updated `PYTH_FEED_IDS` keys to CAIP-19 format, `coingecko-oracle.ts` passing `token.network` for L2 platform resolution, `oracle-chain.ts` and `resolve-effective-amount-usd.ts` propagating `network` through TokenRef.
+
+**Uses (from STACK.md):** `coingecko-platform-ids.ts` extended with CAIP-2 keyed entries; Zod SSoT for platform map type safety.
+
+**Implements (from ARCHITECTURE.md):** Price oracle chain component modifications; `getCoinGeckoPlatform(chain, network?)` signature change.
+
+**Avoids (from PITFALLS.md):** C-05 (atomic cache key + PYTH_FEED_IDS + CoinGecko map update in single commit), M-05 (CoinGecko L2 platform IDs must be added in this phase — not deferred — or the primary goal fails).
+
+### Phase 3: DB Migration v22 + Token Registry + Schema Extensions
+
+**Rationale:** DB migration is the highest-risk persistent operation and needs the CAIP module (Phase 1) to run the application-level backfill. Completing schema extensions here ensures the pipeline/policy changes in Phase 4 have stable Zod schemas to build against.
+
+**Delivers:** DB migration v22 (`asset_id TEXT` column on `token_registry` + application-level backfill for all 13 networks + unique index after population), updated Drizzle schema (`schema.ts`), `token-registry-service.ts` returning `assetId` in responses, `TokenInfoSchema` with optional `assetId` field (`transaction.schema.ts`), `AllowedTokensRulesSchema` with optional `assetId` field (`policy.schema.ts`), REST API token responses including `assetId`.
+
+**Addresses (from FEATURES.md):** Token registry DB migration with asset_id column, transaction request assetId field, REST API response assetId fields, ALLOWED_TOKENS schema extension.
+
+**Avoids (from PITFALLS.md):** C-04 (exhaustive 13-network application-level backfill, TypeScript round-trip verification test after migration, NULL for unmappable rows), L-01 (no extra `.max()` constraint — Zod regex handles 178-char spec maximum), L-04 (incoming_transactions NULL token_address -> native CAIP-19 in backfill).
+
+### Phase 4: Pipeline Integration + Policy Engine + API + MCP + SDK + Skills
+
+**Rationale:** Integration layer that ties all prior phases together. Must come last because it depends on extended Zod schemas (Phase 3), CAIP module (Phase 1), and network-aware TokenRef (Phase 2). This phase carries the highest security risk and requires the policy evaluation 4-scenario test matrix to be completed and passing before merge.
+
+**Delivers:** Updated `database-policy-engine.ts` with 4-scenario ALLOWED_TOKENS matching (assetId-priority, address fallback, cross-validation between rule and transaction), updated `stages.ts` extracting `assetId` from transaction request into `TransactionParam`, MCP tool updates (`send_token`, `approve_token`, `get_token_balance` accepting optional `assetId`), SDK TS standalone types updated with optional `assetId` on `AssetInfo`/`TokenInfo`/`TransactionResponse`, Python SDK updated, skills file documentation (CAIP-19 format, assetId vs token precedence rules for AI agents).
+
+**Addresses (from FEATURES.md):** ALLOWED_TOKENS assetId support in policy evaluation, Pipeline Stage 1 assetId extraction, MCP tool assetId parameters, SDK support, skills files.
+
+**Avoids (from PITFALLS.md):** C-03 (4-scenario policy evaluation matrix with 16+ test cases; normalize to tuple before comparison), M-04 (CAIP-19 policies fix L2 address collision — document as security improvement, not breaking change), M-06 (additive fields only, snapshot tests for all API response types), L-02 (SDK standalone types updated with optional assetId — no core dependency introduced), L-03 (clear assetId > token precedence rule in MCP tools with consistency validation).
 
 ### Phase Ordering Rationale
 
-- **Phases 1 -> 2 -> 3 -> 5** is a strict compile-time dependency chain: types before subscribers, subscribers before service, service before API
-- **Phase 4 (Config)** can run in parallel with Phase 3 but message templates must be committed before Phase 3 notification emission is tested
-- **Phase 3 is the highest-risk phase** — it contains 5 of the 6 critical pitfalls (C-01, C-02, C-04, C-05, C-06) and the highest-complexity component (SubscriptionMultiplexer). Allocate extra time and build incrementally: IncomingTxQueue first, then SubscriptionMultiplexer with extensive logging, then IncomingTxMonitorService
-- **Phase 6 (Tests)** is non-optional — the 6 critical pitfalls each have test scenarios that must pass. Ship without these tests and the first production deployment will find them the hard way
-- Within Phase 2, SolanaIncomingSubscriber and EvmIncomingSubscriber are independent and can be parallelized across implementers
-- The Admin UI monitor_incoming toggle and settings panel (mentioned in design doc 76 Phase 6) can be deferred — the Admin Settings page already renders settings categories dynamically, so adding the 'incoming' category generates the form automatically
+- Phase 1 is the prerequisite for all others — no imports before the module exists, no Zod schemas before `Caip19Schema` is defined.
+- Phase 2 before Phase 3 because oracle changes are independent and deliver the primary business value faster; demonstrating L2 price resolution early validates the entire approach.
+- Phase 3 before Phase 4 because the pipeline and policy changes require the extended Zod schemas (`TokenInfoSchema.assetId`, `AllowedTokensRulesSchema.assetId`) and the DB `asset_id` column to be in place for meaningful end-to-end testing.
+- Phase 4 last because it is the integration test surface — all components must be complete to write meaningful E2E tests including the 4-scenario policy evaluation matrix.
+- This ordering matches the recommendation in both FEATURES.md (Phases 1-3) and ARCHITECTURE.md (Phases 1-4 with identical rationale).
+- Estimated scope: ~920 LOC implementation + ~600 LOC tests = ~1,500 LOC total across 5 new files and 14 modified files.
 
 ### Research Flags
 
-Phases needing attention during implementation:
+Phases with well-documented patterns (skip research-phase):
+- **Phase 1 (Core CAIP Module):** Spec is fully verified at standards.chainagnostic.org. Implementation is straightforward string manipulation + Zod regex. All code patterns follow established WAIaaS conventions. No further research needed.
+- **Phase 3 (DB Migration):** Application-level backfill pattern established in existing migration v6b. DB schema changes (ALTER TABLE ADD COLUMN) are well-understood in the WAIaaS migration system. No further research needed.
+- **Phase 4 (Pipeline/Policy/SDK/Skills):** All modification patterns (optional Zod fields, pipeline stage extraction, SDK type updates, MCP tool parameter addition) follow established WAIaaS codebase patterns. No further research needed.
 
-- **Phase 3 (SubscriptionMultiplexer / reconnect loop):** @solana/kit reconnection behavior when the WebSocket drops mid-`for await` is MEDIUM confidence — no official documentation. Verify early with a minimal empirical test: create a `logsNotifications` subscription, forcibly close the WebSocket, confirm whether the iterator throws or silently completes. The entire reconnect loop design depends on this behavior. Keep all state transitions observable with debug logging.
-- **Phase 2 (SolanaIncomingSubscriber):** `logsNotifications` TypeScript generics in @solana/kit ^6.0.1 should be verified by reading the installed package's type definitions (`node_modules/@solana/rpc-subscriptions-api/dist/index.d.ts`) before writing the subscriber. The QuickNode guide confirms the general pattern but exact TypeScript types need code-level verification.
-- **Phase 2 (Solana heartbeat):** The dual heartbeat strategy (WebSocket ping + 60s `getSlot()` RPC call) should be validated against the actual RPC provider (Helius or QuickNode) in staging. Different providers track "inactivity" at different layers (transport vs application). Log WebSocket connection duration to detect if connections consistently last exactly 10 minutes (heartbeat not working).
-
-Phases with well-established patterns (no additional research needed):
-
-- **Phase 1 (Core Types + DB):** DB migration framework, TypeScript interface patterns, and barrel export conventions are fully established. Migration v21 follows identical structure to v19 and v20.
-- **Phase 4 (Config + Settings):** Identical to [balance_monitor] config pattern already implemented. Copy-and-modify.
-- **Phase 5 (REST API + SDK + MCP):** UUID v7 cursor pagination, SDK URLSearchParams delegation, and MCP tool registration with ApiClient all follow existing patterns with zero novel elements.
-- **Phase 6 (Integration Testing):** vitest patterns, BackgroundWorkers timer testing with vi.useFakeTimers(), and vitest-websocket-mock usage are established. Design doc 76 section 9 provides the full T-01 through T-17 test specification.
+Phases needing runtime validation during implementation:
+- **Phase 2 — CoinGecko L2 platform IDs (MEDIUM confidence):** Platform IDs `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` are documented in CoinGecko API docs but not directly tested. During Phase 2 implementation, verify with a live `GET /api/v3/asset_platforms` call before hardcoding the map. STACK.md explicitly flags this as MEDIUM confidence.
+- **Phase 4 — MCP tool parameter interaction:** The interaction between legacy `token` parameter and new `assetId` parameter needs review against actual agent query patterns before finalizing the precedence and error messaging in tools.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | No new dependencies needed. viem API surfaces verified via GitHub source code. better-sqlite3 batch patterns confirmed via performance docs + existing codebase. Node.js 22 WS limitations confirmed via official docs. One MEDIUM item: @solana/kit `logsNotifications` exact TypeScript generics need code-level verification. |
-| Features | HIGH | Design doc 76 provides complete specification with 19 locked decisions. Feature scope is fully bounded. LOC estimates (~2,400 implementation + ~1,200 tests) based on code-level complexity analysis per file. Anti-features are explicitly listed and rationale is sound. |
-| Architecture | HIGH | All 14 integration points verified against actual source files: daemon.ts (1,309 lines), workers.ts, connection.ts, migrate.ts, setting-keys.ts, hot-reload.ts, server.ts, event-types.ts, notification.ts. Component boundaries are non-overlapping. IChainSubscriber vs IChainAdapter separation rationale is fully verified. |
-| Pitfalls | HIGH (C-01, C-02, C-04, C-05, M-03, M-07) / MEDIUM (C-03, C-06, M-01, M-02) | C-01 through C-05 derived from codebase analysis of BackgroundWorkers.stopAll(), workers.ts, and official SQLite/viem docs. C-06 is real but statistically rare on Ethereum mainnet post-Merge. M-01 (inactivity timeout) and M-02 (getSignaturesForAddress ordering) are MEDIUM due to RPC provider variability and Solana validator internals. |
+| Stack | HIGH | All 4 library candidates evaluated via npm registry + source code inspection + spec cross-reference. Custom implementation decision is unambiguous. Zero new dependencies confirmed. One MEDIUM item: CoinGecko L2 platform IDs verified via docs but not live API call. |
+| Features | HIGH | All 19 table-stakes features traced to official CAIP specs and verified against existing codebase patterns. Differentiator features validated against actual code gaps (coingecko-platform-ids.ts comment explicitly says "L2 out of scope"). Anti-features have clear rationale. |
+| Architecture | HIGH | 19 files identified (5 new, 14 modified) via direct codebase analysis. Dependency graph verified with no circular dependencies. Migration approach follows established WAIaaS v6b pattern confirmed in migrate.ts. Component boundaries are non-overlapping. |
+| Pitfalls | HIGH | 5 critical and 6 moderate pitfalls each traced to specific file/line numbers in codebase (e.g., C-01 traces to price-cache.ts:38-41, coingecko-oracle.ts:67, database-policy-engine.ts:927). CAIP spec regex inconsistencies verified against official specifications. Security test at policy-bypass-attacks.security.test.ts:313 confirms C-02 is real. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **@solana/kit `logsNotifications` reconnection behavior (MEDIUM):** Official docs do not specify what happens to the `for await` iterator when the underlying WebSocket disconnects. Expected behavior (iterator throws, reconnect loop catches) needs empirical verification in Phase 3. Implement observable state transitions with debug logging before building the full reconnect loop.
-- **Solana RPC provider heartbeat policy (MEDIUM):** The dual heartbeat (WebSocket ping + 60s `getSlot()`) should prevent 10-minute inactivity timeouts but different providers implement this differently. Validate in staging with actual provider before declaring Phase 2 complete. Log WebSocket connection duration as an observable metric.
-- **EVM native ETH via `getBlock(includeTransactions: true)` RPC cost at scale:** Full block deserialization (~150 TXs per block on mainnet, most irrelevant) is inherently expensive. The 10-block-per-cycle cap mitigates this. If RPC credit consumption at scale (100 wallets, 30s polling) proves excessive, `eth_getBlockReceipts` or provider-specific enhanced APIs (Alchemy `alchemy_getAssetTransfers`) may be needed. Measure in Phase 6 integration tests.
-- **Design doc 76 "optional optimization" label on queue dedup (confirmed wrong):** The design doc section 2.4 labels `Set`-based dedup as "optional optimization." Research confirms this is incorrect — it is mandatory to prevent memory pressure and wasted DB operations during gap recovery. The Map-based dedup must be implemented as a first-class requirement, not an optimization. Address this discrepancy when starting Phase 3.
+- **CoinGecko L2 platform IDs (MEDIUM):** `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` are documented in CoinGecko API docs but not live-tested. During Phase 2 implementation, make one `GET /api/v3/asset_platforms` call to confirm exact platform ID strings before hardcoding the map. Handle gracefully if any ID differs.
+
+- **Token-2022 CAIP-19 namespace (MEDIUM):** The Solana CAIP-19 spec uses `token` namespace for fungible assets without explicitly addressing Token-2022. Community consensus is that Token-2022 tokens use the same `token` namespace since both programs use mint accounts as identifiers. This is the correct approach but not formally spec-documented — monitor the CASA Solana namespace registry for any update before implementation completes.
+
+- **Polygon native asset (MATIC/POL):** Polygon uses `slip44:966` (MATIC/POL coin type) as its native asset, unlike other EVM L2s that use `slip44:60` (ETH). The `nativeAssetId()` helper must have a lookup table that correctly maps `polygon-mainnet` to `slip44:966` and `polygon-amoy` to `slip44:966`. Confirm this edge case is handled in the `NATIVE_SLIP44` map within `asset-helpers.ts`.
+
+- **PYTH_FEED_IDS key format during Phase 2:** The existing `pyth-feed-ids.ts` uses `solana:native` and `ethereum:0x...` style keys. These must be updated to CAIP-19 format in the same commit as `buildCacheKey()` changes. This is required by C-05 (atomic switchover) and must be explicitly tracked during Phase 2 implementation — it is easy to miss this file when updating the oracle chain.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- WAIaaS Design Doc 76 (internal: `internal/design/76-incoming-transaction-monitoring.md`) — 2,441 lines, 19 design decisions, complete specification
-- WAIaaS codebase direct analysis: `packages/daemon/src/lifecycle/daemon.ts` (1,309 lines, Step 4c integration points), `packages/daemon/src/lifecycle/workers.ts` (BackgroundWorkers.stopAll behavior), `packages/daemon/src/infrastructure/database/connection.ts` (7 PRAGMA configuration), `packages/daemon/src/infrastructure/database/migrate.ts` (LATEST_SCHEMA_VERSION=20), `packages/core/src/events/event-types.ts` (5 current events), `packages/core/src/enums/notification.ts` (28 current types)
-- [Solana logsSubscribe RPC docs](https://solana.com/docs/rpc/websocket/logssubscribe) — mentions filter single-address constraint, commitment levels, response format
-- [viem watchEvent source](https://github.com/wevm/viem/blob/main/src/actions/public/watchEvent.ts) — function signature, transport mode selection, poll vs subscription behavior
-- [viem watchBlocks source](https://github.com/wevm/viem/blob/main/src/actions/public/watchBlocks.ts) — includeTransactions option, WebSocket vs polling
-- [viem WebSocket transport source](https://github.com/wevm/viem/blob/main/src/clients/transports/webSocket.ts) — reconnect/keepAlive/timeout config options and defaults
-- [viem Issue #2325](https://github.com/wevm/viem/issues/2325) — Socket CLOSED recovery fix confirmed in 2.13.1
-- [viem Issue #2563](https://github.com/wevm/viem/issues/2563) — Reconnect after 1h fix confirmed in PR #3313
-- [better-sqlite3 performance docs](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/performance.md) — WAL mode, transaction batching, 50x speedup with prepared statements
-- [Node.js WebSocket docs](https://nodejs.org/en/learn/getting-started/websocket) — stable since v22.4.0, W3C API, no `ws.ping()` method
+- [CAIP-2 Specification](https://standards.chainagnostic.org/CAIPs/caip-2) — namespace regex `[-a-z0-9]{3,8}`, reference regex `[-_a-zA-Z0-9]{1,32}` (note: underscore included)
+- [CAIP-19 Specification](https://standards.chainagnostic.org/CAIPs/caip-19) — asset_type format, asset_reference regex `[-.%a-zA-Z0-9]{1,128}` (note: period and percent included)
+- [CAIP-20 SLIP44 Namespace](https://standards.chainagnostic.org/CAIPs/caip-20) — ETH coin type 60, SOL coin type 501
+- [Solana CAIP-19 Namespace](https://namespaces.chainagnostic.org/solana/caip19) — `token` namespace for SPL + Token-2022, mint address as reference
+- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) — genesis hash truncated to 32 chars for mainnet/devnet/testnet
+- [EIP-155 CAIP-19 Namespace](https://namespaces.chainagnostic.org/eip155/caip19) — `erc20` namespace, 0x-prefixed 40-char address
+- [SLIP-0044 Registry](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) — ETH=60, SOL=501, MATIC=966
+- WAIaaS codebase (direct inspection): `x402.types.ts` (CAIP2_TO_NETWORK 13 entries), `price-cache.ts` (buildCacheKey format), `coingecko-platform-ids.ts` (2-entry map with L2 TODO comment), `coingecko-oracle.ts` (getPrice address handling), `database-policy-engine.ts` (ALLOWED_TOKENS evaluation lines 892-938), `schema.ts` (token_registry + incoming_transactions), `migrate.ts` (v6b application-level backfill pattern), `token-registry-service.ts`, `transaction.schema.ts`, `policy.schema.ts`, `sdk/types.ts`, `policy-bypass-attacks.security.test.ts:313`
 
 ### Secondary (MEDIUM confidence)
-- [QuickNode @solana/kit subscriptions guide](https://www.quicknode.com/guides/solana-development/tooling/web3-2/subscriptions) — `createSolanaRpcSubscriptions` API, async iterator pattern, `logsNotifications` method name
-- [@solana/rpc-subscriptions-api npm](https://www.npmjs.com/package/@solana/rpc-subscriptions-api) — package exports, Notifications suffix convention
-- [Helius Solana commitment levels](https://www.helius.dev/blog/solana-commitment-levels) — confirmed vs finalized semantics, ~5% rollback probability for confirmed
-- [Solana getSignaturesForAddress ordering issue #35521](https://github.com/solana-labs/solana/issues/35521) — intra-slot ordering inconsistency between blockstore and bigtable backends
-- [Drizzle Issue #2474](https://github.com/drizzle-team/drizzle-orm/issues/2474) — returning + onConflictDoNothing limitation, justifies raw better-sqlite3 for write path
-- [ws library memory leak issue #804](https://github.com/websockets/ws/issues/804) — event listener accumulation pattern on reconnect
-- [SQLite WAL documentation](https://sqlite.org/wal.html) — WAL checkpoint behavior, single writer, SQLITE_BUSY conditions
+- [CoinGecko Asset Platforms API](https://docs.coingecko.com/reference/asset-platforms-list) — `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` platform IDs (documented, not live-tested)
+- [WalletConnect Pay](https://docs.walletconnect.network/payments/wallet-implementation) — CAIP-19 asset format in payment requests (confirms ecosystem adoption)
+- [caip npm package](https://www.npmjs.com/package/caip) — v1.1.1, evaluated and rejected: incorrect `asset_reference` regex missing `.%`, OOP API incompatible with Zod SSoT, near-zero maintenance velocity
+- [@shapeshiftoss/caip npm](https://www.npmjs.com/package/@shapeshiftoss/caip) — v8.16.7, evaluated and rejected: 4.36 MB unpacked, axios runtime dependency
 
 ### Tertiary (informational)
-- [OneUptime WebSocket reconnection guide](https://oneuptime.com/blog/post/2026-01-27-websocket-reconnection/view) — exponential backoff patterns, jitter rationale
-- [Gate.com dusting attack guide](https://web3.gate.com/crypto-wiki/article/understanding-dusting-attacks-in-cryptocurrency-security-20251203) — dust detection thresholds, micro-quantity patterns
-- [Alchemy eth_getLogs deep dive](https://www.alchemy.com/docs/deep-dive-into-eth_getlogs) — block range best practices, indexed topic filtering
-- [vitest-websocket-mock](https://github.com/akiomik/vitest-websocket-mock) — structured WS mock assertions for testing
+- [Solana Testnet Restart 2024-01-02](https://github.com/anza-xyz/agave/wiki/2024%E2%80%9001%E2%80%9002-Testnet-Rollback-and-Restart) — confirms devnet/testnet genesis hash instability risk (Pitfall M-03)
+- [EIP-55 Checksum Address Encoding](https://eips.ethereum.org/EIPS/eip-55) — mixed-case checksum scheme (relevant to C-01 normalization decision)
+- [Axelar CREATE2 Cross-Chain Tutorial](https://www.axelar.network/blog/same-address-cross-chain-tutorial) — same address on different EVM chains (explains M-04 address collision pitfall)
 
 ---
-*Research completed: 2026-02-21*
+*Research completed: 2026-02-22*
 *Ready for roadmap: yes*

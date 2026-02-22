@@ -157,11 +157,13 @@
 | 140 | ENHANCEMENT | LOW | Approval Method 라벨 "SDK" → "Wallet App" 변경 — 사용자 직관성 개선 | v27.1 | FIXED | 2026-02-22 |
 | 141 | BUG | HIGH | Signing SDK 설정이 리뉴얼된 Admin UI에서 접근 불가 — 메뉴 재구성 시 누락 | v27.1 | FIXED | 2026-02-22 |
 | 142 | ENHANCEMENT | MEDIUM | 알림 카테고리 필터 통합 — 일반 채널 + 지갑 앱 채널 단일 설정 | v27.1 | FIXED | 2026-02-22 |
-| 143 | BUG | CRITICAL | Confirmation Worker RPC 콜백 미주입 — DETECTED→CONFIRMED 전이 불가 | v27.1 | OPEN | |
-| 144 | MISSING | MEDIUM | SDK Signing E2E 라이브 인프라 수동 테스트 미검증 (ntfy/Telegram) | v2.6.1 | OPEN | |
+| 143 | BUG | CRITICAL | Confirmation Worker RPC 콜백 미주입 — DETECTED→CONFIRMED 전이 불가 | v27.2 | FIXED | 2026-02-22 |
+| 144 | MISSING | MEDIUM | SDK Signing E2E 라이브 인프라 수동 테스트 미검증 (ntfy/Telegram) | v2.6.1 | WONTFIX | 2026-02-22 |
 | 145 | BUG | LOW | README/deployment.md CLI 문법 불일치 — `add --all` vs `add all` | v2.0 | FIXED | 2026-02-22 |
-| 146 | BUG | LOW | examples/simple-agent/README.md 깨진 링크 + placeholder URL + 구버전 | v2.0 | OPEN | |
+| 146 | BUG | LOW | examples/simple-agent/README.md 깨진 링크 + placeholder URL + 구버전 | v27.2 | FIXED | 2026-02-22 |
 | 147 | BUG | LOW | validate-openapi.ts `@see` 주석 경로 불일치 | v2.0 | FIXED | 2026-02-22 |
+| 148 | ENHANCEMENT | MEDIUM | 알림 메시지에 블록 익스플로러 링크 추가 + {txId} 미치환 버그 수정 | v27.2 | FIXED | 2026-02-22 |
+| 149 | ENHANCEMENT | HIGH | 에이전트가 마스터 패스워드를 요청하지 못하도록 차단 | v27.2 | FIXED | 2026-02-22 |
 
 ## Type Legend
 
@@ -173,9 +175,9 @@
 
 ## Summary
 
-- **OPEN:** 4
-- **FIXED:** 143
+- **OPEN:** 0
+- **FIXED:** 148
 - **RESOLVED:** 0
 - **VERIFIED:** 0
-- **WONTFIX:** 0
-- **Total:** 147
+- **WONTFIX:** 1
+- **Total:** 149

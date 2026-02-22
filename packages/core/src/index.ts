@@ -210,6 +210,12 @@ export type {
   // v27.1 connection state machine types
   ConnectionState,
   ReconnectConfig,
+  // v27.2 CAIP types
+  Caip2,
+  Caip2Params,
+  Caip19AssetType,
+  Caip19,
+  Caip19Params,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -246,11 +252,29 @@ export {
   PaymentRequirementsV2Schema,
 } from './interfaces/index.js';
 
+// v27.2 CAIP-2/19 module (schemas, parsers, formatters, network map, asset helpers)
+export {
+  Caip2Schema,
+  formatCaip2,
+  Caip19AssetTypeSchema,
+  Caip19Schema,
+  formatCaip19,
+  parseCaip19,
+  networkToCaip2,
+  caip2ToNetwork,
+  nativeAssetId,
+  tokenAssetId,
+  isNativeAsset,
+} from './interfaces/index.js';
+
 // v1.5.3 Currency formatting utilities
 export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';
 
 // v1.7 Blockchain amount formatting utilities (NOTE-01)
 export { formatAmount, parseAmount } from './utils/index.js';
+
+// v27.2 Block explorer URL mapping
+export { getExplorerTxUrl } from './utils/index.js';
 
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';

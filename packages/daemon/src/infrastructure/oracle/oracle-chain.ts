@@ -18,7 +18,7 @@
  */
 import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@waiaas/core';
 import type { InMemoryPriceCache } from './price-cache.js';
-import { buildCacheKey } from './price-cache.js';
+import { buildCacheKey, resolveNetwork } from './price-cache.js';
 import { PriceNotAvailableError } from './oracle-errors.js';
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,8 @@ export class OracleChain implements IPriceOracle {
    * @throws PriceNotAvailableError when no source can provide a price.
    */
   async getPrice(token: TokenRef): Promise<PriceInfo> {
-    const cacheKey = buildCacheKey(token.chain, token.address);
+    const network = resolveNetwork(token.chain, token.network);
+    const cacheKey = buildCacheKey(network, token.address);
 
     return this.cache.getOrFetch(cacheKey, async () => {
       return this.fetchWithFallback(token, cacheKey);
@@ -114,7 +115,8 @@ export class OracleChain implements IPriceOracle {
     const promises = tokens.map(async (token) => {
       try {
         const price = await this.getPrice(token);
-        const key = buildCacheKey(token.chain, token.address);
+        const network = resolveNetwork(token.chain, token.network);
+        const key = buildCacheKey(network, token.address);
         result.set(key, price);
       } catch {
         // Skip failed tokens
@@ -134,8 +136,9 @@ export class OracleChain implements IPriceOracle {
    * @returns PriceInfo for the native token.
    */
   async getNativePrice(chain: ChainType): Promise<PriceInfo> {
+    const network = resolveNetwork(chain);
     const decimals = chain === 'solana' ? 9 : 18;
-    return this.getPrice({ address: 'native', decimals, chain });
+    return this.getPrice({ address: 'native', decimals, chain, network });
   }
 
   /**

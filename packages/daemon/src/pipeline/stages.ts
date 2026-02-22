@@ -181,6 +181,7 @@ interface TransactionParam {
   chain: string;
   network?: string;
   tokenAddress?: string;
+  assetId?: string;       // CAIP-19 asset identifier from token.assetId
   contractAddress?: string;
   selector?: string;
   spenderAddress?: string;
@@ -194,13 +195,14 @@ function buildTransactionParam(
 ): TransactionParam {
   switch (txType) {
     case 'TOKEN_TRANSFER': {
-      const r = req as { to: string; amount: string; token: { address: string } };
+      const r = req as { to: string; amount: string; token: { address: string; assetId?: string } };
       return {
         type: 'TOKEN_TRANSFER',
         amount: r.amount,
         toAddress: r.to,
         chain,
         tokenAddress: r.token.address,
+        assetId: r.token.assetId,
       };
     }
     case 'CONTRACT_CALL': {
@@ -215,12 +217,14 @@ function buildTransactionParam(
       };
     }
     case 'APPROVE': {
-      const r = req as { spender: string; amount: string };
+      const r = req as { spender: string; amount: string; token: { address: string; assetId?: string } };
       return {
         type: 'APPROVE',
         amount: r.amount,
         toAddress: r.spender,
         chain,
+        tokenAddress: r.token.address,
+        assetId: r.token.assetId,
         spenderAddress: r.spender,
         approveAmount: r.amount,
       };
@@ -326,7 +330,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   let priceResult: PriceResult | undefined;
   if (ctx.priceOracle) {
     priceResult = await resolveEffectiveAmountUsd(
-      req as unknown as Record<string, unknown>, txType, ctx.wallet.chain, ctx.priceOracle,
+      req as unknown as Record<string, unknown>, txType, ctx.wallet.chain, ctx.priceOracle, ctx.resolvedNetwork,
     );
   }
 
@@ -347,6 +351,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
         chain: ctx.wallet.chain,
         network: ctx.resolvedNetwork,
         tokenAddress: 'token' in instr ? (instr as { token?: { address: string } }).token?.address : undefined,
+        assetId: 'token' in instr ? (instr as { token?: { assetId?: string } }).token?.assetId : undefined,
         contractAddress: instrType === 'CONTRACT_CALL' ? ('to' in instr ? (instr as { to?: string }).to : undefined) : undefined,
         selector: 'calldata' in instr ? (instr as { calldata?: string }).calldata?.slice(0, 10) : undefined,
         spenderAddress: 'spender' in instr ? (instr as { spender?: string }).spender : undefined,
@@ -793,6 +798,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
       // Fire-and-forget: notify TX_SUBMITTED
       void ctx.notificationService?.notify('TX_SUBMITTED', ctx.walletId, {
+        txId: ctx.txId,
         txHash: ctx.submitResult.txHash,
         amount: reqAmount,
         to: reqTo,
@@ -962,6 +968,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
 
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
+      txId: ctx.txId,
       txHash: ctx.submitResult!.txHash,
       amount: reqAmount,
       to: reqTo,

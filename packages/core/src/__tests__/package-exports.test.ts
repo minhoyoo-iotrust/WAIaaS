@@ -59,4 +59,25 @@ describe('@waiaas/core package export verification', () => {
     expect(msg).toHaveProperty('system');
     expect(msg).toHaveProperty('cli');
   });
+
+  it('CAIP-2/19 module exports are available', () => {
+    // Schemas
+    expect(core.Caip2Schema).toBeDefined();
+    expect(core.Caip19Schema).toBeDefined();
+    expect(core.Caip19AssetTypeSchema).toBeDefined();
+    // Parsers/formatters
+    expect(core.parseCaip2).toBeDefined();
+    expect(core.formatCaip2).toBeDefined();
+    expect(core.parseCaip19).toBeDefined();
+    expect(core.formatCaip19).toBeDefined();
+    // Network map
+    expect(core.CAIP2_TO_NETWORK).toBeDefined();
+    expect(core.NETWORK_TO_CAIP2).toBeDefined();
+    expect(core.networkToCaip2).toBeDefined();
+    expect(core.caip2ToNetwork).toBeDefined();
+    // Asset helpers
+    expect(core.nativeAssetId).toBeDefined();
+    expect(core.tokenAssetId).toBeDefined();
+    expect(core.isNativeAsset).toBeDefined();
+  });
 });

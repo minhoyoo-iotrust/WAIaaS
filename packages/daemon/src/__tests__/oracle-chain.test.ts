@@ -8,10 +8,12 @@
  * deviation > threshold (5%) degrades result to isStale=true.
  *
  * Tests use mock IPriceOracle instances for primary and fallback.
+ *
+ * Cache keys are CAIP-19 format (Phase 232 migration).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { IPriceOracle, TokenRef, PriceInfo } from '@waiaas/core';
-import { InMemoryPriceCache } from '../infrastructure/oracle/price-cache.js';
+import { InMemoryPriceCache, buildCacheKey } from '../infrastructure/oracle/price-cache.js';
 import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
 import { OracleChain } from '../infrastructure/oracle/oracle-chain.js';
 
@@ -44,12 +46,14 @@ const SOL_TOKEN: TokenRef = {
   address: 'native',
   decimals: 9,
   chain: 'solana',
+  network: 'mainnet',
 };
 
 const ETH_TOKEN: TokenRef = {
   address: 'native',
   decimals: 18,
   chain: 'ethereum',
+  network: 'ethereum-mainnet',
 };
 
 const _USDC_TOKEN: TokenRef = {
@@ -57,7 +61,12 @@ const _USDC_TOKEN: TokenRef = {
   symbol: 'USDC',
   decimals: 6,
   chain: 'solana',
+  network: 'mainnet',
 };
+
+// CAIP-19 cache keys for test assertions
+const SOL_CACHE_KEY = buildCacheKey('mainnet', 'native');         // solana:5eykt.../slip44:501
+const ETH_CACHE_KEY = buildCacheKey('ethereum-mainnet', 'native'); // eip155:1/slip44:60
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -88,8 +97,8 @@ describe('OracleChain', () => {
     expect(result.source).toBe('pyth');
     expect(result.isStale).toBe(false);
 
-    // Verify cache was populated (immediate get should hit)
-    const cached = cache.get('solana:native');
+    // Verify cache was populated with CAIP-19 key
+    const cached = cache.get(SOL_CACHE_KEY);
     expect(cached).not.toBeNull();
     expect(cached!.usdPrice).toBe(150);
   });
@@ -100,7 +109,7 @@ describe('OracleChain', () => {
 
   it('Primary 실패 + Fallback 성공 -> Fallback 가격 반환', async () => {
     const primary = createMockOracle({
-      getPrice: vi.fn().mockRejectedValue(new PriceNotAvailableError('solana:native')),
+      getPrice: vi.fn().mockRejectedValue(new PriceNotAvailableError(SOL_CACHE_KEY)),
     });
     const fallbackPrice = buildPrice(148, 'coingecko');
     const fallback = createMockOracle({
@@ -119,13 +128,13 @@ describe('OracleChain', () => {
   // -------------------------------------------------------------------------
 
   it('Primary 실패 + Fallback 없음 -> Stale 캐시 fallback', async () => {
-    // Seed stale cache entry
-    cache.set('solana:native', buildPrice(145, 'pyth'));
+    // Seed stale cache entry with CAIP-19 key
+    cache.set(SOL_CACHE_KEY, buildPrice(145, 'pyth'));
     // Wait for TTL to expire
     await new Promise((r) => setTimeout(r, 150));
 
     const primary = createMockOracle({
-      getPrice: vi.fn().mockRejectedValue(new PriceNotAvailableError('solana:native')),
+      getPrice: vi.fn().mockRejectedValue(new PriceNotAvailableError(SOL_CACHE_KEY)),
     });
 
     const chain = new OracleChain({ primary, cache });
@@ -140,8 +149,8 @@ describe('OracleChain', () => {
   // -------------------------------------------------------------------------
 
   it('Primary 실패 + Fallback 실패 -> Stale 캐시 fallback', async () => {
-    // Seed stale cache entry
-    cache.set('solana:native', buildPrice(140, 'pyth'));
+    // Seed stale cache entry with CAIP-19 key
+    cache.set(SOL_CACHE_KEY, buildPrice(140, 'pyth'));
     // Wait for TTL to expire
     await new Promise((r) => setTimeout(r, 150));
 
@@ -165,7 +174,7 @@ describe('OracleChain', () => {
 
   it('모든 실패 + Stale 캐시 없음 -> PriceNotAvailableError throw', async () => {
     const primary = createMockOracle({
-      getPrice: vi.fn().mockRejectedValue(new PriceNotAvailableError('solana:native')),
+      getPrice: vi.fn().mockRejectedValue(new PriceNotAvailableError(SOL_CACHE_KEY)),
     });
     const fallback = createMockOracle({
       getPrice: vi.fn().mockRejectedValue(new Error('CoinGecko down')),
@@ -291,10 +300,10 @@ describe('OracleChain', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 12. getPrices() batch query
+  // 12. getPrices() batch query with CAIP-19 keys
   // -------------------------------------------------------------------------
 
-  it('getPrices() - 여러 토큰 배치 조회', async () => {
+  it('getPrices() - 여러 토큰 배치 조회 (CAIP-19 키)', async () => {
     const primary = createMockOracle({
       getPrice: vi.fn()
         .mockResolvedValueOnce(buildPrice(150, 'pyth'))   // SOL
@@ -305,8 +314,8 @@ describe('OracleChain', () => {
     const result = await chain.getPrices([SOL_TOKEN, ETH_TOKEN]);
 
     expect(result.size).toBe(2);
-    expect(result.get('solana:native')?.usdPrice).toBe(150);
-    expect(result.get('ethereum:native')?.usdPrice).toBe(3500);
+    expect(result.get(SOL_CACHE_KEY)?.usdPrice).toBe(150);
+    expect(result.get(ETH_CACHE_KEY)?.usdPrice).toBe(3500);
   });
 
   // -------------------------------------------------------------------------
@@ -323,9 +332,9 @@ describe('OracleChain', () => {
 
     expect(result.usdPrice).toBe(150);
     expect(result.source).toBe('pyth');
-    // Verify getPrice was called with native token
+    // Verify getPrice was called with native token including network
     expect(primary.getPrice).toHaveBeenCalledWith(
-      expect.objectContaining({ address: 'native', chain: 'solana', decimals: 9 }),
+      expect.objectContaining({ address: 'native', chain: 'solana', decimals: 9, network: 'mainnet' }),
     );
   });
 
@@ -348,12 +357,12 @@ describe('OracleChain', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 15. Cache hit -> skip API call
+  // 15. Cache hit -> skip API call (CAIP-19 key)
   // -------------------------------------------------------------------------
 
-  it('캐시 히트 시 API 호출 건너뜀', async () => {
-    // Seed fresh cache entry
-    cache.set('solana:native', buildPrice(155, 'pyth'));
+  it('캐시 히트 시 API 호출 건너뜀 (CAIP-19 키)', async () => {
+    // Seed fresh cache entry with CAIP-19 key
+    cache.set(SOL_CACHE_KEY, buildPrice(155, 'pyth'));
 
     const primary = createMockOracle({
       getPrice: vi.fn().mockResolvedValue(buildPrice(160, 'pyth')),

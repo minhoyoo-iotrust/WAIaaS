@@ -79,8 +79,8 @@ describe('parseCaip2', () => {
   });
 
   it('throws for invalid CAIP-2 format (no colon)', () => {
-    expect(() => parseCaip2('eip155')).toThrow('Invalid CAIP-2 identifier');
-    expect(() => parseCaip2('')).toThrow('Invalid CAIP-2 identifier');
+    expect(() => parseCaip2('eip155')).toThrow('Invalid CAIP-2 chain ID format');
+    expect(() => parseCaip2('')).toThrow('Invalid CAIP-2 chain ID format');
   });
 });
 

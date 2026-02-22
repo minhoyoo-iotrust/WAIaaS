@@ -1,7 +1,7 @@
 # 마일스톤 m27-03: 토큰별 지출 한도 정책
 
 - **Status:** PLANNED
-- **Milestone:** v27.0
+- **Milestone:** v27.2
 
 ## 목표
 
@@ -32,11 +32,14 @@ v1.5.3에서 USD 기반 임계값(`instant_max_usd` 등)을 추가하여 부분�
 
 | 위치 | 역할 |
 |------|------|
-| `core/schemas/policy.schema.ts:69-88` | SpendingLimitRulesSchema (Zod SSoT) |
-| `daemon/pipeline/database-policy-engine.ts:1278-1292` | `evaluateNativeTier()` — raw BigInt 비교 |
-| `daemon/pipeline/database-policy-engine.ts:1306-1317` | `evaluateUsdTier()` — USD 비교 |
-| `daemon/pipeline/resolve-effective-amount-usd.ts:53-55` | `NATIVE_DECIMALS` 매핑 (solana:9, ethereum:18) |
+| `core/schemas/policy.schema.ts:71-90` | SpendingLimitRulesSchema (Zod SSoT) |
+| `daemon/pipeline/database-policy-engine.ts:1277-1306` | `evaluateSpendingLimit()` — 티어 결정 진입점 |
+| `daemon/pipeline/database-policy-engine.ts:1311-1325` | `evaluateNativeTier()` — raw BigInt 비교 |
+| `daemon/pipeline/database-policy-engine.ts:1339-1350` | `evaluateUsdTier()` — USD 비교 |
+| `daemon/pipeline/database-policy-engine.ts:112-131` | `TransactionParam` 인터페이스 — 정책 평가 입력 |
+| `daemon/pipeline/resolve-effective-amount-usd.ts:53-56` | `NATIVE_DECIMALS` 매핑 (solana:9, ethereum:18) |
 | `adapters/evm/src/evm-chain-map.ts:19-28` | 네트워크별 `nativeSymbol` 매핑 (ETH, POL 등) |
+| `core/schemas/transaction.schema.ts:55-60` | `TokenInfoSchema` — `decimals` 필드 (TOKEN_TRANSFER 요청) |
 | `admin/components/policy-forms/spending-limit-form.tsx` | Admin UI 정책 폼 |
 
 ---
@@ -90,7 +93,34 @@ export const SpendingLimitRulesSchema = z.object({
 
 ### 2. 평가 로직 변경
 
-**`evaluateSpendingLimit()` 수정:**
+**`TransactionParam` 인터페이스 확장:**
+
+현재 `TransactionParam`에는 `tokenDecimals` 필드가 없다. `token_limits` 평가에 필요한 정보를 전달하기 위해 다음 필드를 추가한다:
+
+```typescript
+interface TransactionParam {
+  // ... 기존 필드 ...
+  /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER only). */
+  tokenDecimals?: number;
+}
+```
+
+호출부에서 요청의 `token.decimals` 값을 `TransactionParam.tokenDecimals`로 전달한다.
+
+**`evaluateSpendingLimit()` 시그니처 확장:**
+
+현재 시그니처 `(resolved, amount, usdAmount?)`에 트랜잭션 컨텍스트를 추가한다:
+
+```typescript
+private evaluateSpendingLimit(
+  resolved: PolicyRow[],
+  amount: string,
+  usdAmount?: number,
+  tokenContext?: { type: string; tokenAddress?: string; tokenDecimals?: number; chain?: string },
+): PolicyEvaluation | null
+```
+
+**평가 흐름:**
 
 ```
 1. USD 티어 평가 (기존 로직 유지)
@@ -98,6 +128,9 @@ export const SpendingLimitRulesSchema = z.object({
    a. token_limits에서 해당 토큰 키 조회
       - TRANSFER → "native"
       - TOKEN_TRANSFER → tokenAddress
+      - APPROVE → tokenAddress (승인 대상 토큰)
+      - CONTRACT_CALL → token_limits 미적용 (amount는 네이티브 value)
+      - BATCH → 서브 트랜잭션별 개별 평가 아님, 합산 amount에 대해 기존 raw/USD로만 평가
    b. 매칭되는 token_limit 있으면:
       - 트랜잭션 raw amount를 decimal로 나눠 사람 읽기 단위로 변환
       - token_limit의 instant_max/notify_max/delay_max와 비교
@@ -106,9 +139,19 @@ export const SpendingLimitRulesSchema = z.object({
 3. 최종 티어 = maxTier(USD 티어, 토큰별 티어, 누적 티어)
 ```
 
+**트랜잭션 타입별 token_limits 적용 규칙:**
+
+| 타입 | token_limits 키 | decimal 소스 | 비고 |
+|------|----------------|-------------|------|
+| TRANSFER | `"native"` | `NATIVE_DECIMALS[chain]` | 네이티브 전송 |
+| TOKEN_TRANSFER | `tokenAddress` | `TransactionParam.tokenDecimals` | 토큰 전송 |
+| APPROVE | `tokenAddress` | `TransactionParam.tokenDecimals` | 토큰 승인 금액 |
+| CONTRACT_CALL | 미적용 | — | value는 네이티브, raw 폴백만 사용 |
+| BATCH | 미적용 | — | 합산 금액에 대해 USD/raw만 평가 |
+
 **decimal 정보 소스:**
 - 네이티브 토큰: `NATIVE_DECIMALS` 매핑 (solana:9, ethereum:18) — 이미 존재
-- 컨트랙트 토큰: `TransactionParam.tokenDecimals` — TOKEN_TRANSFER 시 요청에 포함됨
+- 컨트랙트 토큰: `TransactionParam.tokenDecimals` — TOKEN_TRANSFER/APPROVE 시 요청의 `token.decimals`에서 전달
 
 ### 3. Admin UI 변경
 
@@ -193,8 +236,10 @@ export const SpendingLimitRulesSchema = z.object({
 
 ### 2. 정책 엔진 (`packages/daemon`)
 
-- `database-policy-engine.ts` — `evaluateSpendingLimit()`: token_limits 조회 + decimal 변환 로직
-- `database-policy-engine.ts` — `evaluateNativeTier()`: raw 필드 없을 때 스킵 처리
+- `database-policy-engine.ts` — `TransactionParam` 인터페이스에 `tokenDecimals?: number` 추가
+- `database-policy-engine.ts` — `evaluateSpendingLimit()` 시그니처 확장 (`tokenContext` 파라미터 추가) + token_limits 조회 + decimal 변환 로직
+- `database-policy-engine.ts` — `evaluateSpendingLimit()` 호출부 (TRANSFER, TOKEN_TRANSFER, APPROVE, BATCH)에서 `tokenContext` 전달
+- `database-policy-engine.ts` — `evaluateNativeTier()`: raw 필드 없을 때 스킵 처리 (undefined 방어)
 - `database-policy-engine.ts` — `evaluateTokenTier()`: 신규 함수, 사람 읽기 단위 비교
 - `resolve-effective-amount-usd.ts` — `NATIVE_DECIMALS`를 core 패키지로 이동 (공유 필요)
 
@@ -213,7 +258,7 @@ export const SpendingLimitRulesSchema = z.object({
 | 파일 | 변경 내용 |
 |------|----------|
 | `packages/core/src/schemas/policy.schema.ts` | TokenLimitSchema, raw optional, superRefine |
-| `packages/daemon/src/pipeline/database-policy-engine.ts` | evaluateTokenTier, 폴백 로직 |
+| `packages/daemon/src/pipeline/database-policy-engine.ts` | TransactionParam 확장, evaluateSpendingLimit 시그니처 변경, evaluateTokenTier, 호출부 tokenContext 전달, 폴백 로직 |
 | `packages/daemon/src/pipeline/resolve-effective-amount-usd.ts` | NATIVE_DECIMALS 공유화 |
 | `packages/admin/src/components/policy-forms/spending-limit-form.tsx` | 폼 재구성 |
 | `packages/admin/src/pages/policies.tsx` | validation 갱신 |
@@ -254,8 +299,14 @@ export const SpendingLimitRulesSchema = z.object({
 18. Legacy 섹션에 deprecated 안내가 표시되는지 확인
 19. 신규 정책 생성 시 raw 필드 미입력으로 저장 가능한지 확인
 
+### 단위 테스트 — 타입별 token_limits 적용
+
+20. APPROVE 트랜잭션에서 `token_limits[tokenAddress]`가 승인 금액에 적용되는지 확인
+21. CONTRACT_CALL 트랜잭션에서 `token_limits`가 적용되지 않고 raw/USD만으로 평가되는지 확인
+22. BATCH 트랜잭션에서 `token_limits`가 적용되지 않고 합산 금액에 대해 raw/USD만으로 평가되는지 확인
+
 ### 회귀 테스트
 
-20. 기존 SPENDING_LIMIT 정책의 BATCH 트랜잭션 평가가 변경 없이 동작하는지 확인
-21. 누적 한도(daily_limit_usd, monthly_limit_usd) 평가가 영향 받지 않는지 확인
-22. Oracle 실패 시 USD 평가 스킵 + 토큰별/raw 폴백이 정상 동작하는지 확인
+23. 기존 SPENDING_LIMIT 정책의 BATCH 트랜잭션 평가가 변경 없이 동작하는지 확인
+24. 누적 한도(daily_limit_usd, monthly_limit_usd) 평가가 영향 받지 않는지 확인
+25. Oracle 실패 시 USD 평가 스킵 + 토큰별/raw 폴백이 정상 동작하는지 확인

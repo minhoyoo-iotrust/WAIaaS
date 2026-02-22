@@ -35,6 +35,7 @@
  */
 
 import type { IPolicyEngine, PolicyEvaluation, PolicyTier } from '@waiaas/core';
+import { parseCaip19 } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq, or, and, isNull, desc } from 'drizzle-orm';
@@ -65,7 +66,7 @@ interface WhitelistRules {
 }
 
 interface AllowedTokensRules {
-  tokens: Array<{ address: string }>;
+  tokens: Array<{ address: string; assetId?: string }>;
 }
 
 interface ContractWhitelistRules {
@@ -117,6 +118,8 @@ interface TransactionParam {
   network?: string;
   /** Token address for ALLOWED_TOKENS evaluation (TOKEN_TRANSFER only). */
   tokenAddress?: string;
+  /** CAIP-19 asset identifier for ALLOWED_TOKENS 4-scenario matching (TOKEN_TRANSFER only). */
+  assetId?: string;
   /** Contract address for CONTRACT_WHITELIST evaluation (CONTRACT_CALL only). */
   contractAddress?: string;
   /** Function selector (4-byte hex, e.g. '0x12345678') for METHOD_WHITELIST evaluation (CONTRACT_CALL only). */
@@ -876,16 +879,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // -------------------------------------------------------------------------
 
   /**
-   * Evaluate ALLOWED_TOKENS policy.
+   * Evaluate ALLOWED_TOKENS policy with 4-scenario matching matrix (PLCY-03).
    *
    * Logic:
    * - Only applies to TOKEN_TRANSFER transaction type
    * - If transaction type is TOKEN_TRANSFER and no ALLOWED_TOKENS policy exists:
    *   -> deny with reason 'Token transfer not allowed: no ALLOWED_TOKENS policy configured'
-   * - If ALLOWED_TOKENS policy exists, check if transaction's token address is in rules.tokens[].address:
-   *   -> If found: return null (continue to next evaluation)
-   *   -> If not found: deny with reason 'Token not in allowed list: {tokenAddress}'
-   * - For non-TOKEN_TRANSFER types: return null (not applicable)
+   * - If ALLOWED_TOKENS policy exists, match using 4-scenario matrix:
+   *   Scenario 1: Policy assetId + TX assetId -> exact CAIP-19 string match
+   *   Scenario 2: Policy assetId + TX address only -> extract address from policy assetId, compare lowercase
+   *   Scenario 3: Policy address only + TX assetId -> extract address from TX assetId, compare lowercase
+   *   Scenario 4: Policy address only + TX address only -> current behavior (case-insensitive)
+   * - EVM addresses normalized to lowercase for comparison (PLCY-04)
    *
    * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
    */
@@ -912,9 +917,10 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     // Parse rules.tokens array
     const rules: AllowedTokensRules = JSON.parse(allowedTokensPolicy.rules);
-    const tokenAddress = transaction.tokenAddress;
+    const txTokenAddress = transaction.tokenAddress;
+    const txAssetId = transaction.assetId;
 
-    if (!tokenAddress) {
+    if (!txTokenAddress && !txAssetId) {
       return {
         allowed: false,
         tier: 'INSTANT',
@@ -922,16 +928,43 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       };
     }
 
-    // Check if token is in allowed list (case-insensitive comparison for EVM addresses)
-    const isAllowed = rules.tokens.some(
-      (t) => t.address.toLowerCase() === tokenAddress.toLowerCase(),
-    );
+    // 4-scenario matching matrix (PLCY-03)
+    const isAllowed = rules.tokens.some((policyToken) => {
+      // Scenario 1: Both have assetId -> exact CAIP-19 string match
+      // CAIP-19 strings are already normalized (EVM lowercase by tokenAssetId, Solana preserved)
+      if (policyToken.assetId && txAssetId) {
+        return policyToken.assetId === txAssetId;
+      }
+
+      // Scenario 2: Policy has assetId, TX has address only
+      if (policyToken.assetId && txTokenAddress) {
+        try {
+          const policyAddr = parseCaip19(policyToken.assetId).assetReference;
+          return policyAddr.toLowerCase() === txTokenAddress.toLowerCase();
+        } catch {
+          return false; // Invalid policy assetId -> no match
+        }
+      }
+
+      // Scenario 3: Policy has address only, TX has assetId
+      if (!policyToken.assetId && txAssetId) {
+        try {
+          const txAddr = parseCaip19(txAssetId).assetReference;
+          return policyToken.address.toLowerCase() === txAddr.toLowerCase();
+        } catch {
+          return false; // Invalid TX assetId -> no match
+        }
+      }
+
+      // Scenario 4: Both address only -> current behavior (case-insensitive)
+      return policyToken.address.toLowerCase() === (txTokenAddress ?? '').toLowerCase();
+    });
 
     if (!isAllowed) {
       return {
         allowed: false,
         tier: 'INSTANT',
-        reason: `Token not in allowed list: ${tokenAddress}`,
+        reason: `Token not in allowed list: ${txAssetId ?? txTokenAddress}`,
       };
     }
 

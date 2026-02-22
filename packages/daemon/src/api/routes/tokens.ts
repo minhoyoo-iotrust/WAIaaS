@@ -138,6 +138,7 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
           name: t.name,
           decimals: t.decimals,
           source: t.source,
+          assetId: t.assetId ?? null,
         })),
       },
       200,

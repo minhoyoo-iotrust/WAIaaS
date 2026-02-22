@@ -9,7 +9,8 @@
  */
 import { z } from 'zod';
 import type { ChainType } from '../enums/chain.js';
-import { ChainTypeEnum } from '../enums/chain.js';
+import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
+import { Caip19Schema } from '../caip/index.js';
 
 // ---------------------------------------------------------------------------
 // Zod SSoT: TokenRef
@@ -25,6 +26,10 @@ export const TokenRefSchema = z.object({
   decimals: z.number().int().min(0).max(18),
   /** Target chain. */
   chain: ChainTypeEnum,
+  /** CAIP-19 asset type URI (optional, for standard asset identification). */
+  assetId: Caip19Schema.optional(),
+  /** L2 network disambiguation (optional, complements chain for multi-network). */
+  network: NetworkTypeEnum.optional(),
 });
 
 /** Token reference for price lookup. Derived from TokenRefSchema via z.infer. */

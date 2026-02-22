@@ -15,6 +15,7 @@
 - ✅ **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** -- Phases 210-214 (shipped 2026-02-21)
 - ✅ **v27.0 수신 트랜잭션 모니터링 설계** -- Phases 215-223 (shipped 2026-02-21)
 - ✅ **v27.1 수신 트랜잭션 모니터링 구현** -- Phases 224-230 (shipped 2026-02-22)
+- ✅ **v27.2 CAIP-19 자산 식별 표준** -- Phases 231-234 (shipped 2026-02-22)
 
 ## Phases
 
@@ -174,6 +175,18 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v27.2 CAIP-19 자산 식별 표준 (Phases 231-234) -- SHIPPED 2026-02-22</summary>
+
+- [x] Phase 231: Core CAIP Module + Network Map (2/2 plans) -- completed 2026-02-22
+- [x] Phase 232: Oracle L2 Support + Cache Key Migration (2/2 plans) -- completed 2026-02-22
+- [x] Phase 233: DB Migration + Schema + Policy (3/3 plans) -- completed 2026-02-22
+- [x] Phase 234: MCP + SDK + Skills Integration (2/2 plans) -- completed 2026-02-22
+
+See `.planning/milestones/v27.2-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -191,3 +204,4 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
 | 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
+| 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |

@@ -26,7 +26,10 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
         address: z.string().describe('Token mint (SPL) or contract address (ERC-20)'),
         decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
         symbol: z.string().describe('Token symbol (e.g., USDC)'),
-      }).optional().describe('Required for TOKEN_TRANSFER'),
+        assetId: z.string().optional().describe(
+          'CAIP-19 asset identifier (e.g., "eip155:1/erc20:0xa0b8..." or "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5..."). When provided, the daemon cross-validates address against assetId. EVM addresses must be lowercase in CAIP-19.',
+        ),
+      }).optional().describe('Required for TOKEN_TRANSFER. Token metadata with optional CAIP-19 assetId.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
     },
     async (args) => {

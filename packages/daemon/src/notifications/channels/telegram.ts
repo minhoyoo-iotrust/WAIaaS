@@ -44,6 +44,11 @@ export class TelegramChannel implements INotificationChannel {
     const body = escape(payload.body);
     const parts = [title, '', body];
 
+    // Explorer link (MarkdownV2 inline link: [text](url))
+    if (payload.explorerUrl) {
+      parts.push('', `[View on Explorer](${payload.explorerUrl})`);
+    }
+
     // Only show wallet/time for wallet-specific events
     if (payload.walletId) {
       const name = payload.walletName || payload.walletId;

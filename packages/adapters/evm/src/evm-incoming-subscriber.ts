@@ -97,6 +97,16 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
     this.subscriptions.clear();
   }
 
+  // -- RPC helpers (used by confirmation worker) --
+
+  /**
+   * Returns the current block number from the connected EVM RPC.
+   * Used by the confirmation worker to compare against DETECTED tx block numbers.
+   */
+  async getBlockNumber(): Promise<bigint> {
+    return this.client.getBlockNumber();
+  }
+
   // -- Polling (called by BackgroundWorkers in Phase 226) --
 
   async pollAll(): Promise<void> {

@@ -2,19 +2,15 @@
 
 ## 이것이 무엇인가
 
-중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 10개 패키지) / Docker(`waiaas/daemon`, `waiaas/push-relay`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. **1:N 멀티 지갑 세션 모델**로 하나의 세션 토큰이 여러 지갑에 접근하고, GET /v1/connect-info 자기 발견 엔드포인트로 에이전트가 마스터 패스워드 없이 접근 가능 지갑/정책/capabilities를 파악한다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. Admin Web UI(`/admin`)는 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 구성되며, Ctrl+K 설정 검색/미저장 경고/필드 description help text 등 DX를 제공한다. @waiaas/push-relay로 ntfy 토픽을 기존 푸시 인프라(Pushwoosh/FCM)로 변환·전달하여, 지갑 앱이 기존 푸시 파이프라인만으로 서명 요청과 알림을 수신할 수 있다. 자동 버전 체크 + CLI update 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델 + workflow_dispatch RC 승격 자동화로 배포를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
+중앙 서버 없이 사용자가 직접 설치하여 운영하는 오픈소스(MIT) AI 에이전트 지갑 시스템. 체인 무관(Chain-Agnostic) 3계층 보안 모델(세션 인증 → 시간 지연+AutoStop → 모니터링+Kill Switch)로 에이전트 해킹이나 키 유출 시에도 피해를 최소화한다. npm(`@waiaas/*` 10개 패키지) / Docker(`waiaas/daemon`, `waiaas/push-relay`) / CLI로 배포하며, REST API(60+ 엔드포인트), TypeScript/Python SDK, MCP 통합(18+ 도구), Telegram Bot 원격 관리를 통해 모든 에이전트 프레임워크에서 사용 가능하다. 멀티체인 환경 모델(1 월렛 = 1 체인 + 1 환경)로 하나의 EVM 월렛이 5개 네트워크에서 동작하며, ALLOWED_NETWORKS 정책으로 네트워크를 제한할 수 있다. **1:N 멀티 지갑 세션 모델**로 하나의 세션 토큰이 여러 지갑에 접근하고, GET /v1/connect-info 자기 발견 엔드포인트로 에이전트가 마스터 패스워드 없이 접근 가능 지갑/정책/capabilities를 파악한다. WalletConnect v2로 외부 지갑(MetaMask/Phantom) 연결하여 QR 스캔 기반 Owner 승인이 가능하며, WC 실패 시 Telegram Bot으로 자동 전환된다. Admin Web UI(`/admin`)는 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 구성되며, Ctrl+K 설정 검색/미저장 경고/필드 description help text 등 DX를 제공한다. @waiaas/push-relay로 ntfy 토픽을 기존 푸시 인프라(Pushwoosh/FCM)로 변환·전달하여, 지갑 앱이 기존 푸시 파이프라인만으로 서명 요청과 알림을 수신할 수 있다. CAIP-19 표준 자산 식별자로 토큰을 체인/네트워크/주소 차원에서 고유하게 식별하며, DB/정책/오라클/API 전 레이어가 assetId를 지원한다(하위 호환 유지). 자동 버전 체크 + CLI update 7단계 시퀀스로 안전한 업그레이드가 가능하고, release-please 2-게이트 릴리스 모델 + workflow_dispatch RC 승격 자동화로 배포를 지원한다. v2.0.0-rc.1 pre-release 발행 완료.
 
 ## 핵심 가치
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: (다음 마일스톤 미정)
-
-v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22).
-
 ## Current State
 
-v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 11-패키지 모노레포 + Python SDK, ~155,540 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레포 + Python SDK, ~157,584 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -54,10 +50,11 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 11-패키지
 - ✅ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 — shipped 2026-02-21 (15 plans, 30 requirements, ~145,704 LOC TS)
 - ✅ v27.0 수신 트랜잭션 모니터링 설계 — shipped 2026-02-21 (16 plans, 29 requirements, 26 설계 결정, docs 76)
 - ✅ v27.1 수신 트랜잭션 모니터링 구현 — shipped 2026-02-22 (18 plans, 30 requirements, ~155,540 LOC TS)
+- ✅ v27.2 CAIP-19 자산 식별 표준 — shipped 2026-02-22 (9 plans, 31 requirements, ~157,584 LOC TS)
 
 **코드베이스 현황:**
 - 11-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay + waiaas (Python)
-- ~155,540 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
+- ~157,584 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
 - 4,396+ 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin + push-relay)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
@@ -91,6 +88,7 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 11-패키지
 - IChainSubscriber 6-method + SolanaIncomingSubscriber/EvmIncomingSubscriber + IncomingTxMonitorService (큐+멀티플렉서+안전규칙+KillSwitch)
 - incoming_transactions/incoming_tx_cursors DB v21 + wallets.monitor_incoming opt-in
 - GET /v1/wallet/incoming + /summary REST API + TS/Python SDK + MCP 2 tools + Admin IncomingSettings
+- CAIP-19 자산 식별: caip/ 모듈(~240 LOC), 13-네트워크 양방향 맵, TokenRef assetId 확장, DB v22 token_registry.asset_id, 4-시나리오 ALLOWED_TOKENS 매칭, 가격 오라클 L2(Polygon/Arbitrum/Optimism/Base) 지원
 - 설계 문서 40개 (24-76), 8 objective 문서
 
 ## 요구사항
@@ -471,6 +469,14 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 11-패키지
 - ✓ 3개 통합 버그 수정 (BackgroundWorkers 공유, polling worker handlers, gap recovery wiring) — v27.1 (Phase 230)
 - ✓ 20개 통합 테스트 6대 피트폴 검증 (listener leak, SQLite contention, dedup, shutdown drain, EVM reorg, gap recovery) — v27.1 (Phase 229)
 
+- ✓ CAIP-2/19 파서/포매터 + Zod 스키마 + 13-네트워크 양방향 맵 (CAIP-01~10) — v27.2 (Phase 231)
+- ✓ TokenRef assetId(CAIP-19) + network(NetworkType) 확장 (TOKN-01) — v27.2 (Phase 231)
+- ✓ 가격 오라클 CAIP-19 캐시 키 전환 + CoinGecko L2 플랫폼 매핑 + Pyth 피드 ID 원자적 전환 (ORCL-01~04) — v27.2 (Phase 232)
+- ✓ DB v22 마이그레이션: token_registry.asset_id + CAIP-19 backfill + Token API assetId (TOKN-02~04) — v27.2 (Phase 233)
+- ✓ TokenInfoSchema assetId cross-validation + TransactionParam assetId 전파 (TXSC-01~03) — v27.2 (Phase 233)
+- ✓ ALLOWED_TOKENS 4-시나리오 정책 매칭 매트릭스 (PLCY-01~04) — v27.2 (Phase 233)
+- ✓ MCP 토큰 도구 assetId 파라미터 + TS/Python SDK 타입 확장 + 3개 스킬 파일 문서화 (MCPS-01~04, SKIL-01~02) — v27.2 (Phase 234)
+
 ### 활성
 
 (없음 — 다음 마일스톤 미정)
@@ -492,7 +498,7 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 11-패키지
 
 ## 컨텍스트
 
-**누적:** 52 milestones (v0.1-v27.1), 230 phases, 496 plans, 1,331 requirements, 40 설계 문서(24-76), 8 objective 문서, ~155,540 LOC TS, 4,396+ 테스트
+**누적:** 53 milestones (v0.1-v27.2), 234 phases, 505 plans, 1,362 requirements, 40 설계 문서(24-76), 8 objective 문서, ~157,584 LOC TS, 4,396+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -533,6 +539,7 @@ v26.3 Push Relay Server shipped (2026-02-20). 3 페이즈, 8 플랜, 25 요구�
 v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 5 페이즈, 15 플랜, 30 요구사항, ~145,704 LOC TS, 4,396+ 테스트, 5 설계 결정.
 v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈, 16 플랜, 29 요구사항, 101 파일 변경, +8,058/-2,158 lines, 26 설계 결정. 설계 문서 76(~2,300줄, 8섹션).
 v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 7 페이즈, 18 플랜, 30 요구사항, 189 파일 변경, +23,969/-5,834 lines, 102 커밋, ~155,540 LOC TS. Known gap: STO-03 (Confirmation Worker RPC 콜백 미주입).
+v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 4 페이즈, 9 플랜, 31 요구사항, 135 파일 변경, +12,997/-2,406 lines, 62 커밋, ~157,584 LOC TS.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -867,6 +874,17 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 7 페이즈,
 | SafetyRuleContext.decimals + getDecimals() 헬퍼 | IncomingTransaction 타입 변경 없이 decimals 전달 | ✓ Good — v27.0 갭 해결 |
 
 | IncomingTransaction interface + Zod schema 이중 정의 | interface는 코드 계약, Zod는 검증/OpenAPI SSoT | ✓ Good — v27.1 구현 |
+| Custom CAIP-2/19 모듈 (~240 LOC, 외부 의존성 0) | 4개 외부 라이브러리 평가 후 과잉 의존성 판단 | ✓ Good — v27.2 구현 |
+| `token` namespace for Solana SPL/Token-2022 (NOT `spl`) | CAIP-19 표준 준수, SPL은 비표준 | ✓ Good — v27.2 구현 |
+| slip44: ETH=60, SOL=501, POL=966 (Polygon NOT 60) | SLIP-44 표준 coin type 준수 | ✓ Good — v27.2 구현 |
+| EVM addresses lowercase at CAIP construction time | Solana base58은 NEVER lowercased, 체인별 정규화 | ✓ Good — v27.2 구현 |
+| InMemoryPriceCache volatile — 캐시 키 마이그레이션 제로 비용 | 재시작 시 자동 적용, 데이터 마이그레이션 불필요 | ✓ Good — v27.2 구현 |
+| DB v22 application-level backfill (SELECT+loop+UPDATE) | established v6b 패턴 재사용 | ✓ Good — v27.2 구현 |
+| 4-scenario ALLOWED_TOKENS 정책 매칭 매트릭스 | assetId↔assetId, assetId↔legacy, legacy↔assetId, legacy↔legacy 전환 기간 호환 | ✓ Good — v27.2 구현 |
+| CAIP-19 assetId optional additive (하위 호환) | 기존 address-only 경로 전부 유지, 점진적 전환 | ✓ Good — v27.2 구현 |
+| network-map.ts SSoT for CAIP-2/NetworkType 양방향 맵 | x402.types.ts, wc-session-service.ts 모두 여기서 import | ✓ Good — v27.2 구현 |
+| resolveNetwork(chain, network?) 하위호환 패턴 | 오라클 호출자 시그니처 점진적 마이그레이션 | ✓ Good — v27.2 구현 |
+| MCP tools 내 CAIP-19 validation 없음 | 데몬 Caip19Schema superRefine이 단일 검증 지점 | ✓ Good — v27.2 구현 |
 | CREATE TABLE IF NOT EXISTS v21 마이그레이션 | pushSchema DDL 실행 순서 호환, 기존 패턴 일관 | ✓ Good — v27.1 구현 |
 | generateId DI 주입 (crypto.randomUUID default) | 테스트 가능성 확보, Phase 226에서 UUID v7 사용 | ✓ Good — v27.1 구현 |
 | EVM polling-first (connect no-op) | EVM WebSocket 불안정 대응, 설계(D-06) 충실 구현 | ✓ Good — v27.1 구현 |
@@ -879,9 +897,9 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 7 페이즈,
 | Polling workers structural typing cast | pollAll()이 IChainSubscriber interface에 없음, as unknown as 캐스트 | ✓ Good — v27.1 구현 |
 | TX_INCOMING_SUSPICIOUS → security_alert 카테고리 | 전 채널 브로드캐스트, TX_INCOMING은 transaction 카테고리 | ✓ Good — v27.1 구현 |
 
-## Shipped: v27.1 수신 트랜잭션 모니터링 구현
+## Shipped: v27.2 CAIP-19 자산 식별 표준
 
-v27.1 shipped. v27.0 설계를 구현하여 에이전트 지갑 수신 트랜잭션 실시간 감지·저장·알림 시스템 완성. SolanaIncomingSubscriber(WebSocket logsSubscribe + 60s heartbeat) + EvmIncomingSubscriber(getLogs + getBlock polling), IncomingTxQueue(Map dedup + 5s batch flush), SubscriptionMultiplexer(연결 공유 + 3-state 재연결 + 폴링 폴백), 3 safety rules + KillSwitch 연동, REST API 3 엔드포인트 + TS/Python SDK + MCP 2 tools, 20개 통합 테스트. Known gap: STO-03 (Confirmation Worker RPC 콜백 미주입, DETECTED→CONFIRMED 미작동).
+v27.2 shipped. WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일. Custom CAIP-2/19 파서 모듈(~240 LOC, 외부 의존성 0), 13-네트워크 양방향 맵, 가격 오라클 L2 지원(Polygon/Arbitrum/Optimism/Base), DB v22 마이그레이션(token_registry.asset_id + 자동 backfill), 4-시나리오 ALLOWED_TOKENS 정책 매칭 매트릭스, MCP 토큰 도구 assetId + TS/Python SDK 타입 확장 + 3개 스킬 파일 문서화. 모든 변경 additive(하위 호환). 31/31 requirements PASS.
 
 ---
-*최종 업데이트: 2026-02-22 after v27.1 milestone complete*
+*최종 업데이트: 2026-02-22 after v27.2 milestone complete*

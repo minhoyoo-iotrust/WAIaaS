@@ -15,43 +15,9 @@ import type {
   PaymentRequirements,
 } from '@x402/core/types';
 
-// ── CAIP-2 <-> WAIaaS NetworkType Mapping ────────────────────
-
-export const CAIP2_TO_NETWORK: Record<string, { chain: ChainType; network: NetworkType }> = {
-  // EVM
-  'eip155:1':        { chain: 'ethereum', network: 'ethereum-mainnet' },
-  'eip155:11155111': { chain: 'ethereum', network: 'ethereum-sepolia' },
-  'eip155:137':      { chain: 'ethereum', network: 'polygon-mainnet' },
-  'eip155:80002':    { chain: 'ethereum', network: 'polygon-amoy' },
-  'eip155:42161':    { chain: 'ethereum', network: 'arbitrum-mainnet' },
-  'eip155:421614':   { chain: 'ethereum', network: 'arbitrum-sepolia' },
-  'eip155:10':       { chain: 'ethereum', network: 'optimism-mainnet' },
-  'eip155:11155420': { chain: 'ethereum', network: 'optimism-sepolia' },
-  'eip155:8453':     { chain: 'ethereum', network: 'base-mainnet' },
-  'eip155:84532':    { chain: 'ethereum', network: 'base-sepolia' },
-  // Solana
-  'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': { chain: 'solana', network: 'mainnet' },
-  'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1':  { chain: 'solana', network: 'devnet' },
-  'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z':  { chain: 'solana', network: 'testnet' },
-};
-
-// Reverse mapping (WAIaaS NetworkType -> CAIP-2)
-export const NETWORK_TO_CAIP2 = Object.fromEntries(
-  Object.entries(CAIP2_TO_NETWORK).map(([caip2, { network }]) => [network, caip2]),
-) as Record<NetworkType, string>;
-
-/**
- * Parse a CAIP-2 identifier into namespace and reference.
- * @example parseCaip2('eip155:1') => { namespace: 'eip155', reference: '1' }
- */
-export function parseCaip2(caip2Network: string): { namespace: string; reference: string } {
-  const colonIndex = caip2Network.indexOf(':');
-  if (colonIndex === -1) throw new Error(`Invalid CAIP-2 identifier: ${caip2Network}`);
-  return {
-    namespace: caip2Network.slice(0, colonIndex),
-    reference: caip2Network.slice(colonIndex + 1),
-  };
-}
+// ── CAIP-2 <-> WAIaaS NetworkType Mapping (re-exported from caip/ SSoT) ──
+import { CAIP2_TO_NETWORK, NETWORK_TO_CAIP2, parseCaip2 } from '../caip/index.js';
+export { CAIP2_TO_NETWORK, NETWORK_TO_CAIP2, parseCaip2 };
 
 /**
  * Resolve a CAIP-2 network identifier to WAIaaS chain+network.

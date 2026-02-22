@@ -200,6 +200,52 @@ describe('send_token tool', () => {
       network: 'polygon-mainnet',
     });
   });
+
+  it('passes assetId in token object through to API (CAIP-19)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({
+      to: 'addr',
+      amount: '5000000',
+      type: 'TOKEN_TRANSFER',
+      token: {
+        address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        decimals: 6,
+        symbol: 'USDC',
+        assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      },
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '5000000',
+      type: 'TOKEN_TRANSFER',
+      token: {
+        address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        decimals: 6,
+        symbol: 'USDC',
+        assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      },
+    });
+  });
+
+  it('sends token without assetId when omitted (backward compat)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({
+      to: 'addr',
+      amount: '1000',
+      type: 'TOKEN_TRANSFER',
+      token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+    });
+
+    const calledBody = (apiClient.post as ReturnType<typeof vi.fn>).mock.calls[0]![1] as Record<string, unknown>;
+    const token = calledBody['token'] as Record<string, unknown>;
+    expect(token).toEqual({ address: 'mint1', decimals: 6, symbol: 'USDC' });
+    expect(token).not.toHaveProperty('assetId');
+  });
 });
 
 describe('get_balance tool', () => {
@@ -672,6 +718,34 @@ describe('approve_token tool', () => {
       token: { address: '0xToken', decimals: 18, symbol: 'TK' },
       amount: '100',
       network: 'base-mainnet',
+    });
+  });
+
+  it('passes assetId in token object through to API (CAIP-19)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerApproveToken, apiClient);
+
+    await handler({
+      spender: '0xDEFiRouter',
+      token: {
+        address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        decimals: 6,
+        symbol: 'USDC',
+        assetId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      },
+      amount: '1000000000',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'APPROVE',
+      spender: '0xDEFiRouter',
+      token: {
+        address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        decimals: 6,
+        symbol: 'USDC',
+        assetId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      },
+      amount: '1000000000',
     });
   });
 });

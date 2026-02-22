@@ -12,7 +12,7 @@
 import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@waiaas/core';
 import { getCoinGeckoPlatform } from './coingecko-platform-ids.js';
 import { PriceNotAvailableError, CoinGeckoNotConfiguredError } from './oracle-errors.js';
-import { buildCacheKey } from './price-cache.js';
+import { buildCacheKey, resolveNetwork } from './price-cache.js';
 
 // Re-export error classes for consumer convenience
 export { PriceNotAvailableError, CoinGeckoNotConfiguredError } from './oracle-errors.js';
@@ -50,15 +50,17 @@ export class CoinGeckoOracle implements IPriceOracle {
   async getPrice(token: TokenRef): Promise<PriceInfo> {
     this.ensureConfigured();
 
+    const network = resolveNetwork(token.chain, token.network);
+
     // Delegate native tokens to getNativePrice
     if (token.address === 'native') {
-      return this.getNativePrice(token.chain);
+      return this.getNativePriceByNetwork(network);
     }
 
-    const platform = getCoinGeckoPlatform(token.chain);
+    const platform = getCoinGeckoPlatform(network);
     if (!platform) {
       throw new PriceNotAvailableError(
-        `Unsupported chain for CoinGecko: ${token.chain}`,
+        `Unsupported network for CoinGecko: ${network}`,
       );
     }
 
@@ -80,7 +82,7 @@ export class CoinGeckoOracle implements IPriceOracle {
     const tokenData = data[lookupKey];
     if (!tokenData?.usd) {
       throw new PriceNotAvailableError(
-        `CoinGecko returned no price for ${token.symbol ?? token.address} on ${token.chain}`,
+        `CoinGecko returned no price for ${token.symbol ?? token.address} on ${network}`,
       );
     }
 
@@ -103,35 +105,37 @@ export class CoinGeckoOracle implements IPriceOracle {
 
     const result = new Map<string, PriceInfo>();
 
-    // Separate native and non-native tokens
+    // Separate native and non-native tokens, group by resolved network
     const nativeTokens: TokenRef[] = [];
-    const tokensByChain = new Map<string, TokenRef[]>();
+    const tokensByNetwork = new Map<string, TokenRef[]>();
 
     for (const token of tokens) {
       if (token.address === 'native') {
         nativeTokens.push(token);
       } else {
-        const list = tokensByChain.get(token.chain) ?? [];
+        const network = resolveNetwork(token.chain, token.network);
+        const list = tokensByNetwork.get(network) ?? [];
         list.push(token);
-        tokensByChain.set(token.chain, list);
+        tokensByNetwork.set(network, list);
       }
     }
 
-    // Batch query per chain (comma-separated addresses)
+    // Batch query per network (comma-separated addresses)
     const batchPromises: Promise<void>[] = [];
 
-    for (const [chain, chainTokens] of tokensByChain) {
+    for (const [network, networkTokens] of tokensByNetwork) {
       batchPromises.push(
-        this.fetchBatchTokenPrices(chain, chainTokens, result),
+        this.fetchBatchTokenPrices(network, networkTokens, result),
       );
     }
 
     // Native token queries
     for (const token of nativeTokens) {
+      const network = resolveNetwork(token.chain, token.network);
       batchPromises.push(
-        this.getNativePrice(token.chain)
+        this.getNativePriceByNetwork(network)
           .then((price) => {
-            result.set(buildCacheKey(token.chain, 'native'), price);
+            result.set(buildCacheKey(network, 'native'), price);
           })
           .catch(() => {
             // Skip failed native price queries
@@ -146,18 +150,30 @@ export class CoinGeckoOracle implements IPriceOracle {
   /**
    * Get native token price (SOL or ETH).
    *
+   * Part of IPriceOracle interface. Resolves network internally from chain.
+   *
    * @param chain - Chain type ('solana' or 'ethereum').
    * @returns PriceInfo with native token USD price.
    * @throws CoinGeckoNotConfiguredError if API key is empty.
    * @throws PriceNotAvailableError if chain is unsupported or no data.
    */
   async getNativePrice(chain: ChainType): Promise<PriceInfo> {
+    const network = resolveNetwork(chain);
+    return this.getNativePriceByNetwork(network);
+  }
+
+  /**
+   * Get native token price by NetworkType.
+   *
+   * Internal helper used by getPrice() and getPrices() where network is already resolved.
+   */
+  private async getNativePriceByNetwork(network: string): Promise<PriceInfo> {
     this.ensureConfigured();
 
-    const platform = getCoinGeckoPlatform(chain);
+    const platform = getCoinGeckoPlatform(network);
     if (!platform) {
       throw new PriceNotAvailableError(
-        `Unsupported chain for CoinGecko native price: ${chain}`,
+        `Unsupported network for CoinGecko native price: ${network}`,
       );
     }
 
@@ -172,7 +188,7 @@ export class CoinGeckoOracle implements IPriceOracle {
     const coinData = data[platform.nativeCoinId];
     if (!coinData?.usd) {
       throw new PriceNotAvailableError(
-        `CoinGecko returned no native price for ${chain}`,
+        `CoinGecko returned no native price for ${network}`,
       );
     }
 
@@ -226,17 +242,19 @@ export class CoinGeckoOracle implements IPriceOracle {
     };
   }
 
-  /** Fetch batch token prices for a single chain and add to result map. */
+  /** Fetch batch token prices for a single network and add to result map. */
   private async fetchBatchTokenPrices(
-    chain: string,
+    network: string,
     tokens: TokenRef[],
     result: Map<string, PriceInfo>,
   ): Promise<void> {
-    const platform = getCoinGeckoPlatform(chain);
+    const platform = getCoinGeckoPlatform(network);
     if (!platform) return;
 
+    // EVM addresses must be lowercased for CoinGecko API
+    const isEvm = tokens[0]?.chain === 'ethereum';
     const addresses = tokens.map((t) =>
-      chain === 'ethereum' ? t.address.toLowerCase() : t.address,
+      isEvm ? t.address.toLowerCase() : t.address,
     );
 
     const url =
@@ -249,13 +267,14 @@ export class CoinGeckoOracle implements IPriceOracle {
       const data = await this.fetchJson<Record<string, { usd?: number; last_updated_at?: number }>>(url);
 
       for (const token of tokens) {
-        const addr = chain === 'ethereum'
+        const addr = isEvm
           ? token.address.toLowerCase()
           : token.address;
         const tokenData = data[addr];
         if (tokenData?.usd) {
+          const tokenNetwork = resolveNetwork(token.chain, token.network);
           result.set(
-            buildCacheKey(chain, token.address),
+            buildCacheKey(tokenNetwork, token.address),
             this.buildPriceInfo(tokenData.usd),
           );
         }

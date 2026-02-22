@@ -363,4 +363,157 @@ describe('resolveEffectiveAmountUsd', () => {
     const success = result as PriceResultSuccess;
     expect(success.usdAmount).toBeCloseTo(101, 2); // $100 + $1 + $0
   });
+
+  // -----------------------------------------------------------------------
+  // 16. TOKEN_TRANSFER: network parameter is forwarded to oracle getPrice
+  // -----------------------------------------------------------------------
+  it('TOKEN_TRANSFER: passes network to oracle getPrice for L2 tokens', async () => {
+    const mockOracle = createMockOracle({
+      getPrice: vi.fn().mockResolvedValue(buildPrice(1)),
+    });
+
+    const request = {
+      to: '0xrecipient',
+      amount: '1000000',
+      token: { address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', decimals: 6, symbol: 'USDC' },
+    };
+    const result = await resolveEffectiveAmountUsd(
+      request, 'TOKEN_TRANSFER', 'ethereum', mockOracle, 'polygon-mainnet',
+    );
+
+    expect(result.type).toBe('success');
+    // Verify oracle received network in TokenRef
+    expect(mockOracle.getPrice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+        decimals: 6,
+        chain: 'ethereum',
+        network: 'polygon-mainnet',
+      }),
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 17. TOKEN_TRANSFER: backward compatibility -- no network -> undefined
+  // -----------------------------------------------------------------------
+  it('TOKEN_TRANSFER: backward compatible without network parameter', async () => {
+    const mockOracle = createMockOracle({
+      getPrice: vi.fn().mockResolvedValue(buildPrice(1)),
+    });
+
+    const request = {
+      to: 'abc123',
+      amount: '1000000',
+      token: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, symbol: 'USDC' },
+    };
+    // No network parameter (5th arg omitted)
+    const result = await resolveEffectiveAmountUsd(request, 'TOKEN_TRANSFER', 'solana', mockOracle);
+
+    expect(result.type).toBe('success');
+    // Verify oracle received undefined network (resolveNetwork handles default)
+    expect(mockOracle.getPrice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        chain: 'solana',
+        network: undefined,
+      }),
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 18a. BATCH: non-PriceNotAvailableError in TOKEN_TRANSFER -> oracleDown
+  // -----------------------------------------------------------------------
+  it('BATCH: returns oracleDown when TOKEN_TRANSFER throws non-PriceNotAvailableError', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+      getPrice: vi.fn().mockRejectedValue(new Error('Network timeout')),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        {
+          to: 'addr1',
+          amount: '1000000',
+          token: { address: 'someToken', decimals: 6, symbol: 'TKN' },
+        },
+      ],
+    };
+    const result = await resolveEffectiveAmountUsd(request, 'BATCH', 'solana', mockOracle);
+
+    expect(result.type).toBe('oracleDown');
+  });
+
+  // -----------------------------------------------------------------------
+  // 18b. BATCH: CONTRACT_CALL with value='0' -> $0 contribution
+  // -----------------------------------------------------------------------
+  it('BATCH: CONTRACT_CALL with value "0" contributes $0 to total', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        { to: 'addr1', amount: '1000000000' }, // TRANSFER: 1 SOL = $100
+        { to: 'contractAddr', calldata: '0x12345678', value: '0' }, // CONTRACT_CALL: $0
+      ],
+    };
+    const result = await resolveEffectiveAmountUsd(request, 'BATCH', 'solana', mockOracle);
+
+    expect(result.type).toBe('success');
+    const success = result as PriceResultSuccess;
+    expect(success.usdAmount).toBeCloseTo(100, 2); // Only TRANSFER contributes
+  });
+
+  // -----------------------------------------------------------------------
+  // 18c. BATCH: CONTRACT_CALL with non-zero value -> adds to total
+  // -----------------------------------------------------------------------
+  it('BATCH: CONTRACT_CALL with non-zero value adds native amount to total', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        { to: 'contractAddr', calldata: '0x12345678', value: '500000000' }, // 0.5 SOL = $50
+      ],
+    };
+    const result = await resolveEffectiveAmountUsd(request, 'BATCH', 'solana', mockOracle);
+
+    expect(result.type).toBe('success');
+    const success = result as PriceResultSuccess;
+    expect(success.usdAmount).toBeCloseTo(50, 2);
+  });
+
+  // -----------------------------------------------------------------------
+  // 18. BATCH: network is forwarded to TOKEN_TRANSFER instructions
+  // -----------------------------------------------------------------------
+  it('BATCH: passes network to TOKEN_TRANSFER getPrice calls', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+      getPrice: vi.fn().mockResolvedValue(buildPrice(1)),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        {
+          to: '0xaddr',
+          amount: '1000000',
+          token: { address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', decimals: 6, symbol: 'USDC' },
+        },
+      ],
+    };
+    await resolveEffectiveAmountUsd(request, 'BATCH', 'ethereum', mockOracle, 'polygon-mainnet');
+
+    // Verify getPrice was called with network
+    expect(mockOracle.getPrice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: 'ethereum',
+        network: 'polygon-mainnet',
+      }),
+    );
+  });
 });

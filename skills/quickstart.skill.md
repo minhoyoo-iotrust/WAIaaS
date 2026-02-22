@@ -25,13 +25,13 @@ All endpoints use this base. The daemon runs locally on port 3100 by default.
 
 WAIaaS uses two authentication methods:
 
-| Auth Type | Header | Used For |
-|-----------|--------|----------|
-| **masterAuth** | `X-Master-Password: <password>` | Wallet creation, session creation, wallet listing, token registry, MCP provisioning, admin |
-| **sessionAuth** | `Authorization: Bearer <token>` | Balance queries, transactions, wallet updates/deletion, session renewal |
+| Auth Type | Header | Used For | Who |
+|-----------|--------|----------|-----|
+| **masterAuth** | `X-Master-Password: <password>` | Wallet creation, session creation, policy config, admin | **Operator only** |
+| **sessionAuth** | `Authorization: Bearer <token>` | Balance queries, transactions, wallet info, session renewal | AI agents |
 
-- **masterAuth** is for administrative operations. The master password is set in `config.toml` or via `WAIAAS_SECURITY_MASTER_PASSWORD` env var.
-- **sessionAuth** is for wallet-scoped operations. You get a JWT token by creating a session (Step 3 below). Each session is bound to one wallet.
+- **masterAuth** is for administrative operations performed by the **Operator** via Admin UI or CLI. AI agents must NEVER request or use the master password.
+- **sessionAuth** is for wallet-scoped operations. AI agents operate exclusively with session tokens (Bearer wai_sess_...).
 
 ## Self-Discovery (Recommended First Step)
 
@@ -325,3 +325,31 @@ Common error codes:
 - **transactions.skill.md** -- All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with full parameters
 - **policies.skill.md** -- Policy management (spending limits, whitelists, rate limits, approval tiers)
 - **admin.skill.md** -- Admin operations (kill switch, status, settings, notifications)
+
+## Asset Identification (CAIP-19)
+
+WAIaaS supports CAIP-19 standard asset identifiers for unambiguous cross-chain token identification. When sending token transfers, you can include an optional `assetId` field in the token object:
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TOKEN_TRANSFER",
+    "to": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
+    "amount": "5000000",
+    "token": {
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "decimals": 6,
+      "symbol": "USDC",
+      "assetId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    }
+  }'
+```
+
+CAIP-19 format: `{chain_id}/{asset_namespace}:{asset_reference}`
+- EVM tokens: `eip155:{chainId}/erc20:{lowercase_address}`
+- Solana tokens: `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:{base58_address}`
+- Native assets: `{chain_id}/slip44:{coin_type}` (ETH=60, SOL=501, POL=966)
+
+The `assetId` field is optional and backward compatible. See **transactions.skill.md** section 13 for full CAIP-19 reference.

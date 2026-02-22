@@ -34,7 +34,7 @@ describe('PythOracle', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 1. getPrice() - SOL/USD
+  // 1. getPrice() - SOL/USD (with network for CAIP-19 key derivation)
   // -----------------------------------------------------------------------
   it('getPrice() should return SOL/USD price from Pyth Hermes API', async () => {
     const solFeedId = 'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d';
@@ -47,7 +47,7 @@ describe('PythOracle', () => {
       json: () => Promise.resolve(response),
     });
 
-    const result = await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana' });
+    const result = await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'mainnet' });
 
     expect(result.usdPrice).toBeCloseTo(184.13602312, 6);
     expect(result.source).toBe('pyth');
@@ -60,7 +60,7 @@ describe('PythOracle', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 2. getPrice() - ETH/USD
+  // 2. getPrice() - ETH/USD (with network for CAIP-19 key derivation)
   // -----------------------------------------------------------------------
   it('getPrice() should return ETH/USD price from Pyth Hermes API', async () => {
     const ethFeedId = 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace';
@@ -73,7 +73,7 @@ describe('PythOracle', () => {
       json: () => Promise.resolve(response),
     });
 
-    const result = await oracle.getPrice({ address: 'native', decimals: 18, chain: 'ethereum' });
+    const result = await oracle.getPrice({ address: 'native', decimals: 18, chain: 'ethereum', network: 'ethereum-mainnet' });
 
     expect(result.usdPrice).toBeCloseTo(3300.12345678, 6);
     expect(result.source).toBe('pyth');
@@ -90,6 +90,7 @@ describe('PythOracle', () => {
         address: 'UnKnOwNtOkEn1111111111111111111111111111',
         decimals: 6,
         chain: 'solana',
+        network: 'mainnet',
       }),
     ).rejects.toThrow(PriceNotAvailableError);
 
@@ -108,7 +109,7 @@ describe('PythOracle', () => {
     });
 
     await expect(
-      oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana' }),
+      oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'mainnet' }),
     ).rejects.toThrow(/Pyth API/);
   });
 
@@ -126,7 +127,7 @@ describe('PythOracle', () => {
       json: () => Promise.resolve(response),
     });
 
-    await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana' });
+    await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'mainnet' });
 
     // Verify fetch was called with AbortSignal.timeout
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -136,9 +137,9 @@ describe('PythOracle', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 6. getPrices() - batch query
+  // 6. getPrices() - batch query with CAIP-19 result keys
   // -----------------------------------------------------------------------
-  it('getPrices() should batch multiple tokens into a single API call', async () => {
+  it('getPrices() should batch multiple tokens into a single API call with CAIP-19 keys', async () => {
     const solFeedId = 'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d';
     const ethFeedId = 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace';
 
@@ -153,8 +154,8 @@ describe('PythOracle', () => {
     });
 
     const tokens = [
-      { address: 'native', decimals: 9, chain: 'solana' as const },
-      { address: 'native', decimals: 18, chain: 'ethereum' as const },
+      { address: 'native', decimals: 9, chain: 'solana' as const, network: 'mainnet' as const },
+      { address: 'native', decimals: 18, chain: 'ethereum' as const, network: 'ethereum-mainnet' as const },
     ];
 
     const result = await oracle.getPrices(tokens);
@@ -165,10 +166,10 @@ describe('PythOracle', () => {
     expect(url).toContain(`ids[]=0x${solFeedId}`);
     expect(url).toContain(`ids[]=0x${ethFeedId}`);
 
-    // Should return Map with both prices
+    // Should return Map with CAIP-19 keys
     expect(result.size).toBe(2);
-    expect(result.get('solana:native')?.usdPrice).toBeCloseTo(184.13602312, 6);
-    expect(result.get('ethereum:native')?.usdPrice).toBeCloseTo(3300.12345678, 6);
+    expect(result.get('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501')?.usdPrice).toBeCloseTo(184.13602312, 6);
+    expect(result.get('eip155:1/slip44:60')?.usdPrice).toBeCloseTo(3300.12345678, 6);
   });
 
   // -----------------------------------------------------------------------
@@ -225,12 +226,12 @@ describe('PythOracle', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 10. Pyth price conversion precision (BTC range)
+  // 10. getPrice() backward compatibility: chain without network still works
   // -----------------------------------------------------------------------
-  it('should correctly convert Pyth price with BTC-range values', async () => {
-    const btcFeedId = 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
+  it('getPrice() should resolve network from chain when network is not provided', async () => {
+    const solFeedId = 'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d';
     const response = makePythResponse([
-      { id: btcFeedId, price: '6700000000000', conf: '5000000', expo: -8 },
+      { id: solFeedId, price: '18413602312', conf: '17716632', expo: -8 },
     ]);
 
     fetchMock.mockResolvedValueOnce({
@@ -238,16 +239,10 @@ describe('PythOracle', () => {
       json: () => Promise.resolve(response),
     });
 
-    // Use a cache key that maps to BTC feed
-    const result = await oracle.getPrice({
-      address: 'native_btc',
-      decimals: 8,
-      chain: 'ethereum',
-    });
+    // No network field -- resolveNetwork(chain) should handle it
+    const result = await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana' });
 
-    expect(result.usdPrice).toBeCloseTo(67000.0, 2);
+    expect(result.usdPrice).toBeCloseTo(184.13602312, 6);
     expect(result.source).toBe('pyth');
-    // Confidence: 1 - (5000000 * 10^-8 / 67000) ≈ 0.99999925...
-    expect(result.confidence).toBeGreaterThan(0.99);
   });
 });

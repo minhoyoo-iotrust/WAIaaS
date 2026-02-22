@@ -41,6 +41,7 @@ class AssetInfo(BaseModel):
     decimals: int
     is_native: bool = Field(alias="isNative")
     usd_value: Optional[float] = Field(default=None, alias="usdValue")
+    asset_id: Optional[str] = Field(default=None, alias="assetId")
 
     model_config = {"populate_by_name": True}
 
@@ -141,6 +142,9 @@ class TokenInfo(BaseModel):
     address: str
     decimals: int
     symbol: str
+    asset_id: Optional[str] = Field(default=None, alias="assetId")
+
+    model_config = {"populate_by_name": True}
 
 
 class SendTokenRequest(BaseModel):

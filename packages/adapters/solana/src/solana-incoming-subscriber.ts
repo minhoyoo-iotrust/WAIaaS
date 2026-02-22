@@ -186,6 +186,28 @@ export class SolanaIncomingSubscriber implements IChainSubscriber {
     this.disconnectResolve?.();
   }
 
+  // -- RPC helpers (used by confirmation worker) --
+
+  /**
+   * Checks if a Solana transaction has reached 'finalized' commitment.
+   * Returns true if the transaction exists at finalized level, false otherwise.
+   * Used by the confirmation worker to transition DETECTED → CONFIRMED.
+   */
+  async checkFinalized(txHash: string): Promise<boolean> {
+    try {
+      const tx = await this.rpc
+        .getTransaction(txHash as Signature, {
+          commitment: 'finalized',
+          maxSupportedTransactionVersion: 0,
+          encoding: 'jsonParsed',
+        })
+        .send();
+      return tx !== null;
+    } catch {
+      return false;
+    }
+  }
+
   // -- Polling (public for BackgroundWorkers in Phase 226) --
 
   /**

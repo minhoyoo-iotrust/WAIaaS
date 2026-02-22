@@ -1352,13 +1352,31 @@
 
 
 
+---
 
-## v27.1 수신 트랜잭션 모니터링 구현 (Shipped: 2026-02-22)
+## v27.2 CAIP-19 자산 식별 표준 (Shipped: 2026-02-22)
 
-**Phases completed:** 156 phases, 334 plans, 50 tasks
+**Delivered:** WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일. Custom CAIP-2/19 파서 모듈(~240 LOC, 외부 의존성 0), 13-네트워크 양방향 맵, 가격 오라클 L2 지원(Polygon/Arbitrum/Optimism/Base), DB v22 마이그레이션(asset_id 컬럼 + 자동 backfill), 4-시나리오 정책 매칭 매트릭스, MCP/SDK/Skills CAIP-19 확장. 모든 변경 additive(하위 호환).
+
+**Phases completed:** 231-234 (4 phases, 9 plans, 31 requirements)
 
 **Key accomplishments:**
-- (none recorded)
+
+- CAIP-2/19 파서/포매터 + Zod 스키마 + 13-네트워크 양방향 맵(NETWORK_TO_CAIP2/CAIP2_TO_NETWORK) + slip44 native asset helpers
+- 가격 오라클 CAIP-19 캐시 키 전환 + CoinGecko L2 플랫폼 매핑(polygon-pos, arbitrum-one, optimistic-ethereum, base) + Pyth 피드 ID 원자적 전환
+- DB v22 마이그레이션: token_registry.asset_id 컬럼 + CAIP-19 자동 backfill + Token API assetId 응답
+- TokenInfoSchema assetId cross-validation + TransactionParam assetId 전파 + 4-시나리오 ALLOWED_TOKENS 정책 매칭
+- MCP 토큰 도구 assetId 파라미터 + TS/Python SDK 타입 확장 + 3개 스킬 파일 CAIP-19 문서화
+
+**Stats:**
+
+- 4 phases, 9 plans, 31 requirements, 62 commits
+- 135 files changed, +12,997 / -2,406 lines
+- ~157,584 LOC TypeScript
+- Timeline: 1 day (2026-02-22)
+- Git range: v27.1..HEAD
+
+**What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
 

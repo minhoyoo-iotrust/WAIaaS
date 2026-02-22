@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TransactionTypeEnum, TransactionStatusEnum } from '../enums/transaction.js';
 import { PolicyTierEnum } from '../enums/policy.js';
 import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
+import { Caip19Schema, parseCaip19 } from '../caip/index.js';
 
 export const TransactionSchema = z.object({
   id: z.string().uuid(),
@@ -51,10 +52,36 @@ export const TransferRequestSchema = z.object({
 export type TransferRequestInput = z.infer<typeof TransferRequestSchema>;
 
 /** Token metadata for TOKEN_TRANSFER and APPROVE requests. */
-const TokenInfoSchema = z.object({
+const TokenInfoBaseSchema = z.object({
   address: z.string().min(1), // mint address (SPL) or contract address (ERC-20)
   decimals: z.number().int().min(0).max(18),
   symbol: z.string().min(1).max(10),
+  assetId: Caip19Schema.optional(),
+});
+
+/** TokenInfoSchema with cross-validation: when assetId is provided, its address must match the address field. */
+const TokenInfoSchema = TokenInfoBaseSchema.superRefine((data, ctx) => {
+  if (!data.assetId) return; // No assetId -> skip cross-validation (TXSC-03)
+
+  try {
+    const parsed = parseCaip19(data.assetId);
+    const extractedAddress = parsed.assetReference;
+
+    // Cross-validate: case-insensitive for EVM (Pitfall 1: checksummed vs lowercased)
+    if (extractedAddress.toLowerCase() !== data.address.toLowerCase()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `assetId address '${extractedAddress}' does not match provided address '${data.address}'`,
+        path: ['assetId'],
+      });
+    }
+  } catch {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid CAIP-19 assetId: ${data.assetId}`,
+      path: ['assetId'],
+    });
+  }
 });
 
 /** Type 2: TOKEN_TRANSFER -- SPL/ERC-20 token transfer. */
