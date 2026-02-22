@@ -43,9 +43,9 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Wallet List
 
-- [ ] **WLST-01**: 지갑 이름 또는 공개키로 실시간 검색 필터링할 수 있다
-- [ ] **WLST-02**: 체인/환경/상태로 지갑 목록을 필터링할 수 있다
-- [ ] **WLST-03**: 지갑 목록에 기본 네트워크 네이티브 토큰 잔액 + USD 가치가 표시된다
+- [x] **WLST-01**: 지갑 이름 또는 공개키로 실시간 검색 필터링할 수 있다
+- [x] **WLST-02**: 체인/환경/상태로 지갑 목록을 필터링할 수 있다
+- [x] **WLST-03**: 지갑 목록에 기본 네트워크 네이티브 토큰 잔액 + USD 가치가 표시된다
 
 ### Wallet Detail
 
@@ -113,9 +113,9 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | INTX-02 | Phase 242 | Complete |
 | INTX-03 | Phase 242 | Complete |
 | INTX-04 | Phase 242 | Complete |
-| WLST-01 | Phase 243 | Pending |
-| WLST-02 | Phase 243 | Pending |
-| WLST-03 | Phase 243 | Pending |
+| WLST-01 | Phase 243 | Complete |
+| WLST-02 | Phase 243 | Complete |
+| WLST-03 | Phase 243 | Complete |
 | WDET-01 | Phase 243 | Pending |
 | WDET-02 | Phase 243 | Pending |
 | WDET-03 | Phase 243 | Pending |

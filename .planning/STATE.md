@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 242 -- Incoming TX Monitoring UI
+**Current focus:** Phase 243 -- Wallet List + Wallet Detail
 
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 4 of 5 (Phase 242: Incoming TX Monitoring UI) -- IN PROGRESS
-Plan: 1 of 1 in current phase
-Status: Plan 242-01 complete
-Last activity: 2026-02-23 -- Completed 242-01 (Incoming TX Monitoring UI)
+Phase: 5 of 5 (Phase 243: Wallet List + Wallet Detail) -- IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Plan 243-01 complete
+Last activity: 2026-02-23 -- Completed 243-01 (Wallet List Search, Filter, Balance)
 
-Progress: [########..] 80%
+Progress: [#########.] 90%
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Progress: [########..] 80%
 | 240 | 2/2 | 10min | 5min |
 | 241 | 2/2 | 6min | 3min |
 | 242 | 1/1 | 6min | 6min |
+| 243 | 1/2 | 5min | 5min |
 
 ## Accumulated Context
 
@@ -65,6 +66,10 @@ Progress: [########..] 80%
 - 242-01: apiPatch helper added for PATCH mutations
 - 242-01: monitorIncoming added to WalletCrudResponseSchema
 - 242-01: syncUrl=false for /incoming FilterBar (standalone page, no tab routing)
+- 243-01: walletColumns moved inside WalletListContent to reference balances signal
+- 243-01: syncUrl=false for wallet list FilterBar (tab-routed page uses hash for tab state)
+- 243-01: Balance fetch capped at first 50 wallets (BALANCE_FETCH_LIMIT)
+- 243-01: No USD in balance column (balance API lacks amountUsd)
 
 ### Blockers/Concerns
 
@@ -73,5 +78,5 @@ Progress: [########..] 80%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 242-01-PLAN.md
+Stopped at: Completed 243-01-PLAN.md
 Resume file: None
