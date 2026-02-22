@@ -481,6 +481,7 @@ const adminWalletTransactionsRoute = createRoute({
     params: z.object({ id: z.string().uuid() }),
     query: z.object({
       limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+      offset: z.coerce.number().int().min(0).default(0).optional(),
     }),
   },
   responses: {
@@ -532,6 +533,7 @@ const adminWalletBalanceRoute = createRoute({
                   .object({
                     balance: z.string(),
                     symbol: z.string(),
+                    usd: z.number().nullable().optional(),
                   })
                   .nullable(),
                 tokens: z.array(
@@ -1565,6 +1567,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const { id } = c.req.valid('param');
     const query = c.req.valid('query');
     const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
 
     // Verify wallet exists
     const wallet = deps.db.select().from(wallets).where(eq(wallets.id, id)).get();
@@ -1579,6 +1582,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .where(eq(transactions.walletId, id))
       .orderBy(desc(transactions.createdAt))
       .limit(limit)
+      .offset(offset)
       .all();
 
     // Total count
@@ -1641,6 +1645,15 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         const balanceInfo = await adapter.getBalance(wallet.publicKey);
         const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
 
+        // Resolve USD price for native token if price oracle is available
+        let nativeUsd: number | null = null;
+        if (deps.priceOracle) {
+          try {
+            const priceInfo = await deps.priceOracle.getNativePrice(chain);
+            nativeUsd = Number(nativeBalance) * priceInfo.usdPrice;
+          } catch { /* non-critical: USD price unavailable */ }
+        }
+
         const assets = await adapter.getAssets(wallet.publicKey);
         const tokens = assets
           .filter((a) => !a.isNative)
@@ -1653,7 +1666,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         return {
           network,
           isDefault: network === defaultNetwork,
-          native: { balance: nativeBalance, symbol: balanceInfo.symbol },
+          native: { balance: nativeBalance, symbol: balanceInfo.symbol, usd: nativeUsd },
           tokens,
         };
       }),
