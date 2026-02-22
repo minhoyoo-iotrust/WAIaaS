@@ -63,8 +63,8 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Notification Log
 
-- [ ] **NLOG-01**: 알림 로그를 이벤트 타입, 채널, 상태, 날짜 범위로 필터링할 수 있다
-- [ ] **NLOG-02**: 알림 로그의 Wallet ID 클릭 시 지갑 상세 페이지로 이동한다
+- [x] **NLOG-01**: 알림 로그를 이벤트 타입, 채널, 상태, 날짜 범위로 필터링할 수 있다
+- [x] **NLOG-02**: 알림 로그의 Wallet ID 클릭 시 지갑 상세 페이지로 이동한다
 
 ## Future Requirements
 
@@ -107,8 +107,8 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | TOKR-02 | Phase 241 | Complete |
 | TOKR-03 | Phase 241 | Complete |
 | TOKR-04 | Phase 241 | Complete |
-| NLOG-01 | Phase 241 | Pending |
-| NLOG-02 | Phase 241 | Pending |
+| NLOG-01 | Phase 241 | Complete |
+| NLOG-02 | Phase 241 | Complete |
 | INTX-01 | Phase 242 | Pending |
 | INTX-02 | Phase 242 | Pending |
 | INTX-03 | Phase 242 | Pending |

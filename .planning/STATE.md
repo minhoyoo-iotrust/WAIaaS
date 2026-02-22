@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 3 of 5 (Phase 241: Token Registry + Notification Log) -- IN PROGRESS
-Plan: 1 of 2 in current phase
-Status: Plan 241-01 complete
-Last activity: 2026-02-23 -- Completed 241-01 (Token Registry Page)
+Phase: 3 of 5 (Phase 241: Token Registry + Notification Log) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-23 -- Completed 241-02 (Notification Log Filters + Wallet Links)
 
-Progress: [#####.....] 50%
+Progress: [######....] 60%
 
 ## Performance Metrics
 
@@ -36,7 +36,7 @@ Progress: [#####.....] 50%
 | 238 | 1/1 | 3min | 3min |
 | 239 | 2/2 | -- | -- |
 | 240 | 2/2 | 10min | 5min |
-| 241 | 1/2 | 3min | 3min |
+| 241 | 2/2 | 6min | 3min |
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ Progress: [#####.....] 50%
 - 240-02: Network column before Status, Tx Hash column after Status in Recent Activity table
 - 241-01: apiDelete extended with optional body parameter for DELETE /v1/tokens JSON body requirement
 - 241-01: Inlined EVM_NETWORKS constant (10 networks) in tokens.tsx, matching pattern from transactions.tsx
+- 241-02: syncUrl=false for notification log FilterBar (tab-routed page uses hash for tab state)
+- 241-02: Date filters convert YYYY-MM-DD to Unix seconds (start-of-day for since, end-of-day for until)
 
 ### Blockers/Concerns
 
@@ -66,5 +68,5 @@ Progress: [#####.....] 50%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 241-01-PLAN.md
+Stopped at: Completed 241-02-PLAN.md
 Resume file: None
