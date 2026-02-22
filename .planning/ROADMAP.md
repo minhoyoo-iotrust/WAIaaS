@@ -254,11 +254,11 @@ Plans:
   2. 컨트랙트 주소 입력 시 온체인 메타데이터가 자동 조회되고, 확인 후 커스텀 토큰이 등록된다
   3. 커스텀 토큰만 삭제 가능하며 빌트인 토큰에는 삭제 불가 표시가 있다
   4. 알림 로그를 이벤트 타입/채널/상태/날짜 범위로 필터링할 수 있고, Wallet ID 클릭 시 지갑 상세 페이지로 이동한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 241-01: Token registry page (list, add, delete, network filter)
-- [ ] 241-02: Notification log filter bar + wallet link
+- [ ] 241-01-PLAN.md -- Token registry page (network filter, token table, add form, delete, source badges)
+- [ ] 241-02-PLAN.md -- Notification log filter bar (event type/channel/status/date) + clickable wallet links
 
 ### Phase 242: Incoming TX Monitoring UI
 **Goal**: 운영자가 수신 트랜잭션 모니터링 설정과 크로스 지갑 수신 TX 조회를 단일 /incoming 페이지에서 수행할 수 있다
