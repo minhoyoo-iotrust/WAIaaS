@@ -2,7 +2,7 @@
  * WcSessionService pairing / session management unit tests (Phase 147).
  *
  * Tests createPairing, getSessionInfo, getPairingStatus, disconnectSession,
- * getSessionTopic, and CAIP2_CHAIN_IDS constant verification.
+ * getSessionTopic, and NETWORK_TO_CAIP2 constant verification.
  *
  * Uses in-memory SQLite with pushSchema for a fresh DB per test.
  * SignClient is mocked via (service as any).signClient assignment.
@@ -10,11 +10,11 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, NETWORK_TO_CAIP2 } from '@waiaas/core';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import { SettingsService } from '../infrastructure/settings/settings-service.js';
-import { WcSessionService, CAIP2_CHAIN_IDS } from '../services/wc-session-service.js';
+import { WcSessionService } from '../services/wc-session-service.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
@@ -267,28 +267,28 @@ describe('WcSessionService Pairing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // CAIP2_CHAIN_IDS constant verification
+  // NETWORK_TO_CAIP2 constant verification
   // -------------------------------------------------------------------------
 
-  describe('CAIP2_CHAIN_IDS', () => {
+  describe('NETWORK_TO_CAIP2', () => {
     it('maps Solana devnet correctly', () => {
-      expect(CAIP2_CHAIN_IDS['devnet']).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
+      expect(NETWORK_TO_CAIP2['devnet']).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
     });
 
     it('maps ethereum-sepolia correctly', () => {
-      expect(CAIP2_CHAIN_IDS['ethereum-sepolia']).toBe('eip155:11155111');
+      expect(NETWORK_TO_CAIP2['ethereum-sepolia']).toBe('eip155:11155111');
     });
 
     it('maps Solana mainnet correctly', () => {
-      expect(CAIP2_CHAIN_IDS['mainnet']).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
+      expect(NETWORK_TO_CAIP2['mainnet']).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
     });
 
     it('maps base-sepolia correctly', () => {
-      expect(CAIP2_CHAIN_IDS['base-sepolia']).toBe('eip155:84532');
+      expect(NETWORK_TO_CAIP2['base-sepolia']).toBe('eip155:84532');
     });
 
     it('has 13 entries total (3 Solana + 10 EVM)', () => {
-      expect(Object.keys(CAIP2_CHAIN_IDS).length).toBe(13);
+      expect(Object.keys(NETWORK_TO_CAIP2).length).toBe(13);
     });
   });
 });

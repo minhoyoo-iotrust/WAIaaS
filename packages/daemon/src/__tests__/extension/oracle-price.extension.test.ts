@@ -16,7 +16,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { IPriceOracle, PriceInfo, TokenRef, ChainType, CacheStats } from '@waiaas/core';
 import { OracleChain } from '../../infrastructure/oracle/oracle-chain.js';
-import { InMemoryPriceCache } from '../../infrastructure/oracle/price-cache.js';
+import { InMemoryPriceCache, buildCacheKey } from '../../infrastructure/oracle/price-cache.js';
 import { PriceNotAvailableError } from '../../infrastructure/oracle/oracle-errors.js';
 import { classifyPriceAge, PRICE_AGE_THRESHOLDS } from '../../infrastructure/oracle/price-age.js';
 import {
@@ -379,11 +379,12 @@ describe('ORC-I01~I06: integration -- OracleChain', () => {
   });
 
   it('ORC-I05: CoinGecko 429 simulation -> stale cache fallback', async () => {
-    // Pre-populate cache
-    cache.set('solana:native', buildPrice(180, { source: 'pyth' }));
+    // Pre-populate cache with CAIP-19 key (matches OracleChain's buildCacheKey)
+    const solCacheKey = buildCacheKey('mainnet', 'native');
+    cache.set(solCacheKey, buildPrice(180, { source: 'pyth' }));
 
     // Expire TTL but within staleMax
-    const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get('solana:native');
+    const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get(solCacheKey);
     if (entry) {
       entry.expiresAt = Date.now() - 1000;
     }
@@ -412,8 +413,8 @@ describe('ORC-I01~I06: integration -- OracleChain', () => {
     const result = await oracle.getPrices([SOL_TOKEN, USDC_TOKEN]);
 
     expect(result.size).toBe(1);
-    expect(result.has('solana:native')).toBe(true);
-    expect(result.has(`solana:${USDC_TOKEN.address}`)).toBe(false);
+    expect(result.has(buildCacheKey('mainnet', 'native'))).toBe(true);
+    expect(result.has(buildCacheKey('mainnet', USDC_TOKEN.address))).toBe(false);
   });
 });
 
@@ -565,9 +566,10 @@ describe('ORC-X01~X08: cross-validation + price age + cache', () => {
   });
 
   it('ORC-X07: total oracle failure + stale cache -> isStale=true, source=cache', async () => {
-    // Pre-populate and expire
-    cache.set('solana:native', buildPrice(180));
-    const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get('solana:native');
+    // Pre-populate and expire with CAIP-19 key
+    const solCacheKey = buildCacheKey('mainnet', 'native');
+    cache.set(solCacheKey, buildPrice(180));
+    const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get(solCacheKey);
     if (entry) {
       entry.expiresAt = Date.now() - 1000;
     }

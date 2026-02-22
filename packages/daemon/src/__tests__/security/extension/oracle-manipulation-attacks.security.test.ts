@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { IPriceOracle, PriceInfo, TokenRef, ChainType, CacheStats } from '@waiaas/core';
 import { OracleChain } from '../../../infrastructure/oracle/oracle-chain.js';
-import { InMemoryPriceCache } from '../../../infrastructure/oracle/price-cache.js';
+import { InMemoryPriceCache, buildCacheKey } from '../../../infrastructure/oracle/price-cache.js';
 import { PriceNotAvailableError } from '../../../infrastructure/oracle/oracle-errors.js';
 
 // ---------------------------------------------------------------------------
@@ -160,10 +160,11 @@ describe('SEC-10-04: Stale cache returned when oracles fail', () => {
   it('returns stale data with isStale=true from cache', async () => {
     // Pre-populate cache with data that is past TTL but within staleMax
     const stalePrice = priceInfo(180, { source: 'pyth' });
-    cache.set('solana:native', stalePrice);
+    const solCacheKey = buildCacheKey('mainnet', 'native');
+    cache.set(solCacheKey, stalePrice);
 
     // Fast-forward past TTL (5 min) but within staleMax (30 min)
-    const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get('solana:native');
+    const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get(solCacheKey);
     if (entry) {
       entry.expiresAt = Date.now() - 1000; // expired TTL
     }
@@ -288,8 +289,8 @@ describe('SEC-10-10: getPrices with partial failures', () => {
     const result = await oracle.getPrices([SOL_TOKEN, USDC_TOKEN]);
 
     expect(result.size).toBe(1);
-    expect(result.has('solana:native')).toBe(true);
-    expect(result.has('solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')).toBe(false);
+    expect(result.has(buildCacheKey('mainnet', 'native'))).toBe(true);
+    expect(result.has(buildCacheKey('mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))).toBe(false);
   });
 });
 
@@ -498,8 +499,8 @@ describe('SEC-10-18: getPrices batch with mixed results', () => {
     const result = await oracle.getPrices([token1, token2, token3]);
 
     expect(result.size).toBe(2);
-    expect(result.get('solana:Token1')?.usdPrice).toBe(10);
-    expect(result.get('solana:Token3')?.usdPrice).toBe(30);
+    expect(result.get(buildCacheKey('mainnet', 'Token1'))?.usdPrice).toBe(10);
+    expect(result.get(buildCacheKey('mainnet', 'Token3'))?.usdPrice).toBe(30);
   });
 });
 
