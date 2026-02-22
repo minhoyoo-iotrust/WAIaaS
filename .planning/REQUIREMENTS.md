@@ -18,14 +18,14 @@
 
 - [x] **ENGN-01**: TransactionParam에 tokenDecimals 필드가 추가되고 3곳 인터페이스가 동기화됨
 - [x] **ENGN-02**: buildTransactionParam()이 TOKEN_TRANSFER/APPROVE에서 tokenDecimals를 전달함
-- [ ] **ENGN-03**: evaluateSpendingLimit()에 tokenContext 파라미터가 추가됨
-- [ ] **ENGN-04**: evaluateTokenTier() 함수가 CAIP-19 키 매칭 순서(정확→native:{chain}→native→raw 폴백)로 평가함
-- [ ] **ENGN-05**: 토큰별 한도 매칭 시 raw amount를 decimal 변환하여 사람 읽기 단위로 비교함
-- [ ] **ENGN-06**: token_limits 매칭 없을 때 기존 raw 필드로 폴백함
-- [ ] **ENGN-07**: raw 필드도 없을 때 네이티브 티어 평가를 스킵하고 USD만으로 판정함
-- [ ] **ENGN-08**: per-tx 최종 티어가 maxTier(USD 티어, 토큰별 티어)로 결정됨
-- [ ] **ENGN-09**: APPROVE + APPROVE_TIER_OVERRIDE 존재 시 token_limits가 무시됨
-- [ ] **ENGN-10**: CONTRACT_CALL/BATCH에서 token_limits가 적용되지 않음
+- [x] **ENGN-03**: evaluateSpendingLimit()에 tokenContext 파라미터가 추가됨
+- [x] **ENGN-04**: evaluateTokenTier() 함수가 CAIP-19 키 매칭 순서(정확→native:{chain}→native→raw 폴백)로 평가함
+- [x] **ENGN-05**: 토큰별 한도 매칭 시 raw amount를 decimal 변환하여 사람 읽기 단위로 비교함
+- [x] **ENGN-06**: token_limits 매칭 없을 때 기존 raw 필드로 폴백함
+- [x] **ENGN-07**: raw 필드도 없을 때 네이티브 티어 평가를 스킵하고 USD만으로 판정함
+- [x] **ENGN-08**: per-tx 최종 티어가 maxTier(USD 티어, 토큰별 티어)로 결정됨
+- [x] **ENGN-09**: APPROVE + APPROVE_TIER_OVERRIDE 존재 시 token_limits가 무시됨
+- [x] **ENGN-10**: CONTRACT_CALL/BATCH에서 token_limits가 적용되지 않음
 
 ### Admin (UI 폼)
 
@@ -68,14 +68,14 @@
 | SCHM-06 | Phase 235 | Complete |
 | ENGN-01 | Phase 236 | Complete |
 | ENGN-02 | Phase 236 | Complete |
-| ENGN-03 | Phase 236 | Pending |
-| ENGN-04 | Phase 236 | Pending |
-| ENGN-05 | Phase 236 | Pending |
-| ENGN-06 | Phase 236 | Pending |
-| ENGN-07 | Phase 236 | Pending |
-| ENGN-08 | Phase 236 | Pending |
-| ENGN-09 | Phase 236 | Pending |
-| ENGN-10 | Phase 236 | Pending |
+| ENGN-03 | Phase 236 | Complete |
+| ENGN-04 | Phase 236 | Complete |
+| ENGN-05 | Phase 236 | Complete |
+| ENGN-06 | Phase 236 | Complete |
+| ENGN-07 | Phase 236 | Complete |
+| ENGN-08 | Phase 236 | Complete |
+| ENGN-09 | Phase 236 | Complete |
+| ENGN-10 | Phase 236 | Complete |
 | ADMN-01 | Phase 237 | Pending |
 | ADMN-02 | Phase 237 | Pending |
 | ADMN-03 | Phase 237 | Pending |
