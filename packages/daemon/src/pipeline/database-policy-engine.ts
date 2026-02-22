@@ -48,9 +48,9 @@ import type { SettingsService } from '../infrastructure/settings/settings-servic
 // ---------------------------------------------------------------------------
 
 interface SpendingLimitRules {
-  instant_max: string;
-  notify_max: string;
-  delay_max: string;
+  instant_max?: string;   // Phase 235: optional (was required, now optional for USD-only/token_limits-only policies)
+  notify_max?: string;    // Phase 235: optional
+  delay_max?: string;     // Phase 235: optional
   delay_seconds: number;
   // Phase 127: USD 기준 (optional)
   instant_max_usd?: number;
@@ -59,6 +59,8 @@ interface SpendingLimitRules {
   // Phase 136: 누적 USD 한도 (optional)
   daily_limit_usd?: number;
   monthly_limit_usd?: number;
+  // Phase 235: 토큰별 한도 (optional)
+  token_limits?: Record<string, { instant_max: string; notify_max: string; delay_max: string }>;
 }
 
 interface WhitelistRules {
@@ -1307,11 +1309,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
   /**
    * Evaluate native amount tier (extracted from evaluateSpendingLimit).
+   * Note: non-null assertions used here -- Phase 236 will add proper undefined guards.
    */
   private evaluateNativeTier(amountBig: bigint, rules: SpendingLimitRules): PolicyTier {
-    const instantMax = BigInt(rules.instant_max);
-    const notifyMax = BigInt(rules.notify_max);
-    const delayMax = BigInt(rules.delay_max);
+    const instantMax = BigInt(rules.instant_max!);
+    const notifyMax = BigInt(rules.notify_max!);
+    const delayMax = BigInt(rules.delay_max!);
 
     if (amountBig <= instantMax) {
       return 'INSTANT';

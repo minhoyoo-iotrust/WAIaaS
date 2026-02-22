@@ -46,19 +46,39 @@ const DIGIT_STRING_REGEX = /^\d+$/;
 
 /**
  * Validate SPENDING_LIMIT rules structure.
- * Required fields: instant_max, notify_max, delay_max (digit strings).
+ * At least one of: raw limits, USD limits, or token_limits must be present.
+ * Raw fields are validated only when present (backward compat).
  * Optional: delay_seconds (number), approval_timeout (number).
  */
 function validateSpendingLimitRules(rules: Record<string, unknown>): void {
-  const required = ['instant_max', 'notify_max', 'delay_max'] as const;
-  for (const field of required) {
+  const rawFields = ['instant_max', 'notify_max', 'delay_max'] as const;
+  const usdFields = ['instant_max_usd', 'notify_max_usd', 'delay_max_usd'] as const;
+
+  const hasRaw = rawFields.some((f) => rules[f] !== undefined);
+  const hasUsd = usdFields.some((f) => rules[f] !== undefined);
+  const hasTokenLimits =
+    rules.token_limits !== undefined &&
+    typeof rules.token_limits === 'object' &&
+    rules.token_limits !== null &&
+    Object.keys(rules.token_limits).length > 0;
+
+  if (!hasRaw && !hasUsd && !hasTokenLimits) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message:
+        'SPENDING_LIMIT rules must include at least one of: raw limits (instant_max/notify_max/delay_max), USD limits, or token_limits',
+    });
+  }
+
+  // If raw fields ARE present, validate they are digit strings (backward compat)
+  for (const field of rawFields) {
     const value = rules[field];
-    if (typeof value !== 'string' || !DIGIT_STRING_REGEX.test(value)) {
+    if (value !== undefined && (typeof value !== 'string' || !DIGIT_STRING_REGEX.test(value))) {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: `SPENDING_LIMIT rules.${field} must be a digit string`,
       });
     }
   }
+
   if (rules.delay_seconds !== undefined && typeof rules.delay_seconds !== 'number') {
     throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
       message: 'SPENDING_LIMIT rules.delay_seconds must be a number',
