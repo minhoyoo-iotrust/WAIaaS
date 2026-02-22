@@ -26,6 +26,8 @@ export {
   type CreatePolicyRequest,
   UpdatePolicyRequestSchema,
   type UpdatePolicyRequest,
+  TokenLimitSchema,
+  type TokenLimit,
   SpendingLimitRulesSchema,
   type SpendingLimitRules,
   WhitelistRulesSchema,
