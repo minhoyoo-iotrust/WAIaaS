@@ -5,26 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 237 -- Integration Test (통합 테스트)
+**Current focus:** Phase 237 -- Admin UI Token Limits
 
 ## Current Position
 
 Milestone: v27.3 토큰별 지출 한도 정책
-Phase: 237 (3 of 4) (Integration Test -- 통합 테스트)
-Plan: 0 of 2 in current phase
+Phase: 237 (3 of 4) (Admin UI Token Limits)
+Plan: 1 of 2 in current phase
 Status: Executing
-Last activity: 2026-02-22 -- Completed 236-03 (tokenContext callsite wiring)
+Last activity: 2026-02-22 -- Completed 237-01 (Admin UI spending-limit-form restructure)
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Cumulative:** 53 milestones, 235 phases, 506 plans, 1,368 reqs, 4,396+ tests, ~157,584 LOC TS
 
 **v27.3 Velocity:**
-- Total plans completed: 4/7
+- Total plans completed: 5/7
 - Average duration: 4min
-- Total execution time: 0.27 hours
+- Total execution time: 0.30 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [██████░░░░] 57%
 |-------|-------|-------|----------|
 | 235 | 1/1 | 3min | 3min |
 | 236 | 3/3 | 13min | 4.3min |
-| 237 | 0/2 | - | - |
+| 237 | 1/2 | 2min | 2min |
 | 238 | 0/1 | - | - |
 
 ## Accumulated Context
@@ -53,6 +53,9 @@ Progress: [██████░░░░] 57%
 - [236-02] evaluateBatch APPROVE_TIER_OVERRIDE default kept unchanged (APPROVAL) -- only single-evaluate updated
 - [236-03] evaluate() + evaluateAndReserve() tokenContext wiring completed in plan 02 via buildTokenContext -- plan 03 verified
 - [236-03] evaluateBatch tokenContext intentionally omitted (BATCH aggregates native amounts, raw/USD only)
+- [237-01] NETWORK_NATIVE_SYMBOL is an inline constant in spending-limit-form.tsx -- no cross-module dependency
+- [237-01] token_limits['native'] key removed entirely when all 3 fields are empty
+- [237-01] DEFAULT_RULES.SPENDING_LIMIT stripped of raw fields -- new policies default to USD/token_limits only
 
 ### Blockers/Concerns
 
@@ -61,5 +64,5 @@ Progress: [██████░░░░] 57%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 236-03-PLAN.md (tokenContext callsite wiring)
+Stopped at: Completed 237-01-PLAN.md (Admin UI spending-limit-form restructure)
 Resume file: None
