@@ -10,7 +10,7 @@
 
 ## Current State
 
-v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레포 + Python SDK, ~157,584 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v27.3 토큰별 지출 한도 정책 shipped (2026-02-22). 11-패키지 모노레포 + Python SDK, ~158,416 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -51,10 +51,11 @@ v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레�
 - ✅ v27.0 수신 트랜잭션 모니터링 설계 — shipped 2026-02-21 (16 plans, 29 requirements, 26 설계 결정, docs 76)
 - ✅ v27.1 수신 트랜잭션 모니터링 구현 — shipped 2026-02-22 (18 plans, 30 requirements, ~155,540 LOC TS)
 - ✅ v27.2 CAIP-19 자산 식별 표준 — shipped 2026-02-22 (9 plans, 31 requirements, ~157,584 LOC TS)
+- ✅ v27.3 토큰별 지출 한도 정책 — shipped 2026-02-22 (7 plans, 27 requirements, ~158,416 LOC TS)
 
 **코드베이스 현황:**
 - 11-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay + waiaas (Python)
-- ~157,584 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
+- ~158,416 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
 - 4,396+ 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin + push-relay)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
@@ -89,6 +90,7 @@ v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레�
 - incoming_transactions/incoming_tx_cursors DB v21 + wallets.monitor_incoming opt-in
 - GET /v1/wallet/incoming + /summary REST API + TS/Python SDK + MCP 2 tools + Admin IncomingSettings
 - CAIP-19 자산 식별: caip/ 모듈(~240 LOC), 13-네트워크 양방향 맵, TokenRef assetId 확장, DB v22 token_registry.asset_id, 4-시나리오 ALLOWED_TOKENS 매칭, 가격 오라클 L2(Polygon/Arbitrum/Optimism/Base) 지원
+- token_limits: CAIP-19 키 기반 토큰별 사람 읽기 단위 지출 한도, evaluateTokenTier 4단계 매칭(정확→native:{chain}→native→raw 폴백), Admin UI 토큰 레지스트리 연동 편집기
 - 설계 문서 40개 (24-76), 8 objective 문서
 
 ## 요구사항
@@ -477,19 +479,14 @@ v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레�
 - ✓ ALLOWED_TOKENS 4-시나리오 정책 매칭 매트릭스 (PLCY-01~04) — v27.2 (Phase 233)
 - ✓ MCP 토큰 도구 assetId 파라미터 + TS/Python SDK 타입 확장 + 3개 스킬 파일 문서화 (MCPS-01~04, SKIL-01~02) — v27.2 (Phase 234)
 
+- ✓ TokenLimitSchema Zod SSoT — raw optional 전환 + CAIP-19 키 기반 token_limits record + superRefine 검증 (SCHM-01~06) — v27.3 (Phase 235)
+- ✓ evaluateTokenTier 정책 엔진 — CAIP-19 4단계 매칭 + decimal 변환 + maxTier(USD, 토큰별) 합산 (ENGN-01~10) — v27.3 (Phase 236)
+- ✓ Admin UI 토큰별 한도 폼 — USD 최상단 + 네이티브/CAIP-19 편집기 + 레지스트리 연동 + deprecated 표시 (ADMN-01~07) — v27.3 (Phase 237)
+- ✓ 하위 호환 100% + skill 파일 갱신 (CMPT-01~04) — v27.3 (Phase 238)
+
 ### 활성
 
-## Current Milestone: v27.3 토큰별 지출 한도 정책
-
-**Goal:** SPENDING_LIMIT 정책에 CAIP-19 기반 token_limits를 추가하여, 토큰별 사람 읽기 단위 금액 한도를 설정할 수 있도록 확장
-
-**Target features:**
-- raw 필드(instant_max/notify_max/delay_max) optional 전환 + Zod superRefine 검증
-- token_limits 필드 추가 (CAIP-19 키 매칭: asset ID → native:{chain} → native 폴백)
-- evaluateTokenTier 신규 함수 + 3곳 호출부 tokenContext 전달
-- TransactionParam 인터페이스 3곳 동기화 (tokenDecimals 추가)
-- Admin UI spending-limit-form 재구성 (USD 우선 + 토큰별 한도 편집 + Legacy deprecated)
-- 스킬 파일 문서화
+(다음 마일스톤에서 정의)
 
 ### 범위 외
 
@@ -508,7 +505,7 @@ v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레�
 
 ## 컨텍스트
 
-**누적:** 53 milestones (v0.1-v27.2), 234 phases, 505 plans, 1,362 requirements, 40 설계 문서(24-76), 8 objective 문서, ~157,584 LOC TS, 4,396+ 테스트
+**누적:** 54 milestones (v0.1-v27.3), 238 phases, 512 plans, 1,389 requirements, 40 설계 문서(24-76), 8 objective 문서, ~158,416 LOC TS, 4,396+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -550,6 +547,7 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 5 
 v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈, 16 플랜, 29 요구사항, 101 파일 변경, +8,058/-2,158 lines, 26 설계 결정. 설계 문서 76(~2,300줄, 8섹션).
 v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 7 페이즈, 18 플랜, 30 요구사항, 189 파일 변경, +23,969/-5,834 lines, 102 커밋, ~155,540 LOC TS. Known gap: STO-03 (Confirmation Worker RPC 콜백 미주입).
 v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 4 페이즈, 9 플랜, 31 요구사항, 135 파일 변경, +12,997/-2,406 lines, 62 커밋, ~157,584 LOC TS.
+v27.3 토큰별 지출 한도 정책 shipped (2026-02-22). 4 페이즈, 7 플랜, 27 요구사항, 35 파일 변경, +4,809/-104 lines, 29 커밋, ~158,416 LOC TS.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -906,10 +904,23 @@ v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 4 페이즈, 9 플랜, 
 | BackgroundWorkers pre-created double guard | daemon Step 4c-9 전 + Step 6 내부, 방어적 코딩 | ✓ Good — v27.1 구현 |
 | Polling workers structural typing cast | pollAll()이 IChainSubscriber interface에 없음, as unknown as 캐스트 | ✓ Good — v27.1 구현 |
 | TX_INCOMING_SUSPICIOUS → security_alert 카테고리 | 전 채널 브로드캐스트, TX_INCOMING은 transaction 카테고리 | ✓ Good — v27.1 구현 |
+| CAIP-19 regex 인라인 복제 (policy.schema.ts) | caip/ 모듈 순환 의존성 방지 | ✓ Good — v27.3 구현 |
+| raw 필드 optional + superRefine "USD/token_limits/raw 중 하나 필수" | 하위 호환 유지하면서 USD-only 정책 허용 | ✓ Good — v27.3 구현 |
+| evaluateTokenTier 4단계 CAIP-19 매칭 순서 | 정확→native:{chain}→native→raw 폴백, 토큰별 세밀 제어 | ✓ Good — v27.3 구현 |
+| parseDecimalToBigInt fixed-point multiplication | 부동소수점 없이 정밀 비교 | ✓ Good — v27.3 구현 |
+| NATIVE_DECIMALS 중복 정의 (DRY 위반) | cross-file 의존성 회피, 런타임 미영향 | ⚠️ Revisit — v27.3 tech debt |
+| sign-only tokenDecimals 미전달 | ParsedOperation에 decimals 없음, 설계 문서 기록 | — Pending — v27.3 known limitation |
+| APPROVE without OVERRIDE → SPENDING_LIMIT 평가 | token_limits 평가를 위해 기존 경로 수정 | ✓ Good — v27.3 구현 |
+| evaluateBatch tokenContext 미전달 | BATCH는 native 합산만, raw/USD만 적용 | ✓ Good — v27.3 구현 |
+| Admin token registry EVM-only fetch | Solana 레지스트리 API 미존재, manual CAIP-19 입력 제공 | ✓ Good — v27.3 구현 |
 
 ## Shipped: v27.2 CAIP-19 자산 식별 표준
 
 v27.2 shipped. WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일. Custom CAIP-2/19 파서 모듈(~240 LOC, 외부 의존성 0), 13-네트워크 양방향 맵, 가격 오라클 L2 지원(Polygon/Arbitrum/Optimism/Base), DB v22 마이그레이션(token_registry.asset_id + 자동 backfill), 4-시나리오 ALLOWED_TOKENS 정책 매칭 매트릭스, MCP 토큰 도구 assetId + TS/Python SDK 타입 확장 + 3개 스킬 파일 문서화. 모든 변경 additive(하위 호환). 31/31 requirements PASS.
 
+## Shipped: v27.3 토큰별 지출 한도 정책
+
+v27.3 shipped. SPENDING_LIMIT 정책에 CAIP-19 기반 토큰별 사람 읽기 단위 지출 한도(token_limits) 추가. TokenLimitSchema Zod SSoT(raw optional 전환, superRefine "USD/token_limits/raw 중 하나 필수" 검증), evaluateTokenTier 4단계 CAIP-19 매칭(정확→native:{chain}→native→raw 폴백) + decimal 변환 + maxTier(USD, 토큰별) 합산, Admin UI spending-limit-form 재구성(USD 최상단 + 네이티브/CAIP-19 토큰 편집기 + 레지스트리 연동 + Legacy deprecated), 하위 호환 100%(기존 raw-only 정책 동일 동작). 27/27 requirements PASS, 5 tech debt(전부 non-blocking).
+
 ---
-*최종 업데이트: 2026-02-22 after v27.2 milestone complete*
+*최종 업데이트: 2026-02-22 after v27.3 milestone complete*
