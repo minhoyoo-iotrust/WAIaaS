@@ -8,9 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: (다음 마일스톤 미정)
+## Current Milestone: v27.2 CAIP-19 자산 식별 표준
 
-v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22).
+**Goal:** WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일하여, 모든 ActionProvider와 외부 인터페이스가 체인·네트워크·자산을 하나의 식별자로 표현할 수 있는 상태.
+
+**Target features:**
+- CAIP-19 파서/포매터 모듈 (packages/core/src/caip/)
+- TokenRef 확장 (assetId, network 필드 추가)
+- 가격 오라클 캐시 키 CAIP-19 전환 + L2 토큰 가격 조회
+- ActionProvider 인터페이스 CAIP-19 토큰 식별
+- 트랜잭션 요청/정책 스키마 assetId 확장
+- 토큰 레지스트리 DB asset_id 컬럼 + 마이그레이션
+- REST API / MCP / Skills assetId 필드 업데이트
 
 ## Current State
 

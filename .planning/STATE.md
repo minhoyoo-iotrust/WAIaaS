@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v27.1 수신 트랜잭션 모니터링 구현 shipped. Planning next milestone.
+**Current focus:** v27.2 CAIP-19 자산 식별 표준
 
 ## Current Position
 
-Phase: (none — between milestones)
-Plan: N/A
-Status: Milestone v27.1 complete
-Last activity: 2026-02-22 -- Milestone v27.1 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-22 — Milestone v27.2 started
 
 ## Performance Metrics
 
@@ -31,5 +31,5 @@ Last activity: 2026-02-22 -- Milestone v27.1 archived
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Milestone v27.1 complete
+Stopped at: Milestone v27.2 initialization
 Resume file: None
