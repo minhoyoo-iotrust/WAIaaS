@@ -240,11 +240,11 @@ Plans:
   2. "+ Add Token Limit" 버튼으로 CAIP-19 기반 토큰 한도를 추가하고 삭제할 수 있으며, 토큰 레지스트리 선택 시 CAIP-19 ID가 자동 생성된다
   3. 네이티브 토큰 심볼이 정책의 network에 따라 SOL/ETH/POL로 올바르게 표시된다
   4. Legacy 섹션에 deprecated 안내가 표시되고, 신규 정책 생성 시 raw 필드 미입력으로 저장할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 237-01: spending-limit-form.tsx 재구성 -- USD 최상단 + Token-Specific Limits 섹션 (네이티브 + CAIP-19 토큰 편집기)
-- [ ] 237-02: 토큰 레지스트리 연동 + CAIP-19 자동 생성 + Legacy deprecated 표시 + policies.tsx validation 갱신
+- [ ] 237-01-PLAN.md -- spending-limit-form.tsx 재구성 (USD 최상단 + 네이티브 토큰 한도 + network-aware 심볼 + raw optional)
+- [ ] 237-02-PLAN.md -- CAIP-19 토큰 레지스트리 연동 + 동적 토큰 한도 행 + Legacy deprecated + validation 갱신
 
 ### Phase 238: Compat + Docs -- 하위 호환 검증 및 문서화
 **Goal**: 기존 정책이 변경 없이 동일하게 동작하고, 새 기능이 문서화되어 에이전트가 token_limits를 활용할 수 있다
