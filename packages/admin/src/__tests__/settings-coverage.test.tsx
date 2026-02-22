@@ -856,9 +856,8 @@ describe('Settings coverage: field helpers', () => {
     await renderAndWait();
 
     expect(screen.getByText('Telegram Bot')).toBeTruthy();
-    const enabledSelect = document.querySelector('select[name="telegram.enabled"]') as HTMLSelectElement;
-    expect(enabledSelect).toBeTruthy();
-    expect(enabledSelect.value).toBe('false');
+    const botTokenInput = document.querySelector('input[name="telegram.bot_token"]') as HTMLInputElement;
+    expect(botTokenInput).toBeTruthy();
   });
 
   it('Display section renders and CurrencySelect onChange triggers dirty', async () => {

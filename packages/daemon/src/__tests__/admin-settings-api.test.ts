@@ -288,7 +288,7 @@ describe('GET /admin/settings', () => {
 
     // Verify telegram defaults
     const telegram = body.telegram as Record<string, unknown>;
-    expect(telegram).toHaveProperty('enabled');
+    expect(telegram).toHaveProperty('bot_token');
   });
 });
 

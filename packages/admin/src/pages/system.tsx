@@ -22,7 +22,7 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // System-relevant setting categories (used for save filtering)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.'];
+const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'signing_sdk.'];
 const SYSTEM_EXACT_KEYS = new Set(['security.rate_limit_global_ip_rpm']);
 
 function isSystemSetting(key: string): boolean {
@@ -102,14 +102,13 @@ export default function SystemPage() {
   const ev = (cat: string, key: string) =>
     getEffectiveValuePure(settings.value, dirty.value, cat, key);
 
-  const _ebv = (cat: string, key: string) =>
+  const ebv = (cat: string, key: string) =>
     getEffectiveBoolValuePure(settings.value, dirty.value, cat, key);
 
   const icc = (cat: string, key: string) =>
     isCredentialConfiguredPure(settings.value, dirty.value, cat, key);
 
-  // Suppress unused variable warnings -- _ebv kept for consistency
-  void _ebv;
+  // Suppress unused variable warnings -- icc kept for consistency
   void icc;
 
   // ---------------------------------------------------------------------------
@@ -426,6 +425,113 @@ export default function SystemPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: Signing SDK
+  // ---------------------------------------------------------------------------
+
+  function SigningSDKSection() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Signing SDK</h3>
+          <p class="settings-description">
+            Configure the Wallet Signing SDK for owner approval via mobile wallet app
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="SDK Enabled"
+              name="signing_sdk.enabled"
+              type="select"
+              value={ev('signing_sdk', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('signing_sdk.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+              description="Enable Signing SDK for wallet app approval"
+            />
+            <FormField
+              label={keyToLabel('request_expiry_min')}
+              name="signing_sdk.request_expiry_min"
+              type="number"
+              value={Number(ev('signing_sdk', 'request_expiry_min')) || 30}
+              onChange={(v) => handleFieldChange('signing_sdk.request_expiry_min', v)}
+              min={1}
+              max={1440}
+              description="Minutes before a sign request expires"
+            />
+            <FormField
+              label={keyToLabel('preferred_channel')}
+              name="signing_sdk.preferred_channel"
+              type="select"
+              value={ev('signing_sdk', 'preferred_channel') || 'ntfy'}
+              onChange={(v) => handleFieldChange('signing_sdk.preferred_channel', v)}
+              options={[
+                { label: 'ntfy', value: 'ntfy' },
+                { label: 'Telegram', value: 'telegram' },
+              ]}
+              description="Preferred signing channel for SDK requests"
+            />
+            <FormField
+              label={keyToLabel('preferred_wallet')}
+              name="signing_sdk.preferred_wallet"
+              type="text"
+              value={ev('signing_sdk', 'preferred_wallet')}
+              onChange={(v) => handleFieldChange('signing_sdk.preferred_wallet', v)}
+              placeholder="Optional wallet app name"
+              description="Preferred wallet app for deep linking"
+            />
+            <FormField
+              label={keyToLabel('ntfy_request_topic_prefix')}
+              name="signing_sdk.ntfy_request_topic_prefix"
+              type="text"
+              value={ev('signing_sdk', 'ntfy_request_topic_prefix')}
+              onChange={(v) => handleFieldChange('signing_sdk.ntfy_request_topic_prefix', v)}
+              description="ntfy topic prefix for sign requests"
+            />
+            <FormField
+              label={keyToLabel('ntfy_response_topic_prefix')}
+              name="signing_sdk.ntfy_response_topic_prefix"
+              type="text"
+              value={ev('signing_sdk', 'ntfy_response_topic_prefix')}
+              onChange={(v) => handleFieldChange('signing_sdk.ntfy_response_topic_prefix', v)}
+              description="ntfy topic prefix for sign responses"
+            />
+          </div>
+          <div class="settings-info-box">
+            Enable the Signing SDK to allow wallet owners to approve/reject transactions
+            from their mobile wallet app. Requires a signing channel (ntfy or Telegram)
+            to deliver sign requests.
+          </div>
+
+          <div class="settings-subgroup" style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <div class="settings-subgroup-title">Wallet App Notifications</div>
+            <p class="settings-description" style={{ marginBottom: '0.75rem' }}>
+              Push notifications to wallet apps via ntfy side channel.
+            </p>
+            <div class="settings-fields-grid">
+              <div class="settings-field-full">
+                <FormField
+                  label="Notifications Enabled"
+                  name="signing_sdk.notifications_enabled"
+                  type="checkbox"
+                  value={ebv('signing_sdk', 'notifications_enabled')}
+                  onChange={(v) => handleFieldChange('signing_sdk.notifications_enabled', v)}
+                  description="Push event notifications to wallet apps"
+                />
+              </div>
+            </div>
+            <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
+              Category filtering is configured in Notifications &gt; Settings.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
 
@@ -474,6 +580,9 @@ export default function SystemPage() {
 
           {/* 5. Log Level */}
           <LogLevelSection />
+
+          {/* 6. Signing SDK */}
+          <SigningSDKSection />
         </>
       )}
 

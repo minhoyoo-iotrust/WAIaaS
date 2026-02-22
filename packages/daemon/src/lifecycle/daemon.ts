@@ -445,6 +445,11 @@ export class DaemonLifecycle {
         },
       });
 
+      // Inject SettingsService for category filtering
+      if (ss) {
+        this.notificationService.setSettingsService(ss);
+      }
+
       // Initialize configured channels: SettingsService (DB) takes priority over config.toml
       const notifEnabled = ss
         ? ss.get('notifications.enabled') === 'true'
@@ -597,11 +602,10 @@ export class DaemonLifecycle {
     try {
       // Read telegram settings from SettingsService (falls back to config.toml)
       const ss = this._settingsService;
-      const botEnabled = ss ? ss.get('telegram.enabled') === 'true' : this._config!.telegram.enabled;
       // Token priority: telegram.bot_token > notifications.telegram_bot_token > config.toml
       const botToken = (ss ? (ss.get('telegram.bot_token') || ss.get('notifications.telegram_bot_token')) : null)
         || this._config!.telegram.bot_token;
-      if (botEnabled && botToken) {
+      if (botToken) {
         const { TelegramBotService, TelegramApi } = await import(
           '../infrastructure/telegram/index.js'
         );

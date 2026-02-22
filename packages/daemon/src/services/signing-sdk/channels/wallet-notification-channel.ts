@@ -58,7 +58,7 @@ export class WalletNotificationChannel {
       // Gate 3: category filter
       const category = EVENT_CATEGORY_MAP[eventType];
       if (!category) return;
-      const filterJson = this.settings.get('signing_sdk.notify_categories');
+      const filterJson = this.settings.get('notifications.notify_categories');
       if (filterJson && filterJson !== '[]') {
         try {
           const allowedCategories = JSON.parse(filterJson) as string[];

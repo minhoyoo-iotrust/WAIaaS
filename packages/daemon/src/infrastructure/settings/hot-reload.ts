@@ -52,6 +52,7 @@ const NOTIFICATION_KEYS = new Set([
   'notifications.slack_webhook_url',
   'notifications.locale',
   'notifications.rate_limit_rpm',
+  'notifications.notify_categories',
 ]);
 
 const RPC_KEYS_PREFIX = 'rpc.';
@@ -84,7 +85,6 @@ const WALLETCONNECT_KEYS_PREFIX = 'walletconnect.';
 const INCOMING_KEYS_PREFIX = 'incoming.';
 
 const TELEGRAM_BOT_KEYS = new Set([
-  'telegram.enabled',
   'telegram.bot_token',
   'telegram.locale',
   'notifications.telegram_bot_token', // shared token triggers bot reload too
@@ -379,14 +379,13 @@ export class HotReloadOrchestrator {
       ref.current = null;
     }
 
-    // 2. Check if bot should be enabled
+    // 2. Check if bot_token exists (bot enabled when token is present)
     const ss = this.deps.settingsService;
-    const enabled = ss.get('telegram.enabled') === 'true';
     // Token priority: telegram.bot_token > notifications.telegram_bot_token
     const botToken = ss.get('telegram.bot_token') || ss.get('notifications.telegram_bot_token');
 
-    if (!enabled || !botToken) {
-      console.log(`Hot-reload: Telegram Bot ${!enabled ? 'disabled' : 'stopped (no token)'}`);
+    if (!botToken) {
+      console.log('Hot-reload: Telegram Bot stopped (no token)');
       return;
     }
 

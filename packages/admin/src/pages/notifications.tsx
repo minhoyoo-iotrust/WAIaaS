@@ -244,18 +244,6 @@ function NotificationSettingsTab() {
               <div class="settings-subgroup-title">Telegram Bot</div>
               <div class="settings-fields-grid">
                 <FormField
-                  label="Bot Enabled"
-                  name="telegram.enabled"
-                  type="select"
-                  value={getEffectiveValue(settings.value, dirty.value, 'telegram', 'enabled') || 'false'}
-                  onChange={(v) => handleFieldChange('telegram.enabled', v)}
-                  options={[
-                    { label: 'Yes', value: 'true' },
-                    { label: 'No', value: 'false' },
-                  ]}
-                  description="Enable or disable the Telegram bot"
-                />
-                <FormField
                   label={keyToLabel('bot_token')}
                   name="telegram.bot_token"
                   type="password"
@@ -330,6 +318,49 @@ function NotificationSettingsTab() {
                 max={1000}
                 description="Max notifications per minute"
               />
+            </div>
+          </FieldGroup>
+
+          <FieldGroup legend="Category Filter" description="Filter which notification categories are delivered. Leave all unchecked to receive all.">
+            {(() => {
+              const NOTIFY_CATEGORY_OPTIONS = [
+                { value: 'transaction', label: 'Transaction Events' },
+                { value: 'policy', label: 'Policy Violations' },
+                { value: 'security_alert', label: 'Security Alerts' },
+                { value: 'session', label: 'Session Events' },
+                { value: 'owner', label: 'Owner Events' },
+                { value: 'system', label: 'System Notifications' },
+              ];
+              const currentJson = getEffectiveValue(settings.value, dirty.value, 'notifications', 'notify_categories') || '[]';
+              let currentCategories: string[] = [];
+              try {
+                const parsed = JSON.parse(currentJson);
+                if (Array.isArray(parsed)) currentCategories = parsed;
+              } catch { /* use empty */ }
+              const handleToggle = (val: string, checked: boolean) => {
+                const updated = checked
+                  ? [...currentCategories, val]
+                  : currentCategories.filter((c) => c !== val);
+                handleFieldChange('notifications.notify_categories', JSON.stringify(updated));
+              };
+              return (
+                <div class="settings-fields-grid">
+                  {NOTIFY_CATEGORY_OPTIONS.map((opt) => (
+                    <FormField
+                      key={opt.value}
+                      label={opt.label}
+                      name={`notify_cat_${opt.value}`}
+                      type="checkbox"
+                      value={currentCategories.includes(opt.value)}
+                      onChange={(v) => handleToggle(opt.value, Boolean(v))}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+            <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
+              Applies to all notification channels (Telegram, Discord, ntfy, Slack) and wallet app side channel.
+              Broadcast events (Kill Switch, Auto Stop, Suspicious TX) always bypass the filter.
             </div>
           </FieldGroup>
 

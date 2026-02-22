@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { IncomingTransaction } from '@waiaas/core';
+import type { IncomingTransaction as _IncomingTransaction } from '@waiaas/core';
 import { IncomingTxMonitorService } from '../incoming-tx-monitor-service.js';
 import type { IncomingTxMonitorConfig } from '../incoming-tx-monitor-service.js';
 
@@ -165,7 +165,6 @@ describe('BUG-1: BackgroundWorkers Instance Sharing', () => {
 
     // Extract handler functions from workers.register.mock.calls
     for (const call of workers.register.mock.calls) {
-      const name = call[0] as string;
       const config = call[1] as { handler: unknown; interval: number };
 
       // Each registered worker should have a handler that is a function

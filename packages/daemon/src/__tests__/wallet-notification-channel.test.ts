@@ -33,7 +33,7 @@ function createMockSettings(overrides: Record<string, string> = {}) {
   const map = new Map<string, string>([
     ['signing_sdk.enabled', 'true'],
     ['signing_sdk.notifications_enabled', 'true'],
-    ['signing_sdk.notify_categories', '[]'],
+    ['notifications.notify_categories', '[]'],
     ['notifications.ntfy_server', 'https://ntfy.sh'],
   ]);
   for (const [k, v] of Object.entries(overrides)) {
@@ -272,7 +272,7 @@ describe('WalletNotificationChannel', () => {
   describe('SETTINGS-03: category filtering', () => {
     it('allows transaction events when notify_categories=["transaction"]', async () => {
       const settings = createMockSettings({
-        'signing_sdk.notify_categories': '["transaction"]',
+        'notifications.notify_categories': '["transaction"]',
       });
       const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
@@ -283,7 +283,7 @@ describe('WalletNotificationChannel', () => {
 
     it('filters out security_alert events when notify_categories=["transaction"]', async () => {
       const settings = createMockSettings({
-        'signing_sdk.notify_categories': '["transaction"]',
+        'notifications.notify_categories': '["transaction"]',
       });
       const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
@@ -294,7 +294,7 @@ describe('WalletNotificationChannel', () => {
 
     it('allows all events when notify_categories=[] (empty array)', async () => {
       const settings = createMockSettings({
-        'signing_sdk.notify_categories': '[]',
+        'notifications.notify_categories': '[]',
       });
       const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });

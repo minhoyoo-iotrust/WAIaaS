@@ -656,20 +656,15 @@ describe('SettingsPage', () => {
 
     expect(screen.getByText('Wallet App Notifications')).toBeTruthy();
     expect(screen.getByText('Notifications Enabled')).toBeTruthy();
-    expect(screen.getByText('Transaction Events')).toBeTruthy();
-    expect(screen.getByText('Policy Violations')).toBeTruthy();
-    expect(screen.getByText('Security Alerts')).toBeTruthy();
-    expect(screen.getByText('Session Events')).toBeTruthy();
-    expect(screen.getByText('Owner Events')).toBeTruthy();
-    expect(screen.getByText('System Notifications')).toBeTruthy();
+    // Category filtering now in Notifications > Settings
+    expect(screen.getByText(/Category filtering is configured in Notifications/)).toBeTruthy();
   });
 
-  // ---- Test 27: Shows all categories hint when none selected ----
-  it('shows all categories hint when no notify categories are selected', async () => {
+  // ---- Test 27: Category filter info box in Signing SDK section ----
+  it('shows category filter redirect info in Signing SDK section', async () => {
     mockApiCalls();
     await renderAndWaitForLoad();
 
-    // With empty notify_categories (default), hint should show
-    expect(screen.getByText('(all categories)')).toBeTruthy();
+    expect(screen.getByText(/Category filtering is configured in Notifications/)).toBeTruthy();
   });
 });

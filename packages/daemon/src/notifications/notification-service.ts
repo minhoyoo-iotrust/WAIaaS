@@ -8,12 +8,14 @@
 
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
+import { EVENT_CATEGORY_MAP } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { getNotificationMessage } from './templates/message-templates.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import type { WalletNotificationChannel } from '../services/signing-sdk/channels/wallet-notification-channel.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 
 // Broadcast event types -- sent to ALL channels simultaneously
 const BROADCAST_EVENTS: Set<string> = new Set([
@@ -35,6 +37,9 @@ export class NotificationService {
 
   // Wallet notification side channel (v2.7 -- independent of traditional channels)
   private walletNotificationChannel: WalletNotificationChannel | null = null;
+
+  // SettingsService for category filter (injected by daemon lifecycle)
+  private settingsService: SettingsService | null = null;
 
   // Rate limiter: Map<channelName, timestamps[]>
   private rateLimitMap = new Map<string, number[]>();
@@ -85,6 +90,11 @@ export class NotificationService {
     this.walletNotificationChannel = channel;
   }
 
+  /** Set the SettingsService for category filtering (injected by daemon lifecycle). */
+  setSettingsService(service: SettingsService | null): void {
+    this.settingsService = service;
+  }
+
   /**
    * Send notification via priority-based delivery with fallback.
    * Tries channels in order; on failure, falls back to next channel.
@@ -101,6 +111,14 @@ export class NotificationService {
     const mergedVars = walletInfo.walletName
       ? { walletName: walletInfo.walletName, ...vars }
       : { walletName: walletId, ...vars };
+
+    // Category filter: check notifications.notify_categories (empty = allow all)
+    // BROADCAST_EVENTS always bypass the filter.
+    const isBroadcast = BROADCAST_EVENTS.has(eventType);
+    if (!isBroadcast && this.settingsService) {
+      const filtered = this.isCategoryFiltered(eventType);
+      if (filtered) return;
+    }
 
     // Side channel: wallet app notification (independent of traditional channels, never blocks)
     // Placed BEFORE the channels.length guard so it fires even with zero configured channels.
@@ -190,6 +208,25 @@ export class NotificationService {
     this.recordSend(channel.name);
     // Log successful delivery
     this.logDelivery(channel.name, payload, 'sent');
+  }
+
+  /**
+   * Check if the event type is filtered out by notifications.notify_categories.
+   * Empty array = allow all. Returns true if the event should be suppressed.
+   */
+  private isCategoryFiltered(eventType: NotificationEventType): boolean {
+    if (!this.settingsService) return false;
+    try {
+      const filterJson = this.settingsService.get('notifications.notify_categories');
+      if (!filterJson || filterJson === '[]') return false;
+      const allowed = JSON.parse(filterJson) as string[];
+      if (!Array.isArray(allowed) || allowed.length === 0) return false;
+      const category = EVENT_CATEGORY_MAP[eventType];
+      if (!category) return false;
+      return !allowed.includes(category);
+    } catch {
+      return false;
+    }
   }
 
   /** Check if channel is rate limited (sliding window). */

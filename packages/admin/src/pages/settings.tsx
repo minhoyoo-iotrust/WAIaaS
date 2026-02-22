@@ -673,17 +673,6 @@ export default function SettingsPage() {
         <div class="settings-category-body">
           <div class="settings-fields-grid">
             <FormField
-              label="Bot Enabled"
-              name="telegram.enabled"
-              type="select"
-              value={getEffectiveValue('telegram', 'enabled') || 'false'}
-              onChange={(v) => handleFieldChange('telegram.enabled', v)}
-              options={[
-                { label: 'Yes', value: 'true' },
-                { label: 'No', value: 'false' },
-              ]}
-            />
-            <FormField
               label="Bot Token"
               name="telegram.bot_token"
               type="password"
@@ -717,34 +706,7 @@ export default function SettingsPage() {
   // Section: Signing SDK
   // ---------------------------------------------------------------------------
 
-  const NOTIFY_CATEGORY_OPTIONS = [
-    { value: 'transaction', label: 'Transaction Events' },
-    { value: 'policy', label: 'Policy Violations' },
-    { value: 'security_alert', label: 'Security Alerts' },
-    { value: 'session', label: 'Session Events' },
-    { value: 'owner', label: 'Owner Events' },
-    { value: 'system', label: 'System Notifications' },
-  ];
-
   function SigningSDKSettings() {
-    // Parse current notify_categories JSON array
-    const currentCategoriesJson = getEffectiveValue('signing_sdk', 'notify_categories') || '[]';
-    let currentCategories: string[] = [];
-    try {
-      const parsed = JSON.parse(currentCategoriesJson);
-      if (Array.isArray(parsed)) currentCategories = parsed;
-    } catch { /* use empty */ }
-
-    const handleCategoryToggle = (categoryValue: string, checked: boolean) => {
-      let updated: string[];
-      if (checked) {
-        updated = [...currentCategories, categoryValue];
-      } else {
-        updated = currentCategories.filter((c) => c !== categoryValue);
-      }
-      handleFieldChange('signing_sdk.notify_categories', JSON.stringify(updated));
-    };
-
     return (
       <div class="settings-category">
         <div class="settings-category-header">
@@ -831,26 +793,8 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-            <div style={{ marginTop: '0.75rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Notify Categories {currentCategories.length === 0 && <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(all categories)</span>}
-              </label>
-              <div class="settings-fields-grid">
-                {NOTIFY_CATEGORY_OPTIONS.map((opt) => (
-                  <FormField
-                    key={opt.value}
-                    label={opt.label}
-                    name={`notify_cat_${opt.value}`}
-                    type="checkbox"
-                    value={currentCategories.includes(opt.value)}
-                    onChange={(v) => handleCategoryToggle(opt.value, Boolean(v))}
-                  />
-                ))}
-              </div>
-              <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
-                Select specific categories to receive, or leave all unchecked to receive all notification types.
-                Security Alerts are delivered with high priority (ntfy priority 5).
-              </div>
+            <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
+              Category filtering is configured in Notifications &gt; Settings.
             </div>
           </div>
         </div>

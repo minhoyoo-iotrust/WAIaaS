@@ -62,6 +62,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.slack_webhook_url', category: 'notifications', configPath: 'notifications.slack_webhook_url', defaultValue: '', isCredential: true },
   { key: 'notifications.locale', category: 'notifications', configPath: 'notifications.locale', defaultValue: 'en', isCredential: false },
   { key: 'notifications.rate_limit_rpm', category: 'notifications', configPath: 'notifications.rate_limit_rpm', defaultValue: '20', isCredential: false },
+  { key: 'notifications.notify_categories', category: 'notifications', configPath: 'notifications.notify_categories', defaultValue: '[]', isCredential: false },
 
   // --- rpc category (Solana 3 + EVM 10 + evm_default_network) ---
   { key: 'rpc.solana_mainnet', category: 'rpc', configPath: 'rpc.solana_mainnet', defaultValue: 'https://api.mainnet-beta.solana.com', isCredential: false },
@@ -127,7 +128,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'monitoring.enabled', category: 'monitoring', configPath: 'security.monitoring_enabled', defaultValue: 'true', isCredential: false },
 
   // --- telegram category (Bot service settings) ---
-  { key: 'telegram.enabled', category: 'telegram', configPath: 'telegram.enabled', defaultValue: 'false', isCredential: false },
   { key: 'telegram.bot_token', category: 'telegram', configPath: 'telegram.bot_token', defaultValue: '', isCredential: true },
   { key: 'telegram.locale', category: 'telegram', configPath: 'telegram.locale', defaultValue: 'en', isCredential: false },
 
@@ -140,7 +140,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'signing_sdk.ntfy_response_topic_prefix', category: 'signing_sdk', configPath: 'signing_sdk.ntfy_response_topic_prefix', defaultValue: 'waiaas-response', isCredential: false },
   { key: 'signing_sdk.wallets', category: 'signing_sdk', configPath: 'signing_sdk.wallets', defaultValue: '[]', isCredential: false },
   { key: 'signing_sdk.notifications_enabled', category: 'signing_sdk', configPath: 'signing_sdk.notifications_enabled', defaultValue: 'true', isCredential: false },
-  { key: 'signing_sdk.notify_categories', category: 'signing_sdk', configPath: 'signing_sdk.notify_categories', defaultValue: '[]', isCredential: false },
 
   // --- incoming category (Incoming TX monitor settings) ---
   { key: 'incoming.enabled', category: 'incoming', configPath: 'incoming.enabled', defaultValue: 'false', isCredential: false },
