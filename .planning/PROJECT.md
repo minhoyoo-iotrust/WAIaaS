@@ -479,7 +479,17 @@ v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 11-패키지 모노레�
 
 ### 활성
 
-(없음 — 다음 마일스톤 미정)
+## Current Milestone: v27.3 토큰별 지출 한도 정책
+
+**Goal:** SPENDING_LIMIT 정책에 CAIP-19 기반 token_limits를 추가하여, 토큰별 사람 읽기 단위 금액 한도를 설정할 수 있도록 확장
+
+**Target features:**
+- raw 필드(instant_max/notify_max/delay_max) optional 전환 + Zod superRefine 검증
+- token_limits 필드 추가 (CAIP-19 키 매칭: asset ID → native:{chain} → native 폴백)
+- evaluateTokenTier 신규 함수 + 3곳 호출부 tokenContext 전달
+- TransactionParam 인터페이스 3곳 동기화 (tokenDecimals 추가)
+- Admin UI spending-limit-form 재구성 (USD 우선 + 토큰별 한도 편집 + Legacy deprecated)
+- 스킬 파일 문서화
 
 ### 범위 외
 
