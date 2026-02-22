@@ -251,7 +251,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 234-01-PLAN.md — MCP 도구 assetId 파라미터 + description 업데이트 + passthrough 테스트
+- [x] 234-01-PLAN.md — MCP 도구 assetId 파라미터 + description 업데이트 + passthrough 테스트
 - [ ] 234-02-PLAN.md — TS/Python SDK 타입 assetId 필드 + 3개 스킬 파일 CAIP-19 문서화
 
 ## Progress
@@ -278,4 +278,4 @@ Phases execute in numeric order: 231 -> 232 -> 233 -> 234
 | 231 | 2/2 | Complete    | 2026-02-22 | - |
 | 232 | 2/2 | Complete    | 2026-02-22 | - |
 | 233 | 3/3 | Complete    | 2026-02-22 | - |
-| 234 | v27.2 | 0/2 | Not started | - |
+| 234 | v27.2 | 1/2 | In progress | - |

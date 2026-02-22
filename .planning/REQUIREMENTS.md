@@ -47,8 +47,8 @@
 
 ### MCP/SDK
 
-- [ ] **MCPS-01**: Token-related MCP tools (send_token, approve_token, etc.) accept optional assetId parameter
-- [ ] **MCPS-02**: MCP tool descriptions document CAIP-19 assetId format and usage
+- [x] **MCPS-01**: Token-related MCP tools (send_token, approve_token, etc.) accept optional assetId parameter
+- [x] **MCPS-02**: MCP tool descriptions document CAIP-19 assetId format and usage
 - [ ] **MCPS-03**: TypeScript SDK types include assetId fields in token-related interfaces
 - [ ] **MCPS-04**: Python SDK types include assetId fields in token-related models
 
@@ -108,8 +108,8 @@
 | PLCY-02 | Phase 233 | Complete |
 | PLCY-03 | Phase 233 | Complete |
 | PLCY-04 | Phase 233 | Complete |
-| MCPS-01 | Phase 234 | Pending |
-| MCPS-02 | Phase 234 | Pending |
+| MCPS-01 | Phase 234 | Complete |
+| MCPS-02 | Phase 234 | Complete |
 | MCPS-03 | Phase 234 | Pending |
 | MCPS-04 | Phase 234 | Pending |
 | SKIL-01 | Phase 234 | Pending |
