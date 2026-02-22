@@ -27,10 +27,10 @@
 
 ### Price Oracle
 
-- [ ] **ORCL-01**: Price oracle cache key uses CAIP-19 format instead of legacy ${chain}:${address}
-- [ ] **ORCL-02**: CoinGecko platform ID map is expanded to cover L2 networks (polygon-pos, arbitrum-one, optimistic-ethereum, base)
+- [x] **ORCL-01**: Price oracle cache key uses CAIP-19 format instead of legacy ${chain}:${address}
+- [x] **ORCL-02**: CoinGecko platform ID map is expanded to cover L2 networks (polygon-pos, arbitrum-one, optimistic-ethereum, base)
 - [ ] **ORCL-03**: L2 token prices can be resolved via CoinGecko using CAIP-2 based platform mapping
-- [ ] **ORCL-04**: PYTH_FEED_IDS key format is updated atomically with cache key migration
+- [x] **ORCL-04**: PYTH_FEED_IDS key format is updated atomically with cache key migration
 
 ### Transaction Schema
 
@@ -97,10 +97,10 @@
 | TOKN-02 | Phase 233 | Pending |
 | TOKN-03 | Phase 233 | Pending |
 | TOKN-04 | Phase 233 | Pending |
-| ORCL-01 | Phase 232 | Pending |
-| ORCL-02 | Phase 232 | Pending |
+| ORCL-01 | Phase 232 | Complete |
+| ORCL-02 | Phase 232 | Complete |
 | ORCL-03 | Phase 232 | Pending |
-| ORCL-04 | Phase 232 | Pending |
+| ORCL-04 | Phase 232 | Complete |
 | TXSC-01 | Phase 233 | Pending |
 | TXSC-02 | Phase 233 | Pending |
 | TXSC-03 | Phase 233 | Pending |

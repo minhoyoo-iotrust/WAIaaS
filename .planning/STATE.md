@@ -5,31 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 231 - Core CAIP Module + Network Map
+**Current focus:** Phase 232 - Oracle L2 Support + Cache Key Migration
 
 ## Current Position
 
-Phase: 1 of 4 (Phase 231: Core CAIP Module + Network Map) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 231 complete, ready for Phase 232
-Last activity: 2026-02-22 -- Completed 231-02 network map + asset helpers
+Phase: 2 of 4 (Phase 232: Oracle L2 Support + Cache Key Migration)
+Plan: 1 of 2 in current phase
+Status: 232-01 complete, ready for 232-02
+Last activity: 2026-02-22 -- Completed 232-01 oracle CAIP-19 cache key migration
 
-Progress: [██░░░░░░░░] 25%
+Progress: [████░░░░░░] 38%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 2 (this milestone)
-- Average duration: 3.5min
-- Total execution time: 0.12 hours
+- Total plans completed: 3 (this milestone)
+- Average duration: 3.7min
+- Total execution time: 0.18 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 231 | 2/2 | 7min | 3.5min |
+| 232 | 1/2 | 5min | 5min |
 
 *Updated after each plan completion*
 
@@ -50,6 +51,9 @@ Progress: [██░░░░░░░░] 25%
 - network-map.ts is SSoT for CAIP-2/NetworkType -- x402.types.ts and wc-session-service.ts import from it
 - Polygon uses SLIP-44 966 (POL), NOT 60 (ETH)
 - TokenRefSchema extension additive (optional assetId + network) -- zero breaking changes
+- BTC feed ID entry removed -- synthetic key 'ethereum:native_btc' has no valid CAIP-19 mapping
+- CoinGecko batch queries grouped by resolved network (not chain) to disambiguate L2 tokens
+- resolveNetwork(chain, network?) pattern for backward-compatible NetworkType resolution in oracle callers
 
 ### Blockers/Concerns
 
@@ -59,5 +63,5 @@ Progress: [██░░░░░░░░] 25%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 231-02-PLAN.md (network map + asset helpers + integration)
+Stopped at: Completed 232-01-PLAN.md (oracle CAIP-19 cache key migration + L2 platform map)
 Resume file: None
