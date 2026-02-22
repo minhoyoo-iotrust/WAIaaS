@@ -231,12 +231,12 @@ Plans:
   3. 트랜잭션 요청에 assetId를 포함하면 address가 자동 추출되고, assetId와 address가 동시 제공될 때 cross-validation이 수행된다
   4. ALLOWED_TOKENS 정책에 assetId를 사용할 수 있으며, 4가지 매칭 시나리오(assetId<->assetId, assetId<->legacy, legacy<->assetId, legacy<->legacy) 모두 정확히 동작한다
   5. 기존 assetId 없는 트랜잭션과 정책이 변경 없이 동일하게 동작한다 (하위 호환)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 233-01: DB v22 마이그레이션 + token_registry asset_id backfill + API 응답
-- [ ] 233-02: TokenInfoSchema assetId 확장 + Stage 1 추출/검증
-- [ ] 233-03: ALLOWED_TOKENS 정책 assetId 지원 + 4-scenario 평가 매트릭스
+- [ ] 233-01-PLAN.md — DB v22 마이그레이션 + Drizzle 스키마 + token_registry asset_id backfill + Token API assetId 응답
+- [ ] 233-02-PLAN.md — TokenInfoSchema assetId 확장 + superRefine cross-validation + Stage 1 TransactionParam 전파
+- [ ] 233-03-PLAN.md — ALLOWED_TOKENS 정책 assetId 지원 + 4-scenario 평가 매트릭스
 
 ### Phase 234: MCP + SDK + Skills Integration
 **Goal**: AI 에이전트가 MCP 도구, TypeScript/Python SDK, 스킬 파일을 통해 CAIP-19 assetId로 토큰을 식별하고 트랜잭션을 요청할 수 있는 상태
