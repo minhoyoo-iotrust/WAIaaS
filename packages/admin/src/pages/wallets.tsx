@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals';
+import { useSignal, useComputed } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { currentPath } from '../components/layout';
@@ -17,6 +17,9 @@ import { getErrorMessage } from '../utils/error-messages';
 import { formatDate, formatAddress } from '../utils/format';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
+import { SearchInput } from '../components/search-input';
+import { FilterBar } from '../components/filter-bar';
+import type { FilterField } from '../components/filter-bar';
 import {
   type SettingsData,
   type RpcTestResult,
@@ -134,41 +137,7 @@ export function chainNetworkOptions(chain: string): { label: string; value: stri
   return [{ label: 'Devnet', value: 'devnet' }];
 }
 
-const walletColumns: Column<Wallet>[] = [
-  { key: 'name', header: 'Name' },
-  { key: 'chain', header: 'Chain' },
-  {
-    key: 'environment',
-    header: 'Environment',
-    render: (a) => (
-      <Badge variant={a.environment === 'mainnet' ? 'warning' : 'info'}>{a.environment}</Badge>
-    ),
-  },
-  {
-    key: 'publicKey',
-    header: 'Public Key',
-    render: (a) => (
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        {formatAddress(a.publicKey)} <CopyButton value={a.publicKey} />
-      </span>
-    ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    render: (a) => (
-      <Badge variant={a.status === 'ACTIVE' ? 'success' : a.status === 'SUSPENDED' ? 'warning' : 'danger'}>{a.status}</Badge>
-    ),
-  },
-  {
-    key: 'ownerState',
-    header: 'Owner',
-    render: (a) => (
-      <Badge variant={ownerStateBadge(a.ownerState)}>{a.ownerState}</Badge>
-    ),
-  },
-  { key: 'createdAt', header: 'Created', render: (a) => formatDate(a.createdAt) },
-];
+// walletColumns moved inside WalletListContent to reference balances signal
 
 function ownerStateBadge(state: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   switch (state) {
@@ -1595,6 +1564,40 @@ function WalletConnectTab() {
 // Wallet List Content
 // ---------------------------------------------------------------------------
 
+const WALLET_FILTER_FIELDS: FilterField[] = [
+  {
+    key: 'chain',
+    label: 'Chain',
+    type: 'select',
+    options: [
+      { value: 'solana', label: 'Solana' },
+      { value: 'ethereum', label: 'Ethereum' },
+    ],
+  },
+  {
+    key: 'environment',
+    label: 'Environment',
+    type: 'select',
+    options: [
+      { value: 'testnet', label: 'Testnet' },
+      { value: 'mainnet', label: 'Mainnet' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', label: 'ACTIVE' },
+      { value: 'SUSPENDED', label: 'SUSPENDED' },
+      { value: 'TERMINATED', label: 'TERMINATED' },
+    ],
+  },
+];
+
+/** Max wallets for which to fetch balances in parallel */
+const BALANCE_FETCH_LIMIT = 50;
+
 function WalletListContent() {
   const wallets = useSignal<Wallet[]>([]);
   const loading = useSignal(true);
@@ -1605,6 +1608,11 @@ function WalletListContent() {
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
   const createdSessionToken = useSignal<string | null>(null);
+
+  // Search + filter state
+  const search = useSignal('');
+  const filters = useSignal<Record<string, string>>({ chain: '', environment: '', status: '' });
+  const balances = useSignal<Record<string, { balance: string; symbol: string } | null>>({});
 
   const fetchWallets = async () => {
     try {
@@ -1617,6 +1625,100 @@ function WalletListContent() {
       loading.value = false;
     }
   };
+
+  // Fetch balances for wallets (up to BALANCE_FETCH_LIMIT)
+  const fetchBalances = async (walletList: Wallet[]) => {
+    const toFetch = walletList.slice(0, BALANCE_FETCH_LIMIT);
+    const results: Record<string, { balance: string; symbol: string } | null> = {};
+    await Promise.allSettled(
+      toFetch.map(async (w) => {
+        try {
+          const resp = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(w.id));
+          const defaultNet = resp.balances?.find((b) => b.isDefault);
+          if (defaultNet?.native) {
+            results[w.id] = { balance: defaultNet.native.balance, symbol: defaultNet.native.symbol };
+          } else {
+            results[w.id] = null;
+          }
+        } catch {
+          results[w.id] = null;
+        }
+      }),
+    );
+    balances.value = { ...balances.value, ...results };
+  };
+
+  const filteredWallets = useComputed(() => {
+    let list = wallets.value;
+    const q = search.value.toLowerCase();
+    if (q) {
+      list = list.filter(
+        (w) => w.name.toLowerCase().includes(q) || w.publicKey.toLowerCase().includes(q),
+      );
+    }
+    const f = filters.value;
+    if (f.chain) list = list.filter((w) => w.chain === f.chain);
+    if (f.environment) list = list.filter((w) => w.environment === f.environment);
+    if (f.status) list = list.filter((w) => w.status === f.status);
+    return list;
+  });
+
+  // Build walletColumns inside the function so we can reference `balances`
+  const listColumns: Column<Wallet>[] = [
+    { key: 'name', header: 'Name' },
+    { key: 'chain', header: 'Chain' },
+    {
+      key: 'environment',
+      header: 'Environment',
+      render: (a) => (
+        <Badge variant={a.environment === 'mainnet' ? 'warning' : 'info'}>{a.environment}</Badge>
+      ),
+    },
+    {
+      key: 'publicKey',
+      header: 'Public Key',
+      render: (a) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          {formatAddress(a.publicKey)} <CopyButton value={a.publicKey} />
+        </span>
+      ),
+    },
+    {
+      key: 'balance' as string,
+      header: 'Balance',
+      render: (wallet) => {
+        const bal = balances.value[wallet.id];
+        if (bal === undefined)
+          return <span style={{ color: 'var(--color-text-secondary)' }}>Loading...</span>;
+        if (bal === null)
+          return <span style={{ color: 'var(--color-text-secondary)' }}>--</span>;
+        return (
+          <span>
+            {bal.balance} {bal.symbol}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (a) => (
+        <Badge
+          variant={
+            a.status === 'ACTIVE' ? 'success' : a.status === 'SUSPENDED' ? 'warning' : 'danger'
+          }
+        >
+          {a.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'ownerState',
+      header: 'Owner',
+      render: (a) => <Badge variant={ownerStateBadge(a.ownerState)}>{a.ownerState}</Badge>,
+    },
+    { key: 'createdAt', header: 'Created', render: (a) => formatDate(a.createdAt) },
+  ];
 
   const handleCreate = async () => {
     if (!formName.value.trim()) {
@@ -1660,7 +1762,12 @@ function WalletListContent() {
   };
 
   useEffect(() => {
-    fetchWallets();
+    fetchWallets().then(() => {
+      // Fetch balances after wallets load
+      if (wallets.value.length > 0) {
+        void fetchBalances(wallets.value);
+      }
+    });
   }, []);
 
   return (
@@ -1746,9 +1853,21 @@ function WalletListContent() {
         </div>
       )}
 
+      <FilterBar
+        fields={WALLET_FILTER_FIELDS}
+        values={filters.value}
+        onChange={(v) => { filters.value = v; }}
+        syncUrl={false}
+      />
+      <SearchInput
+        value={search.value}
+        onSearch={(q) => { search.value = q; }}
+        placeholder="Search by name or public key..."
+      />
+
       <Table<Wallet>
-        columns={walletColumns}
-        data={wallets.value}
+        columns={listColumns}
+        data={filteredWallets.value}
         loading={loading.value}
         onRowClick={navigateToDetail}
         emptyMessage="No wallets yet"
