@@ -11,3 +11,9 @@ export {
   parseCaip19,
   formatCaip19,
 } from './caip19.js';
+
+// Network map (CAIP-2 <-> NetworkType bidirectional)
+export { CAIP2_TO_NETWORK, NETWORK_TO_CAIP2, networkToCaip2, caip2ToNetwork } from './network-map.js';
+
+// Asset helpers (native + token CAIP-19 generation)
+export { nativeAssetId, tokenAssetId, isNativeAsset } from './asset-helpers.js';

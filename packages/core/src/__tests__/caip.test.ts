@@ -8,7 +8,15 @@ import {
   formatCaip2,
   parseCaip19,
   formatCaip19,
+  CAIP2_TO_NETWORK,
+  NETWORK_TO_CAIP2,
+  networkToCaip2,
+  caip2ToNetwork,
+  nativeAssetId,
+  tokenAssetId,
+  isNativeAsset,
 } from '../caip/index.js';
+import { NETWORK_TYPES, CHAIN_TYPES } from '../enums/chain.js';
 
 // ─── CAIP-2 (Chain ID) ──────────────────────────────────────────
 
@@ -264,5 +272,184 @@ describe('CAIP-19 roundtrip', () => {
       assetNamespace: ns,
       assetReference: ref,
     });
+  });
+});
+
+// ─── Network Map (CAIP-2 <-> NetworkType) ───────────────────────
+
+describe('CAIP2_TO_NETWORK / NETWORK_TO_CAIP2 maps', () => {
+  it('CAIP2_TO_NETWORK has 13 entries', () => {
+    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(13);
+  });
+
+  it('NETWORK_TO_CAIP2 has 13 entries', () => {
+    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(13);
+  });
+
+  it('every value maps to valid ChainType and NetworkType', () => {
+    for (const [, { chain, network }] of Object.entries(CAIP2_TO_NETWORK)) {
+      expect((CHAIN_TYPES as readonly string[]).includes(chain)).toBe(true);
+      expect((NETWORK_TYPES as readonly string[]).includes(network)).toBe(true);
+    }
+  });
+
+  it('has 10 EVM entries and 3 Solana entries', () => {
+    const evmEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('eip155:'));
+    const solanaEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('solana:'));
+    expect(evmEntries).toHaveLength(10);
+    expect(solanaEntries).toHaveLength(3);
+  });
+
+  it('bidirectional roundtrip consistency', () => {
+    for (const [caip2, { network }] of Object.entries(CAIP2_TO_NETWORK)) {
+      expect(NETWORK_TO_CAIP2[network]).toBe(caip2);
+    }
+  });
+});
+
+describe('networkToCaip2()', () => {
+  it('returns eip155:1 for ethereum-mainnet', () => {
+    expect(networkToCaip2('ethereum-mainnet')).toBe('eip155:1');
+  });
+
+  it('returns solana mainnet chain ID for mainnet', () => {
+    expect(networkToCaip2('mainnet')).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
+  });
+
+  it('all 13 NetworkType values resolve without error', () => {
+    for (const network of NETWORK_TYPES) {
+      expect(() => networkToCaip2(network)).not.toThrow();
+    }
+  });
+
+  it('throws for unknown network string', () => {
+    expect(() => networkToCaip2('unknown-net' as any)).toThrow('Unknown network');
+  });
+});
+
+describe('caip2ToNetwork()', () => {
+  it('returns { chain: ethereum, network: ethereum-mainnet } for eip155:1', () => {
+    expect(caip2ToNetwork('eip155:1')).toEqual({
+      chain: 'ethereum',
+      network: 'ethereum-mainnet',
+    });
+  });
+
+  it('returns { chain: solana, network: mainnet } for solana mainnet chain ID', () => {
+    expect(caip2ToNetwork('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toEqual({
+      chain: 'solana',
+      network: 'mainnet',
+    });
+  });
+
+  it('throws for unknown CAIP-2 string', () => {
+    expect(() => caip2ToNetwork('eip155:999')).toThrow('Unknown CAIP-2 chain ID');
+  });
+});
+
+// ─── Asset Helpers ──────────────────────────────────────────────
+
+describe('nativeAssetId()', () => {
+  it('returns eip155:1/slip44:60 for ethereum-mainnet', () => {
+    expect(nativeAssetId('ethereum-mainnet')).toBe('eip155:1/slip44:60');
+  });
+
+  it('returns eip155:137/slip44:966 for polygon-mainnet (NOT 60!)', () => {
+    expect(nativeAssetId('polygon-mainnet')).toBe('eip155:137/slip44:966');
+  });
+
+  it('returns eip155:80002/slip44:966 for polygon-amoy', () => {
+    expect(nativeAssetId('polygon-amoy')).toBe('eip155:80002/slip44:966');
+  });
+
+  it('returns solana mainnet native asset for mainnet', () => {
+    expect(nativeAssetId('mainnet')).toBe(
+      'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501',
+    );
+  });
+
+  it('returns eip155:8453/slip44:60 for base-mainnet', () => {
+    expect(nativeAssetId('base-mainnet')).toBe('eip155:8453/slip44:60');
+  });
+
+  it('all 13 native asset IDs are valid CAIP-19 strings', () => {
+    for (const network of NETWORK_TYPES) {
+      const assetId = nativeAssetId(network);
+      expect(() => Caip19Schema.parse(assetId)).not.toThrow();
+    }
+  });
+});
+
+describe('tokenAssetId()', () => {
+  it('lowercases EVM address and uses erc20 namespace', () => {
+    const result = tokenAssetId(
+      'ethereum-mainnet',
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    );
+    expect(result).toBe(
+      'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+    );
+  });
+
+  it('preserves Solana base58 case and uses token namespace', () => {
+    const result = tokenAssetId(
+      'mainnet',
+      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    );
+    expect(result).toBe(
+      'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    );
+  });
+
+  it('lowercases Polygon EVM address', () => {
+    const result = tokenAssetId(
+      'polygon-mainnet',
+      '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+    );
+    expect(result).toBe(
+      'eip155:137/erc20:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+    );
+  });
+
+  it('all token asset IDs are valid CAIP-19 strings', () => {
+    const evmAddr = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+    const solAddr = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+    for (const network of NETWORK_TYPES) {
+      const addr = ['mainnet', 'devnet', 'testnet'].includes(network) ? solAddr : evmAddr;
+      const assetId = tokenAssetId(network, addr);
+      expect(() => Caip19Schema.parse(assetId)).not.toThrow();
+    }
+  });
+
+  it('already-lowercase EVM address produces same result (idempotent)', () => {
+    const lower = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+    const mixed = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+    expect(tokenAssetId('ethereum-mainnet', lower)).toBe(
+      tokenAssetId('ethereum-mainnet', mixed),
+    );
+  });
+});
+
+describe('isNativeAsset()', () => {
+  it('returns true for ETH native asset', () => {
+    expect(isNativeAsset('eip155:1/slip44:60')).toBe(true);
+  });
+
+  it('returns true for SOL native asset', () => {
+    expect(isNativeAsset('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501')).toBe(true);
+  });
+
+  it('returns false for ERC-20 token', () => {
+    expect(
+      isNativeAsset('eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'),
+    ).toBe(false);
+  });
+
+  it('returns false for Solana SPL token', () => {
+    expect(
+      isNativeAsset(
+        'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      ),
+    ).toBe(false);
   });
 });
