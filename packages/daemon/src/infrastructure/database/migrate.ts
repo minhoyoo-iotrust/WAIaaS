@@ -35,7 +35,10 @@ import {
   POLICY_TIERS,
   NOTIFICATION_LOG_STATUSES,
   INCOMING_TX_STATUSES,
+  NETWORK_TO_CAIP2,
+  tokenAssetId,
 } from '@waiaas/core';
+import type { NetworkType } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Utility: build CHECK IN clause from SSoT arrays
@@ -52,7 +55,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 21;
+export const LATEST_SCHEMA_VERSION = 22;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -190,7 +193,7 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL
 )`,
 
-    // Table 9: token_registry
+    // Table 9: token_registry (asset_id added in v22)
     `CREATE TABLE IF NOT EXISTS token_registry (
   id TEXT PRIMARY KEY,
   network TEXT NOT NULL,
@@ -199,6 +202,7 @@ function getCreateTableStatements(): string[] {
   name TEXT NOT NULL,
   decimals INTEGER NOT NULL,
   source TEXT NOT NULL DEFAULT 'custom' CHECK (source IN ('builtin', 'custom')),
+  asset_id TEXT,
   created_at INTEGER NOT NULL
 )`,
 
@@ -1529,6 +1533,43 @@ MIGRATIONS.push({
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_incoming_tx_detected_at ON incoming_transactions(detected_at)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_incoming_tx_chain_network ON incoming_transactions(chain, network)');
     sqlite.exec("CREATE INDEX IF NOT EXISTS idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'");
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v22: Add asset_id column to token_registry with CAIP-19 backfill
+// ---------------------------------------------------------------------------
+// Simple ALTER TABLE ADD COLUMN + application-level backfill.
+// Generates CAIP-19 asset_id for each known-network token using tokenAssetId().
+// Unknown networks are skipped (asset_id remains NULL).
+
+MIGRATIONS.push({
+  version: 22,
+  description: 'Add asset_id column to token_registry with CAIP-19 backfill',
+  managesOwnTransaction: false,
+  up: (sqlite) => {
+    // Step 1: Add nullable column
+    sqlite.exec('ALTER TABLE token_registry ADD COLUMN asset_id TEXT');
+
+    // Step 2: Application-level backfill using tokenAssetId()
+    const rows = sqlite
+      .prepare('SELECT id, network, address FROM token_registry')
+      .all() as Array<{ id: string; network: string; address: string }>;
+
+    const updateStmt = sqlite.prepare(
+      'UPDATE token_registry SET asset_id = ? WHERE id = ?'
+    );
+
+    for (const row of rows) {
+      // Guard: only backfill for known networks (Pitfall 4)
+      if (!(row.network in NETWORK_TO_CAIP2)) continue;
+      try {
+        const assetId = tokenAssetId(row.network as NetworkType, row.address);
+        updateStmt.run(assetId, row.id);
+      } catch {
+        // Skip on error -- rows with unknown networks get asset_id = NULL
+      }
+    }
   },
 });
 

@@ -339,6 +339,7 @@ export const tokenRegistry = sqliteTable(
     name: text('name').notNull(),
     decimals: integer('decimals').notNull(),
     source: text('source').notNull().default('custom'), // 'builtin' | 'custom'
+    assetId: text('asset_id'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
