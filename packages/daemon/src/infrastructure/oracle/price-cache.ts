@@ -10,7 +10,8 @@
  *   Between TTL and staleMax, getStale() returns the old value for fallback use.
  * - maxEntries (128 default): LRU capacity. Oldest entry evicted on overflow.
  */
-import type { PriceInfo, CacheStats } from '@waiaas/core';
+import type { PriceInfo, CacheStats, ChainType, NetworkType } from '@waiaas/core';
+import { nativeAssetId, tokenAssetId } from '@waiaas/core';
 
 /** Internal cache entry wrapping a PriceInfo with timing metadata. */
 interface CacheEntry {
@@ -25,20 +26,40 @@ interface CacheEntry {
 }
 
 /**
- * Build a normalized cache key for a token.
+ * Resolve NetworkType from a token's chain and optional network fields.
  *
- * EVM addresses are lowercased for consistency with CoinGecko API responses
- * and EIP-55 checksum normalization.
+ * Falls back to the chain's primary mainnet for backward compatibility
+ * when network is not provided.
  *
- * @param chain - Chain identifier ('solana' | 'ethereum').
- * @param address - Token address (mint for Solana, contract for EVM).
- * @returns Normalized cache key in format `chain:address`.
+ * @param chain - Chain type ('solana' | 'ethereum').
+ * @param network - Optional network type. If provided, returned as-is.
+ * @returns Resolved NetworkType.
  */
-export function buildCacheKey(chain: string, address: string): string {
-  const normalizedAddress = chain === 'ethereum'
-    ? address.toLowerCase()
-    : address;
-  return `${chain}:${normalizedAddress}`;
+export function resolveNetwork(chain: ChainType, network?: NetworkType): NetworkType {
+  if (network) return network;
+  return chain === 'solana' ? 'mainnet' : 'ethereum-mainnet';
+}
+
+/**
+ * Build a CAIP-19 cache key for a token.
+ *
+ * Uses nativeAssetId/tokenAssetId from @waiaas/core (Phase 231 SSoT).
+ * EVM addresses are lowercased internally by tokenAssetId().
+ * Solana base58 addresses are preserved by tokenAssetId().
+ *
+ * @param network - NetworkType (e.g., 'ethereum-mainnet', 'polygon-mainnet', 'mainnet').
+ * @param address - Token address or 'native' for native token.
+ * @returns CAIP-19 asset type URI as cache key.
+ *
+ * @example buildCacheKey('ethereum-mainnet', 'native') => 'eip155:1/slip44:60'
+ * @example buildCacheKey('polygon-mainnet', '0xAddr') => 'eip155:137/erc20:0xaddr'
+ * @example buildCacheKey('mainnet', 'EPjFWdd5...') => 'solana:5eykt.../token:EPjFWdd5...'
+ */
+export function buildCacheKey(network: NetworkType, address: string): string {
+  if (address === 'native') {
+    return nativeAssetId(network);
+  }
+  return tokenAssetId(network, address);
 }
 
 /**
