@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.6.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc...v2.6.0-rc.1) (2026-02-22)
+
+
+### Features
+
+* **231-01:** implement CAIP-2/19 parser, formatter, and Zod schemas ([81a3691](https://github.com/minhoyoo-iotrust/WAIaaS/commit/81a36915b7fb0ddf4ebfb78282b9840cc4d8a145))
+* **231-02:** implement network-map.ts and asset-helpers.ts with 13-network CAIP-2 mapping ([4a42d4a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4a42d4a3f15d41b22780ad1dfc7f97fa8ed27a68))
+* **231-02:** integrate CAIP module with x402, WC, TokenRef, barrel exports ([41c63d7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/41c63d7033b4d45c894dff6920f0d8a826e1414b))
+* **232-01:** migrate all oracle callers to buildCacheKey(network, address) ([2ab5d6c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2ab5d6c3bf0e3f1688e29df63c0f0ef987d18c28))
+* **232-01:** rewrite buildCacheKey to CAIP-19 + expand CoinGecko L2 + update Pyth keys ([4d4a209](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d4a2094aa135d1fc4bf3d0d1e0a00b8bfd2fdbb))
+* **232-02:** thread network through pipeline oracle callers ([ef4add5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ef4add5dc479f277d88c94d25fc966827f23d53a))
+* **233-01:** add assetId field to token registry service and API response ([2d2be3f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2d2be3f08e414fadaebbb163c8959c410b1b13d1))
+* **233-01:** add DB v22 migration with asset_id column and CAIP-19 backfill ([601ed90](https://github.com/minhoyoo-iotrust/WAIaaS/commit/601ed9097edab36037641a3bde04b6140d8f05fa))
+* **233-02:** add optional assetId to TokenInfoSchema with cross-validation ([7ce2289](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7ce228943afd5abb623f543da8dd0f2b5843d0a2))
+* **233-02:** propagate assetId through TransactionParam in pipeline ([bab6742](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bab6742499a3ae2f19d6f9bf929e8fc669ec6ed3))
+* **233-03:** extend AllowedTokensRulesSchema with optional CAIP-19 assetId ([6231d68](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6231d6845ea302b2e75d8cb80dd545e5630834a0))
+* **233-03:** implement 4-scenario ALLOWED_TOKENS matching matrix with CAIP-19 ([7942d09](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7942d09febc8dc20969756509393161b59deed81))
+* **234-01:** add CAIP-19 assetId parameter to MCP token tool schemas ([ea5f37a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ea5f37a29215a1f6f0cb9a220eaaff8b7e106dfd))
+* **234-02:** add optional CAIP-19 assetId to TS and Python SDK types ([0c44c99](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0c44c99e771b8de1a5e9ebbae128ef1bd4db2d76))
+
+
+### Bug Fixes
+
+* **231:** revise plans based on checker feedback ([5022668](https://github.com/minhoyoo-iotrust/WAIaaS/commit/502266859dae04a77fa3712330e892797232e47b))
+* **233:** revise plans based on checker feedback ([fd7f1d8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fd7f1d88cb50cfcfd4ee0d15f101b496b28aa349))
+* lower daemon coverage thresholds to 84% for lines/statements ([871a4bc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/871a4bc93c9d956125fb967cdc6a9f583453d51e))
+* resolve 5 open issues ([#143](https://github.com/minhoyoo-iotrust/WAIaaS/issues/143), [#146](https://github.com/minhoyoo-iotrust/WAIaaS/issues/146), [#148](https://github.com/minhoyoo-iotrust/WAIaaS/issues/148), [#149](https://github.com/minhoyoo-iotrust/WAIaaS/issues/149), [#144](https://github.com/minhoyoo-iotrust/WAIaaS/issues/144)) ([c911235](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c911235e36f3cabc3c9d481bf5a277dd6d27591e))
+* update test files to use CAIP-19 cache keys and NETWORK_TO_CAIP2 ([a404eeb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a404eeb55072ebef8c6ffd33af2681c39c5da801))
+
 ## [2.6.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.5.0...v2.6.0-rc) (2026-02-22)
 
 
