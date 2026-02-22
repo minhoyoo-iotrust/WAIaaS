@@ -11,27 +11,27 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 Milestone: v27.3 토큰별 지출 한도 정책
 Phase: 236 (2 of 4) (Pipeline -- 평가 로직 확장)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- Completed 235-01 (Schema Zod SSoT)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 236-01 (TransactionParam tokenDecimals)
 
-Progress: [█░░░░░░░░░] 14%
+Progress: [██░░░░░░░░] 29%
 
 ## Performance Metrics
 
 **Cumulative:** 53 milestones, 235 phases, 506 plans, 1,368 reqs, 4,396+ tests, ~157,584 LOC TS
 
 **v27.3 Velocity:**
-- Total plans completed: 1/7
-- Average duration: 3min
-- Total execution time: 0.05 hours
+- Total plans completed: 2/7
+- Average duration: 2.5min
+- Total execution time: 0.08 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 235 | 1/1 | 3min | 3min |
-| 236 | 0/3 | - | - |
+| 236 | 1/3 | 2min | 2min |
 | 237 | 0/2 | - | - |
 | 238 | 0/1 | - | - |
 
@@ -45,6 +45,8 @@ Progress: [█░░░░░░░░░] 14%
 - [235-01] CAIP-19 regex를 policy.schema.ts에 인라인 복제 -- caip/ 모듈과의 순환 의존성 방지
 - [235-01] evaluateNativeTier에 non-null assertion 사용 -- Phase 236에서 proper undefined guards로 교체 예정
 - [235-01] token_limits 키 검증: native | native:{solana|ethereum} | CAIP-19 형식
+- [236-01] sign-only mapOperationToParam does not pass tokenDecimals -- ParsedOperation lacks decimals field
+- [236-01] assetId: undefined explicitly set in sign-only TOKEN_TRANSFER case for interface consistency
 
 ### Blockers/Concerns
 
@@ -53,5 +55,5 @@ Progress: [█░░░░░░░░░] 14%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 235-01-PLAN.md (Schema Zod SSoT)
+Stopped at: Completed 236-01-PLAN.md (TransactionParam tokenDecimals)
 Resume file: None

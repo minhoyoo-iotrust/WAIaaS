@@ -16,8 +16,8 @@
 
 ### Engine (정책 평가)
 
-- [ ] **ENGN-01**: TransactionParam에 tokenDecimals 필드가 추가되고 3곳 인터페이스가 동기화됨
-- [ ] **ENGN-02**: buildTransactionParam()이 TOKEN_TRANSFER/APPROVE에서 tokenDecimals를 전달함
+- [x] **ENGN-01**: TransactionParam에 tokenDecimals 필드가 추가되고 3곳 인터페이스가 동기화됨
+- [x] **ENGN-02**: buildTransactionParam()이 TOKEN_TRANSFER/APPROVE에서 tokenDecimals를 전달함
 - [ ] **ENGN-03**: evaluateSpendingLimit()에 tokenContext 파라미터가 추가됨
 - [ ] **ENGN-04**: evaluateTokenTier() 함수가 CAIP-19 키 매칭 순서(정확→native:{chain}→native→raw 폴백)로 평가함
 - [ ] **ENGN-05**: 토큰별 한도 매칭 시 raw amount를 decimal 변환하여 사람 읽기 단위로 비교함
@@ -66,8 +66,8 @@
 | SCHM-04 | Phase 235 | Complete |
 | SCHM-05 | Phase 235 | Complete |
 | SCHM-06 | Phase 235 | Complete |
-| ENGN-01 | Phase 236 | Pending |
-| ENGN-02 | Phase 236 | Pending |
+| ENGN-01 | Phase 236 | Complete |
+| ENGN-02 | Phase 236 | Complete |
 | ENGN-03 | Phase 236 | Pending |
 | ENGN-04 | Phase 236 | Pending |
 | ENGN-05 | Phase 236 | Pending |
