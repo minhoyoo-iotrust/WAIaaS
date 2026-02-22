@@ -756,6 +756,7 @@ export const TokenRegistryItemSchema = z
     name: z.string(),
     decimals: z.number().int(),
     source: z.enum(['builtin', 'custom']),
+    assetId: z.string().nullable(),
   })
   .openapi('TokenRegistryItem');
 
