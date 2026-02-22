@@ -184,8 +184,10 @@ ALLOWED_TOKENS 정책에 `assetId` 지원. 평가 시 `assetId`가 있으면 체
 ### 8. REST API / MCP / Skills 업데이트
 
 - 토큰 관련 API 응답에 `assetId` 필드 추가
-- `send_token`, `approve_token` MCP 도구에 `assetId` 파라미터 추가
+- `send_token`, `approve_token` 등 토큰 관련 MCP 도구에 `assetId` 파라미터 추가 (현재 24개 도구 중 토큰 식별이 필요한 도구 대상)
 - skills 파일에 CAIP-19 자산 식별자 사용법 반영
+
+> **참고**: `packages/core/src/interfaces/x402.types.ts`에 이미 `CAIP2_TO_NETWORK` 매핑 13개가 존재한다. Phase 2 `network-map.ts` 구현 시 이 매핑을 통합·재활용하여 중복을 방지한다.
 
 ---
 
@@ -285,6 +287,7 @@ skills/
 | 3 | 하위 호환성 유지 비용 | assetId + address 이중 지원으로 코드 복잡도 증가 | 전환 기간 후 address-only 지원 deprecated 예정 |
 | 4 | 외부 프로토콜 매핑 | 각 ActionProvider마다 CAIP-19 ↔ 프로토콜 ID 변환 필요 | 공통 매핑 유틸리티 제공, 프로바이더별 변환은 프로바이더 내부에서 처리 |
 | 5 | npm 파서 라이브러리 품질 | 외부 라이브러리가 유지보수 중단 또는 품질 미달일 수 있음 | 리서치에서 평가 후 직접 구현/라이브러리 사용 결정 |
+| 6 | Solana NetworkType 이름 충돌 | Solana 네트워크가 `'mainnet'`, `'devnet'`, `'testnet'`으로 prefix 없이 정의되어 EVM의 `'ethereum-mainnet'` 등과 명명 패턴이 다름. CAIP-2 매핑 시 양방향 변환 로직에서 혼동 가능 | `network-map.ts`에서 명시적 매핑 테이블로 처리. 변환 함수에 exhaustive switch 적용 |
 
 ---
 
