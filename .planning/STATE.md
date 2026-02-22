@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 236 -- Pipeline (평가 로직 확장)
+**Current focus:** Phase 237 -- Integration Test (통합 테스트)
 
 ## Current Position
 
 Milestone: v27.3 토큰별 지출 한도 정책
-Phase: 236 (2 of 4) (Pipeline -- 평가 로직 확장)
-Plan: 2 of 3 in current phase
+Phase: 237 (3 of 4) (Integration Test -- 통합 테스트)
+Plan: 0 of 2 in current phase
 Status: Executing
-Last activity: 2026-02-22 -- Completed 236-02 (evaluateTokenTier + token_limits)
+Last activity: 2026-02-22 -- Completed 236-03 (tokenContext callsite wiring)
 
-Progress: [████░░░░░░] 43%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
 **Cumulative:** 53 milestones, 235 phases, 506 plans, 1,368 reqs, 4,396+ tests, ~157,584 LOC TS
 
 **v27.3 Velocity:**
-- Total plans completed: 3/7
-- Average duration: 4.7min
-- Total execution time: 0.23 hours
+- Total plans completed: 4/7
+- Average duration: 4min
+- Total execution time: 0.27 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 235 | 1/1 | 3min | 3min |
-| 236 | 2/3 | 11min | 5.5min |
+| 236 | 3/3 | 13min | 4.3min |
 | 237 | 0/2 | - | - |
 | 238 | 0/1 | - | - |
 
@@ -51,6 +51,8 @@ Progress: [████░░░░░░] 43%
 - [236-02] NATIVE_DECIMALS duplicated in database-policy-engine.ts to avoid cross-file dependency
 - [236-02] parseDecimalToBigInt uses fixed-point multiplication for precision-safe comparison
 - [236-02] evaluateBatch APPROVE_TIER_OVERRIDE default kept unchanged (APPROVAL) -- only single-evaluate updated
+- [236-03] evaluate() + evaluateAndReserve() tokenContext wiring completed in plan 02 via buildTokenContext -- plan 03 verified
+- [236-03] evaluateBatch tokenContext intentionally omitted (BATCH aggregates native amounts, raw/USD only)
 
 ### Blockers/Concerns
 
@@ -59,5 +61,5 @@ Progress: [████░░░░░░] 43%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 236-02-PLAN.md (evaluateTokenTier + token_limits)
+Stopped at: Completed 236-03-PLAN.md (tokenContext callsite wiring)
 Resume file: None
