@@ -183,7 +183,7 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 - Integer phases (231, 232, 233, 234): Planned milestone work
 - Decimal phases (231.1, 231.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 231: Core CAIP Module + Network Map** - CAIP-2/19 파서, 13-네트워크 양방향 맵, TokenRef 확장, x402 통합
+- [x] **Phase 231: Core CAIP Module + Network Map** - CAIP-2/19 파서, 13-네트워크 양방향 맵, TokenRef 확장, x402 통합 (completed 2026-02-22)
 - [ ] **Phase 232: Oracle L2 Support + Cache Key Migration** - 가격 오라클 CAIP-19 캐시 키, CoinGecko L2 플랫폼 매핑, Pyth 키 원자적 전환
 - [ ] **Phase 233: DB Migration + Schema + Policy** - DB v22 asset_id 컬럼, 토큰 레지스트리 backfill, 트랜잭션/정책 스키마 assetId 확장
 - [ ] **Phase 234: MCP + SDK + Skills Integration** - MCP 도구 assetId 파라미터, TS/Python SDK 타입, 스킬 파일 문서화
@@ -275,7 +275,7 @@ Phases execute in numeric order: 231 -> 232 -> 233 -> 234
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
 | 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
-| 231 | v27.2 | 1/2 | In progress | - |
+| 231 | 2/2 | Complete   | 2026-02-22 | - |
 | 232 | v27.2 | 0/2 | Not started | - |
 | 233 | v27.2 | 0/3 | Not started | - |
 | 234 | v27.2 | 0/2 | Not started | - |

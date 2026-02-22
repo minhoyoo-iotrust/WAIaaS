@@ -12,15 +12,15 @@
 - [x] **CAIP-03**: User can parse a CAIP-19 asset type URI into chainId, assetNamespace, and assetReference components
 - [x] **CAIP-04**: User can format components into a valid CAIP-19 asset type URI with roundtrip fidelity
 - [x] **CAIP-05**: User can validate CAIP-2 and CAIP-19 strings via Zod schemas with spec-compliant regex
-- [ ] **CAIP-06**: User can convert any WAIaaS NetworkType to its CAIP-2 chain ID and vice versa (13 networks bidirectional)
-- [ ] **CAIP-07**: User can generate a CAIP-19 native asset ID for any supported network using slip44 coin types (ETH=60, SOL=501, POL=966)
-- [ ] **CAIP-08**: User can generate a CAIP-19 token asset ID from network and token address (erc20 for EVM, token for Solana SPL/Token-2022)
-- [ ] **CAIP-09**: User can determine if a CAIP-19 URI represents a native asset via isNativeAsset() helper
-- [ ] **CAIP-10**: x402.types.ts CAIP2_TO_NETWORK mapping is consolidated into the new caip/ module with backward-compatible re-export
+- [x] **CAIP-06**: User can convert any WAIaaS NetworkType to its CAIP-2 chain ID and vice versa (13 networks bidirectional)
+- [x] **CAIP-07**: User can generate a CAIP-19 native asset ID for any supported network using slip44 coin types (ETH=60, SOL=501, POL=966)
+- [x] **CAIP-08**: User can generate a CAIP-19 token asset ID from network and token address (erc20 for EVM, token for Solana SPL/Token-2022)
+- [x] **CAIP-09**: User can determine if a CAIP-19 URI represents a native asset via isNativeAsset() helper
+- [x] **CAIP-10**: x402.types.ts CAIP2_TO_NETWORK mapping is consolidated into the new caip/ module with backward-compatible re-export
 
 ### Token Infrastructure
 
-- [ ] **TOKN-01**: TokenRef schema includes optional assetId (CAIP-19) and network (NetworkType) fields alongside existing address+chain
+- [x] **TOKN-01**: TokenRef schema includes optional assetId (CAIP-19) and network (NetworkType) fields alongside existing address+chain
 - [ ] **TOKN-02**: token_registry DB table has asset_id TEXT column added via incremental migration (v22)
 - [ ] **TOKN-03**: Existing token_registry records are auto-populated with correct CAIP-19 asset_id from (network, address) during migration
 - [ ] **TOKN-04**: Token API responses include assetId field for all token registry entries
@@ -88,12 +88,12 @@
 | CAIP-03 | Phase 231 | Complete |
 | CAIP-04 | Phase 231 | Complete |
 | CAIP-05 | Phase 231 | Complete |
-| CAIP-06 | Phase 231 | Pending |
-| CAIP-07 | Phase 231 | Pending |
-| CAIP-08 | Phase 231 | Pending |
-| CAIP-09 | Phase 231 | Pending |
-| CAIP-10 | Phase 231 | Pending |
-| TOKN-01 | Phase 231 | Pending |
+| CAIP-06 | Phase 231 | Complete |
+| CAIP-07 | Phase 231 | Complete |
+| CAIP-08 | Phase 231 | Complete |
+| CAIP-09 | Phase 231 | Complete |
+| CAIP-10 | Phase 231 | Complete |
+| TOKN-01 | Phase 231 | Complete |
 | TOKN-02 | Phase 233 | Pending |
 | TOKN-03 | Phase 233 | Pending |
 | TOKN-04 | Phase 233 | Pending |

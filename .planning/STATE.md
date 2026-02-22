@@ -9,27 +9,27 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 1 of 4 (Phase 231: Core CAIP Module + Network Map)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 231-01 CAIP-2/19 parser module
+Phase: 1 of 4 (Phase 231: Core CAIP Module + Network Map) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase 231 complete, ready for Phase 232
+Last activity: 2026-02-22 -- Completed 231-02 network map + asset helpers
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 1 (this milestone)
-- Average duration: 2min
-- Total execution time: 0.03 hours
+- Total plans completed: 2 (this milestone)
+- Average duration: 3.5min
+- Total execution time: 0.12 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 231 | 1/2 | 2min | 2min |
+| 231 | 2/2 | 7min | 3.5min |
 
 *Updated after each plan completion*
 
@@ -47,6 +47,9 @@ Progress: [█░░░░░░░░░] 10%
 - Single regex per CAIP schema (no composed schemas) -- simpler and faster
 - Caip19Schema aliases Caip19AssetTypeSchema (fungible tokens only, no AssetId)
 - Both parse and format validate via Zod -- invalid input never silently passes
+- network-map.ts is SSoT for CAIP-2/NetworkType -- x402.types.ts and wc-session-service.ts import from it
+- Polygon uses SLIP-44 966 (POL), NOT 60 (ETH)
+- TokenRefSchema extension additive (optional assetId + network) -- zero breaking changes
 
 ### Blockers/Concerns
 
@@ -56,5 +59,5 @@ Progress: [█░░░░░░░░░] 10%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 231-01-PLAN.md (CAIP-2/19 parser module)
+Stopped at: Completed 231-02-PLAN.md (network map + asset helpers + integration)
 Resume file: None
