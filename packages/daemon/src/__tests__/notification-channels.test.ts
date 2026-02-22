@@ -17,10 +17,17 @@ import { getNotificationMessage } from '../notifications/templates/message-templ
 // ---------------------------------------------------------------------------
 
 function makePayload(overrides?: Partial<NotificationPayload>): NotificationPayload {
+  const title = overrides?.title ?? 'Transaction Confirmed';
+  const body = overrides?.body ?? 'Transaction abc123 confirmed. Amount: 1.5 SOL';
   return {
     eventType: 'TX_CONFIRMED',
     walletId: 'agent-001',
-    message: 'Transaction abc123 confirmed. Amount: 1.5 SOL',
+    walletName: 'my-sol-wallet',
+    walletAddress: '3HfEUdN5VBrkgP3bMGKNSwv4nBxy',
+    network: 'solana-devnet',
+    title,
+    body,
+    message: `${title}\n${body}`,
     details: { txId: 'abc123', amount: '1.5 SOL' },
     timestamp: 1700000000,
     ...overrides,
@@ -40,8 +47,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('NotificationEventType', () => {
-  it('has exactly 28 event types', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(28);
+  it('has exactly 30 event types', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(30);
   });
 
   it('contains the 5 new event types added in v1.3', () => {
@@ -170,8 +177,8 @@ describe('TelegramChannel', () => {
 
   it('send() formats message with MarkdownV2 escaping', async () => {
     await channel.initialize({ telegram_bot_token: 'tok', telegram_chat_id: '1' });
-    // Message with special chars that need escaping
-    await channel.send(makePayload({ message: 'Amount: 1.5 SOL (test)' }));
+    // Body with special chars that need escaping
+    await channel.send(makePayload({ body: 'Amount: 1.5 SOL (test)' }));
 
     const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
     // MarkdownV2 should escape . and ( )
@@ -230,6 +237,7 @@ describe('DiscordChannel', () => {
     expect(url).toBe('https://discord.com/api/webhooks/1/x');
     const body = JSON.parse(options!.body as string);
     expect(body.embeds).toHaveLength(1);
+    expect(body.embeds[0].title).toBe('Transaction Confirmed');
     expect(body.embeds[0].description).toBe('Transaction abc123 confirmed. Amount: 1.5 SOL');
   });
 
@@ -271,12 +279,15 @@ describe('DiscordChannel', () => {
 
     const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
     const fields = body.embeds[0].fields;
-    // 2 default fields (Wallet, Event) + 2 detail fields
-    expect(fields).toHaveLength(4);
-    expect(fields[2].name).toBe('txHash');
-    expect(fields[2].value).toBe('hash123');
-    expect(fields[3].name).toBe('chain');
-    expect(fields[3].value).toBe('solana');
+    // 5 default fields (Wallet, ID, Address, Network, Event) + 2 detail fields
+    expect(fields).toHaveLength(7);
+    expect(fields[0].name).toBe('Wallet');
+    expect(fields[0].value).toBe('my-sol-wallet');
+    expect(fields[1].name).toBe('ID');
+    expect(fields[5].name).toBe('txHash');
+    expect(fields[5].value).toBe('hash123');
+    expect(fields[6].name).toBe('chain');
+    expect(fields[6].value).toBe('solana');
   });
 
   it('send() throws on non-ok response', async () => {
@@ -366,14 +377,21 @@ describe('NtfyChannel', () => {
     expect((options.headers as Record<string, string>)['Tags']).toBe('key');
   });
 
-  it('send() sends plain text body with wallet and timestamp', async () => {
+  it('send() sends plain text body with wallet name and timestamp', async () => {
     await channel.initialize({ ntfy_topic: 'alerts' });
-    const payload = makePayload({ walletId: 'test-wallet' });
+    const payload = makePayload({
+      walletId: '019c6fb6-2b2d-72a8-8515-235255be884d',
+      walletName: 'my-wallet',
+      walletAddress: '3HfEUdN5VBrkgP3bMGKNSwv4nBxy',
+      network: 'solana-devnet',
+    });
     await channel.send(payload);
 
     const body = mockFetch.mock.calls[0]![1]!.body as string;
     expect(body).toContain('Transaction abc123 confirmed. Amount: 1.5 SOL');
-    expect(body).toContain('Wallet: test-wallet');
+    expect(body).toContain('my-wallet (019c6f…884d)');
+    expect(body).toContain('3HfE…nBxy');
+    expect(body).toContain('solana-devnet');
     expect(body).toContain('Time:');
   });
 
@@ -388,7 +406,7 @@ describe('NtfyChannel', () => {
     await channel.send(makePayload({ eventType: 'TX_CONFIRMED' }));
 
     const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Title']).toBe('[WAIaaS] TX CONFIRMED');
+    expect((options.headers as Record<string, string>)['Title']).toBe('[WAIaaS] Transaction Confirmed');
   });
 });
 
@@ -427,6 +445,7 @@ describe('SlackChannel', () => {
     expect(url).toBe('https://hooks.slack.com/services/T/B/xxx');
     const body = JSON.parse(options!.body as string);
     expect(body.attachments).toHaveLength(1);
+    expect(body.attachments[0].title).toContain('Transaction Confirmed');
     expect(body.attachments[0].text).toBe('Transaction abc123 confirmed. Amount: 1.5 SOL');
   });
 
@@ -474,11 +493,14 @@ describe('SlackChannel', () => {
 
     const body = JSON.parse((mockFetch.mock.calls[0]![1]!.body as string));
     const fields = body.attachments[0].fields;
-    // 2 default fields (Wallet, Event) + 2 detail fields
-    expect(fields).toHaveLength(4);
-    expect(fields[2].title).toBe('txHash');
-    expect(fields[2].value).toBe('hash123');
-    expect(fields[3].title).toBe('chain');
-    expect(fields[3].value).toBe('solana');
+    // 5 default fields (Wallet, ID, Address, Network, Event) + 2 detail fields
+    expect(fields).toHaveLength(7);
+    expect(fields[0].title).toBe('Wallet');
+    expect(fields[0].value).toBe('my-sol-wallet');
+    expect(fields[1].title).toBe('ID');
+    expect(fields[5].title).toBe('txHash');
+    expect(fields[5].value).toBe('hash123');
+    expect(fields[6].title).toBe('chain');
+    expect(fields[6].value).toBe('solana');
   });
 });

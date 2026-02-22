@@ -3,7 +3,7 @@ name: "WAIaaS Quickset"
 description: "End-to-end quickset: create wallet, session, check balance, send first transfer"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, quickset, quickstart, waiass]
-version: "2.4.0-rc.7"
+version: "2.5.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

@@ -1,4 +1,5 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { abbreviateId, abbreviateAddress } from './format-utils.js';
 
 export class DiscordChannel implements INotificationChannel {
   readonly name = 'discord';
@@ -15,20 +16,29 @@ export class DiscordChannel implements INotificationChannel {
     // Discord Webhook with Embed format
     const color = this.getColor(payload.eventType);
 
+    const fields: Array<{ name: string; value: string; inline: boolean }> = [];
+    if (payload.walletId) {
+      fields.push({ name: 'Wallet', value: payload.walletName || payload.walletId, inline: true });
+      fields.push({ name: 'ID', value: abbreviateId(payload.walletId), inline: true });
+      if (payload.walletAddress) {
+        fields.push({ name: 'Address', value: abbreviateAddress(payload.walletAddress), inline: true });
+      }
+      if (payload.network) {
+        fields.push({ name: 'Network', value: payload.network, inline: true });
+      }
+    }
+    fields.push({ name: 'Event', value: payload.eventType, inline: true });
+
     const embed: Record<string, unknown> = {
-      title: payload.eventType.replace(/_/g, ' '),
-      description: payload.message,
+      title: payload.title,
+      description: payload.body,
       color,
-      fields: [
-        { name: 'Wallet', value: payload.walletId, inline: true },
-        { name: 'Event', value: payload.eventType, inline: true },
-      ],
-      timestamp: new Date(payload.timestamp * 1000).toISOString(),
+      fields,
+      ...(payload.walletId ? { timestamp: new Date(payload.timestamp * 1000).toISOString() } : {}),
     };
 
     // Add details fields if present
     if (payload.details) {
-      const fields = embed.fields as Array<{ name: string; value: string; inline: boolean }>;
       for (const [key, value] of Object.entries(payload.details)) {
         fields.push({ name: key, value: String(value), inline: true });
       }

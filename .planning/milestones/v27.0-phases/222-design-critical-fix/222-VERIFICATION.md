@@ -37,7 +37,7 @@ human_verification: []
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `docs/design/76-incoming-transaction-monitoring.md` | GAP-1, GAP-2, GAP-3, GAP-4, FLOW-2 수정된 설계 문서 | VERIFIED | 파일 존재. 4개 커밋(439396f, 09addb2, cc26304, 23137e1)이 이 파일만 수정. ~2,300줄 실질적 내용. |
+| `internal/design/76-incoming-transaction-monitoring.md` | GAP-1, GAP-2, GAP-3, GAP-4, FLOW-2 수정된 설계 문서 | VERIFIED | 파일 존재. 4개 커밋(439396f, 09addb2, cc26304, 23137e1)이 이 파일만 수정. ~2,300줄 실질적 내용. |
 
 ---
 
@@ -87,7 +87,7 @@ None — 이 Phase는 설계 문서 텍스트 수정 작업으로, 모든 성공
 
 ### GAP-1: IChainSubscriber 인터페이스 확장 (VERIFIED)
 
-`docs/design/76-incoming-transaction-monitoring.md` §1.4 (L91-141):
+`internal/design/76-incoming-transaction-monitoring.md` §1.4 (L91-141):
 
 ```typescript
 export interface IChainSubscriber {
@@ -164,7 +164,7 @@ Step 6: BackgroundWorkers
 
 ### Commit Verification
 
-4개 커밋 모두 유효하며 단일 파일(`docs/design/76-incoming-transaction-monitoring.md`)만 수정:
+4개 커밋 모두 유효하며 단일 파일(`internal/design/76-incoming-transaction-monitoring.md`)만 수정:
 - `439396f`: GAP-1 — IChainSubscriber connect()/waitForDisconnect() 추가 (+40줄)
 - `09addb2`: GAP-4 — eventBus.emit 타입 통일 + flush:complete 이벤트 (+36/-6줄)
 - `cc26304`: GAP-3 — is_suspicious 컬럼 DDL/INSERT/마이그레이션/Summary SQL (+16/-5줄)
@@ -176,7 +176,7 @@ Step 6: BackgroundWorkers
 
 Phase 222의 목표인 "구현 전 설계 완결성 확보"가 완전히 달성되었다.
 
-설계 문서 `docs/design/76-incoming-transaction-monitoring.md`에서:
+설계 문서 `internal/design/76-incoming-transaction-monitoring.md`에서:
 - GAP-1: IChainSubscriber 인터페이스가 6메서드로 확장되어 reconnectLoop과 일관됨
 - GAP-2: 2개 폴링 BackgroundWorker가 Step 6에 등록되어 POLLING 상태에서 실제 감지 수행 가능
 - GAP-3: is_suspicious 컬럼이 DDL/INSERT/마이그레이션/Summary SQL 4개 섹션에 일관 적용되고 미정의 테이블 참조가 완전 제거됨

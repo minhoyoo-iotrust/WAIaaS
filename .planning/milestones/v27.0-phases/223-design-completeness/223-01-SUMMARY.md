@@ -24,7 +24,7 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - docs/design/76-incoming-transaction-monitoring.md
+    - internal/design/76-incoming-transaction-monitoring.md
 
 key-decisions:
   - "SUSPICIOUS priority routing via channel-internal eventType matching, no NotificationPayload interface change"
@@ -68,7 +68,7 @@ Each task was committed atomically:
 2. **Task 2: getDecimals() helper + SafetyRuleContext decimals (section 6.5-6.6)** - `5ef6965` (docs)
 
 ## Files Created/Modified
-- `docs/design/76-incoming-transaction-monitoring.md` - sections 6.3 (SUSPICIOUS priority description), 6.4 (NtfyChannel.mapPriority extension, WalletNotificationChannel priority branch, NOTIFICATION_CATEGORIES comment update), 6.5 (SafetyRuleContext.decimals + getDecimals() helper definition), 6.6 (DustAttackRule/LargeAmountRule ctx.decimals)
+- `internal/design/76-incoming-transaction-monitoring.md` - sections 6.3 (SUSPICIOUS priority description), 6.4 (NtfyChannel.mapPriority extension, WalletNotificationChannel priority branch, NOTIFICATION_CATEGORIES comment update), 6.5 (SafetyRuleContext.decimals + getDecimals() helper definition), 6.6 (DustAttackRule/LargeAmountRule ctx.decimals)
 
 ## Decisions Made
 - Used channel-internal priority determination (existing pattern) instead of adding priority field to NotificationPayload -- avoids breaking INotificationChannel interface across 4 channel implementations
@@ -99,7 +99,7 @@ None - no external service configuration required.
 
 ## Self-Check: PASSED
 
-- FOUND: docs/design/76-incoming-transaction-monitoring.md
+- FOUND: internal/design/76-incoming-transaction-monitoring.md
 - FOUND: .planning/phases/223-design-completeness/223-01-SUMMARY.md
 - FOUND: 3ad25f6 (Task 1 commit)
 - FOUND: 5ef6965 (Task 2 commit)

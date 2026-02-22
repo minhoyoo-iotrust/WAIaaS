@@ -531,6 +531,67 @@ export interface SpendingLimitRules {
   monthly_limit_usd?: number;
 }
 
+// ---------------------------------------------------------------------------
+// Incoming Transaction Types
+// ---------------------------------------------------------------------------
+
+export interface IncomingTransactionItem {
+  id: string;
+  txHash: string;
+  walletId: string;
+  fromAddress: string;
+  amount: string;
+  tokenAddress: string | null;
+  chain: string;
+  network: string;
+  status: string; // 'DETECTED' | 'CONFIRMED'
+  blockNumber: number | null;
+  detectedAt: number;
+  confirmedAt: number | null;
+  suspicious: boolean;
+}
+
+export interface IncomingTransactionListResponse {
+  data: IncomingTransactionItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface ListIncomingTransactionsParams {
+  cursor?: string;
+  limit?: number;
+  chain?: string;
+  network?: string;
+  status?: 'DETECTED' | 'CONFIRMED';
+  token?: string;
+  fromAddress?: string;
+  since?: number;
+  until?: number;
+  walletId?: string;
+}
+
+export interface IncomingSummaryEntry {
+  date: string;
+  totalCount: number;
+  totalAmountNative: string;
+  totalAmountUsd: number | null;
+  suspiciousCount: number;
+}
+
+export interface IncomingTransactionSummaryResponse {
+  period: string;
+  entries: IncomingSummaryEntry[];
+}
+
+export interface GetIncomingTransactionSummaryParams {
+  period?: 'daily' | 'weekly' | 'monthly';
+  chain?: string;
+  network?: string;
+  since?: number;
+  until?: number;
+  walletId?: string;
+}
+
 /** Policy type enum for REST API /v1/policies. */
 export type PolicyType =
   | 'SPENDING_LIMIT'

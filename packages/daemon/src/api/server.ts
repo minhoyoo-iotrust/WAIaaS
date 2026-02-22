@@ -63,6 +63,7 @@ import { adminRoutes } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
+import { incomingRoutes } from './routes/incoming.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -118,6 +119,8 @@ export interface CreateAppDeps {
   wcSigningBridge?: WcSigningBridge;
   approvalChannelRouter?: ApprovalChannelRouter;
   versionCheckService?: VersionCheckService | null;
+  /** Duck-typed to avoid circular dependency with IncomingTxMonitorService */
+  incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
 }
 
 /**
@@ -317,6 +320,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         notificationService: deps.notificationService,
         eventBus: deps.eventBus,
         jwtSecretManager: deps.jwtSecretManager ?? undefined,
+        incomingTxMonitorService: deps.incomingTxMonitorService,
       }),
     );
   }
@@ -354,6 +358,20 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         adapterPool: deps.adapterPool ?? null,
         config: deps.config ?? null,
         tokenRegistryService,
+        forexRateService: deps.forexRateService,
+        settingsService: deps.settingsService,
+      }),
+    );
+  }
+
+  // Register incoming transaction routes (sessionAuth via /v1/wallet/* wildcard)
+  if (deps.db) {
+    app.route(
+      '/v1',
+      incomingRoutes({
+        db: deps.db,
+        sqlite: deps.sqlite,
+        priceOracle: deps.priceOracle,
         forexRateService: deps.forexRateService,
         settingsService: deps.settingsService,
       }),

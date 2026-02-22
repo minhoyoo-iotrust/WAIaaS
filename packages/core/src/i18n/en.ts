@@ -4,7 +4,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 /**
  * Messages type definition. Enforces key parity across all locales.
  * Keys in errors must match ERROR_CODES keys exactly (100 error codes).
- * Notification templates cover all 22 event types.
+ * Notification templates cover all 30 event types.
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
@@ -174,9 +174,9 @@ export const messages: Messages = {
     INVALID_SIGN_RESPONSE: 'Invalid sign response format',
     SIGN_REQUEST_ALREADY_PROCESSED: 'Sign request has already been processed',
   },
-  // Notification templates (22 event types)
+  // Notification templates (30 event types)
   notifications: {
-    TX_REQUESTED: { title: 'Transaction Requested', body: 'Wallet {walletId} requested {amount} transfer to {to} {display_amount}' },
+    TX_REQUESTED: { title: 'Transaction Requested', body: '{walletName} requested {amount} transfer to {to} {display_amount}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
     TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain {display_amount}' },
     TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount} {display_amount}' },
@@ -185,25 +185,27 @@ export const messages: Messages = {
     TX_DOWNGRADED_DELAY: { title: 'Transaction Delayed', body: 'Transaction {txId} downgraded to delay queue ({seconds}s cooldown)' },
     TX_APPROVAL_REQUIRED: { title: 'Approval Required', body: 'Transaction {txId} requires owner approval. Amount: {amount} to {to} {display_amount}' },
     TX_APPROVAL_EXPIRED: { title: 'Approval Expired', body: 'Approval for transaction {txId} has expired' },
-    POLICY_VIOLATION: { title: 'Policy Violation', body: 'Wallet {walletId} policy violation: {reason}. Policy: {policyType}. Manage: {adminLink}' },
-    WALLET_SUSPENDED: { title: 'Wallet Suspended', body: 'Wallet {walletId} has been suspended: {reason}' },
+    POLICY_VIOLATION: { title: 'Policy Violation', body: '{walletName} policy violation: {reason}. Policy: {policyType}. Manage: {adminLink}' },
+    WALLET_SUSPENDED: { title: 'Wallet Suspended', body: '{walletName} has been suspended: {reason}' },
     KILL_SWITCH_ACTIVATED: { title: 'Kill Switch Activated', body: 'Kill switch activated by {activatedBy}. All operations halted' },
     KILL_SWITCH_RECOVERED: { title: 'Kill Switch Recovered', body: 'Kill switch deactivated. Normal operations resumed' },
     KILL_SWITCH_ESCALATED: { title: 'Kill Switch Escalated', body: 'Kill switch escalated to LOCKED state. Immediate action required' },
-    AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: 'Wallet {walletId} auto-stopped: {reason}. Rule: {rule}' },
-    SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for wallet {walletId} expires in {minutes} minutes' },
-    SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for wallet {walletId} has expired' },
-    SESSION_CREATED: { title: 'Session Created', body: 'New session created for wallet {walletId}' },
-    SESSION_WALLET_ADDED: { title: 'Wallet Added to Session', body: 'Wallet {walletId} has been added to session {sessionId}' },
-    SESSION_WALLET_REMOVED: { title: 'Wallet Removed from Session', body: 'Wallet {walletId} has been removed from session {sessionId}' },
-    OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for wallet {walletId}: {ownerAddress}' },
-    OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from wallet {walletId}' },
-    OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for wallet {walletId}' },
+    AUTO_STOP_TRIGGERED: { title: 'Auto-Stop Triggered', body: '{walletName} auto-stopped: {reason}. Rule: {rule}' },
+    SESSION_EXPIRING_SOON: { title: 'Session Expiring Soon', body: 'Session {sessionId} for {walletName} expires in {minutes} minutes' },
+    SESSION_EXPIRED: { title: 'Session Expired', body: 'Session {sessionId} for {walletName} has expired' },
+    SESSION_CREATED: { title: 'Session Created', body: 'New session created for {walletName}' },
+    SESSION_WALLET_ADDED: { title: 'Wallet Added to Session', body: '{walletName} has been added to session {sessionId}' },
+    SESSION_WALLET_REMOVED: { title: 'Wallet Removed from Session', body: '{walletName} has been removed from session {sessionId}' },
+    OWNER_SET: { title: 'Owner Registered', body: 'Owner registered for {walletName}: {ownerAddress}' },
+    OWNER_REMOVED: { title: 'Owner Removed', body: 'Owner removed from {walletName}' },
+    OWNER_VERIFIED: { title: 'Owner Verified', body: 'Owner verified for {walletName}' },
     DAILY_SUMMARY: { title: 'Daily Summary', body: 'Wallets: {walletCount}, Transactions: {txCount}, Sessions: {sessionCount}' },
-    CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: 'Wallet {walletId} {type} spending at {ratio}% of limit (${spent} / ${limit}) {display_amount}' },
-    LOW_BALANCE: { title: 'Low Balance Alert', body: 'Wallet {walletId} balance low: {balance} {currency}. Threshold: {threshold} {currency}. Please top up.' },
+    CUMULATIVE_LIMIT_WARNING: { title: 'Cumulative Spending Warning', body: '{walletName} {type} spending at {ratio}% of limit (${spent} / ${limit}) {display_amount}' },
+    LOW_BALANCE: { title: 'Low Balance Alert', body: '{walletName} balance low: {balance} {currency}. Threshold: {threshold} {currency}. Please top up.' },
     APPROVAL_CHANNEL_SWITCHED: { title: 'Approval Channel Switched', body: 'Approval for transaction {txId} switched from {from_channel} to {to_channel}. Reason: {reason}' },
     UPDATE_AVAILABLE: { title: 'WAIaaS Update Available', body: 'A new version {latestVersion} is available (current: {currentVersion}). Run `waiaas update` to update.' },
+    TX_INCOMING: { title: 'Incoming Transaction Detected', body: '{walletName} received {amount} from {fromAddress} on {chain} {display_amount}' },
+    TX_INCOMING_SUSPICIOUS: { title: 'Suspicious Incoming Transaction', body: '{walletName} received suspicious transaction: {amount} from {fromAddress}. Reasons: {reasons} {display_amount}' },
   },
   // System messages
   system: {

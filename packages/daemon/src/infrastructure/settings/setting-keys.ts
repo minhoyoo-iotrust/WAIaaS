@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk, incoming
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -42,6 +42,7 @@ export const SETTING_CATEGORIES = [
   'monitoring',
   'telegram',
   'signing_sdk',
+  'incoming',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -61,6 +62,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.slack_webhook_url', category: 'notifications', configPath: 'notifications.slack_webhook_url', defaultValue: '', isCredential: true },
   { key: 'notifications.locale', category: 'notifications', configPath: 'notifications.locale', defaultValue: 'en', isCredential: false },
   { key: 'notifications.rate_limit_rpm', category: 'notifications', configPath: 'notifications.rate_limit_rpm', defaultValue: '20', isCredential: false },
+  { key: 'notifications.notify_categories', category: 'notifications', configPath: 'notifications.notify_categories', defaultValue: '[]', isCredential: false },
 
   // --- rpc category (Solana 3 + EVM 10 + evm_default_network) ---
   { key: 'rpc.solana_mainnet', category: 'rpc', configPath: 'rpc.solana_mainnet', defaultValue: 'https://api.mainnet-beta.solana.com', isCredential: false },
@@ -94,6 +96,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'policy.default_deny_tokens', category: 'security', configPath: 'security.default_deny_tokens', defaultValue: 'true', isCredential: false },
   { key: 'policy.default_deny_contracts', category: 'security', configPath: 'security.default_deny_contracts', defaultValue: 'true', isCredential: false },
   { key: 'policy.default_deny_spenders', category: 'security', configPath: 'security.default_deny_spenders', defaultValue: 'true', isCredential: false },
+  { key: 'policy.default_deny_x402_domains', category: 'security', configPath: 'security.default_deny_x402_domains', defaultValue: 'true', isCredential: false },
 
   // --- daemon category ---
   { key: 'daemon.log_level', category: 'daemon', configPath: 'daemon.log_level', defaultValue: 'info', isCredential: false },
@@ -125,7 +128,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'monitoring.enabled', category: 'monitoring', configPath: 'security.monitoring_enabled', defaultValue: 'true', isCredential: false },
 
   // --- telegram category (Bot service settings) ---
-  { key: 'telegram.enabled', category: 'telegram', configPath: 'telegram.enabled', defaultValue: 'false', isCredential: false },
   { key: 'telegram.bot_token', category: 'telegram', configPath: 'telegram.bot_token', defaultValue: '', isCredential: true },
   { key: 'telegram.locale', category: 'telegram', configPath: 'telegram.locale', defaultValue: 'en', isCredential: false },
 
@@ -138,7 +140,15 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'signing_sdk.ntfy_response_topic_prefix', category: 'signing_sdk', configPath: 'signing_sdk.ntfy_response_topic_prefix', defaultValue: 'waiaas-response', isCredential: false },
   { key: 'signing_sdk.wallets', category: 'signing_sdk', configPath: 'signing_sdk.wallets', defaultValue: '[]', isCredential: false },
   { key: 'signing_sdk.notifications_enabled', category: 'signing_sdk', configPath: 'signing_sdk.notifications_enabled', defaultValue: 'true', isCredential: false },
-  { key: 'signing_sdk.notify_categories', category: 'signing_sdk', configPath: 'signing_sdk.notify_categories', defaultValue: '[]', isCredential: false },
+
+  // --- incoming category (Incoming TX monitor settings) ---
+  { key: 'incoming.enabled', category: 'incoming', configPath: 'incoming.enabled', defaultValue: 'false', isCredential: false },
+  { key: 'incoming.poll_interval', category: 'incoming', configPath: 'incoming.poll_interval', defaultValue: '30', isCredential: false },
+  { key: 'incoming.retention_days', category: 'incoming', configPath: 'incoming.retention_days', defaultValue: '90', isCredential: false },
+  { key: 'incoming.suspicious_dust_usd', category: 'incoming', configPath: 'incoming.suspicious_dust_usd', defaultValue: '0.01', isCredential: false },
+  { key: 'incoming.suspicious_amount_multiplier', category: 'incoming', configPath: 'incoming.suspicious_amount_multiplier', defaultValue: '10', isCredential: false },
+  { key: 'incoming.cooldown_minutes', category: 'incoming', configPath: 'incoming.cooldown_minutes', defaultValue: '5', isCredential: false },
+  { key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.wss_url', defaultValue: '', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

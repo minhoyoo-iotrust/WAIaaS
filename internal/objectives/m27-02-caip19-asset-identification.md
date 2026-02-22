@@ -20,7 +20,7 @@ WAIaaS는 토큰/자산을 식별하는 방식이 컨텍스트마다 다르다:
 | 트랜잭션 요청 | `token: { address, decimals, symbol }` + `network` | `{ address: "0xa0b8...", symbol: "USDC", decimals: 6 }` |
 | 가격 오라클 캐시 키 | `${chain}:${address}` | `solana:EPjFW...`, `ethereum:native` |
 | 토큰 레지스트리 DB | `(network, address)` unique index | `('ethereum-mainnet', '0xA0b8...')` |
-| 정책 (ALLOWED_TOKENS) | `tokens[].address` (raw string) | `"0xa0b8..."` |
+| 정책 (ALLOWED_TOKENS) | `tokens[].address` + `chain` (optional) | `{ address: "0xa0b8...", chain: "ethereum" }` — `chain` 생략 가능하여 L2 네트워크 구분 불가 |
 | AssetInfo | `mint` 필드 (네이티브는 `'native'`) | `mint: 'native'` |
 | x402 USDC 맵 | CAIP-2 chain ID (부분 사용) | `'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'` |
 
@@ -28,7 +28,7 @@ WAIaaS는 토큰/자산을 식별하는 방식이 컨텍스트마다 다르다:
 - 같은 USDC라도 Ethereum, Polygon, Arbitrum에서 각각 다른 주소로 식별되고, 체인 정보가 분리되어 전달됨
 - 가격 오라클의 `TokenRef`에 `network` 필드가 없어 L2 토큰 가격 조회 불가 (CoinGecko 플랫폼 구분 불가)
 - ActionProvider 도입 시 각 프로토콜마다 독자적 토큰 ID 형식 사용 (DCent: `ERC20/0x...`, Jupiter: mint address)
-- 정책의 `address` 필드에 체인 정보가 없어, 같은 주소가 다른 체인에 존재할 때 구분 불가
+- 정책의 `chain` 필드가 optional이고 `ChainType`(solana/ethereum) 수준이라, 같은 주소가 다른 L2 네트워크에 존재할 때 구분 불가
 
 ### CAIP-19 표준 개요
 
@@ -51,7 +51,7 @@ chain_id   = namespace ":" reference           (CAIP-2)
 
 - [CAIP-2](https://standards.chainagnostic.org/CAIPs/caip-2) 스펙 정독
 - **Solana namespace 확정**: genesis hash 기반 reference 형식, 각 네트워크(mainnet-beta, devnet, testnet)의 정확한 genesis hash 확인
-- **EVM namespace**: `eip155:{chainId}` 형식에서 WAIaaS 지원 12개 네트워크의 chain ID 교차 검증
+- **EVM namespace**: `eip155:{chainId}` 형식에서 WAIaaS 지원 10개 EVM 네트워크(5 mainnet + 5 testnet)의 chain ID 교차 검증
 - Solana devnet/testnet 리셋 시 genesis hash 변경 이력 조사
 
 ### R2. CAIP-19 자산 namespace 조사
@@ -229,16 +229,17 @@ skills/
 
 ## 기술 결정 사항
 
-| # | 결정 항목 | 선택지 | 결정 근거 |
-|---|----------|--------|----------|
-| 1 | Solana CAIP-2 reference | genesis hash 기반 (리서치 확정 필요) | CAIP-2 Solana 네임스페이스 표준. x402 코드에서 이미 동일 형식 사용 중 |
-| 2 | EVM CAIP-2 reference | `eip155:{chainId}` | 업계 표준 (WalletConnect 등) |
-| 3 | 네이티브 자산 namespace | `slip44` (리서치 확정 필요) | CAIP-19 표준에서 네이티브 자산에 SLIP-44 coin type 사용 |
-| 4 | SPL 토큰 namespace | `spl` (리서치 확정 필요) | 관례적 namespace. 공식 등록 여부 리서치 필요 |
-| 5 | 하위 호환성 | `assetId` 선택 필드 | 기존 `address` 필드를 유지하고 `assetId`를 선택적으로 추가. 점진적 전환 |
-| 6 | 파서 구현 | 직접 구현 vs npm 라이브러리 (리서치 결정) | 기존 `@chain-agnostic/caip` 등 라이브러리 품질 평가 후 결정 |
-| 7 | CAIP-19 주소 정규화 | EVM lowercase, Solana 원본 | EVM 주소는 소문자로 정규화, Solana base58은 원본 유지 |
-| 8 | 파서 위치 | packages/core | 모든 패키지(daemon, mcp, sdk)에서 공유. 외부 의존성 최소화 |
+| # | 결정 항목 | 선택지 | 결정 근거 | 확정 리서치 |
+|---|----------|--------|----------|------------|
+| 1 | Solana CAIP-2 reference | genesis hash 기반 (리서치 확정 필요) | CAIP-2 Solana 네임스페이스 표준. x402 코드에서 이미 동일 형식 사용 중 | R1 |
+| 2 | EVM CAIP-2 reference | `eip155:{chainId}` | 업계 표준 (WalletConnect 등) | 확정 |
+| 3 | 네이티브 자산 namespace | `slip44` (리서치 확정 필요) | CAIP-19 표준에서 네이티브 자산에 SLIP-44 coin type 사용 | R2 |
+| 4 | SPL 토큰 namespace | `spl` (리서치 확정 필요) | 관례적 namespace. 공식 등록 여부 리서치 필요 | R2 |
+| 5 | Token-2022 namespace | SPL과 동일 vs 별도 (리서치 확정 필요) | Token Extensions가 별도 프로그램이므로 namespace 분리 여부 결정 필요 | R2 |
+| 6 | 하위 호환성 | `assetId` 선택 필드 | 기존 `address` 필드를 유지하고 `assetId`를 선택적으로 추가. 점진적 전환 | R4 |
+| 7 | 파서 구현 | 직접 구현 vs npm 라이브러리 (리서치 결정) | 기존 `@chain-agnostic/caip` 등 라이브러리 품질 평가 후 결정 | R3 |
+| 8 | CAIP-19 주소 정규화 | EVM lowercase, Solana 원본 | EVM 주소는 소문자로 정규화, Solana base58은 원본 유지 | 확정 |
+| 9 | 파서 위치 | packages/core | 모든 패키지(daemon, mcp, sdk)에서 공유. 외부 의존성 최소화 | 확정 |
 
 ---
 
@@ -252,7 +253,7 @@ skills/
 | 2 | CAIP-2 포매팅 | `formatCaip2('eip155', '1')` → `'eip155:1'` assert | [L0] |
 | 3 | CAIP-19 파싱 | `parseCaip19('eip155:1/erc20:0xa0b8...')` → 구조체 assert | [L0] |
 | 4 | CAIP-19 포매팅 | `formatCaip19(...)` → 원본 문자열 roundtrip assert | [L0] |
-| 5 | NetworkType → CAIP-2 매핑 | 12개 네트워크 전체 양방향 매핑 assert | [L0] |
+| 5 | NetworkType → CAIP-2 매핑 | 13개 네트워크(EVM 10 + Solana 3) 전체 양방향 매핑 assert | [L0] |
 | 6 | 네이티브 자산 ID 생성 | `nativeAssetId('ethereum-mainnet')` → `'eip155:1/slip44:60'` assert | [L0] |
 | 7 | 토큰 자산 ID 생성 | `tokenAssetId('ethereum-mainnet', '0xa0b8...')` → CAIP-19 assert | [L0] |
 | 8 | isNativeAsset 판별 | `slip44` namespace → true, `erc20` namespace → false assert | [L0] |
@@ -291,12 +292,21 @@ skills/
 
 | 항목 | 예상 |
 |------|------|
-| 페이즈 | 4개 (리서치 1 / CAIP 파서+매핑 1 / 오라클+레지스트리+DB 마이그레이션 1 / API+MCP+정책+스킬 1) |
+| 페이즈 | 4개 (아래 매핑 참조) |
 | 신규 파일 | 5-7개 |
 | 수정 파일 | 12-18개 |
 | 테스트 | 16-24개 |
 | DB 마이그레이션 | 1건 (token_registry asset_id 컬럼 추가) |
 | 리서치 산출물 | 3건 (스펙 분석, 생태계 호환성, 마이그레이션 전략) |
+
+### 페이즈 ↔ 구현 대상 매핑
+
+| 페이즈 | 내용 | 구현 대상 | 기술 결정 확정 |
+|--------|------|----------|--------------|
+| Phase 1 | 리서치 | R1~R5 | #1, #3, #4, #5, #7 확정 |
+| Phase 2 | CAIP 파서 + 매핑 | 구현 #1 (파서/포매터), #2 (TokenRef 확장) | — |
+| Phase 3 | 오라클 + 레지스트리 + DB | 구현 #3 (가격 오라클), #4 (ActionProvider), #7 (DB 마이그레이션) | — |
+| Phase 4 | API + MCP + 정책 + 스킬 | 구현 #5 (트랜잭션), #6 (정책), #8 (REST/MCP/Skills) | — |
 
 ---
 

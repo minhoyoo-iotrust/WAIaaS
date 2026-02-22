@@ -13,7 +13,7 @@
 6. v21 마이그레이션 — ALTER TABLE + CREATE TABLE 2개 (incoming_transactions, incoming_tx_cursors)
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 1-2
+- internal/design/76-incoming-transaction-monitoring.md 섹션 1-2
 
 ## Requirements Covered
 - MON-01: IChainSubscriber 인터페이스 4메서드 + IncomingTransaction 타입 ✅

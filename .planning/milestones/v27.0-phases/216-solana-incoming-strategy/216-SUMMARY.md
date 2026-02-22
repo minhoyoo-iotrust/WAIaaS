@@ -14,7 +14,7 @@
 8. confirmed 감지 → finalized 확정 2단계 commitment 정책
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 3
+- internal/design/76-incoming-transaction-monitoring.md 섹션 3
 
 ## Requirements Covered
 - MON-02: logsSubscribe + getTransaction 파싱으로 SOL + SPL 감지 ✅

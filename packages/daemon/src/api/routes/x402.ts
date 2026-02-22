@@ -224,7 +224,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
     // Apply 4-level override resolution for domain policies
     const resolvedPolicies = resolveX402DomainPolicies(policyRows, walletId);
 
-    const domainResult = evaluateX402Domain(resolvedPolicies, targetDomain);
+    const domainResult = evaluateX402Domain(resolvedPolicies, targetDomain, deps.settingsService);
     if (domainResult && !domainResult.allowed) {
       void deps.notificationService?.notify('POLICY_VIOLATION', walletId, {
         reason: domainResult.reason ?? 'Domain not allowed',

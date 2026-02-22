@@ -17,7 +17,7 @@
 10. 12개 교차 검증 항목 모두 PASS
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 8
+- internal/design/76-incoming-transaction-monitoring.md 섹션 8
 - 설계 결정 17개 (D-01 ~ D-17)
 
 ## Requirements Covered

@@ -45,6 +45,8 @@ interface WalletDetail extends Wallet {
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
   approvalMethod: string | null;
+  suspendedAt: number | null;
+  suspensionReason: string | null;
   updatedAt: number | null;
 }
 
@@ -155,7 +157,7 @@ const walletColumns: Column<Wallet>[] = [
     key: 'status',
     header: 'Status',
     render: (a) => (
-      <Badge variant={a.status === 'ACTIVE' ? 'success' : 'danger'}>{a.status}</Badge>
+      <Badge variant={a.status === 'ACTIVE' ? 'success' : a.status === 'SUSPENDED' ? 'warning' : 'danger'}>{a.status}</Badge>
     ),
   },
   {
@@ -205,7 +207,6 @@ function DetailRow({
 
 interface ApprovalSettingsInfo {
   signingEnabled: boolean;
-  telegramEnabled: boolean;
   telegramBotConfigured: boolean;
   wcConfigured: boolean;
 }
@@ -220,21 +221,21 @@ const APPROVAL_OPTIONS: Array<{
   {
     value: null,
     label: 'Auto (Global Fallback)',
-    description: 'System decides based on configured channels: SDK ntfy > SDK Telegram > WalletConnect > Telegram Bot > REST',
+    description: 'System decides based on configured channels: Wallet App (ntfy) > Wallet App (Telegram) > WalletConnect > Telegram Bot > REST',
   },
   {
     value: 'sdk_ntfy',
-    label: 'SDK via ntfy',
-    description: 'Push notifications via ntfy server to wallet app',
+    label: 'Wallet App (ntfy)',
+    description: 'Push sign request to wallet app via ntfy server',
     warning: 'Signing SDK is not enabled. Go to System > Signing SDK settings.',
     warningCondition: (s) => !s?.signingEnabled,
   },
   {
     value: 'sdk_telegram',
-    label: 'SDK via Telegram',
-    description: 'Send sign request to Telegram with universal link',
-    warning: 'Signing SDK or Telegram bot is not enabled. Check System > Signing SDK and Telegram settings.',
-    warningCondition: (s) => !s?.signingEnabled || !s?.telegramEnabled || !s?.telegramBotConfigured,
+    label: 'Wallet App (Telegram)',
+    description: 'Push sign request to wallet app via Telegram with universal link',
+    warning: 'Signing SDK or Telegram bot is not configured. Check System > Signing SDK and Notifications > Telegram settings.',
+    warningCondition: (s) => !s?.signingEnabled || !s?.telegramBotConfigured,
   },
   {
     value: 'walletconnect',
@@ -247,8 +248,8 @@ const APPROVAL_OPTIONS: Array<{
     value: 'telegram_bot',
     label: 'Telegram Bot',
     description: 'Approve/reject via Telegram bot /approve and /reject commands',
-    warning: 'Telegram bot is not enabled. Go to System > Telegram settings.',
-    warningCondition: (s) => !s?.telegramEnabled || !s?.telegramBotConfigured,
+    warning: 'Telegram bot token is not configured. Go to Notifications > Settings > Telegram.',
+    warningCondition: (s) => !s?.telegramBotConfigured,
   },
   {
     value: 'rest',
@@ -285,6 +286,10 @@ function WalletDetailView({ id }: { id: string }) {
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
   const approvalSettings = useSignal<ApprovalSettingsInfo | null>(null);
+  const suspendModal = useSignal(false);
+  const suspendLoading = useSignal(false);
+  const suspendReason = useSignal('');
+  const resumeLoading = useSignal(false);
   const fetchWallet = async () => {
     try {
       const result = await apiGet<WalletDetail>(API.WALLET(id));
@@ -323,6 +328,38 @@ function WalletDetailView({ id }: { id: string }) {
       showToast('error', getErrorMessage(e.code));
     } finally {
       deleteLoading.value = false;
+    }
+  };
+
+  const handleSuspend = async () => {
+    suspendLoading.value = true;
+    try {
+      await apiPost(API.WALLET_SUSPEND(id), {
+        reason: suspendReason.value.trim() || undefined,
+      });
+      showToast('success', 'Wallet suspended');
+      suspendModal.value = false;
+      suspendReason.value = '';
+      await fetchWallet();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      suspendLoading.value = false;
+    }
+  };
+
+  const handleResume = async () => {
+    resumeLoading.value = true;
+    try {
+      await apiPost(API.WALLET_RESUME(id));
+      showToast('success', 'Wallet resumed');
+      await fetchWallet();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      resumeLoading.value = false;
     }
   };
 
@@ -508,10 +545,9 @@ function WalletDetailView({ id }: { id: string }) {
     try {
       const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
       const signingEnabled = result['signing_sdk']?.['enabled'] === 'true';
-      const telegramEnabled = result['telegram']?.['enabled'] === 'true';
       const telegramBotConfigured = result['telegram']?.['bot_token'] === true; // credential: boolean means configured
       const wcConfigured = !!result['walletconnect']?.['project_id'] && result['walletconnect']['project_id'] !== '';
-      approvalSettings.value = { signingEnabled, telegramEnabled, telegramBotConfigured, wcConfigured };
+      approvalSettings.value = { signingEnabled, telegramBotConfigured, wcConfigured };
     } catch {
       // Settings fetch failure is non-critical; warnings won't show
     }
@@ -582,9 +618,21 @@ function WalletDetailView({ id }: { id: string }) {
               )}
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
-                Terminate Wallet
-              </Button>
+              {wallet.value.status === 'ACTIVE' && (
+                <Button variant="secondary" onClick={() => { suspendModal.value = true; }}>
+                  Suspend Wallet
+                </Button>
+              )}
+              {wallet.value.status === 'SUSPENDED' && (
+                <Button variant="primary" onClick={handleResume} loading={resumeLoading.value}>
+                  Resume Wallet
+                </Button>
+              )}
+              {wallet.value.status !== 'TERMINATED' && (
+                <Button variant="danger" onClick={() => { deleteModal.value = true; }}>
+                  Terminate Wallet
+                </Button>
+              )}
             </div>
           </div>
 
@@ -599,10 +647,16 @@ function WalletDetailView({ id }: { id: string }) {
             </DetailRow>
             <DetailRow label="Default Network" value={wallet.value.defaultNetwork ?? wallet.value.network} />
             <DetailRow label="Status">
-              <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : 'danger'}>
+              <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : wallet.value.status === 'SUSPENDED' ? 'warning' : 'danger'}>
                 {wallet.value.status}
               </Badge>
             </DetailRow>
+            {wallet.value.status === 'SUSPENDED' && (
+              <>
+                <DetailRow label="Suspended At" value={wallet.value.suspendedAt ? formatDate(wallet.value.suspendedAt) : '--'} />
+                <DetailRow label="Suspension Reason" value={wallet.value.suspensionReason ?? '--'} />
+              </>
+            )}
             <DetailRow label="Created" value={formatDate(wallet.value.createdAt)} />
             <DetailRow
               label="Updated"
@@ -983,6 +1037,28 @@ function WalletDetailView({ id }: { id: string }) {
                 </p>
               </div>
             )}
+          </Modal>
+
+          <Modal
+            open={suspendModal.value}
+            title="Suspend Wallet"
+            onCancel={() => { suspendModal.value = false; suspendReason.value = ''; }}
+            onConfirm={handleSuspend}
+            confirmText="Suspend"
+            confirmVariant="danger"
+            loading={suspendLoading.value}
+          >
+            <p style={{ marginBottom: 'var(--space-3)' }}>
+              Are you sure you want to suspend wallet <strong>{wallet.value.name}</strong>?
+              Suspended wallets cannot process transactions until resumed.
+            </p>
+            <FormField
+              label="Reason (optional)"
+              name="suspend-reason"
+              value={suspendReason.value}
+              onChange={(v) => { suspendReason.value = v as string; }}
+              placeholder="e.g. suspicious activity"
+            />
           </Modal>
         </div>
       ) : (

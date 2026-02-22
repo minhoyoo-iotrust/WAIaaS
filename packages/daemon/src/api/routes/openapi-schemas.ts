@@ -474,6 +474,8 @@ export const WalletDetailResponseSchema = z
     ownerVerified: z.boolean().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     approvalMethod: z.string().nullable().optional(),
+    suspendedAt: z.number().int().nullable().optional(),
+    suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),
     updatedAt: z.number().int().nullable(),
   })
@@ -543,6 +545,28 @@ export const WalletDeleteResponseSchema = z
     status: z.literal('TERMINATED'),
   })
   .openapi('WalletDeleteResponse');
+
+export const WalletSuspendRequestSchema = z
+  .object({
+    reason: z.string().max(200).optional(),
+  })
+  .openapi('WalletSuspendRequest');
+
+export const WalletSuspendResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.literal('SUSPENDED'),
+    suspendedAt: z.number().int(),
+    suspensionReason: z.string(),
+  })
+  .openapi('WalletSuspendResponse');
+
+export const WalletResumeResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.literal('ACTIVE'),
+  })
+  .openapi('WalletResumeResponse');
 
 // ---------------------------------------------------------------------------
 // Admin Response Schemas (6 admin endpoints)
@@ -1026,3 +1050,67 @@ export const ConnectInfoResponseSchema = z.object({
   }),
   prompt: z.string(),
 }).openapi('ConnectInfoResponse');
+
+// ---------------------------------------------------------------------------
+// Incoming Transaction Schemas (GET /v1/wallet/incoming, GET /v1/wallet/incoming/summary)
+// ---------------------------------------------------------------------------
+
+export const IncomingTxItemSchema = z
+  .object({
+    id: z.string().uuid(),
+    txHash: z.string(),
+    walletId: z.string().uuid(),
+    fromAddress: z.string(),
+    amount: z.string(),
+    tokenAddress: z.string().nullable(),
+    chain: z.string(),
+    network: z.string(),
+    status: z.string().describe('DETECTED | CONFIRMED'),
+    blockNumber: z.number().int().nullable(),
+    detectedAt: z.number().int(),
+    confirmedAt: z.number().int().nullable(),
+    suspicious: z.boolean(),
+  })
+  .openapi('IncomingTxItem');
+
+export const IncomingTxListResponseSchema = z
+  .object({
+    data: z.array(IncomingTxItemSchema),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  })
+  .openapi('IncomingTxListResponse');
+
+export const IncomingTxSummaryEntrySchema = z
+  .object({
+    date: z.string(),
+    totalCount: z.number().int(),
+    totalAmountNative: z.string(),
+    totalAmountUsd: z.number().nullable(),
+    suspiciousCount: z.number().int(),
+  })
+  .openapi('IncomingTxSummaryEntry');
+
+export const IncomingTxSummaryResponseSchema = z
+  .object({
+    period: z.string(),
+    entries: z.array(IncomingTxSummaryEntrySchema),
+  })
+  .openapi('IncomingTxSummaryResponse');
+
+// ---------------------------------------------------------------------------
+// PATCH /v1/wallets/:id Schemas (monitorIncoming toggle)
+// ---------------------------------------------------------------------------
+
+export const PatchWalletRequestSchema = z
+  .object({
+    monitorIncoming: z.boolean().optional(),
+  })
+  .openapi('PatchWalletRequest');
+
+export const PatchWalletResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    monitorIncoming: z.boolean(),
+  })
+  .openapi('PatchWalletResponse');

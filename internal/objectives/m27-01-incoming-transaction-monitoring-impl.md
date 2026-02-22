@@ -23,7 +23,7 @@ m27에서 5개 설계 산출물(ITM-01~ITM-05)이 정의되었다. m27-01은 이
 | ITM-02 | 수신 트랜잭션 저장 | incoming_transactions 테이블, incoming_tx_cursors 커서 테이블, Zod 스키마, tx_hash UNIQUE 중복 방지, 메모리 큐+배치 flush, 보존 정책(retention_days 자동 삭제) |
 | ITM-03 | 수신 이력 조회 API | GET /v1/wallet/incoming (cursor pagination, 필터), GET /v1/wallet/incoming/summary, SDK/MCP 확장 |
 | ITM-04 | 수신 이벤트 + 알림 연동 | EventBus `transaction:incoming` 이벤트, TX_INCOMING/TX_INCOMING_SUSPICIOUS 알림 타입, KillSwitch 상태 연동, 의심 입금 감지 규칙, MCP 리소스, i18n 메시지 |
-| ITM-05 | 설정 구조 | config.toml [incoming] 섹션 (wss_url 포함), 지갑별 monitor_incoming opt-in, 환경변수 매핑 |
+| ITM-05 | 설정 구조 | config.toml [incoming] 섹션 7키 (wss_url 포함), 지갑별 monitor_incoming opt-in, 환경변수 매핑, Admin Settings 런타임 변경 |
 
 ---
 
@@ -134,7 +134,7 @@ m27-00 설계 이후 수행된 4개 리서치(ARCHITECTURE, FEATURES, PITFALLS, 
 | 갭 보상 | 미정의 | `incoming_tx_cursors` 테이블 + 재연결 직후 갭 보상 폴링 (CRITICAL C-01 대응) |
 | DB 쓰기 전략 | 즉시 INSERT 가정 | 메모리 큐 + BackgroundWorkers 배치 flush (CRITICAL C-02 대응) |
 | KillSwitch | 미정의 | SUSPENDED/LOCKED 시 알림 suppress, DB 기록 유지 (MODERATE M-01 대응) |
-| WSS URL | 미정의 | config.toml `wss_url` 키 추가 (HTTP rpc_url과 별도) |
+| WSS URL | 미정의 | config.toml `incoming_wss_url` 키 + SettingsService `incoming.wss_url` hot-reload + Admin Settings UI에서 런타임 변경 가능. 빈 값 시 rpc_url에서 https→wss 자동 유도 |
 | 신규 패키지 | 미확인 | **추가 없음** — @solana/kit ^6.0.1 + viem ^2.21.0으로 전부 커버 |
 
 ### 참고 이슈
@@ -147,5 +147,5 @@ m27-00 설계 이후 수행된 4개 리서치(ARCHITECTURE, FEATURES, PITFALLS, 
 ---
 
 *생성일: 2026-02-15*
-*갱신일: 2026-02-21 — 리서치 결과 반영 (구독 방식, 갭 보상, 배치 flush, KillSwitch, WSS URL, 이벤트 네이밍 통일)*
+*갱신일: 2026-02-21 — 리서치 결과 반영 (구독 방식, 갭 보상, 배치 flush, KillSwitch, WSS URL, 이벤트 네이밍 통일) + WSS URL Admin Settings hot-reload 추가, Summary SQL bigint 수정, IncomingTransaction.isSuspicious 타입 필드 추가*
 *선행: m27 (수신 트랜잭션 모니터링 설계)*

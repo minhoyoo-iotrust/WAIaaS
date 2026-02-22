@@ -50,6 +50,19 @@ export {
 export type { ForexRate, CurrencyCode, IForexRateService } from './forex-rate.types.js';
 export { ForexRateSchema, CurrencyCodeSchema } from './forex-rate.types.js';
 
+// v27.1 incoming transaction subscriber types
+export type { IncomingTransaction } from './chain-subscriber.types.js';
+export type { IChainSubscriber } from './IChainSubscriber.js';
+
+// v27.1 connection state machine (reconnection infrastructure)
+export {
+  type ConnectionState,
+  type ReconnectConfig,
+  calculateDelay,
+  DEFAULT_RECONNECT_CONFIG,
+  reconnectLoop,
+} from './connection-state.js';
+
 // v1.5.1 x402 types (Zod SSoT)
 export type { X402FetchRequest, X402FetchResponse, X402PaymentInfo } from './x402.types.js';
 export type { PaymentRequired, PaymentPayload, PaymentRequirements } from './x402.types.js';

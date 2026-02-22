@@ -10,7 +10,7 @@
  *      - walletconnect / telegram_bot / rest -> return method (no channel call)
  *   3. If SDK method but signing_sdk.enabled=false: fall through to global fallback
  *   4. Global fallback priority (CHAN-06):
- *      SDK ntfy > SDK Telegram > WalletConnect > Telegram Bot > REST
+ *      Wallet App (ntfy) > Wallet App (Telegram) > WalletConnect > Telegram Bot > REST
  *
  * CHAN-07: When signing_sdk.enabled !== 'true', SDK channels are skipped entirely.
  *
@@ -185,9 +185,8 @@ export class ApprovalChannelRouter {
 
   private isTelegramBotConfigured(): boolean {
     try {
-      const enabled = this.settings.get('telegram.enabled');
       const botToken = this.settings.get('telegram.bot_token');
-      return enabled === 'true' && !!botToken && botToken.trim().length > 0;
+      return !!botToken && botToken.trim().length > 0;
     } catch {
       return false;
     }

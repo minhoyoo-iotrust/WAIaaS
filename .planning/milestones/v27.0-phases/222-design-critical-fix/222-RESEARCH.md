@@ -6,7 +6,7 @@
 
 ## Summary
 
-Phase 222는 v27.0 마일스톤 감사에서 발견된 Critical 2건(GAP-2, GAP-3) + High 2건(GAP-1, GAP-4) + FLOW-2(Critical E2E 중단) 총 5건의 설계 불일치를 수정하는 작업이다. 모든 불일치는 단일 설계 문서 `docs/design/76-incoming-transaction-monitoring.md`(2,161줄) 내부의 섹션 간 참조 불일치로, 코드 구현이 아닌 설계 문서 텍스트 수정으로 해결된다.
+Phase 222는 v27.0 마일스톤 감사에서 발견된 Critical 2건(GAP-2, GAP-3) + High 2건(GAP-1, GAP-4) + FLOW-2(Critical E2E 중단) 총 5건의 설계 불일치를 수정하는 작업이다. 모든 불일치는 단일 설계 문서 `internal/design/76-incoming-transaction-monitoring.md`(2,161줄) 내부의 섹션 간 참조 불일치로, 코드 구현이 아닌 설계 문서 텍스트 수정으로 해결된다.
 
 핵심 문제는 네 가지로 귀결된다: (1) §5.2 reconnectLoop이 IChainSubscriber 인터페이스(§1.4)에 없는 `connect()`/`waitForDisconnect()` 메서드를 호출 (GAP-1), (2) EVM/Solana 폴링 BackgroundWorker가 §8.9 DaemonLifecycle Step 6에 미등록되어 폴링 모드 진입 시 실제 폴링이 수행되지 않음 (GAP-2, FLOW-2), (3) §7.6 summary SQL이 존재하지 않는 `incoming_tx_suspicious` 테이블을 참조 (GAP-3), (4) §2.6 eventBus.emit이 §6.1에 정의된 IncomingTxEvent 타입과 불일치 (GAP-4).
 
@@ -349,7 +349,7 @@ workers.register('incoming-tx-flush', {
 ## Sources
 
 ### Primary (HIGH confidence)
-- `docs/design/76-incoming-transaction-monitoring.md` -- 전체 섹션 교차 분석 (2,161줄)
+- `internal/design/76-incoming-transaction-monitoring.md` -- 전체 섹션 교차 분석 (2,161줄)
 - `.planning/v27.0-MILESTONE-AUDIT.md` -- GAP-1~4, FLOW-2 정의
 - `.planning/REQUIREMENTS.md` -- 29개 요구사항 + 9개 gap closure 항목
 - `.planning/ROADMAP.md` -- Phase 222 목표/의존/성공 기준

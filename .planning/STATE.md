@@ -2,36 +2,34 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-21)
+See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** 다음 마일스톤 미정 — `/gsd:new-milestone`로 시작
+**Current focus:** v27.1 수신 트랜잭션 모니터링 구현 shipped. Planning next milestone.
 
 ## Current Position
 
-Phase: (none — milestone complete)
-Plan: (none)
-Status: v27.0 수신 트랜잭션 모니터링 설계 shipped. 다음 마일스톤 미정.
-Last activity: 2026-02-21 — v27.0 milestone archived
-
-Progress: [██████████] 100% (v27.0 complete)
+Phase: (none — between milestones)
+Plan: N/A
+Status: Milestone v27.1 complete
+Last activity: 2026-02-22 -- Milestone v27.1 archived
 
 ## Performance Metrics
 
-**Cumulative:** 51 milestones, 223 phases, 478 plans, 1,301 reqs, 4,396+ tests, ~145,704 LOC TS
+**Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared — full decision log in PROJECT.md)
+(Cleared at milestone boundary. See PROJECT.md Key Decisions for full history.)
 
 ### Blockers/Concerns
 
-- (None)
+- STO-03: Confirmation Worker RPC 콜백 미주입 (known gap from v27.1, 다음 마일스톤에서 수정)
 
 ## Session Continuity
 
-Last session: 2026-02-21
-Stopped at: v27.0 milestone complete, archived
+Last session: 2026-02-22
+Stopped at: Milestone v27.1 complete
 Resume file: None

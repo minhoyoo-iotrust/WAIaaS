@@ -895,47 +895,9 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         });
       }
 
-      // Check if any wallet has an owner registered (dual-auth requirement)
-      const body = await c.req.json().catch(() => ({})) as {
-        ownerSignature?: string;
-        ownerAddress?: string;
-        chain?: string;
-        message?: string;
-      };
-
-      // Check if any wallet has owner_address set
-      const walletsWithOwner = deps.db
-        .select({ ownerAddress: wallets.ownerAddress })
-        .from(wallets)
-        .where(sql`${wallets.ownerAddress} IS NOT NULL`)
-        .all();
-
-      const hasOwners = walletsWithOwner.length > 0;
-
-      if (hasOwners) {
-        // Dual-auth: owner signature required
-        if (!body.ownerSignature || !body.ownerAddress || !body.message) {
-          throw new WAIaaSError('INVALID_SIGNATURE', {
-            message: 'Owner signature required for recovery (dual-auth). Provide ownerSignature, ownerAddress, chain, and message.',
-          });
-        }
-
-        // Verify owner address matches a registered wallet owner
-        const matchingWallet = walletsWithOwner.find(
-          (w) => w.ownerAddress === body.ownerAddress,
-        );
-        if (!matchingWallet) {
-          throw new WAIaaSError('INVALID_SIGNATURE', {
-            message: 'Owner address does not match any registered wallet owner',
-          });
-        }
-
-        // Note: Full signature verification (SIWS/SIWE) is done by ownerAuth
-        // middleware in production. For the recover endpoint, the masterAuth
-        // middleware handles the master password part, and we verify owner
-        // identity by matching ownerAddress to a registered wallet.
-      }
-      // If no owners registered: master-only recovery (skip owner verification)
+      // Master password (masterAuth middleware) is sufficient for recovery.
+      // Self-hosted daemon: admin with master password = server/DB access.
+      // Dual-auth adds no real security but blocks emergency recovery.
 
       // LOCKED recovery: additional wait time (5 seconds)
       if (currentState.state === 'LOCKED') {
@@ -1102,7 +1064,9 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const testPayload: NotificationPayload = {
       eventType: 'TX_CONFIRMED',
       walletId: 'admin-test',
-      message: '[Test] WAIaaS notification test',
+      title: '[Test] Notification Test',
+      body: 'WAIaaS notification test',
+      message: '[Test] Notification Test\nWAIaaS notification test',
       timestamp: Math.floor(Date.now() / 1000),
     };
 

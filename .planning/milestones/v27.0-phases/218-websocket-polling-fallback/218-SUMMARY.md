@@ -14,7 +14,7 @@
 7. 블라인드 구간 복구: 재연결 직후 커서 이후 갭 보상 폴링 (Solana: getSignaturesForAddress, EVM: getLogs)
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 5
+- internal/design/76-incoming-transaction-monitoring.md 섹션 5
 
 ## Requirements Covered
 - MON-04: WebSocket 실패 시 폴링 폴백 자동 전환/복구 ✅

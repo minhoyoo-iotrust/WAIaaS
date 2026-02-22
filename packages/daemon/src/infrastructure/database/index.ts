@@ -22,6 +22,8 @@ export {
   settings,
   apiKeys,
   telegramUsers,
+  incomingTransactions,
+  incomingTxCursors,
 } from './schema.js';
 export { generateId } from './id.js';
 export { generateCheckConstraint } from './checks.js';

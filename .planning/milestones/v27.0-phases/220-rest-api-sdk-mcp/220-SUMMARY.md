@@ -15,7 +15,7 @@
 8. resolveWalletId 3단계 우선순위로 지갑 선택
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 7
+- internal/design/76-incoming-transaction-monitoring.md 섹션 7
 
 ## Requirements Covered
 - API-01: GET /v1/wallet/incoming 스키마 (cursor pagination + 필터) ✅

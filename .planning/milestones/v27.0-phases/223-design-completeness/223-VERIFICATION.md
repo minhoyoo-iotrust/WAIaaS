@@ -30,8 +30,8 @@ re_verification: false
 
 | Artifact | Expected | Status | Details |
 | -------- | -------- | ------ | ------- |
-| `docs/design/76-incoming-transaction-monitoring.md` | NOTIFY-1 + getDecimals 보완된 설계 문서 (Plan 01) | ✓ VERIFIED | 2,415 lines. 커밋 3ad25f6 (§8.6+§8.11), 5ef6965 (§6.5 decimals + §6.6 ctx.decimals) 두 건으로 수정됨 |
-| `docs/design/76-incoming-transaction-monitoring.md` | doc 31 PATCH 영향 분석 + skills/ 업데이트 요구사항 보완 (Plan 02) | ✓ VERIFIED | §8.6 doc 31 행에 PATCH/monitorIncoming 내용 포함. §8.11 소섹션 존재하고 wallet.skill.md/transactions.skill.md 양쪽 명세됨 |
+| `internal/design/76-incoming-transaction-monitoring.md` | NOTIFY-1 + getDecimals 보완된 설계 문서 (Plan 01) | ✓ VERIFIED | 2,415 lines. 커밋 3ad25f6 (§8.6+§8.11), 5ef6965 (§6.5 decimals + §6.6 ctx.decimals) 두 건으로 수정됨 |
+| `internal/design/76-incoming-transaction-monitoring.md` | doc 31 PATCH 영향 분석 + skills/ 업데이트 요구사항 보완 (Plan 02) | ✓ VERIFIED | §8.6 doc 31 행에 PATCH/monitorIncoming 내용 포함. §8.11 소섹션 존재하고 wallet.skill.md/transactions.skill.md 양쪽 명세됨 |
 
 ### Key Link Verification
 

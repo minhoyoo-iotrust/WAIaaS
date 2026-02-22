@@ -39,7 +39,6 @@ function createMockSettings(overrides: Record<string, string> = {}): SettingsSer
   const defaults: Record<string, string> = {
     'signing_sdk.enabled': 'false',
     'walletconnect.project_id': '',
-    'telegram.enabled': 'false',
     'telegram.bot_token': '',
     ...overrides,
   };
@@ -204,7 +203,6 @@ describe('ApprovalChannelRouter - Global fallback (CHAN-06)', () => {
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
-      'telegram.enabled': 'true',
       'telegram.bot_token': 'bot123:token',
     });
 
@@ -220,7 +218,6 @@ describe('ApprovalChannelRouter - Global fallback (CHAN-06)', () => {
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
-      'telegram.enabled': 'false',
       'telegram.bot_token': '',
     });
 
@@ -276,7 +273,6 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
     const sqlite = createMockSqlite('sdk_telegram');
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
-      'telegram.enabled': 'true',
       'telegram.bot_token': 'bot123:token',
     });
     const telegramChannel = createMockTelegramChannel();
@@ -297,7 +293,6 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
-      'telegram.enabled': 'false',
     });
     const ntfyChannel = createMockNtfyChannel();
     const telegramChannel = createMockTelegramChannel();
@@ -319,7 +314,6 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
-      'telegram.enabled': 'false',
       'telegram.bot_token': '',
     });
     const ntfyChannel = createMockNtfyChannel();
@@ -401,13 +395,12 @@ describe('ApprovalChannelRouter - Edge cases', () => {
     expect(() => router.shutdown()).not.toThrow();
   });
 
-  it('telegram_bot fallback requires both enabled=true AND bot_token set', async () => {
-    // Only enabled but no token -> skip
+  it('telegram_bot fallback requires bot_token to be set', async () => {
+    // No token -> skip telegram_bot
     const sqlite = createMockSqlite(null);
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
-      'telegram.enabled': 'true',
       'telegram.bot_token': '',
     });
 
@@ -422,7 +415,6 @@ describe('ApprovalChannelRouter - Edge cases', () => {
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '   ',  // whitespace only
-      'telegram.enabled': 'false',
     });
 
     const router = new ApprovalChannelRouter({ sqlite, settingsService: settings });

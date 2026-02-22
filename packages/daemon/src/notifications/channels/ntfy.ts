@@ -1,4 +1,5 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { abbreviateId, abbreviateAddress } from './format-utils.js';
 
 export class NtfyChannel implements INotificationChannel {
   readonly name = 'ntfy';
@@ -19,14 +20,27 @@ export class NtfyChannel implements INotificationChannel {
     const tags = this.mapTags(payload.eventType);
     const url = `${this.server}/${this.topic}`;
 
+    const bodyParts = [payload.body];
+    if (payload.walletId) {
+      const name = payload.walletName || payload.walletId;
+      const idAbbr = abbreviateId(payload.walletId);
+      bodyParts.push(`\n${name} (${idAbbr})`);
+      if (payload.walletAddress) {
+        const addrAbbr = abbreviateAddress(payload.walletAddress);
+        const net = payload.network ?? '';
+        bodyParts.push(net ? `${addrAbbr} · ${net}` : addrAbbr);
+      }
+      bodyParts.push(`Time: ${new Date(payload.timestamp * 1000).toISOString()}`);
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Title': `[WAIaaS] ${payload.eventType.replace(/_/g, ' ')}`,
+        'Title': `[WAIaaS] ${payload.title}`,
         'Priority': String(priority),
         'Tags': tags,
       },
-      body: `${payload.message}\n\nWallet: ${payload.walletId}\nTime: ${new Date(payload.timestamp * 1000).toISOString()}`,
+      body: bodyParts.join(''),
     });
 
     if (!response.ok) {

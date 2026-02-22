@@ -32,6 +32,8 @@ export const API = {
   WALLET_WC_SESSION: (id: string) => `/v1/wallets/${id}/wc/session`,
   WALLET_WC_PAIR_STATUS: (id: string) => `/v1/wallets/${id}/wc/pair/status`,
   WALLET_OWNER_VERIFY: (id: string) => `/v1/wallets/${id}/owner/verify`,
+  WALLET_SUSPEND: (id: string) => `/v1/wallets/${id}/suspend`,
+  WALLET_RESUME: (id: string) => `/v1/wallets/${id}/resume`,
   ADMIN_AGENT_PROMPT: '/v1/admin/agent-prompt',
   ADMIN_SESSION_REISSUE: (id: string) => `/v1/admin/sessions/${id}/reissue`,
 } as const;

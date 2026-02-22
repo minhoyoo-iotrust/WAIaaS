@@ -298,7 +298,7 @@ describe('Kill Switch REST API', () => {
       expect(body.code).toBe('KILL_SWITCH_NOT_ACTIVE');
     });
 
-    it('recover from LOCKED requires dual-auth when owner exists', async () => {
+    it('recover from LOCKED with master-only succeeds even when owner exists', async () => {
       const app = makeApp();
       // Create a wallet with owner
       const now = Math.floor(Date.now() / 1000);
@@ -310,44 +310,13 @@ describe('Kill Switch REST API', () => {
       killSwitchService.activate('master');
       killSwitchService.escalate('master');
 
-      // Try recover without owner signature
+      // Master-only recovery (no owner signature needed)
       const res = await app.request(
         `http://${HOST}/v1/admin/recover`,
         {
           method: 'POST',
           headers: { ...masterHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({}),
-        },
-      );
-      expect(res.status).toBe(401);
-      const body = await res.json() as { code: string };
-      expect(body.code).toBe('INVALID_SIGNATURE');
-    });
-
-    it('recover from LOCKED with owner address passes (no crypto check in this flow)', async () => {
-      const app = makeApp();
-      // Create a wallet with owner
-      const now = Math.floor(Date.now() / 1000);
-      sqlite.prepare(
-        "INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_address, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      ).run('wallet-test', 'test', 'solana', 'testnet', 'pk1', 'ACTIVE', 'owner-addr', now, now);
-
-      // Activate + escalate
-      killSwitchService.activate('master');
-      killSwitchService.escalate('master');
-
-      // Recover with owner address (LOCKED has 5s delay, but we test it)
-      const res = await app.request(
-        `http://${HOST}/v1/admin/recover`,
-        {
-          method: 'POST',
-          headers: { ...masterHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ownerSignature: 'mock-sig',
-            ownerAddress: 'owner-addr',
-            chain: 'solana',
-            message: 'mock-message',
-          }),
         },
       );
       expect(res.status).toBe(200);

@@ -16,7 +16,7 @@
 9. 알림 카테고리 'incoming' 추가, SUSPICIOUS는 priority: high
 
 ## Output
-- docs/design/76-incoming-transaction-monitoring.md 섹션 6
+- internal/design/76-incoming-transaction-monitoring.md 섹션 6
 
 ## Requirements Covered
 - EVT-01: INCOMING_TX_DETECTED 이벤트 스키마 ✅

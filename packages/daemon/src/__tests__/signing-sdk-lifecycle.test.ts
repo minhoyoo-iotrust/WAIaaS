@@ -55,7 +55,6 @@ function createMockSettings(overrides: Record<string, string> = {}): SettingsSer
     'notifications.ntfy_server': 'https://ntfy.sh',
     'notifications.telegram_chat_id': '12345',
     'telegram.bot_token': 'bot123:token',
-    'telegram.enabled': 'true',
     'walletconnect.project_id': '',
     ...overrides,
   };

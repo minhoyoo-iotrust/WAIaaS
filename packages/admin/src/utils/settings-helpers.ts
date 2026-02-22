@@ -92,6 +92,7 @@ export function keyToLabel(key: string): string {
     default_deny_tokens: 'Default Deny: Token Transfers',
     default_deny_contracts: 'Default Deny: Contract Calls',
     default_deny_spenders: 'Default Deny: Token Approvals',
+    default_deny_x402_domains: 'Default Deny: x402 Domains',
     project_id: 'Project ID',
     log_level: 'Log Level',
     currency: 'Display Currency',

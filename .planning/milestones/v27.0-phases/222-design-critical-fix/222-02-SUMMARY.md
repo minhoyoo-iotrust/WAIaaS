@@ -29,7 +29,7 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - "docs/design/76-incoming-transaction-monitoring.md"
+    - "internal/design/76-incoming-transaction-monitoring.md"
 
 key-decisions:
   - "is_suspicious를 incoming_transactions 컬럼으로 추가 (별도 테이블 대신) -- JOIN 없는 단순 쿼리, 마이그레이션 최소화"
@@ -76,7 +76,7 @@ Each task was committed atomically:
 2. **Task 2: 폴링 BackgroundWorker 등록 + SolanaIncomingSubscriber pollAll() + FLOW-2 E2E 완성** - `23137e1` (docs)
 
 ## Files Created/Modified
-- `docs/design/76-incoming-transaction-monitoring.md` - Section 2.1 DDL is_suspicious, Section 2.6 INSERT is_suspicious, Section 2.7 migration is_suspicious, Section 3.5 cross-reference, Section 3.7 pollAll(), Section 5.1 polling worker linkage, Section 5.2 FLOW-2 E2E, Section 7.6 Summary SQL, Section 8.9 polling workers
+- `internal/design/76-incoming-transaction-monitoring.md` - Section 2.1 DDL is_suspicious, Section 2.6 INSERT is_suspicious, Section 2.7 migration is_suspicious, Section 3.5 cross-reference, Section 3.7 pollAll(), Section 5.1 polling worker linkage, Section 5.2 FLOW-2 E2E, Section 7.6 Summary SQL, Section 8.9 polling workers
 
 ## Decisions Made
 - is_suspicious를 별도 테이블(incoming_tx_suspicious) 대신 incoming_transactions 컬럼으로 추가 -- Research의 GAP-3 해결 전략 따름, JOIN 없는 단순 쿼리
@@ -103,7 +103,7 @@ None - no external service configuration required.
 
 ## Self-Check: PASSED
 
-- FOUND: docs/design/76-incoming-transaction-monitoring.md
+- FOUND: internal/design/76-incoming-transaction-monitoring.md
 - FOUND: .planning/phases/222-design-critical-fix/222-02-SUMMARY.md
 - FOUND: cc26304 (Task 1 commit)
 - FOUND: 23137e1 (Task 2 commit)

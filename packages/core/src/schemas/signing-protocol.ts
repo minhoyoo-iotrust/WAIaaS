@@ -211,6 +211,8 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   LOW_BALANCE: 'system',
   APPROVAL_CHANNEL_SWITCHED: 'system',
   UPDATE_AVAILABLE: 'system',
+  TX_INCOMING: 'transaction',
+  TX_INCOMING_SUSPICIOUS: 'security_alert',
 };
 
 // ---------------------------------------------------------------------------

@@ -145,6 +145,23 @@
 | 128 | ENHANCEMENT | HIGH | 에이전트 읽기 전용 API 접근 확대 + 스킬 파일 권한 구분 명확화 | v27.0 | FIXED | 2026-02-21 |
 | 129 | BUG | HIGH | 데몬 재시작 시 Admin UI에서 설정한 알림 채널이 로드되지 않음 | v27.0 | FIXED | 2026-02-21 |
 | 130 | ENHANCEMENT | MEDIUM | 1:N 세션 모델 도입으로 불필요해진 벌크 세션/MCP 토큰 생성 기능 제거 | v27.0 | FIXED | 2026-02-21 |
+| 131 | ENHANCEMENT | MEDIUM | X402_ALLOWED_DOMAINS 정책에 default-deny 토글 추가 | v27.1 | FIXED | 2026-02-21 |
+| 132 | BUG | HIGH | Admin UI에서 킬 스위치 Recover 시 SYSTEM_LOCKED 에러 발생 | v27.1 | FIXED | 2026-02-21 |
+| 133 | MISSING | HIGH | 지갑 Suspend/Resume REST API 및 Admin UI 버튼 추가 | v27.1 | FIXED | 2026-02-21 |
+| 134 | ENHANCEMENT | MEDIUM | 킬 스위치 Recover의 dual-auth(owner 서명) 요구 제거 | v27.1 | FIXED | 2026-02-21 |
+| 135 | ENHANCEMENT | MEDIUM | 알림 메시지에서 walletId 대신 walletName 주 표시 + 부가 정보 축약 | v27.1 | FIXED | 2026-02-21 |
+| 136 | BUG | HIGH | 루트 skills/와 packages/skills/skills/ 내용 불일치로 npm에 오래된 스킬 배포 | v27.1 | FIXED | 2026-02-21 |
+| 137 | BUG | MEDIUM | 알림 메시지 제목 중복 표시 — 4개 채널 모두 title이 2번 출력 | v27.1 | FIXED | 2026-02-21 |
+| 138 | BUG | LOW | 시스템 이벤트 알림에 불필요한 Wallet/타임스탬프 표시 — UPDATE_AVAILABLE 등 | v27.1 | FIXED | 2026-02-21 |
+| 139 | BUG | HIGH | telegram.enabled 미제거 — Approval Method가 Telegram Bot 비활성으로 판단 | v27.1 | FIXED | 2026-02-22 |
+| 140 | ENHANCEMENT | LOW | Approval Method 라벨 "SDK" → "Wallet App" 변경 — 사용자 직관성 개선 | v27.1 | FIXED | 2026-02-22 |
+| 141 | BUG | HIGH | Signing SDK 설정이 리뉴얼된 Admin UI에서 접근 불가 — 메뉴 재구성 시 누락 | v27.1 | FIXED | 2026-02-22 |
+| 142 | ENHANCEMENT | MEDIUM | 알림 카테고리 필터 통합 — 일반 채널 + 지갑 앱 채널 단일 설정 | v27.1 | FIXED | 2026-02-22 |
+| 143 | BUG | CRITICAL | Confirmation Worker RPC 콜백 미주입 — DETECTED→CONFIRMED 전이 불가 | v27.1 | OPEN | |
+| 144 | MISSING | MEDIUM | SDK Signing E2E 라이브 인프라 수동 테스트 미검증 (ntfy/Telegram) | v2.6.1 | OPEN | |
+| 145 | BUG | LOW | README/deployment.md CLI 문법 불일치 — `add --all` vs `add all` | v2.0 | FIXED | 2026-02-22 |
+| 146 | BUG | LOW | examples/simple-agent/README.md 깨진 링크 + placeholder URL + 구버전 | v2.0 | OPEN | |
+| 147 | BUG | LOW | validate-openapi.ts `@see` 주석 경로 불일치 | v2.0 | FIXED | 2026-02-22 |
 
 ## Type Legend
 
@@ -156,9 +173,9 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 130
+- **OPEN:** 4
+- **FIXED:** 143
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 130
+- **Total:** 147

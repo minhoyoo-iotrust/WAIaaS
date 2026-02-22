@@ -34,6 +34,8 @@ export interface HotReloadDeps {
   /** Mutable ref for Telegram Bot hot-reload */
   telegramBotRef?: { current: TelegramBotService | null };
   killSwitchService?: KillSwitchService | null;
+  /** Duck-typed IncomingTxMonitorService to avoid circular imports */
+  incomingTxMonitorService?: { updateConfig: (config: Partial<any>) => void } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +52,7 @@ const NOTIFICATION_KEYS = new Set([
   'notifications.slack_webhook_url',
   'notifications.locale',
   'notifications.rate_limit_rpm',
+  'notifications.notify_categories',
 ]);
 
 const RPC_KEYS_PREFIX = 'rpc.';
@@ -70,6 +73,7 @@ const SECURITY_KEYS = new Set([
   'policy.default_deny_tokens',
   'policy.default_deny_contracts',
   'policy.default_deny_spenders',
+  'policy.default_deny_x402_domains',
 ]);
 
 const AUTOSTOP_KEYS_PREFIX = 'autostop.';
@@ -78,8 +82,9 @@ const MONITORING_KEYS_PREFIX = 'monitoring.';
 
 const WALLETCONNECT_KEYS_PREFIX = 'walletconnect.';
 
+const INCOMING_KEYS_PREFIX = 'incoming.';
+
 const TELEGRAM_BOT_KEYS = new Set([
-  'telegram.enabled',
   'telegram.bot_token',
   'telegram.locale',
   'notifications.telegram_bot_token', // shared token triggers bot reload too
@@ -111,6 +116,7 @@ export class HotReloadOrchestrator {
     const hasMonitoringChanges = changedKeys.some((k) => k.startsWith(MONITORING_KEYS_PREFIX));
     const hasWalletConnectChanges = changedKeys.some((k) => k.startsWith(WALLETCONNECT_KEYS_PREFIX));
     const hasTelegramBotChanges = changedKeys.some((k) => TELEGRAM_BOT_KEYS.has(k));
+    const hasIncomingChanges = changedKeys.some((k) => k.startsWith(INCOMING_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -172,6 +178,14 @@ export class HotReloadOrchestrator {
           console.warn('Hot-reload Telegram Bot failed:', err);
         }),
       );
+    }
+
+    if (hasIncomingChanges) {
+      try {
+        this.reloadIncomingMonitor();
+      } catch (err) {
+        console.warn('Hot-reload incoming monitor failed:', err);
+      }
     }
 
     await Promise.all(reloads);
@@ -290,6 +304,26 @@ export class HotReloadOrchestrator {
   }
 
   /**
+   * Reload Incoming TX Monitor with current settings from SettingsService.
+   * Synchronous: reads new values and calls incomingTxMonitorService.updateConfig().
+   */
+  private reloadIncomingMonitor(): void {
+    const svc = this.deps.incomingTxMonitorService;
+    if (!svc) return;
+
+    const ss = this.deps.settingsService;
+    svc.updateConfig({
+      enabled: ss.get('incoming.enabled') === 'true',
+      pollIntervalSec: parseInt(ss.get('incoming.poll_interval') || '30', 10),
+      retentionDays: parseInt(ss.get('incoming.retention_days') || '90', 10),
+      dustThresholdUsd: parseFloat(ss.get('incoming.suspicious_dust_usd') || '0.01'),
+      amountMultiplier: parseFloat(ss.get('incoming.suspicious_amount_multiplier') || '10'),
+      cooldownMinutes: parseInt(ss.get('incoming.cooldown_minutes') || '5', 10),
+    });
+    console.log('Hot-reload: Incoming TX monitor config updated');
+  }
+
+  /**
    * Reload WalletConnect by shutting down old SignClient and re-initializing.
    * Uses the mutable WcServiceRef so route handlers pick up the new instance.
    */
@@ -345,14 +379,13 @@ export class HotReloadOrchestrator {
       ref.current = null;
     }
 
-    // 2. Check if bot should be enabled
+    // 2. Check if bot_token exists (bot enabled when token is present)
     const ss = this.deps.settingsService;
-    const enabled = ss.get('telegram.enabled') === 'true';
     // Token priority: telegram.bot_token > notifications.telegram_bot_token
     const botToken = ss.get('telegram.bot_token') || ss.get('notifications.telegram_bot_token');
 
-    if (!enabled || !botToken) {
-      console.log(`Hot-reload: Telegram Bot ${!enabled ? 'disabled' : 'stopped (no token)'}`);
+    if (!botToken) {
+      console.log('Hot-reload: Telegram Bot stopped (no token)');
       return;
     }
 

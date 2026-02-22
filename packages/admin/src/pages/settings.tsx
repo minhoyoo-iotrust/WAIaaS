@@ -608,6 +608,13 @@ export default function SettingsPage() {
                 value={getEffectiveBoolValue('security', 'default_deny_spenders')}
                 onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
               />
+              <FormField
+                label={keyToLabel('default_deny_x402_domains')}
+                name="policy.default_deny_x402_domains"
+                type="checkbox"
+                value={getEffectiveBoolValue('security', 'default_deny_x402_domains')}
+                onChange={(v) => handleFieldChange('policy.default_deny_x402_domains', v)}
+              />
             </div>
           </div>
         </div>
@@ -666,17 +673,6 @@ export default function SettingsPage() {
         <div class="settings-category-body">
           <div class="settings-fields-grid">
             <FormField
-              label="Bot Enabled"
-              name="telegram.enabled"
-              type="select"
-              value={getEffectiveValue('telegram', 'enabled') || 'false'}
-              onChange={(v) => handleFieldChange('telegram.enabled', v)}
-              options={[
-                { label: 'Yes', value: 'true' },
-                { label: 'No', value: 'false' },
-              ]}
-            />
-            <FormField
               label="Bot Token"
               name="telegram.bot_token"
               type="password"
@@ -710,34 +706,7 @@ export default function SettingsPage() {
   // Section: Signing SDK
   // ---------------------------------------------------------------------------
 
-  const NOTIFY_CATEGORY_OPTIONS = [
-    { value: 'transaction', label: 'Transaction Events' },
-    { value: 'policy', label: 'Policy Violations' },
-    { value: 'security_alert', label: 'Security Alerts' },
-    { value: 'session', label: 'Session Events' },
-    { value: 'owner', label: 'Owner Events' },
-    { value: 'system', label: 'System Notifications' },
-  ];
-
   function SigningSDKSettings() {
-    // Parse current notify_categories JSON array
-    const currentCategoriesJson = getEffectiveValue('signing_sdk', 'notify_categories') || '[]';
-    let currentCategories: string[] = [];
-    try {
-      const parsed = JSON.parse(currentCategoriesJson);
-      if (Array.isArray(parsed)) currentCategories = parsed;
-    } catch { /* use empty */ }
-
-    const handleCategoryToggle = (categoryValue: string, checked: boolean) => {
-      let updated: string[];
-      if (checked) {
-        updated = [...currentCategories, categoryValue];
-      } else {
-        updated = currentCategories.filter((c) => c !== categoryValue);
-      }
-      handleFieldChange('signing_sdk.notify_categories', JSON.stringify(updated));
-    };
-
     return (
       <div class="settings-category">
         <div class="settings-category-header">
@@ -824,26 +793,8 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-            <div style={{ marginTop: '0.75rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Notify Categories {currentCategories.length === 0 && <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(all categories)</span>}
-              </label>
-              <div class="settings-fields-grid">
-                {NOTIFY_CATEGORY_OPTIONS.map((opt) => (
-                  <FormField
-                    key={opt.value}
-                    label={opt.label}
-                    name={`notify_cat_${opt.value}`}
-                    type="checkbox"
-                    value={currentCategories.includes(opt.value)}
-                    onChange={(v) => handleCategoryToggle(opt.value, Boolean(v))}
-                  />
-                ))}
-              </div>
-              <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
-                Select specific categories to receive, or leave all unchecked to receive all notification types.
-                Security Alerts are delivered with high priority (ntfy priority 5).
-              </div>
+            <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
+              Category filtering is configured in Notifications &gt; Settings.
             </div>
           </div>
         </div>
@@ -1108,6 +1059,99 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: Incoming Transaction Monitoring
+  // ---------------------------------------------------------------------------
+
+  function IncomingSettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Incoming Transaction Monitoring</h3>
+          <p class="settings-description">
+            Monitor incoming transactions to wallets. Detects native and token transfers,
+            flags suspicious activity (dust attacks, large amounts, unknown tokens).
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="Monitoring Enabled"
+              name="incoming.enabled"
+              type="select"
+              value={getEffectiveValue('incoming', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('incoming.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+            />
+            <FormField
+              label="Poll Interval (seconds)"
+              name="incoming.poll_interval"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'poll_interval')) || 30}
+              onChange={(v) => handleFieldChange('incoming.poll_interval', v)}
+              min={5}
+              max={3600}
+            />
+            <FormField
+              label="Retention Days"
+              name="incoming.retention_days"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'retention_days')) || 90}
+              onChange={(v) => handleFieldChange('incoming.retention_days', v)}
+              min={1}
+              max={365}
+            />
+            <FormField
+              label="Suspicious Dust USD Threshold"
+              name="incoming.suspicious_dust_usd"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'suspicious_dust_usd')) || 0.01}
+              onChange={(v) => handleFieldChange('incoming.suspicious_dust_usd', v)}
+              min={0}
+              max={1000}
+            />
+            <FormField
+              label="Suspicious Amount Multiplier"
+              name="incoming.suspicious_amount_multiplier"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'suspicious_amount_multiplier')) || 10}
+              onChange={(v) => handleFieldChange('incoming.suspicious_amount_multiplier', v)}
+              min={1}
+              max={1000}
+            />
+            <FormField
+              label="Notification Cooldown (minutes)"
+              name="incoming.cooldown_minutes"
+              type="number"
+              value={Number(getEffectiveValue('incoming', 'cooldown_minutes')) || 5}
+              onChange={(v) => handleFieldChange('incoming.cooldown_minutes', v)}
+              min={1}
+              max={1440}
+            />
+            <FormField
+              label="WebSocket URL (optional)"
+              name="incoming.wss_url"
+              type="text"
+              value={getEffectiveValue('incoming', 'wss_url')}
+              onChange={(v) => handleFieldChange('incoming.wss_url', v)}
+              placeholder="wss://custom-rpc.example.com"
+            />
+          </div>
+          <div class="settings-info-box">
+            Monitors wallets with incoming monitoring enabled for incoming transactions.
+            Uses WebSocket subscription when available, falls back to polling.
+            Suspicious transactions (dust attacks, unusually large amounts, unknown tokens)
+            trigger broadcast alerts to all notification channels.
+            Changes take effect immediately via hot-reload.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
 
@@ -1154,6 +1198,7 @@ export default function SettingsPage() {
           <ApiKeysSection />
           <AutoStopSettings />
           <MonitoringSettings />
+          <IncomingSettings />
         </>
       )}
 

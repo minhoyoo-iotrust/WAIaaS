@@ -45,7 +45,12 @@ import {
   WalletListResponseSchema,
   WalletDetailResponseSchema,
   WalletDeleteResponseSchema,
+  WalletSuspendRequestSchema,
+  WalletSuspendResponseSchema,
+  WalletResumeResponseSchema,
   WithdrawResponseSchema,
+  PatchWalletRequestSchema,
+  PatchWalletResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -60,6 +65,8 @@ export interface WalletCrudRouteDeps {
   notificationService?: NotificationService;
   eventBus?: EventBus;
   jwtSecretManager?: JwtSecretManager;
+  /** Duck-typed to avoid circular dependency with IncomingTxMonitorService */
+  incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +185,28 @@ const updateWalletRoute = createRoute({
   },
 });
 
+const patchWalletRoute = createRoute({
+  method: 'patch',
+  path: '/wallets/{id}',
+  tags: ['Wallets'],
+  summary: 'Update wallet monitoring settings',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: PatchWalletRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Wallet monitoring settings updated',
+      content: { 'application/json': { schema: PatchWalletResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
 const deleteWalletRoute = createRoute({
   method: 'delete',
   path: '/wallets/{id}',
@@ -192,6 +221,45 @@ const deleteWalletRoute = createRoute({
       content: { 'application/json': { schema: WalletDeleteResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED']),
+  },
+});
+
+const suspendWalletRoute = createRoute({
+  method: 'post',
+  path: '/wallets/{id}/suspend',
+  tags: ['Wallets'],
+  summary: 'Suspend wallet',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: WalletSuspendRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Wallet suspended',
+      content: { 'application/json': { schema: WalletSuspendResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'INVALID_STATE_TRANSITION']),
+  },
+});
+
+const resumeWalletRoute = createRoute({
+  method: 'post',
+  path: '/wallets/{id}/resume',
+  tags: ['Wallets'],
+  summary: 'Resume suspended wallet',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Wallet resumed',
+      content: { 'application/json': { schema: WalletResumeResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'INVALID_STATE_TRANSITION']),
   },
 });
 
@@ -316,6 +384,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerVerified: wallet.ownerVerified,
         ownerState,
         approvalMethod: wallet.ownerApprovalMethod ?? null,
+        suspendedAt: wallet.suspendedAt ? Math.floor(wallet.suspendedAt.getTime() / 1000) : null,
+        suspensionReason: wallet.suspensionReason ?? null,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
         updatedAt: wallet.updatedAt ? Math.floor(wallet.updatedAt.getTime() / 1000) : null,
       },
@@ -478,6 +548,53 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
   });
 
   // ---------------------------------------------------------------------------
+  // PATCH /wallets/:id (update monitoring settings)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(patchWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    if (body.monitorIncoming !== undefined) {
+      await deps.db
+        .update(wallets)
+        .set({ monitorIncoming: body.monitorIncoming })
+        .where(eq(wallets.id, walletId))
+        .run();
+
+      // Fire-and-forget: reconcile subscriptions with updated DB state
+      void deps.incomingTxMonitorService?.syncSubscriptions();
+    }
+
+    // Re-fetch wallet to get updated state
+    const updated = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    return c.json(
+      {
+        id: walletId,
+        monitorIncoming: updated?.monitorIncoming ?? false,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
   // DELETE /wallets/:id (terminate)
   // ---------------------------------------------------------------------------
 
@@ -585,6 +702,104 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       {
         id: walletId,
         status: 'TERMINATED' as const,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /wallets/:id/suspend
+  // ---------------------------------------------------------------------------
+
+  router.openapi(suspendWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    if (wallet.status !== 'ACTIVE') {
+      throw new WAIaaSError('INVALID_STATE_TRANSITION', {
+        message: `Cannot suspend wallet in '${wallet.status}' status. Only ACTIVE wallets can be suspended.`,
+      });
+    }
+
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    const reason = body.reason ?? 'MANUAL';
+
+    await deps.db
+      .update(wallets)
+      .set({
+        status: 'SUSPENDED',
+        suspendedAt: now,
+        suspensionReason: reason,
+        updatedAt: now,
+      })
+      .where(eq(wallets.id, walletId))
+      .run();
+
+    return c.json(
+      {
+        id: walletId,
+        status: 'SUSPENDED' as const,
+        suspendedAt: Math.floor(now.getTime() / 1000),
+        suspensionReason: reason,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /wallets/:id/resume
+  // ---------------------------------------------------------------------------
+
+  router.openapi(resumeWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    if (wallet.status !== 'SUSPENDED') {
+      throw new WAIaaSError('INVALID_STATE_TRANSITION', {
+        message: `Cannot resume wallet in '${wallet.status}' status. Only SUSPENDED wallets can be resumed.`,
+      });
+    }
+
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+
+    await deps.db
+      .update(wallets)
+      .set({
+        status: 'ACTIVE',
+        suspendedAt: null,
+        suspensionReason: null,
+        updatedAt: now,
+      })
+      .where(eq(wallets.id, walletId))
+      .run();
+
+    return c.json(
+      {
+        id: walletId,
+        status: 'ACTIVE' as const,
       },
       200,
     );

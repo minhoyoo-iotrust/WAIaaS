@@ -8,17 +8,21 @@
 
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
+import { EVENT_CATEGORY_MAP } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { eq } from 'drizzle-orm';
 import { getNotificationMessage } from './templates/message-templates.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import type { WalletNotificationChannel } from '../services/signing-sdk/channels/wallet-notification-channel.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 
 // Broadcast event types -- sent to ALL channels simultaneously
 const BROADCAST_EVENTS: Set<string> = new Set([
   'KILL_SWITCH_ACTIVATED',
   'KILL_SWITCH_RECOVERED',
   'AUTO_STOP_TRIGGERED',
+  'TX_INCOMING_SUSPICIOUS',
 ]);
 
 export interface NotificationServiceConfig {
@@ -33,6 +37,9 @@ export class NotificationService {
 
   // Wallet notification side channel (v2.7 -- independent of traditional channels)
   private walletNotificationChannel: WalletNotificationChannel | null = null;
+
+  // SettingsService for category filter (injected by daemon lifecycle)
+  private settingsService: SettingsService | null = null;
 
   // Rate limiter: Map<channelName, timestamps[]>
   private rateLimitMap = new Map<string, number[]>();
@@ -83,6 +90,11 @@ export class NotificationService {
     this.walletNotificationChannel = channel;
   }
 
+  /** Set the SettingsService for category filtering (injected by daemon lifecycle). */
+  setSettingsService(service: SettingsService | null): void {
+    this.settingsService = service;
+  }
+
   /**
    * Send notification via priority-based delivery with fallback.
    * Tries channels in order; on failure, falls back to next channel.
@@ -94,20 +106,39 @@ export class NotificationService {
     vars?: Record<string, string>,
     details?: Record<string, unknown>,
   ): Promise<void> {
+    // Look up wallet info for display (walletName, address, network)
+    const walletInfo = this.lookupWallet(walletId);
+    const mergedVars = walletInfo.walletName
+      ? { walletName: walletInfo.walletName, ...vars }
+      : { walletName: walletId, ...vars };
+
+    // Category filter: check notifications.notify_categories (empty = allow all)
+    // BROADCAST_EVENTS always bypass the filter.
+    const isBroadcast = BROADCAST_EVENTS.has(eventType);
+    if (!isBroadcast && this.settingsService) {
+      const filtered = this.isCategoryFiltered(eventType);
+      if (filtered) return;
+    }
+
     // Side channel: wallet app notification (independent of traditional channels, never blocks)
     // Placed BEFORE the channels.length guard so it fires even with zero configured channels.
     if (this.walletNotificationChannel) {
-      const { title: sideTitle, body: sideBody } = getNotificationMessage(eventType, this.config.locale, vars);
+      const { title: sideTitle, body: sideBody } = getNotificationMessage(eventType, this.config.locale, mergedVars);
       // Fire-and-forget with try/catch isolation (DAEMON-06)
       this.walletNotificationChannel.notify(eventType, walletId, sideTitle, sideBody, details).catch(() => {});
     }
 
     if (this.channels.length === 0) return; // No traditional channels configured
 
-    const { title, body } = getNotificationMessage(eventType, this.config.locale, vars);
+    const { title, body } = getNotificationMessage(eventType, this.config.locale, mergedVars);
     const payload: NotificationPayload = {
       eventType,
       walletId,
+      walletName: walletInfo.walletName,
+      walletAddress: walletInfo.walletAddress,
+      network: walletInfo.network,
+      title,
+      body,
       message: `${title}\n${body}`,
       details,
       timestamp: Math.floor(Date.now() / 1000),
@@ -179,6 +210,25 @@ export class NotificationService {
     this.logDelivery(channel.name, payload, 'sent');
   }
 
+  /**
+   * Check if the event type is filtered out by notifications.notify_categories.
+   * Empty array = allow all. Returns true if the event should be suppressed.
+   */
+  private isCategoryFiltered(eventType: NotificationEventType): boolean {
+    if (!this.settingsService) return false;
+    try {
+      const filterJson = this.settingsService.get('notifications.notify_categories');
+      if (!filterJson || filterJson === '[]') return false;
+      const allowed = JSON.parse(filterJson) as string[];
+      if (!Array.isArray(allowed) || allowed.length === 0) return false;
+      const category = EVENT_CATEGORY_MAP[eventType];
+      if (!category) return false;
+      return !allowed.includes(category);
+    } catch {
+      return false;
+    }
+  }
+
   /** Check if channel is rate limited (sliding window). */
   private isRateLimited(channelName: string): boolean {
     const now = Date.now();
@@ -195,6 +245,36 @@ export class NotificationService {
     const timestamps = this.rateLimitMap.get(channelName) ?? [];
     timestamps.push(Date.now());
     this.rateLimitMap.set(channelName, timestamps);
+  }
+
+  /**
+   * Look up wallet name, address, and network from DB.
+   * Returns empty strings when DB unavailable, walletId is empty/system, or wallet not found.
+   */
+  private lookupWallet(walletId: string): { walletName: string; walletAddress: string; network: string } {
+    const empty = { walletName: '', walletAddress: '', network: '' };
+    if (!this.db || !walletId || walletId === 'system') return empty;
+
+    try {
+      const row = this.db
+        .select({
+          name: schema.wallets.name,
+          publicKey: schema.wallets.publicKey,
+          defaultNetwork: schema.wallets.defaultNetwork,
+          chain: schema.wallets.chain,
+        })
+        .from(schema.wallets)
+        .where(eq(schema.wallets.id, walletId))
+        .get();
+      if (!row) return empty;
+      return {
+        walletName: row.name,
+        walletAddress: row.publicKey,
+        network: row.defaultNetwork ?? row.chain,
+      };
+    } catch {
+      return empty;
+    }
   }
 
   /**

@@ -382,7 +382,7 @@ check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
 ## Sources
 
 ### Primary (HIGH confidence)
-- `docs/design/76-incoming-transaction-monitoring.md` -- §6.3-§6.6 (알림/규칙), §8.6 (영향 분석) 교차 분석
+- `internal/design/76-incoming-transaction-monitoring.md` -- §6.3-§6.6 (알림/규칙), §8.6 (영향 분석) 교차 분석
 - `.planning/v27.0-MILESTONE-AUDIT.md` -- NOTIFY-1, getDecimals, doc 31, skills/ 4건 정의
 - `.planning/REQUIREMENTS.md` -- EVT-02, EVT-05, VER-01 요구사항 + gap closure 항목
 - `.planning/ROADMAP.md` -- Phase 223 목표/의존/성공 기준

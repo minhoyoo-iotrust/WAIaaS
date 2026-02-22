@@ -1,5 +1,33 @@
 # Project Milestones: WAIaaS
 
+## v27.1 수신 트랜잭션 모니터링 구현 (Shipped: 2026-02-22)
+
+**Delivered:** v27.0에서 설계한 수신 트랜잭션 모니터링을 완전 구현. IChainSubscriber 기반 Solana/EVM 체인별 수신 감지, IncomingTxQueue 메모리 큐 + 배치 flush, SubscriptionMultiplexer 연결 공유 + 폴링 폴백, 3개 안전 규칙(dust/unknownToken/largeAmount), REST API 3 엔드포인트 + SDK/MCP 확장, 20개 통합 테스트 완성.
+
+**Phases completed:** 224-230 (7 phases, 18 plans, 30 requirements)
+
+**Key accomplishments:**
+
+- IChainSubscriber 6-method interface + DB v21 migration (incoming_transactions, incoming_tx_cursors, wallets.monitor_incoming)
+- SolanaIncomingSubscriber WebSocket logsSubscribe + SOL/SPL/Token-2022 파서 + 60s heartbeat keepalive
+- EvmIncomingSubscriber getLogs ERC-20 Transfer + getBlock native ETH 폴링 감지
+- IncomingTxMonitorService: 큐(Map dedup + batch flush) + multiplexer(연결 공유 + 재연결) + 3 safety rules + KillSwitch 연동
+- REST API(GET /incoming, /summary, PATCH /wallets/:id monitorIncoming) + TS/Python SDK + MCP 2 tools + Admin IncomingSettings
+- 20 통합 테스트 — 6대 피트폴(listener leak, SQLite contention, dedup, shutdown drain, EVM reorg) + gap recovery + KillSwitch 억제
+
+**Stats:**
+
+- 7 phases, 18 plans, 30 requirements, 102 commits
+- 189 files changed, +23,969 / -5,834 lines
+- ~155,540 LOC TypeScript
+- Timeline: 1 day (2026-02-21 → 2026-02-22)
+
+### Known Gaps
+
+- **STO-03**: Confirmation Worker RPC 콜백(getBlockNumber, checkSolanaFinalized) 미주입 — DETECTED→CONFIRMED 상태 전환 미작동. 다음 마일스톤에서 수정 예정.
+
+---
+
 ## v27.0 수신 트랜잭션 모니터링 설계 (Shipped: 2026-02-21)
 
 **Delivered:** 지갑으로 들어오는 수신 트랜잭션을 실시간 감지·기록·알림하는 인프라를 설계 수준에서 완전히 정의. IChainSubscriber 6-메서드 인터페이스, incoming_transactions DB 스키마, Solana/EVM 체인별 감지 전략, WebSocket 3-state 상태 머신 + 폴링 폴백, 의심 입금 감지 3규칙, REST API/SDK/MCP 명세, config.toml [incoming] 6키 설정까지 설계 문서(doc 76, ~2,300줄, 8섹션)로 완성. 감사 갭 9건 전량 해결.
@@ -19,7 +47,7 @@
 
 - 9 phases, 16 plans, 29 requirements, 26 design decisions, 9 gap closure items
 - 101 files changed, +8,058 / -2,158 lines
-- Output: docs/design/76-incoming-transaction-monitoring.md (~2,300 lines, 8 sections)
+- Output: internal/design/76-incoming-transaction-monitoring.md (~2,300 lines, 8 sections)
 - Timeline: 1 day (2026-02-21)
 - Git range: 1618dce → e32e2f0 (40 commits)
 
@@ -1323,4 +1351,14 @@
 ---
 
 
+
+
+## v27.1 수신 트랜잭션 모니터링 구현 (Shipped: 2026-02-22)
+
+**Phases completed:** 156 phases, 334 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
 

@@ -1,245 +1,349 @@
-# Feature Research: Incoming Transaction Monitoring
+# Feature Landscape: Incoming Transaction Monitoring Implementation
 
-**Domain:** Crypto Wallet Incoming Transaction Monitoring (AI Agent Wallet Service — WAIaaS)
+**Domain:** Crypto Wallet Incoming Transaction Monitoring (WAIaaS v27.1 Implementation)
 **Researched:** 2026-02-21
-**Confidence:** HIGH (design doc m27-00 verified against official RPC docs and industry patterns)
+**Confidence:** HIGH (design doc 76 verified against Solana RPC docs, viem docs, industry patterns)
 
 ---
 
 ## Context
 
-WAIaaS already has: 6-stage outgoing TX pipeline, 28-event INotificationChannel, 60+ REST endpoints,
-18 MCP tools, config.toml flat-section config, SettingsService hot-reload, wallet-level opt-in policies.
+WAIaaS v27.0 delivered design doc 76 (~2,300 lines). v27.1 implements it.
 
-This research covers what to ADD for incoming transaction monitoring — specifically for a design-only milestone.
-The downstream consumer is the roadmap + design specification authors for milestone m27.
+**Existing features (already built):**
+- Outgoing TX pipeline (6-stage + sign-only, 8-state machine, 5 discriminated union types)
+- EventBus with 28 notification event types, 4 notification channels + wallet app channel
+- KillSwitch 3-state, AutoStop 4-rule, BalanceMonitor (fail-soft pattern)
+- REST API 60+ endpoints with cursor pagination (UUID v7 cursor pattern established)
+- TypeScript/Python SDK, MCP 18+ tools
+- Admin UI with 7 functional menus, SettingsService hot-reload
+- Token registry (5 EVM mainnet 24 built-in tokens + custom CRUD)
+- BackgroundWorkers periodic scheduler (wal-checkpoint, session-cleanup, version-check)
+- DaemonLifecycle Step 4c fail-soft initialization pattern
+
+**Design doc 76 decisions already locked (19 decisions D-01 through D-19).**
+This feature landscape covers the IMPLEMENTATION scope, complexity, and dependency ordering.
 
 ---
 
-## Feature Landscape
+## Table Stakes
 
-### Table Stakes (Users Expect These)
+Features users expect from any incoming TX monitoring system. Missing = feature feels incomplete.
 
-Features an AI agent wallet service must have for incoming TX monitoring to feel complete.
-Missing any of these = incoming TX feature is not shippable.
+| Feature | Why Expected | Complexity | Depends On | Design Doc Section |
+|---------|--------------|------------|------------|-------------------|
+| Solana SOL native receive detection | Core use case -- agents receive SOL payments | Med | IChainSubscriber interface, SolanaIncomingSubscriber | SS3.2.1 |
+| Solana SPL token receive detection | SPL tokens are primary Solana token standard | Med | SOL detection (shared parser), preTokenBalances/postTokenBalances | SS3.2.2 |
+| Solana Token-2022 detection | Token-2022 is Solana's evolving token standard | Low | SPL detection (same mechanism, no separate code) | SS3.3 |
+| EVM native ETH receive detection | Core use case -- agents receive ETH payments | Med | EvmIncomingSubscriber, getBlock(includeTransactions) | SS4.3 |
+| EVM ERC-20 Transfer event detection | ERC-20 tokens are primary EVM token standard | Med | ETH detection (shared subscriber), getLogs + Transfer topic | SS4.2 |
+| 2-phase status (DETECTED -> CONFIRMED) | Users need fast notification AND safe trigger semantics | Med | DB schema, confirmation background workers | SS1.3 |
+| Wallet-level opt-in toggle | Users must control which wallets are monitored (RPC cost) | Low | wallets.monitor_incoming column, PATCH API | SS2.2, SS8.4 |
+| Global enable/disable gate | Operator must control entire monitoring feature | Low | config.toml [incoming] section, SettingsService | SS8.1 |
+| Incoming TX notification (DETECTED) | Users need to know when funds arrive | Low | Existing NotificationService.notify(), new event type | SS6.2 |
+| Incoming TX history API | Users/agents query past incoming transactions | Med | incoming_transactions table, cursor pagination | SS7.1 |
+| DB migration v21 | Required infrastructure for all features | Low | Existing migration framework, 3 DDL statements | SS2.7 |
+| Config.toml [incoming] 7 keys | Operator configuration surface | Low | Existing config pattern, SettingsService registration | SS8.1-8.3 |
 
-| Feature | Why Expected | Complexity | WAIaaS Dependency | Confidence |
-|---------|--------------|------------|-------------------|------------|
-| Real-time incoming TX detection | Every major wallet (Phantom, MetaMask, Trust Wallet) provides push notification on receive; AI agents need to react to inbound funds | MEDIUM | IChainAdapter — new IChainSubscriber layer; WebSocket on RPC node | HIGH |
-| Native token detection (SOL, ETH) | Base expectation — wallet must know when its primary asset arrives | LOW | accountSubscribe (Solana); eth_subscribe newHeads + to-filter (EVM) | HIGH |
-| SPL / ERC-20 token detection | AI agents manage token-denominated flows (USDC, stablecoins); detecting token arrivals is mandatory for complete fund tracking | MEDIUM | accountSubscribe per ATA (Solana); eth_subscribe logs + Transfer topic filter (EVM) | HIGH |
-| Persistent storage of incoming TX history | Without a DB record, agents cannot query "what arrived since last run"; all wallet services reviewed keep full history | LOW | New `incoming_transactions` table; tx_hash UNIQUE constraint for dedup | HIGH |
-| Duplicate detection | RPC WebSocket can deliver the same event multiple times on reconnect replay; duplicates corrupt accounting | LOW | ON CONFLICT IGNORE on tx_hash UNIQUE | HIGH |
-| Opt-in per-wallet activation with global gate | Inactive wallets must incur zero additional RPC cost; self-hosted constraint. Two-gate model: global incoming_enabled AND per-wallet monitor_incoming | LOW | monitor_incoming boolean column in wallets table + global incoming_enabled config key | HIGH |
-| Polling fallback when WebSocket unavailable | Not all RPC endpoints support WebSocket (public HTTP endpoints, restrictive firewalls); must degrade gracefully without silent failure | MEDIUM | getSignaturesForAddress (Solana); eth_getBlockByNumber scan (EVM) | HIGH |
-| Retention / auto-purge policy | Self-hosted SQLite cannot grow unbounded; incoming_retention_days config key; scheduled cleanup job | LOW | Existing pattern from balance monitor; new scheduler for incoming_transactions table | HIGH |
-| Incoming history REST API | AI agent or admin needs to query history with date/address/token filters | MEDIUM | New GET /v1/wallet/incoming endpoint; cursor pagination matching existing TX list pattern | HIGH |
-| INCOMING_TX_DETECTED notification event | Owner wants a push alert on deposit via Telegram/ntfy/Discord/Slack; MetaMask and Phantom both deliver real-time receive notifications | LOW | 2 new NotificationEventType entries added to existing 28-event enum | HIGH |
-| Wallet-level monitoring activation gate | Only explicitly opted-in wallets generate events and RPC subscriptions; prevents runaway cost | LOW | resolveWalletId + monitor_incoming flag gate before subscribing | HIGH |
+**Total table stakes: 12 features**
 
-### Differentiators (Competitive Advantage)
+---
 
-Features that go beyond baseline and are especially valuable in the AI agent context.
+## Differentiators
 
-| Feature | Value Proposition | Complexity | WAIaaS Dependency | Confidence |
-|---------|-------------------|------------|-------------------|------------|
-| Suspicious incoming TX detection (INCOMING_TX_SUSPICIOUS) | Dust attacks use tiny token airdrops to deanonymize wallets or introduce poisoned coins. AI agents that auto-spend received funds are at higher risk than human-controlled wallets. Threshold-based detection ($0.01 USD) plus ALLOWED_TOKENS cross-check gives immediate protection | MEDIUM | IIncomingSafetyRule interface; price oracle (v1.5 already in WAIaaS) for USD conversion; ALLOWED_TOKENS policy | HIGH |
-| WebSocket connection sharing across wallets on same chain | One WebSocket per chain, not one per wallet. Critical for scaling beyond 5 wallets on a self-hosted node. Geth and Solana both support multiple subscriptions per single connection | MEDIUM | ChainSubscriber multiplexer registry; subscription ID → walletId map; resubscribe all on reconnect | HIGH |
-| Exponential backoff reconnection with jitter | WebSocket drops happen. Without reconnect, monitoring silently stops for hours. Production grade: 1s→2s→4s→…→60s backoff with random jitter to prevent thundering herd. Subscription state must survive reconnect and be replayed automatically | MEDIUM | IChainSubscriber reconnect state machine; subscription registry persisted in memory across reconnects | HIGH |
-| MCP tool: list_incoming_transactions | AI agent can ask "what payments have I received?" directly via MCP without custom REST client code. Enables autonomous DeFi reactions: receive deposit → query balance → swap → yield | LOW | 21st MCP tool; wraps GET /v1/wallet/incoming | HIGH |
-| Unknown token flagging | Any token not in the wallet's ALLOWED_TOKENS policy list triggers INCOMING_TX_SUSPICIOUS. Prevents AI agents from treating malicious airdropped tokens as spendable funds without owner review | LOW | Cross-reference with existing ALLOWED_TOKENS policy store; no USD price needed | HIGH |
-| Large deposit anomaly detection | Alert when a single deposit is N× the wallet's rolling average. Legitimate for AI agents managing treasury — a sudden large inflow is unusual and should prompt owner awareness before agent auto-acts | MEDIUM | Rolling average calculation in IncomingTransactionMonitor on incoming_transactions table; configurable multiplier (default 10×) | MEDIUM |
-| Per-ATA dynamic subscription management (Solana) | SPL tokens live in Associated Token Accounts, not the wallet address itself. A static ATA list at daemon startup is insufficient — new ATAs created after startup must be detected and subscribed dynamically. This is required for complete Solana token monitoring | HIGH | accountSubscribe per ATA; wallet-level accountSubscribe to detect new ATA creation (owner field change in account data); ATA registry with add/remove hooks | HIGH |
-| Summary / income aggregation endpoint | GET /v1/wallet/incoming/summary with daily/weekly/monthly totals. Useful for AI agents managing recurring income streams (subscription payments, yield collection, grant disbursements) | MEDIUM | SQL aggregation on incoming_transactions; optional USD conversion via price oracle | MEDIUM |
+Features that set WAIaaS apart from basic monitoring. Not expected, but high-value.
 
-### Anti-Features (Commonly Requested, Often Problematic)
+| Feature | Value Proposition | Complexity | Depends On | Design Doc Section |
+|---------|-------------------|------------|------------|-------------------|
+| Suspicious deposit detection (3 rules) | Proactive security -- dust attacks, unknown tokens, large amounts | Med | IIncomingSafetyRule interface, PriceOracle integration, token_registry | SS6.5-6.6 |
+| WebSocket -> polling auto-fallback | Resilient monitoring even with unreliable WebSocket RPCs | High | SubscriptionMultiplexer, 3-state connection machine, reconnectLoop | SS5.1-5.2 |
+| Blind gap recovery | Zero TX loss during WebSocket disconnections | High | incoming_tx_cursors table, per-chain recovery logic | SS5.6 |
+| WebSocket multiplexer (shared connections) | Same chain+network wallets share one WS connection | Med | SubscriptionMultiplexer class, per-wallet subscription management | SS5.4 |
+| Summary aggregation API | Daily/weekly/monthly incoming TX summaries with USD values | Med | SQL aggregation, PriceOracle USD conversion, BigInt app-layer sum | SS7.6 |
+| Memory queue + batch flush | SQLite single-writer protection, high throughput | Med | IncomingTxQueue class, BackgroundWorkers flush worker | SS2.6 |
+| Heartbeat (Solana 60s ping) | Prevents 10-minute inactivity timeout on RPC providers | Low | SolanaHeartbeat class, timer.unref() | SS5.3 |
+| Dynamic subscription sync | Runtime add/remove wallets without restart | Med | IncomingTxMonitorService.syncSubscriptions(), eventBus wallet:activity | SS5.5 |
+| Hot-reload all 7 config keys | Change monitoring config without daemon restart | Low | HotReloadOrchestrator extension, existing pattern | SS8.5 |
+| MCP tools (2 new) | AI agents query incoming TX via MCP protocol | Low | Existing MCP tool pattern, REST API delegation | SS7.5 |
+| SDK methods (TS + Python) | Programmatic access to incoming TX data | Low | Existing SDK client pattern, REST API delegation | SS7.4 |
+| Retention policy (auto-delete) | Prevent unbounded DB growth | Low | BackgroundWorkers 1-hour task, configurable days | SS2.5 |
+| i18n message templates (en/ko) | Bilingual notification messages | Low | Existing message-templates.ts pattern | SS6.7 |
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| External indexer / Helius Webhook push | "Zero polling" incoming TX with instant sub-100ms delivery via Helius/Alchemy managed webhooks | Violates Self-Hosted principle: requires outbound registration to 3rd-party service, API key management, external dependency, and internet egress. WAIaaS must operate without connectivity to indexer services | RPC WebSocket subscription achieves near-identical latency without external dependency |
-| NFT incoming detection | Users want notification when receiving an NFT (Metaplex / ERC-721 / ERC-1155) | NFT metadata parsing is complex: Metaplex for Solana, varying ABI for EVM. No reliable USD floor for price-based dust threshold. Scope expansion risks derailing the core monitoring design | Defer to separate milestone; core monitoring covers fungible tokens only (explicitly out of scope in m27-00) |
-| Historical backfill on activation | "When I turn on monitoring, show all past deposits from before activation" | Requires archive RPC node (512-1024 GB RAM) or Etherscan/Solscan API dependency. Public RPC nodes typically only provide recent signature history (limited getSignaturesForAddress lookback). False sense of completeness creates accounting errors | Document clearly: monitoring starts from activation timestamp. Past TX is visible via block explorer links included in INCOMING_TX_DETECTED notification details |
-| Incoming TX policy enforcement (auto-reject / auto-block) | "Block suspicious incoming funds automatically" | Incoming TX cannot be blocked at the RPC layer — funds arrive on-chain regardless of daemon state. Claiming to "block" incoming TX is technically misleading and could create false security expectations | Record incoming TX with is_suspicious flag; emit INCOMING_TX_SUSPICIOUS alert; let Owner decide. Never claim incoming TX was blocked |
-| Global monitoring on by default (all wallets always watched) | "Simpler UX — just monitor everything" | RPC connection cost scales with wallet count. Public RPC nodes have rate limits. On self-hosted nodes with limited hardware, unlimited subscriptions risk overwhelming the node. WAIaaS default-deny policy applies | Opt-in per-wallet with global enable gate. Cost is documented in config.toml. Operators choose which wallets warrant monitoring cost |
-| Real-time balance streaming to AI agent (SSE / WebSocket push) | "Push balance changes to agent as they happen" | Adds SSE/WebSocket server complexity to daemon; agent frameworks poll MCP resources rather than maintaining persistent connections; existing getBalance() RPC call is sufficient for spot queries | On INCOMING_TX_DETECTED event, daemon updates MCP resource state; agent framework fetches on next poll cycle |
+**Total differentiators: 13 features**
+
+---
+
+## Anti-Features
+
+Features to explicitly NOT build in v27.1.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Historical backfill on first subscribe | Unbounded RPC cost, unclear value for AI agents | Start monitoring from current block/slot forward. Log "no backfill" clearly. |
+| Per-token subscription filters | Overcomplicates the interface, RPC APIs don't support it natively | Monitor all tokens, filter in application layer. Token registry whitelist for legitimacy. |
+| Real-time WebSocket push to API clients | Adds WebSocket server complexity to REST daemon | Use polling via GET /v1/wallet/incoming. Notifications handle urgency. |
+| Automatic token claiming/sweeping on receive | Security risk -- auto-spending received funds without approval | Agent explicitly decides actions via existing outgoing TX pipeline. |
+| Cross-wallet incoming TX deduplication | Same TX to multiple wallets is legitimate (batch sends) | UNIQUE(tx_hash, wallet_id) allows same TX for different wallets. |
+| EVM internal transaction (trace) detection | Requires trace API (debug_traceTransaction), not available on most public RPCs | Detect only direct transfers and ERC-20 events. Document limitation. |
+| Geyser plugin integration for Solana | Requires custom validator plugin infrastructure, not suitable for self-hosted | Use standard RPC logsSubscribe + getSignaturesForAddress polling. |
+| NFT receive detection | Different data model, different user expectations | Future milestone if needed. Focus on fungible token monitoring. |
+| Token auto-registration on receive | Unknown tokens should be flagged, not auto-trusted | Mark as unknownToken suspicious. User explicitly registers via token registry. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[incoming_enabled config.toml key (global gate)]
-    └──gates──> [per-wallet monitor_incoming flag]
-                    └──enables──> [IChainSubscriber subscription]
-                                      ├──primary──> [WebSocket RPC (Solana: accountSubscribe; EVM: eth_subscribe)]
-                                      └──fallback──> [Polling (getSignaturesForAddress / eth_getBlockByNumber)]
-                                      └──produces──> [incoming TX event]
-                                                         ├──writes──> [incoming_transactions table (new)]
-                                                         ├──emits──> [INCOMING_TX_DETECTED notification]
-                                                         │               ├──feeds──> [INotificationChannel: Telegram/Discord/ntfy]
-                                                         │               └──feeds──> [WalletNotificationChannel: SDK side channel]
-                                                         └──emits──> [INCOMING_TX_SUSPICIOUS (conditional)]
-
-[SPL Token detection (Solana)]
-    └──requires──> [ATA enumeration via getTokenAccountsByOwner on startup]
-    └──requires──> [accountSubscribe per ATA]
-    └──requires──> [wallet accountSubscribe to detect new ATA creation]
-
-[INCOMING_TX_SUSPICIOUS event]
-    └──requires──> [incoming_transactions table] (rolling average for anomaly detection)
-    └──requires──> [ALLOWED_TOKENS policy store] (unknown token check)
-    └──optionally-uses──> [price oracle (v1.5)] (for USD-based dust threshold)
-
-[GET /v1/wallet/incoming REST API]
-    └──requires──> [incoming_transactions table]
-
-[MCP tool: list_incoming_transactions]
-    └──requires──> [GET /v1/wallet/incoming REST endpoint]
-
-[Summary endpoint: GET /v1/wallet/incoming/summary]
-    └──requires──> [incoming_transactions table]
-    └──optionally-uses──> [price oracle] (for USD totals)
-
-[WebSocket connection sharing]
-    └──requires──> [subscription ID → walletId registry in ChainSubscriber]
-    └──requires──> [resubscribe-all logic in reconnect handler]
-
-[Exponential backoff reconnection]
-    └──requires──> [IChainSubscriber reconnect state machine]
-    └──enhances──> [WebSocket connection sharing] (resubscribes all wallets in registry after reconnect)
+DB Migration v21 (tables + columns)
+  |
+  +---> IChainSubscriber interface (core types)
+  |       |
+  |       +---> SolanaIncomingSubscriber
+  |       |       +---> SOL native detection (preBalances/postBalances)
+  |       |       +---> SPL token detection (preTokenBalances/postTokenBalances)
+  |       |       +---> Token-2022 detection (same mechanism as SPL)
+  |       |       +---> logsSubscribe WebSocket mode
+  |       |       +---> getSignaturesForAddress polling mode
+  |       |
+  |       +---> EvmIncomingSubscriber
+  |               +---> ERC-20 Transfer event detection (getLogs)
+  |               +---> Native ETH detection (getBlock + filter)
+  |               +---> Polling cursor management
+  |
+  +---> IncomingTxQueue (memory queue + batch flush)
+  |       |
+  |       +---> BackgroundWorkers: incoming-tx-flush (5s)
+  |
+  +---> IncomingTxMonitorService (orchestrator)
+  |       |
+  |       +---> SubscriptionMultiplexer
+  |       |       +---> WebSocket connection sharing
+  |       |       +---> 3-state connection machine
+  |       |       +---> Reconnect loop + exponential backoff
+  |       |       +---> Heartbeat (Solana)
+  |       |
+  |       +---> Dynamic subscription sync (syncSubscriptions)
+  |       +---> Blind gap recovery
+  |       +---> IIncomingSafetyRule evaluation
+  |               +---> DustAttackRule (needs PriceOracle)
+  |               +---> UnknownTokenRule (needs token_registry)
+  |               +---> LargeAmountRule (needs PriceOracle + history avg)
+  |
+  +---> Notification integration
+  |       +---> INCOMING_TX_DETECTED event type (28 -> 29)
+  |       +---> INCOMING_TX_SUSPICIOUS event type (29 -> 30)
+  |       +---> Message templates (en/ko)
+  |       +---> Channel priority routing (ntfy, WalletNotificationChannel)
+  |
+  +---> Config + Settings
+  |       +---> config.toml [incoming] 7 keys
+  |       +---> SettingsService registration
+  |       +---> HotReloadOrchestrator extension
+  |       +---> Environment variable mapping (WAIAAS_INCOMING_*)
+  |
+  +---> Confirmation workers
+  |       +---> incoming-tx-confirm-solana (30s, finalized check)
+  |       +---> incoming-tx-confirm-evm (30s, confirmation threshold)
+  |
+  +---> Polling workers (active in POLLING state only)
+  |       +---> incoming-tx-poll-solana (configurable interval)
+  |       +---> incoming-tx-poll-evm (configurable interval)
+  |
+  +---> Retention worker
+  |       +---> incoming-tx-retention (1h, configurable days)
+  |
+  +---> REST API
+  |       +---> GET /v1/wallet/incoming (cursor pagination)
+  |       +---> GET /v1/wallet/incoming/summary (aggregation)
+  |       +---> PATCH /v1/wallet/:id (monitorIncoming field)
+  |       +---> Zod SSoT schemas
+  |
+  +---> SDK/MCP
+  |       +---> TypeScript SDK: listIncomingTransactions, getIncomingTransactionSummary
+  |       +---> Python SDK: list_incoming_transactions, get_incoming_transaction_summary
+  |       +---> MCP tools: list_incoming_transactions, get_incoming_summary
+  |
+  +---> DaemonLifecycle integration (Step 4c-9, fail-soft)
+  |
+  +---> Admin UI
+          +---> Wallet detail: monitor_incoming toggle
+          +---> Settings page: [incoming] section
+          +---> (Optional) Incoming TX list panel
 ```
 
-### Dependency Notes
+---
 
-- **SPL Token detection is the highest-complexity item.** Solana accountSubscribe tracks state changes on a single account. SPL tokens live in ATAs (Associated Token Accounts), not the wallet address. A static ATA list captured at daemon startup is insufficient — new ATAs created after startup (from new token airdrops or first-time receives) must be detected and subscribed. This requires a wallet-level subscription plus ATA registry with dynamic add hooks.
-- **Suspicious TX detection uses price oracle optionally.** The USD dust threshold ($0.01) requires USD price lookup. Price oracle exists in WAIaaS since v1.5. If oracle unavailable for a specific token, fall back to raw token-unit threshold (configurable minimum token units as a secondary threshold).
-- **WebSocket connection sharing must be designed upfront.** Retrofitting from "one connection per wallet" to "one connection per chain" is expensive. ChainSubscriber must be a multiplexer from the start.
-- **Polling fallback has unavoidable detection lag.** At 30-second intervals (default), maximum lag is 30 seconds. This is acceptable for treasury monitoring. Design docs must state this explicitly so AI agent implementations do not assume real-time latency in polling mode.
+## Complexity Assessment by Implementation Area
+
+### Low Complexity (follow existing patterns)
+
+| Area | LOC Estimate | Rationale |
+|------|-------------|-----------|
+| DB migration v21 | ~50 | 3 DDL statements, existing migration framework |
+| config.toml + env vars | ~40 | Copy existing [balance_monitor] pattern |
+| SettingsService registration | ~30 | Add 7 keys to SETTING_KEYS |
+| HotReloadOrchestrator extension | ~30 | Copy BalanceMonitor hot-reload pattern |
+| Notification event types (2 new) | ~20 | Add to NOTIFICATION_EVENT_TYPES array |
+| Message templates (en/ko) | ~20 | Add 2 entries to MESSAGE_TEMPLATES |
+| Channel priority routing | ~15 | Extend mapPriority() pattern match |
+| Retention worker | ~20 | Simple DELETE WHERE detected_at < cutoff |
+| MCP tools (2 new) | ~60 | Copy existing MCP tool pattern |
+| SDK methods (TS) | ~40 | URLSearchParams + GET delegation |
+| SDK methods (Python) | ~30 | params dict + _get delegation |
+| Zod SSoT schemas | ~60 | Query + Response + Summary schemas |
+| wallets.monitor_incoming toggle | ~15 | PATCH handler extension, one column |
+
+### Medium Complexity (chain-specific logic)
+
+| Area | LOC Estimate | Rationale |
+|------|-------------|-----------|
+| IChainSubscriber interface + types | ~80 | New interface file, IncomingTransaction type, enums |
+| SolanaIncomingSubscriber | ~250 | logsSubscribe, TX parsing (SOL + SPL), polling fallback |
+| EvmIncomingSubscriber | ~200 | getLogs (ERC-20), getBlock (ETH), polling cursor |
+| IncomingTxQueue | ~60 | Array queue, splice batch, ON CONFLICT insert |
+| IncomingTxMonitorService | ~200 | Orchestrator: subscribe/unsubscribe, safety rules, notify |
+| Suspicious detection (3 rules) | ~100 | IIncomingSafetyRule, DustAttack, UnknownToken, LargeAmount |
+| REST API endpoints (2 routes) | ~150 | Cursor pagination, summary aggregation, Zod validation |
+| Dynamic subscription sync | ~80 | DB query + Set comparison + add/remove delta |
+| Confirmation workers (2 chains) | ~80 | Solana finalized check, EVM block confirmation count |
+| DaemonLifecycle Step 4c-9 | ~40 | Fail-soft initialization, dependency injection |
+| Admin UI toggle + settings | ~100 | Preact component, settings form section |
+
+### High Complexity (stateful connection management)
+
+| Area | LOC Estimate | Rationale |
+|------|-------------|-----------|
+| SubscriptionMultiplexer | ~200 | WebSocket connection sharing, per-chain connection map |
+| 3-state connection machine | ~80 | WEBSOCKET/POLLING/DISABLED state transitions |
+| Reconnect loop + exponential backoff | ~80 | calculateDelay, jitter, attempt counter, state callbacks |
+| Blind gap recovery | ~120 | Per-chain cursor-based recovery, idempotent re-processing |
+| SolanaHeartbeat | ~30 | 60s ping interval, timer.unref() |
+| Polling workers (conditional) | ~40 | connectionState check, pollAll() delegation |
+
+**Estimated total: ~2,400 LOC implementation + ~1,200 LOC tests = ~3,600 LOC**
 
 ---
 
-## MVP Definition
+## Critical Implementation Patterns (from design doc 76)
 
-This is a design-only milestone. MVP = what the design documents must fully specify before implementation begins.
+### Pattern 1: Solana logsSubscribe Detection
 
-### Launch With — Core Design Deliverables (P1)
+**What:** Subscribe to `logsSubscribe({ mentions: [walletAddress] })` with `confirmed` commitment. The subscription returns only the transaction signature -- full TX details require a subsequent `getTransaction(signature, { encoding: 'jsonParsed' })` call.
 
-- [ ] IChainSubscriber interface — subscribe/unsubscribe/onTransaction + reconnect lifecycle methods
-- [ ] SolanaSubscriber design — accountSubscribe for native SOL + ATA enumeration + dynamic ATA subscription + getSignaturesForAddress fallback
-- [ ] EvmSubscriber design — eth_subscribe logs (ERC-20 Transfer topic filter) + eth_subscribe newHeads (native ETH to-address filter) + eth_getBlockByNumber polling fallback
-- [ ] `incoming_transactions` table schema — id (UUID v7), wallet_id, tx_hash (UNIQUE), from_address, amount, token_address, chain, confirmed_at, is_suspicious (BOOLEAN), created_at; retention TTL via scheduled purge
-- [ ] INCOMING_TX_DETECTED + INCOMING_TX_SUSPICIOUS notification event types (28→30)
-- [ ] GET /v1/wallet/incoming REST endpoint spec — filters (from_address, token_address, chain, since, until), cursor pagination, sessionAuth, limit 50/max 200
-- [ ] config.toml [incoming] section — 6 flat keys: incoming_enabled, incoming_mode, incoming_poll_interval, incoming_retention_days, incoming_suspicious_dust_usd, incoming_suspicious_amount_multiplier
-- [ ] wallets table — monitor_incoming column addition (BOOLEAN DEFAULT 0)
-- [ ] Deduplication strategy — ON CONFLICT IGNORE on tx_hash; idempotent event emission
+**Why this approach:** `mentions` with a wallet address catches ALL transactions involving that address -- SOL transfers, SPL transfers, ATA creation, Token-2022. One subscription per wallet covers everything. (Verified: Solana official docs confirm `mentions` accepts only ONE Pubkey per call.)
 
-### Add After Validation — Differentiator Design Deliverables (P2)
+**Key constraint (HIGH confidence):** Solana RPC `logsSubscribe` `mentions` field accepts a single Pubkey only. Multiple addresses in the array cause an RPC error. Each wallet requires a separate subscription, but subscriptions share the same WebSocket connection via the multiplexer.
 
-- [ ] WebSocket connection sharing — ChainSubscriber multiplexer design; subscription registry spec
-- [ ] Exponential backoff reconnection — state machine spec (1s/2s/4s/…/60s, jitter, max attempts, subscription replay)
-- [ ] MCP tool list_incoming_transactions — parameters, response schema, error handling
-- [ ] IIncomingSafetyRule interface — dust threshold rule, unknown token rule, large deposit anomaly rule
-- [ ] Per-ATA dynamic subscription management — ATA discovery flow, dynamic add/remove, new ATA detection trigger
+**Implementation note:** @solana/kit provides `createSolanaRpcSubscriptions` with `logsNotifications` returning an AsyncIterable. The `for await` loop is consumed until the AbortController signal fires.
 
-### Future Consideration — Defer
+### Pattern 2: EVM Polling-First Strategy
 
-- [ ] MCP Resource waiaas://wallet/incoming — depends on MCP SSE infrastructure not yet designed
-- [ ] Summary endpoint GET /v1/wallet/incoming/summary — SQL aggregation, acceptable to defer
-- [ ] NFT incoming detection — separate milestone, explicitly out of scope per m27-00
+**What:** Use `getLogs` (HTTP RPC) for ERC-20 Transfer event detection + `getBlock(includeTransactions: true)` for native ETH detection. Polling-first, no WebSocket dependency by default.
 
----
+**Why this approach:**
+1. HTTP RPC universally available (self-hosted environments often lack WebSocket endpoints)
+2. EVM block interval (~12s) naturally aligns with polling intervals
+3. viem `watchEvent` behavior depends on transport type (HTTP -> polls, WS -> subscribes) -- unpredictable
+4. `getLogs` supports efficient block range queries with indexed topic filtering
 
-## Feature Prioritization Matrix
+**Key constraint:** Native ETH transfers do NOT emit events. They must be detected by inspecting block transactions where `tx.to === walletAddress && tx.value > 0n`. This requires fetching full blocks, which is RPC-intensive. Design limits to 10 blocks per poll cycle.
 
-| Feature | AI Agent Value | Design Cost | Priority |
-|---------|---------------|-------------|----------|
-| Native token detection (SOL/ETH) | HIGH | LOW | P1 |
-| Incoming TX storage + dedup | HIGH | LOW | P1 |
-| INCOMING_TX_DETECTED notification | HIGH | LOW | P1 |
-| SPL / ERC-20 detection | HIGH | MEDIUM | P1 |
-| Opt-in per-wallet + global gate | HIGH | LOW | P1 |
-| Polling fallback strategy | HIGH | MEDIUM | P1 |
-| GET /v1/wallet/incoming REST | HIGH | MEDIUM | P1 |
-| Retention / auto-purge | MEDIUM | LOW | P1 |
-| Exponential backoff reconnection | HIGH | MEDIUM | P2 |
-| WebSocket connection sharing | HIGH | MEDIUM | P2 |
-| Suspicious TX detection (dust, unknown token) | MEDIUM | MEDIUM | P2 |
-| Large deposit anomaly detection | MEDIUM | MEDIUM | P2 |
-| Per-ATA dynamic subscription (Solana) | HIGH | HIGH | P2 |
-| MCP tool list_incoming_transactions | HIGH | LOW | P2 |
-| Summary endpoint | LOW | MEDIUM | P3 |
-| MCP Resource waiaas://wallet/incoming | MEDIUM | HIGH | P3 |
+### Pattern 3: Memory Queue + Batch Flush
+
+**What:** WebSocket/polling callbacks push to in-memory array. BackgroundWorkers flush every 5 seconds with `INSERT ... ON CONFLICT DO NOTHING` in a SQLite transaction.
+
+**Why this approach:** SQLite better-sqlite3 single-writer protection. Concurrent WebSocket events writing directly to DB would cause WAL contention. Batching amortizes write overhead and keeps the callback synchronous (no async in onTransaction).
+
+### Pattern 4: 2-Phase Status with Separate Confirmation Workers
+
+**What:** TX enters as DETECTED (confirmed/1+ confirmations). Background worker promotes to CONFIRMED (finalized/12+ confirmations) on 30-second interval.
+
+**Why this approach:** Fast notification at DETECTED (user experience) vs safe trigger at CONFIRMED (agent logic). Decouples detection latency from confirmation latency. Agents should only act on CONFIRMED to avoid reorg/rollback losses.
+
+### Pattern 5: Wallet-Level Opt-In with Global Gate
+
+**What:** Two-level gate: `incoming_enabled` (global) AND `monitor_incoming` (per-wallet). Both must be true for monitoring to activate.
+
+**Why this approach:** RPC subscriptions have cost. Default-off prevents surprise RPC bills. Global gate lets operators disable everything instantly. Per-wallet toggle gives granular control.
 
 ---
 
-## Chain-Specific Feature Comparison
+## MVP Recommendation
 
-| Feature | Solana | EVM (Ethereum, Base, etc.) |
-|---------|--------|---------------------------|
-| Native token detection subscription method | accountSubscribe(walletAddress) — detects lamport changes | eth_subscribe("newHeads") + filter block tx.to == walletAddress |
-| Token detection subscription method | accountSubscribe per ATA (one subscription per token account) | eth_subscribe("logs") with topics: [Transfer sig, null, walletAddress] — single subscription covers all ERC-20 tokens |
-| Multiple wallets per connection | Multiple accountSubscribe calls on single WS — supported | Multiple eth_subscribe calls on single WS — supported (Geth: no documented limit, 10k buffer before disconnect) |
-| Commitment level | confirmed (fast, rare reorgs acceptable for monitoring; finalized for accounting) | Block inclusion (latest); reorganization depth typically 1-2 blocks on PoS Ethereum |
-| Dedup sensitivity | confirmed→finalized state transition can trigger duplicate account change events | Uncle blocks on pre-Merge chains; PoS reorgs are rare but possible |
-| Polling fallback method | getSignaturesForAddress(address, { until: lastKnownSig }) | eth_getBlockByNumber(latest) + scan tx array for to == walletAddress; per-block full scan is expensive |
-| New token receive (first time) | Creates new ATA — must detect accountSubscribe on wallet for program-owner-change events | Same eth_subscribe logs filter covers first-time ERC-20 transfers without extra setup |
-| ATA complexity | HIGH — per-token-mint ATA must be discovered and individually subscribed | LOW — single logs subscription covers all ERC-20 Transfer events to wallet address |
+Build in this order, each phase independently testable:
 
----
+### Phase 1: Core Infrastructure
+Prioritize:
+1. **DB migration v21** -- foundation for everything
+2. **IChainSubscriber interface + IncomingTransaction type** -- contracts first
+3. **IncomingTxQueue + flush worker** -- write path
+4. **Config.toml [incoming] + SettingsService** -- configuration surface
+5. **Notification event types (2) + message templates** -- event infrastructure
 
-## Competitor / Reference Analysis
+### Phase 2: Chain Detection
+Prioritize:
+1. **SolanaIncomingSubscriber** -- logsSubscribe + TX parsing (SOL + SPL)
+2. **EvmIncomingSubscriber** -- getLogs (ERC-20) + getBlock (ETH)
+3. **Confirmation workers** -- DETECTED -> CONFIRMED promotion
 
-| Capability | MetaMask Portfolio | Phantom | Trust Wallet | Coinbase Wallet | WAIaaS Target |
-|------------|-------------------|---------|--------------|-----------------|---------------|
-| Incoming TX push notification | Yes (ETH, tokens, NFTs, staking unstake) | Yes (opt-in push, granular by type) | Yes (basic) | Yes (basic) | Yes — INotificationChannel (Telegram/ntfy/Discord/Slack) |
-| Notification granularity | Per account, per event type, Settings toggle | Opt-in by category (transactions, perps, markets) | On/off only | On/off only | Per wallet + per category (signing_sdk.notify_categories existing) |
-| Full TX history (incoming + outgoing) | Yes — MetaMask Portfolio (cloud-indexed) | Yes — chain indexed | Yes — chain indexed | Yes — chain indexed | Currently outgoing only → add incoming via incoming_transactions table |
-| Retention period | Blockchain permanent; local cache varies | Blockchain permanent | Blockchain permanent | 30-day export window | 90-day default, configurable via incoming_retention_days |
-| Dust attack detection | No native (Blowfish focuses on outgoing) | Blocklist + Blowfish (outgoing-focused) | No | No | Yes — INCOMING_TX_SUSPICIOUS with configurable dust_usd threshold |
-| Unknown token flagging | Warning badge (informal) | SimpleHash blocklist | No | No | Yes — cross-reference ALLOWED_TOKENS policy (default-deny applies) |
-| AI agent event reaction support | No (consumer wallet) | No (consumer wallet) | No | Yes (CDP Agentic Wallets — managed service) | Yes — MCP tool + INCOMING_TX_DETECTED event |
-| Self-hosted, no external indexer | No | No | No | No (CDP is managed) | Yes — RPC WebSocket only, no Helius/Alchemy dependency |
+### Phase 3: Resilience + Safety
+Prioritize:
+1. **SubscriptionMultiplexer** -- WebSocket connection sharing
+2. **3-state connection machine + reconnect loop** -- auto-fallback
+3. **Blind gap recovery** -- zero TX loss
+4. **IIncomingSafetyRule 3 rules** -- suspicious detection
 
----
+### Phase 4: Service Integration
+Prioritize:
+1. **IncomingTxMonitorService** -- orchestrator with notification integration
+2. **Dynamic subscription sync** -- runtime wallet management
+3. **DaemonLifecycle Step 4c-9** -- fail-soft startup
+4. **HotReloadOrchestrator extension** -- config hot-reload
 
-## Self-Hosted Design Constraints (WAIaaS-Specific)
+### Phase 5: API + SDK + MCP
+Prioritize:
+1. **REST API: GET /v1/wallet/incoming** -- cursor pagination
+2. **REST API: GET /v1/wallet/incoming/summary** -- aggregation
+3. **PATCH /v1/wallet/:id monitorIncoming** -- opt-in toggle
+4. **SDK methods (TS + Python)** -- client libraries
+5. **MCP tools (2 new)** -- AI agent access
 
-These constraints must inform every feature design decision in the milestone.
+### Phase 6: Admin UI + Polish
+Prioritize:
+1. **Admin UI: wallet detail monitor toggle** -- visual opt-in
+2. **Admin UI: incoming settings section** -- configuration panel
+3. **Retention worker** -- auto-cleanup
+4. **Skills file sync** -- documentation update
 
-| Constraint | Implication |
-|------------|-------------|
-| No external indexer (Helius, Alchemy Notify, Etherscan webhooks ruled out) | WebSocket subscription to RPC node is the only detection path. Polling fallback is mandatory for HTTP-only RPC endpoints |
-| SQLite on single machine (self-hosted) | Batch INSERT on high-frequency incoming TX streams prevents write stalls. Retention policy is critical — unbounded append breaks self-hosted deployments |
-| Default-deny (WAIaaS policy principle) | incoming_enabled=false by default. monitor_incoming=false by default. No wallet is monitored without explicit double opt-in |
-| Config.toml flat-section rule (no nesting) | [incoming] section with 6 flat keys — no nested TOML objects |
-| SettingsService hot-reload for runtime adjustables | incoming_poll_interval, incoming_suspicious_dust_usd, incoming_suspicious_amount_multiplier are runtime adjustable via SettingsService (no daemon restart). incoming_enabled and incoming_mode require restart |
-| Existing INotificationChannel unchanged | Add 2 new event type strings to NOTIFICATION_EVENT_TYPES array — no interface breaking change |
-| Existing 6 NotificationCategory values | INCOMING_TX_DETECTED maps to 'transaction' category; INCOMING_TX_SUSPICIOUS maps to 'security_alert' category — no new categories needed |
+**Defer:**
+- Admin UI incoming TX list panel: Nice-to-have but agents use API directly. Build if time permits.
+- WebSocket mode for EVM: Polling-first covers all use cases. WebSocket optimization is future work.
+- Summary USD conversion with multi-token breakdown: Start with count + suspicious count. Full USD breakdown is complex (multiple tokens, multiple price lookups per summary entry).
 
 ---
 
 ## Sources
 
-- Geth official docs, Real-time Events (pubsub): https://geth.ethereum.org/docs/interacting-with-geth/rpc/pubsub — eth_subscribe types, address filtering in logs, 10k notification buffer limit per connection (HIGH confidence)
-- Solana official RPC docs, accountSubscribe: https://solana.com/docs/rpc/websocket/accountsubscribe — parameters, commitment levels, return format (HIGH confidence)
-- Solana official RPC docs, WebSocket methods index: https://solana.com/docs/rpc/websocket — full subscription method list (HIGH confidence)
-- Alchemy, WebSocket Best Practices for Web3: https://www.alchemy.com/docs/reference/best-practices-for-using-websockets-in-web3 — push-only recommendation, filtered subscriptions reduce bandwidth (HIGH confidence)
-- QuickNode, Solana WebSocket Subscriptions guide: https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-websocket-subscriptions-to-solana-blockchain-using-typescript — ATA monitoring pattern, reconnect with exponential backoff (MEDIUM confidence)
-- CoinTelegraph, Dust attack explained: https://cointelegraph.com/explained/what-is-a-crypto-dusting-attack-and-how-do-you-avoid-it — dust definition, threshold patterns (MEDIUM confidence)
-- Trezor, Dusting attacks and airdrop scam tokens: https://trezor.io/support/troubleshooting/coins-tokens/dusting-attacks-airdrop-scam-tokens — isolation strategy, recommended not to spend dust (MEDIUM confidence)
-- MetaMask, Introducing Wallet Notifications: https://metamask.io/news/introducing-wallet-notifications — event types supported (receive ETH, tokens, NFTs, staking) (MEDIUM confidence)
-- Phantom product update (notifications): https://phantom.com/learn/blog/product-updates-recent-activity-notifications-performance-and-more — opt-in push notification, granular type control (MEDIUM confidence)
-- Coinbase, Agentic Wallets launch: https://www.coinbase.com/developer-platform/discover/launches/agentic-wallets — AI agent deposit reaction patterns, programmable guardrails (MEDIUM confidence)
-- Chainscore Labs / Solana monitoring guide: https://pandaacademy.medium.com/solana-on-chain-event-monitoring-guide-from-theory-to-practice-6750ee9a3933 — ATA subscription strategy, WebSocket + poll hybrid (MEDIUM confidence — 403 on direct fetch, referenced via search summary)
-- WAIaaS internal, m27-00-incoming-transaction-monitoring.md — primary design specification for this milestone (HIGH confidence)
-- WAIaaS internal, packages/core/src/enums/notification.ts — current 28 NotificationEventType entries (HIGH confidence)
-- WAIaaS internal, packages/core/src/interfaces/IChainAdapter.ts — existing 22-method IChainAdapter interface (HIGH confidence)
-- WAIaaS internal, packages/core/src/schemas/signing-protocol.ts — EVENT_CATEGORY_MAP with 6 NotificationCategory values (HIGH confidence)
-- WAIaaS internal, packages/daemon/src/services/signing-sdk/channels/wallet-notification-channel.ts — WalletNotificationChannel implementation with category-based filtering (HIGH confidence)
+### Official Documentation
+- [Solana logsSubscribe RPC Method](https://solana.com/docs/rpc/websocket/logssubscribe) -- mentions filter, commitment levels
+- [Solana RPC WebSocket Methods](https://solana.com/docs/rpc/websocket) -- full WebSocket subscription catalog
+- [viem watchEvent](https://viem.sh/docs/actions/public/watchEvent) -- polling vs WebSocket behavior
+- [viem watchBlocks](https://viem.sh/docs/actions/public/watchBlocks) -- includeTransactions option
 
----
+### RPC Provider Guides
+- [QuickNode: Solana WebSocket Subscriptions](https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-websocket-subscriptions-to-solana-blockchain-using-typescript) -- 10-minute inactivity timeout, ping requirement
+- [Helius: logsSubscribe](https://www.helius.dev/docs/api-reference/rpc/websocket/logssubscribe) -- single Pubkey mentions constraint
+- [Alchemy: eth_getLogs Deep Dive](https://www.alchemy.com/docs/deep-dive-into-eth_getlogs) -- block range best practices, indexed topic filtering
 
-*Feature research for: WAIaaS Incoming Transaction Monitoring (m27)*
-*Researched: 2026-02-21*
-*Mode: Ecosystem — what features exist in the domain, what is expected, what differentiates*
+### Security Patterns
+- [Gate.com: Understanding Dusting Attacks](https://web3.gate.com/crypto-wiki/article/understanding-dusting-attacks-in-cryptocurrency-security-20251203) -- detection patterns, micro-quantity thresholds
+- [BitGo: Dust Attacks in Crypto](https://www.bitgo.com/resources/blog/dust-attacks-in-crypto/) -- common-input-ownership heuristic
+- [OKX: Crypto Dusting Attack Guide](https://www.okx.com/en-us/learn/crypto-dusting-attack-guide) -- platform monitoring approaches
+
+### API Design
+- [Speakeasy: Pagination Best Practices](https://www.speakeasy.com/api-design/pagination) -- cursor-based pagination for real-time data
+- [Stainless: REST API Pagination](https://www.stainless.com/sdk-api-best-practices/how-to-implement-rest-api-pagination-offset-cursor-keyset) -- keyset vs cursor comparison
+
+### WebSocket Reliability
+- [OneUptime: WebSocket Reconnection Logic](https://oneuptime.com/blog/post/2026-01-27-websocket-reconnection/view) -- exponential backoff, jitter, gap recovery patterns
+- [DevToolbox: WebSockets Complete Guide 2026](https://devtoolbox.dedyn.io/blog/websocket-complete-guide) -- heartbeat, state management

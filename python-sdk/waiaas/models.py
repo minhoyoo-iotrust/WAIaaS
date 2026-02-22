@@ -417,6 +417,62 @@ class ConnectInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+# ---------------------------------------------------------------------------
+# Incoming Transaction models
+# ---------------------------------------------------------------------------
+
+
+class IncomingTransactionItem(BaseModel):
+    """A single incoming transaction."""
+
+    id: str
+    tx_hash: str = Field(alias="txHash")
+    wallet_id: str = Field(alias="walletId")
+    from_address: str = Field(alias="fromAddress")
+    amount: str
+    token_address: Optional[str] = Field(default=None, alias="tokenAddress")
+    chain: str
+    network: str
+    status: str
+    block_number: Optional[int] = Field(default=None, alias="blockNumber")
+    detected_at: int = Field(alias="detectedAt")
+    confirmed_at: Optional[int] = Field(default=None, alias="confirmedAt")
+    suspicious: bool = False
+
+    model_config = {"populate_by_name": True}
+
+
+class IncomingTransactionList(BaseModel):
+    """Paginated list of incoming transactions."""
+
+    data: list[IncomingTransactionItem]
+    next_cursor: Optional[str] = Field(default=None, alias="nextCursor")
+    has_more: bool = Field(alias="hasMore")
+
+    model_config = {"populate_by_name": True}
+
+
+class IncomingSummaryEntry(BaseModel):
+    """A single period entry in the incoming transaction summary."""
+
+    date: str
+    total_count: int = Field(alias="totalCount")
+    total_amount_native: str = Field(alias="totalAmountNative")
+    total_amount_usd: Optional[float] = Field(default=None, alias="totalAmountUsd")
+    suspicious_count: int = Field(alias="suspiciousCount")
+
+    model_config = {"populate_by_name": True}
+
+
+class IncomingTransactionSummary(BaseModel):
+    """Period-based incoming transaction summary."""
+
+    period: str
+    entries: list[IncomingSummaryEntry]
+
+    model_config = {"populate_by_name": True}
+
+
 class SpendingLimitRules(BaseModel):
     """SPENDING_LIMIT policy rules schema.
 

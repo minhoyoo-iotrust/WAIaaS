@@ -1,4 +1,5 @@
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
+import { abbreviateId, abbreviateAddress } from './format-utils.js';
 
 export class SlackChannel implements INotificationChannel {
   readonly name = 'slack';
@@ -15,10 +16,18 @@ export class SlackChannel implements INotificationChannel {
     // Slack Incoming Webhook with attachments format
     const color = this.getColor(payload.eventType);
 
-    const fields = [
-      { title: 'Wallet', value: payload.walletId, short: true },
-      { title: 'Event', value: payload.eventType, short: true },
-    ];
+    const fields: Array<{ title: string; value: string; short: boolean }> = [];
+    if (payload.walletId) {
+      fields.push({ title: 'Wallet', value: payload.walletName || payload.walletId, short: true });
+      fields.push({ title: 'ID', value: abbreviateId(payload.walletId), short: true });
+      if (payload.walletAddress) {
+        fields.push({ title: 'Address', value: abbreviateAddress(payload.walletAddress), short: true });
+      }
+      if (payload.network) {
+        fields.push({ title: 'Network', value: payload.network, short: true });
+      }
+    }
+    fields.push({ title: 'Event', value: payload.eventType, short: true });
 
     // Add details fields if present
     if (payload.details) {
@@ -30,10 +39,10 @@ export class SlackChannel implements INotificationChannel {
     const attachment = {
       fallback: payload.message,
       color,
-      title: `[WAIaaS] ${payload.eventType.replace(/_/g, ' ')}`,
-      text: payload.message,
+      title: `[WAIaaS] ${payload.title}`,
+      text: payload.body,
       fields,
-      ts: payload.timestamp,
+      ...(payload.walletId ? { ts: payload.timestamp } : {}),
     };
 
     const response = await fetch(this.webhookUrl, {
