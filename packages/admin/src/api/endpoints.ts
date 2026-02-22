@@ -11,6 +11,7 @@ export const API = {
   SESSION: (id: string) => `/v1/sessions/${id}`,
   POLICIES: '/v1/policies',
   POLICY: (id: string) => `/v1/policies/${id}`,
+  TOKENS: '/v1/tokens',
   ADMIN_NOTIFICATIONS_STATUS: '/v1/admin/notifications/status',
   ADMIN_NOTIFICATIONS_TEST: '/v1/admin/notifications/test',
   ADMIN_NOTIFICATIONS_LOG: '/v1/admin/notifications/log',
