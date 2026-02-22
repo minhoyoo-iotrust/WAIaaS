@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 234 - MCP + SDK + Skills Integration
+**Current focus:** Phase 234 - MCP + SDK + Skills Integration (COMPLETE)
 
 ## Current Position
 
 Phase: 4 of 4 (Phase 234: MCP + SDK + Skills Integration)
-Plan: 1 of 2 in current phase
-Status: Plan 234-01 COMPLETE
-Last activity: 2026-02-22 -- Completed 234-01 MCP tool assetId parameter + tests
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 234 COMPLETE -- All 4 phases done
+Last activity: 2026-02-22 -- Completed 234-02 SDK types + Skills documentation
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 8 (this milestone)
-- Average duration: 4.3min
-- Total execution time: 0.57 hours
+- Total plans completed: 9 (this milestone)
+- Average duration: 4.0min
+- Total execution time: 0.60 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [████████░░] 80%
 | 231 | 2/2 | 7min | 3.5min |
 | 232 | 2/2 | 11min | 5.5min |
 | 233 | 3/3 | 15min | 5min |
-| 234 | 1/2 | 2min | 2min |
+| 234 | 2/2 | 4min | 2min |
 
 *Updated after each plan completion*
 
@@ -67,6 +67,9 @@ Progress: [████████░░] 80%
 - Scenario 1 exact CAIP-19 match; Scenarios 2-3 parseCaip19 + toLowerCase; Scenario 4 unchanged
 - No CAIP-19 validation in MCP tools -- daemon handles all validation via Caip19Schema superRefine
 - assetId added inside existing token z.object() not as top-level parameter -- matches daemon TokenInfoSchema structure
+- assetId optional in both TS/Python SDKs -- zero breaking changes for existing consumers
+- Python TokenInfo gets model_config for populate_by_name since aliased field added
+- Section 13 in transactions.skill.md provides complete CAIP-19 reference with chain examples
 
 ### Blockers/Concerns
 
@@ -76,5 +79,5 @@ Progress: [████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 234-01-PLAN.md (MCP tool assetId parameter + tests)
+Stopped at: Completed 234-02-PLAN.md (SDK types + Skills documentation) -- All plans done
 Resume file: None

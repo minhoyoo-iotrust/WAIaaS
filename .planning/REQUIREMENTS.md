@@ -49,13 +49,13 @@
 
 - [x] **MCPS-01**: Token-related MCP tools (send_token, approve_token, etc.) accept optional assetId parameter
 - [x] **MCPS-02**: MCP tool descriptions document CAIP-19 assetId format and usage
-- [ ] **MCPS-03**: TypeScript SDK types include assetId fields in token-related interfaces
-- [ ] **MCPS-04**: Python SDK types include assetId fields in token-related models
+- [x] **MCPS-03**: TypeScript SDK types include assetId fields in token-related interfaces
+- [x] **MCPS-04**: Python SDK types include assetId fields in token-related models
 
 ### Skills/Docs
 
-- [ ] **SKIL-01**: Skills files (transactions.skill.md, policies.skill.md) document CAIP-19 assetId usage
-- [ ] **SKIL-02**: quickstart.skill.md introduces CAIP-19 asset identification concept
+- [x] **SKIL-01**: Skills files (transactions.skill.md, policies.skill.md) document CAIP-19 assetId usage
+- [x] **SKIL-02**: quickstart.skill.md introduces CAIP-19 asset identification concept
 
 ## Future Requirements
 
@@ -110,10 +110,10 @@
 | PLCY-04 | Phase 233 | Complete |
 | MCPS-01 | Phase 234 | Complete |
 | MCPS-02 | Phase 234 | Complete |
-| MCPS-03 | Phase 234 | Pending |
-| MCPS-04 | Phase 234 | Pending |
-| SKIL-01 | Phase 234 | Pending |
-| SKIL-02 | Phase 234 | Pending |
+| MCPS-03 | Phase 234 | Complete |
+| MCPS-04 | Phase 234 | Complete |
+| SKIL-01 | Phase 234 | Complete |
+| SKIL-02 | Phase 234 | Complete |
 
 **Coverage:**
 - v27.2 requirements: 31 total
