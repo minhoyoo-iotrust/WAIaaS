@@ -368,7 +368,7 @@ function NotificationSettingsTab() {
             </div>
           </FieldGroup>
 
-          <FieldGroup legend="Category Filter" description="Filter which notification categories are delivered. Leave all unchecked to receive all.">
+          <FieldGroup legend="Category Filter" description="Filter which notification categories are delivered. All checked = receive all.">
             {(() => {
               const NOTIFY_CATEGORY_OPTIONS = [
                 { value: 'transaction', label: 'Transaction Events' },
@@ -378,17 +378,24 @@ function NotificationSettingsTab() {
                 { value: 'owner', label: 'Owner Events' },
                 { value: 'system', label: 'System Notifications' },
               ];
+              const ALL_VALUES = NOTIFY_CATEGORY_OPTIONS.map((o) => o.value);
               const currentJson = getEffectiveValue(settings.value, dirty.value, 'notifications', 'notify_categories') || '[]';
-              let currentCategories: string[] = [];
+              let rawCategories: string[] = [];
               try {
                 const parsed = JSON.parse(currentJson);
-                if (Array.isArray(parsed)) currentCategories = parsed;
+                if (Array.isArray(parsed)) rawCategories = parsed;
               } catch { /* use empty */ }
+              // Empty array means "receive all" → display as all checked
+              const displayCategories = rawCategories.length === 0 ? ALL_VALUES : rawCategories;
               const handleToggle = (val: string, checked: boolean) => {
                 const updated = checked
-                  ? [...currentCategories, val]
-                  : currentCategories.filter((c) => c !== val);
-                handleFieldChange('notifications.notify_categories', JSON.stringify(updated));
+                  ? [...displayCategories, val]
+                  : displayCategories.filter((c) => c !== val);
+                // All checked → send empty array (backend "receive all" convention)
+                const toSave = updated.length === ALL_VALUES.length && ALL_VALUES.every((v) => updated.includes(v))
+                  ? []
+                  : updated;
+                handleFieldChange('notifications.notify_categories', JSON.stringify(toSave));
               };
               return (
                 <div class="settings-fields-grid">
@@ -398,7 +405,7 @@ function NotificationSettingsTab() {
                       label={opt.label}
                       name={`notify_cat_${opt.value}`}
                       type="checkbox"
-                      value={currentCategories.includes(opt.value)}
+                      value={displayCategories.includes(opt.value)}
                       onChange={(v) => handleToggle(opt.value, Boolean(v))}
                     />
                   ))}

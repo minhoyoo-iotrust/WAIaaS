@@ -164,6 +164,9 @@
 | 147 | BUG | LOW | validate-openapi.ts `@see` 주석 경로 불일치 | v2.0 | FIXED | 2026-02-22 |
 | 148 | ENHANCEMENT | MEDIUM | 알림 메시지에 블록 익스플로러 링크 추가 + {txId} 미치환 버그 수정 | v27.2 | FIXED | 2026-02-22 |
 | 149 | ENHANCEMENT | HIGH | 에이전트가 마스터 패스워드를 요청하지 못하도록 차단 | v27.2 | FIXED | 2026-02-22 |
+| 150 | ENHANCEMENT | LOW | 알림 카테고리 필터 전체 언체크 시 UX 혼동 — 전체 수신이 빈 체크로 표시 | v27.4 | FIXED | 2026-02-23 |
+| 151 | ENHANCEMENT | MEDIUM | CLI에서 에이전트 프롬프트(매직워드) 생성 명령어 추가 — `waiaas session prompt` | v27.4 | FIXED | 2026-02-23 |
+| 152 | ENHANCEMENT | MEDIUM | CLI에서 지갑 생성 명령어 추가 — `waiaas wallet create` | v27.4 | FIXED | 2026-02-23 |
 
 ## Type Legend
 
@@ -176,8 +179,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 148
+- **FIXED:** 151
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 149
+- **Total:** 152

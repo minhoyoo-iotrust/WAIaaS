@@ -597,7 +597,7 @@ export const AdminStatusResponseSchema = z
         status: z.string(),
         toAddress: z.string().nullable(),
         amount: z.string().nullable(),
-        amountUsd: z.string().nullable(),
+        amountUsd: z.number().nullable(),
         network: z.string().nullable(),
         txHash: z.string().nullable(),
         createdAt: z.number().int().nullable(),

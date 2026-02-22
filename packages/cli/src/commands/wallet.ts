@@ -1,9 +1,10 @@
 /**
  * `waiaas wallet` subcommand group:
+ *   wallet create                        -- Create a new wallet
  *   wallet info                          -- Show wallet details
  *   wallet set-default-network <network> -- Change default network
  *
- * Both commands use masterAuth (X-Master-Password header) for daemon communication.
+ * All commands use masterAuth (X-Master-Password header) for daemon communication.
  */
 
 import { resolvePassword } from '../utils/password.js';
@@ -145,6 +146,117 @@ export async function walletInfoCommand(opts: WalletCommandOptions): Promise<voi
   console.log(`  Available:        ${available}`);
   console.log(`  Status:           ${wallet.status}`);
   console.log('');
+}
+
+export interface WalletCreateOptions {
+  baseUrl: string;
+  password?: string;
+  chain?: string;
+  all?: boolean;
+  mode?: string;
+  name?: string;
+}
+
+interface CreatedWallet {
+  id: string;
+  name: string;
+  chain: string;
+  environment: string;
+  publicKey: string;
+  defaultNetwork: string | null;
+}
+
+const SUPPORTED_CHAINS = ['solana', 'ethereum'] as const;
+
+/**
+ * `waiaas wallet create` -- Create one or more wallets.
+ */
+export async function walletCreateCommand(opts: WalletCreateOptions): Promise<void> {
+  if (opts.chain && opts.all) {
+    console.error('Error: --chain and --all cannot be used together.');
+    process.exit(1);
+  }
+
+  if (!opts.chain && !opts.all) {
+    console.error('Error: Specify --chain <solana|ethereum> or --all.');
+    process.exit(1);
+  }
+
+  if (opts.chain && !SUPPORTED_CHAINS.includes(opts.chain as typeof SUPPORTED_CHAINS[number])) {
+    console.error("Error: Unsupported chain. Use 'solana' or 'ethereum'.");
+    process.exit(1);
+  }
+
+  const password = opts.password ?? await resolvePassword();
+  const mode = opts.mode ?? 'mainnet';
+
+  const chains: Array<{ chain: string; name: string }> = opts.all
+    ? SUPPORTED_CHAINS.map((c) => ({ chain: c, name: `${c === 'ethereum' ? 'evm' : c}-${mode}` }))
+    : [{ chain: opts.chain!, name: opts.name ?? `${opts.chain === 'ethereum' ? 'evm' : opts.chain}-${mode}` }];
+
+  const created: CreatedWallet[] = [];
+
+  for (const { chain, name } of chains) {
+    let res: Response;
+    try {
+      res = await fetch(`${opts.baseUrl}/v1/wallets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Password': password,
+        },
+        body: JSON.stringify({ name, chain, environment: mode }),
+      });
+    } catch {
+      console.error('Error: Daemon is not running. Start it with `waiaas start`.');
+      process.exit(1);
+    }
+
+    if (res.status === 409) {
+      // Idempotent: wallet with same name already exists, reuse it
+      const listRes = await fetch(`${opts.baseUrl}/v1/wallets`, {
+        headers: { 'Accept': 'application/json', 'X-Master-Password': password },
+      });
+      if (!listRes.ok) {
+        console.error(`Error: Failed to list wallets (HTTP ${listRes.status})`);
+        process.exit(1);
+      }
+      const listData = await listRes.json() as { wallets: Array<CreatedWallet> };
+      const existing = listData.wallets.find((w) => w.name === name);
+      if (!existing) {
+        console.error(`Error: Wallet '${name}' reported as existing but not found`);
+        process.exit(1);
+      }
+      console.log(`Reusing existing wallet: ${existing.name} (${existing.id})`);
+      created.push(existing);
+    } else if (!res.ok) {
+      const body = await res.json().catch(() => null) as Record<string, unknown> | null;
+      const msg = body?.['message'] ?? res.statusText;
+      console.error(`Error: Failed to create ${chain} wallet (HTTP ${res.status}): ${msg}`);
+      process.exit(1);
+    } else {
+      const data = await res.json() as CreatedWallet;
+      console.log(`Created wallet: ${data.name} (${data.id})`);
+      created.push(data);
+    }
+  }
+
+  // Fetch networks for each wallet and display summary
+  console.log('');
+  for (const w of created) {
+    const networks = await daemonRequest<WalletNetworksResponse>(
+      opts.baseUrl, 'GET', `/v1/wallets/${w.id}/networks`, password,
+    );
+    const available = networks.availableNetworks.map((n) => n.network).join(', ') || 'none';
+    console.log(`Wallet: ${w.name}`);
+    console.log(`  ID:               ${w.id}`);
+    console.log(`  Chain:            ${w.chain}`);
+    console.log(`  Environment:      ${w.environment}`);
+    console.log(`  Address:          ${w.publicKey}`);
+    console.log(`  Default Network:  ${w.defaultNetwork ?? networks.defaultNetwork ?? 'auto'}`);
+    console.log(`  Available:        ${available}`);
+    console.log('');
+  }
 }
 
 /**
