@@ -26,35 +26,12 @@ import type { Database } from 'better-sqlite3';
 const SignClient: typeof SignClientModule =
   (SignClientModule as any).default ?? SignClientModule;
 type SignClientInstance = InstanceType<typeof SignClient>;
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, NETWORK_TO_CAIP2 } from '@waiaas/core';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { SqliteKeyValueStorage } from './wc-storage.js';
 
 const require = createRequire(import.meta.url);
 const QRCode: typeof import('qrcode') = require('qrcode');
-
-// ---------------------------------------------------------------------------
-// CAIP-2 Chain Identifiers
-// ---------------------------------------------------------------------------
-
-/** CAIP-2 chain identifiers for WalletConnect v2 */
-export const CAIP2_CHAIN_IDS: Record<string, string> = {
-  // Solana
-  'mainnet': 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-  'devnet': 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
-  'testnet': 'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z',
-  // EVM (eip155:{chainId})
-  'ethereum-mainnet': 'eip155:1',
-  'ethereum-sepolia': 'eip155:11155111',
-  'polygon-mainnet': 'eip155:137',
-  'polygon-amoy': 'eip155:80002',
-  'arbitrum-mainnet': 'eip155:42161',
-  'arbitrum-sepolia': 'eip155:421614',
-  'optimism-mainnet': 'eip155:10',
-  'optimism-sepolia': 'eip155:11155420',
-  'base-mainnet': 'eip155:8453',
-  'base-sepolia': 'eip155:84532',
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -220,7 +197,7 @@ export class WcSessionService {
     }
 
     // Resolve CAIP-2 chain ID
-    const chainId = CAIP2_CHAIN_IDS[network] ??
+    const chainId = NETWORK_TO_CAIP2[network as keyof typeof NETWORK_TO_CAIP2] ??
       (chain === 'solana' ? `solana:${network}` : `eip155:${network}`);
 
     // Determine namespace and methods

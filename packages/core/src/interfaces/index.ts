@@ -78,3 +78,23 @@ export {
   PaymentPayloadV2Schema,
   PaymentRequirementsV2Schema,
 } from './x402.types.js';
+
+// v27.2 CAIP-2/19 module (Zod schemas, parsers, formatters, network map, asset helpers)
+export {
+  Caip2Schema,
+  type Caip2,
+  type Caip2Params,
+  formatCaip2,
+  Caip19AssetTypeSchema,
+  Caip19Schema,
+  type Caip19AssetType,
+  type Caip19,
+  type Caip19Params,
+  formatCaip19,
+  parseCaip19,
+  networkToCaip2,
+  caip2ToNetwork,
+  nativeAssetId,
+  tokenAssetId,
+  isNativeAsset,
+} from '../caip/index.js';
