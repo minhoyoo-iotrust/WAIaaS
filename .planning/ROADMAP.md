@@ -200,11 +200,11 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
   3. User can generate native asset IDs (slip44:60 for ETH, slip44:501 for SOL, slip44:966 for POL) and token asset IDs (erc20 for EVM, token for Solana) via nativeAssetId/tokenAssetId helpers
   4. x402.types.ts CAIP2_TO_NETWORK import works unchanged (backward-compatible re-export from caip/ module)
   5. TokenRef Zod schema accepts optional assetId (CAIP-19 string) and network (NetworkType) fields without breaking existing consumers
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 231-01: CAIP-2/19 파서, 포매터, Zod 스키마 구현
-- [ ] 231-02: 13-네트워크 양방향 맵 + asset helpers + x402/WC 통합 + TokenRef 확장
+- [ ] 231-01-PLAN.md — CAIP-2/19 파서, 포매터, Zod 스키마 TDD 구현
+- [ ] 231-02-PLAN.md — 13-네트워크 양방향 맵 + asset helpers + x402/WC 통합 + TokenRef 확장
 
 ### Phase 232: Oracle L2 Support + Cache Key Migration
 **Goal**: 가격 오라클이 CAIP-19 기반 캐시 키를 사용하여 L2 네트워크(Polygon, Arbitrum, Optimism, Base) 토큰 가격을 정확히 조회할 수 있는 상태
