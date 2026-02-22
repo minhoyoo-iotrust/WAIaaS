@@ -37,4 +37,5 @@ export const API = {
   WALLET_RESUME: (id: string) => `/v1/wallets/${id}/resume`,
   ADMIN_AGENT_PROMPT: '/v1/admin/agent-prompt',
   ADMIN_SESSION_REISSUE: (id: string) => `/v1/admin/sessions/${id}/reissue`,
+  ADMIN_TRANSACTIONS: '/v1/admin/transactions',
 } as const;
