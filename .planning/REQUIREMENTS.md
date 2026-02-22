@@ -40,10 +40,10 @@
 
 ### Policy
 
-- [ ] **PLCY-01**: ALLOWED_TOKENS policy rules accept optional assetId field for token matching
-- [ ] **PLCY-02**: Policy evaluation with assetId compares chain+network+address (all three dimensions)
-- [ ] **PLCY-03**: 4-scenario policy matching works correctly (assetId<->assetId, assetId<->legacy, legacy<->assetId, legacy<->legacy)
-- [ ] **PLCY-04**: EVM addresses are normalized to lowercase for CAIP-19 comparison
+- [x] **PLCY-01**: ALLOWED_TOKENS policy rules accept optional assetId field for token matching
+- [x] **PLCY-02**: Policy evaluation with assetId compares chain+network+address (all three dimensions)
+- [x] **PLCY-03**: 4-scenario policy matching works correctly (assetId<->assetId, assetId<->legacy, legacy<->assetId, legacy<->legacy)
+- [x] **PLCY-04**: EVM addresses are normalized to lowercase for CAIP-19 comparison
 
 ### MCP/SDK
 
@@ -104,10 +104,10 @@
 | TXSC-01 | Phase 233 | Complete |
 | TXSC-02 | Phase 233 | Complete |
 | TXSC-03 | Phase 233 | Complete |
-| PLCY-01 | Phase 233 | Pending |
-| PLCY-02 | Phase 233 | Pending |
-| PLCY-03 | Phase 233 | Pending |
-| PLCY-04 | Phase 233 | Pending |
+| PLCY-01 | Phase 233 | Complete |
+| PLCY-02 | Phase 233 | Complete |
+| PLCY-03 | Phase 233 | Complete |
+| PLCY-04 | Phase 233 | Complete |
 | MCPS-01 | Phase 234 | Pending |
 | MCPS-02 | Phase 234 | Pending |
 | MCPS-03 | Phase 234 | Pending |
