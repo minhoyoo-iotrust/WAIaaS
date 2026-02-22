@@ -175,8 +175,9 @@ describe('SEC-08-03: approved spender -> allow', () => {
       approveTx(spender, '1000000'),
     );
     expect(result.allowed).toBe(true);
-    // APPROVE_TIER_OVERRIDE defaults to APPROVAL tier
-    expect(result.tier).toBe('APPROVAL');
+    // Phase 236: No APPROVE_TIER_OVERRIDE -> falls through to SPENDING_LIMIT.
+    // No SPENDING_LIMIT -> INSTANT passthrough.
+    expect(result.tier).toBe('INSTANT');
   });
 });
 
@@ -402,8 +403,8 @@ describe('SEC-08-10: APPROVE_TIER_OVERRIDE tier=DELAY -> forced DELAY', () => {
 // SEC-08-11: No APPROVE_TIER_OVERRIDE -> default APPROVAL tier
 // ---------------------------------------------------------------------------
 
-describe('SEC-08-11: no APPROVE_TIER_OVERRIDE -> default APPROVAL tier', () => {
-  it('defaults to APPROVAL tier when no override policy exists', async () => {
+describe('SEC-08-11: no APPROVE_TIER_OVERRIDE -> INSTANT passthrough (Phase 236)', () => {
+  it('falls through to SPENDING_LIMIT when no override policy exists', async () => {
     const spender = '0xaaaa000000000000000000000000000000000001';
     insertPolicy(conn.sqlite, {
       type: 'APPROVED_SPENDERS',
@@ -418,7 +419,8 @@ describe('SEC-08-11: no APPROVE_TIER_OVERRIDE -> default APPROVAL tier', () => {
       approveTx(spender, '100'),
     );
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL'); // Default
+    // Phase 236: No APPROVE_TIER_OVERRIDE -> no SPENDING_LIMIT -> INSTANT
+    expect(result.tier).toBe('INSTANT');
   });
 });
 
