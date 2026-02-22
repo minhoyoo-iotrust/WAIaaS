@@ -12,8 +12,8 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 Milestone: v27.4 Admin UI UX 개선
 Phase: 5 of 5 (Phase 243: Wallet List + Wallet Detail) -- COMPLETE
 Plan: 2 of 2 in current phase
-Status: Phase 243 complete -- all plans done
-Last activity: 2026-02-23 -- Completed 243-02 (Wallet Detail 4-Tab Layout)
+Status: Milestone v27.4 audit passed -- all gaps closed
+Last activity: 2026-02-23 -- Audit gaps fixed (DASH-04, TXN-03, WLST-03, Badge style)
 
 Progress: [##########] 100%
 
@@ -69,7 +69,7 @@ Progress: [##########] 100%
 - 243-01: walletColumns moved inside WalletListContent to reference balances signal
 - 243-01: syncUrl=false for wallet list FilterBar (tab-routed page uses hash for tab state)
 - 243-01: Balance fetch capped at first 50 wallets (BALANCE_FETCH_LIMIT)
-- 243-01: No USD in balance column (balance API lacks amountUsd)
+- 243-01: USD now shown in wallet list balance column (gap closure fix)
 - 243-02: 4-tab layout uses local function components via closure for WalletDetailView
 - 243-02: Per-wallet transactions endpoint extended with offset query param
 - 243-02: USD value added to balance API via price oracle getNativePrice per chain
@@ -83,5 +83,5 @@ Progress: [##########] 100%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 243-02-PLAN.md -- Phase 243 complete, milestone v27.4 complete
+Stopped at: Milestone v27.4 audit passed -- ready for /gsd:complete-milestone v27.4
 Resume file: None
