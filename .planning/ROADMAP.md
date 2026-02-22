@@ -209,10 +209,10 @@ See `.planning/milestones/v27.2-ROADMAP.md` for full details.
   3. token_limits 키가 "native", "native:{chain}", CAIP-19 형식이 아니면 Zod 검증이 실패한다
   4. token_limits 내 instant_max > notify_max 등 순서 위반 시 Zod 검증이 실패한다
   5. USD/token_limits/raw 모두 없는 정책은 Zod 검증이 실패한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 235-01: TokenLimitSchema 정의 + raw optional 전환 + token_limits record 추가 + superRefine 검증
+- [ ] 235-01-PLAN.md -- TokenLimitSchema + raw optional + token_limits record + superRefine (TDD)
 
 ### Phase 236: Policy Engine -- 토큰별 티어 평가
 **Goal**: 정책 엔진이 CAIP-19 키 기반으로 토큰별 사람 읽기 단위 한도를 평가하고, 기존 raw/USD 평가와 올바르게 합산한다
