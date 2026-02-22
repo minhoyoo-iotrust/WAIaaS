@@ -707,6 +707,52 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ALLOWED_TOKENS CAIP-19 4-scenario matching tests
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - ALLOWED_TOKENS CAIP-19 matching', () => {
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+  it('Scenario 2: denies when policy assetId is invalid CAIP-19 and TX has address only', async () => {
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ assetId: 'not-a-valid-caip19', address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // TX has tokenAddress only (no assetId) -> Scenario 2 catch returns false
+    const result = await engine.evaluate(walletId, tokenTx('1000000', USDC_MINT));
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Token not in allowed list');
+  });
+
+  it('Scenario 3: denies when TX assetId is invalid CAIP-19 and policy has address only', async () => {
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT }],
+      }),
+      priority: 15,
+    });
+
+    // TX has assetId (invalid) but no tokenAddress -> Scenario 3 catch returns false
+    const result = await engine.evaluate(walletId, {
+      type: 'TOKEN_TRANSFER',
+      amount: '1000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      assetId: 'garbage-not-caip19',
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Token not in allowed list');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CONTRACT_WHITELIST + METHOD_WHITELIST tests (8 tests)
 // ---------------------------------------------------------------------------
 

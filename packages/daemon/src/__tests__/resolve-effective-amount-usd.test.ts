@@ -421,6 +421,73 @@ describe('resolveEffectiveAmountUsd', () => {
   });
 
   // -----------------------------------------------------------------------
+  // 18a. BATCH: non-PriceNotAvailableError in TOKEN_TRANSFER -> oracleDown
+  // -----------------------------------------------------------------------
+  it('BATCH: returns oracleDown when TOKEN_TRANSFER throws non-PriceNotAvailableError', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+      getPrice: vi.fn().mockRejectedValue(new Error('Network timeout')),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        {
+          to: 'addr1',
+          amount: '1000000',
+          token: { address: 'someToken', decimals: 6, symbol: 'TKN' },
+        },
+      ],
+    };
+    const result = await resolveEffectiveAmountUsd(request, 'BATCH', 'solana', mockOracle);
+
+    expect(result.type).toBe('oracleDown');
+  });
+
+  // -----------------------------------------------------------------------
+  // 18b. BATCH: CONTRACT_CALL with value='0' -> $0 contribution
+  // -----------------------------------------------------------------------
+  it('BATCH: CONTRACT_CALL with value "0" contributes $0 to total', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        { to: 'addr1', amount: '1000000000' }, // TRANSFER: 1 SOL = $100
+        { to: 'contractAddr', calldata: '0x12345678', value: '0' }, // CONTRACT_CALL: $0
+      ],
+    };
+    const result = await resolveEffectiveAmountUsd(request, 'BATCH', 'solana', mockOracle);
+
+    expect(result.type).toBe('success');
+    const success = result as PriceResultSuccess;
+    expect(success.usdAmount).toBeCloseTo(100, 2); // Only TRANSFER contributes
+  });
+
+  // -----------------------------------------------------------------------
+  // 18c. BATCH: CONTRACT_CALL with non-zero value -> adds to total
+  // -----------------------------------------------------------------------
+  it('BATCH: CONTRACT_CALL with non-zero value adds native amount to total', async () => {
+    const mockOracle = createMockOracle({
+      getNativePrice: vi.fn().mockResolvedValue(buildPrice(100)),
+    });
+
+    const request = {
+      type: 'BATCH',
+      instructions: [
+        { to: 'contractAddr', calldata: '0x12345678', value: '500000000' }, // 0.5 SOL = $50
+      ],
+    };
+    const result = await resolveEffectiveAmountUsd(request, 'BATCH', 'solana', mockOracle);
+
+    expect(result.type).toBe('success');
+    const success = result as PriceResultSuccess;
+    expect(success.usdAmount).toBeCloseTo(50, 2);
+  });
+
+  // -----------------------------------------------------------------------
   // 18. BATCH: network is forwarded to TOKEN_TRANSFER instructions
   // -----------------------------------------------------------------------
   it('BATCH: passes network to TOKEN_TRANSFER getPrice calls', async () => {
