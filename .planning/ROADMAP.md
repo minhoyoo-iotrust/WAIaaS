@@ -223,11 +223,11 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
   3. SearchInput 컴포넌트에 텍스트를 입력하면 debounce 후 필터링 콜백이 호출된다
   4. GET /v1/admin/transactions API가 masterAuth로 보호되며 지갑/타입/상태/네트워크/날짜 범위 필터 + offset/limit 페이지네이션을 지원한다
   5. GET /v1/admin/incoming API가 masterAuth로 보호되며 지갑/체인/상태/suspicious 필터 + offset/limit 페이지네이션을 지원한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 239-01: Shared UI components (ExplorerLink, FilterBar, SearchInput)
-- [ ] 239-02: Cross-wallet Admin API endpoints
+- [ ] 239-01-PLAN.md -- Shared UI components (ExplorerLink, FilterBar, SearchInput) + tests
+- [ ] 239-02-PLAN.md -- Cross-wallet Admin API endpoints (GET /admin/transactions, GET /admin/incoming) + tests
 
 ### Phase 240: Transactions Page + Dashboard
 **Goal**: 운영자가 전체 지갑의 트랜잭션을 단일 페이지에서 조회/필터/검색/페이지네이션할 수 있고, 대시보드에서 승인 대기/실패 건을 즉시 파악하여 트랜잭션 페이지로 이동할 수 있다
