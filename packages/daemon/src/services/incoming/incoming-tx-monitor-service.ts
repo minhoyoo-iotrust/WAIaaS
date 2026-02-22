@@ -420,18 +420,43 @@ export class IncomingTxMonitorService {
     });
 
     // 3. Confirmation worker for Solana (30s)
+    // Build checkSolanaFinalized callback from multiplexer's Solana subscriber.
+    // Uses structural typing to access checkFinalized() without importing the concrete class.
+    const checkSolanaFinalized = async (txHash: string): Promise<boolean> => {
+      const entries = this.multiplexer.getSubscribersForChain('solana');
+      if (entries.length === 0) return false;
+      const sub = entries[0]!.subscriber as unknown as {
+        checkFinalized(txHash: string): Promise<boolean>;
+      };
+      return sub.checkFinalized(txHash);
+    };
+
     this.workers.register('incoming-tx-confirm-solana', {
       interval: 30_000,
       handler: createConfirmationWorkerHandler({
         sqlite: this.sqlite,
+        checkSolanaFinalized,
       }),
     });
 
     // 4. Confirmation worker for EVM (30s)
+    // Build getBlockNumber callback from multiplexer's EVM subscriber.
+    // Routes to the correct subscriber for the given chain:network pair.
+    const getBlockNumber = async (_chain: string, network: string): Promise<bigint> => {
+      const entries = this.multiplexer.getSubscribersForChain('ethereum');
+      const entry = entries.find((e) => e.key === `ethereum:${network}`);
+      if (!entry) throw new Error(`No EVM subscriber for network ${network}`);
+      const sub = entry.subscriber as unknown as {
+        getBlockNumber(): Promise<bigint>;
+      };
+      return sub.getBlockNumber();
+    };
+
     this.workers.register('incoming-tx-confirm-evm', {
       interval: 30_000,
       handler: createConfirmationWorkerHandler({
         sqlite: this.sqlite,
+        getBlockNumber,
       }),
     });
 

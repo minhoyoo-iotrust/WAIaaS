@@ -21,6 +21,9 @@ export class NtfyChannel implements INotificationChannel {
     const url = `${this.server}/${this.topic}`;
 
     const bodyParts = [payload.body];
+    if (payload.explorerUrl) {
+      bodyParts.push(`\nExplorer: ${payload.explorerUrl}`);
+    }
     if (payload.walletId) {
       const name = payload.walletName || payload.walletId;
       const idAbbr = abbreviateId(payload.walletId);

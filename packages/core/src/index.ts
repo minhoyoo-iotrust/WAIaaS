@@ -273,6 +273,9 @@ export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';
 // v1.7 Blockchain amount formatting utilities (NOTE-01)
 export { formatAmount, parseAmount } from './utils/index.js';
 
+// v27.2 Block explorer URL mapping
+export { getExplorerTxUrl } from './utils/index.js';
+
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
 

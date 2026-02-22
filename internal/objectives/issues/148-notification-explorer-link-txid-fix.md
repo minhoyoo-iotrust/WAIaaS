@@ -3,7 +3,7 @@
 - **유형:** ENHANCEMENT
 - **심각도:** MEDIUM
 - **마일스톤:** TBD
-- **상태:** OPEN
+- **상태:** FIXED
 
 ## 현재 상태
 

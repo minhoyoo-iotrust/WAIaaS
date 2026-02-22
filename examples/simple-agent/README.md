@@ -10,7 +10,7 @@ Use this example as a starting point for building your own AI agent with wallet 
 - **WAIaaS daemon** running at `http://localhost:3100`
 - A wallet created and a **session token** issued via `POST /v1/sessions`
 
-> See the [Quickstart Guide](../../docs/quickstart.md) for daemon setup and session creation.
+> See the main [README](../../README.md) for daemon setup and session creation.
 
 ## Setup
 
@@ -44,7 +44,7 @@ npm install @waiaas/sdk
 
 > **Note:** In the monorepo, `@waiaas/sdk` uses `workspace:*` to link the
 > local package. For standalone usage, replace `"workspace:*"` in
-> `package.json` with the published version (e.g., `"^1.7.0"`).
+> `package.json` with the published version (e.g., `"^2.5.0"`).
 
 ## Run
 

@@ -798,6 +798,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
       // Fire-and-forget: notify TX_SUBMITTED
       void ctx.notificationService?.notify('TX_SUBMITTED', ctx.walletId, {
+        txId: ctx.txId,
         txHash: ctx.submitResult.txHash,
         amount: reqAmount,
         to: reqTo,
@@ -967,6 +968,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
 
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
+      txId: ctx.txId,
       txHash: ctx.submitResult!.txHash,
       amount: reqAmount,
       to: reqTo,

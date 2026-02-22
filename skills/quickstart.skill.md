@@ -25,13 +25,13 @@ All endpoints use this base. The daemon runs locally on port 3100 by default.
 
 WAIaaS uses two authentication methods:
 
-| Auth Type | Header | Used For |
-|-----------|--------|----------|
-| **masterAuth** | `X-Master-Password: <password>` | Wallet creation, session creation, wallet listing, token registry, MCP provisioning, admin |
-| **sessionAuth** | `Authorization: Bearer <token>` | Balance queries, transactions, wallet updates/deletion, session renewal |
+| Auth Type | Header | Used For | Who |
+|-----------|--------|----------|-----|
+| **masterAuth** | `X-Master-Password: <password>` | Wallet creation, session creation, policy config, admin | **Operator only** |
+| **sessionAuth** | `Authorization: Bearer <token>` | Balance queries, transactions, wallet info, session renewal | AI agents |
 
-- **masterAuth** is for administrative operations. The master password is set in `config.toml` or via `WAIAAS_SECURITY_MASTER_PASSWORD` env var.
-- **sessionAuth** is for wallet-scoped operations. You get a JWT token by creating a session (Step 3 below). Each session is bound to one wallet.
+- **masterAuth** is for administrative operations performed by the **Operator** via Admin UI or CLI. AI agents must NEVER request or use the master password.
+- **sessionAuth** is for wallet-scoped operations. AI agents operate exclusively with session tokens (Bearer wai_sess_...).
 
 ## Self-Discovery (Recommended First Step)
 

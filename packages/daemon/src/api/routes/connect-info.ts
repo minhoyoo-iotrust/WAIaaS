@@ -98,6 +98,12 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (defaults to wallet default network).');
   lines.push('When session expires (401), renew with PUT /v1/sessions/{sessionId}/renew.');
+  lines.push('');
+  lines.push('IMPORTANT - Security boundaries:');
+  lines.push('- NEVER ask the user for the master password (X-Master-Password). You do not need it.');
+  lines.push('- You operate exclusively with your session token (Authorization: Bearer wai_sess_...).');
+  lines.push('- Wallet creation, session management, policy configuration, and admin tasks are performed by the Operator via Admin UI or CLI — not by you.');
+  lines.push('- Do not attempt to call admin-only endpoints (/v1/admin/*, POST /v1/wallets, POST /v1/sessions, policy CRUD).');
 
   return lines.join('\n');
 }

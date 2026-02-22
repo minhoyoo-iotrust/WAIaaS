@@ -11,6 +11,8 @@ dispatch:
 
 # WAIaaS Policy Management
 
+> **Policy CRUD (create/update/delete) is Operator only** (requires masterAuth). AI agents can read policies via GET endpoints with sessionAuth, but cannot modify them.
+
 Policy engine for enforcing rules on wallet operations. Policies control spending limits, allowed recipients, time windows, rate limits, token whitelists, contract access, approval requirements, and network restrictions.
 
 ## Base URL

@@ -15,19 +15,21 @@ Complete reference for wallet CRUD operations, asset queries, session management
 
 ## Permissions
 
-### Agent (sessionAuth)
+### Agent (sessionAuth) — AI agents use these
 - Query wallet balance, assets, address, nonce, and info
 - Send transactions via transaction endpoints (see transactions.skill.md)
 - Get registered tokens via `GET /v1/tokens`
 - Get applied policies via `GET /v1/policies`
 
-### Admin (masterAuth)
+### Operator only (masterAuth) — NOT for AI agents
 - Create/list/update/delete wallets
 - Create/list/delete sessions, manage session-wallet links
 - Create/delete MCP tokens
 - Register/remove custom tokens
 - Set owner addresses, default network, additional networks
 - WalletConnect pairing management
+
+> AI agents must NEVER request the master password. Use only your session token.
 
 ## 1. Wallet CRUD
 

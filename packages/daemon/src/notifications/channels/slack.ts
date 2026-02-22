@@ -36,11 +36,16 @@ export class SlackChannel implements INotificationChannel {
       }
     }
 
+    // Add explorer link to body when available
+    const text = payload.explorerUrl
+      ? `${payload.body}\n<${payload.explorerUrl}|View on Explorer>`
+      : payload.body;
+
     const attachment = {
       fallback: payload.message,
       color,
       title: `[WAIaaS] ${payload.title}`,
-      text: payload.body,
+      text,
       fields,
       ...(payload.walletId ? { ts: payload.timestamp } : {}),
     };

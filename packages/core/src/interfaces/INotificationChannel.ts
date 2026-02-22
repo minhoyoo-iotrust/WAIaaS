@@ -23,6 +23,8 @@ export interface NotificationPayload {
   message: string;
   /** Additional event-specific details. */
   details?: Record<string, unknown>;
+  /** Block explorer URL for the transaction (if applicable). */
+  explorerUrl?: string;
   /** Unix epoch seconds. */
   timestamp: number;
 }

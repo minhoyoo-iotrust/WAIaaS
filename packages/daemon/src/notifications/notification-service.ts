@@ -8,7 +8,7 @@
 
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
-import { EVENT_CATEGORY_MAP } from '@waiaas/core';
+import { EVENT_CATEGORY_MAP, getExplorerTxUrl } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { getNotificationMessage } from './templates/message-templates.js';
@@ -131,6 +131,13 @@ export class NotificationService {
     if (this.channels.length === 0) return; // No traditional channels configured
 
     const { title, body } = getNotificationMessage(eventType, this.config.locale, mergedVars);
+
+    // Build explorer URL when txHash + network are available
+    const txHash = vars?.txHash;
+    const explorerUrl = (txHash && walletInfo.network)
+      ? getExplorerTxUrl(walletInfo.network, txHash) ?? undefined
+      : undefined;
+
     const payload: NotificationPayload = {
       eventType,
       walletId,
@@ -141,6 +148,7 @@ export class NotificationService {
       body,
       message: `${title}\n${body}`,
       details,
+      explorerUrl,
       timestamp: Math.floor(Date.now() / 1000),
     };
 
