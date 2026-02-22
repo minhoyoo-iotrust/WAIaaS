@@ -16,6 +16,7 @@ export interface PolicyFormProps {
   rules: Record<string, unknown>;
   onChange: (rules: Record<string, unknown>) => void;
   errors: Record<string, string>;
+  network?: string;
 }
 
 /**
@@ -31,10 +32,11 @@ export function PolicyFormRouter({
   rules,
   onChange,
   errors,
+  network,
 }: { type: string } & PolicyFormProps): ComponentChildren {
   switch (type) {
     case 'SPENDING_LIMIT':
-      return <SpendingLimitForm rules={rules} onChange={onChange} errors={errors} />;
+      return <SpendingLimitForm rules={rules} onChange={onChange} errors={errors} network={network} />;
     case 'WHITELIST':
       return <WhitelistForm rules={rules} onChange={onChange} errors={errors} />;
     case 'RATE_LIMIT':

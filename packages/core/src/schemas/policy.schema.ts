@@ -67,14 +67,38 @@ const ApproveTierOverrideRulesSchema = z.object({
   tier: PolicyTierEnum,
 });
 
+/** Per-token spending limit in human-readable units (e.g., "1.5" SOL, "1000" USDC). */
+export const TokenLimitSchema = z.object({
+  instant_max: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a non-negative decimal string'),
+  notify_max: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a non-negative decimal string'),
+  delay_max: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a non-negative decimal string'),
+});
+export type TokenLimit = z.infer<typeof TokenLimitSchema>;
+
+// ---------------------------------------------------------------------------
+// token_limits key validation (Phase 235)
+// ---------------------------------------------------------------------------
+
+const VALID_CHAIN_TYPES = new Set(['solana', 'ethereum']);
+// Duplicated from caip19.ts to avoid circular dependency risk
+const CAIP19_REGEX = /^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}$/;
+
+function isValidTokenLimitKey(key: string): boolean {
+  if (key === 'native') return true;
+  if (key.startsWith('native:')) {
+    return VALID_CHAIN_TYPES.has(key.slice(7));
+  }
+  return CAIP19_REGEX.test(key);
+}
+
 /** SPENDING_LIMIT: 금액 기반 4-티어 보안 분류. */
-export const SpendingLimitRulesSchema = z.object({
-  /** INSTANT 티어 최대 금액 (lamports/wei 문자열) */
-  instant_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+const SpendingLimitRulesBaseSchema = z.object({
+  /** INSTANT 티어 최대 금액 (lamports/wei 문자열, deprecated -- optional since Phase 235) */
+  instant_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다').optional(),
   /** NOTIFY 티어 최대 금액 */
-  notify_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+  notify_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다').optional(),
   /** DELAY 티어 최대 금액 */
-  delay_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다'),
+  delay_max: z.string().regex(/^\d+$/, '양의 정수 문자열이어야 합니다').optional(),
   /** INSTANT 티어 최대 USD 금액 (optional, 미설정 시 네이티브만 사용) */
   instant_max_usd: z.number().nonnegative().optional(),
   /** NOTIFY 티어 최대 USD 금액 */
@@ -87,6 +111,57 @@ export const SpendingLimitRulesSchema = z.object({
   daily_limit_usd: z.number().positive().optional(),
   /** 30일 롤링 윈도우 내 누적 USD 지출 상한 */
   monthly_limit_usd: z.number().positive().optional(),
+  /** 토큰별 한도 (Phase 235): CAIP-19/native 키 → human-readable 한도 */
+  token_limits: z.record(z.string(), TokenLimitSchema).optional(),
+});
+
+export const SpendingLimitRulesSchema = SpendingLimitRulesBaseSchema.superRefine((data, ctx) => {
+  // SCHM-04: At least one limit source must be present
+  const hasRaw = data.instant_max !== undefined || data.notify_max !== undefined || data.delay_max !== undefined;
+  const hasUsd = data.instant_max_usd !== undefined || data.notify_max_usd !== undefined || data.delay_max_usd !== undefined;
+  const hasTokenLimits = data.token_limits !== undefined && Object.keys(data.token_limits).length > 0;
+
+  if (!hasRaw && !hasUsd && !hasTokenLimits) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one of USD limits, token_limits, or raw limits must be specified',
+      path: [],
+    });
+  }
+
+  // Validate token_limits if present
+  if (data.token_limits) {
+    for (const [key, limit] of Object.entries(data.token_limits)) {
+      // SCHM-06: Key format validation
+      if (!isValidTokenLimitKey(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Invalid token_limits key "${key}". Must be "native", "native:{chain}", or a valid CAIP-19 asset ID`,
+          path: ['token_limits', key],
+        });
+      }
+
+      // SCHM-05: Ordering validation (instant_max <= notify_max <= delay_max)
+      const instantMax = parseFloat(limit.instant_max);
+      const notifyMax = parseFloat(limit.notify_max);
+      const delayMax = parseFloat(limit.delay_max);
+
+      if (instantMax > notifyMax) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `token_limits["${key}"]: instant_max (${limit.instant_max}) must be <= notify_max (${limit.notify_max})`,
+          path: ['token_limits', key, 'instant_max'],
+        });
+      }
+      if (notifyMax > delayMax) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `token_limits["${key}"]: notify_max (${limit.notify_max}) must be <= delay_max (${limit.delay_max})`,
+          path: ['token_limits', key, 'notify_max'],
+        });
+      }
+    }
+  }
 });
 export type SpendingLimitRules = z.infer<typeof SpendingLimitRulesSchema>;
 

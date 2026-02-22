@@ -992,14 +992,21 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 15,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 14,
+    });
+
     const result = await engine.evaluate(
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
     );
 
-    // Should pass APPROVED_SPENDERS and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    // Should pass APPROVED_SPENDERS and reach APPROVE_TIER_OVERRIDE (explicit APPROVAL)
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL'); // default tier for APPROVE
+    expect(result.tier).toBe('APPROVAL');
   });
 
   it('should deny APPROVE when spender is NOT in APPROVED_SPENDERS list (SPENDER_NOT_APPROVED)', async () => {
@@ -1087,13 +1094,20 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 14,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 13,
+    });
+
     const maxUint256 = (2n ** 256n - 1n).toString();
     const result = await engine.evaluate(
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
     );
 
-    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (explicit APPROVAL)
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
   });
@@ -1143,17 +1157,26 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 14,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 13,
+    });
+
     const result = await engine.evaluate(
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '500000' }),
     );
 
-    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (explicit APPROVAL)
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
   });
 
-  it('should default to APPROVAL tier with no APPROVE_TIER_OVERRIDE policy', async () => {
+  it('should fall through to INSTANT passthrough with no APPROVE_TIER_OVERRIDE and no SPENDING_LIMIT', async () => {
+    // Phase 236: Without APPROVE_TIER_OVERRIDE, APPROVE falls through to SPENDING_LIMIT.
+    // Without SPENDING_LIMIT either, default INSTANT passthrough.
     await insertPolicy({
       type: 'APPROVED_SPENDERS',
       rules: JSON.stringify({
@@ -1168,7 +1191,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     );
 
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL');
+    expect(result.tier).toBe('INSTANT'); // Phase 236: falls through to default passthrough
   });
 
   it('should use INSTANT tier with APPROVE_TIER_OVERRIDE (tier=INSTANT)', async () => {
@@ -1261,6 +1284,13 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 15,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 14,
+    });
+
     // Send with mixed-case spender address -> should still match
     const result = await engine.evaluate(
       walletId,
@@ -1268,7 +1298,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     );
 
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL'); // default tier
+    expect(result.tier).toBe('APPROVAL');
   });
 });
 
@@ -1671,11 +1701,12 @@ describe('DatabasePolicyEngine - Default Deny Toggles', () => {
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER }),
     );
-    // With no APPROVED_SPENDERS policy, toggle OFF skips spenders check
-    // Then APPROVE_AMOUNT_LIMIT check (default blockUnlimited for large amounts, but 1000000 is below threshold)
-    // Then APPROVE_TIER_OVERRIDE (no policy -> default APPROVAL tier)
+    // Phase 236: With no APPROVED_SPENDERS policy, toggle OFF skips spenders check
+    // Then APPROVE_AMOUNT_LIMIT check (below threshold)
+    // Then APPROVE_TIER_OVERRIDE (no policy -> falls through to SPENDING_LIMIT)
+    // SPENDING_LIMIT: amount '0' <= instant_max -> INSTANT
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL');
+    expect(result.tier).toBe('INSTANT');
   });
 
   // --- TOGGLE-04: whitelist policy exists -> toggle irrelevant ---
@@ -2033,5 +2064,703 @@ describe('DatabasePolicyEngine - USD SPENDING_LIMIT', () => {
     );
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('INSTANT'); // native only
+  });
+});
+
+// ---------------------------------------------------------------------------
+// evaluateSpendingLimit with token_limits tests (Phase 236-02)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - evaluateSpendingLimit with token_limits', () => {
+  const USDC_ASSET_ID = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+  it('1. TOKEN_TRANSFER with matching CAIP-19 key evaluated in human-readable units -> INSTANT', async () => {
+    // Policy: token_limits USDC CAIP-19 key with instant_max=1000 (human-readable USDC)
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '1000',
+            notify_max: '5000',
+            delay_max: '50000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // Allow TOKEN_TRANSFER through ALLOWED_TOKENS
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT, assetId: USDC_ASSET_ID }],
+      }),
+      priority: 15,
+    });
+
+    // 500 USDC = 500000000 (6 decimals), should be INSTANT (500 <= 1000)
+    const result = await engine.evaluate(walletId, {
+      type: 'TOKEN_TRANSFER',
+      amount: '500000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      tokenAddress: USDC_MINT,
+      assetId: USDC_ASSET_ID,
+      tokenDecimals: 6,
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('2. TOKEN_TRANSFER exceeding token_limits threshold returns NOTIFY', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '1000',
+            notify_max: '5000',
+            delay_max: '50000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT, assetId: USDC_ASSET_ID }],
+      }),
+      priority: 15,
+    });
+
+    // 2000 USDC = 2000000000 (6 decimals), should be NOTIFY (1000 < 2000 <= 5000)
+    const result = await engine.evaluate(walletId, {
+      type: 'TOKEN_TRANSFER',
+      amount: '2000000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      tokenAddress: USDC_MINT,
+      assetId: USDC_ASSET_ID,
+      tokenDecimals: 6,
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('3. TRANSFER with native:solana key evaluated using NATIVE_DECIMALS -> NOTIFY', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        token_limits: {
+          'native:solana': {
+            instant_max: '1',
+            notify_max: '5',
+            delay_max: '50',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // 2 SOL = 2000000000 (9 decimals), should be NOTIFY (1 < 2 <= 5)
+    const result = await engine.evaluate(walletId, {
+      type: 'TRANSFER',
+      amount: '2000000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('4. TRANSFER with native shorthand key when policy has network -> INSTANT', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        token_limits: {
+          'native': {
+            instant_max: '1',
+            notify_max: '10',
+            delay_max: '100',
+          },
+        },
+      }),
+      priority: 10,
+      // Network-scoped policy -- insertPolicy helper passes walletId=null by default
+    });
+
+    // Update to network-scoped policy (use valid network from DB CHECK constraint)
+    conn.sqlite
+      .prepare('UPDATE policies SET network = ? WHERE id = (SELECT id FROM policies ORDER BY rowid DESC LIMIT 1)')
+      .run('mainnet');
+
+    // 0.5 SOL = 500000000 (9 decimals), should be INSTANT (0.5 <= 1)
+    const result = await engine.evaluate(walletId, {
+      type: 'TRANSFER',
+      amount: '500000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      network: 'mainnet',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('5. No token_limits match falls back to raw fields -> NOTIFY via raw', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',    // 1 SOL in lamports
+        notify_max: '5000000000',     // 5 SOL
+        delay_max: '50000000000',     // 50 SOL
+        delay_seconds: 300,
+        token_limits: {
+          'native:ethereum': {        // mismatch for solana
+            instant_max: '0.001',
+            notify_max: '0.01',
+            delay_max: '0.1',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // 2 SOL = 2000000000, using raw fields: 1B < 2B <= 5B -> NOTIFY
+    const result = await engine.evaluate(walletId, {
+      type: 'TRANSFER',
+      amount: '2000000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('6. No raw fields + no token_limits match -> USD only evaluation (native tier skipped)', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        // No raw fields (instant_max, notify_max, delay_max all absent)
+        delay_seconds: 300,
+        instant_max_usd: 100,
+        notify_max_usd: 500,
+        delay_max_usd: 5000,
+        // No matching token_limits
+      }),
+      priority: 10,
+    });
+
+    // TRANSFER with amount, no matching token_limits, no raw fields
+    // Native tier should be INSTANT (skipped), USD tier evaluated by usdAmount
+    // Since evaluate() doesn't pass usdAmount, and native tier is INSTANT (skipped) -> INSTANT
+    const result = await engine.evaluate(walletId, {
+      type: 'TRANSFER',
+      amount: '999999999999',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT'); // native tier skipped -> INSTANT
+  });
+
+  it('7. maxTier(USD tier, token tier) -- token tier is more conservative', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        instant_max_usd: 1000,  // USD says INSTANT for $75
+        notify_max_usd: 5000,
+        delay_max_usd: 50000,
+        token_limits: {
+          'native:solana': {
+            instant_max: '0.1',   // token says NOTIFY for 0.5 SOL
+            notify_max: '1',
+            delay_max: '10',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // 0.5 SOL = 500000000 (9 decimals)
+    // token tier: 0.1 < 0.5 <= 1 -> NOTIFY
+    // USD tier: $75 <= $1000 -> INSTANT (via evaluateAndReserve with usdAmount)
+    // maxTier(INSTANT, NOTIFY) = NOTIFY
+    const txId = await insertTransaction({ walletId, status: 'PENDING', amount: '500000000' });
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      {
+        type: 'TRANSFER',
+        amount: '500000000',
+        toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        chain: 'solana',
+      },
+      txId,
+      75, // usdAmount = $75
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('8. APPROVE with CAIP-19 token_limits (no APPROVE_TIER_OVERRIDE) -> NOTIFY', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '100',
+            notify_max: '1000',
+            delay_max: '10000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // APPROVED_SPENDERS to allow APPROVE through
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D' }],
+      }),
+      priority: 15,
+    });
+
+    // Phase 236: Without APPROVE_TIER_OVERRIDE, APPROVE falls through to SPENDING_LIMIT
+    // with token_limits evaluation.
+    // 500 USDC = 500000000 (6 decimals), APPROVE type, no APPROVE_TIER_OVERRIDE
+    // Expected: Goes to SPENDING_LIMIT with token_limits, NOTIFY (100 < 500 <= 1000)
+    const result = await engine.evaluate(walletId, {
+      type: 'APPROVE',
+      amount: '500000000',
+      toAddress: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+      chain: 'solana',
+      spenderAddress: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+      approveAmount: '500000000',
+      assetId: USDC_ASSET_ID,
+      tokenDecimals: 6,
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('9. APPROVE + APPROVE_TIER_OVERRIDE skips token_limits -> DELAY from override', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '100',
+            notify_max: '1000',
+            delay_max: '10000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    await insertPolicy({
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({
+        spenders: [{ address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D' }],
+      }),
+      priority: 15,
+    });
+
+    // APPROVE_TIER_OVERRIDE forces DELAY
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'DELAY' }),
+      priority: 14,
+    });
+
+    // With APPROVE_TIER_OVERRIDE, token_limits never evaluated
+    const result = await engine.evaluate(walletId, {
+      type: 'APPROVE',
+      amount: '500000000',
+      toAddress: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+      chain: 'solana',
+      spenderAddress: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+      approveAmount: '500000000',
+      assetId: USDC_ASSET_ID,
+      tokenDecimals: 6,
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('DELAY');
+  });
+
+  it('10. CONTRACT_CALL skips token_limits -> uses raw fields', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '5000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+        token_limits: {
+          'native:solana': {
+            instant_max: '0.0001', // Very restrictive token limit
+            notify_max: '0.001',
+            delay_max: '0.01',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // Allow CONTRACT_CALL through
+    await insertPolicy({
+      type: 'CONTRACT_WHITELIST',
+      rules: JSON.stringify({
+        contracts: [{ address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D' }],
+      }),
+      priority: 15,
+    });
+
+    // CONTRACT_CALL with 5 SOL = 5000000000 -> should use raw fields, not token_limits
+    // Raw: instant_max(1B) < 5B <= notify_max(5B) -> NOTIFY (not APPROVAL from token_limits)
+    const result = await engine.evaluate(walletId, {
+      type: 'CONTRACT_CALL',
+      amount: '5000000000',
+      toAddress: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+      chain: 'ethereum',
+      contractAddress: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('11. evaluateNativeTier undefined guard -- raw fields undefined returns INSTANT', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        // No raw fields, only token_limits (no match for this chain) and no USD
+        delay_seconds: 300,
+        token_limits: {
+          'native:ethereum': {   // no match for solana TRANSFER
+            instant_max: '0.001',
+            notify_max: '0.01',
+            delay_max: '0.1',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // TRANSFER on solana -- no matching token_limits, no raw fields
+    // evaluateNativeTier should return INSTANT (not crash on BigInt(undefined))
+    const result = await engine.evaluate(walletId, {
+      type: 'TRANSFER',
+      amount: '999999999999999',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT'); // native tier skipped, no crash
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Backward Compatibility tests (CMPT-01/02/03)
+// ---------------------------------------------------------------------------
+
+describe('DatabasePolicyEngine - Backward Compatibility (CMPT-01/02/03)', () => {
+  const USDC_ASSET_ID = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+  // --- CMPT-01: Raw-only policies unchanged ---
+
+  it('CMPT-01a: raw-only policy (no token_limits, no USD) returns INSTANT for small amount', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',     // 1 SOL
+        notify_max: '10000000000',     // 10 SOL
+        delay_max: '50000000000',      // 50 SOL
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // 0.5 SOL = 500M lamports < 1B instant_max -> INSTANT
+    const result = await engine.evaluate(walletId, tx('500000000'));
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('CMPT-01b: raw-only policy returns NOTIFY for medium amount', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // 5 SOL = 5B lamports: instant_max < 5B <= notify_max -> NOTIFY
+    const result = await engine.evaluate(walletId, tx('5000000000'));
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('CMPT-01c: raw-only policy returns DELAY for large amount', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // 30 SOL = 30B lamports: notify_max < 30B <= delay_max -> DELAY
+    const result = await engine.evaluate(walletId, tx('30000000000'));
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('DELAY');
+    expect(result.delaySeconds).toBe(300);
+  });
+
+  it('CMPT-01d: raw-only policy returns APPROVAL for amount exceeding delay_max', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+      }),
+      priority: 10,
+    });
+
+    // 60 SOL = 60B lamports > 50B delay_max -> APPROVAL
+    const result = await engine.evaluate(walletId, tx('60000000000'));
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+  });
+
+  // --- CMPT-02: token_limits priority over raw ---
+
+  it('CMPT-02a: token_limits takes priority over raw for matching TOKEN_TRANSFER', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',     // 1B raw instant
+        notify_max: '10000000000',     // 10B raw notify
+        delay_max: '50000000000',      // 50B raw delay
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '100',        // 100 USDC
+            notify_max: '1000',        // 1000 USDC
+            delay_max: '10000',        // 10000 USDC
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // Allow TOKEN_TRANSFER through ALLOWED_TOKENS
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: USDC_MINT, assetId: USDC_ASSET_ID }],
+      }),
+      priority: 15,
+    });
+
+    // 500 USDC = 500000000 (6 decimals)
+    // Via token_limits: 500 > instant_max(100), 500 <= notify_max(1000) -> token tier = NOTIFY
+    // Via raw: 500000000 <= instant_max(1B) -> raw would be INSTANT
+    // token_limits takes priority -> NOTIFY
+    const result = await engine.evaluate(walletId, {
+      type: 'TOKEN_TRANSFER',
+      amount: '500000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      tokenAddress: USDC_MINT,
+      assetId: USDC_ASSET_ID,
+      tokenDecimals: 6,
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('CMPT-02b: non-matching token falls back to raw fields', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '100',
+            notify_max: '1000',
+            delay_max: '10000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // Allow TOKEN_TRANSFER through ALLOWED_TOKENS for a different token
+    await insertPolicy({
+      type: 'ALLOWED_TOKENS',
+      rules: JSON.stringify({
+        tokens: [{ address: 'DiffTokenAddress' }],
+      }),
+      priority: 15,
+    });
+
+    // Different token, no assetId match -> falls back to raw
+    // 5B > instant_max(1B), <= notify_max(10B) -> NOTIFY via raw
+    const result = await engine.evaluate(walletId, {
+      type: 'TOKEN_TRANSFER',
+      amount: '5000000000',
+      toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      chain: 'solana',
+      tokenAddress: 'DiffTokenAddress',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
+  });
+
+  it('CMPT-02c: TRANSFER (native) with raw + token_limits uses raw when no native key match', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+        token_limits: {
+          [USDC_ASSET_ID]: {
+            instant_max: '100',
+            notify_max: '1000',
+            delay_max: '10000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // TRANSFER 0.5 SOL on solana, no native key in token_limits (only USDC key)
+    // Falls back to raw: 500M <= instant_max(1B) -> INSTANT
+    const result = await engine.evaluate(walletId, tx('500000000'));
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  // --- CMPT-03: Cumulative USD limits unaffected by token_limits ---
+
+  it('CMPT-03a: daily_limit_usd works independently of token_limits (via evaluateAndReserve)', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '10000000000',
+        delay_max: '50000000000',
+        delay_seconds: 300,
+        daily_limit_usd: 100,
+        token_limits: {
+          'native:solana': {
+            instant_max: '100',
+            notify_max: '1000',
+            delay_max: '10000',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // Insert a CONFIRMED transaction with amount_usd = 90 (within 24h window)
+    const now = Math.floor(Date.now() / 1000);
+    conn.sqlite
+      .prepare(
+        `INSERT INTO transactions (id, wallet_id, chain, type, amount, to_address, status, amount_usd, created_at)
+         VALUES (?, ?, 'solana', 'TRANSFER', '0', 'addr', 'CONFIRMED', 90, ?)`,
+      )
+      .run(generateId(), walletId, now);
+
+    // Create a PENDING transaction for evaluateAndReserve
+    const txId = generateId();
+    conn.sqlite
+      .prepare(
+        `INSERT INTO transactions (id, wallet_id, chain, type, amount, to_address, status, created_at)
+         VALUES (?, ?, 'solana', 'TRANSFER', '100000000', 'addr', 'PENDING', ?)`,
+      )
+      .run(txId, walletId, now);
+
+    // evaluateAndReserve: usdAmount=20 -> cumulative = 90 + 20 = 110 > 100 daily_limit
+    const result = engineWithSqlite.evaluateAndReserve(
+      walletId,
+      tx('100000000'),
+      txId,
+      20, // usdAmount = $20
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('APPROVAL');
+    expect(result.approvalReason).toBe('cumulative_daily');
+  });
+
+  it('CMPT-03b: BATCH evaluation ignores token_limits (tokenContext undefined)', async () => {
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',     // 1B raw instant
+        notify_max: '10000000000',     // 10B raw notify
+        delay_max: '50000000000',      // 50B raw delay
+        delay_seconds: 300,
+        token_limits: {
+          'native:solana': {
+            instant_max: '0.0001',     // Very restrictive token limit
+            notify_max: '0.001',
+            delay_max: '0.01',
+          },
+        },
+      }),
+      priority: 10,
+    });
+
+    // Batch of 2 TRANSFERs summing to 5 SOL = 5B lamports
+    // Via raw: 1B < 5B <= 10B -> NOTIFY
+    // token_limits should NOT interfere (BATCH has no tokenContext)
+    const result = await engine.evaluateBatch(walletId, [
+      { type: 'TRANSFER', amount: '2000000000', toAddress: 'Addr1', chain: 'solana' },
+      { type: 'TRANSFER', amount: '3000000000', toAddress: 'Addr2', chain: 'solana' },
+    ]);
+
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('NOTIFY');
   });
 });

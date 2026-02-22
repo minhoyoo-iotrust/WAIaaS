@@ -55,9 +55,9 @@ const POLICY_TYPES = [
 
 const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   SPENDING_LIMIT: {
-    instant_max: '1000000',
-    notify_max: '5000000',
-    delay_max: '10000000',
+    instant_max_usd: '10',
+    notify_max_usd: '100',
+    delay_max_usd: '1000',
     delay_seconds: 300,
     approval_timeout: 3600,
   },
@@ -82,12 +82,48 @@ function validateRules(type: string, rules: Record<string, unknown>): Record<str
   const errors: Record<string, string> = {};
 
   if (type === 'SPENDING_LIMIT') {
-    if (!rules.instant_max || !/^\d+$/.test(rules.instant_max as string))
+    // Raw fields are optional -- validate only if provided
+    if (rules.instant_max && !/^\d+$/.test(rules.instant_max as string))
       errors.instant_max = 'Positive integer required';
-    if (!rules.notify_max || !/^\d+$/.test(rules.notify_max as string))
+    if (rules.notify_max && !/^\d+$/.test(rules.notify_max as string))
       errors.notify_max = 'Positive integer required';
-    if (!rules.delay_max || !/^\d+$/.test(rules.delay_max as string))
+    if (rules.delay_max && !/^\d+$/.test(rules.delay_max as string))
       errors.delay_max = 'Positive integer required';
+
+    // At least one tier source must be present (raw, USD, or token_limits)
+    const hasRaw = !!(rules.instant_max || rules.notify_max || rules.delay_max);
+    const hasUsd = !!(rules.instant_max_usd || rules.notify_max_usd || rules.delay_max_usd);
+    const tokenLimits = rules.token_limits as Record<string, unknown> | undefined;
+    const hasTokenLimits = tokenLimits && Object.keys(tokenLimits).length > 0;
+    if (!hasRaw && !hasUsd && !hasTokenLimits) {
+      errors.__form = 'At least one of USD limits, token limits, or raw limits required';
+    }
+
+    // Validate token_limits entries if present
+    if (tokenLimits) {
+      const decimalRegex = /^\d+(\.\d+)?$/;
+      for (const [key, entry] of Object.entries(tokenLimits)) {
+        const tl = entry as { instant_max?: string; notify_max?: string; delay_max?: string };
+        if (!tl || typeof tl !== 'object') continue;
+        if (tl.instant_max && !decimalRegex.test(tl.instant_max))
+          errors[`token_limits.${key}.instant_max`] = 'Must be a non-negative decimal';
+        if (tl.notify_max && !decimalRegex.test(tl.notify_max))
+          errors[`token_limits.${key}.notify_max`] = 'Must be a non-negative decimal';
+        if (tl.delay_max && !decimalRegex.test(tl.delay_max))
+          errors[`token_limits.${key}.delay_max`] = 'Must be a non-negative decimal';
+        // Ordering: instant <= notify <= delay
+        const im = parseFloat(tl.instant_max || '0');
+        const nm = parseFloat(tl.notify_max || '0');
+        const dm = parseFloat(tl.delay_max || '0');
+        if (im > nm) {
+          errors[`token_limits.${key}.instant_max`] = 'Must be <= Notify Max';
+        }
+        if (nm > dm) {
+          errors[`token_limits.${key}.notify_max`] = 'Must be <= Delay Max';
+        }
+      }
+    }
+
     const ds = Number(rules.delay_seconds);
     if (rules.delay_seconds === undefined || rules.delay_seconds === '' || Number.isNaN(ds) || ds < 60)
       errors.delay_seconds = 'Minimum 60 seconds';
@@ -785,6 +821,7 @@ export default function PoliciesPage() {
                       }
                     }}
                     errors={formErrors.value}
+                    network={formNetwork.value}
                   />
                 )}
               </div>
@@ -866,6 +903,7 @@ export default function PoliciesPage() {
                         }
                       }}
                       errors={editFormErrors.value}
+                      network={editPolicy.value.network ?? ''}
                     />
                   )}
                 </div>

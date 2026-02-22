@@ -326,7 +326,7 @@ describe('APR-U06~U10: policy evaluation', () => {
 // ===========================================================================
 
 describe('APR-I01~I03: integration pipeline', () => {
-  it('APR-I01: EVM approve full pipeline -> allowed with correct tier (APPROVAL default)', async () => {
+  it('APR-I01: EVM approve full pipeline -> allowed with INSTANT (no APPROVE_TIER_OVERRIDE, no SPENDING_LIMIT)', async () => {
     const spender = '0xaaaa000000000000000000000000000000000001';
     insertPolicy(conn.sqlite, {
       type: 'APPROVED_SPENDERS',
@@ -343,11 +343,12 @@ describe('APR-I01~I03: integration pipeline', () => {
 
     const result = await engine.evaluate(walletId, tx);
     expect(result.allowed).toBe(true);
-    // Default APPROVE_TIER_OVERRIDE = APPROVAL
-    expect(result.tier).toBe('APPROVAL');
+    // Phase 236: No APPROVE_TIER_OVERRIDE -> falls through to SPENDING_LIMIT.
+    // No SPENDING_LIMIT -> INSTANT passthrough.
+    expect(result.tier).toBe('INSTANT');
   });
 
-  it('APR-I02: Solana approve full pipeline -> allowed with APPROVAL tier', async () => {
+  it('APR-I02: Solana approve full pipeline -> allowed with INSTANT (no APPROVE_TIER_OVERRIDE)', async () => {
     const solanaWalletId = await insertTestWallet(conn, {
       chain: 'solana',
       defaultNetwork: 'devnet',
@@ -363,7 +364,8 @@ describe('APR-I01~I03: integration pipeline', () => {
     const tx = approveTx(spender, '1000000', { chain: 'solana' });
     const result = await engine.evaluate(solanaWalletId, tx);
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL');
+    // Phase 236: No APPROVE_TIER_OVERRIDE -> INSTANT passthrough
+    expect(result.tier).toBe('INSTANT');
   });
 
   it('APR-I03: unapproved spender in pipeline -> denied with reason', async () => {
@@ -635,7 +637,9 @@ describe('APR-X01~X06: cross-validation + security-related functional', () => {
       approveTx(spender, '1000000'),
     );
     expect(approveResult.allowed).toBe(true);
-    expect(approveResult.tier).toBe('APPROVAL'); // Default APPROVE tier
+    // Phase 236: No APPROVE_TIER_OVERRIDE -> falls through to SPENDING_LIMIT.
+    // Amount '1000000' < instant_max '1000000000' -> INSTANT
+    expect(approveResult.tier).toBe('INSTANT');
 
     // TOKEN_TRANSFER uses ALLOWED_TOKENS
     const tokenResult = await engine.evaluate(

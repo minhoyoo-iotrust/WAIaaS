@@ -5,35 +5,48 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v27.3 SHIPPED — ready for next milestone
 
 ## Current Position
 
-Milestone: v27.2 CAIP-19 자산 식별 표준 -- SHIPPED 2026-02-22
-Status: Milestone complete, archived to .planning/milestones/
-Last activity: 2026-02-22 -- Milestone v27.2 archived
+Milestone: v27.3 토큰별 지출 한도 정책
+Phase: 238 (4 of 4) (Backward Compatibility + Documentation)
+Plan: 1 of 1 in current phase
+Status: Milestone v27.3 SHIPPED
+Last activity: 2026-02-22 -- Milestone v27.3 archived and tagged
+
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 53 milestones, 234 phases, 505 plans, 1,362 reqs, 4,396+ tests, ~157,584 LOC TS
+**Cumulative:** 54 milestones, 238 phases, 512 plans, 1,389 reqs, 4,396+ tests, ~158,416 LOC TS
 
-**v27.2 Velocity:**
-- Total plans completed: 9
-- Average duration: 4.0min
-- Total execution time: 0.60 hours
+**v27.3 Velocity:**
+- Total plans completed: 7/7
+- Average duration: 3.6min
+- Total execution time: 0.40 hours
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 235 | 1/1 | 3min | 3min |
+| 236 | 3/3 | 13min | 4.3min |
+| 237 | 2/2 | 5min | 2.5min |
+| 238 | 1/1 | 3min | 3min |
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared at milestone boundary — see PROJECT.md Key Decisions for full log)
+(Cleared — see PROJECT.md Key Decisions for full log)
 
 ### Blockers/Concerns
 
-- STO-03: Confirmation Worker RPC 콜백 미주입 (v27.1 known gap, unrelated to CAIP-19)
+- STO-03: Confirmation Worker RPC 콜백 미주입 (v27.1 known gap, unrelated to token_limits)
 
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Milestone v27.2 complete
+Stopped at: Milestone v27.3 archived and tagged
 Resume file: None

@@ -3,7 +3,7 @@ name: "WAIaaS Policies"
 description: "Policy engine CRUD: 12 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
-version: "2.5.0-rc"
+version: "2.6.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -162,25 +162,49 @@ Maximum spend per tier. Amounts are digit strings in the chain's smallest unit (
   "notify_max_usd": 100,
   "delay_max_usd": 1000,
   "daily_limit_usd": 500,
-  "monthly_limit_usd": 5000
+  "monthly_limit_usd": 5000,
+  "token_limits": {
+    "native:solana": {"instant_max": "1", "notify_max": "10", "delay_max": "50"},
+    "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {"instant_max": "100", "notify_max": "1000", "delay_max": "10000"}
+  }
 }
 ```
 
 | Field               | Type   | Required | Description                                          |
 | ------------------- | ------ | -------- | ---------------------------------------------------- |
-| `instant_max`       | string | Yes      | Max amount for INSTANT tier (digit string).          |
-| `notify_max`        | string | Yes      | Max amount for NOTIFY tier (digit string).           |
-| `delay_max`         | string | Yes      | Max amount for DELAY tier (digit string).            |
+| `instant_max`       | string | No       | Max amount for INSTANT tier (digit string, raw units). Optional when token_limits or USD thresholds are set. |
+| `notify_max`        | string | No       | Max amount for NOTIFY tier (digit string, raw units). Optional when token_limits or USD thresholds are set. |
+| `delay_max`         | string | No       | Max amount for DELAY tier (digit string, raw units). Optional when token_limits or USD thresholds are set. |
 | `delay_seconds`     | number | No       | Cooldown for DELAY tier (seconds). Min 60, default: 900. |
 | `instant_max_usd`   | number | No       | Max USD amount for INSTANT tier (oracle-based).      |
 | `notify_max_usd`    | number | No       | Max USD amount for NOTIFY tier.                      |
 | `delay_max_usd`     | number | No       | Max USD amount for DELAY tier.                       |
 | `daily_limit_usd`   | number | No       | Cumulative USD spending limit in 24h rolling window. Exceeding escalates to APPROVAL. |
 | `monthly_limit_usd` | number | No       | Cumulative USD spending limit in 30d rolling window. Exceeding escalates to APPROVAL. |
+| `token_limits`      | object | No       | Token-specific spending limits in human-readable units, keyed by CAIP-19 asset identifier. See Token-Specific Limits below. |
 
 **Tier assignment:** Amount <= instant_max -> INSTANT. Amount <= notify_max -> NOTIFY. Amount <= delay_max -> DELAY. Amount > delay_max -> APPROVAL (requires owner approval). USD tiers (if set) are evaluated via price oracle and take precedence over native amount tiers.
 
 **Cumulative limit evaluation:** After per-transaction tier assignment, if `daily_limit_usd` or `monthly_limit_usd` is set, the engine checks rolling-window cumulative USD spending (confirmed + pending reserved amounts). If cumulative + current transaction exceeds the limit, the tier is escalated to APPROVAL regardless of the per-transaction tier. The `TX_APPROVAL_REQUIRED` notification includes a `reason` field (`per_tx`, `cumulative_daily`, or `cumulative_monthly`).
+
+**Token-specific limits (token_limits):**
+
+When `token_limits` is set, the policy engine evaluates transaction amounts against per-token thresholds in human-readable units (e.g., SOL, USDC) instead of raw smallest-unit amounts. Each key is a CAIP-19 asset identifier or native token shorthand.
+
+**Key format:**
+- `"native"` -- native token of the policy's network (only valid when policy has `network` set)
+- `"native:{chain}"` -- native token of a specific chain (e.g., `"native:solana"` for SOL, `"native:ethereum"` for ETH)
+- `"{caip19}"` -- CAIP-19 asset ID for a specific token (e.g., `"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"` for USDC on Solana)
+
+**Matching priority:** exact CAIP-19 asset ID > `native:{chain}` > `native` shorthand > raw field fallback.
+
+**Value format:** Each value is an object with `instant_max`, `notify_max`, `delay_max` as human-readable decimal strings (e.g., `"1.5"` for 1.5 SOL, `"1000"` for 1000 USDC).
+
+**Fallback behavior:** When a transaction's token does not match any `token_limits` key, the engine falls back to raw fields (`instant_max`/`notify_max`/`delay_max`). When raw fields are also absent, the native tier defaults to INSTANT (most permissive), and USD thresholds alone determine the tier.
+
+**Scope:** `token_limits` applies to TRANSFER, TOKEN_TRANSFER, and APPROVE transactions. CONTRACT_CALL and BATCH use raw/USD evaluation only.
+
+**Interaction with USD and cumulative limits:** Per-transaction tier = `max(USD tier, token/native tier)`. Cumulative limits (`daily_limit_usd`, `monthly_limit_usd`) are evaluated independently after per-transaction tier assignment and are unaffected by `token_limits`.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
@@ -582,6 +606,19 @@ curl -s -X POST http://localhost:3100/v1/policies \
 ```
 
 When cumulative spending exceeds the limit, the transaction is escalated to APPROVAL. Owner can then approve, reject, or increase the limit.
+
+### Set token-specific spending limits
+
+```bash
+# Set per-token limits: 1 SOL instant, 10 SOL notify, 50 SOL delay for native Solana
+# Plus 100 USDC instant, 1000 USDC notify, 10000 USDC delay for USDC
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"token_limits":{"native:solana":{"instant_max":"1","notify_max":"10","delay_max":"50"},"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v":{"instant_max":"100","notify_max":"1000","delay_max":"10000"}},"daily_limit_usd":500}}'
+```
+
+Native SOL transfers of <= 1 SOL are INSTANT. USDC transfers of <= 100 USDC are INSTANT. Both respect the $500/day cumulative limit.
 
 ---
 

@@ -1380,3 +1380,13 @@
 
 ---
 
+
+## v27.3 토큰별 지출 한도 정책 (Shipped: 2026-02-22)
+
+**Phases completed:** 153 phases, 323 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

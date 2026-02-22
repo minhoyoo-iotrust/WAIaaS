@@ -48,9 +48,9 @@ import type { SettingsService } from '../infrastructure/settings/settings-servic
 // ---------------------------------------------------------------------------
 
 interface SpendingLimitRules {
-  instant_max: string;
-  notify_max: string;
-  delay_max: string;
+  instant_max?: string;   // Phase 235: optional (was required, now optional for USD-only/token_limits-only policies)
+  notify_max?: string;    // Phase 235: optional
+  delay_max?: string;     // Phase 235: optional
   delay_seconds: number;
   // Phase 127: USD 기준 (optional)
   instant_max_usd?: number;
@@ -59,6 +59,8 @@ interface SpendingLimitRules {
   // Phase 136: 누적 USD 한도 (optional)
   daily_limit_usd?: number;
   monthly_limit_usd?: number;
+  // Phase 235: 토큰별 한도 (optional)
+  token_limits?: Record<string, { instant_max: string; notify_max: string; delay_max: string }>;
 }
 
 interface WhitelistRules {
@@ -92,6 +94,35 @@ interface ApproveTierOverrideRules {
 
 /** Threshold for detecting "unlimited" approve amounts. */
 const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
+
+// Phase 236: Native token decimal places for human-readable conversion
+const NATIVE_DECIMALS: Record<string, number> = {
+  solana: 9,
+  ethereum: 18,
+};
+
+/**
+ * Parse a human-readable decimal string (e.g. "1.5", "1000") to raw bigint units.
+ * Multiplies the value by 10^decimals for precise BigInt comparison.
+ *
+ * Examples:
+ *   parseDecimalToBigInt("1.5", 9) -> 1500000000n (1.5 SOL in lamports)
+ *   parseDecimalToBigInt("1000", 6) -> 1000000000n (1000 USDC in raw)
+ */
+function parseDecimalToBigInt(value: string, decimals: number): bigint {
+  const parts = value.split('.');
+  const integerPart = parts[0] ?? '0';
+  let fractionalPart = parts[1] ?? '';
+
+  // Pad or truncate fractional part to exactly `decimals` digits
+  if (fractionalPart.length > decimals) {
+    fractionalPart = fractionalPart.slice(0, decimals);
+  } else {
+    fractionalPart = fractionalPart.padEnd(decimals, '0');
+  }
+
+  return BigInt(integerPart + fractionalPart);
+}
 
 interface PolicyRow {
   id: string;
@@ -128,6 +159,8 @@ interface TransactionParam {
   spenderAddress?: string;
   /** Approve amount in raw units for APPROVE_AMOUNT_LIMIT evaluation (APPROVE only). */
   approveAmount?: string;
+  /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
+  tokenDecimals?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,11 +282,14 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
     const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
     if (approveTierResult !== null) {
-      return approveTierResult; // FINAL result, skips SPENDING_LIMIT
+      return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
     }
 
     // Step 5: Evaluate SPENDING_LIMIT (tier classification)
-    const spendingResult = this.evaluateSpendingLimit(resolved, transaction.amount);
+    // Phase 236: Build tokenContext from transaction for token_limits evaluation
+    const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
+    const tokenContext = this.buildTokenContext(transaction, spendingPolicy);
+    const spendingResult = this.evaluateSpendingLimit(resolved, transaction.amount, undefined, tokenContext);
     if (spendingResult !== null) {
       return spendingResult;
     }
@@ -356,6 +392,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Evaluate aggregate against SPENDING_LIMIT (Phase 127: pass batchUsdAmount for USD evaluation)
+    // BATCH: token_limits not applicable -- aggregate native amount evaluated via raw/USD only (tokenContext intentionally omitted)
     const amountTier = this.evaluateSpendingLimit(resolved, totalNativeAmount.toString(), batchUsdAmount);
     let finalTier = amountTier ? (amountTier.tier as PolicyTier) : ('INSTANT' as PolicyTier);
 
@@ -543,7 +580,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
       const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
       if (approveTierResult !== null) {
-        return approveTierResult; // FINAL result, skips SPENDING_LIMIT
+        return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
       }
 
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
@@ -566,10 +603,13 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         const effectiveAmount = reservedTotal + requestAmount;
 
         // Evaluate with effective amount (reserved + current) via unified evaluateSpendingLimit
+        // Phase 236: Build tokenContext for token_limits evaluation
+        const tokenContext = this.buildTokenContext(transaction, spendingPolicy);
         const spendingResult = this.evaluateSpendingLimit(
           resolved,
           effectiveAmount.toString(),
           usdAmount,
+          tokenContext,
         );
 
         // Step 6: Cumulative USD limit evaluation (daily/monthly rolling window)
@@ -1238,11 +1278,14 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    *
    * Logic:
    * - Only applies to APPROVE transaction type
-   * - If no APPROVE_TIER_OVERRIDE policy exists: return APPROVAL tier (default: Owner approval required)
-   * - If policy exists: return configured tier
-   * - This is a FINAL result -- skips SPENDING_LIMIT entirely for APPROVE transactions
+   * - If APPROVE_TIER_OVERRIDE policy exists: return configured tier (FINAL, skips SPENDING_LIMIT)
+   * - If no APPROVE_TIER_OVERRIDE policy exists: return null (Phase 236: fall through to SPENDING_LIMIT
+   *   for token_limits evaluation; if no SPENDING_LIMIT either, INSTANT passthrough)
    *
-   * Returns PolicyEvaluation (always returns result for APPROVE type, null for others).
+   * Phase 236 change: Previously defaulted to APPROVAL when no override policy existed.
+   * Now falls through to SPENDING_LIMIT to allow token_limits evaluation for APPROVE transactions.
+   *
+   * Returns PolicyEvaluation if override policy exists, null otherwise.
    */
   private evaluateApproveTierOverride(
     resolved: PolicyRow[],
@@ -1254,8 +1297,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const approveTierPolicy = resolved.find((p) => p.type === 'APPROVE_TIER_OVERRIDE');
 
     if (!approveTierPolicy) {
-      // Default: APPROVAL tier (Owner approval required for approvals)
-      return { allowed: true, tier: 'APPROVAL' as PolicyTier };
+      // Phase 236: No override -> fall through to SPENDING_LIMIT for token_limits evaluation
+      return null;
     }
 
     // Parse rules
@@ -1273,25 +1316,48 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    *
    * Phase 127: usdAmount가 전달되고 rules에 USD 임계값이 설정되어 있으면,
    * 네이티브 티어와 USD 티어 중 더 보수적인(높은) 티어를 채택한다.
+   *
+   * Phase 236: tokenContext가 전달되고 rules에 token_limits가 설정되어 있으면,
+   * evaluateTokenTier()를 사용하여 토큰별 human-readable 한도를 평가한다.
    */
   private evaluateSpendingLimit(
     resolved: PolicyRow[],
     amount: string,
     usdAmount?: number,
+    tokenContext?: {
+      type: string;
+      tokenAddress?: string;
+      tokenDecimals?: number;
+      chain?: string;
+      assetId?: string;
+      policyNetwork?: string;
+    },
   ): PolicyEvaluation | null {
     const spending = resolved.find((p) => p.type === 'SPENDING_LIMIT');
     if (!spending) return null;
 
     const rules: SpendingLimitRules = JSON.parse(spending.rules);
 
-    // 1. 네이티브 기준 티어 (기존 로직)
-    const nativeTier = this.evaluateNativeTier(BigInt(amount), rules);
+    // 1. Token-specific tier (Phase 236)
+    let tokenTier: PolicyTier = 'INSTANT';
+    if (tokenContext && rules.token_limits) {
+      const tokenResult = this.evaluateTokenTier(BigInt(amount), rules, tokenContext);
+      if (tokenResult !== null) {
+        tokenTier = tokenResult;
+      } else {
+        // No token_limits match -> fall back to raw fields
+        tokenTier = this.evaluateNativeTier(BigInt(amount), rules);
+      }
+    } else {
+      // No tokenContext or no token_limits -> use raw fields (existing behavior)
+      tokenTier = this.evaluateNativeTier(BigInt(amount), rules);
+    }
 
     // 2. USD 기준 티어 (Phase 127)
-    let finalTier = nativeTier;
+    let finalTier = tokenTier;
     if (usdAmount !== undefined && usdAmount > 0 && this.hasUsdThresholds(rules)) {
       const usdTier = this.evaluateUsdTier(usdAmount, rules);
-      finalTier = maxTier(nativeTier, usdTier);
+      finalTier = maxTier(tokenTier, usdTier);
     }
 
     // delaySeconds는 최종 tier가 DELAY일 때만 포함
@@ -1306,22 +1372,90 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   }
 
   /**
+   * Evaluate token-specific tier using token_limits with CAIP-19 key matching.
+   * Returns PolicyTier if a matching token limit is found, null otherwise (-> raw fallback).
+   *
+   * Matching priority:
+   * 1. Exact CAIP-19 asset ID match (TOKEN_TRANSFER, APPROVE)
+   * 2. "native:{chain}" match (TRANSFER)
+   * 3. "native" shorthand match (TRANSFER, only when policy has network set)
+   * 4. No match -> return null (caller falls back to raw fields)
+   */
+  private evaluateTokenTier(
+    amountBig: bigint,
+    rules: SpendingLimitRules,
+    tokenContext: {
+      type: string;
+      tokenAddress?: string;
+      tokenDecimals?: number;
+      chain?: string;
+      assetId?: string;
+      policyNetwork?: string;
+    },
+  ): PolicyTier | null {
+    if (!rules.token_limits) return null;
+
+    // Skip for CONTRACT_CALL and BATCH (they don't use token_limits)
+    if (tokenContext.type === 'CONTRACT_CALL' || tokenContext.type === 'BATCH') {
+      return null;
+    }
+
+    let matchedLimit: { instant_max: string; notify_max: string; delay_max: string } | undefined;
+    let decimals: number | undefined;
+
+    if (tokenContext.type === 'TOKEN_TRANSFER' || tokenContext.type === 'APPROVE') {
+      // Try exact CAIP-19 asset ID match
+      if (tokenContext.assetId && rules.token_limits[tokenContext.assetId]) {
+        matchedLimit = rules.token_limits[tokenContext.assetId];
+        decimals = tokenContext.tokenDecimals;
+      }
+    } else if (tokenContext.type === 'TRANSFER') {
+      // Try "native:{chain}" match
+      const nativeChainKey = tokenContext.chain ? `native:${tokenContext.chain}` : undefined;
+      if (nativeChainKey && rules.token_limits[nativeChainKey]) {
+        matchedLimit = rules.token_limits[nativeChainKey];
+        decimals = tokenContext.chain ? NATIVE_DECIMALS[tokenContext.chain] : undefined;
+      }
+      // Fallback: try "native" shorthand (only when policy has a network set)
+      if (!matchedLimit && tokenContext.policyNetwork && rules.token_limits['native']) {
+        matchedLimit = rules.token_limits['native'];
+        decimals = tokenContext.chain ? NATIVE_DECIMALS[tokenContext.chain] : undefined;
+      }
+    }
+
+    if (!matchedLimit || decimals === undefined) {
+      return null; // No match -> caller falls back to raw fields
+    }
+
+    // Use fixed-point comparison: multiply limit by divisor (avoids precision loss)
+    const instantMaxRaw = parseDecimalToBigInt(matchedLimit.instant_max, decimals);
+    const notifyMaxRaw = parseDecimalToBigInt(matchedLimit.notify_max, decimals);
+    const delayMaxRaw = parseDecimalToBigInt(matchedLimit.delay_max, decimals);
+
+    if (amountBig <= instantMaxRaw) return 'INSTANT';
+    if (amountBig <= notifyMaxRaw) return 'NOTIFY';
+    if (amountBig <= delayMaxRaw) return 'DELAY';
+    return 'APPROVAL';
+  }
+
+  /**
    * Evaluate native amount tier (extracted from evaluateSpendingLimit).
+   * Phase 236: proper undefined guards for optional raw fields.
    */
   private evaluateNativeTier(amountBig: bigint, rules: SpendingLimitRules): PolicyTier {
-    const instantMax = BigInt(rules.instant_max);
-    const notifyMax = BigInt(rules.notify_max);
-    const delayMax = BigInt(rules.delay_max);
-
-    if (amountBig <= instantMax) {
-      return 'INSTANT';
-    } else if (amountBig <= notifyMax) {
-      return 'NOTIFY';
-    } else if (amountBig <= delayMax) {
-      return 'DELAY';
-    } else {
-      return 'APPROVAL';
+    // Phase 236: raw fields are now optional -- skip native tier if all undefined
+    if (rules.instant_max === undefined && rules.notify_max === undefined && rules.delay_max === undefined) {
+      return 'INSTANT'; // No raw thresholds -> permissive (USD/token_limits will handle)
     }
+
+    const instantMax = rules.instant_max !== undefined ? BigInt(rules.instant_max) : 0n;
+    const notifyMax = rules.notify_max !== undefined ? BigInt(rules.notify_max) : 0n;
+    const delayMax = rules.delay_max !== undefined ? BigInt(rules.delay_max) : 0n;
+
+    if (amountBig <= instantMax) return 'INSTANT';
+    if (amountBig <= notifyMax) return 'NOTIFY';
+    if (amountBig <= delayMax) return 'DELAY';
+    return 'APPROVAL';
   }
 
   /**
@@ -1347,5 +1481,30 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return 'DELAY';
     }
     return 'APPROVAL';
+  }
+
+  /**
+   * Build tokenContext from TransactionParam for evaluateTokenTier().
+   * Phase 236: Extracts relevant fields and attaches the policy's network.
+   */
+  private buildTokenContext(
+    transaction: TransactionParam,
+    spendingPolicy?: PolicyRow,
+  ): {
+    type: string;
+    tokenAddress?: string;
+    tokenDecimals?: number;
+    chain?: string;
+    assetId?: string;
+    policyNetwork?: string;
+  } {
+    return {
+      type: transaction.type,
+      tokenAddress: transaction.tokenAddress,
+      tokenDecimals: transaction.tokenDecimals,
+      chain: transaction.chain,
+      assetId: transaction.assetId,
+      policyNetwork: spendingPolicy?.network ?? undefined,
+    };
   }
 }

@@ -304,23 +304,25 @@ describe('PolicyFormRouter - type-specific forms', () => {
     });
   });
 
-  it('validates SPENDING_LIMIT: shows error for empty instant_max', async () => {
+  it('validates SPENDING_LIMIT: raw fields are optional when USD defaults present', async () => {
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce(mockPolicies)
+      .mockResolvedValueOnce(mockPolicies);
+    vi.mocked(apiPost).mockResolvedValueOnce({ id: 'ok' });
+
     await renderAndOpenForm();
 
-    // Clear instant_max (default has a value)
+    // Clear instant_max (raw fields are optional since v27.3)
     const instantInput = screen.getByLabelText(/Instant Max \(lamports\/wei\)/i) as HTMLInputElement;
     fireEvent.input(instantInput, { target: { value: '' } });
 
-    // Click Create
+    // Click Create — should succeed because USD defaults are present
     fireEvent.click(screen.getByText('Create'));
 
-    // Validation error should appear
     await waitFor(() => {
-      expect(screen.getByText('Positive integer required')).toBeTruthy();
+      expect(vi.mocked(apiPost)).toHaveBeenCalled();
     });
-
-    // apiPost should NOT have been called
-    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
   });
 
   it('validates WHITELIST: shows error for empty address list', async () => {

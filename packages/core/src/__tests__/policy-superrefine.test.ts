@@ -380,5 +380,234 @@ describe('CreatePolicyRequestSchema superRefine validation', () => {
       });
       expect(result.success).toBe(true);
     });
+
+    // -----------------------------------------------------------------------
+    // SPENDING_LIMIT token_limits (Phase 235)
+    // -----------------------------------------------------------------------
+
+    describe('SPENDING_LIMIT token_limits', () => {
+      // SCHM-01: TokenLimitSchema human-readable amounts
+      it('token_limits with valid decimal strings ("1.5", "1000", "0.001") passes validation', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '1.5', notify_max: '10', delay_max: '100.5' },
+            },
+            delay_seconds: 900,
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('token_limits with integer strings ("1", "100", "1000") passes validation', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:ethereum': { instant_max: '1', notify_max: '100', delay_max: '1000' },
+            },
+            delay_seconds: 900,
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      // SCHM-02: raw fields optional
+      it('accepts SpendingLimitRules with only USD fields (no raw)', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            instant_max_usd: 100,
+            notify_max_usd: 500,
+            delay_max_usd: 5000,
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('accepts SpendingLimitRules with only token_limits (no raw, no USD)', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '1', notify_max: '5', delay_max: '50' },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('still accepts legacy raw-only policies (backward compat)', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            instant_max: '1000000',
+            notify_max: '5000000',
+            delay_max: '10000000',
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      // SCHM-03: token_limits CAIP-19 record keys
+      it('accepts CAIP-19 asset ID as token_limits key', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': {
+                instant_max: '100',
+                notify_max: '500',
+                delay_max: '1000',
+              },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('accepts "native" shorthand key', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              native: { instant_max: '1', notify_max: '10', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('accepts "native:solana" key', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '1', notify_max: '10', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      it('accepts "native:ethereum" key', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:ethereum': { instant_max: '1', notify_max: '10', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      // SCHM-04: at least one limit source required (superRefine)
+      it('rejects when no USD, no token_limits, and no raw fields', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            delay_seconds: 900,
+          },
+        });
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          const paths = result.error.issues.map((i) => i.path.join('.'));
+          expect(paths.some((p) => p.startsWith('rules'))).toBe(true);
+        }
+      });
+
+      // SCHM-05: ordering validation within token_limits
+      it('rejects token_limits where instant_max > notify_max', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '100', notify_max: '10', delay_max: '1000' },
+            },
+          },
+        });
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects token_limits where notify_max > delay_max', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '1', notify_max: '1000', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(false);
+      });
+
+      it('accepts token_limits where instant_max == notify_max == delay_max', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '100', notify_max: '100', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+
+      // SCHM-06: token_limits key format validation
+      it('rejects invalid token_limits key (random string)', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'invalid-key': { instant_max: '1', notify_max: '10', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects token_limits key with invalid CAIP-19 format', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'not:valid/caip:19:format': { instant_max: '1', notify_max: '10', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects token_limits key "native:invalid_chain" (chain must be "solana" or "ethereum")', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:bitcoin': { instant_max: '1', notify_max: '10', delay_max: '100' },
+            },
+          },
+        });
+        expect(result.success).toBe(false);
+      });
+
+      it('accepts multiple token_limits entries simultaneously', () => {
+        const result = CreatePolicyRequestSchema.safeParse({
+          type: 'SPENDING_LIMIT',
+          rules: {
+            token_limits: {
+              'native:solana': { instant_max: '1', notify_max: '10', delay_max: '100' },
+              'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': {
+                instant_max: '100',
+                notify_max: '500',
+                delay_max: '1000',
+              },
+            },
+          },
+        });
+        expect(result.success).toBe(true);
+      });
+    });
   });
 });
