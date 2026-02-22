@@ -1,270 +1,325 @@
-# Feature Landscape: Incoming Transaction Monitoring Implementation
+# Feature Landscape: CAIP-19 Asset Identification Standard
 
-**Domain:** Crypto Wallet Incoming Transaction Monitoring (WAIaaS v27.1 Implementation)
-**Researched:** 2026-02-21
-**Confidence:** HIGH (design doc 76 verified against Solana RPC docs, viem docs, industry patterns)
+**Domain:** CAIP-19 Asset Identification for WAIaaS (m27-02)
+**Researched:** 2026-02-22
+**Confidence:** HIGH (official CAIP specs verified, existing x402 codebase cross-referenced)
 
 ---
 
 ## Context
 
-WAIaaS v27.0 delivered design doc 76 (~2,300 lines). v27.1 implements it.
+WAIaaS identifies tokens/assets differently across contexts: transaction requests use `{ address, decimals, symbol }` + `network`, the price oracle cache uses `${chain}:${address}`, the token registry uses `(network, address)` unique index, ALLOWED_TOKENS policy uses `tokens[].address` with optional `chain`, and x402 already uses partial CAIP-2 (`CAIP2_TO_NETWORK` 13 entries). This fragmentation prevents L2 token price resolution and creates ambiguity when the same contract address exists on multiple EVM chains.
 
-**Existing features (already built):**
-- Outgoing TX pipeline (6-stage + sign-only, 8-state machine, 5 discriminated union types)
-- EventBus with 28 notification event types, 4 notification channels + wallet app channel
-- KillSwitch 3-state, AutoStop 4-rule, BalanceMonitor (fail-soft pattern)
-- REST API 60+ endpoints with cursor pagination (UUID v7 cursor pattern established)
-- TypeScript/Python SDK, MCP 18+ tools
-- Admin UI with 7 functional menus, SettingsService hot-reload
-- Token registry (5 EVM mainnet 24 built-in tokens + custom CRUD)
-- BackgroundWorkers periodic scheduler (wal-checkpoint, session-cleanup, version-check)
-- DaemonLifecycle Step 4c fail-soft initialization pattern
+**Existing foundations (already built):**
+- `CAIP2_TO_NETWORK` / `NETWORK_TO_CAIP2` bidirectional mapping (13 entries) in `packages/core/src/interfaces/x402.types.ts`
+- `parseCaip2(caip2Network)` function with namespace/reference extraction
+- `resolveX402Network(caip2)` chain+network resolution
+- `CAIP2_CHAIN_IDS` in WC session service for WalletConnect v2 pairing
+- `TokenRefSchema` with `{ address, symbol, decimals, chain }` (no `network` field)
+- `buildCacheKey(chain, address)` -> `${chain}:${normalizedAddress}`
+- `AllowedTokensRules` with `tokens: Array<{ address: string }>` (no chain/network scoping)
+- 13 NetworkType values: 3 Solana (`mainnet`, `devnet`, `testnet`) + 10 EVM
 
-**Design doc 76 decisions already locked (19 decisions D-01 through D-19).**
-This feature landscape covers the IMPLEMENTATION scope, complexity, and dependency ordering.
+---
+
+## Verified CAIP Standard Reference
+
+### CAIP-2 Chain IDs for WAIaaS 13 Networks (HIGH confidence)
+
+Verified against official ChainAgnostic namespace specs and existing codebase `CAIP2_TO_NETWORK`.
+
+| WAIaaS NetworkType | CAIP-2 Chain ID | Source |
+|--------------------|-----------------|--------|
+| `mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | ChainAgnostic/namespaces/solana/caip2 |
+| `devnet` | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | ChainAgnostic/namespaces/solana/caip2 |
+| `testnet` | `solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z` | ChainAgnostic/namespaces/solana/caip2 |
+| `ethereum-mainnet` | `eip155:1` | EIP-155, ChainAgnostic/namespaces/eip155/caip2 |
+| `ethereum-sepolia` | `eip155:11155111` | ethereum-lists/chains |
+| `polygon-mainnet` | `eip155:137` | ethereum-lists/chains |
+| `polygon-amoy` | `eip155:80002` | ethereum-lists/chains |
+| `arbitrum-mainnet` | `eip155:42161` | ethereum-lists/chains |
+| `arbitrum-sepolia` | `eip155:421614` | ethereum-lists/chains |
+| `optimism-mainnet` | `eip155:10` | ethereum-lists/chains |
+| `optimism-sepolia` | `eip155:11155420` | ethereum-lists/chains |
+| `base-mainnet` | `eip155:8453` | ethereum-lists/chains |
+| `base-sepolia` | `eip155:84532` | ethereum-lists/chains |
+
+All 13 values match the existing `CAIP2_TO_NETWORK` in `x402.types.ts`. No corrections needed.
+
+Solana genesis hash derivation: `truncate(genesisHash, 32)` where the full genesis hash is 44-char Base58btc. The reference values are first 32 characters of the base58-encoded genesis hash, verifiable via `getGenesisHash` JSON-RPC call.
+
+### CAIP-19 Asset Namespaces (HIGH confidence)
+
+| Namespace | Type | Standard | Registration Status | WAIaaS Usage |
+|-----------|------|----------|---------------------|--------------|
+| `slip44` | Native fungible (cross-chain) | CAIP-20 | Officially registered in CASA | ETH, SOL native assets |
+| `erc20` | EVM fungible tokens | EIP-155 namespace profile | Officially registered | ERC-20 tokens (10 EVM networks) |
+| `erc721` | EVM non-fungible tokens | EIP-155 namespace profile | Officially registered | NOT used (WAIaaS does not handle NFTs) |
+| `token` | Solana fungible tokens | Solana namespace profile | Officially registered in CASA Solana namespace | SPL + Token-2022 fungible tokens |
+| `nft` | Solana non-fungible tokens | Solana namespace profile | Officially registered | NOT used (WAIaaS does not handle NFTs) |
+
+**Critical finding on Solana namespace:** The official ChainAgnostic Solana namespace uses `token` (NOT `spl`) as the asset namespace for fungible tokens. This is explicitly documented at `namespaces.chainagnostic.org/solana/caip19` with example: `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (USDC).
+
+**Token-2022 handling:** The Solana CAIP-19 namespace spec does NOT mention Token-2022 separately. Both SPL Token Program and Token-2022 tokens are identified by their mint account address. Since both programs produce mint accounts that serve as unique identifiers, the `token` namespace covers both. Token-2022 is a drop-in replacement -- same instruction set + extensions. No separate namespace needed.
+
+### SLIP-44 Native Asset Coin Types (HIGH confidence)
+
+| Coin | SLIP-44 Index | CAIP-19 Asset Type (mainnet) | Source |
+|------|---------------|------------------------------|--------|
+| ETH | 60 | `eip155:1/slip44:60` | CAIP-20, SatoshiLabs SLIP registry |
+| SOL | 501 | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501` | CAIP-20, SatoshiLabs SLIP registry |
+| MATIC | 966 | `eip155:137/slip44:966` | SatoshiLabs SLIP registry |
+| BTC | 0 | `bip122:000000000019d6689c085ae165831e93/slip44:0` | CAIP-20 (reference only, WAIaaS does not support) |
+
+**L2 native asset note:** Arbitrum, Optimism, and Base use ETH as native gas token. Their CAIP-19 native asset IDs use `slip44:60`:
+- Arbitrum ETH: `eip155:42161/slip44:60`
+- Optimism ETH: `eip155:10/slip44:60`
+- Base ETH: `eip155:8453/slip44:60`
+
+Polygon uses MATIC (now POL) with `slip44:966` on mainnet. POL was registered in SLIP-44 under the same index 966.
+
+### CAIP-19 Syntax Rules (HIGH confidence)
+
+From the official CAIP-19 specification:
+
+```
+asset_type  = chain_id "/" asset_namespace ":" asset_reference
+asset_id    = asset_type "/" token_id
+chain_id    = namespace ":" reference
+
+namespace        = [-a-z0-9]{3,8}
+reference        = [-_a-zA-Z0-9]{1,32}
+asset_namespace  = [-a-z0-9]{3,8}
+asset_reference  = [-.%a-zA-Z0-9]{1,128}
+token_id         = [-.%a-zA-Z0-9]{1,78}
+```
+
+Maximum total length for `asset_type`: 8 (namespace) + 1 (:) + 32 (reference) + 1 (/) + 8 (asset_namespace) + 1 (:) + 128 (asset_reference) = **179 characters**.
+
+For WAIaaS, the longest practical CAIP-19 would be a Solana token:
+`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` = **90 characters**.
+DB column size of `TEXT` (SQLite) handles this natively.
 
 ---
 
 ## Table Stakes
 
-Features users expect from any incoming TX monitoring system. Missing = feature feels incomplete.
+Features users expect from a CAIP-19 implementation. Missing = the unification effort feels incomplete.
 
-| Feature | Why Expected | Complexity | Depends On | Design Doc Section |
-|---------|--------------|------------|------------|-------------------|
-| Solana SOL native receive detection | Core use case -- agents receive SOL payments | Med | IChainSubscriber interface, SolanaIncomingSubscriber | SS3.2.1 |
-| Solana SPL token receive detection | SPL tokens are primary Solana token standard | Med | SOL detection (shared parser), preTokenBalances/postTokenBalances | SS3.2.2 |
-| Solana Token-2022 detection | Token-2022 is Solana's evolving token standard | Low | SPL detection (same mechanism, no separate code) | SS3.3 |
-| EVM native ETH receive detection | Core use case -- agents receive ETH payments | Med | EvmIncomingSubscriber, getBlock(includeTransactions) | SS4.3 |
-| EVM ERC-20 Transfer event detection | ERC-20 tokens are primary EVM token standard | Med | ETH detection (shared subscriber), getLogs + Transfer topic | SS4.2 |
-| 2-phase status (DETECTED -> CONFIRMED) | Users need fast notification AND safe trigger semantics | Med | DB schema, confirmation background workers | SS1.3 |
-| Wallet-level opt-in toggle | Users must control which wallets are monitored (RPC cost) | Low | wallets.monitor_incoming column, PATCH API | SS2.2, SS8.4 |
-| Global enable/disable gate | Operator must control entire monitoring feature | Low | config.toml [incoming] section, SettingsService | SS8.1 |
-| Incoming TX notification (DETECTED) | Users need to know when funds arrive | Low | Existing NotificationService.notify(), new event type | SS6.2 |
-| Incoming TX history API | Users/agents query past incoming transactions | Med | incoming_transactions table, cursor pagination | SS7.1 |
-| DB migration v21 | Required infrastructure for all features | Low | Existing migration framework, 3 DDL statements | SS2.7 |
-| Config.toml [incoming] 7 keys | Operator configuration surface | Low | Existing config pattern, SettingsService registration | SS8.1-8.3 |
+| Feature | Why Expected | Complexity | Depends On | Notes |
+|---------|--------------|------------|------------|-------|
+| CAIP-2 parser/formatter | Foundation for all CAIP operations. Already partially exists in x402 code. | Low | None | Generalize existing `parseCaip2()` from x402.types.ts, add `formatCaip2()` |
+| CAIP-19 parser/formatter | Core CAIP-19 operations: parse URI into components, format components into URI | Low | CAIP-2 parser | New `parseCaip19()` -> `{ chainId, assetNamespace, assetReference }`, `formatCaip19()` |
+| Zod validation schemas | WAIaaS uses Zod SSoT. CAIP identifiers need Zod-level validation. | Low | Syntax rules | `Caip2Schema`, `Caip19AssetTypeSchema` with regex from spec |
+| NetworkType <-> CAIP-2 bidirectional map | Consolidate existing `CAIP2_TO_NETWORK` + `CAIP2_CHAIN_IDS` duplicates into single SSoT | Low | CAIP-2 parser | Move from x402.types.ts to shared `caip/network-map.ts`. Eliminate WC service duplicate |
+| Native asset ID helper | `nativeAssetId('ethereum-mainnet')` -> `'eip155:1/slip44:60'` without manual construction | Low | Network map, SLIP-44 table | Lookup table: `{ 'solana': 501, 'ethereum': 60, 'polygon': 966 }` |
+| Token asset ID helper | `tokenAssetId('ethereum-mainnet', '0xa0b8...')` -> `'eip155:1/erc20:0xa0b8...'` | Low | Network map, chain->namespace map | Auto-select `erc20` for EVM, `token` for Solana |
+| `isNativeAsset()` predicate | Distinguish native assets (slip44) from token assets in pipeline logic | Low | CAIP-19 parser | Check `assetNamespace === 'slip44'` |
+| EVM address normalization in CAIP-19 | EVM addresses must be lowercase in CAIP-19 (no EIP-55 checksum per CAIP-19 spec guidance) | Low | CAIP-19 formatter | `address.toLowerCase()` for EVM. Solana base58 kept as-is (case-sensitive) |
+| TokenRef `network` field addition | Current `TokenRef` lacks `network`, making L2 tokens indistinguishable | Low | None (schema change) | Add `network: NetworkTypeEnum.optional()` to `TokenRefSchema` |
+| TokenRef `assetId` optional field | Bridge between old format and CAIP-19. Enables gradual migration. | Low | CAIP-19 schema | Add `assetId: Caip19AssetTypeSchema.optional()` to `TokenRefSchema` |
+| Price oracle cache key migration | `buildCacheKey` must distinguish L2 tokens. Current `${chain}:${address}` is ambiguous for same-address tokens on different L2s | Med | Network map, TokenRef.network | Change to `${network}:${normalizedAddress}` or CAIP-19. CoinGecko platform mapping must change accordingly |
+| CoinGecko platform ID from CAIP-2 | CoinGecko uses platform IDs (`polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base`). Need CAIP-2 -> platform mapping for L2 tokens | Med | Network map | New mapping table: `eip155:137` -> `polygon-pos`, etc. |
+| Token registry DB `asset_id` column | token_registry needs a computed CAIP-19 `asset_id` column for unified lookup | Med | CAIP-19 formatter, DB migration | ALTER TABLE + backfill migration. Existing `(network, address)` -> CAIP-19 auto-generation |
+| Transaction request `assetId` field | API consumers should be able to specify tokens via CAIP-19 in TOKEN_TRANSFER requests | Med | CAIP-19 parser, pipeline integration | Optional field on `TokenInfoSchema`. When present, `address` extracted from `assetId` |
+| ALLOWED_TOKENS `assetId` support | Policy rules should support CAIP-19 for chain+network+address scoped whitelisting | Med | CAIP-19 parser | Extend `AllowedTokensRules.tokens` entries to accept `assetId` alternative |
+| REST API response `assetId` fields | Token-related API responses include computed `assetId` for consumer convenience | Low | CAIP-19 formatter | Add to token registry responses, transaction detail responses |
+| MCP tool `assetId` parameters | MCP tools that reference tokens accept `assetId` as an alternative to `address` | Med | CAIP-19 parser | `send_token`, `approve_token`, `get_token_balance` tools |
+| SDK `assetId` support (TS + Python) | SDK methods accept and return `assetId` fields | Low | REST API changes | Follow existing SDK->API delegation pattern |
+| Skills file CAIP-19 documentation | AI agents need to understand CAIP-19 format to use it in MCP tool calls | Low | Feature implementation | Update `transactions.skill.md`, `policies.skill.md`, `quickstart.skill.md` |
 
-**Total table stakes: 12 features**
+**Total table stakes: 19 features**
 
 ---
 
 ## Differentiators
 
-Features that set WAIaaS apart from basic monitoring. Not expected, but high-value.
+Features that add value beyond basic CAIP-19 support. Not expected, but demonstrate maturity.
 
-| Feature | Value Proposition | Complexity | Depends On | Design Doc Section |
-|---------|-------------------|------------|------------|-------------------|
-| Suspicious deposit detection (3 rules) | Proactive security -- dust attacks, unknown tokens, large amounts | Med | IIncomingSafetyRule interface, PriceOracle integration, token_registry | SS6.5-6.6 |
-| WebSocket -> polling auto-fallback | Resilient monitoring even with unreliable WebSocket RPCs | High | SubscriptionMultiplexer, 3-state connection machine, reconnectLoop | SS5.1-5.2 |
-| Blind gap recovery | Zero TX loss during WebSocket disconnections | High | incoming_tx_cursors table, per-chain recovery logic | SS5.6 |
-| WebSocket multiplexer (shared connections) | Same chain+network wallets share one WS connection | Med | SubscriptionMultiplexer class, per-wallet subscription management | SS5.4 |
-| Summary aggregation API | Daily/weekly/monthly incoming TX summaries with USD values | Med | SQL aggregation, PriceOracle USD conversion, BigInt app-layer sum | SS7.6 |
-| Memory queue + batch flush | SQLite single-writer protection, high throughput | Med | IncomingTxQueue class, BackgroundWorkers flush worker | SS2.6 |
-| Heartbeat (Solana 60s ping) | Prevents 10-minute inactivity timeout on RPC providers | Low | SolanaHeartbeat class, timer.unref() | SS5.3 |
-| Dynamic subscription sync | Runtime add/remove wallets without restart | Med | IncomingTxMonitorService.syncSubscriptions(), eventBus wallet:activity | SS5.5 |
-| Hot-reload all 7 config keys | Change monitoring config without daemon restart | Low | HotReloadOrchestrator extension, existing pattern | SS8.5 |
-| MCP tools (2 new) | AI agents query incoming TX via MCP protocol | Low | Existing MCP tool pattern, REST API delegation | SS7.5 |
-| SDK methods (TS + Python) | Programmatic access to incoming TX data | Low | Existing SDK client pattern, REST API delegation | SS7.4 |
-| Retention policy (auto-delete) | Prevent unbounded DB growth | Low | BackgroundWorkers 1-hour task, configurable days | SS2.5 |
-| i18n message templates (en/ko) | Bilingual notification messages | Low | Existing message-templates.ts pattern | SS6.7 |
+| Feature | Value Proposition | Complexity | Depends On | Notes |
+|---------|-------------------|------------|------------|-------|
+| L2 token price resolution | Polygon USDC, Arbitrum USDC etc. currently cannot be priced because CoinGecko needs L2-specific platform IDs. CAIP-19 provides the missing network context. | Med | CoinGecko platform mapping, TokenRef.network | **Highest value differentiator.** Unlocks multi-chain DeFi price feeds |
+| x402 CAIP code consolidation | Eliminate duplicate CAIP-2 maps in x402.types.ts and wc-session-service.ts. Single SSoT in `caip/` module | Low | Network map | Reduces maintenance burden, eliminates divergence risk |
+| WalletConnect CAIP alignment | WalletConnect v2 uses CAIP-2 for session namespaces and CAIP-10 for accounts. Full CAIP-19 in WAIaaS aligns with WC Pay which uses CAIP-19 for asset identification | Low | Network map | Future WalletConnect Pay integration becomes trivial |
+| CAIP-19 policy scoping for L2 tokens | ALLOWED_TOKENS with `assetId` enables per-L2 token whitelisting. Currently `address`-only means allowing USDC on Ethereum also allows it on Arbitrum (same address) | Med | ALLOWED_TOKENS extension | Closes security gap where token whitelist cannot distinguish L2 chains |
+| `assetId` -> `address` auto-extraction | When API receives `assetId`, automatically extract `address`, `chain`, `network`, `decimals` (from registry lookup). Zero manual field population. | Med | CAIP-19 parser, token registry | Superior DX: AI agent sends one field instead of four |
+| ActionProvider CAIP-19 input standard | Future ActionProviders (Jupiter, 0x, LI.FI) receive tokens as CAIP-19. Each provider maps internally to protocol-specific IDs. Standard input format across all providers. | Low (interface only) | CAIP-19 types | No current ActionProvider uses this yet, but sets the standard |
+| Native asset `'native'` -> CAIP-19 migration | Replace ad-hoc `mint: 'native'` patterns with canonical `slip44:60` / `slip44:501` | Low | Native asset helpers | Eliminates magic string, adds type safety |
+| Incoming TX `assetId` tagging | Incoming transactions detected in v27.1 can be tagged with CAIP-19 `assetId` for consistent identification | Low | Incoming TX schema | Adds `asset_id` column to `incoming_transactions` if not present |
+| Admin UI CAIP-19 display | Token registry and policy UI show CAIP-19 asset IDs alongside human-readable names | Low | REST API assetId | Visual confirmation of CAIP-19 adoption |
 
-**Total differentiators: 13 features**
+**Total differentiators: 9 features**
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build in v27.1.
+Features to explicitly NOT build in this milestone.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Historical backfill on first subscribe | Unbounded RPC cost, unclear value for AI agents | Start monitoring from current block/slot forward. Log "no backfill" clearly. |
-| Per-token subscription filters | Overcomplicates the interface, RPC APIs don't support it natively | Monitor all tokens, filter in application layer. Token registry whitelist for legitimacy. |
-| Real-time WebSocket push to API clients | Adds WebSocket server complexity to REST daemon | Use polling via GET /v1/wallet/incoming. Notifications handle urgency. |
-| Automatic token claiming/sweeping on receive | Security risk -- auto-spending received funds without approval | Agent explicitly decides actions via existing outgoing TX pipeline. |
-| Cross-wallet incoming TX deduplication | Same TX to multiple wallets is legitimate (batch sends) | UNIQUE(tx_hash, wallet_id) allows same TX for different wallets. |
-| EVM internal transaction (trace) detection | Requires trace API (debug_traceTransaction), not available on most public RPCs | Detect only direct transfers and ERC-20 events. Document limitation. |
-| Geyser plugin integration for Solana | Requires custom validator plugin infrastructure, not suitable for self-hosted | Use standard RPC logsSubscribe + getSignaturesForAddress polling. |
-| NFT receive detection | Different data model, different user expectations | Future milestone if needed. Focus on fungible token monitoring. |
-| Token auto-registration on receive | Unknown tokens should be flagged, not auto-trusted | Mark as unknownToken suspicious. User explicitly registers via token registry. |
+| ERC-721/ERC-1155 NFT CAIP-19 support | WAIaaS is a fungible-asset wallet. NFT asset IDs require `token_id` suffix (CAIP-19 3-part format) adding schema complexity for unused functionality | Only implement `asset_type` (2-part: namespace:reference). No `asset_id` with `token_id` |
+| `address`-only deprecation | Too early. Existing SDK/MCP consumers rely on `address` field. Forced migration causes breaking changes | Keep `address` fully supported. `assetId` is additive/optional. Deprecation in a future major version |
+| Cross-chain asset equivalence mapping | USDC on Ethereum vs Polygon are different CAIP-19 URIs by design. Mapping "same token across chains" is an application concern, not identification | Each deployment gets its own CAIP-19 URI. Cross-chain equivalence is for future DeFi aggregation features |
+| Wrapped token relationship encoding | WETH<->ETH, WBTC<->BTC relationships cannot be expressed in CAIP-19 | Leave as separate assets. Relationship is application logic, not identification |
+| CAIP-10 account ID integration | CAIP-10 (`namespace:chainId:address`) is for account identification. WAIaaS uses wallet IDs + session model. Adding CAIP-10 complicates the identity model without benefit | Continue using wallet UUID + blockchain address. CAIP-10 only for WalletConnect interop (already handled) |
+| External CAIP parser library (`caip` npm) | The `caip` npm package (v1.1.1, last published 2024-03-20) is maintained but adds an external dependency for ~50 lines of regex/parse logic. WAIaaS already has a working `parseCaip2()`. | Build internally in `packages/core/src/caip/`. Zero external dependencies. Regex patterns from official spec are straightforward |
+| Dynamic namespace registry | Making namespace mappings (erc20, token, slip44) configurable at runtime. Overkill -- WAIaaS supports two chain families with well-defined namespaces | Hardcode namespace selection: EVM -> `erc20`, Solana -> `token`, Native -> `slip44`. Add namespaces only when new chain families are supported |
+| CAIP-19 as primary key in token_registry | Replacing `(network, address)` unique index with `asset_id` primary key. Risky migration, breaks foreign key patterns | Add `asset_id` as computed/indexed column. Keep `(network, address)` as unique index for backward compatibility |
+| Solana devnet/testnet genesis hash dynamic resolution | Fetching genesis hash at runtime via `getGenesisHash` RPC call instead of hardcoded values | Hardcode the 3 known values (matching existing code). Solana devnet/testnet genesis hashes have been stable since 2021. Document manual update procedure if reset occurs |
 
 ---
 
 ## Feature Dependencies
 
 ```
-DB Migration v21 (tables + columns)
+Caip2Schema + Caip19AssetTypeSchema (Zod validation)
   |
-  +---> IChainSubscriber interface (core types)
+  +---> parseCaip2() / formatCaip2() [generalize from x402]
   |       |
-  |       +---> SolanaIncomingSubscriber
-  |       |       +---> SOL native detection (preBalances/postBalances)
-  |       |       +---> SPL token detection (preTokenBalances/postTokenBalances)
-  |       |       +---> Token-2022 detection (same mechanism as SPL)
-  |       |       +---> logsSubscribe WebSocket mode
-  |       |       +---> getSignaturesForAddress polling mode
-  |       |
-  |       +---> EvmIncomingSubscriber
-  |               +---> ERC-20 Transfer event detection (getLogs)
-  |               +---> Native ETH detection (getBlock + filter)
-  |               +---> Polling cursor management
+  |       +---> parseCaip19() / formatCaip19() [new]
+  |               |
+  |               +---> nativeAssetId(network) [slip44 lookup]
+  |               +---> tokenAssetId(network, address) [namespace auto-select]
+  |               +---> isNativeAsset(caip19) [namespace check]
   |
-  +---> IncomingTxQueue (memory queue + batch flush)
-  |       |
-  |       +---> BackgroundWorkers: incoming-tx-flush (5s)
-  |
-  +---> IncomingTxMonitorService (orchestrator)
-  |       |
-  |       +---> SubscriptionMultiplexer
-  |       |       +---> WebSocket connection sharing
-  |       |       +---> 3-state connection machine
-  |       |       +---> Reconnect loop + exponential backoff
-  |       |       +---> Heartbeat (Solana)
-  |       |
-  |       +---> Dynamic subscription sync (syncSubscriptions)
-  |       +---> Blind gap recovery
-  |       +---> IIncomingSafetyRule evaluation
-  |               +---> DustAttackRule (needs PriceOracle)
-  |               +---> UnknownTokenRule (needs token_registry)
-  |               +---> LargeAmountRule (needs PriceOracle + history avg)
-  |
-  +---> Notification integration
-  |       +---> INCOMING_TX_DETECTED event type (28 -> 29)
-  |       +---> INCOMING_TX_SUSPICIOUS event type (29 -> 30)
-  |       +---> Message templates (en/ko)
-  |       +---> Channel priority routing (ntfy, WalletNotificationChannel)
-  |
-  +---> Config + Settings
-  |       +---> config.toml [incoming] 7 keys
-  |       +---> SettingsService registration
-  |       +---> HotReloadOrchestrator extension
-  |       +---> Environment variable mapping (WAIAAS_INCOMING_*)
-  |
-  +---> Confirmation workers
-  |       +---> incoming-tx-confirm-solana (30s, finalized check)
-  |       +---> incoming-tx-confirm-evm (30s, confirmation threshold)
-  |
-  +---> Polling workers (active in POLLING state only)
-  |       +---> incoming-tx-poll-solana (configurable interval)
-  |       +---> incoming-tx-poll-evm (configurable interval)
-  |
-  +---> Retention worker
-  |       +---> incoming-tx-retention (1h, configurable days)
-  |
-  +---> REST API
-  |       +---> GET /v1/wallet/incoming (cursor pagination)
-  |       +---> GET /v1/wallet/incoming/summary (aggregation)
-  |       +---> PATCH /v1/wallet/:id (monitorIncoming field)
-  |       +---> Zod SSoT schemas
-  |
-  +---> SDK/MCP
-  |       +---> TypeScript SDK: listIncomingTransactions, getIncomingTransactionSummary
-  |       +---> Python SDK: list_incoming_transactions, get_incoming_transaction_summary
-  |       +---> MCP tools: list_incoming_transactions, get_incoming_summary
-  |
-  +---> DaemonLifecycle integration (Step 4c-9, fail-soft)
-  |
-  +---> Admin UI
-          +---> Wallet detail: monitor_incoming toggle
-          +---> Settings page: [incoming] section
-          +---> (Optional) Incoming TX list panel
+  +---> NetworkType <-> CAIP-2 map (consolidate x402 + WC duplicates)
+          |
+          +---> TokenRef extension (assetId + network fields)
+          |       |
+          |       +---> Price oracle cache key migration
+          |       |       +---> CoinGecko L2 platform mapping
+          |       |       +---> L2 token price resolution [HIGHEST VALUE]
+          |       |
+          |       +---> Token registry DB migration (asset_id column)
+          |               +---> Backfill (network, address) -> CAIP-19
+          |               +---> REST API assetId in responses
+          |               +---> Admin UI CAIP-19 display
+          |
+          +---> Transaction request assetId field
+          |       +---> assetId -> address auto-extraction
+          |       +---> Pipeline integration (Stage 1 validation)
+          |
+          +---> ALLOWED_TOKENS assetId support
+          |       +---> L2-scoped token whitelisting
+          |       +---> Policy evaluation chain+network+address comparison
+          |
+          +---> MCP tool assetId parameters
+          |       +---> SDK assetId support (TS + Python)
+          |       +---> Skills file documentation
+          |
+          +---> x402 + WC code consolidation
+                  +---> x402.types.ts imports from caip/
+                  +---> wc-session-service.ts imports from caip/
 ```
 
 ---
 
 ## Complexity Assessment by Implementation Area
 
-### Low Complexity (follow existing patterns)
+### Low Complexity (follow existing patterns, <50 LOC each)
 
 | Area | LOC Estimate | Rationale |
 |------|-------------|-----------|
-| DB migration v21 | ~50 | 3 DDL statements, existing migration framework |
-| config.toml + env vars | ~40 | Copy existing [balance_monitor] pattern |
-| SettingsService registration | ~30 | Add 7 keys to SETTING_KEYS |
-| HotReloadOrchestrator extension | ~30 | Copy BalanceMonitor hot-reload pattern |
-| Notification event types (2 new) | ~20 | Add to NOTIFICATION_EVENT_TYPES array |
-| Message templates (en/ko) | ~20 | Add 2 entries to MESSAGE_TEMPLATES |
-| Channel priority routing | ~15 | Extend mapPriority() pattern match |
-| Retention worker | ~20 | Simple DELETE WHERE detected_at < cutoff |
-| MCP tools (2 new) | ~60 | Copy existing MCP tool pattern |
-| SDK methods (TS) | ~40 | URLSearchParams + GET delegation |
-| SDK methods (Python) | ~30 | params dict + _get delegation |
-| Zod SSoT schemas | ~60 | Query + Response + Summary schemas |
-| wallets.monitor_incoming toggle | ~15 | PATCH handler extension, one column |
+| Caip2Schema / Caip19AssetTypeSchema (Zod) | ~20 | Two regex-based z.string() schemas |
+| parseCaip2 / formatCaip2 | ~25 | Generalize existing x402 `parseCaip2()`, add format |
+| parseCaip19 / formatCaip19 | ~40 | Split on `/` and `:`, validate parts, reassemble |
+| nativeAssetId / tokenAssetId | ~30 | Lookup tables + formatCaip19 call |
+| isNativeAsset | ~5 | `parseCaip19(id).assetNamespace === 'slip44'` |
+| NetworkType <-> CAIP-2 map | ~40 | Consolidate CAIP2_TO_NETWORK + CAIP2_CHAIN_IDS |
+| TokenRef schema extension | ~10 | Add 2 optional fields to Zod schema |
+| REST API assetId in responses | ~30 | Compute in response mapper |
+| SDK assetId (TS + Python) | ~40 | Pass-through, type updates |
+| Skills file updates | ~60 | Documentation text |
+| Admin UI CAIP display | ~30 | Show assetId in token list |
+| x402 + WC code consolidation | ~30 | Import redirect, delete duplicates |
 
-### Medium Complexity (chain-specific logic)
-
-| Area | LOC Estimate | Rationale |
-|------|-------------|-----------|
-| IChainSubscriber interface + types | ~80 | New interface file, IncomingTransaction type, enums |
-| SolanaIncomingSubscriber | ~250 | logsSubscribe, TX parsing (SOL + SPL), polling fallback |
-| EvmIncomingSubscriber | ~200 | getLogs (ERC-20), getBlock (ETH), polling cursor |
-| IncomingTxQueue | ~60 | Array queue, splice batch, ON CONFLICT insert |
-| IncomingTxMonitorService | ~200 | Orchestrator: subscribe/unsubscribe, safety rules, notify |
-| Suspicious detection (3 rules) | ~100 | IIncomingSafetyRule, DustAttack, UnknownToken, LargeAmount |
-| REST API endpoints (2 routes) | ~150 | Cursor pagination, summary aggregation, Zod validation |
-| Dynamic subscription sync | ~80 | DB query + Set comparison + add/remove delta |
-| Confirmation workers (2 chains) | ~80 | Solana finalized check, EVM block confirmation count |
-| DaemonLifecycle Step 4c-9 | ~40 | Fail-soft initialization, dependency injection |
-| Admin UI toggle + settings | ~100 | Preact component, settings form section |
-
-### High Complexity (stateful connection management)
+### Medium Complexity (cross-cutting changes, 50-150 LOC each)
 
 | Area | LOC Estimate | Rationale |
 |------|-------------|-----------|
-| SubscriptionMultiplexer | ~200 | WebSocket connection sharing, per-chain connection map |
-| 3-state connection machine | ~80 | WEBSOCKET/POLLING/DISABLED state transitions |
-| Reconnect loop + exponential backoff | ~80 | calculateDelay, jitter, attempt counter, state callbacks |
-| Blind gap recovery | ~120 | Per-chain cursor-based recovery, idempotent re-processing |
-| SolanaHeartbeat | ~30 | 60s ping interval, timer.unref() |
-| Polling workers (conditional) | ~40 | connectionState check, pollAll() delegation |
+| Price oracle cache key migration | ~80 | Change buildCacheKey, update all callers, maintain backward compat during transition |
+| CoinGecko L2 platform mapping | ~60 | New CAIP-2 -> CoinGecko platform ID table, integrate into CoinGeckoOracle |
+| Token registry DB migration | ~80 | ALTER TABLE, backfill query, migration test |
+| Transaction request assetId field | ~100 | Schema change, pipeline Stage 1 extraction, validation |
+| ALLOWED_TOKENS assetId support | ~80 | Rules schema extension, evaluation logic, backward compat |
+| MCP tool assetId parameters | ~100 | ~10 tools need assetId alternative parameter + resolution logic |
+| assetId -> address auto-extraction | ~60 | Parse CAIP-19, lookup registry for decimals/symbol, populate TokenInfo |
 
-**Estimated total: ~2,400 LOC implementation + ~1,200 LOC tests = ~3,600 LOC**
+**Estimated total: ~920 LOC implementation + ~600 LOC tests = ~1,500 LOC**
 
 ---
 
-## Critical Implementation Patterns (from design doc 76)
+## Complete CAIP-19 URI Reference for WAIaaS
 
-### Pattern 1: Solana logsSubscribe Detection
+### Native Assets (13 networks)
 
-**What:** Subscribe to `logsSubscribe({ mentions: [walletAddress] })` with `confirmed` commitment. The subscription returns only the transaction signature -- full TX details require a subsequent `getTransaction(signature, { encoding: 'jsonParsed' })` call.
+| Network | CAIP-19 Asset Type |
+|---------|--------------------|
+| `mainnet` (Solana) | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501` |
+| `devnet` (Solana) | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1/slip44:501` |
+| `testnet` (Solana) | `solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z/slip44:501` |
+| `ethereum-mainnet` | `eip155:1/slip44:60` |
+| `ethereum-sepolia` | `eip155:11155111/slip44:60` |
+| `polygon-mainnet` | `eip155:137/slip44:966` |
+| `polygon-amoy` | `eip155:80002/slip44:966` |
+| `arbitrum-mainnet` | `eip155:42161/slip44:60` |
+| `arbitrum-sepolia` | `eip155:421614/slip44:60` |
+| `optimism-mainnet` | `eip155:10/slip44:60` |
+| `optimism-sepolia` | `eip155:11155420/slip44:60` |
+| `base-mainnet` | `eip155:8453/slip44:60` |
+| `base-sepolia` | `eip155:84532/slip44:60` |
 
-**Why this approach:** `mentions` with a wallet address catches ALL transactions involving that address -- SOL transfers, SPL transfers, ATA creation, Token-2022. One subscription per wallet covers everything. (Verified: Solana official docs confirm `mentions` accepts only ONE Pubkey per call.)
+Note: Arbitrum, Optimism, Base use ETH (slip44:60) as native gas token. Polygon uses MATIC/POL (slip44:966).
 
-**Key constraint (HIGH confidence):** Solana RPC `logsSubscribe` `mentions` field accepts a single Pubkey only. Multiple addresses in the array cause an RPC error. Each wallet requires a separate subscription, but subscriptions share the same WebSocket connection via the multiplexer.
+### Token Asset Examples
 
-**Implementation note:** @solana/kit provides `createSolanaRpcSubscriptions` with `logsNotifications` returning an AsyncIterable. The `for await` loop is consumed until the AbortController signal fires.
+| Token | Network | CAIP-19 Asset Type |
+|-------|---------|-------------------|
+| USDC (Ethereum) | `ethereum-mainnet` | `eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
+| USDC (Polygon) | `polygon-mainnet` | `eip155:137/erc20:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359` |
+| USDC (Arbitrum) | `arbitrum-mainnet` | `eip155:42161/erc20:0xaf88d065e77c8cc2239327c5edb3a432268e5831` |
+| USDC (Base) | `base-mainnet` | `eip155:8453/erc20:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
+| USDC (Solana) | `mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
 
-### Pattern 2: EVM Polling-First Strategy
+---
 
-**What:** Use `getLogs` (HTTP RPC) for ERC-20 Transfer event detection + `getBlock(includeTransactions: true)` for native ETH detection. Polling-first, no WebSocket dependency by default.
+## Backward Compatibility Strategy
 
-**Why this approach:**
-1. HTTP RPC universally available (self-hosted environments often lack WebSocket endpoints)
-2. EVM block interval (~12s) naturally aligns with polling intervals
-3. viem `watchEvent` behavior depends on transport type (HTTP -> polls, WS -> subscribes) -- unpredictable
-4. `getLogs` supports efficient block range queries with indexed topic filtering
+### Principle: Additive Fields, Never Remove
 
-**Key constraint:** Native ETH transfers do NOT emit events. They must be detected by inspecting block transactions where `tx.to === walletAddress && tx.value > 0n`. This requires fetching full blocks, which is RPC-intensive. Design limits to 10 blocks per poll cycle.
+1. **Phase 1 (this milestone):** `assetId` is an optional field everywhere. All existing address-based flows continue to work unchanged.
+2. **Phase 2 (future):** `assetId` becomes the preferred identifier. API responses always include it. Documentation guides consumers toward `assetId`.
+3. **Phase 3 (future major version):** `address`-only fields are deprecated with deprecation warnings. `assetId` required for new features.
 
-### Pattern 3: Memory Queue + Batch Flush
+### Resolution Priority
 
-**What:** WebSocket/polling callbacks push to in-memory array. BackgroundWorkers flush every 5 seconds with `INSERT ... ON CONFLICT DO NOTHING` in a SQLite transaction.
+When both `assetId` and `address` are provided:
+1. Parse `assetId` to extract `{ chainId, namespace, reference }`
+2. Validate that extracted `reference` matches provided `address`
+3. If mismatch, return validation error (never silently prefer one over the other)
+4. If only `address` provided, use it as-is (backward compatible)
+5. If only `assetId` provided, extract all needed fields from it
 
-**Why this approach:** SQLite better-sqlite3 single-writer protection. Concurrent WebSocket events writing directly to DB would cause WAL contention. Batching amortizes write overhead and keeps the callback synchronous (no async in onTransaction).
+### Policy Backward Compatibility
 
-### Pattern 4: 2-Phase Status with Separate Confirmation Workers
+Current ALLOWED_TOKENS rules:
+```json
+{ "tokens": [{ "address": "0xa0b8..." }] }
+```
 
-**What:** TX enters as DETECTED (confirmed/1+ confirmations). Background worker promotes to CONFIRMED (finalized/12+ confirmations) on 30-second interval.
+Extended format:
+```json
+{ "tokens": [
+  { "address": "0xa0b8..." },
+  { "assetId": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" }
+] }
+```
 
-**Why this approach:** Fast notification at DETECTED (user experience) vs safe trigger at CONFIRMED (agent logic). Decouples detection latency from confirmation latency. Agents should only act on CONFIRMED to avoid reorg/rollback losses.
-
-### Pattern 5: Wallet-Level Opt-In with Global Gate
-
-**What:** Two-level gate: `incoming_enabled` (global) AND `monitor_incoming` (per-wallet). Both must be true for monitoring to activate.
-
-**Why this approach:** RPC subscriptions have cost. Default-off prevents surprise RPC bills. Global gate lets operators disable everything instantly. Per-wallet toggle gives granular control.
+Evaluation logic:
+- If entry has `assetId`: match chain + network + address (full scoping)
+- If entry has only `address`: match address only (existing behavior, cross-chain)
+- Both formats can coexist in the same policy
 
 ---
 
@@ -272,78 +327,60 @@ DB Migration v21 (tables + columns)
 
 Build in this order, each phase independently testable:
 
-### Phase 1: Core Infrastructure
-Prioritize:
-1. **DB migration v21** -- foundation for everything
-2. **IChainSubscriber interface + IncomingTransaction type** -- contracts first
-3. **IncomingTxQueue + flush worker** -- write path
-4. **Config.toml [incoming] + SettingsService** -- configuration surface
-5. **Notification event types (2) + message templates** -- event infrastructure
+### Phase 1: CAIP Parser + Network Map (Core Foundation)
+1. `packages/core/src/caip/caip2.ts` -- parser/formatter
+2. `packages/core/src/caip/caip19.ts` -- parser/formatter
+3. `packages/core/src/caip/network-map.ts` -- consolidated from x402 + WC
+4. `packages/core/src/caip/asset-helpers.ts` -- nativeAssetId, tokenAssetId, isNativeAsset
+5. Zod schemas: `Caip2Schema`, `Caip19AssetTypeSchema`
+6. Consolidate x402.types.ts and wc-session-service.ts to import from `caip/`
+7. TokenRef extension: add `assetId` and `network` optional fields
 
-### Phase 2: Chain Detection
-Prioritize:
-1. **SolanaIncomingSubscriber** -- logsSubscribe + TX parsing (SOL + SPL)
-2. **EvmIncomingSubscriber** -- getLogs (ERC-20) + getBlock (ETH)
-3. **Confirmation workers** -- DETECTED -> CONFIRMED promotion
+### Phase 2: Oracle + Registry + DB
+1. Price oracle cache key migration (network-aware)
+2. CoinGecko L2 platform ID mapping
+3. Token registry DB migration (asset_id column + backfill)
+4. Token registry REST API: assetId in responses
 
-### Phase 3: Resilience + Safety
-Prioritize:
-1. **SubscriptionMultiplexer** -- WebSocket connection sharing
-2. **3-state connection machine + reconnect loop** -- auto-fallback
-3. **Blind gap recovery** -- zero TX loss
-4. **IIncomingSafetyRule 3 rules** -- suspicious detection
-
-### Phase 4: Service Integration
-Prioritize:
-1. **IncomingTxMonitorService** -- orchestrator with notification integration
-2. **Dynamic subscription sync** -- runtime wallet management
-3. **DaemonLifecycle Step 4c-9** -- fail-soft startup
-4. **HotReloadOrchestrator extension** -- config hot-reload
-
-### Phase 5: API + SDK + MCP
-Prioritize:
-1. **REST API: GET /v1/wallet/incoming** -- cursor pagination
-2. **REST API: GET /v1/wallet/incoming/summary** -- aggregation
-3. **PATCH /v1/wallet/:id monitorIncoming** -- opt-in toggle
-4. **SDK methods (TS + Python)** -- client libraries
-5. **MCP tools (2 new)** -- AI agent access
-
-### Phase 6: Admin UI + Polish
-Prioritize:
-1. **Admin UI: wallet detail monitor toggle** -- visual opt-in
-2. **Admin UI: incoming settings section** -- configuration panel
-3. **Retention worker** -- auto-cleanup
-4. **Skills file sync** -- documentation update
+### Phase 3: API + Policy + MCP + Skills
+1. Transaction request schema: assetId optional field
+2. Pipeline Stage 1: assetId -> address extraction
+3. ALLOWED_TOKENS: assetId support in rules + evaluation
+4. MCP tools: assetId parameter on token-related tools
+5. SDK (TS + Python): assetId field support
+6. Skills files: CAIP-19 documentation
 
 **Defer:**
-- Admin UI incoming TX list panel: Nice-to-have but agents use API directly. Build if time permits.
-- WebSocket mode for EVM: Polling-first covers all use cases. WebSocket optimization is future work.
-- Summary USD conversion with multi-token breakdown: Start with count + suspicious count. Full USD breakdown is complex (multiple tokens, multiple price lookups per summary entry).
+- ActionProvider CAIP-19 input standard: No current provider. Define interface now, implement when providers exist.
+- Incoming TX assetId tagging: Minor enhancement, can be done in a quick follow-up.
+- Admin UI CAIP display: Low priority, minimal user value vs API/MCP consumers.
 
 ---
 
 ## Sources
 
-### Official Documentation
-- [Solana logsSubscribe RPC Method](https://solana.com/docs/rpc/websocket/logssubscribe) -- mentions filter, commitment levels
-- [Solana RPC WebSocket Methods](https://solana.com/docs/rpc/websocket) -- full WebSocket subscription catalog
-- [viem watchEvent](https://viem.sh/docs/actions/public/watchEvent) -- polling vs WebSocket behavior
-- [viem watchBlocks](https://viem.sh/docs/actions/public/watchBlocks) -- includeTransactions option
+### Official Specifications (HIGH confidence)
+- [CAIP-2: Blockchain ID Specification](https://standards.chainagnostic.org/CAIPs/caip-2) -- chain ID format: `namespace:reference`
+- [CAIP-19: Asset Type and Asset ID Specification](https://standards.chainagnostic.org/CAIPs/caip-19) -- asset URI format, syntax rules
+- [CAIP-20: Asset Reference for SLIP44 Namespace](https://standards.chainagnostic.org/CAIPs/caip-20) -- native asset coin types
+- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) -- genesis hash truncation, chain IDs for mainnet/devnet/testnet
+- [Solana CAIP-19 Namespace](https://namespaces.chainagnostic.org/solana/caip19) -- `token` and `nft` namespaces, mint address as reference
+- [EIP-155 CAIP-19 Namespace](https://namespaces.chainagnostic.org/eip155/caip19) -- `erc20`, `erc721` namespaces
+- [SLIP-0044 Registry](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) -- coin type indices (ETH=60, SOL=501, MATIC=966)
+- [EIP-155 Chain ID Specification](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md) -- EVM chain ID standard
 
-### RPC Provider Guides
-- [QuickNode: Solana WebSocket Subscriptions](https://www.quicknode.com/guides/solana-development/getting-started/how-to-create-websocket-subscriptions-to-solana-blockchain-using-typescript) -- 10-minute inactivity timeout, ping requirement
-- [Helius: logsSubscribe](https://www.helius.dev/docs/api-reference/rpc/websocket/logssubscribe) -- single Pubkey mentions constraint
-- [Alchemy: eth_getLogs Deep Dive](https://www.alchemy.com/docs/deep-dive-into-eth_getlogs) -- block range best practices, indexed topic filtering
+### Ecosystem (MEDIUM confidence)
+- [WalletConnect v2 Namespaces Spec](https://specs.walletconnect.com/2.0/specs/clients/sign/namespaces) -- CAIP-2 for session chains
+- [WalletConnect Pay](https://docs.walletconnect.network/payments/wallet-implementation) -- CAIP-19 for asset identification in payment requests
+- [Portal Chain ID Formatting](https://docs.portalhq.io/resources/chain-id-formatting) -- CAIP-2 chain IDs for EVM L2s
 
-### Security Patterns
-- [Gate.com: Understanding Dusting Attacks](https://web3.gate.com/crypto-wiki/article/understanding-dusting-attacks-in-cryptocurrency-security-20251203) -- detection patterns, micro-quantity thresholds
-- [BitGo: Dust Attacks in Crypto](https://www.bitgo.com/resources/blog/dust-attacks-in-crypto/) -- common-input-ownership heuristic
-- [OKX: Crypto Dusting Attack Guide](https://www.okx.com/en-us/learn/crypto-dusting-attack-guide) -- platform monitoring approaches
+### Libraries (MEDIUM confidence)
+- [caip npm package](https://www.npmjs.com/package/caip) -- v1.1.1 (2024-03-20), zero deps, ChainAgnostic official. Evaluated and decided against: too thin to justify external dependency
+- [caip-js GitHub](https://github.com/ChainAgnostic/caip-js) -- official JS reference implementation
 
-### API Design
-- [Speakeasy: Pagination Best Practices](https://www.speakeasy.com/api-design/pagination) -- cursor-based pagination for real-time data
-- [Stainless: REST API Pagination](https://www.stainless.com/sdk-api-best-practices/how-to-implement-rest-api-pagination-offset-cursor-keyset) -- keyset vs cursor comparison
-
-### WebSocket Reliability
-- [OneUptime: WebSocket Reconnection Logic](https://oneuptime.com/blog/post/2026-01-27-websocket-reconnection/view) -- exponential backoff, jitter, gap recovery patterns
-- [DevToolbox: WebSockets Complete Guide 2026](https://devtoolbox.dedyn.io/blog/websocket-complete-guide) -- heartbeat, state management
+### WAIaaS Codebase (verified)
+- `packages/core/src/interfaces/x402.types.ts` -- existing CAIP2_TO_NETWORK (13 entries), parseCaip2()
+- `packages/daemon/src/services/wc-session-service.ts` -- duplicate CAIP2_CHAIN_IDS
+- `packages/core/src/interfaces/price-oracle.types.ts` -- TokenRefSchema (address, symbol, decimals, chain)
+- `packages/daemon/src/infrastructure/oracle/price-cache.ts` -- buildCacheKey(chain, address)
+- `packages/daemon/src/pipeline/database-policy-engine.ts` -- AllowedTokensRules with address-only matching
