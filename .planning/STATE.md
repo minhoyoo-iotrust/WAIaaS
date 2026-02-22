@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 5 of 5 (Phase 243: Wallet List + Wallet Detail) -- IN PROGRESS
-Plan: 1 of 2 in current phase
-Status: Plan 243-01 complete
-Last activity: 2026-02-23 -- Completed 243-01 (Wallet List Search, Filter, Balance)
+Phase: 5 of 5 (Phase 243: Wallet List + Wallet Detail) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase 243 complete -- all plans done
+Last activity: 2026-02-23 -- Completed 243-02 (Wallet Detail 4-Tab Layout)
 
-Progress: [#########.] 90%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -38,7 +38,7 @@ Progress: [#########.] 90%
 | 240 | 2/2 | 10min | 5min |
 | 241 | 2/2 | 6min | 3min |
 | 242 | 1/1 | 6min | 6min |
-| 243 | 1/2 | 5min | 5min |
+| 243 | 2/2 | 12min | 6min |
 
 ## Accumulated Context
 
@@ -70,6 +70,11 @@ Progress: [#########.] 90%
 - 243-01: syncUrl=false for wallet list FilterBar (tab-routed page uses hash for tab state)
 - 243-01: Balance fetch capped at first 50 wallets (BALANCE_FETCH_LIMIT)
 - 243-01: No USD in balance column (balance API lacks amountUsd)
+- 243-02: 4-tab layout uses local function components via closure for WalletDetailView
+- 243-02: Per-wallet transactions endpoint extended with offset query param
+- 243-02: USD value added to balance API via price oracle getNativePrice per chain
+- 243-02: Transaction filters (status/type) applied client-side on paginated data
+- 243-02: Custom table for wallet transactions matching cross-wallet pattern
 
 ### Blockers/Concerns
 
@@ -78,5 +83,5 @@ Progress: [#########.] 90%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 243-01-PLAN.md
+Stopped at: Completed 243-02-PLAN.md -- Phase 243 complete, milestone v27.4 complete
 Resume file: None

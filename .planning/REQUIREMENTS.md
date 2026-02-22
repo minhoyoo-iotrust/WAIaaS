@@ -49,10 +49,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Wallet Detail
 
-- [ ] **WDET-01**: 지갑 상세 페이지가 Overview/Transactions/Owner/MCP 4탭 구조로 변경된다
-- [ ] **WDET-02**: Transactions 탭이 페이지네이션, txHash 익스플로러 링크, 상태/타입 필터를 지원한다
-- [ ] **WDET-03**: 각 네트워크 잔액 옆에 USD 환산 가치가 표시된다
-- [ ] **WDET-04**: 잔액 섹션에 수동 새로고침 버튼이 있다
+- [x] **WDET-01**: 지갑 상세 페이지가 Overview/Transactions/Owner/MCP 4탭 구조로 변경된다
+- [x] **WDET-02**: Transactions 탭이 페이지네이션, txHash 익스플로러 링크, 상태/타입 필터를 지원한다
+- [x] **WDET-03**: 각 네트워크 잔액 옆에 USD 환산 가치가 표시된다
+- [x] **WDET-04**: 잔액 섹션에 수동 새로고침 버튼이 있다
 
 ### Dashboard
 
@@ -116,10 +116,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | WLST-01 | Phase 243 | Complete |
 | WLST-02 | Phase 243 | Complete |
 | WLST-03 | Phase 243 | Complete |
-| WDET-01 | Phase 243 | Pending |
-| WDET-02 | Phase 243 | Pending |
-| WDET-03 | Phase 243 | Pending |
-| WDET-04 | Phase 243 | Pending |
+| WDET-01 | Phase 243 | Complete |
+| WDET-02 | Phase 243 | Complete |
+| WDET-03 | Phase 243 | Complete |
+| WDET-04 | Phase 243 | Complete |
 
 **Coverage:**
 - v27.4 requirements: 32 total
