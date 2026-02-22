@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 Milestone: v27.4 Admin UI UX 개선
 Phase: 1 of 5 (Phase 239: Foundation -- Shared Components + Admin API)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- Roadmap created for v27.4 (5 phases, 9 plans, 32 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 239-01 (Shared UI Components)
 
-Progress: [..........] 0%
+Progress: [#.........] 11%
 
 ## Performance Metrics
 
@@ -43,6 +43,8 @@ Progress: [..........] 0%
 - m27-04: 필터 상태 URL query params 동기화 (공유/북마크 가능)
 - m27-04: 지갑 상세 4탭 구조 (Overview/Transactions/Owner/MCP)
 - m27-04: offset/limit 서버사이드 페이지네이션
+- 239-01: Inlined EXPLORER_MAP in admin SPA (cannot import @waiaas/core from frontend)
+- 239-01: FilterBar URL sync uses hash query params with replaceState
 
 ### Blockers/Concerns
 
@@ -51,5 +53,5 @@ Progress: [..........] 0%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Roadmap created, ready to plan Phase 239
+Stopped at: Completed 239-01-PLAN.md
 Resume file: None

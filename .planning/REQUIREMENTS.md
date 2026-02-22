@@ -9,9 +9,9 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Shared Components
 
-- [ ] **COMP-01**: ExplorerLink 컴포넌트가 13개 네트워크에 올바른 블록 익스플로러 URL을 렌더링한다
-- [ ] **COMP-02**: FilterBar 재사용 컴포넌트가 다중 필드 필터링을 URL query params로 지원한다
-- [ ] **COMP-03**: SearchInput 컴포넌트가 debounce 기반 실시간 텍스트 필터링을 지원한다
+- [x] **COMP-01**: ExplorerLink 컴포넌트가 13개 네트워크에 올바른 블록 익스플로러 URL을 렌더링한다
+- [x] **COMP-02**: FilterBar 재사용 컴포넌트가 다중 필드 필터링을 URL query params로 지원한다
+- [x] **COMP-03**: SearchInput 컴포넌트가 debounce 기반 실시간 텍스트 필터링을 지원한다
 
 ### Admin API
 
@@ -88,9 +88,9 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMP-01 | Phase 239 | Pending |
-| COMP-02 | Phase 239 | Pending |
-| COMP-03 | Phase 239 | Pending |
+| COMP-01 | Phase 239 | Complete |
+| COMP-02 | Phase 239 | Complete |
+| COMP-03 | Phase 239 | Complete |
 | API-01 | Phase 239 | Pending |
 | API-02 | Phase 239 | Pending |
 | TXN-01 | Phase 240 | Pending |

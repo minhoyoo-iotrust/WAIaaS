@@ -226,7 +226,7 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 239-01-PLAN.md -- Shared UI components (ExplorerLink, FilterBar, SearchInput) + tests
+- [x] 239-01-PLAN.md -- Shared UI components (ExplorerLink, FilterBar, SearchInput) + tests
 - [ ] 239-02-PLAN.md -- Cross-wallet Admin API endpoints (GET /admin/transactions, GET /admin/incoming) + tests
 
 ### Phase 240: Transactions Page + Dashboard
@@ -311,7 +311,7 @@ Phases execute in numeric order: 239 -> 240 -> 241 -> 242 -> 243
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
-| 239 | v27.4 | 0/2 | Not started | - |
+| 239 | v27.4 | 1/2 | In progress | - |
 | 240 | v27.4 | 0/2 | Not started | - |
 | 241 | v27.4 | 0/2 | Not started | - |
 | 242 | v27.4 | 0/1 | Not started | - |
