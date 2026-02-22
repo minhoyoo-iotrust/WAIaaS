@@ -162,6 +162,8 @@
 | 145 | BUG | LOW | README/deployment.md CLI 문법 불일치 — `add --all` vs `add all` | v2.0 | FIXED | 2026-02-22 |
 | 146 | BUG | LOW | examples/simple-agent/README.md 깨진 링크 + placeholder URL + 구버전 | v2.0 | OPEN | |
 | 147 | BUG | LOW | validate-openapi.ts `@see` 주석 경로 불일치 | v2.0 | FIXED | 2026-02-22 |
+| 148 | ENHANCEMENT | MEDIUM | 알림 메시지에 블록 익스플로러 링크 추가 + {txId} 미치환 버그 수정 | TBD | OPEN | |
+| 149 | ENHANCEMENT | HIGH | 에이전트가 마스터 패스워드를 요청하지 못하도록 차단 | TBD | OPEN | |
 
 ## Type Legend
 
@@ -173,9 +175,9 @@
 
 ## Summary
 
-- **OPEN:** 4
+- **OPEN:** 6
 - **FIXED:** 143
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 0
-- **Total:** 147
+- **Total:** 149
