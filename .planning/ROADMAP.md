@@ -248,11 +248,11 @@ Plans:
   3. TypeScript SDK 타입(AssetInfo, TokenInfo 등)에 optional assetId 필드가 포함된다
   4. Python SDK 모델에 optional assetId 필드가 포함된다
   5. Skills 파일(transactions, policies, quickstart)에 CAIP-19 자산 식별 개념과 사용 예제가 문서화된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 234-01: MCP 도구 assetId 파라미터 + description 업데이트
-- [ ] 234-02: TS/Python SDK 타입 + Skills 파일 문서화
+- [ ] 234-01-PLAN.md — MCP 도구 assetId 파라미터 + description 업데이트 + passthrough 테스트
+- [ ] 234-02-PLAN.md — TS/Python SDK 타입 assetId 필드 + 3개 스킬 파일 CAIP-19 문서화
 
 ## Progress
 
