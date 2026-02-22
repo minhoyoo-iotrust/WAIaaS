@@ -286,6 +286,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/sessions/*', masterAuthForAdmin);
     app.use('/v1/admin/telegram-users', masterAuthForAdmin);
     app.use('/v1/admin/telegram-users/*', masterAuthForAdmin);
+    app.use('/v1/admin/transactions', masterAuthForAdmin);
+    app.use('/v1/admin/incoming', masterAuthForAdmin);
   }
 
   // ownerAuth for POST /v1/owner/kill-switch
