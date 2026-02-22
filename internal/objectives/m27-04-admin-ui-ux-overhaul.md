@@ -1,7 +1,7 @@
 # 마일스톤 m27-04: Admin UI UX 개선
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** IN_PROGRESS
+- **Milestone:** v27.4
 
 ## 목표
 
@@ -60,7 +60,7 @@ v27.1에서 구현한 수신 트랜잭션 모니터링의 Admin UI 연동.
 
 | 기능 | 설명 |
 |------|------|
-| 설정 패널 | 기존 `IncomingSettings`(System/Settings 내 활성 렌더링 중, 7개 필드)를 독립 페이지로 이전하여 수신 TX 뷰어와 통합 |
+| 설정 패널 | `settings.tsx`에 인라인으로 작성된 수신 TX 설정 필드(7개)를 독립 페이지로 추출·이전하여 수신 TX 뷰어와 통합 |
 | 수신 TX 뷰어 | 크로스 지갑 수신 트랜잭션 테이블 (시간, 지갑, 발신자, 금액, 체인, 상태, 의심 여부 배지) |
 | 필터 | 지갑, 체인, 상태(DETECTED/CONFIRMED), suspicious 여부 |
 | 지갑별 토글 | 개별 지갑의 수신 모니터링 활성화/비활성화 (설계 문서 76의 per-wallet opt-in) |
@@ -89,7 +89,7 @@ v27.1에서 구현한 수신 트랜잭션 모니터링의 Admin UI 연동.
 | 기능 | 설명 |
 |------|------|
 | 승인 대기 카드 | APPROVAL 티어 대기 중인 트랜잭션 건수 표시 + 클릭 시 트랜잭션 페이지 필터링 |
-| 클릭 가능 카드 | Failed Txns, Recent Txns 카드 클릭 시 트랜잭션 페이지로 이동 (해당 필터 적용) |
+| 클릭 가능 카드 | Failed Txns, Recent Activity 카드 클릭 시 트랜잭션 페이지로 이동 (해당 필터 적용). 기존 Wallets/Sessions/Policies 카드는 이미 href 링크 있음 |
 | 네트워크 컬럼 | Recent Activity 테이블에 네트워크 컬럼 추가 |
 | txHash 링크 | Recent Activity에 txHash 컬럼 + 익스플로러 링크 추가 |
 
@@ -111,10 +111,10 @@ packages/admin/src/
     tokens.tsx                 # 신규: 토큰 레지스트리 페이지
     incoming.tsx               # 신규: 수신 트랜잭션 독립 페이지 (크로스 지갑 조회)
     wallets.tsx                # 수정: 검색/필터/잔액 컬럼
-    wallet-detail.tsx          # 수정: 탭 구조, 페이지네이션, txHash, USD
+    wallets.tsx (WalletDetailView)  # 수정: 탭 구조, 페이지네이션, txHash, USD (별도 파일 아님, wallets.tsx 내 통합)
     dashboard.tsx              # 수정: 승인 대기, 클릭 가능 카드, 네트워크/txHash
     notifications.tsx          # 수정: 로그 필터 바, 지갑 링크
-    settings.tsx               # 수정: IncomingSettings 코드를 incoming.tsx로 이전 후 제거
+    settings.tsx               # 수정: 인라인 수신 TX 설정 필드를 incoming.tsx로 추출·이전 후 제거
   components/
     layout.tsx                 # 수정: 신규 라우트 추가 (/transactions, /tokens 등)
     explorer-link.tsx          # 신규: 블록 익스플로러 링크 공용 컴포넌트 (core의 기존 URL 매핑 모듈 활용)

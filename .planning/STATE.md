@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v27.3 SHIPPED — ready for next milestone
+**Current focus:** Milestone v27.4 Admin UI UX 개선
 
 ## Current Position
 
-Milestone: v27.3 토큰별 지출 한도 정책
-Phase: 238 (4 of 4) (Backward Compatibility + Documentation)
-Plan: 1 of 1 in current phase
-Status: Milestone v27.3 SHIPPED
-Last activity: 2026-02-22 -- Milestone v27.3 archived and tagged
+Milestone: v27.4 Admin UI UX 개선
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-22 — Milestone v27.4 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
