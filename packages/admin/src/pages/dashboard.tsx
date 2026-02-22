@@ -9,6 +9,7 @@ import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { getErrorMessage } from '../utils/error-messages';
 import { showToast } from '../components/toast';
+import { ExplorerLink } from '../components/explorer-link';
 
 interface RecentTransaction {
   id: string;
@@ -20,6 +21,7 @@ interface RecentTransaction {
   amount: string | null;
   amountUsd: number | null;
   network: string | null;
+  txHash: string | null;
   createdAt: number | null;
 }
 
@@ -110,6 +112,11 @@ function buildTxColumns(
       },
     },
     {
+      key: 'network',
+      header: 'Network',
+      render: (tx) => tx.network ?? '\u2014',
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (tx) => {
@@ -121,6 +128,13 @@ function buildTxColumns(
               : 'warning';
         return <Badge variant={variant}>{tx.status}</Badge>;
       },
+    },
+    {
+      key: 'txHash',
+      header: 'Tx Hash',
+      render: (tx) => (
+        <ExplorerLink network={tx.network ?? ''} txHash={tx.txHash} />
+      ),
     },
   ];
 }
@@ -148,6 +162,7 @@ export default function DashboardPage() {
   const displayRate = useSignal<number | null>(1);
   const promptLoading = useSignal(false);
   const promptText = useSignal<string | null>(null);
+  const approvalCount = useSignal<number | null>(null);
 
   const fetchStatus = async () => {
     loading.value = true;
@@ -201,6 +216,9 @@ export default function DashboardPage() {
         displayRate.value = rate;
       })
       .catch(() => { /* fallback to USD */ });
+    apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
+      .then((res) => { approvalCount.value = res.total; })
+      .catch(() => { /* fallback */ });
     const interval = setInterval(fetchStatus, 30_000);
     return () => clearInterval(interval);
   }, []);
@@ -256,12 +274,21 @@ export default function DashboardPage() {
           label="Recent Txns (24h)"
           value={data.value?.recentTxCount?.toString() ?? '\u2014'}
           loading={isInitialLoad}
+          href="#/transactions"
         />
         <StatCard
           label="Failed Txns (24h)"
           value={data.value?.failedTxCount?.toString() ?? '\u2014'}
           loading={isInitialLoad}
           badge={data.value ? (data.value.failedTxCount === 0 ? 'success' : 'danger') : undefined}
+          href="#/transactions?status=FAILED"
+        />
+        <StatCard
+          label="Approval Pending"
+          value={approvalCount.value?.toString() ?? '\u2014'}
+          loading={isInitialLoad}
+          badge={approvalCount.value != null && approvalCount.value > 0 ? 'warning' : undefined}
+          href="#/transactions?status=APPROVED"
         />
       </div>
 
