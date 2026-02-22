@@ -736,7 +736,7 @@ function WalletDetailView({ id }: { id: string }) {
                 }}>
                   <span>
                     {n.name ?? n.network}
-                    {n.isDefault && <Badge variant="success" style={{ marginLeft: 'var(--space-2)' }}>Default</Badge>}
+                    {n.isDefault && <span style={{ marginLeft: 'var(--space-2)', display: 'inline-block' }}><Badge variant="success">Default</Badge></span>}
                   </span>
                   {!n.isDefault && wallet.value?.status === 'ACTIVE' && (
                     <Button
@@ -1775,7 +1775,9 @@ function WalletListContent() {
   // Search + filter state
   const search = useSignal('');
   const filters = useSignal<Record<string, string>>({ chain: '', environment: '', status: '' });
-  const balances = useSignal<Record<string, { balance: string; symbol: string } | null>>({});
+  const balances = useSignal<Record<string, { balance: string; symbol: string; usd?: number | null } | null>>({});
+  const listDisplayCurrency = useSignal<string>('USD');
+  const listDisplayRate = useSignal<number | null>(1);
 
   const fetchWallets = async () => {
     try {
@@ -1792,14 +1794,14 @@ function WalletListContent() {
   // Fetch balances for wallets (up to BALANCE_FETCH_LIMIT)
   const fetchBalances = async (walletList: Wallet[]) => {
     const toFetch = walletList.slice(0, BALANCE_FETCH_LIMIT);
-    const results: Record<string, { balance: string; symbol: string } | null> = {};
+    const results: Record<string, { balance: string; symbol: string; usd?: number | null } | null> = {};
     await Promise.allSettled(
       toFetch.map(async (w) => {
         try {
           const resp = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(w.id));
           const defaultNet = resp.balances?.find((b) => b.isDefault);
           if (defaultNet?.native) {
-            results[w.id] = { balance: defaultNet.native.balance, symbol: defaultNet.native.symbol };
+            results[w.id] = { balance: defaultNet.native.balance, symbol: defaultNet.native.symbol, usd: defaultNet.native.usd };
           } else {
             results[w.id] = null;
           }
@@ -1858,6 +1860,11 @@ function WalletListContent() {
         return (
           <span>
             {bal.balance} {bal.symbol}
+            {bal.usd != null && (
+              <span style={{ color: 'var(--color-text-secondary)', marginLeft: 'var(--space-1)', fontSize: '0.85em' }}>
+                ({formatWithDisplay(bal.usd, listDisplayCurrency.value, listDisplayRate.value)})
+              </span>
+            )}
           </span>
         );
       },
@@ -1931,6 +1938,13 @@ function WalletListContent() {
         void fetchBalances(wallets.value);
       }
     });
+    // Fetch display currency for USD conversion
+    fetchDisplayCurrency()
+      .then(({ currency, rate }) => {
+        listDisplayCurrency.value = currency;
+        listDisplayRate.value = rate;
+      })
+      .catch(() => { /* fallback to USD/1 */ });
   }, []);
 
   return (
