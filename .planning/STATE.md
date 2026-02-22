@@ -5,26 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 237 -- Admin UI Token Limits
+**Current focus:** Phase 238 -- Backward Compatibility + Documentation
 
 ## Current Position
 
 Milestone: v27.3 토큰별 지출 한도 정책
-Phase: 237 (3 of 4) (Admin UI Token Limits)
-Plan: 2 of 2 in current phase
-Status: Phase 237 complete
-Last activity: 2026-02-22 -- Completed 237-02 (CAIP-19 token limit rows with registry integration)
+Phase: 238 (4 of 4) (Backward Compatibility + Documentation)
+Plan: 1 of 1 in current phase
+Status: Phase 238 complete -- Milestone v27.3 complete
+Last activity: 2026-02-22 -- Completed 238-01 (Backward compatibility tests + token_limits documentation)
 
-Progress: [████████░░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Cumulative:** 53 milestones, 235 phases, 506 plans, 1,368 reqs, 4,396+ tests, ~157,584 LOC TS
 
 **v27.3 Velocity:**
-- Total plans completed: 6/7
-- Average duration: 4min
-- Total execution time: 0.35 hours
+- Total plans completed: 7/7
+- Average duration: 3.6min
+- Total execution time: 0.40 hours
 
 **By Phase:**
 
@@ -33,7 +33,7 @@ Progress: [████████░░] 86%
 | 235 | 1/1 | 3min | 3min |
 | 236 | 3/3 | 13min | 4.3min |
 | 237 | 2/2 | 5min | 2.5min |
-| 238 | 0/1 | - | - |
+| 238 | 1/1 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -60,6 +60,8 @@ Progress: [████████░░] 86%
 - [237-02] CAIP-19 asset ID used directly from registry response as token_limits key -- no manual construction
 - [237-02] Manual CAIP-19 entry via prompt() for non-registry tokens or non-EVM networks
 - [237-02] Token symbol display derived from registry match or parsed from CAIP-19 key suffix
+- [238-01] CMPT-03a uses direct SQL for CONFIRMED transaction with amount_usd -- consistent with TOCTOU test patterns
+- [238-01] policies.skill.md raw fields (instant_max, notify_max, delay_max) marked as optional -- token_limits/USD can substitute
 
 ### Blockers/Concerns
 
@@ -68,5 +70,5 @@ Progress: [████████░░] 86%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 237-02-PLAN.md (CAIP-19 token limit rows with registry integration)
+Stopped at: Completed 238-01-PLAN.md (Backward compatibility tests + token_limits documentation) -- Milestone v27.3 complete
 Resume file: None

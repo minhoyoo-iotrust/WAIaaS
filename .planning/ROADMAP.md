@@ -195,7 +195,7 @@ See `.planning/milestones/v27.2-ROADMAP.md` for full details.
 - [x] **Phase 235: Schema -- Zod SSoT 확장** - TokenLimitSchema 정의, raw 필드 optional 전환, token_limits CAIP-19 record 추가, superRefine 검증 (completed 2026-02-22)
 - [x] **Phase 236: Policy Engine -- 토큰별 티어 평가** - TransactionParam 확장, evaluateTokenTier CAIP-19 매칭, 3곳 callsite tokenContext 전달, 폴백 로직 (completed 2026-02-22)
 - [x] **Phase 237: Admin UI -- 토큰별 한도 편집 폼** - USD 최상단 배치, 네이티브/CAIP-19 토큰 한도 편집기, 레지스트리 연동, legacy deprecated 표시 (completed 2026-02-22)
-- [ ] **Phase 238: Compat + Docs -- 하위 호환 검증 및 문서화** - 기존 정책 동일 동작 확인, 우선순위 검증, 누적 한도 비영향 확인, skill 파일 갱신
+- [x] **Phase 238: Compat + Docs -- 하위 호환 검증 및 문서화** - 기존 정책 동일 동작 확인, 우선순위 검증, 누적 한도 비영향 확인, skill 파일 갱신 (completed 2026-02-22)
 
 ## Phase Details
 
@@ -284,4 +284,4 @@ Phases execute in numeric order: 235 -> 236 -> 237 -> 238
 | 235 | 1/1 | Complete    | 2026-02-22 | - |
 | 236 | 3/3 | Complete    | 2026-02-22 | - |
 | 237 | 2/2 | Complete   | 2026-02-22 | - |
-| 238 | v27.3 | 0/1 | Not started | - |
+| 238 | 1/1 | Complete   | 2026-02-22 | - |

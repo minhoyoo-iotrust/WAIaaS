@@ -39,10 +39,10 @@
 
 ### Compat (하위 호환 + 문서)
 
-- [ ] **CMPT-01**: 기존 정책(raw 필드만, token_limits 없음)이 변경 없이 동일하게 동작함
-- [ ] **CMPT-02**: raw + token_limits 동시 존재 시 token_limits가 우선함
-- [ ] **CMPT-03**: 누적 한도(daily/monthly_limit_usd) 평가가 영향받지 않음
-- [ ] **CMPT-04**: policies.skill.md에 token_limits 필드가 문서화됨
+- [x] **CMPT-01**: 기존 정책(raw 필드만, token_limits 없음)이 변경 없이 동일하게 동작함
+- [x] **CMPT-02**: raw + token_limits 동시 존재 시 token_limits가 우선함
+- [x] **CMPT-03**: 누적 한도(daily/monthly_limit_usd) 평가가 영향받지 않음
+- [x] **CMPT-04**: policies.skill.md에 token_limits 필드가 문서화됨
 
 ## Future Requirements
 
@@ -83,10 +83,10 @@
 | ADMN-05 | Phase 237 | Complete |
 | ADMN-06 | Phase 237 | Complete |
 | ADMN-07 | Phase 237 | Complete |
-| CMPT-01 | Phase 238 | Pending |
-| CMPT-02 | Phase 238 | Pending |
-| CMPT-03 | Phase 238 | Pending |
-| CMPT-04 | Phase 238 | Pending |
+| CMPT-01 | Phase 238 | Complete |
+| CMPT-02 | Phase 238 | Complete |
+| CMPT-03 | Phase 238 | Complete |
+| CMPT-04 | Phase 238 | Complete |
 
 **Coverage:**
 - v27.3 requirements: 27 total
