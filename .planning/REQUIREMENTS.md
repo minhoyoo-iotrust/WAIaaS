@@ -60,39 +60,39 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | — | Pending |
-| SCHM-02 | — | Pending |
-| SCHM-03 | — | Pending |
-| SCHM-04 | — | Pending |
-| SCHM-05 | — | Pending |
-| SCHM-06 | — | Pending |
-| ENGN-01 | — | Pending |
-| ENGN-02 | — | Pending |
-| ENGN-03 | — | Pending |
-| ENGN-04 | — | Pending |
-| ENGN-05 | — | Pending |
-| ENGN-06 | — | Pending |
-| ENGN-07 | — | Pending |
-| ENGN-08 | — | Pending |
-| ENGN-09 | — | Pending |
-| ENGN-10 | — | Pending |
-| ADMN-01 | — | Pending |
-| ADMN-02 | — | Pending |
-| ADMN-03 | — | Pending |
-| ADMN-04 | — | Pending |
-| ADMN-05 | — | Pending |
-| ADMN-06 | — | Pending |
-| ADMN-07 | — | Pending |
-| CMPT-01 | — | Pending |
-| CMPT-02 | — | Pending |
-| CMPT-03 | — | Pending |
-| CMPT-04 | — | Pending |
+| SCHM-01 | Phase 235 | Pending |
+| SCHM-02 | Phase 235 | Pending |
+| SCHM-03 | Phase 235 | Pending |
+| SCHM-04 | Phase 235 | Pending |
+| SCHM-05 | Phase 235 | Pending |
+| SCHM-06 | Phase 235 | Pending |
+| ENGN-01 | Phase 236 | Pending |
+| ENGN-02 | Phase 236 | Pending |
+| ENGN-03 | Phase 236 | Pending |
+| ENGN-04 | Phase 236 | Pending |
+| ENGN-05 | Phase 236 | Pending |
+| ENGN-06 | Phase 236 | Pending |
+| ENGN-07 | Phase 236 | Pending |
+| ENGN-08 | Phase 236 | Pending |
+| ENGN-09 | Phase 236 | Pending |
+| ENGN-10 | Phase 236 | Pending |
+| ADMN-01 | Phase 237 | Pending |
+| ADMN-02 | Phase 237 | Pending |
+| ADMN-03 | Phase 237 | Pending |
+| ADMN-04 | Phase 237 | Pending |
+| ADMN-05 | Phase 237 | Pending |
+| ADMN-06 | Phase 237 | Pending |
+| ADMN-07 | Phase 237 | Pending |
+| CMPT-01 | Phase 238 | Pending |
+| CMPT-02 | Phase 238 | Pending |
+| CMPT-03 | Phase 238 | Pending |
+| CMPT-04 | Phase 238 | Pending |
 
 **Coverage:**
 - v27.3 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 after roadmap creation*
