@@ -1,7 +1,7 @@
 # Requirements: WAIaaS v27.2 CAIP-19 자산 식별 표준
 
 **Defined:** 2026-02-22
-**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 
 ## v27.2 Requirements
 
@@ -42,7 +42,7 @@
 
 - [ ] **PLCY-01**: ALLOWED_TOKENS policy rules accept optional assetId field for token matching
 - [ ] **PLCY-02**: Policy evaluation with assetId compares chain+network+address (all three dimensions)
-- [ ] **PLCY-03**: 4-scenario policy matching works correctly (assetId↔assetId, assetId↔legacy, legacy↔assetId, legacy↔legacy)
+- [ ] **PLCY-03**: 4-scenario policy matching works correctly (assetId<->assetId, assetId<->legacy, legacy<->assetId, legacy<->legacy)
 - [ ] **PLCY-04**: EVM addresses are normalized to lowercase for CAIP-19 comparison
 
 ### MCP/SDK
@@ -81,17 +81,45 @@
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| CAIP-01 | Phase 231 | Pending |
+| CAIP-02 | Phase 231 | Pending |
+| CAIP-03 | Phase 231 | Pending |
+| CAIP-04 | Phase 231 | Pending |
+| CAIP-05 | Phase 231 | Pending |
+| CAIP-06 | Phase 231 | Pending |
+| CAIP-07 | Phase 231 | Pending |
+| CAIP-08 | Phase 231 | Pending |
+| CAIP-09 | Phase 231 | Pending |
+| CAIP-10 | Phase 231 | Pending |
+| TOKN-01 | Phase 231 | Pending |
+| TOKN-02 | Phase 233 | Pending |
+| TOKN-03 | Phase 233 | Pending |
+| TOKN-04 | Phase 233 | Pending |
+| ORCL-01 | Phase 232 | Pending |
+| ORCL-02 | Phase 232 | Pending |
+| ORCL-03 | Phase 232 | Pending |
+| ORCL-04 | Phase 232 | Pending |
+| TXSC-01 | Phase 233 | Pending |
+| TXSC-02 | Phase 233 | Pending |
+| TXSC-03 | Phase 233 | Pending |
+| PLCY-01 | Phase 233 | Pending |
+| PLCY-02 | Phase 233 | Pending |
+| PLCY-03 | Phase 233 | Pending |
+| PLCY-04 | Phase 233 | Pending |
+| MCPS-01 | Phase 234 | Pending |
+| MCPS-02 | Phase 234 | Pending |
+| MCPS-03 | Phase 234 | Pending |
+| MCPS-04 | Phase 234 | Pending |
+| SKIL-01 | Phase 234 | Pending |
+| SKIL-02 | Phase 234 | Pending |
 
 **Coverage:**
-- v27.2 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30
+- v27.2 requirements: 31 total
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 after roadmap creation*

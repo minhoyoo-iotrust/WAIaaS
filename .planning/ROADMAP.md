@@ -15,6 +15,7 @@
 - ✅ **v26.4 멀티 지갑 세션 + 에이전트 자기 발견** -- Phases 210-214 (shipped 2026-02-21)
 - ✅ **v27.0 수신 트랜잭션 모니터링 설계** -- Phases 215-223 (shipped 2026-02-21)
 - ✅ **v27.1 수신 트랜잭션 모니터링 구현** -- Phases 224-230 (shipped 2026-02-22)
+- [ ] **v27.2 CAIP-19 자산 식별 표준** -- Phases 231-234 (in progress)
 
 ## Phases
 
@@ -174,7 +175,90 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 
 </details>
 
+### v27.2 CAIP-19 자산 식별 표준 (In Progress)
+
+**Milestone Goal:** WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일하여, 모든 ActionProvider와 외부 인터페이스가 체인/네트워크/자산을 하나의 식별자로 표현할 수 있는 상태. 모든 변경은 additive(하위 호환)이며 기존 address-only 경로는 그대로 유지된다.
+
+**Phase Numbering:**
+- Integer phases (231, 232, 233, 234): Planned milestone work
+- Decimal phases (231.1, 231.2): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 231: Core CAIP Module + Network Map** - CAIP-2/19 파서, 13-네트워크 양방향 맵, TokenRef 확장, x402 통합
+- [ ] **Phase 232: Oracle L2 Support + Cache Key Migration** - 가격 오라클 CAIP-19 캐시 키, CoinGecko L2 플랫폼 매핑, Pyth 키 원자적 전환
+- [ ] **Phase 233: DB Migration + Schema + Policy** - DB v22 asset_id 컬럼, 토큰 레지스트리 backfill, 트랜잭션/정책 스키마 assetId 확장
+- [ ] **Phase 234: MCP + SDK + Skills Integration** - MCP 도구 assetId 파라미터, TS/Python SDK 타입, 스킬 파일 문서화
+
+## Phase Details
+
+### Phase 231: Core CAIP Module + Network Map
+**Goal**: 모든 후속 Phase의 기반이 되는 CAIP-2/19 파싱/포맷팅 모듈과 NetworkType 양방향 맵이 존재하여, 코드베이스 어디서든 표준 자산 식별자를 생성/검증할 수 있는 상태
+**Depends on**: Nothing (first phase of v27.2)
+**Requirements**: CAIP-01, CAIP-02, CAIP-03, CAIP-04, CAIP-05, CAIP-06, CAIP-07, CAIP-08, CAIP-09, CAIP-10, TOKN-01
+**Success Criteria** (what must be TRUE):
+  1. User can import parseCaip2/formatCaip2/parseCaip19/formatCaip19 from packages/core and round-trip any valid CAIP string without data loss
+  2. User can convert any of the 13 WAIaaS NetworkType values to CAIP-2 chain ID and back via networkToCaip2/caip2ToNetwork
+  3. User can generate native asset IDs (slip44:60 for ETH, slip44:501 for SOL, slip44:966 for POL) and token asset IDs (erc20 for EVM, token for Solana) via nativeAssetId/tokenAssetId helpers
+  4. x402.types.ts CAIP2_TO_NETWORK import works unchanged (backward-compatible re-export from caip/ module)
+  5. TokenRef Zod schema accepts optional assetId (CAIP-19 string) and network (NetworkType) fields without breaking existing consumers
+**Plans**: TBD
+
+Plans:
+- [ ] 231-01: CAIP-2/19 파서, 포매터, Zod 스키마 구현
+- [ ] 231-02: 13-네트워크 양방향 맵 + asset helpers + x402/WC 통합 + TokenRef 확장
+
+### Phase 232: Oracle L2 Support + Cache Key Migration
+**Goal**: 가격 오라클이 CAIP-19 기반 캐시 키를 사용하여 L2 네트워크(Polygon, Arbitrum, Optimism, Base) 토큰 가격을 정확히 조회할 수 있는 상태
+**Depends on**: Phase 231
+**Requirements**: ORCL-01, ORCL-02, ORCL-03, ORCL-04
+**Success Criteria** (what must be TRUE):
+  1. Price oracle cache key가 CAIP-19 형식(예: eip155:137/erc20:0x...)을 사용하며, 동일 주소의 Ethereum USDC와 Polygon USDC가 별도 캐시 엔트리로 구분된다
+  2. CoinGecko를 통해 Polygon, Arbitrum, Optimism, Base 메인넷의 ERC-20 토큰 가격을 조회할 수 있다
+  3. PYTH_FEED_IDS 키가 CAIP-19 형식으로 업데이트되어 기존 Pyth 가격 피드가 정상 동작한다
+  4. 데몬 재시작 후 새로운 캐시 키 형식이 자동 적용된다 (인메모리 캐시이므로 데이터 마이그레이션 불필요)
+**Plans**: TBD
+
+Plans:
+- [ ] 232-01: CoinGecko L2 플랫폼 맵 확장 + buildCacheKey CAIP-19 전환
+- [ ] 232-02: PYTH_FEED_IDS 키 전환 + oracle chain TokenRef.network 전파
+
+### Phase 233: DB Migration + Schema + Policy
+**Goal**: token_registry DB 테이블에 CAIP-19 asset_id가 저장되고, 트랜잭션 요청과 정책 규칙이 assetId 필드를 지원하여, 동일 주소의 다른 체인 토큰을 정책 수준에서 구분할 수 있는 상태
+**Depends on**: Phase 231
+**Requirements**: TOKN-02, TOKN-03, TOKN-04, TXSC-01, TXSC-02, TXSC-03, PLCY-01, PLCY-02, PLCY-03, PLCY-04
+**Success Criteria** (what must be TRUE):
+  1. DB v22 마이그레이션 후 token_registry의 모든 기존 레코드에 올바른 CAIP-19 asset_id가 자동 채워져 있다
+  2. Token API 응답(GET /v1/tokens 등)에 assetId 필드가 포함된다
+  3. 트랜잭션 요청에 assetId를 포함하면 address가 자동 추출되고, assetId와 address가 동시 제공될 때 cross-validation이 수행된다
+  4. ALLOWED_TOKENS 정책에 assetId를 사용할 수 있으며, 4가지 매칭 시나리오(assetId<->assetId, assetId<->legacy, legacy<->assetId, legacy<->legacy) 모두 정확히 동작한다
+  5. 기존 assetId 없는 트랜잭션과 정책이 변경 없이 동일하게 동작한다 (하위 호환)
+**Plans**: TBD
+
+Plans:
+- [ ] 233-01: DB v22 마이그레이션 + token_registry asset_id backfill + API 응답
+- [ ] 233-02: TokenInfoSchema assetId 확장 + Stage 1 추출/검증
+- [ ] 233-03: ALLOWED_TOKENS 정책 assetId 지원 + 4-scenario 평가 매트릭스
+
+### Phase 234: MCP + SDK + Skills Integration
+**Goal**: AI 에이전트가 MCP 도구, TypeScript/Python SDK, 스킬 파일을 통해 CAIP-19 assetId로 토큰을 식별하고 트랜잭션을 요청할 수 있는 상태
+**Depends on**: Phase 231, Phase 233
+**Requirements**: MCPS-01, MCPS-02, MCPS-03, MCPS-04, SKIL-01, SKIL-02
+**Success Criteria** (what must be TRUE):
+  1. MCP 도구(send_token, approve_token 등)에 optional assetId 파라미터를 전달하면 해당 토큰으로 트랜잭션이 생성된다
+  2. MCP 도구 description에 CAIP-19 assetId 형식과 사용법이 문서화되어 AI 에이전트가 형식을 이해할 수 있다
+  3. TypeScript SDK 타입(AssetInfo, TokenInfo 등)에 optional assetId 필드가 포함된다
+  4. Python SDK 모델에 optional assetId 필드가 포함된다
+  5. Skills 파일(transactions, policies, quickstart)에 CAIP-19 자산 식별 개념과 사용 예제가 문서화된다
+**Plans**: TBD
+
+Plans:
+- [ ] 234-01: MCP 도구 assetId 파라미터 + description 업데이트
+- [ ] 234-02: TS/Python SDK 타입 + Skills 파일 문서화
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 231 -> 232 -> 233 -> 234
+(Note: Phase 232 and 233 both depend only on 231. Phase 234 depends on 231 + 233.)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -191,3 +275,7 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
 | 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
+| 231 | v27.2 | 0/2 | Not started | - |
+| 232 | v27.2 | 0/2 | Not started | - |
+| 233 | v27.2 | 0/3 | Not started | - |
+| 234 | v27.2 | 0/2 | Not started | - |
