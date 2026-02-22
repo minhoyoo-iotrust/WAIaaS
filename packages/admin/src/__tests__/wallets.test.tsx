@@ -128,7 +128,11 @@ describe('WalletsPage', () => {
   });
 
   it('should render wallet list table', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockWallets);
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWallets);
+      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
+      return Promise.resolve({});
+    });
 
     render(<WalletsPage />);
 
@@ -138,12 +142,17 @@ describe('WalletsPage', () => {
 
     expect(screen.getByText('bot-beta')).toBeTruthy();
     expect(screen.getByText('Name')).toBeTruthy();
-    expect(screen.getByText('Chain')).toBeTruthy();
-    expect(screen.getByText('Environment')).toBeTruthy();
+    // Chain/Environment appear in both FilterBar labels and table headers
+    expect(screen.getAllByText('Chain').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Environment').length).toBeGreaterThanOrEqual(1);
   });
 
   it('should show create form and call POST on submit', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockWallets);
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWallets);
+      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
+      return Promise.resolve({});
+    });
     vi.mocked(apiPost).mockResolvedValue({
       id: 'wallet-3',
       name: 'new-bot',
@@ -251,6 +260,216 @@ describe('WalletsPage', () => {
 
     await waitFor(() => {
       expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/wallets/wallet-1');
+    });
+  });
+});
+
+const mockWalletsExtended = {
+  items: [
+    {
+      id: 'wallet-1',
+      name: 'bot-alpha',
+      chain: 'solana',
+      network: 'devnet',
+      environment: 'testnet',
+      publicKey: 'abc123def456',
+      status: 'ACTIVE',
+      ownerState: 'NONE',
+      createdAt: 1707609600,
+    },
+    {
+      id: 'wallet-2',
+      name: 'bot-beta',
+      chain: 'ethereum',
+      network: 'ethereum-sepolia',
+      environment: 'mainnet',
+      publicKey: 'xyz789uvw012',
+      status: 'SUSPENDED',
+      ownerState: 'NONE',
+      createdAt: 1707609600,
+    },
+    {
+      id: 'wallet-3',
+      name: 'trade-gamma',
+      chain: 'solana',
+      network: 'devnet',
+      environment: 'testnet',
+      publicKey: 'pqr456mno789',
+      status: 'ACTIVE',
+      ownerState: 'NONE',
+      createdAt: 1707609600,
+    },
+  ],
+};
+
+const mockBalanceWallet1 = {
+  balances: [
+    {
+      network: 'devnet',
+      isDefault: true,
+      native: { balance: '1.5', symbol: 'SOL' },
+      tokens: [],
+    },
+  ],
+};
+
+const mockBalanceWallet2 = {
+  balances: [
+    {
+      network: 'ethereum-sepolia',
+      isDefault: true,
+      native: { balance: '0.25', symbol: 'ETH' },
+      tokens: [],
+    },
+  ],
+};
+
+describe('WalletListContent - search, filter, balance', () => {
+  beforeEach(() => {
+    currentPath.value = '/wallets';
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('should filter wallets by search text (name)', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
+      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+      expect(screen.getByText('bot-beta')).toBeTruthy();
+      expect(screen.getByText('trade-gamma')).toBeTruthy();
+    });
+
+    // Type in the search input -- SearchInput uses debounce, so we trigger onSearch directly
+    const searchInput = screen.getByPlaceholderText('Search by name or public key...');
+    // SearchInput fires onSearch via debounce; simulate by firing input + wait
+    fireEvent.input(searchInput, { target: { value: 'alpha' } });
+
+    // Wait for debounced search callback
+    await waitFor(
+      () => {
+        expect(screen.getByText('bot-alpha')).toBeTruthy();
+        expect(screen.queryByText('bot-beta')).toBeNull();
+        expect(screen.queryByText('trade-gamma')).toBeNull();
+      },
+      { timeout: 1000 },
+    );
+  });
+
+  it('should render FilterBar with chain, environment, and status dropdowns', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
+      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    // FilterBar renders labels for each filter field (also in table headers, so use getAllByText)
+    expect(screen.getAllByText('Chain').length).toBeGreaterThanOrEqual(2); // label + th
+    expect(screen.getAllByText('Environment').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(2);
+    // The Clear button from FilterBar
+    expect(screen.getByText('Clear')).toBeTruthy();
+    // Search input is present
+    expect(screen.getByPlaceholderText('Search by name or public key...')).toBeTruthy();
+  });
+
+  it('should display balance column with native balance', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
+      if (path === '/v1/admin/wallets/wallet-1/balance') return Promise.resolve(mockBalanceWallet1);
+      if (path === '/v1/admin/wallets/wallet-2/balance') return Promise.resolve(mockBalanceWallet2);
+      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    // Wait for wallets and balances to load
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    // Balance column header
+    expect(screen.getByText('Balance')).toBeTruthy();
+
+    // Wait for balance values to appear
+    await waitFor(() => {
+      expect(screen.getByText(/1\.5/)).toBeTruthy();
+      expect(screen.getByText(/SOL/)).toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/0\.25/)).toBeTruthy();
+      expect(screen.getByText(/ETH/)).toBeTruthy();
+    });
+  });
+
+  it('should show loading state for balance column', async () => {
+    // apiGet for wallets resolves immediately, but balance never resolves
+    let resolveBalances: () => void;
+    const balancePromise = new Promise<{ balances: never[] }>((resolve) => {
+      resolveBalances = () => resolve({ balances: [] });
+    });
+
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
+      if (path.includes('/balance')) return balancePromise;
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    // Balance cells should show "Loading..." while fetching
+    const loadingCells = screen.getAllByText('Loading...');
+    expect(loadingCells.length).toBeGreaterThan(0);
+
+    // Resolve balances to prevent hanging
+    resolveBalances!();
+  });
+
+  it('should filter wallets by chain dropdown', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
+      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('bot-alpha')).toBeTruthy();
+    });
+
+    // Find the Chain dropdown (FilterBar renders <select> elements)
+    const selects = document.querySelectorAll('.filter-bar select');
+    // First select is 'chain'
+    const chainSelect = selects[0] as HTMLSelectElement;
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    await waitFor(() => {
+      // bot-beta is ethereum, bot-alpha and trade-gamma are solana
+      expect(screen.getByText('bot-beta')).toBeTruthy();
+      expect(screen.queryByText('bot-alpha')).toBeNull();
+      expect(screen.queryByText('trade-gamma')).toBeNull();
     });
   });
 });
