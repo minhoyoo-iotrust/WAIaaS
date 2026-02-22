@@ -181,6 +181,7 @@ interface TransactionParam {
   chain: string;
   network?: string;
   tokenAddress?: string;
+  assetId?: string;       // CAIP-19 asset identifier from token.assetId
   contractAddress?: string;
   selector?: string;
   spenderAddress?: string;
@@ -194,13 +195,14 @@ function buildTransactionParam(
 ): TransactionParam {
   switch (txType) {
     case 'TOKEN_TRANSFER': {
-      const r = req as { to: string; amount: string; token: { address: string } };
+      const r = req as { to: string; amount: string; token: { address: string; assetId?: string } };
       return {
         type: 'TOKEN_TRANSFER',
         amount: r.amount,
         toAddress: r.to,
         chain,
         tokenAddress: r.token.address,
+        assetId: r.token.assetId,
       };
     }
     case 'CONTRACT_CALL': {
@@ -215,12 +217,14 @@ function buildTransactionParam(
       };
     }
     case 'APPROVE': {
-      const r = req as { spender: string; amount: string };
+      const r = req as { spender: string; amount: string; token: { address: string; assetId?: string } };
       return {
         type: 'APPROVE',
         amount: r.amount,
         toAddress: r.spender,
         chain,
+        tokenAddress: r.token.address,
+        assetId: r.token.assetId,
         spenderAddress: r.spender,
         approveAmount: r.amount,
       };
@@ -347,6 +351,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
         chain: ctx.wallet.chain,
         network: ctx.resolvedNetwork,
         tokenAddress: 'token' in instr ? (instr as { token?: { address: string } }).token?.address : undefined,
+        assetId: 'token' in instr ? (instr as { token?: { assetId?: string } }).token?.assetId : undefined,
         contractAddress: instrType === 'CONTRACT_CALL' ? ('to' in instr ? (instr as { to?: string }).to : undefined) : undefined,
         selector: 'calldata' in instr ? (instr as { calldata?: string }).calldata?.slice(0, 10) : undefined,
         spenderAddress: 'spender' in instr ? (instr as { spender?: string }).spender : undefined,
