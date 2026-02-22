@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/daemon",
-  "version": "2.5.0",
+  "version": "2.6.0-rc",
   "description": "WAIaaS daemon - self-hosted wallet service for AI agents",
   "license": "MIT",
   "type": "module",

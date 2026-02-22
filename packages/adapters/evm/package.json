@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/adapter-evm",
-  "version": "2.5.0",
+  "version": "2.6.0-rc",
   "description": "WAIaaS EVM chain adapter - Ethereum/ERC-20 support via viem",
   "license": "MIT",
   "type": "module",

@@ -1,5 +1,54 @@
 # Changelog
 
+## [2.6.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.5.0...v2.6.0-rc) (2026-02-22)
+
+
+### Features
+
+* **224-01:** add IChainSubscriber interface and IncomingTxStatus enum ([bd76428](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bd764289bbc5325fe02f2470abe54f297b6e325c))
+* **224-01:** add IncomingTransaction Zod schema and event types ([c40b0ba](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c40b0baa5c7cf23a0a7bf9b5cd94c1e2ef0008d9))
+* **224-02:** add DB v21 migration + pushSchema DDL for incoming TX monitoring ([35de861](https://github.com/minhoyoo-iotrust/WAIaaS/commit/35de8613072f84675ccc38115c82623f5181e255))
+* **224-02:** add Drizzle schema tables + update migration chain tests + re-exports ([f671e62](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f671e625c393f607b2adb835392730dcc63d9f36))
+* **225-01:** add SOL and SPL/Token-2022 incoming transfer parsers ([953323f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/953323f0e62cde859199c9e6ad37ddf32dba8b22))
+* **225-01:** add SolanaIncomingSubscriber, SolanaHeartbeat, and 19 tests ([4eb612d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4eb612d77b0d6b9fb096a7d4daeb4643705f4896))
+* **225-02:** implement EvmIncomingSubscriber with ERC-20 and native ETH detection ([b508994](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b508994fe085e5c9883f390531d5da388d6a09cc))
+* **225-03:** add ConnectionState type, calculateDelay, and reconnectLoop ([7710287](https://github.com/minhoyoo-iotrust/WAIaaS/commit/77102875e32105e6a46fa31ecc3c9461ae373fae))
+* **226-01:** implement IncomingTxQueue with Map dedup and batch flush ([f7fda7d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f7fda7d1934be15b5f5d3674c2012bedbb2657c2))
+* **226-02:** implement SubscriptionMultiplexer with connection sharing and reconnection ([d060c41](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d060c41c5f0b34c22e0d4202575a47c1bc4326b1))
+* **226-03:** add worker handler factories and cursor utilities ([710df0d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/710df0d26c209698aeba2b67fbe51928113f4507))
+* **226-04:** add safety rules + IncomingTxMonitorService orchestrator ([2223283](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2223283b330730cb872d6f9f5dfaa36e6999c87d))
+* **226-04:** integrate IncomingTxMonitorService into DaemonLifecycle ([c4ce706](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c4ce706ec4ee288cdfdfd9c159df2c7f9171487b))
+* **227-01:** add [incoming] section to DaemonConfigSchema and KNOWN_SECTIONS ([de13998](https://github.com/minhoyoo-iotrust/WAIaaS/commit/de1399868589bf5a9a5c6a24e24ccaeebde821c1))
+* **227-02:** add IncomingSettings component to Admin UI settings page ([b17fc3a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b17fc3a6e0f3ce1184b9dbeae8cb3cb6b1fc2da0))
+* **227-02:** add TX_INCOMING and TX_INCOMING_SUSPICIOUS notification event types ([af557ac](https://github.com/minhoyoo-iotrust/WAIaaS/commit/af557aced0136ae5bdec3881692164151a453fef))
+* **228-01:** add incoming transaction list/summary routes and OpenAPI schemas ([7a5026a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7a5026abb7c2c0c950125bb4bafb2616ef05a633))
+* **228-01:** add PATCH /wallets/:id route and mount incoming routes in server ([fe71253](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fe71253a6902e0b07ce3b05c4ba92272cb7874ae))
+* **228-02:** add incoming transaction models and methods to Python SDK ([fc99f6f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fc99f6f9acba47b05f1300227b49c6fc2825ddea))
+* **228-02:** add incoming transaction types and methods to TypeScript SDK ([7c42f61](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7c42f61617dcd645dff21588173f2f1ef6195baf))
+* **228-03:** add MCP tools for incoming transaction queries ([ea6bc59](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ea6bc59805ed7ebb0495bb9b6bae50ce57264c69))
+* **228-03:** update wallet.skill.md with incoming transactions section ([2f4e56c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2f4e56c5a1fb3e10d122540498151277a6b6a365))
+* add policy.default_deny_x402_domains runtime toggle ([#131](https://github.com/minhoyoo-iotrust/WAIaaS/issues/131)) ([5bc84e8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5bc84e8115d6b8192e9f9bb26a815d9e1b112c08))
+* add wallet suspend/resume REST API and Admin UI ([#133](https://github.com/minhoyoo-iotrust/WAIaaS/issues/133)) ([373111a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/373111a9dd2ee9e95d19a15f49657c562ecb58e4))
+* display walletName instead of walletId in notifications ([#135](https://github.com/minhoyoo-iotrust/WAIaaS/issues/135)) ([e0c26c1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e0c26c165052279c881164a64c9e790022ed9c35))
+
+
+### Bug Fixes
+
+* **225-02:** fix TypeScript strict mode errors in subscriber tests ([a8ae1c9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a8ae1c9c405ad58376214abd06d1a02d5aaeac0a))
+* **226:** add non-null assertions for strict TS build in test files ([d666a59](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d666a5926ab5ecde990cd3f949a8f3a5ea27a83e))
+* **226:** revise plans based on checker feedback ([782736c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/782736c36053b6b74488b9760af4c805f5509958))
+* **228:** revise plans based on checker feedback ([025bbbf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/025bbbf9a018a1fc4073c5634a0c504e402481a7))
+* **229:** fix unused import and type assertion in integration tests ([463628d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/463628dbb6c149a311c10468508039da6d05715e))
+* **229:** revise plan 229-02 based on checker feedback ([d10c125](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d10c125342d9a9016ae6dd9a4267523451befcf1))
+* **230-01:** wire BackgroundWorkers, polling workers, and gap recovery across daemon lifecycle ([6132409](https://github.com/minhoyoo-iotrust/WAIaaS/commit/61324096db3fae6abb521cc34ee253fff77514d7))
+* kill switch recover — remove dual-auth, fix error-handler catch-all code ([#132](https://github.com/minhoyoo-iotrust/WAIaaS/issues/132), [#134](https://github.com/minhoyoo-iotrust/WAIaaS/issues/134)) ([c27f838](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c27f8382ff4c31bf82eeb92fcc30c530e857ddca))
+* **mcp:** update server test tool count from 21 to 23 ([5b76a3e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5b76a3e3fc9373d8ab007ba6a6c148c8c6269c1a))
+* notification title duplication and empty wallet field ([#137](https://github.com/minhoyoo-iotrust/WAIaaS/issues/137), [#138](https://github.com/minhoyoo-iotrust/WAIaaS/issues/138)) ([8e4e83d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8e4e83dda08307cef396cbb2a45cac063b29d5f8))
+* replace sync-version with sync-skills for root-to-package skill copy ([#136](https://github.com/minhoyoo-iotrust/WAIaaS/issues/136)) ([bfcec98](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bfcec98d22c0d6a74b04182cfcd69802ad82c5d8))
+* resolve 4 open issues ([#139](https://github.com/minhoyoo-iotrust/WAIaaS/issues/139), [#140](https://github.com/minhoyoo-iotrust/WAIaaS/issues/140), [#141](https://github.com/minhoyoo-iotrust/WAIaaS/issues/141), [#142](https://github.com/minhoyoo-iotrust/WAIaaS/issues/142)) for v27.1 milestone ([3684a5b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3684a5bf77b60dff5448900516c3a258b1b78de4))
+* resolve lint errors in solana subscriber and test files ([e9a4cfb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e9a4cfb84c9a08bcaed49e7bcac97d984a95c1cd))
+* update NotificationEventType expectedCount from 28 to 30 in enum SSoT ([b4224cc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4224ccc19bef604a556a610a17f0b11d2d39af9))
+
 ## [2.5.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.5.0-rc.1...v2.5.0) (2026-02-21)
 
 
