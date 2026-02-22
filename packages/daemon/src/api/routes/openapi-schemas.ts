@@ -73,6 +73,7 @@ export const WalletCrudResponseSchema = z
     status: z.string(),
     ownerAddress: z.string().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
+    monitorIncoming: z.boolean(),
     createdAt: z.number().int(),
   })
   .openapi('WalletCrudResponse');

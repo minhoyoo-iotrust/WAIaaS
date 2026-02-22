@@ -69,3 +69,6 @@ export const apiPut = <T>(path: string, body?: unknown) =>
 
 export const apiDelete = <T>(path: string, body?: unknown) =>
   apiCall<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined });
+
+export const apiPatch = <T>(path: string, body?: unknown) =>
+  apiCall<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });

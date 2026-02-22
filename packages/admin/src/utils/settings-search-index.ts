@@ -104,6 +104,18 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   { id: 'system..currency', label: 'Display Currency', description: 'Currency for USD amount conversion in dashboard and notifications', page: '/system', tab: '', fieldName: 'display.currency', keywords: ['currency', 'display', 'usd', 'conversion', 'fiat'] },
   { id: 'system..rate_limit_global_ip_rpm', label: 'Global IP Rate Limit (RPM)', description: 'Maximum API requests per minute from a single IP address', page: '/system', tab: '', fieldName: 'security.rate_limit_global_ip_rpm', keywords: ['rate', 'limit', 'rpm', 'ip', 'global', 'throttle'] },
   { id: 'system..log_level', label: 'Log Level', description: 'Daemon logging verbosity level', page: '/system', tab: '', fieldName: 'daemon.log_level', keywords: ['log', 'level', 'debug', 'info', 'warn', 'error', 'daemon'] },
+  // =========================================================================
+  // Incoming TX Page (no tabs)
+  // =========================================================================
+
+  { id: 'incoming..enabled', label: 'Monitoring Enabled', description: 'Enable or disable incoming transaction monitoring', page: '/incoming', tab: '', fieldName: 'incoming.enabled', keywords: ['incoming', 'monitoring', 'enable', 'toggle'] },
+  { id: 'incoming..poll_interval', label: 'Poll Interval (seconds)', description: 'How often to poll for incoming transactions', page: '/incoming', tab: '', fieldName: 'incoming.poll_interval', keywords: ['incoming', 'poll', 'interval', 'frequency'] },
+  { id: 'incoming..retention_days', label: 'Retention Days', description: 'How many days to retain incoming transaction records', page: '/incoming', tab: '', fieldName: 'incoming.retention_days', keywords: ['incoming', 'retention', 'days', 'cleanup'] },
+  { id: 'incoming..suspicious_dust_usd', label: 'Suspicious Dust USD Threshold', description: 'USD threshold below which transactions are flagged as dust', page: '/incoming', tab: '', fieldName: 'incoming.suspicious_dust_usd', keywords: ['incoming', 'suspicious', 'dust', 'threshold', 'usd'] },
+  { id: 'incoming..suspicious_amount_multiplier', label: 'Suspicious Amount Multiplier', description: 'Multiplier for detecting unusually large incoming amounts', page: '/incoming', tab: '', fieldName: 'incoming.suspicious_amount_multiplier', keywords: ['incoming', 'suspicious', 'amount', 'multiplier', 'large'] },
+  { id: 'incoming..cooldown_minutes', label: 'Notification Cooldown (minutes)', description: 'Cooldown period between duplicate incoming TX notifications', page: '/incoming', tab: '', fieldName: 'incoming.cooldown_minutes', keywords: ['incoming', 'cooldown', 'notification', 'minutes'] },
+  { id: 'incoming..wss_url', label: 'WebSocket URL', description: 'Custom WebSocket RPC URL for real-time incoming TX detection', page: '/incoming', tab: '', fieldName: 'incoming.wss_url', keywords: ['incoming', 'websocket', 'wss', 'rpc', 'url'] },
+
   { id: 'system..cross_validation_threshold', label: 'Cross Validation Threshold (%)', description: 'Maximum allowed deviation between price oracle sources', page: '/system', tab: '', fieldName: 'oracle.cross_validation_threshold', keywords: ['oracle', 'price', 'validation', 'threshold', 'deviation'] },
   { id: 'system..signing_sdk_enabled', label: 'SDK Enabled', description: 'Enable Signing SDK for wallet app approval', page: '/system', tab: '', fieldName: 'signing_sdk.enabled', keywords: ['signing', 'sdk', 'wallet', 'app', 'enable'] },
   { id: 'system..signing_sdk_request_expiry', label: 'Request Expiry (min)', description: 'Minutes before a sign request expires', page: '/system', tab: '', fieldName: 'signing_sdk.request_expiry_min', keywords: ['signing', 'sdk', 'expiry', 'timeout', 'request'] },
