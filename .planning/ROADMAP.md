@@ -175,7 +175,7 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 
 </details>
 
-### v27.2 CAIP-19 자산 식별 표준 (In Progress)
+### v27.2 CAIP-19 자산 식별 표준 (COMPLETE)
 
 **Milestone Goal:** WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일하여, 모든 ActionProvider와 외부 인터페이스가 체인/네트워크/자산을 하나의 식별자로 표현할 수 있는 상태. 모든 변경은 additive(하위 호환)이며 기존 address-only 경로는 그대로 유지된다.
 
