@@ -82,6 +82,8 @@ export interface AssetInfo {
   decimals: number;
   isNative: boolean;
   usdValue?: number;
+  /** CAIP-19 asset identifier. Present in daemon responses for registered tokens. */
+  assetId?: string;
 }
 
 export interface AssetsResponse {
@@ -99,6 +101,8 @@ export interface TokenInfo {
   address: string;
   decimals: number;
   symbol: string;
+  /** CAIP-19 asset identifier (e.g., "eip155:1/erc20:0xa0b8..."). Optional -- daemon cross-validates against address when provided. */
+  assetId?: string;
 }
 
 export interface SendTokenParams {
