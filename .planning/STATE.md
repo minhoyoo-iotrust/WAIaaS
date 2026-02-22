@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 Milestone: v27.4 Admin UI UX 개선
 Phase: 1 of 5 (Phase 239: Foundation -- Shared Components + Admin API)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 239-01 (Shared UI Components)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase complete
+Last activity: 2026-02-22 -- Completed 239-02 (Cross-Wallet Admin API)
 
-Progress: [#.........] 11%
+Progress: [##........] 22%
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [#.........] 11%
 | 236 | 3/3 | 13min | 4.3min |
 | 237 | 2/2 | 5min | 2.5min |
 | 238 | 1/1 | 3min | 3min |
+| 239 | 2/2 | -- | -- |
 
 ## Accumulated Context
 
@@ -45,6 +46,9 @@ Progress: [#.........] 11%
 - m27-04: offset/limit 서버사이드 페이지네이션
 - 239-01: Inlined EXPLORER_MAP in admin SPA (cannot import @waiaas/core from frontend)
 - 239-01: FilterBar URL sync uses hash query params with replaceState
+- 239-02: offset/limit pagination for admin cross-wallet endpoints (not cursor)
+- 239-02: No default status filter on GET /admin/incoming (admin sees all statuses)
+- 239-02: LEFT JOIN wallets for walletName in both cross-wallet endpoints
 
 ### Blockers/Concerns
 
@@ -53,5 +57,5 @@ Progress: [#.........] 11%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 239-01-PLAN.md
+Stopped at: Completed 239-02-PLAN.md (Phase 239 complete)
 Resume file: None

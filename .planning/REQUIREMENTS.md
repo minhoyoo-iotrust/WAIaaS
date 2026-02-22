@@ -15,8 +15,8 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Admin API
 
-- [ ] **API-01**: GET /v1/admin/transactions가 크로스 지갑 트랜잭션을 필터/페이지네이션과 함께 반환한다
-- [ ] **API-02**: GET /v1/admin/incoming이 크로스 지갑 수신 트랜잭션을 필터/페이지네이션과 함께 반환한다
+- [x] **API-01**: GET /v1/admin/transactions가 크로스 지갑 트랜잭션을 필터/페이지네이션과 함께 반환한다
+- [x] **API-02**: GET /v1/admin/incoming이 크로스 지갑 수신 트랜잭션을 필터/페이지네이션과 함께 반환한다
 
 ### Transactions Page
 
@@ -91,8 +91,8 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | COMP-01 | Phase 239 | Complete |
 | COMP-02 | Phase 239 | Complete |
 | COMP-03 | Phase 239 | Complete |
-| API-01 | Phase 239 | Pending |
-| API-02 | Phase 239 | Pending |
+| API-01 | Phase 239 | Complete |
+| API-02 | Phase 239 | Complete |
 | TXN-01 | Phase 240 | Pending |
 | TXN-02 | Phase 240 | Pending |
 | TXN-03 | Phase 240 | Pending |

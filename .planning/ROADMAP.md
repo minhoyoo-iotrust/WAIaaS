@@ -205,7 +205,7 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 
 **Milestone Goal:** Admin UI에 부재한 핵심 기능(트랜잭션 페이지, 토큰 레지스트리 관리, 수신 트랜잭션 모니터링)을 추가하고, 기존 페이지의 UX를 전반적으로 개선하여 운영자가 단일 UI에서 모든 지갑 운영 상태를 파악하고 관리할 수 있는 상태를 달성한다.
 
-- [ ] **Phase 239: Foundation -- Shared Components + Admin API** - ExplorerLink/FilterBar/SearchInput 공용 컴포넌트 + 크로스 지갑 Admin API 2개 신규 추가
+- [x] **Phase 239: Foundation -- Shared Components + Admin API** - ExplorerLink/FilterBar/SearchInput 공용 컴포넌트 + 크로스 지갑 Admin API 2개 신규 추가
 - [ ] **Phase 240: Transactions Page + Dashboard** - /transactions 신규 페이지 구축 + 대시보드 승인 대기 카드/클릭 가능 카드/네트워크/txHash 개선
 - [ ] **Phase 241: Token Registry + Notification Log** - /tokens 신규 페이지 구축 + 알림 로그 필터/지갑 링크 개선
 - [ ] **Phase 242: Incoming TX Monitoring UI** - /incoming 독립 페이지(설정 추출 + 크로스 지갑 수신 TX 뷰어 + 필터 + 모니터링 토글)
@@ -227,7 +227,7 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 
 Plans:
 - [x] 239-01-PLAN.md -- Shared UI components (ExplorerLink, FilterBar, SearchInput) + tests
-- [ ] 239-02-PLAN.md -- Cross-wallet Admin API endpoints (GET /admin/transactions, GET /admin/incoming) + tests
+- [x] 239-02-PLAN.md -- Cross-wallet Admin API endpoints (GET /admin/transactions, GET /admin/incoming) + tests
 
 ### Phase 240: Transactions Page + Dashboard
 **Goal**: 운영자가 전체 지갑의 트랜잭션을 단일 페이지에서 조회/필터/검색/페이지네이션할 수 있고, 대시보드에서 승인 대기/실패 건을 즉시 파악하여 트랜잭션 페이지로 이동할 수 있다
@@ -311,7 +311,7 @@ Phases execute in numeric order: 239 -> 240 -> 241 -> 242 -> 243
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
-| 239 | v27.4 | 1/2 | In progress | - |
+| 239 | v27.4 | 2/2 | Complete | 2026-02-22 |
 | 240 | v27.4 | 0/2 | Not started | - |
 | 241 | v27.4 | 0/2 | Not started | - |
 | 242 | v27.4 | 0/1 | Not started | - |
