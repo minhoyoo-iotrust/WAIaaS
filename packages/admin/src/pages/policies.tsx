@@ -101,12 +101,23 @@ function validateRules(type: string, rules: Record<string, unknown>): Record<str
       const decimalRegex = /^\d+(\.\d+)?$/;
       for (const [key, entry] of Object.entries(tokenLimits)) {
         const tl = entry as { instant_max?: string; notify_max?: string; delay_max?: string };
+        if (!tl || typeof tl !== 'object') continue;
         if (tl.instant_max && !decimalRegex.test(tl.instant_max))
-          errors[`token_limits.${key}.instant_max`] = 'Non-negative decimal required';
+          errors[`token_limits.${key}.instant_max`] = 'Must be a non-negative decimal';
         if (tl.notify_max && !decimalRegex.test(tl.notify_max))
-          errors[`token_limits.${key}.notify_max`] = 'Non-negative decimal required';
+          errors[`token_limits.${key}.notify_max`] = 'Must be a non-negative decimal';
         if (tl.delay_max && !decimalRegex.test(tl.delay_max))
-          errors[`token_limits.${key}.delay_max`] = 'Non-negative decimal required';
+          errors[`token_limits.${key}.delay_max`] = 'Must be a non-negative decimal';
+        // Ordering: instant <= notify <= delay
+        const im = parseFloat(tl.instant_max || '0');
+        const nm = parseFloat(tl.notify_max || '0');
+        const dm = parseFloat(tl.delay_max || '0');
+        if (im > nm) {
+          errors[`token_limits.${key}.instant_max`] = 'Must be <= Notify Max';
+        }
+        if (nm > dm) {
+          errors[`token_limits.${key}.notify_max`] = 'Must be <= Delay Max';
+        }
       }
     }
 
