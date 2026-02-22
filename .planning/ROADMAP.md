@@ -254,10 +254,10 @@ Plans:
   1. 기존 정책(raw 필드만, token_limits 없음)이 변경 전과 동일한 티어를 반환한다
   2. raw + token_limits 동시 존재 시 token_limits가 우선하고, 누적 한도(daily/monthly_limit_usd) 평가가 영향받지 않는다
   3. policies.skill.md에 token_limits 필드 사용법(CAIP-19 키 형식, 매칭 순서, 예시)이 문서화되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 238-01: 하위 호환 테스트 (기존 정책 동일 동작, 우선순위 검증, 누적 한도 비영향) + policies.skill.md 갱신
+- [ ] 238-01-PLAN.md -- 하위 호환 테스트 (기존 정책 동일 동작, 우선순위 검증, 누적 한도 비영향) + policies.skill.md 갱신
 
 ## Progress
 
