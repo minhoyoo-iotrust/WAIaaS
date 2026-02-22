@@ -266,7 +266,7 @@ Token whitelist for TOKEN_TRANSFER transactions. **Default deny**: tokens not li
 {
   "tokens": [
     {"address": "<mint-or-contract>", "symbol": "USDC", "chain": "solana"},
-    {"address": "<erc20-address>", "symbol": "USDT", "chain": "ethereum"}
+    {"address": "<erc20-address>", "symbol": "USDT", "chain": "ethereum", "assetId": "eip155:1/erc20:<erc20-address>"}
   ]
 }
 ```
@@ -277,6 +277,9 @@ Token whitelist for TOKEN_TRANSFER transactions. **Default deny**: tokens not li
 | `address` | string | Yes      | Token mint (Solana) or contract address (EVM).   |
 | `symbol`  | string | No       | Token symbol for display (e.g., "USDC").         |
 | `chain`   | string | No       | "solana" or "ethereum". For documentation only.  |
+| `assetId` | string | No       | CAIP-19 asset identifier. Enables cross-chain matching. |
+
+**CAIP-19 matching:** When `assetId` is present in both the policy token entry and the transaction's token object, exact CAIP-19 matching is used (highest confidence). When only one side has `assetId`, the daemon extracts and compares addresses. When neither has `assetId`, legacy address-only matching is used. All 4 scenarios are backward compatible.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
@@ -500,12 +503,12 @@ If no policies of a given default-deny type exist for a wallet, the check is ski
 
 ### Allow USDC token transfers
 
-1. Create ALLOWED_TOKENS policy to whitelist USDC:
+1. Create ALLOWED_TOKENS policy to whitelist USDC (with optional CAIP-19 assetId):
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ALLOWED_TOKENS","rules":{"tokens":[{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","symbol":"USDC"}]}}'
+  -d '{"walletId":"<uuid>","type":"ALLOWED_TOKENS","rules":{"tokens":[{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","symbol":"USDC","assetId":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}]}}'
 ```
 
 2. Send TOKEN_TRANSFER (see `transactions.skill.md` for full transaction reference):
@@ -513,7 +516,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
 curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
-  -d '{"type":"TOKEN_TRANSFER","to":"<recipient>","amount":"5000000","token":{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","decimals":6,"symbol":"USDC"}}'
+  -d '{"type":"TOKEN_TRANSFER","to":"<recipient>","amount":"5000000","token":{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","decimals":6,"symbol":"USDC","assetId":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}}'
 ```
 
 ### Allow Uniswap contract calls
