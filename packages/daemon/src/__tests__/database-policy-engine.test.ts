@@ -992,14 +992,21 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 15,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 14,
+    });
+
     const result = await engine.evaluate(
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '1000000' }),
     );
 
-    // Should pass APPROVED_SPENDERS and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    // Should pass APPROVED_SPENDERS and reach APPROVE_TIER_OVERRIDE (explicit APPROVAL)
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL'); // default tier for APPROVE
+    expect(result.tier).toBe('APPROVAL');
   });
 
   it('should deny APPROVE when spender is NOT in APPROVED_SPENDERS list (SPENDER_NOT_APPROVED)', async () => {
@@ -1087,13 +1094,20 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 14,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 13,
+    });
+
     const maxUint256 = (2n ** 256n - 1n).toString();
     const result = await engine.evaluate(
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: maxUint256 }),
     );
 
-    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (explicit APPROVAL)
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
   });
@@ -1143,17 +1157,26 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 14,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 13,
+    });
+
     const result = await engine.evaluate(
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER, approveAmount: '500000' }),
     );
 
-    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (default APPROVAL)
+    // Should pass APPROVE_AMOUNT_LIMIT and reach APPROVE_TIER_OVERRIDE (explicit APPROVAL)
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('APPROVAL');
   });
 
-  it('should default to APPROVAL tier with no APPROVE_TIER_OVERRIDE policy', async () => {
+  it('should fall through to INSTANT passthrough with no APPROVE_TIER_OVERRIDE and no SPENDING_LIMIT', async () => {
+    // Phase 236: Without APPROVE_TIER_OVERRIDE, APPROVE falls through to SPENDING_LIMIT.
+    // Without SPENDING_LIMIT either, default INSTANT passthrough.
     await insertPolicy({
       type: 'APPROVED_SPENDERS',
       rules: JSON.stringify({
@@ -1168,7 +1191,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     );
 
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL');
+    expect(result.tier).toBe('INSTANT'); // Phase 236: falls through to default passthrough
   });
 
   it('should use INSTANT tier with APPROVE_TIER_OVERRIDE (tier=INSTANT)', async () => {
@@ -1261,6 +1284,13 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
       priority: 15,
     });
 
+    // Phase 236: Explicit APPROVE_TIER_OVERRIDE required (no longer defaults to APPROVAL)
+    await insertPolicy({
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: JSON.stringify({ tier: 'APPROVAL' }),
+      priority: 14,
+    });
+
     // Send with mixed-case spender address -> should still match
     const result = await engine.evaluate(
       walletId,
@@ -1268,7 +1298,7 @@ describe('DatabasePolicyEngine - APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT + APPR
     );
 
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL'); // default tier
+    expect(result.tier).toBe('APPROVAL');
   });
 });
 
@@ -1671,11 +1701,12 @@ describe('DatabasePolicyEngine - Default Deny Toggles', () => {
       walletId,
       approveTx({ spenderAddress: UNISWAP_ROUTER }),
     );
-    // With no APPROVED_SPENDERS policy, toggle OFF skips spenders check
-    // Then APPROVE_AMOUNT_LIMIT check (default blockUnlimited for large amounts, but 1000000 is below threshold)
-    // Then APPROVE_TIER_OVERRIDE (no policy -> default APPROVAL tier)
+    // Phase 236: With no APPROVED_SPENDERS policy, toggle OFF skips spenders check
+    // Then APPROVE_AMOUNT_LIMIT check (below threshold)
+    // Then APPROVE_TIER_OVERRIDE (no policy -> falls through to SPENDING_LIMIT)
+    // SPENDING_LIMIT: amount '0' <= instant_max -> INSTANT
     expect(result.allowed).toBe(true);
-    expect(result.tier).toBe('APPROVAL');
+    expect(result.tier).toBe('INSTANT');
   });
 
   // --- TOGGLE-04: whitelist policy exists -> toggle irrelevant ---
@@ -2169,11 +2200,10 @@ describe('DatabasePolicyEngine - evaluateSpendingLimit with token_limits', () =>
       // Network-scoped policy -- insertPolicy helper passes walletId=null by default
     });
 
-    // Insert as network-scoped policy
-    // We need to update the policy with network field
+    // Update to network-scoped policy (use valid network from DB CHECK constraint)
     conn.sqlite
       .prepare('UPDATE policies SET network = ? WHERE id = (SELECT id FROM policies ORDER BY rowid DESC LIMIT 1)')
-      .run('solana-mainnet');
+      .run('mainnet');
 
     // 0.5 SOL = 500000000 (9 decimals), should be INSTANT (0.5 <= 1)
     const result = await engine.evaluate(walletId, {
@@ -2181,7 +2211,7 @@ describe('DatabasePolicyEngine - evaluateSpendingLimit with token_limits', () =>
       amount: '500000000',
       toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
       chain: 'solana',
-      network: 'solana-mainnet',
+      network: 'mainnet',
     });
 
     expect(result.allowed).toBe(true);
@@ -2312,51 +2342,8 @@ describe('DatabasePolicyEngine - evaluateSpendingLimit with token_limits', () =>
       priority: 15,
     });
 
-    // Override default APPROVE_TIER_OVERRIDE with INSTANT to not interfere
-    // Actually, APPROVE_TIER_OVERRIDE returns FINAL result and skips SPENDING_LIMIT.
-    // So to test APPROVE with token_limits, we need NO APPROVE_TIER_OVERRIDE,
-    // but the default behavior when no APPROVE_TIER_OVERRIDE exists is to return APPROVAL.
-    // This means APPROVE without APPROVE_TIER_OVERRIDE always returns APPROVAL tier,
-    // and SPENDING_LIMIT is never reached for APPROVE.
-    //
-    // The plan says "APPROVE + APPROVE_TIER_OVERRIDE skips evaluateSpendingLimit entirely"
-    // which is the EXISTING behavior. So this test (APPROVE without APPROVE_TIER_OVERRIDE)
-    // should actually return APPROVAL (default), not go through SPENDING_LIMIT.
-    //
-    // Wait - re-reading the plan: test 8 says "APPROVE with CAIP-19 token_limits (no APPROVE_TIER_OVERRIDE)"
-    // Expected: NOTIFY (100 < 500 <= 1000)
-    // This means the plan expects APPROVE WITHOUT override to go through SPENDING_LIMIT.
-    // But current code: evaluateApproveTierOverride returns APPROVAL when no policy exists.
-    // This would need a code change to allow APPROVE through to SPENDING_LIMIT when no override.
-    //
-    // Actually, looking more carefully at the existing code (line 1260-1262):
-    // "if (!approveTierPolicy) return { allowed: true, tier: 'APPROVAL' }"
-    // This means APPROVE ALWAYS gets APPROVAL tier when no override, skipping SPENDING_LIMIT.
-    //
-    // The plan says to test APPROVE WITH token_limits. For APPROVE to use token_limits,
-    // we need APPROVE_TIER_OVERRIDE to NOT exist AND the code to NOT default to APPROVAL.
-    // But that would change existing behavior.
-    //
-    // Reading plan test 9: "APPROVE + APPROVE_TIER_OVERRIDE skips token_limits"
-    // This implies test 8 (no override) DOES go through token_limits.
-    // This is a semantic change: without APPROVE_TIER_OVERRIDE, APPROVE goes through SPENDING_LIMIT.
-    //
-    // BUT the must_haves say: "APPROVE + APPROVE_TIER_OVERRIDE skips evaluateSpendingLimit entirely"
-    // The current code already does this. The question is what happens without APPROVE_TIER_OVERRIDE.
-    // Currently: default APPROVAL. Plan wants: go through SPENDING_LIMIT with token_limits.
-    //
-    // This IS a change from existing behavior. We'll write the test expecting NOTIFY
-    // as the plan specifies. The GREEN phase will need to handle this.
-    //
-    // Actually wait - currently, WITHOUT override, APPROVE defaults to APPROVAL tier.
-    // The plan test 8 expects NOTIFY for 500 USDC with token_limits.
-    // We'd need to remove the default APPROVAL behavior for APPROVE when no override exists.
-    // That's a significant change... but the plan explicitly asks for it.
-    //
-    // Re-reading the plan more carefully: the test says "no APPROVE_TIER_OVERRIDE" policy,
-    // but the current default behavior creates APPROVAL tier. This test expects SPENDING_LIMIT
-    // to handle APPROVE. Let me follow the plan as written.
-
+    // Phase 236: Without APPROVE_TIER_OVERRIDE, APPROVE falls through to SPENDING_LIMIT
+    // with token_limits evaluation.
     // 500 USDC = 500000000 (6 decimals), APPROVE type, no APPROVE_TIER_OVERRIDE
     // Expected: Goes to SPENDING_LIMIT with token_limits, NOTIFY (100 < 500 <= 1000)
     const result = await engine.evaluate(walletId, {
