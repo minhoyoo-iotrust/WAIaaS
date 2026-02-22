@@ -58,57 +58,57 @@ function getVersions(): number[] {
 
 describe('Migration Runner', () => {
   // Note: pushSchema() creates latest schema (wallets table) and records
-  // all migration versions [1, 2, 3, ..., 19], so getMaxVersion() returns 20.
-  // All test migration versions use 21+ to avoid conflicts with real migrations.
+  // all migration versions [1, 2, 3, ..., 22], so getMaxVersion() returns 22.
+  // All test migration versions use 23+ to avoid conflicts with real migrations.
 
   it('should return { applied: 0, skipped: 0 } for empty migrations array', () => {
     const result = runMigrations(sqlite, []);
     expect(result).toEqual({ applied: 0, skipped: 0 });
-    expect(getMaxVersion()).toBe(21); // v1~v21 (incoming_transactions)
+    expect(getMaxVersion()).toBe(22); // v1~v22 (token_registry asset_id)
   });
 
   it('should execute new migrations sequentially', () => {
     const migrations: Migration[] = [
       {
-        version: 22,
+        version: 23,
         description: 'Add test_column to wallets',
         up: (db) => {
-          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v22 TEXT');
+          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v23 TEXT');
         },
       },
       {
-        version: 23,
+        version: 24,
         description: 'Add another test_column to wallets',
         up: (db) => {
-          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v23 TEXT');
+          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v24 TEXT');
         },
       },
     ];
 
     const result = runMigrations(sqlite, migrations);
     expect(result).toEqual({ applied: 2, skipped: 0 });
-    expect(getMaxVersion()).toBe(23);
-    expect(getVersions()).toContain(22);
+    expect(getMaxVersion()).toBe(24);
     expect(getVersions()).toContain(23);
+    expect(getVersions()).toContain(24);
 
     // Verify columns were actually added
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
     const colNames = columns.map((c) => c.name);
-    expect(colNames).toContain('test_col_v22');
     expect(colNames).toContain('test_col_v23');
+    expect(colNames).toContain('test_col_v24');
   });
 
   it('should skip already-applied migrations', () => {
     const migrations: Migration[] = [
       {
-        version: 22,
+        version: 23,
         description: 'Add test_column to wallets',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN test_col_skip TEXT');
         },
       },
       {
-        version: 23,
+        version: 24,
         description: 'Add another column',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN test_col_skip2 TEXT');
@@ -123,20 +123,20 @@ describe('Migration Runner', () => {
     // Second run: skip both
     const second = runMigrations(sqlite, migrations);
     expect(second).toEqual({ applied: 0, skipped: 2 });
-    expect(getMaxVersion()).toBe(23);
+    expect(getMaxVersion()).toBe(24);
   });
 
   it('should rollback failed migration and not execute subsequent ones', () => {
     const migrations: Migration[] = [
       {
-        version: 22,
+        version: 23,
         description: 'Failing migration',
         up: () => {
           throw new Error('Intentional migration failure');
         },
       },
       {
-        version: 23,
+        version: 24,
         description: 'Should not be reached',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN should_not_exist TEXT');
@@ -145,13 +145,13 @@ describe('Migration Runner', () => {
     ];
 
     expect(() => runMigrations(sqlite, migrations)).toThrow(
-      /Migration v22.*failed.*Intentional migration failure/,
+      /Migration v23.*failed.*Intentional migration failure/,
     );
 
-    // version 22 should NOT be recorded (max stays at 21 from pushSchema)
-    expect(getMaxVersion()).toBe(21);
+    // version 23 should NOT be recorded (max stays at 22 from pushSchema)
+    expect(getMaxVersion()).toBe(22);
 
-    // version 21 should NOT have been executed
+    // version 24 should NOT have been executed
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
     const colNames = columns.map((c) => c.name);
     expect(colNames).not.toContain('should_not_exist');
@@ -162,19 +162,11 @@ describe('Migration Runner', () => {
 
     const migrations: Migration[] = [
       {
-        version: 24,
-        description: 'Twenty-fourth',
+        version: 25,
+        description: 'Twenty-fifth',
         up: (db) => {
-          executionOrder.push(24);
-          db.exec('ALTER TABLE wallets ADD COLUMN order_v24 TEXT');
-        },
-      },
-      {
-        version: 22,
-        description: 'Twenty-second',
-        up: (db) => {
-          executionOrder.push(22);
-          db.exec('ALTER TABLE wallets ADD COLUMN order_v22 TEXT');
+          executionOrder.push(25);
+          db.exec('ALTER TABLE wallets ADD COLUMN order_v25 TEXT');
         },
       },
       {
@@ -185,17 +177,25 @@ describe('Migration Runner', () => {
           db.exec('ALTER TABLE wallets ADD COLUMN order_v23 TEXT');
         },
       },
+      {
+        version: 24,
+        description: 'Twenty-fourth',
+        up: (db) => {
+          executionOrder.push(24);
+          db.exec('ALTER TABLE wallets ADD COLUMN order_v24 TEXT');
+        },
+      },
     ];
 
     const result = runMigrations(sqlite, migrations);
     expect(result).toEqual({ applied: 3, skipped: 0 });
-    expect(executionOrder).toEqual([22, 23, 24]);
-    expect(getVersions()).toContain(22);
+    expect(executionOrder).toEqual([23, 24, 25]);
     expect(getVersions()).toContain(23);
     expect(getVersions()).toContain(24);
+    expect(getVersions()).toContain(25);
   });
 
-  it('should skip version 1-20 migrations (already applied from pushSchema)', () => {
+  it('should skip version 1-22 migrations (already applied from pushSchema)', () => {
     const migrations: Migration[] = [
       {
         version: 1,
@@ -346,6 +346,13 @@ describe('Migration Runner', () => {
       },
       {
         version: 22,
+        description: 'Should be skipped (pushSchema records v22)',
+        up: () => {
+          throw new Error('Should not execute');
+        },
+      },
+      {
+        version: 23,
         description: 'Should execute',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN v1_skip_test TEXT');
@@ -354,14 +361,14 @@ describe('Migration Runner', () => {
     ];
 
     const result = runMigrations(sqlite, migrations);
-    expect(result).toEqual({ applied: 1, skipped: 21 });
-    expect(getMaxVersion()).toBe(22);
+    expect(result).toEqual({ applied: 1, skipped: 22 });
+    expect(getMaxVersion()).toBe(23);
   });
 
   it('should record description in schema_version for applied migrations', () => {
     const migrations: Migration[] = [
       {
-        version: 22,
+        version: 23,
         description: 'Add token_balances table',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN desc_test TEXT');
@@ -372,7 +379,7 @@ describe('Migration Runner', () => {
     runMigrations(sqlite, migrations);
 
     const row = sqlite
-      .prepare('SELECT description FROM schema_version WHERE version = 22')
+      .prepare('SELECT description FROM schema_version WHERE version = 23')
       .get() as { description: string } | undefined;
     expect(row).toBeDefined();
     expect(row!.description).toBe('Add token_balances table');
@@ -389,7 +396,7 @@ describe('managesOwnTransaction migrations', () => {
 
     const migrations: Migration[] = [
       {
-        version: 22,
+        version: 23,
         description: 'Self-managed PRAGMA migration',
         managesOwnTransaction: true,
         up: (db) => {
@@ -414,14 +421,14 @@ describe('managesOwnTransaction migrations', () => {
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
     expect(fkAfter[0]!.foreign_keys).toBe(1);
 
-    // schema_version should record version 22
-    expect(getMaxVersion()).toBe(22);
+    // schema_version should record version 23
+    expect(getMaxVersion()).toBe(23);
   });
 
   it('should still allow retry after failure and restore foreign_keys', () => {
     const migrations: Migration[] = [
       {
-        version: 22,
+        version: 23,
         description: 'Failing self-managed migration',
         managesOwnTransaction: true,
         up: () => {
@@ -432,11 +439,11 @@ describe('managesOwnTransaction migrations', () => {
 
     // Should throw the migration error
     expect(() => runMigrations(sqlite, migrations)).toThrow(
-      /Migration v22.*failed.*Intentional self-managed failure/,
+      /Migration v23.*failed.*Intentional self-managed failure/,
     );
 
-    // Version 22 should NOT be recorded (max stays at 21 from pushSchema)
-    expect(getMaxVersion()).toBe(21);
+    // Version 23 should NOT be recorded (max stays at 22 from pushSchema)
+    expect(getMaxVersion()).toBe(22);
 
     // foreign_keys should be restored to ON (1)
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
@@ -1119,5 +1126,104 @@ describe('v3 migration: rename agents to wallets', () => {
     ).get(sessionId) as { wallet_id: string; name: string };
     expect(joined.wallet_id).toBe(agentId);
     expect(joined.name).toBe('FK V3 Agent');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v22 migration: token_registry asset_id backfill data-transformation tests
+// ---------------------------------------------------------------------------
+
+describe('v22 migration: token_registry asset_id backfill', () => {
+  let v21Db: DatabaseType;
+
+  function getV22Migration(): Migration {
+    const v22 = MIGRATIONS.find((m) => m.version === 22);
+    if (!v22) throw new Error('v22 migration not found in MIGRATIONS array');
+    return v22;
+  }
+
+  /** Create a DB at v21 state: full pushSchema minus v22, with token_registry but no asset_id column */
+  function createV21Database(): DatabaseType {
+    const conn = createDatabase(':memory:');
+    const db = conn.sqlite;
+
+    // pushSchema creates latest DDL (v22 with asset_id), so we need to remove the v22 version
+    // and drop the asset_id column. Simpler approach: use pushSchema then "downgrade" by
+    // removing v22 record so migration runner thinks v22 is pending.
+    pushSchema(db);
+
+    // Remove v22 from schema_version so runMigrations will re-run it
+    db.prepare('DELETE FROM schema_version WHERE version = 22').run();
+
+    // asset_id column already exists from DDL, but for a proper test we need to verify
+    // the backfill logic. The DDL creates the column, and pushSchema records it as applied.
+    // Since we removed v22 from schema_version, ALTER TABLE ADD COLUMN will fail
+    // (column already exists). Instead, let's create a truly v21 token_registry.
+    // Drop and recreate token_registry WITHOUT asset_id to simulate pre-v22 state.
+    db.exec('DROP TABLE token_registry');
+    db.exec(`CREATE TABLE token_registry (
+  id TEXT PRIMARY KEY,
+  network TEXT NOT NULL,
+  address TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  name TEXT NOT NULL,
+  decimals INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'custom' CHECK (source IN ('builtin', 'custom')),
+  created_at INTEGER NOT NULL
+)`);
+    db.exec('CREATE UNIQUE INDEX idx_token_registry_network_address ON token_registry(network, address)');
+    db.exec('CREATE INDEX idx_token_registry_network ON token_registry(network)');
+
+    return db;
+  }
+
+  afterEach(() => {
+    try { v21Db.close(); } catch { /* already closed */ }
+  });
+
+  it('should backfill correct CAIP-19 asset_id for known networks', () => {
+    v21Db = createV21Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert test token_registry rows for known networks
+    v21Db.prepare(
+      `INSERT INTO token_registry (id, network, address, symbol, name, decimals, source, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tok-1', 'ethereum-mainnet', '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'USDC', 'USD Coin', 6, 'custom', ts);
+
+    v21Db.prepare(
+      `INSERT INTO token_registry (id, network, address, symbol, name, decimals, source, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tok-2', 'mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 'USDC', 'USD Coin', 6, 'custom', ts);
+
+    // Run v22 migration
+    const v22 = getV22Migration();
+    runMigrations(v21Db, [v22]);
+
+    // Verify backfill results
+    const rows = v21Db.prepare('SELECT id, asset_id FROM token_registry ORDER BY id').all() as Array<{ id: string; asset_id: string | null }>;
+
+    // Ethereum USDC: eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    expect(rows[0]!.asset_id).toBe('eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
+
+    // Solana USDC: solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+    expect(rows[1]!.asset_id).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+  });
+
+  it('should leave asset_id NULL for unknown networks', () => {
+    v21Db = createV21Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    v21Db.prepare(
+      `INSERT INTO token_registry (id, network, address, symbol, name, decimals, source, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('tok-3', 'unknown_chain', '0xabcdef', 'TEST', 'Test Token', 18, 'custom', ts);
+
+    // Run v22 migration
+    const v22 = getV22Migration();
+    runMigrations(v21Db, [v22]);
+
+    const row = v21Db.prepare('SELECT asset_id FROM token_registry WHERE id = ?').get('tok-3') as { asset_id: string | null };
+    expect(row.asset_id).toBeNull();
   });
 });

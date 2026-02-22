@@ -1548,8 +1548,14 @@ MIGRATIONS.push({
   description: 'Add asset_id column to token_registry with CAIP-19 backfill',
   managesOwnTransaction: false,
   up: (sqlite) => {
-    // Step 1: Add nullable column
-    sqlite.exec('ALTER TABLE token_registry ADD COLUMN asset_id TEXT');
+    // Step 1: Add nullable column (skip if already exists from fresh DDL)
+    const columns = sqlite
+      .prepare("PRAGMA table_info('token_registry')")
+      .all() as Array<{ name: string }>;
+    const hasAssetId = columns.some((c) => c.name === 'asset_id');
+    if (!hasAssetId) {
+      sqlite.exec('ALTER TABLE token_registry ADD COLUMN asset_id TEXT');
+    }
 
     // Step 2: Application-level backfill using tokenAssetId()
     const rows = sqlite
