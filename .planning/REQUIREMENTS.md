@@ -88,44 +88,44 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMP-01 | — | Pending |
-| COMP-02 | — | Pending |
-| COMP-03 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| TXN-01 | — | Pending |
-| TXN-02 | — | Pending |
-| TXN-03 | — | Pending |
-| TXN-04 | — | Pending |
-| TXN-05 | — | Pending |
-| TXN-06 | — | Pending |
-| TOKR-01 | — | Pending |
-| TOKR-02 | — | Pending |
-| TOKR-03 | — | Pending |
-| TOKR-04 | — | Pending |
-| INTX-01 | — | Pending |
-| INTX-02 | — | Pending |
-| INTX-03 | — | Pending |
-| INTX-04 | — | Pending |
-| WLST-01 | — | Pending |
-| WLST-02 | — | Pending |
-| WLST-03 | — | Pending |
-| WDET-01 | — | Pending |
-| WDET-02 | — | Pending |
-| WDET-03 | — | Pending |
-| WDET-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| NLOG-01 | — | Pending |
-| NLOG-02 | — | Pending |
+| COMP-01 | Phase 239 | Pending |
+| COMP-02 | Phase 239 | Pending |
+| COMP-03 | Phase 239 | Pending |
+| API-01 | Phase 239 | Pending |
+| API-02 | Phase 239 | Pending |
+| TXN-01 | Phase 240 | Pending |
+| TXN-02 | Phase 240 | Pending |
+| TXN-03 | Phase 240 | Pending |
+| TXN-04 | Phase 240 | Pending |
+| TXN-05 | Phase 240 | Pending |
+| TXN-06 | Phase 240 | Pending |
+| DASH-01 | Phase 240 | Pending |
+| DASH-02 | Phase 240 | Pending |
+| DASH-03 | Phase 240 | Pending |
+| DASH-04 | Phase 240 | Pending |
+| TOKR-01 | Phase 241 | Pending |
+| TOKR-02 | Phase 241 | Pending |
+| TOKR-03 | Phase 241 | Pending |
+| TOKR-04 | Phase 241 | Pending |
+| NLOG-01 | Phase 241 | Pending |
+| NLOG-02 | Phase 241 | Pending |
+| INTX-01 | Phase 242 | Pending |
+| INTX-02 | Phase 242 | Pending |
+| INTX-03 | Phase 242 | Pending |
+| INTX-04 | Phase 242 | Pending |
+| WLST-01 | Phase 243 | Pending |
+| WLST-02 | Phase 243 | Pending |
+| WLST-03 | Phase 243 | Pending |
+| WDET-01 | Phase 243 | Pending |
+| WDET-02 | Phase 243 | Pending |
+| WDET-03 | Phase 243 | Pending |
+| WDET-04 | Phase 243 | Pending |
 
 **Coverage:**
 - v27.4 requirements: 32 total
-- Mapped to phases: 0
-- Unmapped: 32 ⚠️
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 after roadmap creation -- traceability complete*
