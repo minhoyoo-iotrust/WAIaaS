@@ -7,6 +7,7 @@ import { showUnsavedDialog, UnsavedDialog } from './unsaved-dialog';
 import DashboardPage from '../pages/dashboard';
 import WalletsPage from '../pages/wallets';
 import TransactionsPage from '../pages/transactions';
+import TokensPage from '../pages/tokens';
 import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
@@ -25,6 +26,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/wallets': 'Wallets',
   '/transactions': 'Transactions',
   '/sessions': 'Sessions',
+  '/tokens': 'Token Registry',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/security': 'Security',
@@ -36,6 +38,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/wallets': 'Manage wallets, balances, and connections',
   '/transactions': 'View and filter all wallet transactions',
   '/sessions': 'View and manage active sessions',
+  '/tokens': 'Manage EVM token registry per network',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
@@ -56,6 +59,7 @@ const NAV_ITEMS = [
   { path: '/wallets', label: 'Wallets' },
   { path: '/transactions', label: 'Transactions' },
   { path: '/sessions', label: 'Sessions' },
+  { path: '/tokens', label: 'Tokens' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/security', label: 'Security' },
@@ -65,6 +69,7 @@ const NAV_ITEMS = [
 function PageRouter() {
   const path = currentPath.value;
   if (path === '/transactions') return <TransactionsPage />;
+  if (path === '/tokens') return <TokensPage />;
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
