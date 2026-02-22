@@ -282,7 +282,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
     const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
     if (approveTierResult !== null) {
-      return approveTierResult; // FINAL result, skips SPENDING_LIMIT
+      return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
     }
 
     // Step 5: Evaluate SPENDING_LIMIT (tier classification)
@@ -392,6 +392,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Evaluate aggregate against SPENDING_LIMIT (Phase 127: pass batchUsdAmount for USD evaluation)
+    // BATCH: token_limits not applicable -- aggregate native amount evaluated via raw/USD only (tokenContext intentionally omitted)
     const amountTier = this.evaluateSpendingLimit(resolved, totalNativeAmount.toString(), batchUsdAmount);
     let finalTier = amountTier ? (amountTier.tier as PolicyTier) : ('INSTANT' as PolicyTier);
 
@@ -579,7 +580,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
       const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
       if (approveTierResult !== null) {
-        return approveTierResult; // FINAL result, skips SPENDING_LIMIT
+        return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
       }
 
       // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
