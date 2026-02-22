@@ -56,10 +56,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Dashboard
 
-- [ ] **DASH-01**: 대시보드에 APPROVAL 티어 대기 트랜잭션 건수 카드가 표시되며 클릭 시 /transactions 필터링으로 이동한다
-- [ ] **DASH-02**: Failed Txns, Recent Activity 카드 클릭 시 /transactions 해당 필터 적용 페이지로 이동한다
-- [ ] **DASH-03**: Recent Activity 테이블에 네트워크 컬럼이 추가된다
-- [ ] **DASH-04**: Recent Activity 테이블에 txHash 컬럼 + 익스플로러 링크가 추가된다
+- [x] **DASH-01**: 대시보드에 APPROVAL 티어 대기 트랜잭션 건수 카드가 표시되며 클릭 시 /transactions 필터링으로 이동한다
+- [x] **DASH-02**: Failed Txns, Recent Activity 카드 클릭 시 /transactions 해당 필터 적용 페이지로 이동한다
+- [x] **DASH-03**: Recent Activity 테이블에 네트워크 컬럼이 추가된다
+- [x] **DASH-04**: Recent Activity 테이블에 txHash 컬럼 + 익스플로러 링크가 추가된다
 
 ### Notification Log
 
@@ -99,10 +99,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | TXN-04 | Phase 240 | Complete |
 | TXN-05 | Phase 240 | Complete |
 | TXN-06 | Phase 240 | Complete |
-| DASH-01 | Phase 240 | Pending |
-| DASH-02 | Phase 240 | Pending |
-| DASH-03 | Phase 240 | Pending |
-| DASH-04 | Phase 240 | Pending |
+| DASH-01 | Phase 240 | Complete |
+| DASH-02 | Phase 240 | Complete |
+| DASH-03 | Phase 240 | Complete |
+| DASH-04 | Phase 240 | Complete |
 | TOKR-01 | Phase 241 | Pending |
 | TOKR-02 | Phase 241 | Pending |
 | TOKR-03 | Phase 241 | Pending |

@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 2 of 5 (Phase 240: Transactions Page + Dashboard)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-22 -- Completed 240-01 (Transactions Page)
+Phase: 2 of 5 (Phase 240: Transactions Page + Dashboard) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-22 -- Completed 240-02 (Dashboard Enhancements)
 
-Progress: [###.......] 33%
+Progress: [####......] 40%
 
 ## Performance Metrics
 
@@ -35,7 +35,7 @@ Progress: [###.......] 33%
 | 237 | 2/2 | 5min | 2.5min |
 | 238 | 1/1 | 3min | 3min |
 | 239 | 2/2 | -- | -- |
-| 240 | 1/2 | 7min | 7min |
+| 240 | 2/2 | 10min | 5min |
 
 ## Accumulated Context
 
@@ -53,6 +53,8 @@ Progress: [###.......] 33%
 - 240-01: Custom table instead of Table component for row expansion support
 - 240-01: Wallet filter populated dynamically from GET /v1/wallets on mount
 - 240-01: 13 network options in filter dropdown matching EXPLORER_MAP networks
+- 240-02: Approval count fetched via separate lightweight API call (limit=1+total) not client-side computation
+- 240-02: Network column before Status, Tx Hash column after Status in Recent Activity table
 
 ### Blockers/Concerns
 
@@ -61,5 +63,5 @@ Progress: [###.......] 33%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 240-01-PLAN.md
+Stopped at: Completed 240-02-PLAN.md
 Resume file: None

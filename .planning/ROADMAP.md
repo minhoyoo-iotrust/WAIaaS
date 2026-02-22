@@ -206,7 +206,7 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 **Milestone Goal:** Admin UI에 부재한 핵심 기능(트랜잭션 페이지, 토큰 레지스트리 관리, 수신 트랜잭션 모니터링)을 추가하고, 기존 페이지의 UX를 전반적으로 개선하여 운영자가 단일 UI에서 모든 지갑 운영 상태를 파악하고 관리할 수 있는 상태를 달성한다.
 
 - [x] **Phase 239: Foundation -- Shared Components + Admin API** - ExplorerLink/FilterBar/SearchInput 공용 컴포넌트 + 크로스 지갑 Admin API 2개 신규 추가
-- [ ] **Phase 240: Transactions Page + Dashboard** - /transactions 신규 페이지 구축 + 대시보드 승인 대기 카드/클릭 가능 카드/네트워크/txHash 개선
+- [x] **Phase 240: Transactions Page + Dashboard** - /transactions 신규 페이지 구축 + 대시보드 승인 대기 카드/클릭 가능 카드/네트워크/txHash 개선
 - [ ] **Phase 241: Token Registry + Notification Log** - /tokens 신규 페이지 구축 + 알림 로그 필터/지갑 링크 개선
 - [ ] **Phase 242: Incoming TX Monitoring UI** - /incoming 독립 페이지(설정 추출 + 크로스 지갑 수신 TX 뷰어 + 필터 + 모니터링 토글)
 - [ ] **Phase 243: Wallet List + Wallet Detail** - 지갑 목록 검색/필터/잔액 + 지갑 상세 4탭 구조/페이지네이션/USD 표시
@@ -242,8 +242,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 240-01-PLAN.md -- Transactions page (table, filters, search, pagination, row expand) + tests
-- [ ] 240-02-PLAN.md -- Dashboard improvements (approval card, clickable cards, network/txHash columns) + tests
+- [x] 240-01-PLAN.md -- Transactions page (table, filters, search, pagination, row expand) + tests
+- [x] 240-02-PLAN.md -- Dashboard improvements (approval card, clickable cards, network/txHash columns) + tests
 
 ### Phase 241: Token Registry + Notification Log
 **Goal**: 운영자가 Admin UI에서 네트워크별 토큰을 조회/추가/삭제할 수 있고, 알림 로그를 이벤트/채널/상태/날짜로 필터링하여 특정 이벤트를 추적할 수 있다
@@ -312,7 +312,7 @@ Phases execute in numeric order: 239 -> 240 -> 241 -> 242 -> 243
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
 | 239 | v27.4 | Complete    | 2026-02-22 | 2026-02-22 |
-| 240 | 1/2 | In Progress|  | - |
+| 240 | v27.4 | 2/2 | Complete | 2026-02-22 |
 | 241 | v27.4 | 0/2 | Not started | - |
 | 242 | v27.4 | 0/1 | Not started | - |
 | 243 | v27.4 | 0/2 | Not started | - |
