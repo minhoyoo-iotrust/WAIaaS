@@ -13,7 +13,7 @@ export {
   type PriceAge,
 } from './price-age.js';
 
-export { InMemoryPriceCache, buildCacheKey } from './price-cache.js';
+export { InMemoryPriceCache, buildCacheKey, resolveNetwork } from './price-cache.js';
 
 export { PriceNotAvailableError, CoinGeckoNotConfiguredError, ForexNotAvailableError } from './oracle-errors.js';
 
