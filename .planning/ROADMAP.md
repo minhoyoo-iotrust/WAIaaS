@@ -277,5 +277,5 @@ Phases execute in numeric order: 231 -> 232 -> 233 -> 234
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
 | 231 | 2/2 | Complete    | 2026-02-22 | - |
 | 232 | 2/2 | Complete    | 2026-02-22 | - |
-| 233 | v27.2 | 0/3 | Not started | - |
+| 233 | 1/3 | In Progress|  | - |
 | 234 | v27.2 | 0/2 | Not started | - |

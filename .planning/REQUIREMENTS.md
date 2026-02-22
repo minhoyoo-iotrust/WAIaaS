@@ -21,9 +21,9 @@
 ### Token Infrastructure
 
 - [x] **TOKN-01**: TokenRef schema includes optional assetId (CAIP-19) and network (NetworkType) fields alongside existing address+chain
-- [ ] **TOKN-02**: token_registry DB table has asset_id TEXT column added via incremental migration (v22)
-- [ ] **TOKN-03**: Existing token_registry records are auto-populated with correct CAIP-19 asset_id from (network, address) during migration
-- [ ] **TOKN-04**: Token API responses include assetId field for all token registry entries
+- [x] **TOKN-02**: token_registry DB table has asset_id TEXT column added via incremental migration (v22)
+- [x] **TOKN-03**: Existing token_registry records are auto-populated with correct CAIP-19 asset_id from (network, address) during migration
+- [x] **TOKN-04**: Token API responses include assetId field for all token registry entries
 
 ### Price Oracle
 
@@ -94,9 +94,9 @@
 | CAIP-09 | Phase 231 | Complete |
 | CAIP-10 | Phase 231 | Complete |
 | TOKN-01 | Phase 231 | Complete |
-| TOKN-02 | Phase 233 | Pending |
-| TOKN-03 | Phase 233 | Pending |
-| TOKN-04 | Phase 233 | Pending |
+| TOKN-02 | Phase 233 | Complete |
+| TOKN-03 | Phase 233 | Complete |
+| TOKN-04 | Phase 233 | Complete |
 | ORCL-01 | Phase 232 | Complete |
 | ORCL-02 | Phase 232 | Complete |
 | ORCL-03 | Phase 232 | Complete |

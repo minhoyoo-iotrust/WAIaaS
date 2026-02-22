@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 232 - Oracle L2 Support + Cache Key Migration
+**Current focus:** Phase 233 - DB Migration + Schema + Policy
 
 ## Current Position
 
-Phase: 2 of 4 (Phase 232: Oracle L2 Support + Cache Key Migration)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 232 complete, ready for Phase 233
-Last activity: 2026-02-22 -- Completed 232-02 oracle test migration + pipeline network threading
+Phase: 3 of 4 (Phase 233: DB Migration + Schema + Policy)
+Plan: 1 of 3 in current phase (COMPLETE)
+Status: Executing Phase 233
+Last activity: 2026-02-22 -- Completed 233-01 DB v22 migration + token API assetId
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 58%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 4 (this milestone)
-- Average duration: 4.3min
-- Total execution time: 0.28 hours
+- Total plans completed: 5 (this milestone)
+- Average duration: 5.0min
+- Total execution time: 0.42 hours
 
 **By Phase:**
 
@@ -31,6 +31,7 @@ Progress: [█████░░░░░] 50%
 |-------|-------|-------|----------|
 | 231 | 2/2 | 7min | 3.5min |
 | 232 | 2/2 | 11min | 5.5min |
+| 233 | 1/3 | 8min | 8min |
 
 *Updated after each plan completion*
 
@@ -56,6 +57,8 @@ Progress: [█████░░░░░] 50%
 - resolveNetwork(chain, network?) pattern for backward-compatible NetworkType resolution in oracle callers
 - PYTH_FEED_IDS cross-validation test pattern: verify buildCacheKey output matches all feed ID map keys
 - Pipeline network threading: resolveEffectiveAmountUsd passes optional network to oracle for L2 token pricing
+- PRAGMA table_info guard before ALTER TABLE ADD COLUMN for idempotent migrations on fresh-DDL databases
+- Test fixture migration versions bumped +1 when real migration version is added
 
 ### Blockers/Concerns
 
@@ -65,5 +68,5 @@ Progress: [█████░░░░░] 50%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 232-02-PLAN.md (oracle test CAIP-19 migration + pipeline network threading)
+Stopped at: Completed 233-01-PLAN.md (DB v22 migration + token API assetId)
 Resume file: None
