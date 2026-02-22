@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 2 of 4 (Phase 232: Oracle L2 Support + Cache Key Migration)
-Plan: 1 of 2 in current phase
-Status: 232-01 complete, ready for 232-02
-Last activity: 2026-02-22 -- Completed 232-01 oracle CAIP-19 cache key migration
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 232 complete, ready for Phase 233
+Last activity: 2026-02-22 -- Completed 232-02 oracle test migration + pipeline network threading
 
-Progress: [████░░░░░░] 38%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 3 (this milestone)
-- Average duration: 3.7min
-- Total execution time: 0.18 hours
+- Total plans completed: 4 (this milestone)
+- Average duration: 4.3min
+- Total execution time: 0.28 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 231 | 2/2 | 7min | 3.5min |
-| 232 | 1/2 | 5min | 5min |
+| 232 | 2/2 | 11min | 5.5min |
 
 *Updated after each plan completion*
 
@@ -54,6 +54,8 @@ Progress: [████░░░░░░] 38%
 - BTC feed ID entry removed -- synthetic key 'ethereum:native_btc' has no valid CAIP-19 mapping
 - CoinGecko batch queries grouped by resolved network (not chain) to disambiguate L2 tokens
 - resolveNetwork(chain, network?) pattern for backward-compatible NetworkType resolution in oracle callers
+- PYTH_FEED_IDS cross-validation test pattern: verify buildCacheKey output matches all feed ID map keys
+- Pipeline network threading: resolveEffectiveAmountUsd passes optional network to oracle for L2 token pricing
 
 ### Blockers/Concerns
 
@@ -63,5 +65,5 @@ Progress: [████░░░░░░] 38%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 232-01-PLAN.md (oracle CAIP-19 cache key migration + L2 platform map)
+Stopped at: Completed 232-02-PLAN.md (oracle test CAIP-19 migration + pipeline network threading)
 Resume file: None
