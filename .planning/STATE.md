@@ -11,20 +11,20 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 Milestone: v27.3 토큰별 지출 한도 정책
 Phase: 237 (3 of 4) (Admin UI Token Limits)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 237-01 (Admin UI spending-limit-form restructure)
+Plan: 2 of 2 in current phase
+Status: Phase 237 complete
+Last activity: 2026-02-22 -- Completed 237-02 (CAIP-19 token limit rows with registry integration)
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
 **Cumulative:** 53 milestones, 235 phases, 506 plans, 1,368 reqs, 4,396+ tests, ~157,584 LOC TS
 
 **v27.3 Velocity:**
-- Total plans completed: 5/7
+- Total plans completed: 6/7
 - Average duration: 4min
-- Total execution time: 0.30 hours
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [███████░░░] 71%
 |-------|-------|-------|----------|
 | 235 | 1/1 | 3min | 3min |
 | 236 | 3/3 | 13min | 4.3min |
-| 237 | 1/2 | 2min | 2min |
+| 237 | 2/2 | 5min | 2.5min |
 | 238 | 0/1 | - | - |
 
 ## Accumulated Context
@@ -56,6 +56,10 @@ Progress: [███████░░░] 71%
 - [237-01] NETWORK_NATIVE_SYMBOL is an inline constant in spending-limit-form.tsx -- no cross-module dependency
 - [237-01] token_limits['native'] key removed entirely when all 3 fields are empty
 - [237-01] DEFAULT_RULES.SPENDING_LIMIT stripped of raw fields -- new policies default to USD/token_limits only
+- [237-02] Token registry fetched only for EVM networks (10 networks) -- Solana lacks token registry API
+- [237-02] CAIP-19 asset ID used directly from registry response as token_limits key -- no manual construction
+- [237-02] Manual CAIP-19 entry via prompt() for non-registry tokens or non-EVM networks
+- [237-02] Token symbol display derived from registry match or parsed from CAIP-19 key suffix
 
 ### Blockers/Concerns
 
@@ -64,5 +68,5 @@ Progress: [███████░░░] 71%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 237-01-PLAN.md (Admin UI spending-limit-form restructure)
+Stopped at: Completed 237-02-PLAN.md (CAIP-19 token limit rows with registry integration)
 Resume file: None
