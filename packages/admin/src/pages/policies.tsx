@@ -55,6 +55,9 @@ const POLICY_TYPES = [
 
 const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   SPENDING_LIMIT: {
+    instant_max_usd: '10',
+    notify_max_usd: '100',
+    delay_max_usd: '1000',
     delay_seconds: 300,
     approval_timeout: 3600,
   },
