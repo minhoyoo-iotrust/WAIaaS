@@ -12,7 +12,7 @@
  * @see docs/61-price-oracle-spec.md section 6.2
  */
 
-import type { IPriceOracle, PriceInfo } from '@waiaas/core';
+import type { IPriceOracle, PriceInfo, NetworkType } from '@waiaas/core';
 import type { ChainType } from '@waiaas/core';
 import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
 
@@ -70,6 +70,7 @@ export async function resolveEffectiveAmountUsd(
   txType: string,
   chain: string,
   priceOracle: IPriceOracle,
+  network?: string,
 ): Promise<PriceResult> {
   try {
     switch (txType) {
@@ -97,6 +98,7 @@ export async function resolveEffectiveAmountUsd(
             address: req.token.address,
             decimals: req.token.decimals,
             chain: chain as ChainType,
+            network: network as NetworkType | undefined,
           });
           const humanAmount =
             Number(req.amount) / Math.pow(10, req.token.decimals);
@@ -141,7 +143,7 @@ export async function resolveEffectiveAmountUsd(
       }
 
       case 'BATCH': {
-        return await resolveBatchUsd(request, chain, priceOracle);
+        return await resolveBatchUsd(request, chain, priceOracle, network);
       }
 
       default:
@@ -169,6 +171,7 @@ async function resolveBatchUsd(
   request: Record<string, unknown>,
   chain: string,
   priceOracle: IPriceOracle,
+  network?: string,
 ): Promise<PriceResult> {
   const batchReq = request as {
     instructions: Array<Record<string, unknown>>;
@@ -210,6 +213,7 @@ async function resolveBatchUsd(
             address: tokenInstr.token.address,
             decimals: tokenInstr.token.decimals,
             chain: chain as ChainType,
+            network: network as NetworkType | undefined,
           });
           const humanAmount =
             Number(tokenInstr.amount) / Math.pow(10, tokenInstr.token.decimals);

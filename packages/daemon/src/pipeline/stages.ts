@@ -326,7 +326,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   let priceResult: PriceResult | undefined;
   if (ctx.priceOracle) {
     priceResult = await resolveEffectiveAmountUsd(
-      req as unknown as Record<string, unknown>, txType, ctx.wallet.chain, ctx.priceOracle,
+      req as unknown as Record<string, unknown>, txType, ctx.wallet.chain, ctx.priceOracle, ctx.resolvedNetwork,
     );
   }
 
