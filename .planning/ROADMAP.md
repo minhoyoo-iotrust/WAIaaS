@@ -269,10 +269,10 @@ Plans:
   2. /incoming 페이지에서 크로스 지갑 수신 트랜잭션이 시간/지갑/발신자/금액/체인/상태/의심 여부 배지로 표시된다
   3. 지갑/체인/상태/suspicious 여부로 수신 TX를 필터링할 수 있다
   4. 개별 지갑의 수신 모니터링을 활성화/비활성화 토글로 전환할 수 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 242-01: Incoming TX page (settings extraction, cross-wallet viewer, filters, per-wallet toggle)
+- [ ] 242-01-PLAN.md -- Incoming TX page (settings extraction + cross-wallet TX table + filters + per-wallet toggle + tests)
 
 ### Phase 243: Wallet List + Wallet Detail
 **Goal**: 운영자가 지갑 목록에서 검색/필터/잔액으로 원하는 지갑을 빠르게 찾고, 지갑 상세의 4탭 구조에서 트랜잭션/소유자/MCP 정보를 효율적으로 탐색할 수 있다
