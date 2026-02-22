@@ -312,7 +312,7 @@ Phases execute in numeric order: 239 -> 240 -> 241 -> 242 -> 243
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
 | 239 | v27.4 | Complete    | 2026-02-22 | 2026-02-22 |
-| 240 | v27.4 | 0/2 | Not started | - |
+| 240 | 1/2 | In Progress|  | - |
 | 241 | v27.4 | 0/2 | Not started | - |
 | 242 | v27.4 | 0/1 | Not started | - |
 | 243 | v27.4 | 0/2 | Not started | - |

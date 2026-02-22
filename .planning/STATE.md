@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 239 -- Foundation (Shared Components + Admin API)
+**Current focus:** Phase 240 -- Transactions Page + Dashboard
 
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 1 of 5 (Phase 239: Foundation -- Shared Components + Admin API)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-22 -- Completed 239-02 (Cross-Wallet Admin API)
+Phase: 2 of 5 (Phase 240: Transactions Page + Dashboard)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-22 -- Completed 240-01 (Transactions Page)
 
-Progress: [##........] 22%
+Progress: [###.......] 33%
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: [##........] 22%
 | 237 | 2/2 | 5min | 2.5min |
 | 238 | 1/1 | 3min | 3min |
 | 239 | 2/2 | -- | -- |
+| 240 | 1/2 | 7min | 7min |
 
 ## Accumulated Context
 
@@ -49,6 +50,9 @@ Progress: [##........] 22%
 - 239-02: offset/limit pagination for admin cross-wallet endpoints (not cursor)
 - 239-02: No default status filter on GET /admin/incoming (admin sees all statuses)
 - 239-02: LEFT JOIN wallets for walletName in both cross-wallet endpoints
+- 240-01: Custom table instead of Table component for row expansion support
+- 240-01: Wallet filter populated dynamically from GET /v1/wallets on mount
+- 240-01: 13 network options in filter dropdown matching EXPLORER_MAP networks
 
 ### Blockers/Concerns
 
@@ -57,5 +61,5 @@ Progress: [##........] 22%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 239-02-PLAN.md (Phase 239 complete)
+Stopped at: Completed 240-01-PLAN.md
 Resume file: None

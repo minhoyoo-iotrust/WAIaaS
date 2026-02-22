@@ -20,12 +20,12 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Transactions Page
 
-- [ ] **TXN-01**: /transactions 라우트에서 전체 지갑의 트랜잭션을 단일 테이블로 조회할 수 있다
-- [ ] **TXN-02**: 트랜잭션 테이블이 시간, 지갑명, 타입 배지, 수신자, 금액(+USD), 네트워크, 상태 배지, txHash 익스플로러 링크를 표시한다
-- [ ] **TXN-03**: 지갑/타입/상태/네트워크/날짜 범위로 트랜잭션을 필터링할 수 있다
-- [ ] **TXN-04**: 트랜잭션 목록이 서버사이드 페이지네이션(offset/limit)을 지원한다
-- [ ] **TXN-05**: txHash 또는 수신자 주소로 트랜잭션을 검색할 수 있다
-- [ ] **TXN-06**: 트랜잭션 행을 클릭하면 전체 필드가 확장 표시된다
+- [x] **TXN-01**: /transactions 라우트에서 전체 지갑의 트랜잭션을 단일 테이블로 조회할 수 있다
+- [x] **TXN-02**: 트랜잭션 테이블이 시간, 지갑명, 타입 배지, 수신자, 금액(+USD), 네트워크, 상태 배지, txHash 익스플로러 링크를 표시한다
+- [x] **TXN-03**: 지갑/타입/상태/네트워크/날짜 범위로 트랜잭션을 필터링할 수 있다
+- [x] **TXN-04**: 트랜잭션 목록이 서버사이드 페이지네이션(offset/limit)을 지원한다
+- [x] **TXN-05**: txHash 또는 수신자 주소로 트랜잭션을 검색할 수 있다
+- [x] **TXN-06**: 트랜잭션 행을 클릭하면 전체 필드가 확장 표시된다
 
 ### Token Registry
 
@@ -93,12 +93,12 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | COMP-03 | Phase 239 | Complete |
 | API-01 | Phase 239 | Complete |
 | API-02 | Phase 239 | Complete |
-| TXN-01 | Phase 240 | Pending |
-| TXN-02 | Phase 240 | Pending |
-| TXN-03 | Phase 240 | Pending |
-| TXN-04 | Phase 240 | Pending |
-| TXN-05 | Phase 240 | Pending |
-| TXN-06 | Phase 240 | Pending |
+| TXN-01 | Phase 240 | Complete |
+| TXN-02 | Phase 240 | Complete |
+| TXN-03 | Phase 240 | Complete |
+| TXN-04 | Phase 240 | Complete |
+| TXN-05 | Phase 240 | Complete |
+| TXN-06 | Phase 240 | Complete |
 | DASH-01 | Phase 240 | Pending |
 | DASH-02 | Phase 240 | Pending |
 | DASH-03 | Phase 240 | Pending |
