@@ -36,10 +36,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 
 ### Incoming TX
 
-- [ ] **INTX-01**: settings.tsx의 수신 TX 설정 필드가 /incoming 독립 페이지로 추출·이전된다
-- [ ] **INTX-02**: /incoming 페이지에서 크로스 지갑 수신 트랜잭션 테이블을 조회할 수 있다
-- [ ] **INTX-03**: 지갑/체인/상태/suspicious 여부로 수신 TX를 필터링할 수 있다
-- [ ] **INTX-04**: 개별 지갑의 수신 모니터링을 활성화/비활성화할 수 있다
+- [x] **INTX-01**: settings.tsx의 수신 TX 설정 필드가 /incoming 독립 페이지로 추출·이전된다
+- [x] **INTX-02**: /incoming 페이지에서 크로스 지갑 수신 트랜잭션 테이블을 조회할 수 있다
+- [x] **INTX-03**: 지갑/체인/상태/suspicious 여부로 수신 TX를 필터링할 수 있다
+- [x] **INTX-04**: 개별 지갑의 수신 모니터링을 활성화/비활성화할 수 있다
 
 ### Wallet List
 
@@ -109,10 +109,10 @@ Requirements for Admin UI UX 개선. Each maps to roadmap phases.
 | TOKR-04 | Phase 241 | Complete |
 | NLOG-01 | Phase 241 | Complete |
 | NLOG-02 | Phase 241 | Complete |
-| INTX-01 | Phase 242 | Pending |
-| INTX-02 | Phase 242 | Pending |
-| INTX-03 | Phase 242 | Pending |
-| INTX-04 | Phase 242 | Pending |
+| INTX-01 | Phase 242 | Complete |
+| INTX-02 | Phase 242 | Complete |
+| INTX-03 | Phase 242 | Complete |
+| INTX-04 | Phase 242 | Complete |
 | WLST-01 | Phase 243 | Pending |
 | WLST-02 | Phase 243 | Pending |
 | WLST-03 | Phase 243 | Pending |

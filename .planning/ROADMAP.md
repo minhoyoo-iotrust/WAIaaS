@@ -208,7 +208,7 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 - [x] **Phase 239: Foundation -- Shared Components + Admin API** - ExplorerLink/FilterBar/SearchInput 공용 컴포넌트 + 크로스 지갑 Admin API 2개 신규 추가
 - [x] **Phase 240: Transactions Page + Dashboard** - /transactions 신규 페이지 구축 + 대시보드 승인 대기 카드/클릭 가능 카드/네트워크/txHash 개선
 - [x] **Phase 241: Token Registry + Notification Log** - /tokens 신규 페이지 구축 + 알림 로그 필터/지갑 링크 개선 (completed 2026-02-22)
-- [ ] **Phase 242: Incoming TX Monitoring UI** - /incoming 독립 페이지(설정 추출 + 크로스 지갑 수신 TX 뷰어 + 필터 + 모니터링 토글)
+- [x] **Phase 242: Incoming TX Monitoring UI** - /incoming 독립 페이지(설정 추출 + 크로스 지갑 수신 TX 뷰어 + 필터 + 모니터링 토글) (completed 2026-02-22)
 - [ ] **Phase 243: Wallet List + Wallet Detail** - 지갑 목록 검색/필터/잔액 + 지갑 상세 4탭 구조/페이지네이션/USD 표시
 
 ## Phase Details
@@ -314,5 +314,5 @@ Phases execute in numeric order: 239 -> 240 -> 241 -> 242 -> 243
 | 239 | v27.4 | Complete    | 2026-02-22 | 2026-02-22 |
 | 240 | v27.4 | Complete    | 2026-02-22 | 2026-02-22 |
 | 241 | 2/2 | Complete    | 2026-02-22 | - |
-| 242 | v27.4 | 0/1 | Not started | - |
+| 242 | 1/1 | Complete   | 2026-02-22 | - |
 | 243 | v27.4 | 0/2 | Not started | - |

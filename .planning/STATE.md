@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 241 -- Token Registry + Notification Log
+**Current focus:** Phase 242 -- Incoming TX Monitoring UI
 
 ## Current Position
 
 Milestone: v27.4 Admin UI UX 개선
-Phase: 3 of 5 (Phase 241: Token Registry + Notification Log) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-23 -- Completed 241-02 (Notification Log Filters + Wallet Links)
+Phase: 4 of 5 (Phase 242: Incoming TX Monitoring UI) -- IN PROGRESS
+Plan: 1 of 1 in current phase
+Status: Plan 242-01 complete
+Last activity: 2026-02-23 -- Completed 242-01 (Incoming TX Monitoring UI)
 
-Progress: [######....] 60%
+Progress: [########..] 80%
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Progress: [######....] 60%
 | 239 | 2/2 | -- | -- |
 | 240 | 2/2 | 10min | 5min |
 | 241 | 2/2 | 6min | 3min |
+| 242 | 1/1 | 6min | 6min |
 
 ## Accumulated Context
 
@@ -60,6 +61,10 @@ Progress: [######....] 60%
 - 241-01: Inlined EVM_NETWORKS constant (10 networks) in tokens.tsx, matching pattern from transactions.tsx
 - 241-02: syncUrl=false for notification log FilterBar (tab-routed page uses hash for tab state)
 - 241-02: Date filters convert YYYY-MM-DD to Unix seconds (start-of-day for since, end-of-day for until)
+- 242-01: Collapsible settings panel (default expanded) in /incoming page
+- 242-01: apiPatch helper added for PATCH mutations
+- 242-01: monitorIncoming added to WalletCrudResponseSchema
+- 242-01: syncUrl=false for /incoming FilterBar (standalone page, no tab routing)
 
 ### Blockers/Concerns
 
@@ -68,5 +73,5 @@ Progress: [######....] 60%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 241-02-PLAN.md
+Stopped at: Completed 242-01-PLAN.md
 Resume file: None
