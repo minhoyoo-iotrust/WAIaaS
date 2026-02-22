@@ -283,11 +283,11 @@ Plans:
   2. 지갑 목록에 기본 네트워크 네이티브 토큰 잔액 + USD 가치가 표시된다
   3. 지갑 상세 페이지가 Overview/Transactions/Owner/MCP 4탭 구조이며, 탭 전환 시 해당 콘텐츠가 렌더링된다
   4. Transactions 탭이 페이지네이션/txHash 익스플로러 링크/상태-타입 필터를 지원하고, 잔액 옆에 USD 환산 가치 + 수동 새로고침 버튼이 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 243-01: Wallet list improvements (search, filter, balance column)
-- [ ] 243-02: Wallet detail tab restructure + transaction improvements + USD + refresh
+- [ ] 243-01-PLAN.md -- Wallet list search/filter/balance (SearchInput, FilterBar, Balance+USD column)
+- [ ] 243-02-PLAN.md -- Wallet detail 4-tab restructure (Overview/Transactions/Owner/MCP) + pagination + ExplorerLink + USD + refresh
 
 ## Progress
 
