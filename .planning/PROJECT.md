@@ -8,20 +8,13 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v27.1 수신 트랜잭션 모니터링 구현
+## Current Milestone: (다음 마일스톤 미정)
 
-**Goal:** v27.0에서 설계한 수신 트랜잭션 모니터링(doc 76, ITM-01~ITM-05)을 구현하여, 에이전트 지갑으로 들어오는 입금을 실시간 감지·저장·알림하는 상태 달성.
-
-**Target features:**
-- IChainSubscriber 인터페이스 + SolanaSubscriber/EvmSubscriber 구현 (WebSocket→폴링 폴백, 갭 보상)
-- incoming_transactions/incoming_tx_cursors DB 스키마 + 메모리 큐 배치 flush + 보존 정책
-- GET /v1/wallet/incoming, /summary REST API + SDK/MCP 확장
-- EventBus `transaction:incoming` + TX_INCOMING/TX_INCOMING_SUSPICIOUS 알림 + KillSwitch 연동
-- config.toml [incoming] 7키 + 지갑별 monitor_incoming opt-in + Admin Settings 런타임 변경
+v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22).
 
 ## Current State
 
-v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11-패키지 모노레포 + Python SDK, ~145,704 LOC TypeScript (Admin UI ~20,000 LOC), 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 11-패키지 모노레포 + Python SDK, ~155,540 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -60,10 +53,11 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 - ✅ v26.3 Push Relay Server — shipped 2026-02-20 (8 plans, 25 requirements, ~163,416 LOC TS)
 - ✅ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 — shipped 2026-02-21 (15 plans, 30 requirements, ~145,704 LOC TS)
 - ✅ v27.0 수신 트랜잭션 모니터링 설계 — shipped 2026-02-21 (16 plans, 29 requirements, 26 설계 결정, docs 76)
+- ✅ v27.1 수신 트랜잭션 모니터링 구현 — shipped 2026-02-22 (18 plans, 30 requirements, ~155,540 LOC TS)
 
 **코드베이스 현황:**
 - 11-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay + waiaas (Python)
-- ~145,704 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
+- ~155,540 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~20,000 LOC, Push Relay ~1,782 LOC)
 - 4,396+ 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin + push-relay)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
@@ -74,7 +68,7 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 - AdapterPool 멀티체인 (Solana + EVM), secp256k1 멀티커브 키스토어, Owner Auth SIWE/SIWS
 - EnvironmentType SSoT (testnet/mainnet) + 환경-네트워크 매핑 + resolveNetwork() 파이프라인
 - TokenRegistryService: 5 EVM 메인넷 24개 내장 토큰 + 커스텀 토큰 CRUD
-- MCP 18개 내장 도구 (wc_connect/wc_status/wc_disconnect 추가) + Action Provider 동적 도구 + 7개 스킬 리소스
+- MCP 23개 내장 도구 (수신 TX 조회 2개 추가) + Action Provider 동적 도구 + 7개 스킬 리소스
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
@@ -94,7 +88,10 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 - DB v19 마이그레이션 (session_wallets junction + sessions.wallet_id 제거)
 - 1:N 세션 모델 (session_wallets junction, resolveWalletId 3단계 우선순위)
 - GET /v1/connect-info 자기 발견 (capabilities 동적 결정, 자연어 프롬프트)
-- 설계 문서 39개 (24-75), 8 objective 문서
+- IChainSubscriber 6-method + SolanaIncomingSubscriber/EvmIncomingSubscriber + IncomingTxMonitorService (큐+멀티플렉서+안전규칙+KillSwitch)
+- incoming_transactions/incoming_tx_cursors DB v21 + wallets.monitor_incoming opt-in
+- GET /v1/wallet/incoming + /summary REST API + TS/Python SDK + MCP 2 tools + Admin IncomingSettings
+- 설계 문서 40개 (24-76), 8 objective 문서
 
 ## 요구사항
 
@@ -456,6 +453,24 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 - ✓ 기존 설계 문서 9개 영향 분석 + 17개 검증 시나리오 + 교차 검증 PASS — v27.0 (VER-01~03)
 - ✓ 감사 갭 9건 전량 해결 (IChainSubscriber connect()/waitForDisconnect(), 폴링 BackgroundWorker 등록, is_suspicious 컬럼, eventBus 타입 통일, FLOW-2 E2E, NOTIFY-1 priority 라우팅, getDecimals 헬퍼, doc 31 PATCH, skills/ 업데이트) — v27.0 (Phase 222-223)
 
+- ✓ IChainSubscriber 6-method interface + DB v21 migration (incoming_transactions, incoming_tx_cursors, wallets.monitor_incoming) — v27.1 (SUB-01, STO-01)
+- ✓ SolanaIncomingSubscriber WebSocket logsSubscribe + SOL/SPL/Token-2022 파서 + 60s heartbeat keepalive — v27.1 (SUB-02, SUB-07)
+- ✓ EvmIncomingSubscriber getLogs ERC-20 Transfer + getBlock native ETH 폴링 감지 — v27.1 (SUB-03)
+- ✓ WebSocket-to-polling 자동 폴백 3-state connection machine + SubscriptionMultiplexer 연결 공유 — v27.1 (SUB-04, SUB-06)
+- ✓ Gap recovery via incoming_tx_cursors + blind gap recovery after reconnection — v27.1 (SUB-05)
+- ✓ IncomingTxQueue Map dedup + BackgroundWorkers batch flush + ON CONFLICT DO NOTHING — v27.1 (STO-02, STO-04)
+- ✓ Retention policy worker auto-delete older than incoming_retention_days — v27.1 (STO-05)
+- ✓ GET /v1/wallet/incoming 커서 페이지네이션 + GET /summary 기간별 집계 + PATCH monitorIncoming 토글 — v27.1 (API-01~03)
+- ✓ TypeScript/Python SDK listIncomingTransactions + getIncomingTransactionSummary — v27.1 (API-04, API-05)
+- ✓ MCP list-incoming-transactions + get-incoming-summary 2 tools (total 23) — v27.1 (API-06, API-07)
+- ✓ EventBus transaction:incoming + transaction:incoming:suspicious + 3 safety rules (dust/unknownToken/largeAmount) — v27.1 (EVT-01, EVT-03)
+- ✓ TX_INCOMING/TX_INCOMING_SUSPICIOUS NotificationEventType + en/ko i18n templates — v27.1 (EVT-02, EVT-06)
+- ✓ KillSwitch SUSPENDED/LOCKED 알림 억제 + per-wallet cooldown — v27.1 (EVT-04, EVT-05)
+- ✓ config.toml [incoming] 7키 Zod 검증 + WAIAAS_INCOMING_* env var + SettingsService + HotReload — v27.1 (CFG-01~05)
+- ✓ DaemonLifecycle Step 4c-9 IncomingTxMonitorService fail-soft 초기화 — v27.1 (CFG-04)
+- ✓ 3개 통합 버그 수정 (BackgroundWorkers 공유, polling worker handlers, gap recovery wiring) — v27.1 (Phase 230)
+- ✓ 20개 통합 테스트 6대 피트폴 검증 (listener leak, SQLite contention, dedup, shutdown drain, EVM reorg, gap recovery) — v27.1 (Phase 229)
+
 ### 활성
 
 (없음 — 다음 마일스톤 미정)
@@ -477,7 +492,7 @@ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 11
 
 ## 컨텍스트
 
-**누적:** 51 milestones (v0.1-v27.0), 223 phases, 478 plans, 1,301 requirements, 39 설계 문서(24-76), 8 objective 문서, ~145,704 LOC TS, 4,396+ 테스트
+**누적:** 52 milestones (v0.1-v27.1), 230 phases, 496 plans, 1,331 requirements, 40 설계 문서(24-76), 8 objective 문서, ~155,540 LOC TS, 4,396+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -517,6 +532,7 @@ v2.7 지갑 앱 알림 채널 shipped (2026-02-20). 1 페이즈, 4 플랜, 16 �
 v26.3 Push Relay Server shipped (2026-02-20). 3 페이즈, 8 플랜, 25 요구사항, 45 파일 변경, +2,589/-26 lines, 6 설계 결정. @waiaas/push-relay 신규 패키지.
 v26.4 멀티 지갑 세션 + 에이전트 자기 발견 shipped (2026-02-21). 5 페이즈, 15 플랜, 30 요구사항, ~145,704 LOC TS, 4,396+ 테스트, 5 설계 결정.
 v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈, 16 플랜, 29 요구사항, 101 파일 변경, +8,058/-2,158 lines, 26 설계 결정. 설계 문서 76(~2,300줄, 8섹션).
+v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 7 페이즈, 18 플랜, 30 요구사항, 189 파일 변경, +23,969/-5,834 lines, 102 커밋, ~155,540 LOC TS. Known gap: STO-03 (Confirmation Worker RPC 콜백 미주입).
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -533,7 +549,7 @@ v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈,
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
 - 미구현: Jupiter Swap, Tauri
 
-**설계 문서:** 40개 (deliverables 24-76.md) + 대응표/테스트 전략/objective
+**설계 문서:** 40개 (24-76) + 대응표/테스트 전략/objective
 
 ### 알려진 이슈
 
@@ -544,6 +560,7 @@ v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈,
 - Pre-existing 3 CLI E2E failures (E-07, E-08, E-09) — daemon-harness uses old adapter: param, not adapterPool:
 - Kill Switch 3-state DB 저장 (v1.6에서 DB v14 마이그레이션 완료, CAS ACID 패턴)
 - BUG-013~016 RESOLVED in v1.4.3 (Admin MCP 토큰, EVM getAssets, EVM confirmation timeout, 패키지 버전)
+- STO-03: Confirmation Worker RPC 콜백(getBlockNumber, checkSolanaFinalized) 미주입 — DETECTED→CONFIRMED 상태 전환 미작동 (v27.1 known gap, 다음 마일스톤에서 수정)
 
 ## 제약사항
 
@@ -849,9 +866,22 @@ v27.0 수신 트랜잭션 모니터링 설계 shipped (2026-02-21). 9 페이즈,
 | SUSPICIOUS priority:high 채널 내부 eventType 매핑 | NotificationPayload 변경 없이 priority 라우팅 | ✓ Good — v27.0 갭 해결 |
 | SafetyRuleContext.decimals + getDecimals() 헬퍼 | IncomingTransaction 타입 변경 없이 decimals 전달 | ✓ Good — v27.0 갭 해결 |
 
-## Shipped: v27.0 수신 트랜잭션 모니터링 설계
+| IncomingTransaction interface + Zod schema 이중 정의 | interface는 코드 계약, Zod는 검증/OpenAPI SSoT | ✓ Good — v27.1 구현 |
+| CREATE TABLE IF NOT EXISTS v21 마이그레이션 | pushSchema DDL 실행 순서 호환, 기존 패턴 일관 | ✓ Good — v27.1 구현 |
+| generateId DI 주입 (crypto.randomUUID default) | 테스트 가능성 확보, Phase 226에서 UUID v7 사용 | ✓ Good — v27.1 구현 |
+| EVM polling-first (connect no-op) | EVM WebSocket 불안정 대응, 설계(D-06) 충실 구현 | ✓ Good — v27.1 구현 |
+| Duck-typed subscriber 파라미터 (reconnectLoop) | IChainSubscriber 순환 의존 회피 | ✓ Good — v27.1 구현 |
+| 큐 flush 시 generateId() 호출 (UUID v7 time ordering) | 삽입 시점 기준 정렬, 감지 시점과 분리 | ✓ Good — v27.1 구현 |
+| Composite cursor base64url JSON {d, i} | keyset 페이지네이션, offset 없이 안정적 | ✓ Good — v27.1 구현 |
+| Summary JS BigInt 집계 (SQL SUM 미사용) | SQLite bigint 정밀도 이슈 방지 | ✓ Good — v27.1 구현 |
+| Duck-typed incomingTxMonitorService (순환 의존 회피) | HotReloadDeps/CreateAppDeps에서 일관 적용 | ✓ Good — v27.1 구현 |
+| BackgroundWorkers pre-created double guard | daemon Step 4c-9 전 + Step 6 내부, 방어적 코딩 | ✓ Good — v27.1 구현 |
+| Polling workers structural typing cast | pollAll()이 IChainSubscriber interface에 없음, as unknown as 캐스트 | ✓ Good — v27.1 구현 |
+| TX_INCOMING_SUSPICIOUS → security_alert 카테고리 | 전 채널 브로드캐스트, TX_INCOMING은 transaction 카테고리 | ✓ Good — v27.1 구현 |
 
-v27.0 shipped. IChainSubscriber 6-메서드 인터페이스 + incoming_transactions DB 스키마(v21), Solana logsSubscribe(mentions) + EVM getLogs/watchBlocks 이중 감지 전략, 3-state WebSocket 상태 머신 + 멀티플렉서 + 블라인드 구간 복구, INCOMING_TX_DETECTED/SUSPICIOUS 이벤트 + IIncomingSafetyRule 3규칙, REST API/SDK/MCP Zod SSoT 명세, config.toml [incoming] 6키 설정, 감사 갭 9건 전량 해결. 설계 문서 76(~2,300줄, 8섹션) 완성.
+## Shipped: v27.1 수신 트랜잭션 모니터링 구현
+
+v27.1 shipped. v27.0 설계를 구현하여 에이전트 지갑 수신 트랜잭션 실시간 감지·저장·알림 시스템 완성. SolanaIncomingSubscriber(WebSocket logsSubscribe + 60s heartbeat) + EvmIncomingSubscriber(getLogs + getBlock polling), IncomingTxQueue(Map dedup + 5s batch flush), SubscriptionMultiplexer(연결 공유 + 3-state 재연결 + 폴링 폴백), 3 safety rules + KillSwitch 연동, REST API 3 엔드포인트 + TS/Python SDK + MCP 2 tools, 20개 통합 테스트. Known gap: STO-03 (Confirmation Worker RPC 콜백 미주입, DETECTED→CONFIRMED 미작동).
 
 ---
-*최종 업데이트: 2026-02-21 after v27.0 milestone complete*
+*최종 업데이트: 2026-02-22 after v27.1 milestone complete*
