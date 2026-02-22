@@ -849,6 +849,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         amount: transactions.amount,
         amountUsd: transactions.amountUsd,
         network: transactions.network,
+        txHash: transactions.txHash,
         createdAt: transactions.createdAt,
       })
       .from(transactions)
@@ -867,6 +868,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       amount: tx.amount ?? null,
       amountUsd: tx.amountUsd ?? null,
       network: tx.network ?? null,
+      txHash: tx.txHash ?? null,
       createdAt: tx.createdAt instanceof Date
         ? Math.floor(tx.createdAt.getTime() / 1000)
         : (typeof tx.createdAt === 'number' ? tx.createdAt : null),

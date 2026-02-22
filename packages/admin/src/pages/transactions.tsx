@@ -145,8 +145,17 @@ export default function TransactionsPage() {
       if (f.type) params.set('type', f.type);
       if (f.status) params.set('status', f.status);
       if (f.network) params.set('network', f.network);
-      if (f.since) params.set('since', f.since);
-      if (f.until) params.set('until', f.until);
+      if (f.since) {
+        const d = new Date(f.since);
+        if (!isNaN(d.getTime())) params.set('since', String(Math.floor(d.getTime() / 1000)));
+      }
+      if (f.until) {
+        const d = new Date(f.until);
+        if (!isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999);
+          params.set('until', String(Math.floor(d.getTime() / 1000)));
+        }
+      }
       if (search.value) params.set('search', search.value);
       params.set('offset', String(page.value * PAGE_SIZE));
       params.set('limit', String(PAGE_SIZE));
