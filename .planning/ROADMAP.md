@@ -224,12 +224,12 @@ Plans:
   3. token_limits에 매칭 없을 때 기존 raw 필드로 폴백하고, raw도 없으면 USD만으로 판정한다
   4. per-tx 최종 티어가 maxTier(USD 티어, 토큰별 티어)로 결정된다
   5. CONTRACT_CALL/BATCH에서는 token_limits가 적용되지 않고, APPROVE+OVERRIDE 시 token_limits가 무시된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 236-01: TransactionParam 인터페이스 확장 (3곳 동기화) + buildTransactionParam/mapOperationToParam tokenDecimals 전달
-- [ ] 236-02: evaluateSpendingLimit tokenContext 파라미터 추가 + evaluateTokenTier 함수 구현 (CAIP-19 매칭 순서)
-- [ ] 236-03: evaluateSpendingLimit 호출부 3곳 tokenContext 전달 + evaluateNativeTier undefined 방어
+- [ ] 236-01-PLAN.md -- TransactionParam tokenDecimals 추가 (3곳 동기화) + buildTransactionParam decimals 전달
+- [ ] 236-02-PLAN.md -- evaluateTokenTier TDD (CAIP-19 매칭 + decimal 변환 + evaluateNativeTier undefined 방어)
+- [ ] 236-03-PLAN.md -- evaluateSpendingLimit 호출부 3곳 tokenContext 연결
 
 ### Phase 237: Admin UI -- 토큰별 한도 편집 폼
 **Goal**: Admin에서 토큰별 사람 읽기 단위 한도를 직관적으로 설정할 수 있고, 네이티브 심볼이 네트워크에 맞게 표시된다
