@@ -10,26 +10,26 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 1 of 4 (Phase 231: Core CAIP Module + Network Map)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- Roadmap created for v27.2 CAIP-19 자산 식별 표준
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 231-01 CAIP-2/19 parser module
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Cumulative:** 52 milestones, 230 phases, 496 plans, 1,331 reqs, 4,396+ tests, ~155,540 LOC TS
 
 **Velocity:**
-- Total plans completed: 0 (this milestone)
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1 (this milestone)
+- Average duration: 2min
+- Total execution time: 0.03 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 231 | 1/2 | 2min | 2min |
 
 *Updated after each plan completion*
 
@@ -44,6 +44,9 @@ Progress: [░░░░░░░░░░] 0%
 - InMemoryPriceCache volatile -- cache key migration zero-cost at restart
 - DB migration v22: application-level backfill (SELECT+loop+UPDATE, established v6b pattern)
 - 4-scenario policy evaluation matrix required for ALLOWED_TOKENS (C-03 pitfall)
+- Single regex per CAIP schema (no composed schemas) -- simpler and faster
+- Caip19Schema aliases Caip19AssetTypeSchema (fungible tokens only, no AssetId)
+- Both parse and format validate via Zod -- invalid input never silently passes
 
 ### Blockers/Concerns
 
@@ -53,5 +56,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Roadmap created, ready to plan Phase 231
+Stopped at: Completed 231-01-PLAN.md (CAIP-2/19 parser module)
 Resume file: None

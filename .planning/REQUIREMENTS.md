@@ -7,11 +7,11 @@
 
 ### CAIP Parser
 
-- [ ] **CAIP-01**: User can parse a CAIP-2 chain ID string into namespace and reference components
-- [ ] **CAIP-02**: User can format namespace and reference into a valid CAIP-2 chain ID string
-- [ ] **CAIP-03**: User can parse a CAIP-19 asset type URI into chainId, assetNamespace, and assetReference components
-- [ ] **CAIP-04**: User can format components into a valid CAIP-19 asset type URI with roundtrip fidelity
-- [ ] **CAIP-05**: User can validate CAIP-2 and CAIP-19 strings via Zod schemas with spec-compliant regex
+- [x] **CAIP-01**: User can parse a CAIP-2 chain ID string into namespace and reference components
+- [x] **CAIP-02**: User can format namespace and reference into a valid CAIP-2 chain ID string
+- [x] **CAIP-03**: User can parse a CAIP-19 asset type URI into chainId, assetNamespace, and assetReference components
+- [x] **CAIP-04**: User can format components into a valid CAIP-19 asset type URI with roundtrip fidelity
+- [x] **CAIP-05**: User can validate CAIP-2 and CAIP-19 strings via Zod schemas with spec-compliant regex
 - [ ] **CAIP-06**: User can convert any WAIaaS NetworkType to its CAIP-2 chain ID and vice versa (13 networks bidirectional)
 - [ ] **CAIP-07**: User can generate a CAIP-19 native asset ID for any supported network using slip44 coin types (ETH=60, SOL=501, POL=966)
 - [ ] **CAIP-08**: User can generate a CAIP-19 token asset ID from network and token address (erc20 for EVM, token for Solana SPL/Token-2022)
@@ -83,11 +83,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAIP-01 | Phase 231 | Pending |
-| CAIP-02 | Phase 231 | Pending |
-| CAIP-03 | Phase 231 | Pending |
-| CAIP-04 | Phase 231 | Pending |
-| CAIP-05 | Phase 231 | Pending |
+| CAIP-01 | Phase 231 | Complete |
+| CAIP-02 | Phase 231 | Complete |
+| CAIP-03 | Phase 231 | Complete |
+| CAIP-04 | Phase 231 | Complete |
+| CAIP-05 | Phase 231 | Complete |
 | CAIP-06 | Phase 231 | Pending |
 | CAIP-07 | Phase 231 | Pending |
 | CAIP-08 | Phase 231 | Pending |

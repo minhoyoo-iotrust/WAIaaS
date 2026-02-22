@@ -203,7 +203,7 @@ See `.planning/milestones/v27.1-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 231-01-PLAN.md — CAIP-2/19 파서, 포매터, Zod 스키마 TDD 구현
+- [x] 231-01-PLAN.md — CAIP-2/19 파서, 포매터, Zod 스키마 TDD 구현
 - [ ] 231-02-PLAN.md — 13-네트워크 양방향 맵 + asset helpers + x402/WC 통합 + TokenRef 확장
 
 ### Phase 232: Oracle L2 Support + Cache Key Migration
@@ -275,7 +275,7 @@ Phases execute in numeric order: 231 -> 232 -> 233 -> 234
 | 210-214 | v26.4 | 15/15 | Complete | 2026-02-21 |
 | 215-223 | v27.0 | 16/16 | Complete | 2026-02-21 |
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
-| 231 | v27.2 | 0/2 | Not started | - |
+| 231 | v27.2 | 1/2 | In progress | - |
 | 232 | v27.2 | 0/2 | Not started | - |
 | 233 | v27.2 | 0/3 | Not started | - |
 | 234 | v27.2 | 0/2 | Not started | - |
