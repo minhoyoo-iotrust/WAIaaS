@@ -62,6 +62,7 @@
         "packages/adapters/evm/package.json",
         "packages/wallet-sdk/package.json",
         "packages/push-relay/package.json",
+        "packages/actions/package.json",
         "python-sdk/pyproject.toml"
       ]
     }
