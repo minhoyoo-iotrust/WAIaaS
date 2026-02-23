@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.6.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.2...v2.6.0-rc.3) (2026-02-23)
+
+
+### Features
+
+* **239-01:** add ExplorerLink, FilterBar, and SearchInput shared components ([f147357](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f1473570bed7b76c78829a649e0a1d87b28968b4))
+* **239-02:** add cross-wallet admin API endpoints ([7a23ba9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7a23ba9145dc78f7af029463901f6b8066ca7292))
+* **240-01:** add Transactions page with table, filters, search, pagination, and row expand ([98bc517](https://github.com/minhoyoo-iotrust/WAIaaS/commit/98bc517fb2cf8ee87e6bf01c0b01f8c00e461ded))
+* **240-02:** add approval card, clickable cards, and network/txHash columns to dashboard ([6d7392f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6d7392fc0da6b0074c1de10a85300de0b203d17f))
+* **241-01:** create Token Registry admin page with network filter and CRUD ([37ee933](https://github.com/minhoyoo-iotrust/WAIaaS/commit/37ee9338574ab5ea76e1604b8ba4e4573fd2f7d7))
+* **241-02:** add notification log filters and clickable wallet links ([4bc2217](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4bc2217dc90f3619a89f9a5147cff91c4022fae3))
+* **241-gap:** add token metadata auto-resolve endpoint and admin UI auto-fetch ([8113d64](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8113d64a1a786c4438d0af01a832329336da5b8f))
+* **242-01:** add /incoming page with settings panel, TX table, filters, wallet toggle ([df4f1eb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/df4f1eb0e7260e3521153b3dfd811f0527f3b301))
+* **243-01:** add search, filter, and balance column to wallet list ([fb53ea5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fb53ea5c685a3a90b9535a88782a0bf41d7ee582))
+* **243-02:** restructure wallet detail into 4-tab layout with enhanced transactions and USD balance ([a643c99](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a643c99197ea5a047dbcc60d5d5239fe16f201a4))
+
+
+### Bug Fixes
+
+* **admin:** add USD value to wallet list balance column and fix Badge style prop ([007744a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/007744a94f5f39c25907362b11d35ff59093aa3b))
+* **admin:** close milestone audit gaps DASH-04 and TXN-03 ([873d6f6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/873d6f609cbbc3a9e9a2b8c918f9f673b95e81ea))
+* **admin:** update tests for 4-tab wallet detail layout and dashboard polling ([7fdd8d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7fdd8d4708710ab7ef6d4a457b47b4aac1640120))
+* resolve open issues [#150](https://github.com/minhoyoo-iotrust/WAIaaS/issues/150)-[#152](https://github.com/minhoyoo-iotrust/WAIaaS/issues/152) and fix AdminStatus amountUsd type ([c19cf98](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c19cf98d14230ed2502b2257f7f80cb04af8628f))
+
 ## [2.6.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.1...v2.6.0-rc.2) (2026-02-22)
 
 
