@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.2 0x EVM DEX Swap -- Phase 249 0x Swap Provider
+**Current focus:** v28.2 0x EVM DEX Swap -- Phase 250
 
 ## Current Position
 
 Milestone: v28.2 0x EVM DEX Swap
-Phase: 249 of 250 (0x Swap Provider)
-Plan: 1 of 2 in current phase
+Phase: 250 of 250
+Plan: 0 of 0 in current phase
 Status: Executing
-Last activity: 2026-02-23 -- Completed 249-01-PLAN.md (ZeroExApiClient + schemas + config)
+Last activity: 2026-02-23 -- Completed 249-02-PLAN.md (ZeroExSwapActionProvider + tests)
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -44,6 +44,9 @@ Progress: [█████░░░░░] 50%
 - 249-01: AllowanceHolder address identical across all 20 chains -- single constant with Map lookup
 - 249-01: CHAIN_ID_MAP only maps 5 mainnet EVM networks in NETWORK_TYPES
 - 249-01: PriceResponseSchema .passthrough() for API drift tolerance
+- 249-02: encodeApproveCalldata uses manual ABI encoding to avoid viem dependency in @waiaas/actions
+- 249-02: Same-token detection case-insensitive (toLowerCase) for EVM address flexibility
+- 249-02: chainId resolved from explicit input > CHAIN_ID_MAP > default 1 (ActionContext lacks network)
 
 ### Blockers/Concerns
 
@@ -52,5 +55,5 @@ Progress: [█████░░░░░] 50%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 249-01-PLAN.md
+Stopped at: Completed 249-02-PLAN.md
 Resume file: None

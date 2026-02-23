@@ -242,7 +242,7 @@ See `.planning/milestones/v28.1-ROADMAP.md` for full details.
 **Milestone Goal:** EVM 체인에서 AI 에이전트가 0x Swap API v2(AllowanceHolder)를 통해 토큰 스왑을 수행할 수 있도록 ActionProvider 프레임워크를 확장한다. Provider Infrastructure를 Admin Settings 기반으로 재구성하고, ZeroExSwapActionProvider를 구현하며, SDK/MCP/스킬 통합을 완성한다.
 
 - [x] **Phase 248: Provider Infrastructure** - Admin Settings 기반 프로바이더 관리 + resolve() 배열 확장 + provider-trust 정책 (completed 2026-02-23)
-- [ ] **Phase 249: 0x Swap Provider** - ZeroExApiClient + ZeroExSwapActionProvider + AllowanceHolder 통합
+- [x] **Phase 249: 0x Swap Provider** - ZeroExApiClient + ZeroExSwapActionProvider + AllowanceHolder 통합 (completed 2026-02-23)
 - [ ] **Phase 250: Integration** - SDK executeAction + MCP 자동 노출 + 스킬 문서
 
 ## Phase Details
@@ -301,5 +301,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 248. Provider Infrastructure | 3/3 | Complete    | 2026-02-23 | - |
-| 249. 0x Swap Provider | v28.2 | 1/2 | In progress | - |
+| 249. 0x Swap Provider | 2/2 | Complete   | 2026-02-23 | - |
 | 250. Integration | v28.2 | 0/1 | Not started | - |

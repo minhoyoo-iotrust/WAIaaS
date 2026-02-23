@@ -23,10 +23,10 @@ Requirements for milestone v28.2 0x EVM DEX Swap. Each maps to roadmap phases.
 - [x] **ZXSW-01**: ZeroExApiClient가 api.0x.org에 chainId 쿼리 파라미터 + 0x-api-key + 0x-version: v2 헤더로 요청한다
 - [x] **ZXSW-02**: /swap/allowance-holder/price 견적 조회가 Zod 스키마 검증을 거쳐 반환된다
 - [x] **ZXSW-03**: /swap/allowance-holder/quote 실행 calldata 조회가 Zod 스키마 검증을 거쳐 반환된다
-- [ ] **ZXSW-04**: ZeroExSwapActionProvider가 ERC-20 판매 시 [approve, swap] ContractCallRequest 배열을 반환한다
-- [ ] **ZXSW-05**: ZeroExSwapActionProvider가 ETH(네이티브) 판매 시 [swap] 단일 ContractCallRequest를 반환한다
-- [ ] **ZXSW-06**: 슬리피지가 기본 1%(0.01) 적용되고 상한 5%(0.05)로 클램프된다
-- [ ] **ZXSW-07**: liquidityAvailable=false 응답 시 명확한 에러가 반환된다
+- [x] **ZXSW-04**: ZeroExSwapActionProvider가 ERC-20 판매 시 [approve, swap] ContractCallRequest 배열을 반환한다
+- [x] **ZXSW-05**: ZeroExSwapActionProvider가 ETH(네이티브) 판매 시 [swap] 단일 ContractCallRequest를 반환한다
+- [x] **ZXSW-06**: 슬리피지가 기본 1%(0.01) 적용되고 상한 5%(0.05)로 클램프된다
+- [x] **ZXSW-07**: liquidityAvailable=false 응답 시 명확한 에러가 반환된다
 - [x] **ZXSW-08**: 0x API 에러 응답 시 ACTION_API_ERROR가 반환된다
 - [x] **ZXSW-09**: AllowanceHolder 컨트랙트 주소가 chainId 기반으로 정확히 매핑된다 (Cancun 19체인 + Mantle)
 - [x] **ZXSW-10**: 요청 타임아웃 10초(AbortController)가 적용된다
@@ -74,10 +74,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ZXSW-01 | Phase 249 | Complete |
 | ZXSW-02 | Phase 249 | Complete |
 | ZXSW-03 | Phase 249 | Complete |
-| ZXSW-04 | Phase 249 | Pending |
-| ZXSW-05 | Phase 249 | Pending |
-| ZXSW-06 | Phase 249 | Pending |
-| ZXSW-07 | Phase 249 | Pending |
+| ZXSW-04 | Phase 249 | Complete |
+| ZXSW-05 | Phase 249 | Complete |
+| ZXSW-06 | Phase 249 | Complete |
+| ZXSW-07 | Phase 249 | Complete |
 | ZXSW-08 | Phase 249 | Complete |
 | ZXSW-09 | Phase 249 | Complete |
 | ZXSW-10 | Phase 249 | Complete |
