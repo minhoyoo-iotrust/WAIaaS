@@ -222,19 +222,27 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       });
     }
 
-    // 2. Check API key requirement
+    // 2. Resolve walletId from body.walletId > query > defaultWalletId
+    const walletId = resolveWalletId(c, deps.db, body.walletId);
+    const sessionId = c.get('sessionId' as never) as string | undefined;
+
+    // 3. Check API key requirement (after walletId resolution for notification context)
     if (entry.provider.metadata.requiresApiKey) {
       if (!deps.apiKeyStore.has(entry.provider.metadata.name)) {
+        // Fire notification before throwing error
+        const adminPort = deps.config.daemon?.port ?? 3000;
+        const adminUrl = `http://localhost:${adminPort}/admin`;
+        void deps.notificationService?.notify('ACTION_API_KEY_REQUIRED', walletId, {
+          provider: entry.provider.metadata.name,
+          action: actionKey,
+          adminUrl,
+        });
         throw new WAIaaSError('API_KEY_REQUIRED', {
           message: `Admin > Settings에서 ${entry.provider.metadata.name} API 키를 설정하세요`,
           details: { provider: entry.provider.metadata.name },
         });
       }
     }
-
-    // 3. Resolve walletId from body.walletId > query > defaultWalletId
-    const walletId = resolveWalletId(c, deps.db, body.walletId);
-    const sessionId = c.get('sessionId' as never) as string | undefined;
 
     // 4. Look up wallet
     const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();

@@ -177,6 +177,11 @@ export const DaemonConfigSchema = z.object({
       jupiter_swap_max_price_impact_pct: z.number().min(0.01).max(100).default(1.0),
       jupiter_swap_jito_tip_lamports: z.number().int().min(0).max(10_000_000).default(1000),
       jupiter_swap_request_timeout_ms: z.number().int().min(1000).max(60000).default(10000),
+      zerox_swap_enabled: z.boolean().default(false),
+      zerox_swap_api_key: z.string().default(''),
+      zerox_swap_default_slippage_bps: z.number().int().min(1).max(10000).default(100),
+      zerox_swap_max_slippage_bps: z.number().int().min(1).max(10000).default(500),
+      zerox_swap_request_timeout_ms: z.number().int().min(1000).max(60000).default(10000),
     })
     .default({}),
 });

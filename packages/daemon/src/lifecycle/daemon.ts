@@ -881,21 +881,9 @@ export class DaemonLifecycle {
       this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword);
       this.actionProviderRegistry = new ActionProviderRegistry();
 
-      // Register built-in action providers from @waiaas/actions
+      // Register built-in action providers from @waiaas/actions (reads from SettingsService)
       const { registerBuiltInProviders } = await import('@waiaas/actions');
-      const actionsConfig = {
-        jupiter_swap: {
-          enabled: this._config!.actions.jupiter_swap_enabled,
-          apiBaseUrl: this._config!.actions.jupiter_swap_api_base_url,
-          apiKey: this._config!.actions.jupiter_swap_api_key,
-          defaultSlippageBps: this._config!.actions.jupiter_swap_default_slippage_bps,
-          maxSlippageBps: this._config!.actions.jupiter_swap_max_slippage_bps,
-          maxPriceImpactPct: this._config!.actions.jupiter_swap_max_price_impact_pct,
-          jitoTipLamports: this._config!.actions.jupiter_swap_jito_tip_lamports,
-          requestTimeoutMs: this._config!.actions.jupiter_swap_request_timeout_ms,
-        },
-      };
-      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, actionsConfig);
+      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!);
 
       // Load plugins from ~/.waiaas/actions/ (if exists)
       const actionsDir = join(dataDir, 'actions');

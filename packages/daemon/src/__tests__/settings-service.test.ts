@@ -383,7 +383,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -412,14 +412,62 @@ describe('SettingsService', () => {
 
       for (const def of credentialDefs) {
         expect(
-          ['notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url', 'oracle.coingecko_api_key', 'telegram.bot_token'].includes(def.key),
+          [
+            'notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url',
+            'oracle.coingecko_api_key', 'telegram.bot_token',
+            'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key',
+          ].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming = 73
-      expect(SETTING_DEFINITIONS.length).toBe(73);
+      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 13 actions = 86
+      expect(SETTING_DEFINITIONS.length).toBe(86);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // actions category settings
+  // -------------------------------------------------------------------------
+
+  describe('actions category', () => {
+    it('actions.jupiter_swap_enabled returns false by default', () => {
+      expect(service.get('actions.jupiter_swap_enabled')).toBe('false');
+    });
+
+    it('actions.zerox_swap_api_key returns empty string by default', () => {
+      expect(service.get('actions.zerox_swap_api_key')).toBe('');
+    });
+
+    it('actions.zerox_swap_enabled returns false by default', () => {
+      expect(service.get('actions.zerox_swap_enabled')).toBe('false');
+    });
+
+    it('actions settings are accessible via getAll()', () => {
+      const all = service.getAll();
+      expect(all.actions).toBeDefined();
+      expect(all.actions!.jupiter_swap_enabled).toBe('false');
+      expect(all.actions!.zerox_swap_enabled).toBe('false');
+      expect(all.actions!.jupiter_swap_api_base_url).toBe('https://api.jup.ag/swap/v1');
+      expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
+    });
+
+    it('actions category has 13 settings', () => {
+      const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
+      expect(actionsDefs.length).toBe(13);
+    });
+
+    it('actions.jupiter_swap_api_key is a credential', () => {
+      const def = getSettingDefinition('actions.jupiter_swap_api_key');
+      expect(def).toBeDefined();
+      expect(def!.isCredential).toBe(true);
+    });
+
+    it('actions.zerox_swap_api_key is a credential', () => {
+      const def = getSettingDefinition('actions.zerox_swap_api_key');
+      expect(def).toBeDefined();
+      expect(def!.isCredential).toBe(true);
     });
   });
 });
