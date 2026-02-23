@@ -13,6 +13,8 @@ dispatch:
 
 Action Provider framework for executing DeFi protocol actions (swaps, staking, liquidity) through the WAIaaS transaction pipeline. Actions are resolved by registered providers and executed as CONTRACT_CALL transactions through the existing 6-stage pipeline with full policy evaluation.
 
+> AI agents must NEVER request the master password. Use only your session token.
+
 ## Base URL / Authentication
 
 ```

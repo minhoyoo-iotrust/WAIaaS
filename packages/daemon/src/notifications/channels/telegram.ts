@@ -19,14 +19,22 @@ export class TelegramChannel implements INotificationChannel {
     const text = this.formatMarkdownV2(payload);
     const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
 
+    // Build request body with optional inline keyboard from payload.details
+    const requestBody: Record<string, unknown> = {
+      chat_id: this.chatId,
+      text,
+      parse_mode: 'MarkdownV2',
+    };
+
+    // Support inline keyboard passed via payload.details.reply_markup
+    if (payload.details?.reply_markup) {
+      requestBody.reply_markup = payload.details.reply_markup;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: this.chatId,
-        text,
-        parse_mode: 'MarkdownV2',
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

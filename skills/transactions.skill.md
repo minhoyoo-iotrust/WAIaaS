@@ -13,6 +13,8 @@ dispatch:
 
 Complete reference for all 5 transaction types, lifecycle management, and policy interaction. All endpoints use base URL `http://localhost:3100`. Transaction endpoints require **sessionAuth** (`Authorization: Bearer <token>`) unless noted otherwise.
 
+> AI agents must NEVER request the master password. Use only your session token.
+
 ## Permissions
 
 ### Agent (sessionAuth)

@@ -287,6 +287,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/telegram-users', masterAuthForAdmin);
     app.use('/v1/admin/telegram-users/*', masterAuthForAdmin);
     app.use('/v1/admin/transactions', masterAuthForAdmin);
+    app.use('/v1/admin/transactions/*', masterAuthForAdmin);
     app.use('/v1/admin/incoming', masterAuthForAdmin);
   }
 
@@ -524,6 +525,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         sqlite: deps.sqlite,
         dataDir: deps.dataDir,
         versionCheckService: deps.versionCheckService ?? null,
+        delayQueue: deps.delayQueue,
+        approvalWorkflow: deps.approvalWorkflow,
       }),
     );
 

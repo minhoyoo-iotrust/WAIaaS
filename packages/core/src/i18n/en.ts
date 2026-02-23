@@ -35,6 +35,7 @@ export interface Messages {
     bot_pending_empty: string;
     bot_approve_success: string;
     bot_reject_success: string;
+    bot_cancel_success: string;
     bot_tx_not_found: string;
     bot_killswitch_confirm: string;
     bot_killswitch_success: string;
@@ -47,6 +48,7 @@ export interface Messages {
     bot_newsession_wallet_not_found: string;
     keyboard_approve: string;
     keyboard_reject: string;
+    keyboard_cancel: string;
     keyboard_yes: string;
     keyboard_no: string;
   };
@@ -247,6 +249,7 @@ export const messages: Messages = {
     bot_pending_empty: 'No pending transactions\\.',
     bot_approve_success: 'Transaction approved\\.',
     bot_reject_success: 'Transaction rejected\\.',
+    bot_cancel_success: 'Transaction cancelled\\.',
     bot_tx_not_found: 'Transaction not found\\.',
     bot_killswitch_confirm: 'Are you sure you want to activate the kill switch\\?',
     bot_killswitch_success: 'Kill switch activated\\. All operations halted\\.',
@@ -259,6 +262,7 @@ export const messages: Messages = {
     bot_newsession_wallet_not_found: 'Wallet not found or inactive\\.',
     keyboard_approve: 'Approve',
     keyboard_reject: 'Reject',
+    keyboard_cancel: 'Cancel',
     keyboard_yes: 'Yes',
     keyboard_no: 'No',
   },

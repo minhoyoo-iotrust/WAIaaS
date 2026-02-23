@@ -171,12 +171,14 @@
 | 154 | ENHANCEMENT | LOW | Balance Monitoring 설정을 Notifications 페이지로 이동 | v28.1 | FIXED | 2026-02-23 |
 | 155 | ENHANCEMENT | MEDIUM | 알림 필터링을 이벤트 단위로 세분화 | v28.1 | FIXED | 2026-02-23 |
 | 156 | BUG | MEDIUM | FilterBar / SearchInput CSS 스타일 누락으로 UI 엉성 | v28.1 | FIXED | 2026-02-23 |
-| 157 | BUG | HIGH | IncomingTxMonitorService가 삭제된 wallets.network 컬럼 참조 | v28.1 | OPEN | — |
-| 158 | ENHANCEMENT | HIGH | 빌트인 액션 프로바이더 Admin UI 페이지 + API 키 미설정 알림 | v28.2 | OPEN | — |
-| 159 | ENHANCEMENT | HIGH | 딜레이/승인 대기 거래 취소 UX 개선 (Telegram 버튼 + Admin UI) | v28.2 | OPEN | — |
-| 160 | BUG | HIGH | connect-info API가 글로벌 정책(walletId=NULL)을 누락 | v28.2 | OPEN | — |
-| 161 | BUG | MEDIUM | connect-info 프롬프트가 에이전트 읽기 가능 엔드포인트를 차단/누락 | v28.2 | OPEN | — |
-| 162 | MISSING | HIGH | 스킬 파일 마스터 패스워드 요청 금지 안내 누락 + 유지 보장 | v28.2 | OPEN | — |
+| 157 | BUG | HIGH | IncomingTxMonitorService가 삭제된 wallets.network 컬럼 참조 | v28.2 | FIXED | 2026-02-24 |
+| 158 | ENHANCEMENT | HIGH | 빌트인 액션 프로바이더 Admin UI 페이지 + API 키 미설정 알림 | v28.2 | FIXED | 2026-02-24 |
+| 159 | ENHANCEMENT | HIGH | 딜레이/승인 대기 거래 취소 UX 개선 (Telegram 버튼 + Admin UI) | v28.2 | FIXED | 2026-02-24 |
+| 160 | BUG | HIGH | connect-info API가 글로벌 정책(walletId=NULL)을 누락 | v28.2 | FIXED | 2026-02-24 |
+| 161 | BUG | MEDIUM | connect-info 프롬프트가 에이전트 읽기 가능 엔드포인트를 차단/누락 | v28.2 | FIXED | 2026-02-24 |
+| 162 | MISSING | HIGH | 스킬 파일 마스터 패스워드 요청 금지 안내 누락 + 유지 보장 | v28.2 | FIXED | 2026-02-24 |
+| 163 | BUG | HIGH | 알림 메시지 {txId} 미치환 회귀 — TX_APPROVAL_REQUIRED, TX_FAILED 등 6곳 | v28.2 | FIXED | 2026-02-24 |
+| 164 | ENHANCEMENT | MEDIUM | 인커밍 모니터링이 환경 기본 네트워크만 구독 (전체 네트워크 미지원) | v28.2 | OPEN | — |
 
 ## Type Legend
 
@@ -188,9 +190,9 @@
 
 ## Summary
 
-- **OPEN:** 6
-- **FIXED:** 155
+- **OPEN:** 1
+- **FIXED:** 162
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 162
+- **Total:** 164

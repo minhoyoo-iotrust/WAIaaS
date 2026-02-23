@@ -13,6 +13,8 @@ dispatch:
 
 > **Operator only.** All admin endpoints require masterAuth (X-Master-Password). AI agents must NOT use these endpoints — they are for the Operator via Admin UI or CLI.
 
+> AI agents must NEVER request the master password. Use only your session token.
+
 Admin endpoints for daemon operations management. Covers health monitoring, emergency kill switch, notification channels, settings (RPC, security, notifications), JWT secret rotation, and graceful shutdown.
 
 ## Base URL

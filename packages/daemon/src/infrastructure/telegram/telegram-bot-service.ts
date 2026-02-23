@@ -282,6 +282,7 @@ export class TelegramBotService {
     let command: string | null = null;
     if (data.startsWith('approve:')) command = '/approve';
     else if (data.startsWith('reject:')) command = '/reject';
+    else if (data.startsWith('cancel:')) command = '/approve'; // cancel requires admin auth (same as approve)
     else if (data.startsWith('killswitch:')) command = '/killswitch';
     else if (data.startsWith('newsession:')) command = '/newsession';
 
@@ -333,6 +334,13 @@ export class TelegramBotService {
         const txId = data.split(':')[1];
         if (txId) await this.handleReject(chatId, txId);
         await this.api.answerCallbackQuery(cbq.id, msgs.telegram.keyboard_reject);
+        return;
+      }
+
+      if (data.startsWith('cancel:')) {
+        const txId = data.split(':')[1];
+        if (txId) await this.handleCancel(chatId, txId);
+        await this.api.answerCallbackQuery(cbq.id, msgs.telegram.keyboard_cancel);
         return;
       }
     } catch {
@@ -600,6 +608,43 @@ export class TelegramBotService {
       .run(now, 'TX_REJECTED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'reject' }), 'info');
 
     await this.api.sendMessage(chatId, messages.telegram.bot_reject_success);
+  }
+
+  // -----------------------------------------------------------------------
+  // cancel (inline keyboard) -- cancel a QUEUED/DELAYED transaction
+  // -----------------------------------------------------------------------
+
+  private async handleCancel(chatId: number, txId: string): Promise<void> {
+    const messages = getMessages(this.locale);
+
+    // Verify the transaction exists and is QUEUED
+    const tx = this.sqlite
+      .prepare(
+        "SELECT id, status FROM transactions WHERE id = ? AND status = 'QUEUED'",
+      )
+      .get(txId) as { id: string; status: string } | undefined;
+
+    if (!tx) {
+      await this.api.sendMessage(chatId, messages.telegram.bot_tx_not_found);
+      return;
+    }
+
+    // Cancel: update transaction status to CANCELLED
+    this.sqlite
+      .prepare(
+        "UPDATE transactions SET status = 'CANCELLED', reserved_amount = NULL WHERE id = ? AND status = 'QUEUED'",
+      )
+      .run(txId);
+
+    // Audit log
+    const now = Math.floor(Date.now() / 1000);
+    this.sqlite
+      .prepare(
+        'INSERT INTO audit_log (timestamp, event_type, actor, tx_id, details, severity) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(now, 'TX_CANCELLED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'cancel' }), 'info');
+
+    await this.api.sendMessage(chatId, messages.telegram.bot_cancel_success);
   }
 
   // -----------------------------------------------------------------------

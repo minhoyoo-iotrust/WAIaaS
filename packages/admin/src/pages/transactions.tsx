@@ -1,6 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPut, apiPatch, ApiError } from '../api/client';
+import { apiGet, apiPost, apiPut, apiPatch, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { formatDate, formatAddress } from '../utils/format';
 import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
@@ -125,10 +125,12 @@ const TYPE_OPTIONS = [
 
 const OUTGOING_STATUS_OPTIONS = [
   { value: 'PENDING', label: 'PENDING' },
+  { value: 'QUEUED', label: 'QUEUED' },
   { value: 'APPROVED', label: 'APPROVED' },
   { value: 'SUBMITTED', label: 'SUBMITTED' },
   { value: 'CONFIRMED', label: 'CONFIRMED' },
   { value: 'FAILED', label: 'FAILED' },
+  { value: 'CANCELLED', label: 'CANCELLED' },
 ];
 
 const INCOMING_STATUS_OPTIONS = [
@@ -523,6 +525,30 @@ export default function TransactionsPage() {
     if ((page.value + 1) * PAGE_SIZE < total) page.value = page.value + 1;
   }
 
+  async function handleCancelTx(txId: string) {
+    if (!window.confirm('Are you sure you want to cancel this transaction?')) return;
+    try {
+      await apiPost(API.ADMIN_TX_CANCEL(txId));
+      showToast('success', 'Transaction cancelled');
+      await fetchTransactions();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    }
+  }
+
+  async function handleRejectTx(txId: string) {
+    if (!window.confirm('Are you sure you want to reject this transaction?')) return;
+    try {
+      await apiPost(API.ADMIN_TX_REJECT(txId));
+      showToast('success', 'Transaction rejected');
+      await fetchTransactions();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    }
+  }
+
   async function handleToggleMonitor(walletId: string) {
     const currentVal = walletMonitorState.value[walletId] ?? false;
     togglingWallet.value = walletId;
@@ -705,6 +731,26 @@ export default function TransactionsPage() {
         <div class="detail-item"><span class="detail-label">Chain</span><span class="detail-value">{tx.chain}</span></div>
         <div class="detail-item"><span class="detail-label">Tx Hash</span><span class="detail-value">{tx.txHash ?? '\u2014'}</span></div>
         <div class="detail-item"><span class="detail-label">Created At</span><span class="detail-value">{tx.createdAt ? formatDate(tx.createdAt) : '\u2014'}</span></div>
+        {tx.status === 'QUEUED' && (
+          <div class="detail-item" style={{ gridColumn: '1 / -1', marginTop: 'var(--space-2)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={(e: Event) => { e.stopPropagation(); handleCancelTx(tx.id); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e: Event) => { e.stopPropagation(); handleRejectTx(tx.id); }}
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

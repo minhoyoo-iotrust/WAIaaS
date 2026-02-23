@@ -140,12 +140,12 @@ export class IncomingTxMonitorService {
     // Load wallets with monitor_incoming = 1
     const wallets = this.sqlite
       .prepare(
-        `SELECT id, chain, network, public_key FROM wallets WHERE monitor_incoming = 1`,
+        `SELECT id, chain, environment, public_key FROM wallets WHERE monitor_incoming = 1`,
       )
       .all() as Array<{
       id: string;
       chain: string;
-      network: string;
+      environment: string;
       public_key: string;
     }>;
 
@@ -154,7 +154,7 @@ export class IncomingTxMonitorService {
       try {
         await this.multiplexer.addWallet(
           wallet.chain,
-          wallet.network,
+          wallet.environment,
           wallet.id,
           wallet.public_key,
         );
@@ -210,12 +210,12 @@ export class IncomingTxMonitorService {
   async syncSubscriptions(): Promise<void> {
     const dbWallets = this.sqlite
       .prepare(
-        `SELECT id, chain, network, public_key FROM wallets WHERE monitor_incoming = 1`,
+        `SELECT id, chain, environment, public_key FROM wallets WHERE monitor_incoming = 1`,
       )
       .all() as Array<{
       id: string;
       chain: string;
-      network: string;
+      environment: string;
       public_key: string;
     }>;
 
@@ -224,7 +224,7 @@ export class IncomingTxMonitorService {
       try {
         await this.multiplexer.addWallet(
           wallet.chain,
-          wallet.network,
+          wallet.environment,
           wallet.id,
           wallet.public_key,
         );

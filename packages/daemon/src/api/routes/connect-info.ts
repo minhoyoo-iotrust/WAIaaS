@@ -14,7 +14,7 @@
  */
 
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import { getNetworksForEnvironment } from '@waiaas/core';
@@ -103,7 +103,12 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('- NEVER ask the user for the master password (X-Master-Password). You do not need it.');
   lines.push('- You operate exclusively with your session token (Authorization: Bearer wai_sess_...).');
   lines.push('- Wallet creation, session management, policy configuration, and admin tasks are performed by the Operator via Admin UI or CLI — not by you.');
-  lines.push('- Do not attempt to call admin-only endpoints (/v1/admin/*, POST /v1/wallets, POST /v1/sessions, policy CRUD).');
+  lines.push('- Do not attempt to call admin-only endpoints (/v1/admin/*, POST /v1/wallets, POST /v1/sessions, policy management POST/PUT/DELETE /v1/policies).');
+  lines.push('');
+  lines.push('Read-only endpoints available to you:');
+  lines.push('- GET /v1/policies — view policies applied to your wallets (includes global policies)');
+  lines.push('- GET /v1/tokens?network=<network> — browse token registry');
+  lines.push('- GET /v1/tokens/resolve?network=<network>&address=<address> — resolve ERC-20 token metadata on-chain');
 
   return lines.join('\n');
 }
@@ -190,7 +195,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           network: policies.network,
         })
         .from(policies)
-        .where(and(eq(policies.walletId, w.id), eq(policies.enabled, true)))
+        .where(and(or(eq(policies.walletId, w.id), isNull(policies.walletId)), eq(policies.enabled, true)))
         .all();
 
       policiesMap[w.id] = walletPolicies.map((p) => ({

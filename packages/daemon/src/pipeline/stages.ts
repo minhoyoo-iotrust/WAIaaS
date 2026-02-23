@@ -511,6 +511,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   if (tier === 'APPROVAL' && !downgraded) {
     const reason = evaluation.approvalReason ?? 'per_tx';
     void ctx.notificationService?.notify('TX_APPROVAL_REQUIRED', ctx.walletId, {
+      txId: ctx.txId,
       amount: getRequestAmount(ctx.request),
       to: getRequestTo(ctx.request),
       reason,
@@ -547,6 +548,14 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
       ?? ctx.config?.policy_defaults_delay_seconds
       ?? 60;
     ctx.delayQueue.queueDelay(ctx.txId, delaySeconds);
+
+    // Fire-and-forget: notify TX_QUEUED with cancel keyboard data
+    void ctx.notificationService?.notify('TX_QUEUED', ctx.walletId, {
+      txId: ctx.txId,
+      amount: getRequestAmount(ctx.request),
+      to: getRequestTo(ctx.request),
+      delaySeconds: String(delaySeconds),
+    }, { txId: ctx.txId });
 
     // Halt pipeline -- transaction will be picked up by processExpired worker
     throw new WAIaaSError('PIPELINE_HALTED', {
@@ -763,7 +772,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
         // Fire-and-forget: notify TX_FAILED on simulation failure
         void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-          reason: simResult.error ?? 'Simulation failed',
+          txId: ctx.txId,
+          error: simResult.error ?? 'Simulation failed',
           amount: reqAmount,
           display_amount: displayAmount,
         }, { txId: ctx.txId });
@@ -840,7 +850,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
           // Fire-and-forget: notify TX_FAILED
           void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-            reason: err.message,
+            txId: ctx.txId,
+            error: err.message,
             amount: reqAmount,
             display_amount: displayAmount,
           }, { txId: ctx.txId });
@@ -871,7 +882,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
             // Fire-and-forget: notify TX_FAILED
             void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-              reason: `${err.code} (max retries exceeded)`,
+              txId: ctx.txId,
+              error: `${err.code} (max retries exceeded)`,
               amount: reqAmount,
               display_amount: displayAmount,
             }, { txId: ctx.txId });
@@ -908,7 +920,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
             // Fire-and-forget: notify TX_FAILED
             void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-              reason: `${err.code} (stale retry exhausted)`,
+              txId: ctx.txId,
+              error: `${err.code} (stale retry exhausted)`,
               amount: reqAmount,
               display_amount: displayAmount,
             }, { txId: ctx.txId });
@@ -1003,7 +1016,8 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
 
     // Fire-and-forget: notify TX_FAILED on on-chain revert (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-      reason: 'Transaction reverted on-chain',
+      txId: ctx.txId,
+      error: 'Transaction reverted on-chain',
       amount: reqAmount,
       display_amount: displayAmount,
     }, { txId: ctx.txId });
