@@ -255,7 +255,7 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 
 - [x] **Phase 251: 비동기 상태 추적 공통 인프라** - IAsyncStatusTracker 인터페이스 + AsyncPollingService 폴링 스케줄러 + DB v23 마이그레이션(bridge_status/bridge_metadata/GAS_WAITING/partial index) -- completed 2026-02-24
 - [x] **Phase 252: LiFi ActionProvider + 정책 연동 + 알림** - LiFiApiClient + LiFiActionProvider(bridge/cross_swap) + BridgeStatusTracker 2단계 폴링 + 출발 체인 정책 평가 + SPENDING_LIMIT 예약 해제 + 5개 브릿지 알림 이벤트 -- completed 2026-02-24
-- [ ] **Phase 253: 인터페이스 통합** - MCP 2개 도구 자동 노출 + TS/Python SDK executeAction + actions.skill.md 문서
+- [x] **Phase 253: 인터페이스 통합** - MCP 2개 도구 자동 노출 + TS/Python SDK executeAction + actions.skill.md 문서 -- completed 2026-02-24
 
 ## Phase Details
 
