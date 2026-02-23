@@ -303,4 +303,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 248. Provider Infrastructure | 3/3 | Complete    | 2026-02-23 | - |
 | 249. 0x Swap Provider | 2/2 | Complete    | 2026-02-23 | - |
-| 250. Integration | 2/2 | Complete   | 2026-02-23 | 2026-02-23 |
+| 250. Integration | 2/2 | Complete    | 2026-02-23 | 2026-02-23 |
