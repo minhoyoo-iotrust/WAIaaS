@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 Milestone: v28.2 0x EVM DEX Swap
 Phase: 250 of 250
-Plan: 0 of 0 in current phase
-Status: Executing
-Last activity: 2026-02-23 -- Completed 249-02-PLAN.md (ZeroExSwapActionProvider + tests)
+Plan: 2 of 2 in current phase
+Status: Complete
+Last activity: 2026-02-23 -- Completed 250-02-PLAN.md (actions.skill.md 0x Swap docs)
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -47,6 +47,10 @@ Progress: [████████░░] 80%
 - 249-02: encodeApproveCalldata uses manual ABI encoding to avoid viem dependency in @waiaas/actions
 - 249-02: Same-token detection case-insensitive (toLowerCase) for EVM address flexibility
 - 249-02: chainId resolved from explicit input > CHAIN_ID_MAP > default 1 (ActionContext lacks network)
+- 250-01: executeAction body builder -- only include params/network/walletId when provided (empty body {} for no-args calls)
+- 250-01: Python execute_action uses keyword-only args for network/wallet_id to match existing SDK conventions
+- 250-02: Python SDK example uses httpx direct REST call (no execute_action method in python-sdk yet)
+- 250-02: Documented provider name as zerox_swap (underscore) matching metadata.name, MCP tool as action_zerox_swap_swap
 
 ### Blockers/Concerns
 
@@ -55,5 +59,5 @@ Progress: [████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 249-02-PLAN.md
+Stopped at: Completed 250-01-PLAN.md (SDK action provider integration)
 Resume file: None

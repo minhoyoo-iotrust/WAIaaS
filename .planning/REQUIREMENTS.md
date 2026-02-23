@@ -33,8 +33,8 @@ Requirements for milestone v28.2 0x EVM DEX Swap. Each maps to roadmap phases.
 
 ### Integration
 
-- [ ] **INTG-01**: TS SDK client.executeAction(provider, action, params) 메서드가 POST /v1/actions/{provider}/{action}을 호출한다
-- [ ] **INTG-02**: Python SDK await client.execute_action(provider, action, params) 메서드가 동일 엔드포인트를 호출한다
+- [x] **INTG-01**: TS SDK client.executeAction(provider, action, params) 메서드가 POST /v1/actions/{provider}/{action}을 호출한다
+- [x] **INTG-02**: Python SDK await client.execute_action(provider, action, params) 메서드가 동일 엔드포인트를 호출한다
 - [ ] **INTG-03**: MCP action_0x_swap_swap 도구가 자동 노출된다
 - [ ] **INTG-04**: actions.skill.md에 0x Swap 상세 문서(REST API/MCP/SDK 예시, config, 안전 장치)가 추가된다
 
@@ -81,8 +81,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ZXSW-08 | Phase 249 | Complete |
 | ZXSW-09 | Phase 249 | Complete |
 | ZXSW-10 | Phase 249 | Complete |
-| INTG-01 | Phase 250 | Pending |
-| INTG-02 | Phase 250 | Pending |
+| INTG-01 | Phase 250 | Complete |
+| INTG-02 | Phase 250 | Complete |
 | INTG-03 | Phase 250 | Pending |
 | INTG-04 | Phase 250 | Pending |
 

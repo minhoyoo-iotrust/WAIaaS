@@ -243,7 +243,7 @@ See `.planning/milestones/v28.1-ROADMAP.md` for full details.
 
 - [x] **Phase 248: Provider Infrastructure** - Admin Settings 기반 프로바이더 관리 + resolve() 배열 확장 + provider-trust 정책 (completed 2026-02-23)
 - [x] **Phase 249: 0x Swap Provider** - ZeroExApiClient + ZeroExSwapActionProvider + AllowanceHolder 통합 (completed 2026-02-23)
-- [ ] **Phase 250: Integration** - SDK executeAction + MCP 자동 노출 + 스킬 문서
+- [x] **Phase 250: Integration** - SDK executeAction + MCP 자동 노출 + 스킬 문서 (completed 2026-02-23)
 
 ## Phase Details
 
@@ -292,8 +292,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 250-01-PLAN.md -- TS SDK executeAction + Python SDK execute_action + types + tests
-- [ ] 250-02-PLAN.md -- MCP auto-exposure verification + actions.skill.md 0x Swap documentation
+- [x] 250-01-PLAN.md -- TS SDK executeAction + Python SDK execute_action + types + tests
+- [x] 250-02-PLAN.md -- MCP auto-exposure verification + actions.skill.md 0x Swap documentation
 
 ## Progress
 
@@ -303,4 +303,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 248. Provider Infrastructure | 3/3 | Complete    | 2026-02-23 | - |
 | 249. 0x Swap Provider | 2/2 | Complete    | 2026-02-23 | - |
-| 250. Integration | v28.2 | 0/2 | Not started | - |
+| 250. Integration | 2/2 | Complete   | 2026-02-23 | 2026-02-23 |
