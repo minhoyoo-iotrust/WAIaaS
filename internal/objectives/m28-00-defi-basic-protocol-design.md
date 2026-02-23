@@ -970,7 +970,81 @@ EXECUTING (Stage 5 시작)
 
 **중요:** `bridge_status`는 `transactions.status`와 독립적이다. `transactions.status = CONFIRMED`인 상태에서 `bridge_status = PENDING`일 수 있다 (출발 체인 트랜잭션은 확인되었으나 도착 체인 미도착). `bridge_status`는 출발 체인 트랜잭션 이후의 비동기 추적 상태를 나타낸다.
 
-#### 4.4 ASNC-05: 브릿지 타임아웃 정책 확정
+#### 4.4 ASNC-03: 통합 DB 마이그레이션 확정
+
+브릿지/unstake/가스대기의 3개 비동기 추적 기능에 필요한 DB 변경을 단일 마이그레이션으로 통합한다.
+
+**마이그레이션 버전:** v23 (현재 DB v22, v27.2 CAIP-19에서 마지막 마이그레이션)
+**실행 시점:** m28-03 (LI.FI 브릿지, 첫 사용자)
+
+**SQL 마이그레이션:**
+
+```sql
+-- Migration v23: DeFi async tracking + GAS_WAITING state
+-- Applied at: m28-03 (first consumer of bridge_status)
+-- Also used by: m28-04 (unstake tracking), m28-05 (GAS_WAITING)
+
+-- 1. bridge_status: 비동기 추적 상태 (NULL = 해당 없음)
+ALTER TABLE transactions ADD COLUMN bridge_status TEXT
+  CHECK (bridge_status IS NULL OR bridge_status IN (
+    'PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED'
+  ));
+
+-- 2. bridge_metadata: 추적용 JSON 메타데이터
+--    bridge: { tracker: 'bridge', tool, fromChainId, toChainId, txHash, estimatedDuration, pollCount, lastPolledAt }
+--    unstake: { tracker: 'unstake', protocol: 'lido'|'jito', requestId, pollCount, lastPolledAt }
+--    gas: { tracker: 'gas-condition', providerName, originalParams, gasCondition, pollCount, lastPolledAt }
+ALTER TABLE transactions ADD COLUMN bridge_metadata TEXT;
+
+-- 3. GAS_WAITING 상태 추가
+--    기존 TRANSACTION_STATUSES 배열에 'GAS_WAITING' 추가
+--    Drizzle schema의 CHECK constraint 업데이트 필요
+--    packages/core/src/enums/transaction.ts의 TRANSACTION_STATUSES에 'GAS_WAITING' 추가
+
+-- 4. 폴링 쿼리 최적화 인덱스
+CREATE INDEX idx_transactions_bridge_status
+  ON transactions(bridge_status)
+  WHERE bridge_status IS NOT NULL;
+
+CREATE INDEX idx_transactions_gas_waiting
+  ON transactions(status)
+  WHERE status = 'GAS_WAITING';
+```
+
+**Drizzle 스키마 변경 사항:**
+
+- transactions 테이블에 `bridge_status` TEXT (nullable) 추가
+- transactions 테이블에 `bridge_metadata` TEXT (nullable) 추가
+- status CHECK constraint에 `'GAS_WAITING'` 추가
+
+**schema_version 테이블 업데이트:**
+
+- version: 23
+- description: 'DeFi async tracking + GAS_WAITING state'
+
+**bridge_metadata JSON 구조 표:**
+
+| tracker 유형 | 필수 필드 | 선택 필드 |
+|-------------|----------|----------|
+| bridge | tracker, tool, fromChainId, toChainId, txHash | estimatedDuration, receivingTxHash |
+| unstake | tracker, protocol, requestId | estimatedCompletionTime |
+| gas-condition | tracker, providerName, originalParams, gasCondition | rpcFailureSeconds |
+| (공통) | pollCount, lastPolledAt, createdAt | errorMessage |
+
+**마이그레이션 실행 순서:**
+
+1. **m28-03에서 마이그레이션 v23 실행** (bridge_status + bridge_metadata + GAS_WAITING + 인덱스 2개)
+2. **m28-04에서 추가 마이그레이션 없음** (unstake는 bridge_metadata의 `tracker='unstake'`로 구분)
+3. **m28-05에서 추가 마이그레이션 없음** (GAS_WAITING은 이미 v23에서 추가)
+
+이것으로 DeFi 관련 DB 변경을 **단일 마이그레이션으로 통합**하여 마이그레이션 피로도를 최소화한다. 3개 마일스톤(m28-03, m28-04, m28-05)이 동일 DB 스키마를 공유한다.
+
+**인덱스 설계 근거:**
+
+- `idx_transactions_bridge_status`: partial index (bridge_status IS NOT NULL). 대부분의 트랜잭션은 bridge_status가 NULL이므로 인덱스 크기가 작다. pollAll() 쿼리가 30초마다 실행되므로 인덱스가 필수.
+- `idx_transactions_gas_waiting`: partial index (status = 'GAS_WAITING'). GAS_WAITING 트랜잭션은 소수이므로 인덱스 크기가 극소. pollAll() 쿼리 성능 보장.
+
+#### 4.5 ASNC-05: 브릿지 타임아웃 정책 확정
 
 Research Pitfall P4 (크로스체인 브릿지 Fund Loss -- LI.FI "Limbo" State) 대응으로 2시간+ 폴링, 자동 취소 방지를 명시한다.
 
