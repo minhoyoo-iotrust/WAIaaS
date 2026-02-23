@@ -26,15 +26,15 @@ Requirements for milestone v28.1. Each maps to roadmap phases.
 
 ### Policy Integration
 
-- [ ] **PLCY-01**: CONTRACT_WHITELIST에 Jupiter 프로그램 주소 미등록 시 기존 정책 엔진이 거부한다
-- [ ] **PLCY-02**: 스왑 입력 금액을 기존 IPriceOracle로 USD 환산하여 SPENDING_LIMIT 정책을 평가한다
+- [x] **PLCY-01**: CONTRACT_WHITELIST에 Jupiter 프로그램 주소 미등록 시 기존 정책 엔진이 거부한다
+- [x] **PLCY-02**: 스왑 입력 금액을 기존 IPriceOracle로 USD 환산하여 SPENDING_LIMIT 정책을 평가한다
 
 ### Developer Experience
 
-- [ ] **DX-01**: MCP에 jupiter_swap 도구가 자동 노출된다 (mcpExpose=true, ActionProviderRegistry → MCP Tool 자동 변환)
-- [ ] **DX-02**: config.toml [actions.jupiter_swap] 섹션으로 enabled/api_base_url/default_slippage_bps/max_slippage_bps/max_price_impact_pct/jito_tip_lamports/request_timeout_ms를 오버라이드한다
-- [ ] **DX-03**: 데몬 시작 시 JupiterSwapActionProvider가 내장 프로바이더로 자동 등록된다 (ActionProviderRegistry.register)
-- [ ] **DX-04**: transactions.skill.md에 Jupiter Swap 사용법(REST API, MCP, SDK 예시)을 문서화한다
+- [x] **DX-01**: MCP에 jupiter_swap 도구가 자동 노출된다 (mcpExpose=true, ActionProviderRegistry → MCP Tool 자동 변환)
+- [x] **DX-02**: config.toml [actions] 섹션으로 jupiter_swap_enabled/api_base_url/default_slippage_bps/max_slippage_bps/max_price_impact_pct/jito_tip_lamports/request_timeout_ms를 오버라이드한다
+- [x] **DX-03**: 데몬 시작 시 JupiterSwapActionProvider가 내장 프로바이더로 자동 등록된다 (ActionProviderRegistry.register)
+- [x] **DX-04**: actions.skill.md에 Jupiter Swap 사용법(REST API, MCP, SDK 예시, config, 안전 장치)을 문서화한다
 
 ## v2 Requirements
 
@@ -79,12 +79,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAFE-03 | Phase 246 | Done |
 | SAFE-04 | Phase 246 | Done |
 | SAFE-05 | Phase 246 | Done |
-| PLCY-01 | Phase 247 | Pending |
-| PLCY-02 | Phase 247 | Pending |
-| DX-01 | Phase 247 | Pending |
-| DX-02 | Phase 247 | Pending |
-| DX-03 | Phase 247 | Pending |
-| DX-04 | Phase 247 | Pending |
+| PLCY-01 | Phase 247 | Done |
+| PLCY-02 | Phase 247 | Done |
+| DX-01 | Phase 247 | Done |
+| DX-02 | Phase 247 | Done |
+| DX-03 | Phase 247 | Done |
+| DX-04 | Phase 247 | Done |
 
 **Coverage:**
 - v1 requirements: 17 total

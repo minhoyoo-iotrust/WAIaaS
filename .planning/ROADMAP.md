@@ -231,7 +231,7 @@ See `.planning/milestones/v28.0-ROADMAP.md` for full details.
 **Milestone Goal:** Jupiter Aggregator REST API를 IActionProvider 프레임워크에 통합하여, AI 에이전트가 Solana DEX 토큰 스왑을 안전하게 수행할 수 있게 한다. 새로운 npm 의존성 없이 native fetch + Zod 검증으로 구현하며, packages/actions/ 신규 모노레포 패키지를 생성한다.
 
 - [x] **Phase 246: Core Provider Implementation** - JupiterApiClient + JupiterSwapActionProvider + Zod 스키마 + 안전 장치 + 단위 테스트 -- completed 2026-02-23
-- [ ] **Phase 247: Daemon Integration + DX** - 내장 프로바이더 등록 + config.toml 파싱 + 정책 통합 + MCP 검증 + 스킬 파일 업데이트
+- [x] **Phase 247: Daemon Integration + DX** - 내장 프로바이더 등록 + config.toml 파싱 + 정책 통합 + MCP 검증 + 스킬 파일 업데이트 -- completed 2026-02-23
 
 ## Phase Details
 
@@ -262,11 +262,11 @@ Plans:
   2. MCP에 jupiter_swap 도구가 자동 노출되어 AI 에이전트가 도구 목록에서 발견하고 호출할 수 있다
   3. CONTRACT_WHITELIST에 Jupiter 프로그램 주소 미등록 시 정책 엔진이 거부하고, 스왑 입력 금액이 IPriceOracle로 USD 환산되어 SPENDING_LIMIT 정책으로 평가된다
   4. transactions.skill.md에 Jupiter Swap 사용법(REST API, MCP, SDK 예시)이 문서화된다
-**Plans**: TBD
+**Plans**: 2/2
 
 Plans:
-- [ ] 247-01: TBD
-- [ ] 247-02: TBD
+- [x] 247-01: Config + Daemon Registration (DaemonConfigSchema [actions] 8 keys + registerBuiltInProviders + 7 tests)
+- [x] 247-02: Skill File Update + Verification (actions.skill.md Jupiter Swap 상세 + ChainError 보안 테스트 수정)
 
 ## Progress
 
@@ -276,4 +276,4 @@ Phases execute in numeric order: 246 -> 247
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 246. Core Provider Implementation | v28.1 | 4/4 | Completed | 2026-02-23 |
-| 247. Daemon Integration + DX | v28.1 | 0/0 | Not started | - |
+| 247. Daemon Integration + DX | v28.1 | 2/2 | Completed | 2026-02-23 |
