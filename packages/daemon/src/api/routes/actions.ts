@@ -264,9 +264,10 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
     };
 
     // 6. Execute resolve via registry (validates input + return value)
-    let contractCall;
+    // Returns ContractCallRequest[] (always array, single results wrapped)
+    let contractCalls;
     try {
-      contractCall = await deps.registry.executeResolve(
+      contractCalls = await deps.registry.executeResolve(
         actionKey,
         body.params ?? {},
         actionContext,
@@ -314,84 +315,103 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       rpcUrl,
     );
 
-    // 9. Build pipeline context (inject ContractCallRequest as the request)
-    const ctx: PipelineContext = {
-      db: deps.db,
-      adapter,
-      keyStore: deps.keyStore,
-      policyEngine: deps.policyEngine,
-      masterPassword: deps.masterPassword,
-      walletId,
-      wallet: {
-        publicKey: wallet.publicKey,
-        chain: wallet.chain,
-        environment: wallet.environment,
-        defaultNetwork: wallet.defaultNetwork ?? null,
-      },
-      resolvedNetwork,
-      request: contractCall, // ContractCallRequest with type: 'CONTRACT_CALL'
-      txId: '', // stage1Validate will assign
-      sessionId,
-      sqlite: deps.sqlite,
-      delayQueue: deps.delayQueue,
-      approvalWorkflow: deps.approvalWorkflow,
-      config: {
-        policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
-        policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
-      },
-      notificationService: deps.notificationService,
-      priceOracle: deps.priceOracle,
-      settingsService: deps.settingsService,
+    // 9. Sequential pipeline execution for each ContractCallRequest
+    const walletData = {
+      publicKey: wallet.publicKey,
+      chain: wallet.chain,
+      environment: wallet.environment,
+      defaultNetwork: wallet.defaultNetwork ?? null,
+    };
+    const pipelineConfig = {
+      policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
+      policy_defaults_approval_timeout: deps.config.security.policy_defaults_approval_timeout,
     };
 
-    // 10. Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
-    await stage1Validate(ctx);
+    const pipelineResults: Array<{ id: string; status: string }> = [];
 
-    // Return 201 immediately with txId
-    const response = c.json(
+    for (const contractCall of contractCalls) {
+      // Build PipelineContext for this specific ContractCallRequest
+      const ctx: PipelineContext = {
+        db: deps.db,
+        adapter,
+        keyStore: deps.keyStore,
+        policyEngine: deps.policyEngine,
+        masterPassword: deps.masterPassword,
+        walletId,
+        wallet: walletData,
+        resolvedNetwork,
+        request: contractCall, // Single ContractCallRequest with type: 'CONTRACT_CALL'
+        txId: '', // stage1Validate will assign
+        sessionId,
+        sqlite: deps.sqlite,
+        delayQueue: deps.delayQueue,
+        approvalWorkflow: deps.approvalWorkflow,
+        config: pipelineConfig,
+        notificationService: deps.notificationService,
+        priceOracle: deps.priceOracle,
+        settingsService: deps.settingsService,
+      };
+
+      // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
+      await stage1Validate(ctx);
+      pipelineResults.push({ id: ctx.txId, status: 'PENDING' });
+
+      // Stages 2-6 run asynchronously (fire-and-forget)
+      void (async () => {
+        try {
+          await stage2Auth(ctx);
+          await stage3Policy(ctx);
+          await stage4Wait(ctx);
+          await stage5Execute(ctx);
+          await stage6Confirm(ctx);
+        } catch (error) {
+          // PIPELINE_HALTED is intentional -- transaction is QUEUED
+          if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {
+            return;
+          }
+
+          // If stages 2-6 fail, mark as FAILED
+          try {
+            const tx = await deps.db
+              .select()
+              .from(transactions)
+              .where(eq(transactions.id, ctx.txId))
+              .get();
+
+            if (tx && tx.status !== 'CONFIRMED' && tx.status !== 'FAILED' && tx.status !== 'CANCELLED') {
+              const errorMessage = error instanceof Error ? error.message : 'Pipeline execution failed';
+              await deps.db
+                .update(transactions)
+                .set({ status: 'FAILED', error: errorMessage })
+                .where(eq(transactions.id, ctx.txId));
+            }
+          } catch {
+            // Swallow DB update errors in background
+          }
+        }
+      })();
+    }
+
+    // 10. Build response
+    // Backward compatible: single-element -> standard { id, status }
+    // Multi-element -> { id, status, pipeline: [{id, status}...] }
+    const lastResult = pipelineResults[pipelineResults.length - 1]!;
+
+    if (pipelineResults.length === 1) {
+      return c.json(
+        { id: lastResult.id, status: lastResult.status },
+        201,
+      );
+    }
+
+    return c.json(
       {
-        id: ctx.txId,
-        status: 'PENDING',
+        id: lastResult.id,
+        status: lastResult.status,
+        pipeline: pipelineResults,
       },
       201,
     );
-
-    // 11. Stages 2-6 run asynchronously (fire-and-forget)
-    void (async () => {
-      try {
-        await stage2Auth(ctx);
-        await stage3Policy(ctx);
-        await stage4Wait(ctx);
-        await stage5Execute(ctx);
-        await stage6Confirm(ctx);
-      } catch (error) {
-        // PIPELINE_HALTED is intentional -- transaction is QUEUED
-        if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {
-          return;
-        }
-
-        // If stages 2-6 fail, mark as FAILED
-        try {
-          const tx = await deps.db
-            .select()
-            .from(transactions)
-            .where(eq(transactions.id, ctx.txId))
-            .get();
-
-          if (tx && tx.status !== 'CONFIRMED' && tx.status !== 'FAILED' && tx.status !== 'CANCELLED') {
-            const errorMessage = error instanceof Error ? error.message : 'Pipeline execution failed';
-            await deps.db
-              .update(transactions)
-              .set({ status: 'FAILED', error: errorMessage })
-              .where(eq(transactions.id, ctx.txId));
-          }
-        } catch {
-          // Swallow DB update errors in background
-        }
-      }
-    })();
-
-    return response;
   });
 
   return router;

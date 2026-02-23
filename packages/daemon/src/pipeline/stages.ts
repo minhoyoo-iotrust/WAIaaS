@@ -188,6 +188,8 @@ interface TransactionParam {
   approveAmount?: string;
   /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
   tokenDecimals?: number;
+  /** Action provider name for provider-trust policy bypass (set by ActionProviderRegistry). */
+  actionProvider?: string;
 }
 
 function buildTransactionParam(
@@ -209,7 +211,7 @@ function buildTransactionParam(
       };
     }
     case 'CONTRACT_CALL': {
-      const r = req as { to: string; calldata?: string; value?: string };
+      const r = req as { to: string; calldata?: string; value?: string; actionProvider?: string };
       return {
         type: 'CONTRACT_CALL',
         amount: r.value ?? '0',
@@ -217,6 +219,8 @@ function buildTransactionParam(
         chain,
         contractAddress: r.to,
         selector: r.calldata?.slice(0, 10),
+        // Pass through actionProvider for provider-trust policy bypass
+        ...(r.actionProvider ? { actionProvider: r.actionProvider } : {}),
       };
     }
     case 'APPROVE': {
