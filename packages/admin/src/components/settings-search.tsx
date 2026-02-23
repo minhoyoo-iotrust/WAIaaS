@@ -20,7 +20,7 @@ export const pendingNavigation = signal<{ tab: string; fieldName: string } | nul
 const PAGE_LABELS: Record<string, string> = {
   '/wallets': 'Wallets',
   '/sessions': 'Sessions',
-  '/incoming': 'Incoming TX',
+  '/transactions': 'Transactions',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/security': 'Security',

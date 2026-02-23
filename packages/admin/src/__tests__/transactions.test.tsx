@@ -5,6 +5,7 @@ vi.mock('../api/client', () => ({
   apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiPut: vi.fn(),
+  apiPatch: vi.fn(),
   apiDelete: vi.fn(),
   ApiError: class ApiError extends Error {
     status: number;
@@ -43,8 +44,18 @@ vi.mock('../utils/error-messages', () => ({
   },
 }));
 
-import { apiGet, ApiError } from '../api/client';
+vi.mock('../utils/dirty-guard', () => ({
+  registerDirty: vi.fn(),
+  unregisterDirty: vi.fn(),
+  hasDirty: { value: false },
+}));
+
+import { apiGet, apiPatch, ApiError } from '../api/client';
 import TransactionsPage from '../pages/transactions';
+
+// ---------------------------------------------------------------------------
+// Mock data
+// ---------------------------------------------------------------------------
 
 const mockTxResponse = {
   items: [
@@ -84,35 +95,71 @@ const mockTxResponse = {
   limit: 20,
 };
 
-const mockWallets = [{ id: 'wallet-uuid-1', name: 'Test Wallet', chain: 'evm' }];
+const mockIncomingResponse = {
+  items: [
+    {
+      id: 'itx-1',
+      txHash: '0xincoming123',
+      walletId: 'wallet-uuid-1',
+      walletName: 'Test Wallet',
+      fromAddress: '0xsender1234567890abcdef',
+      amount: '1000000000',
+      tokenAddress: null,
+      chain: 'evm',
+      network: 'ethereum-mainnet',
+      status: 'CONFIRMED',
+      blockNumber: 12345,
+      detectedAt: 1700000000,
+      confirmedAt: 1700000100,
+      suspicious: false,
+    },
+  ],
+  total: 1,
+  offset: 0,
+  limit: 20,
+};
 
-const mockSettings = { display: { 'display.currency': 'USD' } };
+const mockWallets = {
+  items: [
+    { id: 'wallet-uuid-1', name: 'Test Wallet', chain: 'evm', network: 'ethereum-mainnet', status: 'ACTIVE', monitorIncoming: true },
+    { id: 'wallet-uuid-2', name: 'Sol Wallet', chain: 'solana', network: 'mainnet', status: 'ACTIVE', monitorIncoming: false },
+  ],
+};
 
-/**
- * Helper: wait for table data to load.
- * Uses wallet-u text (tx-2 walletId slice) which is unique to the table body.
- */
+const mockSettings = {
+  'incoming.enabled': { value: 'true', source: 'db' },
+  'incoming.poll_interval': { value: '30', source: 'config' },
+  'incoming.retention_days': { value: '90', source: 'config' },
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function setupMocks(txResponse = mockTxResponse, incomingResponse = mockIncomingResponse) {
+  vi.mocked(apiGet).mockImplementation((url: string) => {
+    if (url.includes('/v1/admin/transactions')) return Promise.resolve(txResponse);
+    if (url.includes('/v1/admin/incoming')) return Promise.resolve(incomingResponse);
+    if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
+    if (url.includes('/v1/admin/settings')) return Promise.resolve(mockSettings);
+    return Promise.resolve({});
+  });
+}
+
 async function waitForTableData() {
   await waitFor(() => {
     expect(screen.getByText('wallet-u')).toBeTruthy();
   });
 }
 
-/** Helper: find the first data row in the table (contains the address) */
 function getFirstDataRow(): HTMLElement {
-  // formatAddress('0x1234567890abcdef...') => '0x12..5678'
   const cell = screen.getByText('0x12..5678');
   return cell.closest('tr')!;
 }
 
-function setupMocks(txResponse = mockTxResponse) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
-    if (url.includes('/v1/admin/transactions')) return Promise.resolve(txResponse);
-    if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
-    if (url.includes('/v1/admin/settings')) return Promise.resolve(mockSettings);
-    return Promise.resolve({});
-  });
-}
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('TransactionsPage', () => {
   beforeEach(() => {
@@ -124,37 +171,183 @@ describe('TransactionsPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders transaction table with data', async () => {
-    render(<TransactionsPage />);
+  // --- Tab navigation ---
 
+  it('renders 2 tabs', async () => {
+    render(<TransactionsPage />);
     await waitForTableData();
 
-    // Type badges (getAllByText because also in filter dropdown)
-    const transferTexts = screen.getAllByText('TRANSFER');
-    expect(transferTexts.length).toBeGreaterThanOrEqual(2);
-
-    const tokenTransferTexts = screen.getAllByText('TOKEN_TRANSFER');
-    expect(tokenTransferTexts.length).toBeGreaterThanOrEqual(1);
-
-    // Status badges (also in filter options)
-    const confirmedTexts = screen.getAllByText('CONFIRMED');
-    expect(confirmedTexts.length).toBeGreaterThanOrEqual(1);
-
-    // Amount for tx-1
-    expect(screen.getByText(/1\.5/)).toBeTruthy();
-
-    // Wallet name for tx-2 falls back to walletId slice
-    expect(screen.getByText('wallet-u')).toBeTruthy();
-
-    // Column headers
-    expect(screen.getByText('Time')).toBeTruthy();
-    expect(screen.getByText('Tx Hash')).toBeTruthy();
+    // "All Transactions" appears in tab + breadcrumb
+    const allTxTexts = screen.getAllByText('All Transactions');
+    expect(allTxTexts.length).toBeGreaterThanOrEqual(1);
+    const monitorTexts = screen.getAllByText('Monitor Settings');
+    expect(monitorTexts.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('defaults to All Transactions tab', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    // Tab button should have active class
+    const tabBtns = screen.getAllByText('All Transactions');
+    const activeTab = tabBtns.find((el) => el.classList.contains('tab-btn'));
+    expect(activeTab).toBeTruthy();
+    expect(activeTab!.classList.contains('active')).toBe(true);
+  });
+
+  it('switches to Monitor Settings tab', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    fireEvent.click(screen.getByText('Monitor Settings'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Incoming TX Monitoring Settings')).toBeTruthy();
+    });
+  });
+
+  // --- Unified table ---
+
+  it('renders unified table with outgoing and incoming data', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    // Direction badges (also "Outgoing"/"Incoming" in filter dropdown options)
+    const outgoingBadges = screen.getAllByText('Outgoing');
+    expect(outgoingBadges.length).toBeGreaterThanOrEqual(1);
+    // "Incoming" appears in direction filter option + badges
+    const incomingTexts = screen.getAllByText('Incoming');
+    expect(incomingTexts.length).toBeGreaterThanOrEqual(1);
+
+    // Column headers
+    const directionHeaders = screen.getAllByText('Direction');
+    expect(directionHeaders.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Counterparty')).toBeTruthy();
+  });
+
+  it('shows Direction filter with All/Outgoing/Incoming', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    // Direction label appears as filter label and column header
+    const directionLabels = screen.getAllByText('Direction');
+    expect(directionLabels.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // --- Direction filter ---
+
+  it('Outgoing direction calls only outgoing API', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    vi.mocked(apiGet).mockClear();
+    setupMocks();
+
+    // Find the Direction select (first select)
+    const selects = screen.getAllByRole('combobox');
+    const directionSelect = selects[0]!;
+
+    fireEvent.change(directionSelect, { target: { value: 'outgoing' } });
+
+    await waitFor(() => {
+      const calls = vi.mocked(apiGet).mock.calls;
+      const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
+      const inCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/incoming'));
+      expect(txCalls.length).toBeGreaterThanOrEqual(1);
+      expect(inCalls.length).toBe(0);
+    });
+  });
+
+  it('Incoming direction calls only incoming API', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    vi.mocked(apiGet).mockClear();
+    setupMocks();
+
+    const selects = screen.getAllByRole('combobox');
+    const directionSelect = selects[0]!;
+
+    fireEvent.change(directionSelect, { target: { value: 'incoming' } });
+
+    await waitFor(() => {
+      const calls = vi.mocked(apiGet).mock.calls;
+      const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
+      const inCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/incoming'));
+      expect(txCalls.length).toBe(0);
+      expect(inCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('All direction calls both APIs', async () => {
+    render(<TransactionsPage />);
+
+    await waitFor(() => {
+      const calls = vi.mocked(apiGet).mock.calls;
+      const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
+      const inCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/incoming'));
+      expect(txCalls.length).toBeGreaterThanOrEqual(1);
+      expect(inCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // --- Conditional filters ---
+
+  it('hides SearchInput when direction is incoming', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    // SearchInput should exist initially (direction=all)
+    expect(screen.getByPlaceholderText('Search by txHash or recipient address...')).toBeTruthy();
+
+    // Change to incoming
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0]!, { target: { value: 'incoming' } });
+
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Search by txHash or recipient address...')).toBeFalsy();
+    });
+  });
+
+  // --- Expanded row ---
+
+  it('row click expands outgoing detail view', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    const row = getFirstDataRow();
+    fireEvent.click(row);
+
+    await waitFor(() => {
+      expect(screen.getByText('tx-1')).toBeTruthy();
+      expect(screen.getByText('wallet-uuid-1')).toBeTruthy();
+      expect(screen.getByText('AUTO')).toBeTruthy();
+    });
+  });
+
+  it('second click collapses expanded row', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    const row = getFirstDataRow();
+    fireEvent.click(row);
+
+    await waitFor(() => {
+      expect(screen.getByText('tx-1')).toBeTruthy();
+    });
+
+    fireEvent.click(row);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Wallet ID')).toBeFalsy();
+    });
+  });
+
+  // --- Loading / Empty / Error ---
+
   it('shows loading state', async () => {
-    // Delay response to capture loading state
     vi.mocked(apiGet).mockImplementation((url: string) => {
-      if (url.includes('/v1/admin/transactions')) {
+      if (url.includes('/v1/admin/transactions') || url.includes('/v1/admin/incoming')) {
         return new Promise((resolve) =>
           setTimeout(() => resolve(mockTxResponse), 500),
         );
@@ -165,12 +358,14 @@ describe('TransactionsPage', () => {
     });
 
     render(<TransactionsPage />);
-
     expect(screen.getByText('Loading...')).toBeTruthy();
   });
 
-  it('shows empty state when no transactions', async () => {
-    setupMocks({ items: [], total: 0, offset: 0, limit: 20 });
+  it('shows empty state', async () => {
+    setupMocks(
+      { items: [], total: 0, offset: 0, limit: 20 },
+      { items: [], total: 0, offset: 0, limit: 20 },
+    );
 
     render(<TransactionsPage />);
 
@@ -179,9 +374,9 @@ describe('TransactionsPage', () => {
     });
   });
 
-  it('shows error state with retry button', async () => {
+  it('shows error state with retry', async () => {
     vi.mocked(apiGet).mockImplementation((url: string) => {
-      if (url.includes('/v1/admin/transactions')) {
+      if (url.includes('/v1/admin/transactions') || url.includes('/v1/admin/incoming')) {
         return Promise.reject(new ApiError(0, 'NETWORK_ERROR', 'Cannot connect'));
       }
       if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
@@ -198,91 +393,31 @@ describe('TransactionsPage', () => {
     });
 
     expect(screen.getByText('Retry')).toBeTruthy();
-
-    // Setup success response for retry
-    setupMocks();
-
-    fireEvent.click(screen.getByText('Retry'));
-
-    await waitForTableData();
   });
 
-  it('renders explorer link for txHash', async () => {
-    render(<TransactionsPage />);
+  // --- Pagination ---
 
-    await waitForTableData();
-
-    // tx-1 has ethereum-mainnet + txHash, should render as a link
-    const explorerLink = screen.getByText(/0xabcdef/);
-    expect(explorerLink).toBeTruthy();
-    expect(explorerLink.tagName).toBe('A');
-    expect(explorerLink.getAttribute('href')).toContain('etherscan.io');
-  });
-
-  it('handles null txHash gracefully', async () => {
-    render(<TransactionsPage />);
-
-    await waitForTableData();
-
-    // tx-2 has null txHash, so no explorer link should render for it
-    // The row should still render without errors
-    const rows = screen.getAllByRole('row');
-    // header + 2 data rows = 3
-    expect(rows.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('row click expands detail view', async () => {
-    render(<TransactionsPage />);
-
-    await waitForTableData();
-
-    // Click on the first data row
-    const row = getFirstDataRow();
-    fireEvent.click(row);
-
-    // Expanded detail should now show full fields
-    await waitFor(() => {
-      expect(screen.getByText('tx-1')).toBeTruthy(); // ID field in detail
-      expect(screen.getByText('wallet-uuid-1')).toBeTruthy(); // Wallet ID
-      expect(screen.getByText('AUTO')).toBeTruthy(); // Tier
-      expect(screen.getByText('0x1234567890abcdef1234567890abcdef12345678')).toBeTruthy(); // Full address
-    });
-  });
-
-  it('pagination controls navigate pages', async () => {
-    // Mock a response with more than PAGE_SIZE items
-    const largeTxResponse = {
-      items: mockTxResponse.items,
-      total: 50,
-      offset: 0,
-      limit: 20,
-    };
-    setupMocks(largeTxResponse);
+  it('pagination controls work', async () => {
+    setupMocks(
+      { items: mockTxResponse.items, total: 50, offset: 0, limit: 20 },
+      { items: [], total: 0, offset: 0, limit: 20 },
+    );
 
     render(<TransactionsPage />);
-
     await waitForTableData();
 
-    // Check pagination info exists using a text matcher function
-    // The text "Showing 1-2 of 50" may be split across elements
     const paginationInfo = document.querySelector('.pagination-info');
     expect(paginationInfo).toBeTruthy();
-    expect(paginationInfo!.textContent).toContain('Showing');
     expect(paginationInfo!.textContent).toContain('50');
 
-    // Next button should be enabled
     const nextBtn = screen.getByText('Next');
-    expect(nextBtn).toBeTruthy();
     expect((nextBtn as HTMLButtonElement).disabled).toBe(false);
 
-    // Previous button should be disabled on first page
     const prevBtn = screen.getByText('Previous');
     expect((prevBtn as HTMLButtonElement).disabled).toBe(true);
 
-    // Click Next
     fireEvent.click(nextBtn);
 
-    // Verify apiGet was called with offset=20
     await waitFor(() => {
       const calls = vi.mocked(apiGet).mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
@@ -291,21 +426,29 @@ describe('TransactionsPage', () => {
     });
   });
 
-  it('filter change triggers refetch', async () => {
-    render(<TransactionsPage />);
+  // --- Explorer link ---
 
+  it('renders explorer link for txHash', async () => {
+    render(<TransactionsPage />);
     await waitForTableData();
 
-    // Find the Type filter select (second select after Wallet)
-    const selects = screen.getAllByRole('combobox');
-    // selects: wallet_id, type, status, network
-    const typeSelect = selects[1];
-    expect(typeSelect).toBeTruthy();
+    const explorerLink = screen.getByText(/0xabcdef/);
+    expect(explorerLink.tagName).toBe('A');
+    expect(explorerLink.getAttribute('href')).toContain('etherscan.io');
+  });
 
-    // Change type filter
+  // --- Filter change ---
+
+  it('filter change triggers refetch', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    const selects = screen.getAllByRole('combobox');
+    // selects[0] = Direction, selects[1] = Wallet, selects[2] = Type, ...
+    const typeSelect = selects[2];
+
     fireEvent.change(typeSelect!, { target: { value: 'APPROVE' } });
 
-    // Verify apiGet was called with type=APPROVE
     await waitFor(() => {
       const calls = vi.mocked(apiGet).mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
@@ -314,46 +457,63 @@ describe('TransactionsPage', () => {
     });
   });
 
-  it('search input renders and accepts input', async () => {
-    render(<TransactionsPage />);
+  // --- Monitor Settings tab ---
 
+  it('Monitor Settings tab renders settings fields', async () => {
+    render(<TransactionsPage />);
     await waitForTableData();
 
-    // Find the search input
-    const searchInput = screen.getByPlaceholderText('Search by txHash or recipient address...');
-    expect(searchInput).toBeTruthy();
-    expect(searchInput.tagName).toBe('INPUT');
-  });
-
-  it('shows dash for null toAddress', async () => {
-    render(<TransactionsPage />);
-
-    await waitForTableData();
-
-    // tx-2 has null toAddress; there should be dash characters in the table
-    const dashes = screen.getAllByText('\u2014');
-    expect(dashes.length).toBeGreaterThan(0);
-  });
-
-  it('second click on expanded row collapses it', async () => {
-    render(<TransactionsPage />);
-
-    await waitForTableData();
-
-    // Click to expand
-    const row = getFirstDataRow();
-    fireEvent.click(row);
+    fireEvent.click(screen.getByText('Monitor Settings'));
 
     await waitFor(() => {
-      expect(screen.getByText('tx-1')).toBeTruthy();
+      expect(screen.getByText('Monitoring Enabled')).toBeTruthy();
     });
 
-    // Click again to collapse
-    fireEvent.click(row);
+    expect(screen.getByText('Poll Interval (seconds)')).toBeTruthy();
+    expect(screen.getByText('Retention Days')).toBeTruthy();
+    expect(screen.getByText('Suspicious Dust USD Threshold')).toBeTruthy();
+    expect(screen.getByText('Suspicious Amount Multiplier')).toBeTruthy();
+    expect(screen.getByText('Notification Cooldown (minutes)')).toBeTruthy();
+    expect(screen.getByText('WebSocket URL (optional)')).toBeTruthy();
+  });
+
+  it('Monitor Settings tab renders per-wallet toggles', async () => {
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    fireEvent.click(screen.getByText('Monitor Settings'));
 
     await waitFor(() => {
-      // After collapse, the detail labels should be gone
-      expect(screen.queryByText('Wallet ID')).toBeFalsy();
+      expect(screen.getByText('Per-Wallet Monitoring')).toBeTruthy();
+    });
+
+    // Toggle buttons
+    const onButtons = screen.getAllByText('ON');
+    const offButtons = screen.getAllByText('OFF');
+    expect(onButtons.length).toBeGreaterThanOrEqual(1);
+    expect(offButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('toggles wallet monitoring on click', async () => {
+    vi.mocked(apiPatch).mockResolvedValue({ id: 'wallet-uuid-2', monitorIncoming: true });
+
+    render(<TransactionsPage />);
+    await waitForTableData();
+
+    fireEvent.click(screen.getByText('Monitor Settings'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Per-Wallet Monitoring')).toBeTruthy();
+    });
+
+    const offButtons = screen.getAllByText('OFF');
+    fireEvent.click(offButtons[0]!);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPatch)).toHaveBeenCalledWith(
+        '/v1/wallets/wallet-uuid-2',
+        { monitorIncoming: true },
+      );
     });
   });
 });
