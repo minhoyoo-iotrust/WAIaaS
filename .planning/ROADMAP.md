@@ -20,7 +20,7 @@
 - ✅ **v27.4 Admin UI UX 개선** -- Phases 239-243 (shipped 2026-02-23)
 - ✅ **v28.0 기본 DeFi 프로토콜 설계** -- Phases 244-245 (shipped 2026-02-23)
 - ✅ **v28.1 Jupiter Swap** -- Phases 246-247 (shipped 2026-02-23)
-- [ ] **v28.2 0x EVM DEX Swap** -- Phases 248-250 (in progress)
+- [x] **v28.2 0x EVM DEX Swap** -- Phases 248-250 (completed 2026-02-23)
 
 ## Phases
 
@@ -260,9 +260,9 @@ See `.planning/milestones/v28.1-ROADMAP.md` for full details.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 248-01-PLAN.md -- Admin Settings actions category + config.toml migration + ACTION_API_KEY_REQUIRED notification
-- [ ] 248-02-PLAN.md -- resolve() array return + sequential pipeline + provider-trust policy
-- [ ] 248-03-PLAN.md -- Admin UI Actions page
+- [x] 248-01-PLAN.md -- Admin Settings actions category + config.toml migration + ACTION_API_KEY_REQUIRED notification
+- [x] 248-02-PLAN.md -- resolve() array return + sequential pipeline + provider-trust policy
+- [x] 248-03-PLAN.md -- Admin UI Actions page
 
 ### Phase 249: 0x Swap Provider
 **Goal**: AI 에이전트가 EVM 체인에서 0x Swap API v2를 통해 토큰 스왑을 실행할 수 있다
@@ -278,7 +278,7 @@ Plans:
 
 Plans:
 - [x] 249-01-PLAN.md -- ZeroExApiClient + Zod schemas + config + AllowanceHolder mapping + tests
-- [ ] 249-02-PLAN.md -- ZeroExSwapActionProvider (approve+swap resolution) + registerBuiltInProviders wiring + tests
+- [x] 249-02-PLAN.md -- ZeroExSwapActionProvider (approve+swap resolution) + registerBuiltInProviders wiring + tests
 
 ### Phase 250: Integration
 **Goal**: TS/Python SDK, MCP, 스킬 문서에서 0x Swap이 완전히 사용 가능하다
