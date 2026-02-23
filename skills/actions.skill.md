@@ -257,21 +257,12 @@ console.log('Transaction ID:', tx.id);
 from waiaas import WAIaaSClient
 
 async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
-    # Python SDK does not have a dedicated execute_action() method yet.
-    # Use send_transaction with CONTRACT_CALL type, or call the REST API directly:
-    import httpx
-    resp = await httpx.AsyncClient().post(
-        "http://localhost:3100/v1/actions/jupiter_swap/swap",
-        headers={"Authorization": "Bearer wai_sess_..."},
-        json={
-            "params": {
-                "inputMint": "So11111111111111111111111111111111111111112",
-                "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                "amount": "1000000000",
-            }
-        },
-    )
-    print("Transaction ID:", resp.json()["id"])
+    tx = await client.execute_action("jupiter_swap", "swap", {
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "amount": "1000000000",
+    })
+    print("Transaction ID:", tx.id)
 ```
 
 ## 4. 0x Swap -- Built-in Provider (EVM)
@@ -394,23 +385,16 @@ console.log('Transaction ID:', tx.id);
 
 **Python SDK:**
 ```python
-import httpx
+from waiaas import WAIaaSClient
 
-# Python SDK does not have a dedicated execute_action() method yet.
-# Use the REST API directly:
-resp = await httpx.AsyncClient().post(
-    "http://localhost:3100/v1/actions/zerox_swap/swap",
-    headers={"Authorization": "Bearer wai_sess_..."},
-    json={
-        "params": {
-            "sellToken": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-            "buyToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            "sellAmount": "100000000000000000",
-            "chainId": 1,
-        }
-    },
-)
-print("Transaction ID:", resp.json()["id"])
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("zerox_swap", "swap", {
+        "sellToken": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+        "buyToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "sellAmount": "100000000000000000",
+        "chainId": 1,
+    })
+    print("Transaction ID:", tx.id)
 ```
 
 ### Example: Swap 100 USDC to ETH on Ethereum (ERC-20, multi-step)
