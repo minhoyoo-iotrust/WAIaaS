@@ -18,6 +18,7 @@
 - ✅ **v27.2 CAIP-19 자산 식별 표준** -- Phases 231-234 (shipped 2026-02-22)
 - ✅ **v27.3 토큰별 지출 한도 정책** -- Phases 235-238 (shipped 2026-02-22)
 - ✅ **v27.4 Admin UI UX 개선** -- Phases 239-243 (shipped 2026-02-23)
+- **v28.0 기본 DeFi 프로토콜 설계** -- Phases 244-245 (in progress)
 
 ## Phases
 
@@ -214,7 +215,51 @@ See `.planning/milestones/v27.4-ROADMAP.md` for full details.
 
 </details>
 
+### v28.0 기본 DeFi 프로토콜 설계 (In Progress)
+
+**Milestone Goal:** 5개 DeFi 프로토콜(Jupiter Swap, 0x EVM Swap, LI.FI Bridge, Lido+Jito Staking, Gas Conditional Execution) 구현을 위한 공통 설계 산출물 생성. 코드 구현 없이 설계 문서만 산출하며, m28-01~m28-05 구현 마일스톤의 입력으로 소비된다.
+
+- [ ] **Phase 244: 코어 설계 기반** - 패키지 구조, API 클라이언트 패턴, 정책 연동 플로우 설계
+- [ ] **Phase 245: 런타임 동작 설계** - 비동기 상태 추적, 안전성 방어, 테스트 전략 설계
+
+## Phase Details
+
+### Phase 244: 코어 설계 기반
+**Goal**: m28-01~m28-05 구현 시 공통으로 참조할 패키지 구조, API 클라이언트 베이스 패턴, 슬리피지/에러 체계, 정책 연동 플로우가 확정되어 각 프로바이더 구현이 동일한 설계 기반 위에서 진행된다
+**Depends on**: Nothing (first phase)
+**Requirements**: PKGS-01, PKGS-02, PKGS-03, PKGS-04, APIC-01, APIC-02, APIC-03, APIC-04, APIC-05, PLCY-01, PLCY-02, PLCY-03, PLCY-04
+**Success Criteria** (what must be TRUE):
+  1. packages/actions/ 디렉토리 트리와 모듈 구조가 확정되어, 설계 문서만 보고 m28-01에서 패키지 스캐폴딩을 즉시 생성할 수 있다
+  2. ActionApiClient 베이스 패턴(fetch+AbortController+Zod)과 ContractCallRequest 변환 매핑(Solana programId/instructionData/accounts, EVM to/data/value)이 완성되어, 4개 프로바이더 API 클라이언트가 동일 기반 위에 구현 가능하다
+  3. DeFi 에러 코드 체계(ACTION_API_ERROR, ACTION_RATE_LIMITED, PRICE_IMPACT_TOO_HIGH)와 슬리피지 제어 로직(기본값/상한/클램핑, bps-pct 단위 변환)이 완성되어, 프로바이더 간 일관된 에러 처리와 슬리피지 적용이 가능하다
+  4. 4개 프로토콜의 정책 연동 플로우가 다이어그램과 함께 확정되어 -- resolve() -> Stage 2 경로, CONTRACT_WHITELIST 등록 대상, 크로스체인 출발 체인 정책 평가 규칙, 도착 주소 변조 방지 검증이 명문화된다
+**Plans**: TBD
+
+Plans:
+- [ ] 244-01: TBD
+- [ ] 244-02: TBD
+- [ ] 244-03: TBD
+
+### Phase 245: 런타임 동작 설계
+**Goal**: 브릿지/언스테이크 비동기 추적, 트랜잭션 상태 머신 확장, 통합 DB 마이그레이션, 안전성 방어(MEV/리베이스/stale calldata/API drift), 테스트 전략이 확정되어 구현 시 런타임 동작에 대한 설계 불확실성이 제거된다
+**Depends on**: Phase 244
+**Requirements**: ASNC-01, ASNC-02, ASNC-03, ASNC-04, ASNC-05, SAFE-01, SAFE-02, SAFE-03, SAFE-04, TEST-01, TEST-02, TEST-03
+**Success Criteria** (what must be TRUE):
+  1. AsyncStatusTracker 인터페이스와 폴링 스케줄러(setTimeout 체인, 간격/최대횟수) 설계가 완성되어, 브릿지/언스테이크/가스대기 3개 구현체가 동일 패턴을 따를 수 있다
+  2. 트랜잭션 상태 머신(8-state -> 9-state, GAS_WAITING 추가) 전이 다이어그램과 통합 DB 마이그레이션(bridge_status + bridge_metadata 컬럼 + GAS_WAITING 상태)이 단일 설계로 확정되어, m28-03에서 마이그레이션을 바로 작성할 수 있다
+  3. 4개 안전성 설계 -- Jito MEV fail-closed, stETH vs wstETH 아키텍처 결정, stale calldata 재조회 패턴, API drift Zod strict 전략 -- 가 각각 완성되어, 구현 시 안전 관련 판단이 불필요하다
+  4. mock API 픽스처 공통 구조, 테스트 헬퍼(createMockApiResponse, assertContractCallRequest), 4-프로토콜 x 시나리오 매트릭스가 확정되어, 프로바이더 테스트 작성 시 일관된 패턴과 커버리지 기준이 존재한다
+**Plans**: TBD
+
+Plans:
+- [ ] 245-01: TBD
+- [ ] 245-02: TBD
+- [ ] 245-03: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 244 -> 245
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -234,3 +279,5 @@ See `.planning/milestones/v27.4-ROADMAP.md` for full details.
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
 | 239-243 | v27.4 | 9/9 | Complete | 2026-02-23 |
+| 244 | v28.0 | 0/? | Not started | - |
+| 245 | v28.0 | 0/? | Not started | - |
