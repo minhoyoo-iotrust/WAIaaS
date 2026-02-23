@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.0 기본 DeFi 프로토콜 설계 -- Phase 245 런타임 동작 설계
+**Current focus:** v28.0 기본 DeFi 프로토콜 설계 -- Phase 245 완료
 
 ## Current Position
 
 Milestone: v28.0 기본 DeFi 프로토콜 설계
 Phase: 245 of 245 (런타임 동작 설계)
-Plan: 2 of 3 in current phase
-Status: Plan 245-01 + 245-02 complete
-Last activity: 2026-02-23 -- Completed 245-01-PLAN.md (DEFI-04 비동기 상태 추적 설계)
+Plan: 3 of 3 in current phase
+Status: Phase 245 complete (all 3 plans done)
+Last activity: 2026-02-23 -- Completed 245-03-PLAN.md (DEFI-05 테스트 전략 확정)
 
-Progress: [██████████] 67% (Phase 245, 2/3 plans)
+Progress: [██████████████████████] 100% (Phase 245, 3/3 plans)
 
 ## Performance Metrics
 
@@ -52,6 +52,10 @@ Progress: [██████████] 67% (Phase 245, 2/3 plans)
 - ASNC-03: 통합 DB migration v23 -- bridge_status + bridge_metadata + GAS_WAITING + partial indexes 2개
 - ASNC-04: GAS_WAITING 11번째 트랜잭션 상태, Stage 3.5 진입, SIGNED/CANCELLED 탈출
 - ASNC-05: 브릿지 3단계 타임아웃 (2h active -> 22h monitoring -> TIMEOUT), 자동 취소 금지
+- TEST-01: JSON fixture files per provider, Zod schema pass guaranteed, error cases included
+- TEST-02: 3 test helpers (createMockApiResponse, assertContractCallRequest, createMockActionContext)
+- TEST-03: C1-C10 공통 시나리오 + J1-J4/Z1-Z3/L1-L4/S1-S4 프로토콜별 + G1-G7 가스 조건 = 33 시나리오
+- TEST-03: 프로바이더별 최소 12개 테스트, L0만으로 CI 통과, L2는 수동 검증
 
 ### Blockers/Concerns
 
@@ -60,5 +64,5 @@ Progress: [██████████] 67% (Phase 245, 2/3 plans)
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 245-01-PLAN.md (DEFI-04 비동기 상태 추적 설계 확정)
+Stopped at: Completed 245-03-PLAN.md (DEFI-05 테스트 전략 확정, Phase 245 완료)
 Resume file: None
