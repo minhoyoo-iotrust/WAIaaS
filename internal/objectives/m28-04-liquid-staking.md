@@ -1,7 +1,7 @@
 # 마일스톤 m28-04: Liquid Staking (Lido + Jito)
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v28.4
 
 ## 목표
 
@@ -118,7 +118,7 @@ jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 | 2 | SOL Liquid Staking | Jito (JitoSOL) | TVL $3B(Solana 최대 LST), MEV 수익 공유, 14.3M SOL staked. SPL Stake Pool 표준 사용으로 안정적 |
 | 3 | 통합 방식 — Lido | 컨트랙트 ABI 직접 호출 (viem) | Lido 스테이킹은 `submit()` 한 함수. REST API/SDK 의존 없이 ABI 인코딩만으로 충분. 외부 의존성 최소화 |
 | 4 | 통합 방식 — Jito | SPL Stake Pool 프로그램 호출 | Jito는 SPL Stake Pool 표준(`SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy`) 사용. @solana/kit의 instruction 빌더로 구현 |
-| 5 | unstake 비동기 처리 | 트랜잭션 기록 + 알림 | Lido unstake는 1~5일, Jito는 ~2일 소요. 요청 즉시 트랜잭션 기록 + unstake 완료 시 알림 발송. 상태 폴링은 m28-03 브릿지 상태 추적 패턴 재사용 |
+| 5 | unstake 비동기 처리 | 트랜잭션 기록 + 알림 | Lido unstake는 1~5일, Jito는 ~2일 소요. 요청 즉시 트랜잭션 기록 + unstake 완료 시 알림 발송. 상태 폴링은 **m28-00 설계(DEFI-04) AsyncStatusTracker 공통 인터페이스** 기반 구현 (m28-03 브릿지와 동일 패턴) |
 | 6 | Lido vs Rocket Pool | Lido 우선 | Lido가 TVL 10배+, stETH DeFi 호환성 최고. Rocket Pool(rETH)은 탈중앙화 장점이 있으나 Tier 2+에서 추가 가능 |
 | 7 | wstETH vs stETH | stETH 직접 사용 | stETH는 리베이스 토큰(잔고 자동 증가), wstETH는 non-rebasing 래퍼. stETH가 직관적이고 Lido `submit()` 기본 반환값. L2에서는 wstETH 브릿지 필요 시 별도 처리 |
 
@@ -178,9 +178,11 @@ jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m28-00 (기본 DeFi 프로토콜 설계) | DEFI-03(정책 연동), DEFI-04(비동기 상태 추적 — unstake 폴링에 AsyncStatusTracker 인터페이스 사용), DEFI-05(테스트 전략) 설계 산출물을 입력으로 사용 |
 | v1.5 (Action Provider 프레임워크) | IActionProvider, ActionProviderRegistry, MCP Tool 자동 변환 |
 | v1.5 (가격 오라클) | stETH/JitoSOL의 USD 환산에 IPriceOracle 필요 |
 | v1.4 (EVM + Solana 인프라) | EvmAdapter(viem), SolanaAdapter(@solana/kit), ContractCallRequest |
+| m28-01 (Jupiter Swap) | packages/actions/ 패키지 구조, 내장 프로바이더 로딩 패턴 재사용 |
 
 ---
 
@@ -208,5 +210,5 @@ jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 ---
 
 *생성일: 2026-02-15*
-*선행: m28-02 (0x EVM DEX Swap)*
+*선행: m28-00 (DEFI-04 비동기 추적 설계) + m28-01 (packages/actions/ 구조 확립). m28-02/03과 병렬 진행 가능 (unstake 비동기 추적은 m28-00 설계를 직접 구현, m28-03 구현물에 의존하지 않음)*
 *관련: Lido (https://docs.lido.fi/), Jito (https://www.jito.network/docs/), v1.4.6 (멀티체인 월렛)*

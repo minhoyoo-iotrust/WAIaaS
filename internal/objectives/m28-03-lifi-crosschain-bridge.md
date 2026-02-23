@@ -1,7 +1,7 @@
 # 마일스톤 m28-03: LI.FI 크로스체인 브릿지
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v28.3
 
 ## 목표
 
@@ -148,6 +148,7 @@ status_poll_max_attempts = 60                  # 최대 폴링 횟수 (30분)
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m28-00 (기본 DeFi 프로토콜 설계) | DEFI-02(REST→calldata 공통 패턴), DEFI-03(정책 연동), DEFI-04(비동기 상태 추적 — AsyncStatusTracker 인터페이스, 폴링, DB 통합 마이그레이션), DEFI-05(테스트 전략) 설계 산출물을 입력으로 사용 |
 | v1.5 (Action Provider 프레임워크) | IActionProvider, ActionProviderRegistry, MCP Tool 자동 변환, POST /v1/actions/:provider/:action |
 | m28-01/m28-02 (Jupiter/0x) | 내장 프로바이더 패턴, packages/actions/ 구조 재사용 |
 | v1.4.6 (멀티체인 월렛) | Solana/EVM 양쪽 월렛 지원. 크로스체인 브릿지의 출발/도착 월렛 해석에 필요 |
@@ -172,7 +173,7 @@ status_poll_max_attempts = 60                  # 최대 폴링 횟수 (30분)
 | 페이즈 | 2개 (LiFiActionProvider + API Client + 상태 추적 1 / MCP+SDK+스킬+정책연동 1) |
 | 신규/수정 파일 | 12-16개 |
 | 테스트 | 14-20개 |
-| DB 마이그레이션 | transactions 테이블에 bridge_status 컬럼 추가 가능 |
+| DB 마이그레이션 | 1건 — m28-00 설계(DEFI-04)에 따른 **통합 마이그레이션 실행**: transactions 테이블에 bridge_status 컬럼 추가 + GAS_WAITING 상태 확장 (m28-05에서 사용할 상태를 여기서 함께 추가) |
 
 ---
 

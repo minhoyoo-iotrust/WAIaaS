@@ -14,7 +14,7 @@
 ## Schema & Type System
 
 - **Zod SSoT**: Zod schemas are the single source of truth. Derivation order: Zod → TypeScript types → OpenAPI → Drizzle schema → DB CHECK constraints.
-- **discriminatedUnion 5-type**: Discriminate on the `type` field: TRANSFER / TOKEN_TRANSFER / CONTRACT_CALL / APPROVE / BATCH.
+- **discriminatedUnion 7-type**: Discriminate on the `type` field: TRANSFER / TOKEN_TRANSFER / CONTRACT_CALL / APPROVE / BATCH / SIGN / X402_PAYMENT.
 - ChainError extends Error (not WAIaaSError). Convert to WAIaaSError in Stage 5.
 - Gas safety margin: `(estimatedGas * 120n) / 100n` bigint arithmetic.
 
@@ -40,6 +40,12 @@
   - Targets: quickstart.skill.md, wallet.skill.md, transactions.skill.md, policies.skill.md, admin.skill.md
   - Sync the corresponding skill files when endpoints are added/removed/changed, request/response schemas change, auth methods change, or error codes are added.
   - Create a new skill file when a new domain is added.
+
+## Test Coverage
+
+- **⚠️ ABSOLUTE RULE: NEVER lower test coverage thresholds.** When CI/CD fails due to insufficient test coverage, the ONLY acceptable response is to add tests until the coverage threshold is met. Lowering coverage thresholds in vitest.config.ts, CI workflows, or any other configuration is strictly prohibited — no exceptions, no temporary workarounds.
+- If coverage drops due to new code, write tests for the new code paths.
+- If coverage drops due to refactoring, update or add tests to cover the refactored logic.
 
 ## Git Branching
 

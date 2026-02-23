@@ -1,420 +1,291 @@
-# Technology Stack: CAIP-19 Asset Identification
+# Technology Stack: DeFi Protocol Integration (m28-00 ~ m28-05)
 
-**Project:** WAIaaS CAIP-19 Asset Identification (m27-02)
-**Researched:** 2026-02-22
-
-## Recommendation Summary
-
-**Build a custom CAIP-2/CAIP-19 parser in `packages/core/src/caip/`** instead of using any npm library. The available libraries are either stale, bloated, or carry unnecessary dependencies. WAIaaS already has a partial CAIP-2 parser in `x402.types.ts` and Zod SSoT patterns that make a custom ~200 LOC implementation cleaner than any external dependency.
+**Project:** WAIaaS DeFi Action Providers
+**Researched:** 2026-02-23
+**Overall confidence:** HIGH
 
 ---
 
-## Recommended Stack
+## Executive Summary
 
-### CAIP Parser (NEW -- custom implementation)
+The DeFi protocol integration for WAIaaS requires **zero new npm dependencies**. All 5 milestones (Jupiter Swap, 0x Swap, LI.FI Bridge, Lido+Jito Staking, Gas Conditional Execution) can be implemented using the existing dependency set: `viem ^2.21.0` (locked 2.45.3), `@solana/kit ^6.0.1` (locked 6.0.1), `zod ^3.24.0` (locked 3.25.76), and Node.js 22 native `fetch`.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Custom `caip/` module | N/A | CAIP-2 + CAIP-19 parse/format/validate | See "Library Evaluation" below. Zero dependencies, Zod SSoT integration, ~200 LOC. Existing `parseCaip2()` in x402.types.ts is proof of concept. |
-| Zod (existing) | 3.x | CAIP URI schema validation | Already SSoT. Regex-based Zod schemas replace need for external validator. |
-
-### CoinGecko Platform Mapping (EXTEND existing)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `coingecko-platform-ids.ts` (existing) | N/A | Extend COINGECKO_PLATFORM_MAP with L2 entries | Currently only `solana` and `ethereum`. Add 4 L2 mainnet platforms for price oracle support. |
-
-### No New Dependencies Required
-
-The CAIP-19 feature requires **zero new npm packages**. All implementation uses existing Zod + TypeScript infrastructure.
+This is a deliberate architectural decision, not a constraint. Each DeFi protocol provides REST APIs that return calldata/instructions directly. The pattern is: native fetch -> Zod-validated response -> ContractCallRequest -> existing 6-stage pipeline. No protocol SDKs are needed.
 
 ---
 
-## Library Evaluation: Why NOT to Use External Packages
+## Recommended Stack (Additions Only)
 
-### Candidate 1: `caip` (pedrouid/caip-js)
+### New Package
 
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Version | 1.1.1 | Stable but unmaintained |
-| Last publish | 2024-03-20 | Minor patch after 2 years of inactivity |
-| Previous publish | 2022-04-27 (v1.1.0) | Nearly 2 years between updates |
-| Weekly downloads | ~7,500 | LOW for production use |
-| Unpacked size | 98.9 KB | EXCESSIVE for regex-based parsing |
-| Dependencies | 0 | Good |
-| TypeScript | Built with TS 3.7.5 | Outdated. No modern TS features. |
-| Stars | 28 | Low community interest |
-| License | MIT | Compatible |
-| API | OOP: `ChainId`, `AccountId`, `AssetType`, `AssetId` classes | Over-engineered for our use case |
-| CAIP-19 regex | `[-:a-zA-Z0-9]{11,115}` (AssetType) | **WRONG**: Official spec allows `.` and `%` in asset_reference but this regex does not |
+| Package | Location | Purpose | Why |
+|---------|----------|---------|-----|
+| @waiaas/actions | packages/actions/ | Built-in ActionProvider implementations | Separates DeFi protocol code from core/daemon. Selective inclusion. Same monorepo pattern as adapter-evm/adapter-solana |
 
-**Verdict: REJECT.**
-- Regex does not match CAIP-19 spec (`asset_reference` allows `[-.%a-zA-Z0-9]{1,128}` per official spec, but library uses `[-a-zA-Z0-9]` throughout).
-- OOP class-based API conflicts with WAIaaS functional/Zod SSoT patterns.
-- 98.9 KB for something achievable in ~200 LOC of custom code.
-- Maintenance velocity is near-zero; if a spec bug exists, no fix will come.
+### No New npm Dependencies
 
-**Confidence: HIGH** (verified via npm registry metadata, GitHub source inspection, spec cross-reference)
+All DeFi providers use existing workspace dependencies only:
 
-### Candidate 2: `@shapeshiftoss/caip`
+| Dependency | Already In | Version (locked) | Used For |
+|------------|-----------|-------------------|----------|
+| viem | adapter-evm, daemon | 2.45.3 | `encodeFunctionData()` for Lido ABI, `signTypedData()` for 0x Permit2 EIP-712 |
+| @solana/kit | adapter-solana, daemon | 6.0.1 | Jito SPL Stake Pool raw instruction building |
+| @solana-program/token | adapter-solana, daemon | 0.10.0 | Token account derivation for Jito staking |
+| @solana-program/system | adapter-solana | 0.11.0 | SOL transfer instructions in Jito deposit |
+| zod | daemon, core | 3.25.76 | Input/output schema validation for all API responses |
+| Node.js 22 native fetch | runtime | built-in | Jupiter, 0x, LI.FI REST API calls + AbortController timeout |
 
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Version | 8.16.7 (latest stable) | Actively maintained (117 versions) |
-| Last publish | 2026-01-20 | Recent |
-| Unpacked size | 4.36 MB | MASSIVELY BLOATED |
-| Dependencies | axios ^1.13.0 | Drags in HTTP client -- unacceptable |
-| License | MIT | Compatible |
-
-**Verdict: REJECT.**
-- 4.36 MB unpacked size is absurd for URI parsing.
-- Pulls in `axios` as a runtime dependency for network requests (it bundles chain registry data fetching).
-- ShapeShift-specific abstractions (chain adapters, asset service) irrelevant to WAIaaS.
-- Breaks the "zero external deps for core parsing" principle.
-
-**Confidence: HIGH** (verified via npm registry metadata)
-
-### Candidate 3: `@agentcommercekit/caip`
-
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Version | 0.1.0 | Pre-release |
-| Dependencies | 0 | Good |
-| License | MIT | Compatible |
-| TypeScript | Yes (modern) | Good |
-
-**Verdict: REJECT.**
-- v0.1.0 pre-release. Zero track record.
-- Part of a larger `agentcommercekit/ack` monorepo. Unclear maintenance trajectory.
-- Cannot depend on a v0.1.0 package in production for a wallet system.
-
-**Confidence: MEDIUM** (verified via npm, limited GitHub inspection due to 404 on source)
-
-### Candidate 4: `caip-utils`
-
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Version | 0.1.1 | Pre-release |
-| Dependencies | 0 | Good |
-
-**Verdict: REJECT.** Same reasoning as @agentcommercekit/caip -- too immature.
-
-**Confidence: MEDIUM**
-
-### Conclusion: Custom Implementation
-
-All evaluated libraries fail on at least one critical criterion: spec compliance, size, maintenance, or dependency hygiene. A custom implementation in `packages/core/src/caip/` is the correct choice because:
-
-1. **Spec compliance**: We control the regex to match CAIP-19 spec exactly.
-2. **Zod SSoT integration**: Schemas integrate directly into existing derivation chain (Zod -> TS -> OpenAPI).
-3. **Zero dependencies**: No new `node_modules` entries.
-4. **Existing foundation**: `parseCaip2()` and `CAIP2_TO_NETWORK` already exist in `x402.types.ts`.
-5. **Minimal code**: ~200 LOC for parser/formatter/validator/mapping.
+**Confidence: HIGH** -- Verified against locked versions in pnpm-lock.yaml and existing package.json files.
 
 ---
 
-## CAIP-2 / CAIP-19 Specification Reference
+## Protocol-Specific Stack Details
 
-### CAIP-2 (Chain ID) -- [CAIP-2 Spec](https://standards.chainagnostic.org/CAIPs/caip-2)
+### 1. Jupiter Swap (m28-01) -- Solana DEX
 
-```
-chain_id:        namespace + ":" + reference
-namespace:       [-a-z0-9]{3,8}
-reference:       [-a-zA-Z0-9]{1,32}
-```
+| Item | Value | Confidence |
+|------|-------|------------|
+| API Base URL | `https://api.jup.ag/swap/v1` | HIGH -- verified via [dev.jup.ag](https://dev.jup.ag/docs/swap-api) |
+| Quote Endpoint | `GET /swap/v1/quote?inputMint=&outputMint=&amount=&slippageBps=` | HIGH |
+| Instructions Endpoint | `POST /swap/v1/swap-instructions` (body: `{ quoteResponse, userPublicKey }`) | HIGH |
+| API Key | Optional (improves rate limits) | HIGH |
+| Auth Header | `Authorization: Bearer <api_key>` (when key provided) | MEDIUM |
+| Rate Limit | Unkeyed: limited; Keyed: higher (specific limits undocumented) | LOW |
+| Response Validation | Zod schemas for QuoteResponse + SwapInstructionsResponse | HIGH |
+| HTTP Client | `globalThis.fetch` + `AbortController` (10s timeout) | HIGH |
+| Instruction Format | `swapInstruction`, `computeBudgetInstructions[]`, `setupInstructions[]`, `cleanupInstruction`, `addressLookupTableAddresses[]` | HIGH |
 
-**Regex**: `/^[-a-z0-9]{3,8}:[-a-zA-Z0-9]{1,32}$/`
+**Integration pattern:** fetch quote -> validate response -> fetch swap-instructions -> map instructions to ContractCallRequest (programId, instructionData, accounts) -> existing pipeline.
 
-### CAIP-19 (Asset Type) -- [CAIP-19 Spec](https://standards.chainagnostic.org/CAIPs/caip-19)
+**No SDK needed.** Jupiter JS SDK (`@jup-ag/api`) adds ~2MB bundle and wraps the same REST endpoints. Native fetch is sufficient for 2 API calls.
 
-```
-asset_type:      chain_id + "/" + asset_namespace + ":" + asset_reference
-asset_namespace: [-a-z0-9]{3,8}
-asset_reference: [-.%a-zA-Z0-9]{1,128}
-```
+### 2. 0x Swap (m28-02) -- EVM DEX Aggregator
 
-**Regex**: `/^[-a-z0-9]{3,8}:[-a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}$/`
+| Item | Value | Confidence |
+|------|-------|------------|
+| API Base URL | `https://api.0x.org` (unified, all chains) | HIGH -- verified via [0x docs](https://0x.org/docs/upgrading/upgrading_to_swap_v2) |
+| Version Header | `0x-version: v2` (required) | HIGH |
+| API Key Header | `0x-api-key: <key>` (required) | HIGH |
+| Chain Routing | `chainId` query parameter (not URL path) | HIGH |
+| Price Endpoint | `GET /swap/permit2/price?chainId=&sellToken=&buyToken=&sellAmount=` | HIGH |
+| Quote Endpoint | `GET /swap/permit2/quote?chainId=&sellToken=&buyToken=&sellAmount=&taker=` | HIGH |
+| Permit2 Contract | `0x000000000022D473030F116dDEE9F6B43aC78BA3` (same on all chains) | HIGH |
+| Slippage Unit | Decimal fraction (0.01 = 1%) via `slippagePercentage` param | HIGH |
+| EIP-712 Signing | Quote response includes `permit2.eip712` object for signing | HIGH |
+| Supported Chains | Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche, Scroll, Linea, Blast, Mode, Mantle, Unichain, Berachain, Ink, Plasma, Sonic, Monad, Worldchain | HIGH |
 
-### CAIP-19 Asset ID (with token_id, for NFTs -- out of scope for v27.2)
+**Integration pattern:** fetch price (indicative) -> fetch quote (executable) -> sign Permit2 EIP-712 with `viem.signTypedData()` -> append signature to calldata -> ContractCallRequest (to, data, value) -> pipeline.
 
-```
-asset_id:        asset_type + "/" + token_id
-token_id:        [-.%a-zA-Z0-9]{1,78}
-```
+**Critical: Permit2 EIP-712 signing.** The 0x v2 Permit2 flow requires signing an EIP-712 typed data message from the quote response, then appending the signature to the transaction calldata. viem 2.x already provides `signTypedData()` which handles this natively. No additional library needed.
 
-**Regex**: `/^[-a-z0-9]{3,8}:[-a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}\/[-.%a-zA-Z0-9]{1,78}$/`
+**Permit2 approval flow:** First ERC-20 swap requires a separate `approve()` transaction to the Permit2 contract. This runs as an independent pipeline execution (APPROVE type) before the swap pipeline. Subsequent swaps skip approval.
 
-**Important note**: The `caip` npm package uses `[-a-zA-Z0-9]` for asset_reference, MISSING `.` and `%` characters from the official spec. Our custom implementation must include them.
+### 3. LI.FI Bridge (m28-03) -- Cross-chain
 
-**Confidence: HIGH** (verified via official spec at standards.chainagnostic.org)
+| Item | Value | Confidence |
+|------|-------|------------|
+| API Base URL | `https://li.quest/v1` | HIGH -- verified via [docs.li.fi](https://docs.li.fi/api-reference/introduction) |
+| Quote Endpoint | `GET /v1/quote?fromChain=&toChain=&fromToken=&toToken=&fromAmount=&fromAddress=&slippage=` | HIGH |
+| Status Endpoint | `GET /v1/status?txHash=&fromChain=` | HIGH |
+| API Key | Optional (x-lifi-api-key header, improves rate limits) | HIGH |
+| Solana Chain ID | `1151111081099710` | HIGH -- verified via [docs.li.fi/solana](https://docs.li.fi/li.fi-api/solana) |
+| Solana SOL Address | `11111111111111111111111111111111` (System Program) | HIGH |
+| Status Values | `PENDING`, `DONE`, `NOT_FOUND`, `INVALID`, `FAILED` | HIGH |
+| Slippage Unit | Decimal fraction (0.03 = 3%) | HIGH |
+| Timeout | 15 seconds for quote (cross-chain route calculation is slower) | MEDIUM |
+| Solana Bridges | Mayan (Swift/CCTP/Wormhole), AllBridge (stablecoins) | HIGH |
 
----
+**Integration pattern:** fetch quote (includes calldata + route) -> ContractCallRequest from source chain -> pipeline execution -> poll `/status` with txHash until DONE/FAILED/timeout.
 
-## CAIP-2 Network Mapping Table (WAIaaS -- 13 networks)
+**Async status tracking:** Bridge completion takes minutes to tens of minutes. Polling-based tracking via `GET /v1/status` with 30-second intervals. No webhooks needed (simpler for self-hosted daemon).
 
-Existing mapping from `packages/core/src/interfaces/x402.types.ts` to be extracted and unified:
+### 4a. Lido Staking (m28-04) -- ETH Liquid Staking
 
-| CAIP-2 Chain ID | WAIaaS ChainType | WAIaaS NetworkType | EVM Chain ID |
-|----------------|-----------------|-------------------|--------------|
-| `eip155:1` | ethereum | ethereum-mainnet | 1 |
-| `eip155:11155111` | ethereum | ethereum-sepolia | 11155111 |
-| `eip155:137` | ethereum | polygon-mainnet | 137 |
-| `eip155:80002` | ethereum | polygon-amoy | 80002 |
-| `eip155:42161` | ethereum | arbitrum-mainnet | 42161 |
-| `eip155:421614` | ethereum | arbitrum-sepolia | 421614 |
-| `eip155:10` | ethereum | optimism-mainnet | 10 |
-| `eip155:11155420` | ethereum | optimism-sepolia | 11155420 |
-| `eip155:8453` | ethereum | base-mainnet | 8453 |
-| `eip155:84532` | ethereum | base-sepolia | 84532 |
-| `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | solana | mainnet | N/A |
-| `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | solana | devnet | N/A |
-| `solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z` | solana | testnet | N/A |
+| Item | Value | Confidence |
+|------|-------|------------|
+| stETH Contract | `0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84` (Ethereum mainnet) | HIGH -- verified via [Etherscan](https://etherscan.io/address/0xae7ab96520de3a18e5e111b5eaab095312d7fe84) |
+| Withdrawal Queue | `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` (Ethereum mainnet) | HIGH -- verified via [docs.lido.fi](https://docs.lido.fi/contracts/withdrawal-queue-erc721/) |
+| Stake Function | `submit(address _referral) payable returns (uint256)` | HIGH -- verified via [Lido docs](https://docs.lido.fi/contracts/lido/) |
+| Unstake Function | `requestWithdrawals(uint256[] amounts, address owner) returns (uint256[] requestIds)` | HIGH |
+| ABI Encoding | `viem.encodeFunctionData({ abi, functionName: 'submit', args: [referralAddress] })` | HIGH |
+| ETH Value | Passed as `value` field in ContractCallRequest (not in calldata) | HIGH |
+| No External API | Direct contract call via ABI encoding. No REST API needed | HIGH |
 
-**Source**: Verified against existing codebase (`x402.types.ts` lines 20-36) and Solana CAIP-2 namespace spec.
+**Integration pattern:** `encodeFunctionData()` with minimal ABI -> ContractCallRequest (to=stETH, data=encoded, value=stakeAmount) -> pipeline.
 
-**Confidence: HIGH**
-
----
-
-## Asset Namespace Reference
-
-### EVM Chains (eip155) -- [EIP155 CAIP-19 Namespace](https://namespaces.chainagnostic.org/eip155/caip19)
-
-| Namespace | Standard | asset_reference | WAIaaS Use |
-|-----------|----------|----------------|-----------|
-| `slip44` | CAIP-20 | Unsigned integer (SLIP-44 coin type) | Native ETH: `slip44:60` |
-| `erc20` | CAIP-21 | EVM contract address (0x-prefixed, 42 chars) | ERC-20 tokens |
-| `erc721` | N/A | EVM contract address | Out of scope (NFTs) |
-
-### Solana Chain -- [Solana CAIP-19 Namespace](https://namespaces.chainagnostic.org/solana/caip19)
-
-| Namespace | Description | asset_reference | WAIaaS Use |
-|-----------|-------------|----------------|-----------|
-| `slip44` | Native SOL | `501` (SLIP-44 coin type) | Native SOL |
-| `token` | SPL Fungible Token | Mint address (base58, 32-44 chars) | SPL tokens + Token-2022 |
-| `nft` | SPL Non-Fungible Token | Mint address (base58) | Out of scope (NFTs) |
-
-**Critical finding**: The Solana CAIP-19 namespace spec uses `token` (NOT `spl`) as the asset namespace for SPL fungible tokens. Both SPL and Token-2022 use the same `token` namespace because they share the mint address abstraction.
-
-**Confidence: HIGH** (verified at namespaces.chainagnostic.org/solana/caip19)
-
----
-
-## SLIP-44 Coin Type Numbers -- [SLIP-0044 Registry](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
-
-| Coin | Symbol | SLIP-44 Type | CAIP-19 Native Asset Example |
-|------|--------|-------------|------------------------------|
-| Ethereum | ETH | 60 | `eip155:1/slip44:60` |
-| Solana | SOL | 501 | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501` |
-
-**Note**: L2 native tokens (MATIC/POL on Polygon, etc.) are ERC-20 tokens on the L2 chain, not separate SLIP-44 entries. For EVM L2 chains, the native gas token is ETH, so the native asset uses `slip44:60` regardless of which EVM chain. E.g., native ETH on Base is `eip155:8453/slip44:60` (ETH is coin type 60 on all EVM chains).
-
-**Confidence: HIGH** (ETH=60 and SOL=501 verified via SLIP-0044 registry and CAIP-20 spec)
-
----
-
-## CAIP-19 Examples (WAIaaS-relevant)
-
-```
-# Native assets
-eip155:1/slip44:60                                                        # ETH on Ethereum mainnet
-eip155:137/slip44:60                                                      # ETH (gas) on Polygon
-eip155:42161/slip44:60                                                    # ETH on Arbitrum
-eip155:10/slip44:60                                                       # ETH on Optimism
-eip155:8453/slip44:60                                                     # ETH on Base
-solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501                       # SOL on mainnet
-
-# ERC-20 tokens
-eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48                 # USDC on Ethereum
-eip155:137/erc20:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359               # USDC on Polygon
-eip155:42161/erc20:0xaf88d065e77c8cc2239327c5edb3a432268e5831             # USDC on Arbitrum
-eip155:8453/erc20:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913              # USDC on Base
-
-# SPL tokens (Solana)
-solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v  # USDC on Solana mainnet
-```
-
-**EVM address canonicalization**: CAIP-19 spec does NOT require canonicalization, but WAIaaS should lowercase EVM addresses in CAIP-19 URIs for consistency (matches existing `address.toLowerCase()` pattern used in policy matching).
-
----
-
-## CoinGecko Platform ID Mapping (EXTEND for L2 support)
-
-### Current (`coingecko-platform-ids.ts`)
+**ABI is trivially small.** Lido's `submit()` is a single payable function with one address parameter. The ABI can be hardcoded as a const array -- no ABI fetching or generation needed.
 
 ```typescript
-export const COINGECKO_PLATFORM_MAP: Record<string, CoinGeckoPlatform> = {
-  solana: { platformId: 'solana', nativeCoinId: 'solana' },
-  ethereum: { platformId: 'ethereum', nativeCoinId: 'ethereum' },
-};
+// Entire Lido stake ABI needed
+const LIDO_SUBMIT_ABI = [{
+  name: 'submit',
+  type: 'function',
+  stateMutability: 'payable',
+  inputs: [{ name: '_referral', type: 'address' }],
+  outputs: [{ name: '', type: 'uint256' }],
+}] as const;
 ```
 
-### Extended Mapping (CAIP-2 keyed)
+### 4b. Jito Staking (m28-04) -- SOL Liquid Staking
 
-Re-key by CAIP-2 chain ID for unambiguous L2 support:
+| Item | Value | Confidence |
+|------|-------|------------|
+| SPL Stake Pool Program | `SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy` | HIGH -- verified via [Jito docs](https://www.jito.network/docs/stakenet/jito-steward/advanced/spl-stake-pool-internals/) |
+| Jito Stake Pool Address | `Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb` | HIGH -- verified via [solanacompass](https://solanacompass.com/stake-pools/Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb) |
+| JitoSOL Mint | `J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn` | HIGH |
+| Deposit Instruction | DepositSol -- 10 accounts + lamports_in (u64) | HIGH -- verified via [docs.rs](https://docs.rs/spl-stake-pool/latest/spl_stake_pool/instruction/fn.deposit_sol.html) |
+| Instruction Building | Manual raw instruction encoding with @solana/kit | HIGH |
+| @solana/spl-stake-pool | **DO NOT USE** -- depends on @solana/web3.js ^1.95.3, incompatible with @solana/kit 6.x | HIGH |
 
-| CAIP-2 Chain ID | CoinGecko `platformId` | CoinGecko `nativeCoinId` | EVM Chain ID | WAIaaS Network |
-|----------------|----------------------|------------------------|--------------|----------------|
-| `eip155:1` | `ethereum` | `ethereum` | 1 | ethereum-mainnet |
-| `eip155:137` | `polygon-pos` | `matic-network` | 137 | polygon-mainnet |
-| `eip155:42161` | `arbitrum-one` | `ethereum` | 42161 | arbitrum-mainnet |
-| `eip155:10` | `optimistic-ethereum` | `ethereum` | 10 | optimism-mainnet |
-| `eip155:8453` | `base` | `ethereum` | 8453 | base-mainnet |
-| `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | `solana` | `solana` | N/A | mainnet |
+**Critical: @solana/spl-stake-pool is incompatible.** The npm package `@solana/spl-stake-pool@1.1.8` (last published 1+ year ago) depends on `@solana/web3.js ^1.95.3` (legacy v1). WAIaaS uses `@solana/kit ^6.0.1` (web3.js v2). These are **fundamentally incompatible** -- different address types, different transaction building APIs, different key types. There is no `@solana-program/stake-pool` package for @solana/kit yet.
 
-**Note**: Testnets are excluded from CoinGecko mapping (no price data for testnet tokens).
+**Solution: Manual instruction building.** Build DepositSol/WithdrawStake instructions manually:
+1. Encode instruction discriminator (u8) + lamports (u64 LE)
+2. Assemble 10 account metas (pool, withdraw auth, reserve, from, pool_tokens_to, fee, referrer, mint, token_program, system_program)
+3. Derive PDAs (withdraw authority, associated token accounts)
+4. Construct instruction with @solana/kit's `IInstruction` type
 
-**Confidence: MEDIUM** (polygon-pos=137 verified via CoinGecko docs. Other platform IDs based on CoinGecko's documented naming conventions and web search results. Should be verified with a live API call to `/asset_platforms` during implementation.)
+This approach is proven -- the Jito reference implementation demonstrates manual instruction building, and the project already builds raw Solana instructions in adapter-solana.
+
+**DepositSol Account Layout (10 accounts):**
+
+| # | Account | Writable | Signer | Description |
+|---|---------|----------|--------|-------------|
+| 0 | stakePool | W | - | Jito stake pool account |
+| 1 | withdrawAuthority | - | - | PDA: seeds=['withdraw', stakePool], program=SPoo1 |
+| 2 | reserveStake | W | - | Reserve stake account (from pool data) |
+| 3 | fundingAccount | W | S | SOL source (wallet address) |
+| 4 | poolTokensTo | W | - | JitoSOL destination ATA |
+| 5 | managerFeeAccount | W | - | Manager fee token account (from pool data) |
+| 6 | referrerPoolTokens | W | - | Referrer pool tokens (can be same as manager fee) |
+| 7 | poolMint | W | - | JitoSOL mint address |
+| 8 | systemProgram | - | - | System Program (11111...) |
+| 9 | tokenProgram | - | - | SPL Token Program |
+
+### 5. Gas Conditional Execution (m28-05)
+
+| Item | Value | Confidence |
+|------|-------|------------|
+| EVM Gas Price | `eth_gasPrice` RPC method (returns baseFee + priorityFee) | HIGH |
+| EVM Priority Fee | `eth_maxPriorityFeePerGas` RPC method | HIGH |
+| Solana Priority Fee | `getRecentPrioritizationFees` RPC method | HIGH |
+| No External API | Uses existing RPC endpoints via IChainAdapter | HIGH |
+| Worker Pattern | `setTimeout` chain (not `setInterval`) for reliable scheduling | HIGH |
+| DB State | GAS_WAITING status in transactions table (added in m28-03 migration) | HIGH |
+
+**No new dependencies.** Gas condition evaluation uses existing RPC infrastructure. EVM gas prices come from `eth_gasPrice` / `eth_maxPriorityFeePerGas` via viem's publicClient. Solana priority fees come from `getRecentPrioritizationFees` via @solana/kit's RPC.
 
 ---
 
-## Zod Schema Patterns for CAIP Validation
+## Dependency Graph for @waiaas/actions
 
-### Recommended Zod Schemas (to be placed in `packages/core/src/caip/schemas.ts`)
-
-```typescript
-import { z } from 'zod';
-
-// -- CAIP-2 Chain ID --
-// Format: namespace:reference
-// Example: "eip155:1", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
-
-export const Caip2Schema = z.string().regex(
-  /^[-a-z0-9]{3,8}:[-a-zA-Z0-9]{1,32}$/,
-  'Invalid CAIP-2 chain ID format (expected namespace:reference)',
-);
-export type Caip2 = z.infer<typeof Caip2Schema>;
-
-// -- CAIP-19 Asset Type --
-// Format: chain_id/asset_namespace:asset_reference
-// Example: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-
-export const Caip19AssetTypeSchema = z.string().regex(
-  /^[-a-z0-9]{3,8}:[-a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}$/,
-  'Invalid CAIP-19 asset type format (expected chainId/namespace:reference)',
-);
-export type Caip19AssetType = z.infer<typeof Caip19AssetTypeSchema>;
-
-// -- Convenience alias (WAIaaS uses "AssetId" to mean AssetType) --
-// Note: CAIP-19 "AssetId" technically includes token_id suffix for NFTs.
-// WAIaaS only handles fungible tokens, so AssetType is sufficient.
-// We alias it as Caip19Schema for API simplicity.
-
-export const Caip19Schema = Caip19AssetTypeSchema;
-export type Caip19 = Caip19AssetType;
+```
+@waiaas/actions (NEW)
+  +-- @waiaas/core (workspace:*)        # IActionProvider, ContractCallRequest, schemas
+  +-- viem (^2.21.0)                    # Lido ABI encoding, 0x Permit2 EIP-712 signing
+  +-- @solana/kit (^6.0.1)             # Jito raw instruction building
+  +-- @solana-program/token (^0.10.0)  # Token account derivation (Jito JitoSOL ATA)
+  +-- @solana-program/system (^0.11.0) # System program for SOL transfers
+  +-- zod (^3.24.0)                    # API response schema validation
 ```
 
-**Integration with existing Zod SSoT**:
-- These schemas follow the same pattern as `ChainTypeEnum`, `NetworkTypeEnum`, etc.
-- Exported from `packages/core/src/caip/index.ts` and re-exported from `packages/core/src/index.ts`.
-- Used in TokenRef extension: `assetId: Caip19Schema.optional()`.
-
-**Confidence: HIGH** (regex patterns verified against official CAIP-19 spec)
-
----
-
-## Implementation Plan: Parser/Formatter Module
-
-### File: `packages/core/src/caip/caip2.ts`
-
-```typescript
-// Parsed CAIP-2 result
-export interface Caip2Params {
-  namespace: string;  // e.g., "eip155", "solana"
-  reference: string;  // e.g., "1", "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
-}
-
-export function parseCaip2(chainId: string): Caip2Params {
-  Caip2Schema.parse(chainId); // Zod validation
-  const idx = chainId.indexOf(':');
-  return { namespace: chainId.slice(0, idx), reference: chainId.slice(idx + 1) };
-}
-
-export function formatCaip2(namespace: string, reference: string): string {
-  const result = `${namespace}:${reference}`;
-  Caip2Schema.parse(result); // validate on output too
-  return result;
-}
-```
-
-### File: `packages/core/src/caip/caip19.ts`
-
-```typescript
-export interface Caip19Params {
-  chainId: string;        // CAIP-2 chain ID
-  assetNamespace: string; // e.g., "slip44", "erc20", "token"
-  assetReference: string; // e.g., "60", "0xa0b8...", "EPjF..."
-}
-
-export function parseCaip19(assetType: string): Caip19Params {
-  Caip19Schema.parse(assetType);
-  const slashIdx = assetType.indexOf('/');
-  const chainId = assetType.slice(0, slashIdx);
-  const assetPart = assetType.slice(slashIdx + 1);
-  const colonIdx = assetPart.indexOf(':');
-  return {
-    chainId,
-    assetNamespace: assetPart.slice(0, colonIdx),
-    assetReference: assetPart.slice(colonIdx + 1),
-  };
-}
-
-export function formatCaip19(
-  chainId: string,
-  assetNamespace: string,
-  assetReference: string,
-): string {
-  const result = `${chainId}/${assetNamespace}:${assetReference}`;
-  Caip19Schema.parse(result);
-  return result;
-}
-```
-
-### File: `packages/core/src/caip/network-map.ts`
-
-Moves and extends `CAIP2_TO_NETWORK` + `NETWORK_TO_CAIP2` from `x402.types.ts`:
-- Source of truth for all 13 WAIaaS networks.
-- `x402.types.ts` imports from this module (backwards compatible).
-- Adds `networkToCaip2()` and `caip2ToNetwork()` functions.
-
-### File: `packages/core/src/caip/asset-helpers.ts`
-
-```typescript
-export function nativeAssetId(network: NetworkType): string {
-  const caip2 = networkToCaip2(network);
-  const { namespace } = parseCaip2(caip2);
-  if (namespace === 'eip155') return formatCaip19(caip2, 'slip44', '60');
-  if (namespace === 'solana') return formatCaip19(caip2, 'slip44', '501');
-  throw new Error(`Unsupported namespace: ${namespace}`);
-}
-
-export function tokenAssetId(network: NetworkType, address: string): string {
-  const caip2 = networkToCaip2(network);
-  const { namespace } = parseCaip2(caip2);
-  if (namespace === 'eip155') return formatCaip19(caip2, 'erc20', address.toLowerCase());
-  if (namespace === 'solana') return formatCaip19(caip2, 'token', address);
-  throw new Error(`Unsupported namespace: ${namespace}`);
-}
-
-export function isNativeAsset(caip19: string): boolean {
-  const { assetNamespace } = parseCaip19(caip19);
-  return assetNamespace === 'slip44';
-}
-```
+All dependencies already exist in the monorepo. No new packages to install.
 
 ---
 
 ## What NOT to Add
 
-| Do NOT Add | Reason |
-|------------|--------|
-| `caip` npm package | Stale (last real update 2022), incorrect regex, OOP API |
-| `@shapeshiftoss/caip` | 4.36 MB, drags in axios, massively over-scoped |
-| `@agentcommercekit/caip` | v0.1.0, too immature for production wallet |
-| `caip-utils` | v0.1.1, same immaturity issue |
-| `caip-solana` / `caip-eip155` | Chain-specific helpers, unnecessary when building a universal parser |
-| Any SLIP-44 lookup library (`slip44` npm) | Only need 2 values (ETH=60, SOL=501). A lookup table is overkill. |
-| NFT support (erc721, nft namespace) | Out of scope. WAIaaS handles fungible tokens only. |
+| Library | Why Reject |
+|---------|-----------|
+| `@jup-ag/api` | Jupiter REST API is 2 endpoints. SDK adds ~2MB, wraps same fetch calls, pins dependency versions |
+| `@solana/spl-stake-pool` | Depends on @solana/web3.js v1 (legacy). Incompatible with @solana/kit v6. Last updated 1+ year ago |
+| `@lifi/sdk` | LI.FI SDK is designed for frontend dApps with wallet adapters. Server-side needs only 2 REST endpoints (quote + status) |
+| `@0xproject/swap-sdk` | No official 0x SDK for server-side. REST API is the intended integration path |
+| Any gas oracle SDK (Blocknative, etc.) | RPC eth_gasPrice/eth_maxPriorityFeePerGas provides the same data without external dependency |
+| `@lidofinance/lido-ethereum-sdk` | Lido SDK is for frontend wallet integration. Server-side only needs `submit()` ABI encoding (4 lines with viem) |
+| `ethers` | Already using viem. Do not add a competing EVM library |
+
+---
+
+## packages/actions/ Package Configuration
+
+### package.json
+
+```json
+{
+  "name": "@waiaas/actions",
+  "version": "2.6.0-rc.3",
+  "description": "WAIaaS built-in DeFi Action Provider implementations",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "@solana-program/system": "^0.11.0",
+    "@solana-program/token": "^0.10.0",
+    "@solana/kit": "^6.0.1",
+    "viem": "^2.21.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3"
+  }
+}
+```
+
+### tsconfig.json
+
+Standard monorepo TypeScript config extending root, targeting ES2022, NodeNext module resolution.
+
+---
+
+## External API Authentication Summary
+
+| Protocol | Auth Required | Method | Config Key |
+|----------|--------------|--------|------------|
+| Jupiter | No (optional for rate limits) | `Authorization: Bearer <key>` header | `actions.jupiter_swap.api_key` |
+| 0x | **Yes** (mandatory) | `0x-api-key: <key>` header + `0x-version: v2` header | `actions.0x_swap.api_key` |
+| LI.FI | No (optional for rate limits) | `x-lifi-api-key: <key>` header | `actions.lifi.api_key` |
+| Lido | N/A (on-chain) | None | None |
+| Jito | N/A (on-chain) | None | None |
+
+**0x is the only protocol that requires an API key.** Free tier available at [dashboard.0x.org](https://dashboard.0x.org). The provider must validate key presence at initialization and provide a clear error message directing to Admin Settings if missing.
+
+---
+
+## Slippage Unit Conventions
+
+| Protocol | Unit | Config Key | Default | Max |
+|----------|------|------------|---------|-----|
+| Jupiter | BPS (integer, 100 = 1%) | `default_slippage_bps` / `max_slippage_bps` | 50 (0.5%) | 500 (5%) |
+| 0x | Percent (decimal, 0.01 = 1%) | `default_slippage_pct` / `max_slippage_pct` | 0.01 (1%) | 0.05 (5%) |
+| LI.FI | Percent (decimal, 0.03 = 3%) | `default_slippage_pct` / `max_slippage_pct` | 0.03 (3%) | 0.05 (5%) |
+
+Each config key uses the API-native unit to avoid conversion confusion. The key suffix (`_bps` vs `_pct`) makes the unit explicit.
+
+---
+
+## Contract/Program Addresses for CONTRACT_WHITELIST
+
+These addresses must be registered in CONTRACT_WHITELIST for each protocol to function (default-deny policy):
+
+| Protocol | Chain | Address | Description |
+|----------|-------|---------|-------------|
+| Jupiter | Solana | `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4` | Jupiter Aggregator v6 program |
+| 0x | All EVM | Per-chain ExchangeProxy (from quote response `to` field) | 0x Settlement contract |
+| 0x | All EVM | `0x000000000022D473030F116dDEE9F6B43aC78BA3` | Permit2 universal contract |
+| LI.FI | EVM | Per-route contract (from quote response `transactionRequest.to`) | LI.FI diamond proxy |
+| LI.FI | Solana | Per-route program (from quote response) | Bridge program |
+| Lido | Ethereum | `0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84` | stETH / Lido contract |
+| Lido | Ethereum | `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` | WithdrawalQueueERC721 |
+| Jito | Solana | `SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy` | SPL Stake Pool program |
 
 ---
 
@@ -422,63 +293,63 @@ export function isNativeAsset(caip19: string): boolean {
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| CAIP Parser | Custom ~200 LOC | `caip` npm v1.1.1 | Wrong regex (missing `.%` in asset_reference), OOP API, stale maintenance |
-| CAIP Parser | Custom ~200 LOC | `@shapeshiftoss/caip` v8.16.7 | 4.36 MB, requires axios, massively bloated |
-| Zod Validation | Regex-based Zod schemas | Runtime class-based validation (caip npm) | Breaks Zod SSoT derivation chain |
-| CoinGecko Mapping | Extend existing `COINGECKO_PLATFORM_MAP` | Fetch from `/asset_platforms` API at runtime | Adds HTTP dependency + latency. Static map is sufficient for 6 supported mainnets. |
-| Solana SPL namespace | `token` | `spl` | Official CAIP namespace is `token`, not `spl`. Using `spl` would break interop. |
-| EVM address case | Lowercase in CAIP-19 | Mixed-case (EIP-55 checksum) | CAIP-19 spec says canonicalization is optional; lowercase matches existing WAIaaS pattern |
+| Jupiter integration | Native fetch | @jup-ag/api SDK | SDK wraps 2 REST endpoints, adds 2MB, pins versions. fetch is simpler and already used project-wide |
+| 0x integration | Native fetch + viem signTypedData | @0x/swap SDK | No official server-side SDK. REST + viem EIP-712 is the documented integration path |
+| LI.FI integration | Native fetch + polling | @lifi/sdk | SDK designed for frontend wallet adapters. Server needs only quote + status endpoints |
+| Jito instruction building | Manual with @solana/kit | @solana/spl-stake-pool | spl-stake-pool depends on @solana/web3.js v1 (incompatible with @solana/kit v6). Last updated 1yr+ ago |
+| Lido ABI encoding | viem encodeFunctionData | @lidofinance/lido-ethereum-sdk | SDK is for frontend. submit() is 1 function -- 4 lines of ABI encoding with viem |
+| Gas oracle | RPC eth_gasPrice | Blocknative / EthGasStation | External dependency for data already available from RPC. Self-hosted principle |
+| SOL DEX (alt to Jupiter) | Jupiter | Raydium | Jupiter aggregates Raydium + others. Single aggregator covers more liquidity |
+| EVM DEX (alt to 0x) | 0x | 1inch | 0x: 19+ chains, Permit2, institutional-grade. 1inch: 9+ chains, Fusion (gasless) is nice but separate feature |
+| Cross-chain (alt to LI.FI) | LI.FI | Socket / Bungee | LI.FI: 100+ bridges, 40+ chains, single API. Socket has fewer integrations |
+| ETH staking (alt to Lido) | Lido | Rocket Pool | Lido: $35B TVL, stETH is DeFi standard. Rocket Pool: more decentralized but 10x less TVL |
+| SOL staking (alt to Jito) | Jito | Marinade | Jito: largest SOL LST, MEV rewards. Marinade: good but smaller TVL |
 
 ---
 
-## Installation
+## Installation (packages/actions/)
 
 ```bash
-# No new packages needed.
-# Zero npm install commands.
-```
+# No new packages to install -- all dependencies are already in the monorepo.
+# Just create the package and reference workspace dependencies:
 
----
+# 1. Create package directory
+mkdir -p packages/actions/src/providers
 
-## Migration Path for Existing Code
+# 2. Add to pnpm workspace (already included via packages/* glob)
 
-### x402.types.ts Refactoring
+# 3. Add workspace dependency in daemon:
+# packages/daemon/package.json -> "@waiaas/actions": "workspace:*"
 
-```
-BEFORE: CAIP2_TO_NETWORK defined in x402.types.ts
-AFTER:  CAIP2_TO_NETWORK defined in caip/network-map.ts
-        x402.types.ts re-exports from caip/network-map.ts
-```
-
-### coingecko-platform-ids.ts Extension
-
-```
-BEFORE: Keyed by ChainType ('solana' | 'ethereum') -- 2 entries
-AFTER:  Keyed by CAIP-2 chain ID -- 6+ entries (mainnet networks)
-        Old ChainType-keyed API preserved as compatibility wrapper
-```
-
-### TokenRef Extension
-
-```
-BEFORE: { address, symbol?, decimals, chain }
-AFTER:  { address, symbol?, decimals, chain, assetId?, network? }
-        assetId is optional for backwards compatibility
+# 4. Turbo pipeline: add to turbo.json build dependencies
 ```
 
 ---
 
 ## Sources
 
-- [CAIP-19 Specification](https://standards.chainagnostic.org/CAIPs/caip-19) -- HIGH confidence
-- [CAIP-2 Specification](https://standards.chainagnostic.org/CAIPs/caip-2) -- HIGH confidence
-- [CAIP-20 (SLIP44 Asset Namespace)](https://standards.chainagnostic.org/CAIPs/caip-20) -- HIGH confidence
-- [EIP155 CAIP-19 Namespace](https://namespaces.chainagnostic.org/eip155/caip19) -- HIGH confidence
-- [Solana CAIP-19 Namespace](https://namespaces.chainagnostic.org/solana/caip19) -- HIGH confidence
-- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) -- HIGH confidence
-- [SLIP-0044 Registry](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) -- HIGH confidence
-- [CoinGecko Asset Platforms API](https://docs.coingecko.com/reference/asset-platforms-list) -- MEDIUM confidence (platform IDs verified for polygon-pos, others inferred from naming convention)
-- [caip npm package](https://www.npmjs.com/package/caip) -- HIGH confidence (metadata verified via npm registry)
-- [@shapeshiftoss/caip npm](https://www.npmjs.com/package/@shapeshiftoss/caip) -- HIGH confidence (metadata verified via npm registry)
-- [pedrouid/caip-js GitHub](https://github.com/pedrouid/caip-js) -- HIGH confidence (source code inspected)
-- Existing WAIaaS codebase (`x402.types.ts`, `coingecko-platform-ids.ts`, `chain.ts`) -- HIGH confidence (direct code inspection)
+### Verified (HIGH confidence)
+- [Jupiter Swap API docs](https://dev.jup.ag/docs/swap-api) -- Quote + swap-instructions endpoints
+- [Jupiter Quote endpoint](https://dev.jup.ag/docs/swap-api/get-quote) -- Parameters and response schema
+- [0x Swap API v2 upgrade guide](https://0x.org/docs/upgrading/upgrading_to_swap_v2) -- v2 headers, chainId param, Permit2
+- [0x Permit2 guide](https://0x.org/docs/0x-swap-api/guides/swap-tokens-with-0x-swap-api-permit2) -- EIP-712 signing flow
+- [LI.FI API reference](https://docs.li.fi/api-reference/introduction) -- Base URL, auth, rate limits
+- [LI.FI Solana integration](https://docs.li.fi/li.fi-api/solana) -- Chain ID, bridges, token addresses
+- [LI.FI status tracking](https://docs.li.fi/introduction/user-flows-and-examples/status-tracking) -- Polling endpoint
+- [Lido contract docs](https://docs.lido.fi/contracts/lido/) -- submit() function, contract address
+- [Lido Withdrawal Queue](https://docs.lido.fi/contracts/withdrawal-queue-erc721/) -- requestWithdrawals(), address
+- [Jito Stake Pool internals](https://www.jito.network/docs/stakenet/jito-steward/advanced/spl-stake-pool-internals/) -- SPL Stake Pool program
+- [Jito reference implementation](https://github.com/jito-foundation/jito-stake-unstake-reference) -- DepositSol/WithdrawStake instruction building
+- [SPL Stake Pool deposit_sol](https://docs.rs/spl-stake-pool/latest/spl_stake_pool/instruction/fn.deposit_sol.html) -- 10-account instruction spec
+- [viem encodeFunctionData](https://viem.sh/docs/contract/encodeFunctionData.html) -- ABI encoding
+- [viem signTypedData](https://viem.sh/docs/actions/wallet/signTypedData.html) -- EIP-712 signing
+- Locked versions verified from pnpm-lock.yaml: viem@2.45.3, @solana/kit@6.0.1, zod@3.25.76
+
+### Verified (MEDIUM confidence)
+- Jupiter API key authentication method (documented but details sparse)
+- 0x supported chains list (19+ confirmed, exact list may change)
+
+### Needs Validation at Implementation Time
+- Jupiter swap-instructions response exact field names (verify with live API call)
+- 0x quote response `permit2.eip712` object structure (verify with testnet call)
+- LI.FI Solana transaction format differences from EVM (verify with testnet)

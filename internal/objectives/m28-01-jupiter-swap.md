@@ -1,7 +1,7 @@
 # 마일스톤 m28-01: Jupiter Swap (첫 번째 Action Provider 구현체)
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v28.1
 
 ## 목표
 
@@ -128,6 +128,7 @@ jito_tip_lamports = 1000                       # Jito MEV 보호 tip
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m28-00 (기본 DeFi 프로토콜 설계) | DEFI-01(패키지 구조), DEFI-02(REST→calldata 공통 패턴), DEFI-03(정책 연동), DEFI-05(테스트 전략) 설계 산출물을 입력으로 사용 |
 | v1.5 (가격 오라클 + Action Provider 프레임워크) | IActionProvider 인터페이스, ActionProviderRegistry, MCP Tool 자동 변환, POST /v1/actions/:provider/:action 엔드포인트가 v1.5에서 구현됨. JupiterSwapActionProvider는 이 프레임워크 위에서 동작 |
 | v1.4 (토큰 + 컨트랙트 확장) | ContractCallRequest 인터페이스, CONTRACT_WHITELIST 정책, 파이프라인 Stage 5가 v1.4에서 구현됨 |
 
