@@ -39,6 +39,7 @@ PACKAGES=(
   "packages/adapters/evm"
   "packages/wallet-sdk"
   "packages/push-relay"
+  "packages/actions"
 )
 
 echo ""
@@ -76,6 +77,7 @@ npm install \
   "${TARBALLS[@waiaas/adapter-solana]}" \
   "${TARBALLS[@waiaas/adapter-evm]}" \
   "${TARBALLS[@waiaas/push-relay]}" \
+  "${TARBALLS[@waiaas/actions]}" \
   --save
 
 # Step 4: Verify ESM imports

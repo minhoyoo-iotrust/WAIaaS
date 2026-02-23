@@ -31,6 +31,7 @@ COPY packages/cli/package.json packages/cli/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
 COPY packages/mcp/package.json packages/mcp/package.json
 COPY packages/push-relay/package.json packages/push-relay/package.json
+COPY packages/actions/package.json packages/actions/package.json
 
 # 3) Install all dependencies (frozen lockfile for reproducibility)
 RUN pnpm install --frozen-lockfile
@@ -85,6 +86,7 @@ COPY --from=builder /app/packages/cli/package.json packages/cli/package.json
 COPY --from=builder /app/packages/sdk/package.json packages/sdk/package.json
 COPY --from=builder /app/packages/mcp/package.json packages/mcp/package.json
 COPY --from=builder /app/packages/push-relay/package.json packages/push-relay/package.json
+COPY --from=builder /app/packages/actions/package.json packages/actions/package.json
 
 # 3) Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
@@ -99,6 +101,7 @@ COPY --from=builder /app/packages/cli/dist packages/cli/dist
 COPY --from=builder /app/packages/cli/bin packages/cli/bin
 COPY --from=builder /app/packages/sdk/dist packages/sdk/dist
 COPY --from=builder /app/packages/mcp/dist packages/mcp/dist
+COPY --from=builder /app/packages/actions/dist packages/actions/dist
 
 # 5) Copy and prepare entrypoint
 COPY docker/entrypoint.sh /app/entrypoint.sh
