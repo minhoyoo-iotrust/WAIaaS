@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.6...v2.6.0-rc.7) (2026-02-23)
+
+
+### Bug Fixes
+
+* add @waiaas/actions to release-please config and bump version ([5dedec4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5dedec4a4bd296a63c32d23f547538e00a97c267))
+
 ## [2.6.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.5...v2.6.0-rc.6) (2026-02-23)
 
 
