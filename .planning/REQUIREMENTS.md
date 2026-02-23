@@ -68,29 +68,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SWAP-01 | — | Pending |
-| SWAP-02 | — | Pending |
-| SWAP-03 | — | Pending |
-| SWAP-04 | — | Pending |
-| SWAP-05 | — | Pending |
-| SWAP-06 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
-| SAFE-03 | — | Pending |
-| SAFE-04 | — | Pending |
-| SAFE-05 | — | Pending |
-| PLCY-01 | — | Pending |
-| PLCY-02 | — | Pending |
-| DX-01 | — | Pending |
-| DX-02 | — | Pending |
-| DX-03 | — | Pending |
-| DX-04 | — | Pending |
+| SWAP-01 | Phase 246 | Pending |
+| SWAP-02 | Phase 246 | Pending |
+| SWAP-03 | Phase 246 | Pending |
+| SWAP-04 | Phase 246 | Pending |
+| SWAP-05 | Phase 246 | Pending |
+| SWAP-06 | Phase 246 | Pending |
+| SAFE-01 | Phase 246 | Pending |
+| SAFE-02 | Phase 246 | Pending |
+| SAFE-03 | Phase 246 | Pending |
+| SAFE-04 | Phase 246 | Pending |
+| SAFE-05 | Phase 246 | Pending |
+| PLCY-01 | Phase 247 | Pending |
+| PLCY-02 | Phase 247 | Pending |
+| DX-01 | Phase 247 | Pending |
+| DX-02 | Phase 247 | Pending |
+| DX-03 | Phase 247 | Pending |
+| DX-04 | Phase 247 | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation*
