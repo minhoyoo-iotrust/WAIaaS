@@ -180,6 +180,7 @@
 | 163 | BUG | HIGH | 알림 메시지 {txId} 미치환 회귀 — TX_APPROVAL_REQUIRED, TX_FAILED 등 6곳 | v28.2 | FIXED | 2026-02-24 |
 | 164 | ENHANCEMENT | MEDIUM | 인커밍 모니터링이 환경 기본 네트워크만 구독 (전체 네트워크 미지원) | v28.2 | OPEN | — |
 | 165 | ENHANCEMENT | HIGH | 알림 메시지 금액이 최소 단위(wei/lamports)로 표시 (사람 친화적 포맷 미지원) | v28.2 | OPEN | — |
+| 166 | BUG | HIGH | WalletConnect 핫리로드 시 WcSigningBridge 미생성 — 서명 요청 전달 불가 | v28.2 | OPEN | — |
 
 ## Type Legend
 
@@ -191,9 +192,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 3
 - **FIXED:** 162
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 165
+- **Total:** 166
