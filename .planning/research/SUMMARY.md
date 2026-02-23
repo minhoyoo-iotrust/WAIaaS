@@ -1,199 +1,180 @@
 # Project Research Summary
 
-**Project:** WAIaaS CAIP-19 Asset Identification (m27-02)
-**Domain:** Multi-chain asset identification standard integration into existing wallet infrastructure
-**Researched:** 2026-02-22
+**Project:** WAIaaS Jupiter Swap Action Provider (m28-01)
+**Domain:** Solana DEX Token Swap via Jupiter Aggregator — IActionProvider Implementation
+**Researched:** 2026-02-23
 **Confidence:** HIGH
 
 ## Executive Summary
 
-WAIaaS currently fragments token identification across multiple representations: `{address, decimals, symbol}` + `chain` in transaction requests, `${chain}:${address}` as price oracle cache keys, `(network, address)` as the token registry primary index, and a partial CAIP-2 mapping already used for x402 and WalletConnect. This fragmentation directly causes the inability to resolve L2 token prices (Polygon USDC, Arbitrum USDC) because the oracle cannot distinguish same-address tokens deployed on different EVM chains. CAIP-19 (`chainId/namespace:reference`) is the industry-standard solution, with the ChainAgnostic Improvement Proposals providing exact specifications for all 13 WAIaaS networks across both Solana and EVM chains.
+Jupiter Swap Action Provider (m28-01) is the first built-in Action Provider in the WAIaaS DeFi expansion. The implementation integrates Jupiter Aggregator's REST API into the existing IActionProvider framework, converting Jupiter swap instructions into ContractCallRequest objects that flow through the established 6-stage pipeline. The approach requires no new npm dependencies — two Jupiter REST endpoints (`/swap/v1/quote` and `/swap/v1/swap-instructions`) are consumed via native Node.js `fetch()` with Zod response validation for runtime API drift detection. A new `@waiaas/actions` monorepo package isolates built-in providers from daemon internals and establishes the container for all future built-in Action Providers.
 
-The recommended approach is a custom ~240 LOC CAIP module (`packages/core/src/caip/`) with zero new npm dependencies. All four evaluated external libraries were rejected: the leading `caip` npm package (v1.1.1) has an incorrect regex that omits `.` and `%` from `asset_reference`, is effectively unmaintained (last real update 2022), and uses an OOP API incompatible with WAIaaS's Zod SSoT discipline; `@shapeshiftoss/caip` is 4.36 MB and drags in axios; the remaining two candidates are pre-release (v0.1.x) with no track record. The implementation consolidates the existing `CAIP2_TO_NETWORK` map from `x402.types.ts` into the new module, eliminating duplication between x402 types and the WalletConnect session service. All integration points use optional additive fields, preserving backward compatibility for all existing SDK and MCP consumers.
+The recommended approach is a 2-phase build: Phase 246 implements the core provider (JupiterApiClient + JupiterSwapActionProvider + unit tests with msw mocks), and Phase 247 wires the daemon integration (built-in registration, config parsing, policy integration, MCP verification, skill file update). This sequencing minimizes risk because the provider logic is fully testable in isolation before touching daemon startup code. The critical architectural constraint is using `/swap-instructions` rather than `/swap` — the latter returns a serialized transaction that is incompatible with the resolve-then-execute pattern and cannot be mapped to ContractCallRequest.
 
-The highest-risk area is not the CAIP parser itself (trivial string manipulation) but the transition layer: EVM address case normalization must happen at CAIP construction time or cache misses and policy bypass vulnerabilities emerge; the DB migration that auto-populates `asset_id` must enumerate all 13 networks correctly or produce silent data corruption; and the policy engine must handle all four address/assetId matching combinations or a silent security regression occurs. A 4-phase build order — Core CAIP module, Oracle/TokenRef, DB/Registry/Schema, Pipeline/Policy/API/MCP — mirrors the natural dependency chain and isolates risk at each step.
+The top risks are: (1) using the wrong Jupiter endpoint (`/swap` vs `/swap-instructions`), which is a critical design violation already guarded by design doc 63; (2) compute budget instructions from Jupiter's response must be included alongside the swap instruction or transactions fail on complex multi-hop routes; (3) the ContractCallRequest `accounts[]` field name must be verified against the actual schema before implementation to avoid a silent Zod validation mismatch. All three risks are fully addressed by the existing design decisions and the Zod-first validation strategy.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Zero new npm dependencies are required. The custom `caip/` module uses the existing Zod 3.x infrastructure for schema validation via two regex-based schemas (`Caip2Schema`, `Caip19AssetTypeSchema`). The CAIP-19 spec's exact regexes have been verified against the official ChainAgnostic standards site and differ meaningfully from what the `caip` npm package implements (the npm package incorrectly uses `[-a-zA-Z0-9]` for `asset_reference`, missing `.` and `%`). The existing CoinGecko platform ID map (`coingecko-platform-ids.ts`) needs to be extended with 4 L2 mainnet entries keyed by CAIP-2 chain ID rather than by chain type string.
+The implementation leverages entirely existing infrastructure with zero new npm dependencies. Jupiter integration is handled via native `fetch()` (Node.js 22 built-in), `AbortSignal.timeout(10_000)`, and Zod response schemas. The only new artifact is the `packages/actions/` package that houses built-in providers, with `@waiaas/core` and `zod` as peer dependencies only.
 
 **Core technologies:**
-- Custom `packages/core/src/caip/` module (5 files, ~240 LOC): CAIP-2 and CAIP-19 parsing/formatting — zero-dependency, spec-compliant, integrates with Zod SSoT. Existing `parseCaip2()` in `x402.types.ts` is the proof-of-concept foundation.
-- Zod 3.x (existing): CAIP URI validation — regex-based schemas maintain the Zod SSoT derivation chain (Zod -> TS -> OpenAPI -> Drizzle).
-- `coingecko-platform-ids.ts` (extend existing): L2 price oracle mapping — extend with `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` platform IDs keyed by CAIP-2 string.
+- `@waiaas/core` (IActionProvider, ContractCallRequest types) — unchanged interface; JupiterSwapActionProvider implements resolve()
+- `@waiaas/daemon` (ActionProviderRegistry, 6-stage pipeline) — unchanged; built-in registration added to Step 4f of daemon startup
+- Jupiter API v1 (native fetch, no SDK) — `/swap/v1/quote` + `/swap/v1/swap-instructions` only; SDK adds unnecessary bundle bloat for 2 endpoints
+- Jito MEV protection (via Jupiter parameter) — `jitoTipLamports` in swap-instructions request; Jupiter handles Jito block engine internally; no direct Jito SDK needed
+- Zod 3.x (runtime response validation) — API drift detection; critical for long-term maintainability as Jupiter API evolves
+- `@solana/kit` 6.x (unchanged) — handles signing and transaction submission downstream in the pipeline
+
+**What not to add:**
+- `@jup-ag/api` (Jupiter SDK) — unnecessary; 2 endpoints via native fetch is sufficient
+- `jito-ts` — Jupiter API abstracts Jito; direct Jito SDK would add coupling without benefit
+- Any Raydium/Orca/individual DEX SDK — Jupiter aggregates 20+ DEXes; per-DEX SDKs defeat the purpose
 
 ### Expected Features
 
-**Must have (table stakes) — 19 features total:**
-- CAIP-2 parser/formatter (generalize existing `parseCaip2()` from x402.types.ts, add `formatCaip2()`)
-- CAIP-19 parser/formatter with spec-compliant regex including `.` and `%` in `asset_reference`
-- Zod validation schemas `Caip2Schema` and `Caip19AssetTypeSchema`
-- Consolidated NetworkType <-> CAIP-2 bidirectional map (eliminate x402 + WC session service duplicates)
-- `nativeAssetId(network)`, `tokenAssetId(network, address)`, `isNativeAsset()` helpers
-- EVM address lowercase normalization at CAIP-19 construction (Solana MUST NOT be lowercased — base58 is case-sensitive)
-- TokenRef extension with optional `assetId` and `network` fields
-- Price oracle cache key migration to CAIP-19 format (network-aware, atomic with PYTH_FEED_IDS update)
-- CoinGecko L2 platform ID mapping for all 5 EVM mainnets
-- Token registry DB migration v22 with `asset_id` column and application-level backfill
-- Transaction request `assetId` optional field with Stage 1 extraction and cross-validation against `address`
-- ALLOWED_TOKENS policy: `assetId` support in rules and 4-scenario evaluation logic
-- MCP tools: `assetId` parameter on `send_token`, `approve_token`, `get_token_balance`
-- SDK (TS + Python): optional `assetId` field support
-- Skills files: CAIP-19 documentation for AI agents
+**Must have (table stakes):**
+- Quote API call with Zod-validated response — foundation of all swap flows; catches API drift early
+- `/swap-instructions` call and ContractCallRequest conversion — core resolve() output; must use this endpoint not `/swap`
+- Slippage protection (default 50bps, max 500bps, schema-enforced) — user expects safe defaults; upper bound prevents runaway slippage
+- Price impact validation (reject > 1%) — prevents catastrophic loss on illiquid routes; PRICE_IMPACT_TOO_HIGH error
+- MCP tool auto-exposure (`mcpExpose=true`) — AI agents need tool access without manual wiring
+- SDK `executeAction('jupiter_swap', params)` support — SDK users expect consistent interface across all actions
+- `[actions.jupiter_swap]` config.toml section — all parameters overridable at deploy time without code changes
 
-**Should have (differentiators — highest priority first):**
-- L2 token price resolution — the primary business value: Polygon USDC, Arbitrum USDC, Base USDC prices now resolvable via CoinGecko L2 platform mapping
-- CAIP-19 policy scoping — closes L2 address collision security gap (same USDC address on Ethereum vs Polygon treated as distinct assets)
-- `assetId` -> auto-extraction of `{address, chain, network}` — superior DX: AI agent sends one field instead of four
-- x402 + WalletConnect CAIP-2 code consolidation — maintenance debt elimination, single SSoT
+**Should have (differentiators):**
+- Jito MEV protection (tip lamports via Jupiter parameter) — prevents frontrunning and sandwich attacks; low cost (~$0.0002/swap)
+- `programId` verification against known Jupiter program address — MITM defense; prevents spoofed swap instructions
+- `restrictIntermediateTokens=true` — prevents routing through manipulated or low-liquidity tokens
+- `inputMint === outputMint` pre-validation — eliminates nonsense swap requests before hitting the API
+- CONTRACT_WHITELIST integration — consistent with WAIaaS default-deny policy; Jupiter program must be whitelisted
+- SPENDING_LIMIT USD conversion — existing price oracle enables policy enforcement on swap input amount
 
-**Defer to follow-up:**
-- ActionProvider CAIP-19 input standard (no current ActionProvider to retrofit; define interface now, implement later)
-- Incoming TX `asset_id` column backfill (minor enhancement, quick follow-up task after v27.1 known gap STO-03 resolution)
-- Admin UI CAIP-19 display (low priority vs API/MCP consumers)
-- NFT support (erc721, nft namespace) — explicitly out of scope for fungible-asset wallet
+**Defer to later milestones:**
+- DCA (Dollar Cost Averaging) — separate milestone scope with different API flow
+- Limit Orders — separate milestone scope; requires background execution model
+- Route visualization in Admin UI — Admin UI extension, out of m28-01 scope
+- Multi-hop customization — Jupiter auto-optimizes; manual route control adds complexity without value
 
 ### Architecture Approach
 
-The integration is a widening operation: a single new module (`packages/core/src/caip/`) becomes the canonical identification layer, and 14 existing files are modified to flow `assetId`/`network` context through the stack. The caip module has clean internal dependency ordering (caip2 -> caip19 -> network-map -> asset-helpers -> index) with no circular dependencies. The existing CAIP-2 foundation in `x402.types.ts` is re-exported from the new module for backward compatibility, eliminating duplication without breaking existing imports. The adapter layer (SolanaAdapter, EvmAdapter) is intentionally not touched — CAIP-19 is resolved to raw `{address, chain}` before reaching adapters, preserving their single responsibility.
+The architecture follows strict layering: JupiterSwapActionProvider implements IActionProvider and emits ContractCallRequest, which passes unchanged into the existing 6-stage pipeline (policy → sign → submit → confirm). No pipeline modifications are needed. The new `packages/actions/` package has peer dependencies only — the daemon imports and registers it at startup. The JupiterApiClient is a thin fetch wrapper with Zod validation; the provider orchestrates a 6-step resolve flow (input validation → quote → quote validation → swap-instructions → ContractCallRequest mapping → defensive re-validation).
 
 **Major components:**
-1. `packages/core/src/caip/` (NEW, 5 files, ~240 LOC) — canonical CAIP-2/19 parsing, formatting, validation, and network mapping; consolidates existing x402.types.ts maps
-2. Price oracle chain (MODIFY 4 files: `price-cache.ts`, `coingecko-platform-ids.ts`, `coingecko-oracle.ts`, `oracle-chain.ts`) — TokenRef gains `network`, cache keys become CAIP-19, CoinGecko platform map gains 4 L2 entries
-3. DB migration v22 + token registry (MODIFY 3 files: `schema.ts`, `migrate.ts`, `token-registry-service.ts`) — `asset_id` column with application-level backfill for all 13 networks
-4. Schema extensions (MODIFY 2 files: `transaction.schema.ts`, `policy.schema.ts`) — optional `assetId` on `TokenInfoSchema` and `AllowedTokensRulesSchema`
-5. Pipeline/policy/API/MCP/SDK/Skills (MODIFY 7+ files) — optional `assetId` integration at all consumer-facing touch points
-6. x402.types.ts + wc-session-service.ts (MODIFY 2 files) — re-export from caip/ module, eliminating duplication
+1. `JupiterApiClient` — HTTP client for Jupiter REST API (native fetch + AbortSignal timeout + Zod response validation); handles optional `x-api-key` header for rate limit relaxation
+2. `JupiterSwapActionProvider` — IActionProvider implementation; orchestrates 6-step resolve flow; produces ContractCallRequest containing programId, instructionData (Base64), and accounts
+3. `packages/actions/` (new monorepo package) — container for all built-in Action Providers; peer deps on `@waiaas/core` and `zod`; no daemon knowledge
+4. Daemon startup extension (Step 4f) — built-in provider registration before ESM plugin loading; config-driven enable/disable; ApiKeyStore for encrypted API key
+5. Zod schemas (input + quote response + swap-instructions response) — SSoT for all Jupiter API types; enables API drift detection; validates both real and mocked responses
 
 **Key patterns to follow:**
-- Optional field with priority resolution: `assetId` takes priority when present; legacy `address`+`chain` path unchanged when absent
-- Cache key migration via volatile cache: in-memory cache clears on restart, so format changes require no data migration
-- DB column addition with application-level backfill: SELECT + loop + UPDATE in migration runner (follows established v6b pattern)
+- Provider-first testability: provider is fully testable without daemon integration via msw HTTP mocks
+- Defensive re-validation: ContractCallRequestSchema.parse() at end of resolve() guards against malformed output
+- Config-driven behavior: all numeric parameters (slippage, price impact, Jito tip, timeout) are config.toml overridable and SettingsService runtime-adjustable
 
 ### Critical Pitfalls
 
-1. **EVM address case normalization (C-01, CRITICAL)** — EVM addresses must be lowercased at `formatCaip19()` / `tokenAssetId()` construction time. The existing codebase already lowercases in `price-cache.ts:38-41`, `coingecko-oracle.ts:67`, and `database-policy-engine.ts:927`. If CAIP-19 strings are constructed with EIP-55 checksum addresses (mixed case) but compared against lowercase cache keys, cache misses and policy bypass vulnerabilities emerge. Prevention: canonicalize when `chainNamespace === 'eip155'` in the formatter; never compare raw CAIP-19 strings.
-
-2. **Solana base58 must never be lowercased (C-02, CRITICAL)** — Base58 is case-sensitive: lowercasing `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (USDC mint) produces an invalid and different address. Prevention: branch on CAIP-2 namespace — lowercase only when `namespace === 'eip155'`; add explicit "NEVER lowercase Solana addresses" comment; existing security test `policy-bypass-attacks.security.test.ts:313` documents this exact scenario.
-
-3. **Policy evaluation 4-scenario correctness (C-03, CRITICAL)** — During the dual-support period, the policy engine encounters four matching combinations: (address policy, address tx), (address policy, assetId tx), (assetId policy, address tx), (assetId policy, assetId tx). Missing any scenario creates a default-deny bypass security gap. Prevention: normalize both policy rule and transaction to a `(chain, network, address)` tuple before comparison; 16+ test cases minimum for ALLOWED_TOKENS alone.
-
-4. **DB migration auto-population errors (C-04, CRITICAL)** — The migration SQL CASE statement must enumerate all 13 networks explicitly. A missing branch silently produces NULL or wrong `asset_id` values. After the unique index is created, wrong values cause constraint violations on future inserts. CAIP-2 mapping lives in JavaScript, not SQL — use application-level SELECT + loop + UPDATE (established WAIaaS pattern from migration v6b). Prevention: write a TypeScript round-trip verification test after migration runs; handle NULLs gracefully for any unmappable rows.
-
-5. **Price oracle cache key atomic switchover (C-05, CRITICAL)** — Changing `buildCacheKey()` from `${chain}:${address}` to CAIP-19 format orphans `PYTH_FEED_IDS` map keys (currently `solana:native`, `ethereum:0x...`). Prevention: update `buildCacheKey()`, `PYTH_FEED_IDS`, and `COINGECKO_PLATFORM_MAP` in the same Phase 2 commit. The cache is volatile (in-memory only, clears on restart) so no persistent data migration is needed; a daemon restart after deploy is sufficient.
+1. **/swap vs /swap-instructions endpoint choice (CRITICAL)** — `/swap` returns a serialized Base64 transaction with embedded feePayer and recentBlockhash, making ContractCallRequest mapping impossible. Must use `/swap-instructions`. Design doc 63 specifies this; enforce in code review.
+2. **computeBudgetInstructions omission (MEDIUM, HIGH impact)** — Jupiter's response includes `computeBudgetInstructions` that set the CU limit and priority fee. Omitting them causes transaction failure on multi-hop routes that exceed Solana's default 200K CU limit. These must be included alongside swapInstruction in the transaction build. Resolution approach (batch vs additional fields vs adapter auto-detect) must be determined by reading `IChainAdapter.buildContractCall()` before implementation.
+3. **ContractCallRequest accounts field name mismatch (HIGH)** — Design doc 63 references `accounts[].address` but the actual schema may use `accounts[].pubkey`. A mismatch causes Zod validation failure with no clear error message. Verify the exact field name in the live ContractCallRequestSchema before writing the mapping code.
+4. **Jupiter API URL migration (HIGH)** — Legacy tutorials reference `quote-api.jup.ag/v6/quote`; correct URL is `api.jup.ag/swap/v1/quote`. Zod response validation catches wrong endpoint at runtime; `api_base_url` config allows correction without code changes.
+5. **ATA setup instructions required (MEDIUM)** — If the wallet lacks an ATA for the output token, the swap fails. Jupiter's `setupInstructions` in the response handle ATA creation and must be prepended to the transaction before swapInstruction.
 
 ## Implications for Roadmap
 
-Based on research, the natural dependency chain drives a 4-phase build order. Every subsequent phase imports from the caip module, so Phase 1 is an unblockable prerequisite. The oracle changes (Phase 2) are independent of the DB changes (Phase 3), but both must be complete before Phase 4 pipeline integration can be tested end-to-end.
+The 2-phase structure from ARCHITECTURE.md is confirmed as optimal. Dependencies flow cleanly: Phase 246 produces a fully tested, standalone provider; Phase 247 wires it into the running system and validates end-to-end. All critical pitfalls land in Phase 246 where unit tests can catch them before any daemon interaction.
 
-### Phase 1: Core CAIP Module + Network Map Consolidation
+### Phase 246: Core Provider Implementation
 
-**Rationale:** Every other phase depends on `packages/core/src/caip/`. Build this first with comprehensive unit tests so downstream phases have a reliable, independently-verified foundation. Consolidating `CAIP2_TO_NETWORK` from x402 and WC in this phase prevents duplication drift (Pitfall L-06) and makes the SSoT canonical from the start.
+**Rationale:** The provider is independently testable without daemon integration. Building and testing it in isolation catches the critical pitfalls (wrong endpoint, missing computeBudget, field name mismatches, ATA handling) before touching the daemon startup path. This is the higher-risk phase — all critical and medium pitfalls concentrate here and must be resolved before Phase 247.
 
-**Delivers:** `caip2.ts` (parser/formatter/Zod schema), `caip19.ts` (parser/formatter/Zod schema with spec-compliant `.%` in asset_reference), `network-map.ts` (consolidated 13-network bidirectional map), `asset-helpers.ts` (`nativeAssetId`, `tokenAssetId`, `isNativeAsset`, `extractAddress`, `resolveAssetId`), `index.ts` (barrel export). Modified files: `x402.types.ts` (re-export from caip/), `wc-session-service.ts` (import from caip/), `price-oracle.types.ts` (optional `assetId` + `network` on TokenRef).
+**Delivers:** `packages/actions/` package structure, JupiterSwapConfig with defaults, JupiterSwapInputSchema (Zod), Jupiter API response Zod schemas (quote + swap-instructions), JupiterApiClient (fetch + AbortSignal + response validation), JupiterSwapActionProvider (6-step resolve flow), unit tests with msw mocks, schema validation tests, computeBudgetInstructions handling decision
 
-**Addresses (from FEATURES.md):** All 7 table-stakes parser/formatter/schema/map features; x402 + WC code consolidation differentiator; TokenRef extension.
+**Addresses features:**
+- Table stakes: Quote API, swap-instructions, ContractCallRequest conversion, slippage validation, price impact check, Zod response schemas
+- Differentiators: Jito tip, programId verification, restrictIntermediateTokens, inputMint=outputMint guard
 
-**Avoids (from PITFALLS.md):** C-01 (EVM lowercase at construction), C-02 (Solana preservation via namespace branch), M-01 (spec-compliant regex including `_` in CAIP-2 reference and `.%` in CAIP-19 reference), M-02 (use `token` namespace for both SPL and Token-2022), L-05 (slip44 native asset convention with ETH=60, SOL=501), L-06 (x402 duplication eliminated via re-export).
+**Avoids pitfalls:**
+- P2 (wrong endpoint) — code structure enforces `/swap-instructions`; no code path touches `/swap`
+- P4 (compute budget) — `computeBudgetInstructions` included in transaction build after reading IChainAdapter
+- P5 (ATA setup) — `setupInstructions` prepended before swapInstruction in build
+- P7 (field name mismatch) — ContractCallRequestSchema read before writing mapping code; unit test verifies Zod parse succeeds
+- P11 (mock quality) — Zod schemas validate mock fixtures match real API shape; msw intercepts HTTP
 
-### Phase 2: Oracle L2 Support + Cache Key Migration
+### Phase 247: Daemon Integration and DX
 
-**Rationale:** The primary business value of this milestone is L2 token price resolution. This phase activates that capability immediately after the CAIP module is available. Cache key migration is isolated here because it is volatile (no persistent data risk). The atomic switchover requirement (C-05) means all oracle touch points must land in one commit.
+**Rationale:** Once the provider is tested in isolation, daemon wiring is low-risk configuration work. MCP auto-discovery and SDK support require no code changes to existing infrastructure — only verification and documentation are needed. Policy integration tests can only run in this phase because they require the full daemon context.
 
-**Delivers:** Extended `coingecko-platform-ids.ts` with 5 CAIP-2 keyed mainnet entries (`polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base`, `solana`), updated `buildCacheKey()` producing CAIP-19 format when network context is available with legacy fallback, updated `PYTH_FEED_IDS` keys to CAIP-19 format, `coingecko-oracle.ts` passing `token.network` for L2 platform resolution, `oracle-chain.ts` and `resolve-effective-amount-usd.ts` propagating `network` through TokenRef.
+**Delivers:** Built-in provider registration in `daemon.ts` Step 4f, config.toml `[actions.jupiter_swap]` section parsing, SettingsService runtime-adjustable settings (slippage, price impact), ApiKeyStore integration for optional Jupiter API key, MCP tool verification (`action_jupiter_swap_jupiter_swap`), SDK end-to-end test (`executeAction('jupiter_swap', params)`), policy integration tests (CONTRACT_WHITELIST enforcement + SPENDING_LIMIT USD conversion on swap amount), `skills/transactions.skill.md` update with Jupiter Swap usage
 
-**Uses (from STACK.md):** `coingecko-platform-ids.ts` extended with CAIP-2 keyed entries; Zod SSoT for platform map type safety.
+**Uses:**
+- `@waiaas/actions` package (from Phase 246)
+- `ActionProviderRegistry.register()` (unchanged API)
+- `SettingsService` (existing runtime settings infrastructure)
+- `ApiKeyStore` (existing AES-256-GCM encrypted key storage)
 
-**Implements (from ARCHITECTURE.md):** Price oracle chain component modifications; `getCoinGeckoPlatform(chain, network?)` signature change.
+**Implements:**
+- Daemon Step 4f extension (built-in providers before ESM plugins)
+- config.toml section loader extension (`[actions.jupiter_swap]`)
+- Environment variable override (`WAIAAS_ACTIONS_JUPITER_SWAP_*`)
 
-**Avoids (from PITFALLS.md):** C-05 (atomic cache key + PYTH_FEED_IDS + CoinGecko map update in single commit), M-05 (CoinGecko L2 platform IDs must be added in this phase — not deferred — or the primary goal fails).
-
-### Phase 3: DB Migration v22 + Token Registry + Schema Extensions
-
-**Rationale:** DB migration is the highest-risk persistent operation and needs the CAIP module (Phase 1) to run the application-level backfill. Completing schema extensions here ensures the pipeline/policy changes in Phase 4 have stable Zod schemas to build against.
-
-**Delivers:** DB migration v22 (`asset_id TEXT` column on `token_registry` + application-level backfill for all 13 networks + unique index after population), updated Drizzle schema (`schema.ts`), `token-registry-service.ts` returning `assetId` in responses, `TokenInfoSchema` with optional `assetId` field (`transaction.schema.ts`), `AllowedTokensRulesSchema` with optional `assetId` field (`policy.schema.ts`), REST API token responses including `assetId`.
-
-**Addresses (from FEATURES.md):** Token registry DB migration with asset_id column, transaction request assetId field, REST API response assetId fields, ALLOWED_TOKENS schema extension.
-
-**Avoids (from PITFALLS.md):** C-04 (exhaustive 13-network application-level backfill, TypeScript round-trip verification test after migration, NULL for unmappable rows), L-01 (no extra `.max()` constraint — Zod regex handles 178-char spec maximum), L-04 (incoming_transactions NULL token_address -> native CAIP-19 in backfill).
-
-### Phase 4: Pipeline Integration + Policy Engine + API + MCP + SDK + Skills
-
-**Rationale:** Integration layer that ties all prior phases together. Must come last because it depends on extended Zod schemas (Phase 3), CAIP module (Phase 1), and network-aware TokenRef (Phase 2). This phase carries the highest security risk and requires the policy evaluation 4-scenario test matrix to be completed and passing before merge.
-
-**Delivers:** Updated `database-policy-engine.ts` with 4-scenario ALLOWED_TOKENS matching (assetId-priority, address fallback, cross-validation between rule and transaction), updated `stages.ts` extracting `assetId` from transaction request into `TransactionParam`, MCP tool updates (`send_token`, `approve_token`, `get_token_balance` accepting optional `assetId`), SDK TS standalone types updated with optional `assetId` on `AssetInfo`/`TokenInfo`/`TransactionResponse`, Python SDK updated, skills file documentation (CAIP-19 format, assetId vs token precedence rules for AI agents).
-
-**Addresses (from FEATURES.md):** ALLOWED_TOKENS assetId support in policy evaluation, Pipeline Stage 1 assetId extraction, MCP tool assetId parameters, SDK support, skills files.
-
-**Avoids (from PITFALLS.md):** C-03 (4-scenario policy evaluation matrix with 16+ test cases; normalize to tuple before comparison), M-04 (CAIP-19 policies fix L2 address collision — document as security improvement, not breaking change), M-06 (additive fields only, snapshot tests for all API response types), L-02 (SDK standalone types updated with optional assetId — no core dependency introduced), L-03 (clear assetId > token precedence rule in MCP tools with consistency validation).
+**Avoids pitfalls:**
+- P8 (registration order) — built-in providers registered before ESM plugins; name conflict detected at registration time
+- P9 (MCP tool name) — follow design doc as-is (`action_jupiter_swap_jupiter_swap`); functional even if slightly redundant
+- P10 (config flat structure) — `[actions.jupiter_swap]` is standard TOML table; environment variables follow `WAIAAS_{SECTION}_{KEY}` pattern
 
 ### Phase Ordering Rationale
 
-- Phase 1 is the prerequisite for all others — no imports before the module exists, no Zod schemas before `Caip19Schema` is defined.
-- Phase 2 before Phase 3 because oracle changes are independent and deliver the primary business value faster; demonstrating L2 price resolution early validates the entire approach.
-- Phase 3 before Phase 4 because the pipeline and policy changes require the extended Zod schemas (`TokenInfoSchema.assetId`, `AllowedTokensRulesSchema.assetId`) and the DB `asset_id` column to be in place for meaningful end-to-end testing.
-- Phase 4 last because it is the integration test surface — all components must be complete to write meaningful E2E tests including the 4-scenario policy evaluation matrix.
-- This ordering matches the recommendation in both FEATURES.md (Phases 1-3) and ARCHITECTURE.md (Phases 1-4 with identical rationale).
-- Estimated scope: ~920 LOC implementation + ~600 LOC tests = ~1,500 LOC total across 5 new files and 14 modified files.
+- Provider-first ordering reflects the dependency direction: `packages/actions/` has zero knowledge of `packages/daemon/`; daemon imports actions unidirectionally. Building the dependency first is the correct order.
+- All critical pitfalls manifest in Phase 246 where they can be caught by unit tests before any daemon interaction. Phase 247 has only low-risk configuration wiring.
+- The 2-phase split aligns with the natural testing boundary: Phase 246 tests with msw mocks at the HTTP layer; Phase 247 tests with the full daemon context and real policy engine.
+- Config and policy integration land in Phase 247 because they require the running daemon context and follow well-established patterns from previous milestones.
 
 ### Research Flags
 
-Phases with well-documented patterns (skip research-phase):
-- **Phase 1 (Core CAIP Module):** Spec is fully verified at standards.chainagnostic.org. Implementation is straightforward string manipulation + Zod regex. All code patterns follow established WAIaaS conventions. No further research needed.
-- **Phase 3 (DB Migration):** Application-level backfill pattern established in existing migration v6b. DB schema changes (ALTER TABLE ADD COLUMN) are well-understood in the WAIaaS migration system. No further research needed.
-- **Phase 4 (Pipeline/Policy/SDK/Skills):** All modification patterns (optional Zod fields, pipeline stage extraction, SDK type updates, MCP tool parameter addition) follow established WAIaaS codebase patterns. No further research needed.
+Phases needing deeper investigation during planning:
 
-Phases needing runtime validation during implementation:
-- **Phase 2 — CoinGecko L2 platform IDs (MEDIUM confidence):** Platform IDs `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` are documented in CoinGecko API docs but not directly tested. During Phase 2 implementation, verify with a live `GET /api/v3/asset_platforms` call before hardcoding the map. STACK.md explicitly flags this as MEDIUM confidence.
-- **Phase 4 — MCP tool parameter interaction:** The interaction between legacy `token` parameter and new `assetId` parameter needs review against actual agent query patterns before finalizing the precedence and error messaging in tools.
+- **Phase 246 — computeBudgetInstructions transport (P4, open design question):** How `computeBudgetInstructions` from Jupiter's response travel through ContractCallRequest to the Solana adapter is not fully resolved. Three options exist: (1) include in a BATCH type alongside swapInstruction, (2) add explicit computeBudget fields to ContractCallRequest, (3) let the adapter auto-detect from instruction complexity. Read `IChainAdapter.buildContractCall()` and `SolanaAdapter` implementation at Phase 246 start to select the correct approach before writing any code.
+
+Phases with standard patterns (skip research-phase):
+
+- **Phase 247 (daemon integration):** Built-in provider registration follows a well-established pattern from the existing codebase (daemon Step 4 lifecycle, config loader, SettingsService). No novel patterns required; direct implementation appropriate.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All 4 library candidates evaluated via npm registry + source code inspection + spec cross-reference. Custom implementation decision is unambiguous. Zero new dependencies confirmed. One MEDIUM item: CoinGecko L2 platform IDs verified via docs but not live API call. |
-| Features | HIGH | All 19 table-stakes features traced to official CAIP specs and verified against existing codebase patterns. Differentiator features validated against actual code gaps (coingecko-platform-ids.ts comment explicitly says "L2 out of scope"). Anti-features have clear rationale. |
-| Architecture | HIGH | 19 files identified (5 new, 14 modified) via direct codebase analysis. Dependency graph verified with no circular dependencies. Migration approach follows established WAIaaS v6b pattern confirmed in migrate.ts. Component boundaries are non-overlapping. |
-| Pitfalls | HIGH | 5 critical and 6 moderate pitfalls each traced to specific file/line numbers in codebase (e.g., C-01 traces to price-cache.ts:38-41, coingecko-oracle.ts:67, database-policy-engine.ts:927). CAIP spec regex inconsistencies verified against official specifications. Security test at policy-bypass-attacks.security.test.ts:313 confirms C-02 is real. |
+| Stack | HIGH | Zero new dependencies confirmed; native fetch + Zod is established WAIaaS pattern; Jupiter API v1 URL verified against official docs |
+| Features | HIGH | Design doc 63 + Jupiter API docs + existing framework constraints define clear and bounded scope |
+| Architecture | HIGH | Full 6-step resolve flow specified; only computeBudgetInstructions passing is an open decision requiring codebase read |
+| Pitfalls | HIGH | All 12 pitfalls sourced from codebase analysis + design docs + Jupiter API docs; P4 and P7 are the live risks requiring pre-implementation verification |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **CoinGecko L2 platform IDs (MEDIUM):** `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` are documented in CoinGecko API docs but not live-tested. During Phase 2 implementation, make one `GET /api/v3/asset_platforms` call to confirm exact platform ID strings before hardcoding the map. Handle gracefully if any ID differs.
+- **computeBudgetInstructions transport (P4) — open design decision:** How `computeBudgetInstructions` from Jupiter's response are included in the final Solana transaction is not specified in design doc 63. Read `IChainAdapter.buildContractCall()` and `SolanaAdapter` at the start of Phase 246 and make an explicit design decision before writing the ContractCallRequest mapping code. Document the decision in Phase 246 implementation.
 
-- **Token-2022 CAIP-19 namespace (MEDIUM):** The Solana CAIP-19 spec uses `token` namespace for fungible assets without explicitly addressing Token-2022. Community consensus is that Token-2022 tokens use the same `token` namespace since both programs use mint accounts as identifiers. This is the correct approach but not formally spec-documented — monitor the CASA Solana namespace registry for any update before implementation completes.
+- **ContractCallRequest accounts field name (P7) — 5-minute verification required:** `accounts[].pubkey` vs `accounts[].address` — read the actual `ContractCallRequestSchema` from `packages/core/src/schemas/transaction.schema.ts` before writing any mapping code. A mismatch produces a hard-to-debug Zod parse failure at runtime.
 
-- **Polygon native asset (MATIC/POL):** Polygon uses `slip44:966` (MATIC/POL coin type) as its native asset, unlike other EVM L2s that use `slip44:60` (ETH). The `nativeAssetId()` helper must have a lookup table that correctly maps `polygon-mainnet` to `slip44:966` and `polygon-amoy` to `slip44:966`. Confirm this edge case is handled in the `NATIVE_SLIP44` map within `asset-helpers.ts`.
-
-- **PYTH_FEED_IDS key format during Phase 2:** The existing `pyth-feed-ids.ts` uses `solana:native` and `ethereum:0x...` style keys. These must be updated to CAIP-19 format in the same commit as `buildCacheKey()` changes. This is required by C-05 (atomic switchover) and must be explicitly tracked during Phase 2 implementation — it is easy to miss this file when updating the oracle chain.
+- **ApiKeyStore API for named keys — confirm before Phase 247:** Confirm the existing ApiKeyStore supports named key storage for `jupiter_swap` specifically. If it only supports a single key, a minor extension is needed before implementing the API key header injection in JupiterApiClient.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [CAIP-2 Specification](https://standards.chainagnostic.org/CAIPs/caip-2) — namespace regex `[-a-z0-9]{3,8}`, reference regex `[-_a-zA-Z0-9]{1,32}` (note: underscore included)
-- [CAIP-19 Specification](https://standards.chainagnostic.org/CAIPs/caip-19) — asset_type format, asset_reference regex `[-.%a-zA-Z0-9]{1,128}` (note: period and percent included)
-- [CAIP-20 SLIP44 Namespace](https://standards.chainagnostic.org/CAIPs/caip-20) — ETH coin type 60, SOL coin type 501
-- [Solana CAIP-19 Namespace](https://namespaces.chainagnostic.org/solana/caip19) — `token` namespace for SPL + Token-2022, mint address as reference
-- [Solana CAIP-2 Namespace](https://namespaces.chainagnostic.org/solana/caip2) — genesis hash truncated to 32 chars for mainnet/devnet/testnet
-- [EIP-155 CAIP-19 Namespace](https://namespaces.chainagnostic.org/eip155/caip19) — `erc20` namespace, 0x-prefixed 40-char address
-- [SLIP-0044 Registry](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) — ETH=60, SOL=501, MATIC=966
-- WAIaaS codebase (direct inspection): `x402.types.ts` (CAIP2_TO_NETWORK 13 entries), `price-cache.ts` (buildCacheKey format), `coingecko-platform-ids.ts` (2-entry map with L2 TODO comment), `coingecko-oracle.ts` (getPrice address handling), `database-policy-engine.ts` (ALLOWED_TOKENS evaluation lines 892-938), `schema.ts` (token_registry + incoming_transactions), `migrate.ts` (v6b application-level backfill pattern), `token-registry-service.ts`, `transaction.schema.ts`, `policy.schema.ts`, `sdk/types.ts`, `policy-bypass-attacks.security.test.ts:313`
+- WAIaaS design document 63 (internal) — Full Jupiter Swap architecture, resolve flow, ContractCallRequest mapping, DEFI-01~05 safety rules, Jito MEV protection specification
+- Jupiter API v1 official documentation — `/swap/v1/quote` and `/swap/v1/swap-instructions` endpoint specs, response schemas, `jitoTipLamports` parameter, URL migration from v6
+- WAIaaS codebase — `packages/core` (IActionProvider interface, ContractCallRequest schema), `packages/daemon` (ActionProviderRegistry, 6-stage pipeline, daemon Step 4 lifecycle), `packages/mcp` (action-provider.ts auto-discovery)
 
 ### Secondary (MEDIUM confidence)
-- [CoinGecko Asset Platforms API](https://docs.coingecko.com/reference/asset-platforms-list) — `polygon-pos`, `arbitrum-one`, `optimistic-ethereum`, `base` platform IDs (documented, not live-tested)
-- [WalletConnect Pay](https://docs.walletconnect.network/payments/wallet-implementation) — CAIP-19 asset format in payment requests (confirms ecosystem adoption)
-- [caip npm package](https://www.npmjs.com/package/caip) — v1.1.1, evaluated and rejected: incorrect `asset_reference` regex missing `.%`, OOP API incompatible with Zod SSoT, near-zero maintenance velocity
-- [@shapeshiftoss/caip npm](https://www.npmjs.com/package/@shapeshiftoss/caip) — v8.16.7, evaluated and rejected: 4.36 MB unpacked, axios runtime dependency
+- Jito MEV protection via Jupiter abstraction — confirmed Jupiter handles Jito block engine submission internally when `jitoTipLamports` is provided; direct Jito SDK not required
+- Solana compute budget behavior — multi-hop routes exceeding 200K CU limit is documented Solana behavior; Jupiter's `computeBudgetInstructions` is the standard mitigation provided by Jupiter API
 
-### Tertiary (informational)
-- [Solana Testnet Restart 2024-01-02](https://github.com/anza-xyz/agave/wiki/2024%E2%80%9001%E2%80%9002-Testnet-Rollback-and-Restart) — confirms devnet/testnet genesis hash instability risk (Pitfall M-03)
-- [EIP-55 Checksum Address Encoding](https://eips.ethereum.org/EIPS/eip-55) — mixed-case checksum scheme (relevant to C-01 normalization decision)
-- [Axelar CREATE2 Cross-Chain Tutorial](https://www.axelar.network/blog/same-address-cross-chain-tutorial) — same address on different EVM chains (explains M-04 address collision pitfall)
+### Tertiary (LOW confidence)
+- Jupiter API URL migration (v6 → v1) — based on documented URL change and `api_base_url` config provides runtime correction capability; exact migration date not confirmed
+- ATA creation via `setupInstructions` — standard Solana pattern; Jupiter handling confirmed in API docs but not verified against live response shape in test environment before implementation
 
 ---
-*Research completed: 2026-02-22*
+*Research completed: 2026-02-23*
 *Ready for roadmap: yes*
