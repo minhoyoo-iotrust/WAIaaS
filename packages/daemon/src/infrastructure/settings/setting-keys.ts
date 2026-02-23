@@ -63,6 +63,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.locale', category: 'notifications', configPath: 'notifications.locale', defaultValue: 'en', isCredential: false },
   { key: 'notifications.rate_limit_rpm', category: 'notifications', configPath: 'notifications.rate_limit_rpm', defaultValue: '20', isCredential: false },
   { key: 'notifications.notify_categories', category: 'notifications', configPath: 'notifications.notify_categories', defaultValue: '[]', isCredential: false },
+  { key: 'notifications.notify_events', category: 'notifications', configPath: 'notifications.notify_events', defaultValue: '[]', isCredential: false },
 
   // --- rpc category (Solana 3 + EVM 10 + evm_default_network) ---
   { key: 'rpc.solana_mainnet', category: 'rpc', configPath: 'rpc.solana_mainnet', defaultValue: 'https://api.mainnet-beta.solana.com', isCredential: false },

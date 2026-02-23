@@ -83,6 +83,7 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   { id: 'notifications.settings.ntfy_topic', label: 'Ntfy Topic', description: 'Topic name for ntfy notifications', page: '/notifications', tab: 'settings', fieldName: 'notifications.ntfy_topic', keywords: ['ntfy', 'topic', 'push', 'notification'] },
   { id: 'notifications.settings.slack_webhook_url', label: 'Slack Webhook URL', description: 'Webhook URL for Slack notifications', page: '/notifications', tab: 'settings', fieldName: 'notifications.slack_webhook_url', keywords: ['slack', 'webhook', 'notification', 'credential'] },
   { id: 'notifications.settings.rate_limit_rpm', label: 'Rate Limit (RPM)', description: 'Max notifications per minute', page: '/notifications', tab: 'settings', fieldName: 'notifications.rate_limit_rpm', keywords: ['rate', 'limit', 'rpm', 'notification', 'throttle'] },
+  { id: 'notifications.settings.notify_events', label: 'Event Filter', description: 'Per-event notification filter (choose which events are delivered)', page: '/notifications', tab: 'settings', fieldName: 'notifications.notify_events', keywords: ['filter', 'event', 'category', 'notification', 'subscribe'] },
   { id: 'notifications.settings.telegram_dedicated_bot_token', label: 'Bot Token', description: 'Dedicated bot token for Telegram bot (optional, uses notification token if empty)', page: '/notifications', tab: 'settings', fieldName: 'telegram.bot_token', keywords: ['telegram', 'bot', 'token', 'credential'] },
 
   // =========================================================================

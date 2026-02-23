@@ -543,6 +543,96 @@ describe('Message storage in notification_logs', () => {
 // 8. Config integration tests (DaemonConfigSchema new fields)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Per-event filtering (isEventFiltered)
+// ---------------------------------------------------------------------------
+
+describe('Per-event filtering', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function createSettingsService(data: Record<string, string>) {
+    return { get: (key: string) => data[key] ?? '' } as any;
+  }
+
+  it('allows events in notify_events whitelist', async () => {
+    const ch = createMockChannel('ch1');
+    const service = new NotificationService({ db: createTestDb().drizzle });
+    service.addChannel(ch);
+    service.setSettingsService(createSettingsService({
+      'notifications.notify_events': '["TX_CONFIRMED"]',
+    }));
+
+    await service.notify('TX_CONFIRMED', 'w1');
+    expect(ch.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('filters out events not in notify_events whitelist', async () => {
+    const ch = createMockChannel('ch1');
+    const service = new NotificationService({ db: createTestDb().drizzle });
+    service.addChannel(ch);
+    service.setSettingsService(createSettingsService({
+      'notifications.notify_events': '["TX_CONFIRMED"]',
+    }));
+
+    await service.notify('TX_FAILED', 'w1');
+    expect(ch.send).not.toHaveBeenCalled();
+  });
+
+  it('broadcast events bypass notify_events filter', async () => {
+    const ch = createMockChannel('ch1');
+    const service = new NotificationService({ db: createTestDb().drizzle });
+    service.addChannel(ch);
+    service.setSettingsService(createSettingsService({
+      'notifications.notify_events': '["TX_CONFIRMED"]',
+    }));
+
+    await service.notify('KILL_SWITCH_ACTIVATED', 'w1');
+    expect(ch.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('empty notify_events = allow all (default)', async () => {
+    const ch = createMockChannel('ch1');
+    const service = new NotificationService({ db: createTestDb().drizzle });
+    service.addChannel(ch);
+    service.setSettingsService(createSettingsService({
+      'notifications.notify_events': '[]',
+    }));
+
+    await service.notify('TX_FAILED', 'w1');
+    expect(ch.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to notify_categories when notify_events is empty', async () => {
+    const ch = createMockChannel('ch1');
+    const service = new NotificationService({ db: createTestDb().drizzle });
+    service.addChannel(ch);
+    service.setSettingsService(createSettingsService({
+      'notifications.notify_events': '[]',
+      'notifications.notify_categories': '["policy"]',
+    }));
+
+    // TX_CONFIRMED is 'transaction' category, not in allowed ['policy']
+    await service.notify('TX_CONFIRMED', 'w1');
+    expect(ch.send).not.toHaveBeenCalled();
+  });
+
+  it('prefers notify_events over notify_categories', async () => {
+    const ch = createMockChannel('ch1');
+    const service = new NotificationService({ db: createTestDb().drizzle });
+    service.addChannel(ch);
+    service.setSettingsService(createSettingsService({
+      'notifications.notify_events': '["TX_CONFIRMED"]',
+      'notifications.notify_categories': '["policy"]',
+    }));
+
+    // TX_CONFIRMED category=transaction, not in categories, but IS in events
+    await service.notify('TX_CONFIRMED', 'w1');
+    expect(ch.send).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Config integration', () => {
   it('DaemonConfigSchema defaults locale to en', () => {
     const config = DaemonConfigSchema.parse({});

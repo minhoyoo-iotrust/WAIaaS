@@ -55,17 +55,27 @@ export class WalletNotificationChannel {
       // Gate 2: signing_sdk.notifications_enabled
       if (this.settings.get('signing_sdk.notifications_enabled') !== 'true') return;
 
-      // Gate 3: category filter
+      // Gate 3: event filter (per-event → fallback to legacy category)
       const category = EVENT_CATEGORY_MAP[eventType];
       if (!category) return;
-      const filterJson = this.settings.get('notifications.notify_categories');
-      if (filterJson && filterJson !== '[]') {
+      const eventsJson = this.settings.get('notifications.notify_events');
+      if (eventsJson && eventsJson !== '[]') {
         try {
-          const allowedCategories = JSON.parse(filterJson) as string[];
-          if (Array.isArray(allowedCategories) && allowedCategories.length > 0) {
-            if (!allowedCategories.includes(category)) return;
+          const allowedEvents = JSON.parse(eventsJson) as string[];
+          if (Array.isArray(allowedEvents) && allowedEvents.length > 0) {
+            if (!allowedEvents.includes(eventType)) return;
           }
         } catch { /* invalid JSON = allow all */ }
+      } else {
+        const filterJson = this.settings.get('notifications.notify_categories');
+        if (filterJson && filterJson !== '[]') {
+          try {
+            const allowedCategories = JSON.parse(filterJson) as string[];
+            if (Array.isArray(allowedCategories) && allowedCategories.length > 0) {
+              if (!allowedCategories.includes(category)) return;
+            }
+          } catch { /* invalid JSON = allow all */ }
+        }
       }
 
       // Resolve target wallets

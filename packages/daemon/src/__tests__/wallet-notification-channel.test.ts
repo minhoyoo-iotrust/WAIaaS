@@ -306,6 +306,59 @@ describe('WalletNotificationChannel', () => {
   });
 
   // -------------------------------------------------------------------------
+  // SETTINGS-04: notify_events filters by event
+  // -------------------------------------------------------------------------
+  describe('SETTINGS-04: per-event filtering', () => {
+    it('allows specific events when notify_events is set', async () => {
+      const settings = createMockSettings({
+        'notifications.notify_events': '["TX_CONFIRMED"]',
+      });
+      const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_CONFIRMED', SDK_NTFY_WALLET_1.id, 'Tx', 'Body');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('filters out events not in notify_events', async () => {
+      const settings = createMockSettings({
+        'notifications.notify_events': '["TX_CONFIRMED"]',
+      });
+      const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_FAILED', SDK_NTFY_WALLET_1.id, 'Tx', 'Body');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('prefers notify_events over notify_categories', async () => {
+      const settings = createMockSettings({
+        'notifications.notify_events': '["TX_CONFIRMED"]',
+        'notifications.notify_categories': '["policy"]',
+      });
+      const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      // TX_CONFIRMED is in notify_events, should be allowed even though category is "transaction" not "policy"
+      await channel.notify('TX_CONFIRMED', SDK_NTFY_WALLET_1.id, 'Tx', 'Body');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to notify_categories when notify_events is empty', async () => {
+      const settings = createMockSettings({
+        'notifications.notify_events': '[]',
+        'notifications.notify_categories': '["policy"]',
+      });
+      const sqlite = createMockSqlite([SDK_NTFY_WALLET_1]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      // TX_CONFIRMED category=transaction, not in notify_categories=["policy"]
+      await channel.notify('TX_CONFIRMED', SDK_NTFY_WALLET_1.id, 'Tx', 'Body');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Details passthrough
   // -------------------------------------------------------------------------
   describe('details passthrough', () => {
