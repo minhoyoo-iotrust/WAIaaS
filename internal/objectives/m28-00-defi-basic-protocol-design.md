@@ -724,28 +724,289 @@ if (isOwnWallet) {
 
 ---
 
-### 4. 비동기 상태 추적 패턴
+### 4. DEFI-04: 비동기 상태 추적 패턴 (확정 설계)
 
-크로스체인 브릿지(m28-03)와 unstake(m28-04)는 비동기 완료를 추적해야 한다. 공통 폴링 패턴을 설계한다.
+크로스체인 브릿지(m28-03), unstake(m28-04), 가스 조건부 실행(m28-05)은 비동기 완료를 추적해야 한다. 공통 폴링 패턴과 상태 머신 확장을 확정한다.
 
-#### 4.1 설계 범위
+> **상태:** 확정 설계 (2026-02-23)
+> **요구사항:** ASNC-01, ASNC-02, ASNC-03, ASNC-04, ASNC-05
 
-| 항목 | 내용 |
-|------|------|
-| 추적 대상 | 브릿지 전송 (수 분~수십 분), unstake 대기 (수 시간~수 일) |
-| 추적 방식 | 폴링 기반 (외부 API /status 호출) |
-| 폴링 간격 | 브릿지 30초, unstake 5분 (config.toml 오버라이드) |
-| 최대 폴링 | 브릿지 60회 (30분), unstake 288회 (24시간) |
-| 상태 전이 | PENDING → COMPLETED / FAILED / TIMEOUT |
-| 알림 | 완료/실패/타임아웃 시 알림 발송 |
-| DB 마이그레이션 | bridge_status(m28-03) + GAS_WAITING 상태(m28-05)를 단일 마이그레이션으로 통합 설계. **실행 시점: m28-03** (브릿지가 먼저 필요하므로 m28-03에서 통합 마이그레이션 적용, m28-05는 이미 추가된 GAS_WAITING 상태를 사용) |
+#### 4.1 ASNC-01: IAsyncStatusTracker 공통 인터페이스 확정
 
-#### 4.2 설계 산출물
+브릿지/unstake/가스대기 3개 비동기 추적 구현체가 동일 패턴을 따르기 위한 공통 인터페이스를 확정한다.
 
-- AsyncStatusTracker 공통 인터페이스
-- 폴링 스케줄러 설계 (setInterval vs setTimeout 체인)
-- transactions 테이블 bridge_status 컬럼 추가 + GAS_WAITING 상태 확장 통합 마이그레이션 설계
-- 상태 전이 다이어그램
+```typescript
+export interface IAsyncStatusTracker {
+  /** 비동기 작업의 현재 상태를 확인한다 */
+  checkStatus(txId: string, metadata: Record<string, unknown>): Promise<AsyncTrackingResult>;
+  /** 이 트래커의 이름 (bridge, unstake, gas-condition) */
+  readonly name: string;
+  /** 최대 폴링 시도 횟수 */
+  readonly maxAttempts: number;
+  /** 폴링 간격 (ms) */
+  readonly pollIntervalMs: number;
+  /** 타임아웃 시 상태 전이 (TIMEOUT vs BRIDGE_MONITORING vs CANCELLED) */
+  readonly timeoutTransition: 'TIMEOUT' | 'BRIDGE_MONITORING' | 'CANCELLED';
+}
+
+export interface AsyncTrackingResult {
+  state: 'PENDING' | 'COMPLETED' | 'FAILED' | 'TIMEOUT';
+  /** COMPLETED 시 도착 체인 정보, FAILED 시 에러 정보 */
+  details?: Record<string, unknown>;
+  /** 다음 폴링까지 대기 간격 오버라이드 (ms, 선택) -- 백오프 구현용 */
+  nextIntervalOverride?: number;
+}
+```
+
+**3개 구현체 설계:**
+
+| 구현체 | 대상 | pollIntervalMs | maxAttempts | 총 시간 | timeoutTransition | checkStatus 내부 |
+|--------|------|---------------|-------------|---------|-------------------|-----------------|
+| BridgeStatusTracker | LI.FI /status API 폴링 | 30,000 (30초) | 240 (2시간) | 2시간 | `BRIDGE_MONITORING` | LI.FI `/status` API 호출, txHash + fromChainId로 조회 |
+| UnstakeStatusTracker | Lido WithdrawalQueue + Jito epoch 폴링 | 300,000 (5분) | 4,032 (14일) | 14일 | `TIMEOUT` | Lido: `isFinalized(requestId)` RPC. Jito: epoch 경계 확인 |
+| GasConditionTracker | RPC gas price 폴링 | 30,000 (30초) | config (기본 120, 1시간) | 1시간 (기본) | `CANCELLED` | `eth_gasPrice` / `getRecentPrioritizationFees` RPC 호출, gasCondition 비교 |
+
+**구현체별 상세:**
+
+**BridgeStatusTracker:**
+- LI.FI `/status` API를 txHash + fromChainId로 호출한다
+- 응답의 `status` 필드를 `AsyncTrackingResult.state`로 매핑한다: `DONE` -> `COMPLETED`, `FAILED` -> `FAILED`, 나머지 -> `PENDING`
+- 2시간(240회) 후 미완료 시 `BRIDGE_MONITORING`으로 전환 (자동 취소 절대 금지)
+- `BRIDGE_MONITORING` 전환 후에도 BridgeMonitoringTracker가 5분 간격으로 계속 폴링 (최대 24시간)
+
+**UnstakeStatusTracker:**
+- Lido: WithdrawalQueueERC721 컨트랙트의 `getWithdrawalStatus(requestId)` 호출. `isFinalized=true` -> `COMPLETED`
+- Jito: SPL Stake Pool deactivation epoch 이후 cooldown 확인. epoch 경계 통과 -> `COMPLETED`
+- 14일(4,032회) 후 미완료 시 `TIMEOUT` 전환, 운영자 수동 확인 필요
+
+**GasConditionTracker:**
+- EVM: `eth_gasPrice` + `eth_maxPriorityFeePerGas` RPC 호출, gasCondition.maxGasPrice / maxPriorityFee 비교
+- Solana: `getRecentPrioritizationFees` RPC 호출, gasCondition.maxPriorityFee 비교
+- 조건 충족 시 `COMPLETED` 반환 -> 파이프라인 Stage 4부터 재개
+- 타임아웃(기본 1시간, 120회) 시 `CANCELLED` 전환 + TX_CANCELLED 알림
+
+#### 4.2 ASNC-02: 폴링 스케줄러 설계 확정
+
+**setInterval 대신 setTimeout 체인을 사용하는 이유:**
+
+- `setInterval`: 핸들러 실행 시간이 간격을 초과하면 중첩 실행 위험. 예: checkStatus가 네트워크 지연으로 35초 소요 시, 30초 setInterval은 이전 핸들러가 완료되기 전에 다음 호출을 시작한다.
+- `setTimeout` 체인: 핸들러 완료 후 다음 타이머를 설정하므로 중첩이 원천 방지된다. 또한 `nextIntervalOverride`를 통해 동적 백오프가 자연스럽게 구현된다.
+
+**AsyncPollingService 설계:**
+
+```typescript
+class AsyncPollingService {
+  private readonly trackers: Map<string, IAsyncStatusTracker> = new Map();
+
+  constructor(
+    private readonly db: Database,
+    private readonly notificationService: NotificationService,
+  ) {}
+
+  /** tracker를 등록한다 */
+  registerTracker(tracker: IAsyncStatusTracker): void {
+    this.trackers.set(tracker.name, tracker);
+  }
+
+  /** DB에서 추적 대상 트랜잭션을 조회하고 각 tracker로 상태를 확인한다 */
+  async pollAll(): Promise<void> {
+    // 1. SELECT * FROM transactions
+    //    WHERE bridge_status IN ('PENDING', 'BRIDGE_MONITORING')
+    //       OR status = 'GAS_WAITING'
+    const targets = await this.getTrackingTargets();
+
+    // 2. 각 트랜잭션을 순차 처리 (병렬 처리 시 외부 API rate limit 위험)
+    for (const tx of targets) {
+      try {
+        const trackerName = this.resolveTrackerName(tx);
+        const tracker = this.trackers.get(trackerName);
+        if (!tracker) continue;
+
+        // 3. per-tracker 타이밍 검사: lastPolledAt + pollIntervalMs 미경과 시 skip
+        const metadata = JSON.parse(tx.bridge_metadata ?? '{}');
+        const lastPolled = metadata.lastPolledAt ?? 0;
+        const now = Date.now();
+        if (now - lastPolled < tracker.pollIntervalMs) continue;
+
+        // 4. 폴링 횟수 검사: maxAttempts 초과 시 타임아웃 전이
+        const pollCount = (metadata.pollCount ?? 0) + 1;
+        if (pollCount > tracker.maxAttempts) {
+          await this.handleTimeout(tx, tracker, metadata);
+          continue;
+        }
+
+        // 5. checkStatus 호출
+        const result = await tracker.checkStatus(tx.id, metadata);
+
+        // 6. 결과에 따라 DB 업데이트 + 알림
+        await this.processResult(tx, tracker, result, { ...metadata, pollCount, lastPolledAt: now });
+      } catch (err) {
+        // 7. 에러 시 해당 트랜잭션만 skip, 로그 출력, 다른 트랜잭션 계속 처리
+        console.error(`AsyncPolling error for tx ${tx.id}:`, err);
+      }
+    }
+  }
+
+  /** tracker 유형 판별: bridge_metadata.tracker 필드 기준 */
+  private resolveTrackerName(tx: Transaction): string {
+    if (tx.status === 'GAS_WAITING') return 'gas-condition';
+    const metadata = JSON.parse(tx.bridge_metadata ?? '{}');
+    return metadata.tracker ?? 'bridge'; // bridge, unstake, gas-condition
+  }
+
+  /** 타임아웃 처리 */
+  private async handleTimeout(
+    tx: Transaction,
+    tracker: IAsyncStatusTracker,
+    metadata: Record<string, unknown>,
+  ): Promise<void> {
+    // tracker.timeoutTransition에 따라:
+    // - BRIDGE_MONITORING: bridge_status를 BRIDGE_MONITORING으로 전환 (폴링 계속, 5분 간격)
+    // - TIMEOUT: bridge_status를 TIMEOUT으로 전환 (폴링 중단)
+    // - CANCELLED: status를 CANCELLED로 전환 + TX_CANCELLED 알림
+  }
+
+  /** 결과 처리 */
+  private async processResult(
+    tx: Transaction,
+    tracker: IAsyncStatusTracker,
+    result: AsyncTrackingResult,
+    metadata: Record<string, unknown>,
+  ): Promise<void> {
+    // COMPLETED: bridge_status=COMPLETED, SPENDING_LIMIT 예약 해제, 알림 발송
+    // FAILED: bridge_status=FAILED, SPENDING_LIMIT 예약 해제, 알림 발송
+    // PENDING: bridge_metadata 업데이트 (pollCount, lastPolledAt)
+    // TIMEOUT: handleTimeout 위임
+  }
+}
+```
+
+**BackgroundWorkers 등록 패턴:**
+
+```typescript
+workers.register('async-status', {
+  interval: 30_000,  // 최소 간격 (실제 간격은 tracker별 lastPolledAt로 관리)
+  handler: () => asyncPollingService.pollAll(),
+});
+```
+
+**주의:** BackgroundWorkers는 기존에 `setInterval`을 사용하며 중첩 방지 로직이 내장되어 있다 (`running` Map으로 이전 실행 중이면 skip). `pollAll()` 내부에서 per-tracker 타이밍을 `bridge_metadata.lastPolledAt`으로 관리하여, 30초마다 호출되더라도 5분 간격 tracker는 실제로 5분에 1회만 checkStatus를 호출한다.
+
+**pollAll() 내부 로직 요약:**
+
+1. `SELECT * FROM transactions WHERE bridge_status IN ('PENDING', 'BRIDGE_MONITORING') OR status = 'GAS_WAITING'`
+2. 각 트랜잭션의 `bridge_metadata.tracker` 필드에서 tracker 유형 판별
+3. `lastPolledAt + pollIntervalMs` 미경과 시 해당 트랜잭션 skip
+4. `pollCount > maxAttempts` 시 타임아웃 전이 처리
+5. `tracker.checkStatus()` 호출
+6. 결과에 따라 DB 업데이트 (`bridge_status`, `bridge_metadata`) + 알림 발송
+7. 에러 시 해당 트랜잭션만 skip, 다른 트랜잭션 계속 처리
+
+#### 4.3 ASNC-04: 트랜잭션 상태 머신 확장 (10-state -> 11-state)
+
+현재 `TRANSACTION_STATUSES` 배열 10개 상태에 `GAS_WAITING`을 추가하여 11개로 확장한다.
+
+**현재 10개 상태:**
+`PENDING`, `QUEUED`, `EXECUTING`, `SUBMITTED`, `CONFIRMED`, `FAILED`, `CANCELLED`, `EXPIRED`, `PARTIAL_FAILURE`, `SIGNED`
+
+**추가 상태:**
+`GAS_WAITING` -- 가스 조건 미충족으로 대기 중
+
+**전이 다이어그램:**
+
+```
+PENDING
+  |
+  v
+QUEUED (Stage 1 INSERT)
+  |
+  v
+EXECUTING (Stage 5 시작)
+  |
+  +--[gasCondition 존재 + 조건 미충족]--> GAS_WAITING (Stage 3.5)
+  |                                          |
+  |                                          +--[조건 충족]--> SIGNED (Stage 5c)
+  |                                          +--[타임아웃]--> CANCELLED
+  |
+  +--[gasCondition 없음 / 조건 즉시 충족]--> SIGNED (Stage 5c)
+                                               |
+                                               v
+                                            SUBMITTED (Stage 5d)
+                                               |
+                                               +--------> CONFIRMED (Stage 6)
+                                               +--------> FAILED (Stage 6)
+                                               |
+                                               +--[bridge/unstake 메타데이터 존재]
+                                                    |
+                                                    v
+                                               bridge_status: PENDING
+                                                    |
+                                                    +---> COMPLETED
+                                                    +---> FAILED
+                                                    +---> BRIDGE_MONITORING
+                                                    +---> TIMEOUT
+                                                    +---> REFUNDED
+```
+
+**GAS_WAITING 전이 규칙:**
+
+| 전이 | 조건 | 결과 |
+|------|------|------|
+| EXECUTING -> GAS_WAITING | Stage 3 (Policy) 통과 후, gasCondition이 존재하고 현재 가스 가격이 조건 미충족 | status = GAS_WAITING, bridge_metadata에 gas-condition tracker 정보 저장 |
+| GAS_WAITING -> SIGNED | GasConditionTracker가 조건 충족 감지 | Stage 4 (Wait)부터 파이프라인 재개. **주의:** 가스 조건 충족 시점의 quote가 만료되었을 수 있으므로, Stage 5에서 re-quote 필요 여부 확인 (QUOTE_EXPIRED 에러 코드 사용) |
+| GAS_WAITING -> CANCELLED | 타임아웃 (기본 1시간, 120회 @ 30초) | status = CANCELLED, TX_CANCELLED 알림 발송 |
+
+**bridge_status 전이 규칙:**
+
+| 전이 | 조건 | 결과 |
+|------|------|------|
+| (없음) -> PENDING | Stage 6 (Confirm) 완료 후, 브릿지/unstake 메타데이터 존재 시 | bridge_status = PENDING, bridge_metadata에 tracker 정보 저장 |
+| PENDING -> COMPLETED | 외부 API에서 완료 확인 | bridge_status = COMPLETED, SPENDING_LIMIT 예약 해제, 알림 발송 |
+| PENDING -> FAILED | 외부 API에서 실패 확인 | bridge_status = FAILED, SPENDING_LIMIT 예약 해제, 알림 발송 |
+| PENDING -> REFUNDED | 외부 API에서 환불 확인 (LI.FI 브릿지 전용) | bridge_status = REFUNDED, SPENDING_LIMIT 예약 해제, 알림 발송 |
+| PENDING -> BRIDGE_MONITORING | 2시간 폴링 후 미완료 (브릿지 전용) | bridge_status = BRIDGE_MONITORING, 축소 빈도(5분) 폴링 계속, 알림 발송 |
+| BRIDGE_MONITORING -> COMPLETED/FAILED | 축소 빈도 폴링에서 완료/실패 감지 | 해당 상태로 전이, 예약 해제, 알림 |
+| BRIDGE_MONITORING -> TIMEOUT | 24시간 후 미완료 | bridge_status = TIMEOUT, 폴링 중단, 운영자 수동 확인 필요, 알림 발송 |
+
+**중요:** `bridge_status`는 `transactions.status`와 독립적이다. `transactions.status = CONFIRMED`인 상태에서 `bridge_status = PENDING`일 수 있다 (출발 체인 트랜잭션은 확인되었으나 도착 체인 미도착). `bridge_status`는 출발 체인 트랜잭션 이후의 비동기 추적 상태를 나타낸다.
+
+#### 4.4 ASNC-05: 브릿지 타임아웃 정책 확정
+
+Research Pitfall P4 (크로스체인 브릿지 Fund Loss -- LI.FI "Limbo" State) 대응으로 2시간+ 폴링, 자동 취소 방지를 명시한다.
+
+**3단계 폴링 정책:**
+
+| 단계 | 간격 | 최대 횟수 | 총 시간 | bridge_status | 비고 |
+|------|------|----------|---------|---------------|------|
+| 1단계: 활성 폴링 | 30초 | 240회 | 2시간 | PENDING | BridgeStatusTracker 사용 |
+| 2단계: 축소 폴링 | 5분 | 264회 | 22시간 | BRIDGE_MONITORING | BridgeMonitoringTracker 사용 (BridgeStatusTracker의 확장) |
+| 3단계: 폴링 중단 | - | - | - | TIMEOUT | 운영자 수동 확인 필요 |
+
+**총 모니터링 시간: 최대 24시간** (2시간 활성 + 22시간 축소)
+
+**자동 취소 절대 금지 원칙:**
+
+- `TIMEOUT`은 `CANCELLED`가 아니다. 자금이 브릿지 프로토콜 내 "limbo" 상태에 있을 수 있다.
+- `TIMEOUT` 전환 시에도 `SPENDING_LIMIT` 예약을 해제하지 않는다. 예약은 자금 소재가 확정될 때까지 유지한다.
+- `SPENDING_LIMIT` 예약 해제 조건: `bridge_status = COMPLETED` 또는 `bridge_status = REFUNDED`만.
+- `FAILED` 시에도 예약을 해제한다 (실패한 브릿지는 출발 체인에서 자금이 차감되지 않았으므로).
+
+**알림 정책:**
+
+| bridge_status 전이 | 알림 이벤트 | 우선순위 |
+|-------------------|-----------|---------|
+| PENDING -> COMPLETED | BRIDGE_COMPLETED | normal |
+| PENDING -> FAILED | BRIDGE_FAILED | high |
+| PENDING -> BRIDGE_MONITORING | BRIDGE_MONITORING_STARTED | high |
+| BRIDGE_MONITORING -> COMPLETED | BRIDGE_COMPLETED | normal |
+| BRIDGE_MONITORING -> TIMEOUT | BRIDGE_TIMEOUT | critical |
+| PENDING -> REFUNDED | BRIDGE_REFUNDED | high |
+
+**운영자 대시보드 연동:**
+
+- Admin UI > Transactions 뷰에서 `bridge_status` 컬럼 표시
+- BRIDGE_MONITORING / TIMEOUT 상태 트랜잭션에 경고 아이콘 표시
+- TIMEOUT 트랜잭션에 "수동 확인 필요" 액션 버튼 제공 (LI.FI support 페이지 링크 포함)
 
 ---
 
