@@ -185,6 +185,113 @@ Stage 6: Confirm (waitForConfirmation)
 
 Pitfall P13 (CONTRACT_WHITELIST 파편화) 방지: 프로바이더별 번들로 묶어 한 번에 등록/해제한다.
 
+#### PLCY-03: 크로스체인 정책 평가 규칙
+
+크로스체인 브릿지(LI.FI)에서의 정책 평가 규칙을 확정한다.
+
+**1. 출발 체인 정책으로 평가** -- 자금이 나가는 쪽의 월렛 정책을 적용한다.
+- walletId = 출발 체인의 월렛 ID
+- CONTRACT_WHITELIST: 출발 체인의 브릿지 컨트랙트가 등록되어야 한다
+- SPENDING_LIMIT: 브릿지 금액(fromAmount)을 USD 환산하여 평가한다
+
+**2. 도착 체인은 수신이므로 정책 미적용** -- 도착 체인에서 자산이 수신되는 것은 incoming TX와 동일하다.
+- 도착 체인 월렛의 SPENDING_LIMIT은 소비하지 않는다
+- 다만 도착 주소 검증은 별도 수행한다 (PLCY-04)
+
+**3. cross-chain swap의 정책 평가**
+- "SOL -> Base USDC" 같은 크로스체인 스왑도 출발 체인(Solana) 정책으로 평가한다
+- 도착 체인(Base)에서의 DEX 스왑은 LI.FI가 내부적으로 수행한다 (WAIaaS 정책 범위 밖)
+
+**4. SPENDING_LIMIT 예약 유지 규칙**
+- 브릿지 제출 시 SPENDING_LIMIT 예약을 생성한다
+- bridge_status가 COMPLETED 또는 REFUNDED가 될 때까지 예약을 유지한다
+- TIMEOUT/BRIDGE_MONITORING 상태에서는 예약을 해제하지 않는다 (자금이 limbo에 있을 수 있음)
+- Pitfall P4 방지: 예약 조기 해제 방지로 과지출을 차단한다
+
+**크로스체인 브릿지 플로우 (정책 관점):**
+
+```
+출발 체인 월렛 (Solana)
+  |
+  v
+resolve('cross_swap', { fromChain: 'solana', toChain: 'base', ... })
+  |                     <-- 출발 체인 context (walletId, policies)
+  v
+ContractCallRequest (출발 체인 트랜잭션)
+  |
+  v
+Stage 3: Policy (출발 체인 월렛의 정책)
+  - CONTRACT_WHITELIST: LI.FI Solana bridge program  [check]
+  - SPENDING_LIMIT: fromAmount USD 환산 -> 4-tier 평가
+  - toAddress 검증 (PLCY-04) <-- 추가 검증
+  |
+  v
+Stage 4-6: 실행 (출발 체인 트랜잭션 전송)
+  |
+  v
+BridgeStatusWorker: /status 폴링
+  -> COMPLETED: SPENDING_LIMIT 예약 해제
+  -> FAILED: SPENDING_LIMIT 예약 해제 + 알림
+  -> TIMEOUT: 예약 유지 + BRIDGE_MONITORING 전환
+```
+
+#### PLCY-04: 도착 주소 변조 방지 검증 설계
+
+Pitfall P7 (크로스체인 도착 주소 정책 바이패스) 방지를 위한 3단계 검증을 설계한다.
+
+**위협 모델:**
+AI 에이전트가 브릿지 요청 시 도착 주소를 공격자 주소로 지정할 수 있다. 정책 엔진은 출발 체인 트랜잭션만 평가하므로, 도착 주소가 브릿지 calldata 내부에 숨겨져 있어 정책 평가에서 보이지 않는다.
+
+**3단계 도착 주소 검증:**
+
+**1단계 - LI.FI quote에서 toAddress 추출 및 검증:**
+```
+LiFiActionProvider.resolve() 내부:
+  const quote = await lifiClient.getQuote({ ..., fromAddress: ctx.walletAddress });
+
+  // toAddress 추출
+  const toAddress = quote.action.toAddress;
+
+  // 검증 1: toAddress가 반드시 존재
+  if (!toAddress) throw new WAIaaSError('BRIDGE_MISSING_DESTINATION');
+
+  // 검증 2: toAddress가 동일 Owner의 월렛인지 확인
+  const isOwnWallet = await walletService.isOwnedBySameOwner(
+    ctx.walletId,  // 출발 월렛
+    toAddress,      // 도착 주소
+    quote.action.toChainId  // 도착 체인
+  );
+```
+
+**2단계 - 정책 기반 분기:**
+```
+if (isOwnWallet) {
+  // 자기 월렛으로 브릿지 -> 자동 허용
+  // 이것이 기본 동작 (self-bridge)
+} else {
+  // 외부 주소로 브릿지 -> APPROVAL 필요
+  // resolve() 결과에 requiresApproval: true 플래그 설정
+  // Stage 4에서 Owner 승인 대기
+}
+```
+
+**3단계 - calldata 내 도착 주소 일치 검증:**
+```
+// resolve()가 반환한 ContractCallRequest의 metadata에 toAddress 저장
+// Stage 5 (execute) 전에 calldata 내 도착 주소와 metadata.toAddress 일치 확인
+// (선택적 심층 검증 -- 구현 복잡도에 따라 Phase 2에서 결정)
+```
+
+**기본 정책: self-bridge only**
+- 기본적으로 도착 주소 = 동일 Owner의 도착 체인 월렛 주소로 자동 설정한다
+- LI.FI /quote 호출 시 fromAddress와 동일 Owner의 도착 체인 월렛을 toAddress로 지정한다
+- 에이전트가 명시적으로 다른 주소를 지정할 경우 APPROVAL 티어로 격상한다
+- Admin Settings에서 `allow_external_bridge_destination` (기본: false) 설정을 제공한다
+
+**에러 코드:**
+- `BRIDGE_MISSING_DESTINATION`: "도착 주소를 확인할 수 없습니다. self-bridge를 사용하세요."
+- `BRIDGE_DESTINATION_NOT_OWNED`: "도착 주소가 이 Owner의 월렛이 아닙니다. Owner 승인이 필요합니다."
+
 ---
 
 ### 4. 비동기 상태 추적 패턴
