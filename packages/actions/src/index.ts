@@ -22,6 +22,7 @@ export { LiFiActionProvider } from './providers/lifi/index.js';
 export { LIFI_DEFAULTS, LIFI_CHAIN_MAP, getLiFiChainId } from './providers/lifi/config.js';
 export type { LiFiConfig } from './providers/lifi/config.js';
 export { LiFiApiClient } from './providers/lifi/lifi-api-client.js';
+export { BridgeStatusTracker, BridgeMonitoringTracker } from './providers/lifi/bridge-status-tracker.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';

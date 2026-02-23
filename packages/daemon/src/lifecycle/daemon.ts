@@ -45,7 +45,7 @@ import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
 import { BackgroundWorkers } from './workers.js';
-import { keyValueStore } from '../infrastructure/database/schema.js';
+import { keyValueStore, transactions as txTable } from '../infrastructure/database/schema.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '../infrastructure/keystore/crypto.js';
@@ -828,8 +828,27 @@ export class DaemonLifecycle {
     try {
       if (this._db) {
         const { AsyncPollingService } = await import('../services/async-polling-service.js');
-        this._asyncPollingService = new AsyncPollingService(this._db);
-        console.debug('Step 4c-10: AsyncPollingService initialized');
+        this._asyncPollingService = new AsyncPollingService(this._db, {
+          emitNotification: (eventType, walletId, data) => {
+            if (this.notificationService) {
+              void this.notificationService.notify(
+                eventType as import('@waiaas/core').NotificationEventType,
+                walletId,
+                undefined, // vars (template interpolation — not needed for bridge events)
+                data,      // details (metadata passed through to notification)
+              );
+            }
+          },
+          releaseReservation: (txId) => {
+            // Reset reserved_amount and reserved_amount_usd to 0 for the transaction
+            this._db!
+              .update(txTable)
+              .set({ reservedAmount: '0', reservedAmountUsd: null })
+              .where(eq(txTable.id, txId))
+              .run();
+          },
+        });
+        console.debug('Step 4c-10: AsyncPollingService initialized (with callbacks)');
       }
     } catch (err) {
       console.warn('Step 4c-10 (fail-soft): AsyncPollingService init warning:', err);
@@ -917,6 +936,28 @@ export class DaemonLifecycle {
       }
     } catch (err) {
       console.warn('Step 4f (fail-soft): ActionProviderRegistry init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4f-2: Register bridge status trackers when lifi is enabled
+    // ------------------------------------------------------------------
+    if (this._asyncPollingService && this._settingsService?.get('actions.lifi_enabled') === 'true') {
+      try {
+        const { BridgeStatusTracker, BridgeMonitoringTracker } = await import('@waiaas/actions');
+        const lifiConfig = {
+          enabled: true,
+          apiBaseUrl: this._settingsService!.get('actions.lifi_api_base_url'),
+          apiKey: this._settingsService!.get('actions.lifi_api_key'),
+          defaultSlippagePct: Number(this._settingsService!.get('actions.lifi_default_slippage_pct')),
+          maxSlippagePct: Number(this._settingsService!.get('actions.lifi_max_slippage_pct')),
+          requestTimeoutMs: 15_000,
+        };
+        this._asyncPollingService.registerTracker(new BridgeStatusTracker(lifiConfig));
+        this._asyncPollingService.registerTracker(new BridgeMonitoringTracker(lifiConfig));
+        console.debug('Step 4f-2: Bridge status trackers registered (bridge + bridge-monitoring)');
+      } catch (err) {
+        console.warn('Step 4f-2 (fail-soft): Bridge tracker registration failed:', err);
+      }
     }
 
     // ------------------------------------------------------------------

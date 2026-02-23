@@ -23,6 +23,14 @@ export interface PollResult {
   errors: number;
 }
 
+/** Callbacks invoked by AsyncPollingService after state transitions. */
+export interface AsyncPollingCallbacks {
+  /** Emit a notification event. */
+  emitNotification?(eventType: string, walletId: string, data: Record<string, unknown>): void;
+  /** Release SPENDING_LIMIT reservation for a transaction. */
+  releaseReservation?(txId: string): void;
+}
+
 /**
  * AsyncPollingService manages registered IAsyncStatusTracker instances
  * and drives their polling lifecycle via pollAll().
@@ -30,7 +38,10 @@ export interface PollResult {
 export class AsyncPollingService {
   private readonly trackers: Map<string, IAsyncStatusTracker> = new Map();
 
-  constructor(private readonly db: BetterSQLite3Database<typeof schema>) {}
+  constructor(
+    private readonly db: BetterSQLite3Database<typeof schema>,
+    private readonly callbacks?: AsyncPollingCallbacks,
+  ) {}
 
   /**
    * Register a tracker by its name.
@@ -94,7 +105,11 @@ export class AsyncPollingService {
         // MaxAttempts check
         const pollCount = ((metadata.pollCount as number) ?? 0) + 1;
         if (pollCount > tracker.maxAttempts) {
-          await this.handleTimeout(tx, tracker, metadata);
+          await this.handleTimeout(
+            { id: tx.id, bridgeMetadata: tx.bridgeMetadata, walletId: tx.walletId },
+            tracker,
+            metadata,
+          );
           polled++;
           continue;
         }
@@ -102,12 +117,13 @@ export class AsyncPollingService {
         // Call tracker.checkStatus()
         const result = await tracker.checkStatus(tx.id, metadata);
 
-        // Process result
-        await this.processResult(tx, tracker, result, {
-          ...metadata,
-          pollCount,
-          lastPolledAt: now,
-        });
+        // Process result (pass walletId for notifications)
+        await this.processResult(
+          { id: tx.id, bridgeMetadata: tx.bridgeMetadata, walletId: tx.walletId },
+          tracker,
+          result,
+          { ...metadata, pollCount, lastPolledAt: now },
+        );
         polled++;
       } catch (err) {
         // Error isolation: log and continue
@@ -145,7 +161,7 @@ export class AsyncPollingService {
    * - 'CANCELLED': Cancel the transaction
    */
   private async handleTimeout(
-    tx: { id: string; bridgeMetadata: string | null },
+    tx: { id: string; bridgeMetadata: string | null; walletId?: string },
     tracker: IAsyncStatusTracker,
     metadata: Record<string, unknown>,
   ): Promise<void> {
@@ -163,8 +179,33 @@ export class AsyncPollingService {
         })
         .where(eq(transactions.id, tx.id))
         .run();
+    } else if (tracker.timeoutTransition === 'BRIDGE_MONITORING') {
+      // Transition to reduced-frequency monitoring
+      const newMeta = {
+        ...metadata,
+        pollCount: 0,
+        lastPolledAt: Date.now(),
+        transitionedAt: Date.now(),
+        tracker: 'bridge-monitoring',  // Switch tracker for BridgeMonitoringTracker pickup
+      };
+      this.db
+        .update(transactions)
+        .set({
+          bridgeStatus: 'BRIDGE_MONITORING' as BridgeStatus,
+          bridgeMetadata: JSON.stringify(newMeta),
+        })
+        .where(eq(transactions.id, tx.id))
+        .run();
+
+      // Emit BRIDGE_MONITORING_STARTED — reservation NOT released (funds in limbo)
+      if (tx.walletId) {
+        this.callbacks?.emitNotification?.('BRIDGE_MONITORING_STARTED', tx.walletId, {
+          txId: tx.id,
+          ...newMeta,
+        });
+      }
     } else {
-      // Transition bridge_status (BRIDGE_MONITORING or TIMEOUT)
+      // TIMEOUT transition (terminal)
       const newMeta = {
         ...metadata,
         pollCount: 0,
@@ -179,19 +220,27 @@ export class AsyncPollingService {
         })
         .where(eq(transactions.id, tx.id))
         .run();
+
+      // Emit BRIDGE_TIMEOUT — reservation NOT released (funds may be in limbo)
+      if (tx.walletId) {
+        this.callbacks?.emitNotification?.('BRIDGE_TIMEOUT', tx.walletId, {
+          txId: tx.id,
+          ...newMeta,
+        });
+      }
     }
   }
 
   /**
    * Process checkStatus result and update DB accordingly.
    *
-   * - COMPLETED: Update bridge_status to COMPLETED
-   * - FAILED: Update bridge_status to FAILED
-   * - TIMEOUT: Delegate to handleTimeout
+   * - COMPLETED: Update bridge_status, release reservation, emit notification
+   * - FAILED: Update bridge_status, release reservation, emit notification
+   * - TIMEOUT: Delegate to handleTimeout (which emits its own notifications)
    * - PENDING: Update bridge_metadata only (pollCount, lastPolledAt)
    */
   private async processResult(
-    tx: { id: string; bridgeMetadata: string | null },
+    tx: { id: string; bridgeMetadata: string | null; walletId?: string },
     tracker: IAsyncStatusTracker,
     result: AsyncTrackingResult,
     metadata: Record<string, unknown>,
@@ -202,16 +251,32 @@ export class AsyncPollingService {
     };
 
     switch (result.state) {
-      case 'COMPLETED':
+      case 'COMPLETED': {
+        // Determine if refunded
+        const isRefunded = updatedMetadata.refunded === true;
+
         this.db
           .update(transactions)
           .set({
-            bridgeStatus: 'COMPLETED',
+            bridgeStatus: isRefunded ? 'REFUNDED' as BridgeStatus : 'COMPLETED',
             bridgeMetadata: JSON.stringify(updatedMetadata),
           })
           .where(eq(transactions.id, tx.id))
           .run();
+
+        // Release SPENDING_LIMIT reservation (COMPLETED/REFUNDED both release)
+        this.callbacks?.releaseReservation?.(tx.id);
+
+        // Emit notification
+        const eventType = isRefunded ? 'BRIDGE_REFUNDED' : 'BRIDGE_COMPLETED';
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.(eventType, tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
         break;
+      }
 
       case 'FAILED':
         this.db
@@ -222,6 +287,17 @@ export class AsyncPollingService {
           })
           .where(eq(transactions.id, tx.id))
           .run();
+
+        // Release SPENDING_LIMIT reservation (FAILED = funds not deducted)
+        this.callbacks?.releaseReservation?.(tx.id);
+
+        // Emit notification
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.('BRIDGE_FAILED', tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
         break;
 
       case 'TIMEOUT':

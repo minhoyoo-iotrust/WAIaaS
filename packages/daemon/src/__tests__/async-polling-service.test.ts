@@ -415,3 +415,180 @@ describe('AsyncPollingService: GAS_WAITING and BRIDGE_MONITORING pickup', () => 
     expect(tracker.checkStatus).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Callback tests: notifications + reservation release (DEFI-04)
+// ---------------------------------------------------------------------------
+
+describe('AsyncPollingService: callbacks', () => {
+  beforeEach(() => resetDb());
+
+  it('emits BRIDGE_COMPLETED and releases reservation on COMPLETED result', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-cb-complete', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'COMPLETED',
+        details: { destTxHash: '0xdest' },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'BRIDGE_COMPLETED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-cb-complete', destTxHash: '0xdest' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-cb-complete');
+  });
+
+  it('emits BRIDGE_REFUNDED and releases reservation on refunded COMPLETED result', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-cb-refund', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'COMPLETED',
+        details: { refunded: true, substatusMessage: 'Refunded' },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    // bridge_status should be REFUNDED
+    const tx = getTx('tx-cb-refund');
+    expect(tx.bridge_status).toBe('REFUNDED');
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'BRIDGE_REFUNDED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-cb-refund', refunded: true }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-cb-refund');
+  });
+
+  it('emits BRIDGE_FAILED and releases reservation on FAILED result', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-cb-fail', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'FAILED',
+        details: { error: 'Slippage' },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'BRIDGE_FAILED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-cb-fail', error: 'Slippage' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-cb-fail');
+  });
+
+  it('emits BRIDGE_MONITORING_STARTED on BRIDGE_MONITORING transition (no reservation release)', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 240, lastPolledAt: 0 });
+    insertBridgeTx('tx-cb-monitor', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      maxAttempts: 240,
+      timeoutTransition: 'BRIDGE_MONITORING',
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'BRIDGE_MONITORING_STARTED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-cb-monitor', tracker: 'bridge-monitoring' }),
+    );
+    // Reservation NOT released (funds in limbo)
+    expect(releaseReservation).not.toHaveBeenCalled();
+  });
+
+  it('emits BRIDGE_TIMEOUT on TIMEOUT transition (no reservation release)', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge-monitoring', pollCount: 264, lastPolledAt: 0 });
+    insertBridgeTx('tx-cb-timeout', 'BRIDGE_MONITORING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'bridge-monitoring',
+      maxAttempts: 264,
+      timeoutTransition: 'TIMEOUT',
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'BRIDGE_TIMEOUT',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-cb-timeout' }),
+    );
+    // Reservation NOT released (funds may be in limbo)
+    expect(releaseReservation).not.toHaveBeenCalled();
+  });
+
+  it('does not call callbacks when not provided', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-no-cb', 'PENDING', metadata);
+
+    const tracker = createMockTracker({
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'COMPLETED',
+        details: { destTxHash: '0xdest' },
+      } satisfies AsyncTrackingResult),
+    });
+
+    // No callbacks passed — should not throw
+    const service = new AsyncPollingService(db);
+    service.registerTracker(tracker);
+    await expect(service.pollAll()).resolves.toEqual({ polled: 1, skipped: 0, errors: 0 });
+  });
+
+  it('BRIDGE_MONITORING transition sets tracker to bridge-monitoring in metadata', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 240, lastPolledAt: 0 });
+    insertBridgeTx('tx-cb-tracker-switch', 'PENDING', metadata);
+
+    const tracker = createMockTracker({
+      maxAttempts: 240,
+      timeoutTransition: 'BRIDGE_MONITORING',
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification: vi.fn(), releaseReservation: vi.fn() });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-cb-tracker-switch');
+    const updatedMeta = JSON.parse(tx.bridge_metadata as string);
+    expect(updatedMeta.tracker).toBe('bridge-monitoring');
+    expect(updatedMeta.pollCount).toBe(0);
+  });
+});
