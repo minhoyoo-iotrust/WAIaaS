@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.6.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.7...v2.6.0-rc.8) (2026-02-23)
+
+
+### Features
+
+* **248-01:** add actions settings category and ACTION_API_KEY_REQUIRED notification ([0ffc2a0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0ffc2a0a2f4135c3464bf145262d0ce8766f7ed2))
+* **248-01:** migrate registerBuiltInProviders to SettingsService and fire API key notification ([de183fd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/de183fdef9836421c0ec022da4072c313350ff62))
+* **248-02:** extend resolve() to return ContractCallRequest[] with actionProvider tagging ([df35876](https://github.com/minhoyoo-iotrust/WAIaaS/commit/df358764ed91e16a00e50c3cf8d35ffea22ae54d))
+* **248-02:** sequential pipeline execution + provider-trust CONTRACT_WHITELIST bypass ([f61f958](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f61f958c820afcaa4b84abbd1c456a1d6c98e2ff))
+* **248-03:** add Actions page with provider list, toggles, and API key management ([dcfc904](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dcfc904f539e09ef05c523c4f54cadaf9d5d25b4))
+* **249-01:** add ZeroExApiClient, Zod schemas, and config ([7690aea](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7690aeaa21510fda7b141bfb0c26cb80d7800077))
+* **249-02:** implement ZeroExSwapActionProvider with approve+swap resolution ([b3dd141](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b3dd141dcdbabf22c54163dff173bc1ccd63b64d))
+* **250-01:** add execute_action method to Python SDK ([b21c91e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b21c91eb632ffbba766b32d81c18ef0d4199d901))
+* **250-01:** add executeAction method to TS SDK ([6c93cbf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6c93cbf3a3d4c5e4376f89be006dca539409e806))
+
+
+### Bug Fixes
+
+* **248:** update test assertions for executeResolve array return and notification count ([ef72b5d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ef72b5dd5b0112326dd6e91746bacbad54aad2b1))
+* **250:** update Python SDK examples in skill docs and fix INTG-03 tool name ([8663782](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8663782b621226abd79590b9d015e8778d091795))
+* align test assertions with formatted amounts and multi-network subscriptions ([fe337aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fe337aaa1ee514fb05276e3f601861116dcc3544))
+* align test fixtures with column rename and add multi-network subscriptions ([da29107](https://github.com/minhoyoo-iotrust/WAIaaS/commit/da29107edd2dbff1a5949ef41c0ed22c2e355ffb))
+* correct provider name in Python SDK docstring (0x-swap -&gt; zerox_swap) ([31252fb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/31252fb0f848a12e00ee24d8f3db801422a2ab35))
+* create WcSigningBridge during WalletConnect hot-reload ([#166](https://github.com/minhoyoo-iotrust/WAIaaS/issues/166)) ([3231742](https://github.com/minhoyoo-iotrust/WAIaaS/commit/32317429e7c5b2154bdf94116579e04376f39770))
+* resolve 7 open issues ([#157](https://github.com/minhoyoo-iotrust/WAIaaS/issues/157)-[#163](https://github.com/minhoyoo-iotrust/WAIaaS/issues/163)) for milestone v28.2 ([e31d9dc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e31d9dc37050e3fd266726679f36be32b664d0b9))
+* update action-provider contract test for resolve() array return type ([b8b153c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b8b153cb8ed94b0216ef056c137dffbf8ed9e68c))
+* update NotificationEventType expected count to 31 ([ac0b986](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ac0b9865422264e2ff5a0ece7ad5028a78d14c3e))
+
 ## [2.6.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.6...v2.6.0-rc.7) (2026-02-23)
 
 
