@@ -26,32 +26,237 @@ v1.5에서 IActionProvider 인터페이스, ActionProviderRegistry, MCP Tool 자
 
 ## 설계 대상
 
-### 1. packages/actions/ 패키지 구조
+### 1. DEFI-01: packages/actions/ 패키지 구조 (확정 설계)
 
 내장 ActionProvider 구현체를 코어/데몬과 분리하여 선택적 설치가 가능한 독립 패키지로 설계한다.
 
-#### 1.1 설계 범위
+> **상태:** 확정 설계 (2026-02-23)
+> **요구사항:** PKGS-01, PKGS-02, PKGS-03, PKGS-04
 
-| 항목 | 내용 |
+#### 1.1 PKGS-01: 디렉토리 구조 확정
+
+```
+packages/actions/
+  package.json                    # @waiaas/actions, workspace dependencies only
+  tsconfig.json                   # extends root, ES2022, NodeNext
+  src/
+    index.ts                      # 내장 프로바이더 export + registerBuiltInProviders()
+    common/
+      action-api-client.ts        # ActionApiClient base (fetch + AbortController + Zod)
+      slippage.ts                 # SlippageHelper (clamp, bps/pct 변환, branded types)
+      errors.ts                   # DeFi 에러 코드 정의 (ACTION_API_ERROR 등)
+    providers/
+      jupiter-swap/               # m28-01
+        index.ts                  # JupiterSwapActionProvider : IActionProvider
+        jupiter-api-client.ts     # Jupiter REST API (extends ActionApiClient)
+        schemas.ts                # QuoteResponse, SwapInstructionsResponse Zod
+        config.ts                 # JupiterSwapConfig type + defaults
+      0x-swap/                    # m28-02
+        index.ts                  # ZeroExSwapActionProvider : IActionProvider
+        0x-api-client.ts          # 0x REST API (extends ActionApiClient)
+        schemas.ts                # PriceResponse, QuoteResponse Zod
+        config.ts                 # ZeroExSwapConfig type + defaults
+        allowance-holder.ts       # AllowanceHolder approve helper (NOT Permit2)
+      lifi/                       # m28-03
+        index.ts                  # LiFiActionProvider : IActionProvider
+        lifi-api-client.ts        # LI.FI REST API (extends ActionApiClient)
+        schemas.ts                # QuoteResponse, StatusResponse Zod
+        config.ts                 # LiFiConfig type + defaults
+      lido/                       # m28-04
+        index.ts                  # LidoStakingActionProvider : IActionProvider
+        lido-contract.ts          # ABI encodings (submit, requestWithdrawals)
+        schemas.ts                # Input Zod schemas
+        config.ts                 # LidoConfig type + defaults
+      jito/                       # m28-04
+        index.ts                  # JitoStakingActionProvider : IActionProvider
+        jito-stake-pool.ts        # SPL Stake Pool instruction builder
+        schemas.ts                # Input Zod schemas
+        config.ts                 # JitoConfig type + defaults
+```
+
+**package.json 확정 내용:**
+
+```json
+{
+  "name": "@waiaas/actions",
+  "version": "2.6.0-rc.3",
+  "description": "WAIaaS built-in DeFi Action Provider implementations",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "@solana-program/system": "^0.11.0",
+    "@solana-program/token": "^0.10.0",
+    "@solana/kit": "^6.0.1",
+    "viem": "^2.21.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3"
+  }
+}
+```
+
+- **신규 npm 의존성: 0개** -- 모든 의존성은 기존 모노레포 패키지
+- daemon package.json에 추가: `"@waiaas/actions": "workspace:*"`
+
+#### 1.2 PKGS-02: 내장 프로바이더 등록/해제 라이프사이클 설계
+
+`registerBuiltInProviders()` 함수의 확정 설계:
+
+```typescript
+// packages/actions/src/index.ts
+export function registerBuiltInProviders(
+  registry: ActionProviderRegistry,
+  config: DaemonConfig,
+): { loaded: string[]; skipped: string[] } {
+  const loaded: string[] = [];
+  const skipped: string[] = [];
+
+  const providers: Array<{ key: string; factory: () => IActionProvider }> = [
+    { key: 'jupiter_swap', factory: () => new JupiterSwapActionProvider(config.actions?.jupiter_swap) },
+    { key: '0x_swap', factory: () => new ZeroExSwapActionProvider(config.actions?.['0x_swap']) },
+    { key: 'lifi', factory: () => new LiFiActionProvider(config.actions?.lifi) },
+    { key: 'lido', factory: () => new LidoStakingActionProvider(config.actions?.lido) },
+    { key: 'jito', factory: () => new JitoStakingActionProvider(config.actions?.jito) },
+  ];
+
+  for (const { key, factory } of providers) {
+    if (config.actions?.[key]?.enabled) {
+      try {
+        registry.register(factory());
+        loaded.push(key);
+      } catch (err) {
+        console.warn(`Built-in provider '${key}' registration failed:`, err);
+        skipped.push(key);
+      }
+    } else {
+      skipped.push(key);
+    }
+  }
+  return { loaded, skipped };
+}
+```
+
+**라이프사이클 6단계:**
+
+1. 데몬 시작 시 Step 4 (DaemonLifecycle)에서 `registerBuiltInProviders()` 호출
+2. `config.actions.{provider_name}.enabled` 플래그 확인
+3. `enabled=true`인 프로바이더만 `factory()` 호출 후 `registry.register()`
+4. 등록 실패 시 `warn` 로그 + skip (데몬 전체 실패 방지)
+5. 반환: `{ loaded: string[], skipped: string[] }` -- 데몬 시작 로그에 출력
+6. 데몬 종료 시: 별도 해제 불필요 (프로바이더는 stateless, GC 처리)
+
+#### 1.3 PKGS-03: config.toml [actions.*] 공통 스키마 패턴 확정
+
+**모든 프로바이더 공통 필드:**
+
+| 필드 | 타입 | 필수 | 기본값 | 설명 |
+|------|------|------|--------|------|
+| `enabled` | boolean | 필수 | `false` | 프로바이더 활성화 여부 |
+| `api_base_url` | string | REST API 프로바이더만 | 프로바이더별 | REST API 기본 URL |
+| `api_key` | string | 0x 필수, Jupiter/LI.FI 선택 | `""` | API 인증 키 |
+
+**프로바이더별 슬리피지 필드:**
+
+| 프로바이더 | config 키 | 타입 | 단위 | 기본값 | 상한 |
+|-----------|-----------|------|------|--------|------|
+| Jupiter | `default_slippage_bps` / `max_slippage_bps` | integer | bps (API 네이티브) | 50 (0.5%) | 500 (5%) |
+| 0x | `default_slippage_pct` / `max_slippage_pct` | decimal | pct (API 네이티브) | 0.01 (1%) | 0.05 (5%) |
+| LI.FI | `default_slippage_pct` / `max_slippage_pct` | decimal | pct (API 네이티브) | 0.03 (3%) | 0.05 (5%) |
+
+**Zod 검증 스키마:** `ActionsConfigSchema`를 core에 추가. 환경변수 오버라이드: `WAIAAS_ACTIONS_{PROVIDER}_{KEY}` 패턴 (기존 패턴 일관).
+
+**config.toml 검증 바운드:**
+- Jupiter bps: 1~10000 (integer). 범위 초과 시 config 로딩에서 즉시 에러
+- 0x/LI.FI pct: 0.001~1.0 (decimal). 범위 초과 시 config 로딩에서 즉시 에러
+
+**프로바이더별 config.toml 전체 섹션 예시:**
+
+```toml
+# === DeFi Action Provider Configuration ===
+
+[actions.jupiter_swap]
+enabled = true
+api_base_url = "https://api.jup.ag/swap/v1"
+# api_key = ""                                 # Jupiter API key (optional, improves rate limits)
+default_slippage_bps = 50                      # 0.5%
+max_slippage_bps = 500                         # 5%
+max_price_impact_pct = 1.0                     # 1% price impact limit
+jito_tip_lamports = 1000                       # Jito MEV protection tip (default 1000 lamports)
+# jito_block_engine_url = ""                   # Jito block engine URL (optional)
+
+[actions.0x_swap]
+enabled = true
+api_key = ""                                   # 0x API key (REQUIRED -- get from dashboard.0x.org)
+api_base_url = "https://api.0x.org"            # Unified endpoint (v2, all chains via chainId param)
+default_slippage_pct = 0.01                    # 1%
+max_slippage_pct = 0.05                        # 5%
+
+[actions.lifi]
+enabled = true
+# api_key = ""                                 # LI.FI API key (optional, improves rate limits)
+api_base_url = "https://li.quest/v1"
+default_slippage_pct = 0.03                    # 3% (cross-chain needs higher default)
+max_slippage_pct = 0.05                        # 5%
+status_poll_interval_sec = 30                  # Bridge status polling interval
+status_poll_max_attempts = 240                 # Max attempts (2 hours at 30s)
+
+[actions.lido]
+enabled = true
+steth_address = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
+withdrawal_queue_address = "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"
+
+[actions.jito]
+enabled = true
+stake_pool = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+```
+
+#### 1.4 PKGS-04: Admin Settings 런타임 변경 가능 설정 항목 확정
+
+**config.toml (정적, 재시작 필요):**
+
+| 설정 | 이유 |
 |------|------|
-| 패키지 이름 | @waiaas/actions (모노레포 packages/actions/) |
-| 프로바이더 디렉토리 | providers/{name}/ — index.ts, schemas.ts, config.ts, api-client.ts |
-| 내장 프로바이더 로딩 | 데몬 시작 시 enabled 프로바이더만 ActionProviderRegistry에 등록 |
-| config.toml 패턴 | [actions.{provider_name}] 섹션 — enabled, 프로바이더별 설정 |
-| 의존성 정책 | 프로바이더별 외부 SDK는 선택적 의존성. REST API 직접 호출 우선 |
+| `enabled` | 프로바이더 로딩은 데몬 시작 시에만 발생 |
+| `api_base_url` | API 엔드포인트 변경은 인프라 변경 |
+| 컨트랙트 주소 (`steth_address`, `withdrawal_queue_address`, `stake_pool`, `jitosol_mint`) | 온체인 주소는 변경 빈도 극저 |
 
-#### 1.2 설계 산출물
+**Admin Settings (런타임, hot-reload 가능):**
 
-- packages/actions/ 디렉토리 구조 확정 + 패키지 스캐폴딩 (package.json, tsconfig.json, turbo 연동은 m28-01 첫 페이즈에서 구현)
-- 내장 프로바이더 등록/해제 라이프사이클
-- config.toml [actions.*] 섹션 스키마 공통 패턴
-- Admin Settings 노출 항목 (API 키, 슬리피지 등 런타임 변경 가능 설정)
+| 설정 | 카테고리 | 이유 |
+|------|---------|------|
+| `api_key` (Jupiter, 0x, LI.FI) | 보안 자격 증명 | 키 교체/갱신을 재시작 없이 수행 |
+| `default_slippage_bps` / `default_slippage_pct` | 운영 파라미터 | 시장 상황에 따라 실시간 조정 |
+| `max_slippage_bps` / `max_slippage_pct` | 운영 파라미터 | 위험 한도 실시간 조정 |
+| `max_price_impact_pct` (Jupiter) | 운영 파라미터 | 가격 영향 한도 실시간 조정 |
+| `jito_tip_lamports` (Jupiter) | 운영 파라미터 | MEV 보호 비용 실시간 조정 |
+| `status_poll_interval_sec` (LI.FI) | 운영 파라미터 | 폴링 빈도 실시간 조정 |
+| `status_poll_max_attempts` (LI.FI) | 운영 파라미터 | 최대 대기 시간 실시간 조정 |
+
+**경계 원칙:** "보안 자격 증명과 인프라 설정 = config.toml only, 운영 파라미터 = Admin Settings"
+
+> **Note:** `api_key`는 보안 자격 증명이지만 Admin Settings에서도 관리 가능 -- 키 교체 시 재시작 없이 적용이 운영상 중요하기 때문. Admin Settings에서는 password-type 입력 + master password 암호화 저장.
+
+**Settings snapshot 패턴:** `resolve()` 진입 시 설정 스냅샷 획득, 파이프라인 완료까지 스냅샷 사용 (Pitfall P19 방지). 이를 통해 resolve() 실행 중 Admin Settings 변경이 진행 중인 트랜잭션에 영향을 주지 않음.
 
 ---
 
-### 2. REST API → calldata 변환 공통 패턴
+### 2. DEFI-02: REST API -> calldata 변환 공통 패턴 (확정 설계)
 
-4개 프로토콜 모두 **외부 REST API 호출 → calldata/instruction 획득 → ContractCallRequest 변환**이라는 동일 패턴을 따른다. 이 공통 패턴을 설계한다.
+4개 프로토콜 모두 **외부 REST API 호출 -> calldata/instruction 획득 -> ContractCallRequest 변환**이라는 동일 패턴을 따른다.
+
+> **상태:** 확정 설계 (2026-02-23)
+> **요구사항:** APIC-01, APIC-02, APIC-03, APIC-04, APIC-05
 
 #### 2.1 공통 플로우
 
@@ -62,25 +267,249 @@ resolve(actionName, params)
   3. 견적 검증 (슬리피지, priceImpact 등)
   4. 외부 API 호출 (calldata/instruction 획득)
   5. ContractCallRequest 변환 (체인별 매핑)
-  6. 반환 → 기존 파이프라인 Stage 1~6 실행
+  6. 반환 -> 기존 파이프라인 Stage 1~6 실행
 ```
 
-#### 2.2 설계 범위
+#### 2.2 APIC-01: ActionApiClient 베이스 패턴 확정
 
-| 항목 | 내용 |
-|------|------|
-| API Client 공통 패턴 | native fetch + AbortController 타임아웃 + 응답 Zod 검증 |
-| 타임아웃 기본값 | 10초 (크로스체인은 15초) |
-| 에러 처리 | ACTION_API_ERROR, ACTION_RATE_LIMITED, PRICE_IMPACT_TOO_HIGH 에러 코드 |
-| 슬리피지 제어 | 프로바이더별 기본값/상한 config, 사용자 입력 → 상한 클램핑. 단위는 외부 API 네이티브 단위 사용: Jupiter=bps(정수), 0x/LI.FI=pct(소수). config 키도 API 단위에 맞춤 (_bps / _pct) |
-| 견적 캐시 | 프로바이더별 선택적 캐시 (30초 TTL) |
+```typescript
+// packages/actions/src/common/action-api-client.ts
+export class ActionApiClient {
+  constructor(
+    private readonly baseUrl: string,
+    private readonly timeoutMs: number = 10_000,
+    private readonly headers: Record<string, string> = {},
+  ) {}
 
-#### 2.3 설계 산출물
+  async get<T>(path: string, schema: z.ZodType<T>, params?: Record<string, string>): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await fetch(url.toString(), {
+        signal: controller.signal,
+        headers: this.headers,
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 429) {
+          throw new ChainError('ACTION_RATE_LIMITED', `Rate limited: ${body}`);
+        }
+        throw new ChainError('ACTION_API_ERROR', `API error ${res.status}: ${body}`);
+      }
+      const data = await res.json();
+      return schema.parse(data); // Runtime API contract validation
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new ChainError('ACTION_API_TIMEOUT', `API timeout after ${this.timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
 
-- ActionApiClient 베이스 패턴 (fetch 래퍼, 타임아웃, Zod 검증)
-- ContractCallRequest 변환 매핑 (Solana: programId/instructionData/accounts, EVM: to/data/value)
-- 에러 코드 추가 (ACTION_API_ERROR, ACTION_RATE_LIMITED, PRICE_IMPACT_TOO_HIGH)
-- 슬리피지 제어 공통 로직 (기본값/상한/클램핑) + 프로바이더별 단위 규칙 (API 네이티브 단위: bps/pct)
+  async post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await fetch(new URL(path, this.baseUrl).toString(), {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { ...this.headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        if (res.status === 429) {
+          throw new ChainError('ACTION_RATE_LIMITED', `Rate limited: ${text}`);
+        }
+        throw new ChainError('ACTION_API_ERROR', `API error ${res.status}: ${text}`);
+      }
+      const data = await res.json();
+      return schema.parse(data);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new ChainError('ACTION_API_TIMEOUT', `API timeout after ${this.timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+```
+
+**핵심 설계 결정:**
+
+- native fetch + AbortController (SDK 미사용, 신규 의존성 0개)
+- 모든 응답에 `Zod schema.parse()` 적용 -- API drift 런타임 감지
+- 실패 시 `ChainError` 반환 (`ACTION_API_ERROR`, `ACTION_API_TIMEOUT`, `ACTION_RATE_LIMITED`)
+- ChainError -> WAIaaSError 변환은 Stage 5에서 수행 (기존 패턴)
+- 타임아웃 기본 10초, 크로스체인(LI.FI)은 15초
+- resolve()는 파이프라인 진입 전에 호출되므로 파이프라인 타임아웃과 독립 (Pitfall P10 방지)
+- 응답 로깅: 첫 성공 시 + Zod 실패 시 raw response 로깅
+
+#### 2.3 APIC-02: ContractCallRequest 변환 매핑 확정
+
+**Solana 매핑 (Jupiter, Jito):**
+
+```
+외부 API instruction -> ContractCallRequest:
+  type: 'CONTRACT_CALL'
+  to: programId (Jupiter v6 program / Jito SPL Stake Pool)
+  programId: instruction.programId
+  instructionData: instruction.data (base64)
+  accounts: instruction.accounts (AccountMeta[])
+```
+
+**EVM 매핑 (0x, LI.FI, Lido):**
+
+```
+외부 API calldata -> ContractCallRequest:
+  type: 'CONTRACT_CALL'
+  to: quote.to (ExchangeProxy / LI.FI router / stETH contract)
+  calldata: quote.data (hex)
+  value: quote.value (ETH amount, 0 for token swaps)
+```
+
+**Solana vs EVM 매핑 비교:**
+
+| 필드 | Solana | EVM | 비고 |
+|------|--------|-----|------|
+| `type` | `CONTRACT_CALL` | `CONTRACT_CALL` | 동일 |
+| `to` | programId | contract address | Solana: 프로그램 주소, EVM: 컨트랙트 주소 |
+| 호출 데이터 | `instructionData` (base64) | `calldata` (hex) | 인코딩 형식 상이 |
+| 부가 정보 | `accounts` (AccountMeta[]) | `value` (wei amount) | Solana: 계정 목록, EVM: ETH 전송액 |
+| 다중 인스트럭션 | BATCH 타입 사용 | 단일 calldata | Jupiter: setup+swap+cleanup 다중 인스트럭션 |
+
+#### 2.4 APIC-03: DeFi 에러 코드 확정
+
+기존 WAIaaSError 체계에 추가할 DeFi 에러 코드:
+
+| 코드 | HTTP | 설명 | 사용처 |
+|------|------|------|--------|
+| `ACTION_API_ERROR` | 502 | 외부 DeFi API 호출 실패 (non-200 응답) | 모든 REST API 프로바이더 |
+| `ACTION_API_TIMEOUT` | 504 | 외부 DeFi API 타임아웃 | 모든 REST API 프로바이더 |
+| `ACTION_RATE_LIMITED` | 429 | 외부 API rate limit 초과 | Jupiter, 0x, LI.FI |
+| `PRICE_IMPACT_TOO_HIGH` | 422 | 가격 영향이 설정 상한 초과 | Jupiter, 0x |
+| `ACTION_REQUIRES_APPROVAL` | 409 | ERC-20 토큰 승인 필요 (AllowanceHolder) | 0x |
+| `BRIDGE_ROUTE_NOT_FOUND` | 404 | 크로스체인 경로 없음 | LI.FI |
+| `JITO_UNAVAILABLE` | 503 | Jito 블록 엔진 사용 불가 (fail-closed) | Jupiter |
+| `QUOTE_EXPIRED` | 410 | 견적 TTL 만료 | Gas Condition 재실행 시 |
+
+**ChainError -> WAIaaSError 변환 경로:**
+
+```
+ActionApiClient (ChainError)
+  -> ActionProvider.resolve() (ChainError 전파)
+    -> ActionProviderRegistry.executeResolve() (catch ChainError)
+      -> Action Route Handler (catch ChainError -> WAIaaSError 변환)
+        -> HTTP Response (WAIaaSError.code -> HTTP status + error body)
+```
+
+Stage 5에서의 변환이 아닌, Action Route Handler에서의 변환이 적절하다. resolve()는 파이프라인 외부에서 호출되므로 Stage 5에 도달하지 않는다.
+
+#### 2.5 APIC-04: 슬리피지 제어 공통 로직 확정
+
+```typescript
+// packages/actions/src/common/slippage.ts
+
+// 브랜디드 타입으로 단위 혼동 방지
+type SlippageBps = number & { __brand: 'bps' };
+type SlippagePct = number & { __brand: 'pct' };
+
+// 팩토리 함수 (런타임 검증 포함)
+function asBps(value: number): SlippageBps {
+  if (!Number.isInteger(value) || value < 1 || value > 10000) {
+    throw new Error(`Invalid bps value: ${value} (must be integer 1-10000)`);
+  }
+  return value as SlippageBps;
+}
+
+function asPct(value: number): SlippagePct {
+  if (value < 0.001 || value > 1.0) {
+    throw new Error(`Invalid pct value: ${value} (must be 0.001-1.0)`);
+  }
+  return value as SlippagePct;
+}
+
+// 클램핑 함수
+function clampSlippageBps(input: number, default_: SlippageBps, max: SlippageBps): SlippageBps {
+  const value = input <= 0 ? default_ : Math.min(input, max);
+  return asBps(Math.round(value));
+}
+
+function clampSlippagePct(input: number, default_: SlippagePct, max: SlippagePct): SlippagePct {
+  const value = input <= 0 ? default_ : Math.min(input, max);
+  return asPct(value);
+}
+
+// 변환 함수
+function bpsToSlippagePct(bps: SlippageBps): SlippagePct {
+  return asPct(bps / 10000);  // 50 -> 0.005
+}
+
+function pctToSlippageBps(pct: SlippagePct): SlippageBps {
+  return asBps(Math.round(pct * 10000));  // 0.005 -> 50
+}
+```
+
+**프로바이더별 단위 매핑 테이블:**
+
+| 프로바이더 | API 파라미터 | 단위 | config 키 | 기본값 | 상한 |
+|-----------|-------------|------|-----------|--------|------|
+| Jupiter | `slippageBps` | bps (integer) | `default_slippage_bps` / `max_slippage_bps` | 50 (0.5%) | 500 (5%) |
+| 0x | `slippagePercentage` | pct (decimal) | `default_slippage_pct` / `max_slippage_pct` | 0.01 (1%) | 0.05 (5%) |
+| LI.FI | `slippage` | pct (decimal) | `default_slippage_pct` / `max_slippage_pct` | 0.03 (3%) | 0.05 (5%) |
+
+**config 검증 바운드:** Jupiter bps 1~10000, 0x/LI.FI pct 0.001~1.0. 범위 초과 시 config 로딩에서 즉시 에러.
+
+#### 2.6 APIC-05: 0x AllowanceHolder 토큰 승인 플로우 확정
+
+Research에서 확인된 바와 같이 **AllowanceHolder를 사용**한다 (Permit2 대신).
+
+**AllowanceHolder 플로우:**
+
+1. `GET /swap/allowance-holder/price` -- 견적 조회 (NOT `/swap/permit2/price`)
+2. `GET /swap/allowance-holder/quote` -- 실행용 calldata 획득 (NOT `/swap/permit2/quote`)
+3. ERC-20 판매 시: **AllowanceHolder 컨트랙트에 대한 standard ERC-20 approve 필요**
+4. approve는 기존 APPROVE 파이프라인 타입으로 실행 (별도 파이프라인)
+5. approve 완료 후 swap 파이프라인 실행
+
+**AllowanceHolder vs Permit2 비교:**
+
+| 항목 | AllowanceHolder (채택) | Permit2 (미채택) |
+|------|----------------------|-----------------|
+| 서명 | 1회 (트랜잭션) | 2회 (EIP-712 + 트랜잭션) |
+| 가스 | 낮음 | 높음 |
+| 복잡도 | 낮음 (standard approve) | 높음 (EIP-712 서명 + 시그니처 조합) |
+| 적합 환경 | 서버사이드 (WAIaaS) | 브라우저 지갑 |
+| EIP-712 필요 | 아니오 | 예 |
+| 보안 모델 | standard ERC-20 approve | Permit2 universal approval |
+
+**채택 근거:** AllowanceHolder는 0x가 서버사이드 통합에 공식 권장하는 방식이다. Permit2 대비 구현 복잡도가 낮고(EIP-712 서명 불필요), 가스비가 저렴하며, 기존 WAIaaS APPROVE 파이프라인과 자연스럽게 통합된다.
+
+**policy 평가:**
+- approve 트랜잭션은 $0 지출로 평가 (승인은 지출이 아님)
+- swap 금액만 SPENDING_LIMIT 대상
+- AllowanceHolder 주소는 `APPROVED_SPENDERS` 정책에서 관리
+
+**approve -> swap 순차 실행:**
+
+```
+사용자: 0x_swap 요청 (USDC -> ETH)
+  |
+  v
+ZeroExSwapActionProvider.resolve()
+  1. allowance 확인: AllowanceHolder에 대한 USDC allowance 충분한지?
+  2. allowance 부족 시: ACTION_REQUIRES_APPROVAL 에러 반환
+     -> Action Route Handler가 2-step 오케스트레이션:
+        Step 1: APPROVE 파이프라인 실행 (approve AllowanceHolder for USDC)
+        Step 2: approve CONFIRMED 후 resolve() 재호출 -> swap 실행
+  3. allowance 충분 시: 바로 ContractCallRequest 반환 -> swap 실행
+```
 
 ---
 
