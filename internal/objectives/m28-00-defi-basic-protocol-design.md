@@ -1341,25 +1341,200 @@ if (effectiveWaitTime > gasCondition.timeout) {
 
 ---
 
-### 5. 테스트 전략
+### 7. 테스트 전략 (DEFI-05 확정)
 
-4개 프로토콜 공통의 테스트 패턴을 설계한다.
+> **상태:** 확정 설계 (2026-02-23)
+> **요구사항:** TEST-01, TEST-02, TEST-03
 
-#### 5.1 설계 범위
+#### TEST-01: Mock API 응답 픽스처 공통 구조
 
-| 항목 | 내용 |
-|------|------|
-| 단위 테스트 | mock 외부 API 응답 → resolve() → ContractCallRequest 검증 |
-| 통합 테스트 | mock API + mock ChainAdapter → 파이프라인 실행 → 상태 전이 |
-| 정책 테스트 | CONTRACT_WHITELIST / SPENDING_LIMIT 연동 검증 |
-| MCP 테스트 | 프로바이더 등록 → MCP tool 목록 자동 노출 |
-| 외부 API 실 호출 | [HUMAN] 태그 — Devnet/Testnet에서 수동 검증 |
+**디렉토리 구조:**
 
-#### 5.2 설계 산출물
+```
+packages/actions/src/
+  __tests__/
+    fixtures/
+      jupiter/
+        quote-response.json          # Jupiter /quote 성공 응답
+        swap-instructions-response.json  # Jupiter /swap-instructions 성공 응답
+        quote-error-429.json         # Rate limit 에러 응답
+        quote-high-impact.json       # priceImpactPct > 1% 응답
+      0x/
+        price-response.json          # 0x /price 성공 응답
+        quote-response.json          # 0x /quote 성공 응답
+        quote-insufficient-allowance.json  # allowance 부족 응답
+      lifi/
+        quote-response-evm.json      # LI.FI EVM origin 성공 응답
+        quote-response-solana.json   # LI.FI Solana origin 성공 응답
+        status-pending.json          # /status PENDING 응답
+        status-done.json             # /status DONE 응답
+        status-failed.json           # /status FAILED 응답
+      common/
+        contract-call-request-evm.json   # 기대 ContractCallRequest (EVM)
+        contract-call-request-solana.json # 기대 ContractCallRequest (Solana)
+    helpers/
+      mock-api-client.ts             # ActionApiClient mock helper
+      assert-contract-call.ts        # ContractCallRequest assertion helper
+      create-mock-context.ts         # ActionContext factory
+```
 
-- mock API 응답 픽스처 공통 구조
-- 프로바이더 테스트 헬퍼 (createMockApiResponse, assertContractCallRequest)
-- 4개 프로토콜 × 공통 시나리오 매트릭스
+**픽스처 설계 원칙:**
+
+1. **JSON 파일로 분리**: 테스트 코드와 데이터를 분리하여 유지보수 용이
+2. **실제 API 응답 기반**: 각 JSON은 실제 API 호출로 획득한 응답을 정리한 것 (민감 데이터 마스킹)
+3. **Zod 스키마 통과 보장**: 모든 픽스처는 해당 프로바이더의 Zod 스키마를 통과해야 함
+4. **에러 케이스 포함**: 성공 응답뿐 아니라 429, 500, 스키마 변경 등 에러 응답도 포함
+
+#### TEST-02: 프로바이더 테스트 헬퍼
+
+```typescript
+// helpers/mock-api-client.ts
+export function createMockApiResponse<T>(fixture: T): {
+  ok: boolean;
+  status: number;
+  json: () => Promise<T>;
+  text: () => Promise<string>;
+} {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => fixture,
+    text: async () => JSON.stringify(fixture),
+  };
+}
+
+export function createMockApiError(status: number, body: string): {
+  ok: boolean;
+  status: number;
+  json: () => Promise<unknown>;
+  text: () => Promise<string>;
+} {
+  return {
+    ok: false,
+    status,
+    json: async () => ({ error: body }),
+    text: async () => body,
+  };
+}
+
+/** global.fetch를 mock하여 순차적 응답을 반환한다 */
+export function mockFetchSequence(responses: Array<Response | Error>): void;
+```
+
+```typescript
+// helpers/assert-contract-call.ts
+export function assertContractCallRequest(
+  result: ContractCallRequest,
+  expected: {
+    to: string;
+    chain: 'solana' | 'evm';
+    /** EVM: calldata hex 접두사 확인 */
+    calldataPrefix?: string;
+    /** EVM: value 확인 */
+    value?: string;
+    /** Solana: programId 확인 */
+    programId?: string;
+    /** Solana: accounts 개수 확인 */
+    accountsCount?: number;
+  },
+): void {
+  expect(result.type).toBe('CONTRACT_CALL');
+  expect(result.to).toBe(expected.to);
+  if (expected.chain === 'evm') {
+    expect(result.calldata).toBeDefined();
+    if (expected.calldataPrefix) {
+      expect(result.calldata!.startsWith(expected.calldataPrefix)).toBe(true);
+    }
+    if (expected.value) expect(result.value).toBe(expected.value);
+  }
+  if (expected.chain === 'solana') {
+    expect(result.programId).toBeDefined();
+    if (expected.programId) expect(result.programId).toBe(expected.programId);
+    expect(result.instructionData).toBeDefined();
+    if (expected.accountsCount) expect(result.accounts?.length).toBe(expected.accountsCount);
+  }
+}
+```
+
+```typescript
+// helpers/create-mock-context.ts
+export function createMockActionContext(overrides?: Partial<ActionContext>): ActionContext {
+  return {
+    walletId: 'test-wallet-id',
+    walletAddress: 'test-wallet-address',
+    chain: 'solana',
+    network: 'mainnet',
+    environment: 'mainnet',
+    sessionId: 'test-session-id',
+    ...overrides,
+  };
+}
+```
+
+#### TEST-03: 4개 프로토콜 x 공통 시나리오 매트릭스
+
+모든 프로바이더가 공통으로 검증해야 하는 시나리오를 매트릭스로 정의한다. 각 프로바이더의 objective 파일에 정의된 E2E 시나리오와 교차하여 커버리지를 보장한다.
+
+**공통 시나리오 (모든 프로바이더 필수):**
+
+| # | 시나리오 | Jupiter | 0x | LI.FI | Lido | Jito |
+|---|---------|---------|-----|-------|------|------|
+| C1 | resolve() 성공 -> ContractCallRequest 반환 | O | O | O | O | O |
+| C2 | 외부 API 에러 -> ACTION_API_ERROR | O | O | O | - | - |
+| C3 | API 타임아웃 -> ACTION_API_TIMEOUT | O | O | O | - | - |
+| C4 | Rate limit -> ACTION_RATE_LIMITED | O | O | O | - | - |
+| C5 | Zod 검증 실패 -> ACTION_API_ERROR (schema drift) | O | O | O | - | - |
+| C6 | 슬리피지 클램핑 (기본값/최대값 적용) | O | O | O | - | - |
+| C7 | CONTRACT_WHITELIST 정책 연동 | O | O | O | O | O |
+| C8 | SPENDING_LIMIT 정책 연동 | O | O | O | O | O |
+| C9 | MCP tool 자동 노출 | O | O | O | O | O |
+| C10 | config.toml enabled=false -> 미등록 | O | O | O | O | O |
+
+**프로토콜별 추가 시나리오:**
+
+| # | 시나리오 | 대상 프로바이더 |
+|---|---------|---------------|
+| J1 | dynamicSlippage 활성화 확인 | Jupiter |
+| J2 | priceImpactPct > 1% -> PRICE_IMPACT_TOO_HIGH | Jupiter |
+| J3 | Jito tip instruction 포함 확인 | Jupiter |
+| J4 | Jito 실패 -> JITO_UNAVAILABLE (fail-closed) | Jupiter |
+| Z1 | AllowanceHolder approve 필요 -> ACTION_REQUIRES_APPROVAL | 0x |
+| Z2 | API key 미설정 + enabled=true -> 시작 에러 | 0x |
+| Z3 | chainId 라우팅 정확성 (Ethereum vs Base vs Arbitrum) | 0x |
+| L1 | 브릿지 상태 폴링 -> COMPLETED | LI.FI |
+| L2 | 브릿지 타임아웃 -> BRIDGE_MONITORING -> TIMEOUT | LI.FI |
+| L3 | 도착 주소 검증 (self-bridge default) | LI.FI |
+| L4 | 크로스체인 정책: 출발 체인 정책 적용 | LI.FI |
+| S1 | wstETH wrap BATCH 트랜잭션 생성 (Lido stake) | Lido |
+| S2 | unstake -> Withdrawal Queue + 비동기 추적 | Lido |
+| S3 | JitoSOL 환율 0.5% 허용 범위 | Jito |
+| S4 | epoch 경계 근접 경고 | Jito |
+
+**테스트 레벨 분류:**
+
+| 레벨 | 설명 | 태그 | 자동화 |
+|------|------|------|--------|
+| L0 | 단위 테스트 (mock 전체, 격리) | [L0] | 100% |
+| L1 | 통합 테스트 (mock API + 실제 파이프라인) | [L1] | 100% |
+| L2 | 외부 API 실 호출 (Testnet/Devnet) | [HUMAN] | 수동 |
+
+**커버리지 기준:**
+
+- 각 프로바이더별 최소 테스트 수: 12개 (C1~C10 공통 + 2개 프로토콜별)
+- L0 테스트만으로 CI 통과 가능 (L2는 수동 검증)
+- 새 프로바이더 추가 시 C1~C10 매트릭스를 체크리스트로 사용
+
+**Gas Condition 테스트 시나리오 (m28-05 전용):**
+
+| # | 시나리오 | 설명 |
+|---|---------|------|
+| G1 | gasCondition 지정 -> GAS_WAITING 진입 | mock RPC 높은 가스비 |
+| G2 | 조건 충족 -> re-resolve -> 실행 재개 | mock RPC 낮은 가스비 전환 |
+| G3 | 타임아웃 -> CANCELLED | timeout 1초 + 높은 가스비 유지 |
+| G4 | re-resolve 실패 -> CANCELLED + QUOTE_EXPIRED | mock API 에러 |
+| G5 | per-wallet 제한 초과 -> GAS_CONDITION_LIMIT_EXCEEDED | 6번째 요청 |
+| G6 | RPC 실패 시 타임아웃 시계 일시 정지 | mock RPC 장애 + 복구 |
+| G7 | 데몬 재시작 후 GAS_WAITING 복원 | DB 상태 복원 검증 |
 
 ---
 
