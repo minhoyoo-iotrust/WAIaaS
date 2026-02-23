@@ -718,7 +718,7 @@ The Admin UI shows a three-state status for each provider:
 | `POLICY_VIOLATION` | 403 | Transaction blocked by policy. | Check policies with GET /v1/policies. |
 | `PRICE_IMPACT_TOO_HIGH` | 502 | Price impact exceeds configured maximum (Jupiter). | Reduce swap amount or increase max_price_impact_pct. |
 | `LIQUIDITY_UNAVAILABLE` | 502 | No liquidity available for the swap pair (0x). | Try a different token pair or smaller amount. |
-| `UNSUPPORTED_CHAIN` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
+| `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
 ## 9. MCP Auto-Registration
