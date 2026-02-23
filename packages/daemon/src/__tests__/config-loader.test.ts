@@ -706,6 +706,6 @@ jupiter_swap_max_price_impact_pct = 2.0
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
     const actionsKeys = Object.keys(config.actions);
-    expect(actionsKeys).toHaveLength(13); // 8 Jupiter + 5 0x (added in 248-01)
+    expect(actionsKeys).toHaveLength(18); // 8 Jupiter + 5 0x + 5 LiFi
   });
 });
