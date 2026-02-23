@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.6.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.4...v2.6.0-rc.5) (2026-02-23)
+
+
+### Features
+
+* **actions:** add Jupiter Swap action provider package ([43e710a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/43e710a5931201f6fb98686274c2aaa54cdcf98d))
+* add per-event notification filtering with collapsible UI ([#155](https://github.com/minhoyoo-iotrust/WAIaaS/issues/155)) ([3818174](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3818174874f70ecb1ed831a5dfb9c0ea77b9fe82))
+* **admin:** merge Transactions and Incoming TX pages ([#153](https://github.com/minhoyoo-iotrust/WAIaaS/issues/153)) ([d71461a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d71461a9ac069c351f1008204120741efc1abc0f))
+* **daemon:** integrate Jupiter Swap provider with config and auto-registration ([c87127e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c87127e48cd745738d4e77581693e3f78ee9b69c))
+
+
+### Bug Fixes
+
+* **admin:** add FilterBar and SearchInput CSS styles ([#156](https://github.com/minhoyoo-iotrust/WAIaaS/issues/156)) ([a852089](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a852089636df62de8109f8ba15143e0fac75ed4c))
+* move Balance Monitoring tab from Wallets to Notifications page ([#154](https://github.com/minhoyoo-iotrust/WAIaaS/issues/154)) ([3662377](https://github.com/minhoyoo-iotrust/WAIaaS/commit/36623774d1db0e4b007687cc5eea6f6ddfd3c3f8))
+
 ## [2.6.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.3...v2.6.0-rc.4) (2026-02-23)
 
 
