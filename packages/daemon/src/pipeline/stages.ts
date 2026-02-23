@@ -1011,7 +1011,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
-  const reqAmount = getRequestAmount(ctx.request);
+  const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
   const reqTo = getRequestTo(ctx.request);
 
   // [Phase 139] Resolve display amount for Stage 6 notifications

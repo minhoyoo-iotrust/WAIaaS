@@ -178,10 +178,10 @@ describe('IncomingTxMonitorService', () => {
   // ── Lifecycle ──────────────────────────────────────────────────
 
   describe('start()', () => {
-    it('loads wallets from DB and adds to multiplexer', async () => {
+    it('loads wallets from DB and adds to multiplexer on all networks', async () => {
       const walletRows = [
         { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pubkey1' },
-        { id: 'w2', chain: 'ethereum', environment: 'sepolia', public_key: 'pubkey2' },
+        { id: 'w2', chain: 'ethereum', environment: 'testnet', public_key: 'pubkey2' },
       ];
 
       // Make the wallet query return our test wallets
@@ -195,10 +195,16 @@ describe('IncomingTxMonitorService', () => {
         expect.stringContaining('monitor_incoming = 1'),
       );
 
-      // Verify subscriber factory was called for both chain:network pairs
-      expect(subscriberFactory).toHaveBeenCalledTimes(2);
+      // Verify subscriber factory was called for all networks:
+      // solana:mainnet → ['mainnet'] (1 network)
+      // ethereum:testnet → ['ethereum-sepolia', 'polygon-amoy', 'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia'] (5 networks)
+      expect(subscriberFactory).toHaveBeenCalledTimes(6);
       expect(subscriberFactory).toHaveBeenCalledWith('solana', 'mainnet');
-      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'sepolia');
+      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'ethereum-sepolia');
+      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'polygon-amoy');
+      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'arbitrum-sepolia');
+      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'optimism-sepolia');
+      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'base-sepolia');
     });
 
     it('registers 6 background workers', async () => {

@@ -279,8 +279,9 @@ describe('BUG-2: Polling Worker Handlers', () => {
     const handler = pollEvmCall![1].handler as () => Promise<void>;
     await handler();
 
-    // Assert subscriber.pollAll() was called
-    expect(mockPollAll).toHaveBeenCalledTimes(1);
+    // Assert subscriber.pollAll() was called for each ethereum network
+    // ethereum:mainnet expands to 5 networks, all sharing the same mock subscriber
+    expect(mockPollAll).toHaveBeenCalledTimes(5);
 
     await service.stop();
   });

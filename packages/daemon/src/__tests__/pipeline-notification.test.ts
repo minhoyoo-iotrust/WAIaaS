@@ -190,7 +190,7 @@ describe('stage1Validate: TX_REQUESTED notification', () => {
     expect(notificationService.notify).toHaveBeenCalledWith(
       'TX_REQUESTED',
       walletId,
-      { amount: '1000000000', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', type: 'TRANSFER', display_amount: '' },
+      { amount: '1 SOL', to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', type: 'TRANSFER', display_amount: '' },
       { txId: ctx.txId },
     );
   });
@@ -227,7 +227,7 @@ describe('stage3Policy: POLICY_VIOLATION notification', () => {
       walletId,
       {
         reason: 'limit exceeded',
-        amount: '1000000000',
+        amount: '1 SOL',
         to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
         policyType: '',
         tokenAddress: '',
@@ -261,7 +261,7 @@ describe('stage5Execute: TX_SUBMITTED notification', () => {
     expect(submittedCall).toBeTruthy();
     expect(submittedCall![1]).toBe(walletId);
     expect(submittedCall![2]).toHaveProperty('txHash');
-    expect(submittedCall![2]).toHaveProperty('amount', '1000000000');
+    expect(submittedCall![2]).toHaveProperty('amount', '1 SOL');
     expect(submittedCall![2]).toHaveProperty('to', 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
     expect(submittedCall![3]).toEqual({ txId: ctx.txId });
   });
@@ -299,7 +299,7 @@ describe('stage5Execute: TX_FAILED notification on simulation failure', () => {
     expect(failedCall).toBeTruthy();
     expect(failedCall![1]).toBe(walletId);
     expect(failedCall![2]).toHaveProperty('error', 'Insufficient funds');
-    expect(failedCall![2]).toHaveProperty('amount', '1000000000');
+    expect(failedCall![2]).toHaveProperty('amount', '1 SOL');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
   });
 });
@@ -326,7 +326,7 @@ describe('stage6Confirm: TX_CONFIRMED notification', () => {
     expect(confirmedCall).toBeTruthy();
     expect(confirmedCall![1]).toBe(walletId);
     expect(confirmedCall![2]).toHaveProperty('txHash');
-    expect(confirmedCall![2]).toHaveProperty('amount', '1000000000');
+    expect(confirmedCall![2]).toHaveProperty('amount', '1 SOL');
     expect(confirmedCall![2]).toHaveProperty('to', 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
     expect(confirmedCall![3]).toEqual({ txId: ctx.txId });
   });
@@ -364,7 +364,7 @@ describe('stage6Confirm: TX_FAILED notification on on-chain revert', () => {
     expect(failedCall).toBeTruthy();
     expect(failedCall![1]).toBe(walletId);
     expect(failedCall![2]).toHaveProperty('error', 'Transaction reverted on-chain');
-    expect(failedCall![2]).toHaveProperty('amount', '1000000000');
+    expect(failedCall![2]).toHaveProperty('amount', '1 SOL');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
   });
 });
