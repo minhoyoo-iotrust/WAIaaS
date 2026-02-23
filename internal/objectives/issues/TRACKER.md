@@ -182,8 +182,8 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 153
+- **OPEN:** 0
+- **FIXED:** 155
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
