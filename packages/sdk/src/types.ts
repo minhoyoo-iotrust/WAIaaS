@@ -596,6 +596,28 @@ export interface GetIncomingTransactionSummaryParams {
   walletId?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Action Provider Types
+// ---------------------------------------------------------------------------
+
+export interface ExecuteActionParams {
+  /** Action-specific parameters as key-value pairs */
+  params?: Record<string, unknown>;
+  /** Target network (e.g., 'ethereum-mainnet'). Defaults to wallet default. */
+  network?: string;
+  /** Target wallet ID (multi-wallet sessions). Omit for default wallet. */
+  walletId?: string;
+}
+
+export interface ExecuteActionResponse {
+  /** Transaction ID (last element for multi-step) */
+  id: string;
+  /** Transaction status */
+  status: string;
+  /** Pipeline steps (present for multi-step actions like approve+swap) */
+  pipeline?: Array<{ id: string; status: string }>;
+}
+
 /** Policy type enum for REST API /v1/policies. */
 export type PolicyType =
   | 'SPENDING_LIMIT'
