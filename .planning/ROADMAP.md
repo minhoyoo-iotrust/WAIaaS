@@ -274,11 +274,11 @@ Plans:
   3. 슬리피지가 기본 1%로 적용되고 5% 초과 지정 시 5%로 클램프된다
   4. 유동성 부족(liquidityAvailable=false) 또는 API 에러 시 명확한 에러 메시지가 반환된다
   5. AllowanceHolder 컨트랙트 주소가 지원 체인(Cancun 19체인 + Mantle)별로 정확히 매핑된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 249-01: ZeroExApiClient (API 통신 + Zod 스키마 + 에러 처리)
-- [ ] 249-02: ZeroExSwapActionProvider (approve+swap 로직 + AllowanceHolder 매핑 + 안전 장치)
+- [ ] 249-01-PLAN.md -- ZeroExApiClient + Zod schemas + config + AllowanceHolder mapping + tests
+- [ ] 249-02-PLAN.md -- ZeroExSwapActionProvider (approve+swap resolution) + registerBuiltInProviders wiring + tests
 
 ### Phase 250: Integration
 **Goal**: TS/Python SDK, MCP, 스킬 문서에서 0x Swap이 완전히 사용 가능하다
