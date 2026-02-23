@@ -208,7 +208,7 @@ describe('ACT-U01~U04: Unit Registry errors', () => {
     );
 
     // Registry passes through -- chain enforcement is at pipeline level
-    expect(result.type).toBe('CONTRACT_CALL');
+    expect(result[0].type).toBe('CONTRACT_CALL');
   });
 });
 
@@ -292,8 +292,8 @@ describe('ACT-I01~I04: Integration plugin load + pipeline', () => {
       testContext,
     );
 
-    expect(result.type).toBe('CONTRACT_CALL');
-    expect(result.to).toBe('0xUnknownContract1234567890abcdef12345678');
+    expect(result[0].type).toBe('CONTRACT_CALL');
+    expect(result[0].to).toBe('0xUnknownContract1234567890abcdef12345678');
     // Note: Stage 3 policy engine would reject this if to is not whitelisted
   });
 
@@ -330,14 +330,15 @@ describe('ACT-F01~F04: Normal functional behavior', () => {
       testContext,
     );
 
-    // Validate result matches ContractCallRequestSchema
-    expect(result.type).toBe('CONTRACT_CALL');
-    expect(result.to).toBe('0xDex1234567890abcdef1234567890abcdef123456');
-    expect(result.calldata).toBe('0x38ed1739');
+    // Validate result matches ContractCallRequestSchema (executeResolve returns array)
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('CONTRACT_CALL');
+    expect(result[0].to).toBe('0xDex1234567890abcdef1234567890abcdef123456');
+    expect(result[0].calldata).toBe('0x38ed1739');
 
     // Re-validate via Zod schema (what registry does internally)
-    const parsed = ContractCallRequestSchema.parse(result);
-    expect(parsed).toEqual(result);
+    const parsed = ContractCallRequestSchema.parse(result[0]);
+    expect(parsed.type).toEqual(result[0].type);
 
     // Verify resolve was called with correct args
     expect(provider.resolve).toHaveBeenCalledOnce();
@@ -373,8 +374,8 @@ describe('ACT-F01~F04: Normal functional behavior', () => {
     const resolveCall = provider.resolve.mock.calls[0];
     expect(resolveCall[2].walletAddress).toBe(walletAddr);
 
-    // Result is a valid ContractCallRequest (from is enforced at pipeline level)
-    expect(result.type).toBe('CONTRACT_CALL');
+    // Result is a valid ContractCallRequest array (from is enforced at pipeline level)
+    expect(result[0].type).toBe('CONTRACT_CALL');
   });
 
   // ACT-F03: getMcpExposedActions() filters mcpExpose=true only
@@ -483,12 +484,12 @@ describe('ACT-X01~X04: Cross-validation', () => {
     );
 
     // Result passes schema validation (which executeResolve does internally)
-    expect(result.type).toBe('CONTRACT_CALL');
-    expect(result.to).toBe('0xWhitelistedContract1234567890abcdef123456');
-    expect(result.value).toBe('1000000000000000000');
+    expect(result[0].type).toBe('CONTRACT_CALL');
+    expect(result[0].to).toBe('0xWhitelistedContract1234567890abcdef123456');
+    expect(result[0].value).toBe('1000000000000000000');
 
     // Double-check with explicit schema parse
-    expect(() => ContractCallRequestSchema.parse(result)).not.toThrow();
+    expect(() => ContractCallRequestSchema.parse(result[0])).not.toThrow();
   });
 
   // ACT-X02: Multiple providers with independent resolve
@@ -538,14 +539,14 @@ describe('ACT-X01~X04: Cross-validation', () => {
       testContext,
     );
 
-    // Each provider returns its own result independently
-    expect(resultA.to).toBe('0xContractAAAA1234567890abcdef1234567890ab');
-    expect(resultB.to).toBe('0xContractBBBB1234567890abcdef1234567890ab');
-    expect(resultC.to).toBe('0xContractCCCC1234567890abcdef1234567890ab');
+    // Each provider returns its own result independently (array of 1)
+    expect(resultA[0].to).toBe('0xContractAAAA1234567890abcdef1234567890ab');
+    expect(resultB[0].to).toBe('0xContractBBBB1234567890abcdef1234567890ab');
+    expect(resultC[0].to).toBe('0xContractCCCC1234567890abcdef1234567890ab');
 
-    expect(resultA.calldata).toBe('0xaaaa');
-    expect(resultB.calldata).toBe('0xbbbb');
-    expect(resultC.calldata).toBe('0xcccc');
+    expect(resultA[0].calldata).toBe('0xaaaa');
+    expect(resultB[0].calldata).toBe('0xbbbb');
+    expect(resultC[0].calldata).toBe('0xcccc');
 
     // Each provider's resolve called exactly once
     expect(provA.resolve).toHaveBeenCalledOnce();
@@ -572,7 +573,7 @@ describe('ACT-X01~X04: Cross-validation', () => {
       { amount: '100' },
       testContext,
     );
-    expect(result.to).toBe('0xOriginal1234567890abcdef1234567890abcdef');
+    expect(result[0].to).toBe('0xOriginal1234567890abcdef1234567890abcdef');
 
     // Unregister
     expect(registry.unregister('reregister_prov')).toBe(true);
@@ -596,7 +597,7 @@ describe('ACT-X01~X04: Cross-validation', () => {
       { amount: '100' },
       testContext,
     );
-    expect(result.to).toBe('0xUpdated1234567890abcdef1234567890abcdef12');
+    expect(result[0].to).toBe('0xUpdated1234567890abcdef1234567890abcdef12');
   });
 
   // ACT-X04: MCP Tool conversion accuracy (ActionDefinition -> MCP tool schema)

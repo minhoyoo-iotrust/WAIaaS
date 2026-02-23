@@ -116,6 +116,8 @@ export const ContractCallRequestSchema = z.object({
     )
     .optional(),
   network: NetworkTypeEnum.optional(),
+  /** Provider name tag for provider-trust policy bypass. Set by ActionProviderRegistry. */
+  actionProvider: z.string().optional(),
 });
 export type ContractCallRequest = z.infer<typeof ContractCallRequestSchema>;
 

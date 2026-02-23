@@ -38,7 +38,10 @@ export const API = {
   ADMIN_AGENT_PROMPT: '/v1/admin/agent-prompt',
   ADMIN_SESSION_REISSUE: (id: string) => `/v1/admin/sessions/${id}/reissue`,
   ADMIN_TRANSACTIONS: '/v1/admin/transactions',
+  ADMIN_TX_CANCEL: (id: string) => `/v1/admin/transactions/${id}/cancel`,
+  ADMIN_TX_REJECT: (id: string) => `/v1/admin/transactions/${id}/reject`,
   ADMIN_INCOMING: '/v1/admin/incoming',
   WALLET_PATCH: (id: string) => `/v1/wallets/${id}`,
   TOKENS_RESOLVE: '/v1/tokens/resolve',
+  ACTIONS_PROVIDERS: '/v1/actions/providers',
 } as const;

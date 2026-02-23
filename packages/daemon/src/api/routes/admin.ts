@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 24 daemon administration endpoints.
+ * Admin route handlers: 26 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -23,6 +23,8 @@
  * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
  * GET    /admin/transactions        - Cross-wallet transaction list with filters (masterAuth)
  * GET    /admin/incoming            - Cross-wallet incoming transaction list with filters (masterAuth)
+ * POST   /admin/transactions/:id/cancel - Cancel a QUEUED (DELAY) transaction (masterAuth)
+ * POST   /admin/transactions/:id/reject - Reject a pending approval transaction (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
@@ -51,6 +53,8 @@ import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
 import type { VersionCheckService } from '../../infrastructure/version/version-check-service.js';
+import type { DelayQueue } from '../../workflow/delay-queue.js';
+import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import {
   AdminStatusResponseSchema,
   KillSwitchResponseSchema,
@@ -111,6 +115,8 @@ export interface AdminRouteDeps {
   sqlite?: SQLiteDatabase;
   dataDir?: string;
   versionCheckService?: VersionCheckService | null;
+  delayQueue?: DelayQueue;
+  approvalWorkflow?: ApprovalWorkflow;
 }
 
 // ---------------------------------------------------------------------------
@@ -781,6 +787,8 @@ const adminIncomingRoute = createRoute({
  * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
  * GET    /admin/transactions        - Cross-wallet transaction list (masterAuth)
  * GET    /admin/incoming            - Cross-wallet incoming tx list (masterAuth)
+ * POST   /admin/transactions/:id/cancel - Cancel delayed transaction (masterAuth)
+ * POST   /admin/transactions/:id/reject - Reject pending approval transaction (masterAuth)
  */
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -2255,6 +2263,95 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       sessionId,
       tokenIssuedCount: newCount,
       expiresAt: expiresAtSec,
+    }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/transactions/:id/cancel — Cancel a QUEUED (DELAY) transaction
+  // ---------------------------------------------------------------------------
+
+  const adminTxCancelRoute = createRoute({
+    method: 'post',
+    path: '/admin/transactions/{id}/cancel',
+    tags: ['Admin'],
+    summary: 'Cancel a delayed (QUEUED) transaction',
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: 'Transaction cancelled',
+        content: {
+          'application/json': {
+            schema: z.object({
+              id: z.string(),
+              status: z.literal('CANCELLED'),
+            }),
+          },
+        },
+      },
+      ...buildErrorResponses(['TX_NOT_FOUND']),
+    },
+  });
+
+  router.openapi(adminTxCancelRoute, async (c) => {
+    const { id: txId } = c.req.valid('param');
+
+    if (!deps.delayQueue) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'Delay queue not available',
+      });
+    }
+
+    deps.delayQueue.cancelDelay(txId);
+
+    return c.json({ id: txId, status: 'CANCELLED' as const }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/transactions/:id/reject — Reject a pending (APPROVAL) transaction
+  // ---------------------------------------------------------------------------
+
+  const adminTxRejectRoute = createRoute({
+    method: 'post',
+    path: '/admin/transactions/{id}/reject',
+    tags: ['Admin'],
+    summary: 'Reject a pending approval transaction',
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: 'Transaction rejected',
+        content: {
+          'application/json': {
+            schema: z.object({
+              id: z.string(),
+              status: z.literal('CANCELLED'),
+              rejectedAt: z.number(),
+            }),
+          },
+        },
+      },
+      ...buildErrorResponses(['TX_NOT_FOUND']),
+    },
+  });
+
+  router.openapi(adminTxRejectRoute, async (c) => {
+    const { id: txId } = c.req.valid('param');
+
+    if (!deps.approvalWorkflow) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
+        message: 'Approval workflow not available',
+      });
+    }
+
+    const result = deps.approvalWorkflow.reject(txId);
+
+    return c.json({
+      id: txId,
+      status: 'CANCELLED' as const,
+      rejectedAt: result.rejectedAt,
     }, 200);
   });
 

@@ -40,6 +40,7 @@
   - Targets: quickstart.skill.md, wallet.skill.md, transactions.skill.md, policies.skill.md, admin.skill.md
   - Sync the corresponding skill files when endpoints are added/removed/changed, request/response schemas change, auth methods change, or error codes are added.
   - Create a new skill file when a new domain is added.
+  - **All skill files must include the security notice:** `> AI agents must NEVER request the master password. Use only your session token.`
 
 ## Test Coverage
 

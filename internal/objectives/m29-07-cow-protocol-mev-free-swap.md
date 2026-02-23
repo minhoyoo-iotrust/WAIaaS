@@ -58,15 +58,16 @@ const CowSwapInputSchema = z.object({
 });
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.cow_swap]
-enabled = true
-api_base_url = "https://api.cow.fi"     # 기본값
-default_valid_to_sec = 1800              # 주문 유효 기간 (30분)
-order_poll_interval_sec = 10             # 주문 상태 폴링 간격
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `cow_swap.enabled` | `true` | 프로바이더 활성화 |
+| `cow_swap.api_base_url` | `"https://api.cow.fi"` | API base URL |
+| `cow_swap.default_valid_to_sec` | `1800` | 주문 유효 기간 (30분) |
+| `cow_swap.order_poll_interval_sec` | `10` | 주문 상태 폴링 간격 |
 
 ---
 

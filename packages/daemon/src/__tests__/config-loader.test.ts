@@ -702,10 +702,10 @@ jupiter_swap_max_price_impact_pct = 2.0
     expect(() => loadConfig(dir)).toThrow();
   });
 
-  it('DaemonConfigSchema actions section has 8 keys', () => {
+  it('DaemonConfigSchema actions section has 13 keys', () => {
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
     const actionsKeys = Object.keys(config.actions);
-    expect(actionsKeys).toHaveLength(8);
+    expect(actionsKeys).toHaveLength(13); // 8 Jupiter + 5 0x (added in 248-01)
   });
 });

@@ -68,16 +68,17 @@ const DriftClosePositionInputSchema = z.object({
 });
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.drift]
-enabled = true
-max_leverage = 5                             # 기본 최대 레버리지
-max_position_usd = 10000                     # 기본 최대 포지션 크기 (USD)
-margin_warning_threshold_pct = 0.15          # 마진 비율 15% 이하 경고
-position_sync_interval_sec = 60              # 포지션 동기화 간격 (1분, Perp는 빈번한 변동)
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `drift.enabled` | `true` | 프로바이더 활성화 |
+| `drift.max_leverage` | `5` | 기본 최대 레버리지 |
+| `drift.max_position_usd` | `10000` | 기본 최대 포지션 크기 (USD) |
+| `drift.margin_warning_threshold_pct` | `0.15` | 마진 비율 경고 임계값 (15%) |
+| `drift.position_sync_interval_sec` | `60` | 포지션 동기화 간격 (1분) |
 
 ---
 

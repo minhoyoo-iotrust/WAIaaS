@@ -161,6 +161,8 @@ interface TransactionParam {
   approveAmount?: string;
   /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
   tokenDecimals?: number;
+  /** Action provider name for provider-trust policy bypass (set by ActionProviderRegistry). */
+  actionProvider?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -1020,6 +1022,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    *
    * Logic:
    * - Only applies to CONTRACT_CALL transaction type
+   * - Provider-trust: if transaction has actionProvider and the provider is enabled
+   *   in SettingsService, skip CONTRACT_WHITELIST entirely (trusted provider bypass)
    * - If transaction type is CONTRACT_CALL and no CONTRACT_WHITELIST policy exists:
    *   -> deny with reason 'Contract calls disabled: no CONTRACT_WHITELIST policy configured'
    * - If CONTRACT_WHITELIST policy exists, check if contract address is in rules.contracts[].address:
@@ -1035,6 +1039,19 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   ): PolicyEvaluation | null {
     // Only evaluate for CONTRACT_CALL transactions
     if (transaction.type !== 'CONTRACT_CALL') return null;
+
+    // Provider-trust: skip CONTRACT_WHITELIST for trusted action providers
+    if (transaction.actionProvider && this.settingsService) {
+      const enabledKey = `actions.${transaction.actionProvider}_enabled`;
+      try {
+        const enabled = this.settingsService.get(enabledKey);
+        if (enabled === 'true') {
+          return null; // Skip CONTRACT_WHITELIST -- provider is trusted
+        }
+      } catch {
+        // Unknown setting key means provider is not registered -- fall through to normal check
+      }
+    }
 
     const contractWhitelistPolicy = resolved.find((p) => p.type === 'CONTRACT_WHITELIST');
 

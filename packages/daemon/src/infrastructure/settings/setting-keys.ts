@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk, incoming
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk, incoming, actions
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -43,6 +43,7 @@ export const SETTING_CATEGORIES = [
   'telegram',
   'signing_sdk',
   'incoming',
+  'actions',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -150,6 +151,21 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'incoming.suspicious_amount_multiplier', category: 'incoming', configPath: 'incoming.suspicious_amount_multiplier', defaultValue: '10', isCredential: false },
   { key: 'incoming.cooldown_minutes', category: 'incoming', configPath: 'incoming.cooldown_minutes', defaultValue: '5', isCredential: false },
   { key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.wss_url', defaultValue: '', isCredential: false },
+
+  // --- actions category (DeFi action providers) ---
+  { key: 'actions.jupiter_swap_enabled', category: 'actions', configPath: 'actions.jupiter_swap_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.jupiter_swap_api_base_url', category: 'actions', configPath: 'actions.jupiter_swap_api_base_url', defaultValue: 'https://api.jup.ag/swap/v1', isCredential: false },
+  { key: 'actions.jupiter_swap_api_key', category: 'actions', configPath: 'actions.jupiter_swap_api_key', defaultValue: '', isCredential: true },
+  { key: 'actions.jupiter_swap_default_slippage_bps', category: 'actions', configPath: 'actions.jupiter_swap_default_slippage_bps', defaultValue: '50', isCredential: false },
+  { key: 'actions.jupiter_swap_max_slippage_bps', category: 'actions', configPath: 'actions.jupiter_swap_max_slippage_bps', defaultValue: '500', isCredential: false },
+  { key: 'actions.jupiter_swap_max_price_impact_pct', category: 'actions', configPath: 'actions.jupiter_swap_max_price_impact_pct', defaultValue: '1', isCredential: false },
+  { key: 'actions.jupiter_swap_jito_tip_lamports', category: 'actions', configPath: 'actions.jupiter_swap_jito_tip_lamports', defaultValue: '1000', isCredential: false },
+  { key: 'actions.jupiter_swap_request_timeout_ms', category: 'actions', configPath: 'actions.jupiter_swap_request_timeout_ms', defaultValue: '10000', isCredential: false },
+  { key: 'actions.zerox_swap_enabled', category: 'actions', configPath: 'actions.zerox_swap_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.zerox_swap_api_key', category: 'actions', configPath: 'actions.zerox_swap_api_key', defaultValue: '', isCredential: true },
+  { key: 'actions.zerox_swap_default_slippage_bps', category: 'actions', configPath: 'actions.zerox_swap_default_slippage_bps', defaultValue: '100', isCredential: false },
+  { key: 'actions.zerox_swap_max_slippage_bps', category: 'actions', configPath: 'actions.zerox_swap_max_slippage_bps', defaultValue: '500', isCredential: false },
+  { key: 'actions.zerox_swap_request_timeout_ms', category: 'actions', configPath: 'actions.zerox_swap_request_timeout_ms', defaultValue: '10000', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

@@ -245,6 +245,41 @@ function createTestProvider(): IActionProvider {
   };
 }
 
+const TEST_CONTRACT_CALL_2: ContractCallRequest = {
+  type: 'CONTRACT_CALL',
+  to: 'JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB',
+  programId: 'JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB',
+  instructionData: Buffer.from([4, 5, 6]).toString('base64'),
+  accounts: [
+    { pubkey: MOCK_PUBLIC_KEY, isSigner: true, isWritable: true },
+  ],
+};
+
+function createMultiStepProvider(): IActionProvider {
+  return {
+    metadata: {
+      name: 'multi_step_provider',
+      description: 'Multi-step action provider for integration tests',
+      version: '1.0.0',
+      chains: ['solana'],
+      mcpExpose: false,
+      requiresApiKey: false,
+      requiredApis: [],
+    },
+    actions: [
+      {
+        name: 'multi_action',
+        description: 'A multi-step action that returns two contract calls',
+        chain: 'solana',
+        inputSchema: z.object({ amount: z.string() }),
+        riskLevel: 'medium',
+        defaultTier: 'NOTIFY',
+      },
+    ] as readonly ActionDefinition[],
+    resolve: vi.fn().mockResolvedValue([TEST_CONTRACT_CALL, TEST_CONTRACT_CALL_2]),
+  };
+}
+
 function createPaidProvider(): IActionProvider {
   return {
     metadata: {
@@ -298,6 +333,7 @@ beforeEach(async () => {
   registry = new ActionProviderRegistry();
   registry.register(createTestProvider());
   registry.register(createPaidProvider());
+  registry.register(createMultiStepProvider());
 
   // Create ApiKeyStore
   apiKeyStore = new ApiKeyStore(conn.db, TEST_MASTER_PASSWORD);
@@ -382,7 +418,7 @@ describe('GET /v1/actions/providers', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     const providers = body.providers as Array<Record<string, unknown>>;
-    expect(providers).toHaveLength(2);
+    expect(providers).toHaveLength(3);
 
     // Find test_provider
     const testProvider = providers.find((p) => p.name === 'test_provider');
@@ -597,6 +633,58 @@ describe('POST /v1/actions/:provider/:action', () => {
     const body = await json(res);
     expect(body.code).toBe('ACTION_RESOLVE_FAILED');
     expect((body.message as string)).toContain('External API timeout');
+  });
+
+  it('should return single-element response for standard { id, status } backward compat (i)', async () => {
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/actions/test_provider/test_action', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ params: { amount: '1000000' } }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+    expect(body.status).toBe('PENDING');
+    // Single-element: no pipeline field
+    expect(body.pipeline).toBeUndefined();
+  });
+
+  it('should return multi-element response with pipeline array field (j)', async () => {
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/actions/multi_step_provider/multi_action', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ params: { amount: '1000000' } }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    expect(body.id).toBeTruthy();
+    expect(body.status).toBe('PENDING');
+    // Multi-element: has pipeline array
+    const pipeline = body.pipeline as Array<{ id: string; status: string }>;
+    expect(pipeline).toBeDefined();
+    expect(pipeline).toHaveLength(2);
+    expect(pipeline[0].id).toBeTruthy();
+    expect(pipeline[0].status).toBe('PENDING');
+    expect(pipeline[1].id).toBeTruthy();
+    expect(pipeline[1].status).toBe('PENDING');
+    // Last element id is the primary response id
+    expect(body.id).toBe(pipeline[1].id);
   });
 });
 

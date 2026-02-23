@@ -5,11 +5,13 @@
  *   - Kill Switch confirm/cancel (Yes/No)
  *   - Wallet selection (dynamic wallet list)
  *   - Transaction approval/rejection (Approve/Reject per tx)
+ *   - Transaction cancel (Cancel per tx, for DELAY tier)
  *
  * Callback data prefixes:
  *   - killswitch:confirm / killswitch:cancel
  *   - newsession:{walletId}
  *   - approve:{txId} / reject:{txId}
+ *   - cancel:{txId}
  *
  * @see packages/daemon/src/infrastructure/telegram/telegram-bot-service.ts
  */
@@ -57,6 +59,23 @@ export function buildApprovalKeyboard(
         {
           text: `${msgs.keyboard_reject} ${txId.slice(0, 8)}`,
           callback_data: `reject:${txId}`,
+        },
+      ],
+    ],
+  };
+}
+
+/** Transaction cancel keyboard (single Cancel button, for DELAY tier). */
+export function buildCancelKeyboard(
+  txId: string,
+  msgs: Messages['telegram'],
+): TelegramInlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: `${msgs.keyboard_cancel} ${txId.slice(0, 8)}`,
+          callback_data: `cancel:${txId}`,
         },
       ],
     ],

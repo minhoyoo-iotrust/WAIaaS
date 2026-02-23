@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 from waiaas.client import WAIaaSClient
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
+    ActionResponse,
     MultiNetworkAssetsResponse,
     MultiNetworkBalanceResponse,
     PendingTransactionList,
@@ -1115,3 +1116,132 @@ class TestX402Fetch:
         with pytest.raises(WAIaaSError) as exc_info:
             await client.x402_fetch("https://blocked.com")
         assert exc_info.value.code == "X402_DOMAIN_NOT_ALLOWED"
+
+
+# ---------------------------------------------------------------------------
+# Action Provider methods
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteAction:
+    async def test_calls_post_actions_provider_action(self):
+        captured_body = {}
+        captured_url = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/actions/" in str(request.url):
+                captured_body.update(json.loads(request.content))
+                captured_url["url"] = str(request.url)
+                return httpx.Response(
+                    200,
+                    json={"id": "tx-1", "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.execute_action(
+            "0x-swap",
+            "swap",
+            {"sellToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "buyToken": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "sellAmount": "1000"},
+        )
+        assert isinstance(result, ActionResponse)
+        assert result.id == "tx-1"
+        assert result.status == "PENDING"
+        assert "/v1/actions/0x-swap/swap" in captured_url["url"]
+        assert captured_body["params"]["sellToken"] == "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+
+    async def test_with_network_sends_network_in_body(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/actions/" in str(request.url):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={"id": "tx-1", "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        await client.execute_action(
+            "0x-swap",
+            "swap",
+            {"sellToken": "0xA", "buyToken": "0xB", "sellAmount": "100"},
+            network="ethereum-mainnet",
+        )
+        assert captured_body["network"] == "ethereum-mainnet"
+
+    async def test_with_wallet_id_sends_wallet_id_in_body(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/actions/" in str(request.url):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={"id": "tx-1", "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        await client.execute_action(
+            "0x-swap",
+            "swap",
+            {"sellToken": "0xA", "buyToken": "0xB", "sellAmount": "100"},
+            wallet_id="wallet-123",
+        )
+        assert captured_body["walletId"] == "wallet-123"
+
+    async def test_returns_pipeline_for_multi_step(self):
+        handler = make_handler(
+            {
+                ("POST", "/v1/actions/0x-swap/swap"): (
+                    200,
+                    {
+                        "id": "tx-2",
+                        "status": "PENDING",
+                        "pipeline": [
+                            {"id": "tx-1", "status": "PENDING"},
+                            {"id": "tx-2", "status": "PENDING"},
+                        ],
+                    },
+                ),
+            }
+        )
+        client = make_client(handler)
+        result = await client.execute_action(
+            "0x-swap",
+            "swap",
+            {"sellToken": "0xA", "buyToken": "0xB", "sellAmount": "100"},
+        )
+        assert isinstance(result, ActionResponse)
+        assert result.pipeline is not None
+        assert len(result.pipeline) == 2
+        assert result.pipeline[0].id == "tx-1"
+        assert result.pipeline[1].id == "tx-2"
+
+    async def test_sends_empty_body_when_no_params(self):
+        captured_body = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and "/v1/actions/" in str(request.url):
+                captured_body.update(json.loads(request.content))
+                return httpx.Response(
+                    200,
+                    json={"id": "tx-3", "status": "PENDING"},
+                )
+            return httpx.Response(
+                404, json={"code": "NOT_FOUND", "message": "Not found"}
+            )
+
+        client = make_client(handler)
+        result = await client.execute_action("0x-swap", "swap")
+        assert isinstance(result, ActionResponse)
+        assert result.id == "tx-3"
+        assert captured_body == {}

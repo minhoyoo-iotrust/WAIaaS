@@ -60,15 +60,16 @@ const PendleBuyPTInputSchema = z.object({
 });
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.pendle]
-enabled = true
-api_base_url = "https://api-v2.pendle.finance"   # 기본값
-default_slippage_pct = 0.01                       # 1%
-maturity_warning_days = 7                         # 만기 경고 (7일 전)
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `pendle.enabled` | `true` | 프로바이더 활성화 |
+| `pendle.api_base_url` | `"https://api-v2.pendle.finance"` | API base URL |
+| `pendle.default_slippage_pct` | `0.01` | 기본 슬리피지 (1%) |
+| `pendle.maturity_warning_days` | `7` | 만기 경고 (7일 전) |
 
 ---
 
@@ -116,7 +117,7 @@ maturity_warning_days = 7                         # 만기 경고 (7일 전)
 | # | 리스크 | 영향 | 대응 방안 |
 |---|--------|------|----------|
 | 1 | PT/YT 개념 복잡도 | AI 에이전트/Owner가 PT/YT 개념을 이해하기 어려움 | MCP 도구 설명에 "고정 수익률(buyPT)" vs "변동 수익률 레버리지(buyYT)" 명시. 스킬 파일에 예시 시나리오 추가 |
-| 2 | 만기 관리 부재 시 손실 | 만기 후 미상환 PT는 수익률을 놓칠 수 있음 | MaturityMonitor로 경고. 만기 도래 시 자동 상환 옵션(config.toml auto_redeem=true) |
+| 2 | 만기 관리 부재 시 손실 | 만기 후 미상환 PT는 수익률을 놓칠 수 있음 | MaturityMonitor로 경고. 만기 도래 시 자동 상환 옵션(Admin Settings auto_redeem=true) |
 | 3 | Pendle 유동성 변동 | 만기 접근 시 유동성 감소로 슬리피지 증가 | 만기 14일 전부터 슬리피지 경고. 유동성 부족 시 거래 거부 |
 
 ---

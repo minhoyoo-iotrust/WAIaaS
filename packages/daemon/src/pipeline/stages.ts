@@ -42,7 +42,7 @@ import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
-import { formatDisplayCurrency, type EventBus } from '@waiaas/core';
+import { formatDisplayCurrency, formatAmount, type EventBus } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
@@ -129,6 +129,48 @@ function getRequestMemo(req: SendTransactionRequest | TransactionRequest): strin
 }
 
 // ---------------------------------------------------------------------------
+// Helper: format notification amount with token symbol
+// ---------------------------------------------------------------------------
+
+const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
+const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
+
+/**
+ * Format raw blockchain amount to human-readable string with token symbol.
+ * e.g. "1000000000000000000" → "1 ETH", "100000000" → "100 USDC"
+ */
+function formatNotificationAmount(
+  req: SendTransactionRequest | TransactionRequest,
+  chain: string,
+): string {
+  const raw = getRequestAmount(req);
+  if (raw === '0' || raw === '') return '0';
+
+  try {
+    if ('type' in req && req.type === 'TOKEN_TRANSFER') {
+      const r = req as TokenTransferRequest;
+      const decimals = r.token.decimals;
+      const symbol = r.token.symbol ?? r.token.address.slice(0, 8);
+      return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
+    }
+
+    if ('type' in req && req.type === 'APPROVE') {
+      const r = req as ApproveRequest;
+      const decimals = r.token.decimals;
+      const symbol = r.token.symbol ?? r.token.address.slice(0, 8);
+      return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
+    }
+
+    // Native transfer / CONTRACT_CALL with value
+    const decimals = NATIVE_DECIMALS[chain] ?? 18;
+    const symbol = NATIVE_SYMBOLS[chain] ?? chain.toUpperCase();
+    return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
+  } catch {
+    return raw;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helper: resolve display amount for notification messages
 // ---------------------------------------------------------------------------
 
@@ -188,6 +230,8 @@ interface TransactionParam {
   approveAmount?: string;
   /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
   tokenDecimals?: number;
+  /** Action provider name for provider-trust policy bypass (set by ActionProviderRegistry). */
+  actionProvider?: string;
 }
 
 function buildTransactionParam(
@@ -209,7 +253,7 @@ function buildTransactionParam(
       };
     }
     case 'CONTRACT_CALL': {
-      const r = req as { to: string; calldata?: string; value?: string };
+      const r = req as { to: string; calldata?: string; value?: string; actionProvider?: string };
       return {
         type: 'CONTRACT_CALL',
         amount: r.value ?? '0',
@@ -217,6 +261,8 @@ function buildTransactionParam(
         chain,
         contractAddress: r.to,
         selector: r.calldata?.slice(0, 10),
+        // Pass through actionProvider for provider-trust policy bypass
+        ...(r.actionProvider ? { actionProvider: r.actionProvider } : {}),
       };
     }
     case 'APPROVE': {
@@ -290,7 +336,7 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)
   // display_amount is empty at Stage 1 -- amountUsd not yet computed
   void ctx.notificationService?.notify('TX_REQUESTED', ctx.walletId, {
-    amount: amount ?? '0',
+    amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
     to: toAddress ?? '',
     type: txType,
     display_amount: '',
@@ -393,7 +439,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     // Fire-and-forget: notify POLICY_VIOLATION (never blocks pipeline)
     void ctx.notificationService?.notify('POLICY_VIOLATION', ctx.walletId, {
       reason: evaluation.reason ?? 'Policy denied',
-      amount: getRequestAmount(ctx.request),
+      amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
       to: getRequestTo(ctx.request),
       policyType: extractPolicyType(evaluation.reason),
       tokenAddress: txParam.tokenAddress ?? '',
@@ -448,7 +494,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       : undefined;
 
     const notifyVars: Record<string, string> = {
-      amount: getRequestAmount(ctx.request),
+      amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
       to: getRequestTo(ctx.request),
       reason: `가격 불명 토큰 (${priceResult.tokenAddress}) -- 최소 NOTIFY 격상`,
       policyType: 'SPENDING_LIMIT',
@@ -507,7 +553,8 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   if (tier === 'APPROVAL' && !downgraded) {
     const reason = evaluation.approvalReason ?? 'per_tx';
     void ctx.notificationService?.notify('TX_APPROVAL_REQUIRED', ctx.walletId, {
-      amount: getRequestAmount(ctx.request),
+      txId: ctx.txId,
+      amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
       to: getRequestTo(ctx.request),
       reason,
       display_amount: displayAmount,
@@ -543,6 +590,14 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
       ?? ctx.config?.policy_defaults_delay_seconds
       ?? 60;
     ctx.delayQueue.queueDelay(ctx.txId, delaySeconds);
+
+    // Fire-and-forget: notify TX_QUEUED with cancel keyboard data
+    void ctx.notificationService?.notify('TX_QUEUED', ctx.walletId, {
+      txId: ctx.txId,
+      amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
+      to: getRequestTo(ctx.request),
+      delaySeconds: String(delaySeconds),
+    }, { txId: ctx.txId });
 
     // Halt pipeline -- transaction will be picked up by processExpired worker
     throw new WAIaaSError('PIPELINE_HALTED', {
@@ -732,7 +787,7 @@ async function buildByType(
  * Total attempts: initial 1 + up to 3 retries = 4 max.
  */
 export async function stage5Execute(ctx: PipelineContext): Promise<void> {
-  const reqAmount = getRequestAmount(ctx.request);
+  const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
   const reqTo = getRequestTo(ctx.request);
 
   // [Phase 139] Resolve display amount once for all Stage 5 notifications
@@ -759,7 +814,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
         // Fire-and-forget: notify TX_FAILED on simulation failure
         void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-          reason: simResult.error ?? 'Simulation failed',
+          txId: ctx.txId,
+          error: simResult.error ?? 'Simulation failed',
           amount: reqAmount,
           display_amount: displayAmount,
         }, { txId: ctx.txId });
@@ -836,7 +892,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
           // Fire-and-forget: notify TX_FAILED
           void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-            reason: err.message,
+            txId: ctx.txId,
+            error: err.message,
             amount: reqAmount,
             display_amount: displayAmount,
           }, { txId: ctx.txId });
@@ -867,7 +924,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
             // Fire-and-forget: notify TX_FAILED
             void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-              reason: `${err.code} (max retries exceeded)`,
+              txId: ctx.txId,
+              error: `${err.code} (max retries exceeded)`,
               amount: reqAmount,
               display_amount: displayAmount,
             }, { txId: ctx.txId });
@@ -904,7 +962,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
             // Fire-and-forget: notify TX_FAILED
             void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-              reason: `${err.code} (stale retry exhausted)`,
+              txId: ctx.txId,
+              error: `${err.code} (stale retry exhausted)`,
               amount: reqAmount,
               display_amount: displayAmount,
             }, { txId: ctx.txId });
@@ -952,7 +1011,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
-  const reqAmount = getRequestAmount(ctx.request);
+  const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
   const reqTo = getRequestTo(ctx.request);
 
   // [Phase 139] Resolve display amount for Stage 6 notifications
@@ -999,7 +1058,8 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
 
     // Fire-and-forget: notify TX_FAILED on on-chain revert (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
-      reason: 'Transaction reverted on-chain',
+      txId: ctx.txId,
+      error: 'Transaction reverted on-chain',
       amount: reqAmount,
       display_amount: displayAmount,
     }, { txId: ctx.txId });

@@ -189,7 +189,7 @@ describe('SEC-12-02: Slippage 0bps (minimum) is allowed', () => {
       testContext,
     );
 
-    expect(result.type).toBe('CONTRACT_CALL');
+    expect(result[0].type).toBe('CONTRACT_CALL');
   });
 });
 
@@ -213,7 +213,7 @@ describe('SEC-12-03: Slippage 500bps (boundary max) is allowed', () => {
       testContext,
     );
 
-    expect(result.type).toBe('CONTRACT_CALL');
+    expect(result[0].type).toBe('CONTRACT_CALL');
   });
 });
 
@@ -277,7 +277,7 @@ describe('SEC-12-06: Program ID verification for Jupiter', () => {
     );
 
     // Pipeline should verify programId matches expected Jupiter program
-    expect(result.programId).toBe(JUPITER_PROGRAM_ID);
+    expect(result[0].programId).toBe(JUPITER_PROGRAM_ID);
   });
 
   it('detects spoofed program ID', async () => {
@@ -298,7 +298,7 @@ describe('SEC-12-06: Program ID verification for Jupiter', () => {
     );
 
     // Program ID doesn't match Jupiter -- pipeline would reject this
-    expect(result.programId).not.toBe(JUPITER_PROGRAM_ID);
+    expect(result[0].programId).not.toBe(JUPITER_PROGRAM_ID);
   });
 });
 
@@ -419,6 +419,6 @@ describe('SEC-12-12: Extremely large swap amount', () => {
     );
 
     // Schema accepts numeric string of any size (BigInt handles it)
-    expect(result.type).toBe('CONTRACT_CALL');
+    expect(result[0].type).toBe('CONTRACT_CALL');
   });
 });

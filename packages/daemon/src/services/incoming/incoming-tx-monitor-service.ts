@@ -21,7 +21,8 @@
 
 import type { Database } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { EventBus, IChainSubscriber, IncomingTransaction } from '@waiaas/core';
+import type { EventBus, IChainSubscriber, IncomingTransaction, ChainType, EnvironmentType } from '@waiaas/core';
+import { getNetworksForEnvironment, formatAmount } from '@waiaas/core';
 import type { BackgroundWorkers } from '../../lifecycle/workers.js';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -65,6 +66,31 @@ export interface IncomingTxMonitorDeps {
   notificationService?: NotificationService | null;
   subscriberFactory: SubscriberFactory;
   config: IncomingTxMonitorConfig;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+
+const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
+
+/**
+ * Format incoming tx amount to human-readable string with symbol.
+ * Uses token registry decimals/symbol when available, falls back to native.
+ */
+function formatIncomingAmount(
+  tx: IncomingTransaction,
+  decimals: number,
+  tokenSymbol: string | null,
+): string {
+  if (!tx.amount || tx.amount === '0') return '0';
+  try {
+    const symbol = tokenSymbol
+      ?? (tx.tokenAddress ? tx.tokenAddress.slice(0, 8) : null)
+      ?? NATIVE_SYMBOLS[tx.chain]
+      ?? tx.chain.toUpperCase();
+    return `${formatAmount(BigInt(tx.amount), decimals)} ${symbol}`;
+  } catch {
+    return tx.amount;
+  }
 }
 
 // ── IncomingTxMonitorService ────────────────────────────────────
@@ -140,29 +166,43 @@ export class IncomingTxMonitorService {
     // Load wallets with monitor_incoming = 1
     const wallets = this.sqlite
       .prepare(
-        `SELECT id, chain, network, public_key FROM wallets WHERE monitor_incoming = 1`,
+        `SELECT id, chain, environment, public_key FROM wallets WHERE monitor_incoming = 1`,
       )
       .all() as Array<{
       id: string;
       chain: string;
-      network: string;
+      environment: string;
       public_key: string;
     }>;
 
-    // Subscribe each wallet
+    // Subscribe each wallet on all networks for its chain:environment
+    let subscriptionCount = 0;
     for (const wallet of wallets) {
-      try {
-        await this.multiplexer.addWallet(
-          wallet.chain,
-          wallet.network,
-          wallet.id,
-          wallet.public_key,
-        );
-      } catch (err) {
+      const networks = getNetworksForEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+      );
+      if (!networks || !Array.isArray(networks)) {
         console.warn(
-          `IncomingTxMonitor: failed to subscribe wallet ${wallet.id}:`,
-          err,
+          `IncomingTxMonitor: unknown chain:environment ${wallet.chain}:${wallet.environment}, skipping wallet ${wallet.id}`,
         );
+        continue;
+      }
+      for (const network of networks) {
+        try {
+          await this.multiplexer.addWallet(
+            wallet.chain,
+            network,
+            wallet.id,
+            wallet.public_key,
+          );
+          subscriptionCount++;
+        } catch (err) {
+          console.warn(
+            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}:`,
+            err,
+          );
+        }
       }
     }
 
@@ -170,7 +210,7 @@ export class IncomingTxMonitorService {
     this.registerWorkers();
 
     console.debug(
-      `IncomingTxMonitorService started: ${wallets.length} wallets subscribed`,
+      `IncomingTxMonitorService started: ${wallets.length} wallets, ${subscriptionCount} network subscriptions`,
     );
   }
 
@@ -210,29 +250,36 @@ export class IncomingTxMonitorService {
   async syncSubscriptions(): Promise<void> {
     const dbWallets = this.sqlite
       .prepare(
-        `SELECT id, chain, network, public_key FROM wallets WHERE monitor_incoming = 1`,
+        `SELECT id, chain, environment, public_key FROM wallets WHERE monitor_incoming = 1`,
       )
       .all() as Array<{
       id: string;
       chain: string;
-      network: string;
+      environment: string;
       public_key: string;
     }>;
 
-    // Add any new wallets to multiplexer (addWallet handles dedup internally)
+    // Add any new wallets to multiplexer on all networks (addWallet handles dedup internally)
     for (const wallet of dbWallets) {
-      try {
-        await this.multiplexer.addWallet(
-          wallet.chain,
-          wallet.network,
-          wallet.id,
-          wallet.public_key,
-        );
-      } catch (err) {
-        console.warn(
-          `syncSubscriptions: failed to add wallet ${wallet.id}:`,
-          err,
-        );
+      const networks = getNetworksForEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+      );
+      if (!networks || !Array.isArray(networks)) continue;
+      for (const network of networks) {
+        try {
+          await this.multiplexer.addWallet(
+            wallet.chain,
+            network,
+            wallet.id,
+            wallet.public_key,
+          );
+        } catch (err) {
+          console.warn(
+            `syncSubscriptions: failed to add wallet ${wallet.id} on ${network}:`,
+            err,
+          );
+        }
       }
     }
   }
@@ -292,6 +339,18 @@ export class IncomingTxMonitorService {
         }
 
         // 3. Send notifications (suppressed by KillSwitch, subject to cooldown)
+        // Look up token symbol for formatted amount
+        let tokenSymbol: string | null = null;
+        if (tx.tokenAddress !== null) {
+          try {
+            const symRow = this.sqlite
+              .prepare('SELECT symbol FROM token_registry WHERE address = ? AND chain = ? LIMIT 1')
+              .get(tx.tokenAddress, tx.chain) as { symbol: string } | undefined;
+            if (symRow) tokenSymbol = symRow.symbol;
+          } catch { /* use default */ }
+        }
+        const formattedAmount = formatIncomingAmount(tx, context.decimals, tokenSymbol);
+
         const killState = this.killSwitchService?.getState();
         if (!killState || killState.state === 'ACTIVE') {
           const eventType = isSuspicious
@@ -304,7 +363,7 @@ export class IncomingTxMonitorService {
               {
                 walletId: tx.walletId,
                 txHash: tx.txHash,
-                amount: tx.amount,
+                amount: formattedAmount,
                 fromAddress: tx.fromAddress,
                 chain: tx.chain,
                 display_amount: '',

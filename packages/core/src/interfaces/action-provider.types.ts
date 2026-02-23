@@ -98,7 +98,10 @@ export interface IActionProvider {
   /** Available actions exposed by this provider. */
   readonly actions: readonly ActionDefinition[];
   /**
-   * Resolve action parameters into a ContractCallRequest.
+   * Resolve action parameters into a ContractCallRequest or an array of
+   * ContractCallRequest[] for multi-step operations (e.g., approve + swap).
+   * Each element is executed sequentially through the pipeline.
+   *
    * The return value is re-validated via ContractCallRequestSchema.parse()
    * by ActionProviderRegistry to prevent policy bypass.
    */
@@ -106,5 +109,5 @@ export interface IActionProvider {
     actionName: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest>;
+  ): Promise<ContractCallRequest | ContractCallRequest[]>;
 }

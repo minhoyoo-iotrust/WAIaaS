@@ -58,14 +58,15 @@ packages/actions/src/
       config.ts                  # KaminoConfig 타입
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.kamino]
-enabled = true
-market = "main"                              # 기본 market
-health_factor_warning_threshold = 1.2        # m28 프레임워크 공유
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `kamino.enabled` | `true` | 프로바이더 활성화 |
+| `kamino.market` | `"main"` | 기본 market |
+| `kamino.health_factor_warning_threshold` | `1.2` | 헬스 팩터 경고 임계값 (Lending 프레임워크 공유) |
 
 ---
 
@@ -75,7 +76,7 @@ health_factor_warning_threshold = 1.2        # m28 프레임워크 공유
 |---|----------|--------|----------|
 | 1 | 통합 방식 | @kamino-finance/klend-sdk | Kamino는 Solana 프로그램 호출이 복잡(obligation 계정, reserve 조회 등). SDK가 instruction 빌딩을 추상화. ABI 직접 호출보다 SDK가 효율적 |
 | 2 | Lending 프레임워크 호환 | ILendingProvider 구현 | m29-01에서 정의한 supply/borrow/repay/withdraw 4개 표준 액션 + getPosition/getHealthFactor. Aave와 동일 인터페이스로 Admin UI/정책이 프로토콜 무관하게 동작 |
-| 3 | Market 선택 | config.toml로 기본 market 지정 | Kamino는 Main/JLP/Altcoin 등 복수 market 운영. 기본값은 main market, 액션 파라미터로 오버라이드 가능 |
+| 3 | Market 선택 | Admin Settings에서 기본 market 지정 | Kamino는 Main/JLP/Altcoin 등 복수 market 운영. 기본값은 main market, 액션 파라미터로 오버라이드 가능 |
 
 ---
 

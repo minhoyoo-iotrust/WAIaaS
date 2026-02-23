@@ -20,6 +20,7 @@
 - ✅ **v27.4 Admin UI UX 개선** -- Phases 239-243 (shipped 2026-02-23)
 - ✅ **v28.0 기본 DeFi 프로토콜 설계** -- Phases 244-245 (shipped 2026-02-23)
 - ✅ **v28.1 Jupiter Swap** -- Phases 246-247 (shipped 2026-02-23)
+- ✅ **v28.2 0x EVM DEX Swap** -- Phases 248-250 (shipped 2026-02-24)
 
 ## Phases
 
@@ -233,5 +234,16 @@ See `.planning/milestones/v28.0-ROADMAP.md` for full details.
 - [x] Phase 247: Daemon Integration + DX (2/2 plans) -- completed 2026-02-23
 
 See `.planning/milestones/v28.1-ROADMAP.md` for full details.
+
+</details>
+
+<details>
+<summary>✅ v28.2 0x EVM DEX Swap (Phases 248-250) -- SHIPPED 2026-02-24</summary>
+
+- [x] Phase 248: Provider Infrastructure (3/3 plans) -- completed 2026-02-23
+- [x] Phase 249: 0x Swap Provider (2/2 plans) -- completed 2026-02-23
+- [x] Phase 250: Integration (2/2 plans) -- completed 2026-02-23
+
+See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 
 </details>

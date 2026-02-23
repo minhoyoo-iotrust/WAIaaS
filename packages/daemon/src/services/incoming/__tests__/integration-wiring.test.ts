@@ -206,7 +206,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
 
     // Return one solana wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -254,7 +254,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
 
     // Return one ethereum wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w2', chain: 'ethereum', network: 'mainnet', public_key: 'pk2' },
+      { id: 'w2', chain: 'ethereum', environment: 'mainnet', public_key: 'pk2' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -279,8 +279,9 @@ describe('BUG-2: Polling Worker Handlers', () => {
     const handler = pollEvmCall![1].handler as () => Promise<void>;
     await handler();
 
-    // Assert subscriber.pollAll() was called
-    expect(mockPollAll).toHaveBeenCalledTimes(1);
+    // Assert subscriber.pollAll() was called for each ethereum network
+    // ethereum:mainnet expands to 5 networks, all sharing the same mock subscriber
+    expect(mockPollAll).toHaveBeenCalledTimes(5);
 
     await service.stop();
   });
@@ -302,7 +303,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
 
     // Return one solana wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -368,7 +369,7 @@ describe('BUG-3: Gap Recovery Wiring', () => {
 
     // Return one solana wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -416,7 +417,7 @@ describe('BUG-3: Gap Recovery Wiring', () => {
 
     // Only return a solana wallet (no ethereum)
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({

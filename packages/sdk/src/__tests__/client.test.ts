@@ -1249,6 +1249,117 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // executeAction
+  // =========================================================================
+
+  describe('executeAction', () => {
+    it('should call POST /v1/actions/provider/action with params body', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = { id: 'tx-1', status: 'PENDING' };
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.executeAction('0x-swap', 'swap', {
+        params: { sellToken: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', buyToken: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', sellAmount: '1000' },
+      });
+
+      expect(result).toEqual(expected);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/actions/0x-swap/swap');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(opts.method).toBe('POST');
+      expect(JSON.parse(opts.body as string)).toEqual({
+        params: { sellToken: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', buyToken: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', sellAmount: '1000' },
+      });
+
+      const headers = opts.headers as Record<string, string>;
+      expect(headers['Authorization']).toBe(`Bearer ${mockToken}`);
+    });
+
+    it('should send network in body', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(mockResponse({ id: 'tx-1', status: 'PENDING' }));
+
+      await client.executeAction('0x-swap', 'swap', {
+        params: { sellToken: '0xA', buyToken: '0xB', sellAmount: '100' },
+        network: 'ethereum-mainnet',
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['network']).toBe('ethereum-mainnet');
+    });
+
+    it('should send walletId in body', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(mockResponse({ id: 'tx-1', status: 'PENDING' }));
+
+      await client.executeAction('0x-swap', 'swap', {
+        params: { sellToken: '0xA', buyToken: '0xB', sellAmount: '100' },
+        walletId: 'wallet-123',
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['walletId']).toBe('wallet-123');
+    });
+
+    it('should return pipeline for multi-step actions', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const expected = {
+        id: 'tx-2',
+        status: 'PENDING',
+        pipeline: [
+          { id: 'tx-1', status: 'PENDING' },
+          { id: 'tx-2', status: 'PENDING' },
+        ],
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.executeAction('0x-swap', 'swap', {
+        params: { sellToken: '0xA', buyToken: '0xB', sellAmount: '100' },
+      });
+
+      expect(result).toEqual(expected);
+      expect(result.pipeline).toHaveLength(2);
+      expect(result.pipeline![0]!.id).toBe('tx-1');
+      expect(result.pipeline![1]!.id).toBe('tx-2');
+    });
+
+    it('should send empty body when no params given', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(mockResponse({ id: 'tx-3', status: 'PENDING' }));
+
+      await client.executeAction('0x-swap', 'swap');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(JSON.parse(opts.body as string)).toEqual({});
+    });
+  });
+
+  // =========================================================================
   // HTTP Layer
   // =========================================================================
 

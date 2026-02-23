@@ -2733,6 +2733,108 @@ describe('DatabasePolicyEngine - Backward Compatibility (CMPT-01/02/03)', () => 
     expect(result.approvalReason).toBe('cumulative_daily');
   });
 
+  // -------------------------------------------------------------------------
+  // Provider-trust CONTRACT_WHITELIST bypass tests (PTRUST-01 ~ PTRUST-03)
+  // -------------------------------------------------------------------------
+
+  it('PTRUST-01: CONTRACT_CALL with actionProvider and provider enabled skips CONTRACT_WHITELIST', async () => {
+    // Set up: create SettingsService with actions.jupiter_swap_enabled=true
+    const config = DaemonConfigSchema.parse({});
+    const settingsService = new SettingsService({
+      db: conn.db,
+      config,
+      masterPassword: 'test-master-password',
+    });
+    settingsService.set('actions.jupiter_swap_enabled', 'true');
+    const trustEngine = new DatabasePolicyEngine(conn.db, undefined, settingsService);
+
+    // Insert a policy so we bypass "no policies" passthrough (but no CONTRACT_WHITELIST)
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        delay_seconds: 60,
+      }),
+      priority: 1,
+    });
+
+    // CONTRACT_CALL with actionProvider='jupiter_swap' -- should skip CONTRACT_WHITELIST
+    const result = await trustEngine.evaluate(walletId, {
+      ...contractCallTx({ contractAddress: '0xUnknownDexContract' }),
+      actionProvider: 'jupiter_swap',
+    });
+
+    // Provider is trusted -> CONTRACT_WHITELIST skipped -> allowed
+    expect(result.allowed).toBe(true);
+  });
+
+  it('PTRUST-02: CONTRACT_CALL with actionProvider but provider disabled enforces CONTRACT_WHITELIST', async () => {
+    const config = DaemonConfigSchema.parse({});
+    const settingsService = new SettingsService({
+      db: conn.db,
+      config,
+      masterPassword: 'test-master-password',
+    });
+    settingsService.set('actions.jupiter_swap_enabled', 'false');
+    const trustEngine = new DatabasePolicyEngine(conn.db, undefined, settingsService);
+
+    // Insert a SPENDING_LIMIT to avoid "no policies" passthrough
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        delay_seconds: 60,
+      }),
+      priority: 1,
+    });
+
+    // CONTRACT_CALL with actionProvider='jupiter_swap' but provider disabled
+    const result = await trustEngine.evaluate(walletId, {
+      ...contractCallTx({ contractAddress: '0xUnknownDexContract' }),
+      actionProvider: 'jupiter_swap',
+    });
+
+    // Provider is disabled -> falls through to CONTRACT_WHITELIST -> denied (no policy)
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no CONTRACT_WHITELIST');
+  });
+
+  it('PTRUST-03: CONTRACT_CALL without actionProvider evaluates CONTRACT_WHITELIST normally', async () => {
+    const config = DaemonConfigSchema.parse({});
+    const settingsService = new SettingsService({
+      db: conn.db,
+      config,
+      masterPassword: 'test-master-password',
+    });
+    settingsService.set('actions.jupiter_swap_enabled', 'true');
+    const trustEngine = new DatabasePolicyEngine(conn.db, undefined, settingsService);
+
+    // Insert SPENDING_LIMIT to avoid "no policies" passthrough
+    await insertPolicy({
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '999999999999',
+        notify_max: '999999999999',
+        delay_max: '999999999999',
+        delay_seconds: 60,
+      }),
+      priority: 1,
+    });
+
+    // CONTRACT_CALL without actionProvider -- normal CONTRACT_WHITELIST evaluation
+    const result = await trustEngine.evaluate(walletId, contractCallTx({
+      contractAddress: '0xSomeContract',
+    }));
+
+    // No actionProvider -> no trust bypass -> denied (no CONTRACT_WHITELIST policy)
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no CONTRACT_WHITELIST');
+  });
+
   it('CMPT-03b: BATCH evaluation ignores token_limits (tokenContext undefined)', async () => {
     await insertPolicy({
       type: 'SPENDING_LIMIT',

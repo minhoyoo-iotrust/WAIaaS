@@ -1,7 +1,7 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 21 REST API methods with typed responses:
+ * Wraps 22 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo(), setDefaultNetwork() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
@@ -11,6 +11,7 @@
  * - encodeCalldata(), signTransaction() (utils)
  * - x402Fetch() (x402 auto-payment)
  * - wcConnect(), wcStatus(), wcDisconnect() (WalletConnect)
+ * - executeAction() (action providers: DeFi swaps, etc.)
  *
  * All methods use exponential backoff retry for 429/5xx responses.
  * sendToken() performs inline pre-validation before making the HTTP request.
@@ -56,6 +57,8 @@ import type {
   ListIncomingTransactionsParams,
   IncomingTransactionSummaryResponse,
   GetIncomingTransactionSummaryParams,
+  ExecuteActionParams,
+  ExecuteActionResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -390,6 +393,26 @@ export class WAIaaSClient {
   async wcDisconnect(): Promise<WcDisconnectResponse> {
     return withRetry(
       () => this.http.delete<WcDisconnectResponse>('/v1/wallet/wc/session', this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  // --- Actions ---
+  async executeAction(
+    provider: string,
+    action: string,
+    params?: ExecuteActionParams,
+  ): Promise<ExecuteActionResponse> {
+    const body: Record<string, unknown> = {};
+    if (params?.params) body.params = params.params;
+    if (params?.network) body.network = params.network;
+    if (params?.walletId) body.walletId = params.walletId;
+    return withRetry(
+      () => this.http.post<ExecuteActionResponse>(
+        `/v1/actions/${provider}/${action}`,
+        body,
+        this.authHeaders(),
+      ),
       this.retryOptions,
     );
   }

@@ -213,6 +213,7 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   UPDATE_AVAILABLE: 'system',
   TX_INCOMING: 'transaction',
   TX_INCOMING_SUSPICIOUS: 'security_alert',
+  ACTION_API_KEY_REQUIRED: 'system',
 };
 
 // ---------------------------------------------------------------------------
@@ -250,6 +251,7 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   LOW_BALANCE: 'Low balance warning',
   APPROVAL_CHANNEL_SWITCHED: 'Approval channel changed',
   UPDATE_AVAILABLE: 'Daemon update available',
+  ACTION_API_KEY_REQUIRED: 'API key required for action provider',
 };
 
 // ---------------------------------------------------------------------------

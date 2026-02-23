@@ -97,15 +97,16 @@ packages/daemon/src/routes/
   wallets.ts                     # GET /v1/wallets/:id/positions, /health-factor 추가
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.aave_v3]
-enabled = true
-health_factor_warning_threshold = 1.2    # 헬스 팩터 경고 임계값
-position_sync_interval_sec = 300         # 포지션 동기화 간격 (5분)
-max_ltv_pct = 0.8                        # 최대 LTV (80%)
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `aave_v3.enabled` | `true` | 프로바이더 활성화 |
+| `aave_v3.health_factor_warning_threshold` | `1.2` | 헬스 팩터 경고 임계값 |
+| `aave_v3.position_sync_interval_sec` | `300` | 포지션 동기화 간격 (5분) |
+| `aave_v3.max_ltv_pct` | `0.8` | 최대 LTV (80%) |
 
 ---
 
@@ -117,7 +118,7 @@ max_ltv_pct = 0.8                        # 최대 LTV (80%)
 | 2 | 포지션 추적 방식 | 온체인 조회 + DB 캐시 | aToken/debtToken 잔고를 온체인 조회하되, 5분 간격으로 positions 테이블에 캐시. Admin UI는 캐시에서 읽고, 정책 평가는 온체인 실시간 조회 |
 | 3 | Aave 통합 방식 | 컨트랙트 ABI 직접 호출 (viem) | Aave SDK 의존성 추가 대신 ABI 인코딩으로 충분. Pool 컨트랙트의 supply/borrow/repay/withdraw는 단일 함수 호출 |
 | 4 | 헬스 팩터 모니터링 | 폴링 기반 (5분 간격) | WebSocket 기반 실시간 모니터링은 RPC 비용 과다. 5분 간격 폴링으로 청산 위험 조기 감지 가능. 급격한 가격 변동은 가격 오라클(v1.5)이 STALE 경고로 보완 |
-| 5 | 청산 경고 임계값 | 헬스 팩터 1.2 (기본) | Aave 청산 임계값은 1.0. 1.2에서 경고하면 Owner가 상환/담보 추가할 여유 확보. config.toml에서 오버라이드 가능 |
+| 5 | 청산 경고 임계값 | 헬스 팩터 1.2 (기본) | Aave 청산 임계값은 1.0. 1.2에서 경고하면 Owner가 상환/담보 추가할 여유 확보. Admin Settings에서 오버라이드 가능 |
 
 ---
 

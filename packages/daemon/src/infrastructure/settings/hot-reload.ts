@@ -16,6 +16,8 @@ import type { SettingsService } from './settings-service.js';
 import type { AutoStopService, AutoStopConfig } from '../../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../../services/monitoring/balance-monitor-service.js';
 import type { WcServiceRef } from '../../services/wc-session-service.js';
+import type { WcSigningBridgeRef } from '../../services/wc-signing-bridge.js';
+import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { TelegramBotService } from '../telegram/telegram-bot-service.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
 
@@ -30,6 +32,9 @@ export interface HotReloadDeps {
   autoStopService?: AutoStopService | null;
   balanceMonitorService?: BalanceMonitorService | null;
   wcServiceRef?: WcServiceRef | null;
+  /** Mutable ref for WcSigningBridge hot-reload */
+  wcSigningBridgeRef?: WcSigningBridgeRef | null;
+  approvalWorkflow?: ApprovalWorkflow | null;
   sqlite?: Database | null;
   /** Mutable ref for Telegram Bot hot-reload */
   telegramBotRef?: { current: TelegramBotService | null };
@@ -327,6 +332,7 @@ export class HotReloadOrchestrator {
   /**
    * Reload WalletConnect by shutting down old SignClient and re-initializing.
    * Uses the mutable WcServiceRef so route handlers pick up the new instance.
+   * Also creates/destroys WcSigningBridge to match WcSessionService lifecycle.
    */
   private async reloadWalletConnect(): Promise<void> {
     const ref = this.deps.wcServiceRef;
@@ -345,6 +351,12 @@ export class HotReloadOrchestrator {
       ref.current = null;
     }
 
+    // 1b. Destroy existing WcSigningBridge
+    const bridgeRef = this.deps.wcSigningBridgeRef;
+    if (bridgeRef) {
+      bridgeRef.current = null;
+    }
+
     // 2. Check if new project_id exists
     const ss = this.deps.settingsService;
     const projectId = ss.get('walletconnect.project_id');
@@ -360,7 +372,19 @@ export class HotReloadOrchestrator {
     await newService.initialize();
     ref.current = newService;
 
-    console.log('Hot-reload: WalletConnect service re-initialized with new settings');
+    // 4. Create WcSigningBridge (requires approvalWorkflow)
+    if (bridgeRef && this.deps.approvalWorkflow) {
+      const { WcSigningBridge } = await import('../../services/wc-signing-bridge.js');
+      bridgeRef.current = new WcSigningBridge({
+        wcServiceRef: ref,
+        approvalWorkflow: this.deps.approvalWorkflow,
+        sqlite,
+        notificationService: this.deps.notificationService ?? undefined,
+      });
+      console.log('Hot-reload: WalletConnect service + signing bridge re-initialized');
+    } else {
+      console.log('Hot-reload: WalletConnect service re-initialized (no signing bridge — approvalWorkflow unavailable)');
+    }
   }
 
   /**
