@@ -39,7 +39,7 @@ import type { AutoStopConfig } from '../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
-import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
+import { resolveRpcUrl, rpcConfigKey } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
@@ -790,15 +790,14 @@ export class DaemonLifecycle {
           const subscriberFactory = async (chain: string, network: string) => {
             const sSvc = this._settingsService!;
             if (chain === 'solana') {
-              const rpcUrl = sSvc.get(`rpc.solana_${network}`);
+              const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
               // WSS URL: derive from RPC URL (replace https:// with wss://)
               const wssUrl = sSvc.get('incoming.wss_url') || rpcUrl.replace(/^https:\/\//, 'wss://');
               const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
             // EVM chains
-            const rpcKey = `rpc.evm_${network.replace(/-/g, '_')}`;
-            const rpcUrl = sSvc.get(rpcKey);
+            const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             return new EvmIncomingSubscriber({ rpcUrl });
           };
