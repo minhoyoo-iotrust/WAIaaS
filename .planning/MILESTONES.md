@@ -1421,3 +1421,34 @@
 
 ---
 
+
+## v28.0 기본 DeFi 프로토콜 설계 (Shipped: 2026-02-23)
+
+**Delivered:** 5개 DeFi 프로토콜(Jupiter Swap, 0x EVM Swap, LI.FI Bridge, Lido/Jito Staking, Gas Conditional Execution) 구현을 위한 공통 설계 산출물을 완성. 코드 구현 없이 설계 문서만 산출하며, m28-01~m28-05 구현 마일스톤의 입력으로 소비된다. 25개 설계 요구사항 전량 충족, 59개 설계 결정 확정.
+
+**Phases completed:** 244-245 (2 phases, 5 plans, 25 requirements)
+
+**Key accomplishments:**
+
+- DEFI-01: packages/actions/ 패키지 구조 + registerBuiltInProviders() 6-step 라이프사이클 + config.toml [actions.*] 공통 스키마 + Admin Settings 경계 확정
+- DEFI-02: ActionApiClient(fetch+AbortController+Zod) 베이스 패턴 + Solana/EVM ContractCallRequest 변환 매핑 + 8개 DeFi 에러코드 + SlippageBps/SlippagePct branded types 확정
+- DEFI-03: ActionProvider→Stage 3 정책 연동 플로우 다이어그램 + 4개 프로토콜 CONTRACT_WHITELIST(8 주소) + 크로스체인 출발 체인 정책 + 도착 주소 3단계 검증 확정
+- DEFI-04: IAsyncStatusTracker 인터페이스 + AsyncPollingService + 10→11-state 상태 머신(GAS_WAITING) + DB migration v23 + 3단계 브릿지 타임아웃(2h→22h→TIMEOUT) 확정
+- Safety: Jito MEV fail-closed(공개 멤풀 폴백 금지) + wstETH 채택(리베이스 근본 해결) + stale calldata re-resolve 패턴 + API drift 3중 방어(Zod+버전고정+실패로깅) 확정
+- DEFI-05: JSON mock fixture 구조 + 3개 테스트 헬퍼(createMockApiResponse/assertContractCallRequest/createMockActionContext) + 33-scenario 매트릭스(C1-C10+J/Z/L/S+G1-G7) 확정
+
+**Stats:**
+
+- 2 phases, 5 plans, 25 requirements, 24 commits
+- 60 files changed, +6,451 / -530 lines
+- ~186,724 LOC TypeScript (unchanged — design only)
+- Timeline: 1 day (2026-02-23)
+
+### Tech Debt
+
+- m28-05 objective GAS_WAITING 상태 위치/진입/탈출이 확정 설계와 불일치 (구현 마일스톤 시작 시 업데이트 필요)
+- m28-04 objective 결정 #7 stETH→wstETH 미반영 (구현 마일스톤 시작 시 업데이트 필요)
+- m28-03 objective 폴링 설정 30분→2시간+BRIDGE_MONITORING 미반영 (구현 마일스톤 시작 시 업데이트 필요)
+
+---
+

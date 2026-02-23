@@ -10,7 +10,7 @@
 
 ## Current State
 
-v27.4 Admin UI UX 개선 shipped (2026-02-23). 11-패키지 모노레포 + Python SDK, ~186,724 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v28.0 기본 DeFi 프로토콜 설계 shipped (2026-02-23). 11-패키지 모노레포 + Python SDK, ~186,724 LOC TypeScript, 4,396+ 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -53,6 +53,7 @@ v27.4 Admin UI UX 개선 shipped (2026-02-23). 11-패키지 모노레포 + Pytho
 - ✅ v27.2 CAIP-19 자산 식별 표준 — shipped 2026-02-22 (9 plans, 31 requirements, ~157,584 LOC TS)
 - ✅ v27.3 토큰별 지출 한도 정책 — shipped 2026-02-22 (7 plans, 27 requirements, ~158,416 LOC TS)
 - ✅ v27.4 Admin UI UX 개선 — shipped 2026-02-23 (9 plans, 32 requirements, ~186,724 LOC TS)
+- ✅ v28.0 기본 DeFi 프로토콜 설계 — shipped 2026-02-23 (5 plans, 25 requirements, 59 설계 결정)
 
 **코드베이스 현황:**
 - 11-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay + waiaas (Python)
@@ -495,17 +496,16 @@ v27.4 Admin UI UX 개선 shipped (2026-02-23). 11-패키지 모노레포 + Pytho
 - ✓ 지갑 목록 검색/필터/잔액+USD (WLST-01~03) — v27.4 (Phase 243)
 - ✓ 지갑 상세 4탭(Overview/Transactions/Owner/MCP) + 페이지네이션/USD/새로고침 (WDET-01~04) — v27.4 (Phase 243)
 
+- ✓ DEFI-01: packages/actions/ 패키지 구조 + registerBuiltInProviders 라이프사이클 + config.toml [actions.*] 공통 스키마 + Admin Settings 경계 확정 — v28.0 (Phase 244)
+- ✓ DEFI-02: ActionApiClient(fetch+AbortController+Zod) 베이스 + Solana/EVM ContractCallRequest 매핑 + 8 DeFi 에러코드 + SlippageBps/SlippagePct branded types 확정 — v28.0 (Phase 244)
+- ✓ DEFI-03: ActionProvider→Stage 3 정책 플로우 + CONTRACT_WHITELIST 8주소 + 크로스체인 출발 체인 정책 + 도착 주소 3단계 검증 확정 — v28.0 (Phase 244)
+- ✓ DEFI-04: IAsyncStatusTracker + AsyncPollingService + 10→11-state(GAS_WAITING) + DB migration v23 + 3단계 브릿지 타임아웃 확정 — v28.0 (Phase 245)
+- ✓ DEFI-05: JSON mock fixture 구조 + 3 테스트 헬퍼 + 33-scenario 매트릭스 확정 — v28.0 (Phase 245)
+- ✓ Safety: Jito MEV fail-closed + wstETH 채택 + stale calldata re-resolve + API drift 3중 방어 확정 — v28.0 (Phase 245)
+
 ### 활성
 
-**Current Milestone: v28.0 기본 DeFi 프로토콜 설계**
-
-**Goal:** Action Provider 프레임워크 위에 4개 DeFi 프로토콜(DEX Swap, EVM Swap, 크로스체인 브릿지, Liquid Staking)의 공통 설계를 확정하여 m28-01~m28-05 구현의 입력을 생산
-
-- [ ] packages/actions/ 패키지 구조 설계 (DEFI-01)
-- [ ] REST API → calldata 변환 공통 패턴 설계 (DEFI-02)
-- [ ] 정책 연동 설계 (DEFI-03)
-- [ ] 비동기 상태 추적 패턴 설계 (DEFI-04)
-- [ ] 테스트 전략 설계 (DEFI-05)
+(다음 마일스톤 `/gsd:new-milestone`에서 정의)
 
 ### 범위 외
 
@@ -522,7 +522,7 @@ v27.4 Admin UI UX 개선 shipped (2026-02-23). 11-패키지 모노레포 + Pytho
 
 ## 컨텍스트
 
-**누적:** 55 milestones (v0.1-v27.4), 243 phases, 521 plans, 1,421 requirements, 40 설계 문서(24-76), 8 objective 문서, ~186,724 LOC TS, 4,396+ 테스트
+**누적:** 56 milestones (v0.1-v28.0), 245 phases, 526 plans, 1,446 requirements, 40 설계 문서(24-76), 8 objective 문서, ~186,724 LOC TS, 4,396+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -566,6 +566,7 @@ v27.1 수신 트랜잭션 모니터링 구현 shipped (2026-02-22). 7 페이즈,
 v27.2 CAIP-19 자산 식별 표준 shipped (2026-02-22). 4 페이즈, 9 플랜, 31 요구사항, 135 파일 변경, +12,997/-2,406 lines, 62 커밋, ~157,584 LOC TS.
 v27.3 토큰별 지출 한도 정책 shipped (2026-02-22). 4 페이즈, 7 플랜, 27 요구사항, 35 파일 변경, +4,809/-104 lines, 29 커밋, ~158,416 LOC TS.
 v27.4 Admin UI UX 개선 shipped (2026-02-23). 5 페이즈, 9 플랜, 32 요구사항, 51 파일 변경, +6,177/-577 lines, ~186,724 LOC TS. 30 설계 결정.
+v28.0 기본 DeFi 프로토콜 설계 shipped (2026-02-23). 2 페이즈, 5 플랜, 25 요구사항, 60 파일 변경, +6,451/-530 lines, 24 커밋, 59 설계 결정. 설계 문서 m28-00(~1,595줄). Tech debt: m28-03/04/05 objective 파일 업데이트 필요.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
