@@ -6,11 +6,16 @@
  */
 import type { IActionProvider } from '@waiaas/core';
 import { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
+import { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
 export { JUPITER_PROGRAM_ID, JUPITER_SWAP_DEFAULTS } from './providers/jupiter-swap/config.js';
 export type { JupiterSwapConfig } from './providers/jupiter-swap/config.js';
+
+export { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
+export { ALLOWANCE_HOLDER_ADDRESSES, ZEROX_SWAP_DEFAULTS, CHAIN_ID_MAP, getAllowanceHolderAddress } from './providers/zerox-swap/config.js';
+export type { ZeroExSwapConfig } from './providers/zerox-swap/config.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -68,7 +73,16 @@ export function registerBuiltInProviders(
     {
       key: 'zerox_swap',
       enabledKey: 'actions.zerox_swap_enabled',
-      factory: () => null, // ZeroExSwapActionProvider not yet implemented
+      factory: () => {
+        const config: Partial<import('./providers/zerox-swap/config.js').ZeroExSwapConfig> = {
+          enabled: true,
+          apiKey: settingsReader.get('actions.zerox_swap_api_key'),
+          defaultSlippageBps: Number(settingsReader.get('actions.zerox_swap_default_slippage_bps')),
+          maxSlippageBps: Number(settingsReader.get('actions.zerox_swap_max_slippage_bps')),
+          requestTimeoutMs: Number(settingsReader.get('actions.zerox_swap_request_timeout_ms')),
+        };
+        return new ZeroExSwapActionProvider(config);
+      },
     },
   ];
 
