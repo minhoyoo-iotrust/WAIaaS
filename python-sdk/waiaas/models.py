@@ -477,6 +477,26 @@ class IncomingTransactionSummary(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+# ---------------------------------------------------------------------------
+# Action Provider models
+# ---------------------------------------------------------------------------
+
+
+class ActionPipelineStep(BaseModel):
+    """Single pipeline step result."""
+
+    id: str
+    status: str
+
+
+class ActionResponse(BaseModel):
+    """Response from POST /v1/actions/:provider/:action."""
+
+    id: str
+    status: str
+    pipeline: Optional[list[ActionPipelineStep]] = None
+
+
 class SpendingLimitRules(BaseModel):
     """SPENDING_LIMIT policy rules schema.
 

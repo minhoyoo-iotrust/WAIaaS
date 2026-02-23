@@ -8,6 +8,7 @@ import httpx
 
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
+    ActionResponse,
     ConnectInfo,
     EncodeCalldataRequest,
     EncodeCalldataResponse,
@@ -535,3 +536,43 @@ class WAIaaSClient:
         """
         resp = await self._request("DELETE", "/v1/wallet/wc/session")
         return WcDisconnectResponse.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # Actions API
+    # -----------------------------------------------------------------
+
+    async def execute_action(
+        self,
+        provider: str,
+        action: str,
+        params: Optional[dict[str, Any]] = None,
+        *,
+        network: Optional[str] = None,
+        wallet_id: Optional[str] = None,
+    ) -> ActionResponse:
+        """POST /v1/actions/:provider/:action -- Execute an action via provider.
+
+        Resolves action parameters into one or more ContractCallRequests and
+        executes them through the 6-stage transaction pipeline.
+
+        Args:
+            provider: Action provider name (e.g., '0x-swap', 'jupiter_swap').
+            action: Action name (e.g., 'swap').
+            params: Action-specific parameters as key-value dict.
+            network: Target network. Defaults to wallet default network.
+            wallet_id: Target wallet ID for multi-wallet sessions.
+
+        Returns:
+            ActionResponse with id, status, and optional pipeline for multi-step.
+        """
+        body: dict[str, Any] = {}
+        if params is not None:
+            body["params"] = params
+        if network is not None:
+            body["network"] = network
+        if wallet_id is not None:
+            body["walletId"] = wallet_id
+        resp = await self._request(
+            "POST", f"/v1/actions/{provider}/{action}", json_body=body
+        )
+        return ActionResponse.model_validate(resp.json())
