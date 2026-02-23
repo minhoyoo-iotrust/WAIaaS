@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.0 기본 DeFi 프로토콜 설계 -- Phase 244 코어 설계 기반
+**Current focus:** v28.0 기본 DeFi 프로토콜 설계 -- Phase 245 런타임 동작 설계
 
 ## Current Position
 
 Milestone: v28.0 기본 DeFi 프로토콜 설계
-Phase: 244 of 245 (코어 설계 기반)
-Plan: 2 of 2 in current phase
-Status: Phase 244 complete
-Last activity: 2026-02-23 -- Completed 244-02-PLAN.md (DEFI-03 정책 연동 설계)
+Phase: 245 of 245 (런타임 동작 설계)
+Plan: 2 of 3 in current phase
+Status: Plan 245-02 complete (SAFE-01~04 안전성 설계 확정)
+Last activity: 2026-02-23 -- Completed 245-02-PLAN.md (안전성 설계 4개 확정)
 
-Progress: [█████████░] 100% (Phase 244)
+Progress: [██████████] 67% (Phase 245, 2/3 plans)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [█████████░] 100% (Phase 244)
 (Cleared at milestone boundary -- see PROJECT.md Key Decisions for full log)
 
 - Research: 0x AllowanceHolder 사용 (Permit2 대신) -- m28-02 objective 수정 완료 (244-01)
-- Research: wstETH vs stETH 아키텍처 결정 -- m28-00 설계에서 확정 필요
+- Research: wstETH vs stETH 아키텍처 결정 -- SAFE-02에서 wstETH 채택 확정 (245-02)
 - DEFI-01: packages/actions/ 디렉토리 트리, package.json, registerBuiltInProviders() 6-step 라이프사이클 확정
 - DEFI-02: ActionApiClient base (fetch+Zod), 8개 DeFi 에러 코드, SlippageBps/SlippagePct branded types 확정
 - APIC-05: AllowanceHolder 플로우 확정 -- standard ERC-20 approve, EIP-712 불필요
@@ -41,6 +41,12 @@ Progress: [█████████░] 100% (Phase 244)
 - PLCY-04: 도착 주소 기본 정책 self-bridge only, 외부 주소 APPROVAL 격상
 - PLCY-04: SPENDING_LIMIT 예약은 COMPLETED/REFUNDED에서만 해제 (P4 대응)
 - PLCY-02: Settings snapshot을 resolve() 진입 시 획득, 파이프라인 완료까지 유지
+- SAFE-01: Jito fail-closed -- JITO_UNAVAILABLE 에러, 공개 RPC 폴백 절대 금지, JITO_DEGRADED 알림
+- SAFE-02: wstETH 채택 (stETH 대신) -- 리베이스/dust/L2 문제 근본 해결, PLCY-02 Lido 번들 3개 주소로 업데이트
+- SAFE-03: re-resolve 패턴 -- bridge_metadata에 providerName+originalParams 저장, 가스 조건 충족 시 재호출
+- SAFE-03: per-wallet 가스 대기 제한 max_per_wallet=5, per-wallet lock으로 nonce 순차 처리
+- SAFE-04: API drift 3중 방어 -- Zod + 버전 고정 URL + redirect:'error' + API_SCHEMA_DRIFT 알림 (3회 연속 실패)
+- SAFE-04: RPC 장애 시 effectiveWaitTime으로 타임아웃 시계 일시 정지
 
 ### Blockers/Concerns
 
@@ -49,5 +55,5 @@ Progress: [█████████░] 100% (Phase 244)
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 244-01-PLAN.md (DEFI-01/DEFI-02 확정 + m28-02 AllowanceHolder 업데이트)
+Stopped at: Completed 245-02-PLAN.md (SAFE-01~04 안전성 설계 확정)
 Resume file: None
