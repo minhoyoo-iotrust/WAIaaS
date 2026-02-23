@@ -1169,22 +1169,6 @@ describe('WalletListWithTabs - Tab switching', () => {
     });
   });
 
-  it('switches to Balance Monitoring tab', async () => {
-    setupTabMocks();
-
-    render(<WalletsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Balance Monitoring')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText('Balance Monitoring'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Periodic balance checks/)).toBeTruthy();
-    });
-  });
-
   it('switches to WalletConnect tab', async () => {
     setupTabMocks();
 
@@ -1263,46 +1247,6 @@ describe('RpcEndpointsTab', () => {
       expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', expect.objectContaining({
         chain: 'solana',
       }));
-    });
-  });
-});
-
-describe('BalanceMonitoringTab', () => {
-  beforeEach(() => { currentPath.value = '/wallets'; });
-  afterEach(() => { cleanup(); vi.clearAllMocks(); });
-
-  it('saves monitoring settings', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      if (path === '/v1/admin/settings') return mockSettingsData;
-      return {};
-    });
-    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
-
-    render(<WalletsPage />);
-
-    fireEvent.click(screen.getByText('Balance Monitoring'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Periodic balance checks/)).toBeTruthy();
-    });
-
-    // Change cooldown hours
-    const cooldownInput = screen.getByLabelText('Alert Cooldown (hours)') as HTMLInputElement;
-    fireEvent.input(cooldownInput, { target: { value: '12' } });
-
-    await waitFor(() => {
-      expect(screen.getByText('Save')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText('Save'));
-
-    await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: expect.arrayContaining([
-          expect.objectContaining({ key: 'monitoring.cooldown_hours', value: '12' }),
-        ]),
-      });
     });
   });
 });

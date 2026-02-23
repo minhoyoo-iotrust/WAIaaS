@@ -1,7 +1,7 @@
 /**
  * SEC-13: ChainError 3-category mapping security -- 12 attack scenarios.
  *
- * Verifies that all 29 ChainErrorCode values are correctly mapped to
+ * Verifies that all 33 ChainErrorCode values are correctly mapped to
  * PERMANENT/TRANSIENT/STALE categories and that retryable is auto-derived.
  *
  * Misclassifying PERMANENT as TRANSIENT causes infinite retry loops.
@@ -47,6 +47,8 @@ const EXPECTED_PERMANENT: ChainErrorCode[] = [
   'BATCH_SIZE_EXCEEDED',
   'INVALID_RAW_TRANSACTION',
   'WALLET_NOT_SIGNER',
+  'ACTION_API_ERROR',
+  'PRICE_IMPACT_TOO_HIGH',
 ];
 
 const EXPECTED_TRANSIENT: ChainErrorCode[] = [
@@ -54,6 +56,8 @@ const EXPECTED_TRANSIENT: ChainErrorCode[] = [
   'RPC_CONNECTION_ERROR',
   'RATE_LIMITED',
   'NODE_BEHIND',
+  'ACTION_API_TIMEOUT',
+  'ACTION_RATE_LIMITED',
 ];
 
 const EXPECTED_STALE: ChainErrorCode[] = [
@@ -73,7 +77,7 @@ const ALL_EXPECTED_CODES: ChainErrorCode[] = [
 // SEC-13-01: PERMANENT codes retryable === false (exhaustive)
 // ---------------------------------------------------------------------------
 
-describe('SEC-13-01: All 21 PERMANENT codes have retryable=false', () => {
+describe('SEC-13-01: All 23 PERMANENT codes have retryable=false', () => {
   it.each(EXPECTED_PERMANENT)(
     '%s -> retryable=false',
     (code) => {
@@ -83,8 +87,8 @@ describe('SEC-13-01: All 21 PERMANENT codes have retryable=false', () => {
     },
   );
 
-  it('exactly 21 PERMANENT codes exist', () => {
-    expect(EXPECTED_PERMANENT).toHaveLength(21);
+  it('exactly 23 PERMANENT codes exist', () => {
+    expect(EXPECTED_PERMANENT).toHaveLength(23);
     const actualPermanent = Object.entries(CHAIN_ERROR_CATEGORIES)
       .filter(([, cat]) => cat === 'PERMANENT')
       .map(([code]) => code);
@@ -96,7 +100,7 @@ describe('SEC-13-01: All 21 PERMANENT codes have retryable=false', () => {
 // SEC-13-02: TRANSIENT codes retryable === true (exhaustive)
 // ---------------------------------------------------------------------------
 
-describe('SEC-13-02: All 4 TRANSIENT codes have retryable=true', () => {
+describe('SEC-13-02: All 6 TRANSIENT codes have retryable=true', () => {
   it.each(EXPECTED_TRANSIENT)(
     '%s -> retryable=true',
     (code) => {
@@ -106,8 +110,8 @@ describe('SEC-13-02: All 4 TRANSIENT codes have retryable=true', () => {
     },
   );
 
-  it('exactly 4 TRANSIENT codes exist', () => {
-    expect(EXPECTED_TRANSIENT).toHaveLength(4);
+  it('exactly 6 TRANSIENT codes exist', () => {
+    expect(EXPECTED_TRANSIENT).toHaveLength(6);
     const actualTransient = Object.entries(CHAIN_ERROR_CATEGORIES)
       .filter(([, cat]) => cat === 'TRANSIENT')
       .map(([code]) => code);
@@ -142,18 +146,18 @@ describe('SEC-13-03: All 4 STALE codes have retryable=true', () => {
 // SEC-13-04: Total code count === 29 (detect additions/removals)
 // ---------------------------------------------------------------------------
 
-describe('SEC-13-04: CHAIN_ERROR_CATEGORIES has exactly 29 entries', () => {
-  it('total keys === 29', () => {
+describe('SEC-13-04: CHAIN_ERROR_CATEGORIES has exactly 33 entries', () => {
+  it('total keys === 33', () => {
     const keys = Object.keys(CHAIN_ERROR_CATEGORIES);
-    expect(keys).toHaveLength(29);
+    expect(keys).toHaveLength(33);
   });
 
-  it('21 + 4 + 4 = 29 partitions are exhaustive and disjoint', () => {
+  it('23 + 6 + 4 = 33 partitions are exhaustive and disjoint', () => {
     const allExpected = new Set(ALL_EXPECTED_CODES);
-    expect(allExpected.size).toBe(29);
+    expect(allExpected.size).toBe(33);
 
     const allActual = new Set(Object.keys(CHAIN_ERROR_CATEGORIES));
-    expect(allActual.size).toBe(29);
+    expect(allActual.size).toBe(33);
 
     // Every expected code is in actual
     for (const code of allExpected) {

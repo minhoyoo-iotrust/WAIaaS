@@ -139,6 +139,7 @@ export {
   NOTIFICATION_CATEGORIES,
   type NotificationCategory,
   EVENT_CATEGORY_MAP,
+  EVENT_DESCRIPTIONS,
   NotificationMessageSchema,
   type NotificationMessage,
 } from './schemas/signing-protocol.js';

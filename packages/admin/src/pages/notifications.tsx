@@ -60,12 +60,13 @@ interface NotificationLogResponse {
 
 const PAGE_SIZE = 20;
 
-type NotifTab = 'channels' | 'telegram' | 'settings';
+type NotifTab = 'channels' | 'telegram' | 'settings' | 'balance';
 
 const NOTIFICATIONS_TABS = [
   { key: 'channels', label: 'Channels & Logs' },
   { key: 'telegram', label: 'Telegram Users' },
   { key: 'settings', label: 'Settings' },
+  { key: 'balance', label: 'Balance Monitor' },
 ];
 
 const LOG_FILTER_FIELDS: FilterField[] = [
@@ -368,47 +369,126 @@ function NotificationSettingsTab() {
             </div>
           </FieldGroup>
 
-          <FieldGroup legend="Category Filter" description="Filter which notification categories are delivered. All checked = receive all.">
+          <FieldGroup legend="Event Filter" description="Choose which notification events are delivered. All checked = receive all.">
             {(() => {
-              const NOTIFY_CATEGORY_OPTIONS = [
-                { value: 'transaction', label: 'Transaction Events' },
-                { value: 'policy', label: 'Policy Violations' },
-                { value: 'security_alert', label: 'Security Alerts' },
-                { value: 'session', label: 'Session Events' },
-                { value: 'owner', label: 'Owner Events' },
-                { value: 'system', label: 'System Notifications' },
+              const BROADCAST = new Set(['KILL_SWITCH_ACTIVATED', 'KILL_SWITCH_RECOVERED', 'AUTO_STOP_TRIGGERED', 'TX_INCOMING_SUSPICIOUS']);
+              const EVENT_GROUPS: { category: string; label: string; events: { event: string; desc: string }[] }[] = [
+                { category: 'transaction', label: 'Transaction Events', events: [
+                  { event: 'TX_REQUESTED', desc: 'Transaction request received' },
+                  { event: 'TX_QUEUED', desc: 'Waiting in time-delay queue' },
+                  { event: 'TX_SUBMITTED', desc: 'Submitted to blockchain' },
+                  { event: 'TX_CONFIRMED', desc: 'Confirmed on-chain' },
+                  { event: 'TX_FAILED', desc: 'Transaction failed' },
+                  { event: 'TX_CANCELLED', desc: 'Cancelled by user or policy' },
+                  { event: 'TX_DOWNGRADED_DELAY', desc: 'Auto-approved demoted to time-delay' },
+                  { event: 'TX_APPROVAL_REQUIRED', desc: 'Owner approval required' },
+                  { event: 'TX_APPROVAL_EXPIRED', desc: 'Approval wait timed out' },
+                  { event: 'TX_INCOMING', desc: 'Incoming transaction detected' },
+                ]},
+                { category: 'policy', label: 'Policy', events: [
+                  { event: 'POLICY_VIOLATION', desc: 'Blocked by policy rule' },
+                  { event: 'CUMULATIVE_LIMIT_WARNING', desc: 'Cumulative spend limit warning' },
+                ]},
+                { category: 'security_alert', label: 'Security Alerts', events: [
+                  { event: 'WALLET_SUSPENDED', desc: 'Wallet suspended' },
+                  { event: 'KILL_SWITCH_ACTIVATED', desc: 'Emergency lock activated' },
+                  { event: 'KILL_SWITCH_RECOVERED', desc: 'Emergency lock released' },
+                  { event: 'KILL_SWITCH_ESCALATED', desc: 'Kill switch escalated' },
+                  { event: 'AUTO_STOP_TRIGGERED', desc: 'Auto-stop triggered' },
+                  { event: 'TX_INCOMING_SUSPICIOUS', desc: 'Suspicious incoming transaction' },
+                ]},
+                { category: 'session', label: 'Session Events', events: [
+                  { event: 'SESSION_EXPIRING_SOON', desc: 'Session expiring soon' },
+                  { event: 'SESSION_EXPIRED', desc: 'Session expired' },
+                  { event: 'SESSION_CREATED', desc: 'Session created' },
+                  { event: 'SESSION_WALLET_ADDED', desc: 'Wallet added to session' },
+                  { event: 'SESSION_WALLET_REMOVED', desc: 'Wallet removed from session' },
+                ]},
+                { category: 'owner', label: 'Owner Events', events: [
+                  { event: 'OWNER_SET', desc: 'Owner address registered' },
+                  { event: 'OWNER_REMOVED', desc: 'Owner address removed' },
+                  { event: 'OWNER_VERIFIED', desc: 'Owner address verified' },
+                ]},
+                { category: 'system', label: 'System Notifications', events: [
+                  { event: 'DAILY_SUMMARY', desc: 'Daily summary report' },
+                  { event: 'LOW_BALANCE', desc: 'Low balance warning' },
+                  { event: 'APPROVAL_CHANNEL_SWITCHED', desc: 'Approval channel changed' },
+                  { event: 'UPDATE_AVAILABLE', desc: 'Daemon update available' },
+                ]},
               ];
-              const ALL_VALUES = NOTIFY_CATEGORY_OPTIONS.map((o) => o.value);
-              const currentJson = getEffectiveValue(settings.value, dirty.value, 'notifications', 'notify_categories') || '[]';
-              let rawCategories: string[] = [];
+              const ALL_EVENTS = EVENT_GROUPS.flatMap((g) => g.events.map((e) => e.event))
+                .filter((e) => !BROADCAST.has(e));
+              const currentJson = getEffectiveValue(settings.value, dirty.value, 'notifications', 'notify_events') || '[]';
+              let rawEvents: string[] = [];
               try {
                 const parsed = JSON.parse(currentJson);
-                if (Array.isArray(parsed)) rawCategories = parsed;
+                if (Array.isArray(parsed)) rawEvents = parsed;
               } catch { /* use empty */ }
-              // Empty array means "receive all" → display as all checked
-              const displayCategories = rawCategories.length === 0 ? ALL_VALUES : rawCategories;
-              const handleToggle = (val: string, checked: boolean) => {
+              const displayEvents = rawEvents.length === 0 ? ALL_EVENTS : rawEvents;
+              const handleEventToggle = (event: string, checked: boolean) => {
                 const updated = checked
-                  ? [...displayCategories, val]
-                  : displayCategories.filter((c) => c !== val);
-                // All checked → send empty array (backend "receive all" convention)
-                const toSave = updated.length === ALL_VALUES.length && ALL_VALUES.every((v) => updated.includes(v))
+                  ? [...displayEvents, event]
+                  : displayEvents.filter((e) => e !== event);
+                const toSave = updated.length === ALL_EVENTS.length && ALL_EVENTS.every((e) => updated.includes(e))
                   ? []
                   : updated;
-                handleFieldChange('notifications.notify_categories', JSON.stringify(toSave));
+                handleFieldChange('notifications.notify_events', JSON.stringify(toSave));
+              };
+              const handleGroupToggle = (group: typeof EVENT_GROUPS[0], checked: boolean) => {
+                const filterable = group.events.filter((e) => !BROADCAST.has(e.event)).map((e) => e.event);
+                let updated: string[];
+                if (checked) {
+                  updated = [...new Set([...displayEvents, ...filterable])];
+                } else {
+                  const removeSet = new Set(filterable);
+                  updated = displayEvents.filter((e) => !removeSet.has(e));
+                }
+                const toSave = updated.length === ALL_EVENTS.length && ALL_EVENTS.every((e) => updated.includes(e))
+                  ? []
+                  : updated;
+                handleFieldChange('notifications.notify_events', JSON.stringify(toSave));
               };
               return (
-                <div class="settings-fields-grid">
-                  {NOTIFY_CATEGORY_OPTIONS.map((opt) => (
-                    <FormField
-                      key={opt.value}
-                      label={opt.label}
-                      name={`notify_cat_${opt.value}`}
-                      type="checkbox"
-                      value={displayCategories.includes(opt.value)}
-                      onChange={(v) => handleToggle(opt.value, Boolean(v))}
-                    />
-                  ))}
+                <div class="event-filter-groups">
+                  {EVENT_GROUPS.map((group) => {
+                    const filterable = group.events.filter((e) => !BROADCAST.has(e.event));
+                    const allChecked = filterable.every((e) => displayEvents.includes(e.event));
+                    const someChecked = filterable.some((e) => displayEvents.includes(e.event));
+                    return (
+                      <details key={group.category} class="event-filter-group" open>
+                        <summary class="event-filter-group-header">
+                          <span class="event-filter-group-label">{group.label}</span>
+                          <label class="event-filter-group-all" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              ref={(el) => { if (el) el.indeterminate = someChecked && !allChecked; }}
+                              onChange={(e) => handleGroupToggle(group, (e.target as HTMLInputElement).checked)}
+                            />
+                            {' All'}
+                          </label>
+                        </summary>
+                        <div class="event-filter-events">
+                          {group.events.map((ev) => {
+                            const isBroadcast = BROADCAST.has(ev.event);
+                            return (
+                              <label key={ev.event} class={`event-filter-event ${isBroadcast ? 'event-broadcast' : ''}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={isBroadcast || displayEvents.includes(ev.event)}
+                                  disabled={isBroadcast}
+                                  onChange={(e) => handleEventToggle(ev.event, (e.target as HTMLInputElement).checked)}
+                                />
+                                <code>{ev.event}</code>
+                                <span class="event-desc">{ev.desc}</span>
+                                {isBroadcast && <span class="event-broadcast-badge">Always sent</span>}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    );
+                  })}
                 </div>
               );
             })()}
@@ -441,6 +521,159 @@ function NotificationSettingsTab() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Balance Monitor Tab
+// ---------------------------------------------------------------------------
+
+const MONITORING_DESCRIPTIONS: Record<string, string> = {
+  enabled: 'Enable or disable balance monitoring',
+  check_interval_sec: 'How often to check wallet balances',
+  low_balance_threshold_sol: 'Alert when SOL balance drops below this amount',
+  low_balance_threshold_eth: 'Alert when ETH balance drops below this amount',
+  cooldown_hours: 'Suppress duplicate alerts for this many hours',
+};
+
+function BalanceMonitorTab() {
+  const settings = useSignal<SettingsData>({});
+  const dirty = useSignal<Record<string, string>>({});
+  const saving = useSignal(false);
+  const loading = useSignal(true);
+
+  const fetchSettings = async () => {
+    try {
+      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = result;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
+    const strValue = typeof value === 'boolean' ? String(value) : String(value);
+    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  };
+
+  const handleSave = async () => {
+    saving.value = true;
+    try {
+      const entries = Object.entries(dirty.value)
+        .filter(([key]) => key.startsWith('monitoring.'))
+        .map(([key, value]) => ({ key, value }));
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
+      settings.value = result.settings;
+      dirty.value = {};
+      showToast('success', 'Settings saved and applied');
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  const handleDiscard = () => {
+    dirty.value = {};
+  };
+
+  useEffect(() => {
+    registerDirty({
+      id: 'notifications-balance',
+      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('monitoring.')).length > 0,
+      save: handleSave,
+      discard: handleDiscard,
+    });
+    return () => unregisterDirty('notifications-balance');
+  }, []);
+
+  const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
+    { key: 'enabled', type: 'checkbox' },
+    { key: 'check_interval_sec', type: 'number', min: 60, max: 86400 },
+    { key: 'low_balance_threshold_sol', type: 'number', min: 0 },
+    { key: 'low_balance_threshold_eth', type: 'number', min: 0 },
+    { key: 'cooldown_hours', type: 'number', min: 1, max: 168 },
+  ];
+
+  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('monitoring.')).length;
+
+  if (loading.value) {
+    return (
+      <div class="empty-state">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {dirtyCount > 0 && (
+        <div class="settings-save-bar">
+          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <div class="settings-save-bar-actions">
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Balance Monitoring</h3>
+          <p class="settings-description">
+            Periodic balance checks for all active wallets. Sends LOW_BALANCE alerts when
+            native token balance drops below thresholds. Changes apply immediately.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            {fields.map((f) =>
+              f.type === 'checkbox' ? (
+                <div class="settings-field-full" key={f.key}>
+                  <FormField
+                    label={keyToLabel(f.key)}
+                    name={`monitoring.${f.key}`}
+                    type="checkbox"
+                    value={getEffectiveBoolValue(settings.value, dirty.value, 'monitoring', f.key)}
+                    onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                    description={MONITORING_DESCRIPTIONS[f.key]}
+                  />
+                </div>
+              ) : (
+                <FormField
+                  key={f.key}
+                  label={keyToLabel(f.key)}
+                  name={`monitoring.${f.key}`}
+                  type="number"
+                  value={Number(getEffectiveValue(settings.value, dirty.value, 'monitoring', f.key)) || 0}
+                  onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
+                  min={f.min}
+                  max={f.max}
+                  description={MONITORING_DESCRIPTIONS[f.key]}
+                />
+              ),
+            )}
+          </div>
+          <div class="settings-info-box">
+            Monitors all active wallet native token balances (SOL, ETH) at the configured interval.
+            When balance drops below threshold, a LOW_BALANCE notification is sent.
+            Duplicate alerts are suppressed for the cooldown period (per wallet).
           </div>
         </div>
       </div>
@@ -658,6 +891,8 @@ export default function NotificationsPage() {
         <TelegramUsersContent />
       ) : activeTab.value === 'settings' ? (
         <NotificationSettingsTab />
+      ) : activeTab.value === 'balance' ? (
+        <BalanceMonitorTab />
       ) : (
       <>
       {/* Section 1: Channel Status Cards */}

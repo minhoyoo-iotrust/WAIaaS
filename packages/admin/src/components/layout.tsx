@@ -12,7 +12,6 @@ import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
 import SecurityPage from '../pages/security';
-import IncomingPage from '../pages/incoming';
 import SystemPage from '../pages/system';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
@@ -26,7 +25,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/wallets': 'Wallets',
   '/transactions': 'Transactions',
-  '/incoming': 'Incoming TX',
   '/sessions': 'Sessions',
   '/tokens': 'Token Registry',
   '/policies': 'Policies',
@@ -38,8 +36,7 @@ const PAGE_TITLES: Record<string, string> = {
 const PAGE_SUBTITLES: Record<string, string> = {
   '/dashboard': 'System overview and key metrics',
   '/wallets': 'Manage wallets, balances, and connections',
-  '/transactions': 'View and filter all wallet transactions',
-  '/incoming': 'Monitor incoming transactions and configure monitoring settings',
+  '/transactions': 'View all transactions and configure incoming monitoring',
   '/sessions': 'View and manage active sessions',
   '/tokens': 'Manage EVM token registry per network',
   '/policies': 'Configure transaction policies and rules',
@@ -61,7 +58,6 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/wallets', label: 'Wallets' },
   { path: '/transactions', label: 'Transactions' },
-  { path: '/incoming', label: 'Incoming TX' },
   { path: '/sessions', label: 'Sessions' },
   { path: '/tokens', label: 'Tokens' },
   { path: '/policies', label: 'Policies' },
@@ -73,7 +69,10 @@ const NAV_ITEMS = [
 function PageRouter() {
   const path = currentPath.value;
   if (path === '/transactions') return <TransactionsPage />;
-  if (path === '/incoming') return <IncomingPage />;
+  if (path === '/incoming') {
+    window.location.hash = '#/transactions';
+    return <TransactionsPage />;
+  }
   if (path === '/tokens') return <TokensPage />;
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/policies') return <PoliciesPage />;

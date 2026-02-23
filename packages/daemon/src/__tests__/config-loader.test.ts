@@ -638,3 +638,74 @@ poll_interval = 60
     expect(source).toContain("'incoming.'");
   });
 });
+
+// ---------------------------------------------------------------------------
+// [actions] section tests (Phase 247-01: Jupiter Swap config)
+// ---------------------------------------------------------------------------
+
+describe('[actions] section', () => {
+  it('loads [actions] section with all 8 defaults when no config.toml', () => {
+    const dir = saveTempDir(createTempDir());
+    const config = loadConfig(dir);
+    expect(config.actions.jupiter_swap_enabled).toBe(false);
+    expect(config.actions.jupiter_swap_api_base_url).toBe('https://api.jup.ag/swap/v1');
+    expect(config.actions.jupiter_swap_api_key).toBe('');
+    expect(config.actions.jupiter_swap_default_slippage_bps).toBe(50);
+    expect(config.actions.jupiter_swap_max_slippage_bps).toBe(500);
+    expect(config.actions.jupiter_swap_max_price_impact_pct).toBe(1.0);
+    expect(config.actions.jupiter_swap_jito_tip_lamports).toBe(1000);
+    expect(config.actions.jupiter_swap_request_timeout_ms).toBe(10000);
+  });
+
+  it('config.toml [actions] section accepted and parsed', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(
+      join(dir, 'config.toml'),
+      `[actions]
+jupiter_swap_enabled = true
+jupiter_swap_default_slippage_bps = 75
+jupiter_swap_max_price_impact_pct = 2.0
+`,
+    );
+    const config = loadConfig(dir);
+    expect(config.actions.jupiter_swap_enabled).toBe(true);
+    expect(config.actions.jupiter_swap_default_slippage_bps).toBe(75);
+    expect(config.actions.jupiter_swap_max_price_impact_pct).toBe(2.0);
+    // Unspecified keys should have defaults
+    expect(config.actions.jupiter_swap_max_slippage_bps).toBe(500);
+    expect(config.actions.jupiter_swap_jito_tip_lamports).toBe(1000);
+  });
+
+  it('WAIAAS_ACTIONS_JUPITER_SWAP_ENABLED=true overrides actions.jupiter_swap_enabled', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_ACTIONS_JUPITER_SWAP_ENABLED', 'true');
+    const config = loadConfig(dir);
+    expect(config.actions.jupiter_swap_enabled).toBe(true);
+  });
+
+  it('WAIAAS_ACTIONS_JUPITER_SWAP_DEFAULT_SLIPPAGE_BPS=100 overrides', () => {
+    const dir = saveTempDir(createTempDir());
+    setEnv('WAIAAS_ACTIONS_JUPITER_SWAP_DEFAULT_SLIPPAGE_BPS', '100');
+    const config = loadConfig(dir);
+    expect(config.actions.jupiter_swap_default_slippage_bps).toBe(100);
+  });
+
+  it('Zod rejects jupiter_swap_default_slippage_bps below minimum (1)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[actions]\njupiter_swap_default_slippage_bps = 0\n');
+    expect(() => loadConfig(dir)).toThrow();
+  });
+
+  it('Zod rejects jupiter_swap_request_timeout_ms below minimum (1000)', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[actions]\njupiter_swap_request_timeout_ms = 100\n');
+    expect(() => loadConfig(dir)).toThrow();
+  });
+
+  it('DaemonConfigSchema actions section has 8 keys', () => {
+    const dir = saveTempDir(createTempDir());
+    const config = loadConfig(dir);
+    const actionsKeys = Object.keys(config.actions);
+    expect(actionsKeys).toHaveLength(8);
+  });
+});

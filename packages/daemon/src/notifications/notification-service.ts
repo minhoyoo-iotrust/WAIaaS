@@ -112,11 +112,12 @@ export class NotificationService {
       ? { walletName: walletInfo.walletName, ...vars }
       : { walletName: walletId, ...vars };
 
-    // Category filter: check notifications.notify_categories (empty = allow all)
+    // Event filter: check notifications.notify_events (empty = allow all)
+    // Falls back to legacy notify_categories if notify_events is not set.
     // BROADCAST_EVENTS always bypass the filter.
     const isBroadcast = BROADCAST_EVENTS.has(eventType);
     if (!isBroadcast && this.settingsService) {
-      const filtered = this.isCategoryFiltered(eventType);
+      const filtered = this.isEventFiltered(eventType);
       if (filtered) return;
     }
 
@@ -219,12 +220,22 @@ export class NotificationService {
   }
 
   /**
-   * Check if the event type is filtered out by notifications.notify_categories.
+   * Check if the event type is filtered out by notifications.notify_events.
+   * Falls back to legacy notifications.notify_categories if notify_events is empty/unset.
    * Empty array = allow all. Returns true if the event should be suppressed.
    */
-  private isCategoryFiltered(eventType: NotificationEventType): boolean {
+  private isEventFiltered(eventType: NotificationEventType): boolean {
     if (!this.settingsService) return false;
     try {
+      // Prefer per-event filter
+      const eventsJson = this.settingsService.get('notifications.notify_events');
+      if (eventsJson && eventsJson !== '[]') {
+        const allowedEvents = JSON.parse(eventsJson) as string[];
+        if (Array.isArray(allowedEvents) && allowedEvents.length > 0) {
+          return !allowedEvents.includes(eventType);
+        }
+      }
+      // Fallback to legacy category filter
       const filterJson = this.settingsService.get('notifications.notify_categories');
       if (!filterJson || filterJson === '[]') return false;
       const allowed = JSON.parse(filterJson) as string[];

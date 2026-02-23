@@ -83,6 +83,8 @@ describe('ChainError', () => {
       'BATCH_SIZE_EXCEEDED',
       'INVALID_RAW_TRANSACTION',
       'WALLET_NOT_SIGNER',
+      'ACTION_API_ERROR',
+      'PRICE_IMPACT_TOO_HIGH',
     ];
 
     const TRANSIENT_CODES: ChainErrorCode[] = [
@@ -90,6 +92,8 @@ describe('ChainError', () => {
       'RPC_CONNECTION_ERROR',
       'RATE_LIMITED',
       'NODE_BEHIND',
+      'ACTION_API_TIMEOUT',
+      'ACTION_RATE_LIMITED',
     ];
 
     const STALE_CODES: ChainErrorCode[] = [
@@ -99,19 +103,19 @@ describe('ChainError', () => {
       'SLOT_SKIPPED',
     ];
 
-    it('has exactly 29 error codes', () => {
-      expect(Object.keys(CHAIN_ERROR_CATEGORIES)).toHaveLength(29);
+    it('has exactly 33 error codes', () => {
+      expect(Object.keys(CHAIN_ERROR_CATEGORIES)).toHaveLength(33);
     });
 
-    it('PERMANENT category has 21 codes', () => {
-      expect(PERMANENT_CODES).toHaveLength(21);
+    it('PERMANENT category has 23 codes', () => {
+      expect(PERMANENT_CODES).toHaveLength(23);
       for (const code of PERMANENT_CODES) {
         expect(CHAIN_ERROR_CATEGORIES[code]).toBe('PERMANENT');
       }
     });
 
-    it('TRANSIENT category has 4 codes', () => {
-      expect(TRANSIENT_CODES).toHaveLength(4);
+    it('TRANSIENT category has 6 codes', () => {
+      expect(TRANSIENT_CODES).toHaveLength(6);
       for (const code of TRANSIENT_CODES) {
         expect(CHAIN_ERROR_CATEGORIES[code]).toBe('TRANSIENT');
       }
@@ -124,9 +128,9 @@ describe('ChainError', () => {
       }
     });
 
-    it('all 29 codes accounted for (PERMANENT + TRANSIENT + STALE)', () => {
+    it('all 33 codes accounted for (PERMANENT + TRANSIENT + STALE)', () => {
       const allCodes = [...PERMANENT_CODES, ...TRANSIENT_CODES, ...STALE_CODES];
-      expect(allCodes).toHaveLength(29);
+      expect(allCodes).toHaveLength(33);
 
       const allKeys = Object.keys(CHAIN_ERROR_CATEGORIES);
       expect(allKeys.sort()).toEqual(allCodes.sort());

@@ -216,6 +216,43 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
 };
 
 // ---------------------------------------------------------------------------
+// Per-Event Descriptions (for Admin UI)
+// ---------------------------------------------------------------------------
+
+export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
+  TX_REQUESTED: 'Transaction request received',
+  TX_QUEUED: 'Waiting in time-delay queue',
+  TX_SUBMITTED: 'Submitted to blockchain',
+  TX_CONFIRMED: 'Confirmed on-chain',
+  TX_FAILED: 'Transaction failed',
+  TX_CANCELLED: 'Cancelled by user or policy',
+  TX_DOWNGRADED_DELAY: 'Auto-approved demoted to time-delay',
+  TX_APPROVAL_REQUIRED: 'Owner approval required',
+  TX_APPROVAL_EXPIRED: 'Approval wait timed out',
+  TX_INCOMING: 'Incoming transaction detected',
+  TX_INCOMING_SUSPICIOUS: 'Suspicious incoming transaction',
+  POLICY_VIOLATION: 'Blocked by policy rule',
+  CUMULATIVE_LIMIT_WARNING: 'Cumulative spend limit warning',
+  WALLET_SUSPENDED: 'Wallet suspended',
+  KILL_SWITCH_ACTIVATED: 'Emergency lock activated',
+  KILL_SWITCH_RECOVERED: 'Emergency lock released',
+  KILL_SWITCH_ESCALATED: 'Kill switch escalated',
+  AUTO_STOP_TRIGGERED: 'Auto-stop triggered',
+  SESSION_EXPIRING_SOON: 'Session expiring soon',
+  SESSION_EXPIRED: 'Session expired',
+  SESSION_CREATED: 'Session created',
+  SESSION_WALLET_ADDED: 'Wallet added to session',
+  SESSION_WALLET_REMOVED: 'Wallet removed from session',
+  OWNER_SET: 'Owner address registered',
+  OWNER_REMOVED: 'Owner address removed',
+  OWNER_VERIFIED: 'Owner address verified',
+  DAILY_SUMMARY: 'Daily summary report',
+  LOW_BALANCE: 'Low balance warning',
+  APPROVAL_CHANNEL_SWITCHED: 'Approval channel changed',
+  UPDATE_AVAILABLE: 'Daemon update available',
+};
+
+// ---------------------------------------------------------------------------
 // NotificationMessage Schema (v2.7 Side Channel)
 // ---------------------------------------------------------------------------
 

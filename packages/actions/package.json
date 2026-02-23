@@ -1,0 +1,46 @@
+{
+  "name": "@waiaas/actions",
+  "version": "2.6.0-rc.4",
+  "description": "WAIaaS built-in DeFi Action Provider implementations",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
+    "directory": "packages/actions"
+  },
+  "homepage": "https://github.com/minhoyoo-iotrust/WAIaaS#readme",
+  "bugs": {
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "msw": "^2.7.0"
+  }
+}

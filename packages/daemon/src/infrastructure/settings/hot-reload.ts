@@ -53,6 +53,7 @@ const NOTIFICATION_KEYS = new Set([
   'notifications.locale',
   'notifications.rate_limit_rpm',
   'notifications.notify_categories',
+  'notifications.notify_events',
 ]);
 
 const RPC_KEYS_PREFIX = 'rpc.';

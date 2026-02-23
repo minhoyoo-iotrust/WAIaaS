@@ -418,8 +418,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming = 72
-      expect(SETTING_DEFINITIONS.length).toBe(72);
+      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming = 73
+      expect(SETTING_DEFINITIONS.length).toBe(73);
     });
   });
 });

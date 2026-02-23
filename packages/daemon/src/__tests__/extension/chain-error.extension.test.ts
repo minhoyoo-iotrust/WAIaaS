@@ -8,7 +8,7 @@
  * - CE-10~CE-12: Cross-validation + real-world usage patterns
  *
  * Differs from chain-error-attacks.security.test.ts (security perspective):
- *   This file validates correct normal behavior -- all 29 codes classified correctly,
+ *   This file validates correct normal behavior -- all 33 codes classified correctly,
  *   retryable derived accurately, serialization complete, and cause chaining works.
  *
  * @see packages/core/src/errors/chain-error.ts
@@ -50,6 +50,8 @@ const PERMANENT_CODES: ChainErrorCode[] = [
   'BATCH_SIZE_EXCEEDED',
   'INVALID_RAW_TRANSACTION',
   'WALLET_NOT_SIGNER',
+  'ACTION_API_ERROR',
+  'PRICE_IMPACT_TOO_HIGH',
 ];
 
 const TRANSIENT_CODES: ChainErrorCode[] = [
@@ -57,6 +59,8 @@ const TRANSIENT_CODES: ChainErrorCode[] = [
   'RPC_CONNECTION_ERROR',
   'RATE_LIMITED',
   'NODE_BEHIND',
+  'ACTION_API_TIMEOUT',
+  'ACTION_RATE_LIMITED',
 ];
 
 const STALE_CODES: ChainErrorCode[] = [
@@ -77,9 +81,9 @@ const ALL_CODES: ChainErrorCode[] = [
 // ===========================================================================
 
 describe('CE-01~CE-03: 3-category classification accuracy', () => {
-  // CE-01: All 21 PERMANENT codes -> category='PERMANENT', retryable=false
-  it('CE-01: all 21 PERMANENT codes are classified correctly', () => {
-    expect(PERMANENT_CODES).toHaveLength(21);
+  // CE-01: All 23 PERMANENT codes -> category='PERMANENT', retryable=false
+  it('CE-01: all 23 PERMANENT codes are classified correctly', () => {
+    expect(PERMANENT_CODES).toHaveLength(23);
 
     for (const code of PERMANENT_CODES) {
       const err = new ChainError(code, 'ethereum');
@@ -95,9 +99,9 @@ describe('CE-01~CE-03: 3-category classification accuracy', () => {
     expect(actualPermanent.sort()).toEqual([...PERMANENT_CODES].sort());
   });
 
-  // CE-02: All 4 TRANSIENT codes -> category='TRANSIENT', retryable=true
-  it('CE-02: all 4 TRANSIENT codes are classified correctly', () => {
-    expect(TRANSIENT_CODES).toHaveLength(4);
+  // CE-02: All 6 TRANSIENT codes -> category='TRANSIENT', retryable=true
+  it('CE-02: all 6 TRANSIENT codes are classified correctly', () => {
+    expect(TRANSIENT_CODES).toHaveLength(6);
 
     for (const code of TRANSIENT_CODES) {
       const err = new ChainError(code, 'solana');
@@ -161,9 +165,9 @@ describe('CE-04~CE-06: Constructor + retryable auto-derivation', () => {
     expect(err.retryable).toBe(true);
   });
 
-  // CE-06: retryable = (category !== 'PERMANENT') for all 29 codes
-  it('CE-06: retryable auto-derivation is accurate for all 29 codes', () => {
-    expect(ALL_CODES).toHaveLength(29);
+  // CE-06: retryable = (category !== 'PERMANENT') for all 33 codes
+  it('CE-06: retryable auto-derivation is accurate for all 33 codes', () => {
+    expect(ALL_CODES).toHaveLength(33);
 
     for (const code of ALL_CODES) {
       const err = new ChainError(code, 'ethereum');
@@ -178,12 +182,12 @@ describe('CE-04~CE-06: Constructor + retryable auto-derivation', () => {
     const retryableCodes = ALL_CODES.filter(
       (code) => CHAIN_ERROR_CATEGORIES[code] !== 'PERMANENT',
     );
-    expect(retryableCodes).toHaveLength(8); // 4 TRANSIENT + 4 STALE
+    expect(retryableCodes).toHaveLength(10); // 6 TRANSIENT + 4 STALE
 
     const nonRetryableCodes = ALL_CODES.filter(
       (code) => CHAIN_ERROR_CATEGORIES[code] === 'PERMANENT',
     );
-    expect(nonRetryableCodes).toHaveLength(21);
+    expect(nonRetryableCodes).toHaveLength(23);
   });
 });
 
@@ -259,17 +263,17 @@ describe('CE-07~CE-09: toJSON + cause chaining', () => {
 // ===========================================================================
 
 describe('CE-10~CE-12: Cross-validation + real-world patterns', () => {
-  // CE-10: 29 codes = PERMANENT(21) + TRANSIENT(4) + STALE(4) disjoint partition
-  it('CE-10: 29 codes form an exhaustive, disjoint 3-partition', () => {
+  // CE-10: 33 codes = PERMANENT(23) + TRANSIENT(6) + STALE(4) disjoint partition
+  it('CE-10: 33 codes form an exhaustive, disjoint 3-partition', () => {
     // Total count
     const allMappingKeys = Object.keys(CHAIN_ERROR_CATEGORIES);
-    expect(allMappingKeys).toHaveLength(29);
+    expect(allMappingKeys).toHaveLength(33);
 
     // Partition sizes
-    expect(PERMANENT_CODES).toHaveLength(21);
-    expect(TRANSIENT_CODES).toHaveLength(4);
+    expect(PERMANENT_CODES).toHaveLength(23);
+    expect(TRANSIENT_CODES).toHaveLength(6);
     expect(STALE_CODES).toHaveLength(4);
-    expect(21 + 4 + 4).toBe(29);
+    expect(23 + 6 + 4).toBe(33);
 
     // Disjoint check: no code appears in multiple categories
     const allExpected = new Set<string>();
@@ -285,7 +289,7 @@ describe('CE-10~CE-12: Cross-validation + real-world patterns', () => {
       expect(allExpected.has(code)).toBe(false);
       allExpected.add(code);
     }
-    expect(allExpected.size).toBe(29);
+    expect(allExpected.size).toBe(33);
 
     // Exhaustive check: every actual key is accounted for
     const actualSet = new Set(allMappingKeys);
