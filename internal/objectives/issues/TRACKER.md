@@ -170,6 +170,7 @@
 | 153 | ENHANCEMENT | MEDIUM | Admin UI Transactions + Incoming TX 페이지 통합 | — | OPEN | — |
 | 154 | ENHANCEMENT | LOW | Balance Monitoring 설정을 Notifications 페이지로 이동 | — | OPEN | — |
 | 155 | ENHANCEMENT | MEDIUM | 알림 필터링을 이벤트 단위로 세분화 | — | OPEN | — |
+| 156 | BUG | MEDIUM | FilterBar / SearchInput CSS 스타일 누락으로 UI 엉성 | — | OPEN | — |
 
 ## Type Legend
 
@@ -181,9 +182,9 @@
 
 ## Summary
 
-- **OPEN:** 3
+- **OPEN:** 4
 - **FIXED:** 151
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 155
+- **Total:** 156
