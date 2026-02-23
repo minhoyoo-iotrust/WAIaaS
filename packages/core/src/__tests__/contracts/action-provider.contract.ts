@@ -138,7 +138,8 @@ export function actionProviderContractTests(
         const actionName = options?.validActionName ?? provider.actions[0]!.name;
         const params = options?.validParams ?? { amount: '100' };
 
-        const result = await provider.resolve(actionName, params, CONTRACT_TEST_CONTEXT);
+        const rawResult = await provider.resolve(actionName, params, CONTRACT_TEST_CONTEXT);
+        const result = Array.isArray(rawResult) ? rawResult[0]! : rawResult;
 
         expect(result).toBeDefined();
         expect(result.type).toBe('CONTRACT_CALL');
