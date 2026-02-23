@@ -39,11 +39,16 @@ export type ChainErrorCode =
   | 'BATCH_SIZE_EXCEEDED'
   | 'INVALID_RAW_TRANSACTION'
   | 'WALLET_NOT_SIGNER'
-  // TRANSIENT (4) -- temporary infrastructure issues, safe to retry
+  // PERMANENT -- DeFi action provider errors (4)
+  | 'ACTION_API_ERROR'
+  | 'PRICE_IMPACT_TOO_HIGH'
+  // TRANSIENT (6) -- temporary infrastructure issues, safe to retry
   | 'RPC_TIMEOUT'
   | 'RPC_CONNECTION_ERROR'
   | 'RATE_LIMITED'
   | 'NODE_BEHIND'
+  | 'ACTION_API_TIMEOUT'
+  | 'ACTION_RATE_LIMITED'
   // STALE (4) -- stale state, rebuild transaction and retry
   | 'BLOCKHASH_EXPIRED'
   | 'NONCE_TOO_LOW'
@@ -77,11 +82,15 @@ export const CHAIN_ERROR_CATEGORIES: Record<ChainErrorCode, ChainErrorCategory> 
   BATCH_SIZE_EXCEEDED: 'PERMANENT',
   INVALID_RAW_TRANSACTION: 'PERMANENT',
   WALLET_NOT_SIGNER: 'PERMANENT',
-  // TRANSIENT (4)
+  ACTION_API_ERROR: 'PERMANENT',
+  PRICE_IMPACT_TOO_HIGH: 'PERMANENT',
+  // TRANSIENT (6)
   RPC_TIMEOUT: 'TRANSIENT',
   RPC_CONNECTION_ERROR: 'TRANSIENT',
   RATE_LIMITED: 'TRANSIENT',
   NODE_BEHIND: 'TRANSIENT',
+  ACTION_API_TIMEOUT: 'TRANSIENT',
+  ACTION_RATE_LIMITED: 'TRANSIENT',
   // STALE (4)
   BLOCKHASH_EXPIRED: 'STALE',
   NONCE_TOO_LOW: 'STALE',

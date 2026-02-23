@@ -1,7 +1,7 @@
 /**
  * M6: Jupiter API msw handlers.
  *
- * Intercepts Jupiter v6 API endpoints (/v6/quote, /v6/swap-instructions)
+ * Intercepts Jupiter API endpoints (/swap/v1/quote, /swap/v1/swap-instructions)
  * with canned responses for deterministic testing. Supports both success
  * and error scenarios via factory functions.
  */
@@ -11,7 +11,7 @@ import { http, HttpResponse } from 'msw';
 // Canned responses
 // ---------------------------------------------------------------------------
 
-/** Default Jupiter /v6/quote response (SOL -> USDC). */
+/** Default Jupiter /swap/v1/quote response (SOL -> USDC). */
 const DEFAULT_QUOTE_RESPONSE = {
   inputMint: 'So11111111111111111111111111111111111111112',
   inAmount: '1000000000', // 1 SOL in lamports
@@ -41,7 +41,7 @@ const DEFAULT_QUOTE_RESPONSE = {
   timeTaken: 0.042,
 };
 
-/** Default Jupiter /v6/swap-instructions response. */
+/** Default Jupiter /swap/v1/swap-instructions response. */
 const DEFAULT_SWAP_RESPONSE = {
   tokenLedgerInstruction: null,
   computeBudgetInstructions: [
@@ -71,7 +71,7 @@ const DEFAULT_SWAP_RESPONSE = {
 // ---------------------------------------------------------------------------
 
 /**
- * Create Jupiter v6 API msw handlers with optional response overrides.
+ * Create Jupiter API msw handlers with optional response overrides.
  *
  * @param overrides - Partial overrides for quote and/or swap responses.
  * @returns msw http handlers array for setupServer().
@@ -81,7 +81,7 @@ export function createJupiterHandlers(overrides?: {
   swap?: Record<string, unknown>;
 }) {
   return [
-    http.get('https://quote-api.jup.ag/v6/quote', ({ request }) => {
+    http.get('https://api.jup.ag/swap/v1/quote', ({ request }) => {
       const url = new URL(request.url);
       const inputMint = url.searchParams.get('inputMint');
       const outputMint = url.searchParams.get('outputMint');
@@ -100,7 +100,7 @@ export function createJupiterHandlers(overrides?: {
       return HttpResponse.json(response);
     }),
 
-    http.post('https://quote-api.jup.ag/v6/swap-instructions', async () => {
+    http.post('https://api.jup.ag/swap/v1/swap-instructions', async () => {
       return HttpResponse.json(overrides?.swap ?? DEFAULT_SWAP_RESPONSE);
     }),
   ];
@@ -114,14 +114,14 @@ export function createJupiterHandlers(overrides?: {
  */
 export function createJupiterErrorHandlers(statusCode = 400) {
   return [
-    http.get('https://quote-api.jup.ag/v6/quote', () => {
+    http.get('https://api.jup.ag/swap/v1/quote', () => {
       return HttpResponse.json(
         { error: 'Route not found', errorCode: 'ROUTE_NOT_FOUND' },
         { status: statusCode },
       );
     }),
 
-    http.post('https://quote-api.jup.ag/v6/swap-instructions', () => {
+    http.post('https://api.jup.ag/swap/v1/swap-instructions', () => {
       return HttpResponse.json(
         { error: 'Invalid quote', errorCode: 'INVALID_QUOTE' },
         { status: statusCode },
