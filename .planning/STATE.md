@@ -27,8 +27,13 @@ Progress: [█████████░] 100% (Phase 244)
 
 (Cleared at milestone boundary -- see PROJECT.md Key Decisions for full log)
 
-- Research: 0x AllowanceHolder 사용 (Permit2 대신) -- m28-02 objective 파일 수정 필요
+- Research: 0x AllowanceHolder 사용 (Permit2 대신) -- m28-02 objective 수정 완료 (244-01)
 - Research: wstETH vs stETH 아키텍처 결정 -- m28-00 설계에서 확정 필요
+- DEFI-01: packages/actions/ 디렉토리 트리, package.json, registerBuiltInProviders() 6-step 라이프사이클 확정
+- DEFI-02: ActionApiClient base (fetch+Zod), 8개 DeFi 에러 코드, SlippageBps/SlippagePct branded types 확정
+- APIC-05: AllowanceHolder 플로우 확정 -- standard ERC-20 approve, EIP-712 불필요
+- config.toml [actions.*] 공통 스키마: enabled/api_base_url/api_key + 프로바이더별 슬리피지
+- Admin Settings 경계: api_key + 운영 파라미터 = hot-reload, enabled + urls + 주소 = config.toml only
 - Research: 신규 npm 의존성 0개 -- 모든 DeFi 프로토콜 기존 패키지로 통합
 - PLCY-01: resolve() 순수 함수 -- 정책 평가는 Stage 3에서만 수행
 - PLCY-02: approve 트랜잭션은 $0 지출 평가 (승인 != 지출)
@@ -44,5 +49,5 @@ Progress: [█████████░] 100% (Phase 244)
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 244-02-PLAN.md (DEFI-03 정책 연동 설계 확정)
+Stopped at: Completed 244-01-PLAN.md (DEFI-01/DEFI-02 확정 + m28-02 AllowanceHolder 업데이트)
 Resume file: None

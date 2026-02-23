@@ -219,7 +219,7 @@ See `.planning/milestones/v27.4-ROADMAP.md` for full details.
 
 **Milestone Goal:** 5개 DeFi 프로토콜(Jupiter Swap, 0x EVM Swap, LI.FI Bridge, Lido+Jito Staking, Gas Conditional Execution) 구현을 위한 공통 설계 산출물 생성. 코드 구현 없이 설계 문서만 산출하며, m28-01~m28-05 구현 마일스톤의 입력으로 소비된다.
 
-- [ ] **Phase 244: 코어 설계 기반** - 패키지 구조, API 클라이언트 패턴, 정책 연동 플로우 설계
+- [x] **Phase 244: 코어 설계 기반** - 패키지 구조, API 클라이언트 패턴, 정책 연동 플로우 설계 (completed 2026-02-23)
 - [ ] **Phase 245: 런타임 동작 설계** - 비동기 상태 추적, 안전성 방어, 테스트 전략 설계
 
 ## Phase Details
@@ -278,5 +278,5 @@ Phases execute in numeric order: 244 -> 245
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
 | 239-243 | v27.4 | 9/9 | Complete | 2026-02-23 |
-| 244 | 1/2 | In Progress|  | - |
+| 244 | 2/2 | Complete   | 2026-02-23 | - |
 | 245 | v28.0 | 0/? | Not started | - |
