@@ -1,7 +1,7 @@
 # 마일스톤 m28-02: 0x EVM DEX Swap
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v28.2
 
 ## 목표
 
@@ -22,7 +22,7 @@ Jupiter (Solana):
   POST /swap/v1/quote → 견적 → POST /swap-instructions → instruction → ContractCallRequest
 
 0x (EVM):
-  GET /swap/permit2/price → 견적 → GET /swap/permit2/quote → calldata → ContractCallRequest
+  GET /swap/allowance-holder/price → 견적 → GET /swap/allowance-holder/quote → calldata → ContractCallRequest
 ```
 
 ---
@@ -33,10 +33,10 @@ Jupiter (Solana):
 
 | 컴포넌트 | 내용 |
 |----------|------|
-| ZeroExSwapActionProvider | IActionProvider 구현체. 0x Swap API v2 호출(Permit2 기반). resolve() -> ContractCallRequest(to/data/value 매핑). 지원 체인: Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche 등 19+ 체인 |
-| ZeroExApiClient | 0x REST API 래퍼. `/swap/permit2/price`(견적 조회), `/swap/permit2/quote`(실행용 calldata). API 키 기반 인증(`0x-api-key` 헤더). 요청 타임아웃 10초(AbortController). 응답 Zod 스키마 검증 |
-| 슬리피지 제어 | 기본 100bps(1%), 상한 500bps(5%). config.toml [actions.0x_swap] 섹션에서 오버라이드. 0x API의 `slippagePercentage` 파라미터에 매핑 |
-| Permit2 토큰 승인 | ERC-20 토큰 스왑 시 Permit2 컨트랙트 승인 필요. 첫 스왑 시 자동으로 approve 트랜잭션 선행 실행. ETH(네이티브) 스왑은 승인 불필요 |
+| ZeroExSwapActionProvider | IActionProvider 구현체. 0x Swap API v2 호출(AllowanceHolder 기반). resolve() -> ContractCallRequest(to/data/value 매핑). 지원 체인: Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche 등 19+ 체인 |
+| ZeroExApiClient | 0x REST API 래퍼. `/swap/allowance-holder/price`(견적 조회), `/swap/allowance-holder/quote`(실행용 calldata). API 키 기반 인증(`0x-api-key` 헤더). 요청 타임아웃 10초(AbortController). 응답 Zod 스키마 검증 |
+| 슬리피지 제어 | 기본 0.01(1%), 상한 0.05(5%). config.toml [actions.0x_swap] 섹션에서 오버라이드. 0x API의 `slippagePercentage` 파라미터에 매핑. pct 단위 사용 (API 네이티브) |
+| AllowanceHolder 토큰 승인 | ERC-20 토큰 스왑 시 AllowanceHolder 컨트랙트에 standard ERC-20 approve 필요. 첫 스왑 시 **별도 파이프라인 실행으로 approve 트랜잭션을 선행 전송** (2건의 독립 파이프라인: approve 1건 + swap 1건). approve 완료 확인 후 swap 파이프라인 자동 진행. ETH(네이티브) 스왑은 승인 불필요. EIP-712 서명 불필요 (standard approve만 사용) |
 | MCP 도구 | waiaas_0x_swap — ActionDefinition -> MCP Tool 자동 매핑(v1.5 프레임워크 활용) |
 | SDK 지원 | TS SDK executeAction('0x_swap', params) + Python SDK execute_action('0x_swap', params) |
 
@@ -62,7 +62,7 @@ packages/actions/src/
       0x-api-client.ts           # 0x REST API 래퍼
       schemas.ts                 # ZeroExSwapInputSchema, PriceResponse, QuoteResponse Zod 스키마
       config.ts                  # ZeroExSwapConfig 타입 + 기본값
-      permit2.ts                 # Permit2 승인 헬퍼
+      allowance-holder.ts        # AllowanceHolder approve 헬퍼
   index.ts                       # 내장 프로바이더 export (jupiter_swap, 0x_swap)
 ```
 
@@ -92,11 +92,11 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 
 | # | 결정 항목 | 선택지 | 결정 근거 |
 |---|----------|--------|----------|
-| 1 | 0x API 버전 | Swap API v2 (Permit2 기반) | 최신 버전. Permit2로 토큰 승인 UX 개선(한 번 승인 → 모든 DEX에서 사용). v1 대비 가스 효율 향상 |
+| 1 | 0x API 버전 | Swap API v2 (AllowanceHolder 기반) | 최신 버전. AllowanceHolder로 standard ERC-20 approve 사용 -- 서버사이드에 최적. EIP-712 서명 불필요, 낮은 가스비, 단순한 구현. Research에서 AllowanceHolder가 서버사이드 환경에 적합하다고 확인됨 (0x 공식 권장) |
 | 2 | API 키 정책 | 필수 (config.toml) | 0x API는 API 키가 필수. 무료 플랜(제한적 rate limit) + 유료 플랜 모두 동일 키 필드 사용. Admin Settings > Actions에서 설정 가능 |
 | 3 | 체인 라우팅 | 월렛의 chain 속성 기반 자동 선택 | 월렛이 ethereum 체인이면 0x Ethereum API 호출, base 체인이면 Base API 호출. 0x는 체인별 동일 API 구조 |
-| 4 | Permit2 승인 처리 | ActionProvider 내부에서 자동 처리 | ERC-20 첫 스왑 시 Permit2 approve를 별도 트랜잭션으로 선행. 이후 스왑은 approve 불필요. ETH 네이티브 스왑은 승인 자체 불필요 |
-| 5 | 1inch 대비 0x 선택 근거 | 0x | 체인 커버리지(19+ vs 9+), 기관급 API 안정성, Permit2 기반 최신 아키텍처. 1inch Fusion(gasless)은 향후 별도 ActionProvider로 추가 가능 |
+| 4 | AllowanceHolder approve 처리 | standard ERC-20 approve + swap 순차 실행 | ERC-20 첫 스왑 시 AllowanceHolder 컨트랙트에 standard approve를 별도 APPROVE 파이프라인으로 선행. approve 완료 후 swap 실행. ETH 네이티브 스왑은 승인 자체 불필요. EIP-712 서명 불필요 (Permit2 대비 복잡도 대폭 감소) |
+| 5 | 1inch 대비 0x 선택 근거 | 0x | 체인 커버리지(19+ vs 9+), 기관급 API 안정성, AllowanceHolder 기반 서버사이드 최적화. 1inch Fusion(gasless)은 향후 별도 ActionProvider로 추가 가능 |
 
 ---
 
@@ -108,11 +108,11 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 1 | 0x_swap resolve -> ContractCallRequest 반환 | mock 0x /swap/permit2/quote 응답 -> ZeroExSwapActionProvider.resolve() -> ContractCallRequest(to/data/value) 반환 assert | [L0] |
+| 1 | 0x_swap resolve -> ContractCallRequest 반환 | mock 0x /swap/allowance-holder/quote 응답 -> ZeroExSwapActionProvider.resolve() -> ContractCallRequest(to/data/value) 반환 assert | [L0] |
 | 2 | 0x_swap execute -> 파이프라인 실행 | mock 0x API + mock EvmAdapter -> resolve() -> ContractCallRequest -> 파이프라인 실행 -> 상태 전이 assert | [L0] |
 | 3 | MCP: waiaas_0x_swap 도구 자동 노출 | 0x_swap 프로바이더(mcpExpose=true) 등록 -> MCP tool 목록에 waiaas_0x_swap 포함 assert | [L0] |
-| 4 | ETH -> USDC 스왑 -> 네이티브 토큰 판매 | mock quote(ETH->USDC) -> value 필드에 ETH 금액 포함 + Permit2 승인 불필요 assert | [L0] |
-| 5 | USDC -> ETH 스왑 -> ERC-20 판매 + Permit2 | mock quote(USDC->ETH) -> Permit2 승인 트랜잭션 선행 + 스왑 트랜잭션 실행 assert | [L0] |
+| 4 | ETH -> USDC 스왑 -> 네이티브 토큰 판매 | mock quote(ETH->USDC) -> value 필드에 ETH 금액 포함 + AllowanceHolder 승인 불필요 assert | [L0] |
+| 5 | USDC -> ETH 스왑 -> ERC-20 판매 + AllowanceHolder | mock quote(USDC->ETH) -> AllowanceHolder approve 트랜잭션 선행 (standard ERC-20 approve) + 스왑 트랜잭션 실행 assert | [L0] |
 
 ### 슬리피지 + 에러
 
@@ -135,13 +135,13 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
 | 12 | Ethereum 월렛 -> 0x Ethereum API 호출 | ethereum 체인 월렛 + 스왑 -> api.0x.org 호출 assert | [L0] |
-| 13 | Base 월렛 -> 0x Base API 호출 | base 체인 월렛 + 스왑 -> base.api.0x.org 호출 assert | [L0] |
+| 13 | Base 월렛 -> 0x Base API 호출 | base 체인 월렛 + 스왑 -> api.0x.org (chainId=8453) 호출 assert | [L0] |
 
 ### 외부 API 실 호출
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 14 | 0x API 실 호출 테스트넷 검증 | Sepolia에서 0x /swap/permit2/price 실 호출 -> 견적 응답 성공 확인 | [HUMAN] |
+| 14 | 0x API 실 호출 테스트넷 검증 | Sepolia에서 0x /swap/allowance-holder/price 실 호출 -> 견적 응답 성공 확인 | [HUMAN] |
 
 ---
 
@@ -149,6 +149,7 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m28-00 (기본 DeFi 프로토콜 설계) | DEFI-02(REST→calldata 공통 패턴), DEFI-03(정책 연동), DEFI-05(테스트 전략) 설계 산출물을 입력으로 사용 |
 | v1.5 (Action Provider 프레임워크) | IActionProvider, ActionProviderRegistry, MCP Tool 자동 변환, POST /v1/actions/:provider/:action |
 | m28-01 (Jupiter Swap) | 첫 번째 ActionProvider 구현으로 패턴 확립. packages/actions/ 패키지 구조, 내장 프로바이더 로딩 로직 재사용 |
 | v1.4 (EVM 인프라) | EvmAdapter, ContractCallRequest(EVM: to/data/value), CONTRACT_WHITELIST |
@@ -160,7 +161,7 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 | # | 리스크 | 영향 | 대응 방안 |
 |---|--------|------|----------|
 | 1 | 0x API 키 필수 | Jupiter(키 선택)와 달리 0x는 API 키 필수. DX 장벽 | Admin Settings에서 키 설정 UI 제공. 무료 플랜으로 시작 가능. 키 미설정 시 명확한 안내 메시지 |
-| 2 | Permit2 승인 UX | 첫 ERC-20 스왑 시 추가 트랜잭션(approve) 필요 | 자동으로 approve 선행 실행. 사용자에게 "첫 스왑 시 토큰 승인이 필요합니다" 알림 |
+| 2 | AllowanceHolder 승인 UX | 첫 ERC-20 스왑 시 추가 트랜잭션(standard approve) 필요 | 자동으로 approve 선행 실행. 사용자에게 "첫 스왑 시 토큰 승인이 필요합니다" 알림. AllowanceHolder는 standard ERC-20 approve이므로 EIP-712 서명 불필요 |
 | 3 | 0x API 체인별 엔드포인트 분기 | 19+ 체인에 대해 base URL 매핑 관리 필요 | chainId -> API base URL 매핑 테이블 관리. 미지원 체인 요청 시 명확한 에러 |
 | 4 | 0x API rate limit | 무료 플랜은 rate limit 존재 | 견적 캐시(30초 TTL). 실행(quote)은 캐시 불가하므로 rate limit 도달 시 ACTION_RATE_LIMITED 에러 반환 |
 
@@ -170,7 +171,7 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 
 | 항목 | 예상 |
 |------|------|
-| 페이즈 | 2개 (ZeroExSwapActionProvider + API Client + Permit2 1 / MCP+SDK+스킬+테스트 1) |
+| 페이즈 | 2개 (ZeroExSwapActionProvider + API Client + AllowanceHolder 1 / MCP+SDK+스킬+테스트 1) |
 | 신규/수정 파일 | 12-16개 |
 | 테스트 | 14-20개 |
 | DB 마이그레이션 | 없음 |
@@ -178,5 +179,32 @@ Body: { sellToken, buyToken, sellAmount, slippagePercentage?, chain? }
 ---
 
 *생성일: 2026-02-15*
+*수정일: 2026-02-23 -- Permit2 -> AllowanceHolder 변경 (Research 결정 반영)*
 *선행: m28-01 (Jupiter Swap)*
 *관련: 0x Swap API v2 (https://0x.org/docs/0x-swap-api/introduction)*
+
+---
+
+## 변경 이력
+
+### 2026-02-23: Permit2 -> AllowanceHolder 변경
+
+**변경 근거:** Research에서 AllowanceHolder가 서버사이드 환경에 적합하다고 확인됨 (0x 공식 권장).
+
+**주요 변경 사항:**
+- API 엔드포인트: `/swap/permit2/*` -> `/swap/allowance-holder/*`
+- 토큰 승인 방식: Permit2 (EIP-712 서명 필요) -> AllowanceHolder (standard ERC-20 approve)
+- 파일 구조: `permit2.ts` -> `allowance-holder.ts`
+- 기술 결정 #1: "Permit2 기반" -> "AllowanceHolder 기반"
+- 기술 결정 #4: "Permit2 승인 처리" -> "AllowanceHolder approve 처리"
+- EIP-712 서명 관련 내용 전면 제거
+
+**AllowanceHolder 채택 이유 (vs Permit2):**
+
+| 항목 | AllowanceHolder (채택) | Permit2 (미채택) |
+|------|----------------------|-----------------|
+| 서명 | 1회 (트랜잭션) | 2회 (EIP-712 + 트랜잭션) |
+| 가스 | 낮음 | 높음 |
+| 복잡도 | 낮음 (standard approve) | 높음 (EIP-712 서명 + 시그니처 조합) |
+| 적합 환경 | 서버사이드 (WAIaaS) | 브라우저 지갑 |
+| Race condition 리스크 | 낮음 (순차 실행) | 높음 (Pitfall P3) |
