@@ -130,7 +130,7 @@ export function registerBuiltInProviders(
   ];
 
   for (const { key, factory } of providers) {
-    if (config.actions?.[key]?.enabled) {
+    if (config.actions?.[key]?.enabled !== false) {  // 기본 활성화: undefined → true
       try {
         registry.register(factory());
         loaded.push(key);
@@ -149,21 +149,23 @@ export function registerBuiltInProviders(
 **라이프사이클 6단계:**
 
 1. 데몬 시작 시 Step 4 (DaemonLifecycle)에서 `registerBuiltInProviders()` 호출
-2. `config.actions.{provider_name}.enabled` 플래그 확인
-3. `enabled=true`인 프로바이더만 `factory()` 호출 후 `registry.register()`
+2. SettingsService에서 `actions.{provider_name}.enabled` 플래그 확인 (기본값: `true` — `enabled !== false` 로직으로 빌트인 프로바이더 기본 활성화)
+3. `enabled !== false`인 프로바이더만 `factory()` 호출 후 `registry.register()`
 4. 등록 실패 시 `warn` 로그 + skip (데몬 전체 실패 방지)
 5. 반환: `{ loaded: string[], skipped: string[] }` -- 데몬 시작 로그에 출력
 6. 데몬 종료 시: 별도 해제 불필요 (프로바이더는 stateless, GC 처리)
 
-#### 1.3 PKGS-03: config.toml [actions.*] 공통 스키마 패턴 확정
+#### 1.3 PKGS-03: Admin Settings actions 카테고리 공통 스키마 패턴 확정
+
+> **변경:** config.toml `[actions.*]` 섹션 → SettingsService `actions` 카테고리로 이관 (#158). 빌트인 프로바이더는 기본 활성화.
 
 **모든 프로바이더 공통 필드:**
 
 | 필드 | 타입 | 필수 | 기본값 | 설명 |
 |------|------|------|--------|------|
-| `enabled` | boolean | 필수 | `false` | 프로바이더 활성화 여부 |
+| `enabled` | boolean | 필수 | `true` | 프로바이더 활성화 여부 (**빌트인 기본 활성화**) |
 | `api_base_url` | string | REST API 프로바이더만 | 프로바이더별 | REST API 기본 URL |
-| `api_key` | string | 0x 필수, Jupiter/LI.FI 선택 | `""` | API 인증 키 |
+| `api_key` | string | 0x 필수, Jupiter/LI.FI 선택 | `""` | API 인증 키 (Admin UI Actions 페이지에서 설정) |
 
 **프로바이더별 슬리피지 필드:**
 
@@ -173,79 +175,66 @@ export function registerBuiltInProviders(
 | 0x | `default_slippage_pct` / `max_slippage_pct` | decimal | pct (API 네이티브) | 0.01 (1%) | 0.05 (5%) |
 | LI.FI | `default_slippage_pct` / `max_slippage_pct` | decimal | pct (API 네이티브) | 0.03 (3%) | 0.05 (5%) |
 
-**Zod 검증 스키마:** `ActionsConfigSchema`를 core에 추가. 환경변수 오버라이드: `WAIAAS_ACTIONS_{PROVIDER}_{KEY}` 패턴 (기존 패턴 일관).
+**Zod 검증 스키마:** `ActionsSettingsSchema`를 core에 추가. SettingsService에서 Zod 검증 적용.
 
-**config.toml 검증 바운드:**
-- Jupiter bps: 1~10000 (integer). 범위 초과 시 config 로딩에서 즉시 에러
-- 0x/LI.FI pct: 0.001~1.0 (decimal). 범위 초과 시 config 로딩에서 즉시 에러
+**검증 바운드:**
+- Jupiter bps: 1~10000 (integer). 범위 초과 시 설정 저장에서 즉시 에러
+- 0x/LI.FI pct: 0.001~1.0 (decimal). 범위 초과 시 설정 저장에서 즉시 에러
 
-**프로바이더별 config.toml 전체 섹션 예시:**
+**프로바이더별 Admin Settings 전체 항목:**
 
-```toml
-# === DeFi Action Provider Configuration ===
+| 프로바이더 | 설정 키 | 기본값 | 설명 |
+|-----------|---------|--------|------|
+| **jupiter_swap** | `enabled` | `true` | 프로바이더 활성화 |
+| | `api_base_url` | `"https://api.jup.ag/swap/v1"` | API base URL |
+| | `api_key` | `""` | API 키 (선택) |
+| | `default_slippage_bps` | `50` | 기본 슬리피지 (0.5%) |
+| | `max_slippage_bps` | `500` | 최대 슬리피지 (5%) |
+| | `max_price_impact_pct` | `1.0` | 가격 영향 상한 |
+| | `jito_tip_lamports` | `1000` | Jito MEV tip |
+| | `jito_block_engine_url` | `""` | Jito 블록 엔진 URL (선택) |
+| **0x_swap** | `enabled` | `true` | 프로바이더 활성화 |
+| | `api_base_url` | `"https://api.0x.org"` | API base URL (v2, chainId 라우팅) |
+| | `api_key` | `""` | API 키 (**필수** — 미설정 시 알림) |
+| | `default_slippage_pct` | `0.01` | 기본 슬리피지 (1%) |
+| | `max_slippage_pct` | `0.05` | 최대 슬리피지 (5%) |
+| **lifi** | `enabled` | `true` | 프로바이더 활성화 |
+| | `api_base_url` | `"https://li.quest/v1"` | API base URL |
+| | `api_key` | `""` | API 키 (선택) |
+| | `default_slippage_pct` | `0.03` | 기본 슬리피지 (3%, 크로스체인) |
+| | `max_slippage_pct` | `0.05` | 최대 슬리피지 (5%) |
+| | `status_poll_interval_sec` | `30` | 브릿지 상태 폴링 간격 |
+| | `status_poll_max_attempts` | `240` | 최대 폴링 횟수 (2시간) |
+| **lido** | `enabled` | `true` | 프로바이더 활성화 |
+| | `steth_address` | `"0xae7ab96520...7fE84"` | stETH 컨트랙트 |
+| | `withdrawal_queue_address` | `"0x889edC2...F9B1"` | Withdrawal Queue |
+| **jito** | `enabled` | `true` | 프로바이더 활성화 |
+| | `stake_pool` | `"Jito4APy...Awbb"` | Stake Pool 주소 |
+| | `jitosol_mint` | `"J1toso1...GCPn"` | JitoSOL Mint |
 
-[actions.jupiter_swap]
-enabled = true
-api_base_url = "https://api.jup.ag/swap/v1"
-# api_key = ""                                 # Jupiter API key (optional, improves rate limits)
-default_slippage_bps = 50                      # 0.5%
-max_slippage_bps = 500                         # 5%
-max_price_impact_pct = 1.0                     # 1% price impact limit
-jito_tip_lamports = 1000                       # Jito MEV protection tip (default 1000 lamports)
-# jito_block_engine_url = ""                   # Jito block engine URL (optional)
+#### 1.4 PKGS-04: Admin Settings 전면 이관 + API 키 미설정 알림 확정
 
-[actions.0x_swap]
-enabled = true
-api_key = ""                                   # 0x API key (REQUIRED -- get from dashboard.0x.org)
-api_base_url = "https://api.0x.org"            # Unified endpoint (v2, all chains via chainId param)
-default_slippage_pct = 0.01                    # 1%
-max_slippage_pct = 0.05                        # 5%
+> **변경:** config.toml/Admin Settings 이원 구조 → **Admin Settings 단일 관리** (#158). 빌트인 프로바이더 설정은 모두 SettingsService `actions` 카테고리에서 관리. config.toml `[actions]` 섹션은 폐지.
 
-[actions.lifi]
-enabled = true
-# api_key = ""                                 # LI.FI API key (optional, improves rate limits)
-api_base_url = "https://li.quest/v1"
-default_slippage_pct = 0.03                    # 3% (cross-chain needs higher default)
-max_slippage_pct = 0.05                        # 5%
-status_poll_interval_sec = 30                  # Bridge status polling interval
-status_poll_max_attempts = 240                 # Max attempts (2 hours at 30s)
+**Admin Settings (런타임, hot-reload 가능 — 전 항목):**
 
-[actions.lido]
-enabled = true
-steth_address = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
-withdrawal_queue_address = "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"
+| 설정 그룹 | 설정 항목 | 이유 |
+|----------|----------|------|
+| 프로바이더 활성화 (`enabled`) | 전 프로바이더 | 데몬 재시작 없이 프로바이더 활성화/비활성화 |
+| API URL (`api_base_url`) | Jupiter, 0x, LI.FI | 엔드포인트 변경을 재시작 없이 수행 |
+| API 키 (`api_key`) | Jupiter, 0x, LI.FI | 키 교체/갱신을 재시작 없이 수행. password-type 입력 + master password 암호화 저장 |
+| 슬리피지 (`default_slippage_*`, `max_slippage_*`) | Jupiter, 0x, LI.FI | 시장 상황에 따라 실시간 조정 |
+| 운영 파라미터 | `max_price_impact_pct`, `jito_tip_lamports`, `status_poll_*` 등 | 위험 한도/폴링 빈도 실시간 조정 |
+| 컨트랙트 주소 | Lido, Jito | mainnet 기본값, testnet 자동 전환. 변경 빈도 극저이지만 Admin UI에서 일괄 관리 |
 
-[actions.jito]
-enabled = true
-stake_pool = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
-jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-```
+**API 키 미설정 알림 (#158):**
 
-#### 1.4 PKGS-04: Admin Settings 런타임 변경 가능 설정 항목 확정
-
-**config.toml (정적, 재시작 필요):**
-
-| 설정 | 이유 |
+| 항목 | 내용 |
 |------|------|
-| `enabled` | 프로바이더 로딩은 데몬 시작 시에만 발생 |
-| `api_base_url` | API 엔드포인트 변경은 인프라 변경 |
-| 컨트랙트 주소 (`steth_address`, `withdrawal_queue_address`, `stake_pool`, `jitosol_mint`) | 온체인 주소는 변경 빈도 극저 |
-
-**Admin Settings (런타임, hot-reload 가능):**
-
-| 설정 | 카테고리 | 이유 |
-|------|---------|------|
-| `api_key` (Jupiter, 0x, LI.FI) | 보안 자격 증명 | 키 교체/갱신을 재시작 없이 수행 |
-| `default_slippage_bps` / `default_slippage_pct` | 운영 파라미터 | 시장 상황에 따라 실시간 조정 |
-| `max_slippage_bps` / `max_slippage_pct` | 운영 파라미터 | 위험 한도 실시간 조정 |
-| `max_price_impact_pct` (Jupiter) | 운영 파라미터 | 가격 영향 한도 실시간 조정 |
-| `jito_tip_lamports` (Jupiter) | 운영 파라미터 | MEV 보호 비용 실시간 조정 |
-| `status_poll_interval_sec` (LI.FI) | 운영 파라미터 | 폴링 빈도 실시간 조정 |
-| `status_poll_max_attempts` (LI.FI) | 운영 파라미터 | 최대 대기 시간 실시간 조정 |
-
-**경계 원칙:** "보안 자격 증명과 인프라 설정 = config.toml only, 운영 파라미터 = Admin Settings"
-
-> **Note:** `api_key`는 보안 자격 증명이지만 Admin Settings에서도 관리 가능 -- 키 교체 시 재시작 없이 적용이 운영상 중요하기 때문. Admin Settings에서는 password-type 입력 + master password 암호화 저장.
+| 트리거 | 에이전트가 API 키 필수 프로바이더(0x 등) 호출 시 키 미설정 |
+| 에러 응답 | ACTION_API_KEY_REQUIRED 에러 + `adminUrl: '/admin#/actions'` 필드 포함 |
+| 알림 | `EventBus.emit('action:api_key_required')` → 알림 채널 발송 |
+| 중복 방지 | 프로바이더별 쿨다운 적용 (동일 프로바이더 반복 호출 시 알림 1회만) |
 
 **Settings snapshot 패턴:** `resolve()` 진입 시 설정 스냅샷 획득, 파이프라인 완료까지 스냅샷 사용 (Pitfall P19 방지). 이를 통해 resolve() 실행 중 Admin Settings 변경이 진행 중인 트랜잭션에 영향을 주지 않음.
 
@@ -383,6 +372,7 @@ export class ActionApiClient {
 | 호출 데이터 | `instructionData` (base64) | `calldata` (hex) | 인코딩 형식 상이 |
 | 부가 정보 | `accounts` (AccountMeta[]) | `value` (wei amount) | Solana: 계정 목록, EVM: ETH 전송액 |
 | 다중 인스트럭션 | BATCH 타입 사용 | 단일 calldata | Jupiter: setup+swap+cleanup 다중 인스트럭션 |
+| 다중 요청 (approve+swap) | N/A | resolve() → `[approveReq, swapReq]` | EVM ERC-20 스왑 시 AllowanceHolder approve 선행 |
 
 #### 2.4 APIC-03: DeFi 에러 코드 확정
 
@@ -394,7 +384,7 @@ export class ActionApiClient {
 | `ACTION_API_TIMEOUT` | 504 | 외부 DeFi API 타임아웃 | 모든 REST API 프로바이더 |
 | `ACTION_RATE_LIMITED` | 429 | 외부 API rate limit 초과 | Jupiter, 0x, LI.FI |
 | `PRICE_IMPACT_TOO_HIGH` | 422 | 가격 영향이 설정 상한 초과 | Jupiter, 0x |
-| `ACTION_REQUIRES_APPROVAL` | 409 | ERC-20 토큰 승인 필요 (AllowanceHolder) | 0x |
+| ~~`ACTION_REQUIRES_APPROVAL`~~ | ~~409~~ | ~~ERC-20 토큰 승인 필요~~ | ~~0x~~ (resolve() 배열 반환으로 대체 — approve가 필요하면 resolve()가 [approveReq, swapReq] 반환) |
 | `BRIDGE_ROUTE_NOT_FOUND` | 404 | 크로스체인 경로 없음 | LI.FI |
 | `JITO_UNAVAILABLE` | 503 | Jito 블록 엔진 사용 불가 (fail-closed) | Jupiter |
 | `QUOTE_EXPIRED` | 410 | 견적 TTL 만료 | Gas Condition 재실행 시 |
@@ -531,11 +521,14 @@ ActionProviderRegistry.executeResolve(actionKey, params, context)
   2. provider.resolve(actionName, params, context)
      - 외부 API 호출 또는 ABI 인코딩
      - Settings snapshot 획득 (resolve 시작 시점)
-     -> 반환: ContractCallRequest
-  3. ContractCallRequestSchema.parse(result) -- 반환값 재검증
+     -> 반환: ContractCallRequest[] (단일 또는 다건)
+  3. 각 ContractCallRequest에 ContractCallRequestSchema.parse() -- 반환값 재검증
+  4. 각 ContractCallRequest에 actionProvider 태그 자동 주입
         |
         v
-executeSend(walletId, contractCallRequest) -- 기존 파이프라인 진입
+for each request in ContractCallRequest[] (순차 실행):
+  executeSend(walletId, request) -- 기존 파이프라인 진입
+  (중간 실패 시 나머지 미실행, 에러 반환)
         |
         v
 Stage 1: Validate + DB INSERT (PENDING)
@@ -548,7 +541,9 @@ Stage 2: Auth (sessionId 검증)
         v
 Stage 3: Policy Evaluation  <-- 정책 평가 핵심 지점
   3a. CONTRACT_WHITELIST 검사
-      - contractCallRequest.to 주소가 화이트리스트에 등록되었는지 확인
+      - Provider-trust 모델: contractCallRequest.actionProvider가 설정되어 있고
+        해당 프로바이더가 활성화 상태이면 CONTRACT_WHITELIST 검사 skip
+      - 그 외: contractCallRequest.to 주소가 화이트리스트에 등록되었는지 확인
       - 미등록 시: POLICY_VIOLATION (CONTRACT_WHITELIST) 에러 -> 즉시 거부
   3b. SPENDING_LIMIT 평가
       - 금액 추출: value (native) 또는 amount (token)
@@ -572,11 +567,12 @@ Stage 6: Confirm (waitForConfirmation)
 
 **핵심 원칙:**
 
-1. **resolve()는 순수 함수** -- 정책 평가는 파이프라인 Stage 3에서만 수행. resolve()에서 정책 검사를 하지 않는다.
-2. **CONTRACT_WHITELIST 필수** -- 정책 평가 시점에서 ContractCallRequest의 `to` 주소가 CONTRACT_WHITELIST에 등록되어야 한다.
+1. **resolve()는 순수 함수** -- 정책 평가는 파이프라인 Stage 3에서만 수행. resolve()에서 정책 검사를 하지 않는다. resolve()는 `ContractCallRequest[]`를 반환하며, 단일 항목(Jupiter: `[swapReq]`)이거나 다중 항목(0x: `[approveReq, swapReq]`)일 수 있다.
+2. **Provider-trust 모델** -- 등록+활성화된 ActionProvider가 resolve()한 ContractCallRequest에는 `actionProvider` 태그가 자동 주입된다. Policy Stage 3에서 `actionProvider` 태그가 있고 해당 프로바이더가 활성화 상태이면 CONTRACT_WHITELIST 검사를 skip한다. Admin이 프로바이더를 활성화하는 행위가 컨트랙트 상호작용 신뢰의 명시적 opt-in이다. 동적 주소를 반환하는 프로바이더(0x, LI.FI)의 정적 번들 등록 불가 문제를 해결한다.
 3. **SPENDING_LIMIT 금액 기준** -- resolve()가 반환한 금액(value/amount)을 기준으로 평가한다.
 4. **approve 트랜잭션은 $0 지출로 평가** -- 승인(approval)은 지출이 아니다. APPROVE 타입 트랜잭션의 SPENDING_LIMIT 평가 금액은 $0이다.
 5. **Settings snapshot** -- resolve() 진입 시 Settings snapshot을 획득하고, 파이프라인 완료까지 해당 snapshot을 유지한다. 중간에 Admin Settings가 변경되어도 진행 중인 트랜잭션에는 영향 없다.
+6. **배열 순차 실행** -- resolve()가 다중 ContractCallRequest를 반환하면 actions route handler가 순차적으로 파이프라인에 투입한다. 각 요청은 독립적으로 6-stage 풀 파이프라인을 통과한다(정책 평가 포함). 중간 실패 시 나머지는 미실행되고 에러를 반환한다.
 
 #### PLCY-02: 4개 프로토콜의 CONTRACT_WHITELIST 등록 대상
 
@@ -594,23 +590,23 @@ Stage 6: Confirm (waitForConfirmation)
 | Lido | Ethereum | 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 | WithdrawalQueueERC721 | lido |
 | Jito | Solana | SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy | SPL Stake Pool program | jito |
 
-**정적 주소 (Lido, Jito, Jupiter):** 프로바이더의 config.ts에 하드코딩한다. 프로바이더 등록 시 화이트리스트 번들로 제공한다.
+**정적 주소 (Lido, Jito, Jupiter):** 프로바이더의 config.ts에 하드코딩한다. Provider-trust 모델에 의해 프로바이더가 활성화되면 해당 주소에 대한 CONTRACT_WHITELIST 검사가 자동 skip된다.
 
-**동적 주소 (0x, LI.FI):** quote response의 `to` 필드에서 획득한다. 프로바이더가 resolve()에서 반환한 ContractCallRequest.to가 화이트리스트에 등록되어야 한다. 동적 주소의 경우 프로바이더가 resolve() 시 획득한 주소를 반환하고, Stage 3에서 해당 주소의 화이트리스트 등록 여부를 검사한다.
+**동적 주소 (0x, LI.FI):** quote response의 `to` 필드에서 획득한다. 0x API v2는 체인/거래마다 다른 settler 주소를 반환하므로 정적 번들 등록이 불가능하다. Provider-trust 모델에 의해 `actionProvider` 태그가 있는 ContractCallRequest는 CONTRACT_WHITELIST 검사를 skip하므로, 동적 주소도 안전하게 처리된다.
 
-**프로바이더 화이트리스트 번들 설계:**
+**Provider-trust 모델 (CONTRACT_WHITELIST 대체):**
 
-각 ActionProvider에 `getRequiredContracts(chain): ContractAddress[]` 메서드를 추가한다.
-- 정적 주소를 가진 프로바이더(Jupiter, Lido, Jito)는 하드코딩된 주소 배열을 반환한다.
-- 동적 주소를 가진 프로바이더(0x, LI.FI)는 빈 배열을 반환하되, 문서에 "동적 주소이므로 첫 사용 시 자동 등록 안내 필요"를 명시한다.
+> **변경:** `getRequiredContracts()` 메서드 + 화이트리스트 번들 방식 → Provider-trust 모델로 전환 (2026-02-23).
 
-프로바이더 활성화 시 Admin UI에서 안내:
-- "이 프로바이더가 필요한 컨트랙트 주소를 화이트리스트에 추가하시겠습니까?"
-- 정적 주소는 자동 추가 제안, 동적 주소는 첫 트랜잭션 시 안내.
+- ContractCallRequest에 `actionProvider?: string` 옵션 필드 추가
+- `ActionProviderRegistry.executeResolve()`에서 resolve() 결과에 프로바이더 이름 자동 태깅
+- Policy Stage 3: `actionProvider`가 설정되어 있고 해당 프로바이더가 Admin Settings에서 활성화 상태이면 CONTRACT_WHITELIST 검사 skip
+- Admin이 프로바이더를 활성화하는 행위 = 해당 프로바이더의 컨트랙트 상호작용을 신뢰하는 명시적 opt-in
+- 수동 ContractCallRequest(REST API 직접 호출)는 `actionProvider` 태그가 없으므로 기존 CONTRACT_WHITELIST 검사가 그대로 적용됨
 
-에러 메시지 개선:
+에러 메시지 개선 (수동 ContractCallRequest에 대해):
 - 기존: `"CONTRACT_WHITELIST violation for 0xae75..."`
-- 개선: `"Lido stETH contract가 화이트리스트에 미등록. Admin > Policies에서 Lido 번들을 활성화하세요"`
+- 개선: `"Lido stETH contract가 화이트리스트에 미등록. Admin > Policies에서 추가하세요"`
 - 프로바이더 컨텍스트를 포함하여 운영자가 바로 조치할 수 있도록 안내한다.
 
 Pitfall P13 (CONTRACT_WHITELIST 파편화) 방지: 프로바이더별 번들로 묶어 한 번에 등록/해제한다.
@@ -1095,7 +1091,7 @@ Research Pitfall P4 (크로스체인 브릿지 Fund Loss -- LI.FI "Limbo" State)
 
 **설계 내용:**
 
-1. JupiterSwapActionProvider는 config.toml의 `jito_block_engine_url` 설정 존재 시 Jito 경로를 사용한다
+1. JupiterSwapActionProvider는 Admin Settings의 `jito_block_engine_url` 설정 존재 시 Jito 경로를 사용한다
 2. Jito 전송 실패 시 (연결 실패, 타임아웃, 거부):
    - 트랜잭션을 즉시 FAILED 처리
    - JITO_UNAVAILABLE 에러 코드 반환
@@ -1283,7 +1279,7 @@ GasConditionWorker.onConditionMet(txId)
 - Zod 에러 메시지에 누락된 필드명을 포함하여 디버깅 용이하게
 
 **2. 버전 고정:**
-- config.toml의 `api_base_url`에 버전이 포함된 URL을 사용
+- Admin Settings의 `api_base_url`에 버전이 포함된 URL을 사용
 - Jupiter: `https://api.jup.ag/swap/v1` (v1 고정)
 - 0x: `https://api.0x.org` (v2 unified, chainId 파라미터로 라우팅)
 - LI.FI: `https://li.quest/v1` (v1 고정)
@@ -1488,7 +1484,7 @@ export function createMockActionContext(overrides?: Partial<ActionContext>): Act
 | C7 | CONTRACT_WHITELIST 정책 연동 | O | O | O | O | O |
 | C8 | SPENDING_LIMIT 정책 연동 | O | O | O | O | O |
 | C9 | MCP tool 자동 노출 | O | O | O | O | O |
-| C10 | config.toml enabled=false -> 미등록 | O | O | O | O | O |
+| C10 | Admin Settings enabled=false -> 미등록 | O | O | O | O | O |
 
 **프로토콜별 추가 시나리오:**
 

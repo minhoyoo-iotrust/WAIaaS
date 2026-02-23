@@ -33,7 +33,7 @@ Jupiter는 Solana 최대 DEX 애그리게이터(일 거래량 $1B+)로, 단일 A
 |----------|------|
 | JupiterSwapActionProvider | IActionProvider 구현체. Quote API v1 호출(inputMint/outputMint/amount/slippageBps) -> 최적 경로 획득 -> /swap-instructions API 호출 -> 개별 instruction 획득 -> ContractCallRequest 변환(programId=JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4, instructionData/accounts 매핑). priceImpact 1% 초과 시 PRICE_IMPACT_TOO_HIGH 에러로 거부 |
 | JupiterApiClient | Jupiter REST API 래퍼. Quote API v1 + /swap-instructions 호출. native fetch 사용(SDK 미사용), 요청 타임아웃 10초(AbortController). 응답 Zod 스키마 검증으로 API 변경 감지 |
-| 슬리피지 제어 | 기본 50bps(0.5%), 고변동 토큰 500bps(5%) 상한. config.toml [actions.jupiter_swap] 섹션에서 default_slippage_bps/max_slippage_bps 오버라이드 |
+| 슬리피지 제어 | 기본 50bps(0.5%), 고변동 토큰 500bps(5%) 상한. Admin Settings > Actions 페이지에서 default_slippage_bps/max_slippage_bps 오버라이드 |
 | Jito MEV 보호 | tip amount 기본 1000 lamports(max 100,000), Jito 블록 엔진 URL로 트랜잭션 직접 전송, 프론트러닝/샌드위치 공격 방지 |
 | MCP 도구 | waiaas_jupiter_swap — ActionDefinition -> MCP Tool 자동 매핑(v1.5 프레임워크 활용). AI 에이전트가 MCP를 통해 토큰 스왑 요청 가능 |
 | SDK 지원 | TS SDK executeAction('jupiter_swap', params) + Python SDK execute_action('jupiter_swap', params) |
@@ -58,19 +58,20 @@ skills/
   transactions.skill.md          # Jupiter Swap 사용법 추가
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.jupiter_swap]
-enabled = true
-api_base_url = "https://api.jup.ag/swap/v1"  # 기본값
-# api_key = ""                                 # Jupiter API 키 (선택)
-default_slippage_bps = 50                      # 0.5%
-max_slippage_bps = 500                         # 5%
-max_price_impact_pct = 1.0                     # 1% 초과 시 거부
-jito_tip_lamports = 1000                       # Jito MEV 보호 tip
-# jito_block_engine_url = ""                   # Jito 블록 엔진 URL (선택)
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `jupiter_swap.enabled` | `true` | 프로바이더 활성화 |
+| `jupiter_swap.api_key` | `""` | Jupiter API 키 (선택) |
+| `jupiter_swap.api_base_url` | `"https://api.jup.ag/swap/v1"` | API base URL |
+| `jupiter_swap.default_slippage_bps` | `50` | 기본 슬리피지 (0.5%) |
+| `jupiter_swap.max_slippage_bps` | `500` | 최대 슬리피지 (5%) |
+| `jupiter_swap.max_price_impact_pct` | `1.0` | 가격 영향 상한 (1%) |
+| `jupiter_swap.jito_tip_lamports` | `1000` | Jito MEV 보호 tip |
+| `jupiter_swap.jito_block_engine_url` | `""` | Jito 블록 엔진 URL (선택) |
 
 ---
 
@@ -79,7 +80,7 @@ jito_tip_lamports = 1000                       # Jito MEV 보호 tip
 | # | 결정 항목 | 선택지 | 결정 근거 |
 |---|----------|--------|----------|
 | 1 | Jupiter API 호출 방식 | fetch 직접 호출 (SDK 미사용) | Jupiter JS SDK는 추가 의존성 + 번들 크기 증가. Quote API/swap-instructions는 단순 REST 호출이므로 native fetch로 충분. 요청 타임아웃 10초, AbortController 사용 |
-| 2 | 슬리피지 기본값 config 위치 | [actions.jupiter_swap] 섹션 | config.toml 평탄화 원칙(v0.7) 준수. default_slippage_bps, max_slippage_bps 키로 오버라이드 |
+| 2 | 슬리피지 기본값 설정 위치 | Admin Settings > Actions | SettingsService actions 카테고리에 등록. 데몬 재시작 없이 런타임 변경 가능. default_slippage_bps, max_slippage_bps 키로 오버라이드 |
 | 3 | MEV 보호 방식 | Jito 블록 엔진 직접 전송 | Solana DEX 스왑은 MEV 공격(프론트러닝, 샌드위치) 타겟. Jito tip을 통한 블록 엔진 직접 전송으로 공개 mempool 노출 방지. tip 비용은 미미(1000 lamports ≈ $0.0002) |
 | 4 | CONTRACT_WHITELIST 연동 | Jupiter 프로그램 주소 필수 화이트리스트 | 기본 거부 정책과 일관성. Owner가 Jupiter 프로그램 주소를 CONTRACT_WHITELIST에 등록해야 스왑 실행 가능. 미등록 시 정책 엔진에서 거부 |
 | 5 | 패키지 구조 | packages/actions/ 독립 패키지 | 코어/데몬과 분리하여 선택적 설치 가능. 향후 추가 프로바이더(Uniswap, Compound 등)도 동일 패키지에 포함 |
@@ -103,7 +104,7 @@ jito_tip_lamports = 1000                       # Jito MEV 보호 tip
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
 | 4 | 슬리피지: 기본 50bps 적용 확인 | JupiterSwapActionProvider 기본 설정 -> Quote API 호출 시 slippageBps=50 파라미터 assert | [L0] |
-| 5 | 슬리피지: config.toml 오버라이드 적용 | [actions.jupiter_swap] default_slippage_bps=100 설정 -> slippageBps=100 적용 assert | [L0] |
+| 5 | 슬리피지: Admin Settings 오버라이드 적용 | Admin Settings jupiter_swap.default_slippage_bps=100 설정 -> slippageBps=100 적용 assert | [L0] |
 | 6 | 슬리피지: max_slippage_bps 초과 요청 -> 상한 적용 | 사용자 slippageBps=1000 요청 -> max 500 적용 assert | [L0] |
 | 7 | priceImpact 1% 초과 -> PRICE_IMPACT_TOO_HIGH 에러 거부 | mock Quote API priceImpactPct=2.5 반환 -> resolve() PRICE_IMPACT_TOO_HIGH 에러 assert | [L0] |
 | 8 | Jito MEV 보호: tip 포함 트랜잭션 빌드 확인 | mock /swap-instructions -> ContractCallRequest에 Jito tip instruction 포함 assert | [L0] |

@@ -67,18 +67,19 @@ packages/actions/src/
   index.ts                       # 내장 프로바이더 export 업데이트
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.lifi]
-enabled = true
-api_key = ""                                   # LI.FI API 키 (선택, rate limit 완화)
-api_base_url = "https://li.quest/v1"           # 기본값
-default_slippage_pct = 0.03                    # 3% (크로스체인은 높은 슬리피지 필요)
-max_slippage_pct = 0.05                        # 5%
-status_poll_interval_sec = 30                  # 브릿지 상태 폴링 간격
-status_poll_max_attempts = 60                  # 최대 폴링 횟수 (30분)
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `lifi.enabled` | `true` | 프로바이더 활성화 |
+| `lifi.api_key` | `""` | LI.FI API 키 (선택, rate limit 완화) |
+| `lifi.api_base_url` | `"https://li.quest/v1"` | API base URL |
+| `lifi.default_slippage_pct` | `0.03` | 기본 슬리피지 (3%, 크로스체인) |
+| `lifi.max_slippage_pct` | `0.05` | 최대 슬리피지 (5%) |
+| `lifi.status_poll_interval_sec` | `30` | 브릿지 상태 폴링 간격 |
+| `lifi.status_poll_max_attempts` | `60` | 최대 폴링 횟수 (30분) |
 
 ---
 
@@ -87,7 +88,7 @@ status_poll_max_attempts = 60                  # 최대 폴링 횟수 (30분)
 | # | 결정 항목 | 선택지 | 결정 근거 |
 |---|----------|--------|----------|
 | 1 | 크로스체인 프로토콜 | LI.FI (메타 애그리게이터) | 단일 API로 100+ 브릿지(Wormhole, Stargate, Across, deBridge 등) + DEX를 집계. 개별 브릿지 통합 대비 유지보수 비용 최소화. 40+ 체인 커버리지 |
-| 2 | API 키 정책 | 선택 (config.toml) | LI.FI는 API 키 없이도 기본 사용 가능. 키 설정 시 rate limit 완화 + 프리미엄 기능 접근 |
+| 2 | API 키 정책 | 선택 (Admin Settings) | LI.FI는 API 키 없이도 기본 사용 가능. Admin Settings > Actions 페이지에서 설정. 키 설정 시 rate limit 완화 + 프리미엄 기능 접근 |
 | 3 | 브릿지 상태 추적 | 폴링 기반 (/status API) | LI.FI가 webhooks를 지원하지만, self-hosted 데몬 환경에서 webhooks 수신이 복잡. 폴링이 구현 단순하고 방화벽 이슈 없음. 30초 간격으로 최대 30분 추적 |
 | 4 | 슬리피지 기본값 | 3% (크로스체인) | 단일 체인 스왑(1%) 대비 크로스체인은 브릿지 수수료 + 가격 변동 폭이 커서 높은 슬리피지 필요. LI.FI 공식 권장값 |
 | 5 | 정책 평가 시점 | 출발 체인 기준 | 크로스체인 브릿지의 정책 평가는 출발 체인 월렛의 정책으로 수행. 도착 체인의 정책은 수신이므로 평가 대상 아님 |

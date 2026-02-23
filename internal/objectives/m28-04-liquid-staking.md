@@ -92,21 +92,25 @@ packages/daemon/src/routes/
   wallets.ts                     # GET /v1/wallets/:id/staking 추가
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.lido]
-enabled = true
-# Ethereum mainnet 기본값, testnet은 환경에 따라 자동 전환
-steth_address = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"
-withdrawal_queue_address = "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158). 컨트랙트 주소는 mainnet 기본값이며, testnet은 환경에 따라 자동 전환.
 
-[actions.jito]
-enabled = true
-# Solana mainnet 기본값, testnet은 환경에 따라 자동 전환
-stake_pool = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
-jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-```
+**Lido (EVM)**
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `lido.enabled` | `true` | 프로바이더 활성화 |
+| `lido.steth_address` | `"0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"` | stETH 컨트랙트 (Ethereum mainnet) |
+| `lido.withdrawal_queue_address` | `"0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"` | Withdrawal Queue 컨트랙트 |
+
+**Jito (Solana)**
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `jito.enabled` | `true` | 프로바이더 활성화 |
+| `jito.stake_pool` | `"Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"` | Stake Pool 주소 |
+| `jito.jitosol_mint` | `"J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"` | JitoSOL Mint 주소 |
 
 ---
 
@@ -193,7 +197,7 @@ jitosol_mint = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 | 1 | unstake 대기 시간 | Lido 1~5일, Jito ~2일. 사용자가 즉시 출금 기대 가능 | unstake 요청 시 예상 대기 시간 명시. "즉시 출금이 필요하면 DEX에서 stETH/JitoSOL을 직접 판매하세요" 안내 |
 | 2 | stETH 리베이스 추적 | stETH는 일일 리베이스로 잔고가 자동 증가. 정책 평가 시 이전 잔고와 불일치 가능 | 스테이킹 포지션 조회 시 실시간 잔고 확인. 리베이스 증분은 수익이므로 정책 평가 대상 아님 |
 | 3 | Jito Stake Pool 환율 변동 | SOL:JitoSOL 환율이 에포크마다 변동. 예상 수량과 실제 수량 차이 발생 | 견적(예상 JitoSOL 수량) 조회 후 실제 실행. 슬리피지 0.1% 이내로 변동폭 작음 |
-| 4 | 테스트넷 컨트랙트 주소 차이 | Lido Goerli/Sepolia, Jito Devnet 주소가 mainnet과 다름 | EnvironmentType SSoT(v1.4.5)에 따라 컨트랙트 주소 자동 전환. config.toml은 mainnet 기본, testnet은 hardcoded 매핑 |
+| 4 | 테스트넷 컨트랙트 주소 차이 | Lido Goerli/Sepolia, Jito Devnet 주소가 mainnet과 다름 | EnvironmentType SSoT(v1.4.5)에 따라 컨트랙트 주소 자동 전환. Admin Settings는 mainnet 기본, testnet은 hardcoded 매핑 |
 | 5 | Lido L2 지원 | L2(Arbitrum, Base 등)에서는 stETH가 아닌 wstETH 브릿지 사용 | m28-04는 Ethereum mainnet 우선. L2 Lido 스테이킹은 향후 확장 |
 
 ---

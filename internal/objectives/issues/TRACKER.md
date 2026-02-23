@@ -171,6 +171,9 @@
 | 154 | ENHANCEMENT | LOW | Balance Monitoring 설정을 Notifications 페이지로 이동 | v28.1 | FIXED | 2026-02-23 |
 | 155 | ENHANCEMENT | MEDIUM | 알림 필터링을 이벤트 단위로 세분화 | v28.1 | FIXED | 2026-02-23 |
 | 156 | BUG | MEDIUM | FilterBar / SearchInput CSS 스타일 누락으로 UI 엉성 | v28.1 | FIXED | 2026-02-23 |
+| 157 | BUG | HIGH | IncomingTxMonitorService가 삭제된 wallets.network 컬럼 참조 | v28.1 | OPEN | — |
+| 158 | ENHANCEMENT | HIGH | 빌트인 액션 프로바이더 Admin UI 페이지 + API 키 미설정 알림 | v28.2 | OPEN | — |
+| 159 | ENHANCEMENT | HIGH | 딜레이/승인 대기 거래 취소 UX 개선 (Telegram 버튼 + Admin UI) | v28.2 | OPEN | — |
 
 ## Type Legend
 
@@ -182,9 +185,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 3
 - **FIXED:** 155
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 156
+- **Total:** 159

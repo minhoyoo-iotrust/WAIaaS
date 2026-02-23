@@ -52,13 +52,14 @@ const MarinadeUnstakeInputSchema = z.object({
 });
 ```
 
-### config.toml
+### Admin Settings (Actions 페이지)
 
-```toml
-[actions.marinade]
-enabled = true
-msol_mint = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-```
+빌트인 프로바이더는 기본 활성화 상태. Admin UI > Actions 페이지에서 런타임 설정 변경 가능 (#158).
+
+| 설정 키 | 기본값 | 설명 |
+|---------|--------|------|
+| `marinade.enabled` | `true` | 프로바이더 활성화 |
+| `marinade.msol_mint` | `"mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"` | mSOL Mint 주소 |
 
 ---
 
